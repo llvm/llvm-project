@@ -862,13 +862,23 @@ convolutionMatchAndRewriterHelper(Operation *op,
   ShapedType resultTy = op->getResult(0).getType().cast<ShapedType>();
 
   Type inputETy = inputTy.getElementType();
-  Type weightETy = weightTy.getElementType();
-  Type biasETy = biasTy.getElementType();
   Type resultETy = resultTy.getElementType();
 
   auto padAttr = op->getAttr("pad").cast<ArrayAttr>();
   auto strideTosaAttr = op->getAttr("stride").cast<ArrayAttr>();
   auto dilationTosaAttr = op->getAttr("dilation").cast<ArrayAttr>();
+
+  bool isQuantized = op->hasAttr("quantization_info");
+  IntegerAttr iZp;
+  IntegerAttr kZp;
+  if (isQuantized) {
+    auto quantizationInfo =
+        op->getAttr("quantization_info").cast<tosa::ConvOpQuantizationAttr>();
+    iZp = rewriter.getI32IntegerAttr(
+        quantizationInfo.input_zp().getValue().getSExtValue());
+    kZp = rewriter.getI32IntegerAttr(
+        quantizationInfo.weight_zp().getValue().getSExtValue());
+  }
 
   if (!inputTy.hasStaticShape() || !weightTy.hasStaticShape() ||
       !biasTy.hasStaticShape() || !resultTy.hasStaticShape())
@@ -877,11 +887,6 @@ convolutionMatchAndRewriterHelper(Operation *op,
 
   auto weightShape = weightTy.getShape();
   auto resultShape = resultTy.getShape();
-
-  // TODO(suderman): Support other types.
-  if (!inputETy.isF32() || !weightETy.isF32() || !biasETy.isF32() ||
-      !resultETy.isF32())
-    return failure();
 
   // Apply padding as necessary.
   Attribute zeroAttr = rewriter.getZeroAttr(inputETy);
@@ -924,14 +929,23 @@ convolutionMatchAndRewriterHelper(Operation *op,
   auto dilationAttr = DenseIntElementsAttr::get(
       RankedTensorType::get({2}, rewriter.getI64Type()), dilation);
 
-  if (isa<tosa::Conv2DOp>(op)) {
+  if (isa<tosa::Conv2DOp>(op) && !isQuantized) {
     rewriter.replaceOpWithNewOp<linalg::Conv2DInputNhwcFilterOhwiPolyOp>(
         op, resultTy, ValueRange{input, weight}, ValueRange{biasBroadcast},
         strideAttr, dilationAttr);
     return success();
   }
 
-  if (isa<tosa::DepthwiseConv2DOp>(op)) {
+  if (isa<tosa::Conv2DOp>(op) && isQuantized) {
+    auto iZpVal = rewriter.create<ConstantOp>(loc, iZp);
+    auto kZpVal = rewriter.create<ConstantOp>(loc, kZp);
+    rewriter.replaceOpWithNewOp<linalg::Conv2DInputNhwcFilterOhwiPolyQOp>(
+        op, resultTy, ValueRange{input, weight, iZpVal, kZpVal},
+        ValueRange{biasBroadcast}, strideAttr, dilationAttr);
+    return success();
+  }
+
+  if (isa<tosa::DepthwiseConv2DOp>(op) && !isQuantized) {
     ShapedType linalgConvTy =
         RankedTensorType::get({resultShape[0], resultShape[1], resultShape[2],
                                weightShape[2], weightShape[3]},
