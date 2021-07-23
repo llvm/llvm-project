@@ -91,10 +91,10 @@ define <4 x double> @multiply_right_transpose_2x3x2(<6 x double> %a, <6 x double
 ; CHECK-NEXT:    [[TMP11:%.*]] = insertelement <3 x double> [[TMP9]], double [[TMP10]], i64 2
 ; CHECK-NEXT:    [[TMP12:%.*]] = bitcast <6 x double>* [[P:%.*]] to double*
 ; CHECK-NEXT:    [[VEC_CAST:%.*]] = bitcast double* [[TMP12]] to <3 x double>*
-; CHECK-NEXT:    store <3 x double> undef, <3 x double>* [[VEC_CAST]], align 16
+; CHECK-NEXT:    store <3 x double> [[TMP5]], <3 x double>* [[VEC_CAST]], align 16
 ; CHECK-NEXT:    [[VEC_GEP:%.*]] = getelementptr double, double* [[TMP12]], i64 3
 ; CHECK-NEXT:    [[VEC_CAST42:%.*]] = bitcast double* [[VEC_GEP]] to <3 x double>*
-; CHECK-NEXT:    store <3 x double> undef, <3 x double>* [[VEC_CAST42]], align 8
+; CHECK-NEXT:    store <3 x double> [[TMP11]], <3 x double>* [[VEC_CAST42]], align 8
 ; CHECK-NEXT:    [[SPLIT:%.*]] = shufflevector <6 x double> [[A:%.*]], <6 x double> poison, <2 x i32> <i32 0, i32 1>
 ; CHECK-NEXT:    [[SPLIT1:%.*]] = shufflevector <6 x double> [[A]], <6 x double> poison, <2 x i32> <i32 2, i32 3>
 ; CHECK-NEXT:    [[SPLIT2:%.*]] = shufflevector <6 x double> [[A]], <6 x double> poison, <2 x i32> <i32 4, i32 5>

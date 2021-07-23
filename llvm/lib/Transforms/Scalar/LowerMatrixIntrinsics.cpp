@@ -1140,7 +1140,8 @@ public:
   /// deletion.
   void finalizeLowering(Instruction *Inst, MatrixTy Matrix,
                         IRBuilder<> &Builder) {
-    Inst2ColumnMatrix.insert(std::make_pair(Inst, Matrix));
+    auto inserted = Inst2ColumnMatrix.insert(std::make_pair(Inst, Matrix));
+    assert(inserted.second && "multiple matrix lowering mapping");
 
     ToRemove.push_back(Inst);
     Value *Flattened = nullptr;
@@ -1540,11 +1541,11 @@ public:
       if (Transpose->hasOneUse()) {
         FusedInsts.insert(cast<Instruction>(Transpose));
         ToRemove.push_back(cast<Instruction>(Transpose));
+        // TODO: add a fake entry for the folded instruction so that this is
+        // included in the expression in the remark.
+        Inst2ColumnMatrix[Transpose] = MatrixTy(M, C, EltType);
       }
       finalizeLowering(MatMul, Result, Builder);
-      // TODO: add a fake entry for the folded instruction so that this is
-      // included in the expression in the remark.
-      Inst2ColumnMatrix[Transpose] = MatrixTy(M, C, EltType);
       return;
     }
 
