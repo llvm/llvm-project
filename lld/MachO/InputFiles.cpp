@@ -1235,8 +1235,8 @@ void ArchiveFile::fetch(const object::Archive::Symbol &sym) {
   // to it later.
   const object::Archive::Symbol symCopy = sym;
 
-  if (Optional<InputFile *> file =
-          loadArchiveMember(mb, modTime, getName(), /*objCOnly=*/false)) {
+  if (Optional<InputFile *> file = loadArchiveMember(
+          mb, modTime, getName(), /*objCOnly=*/false, c.getChildOffset())) {
     inputFiles.insert(*file);
     // ld64 doesn't demangle sym here even with -demangle.
     // Match that: intentionally don't call toMachOString().
@@ -1275,8 +1275,22 @@ static macho::Symbol *createBitcodeSymbol(const lto::InputFile::Symbol &objSym,
                             /*noDeadStrip=*/false);
 }
 
-BitcodeFile::BitcodeFile(MemoryBufferRef mbref)
-    : InputFile(BitcodeKind, mbref) {
+BitcodeFile::BitcodeFile(MemoryBufferRef mb, StringRef archiveName,
+                         uint64_t offsetInArchive)
+    : InputFile(BitcodeKind, mb) {
+  std::string path = mb.getBufferIdentifier().str();
+  // ThinLTO assumes that all MemoryBufferRefs given to it have a unique
+  // name. If two members with the same name are provided, this causes a
+  // collision and ThinLTO can't proceed.
+  // So, we append the archive name to disambiguate two members with the same
+  // name from multiple different archives, and offset within the archive to
+  // disambiguate two members of the same name from a single archive.
+  MemoryBufferRef mbref(
+      mb.getBuffer(),
+      saver.save(archiveName.empty() ? path
+                                     : archiveName + sys::path::filename(path) +
+                                           utostr(offsetInArchive)));
+
   obj = check(lto::InputFile::create(mbref));
 
   // Convert LTO Symbols to LLD Symbols in order to perform resolution. The
