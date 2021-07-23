@@ -77,7 +77,8 @@ ICF::ICF(std::vector<ConcatInputSection *> &inputs) {
 static unsigned icfPass = 0;
 static std::atomic<bool> icfRepeat{false};
 
-// Compare everything except the relocation referents
+// Compare "non-moving" parts of two ConcatInputSections, namely everything
+// except references to other ConcatInputSections.
 static bool equalsConstant(const ConcatInputSection *ia,
                            const ConcatInputSection *ib) {
   // We can only fold within the same OutputSection.
@@ -89,7 +90,7 @@ static bool equalsConstant(const ConcatInputSection *ia,
     return false;
   if (ia->relocs.size() != ib->relocs.size())
     return false;
-  auto f = [&](const Reloc &ra, const Reloc &rb) {
+  auto f = [](const Reloc &ra, const Reloc &rb) {
     if (ra.type != rb.type)
       return false;
     if (ra.pcrel != rb.pcrel)
@@ -101,65 +102,79 @@ static bool equalsConstant(const ConcatInputSection *ia,
     if (ra.addend != rb.addend)
       return false;
     if (ra.referent.is<Symbol *>() != rb.referent.is<Symbol *>())
-      return false; // a nice place to breakpoint
-    return true;
-  };
-  return std::equal(ia->relocs.begin(), ia->relocs.end(), ib->relocs.begin(),
-                    f);
-}
+      return false;
 
-// Compare only the relocation referents
-static bool equalsVariable(const ConcatInputSection *ia,
-                           const ConcatInputSection *ib) {
-  assert(ia->relocs.size() == ib->relocs.size());
-  auto f = [&](const Reloc &ra, const Reloc &rb) {
-    if (ra.referent == rb.referent)
-      return true;
+    InputSection *isecA, *isecB;
     if (ra.referent.is<Symbol *>()) {
       const auto *sa = ra.referent.get<Symbol *>();
       const auto *sb = rb.referent.get<Symbol *>();
       if (sa->kind() != sb->kind())
         return false;
       if (isa<Defined>(sa)) {
-        const auto *da = dyn_cast<Defined>(sa);
-        const auto *db = dyn_cast<Defined>(sb);
+        const auto *da = cast<Defined>(sa);
+        const auto *db = cast<Defined>(sb);
         if (da->isec && db->isec) {
-          if (da->isec->kind() != db->isec->kind())
-            return false;
-          if (const auto *isecA = dyn_cast<ConcatInputSection>(da->isec)) {
-            const auto *isecB = cast<ConcatInputSection>(db->isec);
-            return da->value == db->value && isecA->icfEqClass[icfPass % 2] ==
-                                                 isecB->icfEqClass[icfPass % 2];
-          }
-          // Else we have two literal sections. References to them are
-          // constant-equal if their offsets in the output section are equal.
-          return da->isec->parent == db->isec->parent &&
-                 da->isec->getOffset(da->value) ==
-                     db->isec->getOffset(db->value);
+          isecA = da->isec;
+          isecB = db->isec;
+        } else {
+          assert(da->isAbsolute() && db->isAbsolute());
+          return da->value == db->value;
         }
-        assert(da->isAbsolute() && db->isAbsolute());
-        return da->value == db->value;
-      } else if (isa<DylibSymbol>(sa)) {
-        // There is one DylibSymbol per gotIndex and we already checked for
-        // symbol equality, thus we know that these must be different.
-        return false;
       } else {
-        llvm_unreachable("equalsVariable symbol kind");
+        assert(isa<DylibSymbol>(sa));
+        return sa == sb;
       }
+    } else {
+      isecA = ra.referent.get<InputSection *>();
+      isecB = rb.referent.get<InputSection *>();
+    }
+
+    if (isecA->parent != isecB->parent)
+      return false;
+    // Sections with identical parents should be of the same kind.
+    assert(isecA->kind() == isecB->kind());
+    // We will compare ConcatInputSection contents in equalsVariable.
+    if (isa<ConcatInputSection>(isecA))
+      return true;
+    // Else we have two literal sections. References to them are equal iff their
+    // offsets in the output section are equal.
+    return isecA->getOffset(ra.addend) == isecB->getOffset(rb.addend);
+  };
+  return std::equal(ia->relocs.begin(), ia->relocs.end(), ib->relocs.begin(),
+                    f);
+}
+
+// Compare the "moving" parts of two ConcatInputSections -- i.e. everything not
+// handled by equalsConstant().
+static bool equalsVariable(const ConcatInputSection *ia,
+                           const ConcatInputSection *ib) {
+  assert(ia->relocs.size() == ib->relocs.size());
+  auto f = [](const Reloc &ra, const Reloc &rb) {
+    // We already filtered out mismatching values/addends in equalsConstant.
+    if (ra.referent == rb.referent)
+      return true;
+    const ConcatInputSection *isecA, *isecB;
+    if (ra.referent.is<Symbol *>()) {
+      // Matching DylibSymbols are already filtered out by the
+      // identical-referent check above. Non-matching DylibSymbols were filtered
+      // out in equalsConstant(). So we can safely cast to Defined here.
+      const auto *da = cast<Defined>(ra.referent.get<Symbol *>());
+      const auto *db = cast<Defined>(rb.referent.get<Symbol *>());
+      if (da->isAbsolute())
+        return true;
+      isecA = dyn_cast<ConcatInputSection>(da->isec);
+      if (!isecA)
+        return true; // literal sections were checked in equalsConstant.
+      isecB = cast<ConcatInputSection>(db->isec);
     } else {
       const auto *sa = ra.referent.get<InputSection *>();
       const auto *sb = rb.referent.get<InputSection *>();
-      if (sa->kind() != sb->kind())
-        return false;
-      if (const auto *isecA = dyn_cast<ConcatInputSection>(sa)) {
-        const auto *isecB = cast<ConcatInputSection>(sb);
-        return isecA->icfEqClass[icfPass % 2] == isecB->icfEqClass[icfPass % 2];
-      } else {
-        assert(isa<CStringInputSection>(sa) ||
-               isa<WordLiteralInputSection>(sa));
-        return sa->getOffset(ra.addend) == sb->getOffset(rb.addend);
-      }
+      isecA = dyn_cast<ConcatInputSection>(sa);
+      if (!isecA)
+        return true;
+      isecB = cast<ConcatInputSection>(sb);
     }
+    return isecA->icfEqClass[icfPass % 2] == isecB->icfEqClass[icfPass % 2];
   };
   return std::equal(ia->relocs.begin(), ia->relocs.end(), ib->relocs.begin(),
                     f);
