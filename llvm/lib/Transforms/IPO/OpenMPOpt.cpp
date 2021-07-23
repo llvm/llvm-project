@@ -447,20 +447,19 @@ struct OMPInformationCache : public InformationCache {
 };
 
 template <typename Ty, bool InsertInvalidates = true>
-struct BooleanStateWithPtrSetVector : public BooleanState {
-
-  bool contains(Ty *Elem) const { return Set.contains(Elem); }
-  bool insert(Ty *Elem) {
+struct BooleanStateWithSetVector : public BooleanState {
+  bool contains(const Ty &Elem) const { return Set.contains(Elem); }
+  bool insert(const Ty &Elem) {
     if (InsertInvalidates)
       BooleanState::indicatePessimisticFixpoint();
     return Set.insert(Elem);
   }
 
-  Ty *operator[](int Idx) const { return Set[Idx]; }
-  bool operator==(const BooleanStateWithPtrSetVector &RHS) const {
+  const Ty &operator[](int Idx) const { return Set[Idx]; }
+  bool operator==(const BooleanStateWithSetVector &RHS) const {
     return BooleanState::operator==(RHS) && Set == RHS.Set;
   }
-  bool operator!=(const BooleanStateWithPtrSetVector &RHS) const {
+  bool operator!=(const BooleanStateWithSetVector &RHS) const {
     return !(*this == RHS);
   }
 
@@ -468,8 +467,7 @@ struct BooleanStateWithPtrSetVector : public BooleanState {
   size_t size() const { return Set.size(); }
 
   /// "Clamp" this state with \p RHS.
-  BooleanStateWithPtrSetVector &
-  operator^=(const BooleanStateWithPtrSetVector &RHS) {
+  BooleanStateWithSetVector &operator^=(const BooleanStateWithSetVector &RHS) {
     BooleanState::operator^=(RHS);
     Set.insert(RHS.Set.begin(), RHS.Set.end());
     return *this;
@@ -477,7 +475,7 @@ struct BooleanStateWithPtrSetVector : public BooleanState {
 
 private:
   /// A set to keep track of elements.
-  SetVector<Ty *> Set;
+  SetVector<Ty> Set;
 
 public:
   typename decltype(Set)::iterator begin() { return Set.begin(); }
@@ -485,6 +483,10 @@ public:
   typename decltype(Set)::const_iterator begin() const { return Set.begin(); }
   typename decltype(Set)::const_iterator end() const { return Set.end(); }
 };
+
+template <typename Ty, bool InsertInvalidates = true>
+using BooleanStateWithPtrSetVector =
+    BooleanStateWithSetVector<Ty *, InsertInvalidates>;
 
 struct KernelInfoState : AbstractState {
   /// Flag to track if we reached a fixpoint.
