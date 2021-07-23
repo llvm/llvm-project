@@ -242,8 +242,7 @@ void referenceThroughTypedef(int I, ICRTy Builtin, MyIntCRTy MyInt) {}
 // CHECK-MESSAGES: :[[@LINE-4]]:37: note: 'int' and 'ICRTy' parameters accept and bind the same kind of values
 // CHECK-MESSAGES: :[[@LINE-5]]:30: note: after resolving type aliases, 'int' and 'MyIntCRTy' are the same
 // CHECK-MESSAGES: :[[@LINE-6]]:52: note: 'int' and 'MyIntCRTy' parameters accept and bind the same kind of values
-// CHECK-MESSAGES: :[[@LINE-7]]:37: note: after resolving type aliases, the common type of 'ICRTy' and 'MyIntCRTy' is 'int'
-// CHECK-MESSAGES: :[[@LINE-8]]:52: note: 'ICRTy' and 'MyIntCRTy' parameters accept and bind the same kind of values
+// CHECK-MESSAGES: :[[@LINE-7]]:37: note: after resolving type aliases, the common type of 'ICRTy' and 'MyIntCRTy' is 'const int &'
 
 short const typedef int unsigned Eldritch;
 typedef const unsigned short Holy;
@@ -358,10 +357,20 @@ void attributedParam1Typedef(const __attribute__((address_space(256))) int *One,
 // CHECK-MESSAGES: :[[@LINE-2]]:30: warning: 2 adjacent parameters of 'attributedParam1Typedef' of similar type are
 // CHECK-MESSAGES: :[[@LINE-3]]:77: note: the first parameter in the range is 'One'
 // CHECK-MESSAGES: :[[@LINE-3]]:80: note: the last parameter in the range is 'Two'
-// CHECK-MESSAGES: :[[@LINE-5]]:30: note: after resolving type aliases, the common type of 'const __attribute__((address_space(256))) int *' and 'const __attribute__((address_space(256))) MyInt1 *' is 'const __attribute__((address_space(256))) int'
-// FIXME: The last diagnostic line is a bit bad: the common type should be a
-// pointer type -- it is not clear right now, how it would be possible to
-// properly wire a logic in that fixes it.
+// CHECK-MESSAGES: :[[@LINE-5]]:30: note: after resolving type aliases, 'const __attribute__((address_space(256))) int *' and 'const __attribute__((address_space(256))) MyInt1 *' are the same
+
+void attributedParam1TypedefRef(
+    const __attribute__((address_space(256))) int &OneR,
+    __attribute__((address_space(256))) MyInt1 &TwoR) {}
+// NO-WARN: One is CVR-qualified, the other is not.
+
+void attributedParam1TypedefCRef(
+    const __attribute__((address_space(256))) int &OneR,
+    const __attribute__((address_space(256))) MyInt1 &TwoR) {}
+// CHECK-MESSAGES: :[[@LINE-2]]:5: warning: 2 adjacent parameters of 'attributedParam1TypedefCRef' of similar type are
+// CHECK-MESSAGES: :[[@LINE-3]]:52: note: the first parameter in the range is 'OneR'
+// CHECK-MESSAGES: :[[@LINE-3]]:55: note: the last parameter in the range is 'TwoR'
+// CHECK-MESSAGES: :[[@LINE-5]]:5: note: after resolving type aliases, 'const __attribute__((address_space(256))) int &' and 'const __attribute__((address_space(256))) MyInt1 &' are the same
 
 void attributedParam2(__attribute__((address_space(256))) int *One,
                       const __attribute__((address_space(256))) MyInt1 *Two) {}
