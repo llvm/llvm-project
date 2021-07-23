@@ -4,11 +4,9 @@
 define i64 @select_consts_i64(i64 %offset, i32 %x) {
 ; CHECK-LABEL: select_consts_i64:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    xorl %ecx, %ecx
+; CHECK-NEXT:    leaq 42(%rdi), %rax
 ; CHECK-NEXT:    testl %esi, %esi
-; CHECK-NEXT:    movl $42, %eax
-; CHECK-NEXT:    cmovneq %rcx, %rax
-; CHECK-NEXT:    addq %rdi, %rax
+; CHECK-NEXT:    cmovneq %rdi, %rax
 ; CHECK-NEXT:    retq
   %b = icmp eq i32 %x, 0
   %s = select i1 %b, i64 42, i64 0
@@ -19,11 +17,10 @@ define i64 @select_consts_i64(i64 %offset, i32 %x) {
 define i32 @select_consts_i32(i32 %offset, i64 %x) {
 ; CHECK-LABEL: select_consts_i32:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    xorl %ecx, %ecx
+; CHECK-NEXT:    # kill: def $edi killed $edi def $rdi
+; CHECK-NEXT:    leal 43(%rdi), %eax
 ; CHECK-NEXT:    cmpq $42, %rsi
-; CHECK-NEXT:    movl $43, %eax
-; CHECK-NEXT:    cmovgel %ecx, %eax
-; CHECK-NEXT:    addl %edi, %eax
+; CHECK-NEXT:    cmovgel %edi, %eax
 ; CHECK-NEXT:    retq
   %b = icmp sgt i64 %x, 41
   %s = select i1 %b, i32 0, i32 43
@@ -34,11 +31,10 @@ define i32 @select_consts_i32(i32 %offset, i64 %x) {
 define i16 @select_consts_i16(i16 %offset, i1 %b) {
 ; CHECK-LABEL: select_consts_i16:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    xorl %ecx, %ecx
+; CHECK-NEXT:    # kill: def $edi killed $edi def $rdi
+; CHECK-NEXT:    leal 44(%rdi), %eax
 ; CHECK-NEXT:    testb $1, %sil
-; CHECK-NEXT:    movl $44, %eax
-; CHECK-NEXT:    cmovel %ecx, %eax
-; CHECK-NEXT:    addl %edi, %eax
+; CHECK-NEXT:    cmovel %edi, %eax
 ; CHECK-NEXT:    # kill: def $ax killed $ax killed $eax
 ; CHECK-NEXT:    retq
   %s = select i1 %b, i16 44, i16 0
