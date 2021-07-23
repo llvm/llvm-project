@@ -14,5 +14,5 @@ using namespace lld;
 using namespace lld::macho;
 
 uint64_t OutputSection::getSegmentOffset() const {
-  return addr - parent->firstSection()->addr;
+  return addr - parent->addr;
 }
