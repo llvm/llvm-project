@@ -41,8 +41,7 @@ class LLT {
 public:
   /// Get a low-level scalar or aggregate "bag of bits".
   static LLT scalar(unsigned SizeInBits) {
-    assert(SizeInBits > 0 && "invalid scalar size");
-    return LLT{/*isPointer=*/false, /*isVector=*/false,
+    return LLT{/*isPointer=*/false, /*isVector=*/false, /*isScalar=*/true,
                ElementCount::getFixed(0), SizeInBits,
                /*AddressSpace=*/0};
   }
@@ -50,23 +49,23 @@ public:
   /// Get a low-level pointer in the given address space.
   static LLT pointer(unsigned AddressSpace, unsigned SizeInBits) {
     assert(SizeInBits > 0 && "invalid pointer size");
-    return LLT{/*isPointer=*/true, /*isVector=*/false,
+    return LLT{/*isPointer=*/true, /*isVector=*/false, /*isScalar=*/false,
                ElementCount::getFixed(0), SizeInBits, AddressSpace};
   }
 
   /// Get a low-level vector of some number of elements and element width.
   static LLT vector(ElementCount EC, unsigned ScalarSizeInBits) {
     assert(!EC.isScalar() && "invalid number of vector elements");
-    assert(ScalarSizeInBits > 0 && "invalid vector element size");
-    return LLT{/*isPointer=*/false, /*isVector=*/true, EC, ScalarSizeInBits,
-               /*AddressSpace=*/0};
+    return LLT{/*isPointer=*/false, /*isVector=*/true, /*isScalar=*/false,
+               EC, ScalarSizeInBits, /*AddressSpace=*/0};
   }
 
   /// Get a low-level vector of some number of elements and element type.
   static LLT vector(ElementCount EC, LLT ScalarTy) {
     assert(!EC.isScalar() && "invalid number of vector elements");
     assert(!ScalarTy.isVector() && "invalid vector element type");
-    return LLT{ScalarTy.isPointer(), /*isVector=*/true, EC,
+    return LLT{ScalarTy.isPointer(), /*isVector=*/true, /*isScalar=*/false,
+               EC,
                ScalarTy.getSizeInBits().getFixedSize(),
                ScalarTy.isPointer() ? ScalarTy.getAddressSpace() : 0};
   }
@@ -106,17 +105,18 @@ public:
     return scalarOrVector(EC, LLT::scalar(static_cast<unsigned>(ScalarSize)));
   }
 
-  explicit LLT(bool isPointer, bool isVector, ElementCount EC,
+  explicit LLT(bool isPointer, bool isVector, bool isScalar, ElementCount EC,
                uint64_t SizeInBits, unsigned AddressSpace) {
-    init(isPointer, isVector, EC, SizeInBits, AddressSpace);
+    init(isPointer, isVector, isScalar, EC, SizeInBits, AddressSpace);
   }
-  explicit LLT() : IsPointer(false), IsVector(false), RawData(0) {}
+  explicit LLT()
+      : IsScalar(false), IsPointer(false), IsVector(false), RawData(0) {}
 
   explicit LLT(MVT VT);
 
-  bool isValid() const { return RawData != 0; }
+  bool isValid() const { return IsScalar || RawData != 0; }
 
-  bool isScalar() const { return isValid() && !IsPointer && !IsVector; }
+  bool isScalar() const { return IsScalar; }
 
   bool isPointer() const { return isValid() && IsPointer && !IsVector; }
 
@@ -196,6 +196,8 @@ public:
   /// not attempt to handle cases that aren't evenly divisible.
   LLT divide(int Factor) const {
     assert(Factor != 1);
+    assert((!isScalar() || getScalarSizeInBits() != 0) &&
+           "cannot divide scalar of size zero");
     if (isVector()) {
       assert(getElementCount().isKnownMultipleOf(Factor));
       return scalarOrVector(getElementCount().divideCoefficientBy(Factor),
@@ -209,18 +211,17 @@ public:
   bool isByteSized() const { return getSizeInBits().isKnownMultipleOf(8); }
 
   unsigned getScalarSizeInBits() const {
-    assert(RawData != 0 && "Invalid Type");
-    if (!IsVector) {
-      if (!IsPointer)
-        return getFieldValue(ScalarSizeFieldInfo);
-      else
-        return getFieldValue(PointerSizeFieldInfo);
-    } else {
+    if (IsScalar)
+      return getFieldValue(ScalarSizeFieldInfo);
+    if (IsVector) {
       if (!IsPointer)
         return getFieldValue(VectorSizeFieldInfo);
       else
         return getFieldValue(PointerVectorSizeFieldInfo);
-    }
+    } else if (IsPointer)
+      return getFieldValue(PointerSizeFieldInfo);
+    else
+      llvm_unreachable("unexpected LLT");
   }
 
   unsigned getAddressSpace() const {
@@ -252,7 +253,7 @@ public:
 
   bool operator==(const LLT &RHS) const {
     return IsPointer == RHS.IsPointer && IsVector == RHS.IsVector &&
-           RHS.RawData == RawData;
+           IsScalar == RHS.IsScalar && RHS.RawData == RawData;
   }
 
   bool operator!=(const LLT &RHS) const { return !(*this == RHS); }
@@ -262,9 +263,10 @@ public:
 
 private:
   /// LLT is packed into 64 bits as follows:
+  /// isScalar : 1
   /// isPointer : 1
   /// isVector  : 1
-  /// with 62 bits remaining for Kind-specific data, packed in bitfields
+  /// with 61 bits remaining for Kind-specific data, packed in bitfields
   /// as described below. As there isn't a simple portable way to pack bits
   /// into bitfields, here the different fields in the packed structure is
   /// described in static const *Field variables. Each of these variables
@@ -286,7 +288,7 @@ private:
   static const constexpr BitFieldInfo PointerAddressSpaceFieldInfo{
       24, PointerSizeFieldInfo[0] + PointerSizeFieldInfo[1]};
   static_assert((PointerAddressSpaceFieldInfo[0] +
-                 PointerAddressSpaceFieldInfo[1]) <= 62,
+                 PointerAddressSpaceFieldInfo[1]) <= 61,
                 "Insufficient bits to encode all data");
   /// * Vector-of-non-pointer (isPointer == 0 && isVector == 1):
   ///   NumElements: 16;
@@ -297,7 +299,7 @@ private:
       32, VectorElementsFieldInfo[0] + VectorElementsFieldInfo[1]};
   static const constexpr BitFieldInfo VectorScalableFieldInfo{
       1, VectorSizeFieldInfo[0] + VectorSizeFieldInfo[1]};
-  static_assert((VectorSizeFieldInfo[0] + VectorSizeFieldInfo[1]) <= 62,
+  static_assert((VectorSizeFieldInfo[0] + VectorSizeFieldInfo[1]) <= 61,
                 "Insufficient bits to encode all data");
   /// * Vector-of-pointer (isPointer == 1 && isVector == 1):
   ///   NumElements: 16;
@@ -314,12 +316,13 @@ private:
       1, PointerVectorAddressSpaceFieldInfo[0] +
              PointerVectorAddressSpaceFieldInfo[1]};
   static_assert((PointerVectorAddressSpaceFieldInfo[0] +
-                 PointerVectorAddressSpaceFieldInfo[1]) <= 62,
+                 PointerVectorAddressSpaceFieldInfo[1]) <= 61,
                 "Insufficient bits to encode all data");
 
+  uint64_t IsScalar : 1;
   uint64_t IsPointer : 1;
   uint64_t IsVector : 1;
-  uint64_t RawData : 62;
+  uint64_t RawData : 61;
 
   static uint64_t getMask(const BitFieldInfo FieldInfo) {
     const int FieldSizeInBits = FieldInfo[0];
@@ -336,19 +339,16 @@ private:
     return getMask(FieldInfo) & (RawData >> FieldInfo[1]);
   }
 
-  void init(bool IsPointer, bool IsVector, ElementCount EC, uint64_t SizeInBits,
-            unsigned AddressSpace) {
+  void init(bool IsPointer, bool IsVector, bool IsScalar, ElementCount EC,
+            uint64_t SizeInBits, unsigned AddressSpace) {
     assert(SizeInBits <= std::numeric_limits<unsigned>::max() &&
            "Not enough bits in LLT to represent size");
     this->IsPointer = IsPointer;
     this->IsVector = IsVector;
-    if (!IsVector) {
-      if (!IsPointer)
-        RawData = maskAndShift(SizeInBits, ScalarSizeFieldInfo);
-      else
-        RawData = maskAndShift(SizeInBits, PointerSizeFieldInfo) |
-                  maskAndShift(AddressSpace, PointerAddressSpaceFieldInfo);
-    } else {
+    this->IsScalar = IsScalar;
+    if (IsScalar)
+      RawData = maskAndShift(SizeInBits, ScalarSizeFieldInfo);
+    else if (IsVector) {
       assert(EC.isVector() && "invalid number of vector elements");
       if (!IsPointer)
         RawData =
@@ -363,13 +363,17 @@ private:
             maskAndShift(AddressSpace, PointerVectorAddressSpaceFieldInfo) |
             maskAndShift(EC.isScalable() ? 1 : 0,
                          PointerVectorScalableFieldInfo);
-    }
+    } else if (IsPointer)
+      RawData = maskAndShift(SizeInBits, PointerSizeFieldInfo) |
+                maskAndShift(AddressSpace, PointerAddressSpaceFieldInfo);
+    else
+      llvm_unreachable("unexpected LLT configuration");
   }
 
 public:
   uint64_t getUniqueRAWLLTData() const {
-    return ((uint64_t)RawData) << 2 | ((uint64_t)IsPointer) << 1 |
-           ((uint64_t)IsVector);
+    return ((uint64_t)RawData) << 3 | ((uint64_t)IsScalar) << 2 |
+           ((uint64_t)IsPointer) << 1 | ((uint64_t)IsVector);
   }
 };
 
