@@ -11,7 +11,6 @@
 #include "TestFS.h"
 #include "support/Context.h"
 
-#include "clang/Tooling/ArgumentsAdjusters.h"
 #include "llvm/ADT/ScopeExit.h"
 #include "llvm/ADT/StringExtras.h"
 #include "llvm/Support/FileSystem.h"
@@ -166,15 +165,13 @@ TEST(CommandMangler, ConfigEdits) {
         for (char &C : Arg)
           C = llvm::toUpper(C);
     });
-    Cfg.CompileFlags.Edits.push_back([](std::vector<std::string> &Argv) {
-      Argv = tooling::getInsertArgumentAdjuster("--hello")(Argv, "");
-    });
+    Cfg.CompileFlags.Edits.push_back(
+        [](std::vector<std::string> &Argv) { Argv.push_back("--hello"); });
     WithContextValue WithConfig(Config::Key, std::move(Cfg));
     Mangler.adjust(Cmd);
   }
-  // Edits are applied in given order and before other mangling and they always
-  // go before filename.
-  EXPECT_THAT(Cmd, ElementsAre(_, "--hello", "--", "FOO.CC"));
+  // Edits are applied in given order and before other mangling.
+  EXPECT_THAT(Cmd, ElementsAre(_, "FOO.CC", "--hello"));
 }
 
 static std::string strip(llvm::StringRef Arg, llvm::StringRef Argv) {
@@ -338,8 +335,9 @@ TEST(ArgStripperTest, OrderDependent) {
 }
 
 TEST(PrintArgvTest, All) {
-  std::vector<llvm::StringRef> Args = {"one",      "two",    "thr ee",
-                                       "f\"o\"ur", "fi\\ve", "$"};
+  std::vector<llvm::StringRef> Args = {
+      "one", "two", "thr ee", "f\"o\"ur", "fi\\ve", "$"
+  };
   const char *Expected = R"(one two "thr ee" "f\"o\"ur" "fi\\ve" $)";
   EXPECT_EQ(Expected, printArgv(Args));
 }
