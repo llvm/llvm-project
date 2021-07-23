@@ -11635,8 +11635,8 @@ ScalarEvolution::howManyLessThans(const SCEV *LHS, const SCEV *RHS,
     // Precondition a) implies that if the stride is negative, this is a single
     // trip loop. The backedge taken count formula reduces to zero in this case.
     //
-    // Precondition b) implies that the unknown stride cannot be zero otherwise
-    // we have UB.
+    // Precondition b) implies that if rhs is invariant in L, then unknown
+    // stride being zero means the backedge can't be taken without UB.
     //
     // The positive stride case is the same as isKnownPositive(Stride) returning
     // true (original behavior of the function).
@@ -11657,34 +11657,36 @@ ScalarEvolution::howManyLessThans(const SCEV *LHS, const SCEV *RHS,
         !loopIsFiniteByAssumption(L))
       return getCouldNotCompute();
 
-    // We allow a potentially zero stride, but we need to divide by stride
-    // below.  Since the loop can't be infinite and this check must control
-    // the sole exit, we can infer the exit must be taken on the first
-    // iteration (e.g. backedge count = 0) if the stride is zero.  Given that,
-    // we know the numerator in the divides below must be zero, so we can
-    // pick an arbitrary non-zero value for the denominator (e.g. stride)
-    // and produce the right result.
-    // FIXME: Handle the case where Stride is poison?
-    auto wouldZeroStrideBeUB = [&]() {
-      // If RHS isn't loop invariant, bail out for now. This isn't necessary
-      // for the proof, but isLoopEntryGuardedByCond only works on
-      // loop-invariant values.
+    if (!isKnownNonZero(Stride)) {
+      // If we have a step of zero, and RHS isn't invariant in L, we don't know
+      // if it might eventually be greater than start and if so, on which
+      // iteration.  We can't even produce a useful upper bound.
       if (!isLoopInvariant(RHS, L))
-        return false;
+        return getCouldNotCompute();
 
-      // Proof by contradiction.  Suppose the stride were zero.  If we can
-      // prove that the backedge *is* taken on the first iteration, then since
-      // we know this condition controls the sole exit, we must have an
-      // infinite loop.  We can't have a (well defined) infinite loop per
-      // check just above.
-      // Note: The (Start - Stride) term is used to get the start' term from
-      // (start' + stride,+,stride). Remember that we only care about the
-      // result of this expression when stride == 0 at runtime.
-      auto *StartIfZero = getMinusSCEV(IV->getStart(), Stride);
-      return isLoopEntryGuardedByCond(L, Cond, StartIfZero, RHS);
-    };
-    if (!isKnownNonZero(Stride) && !wouldZeroStrideBeUB()) {
-      Stride = getUMaxExpr(Stride, getOne(Stride->getType()));
+      // We allow a potentially zero stride, but we need to divide by stride
+      // below.  Since the loop can't be infinite and this check must control
+      // the sole exit, we can infer the exit must be taken on the first
+      // iteration (e.g. backedge count = 0) if the stride is zero.  Given that,
+      // we know the numerator in the divides below must be zero, so we can
+      // pick an arbitrary non-zero value for the denominator (e.g. stride)
+      // and produce the right result.
+      // FIXME: Handle the case where Stride is poison?
+      auto wouldZeroStrideBeUB = [&]() {
+        // Proof by contradiction.  Suppose the stride were zero.  If we can
+        // prove that the backedge *is* taken on the first iteration, then since
+        // we know this condition controls the sole exit, we must have an
+        // infinite loop.  We can't have a (well defined) infinite loop per
+        // check just above.
+        // Note: The (Start - Stride) term is used to get the start' term from
+        // (start' + stride,+,stride). Remember that we only care about the
+        // result of this expression when stride == 0 at runtime.
+        auto *StartIfZero = getMinusSCEV(IV->getStart(), Stride);
+        return isLoopEntryGuardedByCond(L, Cond, StartIfZero, RHS);
+      };
+      if (!wouldZeroStrideBeUB()) {
+        Stride = getUMaxExpr(Stride, getOne(Stride->getType()));
+      }
     }
   } else if (!Stride->isOne() && !NoWrap) {
     auto isUBOnWrap = [&]() {
