@@ -590,20 +590,6 @@ f32x4 max_f32x4(f32x4 x, f32x4 y) {
   // WEBASSEMBLY-NEXT: ret
 }
 
-f32x4 pmin_f32x4(f32x4 x, f32x4 y) {
-  return __builtin_wasm_pmin_f32x4(x, y);
-  // WEBASSEMBLY: call <4 x float> @llvm.wasm.pmin.v4f32(
-  // WEBASSEMBLY-SAME: <4 x float> %x, <4 x float> %y)
-  // WEBASSEMBLY-NEXT: ret
-}
-
-f32x4 pmax_f32x4(f32x4 x, f32x4 y) {
-  return __builtin_wasm_pmax_f32x4(x, y);
-  // WEBASSEMBLY: call <4 x float> @llvm.wasm.pmax.v4f32(
-  // WEBASSEMBLY-SAME: <4 x float> %x, <4 x float> %y)
-  // WEBASSEMBLY-NEXT: ret
-}
-
 f64x2 min_f64x2(f64x2 x, f64x2 y) {
   return __builtin_wasm_min_f64x2(x, y);
   // WEBASSEMBLY: call <2 x double> @llvm.minimum.v2f64(
@@ -614,20 +600,6 @@ f64x2 min_f64x2(f64x2 x, f64x2 y) {
 f64x2 max_f64x2(f64x2 x, f64x2 y) {
   return __builtin_wasm_max_f64x2(x, y);
   // WEBASSEMBLY: call <2 x double> @llvm.maximum.v2f64(
-  // WEBASSEMBLY-SAME: <2 x double> %x, <2 x double> %y)
-  // WEBASSEMBLY-NEXT: ret
-}
-
-f64x2 pmin_f64x2(f64x2 x, f64x2 y) {
-  return __builtin_wasm_pmin_f64x2(x, y);
-  // WEBASSEMBLY: call <2 x double> @llvm.wasm.pmin.v2f64(
-  // WEBASSEMBLY-SAME: <2 x double> %x, <2 x double> %y)
-  // WEBASSEMBLY-NEXT: ret
-}
-
-f64x2 pmax_f64x2(f64x2 x, f64x2 y) {
-  return __builtin_wasm_pmax_f64x2(x, y);
-  // WEBASSEMBLY: call <2 x double> @llvm.wasm.pmax.v2f64(
   // WEBASSEMBLY-SAME: <2 x double> %x, <2 x double> %y)
   // WEBASSEMBLY-NEXT: ret
 }
