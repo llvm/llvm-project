@@ -15662,6 +15662,15 @@ Value *CodeGenFunction::EmitPPCBuiltinExpr(unsigned BuiltinID,
     auto Pair = EmitAtomicCompareExchange(
         LV, RValue::get(OldVal), RValue::get(Ops[2]), E->getExprLoc(),
         llvm::AtomicOrdering::Monotonic, llvm::AtomicOrdering::Monotonic, true);
+    // Unlike c11's atomic_compare_exchange, accroding to
+    // https://www.ibm.com/docs/en/xl-c-and-cpp-aix/16.1?topic=functions-compare-swap-compare-swaplp
+    // > In either case, the contents of the memory location specified by addr
+    // > are copied into the memory location specified by old_val_addr.
+    // But it hasn't specified storing to OldValAddr is atomic or not and
+    // which order to use. Now following XL's codegen, treat it as a normal
+    // store.
+    Value *LoadedVal = Pair.first.getScalarVal();
+    Builder.CreateStore(LoadedVal, OldValAddr);
     return Pair.second;
   }
   case PPC::BI__builtin_ppc_fetch_and_add:
