@@ -5,9 +5,13 @@
     *                                                *
     **************************************************
 
-.. _amdgpu_synid_gfx9_opt:
+.. _amdgpu_synid_gfx9_sbase_1:
 
-opt
-===
+sbase
+=====
 
-This is an optional operand. It must be used if and only if :ref:`glc<amdgpu_synid_glc>` is specified.
+A 128-bit buffer resource constant for scalar memory operations which provides a base address, a size and a stride.
+
+*Size:* 4 dwords.
+
+*Operands:* :ref:`s<amdgpu_synid_s>`, :ref:`ttmp<amdgpu_synid_ttmp>`

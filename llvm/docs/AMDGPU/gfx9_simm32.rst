@@ -5,9 +5,9 @@
     *                                                *
     **************************************************
 
-.. _amdgpu_synid_gfx9_opt:
+.. _amdgpu_synid_gfx9_simm32:
 
-opt
-===
+simm32
+======
 
-This is an optional operand. It must be used if and only if :ref:`glc<amdgpu_synid_glc>` is specified.
+An :ref:`integer_number<amdgpu_synid_integer_number>` or an :ref:`absolute_expression<amdgpu_synid_absolute_expression>`. The value is truncated to 32 bits.

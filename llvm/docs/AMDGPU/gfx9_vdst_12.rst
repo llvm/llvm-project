@@ -5,9 +5,13 @@
     *                                                *
     **************************************************
 
-.. _amdgpu_synid_gfx9_opt:
+.. _amdgpu_synid_gfx9_vdst_12:
 
-opt
-===
+vdst
+====
 
-This is an optional operand. It must be used if and only if :ref:`glc<amdgpu_synid_glc>` is specified.
+Instruction output: data read from a memory buffer.
+
+*Size:* 4 dwords by default. :ref:`tfe<amdgpu_synid_tfe>` adds 1 dword if specified.
+
+*Operands:* :ref:`v<amdgpu_synid_v>`

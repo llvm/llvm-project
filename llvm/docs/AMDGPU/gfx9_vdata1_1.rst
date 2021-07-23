@@ -5,9 +5,13 @@
     *                                                *
     **************************************************
 
-.. _amdgpu_synid_gfx9_opt:
+.. _amdgpu_synid_gfx9_vdata1_1:
 
-opt
-===
+vdata1
+======
 
-This is an optional operand. It must be used if and only if :ref:`glc<amdgpu_synid_glc>` is specified.
+Instruction input.
+
+*Size:* 2 dwords.
+
+*Operands:* :ref:`v<amdgpu_synid_v>`

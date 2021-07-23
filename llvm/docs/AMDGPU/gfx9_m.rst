@@ -5,9 +5,9 @@
     *                                                *
     **************************************************
 
-.. _amdgpu_synid_gfx9_opt:
+.. _amdgpu_synid_gfx9_m:
 
-opt
-===
+m
+=
 
-This is an optional operand. It must be used if and only if :ref:`glc<amdgpu_synid_glc>` is specified.
+This operand may be used with integer operand modifier :ref:`sext<amdgpu_synid_sext>`.

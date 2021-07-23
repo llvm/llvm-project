@@ -5,9 +5,13 @@
     *                                                *
     **************************************************
 
-.. _amdgpu_synid_gfx9_opt:
+.. _amdgpu_synid_gfx9_ssamp:
 
-opt
-===
+ssamp
+=====
 
-This is an optional operand. It must be used if and only if :ref:`glc<amdgpu_synid_glc>` is specified.
+Sampler constant used to specify filtering options applied to the image data after it is read.
+
+*Size:* 4 dwords.
+
+*Operands:* :ref:`s<amdgpu_synid_s>`, :ref:`ttmp<amdgpu_synid_ttmp>`

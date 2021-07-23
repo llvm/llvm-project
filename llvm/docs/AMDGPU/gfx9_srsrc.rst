@@ -5,9 +5,13 @@
     *                                                *
     **************************************************
 
-.. _amdgpu_synid_gfx9_opt:
+.. _amdgpu_synid_gfx9_srsrc:
 
-opt
-===
+srsrc
+=====
 
-This is an optional operand. It must be used if and only if :ref:`glc<amdgpu_synid_glc>` is specified.
+Image resource constant which defines the location of the image buffer in memory, its dimensions, tiling, and data format.
+
+*Size:* 8 dwords.
+
+*Operands:* :ref:`s<amdgpu_synid_s>`, :ref:`ttmp<amdgpu_synid_ttmp>`
