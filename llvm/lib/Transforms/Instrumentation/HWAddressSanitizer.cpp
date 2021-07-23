@@ -362,7 +362,8 @@ public:
   explicit HWAddressSanitizerLegacyPass(bool CompileKernel = false,
                                         bool Recover = false,
                                         bool DisableOptimization = false)
-      : FunctionPass(ID), CompileKernel(CompileKernel), Recover(Recover) {
+      : FunctionPass(ID), CompileKernel(CompileKernel), Recover(Recover),
+        DisableOptimization(DisableOptimization) {
     initializeHWAddressSanitizerLegacyPassPass(
         *PassRegistry::getPassRegistry());
   }
