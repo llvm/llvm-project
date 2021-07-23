@@ -45,24 +45,27 @@ void f0() {
   int *_dummy1 = &(*(x1 + 1));
 }
 
-// FIXME: The checks for this function are broken; we should error
-// on promoting a register array to a pointer! (C99 6.3.2.1p3)
 void f1() {
   register int x0[10];
-  int *_dummy00 = x0; // fixme-error {{address of register variable requested}}
-  int *_dummy01 = &(*x0); // fixme-error {{address of register variable requested}}
+  int *_dummy00 = x0;     // expected-error {{address of register variable requested}}
+  int *_dummy01 = &(*x0); // expected-error {{address of register variable requested}}
 
   register int x1[10];
-  int *_dummy1 = &(*(x1 + 1)); // fixme-error {{address of register variable requested}}
+  int *_dummy1 = &(*(x1 + 1)); // expected-error {{address of register variable requested}}
 
   register int *x2;
   int *_dummy2 = &(*(x2 + 1));
 
   register int x3[10][10][10];
-  int (*_dummy3)[10] = &x3[0][0]; // expected-error {{address of register variable requested}}
+  int(*_dummy3)[10] = &x3[0][0]; // expected-error {{address of register variable requested}}
 
   register struct { int f0[10]; } x4;
   int *_dummy4 = &x4.f0[2]; // expected-error {{address of register variable requested}}
+
+  add_one(x0);      // expected-error {{address of register variable requested}}
+  (void)sizeof(x0); // OK, not an array decay.
+
+  int *p = ((int *)x0)++; // expected-error {{address of register variable requested}}
 }
 
 void f2() {
@@ -86,12 +89,8 @@ void f4() {
 void f5() {
   register int arr[2];
 
-  /* This is just here because if we happened to support this as an
-     lvalue we would need to give a warning. Note that gcc warns about
-     this as a register before it warns about it as an invalid
-     lvalue. */
-  int *_dummy0 = &(int*) arr; // expected-error {{cannot take the address of an rvalue}}
-  int *_dummy1 = &(arr + 1); // expected-error {{cannot take the address of an rvalue}}
+  int *_dummy0 = &(int*) arr; // expected-error {{address of register variable requested}}
+  int *_dummy1 = &(arr + 1); // expected-error {{address of register variable requested}}
 }
 
 void f6(register int x) {
