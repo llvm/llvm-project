@@ -61,6 +61,9 @@ DLWRAP(cuDeviceCanAccessPeer, 3);
 DLWRAP(cuCtxEnablePeerAccess, 2);
 DLWRAP(cuMemcpyPeerAsync, 6);
 
+DLWRAP(cuCtxGetLimit, 2);
+DLWRAP(cuCtxSetLimit, 2);
+
 DLWRAP_FINALIZE();
 
 #ifndef DYNAMIC_CUDA_PATH

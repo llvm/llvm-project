@@ -12,7 +12,7 @@ define void @reduce() {
 ; CHECK-NEXT:  Cost Model: Found an estimated cost of 181 for instruction: %V64 = call i1 @llvm.vector.reduce.and.v64i1(<64 x i1> undef)
 ; CHECK-NEXT:  Cost Model: Found an estimated cost of 362 for instruction: %V128 = call i1 @llvm.vector.reduce.and.v128i1(<128 x i1> undef)
 ; CHECK-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: %V1i8 = call i8 @llvm.vector.reduce.and.v1i8(<1 x i8> undef)
-; CHECK-NEXT:  Cost Model: Found an estimated cost of 13 for instruction: %V3i8 = call i8 @llvm.vector.reduce.and.v3i8(<3 x i8> undef)
+; CHECK-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: %V3i8 = call i8 @llvm.vector.reduce.and.v3i8(<3 x i8> undef)
 ; CHECK-NEXT:  Cost Model: Found an estimated cost of 7 for instruction: %V4i8 = call i8 @llvm.vector.reduce.and.v4i8(<4 x i8> undef)
 ; CHECK-NEXT:  Cost Model: Found an estimated cost of 15 for instruction: %V8i8 = call i8 @llvm.vector.reduce.and.v8i8(<8 x i8> undef)
 ; CHECK-NEXT:  Cost Model: Found an estimated cost of 17 for instruction: %V16i8 = call i8 @llvm.vector.reduce.and.v16i8(<16 x i8> undef)

@@ -1,16 +1,25 @@
 // RUN: mlir-opt %s -split-input-file -async-parallel-for=async-dispatch=true  \
-// RUN: | FileCheck %s
+// RUN: | FileCheck %s --dump-input=always
 
-// CHECK-LABEL: @loop_1d
+// CHECK-LABEL: @loop_1d(
+// CHECK-SAME:    %[[LB:.*]]: index, %[[UB:.*]]: index, %[[STEP:.*]]: index
 func @loop_1d(%arg0: index, %arg1: index, %arg2: index, %arg3: memref<?xf32>) {
-  // CHECK: %[[C0:.*]] = constant 0 : index
-  // CHECK: %[[GROUP:.*]] = async.create_group
-  // CHECK: scf.if {{.*}} {
-  // CHECK:   call @parallel_compute_fn(%[[C0]]
-  // CHECK: } else {
-  // CHECK:   call @async_dispatch_fn
-  // CHECK: }
-  // CHECK: async.await_all %[[GROUP]]
+  // CHECK:      %[[C0:.*]] = constant 0 : index
+
+  // CHECK:      %[[RANGE:.*]] = subi %[[UB]], %[[LB]]
+  // CHECK:      %[[TRIP_CNT:.*]] = ceildivi_signed %[[RANGE]], %[[STEP]]
+  // CHECK:      %[[IS_NOOP:.*]] = cmpi eq, %[[TRIP_CNT]], %[[C0]] : index
+
+  // CHECK:      scf.if %[[IS_NOOP]] {
+  // CHECK-NEXT: } else {
+  // CHECK:        %[[GROUP:.*]] = async.create_group
+  // CHECK:        scf.if {{.*}} {
+  // CHECK:          call @parallel_compute_fn(%[[C0]]
+  // CHECK:        } else {
+  // CHECK:          call @async_dispatch_fn
+  // CHECK:        }
+  // CHECK:        async.await_all %[[GROUP]]
+  // CHECK:      }
   scf.parallel (%i) = (%arg0) to (%arg1) step (%arg2) {
     %one = constant 1.0 : f32
     memref.store %one, %arg3[%i] : memref<?xf32>

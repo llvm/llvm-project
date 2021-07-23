@@ -16251,6 +16251,30 @@ long16 __ovld __cnfn bit_reverse(long16);
 ulong16 __ovld __cnfn bit_reverse(ulong16);
 #endif // cl_khr_extended_bit_ops
 
+#if defined(__opencl_c_integer_dot_product_input_4x8bit)
+uint __ovld __cnfn dot(uchar4, uchar4);
+int __ovld __cnfn dot(char4, char4);
+int __ovld __cnfn dot(uchar4, char4);
+int __ovld __cnfn dot(char4, uchar4);
+
+uint __ovld __cnfn dot_acc_sat(uchar4, uchar4, uint);
+int __ovld __cnfn dot_acc_sat(char4, char4, int);
+int __ovld __cnfn dot_acc_sat(uchar4, char4, int);
+int __ovld __cnfn dot_acc_sat(char4, uchar4, int);
+#endif // __opencl_c_integer_dot_product_input_4x8bit
+
+#if defined(__opencl_c_integer_dot_product_input_4x8bit_packed)
+uint __ovld __cnfn dot_4x8packed_uu_uint(uint, uint);
+int __ovld __cnfn dot_4x8packed_ss_int(uint, uint);
+int __ovld __cnfn dot_4x8packed_us_int(uint, uint);
+int __ovld __cnfn dot_4x8packed_su_int(uint, uint);
+
+uint __ovld __cnfn dot_acc_sat_4x8packed_uu_uint(uint, uint, uint);
+int __ovld __cnfn dot_acc_sat_4x8packed_ss_int(uint, uint, int);
+int __ovld __cnfn dot_acc_sat_4x8packed_us_int(uint, uint, int);
+int __ovld __cnfn dot_acc_sat_4x8packed_su_int(uint, uint, int);
+#endif // __opencl_c_integer_dot_product_input_4x8bit_packed
+
 #if defined(cl_intel_subgroups)
 // Intel-Specific Sub Group Functions
 float   __ovld __conv intel_sub_group_shuffle( float  x, uint c );

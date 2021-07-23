@@ -451,24 +451,47 @@ unsigned char _InterlockedCompareExchange128_rel(__int64 volatile *_Destination,
 static __inline__ void __DEFAULT_FN_ATTRS __movsb(unsigned char *__dst,
                                                   unsigned char const *__src,
                                                   size_t __n) {
-  __asm__ __volatile__("rep movsb" : "+D"(__dst), "+S"(__src), "+c"(__n)
-                       : : "memory");
+#if defined(__x86_64__)
+  __asm__ __volatile__("rep movsb"
+                       : "+D"(__dst), "+S"(__src), "+c"(__n)
+                       :
+                       : "memory");
+#else
+  __asm__ __volatile__("xchg %%esi, %1\nrep movsb\nxchg %%esi, %1"
+                       : "+D"(__dst), "+r"(__src), "+c"(__n)
+                       :
+                       : "memory");
+#endif
 }
 static __inline__ void __DEFAULT_FN_ATTRS __movsd(unsigned long *__dst,
                                                   unsigned long const *__src,
                                                   size_t __n) {
+#if defined(__x86_64__)
   __asm__ __volatile__("rep movsl"
                        : "+D"(__dst), "+S"(__src), "+c"(__n)
                        :
                        : "memory");
+#else
+  __asm__ __volatile__("xchg %%esi, %1\nrep movsl\nxchg %%esi, %1"
+                       : "+D"(__dst), "+r"(__src), "+c"(__n)
+                       :
+                       : "memory");
+#endif
 }
 static __inline__ void __DEFAULT_FN_ATTRS __movsw(unsigned short *__dst,
                                                   unsigned short const *__src,
                                                   size_t __n) {
+#if defined(__x86_64__)
   __asm__ __volatile__("rep movsw"
                        : "+D"(__dst), "+S"(__src), "+c"(__n)
                        :
                        : "memory");
+#else
+  __asm__ __volatile__("xchg %%esi, %1\nrep movsw\nxchg %%esi, %1"
+                       : "+D"(__dst), "+r"(__src), "+c"(__n)
+                       :
+                       : "memory");
+#endif
 }
 static __inline__ void __DEFAULT_FN_ATTRS __stosd(unsigned long *__dst,
                                                   unsigned long __x,
