@@ -228,6 +228,7 @@ namespace {
 struct ArchiveMember {
   MemoryBufferRef mbref;
   uint32_t modTime;
+  uint64_t offsetInArchive;
 };
 } // namespace
 
@@ -257,7 +258,7 @@ static std::vector<ArchiveMember> getArchiveMembers(MemoryBufferRef mb) {
         CHECK(c.getLastModified(), mb.getBufferIdentifier() +
                                        ": could not get the modification "
                                        "time for a child of the archive"));
-    v.push_back({mbref, modTime});
+    v.push_back({mbref, modTime, c.getChildOffset()});
   }
   if (err)
     fatal(mb.getBufferIdentifier() +
@@ -298,7 +299,8 @@ static InputFile *addFile(StringRef path, bool forceLoadArchive,
       if (Optional<MemoryBufferRef> buffer = readFile(path)) {
         for (const ArchiveMember &member : getArchiveMembers(*buffer)) {
           if (Optional<InputFile *> file = loadArchiveMember(
-                  member.mbref, member.modTime, path, /*objCOnly=*/false)) {
+                  member.mbref, member.modTime, path, /*objCOnly=*/false,
+                  member.offsetInArchive)) {
             inputFiles.insert(*file);
             printArchiveMemberLoad(
                 (forceLoadArchive ? "-force_load" : "-all_load"),
@@ -319,7 +321,8 @@ static InputFile *addFile(StringRef path, bool forceLoadArchive,
       if (Optional<MemoryBufferRef> buffer = readFile(path)) {
         for (const ArchiveMember &member : getArchiveMembers(*buffer)) {
           if (Optional<InputFile *> file = loadArchiveMember(
-                  member.mbref, member.modTime, path, /*objCOnly=*/true)) {
+                  member.mbref, member.modTime, path, /*objCOnly=*/true,
+                  member.offsetInArchive)) {
             inputFiles.insert(*file);
             printArchiveMemberLoad("-ObjC", inputFiles.back());
           }
@@ -343,7 +346,7 @@ static InputFile *addFile(StringRef path, bool forceLoadArchive,
     }
     break;
   case file_magic::bitcode:
-    newFile = make<BitcodeFile>(mbref);
+    newFile = make<BitcodeFile>(mbref, "", 0);
     break;
   case file_magic::macho_executable:
   case file_magic::macho_bundle:

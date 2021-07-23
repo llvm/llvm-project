@@ -713,10 +713,8 @@ Attributor::getAssumedSimplified(const IRPosition &IRP,
   // First check all callbacks provided by outside AAs. If any of them returns
   // a non-null value that is different from the associated value, or None, we
   // assume it's simpliied.
-  for (auto &CB : SimplificationCallbacks[IRP]) {
-    Optional<Value *> SimplifiedV = CB(IRP, AA, UsedAssumedInformation);
-    return SimplifiedV;
-  }
+  for (auto &CB : SimplificationCallbacks[IRP])
+    return CB(IRP, AA, UsedAssumedInformation);
 
   // If no high-level/outside simplification occured, use AAValueSimplify.
   const auto &ValueSimplifyAA =

@@ -21,114 +21,70 @@
 
 static constexpr unsigned MinBytes = 8;
 
-template <unsigned BytesPerThread, unsigned NThreads = MAX_THREADS_PER_TEAM>
+template <unsigned BPerThread, unsigned NThreads = MAX_THREADS_PER_TEAM>
 struct alignas(32) ThreadStackTy {
-  static constexpr unsigned MaxSize = NThreads * BytesPerThread;
+  static constexpr unsigned BytesPerThread = BPerThread;
   static constexpr unsigned NumThreads = NThreads;
   static constexpr unsigned NumWarps = (NThreads + WARPSIZE - 1) / WARPSIZE;
-  static constexpr unsigned MaxSizePerWarp = MaxSize / NumWarps;
 
-  unsigned char Data[MaxSize];
-  char Sizes[MaxSize / MinBytes];
-  char SizeUsage[NumWarps];
-  char Usage[NumWarps];
+  unsigned char Data[NumThreads][BytesPerThread];
+  unsigned char Usage[NumThreads];
 };
 
 [[clang::loader_uninitialized]] ThreadStackTy<MinBytes * 8, 1> MainSharedStack;
 #pragma omp allocate(MainSharedStack) allocator(omp_pteam_mem_alloc)
 
-[[clang::loader_uninitialized]] ThreadStackTy<MinBytes * 2,
-                                              MAX_THREADS_PER_TEAM / 8>
+[[clang::loader_uninitialized]] ThreadStackTy<MinBytes,
+                                              MAX_THREADS_PER_TEAM / 4>
     WorkerSharedStack;
 #pragma omp allocate(WorkerSharedStack) allocator(omp_pteam_mem_alloc)
 
-template <typename AllocTy>
-static void *__kmpc_alloc_for_warp(AllocTy Alloc, unsigned Bytes,
-                                   unsigned WarpBytes) {
-  void *Ptr;
-  __kmpc_impl_lanemask_t CurActive = __kmpc_impl_activemask();
-  unsigned LeaderID = __kmpc_impl_ffs(CurActive) - 1;
-  bool IsWarpLeader =
-      (__kmpc_get_hardware_thread_id_in_block() % WARPSIZE) == LeaderID;
-  if (IsWarpLeader)
-    Ptr = Alloc();
-  // Get address from the first active lane.
-  int *FP = (int *)&Ptr;
-  FP[0] = __kmpc_impl_shfl_sync(CurActive, FP[0], LeaderID);
-  if (sizeof(Ptr) == 8)
-    FP[1] = __kmpc_impl_shfl_sync(CurActive, FP[1], LeaderID);
-  return (void *)&((char *)(Ptr))[(GetLaneId() - LeaderID) * Bytes];
-}
-
 EXTERN void *__kmpc_alloc_shared(size_t Bytes) {
-  Bytes = Bytes + (Bytes % MinBytes);
+  size_t AlignedBytes = Bytes + (Bytes % MinBytes);
   int TID = __kmpc_get_hardware_thread_id_in_block();
   if (__kmpc_is_generic_main_thread(TID)) {
     // Main thread alone, use shared memory if space is available.
-    if (MainSharedStack.Usage[0] + Bytes <= MainSharedStack.MaxSize) {
-      void *Ptr = &MainSharedStack.Data[MainSharedStack.Usage[0]];
-      MainSharedStack.Usage[0] += Bytes;
-      MainSharedStack.Sizes[MainSharedStack.SizeUsage[0]++] = Bytes;
+    if (MainSharedStack.Usage[0] + AlignedBytes <= MainSharedStack.BytesPerThread) {
+      void *Ptr = &MainSharedStack.Data[0][MainSharedStack.Usage[0]];
+      MainSharedStack.Usage[0] += AlignedBytes;
       return Ptr;
     }
-  } else {
-    int WID = GetWarpId();
-    unsigned WarpBytes = Bytes * WARPSIZE;
-    auto AllocSharedStack = [&]() {
-      unsigned WarpOffset = WID * WorkerSharedStack.MaxSizePerWarp;
-      void *Ptr =
-          &WorkerSharedStack.Data[WarpOffset + WorkerSharedStack.Usage[WID]];
-      WorkerSharedStack.Usage[WID] += WarpBytes;
-      WorkerSharedStack.Sizes[WorkerSharedStack.SizeUsage[WID]++] = WarpBytes;
+  } else if (TID < WorkerSharedStack.NumThreads) {
+    if (WorkerSharedStack.Usage[TID] + AlignedBytes <= WorkerSharedStack.BytesPerThread) {
+      void *Ptr = &WorkerSharedStack.Data[TID][WorkerSharedStack.Usage[TID]];
+      WorkerSharedStack.Usage[TID] += AlignedBytes;
       return Ptr;
-    };
-    if (TID < WorkerSharedStack.NumThreads &&
-        WorkerSharedStack.Usage[WID] + WarpBytes <=
-            WorkerSharedStack.MaxSizePerWarp)
-      return __kmpc_alloc_for_warp(AllocSharedStack, Bytes, WarpBytes);
+    }
   }
   // Fallback to malloc
-  unsigned WarpBytes = Bytes * WARPSIZE;
-  auto AllocGlobal = [&] {
-    return SafeMalloc(WarpBytes, "AllocGlobalFallback");
-  };
-  return __kmpc_alloc_for_warp(AllocGlobal, Bytes, WarpBytes);
+  return SafeMalloc(Bytes, "AllocGlobalFallback");
 }
 
-EXTERN void __kmpc_free_shared(void *Ptr, size_t /* Bytes */) {
-  __kmpc_impl_lanemask_t CurActive = __kmpc_impl_activemask();
-  unsigned LeaderID = __kmpc_impl_ffs(CurActive) - 1;
-  bool IsWarpLeader =
-      (__kmpc_get_hardware_thread_id_in_block() % WARPSIZE) == LeaderID;
-  __kmpc_syncwarp(CurActive);
-  if (IsWarpLeader) {
-    if (Ptr >= &MainSharedStack.Data[0] &&
-        Ptr < &MainSharedStack.Data[MainSharedStack.MaxSize]) {
-      unsigned Bytes = MainSharedStack.Sizes[--MainSharedStack.SizeUsage[0]];
-      MainSharedStack.Usage[0] -= Bytes;
+EXTERN void __kmpc_free_shared(void *Ptr, size_t Bytes) {
+  size_t AlignedBytes = Bytes + (Bytes % MinBytes);
+  int TID = __kmpc_get_hardware_thread_id_in_block();
+  if (__kmpc_is_generic_main_thread(TID)) {
+    if (Ptr >= &MainSharedStack.Data[0][0] &&
+        Ptr < &MainSharedStack.Data[MainSharedStack.NumThreads][0]) {
+      MainSharedStack.Usage[0] -= AlignedBytes;
       return;
     }
-    if (Ptr >= &WorkerSharedStack.Data[0] &&
-        Ptr < &WorkerSharedStack.Data[WorkerSharedStack.MaxSize]) {
-      int WID = GetWarpId();
-      unsigned Bytes =
-          WorkerSharedStack.Sizes[--WorkerSharedStack.SizeUsage[WID]];
-      WorkerSharedStack.Usage[WID] -= Bytes;
+  } else if (TID < WorkerSharedStack.NumThreads) {
+    if (Ptr >= &WorkerSharedStack.Data[0][0] &&
+        Ptr < &WorkerSharedStack.Data[WorkerSharedStack.NumThreads][0]) {
+      int TID = __kmpc_get_hardware_thread_id_in_block();
+      WorkerSharedStack.Usage[TID] -= AlignedBytes;
       return;
     }
-    SafeFree(Ptr, "FreeGlobalFallback");
   }
+  SafeFree(Ptr, "FreeGlobalFallback");
 }
 
 EXTERN void __kmpc_data_sharing_init_stack() {
-  for (unsigned i = 0; i < MainSharedStack.NumWarps; ++i) {
-    MainSharedStack.SizeUsage[i] = 0;
+  for (unsigned i = 0; i < MainSharedStack.NumWarps; ++i)
     MainSharedStack.Usage[i] = 0;
-  }
-  for (unsigned i = 0; i < WorkerSharedStack.NumWarps; ++i) {
-    WorkerSharedStack.SizeUsage[i] = 0;
+  for (unsigned i = 0; i < WorkerSharedStack.NumThreads; ++i)
     WorkerSharedStack.Usage[i] = 0;
-  }
 }
 
 /// Allocate storage in shared memory to communicate arguments from the main

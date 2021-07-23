@@ -1119,9 +1119,10 @@ public:
              ? getOffloadEntry(DeviceId, TgtEntryPtr)->name
              : "(null)",
          CudaBlocksPerGrid, CudaThreadsPerBlock,
-         (KernelInfo->ExecutionMode != SPMD 
-             ? (KernelInfo->ExecutionMode == GENERIC ? "Generic" : "SPMD-Generic")
-             : "SPMD"));
+         (KernelInfo->ExecutionMode != SPMD
+              ? (KernelInfo->ExecutionMode == GENERIC ? "Generic"
+                                                      : "SPMD-Generic")
+              : "SPMD"));
 
     CUstream Stream = getStream(DeviceId, AsyncInfo);
     Err = cuLaunchKernel(KernelInfo->Func, CudaBlocksPerGrid, /* gridDimY */ 1,

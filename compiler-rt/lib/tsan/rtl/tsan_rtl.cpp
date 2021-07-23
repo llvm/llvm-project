@@ -422,7 +422,6 @@ void Initialize(ThreadState *thr) {
   InitializeInterceptors();
   CheckShadowMapping();
   InitializePlatform();
-  InitializeMutex();
   InitializeDynamicAnnotations();
 #if !SANITIZER_GO
   InitializeShadowMemory();
@@ -1133,7 +1132,28 @@ void build_consistency_release() {}
 
 }  // namespace __tsan
 
+#if SANITIZER_CHECK_DEADLOCKS
+namespace __sanitizer {
+using namespace __tsan;
+MutexMeta mutex_meta[] = {
+    {MutexInvalid, "Invalid", {}},
+    {MutexThreadRegistry, "ThreadRegistry", {}},
+    {MutexTypeTrace, "Trace", {MutexLeaf}},
+    {MutexTypeReport, "Report", {MutexTypeSyncVar}},
+    {MutexTypeSyncVar, "SyncVar", {}},
+    {MutexTypeAnnotations, "Annotations", {}},
+    {MutexTypeAtExit, "AtExit", {MutexTypeSyncVar}},
+    {MutexTypeFired, "Fired", {MutexLeaf}},
+    {MutexTypeRacy, "Racy", {MutexLeaf}},
+    {MutexTypeGlobalProc, "GlobalProc", {}},
+    {},
+};
+
+void PrintMutexPC(uptr pc) { StackTrace(&pc, 1).Print(); }
+}  // namespace __sanitizer
+#endif
+
 #if !SANITIZER_GO
 // Must be included in this file to make sure everything is inlined.
-#include "tsan_interface_inl.h"
+#  include "tsan_interface_inl.h"
 #endif

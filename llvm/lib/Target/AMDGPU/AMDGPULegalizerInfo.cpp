@@ -4153,12 +4153,11 @@ static void packImage16bitOpsToDwords(MachineIRBuilder &B, MachineInstr &MI,
 
     Register AddrReg = SrcOp.getReg();
 
-    if (I < Intr->GradientStart) {
-      AddrReg = B.buildBitcast(V2S16, AddrReg).getReg(0);
-      PackedAddrs.push_back(AddrReg);
-    } else if ((I >= Intr->GradientStart && I < Intr->CoordStart && !IsG16) ||
-               (I >= Intr->CoordStart && !IsA16)) {
+    if ((I < Intr->GradientStart) ||
+        (I >= Intr->GradientStart && I < Intr->CoordStart && !IsG16) ||
+        (I >= Intr->CoordStart && !IsA16)) {
       // Handle any gradient or coordinate operands that should not be packed
+      AddrReg = B.buildBitcast(V2S16, AddrReg).getReg(0);
       PackedAddrs.push_back(AddrReg);
     } else {
       // Dz/dh, dz/dv and the last odd coord are packed with undef. Also, in 1D,
@@ -4202,9 +4201,8 @@ static void convertImageAddrToPacked(MachineIRBuilder &B, MachineInstr &MI,
 
   int NumAddrRegs = AddrRegs.size();
   if (NumAddrRegs != 1) {
-    // Round up to 8 elements for v5-v7
-    // FIXME: Missing intermediate sized register classes and instructions.
-    if (NumAddrRegs > 4 && !isPowerOf2_32(NumAddrRegs)) {
+    // Above 8 elements round up to next power of 2 (i.e. 16).
+    if (NumAddrRegs > 8 && !isPowerOf2_32(NumAddrRegs)) {
       const int RoundedNumRegs = NextPowerOf2(NumAddrRegs);
       auto Undef = B.buildUndef(S32);
       AddrRegs.append(RoundedNumRegs - NumAddrRegs, Undef.getReg(0));
@@ -4375,7 +4373,8 @@ bool AMDGPULegalizerInfo::legalizeImageIntrinsic(
                                 IsG16);
 
       // See also below in the non-a16 branch
-      const bool UseNSA = PackedRegs.size() >= 3 && ST.hasNSAEncoding();
+      const bool UseNSA = ST.hasNSAEncoding() && PackedRegs.size() >= 3 &&
+                          PackedRegs.size() <= ST.getNSAMaxSize();
 
       if (!UseNSA && PackedRegs.size() > 1) {
         LLT PackedAddrTy = LLT::fixed_vector(2 * PackedRegs.size(), 16);
@@ -4412,7 +4411,8 @@ bool AMDGPULegalizerInfo::legalizeImageIntrinsic(
     //
     // SIShrinkInstructions will convert NSA encodings to non-NSA after register
     // allocation when possible.
-    const bool UseNSA = CorrectedNumVAddrs >= 3 && ST.hasNSAEncoding();
+    const bool UseNSA = ST.hasNSAEncoding() && CorrectedNumVAddrs >= 3 &&
+                        CorrectedNumVAddrs <= ST.getNSAMaxSize();
 
     if (!UseNSA && Intr->NumVAddrs > 1)
       convertImageAddrToPacked(B, MI, ArgOffset + Intr->VAddrStart,

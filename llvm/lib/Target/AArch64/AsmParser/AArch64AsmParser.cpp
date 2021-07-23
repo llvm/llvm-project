@@ -1944,7 +1944,7 @@ public:
   void print(raw_ostream &OS) const override;
 
   static std::unique_ptr<AArch64Operand>
-  CreateToken(StringRef Str, bool IsSuffix, SMLoc S, MCContext &Ctx) {
+  CreateToken(StringRef Str, SMLoc S, MCContext &Ctx, bool IsSuffix = false) {
     auto Op = std::make_unique<AArch64Operand>(k_Token, Ctx);
     Op->Tok.Data = Str.data();
     Op->Tok.Length = Str.size();
@@ -2875,10 +2875,8 @@ AArch64AsmParser::tryParseFPImm(OperandVector &Operands) {
       RealVal.changeSign();
 
     if (AddFPZeroAsLiteral && RealVal.isPosZero()) {
-      Operands.push_back(
-          AArch64Operand::CreateToken("#0", false, S, getContext()));
-      Operands.push_back(
-          AArch64Operand::CreateToken(".0", false, S, getContext()));
+      Operands.push_back(AArch64Operand::CreateToken("#0", S, getContext()));
+      Operands.push_back(AArch64Operand::CreateToken(".0", S, getContext()));
     } else
       Operands.push_back(AArch64Operand::CreateFPImm(
           RealVal, *StatusOrErr == APFloat::opOK, S, getContext()));
@@ -3274,8 +3272,7 @@ bool AArch64AsmParser::parseSysAlias(StringRef Name, SMLoc NameLoc,
     return TokError("invalid operand");
 
   Mnemonic = Name;
-  Operands.push_back(
-      AArch64Operand::CreateToken("sys", false, NameLoc, getContext()));
+  Operands.push_back(AArch64Operand::CreateToken("sys", NameLoc, getContext()));
 
   MCAsmParser &Parser = getParser();
   const AsmToken &Tok = Parser.getTok();
@@ -3551,8 +3548,7 @@ bool AArch64AsmParser::tryParseNeonVectorRegister(OperandVector &Operands) {
   // If there was an explicit qualifier, that goes on as a literal text
   // operand.
   if (!Kind.empty())
-    Operands.push_back(
-        AArch64Operand::CreateToken(Kind, false, S, getContext()));
+    Operands.push_back(AArch64Operand::CreateToken(Kind, S, getContext()));
 
   return tryParseVectorIndex(Operands) == MatchOperand_ParseFail;
 }
@@ -3658,8 +3654,7 @@ AArch64AsmParser::tryParseSVEPredicateVector(OperandVector &Operands) {
   }
 
   // Add a literal slash as operand
-  Operands.push_back(
-      AArch64Operand::CreateToken("/" , false, getLoc(), getContext()));
+  Operands.push_back(AArch64Operand::CreateToken("/", getLoc(), getContext()));
 
   Parser.Lex(); // Eat the slash.
 
@@ -3672,8 +3667,7 @@ AArch64AsmParser::tryParseSVEPredicateVector(OperandVector &Operands) {
 
   // Add zero/merge token.
   const char *ZM = Pred == "z" ? "z" : "m";
-  Operands.push_back(
-    AArch64Operand::CreateToken(ZM, false, getLoc(), getContext()));
+  Operands.push_back(AArch64Operand::CreateToken(ZM, getLoc(), getContext()));
 
   Parser.Lex(); // Eat zero/merge token.
   return MatchOperand_Success;
@@ -3985,12 +3979,12 @@ bool AArch64AsmParser::parseOptionalMulOperand(OperandVector &Operands) {
     return true;
 
   Operands.push_back(
-    AArch64Operand::CreateToken("mul", false, getLoc(), getContext()));
+      AArch64Operand::CreateToken("mul", getLoc(), getContext()));
   Parser.Lex(); // Eat the "mul"
 
   if (NextIsVL) {
     Operands.push_back(
-        AArch64Operand::CreateToken("vl", false, getLoc(), getContext()));
+        AArch64Operand::CreateToken("vl", getLoc(), getContext()));
     Parser.Lex(); // Eat the "vl"
     return false;
   }
@@ -4025,7 +4019,7 @@ bool AArch64AsmParser::parseKeywordOperand(OperandVector &Operands) {
                 .Case("za", "za")
                 .Default(Keyword);
   Operands.push_back(
-      AArch64Operand::CreateToken(Keyword, false, Tok.getLoc(), getContext()));
+      AArch64Operand::CreateToken(Keyword, Tok.getLoc(), getContext()));
 
   Parser.Lex();
   return false;
@@ -4065,8 +4059,7 @@ bool AArch64AsmParser::parseOperand(OperandVector &Operands, bool isCondCode,
   }
   case AsmToken::LBrac: {
     SMLoc Loc = Parser.getTok().getLoc();
-    Operands.push_back(AArch64Operand::CreateToken("[", false, Loc,
-                                                   getContext()));
+    Operands.push_back(AArch64Operand::CreateToken("[", Loc, getContext()));
     Parser.Lex(); // Eat '['
 
     // There's no comma after a '[', so we can parse the next operand
@@ -4078,8 +4071,7 @@ bool AArch64AsmParser::parseOperand(OperandVector &Operands, bool isCondCode,
       return false;
 
     SMLoc Loc = Parser.getTok().getLoc();
-    Operands.push_back(
-        AArch64Operand::CreateToken("{", false, Loc, getContext()));
+    Operands.push_back(AArch64Operand::CreateToken("{", Loc, getContext()));
     Parser.Lex(); // Eat '{'
 
     // There's no comma after a '{', so we can parse the next operand
@@ -4159,10 +4151,8 @@ bool AArch64AsmParser::parseOperand(OperandVector &Operands, bool isCondCode,
         return TokError("expected floating-point constant #0.0");
       Parser.Lex(); // Eat the token.
 
-      Operands.push_back(
-          AArch64Operand::CreateToken("#0", false, S, getContext()));
-      Operands.push_back(
-          AArch64Operand::CreateToken(".0", false, S, getContext()));
+      Operands.push_back(AArch64Operand::CreateToken("#0", S, getContext()));
+      Operands.push_back(AArch64Operand::CreateToken(".0", S, getContext()));
       return false;
     }
 
@@ -4202,9 +4192,9 @@ bool AArch64AsmParser::parseOperand(OperandVector &Operands, bool isCondCode,
         Imm >>= 16;
       }
       if (ShiftAmt <= MaxShiftAmt && Imm <= 0xFFFF) {
-          Operands[0] = AArch64Operand::CreateToken("movz", false, Loc, Ctx);
-          Operands.push_back(AArch64Operand::CreateImm(
-                     MCConstantExpr::create(Imm, Ctx), S, E, Ctx));
+        Operands[0] = AArch64Operand::CreateToken("movz", Loc, Ctx);
+        Operands.push_back(AArch64Operand::CreateImm(
+            MCConstantExpr::create(Imm, Ctx), S, E, Ctx));
         if (ShiftAmt)
           Operands.push_back(AArch64Operand::CreateShiftExtend(AArch64_AM::LSL,
                      ShiftAmt, true, S, E, Ctx));
@@ -4354,8 +4344,7 @@ bool AArch64AsmParser::ParseInstruction(ParseInstructionInfo &Info,
       Head == "cfp" || Head == "dvp" || Head == "cpp")
     return parseSysAlias(Head, NameLoc, Operands);
 
-  Operands.push_back(
-      AArch64Operand::CreateToken(Head, false, NameLoc, getContext()));
+  Operands.push_back(AArch64Operand::CreateToken(Head, NameLoc, getContext()));
   Mnemonic = Head;
 
   // Handle condition codes for a branch mnemonic
@@ -4369,8 +4358,8 @@ bool AArch64AsmParser::ParseInstruction(ParseInstructionInfo &Info,
     AArch64CC::CondCode CC = parseCondCodeString(Head);
     if (CC == AArch64CC::Invalid)
       return Error(SuffixLoc, "invalid condition code");
-    Operands.push_back(
-        AArch64Operand::CreateToken(".", true, SuffixLoc, getContext()));
+    Operands.push_back(AArch64Operand::CreateToken(".", SuffixLoc, getContext(),
+                                                   /*IsSuffix=*/true));
     Operands.push_back(
         AArch64Operand::CreateCondCode(CC, NameLoc, NameLoc, getContext()));
   }
@@ -4382,8 +4371,8 @@ bool AArch64AsmParser::ParseInstruction(ParseInstructionInfo &Info,
     Head = Name.slice(Start, Next);
     SMLoc SuffixLoc = SMLoc::getFromPointer(NameLoc.getPointer() +
                                             (Head.data() - Name.data()) + 1);
-    Operands.push_back(
-        AArch64Operand::CreateToken(Head, true, SuffixLoc, getContext()));
+    Operands.push_back(AArch64Operand::CreateToken(
+        Head, SuffixLoc, getContext(), /*IsSuffix=*/true));
   }
 
   // Conditional compare instructions have a Condition Code operand, which needs
@@ -4432,13 +4421,13 @@ bool AArch64AsmParser::ParseInstruction(ParseInstructionInfo &Info,
 
       if (parseOptionalToken(AsmToken::RBrac))
         Operands.push_back(
-            AArch64Operand::CreateToken("]", false, getLoc(), getContext()));
+            AArch64Operand::CreateToken("]", getLoc(), getContext()));
       if (parseOptionalToken(AsmToken::Exclaim))
         Operands.push_back(
-            AArch64Operand::CreateToken("!", false, getLoc(), getContext()));
+            AArch64Operand::CreateToken("!", getLoc(), getContext()));
       if (parseOptionalToken(AsmToken::RCurly))
         Operands.push_back(
-            AArch64Operand::CreateToken("}", false, getLoc(), getContext()));
+            AArch64Operand::CreateToken("}", getLoc(), getContext()));
 
       ++N;
     } while (parseOptionalToken(AsmToken::Comma));
@@ -5144,8 +5133,8 @@ bool AArch64AsmParser::MatchAndEmitInstruction(SMLoc IDLoc, unsigned &Opcode,
         const MCExpr *NewOp3 = MCConstantExpr::create(NewOp3Val, getContext());
         const MCExpr *NewOp4 = MCConstantExpr::create(NewOp4Val, getContext());
 
-        Operands[0] = AArch64Operand::CreateToken(
-            "ubfm", false, Op.getStartLoc(), getContext());
+        Operands[0] =
+            AArch64Operand::CreateToken("ubfm", Op.getStartLoc(), getContext());
         Operands.push_back(AArch64Operand::CreateImm(
             NewOp4, Op3.getStartLoc(), Op3.getEndLoc(), getContext()));
         Operands[3] = AArch64Operand::CreateImm(NewOp3, Op3.getStartLoc(),
@@ -5194,8 +5183,8 @@ bool AArch64AsmParser::MatchAndEmitInstruction(SMLoc IDLoc, unsigned &Opcode,
 
         const MCExpr *ImmRExpr = MCConstantExpr::create(ImmR, getContext());
         const MCExpr *ImmSExpr = MCConstantExpr::create(ImmS, getContext());
-        Operands[0] = AArch64Operand::CreateToken(
-              "bfm", false, Op.getStartLoc(), getContext());
+        Operands[0] =
+            AArch64Operand::CreateToken("bfm", Op.getStartLoc(), getContext());
         Operands[2] = AArch64Operand::CreateReg(
             RegWidth == 32 ? AArch64::WZR : AArch64::XZR, RegKind::Scalar,
             SMLoc(), SMLoc(), getContext());
@@ -5257,14 +5246,14 @@ bool AArch64AsmParser::MatchAndEmitInstruction(SMLoc IDLoc, unsigned &Opcode,
           Operands[4] = AArch64Operand::CreateImm(
               NewOp4, Op4.getStartLoc(), Op4.getEndLoc(), getContext());
           if (Tok == "bfi")
-            Operands[0] = AArch64Operand::CreateToken(
-                "bfm", false, Op.getStartLoc(), getContext());
+            Operands[0] = AArch64Operand::CreateToken("bfm", Op.getStartLoc(),
+                                                      getContext());
           else if (Tok == "sbfiz")
-            Operands[0] = AArch64Operand::CreateToken(
-                "sbfm", false, Op.getStartLoc(), getContext());
+            Operands[0] = AArch64Operand::CreateToken("sbfm", Op.getStartLoc(),
+                                                      getContext());
           else if (Tok == "ubfiz")
-            Operands[0] = AArch64Operand::CreateToken(
-                "ubfm", false, Op.getStartLoc(), getContext());
+            Operands[0] = AArch64Operand::CreateToken("ubfm", Op.getStartLoc(),
+                                                      getContext());
           else
             llvm_unreachable("No valid mnemonic for alias?");
         }
@@ -5311,14 +5300,14 @@ bool AArch64AsmParser::MatchAndEmitInstruction(SMLoc IDLoc, unsigned &Opcode,
           Operands[4] = AArch64Operand::CreateImm(
               NewOp4, Op4.getStartLoc(), Op4.getEndLoc(), getContext());
           if (Tok == "bfxil")
-            Operands[0] = AArch64Operand::CreateToken(
-                "bfm", false, Op.getStartLoc(), getContext());
+            Operands[0] = AArch64Operand::CreateToken("bfm", Op.getStartLoc(),
+                                                      getContext());
           else if (Tok == "sbfx")
-            Operands[0] = AArch64Operand::CreateToken(
-                "sbfm", false, Op.getStartLoc(), getContext());
+            Operands[0] = AArch64Operand::CreateToken("sbfm", Op.getStartLoc(),
+                                                      getContext());
           else if (Tok == "ubfx")
-            Operands[0] = AArch64Operand::CreateToken(
-                "ubfm", false, Op.getStartLoc(), getContext());
+            Operands[0] = AArch64Operand::CreateToken("ubfm", Op.getStartLoc(),
+                                                      getContext());
           else
             llvm_unreachable("No valid mnemonic for alias?");
         }
@@ -5344,8 +5333,8 @@ bool AArch64AsmParser::MatchAndEmitInstruction(SMLoc IDLoc, unsigned &Opcode,
                 " correctly on this CPU, converting to equivalent movi.16b");
         // Switch the suffix to .16b.
         unsigned Idx = Op1.isToken() ? 1 : 2;
-        Operands[Idx] = AArch64Operand::CreateToken(".16b", false, IDLoc,
-                                                  getContext());
+        Operands[Idx] =
+            AArch64Operand::CreateToken(".16b", IDLoc, getContext());
       }
     }
   }
