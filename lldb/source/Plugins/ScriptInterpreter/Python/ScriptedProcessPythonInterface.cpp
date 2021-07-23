@@ -55,15 +55,23 @@ StructuredData::GenericSP ScriptedProcessPythonInterface::CreatePluginObject(
 }
 
 Status ScriptedProcessPythonInterface::Launch() {
-  return LaunchOrResume("launch");
+  return GetStatusFromMethod("launch");
 }
 
 Status ScriptedProcessPythonInterface::Resume() {
-  return LaunchOrResume("resume");
+  return GetStatusFromMethod("resume");
 }
 
-Status
-ScriptedProcessPythonInterface::LaunchOrResume(llvm::StringRef method_name) {
+bool ScriptedProcessPythonInterface::ShouldStop() {
+  return GetGenericInteger("shuold_stop");
+}
+
+Status ScriptedProcessPythonInterface::Stop() {
+  return GetStatusFromMethod("stop");
+}
+
+Status ScriptedProcessPythonInterface::GetStatusFromMethod(
+    llvm::StringRef method_name) {
   Locker py_lock(&m_interpreter, Locker::AcquireLock | Locker::NoSTDIN,
                  Locker::FreeLock);
 
@@ -281,7 +289,6 @@ lldb::pid_t ScriptedProcessPythonInterface::GetProcessID() {
 
 bool ScriptedProcessPythonInterface::IsAlive() {
   return GetGenericInteger("is_alive");
-  ;
 }
 
 #endif
