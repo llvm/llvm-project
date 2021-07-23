@@ -349,7 +349,7 @@ public:
   /// Return the in-memory pointer type for the given address space, defaults to
   /// the pointer type from the data layout.  FIXME: The default needs to be
   /// removed once all the code is updated.
-  MVT getPointerMemTy(const DataLayout &DL, uint32_t AS = 0) const {
+  virtual MVT getPointerMemTy(const DataLayout &DL, uint32_t AS = 0) const {
     return MVT::getIntegerVT(DL.getPointerSizeInBits(AS));
   }
 
