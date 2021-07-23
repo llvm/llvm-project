@@ -7130,7 +7130,7 @@ static bool CC_RISCV(const DataLayout &DL, RISCVABI::ABI ABI, unsigned ValNo,
   // Split arguments might be passed indirectly, so keep track of the pending
   // values. Split vectors are passed via a mix of registers and indirectly, so
   // treat them as we would any other argument.
-  if (!LocVT.isVector() && (ArgFlags.isSplit() || !PendingLocs.empty())) {
+  if (ValVT.isScalarInteger() && (ArgFlags.isSplit() || !PendingLocs.empty())) {
     LocVT = XLenVT;
     LocInfo = CCValAssign::Indirect;
     PendingLocs.push_back(
@@ -7143,7 +7143,8 @@ static bool CC_RISCV(const DataLayout &DL, RISCVABI::ABI ABI, unsigned ValNo,
 
   // If the split argument only had two elements, it should be passed directly
   // in registers or on the stack.
-  if (!LocVT.isVector() && ArgFlags.isSplitEnd() && PendingLocs.size() <= 2) {
+  if (ValVT.isScalarInteger() && ArgFlags.isSplitEnd() &&
+      PendingLocs.size() <= 2) {
     assert(PendingLocs.size() == 2 && "Unexpected PendingLocs.size()");
     // Apply the normal calling convention rules to the first half of the
     // split argument.
