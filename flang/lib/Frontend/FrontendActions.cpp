@@ -208,9 +208,14 @@ void PrintPreprocessedAction::ExecuteAction() {
   std::string buf;
   llvm::raw_string_ostream outForPP{buf};
 
-  // Run the preprocessor
+  // Format or dump the prescanner's output
   CompilerInstance &ci = this->instance();
-  ci.parsing().DumpCookedChars(outForPP);
+  if (ci.invocation().preprocessorOpts().noReformat) {
+    ci.parsing().DumpCookedChars(outForPP);
+  } else {
+    ci.parsing().EmitPreprocessedSource(
+        outForPP, !ci.invocation().preprocessorOpts().noLineDirectives);
+  }
 
   // If a pre-defined output stream exists, dump the preprocessed content there
   if (!ci.IsOutputStreamNull()) {
@@ -219,7 +224,7 @@ void PrintPreprocessedAction::ExecuteAction() {
     return;
   }
 
-  // Print diagnostics from the preprocessor
+  // Print diagnostics from the prescanner
   ci.parsing().messages().Emit(llvm::errs(), ci.allCookedSources());
 
   // Create a file and save the preprocessed output there
@@ -228,7 +233,6 @@ void PrintPreprocessedAction::ExecuteAction() {
     (*os) << outForPP.str();
   } else {
     llvm::errs() << "Unable to create the output file\n";
-    return;
   }
 }
 

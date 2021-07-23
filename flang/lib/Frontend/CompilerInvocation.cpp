@@ -371,6 +371,9 @@ static void parsePreprocessorArgs(
         (currentArg->getOption().matches(clang::driver::options::OPT_cpp))
         ? PPMacrosFlag::Include
         : PPMacrosFlag::Exclude;
+
+  opts.noReformat = args.hasArg(clang::driver::options::OPT_fno_reformat);
+  opts.noLineDirectives = args.hasArg(clang::driver::options::OPT_P);
 }
 
 /// Parses all semantic related arguments and populates the variables
