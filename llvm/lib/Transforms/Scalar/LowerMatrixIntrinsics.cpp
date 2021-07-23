@@ -774,6 +774,7 @@ public:
         ++II;
         Value *A, *B, *AT, *BT;
         ConstantInt *R, *K, *C;
+        // A^t * B ^t -> (B * A)^t
         if (match(&*I, m_Intrinsic<Intrinsic::matrix_multiply>(
                            m_Value(A), m_Value(B), m_ConstantInt(R),
                            m_ConstantInt(K), m_ConstantInt(C))) &&
@@ -784,8 +785,8 @@ public:
           Value *M = Builder.CreateMatrixMultiply(
               BT, AT, C->getZExtValue(), K->getZExtValue(), R->getZExtValue());
           setShapeInfo(M, {C, R});
-          Value *NewInst = Builder.CreateMatrixTranspose(M, R->getZExtValue(),
-                                                         C->getZExtValue());
+          Instruction *NewInst = Builder.CreateMatrixTranspose(
+              M, C->getZExtValue(), R->getZExtValue());
           ReplaceAllUsesWith(*I, NewInst);
           if (I->use_empty())
             I->eraseFromParent();
