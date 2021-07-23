@@ -27,6 +27,8 @@ using utils::decl_ref_expr::isOnlyUsedAsConst;
 
 static constexpr StringRef ObjectArgId = "objectArg";
 static constexpr StringRef InitFunctionCallId = "initFunctionCall";
+static constexpr StringRef MethodDeclId = "methodDecl";
+static constexpr StringRef FunctionDeclId = "functionDecl";
 static constexpr StringRef OldVarDeclId = "oldVarDecl";
 
 void recordFixes(const VarDecl &Var, ASTContext &Context,
@@ -81,7 +83,8 @@ AST_MATCHER_FUNCTION(StatementMatcher, isConstRefReturningMethodCall) {
   // returned either points to a global static variable or to a member of the
   // called object.
   return cxxMemberCallExpr(
-      callee(cxxMethodDecl(returns(matchers::isReferenceToConst()))),
+      callee(cxxMethodDecl(returns(matchers::isReferenceToConst()))
+                 .bind(MethodDeclId)),
       on(declRefExpr(to(varDecl().bind(ObjectArgId)))));
 }
 
@@ -89,7 +92,8 @@ AST_MATCHER_FUNCTION(StatementMatcher, isConstRefReturningFunctionCall) {
   // Only allow initialization of a const reference from a free function if it
   // has no arguments. Otherwise it could return an alias to one of its
   // arguments and the arguments need to be checked for const use as well.
-  return callExpr(callee(functionDecl(returns(matchers::isReferenceToConst()))),
+  return callExpr(callee(functionDecl(returns(matchers::isReferenceToConst()))
+                             .bind(FunctionDeclId)),
                   argumentCountIs(0), unless(callee(cxxMethodDecl())))
       .bind(InitFunctionCallId);
 }
@@ -153,6 +157,45 @@ static bool isInitializingVariableImmutable(const VarDecl &InitializingVar,
 bool isVariableUnused(const VarDecl &Var, const Stmt &BlockStmt,
                       ASTContext &Context) {
   return allDeclRefExprs(Var, BlockStmt, Context).empty();
+}
+
+const SubstTemplateTypeParmType *getSubstitutedType(const QualType &Type,
+                                                    ASTContext &Context) {
+  auto Matches = match(
+      qualType(anyOf(substTemplateTypeParmType().bind("subst"),
+                     hasDescendant(substTemplateTypeParmType().bind("subst")))),
+      Type, Context);
+  return selectFirst<SubstTemplateTypeParmType>("subst", Matches);
+}
+
+bool differentReplacedTemplateParams(const QualType &VarType,
+                                     const QualType &InitializerType,
+                                     ASTContext &Context) {
+  if (const SubstTemplateTypeParmType *VarTmplType =
+          getSubstitutedType(VarType, Context)) {
+    if (const SubstTemplateTypeParmType *InitializerTmplType =
+            getSubstitutedType(InitializerType, Context)) {
+      return VarTmplType->getReplacedParameter()
+                 ->desugar()
+                 .getCanonicalType() !=
+             InitializerTmplType->getReplacedParameter()
+                 ->desugar()
+                 .getCanonicalType();
+    }
+  }
+  return false;
+}
+
+QualType constructorArgumentType(const VarDecl *OldVar,
+                                 const BoundNodes &Nodes) {
+  if (OldVar) {
+    return OldVar->getType();
+  }
+  if (const auto *FuncDecl = Nodes.getNodeAs<FunctionDecl>(FunctionDeclId)) {
+    return FuncDecl->getReturnType();
+  }
+  const auto *MethodDecl = Nodes.getNodeAs<CXXMethodDecl>(MethodDeclId);
+  return MethodDecl->getReturnType();
 }
 
 } // namespace
@@ -221,6 +264,16 @@ void UnnecessaryCopyInitialization::check(
   for (unsigned int I = 1; I < CtorCall->getNumArgs(); ++I)
     if (!CtorCall->getArg(I)->isDefaultArgument())
       return;
+
+  // Don't apply the check if the variable and its initializer have different
+  // replaced template parameter types. In this case the check triggers for a
+  // template instantiation where the substituted types are the same, but
+  // instantiations where the types differ and rely on implicit conversion would
+  // no longer compile if we switched to a reference.
+  if (differentReplacedTemplateParams(
+          NewVar->getType(), constructorArgumentType(OldVar, Result.Nodes),
+          *Result.Context))
+    return;
 
   if (OldVar == nullptr) {
     handleCopyFromMethodReturn(*NewVar, *BlockStmt, *Stmt, IssueFix, ObjectArg,
