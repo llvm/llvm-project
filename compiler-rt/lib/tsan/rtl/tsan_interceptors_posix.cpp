@@ -196,12 +196,10 @@ struct InterceptorContext {
   unsigned finalize_key;
 #endif
 
-  BlockingMutex atexit_mu;
+  Mutex atexit_mu;
   Vector<struct AtExitCtx *> AtExitStack;
 
-  InterceptorContext()
-      : libignore(LINKER_INITIALIZED), AtExitStack() {
-  }
+  InterceptorContext() : libignore(LINKER_INITIALIZED), atexit_mu(MutexTypeAtExit), AtExitStack() {}
 };
 
 static ALIGNED(64) char interceptor_placeholder[sizeof(InterceptorContext)];
@@ -377,7 +375,7 @@ static void at_exit_wrapper() {
   AtExitCtx *ctx;
   {
     // Ensure thread-safety.
-    BlockingMutexLock l(&interceptor_ctx()->atexit_mu);
+    Lock l(&interceptor_ctx()->atexit_mu);
 
     // Pop AtExitCtx from the top of the stack of callback functions
     uptr element = interceptor_ctx()->AtExitStack.Size() - 1;
@@ -433,7 +431,7 @@ static int setup_at_exit_wrapper(ThreadState *thr, uptr pc, void(*f)(),
     // Store ctx in a local stack-like structure
 
     // Ensure thread-safety.
-    BlockingMutexLock l(&interceptor_ctx()->atexit_mu);
+    Lock l(&interceptor_ctx()->atexit_mu);
     // __cxa_atexit calls calloc. If we don't ignore interceptors, we will fail
     // due to atexit_mu held on exit from the calloc interceptor.
     ScopedIgnoreInterceptors ignore;
