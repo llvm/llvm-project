@@ -20,7 +20,7 @@ def err_fe_pch_malformed_block : Error<
 def err_fe_ast_file_modified : Error<
     "file '%0' has been modified since the "
     "%select{precompiled header|module file|AST file}1 '%2' was built"
-    ": %select{size|mtime|content}3 changed">,
+    ": %select{size|mtime|content}3 changed%select{| (was %5, now %6)}4">,
     DefaultFatal;
 def err_fe_pch_file_overridden : Error<
     "file '%0' from the precompiled header has been overridden">;
