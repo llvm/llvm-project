@@ -85,6 +85,8 @@ static inline void __kmp_dephash_free(kmp_info_t *thread, kmp_dephash_t *h) {
 #endif
 }
 
+extern void __kmpc_give_task(kmp_task_t *ptask, kmp_int32 start);
+
 static inline void __kmp_release_deps(kmp_int32 gtid, kmp_taskdata_t *task) {
   kmp_info_t *thread = __kmp_threads[gtid];
   kmp_depnode_t *node = task->td_depnode;
@@ -143,7 +145,9 @@ static inline void __kmp_release_deps(kmp_int32 gtid, kmp_taskdata_t *task) {
           // encountering thread's queue; otherwise, it can be pushed to its own
           // queue.
           if (!next_taskdata->td_flags.hidden_helper) {
-            __kmp_omp_task(task->encountering_gtid, successor->dn.task, false);
+            __kmpc_give_task(
+                successor->dn.task,
+                __kmp_tid_from_gtid(next_taskdata->encountering_gtid));
           } else {
             __kmp_omp_task(gtid, successor->dn.task, false);
           }
