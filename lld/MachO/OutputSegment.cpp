@@ -146,10 +146,8 @@ void OutputSegment::sortOutputSections() {
 }
 
 void macho::sortOutputSegments() {
-  // sort() instead of stable_sort() is fine because segmentOrder() is
-  // name-based and getOrCreateOutputSegment() makes there's only a single
-  // segment for every name.
-  llvm::sort(outputSegments, compareByOrder<OutputSegment *>(segmentOrder));
+  llvm::stable_sort(outputSegments,
+                    compareByOrder<OutputSegment *>(segmentOrder));
 }
 
 static DenseMap<StringRef, OutputSegment *> nameToOutputSegment;
