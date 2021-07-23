@@ -113,3 +113,14 @@ void copy(const T *Dest, T *Source) {}
 // CHECK-MESSAGES: :[[@LINE-2]]:20: note: the first parameter in the range is 'Dest'
 // CHECK-MESSAGES: :[[@LINE-3]]:29: note: the last parameter in the range is 'Source'
 // CHECK-MESSAGES: :[[@LINE-4]]:26: note: 'const T *' and 'T *' parameters accept and bind the same kind of values
+
+void attributedParam2(__attribute__((address_space(256))) int *One,
+                      const __attribute__((address_space(256))) MyInt1 *Two) {}
+// CHECK-MESSAGES: :[[@LINE-2]]:23: warning: 2 adjacent parameters of 'attributedParam2' of similar type are
+// CHECK-MESSAGES: :[[@LINE-3]]:64: note: the first parameter in the range is 'One'
+// CHECK-MESSAGES: :[[@LINE-3]]:73: note: the last parameter in the range is 'Two'
+// CHECK-MESSAGES: :[[@LINE-5]]:23: note: after resolving type aliases, the common type of '__attribute__((address_space(256))) int *' and 'const __attribute__((address_space(256))) MyInt1 *' is 'int'
+// CHECK-MESSAGES: :[[@LINE-5]]:23: note: '__attribute__((address_space(256))) int *' and 'const __attribute__((address_space(256))) MyInt1 *' parameters accept and bind the same kind of values
+// FIXME: The last diagnostic line is a bit bad: the common type should be a
+// pointer type -- it is not clear right now, how it would be possible to
+// properly wire a logic in that fixes it.
