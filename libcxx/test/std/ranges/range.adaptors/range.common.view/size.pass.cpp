@@ -22,12 +22,12 @@
 struct CopyableView : std::ranges::view_base {
   int *ptr_;
   constexpr CopyableView(int* ptr) : ptr_(ptr) {}
-  constexpr friend int* begin(CopyableView& view) { return view.ptr_; }
-  constexpr friend int* begin(CopyableView const& view) { return view.ptr_; }
-  constexpr friend sentinel_wrapper<int*> end(CopyableView& view) {
+  friend constexpr int* begin(CopyableView& view) { return view.ptr_; }
+  friend constexpr int* begin(CopyableView const& view) { return view.ptr_; }
+  friend constexpr sentinel_wrapper<int*> end(CopyableView& view) {
     return sentinel_wrapper<int*>{view.ptr_ + 8};
   }
-  constexpr friend sentinel_wrapper<int*> end(CopyableView const& view) {
+  friend constexpr sentinel_wrapper<int*> end(CopyableView const& view) {
     return sentinel_wrapper<int*>{view.ptr_ + 8};
   }
 };
@@ -36,12 +36,12 @@ using ForwardIter = forward_iterator<int*>;
 struct SizedForwardView : std::ranges::view_base {
   int *ptr_;
   constexpr SizedForwardView(int* ptr) : ptr_(ptr) {}
-  constexpr friend ForwardIter begin(SizedForwardView& view) { return ForwardIter(view.ptr_); }
-  constexpr friend ForwardIter begin(SizedForwardView const& view) { return ForwardIter(view.ptr_); }
-  constexpr friend sentinel_wrapper<ForwardIter> end(SizedForwardView& view) {
+  friend constexpr ForwardIter begin(SizedForwardView& view) { return ForwardIter(view.ptr_); }
+  friend constexpr ForwardIter begin(SizedForwardView const& view) { return ForwardIter(view.ptr_); }
+  friend constexpr sentinel_wrapper<ForwardIter> end(SizedForwardView& view) {
     return sentinel_wrapper<ForwardIter>{ForwardIter(view.ptr_ + 8)};
   }
-  constexpr friend sentinel_wrapper<ForwardIter> end(SizedForwardView const& view) {
+  friend constexpr sentinel_wrapper<ForwardIter> end(SizedForwardView const& view) {
     return sentinel_wrapper<ForwardIter>{ForwardIter(view.ptr_ + 8)};
   }
 };
