@@ -4720,6 +4720,15 @@ void Clang::ConstructJob(Compilation &C, const JobAction &JA,
     CmdArgs.push_back(Args.MakeArgString(std::to_string(FunctionAlignment)));
   }
 
+  if (const Arg *A = Args.getLastArg(options::OPT_falign_loops_EQ)) {
+    unsigned Value = 0;
+    if (StringRef(A->getValue()).getAsInteger(10, Value) || Value > 65536)
+      TC.getDriver().Diag(diag::err_drv_invalid_int_value)
+          << A->getAsString(Args) << A->getValue();
+    Value = Value ? 1u << llvm::Log2_32_Ceil(std::min(Value, 65536u)) : 0;
+    CmdArgs.push_back(Args.MakeArgString("-falign-loops=" + Twine(Value)));
+  }
+
   llvm::Reloc::Model RelocationModel;
   unsigned PICLevel;
   bool IsPIE;

@@ -293,6 +293,8 @@ CODEGENOPT(StackRealignment  , 1, 0) ///< Control whether to force stack
                                      ///< realignment.
 CODEGENOPT(UseInitArray      , 1, 0) ///< Control whether to use .init_array or
                                      ///< .ctors.
+VALUE_CODEGENOPT(LoopAlignment     , 32, 0) ///< Overrides default loop
+                                            ///< alignment, if not 0.
 VALUE_CODEGENOPT(StackAlignment    , 32, 0) ///< Overrides default stack
                                             ///< alignment, if not 0.
 VALUE_CODEGENOPT(StackProbeSize    , 32, 4096) ///< Overrides default stack
