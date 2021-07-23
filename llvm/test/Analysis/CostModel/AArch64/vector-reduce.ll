@@ -3,7 +3,7 @@
 
 define i8 @add.i8.v8i8(<8 x i8> %v) {
 ; COST-LABEL: 'add.i8.v8i8'
-; COST-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %r = call i8 @llvm.vector.reduce.add.v8i8(<8 x i8> %v)
+; COST-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %r = call i8 @llvm.vector.reduce.add.v8i8(<8 x i8> %v)
 ; COST-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: ret i8 %r
 ;
   %r = call i8 @llvm.vector.reduce.add.v8i8(<8 x i8> %v)
@@ -12,7 +12,7 @@ define i8 @add.i8.v8i8(<8 x i8> %v) {
 
 define i8 @add.i8.v16i8(<16 x i8> %v) {
 ; COST-LABEL: 'add.i8.v16i8'
-; COST-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %r = call i8 @llvm.vector.reduce.add.v16i8(<16 x i8> %v)
+; COST-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %r = call i8 @llvm.vector.reduce.add.v16i8(<16 x i8> %v)
 ; COST-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: ret i8 %r
 ;
   %r = call i8 @llvm.vector.reduce.add.v16i8(<16 x i8> %v)
@@ -21,7 +21,7 @@ define i8 @add.i8.v16i8(<16 x i8> %v) {
 
 define i16 @add.i16.v4i16(<4 x i16> %v) {
 ; COST-LABEL: 'add.i16.v4i16'
-; COST-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %r = call i16 @llvm.vector.reduce.add.v4i16(<4 x i16> %v)
+; COST-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %r = call i16 @llvm.vector.reduce.add.v4i16(<4 x i16> %v)
 ; COST-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: ret i16 %r
 ;
   %r = call i16 @llvm.vector.reduce.add.v4i16(<4 x i16> %v)
@@ -30,7 +30,7 @@ define i16 @add.i16.v4i16(<4 x i16> %v) {
 
 define i16 @add.i16.v8i16(<8 x i16> %v) {
 ; COST-LABEL: 'add.i16.v8i16'
-; COST-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %r = call i16 @llvm.vector.reduce.add.v8i16(<8 x i16> %v)
+; COST-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %r = call i16 @llvm.vector.reduce.add.v8i16(<8 x i16> %v)
 ; COST-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: ret i16 %r
 ;
   %r = call i16 @llvm.vector.reduce.add.v8i16(<8 x i16> %v)
@@ -39,7 +39,7 @@ define i16 @add.i16.v8i16(<8 x i16> %v) {
 
 define i32 @add.i32.v4i32(<4 x i32> %v) {
 ; COST-LABEL: 'add.i32.v4i32'
-; COST-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %r = call i32 @llvm.vector.reduce.add.v4i32(<4 x i32> %v)
+; COST-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %r = call i32 @llvm.vector.reduce.add.v4i32(<4 x i32> %v)
 ; COST-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: ret i32 %r
 ;
   %r = call i32 @llvm.vector.reduce.add.v4i32(<4 x i32> %v)
