@@ -19,8 +19,8 @@ group("symlinks") {
 
 executable("llvm-dwp") {
   deps = [
-    "//llvm/lib/DebugInfo/DWARF",
     "//llvm/lib/DWP",
+    "//llvm/lib/DebugInfo/DWARF",
     "//llvm/lib/MC",
     "//llvm/lib/Object",
     "//llvm/lib/Support",

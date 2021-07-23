@@ -40,9 +40,9 @@ static uint64_t resolveSymbolVA(const Symbol *sym, uint8_t type) {
   const RelocAttrs &relocAttrs = target->getRelocAttrs(type);
   if (relocAttrs.hasAttr(RelocAttrBits::BRANCH))
     return sym->resolveBranchVA();
-  else if (relocAttrs.hasAttr(RelocAttrBits::GOT))
+  if (relocAttrs.hasAttr(RelocAttrBits::GOT))
     return sym->resolveGotVA();
-  else if (relocAttrs.hasAttr(RelocAttrBits::TLV))
+  if (relocAttrs.hasAttr(RelocAttrBits::TLV))
     return sym->resolveTlvVA();
   return sym->getVA();
 }

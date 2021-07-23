@@ -241,6 +241,8 @@ multiclass ArcBinaryEXT5Inst<bits<6> mincode, string opasm> :
 
 multiclass ArcUnaryGEN4Inst<bits<6> mincode, string opasm> :
   ArcUnaryInst<0b00100, mincode, opasm>;
+multiclass ArcUnaryEXT5Inst<bits<6> mincode, string opasm> :
+  ArcUnaryInst<0b00101, mincode, opasm>;
 
 // Pattern generation for different instruction variants.
 multiclass MultiPat<SDPatternOperator InFrag,
@@ -297,6 +299,9 @@ defm : MultiPat<mulhu, MPYMU_rrr, MPYMU_rru6, MPYMU_rrlimm>;
 // General unary instruction definitions.
 defm SEXB : ArcUnaryGEN4Inst<0b000101, "sexb">;
 defm SEXH : ArcUnaryGEN4Inst<0b000110, "sexh">;
+
+// Extension unary instruction definitions.
+defm FLS : ArcUnaryEXT5Inst<0b010011, "fls">;
 
 // General Unary Instruction fragments.
 def : Pat<(sext_inreg i32:$a, i8), (SEXB_rr i32:$a)>;
