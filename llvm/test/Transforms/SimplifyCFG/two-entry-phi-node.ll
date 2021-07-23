@@ -200,10 +200,14 @@ define i1 @t6_nor_logical2(i8 %v0, i8 %v1, i8 %v2, i1 %v3) {
 ; CHECK-LABEL: @t6_nor_logical2(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[C0:%.*]] = icmp eq i8 [[V0:%.*]], 0
+; CHECK-NEXT:    br i1 [[C0]], label [[PRED0:%.*]], label [[END:%.*]]
+; CHECK:       pred0:
 ; CHECK-NEXT:    [[C1:%.*]] = icmp eq i8 [[V1:%.*]], 0
 ; CHECK-NEXT:    [[C2:%.*]] = icmp ne i8 [[V2:%.*]], 0
 ; CHECK-NEXT:    [[COMPUTED:%.*]] = select i1 [[C1]], i1 false, i1 [[C2]]
-; CHECK-NEXT:    [[R:%.*]] = select i1 [[C0]], i1 [[COMPUTED]], i1 [[V3:%.*]]
+; CHECK-NEXT:    br label [[END]]
+; CHECK:       end:
+; CHECK-NEXT:    [[R:%.*]] = phi i1 [ [[COMPUTED]], [[PRED0]] ], [ [[V3:%.*]], [[ENTRY:%.*]] ]
 ; CHECK-NEXT:    ret i1 [[R]]
 ;
 entry:
@@ -290,10 +294,14 @@ define i1 @t9_nand_logical2(i8 %v0, i8 %v1, i8 %v2, i1 %v3) {
 ; CHECK-LABEL: @t9_nand_logical2(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[C0:%.*]] = icmp eq i8 [[V0:%.*]], 0
+; CHECK-NEXT:    br i1 [[C0]], label [[PRED0:%.*]], label [[END:%.*]]
+; CHECK:       pred0:
 ; CHECK-NEXT:    [[C1:%.*]] = icmp eq i8 [[V1:%.*]], 0
 ; CHECK-NEXT:    [[C2:%.*]] = icmp ne i8 [[V2:%.*]], 0
 ; CHECK-NEXT:    [[COMPUTED:%.*]] = select i1 [[C1]], i1 [[C2]], i1 true
-; CHECK-NEXT:    [[R:%.*]] = select i1 [[C0]], i1 [[COMPUTED]], i1 [[V3:%.*]]
+; CHECK-NEXT:    br label [[END]]
+; CHECK:       end:
+; CHECK-NEXT:    [[R:%.*]] = phi i1 [ [[COMPUTED]], [[PRED0]] ], [ [[V3:%.*]], [[ENTRY:%.*]] ]
 ; CHECK-NEXT:    ret i1 [[R]]
 ;
 entry:
