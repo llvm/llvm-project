@@ -19,6 +19,7 @@
 // CHECK-NEXT:    [[TMP2:%.*]] = cmpxchg weak volatile i32* [[A_ADDR]], i32 [[TMP1]], i32 [[TMP0]] monotonic monotonic, align 4
 // CHECK-NEXT:    [[TMP3:%.*]] = extractvalue { i32, i1 } [[TMP2]], 0
 // CHECK-NEXT:    [[TMP4:%.*]] = extractvalue { i32, i1 } [[TMP2]], 1
+// CHECK-NEXT:    store i32 [[TMP3]], i32* [[B_ADDR]], align 4
 // CHECK-NEXT:    ret void
 //
 void test_builtin_ppc_compare_and_swap(int a, int b, int c) {
@@ -39,6 +40,7 @@ void test_builtin_ppc_compare_and_swap(int a, int b, int c) {
 // CHECK-NEXT:    [[TMP2:%.*]] = cmpxchg weak volatile i64* [[A_ADDR]], i64 [[TMP1]], i64 [[TMP0]] monotonic monotonic, align 8
 // CHECK-NEXT:    [[TMP3:%.*]] = extractvalue { i64, i1 } [[TMP2]], 0
 // CHECK-NEXT:    [[TMP4:%.*]] = extractvalue { i64, i1 } [[TMP2]], 1
+// CHECK-NEXT:    store i64 [[TMP3]], i64* [[B_ADDR]], align 8
 // CHECK-NEXT:    ret void
 //
 void test_builtin_ppc_compare_and_swaplp(long a, long b, long c) {
