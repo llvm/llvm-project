@@ -164,8 +164,8 @@ class CommandLineCompletionTestCase(TestBase):
 
         self.complete_from_to('process signal ',
                               'process signal SIG')
-        self.complete_from_to('process signal SIGIN',
-                              'process signal SIGINT')
+        self.complete_from_to('process signal SIGPIP',
+                              'process signal SIGPIPE')
         self.complete_from_to('process signal SIGA',
                               ['SIGABRT',
                                'SIGALRM'])
