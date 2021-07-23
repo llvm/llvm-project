@@ -6473,9 +6473,21 @@ unsigned LoopVectorizationCostModel::selectInterleaveCount(ElementCount VF,
 
     // If we have a scalar reduction (vector reductions are already dealt with
     // by this point), we can increase the critical path length if the loop
-    // we're interleaving is inside another loop. Limit, by default to 2, so the
-    // critical path only gets increased by one reduction operation.
+    // we're interleaving is inside another loop. For tree-wise reductions
+    // set the limit to 2, and for ordered reductions it's best to disable
+    // interleaving entirely.
     if (HasReductions && TheLoop->getLoopDepth() > 1) {
+      bool HasOrderedReductions =
+          any_of(Legal->getReductionVars(), [&](auto &Reduction) -> bool {
+            const RecurrenceDescriptor &RdxDesc = Reduction.second;
+            return RdxDesc.isOrdered();
+          });
+      if (HasOrderedReductions) {
+        LLVM_DEBUG(
+            dbgs() << "LV: Not interleaving scalar ordered reductions.\n");
+        return 1;
+      }
+
       unsigned F = static_cast<unsigned>(MaxNestedScalarReductionIC);
       SmallIC = std::min(SmallIC, F);
       StoresIC = std::min(StoresIC, F);
