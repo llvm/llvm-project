@@ -689,15 +689,23 @@ define void @PR14241(i32* %s, i64 %size) {
 ;
 ; CHECK-LABEL: @PR14241(
 ; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[S1:%.*]] = bitcast i32* [[S:%.*]] to i8*
 ; CHECK-NEXT:    [[END_IDX:%.*]] = add i64 [[SIZE:%.*]], -1
 ; CHECK-NEXT:    [[END_PTR:%.*]] = getelementptr inbounds i32, i32* [[S:%.*]], i64 [[END_IDX]]
+; CHECK-NEXT:    [[SCEVGEP:%.*]] = getelementptr i32, i32* [[S]], i64 1
+; CHECK-NEXT:    [[SCEVGEP2:%.*]] = bitcast i32* [[SCEVGEP]] to i8*
+; CHECK-NEXT:    [[TMP1:%.*]] = shl i64 [[SIZE]], 2
+; CHECK-NEXT:    [[TMP2:%.*]] = add i64 [[TMP1]], -8
+; CHECK-NEXT:    [[TMP3:%.*]] = lshr i64 [[TMP2]], 2
+; CHECK-NEXT:    [[TMP4:%.*]] = shl nuw i64 [[TMP3]], 2
+; CHECK-NEXT:    [[TMP5:%.*]] = add i64 [[TMP4]], 4
+; CHECK-NEXT:    call void @llvm.memmove.p0i8.p0i8.i64(i8* align 4 [[S1]], i8* align 4 [[SCEVGEP2]], i64 [[TMP5]], i1 false)
 ; CHECK-NEXT:    br label [[WHILE_BODY:%.*]]
 ; CHECK:       while.body:
 ; CHECK-NEXT:    [[PHI_PTR:%.*]] = phi i32* [ [[S]], [[ENTRY:%.*]] ], [ [[NEXT_PTR:%.*]], [[WHILE_BODY]] ]
 ; CHECK-NEXT:    [[SRC_PTR:%.*]] = getelementptr inbounds i32, i32* [[PHI_PTR]], i64 1
 ; CHECK-NEXT:    [[VAL:%.*]] = load i32, i32* [[SRC_PTR]], align 4
 ; CHECK-NEXT:    [[DST_PTR:%.*]] = getelementptr inbounds i32, i32* [[PHI_PTR]], i64 0
-; CHECK-NEXT:    store i32 [[VAL]], i32* [[DST_PTR]], align 4
 ; CHECK-NEXT:    [[NEXT_PTR]] = getelementptr inbounds i32, i32* [[PHI_PTR]], i64 1
 ; CHECK-NEXT:    [[CMP:%.*]] = icmp eq i32* [[NEXT_PTR]], [[END_PTR]]
 ; CHECK-NEXT:    br i1 [[CMP]], label [[EXIT:%.*]], label [[WHILE_BODY]]
@@ -709,8 +717,6 @@ entry:
   %end.idx = add i64 %size, -1
   %end.ptr = getelementptr inbounds i32, i32* %s, i64 %end.idx
   br label %while.body
-; FIXME: When we regain the ability to form a memmove here, this test should be
-; reversed and turned into a positive assertion.
 
 while.body:
   %phi.ptr = phi i32* [ %s, %entry ], [ %next.ptr, %while.body ]
@@ -1060,6 +1066,274 @@ loop.exit:
   br label %exit
 
 exit:
+  ret void
+}
+
+;; Memmove formation.
+define void @PR46179_positive_stride(i8* %Src, i64 %Size) {
+; CHECK-LABEL: @PR46179_positive_stride(
+; CHECK-NEXT:  bb.nph:
+; CHECK-NEXT:    [[SCEVGEP:%.*]] = getelementptr i8, i8* [[SRC:%.*]], i64 1
+; CHECK-NEXT:    call void @llvm.memmove.p0i8.p0i8.i64(i8* align 1 [[SRC]], i8* align 1 [[SCEVGEP]], i64 [[SIZE:%.*]], i1 false)
+; CHECK-NEXT:    br label [[FOR_BODY:%.*]]
+; CHECK:       for.body:
+; CHECK-NEXT:    [[INDVAR:%.*]] = phi i64 [ 0, [[BB_NPH:%.*]] ], [ [[INDVAR_NEXT:%.*]], [[FOR_BODY]] ]
+; CHECK-NEXT:    [[STEP:%.*]] = add nuw nsw i64 [[INDVAR]], 1
+; CHECK-NEXT:    [[SRCI:%.*]] = getelementptr i8, i8* [[SRC]], i64 [[STEP]]
+; CHECK-NEXT:    [[DESTI:%.*]] = getelementptr i8, i8* [[SRC]], i64 [[INDVAR]]
+; CHECK-NEXT:    [[V:%.*]] = load i8, i8* [[SRCI]], align 1
+; CHECK-NEXT:    [[INDVAR_NEXT]] = add i64 [[INDVAR]], 1
+; CHECK-NEXT:    [[EXITCOND:%.*]] = icmp eq i64 [[INDVAR_NEXT]], [[SIZE:%.*]]
+; CHECK-NEXT:    br i1 [[EXITCOND]], label [[FOR_END:%.*]], label [[FOR_BODY]]
+; CHECK:       for.end:
+; CHECK-NEXT:    ret void
+;
+bb.nph:
+  br label %for.body
+
+for.body:                                         ; preds = %bb.nph, %for.body
+  %indvar = phi i64 [ 0, %bb.nph ], [ %indvar.next, %for.body ]
+  %Step = add nuw nsw i64 %indvar, 1
+  %SrcI = getelementptr i8, i8* %Src, i64 %Step
+  %DestI = getelementptr i8, i8* %Src, i64 %indvar
+  %V = load i8, i8* %SrcI, align 1
+  store i8 %V, i8* %DestI, align 1
+  %indvar.next = add i64 %indvar, 1
+  %exitcond = icmp eq i64 %indvar.next, %Size
+  br i1 %exitcond, label %for.end, label %for.body
+
+for.end:                                          ; preds = %for.body, %entry
+  ret void
+}
+
+;; Memmove formation.
+define void @PR46179_negative_stride(i8* %Src, i64 %Size) {
+; CHECK-LABEL: @PR46179_negative_stride(
+; CHECK-NEXT:  bb.nph:
+; CHECK-NEXT:    [[CMP1:%.*]] = icmp sgt i64 [[SIZE:%.*]], 0
+; CHECK-NEXT:    br i1 [[CMP1]], label [[FOR_BODY_PREHEADER:%.*]], label [[FOR_END:%.*]]
+; CHECK:       for.body.preheader:
+; CHECK-NEXT:    [[SCEVGEP:%.*]] = getelementptr i8, i8* [[SRC:%.*]], i64 1
+; CHECK-NEXT:    call void @llvm.memmove.p0i8.p0i8.i64(i8* align 1 [[SCEVGEP]], i8* align 1 [[SRC]], i64 [[SIZE]], i1 false)
+; CHECK-NEXT:    br label [[FOR_BODY:%.*]]
+; CHECK:       for.body:
+; CHECK-NEXT:    [[INDVAR:%.*]] = phi i64 [ [[STEP]], [[FOR_BODY]] ], [ [[SIZE]], [[FOR_BODY_PREHEADER]] ]
+; CHECK-NEXT:    [[STEP:%.*]] = add nsw i64 [[INDVAR]], -1
+; CHECK-NEXT:    [[SRCI:%.*]] = getelementptr inbounds i8, i8* [[SRC:%.*]], i64 [[STEP]]
+; CHECK-NEXT:    [[V:%.*]] = load i8, i8* [[SRCI]], align 1
+; CHECK-NEXT:    [[DESTI:%.*]] = getelementptr inbounds i8, i8* [[SRC]], i64 [[INDVAR]]
+; CHECK-NEXT:    [[EXITCOND:%.*]] = icmp sgt i64 [[INDVAR]], 1
+; CHECK-NEXT:    br i1 [[EXITCOND]], label [[FOR_BODY]], label [[FOR_END]]
+; CHECK:       for.end:
+; CHECK-NEXT:    ret void
+;
+bb.nph:
+  %cmp1 = icmp sgt i64 %Size, 0
+  br i1 %cmp1, label %for.body, label %for.end
+
+for.body:                                           ; preds = %bb.nph, %.for.body
+  %indvar = phi i64 [ %Step, %for.body ], [ %Size, %bb.nph ]
+  %Step = add nsw i64 %indvar, -1
+  %SrcI = getelementptr inbounds i8, i8* %Src, i64 %Step
+  %V = load i8, i8* %SrcI, align 1
+  %DestI = getelementptr inbounds i8, i8* %Src, i64 %indvar
+  store i8 %V, i8* %DestI, align 1
+  %exitcond = icmp sgt i64 %indvar, 1
+  br i1 %exitcond, label %for.body, label %for.end
+
+for.end:                                      ; preds = %.for.body, %bb.nph
+  ret void
+}
+
+;; Do not form memmove from previous store when stride is positive.
+define void @do_not_form_memmove1(i8* %Src, i64 %Size) {
+; CHECK-LABEL: @do_not_form_memmove1(
+; CHECK-NEXT:  bb.nph:
+; CHECK-NEXT:    br label [[FOR_BODY:%.*]]
+; CHECK:       for.body:
+; CHECK-NEXT:    [[INDVAR:%.*]] = phi i64 [ 1, [[BB_NPH:%.*]] ], [ [[INDVAR_NEXT:%.*]], [[FOR_BODY]] ]
+; CHECK-NEXT:    [[STEP:%.*]] = add nuw nsw i64 [[INDVAR]], -1
+; CHECK-NEXT:    [[SRCI:%.*]] = getelementptr i8, i8* [[SRC:%.*]], i64 [[STEP]]
+; CHECK-NEXT:    [[DESTI:%.*]] = getelementptr i8, i8* [[SRC]], i64 [[INDVAR]]
+; CHECK-NEXT:    [[V:%.*]] = load i8, i8* [[SRCI]], align 1
+; CHECK-NEXT:    store i8 [[V]], i8* [[DESTI]], align 1
+; CHECK-NEXT:    [[INDVAR_NEXT]] = add i64 [[INDVAR]], 1
+; CHECK-NEXT:    [[EXITCOND:%.*]] = icmp eq i64 [[INDVAR_NEXT]], [[SIZE:%.*]]
+; CHECK-NEXT:    br i1 [[EXITCOND]], label [[FOR_END:%.*]], label [[FOR_BODY]]
+; CHECK:       for.end:
+; CHECK-NEXT:    ret void
+;
+bb.nph:
+  br label %for.body
+
+for.body:                                         ; preds = %bb.nph, %for.body
+  %indvar = phi i64 [ 1, %bb.nph ], [ %indvar.next, %for.body ]
+  %Step = add nuw nsw i64 %indvar, -1
+  %SrcI = getelementptr i8, i8* %Src, i64 %Step
+  %DestI = getelementptr i8, i8* %Src, i64 %indvar
+  %V = load i8, i8* %SrcI, align 1
+  store i8 %V, i8* %DestI, align 1
+  %indvar.next = add i64 %indvar, 1
+  %exitcond = icmp eq i64 %indvar.next, %Size
+  br i1 %exitcond, label %for.end, label %for.body
+
+for.end:                                          ; preds = %for.body, %entry
+  ret void
+}
+
+;; Do not form memmove from next store when stride is negative.
+define void @do_not_form_memmove2(i8* %Src, i64 %Size) {
+; CHECK-LABEL: @do_not_form_memmove2(
+; CHECK-NEXT:  bb.nph:
+; CHECK-NEXT:    [[CMP1:%.*]] = icmp sgt i64 [[SIZE:%.*]], 0
+; CHECK-NEXT:    br i1 [[CMP1]], label [[FOR_BODY_PREHEADER:%.*]], label [[FOR_END:%.*]]
+; CHECK:       for.body.preheader:
+; CHECK-NEXT:    br label [[FOR_BODY:%.*]]
+; CHECK:       for.body:
+; CHECK-NEXT:    [[INDVAR:%.*]] = phi i64 [ [[INDVAR_NEXT]], [[FOR_BODY]] ], [ [[SIZE]], [[FOR_BODY_PREHEADER]] ]
+; CHECK-NEXT:    [[STEP:%.*]] = add nuw nsw i64 [[INDVAR]], 1
+; CHECK-NEXT:    [[SRCI:%.*]] = getelementptr inbounds i8, i8* [[SRC:%.*]], i64 [[STEP]]
+; CHECK-NEXT:    [[V:%.*]] = load i8, i8* [[SRCI]], align 1
+; CHECK-NEXT:    [[DESTI:%.*]] = getelementptr inbounds i8, i8* [[SRC]], i64 [[INDVAR]]
+; CHECK-NEXT:    store i8 [[V]], i8* [[DESTI]], align 1
+; CHECK-NEXT:    [[INDVAR_NEXT:%.*]] = add nsw i64 [[INDVAR]], -1
+; CHECK-NEXT:    [[EXITCOND:%.*]] = icmp sgt i64 [[INDVAR]], 1
+; CHECK-NEXT:    br i1 [[EXITCOND]], label [[FOR_BODY]], label [[FOR_END]]
+; CHECK:       for.end:
+; CHECK-NEXT:    ret void
+;
+bb.nph:
+  %cmp1 = icmp sgt i64 %Size, 0
+  br i1 %cmp1, label %for.body, label %for.end
+
+for.body:                                           ; preds = %bb.nph, %.for.body
+  %indvar = phi i64 [ %indvar.next, %for.body ], [ %Size, %bb.nph ]
+  %Step = add nuw nsw i64 %indvar, 1
+  %SrcI = getelementptr inbounds i8, i8* %Src, i64 %Step
+  %V = load i8, i8* %SrcI, align 1
+  %DestI = getelementptr inbounds i8, i8* %Src, i64 %indvar
+  store i8 %V, i8* %DestI, align 1
+  %indvar.next = add nsw i64 %indvar, -1
+  %exitcond = icmp sgt i64 %indvar, 1
+  br i1 %exitcond, label %for.body, label %for.end
+
+for.end:                                      ; preds = %.for.body, %bb.nph
+  ret void
+}
+
+;; Do not form memmove when underaligned load is overlapped with store.
+define void @do_not_form_memmove3(i32* %s, i64 %size) {
+; CHECK-LABEL: @do_not_form_memmove3(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[END_IDX:%.*]] = add i64 [[SIZE:%.*]], -1
+; CHECK-NEXT:    [[END_PTR:%.*]] = getelementptr inbounds i32, i32* [[S:%.*]], i64 [[END_IDX]]
+; CHECK-NEXT:    br label [[WHILE_BODY:%.*]]
+; CHECK:       while.body:
+; CHECK-NEXT:    [[PHI_PTR:%.*]] = phi i32* [ [[S]], [[ENTRY:%.*]] ], [ [[NEXT_PTR:%.*]], [[WHILE_BODY]] ]
+; CHECK-NEXT:    [[NEXT:%.*]] = bitcast i32* [[PHI_PTR]] to i16*
+; CHECK-NEXT:    [[SRC_PTR:%.*]] = getelementptr i16, i16* [[NEXT]], i64 1
+; CHECK-NEXT:    [[SRC_PTR2:%.*]] = bitcast i16* [[SRC_PTR]] to i32*
+; CHECK-NEXT:    [[VAL:%.*]] = load i32, i32* [[SRC_PTR2]], align 2
+; CHECK-NEXT:    [[DST_PTR:%.*]] = getelementptr i32, i32* [[PHI_PTR]], i64 0
+; CHECK-NEXT:    store i32 [[VAL]], i32* [[DST_PTR]], align 4
+; CHECK-NEXT:    [[NEXT_PTR]] = getelementptr i32, i32* [[PHI_PTR]], i64 1
+; CHECK-NEXT:    [[CMP:%.*]] = icmp eq i32* [[NEXT_PTR]], [[END_PTR]]
+; CHECK-NEXT:    br i1 [[CMP]], label [[EXIT:%.*]], label [[WHILE_BODY]]
+; CHECK:       exit:
+; CHECK-NEXT:    ret void
+;
+entry:
+  %end.idx = add i64 %size, -1
+  %end.ptr = getelementptr inbounds i32, i32* %s, i64 %end.idx
+  br label %while.body
+
+while.body:
+  %phi.ptr = phi i32* [ %s, %entry ], [ %next.ptr, %while.body ]
+  %next = bitcast i32* %phi.ptr to i16*
+  %src.ptr = getelementptr i16, i16* %next, i64 1
+  %src.ptr2 = bitcast i16* %src.ptr to i32*
+  ; below underaligned load is overlapped with store.
+  %val = load i32, i32* %src.ptr2, align 2
+  %dst.ptr = getelementptr i32, i32* %phi.ptr, i64 0
+  store i32 %val, i32* %dst.ptr, align 4
+  %next.ptr = getelementptr i32, i32* %phi.ptr, i64 1
+  %cmp = icmp eq i32* %next.ptr, %end.ptr
+  br i1 %cmp, label %exit, label %while.body
+
+exit:
+  ret void
+}
+
+declare void @llvm.memcpy.p0i8.p0i8.i64(i8* noalias nocapture writeonly, i8* noalias nocapture readonly, i64, i1 immarg)
+
+;; FIXME: Do not form memmove from loop body containing memcpy.
+define void @do_not_form_memmove4(i8* %Src, i64 %Size) {
+; CHECK-LABEL: @do_not_form_memmove4(
+; CHECK-NEXT:  bb.nph:
+; CHECK-NEXT:    br label [[FOR_BODY:%.*]]
+; CHECK:       for.body:
+; CHECK-NEXT:    [[INDVAR:%.*]] = phi i64 [ 0, [[BB_NPH:%.*]] ], [ [[INDVAR_NEXT:%.*]], [[FOR_BODY]] ]
+; CHECK-NEXT:    [[STEP:%.*]] = add nuw nsw i64 [[INDVAR]], 1
+; CHECK-NEXT:    [[SRCI:%.*]] = getelementptr i8, i8* [[SRC]], i64 [[STEP]]
+; CHECK-NEXT:    [[DESTI:%.*]] = getelementptr i8, i8* [[SRC]], i64 [[INDVAR]]
+; CHECK-NEXT:    call void @llvm.memcpy.p0i8.p0i8.i64(i8* align 1 [[DESTI]], i8* align 1 [[SRCI]], i64 1, i1 false)
+; CHECK-NEXT:    [[INDVAR_NEXT]] = add i64 [[INDVAR]], 1
+; CHECK-NEXT:    [[EXITCOND:%.*]] = icmp eq i64 [[INDVAR_NEXT]], [[SIZE:%.*]]
+; CHECK-NEXT:    br i1 [[EXITCOND]], label [[FOR_END:%.*]], label [[FOR_BODY]]
+; CHECK:       for.end:
+; CHECK-NEXT:    ret void
+;
+bb.nph:
+  br label %for.body
+
+for.body:                                         ; preds = %bb.nph, %for.body
+  %indvar = phi i64 [ 0, %bb.nph ], [ %indvar.next, %for.body ]
+  %Step = add nuw nsw i64 %indvar, 1
+  %SrcI = getelementptr i8, i8* %Src, i64 %Step
+  %DestI = getelementptr i8, i8* %Src, i64 %indvar
+  call void @llvm.memcpy.p0i8.p0i8.i64(i8* align 1 %DestI, i8* align 1 %SrcI, i64 1, i1 false)
+  %indvar.next = add i64 %indvar, 1
+  %exitcond = icmp eq i64 %indvar.next, %Size
+  br i1 %exitcond, label %for.end, label %for.body
+
+for.end:                                          ; preds = %for.body, %entry
+  ret void
+}
+
+;; Memcpy formation is still preferred over memmove.
+define void @prefer_memcpy_over_memmove(i8* noalias %Src, i8* noalias %Dest, i64 %Size) {
+; CHECK-LABEL: @prefer_memcpy_over_memmove(
+; CHECK-NEXT:  bb.nph:
+; CHECK-NEXT:    [[SCEVGEP:%.*]] = getelementptr i8, i8* [[SRC:%.*]], i64 42
+; CHECK-NEXT:    call void @llvm.memcpy.p0i8.p0i8.i64(i8* align 1 [[DEST:%.*]], i8* align 1 [[SCEVGEP]], i64 [[SIZE:%.*]], i1 false)
+; CHECK-NEXT:    br label [[FOR_BODY:%.*]]
+; CHECK:       for.body:
+; CHECK-NEXT:    [[INDVAR:%.*]] = phi i64 [ 0, [[BB_NPH:%.*]] ], [ [[INDVAR_NEXT:%.*]], [[FOR_BODY]] ]
+; CHECK-NEXT:    [[STEP:%.*]] = add nuw nsw i64 [[INDVAR]], 42
+; CHECK-NEXT:    [[SRCI:%.*]] = getelementptr i8, i8* [[SRC]], i64 [[STEP]]
+; CHECK-NEXT:    [[DESTI:%.*]] = getelementptr i8, i8* [[DEST]], i64 [[INDVAR]]
+; CHECK-NEXT:    [[V:%.*]] = load i8, i8* [[SRCI]], align 1
+; CHECK-NEXT:    [[INDVAR_NEXT]] = add i64 [[INDVAR]], 1
+; CHECK-NEXT:    [[EXITCOND:%.*]] = icmp eq i64 [[INDVAR_NEXT]], [[SIZE]]
+; CHECK-NEXT:    br i1 [[EXITCOND]], label [[FOR_END:%.*]], label [[FOR_BODY]]
+; CHECK:       for.end:
+; CHECK-NEXT:    ret void
+;
+bb.nph:
+  br label %for.body
+
+for.body:                                         ; preds = %bb.nph, %for.body
+  %indvar = phi i64 [ 0, %bb.nph ], [ %indvar.next, %for.body ]
+  %Step = add nuw nsw i64 %indvar, 42
+  %SrcI = getelementptr i8, i8* %Src, i64 %Step
+  %DestI = getelementptr i8, i8* %Dest, i64 %indvar
+  %V = load i8, i8* %SrcI, align 1
+  store i8 %V, i8* %DestI, align 1
+  %indvar.next = add i64 %indvar, 1
+  %exitcond = icmp eq i64 %indvar.next, %Size
+  br i1 %exitcond, label %for.end, label %for.body
+
+for.end:                                          ; preds = %for.body, %entry
   ret void
 }
 
