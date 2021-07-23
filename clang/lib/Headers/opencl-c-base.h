@@ -169,9 +169,7 @@ typedef double double8 __attribute__((ext_vector_type(8)));
 typedef double double16 __attribute__((ext_vector_type(16)));
 #endif
 
-#if defined(__OPENCL_CPP_VERSION__) || (__OPENCL_C_VERSION__ >= CL_VERSION_2_0)
 #define NULL ((void*)0)
-#endif
 
 /**
  * Value of maximum non-infinite single-precision floating-point
