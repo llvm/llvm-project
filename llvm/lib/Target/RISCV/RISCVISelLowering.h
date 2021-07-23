@@ -196,6 +196,12 @@ enum NodeType : unsigned {
   UDIV_VL,
   UREM_VL,
   XOR_VL,
+
+  SADDSAT_VL,
+  UADDSAT_VL,
+  SSUBSAT_VL,
+  USUBSAT_VL,
+
   FADD_VL,
   FSUB_VL,
   FMUL_VL,
