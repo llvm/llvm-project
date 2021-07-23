@@ -13,6 +13,7 @@
 #include "clang/Driver/Options.h"
 #include "clang/Frontend/CompilerInvocation.h"
 #include "clang/Tooling/ArgumentsAdjusters.h"
+#include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/StringRef.h"
@@ -193,7 +194,8 @@ CommandMangler CommandMangler::detect() {
 
 CommandMangler CommandMangler::forTests() { return CommandMangler(); }
 
-void CommandMangler::adjust(std::vector<std::string> &Cmd) const {
+void CommandMangler::adjust(std::vector<std::string> &Cmd,
+                            llvm::StringRef File) const {
   trace::Span S("AdjustCompileFlags");
   auto &OptTable = clang::driver::getDriverOptTable();
   // OriginalArgs needs to outlive ArgList.
@@ -204,18 +206,27 @@ void CommandMangler::adjust(std::vector<std::string> &Cmd) const {
   // ParseArgs propagates missig arg/opt counts on error, but preserves
   // everything it could parse in ArgList. So we just ignore those counts.
   unsigned IgnoredCount;
-  auto ArgList = OptTable.ParseArgs(OriginalArgs, IgnoredCount, IgnoredCount);
+  // Drop the executable name, as ParseArgs doesn't expect it. This means
+  // indices are actually of by one between ArgList and OriginalArgs.
+  auto ArgList =
+      OptTable.ParseArgs(llvm::makeArrayRef(OriginalArgs).drop_front(),
+                         IgnoredCount, IgnoredCount);
 
   // Move the inputs to the end, separated via `--` from flags. This ensures
   // modifications done in the following steps apply in more cases (like setting
   // -x, which only affects inputs that come after it).
   if (!ArgList.hasArgNoClaim(driver::options::OPT__DASH_DASH)) {
-    // In theory there might be more than one input, but clangd can't deal with
-    // them anyway.
-    if (auto *Input = ArgList.getLastArg(driver::options::OPT_INPUT)) {
-      Cmd.insert(Cmd.end(), {"--", Input->getAsString(ArgList)});
-      Cmd.erase(Cmd.begin() + Input->getIndex());
-    }
+    // Drop all the inputs and only add one for the current file.
+    llvm::SmallVector<unsigned, 1> IndicesToDrop;
+    for (auto *Input : ArgList.filtered(driver::options::OPT_INPUT))
+      IndicesToDrop.push_back(Input->getIndex());
+    llvm::sort(IndicesToDrop);
+    llvm::for_each(llvm::reverse(IndicesToDrop),
+                   // +1 to account for the executable name in Cmd[0] that
+                   // doesn't exist in ArgList.
+                   [&Cmd](unsigned Idx) { Cmd.erase(Cmd.begin() + Idx + 1); });
+    Cmd.push_back("--");
+    Cmd.push_back(File.str());
   }
 
   for (auto &Edit : Config::current().CompileFlags.Edits)
@@ -265,7 +276,7 @@ CommandMangler::operator clang::tooling::ArgumentsAdjuster() && {
   return [Mangler = std::make_shared<CommandMangler>(std::move(*this))](
              const std::vector<std::string> &Args, llvm::StringRef File) {
     auto Result = Args;
-    Mangler->adjust(Result);
+    Mangler->adjust(Result, File);
     return Result;
   };
 }

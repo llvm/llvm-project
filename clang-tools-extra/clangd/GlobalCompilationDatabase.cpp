@@ -766,7 +766,7 @@ OverlayCDB::getCompileCommand(PathRef File) const {
   if (!Cmd)
     return llvm::None;
   if (ArgsAdjuster)
-    Cmd->CommandLine = ArgsAdjuster(Cmd->CommandLine, Cmd->Filename);
+    Cmd->CommandLine = ArgsAdjuster(Cmd->CommandLine, File);
   return Cmd;
 }
 
@@ -776,7 +776,7 @@ tooling::CompileCommand OverlayCDB::getFallbackCommand(PathRef File) const {
   Cmd.CommandLine.insert(Cmd.CommandLine.end(), FallbackFlags.begin(),
                          FallbackFlags.end());
   if (ArgsAdjuster)
-    Cmd.CommandLine = ArgsAdjuster(Cmd.CommandLine, Cmd.Filename);
+    Cmd.CommandLine = ArgsAdjuster(Cmd.CommandLine, File);
   return Cmd;
 }
 
