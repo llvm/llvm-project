@@ -73,8 +73,6 @@ target(tsan_target_type, "tsan") {
     "rtl/tsan_md5.cpp",
     "rtl/tsan_mman.cpp",
     "rtl/tsan_mman.h",
-    "rtl/tsan_mutex.cpp",
-    "rtl/tsan_mutex.h",
     "rtl/tsan_mutexset.cpp",
     "rtl/tsan_mutexset.h",
     "rtl/tsan_platform.h",
