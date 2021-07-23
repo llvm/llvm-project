@@ -61,6 +61,12 @@ struct ParseInputs {
   FeatureModuleSet *FeatureModules = nullptr;
 };
 
+/// Clears \p CI from options that are not supported by clangd, like codegen or
+/// plugins. This should be combined with CommandMangler::adjust, which provides
+/// similar functionality for options that needs to be stripped from compile
+/// flags.
+void disableUnsupportedOptions(CompilerInvocation &CI);
+
 /// Builds compiler invocation that could be used to build AST or preamble.
 std::unique_ptr<CompilerInvocation>
 buildCompilerInvocation(const ParseInputs &Inputs, clang::DiagnosticConsumer &D,
