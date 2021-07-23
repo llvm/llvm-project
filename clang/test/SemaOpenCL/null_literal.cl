@@ -1,7 +1,7 @@
-// RUN: %clang_cc1 -verify %s
-// RUN: %clang_cc1 -cl-std=CL2.0 -verify %s
-
-#define NULL ((void*)0)
+// RUN: %clang_cc1 -cl-std=CL1.0 -fdeclare-opencl-builtins -finclude-default-header -verify %s
+// RUN: %clang_cc1 -cl-std=CL1.1 -fdeclare-opencl-builtins -finclude-default-header -verify %s
+// RUN: %clang_cc1 -cl-std=CL1.2 -fdeclare-opencl-builtins -finclude-default-header -verify %s
+// RUN: %clang_cc1 -cl-std=CL2.0 -fdeclare-opencl-builtins -finclude-default-header -verify %s
 
 void foo(){
 
