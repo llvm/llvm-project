@@ -49,28 +49,33 @@ namespace __llvm_libc {
 // superior for sizes that mattered.
 inline static void GeneralPurposeMemset(char *dst, unsigned char value,
                                         size_t count) {
+#if defined(__i386__) || defined(__x86_64__)
+  using namespace ::__llvm_libc::x86;
+#else
+  using namespace ::__llvm_libc::scalar;
+#endif
+
   if (count == 0)
     return;
   if (count == 1)
-    return SplatSet<scalar::_1>(dst, value);
+    return SplatSet<_1>(dst, value);
   if (count == 2)
-    return SplatSet<scalar::_2>(dst, value);
+    return SplatSet<_2>(dst, value);
   if (count == 3)
-    return SplatSet<scalar::_3>(dst, value);
+    return SplatSet<_3>(dst, value);
   if (count == 4)
-    return SplatSet<scalar::_4>(dst, value);
+    return SplatSet<_4>(dst, value);
   if (count <= 8)
-    return SplatSet<HeadTail<scalar::_4>>(dst, value, count);
+    return SplatSet<HeadTail<_4>>(dst, value, count);
   if (count <= 16)
-    return SplatSet<HeadTail<scalar::_8>>(dst, value, count);
+    return SplatSet<HeadTail<_8>>(dst, value, count);
   if (count <= 32)
-    return SplatSet<HeadTail<scalar::_16>>(dst, value, count);
+    return SplatSet<HeadTail<_16>>(dst, value, count);
   if (count <= 64)
-    return SplatSet<HeadTail<scalar::_32>>(dst, value, count);
+    return SplatSet<HeadTail<_32>>(dst, value, count);
   if (count <= 128)
-    return SplatSet<HeadTail<scalar::_64>>(dst, value, count);
-  return SplatSet<Align<scalar::_32, Arg::Dst>::Then<Loop<scalar::_32>>>(
-      dst, value, count);
+    return SplatSet<HeadTail<_64>>(dst, value, count);
+  return SplatSet<Align<_32, Arg::Dst>::Then<Loop<_32>>>(dst, value, count);
 }
 
 } // namespace __llvm_libc

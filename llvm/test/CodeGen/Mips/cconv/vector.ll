@@ -554,10 +554,8 @@ define <4 x i8> @i8_4(<4 x i8> %a, <4 x i8> %b) {
 ; MIPS64R5:       # %bb.0:
 ; MIPS64R5-NEXT:    daddiu $sp, $sp, -16
 ; MIPS64R5-NEXT:    .cfi_def_cfa_offset 16
-; MIPS64R5-NEXT:    sll $1, $5, 0
-; MIPS64R5-NEXT:    sw $1, 8($sp)
-; MIPS64R5-NEXT:    sll $1, $4, 0
-; MIPS64R5-NEXT:    sw $1, 12($sp)
+; MIPS64R5-NEXT:    sw $5, 8($sp)
+; MIPS64R5-NEXT:    sw $4, 12($sp)
 ; MIPS64R5-NEXT:    lbu $1, 9($sp)
 ; MIPS64R5-NEXT:    lbu $2, 8($sp)
 ; MIPS64R5-NEXT:    insert.w $w0[0], $2
@@ -1263,10 +1261,8 @@ define <2 x i16> @i16_2(<2 x i16> %a, <2 x i16> %b) {
 ; MIPS64R5:       # %bb.0:
 ; MIPS64R5-NEXT:    daddiu $sp, $sp, -16
 ; MIPS64R5-NEXT:    .cfi_def_cfa_offset 16
-; MIPS64R5-NEXT:    sll $1, $5, 0
-; MIPS64R5-NEXT:    sw $1, 8($sp)
-; MIPS64R5-NEXT:    sll $1, $4, 0
-; MIPS64R5-NEXT:    sw $1, 12($sp)
+; MIPS64R5-NEXT:    sw $5, 8($sp)
+; MIPS64R5-NEXT:    sw $4, 12($sp)
 ; MIPS64R5-NEXT:    lh $1, 10($sp)
 ; MIPS64R5-NEXT:    lh $2, 8($sp)
 ; MIPS64R5-NEXT:    insert.d $w0[0], $2
