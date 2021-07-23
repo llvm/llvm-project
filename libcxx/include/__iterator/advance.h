@@ -16,11 +16,11 @@
 #include <__iterator/concepts.h>
 #include <__iterator/incrementable_traits.h>
 #include <__iterator/iterator_traits.h>
+#include <__utility/move.h>
 #include <cstdlib>
 #include <concepts>
 #include <limits>
 #include <type_traits>
-#include <utility>
 
 #if !defined(_LIBCPP_HAS_NO_PRAGMA_SYSTEM_HEADER)
 #pragma GCC system_header
@@ -70,7 +70,7 @@ inline _LIBCPP_INLINE_VISIBILITY _LIBCPP_CONSTEXPR_AFTER_CXX14 void advance(_Inp
 
 namespace ranges {
 // [range.iter.op.advance]
-struct __advance_fn final : __function_like {
+struct __advance_fn final : private __function_like {
 private:
   template <class _Tp>
   _LIBCPP_HIDE_FROM_ABI
@@ -129,7 +129,7 @@ public:
   constexpr void operator()(_Ip& __i, _Sp __bound) const {
     // If `I` and `S` model `assignable_from<I&, S>`, equivalent to `i = std::move(bound)`.
     if constexpr (assignable_from<_Ip&, _Sp>) {
-      __i = std::move(__bound);
+      __i = _VSTD::move(__bound);
     }
     // Otherwise, if `S` and `I` model `sized_sentinel_for<S, I>`, equivalent to `ranges::advance(i, bound - i)`.
     else if constexpr (sized_sentinel_for<_Sp, _Ip>) {
