@@ -205,6 +205,23 @@ def depthwise_conv_2d_input_nhwc_filter_hwc_poly(
       U, I[D.n, D.oh * S.SH + D.kh * S.DH, D.ow * S.SW + D.kw * S.DW,
            D.c]) * cast(U, K[D.kh, D.kw, D.c])
 
+@linalg_structured_op
+def conv_2d_nchw(
+    I=TensorDef(T1, S.N, S.C, S.IH, S.IW),
+    K=TensorDef(T2, S.F, S.C, S.KH, S.KW),
+    O=TensorDef(U, S.N, S.F, S.OH, S.OW, S.C, output=True),
+    strides=AttributeDef(S.SH, S.SW),
+    dilations=AttributeDef(S.DH, S.DW)):
+  """Performs 2-D convolution.
+
+  Numeric casting is performed on the operands to the inner multiply, promoting
+  them to the same data type as the accumulator/output.
+  """
+  domain(D.n, D.f, D.oh, D.ow, D.c, D.kh, D.kw)
+  O[D.n, D.f, D.oh, D.ow] += cast(
+      U, I[D.n, D.c, D.oh * S.SH + D.kh * S.DH, D.ow * S.SW + D.kw * S.DW,
+           ]) * cast(U, K[D.f, D.c, D.kh, D.kw])
+
 
 @linalg_structured_op
 def pooling_nhwc_sum(
@@ -240,6 +257,22 @@ def pooling_nhwc_max(
       cast(U, I[D.n, D.oh * S.SH + D.kh * S.DH, D.ow * S.SW + D.kw * S.DW,
                 D.c]))
 
+@linalg_structured_op
+def pooling_nchw_max(
+    I=TensorDef(T1, S.N, S.C, S.H, S.W),
+    K=TensorDef(T2, S.KH, S.KW, index_dims=[D.kh, D.kw]),
+    O=TensorDef(U, S.N, S.C, S.OH, S.OW, output=True),
+    strides=AttributeDef(S.SH, S.SW),
+    dilations=AttributeDef(S.DH, S.DW)):
+  """Performs max pooling.
+
+  Numeric casting is performed on the input operand, promoting it to the same
+  data type as the accumulator/output.
+  """
+  domain(D.n, D.c, D.oh, D.ow, D.kh, D.kw)
+  O[D.n, D.c, D.oh, D.ow] = ReduceFn.max(D.kh, D.kw)(
+      cast(U, I[D.n, D.c, D.oh * S.SH + D.kh * S.DH, D.ow * S.SW + D.kw * S.DW,
+                ]))
 
 @linalg_structured_op
 def pooling_nhwc_min(
