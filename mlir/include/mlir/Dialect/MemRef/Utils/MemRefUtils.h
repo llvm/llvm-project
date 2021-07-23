@@ -20,10 +20,10 @@
 
 namespace mlir {
 
-/// Finds the associated dealloc that can be linked to our allocation nodes (if
-/// any).
-Operation *findDealloc(Value allocValue);
-
+/// Finds a single dealloc operation for the given allocated value. If there
+/// are > 1 deallocates for `allocValue`, returns None, else returns the single
+/// deallocate if it exists or nullptr.
+llvm::Optional<Operation *> findDealloc(Value allocValue);
 } // end namespace mlir
 
 #endif // MLIR_DIALECT_MEMREF_UTILS_MEMREFUTILS_H
