@@ -165,26 +165,18 @@ LookupResult DeviceTy::lookupMapping(void *HstPtrBegin, int64_t Size) {
   return lr;
 }
 
-// Used by targetDataBegin
-// Return a struct containing target pointer begin (where the data will be
-// moved).
-// Allocate memory if this is the first occurrence of this mapping.
-// Increment the reference counter.
-// If the target pointer is NULL, then either data allocation failed or the user
-// tried to do an illegal mapping.
-// The returned struct also returns an iterator to the map table entry
-// corresponding to the host pointer (if exists), and two flags indicating
-// whether the entry is just created, and if the target pointer included is
-// actually a host pointer (when unified memory enabled).
 TargetPointerResultTy
-DeviceTy::getOrAllocTgtPtr(void *HstPtrBegin, void *HstPtrBase, int64_t Size,
-                           map_var_info_t HstPtrName, bool IsImplicit,
-                           bool UpdateRefCount, bool HasCloseModifier,
-                           bool HasPresentModifier) {
-  void *TargetPointer = NULL;
-  bool IsNew = false;
+DeviceTy::getTargetPointer(void *HstPtrBegin, void *HstPtrBase, int64_t Size,
+                           map_var_info_t HstPtrName, MoveDataStateTy MoveData,
+                           bool IsImplicit, bool UpdateRefCount,
+                           bool HasCloseModifier, bool HasPresentModifier,
+                           AsyncInfoTy &AsyncInfo) {
+  void *TargetPointer = nullptr;
   bool IsHostPtr = false;
+  bool IsNew = false;
+
   DataMapMtx.lock();
+
   LookupResult LR = lookupMapping(HstPtrBegin, Size);
   auto Entry = LR.Entry;
 
@@ -263,7 +255,38 @@ DeviceTy::getOrAllocTgtPtr(void *HstPtrBegin, void *HstPtrBase, int64_t Size,
     TargetPointer = (void *)Ptr;
   }
 
-  DataMapMtx.unlock();
+  if (IsNew && MoveData == MoveDataStateTy::UNKNOWN)
+    MoveData = MoveDataStateTy::REQUIRED;
+
+  // If the target pointer is valid, and we need to transfer data, issue the
+  // data transfer.
+  if (TargetPointer && (MoveData == MoveDataStateTy::REQUIRED)) {
+    // Lock the entry before releasing the mapping table lock such that another
+    // thread that could issue data movement will get the right result.
+    Entry->lock();
+    // Release the mapping table lock right after the entry is locked.
+    DataMapMtx.unlock();
+
+    DP("Moving %" PRId64 " bytes (hst:" DPxMOD ") -> (tgt:" DPxMOD ")\n", Size,
+       DPxPTR(HstPtrBegin), DPxPTR(TargetPointer));
+
+    int Ret = submitData(TargetPointer, HstPtrBegin, Size, AsyncInfo);
+
+    // Unlock the entry immediately after the data movement is issued.
+    Entry->unlock();
+
+    if (Ret != OFFLOAD_SUCCESS) {
+      REPORT("Copying data to device failed.\n");
+      // We will also return nullptr if the data movement fails because that
+      // pointer points to a corrupted memory region so it doesn't make any
+      // sense to continue to use it.
+      TargetPointer = nullptr;
+    }
+  } else {
+    // Release the mapping table lock directly.
+    DataMapMtx.unlock();
+  }
+
   return {{IsNew, IsHostPtr}, Entry, TargetPointer};
 }
 
