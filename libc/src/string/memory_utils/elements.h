@@ -304,7 +304,7 @@ template <size_t Alignment> struct AlignHelper<Arg::_2, Alignment> {
 //
 // e.g. A 16-byte Destination Aligned 32-byte Loop Copy can be written as:
 // Copy<Align<_16, Arg::Dst>::Then<Loop<_32>>>(dst, src, count);
-template <typename AlignmentT, Arg AlignOn> struct Align {
+template <typename AlignmentT, Arg AlignOn = Arg::_1> struct Align {
 private:
   static constexpr size_t Alignment = AlignmentT::kSize;
   static_assert(Alignment > 1, "Alignment must be more than 1");
@@ -338,6 +338,44 @@ public:
       char *dummy = nullptr;
       internal::AlignHelper<Arg::_1, Alignment>::Bump(dst, dummy, size);
       NextT::SplatSet(dst, value, size);
+    }
+  };
+};
+
+// An operation that allows to skip the specified amount of bytes.
+template <ptrdiff_t Bytes> struct Skip {
+  template <typename NextT> struct Then {
+    static void Copy(char *__restrict dst, const char *__restrict src,
+                     size_t size) {
+      NextT::Copy(dst + Bytes, src + Bytes, size - Bytes);
+    }
+
+    static void Copy(char *__restrict dst, const char *__restrict src) {
+      NextT::Copy(dst + Bytes, src + Bytes);
+    }
+
+    static bool Equals(const char *lhs, const char *rhs, size_t size) {
+      return NextT::Equals(lhs + Bytes, rhs + Bytes, size - Bytes);
+    }
+
+    static bool Equals(const char *lhs, const char *rhs) {
+      return NextT::Equals(lhs + Bytes, rhs + Bytes);
+    }
+
+    static int ThreeWayCompare(const char *lhs, const char *rhs, size_t size) {
+      return NextT::ThreeWayCompare(lhs + Bytes, rhs + Bytes, size - Bytes);
+    }
+
+    static int ThreeWayCompare(const char *lhs, const char *rhs) {
+      return NextT::ThreeWayCompare(lhs + Bytes, rhs + Bytes);
+    }
+
+    static void SplatSet(char *dst, const unsigned char value, size_t size) {
+      NextT::SplatSet(dst + Bytes, value, size - Bytes);
+    }
+
+    static void SplatSet(char *dst, const unsigned char value) {
+      NextT::SplatSet(dst + Bytes, value);
     }
   };
 };
