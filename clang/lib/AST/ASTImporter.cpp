@@ -2302,17 +2302,17 @@ ExpectedDecl ASTNodeImporter::VisitBindingDecl(BindingDecl *D) {
   if (ToND)
     return ToND;
 
+  BindingDecl *ToD;
+  if (GetImportedOrCreateDecl(ToD, D, Importer.getToContext(), DC, Loc,
+                              Name.getAsIdentifierInfo()))
+    return ToD;
+
   Error Err = Error::success();
   QualType ToType = importChecked(Err, D->getType());
   Expr *ToBinding = importChecked(Err, D->getBinding());
   ValueDecl *ToDecomposedDecl = importChecked(Err, D->getDecomposedDecl());
   if (Err)
     return std::move(Err);
-
-  BindingDecl *ToD;
-  if (GetImportedOrCreateDecl(ToD, D, Importer.getToContext(), DC, Loc,
-                              Name.getAsIdentifierInfo()))
-    return ToD;
 
   ToD->setBinding(ToType, ToBinding);
   ToD->setDecomposedDecl(ToDecomposedDecl);
@@ -4098,14 +4098,26 @@ ExpectedDecl ASTNodeImporter::VisitVarDecl(VarDecl *D) {
   if (Err)
     return std::move(Err);
 
-  // Create the imported variable.
   VarDecl *ToVar;
-  if (GetImportedOrCreateDecl(ToVar, D, Importer.getToContext(), DC,
-                              ToInnerLocStart, Loc,
-                              Name.getAsIdentifierInfo(),
-                              ToType, ToTypeSourceInfo,
-                              D->getStorageClass()))
-    return ToVar;
+  if (auto *FromDecomp = dyn_cast<DecompositionDecl>(D)) {
+    SmallVector<BindingDecl *> Bindings(FromDecomp->bindings().size());
+    if (Error Err =
+            ImportArrayChecked(FromDecomp->bindings(), Bindings.begin()))
+      return std::move(Err);
+    DecompositionDecl *ToDecomp;
+    if (GetImportedOrCreateDecl(
+            ToDecomp, FromDecomp, Importer.getToContext(), DC, ToInnerLocStart,
+            Loc, ToType, ToTypeSourceInfo, D->getStorageClass(), Bindings))
+      return ToDecomp;
+    ToVar = ToDecomp;
+  } else {
+    // Create the imported variable.
+    if (GetImportedOrCreateDecl(ToVar, D, Importer.getToContext(), DC,
+                                ToInnerLocStart, Loc,
+                                Name.getAsIdentifierInfo(), ToType,
+                                ToTypeSourceInfo, D->getStorageClass()))
+      return ToVar;
+  }
 
   ToVar->setTSCSpec(D->getTSCSpec());
   ToVar->setQualifierInfo(ToQualifierLoc);
