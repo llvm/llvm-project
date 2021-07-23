@@ -32,3 +32,19 @@ body: |
     %trunc:_(<4 x s8>) = G_TRUNC %val
     G_STORE %trunc(<4 x s8>), %ptr(p0) :: (store (<4 x s8>))
 ...
+---
+name:            truncstore_too_large
+legalized:       true
+body: |
+  bb.0.entry:
+    liveins: $x0
+    ; CHECK-LABEL: name: truncstore_too_large
+    ; CHECK: %ptr:_(p0) = COPY $x0
+    ; CHECK: %val:_(s128) = COPY $q0
+    ; CHECK: %trunc:_(s32) = G_TRUNC %val(s128)
+    ; CHECK: G_STORE %trunc(s32), %ptr(p0) :: (store (s32))
+    %ptr:_(p0) = COPY $x0
+    %val:_(s128) = COPY $q0
+    %trunc:_(s32) = G_TRUNC %val
+    G_STORE %trunc(s32), %ptr(p0) :: (store (s32))
+...

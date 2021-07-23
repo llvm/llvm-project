@@ -1,7 +1,7 @@
+.. _omp140:
+
 Could not internalize function. Some optimizations may not be possible. [OMP140]
 ====================================================================================================================
-
-.. _omp140:
 
 This analysis remark indicates that function internalization failed for the
 given function. Internalization occurs when a call to a function that ordinarily

@@ -2793,6 +2793,11 @@ bool Lexer::LexEndOfFile(Token &Result, const char *CurPtr) {
 
   if (PP->isRecordingPreamble() && PP->isInPrimaryFile()) {
     PP->setRecordedPreambleConditionalStack(ConditionalStack);
+    // If the preamble cuts off the end of a header guard, consider it guarded.
+    // The guard is valid for the preamble content itself, and for tools the
+    // most useful answer is "yes, this file has a header guard".
+    if (!ConditionalStack.empty())
+      MIOpt.ExitTopLevelConditional();
     ConditionalStack.clear();
   }
 

@@ -12,6 +12,8 @@ extern long long lla, llb;
 extern int ia, ib;
 extern unsigned int ui;
 extern unsigned long long ull;
+extern const int cia;
+extern unsigned long ula;
 
 void test_trap(void) {
 #ifdef __PPC64__
@@ -59,4 +61,45 @@ void testMathBuiltin(void) {
   __mtfsfi(0, usi); //expected-error {{argument to '__builtin_ppc_mtfsfi' must be a constant integer}}
   __mtfsfi(8, 0); //expected-error {{argument value 8 is outside the valid range [0, 7]}}
   __mtfsfi(5, 24); //expected-error {{argument value 24 is outside the valid range [0, 15]}}
+}
+
+unsigned long long testrdlam(unsigned long long rs, unsigned int shift, unsigned int not_const) {
+  // The third parameter is a mask that must be a constant that represents a
+  // contiguous bit field.
+  unsigned long long Return;
+  // Third parameter is not a constant.
+  Return = __rdlam(rs, shift, not_const); //expected-error {{argument to '__builtin_ppc_rdlam' must be a constant integer}}
+  // Third parameter is a constant but not a contiguous bit field.
+  return __rdlam(rs, shift, 0xF4) + Return; //expected-error {{argument 2 value should represent a contiguous bit field}}
+}
+
+void testalignx(const void *pointer, unsigned int alignment) {
+  // The alignment must be an immediate.
+  __alignx(alignment, pointer); //expected-error {{argument to '__builtin_ppc_alignx' must be a constant integer}}
+  // The alignment must be a power of 2.
+  __alignx(0x0, pointer); //expected-error {{argument should be a power of 2}}
+  // The alignment must be a power of 2.
+  __alignx(0xFF, pointer); //expected-error {{argument should be a power of 2}}
+}
+
+#ifndef __PPC64__
+long long testbpermd(long long bit_selector, long long source) {
+  return __bpermd(bit_selector, source); //expected-error {{this builtin is only available on 64-bit targets}}
+}
+
+long long testdivde(long long dividend, long long divisor) {
+  return __divde(dividend, divisor); //expected-error {{this builtin is only available on 64-bit targets}}
+}
+
+unsigned long long testdivdeu(unsigned long long dividend, unsigned long long divisor) {
+  return __divdeu(dividend, divisor); //expected-error {{this builtin is only available on 64-bit targets}}
+}
+#endif
+
+unsigned long test_mfspr(void) {
+  return __mfspr(cia); //expected-error {{argument to '__builtin_ppc_mfspr' must be a constant integer}}
+}
+
+void test_mtspr(void) {
+   __mtspr(cia, ula); //expected-error {{argument to '__builtin_ppc_mtspr' must be a constant integer}}
 }

@@ -1,3 +1,4 @@
 numpy
-pybind11>=2.6.0
+# Version 2.7.0 excluded: https://github.com/pybind/pybind11/issues/3136
+pybind11>=2.6.0,!=2.7.0
 PyYAML

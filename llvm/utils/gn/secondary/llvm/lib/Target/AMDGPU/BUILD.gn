@@ -164,6 +164,7 @@ static_library("LLVMAMDGPUCodeGen") {
     "AMDGPURegBankCombiner.cpp",
     "AMDGPURegisterBankInfo.cpp",
     "AMDGPUReplaceLDSUseWithPointer.cpp",
+    "AMDGPUResourceUsageAnalysis.cpp",
     "AMDGPURewriteOutArguments.cpp",
     "AMDGPUSubtarget.cpp",
     "AMDGPUTargetMachine.cpp",

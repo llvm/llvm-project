@@ -24,7 +24,7 @@ else:
   _load_extension = _mlir_libs.load_extension
   _preload_dependency = _mlir_libs.preload_dependency
 
-_preload_dependency("MLIRPublicAPI")
+_preload_dependency("MLIRPythonCAPI")
 
 # Expose the corresponding C-Extension module with a well-known name at this
 # top-level module. This allows relative imports like the following to

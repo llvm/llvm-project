@@ -1,7 +1,7 @@
+.. _omp130:
+
 Removing unused state machine from generic-mode kernel. [OMP130]
 ================================================================
-
-.. _omp130:
 
 This optimization remark indicates that an unused state machine was removed from
 a target region. This occurs when there are no parallel regions inside of a

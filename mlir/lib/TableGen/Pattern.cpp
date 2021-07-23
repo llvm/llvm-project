@@ -193,8 +193,8 @@ StringRef SymbolInfoMap::getValuePackName(StringRef symbol, int *index) {
 }
 
 SymbolInfoMap::SymbolInfo::SymbolInfo(const Operator *op, SymbolInfo::Kind kind,
-                                      Optional<int> index)
-    : op(op), kind(kind), argIndex(index) {}
+                                      Optional<DagAndIndex> dagAndIndex)
+    : op(op), kind(kind), dagAndIndex(dagAndIndex) {}
 
 int SymbolInfoMap::SymbolInfo::getStaticValueCount() const {
   switch (kind) {
@@ -217,8 +217,9 @@ std::string SymbolInfoMap::SymbolInfo::getVarDecl(StringRef name) const {
   switch (kind) {
   case Kind::Attr: {
     if (op) {
-      auto type =
-          op->getArg(*argIndex).get<NamedAttribute *>()->attr.getStorageType();
+      auto type = op->getArg((*dagAndIndex).second)
+                      .get<NamedAttribute *>()
+                      ->attr.getStorageType();
       return std::string(formatv("{0} {1};\n", type, name));
     }
     // TODO(suderman): Use a more exact type when available.
@@ -254,7 +255,8 @@ std::string SymbolInfoMap::SymbolInfo::getValueAndRangeUse(
   }
   case Kind::Operand: {
     assert(index < 0);
-    auto *operand = op->getArg(*argIndex).get<NamedTypeConstraint *>();
+    auto *operand =
+        op->getArg((*dagAndIndex).second).get<NamedTypeConstraint *>();
     // If this operand is variadic, then return a range. Otherwise, return the
     // value itself.
     if (operand->isVariableLength()) {
@@ -355,8 +357,8 @@ std::string SymbolInfoMap::SymbolInfo::getAllRangeUse(
   llvm_unreachable("unknown kind");
 }
 
-bool SymbolInfoMap::bindOpArgument(StringRef symbol, const Operator &op,
-                                   int argIndex) {
+bool SymbolInfoMap::bindOpArgument(DagNode node, StringRef symbol,
+                                   const Operator &op, int argIndex) {
   StringRef name = getValuePackName(symbol);
   if (name != symbol) {
     auto error = formatv(
@@ -366,7 +368,7 @@ bool SymbolInfoMap::bindOpArgument(StringRef symbol, const Operator &op,
 
   auto symInfo = op.getArg(argIndex).is<NamedAttribute *>()
                      ? SymbolInfo::getAttr(&op, argIndex)
-                     : SymbolInfo::getOperand(&op, argIndex);
+                     : SymbolInfo::getOperand(node, &op, argIndex);
 
   std::string key = symbol.str();
   if (symbolInfoMap.count(key)) {
@@ -414,13 +416,15 @@ SymbolInfoMap::const_iterator SymbolInfoMap::find(StringRef key) const {
 }
 
 SymbolInfoMap::const_iterator
-SymbolInfoMap::findBoundSymbol(StringRef key, const Operator &op,
+SymbolInfoMap::findBoundSymbol(StringRef key, DagNode node, const Operator &op,
                                int argIndex) const {
   std::string name = getValuePackName(key).str();
   auto range = symbolInfoMap.equal_range(name);
 
+  const auto symbolInfo = SymbolInfo::getOperand(node, &op, argIndex);
+
   for (auto it = range.first; it != range.second; ++it) {
-    if (it->second.op == &op && it->second.argIndex == argIndex) {
+    if (it->second.dagAndIndex == symbolInfo.dagAndIndex) {
       return it;
     }
   }
@@ -722,7 +726,8 @@ void Pattern::collectBoundSymbols(DagNode tree, SymbolInfoMap &infoMap,
         if (!treeArgName.empty() && treeArgName != "_") {
           LLVM_DEBUG(llvm::dbgs() << "found symbol bound to op argument: "
                                   << treeArgName << '\n');
-          verifyBind(infoMap.bindOpArgument(treeArgName, op, i), treeArgName);
+          verifyBind(infoMap.bindOpArgument(tree, treeArgName, op, i),
+                     treeArgName);
         }
       }
     }

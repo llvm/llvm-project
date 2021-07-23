@@ -137,6 +137,72 @@ entry:
   ret void
 }
 
+define void @test5(<2 x i64>* %a, i32* %in) {
+; P9-LABEL: test5:
+; P9:       # %bb.0: # %entry
+; P9-NEXT:    lfiwax f0, 0, r4
+; P9-NEXT:    xxspltd vs0, vs0, 0
+; P9-NEXT:    stxv vs0, 0(r3)
+; P9-NEXT:    blr
+;
+; P8-LABEL: test5:
+; P8:       # %bb.0: # %entry
+; P8-NEXT:    lfiwax f0, 0, r4
+; P8-NEXT:    xxspltd vs0, vs0, 0
+; P8-NEXT:    stxvd2x vs0, 0, r3
+; P8-NEXT:    blr
+;
+; P7-LABEL: test5:
+; P7:       # %bb.0: # %entry
+; P7-NEXT:    lwa r4, 0(r4)
+; P7-NEXT:    addi r5, r1, -16
+; P7-NEXT:    std r4, -8(r1)
+; P7-NEXT:    std r4, -16(r1)
+; P7-NEXT:    lxvd2x vs0, 0, r5
+; P7-NEXT:    stxvd2x vs0, 0, r3
+; P7-NEXT:    blr
+entry:
+  %0 = load i32, i32* %in, align 4
+  %conv = sext i32 %0 to i64
+  %splat.splatinsert.i = insertelement <2 x i64> poison, i64 %conv, i32 0
+  %splat.splat.i = shufflevector <2 x i64> %splat.splatinsert.i, <2 x i64> poison, <2 x i32> zeroinitializer
+  store <2 x i64> %splat.splat.i, <2 x i64>* %a, align 16
+  ret void
+}
+
+define void @test6(<2 x i64>* %a, i32* %in) {
+; P9-LABEL: test6:
+; P9:       # %bb.0: # %entry
+; P9-NEXT:    lfiwzx f0, 0, r4
+; P9-NEXT:    xxspltd vs0, vs0, 0
+; P9-NEXT:    stxv vs0, 0(r3)
+; P9-NEXT:    blr
+;
+; P8-LABEL: test6:
+; P8:       # %bb.0: # %entry
+; P8-NEXT:    lfiwzx f0, 0, r4
+; P8-NEXT:    xxspltd vs0, vs0, 0
+; P8-NEXT:    stxvd2x vs0, 0, r3
+; P8-NEXT:    blr
+;
+; P7-LABEL: test6:
+; P7:       # %bb.0: # %entry
+; P7-NEXT:    lwz r4, 0(r4)
+; P7-NEXT:    addi r5, r1, -16
+; P7-NEXT:    std r4, -8(r1)
+; P7-NEXT:    std r4, -16(r1)
+; P7-NEXT:    lxvd2x vs0, 0, r5
+; P7-NEXT:    stxvd2x vs0, 0, r3
+; P7-NEXT:    blr
+entry:
+  %0 = load i32, i32* %in, align 4
+  %conv = zext i32 %0 to i64
+  %splat.splatinsert.i = insertelement <2 x i64> poison, i64 %conv, i32 0
+  %splat.splat.i = shufflevector <2 x i64> %splat.splatinsert.i, <2 x i64> poison, <2 x i32> zeroinitializer
+  store <2 x i64> %splat.splat.i, <2 x i64>* %a, align 16
+  ret void
+}
+
 define <16 x i8> @unadjusted_lxvwsx(i32* %s, i32* %t) {
 ; P9-LABEL: unadjusted_lxvwsx:
 ; P9:       # %bb.0: # %entry

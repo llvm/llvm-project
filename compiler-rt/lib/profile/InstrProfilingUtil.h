@@ -74,11 +74,11 @@ int lprofSuspendSigKill();
 /* Restore previously suspended SIGKILL. */
 void lprofRestoreSigKill();
 
-inline size_t lprofRoundUpTo(size_t x, size_t boundary) {
+static inline size_t lprofRoundUpTo(size_t x, size_t boundary) {
   return (x + boundary - 1) & ~(boundary - 1);
 }
 
-inline size_t lprofRoundDownTo(size_t x, size_t boundary) {
+static inline size_t lprofRoundDownTo(size_t x, size_t boundary) {
   return x & ~(boundary - 1);
 }
 

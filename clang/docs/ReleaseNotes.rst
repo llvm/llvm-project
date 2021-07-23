@@ -76,6 +76,9 @@ New Compiler Flags
   file contains frame size information for each function defined in the source
   file.
 
+- ``-Wnull-pointer-subtraction`` emits warning when user code may have
+  undefined behaviour due to subtraction involving a null pointer.
+
 Deprecated Compiler Flags
 -------------------------
 
@@ -92,6 +95,7 @@ Modified Compiler Flags
   instead. ``-B``'s other GCC-compatible semantics are preserved:
   ``$prefix/$triple-$file`` and ``$prefix$file`` are searched for executables,
   libraries, includes, and data files used by the compiler.
+- ``-Wextra`` now also implies ``-Wnull-pointer-subtraction.``
 
 Removed Compiler Flags
 -------------------------

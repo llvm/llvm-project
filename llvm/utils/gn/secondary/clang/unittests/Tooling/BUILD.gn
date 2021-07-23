@@ -13,6 +13,7 @@ unittest("ToolingTests") {
     "//clang/lib/Rewrite",
     "//clang/lib/Tooling",
     "//clang/lib/Tooling/Core",
+    "//clang/lib/Tooling/DependencyScanning",
     "//clang/lib/Tooling/Refactoring",
     "//clang/lib/Tooling/Transformer",
     "//llvm/lib/Support",

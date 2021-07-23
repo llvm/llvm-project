@@ -264,7 +264,10 @@ void LinkGraph::dump(raw_ostream &OS) {
       OS << "  block " << formatv("{0:x16}", B->getAddress())
          << " size = " << formatv("{0:x8}", B->getSize())
          << ", align = " << B->getAlignment()
-         << ", alignment-offset = " << B->getAlignmentOffset() << "\n";
+         << ", alignment-offset = " << B->getAlignmentOffset();
+      if (B->isZeroFill())
+        OS << ", zero-fill";
+      OS << "\n";
 
       auto BlockSymsI = BlockSymbols.find(B);
       if (BlockSymsI != BlockSymbols.end()) {

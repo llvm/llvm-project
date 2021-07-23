@@ -933,6 +933,17 @@ void AArch64InstPrinter::printMatrixTile(const MCInst *MI, unsigned OpNum,
   O << getRegisterName(RegOp.getReg());
 }
 
+void AArch64InstPrinter::printSVCROp(const MCInst *MI, unsigned OpNum,
+                                     const MCSubtargetInfo &STI,
+                                     raw_ostream &O) {
+  const MCOperand &MO = MI->getOperand(OpNum);
+  assert(MO.isImm() && "Unexpected operand type!");
+  unsigned svcrop = MO.getImm();
+  const auto *SVCR = AArch64SVCR::lookupSVCRByEncoding(svcrop);
+  assert(SVCR && "Unexpected SVCR operand!");
+  O << SVCR->Name;
+}
+
 void AArch64InstPrinter::printOperand(const MCInst *MI, unsigned OpNo,
                                       const MCSubtargetInfo &STI,
                                       raw_ostream &O) {

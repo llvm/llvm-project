@@ -3366,10 +3366,10 @@ bool ScopBuilder::calculateMinMaxAccess(AliasGroupTy AliasGroup,
   MinMaxAccesses.reserve(AliasGroup.size());
 
   isl::union_set Domains = scop->getDomains();
-  isl::union_map Accesses = isl::union_map::empty(scop->getParamSpace());
+  isl::union_map Accesses = isl::union_map::empty(scop->getIslCtx());
 
   for (MemoryAccess *MA : AliasGroup)
-    Accesses = Accesses.add_map(MA->getAccessRelation());
+    Accesses = Accesses.unite(MA->getAccessRelation());
 
   Accesses = Accesses.intersect_domain(Domains);
   isl::union_set Locations = Accesses.range();

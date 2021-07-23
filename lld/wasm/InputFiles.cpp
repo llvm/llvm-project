@@ -124,6 +124,7 @@ uint64_t ObjFile::calcNewAddend(const WasmRelocation &reloc) const {
   case R_WASM_MEMORY_ADDR_I32:
   case R_WASM_MEMORY_ADDR_I64:
   case R_WASM_MEMORY_ADDR_TLS_SLEB:
+  case R_WASM_MEMORY_ADDR_TLS_SLEB64:
   case R_WASM_FUNCTION_OFFSET_I32:
   case R_WASM_FUNCTION_OFFSET_I64:
   case R_WASM_MEMORY_ADDR_LOCREL_I32:
@@ -196,6 +197,7 @@ uint64_t ObjFile::calcNewValue(const WasmRelocation &reloc, uint64_t tombstone,
     return value;
   }
   case R_WASM_MEMORY_ADDR_TLS_SLEB:
+  case R_WASM_MEMORY_ADDR_TLS_SLEB64:
     if (isa<UndefinedData>(sym) || sym->isUndefWeak())
       return 0;
     // TLS relocations are relative to the start of the TLS output segment
@@ -756,8 +758,9 @@ void BitcodeFile::parse() {
   }
   checkArch(t.getArch());
   std::vector<bool> keptComdats;
-  for (StringRef s : obj->getComdatTable())
-    keptComdats.push_back(symtab->addComdat(s));
+  // TODO Support nodeduplicate https://bugs.llvm.org/show_bug.cgi?id=50531
+  for (std::pair<StringRef, Comdat::SelectionKind> s : obj->getComdatTable())
+    keptComdats.push_back(symtab->addComdat(s.first));
 
   for (const lto::InputFile::Symbol &objSym : obj->symbols())
     symbols.push_back(createBitcodeSymbol(keptComdats, objSym, *this));

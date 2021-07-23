@@ -16,7 +16,7 @@ device. The module will attempt to compile a test program using known compiler
 flags for each requested architecture. If successful, the flags required for
 offloading will be loaded into the ``OpenMPTarget::OpenMPTarget_<device>``
 target or the ``OpenMPTarget_<device>_FLAGS`` variable. Currently supported target
-devices are ``NVPTX`` and ``AMDGCN``. This module is still under development so
+devices are ``NVPTX`` and ``AMDGPU``. This module is still under development so
 some features may be missing.
 
 To use this module, simply add the path to CMake's current module path and call

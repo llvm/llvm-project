@@ -73,11 +73,13 @@ namespace ranges {
 struct __advance_fn final : __function_like {
 private:
   template <class _Tp>
+  _LIBCPP_HIDE_FROM_ABI
   static constexpr _Tp __abs(_Tp __n) noexcept {
     return __n < 0 ? -__n : __n;
   }
 
   template <class _Ip>
+  _LIBCPP_HIDE_FROM_ABI
   static constexpr void __advance_forward(_Ip& __i, iter_difference_t<_Ip> __n) {
     while (__n > 0) {
       --__n;
@@ -86,6 +88,7 @@ private:
   }
 
   template <class _Ip>
+  _LIBCPP_HIDE_FROM_ABI
   static constexpr void __advance_backward(_Ip& __i, iter_difference_t<_Ip> __n) {
     while (__n < 0) {
       ++__n;
@@ -98,6 +101,7 @@ public:
 
   // Preconditions: If `I` does not model `bidirectional_iterator`, `n` is not negative.
   template <input_or_output_iterator _Ip>
+  _LIBCPP_HIDE_FROM_ABI
   constexpr void operator()(_Ip& __i, iter_difference_t<_Ip> __n) const {
     _LIBCPP_ASSERT(__n >= 0 || bidirectional_iterator<_Ip>,
                    "If `n < 0`, then `bidirectional_iterator<I>` must be true.");
@@ -121,6 +125,7 @@ public:
 
   // Preconditions: Either `assignable_from<I&, S> || sized_sentinel_for<S, I>` is modeled, or [i, bound) denotes a range.
   template <input_or_output_iterator _Ip, sentinel_for<_Ip> _Sp>
+  _LIBCPP_HIDE_FROM_ABI
   constexpr void operator()(_Ip& __i, _Sp __bound) const {
     // If `I` and `S` model `assignable_from<I&, S>`, equivalent to `i = std::move(bound)`.
     if constexpr (assignable_from<_Ip&, _Sp>) {
@@ -144,6 +149,7 @@ public:
   //   * If `n < 0`, [bound, i) denotes a range, `I` models `bidirectional_iterator`, and `I` and `S` model `same_as<I, S>`.
   // Returns: `n - M`, where `M` is the difference between the the ending and starting position.
   template <input_or_output_iterator _Ip, sentinel_for<_Ip> _Sp>
+  _LIBCPP_HIDE_FROM_ABI
   constexpr iter_difference_t<_Ip> operator()(_Ip& __i, iter_difference_t<_Ip> __n, _Sp __bound) const {
     _LIBCPP_ASSERT(__n >= 0 || (bidirectional_iterator<_Ip> && same_as<_Ip, _Sp>),
                    "If `n < 0`, then `bidirectional_iterator<I> && same_as<I, S>` must be true.");

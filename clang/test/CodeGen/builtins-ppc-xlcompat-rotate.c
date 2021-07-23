@@ -55,3 +55,30 @@ void test_builtin_ppc_rlwnm() {
   /*shift = 31, mask = 0x1FF = 511*/
   unsigned int res = __builtin_ppc_rlwnm(ui, 31, 0x1FF);
 }
+
+// CHECK-LABEL: @testrotatel4(
+// CHECK:         [[TMP:%.*]] = call i32 @llvm.fshl.i32(i32 {{%.*}}, i32 {{%.*}}, i32 {{%.*}})
+// CHECK-NEXT:    ret i32 [[TMP]]
+//
+unsigned int testrotatel4(unsigned int rs, unsigned int shift) {
+  return __rotatel4(rs, shift);
+}
+
+// CHECK-LABEL: @testrotatel8(
+// CHECK:         [[TMP:%.*]] = call i64 @llvm.fshl.i64(i64 {{%.*}}, i64 {{%.*}}, i64 {{%.*}})
+// CHECK-NEXT:    ret i64 [[TMP]]
+//
+unsigned long long testrotatel8(unsigned long long rs, unsigned long long shift) {
+  return __rotatel8(rs, shift);
+}
+
+// CHECK-LABEL: @testrdlam(
+// CHECK:         [[TMP0:%.*]] = call i64 @llvm.fshl.i64(i64 {{%.*}}, i64 {{%.*}}, i64 {{%.*}})
+// CHECK-NEXT:    [[TMP1:%.*]] = and i64 [[TMP0]], 7
+// CHECK-NEXT:    ret i64 [[TMP1]]
+//
+unsigned long long testrdlam(unsigned long long rs, unsigned int shift) {
+  // The third parameter is a mask that must be a constant that represents a
+  // contiguous bit field.
+  return __rdlam(rs, shift, 7);
+}

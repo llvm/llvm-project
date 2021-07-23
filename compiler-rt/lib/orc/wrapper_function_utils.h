@@ -125,7 +125,7 @@ serializeViaSPSToWrapperFunctionResult(const ArgTs &...Args) {
   if (!SPSArgListT::serialize(OB, Args...))
     return make_error<StringError>(
         "Error serializing arguments to blob in call");
-  return Result;
+  return std::move(Result);
 }
 
 template <typename RetT> class WrapperFunctionHandlerCaller {
@@ -305,9 +305,9 @@ public:
     detail::ResultDeserializer<SPSRetTagT, RetT>::makeSafe(Result);
 
     if (ORC_RT_UNLIKELY(!&__orc_rt_jit_dispatch_ctx))
-      return make_error<StringError>("__orc_jtjit_dispatch_ctx not set");
+      return make_error<StringError>("__orc_rt_jit_dispatch_ctx not set");
     if (ORC_RT_UNLIKELY(!&__orc_rt_jit_dispatch))
-      return make_error<StringError>("__orc_jtjit_dispatch not set");
+      return make_error<StringError>("__orc_rt_jit_dispatch not set");
 
     auto ArgBuffer =
         detail::serializeViaSPSToWrapperFunctionResult<SPSArgList<SPSTagTs...>>(

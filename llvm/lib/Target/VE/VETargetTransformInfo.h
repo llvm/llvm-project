@@ -76,6 +76,16 @@ public:
     // TODO report vregs once vector isel is stable.
     return 0;
   }
+
+  bool shouldBuildRelLookupTables() const {
+    // NEC nld doesn't support relative lookup tables.  It shows following
+    // errors.  So, we disable it at the moment.
+    //   /opt/nec/ve/bin/nld: src/CMakeFiles/cxxabi_shared.dir/cxa_demangle.cpp
+    //   .o(.rodata+0x17b4): reloc against `.L.str.376': error 2
+    //   /opt/nec/ve/bin/nld: final link failed: Nonrepresentable section on
+    //   output
+    return false;
+  }
 };
 
 } // namespace llvm

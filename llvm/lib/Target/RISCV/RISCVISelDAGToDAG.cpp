@@ -504,6 +504,125 @@ void RISCVDAGToDAGISel::Select(SDNode *Node) {
 
     break;
   }
+  case ISD::AND: {
+    auto *N1C = dyn_cast<ConstantSDNode>(Node->getOperand(1));
+    if (!N1C)
+      break;
+
+    SDValue N0 = Node->getOperand(0);
+
+    bool LeftShift = N0.getOpcode() == ISD::SHL;
+    if (!LeftShift && N0.getOpcode() != ISD::SRL)
+      break;
+
+    auto *C = dyn_cast<ConstantSDNode>(N0.getOperand(1));
+    if (!C)
+      break;
+    uint64_t C2 = C->getZExtValue();
+    unsigned XLen = Subtarget->getXLen();
+    if (!C2 || C2 >= XLen)
+      break;
+
+    uint64_t C1 = N1C->getZExtValue();
+
+    // Keep track of whether this is a andi, zext.h, or zext.w.
+    bool ZExtOrANDI = isInt<12>(N1C->getSExtValue());
+    if (C1 == UINT64_C(0xFFFF) &&
+        (Subtarget->hasStdExtZbb() || Subtarget->hasStdExtZbp()))
+      ZExtOrANDI = true;
+    if (C1 == UINT64_C(0xFFFFFFFF) && Subtarget->hasStdExtZba())
+      ZExtOrANDI = true;
+
+    // Clear irrelevant bits in the mask.
+    if (LeftShift)
+      C1 &= maskTrailingZeros<uint64_t>(C2);
+    else
+      C1 &= maskTrailingOnes<uint64_t>(XLen - C2);
+
+    // Some transforms should only be done if the shift has a single use or
+    // the AND would become (srli (slli X, 32), 32)
+    bool OneUseOrZExtW = N0.hasOneUse() || C1 == UINT64_C(0xFFFFFFFF);
+
+    SDValue X = N0.getOperand(0);
+
+    // Turn (and (srl x, c2) c1) -> (srli (slli x, c3-c2), c3) if c1 is a mask
+    // with c3 leading zeros.
+    if (!LeftShift && isMask_64(C1)) {
+      uint64_t C3 = XLen - (64 - countLeadingZeros(C1));
+      if (C2 < C3) {
+        // If the number of leading zeros is C2+32 this can be SRLIW.
+        if (C2 + 32 == C3) {
+          SDNode *SRLIW =
+              CurDAG->getMachineNode(RISCV::SRLIW, DL, XLenVT, X,
+                                     CurDAG->getTargetConstant(C2, DL, XLenVT));
+          ReplaceNode(Node, SRLIW);
+          return;
+        }
+
+        // (and (srl (sexti32 Y), c2), c1) -> (srliw (sraiw Y, 31), c3 - 32) if
+        // c1 is a mask with c3 leading zeros and c2 >= 32 and c3-c2==1.
+        //
+        // This pattern occurs when (i32 (srl (sra 31), c3 - 32)) is type
+        // legalized and goes through DAG combine.
+        SDValue Y;
+        if (C2 >= 32 && (C3 - C2) == 1 && N0.hasOneUse() &&
+            selectSExti32(X, Y)) {
+          SDNode *SRAIW =
+              CurDAG->getMachineNode(RISCV::SRAIW, DL, XLenVT, Y,
+                                     CurDAG->getTargetConstant(31, DL, XLenVT));
+          SDNode *SRLIW = CurDAG->getMachineNode(
+              RISCV::SRLIW, DL, XLenVT, SDValue(SRAIW, 0),
+              CurDAG->getTargetConstant(C3 - 32, DL, XLenVT));
+          ReplaceNode(Node, SRLIW);
+          return;
+        }
+
+        // (srli (slli x, c3-c2), c3).
+        if (OneUseOrZExtW && !ZExtOrANDI) {
+          SDNode *SLLI = CurDAG->getMachineNode(
+              RISCV::SLLI, DL, XLenVT, X,
+              CurDAG->getTargetConstant(C3 - C2, DL, XLenVT));
+          SDNode *SRLI =
+              CurDAG->getMachineNode(RISCV::SRLI, DL, XLenVT, SDValue(SLLI, 0),
+                                     CurDAG->getTargetConstant(C3, DL, XLenVT));
+          ReplaceNode(Node, SRLI);
+          return;
+        }
+      }
+    }
+
+    // Turn (and (shl x, c2) c1) -> (srli (slli c2+c3), c3) if c1 is a mask
+    // shifted by c2 bits with c3 leading zeros.
+    if (LeftShift && isShiftedMask_64(C1)) {
+      uint64_t C3 = XLen - (64 - countLeadingZeros(C1));
+
+      if (C2 + C3 < XLen &&
+          C1 == (maskTrailingOnes<uint64_t>(XLen - (C2 + C3)) << C2)) {
+        // Use slli.uw when possible.
+        if ((XLen - (C2 + C3)) == 32 && Subtarget->hasStdExtZba()) {
+          SDNode *SLLIUW =
+              CurDAG->getMachineNode(RISCV::SLLIUW, DL, XLenVT, X,
+                                     CurDAG->getTargetConstant(C2, DL, XLenVT));
+          ReplaceNode(Node, SLLIUW);
+          return;
+        }
+
+        // (srli (slli c2+c3), c3)
+        if (OneUseOrZExtW && !ZExtOrANDI) {
+          SDNode *SLLI = CurDAG->getMachineNode(
+              RISCV::SLLI, DL, XLenVT, X,
+              CurDAG->getTargetConstant(C2 + C3, DL, XLenVT));
+          SDNode *SRLI =
+              CurDAG->getMachineNode(RISCV::SRLI, DL, XLenVT, SDValue(SLLI, 0),
+                                     CurDAG->getTargetConstant(C3, DL, XLenVT));
+          ReplaceNode(Node, SRLI);
+          return;
+        }
+      }
+    }
+
+    break;
+  }
   case ISD::INTRINSIC_WO_CHAIN: {
     unsigned IntNo = Node->getConstantOperandVal(0);
     switch (IntNo) {
@@ -1375,41 +1494,6 @@ bool RISCVDAGToDAGISel::selectZExti32(SDValue N, SDValue &Val) {
   }
 
   return false;
-}
-
-// Check that it is a SLLIUW (Shift Logical Left Immediate Unsigned i32
-// on RV64).
-// SLLIUW is the same as SLLI except for the fact that it clears the bits
-// XLEN-1:32 of the input RS1 before shifting.
-// A PatFrag has already checked that it has the right structure:
-//
-//  (AND (SHL RS1, VC2), VC1)
-//
-// We check that VC2, the shamt is less than 32, otherwise the pattern is
-// exactly the same as SLLI and we give priority to that.
-// Eventually we check that VC1, the mask used to clear the upper 32 bits
-// of RS1, is correct:
-//
-//  VC1 == (0xFFFFFFFF << VC2)
-//
-bool RISCVDAGToDAGISel::MatchSLLIUW(SDNode *N) const {
-  assert(N->getOpcode() == ISD::AND);
-  assert(N->getOperand(0).getOpcode() == ISD::SHL);
-  assert(isa<ConstantSDNode>(N->getOperand(1)));
-  assert(isa<ConstantSDNode>(N->getOperand(0).getOperand(1)));
-
-  // The IsRV64 predicate is checked after PatFrag predicates so we can get
-  // here even on RV32.
-  if (!Subtarget->is64Bit())
-    return false;
-
-  SDValue Shl = N->getOperand(0);
-  uint64_t VC1 = N->getConstantOperandVal(1);
-  uint64_t VC2 = Shl.getConstantOperandVal(1);
-
-  // Immediate range should be enforced by uimm5 predicate.
-  assert(VC2 < 32 && "Unexpected immediate");
-  return (VC1 >> VC2) == UINT64_C(0xFFFFFFFF);
 }
 
 // Select VL as a 5 bit immediate or a value that will become a register. This

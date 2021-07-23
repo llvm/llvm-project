@@ -588,6 +588,58 @@ static unsigned getMinSizeForRegBank(const RegisterBank &RB) {
   }
 }
 
+/// Create a REG_SEQUENCE instruction using the registers in \p Regs.
+/// Helper function for functions like createDTuple and createQTuple.
+///
+/// \p RegClassIDs - The list of register class IDs available for some tuple of
+/// a scalar class. E.g. QQRegClassID, QQQRegClassID, QQQQRegClassID. This is
+/// expected to contain between 2 and 4 tuple classes.
+///
+/// \p SubRegs - The list of subregister classes associated with each register
+/// class ID in \p RegClassIDs. E.g., QQRegClassID should use the qsub0
+/// subregister class. The index of each subregister class is expected to
+/// correspond with the index of each register class.
+///
+/// \returns Either the destination register of REG_SEQUENCE instruction that
+/// was created, or the 0th element of \p Regs if \p Regs contains a single
+/// element.
+static Register createTuple(ArrayRef<Register> Regs,
+                            const unsigned RegClassIDs[],
+                            const unsigned SubRegs[], MachineIRBuilder &MIB) {
+  unsigned NumRegs = Regs.size();
+  if (NumRegs == 1)
+    return Regs[0];
+  assert(NumRegs >= 2 && NumRegs <= 4 &&
+         "Only support between two and 4 registers in a tuple!");
+  const TargetRegisterInfo *TRI = MIB.getMF().getSubtarget().getRegisterInfo();
+  auto *DesiredClass = TRI->getRegClass(RegClassIDs[NumRegs - 2]);
+  auto RegSequence =
+      MIB.buildInstr(TargetOpcode::REG_SEQUENCE, {DesiredClass}, {});
+  for (unsigned I = 0, E = Regs.size(); I < E; ++I) {
+    RegSequence.addUse(Regs[I]);
+    RegSequence.addImm(SubRegs[I]);
+  }
+  return RegSequence.getReg(0);
+}
+
+/// Create a tuple of D-registers using the registers in \p Regs.
+static Register createDTuple(ArrayRef<Register> Regs, MachineIRBuilder &MIB) {
+  static const unsigned RegClassIDs[] = {
+      AArch64::DDRegClassID, AArch64::DDDRegClassID, AArch64::DDDDRegClassID};
+  static const unsigned SubRegs[] = {AArch64::dsub0, AArch64::dsub1,
+                                     AArch64::dsub2, AArch64::dsub3};
+  return createTuple(Regs, RegClassIDs, SubRegs, MIB);
+}
+
+/// Create a tuple of Q-registers using the registers in \p Regs.
+static Register createQTuple(ArrayRef<Register> Regs, MachineIRBuilder &MIB) {
+  static const unsigned RegClassIDs[] = {
+      AArch64::QQRegClassID, AArch64::QQQRegClassID, AArch64::QQQQRegClassID};
+  static const unsigned SubRegs[] = {AArch64::qsub0, AArch64::qsub1,
+                                     AArch64::qsub2, AArch64::qsub3};
+  return createTuple(Regs, RegClassIDs, SubRegs, MIB);
+}
+
 static Optional<uint64_t> getImmedFromMO(const MachineOperand &Root) {
   auto &MI = *Root.getParent();
   auto &MBB = *MI.getParent();
@@ -4700,15 +4752,10 @@ bool AArch64InstructionSelector::selectShuffleVector(
 
   // For TBL2 we need to emit a REG_SEQUENCE to tie together two consecutive
   // Q registers for regalloc.
-  auto RegSeq = MIB.buildInstr(TargetOpcode::REG_SEQUENCE,
-                               {&AArch64::QQRegClass}, {Src1Reg})
-                    .addImm(AArch64::qsub0)
-                    .addUse(Src2Reg)
-                    .addImm(AArch64::qsub1);
-
+  SmallVector<Register, 2> Regs = {Src1Reg, Src2Reg};
+  auto RegSeq = createQTuple(Regs, MIB);
   auto TBL2 = MIB.buildInstr(AArch64::TBLv16i8Two, {I.getOperand(0)},
                              {RegSeq, IndexLoad->getOperand(0)});
-  constrainSelectedInstRegOperands(*RegSeq, TII, TRI, RBI);
   constrainSelectedInstRegOperands(*TBL2, TII, TRI, RBI);
   I.eraseFromParent();
   return true;
@@ -5007,6 +5054,43 @@ bool AArch64InstructionSelector::selectIntrinsicWithSideEffects(
     MIB.buildInstr(AArch64::BRK, {}, {})
         .addImm(I.getOperand(1).getImm() | ('U' << 8));
     break;
+  case Intrinsic::aarch64_neon_st2: {
+    Register Src1 = I.getOperand(1).getReg();
+    Register Src2 = I.getOperand(2).getReg();
+    Register Ptr = I.getOperand(3).getReg();
+    LLT Ty = MRI.getType(Src1);
+    const LLT S8 = LLT::scalar(8);
+    const LLT S16 = LLT::scalar(16);
+    const LLT S32 = LLT::scalar(32);
+    const LLT S64 = LLT::scalar(64);
+    const LLT P0 = LLT::pointer(0, 64);
+    unsigned Opc;
+    if (Ty == LLT::fixed_vector(8, S8))
+      Opc = AArch64::ST2Twov8b;
+    else if (Ty == LLT::fixed_vector(16, S8))
+      Opc = AArch64::ST2Twov16b;
+    else if (Ty == LLT::fixed_vector(4, S16))
+      Opc = AArch64::ST2Twov4h;
+    else if (Ty == LLT::fixed_vector(8, S16))
+      Opc = AArch64::ST2Twov8h;
+    else if (Ty == LLT::fixed_vector(2, S32))
+      Opc = AArch64::ST2Twov2s;
+    else if (Ty == LLT::fixed_vector(4, S32))
+      Opc = AArch64::ST2Twov4s;
+    else if (Ty == LLT::fixed_vector(2, S64) || Ty == LLT::fixed_vector(2, P0))
+      Opc = AArch64::ST2Twov2d;
+    else if (Ty == S64 | Ty == P0)
+      Opc = AArch64::ST1Twov1d;
+    else
+      llvm_unreachable("Unexpected type for st2!");
+    SmallVector<Register, 2> Regs = {Src1, Src2};
+    Register Tuple = Ty.getSizeInBits() == 128 ? createQTuple(Regs, MIB)
+                                               : createDTuple(Regs, MIB);
+    auto Store = MIB.buildInstr(Opc, {}, {Tuple, Ptr});
+    Store.cloneMemRefs(I);
+    constrainSelectedInstRegOperands(*Store, TII, TRI, RBI);
+    break;
+  }
   }
 
   I.eraseFromParent();

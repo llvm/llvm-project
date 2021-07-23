@@ -7,6 +7,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "llvm/ExecutionEngine/Orc/Shared/SimplePackedSerialization.h"
+#include "llvm/ExecutionEngine/Orc/LLVMSPSSerializers.h"
 #include "gtest/gtest.h"
 
 using namespace llvm;
@@ -157,4 +158,10 @@ TEST(SimplePackedSerializationTest, ArgListSerialization) {
   EXPECT_EQ(Arg1, ArgOut1);
   EXPECT_EQ(Arg2, ArgOut2);
   EXPECT_EQ(Arg3, ArgOut3);
+}
+
+TEST(SimplePackedSerialization, StringMap) {
+  StringMap<int32_t> M({{"A", 1}, {"B", 2}});
+  blobSerializationRoundTrip<SPSSequence<SPSTuple<SPSString, int32_t>>,
+                             StringMap<int32_t>>(M);
 }

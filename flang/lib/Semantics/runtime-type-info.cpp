@@ -38,7 +38,7 @@ static int FindLenParameterIndex(
 class RuntimeTableBuilder {
 public:
   RuntimeTableBuilder(SemanticsContext &, RuntimeDerivedTypeTables &);
-  void DescribeTypes(Scope &scope);
+  void DescribeTypes(Scope &scope, bool inSchemata);
 
 private:
   const Symbol *DescribeType(Scope &);
@@ -58,6 +58,9 @@ private:
       const std::string &distinctName, const SymbolVector *parameters);
   evaluate::StructureConstructor DescribeComponent(
       const Symbol &, const ProcEntityDetails &, Scope &);
+  bool InitializeDataPointer(evaluate::StructureConstructorValues &,
+      const Symbol &symbol, const ObjectEntityDetails &object, Scope &scope,
+      Scope &dtScope, const std::string &distinctName);
   evaluate::StructureConstructor PackageIntValue(
       const SomeExpr &genre, std::int64_t = 0) const;
   SomeExpr PackageIntValueExpr(const SomeExpr &genre, std::int64_t = 0) const;
@@ -132,6 +135,7 @@ private:
   SomeExpr writeFormattedEnum_; // SpecialBinding::Which::WriteFormatted
   SomeExpr writeUnformattedEnum_; // SpecialBinding::Which::WriteUnformatted
   parser::CharBlock location_;
+  std::set<const Scope *> ignoreScopes_;
 };
 
 RuntimeTableBuilder::RuntimeTableBuilder(
@@ -152,18 +156,21 @@ RuntimeTableBuilder::RuntimeTableBuilder(
       readFormattedEnum_{GetEnumValue("readformatted")},
       readUnformattedEnum_{GetEnumValue("readunformatted")},
       writeFormattedEnum_{GetEnumValue("writeformatted")},
-      writeUnformattedEnum_{GetEnumValue("writeunformatted")} {}
+      writeUnformattedEnum_{GetEnumValue("writeunformatted")} {
+  ignoreScopes_.insert(tables_.schemata);
+}
 
-void RuntimeTableBuilder::DescribeTypes(Scope &scope) {
-  if (&scope == tables_.schemata) {
-    return; // don't loop trying to describe a schema...
-  }
+void RuntimeTableBuilder::DescribeTypes(Scope &scope, bool inSchemata) {
+  inSchemata |= ignoreScopes_.find(&scope) != ignoreScopes_.end();
   if (scope.IsDerivedType()) {
-    DescribeType(scope);
-  } else {
-    for (Scope &child : scope.children()) {
-      DescribeTypes(child);
+    if (!inSchemata) { // don't loop trying to describe a schema
+      DescribeType(scope);
     }
+  } else {
+    scope.InstantiateDerivedTypes();
+  }
+  for (Scope &child : scope.children()) {
+    DescribeTypes(child, inSchemata);
   }
 }
 
@@ -314,11 +321,29 @@ static SomeExpr SaveObjectInit(
       evaluate::Designator<evaluate::SomeDerived>{symbol});
 }
 
+template <int KIND> static SomeExpr IntExpr(std::int64_t n) {
+  return evaluate::AsGenericExpr(
+      evaluate::Constant<evaluate::Type<TypeCategory::Integer, KIND>>{n});
+}
+
 const Symbol *RuntimeTableBuilder::DescribeType(Scope &dtScope) {
   if (const Symbol * info{dtScope.runtimeDerivedTypeDescription()}) {
     return info;
   }
   const DerivedTypeSpec *derivedTypeSpec{dtScope.derivedTypeSpec()};
+  if (!derivedTypeSpec && !dtScope.IsParameterizedDerivedType() &&
+      dtScope.symbol()) {
+    // This derived type was declared (obviously, there's a Scope) but never
+    // used in this compilation (no instantiated DerivedTypeSpec points here).
+    // Create a DerivedTypeSpec now for it so that ComponentIterator
+    // will work. This covers the case of a derived type that's declared in
+    // a module but used only by clients and submodules, enabling the
+    // run-time "no initialization needed here" flag to work.
+    DerivedTypeSpec derived{dtScope.symbol()->name(), *dtScope.symbol()};
+    DeclTypeSpec &decl{
+        dtScope.MakeDerivedType(DeclTypeSpec::TypeDerived, std::move(derived))};
+    derivedTypeSpec = &decl.derivedTypeSpec();
+  }
   const Symbol *dtSymbol{
       derivedTypeSpec ? &derivedTypeSpec->typeSymbol() : dtScope.symbol()};
   if (!dtSymbol) {
@@ -360,18 +385,6 @@ const Symbol *RuntimeTableBuilder::DescribeType(Scope &dtScope) {
     }
     AddValue(
         dtValues, derivedTypeSchema_, "sizeinbytes"s, IntToExpr(sizeInBytes));
-  }
-  const Symbol *parentDescObject{nullptr};
-  if (const Scope * parentScope{dtScope.GetDerivedTypeParent()}) {
-    parentDescObject = DescribeType(*const_cast<Scope *>(parentScope));
-  }
-  if (parentDescObject) {
-    AddValue(dtValues, derivedTypeSchema_, "parent"s,
-        evaluate::AsGenericExpr(evaluate::Expr<evaluate::SomeDerived>{
-            evaluate::Designator<evaluate::SomeDerived>{*parentDescObject}}));
-  } else {
-    AddValue(dtValues, derivedTypeSchema_, "parent"s,
-        SomeExpr{evaluate::NullPointer{}});
   }
   bool isPDTinstantiation{derivedTypeSpec && &dtScope != dtSymbol->scope()};
   if (isPDTinstantiation) {
@@ -518,6 +531,18 @@ const Symbol *RuntimeTableBuilder::DescribeType(Scope &dtScope) {
             std::move(specials),
             evaluate::ConstantSubscripts{
                 static_cast<evaluate::ConstantSubscript>(specials.size())}));
+    // Note the presence/absence of a parent component
+    AddValue(dtValues, derivedTypeSchema_, "hasparent"s,
+        IntExpr<1>(dtScope.GetDerivedTypeParent() != nullptr));
+    // To avoid wasting run time attempting to initialize derived type
+    // instances without any initialized components, analyze the type
+    // and set a flag if there's nothing to do for it at run time.
+    AddValue(dtValues, derivedTypeSchema_, "noinitializationneeded"s,
+        IntExpr<1>(
+            derivedTypeSpec && !derivedTypeSpec->HasDefaultInitialization()));
+    // Similarly, a flag to short-circuit destruction when not needed.
+    AddValue(dtValues, derivedTypeSchema_, "nodestructionneeded"s,
+        IntExpr<1>(derivedTypeSpec && !derivedTypeSpec->HasDestruction()));
   }
   dtObject.get<ObjectEntityDetails>().set_init(MaybeExpr{
       StructureExpr(Structure(derivedTypeSchema_, std::move(dtValues)))});
@@ -561,11 +586,6 @@ const DeclTypeSpec &RuntimeTableBuilder::GetSchema(
   }
   CHECK(spec->AsDerived());
   return *spec;
-}
-
-template <int KIND> static SomeExpr IntExpr(std::int64_t n) {
-  return evaluate::AsGenericExpr(
-      evaluate::Constant<evaluate::Type<TypeCategory::Integer, KIND>>{n});
 }
 
 SomeExpr RuntimeTableBuilder::GetEnumValue(const char *name) const {
@@ -723,11 +743,8 @@ evaluate::StructureConstructor RuntimeTableBuilder::DescribeComponent(
     AddValue(values, componentSchema_, "genre"s, GetEnumValue("allocatable"));
   } else if (IsPointer(symbol)) {
     AddValue(values, componentSchema_, "genre"s, GetEnumValue("pointer"));
-    hasDataInit = object.init().has_value();
-    if (hasDataInit) {
-      AddValue(values, componentSchema_, "initialization"s,
-          SomeExpr{*object.init()});
-    }
+    hasDataInit = InitializeDataPointer(
+        values, symbol, object, scope, dtScope, distinctName);
   } else if (IsAutomaticObject(symbol)) {
     AddValue(values, componentSchema_, "genre"s, GetEnumValue("automatic"));
   } else {
@@ -762,6 +779,70 @@ evaluate::StructureConstructor RuntimeTableBuilder::DescribeComponent(
         SomeExpr{evaluate::NullPointer{}});
   }
   return {DEREF(procPtrSchema_.AsDerived()), std::move(values)};
+}
+
+// Create a static pointer object with the same initialization
+// from whence the runtime can memcpy() the data pointer
+// component initialization.
+// Creates and interconnects the symbols, scopes, and types for
+//   TYPE :: ptrDt
+//     type, POINTER :: name
+//   END TYPE
+//   TYPE(ptrDt), TARGET, SAVE :: ptrInit = ptrDt(designator)
+// and then initializes the original component by setting
+//   initialization = ptrInit
+// which takes the address of ptrInit because the type is C_PTR.
+// This technique of wrapping the data pointer component into
+// a derived type instance disables any reason for lowering to
+// attempt to dereference the RHS of an initializer, thereby
+// allowing the runtime to actually perform the initialization
+// by means of a simple memcpy() of the wrapped descriptor in
+// ptrInit to the data pointer component being initialized.
+bool RuntimeTableBuilder::InitializeDataPointer(
+    evaluate::StructureConstructorValues &values, const Symbol &symbol,
+    const ObjectEntityDetails &object, Scope &scope, Scope &dtScope,
+    const std::string &distinctName) {
+  if (object.init().has_value()) {
+    SourceName ptrDtName{SaveObjectName(
+        ".dp."s + distinctName + "."s + symbol.name().ToString())};
+    Symbol &ptrDtSym{
+        *scope.try_emplace(ptrDtName, Attrs{}, UnknownDetails{}).first->second};
+    Scope &ptrDtScope{scope.MakeScope(Scope::Kind::DerivedType, &ptrDtSym)};
+    ignoreScopes_.insert(&ptrDtScope);
+    ObjectEntityDetails ptrDtObj;
+    ptrDtObj.set_type(DEREF(object.type()));
+    ptrDtObj.set_shape(object.shape());
+    Symbol &ptrDtComp{*ptrDtScope
+                           .try_emplace(symbol.name(), Attrs{Attr::POINTER},
+                               std::move(ptrDtObj))
+                           .first->second};
+    DerivedTypeDetails ptrDtDetails;
+    ptrDtDetails.add_component(ptrDtComp);
+    ptrDtSym.set_details(std::move(ptrDtDetails));
+    ptrDtSym.set_scope(&ptrDtScope);
+    DeclTypeSpec &ptrDtDeclType{
+        scope.MakeDerivedType(DeclTypeSpec::Category::TypeDerived,
+            DerivedTypeSpec{ptrDtName, ptrDtSym})};
+    DerivedTypeSpec &ptrDtDerived{DEREF(ptrDtDeclType.AsDerived())};
+    ptrDtDerived.set_scope(ptrDtScope);
+    ptrDtDerived.CookParameters(context_.foldingContext());
+    ptrDtDerived.Instantiate(scope);
+    ObjectEntityDetails ptrInitObj;
+    ptrInitObj.set_type(ptrDtDeclType);
+    evaluate::StructureConstructorValues ptrInitValues;
+    AddValue(
+        ptrInitValues, ptrDtDeclType, symbol.name().ToString(), *object.init());
+    ptrInitObj.set_init(evaluate::AsGenericExpr(
+        Structure(ptrDtDeclType, std::move(ptrInitValues))));
+    AddValue(values, componentSchema_, "initialization"s,
+        SaveObjectInit(scope,
+            SaveObjectName(
+                ".di."s + distinctName + "."s + symbol.name().ToString()),
+            ptrInitObj));
+    return true;
+  } else {
+    return false;
+  }
 }
 
 evaluate::StructureConstructor RuntimeTableBuilder::PackageIntValue(
@@ -961,7 +1042,7 @@ RuntimeDerivedTypeTables BuildRuntimeDerivedTypeTables(
   result.schemata = reader.Read(schemataModule);
   if (result.schemata) {
     RuntimeTableBuilder builder{context, result};
-    builder.DescribeTypes(context.globalScope());
+    builder.DescribeTypes(context.globalScope(), false);
   }
   return result;
 }

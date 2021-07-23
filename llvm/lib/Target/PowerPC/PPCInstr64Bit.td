@@ -1796,6 +1796,9 @@ def : Pat<(int_ppc_store8r g8rc:$a, ForceXForm:$ptr),
           (STDBRX g8rc:$a, ForceXForm:$ptr)>;
 }
 
+def : Pat<(i64 (int_ppc_cmpb g8rc:$a, g8rc:$b)),
+          (i64 (CMPB8 $a, $b))>;
+
 let Predicates = [IsISA3_0] in {
 // DARN (deliver random number)
 // L=0 for 32-bit, L=1 for conditioned random, L=2 for raw random
@@ -1836,3 +1839,7 @@ def : Pat<(int_ppc_tdw g8rc:$A, g8rc:$B, i32:$IMM),
 // trapd
 def : Pat<(int_ppc_trapd g8rc:$A),
           (TDI 24, $A, 0)>;
+def : Pat<(i64 (int_ppc_mfspr timm:$SPR)),
+          (MFSPR8 $SPR)>;
+def : Pat<(int_ppc_mtspr timm:$SPR, g8rc:$RT),
+          (MTSPR8 $SPR, $RT)>;

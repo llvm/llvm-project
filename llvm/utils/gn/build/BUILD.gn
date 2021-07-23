@@ -9,7 +9,7 @@ declare_args() {
   # After building with this, run tests and then run
   #    llvm/utils/prepare-code-coverage-artifact.py  \
   #        .../llvm-profdata .../llvm-cov out/gn/profiles/ report/ \
-  #        out/gn/bin/llvm-undname ...`
+  #        out/gn/bin/llvm-undname ...
   # to generate a HTML report for the binaries passed in the last line.
   llvm_build_instrumented_coverage = false
 
@@ -233,6 +233,14 @@ config("compiler_defaults") {
       "-fprofile-instr-generate=" +
           rebase_path("$root_build_dir/profiles/%4m.profraw"),
     ]
+    if (use_goma) {
+      # goma has a bug where it writes the server-side absolute path.
+      # Work around that.
+      # FIXME: Instead, set this to `.` for deterministic builds and pass
+      # the build dir to prepare-code-coverage-artifact.py instead.
+      cflags += [ "-fcoverage-compilation-dir=" + rebase_path(root_build_dir) ]
+    }
+
     if (host_os != "win") {
       ldflags += [ "-fprofile-instr-generate" ]
     }

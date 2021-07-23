@@ -116,10 +116,10 @@ isl::union_map scheduleProjectOut(const isl::union_map &UMap, unsigned first,
     return UMap; /* isl_map_project_out would also reset the tuple, which should
                     have no effect on schedule ranges */
 
-  auto Result = isl::union_map::empty(UMap.get_space());
+  auto Result = isl::union_map::empty(UMap.ctx());
   for (isl::map Map : UMap.get_map_list()) {
     auto Outprojected = Map.project_out(isl::dim::out, first, n);
-    Result = Result.add_map(Outprojected);
+    Result = Result.unite(Outprojected);
   }
   return Result;
 }
@@ -142,12 +142,12 @@ isl_size scheduleScatterDims(const isl::union_map &Schedule) {
 
 /// Return the @p pos' range dimension, converted to an isl_union_pw_aff.
 isl::union_pw_aff scheduleExtractDimAff(isl::union_map UMap, unsigned pos) {
-  auto SingleUMap = isl::union_map::empty(UMap.get_space());
+  auto SingleUMap = isl::union_map::empty(UMap.ctx());
   for (isl::map Map : UMap.get_map_list()) {
     unsigned MapDims = Map.range_tuple_dim();
     isl::map SingleMap = Map.project_out(isl::dim::out, 0, pos);
     SingleMap = SingleMap.project_out(isl::dim::out, 1, MapDims - pos - 1);
-    SingleUMap = SingleUMap.add_map(SingleMap);
+    SingleUMap = SingleUMap.unite(SingleMap);
   };
 
   auto UAff = isl::union_pw_multi_aff(SingleUMap);
@@ -191,7 +191,7 @@ isl::union_map tryFlattenSequence(isl::union_map Schedule) {
   auto AllDomains = Schedule.domain();
   auto AllDomainsToNull = isl::union_pw_multi_aff(AllDomains);
 
-  auto NewSchedule = isl::union_map::empty(ParamSpace);
+  auto NewSchedule = isl::union_map::empty(ParamSpace.ctx());
   auto Counter = isl::pw_aff(isl::local_space(ParamSpace.set_from_params()));
 
   while (!ScatterSet.is_empty()) {

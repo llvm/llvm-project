@@ -1,4 +1,4 @@
-# RUN: not llvm-ifs -action write-ifs -o - %s %S/func.ifs 2>&1 | \
+# RUN: not llvm-ifs --input-format=IFS --output-format=IFS -o - %s %S/func.ifs 2>&1 | \
 # RUN: FileCheck %s --check-prefixes=CHECK-IFS
 
 # Here we are testing to see if two symbols with identical names will fail to
@@ -7,10 +7,9 @@
 # CHECK-IFS-NEXT: Filename:
 # CHECK-IFS-NEXT: Type Values: Object Func
 
---- !experimental-ifs-v2
-IfsVersion: 2.0
-Triple: x86_64-unknown-linux-gnu
-ObjectFileFormat: ELF
+--- !ifs-v1
+IfsVersion: 3.0
+Target: x86_64-unknown-linux-gnu
 Symbols:
   - { Name: a, Type: Object, Size: 1 }
 ...

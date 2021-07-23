@@ -162,6 +162,59 @@ operator!=(const forward_iterator<T>& x, const forward_iterator<U>& y)
 }
 
 template <class It>
+class non_default_constructible_iterator
+{
+    It it_;
+
+    template <class U> friend class non_default_constructible_iterator;
+public:
+    typedef          std::input_iterator_tag                   iterator_category;
+    typedef typename std::iterator_traits<It>::value_type      value_type;
+    typedef typename std::iterator_traits<It>::difference_type difference_type;
+    typedef It                                                 pointer;
+    typedef typename std::iterator_traits<It>::reference       reference;
+
+    TEST_CONSTEXPR_CXX14 It base() const {return it_;}
+
+    non_default_constructible_iterator() = delete;
+
+    explicit TEST_CONSTEXPR_CXX14 non_default_constructible_iterator(It it) : it_(it) {}
+    template <class U>
+        TEST_CONSTEXPR_CXX14 non_default_constructible_iterator(const non_default_constructible_iterator<U>& u) :it_(u.it_) {}
+
+    TEST_CONSTEXPR_CXX14 reference operator*() const {return *it_;}
+    TEST_CONSTEXPR_CXX14 pointer operator->() const {return it_;}
+
+    TEST_CONSTEXPR_CXX14 non_default_constructible_iterator& operator++() {++it_; return *this;}
+    TEST_CONSTEXPR_CXX14 non_default_constructible_iterator operator++(int)
+        {non_default_constructible_iterator tmp(*this); ++(*this); return tmp;}
+
+    friend TEST_CONSTEXPR_CXX14 bool operator==(const non_default_constructible_iterator& x, const non_default_constructible_iterator& y)
+        {return x.it_ == y.it_;}
+    friend TEST_CONSTEXPR_CXX14 bool operator!=(const non_default_constructible_iterator& x, const non_default_constructible_iterator& y)
+        {return !(x == y);}
+
+    template <class T>
+    void operator,(T const &) DELETE_FUNCTION;
+};
+
+template <class T, class U>
+inline
+bool TEST_CONSTEXPR_CXX14
+operator==(const non_default_constructible_iterator<T>& x, const non_default_constructible_iterator<U>& y)
+{
+    return x.base() == y.base();
+}
+
+template <class T, class U>
+inline
+bool TEST_CONSTEXPR_CXX14
+operator!=(const non_default_constructible_iterator<T>& x, const non_default_constructible_iterator<U>& y)
+{
+    return !(x == y);
+}
+
+template <class It>
 class bidirectional_iterator
 {
     It it_;

@@ -15,16 +15,11 @@
 
 #include "sanitizer_common/sanitizer_internal_defs.h"
 #include "sanitizer_common/sanitizer_libc.h"
-#include "tsan_stat.h"
 #include "ubsan/ubsan_platform.h"
 
 // Setup defaults for compile definitions.
 #ifndef TSAN_NO_HISTORY
 # define TSAN_NO_HISTORY 0
-#endif
-
-#ifndef TSAN_COLLECT_STATS
-# define TSAN_COLLECT_STATS 0
 #endif
 
 #ifndef TSAN_CONTAINS_UBSAN
@@ -107,22 +102,11 @@ void build_consistency_debug();
 void build_consistency_release();
 #endif
 
-#if TSAN_COLLECT_STATS
-void build_consistency_stats();
-#else
-void build_consistency_nostats();
-#endif
-
 static inline void USED build_consistency() {
 #if SANITIZER_DEBUG
   build_consistency_debug();
 #else
   build_consistency_release();
-#endif
-#if TSAN_COLLECT_STATS
-  build_consistency_stats();
-#else
-  build_consistency_nostats();
 #endif
 }
 

@@ -39,8 +39,13 @@ InstSeq generateInstSeq(int64_t Val, const FeatureBitset &ActiveFeatures);
 //
 // This will attempt to produce instructions to materialise `Val` as an
 // `Size`-bit immediate.
+//
+// If CompressionCost is true it will use a different cost calculation if RVC is
+// enabled. This should be used to compare two different sequences to determine
+// which is more compressible.
 int getIntMatCost(const APInt &Val, unsigned Size,
-                  const FeatureBitset &ActiveFeatures);
+                  const FeatureBitset &ActiveFeatures,
+                  bool CompressionCost = false);
 } // namespace RISCVMatInt
 } // namespace llvm
 #endif

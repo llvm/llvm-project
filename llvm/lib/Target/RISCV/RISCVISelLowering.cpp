@@ -4541,7 +4541,7 @@ SDValue RISCVTargetLowering::lowerMGATHER(SDValue Op, SelectionDAG &DAG) const {
     VL = DAG.getRegister(RISCV::X0, XLenVT);
 
   unsigned IntID =
-      IsUnmasked ? Intrinsic::riscv_vloxei : Intrinsic::riscv_vloxei_mask;
+      IsUnmasked ? Intrinsic::riscv_vluxei : Intrinsic::riscv_vluxei_mask;
   SmallVector<SDValue, 8> Ops{MGN->getChain(),
                               DAG.getTargetConstant(IntID, DL, XLenVT)};
   if (!IsUnmasked)
@@ -4732,12 +4732,11 @@ static RISCVISD::NodeType getRISCVWOpcode(unsigned Opcode) {
 // SLLW/DIVUW/.../*W later one because the fact the operation was originally of
 // type i8/i16/i32 is lost.
 static SDValue customLegalizeToWOp(SDNode *N, SelectionDAG &DAG,
-                                   unsigned ExtOpc0 = ISD::ANY_EXTEND,
-                                   unsigned ExtOpc1 = ISD::ANY_EXTEND) {
+                                   unsigned ExtOpc = ISD::ANY_EXTEND) {
   SDLoc DL(N);
   RISCVISD::NodeType WOpcode = getRISCVWOpcode(N->getOpcode());
-  SDValue NewOp0 = DAG.getNode(ExtOpc0, DL, MVT::i64, N->getOperand(0));
-  SDValue NewOp1 = DAG.getNode(ExtOpc1, DL, MVT::i64, N->getOperand(1));
+  SDValue NewOp0 = DAG.getNode(ExtOpc, DL, MVT::i64, N->getOperand(0));
+  SDValue NewOp1 = DAG.getNode(ExtOpc, DL, MVT::i64, N->getOperand(1));
   SDValue NewRes = DAG.getNode(WOpcode, DL, MVT::i64, NewOp0, NewOp1);
   // ReplaceNodeResults requires we maintain the same type for the return value.
   return DAG.getNode(ISD::TRUNCATE, DL, N->getValueType(0), NewRes);
@@ -4902,17 +4901,12 @@ void RISCVTargetLowering::ReplaceNodeResults(SDNode *N,
     // If the input is i32, use ANY_EXTEND since the W instructions don't read
     // the upper 32 bits. For other types we need to sign or zero extend
     // based on the opcode.
-    unsigned ExtOpc0 = ISD::ANY_EXTEND, ExtOpc1 = ISD::ANY_EXTEND;
-    if (VT != MVT::i32) {
-      ExtOpc0 = N->getOpcode() == ISD::SDIV ? ISD::SIGN_EXTEND
-                                            : ISD::ZERO_EXTEND;
-      ExtOpc1 = ExtOpc0;
-    } else if (N->getOperand(0).getOpcode() == ISD::Constant) {
-      // Sign extend i32 constants to improve materialization.
-      ExtOpc0 = ISD::SIGN_EXTEND;
-    }
+    unsigned ExtOpc = ISD::ANY_EXTEND;
+    if (VT != MVT::i32)
+      ExtOpc = N->getOpcode() == ISD::SDIV ? ISD::SIGN_EXTEND
+                                           : ISD::ZERO_EXTEND;
 
-    Results.push_back(customLegalizeToWOp(N, DAG, ExtOpc0, ExtOpc1));
+    Results.push_back(customLegalizeToWOp(N, DAG, ExtOpc));
     break;
   }
   case ISD::UADDO:
@@ -6260,9 +6254,11 @@ bool RISCVTargetLowering::isDesirableToCommuteWithShift(
       // Neither constant will fit into an immediate, so find materialisation
       // costs.
       int C1Cost = RISCVMatInt::getIntMatCost(C1Int, Ty.getSizeInBits(),
-                                              Subtarget.getFeatureBits());
+                                              Subtarget.getFeatureBits(),
+                                              /*CompressionCost*/true);
       int ShiftedC1Cost = RISCVMatInt::getIntMatCost(
-          ShiftedC1Int, Ty.getSizeInBits(), Subtarget.getFeatureBits());
+          ShiftedC1Int, Ty.getSizeInBits(), Subtarget.getFeatureBits(),
+          /*CompressionCost*/true);
 
       // Materialising `c1` is cheaper than materialising `c1 << c2`, so the
       // combine should be prevented.

@@ -1340,7 +1340,7 @@ bool GCNHazardRecognizer::fixVALUPartialForwardingHazard(MachineInstr *MI) {
   State.ExecPos = std::numeric_limits<int>::max();
 
   // This overloads expiry testing with all the hazard detection
-  auto IsHazardFn = [this, SrcVGPRs](StateType &State, const MachineInstr &I) {
+  auto IsHazardFn = [&, this](StateType &State, const MachineInstr &I) {
     // Too many VALU states have passed
     if (State.VALUs > NoHazardVALUWaitStates)
       return HazardExpired;

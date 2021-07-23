@@ -41,7 +41,7 @@ enum MutexType {
 
 class Mutex {
  public:
-  explicit Mutex(MutexType type, StatType stat_type);
+  explicit Mutex(MutexType type);
   ~Mutex();
 
   void Lock();
@@ -56,9 +56,6 @@ class Mutex {
   atomic_uintptr_t state_;
 #if SANITIZER_DEBUG
   MutexType type_;
-#endif
-#if TSAN_COLLECT_STATS
-  StatType stat_type_;
 #endif
 
   Mutex(const Mutex&);

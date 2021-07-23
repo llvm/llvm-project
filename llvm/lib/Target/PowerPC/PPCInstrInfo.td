@@ -5291,6 +5291,8 @@ def : Pat<(i32 (int_ppc_mulhw gprc:$a, gprc:$b)),
           (i32 (MULHW $a, $b))>;
 def : Pat<(i32 (int_ppc_mulhwu gprc:$a, gprc:$b)),
           (i32 (MULHWU $a, $b))>;
+def : Pat<(i32 (int_ppc_cmpb gprc:$a, gprc:$b)),
+          (i32 (CMPB $a, $b))>;
 
 def : Pat<(int_ppc_load2r ForceXForm:$ptr),
           (LHBRX ForceXForm:$ptr)>;
@@ -5478,3 +5480,24 @@ def : Pat<(int_ppc_fctudz f64:$A),
         (XSCVDPUXDS $A)>;
 def : Pat<(int_ppc_fctuwz f64:$A),
         (XSCVDPUXWS $A)>;
+
+def : Pat<(int_ppc_mfmsr), (MFMSR)>;
+def : Pat<(int_ppc_mftbu), (MFTB 269)>;
+def : Pat<(i32 (int_ppc_mfspr timm:$SPR)),
+          (MFSPR $SPR)>;
+def : Pat<(int_ppc_mtspr timm:$SPR, gprc:$RT),
+          (MTSPR $SPR, $RT)>;
+def : Pat<(int_ppc_mtmsr gprc:$RS),
+          (MTMSR $RS, 0)>;
+
+let Predicates = [IsISA2_07] in {
+  def : Pat<(int_ppc_sthcx ForceXForm:$dst, gprc:$A),
+          (STHCX gprc:$A, ForceXForm:$dst)>;
+}
+def : Pat<(int_ppc_dcbtstt ForceXForm:$dst),
+          (DCBTST 16, ForceXForm:$dst)>;
+def : Pat<(int_ppc_dcbtt ForceXForm:$dst),
+          (DCBT 16, ForceXForm:$dst)>;
+
+def : Pat<(int_ppc_stfiw ForceXForm:$dst, f64:$XT),
+          (STFIWX f64:$XT, ForceXForm:$dst)>;

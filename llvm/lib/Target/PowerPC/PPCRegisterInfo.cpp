@@ -472,6 +472,62 @@ bool PPCRegisterInfo::isCallerPreservedPhysReg(MCRegister PhysReg,
   return false;
 }
 
+bool PPCRegisterInfo::getRegAllocationHints(Register VirtReg,
+                                            ArrayRef<MCPhysReg> Order,
+                                            SmallVectorImpl<MCPhysReg> &Hints,
+                                            const MachineFunction &MF,
+                                            const VirtRegMap *VRM,
+                                            const LiveRegMatrix *Matrix) const {
+  const MachineRegisterInfo *MRI = &MF.getRegInfo();
+
+  // Call the base implementation first to set any hints based on the usual
+  // heuristics and decide what the return value should be. We want to return
+  // the same value returned by the base implementation. If the base
+  // implementation decides to return true and force the allocation then we
+  // will leave it as such. On the other hand if the base implementation
+  // decides to return false the following code will not force the allocation
+  // as we are just looking to provide a hint.
+  bool BaseImplRetVal = TargetRegisterInfo::getRegAllocationHints(
+      VirtReg, Order, Hints, MF, VRM, Matrix);
+  // We are interested in instructions that copy values to ACC/UACC.
+  // The copy into UACC will be simply a COPY to a subreg so we
+  // want to allocate the corresponding physical subreg for the source.
+  // The copy into ACC will be a BUILD_UACC so we want to allocate
+  // the same number UACC for the source.
+  for (MachineInstr &Use : MRI->reg_nodbg_instructions(VirtReg)) {
+    const MachineOperand *ResultOp = nullptr;
+    Register ResultReg;
+    switch (Use.getOpcode()) {
+    case TargetOpcode::COPY: {
+      ResultOp = &Use.getOperand(0);
+      ResultReg = ResultOp->getReg();
+      if (Register::isVirtualRegister(ResultReg) &&
+          MRI->getRegClass(ResultReg)->contains(PPC::UACC0) &&
+          VRM->hasPhys(ResultReg)) {
+        Register UACCPhys = VRM->getPhys(ResultReg);
+        Register HintReg = getSubReg(UACCPhys, ResultOp->getSubReg());
+        Hints.push_back(HintReg);
+      }
+      break;
+    }
+    case PPC::BUILD_UACC: {
+      ResultOp = &Use.getOperand(0);
+      ResultReg = ResultOp->getReg();
+      if (MRI->getRegClass(ResultReg)->contains(PPC::ACC0) &&
+          VRM->hasPhys(ResultReg)) {
+        Register ACCPhys = VRM->getPhys(ResultReg);
+        assert((ACCPhys >= PPC::ACC0 && ACCPhys <= PPC::ACC7) &&
+               "Expecting an ACC register for BUILD_UACC.");
+        Register HintReg = PPC::UACC0 + (ACCPhys - PPC::ACC0);
+        Hints.push_back(HintReg);
+      }
+      break;
+    }
+    }
+  }
+  return BaseImplRetVal;
+}
+
 unsigned PPCRegisterInfo::getRegPressureLimit(const TargetRegisterClass *RC,
                                               MachineFunction &MF) const {
   const PPCFrameLowering *TFI = getFrameLowering(MF);

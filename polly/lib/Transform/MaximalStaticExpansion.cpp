@@ -136,7 +136,7 @@ isl::union_map MaximalStaticExpander::filterDependences(
   auto AccessDomainSet = MA->getAccessRelation().domain();
   auto AccessDomainId = AccessDomainSet.get_tuple_id();
 
-  isl::union_map MapDependences = isl::union_map::empty(S.getParamSpace());
+  isl::union_map MapDependences = isl::union_map::empty(S.getIslCtx());
 
   for (isl::map Map : Dependences.get_map_list()) {
     // Filter out Statement to Statement dependences.
@@ -161,7 +161,7 @@ isl::union_map MaximalStaticExpander::filterDependences(
       continue;
 
     // Add the corresponding map to MapDependences.
-    MapDependences = MapDependences.add_map(NewMap);
+    MapDependences = MapDependences.unite(NewMap);
   }
 
   return MapDependences;
@@ -184,7 +184,7 @@ bool MaximalStaticExpander::isExpandable(
     auto Writes = S.getPHIIncomings(SAI);
 
     // Get the domain where all the writes are writing to.
-    auto WriteDomain = isl::union_set::empty(S.getParamSpace());
+    auto WriteDomain = isl::union_set::empty(S.getIslCtx());
 
     for (auto Write : Writes) {
       auto MapDeps = filterDependences(S, Dependences, Write);
@@ -209,8 +209,8 @@ bool MaximalStaticExpander::isExpandable(
 
   int NumberWrites = 0;
   for (ScopStmt &Stmt : S) {
-    auto StmtReads = isl::union_map::empty(S.getParamSpace());
-    auto StmtWrites = isl::union_map::empty(S.getParamSpace());
+    auto StmtReads = isl::union_map::empty(S.getIslCtx());
+    auto StmtWrites = isl::union_map::empty(S.getIslCtx());
 
     for (MemoryAccess *MA : Stmt) {
       // Check if the current MemoryAccess involved the current SAI.

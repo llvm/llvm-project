@@ -1,8 +1,8 @@
-Potentially unknown OpenMP target region caller `[OMP100]`
-==========================================================
-
 .. _omp100:
 .. _omp_no_external_caller_in_target_region:
+
+Potentially unknown OpenMP target region caller `[OMP100]`
+==========================================================
 
 A function remark that indicates the function, when compiled for a GPU, is
 potentially called from outside the translation unit. Note that a remark is

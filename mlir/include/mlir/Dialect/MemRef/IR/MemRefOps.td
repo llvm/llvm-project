@@ -425,8 +425,10 @@ def CloneOp : MemRef_Op<"clone", [
     %arg1 = memref.clone %arg0 : memref<?xf32> to memref<?xf32>
     ```
 
-    Note, that mutating the source or result of the clone operation leads to
-    undefined behavior.
+    Valid implementations of this operation may alias the input and output
+    views or create an actual copy. Mutating the source or result
+    of the clone operation after the clone operation thus leads to undefined
+    behavior.
   }];
 
   let arguments = (ins Arg<AnyRankedOrUnrankedMemRef, "", []>:$input);

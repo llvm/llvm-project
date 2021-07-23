@@ -223,3 +223,13 @@ accepted if enabled by command-line options.
   from `COS(3.14159)`, for example.  f18 will complain when a
   generic intrinsic function's inferred result type does not
   match an explicit declaration.  This message is a warning.
+
+## Standard features that might as well not be
+
+* f18 supports designators with constant expressions, properly
+  constrained, as initial data targets for data pointers in
+  initializers of variable and component declarations and in
+  `DATA` statements; e.g., `REAL, POINTER :: P => T(1:10:2)`.
+  This Fortran 2008 feature might as well be viewed like an
+  extension; no other compiler that we've tested can handle
+  it yet.
