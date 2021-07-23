@@ -24,7 +24,7 @@ def _llvm_zlib_external_impl(repository_ctx):
         "BUILD",
         repository_ctx.attr._external_build_template,
         substitutions = {
-            "@external_zlib_repo//:zlib_rule": str(repository_ctx.attr.external_zlib),
+            "@external_zlib_repo//:zlib_rule": repository_ctx.attr.external_zlib,
         },
         executable = False,
     )
@@ -36,7 +36,7 @@ llvm_zlib_external = repository_rule(
             default = Label("//deps_impl:zlib_external.BUILD"),
             allow_single_file = True,
         ),
-        "external_zlib": attr.label(
+        "external_zlib": attr.string(
             doc = "The dependency that should be used for the external zlib library.",
             mandatory = True,
         ),
