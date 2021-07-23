@@ -914,7 +914,7 @@ cc_library(
 )
 
 cc_library(
-    name = "LLVMDWP",
+    name = "DWP",
     srcs = glob([
         "lib/DWP/*.cpp",
         "lib/DWP/*.h",
@@ -2743,7 +2743,7 @@ cc_binary(
     stamp = 0,
     deps = [
         ":AllTargetsCodeGens",
-        ":LLVMDWP",
+        ":DWP",
         ":MC",
         ":Support",
     ],
