@@ -51,7 +51,8 @@ public:
   bool IsAlive() override;
 
 protected:
-  llvm::Optional<uint64_t> GetGenericInteger(llvm::StringRef method_name);
+  llvm::Optional<unsigned long long>
+  GetGenericInteger(llvm::StringRef method_name);
   Status GetStatusFromMethod(llvm::StringRef method_name);
 
 private:
