@@ -1749,6 +1749,31 @@ let Extension = FuncExtKhrExtendedBitOps in {
   def : Builtin<"bit_reverse", [AIGenTypeN, AIGenTypeN], Attr.Const>;
 }
 
+// Section 42.3 - cl_khr_integer_dot_product
+let Extension = FunctionExtension<"__opencl_c_integer_dot_product_input_4x8bit"> in {
+  def : Builtin<"dot", [UInt, VectorType<UChar, 4>, VectorType<UChar, 4>], Attr.Const>;
+  def : Builtin<"dot", [Int, VectorType<Char, 4>, VectorType<Char, 4>], Attr.Const>;
+  def : Builtin<"dot", [Int, VectorType<UChar, 4>, VectorType<Char, 4>], Attr.Const>;
+  def : Builtin<"dot", [Int, VectorType<Char, 4>, VectorType<UChar, 4>], Attr.Const>;
+
+  def : Builtin<"dot_acc_sat", [UInt, VectorType<UChar, 4>, VectorType<UChar, 4>, UInt], Attr.Const>;
+  def : Builtin<"dot_acc_sat", [Int, VectorType<Char, 4>, VectorType<Char, 4>, Int], Attr.Const>;
+  def : Builtin<"dot_acc_sat", [Int, VectorType<UChar, 4>, VectorType<Char, 4>, Int], Attr.Const>;
+  def : Builtin<"dot_acc_sat", [Int, VectorType<Char, 4>, VectorType<UChar, 4>, Int], Attr.Const>;
+}
+
+let Extension = FunctionExtension<"__opencl_c_integer_dot_product_input_4x8bit_packed"> in {
+  def : Builtin<"dot_4x8packed_uu_uint", [UInt, UInt, UInt], Attr.Const>;
+  def : Builtin<"dot_4x8packed_ss_int", [Int, UInt, UInt], Attr.Const>;
+  def : Builtin<"dot_4x8packed_us_int", [Int, UInt, UInt], Attr.Const>;
+  def : Builtin<"dot_4x8packed_su_int", [Int, UInt, UInt], Attr.Const>;
+
+  def : Builtin<"dot_acc_sat_4x8packed_uu_uint", [UInt, UInt, UInt, UInt], Attr.Const>;
+  def : Builtin<"dot_acc_sat_4x8packed_ss_int", [Int, UInt, UInt, Int], Attr.Const>;
+  def : Builtin<"dot_acc_sat_4x8packed_us_int", [Int, UInt, UInt, Int], Attr.Const>;
+  def : Builtin<"dot_acc_sat_4x8packed_su_int", [Int, UInt, UInt, Int], Attr.Const>;
+}
+
 //--------------------------------------------------------------------
 // Arm extensions.
 let Extension = ArmIntegerDotProductInt8 in {
