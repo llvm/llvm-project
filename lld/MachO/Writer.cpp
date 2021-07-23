@@ -239,10 +239,7 @@ public:
     c->maxprot = seg->maxProt;
     c->initprot = seg->initProt;
 
-    if (seg->getSections().empty())
-      return;
-
-    c->vmaddr = seg->firstSection()->addr;
+    c->vmaddr = seg->addr;
     c->vmsize = seg->vmSize;
     c->filesize = seg->fileSize;
     c->nsects = seg->numNonHiddenSections();
@@ -980,6 +977,7 @@ void Writer::finalizeAddresses() {
   for (OutputSegment *seg : outputSegments) {
     if (seg == linkEditSegment)
       continue;
+    seg->addr = addr;
     assignAddresses(seg);
     // codesign / libstuff checks for segment ordering by verifying that
     // `fileOff + fileSize == next segment fileOff`. So we call alignTo() before
@@ -987,7 +985,7 @@ void Writer::finalizeAddresses() {
     // contiguous. We handle addr / vmSize similarly for the same reason.
     fileOff = alignTo(fileOff, pageSize);
     addr = alignTo(addr, pageSize);
-    seg->vmSize = addr - seg->firstSection()->addr;
+    seg->vmSize = addr - seg->addr;
     seg->fileSize = fileOff - seg->fileOff;
   }
 }
@@ -1013,9 +1011,10 @@ void Writer::finalizeLinkEditSegment() {
 
   // Now that __LINKEDIT is filled out, do a proper calculation of its
   // addresses and offsets.
+  linkEditSegment->addr = addr;
   assignAddresses(linkEditSegment);
   // No need to page-align fileOff / addr here since this is the last segment.
-  linkEditSegment->vmSize = addr - linkEditSegment->firstSection()->addr;
+  linkEditSegment->vmSize = addr - linkEditSegment->addr;
   linkEditSegment->fileSize = fileOff - linkEditSegment->fileOff;
 }
 
