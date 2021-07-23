@@ -20,7 +20,6 @@
 
 #include "sanitizer_common/sanitizer_common.h"
 #include "tsan_defs.h"
-#include "tsan_mutex.h"
 
 namespace __tsan {
 

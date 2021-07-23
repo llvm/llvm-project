@@ -9,7 +9,6 @@ SRCS="
 	../rtl/tsan_flags.cpp
 	../rtl/tsan_interface_atomic.cpp
 	../rtl/tsan_md5.cpp
-	../rtl/tsan_mutex.cpp
 	../rtl/tsan_report.cpp
 	../rtl/tsan_rtl.cpp
 	../rtl/tsan_rtl_mutex.cpp

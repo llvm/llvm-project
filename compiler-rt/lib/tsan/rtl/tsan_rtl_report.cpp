@@ -129,7 +129,7 @@ bool ShouldReport(ThreadState *thr, ReportType typ) {
   // We set thr->suppress_reports in the fork context.
   // Taking any locking in the fork context can lead to deadlocks.
   // If any locks are already taken, it's too late to do this check.
-  CheckNoLocks(thr);
+  CheckedMutex::CheckNoLocks();
   // For the same reason check we didn't lock thread_registry yet.
   if (SANITIZER_DEBUG)
     ThreadRegistryLock l(ctx->thread_registry);
@@ -596,7 +596,7 @@ static bool RaceBetweenAtomicAndFree(ThreadState *thr) {
 }
 
 void ReportRace(ThreadState *thr) {
-  CheckNoLocks(thr);
+  CheckedMutex::CheckNoLocks();
 
   // Symbolizer makes lots of intercepted calls. If we try to process them,
   // at best it will cause deadlocks on internal mutexes.
