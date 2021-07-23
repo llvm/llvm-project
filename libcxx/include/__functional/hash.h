@@ -75,10 +75,10 @@ __murmur2_or_cityhash<_Size, 32>::operator()(const void* __key, _Size __len)
     switch (__len)
     {
     case 3:
-        __h ^= __data[2] << 16;
+        __h ^= static_cast<_Size>(__data[2] << 16);
         _LIBCPP_FALLTHROUGH();
     case 2:
-        __h ^= __data[1] << 8;
+        __h ^= static_cast<_Size>(__data[1] << 8);
         _LIBCPP_FALLTHROUGH();
     case 1:
         __h ^= __data[0];
@@ -140,9 +140,9 @@ struct __murmur2_or_cityhash<_Size, 64>
       return __hash_len_16(__len + (__a << 3), __b);
     }
     if (__len > 0) {
-      const unsigned char __a = __s[0];
-      const unsigned char __b = __s[__len >> 1];
-      const unsigned char __c = __s[__len - 1];
+      const unsigned char __a = static_cast<unsigned char>(__s[0]);
+      const unsigned char __b = static_cast<unsigned char>(__s[__len >> 1]);
+      const unsigned char __c = static_cast<unsigned char>(__s[__len - 1]);
       const uint32_t __y = static_cast<uint32_t>(__a) +
                            (static_cast<uint32_t>(__b) << 8);
       const uint32_t __z = __len + (static_cast<uint32_t>(__c) << 2);
