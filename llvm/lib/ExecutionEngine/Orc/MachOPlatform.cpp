@@ -446,19 +446,30 @@ void MachOPlatform::rt_lookupSymbol(SendSymbolAddressFn SendResult,
     return;
   }
 
+  // Use functor class to work around XL build compiler issue on AIX.
+  class RtLookupNotifyComplete {
+  public:
+    RtLookupNotifyComplete(SendSymbolAddressFn &&SendResult)
+        : SendResult(std::move(SendResult)) {}
+    void operator()(Expected<SymbolMap> Result) {
+      if (Result) {
+        assert(Result->size() == 1 && "Unexpected result map count");
+        SendResult(ExecutorAddress(Result->begin()->second.getAddress()));
+      } else {
+        SendResult(Result.takeError());
+      }
+    }
+
+  private:
+    SendSymbolAddressFn SendResult;
+  };
+
   // FIXME: Proper mangling.
   auto MangledName = ("_" + SymbolName).str();
   ES.lookup(
       LookupKind::DLSym, {{JD, JITDylibLookupFlags::MatchExportedSymbolsOnly}},
       SymbolLookupSet(ES.intern(MangledName)), SymbolState::Ready,
-      [SendResult = std::move(SendResult)](Expected<SymbolMap> Result) mutable {
-        if (Result) {
-          assert(Result->size() == 1 && "Unexpected result map count");
-          SendResult(ExecutorAddress(Result->begin()->second.getAddress()));
-        } else
-          SendResult(Result.takeError());
-      },
-      NoDependenciesToRegister);
+      RtLookupNotifyComplete(std::move(SendResult)), NoDependenciesToRegister);
 }
 
 Error MachOPlatform::bootstrapMachORuntime(JITDylib &PlatformJD) {
