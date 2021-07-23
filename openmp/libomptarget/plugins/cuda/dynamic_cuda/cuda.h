@@ -34,6 +34,17 @@ typedef enum CUstream_flags_enum {
   CU_STREAM_NON_BLOCKING = 0x1,
 } CUstream_flags;
 
+typedef enum CUlimit_enum {
+  CU_LIMIT_STACK_SIZE = 0x0,
+  CU_LIMIT_PRINTF_FIFO_SIZE = 0x1,
+  CU_LIMIT_MALLOC_HEAP_SIZE = 0x2,
+  CU_LIMIT_DEV_RUNTIME_SYNC_DEPTH = 0x3,
+  CU_LIMIT_DEV_RUNTIME_PENDING_LAUNCH_COUNT = 0x4,
+  CU_LIMIT_MAX_L2_FETCH_GRANULARITY = 0x5,
+  CU_LIMIT_PERSISTING_L2_CACHE_SIZE = 0x6,
+  CU_LIMIT_MAX
+} CUlimit;
+
 typedef enum CUdevice_attribute_enum {
   CU_DEVICE_ATTRIBUTE_MAX_BLOCK_DIM_X = 2,
   CU_DEVICE_ATTRIBUTE_MAX_GRID_DIM_X = 5,
@@ -99,5 +110,8 @@ CUresult cuDeviceCanAccessPeer(int *, CUdevice, CUdevice);
 CUresult cuCtxEnablePeerAccess(CUcontext, unsigned);
 CUresult cuMemcpyPeerAsync(CUdeviceptr, CUcontext, CUdeviceptr, CUcontext,
                            size_t, CUstream);
+
+CUresult cuCtxGetLimit(size_t *, CUlimit);
+CUresult cuCtxSetLimit(CUlimit, size_t);
 
 #endif
