@@ -42,6 +42,10 @@ Quickstart
            ../test-suite
    ```
 
+**NOTE!** if you are using your built clang, and you want to build and run the
+MicroBenchmarks/XRay microbenchmarks, you need to add `compiler-rt` to your
+`LLVM_ENABLE_RUNTIMES` cmake flag.
+
 4. Build the benchmarks:
 
    ```text
