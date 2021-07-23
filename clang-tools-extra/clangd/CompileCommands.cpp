@@ -9,11 +9,14 @@
 #include "CompileCommands.h"
 #include "Config.h"
 #include "support/Logger.h"
+#include "support/Trace.h"
 #include "clang/Driver/Options.h"
 #include "clang/Frontend/CompilerInvocation.h"
 #include "clang/Tooling/ArgumentsAdjusters.h"
 #include "llvm/ADT/STLExtras.h"
+#include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/StringRef.h"
+#include "llvm/Option/ArgList.h"
 #include "llvm/Option/Option.h"
 #include "llvm/Support/Allocator.h"
 #include "llvm/Support/Debug.h"
@@ -188,11 +191,33 @@ CommandMangler CommandMangler::detect() {
   return Result;
 }
 
-CommandMangler CommandMangler::forTests() {
-  return CommandMangler();
-}
+CommandMangler CommandMangler::forTests() { return CommandMangler(); }
 
 void CommandMangler::adjust(std::vector<std::string> &Cmd) const {
+  trace::Span S("AdjustCompileFlags");
+  auto &OptTable = clang::driver::getDriverOptTable();
+  // OriginalArgs needs to outlive ArgList.
+  llvm::SmallVector<const char *, 16> OriginalArgs;
+  OriginalArgs.reserve(Cmd.size());
+  for (const std::string &S : Cmd)
+    OriginalArgs.push_back(S.c_str());
+  // ParseArgs propagates missig arg/opt counts on error, but preserves
+  // everything it could parse in ArgList. So we just ignore those counts.
+  unsigned IgnoredCount;
+  auto ArgList = OptTable.ParseArgs(OriginalArgs, IgnoredCount, IgnoredCount);
+
+  // Move the inputs to the end, separated via `--` from flags. This ensures
+  // modifications done in the following steps apply in more cases (like setting
+  // -x, which only affects inputs that come after it).
+  if (!ArgList.hasArgNoClaim(driver::options::OPT__DASH_DASH)) {
+    // In theory there might be more than one input, but clangd can't deal with
+    // them anyway.
+    if (auto *Input = ArgList.getLastArg(driver::options::OPT_INPUT)) {
+      Cmd.insert(Cmd.end(), {"--", Input->getAsString(ArgList)});
+      Cmd.erase(Cmd.begin() + Input->getIndex());
+    }
+  }
+
   for (auto &Edit : Config::current().CompileFlags.Edits)
     Edit(Cmd);
 
@@ -215,7 +240,7 @@ void CommandMangler::adjust(std::vector<std::string> &Cmd) const {
 
   // Don't set `-isysroot` if it is already set or if `--sysroot` is set.
   // `--sysroot` is a superset of the `-isysroot` argument.
-  if (Sysroot && !Has("-isysroot") && !Has("--sysroot")) {
+  if (Sysroot && !Has("--sysroot") && !Has("-isysroot")) {
     ToAppend.push_back("-isysroot");
     ToAppend.push_back(*Sysroot);
   }
