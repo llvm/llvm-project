@@ -938,7 +938,6 @@ InstructionCost X86TTIImpl::getArithmeticInstrCost(
 
     { ISD::SRA,  MVT::v16i8,      24 }, // pblendvb sequence.
     { ISD::SRA,  MVT::v8i16,      14 }, // pblendvb sequence.
-    { ISD::SRA,  MVT::v4i32,      12 }, // Shift each lane + blend.
 
     { ISD::MUL,  MVT::v4i32,       2 }  // pmulld (Nehalem from agner.org)
   };
@@ -950,20 +949,20 @@ InstructionCost X86TTIImpl::getArithmeticInstrCost(
   static const CostTblEntry SSE2CostTable[] = {
     // We don't correctly identify costs of casts because they are marked as
     // custom.
-    { ISD::SHL,  MVT::v16i8,      26 }, // cmpgtb sequence.
-    { ISD::SHL,  MVT::v8i16,      32 }, // cmpgtb sequence.
-    { ISD::SHL,  MVT::v4i32,     2*5 }, // We optimized this using mul.
+    { ISD::SHL,  MVT::v16i8,      13 }, // cmpgtb sequence.
+    { ISD::SHL,  MVT::v8i16,      25 }, // cmpgtw sequence.
+    { ISD::SHL,  MVT::v4i32,      16 }, // pslld/paddd/cvttps2dq/pmuludq.
     { ISD::SHL,  MVT::v2i64,       4 }, // splat+shuffle sequence.
 
-    { ISD::SRL,  MVT::v16i8,      26 }, // cmpgtb sequence.
-    { ISD::SRL,  MVT::v8i16,      32 }, // cmpgtb sequence.
-    { ISD::SRL,  MVT::v4i32,      16 }, // Shift each lane + blend.
+    { ISD::SRL,  MVT::v16i8,      14 }, // cmpgtb sequence.
+    { ISD::SRL,  MVT::v8i16,      16 }, // cmpgtw sequence.
+    { ISD::SRL,  MVT::v4i32,      12 }, // Shift each lane + blend.
     { ISD::SRL,  MVT::v2i64,       4 }, // splat+shuffle sequence.
 
-    { ISD::SRA,  MVT::v16i8,      54 }, // unpacked cmpgtb sequence.
-    { ISD::SRA,  MVT::v8i16,      32 }, // cmpgtb sequence.
-    { ISD::SRA,  MVT::v4i32,      16 }, // Shift each lane + blend.
-    { ISD::SRA,  MVT::v2i64,      12 }, // srl/xor/sub sequence.
+    { ISD::SRA,  MVT::v16i8,      27 }, // unpacked cmpgtb sequence.
+    { ISD::SRA,  MVT::v8i16,      16 }, // cmpgtw sequence.
+    { ISD::SRA,  MVT::v4i32,      12 }, // Shift each lane + blend.
+    { ISD::SRA,  MVT::v2i64,       8 }, // srl/xor/sub splat+shuffle sequence.
 
     { ISD::MUL,  MVT::v8i16,       1 }, // pmullw
     { ISD::MUL,  MVT::v4i32,       6 }, // 3*pmuludq/4*shuffle
