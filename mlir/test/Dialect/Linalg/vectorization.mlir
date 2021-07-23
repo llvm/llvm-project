@@ -85,6 +85,44 @@ func @vectorization_test(%A: memref<8x16xf32>, %B: memref<16x32xf32>,
 
 // -----
 
+#matmul_transpose_out_trait = {
+  args_in = 2,
+  args_out = 1,
+  indexing_maps = [
+    affine_map<(m, n, k) -> (m, k)>,
+    affine_map<(m, n, k) -> (k, n)>,
+    affine_map<(m, n, k) -> (n, m)>
+  ],
+  iterator_types = ["parallel", "parallel", "reduction"]
+}
+
+// CHECK-DAG: #[[$trans_2d:.*]] =  affine_map<(d0, d1) -> (d1, d0)>
+// CHECK-DAG: #[[$mk:.*]] = affine_map<(d0, d1, d2) -> (d0, d2)>
+// CHECK-DAG: #[[$nk:.*]] = affine_map<(d0, d1, d2) -> (d1, d2)>
+// CHECK-DAG: #[[$mn:.*]] = affine_map<(d0, d1, d2) -> (d0, d1)>
+
+// CHECK-LABEL: func @generic_output_transpose
+func @generic_output_transpose(%A: memref<8x16xf32>, %B: memref<16x32xf32>,
+                         %C: memref<32x8xf32>) {
+  //       CHECK: vector.transfer_read %{{.*}} : memref<8x16xf32>, vector<8x16xf32>
+  //       CHECK: vector.transfer_read %{{.*}} : memref<16x32xf32>, vector<32x16xf32>
+  //       CHECK: vector.transfer_read %{{.*}} : memref<32x8xf32>, vector<8x32xf32>
+  //       CHECK: vector.contract {indexing_maps = [#[[$mk]], #[[$nk]], #[[$mn]]]
+  //  CHECK-SAME:   vector<8x16xf32>, vector<32x16xf32> into vector<8x32xf32>
+  //       CHECK: vector.transfer_write %{{.*}}, %{{.*}} : vector<8x32xf32>, memref<32x8xf32>
+  linalg.generic #matmul_transpose_out_trait
+    ins(%A, %B : memref<8x16xf32>, memref<16x32xf32>)
+   outs(%C : memref<32x8xf32>) {
+    ^bb(%a: f32, %b: f32, %c: f32) :
+      %d = mulf %a, %b: f32
+      %e = addf %c, %d: f32
+      linalg.yield %e : f32
+  }
+  return
+}
+
+// -----
+
 #matmul_trait = {
   args_in = 2,
   args_out = 1,
