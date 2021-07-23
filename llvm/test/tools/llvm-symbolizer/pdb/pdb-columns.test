@@ -6,7 +6,7 @@ RUN: echo 0x140006C20 >> %t.input
 RUN: echo 0x140006C30 >> %t.input
 RUN: echo 0x140006C40 >> %t.input
 RUN: echo 0x140006C70 >> %t.input
-RUN:    llvm-symbolizer -obj="%p/Inputs/test-columns.exe" < %t.input \
+RUN:    llvm-symbolizer --obj="%p/Inputs/test-columns.exe" < %t.input \
 RUN:    | FileCheck %s
 
 This tests that the symbolizer outputs column info when it is present in the pdb.
