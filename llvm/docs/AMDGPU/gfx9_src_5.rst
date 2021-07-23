@@ -5,9 +5,13 @@
     *                                                *
     **************************************************
 
-.. _amdgpu_synid_gfx9_opt:
+.. _amdgpu_synid_gfx9_src_5:
 
-opt
+src
 ===
 
-This is an optional operand. It must be used if and only if :ref:`glc<amdgpu_synid_glc>` is specified.
+Instruction input.
+
+*Size:* 1 dword.
+
+*Operands:* :ref:`v<amdgpu_synid_v>`, :ref:`lds_direct<amdgpu_synid_lds_direct>`

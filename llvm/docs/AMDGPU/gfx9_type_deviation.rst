@@ -5,9 +5,9 @@
     *                                                *
     **************************************************
 
-.. _amdgpu_synid_gfx9_opt:
+.. _amdgpu_synid_gfx9_type_deviation:
 
-opt
-===
+Type Deviation
+==============
 
-This is an optional operand. It must be used if and only if :ref:`glc<amdgpu_synid_glc>` is specified.
+*Type* of this operand differs from *type* :ref:`implied by the opcode<amdgpu_syn_instruction_type>`. This tag specifies actual operand *type*.

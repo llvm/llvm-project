@@ -5,9 +5,13 @@
     *                                                *
     **************************************************
 
-.. _amdgpu_synid_gfx9_opt:
+.. _amdgpu_synid_gfx9_vcc:
 
-opt
+vcc
 ===
 
-This is an optional operand. It must be used if and only if :ref:`glc<amdgpu_synid_glc>` is specified.
+Vector condition code.
+
+*Size:* 2 dwords.
+
+*Operands:* :ref:`vcc<amdgpu_synid_vcc>`

@@ -5,9 +5,13 @@
     *                                                *
     **************************************************
 
-.. _amdgpu_synid_gfx9_opt:
+.. _amdgpu_synid_gfx9_vaddr:
 
-opt
-===
+vaddr
+=====
 
-This is an optional operand. It must be used if and only if :ref:`glc<amdgpu_synid_glc>` is specified.
+An offset from the start of GDS/LDS memory.
+
+*Size:* 1 dword.
+
+*Operands:* :ref:`v<amdgpu_synid_v>`
