@@ -16,9 +16,11 @@ add_llvm_component_library(LLVMJITLink
 
   ELF.cpp
   ELFLinkGraphBuilder.cpp
+  ELF_riscv.cpp
   ELF_x86_64.cpp
 
   # Architectures:
+  riscv.cpp
   x86_64.cpp
 
   ADDITIONAL_HEADER_DIRS
