@@ -5630,10 +5630,8 @@ TargetLowering::prepareUREMEqFold(EVT SETCCVT, SDValue REMNode,
     // We need ROTR to do this.
     if (!DCI.isBeforeLegalizeOps() && !isOperationLegalOrCustom(ISD::ROTR, VT))
       return SDValue();
-    SDNodeFlags Flags;
-    Flags.setExact(true);
     // UREM: (rotr (mul N, P), K)
-    Op0 = DAG.getNode(ISD::ROTR, DL, VT, Op0, KVal, Flags);
+    Op0 = DAG.getNode(ISD::ROTR, DL, VT, Op0, KVal);
     Created.push_back(Op0.getNode());
   }
 
@@ -5897,10 +5895,8 @@ TargetLowering::prepareSREMEqFold(EVT SETCCVT, SDValue REMNode,
     // We need ROTR to do this.
     if (!DCI.isBeforeLegalizeOps() && !isOperationLegalOrCustom(ISD::ROTR, VT))
       return SDValue();
-    SDNodeFlags Flags;
-    Flags.setExact(true);
     // SREM: (rotr (add (mul N, P), A), K)
-    Op0 = DAG.getNode(ISD::ROTR, DL, VT, Op0, KVal, Flags);
+    Op0 = DAG.getNode(ISD::ROTR, DL, VT, Op0, KVal);
     Created.push_back(Op0.getNode());
   }
 
