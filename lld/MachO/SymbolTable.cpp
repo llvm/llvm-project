@@ -197,6 +197,13 @@ Defined *SymbolTable::addSynthetic(StringRef name, InputSection *isec,
 }
 
 void lld::macho::treatUndefinedSymbol(const Undefined &sym, StringRef source) {
+  // Handle -U.
+  if (config->explicitDynamicLookups.count(sym.getName())) {
+    symtab->addDynamicLookup(sym.getName());
+    return;
+  }
+
+  // Handle -undefined.
   auto message = [source, &sym]() {
     std::string message = "undefined symbol";
     if (config->archMultiple)

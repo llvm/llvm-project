@@ -147,9 +147,9 @@
 # STRIPDYLIB-NEXT:  l {{.*}} __dyld_private
 # STRIPDYLIB-NEXT:  g {{.*}} _main
 # STRIPDYLIB-NEXT:  g {{.*}} __mh_execute_header
-# STRIPDYLIB-NEXT:  *UND* _ref_undef_fun
 # STRIPDYLIB-NEXT:  *UND* dyld_stub_binder
 # STRIPDYLIB-NEXT:  *UND* _ref_dylib_fun
+# STRIPDYLIB-NEXT:  *UND* _ref_undef_fun
 # STRIPDYLIB:      Bind table:
 # STRIPDYLIB:      Lazy bind table:
 # STRIPDYLIB:       __DATA   __la_symbol_ptr {{.*}} flat-namespace _ref_undef_fun
@@ -202,9 +202,9 @@
 # LIVESUPP-NEXT:   g {{.*}} _bar
 # LIVESUPP-NEXT:   g {{.*}} _foo
 # LIVESUPP-NEXT:   g {{.*}} __mh_execute_header
-# LIVESUPP-NEXT:   *UND* _ref_undef_fun
 # LIVESUPP-NEXT:   *UND* dyld_stub_binder
 # LIVESUPP-NEXT:   *UND* _ref_dylib_fun
+# LIVESUPP-NEXT:   *UND* _ref_undef_fun
 
 # RUN: llvm-mc -filetype=obj -triple=x86_64-apple-macos \
 # RUN:     %t/live-support-iterations.s -o %t/live-support-iterations.o
