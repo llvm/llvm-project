@@ -2708,10 +2708,12 @@ static bool FoldTwoEntryPHINode(PHINode *PN, const TargetTransformInfo &TTI,
   BasicBlock *BB = PN->getParent();
 
   BasicBlock *IfTrue, *IfFalse;
-  Value *IfCond = GetIfCondition(BB, IfTrue, IfFalse);
-  if (!IfCond ||
-      // Don't bother if the branch will be constant folded trivially.
-      isa<ConstantInt>(IfCond))
+  BranchInst *DomBI = GetIfCondition(BB, IfTrue, IfFalse);
+  if (!DomBI)
+    return false;
+  Value *IfCond = DomBI->getCondition();
+  // Don't bother if the branch will be constant folded trivially.
+  if (isa<ConstantInt>(IfCond))
     return false;
 
   // Don't try to fold an unreachable block. For example, the phi node itself
