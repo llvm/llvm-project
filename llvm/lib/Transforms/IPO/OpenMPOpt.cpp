@@ -2585,11 +2585,11 @@ struct AAHeapToSharedFunction : public AAHeapToShared {
     findPotentialRemovedFreeCalls(A);
   }
 
-  bool isAssumedHeapToShared(CallBase &CB) const {
+  bool isAssumedHeapToShared(CallBase &CB) const override {
     return isValidState() && MallocCalls.count(&CB);
   }
 
-  bool isAssumedHeapToSharedRemovedFree(CallBase &CB) const {
+  bool isAssumedHeapToSharedRemovedFree(CallBase &CB) const override {
     return isValidState() && PotentialRemovedFreeCalls.count(&CB);
   }
 
