@@ -1292,14 +1292,10 @@ defm : NarrowingStorePatGlobalAddrOffOnly<I32x4, store_v4i16_trunc_v4i32>;
 
 // Bitcasts are nops
 // Matching bitcast t1 to t1 causes strange errors, so avoid repeating types
-foreach t1 = [v16i8, v8i16, v4i32, v2i64, v4f32, v2f64] in
-foreach t2 = !foldl(
-  []<ValueType>, [v16i8, v8i16, v4i32, v2i64, v4f32, v2f64],
-  acc, cur, !if(!eq(!cast<string>(t1), !cast<string>(cur)),
-    acc, !listconcat(acc, [cur])
-  )
-) in
-def : Pat<(t1 (bitconvert (t2 V128:$v))), (t1 V128:$v)>;
+foreach t1 = AllVecs in
+foreach t2 = AllVecs in
+if !ne(t1, t2) then
+def : Pat<(t1.vt (bitconvert (t2.vt V128:$v))), (t1.vt V128:$v)>;
 
 // Extended pairwise addition
 defm "" : SIMDConvert<I16x8, I8x16, int_wasm_extadd_pairwise_signed,
