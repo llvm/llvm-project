@@ -847,6 +847,9 @@ static DenseMap<const InputSection *, size_t> buildInputSectionPriorities() {
     return sectionPriorities;
 
   auto addSym = [&](Defined &sym) {
+    if (sym.isAbsolute())
+      return;
+
     auto it = config->priorities.find(sym.getName());
     if (it == config->priorities.end())
       return;
