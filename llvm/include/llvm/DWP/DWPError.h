@@ -1,5 +1,5 @@
-#ifndef TOOLS_LLVM_DWP_DWPERROR
-#define TOOLS_LLVM_DWP_DWPERROR
+#ifndef LLVM_DWP_DWPERROR_H
+#define LLVM_DWP_DWPERROR_H
 
 #include "llvm/Support/Error.h"
 #include "llvm/Support/ErrorHandling.h"
@@ -20,4 +20,4 @@ private:
 };
 } // namespace llvm
 
-#endif
+#endif // LLVM_DWP_DWPERROR_H
