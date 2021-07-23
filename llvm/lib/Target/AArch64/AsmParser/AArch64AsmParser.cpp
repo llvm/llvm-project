@@ -5106,6 +5106,8 @@ bool AArch64AsmParser::showMatchError(SMLoc Loc, unsigned ErrCode,
     return Error(Loc, "invalid matrix operand, expected za[0-7].d");
   case Match_InvalidMatrix:
     return Error(Loc, "invalid matrix operand, expected za");
+  case Match_InvalidMatrixIndexGPR32_12_15:
+    return Error(Loc, "operand must be a register in range [w12, w15]");
   default:
     llvm_unreachable("unexpected error code!");
   }
@@ -5641,6 +5643,7 @@ bool AArch64AsmParser::MatchAndEmitInstruction(SMLoc IDLoc, unsigned &Opcode,
   case Match_InvalidMatrixTileVectorV64:
   case Match_InvalidMatrixTileVectorV128:
   case Match_InvalidSVCR:
+  case Match_InvalidMatrixIndexGPR32_12_15:
   case Match_MSR:
   case Match_MRS: {
     if (ErrorInfo >= Operands.size())
