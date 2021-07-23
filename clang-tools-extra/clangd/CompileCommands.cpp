@@ -12,8 +12,6 @@
 #include "clang/Driver/Options.h"
 #include "clang/Frontend/CompilerInvocation.h"
 #include "clang/Tooling/ArgumentsAdjusters.h"
-#include "llvm/ADT/STLExtras.h"
-#include "llvm/ADT/StringRef.h"
 #include "llvm/Option/Option.h"
 #include "llvm/Support/Allocator.h"
 #include "llvm/Support/Debug.h"
@@ -22,7 +20,6 @@
 #include "llvm/Support/MemoryBuffer.h"
 #include "llvm/Support/Path.h"
 #include "llvm/Support/Program.h"
-#include <iterator>
 #include <string>
 #include <vector>
 
@@ -205,9 +202,14 @@ void CommandMangler::adjust(std::vector<std::string> &Cmd) const {
     return false;
   };
 
-  llvm::erase_if(Cmd, [](llvm::StringRef Elem) {
-    return Elem.startswith("--save-temps") || Elem.startswith("-save-temps");
-  });
+  // clangd should not write files to disk, including dependency files
+  // requested on the command line.
+  Cmd = tooling::getClangStripDependencyFileAdjuster()(Cmd, "");
+  // Strip plugin related command line arguments. Clangd does
+  // not support plugins currently. Therefore it breaks if
+  // compiler tries to load plugins.
+  Cmd = tooling::getStripPluginsAdjuster()(Cmd, "");
+  Cmd = tooling::getClangSyntaxOnlyAdjuster()(Cmd, "");
 
   std::vector<std::string> ToAppend;
   if (ResourceDir && !Has("-resource-dir"))
@@ -221,8 +223,8 @@ void CommandMangler::adjust(std::vector<std::string> &Cmd) const {
   }
 
   if (!ToAppend.empty()) {
-    Cmd.insert(llvm::find(Cmd, "--"), std::make_move_iterator(ToAppend.begin()),
-               std::make_move_iterator(ToAppend.end()));
+    Cmd = tooling::getInsertArgumentAdjuster(
+        std::move(ToAppend), tooling::ArgumentInsertPosition::END)(Cmd, "");
   }
 
   if (!Cmd.empty()) {
