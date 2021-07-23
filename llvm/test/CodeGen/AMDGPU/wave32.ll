@@ -250,9 +250,9 @@ bb13:
 ; GCN:     s_cbranch_execz
 ; GCN:   BB{{.*}}:
 
-; GFX1032: s_or_b32 [[MASK1]], [[MASK1]], exec_lo
-; GFX1064: s_or_b64 [[MASK1]], [[MASK1]], exec
-; GCN: global_load_dword [[LOAD:v[0-9]+]]
+; GFX1032-DAG: s_or_b32 [[MASK1]], [[MASK1]], exec_lo
+; GFX1064-DAG: s_or_b64 [[MASK1]], [[MASK1]], exec
+; GCN-DAG: global_load_dword [[LOAD:v[0-9]+]]
 ; GFX1032: v_cmp_gt_i32_e32 vcc_lo, 11, [[LOAD]]
 ; GFX1064: v_cmp_gt_i32_e32 vcc, 11, [[LOAD]]
 define amdgpu_kernel void @test_loop_with_if_else_break(i32 addrspace(1)* %arg) #0 {

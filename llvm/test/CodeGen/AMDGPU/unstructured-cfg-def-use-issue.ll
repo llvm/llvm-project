@@ -186,14 +186,15 @@ define hidden void @blam() {
 ; GCN:       ; %bb.0: ; %bb
 ; GCN-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GCN-NEXT:    s_or_saveexec_b64 s[4:5], -1
-; GCN-NEXT:    buffer_store_dword v40, off, s[0:3], s32 offset:12 ; 4-byte Folded Spill
+; GCN-NEXT:    buffer_store_dword v40, off, s[0:3], s32 offset:16 ; 4-byte Folded Spill
 ; GCN-NEXT:    s_mov_b64 exec, s[4:5]
 ; GCN-NEXT:    v_writelane_b32 v40, s33, 4
 ; GCN-NEXT:    s_mov_b32 s33, s32
 ; GCN-NEXT:    s_addk_i32 s32, 0x800
-; GCN-NEXT:    buffer_store_dword v41, off, s[0:3], s33 offset:8 ; 4-byte Folded Spill
-; GCN-NEXT:    buffer_store_dword v42, off, s[0:3], s33 offset:4 ; 4-byte Folded Spill
-; GCN-NEXT:    buffer_store_dword v43, off, s[0:3], s33 ; 4-byte Folded Spill
+; GCN-NEXT:    buffer_store_dword v41, off, s[0:3], s33 offset:12 ; 4-byte Folded Spill
+; GCN-NEXT:    buffer_store_dword v42, off, s[0:3], s33 offset:8 ; 4-byte Folded Spill
+; GCN-NEXT:    buffer_store_dword v43, off, s[0:3], s33 offset:4 ; 4-byte Folded Spill
+; GCN-NEXT:    buffer_store_dword v44, off, s[0:3], s33 ; 4-byte Folded Spill
 ; GCN-NEXT:    v_writelane_b32 v40, s34, 0
 ; GCN-NEXT:    v_writelane_b32 v40, s35, 1
 ; GCN-NEXT:    v_writelane_b32 v40, s36, 2
@@ -202,8 +203,9 @@ define hidden void @blam() {
 ; GCN-NEXT:    v_mov_b32_e32 v1, 0
 ; GCN-NEXT:    v_mov_b32_e32 v2, 0
 ; GCN-NEXT:    v_and_b32_e32 v0, 0x3ff, v0
-; GCN-NEXT:    flat_load_dword v43, v[1:2]
 ; GCN-NEXT:    v_mov_b32_e32 v42, 0
+; GCN-NEXT:    flat_load_dword v43, v[1:2]
+; GCN-NEXT:    v_mov_b32_e32 v44, 0x7fc00000
 ; GCN-NEXT:    s_getpc_b64 s[36:37]
 ; GCN-NEXT:    s_add_u32 s36, s36, spam@rel32@lo+4
 ; GCN-NEXT:    s_addc_u32 s37, s37, spam@rel32@hi+12
@@ -214,13 +216,11 @@ define hidden void @blam() {
 ; GCN-NEXT:  BB1_1: ; %bb10
 ; GCN-NEXT:    ; in Loop: Header=BB1_3 Depth=1
 ; GCN-NEXT:    s_or_b64 exec, exec, s[6:7]
-; GCN-NEXT:    v_mov_b32_e32 v0, 0x7fc00000
-; GCN-NEXT:    buffer_store_dword v0, off, s[0:3], 0
+; GCN-NEXT:    buffer_store_dword v44, off, s[0:3], 0
 ; GCN-NEXT:  BB1_2: ; %bb18
 ; GCN-NEXT:    ; in Loop: Header=BB1_3 Depth=1
-; GCN-NEXT:    v_mov_b32_e32 v0, 0x7fc00000
+; GCN-NEXT:    buffer_store_dword v44, off, s[0:3], 0
 ; GCN-NEXT:    s_mov_b64 s[4:5], 0
-; GCN-NEXT:    buffer_store_dword v0, off, s[0:3], 0
 ; GCN-NEXT:  BB1_3: ; %bb2
 ; GCN-NEXT:    ; =>This Loop Header: Depth=1
 ; GCN-NEXT:    ; Child Loop BB1_4 Depth 2
@@ -229,8 +229,7 @@ define hidden void @blam() {
 ; GCN-NEXT:    ; Parent Loop BB1_3 Depth=1
 ; GCN-NEXT:    ; => This Inner Loop Header: Depth=2
 ; GCN-NEXT:    flat_load_dword v0, v[41:42]
-; GCN-NEXT:    v_mov_b32_e32 v1, 0
-; GCN-NEXT:    buffer_store_dword v1, off, s[0:3], 0
+; GCN-NEXT:    buffer_store_dword v42, off, s[0:3], 0
 ; GCN-NEXT:    s_waitcnt vmcnt(1)
 ; GCN-NEXT:    v_cmp_gt_i32_e32 vcc, 3, v0
 ; GCN-NEXT:    s_and_saveexec_b64 s[8:9], vcc
@@ -268,8 +267,7 @@ define hidden void @blam() {
 ; GCN-NEXT:  ; %bb.9: ; %bb16
 ; GCN-NEXT:    ; in Loop: Header=BB1_3 Depth=1
 ; GCN-NEXT:    s_or_b64 exec, exec, s[4:5]
-; GCN-NEXT:    v_mov_b32_e32 v0, 0x7fc00000
-; GCN-NEXT:    buffer_store_dword v0, off, s[0:3], 0
+; GCN-NEXT:    buffer_store_dword v44, off, s[0:3], 0
 ; GCN-NEXT:  BB1_10: ; %bb17
 ; GCN-NEXT:    ; in Loop: Header=BB1_3 Depth=1
 ; GCN-NEXT:    buffer_store_dword v43, off, s[0:3], 0

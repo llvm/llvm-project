@@ -147,6 +147,7 @@ define amdgpu_kernel void @infinite_loop_nest_ret(i32 addrspace(1)* %out) {
 ; SI-NEXT:    v_cmp_ne_u32_e64 s[0:1], 3, v0
 ; SI-NEXT:    s_mov_b32 s7, 0xf000
 ; SI-NEXT:    s_mov_b32 s6, -1
+; SI-NEXT:    v_mov_b32_e32 v0, 0x3e7
 ; SI-NEXT:  BB3_2: ; %outer_loop
 ; SI-NEXT:    ; =>This Loop Header: Depth=1
 ; SI-NEXT:    ; Child Loop BB3_3 Depth 2
@@ -156,8 +157,6 @@ define amdgpu_kernel void @infinite_loop_nest_ret(i32 addrspace(1)* %out) {
 ; SI-NEXT:    ; => This Inner Loop Header: Depth=2
 ; SI-NEXT:    s_and_b64 s[8:9], exec, s[0:1]
 ; SI-NEXT:    s_or_b64 s[2:3], s[8:9], s[2:3]
-; SI-NEXT:    s_waitcnt expcnt(0)
-; SI-NEXT:    v_mov_b32_e32 v0, 0x3e7
 ; SI-NEXT:    s_waitcnt lgkmcnt(0)
 ; SI-NEXT:    buffer_store_dword v0, off, s[4:7], 0
 ; SI-NEXT:    s_waitcnt vmcnt(0)
