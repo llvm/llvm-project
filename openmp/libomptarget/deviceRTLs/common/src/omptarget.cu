@@ -94,7 +94,9 @@ static void __kmpc_spmd_kernel_init(bool RequiresFullRuntime) {
 
   if (GetLaneId() == 0) {
     parallelLevel[GetWarpId()] =
-        1 + (GetNumberOfThreadsInBlock() > 1 ? OMP_ACTIVE_PARALLEL_LEVEL : 0);
+        1 + (__kmpc_get_hardware_num_threads_in_block() > 1
+                 ? OMP_ACTIVE_PARALLEL_LEVEL
+                 : 0);
   }
 
   __kmpc_data_sharing_init_stack();
