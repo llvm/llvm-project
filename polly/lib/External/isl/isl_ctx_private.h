@@ -42,6 +42,3 @@ struct isl_ctx {
 };
 
 int isl_ctx_next_operation(isl_ctx *ctx);
-
-void isl_ctx_set_full_error(isl_ctx *ctx, enum isl_error error, const char *msg,
-	const char *file, int line);
