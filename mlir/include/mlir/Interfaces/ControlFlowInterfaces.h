@@ -87,6 +87,32 @@ private:
 };
 
 //===----------------------------------------------------------------------===//
+// RegionBranchTerminatorOpInterface
+//===----------------------------------------------------------------------===//
+
+/// Returns true if the given operation is either annotated with the
+/// `ReturnLike` trait or implements the `RegionBranchTerminatorOpInterface`.
+bool isRegionReturnLike(Operation *operation);
+
+/// Returns the mutable operands that are passed to the region with the given
+/// `regionIndex`. If the operation does not implement the
+/// `RegionBranchTerminatorOpInterface` and is not marked as `ReturnLike`, the
+/// result will be `llvm::None`. In all other cases, the resulting
+/// `OperandRange` represents all operands that are passed to the specified
+/// successor region. If `regionIndex` is `llvm::None`, all operands that are
+/// passed to the parent operation will be returned.
+Optional<MutableOperandRange>
+getMutableRegionBranchSuccessorOperands(Operation *operation,
+                                        Optional<unsigned> regionIndex);
+
+/// Returns the read only operands that are passed to the region with the given
+/// `regionIndex`. See `getMutableRegionBranchSuccessorOperands` for more
+/// information.
+Optional<OperandRange>
+getRegionBranchSuccessorOperands(Operation *operation,
+                                 Optional<unsigned> regionIndex);
+
+//===----------------------------------------------------------------------===//
 // ControlFlow Traits
 //===----------------------------------------------------------------------===//
 

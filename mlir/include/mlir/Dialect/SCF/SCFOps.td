@@ -36,8 +36,12 @@ class SCF_Op<string mnemonic, list<OpTrait> traits = []> :
   let parser = [{ return ::parse$cppClass(parser, result); }];
 }
 
-def ConditionOp : SCF_Op<"condition",
-                         [HasParent<"WhileOp">, NoSideEffect, Terminator]> {
+def ConditionOp : SCF_Op<"condition", [
+  HasParent<"WhileOp">,
+  DeclareOpInterfaceMethods<RegionBranchTerminatorOpInterface>,
+  NoSideEffect,
+  Terminator
+]> {
   let summary = "loop continuation condition";
   let description = [{
     This operation accepts the continuation (i.e., inverse of exit) condition
