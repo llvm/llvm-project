@@ -21,10 +21,10 @@ body: |
     ; CHECK-LABEL: name: zvlsseg_spill
     ; CHECK: liveins: $x10, $x11
     ; CHECK: $x2 = frame-setup ADDI $x2, -16
-    ; CHECK: CFI_INSTRUCTION def_cfa_offset 16
-    ; CHECK: $x12 = PseudoReadVLENB
-    ; CHECK: $x12 = SLLI killed $x12, 3
-    ; CHECK: $x2 = SUB $x2, killed $x12
+    ; CHECK: frame-setup CFI_INSTRUCTION def_cfa_offset 16
+    ; CHECK: $x12 = frame-setup PseudoReadVLENB
+    ; CHECK: $x12 = frame-setup SLLI killed $x12, 3
+    ; CHECK: $x2 = frame-setup SUB $x2, killed $x12
     ; CHECK: dead $x0 = PseudoVSETVLI killed renamable $x11, 88, implicit-def $vl, implicit-def $vtype
     ; CHECK: $v0_v1_v2_v3_v4_v5_v6 = PseudoVLSEG7E64_V_M1 renamable $x10, $noreg, 6, implicit $vl, implicit $vtype
     ; CHECK: $x11 = ADDI $x2, 16
@@ -34,9 +34,9 @@ body: |
     ; CHECK: $x12 = PseudoReadVLENB
     ; CHECK: dead renamable $v7_v8_v9_v10_v11_v12_v13 = PseudoVRELOAD7_M1 killed $x11, killed $x12, implicit-def $v8
     ; CHECK: VS1R_V killed $v8, killed renamable $x10
-    ; CHECK: $x10 = PseudoReadVLENB
-    ; CHECK: $x10 = SLLI killed $x10, 3
-    ; CHECK: $x2 = ADD $x2, killed $x10
+    ; CHECK: $x10 = frame-destroy PseudoReadVLENB
+    ; CHECK: $x10 = frame-destroy SLLI killed $x10, 3
+    ; CHECK: $x2 = frame-destroy ADD $x2, killed $x10
     ; CHECK: $x2 = frame-destroy ADDI $x2, 16
     ; CHECK: PseudoRET
     %0:gpr = COPY $x10
