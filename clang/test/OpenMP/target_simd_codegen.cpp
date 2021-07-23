@@ -357,7 +357,7 @@ int foo(int n) {
 
 
 // CHECK:       define internal {{.*}}i32 [[OMP_TASK_ENTRY]](i32 {{.*}}%0, [[KMP_TASK_T_WITH_PRIVATES]]* noalias %1)
-// CHECK:       [[RET:%.+]] = call i32 @__tgt_target_teams_nowait_mapper(%struct.ident_t* @{{.+}}, i64 -1, i8* @{{[^,]+}}, i32 0, i8** null, i8** null, i64* null, i64* null, i8** null, i8** null, i32 1, i32 1)
+// CHECK:       [[RET:%.+]] = call i32 @__tgt_target_teams_nowait_mapper(%struct.ident_t* @{{.+}}, i64 -1, i8* @{{[^,]+}}, i32 0, i8** null, i8** null, i64* null, i64* null, i8** null, i8** null, i32 1, i32 1, i32 0, i8* null, i32 0, i8* null)
 // CHECK-NEXT:  [[ERROR:%.+]] = icmp ne i32 [[RET]], 0
 // CHECK-NEXT:  br i1 [[ERROR]], label %[[FAIL:[^,]+]], label %[[END:[^,]+]]
 // CHECK:       [[FAIL]]

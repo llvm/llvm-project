@@ -1066,7 +1066,7 @@ int bar(int n){
 // CHECK1-NEXT:    [[TMP22:%.*]] = getelementptr inbounds [3 x i64], [3 x i64]* [[TMP19]], i64 0, i64 0
 // CHECK1-NEXT:    [[TMP23:%.*]] = getelementptr inbounds [[STRUCT_ANON:%.*]], %struct.anon* [[TMP12]], i32 0, i32 1
 // CHECK1-NEXT:    [[TMP24:%.*]] = getelementptr inbounds [[STRUCT_ANON]], %struct.anon* [[TMP12]], i32 0, i32 2
-// CHECK1-NEXT:    [[TMP25:%.*]] = call i32 @__tgt_target_teams_nowait_mapper(%struct.ident_t* @[[GLOB2]], i64 -1, i8* @.{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__Z3fooi_l138.region_id, i32 3, i8** [[TMP20]], i8** [[TMP21]], i64* [[TMP22]], i64* getelementptr inbounds ([3 x i64], [3 x i64]* @.offload_maptypes, i32 0, i32 0), i8** null, i8** null, i32 1, i32 0) #[[ATTR3]]
+// CHECK1-NEXT:    [[TMP25:%.*]] = call i32 @__tgt_target_teams_nowait_mapper(%struct.ident_t* @[[GLOB2]], i64 -1, i8* @.{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__Z3fooi_l138.region_id, i32 3, i8** [[TMP20]], i8** [[TMP21]], i64* [[TMP22]], i64* getelementptr inbounds ([3 x i64], [3 x i64]* @.offload_maptypes, i32 0, i32 0), i8** null, i8** null, i32 1, i32 0, i32 0, i8* null, i32 0, i8* null) #[[ATTR3]]
 // CHECK1-NEXT:    [[TMP26:%.*]] = icmp ne i32 [[TMP25]], 0
 // CHECK1-NEXT:    br i1 [[TMP26]], label [[OMP_OFFLOAD_FAILED_I:%.*]], label [[DOTOMP_OUTLINED__3_EXIT:%.*]]
 // CHECK1:       omp_offload.failed.i:
@@ -2715,7 +2715,7 @@ int bar(int n){
 // CHECK2-NEXT:    [[TMP22:%.*]] = getelementptr inbounds [3 x i64], [3 x i64]* [[TMP19]], i64 0, i64 0
 // CHECK2-NEXT:    [[TMP23:%.*]] = getelementptr inbounds [[STRUCT_ANON:%.*]], %struct.anon* [[TMP12]], i32 0, i32 1
 // CHECK2-NEXT:    [[TMP24:%.*]] = getelementptr inbounds [[STRUCT_ANON]], %struct.anon* [[TMP12]], i32 0, i32 2
-// CHECK2-NEXT:    [[TMP25:%.*]] = call i32 @__tgt_target_teams_nowait_mapper(%struct.ident_t* @[[GLOB2]], i64 -1, i8* @.{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__Z3fooi_l138.region_id, i32 3, i8** [[TMP20]], i8** [[TMP21]], i64* [[TMP22]], i64* getelementptr inbounds ([3 x i64], [3 x i64]* @.offload_maptypes, i32 0, i32 0), i8** null, i8** null, i32 1, i32 0) #[[ATTR3]]
+// CHECK2-NEXT:    [[TMP25:%.*]] = call i32 @__tgt_target_teams_nowait_mapper(%struct.ident_t* @[[GLOB2]], i64 -1, i8* @.{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__Z3fooi_l138.region_id, i32 3, i8** [[TMP20]], i8** [[TMP21]], i64* [[TMP22]], i64* getelementptr inbounds ([3 x i64], [3 x i64]* @.offload_maptypes, i32 0, i32 0), i8** null, i8** null, i32 1, i32 0, i32 0, i8* null, i32 0, i8* null) #[[ATTR3]]
 // CHECK2-NEXT:    [[TMP26:%.*]] = icmp ne i32 [[TMP25]], 0
 // CHECK2-NEXT:    br i1 [[TMP26]], label [[OMP_OFFLOAD_FAILED_I:%.*]], label [[DOTOMP_OUTLINED__3_EXIT:%.*]]
 // CHECK2:       omp_offload.failed.i:
@@ -4343,7 +4343,7 @@ int bar(int n){
 // CHECK3-NEXT:    [[TMP22:%.*]] = getelementptr inbounds [3 x i64], [3 x i64]* [[TMP19]], i32 0, i32 0
 // CHECK3-NEXT:    [[TMP23:%.*]] = getelementptr inbounds [[STRUCT_ANON:%.*]], %struct.anon* [[TMP12]], i32 0, i32 1
 // CHECK3-NEXT:    [[TMP24:%.*]] = getelementptr inbounds [[STRUCT_ANON]], %struct.anon* [[TMP12]], i32 0, i32 2
-// CHECK3-NEXT:    [[TMP25:%.*]] = call i32 @__tgt_target_teams_nowait_mapper(%struct.ident_t* @[[GLOB2]], i64 -1, i8* @.{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__Z3fooi_l138.region_id, i32 3, i8** [[TMP20]], i8** [[TMP21]], i64* [[TMP22]], i64* getelementptr inbounds ([3 x i64], [3 x i64]* @.offload_maptypes, i32 0, i32 0), i8** null, i8** null, i32 1, i32 0) #[[ATTR3]]
+// CHECK3-NEXT:    [[TMP25:%.*]] = call i32 @__tgt_target_teams_nowait_mapper(%struct.ident_t* @[[GLOB2]], i64 -1, i8* @.{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__Z3fooi_l138.region_id, i32 3, i8** [[TMP20]], i8** [[TMP21]], i64* [[TMP22]], i64* getelementptr inbounds ([3 x i64], [3 x i64]* @.offload_maptypes, i32 0, i32 0), i8** null, i8** null, i32 1, i32 0, i32 0, i8* null, i32 0, i8* null) #[[ATTR3]]
 // CHECK3-NEXT:    [[TMP26:%.*]] = icmp ne i32 [[TMP25]], 0
 // CHECK3-NEXT:    br i1 [[TMP26]], label [[OMP_OFFLOAD_FAILED_I:%.*]], label [[DOTOMP_OUTLINED__3_EXIT:%.*]]
 // CHECK3:       omp_offload.failed.i:
@@ -5948,7 +5948,7 @@ int bar(int n){
 // CHECK4-NEXT:    [[TMP22:%.*]] = getelementptr inbounds [3 x i64], [3 x i64]* [[TMP19]], i32 0, i32 0
 // CHECK4-NEXT:    [[TMP23:%.*]] = getelementptr inbounds [[STRUCT_ANON:%.*]], %struct.anon* [[TMP12]], i32 0, i32 1
 // CHECK4-NEXT:    [[TMP24:%.*]] = getelementptr inbounds [[STRUCT_ANON]], %struct.anon* [[TMP12]], i32 0, i32 2
-// CHECK4-NEXT:    [[TMP25:%.*]] = call i32 @__tgt_target_teams_nowait_mapper(%struct.ident_t* @[[GLOB2]], i64 -1, i8* @.{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__Z3fooi_l138.region_id, i32 3, i8** [[TMP20]], i8** [[TMP21]], i64* [[TMP22]], i64* getelementptr inbounds ([3 x i64], [3 x i64]* @.offload_maptypes, i32 0, i32 0), i8** null, i8** null, i32 1, i32 0) #[[ATTR3]]
+// CHECK4-NEXT:    [[TMP25:%.*]] = call i32 @__tgt_target_teams_nowait_mapper(%struct.ident_t* @[[GLOB2]], i64 -1, i8* @.{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__Z3fooi_l138.region_id, i32 3, i8** [[TMP20]], i8** [[TMP21]], i64* [[TMP22]], i64* getelementptr inbounds ([3 x i64], [3 x i64]* @.offload_maptypes, i32 0, i32 0), i8** null, i8** null, i32 1, i32 0, i32 0, i8* null, i32 0, i8* null) #[[ATTR3]]
 // CHECK4-NEXT:    [[TMP26:%.*]] = icmp ne i32 [[TMP25]], 0
 // CHECK4-NEXT:    br i1 [[TMP26]], label [[OMP_OFFLOAD_FAILED_I:%.*]], label [[DOTOMP_OUTLINED__3_EXIT:%.*]]
 // CHECK4:       omp_offload.failed.i:
@@ -10782,7 +10782,7 @@ int bar(int n){
 // CHECK17-NEXT:    [[TMP22:%.*]] = getelementptr inbounds [3 x i64], [3 x i64]* [[TMP19]], i64 0, i64 0
 // CHECK17-NEXT:    [[TMP23:%.*]] = getelementptr inbounds [[STRUCT_ANON:%.*]], %struct.anon* [[TMP12]], i32 0, i32 1
 // CHECK17-NEXT:    [[TMP24:%.*]] = getelementptr inbounds [[STRUCT_ANON]], %struct.anon* [[TMP12]], i32 0, i32 2
-// CHECK17-NEXT:    [[TMP25:%.*]] = call i32 @__tgt_target_teams_nowait_mapper(%struct.ident_t* @[[GLOB2]], i64 -1, i8* @.{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__Z3fooi_l138.region_id, i32 3, i8** [[TMP20]], i8** [[TMP21]], i64* [[TMP22]], i64* getelementptr inbounds ([3 x i64], [3 x i64]* @.offload_maptypes, i32 0, i32 0), i8** null, i8** null, i32 1, i32 0) #[[ATTR3]]
+// CHECK17-NEXT:    [[TMP25:%.*]] = call i32 @__tgt_target_teams_nowait_mapper(%struct.ident_t* @[[GLOB2]], i64 -1, i8* @.{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__Z3fooi_l138.region_id, i32 3, i8** [[TMP20]], i8** [[TMP21]], i64* [[TMP22]], i64* getelementptr inbounds ([3 x i64], [3 x i64]* @.offload_maptypes, i32 0, i32 0), i8** null, i8** null, i32 1, i32 0, i32 0, i8* null, i32 0, i8* null) #[[ATTR3]]
 // CHECK17-NEXT:    [[TMP26:%.*]] = icmp ne i32 [[TMP25]], 0
 // CHECK17-NEXT:    br i1 [[TMP26]], label [[OMP_OFFLOAD_FAILED_I:%.*]], label [[DOTOMP_OUTLINED__3_EXIT:%.*]]
 // CHECK17:       omp_offload.failed.i:
@@ -12431,7 +12431,7 @@ int bar(int n){
 // CHECK18-NEXT:    [[TMP22:%.*]] = getelementptr inbounds [3 x i64], [3 x i64]* [[TMP19]], i64 0, i64 0
 // CHECK18-NEXT:    [[TMP23:%.*]] = getelementptr inbounds [[STRUCT_ANON:%.*]], %struct.anon* [[TMP12]], i32 0, i32 1
 // CHECK18-NEXT:    [[TMP24:%.*]] = getelementptr inbounds [[STRUCT_ANON]], %struct.anon* [[TMP12]], i32 0, i32 2
-// CHECK18-NEXT:    [[TMP25:%.*]] = call i32 @__tgt_target_teams_nowait_mapper(%struct.ident_t* @[[GLOB2]], i64 -1, i8* @.{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__Z3fooi_l138.region_id, i32 3, i8** [[TMP20]], i8** [[TMP21]], i64* [[TMP22]], i64* getelementptr inbounds ([3 x i64], [3 x i64]* @.offload_maptypes, i32 0, i32 0), i8** null, i8** null, i32 1, i32 0) #[[ATTR3]]
+// CHECK18-NEXT:    [[TMP25:%.*]] = call i32 @__tgt_target_teams_nowait_mapper(%struct.ident_t* @[[GLOB2]], i64 -1, i8* @.{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__Z3fooi_l138.region_id, i32 3, i8** [[TMP20]], i8** [[TMP21]], i64* [[TMP22]], i64* getelementptr inbounds ([3 x i64], [3 x i64]* @.offload_maptypes, i32 0, i32 0), i8** null, i8** null, i32 1, i32 0, i32 0, i8* null, i32 0, i8* null) #[[ATTR3]]
 // CHECK18-NEXT:    [[TMP26:%.*]] = icmp ne i32 [[TMP25]], 0
 // CHECK18-NEXT:    br i1 [[TMP26]], label [[OMP_OFFLOAD_FAILED_I:%.*]], label [[DOTOMP_OUTLINED__3_EXIT:%.*]]
 // CHECK18:       omp_offload.failed.i:
@@ -14059,7 +14059,7 @@ int bar(int n){
 // CHECK19-NEXT:    [[TMP22:%.*]] = getelementptr inbounds [3 x i64], [3 x i64]* [[TMP19]], i32 0, i32 0
 // CHECK19-NEXT:    [[TMP23:%.*]] = getelementptr inbounds [[STRUCT_ANON:%.*]], %struct.anon* [[TMP12]], i32 0, i32 1
 // CHECK19-NEXT:    [[TMP24:%.*]] = getelementptr inbounds [[STRUCT_ANON]], %struct.anon* [[TMP12]], i32 0, i32 2
-// CHECK19-NEXT:    [[TMP25:%.*]] = call i32 @__tgt_target_teams_nowait_mapper(%struct.ident_t* @[[GLOB2]], i64 -1, i8* @.{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__Z3fooi_l138.region_id, i32 3, i8** [[TMP20]], i8** [[TMP21]], i64* [[TMP22]], i64* getelementptr inbounds ([3 x i64], [3 x i64]* @.offload_maptypes, i32 0, i32 0), i8** null, i8** null, i32 1, i32 0) #[[ATTR3]]
+// CHECK19-NEXT:    [[TMP25:%.*]] = call i32 @__tgt_target_teams_nowait_mapper(%struct.ident_t* @[[GLOB2]], i64 -1, i8* @.{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__Z3fooi_l138.region_id, i32 3, i8** [[TMP20]], i8** [[TMP21]], i64* [[TMP22]], i64* getelementptr inbounds ([3 x i64], [3 x i64]* @.offload_maptypes, i32 0, i32 0), i8** null, i8** null, i32 1, i32 0, i32 0, i8* null, i32 0, i8* null) #[[ATTR3]]
 // CHECK19-NEXT:    [[TMP26:%.*]] = icmp ne i32 [[TMP25]], 0
 // CHECK19-NEXT:    br i1 [[TMP26]], label [[OMP_OFFLOAD_FAILED_I:%.*]], label [[DOTOMP_OUTLINED__3_EXIT:%.*]]
 // CHECK19:       omp_offload.failed.i:
@@ -15664,7 +15664,7 @@ int bar(int n){
 // CHECK20-NEXT:    [[TMP22:%.*]] = getelementptr inbounds [3 x i64], [3 x i64]* [[TMP19]], i32 0, i32 0
 // CHECK20-NEXT:    [[TMP23:%.*]] = getelementptr inbounds [[STRUCT_ANON:%.*]], %struct.anon* [[TMP12]], i32 0, i32 1
 // CHECK20-NEXT:    [[TMP24:%.*]] = getelementptr inbounds [[STRUCT_ANON]], %struct.anon* [[TMP12]], i32 0, i32 2
-// CHECK20-NEXT:    [[TMP25:%.*]] = call i32 @__tgt_target_teams_nowait_mapper(%struct.ident_t* @[[GLOB2]], i64 -1, i8* @.{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__Z3fooi_l138.region_id, i32 3, i8** [[TMP20]], i8** [[TMP21]], i64* [[TMP22]], i64* getelementptr inbounds ([3 x i64], [3 x i64]* @.offload_maptypes, i32 0, i32 0), i8** null, i8** null, i32 1, i32 0) #[[ATTR3]]
+// CHECK20-NEXT:    [[TMP25:%.*]] = call i32 @__tgt_target_teams_nowait_mapper(%struct.ident_t* @[[GLOB2]], i64 -1, i8* @.{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__Z3fooi_l138.region_id, i32 3, i8** [[TMP20]], i8** [[TMP21]], i64* [[TMP22]], i64* getelementptr inbounds ([3 x i64], [3 x i64]* @.offload_maptypes, i32 0, i32 0), i8** null, i8** null, i32 1, i32 0, i32 0, i8* null, i32 0, i8* null) #[[ATTR3]]
 // CHECK20-NEXT:    [[TMP26:%.*]] = icmp ne i32 [[TMP25]], 0
 // CHECK20-NEXT:    br i1 [[TMP26]], label [[OMP_OFFLOAD_FAILED_I:%.*]], label [[DOTOMP_OUTLINED__3_EXIT:%.*]]
 // CHECK20:       omp_offload.failed.i:
