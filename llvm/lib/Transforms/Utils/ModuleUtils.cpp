@@ -177,28 +177,6 @@ llvm::getOrCreateSanitizerCtorAndInitFunctions(
   return std::make_pair(Ctor, InitFunction);
 }
 
-Function *llvm::getOrCreateInitFunction(Module &M, StringRef Name) {
-  assert(!Name.empty() && "Expected init function name");
-  if (Function *F = M.getFunction(Name)) {
-    if (F->arg_size() != 0 ||
-        F->getReturnType() != Type::getVoidTy(M.getContext())) {
-      std::string Err;
-      raw_string_ostream Stream(Err);
-      Stream << "Sanitizer interface function defined with wrong type: " << *F;
-      report_fatal_error(Err);
-    }
-    return F;
-  }
-  Function *F =
-      cast<Function>(M.getOrInsertFunction(Name, AttributeList(),
-                                           Type::getVoidTy(M.getContext()))
-                         .getCallee());
-
-  appendToGlobalCtors(M, F, 0);
-
-  return F;
-}
-
 void llvm::filterDeadComdatFunctions(
     Module &M, SmallVectorImpl<Function *> &DeadComdatFunctions) {
   // Build a map from the comdat to the number of entries in that comdat we
