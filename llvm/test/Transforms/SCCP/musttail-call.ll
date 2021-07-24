@@ -59,7 +59,7 @@ define internal i8* @side_effects(i8 %v) {
 }
 
 ; The call to this function is removed, so the return value must be zapped
-define internal i8* @no_side_effects(i8 %v) readonly nounwind {
+define internal i8* @no_side_effects(i8 %v) readonly nounwind willreturn {
 ; CHECK-LABEL: define {{[^@]+}}@no_side_effects
 ; CHECK-SAME: (i8 [[V:%.*]]) #[[ATTR0:[0-9]+]] {
 ; CHECK-NEXT:    ret i8* undef

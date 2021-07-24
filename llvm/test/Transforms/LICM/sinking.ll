@@ -3,7 +3,7 @@
 ; RUN: opt < %s -basic-aa -licm -S -enable-mssa-loop-dependency=true -verify-memoryssa | FileCheck %s
 
 
-declare i32 @strlen(i8*) readonly nounwind
+declare i32 @strlen(i8*) readonly nounwind willreturn
 
 declare void @foo()
 
@@ -27,7 +27,7 @@ Out:		; preds = %Loop
   ret i32 %A
 }
 
-declare double @sin(double) readnone nounwind
+declare double @sin(double) readnone nounwind willreturn
 
 ; Sink readnone function out of loop with unknown memory behavior.
 define double @test2(double %X) {
