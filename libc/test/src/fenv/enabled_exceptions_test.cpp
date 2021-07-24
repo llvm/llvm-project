@@ -49,6 +49,17 @@ TEST(LlvmLibcExceptionStatusTest, RaiseAndCrash) {
       ASSERT_EQ(__llvm_libc::fetestexcept(others), others);
     }
 
-    ASSERT_RAISES_FP_EXCEPT([=] { __llvm_libc::feraiseexcept(e); });
+    ASSERT_RAISES_FP_EXCEPT([=] {
+      // In test frameworks like Fuchsia's zxtest, this translates to
+      // a death test which runs this closure in a different thread. So,
+      // we enable the exception again inside this closure so that the
+      // exception gets enabled for the thread running this closure.
+      __llvm_libc::fputil::enableExcept(e);
+      __llvm_libc::feraiseexcept(e);
+    });
+
+    // Cleanup.
+    __llvm_libc::fputil::disableExcept(FE_ALL_EXCEPT);
+    ASSERT_EQ(__llvm_libc::feclearexcept(FE_ALL_EXCEPT), 0);
   }
 }
