@@ -7,9 +7,11 @@
 //===----------------------------------------------------------------------===//
 
 #include "SymbolTable.h"
+#include "ConcatOutputSection.h"
 #include "Config.h"
 #include "InputFiles.h"
 #include "Symbols.h"
+#include "SyntheticSections.h"
 #include "lld/Common/ErrorHandler.h"
 #include "lld/Common/Memory.h"
 
@@ -196,7 +198,73 @@ Defined *SymbolTable::addSynthetic(StringRef name, InputSection *isec,
   return s;
 }
 
+enum class Boundary {
+  Start,
+  End,
+};
+
+static void handleSectionBoundarySymbol(const Undefined &sym, StringRef segSect,
+                                        Boundary which) {
+  StringRef segName, sectName;
+  std::tie(segName, sectName) = segSect.split('$');
+
+  // Attach the symbol to any InputSection that will end up in the right
+  // OutputSection -- it doesn't matter which one we pick.
+  // Don't bother looking through inputSections for a matching
+  // ConcatInputSection -- we need to create ConcatInputSection for
+  // non-existing sections anyways, and that codepath works even if we should
+  // already have a ConcatInputSection with the right name.
+
+  OutputSection *osec = nullptr;
+  // This looks for __TEXT,__cstring etc.
+  for (SyntheticSection *ssec : syntheticSections)
+    if (ssec->segname == segName && ssec->name == sectName) {
+      osec = ssec->isec->parent;
+      break;
+    }
+
+  if (!osec) {
+    ConcatInputSection *isec = make<ConcatInputSection>(segName, sectName);
+
+    // This runs after markLive() and is only called for Undefineds that are
+    // live. Marking the isec live ensures an OutputSection is created that the
+    // start/end symbol can refer to.
+    assert(sym.isLive());
+    isec->live = true;
+
+    // This runs after gatherInputSections(), so need to explicitly set parent
+    // and add to inputSections.
+    osec = isec->parent = ConcatOutputSection::getOrCreateForInput(isec);
+    inputSections.push_back(isec);
+  }
+
+  Defined *boundarySym = symtab->addSynthetic(
+      sym.getName(), /*isec=*/nullptr, /*value=*/-1, /*isPrivateExtern=*/true,
+      /*includeInSymtab=*/false, /*referencedDynamically=*/false);
+  if (which == Boundary::Start)
+    osec->sectionStartSymbols.push_back(boundarySym);
+  else
+    osec->sectionEndSymbols.push_back(boundarySym);
+}
+
+static void handleSegmentBoundarySymbol(const Undefined &sym, StringRef segName,
+                                        Boundary which) {
+  // FIXME
+  error("segment$start$ and segment$end$ symbols are not yet implemented");
+}
+
 void lld::macho::treatUndefinedSymbol(const Undefined &sym, StringRef source) {
+  // Handle start/end symbols.
+  StringRef name = sym.getName();
+  if (name.consume_front("section$start$"))
+    return handleSectionBoundarySymbol(sym, name, Boundary::Start);
+  if (name.consume_front("section$end$"))
+    return handleSectionBoundarySymbol(sym, name, Boundary::End);
+  if (name.consume_front("segment$start$"))
+    return handleSegmentBoundarySymbol(sym, name, Boundary::Start);
+  if (name.consume_front("segment$end$"))
+    return handleSegmentBoundarySymbol(sym, name, Boundary::End);
+
   // Handle -U.
   if (config->explicitDynamicLookups.count(sym.getName())) {
     symtab->addDynamicLookup(sym.getName());
