@@ -240,13 +240,12 @@ struct AAAMDWorkGroupSizeFunction : public AAAMDWorkGroupSize {
   }
 
   ChangeStatus updateImpl(Attributor &A) override {
-    Function *F = getAssociatedFunction();
     ChangeStatus Change = ChangeStatus::UNCHANGED;
 
     auto CheckCallSite = [&](AbstractCallSite CS) {
       Function *Caller = CS.getInstruction()->getFunction();
       LLVM_DEBUG(dbgs() << "[AAAMDWorkGroupSize] Call " << Caller->getName()
-                        << "->" << F->getName() << "\n");
+                        << "->" << getAssociatedFunction()->getName() << "\n");
 
       const auto &CallerInfo = A.getAAFor<AAAMDWorkGroupSize>(
           *this, IRPosition::function(*Caller), DepClassTy::REQUIRED);
