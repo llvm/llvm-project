@@ -41,9 +41,11 @@ TEST(CommandMangler, Everything) {
   Mangler.ClangPath = testPath("fake/clang");
   Mangler.ResourceDir = testPath("fake/resources");
   Mangler.Sysroot = testPath("fake/sysroot");
-  std::vector<std::string> Cmd = {"clang++", "--", "foo.cc"};
+  std::vector<std::string> Cmd = {"clang++", "-Xclang", "-load",
+                                  "-Xclang", "plugin",  "-MF",
+                                  "dep",     "--",      "foo.cc"};
   Mangler.adjust(Cmd);
-  EXPECT_THAT(Cmd, ElementsAre(testPath("fake/clang++"),
+  EXPECT_THAT(Cmd, ElementsAre(testPath("fake/clang++"), "-fsyntax-only",
                                "-resource-dir=" + testPath("fake/resources"),
                                "-isysroot", testPath("fake/sysroot"), "--",
                                "foo.cc"));
@@ -65,6 +67,38 @@ TEST(CommandMangler, Sysroot) {
   Mangler.adjust(Cmd);
   EXPECT_THAT(llvm::join(Cmd, " "),
               HasSubstr("-isysroot " + testPath("fake/sysroot")));
+}
+
+TEST(CommandMangler, StripPlugins) {
+  auto Mangler = CommandMangler::forTests();
+  std::vector<std::string> Cmd = {"clang++", "-Xclang", "-load",
+                                  "-Xclang", "plugin",  "foo.cc"};
+  Mangler.adjust(Cmd);
+  for (const char* Stripped : {"-Xclang", "-load", "plugin"})
+    EXPECT_THAT(Cmd, Not(Contains(Stripped)));
+}
+
+TEST(CommandMangler, StripOutput) {
+  auto Mangler = CommandMangler::forTests();
+  std::vector<std::string> Cmd = {"clang++", "-MF", "dependency", "-c",
+                                  "foo.cc"};
+  Mangler.adjust(Cmd);
+  for (const char* Stripped : {"-MF", "dependency"})
+    EXPECT_THAT(Cmd, Not(Contains(Stripped)));
+}
+
+TEST(CommandMangler, StripShowIncludes) {
+  auto Mangler = CommandMangler::forTests();
+  std::vector<std::string> Cmd = {"clang-cl", "/showIncludes", "foo.cc"};
+  Mangler.adjust(Cmd);
+  EXPECT_THAT(Cmd, Not(Contains("/showIncludes")));
+}
+
+TEST(CommandMangler, StripShowIncludesUser) {
+  auto Mangler = CommandMangler::forTests();
+  std::vector<std::string> Cmd = {"clang-cl", "/showIncludes:user", "foo.cc"};
+  Mangler.adjust(Cmd);
+  EXPECT_THAT(Cmd, Not(Contains("/showIncludes:user")));
 }
 
 TEST(CommandMangler, ClangPath) {
@@ -171,7 +205,7 @@ TEST(CommandMangler, ConfigEdits) {
     Mangler.adjust(Cmd);
   }
   // Edits are applied in given order and before other mangling.
-  EXPECT_THAT(Cmd, ElementsAre(_, "FOO.CC", "--hello"));
+  EXPECT_THAT(Cmd, ElementsAre(_, "FOO.CC", "--hello", "-fsyntax-only"));
 }
 
 static std::string strip(llvm::StringRef Arg, llvm::StringRef Argv) {
