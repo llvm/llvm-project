@@ -248,9 +248,9 @@ private:
 bool BCECmpBlock::canSinkBCECmpInst(const Instruction *Inst,
                                     DenseSet<Instruction *> &BlockInsts,
                                     AliasAnalysis &AA) const {
-  // If this instruction has side effects and its in middle of the BCE cmp block
-  // instructions, then bail for now.
-  if (Inst->mayHaveSideEffects()) {
+  // If this instruction may clobber the loads and is in middle of the BCE cmp
+  // block instructions, then bail for now.
+  if (Inst->mayWriteToMemory()) {
     // Bail if this is not a simple load or store
     if (!isSimpleLoadOrStore(Inst))
       return false;
