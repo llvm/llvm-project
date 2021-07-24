@@ -11536,18 +11536,17 @@ const SCEV *ScalarEvolution::computeMaxBECountForLT(const SCEV *Start,
 
   // Calculate the maximum backedge count based on the range of values
   // permitted by Start, End, and Stride.
-  const SCEV *MaxBECount;
   APInt MinStart =
       IsSigned ? getSignedRangeMin(Start) : getUnsignedRangeMin(Start);
 
-  APInt StrideForMaxBECount =
+  APInt MinStride =
       IsSigned ? getSignedRangeMin(Stride) : getUnsignedRangeMin(Stride);
 
   // We assume either the stride is positive, or the backedge-taken count
   // is zero. So force StrideForMaxBECount to be at least one.
   APInt One(BitWidth, 1);
-  StrideForMaxBECount = IsSigned ? APIntOps::smax(One, StrideForMaxBECount)
-                                 : APIntOps::umax(One, StrideForMaxBECount);
+  APInt StrideForMaxBECount = IsSigned ? APIntOps::smax(One, MinStride)
+                                       : APIntOps::umax(One, MinStride);
 
   APInt MaxValue = IsSigned ? APInt::getSignedMaxValue(BitWidth)
                             : APInt::getMaxValue(BitWidth);
@@ -11564,10 +11563,8 @@ const SCEV *ScalarEvolution::computeMaxBECountForLT(const SCEV *Start,
   MaxEnd = IsSigned ? APIntOps::smax(MaxEnd, MinStart)
                     : APIntOps::umax(MaxEnd, MinStart);
 
-  MaxBECount = getUDivCeilSCEV(getConstant(MaxEnd - MinStart) /* Delta */,
-                               getConstant(StrideForMaxBECount) /* Step */);
-
-  return MaxBECount;
+  return getUDivCeilSCEV(getConstant(MaxEnd - MinStart) /* Delta */,
+                         getConstant(StrideForMaxBECount) /* Step */);
 }
 
 ScalarEvolution::ExitLimit
