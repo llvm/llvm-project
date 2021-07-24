@@ -4125,7 +4125,7 @@ inline _LIBCPP_INLINE_VISIBILITY double __libcpp_lgamma(double __d) {
 }
 
 template<class _IntType>
-binomial_distribution<_IntType>::param_type::param_type(const result_type __t, const double __p)
+binomial_distribution<_IntType>::param_type::param_type(result_type __t, double __p)
     : __t_(__t), __p_(__p)
 {
     if (0 < __p_ && __p_ < 1)
