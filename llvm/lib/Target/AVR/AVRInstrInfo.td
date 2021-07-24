@@ -1297,6 +1297,7 @@ class AtomicStore<PatFrag Op, RegisterClass DRC,
   Pseudo<(outs), (ins PTRRC:$rd, DRC:$rr), "atomic_op",
          [(Op i16:$rd, DRC:$rr)]>;
 
+let Constraints = "@earlyclobber $rd" in
 class AtomicLoadOp<PatFrag Op, RegisterClass DRC,
                    RegisterClass PTRRC> :
   Pseudo<(outs DRC:$rd), (ins PTRRC:$rr, DRC:$operand),
