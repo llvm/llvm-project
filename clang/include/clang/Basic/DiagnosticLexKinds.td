@@ -519,6 +519,11 @@ def warn_pragma_warning_expected_number :
   ExtWarn<"#pragma warning expected a warning number">,
   InGroup<UnknownPragmas>;
 
+// - #pragma deprecated(...)
+def warn_pragma_deprecated_macro_use :
+  ExtWarn<"macro %0 has been marked as deprecated%select{|: %2}1">,
+  InGroup<DeprecatedPragma>;
+
 // - #pragma execution_character_set(...)
 def warn_pragma_exec_charset_expected :
   ExtWarn<"#pragma execution_character_set expected '%0'">,

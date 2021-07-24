@@ -3887,6 +3887,24 @@ Since the size of ``buffer`` can't be known at compile time, Clang will fold
 as ``__builtin_dynamic_object_size(buffer, 0)``, Clang will fold it into
 ``size``, providing some extra runtime safety.
 
+Deprecating Macros
+==================
+
+Clang supports the pragma ``#pragma clang deprecated``, which can be used to
+provide deprecation warnings for macro uses. For example:
+
+.. code-block:: c
+   #define MIN(x, y) x < y ? x : y
+   #pragma clang deprecated(MIN, "use std::min instead")
+
+   void min(int a, int b) {
+     return MIN(a, b); // warning: MIN is deprecated: use std::min instead
+   }
+
+``#pragma clang deprecated`` should be preferred for this purpose over
+``#pragma GCC warning`` because the warning can be controlled with
+``-Wdeprecated``.
+
 Extended Integer Types
 ======================
 
