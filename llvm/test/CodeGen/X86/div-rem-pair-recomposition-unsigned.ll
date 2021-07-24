@@ -169,6 +169,146 @@ define i64 @scalar_i64(i64 %x, i64 %y, i64* %divdst) nounwind {
   ret i64 %t2
 }
 
+define i128 @scalar_i128(i128 %x, i128 %y, i128* %divdst) nounwind {
+; X86-LABEL: scalar_i128:
+; X86:       # %bb.0:
+; X86-NEXT:    pushl %ebp
+; X86-NEXT:    movl %esp, %ebp
+; X86-NEXT:    pushl %ebx
+; X86-NEXT:    pushl %edi
+; X86-NEXT:    pushl %esi
+; X86-NEXT:    andl $-8, %esp
+; X86-NEXT:    subl $48, %esp
+; X86-NEXT:    movl 44(%ebp), %edi
+; X86-NEXT:    movl 28(%ebp), %ecx
+; X86-NEXT:    leal {{[0-9]+}}(%esp), %eax
+; X86-NEXT:    pushl 40(%ebp)
+; X86-NEXT:    pushl 36(%ebp)
+; X86-NEXT:    pushl 32(%ebp)
+; X86-NEXT:    pushl %ecx
+; X86-NEXT:    movl %ecx, %ebx
+; X86-NEXT:    pushl 24(%ebp)
+; X86-NEXT:    pushl 20(%ebp)
+; X86-NEXT:    pushl 16(%ebp)
+; X86-NEXT:    pushl 12(%ebp)
+; X86-NEXT:    pushl %eax
+; X86-NEXT:    calll __udivti3
+; X86-NEXT:    addl $32, %esp
+; X86-NEXT:    movl {{[0-9]+}}(%esp), %edx
+; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
+; X86-NEXT:    movl %eax, {{[-0-9]+}}(%e{{[sb]}}p) # 4-byte Spill
+; X86-NEXT:    movl {{[0-9]+}}(%esp), %esi
+; X86-NEXT:    movl {{[0-9]+}}(%esp), %ecx
+; X86-NEXT:    movl %ecx, 12(%edi)
+; X86-NEXT:    movl %esi, 8(%edi)
+; X86-NEXT:    movl %eax, 4(%edi)
+; X86-NEXT:    movl %edx, (%edi)
+; X86-NEXT:    movl %edx, %edi
+; X86-NEXT:    movl %ebx, %eax
+; X86-NEXT:    imull %ebx, %ecx
+; X86-NEXT:    mull %esi
+; X86-NEXT:    movl %eax, {{[-0-9]+}}(%e{{[sb]}}p) # 4-byte Spill
+; X86-NEXT:    addl %ecx, %edx
+; X86-NEXT:    imull 32(%ebp), %esi
+; X86-NEXT:    addl %edx, %esi
+; X86-NEXT:    movl 36(%ebp), %eax
+; X86-NEXT:    movl %eax, %ecx
+; X86-NEXT:    movl {{[-0-9]+}}(%e{{[sb]}}p), %ebx # 4-byte Reload
+; X86-NEXT:    imull %ebx, %ecx
+; X86-NEXT:    mull %edi
+; X86-NEXT:    movl %eax, {{[-0-9]+}}(%e{{[sb]}}p) # 4-byte Spill
+; X86-NEXT:    addl %ecx, %edx
+; X86-NEXT:    movl %edi, %eax
+; X86-NEXT:    movl 40(%ebp), %edi
+; X86-NEXT:    imull %eax, %edi
+; X86-NEXT:    addl %edx, %edi
+; X86-NEXT:    movl {{[-0-9]+}}(%e{{[sb]}}p), %ecx # 4-byte Reload
+; X86-NEXT:    addl %ecx, {{[-0-9]+}}(%e{{[sb]}}p) # 4-byte Folded Spill
+; X86-NEXT:    adcl %esi, %edi
+; X86-NEXT:    movl %edi, {{[-0-9]+}}(%e{{[sb]}}p) # 4-byte Spill
+; X86-NEXT:    movl %eax, %edi
+; X86-NEXT:    movl 28(%ebp), %ecx
+; X86-NEXT:    mull %ecx
+; X86-NEXT:    movl %edx, {{[-0-9]+}}(%e{{[sb]}}p) # 4-byte Spill
+; X86-NEXT:    movl %eax, {{[-0-9]+}}(%e{{[sb]}}p) # 4-byte Spill
+; X86-NEXT:    movl %ebx, %eax
+; X86-NEXT:    mull %ecx
+; X86-NEXT:    movl %edx, %esi
+; X86-NEXT:    movl %eax, %ecx
+; X86-NEXT:    addl {{[-0-9]+}}(%e{{[sb]}}p), %ecx # 4-byte Folded Reload
+; X86-NEXT:    adcl $0, %esi
+; X86-NEXT:    movl %edi, %eax
+; X86-NEXT:    mull 32(%ebp)
+; X86-NEXT:    movl %edx, %edi
+; X86-NEXT:    addl %ecx, %eax
+; X86-NEXT:    movl %eax, %ebx
+; X86-NEXT:    adcl %esi, %edi
+; X86-NEXT:    setb %cl
+; X86-NEXT:    movl {{[-0-9]+}}(%e{{[sb]}}p), %eax # 4-byte Reload
+; X86-NEXT:    mull 32(%ebp)
+; X86-NEXT:    addl %edi, %eax
+; X86-NEXT:    movzbl %cl, %ecx
+; X86-NEXT:    adcl %ecx, %edx
+; X86-NEXT:    addl {{[-0-9]+}}(%e{{[sb]}}p), %eax # 4-byte Folded Reload
+; X86-NEXT:    adcl {{[-0-9]+}}(%e{{[sb]}}p), %edx # 4-byte Folded Reload
+; X86-NEXT:    movl 12(%ebp), %ecx
+; X86-NEXT:    subl {{[-0-9]+}}(%e{{[sb]}}p), %ecx # 4-byte Folded Reload
+; X86-NEXT:    movl 16(%ebp), %esi
+; X86-NEXT:    sbbl %ebx, %esi
+; X86-NEXT:    movl 20(%ebp), %edi
+; X86-NEXT:    sbbl %eax, %edi
+; X86-NEXT:    movl 24(%ebp), %ebx
+; X86-NEXT:    sbbl %edx, %ebx
+; X86-NEXT:    movl 8(%ebp), %eax
+; X86-NEXT:    movl %ecx, (%eax)
+; X86-NEXT:    movl %esi, 4(%eax)
+; X86-NEXT:    movl %edi, 8(%eax)
+; X86-NEXT:    movl %ebx, 12(%eax)
+; X86-NEXT:    leal -12(%ebp), %esp
+; X86-NEXT:    popl %esi
+; X86-NEXT:    popl %edi
+; X86-NEXT:    popl %ebx
+; X86-NEXT:    popl %ebp
+; X86-NEXT:    retl $4
+;
+; X64-LABEL: scalar_i128:
+; X64:       # %bb.0:
+; X64-NEXT:    pushq %r15
+; X64-NEXT:    pushq %r14
+; X64-NEXT:    pushq %r13
+; X64-NEXT:    pushq %r12
+; X64-NEXT:    pushq %rbx
+; X64-NEXT:    movq %r8, %r14
+; X64-NEXT:    movq %rcx, %rbx
+; X64-NEXT:    movq %rdx, %r15
+; X64-NEXT:    movq %rsi, %r12
+; X64-NEXT:    movq %rdi, %r13
+; X64-NEXT:    callq __udivti3@PLT
+; X64-NEXT:    movq %rdx, %rcx
+; X64-NEXT:    movq %rdx, 8(%r14)
+; X64-NEXT:    movq %rax, (%r14)
+; X64-NEXT:    imulq %rax, %rbx
+; X64-NEXT:    mulq %r15
+; X64-NEXT:    addq %rbx, %rdx
+; X64-NEXT:    imulq %r15, %rcx
+; X64-NEXT:    addq %rdx, %rcx
+; X64-NEXT:    subq %rax, %r13
+; X64-NEXT:    sbbq %rcx, %r12
+; X64-NEXT:    movq %r13, %rax
+; X64-NEXT:    movq %r12, %rdx
+; X64-NEXT:    popq %rbx
+; X64-NEXT:    popq %r12
+; X64-NEXT:    popq %r13
+; X64-NEXT:    popq %r14
+; X64-NEXT:    popq %r15
+; X64-NEXT:    retq
+  %div = udiv i128 %x, %y
+  store i128 %div, i128* %divdst, align 4
+  %t1 = mul i128 %div, %y
+  %t2 = sub i128 %x, %t1
+  ret i128 %t2
+}
+
 define <16 x i8> @vector_i128_i8(<16 x i8> %x, <16 x i8> %y, <16 x i8>* %divdst) nounwind {
 ; X86-LABEL: vector_i128_i8:
 ; X86:       # %bb.0:
@@ -837,14 +977,14 @@ define i32 @multiple_bb(i32 %x, i32 %y, i32* %divdst, i1 zeroext %store_urem, i3
 ; X86-NEXT:    divl %esi
 ; X86-NEXT:    movl %eax, (%edi)
 ; X86-NEXT:    testb %bl, %bl
-; X86-NEXT:    je .LBB10_2
+; X86-NEXT:    je .LBB11_2
 ; X86-NEXT:  # %bb.1: # %do_urem
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %edx
 ; X86-NEXT:    movl %eax, %edi
 ; X86-NEXT:    imull %esi, %edi
 ; X86-NEXT:    subl %edi, %ecx
 ; X86-NEXT:    movl %ecx, (%edx)
-; X86-NEXT:  .LBB10_2: # %end
+; X86-NEXT:  .LBB11_2: # %end
 ; X86-NEXT:    popl %esi
 ; X86-NEXT:    popl %edi
 ; X86-NEXT:    popl %ebx
@@ -858,13 +998,13 @@ define i32 @multiple_bb(i32 %x, i32 %y, i32* %divdst, i1 zeroext %store_urem, i3
 ; X64-NEXT:    divl %esi
 ; X64-NEXT:    movl %eax, (%r9)
 ; X64-NEXT:    testl %ecx, %ecx
-; X64-NEXT:    je .LBB10_2
+; X64-NEXT:    je .LBB11_2
 ; X64-NEXT:  # %bb.1: # %do_urem
 ; X64-NEXT:    movl %eax, %ecx
 ; X64-NEXT:    imull %esi, %ecx
 ; X64-NEXT:    subl %ecx, %edi
 ; X64-NEXT:    movl %edi, (%r8)
-; X64-NEXT:  .LBB10_2: # %end
+; X64-NEXT:  .LBB11_2: # %end
 ; X64-NEXT:    retq
   %div = udiv i32 %x, %y
   store i32 %div, i32* %divdst, align 4
