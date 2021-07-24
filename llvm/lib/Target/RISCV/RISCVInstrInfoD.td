@@ -351,12 +351,11 @@ def : Pat<(f64 (fpimm0)), (FMV_D_X (i64 X0))>;
 def : Pat<(bitconvert (i64 GPR:$rs1)), (FMV_D_X GPR:$rs1)>;
 def : Pat<(i64 (bitconvert FPR64:$rs1)), (FMV_X_D FPR64:$rs1)>;
 
-// FP->[u]int32 is mostly handled by the FP->[u]int64 patterns. This is safe
-// because fpto[u|s]i produce poison if the value can't fit into the target.
-// We match the single case below because fcvt.wu.d sign-extends its result so
-// is cheaper than fcvt.lu.d+sext.w.
-def : Pat<(sext_inreg (assertzexti32 (fp_to_uint FPR64:$rs1)), i32),
-          (FCVT_WU_D $rs1, 0b001)>;
+// Use target specific isd nodes to help us remember the result is sign
+// extended. Matching sext_inreg+fptoui/fptosi may cause the conversion to be
+// duplicated if it has another user that didn't need the sign_extend.
+def : Pat<(riscv_fcvt_w_rv64 FPR64:$rs1),  (FCVT_W_D $rs1, 0b001)>;
+def : Pat<(riscv_fcvt_wu_rv64 FPR64:$rs1), (FCVT_WU_D $rs1, 0b001)>;
 
 // [u]int32->fp
 def : Pat<(sint_to_fp (i64 (sexti32 (i64 GPR:$rs1)))), (FCVT_D_W $rs1)>;

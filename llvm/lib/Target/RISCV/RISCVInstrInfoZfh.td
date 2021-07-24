@@ -350,12 +350,11 @@ def : Pat<(uint_to_fp (i32 GPR:$rs1)), (FCVT_H_WU $rs1, 0b111)>;
 } // Predicates = [HasStdExtZfh, IsRV32]
 
 let Predicates = [HasStdExtZfh, IsRV64] in {
-// FP->[u]int32 is mostly handled by the FP->[u]int64 patterns. This is safe
-// because fpto[u|s]i produces poison if the value can't fit into the target.
-// We match the single case below because fcvt.wu.s sign-extends its result so
-// is cheaper than fcvt.lu.h+sext.w.
-def : Pat<(sext_inreg (assertzexti32 (fp_to_uint FPR16:$rs1)), i32),
-          (FCVT_WU_H $rs1, 0b001)>;
+// Use target specific isd nodes to help us remember the result is sign
+// extended. Matching sext_inreg+fptoui/fptosi may cause the conversion to be
+// duplicated if it has another user that didn't need the sign_extend.
+def : Pat<(riscv_fcvt_w_rv64 FPR16:$rs1),  (FCVT_W_H $rs1, 0b001)>;
+def : Pat<(riscv_fcvt_wu_rv64 FPR16:$rs1), (FCVT_WU_H $rs1, 0b001)>;
 
 // half->[u]int64. Round-to-zero must be used.
 def : Pat<(i64 (fp_to_sint FPR16:$rs1)), (FCVT_L_H $rs1, 0b001)>;
