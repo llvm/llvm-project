@@ -1061,6 +1061,9 @@ public:
   // Select the last element in the field if multiple elements exists.
   virtual void FieldDelegateSelectLastElement() { return; }
 
+  // Returns true if the field has an error, false otherwise.
+  virtual bool FieldDelegateHasError() { return false; }
+
   bool FieldDelegateIsVisible() { return m_is_visible; }
 
   void FieldDelegateHide() { m_is_visible = false; }
@@ -1098,7 +1101,7 @@ public:
   // field and an optional line for an error if it exists.
   int FieldDelegateGetHeight() override {
     int height = GetFieldHeight();
-    if (HasError())
+    if (FieldDelegateHasError())
       height++;
     return height;
   }
@@ -1138,7 +1141,7 @@ public:
   }
 
   void DrawError(SubPad &surface) {
-    if (!HasError())
+    if (!FieldDelegateHasError())
       return;
     surface.MoveCursor(0, 0);
     surface.AttributeOn(COLOR_PAIR(RedOnBlack));
@@ -1239,14 +1242,14 @@ public:
     return eKeyNotHandled;
   }
 
+  bool FieldDelegateHasError() override { return !m_error.empty(); }
+
   void FieldDelegateExitCallback() override {
     if (!IsSpecified() && m_required)
       SetError("This field is required!");
   }
 
   bool IsSpecified() { return !m_content.empty(); }
-
-  bool HasError() { return !m_error.empty(); }
 
   void ClearError() { m_error.clear(); }
 
@@ -1920,6 +1923,19 @@ public:
 
   void SetError(const char *error) { m_error = error; }
 
+  // If all fields are valid, true is returned. Otherwise, an error message is
+  // set and false is returned. This method is usually called at the start of an
+  // action that requires valid fields.
+  bool CheckFieldsValidity() {
+    for (int i = 0; i < GetNumberOfFields(); i++) {
+      if (GetField(i)->FieldDelegateHasError()) {
+        SetError("Some fields are invalid!");
+        return false;
+      }
+    }
+    return true;
+  }
+
   // Factory methods to create and add fields of specific types.
 
   TextFieldDelegate *AddTextField(const char *label, const char *content,
@@ -2534,6 +2550,10 @@ public:
 
   void Attach(Window &window) {
     ClearError();
+
+    bool all_fields_are_valid = CheckFieldsValidity();
+    if (!all_fields_are_valid)
+      return;
 
     bool process_is_running = StopRunningProcess();
     if (process_is_running)
