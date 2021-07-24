@@ -1122,10 +1122,32 @@ defm MIN : SIMDBinaryFP<fminimum, "min", 232>;
 defm MAX : SIMDBinaryFP<fmaximum, "max", 233>;
 
 // Pseudo-minimum: pmin
-defm PMIN : SIMDBinaryFP<int_wasm_pmin, "pmin", 234>;
+def pmin : PatFrag<(ops node:$lhs, node:$rhs),
+                   (vselect (setolt $rhs, $lhs), $rhs, $lhs)>;
+defm PMIN : SIMDBinaryFP<pmin, "pmin", 234>;
 
 // Pseudo-maximum: pmax
-defm PMAX : SIMDBinaryFP<int_wasm_pmax, "pmax", 235>;
+def pmax : PatFrag<(ops node:$lhs, node:$rhs),
+                   (vselect (setolt $lhs, $rhs), $rhs, $lhs)>;
+defm PMAX : SIMDBinaryFP<pmax, "pmax", 235>;
+
+// Also match the pmin/pmax cases where the operands are int vectors (but the
+// comparison is still a floating point comparison). This can happen when using
+// the wasm_simd128.h intrinsics because v128_t is an integer vector.
+foreach vec = [F32x4, F64x2] in {
+defvar pmin = !cast<NI>("PMIN_"#vec);
+defvar pmax = !cast<NI>("PMAX_"#vec);
+def : Pat<(vec.int_vt (vselect
+            (setolt (vec.vt (bitconvert V128:$rhs)),
+                    (vec.vt (bitconvert V128:$lhs))),
+            V128:$rhs, V128:$lhs)),
+          (pmin $lhs, $rhs)>;
+def : Pat<(vec.int_vt (vselect
+            (setolt (vec.vt (bitconvert V128:$lhs)),
+                    (vec.vt (bitconvert V128:$rhs))),
+            V128:$rhs, V128:$lhs)),
+          (pmax $lhs, $rhs)>;
+}
 
 //===----------------------------------------------------------------------===//
 // Conversions
