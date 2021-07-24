@@ -145,7 +145,7 @@
 # CHECK-NEXT: [[#%x, PC10:]]:
 # CHECK-SAME: leaq [[#%d, LLVMORDERFILESTART - PC10 - 7]](%rip), %rbx
 
-## Secton-rename tests.
+## Section-rename tests.
 ## Input section __FOO/__bar is renamed to output section
 ## __BAZ/__quux by a -rename_section flag.
 ## section$start$__FOO$__bar ends up referring to the __BAZ/__quux section.
