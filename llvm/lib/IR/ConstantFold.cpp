@@ -2344,6 +2344,94 @@ static bool isIndexInRangeOfArrayType(uint64_t NumElements,
   return true;
 }
 
+// Combine Indices - If the source pointer to this getelementptr instruction
+// is a getelementptr instruction, combine the indices of the two
+// getelementptr instructions into a single instruction.
+static Constant *foldGEPOfGEP(GEPOperator *GEP, bool InBounds,
+                              ArrayRef<Value *> Idxs) {
+  Constant *Idx0 = cast<Constant>(Idxs[0]);
+  if (Idx0->isNullValue()) {
+    // Handle the simple case of a zero index.
+    SmallVector<Value*, 16> NewIndices;
+    NewIndices.reserve(Idxs.size() + GEP->getNumIndices());
+    NewIndices.append(GEP->idx_begin(), GEP->idx_end());
+    NewIndices.append(Idxs.begin() + 1, Idxs.end());
+    return ConstantExpr::getGetElementPtr(
+        GEP->getSourceElementType(), cast<Constant>(GEP->getPointerOperand()),
+        NewIndices, InBounds && GEP->isInBounds(), GEP->getInRangeIndex());
+  }
+
+  gep_type_iterator LastI = gep_type_end(GEP);
+  for (gep_type_iterator I = gep_type_begin(GEP), E = gep_type_end(GEP);
+       I != E; ++I)
+    LastI = I;
+
+  // We cannot combine indices if doing so would take us outside of an
+  // array or vector.  Doing otherwise could trick us if we evaluated such a
+  // GEP as part of a load.
+  //
+  // e.g. Consider if the original GEP was:
+  // i8* getelementptr ({ [2 x i8], i32, i8, [3 x i8] }* @main.c,
+  //                    i32 0, i32 0, i64 0)
+  //
+  // If we then tried to offset it by '8' to get to the third element,
+  // an i8, we should *not* get:
+  // i8* getelementptr ({ [2 x i8], i32, i8, [3 x i8] }* @main.c,
+  //                    i32 0, i32 0, i64 8)
+  //
+  // This GEP tries to index array element '8  which runs out-of-bounds.
+  // Subsequent evaluation would get confused and produce erroneous results.
+  //
+  // The following prohibits such a GEP from being formed by checking to see
+  // if the index is in-range with respect to an array.
+  if (!LastI.isSequential())
+    return nullptr;
+  ConstantInt *CI = dyn_cast<ConstantInt>(Idx0);
+  if (!CI)
+    return nullptr;
+  if (LastI.isBoundedSequential() &&
+      !isIndexInRangeOfArrayType(LastI.getSequentialNumElements(), CI))
+    return nullptr;
+
+  // TODO: This code may be extended to handle vectors as well.
+  auto *LastIdx = cast<Constant>(GEP->getOperand(GEP->getNumOperands()-1));
+  Type *LastIdxTy = LastIdx->getType();
+  if (LastIdxTy->isVectorTy())
+    return nullptr;
+
+  SmallVector<Value*, 16> NewIndices;
+  NewIndices.reserve(Idxs.size() + GEP->getNumIndices());
+  NewIndices.append(GEP->idx_begin(), GEP->idx_end() - 1);
+
+  // Add the last index of the source with the first index of the new GEP.
+  // Make sure to handle the case when they are actually different types.
+  if (LastIdxTy != Idx0->getType()) {
+    unsigned CommonExtendedWidth =
+        std::max(LastIdxTy->getIntegerBitWidth(),
+                 Idx0->getType()->getIntegerBitWidth());
+    CommonExtendedWidth = std::max(CommonExtendedWidth, 64U);
+
+    Type *CommonTy =
+        Type::getIntNTy(LastIdxTy->getContext(), CommonExtendedWidth);
+    Idx0 = ConstantExpr::getSExtOrBitCast(Idx0, CommonTy);
+    LastIdx = ConstantExpr::getSExtOrBitCast(LastIdx, CommonTy);
+  }
+
+  NewIndices.push_back(ConstantExpr::get(Instruction::Add, Idx0, LastIdx));
+  NewIndices.append(Idxs.begin() + 1, Idxs.end());
+
+  // The combined GEP normally inherits its index inrange attribute from
+  // the inner GEP, but if the inner GEP's last index was adjusted by the
+  // outer GEP, any inbounds attribute on that index is invalidated.
+  Optional<unsigned> IRIndex = GEP->getInRangeIndex();
+  if (IRIndex && *IRIndex == GEP->getNumIndices() - 1)
+    IRIndex = None;
+
+  return ConstantExpr::getGetElementPtr(
+      GEP->getSourceElementType(), cast<Constant>(GEP->getPointerOperand()),
+      NewIndices, InBounds && GEP->isInBounds(), IRIndex);
+}
+
 Constant *llvm::ConstantFoldGetElementPtr(Type *PointeeTy, Constant *C,
                                           bool InBounds,
                                           Optional<unsigned> InRangeIndex,
@@ -2402,91 +2490,9 @@ Constant *llvm::ConstantFoldGetElementPtr(Type *PointeeTy, Constant *C,
   }
 
   if (ConstantExpr *CE = dyn_cast<ConstantExpr>(C)) {
-    // Combine Indices - If the source pointer to this getelementptr instruction
-    // is a getelementptr instruction, combine the indices of the two
-    // getelementptr instructions into a single instruction.
-    //
-    if (CE->getOpcode() == Instruction::GetElementPtr) {
-      gep_type_iterator LastI = gep_type_end(CE);
-      for (gep_type_iterator I = gep_type_begin(CE), E = gep_type_end(CE);
-           I != E; ++I)
-        LastI = I;
-
-      // We cannot combine indices if doing so would take us outside of an
-      // array or vector.  Doing otherwise could trick us if we evaluated such a
-      // GEP as part of a load.
-      //
-      // e.g. Consider if the original GEP was:
-      // i8* getelementptr ({ [2 x i8], i32, i8, [3 x i8] }* @main.c,
-      //                    i32 0, i32 0, i64 0)
-      //
-      // If we then tried to offset it by '8' to get to the third element,
-      // an i8, we should *not* get:
-      // i8* getelementptr ({ [2 x i8], i32, i8, [3 x i8] }* @main.c,
-      //                    i32 0, i32 0, i64 8)
-      //
-      // This GEP tries to index array element '8  which runs out-of-bounds.
-      // Subsequent evaluation would get confused and produce erroneous results.
-      //
-      // The following prohibits such a GEP from being formed by checking to see
-      // if the index is in-range with respect to an array.
-      // TODO: This code may be extended to handle vectors as well.
-      bool PerformFold = false;
-      if (Idx0->isNullValue())
-        PerformFold = true;
-      else if (LastI.isSequential())
-        if (ConstantInt *CI = dyn_cast<ConstantInt>(Idx0))
-          PerformFold = (!LastI.isBoundedSequential() ||
-                         isIndexInRangeOfArrayType(
-                             LastI.getSequentialNumElements(), CI)) &&
-                        !CE->getOperand(CE->getNumOperands() - 1)
-                             ->getType()
-                             ->isVectorTy();
-
-      if (PerformFold) {
-        SmallVector<Value*, 16> NewIndices;
-        NewIndices.reserve(Idxs.size() + CE->getNumOperands());
-        NewIndices.append(CE->op_begin() + 1, CE->op_end() - 1);
-
-        // Add the last index of the source with the first index of the new GEP.
-        // Make sure to handle the case when they are actually different types.
-        Constant *Combined = CE->getOperand(CE->getNumOperands()-1);
-        // Otherwise it must be an array.
-        if (!Idx0->isNullValue()) {
-          Type *IdxTy = Combined->getType();
-          if (IdxTy != Idx0->getType()) {
-            unsigned CommonExtendedWidth =
-                std::max(IdxTy->getIntegerBitWidth(),
-                         Idx0->getType()->getIntegerBitWidth());
-            CommonExtendedWidth = std::max(CommonExtendedWidth, 64U);
-
-            Type *CommonTy =
-                Type::getIntNTy(IdxTy->getContext(), CommonExtendedWidth);
-            Constant *C1 = ConstantExpr::getSExtOrBitCast(Idx0, CommonTy);
-            Constant *C2 = ConstantExpr::getSExtOrBitCast(Combined, CommonTy);
-            Combined = ConstantExpr::get(Instruction::Add, C1, C2);
-          } else {
-            Combined =
-              ConstantExpr::get(Instruction::Add, Idx0, Combined);
-          }
-        }
-
-        NewIndices.push_back(Combined);
-        NewIndices.append(Idxs.begin() + 1, Idxs.end());
-
-        // The combined GEP normally inherits its index inrange attribute from
-        // the inner GEP, but if the inner GEP's last index was adjusted by the
-        // outer GEP, any inbounds attribute on that index is invalidated.
-        Optional<unsigned> IRIndex = cast<GEPOperator>(CE)->getInRangeIndex();
-        if (IRIndex && *IRIndex == CE->getNumOperands() - 2 && !Idx0->isNullValue())
-          IRIndex = None;
-
-        return ConstantExpr::getGetElementPtr(
-            cast<GEPOperator>(CE)->getSourceElementType(), CE->getOperand(0),
-            NewIndices, InBounds && cast<GEPOperator>(CE)->isInBounds(),
-            IRIndex);
-      }
-    }
+    if (auto *GEP = dyn_cast<GEPOperator>(CE))
+      if (Constant *C = foldGEPOfGEP(GEP, InBounds, Idxs))
+        return C;
 
     // Attempt to fold casts to the same type away.  For example, folding:
     //
