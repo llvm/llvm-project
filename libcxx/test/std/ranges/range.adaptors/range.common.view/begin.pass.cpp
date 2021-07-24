@@ -25,12 +25,12 @@ struct ContiguousView : std::ranges::view_base {
   constexpr ContiguousView(int* ptr) : ptr_(ptr) {}
   constexpr ContiguousView(ContiguousView&&) = default;
   constexpr ContiguousView& operator=(ContiguousView&&) = default;
-  constexpr friend int* begin(ContiguousView& view) { return view.ptr_; }
-  constexpr friend int* begin(ContiguousView const& view) { return view.ptr_; }
-  constexpr friend sentinel_wrapper<int*> end(ContiguousView& view) {
+  friend constexpr int* begin(ContiguousView& view) { return view.ptr_; }
+  friend constexpr int* begin(ContiguousView const& view) { return view.ptr_; }
+  friend constexpr sentinel_wrapper<int*> end(ContiguousView& view) {
     return sentinel_wrapper<int*>{view.ptr_ + 8};
   }
-  constexpr friend sentinel_wrapper<int*> end(ContiguousView const& view) {
+  friend constexpr sentinel_wrapper<int*> end(ContiguousView const& view) {
     return sentinel_wrapper<int*>{view.ptr_ + 8};
   }
 };
@@ -38,12 +38,12 @@ struct ContiguousView : std::ranges::view_base {
 struct CopyableView : std::ranges::view_base {
   int *ptr_;
   constexpr CopyableView(int* ptr) : ptr_(ptr) {}
-  constexpr friend int* begin(CopyableView& view) { return view.ptr_; }
-  constexpr friend int* begin(CopyableView const& view) { return view.ptr_; }
-  constexpr friend sentinel_wrapper<int*> end(CopyableView& view) {
+  friend constexpr int* begin(CopyableView& view) { return view.ptr_; }
+  friend constexpr int* begin(CopyableView const& view) { return view.ptr_; }
+  friend constexpr sentinel_wrapper<int*> end(CopyableView& view) {
     return sentinel_wrapper<int*>{view.ptr_ + 8};
   }
-  constexpr friend sentinel_wrapper<int*> end(CopyableView const& view) {
+  friend constexpr sentinel_wrapper<int*> end(CopyableView const& view) {
     return sentinel_wrapper<int*>{view.ptr_ + 8};
   }
 };
@@ -59,12 +59,12 @@ using ForwardIter = forward_iterator<int*>;
 struct SizedForwardView : std::ranges::view_base {
   int *ptr_;
   constexpr SizedForwardView(int* ptr) : ptr_(ptr) {}
-  constexpr friend ForwardIter begin(SizedForwardView& view) { return ForwardIter(view.ptr_); }
-  constexpr friend ForwardIter begin(SizedForwardView const& view) { return ForwardIter(view.ptr_); }
-  constexpr friend sentinel_wrapper<ForwardIter> end(SizedForwardView& view) {
+  friend constexpr ForwardIter begin(SizedForwardView& view) { return ForwardIter(view.ptr_); }
+  friend constexpr ForwardIter begin(SizedForwardView const& view) { return ForwardIter(view.ptr_); }
+  friend constexpr sentinel_wrapper<ForwardIter> end(SizedForwardView& view) {
     return sentinel_wrapper<ForwardIter>{ForwardIter(view.ptr_ + 8)};
   }
-  constexpr friend sentinel_wrapper<ForwardIter> end(SizedForwardView const& view) {
+  friend constexpr sentinel_wrapper<ForwardIter> end(SizedForwardView const& view) {
     return sentinel_wrapper<ForwardIter>{ForwardIter(view.ptr_ + 8)};
   }
 };
@@ -80,12 +80,12 @@ using RandomAccessIter = random_access_iterator<int*>;
 struct SizedRandomAccessView : std::ranges::view_base {
   int *ptr_;
   constexpr SizedRandomAccessView(int* ptr) : ptr_(ptr) {}
-  constexpr friend RandomAccessIter begin(SizedRandomAccessView& view) { return RandomAccessIter(view.ptr_); }
-  constexpr friend RandomAccessIter begin(SizedRandomAccessView const& view) { return RandomAccessIter(view.ptr_); }
-  constexpr friend sentinel_wrapper<RandomAccessIter> end(SizedRandomAccessView& view) {
+  friend constexpr RandomAccessIter begin(SizedRandomAccessView& view) { return RandomAccessIter(view.ptr_); }
+  friend constexpr RandomAccessIter begin(SizedRandomAccessView const& view) { return RandomAccessIter(view.ptr_); }
+  friend constexpr sentinel_wrapper<RandomAccessIter> end(SizedRandomAccessView& view) {
     return sentinel_wrapper<RandomAccessIter>{RandomAccessIter(view.ptr_ + 8)};
   }
-  constexpr friend sentinel_wrapper<RandomAccessIter> end(SizedRandomAccessView const& view) {
+  friend constexpr sentinel_wrapper<RandomAccessIter> end(SizedRandomAccessView const& view) {
     return sentinel_wrapper<RandomAccessIter>{RandomAccessIter(view.ptr_ + 8)};
   }
 };

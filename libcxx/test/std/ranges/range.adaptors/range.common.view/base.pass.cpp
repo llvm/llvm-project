@@ -25,12 +25,12 @@ struct ContiguousView : std::ranges::view_base {
   constexpr ContiguousView(int* ptr) : ptr_(ptr) {}
   constexpr ContiguousView(ContiguousView&&) = default;
   constexpr ContiguousView& operator=(ContiguousView&&) = default;
-  constexpr friend int* begin(ContiguousView& view) { return view.ptr_; }
-  constexpr friend int* begin(ContiguousView const& view) { return view.ptr_; }
-  constexpr friend sentinel_wrapper<int*> end(ContiguousView& view) {
+  friend constexpr int* begin(ContiguousView& view) { return view.ptr_; }
+  friend constexpr int* begin(ContiguousView const& view) { return view.ptr_; }
+  friend constexpr sentinel_wrapper<int*> end(ContiguousView& view) {
     return sentinel_wrapper<int*>{view.ptr_ + 8};
   }
-  constexpr friend sentinel_wrapper<int*> end(ContiguousView const& view) {
+  friend constexpr sentinel_wrapper<int*> end(ContiguousView const& view) {
     return sentinel_wrapper<int*>{view.ptr_ + 8};
   }
 };
@@ -38,12 +38,12 @@ struct ContiguousView : std::ranges::view_base {
 struct CopyableView : std::ranges::view_base {
   int *ptr_;
   constexpr CopyableView(int* ptr) : ptr_(ptr) {}
-  constexpr friend int* begin(CopyableView& view) { return view.ptr_; }
-  constexpr friend int* begin(CopyableView const& view) { return view.ptr_; }
-  constexpr friend sentinel_wrapper<int*> end(CopyableView& view) {
+  friend constexpr int* begin(CopyableView& view) { return view.ptr_; }
+  friend constexpr int* begin(CopyableView const& view) { return view.ptr_; }
+  friend constexpr sentinel_wrapper<int*> end(CopyableView& view) {
     return sentinel_wrapper<int*>{view.ptr_ + 8};
   }
-  constexpr friend sentinel_wrapper<int*> end(CopyableView const& view) {
+  friend constexpr sentinel_wrapper<int*> end(CopyableView const& view) {
     return sentinel_wrapper<int*>{view.ptr_ + 8};
   }
 };
