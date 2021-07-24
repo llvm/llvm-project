@@ -2716,6 +2716,14 @@ static bool FoldTwoEntryPHINode(PHINode *PN, const TargetTransformInfo &TTI,
   if (isa<ConstantInt>(IfCond))
     return false;
 
+  BasicBlock *DomBlock = DomBI->getParent();
+  SmallVector<BasicBlock *, 2> IfBlocks;
+  llvm::copy_if(
+      PN->blocks(), std::back_inserter(IfBlocks), [](BasicBlock *IfBlock) {
+        return cast<BranchInst>(IfBlock->getTerminator())->isUnconditional();
+      });
+  assert(!IfBlocks.empty() && "Will have at least one block to speculate.");
+
   // Don't try to fold an unreachable block. For example, the phi node itself
   // can't be the candidate if-condition for a select that we want to form.
   if (auto *IfCondPhiInst = dyn_cast<PHINode>(IfCond))
@@ -2794,13 +2802,8 @@ static bool FoldTwoEntryPHINode(PHINode *PN, const TargetTransformInfo &TTI,
   // in the predecessor blocks can be promoted as well. If not, we won't be able
   // to get rid of the control flow, so it's not worth promoting to select
   // instructions.
-  BasicBlock *DomBlock = DomBI->getParent();
-  BasicBlock *IfBlock1 = PN->getIncomingBlock(0);
-  BasicBlock *IfBlock2 = PN->getIncomingBlock(1);
-  if (cast<BranchInst>(IfBlock1->getTerminator())->isConditional()) {
-    IfBlock1 = nullptr;
-  } else {
-    for (BasicBlock::iterator I = IfBlock1->begin(); !I->isTerminator(); ++I)
+  for (BasicBlock *IfBlock : IfBlocks)
+    for (BasicBlock::iterator I = IfBlock->begin(); !I->isTerminator(); ++I)
       if (!AggressiveInsts.count(&*I) && !isa<DbgInfoIntrinsic>(I) &&
           !isa<PseudoProbeInst>(I)) {
         // This is not an aggressive instruction that we can promote.
@@ -2808,24 +2811,10 @@ static bool FoldTwoEntryPHINode(PHINode *PN, const TargetTransformInfo &TTI,
         // the xform is not worth it.
         return Changed;
       }
-  }
-
-  if (cast<BranchInst>(IfBlock2->getTerminator())->isConditional()) {
-    IfBlock2 = nullptr;
-  } else {
-    for (BasicBlock::iterator I = IfBlock2->begin(); !I->isTerminator(); ++I)
-      if (!AggressiveInsts.count(&*I) && !isa<DbgInfoIntrinsic>(I) &&
-          !isa<PseudoProbeInst>(I)) {
-        // This is not an aggressive instruction that we can promote.
-        // Because of this, we won't be able to get rid of the control flow, so
-        // the xform is not worth it.
-        return Changed;
-      }
-  }
 
   // If either of the blocks has it's address taken, we can't do this fold.
-  if ((IfBlock1 && IfBlock1->hasAddressTaken()) ||
-      (IfBlock2 && IfBlock2->hasAddressTaken()))
+  if (any_of(IfBlocks,
+             [](BasicBlock *IfBlock) { return IfBlock->hasAddressTaken(); }))
     return Changed;
 
   LLVM_DEBUG(dbgs() << "FOUND IF CONDITION!  " << *IfCond
@@ -2837,10 +2826,8 @@ static bool FoldTwoEntryPHINode(PHINode *PN, const TargetTransformInfo &TTI,
 
   // Move all 'aggressive' instructions, which are defined in the
   // conditional parts of the if's up to the dominating block.
-  if (IfBlock1)
-    hoistAllInstructionsInto(DomBlock, DomBI, IfBlock1);
-  if (IfBlock2)
-    hoistAllInstructionsInto(DomBlock, DomBI, IfBlock2);
+  for (BasicBlock *IfBlock : IfBlocks)
+      hoistAllInstructionsInto(DomBlock, DomBI, IfBlock);
 
   IRBuilder<NoFolder> Builder(DomBI);
   // Propagate fast-math-flags from phi nodes to replacement selects.
@@ -2850,8 +2837,8 @@ static bool FoldTwoEntryPHINode(PHINode *PN, const TargetTransformInfo &TTI,
       Builder.setFastMathFlags(PN->getFastMathFlags());
 
     // Change the PHI node into a select instruction.
-    Value *TrueVal = PN->getIncomingValue(PN->getIncomingBlock(0) == IfFalse);
-    Value *FalseVal = PN->getIncomingValue(PN->getIncomingBlock(0) == IfTrue);
+    Value *TrueVal = PN->getIncomingValueForBlock(IfTrue);
+    Value *FalseVal = PN->getIncomingValueForBlock(IfFalse);
 
     Value *Sel = Builder.CreateSelect(IfCond, TrueVal, FalseVal, "", DomBI);
     PN->replaceAllUsesWith(Sel);
@@ -2859,7 +2846,7 @@ static bool FoldTwoEntryPHINode(PHINode *PN, const TargetTransformInfo &TTI,
     PN->eraseFromParent();
   }
 
-  // At this point, IfBlock1 and IfBlock2 are both empty, so our if statement
+  // At this point, all IfBlocks are empty, so our if statement
   // has been flattened.  Change DomBlock to jump directly to our new block to
   // avoid other simplifycfg's kicking in on the diamond.
   Builder.CreateBr(BB);
