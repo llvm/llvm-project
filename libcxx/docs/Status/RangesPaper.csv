@@ -145,5 +145,5 @@ Section,Description,Dependencies,Assignee,Complete
 `[range.single] <http://wg21.link/range.single>`_,single_view,[view.interface],Zoe Carver,In Progress
 `[range.split] <http://wg21.link/range.split>`_,split_view,[range.all],Unassigned,Not started
 `[range.counted] <http://wg21.link/range.counted>`_,view::counted,[range.subrange],Zoe Carver,Not started
-`[range.common] <http://wg21.link/range.common>`_,common_view,[range.all],Zoe Carver,In Progress
+`[range.common] <http://wg21.link/range.common>`_,common_view,[range.all],Zoe Carver,✅
 `[range.reverse] <http://wg21.link/range.reverse>`_,reverse_view,[range.all],Unassigned,Not started
