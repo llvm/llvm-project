@@ -2672,7 +2672,7 @@ void mlir::populateFuncOpTypeConversionPattern(RewritePatternSet &patterns,
 /// Register a legality action for the given operation.
 void ConversionTarget::setOpAction(OperationName op,
                                    LegalizationAction action) {
-  legalOperations[op] = {action, /*isRecursivelyLegal=*/false, llvm::None};
+  legalOperations[op] = {action, /*isRecursivelyLegal=*/false, nullptr};
 }
 
 /// Register a legality action for the given dialects.
@@ -2703,8 +2703,7 @@ auto ConversionTarget::isLegal(Operation *op) const
     // Handle dynamic legality either with the provided legality function, or
     // the default hook on the derived instance.
     if (info->action == LegalizationAction::Dynamic)
-      return info->legalityFn ? (*info->legalityFn)(op)
-                              : isDynamicallyLegal(op);
+      return info->legalityFn ? info->legalityFn(op) : isDynamicallyLegal(op);
 
     // Otherwise, the operation is only legal if it was marked 'Legal'.
     return info->action == LegalizationAction::Legal;
@@ -2758,6 +2757,13 @@ void ConversionTarget::setLegalityCallback(
     dialectLegalityFns[dialect] = callback;
 }
 
+/// Set the dynamic legality callback for the unknown ops.
+void ConversionTarget::setLegalityCallback(
+    const DynamicLegalityCallbackFn &callback) {
+  assert(callback && "expected valid legality callback");
+  unknownLegalityFn = callback;
+}
+
 /// Get the legalization information for the given operation.
 auto ConversionTarget::getOpInfo(OperationName op) const
     -> Optional<LegalizationInfo> {
@@ -2768,7 +2774,7 @@ auto ConversionTarget::getOpInfo(OperationName op) const
   // Check for info for the parent dialect.
   auto dialectIt = legalDialects.find(op.getDialectNamespace());
   if (dialectIt != legalDialects.end()) {
-    Optional<DynamicLegalityCallbackFn> callback;
+    DynamicLegalityCallbackFn callback;
     auto dialectFn = dialectLegalityFns.find(op.getDialectNamespace());
     if (dialectFn != dialectLegalityFns.end())
       callback = dialectFn->second;
@@ -2776,7 +2782,7 @@ auto ConversionTarget::getOpInfo(OperationName op) const
                             callback};
   }
   // Otherwise, check if we mark unknown operations as dynamic.
-  if (unknownOpsDynamicallyLegal)
+  if (unknownLegalityFn)
     return LegalizationInfo{LegalizationAction::Dynamic,
                             /*isRecursivelyLegal=*/false, unknownLegalityFn};
   return llvm::None;
