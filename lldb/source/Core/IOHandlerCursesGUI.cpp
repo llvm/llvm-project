@@ -1454,6 +1454,8 @@ public:
   }
 
   void FieldDelegateDraw(SubPad &surface, bool is_selected) override {
+    UpdateScrolling();
+
     surface.TitledBox(m_label.c_str());
 
     Rect content_bounds = surface.GetFrame();
@@ -1473,29 +1475,23 @@ public:
       m_choice++;
   }
 
-  // If the cursor moved past the first visible choice, scroll up by one
-  // choice.
-  void ScrollUpIfNeeded() {
-    if (m_choice < m_first_visibile_choice)
-      m_first_visibile_choice--;
-  }
+  void UpdateScrolling() {
+    if (m_choice > GetLastVisibleChoice()) {
+      m_first_visibile_choice = m_choice - (m_number_of_visible_choices - 1);
+      return;
+    }
 
-  // If the cursor moved past the last visible choice, scroll down by one
-  // choice.
-  void ScrollDownIfNeeded() {
-    if (m_choice > GetLastVisibleChoice())
-      m_first_visibile_choice++;
+    if (m_choice < m_first_visibile_choice)
+      m_first_visibile_choice = m_choice;
   }
 
   HandleCharResult FieldDelegateHandleChar(int key) override {
     switch (key) {
     case KEY_UP:
       SelectPrevious();
-      ScrollUpIfNeeded();
       return eKeyHandled;
     case KEY_DOWN:
       SelectNext();
-      ScrollDownIfNeeded();
       return eKeyHandled;
     default:
       break;
@@ -1509,6 +1505,15 @@ public:
   // Returns the index of the choice.
   int GetChoice() { return m_choice; }
 
+  void SetChoice(const std::string &choice) {
+    for (int i = 0; i < GetNumberOfChoices(); i++) {
+      if (choice == m_choices[i]) {
+        m_choice = i;
+        return;
+      }
+    }
+  }
+
 protected:
   std::string m_label;
   int m_number_of_visible_choices;
@@ -1517,6 +1522,29 @@ protected:
   int m_choice;
   // The index of the first visible choice in the field.
   int m_first_visibile_choice;
+};
+
+class PlatformPluginFieldDelegate : public ChoicesFieldDelegate {
+public:
+  PlatformPluginFieldDelegate(Debugger &debugger)
+      : ChoicesFieldDelegate("Platform Plugin", 3, GetPossiblePluginNames()) {
+    PlatformSP platform_sp = debugger.GetPlatformList().GetSelectedPlatform();
+    if (platform_sp)
+      SetChoice(platform_sp->GetName().AsCString());
+  }
+
+  std::vector<std::string> GetPossiblePluginNames() {
+    std::vector<std::string> names;
+    size_t i = 0;
+    while (auto name = PluginManager::GetPlatformPluginNameAtIndex(i++))
+      names.push_back(name);
+    return names;
+  }
+
+  std::string GetPluginName() {
+    std::string plugin_name = GetChoiceContent();
+    return plugin_name;
+  }
 };
 
 class ProcessPluginFieldDelegate : public ChoicesFieldDelegate {
@@ -1937,6 +1965,13 @@ public:
                                         std::vector<std::string> choices) {
     ChoicesFieldDelegate *delegate =
         new ChoicesFieldDelegate(label, height, choices);
+    m_fields.push_back(FieldDelegateUP(delegate));
+    return delegate;
+  }
+
+  PlatformPluginFieldDelegate *AddPlatformPluginField(Debugger &debugger) {
+    PlatformPluginFieldDelegate *delegate =
+        new PlatformPluginFieldDelegate(debugger);
     m_fields.push_back(FieldDelegateUP(delegate));
     return delegate;
   }
