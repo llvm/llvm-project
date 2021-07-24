@@ -431,11 +431,22 @@ void RISCVInsertVSETVLI::insertVSETVLI(MachineBasicBlock &MBB, MachineInstr &MI,
 
   Register AVLReg = Info.getAVLReg();
   if (AVLReg == RISCV::NoRegister) {
-    BuildMI(MBB, MI, DL, TII->get(RISCV::PseudoVSETVLI))
+    // We can only use x0, x0 if there's no chance of the vtype change causing
+    // the previous vl to become invalid.
+    if (PrevInfo.isValid() && !PrevInfo.isUnknown() &&
+        Info.hasSameVLMAX(PrevInfo)) {
+      BuildMI(MBB, MI, DL, TII->get(RISCV::PseudoVSETVLI))
+          .addReg(RISCV::X0, RegState::Define | RegState::Dead)
+          .addReg(RISCV::X0, RegState::Kill)
+          .addImm(Info.encodeVTYPE())
+          .addReg(RISCV::VL, RegState::Implicit);
+      return;
+    }
+    // Otherwise use an AVL of 0 to avoid depending on previous vl.
+    BuildMI(MBB, MI, DL, TII->get(RISCV::PseudoVSETIVLI))
         .addReg(RISCV::X0, RegState::Define | RegState::Dead)
-        .addReg(RISCV::X0, RegState::Kill)
-        .addImm(Info.encodeVTYPE())
-        .addReg(RISCV::VL, RegState::Implicit);
+        .addImm(0)
+        .addImm(Info.encodeVTYPE());
     return;
   }
 

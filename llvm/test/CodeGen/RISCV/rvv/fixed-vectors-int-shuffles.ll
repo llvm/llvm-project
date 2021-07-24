@@ -321,7 +321,7 @@ define <8 x i64> @vrgather_shuffle_vx_v8i64(<8 x i64> %x) {
 define <4 x i8> @interleave_shuffles(<4 x i8> %x) {
 ; CHECK-LABEL: interleave_shuffles:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vsetvli zero, zero, e8, mf4, ta, mu
+; CHECK-NEXT:    vsetivli zero, 0, e8, mf4, ta, mu
 ; CHECK-NEXT:    vmv.x.s a0, v8
 ; CHECK-NEXT:    vsetivli zero, 4, e8, mf4, ta, mu
 ; CHECK-NEXT:    vrgather.vi v25, v8, 1

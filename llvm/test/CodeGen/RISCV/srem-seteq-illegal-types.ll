@@ -727,7 +727,7 @@ define void @test_srem_vec(<3 x i33>* %X) nounwind {
 ; RV32MV-NEXT:    vmsne.vv v0, v26, v30
 ; RV32MV-NEXT:    vmv.v.i v26, 0
 ; RV32MV-NEXT:    vmerge.vim v26, v26, -1, v0
-; RV32MV-NEXT:    vsetvli zero, zero, e32, m2, ta, mu
+; RV32MV-NEXT:    vsetivli zero, 0, e32, m2, ta, mu
 ; RV32MV-NEXT:    vmv.x.s a0, v26
 ; RV32MV-NEXT:    sw a0, 0(s1)
 ; RV32MV-NEXT:    vsetivli zero, 1, e32, m2, ta, mu
