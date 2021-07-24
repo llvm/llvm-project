@@ -14,6 +14,20 @@ define i64 @select_consts_i64(i64 %offset, i32 %x) {
   ret i64 %r
 }
 
+define i64 @select_consts_big_i64(i64 %offset, i32 %x) {
+; CHECK-LABEL: select_consts_big_i64:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    movabsq $42000000000, %rax # imm = 0x9C7652400
+; CHECK-NEXT:    addq %rdi, %rax
+; CHECK-NEXT:    testl %esi, %esi
+; CHECK-NEXT:    cmovneq %rdi, %rax
+; CHECK-NEXT:    retq
+  %b = icmp eq i32 %x, 0
+  %s = select i1 %b, i64 42000000000, i64 0
+  %r = add i64 %s, %offset
+  ret i64 %r
+}
+
 define i32 @select_consts_i32(i32 %offset, i64 %x) {
 ; CHECK-LABEL: select_consts_i32:
 ; CHECK:       # %bb.0:
@@ -114,4 +128,130 @@ define i32 @select_1_0_i32(i32 %offset, i64 %x) {
   %s = select i1 %b, i32 1, i32 0
   %r = add i32 %offset, %s
   ret i32 %r
+}
+
+define i64 @select_max32_2_i64(i64 %offset, i64 %x) {
+; CHECK-LABEL: select_max32_2_i64:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    cmpq $41, %rsi
+; CHECK-NEXT:    movl $2147483647, %ecx # imm = 0x7FFFFFFF
+; CHECK-NEXT:    movl $2, %eax
+; CHECK-NEXT:    cmovneq %rcx, %rax
+; CHECK-NEXT:    addq %rdi, %rax
+; CHECK-NEXT:    retq
+  %b = icmp ne i64 %x, 41
+  %s = select i1 %b, i64 2147483647, i64 2
+  %r = add i64 %offset, %s
+  ret i64 %r
+}
+
+define i64 @select_42_min32_i64(i64 %offset, i1 %b) {
+; CHECK-LABEL: select_42_min32_i64:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    testb $1, %sil
+; CHECK-NEXT:    movl $42, %ecx
+; CHECK-NEXT:    movl $2147483648, %eax # imm = 0x80000000
+; CHECK-NEXT:    cmovneq %rcx, %rax
+; CHECK-NEXT:    addq %rdi, %rax
+; CHECK-NEXT:    retq
+  %s = select i1 %b, i64 42, i64 2147483648
+  %r = add i64 %offset, %s
+  ret i64 %r
+}
+
+define i64 @select_big_42_i64(i64 %offset, i64 %x) {
+; CHECK-LABEL: select_big_42_i64:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    cmpq $41, %rsi
+; CHECK-NEXT:    movl $2147483649, %ecx # imm = 0x80000001
+; CHECK-NEXT:    movl $42, %eax
+; CHECK-NEXT:    cmovneq %rcx, %rax
+; CHECK-NEXT:    addq %rdi, %rax
+; CHECK-NEXT:    retq
+  %b = icmp ne i64 %x, 41
+  %s = select i1 %b, i64 2147483649, i64 42
+  %r = add i64 %s, %offset
+  ret i64 %r
+}
+
+define i64 @select_n42_big_i64(i64 %offset, i64 %x) {
+; CHECK-LABEL: select_n42_big_i64:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    cmpq $41, %rsi
+; CHECK-NEXT:    movq $-42, %rcx
+; CHECK-NEXT:    movl $2147483649, %eax # imm = 0x80000001
+; CHECK-NEXT:    cmovneq %rcx, %rax
+; CHECK-NEXT:    addq %rdi, %rax
+; CHECK-NEXT:    retq
+  %b = icmp ne i64 %x, 41
+  %s = select i1 %b, i64 -42, i64 2147483649
+  %r = add i64 %s, %offset
+  ret i64 %r
+}
+
+define i64 @select_big_bigger_i64(i64 %offset, i64 %x) {
+; CHECK-LABEL: select_big_bigger_i64:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    cmpq $41, %rsi
+; CHECK-NEXT:    movl $2147483649, %ecx # imm = 0x80000001
+; CHECK-NEXT:    movabsq $42000000000, %rax # imm = 0x9C7652400
+; CHECK-NEXT:    cmovneq %rcx, %rax
+; CHECK-NEXT:    addq %rdi, %rax
+; CHECK-NEXT:    retq
+  %b = icmp ne i64 %x, 41
+  %s = select i1 %b, i64 2147483649, i64 42000000000
+  %r = add i64 %s, %offset
+  ret i64 %r
+}
+
+define i32 @select_20_43_i32(i32 %offset, i64 %x) {
+; CHECK-LABEL: select_20_43_i32:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    cmpq $42, %rsi
+; CHECK-NEXT:    movl $20, %ecx
+; CHECK-NEXT:    movl $43, %eax
+; CHECK-NEXT:    cmovgel %ecx, %eax
+; CHECK-NEXT:    addl %edi, %eax
+; CHECK-NEXT:    retq
+  %b = icmp sgt i64 %x, 41
+  %s = select i1 %b, i32 20, i32 43
+  %r = add i32 %offset, %s
+  ret i32 %r
+}
+
+define i16 @select_n2_17_i16(i16 %offset, i1 %b) {
+; CHECK-LABEL: select_n2_17_i16:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    testb $1, %sil
+; CHECK-NEXT:    movl $65534, %ecx # imm = 0xFFFE
+; CHECK-NEXT:    movl $17, %eax
+; CHECK-NEXT:    cmovnel %ecx, %eax
+; CHECK-NEXT:    addl %edi, %eax
+; CHECK-NEXT:    # kill: def $ax killed $ax killed $eax
+; CHECK-NEXT:    retq
+  %s = select i1 %b, i16 -2, i16 17
+  %r = add i16 %offset, %s
+  ret i16 %r
+}
+
+%class.btAxis = type { %struct.btBroadphaseProxy.base, [3 x i16], [3 x i16], %struct.btBroadphaseProxy* }
+%struct.btBroadphaseProxy.base = type <{ i8*, i16, i16, [4 x i8], i8*, i32, [4 x float], [4 x float] }>
+%struct.btBroadphaseProxy = type <{ i8*, i16, i16, [4 x i8], i8*, i32, [4 x float], [4 x float], [4 x i8] }>
+
+define i16* @bullet(i1 %b, %class.btAxis* readnone %ptr, i64 %idx) {
+; CHECK-LABEL: bullet:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    leaq (%rdx,%rdx,4), %rcx
+; CHECK-NEXT:    shlq $4, %rcx
+; CHECK-NEXT:    addq %rsi, %rcx
+; CHECK-NEXT:    testb $1, %dil
+; CHECK-NEXT:    movl $60, %edx
+; CHECK-NEXT:    movl $66, %eax
+; CHECK-NEXT:    cmovneq %rdx, %rax
+; CHECK-NEXT:    addq %rcx, %rax
+; CHECK-NEXT:    retq
+  %gep2 = getelementptr inbounds %class.btAxis, %class.btAxis* %ptr, i64 %idx, i32 2, i64 0
+  %gep1 = getelementptr inbounds %class.btAxis, %class.btAxis* %ptr, i64 %idx, i32 1, i64 0
+  %sel = select i1 %b, i16* %gep1, i16* %gep2
+  ret i16* %sel
 }
