@@ -328,6 +328,8 @@ namespace llvm {
     /// passed on the command line.
     std::string StackUsageOutput;
 
+    unsigned LoopAlignment = 0;
+
     /// FloatABIType - This setting is set by -float-abi=xxx option is specfied
     /// on the command line. This setting may either be Default, Soft, or Hard.
     /// Default selects the target's default behavior. Soft selects the ABI for
