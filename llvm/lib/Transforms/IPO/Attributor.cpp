@@ -1146,6 +1146,9 @@ bool Attributor::checkForAllInstructions(function_ref<bool(Instruction &)> Pred,
   if (!AssociatedFunction)
     return false;
 
+  if (AssociatedFunction->isDeclaration())
+    return false;
+
   // TODO: use the function scope once we have call site AAReturnedValues.
   const IRPosition &QueryIRP = IRPosition::function(*AssociatedFunction);
   const auto *LivenessAA =
