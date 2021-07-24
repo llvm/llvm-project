@@ -979,6 +979,28 @@ try.cont:
   ret void
 }
 
+; TODO: Should not get sunk.
+define i32 @not_willreturn(i8* %p) {
+; CHECK-LABEL: @not_willreturn(
+; CHECK-NEXT:    br label [[LOOP:%.*]]
+; CHECK:       loop:
+; CHECK-NEXT:    store volatile i8 0, i8* [[P:%.*]], align 1
+; CHECK-NEXT:    br i1 true, label [[LOOP]], label [[OUT:%.*]]
+; CHECK:       out:
+; CHECK-NEXT:    [[X_LE:%.*]] = call i32 @getv() #[[ATTR5:[0-9]+]]
+; CHECK-NEXT:    ret i32 [[X_LE]]
+;
+  br label %loop
+
+loop:
+  %x = call i32 @getv() nounwind readnone
+  store volatile i8 0, i8* %p
+  br i1 true, label %loop, label %out
+
+out:
+  ret i32 %x
+}
+
 declare void @may_throw()
 declare void @may_throw2()
 declare i32 @__CxxFrameHandler3(...)
