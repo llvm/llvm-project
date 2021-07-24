@@ -70,7 +70,7 @@ public:
   virtual void SetUp() {}
   virtual void TearDown() {}
 
-  static int runTests();
+  static int runTests(const char *);
 
 protected:
   static void addTest(Test *T);
