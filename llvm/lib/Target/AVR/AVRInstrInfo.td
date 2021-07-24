@@ -360,11 +360,13 @@ Uses = [SP] in
                                 "#ADJCALLSTACKDOWN",
                                 [(AVRcallseq_start timm:$amt, timm:$amt2)]>;
 
-  // R31R30 is used to update SP, since it is a scratch reg and this instruction
-  // is placed after the function call then R31R30 should be always free.
-  //let Defs = [R31R30],
-  //Uses = [R31R30] in
-  //:TODO: if we enable this, the pseudo is killed because it looks dead
+  // R31R30 is used to update SP. It is normally free because it is a
+  // call-clobbered register but it is necessary to set it as a def as the
+  // register allocator might use it in rare cases (for rematerialization, it
+  // seems). hasSideEffects needs to be set to true so this instruction isn't
+  // considered dead.
+  let Defs = [R31R30],
+  hasSideEffects=1 in
   def ADJCALLSTACKUP : Pseudo<(outs),
                               (ins i16imm:$amt1, i16imm:$amt2),
                               "#ADJCALLSTACKUP",
