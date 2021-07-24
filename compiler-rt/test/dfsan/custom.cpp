@@ -1939,14 +1939,6 @@ void test_snprintf() {
   ASSERT_LABEL(r, 0);
 }
 
-// This is essentially the same as sprintf with the only difference that it
-// uses a va_list instead of varargs. This empty function is here to appease
-// the check-wrappers script.
-void test_vsprintf() {}
-
-// Same here, but for snprintf.
-void test_vsnprintf() {}
-
 // Tested by a seperate source file.  This empty function is here to appease the
 // check-wrappers script.
 void test_fork() {}
@@ -2027,7 +2019,5 @@ int main(void) {
   test_strtoul();
   test_strtoull();
   test_time();
-  test_vsprintf();
-  test_vsnprintf();
   test_write();
 }
