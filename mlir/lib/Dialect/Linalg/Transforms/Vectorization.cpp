@@ -1186,8 +1186,8 @@ void mlir::linalg::populateConvVectorizationPatterns(
   populateVectorizationPatterns<ConvInputNHWCFilterHWCFOp, 4>(
       tiling, promotion, vectorization, tileSizes);
 
-  populateVectorizationPatterns<ConvNCHWOp, 4>(tiling, promotion, vectorization,
-                                               tileSizes);
+  populateVectorizationPatterns<Conv2DNchwOp, 4>(tiling, promotion,
+                                                 vectorization, tileSizes);
   populateVectorizationPatterns<ConvInputNCHWFilterHWCFOp, 4>(
       tiling, promotion, vectorization, tileSizes);
 
