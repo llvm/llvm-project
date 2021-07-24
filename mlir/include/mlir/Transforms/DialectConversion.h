@@ -753,7 +753,8 @@ public:
     setLegalityCallback(fn);
   }
   void markUnknownOpDynamicallyLegal() {
-    setLegalityCallback([](Operation *) { return true; });
+    setLegalityCallback(
+        [this](Operation *op) { return isDynamicallyLegal(op); });
   }
 
   /// Register the operations of the given dialects as illegal, i.e.
