@@ -1054,3 +1054,70 @@ define i32 @negative_different_x(i32 %x0, i32 %x1, i32 %y, i32* %divdst) nounwin
   %t2 = sub i32 %x1, %t1 ; not %x0
   ret i32 %t2
 }
+
+define i32 @negative_different_y(i32 %x0, i32 %x1, i32 %y, i32 %z, i32* %divdst) nounwind {
+; X86-LABEL: negative_different_y:
+; X86:       # %bb.0:
+; X86-NEXT:    pushl %esi
+; X86-NEXT:    movl {{[0-9]+}}(%esp), %esi
+; X86-NEXT:    movl {{[0-9]+}}(%esp), %ecx
+; X86-NEXT:    movl %ecx, %eax
+; X86-NEXT:    xorl %edx, %edx
+; X86-NEXT:    divl {{[0-9]+}}(%esp)
+; X86-NEXT:    movl %eax, (%esi)
+; X86-NEXT:    imull {{[0-9]+}}(%esp), %eax
+; X86-NEXT:    subl %eax, %ecx
+; X86-NEXT:    movl %ecx, %eax
+; X86-NEXT:    popl %esi
+; X86-NEXT:    retl
+;
+; X64-LABEL: negative_different_y:
+; X64:       # %bb.0:
+; X64-NEXT:    movl %edx, %edi
+; X64-NEXT:    movl %esi, %eax
+; X64-NEXT:    xorl %edx, %edx
+; X64-NEXT:    divl %ecx
+; X64-NEXT:    movl %eax, (%r8)
+; X64-NEXT:    imull %eax, %edi
+; X64-NEXT:    subl %edi, %esi
+; X64-NEXT:    movl %esi, %eax
+; X64-NEXT:    retq
+  %div = udiv i32 %x1, %z ; not %x0
+  store i32 %div, i32* %divdst, align 4
+  %t1 = mul i32 %div, %y
+  %t2 = sub i32 %x1, %t1
+  ret i32 %t2
+}
+
+define i32 @negative_inverted_division(i32 %x0, i32 %x1, i32 %y, i32* %divdst) nounwind {
+; X86-LABEL: negative_inverted_division:
+; X86:       # %bb.0:
+; X86-NEXT:    pushl %esi
+; X86-NEXT:    movl {{[0-9]+}}(%esp), %esi
+; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
+; X86-NEXT:    movl {{[0-9]+}}(%esp), %ecx
+; X86-NEXT:    xorl %edx, %edx
+; X86-NEXT:    divl %ecx
+; X86-NEXT:    movl %eax, (%esi)
+; X86-NEXT:    imull %ecx, %eax
+; X86-NEXT:    subl %eax, %ecx
+; X86-NEXT:    movl %ecx, %eax
+; X86-NEXT:    popl %esi
+; X86-NEXT:    retl
+;
+; X64-LABEL: negative_inverted_division:
+; X64:       # %bb.0:
+; X64-NEXT:    movl %edi, %eax
+; X64-NEXT:    xorl %edx, %edx
+; X64-NEXT:    divl %esi
+; X64-NEXT:    movl %eax, (%rcx)
+; X64-NEXT:    imull %esi, %eax
+; X64-NEXT:    subl %eax, %esi
+; X64-NEXT:    movl %esi, %eax
+; X64-NEXT:    retq
+  %div = udiv i32 %x0, %x1 ; inverted division
+  store i32 %div, i32* %divdst, align 4
+  %t1 = mul i32 %div, %x1
+  %t2 = sub i32 %x1, %t1
+  ret i32 %t2
+}
