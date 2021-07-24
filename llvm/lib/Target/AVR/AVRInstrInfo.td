@@ -1735,20 +1735,19 @@ Defs = [SREG] in
                       "asrw\t$rd",
                       [(set i16:$rd, (AVRasr i16:$src)), (implicit SREG)]>;
 
+  def ROLBRd : Pseudo<(outs GPR8:$rd),
+                      (ins GPR8:$src),
+                      "rolb\t$rd",
+                      [(set i8:$rd, (AVRrol i8:$src)), (implicit SREG)]>;
+
+  def RORBRd : Pseudo<(outs GPR8:$rd),
+                      (ins GPR8:$src),
+                      "rorb\t$rd",
+                      [(set i8:$rd, (AVRror i8:$src)), (implicit SREG)]>;
+
   // Bit rotate operations.
   let Uses = [SREG] in
   {
-    // 8-bit ROL is an alias of ADC Rd, Rd
-
-    def ROLBRd : Pseudo<(outs GPR8:$rd),
-                        (ins GPR8:$src),
-                        "rolb\t$rd",
-                        [(set i8:$rd, (AVRrol i8:$src)), (implicit SREG)]>;
-
-    def RORBRd : Pseudo<(outs GPR8:$rd),
-                        (ins GPR8:$src),
-                        "rorb\t$rd",
-                        [(set i8:$rd, (AVRror i8:$src)), (implicit SREG)]>;
 
     def ROLWRd : Pseudo<(outs DREGS:$rd),
                         (ins DREGS:$src),
@@ -1804,10 +1803,11 @@ def BST : FRdB<0b01,
                "bst\t$rd, $b",
                []>;
 
-let Uses = [SREG] in
+let Constraints = "$src = $rd",
+Uses = [SREG] in
 def BLD : FRdB<0b00,
-               (outs),
-               (ins GPR8:$rd, i8imm:$b),
+               (outs GPR8:$rd),
+               (ins GPR8:$src, i8imm:$b),
                "bld\t$rd, $b",
                []>;
 

@@ -1345,42 +1345,20 @@ bool AVRExpandPseudo::expand<AVR::RORBRd>(Block &MBB, BlockIt MBBI) {
   // to explicitly add the carry bit.
 
   MachineInstr &MI = *MBBI;
-  unsigned OpShiftOut, OpLoad, OpShiftIn, OpAdd;
   Register DstReg = MI.getOperand(0).getReg();
-  bool DstIsDead = MI.getOperand(0).isDead();
-  OpShiftOut = AVR::LSRRd;
-  OpLoad = AVR::LDIRdK;
-  OpShiftIn = AVR::RORRd;
-  OpAdd = AVR::ORRdRr;
 
-  // lsr r16
-  // ldi r0, 0
-  // ror r0
-  // or r16, r17
+  // bst r16, 0
+  // ror r16
+  // bld r16, 7
 
-  // Shift out
-  buildMI(MBB, MBBI, OpShiftOut)
-    .addReg(DstReg, RegState::Define | getDeadRegState(DstIsDead))
-    .addReg(DstReg);
+  // Move the lowest bit from DstReg into the T bit
+  buildMI(MBB, MBBI, AVR::BST).addReg(DstReg).addImm(0);
 
-  // Put 0 in temporary register
-  buildMI(MBB, MBBI, OpLoad)
-    .addReg(SCRATCH_REGISTER, RegState::Define | getDeadRegState(true))
-    .addImm(0x00);
+  // Rotate to the right
+  buildMI(MBB, MBBI, AVR::RORRd, DstReg).addReg(DstReg);
 
-  // Shift in
-  buildMI(MBB, MBBI, OpShiftIn)
-    .addReg(SCRATCH_REGISTER, RegState::Define | getDeadRegState(true))
-    .addReg(SCRATCH_REGISTER);
-
-  // Add the results together using an or-instruction
-  auto MIB = buildMI(MBB, MBBI, OpAdd)
-    .addReg(DstReg, RegState::Define | getDeadRegState(DstIsDead))
-    .addReg(DstReg)
-    .addReg(SCRATCH_REGISTER);
-
-  // SREG is always implicitly killed
-  MIB->getOperand(2).setIsKill();
+  // Move the T bit into the highest bit of DstReg.
+  buildMI(MBB, MBBI, AVR::BLD, DstReg).addReg(DstReg).addImm(7);
 
   MI.eraseFromParent();
   return true;
