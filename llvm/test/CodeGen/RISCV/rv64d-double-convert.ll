@@ -11,7 +11,7 @@ define i32 @aext_fptosi(double %a) nounwind {
 ; RV64ID-LABEL: aext_fptosi:
 ; RV64ID:       # %bb.0:
 ; RV64ID-NEXT:    fmv.d.x ft0, a0
-; RV64ID-NEXT:    fcvt.l.d a0, ft0, rtz
+; RV64ID-NEXT:    fcvt.w.d a0, ft0, rtz
 ; RV64ID-NEXT:    ret
   %1 = fptosi double %a to i32
   ret i32 %1
@@ -21,7 +21,7 @@ define signext i32 @sext_fptosi(double %a) nounwind {
 ; RV64ID-LABEL: sext_fptosi:
 ; RV64ID:       # %bb.0:
 ; RV64ID-NEXT:    fmv.d.x ft0, a0
-; RV64ID-NEXT:    fcvt.l.d a0, ft0, rtz
+; RV64ID-NEXT:    fcvt.w.d a0, ft0, rtz
 ; RV64ID-NEXT:    ret
   %1 = fptosi double %a to i32
   ret i32 %1
@@ -31,7 +31,7 @@ define zeroext i32 @zext_fptosi(double %a) nounwind {
 ; RV64ID-LABEL: zext_fptosi:
 ; RV64ID:       # %bb.0:
 ; RV64ID-NEXT:    fmv.d.x ft0, a0
-; RV64ID-NEXT:    fcvt.l.d a0, ft0, rtz
+; RV64ID-NEXT:    fcvt.w.d a0, ft0, rtz
 ; RV64ID-NEXT:    slli a0, a0, 32
 ; RV64ID-NEXT:    srli a0, a0, 32
 ; RV64ID-NEXT:    ret
@@ -43,7 +43,7 @@ define i32 @aext_fptoui(double %a) nounwind {
 ; RV64ID-LABEL: aext_fptoui:
 ; RV64ID:       # %bb.0:
 ; RV64ID-NEXT:    fmv.d.x ft0, a0
-; RV64ID-NEXT:    fcvt.lu.d a0, ft0, rtz
+; RV64ID-NEXT:    fcvt.wu.d a0, ft0, rtz
 ; RV64ID-NEXT:    ret
   %1 = fptoui double %a to i32
   ret i32 %1
