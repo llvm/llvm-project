@@ -2347,8 +2347,11 @@ static bool isIndexInRangeOfArrayType(uint64_t NumElements,
 // Combine Indices - If the source pointer to this getelementptr instruction
 // is a getelementptr instruction, combine the indices of the two
 // getelementptr instructions into a single instruction.
-static Constant *foldGEPOfGEP(GEPOperator *GEP, bool InBounds,
+static Constant *foldGEPOfGEP(GEPOperator *GEP, Type *PointeeTy, bool InBounds,
                               ArrayRef<Value *> Idxs) {
+  if (PointeeTy != GEP->getResultElementType())
+    return nullptr;
+
   Constant *Idx0 = cast<Constant>(Idxs[0]);
   if (Idx0->isNullValue()) {
     // Handle the simple case of a zero index.
@@ -2491,7 +2494,7 @@ Constant *llvm::ConstantFoldGetElementPtr(Type *PointeeTy, Constant *C,
 
   if (ConstantExpr *CE = dyn_cast<ConstantExpr>(C)) {
     if (auto *GEP = dyn_cast<GEPOperator>(CE))
-      if (Constant *C = foldGEPOfGEP(GEP, InBounds, Idxs))
+      if (Constant *C = foldGEPOfGEP(GEP, PointeeTy, InBounds, Idxs))
         return C;
 
     // Attempt to fold casts to the same type away.  For example, folding:
