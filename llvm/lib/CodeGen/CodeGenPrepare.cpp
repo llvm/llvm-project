@@ -2041,6 +2041,10 @@ static bool despeculateCountZeros(IntrinsicInst *CountZeros,
   if (Ty->isVectorTy() || SizeInBits > DL->getLargestLegalIntTypeSizeInBits())
     return false;
 
+  // Bail if the value is never zero.
+  if (llvm::isKnownNonZero(CountZeros->getOperand(0), *DL))
+    return false;
+
   // The intrinsic will be sunk behind a compare against zero and branch.
   BasicBlock *StartBlock = CountZeros->getParent();
   BasicBlock *CallBlock = StartBlock->splitBasicBlock(CountZeros, "cond.false");
