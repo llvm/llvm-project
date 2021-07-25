@@ -60,6 +60,10 @@ namespace std {
 #include <__format/format_parse_context.h>
 #include <version>
 
+#if defined(_LIBCPP_HAS_NO_INCOMPLETE_FORMAT)
+# error "The Format library is not supported since libc++ has been configured with LIBCXX_ENABLE_INCOMPLETE_FEATURES disabled"
+#endif
+
 #if !defined(_LIBCPP_HAS_NO_PRAGMA_SYSTEM_HEADER)
 #  pragma GCC system_header
 #endif

@@ -10,6 +10,7 @@
 // UNSUPPORTED: libcpp-no-concepts
 // UNSUPPORTED: clang-10
 // UNSUPPORTED: gcc-10
+// UNSUPPORTED: libcpp-has-no-incomplete-ranges
 
 // std::ranges::empty
 
