@@ -347,34 +347,30 @@ define void @val_compare_and_swap_monotonic(i128* %p, i128 %oldval, i128 %newval
 define void @atomic_load_relaxed(i64, i64, i128* %p, i128* %p2) {
 ; CHECK-LLSC-O1-LABEL: atomic_load_relaxed:
 ; CHECK-LLSC-O1:       // %bb.0:
-; CHECK-LLSC-O1-NEXT:    mov w8, #64
-; CHECK-LLSC-O1-NEXT:    sub x9, x8, #64 // =64
 ; CHECK-LLSC-O1-NEXT:  .LBB4_1: // %atomicrmw.start
 ; CHECK-LLSC-O1-NEXT:    // =>This Inner Loop Header: Depth=1
-; CHECK-LLSC-O1-NEXT:    ldxp x10, x8, [x2]
-; CHECK-LLSC-O1-NEXT:    lsl x8, x8, x9
-; CHECK-LLSC-O1-NEXT:    lsr x11, x8, x9
-; CHECK-LLSC-O1-NEXT:    stxp w12, x10, x11, [x2]
-; CHECK-LLSC-O1-NEXT:    cbnz w12, .LBB4_1
+; CHECK-LLSC-O1-NEXT:    ldxp x9, x8, [x2]
+; CHECK-LLSC-O1-NEXT:    lsr x8, x8, #0
+; CHECK-LLSC-O1-NEXT:    lsr x10, x8, #0
+; CHECK-LLSC-O1-NEXT:    stxp w11, x9, x10, [x2]
+; CHECK-LLSC-O1-NEXT:    cbnz w11, .LBB4_1
 ; CHECK-LLSC-O1-NEXT:  // %bb.2: // %atomicrmw.end
-; CHECK-LLSC-O1-NEXT:    mov v0.d[0], x10
+; CHECK-LLSC-O1-NEXT:    mov v0.d[0], x9
 ; CHECK-LLSC-O1-NEXT:    mov v0.d[1], x8
 ; CHECK-LLSC-O1-NEXT:    str q0, [x3]
 ; CHECK-LLSC-O1-NEXT:    ret
 ;
 ; CHECK-CAS-O1-LABEL: atomic_load_relaxed:
 ; CHECK-CAS-O1:       // %bb.0:
-; CHECK-CAS-O1-NEXT:    mov w8, #64
-; CHECK-CAS-O1-NEXT:    sub x9, x8, #64 // =64
 ; CHECK-CAS-O1-NEXT:  .LBB4_1: // %atomicrmw.start
 ; CHECK-CAS-O1-NEXT:    // =>This Inner Loop Header: Depth=1
-; CHECK-CAS-O1-NEXT:    ldxp x10, x8, [x2]
-; CHECK-CAS-O1-NEXT:    lsl x8, x8, x9
-; CHECK-CAS-O1-NEXT:    lsr x11, x8, x9
-; CHECK-CAS-O1-NEXT:    stxp w12, x10, x11, [x2]
-; CHECK-CAS-O1-NEXT:    cbnz w12, .LBB4_1
+; CHECK-CAS-O1-NEXT:    ldxp x9, x8, [x2]
+; CHECK-CAS-O1-NEXT:    lsr x8, x8, #0
+; CHECK-CAS-O1-NEXT:    lsr x10, x8, #0
+; CHECK-CAS-O1-NEXT:    stxp w11, x9, x10, [x2]
+; CHECK-CAS-O1-NEXT:    cbnz w11, .LBB4_1
 ; CHECK-CAS-O1-NEXT:  // %bb.2: // %atomicrmw.end
-; CHECK-CAS-O1-NEXT:    mov v0.d[0], x10
+; CHECK-CAS-O1-NEXT:    mov v0.d[0], x9
 ; CHECK-CAS-O1-NEXT:    mov v0.d[1], x8
 ; CHECK-CAS-O1-NEXT:    str q0, [x3]
 ; CHECK-CAS-O1-NEXT:    ret
