@@ -176,6 +176,9 @@ Changes to the LLVM tools
   ``--format=just-symbols`` and ``-j``.
   (`D105330 <https://reviews.llvm.org/D105330>`_)
 
+* In lli the default JIT engine switched from MCJIT (``-jit-kind=mcjit``) to ORC (``-jit-kind=orc``).
+  (`D98931 <https://reviews.llvm.org/D98931>`_)
+
 Changes to LLDB
 ---------------------------------
 
