@@ -29,6 +29,27 @@ define i32 @_Z3hooii(i32 %b, i32 %a) nounwind ssp minsize {
 
 declare i32 @_Z3gooi(i32);
 
+; CHECK-LABEL: _foo:
+; CHECK:        sub sp, sp, #16
+; CHECK:        bl  _goo
+; CHECK:        add sp, sp, #16
+
+define i32 @foo(i32 %c) nounwind minsize {
+entry:
+  %buffer = alloca [1 x i32], align 4
+  %0 = bitcast [1 x i32]* %buffer to i8*
+  call void @llvm.lifetime.start.p0i8(i64 4, i8* nonnull %0)
+  %arraydecay = getelementptr inbounds [1 x i32], [1 x i32]* %buffer, i64 0, i64 0
+  %call = call i32 @goo(i32* nonnull %arraydecay)
+  %sub = sub nsw i32 %c, %call
+  call void @llvm.lifetime.end.p0i8(i64 4, i8* nonnull %0)
+
+  ret i32 %sub
+}
+
+declare void @llvm.lifetime.start.p0i8(i64 immarg, i8* nocapture)
+declare i32 @goo(i32*)
+declare void @llvm.lifetime.end.p0i8(i64 immarg, i8* nocapture)
 
 ; CHECK-LABEL: _OUTLINED_FUNCTION_PROLOG_x30x29x19x20x21x22:
 ; CHECK:      stp     x22, x21, [sp, #-32]!
