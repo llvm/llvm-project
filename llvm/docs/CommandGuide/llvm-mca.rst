@@ -217,8 +217,10 @@ option specifies "``-``", then the output will also be sent to standard output.
 
 .. option:: -disable-cb
 
-  Force usage of the generic CustomBehaviour class rather than using the target
-  specific class. The generic class never detects any custom hazards.
+  Force usage of the generic CustomBehaviour and InstrPostProcess classes rather
+  than using the target specific implementation. The generic classes never
+  detect any custom hazards or make any post processing modifications to
+  instructions.
 
 
 EXIT STATUS
@@ -1013,4 +1015,5 @@ if you don't know the exact number and a value of 0 represents no stall).
 
 If you'd like to add a CustomBehaviour class for a target that doesn't
 already have one, refer to an existing implementation to see how to set it
-up. Remember to look at (and add to) `/llvm-mca/lib/CMakeLists.txt`.
+up. The classes are implemented within the target specific backend (for
+example `/llvm/lib/Target/AMDGPU/MCA/`) so that they can access backend symbols.
