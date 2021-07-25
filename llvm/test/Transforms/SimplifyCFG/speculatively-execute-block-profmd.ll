@@ -83,11 +83,12 @@ define i32 @predictably_nontaken(i1 %c, i32 %a, i32 %b) {
 ; CHECK:       dispatch:
 ; CHECK-NEXT:    call void @sideeffect1()
 ; CHECK-NEXT:    [[CMP:%.*]] = icmp eq i32 [[A:%.*]], [[B:%.*]]
+; CHECK-NEXT:    br i1 [[CMP]], label [[END]], label [[COND_TRUE:%.*]], !prof [[PROF0]]
+; CHECK:       cond.true:
 ; CHECK-NEXT:    [[VAL:%.*]] = add i32 [[A]], [[B]]
-; CHECK-NEXT:    [[SPEC_SELECT:%.*]] = select i1 [[CMP]], i32 0, i32 [[VAL]], !prof [[PROF0]]
 ; CHECK-NEXT:    br label [[END]]
 ; CHECK:       end:
-; CHECK-NEXT:    [[RES:%.*]] = phi i32 [ -1, [[ENTRY:%.*]] ], [ [[SPEC_SELECT]], [[DISPATCH]] ]
+; CHECK-NEXT:    [[RES:%.*]] = phi i32 [ -1, [[ENTRY:%.*]] ], [ 0, [[DISPATCH]] ], [ [[VAL]], [[COND_TRUE]] ]
 ; CHECK-NEXT:    call void @sideeffect2()
 ; CHECK-NEXT:    ret i32 [[RES]]
 ;

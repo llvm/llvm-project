@@ -2372,6 +2372,20 @@ bool SimplifyCFGOpt::SpeculativelyExecuteBB(BranchInst *BI, BasicBlock *ThenBB,
   }
   assert(EndBB == BI->getSuccessor(!Invert) && "No edge from to end block");
 
+  // If the branch is non-unpredictable, and is predicted to *not* branch to
+  // the `then` block, then avoid speculating it.
+  if (!BI->getMetadata(LLVMContext::MD_unpredictable)) {
+    uint64_t TWeight, FWeight;
+    if (BI->extractProfMetadata(TWeight, FWeight) && (TWeight + FWeight) != 0) {
+      uint64_t EndWeight = Invert ? TWeight : FWeight;
+      BranchProbability BIEndProb =
+          BranchProbability::getBranchProbability(EndWeight, TWeight + FWeight);
+      BranchProbability Likely = TTI.getPredictableBranchThreshold();
+      if (BIEndProb >= Likely)
+        return false;
+    }
+  }
+
   // Keep a count of how many times instructions are used within ThenBB when
   // they are candidates for sinking into ThenBB. Specifically:
   // - They are defined in BB, and
