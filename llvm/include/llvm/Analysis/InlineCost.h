@@ -59,8 +59,6 @@ const uint64_t MaxSimplifiedDynamicAllocaToInline = 65536;
 class CostBenefitPair {
 public:
   CostBenefitPair(APInt Cost, APInt Benefit) : Cost(Cost), Benefit(Benefit) {}
-  CostBenefitPair(const CostBenefitPair &CBP)
-      : Cost(CBP.getCost()), Benefit(CBP.getBenefit()) {}
 
   const APInt &getCost() const { return Cost; }
 
