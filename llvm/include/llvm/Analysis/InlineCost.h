@@ -55,6 +55,22 @@ const unsigned TotalAllocaSizeRecursiveCaller = 1024;
 const uint64_t MaxSimplifiedDynamicAllocaToInline = 65536;
 } // namespace InlineConstants
 
+// The cost-benefit pair computed by cost-benefit analysis.
+class CostBenefitPair {
+public:
+  CostBenefitPair(APInt Cost, APInt Benefit) : Cost(Cost), Benefit(Benefit) {}
+  CostBenefitPair(const CostBenefitPair &CBP)
+      : Cost(CBP.getCost()), Benefit(CBP.getBenefit()) {}
+
+  const APInt &getCost() const { return Cost; }
+
+  const APInt &getBenefit() const { return Benefit; }
+
+private:
+  APInt Cost;
+  APInt Benefit;
+};
+
 /// Represents the cost of inlining a function.
 ///
 /// This supports special values for functions which should "always" or
@@ -77,9 +93,14 @@ class InlineCost {
   /// Must be set for Always and Never instances.
   const char *Reason = nullptr;
 
+  /// The cost-benefit pair computed by cost-benefit analysis.
+  Optional<CostBenefitPair> CostBenefit = None;
+
   // Trivial constructor, interesting logic in the factory functions below.
-  InlineCost(int Cost, int Threshold, const char *Reason = nullptr)
-      : Cost(Cost), Threshold(Threshold), Reason(Reason) {
+  InlineCost(int Cost, int Threshold, const char *Reason = nullptr,
+             Optional<CostBenefitPair> CostBenefit = None)
+      : Cost(Cost), Threshold(Threshold), Reason(Reason),
+        CostBenefit(CostBenefit) {
     assert((isVariable() || Reason) &&
            "Reason must be provided for Never or Always");
   }
@@ -90,11 +111,13 @@ public:
     assert(Cost < NeverInlineCost && "Cost crosses sentinel value");
     return InlineCost(Cost, Threshold);
   }
-  static InlineCost getAlways(const char *Reason) {
-    return InlineCost(AlwaysInlineCost, 0, Reason);
+  static InlineCost getAlways(const char *Reason,
+                              Optional<CostBenefitPair> CostBenefit = None) {
+    return InlineCost(AlwaysInlineCost, 0, Reason, CostBenefit);
   }
-  static InlineCost getNever(const char *Reason) {
-    return InlineCost(NeverInlineCost, 0, Reason);
+  static InlineCost getNever(const char *Reason,
+                             Optional<CostBenefitPair> CostBenefit = None) {
+    return InlineCost(NeverInlineCost, 0, Reason, CostBenefit);
   }
 
   /// Test whether the inline cost is low enough for inlining.
@@ -116,6 +139,9 @@ public:
     assert(isVariable() && "Invalid access of InlineCost");
     return Threshold;
   }
+
+  /// Get the cost-benefit pair which was computed by cost-benefit analysis
+  Optional<CostBenefitPair> getCostBenefit() const { return CostBenefit; }
 
   /// Get the reason of Always or Never.
   const char *getReason() const {
