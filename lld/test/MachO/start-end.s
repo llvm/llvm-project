@@ -406,7 +406,7 @@ _main:
   movq segment$start$ASDF@GOTPCREL(%rip), %rax
   movq segment$end$ASDF@GOTPCREL(%rip), %rbx
 
-  ## Non-undefined symbols don't create segments.
+  # Non-undefined symbols don't create segments.
   callq segment$start$REGULAR
   callq segment$end$REGULAR
 
