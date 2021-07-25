@@ -1760,6 +1760,32 @@ private:
           [&]() { return RemarkCB(RemarkKind(DEBUG_TYPE, RemarkName, F)); });
   }
 
+  /// RAII struct to temporarily change an RTL function's linkage to external.
+  /// This prevents it from being mistakenly removed by other optimizations.
+  struct ExternalizationRAII {
+    ExternalizationRAII(OMPInformationCache &OMPInfoCache,
+                        RuntimeFunction RFKind)
+        : OMPInfoCache(OMPInfoCache),
+          Declaration(OMPInfoCache.RFIs[RFKind].Declaration) {
+      if (!Declaration)
+        return;
+
+      LinkageType = Declaration->getLinkage();
+      Declaration->setLinkage(GlobalValue::ExternalLinkage);
+    }
+
+    ~ExternalizationRAII() {
+      if (!Declaration)
+        return;
+
+      Declaration->setLinkage(LinkageType);
+    }
+
+    OMPInformationCache &OMPInfoCache;
+    Function *Declaration;
+    GlobalValue::LinkageTypes LinkageType;
+  };
+
   /// The underlying module.
   Module &M;
 
@@ -1783,6 +1809,14 @@ private:
   bool runAttributor(bool IsModulePass) {
     if (SCC.empty())
       return false;
+
+    // Temporarily make these function have external linkage so the Attributor
+    // doesn't remove them when we try to look them up later.
+    ExternalizationRAII Parallel(OMPInfoCache, OMPRTL___kmpc_kernel_parallel);
+    ExternalizationRAII EndParallel(OMPInfoCache,
+                                    OMPRTL___kmpc_kernel_end_parallel);
+    ExternalizationRAII BarrierSPMD(OMPInfoCache,
+                                    OMPRTL___kmpc_barrier_simple_spmd);
 
     registerAAs(IsModulePass);
 
