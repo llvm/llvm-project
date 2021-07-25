@@ -88,6 +88,8 @@ define i32 @select_consts_use_i32(i32 %offset, i64 %x, i32* %p) {
   ret i32 %r
 }
 
+; Special-case LEA hacks are done before we try to push the add into a CMOV.
+
 define i32 @select_40_43_i32(i32 %offset, i64 %x) {
 ; CHECK-LABEL: select_40_43_i32:
 ; CHECK:       # %bb.0:
@@ -133,11 +135,10 @@ define i32 @select_1_0_i32(i32 %offset, i64 %x) {
 define i64 @select_max32_2_i64(i64 %offset, i64 %x) {
 ; CHECK-LABEL: select_max32_2_i64:
 ; CHECK:       # %bb.0:
+; CHECK-NEXT:    leaq 2(%rdi), %rax
+; CHECK-NEXT:    addq $2147483647, %rdi # imm = 0x7FFFFFFF
 ; CHECK-NEXT:    cmpq $41, %rsi
-; CHECK-NEXT:    movl $2147483647, %ecx # imm = 0x7FFFFFFF
-; CHECK-NEXT:    movl $2, %eax
-; CHECK-NEXT:    cmovneq %rcx, %rax
-; CHECK-NEXT:    addq %rdi, %rax
+; CHECK-NEXT:    cmovneq %rdi, %rax
 ; CHECK-NEXT:    retq
   %b = icmp ne i64 %x, 41
   %s = select i1 %b, i64 2147483647, i64 2
@@ -207,11 +208,11 @@ define i64 @select_big_bigger_i64(i64 %offset, i64 %x) {
 define i32 @select_20_43_i32(i32 %offset, i64 %x) {
 ; CHECK-LABEL: select_20_43_i32:
 ; CHECK:       # %bb.0:
+; CHECK-NEXT:    # kill: def $edi killed $edi def $rdi
+; CHECK-NEXT:    leal 43(%rdi), %eax
+; CHECK-NEXT:    addl $20, %edi
 ; CHECK-NEXT:    cmpq $42, %rsi
-; CHECK-NEXT:    movl $20, %ecx
-; CHECK-NEXT:    movl $43, %eax
-; CHECK-NEXT:    cmovgel %ecx, %eax
-; CHECK-NEXT:    addl %edi, %eax
+; CHECK-NEXT:    cmovgel %edi, %eax
 ; CHECK-NEXT:    retq
   %b = icmp sgt i64 %x, 41
   %s = select i1 %b, i32 20, i32 43
@@ -222,11 +223,11 @@ define i32 @select_20_43_i32(i32 %offset, i64 %x) {
 define i16 @select_n2_17_i16(i16 %offset, i1 %b) {
 ; CHECK-LABEL: select_n2_17_i16:
 ; CHECK:       # %bb.0:
+; CHECK-NEXT:    # kill: def $edi killed $edi def $rdi
+; CHECK-NEXT:    leal 17(%rdi), %eax
+; CHECK-NEXT:    addl $65534, %edi # imm = 0xFFFE
 ; CHECK-NEXT:    testb $1, %sil
-; CHECK-NEXT:    movl $65534, %ecx # imm = 0xFFFE
-; CHECK-NEXT:    movl $17, %eax
-; CHECK-NEXT:    cmovnel %ecx, %eax
-; CHECK-NEXT:    addl %edi, %eax
+; CHECK-NEXT:    cmovnel %edi, %eax
 ; CHECK-NEXT:    # kill: def $ax killed $ax killed $eax
 ; CHECK-NEXT:    retq
   %s = select i1 %b, i16 -2, i16 17
@@ -241,14 +242,12 @@ define i16 @select_n2_17_i16(i16 %offset, i1 %b) {
 define i16* @bullet(i1 %b, %class.btAxis* readnone %ptr, i64 %idx) {
 ; CHECK-LABEL: bullet:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    leaq (%rdx,%rdx,4), %rcx
-; CHECK-NEXT:    shlq $4, %rcx
-; CHECK-NEXT:    addq %rsi, %rcx
+; CHECK-NEXT:    leaq (%rdx,%rdx,4), %rax
+; CHECK-NEXT:    shlq $4, %rax
+; CHECK-NEXT:    leaq 60(%rsi,%rax), %rcx
+; CHECK-NEXT:    leaq 66(%rsi,%rax), %rax
 ; CHECK-NEXT:    testb $1, %dil
-; CHECK-NEXT:    movl $60, %edx
-; CHECK-NEXT:    movl $66, %eax
-; CHECK-NEXT:    cmovneq %rdx, %rax
-; CHECK-NEXT:    addq %rcx, %rax
+; CHECK-NEXT:    cmovneq %rcx, %rax
 ; CHECK-NEXT:    retq
   %gep2 = getelementptr inbounds %class.btAxis, %class.btAxis* %ptr, i64 %idx, i32 2, i64 0
   %gep1 = getelementptr inbounds %class.btAxis, %class.btAxis* %ptr, i64 %idx, i32 1, i64 0
