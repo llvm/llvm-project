@@ -1440,14 +1440,12 @@ define void @fancierRotate2(i32* %arr, i8* %control, i32 %rot0, i32 %rot1) {
 ; AVX1-NEXT:    vmovd %ecx, %xmm3
 ; AVX1-NEXT:    movq $-1024, %rax # imm = 0xFC00
 ; AVX1-NEXT:    vpxor %xmm8, %xmm8, %xmm8
-; AVX1-NEXT:    vpshufd {{.*#+}} xmm1 = xmm1[0,0,0,0]
 ; AVX1-NEXT:    vmovdqa {{.*#+}} xmm4 = [31,31,31,31]
 ; AVX1-NEXT:    vpand %xmm4, %xmm1, %xmm2
 ; AVX1-NEXT:    vpmovzxdq {{.*#+}} xmm9 = xmm2[0],zero,xmm2[1],zero
 ; AVX1-NEXT:    vmovdqa {{.*#+}} xmm5 = [32,32,32,32]
 ; AVX1-NEXT:    vpsubd %xmm2, %xmm5, %xmm2
 ; AVX1-NEXT:    vpmovzxdq {{.*#+}} xmm10 = xmm2[0],zero,xmm2[1],zero
-; AVX1-NEXT:    vpshufd {{.*#+}} xmm3 = xmm3[0,0,0,0]
 ; AVX1-NEXT:    vpand %xmm4, %xmm3, %xmm4
 ; AVX1-NEXT:    vpmovzxdq {{.*#+}} xmm11 = xmm4[0],zero,xmm4[1],zero
 ; AVX1-NEXT:    vpsubd %xmm4, %xmm5, %xmm4

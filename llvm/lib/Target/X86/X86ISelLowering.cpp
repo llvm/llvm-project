@@ -29034,8 +29034,18 @@ static SDValue LowerRotate(SDValue Op, const X86Subtarget &Subtarget,
   }
 
   // ISD::ROT* uses modulo rotate amounts.
-  Amt = DAG.getNode(ISD::AND, DL, VT, Amt,
-                    DAG.getConstant(EltSizeInBits - 1, DL, VT));
+  if (SDValue BaseRotAmt = DAG.getSplatValue(Amt)) {
+    // If the amount is a splat, perform the modulo BEFORE the splat,
+    // this helps LowerScalarVariableShift to remove the splat later.
+    Amt = DAG.getNode(ISD::SCALAR_TO_VECTOR, DL, VT, BaseRotAmt);
+    Amt = DAG.getNode(ISD::AND, DL, VT, Amt,
+                      DAG.getConstant(EltSizeInBits - 1, DL, VT));
+    Amt = DAG.getVectorShuffle(VT, DL, Amt, DAG.getUNDEF(VT),
+                               SmallVector<int>(NumElts, 0));
+  } else {
+    Amt = DAG.getNode(ISD::AND, DL, VT, Amt,
+                      DAG.getConstant(EltSizeInBits - 1, DL, VT));
+  }
 
   bool ConstantAmt = ISD::isBuildVectorOfConstantSDNodes(Amt.getNode());
   bool LegalVarShifts = SupportedVectorVarShift(VT, Subtarget, ISD::SHL) &&
