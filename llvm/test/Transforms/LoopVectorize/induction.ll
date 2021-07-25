@@ -860,10 +860,10 @@ define i64 @trunc_with_first_order_recurrence() {
 ; CHECK-NEXT:    %vec.phi = phi <2 x i64>
 ; CHECK-NEXT:    %vec.ind = phi <2 x i64> [ <i64 1, i64 2>, %vector.ph ], [ %vec.ind.next, %vector.body ]
 ; CHECK-NEXT:    %vec.ind2 = phi <2 x i32> [ <i32 1, i32 2>, %vector.ph ], [ %vec.ind.next3, %vector.body ]
-; CHECK-NEXT:    %vector.recur = phi <2 x i32> [ <i32 poison, i32 42>, %vector.ph ], [ %vec.ind4, %vector.body ]
-; CHECK-NEXT:    %vec.ind4 = phi <2 x i32> [ <i32 1, i32 2>, %vector.ph ], [ %vec.ind.next5, %vector.body ]
-; CHECK-NEXT:    %vec.ind6 = phi <2 x i32> [ <i32 1, i32 2>, %vector.ph ], [ %vec.ind.next7, %vector.body ]
-; CHECK-NEXT:    shufflevector <2 x i32> %vector.recur, <2 x i32> %vec.ind4, <2 x i32> <i32 1, i32 2>
+; CHECK-NEXT:    %vector.recur = phi <2 x i32> [ <i32 poison, i32 42>, %vector.ph ], [ %vec.ind5, %vector.body ]
+; CHECK-NEXT:    %vec.ind5 = phi <2 x i32> [ <i32 1, i32 2>, %vector.ph ], [ %vec.ind.next6, %vector.body ]
+; CHECK-NEXT:    %vec.ind7 = phi <2 x i32> [ <i32 1, i32 2>, %vector.ph ], [ %vec.ind.next8, %vector.body ]
+; CHECK-NEXT:    shufflevector <2 x i32> %vector.recur, <2 x i32> %vec.ind5, <2 x i32> <i32 1, i32 2>
 entry:
   br label %loop
 
