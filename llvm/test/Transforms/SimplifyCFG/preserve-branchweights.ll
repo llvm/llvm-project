@@ -733,10 +733,9 @@ define void @or_icmps_probably_not_harmful(i32 %x, i32 %y, i8* %p) {
 ; CHECK-LABEL: @or_icmps_probably_not_harmful(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[EXPECTED_TRUE:%.*]] = icmp sgt i32 [[X:%.*]], -1
-; CHECK-NEXT:    br i1 [[EXPECTED_TRUE]], label [[EXIT:%.*]], label [[RARE:%.*]], !prof [[PROF19]], !unpredictable !21
-; CHECK:       rare:
 ; CHECK-NEXT:    [[EXPENSIVE:%.*]] = icmp eq i32 [[Y:%.*]], 0
-; CHECK-NEXT:    br i1 [[EXPENSIVE]], label [[EXIT]], label [[FALSE:%.*]]
+; CHECK-NEXT:    [[OR_COND:%.*]] = select i1 [[EXPECTED_TRUE]], i1 true, i1 [[EXPENSIVE]]
+; CHECK-NEXT:    br i1 [[OR_COND]], label [[EXIT:%.*]], label [[FALSE:%.*]], !prof [[PROF21:![0-9]+]], !unpredictable !22
 ; CHECK:       false:
 ; CHECK-NEXT:    store i8 42, i8* [[P:%.*]], align 1
 ; CHECK-NEXT:    br label [[EXIT]]
@@ -768,7 +767,7 @@ define void @or_icmps_not_that_harmful(i32 %x, i32 %y, i8* %p) {
 ; CHECK-NEXT:    [[EXPECTED_TRUE:%.*]] = icmp sgt i32 [[X:%.*]], -1
 ; CHECK-NEXT:    [[EXPENSIVE:%.*]] = icmp eq i32 [[Y:%.*]], 0
 ; CHECK-NEXT:    [[OR_COND:%.*]] = select i1 [[EXPECTED_TRUE]], i1 true, i1 [[EXPENSIVE]]
-; CHECK-NEXT:    br i1 [[OR_COND]], label [[EXIT:%.*]], label [[FALSE:%.*]], !prof [[PROF22:![0-9]+]]
+; CHECK-NEXT:    br i1 [[OR_COND]], label [[EXIT:%.*]], label [[FALSE:%.*]], !prof [[PROF23:![0-9]+]]
 ; CHECK:       false:
 ; CHECK-NEXT:    store i8 42, i8* [[P:%.*]], align 1
 ; CHECK-NEXT:    br label [[EXIT]]
@@ -800,7 +799,7 @@ define void @or_icmps_not_that_harmful_inverted(i32 %x, i32 %y, i8* %p) {
 ; CHECK-NEXT:    [[EXPECTED_TRUE:%.*]] = icmp sgt i32 [[X:%.*]], -1
 ; CHECK-NEXT:    [[EXPENSIVE:%.*]] = icmp eq i32 [[Y:%.*]], 0
 ; CHECK-NEXT:    [[OR_COND:%.*]] = select i1 [[EXPECTED_TRUE]], i1 true, i1 [[EXPENSIVE]]
-; CHECK-NEXT:    br i1 [[OR_COND]], label [[EXIT:%.*]], label [[FALSE:%.*]], !prof [[PROF23:![0-9]+]]
+; CHECK-NEXT:    br i1 [[OR_COND]], label [[EXIT:%.*]], label [[FALSE:%.*]], !prof [[PROF24:![0-9]+]]
 ; CHECK:       false:
 ; CHECK-NEXT:    store i8 42, i8* [[P:%.*]], align 1
 ; CHECK-NEXT:    br label [[EXIT]]
@@ -831,7 +830,7 @@ define void @or_icmps_useful(i32 %x, i32 %y, i8* %p) {
 ; CHECK-NEXT:    [[EXPECTED_TRUE:%.*]] = icmp sle i32 [[X:%.*]], -1
 ; CHECK-NEXT:    [[EXPENSIVE:%.*]] = icmp eq i32 [[Y:%.*]], 0
 ; CHECK-NEXT:    [[OR_COND:%.*]] = select i1 [[EXPECTED_TRUE]], i1 true, i1 [[EXPENSIVE]]
-; CHECK-NEXT:    br i1 [[OR_COND]], label [[EXIT:%.*]], label [[FALSE:%.*]], !prof [[PROF24:![0-9]+]]
+; CHECK-NEXT:    br i1 [[OR_COND]], label [[EXIT:%.*]], label [[FALSE:%.*]], !prof [[PROF25:![0-9]+]]
 ; CHECK:       false:
 ; CHECK-NEXT:    store i8 42, i8* [[P:%.*]], align 1
 ; CHECK-NEXT:    br label [[EXIT]]
@@ -862,7 +861,7 @@ define void @or_icmps_useful_inverted(i32 %x, i32 %y, i8* %p) {
 ; CHECK-NEXT:    [[EXPECTED_FALSE:%.*]] = icmp sgt i32 [[X:%.*]], -1
 ; CHECK-NEXT:    [[EXPENSIVE:%.*]] = icmp eq i32 [[Y:%.*]], 0
 ; CHECK-NEXT:    [[OR_COND:%.*]] = select i1 [[EXPECTED_FALSE]], i1 true, i1 [[EXPENSIVE]]
-; CHECK-NEXT:    br i1 [[OR_COND]], label [[EXIT:%.*]], label [[FALSE:%.*]], !prof [[PROF24]]
+; CHECK-NEXT:    br i1 [[OR_COND]], label [[EXIT:%.*]], label [[FALSE:%.*]], !prof [[PROF25]]
 ; CHECK:       false:
 ; CHECK-NEXT:    store i8 42, i8* [[P:%.*]], align 1
 ; CHECK-NEXT:    br label [[EXIT]]
@@ -991,7 +990,7 @@ define void @and_icmps_not_that_harmful(i32 %x, i32 %y, i8* %p) {
 ; CHECK-NEXT:    [[EXPECTED_FALSE:%.*]] = icmp sgt i32 [[X:%.*]], -1
 ; CHECK-NEXT:    [[EXPENSIVE:%.*]] = icmp eq i32 [[Y:%.*]], 0
 ; CHECK-NEXT:    [[OR_COND:%.*]] = select i1 [[EXPECTED_FALSE]], i1 [[EXPENSIVE]], i1 false
-; CHECK-NEXT:    br i1 [[OR_COND]], label [[FALSE:%.*]], label [[EXIT:%.*]], !prof [[PROF25:![0-9]+]]
+; CHECK-NEXT:    br i1 [[OR_COND]], label [[FALSE:%.*]], label [[EXIT:%.*]], !prof [[PROF26:![0-9]+]]
 ; CHECK:       false:
 ; CHECK-NEXT:    store i8 42, i8* [[P:%.*]], align 1
 ; CHECK-NEXT:    br label [[EXIT]]
@@ -1023,7 +1022,7 @@ define void @and_icmps_not_that_harmful_inverted(i32 %x, i32 %y, i8* %p) {
 ; CHECK-NEXT:    [[EXPECTED_TRUE:%.*]] = icmp sle i32 [[X:%.*]], -1
 ; CHECK-NEXT:    [[EXPENSIVE:%.*]] = icmp eq i32 [[Y:%.*]], 0
 ; CHECK-NEXT:    [[OR_COND:%.*]] = select i1 [[EXPECTED_TRUE]], i1 [[EXPENSIVE]], i1 false
-; CHECK-NEXT:    br i1 [[OR_COND]], label [[FALSE:%.*]], label [[EXIT:%.*]], !prof [[PROF25]]
+; CHECK-NEXT:    br i1 [[OR_COND]], label [[FALSE:%.*]], label [[EXIT:%.*]], !prof [[PROF26]]
 ; CHECK:       false:
 ; CHECK-NEXT:    store i8 42, i8* [[P:%.*]], align 1
 ; CHECK-NEXT:    br label [[EXIT]]
@@ -1054,7 +1053,7 @@ define void @and_icmps_useful(i32 %x, i32 %y, i8* %p) {
 ; CHECK-NEXT:    [[EXPECTED_TRUE:%.*]] = icmp sgt i32 [[X:%.*]], -1
 ; CHECK-NEXT:    [[EXPENSIVE:%.*]] = icmp eq i32 [[Y:%.*]], 0
 ; CHECK-NEXT:    [[OR_COND:%.*]] = select i1 [[EXPECTED_TRUE]], i1 [[EXPENSIVE]], i1 false
-; CHECK-NEXT:    br i1 [[OR_COND]], label [[FALSE:%.*]], label [[EXIT:%.*]], !prof [[PROF26:![0-9]+]]
+; CHECK-NEXT:    br i1 [[OR_COND]], label [[FALSE:%.*]], label [[EXIT:%.*]], !prof [[PROF27:![0-9]+]]
 ; CHECK:       false:
 ; CHECK-NEXT:    store i8 42, i8* [[P:%.*]], align 1
 ; CHECK-NEXT:    br label [[EXIT]]
@@ -1085,7 +1084,7 @@ define void @and_icmps_useful_inverted(i32 %x, i32 %y, i8* %p) {
 ; CHECK-NEXT:    [[EXPECTED_FALSE:%.*]] = icmp sle i32 [[X:%.*]], -1
 ; CHECK-NEXT:    [[EXPENSIVE:%.*]] = icmp eq i32 [[Y:%.*]], 0
 ; CHECK-NEXT:    [[OR_COND:%.*]] = select i1 [[EXPECTED_FALSE]], i1 [[EXPENSIVE]], i1 false
-; CHECK-NEXT:    br i1 [[OR_COND]], label [[FALSE:%.*]], label [[EXIT:%.*]], !prof [[PROF26]]
+; CHECK-NEXT:    br i1 [[OR_COND]], label [[FALSE:%.*]], label [[EXIT:%.*]], !prof [[PROF27]]
 ; CHECK:       false:
 ; CHECK-NEXT:    store i8 42, i8* [[P:%.*]], align 1
 ; CHECK-NEXT:    br label [[EXIT]]
@@ -1157,10 +1156,11 @@ exit:
 ; CHECK: [[PROF18]] = !{!"branch_weights", i32 8, i32 2}
 ; CHECK: [[PROF19]] = !{!"branch_weights", i32 99, i32 1}
 ; CHECK: [[PROF20]] = !{!"branch_weights", i32 1, i32 99}
-; CHECK: [[META21:![0-9]+]] = !{}
-; CHECK: [[PROF22]] = !{!"branch_weights", i32 197, i32 1}
-; CHECK: [[PROF23]] = !{!"branch_weights", i32 100, i32 98}
-; CHECK: [[PROF24]] = !{!"branch_weights", i32 101, i32 99}
-; CHECK: [[PROF25]] = !{!"branch_weights", i32 1, i32 197}
-; CHECK: [[PROF26]] = !{!"branch_weights", i32 99, i32 101}
+; CHECK: [[PROF21]] = !{!"branch_weights", i32 199, i32 1}
+; CHECK: [[META22:![0-9]+]] = !{}
+; CHECK: [[PROF23]] = !{!"branch_weights", i32 197, i32 1}
+; CHECK: [[PROF24]] = !{!"branch_weights", i32 100, i32 98}
+; CHECK: [[PROF25]] = !{!"branch_weights", i32 101, i32 99}
+; CHECK: [[PROF26]] = !{!"branch_weights", i32 1, i32 197}
+; CHECK: [[PROF27]] = !{!"branch_weights", i32 99, i32 101}
 ;.
