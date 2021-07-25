@@ -443,15 +443,16 @@ define <8 x i8> @interleaved_load_vf8_i8_stride4(<32 x i8>* %ptr) {
 ; AVX512:       # %bb.0:
 ; AVX512-NEXT:    vmovdqa (%rdi), %xmm0
 ; AVX512-NEXT:    vmovdqa 16(%rdi), %xmm1
-; AVX512-NEXT:    vmovdqa {{.*#+}} xmm2 = [1,0,3,2,33,32,35,34]
-; AVX512-NEXT:    vmovdqa {{.*#+}} xmm3 = [6,7,2,3,14,15,10,11,14,15,10,11,12,13,14,15]
-; AVX512-NEXT:    vpshufb %xmm3, %xmm1, %xmm4
-; AVX512-NEXT:    vpshufb %xmm3, %xmm0, %xmm3
-; AVX512-NEXT:    vpermi2w %zmm4, %zmm3, %zmm2
-; AVX512-NEXT:    vprold $8, %zmm4, %zmm4
+; AVX512-NEXT:    vmovdqa {{.*#+}} xmm2 = [6,7,2,3,14,15,10,11,14,15,10,11,12,13,14,15]
+; AVX512-NEXT:    vpshufb %xmm2, %xmm1, %xmm3
+; AVX512-NEXT:    vpshuflw {{.*#+}} xmm4 = xmm3[1,0,3,2,4,5,6,7]
+; AVX512-NEXT:    vpshufb %xmm2, %xmm0, %xmm2
+; AVX512-NEXT:    vpshuflw {{.*#+}} xmm5 = xmm2[1,0,3,2,4,5,6,7]
+; AVX512-NEXT:    vpunpcklqdq {{.*#+}} xmm4 = xmm5[0],xmm4[0]
 ; AVX512-NEXT:    vprold $8, %zmm3, %zmm3
-; AVX512-NEXT:    vpunpcklqdq {{.*#+}} xmm3 = xmm3[0],xmm4[0]
-; AVX512-NEXT:    vpaddb %xmm2, %xmm3, %xmm2
+; AVX512-NEXT:    vprold $8, %zmm2, %zmm2
+; AVX512-NEXT:    vpunpcklqdq {{.*#+}} xmm2 = xmm2[0],xmm3[0]
+; AVX512-NEXT:    vpaddb %xmm4, %xmm2, %xmm2
 ; AVX512-NEXT:    vmovdqa {{.*#+}} xmm3 = <1,u,5,u,9,u,13,u,13,u,5,u,12,u,13,u>
 ; AVX512-NEXT:    vpshufb %xmm3, %xmm1, %xmm1
 ; AVX512-NEXT:    vpshufb %xmm3, %xmm0, %xmm0
