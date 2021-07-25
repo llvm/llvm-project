@@ -1335,16 +1335,6 @@ AttributeList AttributeList::removeAttributes(LLVMContext &C,
   return getImpl(C, AttrSets);
 }
 
-AttributeList
-AttributeList::removeParamUndefImplyingAttributes(LLVMContext &C,
-                                                  unsigned ArgNo) const {
-  AttrBuilder B;
-  B.addAttribute(Attribute::NoUndef);
-  B.addDereferenceableAttr(1);
-  B.addDereferenceableOrNullAttr(1);
-  return removeParamAttributes(C, ArgNo, B);
-}
-
 AttributeList AttributeList::addDereferenceableAttr(LLVMContext &C,
                                                     unsigned Index,
                                                     uint64_t Bytes) const {
@@ -1924,6 +1914,14 @@ AttrBuilder AttributeFuncs::typeIncompatible(Type *Ty) {
     Incompatible.addAttribute(Attribute::NoUndef);
 
   return Incompatible;
+}
+
+AttrBuilder AttributeFuncs::getUBImplyingAttributes() {
+  AttrBuilder B;
+  B.addAttribute(Attribute::NoUndef);
+  B.addDereferenceableAttr(1);
+  B.addDereferenceableOrNullAttr(1);
+  return B;
 }
 
 template<typename AttrClass>
