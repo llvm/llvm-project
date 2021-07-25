@@ -351,27 +351,14 @@ define void @atomic_load_relaxed(i64, i64, i128* %p, i128* %p2) {
 ; CHECK-LLSC-O1-NEXT:    sub x9, x8, #64 // =64
 ; CHECK-LLSC-O1-NEXT:  .LBB4_1: // %atomicrmw.start
 ; CHECK-LLSC-O1-NEXT:    // =>This Inner Loop Header: Depth=1
-; CHECK-LLSC-O1-NEXT:    ldxp x11, x10, [x2]
-; CHECK-LLSC-O1-NEXT:    sub x12, x8, #64 // =64
-; CHECK-LLSC-O1-NEXT:    tst wzr, #0x1
-; CHECK-LLSC-O1-NEXT:    lsl x13, x10, x8
-; CHECK-LLSC-O1-NEXT:    lsr x14, x10, x9
-; CHECK-LLSC-O1-NEXT:    lsl x10, x10, x12
-; CHECK-LLSC-O1-NEXT:    csel x10, x14, x10, ne
-; CHECK-LLSC-O1-NEXT:    csel x13, x13, xzr, ne
-; CHECK-LLSC-O1-NEXT:    csel x10, xzr, x10, ne
-; CHECK-LLSC-O1-NEXT:    orr x11, x11, x13
-; CHECK-LLSC-O1-NEXT:    lsl x13, x10, x9
-; CHECK-LLSC-O1-NEXT:    lsr x12, x10, x12
-; CHECK-LLSC-O1-NEXT:    orr x13, x13, x11, lsr #0
-; CHECK-LLSC-O1-NEXT:    tst wzr, #0x1
-; CHECK-LLSC-O1-NEXT:    csel x12, x13, x12, ne
-; CHECK-LLSC-O1-NEXT:    csel x12, x11, x12, ne
-; CHECK-LLSC-O1-NEXT:    stxp w13, x11, x12, [x2]
-; CHECK-LLSC-O1-NEXT:    cbnz w13, .LBB4_1
+; CHECK-LLSC-O1-NEXT:    ldxp x10, x8, [x2]
+; CHECK-LLSC-O1-NEXT:    lsl x8, x8, x9
+; CHECK-LLSC-O1-NEXT:    lsr x11, x8, x9
+; CHECK-LLSC-O1-NEXT:    stxp w12, x10, x11, [x2]
+; CHECK-LLSC-O1-NEXT:    cbnz w12, .LBB4_1
 ; CHECK-LLSC-O1-NEXT:  // %bb.2: // %atomicrmw.end
-; CHECK-LLSC-O1-NEXT:    mov v0.d[0], x11
-; CHECK-LLSC-O1-NEXT:    mov v0.d[1], x10
+; CHECK-LLSC-O1-NEXT:    mov v0.d[0], x10
+; CHECK-LLSC-O1-NEXT:    mov v0.d[1], x8
 ; CHECK-LLSC-O1-NEXT:    str q0, [x3]
 ; CHECK-LLSC-O1-NEXT:    ret
 ;
@@ -381,27 +368,14 @@ define void @atomic_load_relaxed(i64, i64, i128* %p, i128* %p2) {
 ; CHECK-CAS-O1-NEXT:    sub x9, x8, #64 // =64
 ; CHECK-CAS-O1-NEXT:  .LBB4_1: // %atomicrmw.start
 ; CHECK-CAS-O1-NEXT:    // =>This Inner Loop Header: Depth=1
-; CHECK-CAS-O1-NEXT:    ldxp x11, x10, [x2]
-; CHECK-CAS-O1-NEXT:    sub x12, x8, #64 // =64
-; CHECK-CAS-O1-NEXT:    lsl x13, x10, x8
-; CHECK-CAS-O1-NEXT:    lsr x14, x10, x9
-; CHECK-CAS-O1-NEXT:    lsl x10, x10, x12
-; CHECK-CAS-O1-NEXT:    tst wzr, #0x1
-; CHECK-CAS-O1-NEXT:    csel x13, x13, xzr, ne
-; CHECK-CAS-O1-NEXT:    csel x10, x14, x10, ne
-; CHECK-CAS-O1-NEXT:    csel x10, xzr, x10, ne
-; CHECK-CAS-O1-NEXT:    orr x11, x11, x13
-; CHECK-CAS-O1-NEXT:    lsl x13, x10, x9
-; CHECK-CAS-O1-NEXT:    orr x13, x13, x11, lsr #0
-; CHECK-CAS-O1-NEXT:    lsr x12, x10, x12
-; CHECK-CAS-O1-NEXT:    tst wzr, #0x1
-; CHECK-CAS-O1-NEXT:    csel x12, x13, x12, ne
-; CHECK-CAS-O1-NEXT:    csel x12, x11, x12, ne
-; CHECK-CAS-O1-NEXT:    stxp w13, x11, x12, [x2]
-; CHECK-CAS-O1-NEXT:    cbnz w13, .LBB4_1
+; CHECK-CAS-O1-NEXT:    ldxp x10, x8, [x2]
+; CHECK-CAS-O1-NEXT:    lsl x8, x8, x9
+; CHECK-CAS-O1-NEXT:    lsr x11, x8, x9
+; CHECK-CAS-O1-NEXT:    stxp w12, x10, x11, [x2]
+; CHECK-CAS-O1-NEXT:    cbnz w12, .LBB4_1
 ; CHECK-CAS-O1-NEXT:  // %bb.2: // %atomicrmw.end
-; CHECK-CAS-O1-NEXT:    mov v0.d[0], x11
-; CHECK-CAS-O1-NEXT:    mov v0.d[1], x10
+; CHECK-CAS-O1-NEXT:    mov v0.d[0], x10
+; CHECK-CAS-O1-NEXT:    mov v0.d[1], x8
 ; CHECK-CAS-O1-NEXT:    str q0, [x3]
 ; CHECK-CAS-O1-NEXT:    ret
 ;
