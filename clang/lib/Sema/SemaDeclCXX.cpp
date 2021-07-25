@@ -26,6 +26,7 @@
 #include "clang/AST/TypeOrdering.h"
 #include "clang/Basic/AttributeCommonInfo.h"
 #include "clang/Basic/PartialDiagnostic.h"
+#include "clang/Basic/Specifiers.h"
 #include "clang/Basic/TargetInfo.h"
 #include "clang/Lex/LiteralSupport.h"
 #include "clang/Lex/Preprocessor.h"
@@ -17647,16 +17648,12 @@ bool Sema::DefineUsedVTables() {
     // no key function or the key function is inlined. Don't warn in C++ ABIs
     // that lack key functions, since the user won't be able to make one.
     if (Context.getTargetInfo().getCXXABI().hasKeyFunctions() &&
-        Class->isExternallyVisible() && ClassTSK != TSK_ImplicitInstantiation) {
+        Class->isExternallyVisible() && ClassTSK != TSK_ImplicitInstantiation &&
+        ClassTSK != TSK_ExplicitInstantiationDefinition) {
       const FunctionDecl *KeyFunctionDef = nullptr;
       if (!KeyFunction || (KeyFunction->hasBody(KeyFunctionDef) &&
-                           KeyFunctionDef->isInlined())) {
-        Diag(Class->getLocation(),
-             ClassTSK == TSK_ExplicitInstantiationDefinition
-                 ? diag::warn_weak_template_vtable
-                 : diag::warn_weak_vtable)
-            << Class;
-      }
+                           KeyFunctionDef->isInlined()))
+        Diag(Class->getLocation(), diag::warn_weak_vtable) << Class;
     }
   }
   VTableUses.clear();
