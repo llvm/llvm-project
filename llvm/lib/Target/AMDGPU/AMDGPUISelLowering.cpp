@@ -2453,87 +2453,119 @@ SDValue AMDGPUTargetLowering::LowerCTLZ_CTTZ(SDValue Op, SelectionDAG &DAG) cons
 
 SDValue AMDGPUTargetLowering::LowerINT_TO_FP32(SDValue Op, SelectionDAG &DAG,
                                                bool Signed) const {
-  // Unsigned
-  // cul2f(ulong u)
-  //{
-  //  uint lz = clz(u);
-  //  uint e = (u != 0) ? 127U + 63U - lz : 0;
-  //  u = (u << lz) & 0x7fffffffffffffffUL;
-  //  ulong t = u & 0xffffffffffUL;
-  //  uint v = (e << 23) | (uint)(u >> 40);
-  //  uint r = t > 0x8000000000UL ? 1U : (t == 0x8000000000UL ? v & 1U : 0U);
-  //  return as_float(v + r);
-  //}
-  // Signed
-  // cl2f(long l)
-  //{
-  //  long s = l >> 63;
-  //  float r = cul2f((l + s) ^ s);
-  //  return s ? -r : r;
-  //}
+  // The regular method coverting a 64-bit integer to float roughly consists of
+  // 2 steps: normalization and rounding. In fact, after normalization, the
+  // conversion from a 64-bit integer to a float is essentially the same as the
+  // one from a 32-bit integer. The only difference is that it has more
+  // trailing bits to be rounded. To leverage the native 32-bit conversion, a
+  // 64-bit integer could be preprocessed and fit into a 32-bit integer then
+  // converted into the correct float number. The basic steps for the unsigned
+  // conversion are illustrated in the following pseudo code:
+  //
+  // f32 uitofp(i64 u) {
+  //   i32 hi, lo = split(u);
+  //   // Only count the leading zeros in hi as we have native support of the
+  //   // conversion from i32 to f32. If hi is all 0s, the conversion is
+  //   // reduced to a 32-bit one automatically.
+  //   i32 shamt = clz(hi); // Return 32 if hi is all 0s.
+  //   u <<= shamt;
+  //   hi, lo = split(u);
+  //   hi |= (lo != 0) ? 1 : 0; // Adjust rounding bit in hi based on lo.
+  //   // convert it as a 32-bit integer and scale the result back.
+  //   return uitofp(hi) * 2^(32 - shamt);
+  // }
+  //
+  // The signed one follows the same principle but uses 'ffbh_i32' to count its
+  // sign bits instead. If 'ffbh_i32' is not available, its absolute value is
+  // converted instead followed by negation based its sign bit.
 
   SDLoc SL(Op);
   SDValue Src = Op.getOperand(0);
-  SDValue L = Src;
 
-  SDValue S;
-  if (Signed) {
-    const SDValue SignBit = DAG.getConstant(63, SL, MVT::i64);
-    S = DAG.getNode(ISD::SRA, SL, MVT::i64, L, SignBit);
-
-    SDValue LPlusS = DAG.getNode(ISD::ADD, SL, MVT::i64, L, S);
-    L = DAG.getNode(ISD::XOR, SL, MVT::i64, LPlusS, S);
-  }
-
-  EVT SetCCVT = getSetCCResultType(DAG.getDataLayout(),
-                                   *DAG.getContext(), MVT::f32);
-
-
+  EVT SetCCVT =
+      getSetCCResultType(DAG.getDataLayout(), *DAG.getContext(), MVT::i32);
   SDValue ZeroI32 = DAG.getConstant(0, SL, MVT::i32);
-  SDValue ZeroI64 = DAG.getConstant(0, SL, MVT::i64);
-  SDValue LZ = DAG.getNode(ISD::CTLZ_ZERO_UNDEF, SL, MVT::i64, L);
-  LZ = DAG.getNode(ISD::TRUNCATE, SL, MVT::i32, LZ);
 
-  SDValue K = DAG.getConstant(127U + 63U, SL, MVT::i32);
-  SDValue E = DAG.getSelect(SL, MVT::i32,
-    DAG.getSetCC(SL, SetCCVT, L, ZeroI64, ISD::SETNE),
-    DAG.getNode(ISD::SUB, SL, MVT::i32, K, LZ),
-    ZeroI32);
+  SDValue Lo, Hi;
+  std::tie(Lo, Hi) = split64BitValue(Src, DAG);
+  SDValue Sign;
+  SDValue ShAmt;
+  if (Signed && Subtarget->isGCN()) {
+    // We also need to consider the sign bit in Lo if Hi has just sign bits,
+    // i.e. Hi is 0 or -1. However, that only needs to take the MSB into
+    // account.
+    SDValue HasSameSign =
+        DAG.getSetCC(SL, SetCCVT, DAG.getNode(ISD::XOR, SL, MVT::i32, Lo, Hi),
+                     ZeroI32, ISD::SETGE);
+    SDValue MaxShAmt = DAG.getSelect(SL, MVT::i32, HasSameSign,
+                                     DAG.getConstant(33, SL, MVT::i32),
+                                     DAG.getConstant(32, SL, MVT::i32));
+    // Count the leading sign bits.
+    ShAmt = DAG.getNode(AMDGPUISD::FFBH_I32, SL, MVT::i32, Hi);
+    ShAmt = DAG.getSelect(SL, MVT::i32,
+                          DAG.getSetCC(SL, SetCCVT, ShAmt,
+                                       DAG.getAllOnesConstant(SL, MVT::i32),
+                                       ISD::SETNE),
+                          ShAmt, MaxShAmt);
+    // The shift amount for signed integers is [1, 33].
+    // Different from unsigned conversion, the shift should be one bit less to
+    // preserve the sign bit.
+    ShAmt = DAG.getNode(ISD::SUB, SL, MVT::i32, ShAmt,
+                        DAG.getConstant(1, SL, MVT::i32));
+  } else {
+    if (Signed) {
+      // Without 'ffbh_i32', only leading zeros could be counted. Take the
+      // absolute value first.
+      Sign = DAG.getNode(ISD::SRA, SL, MVT::i64, Src,
+                         DAG.getConstant(63, SL, MVT::i64));
+      SDValue Abs =
+          DAG.getNode(ISD::XOR, SL, MVT::i64,
+                      DAG.getNode(ISD::ADD, SL, MVT::i64, Src, Sign), Sign);
+      std::tie(Lo, Hi) = split64BitValue(Abs, DAG);
+    }
+    // Count the leading zeros.
+    ShAmt = DAG.getNode(ISD::CTLZ, SL, MVT::i32, Hi);
+    // The shift amount for signed integers is [0, 32].
+  }
+  // Normalize the given 64-bit integer.
+  SDValue Norm = DAG.getNode(ISD::SHL, SL, MVT::i64, Src, ShAmt);
+  // Split it again.
+  std::tie(Lo, Hi) = split64BitValue(Norm, DAG);
+  // Calculate the adjust bit for rounding.
+  SDValue Adjust = DAG.getSelect(
+      SL, MVT::i32, DAG.getSetCC(SL, SetCCVT, Lo, ZeroI32, ISD::SETNE),
+      DAG.getConstant(1, SL, MVT::i32), ZeroI32);
+  // Get the 32-bit normalized integer.
+  Norm = DAG.getNode(ISD::OR, SL, MVT::i32, Hi, Adjust);
+  // Convert the normalized 32-bit integer into f32.
+  unsigned Opc =
+      (Signed && Subtarget->isGCN()) ? ISD::SINT_TO_FP : ISD::UINT_TO_FP;
+  SDValue FVal = DAG.getNode(Opc, SL, MVT::f32, Norm);
 
-  SDValue U = DAG.getNode(ISD::AND, SL, MVT::i64,
-    DAG.getNode(ISD::SHL, SL, MVT::i64, L, LZ),
-    DAG.getConstant((-1ULL) >> 1, SL, MVT::i64));
+  // Finally, need to scale back the converted floating number as the original
+  // 64-bit integer is converted as a 32-bit one.
+  ShAmt = DAG.getNode(ISD::SUB, SL, MVT::i32, DAG.getConstant(32, SL, MVT::i32),
+                      ShAmt);
+  // On GCN, use LDEXP directly.
+  if (Subtarget->isGCN())
+    return DAG.getNode(AMDGPUISD::LDEXP, SL, MVT::f32, FVal, ShAmt);
 
-  SDValue T = DAG.getNode(ISD::AND, SL, MVT::i64, U,
-                          DAG.getConstant(0xffffffffffULL, SL, MVT::i64));
-
-  SDValue UShl = DAG.getNode(ISD::SRL, SL, MVT::i64,
-                             U, DAG.getConstant(40, SL, MVT::i64));
-
-  SDValue V = DAG.getNode(ISD::OR, SL, MVT::i32,
-    DAG.getNode(ISD::SHL, SL, MVT::i32, E, DAG.getConstant(23, SL, MVT::i32)),
-    DAG.getNode(ISD::TRUNCATE, SL, MVT::i32,  UShl));
-
-  SDValue C = DAG.getConstant(0x8000000000ULL, SL, MVT::i64);
-  SDValue RCmp = DAG.getSetCC(SL, SetCCVT, T, C, ISD::SETUGT);
-  SDValue TCmp = DAG.getSetCC(SL, SetCCVT, T, C, ISD::SETEQ);
-
-  SDValue One = DAG.getConstant(1, SL, MVT::i32);
-
-  SDValue VTrunc1 = DAG.getNode(ISD::AND, SL, MVT::i32, V, One);
-
-  SDValue R = DAG.getSelect(SL, MVT::i32,
-    RCmp,
-    One,
-    DAG.getSelect(SL, MVT::i32, TCmp, VTrunc1, ZeroI32));
-  R = DAG.getNode(ISD::ADD, SL, MVT::i32, V, R);
-  R = DAG.getNode(ISD::BITCAST, SL, MVT::f32, R);
-
-  if (!Signed)
-    return R;
-
-  SDValue RNeg = DAG.getNode(ISD::FNEG, SL, MVT::f32, R);
-  return DAG.getSelect(SL, MVT::f32, DAG.getSExtOrTrunc(S, SL, SetCCVT), RNeg, R);
+  // Otherwise, align 'ShAmt' to the exponent part and add it into the exponent
+  // part directly to emulate the multiplication of 2^ShAmt. That 8-bit
+  // exponent is enough to avoid overflowing into the sign bit.
+  SDValue Exp = DAG.getNode(ISD::SHL, SL, MVT::i32, ShAmt,
+                            DAG.getConstant(23, SL, MVT::i32));
+  SDValue IVal =
+      DAG.getNode(ISD::ADD, SL, MVT::i32,
+                  DAG.getNode(ISD::BITCAST, SL, MVT::i32, FVal), Exp);
+  if (Signed) {
+    // Set the sign bit.
+    Sign = DAG.getNode(ISD::SHL, SL, MVT::i32,
+                       DAG.getNode(ISD::TRUNCATE, SL, MVT::i32, Sign),
+                       DAG.getConstant(31, SL, MVT::i32));
+    IVal = DAG.getNode(ISD::OR, SL, MVT::i32, IVal, Sign);
+  }
+  return DAG.getNode(ISD::BITCAST, SL, MVT::f32, IVal);
 }
 
 SDValue AMDGPUTargetLowering::LowerINT_TO_FP64(SDValue Op, SelectionDAG &DAG,
