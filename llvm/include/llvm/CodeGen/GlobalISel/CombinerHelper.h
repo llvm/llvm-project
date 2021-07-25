@@ -264,6 +264,9 @@ public:
   void applyCombineShlOfExtend(MachineInstr &MI,
                                const RegisterImmPair &MatchData);
 
+  /// Fold away a merge of an unmerge of the corresponding values.
+  bool matchCombineMergeUnmerge(MachineInstr &MI, Register &MatchInfo);
+
   /// Reduce a shift by a constant to an unmerge and a shift on a half sized
   /// type. This will not produce a shift smaller than \p TargetShiftSize.
   bool matchCombineShiftToUnmerge(MachineInstr &MI, unsigned TargetShiftSize,

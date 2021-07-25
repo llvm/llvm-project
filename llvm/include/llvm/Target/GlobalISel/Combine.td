@@ -490,6 +490,14 @@ def unmerge_merge : GICombineRule<
   (apply [{ Helper.applyCombineUnmergeMergeToPlainValues(*${d}, ${info}); }])
 >;
 
+// Fold merge(unmerge).
+def merge_unmerge : GICombineRule<
+  (defs root:$d, register_matchinfo:$matchinfo),
+  (match (wip_match_opcode G_MERGE_VALUES):$d,
+  [{ return Helper.matchCombineMergeUnmerge(*${d}, ${matchinfo}); }]),
+  (apply [{ Helper.replaceSingleDefInstWithReg(*${d}, ${matchinfo}); }])
+>;
+
 // Fold (fabs (fabs x)) -> (fabs x).
 def fabs_fabs_fold: GICombineRule<
   (defs root:$root, register_matchinfo:$matchinfo),
@@ -694,7 +702,7 @@ def all_combines : GICombineGroup<[trivial_combines, insert_vec_elt_combines,
     known_bits_simplifications, ext_ext_fold,
     not_cmp_fold, opt_brcond_by_inverting_cond,
     unmerge_merge, fabs_fabs_fold, unmerge_cst, unmerge_dead_to_trunc,
-    unmerge_zext_to_zext, trunc_ext_fold, trunc_shl,
+    unmerge_zext_to_zext, merge_unmerge, trunc_ext_fold, trunc_shl,
     const_combines, xor_of_and_with_same_reg, ptr_add_with_zero,
     shift_immed_chain, shift_of_shifted_logic_chain, load_or_combine,
     div_rem_to_divrem, funnel_shift_combines, form_bitfield_extract]>;
