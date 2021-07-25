@@ -339,7 +339,7 @@ void ConcatOutputSection::writeTo(uint8_t *buf) const {
 void ConcatOutputSection::finalizeFlags(InputSection *input) {
   switch (sectionType(input->getFlags())) {
   default /*type-unspec'ed*/:
-    // FIXME: Add additional logics here when supporting emitting obj files.
+    // FIXME: Add additional logic here when supporting emitting obj files.
     break;
   case S_4BYTE_LITERALS:
   case S_8BYTE_LITERALS:
@@ -373,8 +373,5 @@ NamePair macho::maybeRenameSection(NamePair key) {
   auto newNames = config->sectionRenameMap.find(key);
   if (newNames != config->sectionRenameMap.end())
     return newNames->second;
-  auto newName = config->segmentRenameMap.find(key.first);
-  if (newName != config->segmentRenameMap.end())
-    return std::make_pair(newName->second, key.second);
   return key;
 }
