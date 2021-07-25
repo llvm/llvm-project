@@ -39,9 +39,15 @@ define i32 @predictably_taken(i32 %a, i32 %b, i32 %c, i32 %d) {
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    call void @sideeffect0()
 ; CHECK-NEXT:    [[CMP:%.*]] = icmp eq i32 [[A:%.*]], [[B:%.*]]
+; CHECK-NEXT:    br i1 [[CMP]], label [[COND_TRUE:%.*]], label [[COND_FALSE:%.*]], !prof [[PROF0:![0-9]+]]
+; CHECK:       cond.true:
 ; CHECK-NEXT:    [[V0:%.*]] = add i32 [[C:%.*]], [[D:%.*]]
+; CHECK-NEXT:    br label [[END:%.*]]
+; CHECK:       cond.false:
 ; CHECK-NEXT:    [[V1:%.*]] = sub i32 [[C]], [[D]]
-; CHECK-NEXT:    [[RES:%.*]] = select i1 [[CMP]], i32 [[V0]], i32 [[V1]], !prof [[PROF0:![0-9]+]]
+; CHECK-NEXT:    br label [[END]]
+; CHECK:       end:
+; CHECK-NEXT:    [[RES:%.*]] = phi i32 [ [[V0]], [[COND_TRUE]] ], [ [[V1]], [[COND_FALSE]] ]
 ; CHECK-NEXT:    call void @sideeffect1()
 ; CHECK-NEXT:    ret i32 [[RES]]
 ;
@@ -99,9 +105,15 @@ define i32 @predictably_nontaken(i32 %a, i32 %b, i32 %c, i32 %d) {
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    call void @sideeffect0()
 ; CHECK-NEXT:    [[CMP:%.*]] = icmp eq i32 [[A:%.*]], [[B:%.*]]
+; CHECK-NEXT:    br i1 [[CMP]], label [[COND_FALSE:%.*]], label [[COND_TRUE:%.*]], !prof [[PROF0]]
+; CHECK:       cond.true:
 ; CHECK-NEXT:    [[V0:%.*]] = add i32 [[C:%.*]], [[D:%.*]]
+; CHECK-NEXT:    br label [[END:%.*]]
+; CHECK:       cond.false:
 ; CHECK-NEXT:    [[V1:%.*]] = sub i32 [[C]], [[D]]
-; CHECK-NEXT:    [[RES:%.*]] = select i1 [[CMP]], i32 [[V1]], i32 [[V0]], !prof [[PROF0]]
+; CHECK-NEXT:    br label [[END]]
+; CHECK:       end:
+; CHECK-NEXT:    [[RES:%.*]] = phi i32 [ [[V0]], [[COND_TRUE]] ], [ [[V1]], [[COND_FALSE]] ]
 ; CHECK-NEXT:    call void @sideeffect1()
 ; CHECK-NEXT:    ret i32 [[RES]]
 ;
