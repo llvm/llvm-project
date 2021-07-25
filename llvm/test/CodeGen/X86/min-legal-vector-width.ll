@@ -1690,7 +1690,6 @@ define <32 x i8> @var_rotate_v32i8(<32 x i8> %a, <32 x i8> %b) nounwind "min-leg
 define <32 x i8> @splatvar_rotate_v32i8(<32 x i8> %a, <32 x i8> %b) nounwind "min-legal-vector-width"="256" {
 ; CHECK-AVX512-LABEL: splatvar_rotate_v32i8:
 ; CHECK-AVX512:       # %bb.0:
-; CHECK-AVX512-NEXT:    vpbroadcastb %xmm1, %xmm1
 ; CHECK-AVX512-NEXT:    vpand {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm1, %xmm1
 ; CHECK-AVX512-NEXT:    vpmovzxbq {{.*#+}} xmm2 = xmm1[0],zero,zero,zero,zero,zero,zero,zero,xmm1[1],zero,zero,zero,zero,zero,zero,zero
 ; CHECK-AVX512-NEXT:    vpsllw %xmm2, %ymm0, %ymm3
@@ -1710,7 +1709,6 @@ define <32 x i8> @splatvar_rotate_v32i8(<32 x i8> %a, <32 x i8> %b) nounwind "mi
 ;
 ; CHECK-VBMI-LABEL: splatvar_rotate_v32i8:
 ; CHECK-VBMI:       # %bb.0:
-; CHECK-VBMI-NEXT:    vpbroadcastb %xmm1, %xmm1
 ; CHECK-VBMI-NEXT:    vpand {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm1, %xmm1
 ; CHECK-VBMI-NEXT:    vpmovzxbq {{.*#+}} xmm2 = xmm1[0],zero,zero,zero,zero,zero,zero,zero,xmm1[1],zero,zero,zero,zero,zero,zero,zero
 ; CHECK-VBMI-NEXT:    vpsllw %xmm2, %ymm0, %ymm3
