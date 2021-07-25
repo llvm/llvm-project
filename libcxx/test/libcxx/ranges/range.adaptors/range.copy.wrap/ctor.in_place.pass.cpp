@@ -13,7 +13,7 @@
 // template<class ...Args>
 // explicit <copyable-box>::<copyable-box>(in_place_t, Args&& ...args);
 
-#include <__ranges/copyable_box.h>
+#include <ranges>
 
 #include <cassert>
 #include <type_traits>

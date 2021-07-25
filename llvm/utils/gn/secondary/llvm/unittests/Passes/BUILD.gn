@@ -3,7 +3,11 @@ import("//llvm/utils/unittest/unittest.gni")
 # Keyed off LLVM_ENABLE_PLUGINS in the CMake build, which is usually false
 # on Windows and true elsewhere.
 if (host_os != "win") {
-  foreach(plugin, ["TestPlugin", "DoublerPlugin"]) {
+  foreach(plugin,
+          [
+            "TestPlugin",
+            "DoublerPlugin",
+          ]) {
     loadable_module(plugin) {
       # Put plugin next to the unit test executable.
       output_dir = target_out_dir

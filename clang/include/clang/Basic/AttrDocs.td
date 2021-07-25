@@ -4550,11 +4550,14 @@ provided it declares the right formal arguments.
 
 In most respects, this is similar to the ``swiftcall`` attribute, except for
 the following:
+
 - A parameter may be marked ``swift_async_context``, ``swift_context``
   or ``swift_indirect_result`` (with the same restrictions on parameter
   ordering as ``swiftcall``) but the parameter attribute
   ``swift_error_result`` is not permitted.
+
 - A ``swiftasynccall`` function must have return type ``void``.
+
 - Within a ``swiftasynccall`` function, a call to a ``swiftasynccall``
   function that is the immediate operand of a ``return`` statement is
   guaranteed to be performed as a tail call. This syntax is allowed even

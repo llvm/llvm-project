@@ -357,6 +357,24 @@ func @insertvalue_wrong_nesting() {
 
 // -----
 
+func @insertvalue_invalid_type(%a : !llvm.array<1 x i32>) -> !llvm.array<1 x i32> {
+  // expected-error@+1 {{'llvm.insertvalue' op Type mismatch: cannot insert '!llvm.array<1 x i32>' into '!llvm.array<1 x i32>'}}
+  %b = "llvm.insertvalue"(%a, %a) {position = [0]} : (!llvm.array<1 x i32>, !llvm.array<1 x i32>) -> !llvm.array<1 x i32>
+  return %b : !llvm.array<1 x i32>
+}
+
+// -----
+
+func @extractvalue_invalid_type(%a : !llvm.array<4 x vector<8xf32>>) -> !llvm.array<4 x vector<8xf32>> {
+  // expected-error@+1 {{'llvm.extractvalue' op Type mismatch: extracting from '!llvm.array<4 x vector<8xf32>>' should produce 'vector<8xf32>' but this op returns '!llvm.array<4 x vector<8xf32>>'}}
+  %b = "llvm.extractvalue"(%a) {position = [1]}
+            : (!llvm.array<4 x vector<8xf32>>) -> !llvm.array<4 x vector<8xf32>>
+  return %b : !llvm.array<4 x vector<8xf32>>
+}
+
+
+// -----
+
 func @extractvalue_non_llvm_type(%a : i32, %b : tensor<*xi32>) {
   // expected-error@+1 {{expected LLVM IR Dialect type}}
   llvm.extractvalue %b[0] : tensor<*xi32>
@@ -418,6 +436,22 @@ func @invalid_vector_type_2(%arg0: vector<4xf32>, %arg1: i32, %arg2: f32) {
 func @invalid_vector_type_3(%arg0: vector<4xf32>, %arg1: i32, %arg2: f32) {
   // expected-error@+1 {{expected LLVM IR dialect vector type for operand #1}}
   %0 = llvm.shufflevector %arg2, %arg2 [0 : i32, 0 : i32, 0 : i32, 0 : i32, 7 : i32] : f32, f32
+}
+
+// -----
+
+func @invalid_vector_type_4(%a : vector<4xf32>, %idx : i32) -> vector<4xf32> {
+  // expected-error@+1 {{'llvm.extractelement' op Type mismatch: extracting from 'vector<4xf32>' should produce 'f32' but this op returns 'vector<4xf32>'}}
+  %b = "llvm.extractelement"(%a, %idx) : (vector<4xf32>, i32) -> vector<4xf32>
+  return %b : vector<4xf32>
+}
+
+// -----
+
+func @invalid_vector_type_5(%a : vector<4xf32>, %idx : i32) -> vector<4xf32> {
+  // expected-error@+1 {{'llvm.insertelement' op Type mismatch: cannot insert 'vector<4xf32>' into 'vector<4xf32>'}}
+  %b = "llvm.insertelement"(%a, %a, %idx) : (vector<4xf32>, vector<4xf32>, i32) -> vector<4xf32>
+  return %b : vector<4xf32>
 }
 
 // -----

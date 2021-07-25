@@ -1,5 +1,11 @@
 import("//llvm/tools/binutils_symlinks.gni")
+import("//llvm/utils/TableGen/tablegen.gni")
 import("//llvm/utils/gn/build/symlink_or_copy.gni")
+
+tablegen("Opts") {
+  visibility = [ ":llvm-readobj" ]
+  args = [ "-gen-opt-parser-defs" ]
+}
 
 symlinks = [ "llvm-readelf" ]
 if (llvm_install_binutils_symlinks) {
@@ -23,12 +29,14 @@ group("symlinks") {
 
 executable("llvm-readobj") {
   deps = [
+    ":Opts",
     "//llvm/lib/BinaryFormat",
     "//llvm/lib/DebugInfo/CodeView",
     "//llvm/lib/DebugInfo/DWARF",
     "//llvm/lib/DebugInfo/MSF",
     "//llvm/lib/DebugInfo/PDB",
     "//llvm/lib/Object",
+    "//llvm/lib/Option",
     "//llvm/lib/Support",
   ]
   sources = [

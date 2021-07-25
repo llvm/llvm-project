@@ -33,7 +33,7 @@ class MemoryTagTestCase(TestBase):
         # If you're on AArch64 you could have MTE but the remote process
         # must also support it. If you're on any other arhcitecture you
         # won't have any tagging at all. So the error message is different.
-        if self.getArchitecture() == "aarch64":
+        if self.isAArch64():
             expected = "error: Process does not support memory tagging"
         else:
             expected = "error: This architecture does not support memory tagging"

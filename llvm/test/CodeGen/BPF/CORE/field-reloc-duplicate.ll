@@ -19,7 +19,7 @@ entry:
   store %struct.s1* %arg, %struct.s1** %arg.addr, align 8, !tbaa !18
   call void @llvm.dbg.declare(metadata %struct.s1** %arg.addr, metadata !17, metadata !DIExpression()), !dbg !22
   %0 = load %struct.s1*, %struct.s1** %arg.addr, align 8, !dbg !23, !tbaa !18
-  %1 = call i32* @llvm.preserve.struct.access.index.p0i32.p0s_struct.s1s(%struct.s1* %0, i32 0, i32 0), !dbg !24, !llvm.preserve.access.index !12
+  %1 = call i32* @llvm.preserve.struct.access.index.p0i32.p0s_struct.s1s(%struct.s1* elementtype(%struct.s1) %0, i32 0, i32 0), !dbg !24, !llvm.preserve.access.index !12
   %2 = load i32, i32* %1, align 4, !dbg !24, !tbaa !25
   ret i32 %2, !dbg !28
 }
@@ -37,7 +37,7 @@ entry:
   store %struct.s1* %arg, %struct.s1** %arg.addr, align 8, !tbaa !18
   call void @llvm.dbg.declare(metadata %struct.s1** %arg.addr, metadata !31, metadata !DIExpression()), !dbg !32
   %0 = load %struct.s1*, %struct.s1** %arg.addr, align 8, !dbg !33, !tbaa !18
-  %1 = call i32* @llvm.preserve.struct.access.index.p0i32.p0s_struct.s1s(%struct.s1* %0, i32 0, i32 0), !dbg !34, !llvm.preserve.access.index !12
+  %1 = call i32* @llvm.preserve.struct.access.index.p0i32.p0s_struct.s1s(%struct.s1* elementtype(%struct.s1) %0, i32 0, i32 0), !dbg !34, !llvm.preserve.access.index !12
   %2 = load i32, i32* %1, align 4, !dbg !34, !tbaa !25
   ret i32 %2, !dbg !35
 }

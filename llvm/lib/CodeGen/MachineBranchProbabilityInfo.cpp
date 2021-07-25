@@ -68,26 +68,6 @@ bool MachineBranchProbabilityInfo::isEdgeHot(
   return getEdgeProbability(Src, Dst) > HotProb;
 }
 
-MachineBasicBlock *
-MachineBranchProbabilityInfo::getHotSucc(MachineBasicBlock *MBB) const {
-  auto MaxProb = BranchProbability::getZero();
-  MachineBasicBlock *MaxSucc = nullptr;
-  for (MachineBasicBlock::const_succ_iterator I = MBB->succ_begin(),
-       E = MBB->succ_end(); I != E; ++I) {
-    auto Prob = getEdgeProbability(MBB, I);
-    if (Prob > MaxProb) {
-      MaxProb = Prob;
-      MaxSucc = *I;
-    }
-  }
-
-  BranchProbability HotProb(StaticLikelyProb, 100);
-  if (getEdgeProbability(MBB, MaxSucc) >= HotProb)
-    return MaxSucc;
-
-  return nullptr;
-}
-
 raw_ostream &MachineBranchProbabilityInfo::printEdgeProbability(
     raw_ostream &OS, const MachineBasicBlock *Src,
     const MachineBasicBlock *Dst) const {

@@ -14,11 +14,12 @@ define amdgpu_ps void @_amdgpu_ps_main() local_unnamed_addr #3 {
 ; IR-NEXT:    [[DOT01:%.*]] = phi float [ 0.000000e+00, [[DOTLOOPEXIT]] ], [ [[N29:%.*]], [[TRANSITIONBLOCK:%.*]] ]
 ; IR-NEXT:    [[N29]] = fadd float [[DOT01]], 1.000000e+00
 ; IR-NEXT:    [[N30:%.*]] = fcmp ogt float [[N29]], 4.000000e+00
-; IR-NEXT:    br i1 true, label [[TRANSITIONBLOCK]], label [[UNIFIEDRETURNBLOCK:%.*]]
+; IR-NEXT:    br i1 true, label [[TRANSITIONBLOCK]], label [[DUMMYRETURNBLOCK:%.*]]
 ; IR:       TransitionBlock:
 ; IR-NEXT:    br i1 [[N30]], label [[DOTLOOPEXIT]], label [[N28]]
-; IR:       UnifiedReturnBlock:
-; IR-NEXT:    call void @llvm.amdgcn.exp.f32(i32 9, i32 0, float undef, float undef, float undef, float undef, i1 true, i1 true)
+; IR:       n31:
+; IR-NEXT:    ret void
+; IR:       DummyReturnBlock:
 ; IR-NEXT:    ret void
 ;
 .entry:

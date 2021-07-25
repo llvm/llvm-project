@@ -3553,6 +3553,16 @@ DependenceInfo::depends(Instruction *Src, Instruction *Dst,
   const SCEV *DstSCEV = SE->getSCEV(DstPtr);
   LLVM_DEBUG(dbgs() << "    SrcSCEV = " << *SrcSCEV << "\n");
   LLVM_DEBUG(dbgs() << "    DstSCEV = " << *DstSCEV << "\n");
+  if (SE->getPointerBase(SrcSCEV) != SE->getPointerBase(DstSCEV)) {
+    // If two pointers have different bases, trying to analyze indexes won't
+    // work; we can't compare them to each other. This can happen, for example,
+    // if one is produced by an LCSSA PHI node.
+    //
+    // We check this upfront so we don't crash in cases where getMinusSCEV()
+    // returns a SCEVCouldNotCompute.
+    LLVM_DEBUG(dbgs() << "can't analyze SCEV with different pointer base\n");
+    return std::make_unique<Dependence>(Src, Dst);
+  }
   Pair[0].Src = SrcSCEV;
   Pair[0].Dst = DstSCEV;
 

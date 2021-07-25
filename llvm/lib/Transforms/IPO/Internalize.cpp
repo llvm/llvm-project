@@ -131,14 +131,14 @@ bool InternalizePass::maybeInternalize(
       // If a comdat with one member is not externally visible, we can drop it.
       // Otherwise, the comdat can be used to establish dependencies among the
       // group of sections. Thus we have to keep the comdat but switch it to
-      // noduplicates.
-      // Note: noduplicates is not necessary for COFF. wasm doesn't support
-      // noduplicates.
+      // nodeduplicate.
+      // Note: nodeduplicate is not necessary for COFF. wasm doesn't support
+      // nodeduplicate.
       ComdatInfo &Info = ComdatMap.find(C)->second;
       if (Info.Size == 1)
         GO->setComdat(nullptr);
       else if (!IsWasm)
-        C->setSelectionKind(Comdat::NoDuplicates);
+        C->setSelectionKind(Comdat::NoDeduplicate);
     }
 
     if (GV.hasLocalLinkage())

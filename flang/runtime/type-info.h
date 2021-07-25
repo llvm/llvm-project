@@ -73,8 +73,19 @@ public:
   }
   const char *initialization() const { return initialization_; }
 
-  // Creates a pointer descriptor from a component description.
-  void EstablishDescriptor(Descriptor &, const Descriptor &container,
+  std::size_t GetElementByteSize(const Descriptor &) const;
+  std::size_t GetElements(const Descriptor &) const;
+
+  // For ocmponents that are descriptors, returns size of descriptor;
+  // for Genre::Data, returns elemental byte size times element count.
+  std::size_t SizeInBytes(const Descriptor &) const;
+
+  // Establishes a descriptor from this component description.
+  void EstablishDescriptor(
+      Descriptor &, const Descriptor &container, Terminator &) const;
+
+  // Creates a pointer descriptor from this component description.
+  void CreatePointerDescriptor(Descriptor &, const Descriptor &container,
       const SubscriptValue[], Terminator &) const;
 
   FILE *Dump(FILE * = stdout) const;
@@ -100,7 +111,7 @@ private:
 struct ProcPtrComponent {
   StaticDescriptor<0> name; // CHARACTER(:), POINTER
   std::uint64_t offset{0};
-  ProcedurePointer procInitialization; // for Genre::Procedure
+  ProcedurePointer procInitialization;
 };
 
 class SpecialBinding {
@@ -175,7 +186,6 @@ public:
   const Descriptor &binding() const { return binding_.descriptor(); }
   const Descriptor &name() const { return name_.descriptor(); }
   std::uint64_t sizeInBytes() const { return sizeInBytes_; }
-  const Descriptor &parent() const { return parent_.descriptor(); }
   std::uint64_t typeHash() const { return typeHash_; }
   const Descriptor &uninstatiated() const {
     return uninstantiated_.descriptor();
@@ -189,8 +199,13 @@ public:
   const Descriptor &component() const { return component_.descriptor(); }
   const Descriptor &procPtr() const { return procPtr_.descriptor(); }
   const Descriptor &special() const { return special_.descriptor(); }
+  bool hasParent() const { return hasParent_; }
+  bool noInitializationNeeded() const { return noInitializationNeeded_; }
+  bool noDestructionNeeded() const { return noDestructionNeeded_; }
 
   std::size_t LenParameters() const { return lenParameterKind().Elements(); }
+
+  const DerivedType *GetParentType() const;
 
   // Finds a data component by name in this derived type or tis ancestors.
   const Component *FindDataComponent(
@@ -211,7 +226,6 @@ private:
   StaticDescriptor<0> name_; // CHARACTER(:), POINTER
 
   std::uint64_t sizeInBytes_{0};
-  StaticDescriptor<0, true> parent_; // TYPE(DERIVEDTYPE), POINTER
 
   // Instantiations of a parameterized derived type with KIND type
   // parameters will point this data member to the description of
@@ -242,6 +256,10 @@ private:
   // Does not include special bindings from ancestral types.
   StaticDescriptor<1, true>
       special_; // TYPE(SPECIALBINDING), POINTER, DIMENSION(:), CONTIGUOUS
+
+  bool hasParent_{false};
+  bool noInitializationNeeded_{false};
+  bool noDestructionNeeded_{false};
 };
 
 } // namespace Fortran::runtime::typeInfo

@@ -1194,7 +1194,8 @@ AArch64TargetLowering::AArch64TargetLowering(const TargetMachine &TM,
     }
 
     // Legalize unpacked bitcasts to REINTERPRET_CAST.
-    for (auto VT : {MVT::nxv2i32, MVT::nxv2f32})
+    for (auto VT : {MVT::nxv2i16, MVT::nxv4i16, MVT::nxv2i32, MVT::nxv2bf16,
+                    MVT::nxv2f16, MVT::nxv4f16, MVT::nxv2f32})
       setOperationAction(ISD::BITCAST, VT, Custom);
 
     for (auto VT : {MVT::nxv16i1, MVT::nxv8i1, MVT::nxv4i1, MVT::nxv2i1}) {
@@ -1239,6 +1240,13 @@ AArch64TargetLowering::AArch64TargetLowering(const TargetMachine &TM,
         setLoadExtAction(ISD::EXTLOAD, VT, InnerVT, Expand);
       }
     }
+
+    // SVE supports truncating stores of 64 and 128-bit vectors
+    setTruncStoreAction(MVT::v2i64, MVT::v2i8, Custom);
+    setTruncStoreAction(MVT::v2i64, MVT::v2i16, Custom);
+    setTruncStoreAction(MVT::v2i64, MVT::v2i32, Custom);
+    setTruncStoreAction(MVT::v2i32, MVT::v2i8, Custom);
+    setTruncStoreAction(MVT::v2i32, MVT::v2i16, Custom);
 
     for (auto VT : {MVT::nxv2f16, MVT::nxv4f16, MVT::nxv8f16, MVT::nxv2f32,
                     MVT::nxv4f32, MVT::nxv2f64}) {
@@ -1380,7 +1388,7 @@ AArch64TargetLowering::AArch64TargetLowering(const TargetMachine &TM,
   PredictableSelectIsExpensive = Subtarget->predictableSelectIsExpensive();
 }
 
-void AArch64TargetLowering::addTypeForNEON(MVT VT, MVT PromotedBitwiseVT) {
+void AArch64TargetLowering::addTypeForNEON(MVT VT) {
   assert(VT.isVector() && "VT should be a vector type");
 
   if (VT.isFloatingPoint()) {
@@ -1486,6 +1494,16 @@ void AArch64TargetLowering::addTypeForFixedLengthSVE(MVT VT) {
     setCondCodeAction(ISD::SETUNE, VT, Expand);
   }
 
+  // Mark integer truncating stores as having custom lowering
+  if (VT.isInteger()) {
+    MVT InnerVT = VT.changeVectorElementType(MVT::i8);
+    while (InnerVT != VT) {
+      setTruncStoreAction(VT, InnerVT, Custom);
+      InnerVT = InnerVT.changeVectorElementType(
+          MVT::getIntegerVT(2 * InnerVT.getScalarSizeInBits()));
+    }
+  }
+
   // Lower fixed length vector operations to scalable equivalents.
   setOperationAction(ISD::ABS, VT, Custom);
   setOperationAction(ISD::ADD, VT, Custom);
@@ -1571,12 +1589,12 @@ void AArch64TargetLowering::addTypeForFixedLengthSVE(MVT VT) {
 
 void AArch64TargetLowering::addDRTypeForNEON(MVT VT) {
   addRegisterClass(VT, &AArch64::FPR64RegClass);
-  addTypeForNEON(VT, MVT::v2i32);
+  addTypeForNEON(VT);
 }
 
 void AArch64TargetLowering::addQRTypeForNEON(MVT VT) {
   addRegisterClass(VT, &AArch64::FPR128RegClass);
-  addTypeForNEON(VT, MVT::v4i32);
+  addTypeForNEON(VT);
 }
 
 EVT AArch64TargetLowering::getSetCCResultType(const DataLayout &,
@@ -2995,50 +3013,25 @@ getAArch64XALUOOp(AArch64CC::CondCode &CC, SDValue Op, SelectionDAG &DAG) {
     CC = AArch64CC::NE;
     bool IsSigned = Op.getOpcode() == ISD::SMULO;
     if (Op.getValueType() == MVT::i32) {
+      // Extend to 64-bits, then perform a 64-bit multiply.
       unsigned ExtendOpc = IsSigned ? ISD::SIGN_EXTEND : ISD::ZERO_EXTEND;
-      // For a 32 bit multiply with overflow check we want the instruction
-      // selector to generate a widening multiply (SMADDL/UMADDL). For that we
-      // need to generate the following pattern:
-      // (i64 add 0, (i64 mul (i64 sext|zext i32 %a), (i64 sext|zext i32 %b))
       LHS = DAG.getNode(ExtendOpc, DL, MVT::i64, LHS);
       RHS = DAG.getNode(ExtendOpc, DL, MVT::i64, RHS);
       SDValue Mul = DAG.getNode(ISD::MUL, DL, MVT::i64, LHS, RHS);
-      SDValue Add = DAG.getNode(ISD::ADD, DL, MVT::i64, Mul,
-                                DAG.getConstant(0, DL, MVT::i64));
-      // On AArch64 the upper 32 bits are always zero extended for a 32 bit
-      // operation. We need to clear out the upper 32 bits, because we used a
-      // widening multiply that wrote all 64 bits. In the end this should be a
-      // noop.
-      Value = DAG.getNode(ISD::TRUNCATE, DL, MVT::i32, Add);
+      Value = DAG.getNode(ISD::TRUNCATE, DL, MVT::i32, Mul);
+
+      // Check that the result fits into a 32-bit integer.
+      SDVTList VTs = DAG.getVTList(MVT::i64, MVT_CC);
       if (IsSigned) {
-        // The signed overflow check requires more than just a simple check for
-        // any bit set in the upper 32 bits of the result. These bits could be
-        // just the sign bits of a negative number. To perform the overflow
-        // check we have to arithmetic shift right the 32nd bit of the result by
-        // 31 bits. Then we compare the result to the upper 32 bits.
-        SDValue UpperBits = DAG.getNode(ISD::SRL, DL, MVT::i64, Add,
-                                        DAG.getConstant(32, DL, MVT::i64));
-        UpperBits = DAG.getNode(ISD::TRUNCATE, DL, MVT::i32, UpperBits);
-        SDValue LowerBits = DAG.getNode(ISD::SRA, DL, MVT::i32, Value,
-                                        DAG.getConstant(31, DL, MVT::i64));
-        // It is important that LowerBits is last, otherwise the arithmetic
-        // shift will not be folded into the compare (SUBS).
-        SDVTList VTs = DAG.getVTList(MVT::i32, MVT::i32);
-        Overflow = DAG.getNode(AArch64ISD::SUBS, DL, VTs, UpperBits, LowerBits)
-                       .getValue(1);
-      } else {
-        // The overflow check for unsigned multiply is easy. We only need to
-        // check if any of the upper 32 bits are set. This can be done with a
-        // CMP (shifted register). For that we need to generate the following
-        // pattern:
-        // (i64 AArch64ISD::SUBS i64 0, (i64 srl i64 %Mul, i64 32)
-        SDValue UpperBits = DAG.getNode(ISD::SRL, DL, MVT::i64, Mul,
-                                        DAG.getConstant(32, DL, MVT::i64));
-        SDVTList VTs = DAG.getVTList(MVT::i64, MVT::i32);
+        // cmp xreg, wreg, sxtw
+        SDValue SExtMul = DAG.getNode(ISD::SIGN_EXTEND, DL, MVT::i64, Value);
         Overflow =
-            DAG.getNode(AArch64ISD::SUBS, DL, VTs,
-                        DAG.getConstant(0, DL, MVT::i64),
-                        UpperBits).getValue(1);
+            DAG.getNode(AArch64ISD::SUBS, DL, VTs, Mul, SExtMul).getValue(1);
+      } else {
+        // tst xreg, #0xffffffff00000000
+        SDValue UpperBits = DAG.getConstant(0xFFFFFFFF00000000, DL, MVT::i64);
+        Overflow =
+            DAG.getNode(AArch64ISD::ANDS, DL, VTs, Mul, UpperBits).getValue(1);
       }
       break;
     }
@@ -3528,14 +3521,16 @@ SDValue AArch64TargetLowering::LowerBITCAST(SDValue Op,
   if (useSVEForFixedLengthVectorVT(OpVT))
     return LowerFixedLengthBitcastToSVE(Op, DAG);
 
-  if (OpVT == MVT::nxv2f32) {
-    if (ArgVT.isInteger()) {
+  if (OpVT.isScalableVector()) {
+    if (isTypeLegal(OpVT) && !isTypeLegal(ArgVT)) {
+      assert(OpVT.isFloatingPoint() && !ArgVT.isFloatingPoint() &&
+             "Expected int->fp bitcast!");
       SDValue ExtResult =
           DAG.getNode(ISD::ANY_EXTEND, SDLoc(Op), getSVEContainerType(ArgVT),
                       Op.getOperand(0));
-      return getSVESafeBitCast(MVT::nxv2f32, ExtResult, DAG);
+      return getSVESafeBitCast(OpVT, ExtResult, DAG);
     }
-    return getSVESafeBitCast(MVT::nxv2f32, Op.getOperand(0), DAG);
+    return getSVESafeBitCast(OpVT, Op.getOperand(0), DAG);
   }
 
   if (OpVT != MVT::f16 && OpVT != MVT::bf16)
@@ -4552,7 +4547,7 @@ SDValue AArch64TargetLowering::LowerSTORE(SDValue Op,
   EVT MemVT = StoreNode->getMemoryVT();
 
   if (VT.isVector()) {
-    if (useSVEForFixedLengthVectorVT(VT))
+    if (useSVEForFixedLengthVectorVT(VT, true))
       return LowerFixedLengthVectorStoreToSVE(Op, DAG);
 
     unsigned AS = StoreNode->getAddressSpace();
@@ -4564,7 +4559,8 @@ SDValue AArch64TargetLowering::LowerSTORE(SDValue Op,
       return scalarizeVectorStore(StoreNode, DAG);
     }
 
-    if (StoreNode->isTruncatingStore()) {
+    if (StoreNode->isTruncatingStore() && VT == MVT::v4i16 &&
+        MemVT == MVT::v4i8) {
       return LowerTruncateVectorStore(Dl, StoreNode, VT, MemVT, DAG);
     }
     // 256 bit non-temporal stores can be lowered to STNP. Do this as part of
@@ -5980,7 +5976,8 @@ AArch64TargetLowering::LowerCall(CallLoweringInfo &CLI,
       // common case. It should also work for fundamental types too.
       uint32_t BEAlign = 0;
       unsigned OpSize;
-      if (VA.getLocInfo() == CCValAssign::Indirect)
+      if (VA.getLocInfo() == CCValAssign::Indirect ||
+          VA.getLocInfo() == CCValAssign::Trunc)
         OpSize = VA.getLocVT().getFixedSizeInBits();
       else
         OpSize = Flags.isByVal() ? Flags.getByValSize() * 8
@@ -9509,7 +9506,7 @@ SDValue AArch64TargetLowering::LowerDUPQLane(SDValue Op,
   SDValue SplatOne = DAG.getNode(ISD::SPLAT_VECTOR, DL, MVT::nxv2i64, One);
 
   // create the vector 0,1,0,1,...
-  SDValue SV = DAG.getNode(ISD::STEP_VECTOR, DL, MVT::nxv2i64, One);
+  SDValue SV = DAG.getStepVector(DL, MVT::nxv2i64);
   SV = DAG.getNode(ISD::AND, DL, MVT::nxv2i64, SV, SplatOne);
 
   // create the vector idx64,idx64+1,idx64,idx64+1,...
@@ -14004,9 +14001,7 @@ static SDValue LowerSVEIntrinsicIndex(SDNode *N, SelectionDAG &DAG) {
     ScalarTy = MVT::i32;
 
   // Lower index_vector(base, step) to mul(step step_vector(1)) + splat(base).
-  SDValue One = DAG.getConstant(1, DL, ScalarTy);
-  SDValue StepVector =
-      DAG.getNode(ISD::STEP_VECTOR, DL, N->getValueType(0), One);
+  SDValue StepVector = DAG.getStepVector(DL, N->getValueType(0));
   SDValue Step = DAG.getNode(ISD::SPLAT_VECTOR, DL, N->getValueType(0), Op2);
   SDValue Mul = DAG.getNode(ISD::MUL, DL, N->getValueType(0), StepVector, Step);
   SDValue Base = DAG.getNode(ISD::SPLAT_VECTOR, DL, N->getValueType(0), Op1);
@@ -15145,6 +15140,29 @@ static bool performTBISimplification(SDValue Addr,
   return false;
 }
 
+static SDValue foldTruncStoreOfExt(SelectionDAG &DAG, SDNode *N) {
+  assert(N->getOpcode() == ISD::STORE ||
+         N->getOpcode() == ISD::MSTORE && "Expected STORE dag node in input!");
+
+  if (auto Store = dyn_cast<StoreSDNode>(N)) {
+    if (!Store->isTruncatingStore() || Store->isIndexed())
+      return SDValue();
+    SDValue Ext = Store->getValue();
+    auto ExtOpCode = Ext.getOpcode();
+    if (ExtOpCode != ISD::ZERO_EXTEND && ExtOpCode != ISD::SIGN_EXTEND &&
+        ExtOpCode != ISD::ANY_EXTEND)
+      return SDValue();
+    SDValue Orig = Ext->getOperand(0);
+    if (Store->getMemoryVT() != Orig->getValueType(0))
+      return SDValue();
+    return DAG.getStore(Store->getChain(), SDLoc(Store), Orig,
+                        Store->getBasePtr(), Store->getPointerInfo(),
+                        Store->getAlign());
+  }
+
+  return SDValue();
+}
+
 static SDValue performSTORECombine(SDNode *N,
                                    TargetLowering::DAGCombinerInfo &DCI,
                                    SelectionDAG &DAG,
@@ -15155,6 +15173,9 @@ static SDValue performSTORECombine(SDNode *N,
   if (Subtarget->supportsAddressTopByteIgnored() &&
       performTBISimplification(N->getOperand(2), DCI, DAG))
     return SDValue(N, 0);
+
+  if (SDValue Store = foldTruncStoreOfExt(DAG, N))
+    return Store;
 
   return SDValue();
 }
@@ -16926,16 +16947,18 @@ void AArch64TargetLowering::ReplaceBITCASTResults(
     SDNode *N, SmallVectorImpl<SDValue> &Results, SelectionDAG &DAG) const {
   SDLoc DL(N);
   SDValue Op = N->getOperand(0);
+  EVT VT = N->getValueType(0);
+  EVT SrcVT = Op.getValueType();
 
-  if (N->getValueType(0) == MVT::nxv2i32 &&
-      Op.getValueType().isFloatingPoint()) {
-    SDValue CastResult = getSVESafeBitCast(MVT::nxv2i64, Op, DAG);
-    Results.push_back(DAG.getNode(ISD::TRUNCATE, DL, MVT::nxv2i32, CastResult));
+  if (VT.isScalableVector() && !isTypeLegal(VT) && isTypeLegal(SrcVT)) {
+    assert(!VT.isFloatingPoint() && SrcVT.isFloatingPoint() &&
+           "Expected fp->int bitcast!");
+    SDValue CastResult = getSVESafeBitCast(getSVEContainerType(VT), Op, DAG);
+    Results.push_back(DAG.getNode(ISD::TRUNCATE, DL, VT, CastResult));
     return;
   }
 
-  if (N->getValueType(0) != MVT::i16 ||
-      (Op.getValueType() != MVT::f16 && Op.getValueType() != MVT::bf16))
+  if (VT != MVT::i16 || (SrcVT != MVT::f16 && SrcVT != MVT::bf16))
     return;
 
   Op = SDValue(
@@ -17029,6 +17052,7 @@ static void ReplaceCMP_SWAP_128Results(SDNode *N,
   assert(N->getValueType(0) == MVT::i128 &&
          "AtomicCmpSwap on types less than 128 should be legal");
 
+  MachineMemOperand *MemOp = cast<MemSDNode>(N)->getMemOperand();
   if (Subtarget->hasLSE() || Subtarget->outlineAtomics()) {
     // LSE has a 128-bit compare and swap (CASP), but i128 is not a legal type,
     // so lower it here, wrapped in REG_SEQUENCE and EXTRACT_SUBREG.
@@ -17038,8 +17062,6 @@ static void ReplaceCMP_SWAP_128Results(SDNode *N,
         N->getOperand(1), // Ptr
         N->getOperand(0), // Chain in
     };
-
-    MachineMemOperand *MemOp = cast<MemSDNode>(N)->getMemOperand();
 
     unsigned Opcode;
     switch (MemOp->getMergedOrdering()) {
@@ -17077,15 +17099,32 @@ static void ReplaceCMP_SWAP_128Results(SDNode *N,
     return;
   }
 
+  unsigned Opcode;
+  switch (MemOp->getMergedOrdering()) {
+  case AtomicOrdering::Monotonic:
+    Opcode = AArch64::CMP_SWAP_128_MONOTONIC;
+    break;
+  case AtomicOrdering::Acquire:
+    Opcode = AArch64::CMP_SWAP_128_ACQUIRE;
+    break;
+  case AtomicOrdering::Release:
+    Opcode = AArch64::CMP_SWAP_128_RELEASE;
+    break;
+  case AtomicOrdering::AcquireRelease:
+  case AtomicOrdering::SequentiallyConsistent:
+    Opcode = AArch64::CMP_SWAP_128;
+    break;
+  default:
+    llvm_unreachable("Unexpected ordering!");
+  }
+
   auto Desired = splitInt128(N->getOperand(2), DAG);
   auto New = splitInt128(N->getOperand(3), DAG);
   SDValue Ops[] = {N->getOperand(1), Desired.first, Desired.second,
                    New.first,        New.second,    N->getOperand(0)};
   SDNode *CmpSwap = DAG.getMachineNode(
-      AArch64::CMP_SWAP_128, SDLoc(N),
-      DAG.getVTList(MVT::i64, MVT::i64, MVT::i32, MVT::Other), Ops);
-
-  MachineMemOperand *MemOp = cast<MemSDNode>(N)->getMemOperand();
+      Opcode, SDLoc(N), DAG.getVTList(MVT::i64, MVT::i64, MVT::i32, MVT::Other),
+      Ops);
   DAG.setNodeMemRefs(cast<MachineSDNode>(CmpSwap), {MemOp});
 
   Results.push_back(DAG.getNode(ISD::BUILD_PAIR, SDLoc(N), MVT::i128,
@@ -17306,6 +17345,13 @@ AArch64TargetLowering::shouldExpandAtomicCmpXchgInIR(
   // can never succeed. So at -O0 we need a late-expanded pseudo-inst instead.
   if (getTargetMachine().getOptLevel() == CodeGenOpt::None)
     return AtomicExpansionKind::None;
+
+  // 128-bit atomic cmpxchg is weird; AtomicExpand doesn't know how to expand
+  // it.
+  unsigned Size = AI->getCompareOperand()->getType()->getPrimitiveSizeInBits();
+  if (Size > 64)
+    return AtomicExpansionKind::None;
+
   return AtomicExpansionKind::LLSC;
 }
 

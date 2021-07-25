@@ -82,6 +82,10 @@ set(MLIR_TEST_DEPENDS
   mlir_async_runtime
   )
 
+if (MLIR_INCLUDE_INTEGRATION_TESTS)
+  list(APPEND MLIR_TEST_DEPENDS lli)
+endif()
+
 if(MLIR_ENABLE_CUDA_RUNNER)
   list(APPEND MLIR_TEST_DEPENDS mlir_cuda_runtime)
 endif()

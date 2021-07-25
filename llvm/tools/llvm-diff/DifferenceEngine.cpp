@@ -490,6 +490,16 @@ public:
         const Value *LAgg = CSL->getAggregateElement(I);
         const Value *RAgg = CSR->getAggregateElement(I);
 
+        if (LAgg == SavedLHS || RAgg == SavedRHS) {
+          if (LAgg != SavedLHS || RAgg != SavedRHS)
+            // If the left and right operands aren't both re-analyzing the
+            // variable, then the initialiers don't match, so report "false".
+            // Otherwise, we skip these operands..
+            return false;
+
+          continue;
+        }
+
         if (!equivalentAsOperands(LAgg, RAgg)) {
           return false;
         }

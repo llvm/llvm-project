@@ -3,7 +3,7 @@
 # RUN: llvm-mc -filetype=obj -triple=x86_64-unknown-linux %s -o %t.o
 # RUN: echo "TARGET(binary) INPUT(\"%t.o\") TARGET(elf64-x86-64) INPUT(\"%t.o\")" > %t.script
 # RUN: ld.lld --script %t.script -o %t.exe
-# RUN: llvm-readelf -symbols %t.exe | FileCheck %s
+# RUN: llvm-readelf -s %t.exe | FileCheck %s
 
 # CHECK: _binary_
 # CHECK: foobar

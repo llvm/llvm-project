@@ -53,9 +53,9 @@ eh.resume:
   resume { i8*, i32 } %0
 }
 
-;; If the function is in a comdat group with noduplicates kind, the generated
+;; If the function is in a comdat group with nodeduplicate kind, the generated
 ;; .gcc_except_table should is lowered to a zero-flag ELF section group.
-$zero = comdat noduplicates
+$zero = comdat nodeduplicate
 define i32 @zero() uwtable comdat personality i8* bitcast (i32 (...)* @__gxx_personality_v0 to i8*) {
 ; CHECK-LABEL:       zero:
 ; CHECK:             .cfi_endproc

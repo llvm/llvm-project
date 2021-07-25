@@ -1369,9 +1369,6 @@ void CompilerInvocation::GenerateCodeGenArgs(
   if (DebugInfoVal)
     GenerateArg(Args, OPT_debug_info_kind_EQ, *DebugInfoVal, SA);
 
-  if (Opts.DebugInfo == codegenoptions::DebugInfoConstructor)
-    GenerateArg(Args, OPT_fuse_ctor_homing, SA);
-
   for (const auto &Prefix : Opts.DebugPrefixMap)
     GenerateArg(Args, OPT_fdebug_prefix_map_EQ,
                 Prefix.first + "=" + Prefix.second, SA);
@@ -1627,10 +1624,16 @@ bool CompilerInvocation::ParseCodeGenArgs(CodeGenOptions &Opts, ArgList &Args,
   }
 
   // If -fuse-ctor-homing is set and limited debug info is already on, then use
-  // constructor homing.
-  if (Args.getLastArg(OPT_fuse_ctor_homing))
-    if (Opts.getDebugInfo() == codegenoptions::LimitedDebugInfo)
+  // constructor homing, and vice versa for -fno-use-ctor-homing.
+  if (const Arg *A =
+          Args.getLastArg(OPT_fuse_ctor_homing, OPT_fno_use_ctor_homing)) {
+    if (A->getOption().matches(OPT_fuse_ctor_homing) &&
+        Opts.getDebugInfo() == codegenoptions::LimitedDebugInfo)
       Opts.setDebugInfo(codegenoptions::DebugInfoConstructor);
+    if (A->getOption().matches(OPT_fno_use_ctor_homing) &&
+        Opts.getDebugInfo() == codegenoptions::DebugInfoConstructor)
+      Opts.setDebugInfo(codegenoptions::LimitedDebugInfo);
+  }
 
   for (const auto &Arg : Args.getAllArgValues(OPT_fdebug_prefix_map_EQ)) {
     auto Split = StringRef(Arg).split('=');
@@ -2618,24 +2621,24 @@ static bool ParseFrontendArgs(FrontendOptions &Opts, ArgList &Args,
       StringRef ArgStr =
           Args.hasArg(OPT_interface_stub_version_EQ)
               ? Args.getLastArgValue(OPT_interface_stub_version_EQ)
-              : "experimental-ifs-v2";
+              : "ifs-v1";
       if (ArgStr == "experimental-yaml-elf-v1" ||
-          ArgStr == "experimental-ifs-v1" ||
+          ArgStr == "experimental-ifs-v1" || ArgStr == "experimental-ifs-v2" ||
           ArgStr == "experimental-tapi-elf-v1") {
         std::string ErrorMessage =
             "Invalid interface stub format: " + ArgStr.str() +
             " is deprecated.";
         Diags.Report(diag::err_drv_invalid_value)
             << "Must specify a valid interface stub format type, ie: "
-               "-interface-stub-version=experimental-ifs-v2"
+               "-interface-stub-version=ifs-v1"
             << ErrorMessage;
         ProgramAction = frontend::ParseSyntaxOnly;
-      } else if (!ArgStr.startswith("experimental-ifs-")) {
+      } else if (!ArgStr.startswith("ifs-")) {
         std::string ErrorMessage =
             "Invalid interface stub format: " + ArgStr.str() + ".";
         Diags.Report(diag::err_drv_invalid_value)
             << "Must specify a valid interface stub format type, ie: "
-               "-interface-stub-version=experimental-ifs-v2"
+               "-interface-stub-version=ifs-v1"
             << ErrorMessage;
         ProgramAction = frontend::ParseSyntaxOnly;
       }

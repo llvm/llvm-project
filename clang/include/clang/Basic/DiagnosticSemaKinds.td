@@ -82,11 +82,11 @@ def err_typecheck_converted_constant_expression_indirect : Error<
   "bind reference to a temporary">;
 def err_expr_not_cce : Error<
   "%select{case value|enumerator value|non-type template argument|"
-  "array size|constexpr if condition|explicit specifier argument}0 "
+  "array size|explicit specifier argument}0 "
   "is not a constant expression">;
 def ext_cce_narrowing : ExtWarn<
   "%select{case value|enumerator value|non-type template argument|"
-  "array size|constexpr if condition|explicit specifier argument}0 "
+  "array size|explicit specifier argument}0 "
   "%select{cannot be narrowed from type %2 to %3|"
   "evaluates to %2, which cannot be narrowed to type %3}1">,
   InGroup<CXX11Narrowing>, DefaultError, SFINAEFailure;
@@ -1478,6 +1478,8 @@ def err_messaging_class_with_direct_method : Error<
 // C++ declarations
 def err_static_assert_expression_is_not_constant : Error<
   "static_assert expression is not an integral constant expression">;
+def err_constexpr_if_condition_expression_is_not_constant : Error<
+  "constexpr if condition is not a constant expression">;
 def err_static_assert_failed : Error<"static_assert failed%select{ %1|}0">;
 def err_static_assert_requirement_failed : Error<
   "static_assert failed due to requirement '%0'%select{ %2|}1">;
@@ -3243,6 +3245,10 @@ def warn_assume_aligned_too_great
     : Warning<"requested alignment must be %0 bytes or smaller; maximum "
               "alignment assumed">,
       InGroup<DiagGroup<"builtin-assume-aligned-alignment">>;
+def warn_not_xl_compatible
+    : Warning<"requesting an alignment of 16 bytes or greater for struct"
+              " members is not binary compatible with AIX XL 16.1 and older">,
+      InGroup<AIXCompat>;
 def warn_redeclaration_without_attribute_prev_attribute_ignored : Warning<
   "%q0 redeclared without %1 attribute: previous %1 ignored">,
   InGroup<MicrosoftInconsistentDllImport>;
@@ -3533,6 +3539,10 @@ def warn_at_available_unchecked_use : Warning<
   "%select{@available|__builtin_available}0 does not guard availability here; "
   "use if (%select{@available|__builtin_available}0) instead">,
   InGroup<DiagGroup<"unsupported-availability-guard">>;
+
+def warn_missing_sdksettings_for_availability_checking : Warning<
+  "%0 availability is ignored without a valid 'SDKSettings.json' in the SDK">,
+  InGroup<DiagGroup<"ignored-availability-without-sdk-settings">>;
 
 // Thread Safety Attributes
 def warn_thread_attribute_ignored : Warning<
@@ -5828,11 +5838,8 @@ def err_anon_bitfield_has_negative_width : Error<
   "anonymous bit-field has negative width (%0)">;
 def err_bitfield_has_zero_width : Error<"named bit-field %0 has zero width">;
 def err_bitfield_width_exceeds_type_width : Error<
-  "width of bit-field %0 (%1 bits) exceeds %select{width|size}2 "
-  "of its type (%3 bit%s3)">;
-def err_anon_bitfield_width_exceeds_type_width : Error<
-  "width of anonymous bit-field (%0 bits) exceeds %select{width|size}1 "
-  "of its type (%2 bit%s2)">;
+  "width of%select{ anonymous|}0 bit-field%select{| %1}0 (%2 bits) exceeds the "
+  "%select{width|size}3 of its type (%4 bit%s4)">;
 def err_incorrect_number_of_vector_initializers : Error<
   "number of elements must be either one or match the size of the vector">;
 
@@ -6378,6 +6385,9 @@ def warn_pointer_arith_null_ptr : Warning<
 def warn_gnu_null_ptr_arith : Warning<
   "arithmetic on a null pointer treated as a cast from integer to pointer is a GNU extension">,
   InGroup<NullPointerArithmetic>, DefaultIgnore;
+def warn_pointer_sub_null_ptr : Warning<
+  "performing pointer subtraction with a null pointer %select{has|may have}0 undefined behavior">,
+  InGroup<NullPointerSubtraction>, DefaultIgnore;
 def err_kernel_invalidates_sycl_unique_stable_name
     : Error<"kernel instantiation changes the result of an evaluated "
             "'__builtin_sycl_unique_stable_name'">;
@@ -9718,6 +9728,8 @@ def err_argument_not_shifted_byte : Error<
   "argument should be an 8-bit value shifted by a multiple of 8 bits">;
 def err_argument_not_shifted_byte_or_xxff : Error<
   "argument should be an 8-bit value shifted by a multiple of 8 bits, or in the form 0x??FF">;
+def err_argument_not_contiguous_bit_field : Error<
+  "argument %0 value should represent a contiguous bit field">;
 def err_rotation_argument_to_cadd
     : Error<"argument should be the value 90 or 270">;
 def err_rotation_argument_to_cmla
@@ -9746,8 +9758,8 @@ def err_mips_builtin_requires_dspr2 : Error<
   "this builtin requires 'dsp r2' ASE, please use -mdspr2">;
 def err_mips_builtin_requires_msa : Error<
   "this builtin requires 'msa' ASE, please use -mmsa">;
-def err_ppc_builtin_only_on_pwr7 : Error<
-  "this builtin is only valid on POWER7 or later CPUs">;
+def err_ppc_builtin_only_on_arch : Error<
+  "this builtin is only valid on POWER%0 or later CPUs">;
 def err_ppc_invalid_use_mma_type : Error<
   "invalid use of PPC MMA type">;
 def err_x86_builtin_invalid_rounding : Error<
@@ -10100,7 +10112,8 @@ def err_opencl_builtin_pipe_invalid_access_modifier : Error<
 def err_opencl_invalid_access_qualifier : Error<
   "access qualifier can only be used for pipe and image type">;
 def err_opencl_invalid_read_write : Error<
-  "access qualifier %0 can not be used for %1 %select{|prior to OpenCL version 2.0}2">;
+  "access qualifier %0 can not be used for %1 %select{|prior to OpenCL C version 2.0 or in version 3.0 "
+  "and without __opencl_c_read_write_images feature}2">;
 def err_opencl_multiple_access_qualifiers : Error<
   "multiple access qualifiers">;
 def note_opencl_typedef_access_qualifier : Note<

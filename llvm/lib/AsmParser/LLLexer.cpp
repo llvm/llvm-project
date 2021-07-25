@@ -643,6 +643,7 @@ lltok::Kind LLLexer::LexIdentifier() {
   KEYWORD(convergent);
   KEYWORD(dereferenceable);
   KEYWORD(dereferenceable_or_null);
+  KEYWORD(elementtype);
   KEYWORD(inaccessiblememonly);
   KEYWORD(inaccessiblemem_or_argmemonly);
   KEYWORD(inlinehint);
@@ -716,7 +717,7 @@ lltok::Kind LLLexer::LexIdentifier() {
   KEYWORD(any);
   KEYWORD(exactmatch);
   KEYWORD(largest);
-  KEYWORD(noduplicates);
+  KEYWORD(nodeduplicate);
   KEYWORD(samesize);
 
   KEYWORD(eq); KEYWORD(ne); KEYWORD(slt); KEYWORD(sgt); KEYWORD(sle);

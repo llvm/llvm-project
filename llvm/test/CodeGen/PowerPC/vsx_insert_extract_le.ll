@@ -19,7 +19,7 @@ define <2 x double> @testi0(<2 x double>* %p1, double* %p2) {
 ; CHECK-LABEL: testi0:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    lxvd2x vs0, 0, r3
-; CHECK-NEXT:    lfdx f1, 0, r4
+; CHECK-NEXT:    lfd f1, 0(r4)
 ; CHECK-NEXT:    xxswapd vs0, vs0
 ; CHECK-NEXT:    xxmrghd v2, vs0, vs1
 ; CHECK-NEXT:    blr
@@ -27,14 +27,14 @@ define <2 x double> @testi0(<2 x double>* %p1, double* %p2) {
 ; CHECK-P8-BE-LABEL: testi0:
 ; CHECK-P8-BE:       # %bb.0:
 ; CHECK-P8-BE-NEXT:    lxvd2x vs0, 0, r3
-; CHECK-P8-BE-NEXT:    lfdx f1, 0, r4
+; CHECK-P8-BE-NEXT:    lfd f1, 0(r4)
 ; CHECK-P8-BE-NEXT:    xxpermdi v2, vs1, vs0, 1
 ; CHECK-P8-BE-NEXT:    blr
 ;
 ; CHECK-P9-VECTOR-LABEL: testi0:
 ; CHECK-P9-VECTOR:       # %bb.0:
 ; CHECK-P9-VECTOR-NEXT:    lxvd2x vs0, 0, r3
-; CHECK-P9-VECTOR-NEXT:    lfdx f1, 0, r4
+; CHECK-P9-VECTOR-NEXT:    lfd f1, 0(r4)
 ; CHECK-P9-VECTOR-NEXT:    xxswapd vs0, vs0
 ; CHECK-P9-VECTOR-NEXT:    xxmrghd v2, vs0, vs1
 ; CHECK-P9-VECTOR-NEXT:    blr
@@ -57,7 +57,7 @@ define <2 x double> @testi1(<2 x double>* %p1, double* %p2) {
 ; CHECK-LABEL: testi1:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    lxvd2x vs0, 0, r3
-; CHECK-NEXT:    lfdx f1, 0, r4
+; CHECK-NEXT:    lfd f1, 0(r4)
 ; CHECK-NEXT:    xxswapd vs0, vs0
 ; CHECK-NEXT:    xxpermdi v2, vs1, vs0, 1
 ; CHECK-NEXT:    blr
@@ -65,14 +65,14 @@ define <2 x double> @testi1(<2 x double>* %p1, double* %p2) {
 ; CHECK-P8-BE-LABEL: testi1:
 ; CHECK-P8-BE:       # %bb.0:
 ; CHECK-P8-BE-NEXT:    lxvd2x vs0, 0, r3
-; CHECK-P8-BE-NEXT:    lfdx f1, 0, r4
+; CHECK-P8-BE-NEXT:    lfd f1, 0(r4)
 ; CHECK-P8-BE-NEXT:    xxmrghd v2, vs0, vs1
 ; CHECK-P8-BE-NEXT:    blr
 ;
 ; CHECK-P9-VECTOR-LABEL: testi1:
 ; CHECK-P9-VECTOR:       # %bb.0:
 ; CHECK-P9-VECTOR-NEXT:    lxvd2x vs0, 0, r3
-; CHECK-P9-VECTOR-NEXT:    lfdx f1, 0, r4
+; CHECK-P9-VECTOR-NEXT:    lfd f1, 0(r4)
 ; CHECK-P9-VECTOR-NEXT:    xxswapd vs0, vs0
 ; CHECK-P9-VECTOR-NEXT:    xxpermdi v2, vs1, vs0, 1
 ; CHECK-P9-VECTOR-NEXT:    blr
@@ -100,7 +100,7 @@ define double @teste0(<2 x double>* %p1) {
 ;
 ; CHECK-P8-BE-LABEL: teste0:
 ; CHECK-P8-BE:       # %bb.0:
-; CHECK-P8-BE-NEXT:    lfdx f1, 0, r3
+; CHECK-P8-BE-NEXT:    lfd f1, 0(r3)
 ; CHECK-P8-BE-NEXT:    blr
 ;
 ; CHECK-P9-VECTOR-LABEL: teste0:

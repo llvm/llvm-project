@@ -2080,6 +2080,8 @@ getAnyAGPRClassForBitWidth(unsigned BitWidth) {
     return &AMDGPU::AReg_160RegClass;
   if (BitWidth <= 192)
     return &AMDGPU::AReg_192RegClass;
+  if (BitWidth <= 224)
+    return &AMDGPU::AReg_224RegClass;
   if (BitWidth <= 256)
     return &AMDGPU::AReg_256RegClass;
   if (BitWidth <= 512)
@@ -2102,6 +2104,8 @@ getAlignedAGPRClassForBitWidth(unsigned BitWidth) {
     return &AMDGPU::AReg_160_Align2RegClass;
   if (BitWidth <= 192)
     return &AMDGPU::AReg_192_Align2RegClass;
+  if (BitWidth <= 224)
+    return &AMDGPU::AReg_224_Align2RegClass;
   if (BitWidth <= 256)
     return &AMDGPU::AReg_256_Align2RegClass;
   if (BitWidth <= 512)
@@ -2138,6 +2142,8 @@ SIRegisterInfo::getSGPRClassForBitWidth(unsigned BitWidth) {
     return &AMDGPU::SGPR_160RegClass;
   if (BitWidth <= 192)
     return &AMDGPU::SGPR_192RegClass;
+  if (BitWidth <= 224)
+    return &AMDGPU::SGPR_224RegClass;
   if (BitWidth <= 256)
     return &AMDGPU::SGPR_256RegClass;
   if (BitWidth <= 512)

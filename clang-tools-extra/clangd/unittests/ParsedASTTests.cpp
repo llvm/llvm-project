@@ -46,6 +46,7 @@ namespace {
 using ::testing::AllOf;
 using ::testing::ElementsAre;
 using ::testing::ElementsAreArray;
+using ::testing::IsEmpty;
 
 MATCHER_P(DeclNamed, Name, "") {
   if (NamedDecl *ND = dyn_cast<NamedDecl>(arg))
@@ -631,6 +632,258 @@ TEST(ParsedASTTest, PatchesDeletedIncludes) {
                 testPath("foo.cpp"))),
             StringMapToVector(ExpectedAST.getIncludeStructure().includeDepth(
                 testPath("foo.cpp"))));
+}
+
+// Returns Code guarded by #ifndef guards
+std::string guard(llvm::StringRef Code) {
+  static int GuardID = 0;
+  std::string GuardName = ("GUARD_" + llvm::Twine(++GuardID)).str();
+  return llvm::formatv("#ifndef {0}\n#define {0}\n{1}\n#endif\n", GuardName,
+                       Code);
+}
+
+std::string once(llvm::StringRef Code) {
+  return llvm::formatv("#pragma once\n{0}\n", Code);
+}
+
+bool mainIsGuarded(const ParsedAST &AST) {
+  const auto &SM = AST.getSourceManager();
+  const FileEntry *MainFE = SM.getFileEntryForID(SM.getMainFileID());
+  return AST.getPreprocessor()
+      .getHeaderSearchInfo()
+      .isFileMultipleIncludeGuarded(MainFE);
+}
+
+MATCHER_P(Diag, Desc, "") {
+  return llvm::StringRef(arg.Message).contains(Desc);
+}
+
+// Check our understanding of whether the main file is header guarded or not.
+TEST(ParsedASTTest, HeaderGuards) {
+  TestTU TU;
+  TU.ImplicitHeaderGuard = false;
+
+  TU.Code = ";";
+  EXPECT_FALSE(mainIsGuarded(TU.build()));
+
+  TU.Code = guard(";");
+  EXPECT_TRUE(mainIsGuarded(TU.build()));
+
+  TU.Code = once(";");
+  EXPECT_TRUE(mainIsGuarded(TU.build()));
+
+  TU.Code = R"cpp(
+    ;
+    #pragma once
+  )cpp";
+  EXPECT_FALSE(mainIsGuarded(TU.build())); // FIXME: true
+
+  TU.Code = R"cpp(
+    ;
+    #ifndef GUARD
+    #define GUARD
+    ;
+    #endif
+  )cpp";
+  EXPECT_FALSE(mainIsGuarded(TU.build()));
+}
+
+// Check our handling of files that include themselves.
+// Ideally we allow this if the file has header guards.
+//
+// Note: the semicolons (empty statements) are significant!
+// - they force the preamble to end and the body to begin. Directives can have
+//   different effects in the preamble vs main file (which we try to hide).
+// - if the preamble would otherwise cover the whole file, a trailing semicolon
+//   forces their sizes to be different. This is significant because the file
+//   size is part of the lookup key for HeaderFileInfo, and we don't want to
+//   rely on the preamble's HFI being looked up when parsing the main file.
+TEST(ParsedASTTest, HeaderGuardsSelfInclude) {
+  TestTU TU;
+  TU.ImplicitHeaderGuard = false;
+  TU.Filename = "self.h";
+
+  TU.Code = R"cpp(
+    #include "self.h" // error-ok
+    ;
+  )cpp";
+  auto AST = TU.build();
+  EXPECT_THAT(*AST.getDiagnostics(),
+              ElementsAre(Diag("recursively when building a preamble")));
+  EXPECT_FALSE(mainIsGuarded(AST));
+
+  TU.Code = R"cpp(
+    ;
+    #include "self.h" // error-ok
+  )cpp";
+  AST = TU.build();
+  EXPECT_THAT(*AST.getDiagnostics(), ElementsAre(Diag("nested too deeply")));
+  EXPECT_FALSE(mainIsGuarded(AST));
+
+  TU.Code = R"cpp(
+    #pragma once
+    #include "self.h"
+    ;
+  )cpp";
+  AST = TU.build();
+  EXPECT_THAT(*AST.getDiagnostics(), IsEmpty());
+  EXPECT_TRUE(mainIsGuarded(AST));
+
+  TU.Code = R"cpp(
+    #pragma once
+    ;
+    #include "self.h"
+  )cpp";
+  AST = TU.build();
+  EXPECT_THAT(*AST.getDiagnostics(), IsEmpty());
+  EXPECT_TRUE(mainIsGuarded(AST));
+
+  TU.Code = R"cpp(
+    ;
+    #pragma once
+    #include "self.h"
+  )cpp";
+  AST = TU.build();
+  EXPECT_THAT(*AST.getDiagnostics(), IsEmpty());
+  EXPECT_TRUE(mainIsGuarded(AST));
+
+  TU.Code = R"cpp(
+    #ifndef GUARD
+    #define GUARD
+    #include "self.h" // error-ok: FIXME, this would be nice to support
+    #endif
+    ;
+  )cpp";
+  AST = TU.build();
+  EXPECT_THAT(*AST.getDiagnostics(),
+              ElementsAre(Diag("recursively when building a preamble")));
+  EXPECT_TRUE(mainIsGuarded(AST));
+
+  TU.Code = R"cpp(
+    #ifndef GUARD
+    #define GUARD
+    ;
+    #include "self.h"
+    #endif
+  )cpp";
+  AST = TU.build();
+  EXPECT_THAT(*AST.getDiagnostics(), IsEmpty());
+  EXPECT_TRUE(mainIsGuarded(AST));
+
+  // Guarded too late...
+  TU.Code = R"cpp(
+    #include "self.h" // error-ok
+    #ifndef GUARD
+    #define GUARD
+    ;
+    #endif
+  )cpp";
+  AST = TU.build();
+  EXPECT_THAT(*AST.getDiagnostics(),
+              ElementsAre(Diag("recursively when building a preamble")));
+  EXPECT_FALSE(mainIsGuarded(AST));
+
+  TU.Code = R"cpp(
+    #include "self.h" // error-ok
+    ;
+    #ifndef GUARD
+    #define GUARD
+    #endif
+  )cpp";
+  AST = TU.build();
+  EXPECT_THAT(*AST.getDiagnostics(),
+              ElementsAre(Diag("recursively when building a preamble")));
+  EXPECT_FALSE(mainIsGuarded(AST));
+
+  TU.Code = R"cpp(
+    ;
+    #ifndef GUARD
+    #define GUARD
+    #include "self.h"
+    #endif
+  )cpp";
+  AST = TU.build();
+  EXPECT_THAT(*AST.getDiagnostics(), IsEmpty());
+  EXPECT_FALSE(mainIsGuarded(AST));
+
+  TU.Code = R"cpp(
+    #include "self.h" // error-ok
+    #pragma once
+    ;
+  )cpp";
+  AST = TU.build();
+  EXPECT_THAT(*AST.getDiagnostics(),
+              ElementsAre(Diag("recursively when building a preamble")));
+  EXPECT_TRUE(mainIsGuarded(AST));
+
+  TU.Code = R"cpp(
+    #include "self.h" // error-ok
+    ;
+    #pragma once
+  )cpp";
+  AST = TU.build();
+  EXPECT_THAT(*AST.getDiagnostics(),
+              ElementsAre(Diag("recursively when building a preamble")));
+  EXPECT_TRUE(mainIsGuarded(AST));
+}
+
+// Tests how we handle common idioms for splitting a header-only library
+// into interface and implementation files (e.g. *.h vs *.inl).
+// These files mutually include each other, and need careful handling of include
+// guards (which interact with preambles).
+TEST(ParsedASTTest, HeaderGuardsImplIface) {
+  std::string Interface = R"cpp(
+    // error-ok: we assert on diagnostics explicitly
+    template <class T> struct Traits {
+      unsigned size();
+    };
+    #include "impl.h"
+  )cpp";
+  std::string Implementation = R"cpp(
+    // error-ok: we assert on diagnostics explicitly
+    #include "iface.h"
+    template <class T> unsigned Traits<T>::size() {
+      return sizeof(T);
+    }
+  )cpp";
+
+  TestTU TU;
+  TU.ImplicitHeaderGuard = false; // We're testing include guard handling!
+  TU.ExtraArgs.push_back("-xc++-header");
+
+  // Editing the interface file, which is include guarded (easy case).
+  // We mostly get this right via PP if we don't recognize the include guard.
+  TU.Filename = "iface.h";
+  TU.Code = guard(Interface);
+  TU.AdditionalFiles = {{"impl.h", Implementation}};
+  auto AST = TU.build();
+  EXPECT_THAT(*AST.getDiagnostics(), IsEmpty());
+  EXPECT_TRUE(mainIsGuarded(AST));
+  // Slightly harder: the `#pragma once` is part of the preamble, and we
+  // need to transfer it to the main file's HeaderFileInfo.
+  TU.Code = once(Interface);
+  AST = TU.build();
+  EXPECT_THAT(*AST.getDiagnostics(), IsEmpty());
+  EXPECT_TRUE(mainIsGuarded(AST));
+
+  // Editing the implementation file, which is not include guarded.
+  TU.Filename = "impl.h";
+  TU.Code = Implementation;
+  TU.AdditionalFiles = {{"iface.h", guard(Interface)}};
+  AST = TU.build();
+  // The diagnostic is unfortunate in this case, but correct per our model.
+  // Ultimately the include is skipped and the code is parsed correctly though.
+  EXPECT_THAT(*AST.getDiagnostics(),
+              ElementsAre(Diag("in included file: main file cannot be included "
+                               "recursively when building a preamble")));
+  EXPECT_FALSE(mainIsGuarded(AST));
+  // Interface is pragma once guarded, same thing.
+  TU.AdditionalFiles = {{"iface.h", once(Interface)}};
+  AST = TU.build();
+  EXPECT_THAT(*AST.getDiagnostics(),
+              ElementsAre(Diag("in included file: main file cannot be included "
+                               "recursively when building a preamble")));
+  EXPECT_FALSE(mainIsGuarded(AST));
 }
 
 } // namespace

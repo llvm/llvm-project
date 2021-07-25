@@ -565,7 +565,7 @@ def OpWithInferTypeInterfaceOp : TEST_Op<"op_with_infer_type_if", [
 }
 
 def OpWithShapedTypeInferTypeInterfaceOp : TEST_Op<"op_with_shaped_type_infer_type_if",
-      InferTensorTypeWithReify.traits> {
+      [InferTensorTypeWithReify]> {
   let arguments = (ins AnyTensor, AnyTensor);
   let results = (outs AnyTensor);
 }
@@ -579,16 +579,7 @@ def OpWithResultShapeInterfaceOp : TEST_Op<"op_with_result_shape_interface",
 
 def OpWithResultShapePerDimInterfaceOp :
     TEST_Op<"op_with_result_shape_per_dim_interface",
-        [DeclareOpInterfaceMethods<InferShapedTypeOpInterface,
-             ["reifyReturnTypeShapesPerResultDim"]>]> {
-  let arguments = (ins AnyRankedTensor:$operand1, AnyRankedTensor:$operand2);
-  let results = (outs AnyRankedTensor:$result1, AnyRankedTensor:$result2);
-}
-
-def OpWithResultShapeAndPerDimInterfaceOp :
-    TEST_Op<"op_with_result_shape_and_per_dim_interface",
-        [DeclareOpInterfaceMethods<InferShapedTypeOpInterface,
-             ["reifyReturnTypeShapes", "reifyReturnTypeShapesPerResultDim"]>]> {
+        [DeclareOpInterfaceMethods<ReifyRankedShapedTypeOpInterface>]> {
   let arguments = (ins AnyRankedTensor:$operand1, AnyRankedTensor:$operand2);
   let results = (outs AnyRankedTensor:$result1, AnyRankedTensor:$result2);
 }
@@ -725,6 +716,13 @@ def TestEqualArgsPattern : Pat<(OpN $a, $a), (OpO $a)>;
 def TestNestedOpEqualArgsPattern :
   Pat<(OpN $b, (OpP $a, $b, $c, $d, $e, $f)), (replaceWithValue $b)>;
 
+// Test when equality is enforced on same op and same operand but at different
+// depth. We only bound one of the $x to the second operand of outer OpN and
+// left another be the default value (which is the value of first operand of
+// outer OpN). As a result, it ended up comparing wrong values in some cases.
+def TestNestedSameOpAndSameArgEqualityPattern :
+  Pat<(OpN (OpN $_, $x), $x), (replaceWithValue $x)>;
+
 // Test multiple equal arguments check enforced.
 def TestMultipleEqualArgsPattern :
   Pat<(OpP $a, $b, $a, $a, $b, $c), (OpN $c, $b)>;
@@ -859,7 +857,7 @@ def OpNativeCodeCall3 : TEST_Op<"native_code_call3"> {
 // Test that NativeCodeCall is not ignored if it is not used to directly
 // replace the matched root op.
 def : Pattern<(OpNativeCodeCall3 $input),
-              [(NativeCodeCall<"createOpI($_builder, $_loc, $0)"> $input),
+              [(NativeCodeCallVoid<"createOpI($_builder, $_loc, $0)"> $input),
                (OpK)]>;
 
 def OpNativeCodeCall4 : TEST_Op<"native_code_call4"> {
@@ -875,6 +873,19 @@ def GetFirstI32Result : NativeCodeCall<"success(getFirstI32Result($_self, $0))">
 def BindNativeCodeCallResult : NativeCodeCall<"bindNativeCodeCallResult($0)">;
 def : Pat<(OpNativeCodeCall4 (GetFirstI32Result $ret)),
           (OpNativeCodeCall5 (BindNativeCodeCallResult:$native $ret), $native)>;
+
+def OpNativeCodeCall6 : TEST_Op<"native_code_call6"> {
+  let arguments = (ins I32:$input1, I32:$input2);
+  let results = (outs I32:$output1, I32:$output2);
+}
+def OpNativeCodeCall7 : TEST_Op<"native_code_call7"> {
+  let arguments = (ins I32:$input);
+  let results = (outs I32);
+}
+def BindMultipleNativeCodeCallResult : NativeCodeCall<"bindMultipleNativeCodeCallResult($0, $1)", 2>;
+def : Pattern<(OpNativeCodeCall6 $arg1, $arg2),
+              [(OpNativeCodeCall7 (BindMultipleNativeCodeCallResult:$native__0 $arg1, $arg2)),
+               (OpNativeCodeCall7 $native__1)]>;
 
 // Test AllAttrConstraintsOf.
 def OpAllAttrConstraint1 : TEST_Op<"all_attr_constraint_of1"> {
@@ -1035,7 +1046,7 @@ def OpSymbolBindingNoResult : TEST_Op<"symbol_binding_no_result", []> {
 
 // Test that we can bind to an op without results and reference it later.
 def : Pat<(OpSymbolBindingNoResult:$op $operand),
-          (NativeCodeCall<"handleNoResultOp($_builder, $0)"> $op)>;
+          (NativeCodeCallVoid<"handleNoResultOp($_builder, $0)"> $op)>;
 
 //===----------------------------------------------------------------------===//
 // Test Patterns (Attributes)

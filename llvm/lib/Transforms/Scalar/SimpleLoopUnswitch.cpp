@@ -2775,14 +2775,15 @@ static bool unswitchBestCondition(
   SmallVector<BasicBlock *, 4> ExitBlocks;
   L.getUniqueExitBlocks(ExitBlocks);
 
-  // We cannot unswitch if exit blocks contain a cleanuppad instruction as we
-  // don't know how to split those exit blocks.
+  // We cannot unswitch if exit blocks contain a cleanuppad/catchswitch
+  // instruction as we don't know how to split those exit blocks.
   // FIXME: We should teach SplitBlock to handle this and remove this
   // restriction.
   for (auto *ExitBB : ExitBlocks) {
-    if (isa<CleanupPadInst>(ExitBB->getFirstNonPHI())) {
-      LLVM_DEBUG(
-          dbgs() << "Cannot unswitch because of cleanuppad in exit block\n");
+    auto *I = ExitBB->getFirstNonPHI();
+    if (isa<CleanupPadInst>(I) || isa<CatchSwitchInst>(I)) {
+      LLVM_DEBUG(dbgs() << "Cannot unswitch because of cleanuppad/catchswitch "
+                           "in exit block\n");
       return false;
     }
   }
@@ -2984,7 +2985,8 @@ static bool unswitchBestCondition(
 /// done.
 static bool
 unswitchLoop(Loop &L, DominatorTree &DT, LoopInfo &LI, AssumptionCache &AC,
-             AAResults &AA, TargetTransformInfo &TTI, bool NonTrivial,
+             AAResults &AA, TargetTransformInfo &TTI, bool Trivial,
+             bool NonTrivial,
              function_ref<void(bool, bool, ArrayRef<Loop *>)> UnswitchCB,
              ScalarEvolution *SE, MemorySSAUpdater *MSSAU) {
   assert(L.isRecursivelyLCSSAForm(DT, LI) &&
@@ -2995,7 +2997,7 @@ unswitchLoop(Loop &L, DominatorTree &DT, LoopInfo &LI, AssumptionCache &AC,
     return false;
 
   // Try trivial unswitch first before loop over other basic blocks in the loop.
-  if (unswitchAllTrivialConditions(L, DT, LI, SE, MSSAU)) {
+  if (Trivial && unswitchAllTrivialConditions(L, DT, LI, SE, MSSAU)) {
     // If we unswitched successfully we will want to clean up the loop before
     // processing it further so just mark it as unswitched and return.
     UnswitchCB(/*CurrentLoopValid*/ true, false, {});
@@ -3087,7 +3089,7 @@ PreservedAnalyses SimpleLoopUnswitchPass::run(Loop &L, LoopAnalysisManager &AM,
     if (VerifyMemorySSA)
       AR.MSSA->verifyMemorySSA();
   }
-  if (!unswitchLoop(L, AR.DT, AR.LI, AR.AC, AR.AA, AR.TTI, NonTrivial,
+  if (!unswitchLoop(L, AR.DT, AR.LI, AR.AC, AR.AA, AR.TTI, Trivial, NonTrivial,
                     UnswitchCB, &AR.SE,
                     MSSAU.hasValue() ? MSSAU.getPointer() : nullptr))
     return PreservedAnalyses::all();
@@ -3181,7 +3183,7 @@ bool SimpleLoopUnswitchLegacyPass::runOnLoop(Loop *L, LPPassManager &LPM) {
     MSSA->verifyMemorySSA();
 
   bool Changed =
-      unswitchLoop(*L, DT, LI, AC, AA, TTI, NonTrivial, UnswitchCB, SE,
+      unswitchLoop(*L, DT, LI, AC, AA, TTI, true, NonTrivial, UnswitchCB, SE,
                    MSSAU.hasValue() ? MSSAU.getPointer() : nullptr);
 
   if (MSSA && VerifyMemorySSA)

@@ -18,6 +18,7 @@
 #include "llvm/ADT/Triple.h"
 #include "llvm/ExecutionEngine/JITLink/JITLinkMemoryManager.h"
 #include "llvm/ExecutionEngine/Orc/Core.h"
+#include "llvm/ExecutionEngine/Orc/Shared/ExecutorAddress.h"
 #include "llvm/ExecutionEngine/Orc/Shared/TargetProcessControlTypes.h"
 #include "llvm/ExecutionEngine/Orc/Shared/WrapperFunctionUtils.h"
 #include "llvm/Support/DynamicLibrary.h"
@@ -113,6 +114,13 @@ public:
     const SymbolLookupSet &Symbols;
   };
 
+  /// Contains the address of the dispatch function and context that the ORC
+  /// runtime can use to call functions in the JIT.
+  struct JITDispatchInfo {
+    ExecutorAddress JITDispatchFunctionAddress;
+    ExecutorAddress JITDispatchContextAddress;
+  };
+
   virtual ~ExecutorProcessControl();
 
   /// Intern a symbol name in the SymbolStringPool.
@@ -126,6 +134,9 @@ public:
 
   /// Get the page size for the target process.
   unsigned getPageSize() const { return PageSize; }
+
+  /// Get the JIT dispatch function and context address for the executor.
+  const JITDispatchInfo &getJITDispatchInfo() const { return JDI; }
 
   /// Return a MemoryAccess object for the target process.
   MemoryAccess &getMemoryAccess() const { return *MemAccess; }
@@ -198,14 +209,17 @@ public:
 
   /// Run a wrapper function using SPS to serialize the arguments and
   /// deserialize the results.
-  template <typename SPSSignature, typename RetT, typename... ArgTs>
-  Error runSPSWrapper(JITTargetAddress WrapperFnAddr, RetT &RetVal,
-                      const ArgTs &...Args) {
+  ///
+  /// If SPSSignature is a non-void function signature then the second argument
+  /// (the first in the Args list) should be a reference to a return value.
+  template <typename SPSSignature, typename... WrapperCallArgTs>
+  Error runSPSWrapper(JITTargetAddress WrapperFnAddr,
+                      WrapperCallArgTs &&...WrapperCallArgs) {
     return shared::WrapperFunction<SPSSignature>::call(
         [this, WrapperFnAddr](const char *ArgData, size_t ArgSize) {
           return runWrapper(WrapperFnAddr, ArrayRef<char>(ArgData, ArgSize));
         },
-        RetVal, Args...);
+        std::forward<WrapperCallArgTs>(WrapperCallArgs)...);
   }
 
   /// Wrap a handler that takes concrete argument types (and a sender for a
@@ -221,6 +235,15 @@ public:
       shared::WrapperFunction<SPSSignature>::handleAsync(ArgData, ArgSize, H,
                                                          std::move(SendResult));
     };
+  }
+
+  template <typename SPSSignature, typename ClassT, typename... MethodArgTs>
+  static AsyncWrapperFunction
+  wrapAsyncWithSPS(ClassT *Instance, void (ClassT::*Method)(MethodArgTs...)) {
+    return wrapAsyncWithSPS<SPSSignature>(
+        [Instance, Method](MethodArgTs &&...MethodArgs) {
+          (Instance->*Method)(std::forward<MethodArgTs>(MethodArgs)...);
+        });
   }
 
   /// For each symbol name, associate the AsyncWrapperFunction implementation
@@ -250,6 +273,7 @@ protected:
   std::shared_ptr<SymbolStringPool> SSP;
   Triple TargetTriple;
   unsigned PageSize = 0;
+  JITDispatchInfo JDI;
   MemoryAccess *MemAccess = nullptr;
   jitlink::JITLinkMemoryManager *MemMgr = nullptr;
 
@@ -317,6 +341,10 @@ private:
 
   void writeBuffers(ArrayRef<tpctypes::BufferWrite> Ws,
                     WriteResultFn OnWriteComplete) override;
+
+  static shared::detail::CWrapperFunctionResult
+  jitDispatchViaWrapperFunctionManager(void *Ctx, const void *FnTag,
+                                       const char *Data, size_t Size);
 
   std::unique_ptr<jitlink::JITLinkMemoryManager> OwnedMemMgr;
   char GlobalManglingPrefix = 0;

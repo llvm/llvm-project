@@ -72,9 +72,19 @@ public:
   /// \param[in] path
   ///     The original source file path to try and remap.
   ///
+  /// \param[in] only_if_exists
+  ///     If \b true, besides matching \p path with the remapping rules, this
+  ///     tries to check with the filesystem that the remapped file exists. If
+  ///     no valid file is found, \b None is returned. This might be expensive,
+  ///     specially on a network.
+  ///
+  ///     If \b false, then the existence of the returned remapping is not
+  ///     checked.
+  ///
   /// \return
   ///     The remapped filespec that may or may not exist on disk.
-  llvm::Optional<FileSpec> RemapPath(llvm::StringRef path) const;
+  llvm::Optional<FileSpec> RemapPath(llvm::StringRef path,
+                                     bool only_if_exists = false) const;
   bool RemapPath(const char *, std::string &) const = delete;
 
   bool ReverseRemapPath(const FileSpec &file, FileSpec &fixed) const;

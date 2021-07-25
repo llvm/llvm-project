@@ -47,17 +47,17 @@ static inline cpp::EnableIfType<cpp::IsSame<T, float>::Value, T> fma(T x, T y,
     // bit of sum, so that the sticky bits used when rounding sum to float are
     // correct (when it matters).
     fputil::FPBits<double> t(
-        (bit_prod.encoding.exponent >= bitz.encoding.exponent)
+        (bit_prod.getUnbiasedExponent() >= bitz.getUnbiasedExponent())
             ? ((double(bit_sum) - double(bit_prod)) - double(bitz))
             : ((double(bit_sum) - double(bitz)) - double(bit_prod)));
 
     // Update sticky bits if t != 0.0 and the least (52 - 23 - 1 = 28) bits are
     // zero.
-    if (!t.isZero() && ((bit_sum.encoding.mantissa & 0xfff'ffffULL) == 0)) {
-      if (bit_sum.encoding.sign != t.encoding.sign) {
-        ++bit_sum.encoding.mantissa;
-      } else if (bit_sum.encoding.mantissa) {
-        --bit_sum.encoding.mantissa;
+    if (!t.isZero() && ((bit_sum.getMantissa() & 0xfff'ffffULL) == 0)) {
+      if (bit_sum.getSign() != t.getSign()) {
+        bit_sum.setMantissa(bit_sum.getMantissa() + 1);
+      } else if (bit_sum.getMantissa()) {
+        bit_sum.setMantissa(bit_sum.getMantissa() - 1);
       }
     }
   }

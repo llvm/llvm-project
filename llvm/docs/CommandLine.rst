@@ -661,7 +661,7 @@ declared, the command line option ``-help-list`` becomes visible which will
 print the command line options as uncategorized list.
 
 Note that Options that are not explicitly categorized will be placed in the
-``cl::GeneralCategory`` category.
+``cl::getGeneralCategory()`` category.
 
 .. _Reference Guide:
 

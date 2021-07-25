@@ -185,6 +185,17 @@ bool DerivedTypeSpec::HasDefaultInitialization() const {
       })};
 }
 
+bool DerivedTypeSpec::HasDestruction() const {
+  if (!typeSymbol().get<DerivedTypeDetails>().finals().empty()) {
+    return true;
+  }
+  DirectComponentIterator components{*this};
+  return bool{std::find_if(
+      components.begin(), components.end(), [&](const Symbol &component) {
+        return IsDestructible(component, &typeSymbol());
+      })};
+}
+
 ParamValue *DerivedTypeSpec::FindParameter(SourceName target) {
   return const_cast<ParamValue *>(
       const_cast<const DerivedTypeSpec *>(this)->FindParameter(target));
@@ -233,6 +244,34 @@ static int PlumbPDTInstantiationDepth(const Scope *scope) {
   return depth;
 }
 
+// Completes component derived type instantiation and initializer folding
+// for a non-parameterized derived type Scope.
+static void InstantiateNonPDTScope(Scope &typeScope, Scope &containingScope) {
+  auto &context{containingScope.context()};
+  auto &foldingContext{context.foldingContext()};
+  for (auto &pair : typeScope) {
+    Symbol &symbol{*pair.second};
+    if (DeclTypeSpec * type{symbol.GetType()}) {
+      if (DerivedTypeSpec * derived{type->AsDerived()}) {
+        if (!(derived->IsForwardReferenced() &&
+                IsAllocatableOrPointer(symbol))) {
+          derived->Instantiate(containingScope);
+        }
+      }
+    }
+    if (!IsPointer(symbol)) {
+      if (auto *object{symbol.detailsIf<ObjectEntityDetails>()}) {
+        if (MaybeExpr & init{object->init()}) {
+          auto restorer{foldingContext.messages().SetLocation(symbol.name())};
+          init = evaluate::NonPointerInitializationExpr(
+              symbol, std::move(*init), foldingContext);
+        }
+      }
+    }
+  }
+  ComputeOffsets(context, typeScope);
+}
+
 void DerivedTypeSpec::Instantiate(Scope &containingScope) {
   if (instantiated_) {
     return;
@@ -251,27 +290,13 @@ void DerivedTypeSpec::Instantiate(Scope &containingScope) {
   const Scope &typeScope{DEREF(typeSymbol_.scope())};
   if (!MightBeParameterized()) {
     scope_ = &typeScope;
-    for (auto &pair : typeScope) {
-      Symbol &symbol{*pair.second};
-      if (DeclTypeSpec * type{symbol.GetType()}) {
-        if (DerivedTypeSpec * derived{type->AsDerived()}) {
-          if (!(derived->IsForwardReferenced() &&
-                  IsAllocatableOrPointer(symbol))) {
-            derived->Instantiate(containingScope);
-          }
-        }
-      }
-      if (!IsPointer(symbol)) {
-        if (auto *object{symbol.detailsIf<ObjectEntityDetails>()}) {
-          if (MaybeExpr & init{object->init()}) {
-            auto restorer{foldingContext.messages().SetLocation(symbol.name())};
-            init = evaluate::NonPointerInitializationExpr(
-                symbol, std::move(*init), foldingContext);
-          }
-        }
-      }
+    if (typeScope.derivedTypeSpec()) {
+      CHECK(*this == *typeScope.derivedTypeSpec());
+    } else {
+      Scope &mutableTypeScope{const_cast<Scope &>(typeScope)};
+      mutableTypeScope.set_derivedTypeSpec(*this);
+      InstantiateNonPDTScope(mutableTypeScope, containingScope);
     }
-    ComputeOffsets(context, const_cast<Scope &>(typeScope));
     return;
   }
   // New PDT instantiation.  Create a new scope and populate it

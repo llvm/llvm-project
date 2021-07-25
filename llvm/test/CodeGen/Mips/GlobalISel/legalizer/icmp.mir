@@ -144,10 +144,10 @@ body:             |
     ; MIPS32: [[COPY1:%[0-9]+]]:_(s32) = COPY $a1
     ; MIPS32: [[COPY2:%[0-9]+]]:_(s32) = COPY $a2
     ; MIPS32: [[COPY3:%[0-9]+]]:_(s32) = COPY $a3
+    ; MIPS32: [[C:%[0-9]+]]:_(s32) = G_CONSTANT i32 0
     ; MIPS32: [[XOR:%[0-9]+]]:_(s32) = G_XOR [[COPY]], [[COPY2]]
     ; MIPS32: [[XOR1:%[0-9]+]]:_(s32) = G_XOR [[COPY1]], [[COPY3]]
     ; MIPS32: [[OR:%[0-9]+]]:_(s32) = G_OR [[XOR]], [[XOR1]]
-    ; MIPS32: [[C:%[0-9]+]]:_(s32) = G_CONSTANT i32 0
     ; MIPS32: [[ICMP:%[0-9]+]]:_(s32) = G_ICMP intpred(eq), [[OR]](s32), [[C]]
     ; MIPS32: [[COPY4:%[0-9]+]]:_(s32) = COPY [[ICMP]](s32)
     ; MIPS32: $v0 = COPY [[COPY4]](s32)
@@ -178,10 +178,10 @@ body:             |
     ; MIPS32: [[COPY1:%[0-9]+]]:_(s32) = COPY $a1
     ; MIPS32: [[COPY2:%[0-9]+]]:_(s32) = COPY $a2
     ; MIPS32: [[COPY3:%[0-9]+]]:_(s32) = COPY $a3
+    ; MIPS32: [[C:%[0-9]+]]:_(s32) = G_CONSTANT i32 0
     ; MIPS32: [[XOR:%[0-9]+]]:_(s32) = G_XOR [[COPY]], [[COPY2]]
     ; MIPS32: [[XOR1:%[0-9]+]]:_(s32) = G_XOR [[COPY1]], [[COPY3]]
     ; MIPS32: [[OR:%[0-9]+]]:_(s32) = G_OR [[XOR]], [[XOR1]]
-    ; MIPS32: [[C:%[0-9]+]]:_(s32) = G_CONSTANT i32 0
     ; MIPS32: [[ICMP:%[0-9]+]]:_(s32) = G_ICMP intpred(ne), [[OR]](s32), [[C]]
     ; MIPS32: [[COPY4:%[0-9]+]]:_(s32) = COPY [[ICMP]](s32)
     ; MIPS32: $v0 = COPY [[COPY4]](s32)

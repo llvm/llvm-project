@@ -10,6 +10,7 @@
 #define LLD_MACHO_LTO_H
 
 #include "llvm/ADT/SmallString.h"
+#include "llvm/Support/MemoryBuffer.h"
 #include <memory>
 #include <vector>
 
@@ -35,6 +36,7 @@ public:
 private:
   std::unique_ptr<llvm::lto::LTO> ltoObj;
   std::vector<llvm::SmallString<0>> buf;
+  std::vector<std::unique_ptr<llvm::MemoryBuffer>> files;
 };
 
 } // namespace macho

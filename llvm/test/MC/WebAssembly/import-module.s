@@ -1,14 +1,15 @@
 # RUN: llvm-mc -triple=wasm32 < %s | FileCheck %s -check-prefix=CHECK-ASM
 # RUN: llvm-mc -triple=wasm32 -filetype=obj -o - < %s | obj2yaml | FileCheck %s
 
+.functype foo () -> ()
+.functype plain () -> ()
+
 test:
   .functype test () -> ()
   call      foo
   call      plain
   end_function
 
-  .functype foo () -> ()
-  .functype plain () -> ()
   .import_module  foo, bar
   .import_name  foo, qux
 

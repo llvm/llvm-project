@@ -196,5 +196,26 @@ static inline bool IsValidFrame(uptr frame, uptr stack_top, uptr stack_bottom) {
   uptr local_stack;                           \
   uptr sp = (uptr)&local_stack
 
+// GET_CURRENT_PC() is equivalent to StackTrace::GetCurrentPc().
+// Optimized x86 version is faster than GetCurrentPc because
+// it does not involve a function call, instead it reads RIP register.
+// Reads of RIP by an instruction return RIP pointing to the next
+// instruction, which is exactly what we want here, thus 0 offset.
+// It needs to be a macro because otherwise we will get the name
+// of this function on the top of most stacks. Attribute artificial
+// does not do what it claims to do, unfortunatley. And attribute
+// __nodebug__ is clang-only. If we would have an attribute that
+// would remove this function from debug info, we could simply make
+// StackTrace::GetCurrentPc() faster.
+#if defined(__x86_64__)
+#  define GET_CURRENT_PC()                \
+    ({                                    \
+      uptr pc;                            \
+      asm("lea 0(%%rip), %0" : "=r"(pc)); \
+      pc;                                 \
+    })
+#else
+#  define GET_CURRENT_PC() StackTrace::GetCurrentPc()
+#endif
 
 #endif  // SANITIZER_STACKTRACE_H

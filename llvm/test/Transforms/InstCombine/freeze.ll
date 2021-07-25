@@ -86,3 +86,138 @@ define void @or_select_multipleuses_logical(i32 %x, i1 %y) {
   call void @use_i32_i1(i32 %a, i1 %b)
   ret void
 }
+
+; Move the freeze forward to prevent poison from spreading.
+
+define i32 @early_freeze_test1(i32 %x, i32 %y) {
+; CHECK-LABEL: @early_freeze_test1(
+; CHECK-NEXT:    [[V1:%.*]] = add i32 [[X:%.*]], [[Y:%.*]]
+; CHECK-NEXT:    [[V1_FR:%.*]] = freeze i32 [[V1]]
+; CHECK-NEXT:    [[V2:%.*]] = shl i32 [[V1_FR]], 1
+; CHECK-NEXT:    [[V3:%.*]] = and i32 [[V2]], 2
+; CHECK-NEXT:    ret i32 [[V3]]
+;
+  %v1 = add i32 %x, %y
+  %v2 = shl i32 %v1, 1
+  %v3 = and i32 %v2, 2
+  %v3.fr = freeze i32 %v3
+  ret i32 %v3.fr
+}
+
+define i1 @early_freeze_test2(i32* %ptr) {
+; CHECK-LABEL: @early_freeze_test2(
+; CHECK-NEXT:    [[V1:%.*]] = load i32, i32* [[PTR:%.*]], align 4
+; CHECK-NEXT:    [[V1_FR:%.*]] = freeze i32 [[V1]]
+; CHECK-NEXT:    [[V2:%.*]] = and i32 [[V1_FR]], 1
+; CHECK-NEXT:    [[COND:%.*]] = icmp eq i32 [[V2]], 0
+; CHECK-NEXT:    ret i1 [[COND]]
+;
+  %v1 = load i32, i32* %ptr
+  %v2 = and i32 %v1, 1
+  %cond = icmp eq i32 %v2, 0
+  %cond.fr = freeze i1 %cond
+  ret i1 %cond.fr
+}
+
+; add can overflows, so we cannot move freeze beyond add
+
+define i32 @early_freeze_test3(i32 %v1) {
+; CHECK-LABEL: @early_freeze_test3(
+; CHECK-NEXT:    [[V2:%.*]] = shl i32 [[V1:%.*]], 1
+; CHECK-NEXT:    [[V3:%.*]] = add nuw i32 [[V2]], 2
+; CHECK-NEXT:    [[V3_FR:%.*]] = freeze i32 [[V3]]
+; CHECK-NEXT:    [[V4:%.*]] = or i32 [[V3_FR]], 1
+; CHECK-NEXT:    ret i32 [[V4]]
+;
+  %v2 = shl i32 %v1, 1
+  %v3 = add nuw i32 %v2, 2
+  %v4 = or i32 %v3, 1
+  %v4.fr = freeze i32 %v4
+  ret i32 %v4.fr
+}
+
+; If replace all dominated uses of v to freeze(v).
+
+define void @freeze_dominated_uses_test1(i32 %v) {
+; CHECK-LABEL: @freeze_dominated_uses_test1(
+; CHECK-NEXT:    [[V_FR:%.*]] = freeze i32 [[V:%.*]]
+; CHECK-NEXT:    call void @use_i32(i32 [[V_FR]])
+; CHECK-NEXT:    call void @use_i32(i32 [[V_FR]])
+; CHECK-NEXT:    ret void
+;
+  %v.fr = freeze i32 %v
+  call void @use_i32(i32 %v)
+  call void @use_i32(i32 %v.fr)
+  ret void
+}
+
+define void @freeze_dominated_uses_test2(i32 %v) {
+; CHECK-LABEL: @freeze_dominated_uses_test2(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    call void @use_i32(i32 [[V:%.*]])
+; CHECK-NEXT:    [[COND:%.*]] = icmp eq i32 [[V]], 0
+; CHECK-NEXT:    br i1 [[COND]], label [[BB0:%.*]], label [[BB1:%.*]]
+; CHECK:       bb0:
+; CHECK-NEXT:    [[V_FR:%.*]] = freeze i32 [[V]]
+; CHECK-NEXT:    call void @use_i32(i32 [[V_FR]])
+; CHECK-NEXT:    call void @use_i32(i32 [[V_FR]])
+; CHECK-NEXT:    br label [[END:%.*]]
+; CHECK:       bb1:
+; CHECK-NEXT:    call void @use_i32(i32 [[V]])
+; CHECK-NEXT:    br label [[END]]
+; CHECK:       end:
+; CHECK-NEXT:    ret void
+;
+entry:
+  call void @use_i32(i32 %v)
+  %cond = icmp eq i32 %v, 0
+  br i1 %cond, label %bb0, label %bb1
+
+bb0:
+  %v.fr = freeze i32 %v
+  call void @use_i32(i32 %v.fr)
+  call void @use_i32(i32 %v)
+  br label %end
+
+bb1:
+  call void @use_i32(i32 %v)
+  br label %end
+
+end:
+  ret void
+}
+
+; If there is a duplicate freeze, it will be removed.
+
+define void @freeze_dominated_uses_test3(i32 %v, i1 %cond) {
+; CHECK-LABEL: @freeze_dominated_uses_test3(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[V_FR1:%.*]] = freeze i32 [[V:%.*]]
+; CHECK-NEXT:    call void @use_i32(i32 [[V_FR1]])
+; CHECK-NEXT:    br i1 [[COND:%.*]], label [[BB0:%.*]], label [[BB1:%.*]]
+; CHECK:       bb0:
+; CHECK-NEXT:    call void @use_i32(i32 [[V_FR1]])
+; CHECK-NEXT:    br label [[END:%.*]]
+; CHECK:       bb1:
+; CHECK-NEXT:    call void @use_i32(i32 [[V_FR1]])
+; CHECK-NEXT:    br label [[END]]
+; CHECK:       end:
+; CHECK-NEXT:    ret void
+;
+entry:
+  %v.fr1 = freeze i32 %v
+  call void @use_i32(i32 %v.fr1)
+  br i1 %cond, label %bb0, label %bb1
+
+bb0:
+  %v.fr2 = freeze i32 %v
+  call void @use_i32(i32 %v.fr2)
+  br label %end
+
+bb1:
+  call void @use_i32(i32 %v)
+  br label %end
+
+end:
+  ret void
+}

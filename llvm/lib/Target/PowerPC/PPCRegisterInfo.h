@@ -94,6 +94,16 @@ public:
   bool isCallerPreservedPhysReg(MCRegister PhysReg,
                                 const MachineFunction &MF) const override;
 
+  // Provide hints to the register allocator for allocating subregisters
+  // of primed and unprimed accumulators. For example, if accumulator
+  // ACC5 is assigned, we also want to assign UACC5 to the input.
+  // Similarly if UACC5 is assigned, we want to assign VSRp10, VSRp11
+  // to its inputs.
+  bool getRegAllocationHints(Register VirtReg, ArrayRef<MCPhysReg> Order,
+                             SmallVectorImpl<MCPhysReg> &Hints,
+                             const MachineFunction &MF, const VirtRegMap *VRM,
+                             const LiveRegMatrix *Matrix) const override;
+
   /// We require the register scavenger.
   bool requiresRegisterScavenging(const MachineFunction &MF) const override {
     return true;
@@ -136,6 +146,8 @@ public:
   void eliminateFrameIndex(MachineBasicBlock::iterator II, int SPAdj,
                            unsigned FIOperandNum,
                            RegScavenger *RS = nullptr) const override;
+
+  bool addAllocPriorityToGlobalRanges() const override { return true; }
 
   // Support for virtual base registers.
   bool needsFrameBaseReg(MachineInstr *MI, int64_t Offset) const override;

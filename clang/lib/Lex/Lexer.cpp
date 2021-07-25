@@ -588,7 +588,7 @@ PreambleBounds Lexer::ComputePreamble(StringRef Buffer,
   // Create a lexer starting at the beginning of the file. Note that we use a
   // "fake" file source location at offset 1 so that the lexer will track our
   // position within the file.
-  const unsigned StartOffset = 1;
+  const SourceLocation::UIntTy StartOffset = 1;
   SourceLocation FileLoc = SourceLocation::getFromRawEncoding(StartOffset);
   Lexer TheLexer(FileLoc, LangOpts, Buffer.begin(), Buffer.begin(),
                  Buffer.end());
@@ -877,6 +877,14 @@ static CharSourceRange makeRangeFromFileLocs(CharSourceRange Range,
   return CharSourceRange::getCharRange(Begin, End);
 }
 
+// Assumes that `Loc` is in an expansion.
+static bool isInExpansionTokenRange(const SourceLocation Loc,
+                                    const SourceManager &SM) {
+  return SM.getSLocEntry(SM.getFileID(Loc))
+      .getExpansion()
+      .isExpansionTokenRange();
+}
+
 CharSourceRange Lexer::makeFileCharRange(CharSourceRange Range,
                                          const SourceManager &SM,
                                          const LangOptions &LangOpts) {
@@ -896,10 +904,12 @@ CharSourceRange Lexer::makeFileCharRange(CharSourceRange Range,
   }
 
   if (Begin.isFileID() && End.isMacroID()) {
-    if ((Range.isTokenRange() && !isAtEndOfMacroExpansion(End, SM, LangOpts,
-                                                          &End)) ||
-        (Range.isCharRange() && !isAtStartOfMacroExpansion(End, SM, LangOpts,
-                                                           &End)))
+    if (Range.isTokenRange()) {
+      if (!isAtEndOfMacroExpansion(End, SM, LangOpts, &End))
+        return {};
+      // Use the *original* end, not the expanded one in `End`.
+      Range.setTokenRange(isInExpansionTokenRange(Range.getEnd(), SM));
+    } else if (!isAtStartOfMacroExpansion(End, SM, LangOpts, &End))
       return {};
     Range.setEnd(End);
     return makeRangeFromFileLocs(Range, SM, LangOpts);
@@ -914,6 +924,9 @@ CharSourceRange Lexer::makeFileCharRange(CharSourceRange Range,
                                                          &MacroEnd)))) {
     Range.setBegin(MacroBegin);
     Range.setEnd(MacroEnd);
+    // Use the *original* `End`, not the expanded one in `MacroEnd`.
+    if (Range.isTokenRange())
+      Range.setTokenRange(isInExpansionTokenRange(End, SM));
     return makeRangeFromFileLocs(Range, SM, LangOpts);
   }
 
@@ -2780,6 +2793,11 @@ bool Lexer::LexEndOfFile(Token &Result, const char *CurPtr) {
 
   if (PP->isRecordingPreamble() && PP->isInPrimaryFile()) {
     PP->setRecordedPreambleConditionalStack(ConditionalStack);
+    // If the preamble cuts off the end of a header guard, consider it guarded.
+    // The guard is valid for the preamble content itself, and for tools the
+    // most useful answer is "yes, this file has a header guard".
+    if (!ConditionalStack.empty())
+      MIOpt.ExitTopLevelConditional();
     ConditionalStack.clear();
   }
 

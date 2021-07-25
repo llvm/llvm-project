@@ -11,6 +11,9 @@
 //===----------------------------------------------------------------------===//
 
 #include "llvm/Support/Timer.h"
+
+#include "DebugOptions.h"
+
 #include "llvm/ADT/Statistic.h"
 #include "llvm/ADT/StringMap.h"
 #include "llvm/Config/config.h"
@@ -53,20 +56,41 @@ static ManagedStatic<sys::SmartMutex<true> > TimerLock;
 static ManagedStatic<SignpostEmitter> Signposts;
 
 namespace {
-  static cl::opt<bool>
-  TrackSpace("track-memory", cl::desc("Enable -time-passes memory "
+struct CreateTrackSpace {
+  static void *call() {
+    return new cl::opt<bool>("track-memory",
+                             cl::desc("Enable -time-passes memory "
                                       "tracking (this may be slow)"),
-             cl::Hidden);
+                             cl::Hidden);
+  }
+};
+static ManagedStatic<cl::opt<bool>, CreateTrackSpace> TrackSpace;
+struct CreateInfoOutputFilename {
+  static void *call() {
+    return new cl::opt<std::string, true>(
+        "info-output-file", cl::value_desc("filename"),
+        cl::desc("File to append -stats and -timer output to"), cl::Hidden,
+        cl::location(getLibSupportInfoOutputFilename()));
+  }
+};
+static ManagedStatic<cl::opt<std::string, true>, CreateInfoOutputFilename>
+    InfoOutputFilename;
+struct CreateSortTimers {
+  static void *call() {
+    return new cl::opt<bool>(
+        "sort-timers",
+        cl::desc("In the report, sort the timers in each group "
+                 "in wall clock time order"),
+        cl::init(true), cl::Hidden);
+  }
+};
+ManagedStatic<cl::opt<bool>, CreateSortTimers> SortTimers;
+} // namespace
 
-  static cl::opt<std::string, true>
-  InfoOutputFilename("info-output-file", cl::value_desc("filename"),
-                     cl::desc("File to append -stats and -timer output to"),
-                   cl::Hidden, cl::location(getLibSupportInfoOutputFilename()));
-
-  static cl::opt<bool>
-  SortTimers("sort-timers", cl::desc("In the report, sort the timers in each group "
-                                     "in wall clock time order"),
-             cl::init(true), cl::Hidden);
+void llvm::initTimerOptions() {
+  *TrackSpace;
+  *InfoOutputFilename;
+  *SortTimers;
 }
 
 std::unique_ptr<raw_fd_ostream> llvm::CreateInfoOutputFile() {
@@ -125,7 +149,8 @@ Timer::~Timer() {
 }
 
 static inline size_t getMemUsage() {
-  if (!TrackSpace) return 0;
+  if (!*TrackSpace)
+    return 0;
   return sys::Process::GetMallocUsage();
 }
 
@@ -331,7 +356,7 @@ void TimerGroup::addTimer(Timer &T) {
 
 void TimerGroup::PrintQueuedTimers(raw_ostream &OS) {
   // Perhaps sort the timers in descending order by amount of time taken.
-  if (SortTimers)
+  if (*SortTimers)
     llvm::sort(TimersToPrint);
 
   TimeRecord Total;

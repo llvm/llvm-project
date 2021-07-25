@@ -42,6 +42,7 @@
 #include <string>
 #include <tuple>
 #include <type_traits>
+#include <unordered_map>
 #include <utility>
 #include <vector>
 
@@ -85,6 +86,7 @@ public:
   bool skip(size_t Size) {
     if (Size > Remaining)
       return false;
+    Buffer += Size;
     Remaining -= Size;
     return true;
   }
@@ -170,17 +172,11 @@ public:
   }
 };
 
-// Any empty placeholder suitable as a substitute for void when deserializing
+/// Any empty placeholder suitable as a substitute for void when deserializing
 class SPSEmpty {};
 
-/// SPS tag type for target addresses.
-///
-/// SPSTagTargetAddresses should be serialized as a uint64_t value.
-class SPSTagTargetAddress;
-
-template <>
-class SPSSerializationTraits<SPSTagTargetAddress, uint64_t>
-    : public SPSSerializationTraits<uint64_t, uint64_t> {};
+/// Represents an address in the executor.
+class SPSExecutorAddress {};
 
 /// SPS tag type for tuples.
 ///
@@ -287,6 +283,33 @@ public:
   static bool append(std::vector<T> &V, T E) {
     V.push_back(std::move(E));
     return true;
+  }
+};
+
+/// Trivial std::unordered_map<K, V> -> SPSSequence<SPSTuple<SPSKey, SPSValue>>
+/// serialization.
+template <typename SPSKeyTagT, typename SPSValueTagT, typename K, typename V>
+class TrivialSPSSequenceSerialization<SPSTuple<SPSKeyTagT, SPSValueTagT>,
+                                      std::unordered_map<K, V>> {
+public:
+  static constexpr bool available = true;
+};
+
+/// Trivial SPSSequence<SPSTuple<SPSKey, SPSValue>> -> std::unordered_map<K, V>
+/// deserialization.
+template <typename SPSKeyTagT, typename SPSValueTagT, typename K, typename V>
+class TrivialSPSSequenceDeserialization<SPSTuple<SPSKeyTagT, SPSValueTagT>,
+                                        std::unordered_map<K, V>> {
+public:
+  static constexpr bool available = true;
+
+  using element_type = std::pair<K, V>;
+
+  static void reserve(std::unordered_map<K, V> &M, uint64_t Size) {
+    M.reserve(Size);
+  }
+  static bool append(std::unordered_map<K, V> &M, element_type E) {
+    return M.insert(std::move(E)).second;
   }
 };
 

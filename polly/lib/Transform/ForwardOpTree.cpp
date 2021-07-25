@@ -584,7 +584,7 @@ public:
       (void)Access;
 
       if (!LocalTranslator.is_null())
-        Translator = Translator.add_map(LocalTranslator);
+        Translator = Translator.unite(LocalTranslator);
 
       NumKnownLoadsForwarded++;
       TotalKnownLoadsForwarded++;

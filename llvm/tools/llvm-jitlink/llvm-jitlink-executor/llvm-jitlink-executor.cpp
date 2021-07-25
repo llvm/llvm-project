@@ -141,7 +141,7 @@ int main(int argc, char *argv[]) {
   ExitOnErr.setBanner(std::string(argv[0]) + ":");
 
   using JITLinkExecutorEndpoint =
-      shared::MultiThreadedRPCEndpoint<shared::FDRawByteChannel>;
+      shared::SingleThreadedRPCEndpoint<shared::FDRawByteChannel>;
 
   shared::registerStringError<shared::FDRawByteChannel>();
 

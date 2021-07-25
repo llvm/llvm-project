@@ -30,14 +30,14 @@ _LIBCPP_BEGIN_NAMESPACE_STD
 
 class _LIBCPP_EXCEPTION_ABI format_error : public runtime_error {
 public:
-  _LIBCPP_INLINE_VISIBILITY explicit format_error(const string& __s)
+  _LIBCPP_HIDE_FROM_ABI explicit format_error(const string& __s)
       : runtime_error(__s) {}
-  _LIBCPP_INLINE_VISIBILITY explicit format_error(const char* __s)
+  _LIBCPP_HIDE_FROM_ABI explicit format_error(const char* __s)
       : runtime_error(__s) {}
   virtual ~format_error() noexcept;
 };
 
-_LIBCPP_NORETURN inline _LIBCPP_INLINE_VISIBILITY void
+_LIBCPP_NORETURN inline _LIBCPP_HIDE_FROM_ABI void
 __throw_format_error(const char* __s) {
 #ifndef _LIBCPP_NO_EXCEPTIONS
   throw format_error(__s);

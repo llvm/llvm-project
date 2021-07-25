@@ -22,9 +22,9 @@ define dso_local i32 @test(%struct.s* %arg1, %struct.t* %arg2) local_unnamed_add
 entry:
   call void @llvm.dbg.value(metadata %struct.s* %arg1, metadata !22, metadata !DIExpression()), !dbg !24
   call void @llvm.dbg.value(metadata %struct.t* %arg2, metadata !23, metadata !DIExpression()), !dbg !24
-  %0 = tail call i32* @llvm.preserve.struct.access.index.p0i32.p0s_struct.ss(%struct.s* %arg1, i32 1, i32 1), !dbg !25, !llvm.preserve.access.index !12
+  %0 = tail call i32* @llvm.preserve.struct.access.index.p0i32.p0s_struct.ss(%struct.s* elementtype(%struct.s) %arg1, i32 1, i32 1), !dbg !25, !llvm.preserve.access.index !12
   %1 = bitcast i32* %0 to i8*, !dbg !25
-  %2 = tail call i32* @llvm.preserve.struct.access.index.p0i32.p0s_struct.ts(%struct.t* %arg2, i32 1, i32 1), !dbg !26, !llvm.preserve.access.index !17
+  %2 = tail call i32* @llvm.preserve.struct.access.index.p0i32.p0s_struct.ts(%struct.t* elementtype(%struct.t) %arg2, i32 1, i32 1), !dbg !26, !llvm.preserve.access.index !17
   %3 = bitcast i32* %2 to i8*, !dbg !26
   %call = tail call i32 @get_value(i8* %1, i8* %3) #4, !dbg !27
   ret i32 %call, !dbg !28

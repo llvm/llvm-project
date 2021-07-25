@@ -97,7 +97,7 @@ std::vector<BenchmarkReporter::Run> ComputeStats(
 
   // All repetitions should be run with the same number of iterations so we
   // can take this information from the first benchmark.
-  int64_t const run_iterations = reports.front().iterations;
+  const IterationCount run_iterations = reports.front().iterations;
   // create stats for user counters
   struct CounterStat {
     Counter c;
@@ -147,8 +147,13 @@ std::vector<BenchmarkReporter::Run> ComputeStats(
   for (const auto& Stat : *reports[0].statistics) {
     // Get the data from the accumulator to BenchmarkReporter::Run's.
     Run data;
-    data.run_name = reports[0].benchmark_name();
+    data.run_name = reports[0].run_name;
+    data.family_index = reports[0].family_index;
+    data.per_family_instance_index = reports[0].per_family_instance_index;
     data.run_type = BenchmarkReporter::Run::RT_Aggregate;
+    data.threads = reports[0].threads;
+    data.repetitions = reports[0].repetitions;
+    data.repetition_index = Run::no_repetition_index;
     data.aggregate_name = Stat.name_;
     data.report_label = report_label;
 

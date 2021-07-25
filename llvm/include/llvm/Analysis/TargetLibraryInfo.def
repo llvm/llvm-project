@@ -332,7 +332,7 @@ TLI_DEFINE_STRING_INTERNAL("__isoc99_sscanf")
 /// void __kmpc_alloc_shared(size_t nbyte);
 TLI_DEFINE_ENUM_INTERNAL(__kmpc_alloc_shared)
 TLI_DEFINE_STRING_INTERNAL("__kmpc_alloc_shared")
-/// void __kmpc_free_shared(void *ptr);
+/// void __kmpc_free_shared(void *ptr, size_t nbyte);
 TLI_DEFINE_ENUM_INTERNAL(__kmpc_free_shared)
 TLI_DEFINE_STRING_INTERNAL("__kmpc_free_shared")
 /// double __log10_finite(double x);

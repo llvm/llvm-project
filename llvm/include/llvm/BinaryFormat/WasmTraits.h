@@ -63,6 +63,49 @@ template <> struct DenseMapInfo<wasm::WasmGlobalType> {
   }
 };
 
+// Traits for using WasmLimits in a DenseMap
+template <> struct DenseMapInfo<wasm::WasmLimits> {
+  static wasm::WasmLimits getEmptyKey() {
+    return wasm::WasmLimits{0xff, 0xff, 0xff};
+  }
+  static wasm::WasmLimits getTombstoneKey() {
+    return wasm::WasmLimits{0xee, 0xee, 0xee};
+  }
+  static unsigned getHashValue(const wasm::WasmLimits &Limits) {
+    unsigned Hash = hash_value(Limits.Flags);
+    Hash = hash_combine(Hash, Limits.Minimum);
+    if (Limits.Flags & llvm::wasm::WASM_LIMITS_FLAG_HAS_MAX) {
+      Hash = hash_combine(Hash, Limits.Maximum);
+    }
+    return Hash;
+  }
+  static bool isEqual(const wasm::WasmLimits &LHS,
+                      const wasm::WasmLimits &RHS) {
+    return LHS == RHS;
+  }
+};
+
+// Traits for using WasmTableType in a DenseMap
+template <> struct DenseMapInfo<wasm::WasmTableType> {
+  static wasm::WasmTableType getEmptyKey() {
+    return wasm::WasmTableType{0,
+                               DenseMapInfo<wasm::WasmLimits>::getEmptyKey()};
+  }
+  static wasm::WasmTableType getTombstoneKey() {
+    return wasm::WasmTableType{
+        1, DenseMapInfo<wasm::WasmLimits>::getTombstoneKey()};
+  }
+  static unsigned getHashValue(const wasm::WasmTableType &TableType) {
+    return hash_combine(
+        TableType.ElemType,
+        DenseMapInfo<wasm::WasmLimits>::getHashValue(TableType.Limits));
+  }
+  static bool isEqual(const wasm::WasmTableType &LHS,
+                      const wasm::WasmTableType &RHS) {
+    return LHS == RHS;
+  }
+};
+
 } // end namespace llvm
 
 #endif // LLVM_BINARYFORMAT_WASMTRAITS_H

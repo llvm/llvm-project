@@ -58,6 +58,7 @@ static_library("Basic") {
     "CharInfo.cpp",
     "CodeGenOptions.cpp",
     "Cuda.cpp",
+    "DarwinSDKInfo.cpp",
     "Diagnostic.cpp",
     "DiagnosticIDs.cpp",
     "DiagnosticOptions.cpp",

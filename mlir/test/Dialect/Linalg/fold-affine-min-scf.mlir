@@ -10,10 +10,9 @@ func @scf_for(%A : memref<i64>, %step : index) {
   %c16 = constant 16 : index
   %c1024 = constant 1024 : index
 
+  // CHECK:      %[[C2:.*]] = constant 2 : i64
   //      CHECK: scf.for
-  // CHECK-NEXT:   %[[C2:.*]] = constant 2 : index
-  // CHECK-NEXT:   %[[C2I64:.*]] = index_cast %[[C2:.*]]
-  // CHECK-NEXT:   memref.store %[[C2I64]], %{{.*}}[] : memref<i64>
+  // CHECK-NEXT:   memref.store %[[C2]], %{{.*}}[] : memref<i64>
   scf.for %i = %c0 to %c4 step %c2 {
     %1 = affine.min affine_map<(d0, d1)[] -> (2, d1 - d0)> (%i, %c4)
     %2 = index_cast %1: index to i64
@@ -21,9 +20,7 @@ func @scf_for(%A : memref<i64>, %step : index) {
   }
 
   //      CHECK: scf.for
-  // CHECK-NEXT:   %[[C2:.*]] = constant 2 : index
-  // CHECK-NEXT:   %[[C2I64:.*]] = index_cast %[[C2:.*]]
-  // CHECK-NEXT:   memref.store %[[C2I64]], %{{.*}}[] : memref<i64>
+  // CHECK-NEXT:   memref.store %[[C2]], %{{.*}}[] : memref<i64>
   scf.for %i = %c1 to %c7 step %c2 {
     %1 = affine.min affine_map<(d0)[s0] -> (s0 - d0, 2)> (%i)[%c7]
     %2 = index_cast %1: index to i64
@@ -93,10 +90,9 @@ func @scf_parallel(%A : memref<i64>, %step : index) {
   %c7 = constant 7 : index
   %c4 = constant 4 : index
 
+  // CHECK:   %[[C2:.*]] = constant 2 : i64
   // CHECK: scf.parallel
-  // CHECK-NEXT:   %[[C2:.*]] = constant 2 : index
-  // CHECK-NEXT:   %[[C2I64:.*]] = index_cast %[[C2:.*]]
-  // CHECK-NEXT:   memref.store %[[C2I64]], %{{.*}}[] : memref<i64>
+  // CHECK-NEXT:   memref.store %[[C2]], %{{.*}}[] : memref<i64>
   scf.parallel (%i) = (%c0) to (%c4) step (%c2) {
     %1 = affine.min affine_map<(d0, d1)[] -> (2, d1 - d0)> (%i, %c4)
     %2 = index_cast %1: index to i64
@@ -104,9 +100,7 @@ func @scf_parallel(%A : memref<i64>, %step : index) {
   }
 
   // CHECK: scf.parallel
-  // CHECK-NEXT:   %[[C2:.*]] = constant 2 : index
-  // CHECK-NEXT:   %[[C2I64:.*]] = index_cast %[[C2:.*]]
-  // CHECK-NEXT:   memref.store %[[C2I64]], %{{.*}}[] : memref<i64>
+  // CHECK-NEXT:   memref.store %[[C2]], %{{.*}}[] : memref<i64>
   scf.parallel (%i) = (%c1) to (%c7) step (%c2) {
     %1 = affine.min affine_map<(d0)[s0] -> (2, s0 - d0)> (%i)[%c7]
     %2 = index_cast %1: index to i64

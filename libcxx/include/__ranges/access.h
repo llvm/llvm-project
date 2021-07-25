@@ -64,7 +64,7 @@ namespace ranges::__begin {
   struct __fn {
     template <class _Tp>
     requires is_array_v<remove_cv_t<_Tp>>
-    [[nodiscard]] constexpr auto operator()(_Tp& __t) const noexcept {
+    [[nodiscard]] _LIBCPP_HIDE_FROM_ABI constexpr auto operator()(_Tp& __t) const noexcept {
       constexpr bool __complete = __is_complete<iter_value_t<_Tp> >;
       if constexpr (__complete) { // used to disable cryptic diagnostic
         return __t + 0;
@@ -76,7 +76,7 @@ namespace ranges::__begin {
 
     template <class _Tp>
     requires __member_begin<_Tp>
-    [[nodiscard]] constexpr auto operator()(_Tp&& __t) const
+    [[nodiscard]] _LIBCPP_HIDE_FROM_ABI constexpr auto operator()(_Tp&& __t) const
     noexcept(noexcept(_VSTD::__decay_copy(__t.begin())))
     {
       return __t.begin();
@@ -84,7 +84,7 @@ namespace ranges::__begin {
 
     template <class _Tp>
     requires __unqualified_begin<_Tp>
-    [[nodiscard]] constexpr auto operator()(_Tp&& __t) const
+    [[nodiscard]] _LIBCPP_HIDE_FROM_ABI constexpr auto operator()(_Tp&& __t) const
     noexcept(noexcept(_VSTD::__decay_copy(begin(__t))))
     {
       return begin(__t);
@@ -129,7 +129,7 @@ namespace ranges::__end {
   class __fn {
   public:
     template <class _Tp, size_t _Np>
-    [[nodiscard]] constexpr auto operator()(_Tp (&__t)[_Np]) const noexcept {
+    [[nodiscard]] _LIBCPP_HIDE_FROM_ABI constexpr auto operator()(_Tp (&__t)[_Np]) const noexcept {
       constexpr bool __complete = __is_complete<remove_cv_t<_Tp> >;
       if constexpr (__complete) { // used to disable cryptic diagnostic
         return __t + _Np;
@@ -141,7 +141,7 @@ namespace ranges::__end {
 
     template <class _Tp>
     requires __member_end<_Tp>
-    [[nodiscard]] constexpr auto operator()(_Tp&& __t) const
+    [[nodiscard]] _LIBCPP_HIDE_FROM_ABI constexpr auto operator()(_Tp&& __t) const
     noexcept(noexcept(_VSTD::__decay_copy(__t.end())))
     {
       return _VSTD::forward<_Tp>(__t).end();
@@ -149,7 +149,7 @@ namespace ranges::__end {
 
     template <class _Tp>
     requires __unqualified_end<_Tp>
-    [[nodiscard]] constexpr auto operator()(_Tp&& __t) const
+    [[nodiscard]] _LIBCPP_HIDE_FROM_ABI constexpr auto operator()(_Tp&& __t) const
     noexcept(noexcept(_VSTD::__decay_copy(end(__t))))
     {
       return end(__t);
@@ -167,7 +167,7 @@ namespace ranges::__cbegin {
   struct __fn {
     template <class _Tp>
     requires invocable<decltype(ranges::begin), _Tp const&>
-    [[nodiscard]] constexpr auto operator()(_Tp& __t) const
+    [[nodiscard]] _LIBCPP_HIDE_FROM_ABI constexpr auto operator()(_Tp& __t) const
     noexcept(noexcept(ranges::begin(_VSTD::as_const(__t))))
     {
       return ranges::begin(_VSTD::as_const(__t));
@@ -175,7 +175,7 @@ namespace ranges::__cbegin {
 
     template <class _Tp>
     requires is_rvalue_reference_v<_Tp> && invocable<decltype(ranges::begin), _Tp const&&>
-    [[nodiscard]] constexpr auto operator()(_Tp&& __t) const
+    [[nodiscard]] _LIBCPP_HIDE_FROM_ABI constexpr auto operator()(_Tp&& __t) const
     noexcept(noexcept(ranges::begin(static_cast<_Tp const&&>(__t))))
     {
       return ranges::begin(static_cast<_Tp const&&>(__t));
@@ -191,7 +191,7 @@ namespace ranges::__cend {
   struct __fn {
     template <class _Tp>
     requires invocable<decltype(ranges::end), _Tp const&>
-    [[nodiscard]] constexpr auto operator()(_Tp& __t) const
+    [[nodiscard]] _LIBCPP_HIDE_FROM_ABI constexpr auto operator()(_Tp& __t) const
     noexcept(noexcept(ranges::end(_VSTD::as_const(__t))))
     {
       return ranges::end(_VSTD::as_const(__t));
@@ -199,7 +199,7 @@ namespace ranges::__cend {
 
     template <class _Tp>
     requires is_rvalue_reference_v<_Tp> && invocable<decltype(ranges::end), _Tp const&&>
-    [[nodiscard]] constexpr auto operator()(_Tp&& __t) const
+    [[nodiscard]] _LIBCPP_HIDE_FROM_ABI constexpr auto operator()(_Tp&& __t) const
     noexcept(noexcept(ranges::end(static_cast<_Tp const&&>(__t))))
     {
       return ranges::end(static_cast<_Tp const&&>(__t));

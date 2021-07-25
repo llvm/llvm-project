@@ -49,7 +49,7 @@ omptarget_nvptx_ThreadPrivateContext *
 // communicate with the workers.  Since it is in shared memory, there is one
 // copy of these variables for each kernel, instance, and team.
 ////////////////////////////////////////////////////////////////////////////////
-volatile omptarget_nvptx_WorkFn SHARED(omptarget_nvptx_workFn);
+omptarget_nvptx_WorkFn SHARED(omptarget_nvptx_workFn);
 
 ////////////////////////////////////////////////////////////////////////////////
 // OpenMP kernel execution parameters
@@ -60,10 +60,5 @@ uint32_t SHARED(execution_param);
 // Scratchpad for teams reduction.
 ////////////////////////////////////////////////////////////////////////////////
 void *SHARED(ReductionScratchpadPtr);
-
-////////////////////////////////////////////////////////////////////////////////
-// Data sharing related variables.
-////////////////////////////////////////////////////////////////////////////////
-omptarget_nvptx_SharedArgs SHARED(omptarget_nvptx_globalArgs);
 
 #pragma omp end declare target

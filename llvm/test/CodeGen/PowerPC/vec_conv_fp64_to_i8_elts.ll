@@ -48,7 +48,7 @@ define i16 @test2elt(<2 x double> %a) local_unnamed_addr #0 {
 ; CHECK-BE-NEXT:    xscvdpsxws f0, v2
 ; CHECK-BE-NEXT:    addis r3, r2, .LCPI0_0@toc@ha
 ; CHECK-BE-NEXT:    addi r3, r3, .LCPI0_0@toc@l
-; CHECK-BE-NEXT:    lxvx v3, 0, r3
+; CHECK-BE-NEXT:    lxv v3, 0(r3)
 ; CHECK-BE-NEXT:    mffprwz r3, f0
 ; CHECK-BE-NEXT:    xxswapd vs0, v2
 ; CHECK-BE-NEXT:    mtvsrwz v4, r3
@@ -125,7 +125,7 @@ define i32 @test4elt(<4 x double>* nocapture readonly) local_unnamed_addr #1 {
 ; CHECK-BE-NEXT:    lxv vs0, 0(r3)
 ; CHECK-BE-NEXT:    addis r3, r2, .LCPI1_0@toc@ha
 ; CHECK-BE-NEXT:    addi r3, r3, .LCPI1_0@toc@l
-; CHECK-BE-NEXT:    lxvx v2, 0, r3
+; CHECK-BE-NEXT:    lxv v2, 0(r3)
 ; CHECK-BE-NEXT:    xscvdpsxws f2, f1
 ; CHECK-BE-NEXT:    xxswapd vs1, vs1
 ; CHECK-BE-NEXT:    xscvdpsxws f1, f1
@@ -254,7 +254,7 @@ define i64 @test8elt(<8 x double>* nocapture readonly) local_unnamed_addr #1 {
 ; CHECK-BE-NEXT:    lxv vs2, 32(r3)
 ; CHECK-BE-NEXT:    addis r3, r2, .LCPI2_0@toc@ha
 ; CHECK-BE-NEXT:    addi r3, r3, .LCPI2_0@toc@l
-; CHECK-BE-NEXT:    lxvx v2, 0, r3
+; CHECK-BE-NEXT:    lxv v2, 0(r3)
 ; CHECK-BE-NEXT:    xscvdpsxws f4, f3
 ; CHECK-BE-NEXT:    xxswapd vs3, vs3
 ; CHECK-BE-NEXT:    xscvdpsxws f3, f3
@@ -487,7 +487,7 @@ define <16 x i8> @test16elt(<16 x double>* nocapture readonly) local_unnamed_add
 ; CHECK-BE-NEXT:    lxv vs6, 96(r3)
 ; CHECK-BE-NEXT:    addis r3, r2, .LCPI3_0@toc@ha
 ; CHECK-BE-NEXT:    addi r3, r3, .LCPI3_0@toc@l
-; CHECK-BE-NEXT:    lxvx v2, 0, r3
+; CHECK-BE-NEXT:    lxv v2, 0(r3)
 ; CHECK-BE-NEXT:    xscvdpsxws f7, f7
 ; CHECK-BE-NEXT:    mffprwz r3, f8
 ; CHECK-BE-NEXT:    mtvsrwz v3, r3
@@ -603,7 +603,7 @@ define i16 @test2elt_signed(<2 x double> %a) local_unnamed_addr #0 {
 ; CHECK-BE-NEXT:    xscvdpsxws f0, v2
 ; CHECK-BE-NEXT:    addis r3, r2, .LCPI4_0@toc@ha
 ; CHECK-BE-NEXT:    addi r3, r3, .LCPI4_0@toc@l
-; CHECK-BE-NEXT:    lxvx v3, 0, r3
+; CHECK-BE-NEXT:    lxv v3, 0(r3)
 ; CHECK-BE-NEXT:    mffprwz r3, f0
 ; CHECK-BE-NEXT:    xxswapd vs0, v2
 ; CHECK-BE-NEXT:    mtvsrwz v4, r3
@@ -680,7 +680,7 @@ define i32 @test4elt_signed(<4 x double>* nocapture readonly) local_unnamed_addr
 ; CHECK-BE-NEXT:    lxv vs0, 0(r3)
 ; CHECK-BE-NEXT:    addis r3, r2, .LCPI5_0@toc@ha
 ; CHECK-BE-NEXT:    addi r3, r3, .LCPI5_0@toc@l
-; CHECK-BE-NEXT:    lxvx v2, 0, r3
+; CHECK-BE-NEXT:    lxv v2, 0(r3)
 ; CHECK-BE-NEXT:    xscvdpsxws f2, f1
 ; CHECK-BE-NEXT:    xxswapd vs1, vs1
 ; CHECK-BE-NEXT:    xscvdpsxws f1, f1
@@ -809,7 +809,7 @@ define i64 @test8elt_signed(<8 x double>* nocapture readonly) local_unnamed_addr
 ; CHECK-BE-NEXT:    lxv vs2, 32(r3)
 ; CHECK-BE-NEXT:    addis r3, r2, .LCPI6_0@toc@ha
 ; CHECK-BE-NEXT:    addi r3, r3, .LCPI6_0@toc@l
-; CHECK-BE-NEXT:    lxvx v2, 0, r3
+; CHECK-BE-NEXT:    lxv v2, 0(r3)
 ; CHECK-BE-NEXT:    xscvdpsxws f4, f3
 ; CHECK-BE-NEXT:    xxswapd vs3, vs3
 ; CHECK-BE-NEXT:    xscvdpsxws f3, f3
@@ -1042,7 +1042,7 @@ define <16 x i8> @test16elt_signed(<16 x double>* nocapture readonly) local_unna
 ; CHECK-BE-NEXT:    lxv vs6, 96(r3)
 ; CHECK-BE-NEXT:    addis r3, r2, .LCPI7_0@toc@ha
 ; CHECK-BE-NEXT:    addi r3, r3, .LCPI7_0@toc@l
-; CHECK-BE-NEXT:    lxvx v2, 0, r3
+; CHECK-BE-NEXT:    lxv v2, 0(r3)
 ; CHECK-BE-NEXT:    xscvdpsxws f7, f7
 ; CHECK-BE-NEXT:    mffprwz r3, f8
 ; CHECK-BE-NEXT:    mtvsrwz v3, r3

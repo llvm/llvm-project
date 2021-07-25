@@ -21,7 +21,6 @@ debug_info_categories = [
 all_categories = {
     'basic_process': 'Basic process execution sniff tests.',
     'cmdline': 'Tests related to the LLDB command-line interface',
-    'darwin-log': 'Darwin log tests',
     'dataformatters': 'Tests related to the type command and the data formatters subsystem',
     'debugserver': 'Debugserver tests',
     'dsym': 'Tests that can be run with DSYM debug information',

@@ -3986,6 +3986,9 @@ void DeclarationVisitor::Post(const parser::DerivedTypeSpec &x) {
         currScope().IsParameterizedDerivedType()) {
       // Defer instantiation; use the derived type's definition's scope.
       derived.set_scope(DEREF(spec->typeSymbol().scope()));
+    } else if (&currScope() == spec->typeSymbol().scope()) {
+      // Direct recursive use of a type in the definition of one of its
+      // components: defer instantiation
     } else {
       auto restorer{
           GetFoldingContext().messages().SetLocation(currStmtSource().value())};

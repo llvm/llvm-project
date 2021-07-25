@@ -752,7 +752,8 @@ void CodeGenFunction::EmitOMPAggregateAssign(
   llvm::Value *SrcBegin = SrcAddr.getPointer();
   llvm::Value *DestBegin = DestAddr.getPointer();
   // Cast from pointer to array type to pointer to single element.
-  llvm::Value *DestEnd = Builder.CreateGEP(DestBegin, NumElements);
+  llvm::Value *DestEnd =
+      Builder.CreateGEP(DestAddr.getElementType(), DestBegin, NumElements);
   // The basic structure here is a while-do loop.
   llvm::BasicBlock *BodyBB = createBasicBlock("omp.arraycpy.body");
   llvm::BasicBlock *DoneBB = createBasicBlock("omp.arraycpy.done");
@@ -785,9 +786,11 @@ void CodeGenFunction::EmitOMPAggregateAssign(
 
   // Shift the address forward by one element.
   llvm::Value *DestElementNext = Builder.CreateConstGEP1_32(
-      DestElementPHI, /*Idx0=*/1, "omp.arraycpy.dest.element");
+      DestAddr.getElementType(), DestElementPHI, /*Idx0=*/1,
+      "omp.arraycpy.dest.element");
   llvm::Value *SrcElementNext = Builder.CreateConstGEP1_32(
-      SrcElementPHI, /*Idx0=*/1, "omp.arraycpy.src.element");
+      SrcAddr.getElementType(), SrcElementPHI, /*Idx0=*/1,
+      "omp.arraycpy.src.element");
   // Check whether we've reached the end.
   llvm::Value *Done =
       Builder.CreateICmpEQ(DestElementNext, DestEnd, "omp.arraycpy.done");

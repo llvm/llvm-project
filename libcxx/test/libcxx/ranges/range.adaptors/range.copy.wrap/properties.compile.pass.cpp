@@ -12,7 +12,7 @@
 
 // Test various properties of <copyable-box>
 
-#include <__ranges/copyable_box.h>
+#include <ranges>
 
 #include <optional>
 

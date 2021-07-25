@@ -418,7 +418,8 @@ static int dumpSymtab(int argc, char **argv) {
       outs() << '\n';
     }
 
-    std::vector<StringRef> ComdatTable = Input->getComdatTable();
+    ArrayRef<std::pair<StringRef, Comdat::SelectionKind>> ComdatTable =
+        Input->getComdatTable();
     for (const InputFile::Symbol &Sym : Input->symbols()) {
       switch (Sym.getVisibility()) {
       case GlobalValue::HiddenVisibility:
@@ -447,8 +448,27 @@ static int dumpSymtab(int argc, char **argv) {
                << Sym.getCommonAlignment() << '\n';
 
       int Comdat = Sym.getComdatIndex();
-      if (Comdat != -1)
-        outs() << "         comdat " << ComdatTable[Comdat] << '\n';
+      if (Comdat != -1) {
+        outs() << "         comdat ";
+        switch (ComdatTable[Comdat].second) {
+        case Comdat::Any:
+          outs() << "any";
+          break;
+        case Comdat::ExactMatch:
+          outs() << "exactmatch";
+          break;
+        case Comdat::Largest:
+          outs() << "largest";
+          break;
+        case Comdat::NoDeduplicate:
+          outs() << "nodeduplicate";
+          break;
+        case Comdat::SameSize:
+          outs() << "samesize";
+          break;
+        }
+        outs() << ' ' << ComdatTable[Comdat].first << '\n';
+      }
 
       if (TT.isOSBinFormatCOFF() && Sym.isWeak() && Sym.isIndirect())
         outs() << "         fallback " << Sym.getCOFFWeakExternalFallback() << '\n';

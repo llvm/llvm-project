@@ -199,9 +199,9 @@ void RuntimePointerChecking::insert(Loop *Lp, Value *Ptr, bool WritePtr,
   const SCEV *ScStart;
   const SCEV *ScEnd;
 
-  if (SE->isLoopInvariant(Sc, Lp))
+  if (SE->isLoopInvariant(Sc, Lp)) {
     ScStart = ScEnd = Sc;
-  else {
+  } else {
     const SCEVAddRecExpr *AR = dyn_cast<SCEVAddRecExpr>(Sc);
     assert(AR && "Invalid addrec expression");
     const SCEV *Ex = PSE.getBackedgeTakenCount();
@@ -222,13 +222,13 @@ void RuntimePointerChecking::insert(Loop *Lp, Value *Ptr, bool WritePtr,
       ScStart = SE->getUMinExpr(ScStart, ScEnd);
       ScEnd = SE->getUMaxExpr(AR->getStart(), ScEnd);
     }
-    // Add the size of the pointed element to ScEnd.
-    auto &DL = Lp->getHeader()->getModule()->getDataLayout();
-    Type *IdxTy = DL.getIndexType(Ptr->getType());
-    const SCEV *EltSizeSCEV =
-        SE->getStoreSizeOfExpr(IdxTy, Ptr->getType()->getPointerElementType());
-    ScEnd = SE->getAddExpr(ScEnd, EltSizeSCEV);
   }
+  // Add the size of the pointed element to ScEnd.
+  auto &DL = Lp->getHeader()->getModule()->getDataLayout();
+  Type *IdxTy = DL.getIndexType(Ptr->getType());
+  const SCEV *EltSizeSCEV =
+      SE->getStoreSizeOfExpr(IdxTy, Ptr->getType()->getPointerElementType());
+  ScEnd = SE->getAddExpr(ScEnd, EltSizeSCEV);
 
   Pointers.emplace_back(Ptr, ScStart, ScEnd, WritePtr, DepSetId, ASId, Sc);
 }

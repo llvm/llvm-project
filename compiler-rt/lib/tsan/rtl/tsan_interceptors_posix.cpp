@@ -71,7 +71,8 @@ struct ucontext_t {
 };
 #endif
 
-#if defined(__x86_64__) || defined(__mips__) || SANITIZER_PPC64V1
+#if defined(__x86_64__) || defined(__mips__) || SANITIZER_PPC64V1 || \
+    defined(__s390x__)
 #define PTHREAD_ABI_BASE  "GLIBC_2.3.2"
 #elif defined(__aarch64__) || SANITIZER_PPC64V2
 #define PTHREAD_ABI_BASE  "GLIBC_2.17"
@@ -195,12 +196,10 @@ struct InterceptorContext {
   unsigned finalize_key;
 #endif
 
-  BlockingMutex atexit_mu;
+  Mutex atexit_mu;
   Vector<struct AtExitCtx *> AtExitStack;
 
-  InterceptorContext()
-      : libignore(LINKER_INITIALIZED), AtExitStack() {
-  }
+  InterceptorContext() : libignore(LINKER_INITIALIZED), atexit_mu(MutexTypeAtExit), AtExitStack() {}
 };
 
 static ALIGNED(64) char interceptor_placeholder[sizeof(InterceptorContext)];
@@ -266,7 +265,7 @@ ScopedInterceptor::~ScopedInterceptor() {
   if (!thr_->ignore_interceptors) {
     ProcessPendingSignals(thr_);
     FuncExit(thr_);
-    CheckNoLocks(thr_);
+    CheckedMutex::CheckNoLocks();
   }
 }
 
@@ -376,7 +375,7 @@ static void at_exit_wrapper() {
   AtExitCtx *ctx;
   {
     // Ensure thread-safety.
-    BlockingMutexLock l(&interceptor_ctx()->atexit_mu);
+    Lock l(&interceptor_ctx()->atexit_mu);
 
     // Pop AtExitCtx from the top of the stack of callback functions
     uptr element = interceptor_ctx()->AtExitStack.Size() - 1;
@@ -432,7 +431,10 @@ static int setup_at_exit_wrapper(ThreadState *thr, uptr pc, void(*f)(),
     // Store ctx in a local stack-like structure
 
     // Ensure thread-safety.
-    BlockingMutexLock l(&interceptor_ctx()->atexit_mu);
+    Lock l(&interceptor_ctx()->atexit_mu);
+    // __cxa_atexit calls calloc. If we don't ignore interceptors, we will fail
+    // due to atexit_mu held on exit from the calloc interceptor.
+    ScopedIgnoreInterceptors ignore;
 
     res = REAL(__cxa_atexit)((void (*)(void *a))at_exit_wrapper, 0, 0);
     // Push AtExitCtx on the top of the stack of callback functions
@@ -2270,6 +2272,7 @@ static void HandleRecvmsg(ThreadState *thr, uptr pc,
 #define NEED_TLS_GET_ADDR
 #endif
 #undef SANITIZER_INTERCEPT_TLS_GET_ADDR
+#define SANITIZER_INTERCEPT_TLS_GET_OFFSET 1
 #undef SANITIZER_INTERCEPT_PTHREAD_SIGMASK
 
 #define COMMON_INTERCEPT_FUNCTION(name) INTERCEPT_FUNCTION(name)
@@ -2420,6 +2423,10 @@ int sigaction_impl(int sig, const __sanitizer_sigaction *act,
   // the signal handler through rtl_sigaction, very bad things will happen.
   // The handler will run synchronously and corrupt tsan per-thread state.
   SCOPED_INTERCEPTOR_RAW(sigaction, sig, act, old);
+  if (sig <= 0 || sig >= kSigCount) {
+    errno = errno_EINVAL;
+    return -1;
+  }
   __sanitizer_sigaction *sigactions = interceptor_ctx()->sigactions;
   __sanitizer_sigaction old_stored;
   if (old) internal_memcpy(&old_stored, &sigactions[sig], sizeof(old_stored));
@@ -2585,6 +2592,20 @@ static void syscall_post_fork(uptr pc, int pid) {
 #include "sanitizer_common/sanitizer_syscalls_netbsd.inc"
 
 #ifdef NEED_TLS_GET_ADDR
+
+static void handle_tls_addr(void *arg, void *res) {
+  ThreadState *thr = cur_thread();
+  if (!thr)
+    return;
+  DTLS::DTV *dtv = DTLS_on_tls_get_addr(arg, res, thr->tls_addr,
+                                        thr->tls_addr + thr->tls_size);
+  if (!dtv)
+    return;
+  // New DTLS block has been allocated.
+  MemoryResetRange(thr, 0, dtv->beg, dtv->size);
+}
+
+#if !SANITIZER_S390
 // Define own interceptor instead of sanitizer_common's for three reasons:
 // 1. It must not process pending signals.
 //    Signal handlers may contain MOVDQA instruction (see below).
@@ -2597,17 +2618,17 @@ static void syscall_post_fork(uptr pc, int pid) {
 // execute MOVDQA with stack addresses.
 TSAN_INTERCEPTOR(void *, __tls_get_addr, void *arg) {
   void *res = REAL(__tls_get_addr)(arg);
-  ThreadState *thr = cur_thread();
-  if (!thr)
-    return res;
-  DTLS::DTV *dtv = DTLS_on_tls_get_addr(arg, res, thr->tls_addr,
-                                        thr->tls_addr + thr->tls_size);
-  if (!dtv)
-    return res;
-  // New DTLS block has been allocated.
-  MemoryResetRange(thr, 0, dtv->beg, dtv->size);
+  handle_tls_addr(arg, res);
   return res;
 }
+#else // SANITIZER_S390
+TSAN_INTERCEPTOR(uptr, __tls_get_addr_internal, void *arg) {
+  uptr res = __tls_get_offset_wrapper(arg, REAL(__tls_get_offset));
+  char *tp = static_cast<char *>(__builtin_thread_pointer());
+  handle_tls_addr(arg, res + tp);
+  return res;
+}
+#endif
 #endif
 
 #if SANITIZER_NETBSD
@@ -2830,7 +2851,12 @@ void InitializeInterceptors() {
   TSAN_INTERCEPT(_exit);
 
 #ifdef NEED_TLS_GET_ADDR
+#if !SANITIZER_S390
   TSAN_INTERCEPT(__tls_get_addr);
+#else
+  TSAN_INTERCEPT(__tls_get_addr_internal);
+  TSAN_INTERCEPT(__tls_get_offset);
+#endif
 #endif
 
   TSAN_MAYBE_INTERCEPT__LWP_EXIT;

@@ -128,6 +128,8 @@ Function *llvm::createSanitizerCtor(Module &M, StringRef CtorName) {
   Ctor->addAttribute(AttributeList::FunctionIndex, Attribute::NoUnwind);
   BasicBlock *CtorBB = BasicBlock::Create(M.getContext(), "", Ctor);
   ReturnInst::Create(M.getContext(), CtorBB);
+  // Ensure Ctor cannot be discarded, even if in a comdat.
+  appendToUsed(M, {Ctor});
   return Ctor;
 }
 
@@ -173,28 +175,6 @@ llvm::getOrCreateSanitizerCtorAndInitFunctions(
       M, CtorName, InitName, InitArgTypes, InitArgs, VersionCheckName);
   FunctionsCreatedCallback(Ctor, InitFunction);
   return std::make_pair(Ctor, InitFunction);
-}
-
-Function *llvm::getOrCreateInitFunction(Module &M, StringRef Name) {
-  assert(!Name.empty() && "Expected init function name");
-  if (Function *F = M.getFunction(Name)) {
-    if (F->arg_size() != 0 ||
-        F->getReturnType() != Type::getVoidTy(M.getContext())) {
-      std::string Err;
-      raw_string_ostream Stream(Err);
-      Stream << "Sanitizer interface function defined with wrong type: " << *F;
-      report_fatal_error(Err);
-    }
-    return F;
-  }
-  Function *F =
-      cast<Function>(M.getOrInsertFunction(Name, AttributeList(),
-                                           Type::getVoidTy(M.getContext()))
-                         .getCallee());
-
-  appendToGlobalCtors(M, F, 0);
-
-  return F;
 }
 
 void llvm::filterDeadComdatFunctions(

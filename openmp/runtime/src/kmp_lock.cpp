@@ -21,8 +21,6 @@
 #include "kmp_wait_release.h"
 #include "kmp_wrapper_getpid.h"
 
-#include "tsan_annotations.h"
-
 #if KMP_USE_FUTEX
 #include <sys/syscall.h>
 #include <unistd.h>
@@ -112,7 +110,6 @@ __kmp_acquire_tas_lock_timed_template(kmp_tas_lock_t *lck, kmp_int32 gtid) {
 
 int __kmp_acquire_tas_lock(kmp_tas_lock_t *lck, kmp_int32 gtid) {
   int retval = __kmp_acquire_tas_lock_timed_template(lck, gtid);
-  ANNOTATE_TAS_ACQUIRED(lck);
   return retval;
 }
 
@@ -154,7 +151,6 @@ int __kmp_release_tas_lock(kmp_tas_lock_t *lck, kmp_int32 gtid) {
   KMP_MB(); /* Flush all pending memory write invalidates.  */
 
   KMP_FSYNC_RELEASING(lck);
-  ANNOTATE_TAS_RELEASED(lck);
   KMP_ATOMIC_ST_REL(&lck->lk.poll, KMP_LOCK_FREE(tas));
   KMP_MB(); /* Flush all pending memory write invalidates.  */
 
@@ -208,7 +204,6 @@ int __kmp_acquire_nested_tas_lock(kmp_tas_lock_t *lck, kmp_int32 gtid) {
     return KMP_LOCK_ACQUIRED_NEXT;
   } else {
     __kmp_acquire_tas_lock_timed_template(lck, gtid);
-    ANNOTATE_TAS_ACQUIRED(lck);
     lck->lk.depth_locked = 1;
     return KMP_LOCK_ACQUIRED_FIRST;
   }
@@ -398,7 +393,6 @@ __kmp_acquire_futex_lock_timed_template(kmp_futex_lock_t *lck, kmp_int32 gtid) {
 
 int __kmp_acquire_futex_lock(kmp_futex_lock_t *lck, kmp_int32 gtid) {
   int retval = __kmp_acquire_futex_lock_timed_template(lck, gtid);
-  ANNOTATE_FUTEX_ACQUIRED(lck);
   return retval;
 }
 
@@ -441,7 +435,6 @@ int __kmp_release_futex_lock(kmp_futex_lock_t *lck, kmp_int32 gtid) {
                   lck, lck->lk.poll, gtid));
 
   KMP_FSYNC_RELEASING(lck);
-  ANNOTATE_FUTEX_RELEASED(lck);
 
   kmp_int32 poll_val = KMP_XCHG_FIXED32(&(lck->lk.poll), KMP_LOCK_FREE(futex));
 
@@ -512,7 +505,6 @@ int __kmp_acquire_nested_futex_lock(kmp_futex_lock_t *lck, kmp_int32 gtid) {
     return KMP_LOCK_ACQUIRED_NEXT;
   } else {
     __kmp_acquire_futex_lock_timed_template(lck, gtid);
-    ANNOTATE_FUTEX_ACQUIRED(lck);
     lck->lk.depth_locked = 1;
     return KMP_LOCK_ACQUIRED_FIRST;
   }
@@ -644,7 +636,6 @@ __kmp_acquire_ticket_lock_timed_template(kmp_ticket_lock_t *lck,
 
 int __kmp_acquire_ticket_lock(kmp_ticket_lock_t *lck, kmp_int32 gtid) {
   int retval = __kmp_acquire_ticket_lock_timed_template(lck, gtid);
-  ANNOTATE_TICKET_ACQUIRED(lck);
   return retval;
 }
 
@@ -719,7 +710,6 @@ int __kmp_release_ticket_lock(kmp_ticket_lock_t *lck, kmp_int32 gtid) {
                         std::atomic_load_explicit(&lck->lk.now_serving,
                                                   std::memory_order_relaxed);
 
-  ANNOTATE_TICKET_RELEASED(lck);
   std::atomic_fetch_add_explicit(&lck->lk.now_serving, 1U,
                                  std::memory_order_release);
 
@@ -814,7 +804,6 @@ int __kmp_acquire_nested_ticket_lock(kmp_ticket_lock_t *lck, kmp_int32 gtid) {
     return KMP_LOCK_ACQUIRED_NEXT;
   } else {
     __kmp_acquire_ticket_lock_timed_template(lck, gtid);
-    ANNOTATE_TICKET_ACQUIRED(lck);
     std::atomic_store_explicit(&lck->lk.depth_locked, 1,
                                std::memory_order_relaxed);
     std::atomic_store_explicit(&lck->lk.owner_id, gtid + 1,
@@ -1282,7 +1271,6 @@ int __kmp_acquire_queuing_lock(kmp_queuing_lock_t *lck, kmp_int32 gtid) {
   KMP_DEBUG_ASSERT(gtid >= 0);
 
   int retval = __kmp_acquire_queuing_lock_timed_template<false>(lck, gtid);
-  ANNOTATE_QUEUING_ACQUIRED(lck);
   return retval;
 }
 
@@ -1328,7 +1316,6 @@ int __kmp_test_queuing_lock(kmp_queuing_lock_t *lck, kmp_int32 gtid) {
       KA_TRACE(1000,
                ("__kmp_test_queuing_lock: T#%d exiting: holding lock\n", gtid));
       KMP_FSYNC_ACQUIRED(lck);
-      ANNOTATE_QUEUING_ACQUIRED(lck);
       return TRUE;
     }
   }
@@ -1378,7 +1365,6 @@ int __kmp_release_queuing_lock(kmp_queuing_lock_t *lck, kmp_int32 gtid) {
   KMP_DEBUG_ASSERT(this_thr->th.th_next_waiting == 0);
 
   KMP_FSYNC_RELEASING(lck);
-  ANNOTATE_QUEUING_RELEASED(lck);
 
   while (1) {
     kmp_int32 dequeued;
@@ -1567,7 +1553,6 @@ int __kmp_acquire_nested_queuing_lock(kmp_queuing_lock_t *lck, kmp_int32 gtid) {
     return KMP_LOCK_ACQUIRED_NEXT;
   } else {
     __kmp_acquire_queuing_lock_timed_template<false>(lck, gtid);
-    ANNOTATE_QUEUING_ACQUIRED(lck);
     KMP_MB();
     lck->lk.depth_locked = 1;
     KMP_MB();
@@ -2124,7 +2109,6 @@ static void __kmp_acquire_adaptive_lock(kmp_adaptive_lock_t *lck,
   __kmp_acquire_queuing_lock_timed_template<FALSE>(GET_QLK_PTR(lck), gtid);
   // We have acquired the base lock, so count that.
   KMP_INC_STAT(lck, nonSpeculativeAcquires);
-  ANNOTATE_QUEUING_ACQUIRED(lck);
 }
 
 static void __kmp_acquire_adaptive_lock_with_checks(kmp_adaptive_lock_t *lck,
@@ -2357,7 +2341,6 @@ __kmp_acquire_drdpa_lock_timed_template(kmp_drdpa_lock_t *lck, kmp_int32 gtid) {
 
 int __kmp_acquire_drdpa_lock(kmp_drdpa_lock_t *lck, kmp_int32 gtid) {
   int retval = __kmp_acquire_drdpa_lock_timed_template(lck, gtid);
-  ANNOTATE_DRDPA_ACQUIRED(lck);
   return retval;
 }
 
@@ -2434,7 +2417,6 @@ int __kmp_release_drdpa_lock(kmp_drdpa_lock_t *lck, kmp_int32 gtid) {
   KA_TRACE(1000, ("__kmp_release_drdpa_lock: ticket #%lld released lock %p\n",
                   ticket - 1, lck));
   KMP_FSYNC_RELEASING(lck);
-  ANNOTATE_DRDPA_RELEASED(lck);
   polls[ticket & mask] = ticket; // atomic store
   return KMP_LOCK_RELEASED;
 }
@@ -2521,7 +2503,6 @@ int __kmp_acquire_nested_drdpa_lock(kmp_drdpa_lock_t *lck, kmp_int32 gtid) {
     return KMP_LOCK_ACQUIRED_NEXT;
   } else {
     __kmp_acquire_drdpa_lock_timed_template(lck, gtid);
-    ANNOTATE_DRDPA_ACQUIRED(lck);
     KMP_MB();
     lck->lk.depth_locked = 1;
     KMP_MB();
@@ -3844,15 +3825,11 @@ kmp_user_lock_p __kmp_user_lock_allocate(void **user_lock, kmp_int32 gtid,
   if (__kmp_lock_pool == NULL) {
     // Lock pool is empty. Allocate new memory.
 
-    // ANNOTATION: Found no good way to express the syncronisation
-    // between allocation and usage, so ignore the allocation
-    ANNOTATE_IGNORE_WRITES_BEGIN();
     if (__kmp_num_locks_in_block <= 1) { // Tune this cutoff point.
       lck = (kmp_user_lock_p)__kmp_allocate(__kmp_user_lock_size);
     } else {
       lck = __kmp_lock_block_allocate();
     }
-    ANNOTATE_IGNORE_WRITES_END();
 
     // Insert lock in the table so that it can be freed in __kmp_cleanup,
     // and debugger has info on all allocated locks.

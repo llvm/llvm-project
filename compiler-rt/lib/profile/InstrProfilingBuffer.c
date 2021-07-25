@@ -67,13 +67,20 @@ static uint64_t calculateBytesNeededToPageAlign(uint64_t Offset) {
   return 0;
 }
 
+static int needsCounterPadding(void) {
+#if defined(__APPLE__)
+  return __llvm_profile_is_continuous_mode_enabled();
+#else
+  return 0;
+#endif
+}
+
 COMPILER_RT_VISIBILITY
 void __llvm_profile_get_padding_sizes_for_counters(
     uint64_t DataSize, uint64_t CountersSize, uint64_t NamesSize,
     uint64_t *PaddingBytesBeforeCounters, uint64_t *PaddingBytesAfterCounters,
     uint64_t *PaddingBytesAfterNames) {
-  if (!__llvm_profile_is_continuous_mode_enabled() ||
-      lprofRuntimeCounterRelocation()) {
+  if (!needsCounterPadding()) {
     *PaddingBytesBeforeCounters = 0;
     *PaddingBytesAfterCounters = 0;
     *PaddingBytesAfterNames = __llvm_profile_get_num_padding_bytes(NamesSize);

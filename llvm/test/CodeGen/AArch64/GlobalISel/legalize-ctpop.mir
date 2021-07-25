@@ -188,3 +188,112 @@ body:             |
     %ext:_(s32) = G_ANYEXT %ctpop(s16)
     $w0 = COPY %ext(s32)
     RET_ReallyLR implicit $w0
+
+...
+---
+name:            custom_8x16
+tracksRegLiveness: true
+body:             |
+  bb.0:
+    liveins: $q0
+
+    ; CHECK-LABEL: name: custom_8x16
+    ; CHECK: liveins: $q0
+    ; CHECK: [[COPY:%[0-9]+]]:_(<8 x s16>) = COPY $q0
+    ; CHECK: [[BITCAST:%[0-9]+]]:_(<16 x s8>) = G_BITCAST [[COPY]](<8 x s16>)
+    ; CHECK: [[CTPOP:%[0-9]+]]:_(<16 x s8>) = G_CTPOP [[BITCAST]](<16 x s8>)
+    ; CHECK: [[INT:%[0-9]+]]:_(<8 x s16>) = G_INTRINSIC intrinsic(@llvm.aarch64.neon.uaddlp), [[CTPOP]](<16 x s8>)
+    ; CHECK: $q0 = COPY [[INT]](<8 x s16>)
+    ; CHECK: RET_ReallyLR implicit $q0
+    %0:_(<8 x s16>) = COPY $q0
+    %1:_(<8 x s16>) = G_CTPOP %0(<8 x s16>)
+    $q0 = COPY %1(<8 x s16>)
+    RET_ReallyLR implicit $q0
+
+...
+---
+name:            custom_4x32
+tracksRegLiveness: true
+body:             |
+  bb.0:
+    liveins: $q0
+
+    ; CHECK-LABEL: name: custom_4x32
+    ; CHECK: liveins: $q0
+    ; CHECK: [[COPY:%[0-9]+]]:_(<4 x s32>) = COPY $q0
+    ; CHECK: [[BITCAST:%[0-9]+]]:_(<16 x s8>) = G_BITCAST [[COPY]](<4 x s32>)
+    ; CHECK: [[CTPOP:%[0-9]+]]:_(<16 x s8>) = G_CTPOP [[BITCAST]](<16 x s8>)
+    ; CHECK: [[INT:%[0-9]+]]:_(<8 x s16>) = G_INTRINSIC intrinsic(@llvm.aarch64.neon.uaddlp), [[CTPOP]](<16 x s8>)
+    ; CHECK: [[INT1:%[0-9]+]]:_(<4 x s32>) = G_INTRINSIC intrinsic(@llvm.aarch64.neon.uaddlp), [[INT]](<8 x s16>)
+    ; CHECK: $q0 = COPY [[INT1]](<4 x s32>)
+    ; CHECK: RET_ReallyLR implicit $q0
+    %0:_(<4 x s32>) = COPY $q0
+    %1:_(<4 x s32>) = G_CTPOP %0(<4 x s32>)
+    $q0 = COPY %1(<4 x s32>)
+    RET_ReallyLR implicit $q0
+
+...
+---
+name:            custom_2x64
+tracksRegLiveness: true
+body:             |
+  bb.0:
+    liveins: $q0
+
+    ; CHECK-LABEL: name: custom_2x64
+    ; CHECK: liveins: $q0
+    ; CHECK: [[COPY:%[0-9]+]]:_(<2 x s64>) = COPY $q0
+    ; CHECK: [[BITCAST:%[0-9]+]]:_(<16 x s8>) = G_BITCAST [[COPY]](<2 x s64>)
+    ; CHECK: [[CTPOP:%[0-9]+]]:_(<16 x s8>) = G_CTPOP [[BITCAST]](<16 x s8>)
+    ; CHECK: [[INT:%[0-9]+]]:_(<8 x s16>) = G_INTRINSIC intrinsic(@llvm.aarch64.neon.uaddlp), [[CTPOP]](<16 x s8>)
+    ; CHECK: [[INT1:%[0-9]+]]:_(<4 x s32>) = G_INTRINSIC intrinsic(@llvm.aarch64.neon.uaddlp), [[INT]](<8 x s16>)
+    ; CHECK: [[INT2:%[0-9]+]]:_(<2 x s64>) = G_INTRINSIC intrinsic(@llvm.aarch64.neon.uaddlp), [[INT1]](<4 x s32>)
+    ; CHECK: $q0 = COPY [[INT2]](<2 x s64>)
+    ; CHECK: RET_ReallyLR implicit $q0
+    %0:_(<2 x s64>) = COPY $q0
+    %1:_(<2 x s64>) = G_CTPOP %0(<2 x s64>)
+    $q0 = COPY %1(<2 x s64>)
+    RET_ReallyLR implicit $q0
+
+...
+---
+name:            custom_4x16
+tracksRegLiveness: true
+body:             |
+  bb.0:
+    liveins: $d0
+
+    ; CHECK-LABEL: name: custom_4x16
+    ; CHECK: liveins: $d0
+    ; CHECK: [[COPY:%[0-9]+]]:_(<4 x s16>) = COPY $d0
+    ; CHECK: [[BITCAST:%[0-9]+]]:_(<8 x s8>) = G_BITCAST [[COPY]](<4 x s16>)
+    ; CHECK: [[CTPOP:%[0-9]+]]:_(<8 x s8>) = G_CTPOP [[BITCAST]](<8 x s8>)
+    ; CHECK: [[INT:%[0-9]+]]:_(<4 x s16>) = G_INTRINSIC intrinsic(@llvm.aarch64.neon.uaddlp), [[CTPOP]](<8 x s8>)
+    ; CHECK: $d0 = COPY [[INT]](<4 x s16>)
+    ; CHECK: RET_ReallyLR implicit $d0
+    %0:_(<4 x s16>) = COPY $d0
+    %1:_(<4 x s16>) = G_CTPOP %0(<4 x s16>)
+    $d0 = COPY %1(<4 x s16>)
+    RET_ReallyLR implicit $d0
+
+...
+---
+name:            custom_2x32
+tracksRegLiveness: true
+body:             |
+  bb.0:
+    liveins: $d0
+
+    ; CHECK-LABEL: name: custom_2x32
+    ; CHECK: liveins: $d0
+    ; CHECK: [[COPY:%[0-9]+]]:_(<2 x s32>) = COPY $d0
+    ; CHECK: [[BITCAST:%[0-9]+]]:_(<8 x s8>) = G_BITCAST [[COPY]](<2 x s32>)
+    ; CHECK: [[CTPOP:%[0-9]+]]:_(<8 x s8>) = G_CTPOP [[BITCAST]](<8 x s8>)
+    ; CHECK: [[INT:%[0-9]+]]:_(<4 x s16>) = G_INTRINSIC intrinsic(@llvm.aarch64.neon.uaddlp), [[CTPOP]](<8 x s8>)
+    ; CHECK: [[INT1:%[0-9]+]]:_(<2 x s32>) = G_INTRINSIC intrinsic(@llvm.aarch64.neon.uaddlp), [[INT]](<4 x s16>)
+    ; CHECK: $d0 = COPY [[INT1]](<2 x s32>)
+    ; CHECK: RET_ReallyLR implicit $d0
+    %0:_(<2 x s32>) = COPY $d0
+    %1:_(<2 x s32>) = G_CTPOP %0(<2 x s32>)
+    $d0 = COPY %1(<2 x s32>)
+    RET_ReallyLR implicit $d0

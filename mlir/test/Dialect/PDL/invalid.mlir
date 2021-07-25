@@ -167,7 +167,7 @@ pdl.pattern : benefit(1) {
 // expected-error@below {{expected only `pdl` operations within the pattern body}}
 pdl.pattern : benefit(1) {
   // expected-note@below {{see non-`pdl` operation defined here}}
-  "foo.other_op"() : () -> ()
+  "test.foo.other_op"() : () -> ()
 
   %root = pdl.operation "foo.op"
   pdl.rewrite %root with "foo"

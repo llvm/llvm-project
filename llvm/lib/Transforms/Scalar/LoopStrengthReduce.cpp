@@ -511,9 +511,16 @@ bool Formula::isCanonical(const Loop &L) const {
 void Formula::canonicalize(const Loop &L) {
   if (isCanonical(L))
     return;
-  // So far we did not need this case. This is easy to implement but it is
-  // useless to maintain dead code. Beside it could hurt compile time.
-  assert(!BaseRegs.empty() && "1*reg => reg, should not be needed.");
+
+  if (BaseRegs.empty()) {
+    // No base reg? Use scale reg with scale = 1 as such.
+    assert(ScaledReg && "Expected 1*reg => reg");
+    assert(Scale == 1 && "Expected 1*reg => reg");
+    BaseRegs.push_back(ScaledReg);
+    Scale = 0;
+    ScaledReg = nullptr;
+    return;
+  }
 
   // Keep the invariant sum in BaseRegs and one of the variant sum in ScaledReg.
   if (!ScaledReg) {
@@ -4073,7 +4080,7 @@ void LSRInstance::GenerateTruncates(LSRUse &LU, unsigned LUIdx, Formula Base) {
       // happen if SCEV did not do all possible transforms while creating the
       // initial node (maybe due to depth limitations), but it can do them while
       // taking ext.
-      if (F.ScaledReg) {
+      if (F.ScaledReg && !F.ScaledReg->getType()->isPointerTy()) {
         const SCEV *NewScaledReg = SE.getAnyExtendExpr(F.ScaledReg, SrcTy);
         if (NewScaledReg->isZero())
          continue;

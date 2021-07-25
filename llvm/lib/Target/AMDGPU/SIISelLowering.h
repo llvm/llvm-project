@@ -231,10 +231,8 @@ private:
   // Analyze a combined offset from an amdgcn_buffer_ intrinsic and store the
   // three offsets (voffset, soffset and instoffset) into the SDValue[3] array
   // pointed to by Offsets.
-  /// \returns 0 If there is a non-constant offset or if the offset is 0.
-  /// Otherwise returns the constant offset.
-  unsigned setBufferOffsets(SDValue CombinedOffset, SelectionDAG &DAG,
-                            SDValue *Offsets, Align Alignment = Align(4)) const;
+  void setBufferOffsets(SDValue CombinedOffset, SelectionDAG &DAG,
+                        SDValue *Offsets, Align Alignment = Align(4)) const;
 
   // Handle 8 bit and 16 bit buffer loads
   SDValue handleByteShortBufferLoads(SelectionDAG &DAG, EVT LoadVT, SDLoc DL,

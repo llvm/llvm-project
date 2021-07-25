@@ -41,20 +41,25 @@
 #include <utility>
 using namespace llvm;
 
+static cl::OptionCategory LinkCategory("Link Options");
+
 static cl::list<std::string> InputFilenames(cl::Positional, cl::OneOrMore,
-                                            cl::desc("<input bitcode files>"));
+                                            cl::desc("<input bitcode files>"),
+                                            cl::cat(LinkCategory));
 
 static cl::list<std::string> OverridingInputs(
     "override", cl::ZeroOrMore, cl::value_desc("filename"),
     cl::desc(
-        "input bitcode file which can override previously defined symbol(s)"));
+        "input bitcode file which can override previously defined symbol(s)"),
+    cl::cat(LinkCategory));
 
 // Option to simulate function importing for testing. This enables using
 // llvm-link to simulate ThinLTO backend processes.
 static cl::list<std::string> Imports(
     "import", cl::ZeroOrMore, cl::value_desc("function:filename"),
     cl::desc("Pair of function name and filename, where function should be "
-             "imported from bitcode in filename"));
+             "imported from bitcode in filename"),
+    cl::cat(LinkCategory));
 
 // Option to support testing of function importing. The module summary
 // must be specified in the case were we request imports via the -import
@@ -63,53 +68,61 @@ static cl::list<std::string> Imports(
 // consistent promotion and renaming of locals.
 static cl::opt<std::string>
     SummaryIndex("summary-index", cl::desc("Module summary index filename"),
-                 cl::init(""), cl::value_desc("filename"));
+                 cl::init(""), cl::value_desc("filename"),
+                 cl::cat(LinkCategory));
 
-static cl::opt<std::string> OutputFilename("o",
-                                           cl::desc("Override output filename"),
-                                           cl::init("-"),
-                                           cl::value_desc("filename"));
+static cl::opt<std::string>
+    OutputFilename("o", cl::desc("Override output filename"), cl::init("-"),
+                   cl::value_desc("filename"), cl::cat(LinkCategory));
 
 static cl::opt<bool> Internalize("internalize",
-                                 cl::desc("Internalize linked symbols"));
+                                 cl::desc("Internalize linked symbols"),
+                                 cl::cat(LinkCategory));
 
 static cl::opt<bool>
     DisableDITypeMap("disable-debug-info-type-map",
-                     cl::desc("Don't use a uniquing type map for debug info"));
+                     cl::desc("Don't use a uniquing type map for debug info"),
+                     cl::cat(LinkCategory));
 
 static cl::opt<bool> OnlyNeeded("only-needed",
-                                cl::desc("Link only needed symbols"));
+                                cl::desc("Link only needed symbols"),
+                                cl::cat(LinkCategory));
 
-static cl::opt<bool> Force("f", cl::desc("Enable binary output on terminals"));
+static cl::opt<bool> Force("f", cl::desc("Enable binary output on terminals"),
+                           cl::cat(LinkCategory));
 
 static cl::opt<bool> DisableLazyLoad("disable-lazy-loading",
-                                     cl::desc("Disable lazy module loading"));
+                                     cl::desc("Disable lazy module loading"),
+                                     cl::cat(LinkCategory));
 
-static cl::opt<bool>
-    OutputAssembly("S", cl::desc("Write output as LLVM assembly"), cl::Hidden);
+static cl::opt<bool> OutputAssembly("S",
+                                    cl::desc("Write output as LLVM assembly"),
+                                    cl::Hidden, cl::cat(LinkCategory));
 
 static cl::opt<bool> Verbose("v",
-                             cl::desc("Print information about actions taken"));
+                             cl::desc("Print information about actions taken"),
+                             cl::cat(LinkCategory));
 
 static cl::opt<bool> DumpAsm("d", cl::desc("Print assembly as linked"),
-                             cl::Hidden);
+                             cl::Hidden, cl::cat(LinkCategory));
 
 static cl::opt<bool> SuppressWarnings("suppress-warnings",
                                       cl::desc("Suppress all linking warnings"),
-                                      cl::init(false));
+                                      cl::init(false), cl::cat(LinkCategory));
 
 static cl::opt<bool> PreserveBitcodeUseListOrder(
     "preserve-bc-uselistorder",
     cl::desc("Preserve use-list order when writing LLVM bitcode."),
-    cl::init(true), cl::Hidden);
+    cl::init(true), cl::Hidden, cl::cat(LinkCategory));
 
 static cl::opt<bool> PreserveAssemblyUseListOrder(
     "preserve-ll-uselistorder",
     cl::desc("Preserve use-list order when writing LLVM assembly."),
-    cl::init(false), cl::Hidden);
+    cl::init(false), cl::Hidden, cl::cat(LinkCategory));
 
 static cl::opt<bool> NoVerify("disable-verify",
-                              cl::desc("Do not run the verifier"), cl::Hidden);
+                              cl::desc("Do not run the verifier"), cl::Hidden,
+                              cl::cat(LinkCategory));
 
 static ExitOnError ExitOnErr;
 
@@ -434,6 +447,7 @@ int main(int argc, char **argv) {
   LLVMContext Context;
   Context.setDiagnosticHandler(std::make_unique<LLVMLinkDiagnosticHandler>(),
                                true);
+  cl::HideUnrelatedOptions({&LinkCategory, &getColorCategory()});
   cl::ParseCommandLineOptions(argc, argv, "llvm linker\n");
 
   if (!DisableDITypeMap)

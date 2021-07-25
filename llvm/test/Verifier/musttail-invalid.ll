@@ -46,6 +46,13 @@ define void @mismatched_byval({ i32 }* byval({ i32 }) %a) {
   ret void
 }
 
+declare void @mismatched_byval_callee2(ptr byval(i32))
+define void @mismatched_byval2(ptr byval(i64) %a) {
+; CHECK: mismatched ABI impacting function attributes
+  musttail call void @mismatched_byval_callee2(ptr byval(i32) %a)
+  ret void
+}
+
 declare void @mismatched_inreg_callee(i32 inreg)
 define void @mismatched_inreg(i32 %a) {
 ; CHECK: mismatched ABI impacting function attributes

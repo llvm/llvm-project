@@ -144,6 +144,25 @@ define i8 @lastb_extractelement_invalid_predicate_pattern(<vscale x 16 x i8> %v)
   ret i8 %e
 }
 
+; Return the splatted value irrespective of the predicate.
+define i8 @lasta_splat(<vscale x 16 x i1> %pg, i8 %a) #0 {
+; OPT-LABEL: @lasta_splat(
+; OPT-NEXT:    ret i8 %a
+  %splat_insert = insertelement <vscale x 16 x i8> poison, i8 %a, i32 0
+  %splat = shufflevector <vscale x 16 x i8> %splat_insert, <vscale x 16 x i8> poison, <vscale x 16 x i32> zeroinitializer
+  %last = tail call i8 @llvm.aarch64.sve.lasta.nxv16i8(<vscale x 16 x i1> %pg, <vscale x 16 x i8> %splat)
+  ret i8 %last
+}
+
+define i8 @lastb_splat(<vscale x 16 x i1> %pg, i8 %a) #0 {
+; OPT-LABEL: @lastb_splat(
+; OPT-NEXT:    ret i8 %a
+  %splat_insert = insertelement <vscale x 16 x i8> poison, i8 %a, i32 0
+  %splat = shufflevector <vscale x 16 x i8> %splat_insert, <vscale x 16 x i8> poison, <vscale x 16 x i32> zeroinitializer
+  %last = tail call i8 @llvm.aarch64.sve.lastb.nxv16i8(<vscale x 16 x i1> %pg, <vscale x 16 x i8> %splat)
+  ret i8 %last
+}
+
 declare <vscale x 16 x i1> @llvm.aarch64.sve.ptrue.nxv16i1(i32)
 declare i8 @llvm.aarch64.sve.lasta.nxv16i8(<vscale x 16 x i1>, <vscale x 16 x i8>)
 declare i8 @llvm.aarch64.sve.lastb.nxv16i8(<vscale x 16 x i1>, <vscale x 16 x i8>)

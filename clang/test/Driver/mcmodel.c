@@ -3,6 +3,8 @@
 // RUN: %clang -target x86_64 -### -S -mcmodel=kernel %s 2>&1 | FileCheck --check-prefix=KERNEL %s
 // RUN: %clang -target x86_64 -### -c -mcmodel=medium %s 2>&1 | FileCheck --check-prefix=MEDIUM %s
 // RUN: %clang -target x86_64 -### -S -mcmodel=large %s 2>&1 | FileCheck --check-prefix=LARGE %s
+// RUN: %clang -target powerpc-unknown-aix -### -S -mcmodel=medium %s 2> %t.log
+// RUN: FileCheck --check-prefix=AIX-MCMEDIUM-OVERRIDE %s < %t.log
 // RUN: not %clang -c -mcmodel=lager %s 2>&1 | FileCheck --check-prefix=INVALID %s
 
 // TINY: "-mcmodel=tiny"
@@ -10,5 +12,6 @@
 // KERNEL: "-mcmodel=kernel"
 // MEDIUM: "-mcmodel=medium"
 // LARGE: "-mcmodel=large"
+// AIX-MCMEDIUM-OVERRIDE: "-mcmodel=large"
 
 // INVALID: error: invalid argument 'lager' to -mcmodel=

@@ -5,6 +5,7 @@
 """Helper macros to configure the LLVM overlay project."""
 
 load("@bazel_tools//tools/build_defs/repo:utils.bzl", "maybe")
+load("@bazel_skylib//lib:paths.bzl", "paths")
 load(":zlib.bzl", "llvm_zlib_disable", "llvm_zlib_system")
 load(":terminfo.bzl", "llvm_terminfo_disable", "llvm_terminfo_system")
 
@@ -26,32 +27,17 @@ DEFAULT_TARGETS = [
     "X86",
 ]
 
-def _is_absolute(path):
-    """Returns `True` if `path` is an absolute path.
-
-    Args:
-      path: A path (which is a string).
-    Returns:
-      `True` if `path` is an absolute path.
-    """
-    return path.startswith("/") or (len(path) > 2 and path[1] == ":")
-
-def _join_path(a, b):
-    if _is_absolute(b):
-        return b
-    return str(a) + "/" + str(b)
-
 def _overlay_directories(repository_ctx):
-    src_workspace_path = repository_ctx.path(
+    src_workspace_path = str(repository_ctx.path(
         repository_ctx.attr.src_workspace,
-    ).dirname
+    ).dirname)
 
-    src_path = _join_path(src_workspace_path, repository_ctx.attr.src_path)
+    src_path = paths.join(src_workspace_path, repository_ctx.attr.src_path)
 
-    overlay_workspace_path = repository_ctx.path(
+    overlay_workspace_path = str(repository_ctx.path(
         repository_ctx.attr.overlay_workspace,
-    ).dirname
-    overlay_path = _join_path(
+    ).dirname)
+    overlay_path = paths.join(
         overlay_workspace_path,
         repository_ctx.attr.overlay_path,
     )

@@ -1323,15 +1323,17 @@ SDValue AVRTargetLowering::LowerCall(TargetLowering::CallLoweringInfo &CLI,
     RegsToPass.push_back(std::make_pair(VA.getLocReg(), Arg));
   }
 
-  // Second, stack arguments have to walked in reverse order by inserting
-  // chained stores, this ensures their order is not changed by the scheduler
-  // and that the push instruction sequence generated is correct, otherwise they
-  // can be freely intermixed.
+  // Second, stack arguments have to walked.
+  // Previously this code created chained stores but those chained stores appear
+  // to be unchained in the legalization phase. Therefore, do not attempt to
+  // chain them here. In fact, chaining them here somehow causes the first and
+  // second store to be reversed which is the exact opposite of the intended
+  // effect.
   if (HasStackArgs) {
-    for (AE = AI, AI = ArgLocs.size(); AI != AE; --AI) {
-      unsigned Loc = AI - 1;
-      CCValAssign &VA = ArgLocs[Loc];
-      SDValue Arg = OutVals[Loc];
+    SmallVector<SDValue, 8> MemOpChains;
+    for (; AI != AE; AI++) {
+      CCValAssign &VA = ArgLocs[AI];
+      SDValue Arg = OutVals[AI];
 
       assert(VA.isMemLoc());
 
@@ -1341,10 +1343,13 @@ SDValue AVRTargetLowering::LowerCall(TargetLowering::CallLoweringInfo &CLI,
           DAG.getRegister(AVR::SP, getPointerTy(DAG.getDataLayout())),
           DAG.getIntPtrConstant(VA.getLocMemOffset() + 1, DL));
 
-      Chain =
+      MemOpChains.push_back(
           DAG.getStore(Chain, DL, Arg, PtrOff,
-                       MachinePointerInfo::getStack(MF, VA.getLocMemOffset()));
+                       MachinePointerInfo::getStack(MF, VA.getLocMemOffset())));
     }
+
+    if (!MemOpChains.empty())
+      Chain = DAG.getNode(ISD::TokenFactor, DL, MVT::Other, MemOpChains);
   }
 
   // Build a sequence of copy-to-reg nodes chained together with token chain and
@@ -2106,37 +2111,21 @@ Register AVRTargetLowering::getRegisterByName(const char *RegName, LLT VT,
 
   if (VT == LLT::scalar(8)) {
     Reg = StringSwitch<unsigned>(RegName)
-      .Case("r0", AVR::R0).Case("r1", AVR::R1).Case("r2", AVR::R2)
-      .Case("r3", AVR::R3).Case("r4", AVR::R4).Case("r5", AVR::R5)
-      .Case("r6", AVR::R6).Case("r7", AVR::R7).Case("r8", AVR::R8)
-      .Case("r9", AVR::R9).Case("r10", AVR::R10).Case("r11", AVR::R11)
-      .Case("r12", AVR::R12).Case("r13", AVR::R13).Case("r14", AVR::R14)
-      .Case("r15", AVR::R15).Case("r16", AVR::R16).Case("r17", AVR::R17)
-      .Case("r18", AVR::R18).Case("r19", AVR::R19).Case("r20", AVR::R20)
-      .Case("r21", AVR::R21).Case("r22", AVR::R22).Case("r23", AVR::R23)
-      .Case("r24", AVR::R24).Case("r25", AVR::R25).Case("r26", AVR::R26)
-      .Case("r27", AVR::R27).Case("r28", AVR::R28).Case("r29", AVR::R29)
-      .Case("r30", AVR::R30).Case("r31", AVR::R31)
-      .Case("X", AVR::R27R26).Case("Y", AVR::R29R28).Case("Z", AVR::R31R30)
-      .Default(0);
+              .Case("r0", AVR::R0)
+              .Case("r1", AVR::R1)
+              .Default(0);
   } else {
     Reg = StringSwitch<unsigned>(RegName)
-      .Case("r0", AVR::R1R0).Case("r2", AVR::R3R2)
-      .Case("r4", AVR::R5R4).Case("r6", AVR::R7R6)
-      .Case("r8", AVR::R9R8).Case("r10", AVR::R11R10)
-      .Case("r12", AVR::R13R12).Case("r14", AVR::R15R14)
-      .Case("r16", AVR::R17R16).Case("r18", AVR::R19R18)
-      .Case("r20", AVR::R21R20).Case("r22", AVR::R23R22)
-      .Case("r24", AVR::R25R24).Case("r26", AVR::R27R26)
-      .Case("r28", AVR::R29R28).Case("r30", AVR::R31R30)
-      .Case("X", AVR::R27R26).Case("Y", AVR::R29R28).Case("Z", AVR::R31R30)
-      .Default(0);
+              .Case("r0", AVR::R1R0)
+              .Case("sp", AVR::SP)
+              .Default(0);
   }
 
   if (Reg)
     return Reg;
 
-  report_fatal_error("Invalid register name global variable");
+  report_fatal_error(
+      Twine("Invalid register name \"" + StringRef(RegName) + "\"."));
 }
 
 } // end of namespace llvm

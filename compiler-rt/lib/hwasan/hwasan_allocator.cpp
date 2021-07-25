@@ -80,12 +80,29 @@ void GetAllocatorStats(AllocatorStatCounters s) {
   allocator.GetStats(s);
 }
 
+uptr GetAliasRegionStart() {
+#if defined(HWASAN_ALIASING_MODE)
+  constexpr uptr kAliasRegionOffset = 1ULL << (kTaggableRegionCheckShift - 1);
+  uptr AliasRegionStart =
+      __hwasan_shadow_memory_dynamic_address + kAliasRegionOffset;
+
+  CHECK_EQ(AliasRegionStart >> kTaggableRegionCheckShift,
+           __hwasan_shadow_memory_dynamic_address >> kTaggableRegionCheckShift);
+  CHECK_EQ(
+      (AliasRegionStart + kAliasRegionOffset - 1) >> kTaggableRegionCheckShift,
+      __hwasan_shadow_memory_dynamic_address >> kTaggableRegionCheckShift);
+  return AliasRegionStart;
+#else
+  return 0;
+#endif
+}
+
 void HwasanAllocatorInit() {
   atomic_store_relaxed(&hwasan_allocator_tagging_enabled,
                        !flags()->disable_allocator_tagging);
   SetAllocatorMayReturnNull(common_flags()->allocator_may_return_null);
   allocator.Init(common_flags()->allocator_release_to_os_interval_ms,
-                 kAliasRegionStart);
+                 GetAliasRegionStart());
   for (uptr i = 0; i < sizeof(tail_magic); i++)
     tail_magic[i] = GetCurrentThread()->GenerateRandomTag();
 }

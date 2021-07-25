@@ -147,9 +147,9 @@
 # STRIPDYLIB-NEXT:  l {{.*}} __dyld_private
 # STRIPDYLIB-NEXT:  g {{.*}} _main
 # STRIPDYLIB-NEXT:  g {{.*}} __mh_execute_header
-# STRIPDYLIB-NEXT:  *UND* _ref_undef_fun
 # STRIPDYLIB-NEXT:  *UND* dyld_stub_binder
 # STRIPDYLIB-NEXT:  *UND* _ref_dylib_fun
+# STRIPDYLIB-NEXT:  *UND* _ref_undef_fun
 # STRIPDYLIB:      Bind table:
 # STRIPDYLIB:      Lazy bind table:
 # STRIPDYLIB:       __DATA   __la_symbol_ptr {{.*}} flat-namespace _ref_undef_fun
@@ -173,6 +173,18 @@
 # RUN: %lld -lSystem -dead_strip %t/strip-dylib-ref.o %t/dylib.dylib \
 # RUN:     -o %t/strip-dylib-ref -U _ref_undef_fun
 
+## Check that referenced undefs are kept with -undefined dynamic_lookup.
+# RUN: llvm-mc -filetype=obj -triple=x86_64-apple-macos \
+# RUN:     %t/ref-undef.s -o %t/ref-undef.o
+# RUN: %lld -lSystem -dead_strip %t/ref-undef.o \
+# RUN:     -o %t/ref-undef -undefined dynamic_lookup
+# RUN: llvm-objdump --syms --lazy-bind %t/ref-undef | \
+# RUN:     FileCheck --check-prefix=STRIPDYNLOOKUP %s
+# STRIPDYNLOOKUP: SYMBOL TABLE:
+# STRIPDYNLOOKUP:   *UND* _ref_undef_fun
+# STRIPDYNLOOKUP: Lazy bind table:
+# STRIPDYNLOOKUP:   __DATA   __la_symbol_ptr {{.*}} flat-namespace _ref_undef_fun
+
 ## S_ATTR_LIVE_SUPPORT tests.
 # RUN: llvm-mc -filetype=obj -triple=x86_64-apple-macos \
 # RUN:     %t/live-support.s -o %t/live-support.o
@@ -190,9 +202,9 @@
 # LIVESUPP-NEXT:   g {{.*}} _bar
 # LIVESUPP-NEXT:   g {{.*}} _foo
 # LIVESUPP-NEXT:   g {{.*}} __mh_execute_header
-# LIVESUPP-NEXT:   *UND* _ref_undef_fun
 # LIVESUPP-NEXT:   *UND* dyld_stub_binder
 # LIVESUPP-NEXT:   *UND* _ref_dylib_fun
+# LIVESUPP-NEXT:   *UND* _ref_undef_fun
 
 # RUN: llvm-mc -filetype=obj -triple=x86_64-apple-macos \
 # RUN:     %t/live-support-iterations.s -o %t/live-support-iterations.o
@@ -811,4 +823,10 @@ _more_data:
   .quad L._foo4
   .quad L._bar4
 
+.subsections_via_symbols
+
+#--- ref-undef.s
+.globl _main
+_main:
+  callq _ref_undef_fun
 .subsections_via_symbols

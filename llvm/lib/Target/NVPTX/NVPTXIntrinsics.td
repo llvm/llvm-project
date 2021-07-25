@@ -7796,15 +7796,24 @@ defset list<WMMA_INSTR> MMA_LDSTs  = {
   } // layout
 } // defset
 
+// B1 instruction variants need extra constraints.
+class MMA_OP_PREDICATES<WMMA_REGINFO FragA, string b1op> {
+  string Op = b1op;
+  WMMA_REGINFO Frag = FragA;
+  list<Predicate> ret = !listconcat(
+    FragA.Predicates,
+    !if(!eq(b1op, ".and.popc"), [hasSM80,hasPTX71],[])
+  );
+}
 // WMMA.MMA
 class WMMA_MMA<WMMA_REGINFO FragA, WMMA_REGINFO FragB,
                WMMA_REGINFO FragC, WMMA_REGINFO FragD,
-               string ALayout, string BLayout, int Satfinite, string rnd>
-  : WMMA_INSTR<WMMA_NAME<ALayout, BLayout, Satfinite, rnd, FragA, FragB, FragC, FragD>.record,
+               string ALayout, string BLayout, int Satfinite, string rnd, string b1op>
+  : WMMA_INSTR<WMMA_NAME<ALayout, BLayout, Satfinite, rnd, b1op, FragA, FragB, FragC, FragD>.record,
                          [FragA.Ins, FragB.Ins, FragC.Ins]>,
     // Requires does not seem to have effect on Instruction w/o Patterns.
     // We set it here anyways and propagate to the Pat<> we construct below.
-    Requires<FragA.Predicates> {
+    Requires<MMA_OP_PREDICATES<FragA, b1op>.ret> {
   let OutOperandList = FragD.Outs;
   let InOperandList  = !con(Args, (ins MmaCode:$ptx));
   string TypeList = !cond(
@@ -7816,7 +7825,7 @@ class WMMA_MMA<WMMA_REGINFO FragA, WMMA_REGINFO FragB,
        # "." # FragC.ptx_elt_type,
   );
   let AsmString = "wmma.mma"
-                  # !if(!eq(FragA.ptx_elt_type, "b1"), ".xor.popc", "")
+                  # b1op
                   # ".sync"
                   # "${ptx:aligned}"
                   # "." # ALayout
@@ -7837,13 +7846,15 @@ defset list<WMMA_INSTR> WMMAs  = {
       foreach satf = [0, 1] in {
         foreach rnd = ["", "rn", "rz", "rm", "rp"] in {
           foreach op = NVVM_MMA_OPS.all_wmma_ops in {
-            if NVVM_WMMA_SUPPORTED<op, layout_a, layout_b, satf, rnd>.ret then {
-              def : WMMA_MMA<WMMA_REGINFO<op[0], "wmma.mma">,
-                            WMMA_REGINFO<op[1], "wmma.mma">,
-                            WMMA_REGINFO<op[2], "wmma.mma">,
-                            WMMA_REGINFO<op[3], "wmma.mma">,
-                            layout_a, layout_b, satf, rnd>;
-            }
+            foreach b1op = NVVM_MMA_B1OPS<op>.ret in {
+              if NVVM_WMMA_SUPPORTED<op, layout_a, layout_b, satf, rnd>.ret then {
+                def : WMMA_MMA<WMMA_REGINFO<op[0], "wmma.mma">,
+                              WMMA_REGINFO<op[1], "wmma.mma">,
+                              WMMA_REGINFO<op[2], "wmma.mma">,
+                              WMMA_REGINFO<op[3], "wmma.mma">,
+                              layout_a, layout_b, satf, rnd, b1op>;
+              }
+            } // b1op
           } // op
         } // rnd
       } // satf
@@ -7854,12 +7865,12 @@ defset list<WMMA_INSTR> WMMAs  = {
 // MMA
 class MMA<WMMA_REGINFO FragA, WMMA_REGINFO FragB,
                WMMA_REGINFO FragC, WMMA_REGINFO FragD,
-               string ALayout, string BLayout, int Satfinite>
-  : WMMA_INSTR<MMA_NAME<ALayout, BLayout, Satfinite, FragA, FragB, FragC, FragD>.record,
+               string ALayout, string BLayout, int Satfinite, string b1op>
+  : WMMA_INSTR<MMA_NAME<ALayout, BLayout, Satfinite, b1op, FragA, FragB, FragC, FragD>.record,
                         [FragA.Ins, FragB.Ins, FragC.Ins]>,
     // Requires does not seem to have effect on Instruction w/o Patterns.
     // We set it here anyways and propagate to the Pat<> we construct below.
-    Requires<FragA.Predicates> {
+  Requires<MMA_OP_PREDICATES<FragA, b1op>.ret> {
   let OutOperandList = FragD.Outs;
   let InOperandList  = !con(Args, (ins MmaCode:$ptx));
   string TypeList = "." # FragD.ptx_elt_type
@@ -7872,7 +7883,7 @@ class MMA<WMMA_REGINFO FragA, WMMA_REGINFO FragB,
                   # "." # BLayout
                   # !if(Satfinite, ".satfinite", "")
                   # TypeList
-                  # !if(!eq(FragA.ptx_elt_type, "b1"), ".xor.popc", "") # "\n\t\t"
+                  # b1op # "\n\t\t"
                   # FragD.regstring # ",\n\t\t"
                   # FragA.regstring # ",\n\t\t"
                   # FragB.regstring # ",\n\t\t"
@@ -7884,13 +7895,15 @@ defset list<WMMA_INSTR> MMAs  = {
     foreach layout_b = ["row", "col"] in {
       foreach satf = [0, 1] in {
         foreach op = NVVM_MMA_OPS.all_mma_ops in {
-          if NVVM_MMA_SUPPORTED<op, layout_a, layout_b, satf>.ret then {
-            def : MMA<WMMA_REGINFO<op[0], "mma">,
-                      WMMA_REGINFO<op[1], "mma">,
-                      WMMA_REGINFO<op[2], "mma">,
-                      WMMA_REGINFO<op[3], "mma">,
-                      layout_a, layout_b, satf>;
-          }
+          foreach b1op = NVVM_MMA_B1OPS<op>.ret in {
+            if NVVM_MMA_SUPPORTED<op, layout_a, layout_b, satf>.ret then {
+              def : MMA<WMMA_REGINFO<op[0], "mma">,
+                        WMMA_REGINFO<op[1], "mma">,
+                        WMMA_REGINFO<op[2], "mma">,
+                        WMMA_REGINFO<op[3], "mma">,
+                        layout_a, layout_b, satf, b1op>;
+            }
+          } // b1op
         } // op
       } // satf
     } // layout_b

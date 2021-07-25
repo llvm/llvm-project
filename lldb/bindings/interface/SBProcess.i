@@ -417,6 +417,25 @@ public:
     lldb::SBProcessInfo
     GetProcessInfo();
 
+    %feature("autodoc", "
+    Allocates a block of memory within the process, with size and
+    access permissions specified in the arguments. The permisssions
+    argument is an or-combination of zero or more of
+    lldb.ePermissionsWritable, lldb.ePermissionsReadable, and
+    lldb.ePermissionsExecutable. Returns the address
+    of the allocated buffer in the process, or
+    lldb.LLDB_INVALID_ADDRESS if the allocation failed.") AllocateMemory;
+
+    lldb::addr_t
+    AllocateMemory(size_t size, uint32_t permissions, lldb::SBError &error);
+
+    %feature("autodoc", "
+    Deallocates the block of memory (previously allocated using
+    AllocateMemory) given in the argument.") DeallocateMemory;
+
+    lldb::SBError
+    DeallocateMemory(lldb::addr_t ptr);
+
     STRING_EXTENSION(SBProcess)
 
 #ifdef SWIGPYTHON

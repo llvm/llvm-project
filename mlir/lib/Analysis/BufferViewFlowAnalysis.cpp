@@ -104,10 +104,10 @@ void BufferViewFlowAnalysis::build(Operation *op) {
         // Iterate over all immediate terminator operations and wire the
         // successor inputs with the operands of each terminator.
         for (Block &block : region) {
-          for (Operation &operation : block) {
-            if (operation.hasTrait<OpTrait::ReturnLike>())
-              registerDependencies(operation.getOperands(),
-                                   successorRegion.getSuccessorInputs());
+          Operation &terminator = *block.getTerminator();
+          if (terminator.hasTrait<OpTrait::ReturnLike>()) {
+            registerDependencies(terminator.getOperands(),
+                                 successorRegion.getSuccessorInputs());
           }
         }
       }

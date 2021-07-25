@@ -102,6 +102,15 @@ static bool isSupportedCombiningKind(CombiningKind combiningKind,
   return false;
 }
 
+/// Return true if the last dimension of the MemRefType has unit stride. Also
+/// return true for memrefs with no strides.
+bool mlir::vector::isLastMemrefDimUnitStride(MemRefType type) {
+  int64_t offset;
+  SmallVector<int64_t> strides;
+  auto successStrides = getStridesAndOffset(type, strides, offset);
+  return succeeded(successStrides) && (strides.empty() || strides.back() == 1);
+}
+
 //===----------------------------------------------------------------------===//
 // CombiningKindAttr
 //===----------------------------------------------------------------------===//
@@ -1346,11 +1355,25 @@ public:
   }
 };
 
+// Fold broadcast1(broadcast2(x)) into broadcast1(x).
+struct BroadcastFolder : public OpRewritePattern<BroadcastOp> {
+  using OpRewritePattern<BroadcastOp>::OpRewritePattern;
+
+  LogicalResult matchAndRewrite(BroadcastOp broadcastOp,
+                                PatternRewriter &rewriter) const override {
+    auto srcBroadcast = broadcastOp.source().getDefiningOp<BroadcastOp>();
+    if (!srcBroadcast)
+      return failure();
+    rewriter.replaceOpWithNewOp<BroadcastOp>(
+        broadcastOp, broadcastOp.getVectorType(), srcBroadcast.source());
+    return success();
+  }
+};
 } // namespace
 
 void BroadcastOp::getCanonicalizationPatterns(RewritePatternSet &results,
                                               MLIRContext *context) {
-  results.add<BroadcastToShapeCast>(context);
+  results.add<BroadcastToShapeCast, BroadcastFolder>(context);
 }
 
 //===----------------------------------------------------------------------===//
@@ -2939,9 +2962,8 @@ void TransferWriteOp::getCanonicalizationPatterns(RewritePatternSet &results,
 
 static LogicalResult verifyLoadStoreMemRefLayout(Operation *op,
                                                  MemRefType memRefTy) {
-  auto affineMaps = memRefTy.getAffineMaps();
-  if (!affineMaps.empty())
-    return op->emitOpError("base memref should have a default identity layout");
+  if (!isLastMemrefDimUnitStride(memRefTy))
+    return op->emitOpError("most minor memref dim must have unit stride");
   return success();
 }
 
@@ -2965,6 +2987,12 @@ static LogicalResult verify(vector::LoadOp op) {
   if (llvm::size(op.indices()) != memRefTy.getRank())
     return op.emitOpError("requires ") << memRefTy.getRank() << " indices";
   return success();
+}
+
+OpFoldResult LoadOp::fold(ArrayRef<Attribute>) {
+  if (succeeded(foldMemRefCast(*this)))
+    return getResult();
+  return OpFoldResult();
 }
 
 //===----------------------------------------------------------------------===//
@@ -2992,6 +3020,11 @@ static LogicalResult verify(vector::StoreOp op) {
   if (llvm::size(op.indices()) != memRefTy.getRank())
     return op.emitOpError("requires ") << memRefTy.getRank() << " indices";
   return success();
+}
+
+LogicalResult StoreOp::fold(ArrayRef<Attribute> operands,
+                            SmallVectorImpl<OpFoldResult> &results) {
+  return foldMemRefCast(*this);
 }
 
 //===----------------------------------------------------------------------===//
@@ -3042,6 +3075,12 @@ void MaskedLoadOp::getCanonicalizationPatterns(RewritePatternSet &results,
   results.add<MaskedLoadFolder>(context);
 }
 
+OpFoldResult MaskedLoadOp::fold(ArrayRef<Attribute>) {
+  if (succeeded(foldMemRefCast(*this)))
+    return getResult();
+  return OpFoldResult();
+}
+
 //===----------------------------------------------------------------------===//
 // MaskedStoreOp
 //===----------------------------------------------------------------------===//
@@ -3085,6 +3124,11 @@ public:
 void MaskedStoreOp::getCanonicalizationPatterns(RewritePatternSet &results,
                                                 MLIRContext *context) {
   results.add<MaskedStoreFolder>(context);
+}
+
+LogicalResult MaskedStoreOp::fold(ArrayRef<Attribute> operands,
+                                  SmallVectorImpl<OpFoldResult> &results) {
+  return foldMemRefCast(*this);
 }
 
 //===----------------------------------------------------------------------===//
@@ -3505,33 +3549,6 @@ static LogicalResult verify(TypeCastOp op) {
            << resultType;
   return success();
 }
-
-//===----------------------------------------------------------------------===//
-// TupleOp
-//===----------------------------------------------------------------------===//
-
-static ParseResult parseTupleOp(OpAsmParser &parser, OperationState &result) {
-  SmallVector<OpAsmParser::OperandType, 4> operandInfos;
-  SmallVector<Type, 4> types;
-  auto loc = parser.getCurrentLocation();
-  auto *ctx = parser.getBuilder().getContext();
-  return failure(
-      parser.parseOperandList(operandInfos) ||
-      parser.parseOptionalAttrDict(result.attributes) ||
-      parser.parseColonTypeList(types) ||
-      parser.resolveOperands(operandInfos, types, loc, result.operands) ||
-      parser.addTypeToList(TupleType::get(ctx, types), result.types));
-}
-
-static void print(OpAsmPrinter &p, TupleOp op) {
-  p << op.getOperationName() << ' ';
-  p.printOperands(op.getOperands());
-  p.printOptionalAttrDict(op->getAttrs());
-  p << " : ";
-  llvm::interleaveComma(op->getOperandTypes(), p);
-}
-
-static LogicalResult verify(TupleOp op) { return success(); }
 
 //===----------------------------------------------------------------------===//
 // TransposeOp

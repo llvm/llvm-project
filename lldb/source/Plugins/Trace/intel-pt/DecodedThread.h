@@ -61,17 +61,15 @@ private:
 /// As mentioned, any gap is represented as an error in this class.
 class IntelPTInstruction {
 public:
+  IntelPTInstruction(const pt_insn &pt_insn, uint64_t timestamp)
+      : m_pt_insn(pt_insn), m_timestamp(timestamp) {}
+
   IntelPTInstruction(const pt_insn &pt_insn) : m_pt_insn(pt_insn) {}
 
   /// Error constructor
   ///
   /// libipt errors should use the underlying \a IntelPTError class.
-  IntelPTInstruction(llvm::Error err) {
-    llvm::handleAllErrors(std::move(err),
-                          [&](std::unique_ptr<llvm::ErrorInfoBase> info) {
-                            m_error = std::move(info);
-                          });
-  }
+  IntelPTInstruction(llvm::Error err);
 
   /// Check if this object represents an error (i.e. a gap).
   ///
@@ -80,14 +78,33 @@ public:
   bool IsError() const;
 
   /// \return
-  ///     The instruction pointer address, or an \a llvm::Error if it is an
-  ///     error.
-  llvm::Expected<lldb::addr_t> GetLoadAddress() const;
+  ///     The instruction pointer address, or \a LLDB_INVALID_ADDRESS if it is
+  ///     an error.
+  lldb::addr_t GetLoadAddress() const;
 
   /// \return
   ///     An \a llvm::Error object if this class corresponds to an Error, or an
   ///     \a llvm::Error::success otherwise.
   llvm::Error ToError() const;
+
+  /// Get the timestamp associated with the current instruction. The timestamp
+  /// is similar to what a rdtsc instruction would return.
+  ///
+  /// \return
+  ///     The timestamp or \b llvm::None if not available.
+  llvm::Optional<uint64_t> GetTimestampCounter() const;
+
+  /// Get the \a lldb::TraceInstructionControlFlowType categories of the
+  /// instruction.
+  ///
+  /// \param[in] next_load_address
+  ///     The address of the next instruction in the trace or \b
+  ///     LLDB_INVALID_ADDRESS if not available.
+  ///
+  /// \return
+  ///     The control flow categories, or \b 0 if the instruction is an error.
+  lldb::TraceInstructionControlFlowType
+  GetControlFlowType(lldb::addr_t next_load_address) const;
 
   IntelPTInstruction(IntelPTInstruction &&other) = default;
 
@@ -96,6 +113,7 @@ private:
   const IntelPTInstruction &operator=(const IntelPTInstruction &other) = delete;
 
   pt_insn m_pt_insn;
+  llvm::Optional<uint64_t> m_timestamp;
   std::unique_ptr<llvm::ErrorInfoBase> m_error;
 };
 
@@ -106,15 +124,15 @@ private:
 ///
 /// Each decoded thread contains a cursor to the current position the user is
 /// stopped at. See \a Trace::GetCursorPosition for more information.
-class DecodedThread {
+class DecodedThread : public std::enable_shared_from_this<DecodedThread> {
 public:
-  DecodedThread(std::vector<IntelPTInstruction> &&instructions)
-      : m_instructions(std::move(instructions)), m_position(GetLastPosition()) {
-  }
+  DecodedThread(lldb::ThreadSP thread_sp,
+                std::vector<IntelPTInstruction> &&instructions,
+                size_t raw_trace_size);
 
   /// Constructor with a single error signaling a complete failure of the
   /// decoding process.
-  DecodedThread(llvm::Error error);
+  DecodedThread(lldb::ThreadSP thread_sp, llvm::Error error);
 
   /// Get the instructions from the decoded trace. Some of them might indicate
   /// errors (i.e. gaps) in the trace.
@@ -123,27 +141,22 @@ public:
   ///   The instructions of the trace.
   llvm::ArrayRef<IntelPTInstruction> GetInstructions() const;
 
-  /// \return
-  ///   The current position of the cursor of this trace, or 0 if there are no
-  ///   instructions.
-  size_t GetCursorPosition() const;
+  /// Get a new cursor for the decoded thread.
+  lldb::TraceCursorUP GetCursor();
 
-  /// Change the position of the cursor of this trace. If this value is to high,
-  /// the new position will be set as the last instruction of the trace.
+  /// Get the size in bytes of the corresponding Intel PT raw trace
   ///
   /// \return
-  ///     The effective new position.
-  size_t SetCursorPosition(size_t new_position);
-  /// \}
+  ///   The size of the trace.
+  size_t GetRawTraceSize() const;
 
 private:
-  /// \return
-  ///     The index of the last element of the trace, or 0 if empty.
-  size_t GetLastPosition() const;
-
+  lldb::ThreadSP m_thread_sp;
   std::vector<IntelPTInstruction> m_instructions;
-  size_t m_position;
+  size_t m_raw_trace_size;
 };
+
+using DecodedThreadSP = std::shared_ptr<DecodedThread>;
 
 } // namespace trace_intel_pt
 } // namespace lldb_private

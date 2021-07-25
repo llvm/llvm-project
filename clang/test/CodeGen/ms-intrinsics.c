@@ -36,7 +36,7 @@ void test__movsb(unsigned char *Dest, unsigned char *Src, size_t Count) {
   return __movsb(Dest, Src, Count);
 }
 // CHECK-I386-LABEL: define{{.*}} void @test__movsb
-// CHECK-I386:   call { i8*, i8*, i32 } asm sideeffect "rep movsb", "={di},={si},={cx},0,1,2,~{memory},~{dirflag},~{fpsr},~{flags}"(i8* %Dest, i8* %Src, i32 %Count)
+// CHECK-I386:   tail call { i8*, i8*, i32 } asm sideeffect "xchg %esi, $1\0Arep movsb\0Axchg %esi, $1", "={di},=r,={cx},0,1,2,~{memory},~{dirflag},~{fpsr},~{flags}"(i8* %Dest, i8* %Src, i32 %Count)
 // CHECK-I386:   ret void
 // CHECK-I386: }
 
@@ -62,7 +62,7 @@ void test__movsw(unsigned short *Dest, unsigned short *Src, size_t Count) {
   return __movsw(Dest, Src, Count);
 }
 // CHECK-I386-LABEL: define{{.*}} void @test__movsw
-// CHECK-I386:   call { i16*, i16*, i32 } asm sideeffect "rep movsw", "={di},={si},={cx},0,1,2,~{memory},~{dirflag},~{fpsr},~{flags}"(i16* %Dest, i16* %Src, i32 %Count)
+// CHECK-I386:   tail call { i16*, i16*, i32 } asm sideeffect "xchg %esi, $1\0Arep movsw\0Axchg %esi, $1", "={di},=r,={cx},0,1,2,~{memory},~{dirflag},~{fpsr},~{flags}"(i16* %Dest, i16* %Src, i32 %Count)
 // CHECK-I386:   ret void
 // CHECK-I386: }
 
@@ -88,7 +88,7 @@ void test__movsd(unsigned long *Dest, unsigned long *Src, size_t Count) {
   return __movsd(Dest, Src, Count);
 }
 // CHECK-I386-LABEL: define{{.*}} void @test__movsd
-// CHECK-I386:   call { i32*, i32*, i32 } asm sideeffect "rep movsl", "={di},={si},={cx},0,1,2,~{memory},~{dirflag},~{fpsr},~{flags}"(i32* %Dest, i32* %Src, i32 %Count)
+// CHECK-I386:   tail call { i32*, i32*, i32 } asm sideeffect "xchg %esi, $1\0Arep movsl\0Axchg %esi, $1", "={di},=r,={cx},0,1,2,~{memory},~{dirflag},~{fpsr},~{flags}"(i32* %Dest, i32* %Src, i32 %Count)
 // CHECK-I386:   ret void
 // CHECK-I386: }
 

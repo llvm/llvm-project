@@ -1535,7 +1535,7 @@ public:
                                            Type *Ty = nullptr) const = 0;
   virtual const char *getRegisterClassName(unsigned ClassID) const = 0;
   virtual TypeSize getRegisterBitWidth(RegisterKind K) const = 0;
-  virtual unsigned getMinVectorRegisterBitWidth() = 0;
+  virtual unsigned getMinVectorRegisterBitWidth() const = 0;
   virtual Optional<unsigned> getMaxVScale() const = 0;
   virtual bool shouldMaximizeVectorBandwidth() const = 0;
   virtual ElementCount getMinimumVF(unsigned ElemWidth,
@@ -1982,7 +1982,7 @@ public:
   TypeSize getRegisterBitWidth(RegisterKind K) const override {
     return Impl.getRegisterBitWidth(K);
   }
-  unsigned getMinVectorRegisterBitWidth() override {
+  unsigned getMinVectorRegisterBitWidth() const override {
     return Impl.getMinVectorRegisterBitWidth();
   }
   Optional<unsigned> getMaxVScale() const override {

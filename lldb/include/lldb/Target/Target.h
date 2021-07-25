@@ -1429,8 +1429,10 @@ protected:
   typedef std::map<lldb::user_id_t, StopHookSP> StopHookCollection;
   StopHookCollection m_stop_hooks;
   lldb::user_id_t m_stop_hook_next_id;
+  uint32_t m_latest_stop_hook_id; /// This records the last natural stop at
+                                  /// which we ran a stop-hook.
   bool m_valid;
-  bool m_suppress_stop_hooks;
+  bool m_suppress_stop_hooks; /// Used to not run stop hooks for expressions
   bool m_is_dummy_target;
   unsigned m_next_persistent_variable_index = 0;
   /// An optional \a lldb_private::Trace object containing processor trace

@@ -41,7 +41,7 @@ define arm_aapcscc i32* @test_call_simple_stack_params(i32 *%a, i32 %b) {
 ; CHECK: [[SP2:%[0-9]+]]:_(p0) = COPY $sp
 ; CHECK: [[OFF2:%[0-9]+]]:_(s32) = G_CONSTANT i32 4
 ; CHECK: [[FI2:%[0-9]+]]:_(p0) = G_PTR_ADD [[SP2]], [[OFF2]](s32)
-; CHECK: G_STORE [[AVREG]](p0), [[FI2]](p0){{.*}}store (s32)
+; CHECK: G_STORE [[AVREG]](p0), [[FI2]](p0){{.*}}store (p0)
 ; ARM: BL @simple_stack_params_target, csr_aapcs, implicit-def $lr, implicit $sp, implicit $r0, implicit $r1, implicit $r2, implicit $r3, implicit-def $r0
 ; THUMB: tBL 14 /* CC::al */, $noreg, @simple_stack_params_target, csr_aapcs, implicit-def $lr, implicit $sp, implicit $r0, implicit $r1, implicit $r2, implicit $r3, implicit-def $r0
 ; CHECK: [[RVREG:%[0-9]+]]:_(p0) = COPY $r0

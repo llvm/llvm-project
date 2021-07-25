@@ -365,6 +365,38 @@ struct Mapping47 {
 
 // Indicates the runtime will define the memory regions at runtime.
 #define TSAN_RUNTIME_VMA 1
+#elif defined(__s390x__)
+/*
+C/C++ on linux/s390x
+While the kernel provides a 64-bit address space, we have to restrict ourselves
+to 48 bits due to how e.g. SyncVar::GetId() works.
+0000 0000 1000 - 0e00 0000 0000: binary, modules, stacks - 14 TiB
+0e00 0000 0000 - 4000 0000 0000: -
+4000 0000 0000 - 8000 0000 0000: shadow - 64TiB (4 * app)
+8000 0000 0000 - 9000 0000 0000: -
+9000 0000 0000 - 9800 0000 0000: metainfo - 8TiB (0.5 * app)
+9800 0000 0000 - a000 0000 0000: -
+a000 0000 0000 - b000 0000 0000: traces - 16TiB (max history * 128k threads)
+b000 0000 0000 - be00 0000 0000: -
+be00 0000 0000 - c000 0000 0000: heap - 2TiB (max supported by the allocator)
+*/
+struct Mapping {
+  static const uptr kMetaShadowBeg = 0x900000000000ull;
+  static const uptr kMetaShadowEnd = 0x980000000000ull;
+  static const uptr kTraceMemBeg   = 0xa00000000000ull;
+  static const uptr kTraceMemEnd   = 0xb00000000000ull;
+  static const uptr kShadowBeg     = 0x400000000000ull;
+  static const uptr kShadowEnd     = 0x800000000000ull;
+  static const uptr kHeapMemBeg    = 0xbe0000000000ull;
+  static const uptr kHeapMemEnd    = 0xc00000000000ull;
+  static const uptr kLoAppMemBeg   = 0x000000001000ull;
+  static const uptr kLoAppMemEnd   = 0x0e0000000000ull;
+  static const uptr kHiAppMemBeg   = 0xc00000004000ull;
+  static const uptr kHiAppMemEnd   = 0xc00000004000ull;
+  static const uptr kAppMemMsk     = 0xb00000000000ull;
+  static const uptr kAppMemXor     = 0x100000000000ull;
+  static const uptr kVdsoBeg       = 0xfffffffff000ull;
+};
 #endif
 
 #elif SANITIZER_GO && !SANITIZER_WINDOWS && HAS_48_BIT_ADDRESS_SPACE
@@ -527,6 +559,28 @@ struct Mapping47 {
 };
 
 #define TSAN_RUNTIME_VMA 1
+
+#elif SANITIZER_GO && defined(__s390x__)
+/*
+Go on linux/s390x
+0000 0000 1000 - 1000 0000 0000: executable and heap - 16 TiB
+1000 0000 0000 - 4000 0000 0000: -
+4000 0000 0000 - 8000 0000 0000: shadow - 64TiB (4 * app)
+8000 0000 0000 - 9000 0000 0000: -
+9000 0000 0000 - 9800 0000 0000: metainfo - 8TiB (0.5 * app)
+9800 0000 0000 - a000 0000 0000: -
+a000 0000 0000 - b000 0000 0000: traces - 16TiB (max history * 128k threads)
+*/
+struct Mapping {
+  static const uptr kMetaShadowBeg = 0x900000000000ull;
+  static const uptr kMetaShadowEnd = 0x980000000000ull;
+  static const uptr kTraceMemBeg   = 0xa00000000000ull;
+  static const uptr kTraceMemEnd   = 0xb00000000000ull;
+  static const uptr kShadowBeg     = 0x400000000000ull;
+  static const uptr kShadowEnd     = 0x800000000000ull;
+  static const uptr kAppMemBeg     = 0x000000001000ull;
+  static const uptr kAppMemEnd     = 0x100000000000ull;
+};
 
 #else
 # error "Unknown platform"

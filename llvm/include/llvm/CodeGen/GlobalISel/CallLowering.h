@@ -252,7 +252,8 @@ public:
     /// This is overridable primarily for targets to maintain compatibility with
     /// hacks around the existing DAG call lowering infrastructure.
     virtual LLT getStackValueStoreType(const DataLayout &DL,
-                                       const CCValAssign &VA) const;
+                                       const CCValAssign &VA,
+                                       ISD::ArgFlagsTy Flags) const;
 
     /// The specified value has been assigned to a physical register,
     /// handle the appropriate COPY (either to or from) and mark any
@@ -281,7 +282,7 @@ public:
     /// \return The number of \p VAs that have been assigned after the first
     ///         one, and which should therefore be skipped from further
     ///         processing.
-    virtual unsigned assignCustomValue(const ArgInfo &Arg,
+    virtual unsigned assignCustomValue(ArgInfo &Arg,
                                        ArrayRef<CCValAssign> VAs) {
       // This is not a pure virtual method because not all targets need to worry
       // about custom values.
@@ -354,17 +355,13 @@ protected:
   /// Break \p OrigArgInfo into one or more pieces the calling convention can
   /// process, returned in \p SplitArgs. For example, this should break structs
   /// down into individual fields.
+  ///
+  /// If \p Offsets is non-null, it points to a vector to be filled in
+  /// with the in-memory offsets of each of the individual values.
   void splitToValueTypes(const ArgInfo &OrigArgInfo,
                          SmallVectorImpl<ArgInfo> &SplitArgs,
-                         const DataLayout &DL, CallingConv::ID CallConv) const;
-
-  /// Generate instructions for unpacking \p SrcReg into the \p DstRegs
-  /// corresponding to the aggregate type \p PackedTy.
-  ///
-  /// \param DstRegs should contain one virtual register for each base type in
-  ///        \p PackedTy, as returned by computeValueLLTs.
-  void unpackRegs(ArrayRef<Register> DstRegs, Register SrcReg, Type *PackedTy,
-                  MachineIRBuilder &MIRBuilder) const;
+                         const DataLayout &DL, CallingConv::ID CallConv,
+                         SmallVectorImpl<uint64_t> *Offsets = nullptr) const;
 
   /// Analyze the argument list in \p Args, using \p Assigner to populate \p
   /// CCInfo. This will determine the types and locations to use for passed or

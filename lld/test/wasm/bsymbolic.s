@@ -100,6 +100,7 @@
 // SYMBOLIC-NEXT:  - Type:            EXPORT
 
 .globl foo
+
 foo:
   .functype foo () -> ()
   end_function

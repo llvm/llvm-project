@@ -373,6 +373,7 @@ def TTMP_32 : RegisterClass<"AMDGPU", [i32, f32, v2i16, v2f16], 32,
   let isAllocatable = 0;
 }
 
+// Trap handler TMP 16-bit registers
 def TTMP_LO16 : RegisterClass<"AMDGPU", [i16, f16], 16,
                               (add (sequence "TTMP%u_LO16", 0, 15))> {
   let Size = 16;
@@ -382,11 +383,25 @@ def TTMP_LO16 : RegisterClass<"AMDGPU", [i16, f16], 16,
 // Trap handler TMP 64-bit registers
 def TTMP_64Regs : SIRegisterTuples<getSubRegs<2>.ret, TTMP_32, 15, 2, 2, "ttmp">;
 
+// Trap handler TMP 96-bit registers
+def TTMP_96Regs : SIRegisterTuples<getSubRegs<3>.ret, TTMP_32, 15, 3, 3, "ttmp">;
+
 // Trap handler TMP 128-bit registers
 def TTMP_128Regs : SIRegisterTuples<getSubRegs<4>.ret, TTMP_32, 15, 4, 4, "ttmp">;
 
+// Trap handler TMP 160-bit registers
+def TTMP_160Regs : SIRegisterTuples<getSubRegs<5>.ret, TTMP_32, 15, 4, 5, "ttmp">;
+
+// Trap handler TMP 192-bit registers
+def TTMP_192Regs : SIRegisterTuples<getSubRegs<6>.ret, TTMP_32, 15, 4, 6, "ttmp">;
+
+// Trap handler TMP 224-bit registers
+def TTMP_224Regs : SIRegisterTuples<getSubRegs<7>.ret, TTMP_32, 15, 4, 7, "ttmp">;
+
+// Trap handler TMP 256-bit registers
 def TTMP_256Regs : SIRegisterTuples<getSubRegs<8>.ret, TTMP_32, 15, 4, 8, "ttmp">;
 
+// Trap handler TMP 512-bit registers
 def TTMP_512Regs : SIRegisterTuples<getSubRegs<16>.ret, TTMP_32, 15, 4, 16, "ttmp">;
 
 class TmpRegTuplesBase<int index, int size,
@@ -693,127 +708,48 @@ def SReg_1 : RegisterClass<"AMDGPU", [i1], 32,
   let isAllocatable = 0;
 }
 
-// Requires 2 s_mov_b64 to copy
-let CopyCost = 2 in {
+multiclass SRegClass<int numRegs, int priority,
+                     list<ValueType> regTypes,
+                     SIRegisterTuples regList,
+                     SIRegisterTuples ttmpList = regList,
+                     int copyCost = !sra(!add(numRegs, 1), 1)> {
+  defvar hasTTMP = !ne(regList, ttmpList);
+  defvar suffix = !cast<string>(!mul(numRegs, 32));
+  defvar sgprName = !strconcat("SGPR_", suffix);
+  defvar ttmpName = !strconcat("TTMP_", suffix);
 
-// There are no 3-component scalar instructions, but this is needed
-// for symmetry with VGPRs.
-def SGPR_96 : RegisterClass<"AMDGPU", [v3i32, v3f32], 32,
-  (add SGPR_96Regs)> {
-  let AllocationPriority = 14;
+  let AllocationPriority = priority, CopyCost = copyCost in {
+    def "" # sgprName : RegisterClass<"AMDGPU", regTypes, 32, (add regList)> {
+    }
+
+    if hasTTMP then {
+      def "" # ttmpName : RegisterClass<"AMDGPU", regTypes, 32, (add ttmpList)> {
+        let isAllocatable = 0;
+      }
+    }
+
+    def SReg_ # suffix :
+      RegisterClass<"AMDGPU", regTypes, 32,
+                    !con(!dag(add, [!cast<RegisterClass>(sgprName)], ["sgpr"]),
+                    !if(hasTTMP,
+                        !dag(add, [!cast<RegisterClass>(ttmpName)], ["ttmp"]),
+                        (add)))> {
+      let isAllocatable = 0;
+    }
+  }
 }
 
-def SReg_96 : RegisterClass<"AMDGPU", [v3i32, v3f32], 32,
-  (add SGPR_96)> {
-  let AllocationPriority = 14;
-}
-
-def SGPR_128 : RegisterClass<"AMDGPU", [v4i32, v4f32, v2i64], 32,
-                             (add SGPR_128Regs)> {
-  let AllocationPriority = 15;
-}
-
-def TTMP_128 : RegisterClass<"AMDGPU", [v4i32, v4f32, v2i64], 32,
-                             (add TTMP_128Regs)> {
-  let isAllocatable = 0;
-}
-
-def SReg_128 : RegisterClass<"AMDGPU", [v4i32, v4f32, v2i64, v2f64], 32,
-                             (add SGPR_128, TTMP_128)> {
-  let isAllocatable = 0;
-}
-
-} // End CopyCost = 2
-
-// There are no 5-component scalar instructions, but this is needed
-// for symmetry with VGPRs.
-def SGPR_160 : RegisterClass<"AMDGPU", [v5i32, v5f32], 32,
-                             (add SGPR_160Regs)> {
-  let AllocationPriority = 16;
-}
-
-def SReg_160 : RegisterClass<"AMDGPU", [v5i32, v5f32], 32,
-                             (add SGPR_160)> {
-  // FIXME: Should be isAllocatable = 0, but that causes all TableGen-generated
-  // subclasses of SGPR_160 to be marked unallocatable too.
-  // This occurs because SGPR_160 and SReg_160 classes are equivalent in size
-  // meaning their enumeration order is dependent on alphanumeric ordering of
-  // their names.  The superclass for inherence is the last one in topological
-  // order (i.e. enumeration order), hence SReg_160 is selected.
-  // Potential workarounds involve renaming SGPR_160, adding another class
-  // which is ordered last and hence used for inheritance, or adding more
-  // registers to SReg_160 to cause it to be moved earlier in the superclass
-  // list.
-  let CopyCost = 3;
-}
-
-// There are no 6-component scalar instructions, but this is needed
-// for symmetry with VGPRs.
-def SGPR_192 : RegisterClass<"AMDGPU", [v6i32, v6f32, v3i64, v3f64], 32, (add SGPR_192Regs)> {
-  let AllocationPriority = 17;
-}
-
-def SReg_192 : RegisterClass<"AMDGPU", [v6i32, v6f32, v3i64, v3f64], 32, (add SGPR_192)> {
-  let isAllocatable = 0;
-  let CopyCost = 3;
-}
-
-// There are no 7-component scalar instructions, but this is needed
-// for symmetry with VGPRs.
-def SGPR_224 : RegisterClass<"AMDGPU", [v7i32, v7f32], 32, (add SGPR_224Regs)> {
-  let AllocationPriority = 18;
-}
-
-def SReg_224 : RegisterClass<"AMDGPU", [v7i32, v7f32], 32, (add SGPR_224)> {
-  let isAllocatable = 0;
-  let CopyCost = 4;
-}
-
-def SGPR_256 : RegisterClass<"AMDGPU", [v8i32, v8f32, v4i64, v4f64], 32, (add SGPR_256Regs)> {
-  let AllocationPriority = 19;
-}
-
-def TTMP_256 : RegisterClass<"AMDGPU", [v8i32, v8f32, v4i64, v4f64], 32, (add TTMP_256Regs)> {
-  let isAllocatable = 0;
-}
-
-def SReg_256 : RegisterClass<"AMDGPU", [v8i32, v8f32, v4i64, v4f64], 32,
-                             (add SGPR_256, TTMP_256)> {
-  // Requires 4 s_mov_b64 to copy
-  let CopyCost = 4;
-  let isAllocatable = 0;
-}
-
-def SGPR_512 : RegisterClass<"AMDGPU", [v16i32, v16f32, v8i64, v8f64], 32,
-                             (add SGPR_512Regs)> {
-  let AllocationPriority = 20;
-}
-
-def TTMP_512 : RegisterClass<"AMDGPU", [v16i32, v16f32, v8i64, v8f64], 32,
-                             (add TTMP_512Regs)> {
-  let isAllocatable = 0;
-}
-
-def SReg_512 : RegisterClass<"AMDGPU", [v16i32, v16f32, v8i64, v8f64], 32,
-                             (add SGPR_512, TTMP_512)> {
-  // Requires 8 s_mov_b64 to copy
-  let CopyCost = 8;
-  let isAllocatable = 0;
-}
+defm "" : SRegClass<3, 14, [v3i32, v3f32], SGPR_96Regs, TTMP_96Regs>;
+defm "" : SRegClass<4, 15, [v4i32, v4f32, v2i64], SGPR_128Regs, TTMP_128Regs>;
+defm "" : SRegClass<5, 16, [v5i32, v5f32], SGPR_160Regs, TTMP_160Regs>;
+defm "" : SRegClass<6, 17, [v6i32, v6f32, v3i64, v3f64], SGPR_192Regs, TTMP_192Regs>;
+defm "" : SRegClass<7, 18, [v7i32, v7f32], SGPR_224Regs, TTMP_224Regs>;
+defm "" : SRegClass<8, 19, [v8i32, v8f32, v4i64, v4f64], SGPR_256Regs, TTMP_256Regs>;
+defm "" : SRegClass<16, 20, [v16i32, v16f32, v8i64, v8f64], SGPR_512Regs, TTMP_512Regs>;
+defm "" : SRegClass<32, 21, [v32i32, v32f32, v16i64, v16f64], SGPR_1024Regs>;
 
 def VRegOrLds_32 : RegisterClass<"AMDGPU", [i32, f32, i16, f16, v2i16, v2f16], 32,
                                  (add VGPR_32, LDS_DIRECT_CLASS)> {
-  let isAllocatable = 0;
-}
-
-def SGPR_1024 : RegisterClass<"AMDGPU", [v32i32, v32f32, v16i64, v16f64], 32,
-                              (add SGPR_1024Regs)> {
-  let AllocationPriority = 21;
-}
-
-def SReg_1024 : RegisterClass<"AMDGPU", [v32i32, v32f32, v16i64, v16f64], 32,
-                              (add SGPR_1024)> {
-  let CopyCost = 16;
   let isAllocatable = 0;
 }
 

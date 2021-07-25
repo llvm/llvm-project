@@ -326,7 +326,8 @@ void CGNVCUDARuntime::emitDeviceStubBodyNew(CodeGenFunction &CGF,
     llvm::Value* VarPtr = CGF.GetAddrOfLocalVar(Args[i]).getPointer();
     llvm::Value *VoidVarPtr = CGF.Builder.CreatePointerCast(VarPtr, VoidPtrTy);
     CGF.Builder.CreateDefaultAlignedStore(
-        VoidVarPtr, CGF.Builder.CreateConstGEP1_32(KernelArgs.getPointer(), i));
+        VoidVarPtr,
+        CGF.Builder.CreateConstGEP1_32(VoidPtrTy, KernelArgs.getPointer(), i));
   }
 
   llvm::BasicBlock *EndBlock = CGF.createBasicBlock("setup.end");

@@ -833,7 +833,7 @@ foreach vtiTowti = AllWidenableIntVectors in {
                                                   (vti.Vector vti.RegClass:$rs2),
                                                   (vti.Mask true_mask), VLOpFrag),
                            (vti.Mask true_mask), VLOpFrag)),
-            (!cast<Instruction>("PseudoVWMACC_VV_"# vti.LMul.MX)
+            (!cast<Instruction>("PseudoVWMACC_VV_" # vti.LMul.MX # "_TA")
                  wti.RegClass:$rd, vti.RegClass:$rs1, vti.RegClass:$rs2,
                  GPR:$vl, vti.Log2SEW)>;
   def : Pat<(wti.Vector
@@ -842,7 +842,7 @@ foreach vtiTowti = AllWidenableIntVectors in {
                                                    (vti.Vector vti.RegClass:$rs2),
                                                    (vti.Mask true_mask), VLOpFrag),
                            (vti.Mask true_mask), VLOpFrag)),
-            (!cast<Instruction>("PseudoVWMACCU_VV_"# vti.LMul.MX)
+            (!cast<Instruction>("PseudoVWMACCU_VV_" # vti.LMul.MX # "_TA")
                  wti.RegClass:$rd, vti.RegClass:$rs1, vti.RegClass:$rs2,
                  GPR:$vl, vti.Log2SEW)>;
 
@@ -852,7 +852,7 @@ foreach vtiTowti = AllWidenableIntVectors in {
                                                   (vti.Vector vti.RegClass:$rs2),
                                                   (vti.Mask true_mask), VLOpFrag),
                            (vti.Mask true_mask), VLOpFrag)),
-            (!cast<Instruction>("PseudoVWMACC_VX_" # vti.LMul.MX)
+            (!cast<Instruction>("PseudoVWMACC_VX_" # vti.LMul.MX # "_TA")
                  wti.RegClass:$rd, vti.ScalarRegClass:$rs1, vti.RegClass:$rs2,
                  GPR:$vl, vti.Log2SEW)>;
   def : Pat<(wti.Vector
@@ -861,7 +861,7 @@ foreach vtiTowti = AllWidenableIntVectors in {
                                                    (vti.Vector vti.RegClass:$rs2),
                                                    (vti.Mask true_mask), VLOpFrag),
                            (vti.Mask true_mask), VLOpFrag)),
-            (!cast<Instruction>("PseudoVWMACCU_VX_" # vti.LMul.MX)
+            (!cast<Instruction>("PseudoVWMACCU_VX_" # vti.LMul.MX # "_TA")
                  wti.RegClass:$rd, vti.ScalarRegClass:$rs1, vti.RegClass:$rs2,
                  GPR:$vl, vti.Log2SEW)>;
 }

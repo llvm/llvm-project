@@ -75,9 +75,10 @@ struct FuncOrGblEntryTy {
 };
 
 enum ExecutionModeType {
-  SPMD, // constructors, destructors,
-  // combined constructs (`teams distribute parallel for [simd]`)
-  GENERIC, // everything else
+  SPMD,         // constructors, destructors,
+                // combined constructs (`teams distribute parallel for [simd]`)
+  GENERIC,      // everything else
+  SPMD_GENERIC, // Generic kernel with SPMD execution
   NONE
 };
 
@@ -88,6 +89,7 @@ struct KernelTy {
   // execution mode of kernel
   // 0 - SPMD mode (without master warp)
   // 1 - Generic mode (with master warp)
+  // 2 - SPMD mode execution with Generic mode semantics.
   int8_t ExecutionMode;
 
   KernelTy(CUfunction _Func, int8_t _ExecutionMode)
@@ -662,11 +664,34 @@ public:
       DeviceData[DeviceId].BlocksPerGrid = EnvTeamLimit;
     }
 
+    size_t StackLimit;
+    size_t HeapLimit;
+    if (const char *EnvStr = getenv("LIBOMPTARGET_STACK_SIZE")) {
+      StackLimit = std::stol(EnvStr);
+      if (cuCtxSetLimit(CU_LIMIT_STACK_SIZE, StackLimit) != CUDA_SUCCESS)
+        return OFFLOAD_FAIL;
+    } else {
+      if (cuCtxGetLimit(&StackLimit, CU_LIMIT_STACK_SIZE) != CUDA_SUCCESS)
+        return OFFLOAD_FAIL;
+    }
+    if (const char *EnvStr = getenv("LIBOMPTARGET_HEAP_SIZE")) {
+      HeapLimit = std::stol(EnvStr);
+      if (cuCtxSetLimit(CU_LIMIT_MALLOC_HEAP_SIZE, HeapLimit) != CUDA_SUCCESS)
+        return OFFLOAD_FAIL;
+    } else {
+      if (cuCtxGetLimit(&HeapLimit, CU_LIMIT_MALLOC_HEAP_SIZE) != CUDA_SUCCESS)
+        return OFFLOAD_FAIL;
+    }
+
     INFO(OMP_INFOTYPE_PLUGIN_KERNEL, DeviceId,
          "Device supports up to %d CUDA blocks and %d threads with a "
          "warp size of %d\n",
          DeviceData[DeviceId].BlocksPerGrid,
          DeviceData[DeviceId].ThreadsPerBlock, DeviceData[DeviceId].WarpSize);
+    INFO(OMP_INFOTYPE_PLUGIN_KERNEL, DeviceId,
+         "Device heap size is %d Bytes, device stack size is %d Bytes per "
+         "thread\n",
+         (int)HeapLimit, (int)StackLimit);
 
     // Set default number of teams
     if (EnvNumTeams > 0) {
@@ -817,7 +842,7 @@ public:
           return nullptr;
         }
 
-        if (ExecModeVal < 0 || ExecModeVal > 1) {
+        if (ExecModeVal < 0 || ExecModeVal > 2) {
           DP("Error wrong exec_mode value specified in cubin file: %d\n",
              ExecModeVal);
           return nullptr;
@@ -1063,7 +1088,7 @@ public:
           // will execute one iteration of the loop. round up to the nearest
           // integer
           CudaBlocksPerGrid = ((LoopTripCount - 1) / CudaThreadsPerBlock) + 1;
-        } else {
+        } else if (KernelInfo->ExecutionMode == GENERIC) {
           // If we reach this point, then we have a non-combined construct, i.e.
           // `teams distribute` with a nested `parallel for` and each team is
           // assigned one iteration of the `distribute` loop. E.g.:
@@ -1077,6 +1102,17 @@ public:
           // Threads within a team will execute the iterations of the `parallel`
           // loop.
           CudaBlocksPerGrid = LoopTripCount;
+        } else if (KernelInfo->ExecutionMode == SPMD_GENERIC) {
+          // If we reach this point, then we are executing a kernel that was
+          // transformed from Generic-mode to SPMD-mode. This kernel has
+          // SPMD-mode execution, but needs its blocks to be scheduled
+          // differently because the current loop trip count only applies to the
+          // `teams distribute` region and will create var too few blocks using
+          // the regular SPMD-mode method.
+          CudaBlocksPerGrid = LoopTripCount;
+        } else {
+          REPORT("Unknown execution mode: %d\n", KernelInfo->ExecutionMode);
+          return OFFLOAD_FAIL;
         }
         DP("Using %d teams due to loop trip count %" PRIu32
            " and number of threads per block %d\n",
@@ -1101,7 +1137,10 @@ public:
              ? getOffloadEntry(DeviceId, TgtEntryPtr)->name
              : "(null)",
          CudaBlocksPerGrid, CudaThreadsPerBlock,
-         (KernelInfo->ExecutionMode == SPMD) ? "SPMD" : "Generic");
+         (KernelInfo->ExecutionMode != SPMD
+              ? (KernelInfo->ExecutionMode == GENERIC ? "Generic"
+                                                      : "SPMD-Generic")
+              : "SPMD"));
 
     CUstream Stream = getStream(DeviceId, AsyncInfo);
     Err = cuLaunchKernel(KernelInfo->Func, CudaBlocksPerGrid, /* gridDimY */ 1,

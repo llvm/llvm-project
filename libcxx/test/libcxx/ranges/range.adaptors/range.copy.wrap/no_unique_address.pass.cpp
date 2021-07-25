@@ -12,7 +12,7 @@
 
 // This test ensures that <copyable-box> behaves correctly when it holds an empty type.
 
-#include <__ranges/copyable_box.h>
+#include <ranges>
 
 #include <cassert>
 #include <utility>

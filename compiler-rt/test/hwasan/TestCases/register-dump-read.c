@@ -21,7 +21,8 @@ int main() {
   return x[16];
 
   // CHECK: ERROR: HWAddressSanitizer:
-  // CHECK: #0 {{.*}} in main {{.*}}register-dump-read.c:[[@LINE-3]]
+  // First frame might be __hwasan_tag_mismatch<...> so main could be frame 0 or 1.
+  // CHECK: #{{(0|1) .*}} in main {{.*}}register-dump-read.c:[[@LINE-4]]
 
   // Developer note: FileCheck really doesn't like when you have a regex that
   // ends with a '}' character, e.g. the regex "[0-9]{10}" will fail, because

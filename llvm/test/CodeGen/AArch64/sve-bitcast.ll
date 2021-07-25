@@ -450,6 +450,70 @@ define <vscale x 8 x bfloat> @bitcast_double_to_bfloat(<vscale x 2 x double> %v)
   ret <vscale x 8 x bfloat> %bc
 }
 
+define <vscale x 2 x i16> @bitcast_short2_half_to_i16(<vscale x 2 x half> %v) {
+; CHECK-LABEL: bitcast_short2_half_to_i16:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    ret
+  %bc = bitcast <vscale x 2 x half> %v to <vscale x 2 x i16>
+  ret <vscale x 2 x i16> %bc
+}
+
+define <vscale x 4 x i16> @bitcast_short4_half_to_i16(<vscale x 4 x half> %v) {
+; CHECK-LABEL: bitcast_short4_half_to_i16:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    ret
+  %bc = bitcast <vscale x 4 x half> %v to <vscale x 4 x i16>
+  ret <vscale x 4 x i16> %bc
+}
+
+define <vscale x 2 x i16> @bitcast_short2_bfloat_to_i16(<vscale x 2 x bfloat> %v) #0 {
+; CHECK-LABEL: bitcast_short2_bfloat_to_i16:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    ret
+  %bc = bitcast <vscale x 2 x bfloat> %v to <vscale x 2 x i16>
+  ret <vscale x 2 x i16> %bc
+}
+
+define <vscale x 4 x i16> @bitcast_short4_bfloat_to_i16(<vscale x 4 x bfloat> %v) #0 {
+; CHECK-LABEL: bitcast_short4_bfloat_to_i16:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    ret
+  %bc = bitcast <vscale x 4 x bfloat> %v to <vscale x 4 x i16>
+  ret <vscale x 4 x i16> %bc
+}
+
+define <vscale x 2 x half> @bitcast_short2_i16_to_half(<vscale x 2 x i16> %v) {
+; CHECK-LABEL: bitcast_short2_i16_to_half:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    ret
+  %bc = bitcast <vscale x 2 x i16> %v to <vscale x 2 x half>
+  ret <vscale x 2 x half> %bc
+}
+
+define <vscale x 4 x half> @bitcast_short4_i16_to_half(<vscale x 4 x i16> %v) {
+; CHECK-LABEL: bitcast_short4_i16_to_half:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    ret
+  %bc = bitcast <vscale x 4 x i16> %v to <vscale x 4 x half>
+  ret <vscale x 4 x half> %bc
+}
+
+define <vscale x 2 x bfloat> @bitcast_short2_i16_to_bfloat(<vscale x 2 x i16> %v) #0 {
+; CHECK-LABEL: bitcast_short2_i16_to_bfloat:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    ret
+  %bc = bitcast <vscale x 2 x i16> %v to <vscale x 2 x bfloat>
+  ret <vscale x 2 x bfloat> %bc
+}
+
+define <vscale x 4 x bfloat> @bitcast_short4_i16_to_bfloat(<vscale x 4 x i16> %v) #0 {
+; CHECK-LABEL: bitcast_short4_i16_to_bfloat:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    ret
+  %bc = bitcast <vscale x 4 x i16> %v to <vscale x 4 x bfloat>
+  ret <vscale x 4 x bfloat> %bc
+}
+
 define <vscale x 2 x i32> @bitcast_short_float_to_i32(<vscale x 2 x double> %v) #0 {
 ; CHECK-LABEL: bitcast_short_float_to_i32:
 ; CHECK:       // %bb.0:

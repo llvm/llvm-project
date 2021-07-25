@@ -1,18 +1,15 @@
 ! RUN: %S/test_errors.sh %s %t %flang -fopenmp
-! XFAIL: *
+! REQUIRES: shell
 
-! OpenMP Version 4.5
-! 2.9.3 taskloop simd Construct
-! No reduction clause may be specified for !$omp taskloop simd.
+! OpenMP Version 5.0
+! 2.10.3 taskloop simd Construct
 
 program omp_taskloop_simd
   integer i , j , k
 
-  !ERROR: Unexpected clause specified for !$OMP taskloop simd
   !$omp taskloop simd reduction(+:k)
   do i=1,10000
     do j=1,i
-      call loop_body(i, j)
       k = k + 1
     end do
   end do

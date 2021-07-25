@@ -831,7 +831,7 @@ int main(int argc, char **argv) {
                            ThinLinkOut.get(), RemarksFile.get(), PassPipeline,
                            Passes, OK, VK, PreserveAssemblyUseListOrder,
                            PreserveBitcodeUseListOrder, EmitSummaryIndex,
-                           EmitModuleHash, EnableDebugify, Coroutines)
+                           EmitModuleHash, EnableDebugify)
                ? 0
                : 1;
   }

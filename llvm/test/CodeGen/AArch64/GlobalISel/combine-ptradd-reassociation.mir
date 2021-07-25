@@ -151,3 +151,36 @@ body:             |
     RET_ReallyLR implicit $w0
 
 ...
+---
+name:            walk_through_inttoptr
+alignment:       4
+tracksRegLiveness: true
+body:             |
+  bb.1:
+    liveins: $x0
+    ; CHECK-LABEL: name: walk_through_inttoptr
+    ; CHECK: liveins: $x0
+    ; CHECK: [[COPY:%[0-9]+]]:_(p0) = COPY $x0
+    ; CHECK: [[C:%[0-9]+]]:_(s64) = G_CONSTANT i64 4777
+    ; CHECK: [[C1:%[0-9]+]]:_(s64) = G_CONSTANT i64 6
+    ; CHECK: [[C2:%[0-9]+]]:_(s32) = G_CONSTANT i32 0
+    ; CHECK: [[PTR_ADD:%[0-9]+]]:_(p0) = G_PTR_ADD [[COPY]], [[C]](s64)
+    ; CHECK: %ptr_to_int:_(s64) = G_PTRTOINT [[PTR_ADD]](p0)
+    ; CHECK: [[PTR_ADD1:%[0-9]+]]:_(p0) = G_PTR_ADD [[PTR_ADD]], [[C1]](s64)
+    ; CHECK: [[LOAD:%[0-9]+]]:_(s32) = G_LOAD [[PTR_ADD1]](p0) :: (load (s32))
+    ; CHECK: G_STORE [[C2]](s32), [[PTR_ADD]](p0) :: (store (s32))
+    ; CHECK: G_STORE %ptr_to_int(s64), [[PTR_ADD]](p0) :: (store (s64))
+    ; CHECK: $w0 = COPY [[LOAD]](s32)
+    ; CHECK: RET_ReallyLR implicit $w0
+    %0:_(p0) = COPY $x0
+    %2:_(s64) = G_CONSTANT i64 4777
+    %4:_(s64) = G_CONSTANT i64 6
+    %9:_(s32) = G_CONSTANT i32 0
+    %10:_(p0) = G_PTR_ADD %0, %2(s64)
+    %ptr_to_int:_(s64) = G_PTRTOINT %10
+    %11:_(p0) = G_PTR_ADD %10, %4(s64)
+    %7:_(s32) = G_LOAD %11(p0) :: (load 4)
+    G_STORE %9(s32), %10(p0) :: (store 4) ; other use of %10
+    G_STORE %ptr_to_int(s64), %10(p0) :: (store 8)
+    $w0 = COPY %7(s32)
+    RET_ReallyLR implicit $w0

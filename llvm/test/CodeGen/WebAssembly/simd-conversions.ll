@@ -3,7 +3,6 @@
 
 ; Test that vector float-to-int and int-to-float instructions lower correctly
 
-target datalayout = "e-m:e-p:32:32-i64:64-n32:64-S128"
 target triple = "wasm32-unknown-unknown"
 
 ; CHECK-LABEL: convert_s_v4f32:
@@ -82,6 +81,30 @@ define <2 x i64> @trunc_sat_u_v2i64(<2 x double> %x) {
   ret <2 x i64> %a
 }
 
+; CHECK-LABEL: demote_zero_v4f32:
+; NO-SIMD128-NOT: f32x4
+; SIMD128-NEXT: .functype demote_zero_v4f32 (v128) -> (v128){{$}}
+; SIMD128-NEXT: f32x4.demote_zero_f64x2 $push[[R:[0-9]+]]=, $0
+; SIMD128-NEXT: return $pop[[R]]
+define <4 x float> @demote_zero_v4f32(<2 x double> %x) {
+  %v = shufflevector <2 x double> %x, <2 x double> zeroinitializer,
+         <4 x i32> <i32 0, i32 1, i32 2, i32 3>
+  %a = fptrunc <4 x double> %v to <4 x float>
+  ret <4 x float> %a
+}
+
+; CHECK-LABEL: demote_zero_v4f32_2:
+; NO-SIMD128-NOT: f32x4
+; SIMD128-NEXT: .functype demote_zero_v4f32_2 (v128) -> (v128){{$}}
+; SIMD128-NEXT: f32x4.demote_zero_f64x2 $push[[R:[0-9]+]]=, $0
+; SIMD128-NEXT: return $pop[[R]]
+define <4 x float> @demote_zero_v4f32_2(<2 x double> %x) {
+  %v = fptrunc <2 x double> %x to <2 x float>
+  %a = shufflevector <2 x float> %v, <2 x float> zeroinitializer,
+         <4 x i32> <i32 0, i32 1, i32 2, i32 3>
+  ret <4 x float> %a
+}
+
 ; CHECK-LABEL: convert_low_s_v2f64:
 ; NO-SIMD128-NOT: f64x2
 ; SIMD128-NEXT: .functype convert_low_s_v2f64 (v128) -> (v128){{$}}
@@ -123,6 +146,28 @@ define <2 x double> @convert_low_s_v2f64_2(<4 x i32> %x) {
 ; SIMD128-NEXT: return $pop[[R]]
 define <2 x double> @convert_low_u_v2f64_2(<4 x i32> %x) {
   %v = uitofp <4 x i32> %x to <4 x double>
+  %a = shufflevector <4 x double> %v, <4 x double> undef, <2 x i32> <i32 0, i32 1>
+  ret <2 x double> %a
+}
+
+; CHECK-LABEL: promote_low_v2f64:
+; NO-SIMD128-NOT: f64x2
+; SIMD128-NEXT: .functype promote_low_v2f64 (v128) -> (v128){{$}}
+; SIMD128-NEXT: f64x2.promote_low_f32x4 $push[[R:[0-9]+]]=, $0
+; SIMD128-NEXT: return $pop[[R]]
+define <2 x double> @promote_low_v2f64(<4 x float> %x) {
+  %v = shufflevector <4 x float> %x, <4 x float> undef, <2 x i32> <i32 0, i32 1>
+  %a = fpext <2 x float> %v to <2 x double>
+  ret <2 x double> %a
+}
+
+; CHECK-LABEL: promote_low_v2f64_2:
+; NO-SIMD128-NOT: f64x2
+; SIMD128-NEXT: .functype promote_low_v2f64_2 (v128) -> (v128){{$}}
+; SIMD128-NEXT: f64x2.promote_low_f32x4 $push[[R:[0-9]+]]=, $0
+; SIMD128-NEXT: return $pop[[R]]
+define <2 x double> @promote_low_v2f64_2(<4 x float> %x) {
+  %v = fpext <4 x float> %x to <4 x double>
   %a = shufflevector <4 x double> %v, <4 x double> undef, <2 x i32> <i32 0, i32 1>
   ret <2 x double> %a
 }

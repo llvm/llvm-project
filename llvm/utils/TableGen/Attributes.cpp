@@ -25,6 +25,7 @@ public:
 private:
   void emitTargetIndependentNames(raw_ostream &OS);
   void emitFnAttrCompatCheck(raw_ostream &OS, bool IsStringAttr);
+  void emitAttributeProperties(raw_ostream &OF);
 
   RecordKeeper &Records;
 };
@@ -58,7 +59,20 @@ void Attributes::emitTargetIndependentNames(raw_ostream &OS) {
   Emit({"StrBoolAttr"}, "ATTRIBUTE_STRBOOL");
 
   OS << "#undef ATTRIBUTE_ALL\n";
-  OS << "#endif\n";
+  OS << "#endif\n\n";
+
+  OS << "#ifdef GET_ATTR_ENUM\n";
+  OS << "#undef GET_ATTR_ENUM\n";
+  unsigned Value = 1; // Leave zero for AttrKind::None.
+  for (StringRef KindName : {"EnumAttr", "TypeAttr", "IntAttr"}) {
+    OS << "First" << KindName << " = " << Value << ",\n";
+    for (auto A : Records.getAllDerivedDefinitions(KindName)) {
+      OS << A->getName() << " = " << Value << ",\n";
+      Value++;
+    }
+    OS << "Last" << KindName << " = " << (Value - 1) << ",\n";
+  }
+  OS << "#endif\n\n";
 }
 
 void Attributes::emitFnAttrCompatCheck(raw_ostream &OS, bool IsStringAttr) {
@@ -96,9 +110,26 @@ void Attributes::emitFnAttrCompatCheck(raw_ostream &OS, bool IsStringAttr) {
   OS << "#endif\n";
 }
 
+void Attributes::emitAttributeProperties(raw_ostream &OS) {
+  OS << "#ifdef GET_ATTR_PROP_TABLE\n";
+  OS << "#undef GET_ATTR_PROP_TABLE\n";
+  OS << "static const uint8_t AttrPropTable[] = {\n";
+  for (StringRef KindName : {"EnumAttr", "TypeAttr", "IntAttr"}) {
+    for (auto A : Records.getAllDerivedDefinitions(KindName)) {
+      OS << "0";
+      for (Init *P : *A->getValueAsListInit("Properties"))
+        OS << " | AttributeProperty::" << cast<DefInit>(P)->getDef()->getName();
+      OS << ",\n";
+    }
+  }
+  OS << "};\n";
+  OS << "#endif\n";
+}
+
 void Attributes::emit(raw_ostream &OS) {
   emitTargetIndependentNames(OS);
   emitFnAttrCompatCheck(OS, false);
+  emitAttributeProperties(OS);
 }
 
 namespace llvm {

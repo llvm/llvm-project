@@ -14,7 +14,7 @@ define void @scalar_to_vector_i16() {
 }
 
 ; GCN-LABEL: {{^}}scalar_to_vector_f16:
-; GCN-NOOPT: s_movk_i32 [[S:s[0-9]+]], 0x3c00
+; GCN-NOOPT: s_mov_b32 [[S:s[0-9]+]], 0x3c00
 ; GCN-NOOPT: v_mov_b32_e32 [[V:v[0-9]+]], [[S]]
 ; GCN-OPT:   v_mov_b32_e32 [[V:v[0-9]+]], 0x3c00
 ; GCN: buffer_store_short [[V]],

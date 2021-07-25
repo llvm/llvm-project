@@ -676,10 +676,9 @@ define arm_aapcs_vfpcc void @any_extend(<4 x i1> %x, <4 x i32> %y) nounwind ssp 
 ; CHECK-BE-LABEL: any_extend:
 ; CHECK-BE:       @ %bb.0: @ %entry
 ; CHECK-BE-NEXT:    vmov.i16 d16, #0x1
-; CHECK-BE-NEXT:    vrev64.32 d17, d0
+; CHECK-BE-NEXT:    vrev64.16 d17, d0
 ; CHECK-BE-NEXT:    vrev64.32 q9, q1
 ; CHECK-BE-NEXT:    vand d16, d17, d16
-; CHECK-BE-NEXT:    vrev32.16 d16, d16
 ; CHECK-BE-NEXT:    vmovl.u16 q8, d16
 ; CHECK-BE-NEXT:    vsub.i32 q8, q8, q9
 ; CHECK-BE-NEXT:    vmovn.i32 d16, q8

@@ -469,18 +469,19 @@ struct MixData {
     return *this;
   }
 
-  /// Add the specified qualifiers to the common type in the Mix.
-  MixData qualify(Qualifiers Quals) const {
-    SplitQualType Split = CommonType.split();
-    Split.Quals.addQualifiers(Quals);
-    QualType CommonType{Split.Ty, Split.Quals.getAsOpaqueValue()};
+  template <class F> MixData withCommonTypeTransformed(F &&Func) const {
+    if (CommonType.isNull())
+      return *this;
+
+    QualType NewCommonType = Func(CommonType);
 
     if (CreatedFromOneWayConversion) {
       MixData M{Flags, Conversion};
-      M.CommonType = CommonType;
+      M.CommonType = NewCommonType;
       return M;
     }
-    return {Flags, CommonType, Conversion, ConversionRTL};
+
+    return {Flags, NewCommonType, Conversion, ConversionRTL};
   }
 };
 
@@ -543,13 +544,13 @@ struct MixableParameterRange {
 /// Helper enum for the recursive calls in the modelling that toggle what kinds
 /// of implicit conversions are to be modelled.
 enum class ImplicitConversionModellingMode : unsigned char {
-  /// No implicit conversions are modelled.
+  ///< No implicit conversions are modelled.
   None,
 
-  /// The full implicit conversion sequence is modelled.
+  ///< The full implicit conversion sequence is modelled.
   All,
 
-  /// Only model a unidirectional implicit conversion and within it only one
+  ///< Only model a unidirectional implicit conversion and within it only one
   /// standard conversion sequence.
   OneWaySingleStandardOnly
 };
@@ -566,7 +567,58 @@ approximateImplicitConversion(const TheCheck &Check, QualType LType,
                               ImplicitConversionModellingMode ImplicitMode);
 
 static inline bool isUselessSugar(const Type *T) {
-  return isa<DecayedType, ElaboratedType, ParenType>(T);
+  return isa<AttributedType, DecayedType, ElaboratedType, ParenType>(T);
+}
+
+namespace {
+
+struct NonCVRQualifiersResult {
+  /// True if the types are qualified in a way that even after equating or
+  /// removing local CVR qualification, even if the unqualified types
+  /// themselves would mix, the qualified ones don't, because there are some
+  /// other local qualifiers that are not equal.
+  bool HasMixabilityBreakingQualifiers;
+
+  /// The set of equal qualifiers between the two types.
+  Qualifiers CommonQualifiers;
+};
+
+} // namespace
+
+/// Returns if the two types are qualified in a way that ever after equating or
+/// removing local CVR qualification, even if the unqualified types would mix,
+/// the qualified ones don't, because there are some other local qualifiers
+/// that aren't equal.
+static NonCVRQualifiersResult
+getNonCVRQualifiers(const ASTContext &Ctx, QualType LType, QualType RType) {
+  LLVM_DEBUG(llvm::dbgs() << ">>> getNonCVRQualifiers for LType:\n";
+             LType.dump(llvm::dbgs(), Ctx); llvm::dbgs() << "\nand RType:\n";
+             RType.dump(llvm::dbgs(), Ctx); llvm::dbgs() << '\n';);
+  Qualifiers LQual = LType.getLocalQualifiers(),
+             RQual = RType.getLocalQualifiers();
+
+  // Strip potential CVR. That is handled by the check option QualifiersMix.
+  LQual.removeCVRQualifiers();
+  RQual.removeCVRQualifiers();
+
+  NonCVRQualifiersResult Ret;
+  Ret.CommonQualifiers = Qualifiers::removeCommonQualifiers(LQual, RQual);
+
+  LLVM_DEBUG(llvm::dbgs() << "--- hasNonCVRMixabilityBreakingQualifiers. "
+                             "Removed common qualifiers: ";
+             Ret.CommonQualifiers.print(llvm::dbgs(), Ctx.getPrintingPolicy());
+             llvm::dbgs() << "\n\tremaining on LType: ";
+             LQual.print(llvm::dbgs(), Ctx.getPrintingPolicy());
+             llvm::dbgs() << "\n\tremaining on RType: ";
+             RQual.print(llvm::dbgs(), Ctx.getPrintingPolicy());
+             llvm::dbgs() << '\n';);
+
+  // If there are no other non-cvr non-common qualifiers left, we can deduce
+  // that mixability isn't broken.
+  Ret.HasMixabilityBreakingQualifiers =
+      LQual.hasQualifiers() || RQual.hasQualifiers();
+
+  return Ret;
 }
 
 /// Approximate the way how LType and RType might refer to "essentially the
@@ -585,12 +637,6 @@ calculateMixability(const TheCheck &Check, QualType LType, QualType RType,
   LLVM_DEBUG(llvm::dbgs() << ">>> calculateMixability for LType:\n";
              LType.dump(llvm::dbgs(), Ctx); llvm::dbgs() << "\nand RType:\n";
              RType.dump(llvm::dbgs(), Ctx); llvm::dbgs() << '\n';);
-
-  // Certain constructs match on the last catch-all getCanonicalType() equality,
-  // which is perhaps something not what we want. If this variable is true,
-  // the canonical type equality will be ignored.
-  bool RecursiveReturnDiscardingCanonicalType = false;
-
   if (LType == RType) {
     LLVM_DEBUG(llvm::dbgs() << "<<< calculateMixability. Trivial equality.\n");
     return {MixFlags::Trivial, LType};
@@ -612,23 +658,32 @@ calculateMixability(const TheCheck &Check, QualType LType, QualType RType,
         Check, LType, RType.getSingleStepDesugaredType(Ctx), Ctx, ImplicitMode);
   }
 
+  const auto *LLRef = LType->getAs<LValueReferenceType>();
+  const auto *RLRef = RType->getAs<LValueReferenceType>();
+  if (LLRef && RLRef) {
+    LLVM_DEBUG(llvm::dbgs() << "--- calculateMixability. LHS and RHS are &.\n");
+
+    return calculateMixability(Check, LLRef->getPointeeType(),
+                               RLRef->getPointeeType(), Ctx, ImplicitMode)
+        .withCommonTypeTransformed(
+            [&Ctx](QualType QT) { return Ctx.getLValueReferenceType(QT); });
+  }
   // At a particular call site, what could be passed to a 'T' or 'const T' might
   // also be passed to a 'const T &' without the call site putting a direct
   // side effect on the passed expressions.
-  if (const auto *LRef = LType->getAs<LValueReferenceType>()) {
+  if (LLRef) {
     LLVM_DEBUG(llvm::dbgs() << "--- calculateMixability. LHS is &.\n");
-    return isLRefEquallyBindingToType(Check, LRef, RType, Ctx, false,
+    return isLRefEquallyBindingToType(Check, LLRef, RType, Ctx, false,
                                       ImplicitMode) |
            MixFlags::ReferenceBind;
   }
-  if (const auto *RRef = RType->getAs<LValueReferenceType>()) {
+  if (RLRef) {
     LLVM_DEBUG(llvm::dbgs() << "--- calculateMixability. RHS is &.\n");
-    return isLRefEquallyBindingToType(Check, RRef, LType, Ctx, true,
+    return isLRefEquallyBindingToType(Check, RLRef, LType, Ctx, true,
                                       ImplicitMode) |
            MixFlags::ReferenceBind;
   }
 
-  // Dissolve typedefs after the qualifiers outside the typedef are dealt with.
   if (LType->getAs<TypedefType>()) {
     LLVM_DEBUG(llvm::dbgs() << "--- calculateMixability. LHS is typedef.\n");
     return calculateMixability(Check, LType.getSingleStepDesugaredType(Ctx),
@@ -645,34 +700,82 @@ calculateMixability(const TheCheck &Check, QualType LType, QualType RType,
 
   // A parameter of type 'cvr1 T' and another of potentially differently
   // qualified 'cvr2 T' may bind with the same power, if the user so requested.
+  //
+  // Whether to do this check for the inner unqualified types.
+  bool CompareUnqualifiedTypes = false;
   if (LType.getLocalCVRQualifiers() != RType.getLocalCVRQualifiers()) {
-    LLVM_DEBUG(if (LType.getLocalCVRQualifiers()) llvm::dbgs()
-               << "--- calculateMixability. LHS is CVR.\n");
-    LLVM_DEBUG(if (RType.getLocalCVRQualifiers()) llvm::dbgs()
-               << "--- calculateMixability. RHS is CVR.\n");
+    LLVM_DEBUG(if (LType.getLocalCVRQualifiers()) {
+      llvm::dbgs() << "--- calculateMixability. LHS has CVR-Qualifiers: ";
+      Qualifiers::fromCVRMask(LType.getLocalCVRQualifiers())
+          .print(llvm::dbgs(), Ctx.getPrintingPolicy());
+      llvm::dbgs() << '\n';
+    });
+    LLVM_DEBUG(if (RType.getLocalCVRQualifiers()) {
+      llvm::dbgs() << "--- calculateMixability. RHS has CVR-Qualifiers: ";
+      Qualifiers::fromCVRMask(RType.getLocalCVRQualifiers())
+          .print(llvm::dbgs(), Ctx.getPrintingPolicy());
+      llvm::dbgs() << '\n';
+    });
 
     if (!Check.QualifiersMix) {
       LLVM_DEBUG(llvm::dbgs()
-                 << "<<< calculateMixability. QualifiersMix turned off.\n");
+                 << "<<< calculateMixability. QualifiersMix turned off - not "
+                    "mixable.\n");
       return {MixFlags::None};
     }
 
-    return calculateMixability(Check, LType.getLocalUnqualifiedType(),
-                               RType.getLocalUnqualifiedType(), Ctx,
-                               ImplicitMode) |
-           MixFlags::Qualifiers;
+    CompareUnqualifiedTypes = true;
   }
+  // Whether the two types had the same CVR qualifiers.
+  bool OriginallySameQualifiers = false;
   if (LType.getLocalCVRQualifiers() == RType.getLocalCVRQualifiers() &&
       LType.getLocalCVRQualifiers() != 0) {
-    LLVM_DEBUG(llvm::dbgs()
-               << "--- calculateMixability. LHS and RHS same CVR.\n");
-    // Apply the same qualifier back into the found common type if we found
-    // a common type between the unqualified versions.
-    return calculateMixability(Check, LType.getLocalUnqualifiedType(),
-                               RType.getLocalUnqualifiedType(), Ctx,
-                               ImplicitMode)
-        .qualify(LType.getLocalQualifiers());
+    LLVM_DEBUG(if (LType.getLocalCVRQualifiers()) {
+      llvm::dbgs()
+          << "--- calculateMixability. LHS and RHS have same CVR-Qualifiers: ";
+      Qualifiers::fromCVRMask(LType.getLocalCVRQualifiers())
+          .print(llvm::dbgs(), Ctx.getPrintingPolicy());
+      llvm::dbgs() << '\n';
+    });
+
+    CompareUnqualifiedTypes = true;
+    OriginallySameQualifiers = true;
   }
+
+  if (CompareUnqualifiedTypes) {
+    NonCVRQualifiersResult AdditionalQuals =
+        getNonCVRQualifiers(Ctx, LType, RType);
+    if (AdditionalQuals.HasMixabilityBreakingQualifiers) {
+      LLVM_DEBUG(llvm::dbgs() << "<<< calculateMixability. Additional "
+                                 "non-equal incompatible qualifiers.\n");
+      return {MixFlags::None};
+    }
+
+    MixData UnqualifiedMixability =
+        calculateMixability(Check, LType.getLocalUnqualifiedType(),
+                            RType.getLocalUnqualifiedType(), Ctx, ImplicitMode)
+            .withCommonTypeTransformed([&AdditionalQuals, &Ctx](QualType QT) {
+              // Once the mixability was deduced, apply the qualifiers common
+              // to the two type back onto the diagnostic printout.
+              return Ctx.getQualifiedType(QT, AdditionalQuals.CommonQualifiers);
+            });
+
+    if (!OriginallySameQualifiers)
+      // User-enabled qualifier change modelled for the mix.
+      return UnqualifiedMixability | MixFlags::Qualifiers;
+
+    // Apply the same qualifier back into the found common type if they were
+    // the same.
+    return UnqualifiedMixability.withCommonTypeTransformed(
+        [&Ctx, LType](QualType QT) {
+          return Ctx.getQualifiedType(QT, LType.getLocalQualifiers());
+        });
+  }
+
+  // Certain constructs match on the last catch-all getCanonicalType() equality,
+  // which is perhaps something not what we want. If this variable is true,
+  // the canonical type equality will be ignored.
+  bool RecursiveReturnDiscardingCanonicalType = false;
 
   if (LType->isPointerType() && RType->isPointerType()) {
     // If both types are pointers, and pointed to the exact same type,
@@ -680,9 +783,12 @@ calculateMixability(const TheCheck &Check, QualType LType, QualType RType,
     // some other match. However, this must not consider implicit conversions.
     LLVM_DEBUG(llvm::dbgs()
                << "--- calculateMixability. LHS and RHS are Ptrs.\n");
-    MixData MixOfPointee = calculateMixability(
-        Check, LType->getPointeeType(), RType->getPointeeType(), Ctx,
-        ImplicitConversionModellingMode::None);
+    MixData MixOfPointee =
+        calculateMixability(Check, LType->getPointeeType(),
+                            RType->getPointeeType(), Ctx,
+                            ImplicitConversionModellingMode::None)
+            .withCommonTypeTransformed(
+                [&Ctx](QualType QT) { return Ctx.getPointerType(QT); });
     if (hasFlag(MixOfPointee.Flags,
                 MixFlags::WorkaroundDisableCanonicalEquivalence))
       RecursiveReturnDiscardingCanonicalType = true;
@@ -2128,14 +2234,14 @@ void EasilySwappableParametersCheck::check(
           UniqueTypeAlias(LType, RType, CommonType)) {
         StringRef DiagText;
         bool ExplicitlyPrintCommonType = false;
-        if (LTypeStr == CommonTypeStr || RTypeStr == CommonTypeStr)
+        if (LTypeStr == CommonTypeStr || RTypeStr == CommonTypeStr) {
           if (hasFlag(M.flags(), MixFlags::Qualifiers))
             DiagText = "after resolving type aliases, '%0' and '%1' share a "
                        "common type";
           else
             DiagText =
                 "after resolving type aliases, '%0' and '%1' are the same";
-        else if (!CommonType.isNull()) {
+        } else if (!CommonType.isNull()) {
           DiagText = "after resolving type aliases, the common type of '%0' "
                      "and '%1' is '%2'";
           ExplicitlyPrintCommonType = true;

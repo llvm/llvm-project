@@ -11,15 +11,16 @@
 /// Instructions that handle tables
 //===----------------------------------------------------------------------===//
 
-
 multiclass TABLE<WebAssemblyRegClass rt> {
-  defm TABLE_GET_#rt : I<(outs rt:$res), (ins table32_op:$table),
+  let mayLoad = 1 in
+  defm TABLE_GET_#rt : I<(outs rt:$res), (ins table32_op:$table, I32:$i),
                          (outs), (ins table32_op:$table),
                          [],
-                         "table.get\t$res, $table",
+                         "table.get\t$res, $table, $i",
                          "table.get\t$table",
                          0x25>;
 
+  let mayStore = 1 in
   defm TABLE_SET_#rt : I<(outs), (ins table32_op:$table, I32:$i, rt:$val),
                          (outs), (ins table32_op:$table),
                          [],
@@ -45,6 +46,17 @@ multiclass TABLE<WebAssemblyRegClass rt> {
 
 defm "" : TABLE<FUNCREF>, Requires<[HasReferenceTypes]>;
 defm "" : TABLE<EXTERNREF>, Requires<[HasReferenceTypes]>;
+
+def wasm_table_set_t : SDTypeProfile<0, 3, []>;
+def wasm_table_set : SDNode<"WebAssemblyISD::TABLE_SET", wasm_table_set_t,
+                            [SDNPHasChain, SDNPMayStore, SDNPMemOperand]>;
+
+def : Pat<(wasm_table_set i32:$table, i32:$idx, funcref:$r),
+          (TABLE_SET_FUNCREF i32:$table, i32:$idx, funcref:$r)>,
+          Requires<[HasReferenceTypes]>;
+def : Pat<(wasm_table_set i32:$table, i32:$idx, externref:$r),
+          (TABLE_SET_EXTERNREF i32:$table, i32:$idx, externref:$r)>,
+          Requires<[HasReferenceTypes]>;
 
 defm TABLE_SIZE : I<(outs I32:$sz), (ins table32_op:$table),
                     (outs), (ins table32_op:$table),

@@ -15,6 +15,7 @@ typedef svfloat32_t fixed_float32_t FIXED_ATTR;
 typedef svfloat64_t fixed_float64_t FIXED_ATTR;
 typedef svint32_t fixed_int32_t FIXED_ATTR;
 typedef svint64_t fixed_int64_t FIXED_ATTR;
+typedef svbool_t fixed_bool_t FIXED_ATTR;
 
 // SVE VLSTs can be cast to SVE VLATs, regardless of lane size.
 // NOTE: the list below is NOT exhaustive for all SVE types.
@@ -47,3 +48,5 @@ TESTCASE(fixed_int64_t, svfloat32_t)
 TESTCASE(fixed_int64_t, svfloat64_t)
 TESTCASE(fixed_int64_t, svint32_t)
 TESTCASE(fixed_int64_t, svint64_t)
+
+TESTCASE(fixed_bool_t, svbool_t)

@@ -39,9 +39,6 @@ class InputSection;
 
 class OutputSegment {
 public:
-  const OutputSection *firstSection() const { return sections.front(); }
-  const OutputSection *lastSection() const { return sections.back(); }
-
   void addOutputSection(OutputSection *os);
   void sortOutputSections();
 
@@ -50,6 +47,7 @@ public:
 
   uint64_t fileOff = 0;
   uint64_t fileSize = 0;
+  uint64_t addr = 0;
   uint64_t vmSize = 0;
   int inputOrder = UnspecifiedInputOrder;
   StringRef name;

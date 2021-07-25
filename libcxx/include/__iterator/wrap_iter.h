@@ -164,11 +164,29 @@ private:
     template <class _Tp, size_t> friend class _LIBCPP_TEMPLATE_VIS span;
 };
 
+template <class _Iter1>
+_LIBCPP_INLINE_VISIBILITY _LIBCPP_CONSTEXPR_IF_NODEBUG
+bool operator==(const __wrap_iter<_Iter1>& __x, const __wrap_iter<_Iter1>& __y) _NOEXCEPT
+{
+    return __x.base() == __y.base();
+}
+
 template <class _Iter1, class _Iter2>
 _LIBCPP_INLINE_VISIBILITY _LIBCPP_CONSTEXPR_IF_NODEBUG
 bool operator==(const __wrap_iter<_Iter1>& __x, const __wrap_iter<_Iter2>& __y) _NOEXCEPT
 {
     return __x.base() == __y.base();
+}
+
+template <class _Iter1>
+_LIBCPP_INLINE_VISIBILITY _LIBCPP_CONSTEXPR_IF_NODEBUG
+bool operator<(const __wrap_iter<_Iter1>& __x, const __wrap_iter<_Iter1>& __y) _NOEXCEPT
+{
+#if _LIBCPP_DEBUG_LEVEL == 2
+    _LIBCPP_ASSERT(__get_const_db()->__less_than_comparable(&__x, &__y),
+                   "Attempted to compare incomparable iterators");
+#endif
+    return __x.base() < __y.base();
 }
 
 template <class _Iter1, class _Iter2>
@@ -182,11 +200,25 @@ bool operator<(const __wrap_iter<_Iter1>& __x, const __wrap_iter<_Iter2>& __y) _
     return __x.base() < __y.base();
 }
 
+template <class _Iter1>
+_LIBCPP_INLINE_VISIBILITY _LIBCPP_CONSTEXPR_IF_NODEBUG
+bool operator!=(const __wrap_iter<_Iter1>& __x, const __wrap_iter<_Iter1>& __y) _NOEXCEPT
+{
+    return !(__x == __y);
+}
+
 template <class _Iter1, class _Iter2>
 _LIBCPP_INLINE_VISIBILITY _LIBCPP_CONSTEXPR_IF_NODEBUG
 bool operator!=(const __wrap_iter<_Iter1>& __x, const __wrap_iter<_Iter2>& __y) _NOEXCEPT
 {
     return !(__x == __y);
+}
+
+template <class _Iter1>
+_LIBCPP_INLINE_VISIBILITY _LIBCPP_CONSTEXPR_IF_NODEBUG
+bool operator>(const __wrap_iter<_Iter1>& __x, const __wrap_iter<_Iter1>& __y) _NOEXCEPT
+{
+    return __y < __x;
 }
 
 template <class _Iter1, class _Iter2>
@@ -196,11 +228,25 @@ bool operator>(const __wrap_iter<_Iter1>& __x, const __wrap_iter<_Iter2>& __y) _
     return __y < __x;
 }
 
+template <class _Iter1>
+_LIBCPP_INLINE_VISIBILITY _LIBCPP_CONSTEXPR_IF_NODEBUG
+bool operator>=(const __wrap_iter<_Iter1>& __x, const __wrap_iter<_Iter1>& __y) _NOEXCEPT
+{
+    return !(__x < __y);
+}
+
 template <class _Iter1, class _Iter2>
 _LIBCPP_INLINE_VISIBILITY _LIBCPP_CONSTEXPR_IF_NODEBUG
 bool operator>=(const __wrap_iter<_Iter1>& __x, const __wrap_iter<_Iter2>& __y) _NOEXCEPT
 {
     return !(__x < __y);
+}
+
+template <class _Iter1>
+_LIBCPP_INLINE_VISIBILITY _LIBCPP_CONSTEXPR_IF_NODEBUG
+bool operator<=(const __wrap_iter<_Iter1>& __x, const __wrap_iter<_Iter1>& __y) _NOEXCEPT
+{
+    return !(__y < __x);
 }
 
 template <class _Iter1, class _Iter2>

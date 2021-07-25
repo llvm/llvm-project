@@ -41,7 +41,7 @@ function(cxx_abi_list_identifier result triple abi_library abi_version unstable 
 endfunction()
 
 cxx_abi_list_identifier(abi_list_identifier
-  "${TARGET_TRIPLE}"
+  "${LIBCXX_TARGET_TRIPLE}"
   "${LIBCXX_CXX_ABI_LIBNAME}"
   "${LIBCXX_ABI_VERSION}"
   "${LIBCXX_ABI_UNSTABLE}"

@@ -48,7 +48,7 @@ void testParseError(ArrayRef<uint8_t> bytes, const char *msg) {
 }
 
 bool testTagString(unsigned Tag, const char *name) {
-  return ELFAttrs::attrTypeAsString(Tag, ARMBuildAttrs::ARMAttributeTags)
+  return ELFAttrs::attrTypeAsString(Tag, ARMBuildAttrs::getARMAttributeTags())
              .str() == name;
 }
 

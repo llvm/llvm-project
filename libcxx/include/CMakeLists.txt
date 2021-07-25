@@ -133,6 +133,7 @@ set(files
   __iterator/access.h
   __iterator/advance.h
   __iterator/back_insert_iterator.h
+  __iterator/common_iterator.h
   __iterator/concepts.h
   __iterator/data.h
   __iterator/default_sentinel.h
@@ -183,14 +184,17 @@ set(files
   __random/uniform_int_distribution.h
   __ranges/access.h
   __ranges/all.h
+  __ranges/common_view.h
   __ranges/concepts.h
   __ranges/copyable_box.h
+  __ranges/dangling.h
   __ranges/data.h
   __ranges/drop_view.h
   __ranges/empty_view.h
   __ranges/empty.h
   __ranges/enable_borrowed_range.h
   __ranges/enable_view.h
+  __ranges/non_propagating_cache.h
   __ranges/ref_view.h
   __ranges/size.h
   __ranges/subrange.h

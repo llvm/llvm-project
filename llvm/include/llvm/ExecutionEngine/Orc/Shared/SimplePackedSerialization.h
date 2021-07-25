@@ -85,6 +85,7 @@ public:
   bool skip(size_t Size) {
     if (Size > Remaining)
       return false;
+    Buffer += Size;
     Remaining -= Size;
     return true;
   }

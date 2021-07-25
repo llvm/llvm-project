@@ -73,6 +73,9 @@ std::string signatureToString(const wasm::WasmSignature *Sig);
 // Convert a MVT into its corresponding wasm ValType.
 wasm::ValType toValType(MVT Type);
 
+// Convert a register class to a wasm ValType.
+wasm::ValType regClassToValType(unsigned RC);
+
 } // end namespace WebAssembly
 } // end namespace llvm
 

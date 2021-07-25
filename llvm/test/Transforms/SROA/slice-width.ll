@@ -4,6 +4,7 @@ target datalayout = "e-p:64:64:64-p1:16:16:16-i1:8:8-i8:8:8-i16:16:16-i32:32:32-
 
 declare void @llvm.memcpy.p0i8.p0i8.i32(i8* nocapture, i8* nocapture, i32, i1) nounwind
 declare void @llvm.memset.p0i8.i32(i8* nocapture, i8, i32, i1) nounwind
+declare void @llvm.memset.p0i8.i64(i8* nocapture, i8, i64, i1) nounwind
 
 ; This tests that allocas are not split into slices that are not byte width multiple
 define void @no_split_on_non_byte_width(i32) {
@@ -130,4 +131,17 @@ entry:
 
   %result = call i32 @memcpy_vec3float_helper(%S.vec3float* %tmp2)
   ret i32 %result
+}
+
+; Don't crash on length that is constant expression.
+
+define void @PR50888() {
+; CHECK-LABEL: @PR50888(
+; CHECK-NEXT:    [[ARRAY:%.*]] = alloca i8, align 1
+; CHECK-NEXT:    call void @llvm.memset.p0i8.i64(i8* align 1 [[ARRAY]], i8 0, i64 ptrtoint (void ()* @PR50888 to i64), i1 false)
+; CHECK-NEXT:    ret void
+;
+  %array = alloca i8
+  call void @llvm.memset.p0i8.i64(i8* align 16 %array, i8 0, i64 ptrtoint (void ()* @PR50888 to i64), i1 false)
+  ret void
 }

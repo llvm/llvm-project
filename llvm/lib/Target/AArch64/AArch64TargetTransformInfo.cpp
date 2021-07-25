@@ -551,6 +551,10 @@ static Optional<Instruction *> instCombineSVELast(InstCombiner &IC,
   Value *Vec = II.getArgOperand(1);
   bool IsAfter = II.getIntrinsicID() == Intrinsic::aarch64_sve_lasta;
 
+  // lastX(splat(X)) --> X
+  if (auto *SplatVal = getSplatValue(Vec))
+    return IC.replaceInstUsesWith(II, SplatVal);
+
   auto *C = dyn_cast<Constant>(Pg);
   if (IsAfter && C && C->isNullValue()) {
     // The intrinsic is extracting lane 0 so use an extract instead.
@@ -682,6 +686,115 @@ instCombineSVECntElts(InstCombiner &IC, IntrinsicInst &II, unsigned NumElts) {
              : None;
 }
 
+static Optional<Instruction *> instCombineSVEPTest(InstCombiner &IC,
+                                                   IntrinsicInst &II) {
+  IntrinsicInst *Op1 = dyn_cast<IntrinsicInst>(II.getArgOperand(0));
+  IntrinsicInst *Op2 = dyn_cast<IntrinsicInst>(II.getArgOperand(1));
+
+  if (Op1 && Op2 &&
+      Op1->getIntrinsicID() == Intrinsic::aarch64_sve_convert_to_svbool &&
+      Op2->getIntrinsicID() == Intrinsic::aarch64_sve_convert_to_svbool &&
+      Op1->getArgOperand(0)->getType() == Op2->getArgOperand(0)->getType()) {
+
+    IRBuilder<> Builder(II.getContext());
+    Builder.SetInsertPoint(&II);
+
+    Value *Ops[] = {Op1->getArgOperand(0), Op2->getArgOperand(0)};
+    Type *Tys[] = {Op1->getArgOperand(0)->getType()};
+
+    auto *PTest = Builder.CreateIntrinsic(II.getIntrinsicID(), Tys, Ops);
+
+    PTest->takeName(&II);
+    return IC.replaceInstUsesWith(II, PTest);
+  }
+
+  return None;
+}
+
+static Optional<Instruction *> instCombineSVEVectorMul(InstCombiner &IC,
+                                                       IntrinsicInst &II) {
+  auto *OpPredicate = II.getOperand(0);
+  auto *OpMultiplicand = II.getOperand(1);
+  auto *OpMultiplier = II.getOperand(2);
+
+  IRBuilder<> Builder(II.getContext());
+  Builder.SetInsertPoint(&II);
+
+  // Return true if a given instruction is an aarch64_sve_dup_x intrinsic call
+  // with a unit splat value, false otherwise.
+  auto IsUnitDupX = [](auto *I) {
+    auto *IntrI = dyn_cast<IntrinsicInst>(I);
+    if (!IntrI || IntrI->getIntrinsicID() != Intrinsic::aarch64_sve_dup_x)
+      return false;
+
+    auto *SplatValue = IntrI->getOperand(0);
+    return match(SplatValue, m_FPOne()) || match(SplatValue, m_One());
+  };
+
+  // Return true if a given instruction is an aarch64_sve_dup intrinsic call
+  // with a unit splat value, false otherwise.
+  auto IsUnitDup = [](auto *I) {
+    auto *IntrI = dyn_cast<IntrinsicInst>(I);
+    if (!IntrI || IntrI->getIntrinsicID() != Intrinsic::aarch64_sve_dup)
+      return false;
+
+    auto *SplatValue = IntrI->getOperand(2);
+    return match(SplatValue, m_FPOne()) || match(SplatValue, m_One());
+  };
+
+  // The OpMultiplier variable should always point to the dup (if any), so
+  // swap if necessary.
+  if (IsUnitDup(OpMultiplicand) || IsUnitDupX(OpMultiplicand))
+    std::swap(OpMultiplier, OpMultiplicand);
+
+  if (IsUnitDupX(OpMultiplier)) {
+    // [f]mul pg (dupx 1) %n => %n
+    OpMultiplicand->takeName(&II);
+    return IC.replaceInstUsesWith(II, OpMultiplicand);
+  } else if (IsUnitDup(OpMultiplier)) {
+    // [f]mul pg (dup pg 1) %n => %n
+    auto *DupInst = cast<IntrinsicInst>(OpMultiplier);
+    auto *DupPg = DupInst->getOperand(1);
+    // TODO: this is naive. The optimization is still valid if DupPg
+    // 'encompasses' OpPredicate, not only if they're the same predicate.
+    if (OpPredicate == DupPg) {
+      OpMultiplicand->takeName(&II);
+      return IC.replaceInstUsesWith(II, OpMultiplicand);
+    }
+  }
+
+  return None;
+}
+
+static Optional<Instruction *> instCombineSVETBL(InstCombiner &IC,
+                                                 IntrinsicInst &II) {
+  auto *OpVal = II.getOperand(0);
+  auto *OpIndices = II.getOperand(1);
+  VectorType *VTy = cast<VectorType>(II.getType());
+
+  // Check whether OpIndices is an aarch64_sve_dup_x intrinsic call with
+  // constant splat value < minimal element count of result.
+  auto *DupXIntrI = dyn_cast<IntrinsicInst>(OpIndices);
+  if (!DupXIntrI || DupXIntrI->getIntrinsicID() != Intrinsic::aarch64_sve_dup_x)
+    return None;
+
+  auto *SplatValue = dyn_cast<ConstantInt>(DupXIntrI->getOperand(0));
+  if (!SplatValue ||
+      SplatValue->getValue().uge(VTy->getElementCount().getKnownMinValue()))
+    return None;
+
+  // Convert sve_tbl(OpVal sve_dup_x(SplatValue)) to
+  // splat_vector(extractelement(OpVal, SplatValue)) for further optimization.
+  IRBuilder<> Builder(II.getContext());
+  Builder.SetInsertPoint(&II);
+  auto *Extract = Builder.CreateExtractElement(OpVal, SplatValue);
+  auto *VectorSplat =
+      Builder.CreateVectorSplat(VTy->getElementCount(), Extract);
+
+  VectorSplat->takeName(&II);
+  return IC.replaceInstUsesWith(II, VectorSplat);
+}
+
 Optional<Instruction *>
 AArch64TTIImpl::instCombineIntrinsic(InstCombiner &IC,
                                      IntrinsicInst &II) const {
@@ -709,6 +822,15 @@ AArch64TTIImpl::instCombineIntrinsic(InstCombiner &IC,
     return instCombineSVECntElts(IC, II, 8);
   case Intrinsic::aarch64_sve_cntb:
     return instCombineSVECntElts(IC, II, 16);
+  case Intrinsic::aarch64_sve_ptest_any:
+  case Intrinsic::aarch64_sve_ptest_first:
+  case Intrinsic::aarch64_sve_ptest_last:
+    return instCombineSVEPTest(IC, II);
+  case Intrinsic::aarch64_sve_mul:
+  case Intrinsic::aarch64_sve_fmul:
+    return instCombineSVEVectorMul(IC, II);
+  case Intrinsic::aarch64_sve_tbl:
+    return instCombineSVETBL(IC, II);
   }
 
   return None;
@@ -1389,6 +1511,14 @@ AArch64TTIImpl::getMaskedMemoryOpCost(unsigned Opcode, Type *Src,
   auto LT = TLI->getTypeLegalizationCost(DL, Src);
   if (!LT.first.isValid())
     return InstructionCost::getInvalid();
+
+  // The code-generator is currently not able to handle scalable vectors
+  // of <vscale x 1 x eltty> yet, so return an invalid cost to avoid selecting
+  // it. This change will be removed when code-generation for these types is
+  // sufficiently reliable.
+  if (cast<VectorType>(Src)->getElementCount() == ElementCount::getScalable(1))
+    return InstructionCost::getInvalid();
+
   return LT.first * 2;
 }
 
@@ -1402,6 +1532,14 @@ InstructionCost AArch64TTIImpl::getGatherScatterOpCost(
   auto *VT = cast<VectorType>(DataTy);
   auto LT = TLI->getTypeLegalizationCost(DL, DataTy);
   if (!LT.first.isValid())
+    return InstructionCost::getInvalid();
+
+  // The code-generator is currently not able to handle scalable vectors
+  // of <vscale x 1 x eltty> yet, so return an invalid cost to avoid selecting
+  // it. This change will be removed when code-generation for these types is
+  // sufficiently reliable.
+  if (cast<VectorType>(DataTy)->getElementCount() ==
+      ElementCount::getScalable(1))
     return InstructionCost::getInvalid();
 
   ElementCount LegalVF = LT.second.getVectorElementCount();
@@ -1433,6 +1571,14 @@ InstructionCost AArch64TTIImpl::getMemoryOpCost(unsigned Opcode, Type *Ty,
   auto LT = TLI->getTypeLegalizationCost(DL, Ty);
   if (!LT.first.isValid())
     return InstructionCost::getInvalid();
+
+  // The code-generator is currently not able to handle scalable vectors
+  // of <vscale x 1 x eltty> yet, so return an invalid cost to avoid selecting
+  // it. This change will be removed when code-generation for these types is
+  // sufficiently reliable.
+  if (auto *VTy = dyn_cast<ScalableVectorType>(Ty))
+    if (VTy->getElementCount() == ElementCount::getScalable(1))
+      return InstructionCost::getInvalid();
 
   // TODO: consider latency as well for TCK_SizeAndLatency.
   if (CostKind == TTI::TCK_CodeSize || CostKind == TTI::TCK_SizeAndLatency)
@@ -1820,18 +1966,19 @@ AArch64TTIImpl::getArithmeticReductionCost(unsigned Opcode, VectorType *ValTy,
   assert(ISD && "Invalid opcode");
 
   // Horizontal adds can use the 'addv' instruction. We model the cost of these
-  // instructions as normal vector adds. This is the only arithmetic vector
-  // reduction operation for which we have an instruction.
+  // instructions as twice a normal vector add, plus 1 for each legalization
+  // step (LT.first). This is the only arithmetic vector reduction operation for
+  // which we have an instruction.
   // OR, XOR and AND costs should match the codegen from:
   // OR: llvm/test/CodeGen/AArch64/reduce-or.ll
   // XOR: llvm/test/CodeGen/AArch64/reduce-xor.ll
   // AND: llvm/test/CodeGen/AArch64/reduce-and.ll
   static const CostTblEntry CostTblNoPairwise[]{
-      {ISD::ADD, MVT::v8i8,   1},
-      {ISD::ADD, MVT::v16i8,  1},
-      {ISD::ADD, MVT::v4i16,  1},
-      {ISD::ADD, MVT::v8i16,  1},
-      {ISD::ADD, MVT::v4i32,  1},
+      {ISD::ADD, MVT::v8i8,   2},
+      {ISD::ADD, MVT::v16i8,  2},
+      {ISD::ADD, MVT::v4i16,  2},
+      {ISD::ADD, MVT::v8i16,  2},
+      {ISD::ADD, MVT::v4i32,  2},
       {ISD::OR,  MVT::v8i8,  15},
       {ISD::OR,  MVT::v16i8, 17},
       {ISD::OR,  MVT::v4i16,  7},
@@ -1859,7 +2006,7 @@ AArch64TTIImpl::getArithmeticReductionCost(unsigned Opcode, VectorType *ValTy,
     break;
   case ISD::ADD:
     if (const auto *Entry = CostTableLookup(CostTblNoPairwise, ISD, MTy))
-      return LT.first * Entry->Cost;
+      return (LT.first - 1) + Entry->Cost;
     break;
   case ISD::XOR:
   case ISD::AND:
@@ -1977,13 +2124,20 @@ InstructionCost AArch64TTIImpl::getShuffleCost(TTI::ShuffleKind Kind,
       { TTI::SK_Select, MVT::v4f32, 2 }, // rev+trn (or similar).
       { TTI::SK_Select, MVT::v2f64, 1 }, // mov.
       // PermuteSingleSrc shuffle kinds.
-      // TODO: handle vXi8/vXi16.
       { TTI::SK_PermuteSingleSrc, MVT::v2i32, 1 }, // mov.
       { TTI::SK_PermuteSingleSrc, MVT::v4i32, 3 }, // perfectshuffle worst case.
       { TTI::SK_PermuteSingleSrc, MVT::v2i64, 1 }, // mov.
       { TTI::SK_PermuteSingleSrc, MVT::v2f32, 1 }, // mov.
       { TTI::SK_PermuteSingleSrc, MVT::v4f32, 3 }, // perfectshuffle worst case.
       { TTI::SK_PermuteSingleSrc, MVT::v2f64, 1 }, // mov.
+      { TTI::SK_PermuteSingleSrc, MVT::v4i16, 3 }, // perfectshuffle worst case.
+      { TTI::SK_PermuteSingleSrc, MVT::v4f16, 3 }, // perfectshuffle worst case.
+      { TTI::SK_PermuteSingleSrc, MVT::v4bf16, 3 }, // perfectshuffle worst case.
+      { TTI::SK_PermuteSingleSrc, MVT::v8i16, 8 }, // constpool + load + tbl
+      { TTI::SK_PermuteSingleSrc, MVT::v8f16, 8 }, // constpool + load + tbl
+      { TTI::SK_PermuteSingleSrc, MVT::v8bf16, 8 }, // constpool + load + tbl
+      { TTI::SK_PermuteSingleSrc, MVT::v8i8, 8 }, // constpool + load + tbl
+      { TTI::SK_PermuteSingleSrc, MVT::v16i8, 8 }, // constpool + load + tbl
       // Reverse can be lowered with `rev`.
       { TTI::SK_Reverse, MVT::v2i32, 1 }, // mov.
       { TTI::SK_Reverse, MVT::v4i32, 2 }, // REV64; EXT

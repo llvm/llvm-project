@@ -309,6 +309,38 @@ read packet: {"name":<name>, "description":<description>}/E<error code>;AAAAAAAA
 //         Trace buffer size per thread in bytes. It must be a power of 2
 //         greater than or equal to 4096 (2^12) bytes.
 //
+//     "enableTsc": <boolean>,
+//         Whether to enable TSC timestamps or not. This is supported on
+//         all devices that support intel-pt. A TSC timestamp is generated along
+//         with PSB (synchronization) packets, whose frequency can be configured
+//         with the "psbPeriod" parameter.
+//
+//     "psbPeriod"?: <Optional decimal integer>,
+//         This value defines the period in which PSB packets will be generated.
+//         A PSB packet is a synchronization packet that contains a TSC
+//         timestamp and the current absolute instruction pointer.
+//
+//         This parameter can only be used if
+//
+//             /sys/bus/event_source/devices/intel_pt/caps/psb_cyc
+//
+//         is 1. Otherwise, the PSB period will be defined by the processor.
+//
+//         If supported, valid values for this period can be found in
+/
+//             /sys/bus/event_source/devices/intel_pt/caps/psb_periods
+//
+//         which contains a hexadecimal number, whose bits represent valid
+//         values e.g. if bit 2 is set, then value 2 is valid.
+//
+//         The psb_period value is converted to the approximate number of
+//         raw trace bytes between PSB packets as:
+//
+//             2 ^ (value + 11)
+//
+//          e.g. value 3 means 16KiB between PSB packets. Defaults to
+//          0 if supported.
+//
 //     /* process tracing only */
 //     "processBufferSizeLimit": <decimal integer>,
 //         Maximum total buffer size per process in bytes.
@@ -871,7 +903,7 @@ osminor: optional, specifies the minor version number of the OS (e.g. for macOS 
 ospatch: optional, specifies the patch level number of the OS (e.g. for macOS 10.12.2, it would be 2)
 vm-page-size: optional, specifies the target system VM page size, base 10.
            Needed for the "dirty-pages:" list in the qMemoryRegionInfo
-           packet, where a list of dirty pages is sent from the remote 
+           packet, where a list of dirty pages is sent from the remote
            stub.  This page size tells lldb how large each dirty page is.
 addressing_bits: optional, specifies how many bits in addresses are
 		 significant for addressing, base 10.  If bits 38..0
@@ -1185,8 +1217,8 @@ tuples to return are:
                  //
                  // If the stub supports identifying dirty pages within a
                  // memory region, this key should always be present for all
-                 // qMemoryRegionInfo replies.  This key with no pages 
-                 // listed ("dirty-pages:;") indicates no dirty pages in 
+                 // qMemoryRegionInfo replies.  This key with no pages
+                 // listed ("dirty-pages:;") indicates no dirty pages in
                  // this memory region.  The *absence* of this key means
                  // that this stub cannot determine dirty pages.
 

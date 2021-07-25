@@ -864,3 +864,33 @@ define <4 x i128> @sadd(<4 x i128> %a, <4 x i128> %b) local_unnamed_addr {
   ret <4 x i128> %c
 }
 
+define i64 @unsigned_sat_constant_i64_with_single_use(i64 %x) {
+; CHECK-LABEL: unsigned_sat_constant_i64_with_single_use:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    addi 4, 3, -4
+; CHECK-NEXT:    cmpld 4, 3
+; CHECK-NEXT:    iselgt 3, 0, 4
+; CHECK-NEXT:    blr
+  %umin = call i64 @llvm.umin.i64(i64 %x, i64 4)
+  %sub = sub i64 %x, %umin
+  ret i64 %sub
+}
+
+define i64 @unsigned_sat_constant_i64_with_multiple_use(i64 %x, i64 %y) {
+; CHECK-LABEL: unsigned_sat_constant_i64_with_multiple_use:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    li 5, 4
+; CHECK-NEXT:    cmpldi 3, 4
+; CHECK-NEXT:    isellt 5, 3, 5
+; CHECK-NEXT:    sub 3, 3, 5
+; CHECK-NEXT:    add 4, 4, 5
+; CHECK-NEXT:    mulld 3, 3, 4
+; CHECK-NEXT:    blr
+  %umin = call i64 @llvm.umin.i64(i64 %x, i64 4)
+  %sub = sub i64 %x, %umin
+  %add = add i64 %y, %umin
+  %res = mul i64 %sub, %add
+  ret i64 %res
+}
+
+declare i64 @llvm.umin.i64(i64, i64)

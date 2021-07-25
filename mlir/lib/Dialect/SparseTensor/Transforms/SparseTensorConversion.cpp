@@ -27,7 +27,19 @@ using namespace mlir::sparse_tensor;
 
 namespace {
 
-/// Returns internal type encoding for overhead storage.
+/// Internal encoding of primary storage. Keep this enum consistent
+/// with the equivalent enum in the sparse runtime support library.
+enum PrimaryTypeEnum : uint64_t {
+  kF64 = 1,
+  kF32 = 2,
+  kI64 = 3,
+  kI32 = 4,
+  kI16 = 5,
+  kI8 = 6
+};
+
+/// Returns internal type encoding for overhead storage. Keep these
+/// values consistent with the sparse runtime support library.
 static unsigned getOverheadTypeEncoding(unsigned width) {
   switch (width) {
   default:
@@ -41,7 +53,8 @@ static unsigned getOverheadTypeEncoding(unsigned width) {
   }
 }
 
-/// Returns internal dimension level type encoding.
+/// Returns internal dimension level type encoding. Keep these
+/// values consistent with the sparse runtime support library.
 static unsigned
 getDimLevelTypeEncoding(SparseTensorEncodingAttr::DimLevelType dlt) {
   switch (dlt) {
@@ -159,15 +172,17 @@ class SparseTensorNewConverter : public OpConversionPattern<NewOp> {
     unsigned secInd = getOverheadTypeEncoding(enc.getIndexBitWidth());
     unsigned primary;
     if (eltType.isF64())
-      primary = 1;
+      primary = kF64;
     else if (eltType.isF32())
-      primary = 2;
+      primary = kF32;
+    else if (eltType.isInteger(64))
+      primary = kI64;
     else if (eltType.isInteger(32))
-      primary = 3;
+      primary = kI32;
     else if (eltType.isInteger(16))
-      primary = 4;
+      primary = kI16;
     else if (eltType.isInteger(8))
-      primary = 5;
+      primary = kI8;
     else
       return failure();
     params.push_back(
@@ -256,6 +271,8 @@ public:
       name = "sparseValuesF64";
     else if (eltType.isF32())
       name = "sparseValuesF32";
+    else if (eltType.isInteger(64))
+      name = "sparseValuesI64";
     else if (eltType.isInteger(32))
       name = "sparseValuesI32";
     else if (eltType.isInteger(16))

@@ -111,6 +111,13 @@ func @broadcast_tensor_tensor_tensor(tensor<4x3x2xi32>, tensor<?xi32>) -> tensor
 
 // -----
 
+func @broadcast_tensor_tensor_tensor(%arg0: tensor<?x6x1xi32>, %arg1: tensor<*xi32>) -> tensor<?x6x6xi32> {
+  %0 = "test.broadcastable"(%arg0, %arg1) : (tensor<?x6x1xi32>, tensor<*xi32>) -> tensor<?x6x6xi32>
+  return %0 : tensor<?x6x6xi32>
+}
+
+// -----
+
 // Unranked operands but ranked result
 func @broadcast_tensor_tensor_tensor(tensor<*xi32>, tensor<*xi32>) -> tensor<2xi32> {
 ^bb0(%arg0: tensor<*xi32>, %arg1: tensor<*xi32>):

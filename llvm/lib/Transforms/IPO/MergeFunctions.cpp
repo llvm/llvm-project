@@ -767,9 +767,8 @@ static bool canCreateAliasFor(Function *F) {
 void MergeFunctions::writeAlias(Function *F, Function *G) {
   Constant *BitcastF = ConstantExpr::getBitCast(F, G->getType());
   PointerType *PtrType = G->getType();
-  auto *GA = GlobalAlias::create(
-      PtrType->getElementType(), PtrType->getAddressSpace(),
-      G->getLinkage(), "", BitcastF, G->getParent());
+  auto *GA = GlobalAlias::create(G->getValueType(), PtrType->getAddressSpace(),
+                                 G->getLinkage(), "", BitcastF, G->getParent());
 
   F->setAlignment(MaybeAlign(std::max(F->getAlignment(), G->getAlignment())));
   GA->takeName(G);

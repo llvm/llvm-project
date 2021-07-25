@@ -10,14 +10,12 @@
 // to manipulate and query allocatable variables, dummy arguments, & components.
 #ifndef FORTRAN_RUNTIME_ALLOCATABLE_H_
 #define FORTRAN_RUNTIME_ALLOCATABLE_H_
+
 #include "descriptor.h"
 #include "entry-names.h"
 
-namespace Fortran::runtime::typeInfo {
-class DerivedType;
-}
-
 namespace Fortran::runtime {
+
 extern "C" {
 
 // Initializes the descriptor for an allocatable of intrinsic or derived type.
@@ -55,7 +53,7 @@ void RTNAME(AllocatableApplyMold)(Descriptor &, const Descriptor &mold);
 void RTNAME(AllocatableSetBounds)(
     Descriptor &, int zeroBasedDim, SubscriptValue lower, SubscriptValue upper);
 
-// The upper bound is ignored for the last codimension.
+// The upper cobound is ignored for the last codimension.
 void RTNAME(AllocatableSetCoBounds)(Descriptor &, int zeroBasedCoDim,
     SubscriptValue lower, SubscriptValue upper = 0);
 
@@ -114,6 +112,10 @@ int RTNAME(MoveAlloc)(Descriptor &to, const Descriptor &from,
 int RTNAME(AllocatableDeallocate)(Descriptor &, bool hasStat = false,
     const Descriptor *errMsg = nullptr, const char *sourceFile = nullptr,
     int sourceLine = 0);
-}
+
+// Variant of above that does not finalize; for intermediate results
+void RTNAME(AllocatableDeallocateNoFinal)(
+    Descriptor &, const char *sourceFile = nullptr, int sourceLine = 0);
+} // extern "C"
 } // namespace Fortran::runtime
 #endif // FORTRAN_RUNTIME_ALLOCATABLE_H_

@@ -2749,7 +2749,7 @@ void MicrosoftCXXNameMangler::mangleCallingConvention(CallingConv CC) {
     case CC_X86FastCall: Out << 'I'; break;
     case CC_X86VectorCall: Out << 'Q'; break;
     case CC_Swift: Out << 'S'; break;
-    case CC_SwiftAsync: Out << 'T'; break;
+    case CC_SwiftAsync: Out << 'W'; break;
     case CC_PreserveMost: Out << 'U'; break;
     case CC_X86RegCall: Out << 'w'; break;
   }

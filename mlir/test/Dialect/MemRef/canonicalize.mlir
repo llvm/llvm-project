@@ -195,6 +195,44 @@ func @alias_is_freed(%arg0 : memref<?xf32>) {
 
 // -----
 
+// Verify SimplifyClones skips clones with multiple deallocations.
+// CHECK-LABEL: @clone_multiple_dealloc_of_source
+// CHECK-SAME: %[[ARG:.*]]: memref<?xf32>
+func @clone_multiple_dealloc_of_source(%arg0: memref<?xf32>) -> memref<?xf32> {
+  // CHECK-NEXT: %[[RES:.*]] = memref.clone %[[ARG]]
+  // CHECK: memref.dealloc %[[ARG]]
+  // CHECK: memref.dealloc %[[ARG]]
+  // CHECK: return %[[RES]]
+  %0 = memref.clone %arg0 : memref<?xf32> to memref<?xf32>
+  "if_else"() ({
+    memref.dealloc %arg0 : memref<?xf32>
+    }, {
+    memref.dealloc %arg0 : memref<?xf32>
+    }) : () -> ()
+  return %0 : memref<?xf32>
+}
+
+// -----
+
+// CHECK-LABEL: @clone_multiple_dealloc_of_clone
+// CHECK-SAME: %[[ARG:.*]]: memref<?xf32>
+func @clone_multiple_dealloc_of_clone(%arg0: memref<?xf32>) -> memref<?xf32> {
+  // CHECK-NEXT: %[[CLONE:.*]] = memref.clone %[[ARG]]
+  // CHECK: memref.dealloc %[[CLONE]]
+  // CHECK: memref.dealloc %[[CLONE]]
+  // CHECK: return %[[ARG]]
+  %0 = memref.clone %arg0 : memref<?xf32> to memref<?xf32>
+  "use"(%0) : (memref<?xf32>) -> ()
+  "if_else"() ({
+    memref.dealloc %0 : memref<?xf32>
+    }, {
+    memref.dealloc %0 : memref<?xf32>
+    }) : () -> ()
+  return %arg0 : memref<?xf32>
+}
+
+// -----
+
 // CHECK-LABEL: func @dim_of_sized_view
 //  CHECK-SAME:   %{{[a-z0-9A-Z_]+}}: memref<?xi8>
 //  CHECK-SAME:   %[[SIZE:.[a-z0-9A-Z_]+]]: index
@@ -393,5 +431,83 @@ func @alloc_const_fold_with_symbols2() -> memref<?xi32, #map0> {
 func @allocator(%arg0 : memref<memref<?xi32>>, %arg1 : index)  {
   %0 = memref.alloc(%arg1) : memref<?xi32>
   memref.store %0, %arg0[] : memref<memref<?xi32>>
-  return 
+  return
 }
+
+// -----
+
+func @collapsing_memref_reshapes_to_zero_dim(%arg0 : memref<1x1x1xf32>)
+                                             -> memref<f32> {
+  %0 = memref.collapse_shape %arg0 [[0, 1, 2]]
+      : memref<1x1x1xf32> into memref<1xf32>
+  %1 = memref.collapse_shape %0 [] : memref<1xf32> into memref<f32>
+  return %1 : memref<f32>
+}
+// CHECK-LABEL: collapsing_memref_reshapes_to_zero
+//       CHECK:   memref.collapse_shape %{{.*}} []
+//  CHECK-SAME:     memref<1x1x1xf32> into memref<f32>
+
+// -----
+
+func @collapsing_memref_reshapes(%arg0 : memref<?x?x?x?x?xf32>)
+    -> memref<?x?xf32> {
+  %0 = memref.collapse_shape %arg0 [[0, 1], [2], [3, 4]]
+      : memref<?x?x?x?x?xf32> into memref<?x?x?xf32>
+  %1 = memref.collapse_shape %0 [[0, 1], [2]]
+      : memref<?x?x?xf32> into memref<?x?xf32>
+  return %1 : memref<?x?xf32>
+}
+// CHECK-LABEL: collapsing_memref_reshapes
+//       CHECK:   memref.collapse_shape %{{.*}} {{\[}}[0, 1, 2], [3, 4]]
+//   CHECK-NOT:   memref.collapse_shape
+
+// -----
+
+func @expanding_memref_reshapes(%arg0 : memref<?x?xf32>)
+    -> memref<?x6x4x5x?xf32> {
+  %0 = memref.expand_shape %arg0 [[0, 1], [2]]
+      : memref<?x?xf32> into memref<?x4x?xf32>
+  %1 = memref.expand_shape %0 [[0, 1], [2], [3, 4]]
+      : memref<?x4x?xf32> into memref<?x6x4x5x?xf32>
+  return %1 : memref<?x6x4x5x?xf32>
+}
+// CHECK-LABEL: expanding_memref_reshapes
+//       CHECK:   memref.expand_shape %{{.*}} {{\[}}[0, 1, 2], [3, 4]]
+//   CHECK-NOT:   memref.expand_shape
+
+// -----
+
+func @expanding_memref_reshapes_to_zero_dim(%arg0 : memref<f32>)
+                                             -> memref<1x1x1xf32> {
+  %0 = memref.expand_shape %arg0 [] : memref<f32> into memref<1xf32>
+  %1 = memref.expand_shape %0 [[0, 1, 2]]
+      : memref<1xf32> into memref<1x1x1xf32>
+  return %1 : memref<1x1x1xf32>
+}
+// CHECK-LABEL: expanding_memref_reshapes_to_zero
+//       CHECK:   memref.expand_shape %{{.*}} []
+//  CHECK-SAME:     memref<f32> into memref<1x1x1xf32>
+
+// -----
+
+func @fold_memref_reshape(%arg0 : memref<12x4xf32>) -> memref<12x4xf32> {
+  %0 = memref.expand_shape %arg0 [[0, 1], [2]]
+      : memref<12x4xf32> into memref<3x4x4xf32>
+  %1 = memref.collapse_shape %0 [[0, 1], [2]]
+      : memref<3x4x4xf32> into memref<12x4xf32>
+  return %1 : memref<12x4xf32>
+}
+// CHECK-LABEL: @fold_memref_reshape
+//   CHECK-NOT:   linalg.{{.*}}_shape
+
+// -----
+
+func @fold_memref_reshape_dynamic(%arg0 : memref<?x?xf32>) -> memref<?x?xf32> {
+  %0 = memref.expand_shape %arg0 [[0, 1], [2]]
+      : memref<?x?xf32> into memref<?x4x?xf32>
+  %1 = memref.collapse_shape %0 [[0, 1], [2]]
+      : memref<?x4x?xf32> into memref<?x?xf32>
+  return %1 : memref<?x?xf32>
+}
+// CHECK-LABEL: @fold_memref_reshape_dynamic
+//   CHECK-NOT:   linalg.{{.*}}_shape

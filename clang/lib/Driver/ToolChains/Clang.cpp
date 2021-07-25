@@ -490,14 +490,6 @@ static bool ShouldEnableAutolink(const ArgList &Args, const ToolChain &TC,
                       Default);
 }
 
-static bool ShouldDisableDwarfDirectory(const ArgList &Args,
-                                        const ToolChain &TC) {
-  bool UseDwarfDirectory =
-      Args.hasFlag(options::OPT_fdwarf_directory_asm,
-                   options::OPT_fno_dwarf_directory_asm, TC.useIntegratedAs());
-  return !UseDwarfDirectory;
-}
-
 // Convert an arg of the form "-gN" or "-ggdbN" or one of their aliases
 // to the corresponding DebugInfoKind.
 static codegenoptions::DebugInfoKind DebugLevelToInfoKind(const Arg &A) {
@@ -4195,6 +4187,14 @@ static void renderDebugOptions(const ToolChain &TC, const Driver &D,
     }
   }
 
+  // To avoid join/split of directory+filename, the integrated assembler prefers
+  // the directory form of .file on all DWARF versions. GNU as doesn't allow the
+  // form before DWARF v5.
+  if (!Args.hasFlag(options::OPT_fdwarf_directory_asm,
+                    options::OPT_fno_dwarf_directory_asm,
+                    TC.useIntegratedAs() || EffectiveDWARFVersion >= 5))
+    CmdArgs.push_back("-fno-dwarf-directory-asm");
+
   // Decide how to render forward declarations of template instantiations.
   // SCE wants full descriptions, others just get them in the name.
   if (DebuggerTuning == llvm::DebuggerKind::SCE)
@@ -4469,7 +4469,7 @@ void Clang::ConstructJob(Compilation &C, const JobAction &JA,
       StringRef ArgStr =
           Args.hasArg(options::OPT_interface_stub_version_EQ)
               ? Args.getLastArgValue(options::OPT_interface_stub_version_EQ)
-              : "experimental-ifs-v2";
+              : "ifs-v1";
       CmdArgs.push_back("-emit-interface-stubs");
       CmdArgs.push_back(
           Args.MakeArgString(Twine("-interface-stub-version=") + ArgStr.str()));
@@ -4862,6 +4862,14 @@ void Clang::ConstructJob(Compilation &C, const JobAction &JA,
       CmdArgs.push_back("-mabi=vec-default");
   }
 
+  if (Arg *A = Args.getLastArg(options::OPT_mlong_double_128)) {
+    // Emit the unsupported option error until the Clang's library integration
+    // support for 128-bit long double is available for AIX.
+    if (Triple.isOSAIX())
+      D.Diag(diag::err_drv_unsupported_opt_for_target)
+          << A->getSpelling() << RawTriple.str();
+  }
+
   if (Arg *A = Args.getLastArg(options::OPT_Wframe_larger_than_EQ)) {
     StringRef v = A->getValue();
     // FIXME: Validate the argument here so we don't produce meaningless errors
@@ -5150,11 +5158,15 @@ void Clang::ConstructJob(Compilation &C, const JobAction &JA,
   if (Arg *A = Args.getLastArg(options::OPT_mcmodel_EQ)) {
     StringRef CM = A->getValue();
     if (CM == "small" || CM == "kernel" || CM == "medium" || CM == "large" ||
-        CM == "tiny")
-      A->render(Args, CmdArgs);
-    else
+        CM == "tiny") {
+      if (Triple.isOSAIX() && CM == "medium")
+        CmdArgs.push_back("-mcmodel=large");
+      else
+        A->render(Args, CmdArgs);
+    } else {
       D.Diag(diag::err_drv_invalid_argument_to_option)
           << CM << A->getOption().getName();
+    }
   }
 
   if (Arg *A = Args.getLastArg(options::OPT_mtls_size_EQ)) {
@@ -5527,9 +5539,6 @@ void Clang::ConstructJob(Compilation &C, const JobAction &JA,
     else
       CmdArgs.push_back("-fno-gnu-keywords");
   }
-
-  if (ShouldDisableDwarfDirectory(Args, TC))
-    CmdArgs.push_back("-fno-dwarf-directory-asm");
 
   if (!ShouldEnableAutolink(Args, TC, JA))
     CmdArgs.push_back("-fno-autolink");
@@ -5997,8 +6006,14 @@ void Clang::ConstructJob(Compilation &C, const JobAction &JA,
     Args.AddLastArg(CmdArgs, options::OPT_fprofile_remapping_file_EQ);
 
     if (Args.hasFlag(options::OPT_fpseudo_probe_for_profiling,
-                     options::OPT_fno_pseudo_probe_for_profiling, false))
+                     options::OPT_fno_pseudo_probe_for_profiling, false)) {
       CmdArgs.push_back("-fpseudo-probe-for-profiling");
+      // Enforce -funique-internal-linkage-names if it's not explicitly turned
+      // off.
+      if (Args.hasFlag(options::OPT_funique_internal_linkage_names,
+                       options::OPT_fno_unique_internal_linkage_names, true))
+        CmdArgs.push_back("-funique-internal-linkage-names");
+    }
   }
   RenderBuiltinOptions(TC, RawTriple, Args, CmdArgs);
 

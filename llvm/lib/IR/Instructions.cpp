@@ -45,6 +45,10 @@
 
 using namespace llvm;
 
+static cl::opt<bool> DisableI2pP2iOpt(
+    "disable-i2p-p2i-opt", cl::init(false),
+    cl::desc("Disables inttoptr/ptrtoint roundtrip optimization"));
+
 //===----------------------------------------------------------------------===//
 //                            AllocaInst Class
 //===----------------------------------------------------------------------===//
@@ -2845,6 +2849,10 @@ unsigned CastInst::isEliminableCastPair(
         return secondOp;
       return 0;
     case 7: {
+      // Disable inttoptr/ptrtoint optimization if enabled.
+      if (DisableI2pP2iOpt)
+        return 0;
+
       // Cannot simplify if address spaces are different!
       if (SrcTy->getPointerAddressSpace() != DstTy->getPointerAddressSpace())
         return 0;

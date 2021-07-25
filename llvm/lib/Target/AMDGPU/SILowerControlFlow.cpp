@@ -600,6 +600,10 @@ MachineBasicBlock *SILowerControlFlow::process(MachineInstr &MI) {
     emitLoop(MI);
     break;
 
+  case AMDGPU::SI_WATERFALL_LOOP:
+    MI.setDesc(TII->get(AMDGPU::S_CBRANCH_EXECNZ));
+    break;
+
   case AMDGPU::SI_END_CF:
     SplitBB = emitEndCf(MI);
     break;
@@ -840,6 +844,7 @@ bool SILowerControlFlow::runOnMachineFunction(MachineFunction &MF) {
       case AMDGPU::SI_IF:
       case AMDGPU::SI_ELSE:
       case AMDGPU::SI_IF_BREAK:
+      case AMDGPU::SI_WATERFALL_LOOP:
       case AMDGPU::SI_LOOP:
       case AMDGPU::SI_END_CF:
         SplitMBB = process(MI);

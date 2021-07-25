@@ -278,6 +278,17 @@ define double @select_fcmp_nnan_ole_zero(double %x) {
   ret double %fabs
 }
 
+define double @select_nnan_fcmp_nnan_ole_zero(double %x) {
+; CHECK-LABEL: @select_nnan_fcmp_nnan_ole_zero(
+; CHECK-NEXT:    [[TMP1:%.*]] = call nnan double @llvm.fabs.f64(double [[X:%.*]])
+; CHECK-NEXT:    ret double [[TMP1]]
+;
+  %lezero = fcmp ole double %x, 0.0
+  %negx = fsub nnan double 0.0, %x
+  %fabs = select nnan i1 %lezero, double %negx, double %x
+  ret double %fabs
+}
+
 ; Repeat with unordered predicate - nnan allows us to treat ordered/unordered identically.
 
 define double @select_fcmp_nnan_ule_zero(double %x) {
@@ -319,6 +330,17 @@ define <2 x float> @select_fcmp_nnan_ole_negzero(<2 x float> %x) {
   ret <2 x float> %fabs
 }
 
+define <2 x float> @select_nnan_fcmp_nnan_ole_negzero(<2 x float> %x) {
+; CHECK-LABEL: @select_nnan_fcmp_nnan_ole_negzero(
+; CHECK-NEXT:    [[TMP1:%.*]] = call nnan <2 x float> @llvm.fabs.v2f32(<2 x float> [[X:%.*]])
+; CHECK-NEXT:    ret <2 x float> [[TMP1]]
+;
+  %lezero = fcmp ole <2 x float> %x, <float -0.0, float -0.0>
+  %negx = fsub nnan <2 x float> <float 0.0, float undef>, %x
+  %fabs = select nnan <2 x i1> %lezero, <2 x float> %negx, <2 x float> %x
+  ret <2 x float> %fabs
+}
+
 ; X > 0.0 ? X : (0.0 - X) --> fabs(X)
 
 define fp128 @select_fcmp_nnan_ogt_zero(fp128 %x) {
@@ -332,6 +354,17 @@ define fp128 @select_fcmp_nnan_ogt_zero(fp128 %x) {
   ret fp128 %fabs
 }
 
+define fp128 @select_nnan_fcmp_nnan_ogt_zero(fp128 %x) {
+; CHECK-LABEL: @select_nnan_fcmp_nnan_ogt_zero(
+; CHECK-NEXT:    [[TMP1:%.*]] = call nnan fp128 @llvm.fabs.f128(fp128 [[X:%.*]])
+; CHECK-NEXT:    ret fp128 [[TMP1]]
+;
+  %gtzero = fcmp ogt fp128 %x, zeroinitializer
+  %negx = fsub nnan fp128 zeroinitializer, %x
+  %fabs = select nnan i1 %gtzero, fp128 %x, fp128 %negx
+  ret fp128 %fabs
+}
+
 ; X > -0.0 ? X : (0.0 - X) --> fabs(X)
 
 define half @select_fcmp_nnan_ogt_negzero(half %x) {
@@ -342,6 +375,17 @@ define half @select_fcmp_nnan_ogt_negzero(half %x) {
   %gtzero = fcmp ogt half %x, -0.0
   %negx = fsub nnan half 0.0, %x
   %fabs = select i1 %gtzero, half %x, half %negx
+  ret half %fabs
+}
+
+define half @select_nnan_fcmp_nnan_ogt_negzero(half %x) {
+; CHECK-LABEL: @select_nnan_fcmp_nnan_ogt_negzero(
+; CHECK-NEXT:    [[TMP1:%.*]] = call nnan half @llvm.fabs.f16(half [[X:%.*]])
+; CHECK-NEXT:    ret half [[TMP1]]
+;
+  %gtzero = fcmp ogt half %x, -0.0
+  %negx = fsub nnan half 0.0, %x
+  %fabs = select nnan i1 %gtzero, half %x, half %negx
   ret half %fabs
 }
 
@@ -383,6 +427,17 @@ define double @select_fcmp_nnan_nsz_olt_zero(double %x) {
   %ltzero = fcmp olt double %x, 0.0
   %negx = fsub nnan nsz double -0.0, %x
   %fabs = select i1 %ltzero, double %negx, double %x
+  ret double %fabs
+}
+
+define double @select_nnan_nsz_fcmp_nnan_nsz_olt_zero(double %x) {
+; CHECK-LABEL: @select_nnan_nsz_fcmp_nnan_nsz_olt_zero(
+; CHECK-NEXT:    [[TMP1:%.*]] = call nnan nsz double @llvm.fabs.f64(double [[X:%.*]])
+; CHECK-NEXT:    ret double [[TMP1]]
+;
+  %ltzero = fcmp olt double %x, 0.0
+  %negx = fsub nnan nsz double -0.0, %x
+  %fabs = select nnan nsz i1 %ltzero, double %negx, double %x
   ret double %fabs
 }
 
@@ -436,6 +491,17 @@ define float @select_fcmp_nnan_nsz_olt_negzero(float %x) {
   ret float %fabs
 }
 
+define float @select_nnan_ninf_nsz_fcmp_nnan_nsz_olt_negzero(float %x) {
+; CHECK-LABEL: @select_nnan_ninf_nsz_fcmp_nnan_nsz_olt_negzero(
+; CHECK-NEXT:    [[TMP1:%.*]] = call nnan nsz float @llvm.fabs.f32(float [[X:%.*]])
+; CHECK-NEXT:    ret float [[TMP1]]
+;
+  %ltzero = fcmp olt float %x, -0.0
+  %negx = fsub nnan nsz float -0.0, %x
+  %fabs = select nnan ninf nsz i1 %ltzero, float %negx, float %x
+  ret float %fabs
+}
+
 ; Repeat with unordered predicate - nnan allows us to treat ordered/unordered identically.
 
 define float @select_fcmp_nnan_nsz_ult_negzero(float %x) {
@@ -486,6 +552,17 @@ define double @select_fcmp_nnan_nsz_ole_zero(double %x) {
   ret double %fabs
 }
 
+define double @select_fast_fcmp_nnan_nsz_ole_zero(double %x) {
+; CHECK-LABEL: @select_fast_fcmp_nnan_nsz_ole_zero(
+; CHECK-NEXT:    [[TMP1:%.*]] = call nnan nsz double @llvm.fabs.f64(double [[X:%.*]])
+; CHECK-NEXT:    ret double [[TMP1]]
+;
+  %lezero = fcmp ole double %x, 0.0
+  %negx = fsub nnan nsz double -0.0, %x
+  %fabs = select fast i1 %lezero, double %negx, double %x
+  ret double %fabs
+}
+
 ; Repeat with unordered predicate - nnan allows us to treat ordered/unordered identically.
 
 define double @select_fcmp_nnan_nsz_ule_zero(double %x) {
@@ -533,6 +610,17 @@ define float @select_fcmp_nnan_nsz_ole_negzero(float %x) {
   %lezero = fcmp ole float %x, -0.0
   %negx = fsub nnan nsz float -0.0, %x
   %fabs = select i1 %lezero, float %negx, float %x
+  ret float %fabs
+}
+
+define float @select_nnan_nsz_fcmp_nnan_nsz_ole_negzero(float %x) {
+; CHECK-LABEL: @select_nnan_nsz_fcmp_nnan_nsz_ole_negzero(
+; CHECK-NEXT:    [[TMP1:%.*]] = call nnan nsz float @llvm.fabs.f32(float [[X:%.*]])
+; CHECK-NEXT:    ret float [[TMP1]]
+;
+  %lezero = fcmp ole float %x, -0.0
+  %negx = fsub nnan nsz float -0.0, %x
+  %fabs = select nnan nsz i1 %lezero, float %negx, float %x
   ret float %fabs
 }
 

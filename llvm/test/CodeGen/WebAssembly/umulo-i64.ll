@@ -1,6 +1,5 @@
 ; RUN: llc < %s -asm-verbose=false -wasm-disable-explicit-locals -wasm-keep-registers | FileCheck %s
 ; Test that UMULO works correctly on 64-bit operands.
-target datalayout = "e-m:e-p:32:32-i64:64-n32:64-S128"
 target triple = "wasm32-unknown-unknown"
 
 ; CHECK-LABEL: _ZN4core3num21_$LT$impl$u20$u64$GT$15overflowing_mul17h07be88b4cbac028fE:
@@ -29,4 +28,3 @@ start:
   %3 = extractvalue { i64, i1 } %2, 1
   ret i1 %3
 }
-

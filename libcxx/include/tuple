@@ -1165,7 +1165,7 @@ get(const tuple<_Tp...>&& __t) _NOEXCEPT
 
 namespace __find_detail {
 
-static constexpr size_t __not_found = -1;
+static constexpr size_t __not_found = static_cast<size_t>(-1);
 static constexpr size_t __ambiguous = __not_found - 1;
 
 inline _LIBCPP_INLINE_VISIBILITY

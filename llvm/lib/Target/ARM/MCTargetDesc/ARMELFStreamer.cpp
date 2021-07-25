@@ -176,8 +176,8 @@ void ARMTargetAsmStreamer::switchVendor(StringRef Vendor) {}
 void ARMTargetAsmStreamer::emitAttribute(unsigned Attribute, unsigned Value) {
   OS << "\t.eabi_attribute\t" << Attribute << ", " << Twine(Value);
   if (IsVerboseAsm) {
-    StringRef Name =
-        ELFAttrs::attrTypeAsString(Attribute, ARMBuildAttrs::ARMAttributeTags);
+    StringRef Name = ELFAttrs::attrTypeAsString(
+        Attribute, ARMBuildAttrs::getARMAttributeTags());
     if (!Name.empty())
       OS << "\t@ " << Name;
   }
@@ -194,7 +194,7 @@ void ARMTargetAsmStreamer::emitTextAttribute(unsigned Attribute,
     OS << "\t.eabi_attribute\t" << Attribute << ", \"" << String << "\"";
     if (IsVerboseAsm) {
       StringRef Name = ELFAttrs::attrTypeAsString(
-          Attribute, ARMBuildAttrs::ARMAttributeTags);
+          Attribute, ARMBuildAttrs::getARMAttributeTags());
       if (!Name.empty())
         OS << "\t@ " << Name;
     }
@@ -215,7 +215,7 @@ void ARMTargetAsmStreamer::emitIntTextAttribute(unsigned Attribute,
     if (IsVerboseAsm)
       OS << "\t@ "
          << ELFAttrs::attrTypeAsString(Attribute,
-                                       ARMBuildAttrs::ARMAttributeTags);
+                                       ARMBuildAttrs::getARMAttributeTags());
     break;
   }
   OS << "\n";

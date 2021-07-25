@@ -26,8 +26,6 @@ if(NOT LLDB_DEBUGSERVER_ARCH OR "${LLDB_DEBUGSERVER_ARCH}" MATCHES ".*86.*")
   include_directories(${CURRENT_SOURCE_DIR}/i386 ${CURRENT_SOURCE_DIR}/x86_64)
 endif()
 
-add_subdirectory(DarwinLog)
-
 include_directories(..)
 
 include_directories(${LLDB_SOURCE_DIR}/tools/debugserver/source)

@@ -58,6 +58,8 @@ LLVMTypeConverter::LLVMTypeConverter(MLIRContext *ctx,
   addArgumentMaterialization([&](OpBuilder &builder, MemRefType resultType,
                                  ValueRange inputs,
                                  Location loc) -> Optional<Value> {
+    // TODO: bare ptr conversion could be handled here but we would need a way
+    // to distinguish between FuncOp and other regions.
     if (inputs.size() == 1)
       return llvm::None;
     return MemRefDescriptor::pack(builder, loc, *this, resultType, inputs);
@@ -69,20 +71,18 @@ LLVMTypeConverter::LLVMTypeConverter(MLIRContext *ctx,
                                Location loc) -> Optional<Value> {
     if (inputs.size() != 1)
       return llvm::None;
-    // FIXME: These should check LLVM::DialectCastOp can actually be constructed
-    // from the input and result.
-    return builder.create<LLVM::DialectCastOp>(loc, resultType, inputs[0])
-        .getResult();
+
+    return builder.create<UnrealizedConversionCastOp>(loc, resultType, inputs)
+        .getResult(0);
   });
   addTargetMaterialization([&](OpBuilder &builder, Type resultType,
                                ValueRange inputs,
                                Location loc) -> Optional<Value> {
     if (inputs.size() != 1)
       return llvm::None;
-    // FIXME: These should check LLVM::DialectCastOp can actually be constructed
-    // from the input and result.
-    return builder.create<LLVM::DialectCastOp>(loc, resultType, inputs[0])
-        .getResult();
+
+    return builder.create<UnrealizedConversionCastOp>(loc, resultType, inputs)
+        .getResult(0);
   });
 }
 

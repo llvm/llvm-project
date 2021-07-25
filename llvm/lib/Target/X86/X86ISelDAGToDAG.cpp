@@ -5446,6 +5446,9 @@ void X86DAGToDAGISel::Select(SDNode *Node) {
       ConstantSDNode *C = dyn_cast<ConstantSDNode>(N0.getOperand(1));
       if (!C) break;
       uint64_t Mask = C->getZExtValue();
+      // We may have looked through a truncate so mask off any bits that
+      // shouldn't be part of the compare.
+      Mask &= maskTrailingOnes<uint64_t>(CmpVT.getScalarSizeInBits());
 
       // Check if we can replace AND+IMM64 with a shift. This is possible for
       // masks/ like 0xFF000000 or 0x00FFFFFF and if we care only about the zero

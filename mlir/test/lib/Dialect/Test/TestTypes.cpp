@@ -13,6 +13,7 @@
 
 #include "TestTypes.h"
 #include "TestDialect.h"
+#include "mlir/Dialect/LLVMIR/LLVMTypes.h"
 #include "mlir/IR/Builders.h"
 #include "mlir/IR/DialectImplementation.h"
 #include "mlir/IR/Types.h"
@@ -222,11 +223,19 @@ unsigned TestTypeWithLayoutType::extractKind(DataLayoutEntryListRef params,
 // TestDialect
 //===----------------------------------------------------------------------===//
 
+namespace {
+
+struct PtrElementModel
+    : public LLVM::PointerElementTypeInterface::ExternalModel<PtrElementModel,
+                                                              SimpleAType> {};
+} // namespace
+
 void TestDialect::registerTypes() {
   addTypes<TestRecursiveType,
 #define GET_TYPEDEF_LIST
 #include "TestTypeDefs.cpp.inc"
            >();
+  SimpleAType::attachInterface<PtrElementModel>(*getContext());
 }
 
 static Type parseTestType(MLIRContext *ctxt, DialectAsmParser &parser,

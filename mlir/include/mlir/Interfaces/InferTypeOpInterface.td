@@ -93,7 +93,7 @@ def InferShapedTypeOpInterface : OpInterface<"InferShapedTypeOpInterface"> {
       /*methodName=*/"inferReturnTypeComponents",
       /*args=*/(ins "::mlir::MLIRContext*":$context,
                     "::mlir::Optional<::mlir::Location>":$location,
-                    "::mlir::ValueRange":$operands,
+                    "::mlir::ValueShapeRange":$operands,
                     "::mlir::DictionaryAttr":$attributes,
                     "::mlir::RegionRange":$regions,
                     "::mlir::SmallVectorImpl<::mlir::ShapedTypeComponents>&":
@@ -105,9 +105,7 @@ def InferShapedTypeOpInterface : OpInterface<"InferShapedTypeOpInterface"> {
       /*desc=*/[{Reify the shape computation for the operation.
 
       Insert operations using the given OpBuilder that computes the
-      result shape. Only one of this method or
-      `reifyReturnTypeShapesPerResultDim` needs to be overriden by the
-      operation. This interface is supposed to be workable during dialect
+      result shape. This interface is supposed to be workable during dialect
       conversion (e.g. convert from tensor world to buffer world),
       where `getOperand` may be invalid. For example, some ops (e.g.
       dynamic_reshape(input, target_shape)) may depend on their operands
@@ -127,42 +125,14 @@ def InferShapedTypeOpInterface : OpInterface<"InferShapedTypeOpInterface"> {
           "::mlir::SmallVectorImpl<::mlir::Value> &":$reifiedReturnShapes),
       /*methodBody=*/[{}],
       /*defaultImplementation=*/[{ return ::mlir::failure(); }]
-    >,
-    InterfaceMethod<
-      /*desc=*/[{Reify the shape computation for the operation.
-
-      Insert operations using the given OpBuilder that computes the
-      result shape. The `reifiedReturnShapes` is expected to be
-      populated with as many vectors as the number of results of the
-      op (empty if the shape of a result value cannot be computed). If
-      the returned shape for a result is not empty, its size must
-      match the rank of the shaped type returned. Consequently, this
-      interface can only be overridden if the return types are ranked.
-
-      If both this method and `reifyReturnTypeShapes` are overridden
-      by the operation, `reifyReturnTypeShapes` takes precedence. This
-      method is intended to be used when the shape of each result, dim
-      pair can be computed independently. Using this method avoids
-      adding additional instructions to aggregate individual dimension
-      of a result shape into an single `Value` (and consequently
-      avoids the need to extract the value from the shape on the
-      client side).
-      }],
-      /*retTy=*/"::mlir::LogicalResult",
-      /*methodName=*/"reifyReturnTypeShapesPerResultDim",
-      /*args=*/(ins "::mlir::OpBuilder&":$builder,
-          "::mlir::SmallVectorImpl<::mlir::SmallVector<::mlir::Value>>&"
-          :$reifiedReturnShapes),
-      /*methodBody=*/[{}],
-      /*defaultImplementation=*/[{ return ::mlir::failure(); }]
     >
   ];
 }
 
 // Convenience class grouping together type and shaped type op interfaces for
 // ops that have tensor return types.
-class InferTensorType<list<string> overridenMethods = []> {
-  list<OpTrait> traits = [
+class InferTensorType<list<string> overridenMethods = []> : OpTraitList<
+  [
     // Op implements infer type op interface.
     InferTypeOpInterface,
     // The op will have methods implementing the ShapedType type inference
@@ -171,9 +141,39 @@ class InferTensorType<list<string> overridenMethods = []> {
     // The op produces tensors and will use the ShapedType type infer interface
     // along with knowledge that it is producing Tensors to infer the type.
     NativeOpTrait<"InferTensorType">
+  ]>;
+def InferTensorTypeWithReify: OpTraitList<InferTensorType<[
+    "inferReturnTypeComponents", "reifyReturnTypeShapes"]>.traits>;
+
+
+def ReifyRankedShapedTypeOpInterface :
+    OpInterface<"ReifyRankedShapedTypeOpInterface"> {
+  let description = [{
+    Interface to compute the shape of the result of an operation when
+    the result is a ranked shape type, i.e. `RankedTensorType` or
+    `MemRefType`.
+  }];
+  let cppNamespace = "::mlir";
+
+  let methods = [
+    InterfaceMethod<
+      /*desc=*/[{
+        Reify the shape of the result of an operation (typically in
+        terms of shape of its operands)
+
+        Insert operations using the given `OpBuilder` that computes
+        the result shape. The `reifiedReturnShapes` is expected to be
+        populated with as many vectors as the number of results of the
+        op. Each of these vectors is expected to be of size equal to
+        rank of the corresponding result. If the shape of a particular
+        result cannot be computed it must be empty.
+      }],
+      /*retTy=*/"LogicalResult",
+      /*methodName=*/"reifyResultShapes",
+      /*args=*/(ins "::mlir::OpBuilder &":$builder,
+        "ReifiedRankedShapedTypeDims &":$reifiedReturnShapes)
+    >
   ];
 }
-defvar InferTensorTypeWithReify = InferTensorType<[
-    "inferReturnTypeComponents", "reifyReturnTypeShapes"]>;
 
 #endif // MLIR_INFERTYPEOPINTERFACE

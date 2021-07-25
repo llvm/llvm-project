@@ -63,7 +63,7 @@ Non-comprehensive list of changes in this release
   runtime on a CUDA free system. ``gcc-multilib`` and ``g++-multilib`` are
   required. If CUDA is found, the device runtime will be built by default.
 
-  - Static NVPTX device runtime library (``libomptarget-nvptx.a``) was dropped.
+- Static NVPTX device runtime library (``libomptarget-nvptx.a``) was dropped.
   A bitcode library is required to build an OpenMP program. If the library is
   not found in the default path or any of the paths defined by ``LIBRARY_PATH``,
   an error will be raised. User can also specify the path to the bitcode device

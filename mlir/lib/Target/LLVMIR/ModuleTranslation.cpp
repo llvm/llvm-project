@@ -522,7 +522,7 @@ static LogicalResult checkedAddLLVMFnAttribute(Location loc,
     return success();
   }
 
-  if (llvm::Attribute::doesAttrKindHaveArgument(kind)) {
+  if (llvm::Attribute::isIntAttrKind(kind)) {
     if (value.empty())
       return emitError(loc) << "LLVM attribute '" << key << "' expects a value";
 

@@ -835,7 +835,11 @@ public:
 
   /// Returns a vector of type ResVT whose elements contain the linear sequence
   ///   <0, Step, Step * 2, Step * 3, ...>
-  SDValue getStepVector(const SDLoc &DL, EVT ResVT, SDValue Step);
+  SDValue getStepVector(const SDLoc &DL, EVT ResVT, APInt StepVal);
+
+  /// Returns a vector of type ResVT whose elements contain the linear sequence
+  ///   <0, 1, 2, 3, ...>
+  SDValue getStepVector(const SDLoc &DL, EVT ResVT);
 
   /// Returns an ISD::VECTOR_SHUFFLE node semantically equivalent to
   /// the shuffle node in input but with swapped operands.
@@ -1707,11 +1711,6 @@ public:
   bool MaskedValueIsZero(SDValue Op, const APInt &Mask,
                          const APInt &DemandedElts, unsigned Depth = 0) const;
 
-  /// Return true if the DemandedElts of the vector Op are all zero.  We
-  /// use this predicate to simplify operations downstream.
-  bool MaskedElementsAreZero(SDValue Op, const APInt &DemandedElts,
-                             unsigned Depth = 0) const;
-
   /// Return true if '(Op & Mask) == Mask'.
   /// Op and Mask are known to be the same type.
   bool MaskedValueIsAllOnes(SDValue Op, const APInt &Mask,
@@ -1769,6 +1768,31 @@ public:
   /// TargetLowering class to allow target nodes to be understood.
   unsigned ComputeNumSignBits(SDValue Op, const APInt &DemandedElts,
                               unsigned Depth = 0) const;
+
+  /// Return true if this function can prove that \p Op is never poison
+  /// and, if \p PoisonOnly is false, does not have undef bits.
+  bool isGuaranteedNotToBeUndefOrPoison(SDValue Op, bool PoisonOnly = false,
+                                        unsigned Depth = 0) const;
+
+  /// Return true if this function can prove that \p Op is never poison
+  /// and, if \p PoisonOnly is false, does not have undef bits. The DemandedElts
+  /// argument limits the check to the requested vector elements.
+  bool isGuaranteedNotToBeUndefOrPoison(SDValue Op, const APInt &DemandedElts,
+                                        bool PoisonOnly = false,
+                                        unsigned Depth = 0) const;
+
+  /// Return true if this function can prove that \p Op is never poison.
+  bool isGuaranteedNotToBePoison(SDValue Op, unsigned Depth = 0) const {
+    return isGuaranteedNotToBeUndefOrPoison(Op, /*PoisonOnly*/ true, Depth);
+  }
+
+  /// Return true if this function can prove that \p Op is never poison. The
+  /// DemandedElts argument limits the check to the requested vector elements.
+  bool isGuaranteedNotToBePoison(SDValue Op, const APInt &DemandedElts,
+                                 unsigned Depth = 0) const {
+    return isGuaranteedNotToBeUndefOrPoison(Op, DemandedElts,
+                                            /*PoisonOnly*/ true, Depth);
+  }
 
   /// Return true if the specified operand is an ISD::ADD with a ConstantSDNode
   /// on the right-hand side, or if it is an ISD::OR with a ConstantSDNode that

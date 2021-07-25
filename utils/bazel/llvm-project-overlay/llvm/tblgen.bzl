@@ -35,7 +35,7 @@ def gentbl(
       tblgen_args: Extra arguments string to pass to the tblgen binary.
       **kwargs: Keyword arguments to pass to subsidiary cc_library() rule.
     """
-    llvm_project_execroot_path = Label("//llvm:tblgen.bzl", relative_to_caller_repository = False).workspace_root
+    llvm_project_execroot_path = Label("//llvm:tblgen.bzl").workspace_root
 
     if td_file not in td_srcs:
         td_srcs += [td_file]

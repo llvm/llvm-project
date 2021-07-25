@@ -284,28 +284,28 @@
 // CHECK-MSAN-NO-LINK-RUNTIME-LINUX-NOT: libclang_rt.msan
 
 // RUN: %clang -fsanitize=undefined %s -### -o %t.o 2>&1 \
-// RUN:     -target i386-unknown-linux -fuse-ld=ld \
+// RUN:     -target x86_64-unknown-linux-gnux32 -fuse-ld=ld \
 // RUN:     -resource-dir=%S/Inputs/resource_dir \
-// RUN:     --sysroot=%S/Inputs/basic_linux_tree \
+// RUN:     --sysroot=%S/Inputs/multilib_64bit_linux_tree \
 // RUN:   | FileCheck --check-prefix=CHECK-UBSAN-LINUX %s
 
 // RUN: %clang -fsanitize=float-divide-by-zero %s -### -o %t.o 2>&1 \
-// RUN:     -target i386-unknown-linux -fuse-ld=ld \
+// RUN:     -target x86_64-unknown-linux-gnux32 -fuse-ld=ld \
 // RUN:     -resource-dir=%S/Inputs/resource_dir \
-// RUN:     --sysroot=%S/Inputs/basic_linux_tree \
+// RUN:     --sysroot=%S/Inputs/multilib_64bit_linux_tree \
 // RUN:   | FileCheck --check-prefix=CHECK-UBSAN-LINUX %s
 
 // RUN: %clang -fsanitize=undefined %s -### -o %t.o 2>&1 \
-// RUN:     -target i386-unknown-linux -fuse-ld=ld \
+// RUN:     -target x86_64-unknown-linux-gnux32 -fuse-ld=ld \
 // RUN:     -resource-dir=%S/Inputs/resource_dir \
-// RUN:     --sysroot=%S/Inputs/basic_linux_tree \
+// RUN:     --sysroot=%S/Inputs/multilib_64bit_linux_tree \
 // RUN:     -static-libsan \
 // RUN:   | FileCheck --check-prefix=CHECK-UBSAN-LINUX %s
 
 // CHECK-UBSAN-LINUX: "{{.*}}ld{{(.exe)?}}"
 // CHECK-UBSAN-LINUX-NOT: libclang_rt.asan
 // CHECK-UBSAN-LINUX-NOT: libclang_rt.ubsan_standalone_cxx
-// CHECK-UBSAN-LINUX: "--whole-archive" "{{.*}}libclang_rt.ubsan_standalone-i386.a" "--no-whole-archive"
+// CHECK-UBSAN-LINUX: "--whole-archive" "{{.*}}libclang_rt.ubsan_standalone-x32.a" "--no-whole-archive"
 // CHECK-UBSAN-LINUX-NOT: libclang_rt.asan
 // CHECK-UBSAN-LINUX-NOT: libclang_rt.ubsan_standalone_cxx
 // CHECK-UBSAN-LINUX-NOT: "-lstdc++"

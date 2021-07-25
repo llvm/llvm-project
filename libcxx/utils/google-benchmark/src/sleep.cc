@@ -24,6 +24,10 @@
 #include <windows.h>
 #endif
 
+#ifdef BENCHMARK_OS_ZOS
+#include <unistd.h>
+#endif
+
 namespace benchmark {
 #ifdef BENCHMARK_OS_WINDOWS
 // Window's Sleep takes milliseconds argument.
@@ -33,11 +37,23 @@ void SleepForSeconds(double seconds) {
 }
 #else   // BENCHMARK_OS_WINDOWS
 void SleepForMicroseconds(int microseconds) {
+#ifdef BENCHMARK_OS_ZOS
+  // z/OS does not support nanosleep. Instead call sleep() and then usleep() to
+  // sleep for the remaining microseconds because usleep() will fail if its
+  // argument is greater than 1000000.
+  div_t sleepTime = div(microseconds, kNumMicrosPerSecond);
+  int seconds = sleepTime.quot;
+  while (seconds != 0)
+    seconds = sleep(seconds);
+  while (usleep(sleepTime.rem) == -1 && errno == EINTR)
+    ;
+#else
   struct timespec sleep_time;
   sleep_time.tv_sec = microseconds / kNumMicrosPerSecond;
   sleep_time.tv_nsec = (microseconds % kNumMicrosPerSecond) * kNumNanosPerMicro;
   while (nanosleep(&sleep_time, &sleep_time) != 0 && errno == EINTR)
     ;  // Ignore signals and wait for the full interval to elapse.
+#endif
 }
 
 void SleepForMilliseconds(int milliseconds) {

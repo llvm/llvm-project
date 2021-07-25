@@ -1,4 +1,4 @@
-//===- RehshapeOpsUtils.h - Utilities used by reshape ops --*- C++ -*------===//
+//===- ReshapeOpsUtils.h - Utilities used by reshape ops --*- C++ -*------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -26,7 +26,7 @@ using ReassociationIndicesRef = ArrayRef<int64_t>;
 using ReassociationExprs = SmallVector<AffineExpr, 2>;
 
 /// Attribute name for the ArrayAttr which encodes reassociation indices.
-constexpr StringRef getReassociationAttrName();
+constexpr StringRef getReassociationAttrName() { return "reassociation"; }
 
 /// Compose reassociation maps that are used in pair of reshape ops where one
 /// is a producer and other is the consumer. Only valid to use this method when
@@ -44,6 +44,23 @@ Optional<SmallVector<ReassociationIndices>> composeReassociationIndices(
     ArrayRef<ReassociationIndices> producerReassociations,
     ArrayRef<ReassociationIndices> consumerReassociations,
     MLIRContext *context);
+
+/// Convert reassociation indices to affine expressions.
+SmallVector<SmallVector<AffineExpr, 2>, 2> convertReassociationIndicesToExprs(
+    OpBuilder &b, ArrayRef<ReassociationIndices> reassociationIndices);
+
+/// Constructs affine maps out of Array<Array<AffineExpr>>.
+SmallVector<AffineMap, 4>
+getSymbolLessAffineMaps(ArrayRef<ReassociationExprs> reassociation);
+
+/// Wraps a list of reassociations in an ArrayAttr.
+ArrayAttr
+getReassociationIndicesAttribute(OpBuilder &b,
+                                 ArrayRef<ReassociationIndices> reassociation);
+
+/// Convert Array<Array<AffineExpr>> to Array<Array<int64_t>>.
+SmallVector<ReassociationIndices, 2> convertReassociationMapsToIndices(
+    OpBuilder &b, ArrayRef<ReassociationExprs> reassociationExprs);
 
 /// Return the reassociations maps to use to reshape given the source type and
 /// the target type when possible. Return llvm::None when this computation
@@ -78,7 +95,7 @@ void printReshapeOp(OpAsmPrinter &p, ReshapeLikeOp op) {
 
   p << "] ";
   p.printOptionalAttrDict(op->getAttrs(),
-                          /*elidedAttrs=*/{op.getReassociationAttrName()});
+                          /*elidedAttrs=*/{getReassociationAttrName()});
   p << ": " << op.src().getType() << " into " << op.getType();
 }
 

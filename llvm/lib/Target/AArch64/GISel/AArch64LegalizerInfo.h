@@ -35,6 +35,8 @@ public:
                          MachineInstr &MI) const override;
 
 private:
+  bool legalizeBSwap(MachineInstr &MI, MachineRegisterInfo &MRI,
+                     MachineIRBuilder &MIRBuilder) const;
   bool legalizeVaArg(MachineInstr &MI, MachineRegisterInfo &MRI,
                      MachineIRBuilder &MIRBuilder) const;
   bool legalizeLoadStore(MachineInstr &MI, MachineRegisterInfo &MRI,

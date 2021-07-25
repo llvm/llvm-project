@@ -36,6 +36,13 @@ namespace memref {
 void populateFoldSubViewOpPatterns(RewritePatternSet &patterns);
 
 /// Appends patterns that resolve `memref.dim` operations with values that are
+/// defined by operations that implement the
+/// `ReifyRankedShapeTypeShapeOpInterface`, in terms of shapes of its input
+/// operands.
+void populateResolveRankedShapeTypeResultDimsPatterns(
+    RewritePatternSet &patterns);
+
+/// Appends patterns that resolve `memref.dim` operations with values that are
 /// defined by operations that implement the `InferShapedTypeOpInterface`, in
 /// terms of shapes of its input operands.
 void populateResolveShapedTypeResultDimsPatterns(RewritePatternSet &patterns);
@@ -50,7 +57,14 @@ std::unique_ptr<Pass> createFoldSubViewOpsPass();
 
 /// Creates an operation pass to resolve `memref.dim` operations with values
 /// that are defined by operations that implement the
-/// `InferShapedTypeOpInterface`, in terms of shapes of its input operands.
+/// `ReifyRankedShapeTypeShapeOpInterface`, in terms of shapes of its input
+/// operands.
+std::unique_ptr<Pass> createResolveRankedShapeTypeResultDimsPass();
+
+/// Creates an operation pass to resolve `memref.dim` operations with values
+/// that are defined by operations that implement the
+/// `InferShapedTypeOpInterface` or the `ReifyRankedShapeTypeShapeOpInterface`,
+/// in terms of shapes of its input operands.
 std::unique_ptr<Pass> createResolveShapedTypeResultDimsPass();
 
 //===----------------------------------------------------------------------===//

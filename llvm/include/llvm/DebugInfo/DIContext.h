@@ -56,9 +56,7 @@ struct DILineInfo {
            Discriminator == RHS.Discriminator;
   }
 
-  bool operator!=(const DILineInfo &RHS) const {
-    return !(*this == RHS);
-  }
+  bool operator!=(const DILineInfo &RHS) const { return !(*this == RHS); }
 
   bool operator<(const DILineInfo &RHS) const {
     return std::tie(FileName, FunctionName, StartFileName, Line, Column,
@@ -92,7 +90,7 @@ class DIInliningInfo {
 public:
   DIInliningInfo() = default;
 
-  const DILineInfo & getFrame(unsigned Index) const {
+  const DILineInfo &getFrame(unsigned Index) const {
     assert(Index < Frames.size());
     return Frames[Index];
   }
@@ -102,17 +100,11 @@ public:
     return &Frames[Index];
   }
 
-  uint32_t getNumberOfFrames() const {
-    return Frames.size();
-  }
+  uint32_t getNumberOfFrames() const { return Frames.size(); }
 
-  void addFrame(const DILineInfo &Frame) {
-    Frames.push_back(Frame);
-  }
+  void addFrame(const DILineInfo &Frame) { Frames.push_back(Frame); }
 
-  void resize(unsigned i) {
-    Frames.resize(i);
-  }
+  void resize(unsigned i) { Frames.resize(i); }
 };
 
 /// Container for description of a global variable.
@@ -175,7 +167,7 @@ static_assert(DIDT_ID_Count <= 32, "section types overflow storage");
 /// Selects which debug sections get dumped.
 enum DIDumpType : unsigned {
   DIDT_Null,
-  DIDT_All             = ~0U,
+  DIDT_All = ~0U,
 #define HANDLE_DWARF_SECTION(ENUM_NAME, ELF_NAME, CMDLINE_NAME, OPTION)        \
   DIDT_##ENUM_NAME = 1U << DIDT_ID_##ENUM_NAME,
 #include "llvm/BinaryFormat/Dwarf.def"
@@ -224,10 +216,7 @@ struct DIDumpOptions {
 
 class DIContext {
 public:
-  enum DIContextKind {
-    CK_DWARF,
-    CK_PDB
-  };
+  enum DIContextKind { CK_DWARF, CK_PDB };
 
   DIContext(DIContextKind K) : Kind(K) {}
   virtual ~DIContext() = default;
@@ -311,7 +300,7 @@ protected:
 
 public:
   template <typename... Ts>
-  LoadedObjectInfoHelper(Ts &&... Args) : Base(std::forward<Ts>(Args)...) {}
+  LoadedObjectInfoHelper(Ts &&...Args) : Base(std::forward<Ts>(Args)...) {}
 
   std::unique_ptr<llvm::LoadedObjectInfo> clone() const override {
     return std::make_unique<Derived>(static_cast<const Derived &>(*this));

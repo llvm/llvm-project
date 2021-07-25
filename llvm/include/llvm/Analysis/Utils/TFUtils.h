@@ -12,6 +12,7 @@
 #include "llvm/Config/llvm-config.h"
 
 #ifdef LLVM_HAVE_TF_API
+#include "llvm/ADT/StringMap.h"
 #include "llvm/IR/LLVMContext.h"
 #include "llvm/Support/JSON.h"
 
@@ -120,56 +121,62 @@ loadOutputSpecs(LLVMContext &Ctx, StringRef ExpectedDecisionName,
 /// The assumption is that, for an event to be logged (i.e. a set of feature
 /// values and a reward), the user calls the log* API for each feature exactly
 /// once, providing the index matching the position in the feature spec list
-/// provided at construction:
+/// provided at construction. The example assumes the first feature's element
+/// type is float, the second is int64, and the reward is float:
+///
 /// event 0:
-///   logTensorValue(0, ...)
-///   logTensorValue(1, ...)
+///   logFloatValue(0, ...)
+///   logInt64Value(1, ...)
 ///   ...
-///   logReward(...)
+///   logFloatReward(...)
 /// event 1:
-///   logTensorValue(0, ...)
-///   logTensorValue(1, ...)
+///   logFloatValue(0, ...)
+///   logInt64Value(1, ...)
 ///   ...
-///   logReward(...)
+///   logFloatReward(...)
 ///
 /// At the end, call print to generate the protobuf.
+/// Alternatively, don't call logReward at the end of each event, just
+/// log{Float|Int32|Int64}FinalReward at the end.
+class LoggerDataImpl;
 class Logger final {
 public:
-  /// Construct a Logger. If IncludeReward is false, then logReward shouldn't
-  /// be called, and the reward feature won't be printed out.
+  /// Construct a Logger. If IncludeReward is false, then logReward or
+  /// logFinalReward shouldn't be called, and the reward feature won't be
+  /// printed out.
   Logger(const std::vector<LoggedFeatureSpec> &FeatureSpecs,
-         const TensorSpec &RewardSpec, bool IncludeReward)
-      : FeatureSpecs(FeatureSpecs), RewardSpec(RewardSpec),
-        RawLogData(FeatureSpecs.size() + IncludeReward),
-        IncludeReward(IncludeReward) {}
+         const TensorSpec &RewardSpec, bool IncludeReward);
 
-  template <typename T> void logReward(T Value) {
-    assert(IncludeReward);
-    logTensorValue(RawLogData.size() - 1, &Value);
-  }
+  ~Logger();
 
-  template <typename T> void logFinalReward(T Value) {
-    assert(RawLogData.back().empty());
-    logReward(Value);
-  }
+  void logFloatReward(float Value);
+  void logInt32Reward(int32_t Value);
+  void logInt64Reward(int64_t Value);
 
-  template <typename T>
-  void logTensorValue(size_t FeatureID, const T *Value, size_t Size = 1) {
-    const char *Start = reinterpret_cast<const char *>(Value);
-    const char *End = Start + sizeof(T) * Size;
-    RawLogData[FeatureID].insert(RawLogData[FeatureID].end(), Start, End);
-  }
+  void logFloatFinalReward(float Value);
+  void logInt32FinalReward(int32_t Value);
+  void logInt64FinalReward(int64_t Value);
+
+  void logFloatValue(size_t FeatureID, const float *Value);
+  void logInt32Value(size_t FeatureID, const int32_t *Value);
+  void logInt64Value(size_t FeatureID, const int64_t *Value);
+
+  void logSpecifiedTensorValue(size_t FeatureID, const char *RawData);
+
+  // Warning! For int32_t, the return is set up for int64_t, so the caller needs
+  // to piecemeal cast their int32_t values.
+  // FIXME: let's drop int32_t support. While it's supported by evaluator, it's
+  // not supported by the tensorflow::SequenceExample proto. For small values,
+  // we can consider using bytes.
+  char *addEntryAndGetFloatOrInt64Buffer(size_t FeatureID);
 
   void print(raw_ostream &OS);
 
 private:
   std::vector<LoggedFeatureSpec> FeatureSpecs;
   TensorSpec RewardSpec;
-  /// RawData has one entry per feature, plus one more for the reward.
-  /// Each feature's values are then stored in a vector, in succession.
-  /// This means the ith event is stored at [*][i]
-  std::vector<std::vector<char>> RawLogData;
   const bool IncludeReward;
+  std::unique_ptr<LoggerDataImpl> LoggerData;
 };
 
 class TFModelEvaluator final {

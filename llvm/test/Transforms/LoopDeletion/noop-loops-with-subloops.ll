@@ -394,6 +394,29 @@ exit:
   ret void
 }
 
+; Inner infinite loop hidden behind a call.
+; TODO: Loop should not get deleted.
+define void @not_willreturn() {
+; CHECK-LABEL: @not_willreturn(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    br label [[EXIT:%.*]]
+; CHECK:       exit:
+; CHECK-NEXT:    ret void
+;
+entry:
+  br label %loop
+
+loop:
+  %iv = phi i32 [ 0, %entry ], [ %iv.next, %loop ]
+  call void @sideeffect() nounwind readonly
+  %iv.next = add nuw i32 %iv, 1
+  %c = icmp ult i32 %iv, 100
+  br i1 %c, label %loop, label %exit
+
+exit:
+  ret void
+}
+
 !1 = !{!"llvm.loop.mustprogress"}
 !2 = distinct !{!2, !1}
 !3 = distinct !{!3, !1}

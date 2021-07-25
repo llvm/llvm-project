@@ -31,6 +31,7 @@ write_lit_config("lit_site_cfg") {
     "CLANG_LIBS_DIR=",  # needed only for shared builds
     "CLANG_TOOLS_DIR=",
     "CLANGD_ENABLE_REMOTE=0",
+    "CLANGD_TIDY_CHECKS=1",
     "LLVM_HOST_TRIPLE=$llvm_current_triple",
     "LLVM_LIT_TOOLS_DIR=",  # Intentionally empty, matches cmake build.
     "LLVM_TOOLS_DIR=" + rebase_path("$root_out_dir/bin"),

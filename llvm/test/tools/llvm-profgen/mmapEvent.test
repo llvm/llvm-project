@@ -1,6 +1,5 @@
 ; REQUIRES: x86-registered-target
-; RUN: llvm-mc -filetype=obj -triple=x86_64 %S/disassemble.s -o %t
-; RUN: llvm-profgen --perfscript=%s --binary=%t --output=%t --show-mmap-events | FileCheck %s
+; RUN: llvm-profgen --perfscript=%s --binary=%S/Inputs/inline-cs-pseudoprobe.perfbin --output=%t --show-mmap-events | FileCheck %s
 
 PERF_RECORD_MMAP2 2580483/2580483: [0x400000(0x1000) @ 0 103:01 539973862 1972407324]: r-xp /home/a.out
 PERF_RECORD_MMAP2 2580483/2580483: [0x7f2505b40000(0x224000) @ 0 08:04 19532214 4169021329]: r-xp /usr/lib64/ld-2.17.so

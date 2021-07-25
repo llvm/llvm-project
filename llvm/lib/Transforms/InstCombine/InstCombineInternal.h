@@ -168,6 +168,8 @@ public:
   Instruction *visitExtractValueInst(ExtractValueInst &EV);
   Instruction *visitLandingPadInst(LandingPadInst &LI);
   Instruction *visitVAEndInst(VAEndInst &I);
+  Value *pushFreezeToPreventPoisonFromPropagating(FreezeInst &FI);
+  bool freezeDominatedUses(FreezeInst &FI);
   Instruction *visitFreeze(FreezeInst &I);
 
   /// Specify what to return for unhandled instructions.
@@ -339,6 +341,7 @@ private:
   /// \see CastInst::isEliminableCastPair
   Instruction::CastOps isEliminableCastPair(const CastInst *CI1,
                                             const CastInst *CI2);
+  Value *simplifyIntToPtrRoundTripCast(Value *Val);
 
   Value *foldAndOfICmps(ICmpInst *LHS, ICmpInst *RHS, BinaryOperator &And);
   Value *foldOrOfICmps(ICmpInst *LHS, ICmpInst *RHS, BinaryOperator &Or);
@@ -422,16 +425,6 @@ public:
   void replaceUse(Use &U, Value *NewValue) {
     Worklist.addValue(U);
     U = NewValue;
-  }
-
-  /// Creates a result tuple for an overflow intrinsic \p II with a given
-  /// \p Result and a constant \p Overflow value.
-  Instruction *CreateOverflowTuple(IntrinsicInst *II, Value *Result,
-                                   Constant *Overflow) {
-    Constant *V[] = {UndefValue::get(Result->getType()), Overflow};
-    StructType *ST = cast<StructType>(II->getType());
-    Constant *Struct = ConstantStruct::get(ST, V);
-    return InsertValueInst::Create(Struct, Result, 0);
   }
 
   /// Create and insert the idiom we use to indicate a block is unreachable

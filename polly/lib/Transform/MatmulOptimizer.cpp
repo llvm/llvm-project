@@ -686,7 +686,7 @@ getMacroKernelParams(const llvm::TargetTransformInfo *TTI,
 /// @return The specified access relation.
 static isl::map getMatMulAccRel(isl::map MapOldIndVar, unsigned FirstDim,
                                 unsigned SecondDim) {
-  auto AccessRelSpace = isl::space(MapOldIndVar.get_ctx(), 0, 9, 3);
+  auto AccessRelSpace = isl::space(MapOldIndVar.ctx(), 0, 9, 3);
   auto AccessRel = isl::map::universe(AccessRelSpace);
   AccessRel = AccessRel.equate(isl::dim::in, FirstDim, isl::dim::out, 0);
   AccessRel = AccessRel.equate(isl::dim::in, 5, isl::dim::out, 1);
@@ -903,7 +903,7 @@ isolateAndUnrollMatMulInnerLoops(isl::schedule_node Node,
 
   isl::union_set IsolateOption =
       getIsolateOptions(Prefix.add_dims(isl::dim::set, 3), 3);
-  isl::ctx Ctx = Node.get_ctx();
+  isl::ctx Ctx = Node.ctx();
   auto Options = IsolateOption.unite(getDimOptions(Ctx, "unroll"));
   Options = Options.unite(getUnrollIsolatedSetOptions(Ctx));
   Node = Node.band_set_ast_build_options(Options);
@@ -925,8 +925,7 @@ static isl::schedule_node markInterIterationAliasFree(isl::schedule_node Node,
   if (!BasePtr)
     return Node;
 
-  auto Id =
-      isl::id::alloc(Node.get_ctx(), "Inter iteration alias-free", BasePtr);
+  auto Id = isl::id::alloc(Node.ctx(), "Inter iteration alias-free", BasePtr);
   return Node.insert_mark(Id).child(0);
 }
 
@@ -935,7 +934,7 @@ static isl::schedule_node markInterIterationAliasFree(isl::schedule_node Node,
 /// @param Node The child of the mark node to be inserted.
 /// @return The modified isl_schedule_node.
 static isl::schedule_node markLoopVectorizerDisabled(isl::schedule_node Node) {
-  auto Id = isl::id::alloc(Node.get_ctx(), "Loop Vectorizer Disabled", nullptr);
+  auto Id = isl::id::alloc(Node.ctx(), "Loop Vectorizer Disabled", nullptr);
   return Node.insert_mark(Id).child(0);
 }
 

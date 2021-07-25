@@ -595,7 +595,7 @@ public:
   // The parsed MMap event
   struct MMapEvent {
     uint64_t PID = 0;
-    uint64_t BaseAddress = 0;
+    uint64_t Address = 0;
     uint64_t Size = 0;
     uint64_t Offset = 0;
     StringRef BinaryPath;

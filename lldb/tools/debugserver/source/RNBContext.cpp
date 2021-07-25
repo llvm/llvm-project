@@ -258,8 +258,6 @@ const char *RNBContext::EventsAsString(nub_event_t events, std::string &s) {
     s += "proc_stdio_available ";
   if (events & event_proc_profile_data)
     s += "proc_profile_data ";
-  if (events & event_darwin_log_data_available)
-    s += "darwin_log_data_available ";
   if (events & event_read_packet_available)
     s += "read_packet_available ";
   if (events & event_read_thread_running)

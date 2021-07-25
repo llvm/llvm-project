@@ -28,7 +28,7 @@ target triple = "bpfel"
 define dso_local i32 @test(%struct.s* %arg) local_unnamed_addr #0 !dbg !13 {
 entry:
   call void @llvm.dbg.value(metadata %struct.s* %arg, metadata !30, metadata !DIExpression()), !dbg !31
-  %0 = tail call i8* @llvm.preserve.struct.access.index.p0i8.p0s_struct.ss(%struct.s* %arg, i32 5, i32 6), !dbg !32, !llvm.preserve.access.index !18
+  %0 = tail call i8* @llvm.preserve.struct.access.index.p0i8.p0s_struct.ss(%struct.s* elementtype(%struct.s) %arg, i32 5, i32 6), !dbg !32, !llvm.preserve.access.index !18
   %1 = tail call i32 @llvm.bpf.preserve.field.info.p0i8(i8* %0, i64 0), !dbg !33
   %2 = tail call i32 @llvm.bpf.preserve.field.info.p0i8(i8* %0, i64 1), !dbg !34
   %add = add i32 %2, %1, !dbg !35

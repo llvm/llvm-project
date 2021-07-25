@@ -45,11 +45,6 @@ namespace lldb_private {
 class Trace : public PluginInterface,
               public std::enable_shared_from_this<Trace> {
 public:
-  enum class TraceDirection {
-    Forwards = 0,
-    Backwards,
-  };
-
   /// Dump the trace data that this plug-in has access to.
   ///
   /// This function will dump all of the trace data for all threads in a user
@@ -137,62 +132,6 @@ public:
   ///     The JSON schema of this Trace plug-in.
   virtual llvm::StringRef GetSchema() = 0;
 
-  /// Dump \a count instructions of the given thread's trace ending at the
-  /// given \a end_position position.
-  ///
-  /// The instructions are printed along with their indices or positions, which
-  /// are increasing chronologically. This means that the \a index 0 represents
-  /// the oldest instruction of the trace chronologically.
-  ///
-  /// \param[in] thread
-  ///     The thread whose trace will be dumped.
-  ///
-  /// \param[in] s
-  ///     The stream object where the instructions are printed.
-  ///
-  /// \param[in] count
-  ///     The number of instructions to print.
-  ///
-  /// \param[in] end_position
-  ///     The position of the last instruction to print.
-  ///
-  /// \param[in] raw
-  ///     Dump only instruction addresses without disassembly nor symbol
-  ///     information.
-  void DumpTraceInstructions(Thread &thread, Stream &s, size_t count,
-                             size_t end_position, bool raw);
-
-  /// Run the provided callback on the instructions of the trace of the given
-  /// thread.
-  ///
-  /// The instructions will be traversed starting at the given \a position
-  /// sequentially until the callback returns \b false, in which case no more
-  /// instructions are inspected.
-  ///
-  /// The purpose of this method is to allow inspecting traced instructions
-  /// without exposing the internal representation of how they are stored on
-  /// memory.
-  ///
-  /// \param[in] thread
-  ///     The thread whose trace will be traversed.
-  ///
-  /// \param[in] position
-  ///     The instruction position to start iterating on.
-  ///
-  /// \param[in] direction
-  ///     If \b TraceDirection::Forwards, then then instructions will be
-  ///     traversed forwards chronologically, i.e. with incrementing indices. If
-  ///     \b TraceDirection::Backwards, the traversal is done backwards
-  ///     chronologically, i.e. with decrementing indices.
-  ///
-  /// \param[in] callback
-  ///     The callback to execute on each instruction. If it returns \b false,
-  ///     the iteration stops.
-  virtual void TraverseInstructions(
-      Thread &thread, size_t position, TraceDirection direction,
-      std::function<bool(size_t index, llvm::Expected<lldb::addr_t> load_addr)>
-          callback) = 0;
-
   /// Get a \a TraceCursor for the given thread's trace.
   ///
   /// \return
@@ -201,15 +140,19 @@ public:
   ///     trace.
   virtual lldb::TraceCursorUP GetCursor(Thread &thread) = 0;
 
-  /// Get the number of available instructions in the trace of the given thread.
+  /// Dump general info about a given thread's trace. Each Trace plug-in
+  /// decides which data to show.
   ///
   /// \param[in] thread
-  ///     The thread whose trace will be inspected.
+  ///     The thread that owns the trace in question.
   ///
-  /// \return
-  ///     The total number of instructions in the trace, or \a llvm::None if the
-  ///     thread is not being traced.
-  virtual llvm::Optional<size_t> GetInstructionCount(Thread &thread) = 0;
+  /// \param[in] s
+  ///     The stream object where the info will be printed printed.
+  ///
+  /// \param[in] verbose
+  ///     If \b true, print detailed info
+  ///     If \b false, print compact info
+  virtual void DumpTraceInfo(Thread &thread, Stream &s, bool verbose) = 0;
 
   /// Check if a thread is currently traced by this object.
   ///

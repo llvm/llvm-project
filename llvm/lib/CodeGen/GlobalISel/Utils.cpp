@@ -998,12 +998,3 @@ bool llvm::shouldOptForSize(const MachineBasicBlock &MBB,
   return F.hasOptSize() || F.hasMinSize() ||
          llvm::shouldOptimizeForSize(MBB.getBasicBlock(), PSI, BFI);
 }
-
-unsigned llvm::getIntrinsicID(const MachineInstr &MI) {
-#ifndef NDEBUG
-  unsigned Opc = MI.getOpcode();
-  assert(Opc == TargetOpcode::G_INTRINSIC ||
-         Opc == TargetOpcode::G_INTRINSIC_W_SIDE_EFFECTS);
-#endif
-  return MI.getOperand(MI.getNumExplicitDefs()).getIntrinsicID();
-}

@@ -199,7 +199,6 @@ std::size_t OpenFile::Read(FileOffset at, char *buffer, std::size_t minBytes,
   while (got < minBytes) {
     auto chunk{::read(fd_, buffer + got, maxBytes - got)};
     if (chunk == 0) {
-      handler.SignalEnd();
       break;
     } else if (chunk < 0) {
       auto err{errno};

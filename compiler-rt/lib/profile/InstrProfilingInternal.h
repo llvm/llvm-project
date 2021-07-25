@@ -184,10 +184,6 @@ uint64_t lprofGetLoadModuleSignature();
 unsigned lprofProfileDumped(void);
 void lprofSetProfileDumped(unsigned);
 
-/* Return non zero value if counters are being relocated at runtime. */
-unsigned lprofRuntimeCounterRelocation(void);
-void lprofSetRuntimeCounterRelocation(unsigned);
-
 COMPILER_RT_VISIBILITY extern void (*FreeHook)(void *);
 COMPILER_RT_VISIBILITY extern uint8_t *DynamicBufferIOBuffer;
 COMPILER_RT_VISIBILITY extern uint32_t VPBufferSize;
@@ -196,5 +192,11 @@ COMPILER_RT_VISIBILITY extern uint32_t VPMaxNumValsPerSite;
 COMPILER_RT_VISIBILITY extern ValueProfNode *CurrentVNode;
 COMPILER_RT_VISIBILITY extern ValueProfNode *EndVNode;
 extern void (*VPMergeHook)(struct ValueProfData *, __llvm_profile_data *);
+
+/*
+ * Write binary ids into profiles if writer is given.
+ * Return -1 if an error occurs, otherwise, return total size of binary ids.
+ */
+int __llvm_write_binary_ids(ProfDataWriter *Writer);
 
 #endif

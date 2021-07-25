@@ -178,11 +178,11 @@ public:
   TimerImpl(std::string &&name) : threadId(llvm::get_threadid()), name(name) {}
 
   /// Start the timer.
-  void start() { startTime = std::chrono::system_clock::now(); }
+  void start() { startTime = std::chrono::steady_clock::now(); }
 
   /// Stop the timer.
   void stop() {
-    auto newTime = std::chrono::system_clock::now() - startTime;
+    auto newTime = std::chrono::steady_clock::now() - startTime;
     wallTime += newTime;
     userTime += newTime;
   }
@@ -256,7 +256,7 @@ public:
   void mergeChildren(ChildrenMap &&other) {
     if (children.empty()) {
       children = std::move(other);
-      for (auto &child : other)
+      for (auto &child : children)
         child.second->mergeAsyncChildren();
     } else {
       for (auto &child : other)
@@ -384,7 +384,7 @@ public:
   }
 
   /// The last time instant at which the timer was started.
-  std::chrono::time_point<std::chrono::system_clock> startTime;
+  std::chrono::time_point<std::chrono::steady_clock> startTime;
 
   /// Accumulated wall time. If multiple threads of execution are merged into
   /// this timer, the wall time will hold the maximum wall time of each thread

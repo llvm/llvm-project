@@ -8,7 +8,7 @@
 
 #include "src/fenv/fegetexceptflag.h"
 #include "src/__support/common.h"
-#include "utils/FPUtil/FEnv.h"
+#include "utils/FPUtil/FEnvUtils.h"
 
 #include <fenv.h>
 

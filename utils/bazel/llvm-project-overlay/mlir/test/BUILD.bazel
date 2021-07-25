@@ -160,10 +160,10 @@ gentbl_cc_library(
     ],
     tblgen = "//mlir:mlir-tblgen",
     td_file = "lib/Dialect/Test/TestAttrDefs.td",
-    td_srcs = [
+    test = True,
+    deps = [
         ":TestOpTdFiles",
     ],
-    test = True,
 )
 
 gentbl_cc_library(
@@ -227,6 +227,7 @@ cc_library(
         "//mlir:Dialect",
         "//mlir:IR",
         "//mlir:InferTypeOpInterface",
+        "//mlir:LLVMDialect",
         "//mlir:Pass",
         "//mlir:Reducer",
         "//mlir:SideEffects",
@@ -316,10 +317,11 @@ cc_library(
     includes = ["lib/Dialect/Test"],
     deps = [
         ":TestDialect",
+        "//mlir:LLVMCommonConversion",
         "//mlir:LLVMDialect",
-        "//mlir:LLVMTransforms",
         "//mlir:Pass",
         "//mlir:StandardOps",
+        "//mlir:StandardToLLVM",
     ],
 )
 
@@ -426,6 +428,7 @@ cc_library(
         "//mlir:IR",
         "//mlir:Pass",
         "//mlir:SCFDialect",
+        "//mlir:SCFTransforms",
         "//mlir:TransformUtils",
     ],
 )

@@ -459,6 +459,7 @@ int main(int argc, char **argv) {
     return 1;
 
   Module *MOUT = &*Composite;
+#if 0
   if (DirectCalls) {
     if (!rewriteSelectCalls(MOUT, Context))
       return 1;
@@ -466,12 +467,13 @@ int main(int argc, char **argv) {
 
   if (!buildSelectFunction(MOUT, Context))
     return 1;
-
+#endif
   if (!convertExternsToLinkOnce(MOUT, Context))
     return 1;
-
+#if 0
   if (!runInliner(MOUT, Context))
     return 1;
+#endif
 
   if (!removeStackSaveRestore(MOUT, Context))
     return 1;

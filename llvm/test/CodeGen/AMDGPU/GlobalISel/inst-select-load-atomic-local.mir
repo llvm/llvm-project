@@ -189,21 +189,21 @@ body: |
     ; GFX6: liveins: $vgpr0
     ; GFX6: [[COPY:%[0-9]+]]:vgpr(p3) = COPY $vgpr0
     ; GFX6: $m0 = S_MOV_B32 -1
-    ; GFX6: [[LOAD:%[0-9]+]]:vreg_64(<4 x s16>) = G_LOAD [[COPY]](p3) :: (load seq_cst (<2 x s32>), addrspace 3)
+    ; GFX6: [[LOAD:%[0-9]+]]:vreg_64(<4 x s16>) = G_LOAD [[COPY]](p3) :: (load seq_cst (<4 x s16>), addrspace 3)
     ; GFX6: $vgpr0_vgpr1 = COPY [[LOAD]](<4 x s16>)
     ; GFX7-LABEL: name: load_atomic_local_v4s16_seq_cst
     ; GFX7: liveins: $vgpr0
     ; GFX7: [[COPY:%[0-9]+]]:vgpr(p3) = COPY $vgpr0
     ; GFX7: $m0 = S_MOV_B32 -1
-    ; GFX7: [[LOAD:%[0-9]+]]:vreg_64(<4 x s16>) = G_LOAD [[COPY]](p3) :: (load seq_cst (<2 x s32>), addrspace 3)
+    ; GFX7: [[LOAD:%[0-9]+]]:vreg_64(<4 x s16>) = G_LOAD [[COPY]](p3) :: (load seq_cst (<4 x s16>), addrspace 3)
     ; GFX7: $vgpr0_vgpr1 = COPY [[LOAD]](<4 x s16>)
     ; GFX9-LABEL: name: load_atomic_local_v4s16_seq_cst
     ; GFX9: liveins: $vgpr0
     ; GFX9: [[COPY:%[0-9]+]]:vgpr(p3) = COPY $vgpr0
-    ; GFX9: [[LOAD:%[0-9]+]]:vreg_64(<4 x s16>) = G_LOAD [[COPY]](p3) :: (load seq_cst (<2 x s32>), addrspace 3)
+    ; GFX9: [[LOAD:%[0-9]+]]:vreg_64(<4 x s16>) = G_LOAD [[COPY]](p3) :: (load seq_cst (<4 x s16>), addrspace 3)
     ; GFX9: $vgpr0_vgpr1 = COPY [[LOAD]](<4 x s16>)
     %0:vgpr(p3) = COPY $vgpr0
-    %1:vgpr(<4 x s16>) = G_LOAD %0 :: (load seq_cst (<2 x s32>), align 8, addrspace 3)
+    %1:vgpr(<4 x s16>) = G_LOAD %0 :: (load seq_cst (<4 x s16>), align 8, addrspace 3)
     $vgpr0_vgpr1 = COPY %1
 
 ...

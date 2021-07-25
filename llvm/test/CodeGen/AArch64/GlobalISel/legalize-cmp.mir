@@ -79,3 +79,169 @@ body:             |
     RET_ReallyLR
 
 ...
+---
+name:            test_s128_eq
+tracksRegLiveness: true
+body:             |
+  ; CHECK-LABEL: name: test_s128_eq
+  ; CHECK: bb.0:
+  ; CHECK:   successors: %bb.1(0x40000000), %bb.2(0x40000000)
+  ; CHECK:   [[DEF:%[0-9]+]]:_(s64) = G_IMPLICIT_DEF
+  ; CHECK:   [[C:%[0-9]+]]:_(s64) = G_CONSTANT i64 0
+  ; CHECK:   [[XOR:%[0-9]+]]:_(s64) = G_XOR [[DEF]], [[DEF]]
+  ; CHECK:   [[XOR1:%[0-9]+]]:_(s64) = G_XOR [[DEF]], [[DEF]]
+  ; CHECK:   [[OR:%[0-9]+]]:_(s64) = G_OR [[XOR]], [[XOR1]]
+  ; CHECK:   [[ICMP:%[0-9]+]]:_(s32) = G_ICMP intpred(eq), [[OR]](s64), [[C]]
+  ; CHECK:   %cmp:_(s1) = G_TRUNC [[ICMP]](s32)
+  ; CHECK:   G_BRCOND %cmp(s1), %bb.1
+  ; CHECK:   G_BR %bb.2
+  ; CHECK: bb.1:
+  ; CHECK:   successors:
+  ; CHECK: bb.2:
+  ; CHECK:   RET_ReallyLR
+  bb.1:
+    %lhs:_(s128) = G_IMPLICIT_DEF
+    %rhs:_(s128) = G_IMPLICIT_DEF
+    %cmp:_(s1) = G_ICMP intpred(eq), %lhs(s128), %rhs
+    G_BRCOND %cmp(s1), %bb.2
+    G_BR %bb.3
+  bb.2:
+    successors:
+  bb.3:
+    RET_ReallyLR
+
+...
+---
+name:            test_s88_eq
+tracksRegLiveness: true
+body:             |
+  ; CHECK-LABEL: name: test_s88_eq
+  ; CHECK: bb.0:
+  ; CHECK:   successors: %bb.1(0x40000000), %bb.2(0x40000000)
+  ; CHECK:   [[DEF:%[0-9]+]]:_(s64) = G_IMPLICIT_DEF
+  ; CHECK:   [[UV:%[0-9]+]]:_(s8), [[UV1:%[0-9]+]]:_(s8), [[UV2:%[0-9]+]]:_(s8), [[UV3:%[0-9]+]]:_(s8), [[UV4:%[0-9]+]]:_(s8), [[UV5:%[0-9]+]]:_(s8), [[UV6:%[0-9]+]]:_(s8), [[UV7:%[0-9]+]]:_(s8) = G_UNMERGE_VALUES [[DEF]](s64)
+  ; CHECK:   [[MV:%[0-9]+]]:_(s64) = G_MERGE_VALUES [[UV]](s8), [[UV1]](s8), [[UV2]](s8), [[UV3]](s8), [[UV4]](s8), [[UV5]](s8), [[UV6]](s8), [[UV7]](s8)
+  ; CHECK:   [[UV8:%[0-9]+]]:_(s8), [[UV9:%[0-9]+]]:_(s8), [[UV10:%[0-9]+]]:_(s8), [[UV11:%[0-9]+]]:_(s8), [[UV12:%[0-9]+]]:_(s8), [[UV13:%[0-9]+]]:_(s8), [[UV14:%[0-9]+]]:_(s8), [[UV15:%[0-9]+]]:_(s8) = G_UNMERGE_VALUES [[DEF]](s64)
+  ; CHECK:   [[MV1:%[0-9]+]]:_(s64) = G_MERGE_VALUES [[UV8]](s8), [[UV9]](s8), [[UV10]](s8), [[UV11]](s8), [[UV12]](s8), [[UV13]](s8), [[UV14]](s8), [[UV15]](s8)
+  ; CHECK:   [[COPY:%[0-9]+]]:_(s64) = COPY [[MV]](s64)
+  ; CHECK:   [[TRUNC:%[0-9]+]]:_(s32) = G_TRUNC [[DEF]](s64)
+  ; CHECK:   [[COPY1:%[0-9]+]]:_(s64) = COPY [[MV1]](s64)
+  ; CHECK:   [[TRUNC1:%[0-9]+]]:_(s32) = G_TRUNC [[DEF]](s64)
+  ; CHECK:   [[C:%[0-9]+]]:_(s64) = G_CONSTANT i64 0
+  ; CHECK:   [[XOR:%[0-9]+]]:_(s64) = G_XOR [[COPY]], [[COPY1]]
+  ; CHECK:   [[COPY2:%[0-9]+]]:_(s32) = COPY [[TRUNC]](s32)
+  ; CHECK:   [[COPY3:%[0-9]+]]:_(s32) = COPY [[TRUNC1]](s32)
+  ; CHECK:   [[XOR1:%[0-9]+]]:_(s32) = G_XOR [[COPY2]], [[COPY3]]
+  ; CHECK:   [[UV16:%[0-9]+]]:_(s8), [[UV17:%[0-9]+]]:_(s8), [[UV18:%[0-9]+]]:_(s8), [[UV19:%[0-9]+]]:_(s8) = G_UNMERGE_VALUES [[XOR1]](s32)
+  ; CHECK:   [[C1:%[0-9]+]]:_(s8) = G_CONSTANT i8 0
+  ; CHECK:   [[MV2:%[0-9]+]]:_(s64) = G_MERGE_VALUES [[UV16]](s8), [[UV17]](s8), [[UV18]](s8), [[C1]](s8), [[C1]](s8), [[C1]](s8), [[C1]](s8), [[C1]](s8)
+  ; CHECK:   [[OR:%[0-9]+]]:_(s64) = G_OR [[XOR]], [[MV2]]
+  ; CHECK:   [[OR1:%[0-9]+]]:_(s64) = G_OR [[OR]], [[C]]
+  ; CHECK:   [[OR2:%[0-9]+]]:_(s64) = G_OR [[OR1]], [[C]]
+  ; CHECK:   [[ICMP:%[0-9]+]]:_(s32) = G_ICMP intpred(eq), [[OR2]](s64), [[C]]
+  ; CHECK:   %cmp:_(s1) = G_TRUNC [[ICMP]](s32)
+  ; CHECK:   G_BRCOND %cmp(s1), %bb.1
+  ; CHECK:   G_BR %bb.2
+  ; CHECK: bb.1:
+  ; CHECK:   successors:
+  ; CHECK: bb.2:
+  ; CHECK:   RET_ReallyLR
+  bb.1:
+    %lhs:_(s88) = G_IMPLICIT_DEF
+    %rhs:_(s88) = G_IMPLICIT_DEF
+    %cmp:_(s1) = G_ICMP intpred(eq), %lhs(s88), %rhs
+    G_BRCOND %cmp(s1), %bb.2
+    G_BR %bb.3
+  bb.2:
+    successors:
+  bb.3:
+    RET_ReallyLR
+
+...
+---
+name:            test_s88_ne
+tracksRegLiveness: true
+body:             |
+  ; CHECK-LABEL: name: test_s88_ne
+  ; CHECK: bb.0:
+  ; CHECK:   successors: %bb.1(0x40000000), %bb.2(0x40000000)
+  ; CHECK:   [[DEF:%[0-9]+]]:_(s64) = G_IMPLICIT_DEF
+  ; CHECK:   [[UV:%[0-9]+]]:_(s8), [[UV1:%[0-9]+]]:_(s8), [[UV2:%[0-9]+]]:_(s8), [[UV3:%[0-9]+]]:_(s8), [[UV4:%[0-9]+]]:_(s8), [[UV5:%[0-9]+]]:_(s8), [[UV6:%[0-9]+]]:_(s8), [[UV7:%[0-9]+]]:_(s8) = G_UNMERGE_VALUES [[DEF]](s64)
+  ; CHECK:   [[MV:%[0-9]+]]:_(s64) = G_MERGE_VALUES [[UV]](s8), [[UV1]](s8), [[UV2]](s8), [[UV3]](s8), [[UV4]](s8), [[UV5]](s8), [[UV6]](s8), [[UV7]](s8)
+  ; CHECK:   [[UV8:%[0-9]+]]:_(s8), [[UV9:%[0-9]+]]:_(s8), [[UV10:%[0-9]+]]:_(s8), [[UV11:%[0-9]+]]:_(s8), [[UV12:%[0-9]+]]:_(s8), [[UV13:%[0-9]+]]:_(s8), [[UV14:%[0-9]+]]:_(s8), [[UV15:%[0-9]+]]:_(s8) = G_UNMERGE_VALUES [[DEF]](s64)
+  ; CHECK:   [[MV1:%[0-9]+]]:_(s64) = G_MERGE_VALUES [[UV8]](s8), [[UV9]](s8), [[UV10]](s8), [[UV11]](s8), [[UV12]](s8), [[UV13]](s8), [[UV14]](s8), [[UV15]](s8)
+  ; CHECK:   [[COPY:%[0-9]+]]:_(s64) = COPY [[MV]](s64)
+  ; CHECK:   [[TRUNC:%[0-9]+]]:_(s32) = G_TRUNC [[DEF]](s64)
+  ; CHECK:   [[COPY1:%[0-9]+]]:_(s64) = COPY [[MV1]](s64)
+  ; CHECK:   [[TRUNC1:%[0-9]+]]:_(s32) = G_TRUNC [[DEF]](s64)
+  ; CHECK:   [[C:%[0-9]+]]:_(s64) = G_CONSTANT i64 0
+  ; CHECK:   [[XOR:%[0-9]+]]:_(s64) = G_XOR [[COPY]], [[COPY1]]
+  ; CHECK:   [[COPY2:%[0-9]+]]:_(s32) = COPY [[TRUNC]](s32)
+  ; CHECK:   [[COPY3:%[0-9]+]]:_(s32) = COPY [[TRUNC1]](s32)
+  ; CHECK:   [[XOR1:%[0-9]+]]:_(s32) = G_XOR [[COPY2]], [[COPY3]]
+  ; CHECK:   [[UV16:%[0-9]+]]:_(s8), [[UV17:%[0-9]+]]:_(s8), [[UV18:%[0-9]+]]:_(s8), [[UV19:%[0-9]+]]:_(s8) = G_UNMERGE_VALUES [[XOR1]](s32)
+  ; CHECK:   [[C1:%[0-9]+]]:_(s8) = G_CONSTANT i8 0
+  ; CHECK:   [[MV2:%[0-9]+]]:_(s64) = G_MERGE_VALUES [[UV16]](s8), [[UV17]](s8), [[UV18]](s8), [[C1]](s8), [[C1]](s8), [[C1]](s8), [[C1]](s8), [[C1]](s8)
+  ; CHECK:   [[OR:%[0-9]+]]:_(s64) = G_OR [[XOR]], [[MV2]]
+  ; CHECK:   [[OR1:%[0-9]+]]:_(s64) = G_OR [[OR]], [[C]]
+  ; CHECK:   [[OR2:%[0-9]+]]:_(s64) = G_OR [[OR1]], [[C]]
+  ; CHECK:   [[ICMP:%[0-9]+]]:_(s32) = G_ICMP intpred(ne), [[OR2]](s64), [[C]]
+  ; CHECK:   %cmp:_(s1) = G_TRUNC [[ICMP]](s32)
+  ; CHECK:   G_BRCOND %cmp(s1), %bb.1
+  ; CHECK:   G_BR %bb.2
+  ; CHECK: bb.1:
+  ; CHECK:   successors:
+  ; CHECK: bb.2:
+  ; CHECK:   RET_ReallyLR
+  bb.1:
+    %lhs:_(s88) = G_IMPLICIT_DEF
+    %rhs:_(s88) = G_IMPLICIT_DEF
+    %cmp:_(s1) = G_ICMP intpred(ne), %lhs(s88), %rhs
+    G_BRCOND %cmp(s1), %bb.2
+    G_BR %bb.3
+  bb.2:
+    successors:
+  bb.3:
+    RET_ReallyLR
+
+...
+---
+name:            test_s96_eq
+tracksRegLiveness: true
+body:             |
+  ; CHECK-LABEL: name: test_s96_eq
+  ; CHECK: bb.0:
+  ; CHECK:   successors: %bb.1(0x40000000), %bb.2(0x40000000)
+  ; CHECK:   [[DEF:%[0-9]+]]:_(s64) = G_IMPLICIT_DEF
+  ; CHECK:   [[UV:%[0-9]+]]:_(s32), [[UV1:%[0-9]+]]:_(s32) = G_UNMERGE_VALUES [[DEF]](s64)
+  ; CHECK:   [[MV:%[0-9]+]]:_(s64) = G_MERGE_VALUES [[UV]](s32), [[UV1]](s32)
+  ; CHECK:   [[UV2:%[0-9]+]]:_(s32), [[UV3:%[0-9]+]]:_(s32) = G_UNMERGE_VALUES [[DEF]](s64)
+  ; CHECK:   [[MV1:%[0-9]+]]:_(s64) = G_MERGE_VALUES [[UV2]](s32), [[UV3]](s32)
+  ; CHECK:   [[COPY:%[0-9]+]]:_(s64) = COPY [[MV]](s64)
+  ; CHECK:   [[EXTRACT:%[0-9]+]]:_(s32) = G_EXTRACT [[DEF]](s64), 0
+  ; CHECK:   [[COPY1:%[0-9]+]]:_(s64) = COPY [[MV1]](s64)
+  ; CHECK:   [[EXTRACT1:%[0-9]+]]:_(s32) = G_EXTRACT [[DEF]](s64), 0
+  ; CHECK:   [[C:%[0-9]+]]:_(s64) = G_CONSTANT i64 0
+  ; CHECK:   [[XOR:%[0-9]+]]:_(s64) = G_XOR [[COPY]], [[COPY1]]
+  ; CHECK:   [[XOR1:%[0-9]+]]:_(s32) = G_XOR [[EXTRACT]], [[EXTRACT1]]
+  ; CHECK:   [[C1:%[0-9]+]]:_(s32) = G_CONSTANT i32 0
+  ; CHECK:   [[MV2:%[0-9]+]]:_(s64) = G_MERGE_VALUES [[XOR1]](s32), [[C1]](s32)
+  ; CHECK:   [[OR:%[0-9]+]]:_(s64) = G_OR [[XOR]], [[MV2]]
+  ; CHECK:   [[ICMP:%[0-9]+]]:_(s32) = G_ICMP intpred(eq), [[OR]](s64), [[C]]
+  ; CHECK:   %cmp:_(s1) = G_TRUNC [[ICMP]](s32)
+  ; CHECK:   G_BRCOND %cmp(s1), %bb.1
+  ; CHECK:   G_BR %bb.2
+  ; CHECK: bb.1:
+  ; CHECK:   successors:
+  ; CHECK: bb.2:
+  ; CHECK:   RET_ReallyLR
+  bb.1:
+    %lhs:_(s96) = G_IMPLICIT_DEF
+    %rhs:_(s96) = G_IMPLICIT_DEF
+    %cmp:_(s1) = G_ICMP intpred(eq), %lhs(s96), %rhs
+    G_BRCOND %cmp(s1), %bb.2
+    G_BR %bb.3
+  bb.2:
+    successors:
+  bb.3:
+    RET_ReallyLR

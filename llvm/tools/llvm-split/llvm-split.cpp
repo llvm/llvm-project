@@ -24,24 +24,32 @@
 
 using namespace llvm;
 
-static cl::opt<std::string>
-InputFilename(cl::Positional, cl::desc("<input bitcode file>"),
-    cl::init("-"), cl::value_desc("filename"));
+static cl::OptionCategory SplitCategory("Split Options");
 
-static cl::opt<std::string>
-OutputFilename("o", cl::desc("Override output filename"),
-               cl::value_desc("filename"));
+static cl::opt<std::string> InputFilename(cl::Positional,
+                                          cl::desc("<input bitcode file>"),
+                                          cl::init("-"),
+                                          cl::value_desc("filename"),
+                                          cl::cat(SplitCategory));
+
+static cl::opt<std::string> OutputFilename("o",
+                                           cl::desc("Override output filename"),
+                                           cl::value_desc("filename"),
+                                           cl::cat(SplitCategory));
 
 static cl::opt<unsigned> NumOutputs("j", cl::Prefix, cl::init(2),
-                                    cl::desc("Number of output files"));
+                                    cl::desc("Number of output files"),
+                                    cl::cat(SplitCategory));
 
 static cl::opt<bool>
     PreserveLocals("preserve-locals", cl::Prefix, cl::init(false),
-                   cl::desc("Split without externalizing locals"));
+                   cl::desc("Split without externalizing locals"),
+                   cl::cat(SplitCategory));
 
 int main(int argc, char **argv) {
   LLVMContext Context;
   SMDiagnostic Err;
+  cl::HideUnrelatedOptions({&SplitCategory, &getColorCategory()});
   cl::ParseCommandLineOptions(argc, argv, "LLVM module splitter\n");
 
   std::unique_ptr<Module> M = parseIRFile(InputFilename, Err, Context);

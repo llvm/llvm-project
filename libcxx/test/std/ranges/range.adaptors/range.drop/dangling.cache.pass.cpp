@@ -16,6 +16,9 @@
 
 #include <ranges>
 
+#include <cstddef>
+#include <cstring>
+
 #include "test_macros.h"
 #include "types.h"
 

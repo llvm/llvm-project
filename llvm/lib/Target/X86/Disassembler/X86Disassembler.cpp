@@ -1119,6 +1119,8 @@ static int getInstructionID(struct InternalInstruction *insn,
       switch (ppFromVEX2of2(insn->vectorExtensionPrefix[1])) {
       case VEX_PREFIX_66:
         attrMask |= ATTR_OPSIZE;
+        if (insn->hasAdSize)
+          attrMask |= ATTR_ADSIZE;
         break;
       case VEX_PREFIX_F3:
         attrMask |= ATTR_XS;
@@ -1175,6 +1177,8 @@ static int getInstructionID(struct InternalInstruction *insn,
     case 0x66:
       if (insn->mode != MODE_16BIT)
         attrMask |= ATTR_OPSIZE;
+      if (insn->hasAdSize)
+        attrMask |= ATTR_ADSIZE;
       break;
     case 0x67:
       attrMask |= ATTR_ADSIZE;

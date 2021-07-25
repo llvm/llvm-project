@@ -88,7 +88,7 @@ module m
     real, save :: v1
     !ERROR: A pure subprogram may not have a variable with the SAVE attribute
     real :: v2 = 0.
-    !TODO: once we have DATA: !ERROR: A pure subprogram may not have a variable with the SAVE attribute
+    !ERROR: A pure subprogram may not have a variable with the SAVE attribute
     real :: v3
     data v3/0./
     !ERROR: A pure subprogram may not have a variable with the SAVE attribute
