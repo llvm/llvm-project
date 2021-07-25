@@ -1340,7 +1340,6 @@ AttributeList::removeParamUndefImplyingAttributes(LLVMContext &C,
                                                   unsigned ArgNo) const {
   AttrBuilder B;
   B.addAttribute(Attribute::NoUndef);
-  B.addAttribute(Attribute::NonNull);
   B.addDereferenceableAttr(1);
   B.addDereferenceableOrNullAttr(1);
   return removeParamAttributes(C, ArgNo, B);
