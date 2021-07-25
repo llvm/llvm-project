@@ -153,7 +153,16 @@ void macho::sortOutputSegments() {
 static DenseMap<StringRef, OutputSegment *> nameToOutputSegment;
 std::vector<OutputSegment *> macho::outputSegments;
 
+static StringRef maybeRenameSegment(StringRef name) {
+  auto newName = config->segmentRenameMap.find(name);
+  if (newName != config->segmentRenameMap.end())
+    return newName->second;
+  return name;
+}
+
 OutputSegment *macho::getOrCreateOutputSegment(StringRef name) {
+  name = maybeRenameSegment(name);
+
   OutputSegment *&segRef = nameToOutputSegment[name];
   if (segRef)
     return segRef;

@@ -71,8 +71,7 @@
 # SECTSEGYES-NEXT:    segname __TEXT
 # SECTSEGYES:      Section
 # SECTSEGYES-NEXT:   sectname __to_sect
-# SECTSEGYES-NEXT:    segname __TO_SECT
-## FIXME: ^ This should use __SEG like ld64 does.
+# SECTSEGYES-NEXT:    segname __SEG
 ## ...but rename_segment has no effect if it doesn't match the name after
 ## rename_section is applied.
 # RUN: %lld -dylib \
