@@ -523,6 +523,7 @@ def GPU_LaunchOp : GPU_Op<"launch">,
   let parser = [{ return parseLaunchOp(parser, result); }];
   let printer = [{ printLaunchOp(p, *this); }];
   let verifier = [{ return ::verify(*this); }];
+  let hasCanonicalizer = 1;
 }
 
 def GPU_ReturnOp : GPU_Op<"return", [HasParent<"GPUFuncOp">, NoSideEffect,
