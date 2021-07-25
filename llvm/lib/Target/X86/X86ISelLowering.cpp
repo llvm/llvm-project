@@ -49873,14 +49873,20 @@ static SDValue matchPMADDWD_2(SelectionDAG &DAG, SDValue N0, SDValue N1,
 /// count. We do this with CMOV rather the generic 'select' because there are
 /// earlier folds that may be used to turn select-of-constants into logic hacks.
 static SDValue pushAddIntoCmovOfConsts(SDNode *N, SelectionDAG &DAG) {
-  // This checks for a zero operand because add-of-0 gets simplified away.
-  // TODO: Allow generating an extra add?
+  // If an operand is zero, add-of-0 gets simplified away, so that's clearly
+  // better because we eliminate 1-2 instructions. This transform is still
+  // an improvement without zero operands because we trade 2 move constants and
+  // 1 add for 2 adds (LEA) as long as the constants can be represented as
+  // immediate asm operands (fit in 32-bits).
   auto isSuitableCmov = [](SDValue V) {
     if (V.getOpcode() != X86ISD::CMOV || !V.hasOneUse())
       return false;
-    return isa<ConstantSDNode>(V.getOperand(0)) &&
-           isa<ConstantSDNode>(V.getOperand(1)) &&
-           (isNullConstant(V.getOperand(0)) || isNullConstant(V.getOperand(1)));
+    if (!isa<ConstantSDNode>(V.getOperand(0)) ||
+        !isa<ConstantSDNode>(V.getOperand(1)))
+      return false;
+    return isNullConstant(V.getOperand(0)) || isNullConstant(V.getOperand(1)) ||
+           (V.getConstantOperandAPInt(0).isSignedIntN(32) &&
+            V.getConstantOperandAPInt(1).isSignedIntN(32));
   };
 
   // Match an appropriate CMOV as the first operand of the add.
