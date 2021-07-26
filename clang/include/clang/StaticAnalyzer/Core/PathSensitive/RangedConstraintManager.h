@@ -287,6 +287,20 @@ public:
     return contains(T.getZeroValue());
   }
 
+  /// Test if the range is the [0,0] range.
+  ///
+  /// Complexity: O(1)
+  bool encodesFalseRange() const {
+    const llvm::APSInt *Constant = getConcreteValue();
+    return Constant && Constant->isZero();
+  }
+
+  /// Test if the range doesn't contain zero.
+  ///
+  /// Complexity: O(logN)
+  ///             where N = size(this)
+  bool encodesTrueRange() const { return !containsZero(); }
+
   void dump(raw_ostream &OS) const;
   void dump() const;
 
