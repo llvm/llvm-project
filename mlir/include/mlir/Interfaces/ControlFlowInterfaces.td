@@ -119,7 +119,7 @@ def RegionBranchOpInterface : OpInterface<"RegionBranchOpInterface"> {
         `index` is None, `operands` is a set of optional attributes that
         either correspond to a constant value for each operand of this
         operation, or null if that operand is not a constant. If `index` is
-        valid, `operands` corresponds to the exit values of the region at
+        valid, `operands` corresponds to the entry values of the region at
         `index`. Only a region, i.e. a valid `index`, may use the parent
         operation as a successor. This method allows for describing which
         regions may be executed when entering an operation, and which regions
