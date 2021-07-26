@@ -515,6 +515,8 @@ void RankedTensorType::walkImmediateSubElements(
     function_ref<void(Attribute)> walkAttrsFn,
     function_ref<void(Type)> walkTypesFn) const {
   walkTypesFn(getElementType());
+  if (Attribute encoding = getEncoding())
+    walkAttrsFn(encoding);
 }
 
 //===----------------------------------------------------------------------===//
