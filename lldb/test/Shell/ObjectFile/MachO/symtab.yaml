@@ -247,7 +247,7 @@ LoadCommands:
   - cmd:             LC_LOAD_DYLINKER
     cmdsize:         32
     name:            12
-    PayloadString:   '/usr/lib/dyld'
+    Content:         '/usr/lib/dyld'
     ZeroPadBytes:    7
   - cmd:             LC_UUID
     cmdsize:         24
@@ -275,7 +275,7 @@ LoadCommands:
       timestamp:       2
       current_version: 14942208
       compatibility_version: 65536
-    PayloadString:   '/usr/lib/libobjc.A.dylib'
+    Content:         '/usr/lib/libobjc.A.dylib'
     ZeroPadBytes:    8
   - cmd:             LC_LOAD_DYLIB
     cmdsize:         56
@@ -284,7 +284,7 @@ LoadCommands:
       timestamp:       2
       current_version: 83951616
       compatibility_version: 65536
-    PayloadString:   '/usr/lib/libSystem.B.dylib'
+    Content:         '/usr/lib/libSystem.B.dylib'
     ZeroPadBytes:    6
   - cmd:             LC_LOAD_DYLIB
     cmdsize:         64
@@ -293,17 +293,17 @@ LoadCommands:
       timestamp:       2
       current_version: 0
       compatibility_version: 65536
-    PayloadString:   '/usr/lib/swift/libswiftCore.dylib'
+    Content:         '/usr/lib/swift/libswiftCore.dylib'
     ZeroPadBytes:    7
   - cmd:             LC_RPATH
     cmdsize:         136
     path:            12
-    PayloadString:   '/Volumes/Jonas/internal-stable/build/Ninja-RelWithDebInfoAssert+stdlib-RelWithDebInfo/swift-macosx-x86_64/lib/swift/macosx'
+    Content:         '/Volumes/Jonas/internal-stable/build/Ninja-RelWithDebInfoAssert+stdlib-RelWithDebInfo/swift-macosx-x86_64/lib/swift/macosx'
     ZeroPadBytes:    2
   - cmd:             LC_RPATH
     cmdsize:         128
     path:            12
-    PayloadString:   '/Applications/XcodeY.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX10.15.sdk/usr/lib/swift'
+    Content:         '/Applications/XcodeY.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX10.15.sdk/usr/lib/swift'
     ZeroPadBytes:    2
   - cmd:             LC_FUNCTION_STARTS
     cmdsize:         16
