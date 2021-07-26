@@ -45,8 +45,7 @@ def BranchOpInterface : OpInterface<"BranchOpInterface"> {
       }],
       "::mlir::Optional<::mlir::OperandRange>", "getSuccessorOperands",
       (ins "unsigned":$index), [{}], [{
-        ConcreteOp *op = static_cast<ConcreteOp *>(this);
-        auto operands = op->getMutableSuccessorOperands(index);
+        auto operands = $_op.getMutableSuccessorOperands(index);
         return operands ? ::mlir::Optional<::mlir::OperandRange>(*operands) : ::llvm::None;
       }]
     >,
@@ -171,6 +170,54 @@ def RegionBranchOpInterface : OpInterface<"RegionBranchOpInterface"> {
     static LogicalResult verifyTypes(Operation *op) {
       return detail::verifyTypesAlongControlFlowEdges(op);
     }
+  }];
+}
+
+//===----------------------------------------------------------------------===//
+// RegionBranchTerminatorOpInterface
+//===----------------------------------------------------------------------===//
+
+def RegionBranchTerminatorOpInterface :
+  OpInterface<"RegionBranchTerminatorOpInterface"> {
+  let description = [{
+    This interface provides information for branching terminator operations
+    in the presence of a parent RegionBranchOpInterface implementation. It
+    specifies which operands are passed to which successor region.
+  }];
+  let cppNamespace = "::mlir";
+
+  let methods = [
+    InterfaceMethod<[{
+        Returns a mutable range of operands that are semantically "returned" by
+        passing them to the region successor given by `index`.  If `index` is
+        None, this function returns the operands that are passed as a result to
+        the parent operation.
+      }],
+      "::mlir::MutableOperandRange", "getMutableSuccessorOperands",
+      (ins "::mlir::Optional<unsigned>":$index)
+    >,
+    InterfaceMethod<[{
+        Returns a range of operands that are semantically "returned" by passing
+        them to the region successor given by `index`.  If `index` is None, this
+        function returns the operands that are passed as a result to the parent
+        operation.
+      }],
+      "::mlir::OperandRange", "getSuccessorOperands",
+      (ins "::mlir::Optional<unsigned>":$index), [{}],
+      /*defaultImplementation=*/[{
+        return $_op.getMutableSuccessorOperands(index);
+      }]
+    >
+  ];
+
+  let verify = [{
+    static_assert(ConcreteOp::template hasTrait<OpTrait::IsTerminator>(),
+                  "expected operation to be a terminator");
+    static_assert(ConcreteOp::template hasTrait<OpTrait::ZeroResult>(),
+                  "expected operation to have zero results");
+    static_assert(ConcreteOp::template hasTrait<OpTrait::ZeroSuccessor>(),
+                  "expected operation to have zero successors");
+    return success();
   }];
 }
 
