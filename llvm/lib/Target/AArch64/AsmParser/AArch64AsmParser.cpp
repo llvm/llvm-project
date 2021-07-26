@@ -2904,9 +2904,8 @@ AArch64AsmParser::tryParseImmWithOptionalShift(OperandVector &Operands) {
   if (parseSymbolicImmVal(Imm))
     return MatchOperand_ParseFail;
   else if (Parser.getTok().isNot(AsmToken::Comma)) {
-    SMLoc E = Parser.getTok().getLoc();
     Operands.push_back(
-        AArch64Operand::CreateImm(Imm, S, E, getContext()));
+        AArch64Operand::CreateImm(Imm, S, getLoc(), getContext()));
     return MatchOperand_Success;
   }
 
@@ -2916,7 +2915,7 @@ AArch64AsmParser::tryParseImmWithOptionalShift(OperandVector &Operands) {
   // The optional operand must be "lsl #N" where N is non-negative.
   if (!Parser.getTok().is(AsmToken::Identifier) ||
       !Parser.getTok().getIdentifier().equals_insensitive("lsl")) {
-    Error(Parser.getTok().getLoc(), "only 'lsl #+N' valid after immediate");
+    Error(getLoc(), "only 'lsl #+N' valid after immediate");
     return MatchOperand_ParseFail;
   }
 
@@ -2926,28 +2925,27 @@ AArch64AsmParser::tryParseImmWithOptionalShift(OperandVector &Operands) {
   parseOptionalToken(AsmToken::Hash);
 
   if (Parser.getTok().isNot(AsmToken::Integer)) {
-    Error(Parser.getTok().getLoc(), "only 'lsl #+N' valid after immediate");
+    Error(getLoc(), "only 'lsl #+N' valid after immediate");
     return MatchOperand_ParseFail;
   }
 
   int64_t ShiftAmount = Parser.getTok().getIntVal();
 
   if (ShiftAmount < 0) {
-    Error(Parser.getTok().getLoc(), "positive shift amount required");
+    Error(getLoc(), "positive shift amount required");
     return MatchOperand_ParseFail;
   }
   Parser.Lex(); // Eat the number
 
   // Just in case the optional lsl #0 is used for immediates other than zero.
   if (ShiftAmount == 0 && Imm != nullptr) {
-    SMLoc E = Parser.getTok().getLoc();
-    Operands.push_back(AArch64Operand::CreateImm(Imm, S, E, getContext()));
+    Operands.push_back(
+        AArch64Operand::CreateImm(Imm, S, getLoc(), getContext()));
     return MatchOperand_Success;
   }
 
-  SMLoc E = Parser.getTok().getLoc();
-  Operands.push_back(AArch64Operand::CreateShiftedImm(Imm, ShiftAmount,
-                                                      S, E, getContext()));
+  Operands.push_back(AArch64Operand::CreateShiftedImm(Imm, ShiftAmount, S,
+                                                      getLoc(), getContext()));
   return MatchOperand_Success;
 }
 
@@ -3150,7 +3148,7 @@ AArch64AsmParser::tryParseOptionalShiftExtend(OperandVector &Operands) {
 
   // Make sure we do actually have a number, identifier or a parenthesized
   // expression.
-  SMLoc E = Parser.getTok().getLoc();
+  SMLoc E = getLoc();
   if (!Parser.getTok().is(AsmToken::Integer) &&
       !Parser.getTok().is(AsmToken::LParen) &&
       !Parser.getTok().is(AsmToken::Identifier)) {
@@ -4058,8 +4056,8 @@ bool AArch64AsmParser::parseOperand(OperandVector &Operands, bool isCondCode,
     return false;
   }
   case AsmToken::LBrac: {
-    SMLoc Loc = Parser.getTok().getLoc();
-    Operands.push_back(AArch64Operand::CreateToken("[", Loc, getContext()));
+    Operands.push_back(
+        AArch64Operand::CreateToken("[", getLoc(), getContext()));
     Parser.Lex(); // Eat '['
 
     // There's no comma after a '[', so we can parse the next operand
@@ -4070,8 +4068,8 @@ bool AArch64AsmParser::parseOperand(OperandVector &Operands, bool isCondCode,
     if (!parseNeonVectorList(Operands))
       return false;
 
-    SMLoc Loc = Parser.getTok().getLoc();
-    Operands.push_back(AArch64Operand::CreateToken("{", Loc, getContext()));
+    Operands.push_back(
+        AArch64Operand::CreateToken("{", getLoc(), getContext()));
     Parser.Lex(); // Eat '{'
 
     // There's no comma after a '{', so we can parse the next operand
