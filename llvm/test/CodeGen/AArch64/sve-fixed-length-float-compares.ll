@@ -73,19 +73,17 @@ define void @fcmp_oeq_v32f16(<32 x half>* %a, <32 x half>* %b, <32 x i16>* %c) #
 
 ; Ensure sensible type legalisation
 ; VBITS_EQ_256-DAG: ptrue [[PG:p[0-9]+]].h, vl16
-; VBITS_EQ_256-DAG: add x[[A_HI:[0-9]+]], x0, #32
-; VBITS_EQ_256-DAG: add x[[B_HI:[0-9]+]], x1, #32
-; VBITS_EQ_256-DAG: add x[[C_HI:[0-9]+]], x2, #32
+; VBITS_EQ_256-DAG: mov x[[NUMELTS:[0-9]+]], #16
 ; VBITS_EQ_256-DAG: ld1h { [[OP1_LO:z[0-9]+]].h }, [[PG]]/z, [x0]
-; VBITS_EQ_256-DAG: ld1h { [[OP1_HI:z[0-9]+]].h }, [[PG]]/z, [x[[A_HI]]]
+; VBITS_EQ_256-DAG: ld1h { [[OP1_HI:z[0-9]+]].h }, [[PG]]/z, [x0, x[[NUMELTS]], lsl #1]
 ; VBITS_EQ_256-DAG: ld1h { [[OP2_LO:z[0-9]+]].h }, [[PG]]/z, [x1]
-; VBITS_EQ_256-DAG: ld1h { [[OP2_HI:z[0-9]+]].h }, [[PG]]/z, [x[[B_HI]]]
+; VBITS_EQ_256-DAG: ld1h { [[OP2_HI:z[0-9]+]].h }, [[PG]]/z, [x1, x[[NUMELTS]], lsl #1]
 ; VBITS_EQ_256-DAG: fcmeq [[CMP_HI:p[0-9]+]].h, [[PG]]/z, [[OP1_HI]].h, [[OP2_HI]].h
 ; VBITS_EQ_256-DAG: mov [[SEXT_HI:z[0-9]+]].h, [[CMP_HI]]/z, #-1
 ; VBITS_EQ_256-DAG: fcmeq [[CMP_LO:p[0-9]+]].h, [[PG]]/z, [[OP1_LO]].h, [[OP2_LO]].h
 ; VBITS_EQ_256-DAG: mov [[SEXT_LO:z[0-9]+]].h, [[CMP_LO]]/z, #-1
 ; VBITS_EQ_256-DAG: st1h { [[SEXT_LO]].h }, [[PG]], [x2]
-; VBITS_EQ_256-DAG: st1h { [[SEXT_HI]].h }, [[PG]], [x[[C_HI]]]
+; VBITS_EQ_256-DAG: st1h { [[SEXT_HI]].h }, [[PG]], [x2, x[[NUMELTS]], lsl #1]
 ; VBITS_EQ_256-NEXT: ret
   %op1 = load <32 x half>, <32 x half>* %a
   %op2 = load <32 x half>, <32 x half>* %b
@@ -178,19 +176,17 @@ define void @fcmp_oeq_v16f32(<16 x float>* %a, <16 x float>* %b, <16 x i32>* %c)
 
 ; Ensure sensible type legalisation
 ; VBITS_EQ_256-DAG: ptrue [[PG:p[0-9]+]].s, vl8
-; VBITS_EQ_256-DAG: add x[[A_HI:[0-9]+]], x0, #32
-; VBITS_EQ_256-DAG: add x[[B_HI:[0-9]+]], x1, #32
-; VBITS_EQ_256-DAG: add x[[C_HI:[0-9]+]], x2, #32
+; VBITS_EQ_256-DAG: mov x[[NUMELTS:[0-9]+]], #8
 ; VBITS_EQ_256-DAG: ld1w { [[OP1_LO:z[0-9]+]].s }, [[PG]]/z, [x0]
-; VBITS_EQ_256-DAG: ld1w { [[OP1_HI:z[0-9]+]].s }, [[PG]]/z, [x[[A_HI]]]
+; VBITS_EQ_256-DAG: ld1w { [[OP1_HI:z[0-9]+]].s }, [[PG]]/z, [x0, x[[NUMELTS]], lsl #2]
 ; VBITS_EQ_256-DAG: ld1w { [[OP2_LO:z[0-9]+]].s }, [[PG]]/z, [x1]
-; VBITS_EQ_256-DAG: ld1w { [[OP2_HI:z[0-9]+]].s }, [[PG]]/z, [x[[B_HI]]]
+; VBITS_EQ_256-DAG: ld1w { [[OP2_HI:z[0-9]+]].s }, [[PG]]/z, [x1, x[[NUMELTS]], lsl #2]
 ; VBITS_EQ_256-DAG: fcmeq [[CMP_HI:p[0-9]+]].s, [[PG]]/z, [[OP1_HI]].s, [[OP2_HI]].s
 ; VBITS_EQ_256-DAG: mov [[SEXT_HI:z[0-9]+]].s, [[CMP_HI]]/z, #-1
 ; VBITS_EQ_256-DAG: fcmeq [[CMP_LO:p[0-9]+]].s, [[PG]]/z, [[OP1_LO]].s, [[OP2_LO]].s
 ; VBITS_EQ_256-DAG: mov [[SEXT_LO:z[0-9]+]].s, [[CMP_LO]]/z, #-1
 ; VBITS_EQ_256-DAG: st1w { [[SEXT_LO]].s }, [[PG]], [x2]
-; VBITS_EQ_256-DAG: st1w { [[SEXT_HI]].s }, [[PG]], [x[[C_HI]]]
+; VBITS_EQ_256-DAG: st1w { [[SEXT_HI]].s }, [[PG]], [x2, x[[NUMELTS]], lsl #2]
 ; VBITS_EQ_256-NEXT: ret
   %op1 = load <16 x float>, <16 x float>* %a
   %op2 = load <16 x float>, <16 x float>* %b
@@ -283,19 +279,17 @@ define void @fcmp_oeq_v8f64(<8 x double>* %a, <8 x double>* %b, <8 x i64>* %c) #
 
 ; Ensure sensible type legalisation
 ; VBITS_EQ_256-DAG: ptrue [[PG:p[0-9]+]].d, vl4
-; VBITS_EQ_256-DAG: add x[[A_HI:[0-9]+]], x0, #32
-; VBITS_EQ_256-DAG: add x[[B_HI:[0-9]+]], x1, #32
-; VBITS_EQ_256-DAG: add x[[C_HI:[0-9]+]], x2, #32
+; VBITS_EQ_256-DAG: mov x[[NUMELTS:[0-9]+]], #4
 ; VBITS_EQ_256-DAG: ld1d { [[OP1_LO:z[0-9]+]].d }, [[PG]]/z, [x0]
-; VBITS_EQ_256-DAG: ld1d { [[OP1_HI:z[0-9]+]].d }, [[PG]]/z, [x[[A_HI]]]
+; VBITS_EQ_256-DAG: ld1d { [[OP1_HI:z[0-9]+]].d }, [[PG]]/z, [x0, x[[NUMELTS]], lsl #3]
 ; VBITS_EQ_256-DAG: ld1d { [[OP2_LO:z[0-9]+]].d }, [[PG]]/z, [x1]
-; VBITS_EQ_256-DAG: ld1d { [[OP2_HI:z[0-9]+]].d }, [[PG]]/z, [x[[B_HI]]]
+; VBITS_EQ_256-DAG: ld1d { [[OP2_HI:z[0-9]+]].d }, [[PG]]/z, [x1, x[[NUMELTS]], lsl #3]
 ; VBITS_EQ_256-DAG: fcmeq [[CMP_HI:p[0-9]+]].d, [[PG]]/z, [[OP1_HI]].d, [[OP2_HI]].d
 ; VBITS_EQ_256-DAG: mov [[SEXT_HI:z[0-9]+]].d, [[CMP_HI]]/z, #-1
 ; VBITS_EQ_256-DAG: fcmeq [[CMP_LO:p[0-9]+]].d, [[PG]]/z, [[OP1_LO]].d, [[OP2_LO]].d
 ; VBITS_EQ_256-DAG: mov [[SEXT_LO:z[0-9]+]].d, [[CMP_LO]]/z, #-1
 ; VBITS_EQ_256-DAG: st1d { [[SEXT_LO]].d }, [[PG]], [x2]
-; VBITS_EQ_256-DAG: st1d { [[SEXT_HI]].d }, [[PG]], [x[[C_HI]]]
+; VBITS_EQ_256-DAG: st1d { [[SEXT_HI]].d }, [[PG]], [x2, x[[NUMELTS]], lsl #3]
 ; VBITS_EQ_256-NEXT: ret
   %op1 = load <8 x double>, <8 x double>* %a
   %op2 = load <8 x double>, <8 x double>* %b
