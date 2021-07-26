@@ -34,6 +34,36 @@ ORC_RT_JIT_DISPATCH_TAG(__orc_rt_macho_symbol_lookup_tag)
 extern "C" void __register_frame(const void *);
 extern "C" void __deregister_frame(const void *);
 
+// Objective-C types.
+struct objc_class;
+struct objc_image_info;
+struct objc_object;
+struct objc_selector;
+
+using Class = objc_class *;
+using id = objc_object *;
+using SEL = objc_selector *;
+
+// Objective-C registration functions.
+// These are weakly imported. If the Objective-C runtime has not been loaded
+// then code containing Objective-C sections will generate an error.
+extern "C" id objc_msgSend(id, SEL, ...) ORC_RT_WEAK_IMPORT;
+extern "C" Class objc_readClassPair(Class,
+                                    const objc_image_info *) ORC_RT_WEAK_IMPORT;
+extern "C" SEL sel_registerName(const char *) ORC_RT_WEAK_IMPORT;
+
+// Swift types.
+class ProtocolRecord;
+class ProtocolConformanceRecord;
+
+extern "C" void
+swift_registerProtocols(const ProtocolRecord *begin,
+                        const ProtocolRecord *end) ORC_RT_WEAK_IMPORT;
+
+extern "C" void swift_registerProtocolConformances(
+    const ProtocolConformanceRecord *begin,
+    const ProtocolConformanceRecord *end) ORC_RT_WEAK_IMPORT;
+
 namespace {
 
 template <typename HandleFDEFn>
@@ -67,6 +97,108 @@ Error validatePointerSectionExtent(const char *SectionName,
            << " is not a pointer multiple";
     return make_error<StringError>(ErrMsg.str());
   }
+  return Error::success();
+}
+
+Error registerObjCSelectors(
+    const std::vector<ExecutorAddressRange> &ObjCSelRefsSections,
+    const MachOJITDylibInitializers &MOJDIs) {
+
+  if (ORC_RT_UNLIKELY(!sel_registerName))
+    return make_error<StringError>("sel_registerName is not available");
+
+  for (const auto &ObjCSelRefs : ObjCSelRefsSections) {
+
+    if (auto Err = validatePointerSectionExtent("__objc_selrefs", ObjCSelRefs))
+      return Err;
+
+    fprintf(stderr, "Processing selrefs section at 0x%llx\n",
+            ObjCSelRefs.StartAddress.getValue());
+    for (uintptr_t SelEntry : ObjCSelRefs.toSpan<uintptr_t>()) {
+      const char *SelName = reinterpret_cast<const char *>(SelEntry);
+      fprintf(stderr, "Registering selector \"%s\"\n", SelName);
+      auto Sel = sel_registerName(SelName);
+      *reinterpret_cast<SEL *>(SelEntry) = Sel;
+    }
+  }
+
+  return Error::success();
+}
+
+Error registerObjCClasses(
+    const std::vector<ExecutorAddressRange> &ObjCClassListSections,
+    const MachOJITDylibInitializers &MOJDIs) {
+
+  if (ObjCClassListSections.empty())
+    return Error::success();
+
+  if (ORC_RT_UNLIKELY(!objc_msgSend))
+    return make_error<StringError>("objc_msgSend is not available");
+  if (ORC_RT_UNLIKELY(!objc_readClassPair))
+    return make_error<StringError>("objc_readClassPair is not available");
+
+  struct ObjCClassCompiled {
+    void *Metaclass;
+    void *Parent;
+    void *Cache1;
+    void *Cache2;
+    void *Data;
+  };
+
+  auto *ImageInfo =
+      MOJDIs.ObjCImageInfoAddress.toPtr<const objc_image_info *>();
+  auto ClassSelector = sel_registerName("class");
+
+  for (const auto &ObjCClassList : ObjCClassListSections) {
+
+    if (auto Err =
+            validatePointerSectionExtent("__objc_classlist", ObjCClassList))
+      return Err;
+
+    for (uintptr_t ClassPtr : ObjCClassList.toSpan<uintptr_t>()) {
+      auto *Cls = reinterpret_cast<Class>(ClassPtr);
+      auto *ClassCompiled = reinterpret_cast<ObjCClassCompiled *>(ClassPtr);
+      objc_msgSend(reinterpret_cast<id>(ClassCompiled->Parent), ClassSelector);
+      auto Registered = objc_readClassPair(Cls, ImageInfo);
+
+      // FIXME: Improve diagnostic by reporting the failed class's name.
+      if (Registered != Cls)
+        return make_error<StringError>("Unable to register Objective-C class");
+    }
+  }
+  return Error::success();
+}
+
+Error registerSwift5Protocols(
+    const std::vector<ExecutorAddressRange> &Swift5ProtocolSections,
+    const MachOJITDylibInitializers &MOJDIs) {
+
+  if (ORC_RT_UNLIKELY(!Swift5ProtocolSections.empty() &&
+                      !swift_registerProtocols))
+    return make_error<StringError>("swift_registerProtocols is not available");
+
+  for (const auto &Swift5Protocols : Swift5ProtocolSections)
+    swift_registerProtocols(
+        Swift5Protocols.StartAddress.toPtr<const ProtocolRecord *>(),
+        Swift5Protocols.EndAddress.toPtr<const ProtocolRecord *>());
+
+  return Error::success();
+}
+
+Error registerSwift5ProtocolConformances(
+    const std::vector<ExecutorAddressRange> &Swift5ProtocolConformanceSections,
+    const MachOJITDylibInitializers &MOJDIs) {
+
+  if (ORC_RT_UNLIKELY(!Swift5ProtocolConformanceSections.empty() &&
+                      !swift_registerProtocolConformances))
+    return make_error<StringError>(
+        "swift_registerProtocolConformances is not available");
+
+  for (const auto &ProtoConfSec : Swift5ProtocolConformanceSections)
+    swift_registerProtocolConformances(
+        ProtoConfSec.StartAddress.toPtr<const ProtocolConformanceRecord *>(),
+        ProtoConfSec.EndAddress.toPtr<const ProtocolConformanceRecord *>());
+
   return Error::success();
 }
 
@@ -156,8 +288,12 @@ private:
   using InitSectionHandler =
       Error (*)(const std::vector<ExecutorAddressRange> &Sections,
                 const MachOJITDylibInitializers &MOJDIs);
-  const std::vector<std::pair<string_view, InitSectionHandler>> InitSections = {
-      {"__DATA,__mod_init_func", runModInits}};
+  const std::vector<std::pair<const char *, InitSectionHandler>> InitSections =
+      {{"__DATA,__objc_selrefs", registerObjCSelectors},
+       {"__DATA,__objc_classlist", registerObjCClasses},
+       {"__TEXT,__swift5_protos", registerSwift5Protocols},
+       {"__TEXT,__swift5_proto", registerSwift5ProtocolConformances},
+       {"__DATA,__mod_init_func", runModInits}};
 
   // FIXME: Move to thread-state.
   std::string DLFcnError;
@@ -404,8 +540,7 @@ Error MachOPlatformRuntimeState::initializeJITDylib(
   for (auto &KV : InitSections) {
     const auto &Name = KV.first;
     const auto &Handler = KV.second;
-    // FIXME: Remove copy once we have C++17.
-    auto I = MOJDIs.InitSections.find(to_string(Name));
+    auto I = MOJDIs.InitSections.find(Name);
     if (I != MOJDIs.InitSections.end()) {
       if (auto Err = Handler(I->second, MOJDIs))
         return Err;
