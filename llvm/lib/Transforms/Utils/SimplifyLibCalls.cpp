@@ -2522,6 +2522,8 @@ Value *LibCallSimplifier::optimizeSPrintFString(CallInst *CI,
       return ConstantInt::get(CI->getType(), SrcLen - 1);
     } else if (Value *V = emitStpCpy(Dest, CI->getArgOperand(2), B, TLI)) {
       // sprintf(dest, "%s", str) -> stpcpy(dest, str) - dest
+      // Handle mismatched pointer types (goes away with typeless pointers?).
+      V = B.CreatePointerCast(V, Dest->getType());
       Value *PtrDiff = B.CreatePtrDiff(V, Dest);
       return B.CreateIntCast(PtrDiff, CI->getType(), false);
     }
