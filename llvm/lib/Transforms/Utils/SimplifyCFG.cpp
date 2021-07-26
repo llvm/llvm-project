@@ -3054,7 +3054,8 @@ shouldFoldCondBranchesToCommonDestination(BranchInst *BI, BranchInst *PBI,
   // predecessor branch is predictable, we may not want to merge them.
   uint64_t PTWeight, PFWeight;
   BranchProbability PBITrueProb, Likely;
-  if (TTI && PBI->extractProfMetadata(PTWeight, PFWeight) &&
+  if (TTI && !PBI->getMetadata(LLVMContext::MD_unpredictable) &&
+      PBI->extractProfMetadata(PTWeight, PFWeight) &&
       (PTWeight + PFWeight) != 0) {
     PBITrueProb =
         BranchProbability::getBranchProbability(PTWeight, PTWeight + PFWeight);
