@@ -7686,16 +7686,12 @@ void OffloadBundler::ConstructJob(Compilation &C, const JobAction &JA,
       });
     }
     Triples += Action::GetOffloadKindName(CurKind);
-    Triples += "-";
-    std::string NormalizedTriple = CurTC->getTriple().normalize();
-    Triples += NormalizedTriple;
-
-    if (CurDep->getOffloadingArch() != nullptr) {
-      // If OffloadArch is present it can only appear as the 6th hypen
-      // sepearated field of Bundle Entry ID. So, pad required number of
-      // hyphens in Triple.
-      for (int i = 4 - StringRef(NormalizedTriple).count("-"); i > 0; i--)
-        Triples += "-";
+    Triples += '-';
+    Triples += CurTC->getTriple().normalize();
+    if ((CurKind == Action::OFK_HIP || CurKind == Action::OFK_OpenMP ||
+         CurKind == Action::OFK_Cuda) &&
+        CurDep->getOffloadingArch()) {
+      Triples += '-';
       Triples += CurDep->getOffloadingArch();
     }
   }
@@ -7768,17 +7764,13 @@ void OffloadBundler::ConstructJobMultipleOutputs(
 
     auto &Dep = DepInfo[I];
     Triples += Action::GetOffloadKindName(Dep.DependentOffloadKind);
-    Triples += "-";
-    std::string NormalizedTriple =
-        Dep.DependentToolChain->getTriple().normalize();
-    Triples += NormalizedTriple;
-
-    if (!Dep.DependentBoundArch.empty()) {
-      // If OffloadArch is present it can only appear as the 6th hypen
-      // sepearated field of Bundle Entry ID. So, pad required number of
-      // hyphens in Triple.
-      for (int i = 4 - StringRef(NormalizedTriple).count("-"); i > 0; i--)
-        Triples += "-";
+    Triples += '-';
+    Triples += Dep.DependentToolChain->getTriple().normalize();
+    if ((Dep.DependentOffloadKind == Action::OFK_HIP ||
+         Dep.DependentOffloadKind == Action::OFK_OpenMP ||
+         Dep.DependentOffloadKind == Action::OFK_Cuda) &&
+        !Dep.DependentBoundArch.empty()) {
+      Triples += '-';
       Triples += Dep.DependentBoundArch;
     }
   }
