@@ -517,6 +517,10 @@ static llvm::Function *emitOutlinedFunctionPrologue(
     F->setDoesNotThrow();
   F->setDoesNotRecurse();
 
+  // Always inline the outlined function if optimizations are enabled.
+  if (CGM.getCodeGenOpts().OptimizationLevel != 0)
+    F->addFnAttr(llvm::Attribute::AlwaysInline);
+
   // Generate the function.
   CGF.StartFunction(CD, Ctx.VoidTy, F, FuncInfo, TargetArgs,
                     FO.UIntPtrCastRequired ? FO.Loc : FO.S->getBeginLoc(),
@@ -5303,6 +5307,8 @@ static llvm::Function *emitOutlinedOrderedFunction(CodeGenModule &CGM,
   CGF.CapturedStmtInfo = &CapStmtInfo;
   llvm::Function *Fn = CGF.GenerateOpenMPCapturedStmtFunction(*S, Loc);
   Fn->setDoesNotRecurse();
+  if (CGM.getCodeGenOpts().OptimizationLevel != 0)
+    Fn->addFnAttr(llvm::Attribute::AlwaysInline);
   return Fn;
 }
 
