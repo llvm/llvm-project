@@ -44,3 +44,13 @@ int test_builtin_ppc_stbcx() {
 // CHECK-NOPWR8: error: this builtin is only valid on POWER8 or later CPUs
   return __builtin_ppc_stbcx(c_addr, c);
 }
+
+vector unsigned char test_ldrmb(char *ptr) {
+  // CHECK-NOPWR8: error: this builtin is only valid on POWER8 or later CPUs
+  return __builtin_vsx_ldrmb(ptr, 14);
+}
+
+void test_strmbb(char *ptr, vector unsigned char data) {
+  // CHECK-NOPWR8: error: this builtin is only valid on POWER8 or later CPUs
+  __builtin_vsx_strmb(ptr, 14, data);
+}
