@@ -54,16 +54,16 @@ namespace ranges {
   using sentinel_t = decltype(ranges::end(declval<_Rp&>()));
 
   template <range _Rp>
-  using range_difference_t = iter_difference_t<iterator_t<_Rp> >;
+  using range_difference_t = iter_difference_t<iterator_t<_Rp>>;
 
   template <range _Rp>
-  using range_value_t = iter_value_t<iterator_t<_Rp> >;
+  using range_value_t = iter_value_t<iterator_t<_Rp>>;
 
   template <range _Rp>
-  using range_reference_t = iter_reference_t<iterator_t<_Rp> >;
+  using range_reference_t = iter_reference_t<iterator_t<_Rp>>;
 
   template <range _Rp>
-  using range_rvalue_reference_t = iter_rvalue_reference_t<iterator_t<_Rp> >;
+  using range_rvalue_reference_t = iter_rvalue_reference_t<iterator_t<_Rp>>;
 
   // [range.sized]
   template <class _Tp>
@@ -90,17 +90,17 @@ namespace ranges {
 
   // [range.refinements], other range refinements
   template <class _Tp>
-  concept input_range = range<_Tp> && input_iterator<iterator_t<_Tp> >;
+  concept input_range = range<_Tp> && input_iterator<iterator_t<_Tp>>;
 
   template <class _Tp>
-  concept forward_range = input_range<_Tp> && forward_iterator<iterator_t<_Tp> >;
+  concept forward_range = input_range<_Tp> && forward_iterator<iterator_t<_Tp>>;
 
   template <class _Tp>
-  concept bidirectional_range = forward_range<_Tp> && bidirectional_iterator<iterator_t<_Tp> >;
+  concept bidirectional_range = forward_range<_Tp> && bidirectional_iterator<iterator_t<_Tp>>;
 
   template <class _Tp>
   concept random_access_range =
-      bidirectional_range<_Tp> && random_access_iterator<iterator_t<_Tp> >;
+      bidirectional_range<_Tp> && random_access_iterator<iterator_t<_Tp>>;
 
   template<class _Tp>
   concept contiguous_range =
@@ -111,7 +111,7 @@ namespace ranges {
     };
 
   template <class _Tp>
-  concept common_range = range<_Tp> && same_as<iterator_t<_Tp>, sentinel_t<_Tp> >;
+  concept common_range = range<_Tp> && same_as<iterator_t<_Tp>, sentinel_t<_Tp>>;
 
   template<class _Tp>
   concept viewable_range =
