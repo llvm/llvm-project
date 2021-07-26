@@ -4049,19 +4049,17 @@ void InnerLoopVectorizer::truncateToMinimalBitwidths(VPTransformState &State) {
         // Don't do anything with the operands, just extend the result.
         continue;
       } else if (auto *IE = dyn_cast<InsertElementInst>(I)) {
-        auto Elements = cast<FixedVectorType>(IE->getOperand(0)->getType())
-                            ->getNumElements();
+        auto Elements =
+            cast<VectorType>(IE->getOperand(0)->getType())->getElementCount();
         auto *O0 = B.CreateZExtOrTrunc(
-            IE->getOperand(0),
-            FixedVectorType::get(ScalarTruncatedTy, Elements));
+            IE->getOperand(0), VectorType::get(ScalarTruncatedTy, Elements));
         auto *O1 = B.CreateZExtOrTrunc(IE->getOperand(1), ScalarTruncatedTy);
         NewI = B.CreateInsertElement(O0, O1, IE->getOperand(2));
       } else if (auto *EE = dyn_cast<ExtractElementInst>(I)) {
-        auto Elements = cast<FixedVectorType>(EE->getOperand(0)->getType())
-                            ->getNumElements();
+        auto Elements =
+            cast<VectorType>(EE->getOperand(0)->getType())->getElementCount();
         auto *O0 = B.CreateZExtOrTrunc(
-            EE->getOperand(0),
-            FixedVectorType::get(ScalarTruncatedTy, Elements));
+            EE->getOperand(0), VectorType::get(ScalarTruncatedTy, Elements));
         NewI = B.CreateExtractElement(O0, EE->getOperand(2));
       } else {
         // If we don't know what to do, be conservative and don't do anything.
