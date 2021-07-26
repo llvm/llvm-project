@@ -244,8 +244,7 @@ public:
   static std::enable_if_t<are_base_of<Type, Tys...>::value, StructType *>
   create(StringRef Name, Type *elt1, Tys *... elts) {
     assert(elt1 && "Cannot create a struct type with no elements with this");
-    SmallVector<llvm::Type *, 8> StructFields({elt1, elts...});
-    return create(StructFields, Name);
+    return create(ArrayRef<Type *>({elt1, elts...}), Name);
   }
 
   /// This static method is the primary way to create a literal StructType.
@@ -263,8 +262,7 @@ public:
   get(Type *elt1, Tys *... elts) {
     assert(elt1 && "Cannot create a struct type with no elements with this");
     LLVMContext &Ctx = elt1->getContext();
-    SmallVector<llvm::Type *, 8> StructFields({elt1, elts...});
-    return llvm::StructType::get(Ctx, StructFields);
+    return StructType::get(Ctx, ArrayRef<Type *>({elt1, elts...}));
   }
 
   /// Return the type with the specified name, or null if there is none by that
@@ -306,8 +304,7 @@ public:
   std::enable_if_t<are_base_of<Type, Tys...>::value, void>
   setBody(Type *elt1, Tys *... elts) {
     assert(elt1 && "Cannot create a struct type with no elements with this");
-    SmallVector<llvm::Type *, 8> StructFields({elt1, elts...});
-    setBody(StructFields);
+    setBody(ArrayRef<Type *>({elt1, elts...}));
   }
 
   /// Return true if the specified type is valid as a element type.
