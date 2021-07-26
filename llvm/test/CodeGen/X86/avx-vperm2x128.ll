@@ -691,6 +691,34 @@ entry:
   ret <8 x i32> %res
 }
 
+define void @PR50053(<4 x i64>* nocapture %0, <4 x i64>* nocapture readonly %1) {
+; ALL-LABEL: PR50053:
+; ALL:       # %bb.0:
+; ALL-NEXT:    vmovaps (%rsi), %ymm0
+; ALL-NEXT:    vmovaps 32(%rsi), %xmm1
+; ALL-NEXT:    vmovaps 48(%rsi), %xmm2
+; ALL-NEXT:    vperm2f128 {{.*#+}} ymm1 = ymm0[0,1],ymm1[0,1]
+; ALL-NEXT:    vmovaps %ymm1, (%rdi)
+; ALL-NEXT:    vblendps {{.*#+}} ymm0 = ymm2[0,1,2,3],ymm0[4,5,6,7]
+; ALL-NEXT:    vmovaps %ymm0, 32(%rdi)
+; ALL-NEXT:    vzeroupper
+; ALL-NEXT:    retq
+  %3 = load <4 x i64>, <4 x i64>* %1, align 32
+  %4 = getelementptr inbounds <4 x i64>, <4 x i64>* %1, i64 1
+  %5 = bitcast <4 x i64>* %4 to <2 x i64>*
+  %6 = load <2 x i64>, <2 x i64>* %5, align 16
+  %7 = getelementptr inbounds <2 x i64>, <2 x i64>* %5, i64 1
+  %8 = load <2 x i64>, <2 x i64>* %7, align 16
+  %9 = shufflevector <2 x i64> %6, <2 x i64> poison, <4 x i32> <i32 0, i32 1, i32 undef, i32 undef>
+  %10 = shufflevector <4 x i64> %3, <4 x i64> %9, <4 x i32> <i32 0, i32 1, i32 4, i32 5>
+  store <4 x i64> %10, <4 x i64>* %0, align 32
+  %11 = shufflevector <2 x i64> %8, <2 x i64> poison, <4 x i32> <i32 0, i32 1, i32 undef, i32 undef>
+  %12 = shufflevector <4 x i64> %11, <4 x i64> %3, <4 x i32> <i32 0, i32 1, i32 6, i32 7>
+  %13 = getelementptr inbounds <4 x i64>, <4 x i64>* %0, i64 1
+  store <4 x i64> %12, <4 x i64>* %13, align 32
+  ret void
+}
+
 !llvm.module.flags = !{!0}
 !0 = !{i32 1, !"ProfileSummary", !1}
 !1 = !{!2, !3, !4, !5, !6, !7, !8, !9}
