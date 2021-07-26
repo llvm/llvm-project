@@ -1409,6 +1409,54 @@ define <4 x float> @max_const_intrinsic_v4f32() {
   ret <4 x float> %a
 }
 
+; CHECK-LABEL: pmin_v4f32:
+; NO-SIMD128-NOT: f32x4
+; SIMD128-NEXT: .functype pmin_v4f32 (v128, v128) -> (v128){{$}}
+; SIMD128-NEXT: f32x4.pmin $push[[R:[0-9]+]]=, $0, $1{{$}}
+; SIMD128-NEXT: return $pop[[R]]{{$}}
+define <4 x float> @pmin_v4f32(<4 x float> %x, <4 x float> %y) {
+  %c = fcmp olt <4 x float> %y, %x
+  %a = select <4 x i1> %c, <4 x float> %y, <4 x float> %x
+  ret <4 x float> %a
+}
+
+; CHECK-LABEL: pmin_int_v4f32:
+; NO-SIMD128-NOT: f32x4
+; SIMD128-NEXT: .functype pmin_int_v4f32 (v128, v128) -> (v128){{$}}
+; SIMD128-NEXT: f32x4.pmin $push[[R:[0-9]+]]=, $0, $1{{$}}
+; SIMD128-NEXT: return $pop[[R]]{{$}}
+define <4 x i32> @pmin_int_v4f32(<4 x i32> %x, <4 x i32> %y) {
+  %fx = bitcast <4 x i32> %x to <4 x float>
+  %fy = bitcast <4 x i32> %y to <4 x float>
+  %c = fcmp olt <4 x float> %fy, %fx
+  %a = select <4 x i1> %c, <4 x i32> %y, <4 x i32> %x
+  ret <4 x i32> %a
+}
+
+; CHECK-LABEL: pmax_v4f32:
+; NO-SIMD128-NOT: f32x4
+; SIMD128-NEXT: .functype pmax_v4f32 (v128, v128) -> (v128){{$}}
+; SIMD128-NEXT: f32x4.pmax $push[[R:[0-9]+]]=, $0, $1{{$}}
+; SIMD128-NEXT: return $pop[[R]]{{$}}
+define <4 x float> @pmax_v4f32(<4 x float> %x, <4 x float> %y) {
+  %c = fcmp olt <4 x float> %x, %y
+  %a = select <4 x i1> %c, <4 x float> %y, <4 x float> %x
+  ret <4 x float> %a
+}
+
+; CHECK-LABEL: pmax_int_v4f32:
+; NO-SIMD128-NOT: f32x4
+; SIMD128-NEXT: .functype pmax_int_v4f32 (v128, v128) -> (v128){{$}}
+; SIMD128-NEXT: f32x4.pmax $push[[R:[0-9]+]]=, $0, $1{{$}}
+; SIMD128-NEXT: return $pop[[R]]{{$}}
+define <4 x i32> @pmax_int_v4f32(<4 x i32> %x, <4 x i32> %y) {
+  %fx = bitcast <4 x i32> %x to <4 x float>
+  %fy = bitcast <4 x i32> %y to <4 x float>
+  %c = fcmp olt <4 x float> %fx, %fy
+  %a = select <4 x i1> %c, <4 x i32> %y, <4 x i32> %x
+  ret <4 x i32> %a
+}
+
 ; CHECK-LABEL: add_v4f32:
 ; NO-SIMD128-NOT: f32x4
 ; SIMD128-NEXT: .functype add_v4f32 (v128, v128) -> (v128){{$}}
@@ -1583,6 +1631,54 @@ define <2 x double> @max_const_intrinsic_v2f64() {
     <2 x double> <double 5., double 5.>
   )
   ret <2 x double> %a
+}
+
+; CHECK-LABEL: pmin_v2f64:
+; NO-SIMD128-NOT: f64x2
+; SIMD128-NEXT: .functype pmin_v2f64 (v128, v128) -> (v128){{$}}
+; SIMD128-NEXT: f64x2.pmin $push[[R:[0-9]+]]=, $0, $1{{$}}
+; SIMD128-NEXT: return $pop[[R]]{{$}}
+define <2 x double> @pmin_v2f64(<2 x double> %x, <2 x double> %y) {
+  %c = fcmp olt <2 x double> %y, %x
+  %a = select <2 x i1> %c, <2 x double> %y, <2 x double> %x
+  ret <2 x double> %a
+}
+
+; CHECK-LABEL: pmin_int_v2f64:
+; NO-SIMD128-NOT: f64x2
+; SIMD128-NEXT: .functype pmin_int_v2f64 (v128, v128) -> (v128){{$}}
+; SIMD128-NEXT: f64x2.pmin $push[[R:[0-9]+]]=, $0, $1{{$}}
+; SIMD128-NEXT: return $pop[[R]]{{$}}
+define <2 x i64> @pmin_int_v2f64(<2 x i64> %x, <2 x i64> %y) {
+  %fx = bitcast <2 x i64> %x to <2 x double>
+  %fy = bitcast <2 x i64> %y to <2 x double>
+  %c = fcmp olt <2 x double> %fy, %fx
+  %a = select <2 x i1> %c, <2 x i64> %y, <2 x i64> %x
+  ret <2 x i64> %a
+}
+
+; CHECK-LABEL: pmax_v2f64:
+; NO-SIMD128-NOT: f64x2
+; SIMD128-NEXT: .functype pmax_v2f64 (v128, v128) -> (v128){{$}}
+; SIMD128-NEXT: f64x2.pmax $push[[R:[0-9]+]]=, $0, $1{{$}}
+; SIMD128-NEXT: return $pop[[R]]{{$}}
+define <2 x double> @pmax_v2f64(<2 x double> %x, <2 x double> %y) {
+  %c = fcmp olt <2 x double> %x, %y
+  %a = select <2 x i1> %c, <2 x double> %y, <2 x double> %x
+  ret <2 x double> %a
+}
+
+; CHECK-LABEL: pmax_int_v2f64:
+; NO-SIMD128-NOT: f64x2
+; SIMD128-NEXT: .functype pmax_int_v2f64 (v128, v128) -> (v128){{$}}
+; SIMD128-NEXT: f64x2.pmax $push[[R:[0-9]+]]=, $0, $1{{$}}
+; SIMD128-NEXT: return $pop[[R]]{{$}}
+define <2 x i64> @pmax_int_v2f64(<2 x i64> %x, <2 x i64> %y) {
+  %fx = bitcast <2 x i64> %x to <2 x double>
+  %fy = bitcast <2 x i64> %y to <2 x double>
+  %c = fcmp olt <2 x double> %fx, %fy
+  %a = select <2 x i1> %c, <2 x i64> %y, <2 x i64> %x
+  ret <2 x i64> %a
 }
 
 ; CHECK-LABEL: add_v2f64:

@@ -68,8 +68,8 @@ static void walkReturnOperations(Region *region,
                                  std::function<void(Operation *)> func) {
   for (Block &block : *region) {
     Operation *terminator = block.getTerminator();
-    // Skip non-return-like terminators.
-    if (terminator->hasTrait<OpTrait::ReturnLike>())
+    // Skip non region-return-like terminators.
+    if (isRegionReturnLike(terminator))
       func(terminator);
   }
 }
@@ -390,12 +390,15 @@ private:
       // new buffer allocations. Thereby, the appropriate terminator operand
       // will be adjusted to point to the newly allocated buffer instead.
       walkReturnOperations(&region, [&](Operation *terminator) {
+        // Get the actual mutable operands for this terminator op.
+        auto terminatorOperands = *getMutableRegionBranchSuccessorOperands(
+            terminator, region.getRegionNumber());
         // Extract the source value from the current terminator.
-        Value sourceValue = terminator->getOperand(operandIndex);
+        Value sourceValue = ((OperandRange)terminatorOperands)[operandIndex];
         // Create a new clone at the current location of the terminator.
         Value clone = introduceCloneBuffers(sourceValue, terminator);
         // Wire clone and terminator operand.
-        terminator->setOperand(operandIndex, clone);
+        terminatorOperands.slice(operandIndex, 1).assign(clone);
       });
     }
   }

@@ -64,7 +64,7 @@ define i32 @fcvt_w_d(double %a) nounwind {
 ; RV64IFD-LABEL: fcvt_w_d:
 ; RV64IFD:       # %bb.0:
 ; RV64IFD-NEXT:    fmv.d.x ft0, a0
-; RV64IFD-NEXT:    fcvt.l.d a0, ft0, rtz
+; RV64IFD-NEXT:    fcvt.w.d a0, ft0, rtz
 ; RV64IFD-NEXT:    ret
   %1 = fptosi double %a to i32
   ret i32 %1
@@ -133,7 +133,7 @@ define i32 @fcvt_wu_d(double %a) nounwind {
 ; RV64IFD-LABEL: fcvt_wu_d:
 ; RV64IFD:       # %bb.0:
 ; RV64IFD-NEXT:    fmv.d.x ft0, a0
-; RV64IFD-NEXT:    fcvt.lu.d a0, ft0, rtz
+; RV64IFD-NEXT:    fcvt.wu.d a0, ft0, rtz
 ; RV64IFD-NEXT:    ret
   %1 = fptoui double %a to i32
   ret i32 %1
@@ -166,7 +166,7 @@ define i32 @fcvt_wu_d_multiple_use(double %x, i32* %y) {
 ; RV64IFD-NEXT:    addi a0, zero, 1
 ; RV64IFD-NEXT:    beqz a1, .LBB5_2
 ; RV64IFD-NEXT:  # %bb.1:
-; RV64IFD-NEXT:    fcvt.lu.d a0, ft0, rtz
+; RV64IFD-NEXT:    mv a0, a1
 ; RV64IFD-NEXT:  .LBB5_2:
 ; RV64IFD-NEXT:    ret
   %a = fptoui double %x to i32

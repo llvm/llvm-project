@@ -1,3 +1,4 @@
+; REQUIRES: x86
 ; RUN: rm -rf %t; split-file %s %t
 ; RUN: mkdir %t/a %t/b
 ; RUN: opt -thinlto-bc -o %t/main.o %t/main.ll

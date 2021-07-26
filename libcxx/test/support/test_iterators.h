@@ -848,25 +848,25 @@ public:
     return *this;
   }
 
-  constexpr friend stride_counting_iterator operator+(stride_counting_iterator i, difference_type const n)
+  friend constexpr stride_counting_iterator operator+(stride_counting_iterator i, difference_type const n)
   requires std::random_access_iterator<I>
   {
     return i += n;
   }
 
-  constexpr friend stride_counting_iterator operator+(difference_type const n, stride_counting_iterator i)
+  friend constexpr stride_counting_iterator operator+(difference_type const n, stride_counting_iterator i)
   requires std::random_access_iterator<I>
   {
     return i += n;
   }
 
-  constexpr friend stride_counting_iterator operator-(stride_counting_iterator i, difference_type const n)
+  friend constexpr stride_counting_iterator operator-(stride_counting_iterator i, difference_type const n)
   requires std::random_access_iterator<I>
   {
     return i -= n;
   }
 
-  constexpr friend difference_type operator-(stride_counting_iterator const& x, stride_counting_iterator const& y)
+  friend constexpr difference_type operator-(stride_counting_iterator const& x, stride_counting_iterator const& y)
   requires std::sized_sentinel_for<I, I>
   {
     return x.base() - y.base();
@@ -884,25 +884,25 @@ public:
       return base_ == last;
   }
 
-  constexpr friend bool operator<(stride_counting_iterator const& x, stride_counting_iterator const& y)
+  friend constexpr bool operator<(stride_counting_iterator const& x, stride_counting_iterator const& y)
   requires std::random_access_iterator<I>
   {
     return x.base_ < y.base_;
   }
 
-  constexpr friend bool operator>(stride_counting_iterator const& x, stride_counting_iterator const& y)
+  friend constexpr bool operator>(stride_counting_iterator const& x, stride_counting_iterator const& y)
   requires std::random_access_iterator<I>
   {
     return y < x;
   }
 
-  constexpr friend bool operator<=(stride_counting_iterator const& x, stride_counting_iterator const& y)
+  friend constexpr bool operator<=(stride_counting_iterator const& x, stride_counting_iterator const& y)
   requires std::random_access_iterator<I>
   {
     return !(y < x);
   }
 
-  constexpr friend bool operator>=(stride_counting_iterator const& x, stride_counting_iterator const& y)
+  friend constexpr bool operator>=(stride_counting_iterator const& x, stride_counting_iterator const& y)
   requires std::random_access_iterator<I>
   {
     return !(x < y);
@@ -923,6 +923,9 @@ public:
   constexpr bool operator==(I const& other) const requires std::equality_comparable<I> {
     return base_ == other;
   }
+
+  constexpr const I& base() const& { return base_; }
+  constexpr I base() && { return std::move(base_); }
 
 private:
   I base_ = I();

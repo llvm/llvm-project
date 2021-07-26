@@ -15,7 +15,7 @@ define i32 @foo(i16 signext %0, i32 %1, i32* nocapture %2) {
 ; CHECK-NEXT:    andl $65527, %eax # imm = 0xFFF7
 ; CHECK-NEXT:    movl %eax, (%rdx)
 ; CHECK-NEXT:    xorl %eax, %eax
-; CHECK-NEXT:    testl $-9, %edi
+; CHECK-NEXT:    testb $-9, %dil
 ; CHECK-NEXT:    cmovel %esi, %eax
 ; CHECK-NEXT:    retq
   %4 = add i16 %0, 1

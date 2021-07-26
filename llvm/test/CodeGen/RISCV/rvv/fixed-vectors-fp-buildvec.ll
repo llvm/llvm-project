@@ -37,7 +37,7 @@ define <4 x float> @hang_when_merging_stores_after_legalization(<8 x float> %x, 
 ; LMULMAX1:       # %bb.0:
 ; LMULMAX1-NEXT:    addi sp, sp, -32
 ; LMULMAX1-NEXT:    .cfi_def_cfa_offset 32
-; LMULMAX1-NEXT:    vsetvli zero, zero, e32, m2, ta, mu
+; LMULMAX1-NEXT:    vsetivli zero, 0, e32, m2, ta, mu
 ; LMULMAX1-NEXT:    vfmv.f.s ft0, v10
 ; LMULMAX1-NEXT:    fsw ft0, 24(sp)
 ; LMULMAX1-NEXT:    vfmv.f.s ft0, v8

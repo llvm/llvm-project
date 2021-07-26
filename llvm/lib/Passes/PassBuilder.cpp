@@ -1647,6 +1647,10 @@ PassBuilder::buildLTODefaultPipeline(OptimizationLevel Level,
   // Convert @llvm.global.annotations to !annotation metadata.
   MPM.addPass(Annotation2MetadataPass());
 
+  // Create a function that performs CFI checks for cross-DSO calls with targets
+  // in the current module.
+  MPM.addPass(CrossDSOCFIPass());
+
   if (Level == OptimizationLevel::O0) {
     // The WPD and LowerTypeTest passes need to run at -O0 to lower type
     // metadata and intrinsics.
@@ -1864,10 +1868,6 @@ PassBuilder::buildLTODefaultPipeline(OptimizationLevel Level,
   invokePeepholeEPCallbacks(MainFPM, Level);
   MainFPM.addPass(JumpThreadingPass(/*InsertFreezeWhenUnfoldingSelect*/ true));
   MPM.addPass(createModuleToFunctionPassAdaptor(std::move(MainFPM)));
-
-  // Create a function that performs CFI checks for cross-DSO calls with
-  // targets in the current module.
-  MPM.addPass(CrossDSOCFIPass());
 
   // Lower type metadata and the type.test intrinsic. This pass supports
   // clang's control flow integrity mechanisms (-fsanitize=cfi*) and needs

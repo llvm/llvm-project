@@ -16,10 +16,10 @@ struct ContiguousView : std::ranges::view_base {
   constexpr ContiguousView(int* ptr = globalBuff, int start = 0) : start_(start), ptr_(ptr) {}
   constexpr ContiguousView(ContiguousView&&) = default;
   constexpr ContiguousView& operator=(ContiguousView&&) = default;
-  constexpr friend int* begin(ContiguousView& view) { return view.ptr_ + view.start_; }
-  constexpr friend int* begin(ContiguousView const& view) { return view.ptr_ + view.start_; }
-  constexpr friend int* end(ContiguousView& view) { return view.ptr_ + 8; }
-  constexpr friend int* end(ContiguousView const& view) { return view.ptr_ + 8; }
+  friend constexpr int* begin(ContiguousView& view) { return view.ptr_ + view.start_; }
+  friend constexpr int* begin(ContiguousView const& view) { return view.ptr_ + view.start_; }
+  friend constexpr int* end(ContiguousView& view) { return view.ptr_ + 8; }
+  friend constexpr int* end(ContiguousView const& view) { return view.ptr_ + 8; }
 };
 
 struct CopyableView : std::ranges::view_base {
@@ -27,10 +27,10 @@ struct CopyableView : std::ranges::view_base {
   constexpr CopyableView(int start = 0) : start_(start) {}
   constexpr CopyableView(CopyableView const&) = default;
   constexpr CopyableView& operator=(CopyableView const&) = default;
-  constexpr friend int* begin(CopyableView& view) { return globalBuff + view.start_; }
-  constexpr friend int* begin(CopyableView const& view) { return globalBuff + view.start_; }
-  constexpr friend int* end(CopyableView&) { return globalBuff + 8; }
-  constexpr friend int* end(CopyableView const&) { return globalBuff + 8; }
+  friend constexpr int* begin(CopyableView& view) { return globalBuff + view.start_; }
+  friend constexpr int* begin(CopyableView const& view) { return globalBuff + view.start_; }
+  friend constexpr int* end(CopyableView&) { return globalBuff + 8; }
+  friend constexpr int* end(CopyableView const&) { return globalBuff + 8; }
 };
 
 using ForwardIter = forward_iterator<int*>;
@@ -39,10 +39,10 @@ struct ForwardView : std::ranges::view_base {
   constexpr ForwardView(int* ptr = globalBuff) : ptr_(ptr) {}
   constexpr ForwardView(ForwardView&&) = default;
   constexpr ForwardView& operator=(ForwardView&&) = default;
-  constexpr friend ForwardIter begin(ForwardView& view) { return ForwardIter(view.ptr_); }
-  constexpr friend ForwardIter begin(ForwardView const& view) { return ForwardIter(view.ptr_); }
-  constexpr friend ForwardIter end(ForwardView& view) { return ForwardIter(view.ptr_ + 8); }
-  constexpr friend ForwardIter end(ForwardView const& view) { return ForwardIter(view.ptr_ + 8); }
+  friend constexpr ForwardIter begin(ForwardView& view) { return ForwardIter(view.ptr_); }
+  friend constexpr ForwardIter begin(ForwardView const& view) { return ForwardIter(view.ptr_); }
+  friend constexpr ForwardIter end(ForwardView& view) { return ForwardIter(view.ptr_ + 8); }
+  friend constexpr ForwardIter end(ForwardView const& view) { return ForwardIter(view.ptr_ + 8); }
 };
 
 using ForwardRange = test_common_range<forward_iterator>;

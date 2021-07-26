@@ -288,7 +288,7 @@ bool Tokenizer::canContinueIdentifier() const {
   assert(!streamEof());
   const char CurChar = Data[Pos];
   return std::isalnum(CurChar) || CurChar == '_' || CurChar == '.' ||
-         CurChar == '/' || CurChar == '\\';
+         CurChar == '/' || CurChar == '\\' || CurChar == '-';
 }
 
 bool Tokenizer::canStartInt() const {

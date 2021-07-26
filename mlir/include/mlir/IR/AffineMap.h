@@ -503,6 +503,20 @@ AffineMap
 getProjectedMap(AffineMap map,
                 const llvm::SmallDenseSet<unsigned> &projectedDimensions);
 
+/// Apply a permutation from `map` to `source` and return the result.
+template <typename T>
+SmallVector<T> applyPermuationMap(AffineMap map, llvm::ArrayRef<T> source) {
+  assert(map.isProjectedPermutation());
+  assert(map.getNumInputs() == source.size());
+  SmallVector<T> result;
+  result.reserve(map.getNumResults());
+  for (unsigned i = 0, e = map.getNumResults(); i < e; ++i) {
+    unsigned dim = map.getDimPosition(i);
+    result.push_back(source[dim]);
+  }
+  return result;
+}
+
 inline raw_ostream &operator<<(raw_ostream &os, AffineMap map) {
   map.print(os);
   return os;

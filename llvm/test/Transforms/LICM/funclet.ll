@@ -157,6 +157,6 @@ else:                                             ; preds = %postinvoke
 
 declare void @may_throw()
 
-declare i32 @pure_computation() nounwind argmemonly readonly
+declare i32 @pure_computation() nounwind argmemonly readonly willreturn
 
 declare i32 @__CxxFrameHandler3(...)

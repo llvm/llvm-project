@@ -9,7 +9,7 @@
 #ifndef LLVM_LIBC_UTILS_UNITTEST_PLATFORMDEFS_H
 #define LLVM_LIBC_UTILS_UNITTEST_PLATFORMDEFS_H
 
-#if !(defined(_WIN32) || defined(_WIN64))
+#if !defined(_WIN32)
 #define ENABLE_SUBPROCESS_TESTS
 #endif
 

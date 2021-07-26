@@ -2013,7 +2013,8 @@ define i64 @test_chr_22(i1 %i, i64* %j, i64 %v0) !prof !14 {
 ; CHECK-NEXT:    [[C1:%.*]] = icmp slt i64 [[V2]], 100
 ; CHECK-NEXT:    br i1 [[C1]], label [[BB0_SPLIT:%.*]], label [[BB0_SPLIT_NONCHR:%.*]], !prof [[PROF15]]
 ; CHECK:       common.ret:
-; CHECK-NEXT:    ret i64 99
+; CHECK-NEXT:    [[COMMON_RET_OP:%.*]] = phi i64 [ 99, [[BB0_SPLIT]] ], [ 99, [[BB0_SPLIT_NONCHR]] ]
+; CHECK-NEXT:    ret i64 [[COMMON_RET_OP]]
 ; CHECK:       bb0.split:
 ; CHECK-NEXT:    [[V299:%.*]] = mul i64 [[V2]], 7860086430977039991
 ; CHECK-NEXT:    store i64 [[V299]], i64* [[J:%.*]], align 4

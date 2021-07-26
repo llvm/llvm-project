@@ -2191,11 +2191,11 @@ v128_t test_f32x4_max(v128_t a, v128_t b) {
 
 // CHECK-LABEL: @test_f32x4_pmin(
 // CHECK-NEXT:  entry:
-// CHECK-NEXT:    [[TMP0:%.*]] = bitcast <4 x i32> [[A:%.*]] to <4 x float>
-// CHECK-NEXT:    [[TMP1:%.*]] = bitcast <4 x i32> [[B:%.*]] to <4 x float>
-// CHECK-NEXT:    [[TMP2:%.*]] = tail call <4 x float> @llvm.wasm.pmin.v4f32(<4 x float> [[TMP0]], <4 x float> [[TMP1]]) #[[ATTR6]]
-// CHECK-NEXT:    [[TMP3:%.*]] = bitcast <4 x float> [[TMP2]] to <4 x i32>
-// CHECK-NEXT:    ret <4 x i32> [[TMP3]]
+// CHECK-NEXT:    [[TMP0:%.*]] = bitcast <4 x i32> [[B:%.*]] to <4 x float>
+// CHECK-NEXT:    [[TMP1:%.*]] = bitcast <4 x i32> [[A:%.*]] to <4 x float>
+// CHECK-NEXT:    [[CMP_I:%.*]] = fcmp olt <4 x float> [[TMP0]], [[TMP1]]
+// CHECK-NEXT:    [[TMP2:%.*]] = select <4 x i1> [[CMP_I]], <4 x i32> [[B]], <4 x i32> [[A]]
+// CHECK-NEXT:    ret <4 x i32> [[TMP2]]
 //
 v128_t test_f32x4_pmin(v128_t a, v128_t b) {
   return wasm_f32x4_pmin(a, b);
@@ -2205,9 +2205,9 @@ v128_t test_f32x4_pmin(v128_t a, v128_t b) {
 // CHECK-NEXT:  entry:
 // CHECK-NEXT:    [[TMP0:%.*]] = bitcast <4 x i32> [[A:%.*]] to <4 x float>
 // CHECK-NEXT:    [[TMP1:%.*]] = bitcast <4 x i32> [[B:%.*]] to <4 x float>
-// CHECK-NEXT:    [[TMP2:%.*]] = tail call <4 x float> @llvm.wasm.pmax.v4f32(<4 x float> [[TMP0]], <4 x float> [[TMP1]]) #[[ATTR6]]
-// CHECK-NEXT:    [[TMP3:%.*]] = bitcast <4 x float> [[TMP2]] to <4 x i32>
-// CHECK-NEXT:    ret <4 x i32> [[TMP3]]
+// CHECK-NEXT:    [[CMP_I:%.*]] = fcmp olt <4 x float> [[TMP0]], [[TMP1]]
+// CHECK-NEXT:    [[TMP2:%.*]] = select <4 x i1> [[CMP_I]], <4 x i32> [[B]], <4 x i32> [[A]]
+// CHECK-NEXT:    ret <4 x i32> [[TMP2]]
 //
 v128_t test_f32x4_pmax(v128_t a, v128_t b) {
   return wasm_f32x4_pmax(a, b);
@@ -2364,9 +2364,10 @@ v128_t test_f64x2_max(v128_t a, v128_t b) {
 
 // CHECK-LABEL: @test_f64x2_pmin(
 // CHECK-NEXT:  entry:
-// CHECK-NEXT:    [[TMP0:%.*]] = bitcast <4 x i32> [[A:%.*]] to <2 x double>
-// CHECK-NEXT:    [[TMP1:%.*]] = bitcast <4 x i32> [[B:%.*]] to <2 x double>
-// CHECK-NEXT:    [[TMP2:%.*]] = tail call <2 x double> @llvm.wasm.pmin.v2f64(<2 x double> [[TMP0]], <2 x double> [[TMP1]]) #[[ATTR6]]
+// CHECK-NEXT:    [[TMP0:%.*]] = bitcast <4 x i32> [[B:%.*]] to <2 x double>
+// CHECK-NEXT:    [[TMP1:%.*]] = bitcast <4 x i32> [[A:%.*]] to <2 x double>
+// CHECK-NEXT:    [[CMP_I:%.*]] = fcmp olt <2 x double> [[TMP0]], [[TMP1]]
+// CHECK-NEXT:    [[TMP2:%.*]] = select <2 x i1> [[CMP_I]], <2 x double> [[TMP0]], <2 x double> [[TMP1]]
 // CHECK-NEXT:    [[TMP3:%.*]] = bitcast <2 x double> [[TMP2]] to <4 x i32>
 // CHECK-NEXT:    ret <4 x i32> [[TMP3]]
 //
@@ -2378,7 +2379,8 @@ v128_t test_f64x2_pmin(v128_t a, v128_t b) {
 // CHECK-NEXT:  entry:
 // CHECK-NEXT:    [[TMP0:%.*]] = bitcast <4 x i32> [[A:%.*]] to <2 x double>
 // CHECK-NEXT:    [[TMP1:%.*]] = bitcast <4 x i32> [[B:%.*]] to <2 x double>
-// CHECK-NEXT:    [[TMP2:%.*]] = tail call <2 x double> @llvm.wasm.pmax.v2f64(<2 x double> [[TMP0]], <2 x double> [[TMP1]]) #[[ATTR6]]
+// CHECK-NEXT:    [[CMP_I:%.*]] = fcmp olt <2 x double> [[TMP0]], [[TMP1]]
+// CHECK-NEXT:    [[TMP2:%.*]] = select <2 x i1> [[CMP_I]], <2 x double> [[TMP1]], <2 x double> [[TMP0]]
 // CHECK-NEXT:    [[TMP3:%.*]] = bitcast <2 x double> [[TMP2]] to <4 x i32>
 // CHECK-NEXT:    ret <4 x i32> [[TMP3]]
 //

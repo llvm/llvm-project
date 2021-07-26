@@ -29,6 +29,7 @@ namespace orc {
 
 struct MachOPerObjectSectionsToRegister {
   ExecutorAddressRange EHFrameSection;
+  ExecutorAddressRange ThreadDataSection;
 };
 
 struct MachOJITDylibInitializers {
@@ -41,6 +42,7 @@ struct MachOJITDylibInitializers {
 
   std::string Name;
   ExecutorAddress MachOHeaderAddress;
+  ExecutorAddress ObjCImageInfoAddress;
 
   StringMap<SectionList> InitSections;
 };
@@ -120,6 +122,9 @@ public:
   static ArrayRef<std::pair<const char *, const char *>>
   standardRuntimeUtilityAliases();
 
+  /// Returns true if the given section name is an initializer section.
+  static bool isInitializerSection(StringRef SegName, StringRef SectName);
+
 private:
   // The MachOPlatformPlugin scans/modifies LinkGraphs to support MachO
   // platform features including initializers, exceptions, TLV, and language
@@ -158,16 +163,22 @@ private:
     void addMachOHeaderSupportPasses(MaterializationResponsibility &MR,
                                      jitlink::PassConfiguration &Config);
 
-    void addEHSupportPasses(MaterializationResponsibility &MR,
-                            jitlink::PassConfiguration &Config);
+    void addEHAndTLVSupportPasses(MaterializationResponsibility &MR,
+                                  jitlink::PassConfiguration &Config);
 
     Error preserveInitSections(jitlink::LinkGraph &G,
                                MaterializationResponsibility &MR);
 
+    Error processObjCImageInfo(jitlink::LinkGraph &G,
+                               MaterializationResponsibility &MR);
+
     Error registerInitSections(jitlink::LinkGraph &G, JITDylib &JD);
+
+    Error fixTLVSectionsAndEdges(jitlink::LinkGraph &G, JITDylib &JD);
 
     std::mutex PluginMutex;
     MachOPlatform &MP;
+    DenseMap<JITDylib *, std::pair<uint32_t, uint32_t>> ObjCImageInfos;
     InitSymbolDepMap InitSymbolDeps;
   };
 
@@ -208,10 +219,12 @@ private:
   // Records the addresses of runtime symbols used by the platform.
   Error bootstrapMachORuntime(JITDylib &PlatformJD);
 
-  Error registerInitInfo(JITDylib &JD,
+  Error registerInitInfo(JITDylib &JD, ExecutorAddress ObjCImageInfoAddr,
                          ArrayRef<jitlink::Section *> InitSections);
 
   Error registerPerObjectSections(const MachOPerObjectSectionsToRegister &POSR);
+
+  Expected<uint64_t> createPThreadKey();
 
   ExecutionSession &ES;
   ObjectLinkingLayer &ObjLinkingLayer;
@@ -223,6 +236,7 @@ private:
   ExecutorAddress orc_rt_macho_platform_bootstrap;
   ExecutorAddress orc_rt_macho_platform_shutdown;
   ExecutorAddress orc_rt_macho_register_object_sections;
+  ExecutorAddress orc_rt_macho_create_pthread_key;
 
   DenseMap<JITDylib *, SymbolLookupSet> RegisteredInitSymbols;
 
@@ -233,11 +247,13 @@ private:
   std::vector<MachOPerObjectSectionsToRegister> BootstrapPOSRs;
 
   DenseMap<JITTargetAddress, JITDylib *> HeaderAddrToJITDylib;
+  DenseMap<JITDylib *, uint64_t> JITDylibToPThreadKey;
 };
 
 namespace shared {
 
-using SPSMachOPerObjectSectionsToRegister = SPSTuple<SPSExecutorAddressRange>;
+using SPSMachOPerObjectSectionsToRegister =
+    SPSTuple<SPSExecutorAddressRange, SPSExecutorAddressRange>;
 
 template <>
 class SPSSerializationTraits<SPSMachOPerObjectSectionsToRegister,
@@ -246,19 +262,19 @@ class SPSSerializationTraits<SPSMachOPerObjectSectionsToRegister,
 public:
   static size_t size(const MachOPerObjectSectionsToRegister &MOPOSR) {
     return SPSMachOPerObjectSectionsToRegister::AsArgList::size(
-        MOPOSR.EHFrameSection);
+        MOPOSR.EHFrameSection, MOPOSR.ThreadDataSection);
   }
 
   static bool serialize(SPSOutputBuffer &OB,
                         const MachOPerObjectSectionsToRegister &MOPOSR) {
     return SPSMachOPerObjectSectionsToRegister::AsArgList::serialize(
-        OB, MOPOSR.EHFrameSection);
+        OB, MOPOSR.EHFrameSection, MOPOSR.ThreadDataSection);
   }
 
   static bool deserialize(SPSInputBuffer &IB,
                           MachOPerObjectSectionsToRegister &MOPOSR) {
     return SPSMachOPerObjectSectionsToRegister::AsArgList::deserialize(
-        IB, MOPOSR.EHFrameSection);
+        IB, MOPOSR.EHFrameSection, MOPOSR.ThreadDataSection);
   }
 };
 
@@ -266,7 +282,7 @@ using SPSNamedExecutorAddressRangeSequenceMap =
     SPSSequence<SPSTuple<SPSString, SPSExecutorAddressRangeSequence>>;
 
 using SPSMachOJITDylibInitializers =
-    SPSTuple<SPSString, SPSExecutorAddress,
+    SPSTuple<SPSString, SPSExecutorAddress, SPSExecutorAddress,
              SPSNamedExecutorAddressRangeSequenceMap>;
 
 using SPSMachOJITDylibInitializerSequence =
@@ -279,19 +295,22 @@ class SPSSerializationTraits<SPSMachOJITDylibInitializers,
 public:
   static size_t size(const MachOJITDylibInitializers &MOJDIs) {
     return SPSMachOJITDylibInitializers::AsArgList::size(
-        MOJDIs.Name, MOJDIs.MachOHeaderAddress, MOJDIs.InitSections);
+        MOJDIs.Name, MOJDIs.MachOHeaderAddress, MOJDIs.ObjCImageInfoAddress,
+        MOJDIs.InitSections);
   }
 
   static bool serialize(SPSOutputBuffer &OB,
                         const MachOJITDylibInitializers &MOJDIs) {
     return SPSMachOJITDylibInitializers::AsArgList::serialize(
-        OB, MOJDIs.Name, MOJDIs.MachOHeaderAddress, MOJDIs.InitSections);
+        OB, MOJDIs.Name, MOJDIs.MachOHeaderAddress, MOJDIs.ObjCImageInfoAddress,
+        MOJDIs.InitSections);
   }
 
   static bool deserialize(SPSInputBuffer &IB,
                           MachOJITDylibInitializers &MOJDIs) {
     return SPSMachOJITDylibInitializers::AsArgList::deserialize(
-        IB, MOJDIs.Name, MOJDIs.MachOHeaderAddress, MOJDIs.InitSections);
+        IB, MOJDIs.Name, MOJDIs.MachOHeaderAddress, MOJDIs.ObjCImageInfoAddress,
+        MOJDIs.InitSections);
   }
 };
 

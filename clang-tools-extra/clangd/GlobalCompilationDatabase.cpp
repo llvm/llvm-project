@@ -276,7 +276,7 @@ bool DirectoryBasedGlobalCompilationDatabase::DirectoryCache::load(
   // For these, we know the files they read and cache their metadata so we can
   // cheaply validate whether they've changed, and hot-reload if they have.
   // (As a bonus, these are also VFS-clean)!
-  struct {
+  struct CDBFile {
     CachedFile *File;
     // Wrapper for {Fixed,JSON}CompilationDatabase::loadFromBuffer.
     llvm::function_ref<std::unique_ptr<tooling::CompilationDatabase>(
@@ -284,12 +284,10 @@ bool DirectoryBasedGlobalCompilationDatabase::DirectoryCache::load(
         /*Data*/ llvm::StringRef,
         /*ErrorMsg*/ std::string &)>
         Parser;
-  } Files[] = {
-      {&CompileCommandsJson, parseJSON},
-      {&BuildCompileCommandsJson, parseJSON},
-      {&CompileFlagsTxt, parseFixed},
   };
-  for (const auto &Entry : Files) {
+  for (const auto &Entry : {CDBFile{&CompileCommandsJson, parseJSON},
+                            CDBFile{&BuildCompileCommandsJson, parseJSON},
+                            CDBFile{&CompileFlagsTxt, parseFixed}}) {
     bool Active = ActiveCachedFile == Entry.File;
     auto Loaded = Entry.File->load(FS, Active);
     switch (Loaded.Result) {

@@ -32,15 +32,15 @@ _LIBCPP_PUSH_MACROS
 _LIBCPP_BEGIN_NAMESPACE_STD
 
 template <class _InputIter>
-inline _LIBCPP_INLINE_VISIBILITY _LIBCPP_CONSTEXPR_AFTER_CXX14 void
-__advance(_InputIter& __i, typename iterator_traits<_InputIter>::difference_type __n, input_iterator_tag) {
+_LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_AFTER_CXX14
+void __advance(_InputIter& __i, typename iterator_traits<_InputIter>::difference_type __n, input_iterator_tag) {
   for (; __n > 0; --__n)
     ++__i;
 }
 
 template <class _BiDirIter>
-inline _LIBCPP_INLINE_VISIBILITY _LIBCPP_CONSTEXPR_AFTER_CXX14 void
-__advance(_BiDirIter& __i, typename iterator_traits<_BiDirIter>::difference_type __n, bidirectional_iterator_tag) {
+_LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_AFTER_CXX14
+void __advance(_BiDirIter& __i, typename iterator_traits<_BiDirIter>::difference_type __n, bidirectional_iterator_tag) {
   if (__n >= 0)
     for (; __n > 0; --__n)
       ++__i;
@@ -50,17 +50,19 @@ __advance(_BiDirIter& __i, typename iterator_traits<_BiDirIter>::difference_type
 }
 
 template <class _RandIter>
-inline _LIBCPP_INLINE_VISIBILITY _LIBCPP_CONSTEXPR_AFTER_CXX14 void
-__advance(_RandIter& __i, typename iterator_traits<_RandIter>::difference_type __n, random_access_iterator_tag) {
+_LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_AFTER_CXX14
+void __advance(_RandIter& __i, typename iterator_traits<_RandIter>::difference_type __n, random_access_iterator_tag) {
   __i += __n;
 }
 
 template <
     class _InputIter, class _Distance,
-    class = typename enable_if<is_integral<decltype(_VSTD::__convert_to_integral(declval<_Distance>()))>::value>::type>
-inline _LIBCPP_INLINE_VISIBILITY _LIBCPP_CONSTEXPR_AFTER_CXX14 void advance(_InputIter& __i, _Distance __orig_n) {
-  typedef decltype(_VSTD::__convert_to_integral(__orig_n)) _IntegralSize;
-  _IntegralSize __n = __orig_n;
+    class _IntegralDistance = decltype(_VSTD::__convert_to_integral(declval<_Distance>())),
+    class = _EnableIf<is_integral<_IntegralDistance>::value> >
+_LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_AFTER_CXX14
+void advance(_InputIter& __i, _Distance __orig_n) {
+  typedef typename iterator_traits<_InputIter>::difference_type _Difference;
+  _Difference __n = static_cast<_Difference>(_VSTD::__convert_to_integral(__orig_n));
   _LIBCPP_ASSERT(__n >= 0 || __is_cpp17_bidirectional_iterator<_InputIter>::value,
                  "Attempt to advance(it, n) with negative n on a non-bidirectional iterator");
   _VSTD::__advance(__i, __n, typename iterator_traits<_InputIter>::iterator_category());

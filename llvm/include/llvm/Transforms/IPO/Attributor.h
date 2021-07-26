@@ -1593,6 +1593,13 @@ public:
                      bool CheckBBLivenessOnly = false,
                      DepClassTy DepClass = DepClassTy::OPTIONAL);
 
+  /// Return true if \p BB is assumed dead.
+  ///
+  /// If \p LivenessAA is not provided it is queried.
+  bool isAssumedDead(const BasicBlock &BB, const AbstractAttribute *QueryingAA,
+                     const AAIsDead *FnLivenessAA,
+                     DepClassTy DepClass = DepClassTy::OPTIONAL);
+
   /// Check \p Pred on all (transitive) uses of \p V.
   ///
   /// This method will evaluate \p Pred on all (transitive) uses of the
@@ -2470,7 +2477,8 @@ struct IntegerRangeState : public AbstractState {
 /// IRAttribute::manifest is defined in the Attributor.cpp.
 struct IRAttributeManifest {
   static ChangeStatus manifestAttrs(Attributor &A, const IRPosition &IRP,
-                                    const ArrayRef<Attribute> &DeducedAttrs);
+                                    const ArrayRef<Attribute> &DeducedAttrs,
+                                    bool ForceReplace = false);
 };
 
 /// Helper to tie a abstract state implementation to an abstract attribute.
@@ -2695,6 +2703,17 @@ struct AttributorCGSCCPass : public PassInfoMixin<AttributorCGSCCPass> {
 
 Pass *createAttributorLegacyPass();
 Pass *createAttributorCGSCCLegacyPass();
+
+/// Helper function to clamp a state \p S of type \p StateType with the
+/// information in \p R and indicate/return if \p S did change (as-in update is
+/// required to be run again).
+template <typename StateType>
+ChangeStatus clampStateAndIndicateChange(StateType &S, const StateType &R) {
+  auto Assumed = S.getAssumed();
+  S ^= R;
+  return Assumed == S.getAssumed() ? ChangeStatus::UNCHANGED
+                                   : ChangeStatus::CHANGED;
+}
 
 /// ----------------------------------------------------------------------------
 ///                       Abstract Attribute Classes

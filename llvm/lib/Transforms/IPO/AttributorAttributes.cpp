@@ -146,6 +146,16 @@ PIPE_OPERATOR(AAFunctionReachability)
 PIPE_OPERATOR(AAPointerInfo)
 
 #undef PIPE_OPERATOR
+
+template <>
+ChangeStatus clampStateAndIndicateChange<DerefState>(DerefState &S,
+                                                     const DerefState &R) {
+  ChangeStatus CS0 =
+      clampStateAndIndicateChange(S.DerefBytesState, R.DerefBytesState);
+  ChangeStatus CS1 = clampStateAndIndicateChange(S.GlobalState, R.GlobalState);
+  return CS0 | CS1;
+}
+
 } // namespace llvm
 
 /// Get pointer operand of memory accessing instruction. If \p I is
@@ -446,17 +456,6 @@ getBasePointerOfAccessPointerOperand(const Instruction *I, int64_t &BytesOffset,
 
   return GetPointerBaseWithConstantOffset(Ptr, BytesOffset, DL,
                                           AllowNonInbounds);
-}
-
-/// Helper function to clamp a state \p S of type \p StateType with the
-/// information in \p R and indicate/return if \p S did change (as-in update is
-/// required to be run again).
-template <typename StateType>
-ChangeStatus clampStateAndIndicateChange(StateType &S, const StateType &R) {
-  auto Assumed = S.getAssumed();
-  S ^= R;
-  return Assumed == S.getAssumed() ? ChangeStatus::UNCHANGED
-                                   : ChangeStatus::CHANGED;
 }
 
 /// Clamp the information known for all returned values of a function
@@ -3941,15 +3940,6 @@ struct AAIsDeadCallSite final : AAIsDeadFunction {
 };
 
 /// -------------------- Dereferenceable Argument Attribute --------------------
-
-template <>
-ChangeStatus clampStateAndIndicateChange<DerefState>(DerefState &S,
-                                                     const DerefState &R) {
-  ChangeStatus CS0 =
-      clampStateAndIndicateChange(S.DerefBytesState, R.DerefBytesState);
-  ChangeStatus CS1 = clampStateAndIndicateChange(S.GlobalState, R.GlobalState);
-  return CS0 | CS1;
-}
 
 struct AADereferenceableImpl : AADereferenceable {
   AADereferenceableImpl(const IRPosition &IRP, Attributor &A)

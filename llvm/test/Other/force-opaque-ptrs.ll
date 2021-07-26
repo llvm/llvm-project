@@ -64,6 +64,13 @@ define void @remangle_intrinsic() {
   ret void
 }
 
+define i32* @constexpr_gep() {
+; CHECK-LABEL: define {{[^@]+}}@constexpr_gep() {
+; CHECK-NEXT:    ret ptr getelementptr (i32, ptr getelementptr (i8, ptr null, i64 4), i64 1)
+;
+  ret i32* getelementptr(i32, i32* bitcast (i8* getelementptr (i8, i8* null, i64 4) to i32*), i64 1)
+}
+
 declare i8* @llvm.stacksave()
 declare void @llvm.stackprotector(i8*, i8**)
 declare <2 x i64> @llvm.masked.expandload.v2i64(i64*, <2 x i1>, <2 x i64>)

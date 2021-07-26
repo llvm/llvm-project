@@ -894,9 +894,10 @@ InstructionCost TargetTransformInfo::getMemcpyCost(const Instruction *I) const {
 }
 
 InstructionCost TargetTransformInfo::getArithmeticReductionCost(
-    unsigned Opcode, VectorType *Ty, TTI::TargetCostKind CostKind) const {
+    unsigned Opcode, VectorType *Ty, Optional<FastMathFlags> FMF,
+    TTI::TargetCostKind CostKind) const {
   InstructionCost Cost =
-      TTIImpl->getArithmeticReductionCost(Opcode, Ty, CostKind);
+      TTIImpl->getArithmeticReductionCost(Opcode, Ty, FMF, CostKind);
   assert(Cost >= 0 && "TTI should not produce negative costs!");
   return Cost;
 }

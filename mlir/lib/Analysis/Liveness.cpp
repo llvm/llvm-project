@@ -63,21 +63,16 @@ struct BlockInfoBuilder {
       for (Value result : operation.getResults())
         gatherOutValues(result);
 
-    // Mark all nested operation results as defined.
+    // Mark all nested operation results as defined, and nested operation
+    // operands as used. All defined value will be removed from the used set
+    // at the end.
     block->walk([&](Operation *op) {
       for (Value result : op->getResults())
         defValues.insert(result);
+      for (Value operand : op->getOperands())
+        useValues.insert(operand);
     });
-
-    // Check all operations for used operands.
-    block->walk([&](Operation *op) {
-      for (Value operand : op->getOperands()) {
-        // If the operand is already defined in the scope of this
-        // block, we can skip the value in the use set.
-        if (!defValues.count(operand))
-          useValues.insert(operand);
-      }
-    });
+    llvm::set_subtract(useValues, defValues);
   }
 
   /// Updates live-in information of the current block. To do so it uses the
@@ -94,16 +89,16 @@ struct BlockInfoBuilder {
     if (newIn.size() == inValues.size())
       return false;
 
-    inValues = newIn;
+    inValues = std::move(newIn);
     return true;
   }
 
   /// Updates live-out information of the current block. It iterates over all
   /// successors and unifies their live-in values with the current live-out
   /// values.
-  template <typename SourceT> void updateLiveOut(SourceT &source) {
+  void updateLiveOut(const DenseMap<Block *, BlockInfoBuilder> &builders) {
     for (Block *succ : block->getSuccessors()) {
-      BlockInfoBuilder &builder = source[succ];
+      const BlockInfoBuilder &builder = builders.find(succ)->second;
       llvm::set_union(outValues, builder.inValues);
     }
   }
@@ -138,7 +133,7 @@ static void buildBlockMapping(Operation *operation,
       toProcess.insert(block->pred_begin(), block->pred_end());
   });
 
-  // Propagate the in and out-value sets (fixpoint iteration)
+  // Propagate the in and out-value sets (fixpoint iteration).
   while (!toProcess.empty()) {
     Block *current = toProcess.pop_back_val();
     BlockInfoBuilder &builder = builders[current];
@@ -162,7 +157,6 @@ Liveness::Liveness(Operation *op) : operation(op) { build(); }
 
 /// Initializes the internal mappings.
 void Liveness::build() {
-
   // Build internal block mapping.
   DenseMap<Block *, BlockInfoBuilder> builders;
   buildBlockMapping(operation, builders);
@@ -242,9 +236,8 @@ const Liveness::ValueSetT &Liveness::getLiveOut(Block *block) const {
   return getLiveness(block)->out();
 }
 
-/// Returns true if the given operation represent the last use of the given
-/// value.
-bool Liveness::isLastUse(Value value, Operation *operation) const {
+/// Returns true if `value` is not live after `operation`.
+bool Liveness::isDeadAfter(Value value, Operation *operation) const {
   Block *block = operation->getBlock();
   const LivenessBlockInfo *blockInfo = getLiveness(block);
 

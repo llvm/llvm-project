@@ -53,12 +53,20 @@ private:
   /// use mutable to allow modification via std::set iterator which is const.
   mutable uint64_t RefCount;
   static const uint64_t INFRefCount = ~(uint64_t)0;
+  /// This mutex will be locked when data movement is issued. For targets that
+  /// doesn't support async data movement, this mutex can guarantee that after
+  /// it is released, memory region on the target is update to date. For targets
+  /// that support async data movement, this can guarantee that data movement
+  /// has been issued. This mutex *must* be locked right before releasing the
+  /// mapping table lock.
+  std::shared_ptr<std::mutex> UpdateMtx;
 
 public:
   HostDataToTargetTy(uintptr_t BP, uintptr_t B, uintptr_t E, uintptr_t TB,
                      map_var_info_t Name = nullptr, bool IsINF = false)
       : HstPtrBase(BP), HstPtrBegin(B), HstPtrEnd(E), HstPtrName(Name),
-        TgtPtrBegin(TB), RefCount(IsINF ? INFRefCount : 1) {}
+        TgtPtrBegin(TB), RefCount(IsINF ? INFRefCount : 1),
+        UpdateMtx(std::make_shared<std::mutex>()) {}
 
   uint64_t getRefCount() const { return RefCount; }
 
@@ -100,6 +108,10 @@ public:
       return !isRefCountInf();
     return getRefCount() == 1;
   }
+
+  void lock() const { UpdateMtx->lock(); }
+
+  void unlock() const { UpdateMtx->unlock(); }
 };
 
 typedef uintptr_t HstPtrBeginTy;
@@ -161,6 +173,8 @@ struct PendingCtorDtorListsTy {
 typedef std::map<__tgt_bin_desc *, PendingCtorDtorListsTy>
     PendingCtorsDtorsPerLibrary;
 
+enum class MoveDataStateTy : uint32_t { REQUIRED, NONE, UNKNOWN };
+
 struct DeviceTy {
   int32_t DeviceID;
   RTLInfoTy *RTL;
@@ -195,12 +209,21 @@ struct DeviceTy {
   bool isDataExchangable(const DeviceTy &DstDevice);
 
   LookupResult lookupMapping(void *HstPtrBegin, int64_t Size);
-  TargetPointerResultTy getOrAllocTgtPtr(void *HstPtrBegin, void *HstPtrBase,
-                                         int64_t Size,
-                                         map_var_info_t HstPtrName,
-                                         bool IsImplicit, bool UpdateRefCount,
-                                         bool HasCloseModifier,
-                                         bool HasPresentModifier);
+  /// Get the target pointer based on host pointer begin and base. If the
+  /// mapping already exists, the target pointer will be returned directly. In
+  /// addition, if \p MoveData is true, the memory region pointed by \p
+  /// HstPtrBegin of size \p Size will also be transferred to the device. If the
+  /// mapping doesn't exist, and if unified memory is not enabled, a new mapping
+  /// will be created and the data will also be transferred accordingly. nullptr
+  /// will be returned because of any of following reasons:
+  /// - Data allocation failed;
+  /// - The user tried to do an illegal mapping;
+  /// - Data transfer issue fails.
+  TargetPointerResultTy
+  getTargetPointer(void *HstPtrBegin, void *HstPtrBase, int64_t Size,
+                   map_var_info_t HstPtrName, MoveDataStateTy MoveData,
+                   bool IsImplicit, bool UpdateRefCount, bool HasCloseModifier,
+                   bool HasPresentModifier, AsyncInfoTy &AsyncInfo);
   void *getTgtPtrBegin(void *HstPtrBegin, int64_t Size);
   void *getTgtPtrBegin(void *HstPtrBegin, int64_t Size, bool &IsLast,
                        bool UpdateRefCount, bool &IsHostPtr,

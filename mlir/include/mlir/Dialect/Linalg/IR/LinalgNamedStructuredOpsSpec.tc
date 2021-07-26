@@ -125,12 +125,6 @@ def conv_2d_nhwc(I: f32(N, H, W, C), K: f32(F, KH, KW, C)) -> (O: f32(N, H, W, F
       O(n, h, w, f), MulFOp(I(n, h + kh, w + kw, c), K(f, kh, kw, c)));
 }
 
-ods_def<ConvNCHWOp>:
-def conv_2d_nchw(I: f32(N, C, H, W), K: f32(F, C, KH, KW)) -> (O: f32(N, F, H, W)) {
-  O(n, f, h, w) = AddFOp<kh, kw>(
-      O(n, f, h, w), MulFOp(I(n, c, h + kh, w + kw), K(f, c, kh, kw)));
-}
-
 ods_def<ConvDHWOp>:
 def conv_3d(I: f32(D, H, W), K: f32(KD, KH, KW)) -> (O: f32(D, H, W)) {
   O(d, h, w) = AddFOp<kd, kh, kw>(

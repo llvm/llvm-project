@@ -206,6 +206,47 @@ for.end:                                          ; preds = %for.body, %entry
   ret void
 }
 
+; CHECK-LABEL: Determining loop execution counts for: @ult_129_varying_rhs
+; CHECK: Loop %for.body: Unpredictable backedge-taken count.
+; CHECK: Loop %for.body: Unpredictable max backedge-taken count
+
+define void @ult_129_varying_rhs(i8* %n_p) {
+entry:
+  br label %for.body
+
+for.body:                                         ; preds = %entry, %for.body
+  %i.05 = phi i8 [ %add, %for.body ], [ 0, %entry ]
+  %add = add nuw i8 %i.05, 129
+  %n = load i8, i8* %n_p
+  %cmp = icmp ult i8 %add, %n
+  br i1 %cmp, label %for.body, label %for.end
+
+for.end:                                          ; preds = %for.body, %entry
+  ret void
+}
+
+; CHECK-LABEL: Determining loop execution counts for: @ult_symbolic_varying_rhs
+; CHECK: Loop %for.body: Unpredictable backedge-taken count.
+; CHECK: Loop %for.body: Unpredictable max backedge-taken count
+
+define void @ult_symbolic_varying_rhs(i8* %n_p, i8 %step) {
+entry:
+  %assume = icmp ult i8 128, %step
+  call void @llvm.assume(i1 %assume)
+  br label %for.body
+
+for.body:                                         ; preds = %entry, %for.body
+  %i.05 = phi i8 [ %add, %for.body ], [ 0, %entry ]
+  %add = add nuw i8 %i.05, %step
+  %n = load i8, i8* %n_p
+  %cmp = icmp ult i8 %add, %n
+  br i1 %cmp, label %for.body, label %for.end
+
+for.end:                                          ; preds = %for.body, %entry
+  ret void
+}
+
+
 ; Signed Comparisons
 ; ------------------
 
@@ -400,6 +441,46 @@ for.body:                                         ; preds = %entry, %for.body
   %i.05 = phi i8 [ %add, %for.body ], [ -128, %entry ]
   %add = add nuw i8 %i.05, 129
   %cmp = icmp slt i8 %i.05, 0
+  br i1 %cmp, label %for.body, label %for.end
+
+for.end:                                          ; preds = %for.body, %entry
+  ret void
+}
+
+; CHECK-LABEL: Determining loop execution counts for: @slt_129_varying_rhs
+; CHECK: Loop %for.body: Unpredictable backedge-taken count.
+; CHECK: Loop %for.body: Unpredictable max backedge-taken count
+
+define void @slt_129_varying_rhs(i8* %n_p) {
+entry:
+  br label %for.body
+
+for.body:                                         ; preds = %entry, %for.body
+  %i.05 = phi i8 [ %add, %for.body ], [ -128, %entry ]
+  %add = add nsw i8 %i.05, 129
+  %n = load i8, i8* %n_p
+  %cmp = icmp slt i8 %add, %n
+  br i1 %cmp, label %for.body, label %for.end
+
+for.end:                                          ; preds = %for.body, %entry
+  ret void
+}
+
+; CHECK-LABEL: Determining loop execution counts for: @slt_symbolic_varying_rhs
+; CHECK: Loop %for.body: Unpredictable backedge-taken count.
+; CHECK: Loop %for.body: Unpredictable max backedge-taken count
+
+define void @slt_symbolic_varying_rhs(i8* %n_p, i8 %step) {
+entry:
+  %assume = icmp ult i8 128, %step
+  call void @llvm.assume(i1 %assume)
+  br label %for.body
+
+for.body:                                         ; preds = %entry, %for.body
+  %i.05 = phi i8 [ %add, %for.body ], [ -128, %entry ]
+  %add = add nsw i8 %i.05, %step
+  %n = load i8, i8* %n_p
+  %cmp = icmp slt i8 %add, %n
   br i1 %cmp, label %for.body, label %for.end
 
 for.end:                                          ; preds = %for.body, %entry

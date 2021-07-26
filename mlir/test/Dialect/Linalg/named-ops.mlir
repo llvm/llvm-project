@@ -30,6 +30,24 @@ func @depthwise_conv_2d_input_nhwc_filter_hwcf_tensor(%input: tensor<2x4x5x2xf32
   return %0 : tensor<2x3x4x2x3xf32>
 }
 
+// CHECK-LABEL: func @conv_2d_nchw_tensor
+func @conv_2d_nchw_tensor(%input: tensor<2x2x4x5xf32>, %filter: tensor<4x2x3x3xf32>) -> tensor<2x4x2x3xf32> {
+    %cst = constant 0.000000e+00 : f32
+    %init = linalg.init_tensor [2, 4, 2, 3] : tensor<2x4x2x3xf32>
+    %fill = linalg.fill(%cst, %init) : f32, tensor<2x4x2x3xf32> -> tensor<2x4x2x3xf32>
+// CHECK:           %{{.+}} = linalg.conv_2d_nchw
+// CHECK-SAME:       {dilations = dense<1> : vector<2xi64>, strides = dense<1> : vector<2xi64>}
+// CHECK-SAME:       ins(%{{.+}}, %{{.+}} : tensor<2x2x4x5xf32>, tensor<4x2x3x3xf32>)
+// CHECK-SAME:       outs(%{{.+}} : tensor<2x4x2x3xf32>) -> tensor<2x4x2x3xf32>
+// CHECK:           return %{{.+}} : tensor<2x4x2x3xf32>
+// CHECK:         }
+    %0 = linalg.conv_2d_nchw
+    {dilations = dense<1> : vector<2xi64>, strides = dense<1> : vector<2xi64>}
+    ins(%input, %filter: tensor<2x2x4x5xf32>, tensor<4x2x3x3xf32>)
+    outs(%fill : tensor<2x4x2x3xf32>) -> tensor<2x4x2x3xf32>
+    return %0 : tensor<2x4x2x3xf32>
+}
+
 // CHECK-LABEL: func @depthwise_conv_2d_input_nhwc_filter_hwcf_memref
 func @depthwise_conv_2d_input_nhwc_filter_hwcf_memref(%input: memref<2x4x5x2xf32>, %filter: memref<2x2x2x3xf32>, %output: memref<2x3x4x2x3xf32>) {
   // CHECK:      linalg.depthwise_conv_2d_input_nhwc_filter_hwcf
@@ -379,6 +397,25 @@ func @pooling_nhwc_max_tensor(%input: tensor<1x4x4x1xf32>) -> tensor<1x2x2x1xf32
     ins(%input, %fake: tensor<1x4x4x1xf32>, tensor<3x3xf32>)
     outs(%fill: tensor<1x2x2x1xf32>) -> tensor<1x2x2x1xf32>
   return %res : tensor<1x2x2x1xf32>
+}
+
+// -----
+// CHECK-LABEL: func @pooling_nchw_max_tensor
+// CHECK:         %{{.+}} = linalg.pooling_nchw_max
+// CHECK-SAME:      dilations = dense<1> : tensor<2xi64>
+// CHECK-SAME:      strides = dense<1> : tensor<2xi64>
+// CHECK-SAME:      ins(%{{.+}}, %{{.+}} : tensor<1x1x4x4xf32>, tensor<3x3xf32>)
+// CHECK-SAME:      outs(%{{.+}} : tensor<1x1x2x2xf32>) -> tensor<1x1x2x2xf32>
+
+func @pooling_nchw_max_tensor(%input: tensor<1x1x4x4xf32>) -> tensor<1x1x2x2xf32> {
+  %fake = linalg.init_tensor [3, 3] : tensor<3x3xf32>
+  %init = linalg.init_tensor [1, 1, 2, 2] : tensor<1x1x2x2xf32>
+  %cst = constant 0.000000e+00 : f32
+  %fill = linalg.fill(%cst, %init) : f32, tensor<1x1x2x2xf32> -> tensor<1x1x2x2xf32>
+  %res = linalg.pooling_nchw_max {dilations = dense<1> : tensor<2xi64>, strides = dense<1> : tensor<2xi64>}
+    ins(%input, %fake: tensor<1x1x4x4xf32>, tensor<3x3xf32>)
+    outs(%fill: tensor<1x1x2x2xf32>) -> tensor<1x1x2x2xf32>
+  return %res : tensor<1x1x2x2xf32>
 }
 
 // -----

@@ -7,6 +7,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "llvm/ExecutionEngine/Orc/Mangling.h"
+#include "llvm/ExecutionEngine/Orc/MachOPlatform.h"
 #include "llvm/IR/Constants.h"
 #include "llvm/IR/Mangler.h"
 #include "llvm/Object/MachO.h"
@@ -130,24 +131,34 @@ getObjectSymbolInfo(ExecutionSession &ES, MemoryBufferRef ObjBuffer) {
 
   SymbolStringPtr InitSymbol;
 
+  size_t Counter = 0;
+  auto AddInitSymbol = [&]() {
+    while (true) {
+      std::string InitSymString;
+      raw_string_ostream(InitSymString)
+          << "$." << ObjBuffer.getBufferIdentifier() << ".__inits."
+          << Counter++;
+      InitSymbol = ES.intern(InitSymString);
+      if (SymbolFlags.count(InitSymbol))
+        continue;
+      SymbolFlags[InitSymbol] = JITSymbolFlags::MaterializationSideEffectsOnly;
+      return;
+    }
+  };
+
   if (IsMachO) {
     auto &MachOObj = cast<object::MachOObjectFile>(*Obj->get());
     for (auto &Sec : MachOObj.sections()) {
       auto SecType = MachOObj.getSectionType(Sec);
       if ((SecType & MachO::SECTION_TYPE) == MachO::S_MOD_INIT_FUNC_POINTERS) {
-        size_t Counter = 0;
-        while (true) {
-          std::string InitSymString;
-          raw_string_ostream(InitSymString)
-              << "$." << ObjBuffer.getBufferIdentifier() << ".__inits."
-              << Counter++;
-          InitSymbol = ES.intern(InitSymString);
-          if (SymbolFlags.count(InitSymbol))
-            continue;
-          SymbolFlags[InitSymbol] =
-              JITSymbolFlags::MaterializationSideEffectsOnly;
-          break;
-        }
+        AddInitSymbol();
+        break;
+      }
+      auto SegName =
+          MachOObj.getSectionFinalSegmentName(Sec.getRawDataRefImpl());
+      auto SecName = cantFail(MachOObj.getSectionName(Sec.getRawDataRefImpl()));
+      if (MachOPlatform::isInitializerSection(SegName, SecName)) {
+        AddInitSymbol();
         break;
       }
     }

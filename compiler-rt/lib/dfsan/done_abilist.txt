@@ -286,8 +286,6 @@ fun:gettimeofday=custom
 # sprintf-like
 fun:sprintf=custom
 fun:snprintf=custom
-fun:vsprintf=custom
-fun:vsnprintf=custom
 
 # TODO: custom
 fun:asprintf=discard
