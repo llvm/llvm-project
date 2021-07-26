@@ -1300,8 +1300,11 @@ public:
     if (!IsSpecified())
       return;
 
-    FileSpec file(GetPath());
-    if (m_need_to_exist && !FileSystem::Instance().Exists(file)) {
+    if (!m_need_to_exist)
+      return;
+
+    FileSpec file = GetResolvedFileSpec();
+    if (!FileSystem::Instance().Exists(file)) {
       SetError("File doesn't exist!");
       return;
     }
@@ -1311,7 +1314,17 @@ public:
     }
   }
 
-  // Returns the path of the file.
+  FileSpec GetFileSpec() {
+    FileSpec file_spec(GetPath());
+    return file_spec;
+  }
+
+  FileSpec GetResolvedFileSpec() {
+    FileSpec file_spec(GetPath());
+    FileSystem::Instance().Resolve(file_spec);
+    return file_spec;
+  }
+
   const std::string &GetPath() { return m_content; }
 
 protected:
@@ -1330,8 +1343,11 @@ public:
     if (!IsSpecified())
       return;
 
-    FileSpec file(GetPath());
-    if (m_need_to_exist && !FileSystem::Instance().Exists(file)) {
+    if (!m_need_to_exist)
+      return;
+
+    FileSpec file = GetResolvedFileSpec();
+    if (!FileSystem::Instance().Exists(file)) {
       SetError("Directory doesn't exist!");
       return;
     }
@@ -1341,7 +1357,17 @@ public:
     }
   }
 
-  // Returns the path of the file.
+  FileSpec GetFileSpec() {
+    FileSpec file_spec(GetPath());
+    return file_spec;
+  }
+
+  FileSpec GetResolvedFileSpec() {
+    FileSpec file_spec(GetPath());
+    FileSystem::Instance().Resolve(file_spec);
+    return file_spec;
+  }
+
   const std::string &GetPath() { return m_content; }
 
 protected:

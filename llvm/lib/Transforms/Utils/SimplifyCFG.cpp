@@ -2918,7 +2918,6 @@ bool SimplifyCFGOpt::SimplifyCondBranchToTwoReturns(BranchInst *BI,
   BasicBlock *FalseSucc = BI->getSuccessor(1);
   if (TrueSucc == FalseSucc)
     return false;
-  // NOTE: destinations may match, this could be degenerate uncond branch.
   ReturnInst *TrueRet = cast<ReturnInst>(TrueSucc->getTerminator());
   ReturnInst *FalseRet = cast<ReturnInst>(FalseSucc->getTerminator());
 

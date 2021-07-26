@@ -83,6 +83,10 @@ template<class S, class I>
 template<class I>
   concept input_iterator = see below;                      // since C++20
 
+// [iterator.concept.output], concept output_iterator
+template<class I, class T>
+  concept output_iterator = see below;                     // since C++20
+
 // [iterator.concept.forward], concept forward_iterator
 template<class I>
   concept forward_iterator = see below;                    // since C++20

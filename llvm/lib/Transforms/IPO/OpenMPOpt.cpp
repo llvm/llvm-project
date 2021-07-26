@@ -1765,8 +1765,7 @@ private:
   struct ExternalizationRAII {
     ExternalizationRAII(OMPInformationCache &OMPInfoCache,
                         RuntimeFunction RFKind)
-        : OMPInfoCache(OMPInfoCache),
-          Declaration(OMPInfoCache.RFIs[RFKind].Declaration) {
+        : Declaration(OMPInfoCache.RFIs[RFKind].Declaration) {
       if (!Declaration)
         return;
 
@@ -1781,7 +1780,6 @@ private:
       Declaration->setLinkage(LinkageType);
     }
 
-    OMPInformationCache &OMPInfoCache;
     Function *Declaration;
     GlobalValue::LinkageTypes LinkageType;
   };

@@ -6,5 +6,5 @@ RUN: obj2yaml %t.wasm | FileCheck %s
 RUN: wasm-ld -S -o %t.wasm %t.start.o
 RUN: obj2yaml %t.wasm | FileCheck %s
 
-# Check that there is no name section
-CHECK-NOT:   Name:    name
+# Check that there is a name section
+CHECK:   Name:    name

@@ -15069,6 +15069,143 @@ Value *CodeGenFunction::EmitPPCBuiltinExpr(unsigned BuiltinID,
     llvm::Function *F = CGM.getIntrinsic(ID);
     return Builder.CreateCall(F, Ops, "");
   }
+  case PPC::BI__builtin_vsx_ldrmb: {
+    // Essentially boils down to performing an unaligned VMX load sequence so
+    // as to avoid crossing a page boundary and then shuffling the elements
+    // into the right side of the vector register.
+    int64_t NumBytes = cast<ConstantInt>(Ops[1])->getZExtValue();
+    llvm::Type *ResTy = ConvertType(E->getType());
+    bool IsLE = getTarget().isLittleEndian();
+
+    // If the user wants the entire vector, just load the entire vector.
+    if (NumBytes == 16) {
+      Value *BC = Builder.CreateBitCast(Ops[0], ResTy->getPointerTo());
+      Value *LD = Builder.CreateLoad(Address(BC, CharUnits::fromQuantity(1)));
+      if (!IsLE)
+        return LD;
+
+      // Reverse the bytes on LE.
+      SmallVector<int, 16> RevMask;
+      for (int Idx = 0; Idx < 16; Idx++)
+        RevMask.push_back(15 - Idx);
+      return Builder.CreateShuffleVector(LD, LD, RevMask);
+    }
+
+    llvm::Function *Lvx = CGM.getIntrinsic(Intrinsic::ppc_altivec_lvx);
+    llvm::Function *Lvs = CGM.getIntrinsic(IsLE ? Intrinsic::ppc_altivec_lvsr
+                                                : Intrinsic::ppc_altivec_lvsl);
+    llvm::Function *Vperm = CGM.getIntrinsic(Intrinsic::ppc_altivec_vperm);
+    Value *HiMem = Builder.CreateGEP(
+        Int8Ty, Ops[0], ConstantInt::get(Ops[1]->getType(), NumBytes - 1));
+    Value *LoLd = Builder.CreateCall(Lvx, Ops[0], "ld.lo");
+    Value *HiLd = Builder.CreateCall(Lvx, HiMem, "ld.hi");
+    Value *Mask1 = Builder.CreateCall(Lvs, Ops[0], "mask1");
+
+    Ops.clear();
+    Ops.push_back(IsLE ? HiLd : LoLd);
+    Ops.push_back(IsLE ? LoLd : HiLd);
+    Ops.push_back(Mask1);
+    Value *AllElts = Builder.CreateCall(Vperm, Ops, "shuffle1");
+    Constant *Zero = llvm::Constant::getNullValue(IsLE ? ResTy : AllElts->getType());
+
+    if (IsLE) {
+      SmallVector<int, 16> Consts;
+      for (int Idx = 0; Idx < 16; Idx++) {
+        int Val = (NumBytes - Idx - 1 >= 0) ? (NumBytes - Idx - 1)
+                                            : 16 - (NumBytes - Idx);
+        Consts.push_back(Val);
+      }
+      return Builder.CreateShuffleVector(Builder.CreateBitCast(AllElts, ResTy),
+                                         Zero, Consts);
+    }
+    SmallVector<Constant *, 16> Consts;
+    for (int Idx = 0; Idx < 16; Idx++)
+      Consts.push_back(Builder.getInt8(NumBytes + Idx));
+    Value *Mask2 = ConstantVector::get(Consts);
+    return Builder.CreateBitCast(
+        Builder.CreateCall(Vperm, {Zero, AllElts, Mask2}, "shuffle2"), ResTy);
+  }
+  case PPC::BI__builtin_vsx_strmb: {
+    int64_t NumBytes = cast<ConstantInt>(Ops[1])->getZExtValue();
+    bool IsLE = getTarget().isLittleEndian();
+    auto StoreSubVec = [&](unsigned Width, unsigned Offset, unsigned EltNo) {
+      // Storing the whole vector, simply store it on BE and reverse bytes and
+      // store on LE.
+      if (Width == 16) {
+        Value *BC =
+            Builder.CreateBitCast(Ops[0], Ops[2]->getType()->getPointerTo());
+        Value *StVec = Ops[2];
+        if (IsLE) {
+          SmallVector<int, 16> RevMask;
+          for (int Idx = 0; Idx < 16; Idx++)
+            RevMask.push_back(15 - Idx);
+          StVec = Builder.CreateShuffleVector(Ops[2], Ops[2], RevMask);
+        }
+        return Builder.CreateStore(StVec,
+                                   Address(BC, CharUnits::fromQuantity(1)));
+      }
+      auto *ConvTy = Int64Ty;
+      unsigned NumElts = 0;
+      switch (Width) {
+      default:
+        llvm_unreachable("width for stores must be a power of 2");
+      case 8:
+        ConvTy = Int64Ty;
+        NumElts = 2;
+        break;
+      case 4:
+        ConvTy = Int32Ty;
+        NumElts = 4;
+        break;
+      case 2:
+        ConvTy = Int16Ty;
+        NumElts = 8;
+        break;
+      case 1:
+        ConvTy = Int8Ty;
+        NumElts = 16;
+        break;
+      }
+      Value *Vec = Builder.CreateBitCast(
+          Ops[2], llvm::FixedVectorType::get(ConvTy, NumElts));
+      Value *Ptr = Builder.CreateGEP(Int8Ty, Ops[0],
+                                     ConstantInt::get(Int64Ty, Offset));
+      Value *PtrBC = Builder.CreateBitCast(Ptr, ConvTy->getPointerTo());
+      Value *Elt = Builder.CreateExtractElement(Vec, EltNo);
+      if (IsLE && Width > 1) {
+        Function *F = CGM.getIntrinsic(Intrinsic::bswap, ConvTy);
+        Elt = Builder.CreateCall(F, Elt);
+      }
+      return Builder.CreateStore(Elt,
+                                 Address(PtrBC, CharUnits::fromQuantity(1)));
+    };
+    unsigned Stored = 0;
+    unsigned RemainingBytes = NumBytes;
+    Value *Result;
+    if (NumBytes == 16)
+      return StoreSubVec(16, 0, 0);
+    if (NumBytes >= 8) {
+      Result = StoreSubVec(8, NumBytes - 8, IsLE ? 0 : 1);
+      RemainingBytes -= 8;
+      Stored += 8;
+    }
+    if (RemainingBytes >= 4) {
+      Result = StoreSubVec(4, NumBytes - Stored - 4,
+                           IsLE ? (Stored >> 2) : 3 - (Stored >> 2));
+      RemainingBytes -= 4;
+      Stored += 4;
+    }
+    if (RemainingBytes >= 2) {
+      Result = StoreSubVec(2, NumBytes - Stored - 2,
+                           IsLE ? (Stored >> 1) : 7 - (Stored >> 1));
+      RemainingBytes -= 2;
+      Stored += 2;
+    }
+    if (RemainingBytes)
+      Result =
+          StoreSubVec(1, NumBytes - Stored - 1, IsLE ? Stored : 15 - Stored);
+    return Result;
+  }
   // Square root
   case PPC::BI__builtin_vsx_xvsqrtsp:
   case PPC::BI__builtin_vsx_xvsqrtdp: {

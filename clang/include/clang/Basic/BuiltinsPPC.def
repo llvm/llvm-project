@@ -573,6 +573,8 @@ BUILTIN(__builtin_vsx_lxvl, "V4ivC*ULLi", "")
 BUILTIN(__builtin_vsx_lxvll, "V4ivC*ULLi", "")
 BUILTIN(__builtin_vsx_stxvl, "vV4iv*ULLi", "")
 BUILTIN(__builtin_vsx_stxvll, "vV4iv*ULLi", "")
+BUILTIN(__builtin_vsx_ldrmb, "V16UcCc*Ii", "")
+BUILTIN(__builtin_vsx_strmb, "vCc*IiV16Uc", "")
 
 BUILTIN(__builtin_vsx_xvmaxdp, "V2dV2dV2d", "")
 BUILTIN(__builtin_vsx_xvmaxsp, "V4fV4fV4f", "")

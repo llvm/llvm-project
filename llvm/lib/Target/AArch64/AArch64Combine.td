@@ -182,6 +182,13 @@ def form_truncstore : GICombineRule<
   (apply [{ applyFormTruncstore(*${root}, MRI, B, Observer, ${matchinfo}); }])
 >;
 
+def fold_merge_to_zext : GICombineRule<
+  (defs root:$d),
+  (match (wip_match_opcode G_MERGE_VALUES):$d,
+          [{ return matchFoldMergeToZext(*${d}, MRI); }]),
+  (apply [{ applyFoldMergeToZext(*${d}, MRI, B, Observer); }])
+>;
+
 // Post-legalization combines which should happen at all optimization levels.
 // (E.g. ones that facilitate matching for the selector) For example, matching
 // pseudos.
@@ -204,6 +211,6 @@ def AArch64PostLegalizerCombinerHelper
                         mul_const, redundant_sext_inreg,
                         form_bitfield_extract, rotate_out_of_range,
                         icmp_to_true_false_known_bits, merge_unmerge,
-                        select_combines]> {
+                        select_combines, fold_merge_to_zext]> {
   let DisableRuleOption = "aarch64postlegalizercombiner-disable-rule";
 }

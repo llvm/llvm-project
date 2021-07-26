@@ -44,11 +44,11 @@ Section,Description,Dependencies,Assignee,Complete
 | `sentinel_for <https://llvm.org/D100160>`_
 | `sized_sentinel_for <https://llvm.org/D101371>`_
 | `input_iterator <https://llvm.org/D100271>`_
-| output_iterator
+| `output_iterator <https://llvm.org/D106704>`_
 | `forward_iterator <https://llvm.org/D100275>`_
 | `bidirectional_iterator <https://llvm.org/D100278>`_
 | `random_access_iterator <https://llvm.org/D101316>`_
-| `contiguous_iterator <https://llvm.org/D101396>`_",iter_value_t,Christopher Di Bella,In progress
+| `contiguous_iterator <https://llvm.org/D101396>`_",,Various,✅
 `[indirectcallable.indirectinvocable] <http://wg21.link/indirectcallable.indirectinvocable>`_,"| indirectly_unary_invocable
 | `indirectly_regular_unary_invocable <https://llvm.org/D101277>`_
 | `indirectly_unary_predicate <https://llvm.org/D101277>`_
@@ -120,7 +120,7 @@ Section,Description,Dependencies,Assignee,Complete
 | `ranges::random_access_range <https://llvm.org/D101316>`_
 | ranges::contiguous_range
 | `ranges::common_range <https://llvm.org/D100269>`_",[range.range],Christopher Di Bella,✅
-`[range.refinements]`_,`ranges::viewable_range <https://reviews.llvm.org/D105816>`_,[range.range],Louis Dionne,✅
+`[range.refinements]`_,`ranges::viewable_range <https://llvm.org/D105816>`_,[range.range],Louis Dionne,✅
 `[range.utility.helpers] <http://wg21.link/range.utility.helpers>`_,"| *simple-view*
 | *has-arrow*
 | *not-same-as*","| [range.range]
@@ -141,7 +141,7 @@ Section,Description,Dependencies,Assignee,Complete
 `[range.iota] <http://wg21.link/range.iota>`_,iota_view,[range.all],Louis Dionne,Not started
 `[range.take] <http://wg21.link/range.take>`_,take_view,[range.all],Zoe Carver,In Progress
 `[range.join] <http://wg21.link/range.join>`_,join_view,[range.all],Christopher Di Bella,Not started
-`[range.empty] <http://wg21.link/range.empty>`_,`empty_view <https://reviews.llvm.org/D103208>`_,[view.interface],Zoe Carver,✅
+`[range.empty] <http://wg21.link/range.empty>`_,`empty_view <https://llvm.org/D103208>`_,[view.interface],Zoe Carver,✅
 `[range.single] <http://wg21.link/range.single>`_,single_view,[view.interface],Zoe Carver,In Progress
 `[range.split] <http://wg21.link/range.split>`_,split_view,[range.all],Unassigned,Not started
 `[range.counted] <http://wg21.link/range.counted>`_,view::counted,[range.subrange],Zoe Carver,Not started

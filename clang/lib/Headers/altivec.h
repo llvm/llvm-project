@@ -3143,6 +3143,15 @@ static __inline__ void __ATTRS_o_ai vec_xst_len_r(vector unsigned char __a,
 #endif
 #endif
 
+#if defined(__POWER9_VECTOR__) && defined(__powerpc64__)
+#define __vec_ldrmb(PTR, CNT) vec_xl_len_r((const unsigned char *)(PTR), (CNT))
+#define __vec_strmb(PTR, CNT, VAL)                                             \
+  vec_xst_len_r((VAL), (unsigned char *)(PTR), (CNT))
+#else
+#define __vec_ldrmb __builtin_vsx_ldrmb
+#define __vec_strmb __builtin_vsx_strmb
+#endif
+
 /* vec_cpsgn */
 
 #ifdef __VSX__
