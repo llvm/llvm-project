@@ -15,5 +15,5 @@ add_library(
 
 target_include_directories(LibcUnitTestMain PUBLIC ${LIBC_SOURCE_DIR})
 add_dependencies(LibcUnitTestMain LibcUnitTest libc.utils.CPP.standalone_cpp)
-target_link_libraries(LibcUnitTestMain PUBLIC libc_test_utils)
+target_link_libraries(LibcUnitTestMain PUBLIC LibcUnitTest libc_test_utils)
 
