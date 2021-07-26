@@ -76,7 +76,7 @@ struct __advance_fn final : private __function_like {
 private:
   template <class _Tp>
   _LIBCPP_HIDE_FROM_ABI
-  static constexpr _Tp __magnitude_geq(_Tp __a, _Tp __b) {
+  static constexpr _Tp __magnitude_geq(_Tp __a, _Tp __b) noexcept {
     return __a < 0 ? (__a <= __b) : (__a >= __b);
   }
 
@@ -153,12 +153,12 @@ public:
   template <input_or_output_iterator _Ip, sentinel_for<_Ip> _Sp>
   _LIBCPP_HIDE_FROM_ABI
   constexpr iter_difference_t<_Ip> operator()(_Ip& __i, iter_difference_t<_Ip> __n, _Sp __bound) const {
-    _LIBCPP_ASSERT((bidirectional_iterator<_Ip> && same_as<_Ip, _Sp>) || (__n >= 0),
+    _LIBCPP_ASSERT((__n >= 0) || (bidirectional_iterator<_Ip> && same_as<_Ip, _Sp>),
                    "If `n < 0`, then `bidirectional_iterator<I> && same_as<I, S>` must be true.");
     // If `S` and `I` model `sized_sentinel_for<S, I>`:
     if constexpr (sized_sentinel_for<_Sp, _Ip>) {
       // If |n| >= |bound - i|, equivalent to `ranges::advance(i, bound)`.
-      if (auto __M = __bound - __i; __magnitude_geq(__n, __M)) {
+      if (const auto __M = __bound - __i; __magnitude_geq(__n, __M)) {
         (*this)(__i, __bound);
         return __n - __M;
       }
