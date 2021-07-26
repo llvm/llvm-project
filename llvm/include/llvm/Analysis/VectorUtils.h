@@ -80,13 +80,11 @@ struct VFParameter {
 /// represent vector functions. in particular, it is not attached to
 /// any target-specific ABI.
 struct VFShape {
-  unsigned VF;     // Vectorization factor.
-  bool IsScalable; // True if the function is a scalable function.
+  ElementCount VF;                        // Vectorization factor.
   SmallVector<VFParameter, 8> Parameters; // List of parameter information.
   // Comparison operator.
   bool operator==(const VFShape &Other) const {
-    return std::tie(VF, IsScalable, Parameters) ==
-           std::tie(Other.VF, Other.IsScalable, Other.Parameters);
+    return std::tie(VF, Parameters) == std::tie(Other.VF, Other.Parameters);
   }
 
   /// Update the parameter in position P.ParamPos to P.
@@ -115,7 +113,7 @@ struct VFShape {
       Parameters.push_back(
           VFParameter({CI.arg_size(), VFParamKind::GlobalPredicate}));
 
-    return {EC.getKnownMinValue(), EC.isScalable(), Parameters};
+    return {EC, Parameters};
   }
   /// Sanity check on the Parameters in the VFShape.
   bool hasValidParameterList() const;
