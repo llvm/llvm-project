@@ -1374,6 +1374,25 @@ protected:
   bool m_need_to_exist;
 };
 
+class ArchFieldDelegate : public TextFieldDelegate {
+public:
+  ArchFieldDelegate(const char *label, const char *content, bool required)
+      : TextFieldDelegate(label, content, required) {}
+
+  void FieldDelegateExitCallback() override {
+    TextFieldDelegate::FieldDelegateExitCallback();
+    if (!IsSpecified())
+      return;
+
+    if (!GetArchSpec().IsValid())
+      SetError("Not a valid arch!");
+  }
+
+  const std::string &GetArchString() { return m_content; }
+
+  ArchSpec GetArchSpec() { return ArchSpec(GetArchString()); }
+};
+
 class BooleanFieldDelegate : public FieldDelegate {
 public:
   BooleanFieldDelegate(const char *label, bool content)
@@ -1985,6 +2004,14 @@ public:
                                             bool need_to_exist, bool required) {
     DirectoryFieldDelegate *delegate =
         new DirectoryFieldDelegate(label, content, need_to_exist, required);
+    m_fields.push_back(FieldDelegateUP(delegate));
+    return delegate;
+  }
+
+  ArchFieldDelegate *AddArchField(const char *label, const char *content,
+                                  bool required) {
+    ArchFieldDelegate *delegate =
+        new ArchFieldDelegate(label, content, required);
     m_fields.push_back(FieldDelegateUP(delegate));
     return delegate;
   }
