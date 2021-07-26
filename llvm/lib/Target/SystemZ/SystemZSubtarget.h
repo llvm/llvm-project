@@ -68,6 +68,11 @@ protected:
   bool HasVectorPackedDecimalEnhancement;
   bool HasEnhancedSort;
   bool HasDeflateConversion;
+  bool HasVectorPackedDecimalEnhancement2;
+  bool HasNNPAssist;
+  bool HasBEAREnhancement;
+  bool HasResetDATProtection;
+  bool HasProcessorActivityInstrumentation;
   bool HasSoftFloat;
 
 private:
@@ -249,6 +254,27 @@ public:
 
   // Return true if the target has the deflate-conversion facility.
   bool hasDeflateConversion() const { return HasDeflateConversion; }
+
+  // Return true if the target has the vector-packed-decimal
+  // enhancement facility 2.
+  bool hasVectorPackedDecimalEnhancement2() const {
+    return HasVectorPackedDecimalEnhancement2;
+  }
+
+  // Return true if the target has the NNP-assist facility.
+  bool hasNNPAssist() const { return HasNNPAssist; }
+
+  // Return true if the target has the BEAR-enhancement facility.
+  bool hasBEAREnhancement() const { return HasBEAREnhancement; }
+
+  // Return true if the target has the reset-DAT-protection facility.
+  bool hasResetDATProtection() const { return HasResetDATProtection; }
+
+  // Return true if the target has the processor-activity-instrumentation
+  // facility.
+  bool hasProcessorActivityInstrumentation() const {
+    return HasProcessorActivityInstrumentation;
+  }
 
   // Return true if soft float should be used.
   bool hasSoftFloat() const { return HasSoftFloat; }
