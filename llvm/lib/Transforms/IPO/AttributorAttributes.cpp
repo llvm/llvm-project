@@ -7097,6 +7097,9 @@ ChangeStatus AAMemoryBehaviorFloating::updateImpl(Attributor &A) {
       return ChangeStatus::UNCHANGED;
   }
 
+  // The current assumed state used to determine a change.
+  auto AssumedState = S.getAssumed();
+
   // Make sure the value is not captured (except through "return"), if
   // it is, any information derived would be irrelevant anyway as we cannot
   // check the potential aliases introduced by the capture. However, no need
@@ -7105,11 +7108,9 @@ ChangeStatus AAMemoryBehaviorFloating::updateImpl(Attributor &A) {
       A.getAAFor<AANoCapture>(*this, IRP, DepClassTy::OPTIONAL);
   if (!ArgNoCaptureAA.isAssumedNoCaptureMaybeReturned()) {
     S.intersectAssumedBits(FnMemAssumedState);
-    return ChangeStatus::CHANGED;
+    return (AssumedState != getAssumed()) ? ChangeStatus::CHANGED
+                                          : ChangeStatus::UNCHANGED;
   }
-
-  // The current assumed state used to determine a change.
-  auto AssumedState = S.getAssumed();
 
   // Visit and expand uses until all are analyzed or a fixpoint is reached.
   auto UsePred = [&](const Use &U, bool &Follow) -> bool {
