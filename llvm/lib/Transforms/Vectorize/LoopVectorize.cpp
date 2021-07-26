@@ -7418,8 +7418,6 @@ void LoopVectorizationCostModel::setCostBasedWideningDecision(ElementCount VF) {
         Decision = CM_GatherScatter;
         Cost = GatherScatterCost;
       } else {
-        assert(!VF.isScalable() &&
-               "We cannot yet scalarise for scalable vectors");
         Decision = CM_Scalarize;
         Cost = ScalarizationCost;
       }

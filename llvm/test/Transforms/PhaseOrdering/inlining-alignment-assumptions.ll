@@ -34,7 +34,7 @@ define void @caller1(i1 %c, i64* align 1 %ptr) {
 ; ASSUMPTIONS-ON-LABEL: @caller1(
 ; ASSUMPTIONS-ON-NEXT:    br i1 [[C:%.*]], label [[COMMON_RET:%.*]], label [[FALSE1:%.*]]
 ; ASSUMPTIONS-ON:       false1:
-; ASSUMPTIONS-ON-NEXT:    store volatile i64 1, i64* [[PTR:%.*]], align 8
+; ASSUMPTIONS-ON-NEXT:    store volatile i64 1, i64* [[PTR:%.*]], align 4
 ; ASSUMPTIONS-ON-NEXT:    br label [[COMMON_RET]]
 ; ASSUMPTIONS-ON:       common.ret:
 ; ASSUMPTIONS-ON-NEXT:    [[DOTSINK:%.*]] = phi i64 [ 3, [[FALSE1]] ], [ 2, [[TMP0:%.*]] ]

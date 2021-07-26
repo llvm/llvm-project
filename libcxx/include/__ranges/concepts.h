@@ -69,6 +69,9 @@ namespace ranges {
   template <class _Tp>
   concept sized_range = range<_Tp> && requires(_Tp& __t) { ranges::size(__t); };
 
+  template<sized_range _Rp>
+  using range_size_t = decltype(ranges::size(declval<_Rp&>()));
+
   // `disable_sized_range` defined in `<__ranges/size.h>`
 
   // [range.view], views

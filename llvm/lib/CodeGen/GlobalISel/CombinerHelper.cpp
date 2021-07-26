@@ -2014,6 +2014,25 @@ void CombinerHelper::applyCombineShlOfExtend(MachineInstr &MI,
   MI.eraseFromParent();
 }
 
+bool CombinerHelper::matchCombineMergeUnmerge(MachineInstr &MI,
+                                              Register &MatchInfo) {
+  GMerge &Merge = cast<GMerge>(MI);
+  SmallVector<Register, 16> MergedValues;
+  for (unsigned I = 0; I < Merge.getNumSources(); ++I)
+    MergedValues.emplace_back(Merge.getSourceReg(I));
+
+  auto *Unmerge = getOpcodeDef<GUnmerge>(MergedValues[0], MRI);
+  if (!Unmerge || Unmerge->getNumDefs() != Merge.getNumSources())
+    return false;
+
+  for (unsigned I = 0; I < MergedValues.size(); ++I)
+    if (MergedValues[I] != Unmerge->getReg(I))
+      return false;
+
+  MatchInfo = Unmerge->getSourceReg();
+  return true;
+}
+
 static Register peekThroughBitcast(Register Reg,
                                    const MachineRegisterInfo &MRI) {
   while (mi_match(Reg, MRI, m_GBitcast(m_Reg(Reg))))

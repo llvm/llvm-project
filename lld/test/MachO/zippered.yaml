@@ -29,7 +29,7 @@ LoadCommands:
       timestamp:       1
       current_version: 0
       compatibility_version: 0
-    PayloadString:   test
+    Content:         test
     ZeroPadBytes:    4
   - cmd:             LC_DYLD_INFO_ONLY
     cmdsize:         48

@@ -49,6 +49,8 @@
 ///    means nothing occurred, 1 means an exception occurred, and other numbers
 ///    mean a longjmp occurred. In the case of longjmp, __THREW__ variable
 ///    indicates the corresponding setjmp buffer the longjmp corresponds to.
+///    __threwValue is 0 for exceptions, and the argument to longjmp in case of
+///    longjmp.
 ///
 /// * Exception handling
 ///
@@ -158,12 +160,13 @@
 ///      call @__invoke_SIG(func, arg1, arg2)
 ///      %__THREW__.val = __THREW__;
 ///      __THREW__ = 0;
-///      if (%__THREW__.val != 0 & __threwValue != 0) {
+///      %__threwValue.val = __threwValue;
+///      if (%__THREW__.val != 0 & %__threwValue.val != 0) {
 ///        %label = testSetjmp(mem[%__THREW__.val], setjmpTable,
 ///                            setjmpTableSize);
 ///        if (%label == 0)
-///          emscripten_longjmp(%__THREW__.val, __threwValue);
-///        setTempRet0(__threwValue);
+///          emscripten_longjmp(%__THREW__.val, %__threwValue.val);
+///        setTempRet0(%__threwValue.val);
 ///      } else {
 ///        %label = -1;
 ///      }
@@ -177,7 +180,7 @@
 ///    testSetjmp examines setjmpTable to see if there is a matching setjmp
 ///    call. After calling an invoke wrapper, if a longjmp occurred, __THREW__
 ///    will be the address of matching jmp_buf buffer and __threwValue be the
-///    second argument to longjmp. mem[__THREW__.val] is a setjmp ID that is
+///    second argument to longjmp. mem[%__THREW__.val] is a setjmp ID that is
 ///    stored in saveSetjmp. testSetjmp returns a setjmp label, a unique ID to
 ///    each setjmp callsite. Label 0 means this longjmp buffer does not
 ///    correspond to one of the setjmp callsites in this function, so in this
@@ -546,11 +549,12 @@ bool WebAssemblyLowerEmscriptenEHSjLj::isEmAsmCall(Module &M,
 
 // Generate testSetjmp function call seqence with preamble and postamble.
 // The code this generates is equivalent to the following JavaScript code:
-// if (%__THREW__.val != 0 & threwValue != 0) {
+// %__threwValue.val = __threwValue;
+// if (%__THREW__.val != 0 & %__threwValue.val != 0) {
 //   %label = _testSetjmp(mem[%__THREW__.val], setjmpTable, setjmpTableSize);
 //   if (%label == 0)
-//     emscripten_longjmp(%__THREW__.val, threwValue);
-//   setTempRet0(threwValue);
+//     emscripten_longjmp(%__THREW__.val, %__threwValue.val);
+//   setTempRet0(%__threwValue.val);
 // } else {
 //   %label = -1;
 // }
@@ -568,7 +572,7 @@ void WebAssemblyLowerEmscriptenEHSjLj::wrapTestSetjmp(
   IRBuilder<> IRB(C);
   IRB.SetCurrentDebugLocation(DL);
 
-  // if (%__THREW__.val != 0 & threwValue != 0)
+  // if (%__THREW__.val != 0 & %__threwValue.val != 0)
   IRB.SetInsertPoint(BB);
   BasicBlock *ThenBB1 = BasicBlock::Create(C, "if.then1", F);
   BasicBlock *ElseBB1 = BasicBlock::Create(C, "if.else1", F);
@@ -594,12 +598,12 @@ void WebAssemblyLowerEmscriptenEHSjLj::wrapTestSetjmp(
   Value *Cmp2 = IRB.CreateICmpEQ(ThenLabel, IRB.getInt32(0));
   IRB.CreateCondBr(Cmp2, ThenBB2, EndBB2);
 
-  // emscripten_longjmp(%__THREW__.val, threwValue);
+  // emscripten_longjmp(%__THREW__.val, %__threwValue.val);
   IRB.SetInsertPoint(ThenBB2);
   IRB.CreateCall(EmLongjmpF, {Threw, ThrewValue});
   IRB.CreateUnreachable();
 
-  // setTempRet0(threwValue);
+  // setTempRet0(%__threwValue.val);
   IRB.SetInsertPoint(EndBB2);
   IRB.CreateCall(SetTempRet0Func, ThrewValue);
   IRB.CreateBr(EndBB1);

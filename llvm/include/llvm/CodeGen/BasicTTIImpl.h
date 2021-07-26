@@ -2091,8 +2091,8 @@ public:
     auto *VTy = cast<FixedVectorType>(Ty);
     InstructionCost ExtractCost =
         getScalarizationOverhead(VTy, /*Insert=*/false, /*Extract=*/true);
-    InstructionCost ArithCost =
-        getArithmeticInstrCost(Opcode, VTy->getElementType(), CostKind);
+    InstructionCost ArithCost = thisT()->getArithmeticInstrCost(
+        Opcode, VTy->getElementType(), CostKind);
     ArithCost *= VTy->getNumElements();
 
     return ExtractCost + ArithCost;
