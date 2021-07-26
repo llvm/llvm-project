@@ -317,12 +317,11 @@ bool XCOFFWriter::writeXCOFF() {
     if (!writeRelocations())
       return false;
   }
-  if (!Obj.Symbols.empty()) {
-    if (!writeSymbols())
-      return false;
-    // Write the string table.
+  if (!Obj.Symbols.empty() && !writeSymbols())
+    return false;
+  // Write the string table.
+  if (Strings.getSize() > 4)
     Strings.write(W.OS);
-  }
   return true;
 }
 
