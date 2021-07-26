@@ -3211,6 +3211,9 @@ static const struct Extension {
     {"pauth", {AArch64::FeaturePAuth}},
     {"flagm", {AArch64::FeatureFlagM}},
     {"rme", {AArch64::FeatureRME}},
+    {"sme", {AArch64::FeatureSME}},
+    {"sme-f64", {AArch64::FeatureSMEF64}},
+    {"sme-i64", {AArch64::FeatureSMEI64}},
     // FIXME: Unsupported extensions
     {"lor", {}},
     {"rdma", {}},

@@ -559,8 +559,20 @@ public:
 
   /// Return a set of class members for the given state.
   LLVM_NODISCARD inline SymbolSet getClassMembers(ProgramStateRef State) const;
+
   /// Return true if the current class is trivial in the given state.
+  /// A class is trivial if and only if there is not any member relations stored
+  /// to it in State/ClassMembers.
+  /// An equivalence class with one member might seem as it does not hold any
+  /// meaningful information, i.e. that is a tautology. However, during the
+  /// removal of dead symbols we do not remove classes with one member for
+  /// resource and performance reasons. Consequently, a class with one member is
+  /// not necessarily trivial. It could happen that we have a class with two
+  /// members and then during the removal of dead symbols we remove one of its
+  /// members. In this case, the class is still non-trivial (it still has the
+  /// mappings in ClassMembers), even though it has only one member.
   LLVM_NODISCARD inline bool isTrivial(ProgramStateRef State) const;
+
   /// Return true if the current class is trivial and its only member is dead.
   LLVM_NODISCARD inline bool isTriviallyDead(ProgramStateRef State,
                                              SymbolReaper &Reaper) const;

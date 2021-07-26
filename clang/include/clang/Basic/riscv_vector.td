@@ -1212,13 +1212,13 @@ let HasVL = false,
 // 7.4. Vector Unit-Stride Instructions
 def vle1: RVVVLEMaskBuiltin;
 defm vle8: RVVVLEBuiltin<["c"]>;
-defm vle16: RVVVLEBuiltin<["s"]>;
+defm vle16: RVVVLEBuiltin<["s","x"]>;
 defm vle32: RVVVLEBuiltin<["i","f"]>;
 defm vle64: RVVVLEBuiltin<["l","d"]>;
 
 def vse1 : RVVVSEMaskBuiltin;
 defm vse8 : RVVVSEBuiltin<["c"]>;
-defm vse16: RVVVSEBuiltin<["s"]>;
+defm vse16: RVVVSEBuiltin<["s","x"]>;
 defm vse32: RVVVSEBuiltin<["i","f"]>;
 defm vse64: RVVVSEBuiltin<["l","d"]>;
 

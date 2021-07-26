@@ -12000,13 +12000,14 @@ Address CGOpenMPRuntime::getAddressOfLocalVariable(CodeGenFunction &CGF,
     // Cleanup action for allocate support.
     class OMPAllocateCleanupTy final : public EHScopeStack::Cleanup {
       llvm::FunctionCallee RTLFn;
-      unsigned LocEncoding;
+      SourceLocation::UIntTy LocEncoding;
       Address Addr;
       const Expr *Allocator;
 
     public:
-      OMPAllocateCleanupTy(llvm::FunctionCallee RTLFn, unsigned LocEncoding,
-                           Address Addr, const Expr *Allocator)
+      OMPAllocateCleanupTy(llvm::FunctionCallee RTLFn,
+                           SourceLocation::UIntTy LocEncoding, Address Addr,
+                           const Expr *Allocator)
           : RTLFn(RTLFn), LocEncoding(LocEncoding), Addr(Addr),
             Allocator(Allocator) {}
       void Emit(CodeGenFunction &CGF, Flags /*flags*/) override {

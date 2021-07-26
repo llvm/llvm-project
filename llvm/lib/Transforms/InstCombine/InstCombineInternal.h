@@ -426,16 +426,6 @@ public:
     U = NewValue;
   }
 
-  /// Creates a result tuple for an overflow intrinsic \p II with a given
-  /// \p Result and a constant \p Overflow value.
-  Instruction *CreateOverflowTuple(IntrinsicInst *II, Value *Result,
-                                   Constant *Overflow) {
-    Constant *V[] = {UndefValue::get(Result->getType()), Overflow};
-    StructType *ST = cast<StructType>(II->getType());
-    Constant *Struct = ConstantStruct::get(ST, V);
-    return InsertValueInst::Create(Struct, Result, 0);
-  }
-
   /// Create and insert the idiom we use to indicate a block is unreachable
   /// without having to rewrite the CFG from within InstCombine.
   void CreateNonTerminatorUnreachable(Instruction *InsertAt) {

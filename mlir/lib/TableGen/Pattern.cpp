@@ -83,6 +83,11 @@ llvm::StringRef DagLeaf::getNativeCodeTemplate() const {
   return cast<llvm::DefInit>(def)->getDef()->getValueAsString("expression");
 }
 
+int DagLeaf::getNumReturnsOfNativeCode() const {
+  assert(isNativeCodeCall() && "the DAG leaf must be NativeCodeCall");
+  return cast<llvm::DefInit>(def)->getDef()->getValueAsInt("numReturns");
+}
+
 std::string DagLeaf::getStringAttr() const {
   assert(isStringAttr() && "the DAG leaf must be string attribute");
   return def->getAsUnquotedString();
@@ -117,6 +122,13 @@ llvm::StringRef DagNode::getNativeCodeTemplate() const {
   return cast<llvm::DefInit>(node->getOperator())
       ->getDef()
       ->getValueAsString("expression");
+}
+
+int DagNode::getNumReturnsOfNativeCode() const {
+  assert(isNativeCodeCall() && "the DAG leaf must be NativeCodeCall");
+  return cast<llvm::DefInit>(node->getOperator())
+      ->getDef()
+      ->getValueAsInt("numReturns");
 }
 
 llvm::StringRef DagNode::getSymbol() const { return node->getNameStr(); }
@@ -193,8 +205,8 @@ StringRef SymbolInfoMap::getValuePackName(StringRef symbol, int *index) {
 }
 
 SymbolInfoMap::SymbolInfo::SymbolInfo(const Operator *op, SymbolInfo::Kind kind,
-                                      Optional<DagAndIndex> dagAndIndex)
-    : op(op), kind(kind), dagAndIndex(dagAndIndex) {}
+                                      Optional<DagAndConstant> dagAndConstant)
+    : op(op), kind(kind), dagAndConstant(dagAndConstant) {}
 
 int SymbolInfoMap::SymbolInfo::getStaticValueCount() const {
   switch (kind) {
@@ -204,6 +216,8 @@ int SymbolInfoMap::SymbolInfo::getStaticValueCount() const {
     return 1;
   case Kind::Result:
     return op->getNumResults();
+  case Kind::MultipleValues:
+    return getSize();
   }
   llvm_unreachable("unknown kind");
 }
@@ -217,7 +231,7 @@ std::string SymbolInfoMap::SymbolInfo::getVarDecl(StringRef name) const {
   switch (kind) {
   case Kind::Attr: {
     if (op) {
-      auto type = op->getArg((*dagAndIndex).second)
+      auto type = op->getArg(getArgIndex())
                       .get<NamedAttribute *>()
                       ->attr.getStorageType();
       return std::string(formatv("{0} {1};\n", type, name));
@@ -234,6 +248,14 @@ std::string SymbolInfoMap::SymbolInfo::getVarDecl(StringRef name) const {
   }
   case Kind::Value: {
     return std::string(formatv("::mlir::Value {0};\n", name));
+  }
+  case Kind::MultipleValues: {
+    // This is for the variable used in the source pattern. Each named value in
+    // source pattern will only be bound to a Value. The others in the result
+    // pattern may be associated with multiple Values as we will use `auto` to
+    // do the type inference.
+    return std::string(formatv(
+        "::mlir::Value {0}_raw; ::mlir::ValueRange {0}({0}_raw);\n", name));
   }
   case Kind::Result: {
     // Use the op itself for captured results.
@@ -255,8 +277,7 @@ std::string SymbolInfoMap::SymbolInfo::getValueAndRangeUse(
   }
   case Kind::Operand: {
     assert(index < 0);
-    auto *operand =
-        op->getArg((*dagAndIndex).second).get<NamedTypeConstraint *>();
+    auto *operand = op->getArg(getArgIndex()).get<NamedTypeConstraint *>();
     // If this operand is variadic, then return a range. Otherwise, return the
     // value itself.
     if (operand->isVariableLength()) {
@@ -311,6 +332,21 @@ std::string SymbolInfoMap::SymbolInfo::getValueAndRangeUse(
     LLVM_DEBUG(llvm::dbgs() << repl << " (Value)\n");
     return std::string(repl);
   }
+  case Kind::MultipleValues: {
+    assert(op == nullptr);
+    assert(index < getSize());
+    if (index >= 0) {
+      std::string repl =
+          formatv(fmt, std::string(formatv("{0}[{1}]", name, index)));
+      LLVM_DEBUG(llvm::dbgs() << repl << " (MultipleValues)\n");
+      return repl;
+    }
+    // If it doesn't specify certain element, unpack them all.
+    auto repl =
+        formatv(fmt, std::string(formatv("{0}.begin(), {0}.end()", name)));
+    LLVM_DEBUG(llvm::dbgs() << repl << " (MultipleValues)\n");
+    return std::string(repl);
+  }
   }
   llvm_unreachable("unknown kind");
 }
@@ -351,6 +387,20 @@ std::string SymbolInfoMap::SymbolInfo::getAllRangeUse(
     assert(op == nullptr);
     auto repl = formatv(fmt, formatv("{{{0}}", name));
     LLVM_DEBUG(llvm::dbgs() << repl << " (Value)\n");
+    return std::string(repl);
+  }
+  case Kind::MultipleValues: {
+    assert(op == nullptr);
+    assert(index < getSize());
+    if (index >= 0) {
+      std::string repl =
+          formatv(fmt, std::string(formatv("{0}[{1}]", name, index)));
+      LLVM_DEBUG(llvm::dbgs() << repl << " (MultipleValues)\n");
+      return repl;
+    }
+    auto repl =
+        formatv(fmt, std::string(formatv("{0}.begin(), {0}.end()", name)));
+    LLVM_DEBUG(llvm::dbgs() << repl << " (MultipleValues)\n");
     return std::string(repl);
   }
   }
@@ -395,8 +445,22 @@ bool SymbolInfoMap::bindOpResult(StringRef symbol, const Operator &op) {
   return symbolInfoMap.count(inserted->first) == 1;
 }
 
+bool SymbolInfoMap::bindValues(StringRef symbol, int numValues) {
+  std::string name = getValuePackName(symbol).str();
+  if (numValues > 1)
+    return bindMultipleValues(name, numValues);
+  return bindValue(name);
+}
+
 bool SymbolInfoMap::bindValue(StringRef symbol) {
   auto inserted = symbolInfoMap.emplace(symbol.str(), SymbolInfo::getValue());
+  return symbolInfoMap.count(inserted->first) == 1;
+}
+
+bool SymbolInfoMap::bindMultipleValues(StringRef symbol, int numValues) {
+  std::string name = getValuePackName(symbol).str();
+  auto inserted =
+      symbolInfoMap.emplace(name, SymbolInfo::getMultipleValues(numValues));
   return symbolInfoMap.count(inserted->first) == 1;
 }
 
@@ -423,11 +487,9 @@ SymbolInfoMap::findBoundSymbol(StringRef key, DagNode node, const Operator &op,
 
   const auto symbolInfo = SymbolInfo::getOperand(node, &op, argIndex);
 
-  for (auto it = range.first; it != range.second; ++it) {
-    if (it->second.dagAndIndex == symbolInfo.dagAndIndex) {
+  for (auto it = range.first; it != range.second; ++it)
+    if (it->second.dagAndConstant == symbolInfo.dagAndConstant)
       return it;
-    }
-  }
 
   return symbolInfoMap.end();
 }
@@ -633,7 +695,9 @@ void Pattern::collectBoundSymbols(DagNode tree, SymbolInfoMap &infoMap,
       if (!isSrcPattern) {
         LLVM_DEBUG(llvm::dbgs() << "found symbol bound to NativeCodeCall: "
                                 << treeName << '\n');
-        verifyBind(infoMap.bindValue(treeName), treeName);
+        verifyBind(
+            infoMap.bindValues(treeName, tree.getNumReturnsOfNativeCode()),
+            treeName);
       } else {
         PrintFatalError(&def,
                         formatv("binding symbol '{0}' to NativecodeCall in "

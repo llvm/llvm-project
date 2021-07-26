@@ -1323,5 +1323,1464 @@ define void @store_trunc(i32 %val, i8* %p8, i16* %p16) {
   ret void
 }
 
+define i8 @atomicrmw_add_i8(i8* %ptr, i8 %rhs) {
+; CHECK-NOLSE-O1-LABEL: atomicrmw_add_i8:
+; CHECK-NOLSE-O1:       ; %bb.0:
+; CHECK-NOLSE-O1-NEXT:  LBB27_1: ; %atomicrmw.start
+; CHECK-NOLSE-O1-NEXT:    ; =>This Inner Loop Header: Depth=1
+; CHECK-NOLSE-O1-NEXT:    ldaxrb w8, [x0]
+; CHECK-NOLSE-O1-NEXT:    add w9, w8, w1
+; CHECK-NOLSE-O1-NEXT:    stlxrb w10, w9, [x0]
+; CHECK-NOLSE-O1-NEXT:    cbnz w10, LBB27_1
+; CHECK-NOLSE-O1-NEXT:  ; %bb.2: ; %atomicrmw.end
+; CHECK-NOLSE-O1-NEXT:    mov w0, w8
+; CHECK-NOLSE-O1-NEXT:    ret
+;
+; CHECK-NOLSE-O0-LABEL: atomicrmw_add_i8:
+; CHECK-NOLSE-O0:       ; %bb.0:
+; CHECK-NOLSE-O0-NEXT:    sub sp, sp, #32 ; =32
+; CHECK-NOLSE-O0-NEXT:    .cfi_def_cfa_offset 32
+; CHECK-NOLSE-O0-NEXT:    str x0, [sp, #16] ; 8-byte Folded Spill
+; CHECK-NOLSE-O0-NEXT:    str w1, [sp, #24] ; 4-byte Folded Spill
+; CHECK-NOLSE-O0-NEXT:    ldrb w8, [x0]
+; CHECK-NOLSE-O0-NEXT:    str w8, [sp, #28] ; 4-byte Folded Spill
+; CHECK-NOLSE-O0-NEXT:  LBB27_1: ; %atomicrmw.start
+; CHECK-NOLSE-O0-NEXT:    ; =>This Loop Header: Depth=1
+; CHECK-NOLSE-O0-NEXT:    ; Child Loop BB27_2 Depth 2
+; CHECK-NOLSE-O0-NEXT:    ldr w10, [sp, #28] ; 4-byte Folded Reload
+; CHECK-NOLSE-O0-NEXT:    ldr x11, [sp, #16] ; 8-byte Folded Reload
+; CHECK-NOLSE-O0-NEXT:    ldr w8, [sp, #24] ; 4-byte Folded Reload
+; CHECK-NOLSE-O0-NEXT:    add w12, w8, w10, uxth
+; CHECK-NOLSE-O0-NEXT:  LBB27_2: ; %atomicrmw.start
+; CHECK-NOLSE-O0-NEXT:    ; Parent Loop BB27_1 Depth=1
+; CHECK-NOLSE-O0-NEXT:    ; => This Inner Loop Header: Depth=2
+; CHECK-NOLSE-O0-NEXT:    ldaxrb w9, [x11]
+; CHECK-NOLSE-O0-NEXT:    cmp w9, w10, uxtb
+; CHECK-NOLSE-O0-NEXT:    b.ne LBB27_4
+; CHECK-NOLSE-O0-NEXT:  ; %bb.3: ; %atomicrmw.start
+; CHECK-NOLSE-O0-NEXT:    ; in Loop: Header=BB27_2 Depth=2
+; CHECK-NOLSE-O0-NEXT:    stlxrb w8, w12, [x11]
+; CHECK-NOLSE-O0-NEXT:    cbnz w8, LBB27_2
+; CHECK-NOLSE-O0-NEXT:  LBB27_4: ; %atomicrmw.start
+; CHECK-NOLSE-O0-NEXT:    ; in Loop: Header=BB27_1 Depth=1
+; CHECK-NOLSE-O0-NEXT:    str w9, [sp, #12] ; 4-byte Folded Spill
+; CHECK-NOLSE-O0-NEXT:    and w8, w9, #0xff
+; CHECK-NOLSE-O0-NEXT:    subs w8, w8, w10, uxtb
+; CHECK-NOLSE-O0-NEXT:    cset w8, eq
+; CHECK-NOLSE-O0-NEXT:    str w9, [sp, #28] ; 4-byte Folded Spill
+; CHECK-NOLSE-O0-NEXT:    tbz w8, #0, LBB27_1
+; CHECK-NOLSE-O0-NEXT:  ; %bb.5: ; %atomicrmw.end
+; CHECK-NOLSE-O0-NEXT:    ldr w0, [sp, #12] ; 4-byte Folded Reload
+; CHECK-NOLSE-O0-NEXT:    add sp, sp, #32 ; =32
+; CHECK-NOLSE-O0-NEXT:    ret
+;
+; CHECK-LSE-O1-LABEL: atomicrmw_add_i8:
+; CHECK-LSE-O1:       ; %bb.0:
+; CHECK-LSE-O1-NEXT:    ldaddalb w1, w0, [x0]
+; CHECK-LSE-O1-NEXT:    ret
+;
+; CHECK-LSE-O0-LABEL: atomicrmw_add_i8:
+; CHECK-LSE-O0:       ; %bb.0:
+; CHECK-LSE-O0-NEXT:    ldaddalb w1, w0, [x0]
+; CHECK-LSE-O0-NEXT:    ret
+  %res = atomicrmw add i8* %ptr, i8 %rhs seq_cst
+  ret i8 %res
+}
+
+define i8 @atomicrmw_xchg_i8(i8* %ptr, i8 %rhs) {
+; CHECK-NOLSE-O1-LABEL: atomicrmw_xchg_i8:
+; CHECK-NOLSE-O1:       ; %bb.0:
+; CHECK-NOLSE-O1-NEXT:    ; kill: def $w1 killed $w1 def $x1
+; CHECK-NOLSE-O1-NEXT:  LBB28_1: ; %atomicrmw.start
+; CHECK-NOLSE-O1-NEXT:    ; =>This Inner Loop Header: Depth=1
+; CHECK-NOLSE-O1-NEXT:    ldxrb w8, [x0]
+; CHECK-NOLSE-O1-NEXT:    stxrb w9, w1, [x0]
+; CHECK-NOLSE-O1-NEXT:    cbnz w9, LBB28_1
+; CHECK-NOLSE-O1-NEXT:  ; %bb.2: ; %atomicrmw.end
+; CHECK-NOLSE-O1-NEXT:    mov w0, w8
+; CHECK-NOLSE-O1-NEXT:    ret
+;
+; CHECK-NOLSE-O0-LABEL: atomicrmw_xchg_i8:
+; CHECK-NOLSE-O0:       ; %bb.0:
+; CHECK-NOLSE-O0-NEXT:    sub sp, sp, #32 ; =32
+; CHECK-NOLSE-O0-NEXT:    .cfi_def_cfa_offset 32
+; CHECK-NOLSE-O0-NEXT:    str x0, [sp, #16] ; 8-byte Folded Spill
+; CHECK-NOLSE-O0-NEXT:    str w1, [sp, #24] ; 4-byte Folded Spill
+; CHECK-NOLSE-O0-NEXT:    ldrb w8, [x0]
+; CHECK-NOLSE-O0-NEXT:    str w8, [sp, #28] ; 4-byte Folded Spill
+; CHECK-NOLSE-O0-NEXT:  LBB28_1: ; %atomicrmw.start
+; CHECK-NOLSE-O0-NEXT:    ; =>This Loop Header: Depth=1
+; CHECK-NOLSE-O0-NEXT:    ; Child Loop BB28_2 Depth 2
+; CHECK-NOLSE-O0-NEXT:    ldr w10, [sp, #28] ; 4-byte Folded Reload
+; CHECK-NOLSE-O0-NEXT:    ldr x11, [sp, #16] ; 8-byte Folded Reload
+; CHECK-NOLSE-O0-NEXT:    ldr w12, [sp, #24] ; 4-byte Folded Reload
+; CHECK-NOLSE-O0-NEXT:  LBB28_2: ; %atomicrmw.start
+; CHECK-NOLSE-O0-NEXT:    ; Parent Loop BB28_1 Depth=1
+; CHECK-NOLSE-O0-NEXT:    ; => This Inner Loop Header: Depth=2
+; CHECK-NOLSE-O0-NEXT:    ldaxrb w9, [x11]
+; CHECK-NOLSE-O0-NEXT:    cmp w9, w10, uxtb
+; CHECK-NOLSE-O0-NEXT:    b.ne LBB28_4
+; CHECK-NOLSE-O0-NEXT:  ; %bb.3: ; %atomicrmw.start
+; CHECK-NOLSE-O0-NEXT:    ; in Loop: Header=BB28_2 Depth=2
+; CHECK-NOLSE-O0-NEXT:    stlxrb w8, w12, [x11]
+; CHECK-NOLSE-O0-NEXT:    cbnz w8, LBB28_2
+; CHECK-NOLSE-O0-NEXT:  LBB28_4: ; %atomicrmw.start
+; CHECK-NOLSE-O0-NEXT:    ; in Loop: Header=BB28_1 Depth=1
+; CHECK-NOLSE-O0-NEXT:    str w9, [sp, #12] ; 4-byte Folded Spill
+; CHECK-NOLSE-O0-NEXT:    and w8, w9, #0xff
+; CHECK-NOLSE-O0-NEXT:    subs w8, w8, w10, uxtb
+; CHECK-NOLSE-O0-NEXT:    cset w8, eq
+; CHECK-NOLSE-O0-NEXT:    str w9, [sp, #28] ; 4-byte Folded Spill
+; CHECK-NOLSE-O0-NEXT:    tbz w8, #0, LBB28_1
+; CHECK-NOLSE-O0-NEXT:  ; %bb.5: ; %atomicrmw.end
+; CHECK-NOLSE-O0-NEXT:    ldr w0, [sp, #12] ; 4-byte Folded Reload
+; CHECK-NOLSE-O0-NEXT:    add sp, sp, #32 ; =32
+; CHECK-NOLSE-O0-NEXT:    ret
+;
+; CHECK-LSE-O1-LABEL: atomicrmw_xchg_i8:
+; CHECK-LSE-O1:       ; %bb.0:
+; CHECK-LSE-O1-NEXT:    swpb w1, w0, [x0]
+; CHECK-LSE-O1-NEXT:    ret
+;
+; CHECK-LSE-O0-LABEL: atomicrmw_xchg_i8:
+; CHECK-LSE-O0:       ; %bb.0:
+; CHECK-LSE-O0-NEXT:    swpb w1, w0, [x0]
+; CHECK-LSE-O0-NEXT:    ret
+  %res = atomicrmw xchg i8* %ptr, i8 %rhs monotonic
+  ret i8 %res
+}
+
+define i8 @atomicrmw_sub_i8(i8* %ptr, i8 %rhs) {
+; CHECK-NOLSE-O1-LABEL: atomicrmw_sub_i8:
+; CHECK-NOLSE-O1:       ; %bb.0:
+; CHECK-NOLSE-O1-NEXT:  LBB29_1: ; %atomicrmw.start
+; CHECK-NOLSE-O1-NEXT:    ; =>This Inner Loop Header: Depth=1
+; CHECK-NOLSE-O1-NEXT:    ldaxrb w8, [x0]
+; CHECK-NOLSE-O1-NEXT:    sub w9, w8, w1
+; CHECK-NOLSE-O1-NEXT:    stxrb w10, w9, [x0]
+; CHECK-NOLSE-O1-NEXT:    cbnz w10, LBB29_1
+; CHECK-NOLSE-O1-NEXT:  ; %bb.2: ; %atomicrmw.end
+; CHECK-NOLSE-O1-NEXT:    mov w0, w8
+; CHECK-NOLSE-O1-NEXT:    ret
+;
+; CHECK-NOLSE-O0-LABEL: atomicrmw_sub_i8:
+; CHECK-NOLSE-O0:       ; %bb.0:
+; CHECK-NOLSE-O0-NEXT:    sub sp, sp, #32 ; =32
+; CHECK-NOLSE-O0-NEXT:    .cfi_def_cfa_offset 32
+; CHECK-NOLSE-O0-NEXT:    str x0, [sp, #16] ; 8-byte Folded Spill
+; CHECK-NOLSE-O0-NEXT:    str w1, [sp, #24] ; 4-byte Folded Spill
+; CHECK-NOLSE-O0-NEXT:    ldrb w8, [x0]
+; CHECK-NOLSE-O0-NEXT:    str w8, [sp, #28] ; 4-byte Folded Spill
+; CHECK-NOLSE-O0-NEXT:  LBB29_1: ; %atomicrmw.start
+; CHECK-NOLSE-O0-NEXT:    ; =>This Loop Header: Depth=1
+; CHECK-NOLSE-O0-NEXT:    ; Child Loop BB29_2 Depth 2
+; CHECK-NOLSE-O0-NEXT:    ldr w10, [sp, #28] ; 4-byte Folded Reload
+; CHECK-NOLSE-O0-NEXT:    ldr x11, [sp, #16] ; 8-byte Folded Reload
+; CHECK-NOLSE-O0-NEXT:    ldr w8, [sp, #24] ; 4-byte Folded Reload
+; CHECK-NOLSE-O0-NEXT:    subs w12, w10, w8
+; CHECK-NOLSE-O0-NEXT:  LBB29_2: ; %atomicrmw.start
+; CHECK-NOLSE-O0-NEXT:    ; Parent Loop BB29_1 Depth=1
+; CHECK-NOLSE-O0-NEXT:    ; => This Inner Loop Header: Depth=2
+; CHECK-NOLSE-O0-NEXT:    ldaxrb w9, [x11]
+; CHECK-NOLSE-O0-NEXT:    cmp w9, w10, uxtb
+; CHECK-NOLSE-O0-NEXT:    b.ne LBB29_4
+; CHECK-NOLSE-O0-NEXT:  ; %bb.3: ; %atomicrmw.start
+; CHECK-NOLSE-O0-NEXT:    ; in Loop: Header=BB29_2 Depth=2
+; CHECK-NOLSE-O0-NEXT:    stlxrb w8, w12, [x11]
+; CHECK-NOLSE-O0-NEXT:    cbnz w8, LBB29_2
+; CHECK-NOLSE-O0-NEXT:  LBB29_4: ; %atomicrmw.start
+; CHECK-NOLSE-O0-NEXT:    ; in Loop: Header=BB29_1 Depth=1
+; CHECK-NOLSE-O0-NEXT:    str w9, [sp, #12] ; 4-byte Folded Spill
+; CHECK-NOLSE-O0-NEXT:    and w8, w9, #0xff
+; CHECK-NOLSE-O0-NEXT:    subs w8, w8, w10, uxtb
+; CHECK-NOLSE-O0-NEXT:    cset w8, eq
+; CHECK-NOLSE-O0-NEXT:    str w9, [sp, #28] ; 4-byte Folded Spill
+; CHECK-NOLSE-O0-NEXT:    tbz w8, #0, LBB29_1
+; CHECK-NOLSE-O0-NEXT:  ; %bb.5: ; %atomicrmw.end
+; CHECK-NOLSE-O0-NEXT:    ldr w0, [sp, #12] ; 4-byte Folded Reload
+; CHECK-NOLSE-O0-NEXT:    add sp, sp, #32 ; =32
+; CHECK-NOLSE-O0-NEXT:    ret
+;
+; CHECK-LSE-O1-LABEL: atomicrmw_sub_i8:
+; CHECK-LSE-O1:       ; %bb.0:
+; CHECK-LSE-O1-NEXT:    neg w8, w1
+; CHECK-LSE-O1-NEXT:    ldaddab w8, w0, [x0]
+; CHECK-LSE-O1-NEXT:    ret
+;
+; CHECK-LSE-O0-LABEL: atomicrmw_sub_i8:
+; CHECK-LSE-O0:       ; %bb.0:
+; CHECK-LSE-O0-NEXT:    neg w8, w1
+; CHECK-LSE-O0-NEXT:    ldaddab w8, w0, [x0]
+; CHECK-LSE-O0-NEXT:    ret
+  %res = atomicrmw sub i8* %ptr, i8 %rhs acquire
+  ret i8 %res
+}
+
+define i8 @atomicrmw_and_i8(i8* %ptr, i8 %rhs) {
+; CHECK-NOLSE-O1-LABEL: atomicrmw_and_i8:
+; CHECK-NOLSE-O1:       ; %bb.0:
+; CHECK-NOLSE-O1-NEXT:  LBB30_1: ; %atomicrmw.start
+; CHECK-NOLSE-O1-NEXT:    ; =>This Inner Loop Header: Depth=1
+; CHECK-NOLSE-O1-NEXT:    ldxrb w8, [x0]
+; CHECK-NOLSE-O1-NEXT:    and w9, w8, w1
+; CHECK-NOLSE-O1-NEXT:    stlxrb w10, w9, [x0]
+; CHECK-NOLSE-O1-NEXT:    cbnz w10, LBB30_1
+; CHECK-NOLSE-O1-NEXT:  ; %bb.2: ; %atomicrmw.end
+; CHECK-NOLSE-O1-NEXT:    mov w0, w8
+; CHECK-NOLSE-O1-NEXT:    ret
+;
+; CHECK-NOLSE-O0-LABEL: atomicrmw_and_i8:
+; CHECK-NOLSE-O0:       ; %bb.0:
+; CHECK-NOLSE-O0-NEXT:    sub sp, sp, #32 ; =32
+; CHECK-NOLSE-O0-NEXT:    .cfi_def_cfa_offset 32
+; CHECK-NOLSE-O0-NEXT:    str x0, [sp, #16] ; 8-byte Folded Spill
+; CHECK-NOLSE-O0-NEXT:    str w1, [sp, #24] ; 4-byte Folded Spill
+; CHECK-NOLSE-O0-NEXT:    ldrb w8, [x0]
+; CHECK-NOLSE-O0-NEXT:    str w8, [sp, #28] ; 4-byte Folded Spill
+; CHECK-NOLSE-O0-NEXT:  LBB30_1: ; %atomicrmw.start
+; CHECK-NOLSE-O0-NEXT:    ; =>This Loop Header: Depth=1
+; CHECK-NOLSE-O0-NEXT:    ; Child Loop BB30_2 Depth 2
+; CHECK-NOLSE-O0-NEXT:    ldr w10, [sp, #28] ; 4-byte Folded Reload
+; CHECK-NOLSE-O0-NEXT:    ldr x11, [sp, #16] ; 8-byte Folded Reload
+; CHECK-NOLSE-O0-NEXT:    ldr w8, [sp, #24] ; 4-byte Folded Reload
+; CHECK-NOLSE-O0-NEXT:    and w12, w10, w8
+; CHECK-NOLSE-O0-NEXT:  LBB30_2: ; %atomicrmw.start
+; CHECK-NOLSE-O0-NEXT:    ; Parent Loop BB30_1 Depth=1
+; CHECK-NOLSE-O0-NEXT:    ; => This Inner Loop Header: Depth=2
+; CHECK-NOLSE-O0-NEXT:    ldaxrb w9, [x11]
+; CHECK-NOLSE-O0-NEXT:    cmp w9, w10, uxtb
+; CHECK-NOLSE-O0-NEXT:    b.ne LBB30_4
+; CHECK-NOLSE-O0-NEXT:  ; %bb.3: ; %atomicrmw.start
+; CHECK-NOLSE-O0-NEXT:    ; in Loop: Header=BB30_2 Depth=2
+; CHECK-NOLSE-O0-NEXT:    stlxrb w8, w12, [x11]
+; CHECK-NOLSE-O0-NEXT:    cbnz w8, LBB30_2
+; CHECK-NOLSE-O0-NEXT:  LBB30_4: ; %atomicrmw.start
+; CHECK-NOLSE-O0-NEXT:    ; in Loop: Header=BB30_1 Depth=1
+; CHECK-NOLSE-O0-NEXT:    str w9, [sp, #12] ; 4-byte Folded Spill
+; CHECK-NOLSE-O0-NEXT:    and w8, w9, #0xff
+; CHECK-NOLSE-O0-NEXT:    subs w8, w8, w10, uxtb
+; CHECK-NOLSE-O0-NEXT:    cset w8, eq
+; CHECK-NOLSE-O0-NEXT:    str w9, [sp, #28] ; 4-byte Folded Spill
+; CHECK-NOLSE-O0-NEXT:    tbz w8, #0, LBB30_1
+; CHECK-NOLSE-O0-NEXT:  ; %bb.5: ; %atomicrmw.end
+; CHECK-NOLSE-O0-NEXT:    ldr w0, [sp, #12] ; 4-byte Folded Reload
+; CHECK-NOLSE-O0-NEXT:    add sp, sp, #32 ; =32
+; CHECK-NOLSE-O0-NEXT:    ret
+;
+; CHECK-LSE-O1-LABEL: atomicrmw_and_i8:
+; CHECK-LSE-O1:       ; %bb.0:
+; CHECK-LSE-O1-NEXT:    mvn w8, w1
+; CHECK-LSE-O1-NEXT:    ldclrlb w8, w0, [x0]
+; CHECK-LSE-O1-NEXT:    ret
+;
+; CHECK-LSE-O0-LABEL: atomicrmw_and_i8:
+; CHECK-LSE-O0:       ; %bb.0:
+; CHECK-LSE-O0-NEXT:    mvn w8, w1
+; CHECK-LSE-O0-NEXT:    ldclrlb w8, w0, [x0]
+; CHECK-LSE-O0-NEXT:    ret
+  %res = atomicrmw and i8* %ptr, i8 %rhs release
+  ret i8 %res
+}
+
+define i8 @atomicrmw_or_i8(i8* %ptr, i8 %rhs) {
+; CHECK-NOLSE-O1-LABEL: atomicrmw_or_i8:
+; CHECK-NOLSE-O1:       ; %bb.0:
+; CHECK-NOLSE-O1-NEXT:  LBB31_1: ; %atomicrmw.start
+; CHECK-NOLSE-O1-NEXT:    ; =>This Inner Loop Header: Depth=1
+; CHECK-NOLSE-O1-NEXT:    ldaxrb w8, [x0]
+; CHECK-NOLSE-O1-NEXT:    orr w9, w8, w1
+; CHECK-NOLSE-O1-NEXT:    stlxrb w10, w9, [x0]
+; CHECK-NOLSE-O1-NEXT:    cbnz w10, LBB31_1
+; CHECK-NOLSE-O1-NEXT:  ; %bb.2: ; %atomicrmw.end
+; CHECK-NOLSE-O1-NEXT:    mov w0, w8
+; CHECK-NOLSE-O1-NEXT:    ret
+;
+; CHECK-NOLSE-O0-LABEL: atomicrmw_or_i8:
+; CHECK-NOLSE-O0:       ; %bb.0:
+; CHECK-NOLSE-O0-NEXT:    sub sp, sp, #32 ; =32
+; CHECK-NOLSE-O0-NEXT:    .cfi_def_cfa_offset 32
+; CHECK-NOLSE-O0-NEXT:    str x0, [sp, #16] ; 8-byte Folded Spill
+; CHECK-NOLSE-O0-NEXT:    str w1, [sp, #24] ; 4-byte Folded Spill
+; CHECK-NOLSE-O0-NEXT:    ldrb w8, [x0]
+; CHECK-NOLSE-O0-NEXT:    str w8, [sp, #28] ; 4-byte Folded Spill
+; CHECK-NOLSE-O0-NEXT:  LBB31_1: ; %atomicrmw.start
+; CHECK-NOLSE-O0-NEXT:    ; =>This Loop Header: Depth=1
+; CHECK-NOLSE-O0-NEXT:    ; Child Loop BB31_2 Depth 2
+; CHECK-NOLSE-O0-NEXT:    ldr w10, [sp, #28] ; 4-byte Folded Reload
+; CHECK-NOLSE-O0-NEXT:    ldr x11, [sp, #16] ; 8-byte Folded Reload
+; CHECK-NOLSE-O0-NEXT:    ldr w8, [sp, #24] ; 4-byte Folded Reload
+; CHECK-NOLSE-O0-NEXT:    orr w12, w10, w8
+; CHECK-NOLSE-O0-NEXT:  LBB31_2: ; %atomicrmw.start
+; CHECK-NOLSE-O0-NEXT:    ; Parent Loop BB31_1 Depth=1
+; CHECK-NOLSE-O0-NEXT:    ; => This Inner Loop Header: Depth=2
+; CHECK-NOLSE-O0-NEXT:    ldaxrb w9, [x11]
+; CHECK-NOLSE-O0-NEXT:    cmp w9, w10, uxtb
+; CHECK-NOLSE-O0-NEXT:    b.ne LBB31_4
+; CHECK-NOLSE-O0-NEXT:  ; %bb.3: ; %atomicrmw.start
+; CHECK-NOLSE-O0-NEXT:    ; in Loop: Header=BB31_2 Depth=2
+; CHECK-NOLSE-O0-NEXT:    stlxrb w8, w12, [x11]
+; CHECK-NOLSE-O0-NEXT:    cbnz w8, LBB31_2
+; CHECK-NOLSE-O0-NEXT:  LBB31_4: ; %atomicrmw.start
+; CHECK-NOLSE-O0-NEXT:    ; in Loop: Header=BB31_1 Depth=1
+; CHECK-NOLSE-O0-NEXT:    str w9, [sp, #12] ; 4-byte Folded Spill
+; CHECK-NOLSE-O0-NEXT:    and w8, w9, #0xff
+; CHECK-NOLSE-O0-NEXT:    subs w8, w8, w10, uxtb
+; CHECK-NOLSE-O0-NEXT:    cset w8, eq
+; CHECK-NOLSE-O0-NEXT:    str w9, [sp, #28] ; 4-byte Folded Spill
+; CHECK-NOLSE-O0-NEXT:    tbz w8, #0, LBB31_1
+; CHECK-NOLSE-O0-NEXT:  ; %bb.5: ; %atomicrmw.end
+; CHECK-NOLSE-O0-NEXT:    ldr w0, [sp, #12] ; 4-byte Folded Reload
+; CHECK-NOLSE-O0-NEXT:    add sp, sp, #32 ; =32
+; CHECK-NOLSE-O0-NEXT:    ret
+;
+; CHECK-LSE-O1-LABEL: atomicrmw_or_i8:
+; CHECK-LSE-O1:       ; %bb.0:
+; CHECK-LSE-O1-NEXT:    ldsetalb w1, w0, [x0]
+; CHECK-LSE-O1-NEXT:    ret
+;
+; CHECK-LSE-O0-LABEL: atomicrmw_or_i8:
+; CHECK-LSE-O0:       ; %bb.0:
+; CHECK-LSE-O0-NEXT:    ldsetalb w1, w0, [x0]
+; CHECK-LSE-O0-NEXT:    ret
+  %res = atomicrmw or i8* %ptr, i8 %rhs seq_cst
+  ret i8 %res
+}
+
+define i8 @atomicrmw_xor_i8(i8* %ptr, i8 %rhs) {
+; CHECK-NOLSE-O1-LABEL: atomicrmw_xor_i8:
+; CHECK-NOLSE-O1:       ; %bb.0:
+; CHECK-NOLSE-O1-NEXT:  LBB32_1: ; %atomicrmw.start
+; CHECK-NOLSE-O1-NEXT:    ; =>This Inner Loop Header: Depth=1
+; CHECK-NOLSE-O1-NEXT:    ldxrb w8, [x0]
+; CHECK-NOLSE-O1-NEXT:    eor w9, w8, w1
+; CHECK-NOLSE-O1-NEXT:    stxrb w10, w9, [x0]
+; CHECK-NOLSE-O1-NEXT:    cbnz w10, LBB32_1
+; CHECK-NOLSE-O1-NEXT:  ; %bb.2: ; %atomicrmw.end
+; CHECK-NOLSE-O1-NEXT:    mov w0, w8
+; CHECK-NOLSE-O1-NEXT:    ret
+;
+; CHECK-NOLSE-O0-LABEL: atomicrmw_xor_i8:
+; CHECK-NOLSE-O0:       ; %bb.0:
+; CHECK-NOLSE-O0-NEXT:    sub sp, sp, #32 ; =32
+; CHECK-NOLSE-O0-NEXT:    .cfi_def_cfa_offset 32
+; CHECK-NOLSE-O0-NEXT:    str x0, [sp, #16] ; 8-byte Folded Spill
+; CHECK-NOLSE-O0-NEXT:    str w1, [sp, #24] ; 4-byte Folded Spill
+; CHECK-NOLSE-O0-NEXT:    ldrb w8, [x0]
+; CHECK-NOLSE-O0-NEXT:    str w8, [sp, #28] ; 4-byte Folded Spill
+; CHECK-NOLSE-O0-NEXT:  LBB32_1: ; %atomicrmw.start
+; CHECK-NOLSE-O0-NEXT:    ; =>This Loop Header: Depth=1
+; CHECK-NOLSE-O0-NEXT:    ; Child Loop BB32_2 Depth 2
+; CHECK-NOLSE-O0-NEXT:    ldr w10, [sp, #28] ; 4-byte Folded Reload
+; CHECK-NOLSE-O0-NEXT:    ldr x11, [sp, #16] ; 8-byte Folded Reload
+; CHECK-NOLSE-O0-NEXT:    ldr w8, [sp, #24] ; 4-byte Folded Reload
+; CHECK-NOLSE-O0-NEXT:    eor w12, w10, w8
+; CHECK-NOLSE-O0-NEXT:  LBB32_2: ; %atomicrmw.start
+; CHECK-NOLSE-O0-NEXT:    ; Parent Loop BB32_1 Depth=1
+; CHECK-NOLSE-O0-NEXT:    ; => This Inner Loop Header: Depth=2
+; CHECK-NOLSE-O0-NEXT:    ldaxrb w9, [x11]
+; CHECK-NOLSE-O0-NEXT:    cmp w9, w10, uxtb
+; CHECK-NOLSE-O0-NEXT:    b.ne LBB32_4
+; CHECK-NOLSE-O0-NEXT:  ; %bb.3: ; %atomicrmw.start
+; CHECK-NOLSE-O0-NEXT:    ; in Loop: Header=BB32_2 Depth=2
+; CHECK-NOLSE-O0-NEXT:    stlxrb w8, w12, [x11]
+; CHECK-NOLSE-O0-NEXT:    cbnz w8, LBB32_2
+; CHECK-NOLSE-O0-NEXT:  LBB32_4: ; %atomicrmw.start
+; CHECK-NOLSE-O0-NEXT:    ; in Loop: Header=BB32_1 Depth=1
+; CHECK-NOLSE-O0-NEXT:    str w9, [sp, #12] ; 4-byte Folded Spill
+; CHECK-NOLSE-O0-NEXT:    and w8, w9, #0xff
+; CHECK-NOLSE-O0-NEXT:    subs w8, w8, w10, uxtb
+; CHECK-NOLSE-O0-NEXT:    cset w8, eq
+; CHECK-NOLSE-O0-NEXT:    str w9, [sp, #28] ; 4-byte Folded Spill
+; CHECK-NOLSE-O0-NEXT:    tbz w8, #0, LBB32_1
+; CHECK-NOLSE-O0-NEXT:  ; %bb.5: ; %atomicrmw.end
+; CHECK-NOLSE-O0-NEXT:    ldr w0, [sp, #12] ; 4-byte Folded Reload
+; CHECK-NOLSE-O0-NEXT:    add sp, sp, #32 ; =32
+; CHECK-NOLSE-O0-NEXT:    ret
+;
+; CHECK-LSE-O1-LABEL: atomicrmw_xor_i8:
+; CHECK-LSE-O1:       ; %bb.0:
+; CHECK-LSE-O1-NEXT:    ldeorb w1, w0, [x0]
+; CHECK-LSE-O1-NEXT:    ret
+;
+; CHECK-LSE-O0-LABEL: atomicrmw_xor_i8:
+; CHECK-LSE-O0:       ; %bb.0:
+; CHECK-LSE-O0-NEXT:    ldeorb w1, w0, [x0]
+; CHECK-LSE-O0-NEXT:    ret
+  %res = atomicrmw xor i8* %ptr, i8 %rhs monotonic
+  ret i8 %res
+}
+
+define i8 @atomicrmw_min_i8(i8* %ptr, i8 %rhs) {
+; CHECK-NOLSE-O1-LABEL: atomicrmw_min_i8:
+; CHECK-NOLSE-O1:       ; %bb.0:
+; CHECK-NOLSE-O1-NEXT:  LBB33_1: ; %atomicrmw.start
+; CHECK-NOLSE-O1-NEXT:    ; =>This Inner Loop Header: Depth=1
+; CHECK-NOLSE-O1-NEXT:    ldaxrb w8, [x0]
+; CHECK-NOLSE-O1-NEXT:    sxtb w9, w8
+; CHECK-NOLSE-O1-NEXT:    cmp w9, w1, sxtb
+; CHECK-NOLSE-O1-NEXT:    csel w9, w8, w1, le
+; CHECK-NOLSE-O1-NEXT:    stxrb w10, w9, [x0]
+; CHECK-NOLSE-O1-NEXT:    cbnz w10, LBB33_1
+; CHECK-NOLSE-O1-NEXT:  ; %bb.2: ; %atomicrmw.end
+; CHECK-NOLSE-O1-NEXT:    mov w0, w8
+; CHECK-NOLSE-O1-NEXT:    ret
+;
+; CHECK-NOLSE-O0-LABEL: atomicrmw_min_i8:
+; CHECK-NOLSE-O0:       ; %bb.0:
+; CHECK-NOLSE-O0-NEXT:    sub sp, sp, #32 ; =32
+; CHECK-NOLSE-O0-NEXT:    .cfi_def_cfa_offset 32
+; CHECK-NOLSE-O0-NEXT:    str x0, [sp, #16] ; 8-byte Folded Spill
+; CHECK-NOLSE-O0-NEXT:    str w1, [sp, #24] ; 4-byte Folded Spill
+; CHECK-NOLSE-O0-NEXT:    ldrb w8, [x0]
+; CHECK-NOLSE-O0-NEXT:    str w8, [sp, #28] ; 4-byte Folded Spill
+; CHECK-NOLSE-O0-NEXT:  LBB33_1: ; %atomicrmw.start
+; CHECK-NOLSE-O0-NEXT:    ; =>This Loop Header: Depth=1
+; CHECK-NOLSE-O0-NEXT:    ; Child Loop BB33_2 Depth 2
+; CHECK-NOLSE-O0-NEXT:    ldr w10, [sp, #28] ; 4-byte Folded Reload
+; CHECK-NOLSE-O0-NEXT:    ldr x11, [sp, #16] ; 8-byte Folded Reload
+; CHECK-NOLSE-O0-NEXT:    ldr w8, [sp, #24] ; 4-byte Folded Reload
+; CHECK-NOLSE-O0-NEXT:    sxtb w9, w10
+; CHECK-NOLSE-O0-NEXT:    mov w12, w8
+; CHECK-NOLSE-O0-NEXT:    subs w9, w9, w12, sxtb
+; CHECK-NOLSE-O0-NEXT:    csel w12, w10, w8, le
+; CHECK-NOLSE-O0-NEXT:  LBB33_2: ; %atomicrmw.start
+; CHECK-NOLSE-O0-NEXT:    ; Parent Loop BB33_1 Depth=1
+; CHECK-NOLSE-O0-NEXT:    ; => This Inner Loop Header: Depth=2
+; CHECK-NOLSE-O0-NEXT:    ldaxrb w9, [x11]
+; CHECK-NOLSE-O0-NEXT:    cmp w9, w10, uxtb
+; CHECK-NOLSE-O0-NEXT:    b.ne LBB33_4
+; CHECK-NOLSE-O0-NEXT:  ; %bb.3: ; %atomicrmw.start
+; CHECK-NOLSE-O0-NEXT:    ; in Loop: Header=BB33_2 Depth=2
+; CHECK-NOLSE-O0-NEXT:    stlxrb w8, w12, [x11]
+; CHECK-NOLSE-O0-NEXT:    cbnz w8, LBB33_2
+; CHECK-NOLSE-O0-NEXT:  LBB33_4: ; %atomicrmw.start
+; CHECK-NOLSE-O0-NEXT:    ; in Loop: Header=BB33_1 Depth=1
+; CHECK-NOLSE-O0-NEXT:    str w9, [sp, #12] ; 4-byte Folded Spill
+; CHECK-NOLSE-O0-NEXT:    and w8, w9, #0xff
+; CHECK-NOLSE-O0-NEXT:    subs w8, w8, w10, uxtb
+; CHECK-NOLSE-O0-NEXT:    cset w8, eq
+; CHECK-NOLSE-O0-NEXT:    str w9, [sp, #28] ; 4-byte Folded Spill
+; CHECK-NOLSE-O0-NEXT:    tbz w8, #0, LBB33_1
+; CHECK-NOLSE-O0-NEXT:  ; %bb.5: ; %atomicrmw.end
+; CHECK-NOLSE-O0-NEXT:    ldr w0, [sp, #12] ; 4-byte Folded Reload
+; CHECK-NOLSE-O0-NEXT:    add sp, sp, #32 ; =32
+; CHECK-NOLSE-O0-NEXT:    ret
+;
+; CHECK-LSE-O1-LABEL: atomicrmw_min_i8:
+; CHECK-LSE-O1:       ; %bb.0:
+; CHECK-LSE-O1-NEXT:    ldsminab w1, w0, [x0]
+; CHECK-LSE-O1-NEXT:    ret
+;
+; CHECK-LSE-O0-LABEL: atomicrmw_min_i8:
+; CHECK-LSE-O0:       ; %bb.0:
+; CHECK-LSE-O0-NEXT:    ldsminab w1, w0, [x0]
+; CHECK-LSE-O0-NEXT:    ret
+  %res = atomicrmw min i8* %ptr, i8 %rhs acquire
+  ret i8 %res
+}
+
+define i8 @atomicrmw_max_i8(i8* %ptr, i8 %rhs) {
+; CHECK-NOLSE-O1-LABEL: atomicrmw_max_i8:
+; CHECK-NOLSE-O1:       ; %bb.0:
+; CHECK-NOLSE-O1-NEXT:  LBB34_1: ; %atomicrmw.start
+; CHECK-NOLSE-O1-NEXT:    ; =>This Inner Loop Header: Depth=1
+; CHECK-NOLSE-O1-NEXT:    ldxrb w8, [x0]
+; CHECK-NOLSE-O1-NEXT:    sxtb w9, w8
+; CHECK-NOLSE-O1-NEXT:    cmp w9, w1, sxtb
+; CHECK-NOLSE-O1-NEXT:    csel w9, w8, w1, gt
+; CHECK-NOLSE-O1-NEXT:    stlxrb w10, w9, [x0]
+; CHECK-NOLSE-O1-NEXT:    cbnz w10, LBB34_1
+; CHECK-NOLSE-O1-NEXT:  ; %bb.2: ; %atomicrmw.end
+; CHECK-NOLSE-O1-NEXT:    mov w0, w8
+; CHECK-NOLSE-O1-NEXT:    ret
+;
+; CHECK-NOLSE-O0-LABEL: atomicrmw_max_i8:
+; CHECK-NOLSE-O0:       ; %bb.0:
+; CHECK-NOLSE-O0-NEXT:    sub sp, sp, #32 ; =32
+; CHECK-NOLSE-O0-NEXT:    .cfi_def_cfa_offset 32
+; CHECK-NOLSE-O0-NEXT:    str x0, [sp, #16] ; 8-byte Folded Spill
+; CHECK-NOLSE-O0-NEXT:    str w1, [sp, #24] ; 4-byte Folded Spill
+; CHECK-NOLSE-O0-NEXT:    ldrb w8, [x0]
+; CHECK-NOLSE-O0-NEXT:    str w8, [sp, #28] ; 4-byte Folded Spill
+; CHECK-NOLSE-O0-NEXT:  LBB34_1: ; %atomicrmw.start
+; CHECK-NOLSE-O0-NEXT:    ; =>This Loop Header: Depth=1
+; CHECK-NOLSE-O0-NEXT:    ; Child Loop BB34_2 Depth 2
+; CHECK-NOLSE-O0-NEXT:    ldr w10, [sp, #28] ; 4-byte Folded Reload
+; CHECK-NOLSE-O0-NEXT:    ldr x11, [sp, #16] ; 8-byte Folded Reload
+; CHECK-NOLSE-O0-NEXT:    ldr w8, [sp, #24] ; 4-byte Folded Reload
+; CHECK-NOLSE-O0-NEXT:    sxtb w9, w10
+; CHECK-NOLSE-O0-NEXT:    mov w12, w8
+; CHECK-NOLSE-O0-NEXT:    subs w9, w9, w12, sxtb
+; CHECK-NOLSE-O0-NEXT:    csel w12, w10, w8, gt
+; CHECK-NOLSE-O0-NEXT:  LBB34_2: ; %atomicrmw.start
+; CHECK-NOLSE-O0-NEXT:    ; Parent Loop BB34_1 Depth=1
+; CHECK-NOLSE-O0-NEXT:    ; => This Inner Loop Header: Depth=2
+; CHECK-NOLSE-O0-NEXT:    ldaxrb w9, [x11]
+; CHECK-NOLSE-O0-NEXT:    cmp w9, w10, uxtb
+; CHECK-NOLSE-O0-NEXT:    b.ne LBB34_4
+; CHECK-NOLSE-O0-NEXT:  ; %bb.3: ; %atomicrmw.start
+; CHECK-NOLSE-O0-NEXT:    ; in Loop: Header=BB34_2 Depth=2
+; CHECK-NOLSE-O0-NEXT:    stlxrb w8, w12, [x11]
+; CHECK-NOLSE-O0-NEXT:    cbnz w8, LBB34_2
+; CHECK-NOLSE-O0-NEXT:  LBB34_4: ; %atomicrmw.start
+; CHECK-NOLSE-O0-NEXT:    ; in Loop: Header=BB34_1 Depth=1
+; CHECK-NOLSE-O0-NEXT:    str w9, [sp, #12] ; 4-byte Folded Spill
+; CHECK-NOLSE-O0-NEXT:    and w8, w9, #0xff
+; CHECK-NOLSE-O0-NEXT:    subs w8, w8, w10, uxtb
+; CHECK-NOLSE-O0-NEXT:    cset w8, eq
+; CHECK-NOLSE-O0-NEXT:    str w9, [sp, #28] ; 4-byte Folded Spill
+; CHECK-NOLSE-O0-NEXT:    tbz w8, #0, LBB34_1
+; CHECK-NOLSE-O0-NEXT:  ; %bb.5: ; %atomicrmw.end
+; CHECK-NOLSE-O0-NEXT:    ldr w0, [sp, #12] ; 4-byte Folded Reload
+; CHECK-NOLSE-O0-NEXT:    add sp, sp, #32 ; =32
+; CHECK-NOLSE-O0-NEXT:    ret
+;
+; CHECK-LSE-O1-LABEL: atomicrmw_max_i8:
+; CHECK-LSE-O1:       ; %bb.0:
+; CHECK-LSE-O1-NEXT:    ldsmaxlb w1, w0, [x0]
+; CHECK-LSE-O1-NEXT:    ret
+;
+; CHECK-LSE-O0-LABEL: atomicrmw_max_i8:
+; CHECK-LSE-O0:       ; %bb.0:
+; CHECK-LSE-O0-NEXT:    ldsmaxlb w1, w0, [x0]
+; CHECK-LSE-O0-NEXT:    ret
+  %res = atomicrmw max i8* %ptr, i8 %rhs release
+  ret i8 %res
+}
+
+define i8 @atomicrmw_umin_i8(i8* %ptr, i8 %rhs) {
+; CHECK-NOLSE-O1-LABEL: atomicrmw_umin_i8:
+; CHECK-NOLSE-O1:       ; %bb.0:
+; CHECK-NOLSE-O1-NEXT:  LBB35_1: ; %atomicrmw.start
+; CHECK-NOLSE-O1-NEXT:    ; =>This Inner Loop Header: Depth=1
+; CHECK-NOLSE-O1-NEXT:    ldaxrb w8, [x0]
+; CHECK-NOLSE-O1-NEXT:    and w9, w8, #0xff
+; CHECK-NOLSE-O1-NEXT:    cmp w9, w1, uxtb
+; CHECK-NOLSE-O1-NEXT:    csel w9, w8, w1, ls
+; CHECK-NOLSE-O1-NEXT:    stlxrb w10, w9, [x0]
+; CHECK-NOLSE-O1-NEXT:    cbnz w10, LBB35_1
+; CHECK-NOLSE-O1-NEXT:  ; %bb.2: ; %atomicrmw.end
+; CHECK-NOLSE-O1-NEXT:    mov w0, w8
+; CHECK-NOLSE-O1-NEXT:    ret
+;
+; CHECK-NOLSE-O0-LABEL: atomicrmw_umin_i8:
+; CHECK-NOLSE-O0:       ; %bb.0:
+; CHECK-NOLSE-O0-NEXT:    sub sp, sp, #32 ; =32
+; CHECK-NOLSE-O0-NEXT:    .cfi_def_cfa_offset 32
+; CHECK-NOLSE-O0-NEXT:    str x0, [sp, #16] ; 8-byte Folded Spill
+; CHECK-NOLSE-O0-NEXT:    str w1, [sp, #24] ; 4-byte Folded Spill
+; CHECK-NOLSE-O0-NEXT:    ldrb w8, [x0]
+; CHECK-NOLSE-O0-NEXT:    str w8, [sp, #28] ; 4-byte Folded Spill
+; CHECK-NOLSE-O0-NEXT:  LBB35_1: ; %atomicrmw.start
+; CHECK-NOLSE-O0-NEXT:    ; =>This Loop Header: Depth=1
+; CHECK-NOLSE-O0-NEXT:    ; Child Loop BB35_2 Depth 2
+; CHECK-NOLSE-O0-NEXT:    ldr w10, [sp, #28] ; 4-byte Folded Reload
+; CHECK-NOLSE-O0-NEXT:    ldr x11, [sp, #16] ; 8-byte Folded Reload
+; CHECK-NOLSE-O0-NEXT:    ldr w8, [sp, #24] ; 4-byte Folded Reload
+; CHECK-NOLSE-O0-NEXT:    and w9, w10, #0xff
+; CHECK-NOLSE-O0-NEXT:    mov w12, w8
+; CHECK-NOLSE-O0-NEXT:    subs w9, w9, w12, uxtb
+; CHECK-NOLSE-O0-NEXT:    csel w12, w10, w8, ls
+; CHECK-NOLSE-O0-NEXT:  LBB35_2: ; %atomicrmw.start
+; CHECK-NOLSE-O0-NEXT:    ; Parent Loop BB35_1 Depth=1
+; CHECK-NOLSE-O0-NEXT:    ; => This Inner Loop Header: Depth=2
+; CHECK-NOLSE-O0-NEXT:    ldaxrb w9, [x11]
+; CHECK-NOLSE-O0-NEXT:    cmp w9, w10, uxtb
+; CHECK-NOLSE-O0-NEXT:    b.ne LBB35_4
+; CHECK-NOLSE-O0-NEXT:  ; %bb.3: ; %atomicrmw.start
+; CHECK-NOLSE-O0-NEXT:    ; in Loop: Header=BB35_2 Depth=2
+; CHECK-NOLSE-O0-NEXT:    stlxrb w8, w12, [x11]
+; CHECK-NOLSE-O0-NEXT:    cbnz w8, LBB35_2
+; CHECK-NOLSE-O0-NEXT:  LBB35_4: ; %atomicrmw.start
+; CHECK-NOLSE-O0-NEXT:    ; in Loop: Header=BB35_1 Depth=1
+; CHECK-NOLSE-O0-NEXT:    str w9, [sp, #12] ; 4-byte Folded Spill
+; CHECK-NOLSE-O0-NEXT:    and w8, w9, #0xff
+; CHECK-NOLSE-O0-NEXT:    subs w8, w8, w10, uxtb
+; CHECK-NOLSE-O0-NEXT:    cset w8, eq
+; CHECK-NOLSE-O0-NEXT:    str w9, [sp, #28] ; 4-byte Folded Spill
+; CHECK-NOLSE-O0-NEXT:    tbz w8, #0, LBB35_1
+; CHECK-NOLSE-O0-NEXT:  ; %bb.5: ; %atomicrmw.end
+; CHECK-NOLSE-O0-NEXT:    ldr w0, [sp, #12] ; 4-byte Folded Reload
+; CHECK-NOLSE-O0-NEXT:    add sp, sp, #32 ; =32
+; CHECK-NOLSE-O0-NEXT:    ret
+;
+; CHECK-LSE-O1-LABEL: atomicrmw_umin_i8:
+; CHECK-LSE-O1:       ; %bb.0:
+; CHECK-LSE-O1-NEXT:    lduminalb w1, w0, [x0]
+; CHECK-LSE-O1-NEXT:    ret
+;
+; CHECK-LSE-O0-LABEL: atomicrmw_umin_i8:
+; CHECK-LSE-O0:       ; %bb.0:
+; CHECK-LSE-O0-NEXT:    lduminalb w1, w0, [x0]
+; CHECK-LSE-O0-NEXT:    ret
+  %res = atomicrmw umin i8* %ptr, i8 %rhs seq_cst
+  ret i8 %res
+}
+
+define i8 @atomicrmw_umax_i8(i8* %ptr, i8 %rhs) {
+; CHECK-NOLSE-O1-LABEL: atomicrmw_umax_i8:
+; CHECK-NOLSE-O1:       ; %bb.0:
+; CHECK-NOLSE-O1-NEXT:  LBB36_1: ; %atomicrmw.start
+; CHECK-NOLSE-O1-NEXT:    ; =>This Inner Loop Header: Depth=1
+; CHECK-NOLSE-O1-NEXT:    ldxrb w8, [x0]
+; CHECK-NOLSE-O1-NEXT:    and w9, w8, #0xff
+; CHECK-NOLSE-O1-NEXT:    cmp w9, w1, uxtb
+; CHECK-NOLSE-O1-NEXT:    csel w9, w8, w1, hi
+; CHECK-NOLSE-O1-NEXT:    stxrb w10, w9, [x0]
+; CHECK-NOLSE-O1-NEXT:    cbnz w10, LBB36_1
+; CHECK-NOLSE-O1-NEXT:  ; %bb.2: ; %atomicrmw.end
+; CHECK-NOLSE-O1-NEXT:    mov w0, w8
+; CHECK-NOLSE-O1-NEXT:    ret
+;
+; CHECK-NOLSE-O0-LABEL: atomicrmw_umax_i8:
+; CHECK-NOLSE-O0:       ; %bb.0:
+; CHECK-NOLSE-O0-NEXT:    sub sp, sp, #32 ; =32
+; CHECK-NOLSE-O0-NEXT:    .cfi_def_cfa_offset 32
+; CHECK-NOLSE-O0-NEXT:    str x0, [sp, #16] ; 8-byte Folded Spill
+; CHECK-NOLSE-O0-NEXT:    str w1, [sp, #24] ; 4-byte Folded Spill
+; CHECK-NOLSE-O0-NEXT:    ldrb w8, [x0]
+; CHECK-NOLSE-O0-NEXT:    str w8, [sp, #28] ; 4-byte Folded Spill
+; CHECK-NOLSE-O0-NEXT:  LBB36_1: ; %atomicrmw.start
+; CHECK-NOLSE-O0-NEXT:    ; =>This Loop Header: Depth=1
+; CHECK-NOLSE-O0-NEXT:    ; Child Loop BB36_2 Depth 2
+; CHECK-NOLSE-O0-NEXT:    ldr w10, [sp, #28] ; 4-byte Folded Reload
+; CHECK-NOLSE-O0-NEXT:    ldr x11, [sp, #16] ; 8-byte Folded Reload
+; CHECK-NOLSE-O0-NEXT:    ldr w8, [sp, #24] ; 4-byte Folded Reload
+; CHECK-NOLSE-O0-NEXT:    and w9, w10, #0xff
+; CHECK-NOLSE-O0-NEXT:    mov w12, w8
+; CHECK-NOLSE-O0-NEXT:    subs w9, w9, w12, uxtb
+; CHECK-NOLSE-O0-NEXT:    csel w12, w10, w8, hi
+; CHECK-NOLSE-O0-NEXT:  LBB36_2: ; %atomicrmw.start
+; CHECK-NOLSE-O0-NEXT:    ; Parent Loop BB36_1 Depth=1
+; CHECK-NOLSE-O0-NEXT:    ; => This Inner Loop Header: Depth=2
+; CHECK-NOLSE-O0-NEXT:    ldaxrb w9, [x11]
+; CHECK-NOLSE-O0-NEXT:    cmp w9, w10, uxtb
+; CHECK-NOLSE-O0-NEXT:    b.ne LBB36_4
+; CHECK-NOLSE-O0-NEXT:  ; %bb.3: ; %atomicrmw.start
+; CHECK-NOLSE-O0-NEXT:    ; in Loop: Header=BB36_2 Depth=2
+; CHECK-NOLSE-O0-NEXT:    stlxrb w8, w12, [x11]
+; CHECK-NOLSE-O0-NEXT:    cbnz w8, LBB36_2
+; CHECK-NOLSE-O0-NEXT:  LBB36_4: ; %atomicrmw.start
+; CHECK-NOLSE-O0-NEXT:    ; in Loop: Header=BB36_1 Depth=1
+; CHECK-NOLSE-O0-NEXT:    str w9, [sp, #12] ; 4-byte Folded Spill
+; CHECK-NOLSE-O0-NEXT:    and w8, w9, #0xff
+; CHECK-NOLSE-O0-NEXT:    subs w8, w8, w10, uxtb
+; CHECK-NOLSE-O0-NEXT:    cset w8, eq
+; CHECK-NOLSE-O0-NEXT:    str w9, [sp, #28] ; 4-byte Folded Spill
+; CHECK-NOLSE-O0-NEXT:    tbz w8, #0, LBB36_1
+; CHECK-NOLSE-O0-NEXT:  ; %bb.5: ; %atomicrmw.end
+; CHECK-NOLSE-O0-NEXT:    ldr w0, [sp, #12] ; 4-byte Folded Reload
+; CHECK-NOLSE-O0-NEXT:    add sp, sp, #32 ; =32
+; CHECK-NOLSE-O0-NEXT:    ret
+;
+; CHECK-LSE-O1-LABEL: atomicrmw_umax_i8:
+; CHECK-LSE-O1:       ; %bb.0:
+; CHECK-LSE-O1-NEXT:    ldumaxb w1, w0, [x0]
+; CHECK-LSE-O1-NEXT:    ret
+;
+; CHECK-LSE-O0-LABEL: atomicrmw_umax_i8:
+; CHECK-LSE-O0:       ; %bb.0:
+; CHECK-LSE-O0-NEXT:    ldumaxb w1, w0, [x0]
+; CHECK-LSE-O0-NEXT:    ret
+  %res = atomicrmw umax i8* %ptr, i8 %rhs monotonic
+  ret i8 %res
+}
+
+define i16 @atomicrmw_add_i16(i16* %ptr, i16 %rhs) {
+; CHECK-NOLSE-O1-LABEL: atomicrmw_add_i16:
+; CHECK-NOLSE-O1:       ; %bb.0:
+; CHECK-NOLSE-O1-NEXT:  LBB37_1: ; %atomicrmw.start
+; CHECK-NOLSE-O1-NEXT:    ; =>This Inner Loop Header: Depth=1
+; CHECK-NOLSE-O1-NEXT:    ldaxrh w8, [x0]
+; CHECK-NOLSE-O1-NEXT:    add w9, w8, w1
+; CHECK-NOLSE-O1-NEXT:    stlxrh w10, w9, [x0]
+; CHECK-NOLSE-O1-NEXT:    cbnz w10, LBB37_1
+; CHECK-NOLSE-O1-NEXT:  ; %bb.2: ; %atomicrmw.end
+; CHECK-NOLSE-O1-NEXT:    mov w0, w8
+; CHECK-NOLSE-O1-NEXT:    ret
+;
+; CHECK-NOLSE-O0-LABEL: atomicrmw_add_i16:
+; CHECK-NOLSE-O0:       ; %bb.0:
+; CHECK-NOLSE-O0-NEXT:    sub sp, sp, #32 ; =32
+; CHECK-NOLSE-O0-NEXT:    .cfi_def_cfa_offset 32
+; CHECK-NOLSE-O0-NEXT:    str x0, [sp, #16] ; 8-byte Folded Spill
+; CHECK-NOLSE-O0-NEXT:    str w1, [sp, #24] ; 4-byte Folded Spill
+; CHECK-NOLSE-O0-NEXT:    ldrh w8, [x0]
+; CHECK-NOLSE-O0-NEXT:    str w8, [sp, #28] ; 4-byte Folded Spill
+; CHECK-NOLSE-O0-NEXT:  LBB37_1: ; %atomicrmw.start
+; CHECK-NOLSE-O0-NEXT:    ; =>This Loop Header: Depth=1
+; CHECK-NOLSE-O0-NEXT:    ; Child Loop BB37_2 Depth 2
+; CHECK-NOLSE-O0-NEXT:    ldr w8, [sp, #28] ; 4-byte Folded Reload
+; CHECK-NOLSE-O0-NEXT:    ldr x11, [sp, #16] ; 8-byte Folded Reload
+; CHECK-NOLSE-O0-NEXT:    ldr w9, [sp, #24] ; 4-byte Folded Reload
+; CHECK-NOLSE-O0-NEXT:    add w12, w9, w8, uxth
+; CHECK-NOLSE-O0-NEXT:  LBB37_2: ; %atomicrmw.start
+; CHECK-NOLSE-O0-NEXT:    ; Parent Loop BB37_1 Depth=1
+; CHECK-NOLSE-O0-NEXT:    ; => This Inner Loop Header: Depth=2
+; CHECK-NOLSE-O0-NEXT:    ldaxrh w9, [x11]
+; CHECK-NOLSE-O0-NEXT:    cmp w9, w8, uxth
+; CHECK-NOLSE-O0-NEXT:    b.ne LBB37_4
+; CHECK-NOLSE-O0-NEXT:  ; %bb.3: ; %atomicrmw.start
+; CHECK-NOLSE-O0-NEXT:    ; in Loop: Header=BB37_2 Depth=2
+; CHECK-NOLSE-O0-NEXT:    stlxrh w10, w12, [x11]
+; CHECK-NOLSE-O0-NEXT:    cbnz w10, LBB37_2
+; CHECK-NOLSE-O0-NEXT:  LBB37_4: ; %atomicrmw.start
+; CHECK-NOLSE-O0-NEXT:    ; in Loop: Header=BB37_1 Depth=1
+; CHECK-NOLSE-O0-NEXT:    str w9, [sp, #12] ; 4-byte Folded Spill
+; CHECK-NOLSE-O0-NEXT:    uxth w8, w8
+; CHECK-NOLSE-O0-NEXT:    subs w8, w8, w9, uxth
+; CHECK-NOLSE-O0-NEXT:    cset w8, eq
+; CHECK-NOLSE-O0-NEXT:    str w9, [sp, #28] ; 4-byte Folded Spill
+; CHECK-NOLSE-O0-NEXT:    tbz w8, #0, LBB37_1
+; CHECK-NOLSE-O0-NEXT:  ; %bb.5: ; %atomicrmw.end
+; CHECK-NOLSE-O0-NEXT:    ldr w0, [sp, #12] ; 4-byte Folded Reload
+; CHECK-NOLSE-O0-NEXT:    add sp, sp, #32 ; =32
+; CHECK-NOLSE-O0-NEXT:    ret
+;
+; CHECK-LSE-O1-LABEL: atomicrmw_add_i16:
+; CHECK-LSE-O1:       ; %bb.0:
+; CHECK-LSE-O1-NEXT:    ldaddalh w1, w0, [x0]
+; CHECK-LSE-O1-NEXT:    ret
+;
+; CHECK-LSE-O0-LABEL: atomicrmw_add_i16:
+; CHECK-LSE-O0:       ; %bb.0:
+; CHECK-LSE-O0-NEXT:    ldaddalh w1, w0, [x0]
+; CHECK-LSE-O0-NEXT:    ret
+  %res = atomicrmw add i16* %ptr, i16 %rhs seq_cst
+  ret i16 %res
+}
+
+define i16 @atomicrmw_xchg_i16(i16* %ptr, i16 %rhs) {
+; CHECK-NOLSE-O1-LABEL: atomicrmw_xchg_i16:
+; CHECK-NOLSE-O1:       ; %bb.0:
+; CHECK-NOLSE-O1-NEXT:    ; kill: def $w1 killed $w1 def $x1
+; CHECK-NOLSE-O1-NEXT:  LBB38_1: ; %atomicrmw.start
+; CHECK-NOLSE-O1-NEXT:    ; =>This Inner Loop Header: Depth=1
+; CHECK-NOLSE-O1-NEXT:    ldxrh w8, [x0]
+; CHECK-NOLSE-O1-NEXT:    stxrh w9, w1, [x0]
+; CHECK-NOLSE-O1-NEXT:    cbnz w9, LBB38_1
+; CHECK-NOLSE-O1-NEXT:  ; %bb.2: ; %atomicrmw.end
+; CHECK-NOLSE-O1-NEXT:    mov w0, w8
+; CHECK-NOLSE-O1-NEXT:    ret
+;
+; CHECK-NOLSE-O0-LABEL: atomicrmw_xchg_i16:
+; CHECK-NOLSE-O0:       ; %bb.0:
+; CHECK-NOLSE-O0-NEXT:    sub sp, sp, #32 ; =32
+; CHECK-NOLSE-O0-NEXT:    .cfi_def_cfa_offset 32
+; CHECK-NOLSE-O0-NEXT:    str x0, [sp, #16] ; 8-byte Folded Spill
+; CHECK-NOLSE-O0-NEXT:    str w1, [sp, #24] ; 4-byte Folded Spill
+; CHECK-NOLSE-O0-NEXT:    ldrh w8, [x0]
+; CHECK-NOLSE-O0-NEXT:    str w8, [sp, #28] ; 4-byte Folded Spill
+; CHECK-NOLSE-O0-NEXT:  LBB38_1: ; %atomicrmw.start
+; CHECK-NOLSE-O0-NEXT:    ; =>This Loop Header: Depth=1
+; CHECK-NOLSE-O0-NEXT:    ; Child Loop BB38_2 Depth 2
+; CHECK-NOLSE-O0-NEXT:    ldr w8, [sp, #28] ; 4-byte Folded Reload
+; CHECK-NOLSE-O0-NEXT:    ldr x11, [sp, #16] ; 8-byte Folded Reload
+; CHECK-NOLSE-O0-NEXT:    ldr w12, [sp, #24] ; 4-byte Folded Reload
+; CHECK-NOLSE-O0-NEXT:  LBB38_2: ; %atomicrmw.start
+; CHECK-NOLSE-O0-NEXT:    ; Parent Loop BB38_1 Depth=1
+; CHECK-NOLSE-O0-NEXT:    ; => This Inner Loop Header: Depth=2
+; CHECK-NOLSE-O0-NEXT:    ldaxrh w9, [x11]
+; CHECK-NOLSE-O0-NEXT:    cmp w9, w8, uxth
+; CHECK-NOLSE-O0-NEXT:    b.ne LBB38_4
+; CHECK-NOLSE-O0-NEXT:  ; %bb.3: ; %atomicrmw.start
+; CHECK-NOLSE-O0-NEXT:    ; in Loop: Header=BB38_2 Depth=2
+; CHECK-NOLSE-O0-NEXT:    stlxrh w10, w12, [x11]
+; CHECK-NOLSE-O0-NEXT:    cbnz w10, LBB38_2
+; CHECK-NOLSE-O0-NEXT:  LBB38_4: ; %atomicrmw.start
+; CHECK-NOLSE-O0-NEXT:    ; in Loop: Header=BB38_1 Depth=1
+; CHECK-NOLSE-O0-NEXT:    str w9, [sp, #12] ; 4-byte Folded Spill
+; CHECK-NOLSE-O0-NEXT:    uxth w8, w8
+; CHECK-NOLSE-O0-NEXT:    subs w8, w8, w9, uxth
+; CHECK-NOLSE-O0-NEXT:    cset w8, eq
+; CHECK-NOLSE-O0-NEXT:    str w9, [sp, #28] ; 4-byte Folded Spill
+; CHECK-NOLSE-O0-NEXT:    tbz w8, #0, LBB38_1
+; CHECK-NOLSE-O0-NEXT:  ; %bb.5: ; %atomicrmw.end
+; CHECK-NOLSE-O0-NEXT:    ldr w0, [sp, #12] ; 4-byte Folded Reload
+; CHECK-NOLSE-O0-NEXT:    add sp, sp, #32 ; =32
+; CHECK-NOLSE-O0-NEXT:    ret
+;
+; CHECK-LSE-O1-LABEL: atomicrmw_xchg_i16:
+; CHECK-LSE-O1:       ; %bb.0:
+; CHECK-LSE-O1-NEXT:    swph w1, w0, [x0]
+; CHECK-LSE-O1-NEXT:    ret
+;
+; CHECK-LSE-O0-LABEL: atomicrmw_xchg_i16:
+; CHECK-LSE-O0:       ; %bb.0:
+; CHECK-LSE-O0-NEXT:    swph w1, w0, [x0]
+; CHECK-LSE-O0-NEXT:    ret
+  %res = atomicrmw xchg i16* %ptr, i16 %rhs monotonic
+  ret i16 %res
+}
+
+define i16 @atomicrmw_sub_i16(i16* %ptr, i16 %rhs) {
+; CHECK-NOLSE-O1-LABEL: atomicrmw_sub_i16:
+; CHECK-NOLSE-O1:       ; %bb.0:
+; CHECK-NOLSE-O1-NEXT:  LBB39_1: ; %atomicrmw.start
+; CHECK-NOLSE-O1-NEXT:    ; =>This Inner Loop Header: Depth=1
+; CHECK-NOLSE-O1-NEXT:    ldaxrh w8, [x0]
+; CHECK-NOLSE-O1-NEXT:    sub w9, w8, w1
+; CHECK-NOLSE-O1-NEXT:    stxrh w10, w9, [x0]
+; CHECK-NOLSE-O1-NEXT:    cbnz w10, LBB39_1
+; CHECK-NOLSE-O1-NEXT:  ; %bb.2: ; %atomicrmw.end
+; CHECK-NOLSE-O1-NEXT:    mov w0, w8
+; CHECK-NOLSE-O1-NEXT:    ret
+;
+; CHECK-NOLSE-O0-LABEL: atomicrmw_sub_i16:
+; CHECK-NOLSE-O0:       ; %bb.0:
+; CHECK-NOLSE-O0-NEXT:    sub sp, sp, #32 ; =32
+; CHECK-NOLSE-O0-NEXT:    .cfi_def_cfa_offset 32
+; CHECK-NOLSE-O0-NEXT:    str x0, [sp, #16] ; 8-byte Folded Spill
+; CHECK-NOLSE-O0-NEXT:    str w1, [sp, #24] ; 4-byte Folded Spill
+; CHECK-NOLSE-O0-NEXT:    ldrh w8, [x0]
+; CHECK-NOLSE-O0-NEXT:    str w8, [sp, #28] ; 4-byte Folded Spill
+; CHECK-NOLSE-O0-NEXT:  LBB39_1: ; %atomicrmw.start
+; CHECK-NOLSE-O0-NEXT:    ; =>This Loop Header: Depth=1
+; CHECK-NOLSE-O0-NEXT:    ; Child Loop BB39_2 Depth 2
+; CHECK-NOLSE-O0-NEXT:    ldr w8, [sp, #28] ; 4-byte Folded Reload
+; CHECK-NOLSE-O0-NEXT:    ldr x11, [sp, #16] ; 8-byte Folded Reload
+; CHECK-NOLSE-O0-NEXT:    ldr w9, [sp, #24] ; 4-byte Folded Reload
+; CHECK-NOLSE-O0-NEXT:    subs w12, w8, w9
+; CHECK-NOLSE-O0-NEXT:  LBB39_2: ; %atomicrmw.start
+; CHECK-NOLSE-O0-NEXT:    ; Parent Loop BB39_1 Depth=1
+; CHECK-NOLSE-O0-NEXT:    ; => This Inner Loop Header: Depth=2
+; CHECK-NOLSE-O0-NEXT:    ldaxrh w9, [x11]
+; CHECK-NOLSE-O0-NEXT:    cmp w9, w8, uxth
+; CHECK-NOLSE-O0-NEXT:    b.ne LBB39_4
+; CHECK-NOLSE-O0-NEXT:  ; %bb.3: ; %atomicrmw.start
+; CHECK-NOLSE-O0-NEXT:    ; in Loop: Header=BB39_2 Depth=2
+; CHECK-NOLSE-O0-NEXT:    stlxrh w10, w12, [x11]
+; CHECK-NOLSE-O0-NEXT:    cbnz w10, LBB39_2
+; CHECK-NOLSE-O0-NEXT:  LBB39_4: ; %atomicrmw.start
+; CHECK-NOLSE-O0-NEXT:    ; in Loop: Header=BB39_1 Depth=1
+; CHECK-NOLSE-O0-NEXT:    str w9, [sp, #12] ; 4-byte Folded Spill
+; CHECK-NOLSE-O0-NEXT:    uxth w8, w8
+; CHECK-NOLSE-O0-NEXT:    subs w8, w8, w9, uxth
+; CHECK-NOLSE-O0-NEXT:    cset w8, eq
+; CHECK-NOLSE-O0-NEXT:    str w9, [sp, #28] ; 4-byte Folded Spill
+; CHECK-NOLSE-O0-NEXT:    tbz w8, #0, LBB39_1
+; CHECK-NOLSE-O0-NEXT:  ; %bb.5: ; %atomicrmw.end
+; CHECK-NOLSE-O0-NEXT:    ldr w0, [sp, #12] ; 4-byte Folded Reload
+; CHECK-NOLSE-O0-NEXT:    add sp, sp, #32 ; =32
+; CHECK-NOLSE-O0-NEXT:    ret
+;
+; CHECK-LSE-O1-LABEL: atomicrmw_sub_i16:
+; CHECK-LSE-O1:       ; %bb.0:
+; CHECK-LSE-O1-NEXT:    neg w8, w1
+; CHECK-LSE-O1-NEXT:    ldaddah w8, w0, [x0]
+; CHECK-LSE-O1-NEXT:    ret
+;
+; CHECK-LSE-O0-LABEL: atomicrmw_sub_i16:
+; CHECK-LSE-O0:       ; %bb.0:
+; CHECK-LSE-O0-NEXT:    neg w8, w1
+; CHECK-LSE-O0-NEXT:    ldaddah w8, w0, [x0]
+; CHECK-LSE-O0-NEXT:    ret
+  %res = atomicrmw sub i16* %ptr, i16 %rhs acquire
+  ret i16 %res
+}
+
+define i16 @atomicrmw_and_i16(i16* %ptr, i16 %rhs) {
+; CHECK-NOLSE-O1-LABEL: atomicrmw_and_i16:
+; CHECK-NOLSE-O1:       ; %bb.0:
+; CHECK-NOLSE-O1-NEXT:  LBB40_1: ; %atomicrmw.start
+; CHECK-NOLSE-O1-NEXT:    ; =>This Inner Loop Header: Depth=1
+; CHECK-NOLSE-O1-NEXT:    ldxrh w8, [x0]
+; CHECK-NOLSE-O1-NEXT:    and w9, w8, w1
+; CHECK-NOLSE-O1-NEXT:    stlxrh w10, w9, [x0]
+; CHECK-NOLSE-O1-NEXT:    cbnz w10, LBB40_1
+; CHECK-NOLSE-O1-NEXT:  ; %bb.2: ; %atomicrmw.end
+; CHECK-NOLSE-O1-NEXT:    mov w0, w8
+; CHECK-NOLSE-O1-NEXT:    ret
+;
+; CHECK-NOLSE-O0-LABEL: atomicrmw_and_i16:
+; CHECK-NOLSE-O0:       ; %bb.0:
+; CHECK-NOLSE-O0-NEXT:    sub sp, sp, #32 ; =32
+; CHECK-NOLSE-O0-NEXT:    .cfi_def_cfa_offset 32
+; CHECK-NOLSE-O0-NEXT:    str x0, [sp, #16] ; 8-byte Folded Spill
+; CHECK-NOLSE-O0-NEXT:    str w1, [sp, #24] ; 4-byte Folded Spill
+; CHECK-NOLSE-O0-NEXT:    ldrh w8, [x0]
+; CHECK-NOLSE-O0-NEXT:    str w8, [sp, #28] ; 4-byte Folded Spill
+; CHECK-NOLSE-O0-NEXT:  LBB40_1: ; %atomicrmw.start
+; CHECK-NOLSE-O0-NEXT:    ; =>This Loop Header: Depth=1
+; CHECK-NOLSE-O0-NEXT:    ; Child Loop BB40_2 Depth 2
+; CHECK-NOLSE-O0-NEXT:    ldr w8, [sp, #28] ; 4-byte Folded Reload
+; CHECK-NOLSE-O0-NEXT:    ldr x11, [sp, #16] ; 8-byte Folded Reload
+; CHECK-NOLSE-O0-NEXT:    ldr w9, [sp, #24] ; 4-byte Folded Reload
+; CHECK-NOLSE-O0-NEXT:    and w12, w8, w9
+; CHECK-NOLSE-O0-NEXT:  LBB40_2: ; %atomicrmw.start
+; CHECK-NOLSE-O0-NEXT:    ; Parent Loop BB40_1 Depth=1
+; CHECK-NOLSE-O0-NEXT:    ; => This Inner Loop Header: Depth=2
+; CHECK-NOLSE-O0-NEXT:    ldaxrh w9, [x11]
+; CHECK-NOLSE-O0-NEXT:    cmp w9, w8, uxth
+; CHECK-NOLSE-O0-NEXT:    b.ne LBB40_4
+; CHECK-NOLSE-O0-NEXT:  ; %bb.3: ; %atomicrmw.start
+; CHECK-NOLSE-O0-NEXT:    ; in Loop: Header=BB40_2 Depth=2
+; CHECK-NOLSE-O0-NEXT:    stlxrh w10, w12, [x11]
+; CHECK-NOLSE-O0-NEXT:    cbnz w10, LBB40_2
+; CHECK-NOLSE-O0-NEXT:  LBB40_4: ; %atomicrmw.start
+; CHECK-NOLSE-O0-NEXT:    ; in Loop: Header=BB40_1 Depth=1
+; CHECK-NOLSE-O0-NEXT:    str w9, [sp, #12] ; 4-byte Folded Spill
+; CHECK-NOLSE-O0-NEXT:    uxth w8, w8
+; CHECK-NOLSE-O0-NEXT:    subs w8, w8, w9, uxth
+; CHECK-NOLSE-O0-NEXT:    cset w8, eq
+; CHECK-NOLSE-O0-NEXT:    str w9, [sp, #28] ; 4-byte Folded Spill
+; CHECK-NOLSE-O0-NEXT:    tbz w8, #0, LBB40_1
+; CHECK-NOLSE-O0-NEXT:  ; %bb.5: ; %atomicrmw.end
+; CHECK-NOLSE-O0-NEXT:    ldr w0, [sp, #12] ; 4-byte Folded Reload
+; CHECK-NOLSE-O0-NEXT:    add sp, sp, #32 ; =32
+; CHECK-NOLSE-O0-NEXT:    ret
+;
+; CHECK-LSE-O1-LABEL: atomicrmw_and_i16:
+; CHECK-LSE-O1:       ; %bb.0:
+; CHECK-LSE-O1-NEXT:    mvn w8, w1
+; CHECK-LSE-O1-NEXT:    ldclrlh w8, w0, [x0]
+; CHECK-LSE-O1-NEXT:    ret
+;
+; CHECK-LSE-O0-LABEL: atomicrmw_and_i16:
+; CHECK-LSE-O0:       ; %bb.0:
+; CHECK-LSE-O0-NEXT:    mvn w8, w1
+; CHECK-LSE-O0-NEXT:    ldclrlh w8, w0, [x0]
+; CHECK-LSE-O0-NEXT:    ret
+  %res = atomicrmw and i16* %ptr, i16 %rhs release
+  ret i16 %res
+}
+
+define i16 @atomicrmw_or_i16(i16* %ptr, i16 %rhs) {
+; CHECK-NOLSE-O1-LABEL: atomicrmw_or_i16:
+; CHECK-NOLSE-O1:       ; %bb.0:
+; CHECK-NOLSE-O1-NEXT:  LBB41_1: ; %atomicrmw.start
+; CHECK-NOLSE-O1-NEXT:    ; =>This Inner Loop Header: Depth=1
+; CHECK-NOLSE-O1-NEXT:    ldaxrh w8, [x0]
+; CHECK-NOLSE-O1-NEXT:    orr w9, w8, w1
+; CHECK-NOLSE-O1-NEXT:    stlxrh w10, w9, [x0]
+; CHECK-NOLSE-O1-NEXT:    cbnz w10, LBB41_1
+; CHECK-NOLSE-O1-NEXT:  ; %bb.2: ; %atomicrmw.end
+; CHECK-NOLSE-O1-NEXT:    mov w0, w8
+; CHECK-NOLSE-O1-NEXT:    ret
+;
+; CHECK-NOLSE-O0-LABEL: atomicrmw_or_i16:
+; CHECK-NOLSE-O0:       ; %bb.0:
+; CHECK-NOLSE-O0-NEXT:    sub sp, sp, #32 ; =32
+; CHECK-NOLSE-O0-NEXT:    .cfi_def_cfa_offset 32
+; CHECK-NOLSE-O0-NEXT:    str x0, [sp, #16] ; 8-byte Folded Spill
+; CHECK-NOLSE-O0-NEXT:    str w1, [sp, #24] ; 4-byte Folded Spill
+; CHECK-NOLSE-O0-NEXT:    ldrh w8, [x0]
+; CHECK-NOLSE-O0-NEXT:    str w8, [sp, #28] ; 4-byte Folded Spill
+; CHECK-NOLSE-O0-NEXT:  LBB41_1: ; %atomicrmw.start
+; CHECK-NOLSE-O0-NEXT:    ; =>This Loop Header: Depth=1
+; CHECK-NOLSE-O0-NEXT:    ; Child Loop BB41_2 Depth 2
+; CHECK-NOLSE-O0-NEXT:    ldr w8, [sp, #28] ; 4-byte Folded Reload
+; CHECK-NOLSE-O0-NEXT:    ldr x11, [sp, #16] ; 8-byte Folded Reload
+; CHECK-NOLSE-O0-NEXT:    ldr w9, [sp, #24] ; 4-byte Folded Reload
+; CHECK-NOLSE-O0-NEXT:    orr w12, w8, w9
+; CHECK-NOLSE-O0-NEXT:  LBB41_2: ; %atomicrmw.start
+; CHECK-NOLSE-O0-NEXT:    ; Parent Loop BB41_1 Depth=1
+; CHECK-NOLSE-O0-NEXT:    ; => This Inner Loop Header: Depth=2
+; CHECK-NOLSE-O0-NEXT:    ldaxrh w9, [x11]
+; CHECK-NOLSE-O0-NEXT:    cmp w9, w8, uxth
+; CHECK-NOLSE-O0-NEXT:    b.ne LBB41_4
+; CHECK-NOLSE-O0-NEXT:  ; %bb.3: ; %atomicrmw.start
+; CHECK-NOLSE-O0-NEXT:    ; in Loop: Header=BB41_2 Depth=2
+; CHECK-NOLSE-O0-NEXT:    stlxrh w10, w12, [x11]
+; CHECK-NOLSE-O0-NEXT:    cbnz w10, LBB41_2
+; CHECK-NOLSE-O0-NEXT:  LBB41_4: ; %atomicrmw.start
+; CHECK-NOLSE-O0-NEXT:    ; in Loop: Header=BB41_1 Depth=1
+; CHECK-NOLSE-O0-NEXT:    str w9, [sp, #12] ; 4-byte Folded Spill
+; CHECK-NOLSE-O0-NEXT:    uxth w8, w8
+; CHECK-NOLSE-O0-NEXT:    subs w8, w8, w9, uxth
+; CHECK-NOLSE-O0-NEXT:    cset w8, eq
+; CHECK-NOLSE-O0-NEXT:    str w9, [sp, #28] ; 4-byte Folded Spill
+; CHECK-NOLSE-O0-NEXT:    tbz w8, #0, LBB41_1
+; CHECK-NOLSE-O0-NEXT:  ; %bb.5: ; %atomicrmw.end
+; CHECK-NOLSE-O0-NEXT:    ldr w0, [sp, #12] ; 4-byte Folded Reload
+; CHECK-NOLSE-O0-NEXT:    add sp, sp, #32 ; =32
+; CHECK-NOLSE-O0-NEXT:    ret
+;
+; CHECK-LSE-O1-LABEL: atomicrmw_or_i16:
+; CHECK-LSE-O1:       ; %bb.0:
+; CHECK-LSE-O1-NEXT:    ldsetalh w1, w0, [x0]
+; CHECK-LSE-O1-NEXT:    ret
+;
+; CHECK-LSE-O0-LABEL: atomicrmw_or_i16:
+; CHECK-LSE-O0:       ; %bb.0:
+; CHECK-LSE-O0-NEXT:    ldsetalh w1, w0, [x0]
+; CHECK-LSE-O0-NEXT:    ret
+  %res = atomicrmw or i16* %ptr, i16 %rhs seq_cst
+  ret i16 %res
+}
+
+define i16 @atomicrmw_xor_i16(i16* %ptr, i16 %rhs) {
+; CHECK-NOLSE-O1-LABEL: atomicrmw_xor_i16:
+; CHECK-NOLSE-O1:       ; %bb.0:
+; CHECK-NOLSE-O1-NEXT:  LBB42_1: ; %atomicrmw.start
+; CHECK-NOLSE-O1-NEXT:    ; =>This Inner Loop Header: Depth=1
+; CHECK-NOLSE-O1-NEXT:    ldxrh w8, [x0]
+; CHECK-NOLSE-O1-NEXT:    eor w9, w8, w1
+; CHECK-NOLSE-O1-NEXT:    stxrh w10, w9, [x0]
+; CHECK-NOLSE-O1-NEXT:    cbnz w10, LBB42_1
+; CHECK-NOLSE-O1-NEXT:  ; %bb.2: ; %atomicrmw.end
+; CHECK-NOLSE-O1-NEXT:    mov w0, w8
+; CHECK-NOLSE-O1-NEXT:    ret
+;
+; CHECK-NOLSE-O0-LABEL: atomicrmw_xor_i16:
+; CHECK-NOLSE-O0:       ; %bb.0:
+; CHECK-NOLSE-O0-NEXT:    sub sp, sp, #32 ; =32
+; CHECK-NOLSE-O0-NEXT:    .cfi_def_cfa_offset 32
+; CHECK-NOLSE-O0-NEXT:    str x0, [sp, #16] ; 8-byte Folded Spill
+; CHECK-NOLSE-O0-NEXT:    str w1, [sp, #24] ; 4-byte Folded Spill
+; CHECK-NOLSE-O0-NEXT:    ldrh w8, [x0]
+; CHECK-NOLSE-O0-NEXT:    str w8, [sp, #28] ; 4-byte Folded Spill
+; CHECK-NOLSE-O0-NEXT:  LBB42_1: ; %atomicrmw.start
+; CHECK-NOLSE-O0-NEXT:    ; =>This Loop Header: Depth=1
+; CHECK-NOLSE-O0-NEXT:    ; Child Loop BB42_2 Depth 2
+; CHECK-NOLSE-O0-NEXT:    ldr w8, [sp, #28] ; 4-byte Folded Reload
+; CHECK-NOLSE-O0-NEXT:    ldr x11, [sp, #16] ; 8-byte Folded Reload
+; CHECK-NOLSE-O0-NEXT:    ldr w9, [sp, #24] ; 4-byte Folded Reload
+; CHECK-NOLSE-O0-NEXT:    eor w12, w8, w9
+; CHECK-NOLSE-O0-NEXT:  LBB42_2: ; %atomicrmw.start
+; CHECK-NOLSE-O0-NEXT:    ; Parent Loop BB42_1 Depth=1
+; CHECK-NOLSE-O0-NEXT:    ; => This Inner Loop Header: Depth=2
+; CHECK-NOLSE-O0-NEXT:    ldaxrh w9, [x11]
+; CHECK-NOLSE-O0-NEXT:    cmp w9, w8, uxth
+; CHECK-NOLSE-O0-NEXT:    b.ne LBB42_4
+; CHECK-NOLSE-O0-NEXT:  ; %bb.3: ; %atomicrmw.start
+; CHECK-NOLSE-O0-NEXT:    ; in Loop: Header=BB42_2 Depth=2
+; CHECK-NOLSE-O0-NEXT:    stlxrh w10, w12, [x11]
+; CHECK-NOLSE-O0-NEXT:    cbnz w10, LBB42_2
+; CHECK-NOLSE-O0-NEXT:  LBB42_4: ; %atomicrmw.start
+; CHECK-NOLSE-O0-NEXT:    ; in Loop: Header=BB42_1 Depth=1
+; CHECK-NOLSE-O0-NEXT:    str w9, [sp, #12] ; 4-byte Folded Spill
+; CHECK-NOLSE-O0-NEXT:    uxth w8, w8
+; CHECK-NOLSE-O0-NEXT:    subs w8, w8, w9, uxth
+; CHECK-NOLSE-O0-NEXT:    cset w8, eq
+; CHECK-NOLSE-O0-NEXT:    str w9, [sp, #28] ; 4-byte Folded Spill
+; CHECK-NOLSE-O0-NEXT:    tbz w8, #0, LBB42_1
+; CHECK-NOLSE-O0-NEXT:  ; %bb.5: ; %atomicrmw.end
+; CHECK-NOLSE-O0-NEXT:    ldr w0, [sp, #12] ; 4-byte Folded Reload
+; CHECK-NOLSE-O0-NEXT:    add sp, sp, #32 ; =32
+; CHECK-NOLSE-O0-NEXT:    ret
+;
+; CHECK-LSE-O1-LABEL: atomicrmw_xor_i16:
+; CHECK-LSE-O1:       ; %bb.0:
+; CHECK-LSE-O1-NEXT:    ldeorh w1, w0, [x0]
+; CHECK-LSE-O1-NEXT:    ret
+;
+; CHECK-LSE-O0-LABEL: atomicrmw_xor_i16:
+; CHECK-LSE-O0:       ; %bb.0:
+; CHECK-LSE-O0-NEXT:    ldeorh w1, w0, [x0]
+; CHECK-LSE-O0-NEXT:    ret
+  %res = atomicrmw xor i16* %ptr, i16 %rhs monotonic
+  ret i16 %res
+}
+
+define i16 @atomicrmw_min_i16(i16* %ptr, i16 %rhs) {
+; CHECK-NOLSE-O1-LABEL: atomicrmw_min_i16:
+; CHECK-NOLSE-O1:       ; %bb.0:
+; CHECK-NOLSE-O1-NEXT:  LBB43_1: ; %atomicrmw.start
+; CHECK-NOLSE-O1-NEXT:    ; =>This Inner Loop Header: Depth=1
+; CHECK-NOLSE-O1-NEXT:    ldaxrh w8, [x0]
+; CHECK-NOLSE-O1-NEXT:    sxth w9, w8
+; CHECK-NOLSE-O1-NEXT:    cmp w9, w1, sxth
+; CHECK-NOLSE-O1-NEXT:    csel w9, w8, w1, le
+; CHECK-NOLSE-O1-NEXT:    stxrh w10, w9, [x0]
+; CHECK-NOLSE-O1-NEXT:    cbnz w10, LBB43_1
+; CHECK-NOLSE-O1-NEXT:  ; %bb.2: ; %atomicrmw.end
+; CHECK-NOLSE-O1-NEXT:    mov w0, w8
+; CHECK-NOLSE-O1-NEXT:    ret
+;
+; CHECK-NOLSE-O0-LABEL: atomicrmw_min_i16:
+; CHECK-NOLSE-O0:       ; %bb.0:
+; CHECK-NOLSE-O0-NEXT:    sub sp, sp, #32 ; =32
+; CHECK-NOLSE-O0-NEXT:    .cfi_def_cfa_offset 32
+; CHECK-NOLSE-O0-NEXT:    str x0, [sp, #16] ; 8-byte Folded Spill
+; CHECK-NOLSE-O0-NEXT:    str w1, [sp, #24] ; 4-byte Folded Spill
+; CHECK-NOLSE-O0-NEXT:    ldrh w8, [x0]
+; CHECK-NOLSE-O0-NEXT:    str w8, [sp, #28] ; 4-byte Folded Spill
+; CHECK-NOLSE-O0-NEXT:  LBB43_1: ; %atomicrmw.start
+; CHECK-NOLSE-O0-NEXT:    ; =>This Loop Header: Depth=1
+; CHECK-NOLSE-O0-NEXT:    ; Child Loop BB43_2 Depth 2
+; CHECK-NOLSE-O0-NEXT:    ldr w8, [sp, #28] ; 4-byte Folded Reload
+; CHECK-NOLSE-O0-NEXT:    ldr x11, [sp, #16] ; 8-byte Folded Reload
+; CHECK-NOLSE-O0-NEXT:    ldr w9, [sp, #24] ; 4-byte Folded Reload
+; CHECK-NOLSE-O0-NEXT:    sxth w10, w8
+; CHECK-NOLSE-O0-NEXT:    mov w12, w9
+; CHECK-NOLSE-O0-NEXT:    subs w10, w10, w12, sxth
+; CHECK-NOLSE-O0-NEXT:    csel w12, w8, w9, le
+; CHECK-NOLSE-O0-NEXT:  LBB43_2: ; %atomicrmw.start
+; CHECK-NOLSE-O0-NEXT:    ; Parent Loop BB43_1 Depth=1
+; CHECK-NOLSE-O0-NEXT:    ; => This Inner Loop Header: Depth=2
+; CHECK-NOLSE-O0-NEXT:    ldaxrh w9, [x11]
+; CHECK-NOLSE-O0-NEXT:    cmp w9, w8, uxth
+; CHECK-NOLSE-O0-NEXT:    b.ne LBB43_4
+; CHECK-NOLSE-O0-NEXT:  ; %bb.3: ; %atomicrmw.start
+; CHECK-NOLSE-O0-NEXT:    ; in Loop: Header=BB43_2 Depth=2
+; CHECK-NOLSE-O0-NEXT:    stlxrh w10, w12, [x11]
+; CHECK-NOLSE-O0-NEXT:    cbnz w10, LBB43_2
+; CHECK-NOLSE-O0-NEXT:  LBB43_4: ; %atomicrmw.start
+; CHECK-NOLSE-O0-NEXT:    ; in Loop: Header=BB43_1 Depth=1
+; CHECK-NOLSE-O0-NEXT:    str w9, [sp, #12] ; 4-byte Folded Spill
+; CHECK-NOLSE-O0-NEXT:    uxth w8, w8
+; CHECK-NOLSE-O0-NEXT:    subs w8, w8, w9, uxth
+; CHECK-NOLSE-O0-NEXT:    cset w8, eq
+; CHECK-NOLSE-O0-NEXT:    str w9, [sp, #28] ; 4-byte Folded Spill
+; CHECK-NOLSE-O0-NEXT:    tbz w8, #0, LBB43_1
+; CHECK-NOLSE-O0-NEXT:  ; %bb.5: ; %atomicrmw.end
+; CHECK-NOLSE-O0-NEXT:    ldr w0, [sp, #12] ; 4-byte Folded Reload
+; CHECK-NOLSE-O0-NEXT:    add sp, sp, #32 ; =32
+; CHECK-NOLSE-O0-NEXT:    ret
+;
+; CHECK-LSE-O1-LABEL: atomicrmw_min_i16:
+; CHECK-LSE-O1:       ; %bb.0:
+; CHECK-LSE-O1-NEXT:    ldsminah w1, w0, [x0]
+; CHECK-LSE-O1-NEXT:    ret
+;
+; CHECK-LSE-O0-LABEL: atomicrmw_min_i16:
+; CHECK-LSE-O0:       ; %bb.0:
+; CHECK-LSE-O0-NEXT:    ldsminah w1, w0, [x0]
+; CHECK-LSE-O0-NEXT:    ret
+  %res = atomicrmw min i16* %ptr, i16 %rhs acquire
+  ret i16 %res
+}
+
+define i16 @atomicrmw_max_i16(i16* %ptr, i16 %rhs) {
+; CHECK-NOLSE-O1-LABEL: atomicrmw_max_i16:
+; CHECK-NOLSE-O1:       ; %bb.0:
+; CHECK-NOLSE-O1-NEXT:  LBB44_1: ; %atomicrmw.start
+; CHECK-NOLSE-O1-NEXT:    ; =>This Inner Loop Header: Depth=1
+; CHECK-NOLSE-O1-NEXT:    ldxrh w8, [x0]
+; CHECK-NOLSE-O1-NEXT:    sxth w9, w8
+; CHECK-NOLSE-O1-NEXT:    cmp w9, w1, sxth
+; CHECK-NOLSE-O1-NEXT:    csel w9, w8, w1, gt
+; CHECK-NOLSE-O1-NEXT:    stlxrh w10, w9, [x0]
+; CHECK-NOLSE-O1-NEXT:    cbnz w10, LBB44_1
+; CHECK-NOLSE-O1-NEXT:  ; %bb.2: ; %atomicrmw.end
+; CHECK-NOLSE-O1-NEXT:    mov w0, w8
+; CHECK-NOLSE-O1-NEXT:    ret
+;
+; CHECK-NOLSE-O0-LABEL: atomicrmw_max_i16:
+; CHECK-NOLSE-O0:       ; %bb.0:
+; CHECK-NOLSE-O0-NEXT:    sub sp, sp, #32 ; =32
+; CHECK-NOLSE-O0-NEXT:    .cfi_def_cfa_offset 32
+; CHECK-NOLSE-O0-NEXT:    str x0, [sp, #16] ; 8-byte Folded Spill
+; CHECK-NOLSE-O0-NEXT:    str w1, [sp, #24] ; 4-byte Folded Spill
+; CHECK-NOLSE-O0-NEXT:    ldrh w8, [x0]
+; CHECK-NOLSE-O0-NEXT:    str w8, [sp, #28] ; 4-byte Folded Spill
+; CHECK-NOLSE-O0-NEXT:  LBB44_1: ; %atomicrmw.start
+; CHECK-NOLSE-O0-NEXT:    ; =>This Loop Header: Depth=1
+; CHECK-NOLSE-O0-NEXT:    ; Child Loop BB44_2 Depth 2
+; CHECK-NOLSE-O0-NEXT:    ldr w8, [sp, #28] ; 4-byte Folded Reload
+; CHECK-NOLSE-O0-NEXT:    ldr x11, [sp, #16] ; 8-byte Folded Reload
+; CHECK-NOLSE-O0-NEXT:    ldr w9, [sp, #24] ; 4-byte Folded Reload
+; CHECK-NOLSE-O0-NEXT:    sxth w10, w8
+; CHECK-NOLSE-O0-NEXT:    mov w12, w9
+; CHECK-NOLSE-O0-NEXT:    subs w10, w10, w12, sxth
+; CHECK-NOLSE-O0-NEXT:    csel w12, w8, w9, gt
+; CHECK-NOLSE-O0-NEXT:  LBB44_2: ; %atomicrmw.start
+; CHECK-NOLSE-O0-NEXT:    ; Parent Loop BB44_1 Depth=1
+; CHECK-NOLSE-O0-NEXT:    ; => This Inner Loop Header: Depth=2
+; CHECK-NOLSE-O0-NEXT:    ldaxrh w9, [x11]
+; CHECK-NOLSE-O0-NEXT:    cmp w9, w8, uxth
+; CHECK-NOLSE-O0-NEXT:    b.ne LBB44_4
+; CHECK-NOLSE-O0-NEXT:  ; %bb.3: ; %atomicrmw.start
+; CHECK-NOLSE-O0-NEXT:    ; in Loop: Header=BB44_2 Depth=2
+; CHECK-NOLSE-O0-NEXT:    stlxrh w10, w12, [x11]
+; CHECK-NOLSE-O0-NEXT:    cbnz w10, LBB44_2
+; CHECK-NOLSE-O0-NEXT:  LBB44_4: ; %atomicrmw.start
+; CHECK-NOLSE-O0-NEXT:    ; in Loop: Header=BB44_1 Depth=1
+; CHECK-NOLSE-O0-NEXT:    str w9, [sp, #12] ; 4-byte Folded Spill
+; CHECK-NOLSE-O0-NEXT:    uxth w8, w8
+; CHECK-NOLSE-O0-NEXT:    subs w8, w8, w9, uxth
+; CHECK-NOLSE-O0-NEXT:    cset w8, eq
+; CHECK-NOLSE-O0-NEXT:    str w9, [sp, #28] ; 4-byte Folded Spill
+; CHECK-NOLSE-O0-NEXT:    tbz w8, #0, LBB44_1
+; CHECK-NOLSE-O0-NEXT:  ; %bb.5: ; %atomicrmw.end
+; CHECK-NOLSE-O0-NEXT:    ldr w0, [sp, #12] ; 4-byte Folded Reload
+; CHECK-NOLSE-O0-NEXT:    add sp, sp, #32 ; =32
+; CHECK-NOLSE-O0-NEXT:    ret
+;
+; CHECK-LSE-O1-LABEL: atomicrmw_max_i16:
+; CHECK-LSE-O1:       ; %bb.0:
+; CHECK-LSE-O1-NEXT:    ldsmaxlh w1, w0, [x0]
+; CHECK-LSE-O1-NEXT:    ret
+;
+; CHECK-LSE-O0-LABEL: atomicrmw_max_i16:
+; CHECK-LSE-O0:       ; %bb.0:
+; CHECK-LSE-O0-NEXT:    ldsmaxlh w1, w0, [x0]
+; CHECK-LSE-O0-NEXT:    ret
+  %res = atomicrmw max i16* %ptr, i16 %rhs release
+  ret i16 %res
+}
+
+define i16 @atomicrmw_umin_i16(i16* %ptr, i16 %rhs) {
+; CHECK-NOLSE-O1-LABEL: atomicrmw_umin_i16:
+; CHECK-NOLSE-O1:       ; %bb.0:
+; CHECK-NOLSE-O1-NEXT:  LBB45_1: ; %atomicrmw.start
+; CHECK-NOLSE-O1-NEXT:    ; =>This Inner Loop Header: Depth=1
+; CHECK-NOLSE-O1-NEXT:    ldaxrh w8, [x0]
+; CHECK-NOLSE-O1-NEXT:    and w9, w8, #0xffff
+; CHECK-NOLSE-O1-NEXT:    cmp w9, w1, uxth
+; CHECK-NOLSE-O1-NEXT:    csel w9, w8, w1, ls
+; CHECK-NOLSE-O1-NEXT:    stlxrh w10, w9, [x0]
+; CHECK-NOLSE-O1-NEXT:    cbnz w10, LBB45_1
+; CHECK-NOLSE-O1-NEXT:  ; %bb.2: ; %atomicrmw.end
+; CHECK-NOLSE-O1-NEXT:    mov w0, w8
+; CHECK-NOLSE-O1-NEXT:    ret
+;
+; CHECK-NOLSE-O0-LABEL: atomicrmw_umin_i16:
+; CHECK-NOLSE-O0:       ; %bb.0:
+; CHECK-NOLSE-O0-NEXT:    sub sp, sp, #32 ; =32
+; CHECK-NOLSE-O0-NEXT:    .cfi_def_cfa_offset 32
+; CHECK-NOLSE-O0-NEXT:    str x0, [sp, #16] ; 8-byte Folded Spill
+; CHECK-NOLSE-O0-NEXT:    str w1, [sp, #24] ; 4-byte Folded Spill
+; CHECK-NOLSE-O0-NEXT:    ldrh w8, [x0]
+; CHECK-NOLSE-O0-NEXT:    str w8, [sp, #28] ; 4-byte Folded Spill
+; CHECK-NOLSE-O0-NEXT:  LBB45_1: ; %atomicrmw.start
+; CHECK-NOLSE-O0-NEXT:    ; =>This Loop Header: Depth=1
+; CHECK-NOLSE-O0-NEXT:    ; Child Loop BB45_2 Depth 2
+; CHECK-NOLSE-O0-NEXT:    ldr w8, [sp, #28] ; 4-byte Folded Reload
+; CHECK-NOLSE-O0-NEXT:    ldr x11, [sp, #16] ; 8-byte Folded Reload
+; CHECK-NOLSE-O0-NEXT:    ldr w9, [sp, #24] ; 4-byte Folded Reload
+; CHECK-NOLSE-O0-NEXT:    uxth w10, w8
+; CHECK-NOLSE-O0-NEXT:    mov w12, w9
+; CHECK-NOLSE-O0-NEXT:    subs w10, w10, w12, uxth
+; CHECK-NOLSE-O0-NEXT:    csel w12, w8, w9, ls
+; CHECK-NOLSE-O0-NEXT:  LBB45_2: ; %atomicrmw.start
+; CHECK-NOLSE-O0-NEXT:    ; Parent Loop BB45_1 Depth=1
+; CHECK-NOLSE-O0-NEXT:    ; => This Inner Loop Header: Depth=2
+; CHECK-NOLSE-O0-NEXT:    ldaxrh w9, [x11]
+; CHECK-NOLSE-O0-NEXT:    cmp w9, w8, uxth
+; CHECK-NOLSE-O0-NEXT:    b.ne LBB45_4
+; CHECK-NOLSE-O0-NEXT:  ; %bb.3: ; %atomicrmw.start
+; CHECK-NOLSE-O0-NEXT:    ; in Loop: Header=BB45_2 Depth=2
+; CHECK-NOLSE-O0-NEXT:    stlxrh w10, w12, [x11]
+; CHECK-NOLSE-O0-NEXT:    cbnz w10, LBB45_2
+; CHECK-NOLSE-O0-NEXT:  LBB45_4: ; %atomicrmw.start
+; CHECK-NOLSE-O0-NEXT:    ; in Loop: Header=BB45_1 Depth=1
+; CHECK-NOLSE-O0-NEXT:    str w9, [sp, #12] ; 4-byte Folded Spill
+; CHECK-NOLSE-O0-NEXT:    uxth w8, w8
+; CHECK-NOLSE-O0-NEXT:    subs w8, w8, w9, uxth
+; CHECK-NOLSE-O0-NEXT:    cset w8, eq
+; CHECK-NOLSE-O0-NEXT:    str w9, [sp, #28] ; 4-byte Folded Spill
+; CHECK-NOLSE-O0-NEXT:    tbz w8, #0, LBB45_1
+; CHECK-NOLSE-O0-NEXT:  ; %bb.5: ; %atomicrmw.end
+; CHECK-NOLSE-O0-NEXT:    ldr w0, [sp, #12] ; 4-byte Folded Reload
+; CHECK-NOLSE-O0-NEXT:    add sp, sp, #32 ; =32
+; CHECK-NOLSE-O0-NEXT:    ret
+;
+; CHECK-LSE-O1-LABEL: atomicrmw_umin_i16:
+; CHECK-LSE-O1:       ; %bb.0:
+; CHECK-LSE-O1-NEXT:    lduminalh w1, w0, [x0]
+; CHECK-LSE-O1-NEXT:    ret
+;
+; CHECK-LSE-O0-LABEL: atomicrmw_umin_i16:
+; CHECK-LSE-O0:       ; %bb.0:
+; CHECK-LSE-O0-NEXT:    lduminalh w1, w0, [x0]
+; CHECK-LSE-O0-NEXT:    ret
+  %res = atomicrmw umin i16* %ptr, i16 %rhs seq_cst
+  ret i16 %res
+}
+
+define i16 @atomicrmw_umax_i16(i16* %ptr, i16 %rhs) {
+; CHECK-NOLSE-O1-LABEL: atomicrmw_umax_i16:
+; CHECK-NOLSE-O1:       ; %bb.0:
+; CHECK-NOLSE-O1-NEXT:  LBB46_1: ; %atomicrmw.start
+; CHECK-NOLSE-O1-NEXT:    ; =>This Inner Loop Header: Depth=1
+; CHECK-NOLSE-O1-NEXT:    ldxrh w8, [x0]
+; CHECK-NOLSE-O1-NEXT:    and w9, w8, #0xffff
+; CHECK-NOLSE-O1-NEXT:    cmp w9, w1, uxth
+; CHECK-NOLSE-O1-NEXT:    csel w9, w8, w1, hi
+; CHECK-NOLSE-O1-NEXT:    stxrh w10, w9, [x0]
+; CHECK-NOLSE-O1-NEXT:    cbnz w10, LBB46_1
+; CHECK-NOLSE-O1-NEXT:  ; %bb.2: ; %atomicrmw.end
+; CHECK-NOLSE-O1-NEXT:    mov w0, w8
+; CHECK-NOLSE-O1-NEXT:    ret
+;
+; CHECK-NOLSE-O0-LABEL: atomicrmw_umax_i16:
+; CHECK-NOLSE-O0:       ; %bb.0:
+; CHECK-NOLSE-O0-NEXT:    sub sp, sp, #32 ; =32
+; CHECK-NOLSE-O0-NEXT:    .cfi_def_cfa_offset 32
+; CHECK-NOLSE-O0-NEXT:    str x0, [sp, #16] ; 8-byte Folded Spill
+; CHECK-NOLSE-O0-NEXT:    str w1, [sp, #24] ; 4-byte Folded Spill
+; CHECK-NOLSE-O0-NEXT:    ldrh w8, [x0]
+; CHECK-NOLSE-O0-NEXT:    str w8, [sp, #28] ; 4-byte Folded Spill
+; CHECK-NOLSE-O0-NEXT:  LBB46_1: ; %atomicrmw.start
+; CHECK-NOLSE-O0-NEXT:    ; =>This Loop Header: Depth=1
+; CHECK-NOLSE-O0-NEXT:    ; Child Loop BB46_2 Depth 2
+; CHECK-NOLSE-O0-NEXT:    ldr w8, [sp, #28] ; 4-byte Folded Reload
+; CHECK-NOLSE-O0-NEXT:    ldr x11, [sp, #16] ; 8-byte Folded Reload
+; CHECK-NOLSE-O0-NEXT:    ldr w9, [sp, #24] ; 4-byte Folded Reload
+; CHECK-NOLSE-O0-NEXT:    uxth w10, w8
+; CHECK-NOLSE-O0-NEXT:    mov w12, w9
+; CHECK-NOLSE-O0-NEXT:    subs w10, w10, w12, uxth
+; CHECK-NOLSE-O0-NEXT:    csel w12, w8, w9, hi
+; CHECK-NOLSE-O0-NEXT:  LBB46_2: ; %atomicrmw.start
+; CHECK-NOLSE-O0-NEXT:    ; Parent Loop BB46_1 Depth=1
+; CHECK-NOLSE-O0-NEXT:    ; => This Inner Loop Header: Depth=2
+; CHECK-NOLSE-O0-NEXT:    ldaxrh w9, [x11]
+; CHECK-NOLSE-O0-NEXT:    cmp w9, w8, uxth
+; CHECK-NOLSE-O0-NEXT:    b.ne LBB46_4
+; CHECK-NOLSE-O0-NEXT:  ; %bb.3: ; %atomicrmw.start
+; CHECK-NOLSE-O0-NEXT:    ; in Loop: Header=BB46_2 Depth=2
+; CHECK-NOLSE-O0-NEXT:    stlxrh w10, w12, [x11]
+; CHECK-NOLSE-O0-NEXT:    cbnz w10, LBB46_2
+; CHECK-NOLSE-O0-NEXT:  LBB46_4: ; %atomicrmw.start
+; CHECK-NOLSE-O0-NEXT:    ; in Loop: Header=BB46_1 Depth=1
+; CHECK-NOLSE-O0-NEXT:    str w9, [sp, #12] ; 4-byte Folded Spill
+; CHECK-NOLSE-O0-NEXT:    uxth w8, w8
+; CHECK-NOLSE-O0-NEXT:    subs w8, w8, w9, uxth
+; CHECK-NOLSE-O0-NEXT:    cset w8, eq
+; CHECK-NOLSE-O0-NEXT:    str w9, [sp, #28] ; 4-byte Folded Spill
+; CHECK-NOLSE-O0-NEXT:    tbz w8, #0, LBB46_1
+; CHECK-NOLSE-O0-NEXT:  ; %bb.5: ; %atomicrmw.end
+; CHECK-NOLSE-O0-NEXT:    ldr w0, [sp, #12] ; 4-byte Folded Reload
+; CHECK-NOLSE-O0-NEXT:    add sp, sp, #32 ; =32
+; CHECK-NOLSE-O0-NEXT:    ret
+;
+; CHECK-LSE-O1-LABEL: atomicrmw_umax_i16:
+; CHECK-LSE-O1:       ; %bb.0:
+; CHECK-LSE-O1-NEXT:    ldumaxh w1, w0, [x0]
+; CHECK-LSE-O1-NEXT:    ret
+;
+; CHECK-LSE-O0-LABEL: atomicrmw_umax_i16:
+; CHECK-LSE-O0:       ; %bb.0:
+; CHECK-LSE-O0-NEXT:    ldumaxh w1, w0, [x0]
+; CHECK-LSE-O0-NEXT:    ret
+  %res = atomicrmw umax i16* %ptr, i16 %rhs monotonic
+  ret i16 %res
+}
+
+define { i8, i1 } @cmpxchg_i8(i8* %ptr, i8 %desired, i8 %new) {
+; CHECK-NOLSE-O1-LABEL: cmpxchg_i8:
+; CHECK-NOLSE-O1:       ; %bb.0:
+; CHECK-NOLSE-O1-NEXT:    mov x8, x0
+; CHECK-NOLSE-O1-NEXT:    ; kill: def $w2 killed $w2 def $x2
+; CHECK-NOLSE-O1-NEXT:  LBB47_1: ; %cmpxchg.start
+; CHECK-NOLSE-O1-NEXT:    ; =>This Inner Loop Header: Depth=1
+; CHECK-NOLSE-O1-NEXT:    ldxrb w0, [x8]
+; CHECK-NOLSE-O1-NEXT:    and w9, w0, #0xff
+; CHECK-NOLSE-O1-NEXT:    cmp w9, w1, uxtb
+; CHECK-NOLSE-O1-NEXT:    b.ne LBB47_4
+; CHECK-NOLSE-O1-NEXT:  ; %bb.2: ; %cmpxchg.trystore
+; CHECK-NOLSE-O1-NEXT:    ; in Loop: Header=BB47_1 Depth=1
+; CHECK-NOLSE-O1-NEXT:    stxrb w9, w2, [x8]
+; CHECK-NOLSE-O1-NEXT:    cbnz w9, LBB47_1
+; CHECK-NOLSE-O1-NEXT:  ; %bb.3:
+; CHECK-NOLSE-O1-NEXT:    mov w1, #1
+; CHECK-NOLSE-O1-NEXT:    ; kill: def $w0 killed $w0 killed $x0
+; CHECK-NOLSE-O1-NEXT:    ret
+; CHECK-NOLSE-O1-NEXT:  LBB47_4: ; %cmpxchg.nostore
+; CHECK-NOLSE-O1-NEXT:    clrex
+; CHECK-NOLSE-O1-NEXT:    mov w1, wzr
+; CHECK-NOLSE-O1-NEXT:    ; kill: def $w0 killed $w0 killed $x0
+; CHECK-NOLSE-O1-NEXT:    ret
+;
+; CHECK-NOLSE-O0-LABEL: cmpxchg_i8:
+; CHECK-NOLSE-O0:       ; %bb.0:
+; CHECK-NOLSE-O0-NEXT:    mov x9, x0
+; CHECK-NOLSE-O0-NEXT:    mov w10, w1
+; CHECK-NOLSE-O0-NEXT:  LBB47_1: ; =>This Inner Loop Header: Depth=1
+; CHECK-NOLSE-O0-NEXT:    ldaxrb w0, [x9]
+; CHECK-NOLSE-O0-NEXT:    cmp w0, w10, uxtb
+; CHECK-NOLSE-O0-NEXT:    b.ne LBB47_3
+; CHECK-NOLSE-O0-NEXT:  ; %bb.2: ; in Loop: Header=BB47_1 Depth=1
+; CHECK-NOLSE-O0-NEXT:    stlxrb w8, w2, [x9]
+; CHECK-NOLSE-O0-NEXT:    cbnz w8, LBB47_1
+; CHECK-NOLSE-O0-NEXT:  LBB47_3:
+; CHECK-NOLSE-O0-NEXT:    and w8, w0, #0xff
+; CHECK-NOLSE-O0-NEXT:    subs w8, w8, w1, uxtb
+; CHECK-NOLSE-O0-NEXT:    cset w8, eq
+; CHECK-NOLSE-O0-NEXT:    and w1, w8, #0x1
+; CHECK-NOLSE-O0-NEXT:    ret
+;
+; CHECK-LSE-O1-LABEL: cmpxchg_i8:
+; CHECK-LSE-O1:       ; %bb.0:
+; CHECK-LSE-O1-NEXT:    mov x8, x1
+; CHECK-LSE-O1-NEXT:    casb w8, w2, [x0]
+; CHECK-LSE-O1-NEXT:    and w9, w8, #0xff
+; CHECK-LSE-O1-NEXT:    cmp w9, w1, uxtb
+; CHECK-LSE-O1-NEXT:    cset w1, eq
+; CHECK-LSE-O1-NEXT:    mov x0, x8
+; CHECK-LSE-O1-NEXT:    ret
+;
+; CHECK-LSE-O0-LABEL: cmpxchg_i8:
+; CHECK-LSE-O0:       ; %bb.0:
+; CHECK-LSE-O0-NEXT:    mov x8, x0
+; CHECK-LSE-O0-NEXT:    mov x0, x1
+; CHECK-LSE-O0-NEXT:    casb w0, w2, [x8]
+; CHECK-LSE-O0-NEXT:    and w8, w0, #0xff
+; CHECK-LSE-O0-NEXT:    subs w8, w8, w1, uxtb
+; CHECK-LSE-O0-NEXT:    cset w8, eq
+; CHECK-LSE-O0-NEXT:    and w1, w8, #0x1
+; CHECK-LSE-O0-NEXT:    ret
+  %res = cmpxchg i8* %ptr, i8 %desired, i8 %new monotonic monotonic
+  ret { i8, i1 } %res
+}
+
+define { i16, i1 } @cmpxchg_i16(i16* %ptr, i16 %desired, i16 %new) {
+; CHECK-NOLSE-O1-LABEL: cmpxchg_i16:
+; CHECK-NOLSE-O1:       ; %bb.0:
+; CHECK-NOLSE-O1-NEXT:    mov x8, x0
+; CHECK-NOLSE-O1-NEXT:    ; kill: def $w2 killed $w2 def $x2
+; CHECK-NOLSE-O1-NEXT:  LBB48_1: ; %cmpxchg.start
+; CHECK-NOLSE-O1-NEXT:    ; =>This Inner Loop Header: Depth=1
+; CHECK-NOLSE-O1-NEXT:    ldxrh w0, [x8]
+; CHECK-NOLSE-O1-NEXT:    and w9, w0, #0xffff
+; CHECK-NOLSE-O1-NEXT:    cmp w9, w1, uxth
+; CHECK-NOLSE-O1-NEXT:    b.ne LBB48_4
+; CHECK-NOLSE-O1-NEXT:  ; %bb.2: ; %cmpxchg.trystore
+; CHECK-NOLSE-O1-NEXT:    ; in Loop: Header=BB48_1 Depth=1
+; CHECK-NOLSE-O1-NEXT:    stxrh w9, w2, [x8]
+; CHECK-NOLSE-O1-NEXT:    cbnz w9, LBB48_1
+; CHECK-NOLSE-O1-NEXT:  ; %bb.3:
+; CHECK-NOLSE-O1-NEXT:    mov w1, #1
+; CHECK-NOLSE-O1-NEXT:    ; kill: def $w0 killed $w0 killed $x0
+; CHECK-NOLSE-O1-NEXT:    ret
+; CHECK-NOLSE-O1-NEXT:  LBB48_4: ; %cmpxchg.nostore
+; CHECK-NOLSE-O1-NEXT:    clrex
+; CHECK-NOLSE-O1-NEXT:    mov w1, wzr
+; CHECK-NOLSE-O1-NEXT:    ; kill: def $w0 killed $w0 killed $x0
+; CHECK-NOLSE-O1-NEXT:    ret
+;
+; CHECK-NOLSE-O0-LABEL: cmpxchg_i16:
+; CHECK-NOLSE-O0:       ; %bb.0:
+; CHECK-NOLSE-O0-NEXT:    mov x9, x0
+; CHECK-NOLSE-O0-NEXT:    mov w10, w1
+; CHECK-NOLSE-O0-NEXT:  LBB48_1: ; =>This Inner Loop Header: Depth=1
+; CHECK-NOLSE-O0-NEXT:    ldaxrh w0, [x9]
+; CHECK-NOLSE-O0-NEXT:    cmp w0, w10, uxth
+; CHECK-NOLSE-O0-NEXT:    b.ne LBB48_3
+; CHECK-NOLSE-O0-NEXT:  ; %bb.2: ; in Loop: Header=BB48_1 Depth=1
+; CHECK-NOLSE-O0-NEXT:    stlxrh w8, w2, [x9]
+; CHECK-NOLSE-O0-NEXT:    cbnz w8, LBB48_1
+; CHECK-NOLSE-O0-NEXT:  LBB48_3:
+; CHECK-NOLSE-O0-NEXT:    and w8, w0, #0xffff
+; CHECK-NOLSE-O0-NEXT:    subs w8, w8, w1, uxth
+; CHECK-NOLSE-O0-NEXT:    cset w8, eq
+; CHECK-NOLSE-O0-NEXT:    and w1, w8, #0x1
+; CHECK-NOLSE-O0-NEXT:    ret
+;
+; CHECK-LSE-O1-LABEL: cmpxchg_i16:
+; CHECK-LSE-O1:       ; %bb.0:
+; CHECK-LSE-O1-NEXT:    mov x8, x1
+; CHECK-LSE-O1-NEXT:    cash w8, w2, [x0]
+; CHECK-LSE-O1-NEXT:    and w9, w8, #0xffff
+; CHECK-LSE-O1-NEXT:    cmp w9, w1, uxth
+; CHECK-LSE-O1-NEXT:    cset w1, eq
+; CHECK-LSE-O1-NEXT:    mov x0, x8
+; CHECK-LSE-O1-NEXT:    ret
+;
+; CHECK-LSE-O0-LABEL: cmpxchg_i16:
+; CHECK-LSE-O0:       ; %bb.0:
+; CHECK-LSE-O0-NEXT:    mov x8, x0
+; CHECK-LSE-O0-NEXT:    mov x0, x1
+; CHECK-LSE-O0-NEXT:    cash w0, w2, [x8]
+; CHECK-LSE-O0-NEXT:    and w8, w0, #0xffff
+; CHECK-LSE-O0-NEXT:    subs w8, w8, w1, uxth
+; CHECK-LSE-O0-NEXT:    cset w8, eq
+; CHECK-LSE-O0-NEXT:    and w1, w8, #0x1
+; CHECK-LSE-O0-NEXT:    ret
+  %res = cmpxchg i16* %ptr, i16 %desired, i16 %new monotonic monotonic
+  ret { i16, i1 } %res
+}
 
 attributes #0 = { nounwind }

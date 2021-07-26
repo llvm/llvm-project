@@ -4409,6 +4409,10 @@ def : Pat<(i1 (not (trunc i32:$in))),
 def : Pat<(i1 (not (trunc i64:$in))),
            (ANDI_rec_1_EQ_BIT8 $in)>;
 
+def : Pat<(int_ppc_fsel f8rc:$FRA, f8rc:$FRC, f8rc:$FRB), (FSELD $FRA, $FRC, $FRB)>;
+def : Pat<(int_ppc_frsqrte f8rc:$frB), (FRSQRTE $frB)>;
+def : Pat<(int_ppc_frsqrtes f4rc:$frB), (FRSQRTES $frB)>;
+
 //===----------------------------------------------------------------------===//
 // PowerPC Instructions used for assembler/disassembler only
 //
