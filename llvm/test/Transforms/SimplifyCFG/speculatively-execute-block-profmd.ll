@@ -110,8 +110,8 @@ end:
   ret i32 %res
 }
 
-define i32 @unpredictable(i1 %c, i32 %a, i32 %b) {
-; CHECK-LABEL: @unpredictable(
+define i32 @almost_predictably_nontaken(i1 %c, i32 %a, i32 %b) {
+; CHECK-LABEL: @almost_predictably_nontaken(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    call void @sideeffect0()
 ; CHECK-NEXT:    br i1 [[C:%.*]], label [[DISPATCH:%.*]], label [[END:%.*]]
@@ -119,7 +119,7 @@ define i32 @unpredictable(i1 %c, i32 %a, i32 %b) {
 ; CHECK-NEXT:    call void @sideeffect1()
 ; CHECK-NEXT:    [[CMP:%.*]] = icmp eq i32 [[A:%.*]], [[B:%.*]]
 ; CHECK-NEXT:    [[VAL:%.*]] = add i32 [[A]], [[B]]
-; CHECK-NEXT:    [[SPEC_SELECT:%.*]] = select i1 [[CMP]], i32 [[VAL]], i32 0, !unpredictable !1
+; CHECK-NEXT:    [[SPEC_SELECT:%.*]] = select i1 [[CMP]], i32 0, i32 [[VAL]], !prof [[PROF1:![0-9]+]]
 ; CHECK-NEXT:    br label [[END]]
 ; CHECK:       end:
 ; CHECK-NEXT:    [[RES:%.*]] = phi i32 [ -1, [[ENTRY:%.*]] ], [ [[SPEC_SELECT]], [[DISPATCH]] ]
@@ -133,7 +133,42 @@ entry:
 dispatch:
   call void @sideeffect1()
   %cmp = icmp eq i32 %a, %b
-  br i1 %cmp, label %cond.true, label %end, !unpredictable !1 ; unpredictable
+  br i1 %cmp, label %end, label %cond.true, !prof !1 ; almost likely branches to %end
+
+cond.true:
+  %val = add i32 %a, %b
+  br label %end
+
+end:
+  %res = phi i32 [ -1, %entry ], [ 0, %dispatch ], [ %val, %cond.true ]
+  call void @sideeffect2()
+  ret i32 %res
+}
+
+define i32 @unpredictable(i1 %c, i32 %a, i32 %b) {
+; CHECK-LABEL: @unpredictable(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    call void @sideeffect0()
+; CHECK-NEXT:    br i1 [[C:%.*]], label [[DISPATCH:%.*]], label [[END:%.*]]
+; CHECK:       dispatch:
+; CHECK-NEXT:    call void @sideeffect1()
+; CHECK-NEXT:    [[CMP:%.*]] = icmp eq i32 [[A:%.*]], [[B:%.*]]
+; CHECK-NEXT:    [[VAL:%.*]] = add i32 [[A]], [[B]]
+; CHECK-NEXT:    [[SPEC_SELECT:%.*]] = select i1 [[CMP]], i32 [[VAL]], i32 0, !unpredictable !2
+; CHECK-NEXT:    br label [[END]]
+; CHECK:       end:
+; CHECK-NEXT:    [[RES:%.*]] = phi i32 [ -1, [[ENTRY:%.*]] ], [ [[SPEC_SELECT]], [[DISPATCH]] ]
+; CHECK-NEXT:    call void @sideeffect2()
+; CHECK-NEXT:    ret i32 [[RES]]
+;
+entry:
+  call void @sideeffect0()
+  br i1 %c, label %dispatch, label %end
+
+dispatch:
+  call void @sideeffect1()
+  %cmp = icmp eq i32 %a, %b
+  br i1 %cmp, label %cond.true, label %end, !unpredictable !2 ; unpredictable
 
 cond.true:
   %val = add i32 %a, %b
@@ -154,7 +189,7 @@ define i32 @unpredictable_yet_taken(i1 %c, i32 %a, i32 %b) {
 ; CHECK-NEXT:    call void @sideeffect1()
 ; CHECK-NEXT:    [[CMP:%.*]] = icmp eq i32 [[A:%.*]], [[B:%.*]]
 ; CHECK-NEXT:    [[VAL:%.*]] = add i32 [[A]], [[B]]
-; CHECK-NEXT:    [[SPEC_SELECT:%.*]] = select i1 [[CMP]], i32 [[VAL]], i32 0, !prof [[PROF0]], !unpredictable !1
+; CHECK-NEXT:    [[SPEC_SELECT:%.*]] = select i1 [[CMP]], i32 [[VAL]], i32 0, !prof [[PROF0]], !unpredictable !2
 ; CHECK-NEXT:    br label [[END]]
 ; CHECK:       end:
 ; CHECK-NEXT:    [[RES:%.*]] = phi i32 [ -1, [[ENTRY:%.*]] ], [ [[SPEC_SELECT]], [[DISPATCH]] ]
@@ -168,7 +203,7 @@ entry:
 dispatch:
   call void @sideeffect1()
   %cmp = icmp eq i32 %a, %b
-  br i1 %cmp, label %cond.true, label %end, !prof !0, !unpredictable !1 ; likely branches to %cond.true, yet unpredictable
+  br i1 %cmp, label %cond.true, label %end, !prof !0, !unpredictable !2 ; likely branches to %cond.true, yet unpredictable
 
 cond.true:
   %val = add i32 %a, %b
@@ -189,7 +224,7 @@ define i32 @unpredictable_yet_nontaken(i1 %c, i32 %a, i32 %b) {
 ; CHECK-NEXT:    call void @sideeffect1()
 ; CHECK-NEXT:    [[CMP:%.*]] = icmp eq i32 [[A:%.*]], [[B:%.*]]
 ; CHECK-NEXT:    [[VAL:%.*]] = add i32 [[A]], [[B]]
-; CHECK-NEXT:    [[SPEC_SELECT:%.*]] = select i1 [[CMP]], i32 0, i32 [[VAL]], !prof [[PROF0]], !unpredictable !1
+; CHECK-NEXT:    [[SPEC_SELECT:%.*]] = select i1 [[CMP]], i32 0, i32 [[VAL]], !prof [[PROF0]], !unpredictable !2
 ; CHECK-NEXT:    br label [[END]]
 ; CHECK:       end:
 ; CHECK-NEXT:    [[RES:%.*]] = phi i32 [ -1, [[ENTRY:%.*]] ], [ [[SPEC_SELECT]], [[DISPATCH]] ]
@@ -203,7 +238,7 @@ entry:
 dispatch:
   call void @sideeffect1()
   %cmp = icmp eq i32 %a, %b
-  br i1 %cmp, label %end, label %cond.true, !prof !0, !unpredictable !1 ; likely branches to %end, yet unpredictable
+  br i1 %cmp, label %end, label %cond.true, !prof !0, !unpredictable !2 ; likely branches to %end, yet unpredictable
 
 cond.true:
   %val = add i32 %a, %b
@@ -216,7 +251,9 @@ end:
 }
 
 !0 = !{!"branch_weights", i32 99, i32 1}
-!1 = !{}
+!1 = !{!"branch_weights", i32 70, i32 1}
+!2 = !{}
 
 ; CHECK: !0 = !{!"branch_weights", i32 99, i32 1}
-; CHECK: !1 = !{}
+; CHECK: !1 = !{!"branch_weights", i32 70, i32 1}
+; CHECK: !2 = !{}
