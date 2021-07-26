@@ -854,15 +854,15 @@ define amdgpu_kernel void @v_cttz_zero_undef_i32_with_select(i32 addrspace(1)* n
 ; GFX9-GISEL-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX9-GISEL-NEXT:    global_load_ubyte v1, v0, s[2:3]
 ; GFX9-GISEL-NEXT:    global_load_ubyte v2, v0, s[2:3] offset:1
-; GFX9-GISEL-NEXT:    global_load_ubyte v3, v0, s[2:3] offset:2
-; GFX9-GISEL-NEXT:    global_load_ubyte v4, v0, s[2:3] offset:3
+; GFX9-GISEL-NEXT:    global_load_ubyte v3, v0, s[2:3] offset:3
+; GFX9-GISEL-NEXT:    global_load_ubyte v4, v0, s[2:3] offset:2
 ; GFX9-GISEL-NEXT:    s_waitcnt vmcnt(2)
 ; GFX9-GISEL-NEXT:    v_lshl_or_b32 v1, v2, 8, v1
 ; GFX9-GISEL-NEXT:    s_waitcnt vmcnt(1)
-; GFX9-GISEL-NEXT:    v_lshlrev_b32_e32 v2, 16, v3
+; GFX9-GISEL-NEXT:    v_lshlrev_b32_e32 v2, 24, v3
 ; GFX9-GISEL-NEXT:    s_waitcnt vmcnt(0)
-; GFX9-GISEL-NEXT:    v_lshlrev_b32_e32 v3, 24, v4
-; GFX9-GISEL-NEXT:    v_or3_b32 v1, v1, v2, v3
+; GFX9-GISEL-NEXT:    v_lshlrev_b32_e32 v3, 16, v4
+; GFX9-GISEL-NEXT:    v_or3_b32 v1, v2, v3, v1
 ; GFX9-GISEL-NEXT:    v_ffbl_b32_e32 v2, v1
 ; GFX9-GISEL-NEXT:    v_cmp_ne_u32_e32 vcc, 0, v1
 ; GFX9-GISEL-NEXT:    v_cndmask_b32_e32 v1, 32, v2, vcc
@@ -1032,39 +1032,28 @@ define amdgpu_kernel void @v_cttz_zero_undef_i64_with_select(i64 addrspace(1)* n
 ; GFX9-GISEL-NEXT:    v_mov_b32_e32 v1, 0
 ; GFX9-GISEL-NEXT:    s_load_dwordx2 s[0:1], s[0:1], 0x24
 ; GFX9-GISEL-NEXT:    s_waitcnt lgkmcnt(0)
-; GFX9-GISEL-NEXT:    global_load_ubyte v0, v1, s[2:3] offset:1
-; GFX9-GISEL-NEXT:    global_load_ubyte v2, v1, s[2:3] offset:3
-; GFX9-GISEL-NEXT:    global_load_ubyte v3, v1, s[2:3] offset:5
-; GFX9-GISEL-NEXT:    global_load_ubyte v4, v1, s[2:3] offset:7
-; GFX9-GISEL-NEXT:    global_load_ubyte v5, v1, s[2:3]
-; GFX9-GISEL-NEXT:    global_load_ubyte v6, v1, s[2:3] offset:2
-; GFX9-GISEL-NEXT:    global_load_ubyte v7, v1, s[2:3] offset:4
+; GFX9-GISEL-NEXT:    global_load_ubyte v0, v1, s[2:3]
+; GFX9-GISEL-NEXT:    global_load_ubyte v2, v1, s[2:3] offset:1
+; GFX9-GISEL-NEXT:    global_load_ubyte v3, v1, s[2:3] offset:2
+; GFX9-GISEL-NEXT:    global_load_ubyte v4, v1, s[2:3] offset:3
+; GFX9-GISEL-NEXT:    global_load_ubyte v5, v1, s[2:3] offset:4
+; GFX9-GISEL-NEXT:    global_load_ubyte v6, v1, s[2:3] offset:5
+; GFX9-GISEL-NEXT:    global_load_ubyte v7, v1, s[2:3] offset:7
 ; GFX9-GISEL-NEXT:    global_load_ubyte v8, v1, s[2:3] offset:6
-; GFX9-GISEL-NEXT:    s_movk_i32 s2, 0xff
-; GFX9-GISEL-NEXT:    s_waitcnt vmcnt(7)
-; GFX9-GISEL-NEXT:    v_and_b32_e32 v0, s2, v0
 ; GFX9-GISEL-NEXT:    s_waitcnt vmcnt(6)
-; GFX9-GISEL-NEXT:    v_and_b32_e32 v2, s2, v2
+; GFX9-GISEL-NEXT:    v_lshl_or_b32 v0, v2, 8, v0
 ; GFX9-GISEL-NEXT:    s_waitcnt vmcnt(5)
-; GFX9-GISEL-NEXT:    v_and_b32_e32 v3, s2, v3
+; GFX9-GISEL-NEXT:    v_lshlrev_b32_e32 v3, 16, v3
 ; GFX9-GISEL-NEXT:    s_waitcnt vmcnt(4)
-; GFX9-GISEL-NEXT:    v_and_b32_e32 v4, s2, v4
-; GFX9-GISEL-NEXT:    v_lshlrev_b16_e32 v3, 8, v3
-; GFX9-GISEL-NEXT:    v_lshlrev_b16_e32 v4, 8, v4
-; GFX9-GISEL-NEXT:    v_lshlrev_b16_e32 v0, 8, v0
-; GFX9-GISEL-NEXT:    v_lshlrev_b16_e32 v2, 8, v2
+; GFX9-GISEL-NEXT:    v_lshlrev_b32_e32 v2, 24, v4
+; GFX9-GISEL-NEXT:    v_or3_b32 v2, v2, v3, v0
+; GFX9-GISEL-NEXT:    s_waitcnt vmcnt(2)
+; GFX9-GISEL-NEXT:    v_lshl_or_b32 v4, v6, 8, v5
 ; GFX9-GISEL-NEXT:    s_waitcnt vmcnt(1)
-; GFX9-GISEL-NEXT:    v_or_b32_sdwa v3, v7, v3 dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:BYTE_0 src1_sel:DWORD
+; GFX9-GISEL-NEXT:    v_lshlrev_b32_e32 v5, 24, v7
 ; GFX9-GISEL-NEXT:    s_waitcnt vmcnt(0)
-; GFX9-GISEL-NEXT:    v_or_b32_sdwa v4, v8, v4 dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:BYTE_0 src1_sel:DWORD
-; GFX9-GISEL-NEXT:    v_or_b32_sdwa v0, v5, v0 dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:BYTE_0 src1_sel:DWORD
-; GFX9-GISEL-NEXT:    v_or_b32_sdwa v2, v6, v2 dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:BYTE_0 src1_sel:DWORD
-; GFX9-GISEL-NEXT:    v_bfe_u32 v3, v3, 0, 16
-; GFX9-GISEL-NEXT:    v_bfe_u32 v4, v4, 0, 16
-; GFX9-GISEL-NEXT:    v_bfe_u32 v0, v0, 0, 16
-; GFX9-GISEL-NEXT:    v_bfe_u32 v2, v2, 0, 16
-; GFX9-GISEL-NEXT:    v_lshl_or_b32 v3, v4, 16, v3
-; GFX9-GISEL-NEXT:    v_lshl_or_b32 v2, v2, 16, v0
+; GFX9-GISEL-NEXT:    v_lshlrev_b32_e32 v6, 16, v8
+; GFX9-GISEL-NEXT:    v_or3_b32 v3, v5, v6, v4
 ; GFX9-GISEL-NEXT:    v_ffbl_b32_e32 v4, v3
 ; GFX9-GISEL-NEXT:    v_ffbl_b32_e32 v0, v2
 ; GFX9-GISEL-NEXT:    v_add_u32_e32 v4, 32, v4
@@ -1179,15 +1168,15 @@ define amdgpu_kernel void @v_cttz_i32_sel_eq_neg1(i32 addrspace(1)* noalias %out
 ; GFX9-GISEL-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX9-GISEL-NEXT:    global_load_ubyte v1, v0, s[2:3]
 ; GFX9-GISEL-NEXT:    global_load_ubyte v2, v0, s[2:3] offset:1
-; GFX9-GISEL-NEXT:    global_load_ubyte v3, v0, s[2:3] offset:2
-; GFX9-GISEL-NEXT:    global_load_ubyte v4, v0, s[2:3] offset:3
+; GFX9-GISEL-NEXT:    global_load_ubyte v3, v0, s[2:3] offset:3
+; GFX9-GISEL-NEXT:    global_load_ubyte v4, v0, s[2:3] offset:2
 ; GFX9-GISEL-NEXT:    s_waitcnt vmcnt(2)
 ; GFX9-GISEL-NEXT:    v_lshl_or_b32 v1, v2, 8, v1
 ; GFX9-GISEL-NEXT:    s_waitcnt vmcnt(1)
-; GFX9-GISEL-NEXT:    v_lshlrev_b32_e32 v2, 16, v3
+; GFX9-GISEL-NEXT:    v_lshlrev_b32_e32 v2, 24, v3
 ; GFX9-GISEL-NEXT:    s_waitcnt vmcnt(0)
-; GFX9-GISEL-NEXT:    v_lshlrev_b32_e32 v3, 24, v4
-; GFX9-GISEL-NEXT:    v_or3_b32 v1, v1, v2, v3
+; GFX9-GISEL-NEXT:    v_lshlrev_b32_e32 v3, 16, v4
+; GFX9-GISEL-NEXT:    v_or3_b32 v1, v2, v3, v1
 ; GFX9-GISEL-NEXT:    v_ffbl_b32_e32 v2, v1
 ; GFX9-GISEL-NEXT:    v_min_u32_e32 v2, 32, v2
 ; GFX9-GISEL-NEXT:    v_cmp_eq_u32_e32 vcc, 0, v1
@@ -1300,15 +1289,15 @@ define amdgpu_kernel void @v_cttz_i32_sel_ne_neg1(i32 addrspace(1)* noalias %out
 ; GFX9-GISEL-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX9-GISEL-NEXT:    global_load_ubyte v1, v0, s[2:3]
 ; GFX9-GISEL-NEXT:    global_load_ubyte v2, v0, s[2:3] offset:1
-; GFX9-GISEL-NEXT:    global_load_ubyte v3, v0, s[2:3] offset:2
-; GFX9-GISEL-NEXT:    global_load_ubyte v4, v0, s[2:3] offset:3
+; GFX9-GISEL-NEXT:    global_load_ubyte v3, v0, s[2:3] offset:3
+; GFX9-GISEL-NEXT:    global_load_ubyte v4, v0, s[2:3] offset:2
 ; GFX9-GISEL-NEXT:    s_waitcnt vmcnt(2)
 ; GFX9-GISEL-NEXT:    v_lshl_or_b32 v1, v2, 8, v1
 ; GFX9-GISEL-NEXT:    s_waitcnt vmcnt(1)
-; GFX9-GISEL-NEXT:    v_lshlrev_b32_e32 v2, 16, v3
+; GFX9-GISEL-NEXT:    v_lshlrev_b32_e32 v2, 24, v3
 ; GFX9-GISEL-NEXT:    s_waitcnt vmcnt(0)
-; GFX9-GISEL-NEXT:    v_lshlrev_b32_e32 v3, 24, v4
-; GFX9-GISEL-NEXT:    v_or3_b32 v1, v1, v2, v3
+; GFX9-GISEL-NEXT:    v_lshlrev_b32_e32 v3, 16, v4
+; GFX9-GISEL-NEXT:    v_or3_b32 v1, v2, v3, v1
 ; GFX9-GISEL-NEXT:    v_ffbl_b32_e32 v2, v1
 ; GFX9-GISEL-NEXT:    v_min_u32_e32 v2, 32, v2
 ; GFX9-GISEL-NEXT:    v_cmp_ne_u32_e32 vcc, 0, v1
@@ -1429,15 +1418,15 @@ define amdgpu_kernel void @v_cttz_i32_sel_ne_bitwidth(i32 addrspace(1)* noalias 
 ; GFX9-GISEL-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX9-GISEL-NEXT:    global_load_ubyte v1, v0, s[2:3]
 ; GFX9-GISEL-NEXT:    global_load_ubyte v2, v0, s[2:3] offset:1
-; GFX9-GISEL-NEXT:    global_load_ubyte v3, v0, s[2:3] offset:2
-; GFX9-GISEL-NEXT:    global_load_ubyte v4, v0, s[2:3] offset:3
+; GFX9-GISEL-NEXT:    global_load_ubyte v3, v0, s[2:3] offset:3
+; GFX9-GISEL-NEXT:    global_load_ubyte v4, v0, s[2:3] offset:2
 ; GFX9-GISEL-NEXT:    s_waitcnt vmcnt(2)
 ; GFX9-GISEL-NEXT:    v_lshl_or_b32 v1, v2, 8, v1
 ; GFX9-GISEL-NEXT:    s_waitcnt vmcnt(1)
-; GFX9-GISEL-NEXT:    v_lshlrev_b32_e32 v2, 16, v3
+; GFX9-GISEL-NEXT:    v_lshlrev_b32_e32 v2, 24, v3
 ; GFX9-GISEL-NEXT:    s_waitcnt vmcnt(0)
-; GFX9-GISEL-NEXT:    v_lshlrev_b32_e32 v3, 24, v4
-; GFX9-GISEL-NEXT:    v_or3_b32 v1, v1, v2, v3
+; GFX9-GISEL-NEXT:    v_lshlrev_b32_e32 v3, 16, v4
+; GFX9-GISEL-NEXT:    v_or3_b32 v1, v2, v3, v1
 ; GFX9-GISEL-NEXT:    v_ffbl_b32_e32 v1, v1
 ; GFX9-GISEL-NEXT:    v_min_u32_e32 v1, 32, v1
 ; GFX9-GISEL-NEXT:    v_cmp_ne_u32_e32 vcc, 32, v1
