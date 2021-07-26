@@ -8,9 +8,9 @@
 
 #include "AVR.h"
 #include "CommonArgs.h"
-#include "InputInfo.h"
 #include "clang/Driver/Compilation.h"
 #include "clang/Driver/DriverDiagnostic.h"
+#include "clang/Driver/InputInfo.h"
 #include "clang/Driver/Options.h"
 #include "llvm/ADT/Optional.h"
 #include "llvm/ADT/StringExtras.h"
