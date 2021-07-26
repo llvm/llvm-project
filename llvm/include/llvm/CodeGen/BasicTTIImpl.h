@@ -1658,27 +1658,25 @@ public:
     }
     case Intrinsic::vector_reduce_add:
       return thisT()->getArithmeticReductionCost(Instruction::Add, VecOpTy,
-                                                 CostKind);
+                                                 None, CostKind);
     case Intrinsic::vector_reduce_mul:
       return thisT()->getArithmeticReductionCost(Instruction::Mul, VecOpTy,
-                                                 CostKind);
+                                                 None, CostKind);
     case Intrinsic::vector_reduce_and:
       return thisT()->getArithmeticReductionCost(Instruction::And, VecOpTy,
-                                                 CostKind);
+                                                 None, CostKind);
     case Intrinsic::vector_reduce_or:
-      return thisT()->getArithmeticReductionCost(Instruction::Or, VecOpTy,
+      return thisT()->getArithmeticReductionCost(Instruction::Or, VecOpTy, None,
                                                  CostKind);
     case Intrinsic::vector_reduce_xor:
       return thisT()->getArithmeticReductionCost(Instruction::Xor, VecOpTy,
-                                                 CostKind);
+                                                 None, CostKind);
     case Intrinsic::vector_reduce_fadd:
-      // FIXME: Add new flag for cost of strict reductions.
       return thisT()->getArithmeticReductionCost(Instruction::FAdd, VecOpTy,
-                                                 CostKind);
+                                                 FMF, CostKind);
     case Intrinsic::vector_reduce_fmul:
-      // FIXME: Add new flag for cost of strict reductions.
       return thisT()->getArithmeticReductionCost(Instruction::FMul, VecOpTy,
-                                                 CostKind);
+                                                 FMF, CostKind);
     case Intrinsic::vector_reduce_smax:
     case Intrinsic::vector_reduce_smin:
     case Intrinsic::vector_reduce_fmax:
@@ -2014,8 +2012,8 @@ public:
   ///
   /// The cost model should take into account that the actual length of the
   /// vector is reduced on each iteration.
-  InstructionCost getArithmeticReductionCost(unsigned Opcode, VectorType *Ty,
-                                             TTI::TargetCostKind CostKind) {
+  InstructionCost getTreeReductionCost(unsigned Opcode, VectorType *Ty,
+                                       TTI::TargetCostKind CostKind) {
     Type *ScalarTy = Ty->getElementType();
     unsigned NumVecElts = cast<FixedVectorType>(Ty)->getNumElements();
     if ((Opcode == Instruction::Or || Opcode == Instruction::And) &&
@@ -2065,6 +2063,47 @@ public:
     ArithCost += NumReduxLevels * thisT()->getArithmeticInstrCost(Opcode, Ty);
     return ShuffleCost + ArithCost +
            thisT()->getVectorInstrCost(Instruction::ExtractElement, Ty, 0);
+  }
+
+  /// Try to calculate the cost of performing strict (in-order) reductions,
+  /// which involves doing a sequence of floating point additions in lane
+  /// order, starting with an initial value. For example, consider a scalar
+  /// initial value 'InitVal' of type float and a vector of type <4 x float>:
+  ///
+  ///   Vector = <float %v0, float %v1, float %v2, float %v3>
+  ///
+  ///   %add1 = %InitVal + %v0
+  ///   %add2 = %add1 + %v1
+  ///   %add3 = %add2 + %v2
+  ///   %add4 = %add3 + %v3
+  ///
+  /// As a simple estimate we can say the cost of such a reduction is 4 times
+  /// the cost of a scalar FP addition. We can only estimate the costs for
+  /// fixed-width vectors here because for scalable vectors we do not know the
+  /// runtime number of operations.
+  InstructionCost getOrderedReductionCost(unsigned Opcode, VectorType *Ty,
+                                          TTI::TargetCostKind CostKind) {
+    // Targets must implement a default value for the scalable case, since
+    // we don't know how many lanes the vector has.
+    if (isa<ScalableVectorType>(Ty))
+      return InstructionCost::getInvalid();
+
+    auto *VTy = cast<FixedVectorType>(Ty);
+    InstructionCost ExtractCost =
+        getScalarizationOverhead(VTy, /*Insert=*/false, /*Extract=*/true);
+    InstructionCost ArithCost =
+        getArithmeticInstrCost(Opcode, VTy->getElementType(), CostKind);
+    ArithCost *= VTy->getNumElements();
+
+    return ExtractCost + ArithCost;
+  }
+
+  InstructionCost getArithmeticReductionCost(unsigned Opcode, VectorType *Ty,
+                                             Optional<FastMathFlags> FMF,
+                                             TTI::TargetCostKind CostKind) {
+    if (TTI::requiresOrderedReduction(FMF))
+      return getOrderedReductionCost(Opcode, Ty, CostKind);
+    return getTreeReductionCost(Opcode, Ty, CostKind);
   }
 
   /// Try to calculate op costs for min/max reduction operations.
@@ -2133,8 +2172,8 @@ public:
     // Without any native support, this is equivalent to the cost of
     // vecreduce.add(ext) or if IsMLA vecreduce.add(mul(ext, ext))
     VectorType *ExtTy = VectorType::get(ResTy, Ty);
-    InstructionCost RedCost =
-        thisT()->getArithmeticReductionCost(Instruction::Add, ExtTy, CostKind);
+    InstructionCost RedCost = thisT()->getArithmeticReductionCost(
+        Instruction::Add, ExtTy, None, CostKind);
     InstructionCost MulCost = 0;
     InstructionCost ExtCost = thisT()->getCastInstrCost(
         IsUnsigned ? Instruction::ZExt : Instruction::SExt, ExtTy, Ty,
