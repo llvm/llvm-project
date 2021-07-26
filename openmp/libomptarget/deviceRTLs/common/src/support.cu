@@ -70,7 +70,7 @@ int GetNumberOfWorkersInTeam() { return GetMasterThreadID(); }
 int GetLogicalThreadIdInBlock() {
   // Implemented using control flow (predication) instead of with a modulo
   // operation.
-  int tid = GetThreadIdInBlock();
+  int tid = __kmpc_get_hardware_thread_id_in_block();
   if (__kmpc_is_generic_main_thread(tid))
     return 0;
   else
@@ -84,7 +84,7 @@ int GetLogicalThreadIdInBlock() {
 ////////////////////////////////////////////////////////////////////////////////
 
 int GetOmpThreadId() {
-  int tid = GetThreadIdInBlock();
+  int tid = __kmpc_get_hardware_thread_id_in_block();
   if (__kmpc_is_generic_main_thread(tid))
     return 0;
   // omp_thread_num

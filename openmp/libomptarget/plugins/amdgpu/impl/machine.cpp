@@ -5,10 +5,9 @@
  *===------------------------------------------------------------------------*/
 #include "machine.h"
 #include "atmi_runtime.h"
+#include "hsa_api.h"
 #include "internal.h"
 #include <cassert>
-#include <hsa.h>
-#include <hsa_ext_amd.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <vector>

@@ -67,6 +67,10 @@ public:
 
   lldb::TraceCursorUP GetCursor(Thread &thread) override;
 
+  void DumpTraceInfo(Thread &thread, Stream &s, bool verbose) override;
+
+  llvm::Optional<size_t> GetRawTraceSize(Thread &thread);
+
   void DoRefreshLiveProcessState(
       llvm::Expected<TraceGetStateResponse> state) override;
 

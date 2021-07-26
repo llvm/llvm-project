@@ -230,7 +230,6 @@ class ThreadSpec;
 class ThreadPostMortemTrace;
 class Trace;
 class TraceCursor;
-class TraceSessionFileParser;
 class Type;
 class TypeAndOrName;
 class TypeCategoryImpl;

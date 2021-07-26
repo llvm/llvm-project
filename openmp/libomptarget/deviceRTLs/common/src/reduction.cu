@@ -47,7 +47,7 @@ INLINE static void gpu_irregular_warp_reduce(void *reduce_data,
 INLINE static uint32_t
 gpu_irregular_simd_reduce(void *reduce_data, kmp_ShuffleReductFctPtr shflFct) {
   uint32_t size, remote_id, physical_lane_id;
-  physical_lane_id = GetThreadIdInBlock() % WARPSIZE;
+  physical_lane_id = __kmpc_get_hardware_thread_id_in_block() % WARPSIZE;
   __kmpc_impl_lanemask_t lanemask_lt = __kmpc_impl_lanemask_lt();
   __kmpc_impl_lanemask_t Liveness = __kmpc_impl_activemask();
   uint32_t logical_lane_id = __kmpc_impl_popc(Liveness & lanemask_lt) * 2;
@@ -95,9 +95,10 @@ static int32_t nvptx_parallel_reduce_nowait(
   if ((NumThreads % WARPSIZE == 0) || (WarpId < WarpsNeeded - 1))
     gpu_regular_warp_reduce(reduce_data, shflFct);
   else if (NumThreads > 1) // Only SPMD execution mode comes thru this case.
-    gpu_irregular_warp_reduce(reduce_data, shflFct,
-                              /*LaneCount=*/NumThreads % WARPSIZE,
-                              /*LaneId=*/GetThreadIdInBlock() % WARPSIZE);
+    gpu_irregular_warp_reduce(
+        reduce_data, shflFct,
+        /*LaneCount=*/NumThreads % WARPSIZE,
+        /*LaneId=*/__kmpc_get_hardware_thread_id_in_block() % WARPSIZE);
 
   // When we have more than [warpsize] number of threads
   // a block reduction is performed here.
@@ -118,9 +119,10 @@ static int32_t nvptx_parallel_reduce_nowait(
   if (Liveness == __kmpc_impl_all_lanes) // Full warp
     gpu_regular_warp_reduce(reduce_data, shflFct);
   else if (!(Liveness & (Liveness + 1))) // Partial warp but contiguous lanes
-    gpu_irregular_warp_reduce(reduce_data, shflFct,
-                              /*LaneCount=*/__kmpc_impl_popc(Liveness),
-                              /*LaneId=*/GetThreadIdInBlock() % WARPSIZE);
+    gpu_irregular_warp_reduce(
+        reduce_data, shflFct,
+        /*LaneCount=*/__kmpc_impl_popc(Liveness),
+        /*LaneId=*/__kmpc_get_hardware_thread_id_in_block() % WARPSIZE);
   else if (!isRuntimeUninitialized) // Dispersed lanes. Only threads in L2
                                     // parallel region may enter here; return
                                     // early.
@@ -185,7 +187,7 @@ EXTERN int32_t __kmpc_nvptx_teams_reduce_nowait_v2(
 
   // Terminate all threads in non-SPMD mode except for the master thread.
   if (!__kmpc_is_spmd_exec_mode() &&
-      !__kmpc_is_generic_main_thread(GetThreadIdInBlock()))
+      !__kmpc_is_generic_main_thread(__kmpc_get_hardware_thread_id_in_block()))
     return 0;
 
   uint32_t ThreadId = GetLogicalThreadIdInBlock();

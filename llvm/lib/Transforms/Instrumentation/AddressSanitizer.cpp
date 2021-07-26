@@ -2138,6 +2138,8 @@ Instruction *ModuleAddressSanitizer::CreateAsanModuleDtor(Module &M) {
       GlobalValue::InternalLinkage, 0, kAsanModuleDtorName, &M);
   AsanDtorFunction->addAttribute(AttributeList::FunctionIndex,
                                  Attribute::NoUnwind);
+  // Ensure Dtor cannot be discarded, even if in a comdat.
+  appendToUsed(M, {AsanDtorFunction});
   BasicBlock *AsanDtorBB = BasicBlock::Create(*C, "", AsanDtorFunction);
 
   return ReturnInst::Create(*C, AsanDtorBB);

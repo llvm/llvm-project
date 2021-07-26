@@ -237,9 +237,7 @@ detail::OperandStorage::~OperandStorage() {
   if (isDynamicStorage()) {
     TrailingOperandStorage &storage = getDynamicStorage();
     storage.~TrailingOperandStorage();
-    // Workaround false positive in -Wfree-nonheap-object
-    auto *mem = &storage;
-    free(mem);
+    free(&storage);
   } else {
     getInlineStorage().~TrailingOperandStorage();
   }
@@ -373,11 +371,8 @@ MutableArrayRef<OpOperand> detail::OperandStorage::resize(Operation *owner,
     new (&newOperands[numOperands]) OpOperand(owner);
 
   // If the current storage is also dynamic, free it.
-  if (isDynamicStorage()) {
-    // Workaround false positive in -Wfree-nonheap-object
-    auto *mem = &storage;
-    free(mem);
-  }
+  if (isDynamicStorage())
+    free(&storage);
 
   // Update the storage representation to use the new dynamic storage.
   dynamicStorage.setPointerAndInt(newStorage, true);

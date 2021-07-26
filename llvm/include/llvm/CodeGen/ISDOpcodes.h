@@ -601,15 +601,12 @@ enum NodeType {
 
   /// STEP_VECTOR(IMM) - Returns a scalable vector whose lanes are comprised
   /// of a linear sequence of unsigned values starting from 0 with a step of
-  /// IMM, where IMM must be a vector index constant integer value which must
-  /// fit in the vector element type.
-  /// Note that IMM may be a smaller type than the vector element type, in
-  /// which case the step is implicitly sign-extended to the vector element
-  /// type. IMM may also be a larger type than the vector element type, in
-  /// which case the step is implicitly truncated to the vector element type.
+  /// IMM, where IMM must be a TargetConstant with type equal to the vector
+  /// element type. The arithmetic is performed modulo the bitwidth of the
+  /// element.
+  ///
   /// The operation does not support returning fixed-width vectors or
-  /// non-constant operands. If the sequence value exceeds the limit allowed
-  /// for the element type then the values for those lanes are undefined.
+  /// non-constant operands.
   STEP_VECTOR,
 
   /// MULHU/MULHS - Multiply high - Multiply two integers of type iN,

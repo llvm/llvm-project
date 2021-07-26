@@ -7,7 +7,7 @@
 #define SRC_RUNTIME_INCLUDE_RT_H_
 
 #include "atmi_runtime.h"
-#include "hsa.h"
+#include "hsa_api.h"
 #include <string>
 
 namespace core {

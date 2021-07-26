@@ -772,8 +772,6 @@
 ; GCN-O2-NEXT:      AMDGPU Annotate Kernel Features
 ; GCN-O2-NEXT:      FunctionPass Manager
 ; GCN-O2-NEXT:        AMDGPU Lower Kernel Arguments
-; GCN-O2-NEXT:      Analysis if a function is memory bound
-; GCN-O2-NEXT:      FunctionPass Manager
 ; GCN-O2-NEXT:        Dominator Tree Construction
 ; GCN-O2-NEXT:        Natural Loop Information
 ; GCN-O2-NEXT:        CodeGen Prepare
@@ -822,6 +820,7 @@
 ; GCN-O2-NEXT:        SI annotate control flow
 ; GCN-O2-NEXT:        LCSSA Verifier
 ; GCN-O2-NEXT:        Loop-Closed SSA Form Pass
+; GCN-O2-NEXT:      Analysis if a function is memory bound
 ; GCN-O2-NEXT:      DummyCGSCCPass
 ; GCN-O2-NEXT:      FunctionPass Manager
 ; GCN-O2-NEXT:        Safe Stack instrumentation pass
@@ -1073,8 +1072,6 @@
 ; GCN-O3-NEXT:      AMDGPU Annotate Kernel Features
 ; GCN-O3-NEXT:      FunctionPass Manager
 ; GCN-O3-NEXT:        AMDGPU Lower Kernel Arguments
-; GCN-O3-NEXT:      Analysis if a function is memory bound
-; GCN-O3-NEXT:      FunctionPass Manager
 ; GCN-O3-NEXT:        Dominator Tree Construction
 ; GCN-O3-NEXT:        Natural Loop Information
 ; GCN-O3-NEXT:        CodeGen Prepare
@@ -1123,6 +1120,7 @@
 ; GCN-O3-NEXT:        SI annotate control flow
 ; GCN-O3-NEXT:        LCSSA Verifier
 ; GCN-O3-NEXT:        Loop-Closed SSA Form Pass
+; GCN-O3-NEXT:      Analysis if a function is memory bound
 ; GCN-O3-NEXT:      DummyCGSCCPass
 ; GCN-O3-NEXT:      FunctionPass Manager
 ; GCN-O3-NEXT:        Safe Stack instrumentation pass

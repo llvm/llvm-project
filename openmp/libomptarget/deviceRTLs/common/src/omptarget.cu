@@ -34,7 +34,7 @@ static void __kmpc_generic_kernel_init() {
   if (GetLaneId() == 0)
     parallelLevel[GetWarpId()] = 0;
 
-  int threadIdInBlock = GetThreadIdInBlock();
+  int threadIdInBlock = __kmpc_get_hardware_thread_id_in_block();
   if (threadIdInBlock != GetMasterThreadID())
     return;
 
@@ -87,7 +87,7 @@ static void __kmpc_spmd_kernel_init(bool RequiresFullRuntime) {
 
   setExecutionParameters(Spmd, RequiresFullRuntime ? RuntimeInitialized
                          : RuntimeUninitialized);
-  int threadId = GetThreadIdInBlock();
+  int threadId = __kmpc_get_hardware_thread_id_in_block();
   if (threadId == 0) {
     usedSlotIdx = __kmpc_impl_smid() % MAX_SM;
   }
@@ -147,7 +147,7 @@ static void __kmpc_spmd_kernel_deinit(bool RequiresFullRuntime) {
     return;
 
   __kmpc_impl_syncthreads();
-  int threadId = GetThreadIdInBlock();
+  int threadId = __kmpc_get_hardware_thread_id_in_block();
   if (threadId == 0) {
     // Enqueue omp state object for use by another team.
     int slot = usedSlotIdx;
@@ -169,7 +169,7 @@ EXTERN bool __kmpc_kernel_parallel(void**WorkFn);
 
 static void __kmpc_target_region_state_machine(ident_t *Ident) {
 
-  int TId = GetThreadIdInBlock();
+  int TId = __kmpc_get_hardware_thread_id_in_block();
   do {
     void* WorkFn = 0;
 
@@ -199,7 +199,7 @@ EXTERN
 int32_t __kmpc_target_init(ident_t *Ident, bool IsSPMD,
                            bool UseGenericStateMachine,
                            bool RequiresFullRuntime) {
-  int TId = GetThreadIdInBlock();
+  int TId = __kmpc_get_hardware_thread_id_in_block();
   if (IsSPMD)
     __kmpc_spmd_kernel_init(RequiresFullRuntime);
   else

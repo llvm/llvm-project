@@ -127,7 +127,8 @@ private:
 class DecodedThread : public std::enable_shared_from_this<DecodedThread> {
 public:
   DecodedThread(lldb::ThreadSP thread_sp,
-                std::vector<IntelPTInstruction> &&instructions);
+                std::vector<IntelPTInstruction> &&instructions,
+                size_t raw_trace_size);
 
   /// Constructor with a single error signaling a complete failure of the
   /// decoding process.
@@ -143,9 +144,16 @@ public:
   /// Get a new cursor for the decoded thread.
   lldb::TraceCursorUP GetCursor();
 
+  /// Get the size in bytes of the corresponding Intel PT raw trace
+  ///
+  /// \return
+  ///   The size of the trace.
+  size_t GetRawTraceSize() const;
+
 private:
   lldb::ThreadSP m_thread_sp;
   std::vector<IntelPTInstruction> m_instructions;
+  size_t m_raw_trace_size;
 };
 
 using DecodedThreadSP = std::shared_ptr<DecodedThread>;

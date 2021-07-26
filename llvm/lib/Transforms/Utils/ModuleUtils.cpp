@@ -128,6 +128,8 @@ Function *llvm::createSanitizerCtor(Module &M, StringRef CtorName) {
   Ctor->addAttribute(AttributeList::FunctionIndex, Attribute::NoUnwind);
   BasicBlock *CtorBB = BasicBlock::Create(M.getContext(), "", Ctor);
   ReturnInst::Create(M.getContext(), CtorBB);
+  // Ensure Ctor cannot be discarded, even if in a comdat.
+  appendToUsed(M, {Ctor});
   return Ctor;
 }
 

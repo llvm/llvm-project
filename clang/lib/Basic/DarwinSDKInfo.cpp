@@ -115,13 +115,8 @@ clang::parseDarwinSDKInfo(llvm::vfs::FileSystem &VFS, StringRef SDKRootPath) {
     return Result.takeError();
 
   if (const auto *Obj = Result->getAsObject()) {
-    // FIXME: Switch to use parseDarwinSDKSettingsJSON.
-    auto VersionString = Obj->getString("Version");
-    if (VersionString) {
-      VersionTuple Version;
-      if (!Version.tryParse(*VersionString))
-        return DarwinSDKInfo(Version, Version);
-    }
+    if (auto SDKInfo = DarwinSDKInfo::parseDarwinSDKSettingsJSON(Obj))
+      return std::move(SDKInfo);
   }
   return llvm::make_error<llvm::StringError>("invalid SDKSettings.json",
                                              llvm::inconvertibleErrorCode());
