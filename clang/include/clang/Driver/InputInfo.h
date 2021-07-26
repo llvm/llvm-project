@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef LLVM_CLANG_LIB_DRIVER_INPUTINFO_H
-#define LLVM_CLANG_LIB_DRIVER_INPUTINFO_H
+#ifndef LLVM_CLANG_DRIVER_INPUTINFO_H
+#define LLVM_CLANG_DRIVER_INPUTINFO_H
 
 #include "clang/Driver/Action.h"
 #include "clang/Driver/Types.h"
