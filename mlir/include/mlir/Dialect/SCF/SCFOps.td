@@ -573,8 +573,8 @@ def WhileOp : SCF_Op<"while",
     of the `scf.condition` terminator either to the "after" region if the
     control flow is transferred there or to results of the `scf.while` operation
     otherwise. The "after" region takes as arguments the values produced by the
-    "before" region and uses `scf.yield` to supply new arguments for the "after"
-    region, into which it transfers the control flow unconditionally.
+    "before" region and uses `scf.yield` to supply new arguments for the
+    "before" region, into which it transfers the control flow unconditionally.
 
     A simple "while" loop can be represented as follows.
 
