@@ -215,6 +215,10 @@ def IsMemRefTypePred : CPred<"$_self.isa<::mlir::MemRefType>()">;
 def IsUnrankedMemRefTypePred
         : CPred<"$_self.isa<::mlir::UnrankedMemRefType>()">;
 
+// Whether a type is an UnrankedTensorType
+def IsUnrankedTensorTypePred
+        : CPred<"$_self.isa<::mlir::UnrankedTensorType>()">;
+
 // Whether a type is a BaseMemRefType
 def IsBaseMemRefTypePred
         : CPred<"$_self.isa<::mlir::BaseMemRefType>()">;
@@ -623,6 +627,12 @@ class RankedTensorOf<list<Type> allowedTypes> :
   "ranked tensor", "::mlir::TensorType">;
 
 def AnyTensor : TensorOf<[AnyType]>;
+
+// Unranked Memref type
+class UnrankedTensorOf<list<Type> allowedTypes> :
+    ShapedContainerType<allowedTypes,
+                        IsUnrankedTensorTypePred,
+                        "unranked.tensor", "::mlir::UnrankedTensorType">;
 
 def AnyRankedTensor : RankedTensorOf<[AnyType]>;
 
