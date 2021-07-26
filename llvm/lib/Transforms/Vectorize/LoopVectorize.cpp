@@ -6887,7 +6887,8 @@ LoopVectorizationCostModel::expectedCost(
       VectorizationCostTy C = getInstructionCost(&I, VF);
 
       // Check if we should override the cost.
-      if (ForceTargetInstructionCost.getNumOccurrences() > 0)
+      if (C.first.isValid() &&
+          ForceTargetInstructionCost.getNumOccurrences() > 0)
         C.first = InstructionCost(ForceTargetInstructionCost);
 
       // Keep a list of instructions with invalid costs.
