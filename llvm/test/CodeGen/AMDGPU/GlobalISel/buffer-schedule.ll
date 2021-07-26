@@ -1,10 +1,8 @@
 ; RUN: llc -global-isel -mtriple=amdgcn-amd-amdpal -mcpu=gfx900 -verify-machineinstrs < %s | FileCheck -check-prefixes=GCN %s
 
-; FIXME: the first load and store should not be reordered because they might
-; alias depending on the value of %off
 ; GCN-LABEL: {{^}}test1:
-; GCN: buffer_load_dword
 ; GCN: buffer_store_dword
+; GCN: buffer_load_dword
 ; GCN: buffer_store_dword
 define amdgpu_cs void @test1(<4 x i32> inreg %buf, i32 %off) {
 .entry:
