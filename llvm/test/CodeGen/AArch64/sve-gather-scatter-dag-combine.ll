@@ -32,6 +32,7 @@ define <vscale x 2 x i64> @no_dag_combine_sext(<vscale x 2 x i1> %pg,
 ; CHECK-LABEL: no_dag_combine_sext
 ; CHECK:  	ld1b	{ z1.d }, p0/z, [z0.d, #16]
 ; CHECK-NEXT:	ptrue	p0.d
+; CHECK-NEXT: movprfx z0, z1
 ; CHECK-NEXT:	sxtb	z0.d, p0/m, z1.d
 ; CHECK-NEXT:	st1b	{ z1.d }, p1, [x0]
 ; CHECK-NEXT:	ret

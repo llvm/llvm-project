@@ -466,6 +466,9 @@ bool AArch64ExpandPseudo::expand_DestructiveOp(
   case AArch64::DestructiveBinaryImm:
     std::tie(PredIdx, DOPIdx, SrcIdx) = std::make_tuple(1, 2, 3);
     break;
+  case AArch64::DestructiveUnaryPassthru:
+    std::tie(PredIdx, DOPIdx, SrcIdx) = std::make_tuple(2, 3, 3);
+    break;
   case AArch64::DestructiveTernaryCommWithRev:
     std::tie(PredIdx, DOPIdx, SrcIdx, Src2Idx) = std::make_tuple(1, 2, 3, 4);
     if (DstReg == MI.getOperand(3).getReg()) {
@@ -494,6 +497,7 @@ bool AArch64ExpandPseudo::expand_DestructiveOp(
       DstReg != MI.getOperand(DOPIdx).getReg() ||
       MI.getOperand(DOPIdx).getReg() != MI.getOperand(SrcIdx).getReg();
     break;
+  case AArch64::DestructiveUnaryPassthru:
   case AArch64::DestructiveBinaryImm:
     DOPRegIsUnique = true;
     break;
@@ -578,6 +582,11 @@ bool AArch64ExpandPseudo::expand_DestructiveOp(
     .addReg(DstReg, RegState::Define | getDeadRegState(DstIsDead));
 
   switch (DType) {
+  case AArch64::DestructiveUnaryPassthru:
+    DOP.addReg(MI.getOperand(DOPIdx).getReg(), RegState::Kill)
+        .add(MI.getOperand(PredIdx))
+        .add(MI.getOperand(SrcIdx));
+    break;
   case AArch64::DestructiveBinaryImm:
   case AArch64::DestructiveBinaryComm:
   case AArch64::DestructiveBinaryCommWithRev:

@@ -36,6 +36,7 @@ def DestructiveBinary             : DestructiveInstTypeEnum<5>;
 def DestructiveBinaryComm         : DestructiveInstTypeEnum<6>;
 def DestructiveBinaryCommWithRev  : DestructiveInstTypeEnum<7>;
 def DestructiveTernaryCommWithRev : DestructiveInstTypeEnum<8>;
+def DestructiveUnaryPassthru      : DestructiveInstTypeEnum<9>;
 
 class FalseLanesEnum<bits<2> val> {
   bits<2> Value = val;
