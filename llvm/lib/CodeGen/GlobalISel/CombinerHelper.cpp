@@ -2807,6 +2807,14 @@ bool CombinerHelper::replaceInstWithConstant(MachineInstr &MI, int64_t C) {
   return true;
 }
 
+bool CombinerHelper::replaceInstWithConstant(MachineInstr &MI, APInt C) {
+  assert(MI.getNumDefs() == 1 && "Expected only one def?");
+  Builder.setInstr(MI);
+  Builder.buildConstant(MI.getOperand(0), C);
+  MI.eraseFromParent();
+  return true;
+}
+
 bool CombinerHelper::replaceInstWithUndef(MachineInstr &MI) {
   assert(MI.getNumDefs() == 1 && "Expected only one def?");
   Builder.setInstr(MI);
@@ -4244,6 +4252,16 @@ bool CombinerHelper::matchReassocPtrAdd(
     };
   }
   return !reassociationCanBreakAddressingModePattern(MI);
+}
+
+bool CombinerHelper::matchConstantFold(MachineInstr &MI, APInt &MatchInfo) {
+  Register Op1 = MI.getOperand(1).getReg();
+  Register Op2 = MI.getOperand(2).getReg();
+  auto MaybeCst = ConstantFoldBinOp(MI.getOpcode(), Op1, Op2, MRI);
+  if (!MaybeCst)
+    return false;
+  MatchInfo = *MaybeCst;
+  return true;
 }
 
 bool CombinerHelper::tryCombine(MachineInstr &MI) {
