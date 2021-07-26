@@ -234,7 +234,6 @@ class SimplifyCFGOpt {
   bool FoldValueComparisonIntoPredecessors(Instruction *TI,
                                            IRBuilder<> &Builder);
 
-  bool simplifyReturn(ReturnInst *RI, IRBuilder<> &Builder);
   bool simplifyResume(ResumeInst *RI, IRBuilder<> &Builder);
   bool simplifySingleResume(ResumeInst *RI);
   bool simplifyCommonResume(ResumeInst *RI);
@@ -245,7 +244,6 @@ class SimplifyCFGOpt {
   bool simplifyBranch(BranchInst *Branch, IRBuilder<> &Builder);
   bool simplifyUncondBranch(BranchInst *BI, IRBuilder<> &Builder);
   bool simplifyCondBranch(BranchInst *BI, IRBuilder<> &Builder);
-  bool SimplifyCondBranchToTwoReturns(BranchInst *BI, IRBuilder<> &Builder);
 
   bool tryToSimplifyUncondBranchWithICmpInIt(ICmpInst *ICI,
                                              IRBuilder<> &Builder);
@@ -2903,103 +2901,6 @@ static bool FoldTwoEntryPHINode(PHINode *PN, const TargetTransformInfo &TTI,
   return true;
 }
 
-/// If we found a conditional branch that goes to two returning blocks,
-/// try to merge them together into one return,
-/// introducing a select if the return values disagree.
-bool SimplifyCFGOpt::SimplifyCondBranchToTwoReturns(BranchInst *BI,
-                                                    IRBuilder<> &Builder) {
-  auto *BB = BI->getParent();
-  assert(BI->isConditional() && "Must be a conditional branch");
-  BasicBlock *TrueSucc = BI->getSuccessor(0);
-  BasicBlock *FalseSucc = BI->getSuccessor(1);
-  if (TrueSucc == FalseSucc)
-    return false;
-  ReturnInst *TrueRet = cast<ReturnInst>(TrueSucc->getTerminator());
-  ReturnInst *FalseRet = cast<ReturnInst>(FalseSucc->getTerminator());
-
-  // Check to ensure both blocks are empty (just a return) or optionally empty
-  // with PHI nodes.  If there are other instructions, merging would cause extra
-  // computation on one path or the other.
-  if (!TrueSucc->getFirstNonPHIOrDbg()->isTerminator())
-    return false;
-  if (!FalseSucc->getFirstNonPHIOrDbg()->isTerminator())
-    return false;
-
-  Builder.SetInsertPoint(BI);
-  // Okay, we found a branch that is going to two return nodes.  If
-  // there is no return value for this function, just change the
-  // branch into a return.
-  if (FalseRet->getNumOperands() == 0) {
-    TrueSucc->removePredecessor(BB);
-    FalseSucc->removePredecessor(BB);
-    Builder.CreateRetVoid();
-    EraseTerminatorAndDCECond(BI);
-    if (DTU)
-      DTU->applyUpdates({{DominatorTree::Delete, BB, TrueSucc},
-                         {DominatorTree::Delete, BB, FalseSucc}});
-    return true;
-  }
-
-  // Otherwise, figure out what the true and false return values are
-  // so we can insert a new select instruction.
-  Value *TrueValue = TrueRet->getReturnValue();
-  Value *FalseValue = FalseRet->getReturnValue();
-
-  // Unwrap any PHI nodes in the return blocks.
-  if (PHINode *TVPN = dyn_cast_or_null<PHINode>(TrueValue))
-    if (TVPN->getParent() == TrueSucc)
-      TrueValue = TVPN->getIncomingValueForBlock(BB);
-  if (PHINode *FVPN = dyn_cast_or_null<PHINode>(FalseValue))
-    if (FVPN->getParent() == FalseSucc)
-      FalseValue = FVPN->getIncomingValueForBlock(BB);
-
-  // In order for this transformation to be safe, we must be able to
-  // unconditionally execute both operands to the return.  This is
-  // normally the case, but we could have a potentially-trapping
-  // constant expression that prevents this transformation from being
-  // safe.
-  if (ConstantExpr *TCV = dyn_cast_or_null<ConstantExpr>(TrueValue))
-    if (TCV->canTrap())
-      return false;
-  if (ConstantExpr *FCV = dyn_cast_or_null<ConstantExpr>(FalseValue))
-    if (FCV->canTrap())
-      return false;
-
-  // Okay, we collected all the mapped values and checked them for sanity, and
-  // defined to really do this transformation.  First, update the CFG.
-  TrueSucc->removePredecessor(BB);
-  FalseSucc->removePredecessor(BB);
-
-  // Insert select instructions where needed.
-  Value *BrCond = BI->getCondition();
-  if (TrueValue) {
-    // Insert a select if the results differ.
-    if (TrueValue == FalseValue || isa<UndefValue>(FalseValue)) {
-    } else if (isa<UndefValue>(TrueValue)) {
-      TrueValue = FalseValue;
-    } else {
-      TrueValue =
-          Builder.CreateSelect(BrCond, TrueValue, FalseValue, "retval", BI);
-    }
-  }
-
-  Value *RI =
-      !TrueValue ? Builder.CreateRetVoid() : Builder.CreateRet(TrueValue);
-
-  (void)RI;
-
-  LLVM_DEBUG(dbgs() << "\nCHANGING BRANCH TO TWO RETURNS INTO SELECT:"
-                    << "\n  " << *BI << "\nNewRet = " << *RI << "\nTRUEBLOCK: "
-                    << *TrueSucc << "\nFALSEBLOCK: " << *FalseSucc);
-
-  EraseTerminatorAndDCECond(BI);
-  if (DTU)
-    DTU->applyUpdates({{DominatorTree::Delete, BB, TrueSucc},
-                       {DominatorTree::Delete, BB, FalseSucc}});
-
-  return true;
-}
-
 static Value *createLogicalOp(IRBuilderBase &Builder,
                               Instruction::BinaryOps Opc, Value *LHS,
                               Value *RHS, const Twine &Name = "") {
@@ -4625,35 +4526,6 @@ bool SimplifyCFGOpt::simplifyCleanupReturn(CleanupReturnInst *RI) {
   if (removeEmptyCleanup(RI, DTU))
     return true;
 
-  return false;
-}
-
-bool SimplifyCFGOpt::simplifyReturn(ReturnInst *RI, IRBuilder<> &Builder) {
-  BasicBlock *BB = RI->getParent();
-  if (!BB->getFirstNonPHIOrDbg()->isTerminator())
-    return false;
-
-  // Find predecessors that end with branches.
-  SmallVector<BranchInst *, 8> CondBranchPreds;
-  for (BasicBlock *P : predecessors(BB)) {
-    Instruction *PTI = P->getTerminator();
-    if (BranchInst *BI = dyn_cast<BranchInst>(PTI))
-      if (BI->isConditional())
-        CondBranchPreds.push_back(BI);
-  }
-
-  // Check out all of the conditional branches going to this return
-  // instruction.  If any of them just select between returns, change the
-  // branch itself into a select/return pair.
-  while (!CondBranchPreds.empty()) {
-    BranchInst *BI = CondBranchPreds.pop_back_val();
-
-    // Check to see if the non-BB successor is also a return block.
-    if (isa<ReturnInst>(BI->getSuccessor(0)->getTerminator()) &&
-        isa<ReturnInst>(BI->getSuccessor(1)->getTerminator()) &&
-        SimplifyCondBranchToTwoReturns(BI, Builder))
-      return true;
-  }
   return false;
 }
 
@@ -6746,9 +6618,6 @@ bool SimplifyCFGOpt::simplifyOnceImpl(BasicBlock *BB) {
   switch (Terminator->getOpcode()) {
   case Instruction::Br:
     Changed |= simplifyBranch(cast<BranchInst>(Terminator), Builder);
-    break;
-  case Instruction::Ret:
-    Changed |= simplifyReturn(cast<ReturnInst>(Terminator), Builder);
     break;
   case Instruction::Resume:
     Changed |= simplifyResume(cast<ResumeInst>(Terminator), Builder);
