@@ -1,5 +1,3 @@
-; RUN: not --crash llc -O0 -global-isel -global-isel-abort=1 -verify-machineinstrs %s -o - 2>&1 | FileCheck %s --check-prefix=ERROR
-; RUN: llc -O0 -global-isel -global-isel-abort=0 -verify-machineinstrs %s -o - 2>&1 | FileCheck %s --check-prefix=FALLBACK
 ; RUN: llc -O0 -global-isel -global-isel-abort=2 -pass-remarks-missed='gisel*' -verify-machineinstrs %s -o %t.out 2> %t.err
 ; RUN: FileCheck %s --check-prefix=FALLBACK-WITH-REPORT-OUT < %t.out
 ; RUN: FileCheck %s --check-prefix=FALLBACK-WITH-REPORT-ERR < %t.err
@@ -15,23 +13,6 @@ target triple = "aarch64--"
 
 ; BIG-ENDIAN: unable to translate in big endian mode
 
-; We use __fixunstfti as the common denominator for __fixunstfti on Linux and
-; ___fixunstfti on iOS
-; ERROR: unable to translate instruction: ret
-; FALLBACK: ldr q0,
-; FALLBACK-NEXT: bl __fixunstfti
-;
-; FALLBACK-WITH-REPORT-ERR: unable to translate instruction: ret
-; FALLBACK-WITH-REPORT-ERR: warning: Instruction selection used fallback path for ABIi128
-; FALLBACK-WITH-REPORT-OUT-LABEL: ABIi128:
-; FALLBACK-WITH-REPORT-OUT: ldr q0,
-; FALLBACK-WITH-REPORT-OUT-NEXT: bl __fixunstfti
-define i128 @ABIi128(i128 %arg1) {
-  %farg1 =       bitcast i128 %arg1 to fp128
-  %res = fptoui fp128 %farg1 to i128
-  ret i128 %res
-}
-
 ; FALLBACK-WITH-REPORT-ERR: remark: <unknown>:0:0: unable to legalize instruction: G_STORE %3:_(<3 x s32>), %4:_(p0) :: (store (<3 x s32>) into %ir.addr + 16, align 16, basealign 32) (in function: odd_vector)
 ; FALLBACK-WITH-REPORT-ERR: warning: Instruction selection used fallback path for odd_vector
 ; FALLBACK-WITH-REPORT-OUT-LABEL: odd_vector:
@@ -39,15 +20,6 @@ define void @odd_vector(<7 x i32>* %addr) {
   %vec = load <7 x i32>, <7 x i32>* %addr
   store <7 x i32> %vec, <7 x i32>* %addr
   ret void
-}
-
-  ; AArch64 was asserting instead of returning an invalid mapping for unknown
-  ; sizes.
-; FALLBACK-WITH-REPORT-ERR: remark: <unknown>:0:0: unable to translate instruction: ret: '  ret i128 undef' (in function: sequence_sizes)
-; FALLBACK-WITH-REPORT-ERR: warning: Instruction selection used fallback path for sequence_sizes
-; FALLBACK-WITH-REPORT-LABEL: sequence_sizes:
-define i128 @sequence_sizes([8 x i8] %in) {
-  ret i128 undef
 }
 
 ; Make sure we don't mess up metadata arguments.
