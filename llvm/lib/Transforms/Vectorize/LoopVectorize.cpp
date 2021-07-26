@@ -4164,14 +4164,10 @@ void InnerLoopVectorizer::fixCrossIterationPHIs(VPTransformState &State) {
   // the incoming edges.
   VPBasicBlock *Header = State.Plan->getEntry()->getEntryBasicBlock();
   for (VPRecipeBase &R : Header->phis()) {
-    auto *PhiR = dyn_cast<VPWidenPHIRecipe>(&R);
-    if (!PhiR)
-      continue;
-    auto *OrigPhi = cast<PHINode>(PhiR->getUnderlyingValue());
-    if (auto *ReductionPhi = dyn_cast<VPReductionPHIRecipe>(PhiR)) {
+    if (auto *ReductionPhi = dyn_cast<VPReductionPHIRecipe>(&R))
       fixReduction(ReductionPhi, State);
-    } else if (Legal->isFirstOrderRecurrence(OrigPhi))
-      fixFirstOrderRecurrence(PhiR, State);
+    else if (auto *FOR = dyn_cast<VPFirstOrderRecurrencePHIRecipe>(&R))
+      fixFirstOrderRecurrence(FOR, State);
   }
 }
 
@@ -4200,7 +4196,7 @@ void InnerLoopVectorizer::fixFirstOrderRecurrence(VPWidenPHIRecipe *PhiR,
   //
   // In this example, s1 is a recurrence because it's value depends on the
   // previous iteration. In the first phase of vectorization, we created a
-  // temporary value for s1. We now complete the vectorization and produce the
+  // vector phi v1 for s1. We now complete the vectorization and produce the
   // shorthand vector IR shown below (for VF = 4, UF = 1).
   //
   //   vector.ph:
@@ -4226,82 +4222,19 @@ void InnerLoopVectorizer::fixFirstOrderRecurrence(VPWidenPHIRecipe *PhiR,
   // After execution completes the vector loop, we extract the next value of
   // the recurrence (x) to use as the initial value in the scalar loop.
 
-  auto *ScalarInit = PhiR->getStartValue()->getLiveInIRValue();
-
   auto *IdxTy = Builder.getInt32Ty();
-  auto *One = ConstantInt::get(IdxTy, 1);
-
-  // Create a vector from the initial value.
-  auto *VectorInit = ScalarInit;
-  if (VF.isVector()) {
-    Builder.SetInsertPoint(LoopVectorPreHeader->getTerminator());
-    auto *RuntimeVF = getRuntimeVF(Builder, IdxTy, VF);
-    auto *LastIdx = Builder.CreateSub(RuntimeVF, One);
-    VectorInit = Builder.CreateInsertElement(
-        PoisonValue::get(VectorType::get(VectorInit->getType(), VF)),
-        VectorInit, LastIdx, "vector.recur.init");
-  }
-
-  VPValue *PreviousDef = PhiR->getBackedgeValue();
-  // We constructed a temporary phi node in the first phase of vectorization.
-  // This phi node will eventually be deleted.
-  Builder.SetInsertPoint(cast<Instruction>(State.get(PhiR, 0)));
-
-  // Create a phi node for the new recurrence. The current value will either be
-  // the initial value inserted into a vector or loop-varying vector value.
-  auto *VecPhi = Builder.CreatePHI(VectorInit->getType(), 2, "vector.recur");
-  VecPhi->addIncoming(VectorInit, LoopVectorPreHeader);
-
-  // Get the vectorized previous value of the last part UF - 1. It appears last
-  // among all unrolled iterations, due to the order of their construction.
-  Value *PreviousLastPart = State.get(PreviousDef, UF - 1);
-
-  // Find and set the insertion point after the previous value if it is an
-  // instruction.
-  BasicBlock::iterator InsertPt;
-  // Note that the previous value may have been constant-folded so it is not
-  // guaranteed to be an instruction in the vector loop.
-  // FIXME: Loop invariant values do not form recurrences. We should deal with
-  //        them earlier.
-  if (LI->getLoopFor(LoopVectorBody)->isLoopInvariant(PreviousLastPart))
-    InsertPt = LoopVectorBody->getFirstInsertionPt();
-  else {
-    Instruction *PreviousInst = cast<Instruction>(PreviousLastPart);
-    if (isa<PHINode>(PreviousLastPart))
-      // If the previous value is a phi node, we should insert after all the phi
-      // nodes in the block containing the PHI to avoid breaking basic block
-      // verification. Note that the basic block may be different to
-      // LoopVectorBody, in case we predicate the loop.
-      InsertPt = PreviousInst->getParent()->getFirstInsertionPt();
-    else
-      InsertPt = ++PreviousInst->getIterator();
-  }
-  Builder.SetInsertPoint(&*InsertPt);
-
-  // The vector from which to take the initial value for the current iteration
-  // (actual or unrolled). Initially, this is the vector phi node.
-  Value *Incoming = VecPhi;
-
-  // Shuffle the current and previous vector and update the vector parts.
-  for (unsigned Part = 0; Part < UF; ++Part) {
-    Value *PreviousPart = State.get(PreviousDef, Part);
-    Value *PhiPart = State.get(PhiR, Part);
-    auto *Shuffle = VF.isVector()
-                        ? Builder.CreateVectorSplice(Incoming, PreviousPart, -1)
-                        : Incoming;
-    PhiPart->replaceAllUsesWith(Shuffle);
-    cast<Instruction>(PhiPart)->eraseFromParent();
-    State.reset(PhiR, Shuffle, Part);
-    Incoming = PreviousPart;
-  }
+  auto *VecPhi = cast<PHINode>(State.get(PhiR, 0));
 
   // Fix the latch value of the new recurrence in the vector loop.
+  VPValue *PreviousDef = PhiR->getBackedgeValue();
+  Value *Incoming = State.get(PreviousDef, UF - 1);
   VecPhi->addIncoming(Incoming, LI->getLoopFor(LoopVectorBody)->getLoopLatch());
 
   // Extract the last vector element in the middle block. This will be the
   // initial value for the recurrence when jumping to the scalar loop.
   auto *ExtractForScalar = Incoming;
   if (VF.isVector()) {
+    auto *One = ConstantInt::get(IdxTy, 1);
     Builder.SetInsertPoint(LoopMiddleBlock->getTerminator());
     auto *RuntimeVF = getRuntimeVF(Builder, IdxTy, VF);
     auto *LastIdx = Builder.CreateSub(RuntimeVF, One);
@@ -4330,6 +4263,7 @@ void InnerLoopVectorizer::fixFirstOrderRecurrence(VPWidenPHIRecipe *PhiR,
   Builder.SetInsertPoint(&*LoopScalarPreHeader->begin());
   PHINode *Phi = cast<PHINode>(PhiR->getUnderlyingValue());
   auto *Start = Builder.CreatePHI(Phi->getType(), 2, "scalar.recur.init");
+  auto *ScalarInit = PhiR->getStartValue()->getLiveInIRValue();
   for (auto *BB : predecessors(LoopScalarPreHeader)) {
     auto *Incoming = BB == LoopMiddleBlock ? ExtractForScalar : ScalarInit;
     Start->addIncoming(Incoming, BB);
@@ -4785,18 +4719,6 @@ void InnerLoopVectorizer::widenPHIInstruction(Instruction *PN,
   // Phi nodes have cycles, so we need to vectorize them in two stages. This is
   // stage #1: We create a new vector PHI node with no incoming edges. We'll use
   // this value when we vectorize all of the instructions that use the PHI.
-  if (Legal->isFirstOrderRecurrence(P)) {
-    Type *VecTy = State.VF.isScalar()
-                      ? PN->getType()
-                      : VectorType::get(PN->getType(), State.VF);
-
-    for (unsigned Part = 0; Part < State.UF; ++Part) {
-      Value *EntryPart = PHINode::Create(
-          VecTy, 2, "vec.phi", &*LoopVectorBody->getFirstInsertionPt());
-      State.set(PhiR, EntryPart, Part);
-    }
-      return;
-  }
 
   assert(!Legal->isReductionVariable(P) &&
          "reductions should be handled elsewhere");
@@ -9076,7 +8998,7 @@ VPRecipeBuilder::tryToCreateWidenRecipe(Instruction *Instr,
                                              CM.isInLoopReduction(Phi),
                                              CM.useOrderedReductions(RdxDesc));
       } else {
-        PhiRecipe = new VPWidenPHIRecipe(Phi, *StartV);
+        PhiRecipe = new VPFirstOrderRecurrencePHIRecipe(Phi, *StartV);
       }
 
       // Record the incoming value from the backedge, so we can add the incoming
@@ -9317,23 +9239,22 @@ VPlanPtr LoopVectorizationPlanner::buildVPlanWithVPRecipes(
   // ---------------------------------------------------------------------------
 
   // Apply Sink-After legal constraints.
+  auto GetReplicateRegion = [](VPRecipeBase *R) -> VPRegionBlock * {
+    auto *Region = dyn_cast_or_null<VPRegionBlock>(R->getParent()->getParent());
+    if (Region && Region->isReplicator()) {
+      assert(Region->getNumSuccessors() == 1 &&
+             Region->getNumPredecessors() == 1 && "Expected SESE region!");
+      assert(R->getParent()->size() == 1 &&
+             "A recipe in an original replicator region must be the only "
+             "recipe in its block");
+      return Region;
+    }
+    return nullptr;
+  };
   for (auto &Entry : SinkAfter) {
     VPRecipeBase *Sink = RecipeBuilder.getRecipe(Entry.first);
     VPRecipeBase *Target = RecipeBuilder.getRecipe(Entry.second);
 
-    auto GetReplicateRegion = [](VPRecipeBase *R) -> VPRegionBlock * {
-      auto *Region =
-          dyn_cast_or_null<VPRegionBlock>(R->getParent()->getParent());
-      if (Region && Region->isReplicator()) {
-        assert(Region->getNumSuccessors() == 1 &&
-               Region->getNumPredecessors() == 1 && "Expected SESE region!");
-        assert(R->getParent()->size() == 1 &&
-               "A recipe in an original replicator region must be the only "
-               "recipe in its block");
-        return Region;
-      }
-      return nullptr;
-    };
     auto *TargetRegion = GetReplicateRegion(Target);
     auto *SinkRegion = GetReplicateRegion(Sink);
     if (!SinkRegion) {
@@ -9365,8 +9286,8 @@ VPlanPtr LoopVectorizationPlanner::buildVPlanWithVPRecipes(
       VPBlockUtils::connectBlocks(SinkRegion, TargetSucc);
     } else {
       // The sink source is in a replicate region, we need to move the whole
-      // replicate region, which should only contain a single recipe in the main
-      // block.
+      // replicate region, which should only contain a single recipe in the
+      // main block.
       auto *SplitBlock =
           Target->getParent()->splitAt(std::next(Target->getIterator()));
 
@@ -9378,6 +9299,29 @@ VPlanPtr LoopVectorizationPlanner::buildVPlanWithVPRecipes(
       if (VPBB == SplitPred)
         VPBB = SplitBlock;
     }
+  }
+
+  // Introduce a recipe to combine the incoming and previous values of a
+  // first-order recurrence.
+  for (VPRecipeBase &R : Plan->getEntry()->getEntryBasicBlock()->phis()) {
+    auto *RecurPhi = dyn_cast<VPFirstOrderRecurrencePHIRecipe>(&R);
+    if (!RecurPhi)
+      continue;
+
+    auto *RecurSplice = cast<VPInstruction>(
+        Builder.createNaryOp(VPInstruction::FirstOrderRecurrenceSplice,
+                             {RecurPhi, RecurPhi->getBackedgeValue()}));
+
+    VPRecipeBase *PrevRecipe = RecurPhi->getBackedgeRecipe();
+    if (auto *Region = GetReplicateRegion(PrevRecipe)) {
+      VPBasicBlock *Succ = cast<VPBasicBlock>(Region->getSingleSuccessor());
+      RecurSplice->moveBefore(*Succ, Succ->getFirstNonPhi());
+    } else
+      RecurSplice->moveAfter(PrevRecipe);
+    RecurPhi->replaceAllUsesWith(RecurSplice);
+    // Set the first operand of RecurSplice to RecurPhi again, after replacing
+    // all users.
+    RecurSplice->setOperand(0, RecurPhi);
   }
 
   // Interleave memory: for each Interleave Group we marked earlier as relevant
