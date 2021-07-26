@@ -687,13 +687,13 @@ void ExternalFileUnit::BackspaceVariableFormattedRecord(
       if (const char *p{
               FindLastNewline(Frame(), prevNL - 1 - frameOffsetInFile_)}) {
         recordOffsetInFrame_ = p - Frame() + 1;
-        *recordLength = prevNL - (frameOffsetInFile_ + recordOffsetInFrame_);
+        recordLength = prevNL - (frameOffsetInFile_ + recordOffsetInFrame_);
         break;
       }
     }
     if (frameOffsetInFile_ == 0) {
       recordOffsetInFrame_ = 0;
-      *recordLength = prevNL;
+      recordLength = prevNL;
       break;
     }
     frameOffsetInFile_ -= std::min<std::int64_t>(frameOffsetInFile_, 1024);

@@ -4,13 +4,14 @@ Transformed generic-mode kernel to SPMD-mode [OMP120]
 =====================================================
 
 This optimization remark indicates that the execution strategy for the OpenMP
-target offloading kernel was changed. Generic-mode kernels execute by using a
-single thread to schedule parallel worker threads using a state machine. This
+target offloading kernel was changed. Generic-mode kernels are executed by a
+single thread that schedules parallel worker threads using a state machine. This
 code transformation can move a kernel that was initially generated in generic
 mode to SPMD-mode where all threads are active at the same time with no state
-machine. This is only possible if the instructions previously executed by a
-single thread have no side-effects or can be guarded. If the instructions have
-no side-effects they are simply recomputed by each thread.
+machine. This execution strategy is closer to how the threads are actually
+executed on a GPU target. This is only possible if the instructions previously
+executed by a single thread have no side-effects or can be guarded. If the
+instructions have no side-effects they are simply recomputed by each thread.
 
 Generic-mode is often considerably slower than SPMD-mode because of the extra
 overhead required to separately schedule worker threads and pass data between

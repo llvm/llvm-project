@@ -3155,6 +3155,10 @@ def MODSW : XForm_8<31, 779, (outs gprc:$rT), (ins gprc:$rA, gprc:$rB),
 def MODUW : XForm_8<31, 267, (outs gprc:$rT), (ins gprc:$rA, gprc:$rB),
                         "moduw $rT, $rA, $rB", IIC_IntDivW,
                         [(set i32:$rT, (urem i32:$rA, i32:$rB))]>;
+let hasSideEffects = 1 in
+def ADDEX : Z23Form_RTAB5_CY2<31, 170, (outs gprc:$rT),
+                              (ins gprc:$rA, gprc:$rB, u2imm:$CY),
+                              "addex $rT, $rA, $rB, $CY", IIC_IntGeneral, []>;
 }
 
 let PPC970_Unit = 1, hasSideEffects = 0 in {  // FXU Operations.

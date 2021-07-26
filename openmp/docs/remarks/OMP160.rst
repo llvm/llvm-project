@@ -8,7 +8,7 @@ was not found to have any side-effects. This can occur if the region does not
 write any of its results to memory visible outside the region. This optimization
 is necessary because the barrier between sequential and parallel code typically
 prevents dead code elimination from completely removing the region. Otherwise
-there will still be overhead to fork and merge the threads.
+there will still be overhead to fork and merge the threads with no work done.
 
 Example
 -------

@@ -16,6 +16,7 @@
 
 #include <array>
 #include <cassert>
+#include <climits>
 
 #include "test_iterators.h"
 
@@ -100,6 +101,23 @@ constexpr void check_backward(std::ptrdiff_t n, expected_t expected, range_t& ra
   assert(current.stride_count() == -current.stride_displacement());
 }
 
+struct iota_iterator {
+    using difference_type = int;
+    using value_type = int;
+
+    constexpr int operator*() const { return x; }
+    constexpr iota_iterator& operator++() { ++x; return *this; }
+    constexpr iota_iterator operator++(int) { ++x; return iota_iterator{x - 1}; }
+    constexpr bool operator==(const iota_iterator&) const = default;
+    constexpr int operator-(const iota_iterator& that) const { return x - that.x; }
+    constexpr iota_iterator& operator--() { --x; return *this; }
+    constexpr iota_iterator operator--(int) { --x; return iota_iterator{x + 1}; }
+
+    int x;
+};
+static_assert(std::bidirectional_iterator<iota_iterator>);
+static_assert(std::sized_sentinel_for<iota_iterator, iota_iterator>);
+
 constexpr bool test() {
   auto range = range_t{0, 1, 2, 3, 4, 5, 6, 7, 8, 9};
   check_forward_sized_sentinel<cpp17_input_iterator<range_t::const_iterator> >(1, {range.begin() + 1, 0}, range);
@@ -135,6 +153,19 @@ constexpr bool test() {
   // distance > range.size()
   check_forward<forward_iterator<range_t::const_iterator> >(1000, {range.end(), 990}, range);
   check_backward<bidirectional_iterator<range_t::const_iterator> >(1000, {range.begin(), -990}, range);
+
+  // regression-test that INT_MIN doesn't cause any undefined behavior
+  {
+    auto i = iota_iterator{+1};
+    assert(std::ranges::advance(i, INT_MIN, iota_iterator{-2}) == INT_MIN+3);
+    assert(i == iota_iterator{-2});
+    i = iota_iterator{+1};
+    assert(std::ranges::advance(i, -2, iota_iterator{INT_MIN+1}) == 0);
+    assert(i == iota_iterator{-1});
+    i = iota_iterator{+1};
+    assert(std::ranges::advance(i, INT_MIN, iota_iterator{INT_MIN+1}) == 0);
+    assert(i == iota_iterator{INT_MIN+1});
+  }
 
   return true;
 }
