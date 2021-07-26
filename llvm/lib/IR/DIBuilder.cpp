@@ -250,6 +250,11 @@ DIEnumerator *DIBuilder::createEnumerator(StringRef Name, int64_t Val,
                            Name);
 }
 
+DIEnumerator *DIBuilder::createEnumerator(StringRef Name, APSInt Value) {
+  assert(!Name.empty() && "Unable to create enumerator without name");
+  return DIEnumerator::get(VMContext, APInt(Value), Value.isUnsigned(), Name);
+}
+
 DIBasicType *DIBuilder::createUnspecifiedType(StringRef Name) {
   assert(!Name.empty() && "Unable to create type without name");
   return DIBasicType::get(VMContext, dwarf::DW_TAG_unspecified_type, Name);

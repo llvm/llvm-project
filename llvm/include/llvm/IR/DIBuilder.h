@@ -181,7 +181,9 @@ namespace llvm {
                                      DIFile *File);
 
     /// Create a single enumerator value.
-    DIEnumerator *createEnumerator(StringRef Name, int64_t Val, bool IsUnsigned = false);
+    DIEnumerator *createEnumerator(StringRef Name, APSInt Value);
+    DIEnumerator *createEnumerator(StringRef Name, int64_t Val,
+                                   bool IsUnsigned = false);
 
     /// Create a DWARF unspecified type.
     DIBasicType *createUnspecifiedType(StringRef Name);
