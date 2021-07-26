@@ -432,7 +432,7 @@ void unreachable_call() {
 // CHECK1-NEXT:    [[TMP6:%.*]] = bitcast [2 x i8*]* [[CAPTURED_VARS_ADDRS]] to i8**
 // CHECK1-NEXT:    call void @__kmpc_parallel_51(%struct.ident_t* @[[GLOB3]], i32 [[TMP0]], i32 1, i32 -1, i32 -1, i8* bitcast (void (i32*, i32*, i32*, double*)* @__omp_outlined__1 to i8*), i8* bitcast (void (i16, i32)* @__omp_outlined__1_wrapper to i8*), i8** [[TMP6]], i64 2)
 // CHECK1-NEXT:    [[TMP7:%.*]] = load i32, i32* [[F_ON_STACK]], align 4
-// CHECK1-NEXT:    call void @__kmpc_free_shared(i8* [[F]])
+// CHECK1-NEXT:    call void @__kmpc_free_shared(i8* [[F]], i64 4)
 // CHECK1-NEXT:    ret i32 [[TMP7]]
 //
 //
@@ -816,7 +816,7 @@ void unreachable_call() {
 // CHECK2-NEXT:    [[TMP6:%.*]] = bitcast [2 x i8*]* [[CAPTURED_VARS_ADDRS]] to i8**
 // CHECK2-NEXT:    call void @__kmpc_parallel_51(%struct.ident_t* @[[GLOB3]], i32 [[TMP0]], i32 1, i32 -1, i32 -1, i8* bitcast (void (i32*, i32*, i32*, double*)* @__omp_outlined__1 to i8*), i8* bitcast (void (i16, i32)* @__omp_outlined__1_wrapper to i8*), i8** [[TMP6]], i32 2)
 // CHECK2-NEXT:    [[TMP7:%.*]] = load i32, i32* [[F_ON_STACK]], align 4
-// CHECK2-NEXT:    call void @__kmpc_free_shared(i8* [[F]])
+// CHECK2-NEXT:    call void @__kmpc_free_shared(i8* [[F]], i32 4)
 // CHECK2-NEXT:    ret i32 [[TMP7]]
 //
 //
@@ -1199,7 +1199,7 @@ void unreachable_call() {
 // CHECK3-NEXT:    [[TMP6:%.*]] = bitcast [2 x i8*]* [[CAPTURED_VARS_ADDRS]] to i8**
 // CHECK3-NEXT:    call void @__kmpc_parallel_51(%struct.ident_t* @[[GLOB3]], i32 [[TMP0]], i32 1, i32 -1, i32 -1, i8* bitcast (void (i32*, i32*, i32*, double*)* @__omp_outlined__1 to i8*), i8* bitcast (void (i16, i32)* @__omp_outlined__1_wrapper to i8*), i8** [[TMP6]], i32 2)
 // CHECK3-NEXT:    [[TMP7:%.*]] = load i32, i32* [[F_ON_STACK]], align 4
-// CHECK3-NEXT:    call void @__kmpc_free_shared(i8* [[F]])
+// CHECK3-NEXT:    call void @__kmpc_free_shared(i8* [[F]], i32 4)
 // CHECK3-NEXT:    ret i32 [[TMP7]]
 //
 //

@@ -1645,7 +1645,7 @@ int bar(int n){
 // CHECK1-NEXT:    [[TMP6:%.*]] = load i32, i32* [[A_ON_STACK]], align 4
 // CHECK1-NEXT:    [[INC:%.*]] = add nsw i32 [[TMP6]], 1
 // CHECK1-NEXT:    store i32 [[INC]], i32* [[A_ON_STACK]], align 4
-// CHECK1-NEXT:    call void @__kmpc_free_shared(i8* [[A1]])
+// CHECK1-NEXT:    call void @__kmpc_free_shared(i8* [[A1]], i64 4)
 // CHECK1-NEXT:    call void @__kmpc_target_deinit(%struct.ident_t* @[[GLOB1]], i1 false, i1 true)
 // CHECK1-NEXT:    ret void
 // CHECK1:       worker.exit:
@@ -1917,7 +1917,7 @@ int bar(int n){
 // CHECK2-NEXT:    [[TMP6:%.*]] = load i32, i32* [[A_ON_STACK]], align 4
 // CHECK2-NEXT:    [[INC:%.*]] = add nsw i32 [[TMP6]], 1
 // CHECK2-NEXT:    store i32 [[INC]], i32* [[A_ON_STACK]], align 4
-// CHECK2-NEXT:    call void @__kmpc_free_shared(i8* [[A1]])
+// CHECK2-NEXT:    call void @__kmpc_free_shared(i8* [[A1]], i32 4)
 // CHECK2-NEXT:    call void @__kmpc_target_deinit(%struct.ident_t* @[[GLOB1]], i1 false, i1 true)
 // CHECK2-NEXT:    ret void
 // CHECK2:       worker.exit:

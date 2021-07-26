@@ -8,7 +8,7 @@
 
 #include "src/fenv/fegetenv.h"
 #include "src/__support/common.h"
-#include "utils/FPUtil/FEnv.h"
+#include "utils/FPUtil/FEnvUtils.h"
 
 namespace __llvm_libc {
 

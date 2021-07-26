@@ -162,7 +162,11 @@ EXTERN int8_t __kmpc_is_spmd_exec_mode() {
 }
 
 EXTERN int8_t __kmpc_is_generic_main_thread(kmp_int32 Tid) {
-  return !__kmpc_is_spmd_exec_mode() && GetMasterThreadID() == Tid;
+  return !__kmpc_is_spmd_exec_mode() && __kmpc_is_generic_main_thread_id(Tid);
+}
+
+NOINLINE EXTERN int8_t __kmpc_is_generic_main_thread_id(kmp_int32 Tid) {
+  return GetMasterThreadID() == Tid;
 }
 
 EXTERN bool __kmpc_kernel_parallel(void**WorkFn);

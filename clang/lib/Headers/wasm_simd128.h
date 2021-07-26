@@ -396,67 +396,126 @@ static __inline__ v128_t __DEFAULT_FN_ATTRS wasm_i8x16_splat(int8_t __a) {
                            __a, __a, __a, __a, __a, __a, __a, __a};
 }
 
-#define wasm_i8x16_extract_lane(__a, __i)                                      \
-  (__builtin_wasm_extract_lane_s_i8x16((__i8x16)(__a), __i))
+static __inline__ int8_t __DEFAULT_FN_ATTRS wasm_i8x16_extract_lane(v128_t __a,
+                                                                    int __i)
+    __REQUIRE_CONSTANT(__i) {
+  return ((__i8x16)__a)[__i];
+}
 
-#define wasm_u8x16_extract_lane(__a, __i)                                      \
-  (__builtin_wasm_extract_lane_u_i8x16((__u8x16)(__a), __i))
+static __inline__ uint8_t __DEFAULT_FN_ATTRS wasm_u8x16_extract_lane(v128_t __a,
+                                                                     int __i)
+    __REQUIRE_CONSTANT(__i) {
+  return ((__u8x16)__a)[__i];
+}
 
-#define wasm_i8x16_replace_lane(__a, __i, __b)                                 \
-  ((v128_t)__builtin_wasm_replace_lane_i8x16((__i8x16)(__a), __i, __b))
+static __inline__ v128_t __DEFAULT_FN_ATTRS wasm_i8x16_replace_lane(v128_t __a,
+                                                                    int __i,
+                                                                    int8_t __b)
+    __REQUIRE_CONSTANT(__i) {
+  __i8x16 __v = (__i8x16)__a;
+  __v[__i] = __b;
+  return (v128_t)__v;
+}
 
 static __inline__ v128_t __DEFAULT_FN_ATTRS wasm_i16x8_splat(int16_t __a) {
   return (v128_t)(__i16x8){__a, __a, __a, __a, __a, __a, __a, __a};
 }
 
-#define wasm_i16x8_extract_lane(__a, __i)                                      \
-  (__builtin_wasm_extract_lane_s_i16x8((__i16x8)(__a), __i))
+static __inline__ int16_t __DEFAULT_FN_ATTRS wasm_i16x8_extract_lane(v128_t __a,
+                                                                     int __i)
+    __REQUIRE_CONSTANT(__i) {
+  return ((__i16x8)__a)[__i];
+}
 
-#define wasm_u16x8_extract_lane(__a, __i)                                      \
-  (__builtin_wasm_extract_lane_u_i16x8((__u16x8)(__a), __i))
+static __inline__ uint16_t __DEFAULT_FN_ATTRS
+wasm_u16x8_extract_lane(v128_t __a, int __i) __REQUIRE_CONSTANT(__i) {
+  return ((__u16x8)__a)[__i];
+}
 
-#define wasm_i16x8_replace_lane(__a, __i, __b)                                 \
-  ((v128_t)__builtin_wasm_replace_lane_i16x8((__i16x8)(__a), __i, __b))
+static __inline__ v128_t __DEFAULT_FN_ATTRS wasm_i16x8_replace_lane(v128_t __a,
+                                                                    int __i,
+                                                                    int16_t __b)
+    __REQUIRE_CONSTANT(__i) {
+  __i16x8 __v = (__i16x8)__a;
+  __v[__i] = __b;
+  return (v128_t)__v;
+}
 
 static __inline__ v128_t __DEFAULT_FN_ATTRS wasm_i32x4_splat(int32_t __a) {
   return (v128_t)(__i32x4){__a, __a, __a, __a};
 }
 
-#define wasm_i32x4_extract_lane(__a, __i)                                      \
-  (__builtin_wasm_extract_lane_i32x4((__i32x4)(__a), __i))
+static __inline__ int32_t __DEFAULT_FN_ATTRS wasm_i32x4_extract_lane(v128_t __a,
+                                                                     int __i)
+    __REQUIRE_CONSTANT(__i) {
+  return ((__i32x4)__a)[__i];
+}
 
-#define wasm_i32x4_replace_lane(__a, __i, __b)                                 \
-  ((v128_t)__builtin_wasm_replace_lane_i32x4((__i32x4)(__a), __i, __b))
+static __inline__ v128_t __DEFAULT_FN_ATTRS wasm_i32x4_replace_lane(v128_t __a,
+                                                                    int __i,
+                                                                    int32_t __b)
+    __REQUIRE_CONSTANT(__i) {
+  __i32x4 __v = (__i32x4)__a;
+  __v[__i] = __b;
+  return (v128_t)__v;
+}
 
 static __inline__ v128_t __DEFAULT_FN_ATTRS wasm_i64x2_splat(int64_t __a) {
   return (v128_t)(__i64x2){__a, __a};
 }
 
-#define wasm_i64x2_extract_lane(__a, __i)                                      \
-  (__builtin_wasm_extract_lane_i64x2((__i64x2)(__a), __i))
+static __inline__ int64_t __DEFAULT_FN_ATTRS wasm_i64x2_extract_lane(v128_t __a,
+                                                                     int __i)
+    __REQUIRE_CONSTANT(__i) {
+  return ((__i64x2)__a)[__i];
+}
 
-#define wasm_i64x2_replace_lane(__a, __i, __b)                                 \
-  ((v128_t)__builtin_wasm_replace_lane_i64x2((__i64x2)(__a), __i, __b))
+static __inline__ v128_t __DEFAULT_FN_ATTRS wasm_i64x2_replace_lane(v128_t __a,
+                                                                    int __i,
+                                                                    int64_t __b)
+    __REQUIRE_CONSTANT(__i) {
+  __i64x2 __v = (__i64x2)__a;
+  __v[__i] = __b;
+  return (v128_t)__v;
+}
 
 static __inline__ v128_t __DEFAULT_FN_ATTRS wasm_f32x4_splat(float __a) {
   return (v128_t)(__f32x4){__a, __a, __a, __a};
 }
 
-#define wasm_f32x4_extract_lane(__a, __i)                                      \
-  (__builtin_wasm_extract_lane_f32x4((__f32x4)(__a), __i))
+static __inline__ float __DEFAULT_FN_ATTRS wasm_f32x4_extract_lane(v128_t __a,
+                                                                   int __i)
+    __REQUIRE_CONSTANT(__i) {
+  return ((__f32x4)__a)[__i];
+}
 
-#define wasm_f32x4_replace_lane(__a, __i, __b)                                 \
-  ((v128_t)__builtin_wasm_replace_lane_f32x4((__f32x4)(__a), __i, __b))
+static __inline__ v128_t __DEFAULT_FN_ATTRS wasm_f32x4_replace_lane(v128_t __a,
+                                                                    int __i,
+                                                                    float __b)
+    __REQUIRE_CONSTANT(__i) {
+  __f32x4 __v = (__f32x4)__a;
+  __v[__i] = __b;
+  return (v128_t)__v;
+}
 
 static __inline__ v128_t __DEFAULT_FN_ATTRS wasm_f64x2_splat(double __a) {
   return (v128_t)(__f64x2){__a, __a};
 }
 
-#define wasm_f64x2_extract_lane(__a, __i)                                      \
-  (__builtin_wasm_extract_lane_f64x2((__f64x2)(__a), __i))
+static __inline__ double __DEFAULT_FN_ATTRS wasm_f64x2_extract_lane(v128_t __a,
+                                                                    int __i)
+    __REQUIRE_CONSTANT(__i) {
+  return ((__f64x2)__a)[__i];
+}
 
-#define wasm_f64x2_replace_lane(__a, __i, __b)                                 \
-  ((v128_t)__builtin_wasm_replace_lane_f64x2((__f64x2)(__a), __i, __b))
+static __inline__ v128_t __DEFAULT_FN_ATTRS wasm_f64x2_replace_lane(v128_t __a,
+                                                                    int __i,
+                                                                    double __b)
+    __REQUIRE_CONSTANT(__i) {
+  __f64x2 __v = (__f64x2)__a;
+  __v[__i] = __b;
+  return (v128_t)__v;
+}
 
 static __inline__ v128_t __DEFAULT_FN_ATTRS wasm_i8x16_eq(v128_t __a,
                                                           v128_t __b) {

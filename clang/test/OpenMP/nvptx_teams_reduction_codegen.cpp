@@ -4226,7 +4226,7 @@ int bar(int n){
 // CHECK1-NEXT:    [[TMP2:%.*]] = call i32 @__kmpc_global_thread_num(%struct.ident_t* @[[GLOB1]])
 // CHECK1-NEXT:    store i32 [[TMP2]], i32* [[DOTTHREADID_TEMP_]], align 4
 // CHECK1-NEXT:    call void @__omp_outlined__(i32* [[DOTTHREADID_TEMP_]], i32* [[DOTZERO_ADDR]], double* [[E_ON_STACK]]) #[[ATTR1:[0-9]+]]
-// CHECK1-NEXT:    call void @__kmpc_free_shared(i8* [[E1]])
+// CHECK1-NEXT:    call void @__kmpc_free_shared(i8* [[E1]], i64 8)
 // CHECK1-NEXT:    call void @__kmpc_target_deinit(%struct.ident_t* @[[GLOB1]], i1 false, i1 true)
 // CHECK1-NEXT:    ret void
 // CHECK1:       worker.exit:
@@ -4268,7 +4268,7 @@ int bar(int n){
 // CHECK1-NEXT:    call void @__kmpc_nvptx_end_reduce_nowait(i32 [[TMP3]])
 // CHECK1-NEXT:    br label [[DOTOMP_REDUCTION_DONE]]
 // CHECK1:       .omp.reduction.done:
-// CHECK1-NEXT:    call void @__kmpc_free_shared(i8* [[E1]])
+// CHECK1-NEXT:    call void @__kmpc_free_shared(i8* [[E1]], i64 8)
 // CHECK1-NEXT:    ret void
 //
 //
@@ -4531,8 +4531,8 @@ int bar(int n){
 // CHECK1-NEXT:    [[TMP3:%.*]] = call i32 @__kmpc_global_thread_num(%struct.ident_t* @[[GLOB1]])
 // CHECK1-NEXT:    store i32 [[TMP3]], i32* [[DOTTHREADID_TEMP_]], align 4
 // CHECK1-NEXT:    call void @__omp_outlined__1(i32* [[DOTTHREADID_TEMP_]], i32* [[DOTZERO_ADDR]], i8* [[C2]], float* [[D_ON_STACK]]) #[[ATTR1]]
-// CHECK1-NEXT:    call void @__kmpc_free_shared(i8* [[D3]])
-// CHECK1-NEXT:    call void @__kmpc_free_shared(i8* [[C2]])
+// CHECK1-NEXT:    call void @__kmpc_free_shared(i8* [[D3]], i64 4)
+// CHECK1-NEXT:    call void @__kmpc_free_shared(i8* [[C2]], i64 1)
 // CHECK1-NEXT:    call void @__kmpc_target_deinit(%struct.ident_t* @[[GLOB1]], i1 false, i1 true)
 // CHECK1-NEXT:    ret void
 // CHECK1:       worker.exit:
@@ -4593,8 +4593,8 @@ int bar(int n){
 // CHECK1-NEXT:    call void @__kmpc_nvptx_end_reduce_nowait(i32 [[TMP5]])
 // CHECK1-NEXT:    br label [[DOTOMP_REDUCTION_DONE]]
 // CHECK1:       .omp.reduction.done:
-// CHECK1-NEXT:    call void @__kmpc_free_shared(i8* [[D2]])
-// CHECK1-NEXT:    call void @__kmpc_free_shared(i8* [[C1]])
+// CHECK1-NEXT:    call void @__kmpc_free_shared(i8* [[D2]], i64 4)
+// CHECK1-NEXT:    call void @__kmpc_free_shared(i8* [[C1]], i64 1)
 // CHECK1-NEXT:    ret void
 //
 //
@@ -5587,7 +5587,7 @@ int bar(int n){
 // CHECK2-NEXT:    call void @__kmpc_nvptx_end_reduce_nowait(i32 [[TMP3]])
 // CHECK2-NEXT:    br label [[DOTOMP_REDUCTION_DONE]]
 // CHECK2:       .omp.reduction.done:
-// CHECK2-NEXT:    call void @__kmpc_free_shared(i8* [[E1]])
+// CHECK2-NEXT:    call void @__kmpc_free_shared(i8* [[E1]], i32 8)
 // CHECK2-NEXT:    ret void
 //
 //
@@ -5850,8 +5850,8 @@ int bar(int n){
 // CHECK2-NEXT:    [[TMP3:%.*]] = call i32 @__kmpc_global_thread_num(%struct.ident_t* @[[GLOB1]])
 // CHECK2-NEXT:    store i32 [[TMP3]], i32* [[DOTTHREADID_TEMP_]], align 4
 // CHECK2-NEXT:    call void @__omp_outlined__1(i32* [[DOTTHREADID_TEMP_]], i32* [[DOTZERO_ADDR]], i8* [[C2]], float* [[D_ON_STACK]]) #[[ATTR1]]
-// CHECK2-NEXT:    call void @__kmpc_free_shared(i8* [[D3]])
-// CHECK2-NEXT:    call void @__kmpc_free_shared(i8* [[C2]])
+// CHECK2-NEXT:    call void @__kmpc_free_shared(i8* [[D3]], i32 4)
+// CHECK2-NEXT:    call void @__kmpc_free_shared(i8* [[C2]], i32 1)
 // CHECK2-NEXT:    call void @__kmpc_target_deinit(%struct.ident_t* @[[GLOB1]], i1 false, i1 true)
 // CHECK2-NEXT:    ret void
 // CHECK2:       worker.exit:
@@ -5912,8 +5912,8 @@ int bar(int n){
 // CHECK2-NEXT:    call void @__kmpc_nvptx_end_reduce_nowait(i32 [[TMP5]])
 // CHECK2-NEXT:    br label [[DOTOMP_REDUCTION_DONE]]
 // CHECK2:       .omp.reduction.done:
-// CHECK2-NEXT:    call void @__kmpc_free_shared(i8* [[D2]])
-// CHECK2-NEXT:    call void @__kmpc_free_shared(i8* [[C1]])
+// CHECK2-NEXT:    call void @__kmpc_free_shared(i8* [[D2]], i32 4)
+// CHECK2-NEXT:    call void @__kmpc_free_shared(i8* [[C1]], i32 1)
 // CHECK2-NEXT:    ret void
 //
 //
@@ -6905,7 +6905,7 @@ int bar(int n){
 // CHECK3-NEXT:    call void @__kmpc_nvptx_end_reduce_nowait(i32 [[TMP3]])
 // CHECK3-NEXT:    br label [[DOTOMP_REDUCTION_DONE]]
 // CHECK3:       .omp.reduction.done:
-// CHECK3-NEXT:    call void @__kmpc_free_shared(i8* [[E1]])
+// CHECK3-NEXT:    call void @__kmpc_free_shared(i8* [[E1]], i32 8)
 // CHECK3-NEXT:    ret void
 //
 //
@@ -7168,8 +7168,8 @@ int bar(int n){
 // CHECK3-NEXT:    [[TMP3:%.*]] = call i32 @__kmpc_global_thread_num(%struct.ident_t* @[[GLOB1]])
 // CHECK3-NEXT:    store i32 [[TMP3]], i32* [[DOTTHREADID_TEMP_]], align 4
 // CHECK3-NEXT:    call void @__omp_outlined__1(i32* [[DOTTHREADID_TEMP_]], i32* [[DOTZERO_ADDR]], i8* [[C2]], float* [[D_ON_STACK]]) #[[ATTR1]]
-// CHECK3-NEXT:    call void @__kmpc_free_shared(i8* [[D3]])
-// CHECK3-NEXT:    call void @__kmpc_free_shared(i8* [[C2]])
+// CHECK3-NEXT:    call void @__kmpc_free_shared(i8* [[D3]], i32 4)
+// CHECK3-NEXT:    call void @__kmpc_free_shared(i8* [[C2]], i32 1)
 // CHECK3-NEXT:    call void @__kmpc_target_deinit(%struct.ident_t* @[[GLOB1]], i1 false, i1 true)
 // CHECK3-NEXT:    ret void
 // CHECK3:       worker.exit:
@@ -7230,8 +7230,8 @@ int bar(int n){
 // CHECK3-NEXT:    call void @__kmpc_nvptx_end_reduce_nowait(i32 [[TMP5]])
 // CHECK3-NEXT:    br label [[DOTOMP_REDUCTION_DONE]]
 // CHECK3:       .omp.reduction.done:
-// CHECK3-NEXT:    call void @__kmpc_free_shared(i8* [[D2]])
-// CHECK3-NEXT:    call void @__kmpc_free_shared(i8* [[C1]])
+// CHECK3-NEXT:    call void @__kmpc_free_shared(i8* [[D2]], i32 4)
+// CHECK3-NEXT:    call void @__kmpc_free_shared(i8* [[C1]], i32 1)
 // CHECK3-NEXT:    ret void
 //
 //

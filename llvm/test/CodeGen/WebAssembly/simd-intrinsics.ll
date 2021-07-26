@@ -78,9 +78,9 @@ define <16 x i8> @avgr_u_v16i8(<16 x i8> %x, <16 x i8> %y) {
 ; CHECK-NEXT: .functype popcnt_v16i8 (v128) -> (v128){{$}}
 ; CHECK-NEXT: i8x16.popcnt $push[[R:[0-9]+]]=, $0{{$}}
 ; CHECK-NEXT: return $pop[[R]]{{$}}
-declare <16 x i8> @llvm.wasm.popcnt(<16 x i8>)
+declare <16 x i8> @llvm.ctpop.v16i8(<16 x i8>)
 define <16 x i8> @popcnt_v16i8(<16 x i8> %x) {
- %a = call <16 x i8> @llvm.wasm.popcnt(<16 x i8> %x)
+ %a = call <16 x i8> @llvm.ctpop.v16i8(<16 x i8> %x)
  ret <16 x i8> %a
 }
 

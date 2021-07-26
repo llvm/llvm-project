@@ -153,6 +153,7 @@ set(cuda_src_files
 
 # Set flags for LLVM Bitcode compilation.
 set(bc_flags -S -x c++ -O1 -std=c++14
+             -mllvm -openmp-opt-disable-internalization
              -target nvptx64
              -Xclang -emit-llvm-bc
              -Xclang -aux-triple -Xclang ${aux_triple}

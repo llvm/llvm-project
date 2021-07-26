@@ -173,9 +173,9 @@ void test() {
 // CHECK1-NEXT:    call void @llvm.lifetime.end.p0i8(i64 4, i8* [[TMP32]]) #[[ATTR1]]
 // CHECK1-NEXT:    [[TMP33:%.*]] = bitcast i32* [[DOTOMP_IV]] to i8*
 // CHECK1-NEXT:    call void @llvm.lifetime.end.p0i8(i64 4, i8* [[TMP33]]) #[[ATTR1]]
-// CHECK1-NEXT:    call void @__kmpc_free_shared(i8* [[PARTIAL_SUM]])
-// CHECK1-NEXT:    call void @__kmpc_free_shared(i8* [[IEND]])
-// CHECK1-NEXT:    call void @__kmpc_free_shared(i8* [[ISTART]])
+// CHECK1-NEXT:    call void @__kmpc_free_shared(i8* [[PARTIAL_SUM]], i64 8)
+// CHECK1-NEXT:    call void @__kmpc_free_shared(i8* [[IEND]], i64 4)
+// CHECK1-NEXT:    call void @__kmpc_free_shared(i8* [[ISTART]], i64 4)
 // CHECK1-NEXT:    ret void
 //
 //
@@ -740,9 +740,9 @@ void test() {
 // CHECK1-NEXT:    call void @llvm.lifetime.end.p0i8(i64 4, i8* [[TMP32]]) #[[ATTR1]]
 // CHECK1-NEXT:    [[TMP33:%.*]] = bitcast i32* [[DOTOMP_IV]] to i8*
 // CHECK1-NEXT:    call void @llvm.lifetime.end.p0i8(i64 4, i8* [[TMP33]]) #[[ATTR1]]
-// CHECK1-NEXT:    call void @__kmpc_free_shared(i8* [[PARTIAL_SUM]])
-// CHECK1-NEXT:    call void @__kmpc_free_shared(i8* [[IEND]])
-// CHECK1-NEXT:    call void @__kmpc_free_shared(i8* [[ISTART]])
+// CHECK1-NEXT:    call void @__kmpc_free_shared(i8* [[PARTIAL_SUM]], i64 16)
+// CHECK1-NEXT:    call void @__kmpc_free_shared(i8* [[IEND]], i64 4)
+// CHECK1-NEXT:    call void @__kmpc_free_shared(i8* [[ISTART]], i64 4)
 // CHECK1-NEXT:    ret void
 //
 //
@@ -1407,9 +1407,9 @@ void test() {
 // CHECK2-NEXT:    call void @llvm.lifetime.end.p0i8(i64 4, i8* [[TMP32]]) #[[ATTR1]]
 // CHECK2-NEXT:    [[TMP33:%.*]] = bitcast i32* [[DOTOMP_IV]] to i8*
 // CHECK2-NEXT:    call void @llvm.lifetime.end.p0i8(i64 4, i8* [[TMP33]]) #[[ATTR1]]
-// CHECK2-NEXT:    call void @__kmpc_free_shared(i8* [[PARTIAL_SUM]])
-// CHECK2-NEXT:    call void @__kmpc_free_shared(i8* [[IEND]])
-// CHECK2-NEXT:    call void @__kmpc_free_shared(i8* [[ISTART]])
+// CHECK2-NEXT:    call void @__kmpc_free_shared(i8* [[PARTIAL_SUM]], i64 8)
+// CHECK2-NEXT:    call void @__kmpc_free_shared(i8* [[IEND]], i64 4)
+// CHECK2-NEXT:    call void @__kmpc_free_shared(i8* [[ISTART]], i64 4)
 // CHECK2-NEXT:    ret void
 //
 //
@@ -1974,9 +1974,9 @@ void test() {
 // CHECK2-NEXT:    call void @llvm.lifetime.end.p0i8(i64 4, i8* [[TMP32]]) #[[ATTR1]]
 // CHECK2-NEXT:    [[TMP33:%.*]] = bitcast i32* [[DOTOMP_IV]] to i8*
 // CHECK2-NEXT:    call void @llvm.lifetime.end.p0i8(i64 4, i8* [[TMP33]]) #[[ATTR1]]
-// CHECK2-NEXT:    call void @__kmpc_free_shared(i8* [[PARTIAL_SUM]])
-// CHECK2-NEXT:    call void @__kmpc_free_shared(i8* [[IEND]])
-// CHECK2-NEXT:    call void @__kmpc_free_shared(i8* [[ISTART]])
+// CHECK2-NEXT:    call void @__kmpc_free_shared(i8* [[PARTIAL_SUM]], i64 16)
+// CHECK2-NEXT:    call void @__kmpc_free_shared(i8* [[IEND]], i64 4)
+// CHECK2-NEXT:    call void @__kmpc_free_shared(i8* [[ISTART]], i64 4)
 // CHECK2-NEXT:    ret void
 //
 //
@@ -2641,9 +2641,9 @@ void test() {
 // CHECK3-NEXT:    call void @llvm.lifetime.end.p0i8(i64 4, i8* [[TMP32]]) #[[ATTR1]]
 // CHECK3-NEXT:    [[TMP33:%.*]] = bitcast i32* [[DOTOMP_IV]] to i8*
 // CHECK3-NEXT:    call void @llvm.lifetime.end.p0i8(i64 4, i8* [[TMP33]]) #[[ATTR1]]
-// CHECK3-NEXT:    call void @__kmpc_free_shared(i8* [[PARTIAL_SUM]])
-// CHECK3-NEXT:    call void @__kmpc_free_shared(i8* [[IEND]])
-// CHECK3-NEXT:    call void @__kmpc_free_shared(i8* [[ISTART]])
+// CHECK3-NEXT:    call void @__kmpc_free_shared(i8* [[PARTIAL_SUM]], i64 8)
+// CHECK3-NEXT:    call void @__kmpc_free_shared(i8* [[IEND]], i64 4)
+// CHECK3-NEXT:    call void @__kmpc_free_shared(i8* [[ISTART]], i64 4)
 // CHECK3-NEXT:    ret void
 //
 //
@@ -3208,9 +3208,9 @@ void test() {
 // CHECK3-NEXT:    call void @llvm.lifetime.end.p0i8(i64 4, i8* [[TMP32]]) #[[ATTR1]]
 // CHECK3-NEXT:    [[TMP33:%.*]] = bitcast i32* [[DOTOMP_IV]] to i8*
 // CHECK3-NEXT:    call void @llvm.lifetime.end.p0i8(i64 4, i8* [[TMP33]]) #[[ATTR1]]
-// CHECK3-NEXT:    call void @__kmpc_free_shared(i8* [[PARTIAL_SUM]])
-// CHECK3-NEXT:    call void @__kmpc_free_shared(i8* [[IEND]])
-// CHECK3-NEXT:    call void @__kmpc_free_shared(i8* [[ISTART]])
+// CHECK3-NEXT:    call void @__kmpc_free_shared(i8* [[PARTIAL_SUM]], i64 16)
+// CHECK3-NEXT:    call void @__kmpc_free_shared(i8* [[IEND]], i64 4)
+// CHECK3-NEXT:    call void @__kmpc_free_shared(i8* [[ISTART]], i64 4)
 // CHECK3-NEXT:    ret void
 //
 //
