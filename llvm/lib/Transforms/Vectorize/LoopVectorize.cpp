@@ -5123,13 +5123,12 @@ void LoopVectorizationCostModel::collectLoopScalars(ElementCount VF) {
   auto evaluatePtrUse = [&](Instruction *MemAccess, Value *Ptr) {
     if (isScalarPtrInduction(MemAccess, Ptr)) {
       Worklist.insert(cast<Instruction>(Ptr));
-      Instruction *Update = cast<Instruction>(
-          cast<PHINode>(Ptr)->getIncomingValueForBlock(Latch));
-      Worklist.insert(Update);
       LLVM_DEBUG(dbgs() << "LV: Found new scalar instruction: " << *Ptr
                         << "\n");
-      LLVM_DEBUG(dbgs() << "LV: Found new scalar instruction: " << *Update
-                        << "\n");
+
+      Instruction *Update = cast<Instruction>(
+          cast<PHINode>(Ptr)->getIncomingValueForBlock(Latch));
+      ScalarPtrs.insert(Update);
       return;
     }
     // We only care about bitcast and getelementptr instructions contained in
@@ -5143,11 +5142,12 @@ void LoopVectorizationCostModel::collectLoopScalars(ElementCount VF) {
     if (Worklist.count(I))
       return;
 
-    // If the use of the pointer will be a scalar use, and all users of the
-    // pointer are memory accesses, place the pointer in ScalarPtrs. Otherwise,
-    // place the pointer in PossibleNonScalarPtrs.
-    if (isScalarUse(MemAccess, Ptr) && llvm::all_of(I->users(), [&](User *U) {
-          return isa<LoadInst>(U) || isa<StoreInst>(U);
+    // If all users of the pointer will be memory accesses and scalar, place the
+    // pointer in ScalarPtrs. Otherwise, place the pointer in
+    // PossibleNonScalarPtrs.
+    if (llvm::all_of(I->users(), [&](User *U) {
+          return (isa<LoadInst>(U) || isa<StoreInst>(U)) &&
+                 isScalarUse(cast<Instruction>(U), Ptr);
         }))
       ScalarPtrs.insert(I);
     else
