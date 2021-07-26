@@ -4774,7 +4774,8 @@ static void printMetadataImpl(raw_ostream &ROS, const Metadata &MD,
 
   TypePrinting TypePrinter(M);
 
-  WriteAsOperandInternal(OS, &MD, &TypePrinter, MST.getMachine(), M);
+  WriteAsOperandInternal(OS, &MD, &TypePrinter, MST.getMachine(), M,
+                         /* FromValue */ true);
 
   auto *N = dyn_cast<MDNode>(&MD);
   if (OnlyAsOperand || !N) {
