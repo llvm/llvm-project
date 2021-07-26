@@ -766,7 +766,7 @@ define void @recipe_in_merge_candidate_used_by_first_order_recurrence(i32 %k) {
 ; CHECK:      VPlan 'Initial VPlan for VF={2},UF>=1' {
 ; CHECK-NEXT: loop:
 ; CHECK-NEXT:   WIDEN-INDUCTION %iv = phi 0, %iv.next
-; CHECK-NEXT:   WIDEN-PHI ir<%for> = phi ir<0>, ir<%lv.a>
+; CHECK-NEXT:   FIRST-ORDER-RECURRENCE-PHI ir<%for> = phi ir<0>, ir<%lv.a>
 ; CHECK-NEXT:   EMIT vp<%3> = icmp ule ir<%iv> vp<%0>
 ; CHECK-NEXT:   REPLICATE ir<%gep.a> = getelementptr ir<@a>, ir<0>, ir<%iv>
 ; CHECK-NEXT: Successor(s): pred.load
@@ -788,6 +788,7 @@ define void @recipe_in_merge_candidate_used_by_first_order_recurrence(i32 %k) {
 ; CHECK-NEXT: Successor(s): loop.0
 ; CHECK-EMPTY:
 ; CHECK-NEXT: loop.0:
+; CHECK-NEXT:   EMIT vp<%7> = first-order splice ir<%for> ir<%lv.a>
 ; CHECK-NEXT: Successor(s): loop.1
 ; CHECK-EMPTY:
 ; CHECK-NEXT: loop.1:
@@ -800,12 +801,12 @@ define void @recipe_in_merge_candidate_used_by_first_order_recurrence(i32 %k) {
 ; CHECK-NEXT:   CondBit: vp<%3> (loop)
 ; CHECK-EMPTY:
 ; CHECK-NEXT:   pred.store.if:
-; CHECK-NEXT:     REPLICATE ir<%div> = sdiv ir<%for>, vp<%6>
+; CHECK-NEXT:     REPLICATE ir<%div> = sdiv vp<%7>, vp<%6>
 ; CHECK-NEXT:     REPLICATE store ir<%div>, ir<%gep.a>
 ; CHECK-NEXT:   Successor(s): pred.store.continue
 ; CHECK-EMPTY:
 ; CHECK-NEXT:   pred.store.continue:
-; CHECK-NEXT:     PHI-PREDICATED-INSTRUCTION vp<%9> = ir<%div>
+; CHECK-NEXT:     PHI-PREDICATED-INSTRUCTION vp<%10> = ir<%div>
 ; CHECK-NEXT:   No successors
 ; CHECK-NEXT: }
 ; CHECK-NEXT: Successor(s): loop.2
