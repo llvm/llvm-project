@@ -256,11 +256,10 @@ bool BCECmpBlock::canSinkBCECmpInst(const Instruction *Inst,
   }
   // Make sure this instruction does not use any of the BCE cmp block
   // instructions as operand.
-  for (auto BI : BlockInsts) {
-    if (is_contained(Inst->operands(), BI))
-      return false;
-  }
-  return true;
+  return llvm::none_of(Inst->operands(), [&](const Value *Op) {
+    const Instruction *OpI = dyn_cast<Instruction>(Op);
+    return OpI && BlockInsts.contains(OpI);
+  });
 }
 
 void BCECmpBlock::split(BasicBlock *NewParent, AliasAnalysis &AA) const {
