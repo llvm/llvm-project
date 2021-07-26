@@ -2639,16 +2639,13 @@ GDBRemoteCommunicationClient::SendSetCurrentThreadPacket(uint64_t tid,
   packet.PutChar('H');
   packet.PutChar(op);
 
-  if (pid != LLDB_INVALID_PROCESS_ID) {
-    packet.PutChar('p');
-    packet.PutHex64(pid);
-    packet.PutChar('.');
-  }
+  if (pid != LLDB_INVALID_PROCESS_ID)
+    packet.Printf("p%" PRIx64 ".", pid);
 
   if (tid == UINT64_MAX)
     packet.PutCString("-1");
   else
-    packet.PutHex64(tid);
+    packet.Printf("%" PRIx64, tid);
 
   StringExtractorGDBRemote response;
   if (SendPacketAndWaitForResponse(packet.GetString(), response) 
