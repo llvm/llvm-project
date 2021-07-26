@@ -360,7 +360,6 @@ int main(int Argc, const char **Argv) {
     return 1;
 
   llvm::InitializeAllTargets();
-  auto TargetAndMode = ToolChain::getTargetAndModeFromProgramName(Args[0]);
 
   llvm::BumpPtrAllocator A;
   llvm::StringSaver Saver(A);
@@ -372,13 +371,8 @@ int main(int Argc, const char **Argv) {
   // have to manually search for a --driver-mode=cl argument the hard way.
   // Finally, our -cc1 tools don't care which tokenization mode we use because
   // response files written by clang will tokenize the same way in either mode.
-  bool ClangCLMode = false;
-  if (StringRef(TargetAndMode.DriverMode).equals("--driver-mode=cl") ||
-      llvm::find_if(Args, [](const char *F) {
-        return F && strcmp(F, "--driver-mode=cl") == 0;
-      }) != Args.end()) {
-    ClangCLMode = true;
-  }
+  bool ClangCLMode =
+      IsClangCL(getDriverMode(Args[0], llvm::makeArrayRef(Args).slice(1)));
   enum { Default, POSIX, Windows } RSPQuoting = Default;
   for (const char *F : Args) {
     if (strcmp(F, "--rsp-quoting=posix") == 0)
@@ -490,6 +484,7 @@ int main(int Argc, const char **Argv) {
 
   Driver TheDriver(Path, llvm::sys::getDefaultTargetTriple(), Diags);
   SetInstallDir(Args, TheDriver, CanonicalPrefixes);
+  auto TargetAndMode = ToolChain::getTargetAndModeFromProgramName(Args[0]);
   TheDriver.setTargetAndMode(TargetAndMode);
 
   insertTargetAndModeArgs(TargetAndMode, Args, SavedStrings);
