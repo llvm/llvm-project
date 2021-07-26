@@ -5926,7 +5926,6 @@ static bool SwitchToLookupTable(SwitchInst *SI, IRBuilder<> &Builder,
       Updates.push_back({DominatorTree::Delete, BB, SI->getDefaultDest()});
   }
 
-  bool ReturnedEarly = false;
   for (PHINode *PHI : PHIs) {
     const ResultListTy &ResultList = ResultLists[PHI];
 
@@ -5937,15 +5936,6 @@ static bool SwitchToLookupTable(SwitchInst *SI, IRBuilder<> &Builder,
                             FuncName);
 
     Value *Result = Table.BuildLookup(TableIndex, Builder);
-
-    // If the result is used to return immediately from the function, we want to
-    // do that right here.
-    if (PHI->hasOneUse() && isa<ReturnInst>(*PHI->user_begin()) &&
-        PHI->user_back() == CommonDest->getFirstNonPHIOrDbg()) {
-      Builder.CreateRet(Result);
-      ReturnedEarly = true;
-      break;
-    }
 
     // Do a small peephole optimization: re-use the switch table compare if
     // possible.
@@ -5960,11 +5950,9 @@ static bool SwitchToLookupTable(SwitchInst *SI, IRBuilder<> &Builder,
     PHI->addIncoming(Result, LookupBB);
   }
 
-  if (!ReturnedEarly) {
-    Builder.CreateBr(CommonDest);
-    if (DTU)
-      Updates.push_back({DominatorTree::Insert, LookupBB, CommonDest});
-  }
+  Builder.CreateBr(CommonDest);
+  if (DTU)
+    Updates.push_back({DominatorTree::Insert, LookupBB, CommonDest});
 
   // Remove the switch.
   SmallPtrSet<BasicBlock *, 8> RemovedSuccessors;
