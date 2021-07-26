@@ -113,10 +113,6 @@ static cl::opt<unsigned> TwoEntryPHINodeFoldingThreshold(
              "to speculatively execute to fold a 2-entry PHI node into a "
              "select (default = 4)"));
 
-static cl::opt<bool> DupRet(
-    "simplifycfg-dup-ret", cl::Hidden, cl::init(false),
-    cl::desc("Duplicate return instructions into unconditional branches"));
-
 static cl::opt<bool>
     HoistCommon("simplifycfg-hoist-common", cl::Hidden, cl::init(true),
                 cl::desc("Hoist common instructions up to the parent block"));
@@ -4638,32 +4634,12 @@ bool SimplifyCFGOpt::simplifyReturn(ReturnInst *RI, IRBuilder<> &Builder) {
     return false;
 
   // Find predecessors that end with branches.
-  SmallVector<BasicBlock *, 8> UncondBranchPreds;
   SmallVector<BranchInst *, 8> CondBranchPreds;
   for (BasicBlock *P : predecessors(BB)) {
     Instruction *PTI = P->getTerminator();
-    if (BranchInst *BI = dyn_cast<BranchInst>(PTI)) {
-      if (BI->isUnconditional())
-        UncondBranchPreds.push_back(P);
-      else
+    if (BranchInst *BI = dyn_cast<BranchInst>(PTI))
+      if (BI->isConditional())
         CondBranchPreds.push_back(BI);
-    }
-  }
-
-  // If we found some, do the transformation!
-  if (!UncondBranchPreds.empty() && DupRet) {
-    while (!UncondBranchPreds.empty()) {
-      BasicBlock *Pred = UncondBranchPreds.pop_back_val();
-      LLVM_DEBUG(dbgs() << "FOLDING: " << *BB
-                        << "INTO UNCOND BRANCH PRED: " << *Pred);
-      (void)FoldReturnIntoUncondBranch(RI, BB, Pred, DTU);
-    }
-
-    // If we eliminated all predecessors of the block, delete the block now.
-    if (pred_empty(BB))
-      DeleteDeadBlock(BB, DTU);
-
-    return true;
   }
 
   // Check out all of the conditional branches going to this return
