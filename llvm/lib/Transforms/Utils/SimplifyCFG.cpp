@@ -4699,14 +4699,6 @@ bool SimplifyCFGOpt::simplifyUnreachable(UnreachableInst *UI) {
     // Otherwise, this instruction can be freely erased,
     // even if it is not side-effect free.
 
-    // Temporarily disable removal of volatile stores preceding unreachable,
-    // pending a potential LangRef change permitting volatile stores to trap.
-    // TODO: Either remove this code, or properly integrate the check into
-    // isGuaranteedToTransferExecutionToSuccessor().
-    if (auto *SI = dyn_cast<StoreInst>(&*BBI))
-      if (SI->isVolatile())
-        break; // Can not drop this instruction. We're done here.
-
     // Note that deleting EH's here is in fact okay, although it involves a bit
     // of subtle reasoning. If this inst is an EH, all the predecessors of this
     // block will be the unwind edges of Invoke/CatchSwitch/CleanupReturn,
