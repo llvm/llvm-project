@@ -1160,23 +1160,23 @@ define void @indices_convert() {
 ;
 ; XOP-LABEL: indices_convert:
 ; XOP:       # %bb.0: # %bb
-; XOP-NEXT:    vpshufd {{.*#+}} xmm0 = mem[2,3,2,3]
-; XOP-NEXT:    vpand {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0, %xmm0
-; XOP-NEXT:    vpmovzxdq {{.*#+}} xmm0 = xmm0[0],zero,xmm0[1],zero
-; XOP-NEXT:    vmovapd (%rax), %xmm1
-; XOP-NEXT:    vpaddq %xmm0, %xmm0, %xmm0
-; XOP-NEXT:    vpermil2pd $0, %xmm0, %xmm1, %xmm1, %xmm0
+; XOP-NEXT:    vmovdqa (%rax), %xmm0
+; XOP-NEXT:    vpshufd {{.*#+}} xmm1 = xmm0[2,3,2,3]
+; XOP-NEXT:    vpand {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm1, %xmm1
+; XOP-NEXT:    vpmovzxdq {{.*#+}} xmm1 = xmm1[0],zero,xmm1[1],zero
+; XOP-NEXT:    vpaddq %xmm1, %xmm1, %xmm1
+; XOP-NEXT:    vpermil2pd $0, %xmm1, %xmm0, %xmm0, %xmm0
 ; XOP-NEXT:    vmovupd %xmm0, (%rax)
 ; XOP-NEXT:    retq
 ;
 ; AVX1-LABEL: indices_convert:
 ; AVX1:       # %bb.0: # %bb
-; AVX1-NEXT:    vpshufd {{.*#+}} xmm0 = mem[2,3,2,3]
-; AVX1-NEXT:    vpand {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0, %xmm0
-; AVX1-NEXT:    vpmovzxdq {{.*#+}} xmm0 = xmm0[0],zero,xmm0[1],zero
-; AVX1-NEXT:    vmovapd (%rax), %xmm1
-; AVX1-NEXT:    vpaddq %xmm0, %xmm0, %xmm0
-; AVX1-NEXT:    vpermilpd %xmm0, %xmm1, %xmm0
+; AVX1-NEXT:    vmovdqa (%rax), %xmm0
+; AVX1-NEXT:    vpshufd {{.*#+}} xmm1 = xmm0[2,3,2,3]
+; AVX1-NEXT:    vpand {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm1, %xmm1
+; AVX1-NEXT:    vpmovzxdq {{.*#+}} xmm1 = xmm1[0],zero,xmm1[1],zero
+; AVX1-NEXT:    vpaddq %xmm1, %xmm1, %xmm1
+; AVX1-NEXT:    vpermilpd %xmm1, %xmm0, %xmm0
 ; AVX1-NEXT:    vmovupd %xmm0, (%rax)
 ; AVX1-NEXT:    retq
 ;
