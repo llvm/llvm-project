@@ -1524,14 +1524,8 @@ struct PointerBounds {
 static PointerBounds expandBounds(const RuntimeCheckingPtrGroup *CG,
                                   Loop *TheLoop, Instruction *Loc,
                                   SCEVExpander &Exp) {
-  // TODO: Add helper to retrieve pointers to CG.
-  Value *Ptr = CG->RtCheck.Pointers[CG->Members[0]].PointerValue;
-
-  unsigned AS = Ptr->getType()->getPointerAddressSpace();
   LLVMContext &Ctx = Loc->getContext();
-
-  // Use this type for pointer arithmetic.
-  Type *PtrArithTy = Type::getInt8PtrTy(Ctx, AS);
+  Type *PtrArithTy = Type::getInt8PtrTy(Ctx, CG->AddressSpace);
 
   Value *Start = nullptr, *End = nullptr;
   LLVM_DEBUG(dbgs() << "LAA: Adding RT check for range:\n");
