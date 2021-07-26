@@ -216,6 +216,7 @@ namespace {
 class WebAssemblyLowerEmscriptenEHSjLj final : public ModulePass {
   bool EnableEH;   // Enable exception handling
   bool EnableSjLj; // Enable setjmp/longjmp handling
+  bool DoSjLj;     // Whether we actually perform setjmp/longjmp handling
 
   GlobalVariable *ThrewGV = nullptr;
   GlobalVariable *ThrewValueGV = nullptr;
@@ -234,6 +235,8 @@ class WebAssemblyLowerEmscriptenEHSjLj final : public ModulePass {
   StringMap<Function *> InvokeWrappers;
   // Set of allowed function names for exception handling
   std::set<std::string> EHAllowlistSet;
+  // Functions that contains calls to setjmp
+  SmallPtrSet<Function *, 8> SetjmpUsers;
 
   StringRef getPassName() const override {
     return "WebAssembly Lower Emscripten Exceptions";
@@ -252,6 +255,10 @@ class WebAssemblyLowerEmscriptenEHSjLj final : public ModulePass {
   bool areAllExceptionsAllowed() const { return EHAllowlistSet.empty(); }
   bool canLongjmp(Module &M, const Value *Callee) const;
   bool isEmAsmCall(Module &M, const Value *Callee) const;
+  bool supportsException(const Function *F) const {
+    return EnableEH && (areAllExceptionsAllowed() ||
+                        EHAllowlistSet.count(std::string(F->getName())));
+  }
 
   void rebuildSSA(Function &F);
 
@@ -287,7 +294,7 @@ static bool canThrow(const Value *V) {
       return false;
     StringRef Name = F->getName();
     // leave setjmp and longjmp (mostly) alone, we process them properly later
-    if (Name == "setjmp" || Name == "longjmp")
+    if (Name == "setjmp" || Name == "longjmp" || Name == "emscripten_longjmp")
       return false;
     return !F->doesNotThrow();
   }
@@ -693,7 +700,7 @@ bool WebAssemblyLowerEmscriptenEHSjLj::runOnModule(Module &M) {
   Function *LongjmpF = M.getFunction("longjmp");
   bool SetjmpUsed = SetjmpF && !SetjmpF->use_empty();
   bool LongjmpUsed = LongjmpF && !LongjmpF->use_empty();
-  bool DoSjLj = EnableSjLj && (SetjmpUsed || LongjmpUsed);
+  DoSjLj = EnableSjLj && (SetjmpUsed || LongjmpUsed);
 
   auto *TPC = getAnalysisIfAvailable<TargetPassConfig>();
   assert(TPC && "Expected a TargetPassConfig");
@@ -718,7 +725,7 @@ bool WebAssemblyLowerEmscriptenEHSjLj::runOnModule(Module &M) {
 
   bool Changed = false;
 
-  // Exception handling
+  // Function registration for exception handling
   if (EnableEH) {
     // Register __resumeException function
     FunctionType *ResumeFTy =
@@ -729,25 +736,14 @@ bool WebAssemblyLowerEmscriptenEHSjLj::runOnModule(Module &M) {
     FunctionType *EHTypeIDTy =
         FunctionType::get(IRB.getInt32Ty(), IRB.getInt8PtrTy(), false);
     EHTypeIDF = getEmscriptenFunction(EHTypeIDTy, "llvm_eh_typeid_for", &M);
-
-    for (Function &F : M) {
-      if (F.isDeclaration())
-        continue;
-      Changed |= runEHOnFunction(F);
-    }
   }
 
-  // Setjmp/longjmp handling
+  // Function registration and data pre-gathering for setjmp/longjmp handling
   if (DoSjLj) {
-    Changed = true; // We have setjmp or longjmp somewhere
-
     // Register emscripten_longjmp function
     FunctionType *FTy = FunctionType::get(
         IRB.getVoidTy(), {getAddrIntType(&M), IRB.getInt32Ty()}, false);
     EmLongjmpF = getEmscriptenFunction(FTy, "emscripten_longjmp", &M);
-
-    if (LongjmpF)
-      replaceLongjmpWithEmscriptenLongjmp(LongjmpF, EmLongjmpF);
 
     if (SetjmpF) {
       // Register saveSetjmp function
@@ -765,16 +761,33 @@ bool WebAssemblyLowerEmscriptenEHSjLj::runOnModule(Module &M) {
           false);
       TestSetjmpF = getEmscriptenFunction(FTy, "testSetjmp", &M);
 
-      // Only traverse functions that uses setjmp in order not to insert
-      // unnecessary prep / cleanup code in every function
-      SmallPtrSet<Function *, 8> SetjmpUsers;
+      // Precompute setjmp users
       for (User *U : SetjmpF->users()) {
         auto *UI = cast<Instruction>(U);
         SetjmpUsers.insert(UI->getFunction());
       }
+    }
+  }
+
+  // Exception handling transformation
+  if (EnableEH) {
+    for (Function &F : M) {
+      if (F.isDeclaration())
+        continue;
+      Changed |= runEHOnFunction(F);
+    }
+  }
+
+  // Setjmp/longjmp handling transformation
+  if (DoSjLj) {
+    Changed = true; // We have setjmp or longjmp somewhere
+    if (LongjmpF)
+      replaceLongjmpWithEmscriptenLongjmp(LongjmpF, EmLongjmpF);
+    // Only traverse functions that uses setjmp in order not to insert
+    // unnecessary prep / cleanup code in every function
+    if (SetjmpF)
       for (Function *F : SetjmpUsers)
         runSjLjOnFunction(*F);
-    }
   }
 
   if (!Changed) {
@@ -802,8 +815,6 @@ bool WebAssemblyLowerEmscriptenEHSjLj::runEHOnFunction(Function &F) {
   bool Changed = false;
   SmallVector<Instruction *, 64> ToErase;
   SmallPtrSet<LandingPadInst *, 32> LandingPads;
-  bool AllowExceptions = areAllExceptionsAllowed() ||
-                         EHAllowlistSet.count(std::string(F.getName()));
 
   for (BasicBlock &BB : F) {
     auto *II = dyn_cast<InvokeInst>(BB.getTerminator());
@@ -813,11 +824,50 @@ bool WebAssemblyLowerEmscriptenEHSjLj::runEHOnFunction(Function &F) {
     LandingPads.insert(II->getLandingPadInst());
     IRB.SetInsertPoint(II);
 
-    bool NeedInvoke = AllowExceptions && canThrow(II->getCalledOperand());
+    const Value *Callee = II->getCalledOperand();
+    bool NeedInvoke = supportsException(&F) && canThrow(Callee);
     if (NeedInvoke) {
       // Wrap invoke with invoke wrapper and generate preamble/postamble
       Value *Threw = wrapInvoke(II);
       ToErase.push_back(II);
+
+      // If setjmp/longjmp handling is enabled, the thrown value can be not an
+      // exception but a longjmp. If the current function contains calls to
+      // setjmp, it will be appropriately handled in runSjLjOnFunction. But even
+      // if the function does not contain setjmp calls, we shouldn't silently
+      // ignore longjmps; we should rethrow them so they can be correctly
+      // handled in somewhere up the call chain where setjmp is.
+      // __THREW__'s value is 0 when nothing happened, 1 when an exception is
+      // thrown, other values when longjmp is thrown.
+      //
+      // if (%__THREW__.val == 0 || %__THREW__.val == 1)
+      //   goto %tail
+      // else
+      //   goto %longjmp.rethrow
+      //
+      // longjmp.rethrow: ;; This is longjmp. Rethrow it
+      //   %__threwValue.val = __threwValue
+      //   emscripten_longjmp(%__THREW__.val, %__threwValue.val);
+      //
+      // tail: ;; Nothing happened or an exception is thrown
+      //   ... Continue exception handling ...
+      if (DoSjLj && !SetjmpUsers.count(&F) && canLongjmp(M, Callee)) {
+        BasicBlock *Tail = BasicBlock::Create(C, "tail", &F);
+        BasicBlock *RethrowBB = BasicBlock::Create(C, "longjmp.rethrow", &F);
+        Value *CmpEqOne =
+            IRB.CreateICmpEQ(Threw, getAddrSizeInt(&M, 1), "cmp.eq.one");
+        Value *CmpEqZero =
+            IRB.CreateICmpEQ(Threw, getAddrSizeInt(&M, 0), "cmp.eq.zero");
+        Value *Or = IRB.CreateOr(CmpEqZero, CmpEqOne, "or");
+        IRB.CreateCondBr(Or, Tail, RethrowBB);
+        IRB.SetInsertPoint(RethrowBB);
+        Value *ThrewValue = IRB.CreateLoad(IRB.getInt32Ty(), ThrewValueGV,
+                                           ThrewValueGV->getName() + ".val");
+        IRB.CreateCall(EmLongjmpF, {Threw, ThrewValue});
+
+        IRB.CreateUnreachable();
+        IRB.SetInsertPoint(Tail);
+      }
 
       // Insert a branch based on __THREW__ variable
       Value *Cmp = IRB.CreateICmpEQ(Threw, getAddrSizeInt(&M, 1), "cmp");
@@ -1098,6 +1148,46 @@ bool WebAssemblyLowerEmscriptenEHSjLj::runSjLjOnFunction(Function &F) {
         Threw = wrapInvoke(CI);
         ToErase.push_back(CI);
         Tail = SplitBlock(BB, CI->getNextNode());
+
+        // If exception handling is enabled, the thrown value can be not a
+        // longjmp but an exception, in which case we shouldn't silently ignore
+        // exceptions; we should rethrow them.
+        // __THREW__'s value is 0 when nothing happened, 1 when an exception is
+        // thrown, other values when longjmp is thrown.
+        //
+        // if (%__THREW__.val == 1)
+        //   goto %eh.rethrow
+        // else
+        //   goto %normal
+        //
+        // eh.rethrow: ;; Rethrow exception
+        //   %exn = call @__cxa_find_matching_catch_2() ;; Retrieve thrown ptr
+        //   __resumeException(%exn)
+        //
+        // normal:
+        //   <-- Insertion point. Will insert sjlj handling code from here
+        //   goto %tail
+        //
+        // tail:
+        //   ...
+        if (supportsException(&F) && canThrow(Callee)) {
+          IRB.SetInsertPoint(CI);
+          // We will add a new conditional branch. So remove the branch created
+          // when we split the BB
+          ToErase.push_back(BB->getTerminator());
+          BasicBlock *NormalBB = BasicBlock::Create(C, "normal", &F);
+          BasicBlock *RethrowBB = BasicBlock::Create(C, "eh.rethrow", &F);
+          Value *CmpEqOne =
+              IRB.CreateICmpEQ(Threw, getAddrSizeInt(&M, 1), "cmp.eq.one");
+          IRB.CreateCondBr(CmpEqOne, RethrowBB, NormalBB);
+          IRB.SetInsertPoint(RethrowBB);
+          CallInst *Exn = IRB.CreateCall(getFindMatchingCatch(M, 0), {}, "exn");
+          IRB.CreateCall(ResumeF, {Exn});
+          IRB.CreateUnreachable();
+          IRB.SetInsertPoint(NormalBB);
+          IRB.CreateBr(Tail);
+          BB = NormalBB; // New insertion point to insert testSetjmp()
+        }
       }
 
       // We need to replace the terminator in Tail - SplitBlock makes BB go
