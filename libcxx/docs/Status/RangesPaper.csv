@@ -103,10 +103,10 @@ Section,Description,Dependencies,Assignee,Complete
 | `ranges::iterator_t <https://llvm.org/D100255>`_
 | `ranges::sentinel_t <https://llvm.org/D100269>`_
 | `ranges::range_difference_t <https://llvm.org/D100269>`_
-| ranges::range_size_t
+| `ranges::range_size_t <https://llvm.org/D106708>`_
 | `ranges::range_value_t <https://llvm.org/D100269>`_
 | `ranges::range_reference_t <https://llvm.org/D100269>`_
-| `ranges::range_rvalue_reference_t <https://llvm.org/D100269>`_",[range.access],Christopher Di Bella,In progress
+| `ranges::range_rvalue_reference_t <https://llvm.org/D100269>`_",[range.access],Christopher Di Bella,✅
 `[range.sized] <http://wg21.link/range.sized>`_,"| `ranges::sized_range <https://llvm.org/D102434>`_
 | `ranges::disable_sized_range <https://llvm.org/D102434>`_","| [range.primitives]
 | [range.range]",Christopher Di Bella,✅
