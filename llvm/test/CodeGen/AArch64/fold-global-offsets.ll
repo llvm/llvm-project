@@ -133,7 +133,6 @@ define i32 @f7() {
 ; GISEL-NEXT:    mov v0.d[1], x8
 ; GISEL-NEXT:    mov d0, v0.d[1]
 ; GISEL-NEXT:    fmov x8, d0
-; GISEL-NEXT:    lsr x8, x8, #0
 ; GISEL-NEXT:    ldr w0, [x8, #20]
 ; GISEL-NEXT:    ret
 

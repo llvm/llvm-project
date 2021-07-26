@@ -9,9 +9,7 @@ body:             |
     liveins: $x0, $x1
     ; CHECK-LABEL: name: test_combine_select_same_res
     ; CHECK: [[COPY:%[0-9]+]]:_(s64) = COPY $x0
-    ; CHECK: [[TRUNC:%[0-9]+]]:_(s1) = G_TRUNC [[COPY]](s64)
-    ; CHECK: [[SELECT:%[0-9]+]]:_(s64) = G_SELECT [[TRUNC]](s1), [[COPY]], [[COPY]]
-    ; CHECK: $x0 = COPY [[SELECT]](s64)
+    ; CHECK: $x0 = COPY [[COPY]](s64)
     %0:_(s64) = COPY $x0
     %1:_(s1) = G_TRUNC %0
     %2:_(s64) = G_SELECT %1, %0, %0
