@@ -84,7 +84,7 @@
 ; CHECK:         DW_AT_type    (0x{{.*}} "*")
 ; CHECK:         DW_AT_decl_file       ("/tmp{{[/\\]}}dwarf-basics.c")
 ; CHECK:         DW_AT_decl_line       (2)
-; CHECK:         DW_AT_data_member_location    (0x00)
+; CHECK:         DW_AT_data_member_location    (0)
 
 ; CHECK:       NULL
 
