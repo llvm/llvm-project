@@ -1069,6 +1069,12 @@ Error Section::removeSectionReferences(
 void GroupSection::finalize() {
   this->Info = Sym ? Sym->Index : 0;
   this->Link = SymTab ? SymTab->Index : 0;
+  // Linker deduplication for GRP_COMDAT is based on Sym->Name. The local/global
+  // status is not part of the equation. If Sym is localized, the intention is
+  // likely to make the group fully localized. Drop GRP_COMDAT to suppress
+  // deduplication. See https://groups.google.com/g/generic-abi/c/2X6mR-s2zoc
+  if ((FlagWord & GRP_COMDAT) && Sym && Sym->Binding == STB_LOCAL)
+    this->FlagWord &= ~GRP_COMDAT;
 }
 
 Error GroupSection::removeSectionReferences(
