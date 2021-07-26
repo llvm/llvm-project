@@ -2475,6 +2475,16 @@ Turn on loop unroller
 
 Use #line in preprocessed output
 
+.. option:: -fminimize-whitespace, -fno-minimize-whitespace
+
+Ignore the whitespace from the input file when emitting preprocessor
+output. It will only contain whitespace when necessary, e.g. to keep two
+minus signs from merging into to an increment operator. Useful with the
+-P option to normalize whitespace such that two files with only formatting
+changes are equal.
+
+Only valid with -E on C-like inputs and incompatible with -traditional-cpp.
+
 .. option:: -fvalidate-ast-input-files-content
 
 Compute and store the hash of input files used to build an AST. Files with mismatching mtime's are considered valid if both contents is identical
