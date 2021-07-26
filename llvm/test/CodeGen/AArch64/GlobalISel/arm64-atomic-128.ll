@@ -350,10 +350,8 @@ define void @atomic_load_relaxed(i64, i64, i128* %p, i128* %p2) {
 ; CHECK-LLSC-O1-NEXT:  .LBB4_1: // %atomicrmw.start
 ; CHECK-LLSC-O1-NEXT:    // =>This Inner Loop Header: Depth=1
 ; CHECK-LLSC-O1-NEXT:    ldxp x9, x8, [x2]
-; CHECK-LLSC-O1-NEXT:    lsr x8, x8, #0
-; CHECK-LLSC-O1-NEXT:    lsr x10, x8, #0
-; CHECK-LLSC-O1-NEXT:    stxp w11, x9, x10, [x2]
-; CHECK-LLSC-O1-NEXT:    cbnz w11, .LBB4_1
+; CHECK-LLSC-O1-NEXT:    stxp w10, x9, x8, [x2]
+; CHECK-LLSC-O1-NEXT:    cbnz w10, .LBB4_1
 ; CHECK-LLSC-O1-NEXT:  // %bb.2: // %atomicrmw.end
 ; CHECK-LLSC-O1-NEXT:    mov v0.d[0], x9
 ; CHECK-LLSC-O1-NEXT:    mov v0.d[1], x8
@@ -365,10 +363,8 @@ define void @atomic_load_relaxed(i64, i64, i128* %p, i128* %p2) {
 ; CHECK-CAS-O1-NEXT:  .LBB4_1: // %atomicrmw.start
 ; CHECK-CAS-O1-NEXT:    // =>This Inner Loop Header: Depth=1
 ; CHECK-CAS-O1-NEXT:    ldxp x9, x8, [x2]
-; CHECK-CAS-O1-NEXT:    lsr x8, x8, #0
-; CHECK-CAS-O1-NEXT:    lsr x10, x8, #0
-; CHECK-CAS-O1-NEXT:    stxp w11, x9, x10, [x2]
-; CHECK-CAS-O1-NEXT:    cbnz w11, .LBB4_1
+; CHECK-CAS-O1-NEXT:    stxp w10, x9, x8, [x2]
+; CHECK-CAS-O1-NEXT:    cbnz w10, .LBB4_1
 ; CHECK-CAS-O1-NEXT:  // %bb.2: // %atomicrmw.end
 ; CHECK-CAS-O1-NEXT:    mov v0.d[0], x9
 ; CHECK-CAS-O1-NEXT:    mov v0.d[1], x8

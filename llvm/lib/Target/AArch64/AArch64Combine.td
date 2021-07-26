@@ -212,6 +212,6 @@ def AArch64PostLegalizerCombinerHelper
                         form_bitfield_extract, rotate_out_of_range,
                         icmp_to_true_false_known_bits, merge_unmerge,
                         select_combines, fold_merge_to_zext,
-                        constant_fold]> {
+                        constant_fold, identity_combines]> {
   let DisableRuleOption = "aarch64postlegalizercombiner-disable-rule";
 }
