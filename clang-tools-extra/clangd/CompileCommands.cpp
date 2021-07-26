@@ -9,11 +9,17 @@
 #include "CompileCommands.h"
 #include "Config.h"
 #include "support/Logger.h"
+#include "support/Trace.h"
+#include "clang/Driver/Driver.h"
 #include "clang/Driver/Options.h"
+#include "clang/Driver/ToolChain.h"
 #include "clang/Frontend/CompilerInvocation.h"
 #include "clang/Tooling/ArgumentsAdjusters.h"
+#include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/STLExtras.h"
+#include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/StringRef.h"
+#include "llvm/Option/ArgList.h"
 #include "llvm/Option/Option.h"
 #include "llvm/Support/Allocator.h"
 #include "llvm/Support/Debug.h"
@@ -188,11 +194,43 @@ CommandMangler CommandMangler::detect() {
   return Result;
 }
 
-CommandMangler CommandMangler::forTests() {
-  return CommandMangler();
-}
+CommandMangler CommandMangler::forTests() { return CommandMangler(); }
 
 void CommandMangler::adjust(std::vector<std::string> &Cmd) const {
+  trace::Span S("AdjustCompileFlags");
+  auto &OptTable = clang::driver::getDriverOptTable();
+  // OriginalArgs needs to outlive ArgList.
+  llvm::SmallVector<const char *, 16> OriginalArgs;
+  OriginalArgs.reserve(Cmd.size());
+  for (const auto &S : Cmd)
+    OriginalArgs.push_back(S.c_str());
+  bool IsCLMode =
+      !OriginalArgs.empty() &&
+      driver::IsClangCL(driver::getDriverMode(
+          OriginalArgs[0], llvm::makeArrayRef(OriginalArgs).slice(1)));
+  // ParseArgs propagates missig arg/opt counts on error, but preserves
+  // everything it could parse in ArgList. So we just ignore those counts.
+  unsigned IgnoredCount;
+  auto ArgList = OptTable.ParseArgs(
+      OriginalArgs, IgnoredCount, IgnoredCount,
+      /*FlagsToInclude=*/
+      IsCLMode ? (driver::options::CLOption | driver::options::CoreOption)
+               : /*everything*/ 0,
+      /*FlagsToExclude=*/driver::options::NoDriverOption |
+          (IsCLMode ? 0 : driver::options::CLOption));
+
+  // Move the inputs to the end, separated via `--` from flags. This ensures
+  // modifications done in the following steps apply in more cases (like setting
+  // -x, which only affects inputs that come after it).
+  if (!ArgList.hasArgNoClaim(driver::options::OPT__DASH_DASH)) {
+    // In theory there might be more than one input, but clangd can't deal with
+    // them anyway.
+    if (auto *Input = ArgList.getLastArg(driver::options::OPT_INPUT)) {
+      Cmd.insert(Cmd.end(), {"--", Input->getAsString(ArgList)});
+      Cmd.erase(Cmd.begin() + Input->getIndex());
+    }
+  }
+
   for (auto &Edit : Config::current().CompileFlags.Edits)
     Edit(Cmd);
 
