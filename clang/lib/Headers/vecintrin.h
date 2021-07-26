@@ -9353,6 +9353,41 @@ vec_fp_test_data_class(__vector double __a, int __b, int *__c)
                                    __VEC_CLASS_FP_ZERO | \
                                    __VEC_CLASS_FP_INFINITY)
 
+/*-- vec_extend_to_fp32_hi --------------------------------------------------*/
+
+#if __ARCH__ >= 14
+#define vec_extend_to_fp32_hi(X, W) \
+  ((__vector float)__builtin_s390_vclfnhs((X), (W)));
+#endif
+
+/*-- vec_extend_to_fp32_hi --------------------------------------------------*/
+
+#if __ARCH__ >= 14
+#define vec_extend_to_fp32_lo(X, W) \
+  ((__vector float)__builtin_s390_vclfnls((X), (W)));
+#endif
+
+/*-- vec_round_from_fp32 ----------------------------------------------------*/
+
+#if __ARCH__ >= 14
+#define vec_round_from_fp32(X, Y, W) \
+  ((__vector unsigned short)__builtin_s390_vcrnfs((X), (Y), (W)));
+#endif
+
+/*-- vec_convert_to_fp16 ----------------------------------------------------*/
+
+#if __ARCH__ >= 14
+#define vec_convert_to_fp16(X, W) \
+  ((__vector unsigned short)__builtin_s390_vcfn((X), (W)));
+#endif
+
+/*-- vec_convert_from_fp16 --------------------------------------------------*/
+
+#if __ARCH__ >= 14
+#define vec_convert_from_fp16(X, W) \
+  ((__vector unsigned short)__builtin_s390_vcnf((X), (W)));
+#endif
+
 /*-- vec_cp_until_zero ------------------------------------------------------*/
 
 static inline __ATTRS_o_ai __vector signed char

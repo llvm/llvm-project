@@ -1,30 +1,30 @@
-// RUN: %clang_cc1 %s -triple spir-unknown-unknown -verify -pedantic -fsyntax-only
+// RUN: %clang_cc1 %s -triple spir-unknown-unknown -verify -pedantic -fsyntax-only -cl-std=CL1.0
 // RUN: %clang_cc1 %s -triple spir-unknown-unknown -verify -pedantic -fsyntax-only -cl-std=CL1.1
 // RUN: %clang_cc1 %s -triple spir-unknown-unknown -verify -fsyntax-only -cl-std=CL1.1 -DNOPEDANTIC
 // RUN: %clang_cc1 %s -triple spir-unknown-unknown -verify -pedantic -fsyntax-only -cl-std=CL1.2 -DFP64
 
 // Test with a target not supporting fp64.
-// RUN: %clang_cc1 %s -triple r600-unknown-unknown -target-cpu r600 -verify -pedantic -fsyntax-only -DNOFP64 -DNOFP16
+// RUN: %clang_cc1 %s -cl-std=CL1.0 -triple r600-unknown-unknown -target-cpu r600 -verify -pedantic -fsyntax-only -DNOFP64 -DNOFP16
 // RUN: %clang_cc1 -cl-std=CL3.0 %s -triple r600-unknown-unknown -target-cpu r600 -verify -pedantic -fsyntax-only -DNOFP64 -DNOFP16
 
 // Test with some extensions enabled or disabled by cmd-line args
 //
 // Target does not support fp64 and fp16 - override it
-// RUN: %clang_cc1 %s -triple r600-unknown-unknown -target-cpu r600 -verify -pedantic -fsyntax-only -cl-ext=+cl_khr_fp64,+cl_khr_fp16
+// RUN: %clang_cc1 %s -cl-std=CL1.0 -triple r600-unknown-unknown -target-cpu r600 -verify -pedantic -fsyntax-only -cl-ext=+cl_khr_fp64,+cl_khr_fp16
 //
 // Disable or enable all extensions
-// RUN: %clang_cc1 %s -triple spir-unknown-unknown -verify -pedantic -fsyntax-only -cl-ext=-all -DNOFP64 -DNOFP16
-// RUN: %clang_cc1 %s -triple r600-unknown-unknown -target-cpu r600 -verify -pedantic -fsyntax-only -cl-ext=+all
-// RUN: %clang_cc1 %s -triple r600-unknown-unknown -target-cpu r600 -verify -pedantic -fsyntax-only -cl-ext=+all,-cl_khr_fp64 -DNOFP64
-// RUN: %clang_cc1 %s -triple r600-unknown-unknown -target-cpu r600 -verify -pedantic -fsyntax-only -cl-ext=-all,+cl_khr_fp64 -DNOFP16
+// RUN: %clang_cc1 %s -cl-std=CL1.0 -triple spir-unknown-unknown -verify -pedantic -fsyntax-only -cl-ext=-all -DNOFP64 -DNOFP16
+// RUN: %clang_cc1 %s -cl-std=CL1.0 -triple r600-unknown-unknown -target-cpu r600 -verify -pedantic -fsyntax-only -cl-ext=+all
+// RUN: %clang_cc1 %s -cl-std=CL1.0 -triple r600-unknown-unknown -target-cpu r600 -verify -pedantic -fsyntax-only -cl-ext=+all,-cl_khr_fp64 -DNOFP64
+// RUN: %clang_cc1 %s -cl-std=CL1.0 -triple r600-unknown-unknown -target-cpu r600 -verify -pedantic -fsyntax-only -cl-ext=-all,+cl_khr_fp64 -DNOFP16
 // RUN: %clang_cc1 -cl-std=CL3.0 %s -triple spir-unknown-unknown -verify -pedantic -fsyntax-only -cl-ext=-all -DNOFP64 -DNOFP16
 // RUN: %clang_cc1 -cl-std=CL3.0 %s -triple r600-unknown-unknown -target-cpu r600 -verify -pedantic -fsyntax-only -cl-ext=+all -DFP64
 // RUN: %clang_cc1 -cl-std=CL3.0 %s -triple r600-unknown-unknown -target-cpu r600 -verify -pedantic -fsyntax-only -cl-ext=+all,-__opencl_c_fp64,-cl_khr_fp64 -DNOFP64
 //
 // Concatenating
-// RUN: %clang_cc1 %s -triple spir-unknown-unknown -verify -pedantic -fsyntax-only -cl-ext=-cl_khr_fp64 -cl-ext=+cl_khr_fp64
-// RUN: %clang_cc1 %s -triple spir-unknown-unknown -verify -pedantic -fsyntax-only -cl-ext=-cl_khr_fp64,+cl_khr_fp64
-// RUN: %clang_cc1 %s -triple spir-unknown-unknown -verify -pedantic -fsyntax-only -cl-ext=-all -cl-ext=+cl_khr_fp64 -cl-ext=+cl_khr_fp16 -cl-ext=-cl_khr_fp64 -DNOFP64
+// RUN: %clang_cc1 %s -cl-std=CL1.0 -triple spir-unknown-unknown -verify -pedantic -fsyntax-only -cl-ext=-cl_khr_fp64 -cl-ext=+cl_khr_fp64
+// RUN: %clang_cc1 %s -cl-std=CL1.0 -triple spir-unknown-unknown -verify -pedantic -fsyntax-only -cl-ext=-cl_khr_fp64,+cl_khr_fp64
+// RUN: %clang_cc1 %s -cl-std=CL1.0 -triple spir-unknown-unknown -verify -pedantic -fsyntax-only -cl-ext=-all -cl-ext=+cl_khr_fp64 -cl-ext=+cl_khr_fp16 -cl-ext=-cl_khr_fp64 -DNOFP64
 // RUN: %clang_cc1 %s -triple spir-unknown-unknown -verify -pedantic -fsyntax-only -cl-ext=-all -cl-ext=+cl_khr_fp64,-cl_khr_fp64,+cl_khr_fp16 -DNOFP64
 // RUN: %clang_cc1 -cl-std=CL3.0 %s -triple spir-unknown-unknown -verify -pedantic -fsyntax-only -cl-ext=-__opencl_c_fp64,-cl_khr_fp64 -cl-ext=+__opencl_c_fp64,+cl_khr_fp64 -DFP64
 // RUN: %clang_cc1 -cl-std=CL3.0 %s -triple spir-unknown-unknown -verify -pedantic -fsyntax-only -cl-ext=-__opencl_c_fp64,+__opencl_c_fp64,+cl_khr_fp64 -DFP64

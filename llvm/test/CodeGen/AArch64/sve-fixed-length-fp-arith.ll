@@ -69,12 +69,11 @@ define void @fadd_v32f16(<32 x half>* %a, <32 x half>* %b) #0 {
 ; CHECK-DAG: ld1h { [[OP2:z[0-9]+]].h }, [[PG]]/z, [x1]
 ; CHECK-DAG: fadd [[RES:z[0-9]+]].h, [[PG]]/m, [[OP1]].h, [[OP2]].h
 ; CHECK-DAG: st1h { [[RES]].h }, [[PG]], [x0]
-; VBITS_LE_256-DAG: add x[[A1:[0-9]+]], x0, #[[#VBYTES]]
-; VBITS_LE_256-DAG: add x[[B1:[0-9]+]], x1, #[[#VBYTES]]
-; VBITS_LE_256-DAG: ld1h { [[OP1_1:z[0-9]+]].h }, [[PG]]/z, [x[[A1]]]
-; VBITS_LE_256-DAG: ld1h { [[OP2_1:z[0-9]+]].h }, [[PG]]/z, [x[[B1]]]
+; VBITS_LE_256-DAG: mov x[[IDX_1:[0-9]+]], #[[#div(VBYTES,2)]]
+; VBITS_LE_256-DAG: ld1h { [[OP1_1:z[0-9]+]].h }, [[PG]]/z, [x0, x[[IDX_1]], lsl #1]
+; VBITS_LE_256-DAG: ld1h { [[OP2_1:z[0-9]+]].h }, [[PG]]/z, [x1, x[[IDX_1]], lsl #1]
 ; VBITS_LE_256-DAG: fadd [[RES_1:z[0-9]+]].h, [[PG]]/m, [[OP1_1]].h, [[OP2_1]].h
-; VBITS_LE_256-DAG: st1h { [[RES_1]].h }, [[PG]], [x[[A1]]]
+; VBITS_LE_256-DAG: st1h { [[RES_1]].h }, [[PG]], [x0, x[[IDX_1]], lsl #1]
 ; CHECK: ret
   %op1 = load <32 x half>, <32 x half>* %a
   %op2 = load <32 x half>, <32 x half>* %b
@@ -90,24 +89,21 @@ define void @fadd_v64f16(<64 x half>* %a, <64 x half>* %b) #0 {
 ; CHECK-DAG: ld1h { [[OP2:z[0-9]+]].h }, [[PG]]/z, [x1]
 ; CHECK-DAG: fadd [[RES:z[0-9]+]].h, [[PG]]/m, [[OP1]].h, [[OP2]].h
 ; CHECK-DAG: st1h { [[RES]].h }, [[PG]], [x0]
-; VBITS_LE_512-DAG: add x[[A1:[0-9]+]], x0, #[[#VBYTES]]
-; VBITS_LE_512-DAG: add x[[B1:[0-9]+]], x1, #[[#VBYTES]]
-; VBITS_LE_512-DAG: ld1h { [[OP1_1:z[0-9]+]].h }, [[PG]]/z, [x[[A1]]]
-; VBITS_LE_512-DAG: ld1h { [[OP2_1:z[0-9]+]].h }, [[PG]]/z, [x[[B1]]]
+; VBITS_LE_512-DAG: mov x[[IDX_1:[0-9]+]], #[[#div(VBYTES,2)]]
+; VBITS_LE_512-DAG: ld1h { [[OP1_1:z[0-9]+]].h }, [[PG]]/z, [x0, x[[IDX_1]], lsl #1]
+; VBITS_LE_512-DAG: ld1h { [[OP2_1:z[0-9]+]].h }, [[PG]]/z, [x1, x[[IDX_1]], lsl #1]
 ; VBITS_LE_512-DAG: fadd [[RES_1:z[0-9]+]].h, [[PG]]/m, [[OP1_1]].h, [[OP2_1]].h
-; VBITS_LE_512-DAG: st1h { [[RES_1]].h }, [[PG]], [x[[A1]]]
-; VBITS_LE_256-DAG: add x[[A2:[0-9]+]], x0, #[[#mul(VBYTES,2)]]
-; VBITS_LE_256-DAG: add x[[B2:[0-9]+]], x1, #[[#mul(VBYTES,2)]]
-; VBITS_LE_256-DAG: ld1h { [[OP1_2:z[0-9]+]].h }, [[PG]]/z, [x[[A2]]]
-; VBITS_LE_256-DAG: ld1h { [[OP2_2:z[0-9]+]].h }, [[PG]]/z, [x[[B2]]]
+; VBITS_LE_512-DAG: st1h { [[RES_1]].h }, [[PG]], [x0, x[[IDX_1]], lsl #1]
+; VBITS_LE_256-DAG: mov x[[IDX_2:[0-9]+]], #[[#mul(div(VBYTES,2),2)]]
+; VBITS_LE_256-DAG: ld1h { [[OP1_2:z[0-9]+]].h }, [[PG]]/z, [x0, x[[IDX_2]], lsl #1]
+; VBITS_LE_256-DAG: ld1h { [[OP2_2:z[0-9]+]].h }, [[PG]]/z, [x1, x[[IDX_2]], lsl #1]
 ; VBITS_LE_256-DAG: fadd [[RES_2:z[0-9]+]].h, [[PG]]/m, [[OP1_2]].h, [[OP2_2]].h
-; VBITS_LE_256-DAG: st1h { [[RES_2]].h }, [[PG]], [x[[A2]]]
-; VBITS_LE_256-DAG: add x[[A3:[0-9]+]], x0, #[[#mul(VBYTES,3)]]
-; VBITS_LE_256-DAG: add x[[B3:[0-9]+]], x1, #[[#mul(VBYTES,3)]]
-; VBITS_LE_256-DAG: ld1h { [[OP1_3:z[0-9]+]].h }, [[PG]]/z, [x[[A3]]]
-; VBITS_LE_256-DAG: ld1h { [[OP2_3:z[0-9]+]].h }, [[PG]]/z, [x[[B3]]]
+; VBITS_LE_256-DAG: st1h { [[RES_2]].h }, [[PG]], [x0, x[[IDX_2]], lsl #1]
+; VBITS_LE_256-DAG: mov x[[IDX_3:[0-9]+]], #[[#mul(div(VBYTES,2),3)]]
+; VBITS_LE_256-DAG: ld1h { [[OP1_3:z[0-9]+]].h }, [[PG]]/z, [x0, x[[IDX_3]], lsl #1]
+; VBITS_LE_256-DAG: ld1h { [[OP2_3:z[0-9]+]].h }, [[PG]]/z, [x1, x[[IDX_3]], lsl #1]
 ; VBITS_LE_256-DAG: fadd [[RES_3:z[0-9]+]].h, [[PG]]/m, [[OP1_3]].h, [[OP2_3]].h
-; VBITS_LE_256-DAG: st1h { [[RES_3]].h }, [[PG]], [x[[A3]]]
+; VBITS_LE_256-DAG: st1h { [[RES_3]].h }, [[PG]], [x0, x[[IDX_3]], lsl #1]
 ; CHECK: ret
   %op1 = load <64 x half>, <64 x half>* %a
   %op2 = load <64 x half>, <64 x half>* %b

@@ -170,7 +170,14 @@ check-generated-output)
     echo "+++ Making sure the generator scripts were run"
     ${NINJA} -vC "${BUILD_DIR}" libcxx-generate-files
     git diff | tee ${BUILD_DIR}/generated_output.patch
+    git ls-files -o --exclude-standard | tee ${BUILD_DIR}/generated_output.status
     ! grep -q '^--- a' ${BUILD_DIR}/generated_output.patch || false
+    if [ -s ${BUILD_DIR}/generated_output.status ]; then
+        echo "It looks like not all the generator scripts were run,"
+        echo "did you forget to build the libcxx-generate-files target?"
+        echo "Did you add all new files it generated?"
+        false
+    fi
 
     # Reject patches that introduce non-ASCII characters or hard tabs.
     # Depends on LC_COLLATE set at the top of this script.

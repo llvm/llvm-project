@@ -3088,7 +3088,7 @@ void CompilerInvocation::setLangDefaults(LangOptions &Opts, InputKind IK,
     case Language::LLVM_IR:
       llvm_unreachable("Invalid input kind!");
     case Language::OpenCL:
-      LangStd = LangStandard::lang_opencl10;
+      LangStd = LangStandard::lang_opencl12;
       break;
     case Language::OpenCLCXX:
       LangStd = LangStandard::lang_openclcpp;

@@ -108,6 +108,8 @@ public:
       Features["vector-enhancements-1"] = true;
     if (ISARevision >= 13)
       Features["vector-enhancements-2"] = true;
+    if (ISARevision >= 14)
+      Features["nnp-assist"] = true;
     return TargetInfo::initFeatureMap(Features, Diags, CPU, FeaturesVec);
   }
 

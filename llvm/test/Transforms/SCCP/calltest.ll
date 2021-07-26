@@ -34,9 +34,9 @@ define i32 @test_1() {
   ret i32 0
 }
 
-; TODO: Call should not get dropped.
 define i32 @test_not_willreturn() {
 ; CHECK-LABEL: @test_not_willreturn(
+; CHECK-NEXT:    [[TMP1:%.*]] = call [[EMPTY:%.*]] @has_side_effects() #[[ATTR1:[0-9]+]]
 ; CHECK-NEXT:    ret i32 0
 ;
   %1 = call %empty @has_side_effects() nounwind readonly

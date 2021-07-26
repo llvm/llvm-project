@@ -2630,6 +2630,13 @@ void RangeConstraintManager::printJson(raw_ostream &Out, ProgramStateRef State,
   printDisequalities(Out, State, NL, Space, IsDot);
 }
 
+static std::string toString(const SymbolRef &Sym) {
+  std::string S;
+  llvm::raw_string_ostream O(S);
+  Sym->dumpToStream(O);
+  return O.str();
+}
+
 void RangeConstraintManager::printConstraints(raw_ostream &Out,
                                               ProgramStateRef State,
                                               const char *NL,
@@ -2643,37 +2650,37 @@ void RangeConstraintManager::printConstraints(raw_ostream &Out,
     return;
   }
 
+  std::map<std::string, RangeSet> OrderedConstraints;
+  for (std::pair<EquivalenceClass, RangeSet> P : Constraints) {
+    SymbolSet ClassMembers = P.first.getClassMembers(State);
+    for (const SymbolRef &ClassMember : ClassMembers) {
+      bool insertion_took_place;
+      std::tie(std::ignore, insertion_took_place) =
+          OrderedConstraints.insert({toString(ClassMember), P.second});
+      assert(insertion_took_place &&
+             "two symbols should not have the same dump");
+    }
+  }
+
   ++Space;
   Out << '[' << NL;
   bool First = true;
-  for (std::pair<EquivalenceClass, RangeSet> P : Constraints) {
-    SymbolSet ClassMembers = P.first.getClassMembers(State);
-
-    // We can print the same constraint for every class member.
-    for (SymbolRef ClassMember : ClassMembers) {
-      if (First) {
-        First = false;
-      } else {
-        Out << ',';
-        Out << NL;
-      }
-      Indent(Out, Space, IsDot)
-          << "{ \"symbol\": \"" << ClassMember << "\", \"range\": \"";
-      P.second.dump(Out);
-      Out << "\" }";
+  for (std::pair<std::string, RangeSet> P : OrderedConstraints) {
+    if (First) {
+      First = false;
+    } else {
+      Out << ',';
+      Out << NL;
     }
+    Indent(Out, Space, IsDot)
+        << "{ \"symbol\": \"" << P.first << "\", \"range\": \"";
+    P.second.dump(Out);
+    Out << "\" }";
   }
   Out << NL;
 
   --Space;
   Indent(Out, Space, IsDot) << "]," << NL;
-}
-
-static std::string toString(const SymbolRef &Sym) {
-  std::string S;
-  llvm::raw_string_ostream O(S);
-  Sym->dumpToStream(O);
-  return O.str();
 }
 
 static std::string toString(ProgramStateRef State, EquivalenceClass Class) {

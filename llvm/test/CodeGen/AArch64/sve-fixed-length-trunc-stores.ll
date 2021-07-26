@@ -53,9 +53,9 @@ define void @store_trunc_v8i64i8(<8 x i64>* %ap, <8 x i8>* %dest) #0 {
 
 ; Ensure sensible type legalisation
 ; VBITS_EQ_256-DAG: ptrue [[PG1:p[0-9]+]].d, vl4
-; VBITS_EQ_256-DAG: add x[[A_HI:[0-9]+]], x0, #32
+; VBITS_EQ_256-DAG: mov x[[NUMELTS:[0-9]+]], #4
 ; VBITS_EQ_256-DAG: ld1d { [[DWORDS_LO:z[0-9]+]].d }, [[PG1]]/z, [x0]
-; VBITS_EQ_256-DAG: ld1d { [[DWORDS_HI:z[0-9]+]].d }, [[PG1]]/z, [x[[A_HI]]]
+; VBITS_EQ_256-DAG: ld1d { [[DWORDS_HI:z[0-9]+]].d }, [[PG1]]/z, [x0, x[[NUMELTS]], lsl #3]
 ; VBITS_EQ_256-DAG: ptrue [[PG2:p[0-9]+]].s, vl4
 ; VBITS_EQ_256-DAG: uzp1 [[WORDS_LO:z[0-9]+]].s, [[DWORDS_LO]].s, [[DWORDS_LO]].s
 ; VBITS_EQ_256-DAG: uzp1 [[WORDS_HI:z[0-9]+]].s, [[DWORDS_HI]].s, [[DWORDS_HI]].s
@@ -103,9 +103,9 @@ define void @store_trunc_v8i64i16(<8 x i64>* %ap, <8 x i16>* %dest) #0 {
 ; Ensure sensible type legalisation.
 ; Currently does not use the truncating store
 ; VBITS_EQ_256-DAG: ptrue [[PG:p[0-9]+]].d, vl4
-; VBITS_EQ_256-DAG: add x[[A_HI:[0-9]+]], x0, #32
+; VBITS_EQ_256-DAG: mov x[[NUMELTS:[0-9]+]], #4
 ; VBITS_EQ_256-DAG: ld1d { [[DWORDS_LO:z[0-9]+]].d }, [[PG]]/z, [x0]
-; VBITS_EQ_256-DAG: ld1d { [[DWORDS_HI:z[0-9]+]].d }, [[PG]]/z, [x[[A_HI]]]
+; VBITS_EQ_256-DAG: ld1d { [[DWORDS_HI:z[0-9]+]].d }, [[PG]]/z, [x0, x[[NUMELTS]], lsl #3]
 ; VBITS_EQ_256-DAG: uzp1 [[WORDS_LO:z[0-9]+]].s, [[DWORDS_LO]].s, [[DWORDS_LO]].s
 ; VBITS_EQ_256-DAG: uzp1 [[WORDS_HI:z[0-9]+]].s, [[DWORDS_HI]].s, [[DWORDS_HI]].s
 ; VBITS_EQ_256-DAG: uzp1 z[[HALFS_LO:[0-9]+]].h, [[WORDS_LO]].h, [[WORDS_LO]].h
@@ -128,9 +128,9 @@ define void @store_trunc_v8i64i32(<8 x i64>* %ap, <8 x i32>* %dest) #0 {
 
 ; Ensure sensible type legalisation
 ; VBITS_EQ_256-DAG: ptrue [[PG1:p[0-9]+]].d, vl4
-; VBITS_EQ_256-DAG: add x[[A_HI:[0-9]+]], x0, #32
+; VBITS_EQ_256-DAG: mov x[[NUMELTS:[0-9]+]], #4
 ; VBITS_EQ_256-DAG: ld1d { [[DWORDS_LO:z[0-9]+]].d }, [[PG1]]/z, [x0]
-; VBITS_EQ_256-DAG: ld1d { [[DWORDS_HI:z[0-9]+]].d }, [[PG1]]/z, [x[[A_HI]]]
+; VBITS_EQ_256-DAG: ld1d { [[DWORDS_HI:z[0-9]+]].d }, [[PG1]]/z, [x0, x[[NUMELTS]], lsl #3]
 ; VBITS_EQ_256-DAG: ptrue [[PG2:p[0-9]+]].s, vl4
 ; VBITS_EQ_256-DAG: uzp1 [[WORDS_LO:z[0-9]+]].s, [[DWORDS_LO]].s, [[DWORDS_LO]].s
 ; VBITS_EQ_256-DAG: uzp1 [[WORDS_HI:z[0-9]+]].s, [[DWORDS_HI]].s, [[DWORDS_HI]].s
@@ -154,9 +154,9 @@ define void @store_trunc_v16i32i8(<16 x i32>* %ap, <16 x i8>* %dest) #0 {
 ; Ensure sensible type legalisation.
 ; Currently does not use the truncating store
 ; VBITS_EQ_256-DAG: ptrue [[PG:p[0-9]+]].s, vl8
-; VBITS_EQ_256-DAG: add x[[A_HI:[0-9]+]], x0, #32
+; VBITS_EQ_256-DAG: mov x[[NUMELTS:[0-9]+]], #8
 ; VBITS_EQ_256-DAG: ld1w { [[WORDS_LO:z[0-9]+]].s }, [[PG]]/z, [x0]
-; VBITS_EQ_256-DAG: ld1w { [[WORDS_HI:z[0-9]+]].s }, [[PG]]/z, [x[[A_HI]]]
+; VBITS_EQ_256-DAG: ld1w { [[WORDS_HI:z[0-9]+]].s }, [[PG]]/z, [x0, x[[NUMELTS]], lsl #2]
 ; VBITS_EQ_256-DAG: uzp1 [[HALFS_LO:z[0-9]+]].h, [[WORDS_LO]].h, [[WORDS_LO]].h
 ; VBITS_EQ_256-DAG: uzp1 [[HALFS_HI:z[0-9]+]].h, [[WORDS_HI]].h, [[WORDS_HI]].h
 ; VBITS_EQ_256-DAG: uzp1 z[[BYTES_LO:[0-9]+]].b, [[HALFS_LO]].b, [[HALFS_LO]].b
@@ -179,9 +179,9 @@ define void @store_trunc_v16i32i16(<16 x i32>* %ap, <16 x i16>* %dest) #0 {
 
 ; Ensure sensible type legalisation
 ; VBITS_EQ_256-DAG: ptrue [[PG1:p[0-9]+]].s, vl8
-; VBITS_EQ_256-DAG: add x[[A_HI:[0-9]+]], x0, #32
+; VBITS_EQ_256-DAG: mov x[[NUMELTS:[0-9]+]], #8
 ; VBITS_EQ_256-DAG: ld1w { [[WORDS_LO:z[0-9]+]].s }, [[PG1]]/z, [x0]
-; VBITS_EQ_256-DAG: ld1w { [[WORDS_HI:z[0-9]+]].s }, [[PG1]]/z, [x[[A_HI]]]
+; VBITS_EQ_256-DAG: ld1w { [[WORDS_HI:z[0-9]+]].s }, [[PG1]]/z, [x0, x[[NUMELTS]], lsl #2]
 ; VBITS_EQ_256-DAG: ptrue [[PG2:p[0-9]+]].h, vl8
 ; VBITS_EQ_256-DAG: uzp1 [[HALFS_LO:z[0-9]+]].h, [[WORDS_LO]].h, [[WORDS_LO]].h
 ; VBITS_EQ_256-DAG: uzp1 [[HALFS_HI:z[0-9]+]].h, [[WORDS_HI]].h, [[WORDS_HI]].h
@@ -204,9 +204,9 @@ define void @store_trunc_v32i16i8(<32 x i16>* %ap, <32 x i8>* %dest) #0 {
 
 ; Ensure sensible type legalisation
 ; VBITS_EQ_256-DAG: ptrue [[PG1:p[0-9]+]].h, vl16
-; VBITS_EQ_256-DAG: add x[[A_HI:[0-9]+]], x0, #32
+; VBITS_EQ_256-DAG: mov x[[NUMELTS:[0-9]+]], #16
 ; VBITS_EQ_256-DAG: ld1h { [[HALFS_LO:z[0-9]+]].h }, [[PG1]]/z, [x0]
-; VBITS_EQ_256-DAG: ld1h { [[HALFS_HI:z[0-9]+]].h }, [[PG1]]/z, [x[[A_HI]]]
+; VBITS_EQ_256-DAG: ld1h { [[HALFS_HI:z[0-9]+]].h }, [[PG1]]/z, [x0, x[[NUMELTS]], lsl #1]
 ; VBITS_EQ_256-DAG: ptrue [[PG2:p[0-9]+]].b, vl16
 ; VBITS_EQ_256-DAG: uzp1 [[BYTES_LO:z[0-9]+]].b, [[HALFS_LO]].b, [[HALFS_LO]].b
 ; VBITS_EQ_256-DAG: uzp1 [[BYTES_HI:z[0-9]+]].b, [[HALFS_HI]].b, [[HALFS_HI]].b

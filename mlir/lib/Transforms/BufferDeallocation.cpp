@@ -394,7 +394,10 @@ private:
         auto terminatorOperands = *getMutableRegionBranchSuccessorOperands(
             terminator, region.getRegionNumber());
         // Extract the source value from the current terminator.
-        Value sourceValue = ((OperandRange)terminatorOperands)[operandIndex];
+        // This conversion needs to exist on a separate line due to a bug in
+        // GCC conversion analysis.
+        OperandRange immutableTerminatorOperands = terminatorOperands;
+        Value sourceValue = immutableTerminatorOperands[operandIndex];
         // Create a new clone at the current location of the terminator.
         Value clone = introduceCloneBuffers(sourceValue, terminator);
         // Wire clone and terminator operand.

@@ -3216,5 +3216,36 @@ Instruction *InstCombinerImpl::visitSelectInst(SelectInst &SI) {
   if (Value *Fr = foldSelectWithFrozenICmp(SI, Builder))
     return replaceInstUsesWith(SI, Fr);
 
+  // select(mask, mload(,,mask,0), 0) -> mload(,,mask,0)
+  // Load inst is intentionally not checked for hasOneUse()
+  if (match(FalseVal, m_Zero()) &&
+      match(TrueVal, m_MaskedLoad(m_Value(), m_Value(), m_Specific(CondVal),
+                                  m_CombineOr(m_Undef(), m_Zero())))) {
+    auto *MaskedLoad = cast<IntrinsicInst>(TrueVal);
+    if (isa<UndefValue>(MaskedLoad->getArgOperand(3)))
+      MaskedLoad->setArgOperand(3, FalseVal /* Zero */);
+    return replaceInstUsesWith(SI, MaskedLoad);
+  }
+
+  Value *Mask;
+  if (match(TrueVal, m_Zero()) &&
+      match(FalseVal, m_MaskedLoad(m_Value(), m_Value(), m_Value(Mask),
+                                   m_CombineOr(m_Undef(), m_Zero())))) {
+    // We can remove the select by ensuring the load zeros all lanes the
+    // select would have.  We determine this by proving there is no overlap
+    // between the load and select masks.
+    // (i.e (load_mask & select_mask) == 0 == no overlap)
+    bool CanMergeSelectIntoLoad = false;
+    if (Value *V = SimplifyAndInst(CondVal, Mask, SQ.getWithInstruction(&SI)))
+      CanMergeSelectIntoLoad = match(V, m_Zero());
+
+    if (CanMergeSelectIntoLoad) {
+      auto *MaskedLoad = cast<IntrinsicInst>(FalseVal);
+      if (isa<UndefValue>(MaskedLoad->getArgOperand(3)))
+        MaskedLoad->setArgOperand(3, TrueVal /* Zero */);
+      return replaceInstUsesWith(SI, MaskedLoad);
+    }
+  }
+
   return nullptr;
 }

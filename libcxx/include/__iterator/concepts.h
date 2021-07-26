@@ -40,15 +40,15 @@ concept __indirectly_readable_impl =
     typename iter_value_t<_In>;
     typename iter_reference_t<_In>;
     typename iter_rvalue_reference_t<_In>;
-    { *__i } -> same_as<iter_reference_t<_In> >;
-    { ranges::iter_move(__i) } -> same_as<iter_rvalue_reference_t<_In> >;
+    { *__i } -> same_as<iter_reference_t<_In>>;
+    { ranges::iter_move(__i) } -> same_as<iter_rvalue_reference_t<_In>>;
   } &&
   common_reference_with<iter_reference_t<_In>&&, iter_value_t<_In>&> &&
   common_reference_with<iter_reference_t<_In>&&, iter_rvalue_reference_t<_In>&&> &&
   common_reference_with<iter_rvalue_reference_t<_In>&&, const iter_value_t<_In>&>;
 
 template<class _In>
-concept indirectly_readable = __indirectly_readable_impl<remove_cvref_t<_In> >;
+concept indirectly_readable = __indirectly_readable_impl<remove_cvref_t<_In>>;
 
 template<indirectly_readable _Tp>
 using iter_common_reference_t = common_reference_t<iter_reference_t<_Tp>, iter_value_t<_Tp>&>;
@@ -75,7 +75,7 @@ concept weakly_incrementable =
   movable<_Ip> &&
   requires(_Ip __i) {
     typename iter_difference_t<_Ip>;
-    requires __signed_integer_like<iter_difference_t<_Ip> >;
+    requires __signed_integer_like<iter_difference_t<_Ip>>;
     { ++__i } -> same_as<_Ip&>;   // not required to be equality-preserving
     __i++;                        // not required to be equality-preserving
   };
@@ -110,10 +110,10 @@ inline constexpr bool disable_sized_sentinel_for = false;
 template<class _Sp, class _Ip>
 concept sized_sentinel_for =
   sentinel_for<_Sp, _Ip> &&
-  !disable_sized_sentinel_for<remove_cv_t<_Sp>, remove_cv_t<_Ip> > &&
+  !disable_sized_sentinel_for<remove_cv_t<_Sp>, remove_cv_t<_Ip>> &&
   requires(const _Ip& __i, const _Sp& __s) {
-    { __s - __i } -> same_as<iter_difference_t<_Ip> >;
-    { __i - __s } -> same_as<iter_difference_t<_Ip> >;
+    { __s - __i } -> same_as<iter_difference_t<_Ip>>;
+    { __i - __s } -> same_as<iter_difference_t<_Ip>>;
   };
 
 // [iterator.concept.input]
