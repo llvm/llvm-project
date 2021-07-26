@@ -3654,7 +3654,6 @@ InstructionCost BoUpSLP::getEntryCost(const TreeEntry *E,
   else if (auto *IE = dyn_cast<InsertElementInst>(VL[0]))
     ScalarTy = IE->getOperand(1)->getType();
   auto *VecTy = FixedVectorType::get(ScalarTy, VL.size());
-  auto *FinalVecTy = VecTy;
   TTI::TargetCostKind CostKind = TTI::TCK_RecipThroughput;
 
   // If we have computed a smaller type for the expression, update VecTy so
@@ -3662,6 +3661,7 @@ InstructionCost BoUpSLP::getEntryCost(const TreeEntry *E,
   if (MinBWs.count(VL[0]))
     VecTy = FixedVectorType::get(
         IntegerType::get(F->getContext(), MinBWs[VL[0]].first), VL.size());
+  auto *FinalVecTy = VecTy;
 
   unsigned ReuseShuffleNumbers = E->ReuseShuffleIndices.size();
   bool NeedToShuffleReuses = !E->ReuseShuffleIndices.empty();
@@ -3838,7 +3838,6 @@ InstructionCost BoUpSLP::getEntryCost(const TreeEntry *E,
     case Instruction::ExtractElement: {
       // The common cost of removal ExtractElement/ExtractValue instructions +
       // the cost of shuffles, if required to resuffle the original vector.
-      InstructionCost CommonCost = 0;
       if (NeedToShuffleReuses) {
         unsigned Idx = 0;
         for (unsigned I : E->ReuseShuffleIndices) {
@@ -4133,7 +4132,7 @@ InstructionCost BoUpSLP::getEntryCost(const TreeEntry *E,
               commonAlignment(CommonAlignment, cast<LoadInst>(V)->getAlign());
         VecLdCost = TTI->getGatherScatterOpCost(
             Instruction::Load, VecTy, cast<LoadInst>(VL0)->getPointerOperand(),
-            /*VariableMask=*/false, Alignment, CostKind, VL0);
+            /*VariableMask=*/false, CommonAlignment, CostKind, VL0);
       }
       LLVM_DEBUG(dumpTreeCosts(E, CommonCost, VecLdCost, ScalarLdCost));
       return CommonCost + VecLdCost - ScalarLdCost;
@@ -4471,7 +4470,6 @@ InstructionCost BoUpSLP::getTreeCost(ArrayRef<Value *> VectorizedVals) {
 
   SmallPtrSet<Value *, 16> ExtractCostCalculated;
   InstructionCost ExtractCost = 0;
-  SmallBitVector IsIdentity;
   SmallVector<unsigned> VF;
   SmallVector<SmallVector<int>> ShuffleMask;
   SmallVector<Value *> FirstUsers;
@@ -4528,15 +4526,12 @@ InstructionCost BoUpSLP::getTreeCost(ArrayRef<Value *> VectorizedVals) {
           ShuffleMask.emplace_back(VF.back(), UndefMaskElem);
           FirstUsers.push_back(EU.User);
           DemandedElts.push_back(APInt::getNullValue(VF.back()));
-          IsIdentity.push_back(true);
           VecId = FirstUsers.size() - 1;
         } else {
           VecId = std::distance(FirstUsers.begin(), It);
         }
         int Idx = *InsertIdx;
         ShuffleMask[VecId][Idx] = EU.Lane;
-        IsIdentity.set(IsIdentity.test(VecId) &
-                       (EU.Lane == Idx || EU.Lane == UndefMaskElem));
         DemandedElts[VecId].setBit(Idx);
       }
     }
@@ -4562,7 +4557,8 @@ InstructionCost BoUpSLP::getTreeCost(ArrayRef<Value *> VectorizedVals) {
   InstructionCost SpillCost = getSpillCost();
   Cost += SpillCost + ExtractCost;
   for (int I = 0, E = FirstUsers.size(); I < E; ++I) {
-    if (!IsIdentity.test(I)) {
+    // For the very first element - simple shuffle of the source vector.
+    if (I == 0 && !ShuffleVectorInst::isIdentityMask(ShuffleMask[I])) {
       InstructionCost C = TTI->getShuffleCost(
           TTI::SK_PermuteSingleSrc,
           cast<FixedVectorType>(FirstUsers[I]->getType()), ShuffleMask[I]);
@@ -4571,10 +4567,15 @@ InstructionCost BoUpSLP::getTreeCost(ArrayRef<Value *> VectorizedVals) {
                         << *VectorizableTree.front()->Scalars.front() << ".\n"
                         << "SLP: Current total cost = " << Cost << "\n");
       Cost += C;
+      continue;
     }
+    // Other elements - permutation of 2 vectors (the initial one and the next
+    // Ith incoming vector).
     unsigned VF = ShuffleMask[I].size();
-    for (int &Mask : ShuffleMask[I])
-      Mask = (Mask == UndefMaskElem ? 0 : VF) + Mask;
+    for (unsigned Idx = 0; Idx < VF; ++Idx) {
+      int &Mask = ShuffleMask[I][Idx];
+      Mask = Mask == UndefMaskElem ? Idx : VF + Mask;
+    }
     InstructionCost C = TTI->getShuffleCost(
         TTI::SK_PermuteTwoSrc, cast<FixedVectorType>(FirstUsers[I]->getType()),
         ShuffleMask[I]);
