@@ -152,6 +152,14 @@ static void ThreadExitHook(void *hook, thrd_t self) {
   hwasanThreadList().ReleaseThread(thread);
 }
 
+uptr TagMemoryAligned(uptr p, uptr size, tag_t tag) {
+  CHECK(IsAligned(p, kShadowAlignment));
+  CHECK(IsAligned(size, kShadowAlignment));
+  __sanitizer_fill_shadow(p, size, tag,
+                          common_flags()->clear_shadow_mmap_threshold);
+  return AddTagToPointer(p, tag);
+}
+
 // Not implemented because Fuchsia does not use signal handlers.
 void HwasanOnDeadlySignal(int signo, void *info, void *context) {}
 
