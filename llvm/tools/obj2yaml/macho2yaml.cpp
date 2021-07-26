@@ -226,7 +226,7 @@ readString(MachOYAML::LoadCommand &LC,
   auto Start = LoadCmd.Ptr + sizeof(StructType);
   auto MaxSize = LoadCmd.C.cmdsize - sizeof(StructType);
   auto Size = strnlen(Start, MaxSize);
-  LC.PayloadString = StringRef(Start, Size).str();
+  LC.Content = StringRef(Start, Size).str();
   return Start + Size;
 }
 
