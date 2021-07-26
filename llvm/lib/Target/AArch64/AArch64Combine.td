@@ -203,6 +203,7 @@ def AArch64PostLegalizerCombinerHelper
                         extractvecelt_pairwise_add, redundant_or,
                         mul_const, redundant_sext_inreg,
                         form_bitfield_extract, rotate_out_of_range,
-                        icmp_to_true_false_known_bits, merge_unmerge]> {
+                        icmp_to_true_false_known_bits, merge_unmerge,
+                        select_combines]> {
   let DisableRuleOption = "aarch64postlegalizercombiner-disable-rule";
 }
