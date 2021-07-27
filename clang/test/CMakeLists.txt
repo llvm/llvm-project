@@ -37,6 +37,7 @@ configure_lit_site_cfg(
   "CLANG_BINARY_DIR"
   "CLANG_SOURCE_DIR"
   "CLANG_TOOLS_DIR"
+  "CMAKE_LIBRARY_OUTPUT_DIRECTORY"
   )
 
 configure_lit_site_cfg(
