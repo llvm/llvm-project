@@ -147,6 +147,7 @@ Compilation Flags
   For example:
 
 .. code-block:: c++
+
   v = *p;
 
 If the flag is true, the label of ``v`` is the union of the label of ``p`` and
@@ -157,6 +158,7 @@ just ``*p``.
   false. For example:
 
 .. code-block:: c++
+
   *p = v;
 
 If the flag is true, the label of ``*p`` is the union of the label of ``p`` and
@@ -166,6 +168,7 @@ just ``v``.
   labels of offsets in GEP instructions. Its default value is true. For example:
 
 .. code-block:: c++
+
   p += i;
 
 If the flag is true, the label of ``p`` is the union of the label of ``p`` and
@@ -174,6 +177,7 @@ the label of ``i``. If the flag is false, the label of ``p`` is unchanged.
   flow of select instructions. Its default value is true. For example:
 
 .. code-block:: c++
+
   v = b? v1: v2;
 
 If the flag is true, the label of ``v`` is the union of the labels of ``b``,
@@ -186,6 +190,7 @@ is false. If this flag is set to true, a user must provide definitions for the
 following callback functions:
 
 .. code-block:: c++
+
   void __dfsan_load_callback(dfsan_label Label, void* Addr);
   void __dfsan_store_callback(dfsan_label Label, void* Addr);
   void __dfsan_mem_transfer_callback(dfsan_label *Start, size_t Len);
