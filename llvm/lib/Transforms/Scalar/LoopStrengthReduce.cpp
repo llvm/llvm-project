@@ -3150,7 +3150,7 @@ void LSRInstance::CollectChains() {
 void LSRInstance::FinalizeChain(IVChain &Chain) {
   assert(!Chain.Incs.empty() && "empty IV chains are not allowed");
   LLVM_DEBUG(dbgs() << "Final Chain: " << *Chain.Incs[0].UserInst << "\n");
-  
+
   for (const IVInc &Inc : Chain) {
     LLVM_DEBUG(dbgs() << "        Inc: " << *Inc.UserInst << "\n");
     auto UseI = find(Inc.UserInst->operands(), Inc.IVOperand);
@@ -4544,7 +4544,7 @@ void LSRInstance::NarrowSearchSpaceByDetectingSupersets() {
 /// When there are many registers for expressions like A, A+1, A+2, etc.,
 /// allocate a single register for them.
 void LSRInstance::NarrowSearchSpaceByCollapsingUnrolledCode() {
-  if (EstimateSearchSpaceComplexity() < ComplexityLimit) 
+  if (EstimateSearchSpaceComplexity() < ComplexityLimit)
     return;
 
   LLVM_DEBUG(
@@ -6232,9 +6232,9 @@ static llvm::PHINode *GetInductionVariable(const Loop &L, ScalarEvolution &SE,
     assert(isa<PHINode>(&*IV) && "Expected PhI node.");
     if (SE.isSCEVable((*IV).getType())) {
       PHINode *Phi = dyn_cast<PHINode>(&*IV);
-      const llvm::SCEV *S = SE.getSCEV(Phi);
-      LLVM_DEBUG(dbgs() << "scev-salvage: IV : " << *IV << "with SCEV: " << *S
-                        << "\n");
+      LLVM_DEBUG(const llvm::SCEV *S = SE.getSCEV(Phi);
+                 dbgs() << "scev-salvage: IV : " << *IV << "with SCEV: " << *S
+                 << "\n");
       return Phi;
     }
   }
