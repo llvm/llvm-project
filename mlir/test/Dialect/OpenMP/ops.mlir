@@ -369,3 +369,14 @@ func @reduction2(%lb : index, %ub : index, %step : index) {
   return
 }
 
+// CHECK-LABEL: omp_critical
+func @omp_critical() -> () {
+  omp.critical {
+    omp.terminator
+  }
+
+  omp.critical(@mutex) hint(nonspeculative) {
+    omp.terminator
+  }
+  return
+}

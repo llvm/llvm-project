@@ -350,6 +350,43 @@ def MasterOp : OpenMP_Op<"master"> {
 }
 
 //===----------------------------------------------------------------------===//
+// 2.17.1 critical Construct
+//===----------------------------------------------------------------------===//
+// TODO: Autogenerate this from OMP.td in llvm/include/Frontend
+def omp_sync_hint_none: I32EnumAttrCase<"none", 0>;
+def omp_sync_hint_uncontended: I32EnumAttrCase<"uncontended", 1>;
+def omp_sync_hint_contended: I32EnumAttrCase<"contended", 2>;
+def omp_sync_hint_nonspeculative: I32EnumAttrCase<"nonspeculative", 3>;
+def omp_sync_hint_speculative: I32EnumAttrCase<"speculative", 4>;
+
+def SyncHintKind: I32EnumAttr<"SyncHintKind", "OpenMP Sync Hint Kind",
+    [omp_sync_hint_none, omp_sync_hint_uncontended, omp_sync_hint_contended,
+     omp_sync_hint_nonspeculative, omp_sync_hint_speculative]> {
+  let cppNamespace = "::mlir::omp";
+  let stringToSymbolFnName = "ConvertToEnum";
+  let symbolToStringFnName = "ConvertToString";
+}
+
+def CriticalOp : OpenMP_Op<"critical"> {
+  let summary = "critical construct";
+  let description = [{
+    The critical construct imposes a restriction on the associated structured
+    block (region) to be executed by only a single thread at a time.
+  }];
+
+  let arguments = (ins OptionalAttr<FlatSymbolRefAttr>:$name,
+                       OptionalAttr<SyncHintKind>:$hint);
+
+  let regions = (region AnyRegion:$region);
+
+  let assemblyFormat = [{
+    (`(` $name^ `)`)? (`hint` `(` $hint^ `)`)? $region attr-dict
+  }];
+
+  let verifier = "return ::verifyCriticalOp(*this);";
+}
+
+//===----------------------------------------------------------------------===//
 // 2.17.2 barrier Construct
 //===----------------------------------------------------------------------===//
 
