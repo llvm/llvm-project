@@ -1,5 +1,6 @@
 import re
 import os
+import sys
 
 input_file = open(sys.argv[1])
 output_file = open(sys.argv[2])
