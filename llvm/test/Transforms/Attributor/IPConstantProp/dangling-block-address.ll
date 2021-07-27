@@ -64,9 +64,7 @@ define internal void @bar(i32* nocapture %pc) nounwind readonly {
 ; IS__CGSCC_NPM-NEXT:    ret void
 ; IS__CGSCC_NPM:       indirectgoto:
 ; IS__CGSCC_NPM-NEXT:    [[INDVAR]] = phi i32 [ [[INDVAR_NEXT]], [[LAB0:%.*]] ], [ 0, [[ENTRY:%.*]] ]
-; IS__CGSCC_NPM-NEXT:    [[INDIRECT_GOTO_DEST_IN:%.*]] = getelementptr inbounds [2 x i8*], [2 x i8*]* @bar.l, i32 0, i32 undef
-; IS__CGSCC_NPM-NEXT:    [[INDIRECT_GOTO_DEST:%.*]] = load i8*, i8** [[INDIRECT_GOTO_DEST_IN]], align 8
-; IS__CGSCC_NPM-NEXT:    indirectbr i8* [[INDIRECT_GOTO_DEST]], [label [[LAB0]], label %end]
+; IS__CGSCC_NPM-NEXT:    indirectbr i8* undef, [label [[LAB0]], label %end]
 ;
 entry:
   br label %indirectgoto

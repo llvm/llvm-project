@@ -15157,8 +15157,8 @@ static bool performTBISimplification(SDValue Addr,
 }
 
 static SDValue foldTruncStoreOfExt(SelectionDAG &DAG, SDNode *N) {
-  assert(N->getOpcode() == ISD::STORE ||
-         N->getOpcode() == ISD::MSTORE && "Expected STORE dag node in input!");
+  assert((N->getOpcode() == ISD::STORE || N->getOpcode() == ISD::MSTORE) &&
+         "Expected STORE dag node in input!");
 
   if (auto Store = dyn_cast<StoreSDNode>(N)) {
     if (!Store->isTruncatingStore() || Store->isIndexed())

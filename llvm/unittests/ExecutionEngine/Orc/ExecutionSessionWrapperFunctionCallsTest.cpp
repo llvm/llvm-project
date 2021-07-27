@@ -1,4 +1,4 @@
-//===- ExecutorProcessControlTest.cpp - Test ExecutorProcessControl utils -===//
+//===- ExecutionSessionWrapperFunctionCallsTest.cpp -- Test wrapper calls -===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "llvm/ExecutionEngine/Orc/ExecutorProcessControl.h"
 #include "llvm/ExecutionEngine/Orc/Core.h"
+#include "llvm/ExecutionEngine/Orc/ExecutorProcessControl.h"
 #include "llvm/Support/MSVCErrorWorkarounds.h"
 #include "llvm/Testing/Support/Error.h"
 #include "gtest/gtest.h"
@@ -30,24 +30,22 @@ static void addAsyncWrapper(unique_function<void(int32_t)> SendResult,
   SendResult(X + Y);
 }
 
-TEST(ExecutorProcessControl, RunWrapperTemplate) {
-  auto EPC = cantFail(
-      SelfExecutorProcessControl::Create(std::make_shared<SymbolStringPool>()));
+TEST(ExecutionSessionWrapperFunctionCalls, RunWrapperTemplate) {
+  ExecutionSession ES(cantFail(SelfExecutorProcessControl::Create()));
 
   int32_t Result;
-  EXPECT_THAT_ERROR(EPC->runSPSWrapper<int32_t(int32_t, int32_t)>(
+  EXPECT_THAT_ERROR(ES.callSPSWrapper<int32_t(int32_t, int32_t)>(
                         pointerToJITTargetAddress(addWrapper), Result, 2, 3),
                     Succeeded());
   EXPECT_EQ(Result, 5);
 }
 
-TEST(ExecutorProcessControl, RunWrapperAsyncTemplate) {
-  auto EPC = cantFail(
-      SelfExecutorProcessControl::Create(std::make_shared<SymbolStringPool>()));
+TEST(ExecutionSessionWrapperFunctionCalls, RunWrapperAsyncTemplate) {
+  ExecutionSession ES(cantFail(SelfExecutorProcessControl::Create()));
 
   std::promise<MSVCPExpected<int32_t>> RP;
   using Sig = int32_t(int32_t, int32_t);
-  EPC->runSPSWrapperAsync<Sig>(
+  ES.callSPSWrapperAsync<Sig>(
       [&](Error SerializationErr, int32_t R) {
         if (SerializationErr)
           RP.set_value(std::move(SerializationErr));
@@ -58,13 +56,11 @@ TEST(ExecutorProcessControl, RunWrapperAsyncTemplate) {
   EXPECT_THAT_EXPECTED(Result, HasValue(5));
 }
 
-TEST(ExecutorProcessControl, RegisterAsyncHandlerAndRun) {
+TEST(ExecutionSessionWrapperFunctionCalls, RegisterAsyncHandlerAndRun) {
 
   constexpr JITTargetAddress AddAsyncTagAddr = 0x01;
 
-  auto EPC = cantFail(
-      SelfExecutorProcessControl::Create(std::make_shared<SymbolStringPool>()));
-  ExecutionSession ES(EPC->getSymbolStringPool());
+  ExecutionSession ES(cantFail(SelfExecutorProcessControl::Create()));
   auto &JD = ES.createBareJITDylib("JD");
 
   auto AddAsyncTag = ES.intern("addAsync_tag");
@@ -72,12 +68,12 @@ TEST(ExecutorProcessControl, RegisterAsyncHandlerAndRun) {
       {{AddAsyncTag,
         JITEvaluatedSymbol(AddAsyncTagAddr, JITSymbolFlags::Exported)}})));
 
-  ExecutorProcessControl::WrapperFunctionAssociationMap Associations;
+  ExecutionSession::JITDispatchHandlerAssociationMap Associations;
 
   Associations[AddAsyncTag] =
-      EPC->wrapAsyncWithSPS<int32_t(int32_t, int32_t)>(addAsyncWrapper);
+      ES.wrapAsyncWithSPS<int32_t(int32_t, int32_t)>(addAsyncWrapper);
 
-  cantFail(EPC->associateJITSideWrapperFunctions(JD, std::move(Associations)));
+  cantFail(ES.registerJITDispatchHandlers(JD, std::move(Associations)));
 
   std::promise<int32_t> RP;
   auto RF = RP.get_future();
@@ -90,7 +86,7 @@ TEST(ExecutorProcessControl, RegisterAsyncHandlerAndRun) {
   SPSOutputBuffer OB(ArgBufferData, ArgBufferSize);
   EXPECT_TRUE(ArgSerialization::serialize(OB, 1, 2));
 
-  EPC->runJITSideWrapperFunction(
+  ES.runJITDispatchHandler(
       [&](WrapperFunctionResult ResultBuffer) {
         int32_t Result;
         SPSInputBuffer IB(ResultBuffer.data(), ResultBuffer.size());

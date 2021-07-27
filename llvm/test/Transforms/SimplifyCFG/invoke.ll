@@ -13,7 +13,6 @@ declare i32 @fn()
 define i8* @f1() nounwind uwtable ssp personality i8* bitcast (i32 (...)* @__gxx_personality_v0 to i8*) {
 ; CHECK-LABEL: @f1(
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    call void @llvm.trap()
 ; CHECK-NEXT:    unreachable
 ;
 entry:
@@ -34,7 +33,6 @@ lpad:
 define i8* @f2() nounwind uwtable ssp personality i8* bitcast (i32 (...)* @__gxx_personality_v0 to i8*) {
 ; CHECK-LABEL: @f2(
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    call void @llvm.trap()
 ; CHECK-NEXT:    unreachable
 ;
 entry:
@@ -63,7 +61,7 @@ define i8* @f2_no_null_opt() nounwind uwtable ssp #0 personality i8* bitcast (i3
 ; CHECK-NEXT:    [[TMP0:%.*]] = landingpad { i8*, i32 }
 ; CHECK-NEXT:    filter [0 x i8*] zeroinitializer
 ; CHECK-NEXT:    [[TMP1:%.*]] = extractvalue { i8*, i32 } [[TMP0]], 0
-; CHECK-NEXT:    tail call void @__cxa_call_unexpected(i8* [[TMP1]]) #[[ATTR6:[0-9]+]]
+; CHECK-NEXT:    tail call void @__cxa_call_unexpected(i8* [[TMP1]]) #[[ATTR5:[0-9]+]]
 ; CHECK-NEXT:    unreachable
 ;
 entry:
@@ -138,7 +136,7 @@ define i32 @f5(i1 %cond, i8* %a, i8* %b) personality i8* bitcast (i32 (...)* @__
 ; CHECK:       lpad:
 ; CHECK-NEXT:    [[TMP0:%.*]] = landingpad { i8*, i32 }
 ; CHECK-NEXT:    filter [0 x i8*] zeroinitializer
-; CHECK-NEXT:    tail call void @__cxa_call_unexpected(i8* [[A:%.*]]) #[[ATTR6]]
+; CHECK-NEXT:    tail call void @__cxa_call_unexpected(i8* [[A:%.*]]) #[[ATTR5]]
 ; CHECK-NEXT:    unreachable
 ;
 entry:
