@@ -190,6 +190,7 @@ set(files
   __ranges/common_view.h
   __ranges/concepts.h
   __ranges/copyable_box.h
+  __ranges/counted.h
   __ranges/dangling.h
   __ranges/data.h
   __ranges/drop_view.h

@@ -144,6 +144,6 @@ Section,Description,Dependencies,Assignee,Complete
 `[range.empty] <http://wg21.link/range.empty>`_,`empty_view <https://llvm.org/D103208>`_,[view.interface],Zoe Carver,✅
 `[range.single] <http://wg21.link/range.single>`_,single_view,[view.interface],Zoe Carver,✅
 `[range.split] <http://wg21.link/range.split>`_,split_view,[range.all],Zoe Carver,In Progress
-`[range.counted] <http://wg21.link/range.counted>`_,view::counted,[range.subrange],Zoe Carver,Not started
+`[range.counted] <http://wg21.link/range.counted>`_,view::counted,[range.subrange],Zoe Carver,✅
 `[range.common] <http://wg21.link/range.common>`_,common_view,[range.all],Zoe Carver,✅
 `[range.reverse] <http://wg21.link/range.reverse>`_,reverse_view,[range.all],Zoe Carver,✅

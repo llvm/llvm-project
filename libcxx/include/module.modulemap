@@ -622,6 +622,7 @@ module std [system] {
       module common_view            { private header "__ranges/common_view.h"           }
       module concepts               { private header "__ranges/concepts.h"              }
       module copyable_box           { private header "__ranges/copyable_box.h"          }
+      module counted                { private header "__ranges/counted.h"               }
       module dangling               { private header "__ranges/dangling.h"              }
       module data                   { private header "__ranges/data.h"                  }
       module drop_view              { private header "__ranges/drop_view.h"             }
