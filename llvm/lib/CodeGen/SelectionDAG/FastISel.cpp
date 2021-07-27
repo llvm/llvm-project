@@ -1292,18 +1292,22 @@ bool FastISel::selectIntrinsicCall(const IntrinsicInst *II) {
       BuildMI(*FuncInfo.MBB, FuncInfo.InsertPt, DbgLoc, II, false, 0U,
               DI->getVariable(), DI->getExpression());
     } else if (const auto *CI = dyn_cast<ConstantInt>(V)) {
+      // See if there's an expression to constant-fold.
+      DIExpression *Expr = DI->getExpression();
+      if (Expr)
+        std::tie(Expr, CI) = Expr->constantFold(CI);
       if (CI->getBitWidth() > 64)
         BuildMI(*FuncInfo.MBB, FuncInfo.InsertPt, DbgLoc, II)
             .addCImm(CI)
             .addImm(0U)
             .addMetadata(DI->getVariable())
-            .addMetadata(DI->getExpression());
+            .addMetadata(Expr);
       else
         BuildMI(*FuncInfo.MBB, FuncInfo.InsertPt, DbgLoc, II)
             .addImm(CI->getZExtValue())
             .addImm(0U)
             .addMetadata(DI->getVariable())
-            .addMetadata(DI->getExpression());
+            .addMetadata(Expr);
     } else if (const auto *CF = dyn_cast<ConstantFP>(V)) {
       BuildMI(*FuncInfo.MBB, FuncInfo.InsertPt, DbgLoc, II)
           .addFPImm(CF)
