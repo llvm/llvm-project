@@ -3395,7 +3395,7 @@ bool Sema::CheckPPCBuiltinFunctionCall(const TargetInfo &TI, unsigned BuiltinID,
      return SemaBuiltinConstantArgRange(TheCall, 3, 0, 7);
   case PPC::BI__builtin_ppc_tw:
   case PPC::BI__builtin_ppc_tdw:
-    return SemaBuiltinConstantArgRange(TheCall, 2, 0, 31);
+    return SemaBuiltinConstantArgRange(TheCall, 2, 1, 31);
   case PPC::BI__builtin_ppc_cmpeqb:
   case PPC::BI__builtin_ppc_setb:
   case PPC::BI__builtin_ppc_maddhd:

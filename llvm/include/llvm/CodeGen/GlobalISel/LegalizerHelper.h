@@ -165,8 +165,10 @@ public:
   Register widenWithUnmerge(LLT WideTy, Register OrigReg);
 
 private:
-  LegalizeResult
-  widenScalarMergeValues(MachineInstr &MI, unsigned TypeIdx, LLT WideTy);
+  LegalizeResult widenScalarSrcMergeValues(MachineInstr &MI, LLT WideTy);
+  LegalizeResult widenScalarDstMergeValues(MachineInstr &MI, LLT WideTy);
+  LegalizeResult widenScalarMergeValues(MachineInstr &MI, unsigned TypeIdx,
+                                        LLT WideTy);
   LegalizeResult
   widenScalarUnmergeValues(MachineInstr &MI, unsigned TypeIdx, LLT WideTy);
   LegalizeResult

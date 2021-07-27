@@ -17,9 +17,11 @@ extern unsigned long ula;
 
 void test_trap(void) {
 #ifdef __PPC64__
-  __tdw(lla, llb, 50); //expected-error {{argument value 50 is outside the valid range [0, 31]}}
+  __tdw(lla, llb, 50); //expected-error {{argument value 50 is outside the valid range [1, 31]}}
+  __tdw(lla, llb, 0); //expected-error {{argument value 0 is outside the valid range [1, 31]}}
 #endif
-  __tw(ia, ib, 50); //expected-error {{argument value 50 is outside the valid range [0, 31]}}
+  __tw(ia, ib, 50); //expected-error {{argument value 50 is outside the valid range [1, 31]}}
+  __tw(ia, ib, 0); //expected-error {{argument value 0 is outside the valid range [1, 31]}}
 }
 
 void test_builtin_ppc_rldimi() {

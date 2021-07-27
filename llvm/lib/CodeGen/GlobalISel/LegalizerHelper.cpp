@@ -1418,11 +1418,7 @@ void LegalizerHelper::bitcastDst(MachineInstr &MI, LLT CastTy, unsigned OpIdx) {
 }
 
 LegalizerHelper::LegalizeResult
-LegalizerHelper::widenScalarMergeValues(MachineInstr &MI, unsigned TypeIdx,
-                                        LLT WideTy) {
-  if (TypeIdx != 1)
-    return UnableToLegalize;
-
+LegalizerHelper::widenScalarSrcMergeValues(MachineInstr &MI, LLT WideTy) {
   Register DstReg = MI.getOperand(0).getReg();
   LLT DstTy = MRI.getType(DstReg);
   if (DstTy.isVector())
@@ -1537,6 +1533,44 @@ LegalizerHelper::widenScalarMergeValues(MachineInstr &MI, unsigned TypeIdx,
 
   MI.eraseFromParent();
   return Legalized;
+}
+
+LegalizerHelper::LegalizeResult
+LegalizerHelper::widenScalarDstMergeValues(MachineInstr &MI, LLT WideTy) {
+  // Disallow for vectors and pointers. Not sure about what to do with pointers.
+  LLT DstTy = MRI.getType(MI.getOperand(0).getReg());
+  if (!DstTy.isScalar())
+    return UnableToLegalize;
+  LLT SrcTy = MRI.getType(MI.getOperand(1).getReg());
+  const int DstSize = DstTy.getSizeInBits();
+  const int SrcSize = SrcTy.getSizeInBits();
+  const int WideSize = WideTy.getSizeInBits();
+  // If WideSize = DstSize + K * SrcSize then we can get WideSize by padding
+  // with K undef elements.
+  //
+  //    dst = G_MERGE_VALUES elt1, elt2, ..., eltN
+  // -> wide_dst = G_MERGE_VALUES elt1, elt2, ... eltN, pad1, pad2, ... padK
+  int Difference = WideSize - DstSize;
+  if ((Difference) % SrcSize != 0)
+    return UnableToLegalize;
+  int NumPadEltsToAdd = Difference / SrcSize;
+  assert(NumPadEltsToAdd && "Expected to add at least one element?");
+  MachineFunction &MF = *MI.getMF();
+  for (int I = 0; I < NumPadEltsToAdd; ++I) {
+    auto PadElt = MIRBuilder.buildUndef(SrcTy);
+    MI.addOperand(
+        MF, MachineOperand::CreateReg(PadElt.getReg(0), /*isDef = */ false));
+  }
+  widenScalarDst(MI, WideTy, 0);
+  return Legalized;
+}
+
+LegalizerHelper::LegalizeResult
+LegalizerHelper::widenScalarMergeValues(MachineInstr &MI, unsigned TypeIdx,
+                                        LLT WideTy) {
+  if (TypeIdx == 0)
+    return widenScalarDstMergeValues(MI, WideTy);
+  return widenScalarSrcMergeValues(MI, WideTy);
 }
 
 Register LegalizerHelper::widenWithUnmerge(LLT WideTy, Register OrigReg) {

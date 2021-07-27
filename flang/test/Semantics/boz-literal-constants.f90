@@ -77,4 +77,7 @@ subroutine bozchecks
   res = MERGE_BITS(B"1101",3,B"1011")
 
   res = REAL(B"1101")
+
+  !ERROR: BOZ argument requires an explicit interface
+  call implictSub(Z'12345')
 end subroutine
