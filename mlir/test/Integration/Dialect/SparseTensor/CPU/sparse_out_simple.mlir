@@ -59,7 +59,7 @@ module {
 
     // Read the sparse matrix from file, construct sparse storage.
     %fileName = call @getTensorFilename(%c0) : (index) -> (!Filename)
-    %x = sparse_tensor.new %fileName : !llvm.ptr<i8> to tensor<?x?xf64, #DCSR>
+    %x = sparse_tensor.new %fileName : !Filename to tensor<?x?xf64, #DCSR>
 
     // Call kernel.
     %0 = call @kernel_eltwise_mult(%x) : (tensor<?x?xf64, #DCSR>) -> tensor<?x?xf64, #DCSR>
