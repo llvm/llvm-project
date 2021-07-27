@@ -66,7 +66,7 @@ define amdgpu_ps <4 x float> @sample_d_3d(<8 x i32> inreg %rsrc, <4 x i32> inreg
 ; GFX11-NEXT:    v_lshl_or_b32 v4, v4, 16, v9
 ; GFX11-NEXT:    s_delay_alu instid0(VALU_DEP_2) | instskip(SKIP_2) | instid1(VALU_DEP_1)
 ; GFX11-NEXT:    v_lshl_or_b32 v2, v1, 16, v0
-; GFX11-NEXT:    image_sample_d_g16 v[0:3], v[2:9], s[0:7], s[8:11] dmask:0xf dim:SQ_RSRC_IMG_3D
+; GFX11-NEXT:    image_sample_d_g16 v[0:3], v[2:8], s[0:7], s[8:11] dmask:0xf dim:SQ_RSRC_IMG_3D
 ; GFX11-NEXT:    s_waitcnt vmcnt(0)
 ; GFX11-NEXT:    ; return to shader part epilog
 main_body:
@@ -188,7 +188,7 @@ define amdgpu_ps <4 x float> @sample_c_d_cl_2d(<8 x i32> inreg %rsrc, <4 x i32> 
 ; GFX11-NEXT:    v_lshl_or_b32 v4, v4, 16, v3
 ; GFX11-NEXT:    s_delay_alu instid0(VALU_DEP_2) | instskip(SKIP_2) | instid1(VALU_DEP_1)
 ; GFX11-NEXT:    v_lshl_or_b32 v3, v8, 16, v0
-; GFX11-NEXT:    image_sample_c_d_cl_g16 v[0:3], v[2:9], s[0:7], s[8:11] dmask:0xf dim:SQ_RSRC_IMG_2D
+; GFX11-NEXT:    image_sample_c_d_cl_g16 v[0:3], v[2:7], s[0:7], s[8:11] dmask:0xf dim:SQ_RSRC_IMG_2D
 ; GFX11-NEXT:    s_waitcnt vmcnt(0)
 ; GFX11-NEXT:    ; return to shader part epilog
 main_body:
@@ -221,7 +221,7 @@ define amdgpu_ps float @sample_c_d_o_2darray_V1(<8 x i32> inreg %rsrc, <4 x i32>
 ; GFX11-NEXT:    v_lshl_or_b32 v5, v5, 16, v1
 ; GFX11-NEXT:    s_delay_alu instid0(VALU_DEP_2)
 ; GFX11-NEXT:    v_lshl_or_b32 v4, v10, 16, v0
-; GFX11-NEXT:    image_sample_c_d_o_g16 v0, v[2:9], s[0:7], s[8:11] dmask:0x4 dim:SQ_RSRC_IMG_2D_ARRAY
+; GFX11-NEXT:    image_sample_c_d_o_g16 v0, v[2:8], s[0:7], s[8:11] dmask:0x4 dim:SQ_RSRC_IMG_2D_ARRAY
 ; GFX11-NEXT:    s_waitcnt vmcnt(0)
 ; GFX11-NEXT:    ; return to shader part epilog
 main_body:
@@ -254,7 +254,7 @@ define amdgpu_ps <2 x float> @sample_c_d_o_2darray_V2(<8 x i32> inreg %rsrc, <4 
 ; GFX11-NEXT:    v_lshl_or_b32 v5, v5, 16, v1
 ; GFX11-NEXT:    s_delay_alu instid0(VALU_DEP_2)
 ; GFX11-NEXT:    v_lshl_or_b32 v4, v10, 16, v0
-; GFX11-NEXT:    image_sample_c_d_o_g16 v[0:1], v[2:9], s[0:7], s[8:11] dmask:0x6 dim:SQ_RSRC_IMG_2D_ARRAY
+; GFX11-NEXT:    image_sample_c_d_o_g16 v[0:1], v[2:8], s[0:7], s[8:11] dmask:0x6 dim:SQ_RSRC_IMG_2D_ARRAY
 ; GFX11-NEXT:    s_waitcnt vmcnt(0)
 ; GFX11-NEXT:    ; return to shader part epilog
 main_body:

@@ -417,8 +417,8 @@ define amdgpu_ps void @cluster_image_sample(<8 x i32> inreg %src, <4 x i32> inre
 ; GFX9-NEXT:    v_mov_b32_e32 v11, v10
 ; GFX9-NEXT:    v_mov_b32_e32 v12, v10
 ; GFX9-NEXT:    v_mov_b32_e32 v13, v10
-; GFX9-NEXT:    image_sample_d v[2:5], v[2:9], s[0:7], s[8:11] dmask:0xf
-; GFX9-NEXT:    image_sample_d v[6:9], v[8:15], s[0:7], s[8:11] dmask:0xf
+; GFX9-NEXT:    image_sample_d v[2:5], v[2:7], s[0:7], s[8:11] dmask:0xf
+; GFX9-NEXT:    image_sample_d v[6:9], v[8:13], s[0:7], s[8:11] dmask:0xf
 ; GFX9-NEXT:    s_waitcnt vmcnt(0)
 ; GFX9-NEXT:    v_add_f32_e32 v5, v5, v9
 ; GFX9-NEXT:    v_add_f32_e32 v4, v4, v8
@@ -450,15 +450,15 @@ define amdgpu_ps void @cluster_image_sample(<8 x i32> inreg %src, <4 x i32> inre
 ; GFX11-LABEL: cluster_image_sample:
 ; GFX11:       ; %bb.0: ; %entry
 ; GFX11-NEXT:    v_mov_b32_e32 v4, 0
-; GFX11-NEXT:    v_mov_b32_e32 v10, 1.0
 ; GFX11-NEXT:    v_cvt_f32_i32_e32 v8, v0
 ; GFX11-NEXT:    v_cvt_f32_i32_e32 v9, v1
-; GFX11-NEXT:    s_delay_alu instid0(VALU_DEP_4) | instskip(SKIP_1) | instid1(VALU_DEP_4)
+; GFX11-NEXT:    v_mov_b32_e32 v10, 1.0
+; GFX11-NEXT:    s_delay_alu instid0(VALU_DEP_4) | instskip(NEXT) | instid1(VALU_DEP_4)
 ; GFX11-NEXT:    v_mov_b32_e32 v5, v4
-; GFX11-NEXT:    v_mov_b32_e32 v6, v4
 ; GFX11-NEXT:    v_add_f32_e32 v2, 1.0, v8
 ; GFX11-NEXT:    s_delay_alu instid0(VALU_DEP_4)
 ; GFX11-NEXT:    v_add_f32_e32 v3, 1.0, v9
+; GFX11-NEXT:    v_mov_b32_e32 v6, v4
 ; GFX11-NEXT:    v_mov_b32_e32 v7, v4
 ; GFX11-NEXT:    v_add_f32_e32 v8, 2.0, v8
 ; GFX11-NEXT:    v_add_f32_e32 v9, 2.0, v9
@@ -466,8 +466,8 @@ define amdgpu_ps void @cluster_image_sample(<8 x i32> inreg %src, <4 x i32> inre
 ; GFX11-NEXT:    v_mov_b32_e32 v12, v10
 ; GFX11-NEXT:    v_mov_b32_e32 v13, v10
 ; GFX11-NEXT:    s_clause 0x1
-; GFX11-NEXT:    image_sample_d v[2:5], v[2:9], s[0:7], s[8:11] dmask:0xf dim:SQ_RSRC_IMG_2D
-; GFX11-NEXT:    image_sample_d v[6:9], v[8:15], s[0:7], s[8:11] dmask:0xf dim:SQ_RSRC_IMG_2D
+; GFX11-NEXT:    image_sample_d v[2:5], v[2:7], s[0:7], s[8:11] dmask:0xf dim:SQ_RSRC_IMG_2D
+; GFX11-NEXT:    image_sample_d v[6:9], v[8:13], s[0:7], s[8:11] dmask:0xf dim:SQ_RSRC_IMG_2D
 ; GFX11-NEXT:    s_waitcnt vmcnt(0)
 ; GFX11-NEXT:    v_add_f32_e32 v5, v5, v9
 ; GFX11-NEXT:    v_add_f32_e32 v4, v4, v8
