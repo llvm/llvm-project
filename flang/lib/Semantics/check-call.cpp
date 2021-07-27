@@ -46,7 +46,7 @@ static void CheckImplicitInterfaceArg(
     }
   }
   if (const auto *expr{arg.UnwrapExpr()}) {
-    if (std::holds_alternative<evaluate::BOZLiteralConstant>(expr->u)) {
+    if (IsBOZLiteral(*expr)) {
       messages.Say("BOZ argument requires an explicit interface"_err_en_US);
     }
     if (auto named{evaluate::ExtractNamedEntity(*expr)}) {
@@ -632,8 +632,7 @@ static void CheckExplicitInterfaceArg(evaluate::ActualArgument &arg,
                 CheckExplicitDataArg(object, dummyName, *expr, *type,
                     isElemental, context, scope, intrinsic);
               } else if (object.type.type().IsTypelessIntrinsicArgument() &&
-                  std::holds_alternative<evaluate::BOZLiteralConstant>(
-                      expr->u)) {
+                  IsBOZLiteral(*expr)) {
                 // ok
               } else if (object.type.type().IsTypelessIntrinsicArgument() &&
                   evaluate::IsNullPointer(*expr)) {
