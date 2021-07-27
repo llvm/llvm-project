@@ -777,13 +777,30 @@ bool Process::HandleProcessStateChangedEvent(const EventSP &event_sp,
         ThreadSP curr_thread(thread_list.GetSelectedThread());
         ThreadSP thread;
         StopReason curr_thread_stop_reason = eStopReasonInvalid;
-        if (curr_thread) {
+        bool prefer_curr_thread = false;
+        if (curr_thread && curr_thread->IsValid()) {
           curr_thread_stop_reason = curr_thread->GetStopReason();
+          switch (curr_thread_stop_reason) {
+          case eStopReasonNone:
+          case eStopReasonInvalid:
+            // Don't prefer the current thread if it didn't stop for a reason.
+            break;
+          case eStopReasonSignal: {
+            // We need to do the same computation we do for other threads
+            // below in case the current thread happens to be the one that
+            // stopped for the no-stop signal.
+            uint64_t signo = curr_thread->GetStopInfo()->GetValue();
+            if (process_sp->GetUnixSignals()->GetShouldStop(signo))
+              prefer_curr_thread = true;
+          } break;
+          default:
+            prefer_curr_thread = true;
+            break;
+          }
           curr_thread_stop_info_sp = curr_thread->GetStopInfo();
         }
-        if (!curr_thread || !curr_thread->IsValid() ||
-            curr_thread_stop_reason == eStopReasonInvalid ||
-            curr_thread_stop_reason == eStopReasonNone) {
+
+        if (!prefer_curr_thread) {
           // Prefer a thread that has just completed its plan over another
           // thread as current thread.
           ThreadSP plan_thread;
