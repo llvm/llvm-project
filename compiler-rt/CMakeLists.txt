@@ -47,6 +47,8 @@ option(COMPILER_RT_BUILD_XRAY_NO_PREINIT "Build xray with no preinit patching" O
 mark_as_advanced(COMPILER_RT_BUILD_XRAY_NO_PREINIT)
 option(COMPILER_RT_BUILD_ORC "Build ORC runtime" ON)
 mark_as_advanced(COMPILER_RT_BUILD_ORC)
+option(COMPILER_RT_BUILD_GWP_ASAN "Build GWP-ASan, and link it into SCUDO" ON)
+mark_as_advanced(COMPILER_RT_BUILD_GWP_ASAN)
 
 set(COMPILER_RT_ASAN_SHADOW_SCALE ""
     CACHE STRING "Override the shadow scale to be used in ASan runtime")
