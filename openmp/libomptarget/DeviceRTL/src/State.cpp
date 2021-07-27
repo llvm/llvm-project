@@ -85,8 +85,8 @@ private:
   /// Compute the size of the storage space reserved for a thread.
   uint32_t computeThreadStorageTotal() {
     uint32_t NumLanesInBlock = mapping::getNumberOfProcessorElements();
-    return (state::SharedScratchpadSize - NumLanesInBlock + 1) /
-           NumLanesInBlock;
+    return utils::align_down((state::SharedScratchpadSize / NumLanesInBlock),
+                             Alignment);
   }
 
   /// Return the top address of the warp data stack, that is the first address
@@ -114,7 +114,7 @@ void SharedMemorySmartStackTy::init(bool IsSPMD) {
 
 void *SharedMemorySmartStackTy::push(uint64_t Bytes) {
   // First align the number of requested bytes.
-  uint64_t AlignedBytes = (Bytes + (Alignment - 1)) / Alignment * Alignment;
+  uint64_t AlignedBytes = utils::align_up(Bytes, Alignment);
 
   uint32_t StorageTotal = computeThreadStorageTotal();
 
@@ -136,7 +136,7 @@ void *SharedMemorySmartStackTy::push(uint64_t Bytes) {
 }
 
 void SharedMemorySmartStackTy::pop(void *Ptr, uint32_t Bytes) {
-  uint64_t AlignedBytes = (Bytes + (Alignment - 1)) / Alignment * Alignment;
+  uint64_t AlignedBytes = utils::align_up(Bytes, Alignment);
   if (Ptr >= &Data[0] && Ptr < &Data[state::SharedScratchpadSize]) {
     int TId = mapping::getThreadIdInBlock();
     Usage[TId] -= AlignedBytes;
