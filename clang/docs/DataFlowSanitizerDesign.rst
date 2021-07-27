@@ -48,11 +48,78 @@ file ``sanitizer/dfsan_interface.h``.
   /// value.
   dfsan_label dfsan_get_label(long data);
 
+  /// Retrieves the label associated with the data at the given address.
+  dfsan_label dfsan_read_label(const void *addr, size_t size);
+
   /// Returns whether the given label label contains the label elem.
   int dfsan_has_label(dfsan_label label, dfsan_label elem);
 
   /// Computes the union of \c l1 and \c l2, resulting in a union label.
   dfsan_label dfsan_union(dfsan_label l1, dfsan_label l2);
+
+  /// Flushes the DFSan shadow, i.e. forgets about all labels currently associated
+  /// with the application memory.  Use this call to start over the taint tracking
+  /// within the same process.
+  ///
+  /// Note: If another thread is working with tainted data during the flush, that
+  /// taint could still be written to shadow after the flush.
+  void dfsan_flush(void);
+
+The following functions are provided to check origin tracking status and results.
+
+.. code-block:: c
+
+  /// Retrieves the immediate origin associated with the given data. The returned
+  /// origin may point to another origin.
+  ///
+  /// The type of 'data' is arbitrary. The function accepts a value of any type,
+  /// which can be truncated or extended (implicitly or explicitly) as necessary.
+  /// The truncation/extension operations will preserve the label of the original
+  /// value.
+  dfsan_origin dfsan_get_origin(long data);
+
+  /// Retrieves the very first origin associated with the data at the given
+  /// address.
+  dfsan_origin dfsan_get_init_origin(const void *addr);
+
+  /// Prints the origin trace of the label at the address `addr` to stderr. It also
+  /// prints description at the beginning of the trace. If origin tracking is not
+  /// on, or the address is not labeled, it prints nothing.
+  void dfsan_print_origin_trace(const void *addr, const char *description);
+
+  /// Prints the origin trace of the label at the address `addr` to a pre-allocated
+  /// output buffer. If origin tracking is not on, or the address is`
+  /// not labeled, it prints nothing.
+  ///
+  /// `addr` is the tainted memory address whose origin we are printing.
+  /// `description` is a description printed at the beginning of the trace.
+  /// `out_buf` is the output buffer to write the results to. `out_buf_size` is
+  /// the size of `out_buf`. The function returns the number of symbols that
+  /// should have been written to `out_buf` (not including trailing null byte '\0').
+  /// Thus, the string is truncated iff return value is not less than `out_buf_size`.
+  size_t dfsan_sprint_origin_trace(const void *addr, const char *description,
+                                   char *out_buf, size_t out_buf_size);
+
+  /// Returns the value of `-dfsan-track-origins`.
+  int dfsan_get_track_origins(void);
+
+The following functions are provided to register hooks called by custom wrappers.
+
+.. code-block:: c
+
+  /// Sets a callback to be invoked on calls to `write`.  The callback is invoked
+  /// before the write is done. The write is not guaranteed to succeed when the
+  /// callback executes. Pass in NULL to remove any callback.
+  typedef void (*dfsan_write_callback_t)(int fd, const void *buf, size_t count);
+  void dfsan_set_write_callback(dfsan_write_callback_t labeled_write_callback);
+
+  /// Callbacks to be invoked on calls to `memcmp` or `strncmp`.
+  void dfsan_weak_hook_memcmp(void *caller_pc, const void *s1, const void *s2,
+                              size_t n, dfsan_label s1_label,
+                              dfsan_label s2_label, dfsan_label n_label);
+  void dfsan_weak_hook_strncmp(void *caller_pc, const char *s1, const char *s2,
+                              size_t n, dfsan_label s1_label,
+                              dfsan_label s2_label, dfsan_label n_label);
 
 Taint label representation
 --------------------------
