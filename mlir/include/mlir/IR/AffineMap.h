@@ -505,7 +505,7 @@ getProjectedMap(AffineMap map,
 
 /// Apply a permutation from `map` to `source` and return the result.
 template <typename T>
-SmallVector<T> applyPermuationMap(AffineMap map, llvm::ArrayRef<T> source) {
+SmallVector<T> applyPermutationMap(AffineMap map, llvm::ArrayRef<T> source) {
   assert(map.isProjectedPermutation());
   assert(map.getNumInputs() == source.size());
   SmallVector<T> result;
