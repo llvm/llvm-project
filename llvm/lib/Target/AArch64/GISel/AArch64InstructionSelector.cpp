@@ -5042,6 +5042,7 @@ bool AArch64InstructionSelector::selectIntrinsicWithSideEffects(
         {I.getOperand(0).getReg(), I.getOperand(1).getReg()},
         {I.getOperand(3)});
     NewI.cloneMemRefs(I);
+    constrainSelectedInstRegOperands(*NewI, TII, TRI, RBI);
     break;
   }
   case Intrinsic::trap:
