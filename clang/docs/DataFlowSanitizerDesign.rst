@@ -135,6 +135,35 @@ Users are responsible for managing the 8 integer labels (i.e., keeping
 track of what labels they have used so far, picking one that is yet
 unused, etc).
 
+Origin tracking trace representation
+------------------------------------
+
+An origin tracking trace is a list of chains. Each chain has a stack trace
+where the DFSan runtime records a label propapation, and a pointer to its
+previous chain. The very first chain does not point to any chain.
+
+Every four 4-bytes aligned application bytes share a 4-byte origin trace ID. A
+4-byte origin trace ID contains a 4-bit depth and a 28-bit hash ID of a chain.
+
+A chain ID is calculated as a hash from a chain structure. A chain structure
+contains a stack ID and the previous chain ID. The chain head has a zero
+previous chain ID. A stack ID is a hash from a stack trace. The 4-bit depth
+limits the maximal length of a path. The environment variable ``origin_history_size``
+can set the depth limit. Non-positive values mean unlimited. Its default value
+is 16. When reaching the limit, origin tracking ignores following propagation
+chains.
+
+The first chain of a trace starts by `dfsan_set_label` with non-zero labels. A
+new chain is appended at the end of a trace at stores or memory transfers when
+``-dfsan-track-origins`` is 1. Memory transfers include LLVM memory transfer
+instructions, glibc memcpy and memmove. When ``-dfsan-track-origins`` is 2, a
+new chain is also appended at loads.
+
+Other instructions do not create new chains, but simply propagate origin trace
+IDs. If an instruction has more than one operands with non-zero labels, the origin
+treace ID of the last operand with non-zero label is propagated to the result of
+the instruction.
+
 Memory layout and label management
 ----------------------------------
 
