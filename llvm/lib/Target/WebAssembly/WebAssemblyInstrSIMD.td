@@ -1028,7 +1028,14 @@ defm DOT : SIMD_I<(outs V128:$dst), (ins V128:$lhs, V128:$rhs), (outs), (ins),
                   186>;
 
 // Extending multiplication: extmul_{low,high}_P, extmul_high
-multiclass SIMDExtBinary<Vec vec, Intrinsic node, string name, bits<32> simdop> {
+def extend_t : SDTypeProfile<1, 1, [SDTCisVec<0>, SDTCisVec<1>]>;
+def extend_low_s : SDNode<"WebAssemblyISD::EXTEND_LOW_S", extend_t>;
+def extend_high_s : SDNode<"WebAssemblyISD::EXTEND_HIGH_S", extend_t>;
+def extend_low_u : SDNode<"WebAssemblyISD::EXTEND_LOW_U", extend_t>;
+def extend_high_u : SDNode<"WebAssemblyISD::EXTEND_HIGH_U", extend_t>;
+
+multiclass SIMDExtBinary<Vec vec, SDPatternOperator node, string name,
+                         bits<32> simdop> {
   defm _#vec : SIMD_I<(outs V128:$dst), (ins V128:$lhs, V128:$rhs),
                       (outs), (ins),
                       [(set (vec.vt V128:$dst), (node
@@ -1037,32 +1044,41 @@ multiclass SIMDExtBinary<Vec vec, Intrinsic node, string name, bits<32> simdop> 
                       vec.prefix#"."#name, simdop>;
 }
 
-defm EXTMUL_LOW_S :
-  SIMDExtBinary<I16x8, int_wasm_extmul_low_signed, "extmul_low_i8x16_s", 0x9c>;
-defm EXTMUL_HIGH_S :
-  SIMDExtBinary<I16x8, int_wasm_extmul_high_signed, "extmul_high_i8x16_s", 0x9d>;
-defm EXTMUL_LOW_U :
-  SIMDExtBinary<I16x8, int_wasm_extmul_low_unsigned, "extmul_low_i8x16_u", 0x9e>;
-defm EXTMUL_HIGH_U :
-  SIMDExtBinary<I16x8, int_wasm_extmul_high_unsigned, "extmul_high_i8x16_u", 0x9f>;
+class ExtMulPat<SDNode extend> :
+  PatFrag<(ops node:$lhs, node:$rhs),
+          (mul (extend $lhs), (extend $rhs))> {}
+
+def extmul_low_s : ExtMulPat<extend_low_s>;
+def extmul_high_s : ExtMulPat<extend_high_s>;
+def extmul_low_u : ExtMulPat<extend_low_u>;
+def extmul_high_u : ExtMulPat<extend_high_u>;
 
 defm EXTMUL_LOW_S :
-  SIMDExtBinary<I32x4, int_wasm_extmul_low_signed, "extmul_low_i16x8_s", 0xbc>;
+  SIMDExtBinary<I16x8, extmul_low_s, "extmul_low_i8x16_s", 0x9c>;
 defm EXTMUL_HIGH_S :
-  SIMDExtBinary<I32x4, int_wasm_extmul_high_signed, "extmul_high_i16x8_s", 0xbd>;
+  SIMDExtBinary<I16x8, extmul_high_s, "extmul_high_i8x16_s", 0x9d>;
 defm EXTMUL_LOW_U :
-  SIMDExtBinary<I32x4, int_wasm_extmul_low_unsigned, "extmul_low_i16x8_u", 0xbe>;
+  SIMDExtBinary<I16x8, extmul_low_u, "extmul_low_i8x16_u", 0x9e>;
 defm EXTMUL_HIGH_U :
-  SIMDExtBinary<I32x4, int_wasm_extmul_high_unsigned, "extmul_high_i16x8_u", 0xbf>;
+  SIMDExtBinary<I16x8, extmul_high_u, "extmul_high_i8x16_u", 0x9f>;
 
 defm EXTMUL_LOW_S :
-  SIMDExtBinary<I64x2, int_wasm_extmul_low_signed, "extmul_low_i32x4_s", 0xdc>;
+  SIMDExtBinary<I32x4, extmul_low_s, "extmul_low_i16x8_s", 0xbc>;
 defm EXTMUL_HIGH_S :
-  SIMDExtBinary<I64x2, int_wasm_extmul_high_signed, "extmul_high_i32x4_s", 0xdd>;
+  SIMDExtBinary<I32x4, extmul_high_s, "extmul_high_i16x8_s", 0xbd>;
 defm EXTMUL_LOW_U :
-  SIMDExtBinary<I64x2, int_wasm_extmul_low_unsigned, "extmul_low_i32x4_u", 0xde>;
+  SIMDExtBinary<I32x4, extmul_low_u, "extmul_low_i16x8_u", 0xbe>;
 defm EXTMUL_HIGH_U :
-  SIMDExtBinary<I64x2, int_wasm_extmul_high_unsigned, "extmul_high_i32x4_u", 0xdf>;
+  SIMDExtBinary<I32x4, extmul_high_u, "extmul_high_i16x8_u", 0xbf>;
+
+defm EXTMUL_LOW_S :
+  SIMDExtBinary<I64x2, extmul_low_s, "extmul_low_i32x4_s", 0xdc>;
+defm EXTMUL_HIGH_S :
+  SIMDExtBinary<I64x2, extmul_high_s, "extmul_high_i32x4_s", 0xdd>;
+defm EXTMUL_LOW_U :
+  SIMDExtBinary<I64x2, extmul_low_u, "extmul_low_i32x4_u", 0xde>;
+defm EXTMUL_HIGH_U :
+  SIMDExtBinary<I64x2, extmul_high_u, "extmul_high_i32x4_u", 0xdf>;
 
 //===----------------------------------------------------------------------===//
 // Floating-point unary arithmetic
@@ -1191,12 +1207,6 @@ defm "" : SIMDConvert<F64x2, I32x4, convert_low_s, "convert_low_i32x4_s", 0xfe>;
 defm "" : SIMDConvert<F64x2, I32x4, convert_low_u, "convert_low_i32x4_u", 0xff>;
 
 // Extending operations
-def extend_t : SDTypeProfile<1, 1, [SDTCisVec<0>, SDTCisVec<1>]>;
-def extend_low_s : SDNode<"WebAssemblyISD::EXTEND_LOW_S", extend_t>;
-def extend_high_s : SDNode<"WebAssemblyISD::EXTEND_HIGH_S", extend_t>;
-def extend_low_u : SDNode<"WebAssemblyISD::EXTEND_LOW_U", extend_t>;
-def extend_high_u : SDNode<"WebAssemblyISD::EXTEND_HIGH_U", extend_t>;
-
 // TODO: refactor this to be uniform for i64x2 if the numbering is not changed.
 multiclass SIMDExtend<Vec vec, bits<32> baseInst> {
   defm "" : SIMDConvert<vec, vec.split, extend_low_s,
