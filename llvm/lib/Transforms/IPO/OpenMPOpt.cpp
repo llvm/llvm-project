@@ -3991,11 +3991,23 @@ void OpenMPOpt::registerAAs(bool IsModulePass) {
 
   // Create an ExecutionDomain AA for every function and a HeapToStack AA for
   // every function if there is a device kernel.
+  if (!isOpenMPDevice(M))
+    return;
+
   for (auto *F : SCC) {
-    if (!F->isDeclaration())
-      A.getOrCreateAAFor<AAExecutionDomain>(IRPosition::function(*F));
-    if (isOpenMPDevice(M))
-      A.getOrCreateAAFor<AAHeapToStack>(IRPosition::function(*F));
+    if (F->isDeclaration())
+      continue;
+
+    A.getOrCreateAAFor<AAExecutionDomain>(IRPosition::function(*F));
+    A.getOrCreateAAFor<AAHeapToStack>(IRPosition::function(*F));
+
+    for (auto &I : instructions(*F)) {
+      if (auto *LI = dyn_cast<LoadInst>(&I)) {
+        bool UsedAssumedInformation = false;
+        A.getAssumedSimplified(IRPosition::value(*LI), /* AA */ nullptr,
+                               UsedAssumedInformation);
+      }
+    }
   }
 }
 

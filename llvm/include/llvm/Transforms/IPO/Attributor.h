@@ -1544,6 +1544,13 @@ struct Attributor {
                                 UsedAssumedInformation);
   }
 
+  /// If \p V is assumed simplified, return it, if it is unclear yet,
+  /// return None, otherwise return `nullptr`. Same as the public version
+  /// except that it can be used without recording dependences on any \p AA.
+  Optional<Value *> getAssumedSimplified(const IRPosition &V,
+                                         const AbstractAttribute *AA,
+                                         bool &UsedAssumedInformation);
+
   /// Register \p CB as a simplification callback.
   /// `Attributor::getAssumedSimplified` will use these callbacks before
   /// we it will ask `AAValueSimplify`. It is important to ensure this
@@ -1560,13 +1567,6 @@ private:
   /// The vector with all simplification callbacks registered by outside AAs.
   DenseMap<IRPosition, SmallVector<SimplifictionCallbackTy, 1>>
       SimplificationCallbacks;
-
-  /// If \p V is assumed simplified, return it, if it is unclear yet,
-  /// return None, otherwise return `nullptr`. Same as the public version
-  /// except that it can be used without recording dependences on any \p AA.
-  Optional<Value *> getAssumedSimplified(const IRPosition &V,
-                                         const AbstractAttribute *AA,
-                                         bool &UsedAssumedInformation);
 
 public:
   /// Translate \p V from the callee context into the call site context.
