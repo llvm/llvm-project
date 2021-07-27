@@ -9,6 +9,8 @@
 #include "clang/AST/ASTConsumer.h"
 #include "clang/AST/DeclCXX.h"
 #include "clang/AST/DeclGroup.h"
+#include "clang/Driver/Compilation.h"
+#include "clang/Driver/Driver.h"
 #include "clang/Frontend/ASTUnit.h"
 #include "clang/Frontend/CompilerInstance.h"
 #include "clang/Frontend/FrontendAction.h"
@@ -18,6 +20,7 @@
 #include "clang/Tooling/Tooling.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/StringRef.h"
+#include "llvm/Support/Host.h"
 #include "llvm/Support/Path.h"
 #include "llvm/Support/TargetRegistry.h"
 #include "llvm/Support/TargetSelect.h"
@@ -256,6 +259,105 @@ TEST(ToolInvocation, DiagConsumerExpectingSourceManager) {
 
   EXPECT_TRUE(Invocation.run());
   EXPECT_TRUE(Consumer.SawSourceManager);
+}
+
+namespace {
+/// Overlays the real filesystem with the given VFS and returns the result.
+llvm::IntrusiveRefCntPtr<llvm::vfs::OverlayFileSystem>
+overlayRealFS(llvm::IntrusiveRefCntPtr<llvm::vfs::FileSystem> VFS) {
+  auto RFS = llvm::vfs::getRealFileSystem();
+  auto OverlayFS = llvm::makeIntrusiveRefCnt<llvm::vfs::OverlayFileSystem>(RFS);
+  OverlayFS->pushOverlay(VFS);
+  return OverlayFS;
+}
+
+struct CommandLineExtractorTest : public ::testing::Test {
+  llvm::IntrusiveRefCntPtr<llvm::vfs::InMemoryFileSystem> InMemoryFS;
+  llvm::IntrusiveRefCntPtr<DiagnosticsEngine> Diags;
+  driver::Driver Driver;
+
+public:
+  CommandLineExtractorTest()
+      : InMemoryFS(new llvm::vfs::InMemoryFileSystem),
+        Diags(CompilerInstance::createDiagnostics(new DiagnosticOptions)),
+        Driver("clang", llvm::sys::getDefaultTargetTriple(), *Diags,
+               "clang LLVM compiler", overlayRealFS(InMemoryFS)) {}
+
+  void addFile(StringRef Name, StringRef Content) {
+    InMemoryFS->addFile(Name, 0, llvm::MemoryBuffer::getMemBuffer(Content));
+  }
+
+  const llvm::opt::ArgStringList *
+  extractCC1Arguments(llvm::ArrayRef<const char *> Argv) {
+    const std::unique_ptr<driver::Compilation> Compilation(
+        Driver.BuildCompilation(llvm::makeArrayRef(Argv)));
+
+    return getCC1Arguments(Diags.get(), Compilation.get());
+  }
+};
+} // namespace
+
+TEST_F(CommandLineExtractorTest, AcceptOffloading) {
+  addFile("test.c", "int main() {}\n");
+  const char *Args[] = {"clang",     "-target",  "arm64-apple-macosx11.0.0",
+                        "-x",        "hip",      "test.c",
+                        "-nogpulib", "-nogpuinc"};
+  EXPECT_NE(extractCC1Arguments(Args), nullptr);
+}
+
+TEST_F(CommandLineExtractorTest, AcceptOffloadingCompile) {
+  addFile("test.c", "int main() {}\n");
+  const char *Args[] = {"clang",  "-target",   "arm64-apple-macosx11.0.0",
+                        "-c",     "-x",        "hip",
+                        "test.c", "-nogpulib", "-nogpuinc"};
+  EXPECT_NE(extractCC1Arguments(Args), nullptr);
+}
+
+TEST_F(CommandLineExtractorTest, AcceptOffloadingSyntaxOnly) {
+  addFile("test.c", "int main() {}\n");
+  const char *Args[] = {
+      "clang",         "-target",   "arm64-apple-macosx11.0.0",
+      "-fsyntax-only", "-x",        "hip",
+      "test.c",        "-nogpulib", "-nogpuinc"};
+  EXPECT_NE(extractCC1Arguments(Args), nullptr);
+}
+
+TEST_F(CommandLineExtractorTest, AcceptExternalAssembler) {
+  addFile("test.c", "int main() {}\n");
+  const char *Args[] = {
+      "clang", "-target", "arm64-apple-macosx11.0.0", "-fno-integrated-as",
+      "-c",    "test.c"};
+  EXPECT_NE(extractCC1Arguments(Args), nullptr);
+}
+
+TEST_F(CommandLineExtractorTest, AcceptEmbedBitcode) {
+  addFile("test.c", "int main() {}\n");
+  const char *Args[] = {"clang", "-target",         "arm64-apple-macosx11.0.0",
+                        "-c",    "-fembed-bitcode", "test.c"};
+  EXPECT_NE(extractCC1Arguments(Args), nullptr);
+}
+
+TEST_F(CommandLineExtractorTest, AcceptSaveTemps) {
+  addFile("test.c", "int main() {}\n");
+  const char *Args[] = {"clang", "-target",     "arm64-apple-macosx11.0.0",
+                        "-c",    "-save-temps", "test.c"};
+  EXPECT_NE(extractCC1Arguments(Args), nullptr);
+}
+
+TEST_F(CommandLineExtractorTest, RejectMultipleArchitectures) {
+  addFile("test.c", "int main() {}\n");
+  const char *Args[] = {"clang", "-target", "arm64-apple-macosx11.0.0",
+                        "-arch", "x86_64",  "-arch",
+                        "arm64", "-c",      "test.c"};
+  EXPECT_EQ(extractCC1Arguments(Args), nullptr);
+}
+
+TEST_F(CommandLineExtractorTest, RejectMultipleInputFiles) {
+  addFile("one.c", "void one() {}\n");
+  addFile("two.c", "void two() {}\n");
+  const char *Args[] = {"clang", "-target", "arm64-apple-macosx11.0.0",
+                        "-c",    "one.c",   "two.c"};
+  EXPECT_EQ(extractCC1Arguments(Args), nullptr);
 }
 
 struct VerifyEndCallback : public SourceFileCallbacks {

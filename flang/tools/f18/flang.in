@@ -210,6 +210,12 @@ categorise_opts()
       [[ $opt =~ ^-U.* ]] ||
       [[ $opt == "-Werror" ]]; then
       flang_opts+=($opt)
+    elif
+      # These options are not supported by `flang-new`. There is also no point
+      # in forwarding them to the host compiler as the output from
+      # `-fdebug-unparse` will always be in free form.
+      [[ $opt == "-Mfixed" ]] || [[ $opt == "-Mfree" ]]; then
+      :
     elif [[ $opt =~ -I.* ]] || [[ $opt =~ -J.* ]]; then
       # Options that are needed for both Flang and the external driver.
       flang_opts+=($opt)

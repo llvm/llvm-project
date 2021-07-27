@@ -1139,6 +1139,14 @@ auto MachineFunction::salvageCopySSA(MachineInstr &MI)
     // We can produce a DBG_PHI that identifies the constant physreg. Doesn't
     // matter where we put it, as it's constant valued.
     assert(CurInst->isCopy());
+  } else if (State.first == TRI.getFrameRegister(*this)) {
+    // LLVM IR is allowed to read the framepointer by calling a
+    // llvm.frameaddress.* intrinsic. We can support this by emitting a
+    // DBG_PHI $fp. This isn't ideal, because it extends the behaviours /
+    // position that DBG_PHIs appear at, limiting what can be done later.
+    // TODO: see if there's a better way of expressing these variable
+    // locations.
+    ;
   } else {
     // Assert that this is the entry block. If it isn't, then there is some
     // code construct we don't recognise that deals with physregs across

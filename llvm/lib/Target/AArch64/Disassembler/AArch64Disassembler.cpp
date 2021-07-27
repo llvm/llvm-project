@@ -118,6 +118,10 @@ static DecodeStatus DecodeZPR4RegisterClass(MCInst &Inst, unsigned RegNo,
 template <unsigned NumBitsForTile>
 static DecodeStatus DecodeMatrixTile(MCInst &Inst, unsigned RegNo,
                                      uint64_t Address, const void *Decoder);
+static DecodeStatus DecodeMatrixTileListRegisterClass(MCInst &Inst,
+                                                      unsigned RegMask,
+                                                      uint64_t Address,
+                                                      const void *Decoder);
 static DecodeStatus DecodePPRRegisterClass(MCInst &Inst, unsigned RegNo,
                                            uint64_t Address,
                                            const void *Decoder);
@@ -701,6 +705,16 @@ static DecodeStatus DecodeZPR4RegisterClass(MCInst &Inst, unsigned RegNo,
     return Fail;
   unsigned Register = ZZZZDecoderTable[RegNo];
   Inst.addOperand(MCOperand::createReg(Register));
+  return Success;
+}
+
+static DecodeStatus DecodeMatrixTileListRegisterClass(MCInst &Inst,
+                                                      unsigned RegMask,
+                                                      uint64_t Address,
+                                                      const void *Decoder) {
+  if (RegMask > 0xFF)
+    return Fail;
+  Inst.addOperand(MCOperand::createImm(RegMask));
   return Success;
 }
 
