@@ -32,6 +32,10 @@ struct SizeMember {
   constexpr size_t size() { return 42; }
 };
 
+struct StaticSizeMember {
+  constexpr static size_t size() { return 42; }
+};
+
 static_assert(!std::is_invocable_v<RangeSizeT, const SizeMember>);
 
 struct SizeFunction {
@@ -81,6 +85,9 @@ bool constexpr testHasSizeMember() {
 
   assert(std::ranges::size(SizeMemberSigned()) == 42);
   ASSERT_SAME_TYPE(decltype(std::ranges::size(SizeMemberSigned())), long);
+
+  assert(std::ranges::size(StaticSizeMember()) == 42);
+  ASSERT_SAME_TYPE(decltype(std::ranges::size(StaticSizeMember())), size_t);
 
   return true;
 }
