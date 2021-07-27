@@ -406,8 +406,8 @@ Value *HardwareLoop::InitLoopCount() {
   }
 
   if (!isSafeToExpandAt(TripCount, BB->getTerminator(), SE)) {
-    LLVM_DEBUG(dbgs() << "- Bailing, unsafe to expand TripCount "
-               << *TripCount << "\n");
+    LLVM_DEBUG(dbgs() << "- Bailing, unsafe to expand TripCount " << *TripCount
+                      << "\n");
     return nullptr;
   }
 
@@ -424,9 +424,9 @@ Value *HardwareLoop::InitLoopCount() {
   UseLoopGuard = UseLoopGuard && CanGenerateTest(L, Count);
   BeginBB = UseLoopGuard ? BB : L->getLoopPreheader();
   LLVM_DEBUG(dbgs() << " - Loop Count: " << *Count << "\n"
-             << " - Expanded Count in " << BB->getName() << "\n"
-             << " - Will insert set counter intrinsic into: "
-             << BeginBB->getName() << "\n");
+                    << " - Expanded Count in " << BB->getName() << "\n"
+                    << " - Will insert set counter intrinsic into: "
+                    << BeginBB->getName() << "\n");
   return Count;
 }
 
