@@ -1191,7 +1191,11 @@ static Error sanitizeArguments(const Triple &TT, const char *ArgV0) {
       if (DefaultOrcRuntimePath.endswith("bin"))
         sys::path::remove_filename(DefaultOrcRuntimePath); // remove 'bin'
       sys::path::append(DefaultOrcRuntimePath,
-                        "lib/clang/13.0.0/lib/darwin/libclang_rt.orc_osx.a");
+                        ("lib/clang/" + Twine(LLVM_VERSION_MAJOR) + "." +
+                         Twine(LLVM_VERSION_MINOR) + "." +
+                         Twine(LLVM_VERSION_PATCH) +
+                         "/lib/darwin/libclang_rt.orc_osx.a")
+                            .str());
       OrcRuntimePath = DefaultOrcRuntimePath.str().str();
     }
   }
