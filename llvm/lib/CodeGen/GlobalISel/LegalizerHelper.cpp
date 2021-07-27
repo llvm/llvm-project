@@ -3029,13 +3029,13 @@ LegalizerHelper::LegalizeResult LegalizerHelper::lowerStore(GStore &StoreMI) {
   MachineMemOperand &MMO = **StoreMI.memoperands_begin();
   LLT MemTy = MMO.getMemoryType();
 
-  if (SrcTy.isVector())
-    return UnableToLegalize;
-
   unsigned StoreWidth = MemTy.getSizeInBits();
   unsigned StoreSizeInBits = 8 * MemTy.getSizeInBytes();
 
   if (StoreWidth != StoreSizeInBits) {
+    if (SrcTy.isVector())
+      return UnableToLegalize;
+
     // Promote to a byte-sized store with upper bits zero if not
     // storing an integral number of bytes.  For example, promote
     // TRUNCSTORE:i1 X -> TRUNCSTORE:i8 (and X, 1)
@@ -3054,6 +3054,16 @@ LegalizerHelper::LegalizeResult LegalizerHelper::lowerStore(GStore &StoreMI) {
     MIRBuilder.buildStore(ZextInReg, PtrReg, *NewMMO);
     StoreMI.eraseFromParent();
     return Legalized;
+  }
+
+  if (MemTy.isVector()) {
+    // TODO: Handle vector trunc stores
+    if (MemTy != SrcTy)
+      return UnableToLegalize;
+
+    // TODO: We can do better than scalarizing the vector and at least split it
+    // in half.
+    return reduceLoadStoreWidth(StoreMI, 0, SrcTy.getElementType());
   }
 
   unsigned MemSizeInBits = MemTy.getSizeInBits();

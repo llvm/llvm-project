@@ -12,8 +12,7 @@ target datalayout = "e-m:o-i64:64-i128:128-n32:64-S128"
 target triple = "aarch64--"
 
 ; BIG-ENDIAN: unable to translate in big endian mode
-
-; FALLBACK-WITH-REPORT-ERR: remark: <unknown>:0:0: unable to legalize instruction: G_STORE %3:_(<3 x s32>), %4:_(p0) :: (store (<3 x s32>) into %ir.addr + 16, align 16, basealign 32) (in function: odd_vector)
+; FALLBACK-WITH-REPORT-ERR: remark: <unknown>:0:0: unable to legalize instruction: %{{[0-9]+}}:_(<28 x s32>) = G_CONCAT_VECTORS %{{[0-9]+}}:_(<4 x s32>), %{{[0-9]+}}:_(<4 x s32>), %{{[0-9]+}}:_(<4 x s32>), %{{[0-9]+}}:_(<4 x s32>), %{{[0-9]+}}:_(<4 x s32>), %{{[0-9]+}}:_(<4 x s32>), %{{[0-9]+}}:_(<4 x s32>) (in function: odd_vector)
 ; FALLBACK-WITH-REPORT-ERR: warning: Instruction selection used fallback path for odd_vector
 ; FALLBACK-WITH-REPORT-OUT-LABEL: odd_vector:
 define void @odd_vector(<7 x i32>* %addr) {

@@ -9,7 +9,7 @@
 
 
 # ERR-NOT: remark
-# ERR: remark: <unknown>:0:0: unable to legalize instruction: G_STORE %{{[0-9]+}}:_(<3 x s16>), %{{[0-9]+}}:_(p1) :: (store (<3 x s16>) into unknown-address + 16, align 16, addrspace 1) (in function: test_store_global_v11s16_align4)
+# ERR: remark: <unknown>:0:0: unable to legalize instruction: %{{[0-9]+}}:_(<132 x s16>) = G_CONCAT_VECTORS {{.*}} (in function: test_store_global_v11s16_align4)
 # ERR-NOT: remark
 
 ---
@@ -5979,40 +5979,176 @@ body: |
 
     ; SI-LABEL: name: test_store_global_v11s16_align4
     ; SI: [[COPY:%[0-9]+]]:_(p1) = COPY $vgpr0_vgpr1
-    ; SI: [[DEF:%[0-9]+]]:_(<11 x s16>) = G_IMPLICIT_DEF
-    ; SI: [[EXTRACT:%[0-9]+]]:_(<8 x s16>) = G_EXTRACT [[DEF]](<11 x s16>), 0
-    ; SI: [[EXTRACT1:%[0-9]+]]:_(<3 x s16>) = G_EXTRACT [[DEF]](<11 x s16>), 128
-    ; SI: G_STORE [[EXTRACT]](<8 x s16>), [[COPY]](p1) :: (store (<8 x s16>), addrspace 1)
+    ; SI: [[DEF:%[0-9]+]]:_(<12 x s16>) = G_IMPLICIT_DEF
+    ; SI: [[DEF1:%[0-9]+]]:_(<12 x s16>) = G_IMPLICIT_DEF
+    ; SI: [[UV:%[0-9]+]]:_(<2 x s16>), [[UV1:%[0-9]+]]:_(<2 x s16>), [[UV2:%[0-9]+]]:_(<2 x s16>), [[UV3:%[0-9]+]]:_(<2 x s16>), [[UV4:%[0-9]+]]:_(<2 x s16>), [[UV5:%[0-9]+]]:_(<2 x s16>) = G_UNMERGE_VALUES [[DEF]](<12 x s16>)
+    ; SI: [[UV6:%[0-9]+]]:_(<2 x s16>), [[UV7:%[0-9]+]]:_(<2 x s16>), [[UV8:%[0-9]+]]:_(<2 x s16>), [[UV9:%[0-9]+]]:_(<2 x s16>), [[UV10:%[0-9]+]]:_(<2 x s16>), [[UV11:%[0-9]+]]:_(<2 x s16>) = G_UNMERGE_VALUES [[DEF1]](<12 x s16>)
+    ; SI: [[UV12:%[0-9]+]]:_(<2 x s16>), [[UV13:%[0-9]+]]:_(<2 x s16>), [[UV14:%[0-9]+]]:_(<2 x s16>), [[UV15:%[0-9]+]]:_(<2 x s16>), [[UV16:%[0-9]+]]:_(<2 x s16>), [[UV17:%[0-9]+]]:_(<2 x s16>) = G_UNMERGE_VALUES [[DEF1]](<12 x s16>)
+    ; SI: [[UV18:%[0-9]+]]:_(<2 x s16>), [[UV19:%[0-9]+]]:_(<2 x s16>), [[UV20:%[0-9]+]]:_(<2 x s16>), [[UV21:%[0-9]+]]:_(<2 x s16>), [[UV22:%[0-9]+]]:_(<2 x s16>), [[UV23:%[0-9]+]]:_(<2 x s16>) = G_UNMERGE_VALUES [[DEF1]](<12 x s16>)
+    ; SI: [[UV24:%[0-9]+]]:_(<2 x s16>), [[UV25:%[0-9]+]]:_(<2 x s16>), [[UV26:%[0-9]+]]:_(<2 x s16>), [[UV27:%[0-9]+]]:_(<2 x s16>), [[UV28:%[0-9]+]]:_(<2 x s16>), [[UV29:%[0-9]+]]:_(<2 x s16>) = G_UNMERGE_VALUES [[DEF1]](<12 x s16>)
+    ; SI: [[UV30:%[0-9]+]]:_(<2 x s16>), [[UV31:%[0-9]+]]:_(<2 x s16>), [[UV32:%[0-9]+]]:_(<2 x s16>), [[UV33:%[0-9]+]]:_(<2 x s16>), [[UV34:%[0-9]+]]:_(<2 x s16>), [[UV35:%[0-9]+]]:_(<2 x s16>) = G_UNMERGE_VALUES [[DEF1]](<12 x s16>)
+    ; SI: [[UV36:%[0-9]+]]:_(<2 x s16>), [[UV37:%[0-9]+]]:_(<2 x s16>), [[UV38:%[0-9]+]]:_(<2 x s16>), [[UV39:%[0-9]+]]:_(<2 x s16>), [[UV40:%[0-9]+]]:_(<2 x s16>), [[UV41:%[0-9]+]]:_(<2 x s16>) = G_UNMERGE_VALUES [[DEF1]](<12 x s16>)
+    ; SI: [[UV42:%[0-9]+]]:_(<2 x s16>), [[UV43:%[0-9]+]]:_(<2 x s16>), [[UV44:%[0-9]+]]:_(<2 x s16>), [[UV45:%[0-9]+]]:_(<2 x s16>), [[UV46:%[0-9]+]]:_(<2 x s16>), [[UV47:%[0-9]+]]:_(<2 x s16>) = G_UNMERGE_VALUES [[DEF1]](<12 x s16>)
+    ; SI: [[UV48:%[0-9]+]]:_(<2 x s16>), [[UV49:%[0-9]+]]:_(<2 x s16>), [[UV50:%[0-9]+]]:_(<2 x s16>), [[UV51:%[0-9]+]]:_(<2 x s16>), [[UV52:%[0-9]+]]:_(<2 x s16>), [[UV53:%[0-9]+]]:_(<2 x s16>) = G_UNMERGE_VALUES [[DEF1]](<12 x s16>)
+    ; SI: [[UV54:%[0-9]+]]:_(<2 x s16>), [[UV55:%[0-9]+]]:_(<2 x s16>), [[UV56:%[0-9]+]]:_(<2 x s16>), [[UV57:%[0-9]+]]:_(<2 x s16>), [[UV58:%[0-9]+]]:_(<2 x s16>), [[UV59:%[0-9]+]]:_(<2 x s16>) = G_UNMERGE_VALUES [[DEF1]](<12 x s16>)
+    ; SI: [[UV60:%[0-9]+]]:_(<2 x s16>), [[UV61:%[0-9]+]]:_(<2 x s16>), [[UV62:%[0-9]+]]:_(<2 x s16>), [[UV63:%[0-9]+]]:_(<2 x s16>), [[UV64:%[0-9]+]]:_(<2 x s16>), [[UV65:%[0-9]+]]:_(<2 x s16>) = G_UNMERGE_VALUES [[DEF1]](<12 x s16>)
+    ; SI: [[CONCAT_VECTORS:%[0-9]+]]:_(<132 x s16>) = G_CONCAT_VECTORS [[UV]](<2 x s16>), [[UV1]](<2 x s16>), [[UV2]](<2 x s16>), [[UV3]](<2 x s16>), [[UV4]](<2 x s16>), [[UV5]](<2 x s16>), [[UV6]](<2 x s16>), [[UV7]](<2 x s16>), [[UV8]](<2 x s16>), [[UV9]](<2 x s16>), [[UV10]](<2 x s16>), [[UV11]](<2 x s16>), [[UV12]](<2 x s16>), [[UV13]](<2 x s16>), [[UV14]](<2 x s16>), [[UV15]](<2 x s16>), [[UV16]](<2 x s16>), [[UV17]](<2 x s16>), [[UV18]](<2 x s16>), [[UV19]](<2 x s16>), [[UV20]](<2 x s16>), [[UV21]](<2 x s16>), [[UV22]](<2 x s16>), [[UV23]](<2 x s16>), [[UV24]](<2 x s16>), [[UV25]](<2 x s16>), [[UV26]](<2 x s16>), [[UV27]](<2 x s16>), [[UV28]](<2 x s16>), [[UV29]](<2 x s16>), [[UV30]](<2 x s16>), [[UV31]](<2 x s16>), [[UV32]](<2 x s16>), [[UV33]](<2 x s16>), [[UV34]](<2 x s16>), [[UV35]](<2 x s16>), [[UV36]](<2 x s16>), [[UV37]](<2 x s16>), [[UV38]](<2 x s16>), [[UV39]](<2 x s16>), [[UV40]](<2 x s16>), [[UV41]](<2 x s16>), [[UV42]](<2 x s16>), [[UV43]](<2 x s16>), [[UV44]](<2 x s16>), [[UV45]](<2 x s16>), [[UV46]](<2 x s16>), [[UV47]](<2 x s16>), [[UV48]](<2 x s16>), [[UV49]](<2 x s16>), [[UV50]](<2 x s16>), [[UV51]](<2 x s16>), [[UV52]](<2 x s16>), [[UV53]](<2 x s16>), [[UV54]](<2 x s16>), [[UV55]](<2 x s16>), [[UV56]](<2 x s16>), [[UV57]](<2 x s16>), [[UV58]](<2 x s16>), [[UV59]](<2 x s16>), [[UV60]](<2 x s16>), [[UV61]](<2 x s16>), [[UV62]](<2 x s16>), [[UV63]](<2 x s16>), [[UV64]](<2 x s16>), [[UV65]](<2 x s16>)
+    ; SI: [[UV66:%[0-9]+]]:_(<11 x s16>), [[UV67:%[0-9]+]]:_(<11 x s16>), [[UV68:%[0-9]+]]:_(<11 x s16>), [[UV69:%[0-9]+]]:_(<11 x s16>), [[UV70:%[0-9]+]]:_(<11 x s16>), [[UV71:%[0-9]+]]:_(<11 x s16>), [[UV72:%[0-9]+]]:_(<11 x s16>), [[UV73:%[0-9]+]]:_(<11 x s16>), [[UV74:%[0-9]+]]:_(<11 x s16>), [[UV75:%[0-9]+]]:_(<11 x s16>), [[UV76:%[0-9]+]]:_(<11 x s16>), [[UV77:%[0-9]+]]:_(<11 x s16>) = G_UNMERGE_VALUES [[CONCAT_VECTORS]](<132 x s16>)
+    ; SI: [[INSERT:%[0-9]+]]:_(<12 x s16>) = G_INSERT [[DEF1]], [[UV66]](<11 x s16>), 0
+    ; SI: [[EXTRACT:%[0-9]+]]:_(<8 x s16>) = G_EXTRACT [[INSERT]](<12 x s16>), 0
+    ; SI: [[INSERT1:%[0-9]+]]:_(<12 x s16>) = G_INSERT [[DEF1]], [[UV66]](<11 x s16>), 0
+    ; SI: [[EXTRACT1:%[0-9]+]]:_(<3 x s16>) = G_EXTRACT [[INSERT1]](<12 x s16>), 128
+    ; SI: [[BITCAST:%[0-9]+]]:_(<4 x s32>) = G_BITCAST [[EXTRACT]](<8 x s16>)
+    ; SI: G_STORE [[BITCAST]](<4 x s32>), [[COPY]](p1) :: (store (<4 x s32>), addrspace 1)
     ; SI: [[C:%[0-9]+]]:_(s64) = G_CONSTANT i64 16
     ; SI: [[PTR_ADD:%[0-9]+]]:_(p1) = G_PTR_ADD [[COPY]], [[C]](s64)
-    ; SI: G_STORE [[EXTRACT1]](<3 x s16>), [[PTR_ADD]](p1) :: (store (<3 x s16>) into unknown-address + 16, align 16, addrspace 1)
+    ; SI: [[DEF2:%[0-9]+]]:_(<4 x s16>) = G_IMPLICIT_DEF
+    ; SI: [[INSERT2:%[0-9]+]]:_(<4 x s16>) = G_INSERT [[DEF2]], [[EXTRACT1]](<3 x s16>), 0
+    ; SI: [[UV78:%[0-9]+]]:_(<2 x s16>), [[UV79:%[0-9]+]]:_(<2 x s16>) = G_UNMERGE_VALUES [[INSERT2]](<4 x s16>)
+    ; SI: [[BITCAST1:%[0-9]+]]:_(s32) = G_BITCAST [[UV78]](<2 x s16>)
+    ; SI: [[C1:%[0-9]+]]:_(s32) = G_CONSTANT i32 16
+    ; SI: [[LSHR:%[0-9]+]]:_(s32) = G_LSHR [[BITCAST1]], [[C1]](s32)
+    ; SI: [[BITCAST2:%[0-9]+]]:_(s32) = G_BITCAST [[UV79]](<2 x s16>)
+    ; SI: [[LSHR1:%[0-9]+]]:_(s32) = G_LSHR [[BITCAST2]], [[C1]](s32)
+    ; SI: [[COPY1:%[0-9]+]]:_(s32) = COPY [[BITCAST1]](s32)
+    ; SI: G_STORE [[COPY1]](s32), [[PTR_ADD]](p1) :: (store (s16) into unknown-address + 16, align 16, addrspace 1)
+    ; SI: [[C2:%[0-9]+]]:_(s64) = G_CONSTANT i64 2
+    ; SI: [[PTR_ADD1:%[0-9]+]]:_(p1) = G_PTR_ADD [[PTR_ADD]], [[C2]](s64)
+    ; SI: [[COPY2:%[0-9]+]]:_(s32) = COPY [[LSHR]](s32)
+    ; SI: G_STORE [[COPY2]](s32), [[PTR_ADD1]](p1) :: (store (s16) into unknown-address + 18, addrspace 1)
+    ; SI: [[C3:%[0-9]+]]:_(s64) = G_CONSTANT i64 4
+    ; SI: [[PTR_ADD2:%[0-9]+]]:_(p1) = G_PTR_ADD [[PTR_ADD]], [[C3]](s64)
+    ; SI: [[COPY3:%[0-9]+]]:_(s32) = COPY [[BITCAST2]](s32)
+    ; SI: G_STORE [[COPY3]](s32), [[PTR_ADD2]](p1) :: (store (s16) into unknown-address + 20, align 4, addrspace 1)
     ; CI-LABEL: name: test_store_global_v11s16_align4
     ; CI: [[COPY:%[0-9]+]]:_(p1) = COPY $vgpr0_vgpr1
-    ; CI: [[DEF:%[0-9]+]]:_(<11 x s16>) = G_IMPLICIT_DEF
-    ; CI: [[EXTRACT:%[0-9]+]]:_(<8 x s16>) = G_EXTRACT [[DEF]](<11 x s16>), 0
-    ; CI: [[EXTRACT1:%[0-9]+]]:_(<3 x s16>) = G_EXTRACT [[DEF]](<11 x s16>), 128
-    ; CI: G_STORE [[EXTRACT]](<8 x s16>), [[COPY]](p1) :: (store (<8 x s16>), addrspace 1)
+    ; CI: [[DEF:%[0-9]+]]:_(<12 x s16>) = G_IMPLICIT_DEF
+    ; CI: [[DEF1:%[0-9]+]]:_(<12 x s16>) = G_IMPLICIT_DEF
+    ; CI: [[UV:%[0-9]+]]:_(<2 x s16>), [[UV1:%[0-9]+]]:_(<2 x s16>), [[UV2:%[0-9]+]]:_(<2 x s16>), [[UV3:%[0-9]+]]:_(<2 x s16>), [[UV4:%[0-9]+]]:_(<2 x s16>), [[UV5:%[0-9]+]]:_(<2 x s16>) = G_UNMERGE_VALUES [[DEF]](<12 x s16>)
+    ; CI: [[UV6:%[0-9]+]]:_(<2 x s16>), [[UV7:%[0-9]+]]:_(<2 x s16>), [[UV8:%[0-9]+]]:_(<2 x s16>), [[UV9:%[0-9]+]]:_(<2 x s16>), [[UV10:%[0-9]+]]:_(<2 x s16>), [[UV11:%[0-9]+]]:_(<2 x s16>) = G_UNMERGE_VALUES [[DEF1]](<12 x s16>)
+    ; CI: [[UV12:%[0-9]+]]:_(<2 x s16>), [[UV13:%[0-9]+]]:_(<2 x s16>), [[UV14:%[0-9]+]]:_(<2 x s16>), [[UV15:%[0-9]+]]:_(<2 x s16>), [[UV16:%[0-9]+]]:_(<2 x s16>), [[UV17:%[0-9]+]]:_(<2 x s16>) = G_UNMERGE_VALUES [[DEF1]](<12 x s16>)
+    ; CI: [[UV18:%[0-9]+]]:_(<2 x s16>), [[UV19:%[0-9]+]]:_(<2 x s16>), [[UV20:%[0-9]+]]:_(<2 x s16>), [[UV21:%[0-9]+]]:_(<2 x s16>), [[UV22:%[0-9]+]]:_(<2 x s16>), [[UV23:%[0-9]+]]:_(<2 x s16>) = G_UNMERGE_VALUES [[DEF1]](<12 x s16>)
+    ; CI: [[UV24:%[0-9]+]]:_(<2 x s16>), [[UV25:%[0-9]+]]:_(<2 x s16>), [[UV26:%[0-9]+]]:_(<2 x s16>), [[UV27:%[0-9]+]]:_(<2 x s16>), [[UV28:%[0-9]+]]:_(<2 x s16>), [[UV29:%[0-9]+]]:_(<2 x s16>) = G_UNMERGE_VALUES [[DEF1]](<12 x s16>)
+    ; CI: [[UV30:%[0-9]+]]:_(<2 x s16>), [[UV31:%[0-9]+]]:_(<2 x s16>), [[UV32:%[0-9]+]]:_(<2 x s16>), [[UV33:%[0-9]+]]:_(<2 x s16>), [[UV34:%[0-9]+]]:_(<2 x s16>), [[UV35:%[0-9]+]]:_(<2 x s16>) = G_UNMERGE_VALUES [[DEF1]](<12 x s16>)
+    ; CI: [[UV36:%[0-9]+]]:_(<2 x s16>), [[UV37:%[0-9]+]]:_(<2 x s16>), [[UV38:%[0-9]+]]:_(<2 x s16>), [[UV39:%[0-9]+]]:_(<2 x s16>), [[UV40:%[0-9]+]]:_(<2 x s16>), [[UV41:%[0-9]+]]:_(<2 x s16>) = G_UNMERGE_VALUES [[DEF1]](<12 x s16>)
+    ; CI: [[UV42:%[0-9]+]]:_(<2 x s16>), [[UV43:%[0-9]+]]:_(<2 x s16>), [[UV44:%[0-9]+]]:_(<2 x s16>), [[UV45:%[0-9]+]]:_(<2 x s16>), [[UV46:%[0-9]+]]:_(<2 x s16>), [[UV47:%[0-9]+]]:_(<2 x s16>) = G_UNMERGE_VALUES [[DEF1]](<12 x s16>)
+    ; CI: [[UV48:%[0-9]+]]:_(<2 x s16>), [[UV49:%[0-9]+]]:_(<2 x s16>), [[UV50:%[0-9]+]]:_(<2 x s16>), [[UV51:%[0-9]+]]:_(<2 x s16>), [[UV52:%[0-9]+]]:_(<2 x s16>), [[UV53:%[0-9]+]]:_(<2 x s16>) = G_UNMERGE_VALUES [[DEF1]](<12 x s16>)
+    ; CI: [[UV54:%[0-9]+]]:_(<2 x s16>), [[UV55:%[0-9]+]]:_(<2 x s16>), [[UV56:%[0-9]+]]:_(<2 x s16>), [[UV57:%[0-9]+]]:_(<2 x s16>), [[UV58:%[0-9]+]]:_(<2 x s16>), [[UV59:%[0-9]+]]:_(<2 x s16>) = G_UNMERGE_VALUES [[DEF1]](<12 x s16>)
+    ; CI: [[UV60:%[0-9]+]]:_(<2 x s16>), [[UV61:%[0-9]+]]:_(<2 x s16>), [[UV62:%[0-9]+]]:_(<2 x s16>), [[UV63:%[0-9]+]]:_(<2 x s16>), [[UV64:%[0-9]+]]:_(<2 x s16>), [[UV65:%[0-9]+]]:_(<2 x s16>) = G_UNMERGE_VALUES [[DEF1]](<12 x s16>)
+    ; CI: [[CONCAT_VECTORS:%[0-9]+]]:_(<132 x s16>) = G_CONCAT_VECTORS [[UV]](<2 x s16>), [[UV1]](<2 x s16>), [[UV2]](<2 x s16>), [[UV3]](<2 x s16>), [[UV4]](<2 x s16>), [[UV5]](<2 x s16>), [[UV6]](<2 x s16>), [[UV7]](<2 x s16>), [[UV8]](<2 x s16>), [[UV9]](<2 x s16>), [[UV10]](<2 x s16>), [[UV11]](<2 x s16>), [[UV12]](<2 x s16>), [[UV13]](<2 x s16>), [[UV14]](<2 x s16>), [[UV15]](<2 x s16>), [[UV16]](<2 x s16>), [[UV17]](<2 x s16>), [[UV18]](<2 x s16>), [[UV19]](<2 x s16>), [[UV20]](<2 x s16>), [[UV21]](<2 x s16>), [[UV22]](<2 x s16>), [[UV23]](<2 x s16>), [[UV24]](<2 x s16>), [[UV25]](<2 x s16>), [[UV26]](<2 x s16>), [[UV27]](<2 x s16>), [[UV28]](<2 x s16>), [[UV29]](<2 x s16>), [[UV30]](<2 x s16>), [[UV31]](<2 x s16>), [[UV32]](<2 x s16>), [[UV33]](<2 x s16>), [[UV34]](<2 x s16>), [[UV35]](<2 x s16>), [[UV36]](<2 x s16>), [[UV37]](<2 x s16>), [[UV38]](<2 x s16>), [[UV39]](<2 x s16>), [[UV40]](<2 x s16>), [[UV41]](<2 x s16>), [[UV42]](<2 x s16>), [[UV43]](<2 x s16>), [[UV44]](<2 x s16>), [[UV45]](<2 x s16>), [[UV46]](<2 x s16>), [[UV47]](<2 x s16>), [[UV48]](<2 x s16>), [[UV49]](<2 x s16>), [[UV50]](<2 x s16>), [[UV51]](<2 x s16>), [[UV52]](<2 x s16>), [[UV53]](<2 x s16>), [[UV54]](<2 x s16>), [[UV55]](<2 x s16>), [[UV56]](<2 x s16>), [[UV57]](<2 x s16>), [[UV58]](<2 x s16>), [[UV59]](<2 x s16>), [[UV60]](<2 x s16>), [[UV61]](<2 x s16>), [[UV62]](<2 x s16>), [[UV63]](<2 x s16>), [[UV64]](<2 x s16>), [[UV65]](<2 x s16>)
+    ; CI: [[UV66:%[0-9]+]]:_(<11 x s16>), [[UV67:%[0-9]+]]:_(<11 x s16>), [[UV68:%[0-9]+]]:_(<11 x s16>), [[UV69:%[0-9]+]]:_(<11 x s16>), [[UV70:%[0-9]+]]:_(<11 x s16>), [[UV71:%[0-9]+]]:_(<11 x s16>), [[UV72:%[0-9]+]]:_(<11 x s16>), [[UV73:%[0-9]+]]:_(<11 x s16>), [[UV74:%[0-9]+]]:_(<11 x s16>), [[UV75:%[0-9]+]]:_(<11 x s16>), [[UV76:%[0-9]+]]:_(<11 x s16>), [[UV77:%[0-9]+]]:_(<11 x s16>) = G_UNMERGE_VALUES [[CONCAT_VECTORS]](<132 x s16>)
+    ; CI: [[INSERT:%[0-9]+]]:_(<12 x s16>) = G_INSERT [[DEF1]], [[UV66]](<11 x s16>), 0
+    ; CI: [[EXTRACT:%[0-9]+]]:_(<8 x s16>) = G_EXTRACT [[INSERT]](<12 x s16>), 0
+    ; CI: [[INSERT1:%[0-9]+]]:_(<12 x s16>) = G_INSERT [[DEF1]], [[UV66]](<11 x s16>), 0
+    ; CI: [[EXTRACT1:%[0-9]+]]:_(<3 x s16>) = G_EXTRACT [[INSERT1]](<12 x s16>), 128
+    ; CI: [[BITCAST:%[0-9]+]]:_(<4 x s32>) = G_BITCAST [[EXTRACT]](<8 x s16>)
+    ; CI: G_STORE [[BITCAST]](<4 x s32>), [[COPY]](p1) :: (store (<4 x s32>), addrspace 1)
     ; CI: [[C:%[0-9]+]]:_(s64) = G_CONSTANT i64 16
     ; CI: [[PTR_ADD:%[0-9]+]]:_(p1) = G_PTR_ADD [[COPY]], [[C]](s64)
-    ; CI: G_STORE [[EXTRACT1]](<3 x s16>), [[PTR_ADD]](p1) :: (store (<3 x s16>) into unknown-address + 16, align 16, addrspace 1)
+    ; CI: [[DEF2:%[0-9]+]]:_(<4 x s16>) = G_IMPLICIT_DEF
+    ; CI: [[INSERT2:%[0-9]+]]:_(<4 x s16>) = G_INSERT [[DEF2]], [[EXTRACT1]](<3 x s16>), 0
+    ; CI: [[UV78:%[0-9]+]]:_(<2 x s16>), [[UV79:%[0-9]+]]:_(<2 x s16>) = G_UNMERGE_VALUES [[INSERT2]](<4 x s16>)
+    ; CI: [[BITCAST1:%[0-9]+]]:_(s32) = G_BITCAST [[UV78]](<2 x s16>)
+    ; CI: [[C1:%[0-9]+]]:_(s32) = G_CONSTANT i32 16
+    ; CI: [[LSHR:%[0-9]+]]:_(s32) = G_LSHR [[BITCAST1]], [[C1]](s32)
+    ; CI: [[BITCAST2:%[0-9]+]]:_(s32) = G_BITCAST [[UV79]](<2 x s16>)
+    ; CI: [[LSHR1:%[0-9]+]]:_(s32) = G_LSHR [[BITCAST2]], [[C1]](s32)
+    ; CI: [[COPY1:%[0-9]+]]:_(s32) = COPY [[BITCAST1]](s32)
+    ; CI: G_STORE [[COPY1]](s32), [[PTR_ADD]](p1) :: (store (s16) into unknown-address + 16, align 16, addrspace 1)
+    ; CI: [[C2:%[0-9]+]]:_(s64) = G_CONSTANT i64 2
+    ; CI: [[PTR_ADD1:%[0-9]+]]:_(p1) = G_PTR_ADD [[PTR_ADD]], [[C2]](s64)
+    ; CI: [[COPY2:%[0-9]+]]:_(s32) = COPY [[LSHR]](s32)
+    ; CI: G_STORE [[COPY2]](s32), [[PTR_ADD1]](p1) :: (store (s16) into unknown-address + 18, addrspace 1)
+    ; CI: [[C3:%[0-9]+]]:_(s64) = G_CONSTANT i64 4
+    ; CI: [[PTR_ADD2:%[0-9]+]]:_(p1) = G_PTR_ADD [[PTR_ADD]], [[C3]](s64)
+    ; CI: [[COPY3:%[0-9]+]]:_(s32) = COPY [[BITCAST2]](s32)
+    ; CI: G_STORE [[COPY3]](s32), [[PTR_ADD2]](p1) :: (store (s16) into unknown-address + 20, align 4, addrspace 1)
     ; VI-LABEL: name: test_store_global_v11s16_align4
     ; VI: [[COPY:%[0-9]+]]:_(p1) = COPY $vgpr0_vgpr1
-    ; VI: [[DEF:%[0-9]+]]:_(<11 x s16>) = G_IMPLICIT_DEF
-    ; VI: [[EXTRACT:%[0-9]+]]:_(<8 x s16>) = G_EXTRACT [[DEF]](<11 x s16>), 0
-    ; VI: [[EXTRACT1:%[0-9]+]]:_(<3 x s16>) = G_EXTRACT [[DEF]](<11 x s16>), 128
-    ; VI: G_STORE [[EXTRACT]](<8 x s16>), [[COPY]](p1) :: (store (<8 x s16>), addrspace 1)
+    ; VI: [[DEF:%[0-9]+]]:_(<12 x s16>) = G_IMPLICIT_DEF
+    ; VI: [[DEF1:%[0-9]+]]:_(<12 x s16>) = G_IMPLICIT_DEF
+    ; VI: [[UV:%[0-9]+]]:_(<2 x s16>), [[UV1:%[0-9]+]]:_(<2 x s16>), [[UV2:%[0-9]+]]:_(<2 x s16>), [[UV3:%[0-9]+]]:_(<2 x s16>), [[UV4:%[0-9]+]]:_(<2 x s16>), [[UV5:%[0-9]+]]:_(<2 x s16>) = G_UNMERGE_VALUES [[DEF]](<12 x s16>)
+    ; VI: [[UV6:%[0-9]+]]:_(<2 x s16>), [[UV7:%[0-9]+]]:_(<2 x s16>), [[UV8:%[0-9]+]]:_(<2 x s16>), [[UV9:%[0-9]+]]:_(<2 x s16>), [[UV10:%[0-9]+]]:_(<2 x s16>), [[UV11:%[0-9]+]]:_(<2 x s16>) = G_UNMERGE_VALUES [[DEF1]](<12 x s16>)
+    ; VI: [[UV12:%[0-9]+]]:_(<2 x s16>), [[UV13:%[0-9]+]]:_(<2 x s16>), [[UV14:%[0-9]+]]:_(<2 x s16>), [[UV15:%[0-9]+]]:_(<2 x s16>), [[UV16:%[0-9]+]]:_(<2 x s16>), [[UV17:%[0-9]+]]:_(<2 x s16>) = G_UNMERGE_VALUES [[DEF1]](<12 x s16>)
+    ; VI: [[UV18:%[0-9]+]]:_(<2 x s16>), [[UV19:%[0-9]+]]:_(<2 x s16>), [[UV20:%[0-9]+]]:_(<2 x s16>), [[UV21:%[0-9]+]]:_(<2 x s16>), [[UV22:%[0-9]+]]:_(<2 x s16>), [[UV23:%[0-9]+]]:_(<2 x s16>) = G_UNMERGE_VALUES [[DEF1]](<12 x s16>)
+    ; VI: [[UV24:%[0-9]+]]:_(<2 x s16>), [[UV25:%[0-9]+]]:_(<2 x s16>), [[UV26:%[0-9]+]]:_(<2 x s16>), [[UV27:%[0-9]+]]:_(<2 x s16>), [[UV28:%[0-9]+]]:_(<2 x s16>), [[UV29:%[0-9]+]]:_(<2 x s16>) = G_UNMERGE_VALUES [[DEF1]](<12 x s16>)
+    ; VI: [[UV30:%[0-9]+]]:_(<2 x s16>), [[UV31:%[0-9]+]]:_(<2 x s16>), [[UV32:%[0-9]+]]:_(<2 x s16>), [[UV33:%[0-9]+]]:_(<2 x s16>), [[UV34:%[0-9]+]]:_(<2 x s16>), [[UV35:%[0-9]+]]:_(<2 x s16>) = G_UNMERGE_VALUES [[DEF1]](<12 x s16>)
+    ; VI: [[UV36:%[0-9]+]]:_(<2 x s16>), [[UV37:%[0-9]+]]:_(<2 x s16>), [[UV38:%[0-9]+]]:_(<2 x s16>), [[UV39:%[0-9]+]]:_(<2 x s16>), [[UV40:%[0-9]+]]:_(<2 x s16>), [[UV41:%[0-9]+]]:_(<2 x s16>) = G_UNMERGE_VALUES [[DEF1]](<12 x s16>)
+    ; VI: [[UV42:%[0-9]+]]:_(<2 x s16>), [[UV43:%[0-9]+]]:_(<2 x s16>), [[UV44:%[0-9]+]]:_(<2 x s16>), [[UV45:%[0-9]+]]:_(<2 x s16>), [[UV46:%[0-9]+]]:_(<2 x s16>), [[UV47:%[0-9]+]]:_(<2 x s16>) = G_UNMERGE_VALUES [[DEF1]](<12 x s16>)
+    ; VI: [[UV48:%[0-9]+]]:_(<2 x s16>), [[UV49:%[0-9]+]]:_(<2 x s16>), [[UV50:%[0-9]+]]:_(<2 x s16>), [[UV51:%[0-9]+]]:_(<2 x s16>), [[UV52:%[0-9]+]]:_(<2 x s16>), [[UV53:%[0-9]+]]:_(<2 x s16>) = G_UNMERGE_VALUES [[DEF1]](<12 x s16>)
+    ; VI: [[UV54:%[0-9]+]]:_(<2 x s16>), [[UV55:%[0-9]+]]:_(<2 x s16>), [[UV56:%[0-9]+]]:_(<2 x s16>), [[UV57:%[0-9]+]]:_(<2 x s16>), [[UV58:%[0-9]+]]:_(<2 x s16>), [[UV59:%[0-9]+]]:_(<2 x s16>) = G_UNMERGE_VALUES [[DEF1]](<12 x s16>)
+    ; VI: [[UV60:%[0-9]+]]:_(<2 x s16>), [[UV61:%[0-9]+]]:_(<2 x s16>), [[UV62:%[0-9]+]]:_(<2 x s16>), [[UV63:%[0-9]+]]:_(<2 x s16>), [[UV64:%[0-9]+]]:_(<2 x s16>), [[UV65:%[0-9]+]]:_(<2 x s16>) = G_UNMERGE_VALUES [[DEF1]](<12 x s16>)
+    ; VI: [[CONCAT_VECTORS:%[0-9]+]]:_(<132 x s16>) = G_CONCAT_VECTORS [[UV]](<2 x s16>), [[UV1]](<2 x s16>), [[UV2]](<2 x s16>), [[UV3]](<2 x s16>), [[UV4]](<2 x s16>), [[UV5]](<2 x s16>), [[UV6]](<2 x s16>), [[UV7]](<2 x s16>), [[UV8]](<2 x s16>), [[UV9]](<2 x s16>), [[UV10]](<2 x s16>), [[UV11]](<2 x s16>), [[UV12]](<2 x s16>), [[UV13]](<2 x s16>), [[UV14]](<2 x s16>), [[UV15]](<2 x s16>), [[UV16]](<2 x s16>), [[UV17]](<2 x s16>), [[UV18]](<2 x s16>), [[UV19]](<2 x s16>), [[UV20]](<2 x s16>), [[UV21]](<2 x s16>), [[UV22]](<2 x s16>), [[UV23]](<2 x s16>), [[UV24]](<2 x s16>), [[UV25]](<2 x s16>), [[UV26]](<2 x s16>), [[UV27]](<2 x s16>), [[UV28]](<2 x s16>), [[UV29]](<2 x s16>), [[UV30]](<2 x s16>), [[UV31]](<2 x s16>), [[UV32]](<2 x s16>), [[UV33]](<2 x s16>), [[UV34]](<2 x s16>), [[UV35]](<2 x s16>), [[UV36]](<2 x s16>), [[UV37]](<2 x s16>), [[UV38]](<2 x s16>), [[UV39]](<2 x s16>), [[UV40]](<2 x s16>), [[UV41]](<2 x s16>), [[UV42]](<2 x s16>), [[UV43]](<2 x s16>), [[UV44]](<2 x s16>), [[UV45]](<2 x s16>), [[UV46]](<2 x s16>), [[UV47]](<2 x s16>), [[UV48]](<2 x s16>), [[UV49]](<2 x s16>), [[UV50]](<2 x s16>), [[UV51]](<2 x s16>), [[UV52]](<2 x s16>), [[UV53]](<2 x s16>), [[UV54]](<2 x s16>), [[UV55]](<2 x s16>), [[UV56]](<2 x s16>), [[UV57]](<2 x s16>), [[UV58]](<2 x s16>), [[UV59]](<2 x s16>), [[UV60]](<2 x s16>), [[UV61]](<2 x s16>), [[UV62]](<2 x s16>), [[UV63]](<2 x s16>), [[UV64]](<2 x s16>), [[UV65]](<2 x s16>)
+    ; VI: [[UV66:%[0-9]+]]:_(<11 x s16>), [[UV67:%[0-9]+]]:_(<11 x s16>), [[UV68:%[0-9]+]]:_(<11 x s16>), [[UV69:%[0-9]+]]:_(<11 x s16>), [[UV70:%[0-9]+]]:_(<11 x s16>), [[UV71:%[0-9]+]]:_(<11 x s16>), [[UV72:%[0-9]+]]:_(<11 x s16>), [[UV73:%[0-9]+]]:_(<11 x s16>), [[UV74:%[0-9]+]]:_(<11 x s16>), [[UV75:%[0-9]+]]:_(<11 x s16>), [[UV76:%[0-9]+]]:_(<11 x s16>), [[UV77:%[0-9]+]]:_(<11 x s16>) = G_UNMERGE_VALUES [[CONCAT_VECTORS]](<132 x s16>)
+    ; VI: [[INSERT:%[0-9]+]]:_(<12 x s16>) = G_INSERT [[DEF1]], [[UV66]](<11 x s16>), 0
+    ; VI: [[EXTRACT:%[0-9]+]]:_(<8 x s16>) = G_EXTRACT [[INSERT]](<12 x s16>), 0
+    ; VI: [[INSERT1:%[0-9]+]]:_(<12 x s16>) = G_INSERT [[DEF1]], [[UV66]](<11 x s16>), 0
+    ; VI: [[EXTRACT1:%[0-9]+]]:_(<3 x s16>) = G_EXTRACT [[INSERT1]](<12 x s16>), 128
+    ; VI: [[BITCAST:%[0-9]+]]:_(<4 x s32>) = G_BITCAST [[EXTRACT]](<8 x s16>)
+    ; VI: G_STORE [[BITCAST]](<4 x s32>), [[COPY]](p1) :: (store (<4 x s32>), addrspace 1)
     ; VI: [[C:%[0-9]+]]:_(s64) = G_CONSTANT i64 16
     ; VI: [[PTR_ADD:%[0-9]+]]:_(p1) = G_PTR_ADD [[COPY]], [[C]](s64)
-    ; VI: G_STORE [[EXTRACT1]](<3 x s16>), [[PTR_ADD]](p1) :: (store (<3 x s16>) into unknown-address + 16, align 16, addrspace 1)
+    ; VI: [[DEF2:%[0-9]+]]:_(<4 x s16>) = G_IMPLICIT_DEF
+    ; VI: [[INSERT2:%[0-9]+]]:_(<4 x s16>) = G_INSERT [[DEF2]], [[EXTRACT1]](<3 x s16>), 0
+    ; VI: [[UV78:%[0-9]+]]:_(<2 x s16>), [[UV79:%[0-9]+]]:_(<2 x s16>) = G_UNMERGE_VALUES [[INSERT2]](<4 x s16>)
+    ; VI: [[BITCAST1:%[0-9]+]]:_(s32) = G_BITCAST [[UV78]](<2 x s16>)
+    ; VI: [[C1:%[0-9]+]]:_(s32) = G_CONSTANT i32 16
+    ; VI: [[LSHR:%[0-9]+]]:_(s32) = G_LSHR [[BITCAST1]], [[C1]](s32)
+    ; VI: [[BITCAST2:%[0-9]+]]:_(s32) = G_BITCAST [[UV79]](<2 x s16>)
+    ; VI: [[LSHR1:%[0-9]+]]:_(s32) = G_LSHR [[BITCAST2]], [[C1]](s32)
+    ; VI: [[COPY1:%[0-9]+]]:_(s32) = COPY [[BITCAST1]](s32)
+    ; VI: G_STORE [[COPY1]](s32), [[PTR_ADD]](p1) :: (store (s16) into unknown-address + 16, align 16, addrspace 1)
+    ; VI: [[C2:%[0-9]+]]:_(s64) = G_CONSTANT i64 2
+    ; VI: [[PTR_ADD1:%[0-9]+]]:_(p1) = G_PTR_ADD [[PTR_ADD]], [[C2]](s64)
+    ; VI: [[COPY2:%[0-9]+]]:_(s32) = COPY [[LSHR]](s32)
+    ; VI: G_STORE [[COPY2]](s32), [[PTR_ADD1]](p1) :: (store (s16) into unknown-address + 18, addrspace 1)
+    ; VI: [[C3:%[0-9]+]]:_(s64) = G_CONSTANT i64 4
+    ; VI: [[PTR_ADD2:%[0-9]+]]:_(p1) = G_PTR_ADD [[PTR_ADD]], [[C3]](s64)
+    ; VI: [[COPY3:%[0-9]+]]:_(s32) = COPY [[BITCAST2]](s32)
+    ; VI: G_STORE [[COPY3]](s32), [[PTR_ADD2]](p1) :: (store (s16) into unknown-address + 20, align 4, addrspace 1)
     ; GFX9-LABEL: name: test_store_global_v11s16_align4
     ; GFX9: [[COPY:%[0-9]+]]:_(p1) = COPY $vgpr0_vgpr1
-    ; GFX9: [[DEF:%[0-9]+]]:_(<11 x s16>) = G_IMPLICIT_DEF
-    ; GFX9: [[EXTRACT:%[0-9]+]]:_(<8 x s16>) = G_EXTRACT [[DEF]](<11 x s16>), 0
-    ; GFX9: [[EXTRACT1:%[0-9]+]]:_(<3 x s16>) = G_EXTRACT [[DEF]](<11 x s16>), 128
-    ; GFX9: G_STORE [[EXTRACT]](<8 x s16>), [[COPY]](p1) :: (store (<8 x s16>), addrspace 1)
+    ; GFX9: [[DEF:%[0-9]+]]:_(<12 x s16>) = G_IMPLICIT_DEF
+    ; GFX9: [[DEF1:%[0-9]+]]:_(<12 x s16>) = G_IMPLICIT_DEF
+    ; GFX9: [[UV:%[0-9]+]]:_(<2 x s16>), [[UV1:%[0-9]+]]:_(<2 x s16>), [[UV2:%[0-9]+]]:_(<2 x s16>), [[UV3:%[0-9]+]]:_(<2 x s16>), [[UV4:%[0-9]+]]:_(<2 x s16>), [[UV5:%[0-9]+]]:_(<2 x s16>) = G_UNMERGE_VALUES [[DEF]](<12 x s16>)
+    ; GFX9: [[UV6:%[0-9]+]]:_(<2 x s16>), [[UV7:%[0-9]+]]:_(<2 x s16>), [[UV8:%[0-9]+]]:_(<2 x s16>), [[UV9:%[0-9]+]]:_(<2 x s16>), [[UV10:%[0-9]+]]:_(<2 x s16>), [[UV11:%[0-9]+]]:_(<2 x s16>) = G_UNMERGE_VALUES [[DEF1]](<12 x s16>)
+    ; GFX9: [[UV12:%[0-9]+]]:_(<2 x s16>), [[UV13:%[0-9]+]]:_(<2 x s16>), [[UV14:%[0-9]+]]:_(<2 x s16>), [[UV15:%[0-9]+]]:_(<2 x s16>), [[UV16:%[0-9]+]]:_(<2 x s16>), [[UV17:%[0-9]+]]:_(<2 x s16>) = G_UNMERGE_VALUES [[DEF1]](<12 x s16>)
+    ; GFX9: [[UV18:%[0-9]+]]:_(<2 x s16>), [[UV19:%[0-9]+]]:_(<2 x s16>), [[UV20:%[0-9]+]]:_(<2 x s16>), [[UV21:%[0-9]+]]:_(<2 x s16>), [[UV22:%[0-9]+]]:_(<2 x s16>), [[UV23:%[0-9]+]]:_(<2 x s16>) = G_UNMERGE_VALUES [[DEF1]](<12 x s16>)
+    ; GFX9: [[UV24:%[0-9]+]]:_(<2 x s16>), [[UV25:%[0-9]+]]:_(<2 x s16>), [[UV26:%[0-9]+]]:_(<2 x s16>), [[UV27:%[0-9]+]]:_(<2 x s16>), [[UV28:%[0-9]+]]:_(<2 x s16>), [[UV29:%[0-9]+]]:_(<2 x s16>) = G_UNMERGE_VALUES [[DEF1]](<12 x s16>)
+    ; GFX9: [[UV30:%[0-9]+]]:_(<2 x s16>), [[UV31:%[0-9]+]]:_(<2 x s16>), [[UV32:%[0-9]+]]:_(<2 x s16>), [[UV33:%[0-9]+]]:_(<2 x s16>), [[UV34:%[0-9]+]]:_(<2 x s16>), [[UV35:%[0-9]+]]:_(<2 x s16>) = G_UNMERGE_VALUES [[DEF1]](<12 x s16>)
+    ; GFX9: [[UV36:%[0-9]+]]:_(<2 x s16>), [[UV37:%[0-9]+]]:_(<2 x s16>), [[UV38:%[0-9]+]]:_(<2 x s16>), [[UV39:%[0-9]+]]:_(<2 x s16>), [[UV40:%[0-9]+]]:_(<2 x s16>), [[UV41:%[0-9]+]]:_(<2 x s16>) = G_UNMERGE_VALUES [[DEF1]](<12 x s16>)
+    ; GFX9: [[UV42:%[0-9]+]]:_(<2 x s16>), [[UV43:%[0-9]+]]:_(<2 x s16>), [[UV44:%[0-9]+]]:_(<2 x s16>), [[UV45:%[0-9]+]]:_(<2 x s16>), [[UV46:%[0-9]+]]:_(<2 x s16>), [[UV47:%[0-9]+]]:_(<2 x s16>) = G_UNMERGE_VALUES [[DEF1]](<12 x s16>)
+    ; GFX9: [[UV48:%[0-9]+]]:_(<2 x s16>), [[UV49:%[0-9]+]]:_(<2 x s16>), [[UV50:%[0-9]+]]:_(<2 x s16>), [[UV51:%[0-9]+]]:_(<2 x s16>), [[UV52:%[0-9]+]]:_(<2 x s16>), [[UV53:%[0-9]+]]:_(<2 x s16>) = G_UNMERGE_VALUES [[DEF1]](<12 x s16>)
+    ; GFX9: [[UV54:%[0-9]+]]:_(<2 x s16>), [[UV55:%[0-9]+]]:_(<2 x s16>), [[UV56:%[0-9]+]]:_(<2 x s16>), [[UV57:%[0-9]+]]:_(<2 x s16>), [[UV58:%[0-9]+]]:_(<2 x s16>), [[UV59:%[0-9]+]]:_(<2 x s16>) = G_UNMERGE_VALUES [[DEF1]](<12 x s16>)
+    ; GFX9: [[UV60:%[0-9]+]]:_(<2 x s16>), [[UV61:%[0-9]+]]:_(<2 x s16>), [[UV62:%[0-9]+]]:_(<2 x s16>), [[UV63:%[0-9]+]]:_(<2 x s16>), [[UV64:%[0-9]+]]:_(<2 x s16>), [[UV65:%[0-9]+]]:_(<2 x s16>) = G_UNMERGE_VALUES [[DEF1]](<12 x s16>)
+    ; GFX9: [[CONCAT_VECTORS:%[0-9]+]]:_(<132 x s16>) = G_CONCAT_VECTORS [[UV]](<2 x s16>), [[UV1]](<2 x s16>), [[UV2]](<2 x s16>), [[UV3]](<2 x s16>), [[UV4]](<2 x s16>), [[UV5]](<2 x s16>), [[UV6]](<2 x s16>), [[UV7]](<2 x s16>), [[UV8]](<2 x s16>), [[UV9]](<2 x s16>), [[UV10]](<2 x s16>), [[UV11]](<2 x s16>), [[UV12]](<2 x s16>), [[UV13]](<2 x s16>), [[UV14]](<2 x s16>), [[UV15]](<2 x s16>), [[UV16]](<2 x s16>), [[UV17]](<2 x s16>), [[UV18]](<2 x s16>), [[UV19]](<2 x s16>), [[UV20]](<2 x s16>), [[UV21]](<2 x s16>), [[UV22]](<2 x s16>), [[UV23]](<2 x s16>), [[UV24]](<2 x s16>), [[UV25]](<2 x s16>), [[UV26]](<2 x s16>), [[UV27]](<2 x s16>), [[UV28]](<2 x s16>), [[UV29]](<2 x s16>), [[UV30]](<2 x s16>), [[UV31]](<2 x s16>), [[UV32]](<2 x s16>), [[UV33]](<2 x s16>), [[UV34]](<2 x s16>), [[UV35]](<2 x s16>), [[UV36]](<2 x s16>), [[UV37]](<2 x s16>), [[UV38]](<2 x s16>), [[UV39]](<2 x s16>), [[UV40]](<2 x s16>), [[UV41]](<2 x s16>), [[UV42]](<2 x s16>), [[UV43]](<2 x s16>), [[UV44]](<2 x s16>), [[UV45]](<2 x s16>), [[UV46]](<2 x s16>), [[UV47]](<2 x s16>), [[UV48]](<2 x s16>), [[UV49]](<2 x s16>), [[UV50]](<2 x s16>), [[UV51]](<2 x s16>), [[UV52]](<2 x s16>), [[UV53]](<2 x s16>), [[UV54]](<2 x s16>), [[UV55]](<2 x s16>), [[UV56]](<2 x s16>), [[UV57]](<2 x s16>), [[UV58]](<2 x s16>), [[UV59]](<2 x s16>), [[UV60]](<2 x s16>), [[UV61]](<2 x s16>), [[UV62]](<2 x s16>), [[UV63]](<2 x s16>), [[UV64]](<2 x s16>), [[UV65]](<2 x s16>)
+    ; GFX9: [[UV66:%[0-9]+]]:_(<11 x s16>), [[UV67:%[0-9]+]]:_(<11 x s16>), [[UV68:%[0-9]+]]:_(<11 x s16>), [[UV69:%[0-9]+]]:_(<11 x s16>), [[UV70:%[0-9]+]]:_(<11 x s16>), [[UV71:%[0-9]+]]:_(<11 x s16>), [[UV72:%[0-9]+]]:_(<11 x s16>), [[UV73:%[0-9]+]]:_(<11 x s16>), [[UV74:%[0-9]+]]:_(<11 x s16>), [[UV75:%[0-9]+]]:_(<11 x s16>), [[UV76:%[0-9]+]]:_(<11 x s16>), [[UV77:%[0-9]+]]:_(<11 x s16>) = G_UNMERGE_VALUES [[CONCAT_VECTORS]](<132 x s16>)
+    ; GFX9: [[INSERT:%[0-9]+]]:_(<12 x s16>) = G_INSERT [[DEF1]], [[UV66]](<11 x s16>), 0
+    ; GFX9: [[EXTRACT:%[0-9]+]]:_(<8 x s16>) = G_EXTRACT [[INSERT]](<12 x s16>), 0
+    ; GFX9: [[INSERT1:%[0-9]+]]:_(<12 x s16>) = G_INSERT [[DEF1]], [[UV66]](<11 x s16>), 0
+    ; GFX9: [[EXTRACT1:%[0-9]+]]:_(<3 x s16>) = G_EXTRACT [[INSERT1]](<12 x s16>), 128
+    ; GFX9: [[BITCAST:%[0-9]+]]:_(<4 x s32>) = G_BITCAST [[EXTRACT]](<8 x s16>)
+    ; GFX9: G_STORE [[BITCAST]](<4 x s32>), [[COPY]](p1) :: (store (<4 x s32>), addrspace 1)
     ; GFX9: [[C:%[0-9]+]]:_(s64) = G_CONSTANT i64 16
     ; GFX9: [[PTR_ADD:%[0-9]+]]:_(p1) = G_PTR_ADD [[COPY]], [[C]](s64)
-    ; GFX9: G_STORE [[EXTRACT1]](<3 x s16>), [[PTR_ADD]](p1) :: (store (<3 x s16>) into unknown-address + 16, align 16, addrspace 1)
+    ; GFX9: [[DEF2:%[0-9]+]]:_(<4 x s16>) = G_IMPLICIT_DEF
+    ; GFX9: [[INSERT2:%[0-9]+]]:_(<4 x s16>) = G_INSERT [[DEF2]], [[EXTRACT1]](<3 x s16>), 0
+    ; GFX9: [[UV78:%[0-9]+]]:_(<2 x s16>), [[UV79:%[0-9]+]]:_(<2 x s16>) = G_UNMERGE_VALUES [[INSERT2]](<4 x s16>)
+    ; GFX9: [[BITCAST1:%[0-9]+]]:_(s32) = G_BITCAST [[UV78]](<2 x s16>)
+    ; GFX9: [[C1:%[0-9]+]]:_(s32) = G_CONSTANT i32 16
+    ; GFX9: [[LSHR:%[0-9]+]]:_(s32) = G_LSHR [[BITCAST1]], [[C1]](s32)
+    ; GFX9: [[BITCAST2:%[0-9]+]]:_(s32) = G_BITCAST [[UV79]](<2 x s16>)
+    ; GFX9: [[LSHR1:%[0-9]+]]:_(s32) = G_LSHR [[BITCAST2]], [[C1]](s32)
+    ; GFX9: [[COPY1:%[0-9]+]]:_(s32) = COPY [[BITCAST1]](s32)
+    ; GFX9: G_STORE [[COPY1]](s32), [[PTR_ADD]](p1) :: (store (s16) into unknown-address + 16, align 16, addrspace 1)
+    ; GFX9: [[C2:%[0-9]+]]:_(s64) = G_CONSTANT i64 2
+    ; GFX9: [[PTR_ADD1:%[0-9]+]]:_(p1) = G_PTR_ADD [[PTR_ADD]], [[C2]](s64)
+    ; GFX9: [[COPY2:%[0-9]+]]:_(s32) = COPY [[LSHR]](s32)
+    ; GFX9: G_STORE [[COPY2]](s32), [[PTR_ADD1]](p1) :: (store (s16) into unknown-address + 18, addrspace 1)
+    ; GFX9: [[C3:%[0-9]+]]:_(s64) = G_CONSTANT i64 4
+    ; GFX9: [[PTR_ADD2:%[0-9]+]]:_(p1) = G_PTR_ADD [[PTR_ADD]], [[C3]](s64)
+    ; GFX9: [[COPY3:%[0-9]+]]:_(s32) = COPY [[BITCAST2]](s32)
+    ; GFX9: G_STORE [[COPY3]](s32), [[PTR_ADD2]](p1) :: (store (s16) into unknown-address + 20, align 4, addrspace 1)
     %0:_(p1) = COPY $vgpr0_vgpr1
     %1:_(<11 x s16>) = G_IMPLICIT_DEF
     G_STORE %1, %0 :: (store (<11 x s16>), align 16, addrspace 1)
