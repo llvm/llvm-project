@@ -575,6 +575,22 @@ Error LLJITBuilderState::prepareForConstruction() {
       dbgs() << "\n";
   });
 
+  // If neither ES nor EPC has been set then create an EPC instance.
+  if (!ES && !EPC) {
+    LLVM_DEBUG({
+      dbgs() << "ExecutorProcessControl not specified, "
+                "Creating SelfExecutorProcessControl instance\n";
+    });
+    if (auto EPCOrErr = SelfExecutorProcessControl::Create())
+      EPC = std::move(*EPCOrErr);
+    else
+      return EPCOrErr.takeError();
+  } else
+    LLVM_DEBUG({
+      dbgs() << "Using explicitly specified ExecutorProcessControl instance "
+             << EPC.get() << "\n";
+    });
+
   // If the client didn't configure any linker options then auto-configure the
   // JIT linker.
   if (!CreateObjectLinkingLayer) {
@@ -585,16 +601,9 @@ Error LLJITBuilderState::prepareForConstruction() {
       JTMB->setRelocationModel(Reloc::PIC_);
       JTMB->setCodeModel(CodeModel::Small);
       CreateObjectLinkingLayer =
-          [EPC = this->EPC](
-              ExecutionSession &ES,
-              const Triple &) -> Expected<std::unique_ptr<ObjectLayer>> {
-        std::unique_ptr<ObjectLinkingLayer> ObjLinkingLayer;
-        if (EPC)
-          ObjLinkingLayer =
-              std::make_unique<ObjectLinkingLayer>(ES, EPC->getMemMgr());
-        else
-          ObjLinkingLayer = std::make_unique<ObjectLinkingLayer>(
-              ES, std::make_unique<jitlink::InProcessMemoryManager>());
+          [](ExecutionSession &ES,
+             const Triple &) -> Expected<std::unique_ptr<ObjectLayer>> {
+        auto ObjLinkingLayer = std::make_unique<ObjectLinkingLayer>(ES);
         ObjLinkingLayer->addPlugin(std::make_unique<EHFrameRegistrationPlugin>(
             ES, std::make_unique<jitlink::InProcessEHFrameRegistrar>()));
         return std::move(ObjLinkingLayer);
@@ -688,10 +697,24 @@ LLJIT::createCompileFunction(LLJITBuilderState &S,
 }
 
 LLJIT::LLJIT(LLJITBuilderState &S, Error &Err)
-    : ES(S.ES ? std::move(S.ES) : std::make_unique<ExecutionSession>()), Main(),
-      DL(""), TT(S.JTMB->getTargetTriple()) {
+    : DL(""), TT(S.JTMB->getTargetTriple()) {
 
   ErrorAsOutParameter _(&Err);
+
+  assert(!(S.EPC && S.ES) && "EPC and ES should not both be set");
+
+  if (S.EPC) {
+    ES = std::make_unique<ExecutionSession>(std::move(S.EPC));
+  } else if (S.ES)
+    ES = std::move(S.ES);
+  else {
+    if (auto EPC = SelfExecutorProcessControl::Create()) {
+      ES = std::make_unique<ExecutionSession>(std::move(*EPC));
+    } else {
+      Err = EPC.takeError();
+      return;
+    }
+  }
 
   if (auto MainOrErr = this->ES->createJITDylib("main"))
     Main = &*MainOrErr;

@@ -35,7 +35,7 @@ public:
   }
 
 protected:
-  ExecutionSession ES;
+  ExecutionSession ES{std::make_unique<UnsupportedExecutorProcessControl>()};
   JITDylib &JD = ES.createBareJITDylib("main");
   ObjectLinkingLayer ObjLinkingLayer{
       ES, std::make_unique<InProcessMemoryManager>()};

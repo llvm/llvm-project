@@ -621,7 +621,7 @@ static Error loadProcessSymbols(Session &S) {
       };
   S.MainJD->addGenerator(
       ExitOnErr(orc::EPCDynamicLibrarySearchGenerator::GetForTargetProcess(
-          *S.EPC, std::move(FilterMainEntryPoint))));
+          S.ES, std::move(FilterMainEntryPoint))));
 
   return Error::success();
 }
@@ -630,7 +630,7 @@ static Error loadDylibs(Session &S) {
   LLVM_DEBUG(dbgs() << "Loading dylibs...\n");
   for (const auto &Dylib : Dylibs) {
     LLVM_DEBUG(dbgs() << "  " << Dylib << "\n");
-    auto G = orc::EPCDynamicLibrarySearchGenerator::Load(*S.EPC, Dylib.c_str());
+    auto G = orc::EPCDynamicLibrarySearchGenerator::Load(S.ES, Dylib.c_str());
     if (!G)
       return G.takeError();
     S.MainJD->addGenerator(std::move(*G));
@@ -880,13 +880,11 @@ Expected<std::unique_ptr<Session>> Session::Create(Triple TT) {
 Session::~Session() {
   if (auto Err = ES.endSession())
     ES.reportError(std::move(Err));
-  if (auto Err = EPC->disconnect())
-    ES.reportError(std::move(Err));
 }
 
 Session::Session(std::unique_ptr<ExecutorProcessControl> EPC, Error &Err)
-    : EPC(std::move(EPC)), ES(this->EPC->getSymbolStringPool()),
-      ObjLayer(*this, this->EPC->getMemMgr()) {
+    : ES(std::move(EPC)),
+      ObjLayer(*this, ES.getExecutorProcessControl().getMemMgr()) {
 
   /// Local ObjectLinkingLayer::Plugin class to forward modifyPassConfig to the
   /// Session.
@@ -925,20 +923,20 @@ Session::Session(std::unique_ptr<ExecutorProcessControl> EPC, Error &Err)
   ExitOnErr(loadDylibs(*this));
 
   // Set up the platform.
-  if (this->EPC->getTargetTriple().isOSBinFormatMachO() && UseOrcRuntime) {
-    if (auto P = MachOPlatform::Create(ES, ObjLayer, *this->EPC, *MainJD,
+  auto &TT = ES.getExecutorProcessControl().getTargetTriple();
+  if (TT.isOSBinFormatMachO() && UseOrcRuntime) {
+    if (auto P = MachOPlatform::Create(ES, ObjLayer, *MainJD,
                                        OrcRuntimePath.c_str()))
       ES.setPlatform(std::move(*P));
     else {
       Err = P.takeError();
       return;
     }
-  } else if (!NoExec && !this->EPC->getTargetTriple().isOSWindows() &&
-             !this->EPC->getTargetTriple().isOSBinFormatMachO()) {
+  } else if (!NoExec && !TT.isOSWindows() && !TT.isOSBinFormatMachO()) {
     ObjLayer.addPlugin(std::make_unique<EHFrameRegistrationPlugin>(
-        ES, ExitOnErr(EPCEHFrameRegistrar::Create(*this->EPC))));
+        ES, ExitOnErr(EPCEHFrameRegistrar::Create(this->ES))));
     ObjLayer.addPlugin(std::make_unique<DebugObjectManagerPlugin>(
-        ES, ExitOnErr(createJITLoaderGDBRegistrar(*this->EPC))));
+        ES, ExitOnErr(createJITLoaderGDBRegistrar(this->ES))));
   }
 
   ObjLayer.addPlugin(std::make_unique<JITLinkSessionPlugin>(*this));
@@ -985,10 +983,11 @@ void Session::modifyPassConfig(const Triple &TT,
                                PassConfiguration &PassConfig) {
   if (!CheckFiles.empty())
     PassConfig.PostFixupPasses.push_back([this](LinkGraph &G) {
-      if (EPC->getTargetTriple().getObjectFormat() == Triple::ELF)
+      auto &EPC = ES.getExecutorProcessControl();
+      if (EPC.getTargetTriple().getObjectFormat() == Triple::ELF)
         return registerELFGraphInfo(*this, G);
 
-      if (EPC->getTargetTriple().getObjectFormat() == Triple::MachO)
+      if (EPC.getTargetTriple().getObjectFormat() == Triple::MachO)
         return registerMachOGraphInfo(*this, G);
 
       return make_error<StringError>("Unsupported object format for GOT/stub "
@@ -1269,7 +1268,8 @@ static Error loadObjects(Session &S) {
     if (Magic == file_magic::archive ||
         Magic == file_magic::macho_universal_binary)
       JD.addGenerator(ExitOnErr(StaticLibraryDefinitionGenerator::Load(
-          S.ObjLayer, InputFile.c_str(), S.EPC->getTargetTriple())));
+          S.ObjLayer, InputFile.c_str(),
+          S.ES.getExecutorProcessControl().getTargetTriple())));
     else
       ExitOnErr(S.ObjLayer.add(JD, std::move(ObjBuffer)));
   }
@@ -1316,13 +1316,14 @@ static Error loadObjects(Session &S) {
 }
 
 static Error runChecks(Session &S) {
+  const auto &TT = S.ES.getExecutorProcessControl().getTargetTriple();
 
   if (CheckFiles.empty())
     return Error::success();
 
   LLVM_DEBUG(dbgs() << "Running checks...\n");
 
-  auto TripleName = S.EPC->getTargetTriple().str();
+  auto TripleName = TT.str();
   std::string ErrorStr;
   const Target *TheTarget = TargetRegistry::lookupTarget(TripleName, ErrorStr);
   if (!TheTarget)
@@ -1388,9 +1389,8 @@ static Error runChecks(Session &S) {
 
   RuntimeDyldChecker Checker(
       IsSymbolValid, GetSymbolInfo, GetSectionInfo, GetStubInfo, GetGOTInfo,
-      S.EPC->getTargetTriple().isLittleEndian() ? support::little
-                                                : support::big,
-      Disassembler.get(), InstPrinter.get(), dbgs());
+      TT.isLittleEndian() ? support::little : support::big, Disassembler.get(),
+      InstPrinter.get(), dbgs());
 
   std::string CheckLineStart = "# " + CheckName + ":";
   for (auto &CheckFile : CheckFiles) {
@@ -1423,7 +1423,8 @@ static Expected<JITEvaluatedSymbol> getMainEntryPoint(Session &S) {
 
 static Expected<JITEvaluatedSymbol> getOrcRuntimeEntryPoint(Session &S) {
   std::string RuntimeEntryPoint = "__orc_rt_run_program_wrapper";
-  if (S.EPC->getTargetTriple().getObjectFormat() == Triple::MachO)
+  const auto &TT = S.ES.getExecutorProcessControl().getTargetTriple();
+  if (TT.getObjectFormat() == Triple::MachO)
     RuntimeEntryPoint = '_' + RuntimeEntryPoint;
   return S.ES.lookup(S.JDSearchOrder, RuntimeEntryPoint);
 }
@@ -1431,13 +1432,14 @@ static Expected<JITEvaluatedSymbol> getOrcRuntimeEntryPoint(Session &S) {
 static Expected<int> runWithRuntime(Session &S,
                                     JITTargetAddress EntryPointAddress) {
   StringRef DemangledEntryPoint = EntryPointName;
-  if (S.EPC->getTargetTriple().getObjectFormat() == Triple::MachO &&
+  const auto &TT = S.ES.getExecutorProcessControl().getTargetTriple();
+  if (TT.getObjectFormat() == Triple::MachO &&
       DemangledEntryPoint.front() == '_')
     DemangledEntryPoint = DemangledEntryPoint.drop_front();
   using SPSRunProgramSig =
       int64_t(SPSString, SPSString, SPSSequence<SPSString>);
   int64_t Result;
-  if (auto Err = S.EPC->runSPSWrapper<SPSRunProgramSig>(
+  if (auto Err = S.ES.callSPSWrapper<SPSRunProgramSig>(
           EntryPointAddress, Result, S.MainJD->getName(), DemangledEntryPoint,
           static_cast<std::vector<std::string> &>(InputArgv)))
     return std::move(Err);
@@ -1446,7 +1448,8 @@ static Expected<int> runWithRuntime(Session &S,
 
 static Expected<int> runWithoutRuntime(Session &S,
                                        JITTargetAddress EntryPointAddress) {
-  return S.EPC->runAsMain(EntryPointAddress, InputArgv);
+  return S.ES.getExecutorProcessControl().runAsMain(EntryPointAddress,
+                                                    InputArgv);
 }
 
 namespace {
