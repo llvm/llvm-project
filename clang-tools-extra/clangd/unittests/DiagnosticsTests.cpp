@@ -65,6 +65,11 @@ WithNote(::testing::Matcher<Note> NoteMatcher1,
   return Field(&Diag::Notes, UnorderedElementsAre(NoteMatcher1, NoteMatcher2));
 }
 
+::testing::Matcher<const Diag &>
+WithTag(::testing::Matcher<DiagnosticTag> TagMatcher) {
+  return Field(&Diag::Tags, Contains(TagMatcher));
+}
+
 MATCHER_P2(Diag, Range, Message,
            "Diag at " + llvm::to_string(Range) + " = [" + Message + "]") {
   return arg.Range == Range && arg.Message == Message;
@@ -665,6 +670,7 @@ TEST(DiagnosticsTest, ToLSP) {
 
   clangd::Diag D;
   D.ID = clang::diag::err_undeclared_var_use;
+  D.Tags = {DiagnosticTag::Unnecessary};
   D.Name = "undeclared_var_use";
   D.Source = clangd::Diag::Clang;
   D.Message = "something terrible happened";
@@ -710,6 +716,7 @@ main.cpp:6:7: remark: declared somewhere in the main file
 
 ../foo/baz/header.h:10:11:
 note: declared somewhere in the header file)";
+  MainLSP.tags = {DiagnosticTag::Unnecessary};
 
   clangd::Diagnostic NoteInMainLSP;
   NoteInMainLSP.range = NoteInMain.Range;
@@ -1418,6 +1425,24 @@ TEST(Preamble, EndsOnNonEmptyLine) {
         *AST.getDiagnostics(),
         testing::Contains(Diag(Code.range(), "no newline at end of file")));
   }
+}
+
+TEST(Diagnostics, Tags) {
+  TestTU TU;
+  TU.ExtraArgs = {"-Wunused", "-Wdeprecated"};
+  Annotations Test(R"cpp(
+  void bar() __attribute__((deprecated));
+  void foo() {
+    int $unused[[x]];
+    $deprecated[[bar]]();
+  })cpp");
+  TU.Code = Test.code().str();
+  EXPECT_THAT(*TU.build().getDiagnostics(),
+              UnorderedElementsAre(
+                  AllOf(Diag(Test.range("unused"), "unused variable 'x'"),
+                        WithTag(DiagnosticTag::Unnecessary)),
+                  AllOf(Diag(Test.range("deprecated"), "'bar' is deprecated"),
+                        WithTag(DiagnosticTag::Deprecated))));
 }
 } // namespace
 } // namespace clangd

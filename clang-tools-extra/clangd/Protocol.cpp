@@ -584,6 +584,8 @@ llvm::json::Value toJSON(const DiagnosticRelatedInformation &DRI) {
   };
 }
 
+llvm::json::Value toJSON(DiagnosticTag Tag) { return static_cast<int>(Tag); }
+
 llvm::json::Value toJSON(const Diagnostic &D) {
   llvm::json::Object Diag{
       {"range", D.range},
@@ -602,6 +604,8 @@ llvm::json::Value toJSON(const Diagnostic &D) {
     Diag["relatedInformation"] = *D.relatedInformation;
   if (!D.data.empty())
     Diag["data"] = llvm::json::Object(D.data);
+  if (!D.tags.empty())
+    Diag["tags"] = llvm::json::Array{D.tags};
   // FIXME: workaround for older gcc/clang
   return std::move(Diag);
 }
