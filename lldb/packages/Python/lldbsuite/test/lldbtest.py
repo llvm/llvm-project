@@ -798,6 +798,9 @@ class Base(unittest2.TestCase):
             'settings set symbols.clang-modules-cache-path "{}"'.format(
                 configuration.lldb_module_cache_dir),
             "settings set use-color false",
+            
+            # Verify that file cache and live memory always match.
+            "settings set target.verify-file-cache-memory-reads true",
         ]
 
         # Set any user-overridden settings.
