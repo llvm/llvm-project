@@ -383,7 +383,7 @@ def PDL_OperationOp
       CArg<"ArrayRef<StringRef>", "llvm::None">:$attrNames,
       CArg<"ValueRange", "llvm::None">:$attrValues,
       CArg<"ValueRange", "llvm::None">:$resultTypes), [{
-      auto nameAttr = name ? StringAttr() : $_builder.getStringAttr(*name);
+      auto nameAttr = name ? $_builder.getStringAttr(*name) : StringAttr();
       build($_builder, $_state, $_builder.getType<OperationType>(), nameAttr,
             operandValues, attrValues, $_builder.getStrArrayAttr(attrNames),
             resultTypes);
