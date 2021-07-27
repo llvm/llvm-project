@@ -279,11 +279,10 @@ bool DirectoryBasedGlobalCompilationDatabase::DirectoryCache::load(
   struct CDBFile {
     CachedFile *File;
     // Wrapper for {Fixed,JSON}CompilationDatabase::loadFromBuffer.
-    llvm::function_ref<std::unique_ptr<tooling::CompilationDatabase>(
+    std::unique_ptr<tooling::CompilationDatabase> (*Parser)(
         PathRef,
         /*Data*/ llvm::StringRef,
-        /*ErrorMsg*/ std::string &)>
-        Parser;
+        /*ErrorMsg*/ std::string &);
   };
   for (const auto &Entry : {CDBFile{&CompileCommandsJson, parseJSON},
                             CDBFile{&BuildCompileCommandsJson, parseJSON},
