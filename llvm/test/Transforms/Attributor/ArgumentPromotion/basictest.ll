@@ -38,13 +38,12 @@ define internal i32 @test(i32* %X, i32* %Y) {
 ; IS__CGSCC_NPM-LABEL: define {{[^@]+}}@test
 ; IS__CGSCC_NPM-SAME: (i32 [[TMP0:%.*]], i32 [[TMP1:%.*]]) #[[ATTR0:[0-9]+]] {
 ; IS__CGSCC_NPM-NEXT:    [[Y_PRIV:%.*]] = alloca i32, align 4
-; IS__CGSCC_NPM-NEXT:    store i32 [[TMP1]], i32* [[Y_PRIV]], align 4
+; IS__CGSCC_NPM-NEXT:    store i32 2, i32* [[Y_PRIV]], align 4
 ; IS__CGSCC_NPM-NEXT:    [[X_PRIV:%.*]] = alloca i32, align 4
-; IS__CGSCC_NPM-NEXT:    store i32 1, i32* [[X_PRIV]], align 4
 ; IS__CGSCC_NPM-NEXT:    [[A:%.*]] = load i32, i32* [[X_PRIV]], align 4
 ; IS__CGSCC_NPM-NEXT:    [[B:%.*]] = load i32, i32* [[Y_PRIV]], align 4
-; IS__CGSCC_NPM-NEXT:    [[C:%.*]] = add i32 1, [[TMP1]]
-; IS__CGSCC_NPM-NEXT:    ret i32 [[C]]
+; IS__CGSCC_NPM-NEXT:    [[C:%.*]] = add i32 1, 2
+; IS__CGSCC_NPM-NEXT:    ret i32 3
 ;
   %A = load i32, i32* %X
   %B = load i32, i32* %Y
@@ -85,10 +84,9 @@ define internal i32 @caller(i32* %B) {
 ; IS__CGSCC_NPM-LABEL: define {{[^@]+}}@caller
 ; IS__CGSCC_NPM-SAME: (i32 [[TMP0:%.*]]) #[[ATTR0]] {
 ; IS__CGSCC_NPM-NEXT:    [[B_PRIV:%.*]] = alloca i32, align 4
-; IS__CGSCC_NPM-NEXT:    store i32 2, i32* [[B_PRIV]], align 4
 ; IS__CGSCC_NPM-NEXT:    [[TMP2:%.*]] = load i32, i32* [[B_PRIV]], align 4
-; IS__CGSCC_NPM-NEXT:    [[C:%.*]] = call i32 @test(i32 undef, i32 [[TMP2]]) #[[ATTR1:[0-9]+]]
-; IS__CGSCC_NPM-NEXT:    ret i32 [[C]]
+; IS__CGSCC_NPM-NEXT:    [[C:%.*]] = call i32 @test(i32 undef, i32 undef) #[[ATTR1:[0-9]+]]
+; IS__CGSCC_NPM-NEXT:    ret i32 undef
 ;
   %A = alloca i32
   store i32 1, i32* %A
@@ -125,8 +123,7 @@ define i32 @callercaller() {
 ; IS__CGSCC_NPM: Function Attrs: nofree norecurse nosync nounwind readnone willreturn
 ; IS__CGSCC_NPM-LABEL: define {{[^@]+}}@callercaller
 ; IS__CGSCC_NPM-SAME: () #[[ATTR0]] {
-; IS__CGSCC_NPM-NEXT:    [[X:%.*]] = call i32 @caller(i32 undef) #[[ATTR2:[0-9]+]]
-; IS__CGSCC_NPM-NEXT:    ret i32 [[X]]
+; IS__CGSCC_NPM-NEXT:    ret i32 3
 ;
   %B = alloca i32
   store i32 2, i32* %B
@@ -149,5 +146,4 @@ define i32 @callercaller() {
 ;.
 ; IS__CGSCC_NPM: attributes #[[ATTR0]] = { nofree norecurse nosync nounwind readnone willreturn }
 ; IS__CGSCC_NPM: attributes #[[ATTR1]] = { nosync nounwind readnone willreturn }
-; IS__CGSCC_NPM: attributes #[[ATTR2]] = { nounwind readnone willreturn }
 ;.

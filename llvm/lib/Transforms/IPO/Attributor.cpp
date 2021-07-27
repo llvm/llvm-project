@@ -2729,7 +2729,9 @@ raw_ostream &llvm::operator<<(raw_ostream &OS,
                               const AAPointerInfo::Access &Acc) {
   OS << " [" << Acc.getKind() << "] " << *Acc.getRemoteInst();
   if (Acc.getLocalInst() != Acc.getRemoteInst())
-    OS << " via " << *Acc.getLocalInst() << "\n";
+    OS << " via " << *Acc.getLocalInst();
+  if (Acc.getContent().hasValue())
+    OS << " [" << *Acc.getContent() << "]";
   return OS;
 }
 ///}

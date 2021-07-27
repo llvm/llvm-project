@@ -43,13 +43,12 @@ define internal i32 @callee(i1 %C, i32* %P) {
 ; IS__CGSCC_NPM-LABEL: define {{[^@]+}}@callee
 ; IS__CGSCC_NPM-SAME: (i32 [[TMP0:%.*]]) #[[ATTR0:[0-9]+]] {
 ; IS__CGSCC_NPM-NEXT:    [[P_PRIV:%.*]] = alloca i32, align 4
-; IS__CGSCC_NPM-NEXT:    store i32 17, i32* [[P_PRIV]], align 4
 ; IS__CGSCC_NPM-NEXT:    br label [[F:%.*]]
 ; IS__CGSCC_NPM:       T:
 ; IS__CGSCC_NPM-NEXT:    unreachable
 ; IS__CGSCC_NPM:       F:
 ; IS__CGSCC_NPM-NEXT:    [[X:%.*]] = load i32, i32* [[P_PRIV]], align 4
-; IS__CGSCC_NPM-NEXT:    ret i32 [[X]]
+; IS__CGSCC_NPM-NEXT:    ret i32 undef
 ;
   br i1 %C, label %T, label %F
 
@@ -90,8 +89,7 @@ define i32 @foo() {
 ; IS__CGSCC_NPM: Function Attrs: nofree norecurse nosync nounwind readnone willreturn
 ; IS__CGSCC_NPM-LABEL: define {{[^@]+}}@foo
 ; IS__CGSCC_NPM-SAME: () #[[ATTR0]] {
-; IS__CGSCC_NPM-NEXT:    [[X:%.*]] = call i32 @callee(i32 undef) #[[ATTR1:[0-9]+]]
-; IS__CGSCC_NPM-NEXT:    ret i32 [[X]]
+; IS__CGSCC_NPM-NEXT:    ret i32 17
 ;
   %A = alloca i32         ; <i32*> [#uses=2]
   store i32 17, i32* %A
@@ -109,5 +107,4 @@ define i32 @foo() {
 ; IS__CGSCC_OPM: attributes #[[ATTR2]] = { nounwind readonly willreturn }
 ;.
 ; IS__CGSCC_NPM: attributes #[[ATTR0]] = { nofree norecurse nosync nounwind readnone willreturn }
-; IS__CGSCC_NPM: attributes #[[ATTR1]] = { nounwind readnone willreturn }
 ;.

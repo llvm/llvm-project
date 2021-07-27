@@ -185,13 +185,11 @@ define internal i32 @noalias_args_argmem_ro(i32* %A, i32* %B) #1 {
 ; IS__CGSCC_NPM-LABEL: define {{[^@]+}}@noalias_args_argmem_ro
 ; IS__CGSCC_NPM-SAME: (i32 [[TMP0:%.*]], i32 [[TMP1:%.*]]) #[[ATTR2:[0-9]+]] {
 ; IS__CGSCC_NPM-NEXT:    [[B_PRIV:%.*]] = alloca i32, align 4
-; IS__CGSCC_NPM-NEXT:    store i32 5, i32* [[B_PRIV]], align 4
 ; IS__CGSCC_NPM-NEXT:    [[A_PRIV:%.*]] = alloca i32, align 4
-; IS__CGSCC_NPM-NEXT:    store i32 5, i32* [[A_PRIV]], align 4
 ; IS__CGSCC_NPM-NEXT:    [[T0:%.*]] = load i32, i32* [[A_PRIV]], align 4
 ; IS__CGSCC_NPM-NEXT:    [[T1:%.*]] = load i32, i32* [[B_PRIV]], align 4
-; IS__CGSCC_NPM-NEXT:    [[ADD:%.*]] = add nsw i32 [[T0]], [[T1]]
-; IS__CGSCC_NPM-NEXT:    ret i32 [[ADD]]
+; IS__CGSCC_NPM-NEXT:    [[ADD:%.*]] = add nsw i32 5, 5
+; IS__CGSCC_NPM-NEXT:    ret i32 undef
 ;
   %t0 = load i32, i32* %A, align 4
   %t1 = load i32, i32* %B, align 4
@@ -229,8 +227,7 @@ define i32 @visible_local_2() {
 ; IS__CGSCC_NPM: Function Attrs: nofree norecurse nosync nounwind readnone willreturn
 ; IS__CGSCC_NPM-LABEL: define {{[^@]+}}@visible_local_2
 ; IS__CGSCC_NPM-SAME: () #[[ATTR3:[0-9]+]] {
-; IS__CGSCC_NPM-NEXT:    [[CALL:%.*]] = call i32 @noalias_args_argmem_ro(i32 undef, i32 undef) #[[ATTR6:[0-9]+]]
-; IS__CGSCC_NPM-NEXT:    ret i32 [[CALL]]
+; IS__CGSCC_NPM-NEXT:    ret i32 10
 ;
   %B = alloca i32, align 4
   store i32 5, i32* %B, align 4
@@ -280,7 +277,7 @@ define i32 @visible_local_3() {
 ; IS__CGSCC_NPM-SAME: () #[[ATTR3]] {
 ; IS__CGSCC_NPM-NEXT:    [[B:%.*]] = alloca i32, align 4
 ; IS__CGSCC_NPM-NEXT:    store i32 5, i32* [[B]], align 4
-; IS__CGSCC_NPM-NEXT:    [[CALL:%.*]] = call i32 @noalias_args_argmem_rn(i32* noalias nocapture nofree noundef nonnull align 4 dereferenceable(4) [[B]]) #[[ATTR7:[0-9]+]]
+; IS__CGSCC_NPM-NEXT:    [[CALL:%.*]] = call i32 @noalias_args_argmem_rn(i32* noalias nocapture nofree noundef nonnull align 4 dereferenceable(4) [[B]]) #[[ATTR6:[0-9]+]]
 ; IS__CGSCC_NPM-NEXT:    ret i32 [[CALL]]
 ;
   %B = alloca i32, align 4
@@ -313,6 +310,5 @@ attributes #1 = { argmemonly noinline nounwind uwtable willreturn}
 ; IS__CGSCC_NPM: attributes #[[ATTR3]] = { nofree norecurse nosync nounwind readnone willreturn }
 ; IS__CGSCC_NPM: attributes #[[ATTR4]] = { nounwind readonly }
 ; IS__CGSCC_NPM: attributes #[[ATTR5]] = { nosync nounwind readonly }
-; IS__CGSCC_NPM: attributes #[[ATTR6]] = { nounwind readnone willreturn }
-; IS__CGSCC_NPM: attributes #[[ATTR7]] = { nounwind willreturn }
+; IS__CGSCC_NPM: attributes #[[ATTR6]] = { nounwind willreturn }
 ;.

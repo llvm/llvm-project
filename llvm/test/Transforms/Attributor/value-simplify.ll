@@ -613,14 +613,14 @@ define internal i8*@test_byval2(%struct.X* byval(%struct.X) %a) {
 ; IS__TUNIT_NPM-NEXT:    ret i8* [[L]]
 ;
 ; IS__CGSCC_NPM-LABEL: define {{[^@]+}}@test_byval2
-; IS__CGSCC_NPM-SAME: (i8* noalias nofree readnone "no-capture-maybe-returned" [[TMP0:%.*]]) {
+; IS__CGSCC_NPM-SAME: (i8* noalias nofree readnone returned "no-capture-maybe-returned" [[TMP0:%.*]]) {
 ; IS__CGSCC_NPM-NEXT:    [[A_PRIV:%.*]] = alloca [[STRUCT_X:%.*]], align 8
 ; IS__CGSCC_NPM-NEXT:    [[A_PRIV_CAST:%.*]] = bitcast %struct.X* [[A_PRIV]] to i8**
 ; IS__CGSCC_NPM-NEXT:    store i8* [[TMP0]], i8** [[A_PRIV_CAST]], align 8
 ; IS__CGSCC_NPM-NEXT:    call void @sync()
 ; IS__CGSCC_NPM-NEXT:    [[G0:%.*]] = getelementptr [[STRUCT_X]], %struct.X* [[A_PRIV]], i32 0, i32 0
 ; IS__CGSCC_NPM-NEXT:    [[L:%.*]] = load i8*, i8** [[G0]], align 8
-; IS__CGSCC_NPM-NEXT:    ret i8* [[L]]
+; IS__CGSCC_NPM-NEXT:    ret i8* [[TMP0]]
 ;
   call void @sync()
   %g0 = getelementptr %struct.X, %struct.X* %a, i32 0, i32 0
@@ -646,7 +646,7 @@ define i8* @complicated_args_byval2() {
 ; IS__CGSCC_NPM-LABEL: define {{[^@]+}}@complicated_args_byval2() {
 ; IS__CGSCC_NPM-NEXT:    [[TMP1:%.*]] = load i8*, i8** getelementptr inbounds ([[STRUCT_X:%.*]], %struct.X* @S, i32 0, i32 0), align 8
 ; IS__CGSCC_NPM-NEXT:    [[C:%.*]] = call i8* @test_byval2(i8* noalias nofree readnone "no-capture-maybe-returned" [[TMP1]])
-; IS__CGSCC_NPM-NEXT:    ret i8* [[C]]
+; IS__CGSCC_NPM-NEXT:    ret i8* [[TMP1]]
 ;
   %c = call i8* @test_byval2(%struct.X* byval(%struct.X) @S)
   ret i8* %c
