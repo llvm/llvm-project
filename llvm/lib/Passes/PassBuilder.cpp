@@ -145,6 +145,7 @@
 #include "llvm/Transforms/Scalar/ConstraintElimination.h"
 #include "llvm/Transforms/Scalar/CorrelatedValuePropagation.h"
 #include "llvm/Transforms/Scalar/DCE.h"
+#include "llvm/Transforms/Scalar/DFAJumpThreading.h"
 #include "llvm/Transforms/Scalar/DeadStoreElimination.h"
 #include "llvm/Transforms/Scalar/DivRemPairs.h"
 #include "llvm/Transforms/Scalar/EarlyCSE.h"
@@ -302,6 +303,7 @@ extern cl::opt<bool> EnableCHR;
 extern cl::opt<bool> EnableLoopInterchange;
 extern cl::opt<bool> EnableUnrollAndJam;
 extern cl::opt<bool> EnableLoopFlatten;
+extern cl::opt<bool> EnableDFAJumpThreading;
 extern cl::opt<bool> RunNewGVN;
 extern cl::opt<bool> RunPartialInlining;
 extern cl::opt<bool> ExtraVectorizerPasses;
@@ -829,6 +831,9 @@ PassBuilder::buildFunctionSimplificationPipeline(OptimizationLevel Level,
 
   // Re-consider control flow based optimizations after redundancy elimination,
   // redo DCE, etc.
+  if (EnableDFAJumpThreading && Level.getSizeLevel() == 0)
+    FPM.addPass(DFAJumpThreadingPass());
+
   FPM.addPass(JumpThreadingPass());
   FPM.addPass(CorrelatedValuePropagationPass());
 
