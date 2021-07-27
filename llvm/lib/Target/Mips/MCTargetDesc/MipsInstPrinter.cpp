@@ -191,6 +191,16 @@ printMemOperandEA(const MCInst *MI, int opNum, raw_ostream &O) {
 }
 
 void MipsInstPrinter::
+printMemOperandGPRel(const MCInst *MI, int opNum, raw_ostream &O) {
+  O << "%gprel(";
+  printOperand(MI, opNum+1, O);
+  O << ")";
+  O << "(";
+  printOperand(MI, opNum, O);
+  O << ")";
+}
+
+void MipsInstPrinter::
 printFCCOperand(const MCInst *MI, int opNum, raw_ostream &O) {
   const MCOperand& MO = MI->getOperand(opNum);
   O << MipsFCCToString((Mips::CondCode)MO.getImm());

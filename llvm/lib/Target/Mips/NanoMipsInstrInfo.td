@@ -55,6 +55,11 @@ def uimm16_simm12 : Operand<i32>;
 def addrsimm9 : ComplexPattern<iPTR, 2, "selectIntAddrSImm9", [frameindex]>;
 def addruimm12 : ComplexPattern<iPTR, 2, "selectIntAddrUImm12", [frameindex]>;
 
+def mem_gprel : mem_generic {
+  let PrintMethod = "printMemOperandGPRel";
+  let MIOperandInfo = (ops ptr_rc, uimm16);
+}
+
 //===----------------------------------------------------------------------===//
 //
 // Instruction Descriptions
@@ -105,9 +110,9 @@ class RegImmNM<string opstr, Operand Od, RegisterOperand RO,
          [(set RO:$rt, (OpNode imm_type:$imm))]>;
 
 class LoadMemoryNM<string opstr, DAGOperand RO, DAGOperand MO,
-                 SDPatternOperator OpNode = null_frag,
+                   SDPatternOperator OpNode = null_frag,
                    ComplexPattern Addr = addr,
-                   InstrItinClass itin> :
+                   InstrItinClass itin = NoItinerary> :
     InstNM<(outs RO:$rt), (ins MO:$addr), !strconcat(opstr, "\t$rt, $addr"),
            [(set RO:$rt, (OpNode Addr:$addr))],
            itin> {
@@ -469,10 +474,32 @@ def UALW_NM : UnalignedLoad<"ualw", NMUnalignedLW>;
 def UASH_NM : UnalignedStore<"uash", NMUnalignedSH>;
 def UASW_NM : UnalignedStore<"uasw", NMUnalignedSW>;
 
-// TODO: GP addressing
-// TODO: 'X' load/stores reg+reg
+def LWGP_NM : LoadMemoryNM<"lwgp", GPR32NMOpnd, mem_gprel>, InstSize32;
 
+// TODO: 'X' load/stores reg+reg
 }
+
+// Catching out-of-range immediate loads/stores.
+def : Pat<(i32 (extloadi8 GPR32NM:$rs)),
+          (LBU_NM GPR32NM:$rs, 0)>, ISA_NANOMIPS;
+def : Pat<(i32 (zextloadi8 GPR32NM:$rs)),
+          (LBU_NM GPR32NM:$rs, 0)>, ISA_NANOMIPS;
+def : Pat<(i32 (sextloadi8 GPR32NM:$rs)),
+          (LB_NM GPR32NM:$rs, 0)>, ISA_NANOMIPS;
+def : Pat<(truncstorei8 GPR32NM:$rt, GPR32NM:$rs),
+          (SB_NM GPR32NM:$rt, GPR32NM:$rs, 0)>, ISA_NANOMIPS;
+def : Pat<(i32 (extloadi16 GPR32NM:$rs)),
+          (LHU_NM GPR32NM:$rs, 0)>, ISA_NANOMIPS;
+def : Pat<(i32 (zextloadi16 GPR32NM:$rs)),
+          (LHU_NM GPR32NM:$rs, 0)>, ISA_NANOMIPS;
+def : Pat<(i32 (sextloadi16 GPR32NM:$rs)),
+          (LH_NM GPR32NM:$rs, 0)>, ISA_NANOMIPS;
+def : Pat<(truncstorei16 GPR32NM:$rt, GPR32NM:$rs),
+          (SH_NM GPR32NM:$rt, GPR32NM:$rs, 0)>, ISA_NANOMIPS;
+def : Pat<(i32 (load GPR32NM:$rs)),
+          (LW_NM GPR32NM:$rs, 0)>, ISA_NANOMIPS;
+def : Pat<(store GPR32NM:$rt, GPR32NM:$rs),
+          (SW_NM GPR32NM:$rt, GPR32NM:$rs, 0)>, ISA_NANOMIPS;
 
 // Any-extending loads
 def : Pat<(i32 (extloadi8 addruimm12:$addr)),
@@ -483,6 +510,20 @@ def : Pat<(i32 (extloadi16 addruimm12:$addr)),
           (LHU_NM addruimm12:$addr)>, ISA_NANOMIPS;
 def : Pat<(i32 (extloadi16 addrsimm9:$addr)),
           (LHUs9_NM addrsimm9:$addr)>, ISA_NANOMIPS;
+
+// Catching out-of-range immediate unaligned loads/stores.
+def : Pat<(i32 (NMUnalignedLW GPR32NM:$rs, GPR32NM:$src)),
+          (UALW_NM GPR32NM:$rs, 0, GPR32NM:$src)>, ISA_NANOMIPS;
+def : Pat<(NMUnalignedSW GPR32NM:$rt, GPR32NM:$rs),
+          (UASW_NM GPR32NM:$rt, GPR32NM:$rs, 0)>, ISA_NANOMIPS;
+def : Pat<(i32 (NMUnalignedLH GPR32NM:$rs, GPR32NM:$src)),
+          (UALH_NM GPR32NM:$rs, 0, GPR32NM:$src)>, ISA_NANOMIPS;
+def : Pat<(NMUnalignedSH GPR32NM:$rt, GPR32NM:$rs),
+          (UASH_NM GPR32NM:$rt, GPR32NM:$rs, 0)>, ISA_NANOMIPS;
+
+// GP-relative load.
+def : MipsPat<(i32 (load (MipsFullAddr tglobaladdr:$in))),
+              (LWGP_NM GP_NM, tglobaladdr:$in)>, ISA_NANOMIPS;
 
 // Conditional Moves
 def MOVZ_NM : InstNM<(outs GPR32NMOpnd:$rd),

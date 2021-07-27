@@ -762,6 +762,16 @@ printMemOperandEA(const MachineInstr *MI, int opNum, raw_ostream &O) {
 }
 
 void MipsAsmPrinter::
+printMemOperandGPRel(const MachineInstr *MI, int opNum, raw_ostream &O) {
+  O << "%gprel(";
+  printOperand(MI, opNum+1, O);
+  O << ")";
+  O << "(";
+  printOperand(MI, opNum, O);
+  O << ")";
+}
+
+void MipsAsmPrinter::
 printFCCOperand(const MachineInstr *MI, int opNum, raw_ostream &O,
                 const char *Modifier) {
   const MachineOperand &MO = MI->getOperand(opNum);

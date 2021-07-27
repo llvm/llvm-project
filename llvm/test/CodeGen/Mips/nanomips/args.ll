@@ -11,7 +11,7 @@ define i32 @test_ints9(i32 %a, i32 %b) {
 ; CHECK: li ${{[ats][0-9]}}, 7
 ; CHECK: Li_NM
 ; CHECK: sw ${{[ats][0-9]}}, 0($sp)
-; CHECK: SWs9_NM
+; CHECK: SW_NM
 ; CHECK: li $a2, 1
 ; CHECK: Li_NM
 ; CHECK: li $a3, 2

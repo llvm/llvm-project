@@ -15,7 +15,7 @@ define i32 @test_jumptable(i32 %in) {
 ; CHECK: addu $a0, $a0, $a1
 ; CHECK: ADDu_NM
 ; CHECK: lw $a0, 0($a0)
-; CHECK: LWs9_NM
+; CHECK: LW_NM
 ; CHECK: jrc $a0
 ; CHECK: JRC_NM
 

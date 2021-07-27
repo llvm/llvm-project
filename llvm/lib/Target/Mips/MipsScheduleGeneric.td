@@ -697,7 +697,7 @@ def : InstRW<[GenericWriteSync], (instrs GINVI_MMR6, GINVT_MMR6)>;
 // nanoMIPS
 // ========
 
-def : InstRW<[GenericWriteLoad], (instrs LW_NM, LWs9_NM, 
+def : InstRW<[GenericWriteLoad], (instrs LW_NM, LWGP_NM, LWs9_NM, 
                                   LHU_NM, LHUs9_NM, LH_NM, LHs9_NM,
                                   LBU_NM, LBUs9_NM, LB_NM, LBs9_NM,
                                   UALH_NM, UALW_NM)>;
