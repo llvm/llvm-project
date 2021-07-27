@@ -110,6 +110,7 @@ public:
         explicit basic_string(const T& t, const Allocator& a = Allocator()); // C++17
     basic_string(const value_type* s, const allocator_type& a = allocator_type());
     basic_string(const value_type* s, size_type n, const allocator_type& a = allocator_type());
+    basic_string(nullptr_t) = delete; // C++2b
     basic_string(size_type n, value_type c, const allocator_type& a = allocator_type());
     template<class InputIterator>
         basic_string(InputIterator begin, InputIterator end,
@@ -130,6 +131,7 @@ public:
              allocator_type::propagate_on_container_move_assignment::value ||
              allocator_type::is_always_equal::value ); // C++17
     basic_string& operator=(const value_type* s);
+    basic_string& operator=(nullptr_t) = delete; // C++2b
     basic_string& operator=(value_type c);
     basic_string& operator=(initializer_list<value_type>);
 
@@ -843,6 +845,10 @@ public:
         _LIBCPP_INLINE_VISIBILITY
         basic_string(const _CharT* __s, const _Allocator& __a);
 
+#if _LIBCPP_STD_VER > 20
+    basic_string(nullptr_t) = delete;
+#endif
+
     _LIBCPP_INLINE_VISIBILITY
     basic_string(const _CharT* __s, size_type __n);
     _LIBCPP_INLINE_VISIBILITY
@@ -906,6 +912,9 @@ public:
     basic_string& operator=(initializer_list<value_type> __il) {return assign(__il.begin(), __il.size());}
 #endif
     _LIBCPP_INLINE_VISIBILITY basic_string& operator=(const value_type* __s) {return assign(__s);}
+#if _LIBCPP_STD_VER > 20
+    basic_string& operator=(nullptr_t) = delete;
+#endif
     basic_string& operator=(value_type __c);
 
 #if _LIBCPP_DEBUG_LEVEL == 2
