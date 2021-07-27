@@ -134,10 +134,18 @@ if(LLDB_ENABLE_PYTHON AND (BUILD_SHARED_LIBS OR LLVM_LINK_LLVM_DYLIB) AND UNIX A
 endif()
 
 if(Python3_RPATH)
-  set_property(TARGET liblldb APPEND PROPERTY INSTALL_RPATH "${Python3_RPATH}")
-  set_property(TARGET liblldb APPEND PROPERTY BUILD_RPATH   "${Python3_RPATH}")
+  lldb_setup_rpaths(liblldb
+    BUILD_RPATH
+      "${Python3_RPATH}"
+    INSTALL_RPATH
+      "@loader_path/../../../../../../../../Library/Frameworks/"
+      "@loader_path/../../../../../Developer/Library/Frameworks/"
+      "@loader_path/../../../../Developer/Library/Frameworks/"
+      "@loader_path/../../../../Frameworks"
+      "@loader_path/../../../"
+      "/Applications/Xcode.app/Contents/Developer/Library/Frameworks/"
+    )
 endif()
-
 
 if(LLDB_ENABLE_PYTHON)
   add_dependencies(liblldb swig_wrapper_python)
