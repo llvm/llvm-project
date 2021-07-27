@@ -1083,7 +1083,10 @@ static void CloneInstructionsIntoPredecessorBlockAndUpdateSSAUses(
     // For an analogous reason, we must also drop all the metadata whose
     // semantics we don't understand. We *can* preserve !annotation, because
     // it is tied to the instruction itself, not the value or position.
-    NewBonusInst->dropUnknownNonDebugMetadata(LLVMContext::MD_annotation);
+    // Similarly strip attributes on call parameters that may cause UB in
+    // location the call is moved to.
+    NewBonusInst->dropUndefImplyingAttrsAndUnknownMetadata(
+        LLVMContext::MD_annotation);
 
     PredBlock->getInstList().insert(PTI->getIterator(), NewBonusInst);
     NewBonusInst->takeName(&BonusInst);
@@ -2492,10 +2495,12 @@ bool SimplifyCFGOpt::SpeculativelyExecuteBB(BranchInst *BI, BasicBlock *ThenBB,
   // Conservatively strip all metadata on the instruction. Drop the debug loc
   // to avoid making it appear as if the condition is a constant, which would
   // be misleading while debugging.
+  // Similarly strip attributes that maybe dependent on condition we are
+  // hoisting above.
   for (auto &I : *ThenBB) {
     if (!SpeculatedStoreValue || &I != SpeculatedStore)
       I.setDebugLoc(DebugLoc());
-    I.dropUnknownNonDebugMetadata();
+    I.dropUndefImplyingAttrsAndUnknownMetadata();
   }
 
   // Hoist the instructions.
