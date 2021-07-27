@@ -85,6 +85,10 @@ public:
   FailureOr() : FailureOr(failure()) {}
   FailureOr(T &&y) : Optional<T>(std::forward<T>(y)) {}
   FailureOr(const T &y) : Optional<T>(y) {}
+  template <typename U,
+            std::enable_if_t<std::is_constructible<T, U>::value> * = nullptr>
+  FailureOr(const FailureOr<U> &other)
+      : Optional<T>(failed(other) ? Optional<T>() : Optional<T>(*other)) {}
 
   operator LogicalResult() const { return success(this->hasValue()); }
 
