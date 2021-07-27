@@ -497,19 +497,32 @@ __attribute__((noinline)) void __kmpc_free_shared(void *Ptr, uint64_t Bytes) {
   memory::freeShared(Ptr, Bytes, "Frontend free shared");
 }
 
+/// Allocate storage in shared memory to communicate arguments from the main
+/// thread to the workers in generic mode. If we exceed
+/// NUM_SHARED_VARIABLES_IN_SHARED_MEM we will malloc space for communication.
+constexpr uint64_t NUM_SHARED_VARIABLES_IN_SHARED_MEM = 64;
+
+[[clang::loader_uninitialized]] static void
+    *SharedMemVariableSharingSpace[NUM_SHARED_VARIABLES_IN_SHARED_MEM];
+#pragma omp allocate(SharedMemVariableSharingSpace)                            \
+    allocator(omp_pteam_mem_alloc)
 [[clang::loader_uninitialized]] static void **SharedMemVariableSharingSpacePtr;
 #pragma omp allocate(SharedMemVariableSharingSpacePtr)                         \
     allocator(omp_pteam_mem_alloc)
 
-void __kmpc_begin_sharing_variables(void ***GlobalArgs, uint64_t NumArgs) {
-  SharedMemVariableSharingSpacePtr =
-      (void **)__kmpc_alloc_shared(sizeof(void *) * NumArgs);
+void __kmpc_begin_sharing_variables(void ***GlobalArgs, uint64_t nArgs) {
+  if (nArgs <= NUM_SHARED_VARIABLES_IN_SHARED_MEM) {
+    SharedMemVariableSharingSpacePtr = &SharedMemVariableSharingSpace[0];
+  } else {
+    SharedMemVariableSharingSpacePtr = (void **)memory::allocGlobal(
+        nArgs * sizeof(void *), "new extended args");
+  }
   *GlobalArgs = SharedMemVariableSharingSpacePtr;
 }
 
-void __kmpc_end_sharing_variables(void **GlobalArgsPtr, uint64_t NumArgs) {
-  __kmpc_free_shared(SharedMemVariableSharingSpacePtr,
-                     sizeof(void *) * NumArgs);
+void __kmpc_end_sharing_variables() {
+  if (SharedMemVariableSharingSpacePtr != &SharedMemVariableSharingSpace[0])
+    memory::freeGlobal(SharedMemVariableSharingSpacePtr, "new extended args");
 }
 
 void __kmpc_get_shared_variables(void ***GlobalArgs) {
