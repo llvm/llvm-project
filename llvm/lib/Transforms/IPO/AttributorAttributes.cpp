@@ -5067,8 +5067,6 @@ struct AAValueSimplifyImpl : AAValueSimplify {
   void initialize(Attributor &A) override {
     if (getAssociatedValue().getType()->isVoidTy())
       indicatePessimisticFixpoint();
-    if (A.hasSimplificationCallback(getIRPosition()))
-      indicatePessimisticFixpoint();
   }
 
   /// See AbstractAttribute::getAsStr().
@@ -5402,7 +5400,9 @@ struct AAValueSimplifyFloating : AAValueSimplifyImpl {
 
   /// See AbstractAttribute::initialize(...).
   void initialize(Attributor &A) override {
-    AAValueSimplifyImpl::initialize(A);
+    // FIXME: This might have exposed a SCC iterator update bug in the old PM.
+    //        Needs investigation.
+    // AAValueSimplifyImpl::initialize(A);
     Value &V = getAnchorValue();
 
     // TODO: add other stuffs
@@ -5639,7 +5639,6 @@ struct AAValueSimplifyCallSiteReturned : AAValueSimplifyImpl {
       : AAValueSimplifyImpl(IRP, A) {}
 
   void initialize(Attributor &A) override {
-    AAValueSimplifyImpl::initialize(A);
     if (!getAssociatedFunction())
       indicatePessimisticFixpoint();
   }
@@ -7889,20 +7888,6 @@ struct AAValueConstantRangeImpl : AAValueConstantRange {
   AAValueConstantRangeImpl(const IRPosition &IRP, Attributor &A)
       : AAValueConstantRange(IRP, A) {}
 
-  /// See AbstractAttribute::initialize(..).
-  void initialize(Attributor &A) override {
-    if (A.hasSimplificationCallback(getIRPosition())) {
-      indicatePessimisticFixpoint();
-      return;
-    }
-
-    // Intersect a range given by SCEV.
-    intersectKnown(getConstantRangeFromSCEV(A, getCtxI()));
-
-    // Intersect a range given by LVI.
-    intersectKnown(getConstantRangeFromLVI(A, getCtxI()));
-  }
-
   /// See AbstractAttribute::getAsStr().
   const std::string getAsStr() const override {
     std::string Str;
@@ -8034,6 +8019,15 @@ struct AAValueConstantRangeImpl : AAValueConstantRange {
     return getAssumed().intersectWith(SCEVR).intersectWith(LVIR);
   }
 
+  /// See AbstractAttribute::initialize(..).
+  void initialize(Attributor &A) override {
+    // Intersect a range given by SCEV.
+    intersectKnown(getConstantRangeFromSCEV(A, getCtxI()));
+
+    // Intersect a range given by LVI.
+    intersectKnown(getConstantRangeFromLVI(A, getCtxI()));
+  }
+
   /// Helper function to create MDNode for range metadata.
   static MDNode *
   getMDNodeForConstantRange(Type *Ty, LLVMContext &Ctx,
@@ -8163,9 +8157,6 @@ struct AAValueConstantRangeFloating : AAValueConstantRangeImpl {
   /// See AbstractAttribute::initialize(...).
   void initialize(Attributor &A) override {
     AAValueConstantRangeImpl::initialize(A);
-    if (isAtFixpoint())
-      return;
-
     Value &V = getAssociatedValue();
 
     if (auto *C = dyn_cast<ConstantInt>(&V)) {
@@ -8186,7 +8177,6 @@ struct AAValueConstantRangeFloating : AAValueConstantRangeImpl {
 
     if (isa<BinaryOperator>(&V) || isa<CmpInst>(&V) || isa<CastInst>(&V))
       return;
-
     // If it is a load instruction with range metadata, use it.
     if (LoadInst *LI = dyn_cast<LoadInst>(&V))
       if (auto *RangeMD = LI->getMetadata(LLVMContext::MD_range)) {
@@ -8514,14 +8504,6 @@ struct AAPotentialValuesImpl : AAPotentialValues {
   AAPotentialValuesImpl(const IRPosition &IRP, Attributor &A)
       : AAPotentialValues(IRP, A) {}
 
-  /// See AbstractAttribute::initialize(..).
-  void initialize(Attributor &A) override {
-    if (A.hasSimplificationCallback(getIRPosition()))
-      indicatePessimisticFixpoint();
-    else
-      AAPotentialValues::initialize(A);
-  }
-
   /// See AbstractAttribute::getAsStr().
   const std::string getAsStr() const override {
     std::string Str;
@@ -8579,10 +8561,6 @@ struct AAPotentialValuesFloating : AAPotentialValuesImpl {
 
   /// See AbstractAttribute::initialize(..).
   void initialize(Attributor &A) override {
-    AAPotentialValuesImpl::initialize(A);
-    if (isAtFixpoint())
-      return;
-
     Value &V = getAssociatedValue();
 
     if (auto *C = dyn_cast<ConstantInt>(&V)) {
@@ -9115,10 +9093,6 @@ struct AAPotentialValuesCallSiteArgument : AAPotentialValuesFloating {
 
   /// See AbstractAttribute::initialize(..).
   void initialize(Attributor &A) override {
-    AAPotentialValuesImpl::initialize(A);
-    if (isAtFixpoint())
-      return;
-
     Value &V = getAssociatedValue();
 
     if (auto *C = dyn_cast<ConstantInt>(&V)) {
