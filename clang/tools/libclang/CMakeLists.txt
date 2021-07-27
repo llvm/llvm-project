@@ -64,7 +64,7 @@ endif ()
 option(LIBCLANG_BUILD_STATIC
   "Build libclang as a static library (in addition to a shared one)" OFF)
 
-set(LLVM_EXPORTED_SYMBOL_FILE ${CMAKE_CURRENT_SOURCE_DIR}/libclang.exports)
+set(LLVM_EXPORTED_SYMBOL_FILE ${CMAKE_CURRENT_BINARY_DIR}/libclang-generic.exports)
 set(LIBCLANG_VERSION_SCRIPT_FILE ${CMAKE_CURRENT_SOURCE_DIR}/libclang.map)
 
 if(MSVC)
