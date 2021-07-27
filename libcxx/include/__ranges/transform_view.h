@@ -360,7 +360,7 @@ public:
   __sentinel() = default;
 
   _LIBCPP_HIDE_FROM_ABI
-  constexpr explicit __sentinel(sentinel_t<_Base> __end_) : __end_(__end_) {}
+  constexpr explicit __sentinel(sentinel_t<_Base> __end) : __end_(__end) {}
 
   // Note: `__i` should always be `__sentinel<false>`, but directly using
   // `__sentinel<false>` is ill-formed when `_Const` is false

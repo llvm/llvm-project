@@ -741,9 +741,9 @@ public:
 private:
 #if _LIBCPP_DEBUG_LEVEL == 2
     _LIBCPP_INLINE_VISIBILITY
-    __hash_const_local_iterator(__next_pointer __node, size_t __bucket,
+    __hash_const_local_iterator(__next_pointer __node_ptr, size_t __bucket,
                                 size_t __bucket_count, const void* __c) _NOEXCEPT
-        : __node_(__node),
+        : __node_(__node_ptr),
           __bucket_(__bucket),
           __bucket_count_(__bucket_count)
         {
@@ -753,9 +753,9 @@ private:
         }
 #else
     _LIBCPP_INLINE_VISIBILITY
-    __hash_const_local_iterator(__next_pointer __node, size_t __bucket,
+    __hash_const_local_iterator(__next_pointer __node_ptr, size_t __bucket,
                                 size_t __bucket_count) _NOEXCEPT
-        : __node_(__node),
+        : __node_(__node_ptr),
           __bucket_(__bucket),
           __bucket_count_(__bucket_count)
         {
