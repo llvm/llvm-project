@@ -588,14 +588,8 @@ private:
 
 } // namespace
 
-/// Check a call to BuiltinID for buffer overflows. If BuiltinID is a
-/// __builtin_*_chk function, then use the object size argument specified in the
-/// source. Otherwise, infer the object size using __builtin_object_size.
 void Sema::checkFortifiedBuiltinMemoryFunction(FunctionDecl *FD,
                                                CallExpr *TheCall) {
-  // FIXME: There are some more useful checks we could be doing here:
-  //  - Evaluate strlen of strcpy arguments, use as object size.
-
   if (TheCall->isValueDependent() || TheCall->isTypeDependent() ||
       isConstantEvaluated())
     return;
@@ -607,13 +601,66 @@ void Sema::checkFortifiedBuiltinMemoryFunction(FunctionDecl *FD,
   const TargetInfo &TI = getASTContext().getTargetInfo();
   unsigned SizeTypeWidth = TI.getTypeWidth(TI.getSizeType());
 
+  auto ComputeExplicitObjectSizeArgument =
+      [&](unsigned Index) -> Optional<llvm::APSInt> {
+    Expr::EvalResult Result;
+    Expr *SizeArg = TheCall->getArg(Index);
+    if (!SizeArg->EvaluateAsInt(Result, getASTContext()))
+      return llvm::None;
+    return Result.Val.getInt();
+  };
+
+  auto ComputeSizeArgument = [&](unsigned Index) -> Optional<llvm::APSInt> {
+    // If the parameter has a pass_object_size attribute, then we should use its
+    // (potentially) more strict checking mode. Otherwise, conservatively assume
+    // type 0.
+    int BOSType = 0;
+    if (const auto *POS =
+            FD->getParamDecl(Index)->getAttr<PassObjectSizeAttr>())
+      BOSType = POS->getType();
+
+    const Expr *ObjArg = TheCall->getArg(Index);
+    uint64_t Result;
+    if (!ObjArg->tryEvaluateObjectSize(Result, getASTContext(), BOSType))
+      return llvm::None;
+
+    // Get the object size in the target's size_t width.
+    return llvm::APSInt::getUnsigned(Result).extOrTrunc(SizeTypeWidth);
+  };
+
+  auto ComputeStrLenArgument = [&](unsigned Index) -> Optional<llvm::APSInt> {
+    Expr *ObjArg = TheCall->getArg(Index);
+    uint64_t Result;
+    if (!ObjArg->tryEvaluateStrLen(Result, getASTContext()))
+      return llvm::None;
+    // Add 1 for null byte.
+    return llvm::APSInt::getUnsigned(Result + 1).extOrTrunc(SizeTypeWidth);
+  };
+
+  Optional<llvm::APSInt> SourceSize;
+  Optional<llvm::APSInt> DestinationSize;
   unsigned DiagID = 0;
   bool IsChkVariant = false;
-  Optional<llvm::APSInt> UsedSize;
-  unsigned SizeIndex, ObjectIndex;
+
   switch (BuiltinID) {
   default:
     return;
+  case Builtin::BI__builtin_strcpy:
+  case Builtin::BIstrcpy: {
+    DiagID = diag::warn_fortify_strlen_overflow;
+    SourceSize = ComputeStrLenArgument(1);
+    DestinationSize = ComputeSizeArgument(0);
+    break;
+  }
+
+  case Builtin::BI__builtin___strcpy_chk: {
+    DiagID = diag::warn_fortify_strlen_overflow;
+    SourceSize = ComputeStrLenArgument(1);
+    DestinationSize = ComputeExplicitObjectSizeArgument(2);
+    IsChkVariant = true;
+    break;
+  }
+
   case Builtin::BIsprintf:
   case Builtin::BI__builtin___sprintf_chk: {
     size_t FormatIndex = BuiltinID == Builtin::BIsprintf ? 1 : 3;
@@ -639,14 +686,13 @@ void Sema::checkFortifiedBuiltinMemoryFunction(FunctionDecl *FD,
               H, FormatBytes, FormatBytes + StrLen, getLangOpts(),
               Context.getTargetInfo(), false)) {
         DiagID = diag::warn_fortify_source_format_overflow;
-        UsedSize = llvm::APSInt::getUnsigned(H.getSizeLowerBound())
-                       .extOrTrunc(SizeTypeWidth);
+        SourceSize = llvm::APSInt::getUnsigned(H.getSizeLowerBound())
+                         .extOrTrunc(SizeTypeWidth);
         if (BuiltinID == Builtin::BI__builtin___sprintf_chk) {
+          DestinationSize = ComputeExplicitObjectSizeArgument(2);
           IsChkVariant = true;
-          ObjectIndex = 2;
         } else {
-          IsChkVariant = false;
-          ObjectIndex = 0;
+          DestinationSize = ComputeSizeArgument(0);
         }
         break;
       }
@@ -664,18 +710,19 @@ void Sema::checkFortifiedBuiltinMemoryFunction(FunctionDecl *FD,
   case Builtin::BI__builtin___memccpy_chk:
   case Builtin::BI__builtin___mempcpy_chk: {
     DiagID = diag::warn_builtin_chk_overflow;
+    SourceSize = ComputeExplicitObjectSizeArgument(TheCall->getNumArgs() - 2);
+    DestinationSize =
+        ComputeExplicitObjectSizeArgument(TheCall->getNumArgs() - 1);
     IsChkVariant = true;
-    SizeIndex = TheCall->getNumArgs() - 2;
-    ObjectIndex = TheCall->getNumArgs() - 1;
     break;
   }
 
   case Builtin::BI__builtin___snprintf_chk:
   case Builtin::BI__builtin___vsnprintf_chk: {
     DiagID = diag::warn_builtin_chk_overflow;
+    SourceSize = ComputeExplicitObjectSizeArgument(1);
+    DestinationSize = ComputeExplicitObjectSizeArgument(3);
     IsChkVariant = true;
-    SizeIndex = 1;
-    ObjectIndex = 3;
     break;
   }
 
@@ -691,8 +738,8 @@ void Sema::checkFortifiedBuiltinMemoryFunction(FunctionDecl *FD,
     // size larger than the destination buffer though; this is a runtime abort
     // in _FORTIFY_SOURCE mode, and is quite suspicious otherwise.
     DiagID = diag::warn_fortify_source_size_mismatch;
-    SizeIndex = TheCall->getNumArgs() - 1;
-    ObjectIndex = 0;
+    SourceSize = ComputeExplicitObjectSizeArgument(TheCall->getNumArgs() - 1);
+    DestinationSize = ComputeSizeArgument(0);
     break;
   }
 
@@ -705,8 +752,8 @@ void Sema::checkFortifiedBuiltinMemoryFunction(FunctionDecl *FD,
   case Builtin::BImempcpy:
   case Builtin::BI__builtin_mempcpy: {
     DiagID = diag::warn_fortify_source_overflow;
-    SizeIndex = TheCall->getNumArgs() - 1;
-    ObjectIndex = 0;
+    SourceSize = ComputeExplicitObjectSizeArgument(TheCall->getNumArgs() - 1);
+    DestinationSize = ComputeSizeArgument(0);
     break;
   }
   case Builtin::BIsnprintf:
@@ -714,50 +761,14 @@ void Sema::checkFortifiedBuiltinMemoryFunction(FunctionDecl *FD,
   case Builtin::BIvsnprintf:
   case Builtin::BI__builtin_vsnprintf: {
     DiagID = diag::warn_fortify_source_size_mismatch;
-    SizeIndex = 1;
-    ObjectIndex = 0;
+    SourceSize = ComputeExplicitObjectSizeArgument(1);
+    DestinationSize = ComputeSizeArgument(0);
     break;
   }
   }
 
-  llvm::APSInt ObjectSize;
-  // For __builtin___*_chk, the object size is explicitly provided by the caller
-  // (usually using __builtin_object_size). Use that value to check this call.
-  if (IsChkVariant) {
-    Expr::EvalResult Result;
-    Expr *SizeArg = TheCall->getArg(ObjectIndex);
-    if (!SizeArg->EvaluateAsInt(Result, getASTContext()))
-      return;
-    ObjectSize = Result.Val.getInt();
-
-  // Otherwise, try to evaluate an imaginary call to __builtin_object_size.
-  } else {
-    // If the parameter has a pass_object_size attribute, then we should use its
-    // (potentially) more strict checking mode. Otherwise, conservatively assume
-    // type 0.
-    int BOSType = 0;
-    if (const auto *POS =
-            FD->getParamDecl(ObjectIndex)->getAttr<PassObjectSizeAttr>())
-      BOSType = POS->getType();
-
-    Expr *ObjArg = TheCall->getArg(ObjectIndex);
-    uint64_t Result;
-    if (!ObjArg->tryEvaluateObjectSize(Result, getASTContext(), BOSType))
-      return;
-    // Get the object size in the target's size_t width.
-    ObjectSize = llvm::APSInt::getUnsigned(Result).extOrTrunc(SizeTypeWidth);
-  }
-
-  // Evaluate the number of bytes of the object that this call will use.
-  if (!UsedSize) {
-    Expr::EvalResult Result;
-    Expr *UsedSizeArg = TheCall->getArg(SizeIndex);
-    if (!UsedSizeArg->EvaluateAsInt(Result, getASTContext()))
-      return;
-    UsedSize = Result.Val.getInt().extOrTrunc(SizeTypeWidth);
-  }
-
-  if (UsedSize.getValue().ule(ObjectSize))
+  if (!SourceSize || !DestinationSize ||
+      SourceSize.getValue().ule(DestinationSize.getValue()))
     return;
 
   StringRef FunctionName = getASTContext().BuiltinInfo.getName(BuiltinID);
@@ -770,10 +781,13 @@ void Sema::checkFortifiedBuiltinMemoryFunction(FunctionDecl *FD,
     FunctionName = FunctionName.drop_front(std::strlen("__builtin_"));
   }
 
+  SmallString<16> DestinationStr;
+  SmallString<16> SourceStr;
+  DestinationSize->toString(DestinationStr, /*Radix=*/10);
+  SourceSize->toString(SourceStr, /*Radix=*/10);
   DiagRuntimeBehavior(TheCall->getBeginLoc(), TheCall,
                       PDiag(DiagID)
-                          << FunctionName << toString(ObjectSize, /*Radix=*/10)
-                          << toString(UsedSize.getValue(), /*Radix=*/10));
+                          << FunctionName << DestinationStr << SourceStr);
 }
 
 static bool SemaBuiltinSEHScopeCheck(Sema &SemaRef, CallExpr *TheCall,

@@ -3,16 +3,16 @@
 // RUN: ld.lld %t -o %t2
 // The output file is large, most of it zeroes. We dissassemble only the
 // parts we need to speed up the test and avoid a large output file
-// RUN: llvm-objdump -d %t2 --start-address=1048576 --stop-address=1048588 | FileCheck --check-prefix=CHECK1 %s
-// RUN: llvm-objdump -d %t2 --start-address=2097152 --stop-address=2097154 | FileCheck --check-prefix=CHECK2 %s
-// RUN: llvm-objdump -d %t2 --start-address=3145728 --stop-address=3145730 | FileCheck --check-prefix=CHECK3 %s
-// RUN: llvm-objdump -d %t2 --start-address=4194304 --stop-address=4194310 | FileCheck --check-prefix=CHECK4 %s
-// RUN: llvm-objdump -d %t2 --start-address=16777216 --stop-address=16777270 | FileCheck --check-prefix=CHECK5 %s
-// RUN: llvm-objdump -d %t2 --start-address=17825792 --stop-address=17825808 | FileCheck --check-prefix=CHECK6 %s
-// RUN: llvm-objdump -d %t2 --start-address=20971524 --stop-address=20971532 | FileCheck --check-prefix=CHECK7 %s
-// RUN: llvm-objdump -d %t2 --start-address=31457280 --stop-address=31457286 | FileCheck --check-prefix=CHECK8 %s
-// RUN: llvm-objdump -d %t2 --start-address=35651584 --stop-address=35651594 | FileCheck --check-prefix=CHECK9 %s
-// RUN: llvm-objdump -d %t2 --start-address=36700160 --stop-address=36700170 | FileCheck --check-prefix=CHECK10 %s
+// RUN: llvm-objdump -d %t2 --start-address=0x100000 --stop-address=0x10000c | FileCheck --check-prefix=CHECK1 %s
+// RUN: llvm-objdump -d %t2 --start-address=0x200000 --stop-address=0x200002 | FileCheck --check-prefix=CHECK2 %s
+// RUN: llvm-objdump -d %t2 --start-address=0x300000 --stop-address=0x300002 | FileCheck --check-prefix=CHECK3 %s
+// RUN: llvm-objdump -d %t2 --start-address=0x400000 --stop-address=0x400006 | FileCheck --check-prefix=CHECK4 %s
+// RUN: llvm-objdump -d %t2 --start-address=0x1000000 --stop-address=0x1000036 | FileCheck --check-prefix=CHECK5 %s
+// RUN: llvm-objdump -d %t2 --start-address=0x1100000 --stop-address=0x1100010 | FileCheck --check-prefix=CHECK6 %s
+// RUN: llvm-objdump -d %t2 --start-address=0x1400004 --stop-address=0x140000c | FileCheck --check-prefix=CHECK7 %s
+// RUN: llvm-objdump -d %t2 --start-address=0x1e00000 --stop-address=0x1e00006 | FileCheck --check-prefix=CHECK8 %s
+// RUN: llvm-objdump -d %t2 --start-address=0x2200000 --stop-address=0x220000a | FileCheck --check-prefix=CHECK9 %s
+// RUN: llvm-objdump -d %t2 --start-address=0x2300000 --stop-address=0x230000a | FileCheck --check-prefix=CHECK10 %s
 
 // Test the Range extension Thunks for Thumb when all the code is in a single
 // OutputSection. The Thumb unconditional branch b.w and branch and link bl

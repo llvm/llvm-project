@@ -1826,6 +1826,8 @@ static bool EvaluateComplex(const Expr *E, ComplexValue &Res, EvalInfo &Info);
 static bool EvaluateAtomic(const Expr *E, const LValue *This, APValue &Result,
                            EvalInfo &Info);
 static bool EvaluateAsRValue(EvalInfo &Info, const Expr *E, APValue &Result);
+static bool EvaluateBuiltinStrLen(const Expr *E, uint64_t &Result,
+                                  EvalInfo &Info);
 
 /// Evaluate an integer or fixed point expression into an APResult.
 static bool EvaluateFixedPointOrInteger(const Expr *E, APFixedPoint &Result,
@@ -11836,46 +11838,10 @@ bool IntExprEvaluator::VisitBuiltinCallExpr(const CallExpr *E,
   case Builtin::BI__builtin_wcslen: {
     // As an extension, we support __builtin_strlen() as a constant expression,
     // and support folding strlen() to a constant.
-    LValue String;
-    if (!EvaluatePointer(E->getArg(0), String, Info))
-      return false;
-
-    QualType CharTy = E->getArg(0)->getType()->getPointeeType();
-
-    // Fast path: if it's a string literal, search the string value.
-    if (const StringLiteral *S = dyn_cast_or_null<StringLiteral>(
-            String.getLValueBase().dyn_cast<const Expr *>())) {
-      // The string literal may have embedded null characters. Find the first
-      // one and truncate there.
-      StringRef Str = S->getBytes();
-      int64_t Off = String.Offset.getQuantity();
-      if (Off >= 0 && (uint64_t)Off <= (uint64_t)Str.size() &&
-          S->getCharByteWidth() == 1 &&
-          // FIXME: Add fast-path for wchar_t too.
-          Info.Ctx.hasSameUnqualifiedType(CharTy, Info.Ctx.CharTy)) {
-        Str = Str.substr(Off);
-
-        StringRef::size_type Pos = Str.find(0);
-        if (Pos != StringRef::npos)
-          Str = Str.substr(0, Pos);
-
-        return Success(Str.size(), E);
-      }
-
-      // Fall through to slow path to issue appropriate diagnostic.
-    }
-
-    // Slow path: scan the bytes of the string looking for the terminating 0.
-    for (uint64_t Strlen = 0; /**/; ++Strlen) {
-      APValue Char;
-      if (!handleLValueToRValueConversion(Info, E, CharTy, String, Char) ||
-          !Char.isInt())
-        return false;
-      if (!Char.getInt())
-        return Success(Strlen, E);
-      if (!HandleLValueArrayAdjustment(Info, E, String, CharTy, 1))
-        return false;
-    }
+    uint64_t StrLen;
+    if (EvaluateBuiltinStrLen(E->getArg(0), StrLen, Info))
+      return Success(StrLen, E);
+    return false;
   }
 
   case Builtin::BIstrcmp:
@@ -15735,4 +15701,59 @@ bool Expr::tryEvaluateObjectSize(uint64_t &Result, ASTContext &Ctx,
   Expr::EvalStatus Status;
   EvalInfo Info(Ctx, Status, EvalInfo::EM_ConstantFold);
   return tryEvaluateBuiltinObjectSize(this, Type, Info, Result);
+}
+
+static bool EvaluateBuiltinStrLen(const Expr *E, uint64_t &Result,
+                                  EvalInfo &Info) {
+  if (!E->getType()->hasPointerRepresentation() || !E->isPRValue())
+    return false;
+
+  LValue String;
+
+  if (!EvaluatePointer(E, String, Info))
+    return false;
+
+  QualType CharTy = E->getType()->getPointeeType();
+
+  // Fast path: if it's a string literal, search the string value.
+  if (const StringLiteral *S = dyn_cast_or_null<StringLiteral>(
+          String.getLValueBase().dyn_cast<const Expr *>())) {
+    StringRef Str = S->getBytes();
+    int64_t Off = String.Offset.getQuantity();
+    if (Off >= 0 && (uint64_t)Off <= (uint64_t)Str.size() &&
+        S->getCharByteWidth() == 1 &&
+        // FIXME: Add fast-path for wchar_t too.
+        Info.Ctx.hasSameUnqualifiedType(CharTy, Info.Ctx.CharTy)) {
+      Str = Str.substr(Off);
+
+      StringRef::size_type Pos = Str.find(0);
+      if (Pos != StringRef::npos)
+        Str = Str.substr(0, Pos);
+
+      Result = Str.size();
+      return true;
+    }
+
+    // Fall through to slow path.
+  }
+
+  // Slow path: scan the bytes of the string looking for the terminating 0.
+  for (uint64_t Strlen = 0; /**/; ++Strlen) {
+    APValue Char;
+    if (!handleLValueToRValueConversion(Info, E, CharTy, String, Char) ||
+        !Char.isInt())
+      return false;
+    if (!Char.getInt()) {
+      Result = Strlen;
+      return true;
+    }
+    if (!HandleLValueArrayAdjustment(Info, E, String, CharTy, 1))
+      return false;
+  }
+}
+
+bool Expr::tryEvaluateStrLen(uint64_t &Result, ASTContext &Ctx) const {
+  Expr::EvalStatus Status;
+  EvalInfo Info(Ctx, Status, EvalInfo::EM_ConstantFold);
+  return EvaluateBuiltinStrLen(this, Result, Info);
 }

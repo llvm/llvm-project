@@ -19402,14 +19402,7 @@ ExprResult RebuildUnknownAnyExpr::VisitCallExpr(CallExpr *E) {
     if (ParamTypes.empty() && Proto->isVariadic()) { // the special case
       ArgTypes.reserve(E->getNumArgs());
       for (unsigned i = 0, e = E->getNumArgs(); i != e; ++i) {
-        Expr *Arg = E->getArg(i);
-        QualType ArgType = Arg->getType();
-        if (E->isLValue()) {
-          ArgType = S.Context.getLValueReferenceType(ArgType);
-        } else if (E->isXValue()) {
-          ArgType = S.Context.getRValueReferenceType(ArgType);
-        }
-        ArgTypes.push_back(ArgType);
+        ArgTypes.push_back(S.Context.getReferenceQualifiedType(E->getArg(i)));
       }
       ParamTypes = ArgTypes;
     }

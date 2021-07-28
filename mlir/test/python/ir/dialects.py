@@ -35,9 +35,7 @@ def testUserDialectClass():
   ctx = Context()
   # Access using attribute.
   d = ctx.dialects.std
-  # Note that the standard dialect namespace prints as ''. Others will print
-  # as "<Dialect %namespace (..."
-  # CHECK: <Dialect (class mlir.dialects._std_ops_gen._Dialect)>
+  # CHECK: <Dialect std (class mlir.dialects._std_ops_gen._Dialect)>
   print(d)
   try:
     _ = ctx.dialects.not_existing
@@ -48,7 +46,7 @@ def testUserDialectClass():
 
   # Access using index.
   d = ctx.dialects["std"]
-  # CHECK: <Dialect (class mlir.dialects._std_ops_gen._Dialect)>
+  # CHECK: <Dialect std (class mlir.dialects._std_ops_gen._Dialect)>
   print(d)
   try:
     _ = ctx.dialects["not_existing"]
@@ -59,7 +57,7 @@ def testUserDialectClass():
 
   # Using the 'd' alias.
   d = ctx.d["std"]
-  # CHECK: <Dialect (class mlir.dialects._std_ops_gen._Dialect)>
+  # CHECK: <Dialect std (class mlir.dialects._std_ops_gen._Dialect)>
   print(d)
 
 

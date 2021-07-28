@@ -1,4 +1,4 @@
-// RUN: mlir-opt -allow-unregistered-dialect %s -pass-pipeline='func(cse)' | FileCheck %s
+// RUN: mlir-opt -allow-unregistered-dialect %s -pass-pipeline='builtin.func(cse)' | FileCheck %s
 
 // CHECK-DAG: #[[$MAP:.*]] = affine_map<(d0) -> (d0 mod 2)>
 #map0 = affine_map<(d0) -> (d0 mod 2)>

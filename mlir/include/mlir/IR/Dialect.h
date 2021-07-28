@@ -294,7 +294,7 @@ class DialectRegistry {
   using InterfaceMapTy = DenseMap<TypeID, DelayedInterfaces>;
 
 public:
-  explicit DialectRegistry() {}
+  explicit DialectRegistry();
 
   template <typename ConcreteDialect>
   void insert() {
@@ -367,8 +367,7 @@ public:
   void addOpInterface() {
     StringRef opName = OpTy::getOperationName();
     StringRef dialectName = opName.split('.').first;
-    addObjectInterface(dialectName == opName ? "" : dialectName,
-                       ModelTy::Interface::getInterfaceID(),
+    addObjectInterface(dialectName, ModelTy::Interface::getInterfaceID(),
                        [](MLIRContext *context) {
                          OpTy::template attachInterface<ModelTy>(*context);
                        });

@@ -43,6 +43,16 @@ add_libc_unittest(
 )
 
 add_libc_unittest(
+  strncmp_test
+  SUITE
+    libc_string_unittests
+  SRCS
+    strncmp_test.cpp
+  DEPENDS
+    libc.src.string.strncmp
+)
+
+add_libc_unittest(
   memchr_test
   SUITE
     libc_string_unittests

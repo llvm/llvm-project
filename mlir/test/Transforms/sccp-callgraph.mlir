@@ -1,5 +1,5 @@
 // RUN: mlir-opt -allow-unregistered-dialect %s -sccp -split-input-file | FileCheck %s
-// RUN: mlir-opt -allow-unregistered-dialect %s -pass-pipeline="module(sccp)" -split-input-file | FileCheck %s --check-prefix=NESTED
+// RUN: mlir-opt -allow-unregistered-dialect %s -pass-pipeline="builtin.module(sccp)" -split-input-file | FileCheck %s --check-prefix=NESTED
 
 /// Check that a constant is properly propagated through the arguments and
 /// results of a private function.

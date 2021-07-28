@@ -278,7 +278,7 @@ void collapseParallelLoops(scf::ParallelOp loops,
 void mapLoopToProcessorIds(scf::ForOp forOp, ArrayRef<Value> processorId,
                            ArrayRef<Value> numProcessors);
 
-/// Gathers all AffineForOps in 'func' grouped by loop depth.
+/// Gathers all AffineForOps in 'builtin.func' grouped by loop depth.
 void gatherLoops(FuncOp func,
                  std::vector<SmallVector<AffineForOp, 2>> &depthToLoops);
 

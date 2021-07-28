@@ -5454,6 +5454,29 @@ QualType ASTContext::getTypeOfType(QualType tofType) const {
   return QualType(tot, 0);
 }
 
+/// getReferenceQualifiedType - Given an expr, will return the type for
+/// that expression, as in [dcl.type.simple]p4 but without taking id-expressions
+/// and class member access into account.
+QualType ASTContext::getReferenceQualifiedType(const Expr *E) const {
+  // C++11 [dcl.type.simple]p4:
+  //   [...]
+  QualType T = E->getType();
+  switch (E->getValueKind()) {
+  //     - otherwise, if e is an xvalue, decltype(e) is T&&, where T is the
+  //       type of e;
+  case VK_XValue:
+    return getRValueReferenceType(T);
+  //     - otherwise, if e is an lvalue, decltype(e) is T&, where T is the
+  //       type of e;
+  case VK_LValue:
+    return getLValueReferenceType(T);
+  //  - otherwise, decltype(e) is the type of e.
+  case VK_PRValue:
+    return T;
+  }
+  llvm_unreachable("Unknown value kind");
+}
+
 /// Unlike many "get<Type>" functions, we don't unique DecltypeType
 /// nodes. This would never be helpful, since each such type has its own
 /// expression, and would not give a significant memory saving, since there

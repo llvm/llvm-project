@@ -76,7 +76,7 @@ bool CommandObjectThreadTraceExportCTF::DoExecute(Args &command,
     size_t tid = m_options.m_thread_index ? *m_options.m_thread_index
                                           : LLDB_INVALID_THREAD_ID;
     result.AppendErrorWithFormat(
-        "Thread index %lu is out of range (valid values are 0 - %u).\n", tid,
+        "Thread index %" PRIu64 " is out of range (valid values are 0 - %u).\n", tid,
         num_threads);
     return false;
   } else {

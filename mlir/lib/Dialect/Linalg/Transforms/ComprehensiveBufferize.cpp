@@ -2813,7 +2813,7 @@ void LinalgComprehensiveModuleBufferize::runOnOperation() {
       removeBufferizationFuncArguments(bbArg);
   });
 
-  OpPassManager cleanupPipeline(OpPassManager("module"));
+  OpPassManager cleanupPipeline("builtin.module");
   cleanupPipeline.addPass(createCanonicalizerPass());
   cleanupPipeline.addPass(createCSEPass());
   cleanupPipeline.addPass(createLoopInvariantCodeMotionPass());

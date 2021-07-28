@@ -38,13 +38,12 @@ OperationName::OperationName(StringRef name, MLIRContext *context) {
 StringRef OperationName::getDialectNamespace() const {
   if (Dialect *dialect = getDialect())
     return dialect->getNamespace();
-  return representation.get<Identifier>().strref().split('.').first;
+  return getStringRef().split('.').first;
 }
 
 /// Return the operation name with dialect name stripped, if it has one.
 StringRef OperationName::stripDialect() const {
-  auto splitName = getStringRef().split(".");
-  return splitName.second.empty() ? splitName.first : splitName.second;
+  return getStringRef().split('.').second;
 }
 
 /// Return the name of this operation. This always succeeds.

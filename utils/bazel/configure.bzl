@@ -16,15 +16,20 @@ DEFAULT_TARGETS = [
     "AArch64",
     "AMDGPU",
     "ARM",
+    "AVR",
     "BPF",
     "Hexagon",
     "Lanai",
+    "Mips",
+    "MSP430",
     "NVPTX",
     "PowerPC",
     "RISCV",
     "Sparc",
+    "SystemZ",
     "WebAssembly",
     "X86",
+    "XCore",
 ]
 
 def _overlay_directories(repository_ctx):

@@ -75,7 +75,7 @@ void HTRBlockLayer::AppendRepeatedBlock(size_t block_id) {
   m_block_id_trace.emplace_back(block_id);
 }
 
-llvm::ArrayRef<size_t> HTRInstructionLayer::GetInstructionTrace() const {
+llvm::ArrayRef<lldb::addr_t> HTRInstructionLayer::GetInstructionTrace() const {
   return m_instruction_trace;
 }
 
