@@ -740,6 +740,12 @@ public:
   bool tryEvaluateObjectSize(uint64_t &Result, ASTContext &Ctx,
                              unsigned Type) const;
 
+  /// If the current Expr is a pointer, this will try to statically
+  /// determine the strlen of the string pointed to.
+  /// Returns true if all of the above holds and we were able to figure out the
+  /// strlen, false otherwise.
+  bool tryEvaluateStrLen(uint64_t &Result, ASTContext &Ctx) const;
+
   /// Enumeration used to describe the kind of Null pointer constant
   /// returned from \c isNullPointerConstant().
   enum NullPointerConstantKind {
