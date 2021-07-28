@@ -428,8 +428,7 @@ bool CrashRecoveryContext::RunSafely(function_ref<void()> Fn) {
 
 #endif // !_MSC_VER
 
-LLVM_ATTRIBUTE_NORETURN
-void CrashRecoveryContext::HandleExit(int RetCode) {
+[[noreturn]] void CrashRecoveryContext::HandleExit(int RetCode) {
 #if defined(_WIN32)
   // SEH and VEH
   ::RaiseException(0xE0000000 | RetCode, 0, 0, NULL);

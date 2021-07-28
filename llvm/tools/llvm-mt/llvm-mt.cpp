@@ -64,7 +64,7 @@ public:
 };
 } // namespace
 
-LLVM_ATTRIBUTE_NORETURN static void reportError(Twine Msg) {
+[[noreturn]] static void reportError(Twine Msg) {
   WithColor::error(errs(), "llvm-mt") << Msg << '\n';
   exit(1);
 }
