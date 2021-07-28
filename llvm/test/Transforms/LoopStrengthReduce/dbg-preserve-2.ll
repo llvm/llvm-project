@@ -2,7 +2,7 @@
 
 ; Test that LSR does not produce invalid debug info when a debug value is
 ; salvaged during LSR by adding additional location operands, then becomes
-; undef, and finally recovered by SCEV salvaging.
+; undef, and finally recovered by using equal values gathered before LSR.
 
 target datalayout = "e-m:e-p270:32:32-p271:32:32-p272:64:64-i64:64-f80:128-n8:16:32:64-S128"
 
@@ -20,7 +20,7 @@ do.body:                                          ; preds = %do.body, %entry
   %Result.addr.0 = phi i32 [ %Result, %entry ], [ %or, %do.body ]
   %Itr.0 = phi i32 [ 0, %entry ], [ %add, %do.body ], !dbg !17
 ; CHECK-NOT: call void @llvm.dbg.value(metadata !DIArgList
-; CHECK: call void @llvm.dbg.value(metadata !DIArgList(i32 %lsr.iv, i32 %Step), metadata ![[VAR_ITR:[0-9]+]], metadata !DIExpression(DW_OP_LLVM_arg, 0, DW_OP_LLVM_arg, 1, DW_OP_minus, DW_OP_LLVM_arg, 1, DW_OP_div, DW_OP_LLVM_arg, 1, DW_OP_mul, DW_OP_stack_value))
+; CHECK: call void @llvm.dbg.value(metadata i32 %lsr.iv, metadata ![[VAR_ITR:[0-9]+]], metadata !DIExpression()
   call void @llvm.dbg.value(metadata i32 %Itr.0, metadata !16, metadata !DIExpression()), !dbg !17
   call void @llvm.dbg.value(metadata i32 %Result.addr.0, metadata !12, metadata !DIExpression()), !dbg !17
   %add = add nsw i32 %Itr.0, %Step, !dbg !19
