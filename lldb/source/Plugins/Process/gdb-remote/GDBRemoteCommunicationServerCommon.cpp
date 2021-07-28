@@ -501,10 +501,6 @@ GDBRemoteCommunicationServerCommon::Handle_vFile_Open(
   packet.GetHexByteStringTerminatedBy(path, ',');
   if (!path.empty()) {
     if (packet.GetChar() == ',') {
-      // FIXME
-      // The flag values for OpenOptions do not match the values used by GDB
-      // * https://sourceware.org/gdb/onlinedocs/gdb/Open-Flags.html#Open-Flags
-      // * rdar://problem/46788934
       auto flags = File::OpenOptions(packet.GetHexMaxU32(false, 0));
       if (packet.GetChar() == ',') {
         mode_t mode = packet.GetHexMaxU32(false, 0600);
