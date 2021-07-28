@@ -16,9 +16,11 @@
 #include <list>
 #include <memory>
 #include <mutex>
+#include <string.h>
 #include <string>
 #include <unordered_map>
 #include <vector>
+#include <string.h>
 
 #include "Debug.h"
 #include "omptargetplugin.h"

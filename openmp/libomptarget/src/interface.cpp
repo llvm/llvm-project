@@ -44,6 +44,10 @@ EXTERN void __tgt_register_lib(__tgt_bin_desc *desc) {
 }
 
 ////////////////////////////////////////////////////////////////////////////////
+/// Initialize all available devices without registering any image
+EXTERN void __tgt_init_all_rtls() { PM->RTLs.initAllRTLs(); }
+
+////////////////////////////////////////////////////////////////////////////////
 /// unloads a target shared library
 EXTERN void __tgt_unregister_lib(__tgt_bin_desc *desc) {
   TIMESCOPE();
