@@ -16,6 +16,7 @@
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/SmallPtrSet.h"
 #include "llvm/ADT/Statistic.h"
+#include "llvm/ADT/StringExtras.h"
 #include "llvm/Analysis/AssumptionCache.h"
 #include "llvm/Analysis/CFG.h"
 #include "llvm/IR/AssemblyAnnotationWriter.h"
@@ -23,6 +24,7 @@
 #include "llvm/IR/Dominators.h"
 #include "llvm/IR/GlobalVariable.h"
 #include "llvm/IR/IRBuilder.h"
+#include "llvm/IR/InstIterator.h"
 #include "llvm/IR/IntrinsicInst.h"
 #include "llvm/IR/LLVMContext.h"
 #include "llvm/IR/Metadata.h"
@@ -537,6 +539,21 @@ void PredicateInfoBuilder::buildPredicateInfo() {
   renameUses(OpsToRename);
 }
 
+// Create a ssa_copy declaration with custom mangling, because
+// Intrinsic::getDeclaration does not handle overloaded unnamed types properly:
+// all unnamed types get mangled to the same string. We use the pointer
+// to the type as name here, as it guarantees unique names for different
+// types and we remove the declarations when destroying PredicateInfo.
+// It is a workaround for PR38117, because solving it in a fully general way is
+// tricky (FIXME).
+static Function *getCopyDeclaration(Module *M, Type *Ty) {
+  std::string Name = "llvm.ssa.copy." + utostr((uintptr_t) Ty);
+  return cast<Function>(
+      M->getOrInsertFunction(Name,
+                             getType(M->getContext(), Intrinsic::ssa_copy, Ty))
+          .getCallee());
+}
+
 // Given the renaming stack, make all the operands currently on the stack real
 // by inserting them into the IR.  Return the last operation's value.
 Value *PredicateInfoBuilder::materializeStack(unsigned int &Counter,
@@ -568,8 +585,9 @@ Value *PredicateInfoBuilder::materializeStack(unsigned int &Counter,
     // order in the case of multiple predicateinfo in the same block.
     if (isa<PredicateWithEdge>(ValInfo)) {
       IRBuilder<> B(getBranchTerminator(ValInfo));
-      Function *IF = Intrinsic::getDeclaration(
-          F.getParent(), Intrinsic::ssa_copy, Op->getType());
+      Function *IF = getCopyDeclaration(F.getParent(), Op->getType());
+      if (IF->users().empty())
+        PI.CreatedDeclarations.insert(IF);
       CallInst *PIC =
           B.CreateCall(IF, Op, Op->getName() + "." + Twine(Counter++));
       PI.PredicateMap.insert({PIC, ValInfo});
@@ -581,8 +599,9 @@ Value *PredicateInfoBuilder::materializeStack(unsigned int &Counter,
       // Insert the predicate directly after the assume. While it also holds
       // directly before it, assume(i1 true) is not a useful fact.
       IRBuilder<> B(PAssume->AssumeInst->getNextNode());
-      Function *IF = Intrinsic::getDeclaration(
-          F.getParent(), Intrinsic::ssa_copy, Op->getType());
+      Function *IF = getCopyDeclaration(F.getParent(), Op->getType());
+      if (IF->users().empty())
+        PI.CreatedDeclarations.insert(IF);
       CallInst *PIC = B.CreateCall(IF, Op);
       PI.PredicateMap.insert({PIC, ValInfo});
       Result.Def = PIC;
@@ -761,6 +780,23 @@ PredicateInfo::PredicateInfo(Function &F, DominatorTree &DT,
   Builder.buildPredicateInfo();
 }
 
+// Remove all declarations we created . The PredicateInfo consumers are
+// responsible for remove the ssa_copy calls created.
+PredicateInfo::~PredicateInfo() {
+  // Collect function pointers in set first, as SmallSet uses a SmallVector
+  // internally and we have to remove the asserting value handles first.
+  SmallPtrSet<Function *, 20> FunctionPtrs;
+  for (auto &F : CreatedDeclarations)
+    FunctionPtrs.insert(&*F);
+  CreatedDeclarations.clear();
+
+  for (Function *F : FunctionPtrs) {
+    assert(F->user_begin() == F->user_end() &&
+           "PredicateInfo consumer did not remove all SSA copies.");
+    F->eraseFromParent();
+  }
+}
+
 Optional<PredicateConstraint> PredicateBase::getConstraint() const {
   switch (Type) {
   case PT_Assume:
@@ -827,6 +863,19 @@ void PredicateInfoPrinterLegacyPass::getAnalysisUsage(AnalysisUsage &AU) const {
   AU.addRequired<AssumptionCacheTracker>();
 }
 
+// Replace ssa_copy calls created by PredicateInfo with their operand.
+static void replaceCreatedSSACopys(PredicateInfo &PredInfo, Function &F) {
+  for (Instruction &Inst : llvm::make_early_inc_range(instructions(F))) {
+    const auto *PI = PredInfo.getPredicateInfoFor(&Inst);
+    auto *II = dyn_cast<IntrinsicInst>(&Inst);
+    if (!PI || !II || II->getIntrinsicID() != Intrinsic::ssa_copy)
+      continue;
+
+    Inst.replaceAllUsesWith(II->getOperand(0));
+    Inst.eraseFromParent();
+  }
+}
+
 bool PredicateInfoPrinterLegacyPass::runOnFunction(Function &F) {
   auto &DT = getAnalysis<DominatorTreeWrapperPass>().getDomTree();
   auto &AC = getAnalysis<AssumptionCacheTracker>().getAssumptionCache(F);
@@ -834,6 +883,8 @@ bool PredicateInfoPrinterLegacyPass::runOnFunction(Function &F) {
   PredInfo->print(dbgs());
   if (VerifyPredicateInfo)
     PredInfo->verifyPredicateInfo();
+
+  replaceCreatedSSACopys(*PredInfo, F);
   return false;
 }
 
@@ -845,6 +896,7 @@ PreservedAnalyses PredicateInfoPrinterPass::run(Function &F,
   auto PredInfo = std::make_unique<PredicateInfo>(F, DT, AC);
   PredInfo->print(OS);
 
+  replaceCreatedSSACopys(*PredInfo, F);
   return PreservedAnalyses::all();
 }
 
