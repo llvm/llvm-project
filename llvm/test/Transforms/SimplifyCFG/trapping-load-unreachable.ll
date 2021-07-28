@@ -52,7 +52,6 @@ return:         ; preds = %entry
 define void @test2() nounwind {
 ; CHECK-LABEL: @test2(
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    call void @llvm.trap()
 ; CHECK-NEXT:    unreachable
 ;
 entry:
