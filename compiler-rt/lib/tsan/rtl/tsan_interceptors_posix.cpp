@@ -2920,25 +2920,30 @@ void InitializeInterceptors() {
 // Note that no_sanitize_thread attribute does not turn off atomic interception
 // so attaching it to the function defined in user code does not help.
 // That's why we now have what we have.
+constexpr uptr kBarrierThreadBits = 10;
+constexpr uptr kBarrierThreads = 1 << kBarrierThreadBits;
+
 extern "C" SANITIZER_INTERFACE_ATTRIBUTE
 void __tsan_testonly_barrier_init(u64 *barrier, u32 count) {
-  if (count >= (1 << 8)) {
-      Printf("barrier_init: count is too large (%d)\n", count);
-      Die();
+  if (count >= kBarrierThreads) {
+    Printf("barrier_init: count is too large (%d)\n", count);
+    Die();
   }
-  // 8 lsb is thread count, the remaining are count of entered threads.
+  // kBarrierThreadBits lsb is thread count,
+  // the remaining are count of entered threads.
   *barrier = count;
 }
 
 extern "C" SANITIZER_INTERFACE_ATTRIBUTE
 void __tsan_testonly_barrier_wait(u64 *barrier) {
-  unsigned old = __atomic_fetch_add(barrier, 1 << 8, __ATOMIC_RELAXED);
-  unsigned old_epoch = (old >> 8) / (old & 0xff);
+  constexpr uptr kThreadMask = kBarrierThreads - 1;
+  unsigned old = __atomic_fetch_add(barrier, kBarrierThreads, __ATOMIC_RELAXED);
+  unsigned old_epoch = (old >> kBarrierThreadBits) / (old & kThreadMask);
   for (;;) {
     unsigned cur = __atomic_load_n(barrier, __ATOMIC_RELAXED);
-    unsigned cur_epoch = (cur >> 8) / (cur & 0xff);
+    unsigned cur_epoch = (cur >> kBarrierThreadBits) / (cur & kThreadMask);
     if (cur_epoch != old_epoch)
-      return;
-    internal_sched_yield();
+      break;
+    internal_usleep(100);
   }
 }

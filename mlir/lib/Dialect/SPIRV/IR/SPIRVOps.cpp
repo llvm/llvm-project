@@ -2540,6 +2540,7 @@ void spirv::ModuleOp::build(OpBuilder &builder, OperationState &state,
 void spirv::ModuleOp::build(OpBuilder &builder, OperationState &state,
                             spirv::AddressingModel addressingModel,
                             spirv::MemoryModel memoryModel,
+                            Optional<VerCapExtAttr> vceTriple,
                             Optional<StringRef> name) {
   state.addAttribute(
       "addressing_model",
@@ -2548,10 +2549,11 @@ void spirv::ModuleOp::build(OpBuilder &builder, OperationState &state,
                                          static_cast<int32_t>(memoryModel)));
   OpBuilder::InsertionGuard guard(builder);
   builder.createBlock(state.addRegion());
-  if (name) {
-    state.attributes.append(mlir::SymbolTable::getSymbolAttrName(),
-                            builder.getStringAttr(*name));
-  }
+  if (vceTriple)
+    state.addAttribute(getVCETripleAttrName(), *vceTriple);
+  if (name)
+    state.addAttribute(mlir::SymbolTable::getSymbolAttrName(),
+                       builder.getStringAttr(*name));
 }
 
 static ParseResult parseModuleOp(OpAsmParser &parser, OperationState &state) {

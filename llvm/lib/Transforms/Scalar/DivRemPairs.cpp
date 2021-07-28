@@ -272,9 +272,10 @@ static bool optimizeDivRem(Function &F, const TargetTransformInfo &TTI,
 
       if (PredBB && IsSafeToHoist(RemInst, RemBB) &&
           IsSafeToHoist(DivInst, DivBB) &&
-          llvm::all_of(successors(PredBB), [&](BasicBlock *BB) {
-            return BB == DivBB || BB == RemBB;
-          })) {
+          all_of(successors(PredBB),
+                 [&](BasicBlock *BB) { return BB == DivBB || BB == RemBB; }) &&
+          all_of(predecessors(DivBB),
+                 [&](BasicBlock *BB) { return BB == RemBB || BB == PredBB; })) {
         DivDominates = true;
         DivInst->moveBefore(PredBB->getTerminator());
         Changed = true;

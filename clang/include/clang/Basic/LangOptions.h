@@ -233,6 +233,19 @@ public:
   /// Possible exception handling behavior.
   enum class ExceptionHandlingKind { None, SjLj, WinEH, DwarfCFI, Wasm };
 
+  /// Possible float expression evaluation method choices.
+  enum FPEvalMethodKind {
+    /// Use the declared type for fp arithmetic.
+    FEM_Source,
+    /// Use the type double for fp arithmetic.
+    FEM_Double,
+    /// Use extended type for fp arithmetic.
+    FEM_Extended,
+    /// Use the default float eval method specified by Target:
+    //  most targets are defined with evaluation method FEM_Source.
+    FEM_TargetDefault
+  };
+
   enum class LaxVectorConversionKind {
     /// Permit no implicit vector bitcasts.
     None,
@@ -524,6 +537,7 @@ public:
       setAllowFEnvAccess(true);
     else
       setAllowFEnvAccess(LangOptions::FPM_Off);
+    setFPEvalMethod(LO.getFPEvalMethod());
   }
 
   bool allowFPContractWithinStatement() const {

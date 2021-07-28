@@ -4242,8 +4242,13 @@ static bool ParsePreprocessorArgs(PreprocessorOptions &Opts, ArgList &Args,
   // Always avoid lexing editor placeholders when we're just running the
   // preprocessor as we never want to emit the
   // "editor placeholder in source file" error in PP only mode.
-  if (isStrictlyPreprocessorAction(Action))
+  // Certain predefined macros which depend upon semantic processing,
+  // for example __FLT_EVAL_METHOD__, are not expanded in PP mode, they
+  // appear in the preprocessed output as an unexpanded macro name.
+  if (isStrictlyPreprocessorAction(Action)) {
     Opts.LexEditorPlaceholders = false;
+    Opts.LexExpandSpecialBuiltins = false;
+  }
 
   return Diags.getNumErrors() == NumErrorsBefore;
 }
