@@ -188,10 +188,10 @@ If the flag is true, the label of ``v`` is the union of the labels of ``b``,
 labels of just ``v1`` and ``v2``.
 
 * ``-dfsan-event-callbacks`` -- An experimental feature that inserts callbacks for
-certain data events. Currently callbacks are only inserted for loads, stores,
-memory transfers (i.e. memcpy and memmove), and comparisons. Its default value
-is false. If this flag is set to true, a user must provide definitions for the
-following callback functions:
+  certain data events. Currently callbacks are only inserted for loads, stores,
+  memory transfers (i.e. memcpy and memmove), and comparisons. Its default value
+  is false. If this flag is set to true, a user must provide definitions for the
+  following callback functions:
 
 .. code-block:: c++
 
@@ -206,7 +206,7 @@ following callback functions:
   origins at memory load and store operations. Its default value is 0.
 
 * ``-dfsan-instrument-with-call-threshold`` -- If a function being instrumented
-   requires more than this number of origin stores, use callbacks instead of
+  requires more than this number of origin stores, use callbacks instead of
   inline checks (-1 means never use callbacks). Its default value is 3500.
 
 Environment Variables
