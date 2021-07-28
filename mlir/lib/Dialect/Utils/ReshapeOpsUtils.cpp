@@ -183,13 +183,13 @@ Optional<SmallVector<ReassociationIndices>> mlir::composeReassociationIndices(
 
 SmallVector<SmallVector<AffineExpr, 2>, 2>
 mlir::convertReassociationIndicesToExprs(
-    OpBuilder &b, ArrayRef<ReassociationIndices> reassociationIndices) {
+    MLIRContext *context, ArrayRef<ReassociationIndices> reassociationIndices) {
   SmallVector<SmallVector<AffineExpr, 2>, 2> reassociationMaps;
   for (const auto &indices : reassociationIndices) {
     SmallVector<AffineExpr, 2> reassociationMap;
     reassociationMap.reserve(indices.size());
     for (int64_t index : indices)
-      reassociationMap.push_back(b.getAffineDimExpr(index));
+      reassociationMap.push_back(mlir::getAffineDimExpr(index, context));
     reassociationMaps.push_back(std::move(reassociationMap));
   }
   return reassociationMaps;
