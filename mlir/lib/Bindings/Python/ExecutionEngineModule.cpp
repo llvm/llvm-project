@@ -1,4 +1,4 @@
-//===- ExecutionEngine.cpp - Python MLIR ExecutionEngine Bindings ---------===//
+//===- ExecutionEngineModule.cpp - Python module for execution engine -----===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -6,11 +6,9 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "ExecutionEngine.h"
-
-#include "IRModule.h"
 #include "mlir-c/Bindings/Python/Interop.h"
 #include "mlir-c/ExecutionEngine.h"
+#include "mlir/Bindings/Python/PybindAdaptors.h"
 
 namespace py = pybind11;
 using namespace mlir;
@@ -54,18 +52,20 @@ private:
 } // anonymous namespace
 
 /// Create the `mlir.execution_engine` module here.
-void mlir::python::populateExecutionEngineSubmodule(py::module &m) {
+PYBIND11_MODULE(_mlirExecutionEngine, m) {
+  m.doc() = "MLIR Execution Engine";
+
   //----------------------------------------------------------------------------
   // Mapping of the top-level PassManager
   //----------------------------------------------------------------------------
   py::class_<PyExecutionEngine>(m, "ExecutionEngine")
-      .def(py::init<>([](PyModule &module, int optLevel,
+      .def(py::init<>([](MlirModule module, int optLevel,
                          const std::vector<std::string> &sharedLibPaths) {
              llvm::SmallVector<MlirStringRef, 4> libPaths;
              for (const std::string &path : sharedLibPaths)
                libPaths.push_back({path.c_str(), path.length()});
              MlirExecutionEngine executionEngine = mlirExecutionEngineCreate(
-                 module.get(), optLevel, libPaths.size(), libPaths.data());
+                 module, optLevel, libPaths.size(), libPaths.data());
              if (mlirExecutionEngineIsNull(executionEngine))
                throw std::runtime_error(
                    "Failure while creating the ExecutionEngine.");
