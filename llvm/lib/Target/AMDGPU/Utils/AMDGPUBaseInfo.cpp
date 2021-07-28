@@ -192,14 +192,6 @@ unsigned getAddrSizeMIMGOp(const MIMGBaseOpcodeInfo *BaseOpcode,
   return AddrWords;
 }
 
-unsigned getMIMGNSALimit(const MCSubtargetInfo &STI) {
-  if (isGFX11Plus(STI))
-    return 5;
-  if (isGFX10Plus(STI))
-    return 13;
-  return 0;
-}
-
 struct MUBUFInfo {
   uint16_t Opcode;
   uint16_t BaseOpcode;

@@ -6225,15 +6225,13 @@ SDValue SITargetLowering::lowerImage(SDValue Op,
   // SIShrinkInstructions will convert NSA encodings to non-NSA after register
   // allocation when possible.
   //
-  // Disable NSA if it has more registers than can be addressed.
-  //
   // TODO: we can actually allow partial NSA where the final register is a
   // contiguous set of the remaining addresses.
   // This could help where there are more addresses than supported.
   //
   bool UseNSA = ST->hasFeature(AMDGPU::FeatureNSAEncoding) &&
-      VAddrs.size() >= 3 && VAddrs.size() <= AMDGPU::getMIMGNSALimit(*Subtarget);
-
+                VAddrs.size() >= 3 &&
+                VAddrs.size() <= (unsigned)ST->getNSAMaxSize();
   SDValue VAddr;
   if (!UseNSA)
     VAddr = getBuildDwordsVector(DAG, DL, VAddrs);

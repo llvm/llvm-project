@@ -364,9 +364,6 @@ LLVM_READONLY
 const MIMGInfo *getMIMGInfo(unsigned Opc);
 
 LLVM_READONLY
-unsigned getMIMGNSALimit(const MCSubtargetInfo &STI);
-
-LLVM_READONLY
 int getMTBUFBaseOpcode(unsigned Opc);
 
 LLVM_READONLY

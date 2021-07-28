@@ -4153,14 +4153,12 @@ static void packImage16bitOpsToDwords(MachineIRBuilder &B, MachineInstr &MI,
 
     Register AddrReg = SrcOp.getReg();
 
-    if (I < Intr->GradientStart) {
+    if ((I < Intr->GradientStart) ||
+        (I >= Intr->GradientStart && I < Intr->CoordStart && !IsG16) ||
+        (I >= Intr->CoordStart && !IsA16)) {
+      // Handle any gradient or coordinate operands that should not be packed
       AddrReg = B.buildBitcast(V2S16, AddrReg).getReg(0);
       PackedAddrs.push_back(AddrReg);
-    } else if ((I >= Intr->GradientStart && I < Intr->CoordStart && !IsG16) ||
-               (I >= Intr->CoordStart && !IsA16)) {
-      // Handle any gradient or coordinate operands that should not be packed
-      assert(B.getMRI()->getType(AddrReg) == LLT::scalar(32));
-      PackedAddrs.push_back(B.buildBitcast(V2S16, AddrReg).getReg(0));
     } else {
       // Dz/dh, dz/dv and the last odd coord are packed with undef. Also, in 1D,
       // derivatives dx/dh and dx/dv are packed with undef.
@@ -4203,9 +4201,8 @@ static void convertImageAddrToPacked(MachineIRBuilder &B, MachineInstr &MI,
 
   int NumAddrRegs = AddrRegs.size();
   if (NumAddrRegs != 1) {
-    // Round up to 8 elements for v5-v7
-    // FIXME: Missing intermediate sized register classes and instructions.
-    if (NumAddrRegs > 4 && !isPowerOf2_32(NumAddrRegs)) {
+    // Above 8 elements round up to next power of 2 (i.e. 16).
+    if (NumAddrRegs > 8 && !isPowerOf2_32(NumAddrRegs)) {
       const int RoundedNumRegs = NextPowerOf2(NumAddrRegs);
       auto Undef = B.buildUndef(S32);
       AddrRegs.append(RoundedNumRegs - NumAddrRegs, Undef.getReg(0));
@@ -4376,19 +4373,10 @@ bool AMDGPULegalizerInfo::legalizeImageIntrinsic(
                                 IsG16);
 
       // See also below in the non-a16 branch
-      const bool UseNSA = ST.hasNSAEncoding() &&
-        PackedRegs.size() >= 3 &&
-        PackedRegs.size() <= AMDGPU::getMIMGNSALimit(ST);
+      const bool UseNSA = ST.hasNSAEncoding() && PackedRegs.size() >= 3 &&
+                          PackedRegs.size() <= ST.getNSAMaxSize();
 
       if (!UseNSA && PackedRegs.size() > 1) {
-        // Round up to 8 elements for v5-v7
-        // FIXME: Missing intermediate sized register classes and instructions.
-        if (PackedRegs.size() > 4 && !isPowerOf2_32(PackedRegs.size())) {
-          unsigned RoundedSize = NextPowerOf2(PackedRegs.size());
-          auto Undef = B.buildUndef(V2S16);
-          PackedRegs.append(RoundedSize - PackedRegs.size(), Undef.getReg(0));
-        }
-
         LLT PackedAddrTy = LLT::fixed_vector(2 * PackedRegs.size(), 16);
         auto Concat = B.buildConcatVectors(PackedAddrTy, PackedRegs);
         PackedRegs[0] = Concat.getReg(0);
@@ -4424,15 +4412,11 @@ bool AMDGPULegalizerInfo::legalizeImageIntrinsic(
     // SIShrinkInstructions will convert NSA encodings to non-NSA after register
     // allocation when possible.
     //
-    // Disable NSA if it has more registers than can be addressed.
-    //
     // TODO: we can actually allow partial NSA where the final register is a
     // contiguous set of the remaining addresses.
     // This could help where there are more addresses than supported.
-    //
-    const bool UseNSA = ST.hasNSAEncoding() &&
-      CorrectedNumVAddrs >= 3 &&
-      CorrectedNumVAddrs <= AMDGPU::getMIMGNSALimit(ST);
+    const bool UseNSA = ST.hasNSAEncoding() && CorrectedNumVAddrs >= 3 &&
+                        CorrectedNumVAddrs <= ST.getNSAMaxSize();
 
     if (!UseNSA && Intr->NumVAddrs > 1)
       convertImageAddrToPacked(B, MI, ArgOffset + Intr->VAddrStart,
