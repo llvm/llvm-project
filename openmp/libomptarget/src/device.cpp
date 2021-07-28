@@ -511,6 +511,14 @@ int32_t DeviceTy::runRegion(void *TgtEntryPtr, void **TgtVarsPtr,
                                  TgtOffsets, TgtVarsSize, AsyncInfo);
 }
 
+// Run region on device
+bool DeviceTy::printDeviceInfo(int32_t RTLDevId) {
+  if (!RTL->print_device_info)
+    return false;
+  RTL->print_device_info(RTLDevId);
+  return true;
+}
+
 // Run team region on device.
 int32_t DeviceTy::runTeamRegion(void *TgtEntryPtr, void **TgtVarsPtr,
                                 ptrdiff_t *TgtOffsets, int32_t TgtVarsSize,

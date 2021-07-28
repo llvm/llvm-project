@@ -333,6 +333,7 @@ void __kmpc_push_target_tripcount_mapper(ident_t *loc, int64_t device_id,
 
 void __tgt_set_info_flag(uint32_t);
 
+int __tgt_print_device_info(int64_t device_id);
 #ifdef __cplusplus
 }
 #endif

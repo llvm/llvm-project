@@ -61,6 +61,8 @@
   } while (false)
 #endif // OMPTARGET_DEBUG
 
+#define BOOL2TEXT(b) ((b) ? "Yes" : "No")
+
 #include "elf_common.h"
 
 /// Keep entries table per device.
@@ -1157,6 +1159,178 @@ public:
     }
     return (Err == CUDA_SUCCESS) ? OFFLOAD_SUCCESS : OFFLOAD_FAIL;
   }
+
+  void printDeviceInfo(int32_t device_id) {
+    char TmpChar[1000];
+    std::string TmpStr;
+    size_t TmpSt;
+    int TmpInt, TmpInt2, TmpInt3;
+
+    CUdevice Device;
+    checkResult(cuDeviceGet(&Device, device_id),
+                "Error returned from cuCtxGetDevice\n");
+
+    cuDriverGetVersion(&TmpInt);
+    printf("    CUDA Driver Version: \t\t%d \n", TmpInt);
+    printf("    CUDA Device Number: \t\t%d \n", device_id);
+    checkResult(cuDeviceGetName(TmpChar, 1000, Device),
+                "Error returned from cuDeviceGetName\n");
+    printf("    Device Name: \t\t\t%s \n", TmpChar);
+    checkResult(cuDeviceTotalMem(&TmpSt, Device),
+                "Error returned from cuDeviceTotalMem\n");
+    printf("    Global Memory Size: \t\t%zu bytes \n", TmpSt);
+    checkResult(cuDeviceGetAttribute(
+                    &TmpInt, CU_DEVICE_ATTRIBUTE_MULTIPROCESSOR_COUNT, Device),
+                "Error returned from cuDeviceGetAttribute\n");
+    printf("    Number of Multiprocessors: \t\t%d \n", TmpInt);
+    checkResult(
+        cuDeviceGetAttribute(&TmpInt, CU_DEVICE_ATTRIBUTE_GPU_OVERLAP, Device),
+        "Error returned from cuDeviceGetAttribute\n");
+    printf("    Concurrent Copy and Execution: \t%s \n", BOOL2TEXT(TmpInt));
+    checkResult(cuDeviceGetAttribute(
+                    &TmpInt, CU_DEVICE_ATTRIBUTE_TOTAL_CONSTANT_MEMORY, Device),
+                "Error returned from cuDeviceGetAttribute\n");
+    printf("    Total Constant Memory: \t\t%d bytes\n", TmpInt);
+    checkResult(
+        cuDeviceGetAttribute(
+            &TmpInt, CU_DEVICE_ATTRIBUTE_MAX_SHARED_MEMORY_PER_BLOCK, Device),
+        "Error returned from cuDeviceGetAttribute\n");
+    printf("    Max Shared Memory per Block: \t%d bytes \n", TmpInt);
+    checkResult(cuDeviceGetAttribute(
+                    &TmpInt, CU_DEVICE_ATTRIBUTE_MAX_REGISTERS_PER_BLOCK, Device),
+                "Error returned from cuDeviceGetAttribute\n");
+    printf("    Registers per Block: \t\t%d \n", TmpInt);
+    checkResult(
+        cuDeviceGetAttribute(&TmpInt, CU_DEVICE_ATTRIBUTE_WARP_SIZE, Device),
+        "Error returned from cuDeviceGetAttribute\n");
+    printf("    Warp Size: \t\t\t\t%d Threads \n", TmpInt);
+    checkResult(cuDeviceGetAttribute(
+                    &TmpInt, CU_DEVICE_ATTRIBUTE_MAX_THREADS_PER_BLOCK, Device),
+                "Error returned from cuDeviceGetAttribute\n");
+    printf("    Maximum Threads per Block: \t\t%d \n", TmpInt);
+    checkResult(cuDeviceGetAttribute(&TmpInt, CU_DEVICE_ATTRIBUTE_MAX_BLOCK_DIM_X,
+                                    Device),
+                "Error returned from cuDeviceGetAttribute\n");
+    checkResult(cuDeviceGetAttribute(&TmpInt2,
+                                    CU_DEVICE_ATTRIBUTE_MAX_BLOCK_DIM_Y, Device),
+                "Error returned from cuDeviceGetAttribute\n");
+    checkResult(cuDeviceGetAttribute(&TmpInt3,
+                                    CU_DEVICE_ATTRIBUTE_MAX_BLOCK_DIM_Z, Device),
+                "Error returned from cuDeviceGetAttribute\n");
+    printf("    Maximum Block Dimensions: \t\t%d, %d, %d \n", TmpInt, TmpInt2,
+          TmpInt3);
+    checkResult(
+        cuDeviceGetAttribute(&TmpInt, CU_DEVICE_ATTRIBUTE_MAX_GRID_DIM_X, Device),
+        "Error returned from cuDeviceGetAttribute\n");
+    checkResult(cuDeviceGetAttribute(&TmpInt2, CU_DEVICE_ATTRIBUTE_MAX_GRID_DIM_Y,
+                                    Device),
+                "Error returned from cuDeviceGetAttribute\n");
+    checkResult(cuDeviceGetAttribute(&TmpInt3, CU_DEVICE_ATTRIBUTE_MAX_GRID_DIM_Z,
+                                    Device),
+                "Error returned from cuDeviceGetAttribute\n");
+    printf("    Maximum Grid Dimensions: \t\t%d x %d x %d \n", TmpInt, TmpInt2,
+          TmpInt3);
+    checkResult(
+        cuDeviceGetAttribute(&TmpInt, CU_DEVICE_ATTRIBUTE_MAX_PITCH, Device),
+        "Error returned from cuDeviceGetAttribute\n");
+    printf("    Maximum Memory Pitch: \t\t%d bytes \n", TmpInt);
+    checkResult(cuDeviceGetAttribute(
+                    &TmpInt, CU_DEVICE_ATTRIBUTE_TEXTURE_ALIGNMENT, Device),
+                "Error returned from cuDeviceGetAttribute\n");
+    printf("    Texture Alignment: \t\t\t%d bytes \n", TmpInt);
+    checkResult(
+        cuDeviceGetAttribute(&TmpInt, CU_DEVICE_ATTRIBUTE_CLOCK_RATE, Device),
+        "Error returned from cuDeviceGetAttribute\n");
+    printf("    Clock Rate: \t\t\t%d kHz\n", TmpInt);
+    checkResult(cuDeviceGetAttribute(
+                    &TmpInt, CU_DEVICE_ATTRIBUTE_KERNEL_EXEC_TIMEOUT, Device),
+                "Error returned from cuDeviceGetAttribute\n");
+    printf("    Execution Timeout: \t\t\t%s \n", BOOL2TEXT(TmpInt));
+    checkResult(
+        cuDeviceGetAttribute(&TmpInt, CU_DEVICE_ATTRIBUTE_INTEGRATED, Device),
+        "Error returned from cuDeviceGetAttribute\n");
+    printf("    Integrated Device: \t\t\t%s \n", BOOL2TEXT(TmpInt));
+    checkResult(cuDeviceGetAttribute(
+                    &TmpInt, CU_DEVICE_ATTRIBUTE_CAN_MAP_HOST_MEMORY, Device),
+                "Error returned from cuDeviceGetAttribute\n");
+    printf("    Can Map Host Memory: \t\t%s \n", BOOL2TEXT(TmpInt));
+    checkResult(
+        cuDeviceGetAttribute(&TmpInt, CU_DEVICE_ATTRIBUTE_COMPUTE_MODE, Device),
+        "Error returned from cuDeviceGetAttribute\n");
+    if (TmpInt == CU_COMPUTEMODE_DEFAULT)
+      TmpStr = "DEFAULT";
+    else if (TmpInt == CU_COMPUTEMODE_PROHIBITED)
+      TmpStr = "PROHIBITED";
+    else if (TmpInt == CU_COMPUTEMODE_EXCLUSIVE_PROCESS)
+      TmpStr = "EXCLUSIVE PROCESS";
+    else
+      TmpStr = "unknown";
+    printf("    Compute Mode: \t\t\t%s \n", TmpStr.c_str());
+    checkResult(cuDeviceGetAttribute(
+                    &TmpInt, CU_DEVICE_ATTRIBUTE_CONCURRENT_KERNELS, Device),
+                "Error returned from cuDeviceGetAttribute\n");
+    printf("    Concurrent Kernels: \t\t%s \n", BOOL2TEXT(TmpInt));
+    checkResult(
+        cuDeviceGetAttribute(&TmpInt, CU_DEVICE_ATTRIBUTE_ECC_ENABLED, Device),
+        "Error returned from cuDeviceGetAttribute\n");
+    printf("    ECC Enabled: \t\t\t%s \n", BOOL2TEXT(TmpInt));
+    checkResult(cuDeviceGetAttribute(
+                    &TmpInt, CU_DEVICE_ATTRIBUTE_MEMORY_CLOCK_RATE, Device),
+                "Error returned from cuDeviceGetAttribute\n");
+    printf("    Memory Clock Rate: \t\t\t%d kHz\n", TmpInt);
+    checkResult(cuDeviceGetAttribute(
+                    &TmpInt, CU_DEVICE_ATTRIBUTE_GLOBAL_MEMORY_BUS_WIDTH, Device),
+                "Error returned from cuDeviceGetAttribute\n");
+    printf("    Memory Bus Width: \t\t\t%d bits\n", TmpInt);
+    checkResult(
+        cuDeviceGetAttribute(&TmpInt, CU_DEVICE_ATTRIBUTE_L2_CACHE_SIZE, Device),
+        "Error returned from cuDeviceGetAttribute\n");
+    printf("    L2 Cache Size: \t\t\t%d bytes \n", TmpInt);
+    checkResult(
+        cuDeviceGetAttribute(
+            &TmpInt, CU_DEVICE_ATTRIBUTE_MAX_THREADS_PER_MULTIPROCESSOR, Device),
+        "Error returned from cuDeviceGetAttribute\n");
+    printf("    Max Threads Per SMP: \t\t%d \n", TmpInt);
+    checkResult(cuDeviceGetAttribute(
+                    &TmpInt, CU_DEVICE_ATTRIBUTE_ASYNC_ENGINE_COUNT, Device),
+                "Error returned from cuDeviceGetAttribute\n");
+    printf("    Async Engines: \t\t\t%s (%d) \n", BOOL2TEXT(TmpInt), TmpInt);
+    checkResult(cuDeviceGetAttribute(
+                    &TmpInt, CU_DEVICE_ATTRIBUTE_UNIFIED_ADDRESSING, Device),
+                "Error returned from cuDeviceGetAttribute\n");
+    printf("    Unified Addressing: \t\t%s \n", BOOL2TEXT(TmpInt));
+    checkResult(
+        cuDeviceGetAttribute(&TmpInt, CU_DEVICE_ATTRIBUTE_MANAGED_MEMORY, Device),
+        "Error returned from cuDeviceGetAttribute\n");
+    printf("    Managed Memory: \t\t\t%s \n", BOOL2TEXT(TmpInt));
+    checkResult(
+        cuDeviceGetAttribute(
+            &TmpInt, CU_DEVICE_ATTRIBUTE_CONCURRENT_MANAGED_ACCESS, Device),
+        "Error returned from cuDeviceGetAttribute\n");
+    printf("    Concurrent Managed Memory: \t\t%s \n", BOOL2TEXT(TmpInt));
+    checkResult(
+        cuDeviceGetAttribute(
+            &TmpInt, CU_DEVICE_ATTRIBUTE_COMPUTE_PREEMPTION_SUPPORTED, Device),
+        "Error returned from cuDeviceGetAttribute\n");
+    printf("    Preemption Supported: \t\t%s \n", BOOL2TEXT(TmpInt));
+    checkResult(cuDeviceGetAttribute(
+                    &TmpInt, CU_DEVICE_ATTRIBUTE_COOPERATIVE_LAUNCH, Device),
+                "Error returned from cuDeviceGetAttribute\n");
+    printf("    Cooperative Launch: \t\t%s \n", BOOL2TEXT(TmpInt));
+    checkResult(cuDeviceGetAttribute(&TmpInt, CU_DEVICE_ATTRIBUTE_MULTI_GPU_BOARD,
+                                    Device),
+                "Error returned from cuDeviceGetAttribute\n");
+    printf("    Multi-Device Boars: \t\t%s \n", BOOL2TEXT(TmpInt));
+    checkResult(cuDeviceGetAttribute(&TmpInt,
+                                    CU_DEVICE_ATTRIBUTE_COMPUTE_CAPABILITY_MAJOR,
+                                    Device),
+                "Error returned from cuDeviceGetAttribute\n");
+    checkResult(cuDeviceGetAttribute(&TmpInt2,
+                                    CU_DEVICE_ATTRIBUTE_COMPUTE_CAPABILITY_MINOR,
+                                    Device),
+                "Error returned from cuDeviceGetAttribute\n");
+    printf("    Compute Capabilities: \t\t%d%d \n", TmpInt, TmpInt2);
+  }
 };
 
 DeviceRTLTy DeviceRTL;
@@ -1355,6 +1529,11 @@ int32_t __tgt_rtl_synchronize(int32_t device_id,
 void __tgt_rtl_set_info_flag(uint32_t NewInfoLevel) {
   std::atomic<uint32_t> &InfoLevel = getInfoLevelInternal();
   InfoLevel.store(NewInfoLevel);
+}
+
+void __tgt_rtl_print_device_info(int32_t device_id) {
+  assert(DeviceRTL.isValidDeviceId(device_id) && "device_id is invalid");
+  DeviceRTL.printDeviceInfo(device_id);
 }
 
 #ifdef __cplusplus
