@@ -1352,6 +1352,22 @@ class MatrixOperand<RegisterClass RC, int EltSize> : RegisterOperand<RC> {
 
 def MatrixOp : MatrixOperand<MPR, 0>;
 
+class MatrixTileListAsmOperand : AsmOperandClass {
+  let Name = "MatrixTileList";
+  let ParserMethod = "tryParseMatrixTileList";
+  let RenderMethod = "addMatrixTileListOperands";
+  let PredicateMethod = "isMatrixTileList";
+}
+
+class MatrixTileListOperand : Operand<i8> {
+  let ParserMatchClass = MatrixTileListAsmOperand<>;
+  let DecoderMethod = "DecodeMatrixTileListRegisterClass";
+  let EncoderMethod = "EncodeMatrixTileListRegisterClass";
+  let PrintMethod = "printMatrixTileList";
+}
+
+def MatrixTileList : MatrixTileListOperand<>;
+
 def MatrixIndexGPR32_12_15 : RegisterClass<"AArch64", [i32], 32, (sequence "W%u", 12, 15)> {
   let DiagnosticType = "InvalidMatrixIndexGPR32_12_15";
 }

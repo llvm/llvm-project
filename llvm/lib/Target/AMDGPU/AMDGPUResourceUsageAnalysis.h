@@ -51,13 +51,21 @@ public:
 
   bool runOnSCC(CallGraphSCC &SCC) override;
 
+  bool doInitialization(CallGraph &CG) override {
+    CallGraphResourceInfo.clear();
+    return CallGraphSCCPass::doInitialization(CG);
+  }
+
   void getAnalysisUsage(AnalysisUsage &AU) const override {
     AU.addRequired<MachineModuleInfoWrapperPass>();
     AU.setPreservesAll();
   }
 
   const SIFunctionResourceInfo &getResourceInfo(const Function *F) const {
-    return CallGraphResourceInfo.find(F)->getSecond();
+    auto Info = CallGraphResourceInfo.find(F);
+    assert(Info != CallGraphResourceInfo.end() &&
+           "Failed to find resource info for function");
+    return Info->getSecond();
   }
 
 private:

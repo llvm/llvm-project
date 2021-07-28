@@ -360,11 +360,13 @@ Uses = [SP] in
                                 "#ADJCALLSTACKDOWN",
                                 [(AVRcallseq_start timm:$amt, timm:$amt2)]>;
 
-  // R31R30 is used to update SP, since it is a scratch reg and this instruction
-  // is placed after the function call then R31R30 should be always free.
-  //let Defs = [R31R30],
-  //Uses = [R31R30] in
-  //:TODO: if we enable this, the pseudo is killed because it looks dead
+  // R31R30 is used to update SP. It is normally free because it is a
+  // call-clobbered register but it is necessary to set it as a def as the
+  // register allocator might use it in rare cases (for rematerialization, it
+  // seems). hasSideEffects needs to be set to true so this instruction isn't
+  // considered dead.
+  let Defs = [R31R30],
+  hasSideEffects=1 in
   def ADJCALLSTACKUP : Pseudo<(outs),
                               (ins i16imm:$amt1, i16imm:$amt2),
                               "#ADJCALLSTACKUP",
@@ -1295,6 +1297,7 @@ class AtomicStore<PatFrag Op, RegisterClass DRC,
   Pseudo<(outs), (ins PTRRC:$rd, DRC:$rr), "atomic_op",
          [(Op i16:$rd, DRC:$rr)]>;
 
+let Constraints = "@earlyclobber $rd" in
 class AtomicLoadOp<PatFrag Op, RegisterClass DRC,
                    RegisterClass PTRRC> :
   Pseudo<(outs DRC:$rd), (ins PTRRC:$rr, DRC:$operand),
@@ -1732,20 +1735,19 @@ Defs = [SREG] in
                       "asrw\t$rd",
                       [(set i16:$rd, (AVRasr i16:$src)), (implicit SREG)]>;
 
+  def ROLBRd : Pseudo<(outs GPR8:$rd),
+                      (ins GPR8:$src),
+                      "rolb\t$rd",
+                      [(set i8:$rd, (AVRrol i8:$src)), (implicit SREG)]>;
+
+  def RORBRd : Pseudo<(outs GPR8:$rd),
+                      (ins GPR8:$src),
+                      "rorb\t$rd",
+                      [(set i8:$rd, (AVRror i8:$src)), (implicit SREG)]>;
+
   // Bit rotate operations.
   let Uses = [SREG] in
   {
-    // 8-bit ROL is an alias of ADC Rd, Rd
-
-    def ROLBRd : Pseudo<(outs GPR8:$rd),
-                        (ins GPR8:$src),
-                        "rolb\t$rd",
-                        [(set i8:$rd, (AVRrol i8:$src)), (implicit SREG)]>;
-
-    def RORBRd : Pseudo<(outs GPR8:$rd),
-                        (ins GPR8:$src),
-                        "rorb\t$rd",
-                        [(set i8:$rd, (AVRror i8:$src)), (implicit SREG)]>;
 
     def ROLWRd : Pseudo<(outs DREGS:$rd),
                         (ins DREGS:$src),
@@ -1801,10 +1803,11 @@ def BST : FRdB<0b01,
                "bst\t$rd, $b",
                []>;
 
-let Uses = [SREG] in
+let Constraints = "$src = $rd",
+Uses = [SREG] in
 def BLD : FRdB<0b00,
-               (outs),
-               (ins GPR8:$rd, i8imm:$b),
+               (outs GPR8:$rd),
+               (ins GPR8:$src, i8imm:$b),
                "bld\t$rd, $b",
                []>;
 

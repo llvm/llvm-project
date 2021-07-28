@@ -128,6 +128,7 @@ static_library("LLVMAMDGPUCodeGen") {
     "AMDGPUArgumentUsageInfo.cpp",
     "AMDGPUAsmPrinter.cpp",
     "AMDGPUAtomicOptimizer.cpp",
+    "AMDGPUAttributor.cpp",
     "AMDGPUCallLowering.cpp",
     "AMDGPUCodeGenPrepare.cpp",
     "AMDGPUExportClustering.cpp",

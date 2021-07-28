@@ -2163,6 +2163,11 @@ let Predicates = [FeatureDeflateConversion],
   def DFLTCC : SideEffectTernaryMemMemRRFa<"dfltcc", 0xB939,
                                            GR128, GR128, GR64>;
 
+// NNPA.
+let Predicates = [FeatureNNPAssist],
+    mayLoad = 1, mayStore = 1, Defs = [R0D, CC], Uses = [R0D, R1D] in
+  def NNPA : SideEffectInherentRRE<"nnpa", 0xB93B>;
+
 // Execute.
 let hasSideEffects = 1 in {
   def EX   : SideEffectBinaryRX<"ex", 0x44, ADDR64>;

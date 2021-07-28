@@ -5,11 +5,11 @@ Moving globalized variable to the stack. [OMP110]
 
 This optimization remark indicates that a globalized variable was moved back to
 thread-local stack memory on the device. This occurs when the optimization pass
-can determine that a globalized variable is not possibly be shared between
-threads and globalization was unnecessary. Using stack memory is the best-case
-scenario for data globalization as the variable can now be stored in fast
-register files on the device. This optimization requires full visibility of each
-variable.
+can determine that a globalized variable cannot possibly be shared between
+threads and globalization was ultimately unnecessary. Using stack memory is the
+best-case scenario for data globalization as the variable can now be stored in
+fast register files on the device. This optimization requires full visibility of
+each variable.
 
 Globalization typically occurs when a pointer to a thread-local variable escapes
 the current scope. The compiler needs to be pessimistic and assume that the

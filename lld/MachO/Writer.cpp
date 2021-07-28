@@ -239,10 +239,7 @@ public:
     c->maxprot = seg->maxProt;
     c->initprot = seg->initProt;
 
-    if (seg->getSections().empty())
-      return;
-
-    c->vmaddr = seg->firstSection()->addr;
+    c->vmaddr = seg->addr;
     c->vmsize = seg->vmSize;
     c->filesize = seg->fileSize;
     c->nsects = seg->numNonHiddenSections();
@@ -633,7 +630,12 @@ static void prepareSymbolRelocation(Symbol *sym, const InputSection *isec,
 
 void Writer::scanRelocations() {
   TimeTraceScope timeScope("Scan relocations");
-  for (ConcatInputSection *isec : inputSections) {
+
+  // This can't use a for-each loop: It calls treatUndefinedSymbol(), which can
+  // add to inputSections, which invalidates inputSections's iterators.
+  for (size_t i = 0; i < inputSections.size(); ++i) {
+    ConcatInputSection *isec = inputSections[i];
+
     if (isec->shouldOmitFromOutput())
       continue;
 
@@ -847,6 +849,9 @@ static DenseMap<const InputSection *, size_t> buildInputSectionPriorities() {
     return sectionPriorities;
 
   auto addSym = [&](Defined &sym) {
+    if (sym.isAbsolute())
+      return;
+
     auto it = config->priorities.find(sym.getName());
     if (it == config->priorities.end())
       return;
@@ -977,6 +982,7 @@ void Writer::finalizeAddresses() {
   for (OutputSegment *seg : outputSegments) {
     if (seg == linkEditSegment)
       continue;
+    seg->addr = addr;
     assignAddresses(seg);
     // codesign / libstuff checks for segment ordering by verifying that
     // `fileOff + fileSize == next segment fileOff`. So we call alignTo() before
@@ -984,8 +990,9 @@ void Writer::finalizeAddresses() {
     // contiguous. We handle addr / vmSize similarly for the same reason.
     fileOff = alignTo(fileOff, pageSize);
     addr = alignTo(addr, pageSize);
-    seg->vmSize = addr - seg->firstSection()->addr;
+    seg->vmSize = addr - seg->addr;
     seg->fileSize = fileOff - seg->fileOff;
+    seg->assignAddressesToStartEndSymbols();
   }
 }
 
@@ -1010,9 +1017,10 @@ void Writer::finalizeLinkEditSegment() {
 
   // Now that __LINKEDIT is filled out, do a proper calculation of its
   // addresses and offsets.
+  linkEditSegment->addr = addr;
   assignAddresses(linkEditSegment);
   // No need to page-align fileOff / addr here since this is the last segment.
-  linkEditSegment->vmSize = addr - linkEditSegment->firstSection()->addr;
+  linkEditSegment->vmSize = addr - linkEditSegment->addr;
   linkEditSegment->fileSize = fileOff - linkEditSegment->fileOff;
 }
 
@@ -1027,6 +1035,7 @@ void Writer::assignAddresses(OutputSegment *seg) {
     osec->addr = addr;
     osec->fileOff = isZeroFill(osec->flags) ? 0 : fileOff;
     osec->finalize();
+    osec->assignAddressesToStartEndSymbols();
 
     addr += osec->getSize();
     fileOff += osec->getFileSize();

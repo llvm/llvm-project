@@ -149,12 +149,15 @@ class CheckedMutex {
 };
 
 // Reader-writer mutex.
-class MUTEX Mutex {
+// Derive from CheckedMutex for the purposes of EBO.
+// We could make it a field marked with [[no_unique_address]],
+// but this attribute is not supported by some older compilers.
+class MUTEX Mutex : CheckedMutex {
  public:
-  constexpr Mutex(MutexType type = MutexUnchecked) : checked_(type) {}
+  constexpr Mutex(MutexType type = MutexUnchecked) : CheckedMutex(type) {}
 
   void Lock() ACQUIRE() {
-    checked_.Lock();
+    CheckedMutex::Lock();
     u64 reset_mask = ~0ull;
     u64 state = atomic_load_relaxed(&state_);
     const uptr kMaxSpinIters = 1500;
@@ -200,7 +203,7 @@ class MUTEX Mutex {
   }
 
   void Unlock() RELEASE() {
-    checked_.Unlock();
+    CheckedMutex::Unlock();
     bool wake_writer;
     u64 wake_readers;
     u64 new_state;
@@ -229,7 +232,7 @@ class MUTEX Mutex {
   }
 
   void ReadLock() ACQUIRE_SHARED() {
-    checked_.Lock();
+    CheckedMutex::Lock();
     bool locked;
     u64 new_state;
     u64 state = atomic_load_relaxed(&state_);
@@ -250,7 +253,7 @@ class MUTEX Mutex {
   }
 
   void ReadUnlock() RELEASE_SHARED() {
-    checked_.Unlock();
+    CheckedMutex::Unlock();
     bool wake;
     u64 new_state;
     u64 state = atomic_load_relaxed(&state_);
@@ -285,7 +288,6 @@ class MUTEX Mutex {
   }
 
  private:
-  [[no_unique_address]] CheckedMutex checked_;
   atomic_uint64_t state_ = {0};
   Semaphore writers_;
   Semaphore readers_;

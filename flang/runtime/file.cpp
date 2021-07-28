@@ -45,7 +45,8 @@ static int openfile_mkstemp(IoErrorHandler &handler) {
   if (::GetTempFileNameA(tempDirName, "Fortran", uUnique, tempFileName) == 0) {
     return -1;
   }
-  int fd{::_open(tempFileName, _O_CREAT | _O_TEMPORARY, _S_IREAD | _S_IWRITE)};
+  int fd{::_open(
+      tempFileName, _O_CREAT | _O_TEMPORARY | _O_RDWR, _S_IREAD | _S_IWRITE)};
 #else
   char path[]{"/tmp/Fortran-Scratch-XXXXXX"};
   int fd{::mkstemp(path)};
@@ -245,7 +246,7 @@ std::size_t OpenFile::Write(FileOffset at, const char *buffer,
 
 inline static int openfile_ftruncate(int fd, OpenFile::FileOffset at) {
 #ifdef _WIN32
-  return !::_chsize(fd, at);
+  return ::_chsize(fd, at);
 #else
   return ::ftruncate(fd, at);
 #endif

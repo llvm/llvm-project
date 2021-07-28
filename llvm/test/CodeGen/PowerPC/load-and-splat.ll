@@ -9,6 +9,7 @@
 ; RUN:   -mtriple=powerpc64-unknown-unknown < %s | FileCheck %s \
 ; RUN:   -check-prefix=P7
 
+; v2f64
 define dso_local void @test(<2 x double>* nocapture %c, double* nocapture readonly %a) local_unnamed_addr {
 ; P9-LABEL: test:
 ; P9:       # %bb.0: # %entry
@@ -39,6 +40,7 @@ entry:
   ret void
 }
 
+; v4f32
 define dso_local void @test2(<4 x float>* nocapture %c, float* nocapture readonly %a) local_unnamed_addr {
 ; P9-LABEL: test2:
 ; P9:       # %bb.0: # %entry
@@ -73,6 +75,7 @@ entry:
   ret void
 }
 
+; v4i32
 define dso_local void @test3(<4 x i32>* nocapture %c, i32* nocapture readonly %a) local_unnamed_addr {
 ; P9-LABEL: test3:
 ; P9:       # %bb.0: # %entry
@@ -107,6 +110,7 @@ entry:
   ret void
 }
 
+; v2i64
 define dso_local void @test4(<2 x i64>* nocapture %c, i64* nocapture readonly %a) local_unnamed_addr {
 ; P9-LABEL: test4:
 ; P9:       # %bb.0: # %entry
@@ -137,6 +141,7 @@ entry:
   ret void
 }
 
+; sext v2i64
 define void @test5(<2 x i64>* %a, i32* %in) {
 ; P9-LABEL: test5:
 ; P9:       # %bb.0: # %entry
@@ -170,6 +175,7 @@ entry:
   ret void
 }
 
+; zext v2i64
 define void @test6(<2 x i64>* %a, i32* %in) {
 ; P9-LABEL: test6:
 ; P9:       # %bb.0: # %entry
@@ -200,6 +206,74 @@ entry:
   %splat.splatinsert.i = insertelement <2 x i64> poison, i64 %conv, i32 0
   %splat.splat.i = shufflevector <2 x i64> %splat.splatinsert.i, <2 x i64> poison, <2 x i32> zeroinitializer
   store <2 x i64> %splat.splat.i, <2 x i64>* %a, align 16
+  ret void
+}
+
+; v8i16
+define void @test7(<8 x i16>* %a, i16* %in) {
+; P9-LABEL: test7:
+; P9:       # %bb.0: # %entry
+; P9-NEXT:    lxsihzx v2, 0, r4
+; P9-NEXT:    vsplth v2, v2, 3
+; P9-NEXT:    stxv v2, 0(r3)
+; P9-NEXT:    blr
+;
+; P8-LABEL: test7:
+; P8:       # %bb.0: # %entry
+; P8-NEXT:    lhz r4, 0(r4)
+; P8-NEXT:    mtvsrd v2, r4
+; P8-NEXT:    vsplth v2, v2, 3
+; P8-NEXT:    stvx v2, 0, r3
+; P8-NEXT:    blr
+;
+; P7-LABEL: test7:
+; P7:       # %bb.0: # %entry
+; P7-NEXT:    lhz r4, 0(r4)
+; P7-NEXT:    addi r5, r1, -16
+; P7-NEXT:    sth r4, -16(r1)
+; P7-NEXT:    lxvw4x v2, 0, r5
+; P7-NEXT:    vsplth v2, v2, 0
+; P7-NEXT:    stxvw4x v2, 0, r3
+; P7-NEXT:    blr
+entry:
+  %0 = load i16, i16* %in, align 2
+  %splat.splatinsert.i = insertelement <8 x i16> poison, i16 %0, i32 0
+  %splat.splat.i = shufflevector <8 x i16> %splat.splatinsert.i, <8 x i16> poison, <8 x i32> zeroinitializer
+  store <8 x i16> %splat.splat.i, <8 x i16>* %a, align 16
+  ret void
+}
+
+; v16i8
+define void @test8(<16 x i8>* %a, i8* %in) {
+; P9-LABEL: test8:
+; P9:       # %bb.0: # %entry
+; P9-NEXT:    lxsibzx v2, 0, r4
+; P9-NEXT:    vspltb v2, v2, 7
+; P9-NEXT:    stxv v2, 0(r3)
+; P9-NEXT:    blr
+;
+; P8-LABEL: test8:
+; P8:       # %bb.0: # %entry
+; P8-NEXT:    lbz r4, 0(r4)
+; P8-NEXT:    mtvsrd v2, r4
+; P8-NEXT:    vspltb v2, v2, 7
+; P8-NEXT:    stvx v2, 0, r3
+; P8-NEXT:    blr
+;
+; P7-LABEL: test8:
+; P7:       # %bb.0: # %entry
+; P7-NEXT:    lbz r4, 0(r4)
+; P7-NEXT:    addi r5, r1, -16
+; P7-NEXT:    stb r4, -16(r1)
+; P7-NEXT:    lxvw4x v2, 0, r5
+; P7-NEXT:    vspltb v2, v2, 0
+; P7-NEXT:    stxvw4x v2, 0, r3
+; P7-NEXT:    blr
+entry:
+  %0 = load i8, i8* %in, align 1
+  %splat.splatinsert.i = insertelement <16 x i8> poison, i8 %0, i32 0
+  %splat.splat.i = shufflevector <16 x i8> %splat.splatinsert.i, <16 x i8> poison, <16 x i32> zeroinitializer
+  store <16 x i8> %splat.splat.i, <16 x i8>* %a, align 16
   ret void
 }
 

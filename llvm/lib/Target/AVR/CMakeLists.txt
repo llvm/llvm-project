@@ -24,6 +24,7 @@ add_llvm_target(AVRCodeGen
   AVRMCInstLower.cpp
   AVRRelaxMemOperations.cpp
   AVRRegisterInfo.cpp
+  AVRShiftExpand.cpp
   AVRSubtarget.cpp
   AVRTargetMachine.cpp
   AVRTargetObjectFile.cpp

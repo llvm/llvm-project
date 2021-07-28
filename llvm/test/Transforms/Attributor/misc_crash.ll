@@ -90,10 +90,8 @@ define void @func4() {
 
 define internal void @func5(i32 %0) {
 ; CHECK-LABEL: define {{[^@]+}}@func5() {
-; CHECK-NEXT:    [[TMP:%.*]] = alloca i8*, align 8
 ; CHECK-NEXT:    br label [[BLOCK:%.*]]
 ; CHECK:       block:
-; CHECK-NEXT:    store i8* blockaddress(@func5, [[BLOCK]]), i8** [[TMP]], align 8
 ; CHECK-NEXT:    call void @func6(i8* blockaddress(@func5, [[BLOCK]]))
 ; CHECK-NEXT:    ret void
 ;

@@ -2866,15 +2866,13 @@ Instruction *InstCombinerImpl::visitSelectInst(SelectInst &SI) {
   // fast-math-flags (nsz) or fsub with +0.0 (not fneg) for this to work. We
   // also require nnan because we do not want to unintentionally change the
   // sign of a NaN value.
-  // FIXME: These folds should test/propagate FMF from the select, not the
-  //        fsub or fneg.
   // (X <= +/-0.0) ? (0.0 - X) : X --> fabs(X)
   Instruction *FSub;
   if (match(CondVal, m_FCmp(Pred, m_Specific(FalseVal), m_AnyZeroFP())) &&
       match(TrueVal, m_FSub(m_PosZeroFP(), m_Specific(FalseVal))) &&
       match(TrueVal, m_Instruction(FSub)) && FSub->hasNoNaNs() &&
       (Pred == FCmpInst::FCMP_OLE || Pred == FCmpInst::FCMP_ULE)) {
-    Value *Fabs = Builder.CreateUnaryIntrinsic(Intrinsic::fabs, FalseVal, FSub);
+    Value *Fabs = Builder.CreateUnaryIntrinsic(Intrinsic::fabs, FalseVal, &SI);
     return replaceInstUsesWith(SI, Fabs);
   }
   // (X >  +/-0.0) ? X : (0.0 - X) --> fabs(X)
@@ -2882,7 +2880,7 @@ Instruction *InstCombinerImpl::visitSelectInst(SelectInst &SI) {
       match(FalseVal, m_FSub(m_PosZeroFP(), m_Specific(TrueVal))) &&
       match(FalseVal, m_Instruction(FSub)) && FSub->hasNoNaNs() &&
       (Pred == FCmpInst::FCMP_OGT || Pred == FCmpInst::FCMP_UGT)) {
-    Value *Fabs = Builder.CreateUnaryIntrinsic(Intrinsic::fabs, TrueVal, FSub);
+    Value *Fabs = Builder.CreateUnaryIntrinsic(Intrinsic::fabs, TrueVal, &SI);
     return replaceInstUsesWith(SI, Fabs);
   }
   // With nnan and nsz:
@@ -2891,11 +2889,11 @@ Instruction *InstCombinerImpl::visitSelectInst(SelectInst &SI) {
   Instruction *FNeg;
   if (match(CondVal, m_FCmp(Pred, m_Specific(FalseVal), m_AnyZeroFP())) &&
       match(TrueVal, m_FNeg(m_Specific(FalseVal))) &&
-      match(TrueVal, m_Instruction(FNeg)) &&
-      FNeg->hasNoNaNs() && FNeg->hasNoSignedZeros() &&
+      match(TrueVal, m_Instruction(FNeg)) && FNeg->hasNoNaNs() &&
+      FNeg->hasNoSignedZeros() && SI.hasNoSignedZeros() &&
       (Pred == FCmpInst::FCMP_OLT || Pred == FCmpInst::FCMP_OLE ||
        Pred == FCmpInst::FCMP_ULT || Pred == FCmpInst::FCMP_ULE)) {
-    Value *Fabs = Builder.CreateUnaryIntrinsic(Intrinsic::fabs, FalseVal, FNeg);
+    Value *Fabs = Builder.CreateUnaryIntrinsic(Intrinsic::fabs, FalseVal, &SI);
     return replaceInstUsesWith(SI, Fabs);
   }
   // With nnan and nsz:
@@ -2903,11 +2901,11 @@ Instruction *InstCombinerImpl::visitSelectInst(SelectInst &SI) {
   // (X >= +/-0.0) ? X : -X --> fabs(X)
   if (match(CondVal, m_FCmp(Pred, m_Specific(TrueVal), m_AnyZeroFP())) &&
       match(FalseVal, m_FNeg(m_Specific(TrueVal))) &&
-      match(FalseVal, m_Instruction(FNeg)) &&
-      FNeg->hasNoNaNs() && FNeg->hasNoSignedZeros() &&
+      match(FalseVal, m_Instruction(FNeg)) && FNeg->hasNoNaNs() &&
+      FNeg->hasNoSignedZeros() && SI.hasNoSignedZeros() &&
       (Pred == FCmpInst::FCMP_OGT || Pred == FCmpInst::FCMP_OGE ||
        Pred == FCmpInst::FCMP_UGT || Pred == FCmpInst::FCMP_UGE)) {
-    Value *Fabs = Builder.CreateUnaryIntrinsic(Intrinsic::fabs, TrueVal, FNeg);
+    Value *Fabs = Builder.CreateUnaryIntrinsic(Intrinsic::fabs, TrueVal, &SI);
     return replaceInstUsesWith(SI, Fabs);
   }
 
@@ -3217,6 +3215,37 @@ Instruction *InstCombinerImpl::visitSelectInst(SelectInst &SI) {
 
   if (Value *Fr = foldSelectWithFrozenICmp(SI, Builder))
     return replaceInstUsesWith(SI, Fr);
+
+  // select(mask, mload(,,mask,0), 0) -> mload(,,mask,0)
+  // Load inst is intentionally not checked for hasOneUse()
+  if (match(FalseVal, m_Zero()) &&
+      match(TrueVal, m_MaskedLoad(m_Value(), m_Value(), m_Specific(CondVal),
+                                  m_CombineOr(m_Undef(), m_Zero())))) {
+    auto *MaskedLoad = cast<IntrinsicInst>(TrueVal);
+    if (isa<UndefValue>(MaskedLoad->getArgOperand(3)))
+      MaskedLoad->setArgOperand(3, FalseVal /* Zero */);
+    return replaceInstUsesWith(SI, MaskedLoad);
+  }
+
+  Value *Mask;
+  if (match(TrueVal, m_Zero()) &&
+      match(FalseVal, m_MaskedLoad(m_Value(), m_Value(), m_Value(Mask),
+                                   m_CombineOr(m_Undef(), m_Zero())))) {
+    // We can remove the select by ensuring the load zeros all lanes the
+    // select would have.  We determine this by proving there is no overlap
+    // between the load and select masks.
+    // (i.e (load_mask & select_mask) == 0 == no overlap)
+    bool CanMergeSelectIntoLoad = false;
+    if (Value *V = SimplifyAndInst(CondVal, Mask, SQ.getWithInstruction(&SI)))
+      CanMergeSelectIntoLoad = match(V, m_Zero());
+
+    if (CanMergeSelectIntoLoad) {
+      auto *MaskedLoad = cast<IntrinsicInst>(FalseVal);
+      if (isa<UndefValue>(MaskedLoad->getArgOperand(3)))
+        MaskedLoad->setArgOperand(3, TrueVal /* Zero */);
+      return replaceInstUsesWith(SI, MaskedLoad);
+    }
+  }
 
   return nullptr;
 }

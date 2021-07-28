@@ -131,6 +131,18 @@ public:
     return BaseT::getMaxVScale();
   }
 
+  /// Try to return an estimate cost factor that can be used as a multiplier
+  /// when scalarizing an operation for a vector with ElementCount \p VF.
+  /// For scalable vectors this currently takes the most pessimistic view based
+  /// upon the maximum possible value for vscale.
+  unsigned getMaxNumElements(ElementCount VF) const {
+    if (!VF.isScalable())
+      return VF.getFixedValue();
+    Optional<unsigned> MaxNumVScale = getMaxVScale();
+    assert(MaxNumVScale && "Expected valid max vscale value");
+    return *MaxNumVScale * VF.getKnownMinValue();
+  }
+
   unsigned getMaxInterleaveFactor(unsigned VF);
 
   InstructionCost getMaskedMemoryOpCost(unsigned Opcode, Type *Src,
@@ -305,7 +317,7 @@ public:
                                    ElementCount VF) const;
 
   InstructionCost getArithmeticReductionCost(
-      unsigned Opcode, VectorType *Ty,
+      unsigned Opcode, VectorType *Ty, Optional<FastMathFlags> FMF,
       TTI::TargetCostKind CostKind = TTI::TCK_RecipThroughput);
 
   InstructionCost getShuffleCost(TTI::ShuffleKind Kind, VectorType *Tp,

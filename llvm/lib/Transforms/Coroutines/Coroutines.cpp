@@ -361,7 +361,7 @@ void coro::Shape::buildFrom(Function &F) {
 
     // Replace all coro.ends with unreachable instruction.
     for (AnyCoroEndInst *CE : CoroEnds)
-      changeToUnreachable(CE, /*UseLLVMTrap=*/false);
+      changeToUnreachable(CE);
 
     return;
   }

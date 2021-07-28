@@ -915,21 +915,24 @@ Syntax::
 Comdats
 -------
 
-Comdat IR provides access to COFF and ELF object file COMDAT functionality.
+Comdat IR provides access to object file COMDAT/section group functionality
+which represents interrelated sections.
 
-Comdats have a name which represents the COMDAT key. All global objects that
-specify this key will only end up in the final object file if the linker chooses
-that key over some other key. Aliases are placed in the same COMDAT that their
-aliasee computes to, if any.
+Comdats have a name which represents the COMDAT key and a selection kind to
+provide input on how the linker deduplicates comdats with the same key in two
+different object files. A comdat must be included or omitted as a unit.
+Discarding the whole comdat is allowed but discarding a subset is not.
 
-Comdats have a selection kind to provide input on how the linker should
-choose between keys in two different object files.
+A global object may be a member of at most one comdat. Aliases are placed in the
+same COMDAT that their aliasee computes to, if any.
 
 Syntax::
 
     $<Name> = comdat SelectionKind
 
-The selection kind must be one of the following:
+For selection kinds other than ``nodeduplicate``, only one of the duplicate
+comdats may be retained by the linker and the members of the remaining comdats
+must be discarded. The following selection kinds are supported:
 
 ``any``
     The linker may choose any COMDAT key, the choice is arbitrary.
@@ -944,10 +947,13 @@ The selection kind must be one of the following:
     The linker may choose any COMDAT key but the sections must contain the
     same amount of data.
 
-Note that XCOFF and the Mach-O platform don't support COMDATs, and ELF and
-WebAssembly only support ``any`` as a selection kind.
+- XCOFF and Mach-O don't support COMDATs.
+- COFF supports all selection kinds. Non-``nodeduplicate`` selection kinds need
+  a non-local linkage COMDAT symbol.
+- ELF supports ``any`` and ``nodeduplicate``.
+- WebAssembly only supports ``any``.
 
-Here is an example of a COMDAT group where a function will only be selected if
+Here is an example of a COFF COMDAT where a function will only be selected if
 the COMDAT key's section is the largest:
 
 .. code-block:: text
@@ -959,6 +965,12 @@ the COMDAT key's section is the largest:
      ret void
    }
 
+In a COFF object file, this will create a COMDAT section with selection kind
+``IMAGE_COMDAT_SELECT_LARGEST`` containing the contents of the ``@foo`` symbol
+and another COMDAT section with selection kind
+``IMAGE_COMDAT_SELECT_ASSOCIATIVE`` which is associated with the first COMDAT
+section and contains the contents of the ``@bar`` symbol.
+
 As a syntactic sugar the ``$name`` can be omitted if the name is the same as
 the global name:
 
@@ -966,13 +978,7 @@ the global name:
 
   $foo = comdat any
   @foo = global i32 2, comdat
-
-
-In a COFF object file, this will create a COMDAT section with selection kind
-``IMAGE_COMDAT_SELECT_LARGEST`` containing the contents of the ``@foo`` symbol
-and another COMDAT section with selection kind
-``IMAGE_COMDAT_SELECT_ASSOCIATIVE`` which is associated with the first COMDAT
-section and contains the contents of the ``@bar`` symbol.
+  @bar = global i32 3, comdat($foo)
 
 There are some restrictions on the properties of the global object.
 It, or an alias to it, must have the same name as the COMDAT group when
@@ -2860,6 +2866,12 @@ A volatile operation may not call any code in the current module.
 The compiler may assume execution will continue after a volatile operation,
 so operations which modify memory or may have undefined behavior can be
 hoisted past a volatile operation.
+
+As an exception to the preceding rule, the compiler may not assume execution
+will continue after a volatile store operation. This restriction is necessary
+to support the somewhat common pattern in C of intentionally storing to an
+invalid pointer to crash the program. In the future, it might make sense to
+allow frontends to control this behavior.
 
 IR-level volatile loads and stores cannot safely be optimized into llvm.memcpy
 or llvm.memmove intrinsics even when those intrinsics are flagged volatile.
@@ -7737,6 +7749,7 @@ functions with the same priority is not defined.
 If the third field is non-null, and points to a global variable
 or function, the initializer function will only run if the associated
 data from the current module is not discarded.
+On ELF the referenced global variable or function must be in a comdat.
 
 .. _llvmglobaldtors:
 
@@ -7757,6 +7770,7 @@ order of functions with the same priority is not defined.
 If the third field is non-null, and points to a global variable
 or function, the destructor function will only run if the associated
 data from the current module is not discarded.
+On ELF the referenced global variable or function must be in a comdat.
 
 Instruction Reference
 =====================
@@ -14196,7 +14210,7 @@ all types however.
 
 ::
 
-      declare float     @llvm.maxnum.f32(float  %Val0, float  %Val1l)
+      declare float     @llvm.maxnum.f32(float  %Val0, float  %Val1)
       declare double    @llvm.maxnum.f64(double %Val0, double %Val1)
       declare x86_fp80  @llvm.maxnum.f80(x86_fp80  %Val0, x86_fp80  %Val1)
       declare fp128     @llvm.maxnum.f128(fp128 %Val0, fp128 %Val1)

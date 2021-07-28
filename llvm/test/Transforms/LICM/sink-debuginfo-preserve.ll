@@ -68,8 +68,6 @@ bb16:                                             ; preds = %bb13
 
 bb17:                                             ; preds = %bb16, %bb13
   %i18 = load volatile i32, i32* @c, align 4, !dbg !57, !tbaa !40
-  %i19 = add nsw i32 %i18, 1, !dbg !57
-  store volatile i32 %i19, i32* @c, align 4, !dbg !57, !tbaa !40
   %i20 = load volatile i32, i32* @c, align 4, !dbg !46, !tbaa !40
   %i21 = icmp slt i32 %i20, 6, !dbg !47
   br i1 %i21, label %bb13, label %bb22, !dbg !48, !llvm.loop !58

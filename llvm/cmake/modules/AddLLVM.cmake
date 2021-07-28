@@ -231,7 +231,7 @@ function(add_link_opts target_name)
       elseif(LINKER_IS_LLD_LINK)
         set_property(TARGET ${target_name} APPEND_STRING PROPERTY
                       LINK_FLAGS " /opt:lldlto=0")
-      elseif(APPLE)
+      elseif(APPLE AND NOT uppercase_LLVM_ENABLE_LTO STREQUAL "THIN")
         set_property(TARGET ${target_name} APPEND_STRING PROPERTY
                       LINK_FLAGS " -Wl,-mllvm,-O0")
       endif()
@@ -606,7 +606,7 @@ function(llvm_add_library name)
     endif()
   endif()
 
-  if(ARG_SHARED AND UNIX)
+  if(ARG_SHARED)
     if(NOT APPLE AND ARG_SONAME)
       get_target_property(output_name ${name} OUTPUT_NAME)
       if(${output_name} STREQUAL "output_name-NOTFOUND")
@@ -615,10 +615,12 @@ function(llvm_add_library name)
       set(library_name ${output_name}-${LLVM_VERSION_MAJOR}${LLVM_VERSION_SUFFIX})
       set(api_name ${output_name}-${LLVM_VERSION_MAJOR}.${LLVM_VERSION_MINOR}.${LLVM_VERSION_PATCH}${LLVM_VERSION_SUFFIX})
       set_target_properties(${name} PROPERTIES OUTPUT_NAME ${library_name})
-      llvm_install_library_symlink(${api_name} ${library_name} SHARED
-        COMPONENT ${name})
-      llvm_install_library_symlink(${output_name} ${library_name} SHARED
-        COMPONENT ${name})
+      if(UNIX)
+        llvm_install_library_symlink(${api_name} ${library_name} SHARED
+          COMPONENT ${name})
+        llvm_install_library_symlink(${output_name} ${library_name} SHARED
+          COMPONENT ${name})
+      endif()
     endif()
   endif()
 
@@ -1468,7 +1470,7 @@ function(add_unittest test_suite test_name)
     elseif(LINKER_IS_LLD_LINK)
       set_property(TARGET ${test_name} APPEND_STRING PROPERTY
                     LINK_FLAGS " /opt:lldlto=0")
-    elseif(APPLE)
+    elseif(APPLE AND NOT uppercase_LLVM_ENABLE_LTO STREQUAL "THIN")
       set_property(TARGET ${target_name} APPEND_STRING PROPERTY
                     LINK_FLAGS " -Wl,-mllvm,-O0")
     endif()

@@ -28,6 +28,11 @@ DLWRAP(cuDeviceGetAttribute, 3);
 DLWRAP(cuDeviceGetCount, 1);
 DLWRAP(cuFuncGetAttribute, 3);
 
+// Device info
+DLWRAP(cuDeviceGetName, 3);
+DLWRAP(cuDeviceTotalMem, 2);
+DLWRAP(cuDriverGetVersion, 1);
+
 DLWRAP(cuGetErrorString, 2);
 DLWRAP(cuLaunchKernel, 11);
 
@@ -60,6 +65,9 @@ DLWRAP(cuModuleLoadDataEx, 5);
 DLWRAP(cuDeviceCanAccessPeer, 3);
 DLWRAP(cuCtxEnablePeerAccess, 2);
 DLWRAP(cuMemcpyPeerAsync, 6);
+
+DLWRAP(cuCtxGetLimit, 2);
+DLWRAP(cuCtxSetLimit, 2);
 
 DLWRAP_FINALIZE();
 

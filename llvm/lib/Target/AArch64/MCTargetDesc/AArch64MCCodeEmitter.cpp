@@ -186,6 +186,9 @@ public:
   unsigned fixOneOperandFPComparison(const MCInst &MI, unsigned EncodedValue,
                                      const MCSubtargetInfo &STI) const;
 
+  uint32_t EncodeMatrixTileListRegisterClass(const MCInst &MI, unsigned OpIdx,
+                                             SmallVectorImpl<MCFixup> &Fixups,
+                                             const MCSubtargetInfo &STI) const;
   uint32_t encodeMatrixIndexGPR32(const MCInst &MI, unsigned OpIdx,
                                   SmallVectorImpl<MCFixup> &Fixups,
                                   const MCSubtargetInfo &STI) const;
@@ -518,6 +521,14 @@ AArch64MCCodeEmitter::getVecShiftL8OpValue(const MCInst &MI, unsigned OpIdx,
   const MCOperand &MO = MI.getOperand(OpIdx);
   assert(MO.isImm() && "Expected an immediate value for the scale amount!");
   return MO.getImm() - 8;
+}
+
+uint32_t AArch64MCCodeEmitter::EncodeMatrixTileListRegisterClass(
+    const MCInst &MI, unsigned OpIdx, SmallVectorImpl<MCFixup> &Fixups,
+    const MCSubtargetInfo &STI) const {
+  unsigned RegMask = MI.getOperand(OpIdx).getImm();
+  assert(RegMask <= 0xFF && "Invalid register mask!");
+  return RegMask;
 }
 
 uint32_t

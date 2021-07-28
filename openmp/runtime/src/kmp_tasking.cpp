@@ -940,16 +940,17 @@ static void __kmp_task_finish(kmp_int32 gtid, kmp_task_t *task,
     if (!(taskdata->td_flags.team_serial || taskdata->td_flags.tasking_ser) ||
         taskdata->td_flags.detachable == TASK_DETACHABLE ||
         taskdata->td_flags.hidden_helper) {
+      __kmp_release_deps(gtid, taskdata);
       // Predecrement simulated by "- 1" calculation
       children =
           KMP_ATOMIC_DEC(&taskdata->td_parent->td_incomplete_child_tasks) - 1;
       KMP_DEBUG_ASSERT(children >= 0);
       if (taskdata->td_taskgroup)
         KMP_ATOMIC_DEC(&taskdata->td_taskgroup->count);
-      __kmp_release_deps(gtid, taskdata);
-    } else if (task_team && task_team->tt.tt_found_proxy_tasks) {
-      // if we found proxy tasks there could exist a dependency chain
-      // with the proxy task as origin
+    } else if (task_team && (task_team->tt.tt_found_proxy_tasks ||
+                             task_team->tt.tt_hidden_helper_task_encountered)) {
+      // if we found proxy or hidden helper tasks there could exist a dependency
+      // chain with the proxy task as origin
       __kmp_release_deps(gtid, taskdata);
     }
     // td_flags.executing must be marked as 0 after __kmp_release_deps has been
@@ -3833,6 +3834,7 @@ release_and_exit:
   return result;
 }
 
+#define PROXY_TASK_FLAG 0x40000000
 /* The finish of the proxy tasks is divided in two pieces:
     - the top half is the one that can be done from a thread outside the team
     - the bottom half must be run from a thread within the team
@@ -3862,7 +3864,7 @@ static void __kmp_first_top_half_finish_proxy(kmp_taskdata_t *taskdata) {
 
   // Create an imaginary children for this task so the bottom half cannot
   // release the task before we have completed the second top half
-  KMP_ATOMIC_INC(&taskdata->td_incomplete_child_tasks);
+  KMP_ATOMIC_OR(&taskdata->td_incomplete_child_tasks, PROXY_TASK_FLAG);
 }
 
 static void __kmp_second_top_half_finish_proxy(kmp_taskdata_t *taskdata) {
@@ -3874,7 +3876,7 @@ static void __kmp_second_top_half_finish_proxy(kmp_taskdata_t *taskdata) {
   KMP_DEBUG_ASSERT(children >= 0);
 
   // Remove the imaginary children
-  KMP_ATOMIC_DEC(&taskdata->td_incomplete_child_tasks);
+  KMP_ATOMIC_AND(&taskdata->td_incomplete_child_tasks, ~PROXY_TASK_FLAG);
 }
 
 static void __kmp_bottom_half_finish_proxy(kmp_int32 gtid, kmp_task_t *ptask) {
@@ -3887,7 +3889,8 @@ static void __kmp_bottom_half_finish_proxy(kmp_int32 gtid, kmp_task_t *ptask) {
 
   // We need to wait to make sure the top half is finished
   // Spinning here should be ok as this should happen quickly
-  while (KMP_ATOMIC_LD_ACQ(&taskdata->td_incomplete_child_tasks) > 0)
+  while ((KMP_ATOMIC_LD_ACQ(&taskdata->td_incomplete_child_tasks) &
+          PROXY_TASK_FLAG) > 0)
     ;
 
   __kmp_release_deps(gtid, taskdata);

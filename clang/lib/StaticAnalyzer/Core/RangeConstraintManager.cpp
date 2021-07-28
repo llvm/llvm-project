@@ -600,9 +600,10 @@ public:
   areEqual(ProgramStateRef State, SymbolRef First, SymbolRef Second);
 
   /// Iterate over all symbols and try to simplify them.
-  LLVM_NODISCARD ProgramStateRef simplify(SValBuilder &SVB,
-                                          RangeSet::Factory &F,
-                                          ProgramStateRef State);
+  LLVM_NODISCARD static inline ProgramStateRef simplify(SValBuilder &SVB,
+                                                        RangeSet::Factory &F,
+                                                        ProgramStateRef State,
+                                                        EquivalenceClass Class);
 
   void dumpToStream(ProgramStateRef State, raw_ostream &os) const;
   LLVM_DUMP_METHOD void dump(ProgramStateRef State) const {
@@ -1696,7 +1697,7 @@ bool ConstraintAssignor::assignSymExprToConst(const SymExpr *Sym,
   ClassMembersTy Members = State->get<ClassMembers>();
   for (std::pair<EquivalenceClass, SymbolSet> ClassToSymbolSet : Members) {
     EquivalenceClass Class = ClassToSymbolSet.first;
-    State = Class.simplify(Builder, RangeFactory, State);
+    State = EquivalenceClass::simplify(Builder, RangeFactory, State, Class);
     if (!State)
       return false;
     SimplifiedClasses.insert(Class);
@@ -1710,7 +1711,7 @@ bool ConstraintAssignor::assignSymExprToConst(const SymExpr *Sym,
     EquivalenceClass Class = ClassConstraint.first;
     if (SimplifiedClasses.count(Class)) // Already simplified.
       continue;
-    State = Class.simplify(Builder, RangeFactory, State);
+    State = EquivalenceClass::simplify(Builder, RangeFactory, State, Class);
     if (!State)
       return false;
   }
@@ -2090,18 +2091,17 @@ inline Optional<bool> EquivalenceClass::areEqual(ProgramStateRef State,
 // class to this class. This way, we simplify not just the symbols but the
 // classes as well: we strive to keep the number of the classes to be the
 // absolute minimum.
-LLVM_NODISCARD ProgramStateRef EquivalenceClass::simplify(
-    SValBuilder &SVB, RangeSet::Factory &F, ProgramStateRef State) {
-  SymbolSet ClassMembers = getClassMembers(State);
+LLVM_NODISCARD ProgramStateRef
+EquivalenceClass::simplify(SValBuilder &SVB, RangeSet::Factory &F,
+                           ProgramStateRef State, EquivalenceClass Class) {
+  SymbolSet ClassMembers = Class.getClassMembers(State);
   for (const SymbolRef &MemberSym : ClassMembers) {
     SymbolRef SimplifiedMemberSym = ento::simplify(State, MemberSym);
     if (SimplifiedMemberSym && MemberSym != SimplifiedMemberSym) {
-      EquivalenceClass ClassOfSimplifiedSym =
-          EquivalenceClass::find(State, SimplifiedMemberSym);
       // The simplified symbol should be the member of the original Class,
       // however, it might be in another existing class at the moment. We
       // have to merge these classes.
-      State = merge(F, State, ClassOfSimplifiedSym);
+      State = merge(F, State, MemberSym, SimplifiedMemberSym);
       if (!State)
         return nullptr;
     }
@@ -2630,6 +2630,13 @@ void RangeConstraintManager::printJson(raw_ostream &Out, ProgramStateRef State,
   printDisequalities(Out, State, NL, Space, IsDot);
 }
 
+static std::string toString(const SymbolRef &Sym) {
+  std::string S;
+  llvm::raw_string_ostream O(S);
+  Sym->dumpToStream(O);
+  return O.str();
+}
+
 void RangeConstraintManager::printConstraints(raw_ostream &Out,
                                               ProgramStateRef State,
                                               const char *NL,
@@ -2643,37 +2650,37 @@ void RangeConstraintManager::printConstraints(raw_ostream &Out,
     return;
   }
 
+  std::map<std::string, RangeSet> OrderedConstraints;
+  for (std::pair<EquivalenceClass, RangeSet> P : Constraints) {
+    SymbolSet ClassMembers = P.first.getClassMembers(State);
+    for (const SymbolRef &ClassMember : ClassMembers) {
+      bool insertion_took_place;
+      std::tie(std::ignore, insertion_took_place) =
+          OrderedConstraints.insert({toString(ClassMember), P.second});
+      assert(insertion_took_place &&
+             "two symbols should not have the same dump");
+    }
+  }
+
   ++Space;
   Out << '[' << NL;
   bool First = true;
-  for (std::pair<EquivalenceClass, RangeSet> P : Constraints) {
-    SymbolSet ClassMembers = P.first.getClassMembers(State);
-
-    // We can print the same constraint for every class member.
-    for (SymbolRef ClassMember : ClassMembers) {
-      if (First) {
-        First = false;
-      } else {
-        Out << ',';
-        Out << NL;
-      }
-      Indent(Out, Space, IsDot)
-          << "{ \"symbol\": \"" << ClassMember << "\", \"range\": \"";
-      P.second.dump(Out);
-      Out << "\" }";
+  for (std::pair<std::string, RangeSet> P : OrderedConstraints) {
+    if (First) {
+      First = false;
+    } else {
+      Out << ',';
+      Out << NL;
     }
+    Indent(Out, Space, IsDot)
+        << "{ \"symbol\": \"" << P.first << "\", \"range\": \"";
+    P.second.dump(Out);
+    Out << "\" }";
   }
   Out << NL;
 
   --Space;
   Indent(Out, Space, IsDot) << "]," << NL;
-}
-
-static std::string toString(const SymbolRef &Sym) {
-  std::string S;
-  llvm::raw_string_ostream O(S);
-  Sym->dumpToStream(O);
-  return O.str();
 }
 
 static std::string toString(ProgramStateRef State, EquivalenceClass Class) {

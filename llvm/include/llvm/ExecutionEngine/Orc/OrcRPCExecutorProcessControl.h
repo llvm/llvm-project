@@ -13,6 +13,7 @@
 #ifndef LLVM_EXECUTIONENGINE_ORC_ORCRPCEXECUTORPROCESSCONTROL_H
 #define LLVM_EXECUTIONENGINE_ORC_ORCRPCEXECUTORPROCESSCONTROL_H
 
+#include "llvm/ExecutionEngine/Orc/Core.h"
 #include "llvm/ExecutionEngine/Orc/ExecutorProcessControl.h"
 #include "llvm/ExecutionEngine/Orc/Shared/RPCUtils.h"
 #include "llvm/ExecutionEngine/Orc/Shared/RawByteChannel.h"
@@ -358,9 +359,9 @@ public:
     return Result;
   }
 
-  void runWrapperAsync(SendResultFunction OnComplete,
-                       JITTargetAddress WrapperFnAddr,
-                       ArrayRef<char> ArgBuffer) override {
+  void callWrapperAsync(SendResultFunction OnComplete,
+                        JITTargetAddress WrapperFnAddr,
+                        ArrayRef<char> ArgBuffer) override {
     DEBUG_WITH_TYPE("orc", {
       dbgs() << "Running as wrapper function "
              << formatv("{0:x16}", WrapperFnAddr) << " with "
@@ -415,7 +416,7 @@ private:
       std::function<Error(Expected<shared::WrapperFunctionResult>)> SendResult,
       JITTargetAddress FunctionTag, std::vector<uint8_t> ArgBuffer) {
 
-    runJITSideWrapperFunction(
+    getExecutionSession().runJITDispatchHandler(
         [this, SendResult = std::move(SendResult)](
             Expected<shared::WrapperFunctionResult> R) {
           if (auto Err = SendResult(std::move(R)))

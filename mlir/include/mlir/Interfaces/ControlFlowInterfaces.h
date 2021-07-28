@@ -52,9 +52,10 @@ LogicalResult verifyTypesAlongControlFlowEdges(Operation *op);
 /// This class represents a successor of a region. A region successor can either
 /// be another region, or the parent operation. If the successor is a region,
 /// this class represents the destination region, as well as a set of arguments
-/// from that region that will be populated by values from the current region.
+/// from that region that will be populated when control flows into the region.
 /// If the successor is the parent operation, this class represents an optional
-/// set of results that will be populated by values from the current region.
+/// set of results that will be populated when control returns to the parent
+/// operation.
 ///
 /// This interface assumes that the values from the current region that are used
 /// to populate the successor inputs are the operands of the return-like
@@ -85,6 +86,32 @@ private:
   Region *region;
   ValueRange inputs;
 };
+
+//===----------------------------------------------------------------------===//
+// RegionBranchTerminatorOpInterface
+//===----------------------------------------------------------------------===//
+
+/// Returns true if the given operation is either annotated with the
+/// `ReturnLike` trait or implements the `RegionBranchTerminatorOpInterface`.
+bool isRegionReturnLike(Operation *operation);
+
+/// Returns the mutable operands that are passed to the region with the given
+/// `regionIndex`. If the operation does not implement the
+/// `RegionBranchTerminatorOpInterface` and is not marked as `ReturnLike`, the
+/// result will be `llvm::None`. In all other cases, the resulting
+/// `OperandRange` represents all operands that are passed to the specified
+/// successor region. If `regionIndex` is `llvm::None`, all operands that are
+/// passed to the parent operation will be returned.
+Optional<MutableOperandRange>
+getMutableRegionBranchSuccessorOperands(Operation *operation,
+                                        Optional<unsigned> regionIndex);
+
+/// Returns the read only operands that are passed to the region with the given
+/// `regionIndex`. See `getMutableRegionBranchSuccessorOperands` for more
+/// information.
+Optional<OperandRange>
+getRegionBranchSuccessorOperands(Operation *operation,
+                                 Optional<unsigned> regionIndex);
 
 //===----------------------------------------------------------------------===//
 // ControlFlow Traits

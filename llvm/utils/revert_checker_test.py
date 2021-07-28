@@ -106,11 +106,11 @@ class Test(unittest.TestCase):
         root='9f981e9adf9c8d29bb80306daf08d2770263ade6')
     self.assertEqual(reverts, [
         revert_checker.Revert(
-            sha='9f981e9adf9c8d29bb80306daf08d2770263ade6',
-            reverted_sha='4060016fce3e6a0b926ee9fc59e440a612d3a2ec'),
-        revert_checker.Revert(
             sha='4e0fe038f438ae1679eae9e156e1f248595b2373',
             reverted_sha='65b21282c710afe9c275778820c6e3c1cf46734b'),
+        revert_checker.Revert(
+            sha='9f981e9adf9c8d29bb80306daf08d2770263ade6',
+            reverted_sha='4060016fce3e6a0b926ee9fc59e440a612d3a2ec'),
     ])
 
 

@@ -2703,4 +2703,110 @@ TEST_F(OpenMPIRBuilderTest, CreateOffloadMapnames) {
   EXPECT_EQ(Initializer->getType()->getArrayNumElements(), Names.size());
 }
 
+TEST_F(OpenMPIRBuilderTest, CreateMapperAllocas) {
+  OpenMPIRBuilder OMPBuilder(*M);
+  OMPBuilder.initialize();
+  F->setName("func");
+  IRBuilder<> Builder(BB);
+
+  OpenMPIRBuilder::LocationDescription Loc({Builder.saveIP(), DL});
+
+  unsigned TotalNbOperand = 2;
+
+  OpenMPIRBuilder::MapperAllocas MapperAllocas;
+  IRBuilder<>::InsertPoint AllocaIP(&F->getEntryBlock(),
+                                    F->getEntryBlock().getFirstInsertionPt());
+  OMPBuilder.createMapperAllocas(Loc, AllocaIP, TotalNbOperand, MapperAllocas);
+  EXPECT_NE(MapperAllocas.ArgsBase, nullptr);
+  EXPECT_NE(MapperAllocas.Args, nullptr);
+  EXPECT_NE(MapperAllocas.ArgSizes, nullptr);
+  EXPECT_TRUE(MapperAllocas.ArgsBase->getAllocatedType()->isArrayTy());
+  ArrayType *ArrType =
+      dyn_cast<ArrayType>(MapperAllocas.ArgsBase->getAllocatedType());
+  EXPECT_EQ(ArrType->getNumElements(), TotalNbOperand);
+  EXPECT_TRUE(MapperAllocas.ArgsBase->getAllocatedType()
+                  ->getArrayElementType()
+                  ->isPointerTy());
+  EXPECT_TRUE(MapperAllocas.ArgsBase->getAllocatedType()
+                  ->getArrayElementType()
+                  ->getPointerElementType()
+                  ->isIntegerTy(8));
+
+  EXPECT_TRUE(MapperAllocas.Args->getAllocatedType()->isArrayTy());
+  ArrType = dyn_cast<ArrayType>(MapperAllocas.Args->getAllocatedType());
+  EXPECT_EQ(ArrType->getNumElements(), TotalNbOperand);
+  EXPECT_TRUE(MapperAllocas.Args->getAllocatedType()
+                  ->getArrayElementType()
+                  ->isPointerTy());
+  EXPECT_TRUE(MapperAllocas.Args->getAllocatedType()
+                  ->getArrayElementType()
+                  ->getPointerElementType()
+                  ->isIntegerTy(8));
+
+  EXPECT_TRUE(MapperAllocas.ArgSizes->getAllocatedType()->isArrayTy());
+  ArrType = dyn_cast<ArrayType>(MapperAllocas.ArgSizes->getAllocatedType());
+  EXPECT_EQ(ArrType->getNumElements(), TotalNbOperand);
+  EXPECT_TRUE(MapperAllocas.ArgSizes->getAllocatedType()
+                  ->getArrayElementType()
+                  ->isIntegerTy(64));
+}
+
+TEST_F(OpenMPIRBuilderTest, EmitMapperCall) {
+  OpenMPIRBuilder OMPBuilder(*M);
+  OMPBuilder.initialize();
+  F->setName("func");
+  IRBuilder<> Builder(BB);
+  LLVMContext &Ctx = M->getContext();
+
+  OpenMPIRBuilder::LocationDescription Loc({Builder.saveIP(), DL});
+
+  unsigned TotalNbOperand = 2;
+
+  OpenMPIRBuilder::MapperAllocas MapperAllocas;
+  IRBuilder<>::InsertPoint AllocaIP(&F->getEntryBlock(),
+                                    F->getEntryBlock().getFirstInsertionPt());
+  OMPBuilder.createMapperAllocas(Loc, AllocaIP, TotalNbOperand, MapperAllocas);
+
+  auto *BeginMapperFunc = OMPBuilder.getOrCreateRuntimeFunctionPtr(
+      omp::OMPRTL___tgt_target_data_begin_mapper);
+
+  SmallVector<uint64_t> Flags = {0, 2};
+
+  Constant *SrcLocCst = OMPBuilder.getOrCreateSrcLocStr("", "file1", 2, 5);
+  Value *SrcLocInfo = OMPBuilder.getOrCreateIdent(SrcLocCst);
+
+  Constant *Cst1 = OMPBuilder.getOrCreateSrcLocStr("array1", "file1", 2, 5);
+  Constant *Cst2 = OMPBuilder.getOrCreateSrcLocStr("array2", "file1", 3, 5);
+  SmallVector<llvm::Constant *> Names = {Cst1, Cst2};
+
+  GlobalVariable *Maptypes =
+      OMPBuilder.createOffloadMaptypes(Flags, ".offload_maptypes");
+  Value *MaptypesArg = Builder.CreateConstInBoundsGEP2_32(
+      ArrayType::get(Type::getInt64Ty(Ctx), TotalNbOperand), Maptypes,
+      /*Idx0=*/0, /*Idx1=*/0);
+
+  GlobalVariable *Mapnames =
+      OMPBuilder.createOffloadMapnames(Names, ".offload_mapnames");
+  Value *MapnamesArg = Builder.CreateConstInBoundsGEP2_32(
+      ArrayType::get(Type::getInt8PtrTy(Ctx), TotalNbOperand), Mapnames,
+      /*Idx0=*/0, /*Idx1=*/0);
+
+  OMPBuilder.emitMapperCall(Builder.saveIP(), BeginMapperFunc, SrcLocInfo,
+                            MaptypesArg, MapnamesArg, MapperAllocas, -1,
+                            TotalNbOperand);
+
+  CallInst *MapperCall = dyn_cast<CallInst>(&BB->back());
+  EXPECT_NE(MapperCall, nullptr);
+  EXPECT_EQ(MapperCall->getNumArgOperands(), 9U);
+  EXPECT_EQ(MapperCall->getCalledFunction()->getName(),
+            "__tgt_target_data_begin_mapper");
+  EXPECT_EQ(MapperCall->getOperand(0), SrcLocInfo);
+  EXPECT_TRUE(MapperCall->getOperand(1)->getType()->isIntegerTy(64));
+  EXPECT_TRUE(MapperCall->getOperand(2)->getType()->isIntegerTy(32));
+
+  EXPECT_EQ(MapperCall->getOperand(6), MaptypesArg);
+  EXPECT_EQ(MapperCall->getOperand(7), MapnamesArg);
+  EXPECT_TRUE(MapperCall->getOperand(8)->getType()->isPointerTy());
+}
+
 } // namespace

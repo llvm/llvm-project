@@ -113,6 +113,15 @@ uptr FindDynamicShadowStart(uptr shadow_size_bytes) {
 }
 
 }  // namespace __hwasan
+
+#elif SANITIZER_FUCHSIA
+
+namespace __hwasan {
+
+void InitShadowGOT() {}
+
+}  // namespace __hwasan
+
 #else
 namespace __hwasan {
 

@@ -279,10 +279,10 @@ SITargetLowering::SITargetLowering(const TargetMachine &TM,
       case ISD::BITCAST:
       case ISD::EXTRACT_VECTOR_ELT:
       case ISD::INSERT_VECTOR_ELT:
-      case ISD::INSERT_SUBVECTOR:
       case ISD::EXTRACT_SUBVECTOR:
       case ISD::SCALAR_TO_VECTOR:
         break;
+      case ISD::INSERT_SUBVECTOR:
       case ISD::CONCAT_VECTORS:
         setOperationAction(Op, VT, Custom);
         break;
@@ -6803,20 +6803,25 @@ SDValue SITargetLowering::LowerINTRINSIC_WO_CHAIN(SDValue Op,
   }
 }
 
-/// Update \p MMO based on the offset inputs to an intrinsic.  If any of the
-/// offsets are non-constant or if \p VIndex is non-zero then this function does
-/// nothing.  Otherwise, it sets the MMO offset to the sum of \p VOffset, \p
-/// SOffset, and \p Offset.
+/// Update \p MMO based on the offset inputs to an intrinsic.
 static void updateBufferMMO(MachineMemOperand *MMO, SDValue VOffset,
                             SDValue SOffset, SDValue Offset,
                             SDValue VIndex = SDValue()) {
   if (!isa<ConstantSDNode>(VOffset) || !isa<ConstantSDNode>(SOffset) ||
-      !isa<ConstantSDNode>(Offset))
+      !isa<ConstantSDNode>(Offset)) {
+    // The combined offset is not known to be constant, so we cannot represent
+    // it in the MMO. Give up.
+    MMO->setValue((Value *)nullptr);
     return;
+  }
 
   if (VIndex && (!isa<ConstantSDNode>(VIndex) ||
-                 !cast<ConstantSDNode>(VIndex)->isNullValue()))
+                 !cast<ConstantSDNode>(VIndex)->isNullValue())) {
+    // The strided index component of the address is not known to be zero, so we
+    // cannot represent it in the MMO. Give up.
+    MMO->setValue((Value *)nullptr);
     return;
+  }
 
   MMO->setOffset(cast<ConstantSDNode>(VOffset)->getSExtValue() +
                  cast<ConstantSDNode>(SOffset)->getSExtValue() +

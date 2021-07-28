@@ -223,7 +223,6 @@ pdl.pattern : benefit(1) {
   // expected-error@below {{expected no external arguments when the rewrite is specified inline}}
   "pdl.rewrite"(%op, %op) ({
     ^bb1:
-      pdl.rewrite_end
   }) : (!pdl.operation, !pdl.operation) -> ()
 }
 
@@ -235,7 +234,6 @@ pdl.pattern : benefit(1) {
   // expected-error@below {{expected no external constant parameters when the rewrite is specified inline}}
   "pdl.rewrite"(%op) ({
     ^bb1:
-      pdl.rewrite_end
   }) {externalConstParams = []} : (!pdl.operation) -> ()
 }
 
@@ -247,7 +245,6 @@ pdl.pattern : benefit(1) {
   // expected-error@below {{expected rewrite region to be empty when rewrite is external}}
   "pdl.rewrite"(%op) ({
     ^bb1:
-      pdl.rewrite_end
   }) {name = "foo"} : (!pdl.operation) -> ()
 }
 

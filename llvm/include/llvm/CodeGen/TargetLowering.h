@@ -1271,6 +1271,14 @@ public:
        getTruncStoreAction(ValVT, MemVT) == Custom);
   }
 
+  virtual bool canCombineTruncStore(EVT ValVT, EVT MemVT,
+                                    bool LegalOnly) const {
+    if (LegalOnly)
+      return isTruncStoreLegal(ValVT, MemVT);
+
+    return isTruncStoreLegalOrCustom(ValVT, MemVT);
+  }
+
   /// Return how the indexed load should be treated: either it is legal, needs
   /// to be promoted to a larger size, needs to be expanded to some other code
   /// sequence, or the target has a custom expander for it.
@@ -3482,6 +3490,13 @@ public:
   virtual SDValue SimplifyMultipleUseDemandedBitsForTargetNode(
       SDValue Op, const APInt &DemandedBits, const APInt &DemandedElts,
       SelectionDAG &DAG, unsigned Depth) const;
+
+  /// Return true if this function can prove that \p Op is never poison
+  /// and, if \p PoisonOnly is false, does not have undef bits. The DemandedElts
+  /// argument limits the check to the requested vector elements.
+  virtual bool isGuaranteedNotToBeUndefOrPoisonForTargetNode(
+      SDValue Op, const APInt &DemandedElts, const SelectionDAG &DAG,
+      bool PoisonOnly, unsigned Depth) const;
 
   /// Tries to build a legal vector shuffle using the provided parameters
   /// or equivalent variations. The Mask argument maybe be modified as the

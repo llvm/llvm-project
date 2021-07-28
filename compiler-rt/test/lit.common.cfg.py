@@ -695,16 +695,16 @@ config.target_cflags = " " + " ".join(target_cflags + extra_cflags) + " "
 
 if config.host_os == 'Darwin':
   config.substitutions.append((
-    "%get_pid_from_output", 
+    "%get_pid_from_output",
     "{} {}/get_pid_from_output.py".format(
-      sh_quote(config.python_executable), 
+      sh_quote(config.python_executable),
       sh_quote(get_ios_commands_dir())
     ))
   )
   config.substitutions.append(
-    ("%print_crashreport_for_pid", 
+    ("%print_crashreport_for_pid",
     "{} {}/print_crashreport_for_pid.py".format(
-      sh_quote(config.python_executable), 
+      sh_quote(config.python_executable),
       sh_quote(get_ios_commands_dir())
     ))
   )

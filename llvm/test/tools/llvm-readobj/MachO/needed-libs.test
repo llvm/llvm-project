@@ -23,4 +23,4 @@ LoadCommands:
       timestamp:       2
       current_version: 81985536
       compatibility_version: 65536
-    PayloadString:   /usr/lib/libSystem.B.dylib
+    Content:         /usr/lib/libSystem.B.dylib

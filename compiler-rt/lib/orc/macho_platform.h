@@ -33,6 +33,7 @@ namespace macho {
 
 struct MachOPerObjectSectionsToRegister {
   ExecutorAddressRange EHFrameSection;
+  ExecutorAddressRange ThreadDataSection;
 };
 
 struct MachOJITDylibInitializers {
@@ -46,6 +47,7 @@ struct MachOJITDylibInitializers {
 
   std::string Name;
   ExecutorAddress MachOHeaderAddress;
+  ExecutorAddress ObjCImageInfoAddress;
 
   std::unordered_map<std::string, SectionList> InitSections;
 };
@@ -66,7 +68,8 @@ enum dlopen_mode : int {
 
 } // end namespace macho
 
-using SPSMachOPerObjectSectionsToRegister = SPSTuple<SPSExecutorAddressRange>;
+using SPSMachOPerObjectSectionsToRegister =
+    SPSTuple<SPSExecutorAddressRange, SPSExecutorAddressRange>;
 
 template <>
 class SPSSerializationTraits<SPSMachOPerObjectSectionsToRegister,
@@ -75,19 +78,19 @@ class SPSSerializationTraits<SPSMachOPerObjectSectionsToRegister,
 public:
   static size_t size(const macho::MachOPerObjectSectionsToRegister &MOPOSR) {
     return SPSMachOPerObjectSectionsToRegister::AsArgList::size(
-        MOPOSR.EHFrameSection);
+        MOPOSR.EHFrameSection, MOPOSR.ThreadDataSection);
   }
 
   static bool serialize(SPSOutputBuffer &OB,
                         const macho::MachOPerObjectSectionsToRegister &MOPOSR) {
     return SPSMachOPerObjectSectionsToRegister::AsArgList::serialize(
-        OB, MOPOSR.EHFrameSection);
+        OB, MOPOSR.EHFrameSection, MOPOSR.ThreadDataSection);
   }
 
   static bool deserialize(SPSInputBuffer &IB,
                           macho::MachOPerObjectSectionsToRegister &MOPOSR) {
     return SPSMachOPerObjectSectionsToRegister::AsArgList::deserialize(
-        IB, MOPOSR.EHFrameSection);
+        IB, MOPOSR.EHFrameSection, MOPOSR.ThreadDataSection);
   }
 };
 
@@ -95,7 +98,7 @@ using SPSNamedExecutorAddressRangeSequenceMap =
     SPSSequence<SPSTuple<SPSString, SPSExecutorAddressRangeSequence>>;
 
 using SPSMachOJITDylibInitializers =
-    SPSTuple<SPSString, SPSExecutorAddress,
+    SPSTuple<SPSString, SPSExecutorAddress, SPSExecutorAddress,
              SPSNamedExecutorAddressRangeSequenceMap>;
 
 using SPSMachOJITDylibInitializerSequence =
@@ -108,19 +111,22 @@ class SPSSerializationTraits<SPSMachOJITDylibInitializers,
 public:
   static size_t size(const macho::MachOJITDylibInitializers &MOJDIs) {
     return SPSMachOJITDylibInitializers::AsArgList::size(
-        MOJDIs.Name, MOJDIs.MachOHeaderAddress, MOJDIs.InitSections);
+        MOJDIs.Name, MOJDIs.MachOHeaderAddress, MOJDIs.ObjCImageInfoAddress,
+        MOJDIs.InitSections);
   }
 
   static bool serialize(SPSOutputBuffer &OB,
                         const macho::MachOJITDylibInitializers &MOJDIs) {
     return SPSMachOJITDylibInitializers::AsArgList::serialize(
-        OB, MOJDIs.Name, MOJDIs.MachOHeaderAddress, MOJDIs.InitSections);
+        OB, MOJDIs.Name, MOJDIs.MachOHeaderAddress, MOJDIs.ObjCImageInfoAddress,
+        MOJDIs.InitSections);
   }
 
   static bool deserialize(SPSInputBuffer &IB,
                           macho::MachOJITDylibInitializers &MOJDIs) {
     return SPSMachOJITDylibInitializers::AsArgList::deserialize(
-        IB, MOJDIs.Name, MOJDIs.MachOHeaderAddress, MOJDIs.InitSections);
+        IB, MOJDIs.Name, MOJDIs.MachOHeaderAddress, MOJDIs.ObjCImageInfoAddress,
+        MOJDIs.InitSections);
   }
 };
 

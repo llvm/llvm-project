@@ -48,6 +48,7 @@
 #include "llvm/MC/MCExpr.h"
 #include "llvm/MC/MCSectionCOFF.h"
 #include "llvm/MC/MCSectionELF.h"
+#include "llvm/MC/MCSectionGOFF.h"
 #include "llvm/MC/MCSectionMachO.h"
 #include "llvm/MC/MCSectionWasm.h"
 #include "llvm/MC/MCSectionXCOFF.h"
@@ -2520,4 +2521,25 @@ MCSection *TargetLoweringObjectFileXCOFF::getSectionForTOCEntry(
       XCOFF::CsectProperties(
           TM.getCodeModel() == CodeModel::Large ? XCOFF::XMC_TE : XCOFF::XMC_TC,
           XCOFF::XTY_SD));
+}
+
+//===----------------------------------------------------------------------===//
+//                                  GOFF
+//===----------------------------------------------------------------------===//
+TargetLoweringObjectFileGOFF::TargetLoweringObjectFileGOFF()
+    : TargetLoweringObjectFile() {}
+
+MCSection *TargetLoweringObjectFileGOFF::getExplicitSectionGlobal(
+    const GlobalObject *GO, SectionKind Kind, const TargetMachine &TM) const {
+  return SelectSectionForGlobal(GO, Kind, TM);
+}
+
+MCSection *TargetLoweringObjectFileGOFF::SelectSectionForGlobal(
+    const GlobalObject *GO, SectionKind Kind, const TargetMachine &TM) const {
+  auto *Symbol = TM.getSymbol(GO);
+  if (Kind.isBSS())
+    return getContext().getGOFFSection(Symbol->getName(),
+                                       SectionKind::getBSS());
+
+  return getContext().getObjectFileInfo()->getTextSection();
 }

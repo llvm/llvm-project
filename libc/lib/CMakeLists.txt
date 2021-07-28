@@ -1,7 +1,15 @@
+set(SCUDO_DEPS "")
+
+if(LLVM_LIBC_INCLUDE_SCUDO)
+  list(APPEND SCUDO_DEPS RTScudoStandalone.${LIBC_TARGET_ARCHITECTURE} RTScudoStandaloneCWrappers.${LIBC_TARGET_ARCHITECTURE})
+endif()
+
 add_entrypoint_library(
   llvmlibc
   DEPENDS
   ${TARGET_LLVMLIBC_ENTRYPOINTS}
+  EXT_DEPS
+  ${SCUDO_DEPS}
 )
 
 if(LLVM_ENABLE_PER_TARGET_RUNTIME_DIR)

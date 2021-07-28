@@ -692,7 +692,7 @@ public:
 
   /// Return true if the source of an `insertSliceOp` bufferizes to an
   /// equivalent ExtractSliceOp.
-  bool isSourceEquivalentToAMatchingExtractSliceOp(
+  bool isSourceEquivalentToAMatchingInplaceExtractSliceOp(
       InsertSliceOp insertSliceOp) const;
 
   /// Apply `fun` to all the members of the equivalence class of `v`.
@@ -1002,17 +1002,24 @@ bool BufferizationAliasInfo::wouldCreateReadAfterWriteInterference(
 }
 
 /// Return true if the source of a `insertSliceOp` bufferizes to an
-/// equivalent ExtractSliceOp.
-bool BufferizationAliasInfo::isSourceEquivalentToAMatchingExtractSliceOp(
+/// equivalent ExtractSliceOp that bufferizes inplace.
+bool BufferizationAliasInfo::isSourceEquivalentToAMatchingInplaceExtractSliceOp(
     InsertSliceOp insertSliceOp) const {
+  LDBG("isSourceEquivalentToAMatchingInplaceExtractSliceOp: " << *insertSliceOp
+                                                              << '\n');
   auto leaderIt = equivalentInfo.findLeader(insertSliceOp.source());
   for (auto mit = leaderIt, meit = equivalentInfo.member_end(); mit != meit;
        ++mit) {
-    if (areEquivalentExtractSliceOps(
-            dyn_cast_or_null<ExtractSliceOp>(mit->v.getDefiningOp()),
-            insertSliceOp))
+    auto extractSliceOp =
+        dyn_cast_or_null<ExtractSliceOp>(mit->v.getDefiningOp());
+    if (extractSliceOp &&
+        areEquivalentExtractSliceOps(extractSliceOp, insertSliceOp) &&
+        getInPlace(extractSliceOp.result()) == InPlaceSpec::True) {
+      LDBG("\tfound: " << *mit->v.getDefiningOp() << '\n');
       return true;
+    }
   }
+  LDBG("\tnot equivalent\n");
   return false;
 }
 
@@ -1999,7 +2006,8 @@ static LogicalResult bufferize(OpBuilder &b, InsertSliceOp insertSliceOp,
   //     slice is computed out of place into the inplace full tensor.
   //   - The result is not inplace. This is the case where the whole tensor is
   //     cloned and the clone needs to be updated.
-  if (!aliasInfo.isSourceEquivalentToAMatchingExtractSliceOp(insertSliceOp) ||
+  if (!aliasInfo.isSourceEquivalentToAMatchingInplaceExtractSliceOp(
+          insertSliceOp) ||
       inPlace != InPlaceSpec::True) {
     LDBG("insert_slice needs extra source copy: " << insertSliceOp.source()
                                                   << " -> copy\n");
@@ -2655,7 +2663,7 @@ static void layoutPostProcessing(ModuleOp moduleOp) {
   SmallVector<FuncOp> orderedFuncOps;
   DenseMap<FuncOp, DenseSet<Operation *>> callerMap;
   auto res = getFuncOpsOrderedByCalls(moduleOp, orderedFuncOps, callerMap);
-  (void) res;
+  (void)res;
   assert(succeeded(res) && "unexpected getFuncOpsOrderedByCalls failure");
 
   for (FuncOp funcOp : orderedFuncOps) {

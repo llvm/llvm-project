@@ -13,7 +13,7 @@
 #define X87_FPU
 #endif
 
-#if defined(_WIN32) || defined(_WIN64)
+#if defined(_WIN32)
 #define LONG_DOUBLE_IS_DOUBLE
 #endif
 

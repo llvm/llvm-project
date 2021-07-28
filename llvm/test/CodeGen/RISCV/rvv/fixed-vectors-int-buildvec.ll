@@ -68,7 +68,7 @@ define void @buildvec_vid_step2_add0_v4i8(<4 x i8>* %z0, <4 x i8>* %z1, <4 x i8>
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vsetivli zero, 4, e8, mf4, ta, mu
 ; CHECK-NEXT:    vid.v v25
-; CHECK-NEXT:    vsll.vi v25, v25, 1
+; CHECK-NEXT:    vadd.vv v25, v25, v25
 ; CHECK-NEXT:    vse8.v v25, (a0)
 ; CHECK-NEXT:    vse8.v v25, (a1)
 ; CHECK-NEXT:    vse8.v v25, (a2)
@@ -86,7 +86,7 @@ define void @buildvec_vid_step2_add1_v4i8(<4 x i8>* %z0, <4 x i8>* %z1, <4 x i8>
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vsetivli zero, 4, e8, mf4, ta, mu
 ; CHECK-NEXT:    vid.v v25
-; CHECK-NEXT:    vsll.vi v25, v25, 1
+; CHECK-NEXT:    vadd.vv v25, v25, v25
 ; CHECK-NEXT:    vadd.vi v25, v25, 1
 ; CHECK-NEXT:    vse8.v v25, (a0)
 ; CHECK-NEXT:    vse8.v v25, (a1)
@@ -127,7 +127,7 @@ define void @buildvec_vid_stepn2_add0_v4i8(<4 x i8>* %z0, <4 x i8>* %z1, <4 x i8
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vsetivli zero, 4, e8, mf4, ta, mu
 ; CHECK-NEXT:    vid.v v25
-; CHECK-NEXT:    vsll.vi v25, v25, 1
+; CHECK-NEXT:    vadd.vv v25, v25, v25
 ; CHECK-NEXT:    vrsub.vi v25, v25, 0
 ; CHECK-NEXT:    vse8.v v25, (a0)
 ; CHECK-NEXT:    vse8.v v25, (a1)
@@ -146,7 +146,7 @@ define void @buildvec_vid_stepn2_add3_v4i8(<4 x i8>* %z0, <4 x i8>* %z1, <4 x i8
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vsetivli zero, 4, e8, mf4, ta, mu
 ; CHECK-NEXT:    vid.v v25
-; CHECK-NEXT:    vsll.vi v25, v25, 1
+; CHECK-NEXT:    vadd.vv v25, v25, v25
 ; CHECK-NEXT:    vrsub.vi v25, v25, 3
 ; CHECK-NEXT:    vse8.v v25, (a0)
 ; CHECK-NEXT:    ret
@@ -232,7 +232,7 @@ define <4 x i64> @buildvec_vid_step2_add0_v4i64() {
 ; RV64:       # %bb.0:
 ; RV64-NEXT:    vsetivli zero, 2, e64, m1, ta, mu
 ; RV64-NEXT:    vid.v v25
-; RV64-NEXT:    vsll.vi v8, v25, 1
+; RV64-NEXT:    vadd.vv v8, v25, v25
 ; RV64-NEXT:    vadd.vi v9, v8, 4
 ; RV64-NEXT:    ret
   ret <4 x i64> <i64 0, i64 2, i64 4, i64 6>

@@ -58,6 +58,13 @@ NativeProcessProtocol::ReadMemoryTags(int32_t type, lldb::addr_t addr,
   return Status("not implemented");
 }
 
+lldb_private::Status
+NativeProcessProtocol::WriteMemoryTags(int32_t type, lldb::addr_t addr,
+                                       size_t len,
+                                       const std::vector<uint8_t> &tags) {
+  return Status("not implemented");
+}
+
 llvm::Optional<WaitStatus> NativeProcessProtocol::GetExitStatus() {
   if (m_state == lldb::eStateExited)
     return m_exit_status;

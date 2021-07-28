@@ -184,9 +184,6 @@ public:
 
     /// Emit rpaths for @executable_path as well as the resource directory.
     RLO_AddRPath = 1 << 2,
-
-    /// Link the library in before any others.
-    RLO_FirstLink = 1 << 3,
   };
 
   /// Add a runtime library to the list of items to link.

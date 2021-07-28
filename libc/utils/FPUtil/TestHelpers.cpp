@@ -74,7 +74,7 @@ template void describeValue<double>(const char *, double,
 template void describeValue<long double>(const char *, long double,
                                          testutils::StreamWrapper &);
 
-#if defined(_WIN32) || defined(_WIN64)
+#if defined(_WIN32)
 #define sigjmp_buf jmp_buf
 #define sigsetjmp(buf, save) setjmp(buf)
 #define siglongjmp(buf, val) longjmp(buf, val)

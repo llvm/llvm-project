@@ -243,11 +243,16 @@ DIMacroFile *DIBuilder::createTempMacroFile(DIMacroFile *Parent,
   return MF;
 }
 
-DIEnumerator *DIBuilder::createEnumerator(StringRef Name, int64_t Val,
+DIEnumerator *DIBuilder::createEnumerator(StringRef Name, uint64_t Val,
                                           bool IsUnsigned) {
   assert(!Name.empty() && "Unable to create enumerator without name");
   return DIEnumerator::get(VMContext, APInt(64, Val, !IsUnsigned), IsUnsigned,
                            Name);
+}
+
+DIEnumerator *DIBuilder::createEnumerator(StringRef Name, APSInt Value) {
+  assert(!Name.empty() && "Unable to create enumerator without name");
+  return DIEnumerator::get(VMContext, APInt(Value), Value.isUnsigned(), Name);
 }
 
 DIBasicType *DIBuilder::createUnspecifiedType(StringRef Name) {

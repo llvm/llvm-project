@@ -93,21 +93,6 @@ namespace llvm {
     ModuleSummaryIndex *Index;
     SlotMapping *Slots;
 
-    // Instruction metadata resolution.  Each instruction can have a list of
-    // MDRef info associated with them.
-    //
-    // The simpler approach of just creating temporary MDNodes and then calling
-    // RAUW on them when the definition is processed doesn't work because some
-    // instruction metadata kinds, such as dbg, get stored in the IR in an
-    // "optimized" format which doesn't participate in the normal value use
-    // lists. This means that RAUW doesn't work, even on temporary MDNodes
-    // which otherwise support RAUW. Instead, we defer resolving MDNode
-    // references until the definitions have been processed.
-    struct MDRef {
-      SMLoc Loc;
-      unsigned MDKind, MDSlot;
-    };
-
     SmallVector<Instruction*, 64> InstsWithTBAATag;
 
     // Type resolution handling data structures.  The location is set when we

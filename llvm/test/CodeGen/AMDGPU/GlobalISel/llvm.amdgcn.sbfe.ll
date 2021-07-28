@@ -689,8 +689,7 @@ define amdgpu_kernel void @bfe_sext_in_reg_i24(i32 addrspace(1)* %out, i32 addrs
 define amdgpu_kernel void @simplify_demanded_bfe_sdiv(i32 addrspace(1)* %out, i32 addrspace(1)* %in) #0 {
 ; GFX6-LABEL: simplify_demanded_bfe_sdiv:
 ; GFX6:       ; %bb.0:
-; GFX6-NEXT:    v_cvt_f32_ubyte0_e32 v0, 2
-; GFX6-NEXT:    v_rcp_iflag_f32_e32 v0, v0
+; GFX6-NEXT:    v_rcp_iflag_f32_e32 v0, 2.0
 ; GFX6-NEXT:    s_load_dwordx2 s[2:3], s[0:1], 0xb
 ; GFX6-NEXT:    s_load_dwordx2 s[4:5], s[0:1], 0x9
 ; GFX6-NEXT:    s_mov_b32 s6, -1

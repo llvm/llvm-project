@@ -165,6 +165,23 @@ void Instruction::dropPoisonGeneratingFlags() {
   // TODO: FastMathFlags!
 }
 
+void Instruction::dropUndefImplyingAttrsAndUnknownMetadata(
+    ArrayRef<unsigned> KnownIDs) {
+  dropUnknownNonDebugMetadata(KnownIDs);
+  auto *CB = dyn_cast<CallBase>(this);
+  if (!CB)
+    return;
+  // For call instructions, we also need to drop parameter and return attributes
+  // that are can cause UB if the call is moved to a location where the
+  // attribute is not valid.
+  AttributeList AL = CB->getAttributes();
+  if (AL.isEmpty())
+    return;
+  AttrBuilder UBImplyingAttributes = AttributeFuncs::getUBImplyingAttributes();
+  for (unsigned ArgNo = 0; ArgNo < CB->getNumArgOperands(); ArgNo++)
+    CB->removeParamAttrs(ArgNo, UBImplyingAttributes);
+  CB->removeAttributes(AttributeList::ReturnIndex, UBImplyingAttributes);
+}
 
 bool Instruction::isExact() const {
   return cast<PossiblyExactOperator>(this)->isExact();
@@ -663,12 +680,20 @@ bool Instruction::mayThrow() const {
   return isa<ResumeInst>(this);
 }
 
+bool Instruction::mayHaveSideEffects() const {
+  return mayWriteToMemory() || mayThrow() || !willReturn();
+}
+
 bool Instruction::isSafeToRemove() const {
   return (!isa<CallInst>(this) || !this->mayHaveSideEffects()) &&
          !this->isTerminator();
 }
 
 bool Instruction::willReturn() const {
+  // Volatile store isn't guaranteed to return; see LangRef.
+  if (auto *SI = dyn_cast<StoreInst>(this))
+    return !SI->isVolatile();
+
   if (const auto *CB = dyn_cast<CallBase>(this))
     // FIXME: Temporarily assume that all side-effect free intrinsics will
     // return. Remove this workaround once all intrinsics are appropriately

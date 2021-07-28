@@ -212,7 +212,7 @@ public:
   int getInlinerVectorBonusPercent() { return 0; }
 
   InstructionCost getArithmeticReductionCost(
-      unsigned Opcode, VectorType *Ty,
+      unsigned Opcode, VectorType *Ty, Optional<FastMathFlags> FMF,
       TTI::TargetCostKind CostKind = TTI::TCK_RecipThroughput);
 
   InstructionCost getIntrinsicInstrCost(const IntrinsicCostAttributes &ICA,

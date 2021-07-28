@@ -23,7 +23,7 @@ using namespace mlir;
 
 /// Reports that the given type is missing the data layout information and
 /// exits.
-static LLVM_ATTRIBUTE_NORETURN void reportMissingDataLayout(Type type) {
+[[noreturn]] static void reportMissingDataLayout(Type type) {
   std::string message;
   llvm::raw_string_ostream os(message);
   os << "neither the scoping op nor the type class provide data layout "

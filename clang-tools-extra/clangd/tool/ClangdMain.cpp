@@ -679,7 +679,8 @@ int main(int argc, char *argv[]) {
   llvm::sys::SetInterruptFunction(&requestShutdown);
   llvm::cl::SetVersionPrinter([](llvm::raw_ostream &OS) {
     OS << versionString() << "\n"
-       << "Features: " << featureString() << "\n";
+       << "Features: " << featureString() << "\n"
+       << "Platform: " << platformString() << "\n";
   });
   const char *FlagsEnvVar = "CLANGD_FLAGS";
   const char *Overview =

@@ -2191,11 +2191,11 @@ v128_t test_f32x4_max(v128_t a, v128_t b) {
 
 // CHECK-LABEL: @test_f32x4_pmin(
 // CHECK-NEXT:  entry:
-// CHECK-NEXT:    [[TMP0:%.*]] = bitcast <4 x i32> [[A:%.*]] to <4 x float>
-// CHECK-NEXT:    [[TMP1:%.*]] = bitcast <4 x i32> [[B:%.*]] to <4 x float>
-// CHECK-NEXT:    [[TMP2:%.*]] = tail call <4 x float> @llvm.wasm.pmin.v4f32(<4 x float> [[TMP0]], <4 x float> [[TMP1]]) #[[ATTR6]]
-// CHECK-NEXT:    [[TMP3:%.*]] = bitcast <4 x float> [[TMP2]] to <4 x i32>
-// CHECK-NEXT:    ret <4 x i32> [[TMP3]]
+// CHECK-NEXT:    [[TMP0:%.*]] = bitcast <4 x i32> [[B:%.*]] to <4 x float>
+// CHECK-NEXT:    [[TMP1:%.*]] = bitcast <4 x i32> [[A:%.*]] to <4 x float>
+// CHECK-NEXT:    [[CMP_I:%.*]] = fcmp olt <4 x float> [[TMP0]], [[TMP1]]
+// CHECK-NEXT:    [[TMP2:%.*]] = select <4 x i1> [[CMP_I]], <4 x i32> [[B]], <4 x i32> [[A]]
+// CHECK-NEXT:    ret <4 x i32> [[TMP2]]
 //
 v128_t test_f32x4_pmin(v128_t a, v128_t b) {
   return wasm_f32x4_pmin(a, b);
@@ -2205,9 +2205,9 @@ v128_t test_f32x4_pmin(v128_t a, v128_t b) {
 // CHECK-NEXT:  entry:
 // CHECK-NEXT:    [[TMP0:%.*]] = bitcast <4 x i32> [[A:%.*]] to <4 x float>
 // CHECK-NEXT:    [[TMP1:%.*]] = bitcast <4 x i32> [[B:%.*]] to <4 x float>
-// CHECK-NEXT:    [[TMP2:%.*]] = tail call <4 x float> @llvm.wasm.pmax.v4f32(<4 x float> [[TMP0]], <4 x float> [[TMP1]]) #[[ATTR6]]
-// CHECK-NEXT:    [[TMP3:%.*]] = bitcast <4 x float> [[TMP2]] to <4 x i32>
-// CHECK-NEXT:    ret <4 x i32> [[TMP3]]
+// CHECK-NEXT:    [[CMP_I:%.*]] = fcmp olt <4 x float> [[TMP0]], [[TMP1]]
+// CHECK-NEXT:    [[TMP2:%.*]] = select <4 x i1> [[CMP_I]], <4 x i32> [[B]], <4 x i32> [[A]]
+// CHECK-NEXT:    ret <4 x i32> [[TMP2]]
 //
 v128_t test_f32x4_pmax(v128_t a, v128_t b) {
   return wasm_f32x4_pmax(a, b);
@@ -2364,9 +2364,10 @@ v128_t test_f64x2_max(v128_t a, v128_t b) {
 
 // CHECK-LABEL: @test_f64x2_pmin(
 // CHECK-NEXT:  entry:
-// CHECK-NEXT:    [[TMP0:%.*]] = bitcast <4 x i32> [[A:%.*]] to <2 x double>
-// CHECK-NEXT:    [[TMP1:%.*]] = bitcast <4 x i32> [[B:%.*]] to <2 x double>
-// CHECK-NEXT:    [[TMP2:%.*]] = tail call <2 x double> @llvm.wasm.pmin.v2f64(<2 x double> [[TMP0]], <2 x double> [[TMP1]]) #[[ATTR6]]
+// CHECK-NEXT:    [[TMP0:%.*]] = bitcast <4 x i32> [[B:%.*]] to <2 x double>
+// CHECK-NEXT:    [[TMP1:%.*]] = bitcast <4 x i32> [[A:%.*]] to <2 x double>
+// CHECK-NEXT:    [[CMP_I:%.*]] = fcmp olt <2 x double> [[TMP0]], [[TMP1]]
+// CHECK-NEXT:    [[TMP2:%.*]] = select <2 x i1> [[CMP_I]], <2 x double> [[TMP0]], <2 x double> [[TMP1]]
 // CHECK-NEXT:    [[TMP3:%.*]] = bitcast <2 x double> [[TMP2]] to <4 x i32>
 // CHECK-NEXT:    ret <4 x i32> [[TMP3]]
 //
@@ -2378,7 +2379,8 @@ v128_t test_f64x2_pmin(v128_t a, v128_t b) {
 // CHECK-NEXT:  entry:
 // CHECK-NEXT:    [[TMP0:%.*]] = bitcast <4 x i32> [[A:%.*]] to <2 x double>
 // CHECK-NEXT:    [[TMP1:%.*]] = bitcast <4 x i32> [[B:%.*]] to <2 x double>
-// CHECK-NEXT:    [[TMP2:%.*]] = tail call <2 x double> @llvm.wasm.pmax.v2f64(<2 x double> [[TMP0]], <2 x double> [[TMP1]]) #[[ATTR6]]
+// CHECK-NEXT:    [[CMP_I:%.*]] = fcmp olt <2 x double> [[TMP0]], [[TMP1]]
+// CHECK-NEXT:    [[TMP2:%.*]] = select <2 x i1> [[CMP_I]], <2 x double> [[TMP1]], <2 x double> [[TMP0]]
 // CHECK-NEXT:    [[TMP3:%.*]] = bitcast <2 x double> [[TMP2]] to <4 x i32>
 // CHECK-NEXT:    ret <4 x i32> [[TMP3]]
 //
@@ -2779,10 +2781,14 @@ v128_t test_u32x4_extadd_pairwise_u16x8(v128_t a) {
 // CHECK-LABEL: @test_i16x8_extmul_low_i8x16(
 // CHECK-NEXT:  entry:
 // CHECK-NEXT:    [[TMP0:%.*]] = bitcast <4 x i32> [[A:%.*]] to <16 x i8>
+// CHECK-NEXT:    [[VECINIT14_I_I:%.*]] = shufflevector <16 x i8> [[TMP0]], <16 x i8> undef, <8 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7>
+// CHECK-NEXT:    [[CONV_I_I:%.*]] = sext <8 x i8> [[VECINIT14_I_I]] to <8 x i16>
 // CHECK-NEXT:    [[TMP1:%.*]] = bitcast <4 x i32> [[B:%.*]] to <16 x i8>
-// CHECK-NEXT:    [[TMP2:%.*]] = tail call <8 x i16> @llvm.wasm.extmul.low.signed.v8i16(<16 x i8> [[TMP0]], <16 x i8> [[TMP1]]) #[[ATTR6]]
-// CHECK-NEXT:    [[TMP3:%.*]] = bitcast <8 x i16> [[TMP2]] to <4 x i32>
-// CHECK-NEXT:    ret <4 x i32> [[TMP3]]
+// CHECK-NEXT:    [[VECINIT14_I2_I:%.*]] = shufflevector <16 x i8> [[TMP1]], <16 x i8> undef, <8 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7>
+// CHECK-NEXT:    [[CONV_I3_I:%.*]] = sext <8 x i8> [[VECINIT14_I2_I]] to <8 x i16>
+// CHECK-NEXT:    [[MUL_I:%.*]] = mul nsw <8 x i16> [[CONV_I3_I]], [[CONV_I_I]]
+// CHECK-NEXT:    [[TMP2:%.*]] = bitcast <8 x i16> [[MUL_I]] to <4 x i32>
+// CHECK-NEXT:    ret <4 x i32> [[TMP2]]
 //
 v128_t test_i16x8_extmul_low_i8x16(v128_t a, v128_t b) {
   return wasm_i16x8_extmul_low_i8x16(a, b);
@@ -2791,10 +2797,14 @@ v128_t test_i16x8_extmul_low_i8x16(v128_t a, v128_t b) {
 // CHECK-LABEL: @test_i16x8_extmul_high_i8x16(
 // CHECK-NEXT:  entry:
 // CHECK-NEXT:    [[TMP0:%.*]] = bitcast <4 x i32> [[A:%.*]] to <16 x i8>
+// CHECK-NEXT:    [[VECINIT14_I_I:%.*]] = shufflevector <16 x i8> [[TMP0]], <16 x i8> undef, <8 x i32> <i32 8, i32 9, i32 10, i32 11, i32 12, i32 13, i32 14, i32 15>
+// CHECK-NEXT:    [[CONV_I_I:%.*]] = sext <8 x i8> [[VECINIT14_I_I]] to <8 x i16>
 // CHECK-NEXT:    [[TMP1:%.*]] = bitcast <4 x i32> [[B:%.*]] to <16 x i8>
-// CHECK-NEXT:    [[TMP2:%.*]] = tail call <8 x i16> @llvm.wasm.extmul.high.signed.v8i16(<16 x i8> [[TMP0]], <16 x i8> [[TMP1]]) #[[ATTR6]]
-// CHECK-NEXT:    [[TMP3:%.*]] = bitcast <8 x i16> [[TMP2]] to <4 x i32>
-// CHECK-NEXT:    ret <4 x i32> [[TMP3]]
+// CHECK-NEXT:    [[VECINIT14_I2_I:%.*]] = shufflevector <16 x i8> [[TMP1]], <16 x i8> undef, <8 x i32> <i32 8, i32 9, i32 10, i32 11, i32 12, i32 13, i32 14, i32 15>
+// CHECK-NEXT:    [[CONV_I3_I:%.*]] = sext <8 x i8> [[VECINIT14_I2_I]] to <8 x i16>
+// CHECK-NEXT:    [[MUL_I:%.*]] = mul nsw <8 x i16> [[CONV_I3_I]], [[CONV_I_I]]
+// CHECK-NEXT:    [[TMP2:%.*]] = bitcast <8 x i16> [[MUL_I]] to <4 x i32>
+// CHECK-NEXT:    ret <4 x i32> [[TMP2]]
 //
 v128_t test_i16x8_extmul_high_i8x16(v128_t a, v128_t b) {
   return wasm_i16x8_extmul_high_i8x16(a, b);
@@ -2803,10 +2813,14 @@ v128_t test_i16x8_extmul_high_i8x16(v128_t a, v128_t b) {
 // CHECK-LABEL: @test_u16x8_extmul_low_u8x16(
 // CHECK-NEXT:  entry:
 // CHECK-NEXT:    [[TMP0:%.*]] = bitcast <4 x i32> [[A:%.*]] to <16 x i8>
+// CHECK-NEXT:    [[VECINIT14_I_I:%.*]] = shufflevector <16 x i8> [[TMP0]], <16 x i8> undef, <8 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7>
+// CHECK-NEXT:    [[CONV_I_I:%.*]] = zext <8 x i8> [[VECINIT14_I_I]] to <8 x i16>
 // CHECK-NEXT:    [[TMP1:%.*]] = bitcast <4 x i32> [[B:%.*]] to <16 x i8>
-// CHECK-NEXT:    [[TMP2:%.*]] = tail call <8 x i16> @llvm.wasm.extmul.low.unsigned.v8i16(<16 x i8> [[TMP0]], <16 x i8> [[TMP1]]) #[[ATTR6]]
-// CHECK-NEXT:    [[TMP3:%.*]] = bitcast <8 x i16> [[TMP2]] to <4 x i32>
-// CHECK-NEXT:    ret <4 x i32> [[TMP3]]
+// CHECK-NEXT:    [[VECINIT14_I2_I:%.*]] = shufflevector <16 x i8> [[TMP1]], <16 x i8> undef, <8 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7>
+// CHECK-NEXT:    [[CONV_I3_I:%.*]] = zext <8 x i8> [[VECINIT14_I2_I]] to <8 x i16>
+// CHECK-NEXT:    [[MUL_I:%.*]] = mul nuw <8 x i16> [[CONV_I3_I]], [[CONV_I_I]]
+// CHECK-NEXT:    [[TMP2:%.*]] = bitcast <8 x i16> [[MUL_I]] to <4 x i32>
+// CHECK-NEXT:    ret <4 x i32> [[TMP2]]
 //
 v128_t test_u16x8_extmul_low_u8x16(v128_t a, v128_t b) {
   return wasm_u16x8_extmul_low_u8x16(a, b);
@@ -2815,10 +2829,14 @@ v128_t test_u16x8_extmul_low_u8x16(v128_t a, v128_t b) {
 // CHECK-LABEL: @test_u16x8_extmul_high_u8x16(
 // CHECK-NEXT:  entry:
 // CHECK-NEXT:    [[TMP0:%.*]] = bitcast <4 x i32> [[A:%.*]] to <16 x i8>
+// CHECK-NEXT:    [[VECINIT14_I_I:%.*]] = shufflevector <16 x i8> [[TMP0]], <16 x i8> undef, <8 x i32> <i32 8, i32 9, i32 10, i32 11, i32 12, i32 13, i32 14, i32 15>
+// CHECK-NEXT:    [[CONV_I_I:%.*]] = zext <8 x i8> [[VECINIT14_I_I]] to <8 x i16>
 // CHECK-NEXT:    [[TMP1:%.*]] = bitcast <4 x i32> [[B:%.*]] to <16 x i8>
-// CHECK-NEXT:    [[TMP2:%.*]] = tail call <8 x i16> @llvm.wasm.extmul.high.unsigned.v8i16(<16 x i8> [[TMP0]], <16 x i8> [[TMP1]]) #[[ATTR6]]
-// CHECK-NEXT:    [[TMP3:%.*]] = bitcast <8 x i16> [[TMP2]] to <4 x i32>
-// CHECK-NEXT:    ret <4 x i32> [[TMP3]]
+// CHECK-NEXT:    [[VECINIT14_I2_I:%.*]] = shufflevector <16 x i8> [[TMP1]], <16 x i8> undef, <8 x i32> <i32 8, i32 9, i32 10, i32 11, i32 12, i32 13, i32 14, i32 15>
+// CHECK-NEXT:    [[CONV_I3_I:%.*]] = zext <8 x i8> [[VECINIT14_I2_I]] to <8 x i16>
+// CHECK-NEXT:    [[MUL_I:%.*]] = mul nuw <8 x i16> [[CONV_I3_I]], [[CONV_I_I]]
+// CHECK-NEXT:    [[TMP2:%.*]] = bitcast <8 x i16> [[MUL_I]] to <4 x i32>
+// CHECK-NEXT:    ret <4 x i32> [[TMP2]]
 //
 v128_t test_u16x8_extmul_high_u8x16(v128_t a, v128_t b) {
   return wasm_u16x8_extmul_high_u8x16(a, b);
@@ -2827,9 +2845,13 @@ v128_t test_u16x8_extmul_high_u8x16(v128_t a, v128_t b) {
 // CHECK-LABEL: @test_i32x4_extmul_low_i16x8(
 // CHECK-NEXT:  entry:
 // CHECK-NEXT:    [[TMP0:%.*]] = bitcast <4 x i32> [[A:%.*]] to <8 x i16>
+// CHECK-NEXT:    [[VECINIT6_I_I:%.*]] = shufflevector <8 x i16> [[TMP0]], <8 x i16> undef, <4 x i32> <i32 0, i32 1, i32 2, i32 3>
+// CHECK-NEXT:    [[CONV_I_I:%.*]] = sext <4 x i16> [[VECINIT6_I_I]] to <4 x i32>
 // CHECK-NEXT:    [[TMP1:%.*]] = bitcast <4 x i32> [[B:%.*]] to <8 x i16>
-// CHECK-NEXT:    [[TMP2:%.*]] = tail call <4 x i32> @llvm.wasm.extmul.low.signed.v4i32(<8 x i16> [[TMP0]], <8 x i16> [[TMP1]]) #[[ATTR6]]
-// CHECK-NEXT:    ret <4 x i32> [[TMP2]]
+// CHECK-NEXT:    [[VECINIT6_I2_I:%.*]] = shufflevector <8 x i16> [[TMP1]], <8 x i16> undef, <4 x i32> <i32 0, i32 1, i32 2, i32 3>
+// CHECK-NEXT:    [[CONV_I3_I:%.*]] = sext <4 x i16> [[VECINIT6_I2_I]] to <4 x i32>
+// CHECK-NEXT:    [[MUL_I:%.*]] = mul nsw <4 x i32> [[CONV_I3_I]], [[CONV_I_I]]
+// CHECK-NEXT:    ret <4 x i32> [[MUL_I]]
 //
 v128_t test_i32x4_extmul_low_i16x8(v128_t a, v128_t b) {
   return wasm_i32x4_extmul_low_i16x8(a, b);
@@ -2838,9 +2860,13 @@ v128_t test_i32x4_extmul_low_i16x8(v128_t a, v128_t b) {
 // CHECK-LABEL: @test_i32x4_extmul_high_i16x8(
 // CHECK-NEXT:  entry:
 // CHECK-NEXT:    [[TMP0:%.*]] = bitcast <4 x i32> [[A:%.*]] to <8 x i16>
+// CHECK-NEXT:    [[VECINIT6_I_I:%.*]] = shufflevector <8 x i16> [[TMP0]], <8 x i16> undef, <4 x i32> <i32 4, i32 5, i32 6, i32 7>
+// CHECK-NEXT:    [[CONV_I_I:%.*]] = sext <4 x i16> [[VECINIT6_I_I]] to <4 x i32>
 // CHECK-NEXT:    [[TMP1:%.*]] = bitcast <4 x i32> [[B:%.*]] to <8 x i16>
-// CHECK-NEXT:    [[TMP2:%.*]] = tail call <4 x i32> @llvm.wasm.extmul.high.signed.v4i32(<8 x i16> [[TMP0]], <8 x i16> [[TMP1]]) #[[ATTR6]]
-// CHECK-NEXT:    ret <4 x i32> [[TMP2]]
+// CHECK-NEXT:    [[VECINIT6_I2_I:%.*]] = shufflevector <8 x i16> [[TMP1]], <8 x i16> undef, <4 x i32> <i32 4, i32 5, i32 6, i32 7>
+// CHECK-NEXT:    [[CONV_I3_I:%.*]] = sext <4 x i16> [[VECINIT6_I2_I]] to <4 x i32>
+// CHECK-NEXT:    [[MUL_I:%.*]] = mul nsw <4 x i32> [[CONV_I3_I]], [[CONV_I_I]]
+// CHECK-NEXT:    ret <4 x i32> [[MUL_I]]
 //
 v128_t test_i32x4_extmul_high_i16x8(v128_t a, v128_t b) {
   return wasm_i32x4_extmul_high_i16x8(a, b);
@@ -2849,9 +2875,13 @@ v128_t test_i32x4_extmul_high_i16x8(v128_t a, v128_t b) {
 // CHECK-LABEL: @test_u32x4_extmul_low_u16x8(
 // CHECK-NEXT:  entry:
 // CHECK-NEXT:    [[TMP0:%.*]] = bitcast <4 x i32> [[A:%.*]] to <8 x i16>
+// CHECK-NEXT:    [[VECINIT6_I_I:%.*]] = shufflevector <8 x i16> [[TMP0]], <8 x i16> undef, <4 x i32> <i32 0, i32 1, i32 2, i32 3>
+// CHECK-NEXT:    [[CONV_I_I:%.*]] = zext <4 x i16> [[VECINIT6_I_I]] to <4 x i32>
 // CHECK-NEXT:    [[TMP1:%.*]] = bitcast <4 x i32> [[B:%.*]] to <8 x i16>
-// CHECK-NEXT:    [[TMP2:%.*]] = tail call <4 x i32> @llvm.wasm.extmul.low.unsigned.v4i32(<8 x i16> [[TMP0]], <8 x i16> [[TMP1]]) #[[ATTR6]]
-// CHECK-NEXT:    ret <4 x i32> [[TMP2]]
+// CHECK-NEXT:    [[VECINIT6_I2_I:%.*]] = shufflevector <8 x i16> [[TMP1]], <8 x i16> undef, <4 x i32> <i32 0, i32 1, i32 2, i32 3>
+// CHECK-NEXT:    [[CONV_I3_I:%.*]] = zext <4 x i16> [[VECINIT6_I2_I]] to <4 x i32>
+// CHECK-NEXT:    [[MUL_I:%.*]] = mul nuw <4 x i32> [[CONV_I3_I]], [[CONV_I_I]]
+// CHECK-NEXT:    ret <4 x i32> [[MUL_I]]
 //
 v128_t test_u32x4_extmul_low_u16x8(v128_t a, v128_t b) {
   return wasm_u32x4_extmul_low_u16x8(a, b);
@@ -2860,9 +2890,13 @@ v128_t test_u32x4_extmul_low_u16x8(v128_t a, v128_t b) {
 // CHECK-LABEL: @test_u32x4_extmul_high_u16x8(
 // CHECK-NEXT:  entry:
 // CHECK-NEXT:    [[TMP0:%.*]] = bitcast <4 x i32> [[A:%.*]] to <8 x i16>
+// CHECK-NEXT:    [[VECINIT6_I_I:%.*]] = shufflevector <8 x i16> [[TMP0]], <8 x i16> undef, <4 x i32> <i32 4, i32 5, i32 6, i32 7>
+// CHECK-NEXT:    [[CONV_I_I:%.*]] = zext <4 x i16> [[VECINIT6_I_I]] to <4 x i32>
 // CHECK-NEXT:    [[TMP1:%.*]] = bitcast <4 x i32> [[B:%.*]] to <8 x i16>
-// CHECK-NEXT:    [[TMP2:%.*]] = tail call <4 x i32> @llvm.wasm.extmul.high.unsigned.v4i32(<8 x i16> [[TMP0]], <8 x i16> [[TMP1]]) #[[ATTR6]]
-// CHECK-NEXT:    ret <4 x i32> [[TMP2]]
+// CHECK-NEXT:    [[VECINIT6_I2_I:%.*]] = shufflevector <8 x i16> [[TMP1]], <8 x i16> undef, <4 x i32> <i32 4, i32 5, i32 6, i32 7>
+// CHECK-NEXT:    [[CONV_I3_I:%.*]] = zext <4 x i16> [[VECINIT6_I2_I]] to <4 x i32>
+// CHECK-NEXT:    [[MUL_I:%.*]] = mul nuw <4 x i32> [[CONV_I3_I]], [[CONV_I_I]]
+// CHECK-NEXT:    ret <4 x i32> [[MUL_I]]
 //
 v128_t test_u32x4_extmul_high_u16x8(v128_t a, v128_t b) {
   return wasm_u32x4_extmul_high_u16x8(a, b);
@@ -2870,9 +2904,13 @@ v128_t test_u32x4_extmul_high_u16x8(v128_t a, v128_t b) {
 
 // CHECK-LABEL: @test_i64x2_extmul_low_i32x4(
 // CHECK-NEXT:  entry:
-// CHECK-NEXT:    [[TMP0:%.*]] = tail call <2 x i64> @llvm.wasm.extmul.low.signed.v2i64(<4 x i32> [[A:%.*]], <4 x i32> [[B:%.*]]) #[[ATTR6]]
-// CHECK-NEXT:    [[TMP1:%.*]] = bitcast <2 x i64> [[TMP0]] to <4 x i32>
-// CHECK-NEXT:    ret <4 x i32> [[TMP1]]
+// CHECK-NEXT:    [[VECINIT2_I_I:%.*]] = shufflevector <4 x i32> [[A:%.*]], <4 x i32> undef, <2 x i32> <i32 0, i32 1>
+// CHECK-NEXT:    [[CONV_I_I:%.*]] = sext <2 x i32> [[VECINIT2_I_I]] to <2 x i64>
+// CHECK-NEXT:    [[VECINIT2_I2_I:%.*]] = shufflevector <4 x i32> [[B:%.*]], <4 x i32> undef, <2 x i32> <i32 0, i32 1>
+// CHECK-NEXT:    [[CONV_I3_I:%.*]] = sext <2 x i32> [[VECINIT2_I2_I]] to <2 x i64>
+// CHECK-NEXT:    [[MUL_I:%.*]] = mul nsw <2 x i64> [[CONV_I3_I]], [[CONV_I_I]]
+// CHECK-NEXT:    [[TMP0:%.*]] = bitcast <2 x i64> [[MUL_I]] to <4 x i32>
+// CHECK-NEXT:    ret <4 x i32> [[TMP0]]
 //
 v128_t test_i64x2_extmul_low_i32x4(v128_t a, v128_t b) {
   return wasm_i64x2_extmul_low_i32x4(a, b);
@@ -2880,9 +2918,13 @@ v128_t test_i64x2_extmul_low_i32x4(v128_t a, v128_t b) {
 
 // CHECK-LABEL: @test_i64x2_extmul_high_i32x4(
 // CHECK-NEXT:  entry:
-// CHECK-NEXT:    [[TMP0:%.*]] = tail call <2 x i64> @llvm.wasm.extmul.high.signed.v2i64(<4 x i32> [[A:%.*]], <4 x i32> [[B:%.*]]) #[[ATTR6]]
-// CHECK-NEXT:    [[TMP1:%.*]] = bitcast <2 x i64> [[TMP0]] to <4 x i32>
-// CHECK-NEXT:    ret <4 x i32> [[TMP1]]
+// CHECK-NEXT:    [[VECINIT2_I_I:%.*]] = shufflevector <4 x i32> [[A:%.*]], <4 x i32> undef, <2 x i32> <i32 2, i32 3>
+// CHECK-NEXT:    [[CONV_I_I:%.*]] = sext <2 x i32> [[VECINIT2_I_I]] to <2 x i64>
+// CHECK-NEXT:    [[VECINIT2_I2_I:%.*]] = shufflevector <4 x i32> [[B:%.*]], <4 x i32> undef, <2 x i32> <i32 2, i32 3>
+// CHECK-NEXT:    [[CONV_I3_I:%.*]] = sext <2 x i32> [[VECINIT2_I2_I]] to <2 x i64>
+// CHECK-NEXT:    [[MUL_I:%.*]] = mul nsw <2 x i64> [[CONV_I3_I]], [[CONV_I_I]]
+// CHECK-NEXT:    [[TMP0:%.*]] = bitcast <2 x i64> [[MUL_I]] to <4 x i32>
+// CHECK-NEXT:    ret <4 x i32> [[TMP0]]
 //
 v128_t test_i64x2_extmul_high_i32x4(v128_t a, v128_t b) {
   return wasm_i64x2_extmul_high_i32x4(a, b);
@@ -2890,9 +2932,13 @@ v128_t test_i64x2_extmul_high_i32x4(v128_t a, v128_t b) {
 
 // CHECK-LABEL: @test_u64x2_extmul_low_u32x4(
 // CHECK-NEXT:  entry:
-// CHECK-NEXT:    [[TMP0:%.*]] = tail call <2 x i64> @llvm.wasm.extmul.low.unsigned.v2i64(<4 x i32> [[A:%.*]], <4 x i32> [[B:%.*]]) #[[ATTR6]]
-// CHECK-NEXT:    [[TMP1:%.*]] = bitcast <2 x i64> [[TMP0]] to <4 x i32>
-// CHECK-NEXT:    ret <4 x i32> [[TMP1]]
+// CHECK-NEXT:    [[VECINIT2_I_I:%.*]] = shufflevector <4 x i32> [[A:%.*]], <4 x i32> undef, <2 x i32> <i32 0, i32 1>
+// CHECK-NEXT:    [[CONV_I_I:%.*]] = zext <2 x i32> [[VECINIT2_I_I]] to <2 x i64>
+// CHECK-NEXT:    [[VECINIT2_I2_I:%.*]] = shufflevector <4 x i32> [[B:%.*]], <4 x i32> undef, <2 x i32> <i32 0, i32 1>
+// CHECK-NEXT:    [[CONV_I3_I:%.*]] = zext <2 x i32> [[VECINIT2_I2_I]] to <2 x i64>
+// CHECK-NEXT:    [[MUL_I:%.*]] = mul nuw <2 x i64> [[CONV_I3_I]], [[CONV_I_I]]
+// CHECK-NEXT:    [[TMP0:%.*]] = bitcast <2 x i64> [[MUL_I]] to <4 x i32>
+// CHECK-NEXT:    ret <4 x i32> [[TMP0]]
 //
 v128_t test_u64x2_extmul_low_u32x4(v128_t a, v128_t b) {
   return wasm_u64x2_extmul_low_u32x4(a, b);
@@ -2900,9 +2946,13 @@ v128_t test_u64x2_extmul_low_u32x4(v128_t a, v128_t b) {
 
 // CHECK-LABEL: @test_u64x2_extmul_high_u32x4(
 // CHECK-NEXT:  entry:
-// CHECK-NEXT:    [[TMP0:%.*]] = tail call <2 x i64> @llvm.wasm.extmul.high.unsigned.v2i64(<4 x i32> [[A:%.*]], <4 x i32> [[B:%.*]]) #[[ATTR6]]
-// CHECK-NEXT:    [[TMP1:%.*]] = bitcast <2 x i64> [[TMP0]] to <4 x i32>
-// CHECK-NEXT:    ret <4 x i32> [[TMP1]]
+// CHECK-NEXT:    [[VECINIT2_I_I:%.*]] = shufflevector <4 x i32> [[A:%.*]], <4 x i32> undef, <2 x i32> <i32 2, i32 3>
+// CHECK-NEXT:    [[CONV_I_I:%.*]] = zext <2 x i32> [[VECINIT2_I_I]] to <2 x i64>
+// CHECK-NEXT:    [[VECINIT2_I2_I:%.*]] = shufflevector <4 x i32> [[B:%.*]], <4 x i32> undef, <2 x i32> <i32 2, i32 3>
+// CHECK-NEXT:    [[CONV_I3_I:%.*]] = zext <2 x i32> [[VECINIT2_I2_I]] to <2 x i64>
+// CHECK-NEXT:    [[MUL_I:%.*]] = mul nuw <2 x i64> [[CONV_I3_I]], [[CONV_I_I]]
+// CHECK-NEXT:    [[TMP0:%.*]] = bitcast <2 x i64> [[MUL_I]] to <4 x i32>
+// CHECK-NEXT:    ret <4 x i32> [[TMP0]]
 //
 v128_t test_u64x2_extmul_high_u32x4(v128_t a, v128_t b) {
   return wasm_u64x2_extmul_high_u32x4(a, b);

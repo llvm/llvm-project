@@ -22,8 +22,6 @@ define void @caller() #0 {
 ; IS__TUNIT_NPM-NEXT:    ret void
 ;
 ; IS__CGSCC_NPM-LABEL: define {{[^@]+}}@caller() {
-; IS__CGSCC_NPM-NEXT:    [[X:%.*]] = alloca i32, align 4
-; IS__CGSCC_NPM-NEXT:    store i32 42, i32* [[X]], align 4
 ; IS__CGSCC_NPM-NEXT:    call void @promote_i32_ptr(i32 undef), !prof [[PROF0:![0-9]+]]
 ; IS__CGSCC_NPM-NEXT:    ret void
 ;
@@ -51,9 +49,8 @@ define internal void @promote_i32_ptr(i32* %xp) {
 ; IS__CGSCC_NPM-LABEL: define {{[^@]+}}@promote_i32_ptr
 ; IS__CGSCC_NPM-SAME: (i32 [[TMP0:%.*]]) {
 ; IS__CGSCC_NPM-NEXT:    [[XP_PRIV:%.*]] = alloca i32, align 4
-; IS__CGSCC_NPM-NEXT:    store i32 42, i32* [[XP_PRIV]], align 4
 ; IS__CGSCC_NPM-NEXT:    [[X:%.*]] = load i32, i32* [[XP_PRIV]], align 4
-; IS__CGSCC_NPM-NEXT:    call void @use_i32(i32 [[X]])
+; IS__CGSCC_NPM-NEXT:    call void @use_i32(i32 42)
 ; IS__CGSCC_NPM-NEXT:    ret void
 ;
   %x = load i32, i32* %xp

@@ -131,14 +131,13 @@ func @loop_inner_control_flow(%arg0 : index, %arg1 : index, %arg2 : index) -> i3
   return %result : i32
 }
 
-/// Test that we can properly visit region successors when the terminator is not
-/// return-like.
+/// Test that we can properly visit region successors when the terminator
+/// implements the RegionBranchTerminatorOpInterface.
 
-// CHECK-LABEL: func @overdefined_non_returnlike(
-func @overdefined_non_returnlike(%arg1 : i32) {
-  // CHECK: scf.while (%[[ARG:.*]] = %[[INPUT:.*]])
-  // CHECK-NEXT: %[[COND:.*]] = cmpi slt, %[[ARG]], %{{.*}} : i32
-  // CHECK-NEXT: scf.condition(%[[COND]]) %[[ARG]] : i32
+// CHECK-LABEL: func @loop_region_branch_terminator_op(
+func @loop_region_branch_terminator_op(%arg1 : i32) {
+  // CHECK:      %c2_i32 = constant 2 : i32
+  // CHECK-NEXT: return
 
   %c2_i32 = constant 2 : i32
    %0 = scf.while (%arg2 = %c2_i32) : (i32) -> (i32) {

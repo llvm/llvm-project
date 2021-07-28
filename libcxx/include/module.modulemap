@@ -485,6 +485,7 @@ module std [system] {
       module back_insert_iterator  { private header "__iterator/back_insert_iterator.h" }
       module common_iterator       { private header "__iterator/common_iterator.h" }
       module concepts              { private header "__iterator/concepts.h" }
+      module counted_iterator      { private header "__iterator/counted_iterator.h" }
       module data                  { private header "__iterator/data.h" }
       module default_sentinel      { private header "__iterator/default_sentinel.h" }
       module distance              { private header "__iterator/distance.h" }
@@ -613,6 +614,7 @@ module std [system] {
     module __ranges {
       module access                 { private header "__ranges/access.h"                }
       module all                    { private header "__ranges/all.h"                   }
+      module common_view            { private header "__ranges/common_view.h"           }
       module concepts               { private header "__ranges/concepts.h"              }
       module copyable_box           { private header "__ranges/copyable_box.h"          }
       module dangling               { private header "__ranges/dangling.h"              }

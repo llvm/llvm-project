@@ -36,8 +36,12 @@ class SCF_Op<string mnemonic, list<OpTrait> traits = []> :
   let parser = [{ return ::parse$cppClass(parser, result); }];
 }
 
-def ConditionOp : SCF_Op<"condition",
-                         [HasParent<"WhileOp">, NoSideEffect, Terminator]> {
+def ConditionOp : SCF_Op<"condition", [
+  HasParent<"WhileOp">,
+  DeclareOpInterfaceMethods<RegionBranchTerminatorOpInterface>,
+  NoSideEffect,
+  Terminator
+]> {
   let summary = "loop continuation condition";
   let description = [{
     This operation accepts the continuation (i.e., inverse of exit) condition
@@ -569,8 +573,8 @@ def WhileOp : SCF_Op<"while",
     of the `scf.condition` terminator either to the "after" region if the
     control flow is transferred there or to results of the `scf.while` operation
     otherwise. The "after" region takes as arguments the values produced by the
-    "before" region and uses `scf.yield` to supply new arguments for the "after"
-    region, into which it transfers the control flow unconditionally.
+    "before" region and uses `scf.yield` to supply new arguments for the
+    "before" region, into which it transfers the control flow unconditionally.
 
     A simple "while" loop can be represented as follows.
 

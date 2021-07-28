@@ -216,6 +216,9 @@ bool TailDuplicator::tailDuplicateAndUpdate(
 
       // Rewrite uses that are outside of the original def's block.
       MachineRegisterInfo::use_iterator UI = MRI->use_begin(VReg);
+      // Only remove instructions after loop, as DBG_VALUE_LISTs with multiple
+      // uses of VReg may invalidate the use iterator when erased.
+      SmallPtrSet<MachineInstr *, 4> InstrsToRemove;
       while (UI != MRI->use_end()) {
         MachineOperand &UseMO = *UI;
         MachineInstr *UseMI = UseMO.getParent();
@@ -225,13 +228,15 @@ bool TailDuplicator::tailDuplicateAndUpdate(
           // a debug instruction that is a kill.
           // FIXME: Should it SSAUpdate job to delete debug instructions
           // instead of replacing the use with undef?
-          UseMI->eraseFromParent();
+          InstrsToRemove.insert(UseMI);
           continue;
         }
         if (UseMI->getParent() == DefBB && !UseMI->isPHI())
           continue;
         SSAUpdate.RewriteUse(UseMO);
       }
+      for (auto *MI : InstrsToRemove)
+        MI->eraseFromParent();
     }
 
     SSAUpdateVRs.clear();

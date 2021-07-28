@@ -90,7 +90,7 @@ define <2 x i16> @mgather_v2i16_align1(<2 x i16*> %ptrs, <2 x i1> %m, <2 x i16> 
 ; RV32-NEXT:    andi a1, a0, 1
 ; RV32-NEXT:    beqz a1, .LBB4_2
 ; RV32-NEXT:  # %bb.1: # %cond.load
-; RV32-NEXT:    vsetvli zero, zero, e32, mf2, ta, mu
+; RV32-NEXT:    vsetivli zero, 0, e32, mf2, ta, mu
 ; RV32-NEXT:    vmv.x.s a1, v8
 ; RV32-NEXT:    lb a2, 1(a1)
 ; RV32-NEXT:    lbu a1, 0(a1)
@@ -137,7 +137,7 @@ define <2 x i16> @mgather_v2i16_align1(<2 x i16*> %ptrs, <2 x i1> %m, <2 x i16> 
 ; RV64-NEXT:    andi a1, a0, 1
 ; RV64-NEXT:    beqz a1, .LBB4_2
 ; RV64-NEXT:  # %bb.1: # %cond.load
-; RV64-NEXT:    vsetvli zero, zero, e64, m1, ta, mu
+; RV64-NEXT:    vsetivli zero, 0, e64, m1, ta, mu
 ; RV64-NEXT:    vmv.x.s a1, v8
 ; RV64-NEXT:    lb a2, 1(a1)
 ; RV64-NEXT:    lbu a1, 0(a1)
@@ -237,7 +237,7 @@ define <2 x i64> @mgather_v2i64_align4(<2 x i64*> %ptrs, <2 x i1> %m, <2 x i64> 
 ; RV64-NEXT:    andi a1, a0, 1
 ; RV64-NEXT:    beqz a1, .LBB5_2
 ; RV64-NEXT:  # %bb.1: # %cond.load
-; RV64-NEXT:    vsetvli zero, zero, e64, m1, ta, mu
+; RV64-NEXT:    vsetivli zero, 0, e64, m1, ta, mu
 ; RV64-NEXT:    vmv.x.s a1, v8
 ; RV64-NEXT:    lwu a2, 4(a1)
 ; RV64-NEXT:    lwu a1, 0(a1)
@@ -302,7 +302,7 @@ define void @mscatter_v4i16_align1(<4 x i16> %val, <4 x i16*> %ptrs, <4 x i1> %m
 ; RV32-NEXT:    addi sp, sp, 16
 ; RV32-NEXT:    ret
 ; RV32-NEXT:  .LBB6_5: # %cond.store
-; RV32-NEXT:    vsetvli zero, zero, e16, mf2, ta, mu
+; RV32-NEXT:    vsetivli zero, 0, e16, mf2, ta, mu
 ; RV32-NEXT:    vmv.x.s a1, v8
 ; RV32-NEXT:    vsetvli zero, zero, e32, m1, ta, mu
 ; RV32-NEXT:    vmv.x.s a2, v9
@@ -379,7 +379,7 @@ define void @mscatter_v4i16_align1(<4 x i16> %val, <4 x i16*> %ptrs, <4 x i1> %m
 ; RV64-NEXT:    addi sp, sp, 16
 ; RV64-NEXT:    ret
 ; RV64-NEXT:  .LBB6_5: # %cond.store
-; RV64-NEXT:    vsetvli zero, zero, e16, mf2, ta, mu
+; RV64-NEXT:    vsetivli zero, 0, e16, mf2, ta, mu
 ; RV64-NEXT:    vmv.x.s a1, v8
 ; RV64-NEXT:    vsetvli zero, zero, e64, m2, ta, mu
 ; RV64-NEXT:    vmv.x.s a2, v10
@@ -456,7 +456,7 @@ define void @mscatter_v2i32_align2(<2 x i32> %val, <2 x i32*> %ptrs, <2 x i1> %m
 ; RV32-NEXT:    addi sp, sp, 16
 ; RV32-NEXT:    ret
 ; RV32-NEXT:  .LBB7_3: # %cond.store
-; RV32-NEXT:    vsetvli zero, zero, e32, mf2, ta, mu
+; RV32-NEXT:    vsetivli zero, 0, e32, mf2, ta, mu
 ; RV32-NEXT:    vmv.x.s a1, v8
 ; RV32-NEXT:    vmv.x.s a2, v9
 ; RV32-NEXT:    sh a1, 0(a2)
@@ -501,7 +501,7 @@ define void @mscatter_v2i32_align2(<2 x i32> %val, <2 x i32*> %ptrs, <2 x i1> %m
 ; RV64-NEXT:    addi sp, sp, 16
 ; RV64-NEXT:    ret
 ; RV64-NEXT:  .LBB7_3: # %cond.store
-; RV64-NEXT:    vsetvli zero, zero, e32, mf2, ta, mu
+; RV64-NEXT:    vsetivli zero, 0, e32, mf2, ta, mu
 ; RV64-NEXT:    vmv.x.s a1, v8
 ; RV64-NEXT:    vsetvli zero, zero, e64, m1, ta, mu
 ; RV64-NEXT:    vmv.x.s a2, v9
@@ -683,7 +683,7 @@ define void @masked_store_v2i32_align2(<2 x i32> %val, <2 x i32>* %a, <2 x i32> 
 ; RV32-NEXT:    addi sp, sp, 16
 ; RV32-NEXT:    ret
 ; RV32-NEXT:  .LBB9_3: # %cond.store
-; RV32-NEXT:    vsetvli zero, zero, e32, mf2, ta, mu
+; RV32-NEXT:    vsetivli zero, 0, e32, mf2, ta, mu
 ; RV32-NEXT:    vmv.x.s a2, v8
 ; RV32-NEXT:    sh a2, 0(a0)
 ; RV32-NEXT:    srli a2, a2, 16
@@ -726,7 +726,7 @@ define void @masked_store_v2i32_align2(<2 x i32> %val, <2 x i32>* %a, <2 x i32> 
 ; RV64-NEXT:    addi sp, sp, 16
 ; RV64-NEXT:    ret
 ; RV64-NEXT:  .LBB9_3: # %cond.store
-; RV64-NEXT:    vsetvli zero, zero, e32, mf2, ta, mu
+; RV64-NEXT:    vsetivli zero, 0, e32, mf2, ta, mu
 ; RV64-NEXT:    vmv.x.s a2, v8
 ; RV64-NEXT:    sh a2, 0(a0)
 ; RV64-NEXT:    srli a2, a2, 16

@@ -29,6 +29,7 @@
 #include "llvm/IR/Constant.h"
 #include "llvm/IR/Constants.h"
 #include "llvm/IR/GlobalValue.h"
+#include "llvm/IR/GlobalVariable.h"
 #include "llvm/IR/IRBuilder.h"
 #include "llvm/IR/Instruction.h"
 #include "llvm/IR/IntrinsicInst.h"
@@ -281,6 +282,86 @@ AA::combineOptionalValuesInAAValueLatice(const Optional<Value *> &A,
   return nullptr;
 }
 
+bool AA::getPotentialCopiesOfStoredValue(
+    Attributor &A, StoreInst &SI, SmallSetVector<Value *, 4> &PotentialCopies,
+    const AbstractAttribute &QueryingAA, bool &UsedAssumedInformation) {
+
+  Value &Ptr = *SI.getPointerOperand();
+  SmallVector<Value *, 8> Objects;
+  if (!AA::getAssumedUnderlyingObjects(A, Ptr, Objects, QueryingAA, &SI)) {
+    LLVM_DEBUG(
+        dbgs() << "Underlying objects stored into could not be determined\n";);
+    return false;
+  }
+
+  SmallVector<const AAPointerInfo *> PIs;
+  SmallVector<Value *> NewCopies;
+
+  for (Value *Obj : Objects) {
+    LLVM_DEBUG(dbgs() << "Visit underlying object " << *Obj << "\n");
+    if (isa<UndefValue>(Obj))
+      continue;
+    if (isa<ConstantPointerNull>(Obj)) {
+      // A null pointer access can be undefined but any offset from null may
+      // be OK. We do not try to optimize the latter.
+      if (!NullPointerIsDefined(SI.getFunction(),
+                                Ptr.getType()->getPointerAddressSpace()) &&
+          A.getAssumedSimplified(Ptr, QueryingAA, UsedAssumedInformation) ==
+              Obj)
+        continue;
+      LLVM_DEBUG(
+          dbgs() << "Underlying object is a valid nullptr, giving up.\n";);
+      return false;
+    }
+    if (!isa<AllocaInst>(Obj) && !isa<GlobalVariable>(Obj)) {
+      LLVM_DEBUG(dbgs() << "Underlying object is not supported yet: " << *Obj
+                        << "\n";);
+      return false;
+    }
+    if (auto *GV = dyn_cast<GlobalVariable>(Obj))
+      if (!GV->hasLocalLinkage()) {
+        LLVM_DEBUG(dbgs() << "Underlying object is global with external "
+                             "linkage, not supported yet: "
+                          << *Obj << "\n";);
+        return false;
+      }
+
+    auto CheckAccess = [&](const AAPointerInfo::Access &Acc, bool IsExact) {
+      if (!Acc.isRead())
+        return true;
+      auto *LI = dyn_cast<LoadInst>(Acc.getRemoteInst());
+      if (!LI) {
+        LLVM_DEBUG(dbgs() << "Underlying object read through a non-load "
+                             "instruction not supported yet: "
+                          << *Acc.getRemoteInst() << "\n";);
+        return false;
+      }
+      NewCopies.push_back(LI);
+      return true;
+    };
+
+    auto &PI = A.getAAFor<AAPointerInfo>(QueryingAA, IRPosition::value(*Obj),
+                                         DepClassTy::NONE);
+    if (!PI.forallInterferingAccesses(SI, CheckAccess)) {
+      LLVM_DEBUG(
+          dbgs()
+          << "Failed to verify all interfering accesses for underlying object: "
+          << *Obj << "\n");
+      return false;
+    }
+    PIs.push_back(&PI);
+  }
+
+  for (auto *PI : PIs) {
+    if (!PI->getState().isAtFixpoint())
+      UsedAssumedInformation = true;
+    A.recordDependence(*PI, QueryingAA, DepClassTy::OPTIONAL);
+  }
+  PotentialCopies.insert(NewCopies.begin(), NewCopies.end());
+
+  return true;
+}
+
 /// Return true if \p New is equal or worse than \p Old.
 static bool isEqualOrWorse(const Attribute &New, const Attribute &Old) {
   if (!Old.isIntAttribute())
@@ -293,12 +374,14 @@ static bool isEqualOrWorse(const Attribute &New, const Attribute &Old) {
 /// attribute list \p Attrs. This is only the case if it was not already present
 /// in \p Attrs at the position describe by \p PK and \p AttrIdx.
 static bool addIfNotExistent(LLVMContext &Ctx, const Attribute &Attr,
-                             AttributeList &Attrs, int AttrIdx) {
+                             AttributeList &Attrs, int AttrIdx,
+                             bool ForceReplace = false) {
 
   if (Attr.isEnumAttribute()) {
     Attribute::AttrKind Kind = Attr.getKindAsEnum();
     if (Attrs.hasAttribute(AttrIdx, Kind))
-      if (isEqualOrWorse(Attr, Attrs.getAttribute(AttrIdx, Kind)))
+      if (!ForceReplace &&
+          isEqualOrWorse(Attr, Attrs.getAttribute(AttrIdx, Kind)))
         return false;
     Attrs = Attrs.addAttribute(Ctx, AttrIdx, Attr);
     return true;
@@ -306,7 +389,8 @@ static bool addIfNotExistent(LLVMContext &Ctx, const Attribute &Attr,
   if (Attr.isStringAttribute()) {
     StringRef Kind = Attr.getKindAsString();
     if (Attrs.hasAttribute(AttrIdx, Kind))
-      if (isEqualOrWorse(Attr, Attrs.getAttribute(AttrIdx, Kind)))
+      if (!ForceReplace &&
+          isEqualOrWorse(Attr, Attrs.getAttribute(AttrIdx, Kind)))
         return false;
     Attrs = Attrs.addAttribute(Ctx, AttrIdx, Attr);
     return true;
@@ -314,7 +398,8 @@ static bool addIfNotExistent(LLVMContext &Ctx, const Attribute &Attr,
   if (Attr.isIntAttribute()) {
     Attribute::AttrKind Kind = Attr.getKindAsEnum();
     if (Attrs.hasAttribute(AttrIdx, Kind))
-      if (isEqualOrWorse(Attr, Attrs.getAttribute(AttrIdx, Kind)))
+      if (!ForceReplace &&
+          isEqualOrWorse(Attr, Attrs.getAttribute(AttrIdx, Kind)))
         return false;
     Attrs = Attrs.removeAttribute(Ctx, AttrIdx, Kind);
     Attrs = Attrs.addAttribute(Ctx, AttrIdx, Attr);
@@ -395,7 +480,8 @@ ChangeStatus AbstractAttribute::update(Attributor &A) {
 
 ChangeStatus
 IRAttributeManifest::manifestAttrs(Attributor &A, const IRPosition &IRP,
-                                   const ArrayRef<Attribute> &DeducedAttrs) {
+                                   const ArrayRef<Attribute> &DeducedAttrs,
+                                   bool ForceReplace) {
   Function *ScopeFn = IRP.getAnchorScope();
   IRPosition::Kind PK = IRP.getPositionKind();
 
@@ -423,7 +509,7 @@ IRAttributeManifest::manifestAttrs(Attributor &A, const IRPosition &IRP,
   ChangeStatus HasChanged = ChangeStatus::UNCHANGED;
   LLVMContext &Ctx = IRP.getAnchorValue().getContext();
   for (const Attribute &Attr : DeducedAttrs) {
-    if (!addIfNotExistent(Ctx, Attr, Attrs, IRP.getAttrIdx()))
+    if (!addIfNotExistent(Ctx, Attr, Attrs, IRP.getAttrIdx(), ForceReplace))
       continue;
 
     HasChanged = ChangeStatus::CHANGED;
@@ -675,7 +761,7 @@ Attributor::getAssumedConstant(const IRPosition &IRP,
   // First check all callbacks provided by outside AAs. If any of them returns
   // a non-null value that is different from the associated value, or None, we
   // assume it's simpliied.
-  for (auto &CB : SimplificationCallbacks[IRP]) {
+  for (auto &CB : SimplificationCallbacks.lookup(IRP)) {
     Optional<Value *> SimplifiedV = CB(IRP, &AA, UsedAssumedInformation);
     if (!SimplifiedV.hasValue())
       return llvm::None;
@@ -713,7 +799,7 @@ Attributor::getAssumedSimplified(const IRPosition &IRP,
   // First check all callbacks provided by outside AAs. If any of them returns
   // a non-null value that is different from the associated value, or None, we
   // assume it's simpliied.
-  for (auto &CB : SimplificationCallbacks[IRP])
+  for (auto &CB : SimplificationCallbacks.lookup(IRP))
     return CB(IRP, AA, UsedAssumedInformation);
 
   // If no high-level/outside simplification occured, use AAValueSimplify.
@@ -894,6 +980,22 @@ bool Attributor::isAssumedDead(const IRPosition &IRP,
   return false;
 }
 
+bool Attributor::isAssumedDead(const BasicBlock &BB,
+                               const AbstractAttribute *QueryingAA,
+                               const AAIsDead *FnLivenessAA,
+                               DepClassTy DepClass) {
+  if (!FnLivenessAA)
+    FnLivenessAA = lookupAAFor<AAIsDead>(IRPosition::function(*BB.getParent()),
+                                         QueryingAA, DepClassTy::NONE);
+  if (FnLivenessAA->isAssumedDead(&BB)) {
+    if (QueryingAA)
+      recordDependence(*FnLivenessAA, *QueryingAA, DepClass);
+    return true;
+  }
+
+  return false;
+}
+
 bool Attributor::checkForAllUses(function_ref<bool(const Use &, bool &)> Pred,
                                  const AbstractAttribute &QueryingAA,
                                  const Value &V, bool CheckBBLivenessOnly,
@@ -934,6 +1036,23 @@ bool Attributor::checkForAllUses(function_ref<bool(const Use &, bool &)> Pred,
     if (U->getUser()->isDroppable()) {
       LLVM_DEBUG(dbgs() << "[Attributor] Droppable user, skip!\n");
       continue;
+    }
+
+    if (auto *SI = dyn_cast<StoreInst>(U->getUser())) {
+      if (&SI->getOperandUse(0) == U) {
+        SmallSetVector<Value *, 4> PotentialCopies;
+        if (AA::getPotentialCopiesOfStoredValue(*this, *SI, PotentialCopies,
+                                                QueryingAA,
+                                                UsedAssumedInformation)) {
+          LLVM_DEBUG(dbgs() << "[Attributor] Value is stored, continue with "
+                            << PotentialCopies.size()
+                            << " potential copies instead!\n");
+          for (Value *PotentialCopy : PotentialCopies)
+            for (const Use &U : PotentialCopy->uses())
+              Worklist.push_back(&U);
+          continue;
+        }
+      }
     }
 
     bool Follow = false;
@@ -1144,6 +1263,9 @@ bool Attributor::checkForAllInstructions(function_ref<bool(Instruction &)> Pred,
   // Since we need to provide instructions we have to have an exact definition.
   const Function *AssociatedFunction = IRP.getAssociatedFunction();
   if (!AssociatedFunction)
+    return false;
+
+  if (AssociatedFunction->isDeclaration())
     return false;
 
   // TODO: use the function scope once we have call site AAReturnedValues.
@@ -1583,7 +1705,7 @@ ChangeStatus Attributor::cleanupIR() {
       if (!isRunOn(*I->getFunction()))
         continue;
       CGModifiedFunctions.insert(I->getFunction());
-      changeToUnreachable(I, /* UseLLVMTrap */ false);
+      changeToUnreachable(I);
     }
 
   for (auto &V : ToBeDeletedInsts) {
@@ -2210,6 +2332,8 @@ void InformationCache::initializeInformationCache(const Function &CF,
       // The alignment of a pointer is interesting for loads.
     case Instruction::Store:
       // The alignment of a pointer is interesting for stores.
+    case Instruction::Alloca:
+    case Instruction::AddrSpaceCast:
       IsInterestingOpcode = true;
     }
     if (IsInterestingOpcode) {
@@ -2605,7 +2729,9 @@ raw_ostream &llvm::operator<<(raw_ostream &OS,
                               const AAPointerInfo::Access &Acc) {
   OS << " [" << Acc.getKind() << "] " << *Acc.getRemoteInst();
   if (Acc.getLocalInst() != Acc.getRemoteInst())
-    OS << " via " << *Acc.getLocalInst() << "\n";
+    OS << " via " << *Acc.getLocalInst();
+  if (Acc.getContent().hasValue())
+    OS << " [" << *Acc.getContent() << "]";
   return OS;
 }
 ///}

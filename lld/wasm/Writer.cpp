@@ -43,6 +43,7 @@ using namespace llvm::wasm;
 namespace lld {
 namespace wasm {
 static constexpr int stackAlignment = 16;
+static constexpr int heapAlignment = 16;
 
 namespace {
 
@@ -310,9 +311,12 @@ void Writer::layoutMemory() {
     placeStack();
 
   if (WasmSym::heapBase) {
-    // Set `__heap_base` to directly follow the end of the stack or global data.
-    // The fact that this comes last means that a malloc/brk implementation
-    // can grow the heap at runtime.
+    // Set `__heap_base` to follow the end of the stack or global data. The
+    // fact that this comes last means that a malloc/brk implementation can
+    // grow the heap at runtime.
+    // We'll align the heap base here because memory allocators might expect
+    // __heap_base to be aligned already.
+    memoryPtr = alignTo(memoryPtr, heapAlignment);
     log("mem: heap base   = " + Twine(memoryPtr));
     WasmSym::heapBase->setVA(memoryPtr);
   }

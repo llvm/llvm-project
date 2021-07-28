@@ -12,8 +12,10 @@
 //===----------------------------------------------------------------------===//
 
 #include "PassDetail.h"
+#include "mlir/Conversion/SCFToStandard/SCFToStandard.h"
 #include "mlir/Dialect/Async/IR/Async.h"
 #include "mlir/Dialect/Async/Passes.h"
+#include "mlir/Dialect/SCF/SCF.h"
 #include "mlir/Dialect/StandardOps/IR/Ops.h"
 #include "mlir/IR/BlockAndValueMapping.h"
 #include "mlir/IR/ImplicitLocOpBuilder.h"
@@ -571,9 +573,21 @@ void AsyncToAsyncRuntimePass::runOnOperation() {
                  << " functions built from async.execute operations\n";
   });
 
+  // Returns true if operation is inside the coroutine.
+  auto isInCoroutine = [&](Operation *op) -> bool {
+    auto parentFunc = op->getParentOfType<FuncOp>();
+    return outlinedFunctions.find(parentFunc) != outlinedFunctions.end();
+  };
+
   // Lower async operations to async.runtime operations.
   MLIRContext *ctx = module->getContext();
   RewritePatternSet asyncPatterns(ctx);
+
+  // Conversion to async runtime augments original CFG with the coroutine CFG,
+  // and we have to make sure that structured control flow operations with async
+  // operations in nested regions will be converted to branch-based control flow
+  // before we add the coroutine basic blocks.
+  populateLoopToStdConversionPatterns(asyncPatterns);
 
   // Async lowering does not use type converter because it must preserve all
   // types for async.runtime operations.
@@ -591,12 +605,22 @@ void AsyncToAsyncRuntimePass::runOnOperation() {
   runtimeTarget.addIllegalOp<CreateGroupOp, AddToGroupOp>();
   runtimeTarget.addIllegalOp<ExecuteOp, AwaitOp, AwaitAllOp, async::YieldOp>();
 
+  // Decide if structured control flow has to be lowered to branch-based CFG.
+  runtimeTarget.addDynamicallyLegalDialect<scf::SCFDialect>([&](Operation *op) {
+    auto walkResult = op->walk([&](Operation *nested) {
+      bool isAsync = isa<async::AsyncDialect>(nested->getDialect());
+      return isAsync && isInCoroutine(nested) ? WalkResult::interrupt()
+                                              : WalkResult::advance();
+    });
+    return !walkResult.wasInterrupted();
+  });
+  runtimeTarget.addLegalOp<BranchOp, CondBranchOp>();
+
   // Assertions must be converted to runtime errors inside async functions.
   runtimeTarget.addDynamicallyLegalOp<AssertOp>([&](AssertOp op) -> bool {
     auto func = op->getParentOfType<FuncOp>();
     return outlinedFunctions.find(func) == outlinedFunctions.end();
   });
-  runtimeTarget.addLegalOp<CondBranchOp>();
 
   if (failed(applyPartialConversion(module, runtimeTarget,
                                     std::move(asyncPatterns)))) {

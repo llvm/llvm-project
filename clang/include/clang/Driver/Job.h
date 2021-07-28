@@ -10,6 +10,7 @@
 #define LLVM_CLANG_DRIVER_JOB_H
 
 #include "clang/Basic/LLVM.h"
+#include "clang/Driver/InputInfo.h"
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/Optional.h"
 #include "llvm/ADT/SmallVector.h"
@@ -119,8 +120,8 @@ class Command {
   /// argument, which will be the executable).
   llvm::opt::ArgStringList Arguments;
 
-  /// The list of program arguments which are inputs.
-  llvm::opt::ArgStringList InputFilenames;
+  /// The list of program inputs.
+  std::vector<InputInfo> InputInfoList;
 
   /// The list of program arguments which are outputs. May be empty.
   std::vector<std::string> OutputFilenames;
@@ -207,9 +208,7 @@ public:
 
   const llvm::opt::ArgStringList &getArguments() const { return Arguments; }
 
-  const llvm::opt::ArgStringList &getInputFilenames() const {
-    return InputFilenames;
-  }
+  const std::vector<InputInfo> &getInputInfos() const { return InputInfoList; }
 
   const std::vector<std::string> &getOutputFilenames() const {
     return OutputFilenames;

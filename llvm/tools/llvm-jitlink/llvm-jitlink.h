@@ -109,7 +109,6 @@ private:
 };
 
 struct Session {
-  std::unique_ptr<orc::ExecutorProcessControl> EPC;
   orc::ExecutionSession ES;
   orc::JITDylib *MainJD = nullptr;
   LLVMJITLinkObjectLinkingLayer ObjLayer;

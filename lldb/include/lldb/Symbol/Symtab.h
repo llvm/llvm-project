@@ -219,6 +219,26 @@ private:
     return false;
   }
 
+  /// A helper function that looks up full function names.
+  ///
+  /// We generate unique names for synthetic symbols so that users can look
+  /// them up by name when needed. But because doing so is uncommon in normal
+  /// debugger use, we trade off some performance at lookup time for faster
+  /// symbol table building by detecting these symbols and generating their
+  /// names lazily, rather than adding them to the normal symbol indexes. This
+  /// function does the job of first consulting the name indexes, and if that
+  /// fails it extracts the information it needs from the synthetic name and
+  /// locates the symbol.
+  ///
+  /// @param[in] symbol_name The symbol name to search for.
+  ///
+  /// @param[out] indexes The vector if symbol indexes to update with results.
+  ///
+  /// @returns The number of indexes added to the index vector. Zero if no
+  /// matches were found.
+  uint32_t GetNameIndexes(ConstString symbol_name,
+                          std::vector<uint32_t> &indexes);
+
   void SymbolIndicesToSymbolContextList(std::vector<uint32_t> &symbol_indexes,
                                         SymbolContextList &sc_list);
 

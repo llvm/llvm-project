@@ -2109,6 +2109,14 @@ template <Intrinsic::ID IntrID> inline IntrinsicID_match m_Intrinsic() {
   return IntrinsicID_match(IntrID);
 }
 
+/// Matches MaskedLoad Intrinsic.
+template <typename Opnd0, typename Opnd1, typename Opnd2, typename Opnd3>
+inline typename m_Intrinsic_Ty<Opnd0, Opnd1, Opnd2, Opnd3>::Ty
+m_MaskedLoad(const Opnd0 &Op0, const Opnd1 &Op1, const Opnd2 &Op2,
+             const Opnd3 &Op3) {
+  return m_Intrinsic<Intrinsic::masked_load>(Op0, Op1, Op2, Op3);
+}
+
 template <Intrinsic::ID IntrID, typename T0>
 inline typename m_Intrinsic_Ty<T0>::Ty m_Intrinsic(const T0 &Op0) {
   return m_CombineAnd(m_Intrinsic<IntrID>(), m_Argument<0>(Op0));
@@ -2421,14 +2429,6 @@ inline InsertValue_match<Ind, Val_t, Elt_t> m_InsertValue(const Val_t &Val,
 ///  `ptrtoint(gep <vscale x 1 x i8>, <vscale x 1 x i8>* null, i32 1>`
 /// under the right conditions determined by DataLayout.
 struct VScaleVal_match {
-private:
-  template <typename Base, typename Offset>
-  inline BinaryOp_match<Base, Offset, Instruction::GetElementPtr>
-  m_OffsetGep(const Base &B, const Offset &O) {
-    return BinaryOp_match<Base, Offset, Instruction::GetElementPtr>(B, O);
-  }
-
-public:
   const DataLayout &DL;
   VScaleVal_match(const DataLayout &DL) : DL(DL) {}
 
@@ -2436,12 +2436,16 @@ public:
     if (m_Intrinsic<Intrinsic::vscale>().match(V))
       return true;
 
-    if (m_PtrToInt(m_OffsetGep(m_Zero(), m_SpecificInt(1))).match(V)) {
-      auto *GEP = cast<GEPOperator>(cast<Operator>(V)->getOperand(0));
-      auto *DerefTy = GEP->getSourceElementType();
-      if (isa<ScalableVectorType>(DerefTy) &&
-          DL.getTypeAllocSizeInBits(DerefTy).getKnownMinSize() == 8)
-        return true;
+    Value *Ptr;
+    if (m_PtrToInt(m_Value(Ptr)).match(V)) {
+      if (auto *GEP = dyn_cast<GEPOperator>(Ptr)) {
+        auto *DerefTy = GEP->getSourceElementType();
+        if (GEP->getNumIndices() == 1 && isa<ScalableVectorType>(DerefTy) &&
+            m_Zero().match(GEP->getPointerOperand()) &&
+            m_SpecificInt(1).match(GEP->idx_begin()->get()) &&
+            DL.getTypeAllocSizeInBits(DerefTy).getKnownMinSize() == 8)
+          return true;
+      }
     }
 
     return false;

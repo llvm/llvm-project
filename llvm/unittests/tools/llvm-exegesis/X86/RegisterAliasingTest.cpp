@@ -1,4 +1,4 @@
-//===-- RegisterAliasingTest.cpp --------------------------------*- C++ -*-===//
+//===-- X86RegisterAliasingTest.cpp --------------------------------*- C++ -*-===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -23,9 +23,9 @@ namespace llvm {
 namespace exegesis {
 namespace {
 
-class RegisterAliasingTest : public X86TestBase {};
+class X86RegisterAliasingTest : public X86TestBase {};
 
-TEST_F(RegisterAliasingTest, TrackSimpleRegister) {
+TEST_F(X86RegisterAliasingTest, TrackSimpleRegister) {
   const auto &RegInfo = State.getRegInfo();
   const RegisterAliasingTracker tracker(RegInfo, X86::EAX);
   std::set<MCPhysReg> ActualAliasedRegisters;
@@ -39,7 +39,7 @@ TEST_F(RegisterAliasingTest, TrackSimpleRegister) {
   }
 }
 
-TEST_F(RegisterAliasingTest, TrackRegisterClass) {
+TEST_F(X86RegisterAliasingTest, TrackRegisterClass) {
   // The alias bits for GR8_ABCD_LRegClassID are the union of the alias bits for
   // AL, BL, CL and DL.
   const auto &RegInfo = State.getRegInfo();
@@ -57,7 +57,7 @@ TEST_F(RegisterAliasingTest, TrackRegisterClass) {
   ASSERT_THAT(RegClassTracker.aliasedBits(), sum);
 }
 
-TEST_F(RegisterAliasingTest, TrackRegisterClassCache) {
+TEST_F(X86RegisterAliasingTest, TrackRegisterClassCache) {
   // Fetching twice the same tracker yields the same pointers.
   const auto &RegInfo = State.getRegInfo();
   const BitVector NoReservedReg(RegInfo.getNumRegs());

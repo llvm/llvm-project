@@ -61,4 +61,5 @@ Symbols:
     Section:         .bar
   - Name:            bar
     Type:            STT_FUNC
+    Binding:         STB_GLOBAL
     Section:         .foo

@@ -1,4 +1,4 @@
-RUN: llvm-symbolizer 0x401000 0x401001 -obj="%p/Inputs/missing_pdb.exe" 2>%t.err \
+RUN: llvm-symbolizer 0x401000 0x401001 --obj="%p/Inputs/missing_pdb.exe" 2>%t.err \
 RUN:    | FileCheck %s
 RUN: FileCheck -DMSG=%errc_ENOENT --check-prefix=ERROR %s < %t.err
 
