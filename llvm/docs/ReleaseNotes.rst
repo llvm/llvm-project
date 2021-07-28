@@ -126,10 +126,71 @@ Changes to the OCaml bindings
 Changes to the C API
 --------------------
 
+* The C API functions ``LLVMGetAlignment`` and ``LLVMSetAlignment`` now allow
+  changing alignment on atomicrmw and cmpxchg instructions
+
+* A new entry ``LLVMDIArgListMetadataKind`` was added to the
+  ``LLVMMetadataKind`` enum, representing DIArgLists
+  (`D88175 <https://reviews.llvm.org/D88175>`_)
+
+* Type attributes have been added to LLVM-C, introducing
+  LLVMCreateTypeAttribute, LLVMGetTypeAttributeValue and LLVMIsTypeAttribute.
+  (`D977763' <https://reviews.llvm.org/D97763>`_)
+
+* The ``LTO_API_VERSION`` was bumped to 28, introducing a new function
+  ``lto_set_debug_options`` for parsing LTO debug options
+  (`D92611 <https://reviews.llvm.org/D92611>`_)
+
+* ``LLVMJITTargetSymbolFlags`` was renamed to ``LLVMJITSymbolTargetFlags``
+  (`rG8d718a0bff73af066675a6258c01307937c33cf9
+  <https://reviews.llvm.org/rG8d718a0bff73af066675a6258c01307937c33cf9>`_)
+
+* The C API received support for creating custom ORCv2 MaterializationUnits and
+  APIs to retrieve an LLJIT instance's linking layers. An ABI breaking change
+  for ``LLVMOrcAbsoluteSymbols`` was introduced to make it consistent with
+  ``LLVMOrcCreateCustomMaterializationUnit``.
+  (`rGc8fc5e3ba942057d6c4cdcd1faeae69a28e7b671
+  <https://reviews.llvm.org/rGc8fc5e3ba942057d6c4cdcd1faeae69a28e7b671>`_)
+
+* The C API received support for adding ORCv2 object buffers directly to an object
+  layer. (`rG7b73cd684a8d5fb44d34064200f10e2723085c33
+  <https://reviews.llvm.org/rG7b73cd684a8d5fb44d34064200f10e2723085c33>`_)
+
+* A breaking change to ``LLVMGetInlineAsm`` was introduced, adding a ninth
+  argument ``LLVMBool CanThrow`` (`D95745 <https://reviews.llvm.org/D95745>`_)
+
+* The C API received support for calling into the new pass manager.
+  (`D102136 <https://reviews.llvm.org/D102136>`_)
+
 * The C API function ``LLVMIntrinsicCopyOverloadedName`` has been deprecated.
   Please migrate to ``LLVMIntrinsicCopyOverloadedName2`` which takes an extra
   module argument and which also handles unnamed types.
-  ('D99173' <https://reviews.llvm.org/D99173>'_)
+  (`D99173 <https://reviews.llvm.org/D99173>`_)
+
+* The C API received support for dumping objects from ORCv2
+  (`rGcec8e69f01c3374cb38c6683058381b96fab8f89
+  <https://reviews.llvm.org/rGcec8e69f01c3374cb38c6683058381b96fab8f89>`_)
+
+* A breaking change to ``LLVMOrcObjectTransformLayerTransformFunction`` was
+  introduced, changing the order of the function pointer's arguments.
+  (`rG8962c68ad007a525f9daa987c99eda57e0d0069a
+  <https://reviews.llvm.org/rG8962c68ad007a525f9daa987c99eda57e0d0069a>`_)
+
+* The C API received support for accessing utilities from the LLJIT
+  ``IRTransformLayer`` and ``ThreadSafeModule`` classes. (`D103855
+  <https://reviews.llvm.org/D103855>`_)
+
+* The C API received support for creating lazy-export MaterializationUnits
+  (`D104672 <https://reviews.llvm.org/D104672>`_)
+
+* The C API function ``LLVMPassBuilderOptionsSetCoroutines`` was removed because
+  couroutine passes have been enabled by default. (`D105877
+  <https://reviews.llvm.org/D105877>`_)
+
+* ``comdat noduplicates`` was renamed to ``comdat nodeduplicate`` and as a
+  result, ``LLVMNoDuplicatesComdatSelectionKind`` was renamed to
+  ``LLVMNoDeduplicateComdatSelectionKind``. (`D106319
+  <https://reviews.llvm.org/D106319>`_)
 
 Changes to the Go bindings
 --------------------------
