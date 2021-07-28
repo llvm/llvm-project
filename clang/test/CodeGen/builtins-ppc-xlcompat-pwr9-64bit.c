@@ -80,3 +80,19 @@ double insert_exp (double d, unsigned long long ull) {
 // CHECK-NONPWR9-ERR:  error: this builtin is only valid on POWER9 or later CPUs
   return __insert_exp (d, ull);
 }
+
+signed long long test_builtin_ppc_addex0() {
+  // CHECK-LABEL:    @test_builtin_ppc_addex0
+  // CHECK:          %2 = call i64 @llvm.ppc.addex(i64 %0, i64 %1, i32 0)
+  // CHECK-32-ERROR: error: this builtin is only available on 64-bit targets
+  // CHECK-NONPWR9-ERR:  error: this builtin is only valid on POWER9 or later CPUs
+  return __builtin_ppc_addex(sll, sll, 0);
+}
+
+unsigned long long test_builtin_ppc_addex1() {
+  // CHECK-LABEL:    @test_builtin_ppc_addex1
+  // CHECK:          %2 = call i64 @llvm.ppc.addex(i64 %0, i64 %1, i32 0)
+  // CHECK-32-ERROR: error: this builtin is only available on 64-bit targets
+  // CHECK-NONPWR9-ERR:  error: this builtin is only valid on POWER9 or later CPUs
+  return __builtin_ppc_addex(ull, ull, 0);
+}

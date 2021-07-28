@@ -9,7 +9,18 @@
 // RUN:   -fsyntax-only -Wall -Werror -verify %s
 
 extern unsigned int ui;
+extern unsigned long long ull;
+extern long long ll;
 
 void test_builtin_ppc_cmprb() {
   int res = __builtin_ppc_cmprb(3, ui, ui); // expected-error {{argument value 3 is outside the valid range [0, 1]}}
 }
+
+#ifdef __PPC64__
+
+void test_builtin_ppc_addex() {
+  long long res = __builtin_ppc_addex(ll, ll, 4); // expected-error {{argument value 4 is outside the valid range [0, 3]}}
+  unsigned long long res2 = __builtin_ppc_addex(ull, ull, -1); // expected-error {{argument value -1 is outside the valid range [0, 3]}}
+}
+
+#endif

@@ -3294,6 +3294,7 @@ static bool isPPC_64Builtin(unsigned BuiltinID) {
   case PPC::BI__builtin_ppc_store8r:
   case PPC::BI__builtin_ppc_insert_exp:
   case PPC::BI__builtin_ppc_extract_sig:
+  case PPC::BI__builtin_ppc_addex:
     return true;
   }
   return false;
@@ -3435,6 +3436,19 @@ bool Sema::CheckPPCBuiltinFunctionCall(const TargetInfo &TI, unsigned BuiltinID,
   case PPC::BI__builtin_ppc_insert_exp:
     return SemaFeatureCheck(*this, TheCall, "power9-vector",
                             diag::err_ppc_builtin_only_on_arch, "9");
+  case PPC::BI__builtin_ppc_addex: {
+    if (SemaFeatureCheck(*this, TheCall, "isa-v30-instructions",
+                         diag::err_ppc_builtin_only_on_arch, "9") ||
+        SemaBuiltinConstantArgRange(TheCall, 2, 0, 3))
+      return true;
+    // Output warning for reserved values 1 to 3.
+    int ArgValue =
+        TheCall->getArg(2)->getIntegerConstantExpr(Context)->getSExtValue();
+    if (ArgValue != 0)
+      Diag(TheCall->getBeginLoc(), diag::warn_argument_undefined_behaviour)
+          << ArgValue;
+    return false;
+  }
   case PPC::BI__builtin_ppc_mtfsb0:
   case PPC::BI__builtin_ppc_mtfsb1:
     return SemaBuiltinConstantArgRange(TheCall, 0, 0, 31);

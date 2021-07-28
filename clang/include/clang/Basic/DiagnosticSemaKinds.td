@@ -9733,6 +9733,9 @@ def err_argument_invalid_range : Error<
 def warn_argument_invalid_range : Warning<
   "argument value %0 is outside the valid range [%1, %2]">, DefaultError,
   InGroup<DiagGroup<"argument-outside-range">>;
+def warn_argument_undefined_behaviour : Warning<
+  "argument value %0 will result in undefined behaviour">,
+  InGroup<DiagGroup<"argument-undefined-behaviour">>;
 def err_argument_not_multiple : Error<
   "argument should be a multiple of %0">;
 def err_argument_not_power_of_2 : Error<
