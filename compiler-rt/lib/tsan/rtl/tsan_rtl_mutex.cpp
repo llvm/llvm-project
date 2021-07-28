@@ -413,7 +413,7 @@ static void UpdateClockCallback(ThreadContextBase *tctx_base, void *arg) {
   thr->clock.set(&thr->proc()->clock_cache, tctx->tid, epoch);
 }
 
-void AcquireGlobal(ThreadState *thr, uptr pc) {
+void AcquireGlobal(ThreadState *thr) {
   DPrintf("#%d: AcquireGlobal\n", thr->tid);
   if (thr->ignore_sync)
     return;
