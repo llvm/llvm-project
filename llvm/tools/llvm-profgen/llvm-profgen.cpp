@@ -49,14 +49,20 @@ int main(int argc, const char *argv[]) {
   cl::HideUnrelatedOptions({&ProfGenCategory, &getColorCategory()});
   cl::ParseCommandLineOptions(argc, argv, "llvm SPGO profile generator\n");
 
-  // Load binaries and parse perf events and samples
-  PerfReader Reader(BinaryFilenames, PerfTraceFilenames);
-  if (ShowDisassemblyOnly)
+  if (ShowDisassemblyOnly) {
+    for (auto BinaryPath : BinaryFilenames) {
+      (void)ProfiledBinary(BinaryPath);
+    }
     return EXIT_SUCCESS;
-  Reader.parsePerfTraces(PerfTraceFilenames);
+  }
+
+  // Load binaries and parse perf events and samples
+  std::unique_ptr<PerfReaderBase> Reader =
+      PerfReaderBase::create(BinaryFilenames, PerfTraceFilenames);
+  Reader->parsePerfTraces(PerfTraceFilenames);
 
   std::unique_ptr<ProfileGenerator> Generator = ProfileGenerator::create(
-      Reader.getBinarySampleCounters(), Reader.getPerfScriptType());
+      Reader->getBinarySampleCounters(), Reader->getPerfScriptType());
   Generator->generateProfile();
   Generator->write();
 
