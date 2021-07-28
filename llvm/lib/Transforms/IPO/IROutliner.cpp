@@ -33,6 +33,10 @@
 using namespace llvm;
 using namespace IRSimilarity;
 
+// A command flag to be used for debugging to exclude branches from similarity
+// matching and outlining.
+extern cl::opt<bool> DisableBranches;
+
 // Set to true if the user wants the ir outliner to run on linkonceodr linkage
 // functions. This is false by default because the linker can dedupe linkonceodr
 // functions. Since the outliner is confined to a single module (modulo LTO),
@@ -91,6 +95,10 @@ struct OutlinableGroup {
   /// to specific arguments.
   DenseMap<unsigned, unsigned> CanonicalNumberToAggArg;
 
+  /// The number of branches in the region target a basic block that is outside
+  /// of the region.
+  unsigned BranchesToOutside = 0;
+
   /// The number of instructions that will be outlined by extracting \ref
   /// Regions.
   InstructionCost Benefit = 0;
@@ -133,14 +141,26 @@ static void moveBBContents(BasicBlock &SourceBB, BasicBlock &TargetBB) {
 void OutlinableRegion::splitCandidate() {
   assert(!CandidateSplit && "Candidate already split!");
 
-  Instruction *EndInst = (*Candidate->end()).Inst;
-  assert(EndInst && "Expected an end instruction?");
+  Instruction *BackInst = Candidate->backInstruction();
+
+  Instruction *EndInst = nullptr;
+  // Check whether the last instruction is a terminator, if it is, we do
+  // not split on the following instruction. We leave the block as it is.  We
+  // also check that this is not the last instruction in the Module, otherwise
+  // the check for whether the current following instruction matches the
+  // previously recorded instruction will be incorrect.
+  if (!BackInst->isTerminator() ||
+      BackInst->getParent() != &BackInst->getFunction()->back()) {
+    EndInst = Candidate->end()->Inst;
+    assert(EndInst && "Expected an end instruction?");
+  }
 
   // We check if the current instruction following the last instruction in the
   // region is the same as the recorded instruction following the last
   // instruction. If they do not match, there could be problems in rewriting
   // the program after outlining, so we ignore it.
-  if (EndInst != Candidate->backInstruction()->getNextNonDebugInstruction())
+  if (!BackInst->isTerminator() &&
+      EndInst != BackInst->getNextNonDebugInstruction())
     return;
 
   Instruction *StartInst = (*Candidate->begin()).Inst;
@@ -166,13 +186,20 @@ void OutlinableRegion::splitCandidate() {
   std::string OriginalName = PrevBB->getName().str();
 
   StartBB = PrevBB->splitBasicBlock(StartInst, OriginalName + "_to_outline");
-
-  // This is the case for the inner block since we do not have to include
-  // multiple blocks.
-  EndBB = StartBB;
-  FollowBB = EndBB->splitBasicBlock(EndInst, OriginalName + "_after_outline");
+  PrevBB->replaceSuccessorsPhiUsesWith(PrevBB, StartBB);
 
   CandidateSplit = true;
+  if (!BackInst->isTerminator()) {
+    EndBB = EndInst->getParent();
+    FollowBB = EndBB->splitBasicBlock(EndInst, OriginalName + "_after_outline");
+    EndBB->replaceSuccessorsPhiUsesWith(EndBB, FollowBB);
+    FollowBB->replaceSuccessorsPhiUsesWith(PrevBB, FollowBB);
+    return;
+  }
+
+  EndBB = BackInst->getParent();
+  EndsInBranch = true;
+  FollowBB = nullptr;
 }
 
 void OutlinableRegion::reattachCandidate() {
@@ -193,7 +220,6 @@ void OutlinableRegion::reattachCandidate() {
   //   inst3
   //   inst4
   assert(StartBB != nullptr && "StartBB for Candidate is not defined!");
-  assert(FollowBB != nullptr && "StartBB for Candidate is not defined!");
 
   // StartBB should only have one predecessor since we put an unconditional
   // branch at the end of PrevBB when we split the BasicBlock.
@@ -202,21 +228,24 @@ void OutlinableRegion::reattachCandidate() {
          "No Predecessor for the region start basic block!");
 
   assert(PrevBB->getTerminator() && "Terminator removed from PrevBB!");
-  assert(EndBB->getTerminator() && "Terminator removed from EndBB!");
   PrevBB->getTerminator()->eraseFromParent();
-  EndBB->getTerminator()->eraseFromParent();
 
   moveBBContents(*StartBB, *PrevBB);
 
   BasicBlock *PlacementBB = PrevBB;
   if (StartBB != EndBB)
     PlacementBB = EndBB;
-  moveBBContents(*FollowBB, *PlacementBB);
+  if (!EndsInBranch && PlacementBB->getUniqueSuccessor() != nullptr) {
+    assert(FollowBB != nullptr && "FollowBB for Candidate is not defined!");
+    assert(PlacementBB->getTerminator() && "Terminator removed from EndBB!");
+    PlacementBB->getTerminator()->eraseFromParent();
+    moveBBContents(*FollowBB, *PlacementBB);
+    PlacementBB->replaceSuccessorsPhiUsesWith(FollowBB, PlacementBB);
+    FollowBB->eraseFromParent();
+  }
 
   PrevBB->replaceSuccessorsPhiUsesWith(StartBB, PrevBB);
-  PrevBB->replaceSuccessorsPhiUsesWith(FollowBB, PlacementBB);
   StartBB->eraseFromParent();
-  FollowBB->eraseFromParent();
 
   // Make sure to save changes back to the StartBB.
   StartBB = PrevBB;
@@ -761,9 +790,48 @@ findExtractedInputToOverallInputMapping(OutlinableRegion &Region,
 /// \param [in] Outputs - The values found by the code extractor.
 static void
 findExtractedOutputToOverallOutputMapping(OutlinableRegion &Region,
-                                          ArrayRef<Value *> Outputs) {
+                                          SetVector<Value *> &Outputs) {
   OutlinableGroup &Group = *Region.Parent;
   IRSimilarityCandidate &C = *Region.Candidate;
+
+  SmallVector<BasicBlock *> BE;
+  DenseSet<BasicBlock *> BBSet;
+  C.getBasicBlocks(BBSet, BE);
+
+  // Find the exits to the region.
+  SmallPtrSet<BasicBlock *, 1> Exits;
+  for (BasicBlock *Block : BE)
+    for (BasicBlock *Succ : successors(Block))
+      if (!BBSet.contains(Succ))
+        Exits.insert(Succ);
+
+  // For now, we check whether we have more than one exit, if we do, we
+  // ignore this region.
+  if (Exits.size() > 1) {
+    Region.IgnoreRegion = true;
+    return;
+  }
+
+  // After determining which blocks exit to PHINodes, we add these PHINodes to
+  // the set of outputs to be processed.  We also check the incoming values of
+  // the PHINodes for whether they should no longer be considered outputs.
+  DenseSet<Value *> PHIWrapped;
+  for (BasicBlock *ExitBB : Exits) {
+    for (PHINode &PN : ExitBB->phis()) {
+      // Find all incoming values from the outlining region.
+      SmallVector<unsigned, 2> IncomingVals;
+      for (unsigned Idx = 0; Idx < PN.getNumIncomingValues(); ++Idx)
+        if (BBSet.contains(PN.getIncomingBlock(Idx)))
+          IncomingVals.push_back(Idx);
+
+      // Do not process PHI if there is one (or fewer) predecessor from region.
+      if (IncomingVals.size() <= 1)
+        continue;
+
+      Region.IgnoreRegion = true;
+      return;
+    }
+  }
 
   // This counts the argument number in the extracted function.
   unsigned OriginalIndex = Region.NumExtractedInputs;
@@ -840,7 +908,7 @@ void IROutliner::findAddInputsOutputs(Module &M, OutlinableRegion &Region,
 
   // Map the outputs found by the CodeExtractor to the arguments found for
   // the overall function.
-  findExtractedOutputToOverallOutputMapping(Region, Outputs.getArrayRef());
+  findExtractedOutputToOverallOutputMapping(Region, Outputs);
 }
 
 /// Replace the extracted function in the Region with a call to the overall
@@ -1385,20 +1453,20 @@ bool IROutliner::isCompatibleWithAlreadyOutlinedCode(
 
   // We check if the recorded instruction matches the actual next instruction,
   // if it does not, we fix it in the InstructionDataList.
-  Instruction *RealEndInstruction =
-      Region.Candidate->backInstruction()->getNextNonDebugInstruction();
+  if (!Region.Candidate->backInstruction()->isTerminator()) {
+    Instruction *NewEndInst =
+        Region.Candidate->backInstruction()->getNextNonDebugInstruction();
+    assert(NewEndInst && "Next instruction is a nullptr?");
+    if (Region.Candidate->end()->Inst != NewEndInst) {
+      IRInstructionDataList *IDL = Region.Candidate->front()->IDL;
+      IRInstructionData *NewEndIRID = new (InstDataAllocator.Allocate())
+          IRInstructionData(*NewEndInst,
+                            InstructionClassifier.visit(*NewEndInst), *IDL);
 
-  assert(RealEndInstruction && "Next instruction is a nullptr?");
-  if (Region.Candidate->end()->Inst != RealEndInstruction) {
-    IRInstructionDataList *IDL = Region.Candidate->front()->IDL;
-    Instruction *NewEndInst = RealEndInstruction;
-    IRInstructionData *NewEndIRID = new (InstDataAllocator.Allocate())
-        IRInstructionData(*NewEndInst, InstructionClassifier.visit(*NewEndInst),
-                          *IDL);
-
-    // Insert the first IRInstructionData of the new region after the
-    // last IRInstructionData of the IRSimilarityCandidate.
-    IDL->insert(Region.Candidate->end(), *NewEndIRID);
+      // Insert the first IRInstructionData of the new region after the
+      // last IRInstructionData of the IRSimilarityCandidate.
+      IDL->insert(Region.Candidate->end(), *NewEndIRID);
+    }
   }
 
   return none_of(*IRSC, [this](IRInstructionData &ID) {
@@ -1420,6 +1488,15 @@ void IROutliner::pruneIncompatibleRegions(
     return LHS.getStartIdx() < RHS.getStartIdx();
   });
 
+  IRSimilarityCandidate &FirstCandidate = CandidateVec[0];
+  // Since outlining a call and a branch instruction will be the same as only
+  // outlinining a call instruction, we ignore it as a space saving.
+  if (FirstCandidate.getLength() == 2) {
+    if (isa<CallInst>(FirstCandidate.front()->Inst) &&
+        isa<BranchInst>(FirstCandidate.back()->Inst))
+        return;
+  }
+
   unsigned CurrentEndIdx = 0;
   for (IRSimilarityCandidate &IRSC : CandidateVec) {
     PreviouslyOutlined = false;
@@ -1435,9 +1512,13 @@ void IROutliner::pruneIncompatibleRegions(
     if (PreviouslyOutlined)
       continue;
 
-    // TODO: If in the future we can outline across BasicBlocks, we will need to
-    // check all BasicBlocks contained in the region.
-    if (IRSC.getStartBB()->hasAddressTaken())
+    // Check over the instructions, and if the basic block has its address
+    // taken for use somewhere else, we do not outline that block.
+    bool BBHasAddressTaken = any_of(IRSC, [](IRInstructionData &ID){
+      return ID.Inst->getParent()->hasAddressTaken();
+    });
+
+    if (BBHasAddressTaken)
       continue;
 
     if (IRSC.front()->Inst->getFunction()->hasLinkOnceODRLinkage() &&
@@ -1519,10 +1600,33 @@ static InstructionCost findCostForOutputBlocks(Module &M,
                                                OutlinableGroup &CurrentGroup,
                                                TargetTransformInfo &TTI) {
   InstructionCost OutputCost = 0;
+  unsigned NumOutputBranches = 0;
+
+  IRSimilarityCandidate &Candidate = *CurrentGroup.Regions[0]->Candidate;
+  DenseSet<BasicBlock *> CandidateBlocks;
+  Candidate.getBasicBlocks(CandidateBlocks);
+
+  // Count the number of different output branches that point to blocks outside
+  // of the region.
+  DenseSet<BasicBlock *> FoundBlocks;
+  for (IRInstructionData &ID : Candidate) {
+    if (!isa<BranchInst>(ID.Inst))
+      continue;
+
+    for (Value *V : ID.OperVals) {
+      BasicBlock *BB = static_cast<BasicBlock *>(V);
+      DenseSet<BasicBlock *>::iterator CBIt = CandidateBlocks.find(BB);
+      if (CBIt != CandidateBlocks.end() || FoundBlocks.contains(BB))
+        continue;
+      FoundBlocks.insert(BB);
+      NumOutputBranches++;
+    }
+  }
+
+  CurrentGroup.BranchesToOutside = NumOutputBranches;
 
   for (const ArrayRef<unsigned> &OutputUse :
        CurrentGroup.OutputGVNCombinations) {
-    IRSimilarityCandidate &Candidate = *CurrentGroup.Regions[0]->Candidate;
     for (unsigned GVN : OutputUse) {
       Optional<Value *> OV = Candidate.fromGVN(GVN);
       assert(OV.hasValue() && "Could not find value for GVN?");
@@ -1537,14 +1641,14 @@ static InstructionCost findCostForOutputBlocks(Module &M,
       LLVM_DEBUG(dbgs() << "Adding: " << StoreCost
                         << " instructions to cost for output of type "
                         << *V->getType() << "\n");
-      OutputCost += StoreCost;
+      OutputCost += StoreCost * NumOutputBranches;
     }
 
     InstructionCost BranchCost =
         TTI.getCFInstrCost(Instruction::Br, TargetTransformInfo::TCK_CodeSize);
     LLVM_DEBUG(dbgs() << "Adding " << BranchCost << " to the current cost for"
                       << " a branch instruction\n");
-    OutputCost += BranchCost;
+    OutputCost += BranchCost * NumOutputBranches;
   }
 
   // If there is more than one output scheme, we must have a comparison and
@@ -1563,7 +1667,7 @@ static InstructionCost findCostForOutputBlocks(Module &M,
     LLVM_DEBUG(dbgs() << "Adding: " << TotalCost
                       << " instructions for each switch case for each different"
                       << " output path in a function\n");
-    OutputCost += TotalCost;
+    OutputCost += TotalCost * NumOutputBranches;
   }
 
   return OutputCost;
@@ -1651,13 +1755,12 @@ void IROutliner::updateOutputMapping(OutlinableRegion &Region,
 
 bool IROutliner::extractSection(OutlinableRegion &Region) {
   SetVector<Value *> ArgInputs, Outputs, SinkCands;
-  Region.CE->findInputsOutputs(ArgInputs, Outputs, SinkCands);
-
   assert(Region.StartBB && "StartBB for the OutlinableRegion is nullptr!");
-  assert(Region.FollowBB && "FollowBB for the OutlinableRegion is nullptr!");
+  BasicBlock *InitialStart = Region.StartBB;
   Function *OrigF = Region.StartBB->getParent();
   CodeExtractorAnalysisCache CEAC(*OrigF);
-  Region.ExtractedFunction = Region.CE->extractCodeRegion(CEAC);
+  Region.ExtractedFunction =
+      Region.CE->extractCodeRegion(CEAC, ArgInputs, Outputs);
 
   // If the extraction was successful, find the BasicBlock, and reassign the
   // OutlinableRegion blocks
@@ -1668,7 +1771,23 @@ bool IROutliner::extractSection(OutlinableRegion &Region) {
     return false;
   }
 
-  BasicBlock *RewrittenBB = Region.FollowBB->getSinglePredecessor();
+  // Get the block containing the called branch, and reassign the blocks as
+  // necessary.  If the original block still exists, it is because we ended on
+  // a branch instruction, and so we move the contents into the block before
+  // and assign the previous block correctly.
+  User *InstAsUser = Region.ExtractedFunction->user_back();
+  BasicBlock *RewrittenBB = cast<Instruction>(InstAsUser)->getParent();
+  Region.PrevBB = RewrittenBB->getSinglePredecessor();
+  assert(Region.PrevBB && "PrevBB is nullptr?");
+  if (Region.PrevBB == InitialStart) {
+    BasicBlock *NewPrev = InitialStart->getSinglePredecessor();
+    Instruction *BI = NewPrev->getTerminator();
+    BI->eraseFromParent();
+    moveBBContents(*InitialStart, *NewPrev);
+    Region.PrevBB = NewPrev;
+    InitialStart->eraseFromParent();
+  }
+
   Region.StartBB = RewrittenBB;
   Region.EndBB = RewrittenBB;
 
@@ -1711,6 +1830,7 @@ bool IROutliner::extractSection(OutlinableRegion &Region) {
 
 unsigned IROutliner::doOutline(Module &M) {
   // Find the possible similarity sections.
+  InstructionClassifier.EnableBranches = !DisableBranches;
   IRSimilarityIdentifier &Identifier = getIRSI(M);
   SimilarityGroupList &SimilarityCandidates = *Identifier.getSimilarity();
 
@@ -1769,7 +1889,9 @@ unsigned IROutliner::doOutline(Module &M) {
       if (!OS->CandidateSplit)
         continue;
 
-      std::vector<BasicBlock *> BE = {OS->StartBB};
+      SmallVector<BasicBlock *> BE;
+      DenseSet<BasicBlock *> BBSet;
+      OS->Candidate->getBasicBlocks(BBSet, BE);
       OS->CE = new (ExtractorAllocator.Allocate())
           CodeExtractor(BE, nullptr, false, nullptr, nullptr, nullptr, false,
                         false, "outlined");
@@ -1878,7 +2000,9 @@ unsigned IROutliner::doOutline(Module &M) {
     // Create functions out of all the sections, and mark them as outlined.
     OutlinedRegions.clear();
     for (OutlinableRegion *OS : CurrentGroup.Regions) {
-      SmallVector<BasicBlock *> BE = {OS->StartBB};
+      SmallVector<BasicBlock *> BE;
+      DenseSet<BasicBlock *> BBSet;
+      OS->Candidate->getBasicBlocks(BBSet, BE);
       OS->CE = new (ExtractorAllocator.Allocate())
           CodeExtractor(BE, nullptr, false, nullptr, nullptr, nullptr, false,
                         false, "outlined");
