@@ -153,6 +153,7 @@ Compilation Flags
 If the flag is true, the label of ``v`` is the union of the label of ``p`` and
 the label of ``*p``. If the flag is false, the label of ``v`` is the label of
 just ``*p``.
+
 * ``-dfsan-combine-pointer-labels-on-store`` -- Controls whether to include or
   ignore the labels of pointers in store instructions. Its default value is
   false. For example:
@@ -164,6 +165,7 @@ just ``*p``.
 If the flag is true, the label of ``*p`` is the union of the label of ``p`` and
 the label of ``v``. If the flag is false, the label of ``*p`` is the label of
 just ``v``.
+
 * ``-dfsan-combine-offset-labels-on-gep`` -- Controls whether to propagate
   labels of offsets in GEP instructions. Its default value is true. For example:
 
@@ -173,6 +175,7 @@ just ``v``.
 
 If the flag is true, the label of ``p`` is the union of the label of ``p`` and
 the label of ``i``. If the flag is false, the label of ``p`` is unchanged.
+
 * ``-dfsan-track-select-control-flow`` -- Controls whether to track the control
   flow of select instructions. Its default value is true. For example:
 
@@ -183,6 +186,7 @@ the label of ``i``. If the flag is false, the label of ``p`` is unchanged.
 If the flag is true, the label of ``v`` is the union of the labels of ``b``,
 ``v1`` and ``v2``.  If the flag is false, the label of ``v`` is the union of the
 labels of just ``v1`` and ``v2``.
+
 * ``-dfsan-event-callbacks`` -- An experimental feature that inserts callbacks for
 certain data events. Currently callbacks are only inserted for loads, stores,
 memory transfers (i.e. memcpy and memmove), and comparisons. Its default value
@@ -195,10 +199,12 @@ following callback functions:
   void __dfsan_store_callback(dfsan_label Label, void* Addr);
   void __dfsan_mem_transfer_callback(dfsan_label *Start, size_t Len);
   void __dfsan_cmp_callback(dfsan_label CombinedLabel);
+
 * ``-dfsan-track-origins`` -- Controls how to track origins. When its value is
   0, the runtime does not track origins. When its value is 1, the runtime tracks
   origins at memory store operations. When its value is 2, the runtime tracks
   origins at memory load and store operations. Its default value is 0.
+
 * ``-dfsan-instrument-with-call-threshold`` -- If a function being instrumented
    requires more than this number of origin stores, use callbacks instead of
   inline checks (-1 means never use callbacks). Its default value is 3500.
