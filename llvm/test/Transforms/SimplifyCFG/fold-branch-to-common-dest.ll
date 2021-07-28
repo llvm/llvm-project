@@ -118,8 +118,9 @@ final_right:
   ret void
 }
 
-; FIXME: When we fold the dispatch block into pred, the call is moved to pred
-; and the attribute nonnull is no longer valid on paramater. We should drop it.
+; When we fold the dispatch block into pred, the call is moved to pred
+; and the attribute nonnull propagates poison paramater. However, since the
+; function is speculatable, it can never cause UB. So, we need not technically drop it.
 define void @one_pred_with_spec_call(i8 %v0, i8 %v1, i32* %p) {
 ; CHECK-LABEL: @one_pred_with_spec_call(
 ; CHECK-NEXT:  pred:
@@ -133,13 +134,35 @@ define void @one_pred_with_spec_call(i8 %v0, i8 %v1, i32* %p) {
 ; CHECK:       final_right:
 ; CHECK-NEXT:    call void @sideeffect0()
 ; CHECK-NEXT:    br label [[COMMON_RET]]
-;
 pred:
   %c0 = icmp ne i32* %p, null
   br i1 %c0, label %dispatch, label %final_right
 
 dispatch:
   %x = call i32 @speculate_call(i32* nonnull %p)
+  %c1 = icmp eq i8 %v1, 0
+  br i1 %c1, label %final_left, label %final_right
+
+final_left:
+  ret void
+
+final_right:
+  call void @sideeffect0()
+  ret void
+}
+
+; Drop dereferenceable on the parameter
+define void @one_pred_with_spec_call_deref(i8 %v0, i8 %v1, i32* %p) {
+; CHECK-LABEL: one_pred_with_spec_call_deref
+; CHECK-LABEL: pred:
+; CHECK:         %c0 = icmp ne i32* %p, null
+; CHECK:         %x = call i32 @speculate_call(i32* %p)
+pred:
+  %c0 = icmp ne i32* %p, null
+  br i1 %c0, label %dispatch, label %final_right
+
+dispatch:
+  %x = call i32 @speculate_call(i32* dereferenceable(12) %p)
   %c1 = icmp eq i8 %v1, 0
   br i1 %c1, label %final_left, label %final_right
 

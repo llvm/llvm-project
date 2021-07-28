@@ -1106,7 +1106,7 @@ static isl_stat project_out_fixed(struct isl_sched_node *node,
  * If any of the sizes turns out to be zero, then this means
  * that this dimension has a fixed value in terms of
  * the other dimensions.  Perform an (extra) compression
- * to remove this dimensions.
+ * to remove this dimension.
  */
 static isl_stat compute_sizes(struct isl_sched_node *node,
 	__isl_keep isl_set *uncompressed)

@@ -9,6 +9,7 @@ add_llvm_component_library(LLVMScalarOpts
   CorrelatedValuePropagation.cpp
   DCE.cpp
   DeadStoreElimination.cpp
+  DFAJumpThreading.cpp
   DivRemPairs.cpp
   EarlyCSE.cpp
   FlattenCFGPass.cpp

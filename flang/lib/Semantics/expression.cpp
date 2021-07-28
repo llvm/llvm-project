@@ -157,7 +157,7 @@ private:
   bool OkLogicalIntegerAssignment(TypeCategory lhs, TypeCategory rhs);
   int GetRank(std::size_t) const;
   bool IsBOZLiteral(std::size_t i) const {
-    return std::holds_alternative<BOZLiteralConstant>(GetExpr(i).u);
+    return evaluate::IsBOZLiteral(GetExpr(i));
   }
   void SayNoMatch(const std::string &, bool isAssignment = false);
   std::string TypeAsFortran(std::size_t);

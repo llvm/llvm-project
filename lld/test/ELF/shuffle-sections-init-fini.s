@@ -21,12 +21,12 @@
 # CHECK:      Hex dump of section '.init_array'
 # CHECK-NEXT: 0x{{[0-9a-f]+}} ff
 # ORDERED-SAME: 000102 03040506 0708090a 0b
-# SHUFFLED-SAME: 080301 04050907 0b020a06 00
+# SHUFFLED-SAME: 070201 0006090a 040b0503 08
 
 # CHECK:      Hex dump of section '.fini_array'
 # CHECK-NEXT: 0x{{[0-9a-f]+}} ff
 # ORDERED-SAME:  000102 03040506 0708090a 0b
-# SHUFFLED-SAME: 0a0405 08070b02 03090006 01
+# SHUFFLED-SAME: 070008 0a040209 03010b06 05
 
 ## With a SECTIONS command, SHT_INIT_ARRAY prirotities are ignored.
 ## All .init_array* are shuffled together.
@@ -42,7 +42,7 @@
 
 # CHECK2:       Hex dump of section '.init_array'
 # ORDERED2-NEXT:  0x{{[0-9a-f]+}} 00010203 04050607 08090a0b ff
-# SHUFFLED2-NEXT: 0x{{[0-9a-f]+}} 08030104 0509070b 02ff0a06 00
+# SHUFFLED2-NEXT: 0x{{[0-9a-f]+}} 07020100 06090a04 0b050308 ff
 
 .irp i,0,1,2,3,4,5,6,7,8,9,10,11
   .section .init,"ax",@progbits,unique,\i

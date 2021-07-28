@@ -91,21 +91,8 @@ struct X87StateDescriptor {
   uint16_t StatusWord;
   uint16_t Unused2;
   // TODO: Elaborate the remaining 20 bytes as required.
-#if !(defined(_WIN32))
   uint32_t _[5];
-#endif
 };
-
-struct FPState {
-  X87StateDescriptor X87Status;
-#if !(defined(_WIN32))
-  uint32_t MXCSR;
-#endif
-};
-
-static_assert(
-    sizeof(fenv_t) == sizeof(FPState),
-    "Internal floating point state does not match the public fenv_t type.");
 
 static inline uint16_t getX87ControlWord() {
   uint16_t w;
@@ -338,7 +325,48 @@ static inline int setRound(int mode) {
   return 0;
 }
 
-#if !(defined(_WIN32))
+namespace internal {
+
+#ifdef _WIN32
+// MSVC fenv.h defines a very simple representation of the floating point state
+// which just consists of control and status words of the x87 unit.
+struct FPState {
+  uint32_t ControlWord;
+  uint32_t StatusWord;
+};
+#else
+struct FPState {
+  X87StateDescriptor X87Status;
+  uint32_t MXCSR;
+};
+#endif // _WIN32
+
+} // namespace internal
+
+static_assert(
+    sizeof(fenv_t) == sizeof(internal::FPState),
+    "Internal floating point state does not match the public fenv_t type.");
+
+#ifdef _WIN32
+static inline int getEnv(fenv_t *envp) {
+  internal::FPState *state = reinterpret_cast<internal::FPState *>(envp);
+  internal::X87StateDescriptor X87Status;
+  internal::getX87StateDescriptor(X87Status);
+  state->ControlWord = X87Status.ControlWord;
+  state->StatusWord = X87Status.StatusWord;
+  return 0;
+}
+
+static inline int setEnv(const fenv_t *envp) {
+  const internal::FPState *state =
+      reinterpret_cast<const internal::FPState *>(envp);
+  internal::X87StateDescriptor X87Status;
+  X87Status.ControlWord = state->ControlWord;
+  X87Status.StatusWord = state->StatusWord;
+  internal::writeX87StateDescriptor(X87Status);
+  return 0;
+}
+#else
 static inline int getEnv(fenv_t *envp) {
   internal::FPState *state = reinterpret_cast<internal::FPState *>(envp);
   internal::getX87StateDescriptor(state->X87Status);

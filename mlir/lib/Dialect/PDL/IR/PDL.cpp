@@ -286,7 +286,7 @@ void PatternOp::build(OpBuilder &builder, OperationState &state,
         rootKind ? builder.getStringAttr(*rootKind) : StringAttr(),
         builder.getI16IntegerAttr(benefit ? *benefit : 0),
         name ? builder.getStringAttr(*name) : StringAttr());
-  builder.createBlock(state.addRegion());
+  state.regions[0]->emplaceBlock();
 }
 
 /// Returns the rewrite operation of this pattern.

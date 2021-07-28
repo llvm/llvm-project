@@ -6551,6 +6551,20 @@ void CGOpenMPRuntime::emitTargetOutlinedFunctionHelper(
   OffloadEntriesInfoManager.registerTargetRegionEntryInfo(
       DeviceID, FileID, ParentName, Line, OutlinedFn, OutlinedFnID,
       OffloadEntriesInfoManagerTy::OMPTargetRegionEntryTargetRegion);
+
+  // Add NumTeams and ThreadLimit attributes to the outlined GPU function
+  int32_t DefaultValTeams = -1;
+  getNumTeamsExprForTargetDirective(CGF, D, DefaultValTeams);
+  if (DefaultValTeams > 0) {
+    OutlinedFn->addFnAttr("omp_target_num_teams",
+                          std::to_string(DefaultValTeams));
+  }
+  int32_t DefaultValThreads = -1;
+  getNumThreadsExprForTargetDirective(CGF, D, DefaultValThreads);
+  if (DefaultValThreads > 0) {
+    OutlinedFn->addFnAttr("omp_target_thread_limit",
+                          std::to_string(DefaultValThreads));
+  }
 }
 
 /// Checks if the expression is constant or does not have non-trivial function
@@ -6605,24 +6619,13 @@ const Stmt *CGOpenMPRuntime::getSingleCompoundChild(ASTContext &Ctx,
   return Child;
 }
 
-/// Emit the number of teams for a target directive.  Inspect the num_teams
-/// clause associated with a teams construct combined or closely nested
-/// with the target directive.
-///
-/// Emit a team of size one for directives such as 'target parallel' that
-/// have no associated teams construct.
-///
-/// Otherwise, return nullptr.
-static llvm::Value *
-emitNumTeamsForTargetDirective(CodeGenFunction &CGF,
-                               const OMPExecutableDirective &D) {
-  assert(!CGF.getLangOpts().OpenMPIsDevice &&
-         "Clauses associated with the teams directive expected to be emitted "
-         "only for the host!");
+const Expr *CGOpenMPRuntime::getNumTeamsExprForTargetDirective(
+    CodeGenFunction &CGF, const OMPExecutableDirective &D,
+    int32_t &DefaultVal) {
+
   OpenMPDirectiveKind DirectiveKind = D.getDirectiveKind();
   assert(isOpenMPTargetExecutionDirective(DirectiveKind) &&
          "Expected target-based executable directive.");
-  CGBuilderTy &Bld = CGF.Builder;
   switch (DirectiveKind) {
   case OMPD_target: {
     const auto *CS = D.getInnermostCapturedStmt();
@@ -6634,23 +6637,27 @@ emitNumTeamsForTargetDirective(CodeGenFunction &CGF,
             dyn_cast_or_null<OMPExecutableDirective>(ChildStmt)) {
       if (isOpenMPTeamsDirective(NestedDir->getDirectiveKind())) {
         if (NestedDir->hasClausesOfKind<OMPNumTeamsClause>()) {
-          CGOpenMPInnerExprInfo CGInfo(CGF, *CS);
-          CodeGenFunction::CGCapturedStmtRAII CapInfoRAII(CGF, &CGInfo);
           const Expr *NumTeams =
               NestedDir->getSingleClause<OMPNumTeamsClause>()->getNumTeams();
-          llvm::Value *NumTeamsVal =
-              CGF.EmitScalarExpr(NumTeams,
-                                 /*IgnoreResultAssign*/ true);
-          return Bld.CreateIntCast(NumTeamsVal, CGF.Int32Ty,
-                                   /*isSigned=*/true);
+          if (NumTeams->isIntegerConstantExpr(CGF.getContext()))
+            if (auto Constant =
+                    NumTeams->getIntegerConstantExpr(CGF.getContext()))
+              DefaultVal = Constant->getExtValue();
+          return NumTeams;
         }
-        return Bld.getInt32(0);
+        DefaultVal = 0;
+        return nullptr;
       }
       if (isOpenMPParallelDirective(NestedDir->getDirectiveKind()) ||
-          isOpenMPSimdDirective(NestedDir->getDirectiveKind()))
-        return Bld.getInt32(1);
-      return Bld.getInt32(0);
+          isOpenMPSimdDirective(NestedDir->getDirectiveKind())) {
+        DefaultVal = 1;
+        return nullptr;
+      }
+      DefaultVal = 1;
+      return nullptr;
     }
+    // A value of -1 is used to check if we need to emit no teams region
+    DefaultVal = -1;
     return nullptr;
   }
   case OMPD_target_teams:
@@ -6659,22 +6666,22 @@ emitNumTeamsForTargetDirective(CodeGenFunction &CGF,
   case OMPD_target_teams_distribute_parallel_for:
   case OMPD_target_teams_distribute_parallel_for_simd: {
     if (D.hasClausesOfKind<OMPNumTeamsClause>()) {
-      CodeGenFunction::RunCleanupsScope NumTeamsScope(CGF);
       const Expr *NumTeams =
           D.getSingleClause<OMPNumTeamsClause>()->getNumTeams();
-      llvm::Value *NumTeamsVal =
-          CGF.EmitScalarExpr(NumTeams,
-                             /*IgnoreResultAssign*/ true);
-      return Bld.CreateIntCast(NumTeamsVal, CGF.Int32Ty,
-                               /*isSigned=*/true);
+      if (NumTeams->isIntegerConstantExpr(CGF.getContext()))
+        if (auto Constant = NumTeams->getIntegerConstantExpr(CGF.getContext()))
+          DefaultVal = Constant->getExtValue();
+      return NumTeams;
     }
-    return Bld.getInt32(0);
+    DefaultVal = 0;
+    return nullptr;
   }
   case OMPD_target_parallel:
   case OMPD_target_parallel_for:
   case OMPD_target_parallel_for_simd:
   case OMPD_target_simd:
-    return Bld.getInt32(1);
+    DefaultVal = 1;
+    return nullptr;
   case OMPD_parallel:
   case OMPD_for:
   case OMPD_parallel_for:
@@ -6738,6 +6745,48 @@ emitNumTeamsForTargetDirective(CodeGenFunction &CGF,
     break;
   }
   llvm_unreachable("Unexpected directive kind.");
+}
+
+llvm::Value *CGOpenMPRuntime::emitNumTeamsForTargetDirective(
+    CodeGenFunction &CGF, const OMPExecutableDirective &D) {
+  assert(!CGF.getLangOpts().OpenMPIsDevice &&
+         "Clauses associated with the teams directive expected to be emitted "
+         "only for the host!");
+  CGBuilderTy &Bld = CGF.Builder;
+  int32_t DefaultNT = -1;
+  const Expr *NumTeams = getNumTeamsExprForTargetDirective(CGF, D, DefaultNT);
+  if (NumTeams != nullptr) {
+    OpenMPDirectiveKind DirectiveKind = D.getDirectiveKind();
+
+    switch (DirectiveKind) {
+    case OMPD_target: {
+      const auto *CS = D.getInnermostCapturedStmt();
+      CGOpenMPInnerExprInfo CGInfo(CGF, *CS);
+      CodeGenFunction::CGCapturedStmtRAII CapInfoRAII(CGF, &CGInfo);
+      llvm::Value *NumTeamsVal = CGF.EmitScalarExpr(NumTeams,
+                                                  /*IgnoreResultAssign*/ true);
+      return Bld.CreateIntCast(NumTeamsVal, CGF.Int32Ty,
+                             /*isSigned=*/true);
+    }
+    case OMPD_target_teams:
+    case OMPD_target_teams_distribute:
+    case OMPD_target_teams_distribute_simd:
+    case OMPD_target_teams_distribute_parallel_for:
+    case OMPD_target_teams_distribute_parallel_for_simd: {
+      CodeGenFunction::RunCleanupsScope NumTeamsScope(CGF);
+      llvm::Value *NumTeamsVal = CGF.EmitScalarExpr(NumTeams,
+                                                  /*IgnoreResultAssign*/ true);
+      return Bld.CreateIntCast(NumTeamsVal, CGF.Int32Ty,
+                             /*isSigned=*/true);
+    }
+    default:
+      break;
+    }
+  } else if (DefaultNT == -1) {
+    return nullptr;
+  }
+
+  return Bld.getInt32(DefaultNT);
 }
 
 static llvm::Value *getNumThreads(CodeGenFunction &CGF, const CapturedStmt *CS,
@@ -6832,17 +6881,130 @@ static llvm::Value *getNumThreads(CodeGenFunction &CGF, const CapturedStmt *CS,
                                : CGF.Builder.getInt32(0);
 }
 
-/// Emit the number of threads for a target directive.  Inspect the
-/// thread_limit clause associated with a teams construct combined or closely
-/// nested with the target directive.
-///
-/// Emit the num_threads clause for directives such as 'target parallel' that
-/// have no associated teams construct.
-///
-/// Otherwise, return nullptr.
-static llvm::Value *
-emitNumThreadsForTargetDirective(CodeGenFunction &CGF,
-                                 const OMPExecutableDirective &D) {
+const Expr *CGOpenMPRuntime::getNumThreadsExprForTargetDirective(
+    CodeGenFunction &CGF, const OMPExecutableDirective &D,
+    int32_t &DefaultVal) {
+  OpenMPDirectiveKind DirectiveKind = D.getDirectiveKind();
+  assert(isOpenMPTargetExecutionDirective(DirectiveKind) &&
+         "Expected target-based executable directive.");
+
+  switch (DirectiveKind) {
+  case OMPD_target:
+    // Teams have no clause thread_limit
+    return nullptr;
+  case OMPD_target_teams:
+  case OMPD_target_teams_distribute:
+    if (D.hasClausesOfKind<OMPThreadLimitClause>()) {
+      const auto *ThreadLimitClause = D.getSingleClause<OMPThreadLimitClause>();
+      const Expr *ThreadLimit = ThreadLimitClause->getThreadLimit();
+      if (ThreadLimit->isIntegerConstantExpr(CGF.getContext()))
+        if (auto Constant =
+                ThreadLimit->getIntegerConstantExpr(CGF.getContext()))
+          DefaultVal = Constant->getExtValue();
+      return ThreadLimit;
+    }
+    return nullptr;
+  case OMPD_target_parallel:
+  case OMPD_target_parallel_for:
+  case OMPD_target_parallel_for_simd:
+  case OMPD_target_teams_distribute_parallel_for:
+  case OMPD_target_teams_distribute_parallel_for_simd: {
+    Expr *ThreadLimit = nullptr;
+    Expr *NumThreads = nullptr;
+    if (D.hasClausesOfKind<OMPThreadLimitClause>()) {
+      const auto *ThreadLimitClause = D.getSingleClause<OMPThreadLimitClause>();
+      ThreadLimit = ThreadLimitClause->getThreadLimit();
+      if (ThreadLimit->isIntegerConstantExpr(CGF.getContext()))
+        if (auto Constant =
+                ThreadLimit->getIntegerConstantExpr(CGF.getContext()))
+          DefaultVal = Constant->getExtValue();
+    }
+    if (D.hasClausesOfKind<OMPNumThreadsClause>()) {
+      const auto *NumThreadsClause = D.getSingleClause<OMPNumThreadsClause>();
+      NumThreads = NumThreadsClause->getNumThreads();
+      if (NumThreads->isIntegerConstantExpr(CGF.getContext())) {
+        if (auto Constant =
+                NumThreads->getIntegerConstantExpr(CGF.getContext())) {
+          if (Constant->getExtValue() < DefaultVal) {
+            DefaultVal = Constant->getExtValue();
+            ThreadLimit = NumThreads;
+          }
+        }
+      }
+    }
+    return ThreadLimit;
+  }
+  case OMPD_target_teams_distribute_simd:
+  case OMPD_target_simd:
+    DefaultVal = 1;
+    return nullptr;
+  case OMPD_parallel:
+  case OMPD_for:
+  case OMPD_parallel_for:
+  case OMPD_parallel_master:
+  case OMPD_parallel_sections:
+  case OMPD_for_simd:
+  case OMPD_parallel_for_simd:
+  case OMPD_cancel:
+  case OMPD_cancellation_point:
+  case OMPD_ordered:
+  case OMPD_threadprivate:
+  case OMPD_allocate:
+  case OMPD_task:
+  case OMPD_simd:
+  case OMPD_tile:
+  case OMPD_unroll:
+  case OMPD_sections:
+  case OMPD_section:
+  case OMPD_single:
+  case OMPD_master:
+  case OMPD_critical:
+  case OMPD_taskyield:
+  case OMPD_barrier:
+  case OMPD_taskwait:
+  case OMPD_taskgroup:
+  case OMPD_atomic:
+  case OMPD_flush:
+  case OMPD_depobj:
+  case OMPD_scan:
+  case OMPD_teams:
+  case OMPD_target_data:
+  case OMPD_target_exit_data:
+  case OMPD_target_enter_data:
+  case OMPD_distribute:
+  case OMPD_distribute_simd:
+  case OMPD_distribute_parallel_for:
+  case OMPD_distribute_parallel_for_simd:
+  case OMPD_teams_distribute:
+  case OMPD_teams_distribute_simd:
+  case OMPD_teams_distribute_parallel_for:
+  case OMPD_teams_distribute_parallel_for_simd:
+  case OMPD_target_update:
+  case OMPD_declare_simd:
+  case OMPD_declare_variant:
+  case OMPD_begin_declare_variant:
+  case OMPD_end_declare_variant:
+  case OMPD_declare_target:
+  case OMPD_end_declare_target:
+  case OMPD_declare_reduction:
+  case OMPD_declare_mapper:
+  case OMPD_taskloop:
+  case OMPD_taskloop_simd:
+  case OMPD_master_taskloop:
+  case OMPD_master_taskloop_simd:
+  case OMPD_parallel_master_taskloop:
+  case OMPD_parallel_master_taskloop_simd:
+  case OMPD_requires:
+  case OMPD_unknown:
+    break;
+  default:
+    break;
+  }
+  llvm_unreachable("Unsupported directive kind.");
+}
+
+llvm::Value *CGOpenMPRuntime::emitNumThreadsForTargetDirective(
+    CodeGenFunction &CGF, const OMPExecutableDirective &D) {
   assert(!CGF.getLangOpts().OpenMPIsDevice &&
          "Clauses associated with the teams directive expected to be emitted "
          "only for the host!");

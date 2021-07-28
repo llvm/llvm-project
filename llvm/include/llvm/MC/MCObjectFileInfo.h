@@ -426,6 +426,7 @@ private:
 
   void initMachOMCObjectFileInfo(const Triple &T);
   void initELFMCObjectFileInfo(const Triple &T, bool Large);
+  void initGOFFMCObjectFileInfo(const Triple &T);
   void initCOFFMCObjectFileInfo(const Triple &T);
   void initWasmMCObjectFileInfo(const Triple &T);
   void initXCOFFMCObjectFileInfo(const Triple &T);

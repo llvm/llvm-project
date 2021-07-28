@@ -403,6 +403,13 @@ constexpr  move_iterator<Iterator> make_move_iterator(const Iterator& i);
 struct default_sentinel_t;
 inline constexpr default_sentinel_t default_sentinel{};
 
+// [iterators.counted], counted iterators
+template<input_or_output_iterator I> class counted_iterator;
+
+template<input_iterator I>
+  requires see below
+  struct iterator_traits<counted_iterator<I>>;
+
 template <class T, class charT = char, class traits = char_traits<charT>, class Distance = ptrdiff_t>
 class istream_iterator
     : public iterator<input_iterator_tag, T, Distance, const T*, const T&> // until C++17
@@ -574,6 +581,7 @@ template <class E> constexpr const E* data(initializer_list<E> il) noexcept;    
 #include <__iterator/back_insert_iterator.h>
 #include <__iterator/common_iterator.h>
 #include <__iterator/concepts.h>
+#include <__iterator/counted_iterator.h>
 #include <__iterator/data.h>
 #include <__iterator/default_sentinel.h>
 #include <__iterator/distance.h>

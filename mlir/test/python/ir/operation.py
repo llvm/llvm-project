@@ -533,12 +533,12 @@ def testKnownOpView():
 
     # One of the custom ops should resolve to the default OpView.
     custom = module.body.operations[0]
-    # CHECK: <_mlir.ir.OpView object
+    # CHECK: OpView object
     print(repr(custom))
 
     # Check again to make sure negative caching works.
     custom = module.body.operations[0]
-    # CHECK: <_mlir.ir.OpView object
+    # CHECK: OpView object
     print(repr(custom))
 
 run(testKnownOpView)

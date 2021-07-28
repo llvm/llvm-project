@@ -254,3 +254,222 @@ define i16* @bullet(i1 %b, %class.btAxis* readnone %ptr, i64 %idx) {
   %sel = select i1 %b, i16* %gep1, i16* %gep2
   ret i16* %sel
 }
+
+define i16* @bullet_alt1(i1 %b, i16* readnone %ptr, i64 %idx) {
+; CHECK-LABEL: bullet_alt1:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    leaq 60(%rsi), %rax
+; CHECK-NEXT:    leaq 66(%rsi), %rcx
+; CHECK-NEXT:    testb $1, %dil
+; CHECK-NEXT:    cmovneq %rax, %rcx
+; CHECK-NEXT:    leaq (%rdx,%rdx,4), %rax
+; CHECK-NEXT:    shlq $4, %rax
+; CHECK-NEXT:    addq %rcx, %rax
+; CHECK-NEXT:    retq
+  %idx40 = mul i64 %idx, 40
+  %gep2 = getelementptr inbounds i16, i16* %ptr, i64 33
+  %gep1 = getelementptr inbounds i16, i16* %ptr, i64 30
+  %sel = select i1 %b, i16* %gep1, i16* %gep2
+  %gep3 = getelementptr inbounds i16, i16* %sel, i64 %idx40
+  ret i16* %gep3
+}
+
+define void @bullet_load_store(i32 %x, i64 %y, %class.btAxis* %p) {
+; CHECK-LABEL: bullet_load_store:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    leaq (%rsi,%rsi,4), %rax
+; CHECK-NEXT:    shlq $4, %rax
+; CHECK-NEXT:    testb $1, %dil
+; CHECK-NEXT:    leaq 60(%rdx,%rax), %rcx
+; CHECK-NEXT:    leaq 66(%rdx,%rax), %rax
+; CHECK-NEXT:    cmoveq %rcx, %rax
+; CHECK-NEXT:    decw (%rax)
+; CHECK-NEXT:    retq
+  %and = and i32 %x, 1
+  %b = icmp eq i32 %and, 0
+  %gep2 = getelementptr inbounds %class.btAxis, %class.btAxis* %p, i64 %y, i32 2, i64 0
+  %gep1 = getelementptr inbounds %class.btAxis, %class.btAxis* %p, i64 %y, i32 1, i64 0
+  %sel = select i1 %b, i16* %gep1, i16* %gep2
+  %ld = load i16, i16* %sel, align 4
+  %dec = add i16 %ld, -1
+  store i16 %dec, i16* %sel, align 4
+  ret void
+}
+
+define void @complex_lea_alt1(i1 %b, i16* readnone %ptr, i64 %idx) {
+; CHECK-LABEL: complex_lea_alt1:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    leaq 60(%rdx,%rsi), %rax
+; CHECK-NEXT:    leaq 66(%rdx,%rsi), %rcx
+; CHECK-NEXT:    testb $1, %dil
+; CHECK-NEXT:    cmovneq %rax, %rcx
+; CHECK-NEXT:    decw (%rcx)
+; CHECK-NEXT:    retq
+  %i = ptrtoint i16* %ptr to i64
+  %sum = add i64 %idx, %i
+  %base = inttoptr i64 %sum to i16*
+  %gep2 = getelementptr inbounds i16, i16* %base, i64 33
+  %gep1 = getelementptr inbounds i16, i16* %base, i64 30
+  %sel = select i1 %b, i16* %gep1, i16* %gep2
+  %ld = load i16, i16* %sel, align 4
+  %dec = add i16 %ld, -1
+  store i16 %dec, i16* %sel, align 4
+  ret void
+}
+
+define void @complex_lea_alt2(i1 %b, i16* readnone %ptr, i64 %idx) {
+; CHECK-LABEL: complex_lea_alt2:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    leaq 60(%rsi,%rdx), %rax
+; CHECK-NEXT:    leaq 66(%rsi,%rdx), %rcx
+; CHECK-NEXT:    testb $1, %dil
+; CHECK-NEXT:    cmovneq %rax, %rcx
+; CHECK-NEXT:    decw (%rcx)
+; CHECK-NEXT:    retq
+  %i = ptrtoint i16* %ptr to i64
+  %sum = add i64 %i, %idx
+  %base = inttoptr i64 %sum to i16*
+  %gep2 = getelementptr inbounds i16, i16* %base, i64 33
+  %gep1 = getelementptr inbounds i16, i16* %base, i64 30
+  %sel = select i1 %b, i16* %gep1, i16* %gep2
+  %ld = load i16, i16* %sel, align 4
+  %dec = add i16 %ld, -1
+  store i16 %dec, i16* %sel, align 4
+  ret void
+}
+
+define void @complex_lea_alt3(i1 %b, i16* readnone %ptr, i64 %idx) {
+; CHECK-LABEL: complex_lea_alt3:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    leaq 60(%rsi), %rax
+; CHECK-NEXT:    addq $66, %rsi
+; CHECK-NEXT:    testb $1, %dil
+; CHECK-NEXT:    cmovneq %rax, %rsi
+; CHECK-NEXT:    decw (%rsi,%rdx)
+; CHECK-NEXT:    retq
+  %i = ptrtoint i16* %ptr to i64
+  %i66 = add i64 %i, 66
+  %i60 = add i64 %i, 60
+  %o66 = add i64 %i66, %idx
+  %o60 = add i64 %i60, %idx
+  %p66 = inttoptr i64 %o66 to i16*
+  %p60 = inttoptr i64 %o60 to i16*
+  %sel = select i1 %b, i16* %p60, i16* %p66
+  %ld = load i16, i16* %sel, align 4
+  %dec = add i16 %ld, -1
+  store i16 %dec, i16* %sel, align 4
+  ret void
+}
+
+define void @complex_lea_alt4(i1 %b, i16* readnone %ptr, i64 %idx) {
+; CHECK-LABEL: complex_lea_alt4:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    leaq 60(%rsi), %rax
+; CHECK-NEXT:    addq $66, %rsi
+; CHECK-NEXT:    testb $1, %dil
+; CHECK-NEXT:    cmovneq %rax, %rsi
+; CHECK-NEXT:    decw (%rdx,%rsi)
+; CHECK-NEXT:    retq
+  %i = ptrtoint i16* %ptr to i64
+  %i66 = add i64 %i, 66
+  %i60 = add i64 %i, 60
+  %o66 = add i64 %idx, %i66
+  %o60 = add i64 %idx, %i60
+  %p66 = inttoptr i64 %o66 to i16*
+  %p60 = inttoptr i64 %o60 to i16*
+  %sel = select i1 %b, i16* %p60, i16* %p66
+  %ld = load i16, i16* %sel, align 4
+  %dec = add i16 %ld, -1
+  store i16 %dec, i16* %sel, align 4
+  ret void
+}
+
+define void @complex_lea_alt5(i1 %b, i16* readnone %ptr, i64 %idx) {
+; CHECK-LABEL: complex_lea_alt5:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    leaq 60(%rdx), %rax
+; CHECK-NEXT:    addq $66, %rdx
+; CHECK-NEXT:    testb $1, %dil
+; CHECK-NEXT:    cmovneq %rax, %rdx
+; CHECK-NEXT:    decw (%rdx,%rsi)
+; CHECK-NEXT:    retq
+  %i = ptrtoint i16* %ptr to i64
+  %i66 = add i64 %idx, 66
+  %i60 = add i64 %idx, 60
+  %o66 = add i64 %i66, %i
+  %o60 = add i64 %i60, %i
+  %p66 = inttoptr i64 %o66 to i16*
+  %p60 = inttoptr i64 %o60 to i16*
+  %sel = select i1 %b, i16* %p60, i16* %p66
+  %ld = load i16, i16* %sel, align 4
+  %dec = add i16 %ld, -1
+  store i16 %dec, i16* %sel, align 4
+  ret void
+}
+
+define void @complex_lea_alt6(i1 %b, i16* readnone %ptr, i64 %idx) {
+; CHECK-LABEL: complex_lea_alt6:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    leaq 60(%rdx), %rax
+; CHECK-NEXT:    addq $66, %rdx
+; CHECK-NEXT:    testb $1, %dil
+; CHECK-NEXT:    cmovneq %rax, %rdx
+; CHECK-NEXT:    decw (%rsi,%rdx)
+; CHECK-NEXT:    retq
+  %i = ptrtoint i16* %ptr to i64
+  %i66 = add i64 %idx, 66
+  %i60 = add i64 %idx, 60
+  %o66 = add i64 %i, %i66
+  %o60 = add i64 %i, %i60
+  %p66 = inttoptr i64 %o66 to i16*
+  %p60 = inttoptr i64 %o60 to i16*
+  %sel = select i1 %b, i16* %p60, i16* %p66
+  %ld = load i16, i16* %sel, align 4
+  %dec = add i16 %ld, -1
+  store i16 %dec, i16* %sel, align 4
+  ret void
+}
+
+define void @complex_lea_alt7(i1 %b, i16* readnone %ptr, i64 %idx) {
+; CHECK-LABEL: complex_lea_alt7:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    leaq 60(%rdx,%rsi), %rax
+; CHECK-NEXT:    leaq 66(%rdx,%rsi), %rcx
+; CHECK-NEXT:    testb $1, %dil
+; CHECK-NEXT:    cmovneq %rax, %rcx
+; CHECK-NEXT:    decw (%rcx)
+; CHECK-NEXT:    retq
+  %i = ptrtoint i16* %ptr to i64
+  %o = add i64 %idx, %i
+  %o66 = add i64 %o, 66
+  %o60 = add i64 %o, 60
+  %p66 = inttoptr i64 %o66 to i16*
+  %p60 = inttoptr i64 %o60 to i16*
+  %sel = select i1 %b, i16* %p60, i16* %p66
+  %ld = load i16, i16* %sel, align 4
+  %dec = add i16 %ld, -1
+  store i16 %dec, i16* %sel, align 4
+  ret void
+}
+
+define void @complex_lea_alt8(i1 %b, i16* readnone %ptr, i64 %idx) {
+; CHECK-LABEL: complex_lea_alt8:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    leaq 60(%rsi,%rdx), %rax
+; CHECK-NEXT:    leaq 66(%rsi,%rdx), %rcx
+; CHECK-NEXT:    testb $1, %dil
+; CHECK-NEXT:    cmovneq %rax, %rcx
+; CHECK-NEXT:    decw (%rcx)
+; CHECK-NEXT:    retq
+  %i = ptrtoint i16* %ptr to i64
+  %o = add i64 %i, %idx
+  %o66 = add i64 %o, 66
+  %o60 = add i64 %o, 60
+  %p66 = inttoptr i64 %o66 to i16*
+  %p60 = inttoptr i64 %o60 to i16*
+  %sel = select i1 %b, i16* %p60, i16* %p66
+  %ld = load i16, i16* %sel, align 4
+  %dec = add i16 %ld, -1
+  store i16 %dec, i16* %sel, align 4
+  ret void
+}

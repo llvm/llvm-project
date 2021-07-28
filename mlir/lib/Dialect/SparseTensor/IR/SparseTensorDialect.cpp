@@ -214,9 +214,9 @@ static LogicalResult verify(NewOp op) {
 }
 
 static LogicalResult verify(ToPointersOp op) {
-  if (failed(isInBounds(op.dim(), op.tensor())))
-    return op.emitError("requested pointers dimension out of bounds");
   if (auto e = getSparseTensorEncoding(op.tensor().getType())) {
+    if (failed(isInBounds(op.dim(), op.tensor())))
+      return op.emitError("requested pointers dimension out of bounds");
     if (failed(isMatchingWidth(op.result(), e.getPointerBitWidth())))
       return op.emitError("unexpected type for pointers");
     return success();
@@ -225,9 +225,9 @@ static LogicalResult verify(ToPointersOp op) {
 }
 
 static LogicalResult verify(ToIndicesOp op) {
-  if (failed(isInBounds(op.dim(), op.tensor())))
-    return op.emitError("requested indices dimension out of bounds");
   if (auto e = getSparseTensorEncoding(op.tensor().getType())) {
+    if (failed(isInBounds(op.dim(), op.tensor())))
+      return op.emitError("requested indices dimension out of bounds");
     if (failed(isMatchingWidth(op.result(), e.getIndexBitWidth())))
       return op.emitError("unexpected type for indices");
     return success();

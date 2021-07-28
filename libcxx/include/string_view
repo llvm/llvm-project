@@ -83,6 +83,7 @@ namespace std {
       basic_string_view& operator=(const basic_string_view&) noexcept = default;
       template<class Allocator>
       constexpr basic_string_view(const charT* str);
+      basic_string_view(nullptr_t) = delete; // C++2b
       constexpr basic_string_view(const charT* str, size_type len);
 
       // 7.4, basic_string_view iterator support
@@ -272,6 +273,10 @@ public:
     _LIBCPP_CONSTEXPR _LIBCPP_INLINE_VISIBILITY
     basic_string_view(const _CharT* __s)
         : __data(__s), __size(_VSTD::__char_traits_length_checked<_Traits>(__s)) {}
+
+#if _LIBCPP_STD_VER > 20
+    basic_string_view(nullptr_t) = delete;
+#endif
 
     // [string.view.iterators], iterators
     _LIBCPP_CONSTEXPR _LIBCPP_INLINE_VISIBILITY

@@ -60,12 +60,18 @@ python -m pip install -r mlir/python/requirements.txt
 # Now run `cmake`, `ninja`, et al.
 ```
 
-For interactive use, it is sufficient to add the `python` directory in your
-`build/` directory to the `PYTHONPATH`. Typically:
+For interactive use, it is sufficient to add the
+`tools/mlir/python_packages/mlir_core/` directory in your `build/` directory to
+the `PYTHONPATH`. Typically:
 
 ```shell
-export PYTHONPATH=$(cd build && pwd)/python
+export PYTHONPATH=$(cd build && pwd)/tools/mlir/python_packages/mlir_core
 ```
+
+Note that if you have installed (i.e. via `ninja install`, et al), then
+python packages for all enabled projects will be in your install tree under
+`python_packages/` (i.e. `python_packages/mlir_core`). Official distributions
+are built with a more specialized setup.
 
 ## Design
 

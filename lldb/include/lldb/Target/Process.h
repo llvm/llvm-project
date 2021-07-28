@@ -1737,6 +1737,29 @@ public:
   llvm::Expected<std::vector<lldb::addr_t>> ReadMemoryTags(lldb::addr_t addr,
                                                            size_t len);
 
+  /// Write memory tags for a range of memory.
+  /// (calls DoWriteMemoryTags to do the target specific work)
+  ///
+  /// \param[in] addr
+  ///     The address to start writing tags from. It is assumed that this
+  ///     address is granule aligned.
+  ///
+  /// \param[in] len
+  ///     The size of the range to write tags for. It is assumed that this
+  ///     is some multiple of the granule size. This len can be different
+  ///     from (number of tags * granule size) in the case where you want
+  ///     lldb-server to repeat tags across the range.
+  ///
+  /// \param[in] tags
+  ///     Allocation tags to be written. Since lldb-server can repeat tags for a
+  ///     range, the number of tags doesn't have to match the number of granules
+  ///     in the range. (though most of the time it will)
+  ///
+  /// \return
+  ///     A Status telling you if the write succeeded or not.
+  Status WriteMemoryTags(lldb::addr_t addr, size_t len,
+                         const std::vector<lldb::addr_t> &tags);
+
   /// Resolve dynamically loaded indirect functions.
   ///
   /// \param[in] address
@@ -2775,6 +2798,30 @@ protected:
     return llvm::createStringError(llvm::inconvertibleErrorCode(),
                                    "%s does not support reading memory tags",
                                    GetPluginName().GetCString());
+  }
+
+  /// Does the final operation to write memory tags. E.g. sending a GDB packet.
+  /// It assumes that WriteMemoryTags has checked that memory tagging is enabled
+  /// and has packed the tag data.
+  ///
+  /// \param[in] addr
+  ///    Start of address range to write memory tags for.
+  ///
+  /// \param[in] len
+  ///    Length of the memory range to write tags for (in bytes).
+  ///
+  /// \param[in] type
+  ///    Type of tags to read (get this from a MemoryTagManager)
+  ///
+  /// \param[in] tags
+  ///    Packed tags to be written.
+  ///
+  /// \return
+  ///     Status telling you whether the write succeeded.
+  virtual Status DoWriteMemoryTags(lldb::addr_t addr, size_t len, int32_t type,
+                                   const std::vector<uint8_t> &tags) {
+    return Status("%s does not support writing memory tags",
+                  GetPluginName().GetCString());
   }
 
   // Type definitions

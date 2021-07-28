@@ -92,6 +92,12 @@ class TopLevelExpressionsTestCase(TestBase):
             resultFromCode,
             resultFromTopLevel.GetValueAsUnsigned())
 
+        # Make sure the command line version works as well:
+        self.runCmd("expr --top-level -- int TopLevelFunction() { return 101; }")
+        resultFromTopLevel = self.frame().EvaluateExpression("TopLevelFunction()")
+        self.assertTrue(resultFromTopLevel.IsValid())
+        self.assertEqual(101, resultFromTopLevel.GetValueAsUnsigned(), "Command line version works.")
+
     def test_top_level_expression_without_target(self):
         self.expect("expr --top-level -- void func() {}", error=True,
                     substrs=["Top-level code needs to be inserted into a runnable target"])

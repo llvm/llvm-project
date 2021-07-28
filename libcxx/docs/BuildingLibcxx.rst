@@ -251,6 +251,15 @@ libc++ specific options
    This option can be used to enable or disable the filesystem components on
    platforms that may not support them. For example on Windows.
 
+.. option:: LIBCXX_ENABLE_INCOMPLETE_FEATURES:BOOL
+
+  **Default**: ``ON``
+
+  Whether to enable support for incomplete library features. Incomplete features
+  are new library features under development. These features don't guarantee
+  ABI stability nor the quality of completed library features. Vendors
+  shipping the library may want to disable this option.
+
 .. option:: LIBCXX_INSTALL_LIBRARY_DIR:PATH
 
   **Default**: ``lib${LIBCXX_LIBDIR_SUFFIX}``

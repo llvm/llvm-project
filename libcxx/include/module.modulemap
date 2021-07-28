@@ -485,6 +485,7 @@ module std [system] {
       module back_insert_iterator  { private header "__iterator/back_insert_iterator.h" }
       module common_iterator       { private header "__iterator/common_iterator.h" }
       module concepts              { private header "__iterator/concepts.h" }
+      module counted_iterator      { private header "__iterator/counted_iterator.h" }
       module data                  { private header "__iterator/data.h" }
       module default_sentinel      { private header "__iterator/default_sentinel.h" }
       module distance              { private header "__iterator/distance.h" }

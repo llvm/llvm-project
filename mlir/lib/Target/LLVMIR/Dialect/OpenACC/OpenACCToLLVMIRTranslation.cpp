@@ -32,14 +32,14 @@ using OpenACCIRBuilder = llvm::OpenMPIRBuilder;
 // Utility functions
 //===----------------------------------------------------------------------===//
 
-/// 0 = alloc/create
-static constexpr uint64_t kCreateFlag = 0;
-/// 1 = to/device/copyin
-static constexpr uint64_t kDeviceCopyinFlag = 1;
-/// 2 = from/copyout
-static constexpr uint64_t kHostCopyoutFlag = 2;
-/// 8 = delete
-static constexpr uint64_t kDeleteFlag = 8;
+/// Flag values are extracted from openmp/libomptarget/include/omptarget.h and
+/// mapped to corresponding OpenACC flags.
+static constexpr uint64_t kCreateFlag = 0x000;
+static constexpr uint64_t kDeviceCopyinFlag = 0x001;
+static constexpr uint64_t kHostCopyoutFlag = 0x002;
+static constexpr uint64_t kCopyFlag = kDeviceCopyinFlag | kHostCopyoutFlag;
+static constexpr uint64_t kPresentFlag = 0x1000;
+static constexpr uint64_t kDeleteFlag = 0x008;
 
 /// Default value for the device id
 static constexpr int64_t kDefaultDevice = -1;
@@ -123,9 +123,8 @@ processOperands(llvm::IRBuilderBase &builder,
                 LLVM::ModuleTranslation &moduleTranslation, Operation *op,
                 ValueRange operands, unsigned totalNbOperand,
                 uint64_t operandFlag, SmallVector<uint64_t> &flags,
-                SmallVector<llvm::Constant *> &names, unsigned &index,
-                llvm::AllocaInst *argsBase, llvm::AllocaInst *args,
-                llvm::AllocaInst *argSizes) {
+                SmallVectorImpl<llvm::Constant *> &names, unsigned &index,
+                struct OpenACCIRBuilder::MapperAllocas &mapperAllocas) {
   OpenACCIRBuilder *accBuilder = moduleTranslation.getOpenMPBuilder();
   llvm::LLVMContext &ctx = builder.getContext();
   auto *i8PtrTy = llvm::Type::getInt8PtrTy(ctx);
@@ -160,21 +159,24 @@ processOperands(llvm::IRBuilderBase &builder,
     // Store base pointer extracted from operand into the i-th position of
     // argBase.
     llvm::Value *ptrBaseGEP = builder.CreateInBoundsGEP(
-        arrI8PtrTy, argsBase, {builder.getInt32(0), builder.getInt32(index)});
+        arrI8PtrTy, mapperAllocas.ArgsBase,
+        {builder.getInt32(0), builder.getInt32(index)});
     llvm::Value *ptrBaseCast = builder.CreateBitCast(
         ptrBaseGEP, dataPtrBase->getType()->getPointerTo());
     builder.CreateStore(dataPtrBase, ptrBaseCast);
 
     // Store pointer extracted from operand into the i-th position of args.
     llvm::Value *ptrGEP = builder.CreateInBoundsGEP(
-        arrI8PtrTy, args, {builder.getInt32(0), builder.getInt32(index)});
+        arrI8PtrTy, mapperAllocas.Args,
+        {builder.getInt32(0), builder.getInt32(index)});
     llvm::Value *ptrCast =
         builder.CreateBitCast(ptrGEP, dataPtr->getType()->getPointerTo());
     builder.CreateStore(dataPtr, ptrCast);
 
     // Store size extracted from operand into the i-th position of argSizes.
     llvm::Value *sizeGEP = builder.CreateInBoundsGEP(
-        arrI64Ty, argSizes, {builder.getInt32(0), builder.getInt32(index)});
+        arrI64Ty, mapperAllocas.ArgSizes,
+        {builder.getInt32(0), builder.getInt32(index)});
     builder.CreateStore(dataSize, sizeGEP);
 
     flags.push_back(operandFlag);
@@ -187,11 +189,12 @@ processOperands(llvm::IRBuilderBase &builder,
 }
 
 /// Process data operands from acc::EnterDataOp
-static LogicalResult processDataOperands(
-    llvm::IRBuilderBase &builder, LLVM::ModuleTranslation &moduleTranslation,
-    acc::EnterDataOp op, SmallVector<uint64_t> &flags,
-    SmallVector<llvm::Constant *> &names, llvm::AllocaInst *argsBase,
-    llvm::AllocaInst *args, llvm::AllocaInst *argSizes) {
+static LogicalResult
+processDataOperands(llvm::IRBuilderBase &builder,
+                    LLVM::ModuleTranslation &moduleTranslation,
+                    acc::EnterDataOp op, SmallVector<uint64_t> &flags,
+                    SmallVectorImpl<llvm::Constant *> &names,
+                    struct OpenACCIRBuilder::MapperAllocas &mapperAllocas) {
   // TODO add `create_zero` and `attach` operands
 
   unsigned index = 0;
@@ -199,26 +202,26 @@ static LogicalResult processDataOperands(
   // Create operands are handled as `alloc` call.
   if (failed(processOperands(builder, moduleTranslation, op,
                              op.createOperands(), op.getNumDataOperands(),
-                             kCreateFlag, flags, names, index, argsBase, args,
-                             argSizes)))
+                             kCreateFlag, flags, names, index, mapperAllocas)))
     return failure();
 
   // Copyin operands are handled as `to` call.
   if (failed(processOperands(builder, moduleTranslation, op,
                              op.copyinOperands(), op.getNumDataOperands(),
-                             kDeviceCopyinFlag, flags, names, index, argsBase,
-                             args, argSizes)))
+                             kDeviceCopyinFlag, flags, names, index,
+                             mapperAllocas)))
     return failure();
 
   return success();
 }
 
 /// Process data operands from acc::ExitDataOp
-static LogicalResult processDataOperands(
-    llvm::IRBuilderBase &builder, LLVM::ModuleTranslation &moduleTranslation,
-    acc::ExitDataOp op, SmallVector<uint64_t> &flags,
-    SmallVector<llvm::Constant *> &names, llvm::AllocaInst *argsBase,
-    llvm::AllocaInst *args, llvm::AllocaInst *argSizes) {
+static LogicalResult
+processDataOperands(llvm::IRBuilderBase &builder,
+                    LLVM::ModuleTranslation &moduleTranslation,
+                    acc::ExitDataOp op, SmallVector<uint64_t> &flags,
+                    SmallVectorImpl<llvm::Constant *> &names,
+                    struct OpenACCIRBuilder::MapperAllocas &mapperAllocas) {
   // TODO add `detach` operands
 
   unsigned index = 0;
@@ -226,39 +229,39 @@ static LogicalResult processDataOperands(
   // Delete operands are handled as `delete` call.
   if (failed(processOperands(builder, moduleTranslation, op,
                              op.deleteOperands(), op.getNumDataOperands(),
-                             kDeleteFlag, flags, names, index, argsBase, args,
-                             argSizes)))
+                             kDeleteFlag, flags, names, index, mapperAllocas)))
     return failure();
 
   // Copyout operands are handled as `from` call.
   if (failed(processOperands(builder, moduleTranslation, op,
                              op.copyoutOperands(), op.getNumDataOperands(),
-                             kHostCopyoutFlag, flags, names, index, argsBase,
-                             args, argSizes)))
+                             kHostCopyoutFlag, flags, names, index,
+                             mapperAllocas)))
     return failure();
 
   return success();
 }
 
 /// Process data operands from acc::UpdateOp
-static LogicalResult processDataOperands(
-    llvm::IRBuilderBase &builder, LLVM::ModuleTranslation &moduleTranslation,
-    acc::UpdateOp op, SmallVector<uint64_t> &flags,
-    SmallVector<llvm::Constant *> &names, llvm::AllocaInst *argsBase,
-    llvm::AllocaInst *args, llvm::AllocaInst *argSizes) {
+static LogicalResult
+processDataOperands(llvm::IRBuilderBase &builder,
+                    LLVM::ModuleTranslation &moduleTranslation,
+                    acc::UpdateOp op, SmallVector<uint64_t> &flags,
+                    SmallVectorImpl<llvm::Constant *> &names,
+                    struct OpenACCIRBuilder::MapperAllocas &mapperAllocas) {
   unsigned index = 0;
 
   // Host operands are handled as `from` call.
   if (failed(processOperands(builder, moduleTranslation, op, op.hostOperands(),
                              op.getNumDataOperands(), kHostCopyoutFlag, flags,
-                             names, index, argsBase, args, argSizes)))
+                             names, index, mapperAllocas)))
     return failure();
 
   // Device operands are handled as `to` call.
   if (failed(processOperands(builder, moduleTranslation, op,
                              op.deviceOperands(), op.getNumDataOperands(),
-                             kDeviceCopyinFlag, flags, names, index, argsBase,
-                             args, argSizes)))
+                             kDeviceCopyinFlag, flags, names, index,
+                             mapperAllocas)))
     return failure();
 
   return success();
@@ -267,6 +270,153 @@ static LogicalResult processDataOperands(
 //===----------------------------------------------------------------------===//
 // Conversion functions
 //===----------------------------------------------------------------------===//
+
+/// Converts an OpenACC data operation into LLVM IR.
+static LogicalResult convertDataOp(acc::DataOp &op,
+                                   llvm::IRBuilderBase &builder,
+                                   LLVM::ModuleTranslation &moduleTranslation) {
+  llvm::LLVMContext &ctx = builder.getContext();
+  auto enclosingFuncOp = op.getOperation()->getParentOfType<LLVM::LLVMFuncOp>();
+  llvm::Function *enclosingFunction =
+      moduleTranslation.lookupFunction(enclosingFuncOp.getName());
+
+  OpenACCIRBuilder *accBuilder = moduleTranslation.getOpenMPBuilder();
+
+  llvm::Value *srcLocInfo = createSourceLocationInfo(*accBuilder, op);
+
+  llvm::Function *beginMapperFunc = accBuilder->getOrCreateRuntimeFunctionPtr(
+      llvm::omp::OMPRTL___tgt_target_data_begin_mapper);
+
+  llvm::Function *endMapperFunc = accBuilder->getOrCreateRuntimeFunctionPtr(
+      llvm::omp::OMPRTL___tgt_target_data_end_mapper);
+
+  // Number of arguments in the data operation.
+  unsigned totalNbOperand = op.getNumDataOperands();
+
+  struct OpenACCIRBuilder::MapperAllocas mapperAllocas;
+  OpenACCIRBuilder::InsertPointTy allocaIP(
+      &enclosingFunction->getEntryBlock(),
+      enclosingFunction->getEntryBlock().getFirstInsertionPt());
+  accBuilder->createMapperAllocas(builder.saveIP(), allocaIP, totalNbOperand,
+                                  mapperAllocas);
+
+  SmallVector<uint64_t> flags;
+  SmallVector<llvm::Constant *> names;
+  unsigned index = 0;
+
+  // TODO handle no_create, deviceptr and attach operands.
+
+  if (failed(processOperands(builder, moduleTranslation, op, op.copyOperands(),
+                             totalNbOperand, kCopyFlag, flags, names, index,
+                             mapperAllocas)))
+    return failure();
+
+  if (failed(processOperands(
+          builder, moduleTranslation, op, op.copyinOperands(), totalNbOperand,
+          kDeviceCopyinFlag, flags, names, index, mapperAllocas)))
+    return failure();
+
+  // TODO copyin readonly currenlty handled as copyin. Update when extension
+  // available.
+  if (failed(processOperands(builder, moduleTranslation, op,
+                             op.copyinReadonlyOperands(), totalNbOperand,
+                             kDeviceCopyinFlag, flags, names, index,
+                             mapperAllocas)))
+    return failure();
+
+  if (failed(processOperands(
+          builder, moduleTranslation, op, op.copyoutOperands(), totalNbOperand,
+          kHostCopyoutFlag, flags, names, index, mapperAllocas)))
+    return failure();
+
+  // TODO copyout zero currenlty handled as copyout. Update when extension
+  // available.
+  if (failed(processOperands(builder, moduleTranslation, op,
+                             op.copyoutZeroOperands(), totalNbOperand,
+                             kHostCopyoutFlag, flags, names, index,
+                             mapperAllocas)))
+    return failure();
+
+  if (failed(processOperands(builder, moduleTranslation, op,
+                             op.createOperands(), totalNbOperand, kCreateFlag,
+                             flags, names, index, mapperAllocas)))
+    return failure();
+
+  // TODO create zero currenlty handled as create. Update when extension
+  // available.
+  if (failed(processOperands(builder, moduleTranslation, op,
+                             op.createZeroOperands(), totalNbOperand,
+                             kCreateFlag, flags, names, index, mapperAllocas)))
+    return failure();
+
+  if (failed(processOperands(builder, moduleTranslation, op,
+                             op.presentOperands(), totalNbOperand, kPresentFlag,
+                             flags, names, index, mapperAllocas)))
+    return failure();
+
+  llvm::GlobalVariable *maptypes =
+      accBuilder->createOffloadMaptypes(flags, ".offload_maptypes");
+  llvm::Value *maptypesArg = builder.CreateConstInBoundsGEP2_32(
+      llvm::ArrayType::get(llvm::Type::getInt64Ty(ctx), totalNbOperand),
+      maptypes, /*Idx0=*/0, /*Idx1=*/0);
+
+  llvm::GlobalVariable *mapnames =
+      accBuilder->createOffloadMapnames(names, ".offload_mapnames");
+  llvm::Value *mapnamesArg = builder.CreateConstInBoundsGEP2_32(
+      llvm::ArrayType::get(llvm::Type::getInt8PtrTy(ctx), totalNbOperand),
+      mapnames, /*Idx0=*/0, /*Idx1=*/0);
+
+  // Create call to start the data region.
+  accBuilder->emitMapperCall(builder.saveIP(), beginMapperFunc, srcLocInfo,
+                             maptypesArg, mapnamesArg, mapperAllocas,
+                             kDefaultDevice, totalNbOperand);
+
+  // Convert the region.
+  llvm::BasicBlock *entryBlock = nullptr;
+
+  for (Block &bb : op.region()) {
+    llvm::BasicBlock *llvmBB = llvm::BasicBlock::Create(
+        ctx, "acc.data", builder.GetInsertBlock()->getParent());
+    if (entryBlock == nullptr)
+      entryBlock = llvmBB;
+    moduleTranslation.mapBlock(&bb, llvmBB);
+  }
+
+  auto afterDataRegion = builder.saveIP();
+
+  llvm::BranchInst *sourceTerminator = builder.CreateBr(entryBlock);
+
+  builder.restoreIP(afterDataRegion);
+  llvm::BasicBlock *endDataBlock = llvm::BasicBlock::Create(
+      ctx, "acc.end_data", builder.GetInsertBlock()->getParent());
+
+  SetVector<Block *> blocks =
+      LLVM::detail::getTopologicallySortedBlocks(op.region());
+  for (Block *bb : blocks) {
+    llvm::BasicBlock *llvmBB = moduleTranslation.lookupBlock(bb);
+    if (bb->isEntryBlock()) {
+      assert(sourceTerminator->getNumSuccessors() == 1 &&
+             "provided entry block has multiple successors");
+      sourceTerminator->setSuccessor(0, llvmBB);
+    }
+
+    if (failed(
+            moduleTranslation.convertBlock(*bb, bb->isEntryBlock(), builder))) {
+      return failure();
+    }
+
+    if (isa<acc::TerminatorOp, acc::YieldOp>(bb->getTerminator()))
+      builder.CreateBr(endDataBlock);
+  }
+
+  // Create call to end the data region.
+  builder.SetInsertPoint(endDataBlock);
+  accBuilder->emitMapperCall(builder.saveIP(), endMapperFunc, srcLocInfo,
+                             maptypesArg, mapnamesArg, mapperAllocas,
+                             kDefaultDevice, totalNbOperand);
+
+  return success();
+}
 
 /// Converts an OpenACC standalone data operation into LLVM IR.
 template <typename OpTy>
@@ -286,27 +436,20 @@ convertStandaloneDataOp(OpTy &op, llvm::IRBuilderBase &builder,
   // Number of arguments in the enter_data operation.
   unsigned totalNbOperand = op.getNumDataOperands();
 
-  // TODO could be moved to OpenXXIRBuilder?
   llvm::LLVMContext &ctx = builder.getContext();
-  auto *i8PtrTy = llvm::Type::getInt8PtrTy(ctx);
-  auto *arrI8PtrTy = llvm::ArrayType::get(i8PtrTy, totalNbOperand);
-  auto *i64Ty = llvm::Type::getInt64Ty(ctx);
-  auto *arrI64Ty = llvm::ArrayType::get(i64Ty, totalNbOperand);
-  llvm::IRBuilder<>::InsertPoint allocaIP(
+
+  struct OpenACCIRBuilder::MapperAllocas mapperAllocas;
+  OpenACCIRBuilder::InsertPointTy allocaIP(
       &enclosingFunction->getEntryBlock(),
       enclosingFunction->getEntryBlock().getFirstInsertionPt());
-  llvm::IRBuilder<>::InsertPoint currentIP = builder.saveIP();
-  builder.restoreIP(allocaIP);
-  llvm::AllocaInst *argsBase = builder.CreateAlloca(arrI8PtrTy);
-  llvm::AllocaInst *args = builder.CreateAlloca(arrI8PtrTy);
-  llvm::AllocaInst *argSizes = builder.CreateAlloca(arrI64Ty);
-  builder.restoreIP(currentIP);
+  accBuilder->createMapperAllocas(builder.saveIP(), allocaIP, totalNbOperand,
+                                  mapperAllocas);
 
   SmallVector<uint64_t> flags;
   SmallVector<llvm::Constant *> names;
 
   if (failed(processDataOperands(builder, moduleTranslation, op, flags, names,
-                                 argsBase, args, argSizes)))
+                                 mapperAllocas)))
     return failure();
 
   llvm::GlobalVariable *maptypes =
@@ -321,19 +464,9 @@ convertStandaloneDataOp(OpTy &op, llvm::IRBuilderBase &builder,
       llvm::ArrayType::get(llvm::Type::getInt8PtrTy(ctx), totalNbOperand),
       mapnames, /*Idx0=*/0, /*Idx1=*/0);
 
-  llvm::Value *argsBaseGEP = builder.CreateInBoundsGEP(
-      arrI8PtrTy, argsBase, {builder.getInt32(0), builder.getInt32(0)});
-  llvm::Value *argsGEP = builder.CreateInBoundsGEP(
-      arrI8PtrTy, args, {builder.getInt32(0), builder.getInt32(0)});
-  llvm::Value *argSizesGEP = builder.CreateInBoundsGEP(
-      arrI64Ty, argSizes, {builder.getInt32(0), builder.getInt32(0)});
-  llvm::Value *nullPtr = llvm::Constant::getNullValue(
-      llvm::Type::getInt8PtrTy(ctx)->getPointerTo());
-
-  builder.CreateCall(mapperFunc,
-                     {srcLocInfo, builder.getInt64(kDefaultDevice),
-                      builder.getInt32(totalNbOperand), argsBaseGEP, argsGEP,
-                      argSizesGEP, maptypesArg, mapnamesArg, nullPtr});
+  accBuilder->emitMapperCall(builder.saveIP(), mapperFunc, srcLocInfo,
+                             maptypesArg, mapnamesArg, mapperAllocas,
+                             kDefaultDevice, totalNbOperand);
 
   return success();
 }
@@ -363,6 +496,9 @@ LogicalResult OpenACCDialectLLVMIRTranslationInterface::convertOperation(
     LLVM::ModuleTranslation &moduleTranslation) const {
 
   return llvm::TypeSwitch<Operation *, LogicalResult>(op)
+      .Case([&](acc::DataOp dataOp) {
+        return convertDataOp(dataOp, builder, moduleTranslation);
+      })
       .Case([&](acc::EnterDataOp enterDataOp) {
         return convertStandaloneDataOp<acc::EnterDataOp>(enterDataOp, builder,
                                                          moduleTranslation);
@@ -374,6 +510,13 @@ LogicalResult OpenACCDialectLLVMIRTranslationInterface::convertOperation(
       .Case([&](acc::UpdateOp updateOp) {
         return convertStandaloneDataOp<acc::UpdateOp>(updateOp, builder,
                                                       moduleTranslation);
+      })
+      .Case<acc::TerminatorOp, acc::YieldOp>([](auto op) {
+        // `yield` and `terminator` can be just omitted. The block structure was
+        // created in the function that handles their parent operation.
+        assert(op->getNumOperands() == 0 &&
+               "unexpected OpenACC terminator with operands");
+        return success();
       })
       .Default([&](Operation *op) {
         return op->emitError("unsupported OpenACC operation: ")

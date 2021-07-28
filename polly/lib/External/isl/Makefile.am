@@ -498,6 +498,7 @@ EXTRA_DIST = \
 	bset_to_bmap.c \
 	bset_from_bmap.c \
 	isl_check_named_params_templ.c \
+	check_parse_fail_test_templ.c \
 	check_reparse_templ.c \
 	check_reparse_test_templ.c \
 	check_single_reference_templ.c \

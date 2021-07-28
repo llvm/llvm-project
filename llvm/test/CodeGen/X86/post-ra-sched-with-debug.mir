@@ -1,10 +1,12 @@
 # RUN: llc -mtriple=x86_64-unknown-unknown -mcpu=btver2 -run-pass=post-RA-sched -o - %s | FileCheck %s
+# RUN: llc -mtriple=x86_64-unknown-unknown -mcpu=btver2 -run-pass=post-RA-sched -o - %s -experimental-debug-variable-locations| FileCheck %s
 
-# Test that multiple DBG_VALUE's following an instruction whose register needs
-# to be changed during the post-RA scheduler pass are updated correctly.
+# Test that multiple DBG_VALUE's and DBG_PHIs following an instruction whose
+# register needs # to be changed during the post-RA scheduler pass are updated
+# correctly.
 
 # Test case was derived from the output from the following command and
-# the source code below:
+# the source code below. DBG_PHIs added manually later:
 #
 #   clang -S -emit-llvm -target x86_64 -march=btver2 -O2 -g -o - <srcfile> |
 #   llc -stop-before=post-RA-sched -o -
@@ -253,6 +255,8 @@ body:             |
     ; CHECK:      [[REGISTER:\$r[a-z0-9]+]] = LEA64r {{\$r[a-z0-9]+}}, 1, $noreg, -20, $noreg
     ; CHECK-NEXT: DBG_VALUE [[REGISTER]], $noreg, ![[J_VAR]], !DIExpression(), debug-location ![[J_LOC]]
     ; CHECK-NEXT: DBG_VALUE [[REGISTER]], $noreg, ![[I_VAR]], !DIExpression(), debug-location ![[I_LOC]]
+    ; CHECK-NEXT: DBG_PHI [[REGISTER]], 0
+    ; CHECK-NEXT: DBG_PHI [[REGISTER]], 1
 
     frame-setup PUSH64r killed $rbp, implicit-def $rsp, implicit $rsp
     CFI_INSTRUCTION def_cfa_offset 16
@@ -288,10 +292,14 @@ body:             |
     $rcx = LEA64r $rbp, 1, $noreg, -20, $noreg
     DBG_VALUE $rcx, $noreg, !46, !17, debug-location !48
     DBG_VALUE $rcx, $noreg, !39, !17, debug-location !44
+    DBG_PHI $rcx, 0
+    DBG_PHI $rcx, 1
     DBG_VALUE $rbp, -20, !29, !17, debug-location !36
     $rcx = CMOV64rr killed $rcx, killed $rdx, 5, implicit killed $eflags
     $rcx = OR64rr killed $rcx, killed $rsi, implicit-def dead $eflags
     $rdx = MOVSX64rm32 $rbx, 1, $noreg, 0, $noreg :: (load (s32), align 8)
+    DBG_INSTR_REF 1, 0, !46, !17, debug-location !48
+    DBG_INSTR_REF 2, 0, !39, !17, debug-location !44
     TEST32mr killed $rcx, 4, killed $rdx, 0, $noreg, killed $eax, implicit-def $eflags :: (load (s32))
     JCC_1 %bb.2, 5, implicit $eflags
     JMP_1 %bb.3

@@ -85,8 +85,8 @@ private:
   /// Compute the size of the storage space reserved for a thread.
   uint32_t computeThreadStorageTotal() {
     uint32_t NumLanesInBlock = mapping::getNumberOfProcessorElements();
-    return (state::SharedScratchpadSize - NumLanesInBlock + 1) /
-           NumLanesInBlock;
+    return utils::align_down((state::SharedScratchpadSize / NumLanesInBlock),
+                             Alignment);
   }
 
   /// Return the top address of the warp data stack, that is the first address
@@ -114,7 +114,7 @@ void SharedMemorySmartStackTy::init(bool IsSPMD) {
 
 void *SharedMemorySmartStackTy::push(uint64_t Bytes) {
   // First align the number of requested bytes.
-  uint64_t AlignedBytes = (Bytes + (Alignment - 1)) / Alignment * Alignment;
+  uint64_t AlignedBytes = utils::align_up(Bytes, Alignment);
 
   uint32_t StorageTotal = computeThreadStorageTotal();
 
@@ -136,7 +136,7 @@ void *SharedMemorySmartStackTy::push(uint64_t Bytes) {
 }
 
 void SharedMemorySmartStackTy::pop(void *Ptr, uint32_t Bytes) {
-  uint64_t AlignedBytes = (Bytes + (Alignment - 1)) / Alignment * Alignment;
+  uint64_t AlignedBytes = utils::align_up(Bytes, Alignment);
   if (Ptr >= &Data[0] && Ptr < &Data[state::SharedScratchpadSize]) {
     int TId = mapping::getThreadIdInBlock();
     Usage[TId] -= AlignedBytes;
@@ -497,19 +497,32 @@ __attribute__((noinline)) void __kmpc_free_shared(void *Ptr, uint64_t Bytes) {
   memory::freeShared(Ptr, Bytes, "Frontend free shared");
 }
 
+/// Allocate storage in shared memory to communicate arguments from the main
+/// thread to the workers in generic mode. If we exceed
+/// NUM_SHARED_VARIABLES_IN_SHARED_MEM we will malloc space for communication.
+constexpr uint64_t NUM_SHARED_VARIABLES_IN_SHARED_MEM = 64;
+
+[[clang::loader_uninitialized]] static void
+    *SharedMemVariableSharingSpace[NUM_SHARED_VARIABLES_IN_SHARED_MEM];
+#pragma omp allocate(SharedMemVariableSharingSpace)                            \
+    allocator(omp_pteam_mem_alloc)
 [[clang::loader_uninitialized]] static void **SharedMemVariableSharingSpacePtr;
 #pragma omp allocate(SharedMemVariableSharingSpacePtr)                         \
     allocator(omp_pteam_mem_alloc)
 
-void __kmpc_begin_sharing_variables(void ***GlobalArgs, uint64_t NumArgs) {
-  SharedMemVariableSharingSpacePtr =
-      (void **)__kmpc_alloc_shared(sizeof(void *) * NumArgs);
+void __kmpc_begin_sharing_variables(void ***GlobalArgs, uint64_t nArgs) {
+  if (nArgs <= NUM_SHARED_VARIABLES_IN_SHARED_MEM) {
+    SharedMemVariableSharingSpacePtr = &SharedMemVariableSharingSpace[0];
+  } else {
+    SharedMemVariableSharingSpacePtr = (void **)memory::allocGlobal(
+        nArgs * sizeof(void *), "new extended args");
+  }
   *GlobalArgs = SharedMemVariableSharingSpacePtr;
 }
 
-void __kmpc_end_sharing_variables(void **GlobalArgsPtr, uint64_t NumArgs) {
-  __kmpc_free_shared(SharedMemVariableSharingSpacePtr,
-                     sizeof(void *) * NumArgs);
+void __kmpc_end_sharing_variables() {
+  if (SharedMemVariableSharingSpacePtr != &SharedMemVariableSharingSpace[0])
+    memory::freeGlobal(SharedMemVariableSharingSpacePtr, "new extended args");
 }
 
 void __kmpc_get_shared_variables(void ***GlobalArgs) {

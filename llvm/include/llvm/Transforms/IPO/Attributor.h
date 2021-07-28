@@ -1563,6 +1563,11 @@ struct Attributor {
     SimplificationCallbacks[IRP].emplace_back(CB);
   }
 
+  /// Return true if there is a simplification callback for \p IRP.
+  bool hasSimplificationCallback(const IRPosition &IRP) {
+    return SimplificationCallbacks.count(IRP);
+  }
+
 private:
   /// The vector with all simplification callbacks registered by outside AAs.
   DenseMap<IRPosition, SmallVector<SimplifictionCallbackTy, 1>>

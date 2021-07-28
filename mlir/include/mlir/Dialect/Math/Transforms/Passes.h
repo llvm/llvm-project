@@ -15,6 +15,8 @@ class RewritePatternSet;
 
 void populateExpandTanhPattern(RewritePatternSet &patterns);
 
+void populateMathAlgebraicSimplificationPatterns(RewritePatternSet &patterns);
+
 void populateMathPolynomialApproximationPatterns(RewritePatternSet &patterns);
 
 } // namespace mlir

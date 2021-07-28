@@ -402,8 +402,7 @@ TEST_F(FormatTestCSharp, CSharpRegions) {
 }
 
 TEST_F(FormatTestCSharp, CSharpKeyWordEscaping) {
-  verifyFormat("public enum var\n"
-               "{\n"
+  verifyFormat("public enum var {\n"
                "    none,\n"
                "    @string,\n"
                "    bool,\n"

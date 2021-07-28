@@ -332,6 +332,8 @@ public:
   /// @{
   /// Passes are required to drop metadata they don't understand. This is a
   /// convenience method for passes to do so.
+  /// dropUndefImplyingAttrsAndUnknownMetadata should be used instead of
+  /// this API if the Instruction being modified is a call.
   void dropUnknownNonDebugMetadata(ArrayRef<unsigned> KnownIDs);
   void dropUnknownNonDebugMetadata() {
     return dropUnknownNonDebugMetadata(None);
@@ -390,6 +392,13 @@ public:
   /// Drops flags that may cause this instruction to evaluate to poison despite
   /// having non-poison inputs.
   void dropPoisonGeneratingFlags();
+
+  /// This function drops non-debug unknown metadata (through
+  /// dropUnknownNonDebugMetadata). For calls, it also drops parameter and 
+  /// return attributes that can cause undefined behaviour. Both of these should
+  /// be done by passes which move instructions in IR.
+  void
+  dropUndefImplyingAttrsAndUnknownMetadata(ArrayRef<unsigned> KnownIDs = {});
 
   /// Determine whether the exact flag is set.
   bool isExact() const;

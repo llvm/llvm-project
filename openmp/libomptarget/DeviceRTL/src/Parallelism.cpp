@@ -143,8 +143,7 @@ void __kmpc_parallel_51(IdentTy *ident, int32_t, int32_t if_expr,
   }
 
   if (nargs)
-    memory::freeShared(GlobalArgs, nargs * sizeof(void *),
-                       "global args free shared");
+    __kmpc_end_sharing_variables();
 }
 
 __attribute__((noinline)) bool

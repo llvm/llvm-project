@@ -37,5 +37,27 @@ t31:
   ret i64 undef
 }
 
+; Make sure we do not fail when checking for ordered reduction. This test just
+; exercises the path and bails out without performing vectorization.
+; CHECK-LABEL: quux
+; CHECK-NOT: fadd <4 x 
+define void @quux() {
+bb:
+  br label %header
+
+latch:                                              ; preds = %header
+  %tmp = phi double [ %tmp6, %header ]
+  br i1 undef, label %header, label %bb2
+
+bb2:                                              ; preds = %latch
+  %tmp3 = phi double [ %tmp, %latch ]
+  ret void
+
+header:                                              ; preds = %latch, %bb
+  %tmp5 = phi double [ 1.300000e+01, %bb ], [ %tmp, %latch ]
+  %tmp6 = fadd double %tmp5, 1.000000e+00
+  br label %latch
+}
+
 !1 = !{!"function_entry_count", i64 801}
 !2 = !{!"branch_weights", i32 746, i32 1}

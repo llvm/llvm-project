@@ -28,6 +28,11 @@ DLWRAP(cuDeviceGetAttribute, 3);
 DLWRAP(cuDeviceGetCount, 1);
 DLWRAP(cuFuncGetAttribute, 3);
 
+// Device info
+DLWRAP(cuDeviceGetName, 3);
+DLWRAP(cuDeviceTotalMem, 2);
+DLWRAP(cuDriverGetVersion, 1);
+
 DLWRAP(cuGetErrorString, 2);
 DLWRAP(cuLaunchKernel, 11);
 

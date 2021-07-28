@@ -17,6 +17,7 @@
 #include "llvm/MC/MCSection.h"
 #include "llvm/MC/MCSectionCOFF.h"
 #include "llvm/MC/MCSectionELF.h"
+#include "llvm/MC/MCSectionGOFF.h"
 #include "llvm/MC/MCSectionMachO.h"
 #include "llvm/MC/MCSectionWasm.h"
 #include "llvm/MC/MCSectionXCOFF.h"
@@ -502,6 +503,11 @@ void MCObjectFileInfo::initELFMCObjectFileInfo(const Triple &T, bool Large) {
   PseudoProbeSection = Ctx->getELFSection(".pseudo_probe", DebugSecType, 0);
   PseudoProbeDescSection =
       Ctx->getELFSection(".pseudo_probe_desc", DebugSecType, 0);
+}
+
+void MCObjectFileInfo::initGOFFMCObjectFileInfo(const Triple &T) {
+  TextSection = Ctx->getGOFFSection(".text", SectionKind::getText());
+  BSSSection = Ctx->getGOFFSection(".bss", SectionKind::getBSS());
 }
 
 void MCObjectFileInfo::initCOFFMCObjectFileInfo(const Triple &T) {
@@ -994,6 +1000,9 @@ void MCObjectFileInfo::initMCObjectFileInfo(MCContext &MCCtx, bool PIC,
     break;
   case MCContext::IsELF:
     initELFMCObjectFileInfo(TheTriple, LargeCodeModel);
+    break;
+  case MCContext::IsGOFF:
+    initGOFFMCObjectFileInfo(TheTriple);
     break;
   case MCContext::IsWasm:
     initWasmMCObjectFileInfo(TheTriple);
