@@ -6,7 +6,7 @@
 //
 //===----------------------------------------------------------------------===//
 //
-// This files several utilities and algorithms that perform abstract dataflow
+// This file has several utilities and algorithms that perform abstract dataflow
 // analysis over the IR. These allow for users to hook into various analysis
 // propagation algorithms without needing to reinvent the traversal over the
 // different types of control structures present within MLIR, such as regions,
