@@ -5,15 +5,35 @@ float function_scope(float a) {
   return a;
 }
 
+// Ok, at namespace scope.
+namespace foo {
+#pragma float_control(push)
+#pragma float_control(pop)
+}
+
+// Ok, within a language linkage specification.
+extern "C" {
+#pragma float_control(push)
+#pragma float_control(pop)
+}
+
+// Same.
+extern "C++" {
+#pragma float_control(push)
+#pragma float_control(pop)
+}
+
 #ifdef CHECK_ERROR
+// Ok at file scope.
 #pragma float_control(push)
 #pragma float_control(pop)
 #pragma float_control(precise, on, push)
 void check_stack() {
-#pragma float_control(push)                   // expected-error {{can only appear at file scope or namespace scope}}
-#pragma float_control(pop)                    // expected-error {{can only appear at file scope or namespace scope}}
-#pragma float_control(precise, on, push)      // expected-error {{can only appear at file scope or namespace scope}}
-#pragma float_control(except, on, push)       // expected-error {{can only appear at file scope or namespace scope}}
+  // Not okay within a function declaration.
+#pragma float_control(push)                   // expected-error {{can only appear at file or namespace scope or within a language linkage specification}}
+#pragma float_control(pop)                    // expected-error {{can only appear at file or namespace scope or within a language linkage specification}}
+#pragma float_control(precise, on, push)      // expected-error {{can only appear at file or namespace scope or within a language linkage specification}}
+#pragma float_control(except, on, push)       // expected-error {{can only appear at file or namespace scope or within a language linkage specification}}
 #pragma float_control(except, on, push, junk) // expected-error {{float_control is malformed}}
   return;
 }
