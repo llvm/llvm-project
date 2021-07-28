@@ -153,7 +153,8 @@ AST Matchers
 clang-format
 ------------
 
-- ...
+- Option ``AllowShortEnumsOnASingleLine: false`` has been improved, it now
+  correctly places the opening brace according to ``BraceWrapping.AfterEnum``.
 
 libclang
 --------
