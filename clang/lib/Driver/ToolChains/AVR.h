@@ -10,7 +10,7 @@
 #define LLVM_CLANG_LIB_DRIVER_TOOLCHAINS_AVR_H
 
 #include "Gnu.h"
-#include "InputInfo.h"
+#include "clang/Driver/InputInfo.h"
 #include "clang/Driver/ToolChain.h"
 #include "clang/Driver/Tool.h"
 
