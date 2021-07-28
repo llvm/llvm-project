@@ -21,11 +21,11 @@ for.body:                                         ; preds = %entry, %for.body
   call void @llvm.dbg.value(metadata i8 %i.06, metadata !14, metadata !DIExpression()), !dbg !17
   call void @llvm.dbg.value(metadata i8* %p.addr.05, metadata !13, metadata !DIExpression()), !dbg !16
 ; CHECK-NOT: call void @llvm.dbg.value(metadata i8* undef
-; CHECK: call void @llvm.dbg.value(metadata !DIArgList(i8* %lsr.iv, i8* %p), metadata ![[MID_p:[0-9]+]], metadata !DIExpression(DW_OP_LLVM_arg, 0, DW_OP_consts, 3, DW_OP_LLVM_arg, 1, DW_OP_plus, DW_OP_minus, DW_OP_consts, 3, DW_OP_div, DW_OP_consts, 3, DW_OP_mul, DW_OP_LLVM_arg, 1, DW_OP_plus, DW_OP_stack_value))
+; CHECK: call void @llvm.dbg.value(metadata i8* %lsr.iv, metadata ![[MID_p:[0-9]+]], metadata !DIExpression(DW_OP_constu, 3, DW_OP_minus, DW_OP_stack_value)), !dbg !16
   %add.ptr = getelementptr inbounds i8, i8* %p.addr.05, i64 3, !dbg !20
   call void @llvm.dbg.value(metadata i8* %add.ptr, metadata !13, metadata !DIExpression()), !dbg !16
 ; CHECK-NOT: call void @llvm.dbg.value(metadata i8* undef
-; CHECK: call void @llvm.dbg.value(metadata !DIArgList(i8* %lsr.iv, i8* %p), metadata ![[MID_p]], metadata !DIExpression(DW_OP_LLVM_arg, 0, DW_OP_consts, 3, DW_OP_LLVM_arg, 1, DW_OP_plus, DW_OP_minus, DW_OP_consts, 3, DW_OP_div, DW_OP_consts, 3, DW_OP_mul, DW_OP_consts, 3, DW_OP_LLVM_arg, 1, DW_OP_plus, DW_OP_plus, DW_OP_stack_value))
+; CHECK: call void @llvm.dbg.value(metadata i8* %lsr.iv, metadata ![[MID_p]], metadata !DIExpression()), !dbg !16
   store i8 %i.06, i8* %add.ptr, align 1, !dbg !23, !tbaa !24
   %inc = add nuw nsw i8 %i.06, 1, !dbg !27
   call void @llvm.dbg.value(metadata i8 %inc, metadata !14, metadata !DIExpression()), !dbg !17
