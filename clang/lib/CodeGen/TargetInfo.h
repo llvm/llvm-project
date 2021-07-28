@@ -148,6 +148,13 @@ public:
     return Ty;
   }
 
+  /// Target hook to decide whether an inline asm operand can be passed
+  /// by value.
+  virtual bool isScalarizableAsmOperand(CodeGen::CodeGenFunction &CGF,
+                                        llvm::Type *Ty) const {
+    return false;
+  }
+
   /// Adds constraints and types for result registers.
   virtual void addReturnRegisterOutputs(
       CodeGen::CodeGenFunction &CGF, CodeGen::LValue ReturnValue,
