@@ -440,24 +440,16 @@ bool DefGenerator::emitDecls(StringRef selectedDialect) {
   collectAllDefs(selectedDialect, defRecords, defs);
   if (defs.empty())
     return false;
-  {
-    NamespaceEmitter nsEmitter(os, defs.front().getDialect());
 
-    // Declare all the def classes first (in case they reference each other).
-    for (const AttrOrTypeDef &def : defs)
-      os << "  class " << def.getCppClassName() << ";\n";
+  NamespaceEmitter nsEmitter(os, defs.front().getDialect());
 
-    // Emit the declarations.
-    for (const AttrOrTypeDef &def : defs)
-      emitDefDecl(def);
-  }
-  // Emit the TypeID explicit specializations to have a single definition for
-  // each of these.
+  // Declare all the def classes first (in case they reference each other).
   for (const AttrOrTypeDef &def : defs)
-    if (!def.getDialect().getCppNamespace().empty())
-      os << "DECLARE_EXPLICIT_TYPE_ID(" << def.getDialect().getCppNamespace()
-         << "::" << def.getCppClassName() << ")\n";
+    os << "  class " << def.getCppClassName() << ";\n";
 
+  // Emit the declarations.
+  for (const AttrOrTypeDef &def : defs)
+    emitDefDecl(def);
   return false;
 }
 
@@ -942,13 +934,8 @@ bool DefGenerator::emitDefs(StringRef selectedDialect) {
 
   IfDefScope scope("GET_" + defTypePrefix.upper() + "DEF_CLASSES", os);
   emitParsePrintDispatch(defs);
-  for (const AttrOrTypeDef &def : defs) {
+  for (const AttrOrTypeDef &def : defs)
     emitDefDef(def);
-    // Emit the TypeID explicit specializations to have a single symbol def.
-    if (!def.getDialect().getCppNamespace().empty())
-      os << "DEFINE_EXPLICIT_TYPE_ID(" << def.getDialect().getCppNamespace()
-         << "::" << def.getCppClassName() << ")\n";
-  }
 
   return false;
 }
