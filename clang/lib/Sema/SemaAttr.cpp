@@ -475,8 +475,7 @@ void Sema::ActOnPragmaFloatControl(SourceLocation Loc,
                                    PragmaFloatControlKind Value) {
   FPOptionsOverride NewFPFeatures = CurFPFeatureOverrides();
   if ((Action == PSK_Push_Set || Action == PSK_Push || Action == PSK_Pop) &&
-      !(CurContext->isTranslationUnit()) && !CurContext->isNamespace() &&
-      !isa<LinkageSpecDecl>(CurContext)) {
+      !CurContext->getRedeclContext()->isFileContext()) {
     // Push and pop can only occur at file or namespace scope, or within a
     // language linkage declaration.
     Diag(Loc, diag::err_pragma_fc_pp_scope);
