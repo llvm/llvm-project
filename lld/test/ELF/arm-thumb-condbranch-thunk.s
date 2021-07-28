@@ -3,13 +3,13 @@
 // RUN: ld.lld %t.o -o %t
 // The output file is large, most of it zeroes. We dissassemble only the
 // parts we need to speed up the test and avoid a large output file
-// RUN: llvm-objdump -d %t --print-imm-hex --start-address=0x80000 --stop-address=0x80010 --triple=thumbv7a-linux-gnueabihf | FileCheck --check-prefix=CHECK1 %s
-// RUN: llvm-objdump -d %t --print-imm-hex --start-address=0x100000 --stop-address=0x100008 --triple=thumbv7a-linux-gnueabihf | FileCheck --check-prefix=CHECK2 %s
-// RUN: llvm-objdump -d %t --print-imm-hex --start-address=0x180000 --stop-address=0x18000a --triple=thumbv7a-linux-gnueabihf | FileCheck --check-prefix=CHECK3 %s
-// RUN: llvm-objdump -d %t --print-imm-hex --start-address=0x500004 --stop-address=0x500008 --triple=thumbv7a-linux-gnueabihf | FileCheck --check-prefix=CHECK4 %s
-// RUN: llvm-objdump -d %t --print-imm-hex --start-address=0x580000 --stop-address=0x580006 --triple=thumbv7a-linux-gnueabihf | FileCheck --check-prefix=CHECK5 %s
-// RUN: llvm-objdump -d %t --print-imm-hex --start-address=0x1000004 --stop-address=0x100000c --triple=thumbv7a-linux-gnueabihf | FileCheck --check-prefix=CHECK6 %s
-// RUN: llvm-objdump -d %t --print-imm-hex --start-address=0x1100000 --stop-address=0x1100006 --triple=thumbv7a-linux-gnueabihf | FileCheck --check-prefix=CHECK7 %s
+// RUN: llvm-objdump -d %t --print-imm-hex --start-address=0x80000 --stop-address=0x80010 | FileCheck --check-prefix=CHECK1 %s
+// RUN: llvm-objdump -d %t --print-imm-hex --start-address=0x100000 --stop-address=0x100008 | FileCheck --check-prefix=CHECK2 %s
+// RUN: llvm-objdump -d %t --print-imm-hex --start-address=0x180000 --stop-address=0x18000a | FileCheck --check-prefix=CHECK3 %s
+// RUN: llvm-objdump -d %t --print-imm-hex --start-address=0x500004 --stop-address=0x500008 | FileCheck --check-prefix=CHECK4 %s
+// RUN: llvm-objdump -d %t --print-imm-hex --start-address=0x580000 --stop-address=0x580006 | FileCheck --check-prefix=CHECK5 %s
+// RUN: llvm-objdump -d %t --print-imm-hex --start-address=0x1000004 --stop-address=0x100000c | FileCheck --check-prefix=CHECK6 %s
+// RUN: llvm-objdump -d %t --print-imm-hex --start-address=0x1100000 --stop-address=0x1100006 | FileCheck --check-prefix=CHECK7 %s
 // Test Range extension Thunks for the Thumb conditional branch instruction.
 // This instruction only has a range of 1Mb whereas all the other Thumb wide
 // Branch instructions have 16Mb range. We still place our pre-created Thunk

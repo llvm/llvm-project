@@ -3,8 +3,8 @@
 // RUN: ld.lld %t --shared -o %t.so
 // The output file is large, most of it zeroes. We dissassemble only the
 // parts we need to speed up the test and avoid a large output file
-// RUN: llvm-objdump -d %t.so --start-address=16777220 --stop-address=16777244 --triple=thumbv7a-linux-gnueabihf | FileCheck --check-prefix=CHECK1 %s
-// RUN: llvm-objdump -d %t.so --start-address=17825800 --stop-address=17825826 --triple=thumbv7a-linux-gnueabihf | FileCheck --check-prefix=CHECK2 %s
+// RUN: llvm-objdump -d %t.so --start-address=16777220 --stop-address=16777244 | FileCheck --check-prefix=CHECK1 %s
+// RUN: llvm-objdump -d %t.so --start-address=17825800 --stop-address=17825826 | FileCheck --check-prefix=CHECK2 %s
 // RUN: llvm-objdump -d %t.so --start-address=17825824 --stop-address=17825892 --triple=armv7a-linux-gnueabihf | FileCheck --check-prefix=CHECK3 %s
 
 /// A branch to a Thunk that we create on pass N, can drift out of range if

@@ -4,8 +4,8 @@
 // RUN:       .text 0x100000 : { *(SORT_BY_NAME(.text.*)) } \
 // RUN:       }" > %t.script
 // RUN: ld.lld --script %t.script %t -o %t2
-// RUN: llvm-objdump -d %t2 --start-address=1048576 --stop-address=1048584 --triple=thumbv7a-linux-gnueabihf | FileCheck --check-prefix=CHECK1 %s
-// RUN: llvm-objdump -d %t2 --start-address=16777220 --stop-address=16777230 --triple=thumbv7a-linux-gnueabihf | FileCheck --check-prefix=CHECK2 %s
+// RUN: llvm-objdump -d %t2 --start-address=1048576 --stop-address=1048584 | FileCheck --check-prefix=CHECK1 %s
+// RUN: llvm-objdump -d %t2 --start-address=16777220 --stop-address=16777230 | FileCheck --check-prefix=CHECK2 %s
 
  .syntax unified
 

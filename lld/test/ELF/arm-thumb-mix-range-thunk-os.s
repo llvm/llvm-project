@@ -4,16 +4,16 @@
 // The output file is large, most of it zeroes. We dissassemble only the
 // parts we need to speed up the test and avoid a large output file
 // RUN: llvm-objdump -d %t2 --start-address=1048576 --stop-address=1048604 --triple=armv7a-linux-gnueabihf | FileCheck --check-prefix=CHECK1 %s
-// RUN: llvm-objdump -d %t2 --start-address=2097152 --stop-address=2097162 --triple=thumbv7a-linux-gnueabihf | FileCheck --check-prefix=CHECK2 %s
+// RUN: llvm-objdump -d %t2 --start-address=2097152 --stop-address=2097162 | FileCheck --check-prefix=CHECK2 %s
 // RUN: llvm-objdump -d %t2 --start-address=16777220 --stop-address=16777232 --triple=armv7a-linux-gnueabihf | FileCheck --check-prefix=CHECK3 %s
-// RUN: llvm-objdump -d %t2 --start-address=16777232 --stop-address=16777242 --triple=thumbv7a-linux-gnueabihf | FileCheck --check-prefix=CHECK4 %s
-// RUN: llvm-objdump -d %t2 --start-address=32505860 --stop-address=32505870 --triple=thumbv7a-linux-gnueabihf | FileCheck --check-prefix=CHECK5 %s
-// RUN: llvm-objdump -d %t2 --start-address=35651584 --stop-address=35651590 --triple=thumbv7a-linux-gnueabihf | FileCheck --check-prefix=CHECK6 %s
+// RUN: llvm-objdump -d %t2 --start-address=16777232 --stop-address=16777242 | FileCheck --check-prefix=CHECK4 %s
+// RUN: llvm-objdump -d %t2 --start-address=32505860 --stop-address=32505870 | FileCheck --check-prefix=CHECK5 %s
+// RUN: llvm-objdump -d %t2 --start-address=35651584 --stop-address=35651590 | FileCheck --check-prefix=CHECK6 %s
 // RUN: llvm-objdump -d %t2 --start-address=36700160 --stop-address=36700168 --triple=armv7a-linux-gnueabihf | FileCheck --check-prefix=CHECK7 %s
 // RUN: llvm-objdump -d %t2 --start-address=48234500 --stop-address=48234512 --triple=armv7a-linux-gnueabihf | FileCheck --check-prefix=CHECK8 %s
-// RUN: llvm-objdump -d %t2 --start-address=53477380 --stop-address=53477392 --triple=thumbv7a-linux-gnueabihf | FileCheck --check-prefix=CHECK9 %s
+// RUN: llvm-objdump -d %t2 --start-address=53477380 --stop-address=53477392 | FileCheck --check-prefix=CHECK9 %s
 // RUN: llvm-objdump -d %t2 --start-address=68157440 --stop-address=68157452 --triple=armv7a-linux-gnueabihf | FileCheck --check-prefix=CHECK10 %s
-// RUN: llvm-objdump -d %t2 --start-address=69206016 --stop-address=69206024 --triple=thumbv7a-linux-gnueabihf | FileCheck --check-prefix=CHECK11 %s
+// RUN: llvm-objdump -d %t2 --start-address=69206016 --stop-address=69206024 | FileCheck --check-prefix=CHECK11 %s
 
 // Test the Range extension Thunks for ARM and Thumb when all the code is in a
 // single OutputSection. The ARM branches and branch and link instructions

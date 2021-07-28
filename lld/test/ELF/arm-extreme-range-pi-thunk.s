@@ -9,7 +9,7 @@
 
 // RUN: llvm-mc -arm-add-build-attributes -filetype=obj -triple=thumbv7a-none-linux-gnueabi %s -o %t3
 // RUN: ld.lld --script %t.script --pie %t3 -o %t4
-// RUN: llvm-objdump -d --triple=thumbv7a-none-linux-gnueabi --no-show-raw-insn %t4 | FileCheck --check-prefix=CHECK-THUMB %s
+// RUN: llvm-objdump -d --no-show-raw-insn %t4 | FileCheck --check-prefix=CHECK-THUMB %s
 
 // Check that we can create Arm and Thumb v7a Position Independent Thunks that
 // can span the address space without triggering overflow errors. We use an
