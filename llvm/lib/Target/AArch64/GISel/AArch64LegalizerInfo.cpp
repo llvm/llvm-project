@@ -300,9 +300,9 @@ AArch64LegalizerInfo::AArch64LegalizerInfo(const AArch64Subtarget &ST)
                                  {v2s64, p0, s128, 8}})
       // These extends are also legal
       .legalForTypesWithMemDesc({{s32, p0, s8, 8}, {s32, p0, s16, 8}})
-      .clampScalar(0, s8, s64)
+      .widenScalarToNextPow2(0, /* MinSize = */8)
       .lowerIfMemSizeNotPow2()
-      .widenScalarToNextPow2(0)
+      .clampScalar(0, s8, s64)
       .narrowScalarIf([=](const LegalityQuery &Query) {
         // Clamp extending load results to 32-bits.
         return Query.Types[0].isScalar() &&
