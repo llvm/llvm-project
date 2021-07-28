@@ -244,6 +244,26 @@ void referenceThroughTypedef(int I, ICRTy Builtin, MyIntCRTy MyInt) {}
 // CHECK-MESSAGES: :[[@LINE-6]]:52: note: 'int' and 'MyIntCRTy' parameters accept and bind the same kind of values
 // CHECK-MESSAGES: :[[@LINE-7]]:37: note: after resolving type aliases, the common type of 'ICRTy' and 'MyIntCRTy' is 'const int &'
 
+typedef int Point2D[2];
+typedef int Point3D[3];
+
+void arrays1(Point2D P2D, Point3D P3D) {} // In reality this is (int*, int*).
+// CHECK-MESSAGES: :[[@LINE-1]]:14: warning: 2 adjacent parameters of 'arrays1' of similar type ('int *') are
+// CHECK-MESSAGES: :[[@LINE-2]]:22: note: the first parameter in the range is 'P2D'
+// CHECK-MESSAGES: :[[@LINE-3]]:35: note: the last parameter in the range is 'P3D'
+
+void crefToArrayTypedef1(int I, const Point2D &P) {}
+// NO-WARN.
+
+void crefToArrayTypedef2(int *IA, const Point2D &P) {}
+// NO-WARN.
+
+void crefToArrayTypedef3(int P1[2], const Point2D &P) {}
+// NO-WARN.
+
+void crefToArrayTypedefBoth1(const Point2D &VecDescartes, const Point3D &VecThreeD) {}
+// NO-WARN: Distinct types and no conversion because of &.
+
 short const typedef int unsigned Eldritch;
 typedef const unsigned short Holy;
 
@@ -299,6 +319,30 @@ void templateAndAliasTemplate(Pair<int, int> P, TwoOf<int> I) {}
 // CHECK-MESSAGES: :[[@LINE-1]]:31: warning: 2 adjacent parameters of 'templateAndAliasTemplate' of similar type ('Pair<int, int>')
 // CHECK-MESSAGES: :[[@LINE-2]]:46: note: the first parameter in the range is 'P'
 // CHECK-MESSAGES: :[[@LINE-3]]:60: note: the last parameter in the range is 'I'
+
+template <int N, int M>
+void templatedArrayRef(int (&Array1)[N], int (&Array2)[M]) {}
+// NO-WARN: Distinct template types in the primary template.
+
+void templatedArrayRefTest() {
+  int Foo[12], Bar[12];
+  templatedArrayRef(Foo, Bar);
+
+  int Baz[12], Quux[42];
+  templatedArrayRef(Baz, Quux);
+
+  // NO-WARN: Implicit instantiations are not checked.
+}
+
+template <>
+void templatedArrayRef(int (&Array1)[8], int (&Array2)[8]) { templatedArrayRef(Array2, Array1); }
+// CHECK-MESSAGES: :[[@LINE-1]]:24: warning: 2 adjacent parameters of 'templatedArrayRef<8, 8>' of similar type ('int (&)[8]') are
+// CHECK-MESSAGES: :[[@LINE-2]]:30: note: the first parameter in the range is 'Array1'
+// CHECK-MESSAGES: :[[@LINE-3]]:48: note: the last parameter in the range is 'Array2'
+
+template <>
+void templatedArrayRef(int (&Array1)[16], int (&Array2)[24]) {}
+// NO-WARN: Not the same type.
 
 template <typename T>
 struct Vector {

@@ -504,6 +504,14 @@ let Command = "memory write" in {
     Desc<"Start writing bytes from an offset within the input file.">;
 }
 
+let Command = "memory tag write" in {
+  def memory_write_end_addr : Option<"end-addr", "e">, Group<1>,
+  Arg<"AddressOrExpression">, Desc<
+    "Set tags for start address to end-addr, repeating tags as needed"
+    " to cover the range. (instead of calculating the range from the"
+    " number of tags given)">;
+}
+
 let Command = "register read" in {
   def register_read_alternate : Option<"alternate", "A">,
     Desc<"Display register names using the alternate register name if there "

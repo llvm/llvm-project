@@ -7,8 +7,11 @@
 //===----------------------------------------------------------------------===//
 
 #include "CommandObjectMemoryTag.h"
+#include "lldb/Host/OptionParser.h"
 #include "lldb/Interpreter/CommandReturnObject.h"
 #include "lldb/Interpreter/OptionArgParser.h"
+#include "lldb/Interpreter/OptionGroupFormat.h"
+#include "lldb/Interpreter/OptionValueString.h"
 #include "lldb/Target/Process.h"
 
 using namespace lldb;
@@ -120,22 +123,63 @@ protected:
 
 class CommandObjectMemoryTagWrite : public CommandObjectParsed {
 public:
+  class OptionGroupTagWrite : public OptionGroup {
+  public:
+    OptionGroupTagWrite() : OptionGroup(), m_end_addr(LLDB_INVALID_ADDRESS) {}
+
+    ~OptionGroupTagWrite() override = default;
+
+    llvm::ArrayRef<OptionDefinition> GetDefinitions() override {
+      return llvm::makeArrayRef(g_memory_tag_write_options);
+    }
+
+    Status SetOptionValue(uint32_t option_idx, llvm::StringRef option_value,
+                          ExecutionContext *execution_context) override {
+      Status status;
+      const int short_option =
+          g_memory_tag_write_options[option_idx].short_option;
+
+      switch (short_option) {
+      case 'e':
+        m_end_addr = OptionArgParser::ToAddress(execution_context, option_value,
+                                                LLDB_INVALID_ADDRESS, &status);
+        break;
+      default:
+        llvm_unreachable("Unimplemented option");
+      }
+
+      return status;
+    }
+
+    void OptionParsingStarting(ExecutionContext *execution_context) override {
+      m_end_addr = LLDB_INVALID_ADDRESS;
+    }
+
+    lldb::addr_t m_end_addr;
+  };
+
   CommandObjectMemoryTagWrite(CommandInterpreter &interpreter)
       : CommandObjectParsed(interpreter, "tag",
                             "Write memory tags starting from the granule that "
                             "contains the given address.",
                             nullptr,
                             eCommandRequiresTarget | eCommandRequiresProcess |
-                                eCommandProcessMustBePaused) {
+                                eCommandProcessMustBePaused),
+        m_option_group(), m_tag_write_options() {
     // Address
     m_arguments.push_back(
         CommandArgumentEntry{CommandArgumentData(eArgTypeAddressOrExpression)});
     // One or more tag values
     m_arguments.push_back(CommandArgumentEntry{
         CommandArgumentData(eArgTypeValue, eArgRepeatPlus)});
+
+    m_option_group.Append(&m_tag_write_options);
+    m_option_group.Finalize();
   }
 
   ~CommandObjectMemoryTagWrite() override = default;
+
+  Options *GetOptions() override { return &m_option_group; }
 
 protected:
   bool DoExecute(Args &command, CommandReturnObject &result) override {
@@ -196,14 +240,24 @@ protected:
         tag_manager->ExpandToGranule(MemoryTagManager::TagRange(start_addr, 1))
             .GetRangeBase();
 
+    lldb::addr_t end_addr = 0;
+    // When you have an end address you want to align the range like tag read
+    // does. Meaning, align the start down (which we've done) and align the end
+    // up.
+    if (m_tag_write_options.m_end_addr != LLDB_INVALID_ADDRESS)
+      end_addr = m_tag_write_options.m_end_addr;
+    else
+      // Without an end address assume number of tags matches number of granules
+      // to write to
+      end_addr =
+          aligned_start_addr + (tags.size() * tag_manager->GetGranuleSize());
+
     // Now we've aligned the start address so if we ask for another range
     // using the number of tags N, we'll get back a range that is also N
     // granules in size.
     llvm::Expected<MemoryTagManager::TagRange> tagged_range =
-        tag_manager->MakeTaggedRange(
-            aligned_start_addr,
-            aligned_start_addr + (tags.size() * tag_manager->GetGranuleSize()),
-            memory_regions);
+        tag_manager->MakeTaggedRange(aligned_start_addr, end_addr,
+                                     memory_regions);
 
     if (!tagged_range) {
       result.SetError(Status(tagged_range.takeError()));
@@ -221,6 +275,9 @@ protected:
     result.SetStatus(eReturnStatusSuccessFinishResult);
     return true;
   }
+
+  OptionGroupOptions m_option_group;
+  OptionGroupTagWrite m_tag_write_options;
 };
 
 CommandObjectMemoryTag::CommandObjectMemoryTag(CommandInterpreter &interpreter)

@@ -62,11 +62,11 @@ void MemprofStats::MergeFrom(const MemprofStats *stats) {
     dst_ptr[i] += src_ptr[i];
 }
 
-static BlockingMutex print_lock(LINKER_INITIALIZED);
+static Mutex print_lock;
 
 static MemprofStats unknown_thread_stats(LINKER_INITIALIZED);
 static MemprofStats dead_threads_stats(LINKER_INITIALIZED);
-static BlockingMutex dead_threads_stats_lock(LINKER_INITIALIZED);
+static Mutex dead_threads_stats_lock;
 // Required for malloc_zone_statistics() on OS X. This can't be stored in
 // per-thread MemprofStats.
 static uptr max_malloced_memory;
@@ -87,7 +87,7 @@ static void GetAccumulatedStats(MemprofStats *stats) {
   }
   stats->MergeFrom(&unknown_thread_stats);
   {
-    BlockingMutexLock lock(&dead_threads_stats_lock);
+    Lock lock(&dead_threads_stats_lock);
     stats->MergeFrom(&dead_threads_stats);
   }
   // This is not very accurate: we may miss allocation peaks that happen
@@ -99,7 +99,7 @@ static void GetAccumulatedStats(MemprofStats *stats) {
 }
 
 void FlushToDeadThreadStats(MemprofStats *stats) {
-  BlockingMutexLock lock(&dead_threads_stats_lock);
+  Lock lock(&dead_threads_stats_lock);
   dead_threads_stats.MergeFrom(stats);
   stats->Clear();
 }
@@ -113,7 +113,7 @@ static void PrintAccumulatedStats() {
   MemprofStats stats;
   GetAccumulatedStats(&stats);
   // Use lock to keep reports from mixing up.
-  BlockingMutexLock lock(&print_lock);
+  Lock lock(&print_lock);
   stats.Print();
   StackDepotStats *stack_depot_stats = StackDepotGetStats();
   Printf("Stats: StackDepot: %zd ids; %zdM allocated\n",
