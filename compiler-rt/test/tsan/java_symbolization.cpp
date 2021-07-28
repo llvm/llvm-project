@@ -62,11 +62,9 @@ int main() {
 // CHECK:     #1 MyOuterFunc MyOuterFile.java:4321:65
 // CHECK:     #2 Caller1 CallerFile.java:111:22
 // CHECK:     #3 Caller2 CallerFile.java:333:44
-// On Linux/glibc #4 is __libc_start_main, but can be something else elsewhere.
-// CHECK:     #4
+// CHECK-NOT: #4
 // CHECK:   Location is heap block of size 32 at {{.*}} allocated by main thread:
 // CHECK:     #0 Allocer1 Alloc.java:11:222
 // CHECK:     #1 Allocer2 Alloc.java:33:444
-// On Linux/glibc #2 is __libc_start_main, but can be something else elsewhere.
-// CHECK:     #2
+// CHECK-NOT: #2
 // CHECK: DONE
