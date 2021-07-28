@@ -4176,28 +4176,32 @@ PreservedAnalyses OpenMPOptPass::run(Module &M, ModuleAnalysisManager &AM) {
     ORE.emit([&]() {
       OptimizationRemarkAnalysis ORA(DEBUG_TYPE, "OMP140", &F);
       return ORA << "Could not internalize function. "
-                 << "Some optimizations may not be possible.";
+                 << "Some optimizations may not be possible. [OMP140]";
     });
   };
 
   // Create internal copies of each function if this is a kernel Module. This
   // allows iterprocedural passes to see every call edge.
-  DenseSet<const Function *> InternalizedFuncs;
-  if (isOpenMPDevice(M))
+  DenseMap<Function *, Function *> InternalizedMap;
+  if (isOpenMPDevice(M)) {
+    SmallPtrSet<Function *, 16> InternalizeFns;
     for (Function &F : M)
       if (!F.isDeclaration() && !Kernels.contains(&F) && IsCalled(F) &&
           !DisableInternalization) {
-        if (Attributor::internalizeFunction(F, /* Force */ true)) {
-          InternalizedFuncs.insert(&F);
+        if (Attributor::isInternalizable(F)) {
+          InternalizeFns.insert(&F);
         } else if (!F.hasLocalLinkage() && !F.hasFnAttribute(Attribute::Cold)) {
           EmitRemark(F);
         }
       }
 
+    Attributor::internalizeFunctions(InternalizeFns, InternalizedMap);
+  }
+
   // Look at every function in the Module unless it was internalized.
   SmallVector<Function *, 16> SCC;
   for (Function &F : M)
-    if (!F.isDeclaration() && !InternalizedFuncs.contains(&F))
+    if (!F.isDeclaration() && !InternalizedMap.lookup(&F))
       SCC.push_back(&F);
 
   if (SCC.empty())
