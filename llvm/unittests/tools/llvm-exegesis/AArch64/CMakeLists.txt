@@ -1,10 +1,10 @@
-include_directories(
+add_llvm_exegesis_unittest_includes(
   ${LLVM_MAIN_SRC_DIR}/lib/Target/AArch64
   ${LLVM_BINARY_DIR}/lib/Target/AArch64
   ${LLVM_MAIN_SRC_DIR}/tools/llvm-exegesis/lib
   )
 
-set(LLVM_LINK_COMPONENTS
+add_llvm_exegesis_unittest_link_components(
   MC
   MCParser
   Object
@@ -13,9 +13,8 @@ set(LLVM_LINK_COMPONENTS
   AArch64
   )
 
-add_llvm_target_unittest(LLVMExegesisAArch64Tests
+add_llvm_exegesis_unittest_sources(
   TargetTest.cpp
   )
-target_link_libraries(LLVMExegesisAArch64Tests PRIVATE
-  LLVMExegesis
+add_llvm_exegesis_unittest_link_libraries(
   LLVMExegesisAArch64)
