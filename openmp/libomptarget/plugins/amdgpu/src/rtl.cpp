@@ -1478,7 +1478,7 @@ __tgt_target_table *__tgt_rtl_load_binary_locked(int32_t device_id,
 
       if (err != HSA_STATUS_SUCCESS) {
         // Inform the user what symbol prevented offloading
-        DP("Loading global '%s' (Failed)\n", e->name);
+        fprintf(stderr, "Loading global '%s' (Failed)\n", e->name);
         return NULL;
       }
 
