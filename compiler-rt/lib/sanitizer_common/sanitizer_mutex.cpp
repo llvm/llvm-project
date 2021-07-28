@@ -73,7 +73,7 @@ void DebugMutexInit() {
   // Build adjacency matrix.
   bool leaf[kMutexTypeMax];
   internal_memset(&leaf, 0, sizeof(leaf));
-  int cnt[kMutexTypeMax] = {};
+  int cnt[kMutexTypeMax];
   internal_memset(&cnt, 0, sizeof(cnt));
   for (int t = 0; t < kMutexTypeMax; t++) {
     mutex_type_count = t;
