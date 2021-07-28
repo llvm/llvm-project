@@ -815,6 +815,19 @@ static LogicalResult verify(CallOp &op) {
                               << ": " << op.getOperand(i + isIndirect).getType()
                               << " != " << funcType.getParamType(i);
 
+  if (op.getNumResults() == 0 &&
+      !funcType.getReturnType().isa<LLVM::LLVMVoidType>())
+    return op.emitOpError() << "expected function call to produce a value";
+
+  if (op.getNumResults() != 0 &&
+      funcType.getReturnType().isa<LLVM::LLVMVoidType>())
+    return op.emitOpError()
+           << "calling function with void result must not produce values";
+
+  if (op.getNumResults() > 1)
+    return op.emitOpError()
+           << "expected LLVM function call to produce 0 or 1 result";
+
   if (op.getNumResults() &&
       op.getResult(0).getType() != funcType.getReturnType())
     return op.emitOpError()
@@ -874,19 +887,18 @@ static ParseResult parseCallOp(OpAsmParser &parser, OperationState &result) {
   auto funcType = type.dyn_cast<FunctionType>();
   if (!funcType)
     return parser.emitError(trailingTypeLoc, "expected function type");
+  if (funcType.getNumResults() > 1)
+    return parser.emitError(trailingTypeLoc,
+                            "expected function with 0 or 1 result");
   if (isDirect) {
     // Make sure types match.
     if (parser.resolveOperands(operands, funcType.getInputs(),
                                parser.getNameLoc(), result.operands))
       return failure();
-    result.addTypes(funcType.getResults());
+    if (funcType.getNumResults() != 0 &&
+        !funcType.getResult(0).isa<LLVM::LLVMVoidType>())
+      result.addTypes(funcType.getResults());
   } else {
-    // Construct the LLVM IR Dialect function type that the first operand
-    // should match.
-    if (funcType.getNumResults() > 1)
-      return parser.emitError(trailingTypeLoc,
-                              "expected function with 0 or 1 result");
-
     Builder &builder = parser.getBuilder();
     Type llvmResultType;
     if (funcType.getNumResults() == 0) {
@@ -921,7 +933,8 @@ static ParseResult parseCallOp(OpAsmParser &parser, OperationState &result) {
                                parser.getNameLoc(), result.operands))
       return failure();
 
-    result.addTypes(llvmResultType);
+    if (!llvmResultType.isa<LLVM::LLVMVoidType>())
+      result.addTypes(llvmResultType);
   }
 
   return success();

@@ -42,8 +42,7 @@ static cl::opt<bool> noLeadingLines("no-leading-lines",
 static StringRef toolName;
 static int errorCount;
 
-LLVM_ATTRIBUTE_NORETURN static void fatal(StringRef filename,
-                                          const Twine &message) {
+[[noreturn]] static void fatal(StringRef filename, const Twine &message) {
   if (filename.empty())
     WithColor::error(errs(), toolName) << message << '\n';
   else

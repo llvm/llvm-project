@@ -61,7 +61,7 @@ private:
   bool allErrorsHandled() const;
 
   /// Dump output and crash.
-  LLVM_ATTRIBUTE_NORETURN void fatalUnhandledError();
+  [[noreturn]] void fatalUnhandledError();
 
   bool ErrorsAreFatal;
   std::vector<Error> Errors;

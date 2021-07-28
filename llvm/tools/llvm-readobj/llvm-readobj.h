@@ -21,7 +21,7 @@ namespace llvm {
   }
 
   // Various helper functions.
-  LLVM_ATTRIBUTE_NORETURN void reportError(Error Err, StringRef Input); 
+  [[noreturn]] void reportError(Error Err, StringRef Input);
   void reportWarning(Error Err, StringRef Input);
 
   template <class T> T unwrapOrError(StringRef Input, Expected<T> EO) {

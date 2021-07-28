@@ -111,7 +111,7 @@ static ExitOnError ExitOnErr;
 static FileRemover TempPreprocFile;
 static FileRemover TempResFile;
 
-LLVM_ATTRIBUTE_NORETURN static void fatalError(const Twine &Message) {
+[[noreturn]] static void fatalError(const Twine &Message) {
   errs() << Message << "\n";
   exit(1);
 }

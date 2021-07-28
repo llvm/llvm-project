@@ -73,12 +73,12 @@ module {
     // Read the sparse matrix from file, construct sparse storage.
     %fileName = call @getTensorFilename(%c0) : (index) -> (!Filename)
     %a = sparse_tensor.new %fileName
-      : !llvm.ptr<i8> to tensor<?x?xf64, #SparseMatrix>
+      : !Filename to tensor<?x?xf64, #SparseMatrix>
 
     // Initialize all-dense annotated "sparse" matrix to all zeros.
     %fileZero = call @getTensorFilename(%c1) : (index) -> (!Filename)
     %x = sparse_tensor.new %fileZero
-      : !llvm.ptr<i8> to tensor<?x?xf64, #DenseMatrix>
+      : !Filename to tensor<?x?xf64, #DenseMatrix>
 
     // Call the kernel.
     %0 = call @dense_output(%a, %x)

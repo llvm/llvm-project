@@ -170,8 +170,12 @@ static bool findLoopComponents(
   // icmp ult %inc, tripcount -> icmp ult %j, tripcount-1, then we don't flatten
   // the loop (yet).
   TripCount = Compare->getOperand(1);
-  const SCEV *SCEVTripCount =
-      SE->getTripCountFromExitCount(SE->getBackedgeTakenCount(L));
+  const SCEV *BackedgeTakenCount = SE->getBackedgeTakenCount(L);
+  if (isa<SCEVCouldNotCompute>(BackedgeTakenCount)) {
+    LLVM_DEBUG(dbgs() << "Backedge-taken count is not predictable\n");
+    return false;
+  }
+  const SCEV *SCEVTripCount = SE->getTripCountFromExitCount(BackedgeTakenCount);
   if (SE->getSCEV(TripCount) != SCEVTripCount) {
     if (!IsWidened) {
       LLVM_DEBUG(dbgs() << "Could not find valid trip count\n");

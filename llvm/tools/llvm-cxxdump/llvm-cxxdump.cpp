@@ -49,7 +49,7 @@ static void error(std::error_code EC) {
   exit(1);
 }
 
-LLVM_ATTRIBUTE_NORETURN static void error(Error Err) {
+[[noreturn]] static void error(Error Err) {
   logAllUnhandledErrors(std::move(Err), WithColor::error(outs()),
                         "reading file: ");
   outs().flush();

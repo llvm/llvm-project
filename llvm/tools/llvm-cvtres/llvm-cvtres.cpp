@@ -67,7 +67,7 @@ public:
 };
 }
 
-static LLVM_ATTRIBUTE_NORETURN void reportError(Twine Msg) {
+[[noreturn]] static void reportError(Twine Msg) {
   errs() << Msg;
   exit(1);
 }
