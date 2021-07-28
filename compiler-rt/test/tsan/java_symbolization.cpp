@@ -65,10 +65,8 @@ int main() {
 // On Linux/glibc #4 is __libc_start_main, but can be something else elsewhere.
 // CHECK:     #4
 // CHECK:   Location is heap block of size 32 at {{.*}} allocated by main thread:
-// CHECK:     #0 __tsan_java_alloc
-// CHECK:     #1 main
-// CHECK:     #2 Allocer1 Alloc.java:11:222
-// CHECK:     #3 Allocer2 Alloc.java:33:444
-// On Linux/glibc #4 is __libc_start_main, but can be something else elsewhere.
-// CHECK:     #4
+// CHECK:     #0 Allocer1 Alloc.java:11:222
+// CHECK:     #1 Allocer2 Alloc.java:33:444
+// On Linux/glibc #2 is __libc_start_main, but can be something else elsewhere.
+// CHECK:     #2
 // CHECK: DONE
