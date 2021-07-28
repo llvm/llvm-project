@@ -101,8 +101,8 @@ define void @buildvec_dominant0_v2f32(<2 x float>* %x) {
   ret void
 }
 
-; FIXME: We "optimize" this one 2-element load from the constant pool to two
-; loads from the constant pool.
+; We don't want to lower this to the insertion of two scalar elements as above,
+; as each would require their own load from the constant pool.
 
 define void @buildvec_dominant1_v2f32(<2 x float>* %x) {
 ; CHECK-LABEL: buildvec_dominant1_v2f32:
@@ -110,12 +110,7 @@ define void @buildvec_dominant1_v2f32(<2 x float>* %x) {
 ; CHECK-NEXT:    lui a1, %hi(.LCPI3_0)
 ; CHECK-NEXT:    addi a1, a1, %lo(.LCPI3_0)
 ; CHECK-NEXT:    vsetivli zero, 2, e32, mf2, ta, mu
-; CHECK-NEXT:    vlse32.v v25, (a1), zero
-; CHECK-NEXT:    lui a1, %hi(.LCPI3_1)
-; CHECK-NEXT:    flw ft0, %lo(.LCPI3_1)(a1)
-; CHECK-NEXT:    vsetvli zero, zero, e32, mf2, tu, mu
-; CHECK-NEXT:    vfmv.s.f v25, ft0
-; CHECK-NEXT:    vsetvli zero, zero, e32, mf2, ta, mu
+; CHECK-NEXT:    vle32.v v25, (a1)
 ; CHECK-NEXT:    vse32.v v25, (a0)
 ; CHECK-NEXT:    ret
   store <2 x float> <float 1.0, float 2.0>, <2 x float>* %x
