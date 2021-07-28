@@ -40,13 +40,10 @@ define void @run() {
 ; IS__TUNIT_NPM-NEXT:    [[TMP2:%.*]] = call i64 @CaptureAStruct(i32 [[TMP0]], i64 [[TMP1]]) #[[ATTR0]]
 ; IS__TUNIT_NPM-NEXT:    unreachable
 ;
-; IS__CGSCC____: Function Attrs: nofree norecurse noreturn nosync nounwind readonly willreturn
+; IS__CGSCC____: Function Attrs: nofree norecurse noreturn nosync nounwind readnone willreturn
 ; IS__CGSCC____-LABEL: define {{[^@]+}}@run
 ; IS__CGSCC____-SAME: () #[[ATTR0:[0-9]+]] {
 ; IS__CGSCC____-NEXT:  entry:
-; IS__CGSCC____-NEXT:    [[TMP0:%.*]] = load i32, i32* getelementptr inbounds ([[STRUCT_FOO:%.*]], %struct.Foo* @a, i32 0, i32 0), align 8
-; IS__CGSCC____-NEXT:    [[A_0_1:%.*]] = getelementptr [[STRUCT_FOO]], %struct.Foo* @a, i32 0, i32 1
-; IS__CGSCC____-NEXT:    [[TMP1:%.*]] = load i64, i64* [[A_0_1]], align 8
 ; IS__CGSCC____-NEXT:    unreachable
 ;
 entry:
@@ -108,7 +105,7 @@ define internal i64 @CaptureAStruct(%struct.Foo* byval(%struct.Foo) %a) {
 ;
 ; IS________OPM: Function Attrs: nofree noreturn nosync nounwind readnone
 ; IS________OPM-LABEL: define {{[^@]+}}@CaptureAStruct
-; IS________OPM-SAME: (%struct.Foo* noalias nofree noundef nonnull byval([[STRUCT_FOO:%.*]]) align 8 dereferenceable(16) [[A:%.*]]) #[[ATTR0]] {
+; IS________OPM-SAME: (%struct.Foo* noalias nocapture nofree noundef nonnull readnone byval([[STRUCT_FOO:%.*]]) align 8 dereferenceable(16) [[A:%.*]]) #[[ATTR0]] {
 ; IS________OPM-NEXT:  entry:
 ; IS________OPM-NEXT:    [[A_PTR:%.*]] = alloca %struct.Foo*, align 8
 ; IS________OPM-NEXT:    br label [[LOOP:%.*]]
@@ -141,9 +138,9 @@ define internal i64 @CaptureAStruct(%struct.Foo* byval(%struct.Foo) %a) {
 ; IS__CGSCC____-NEXT:  entry:
 ; IS__CGSCC____-NEXT:    [[A_PRIV:%.*]] = alloca [[STRUCT_FOO:%.*]], align 8
 ; IS__CGSCC____-NEXT:    [[A_PRIV_CAST:%.*]] = bitcast %struct.Foo* [[A_PRIV]] to i32*
-; IS__CGSCC____-NEXT:    store i32 [[TMP0]], i32* [[A_PRIV_CAST]], align 8
+; IS__CGSCC____-NEXT:    store i32 undef, i32* [[A_PRIV_CAST]], align 8
 ; IS__CGSCC____-NEXT:    [[A_PRIV_0_1:%.*]] = getelementptr [[STRUCT_FOO]], %struct.Foo* [[A_PRIV]], i32 0, i32 1
-; IS__CGSCC____-NEXT:    store i64 [[TMP1]], i64* [[A_PRIV_0_1]], align 8
+; IS__CGSCC____-NEXT:    store i64 undef, i64* [[A_PRIV_0_1]], align 8
 ; IS__CGSCC____-NEXT:    [[A_PTR:%.*]] = alloca %struct.Foo*, align 8
 ; IS__CGSCC____-NEXT:    br label [[LOOP:%.*]]
 ; IS__CGSCC____:       loop:
@@ -166,7 +163,7 @@ loop:
 ;.
 ; NOT_CGSCC_NPM: attributes #[[ATTR0:[0-9]+]] = { nofree noreturn nosync nounwind readnone }
 ;.
-; IS__CGSCC____: attributes #[[ATTR0]] = { nofree norecurse noreturn nosync nounwind readonly willreturn }
+; IS__CGSCC____: attributes #[[ATTR0]] = { nofree norecurse noreturn nosync nounwind readnone willreturn }
 ; IS__CGSCC____: attributes #[[ATTR1]] = { nofree norecurse nosync nounwind readnone willreturn }
 ; IS__CGSCC____: attributes #[[ATTR2]] = { nofree norecurse noreturn nosync nounwind readnone }
 ;.

@@ -185,6 +185,20 @@ bool getAssumedUnderlyingObjects(Attributor &A, const Value &Ptr,
                                  SmallVectorImpl<Value *> &Objects,
                                  const AbstractAttribute &QueryingAA,
                                  const Instruction *CtxI);
+
+/// Collect all potential values of the one stored by \p SI into
+/// \p PotentialCopies. That is, the only copies that were made via the
+/// store are assumed to be known and all in \p PotentialCopies. Dependences
+/// onto \p QueryingAA are properly tracked, \p UsedAssumedInformation will
+/// inform the caller if assumed information was used.
+///
+/// \returns True if the assumed potential copies are all in \p PotentialCopies,
+///          false if something went wrong and the copies could not be
+///          determined.
+bool getPotentialCopiesOfStoredValue(
+    Attributor &A, StoreInst &SI, SmallSetVector<Value *, 4> &PotentialCopies,
+    const AbstractAttribute &QueryingAA, bool &UsedAssumedInformation);
+
 } // namespace AA
 
 /// The value passed to the line option that defines the maximal initialization
