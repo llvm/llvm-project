@@ -516,25 +516,6 @@ void FutexWait(atomic_uint32_t *p, u32 cmp) {
 
 void FutexWake(atomic_uint32_t *p, u32 count) {}
 
-BlockingMutex::BlockingMutex() {
-  internal_memset(this, 0, sizeof(*this));
-}
-
-void BlockingMutex::Lock() {
-  CHECK(sizeof(OSSpinLock) <= sizeof(opaque_storage_));
-  CHECK_EQ(OS_SPINLOCK_INIT, 0);
-  CHECK_EQ(owner_, 0);
-  OSSpinLockLock((OSSpinLock*)&opaque_storage_);
-}
-
-void BlockingMutex::Unlock() {
-  OSSpinLockUnlock((OSSpinLock*)&opaque_storage_);
-}
-
-void BlockingMutex::CheckLocked() const {
-  CHECK_NE(*(const OSSpinLock*)&opaque_storage_, 0);
-}
-
 u64 NanoTime() {
   timeval tv;
   internal_memset(&tv, 0, sizeof(tv));
