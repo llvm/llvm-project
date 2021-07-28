@@ -8343,6 +8343,17 @@ CreateNanoMipsBuiltinVaListdecl(const ASTContext *Context) {
   RecordDecl *VaListTagDecl = Context->buildImplicitRecord("__va_list");
   VaListTagDecl->startDefinition();
 
+  if (Context->getLangOpts().CPlusPlus) {
+    NamespaceDecl *NS;
+    NS = NamespaceDecl::Create(const_cast<ASTContext &>(*Context),
+                               Context->getTranslationUnitDecl(),
+                               /*Inline*/ false, SourceLocation(),
+                               SourceLocation(), &Context->Idents.get("std"),
+                               /*PrevDecl*/ nullptr);
+    NS->setImplicit();
+    VaListTagDecl->setDeclContext(NS);
+  }
+
   std::pair<QualType, const char *> Fields[5] = {
     { Context->getPointerType(Context->VoidTy), "__overflow_argptr" },
     { Context->getPointerType(Context->VoidTy), "__gpr_top" },
