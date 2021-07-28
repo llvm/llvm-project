@@ -336,7 +336,7 @@ void invoke_free_hook(void *ptr) {
   RunFreeHooks(ptr);
 }
 
-void *internal_alloc(MBlockType typ, uptr sz) {
+void *internal_alloc(uptr sz) {
   ThreadState *thr = cur_thread();
   if (thr->nomalloc) {
     thr->nomalloc = 0;  // CHECK calls internal_malloc().
