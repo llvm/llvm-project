@@ -268,6 +268,9 @@ IntLoadOpPattern::matchAndRewrite(memref::LoadOp loadOp,
       spirv::getElementPtr(typeConverter, memrefType, loadOperands.memref(),
                            loadOperands.indices(), loc, rewriter);
 
+  if (!accessChainOp)
+    return failure();
+
   int srcBits = memrefType.getElementType().getIntOrFloatBitWidth();
   bool isBool = srcBits == 1;
   if (isBool)
@@ -358,6 +361,10 @@ LoadOpPattern::matchAndRewrite(memref::LoadOp loadOp, ArrayRef<Value> operands,
   auto loadPtr = spirv::getElementPtr(
       *getTypeConverter<SPIRVTypeConverter>(), memrefType,
       loadOperands.memref(), loadOperands.indices(), loadOp.getLoc(), rewriter);
+
+  if (!loadPtr)
+    return failure();
+
   rewriter.replaceOpWithNewOp<spirv::LoadOp>(loadOp, loadPtr);
   return success();
 }
@@ -376,6 +383,10 @@ IntStoreOpPattern::matchAndRewrite(memref::StoreOp storeOp,
   spirv::AccessChainOp accessChainOp =
       spirv::getElementPtr(typeConverter, memrefType, storeOperands.memref(),
                            storeOperands.indices(), loc, rewriter);
+
+  if (!accessChainOp)
+    return failure();
+
   int srcBits = memrefType.getElementType().getIntOrFloatBitWidth();
 
   bool isBool = srcBits == 1;
@@ -467,6 +478,10 @@ StoreOpPattern::matchAndRewrite(memref::StoreOp storeOp,
       spirv::getElementPtr(*getTypeConverter<SPIRVTypeConverter>(), memrefType,
                            storeOperands.memref(), storeOperands.indices(),
                            storeOp.getLoc(), rewriter);
+
+  if (!storePtr)
+    return failure();
+
   rewriter.replaceOpWithNewOp<spirv::StoreOp>(storeOp, storePtr,
                                               storeOperands.value());
   return success();
