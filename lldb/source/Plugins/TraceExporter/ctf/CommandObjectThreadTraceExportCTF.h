@@ -30,6 +30,7 @@ public:
     llvm::ArrayRef<OptionDefinition> GetDefinitions() override;
 
     llvm::Optional<size_t> m_thread_index;
+    std::string m_file;
   };
 
   CommandObjectThreadTraceExportCTF(CommandInterpreter &interpreter)
@@ -39,7 +40,8 @@ public:
             "thread trace export ctf [<ctf-options>]",
             lldb::eCommandRequiresProcess | lldb::eCommandTryTargetAPILock |
                 lldb::eCommandProcessMustBeLaunched |
-                lldb::eCommandProcessMustBePaused),
+                lldb::eCommandProcessMustBePaused |
+                lldb::eCommandProcessMustBeTraced),
         m_options() {}
 
   Options *GetOptions() override { return &m_options; }

@@ -37,7 +37,7 @@ protected:
   CodeRegionGenerator &operator=(const CodeRegionGenerator &) = delete;
 
 public:
-  CodeRegionGenerator(SourceMgr &SM) : Regions(SM) {}
+  CodeRegionGenerator(llvm::SourceMgr &SM) : Regions(SM) {}
   virtual ~CodeRegionGenerator();
   virtual Expected<const CodeRegions &>
   parseCodeRegions(const std::unique_ptr<MCInstPrinter> &IP) = 0;
@@ -54,7 +54,7 @@ class AsmCodeRegionGenerator final : public CodeRegionGenerator {
   unsigned AssemblerDialect; // This is set during parsing.
 
 public:
-  AsmCodeRegionGenerator(const Target &T, SourceMgr &SM, MCContext &C,
+  AsmCodeRegionGenerator(const Target &T, llvm::SourceMgr &SM, MCContext &C,
                          const MCAsmInfo &A, const MCSubtargetInfo &S,
                          const MCInstrInfo &I)
       : CodeRegionGenerator(SM), TheTarget(T), Ctx(C), MAI(A), STI(S), MCII(I),

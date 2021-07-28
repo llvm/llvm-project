@@ -8,12 +8,12 @@
 // RUN: ld.lld --script %t.script %t -o %t2
 // The output file is large, most of it zeroes. We dissassemble only the
 // parts we need to speed up the test and avoid a large output file
-// RUN: llvm-objdump -d %t2 --start-address=1048576 --stop-address=1048594 --triple=thumbv7a-linux-gnueabihf | FileCheck --check-prefix=CHECK1 %s
-// RUN: llvm-objdump -d %t2 --start-address=2097152 --stop-address=2097160 --triple=thumbv7a-linux-gnueabihf | FileCheck --check-prefix=CHECK2 %s
-// RUN: llvm-objdump -d %t2 --start-address=11534340 --stop-address=11534350 --triple=thumbv7a-linux-gnueabihf | FileCheck --check-prefix=CHECK3 %s
-// RUN: llvm-objdump -d %t2 --start-address=34603008 --stop-address=34603034 --triple=thumbv7a-linux-gnueabihf | FileCheck --check-prefix=CHECK4 %s
-// RUN: llvm-objdump -d %t2 --start-address=35651584 --stop-address=35651598 --triple=thumbv7a-linux-gnueabihf | FileCheck --check-prefix=CHECK5 %s
-// RUN: llvm-objdump -d %t2 --start-address=68157440 --stop-address=68157472 --triple=thumbv7a-linux-gnueabihf | FileCheck --check-prefix=CHECK6 %s
+// RUN: llvm-objdump -d %t2 --start-address=1048576 --stop-address=1048594 | FileCheck --check-prefix=CHECK1 %s
+// RUN: llvm-objdump -d %t2 --start-address=2097152 --stop-address=2097160 | FileCheck --check-prefix=CHECK2 %s
+// RUN: llvm-objdump -d %t2 --start-address=11534340 --stop-address=11534350 | FileCheck --check-prefix=CHECK3 %s
+// RUN: llvm-objdump -d %t2 --start-address=34603008 --stop-address=34603034 | FileCheck --check-prefix=CHECK4 %s
+// RUN: llvm-objdump -d %t2 --start-address=35651584 --stop-address=35651598 | FileCheck --check-prefix=CHECK5 %s
+// RUN: llvm-objdump -d %t2 --start-address=68157440 --stop-address=68157472 | FileCheck --check-prefix=CHECK6 %s
 
 // Test the range extensions in a linker script where there are several
 // OutputSections requiring range extension Thunks. We should be able to reuse

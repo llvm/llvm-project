@@ -1,4 +1,4 @@
-@ RUN: llvm-mc < %s -triple armv7a -mattr=+vfp3,+neon,+fp16,+hwdiv-arm -filetype=obj | llvm-objdump --triple=arm -d - | FileCheck %s
+@ RUN: llvm-mc < %s -triple armv7a -mattr=+vfp3,+neon,+fp16,+hwdiv-arm -filetype=obj | llvm-objdump -d - | FileCheck %s
 
 .eabi_attribute Tag_FP_arch, 3 // VFP3
 .eabi_attribute Tag_Advanced_SIMD_arch, 2 // SIMDv1 with fp16
