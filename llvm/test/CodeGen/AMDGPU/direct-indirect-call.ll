@@ -21,8 +21,6 @@ define internal void @direct() {
 ;
 ; ATTRIBUTOR_GCN-LABEL: define {{[^@]+}}@direct
 ; ATTRIBUTOR_GCN-SAME: () #[[ATTR1:[0-9]+]] {
-; ATTRIBUTOR_GCN-NEXT:    [[FPTR:%.*]] = alloca void ()*, align 8
-; ATTRIBUTOR_GCN-NEXT:    store void ()* @indirect, void ()** [[FPTR]], align 8
 ; ATTRIBUTOR_GCN-NEXT:    call void @indirect()
 ; ATTRIBUTOR_GCN-NEXT:    ret void
 ;
