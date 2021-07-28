@@ -360,8 +360,8 @@ AArch64LegalizerInfo::AArch64LegalizerInfo(const AArch64Subtarget &ST)
   // Constants
   getActionDefinitionsBuilder(G_CONSTANT)
       .legalFor({p0, s8, s16, s32, s64})
-      .clampScalar(0, s8, s64)
-      .widenScalarToNextPow2(0);
+      .widenScalarToNextPow2(0)
+      .clampScalar(0, s8, s64);
   getActionDefinitionsBuilder(G_FCONSTANT)
       .legalIf([=](const LegalityQuery &Query) {
         const auto &Ty = Query.Types[0];
@@ -383,6 +383,7 @@ AArch64LegalizerInfo::AArch64LegalizerInfo(const AArch64Subtarget &ST)
                  {v8s16, v8s16},
                  {v8s8, v8s8},
                  {v16s8, v16s8}})
+      .widenScalarOrEltToNextPow2(1)
       .clampScalar(1, s32, s64)
       .clampScalar(0, s32, s32)
       .minScalarEltSameAsIf(
@@ -399,7 +400,6 @@ AArch64LegalizerInfo::AArch64LegalizerInfo(const AArch64Subtarget &ST)
       .minScalarOrEltIf(
           [=](const LegalityQuery &Query) { return Query.Types[1] == v2p0; }, 0,
           s64)
-      .widenScalarOrEltToNextPow2(1)
       .clampNumElements(0, v2s32, v4s32);
 
   // Extensions
