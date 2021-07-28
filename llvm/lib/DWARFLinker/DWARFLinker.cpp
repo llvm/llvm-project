@@ -1029,7 +1029,7 @@ unsigned DWARFLinker::DIECloner::cloneBlockAttribute(
   // buffer using cloneExpression(), otherwise copy the data directly.
   SmallVector<uint8_t, 32> Buffer;
   ArrayRef<uint8_t> Bytes = *Val.getAsBlock();
-  if (DWARFAttribute::mayHaveLocationDescription(AttrSpec.Attr) &&
+  if (DWARFAttribute::mayHaveLocationExpr(AttrSpec.Attr) &&
       (Val.isFormClass(DWARFFormValue::FC_Block) ||
        Val.isFormClass(DWARFFormValue::FC_Exprloc))) {
     DWARFUnit &OrigUnit = Unit.getOrigUnit();
