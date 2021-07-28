@@ -72,16 +72,22 @@ static void generateEndPgm(MachineBasicBlock &MBB,
   bool IsPS = F.getCallingConv() == CallingConv::AMDGPU_PS;
 
   // Check if hardware has been configured to expect color or depth exports.
-  bool HasExports =
-      AMDGPU::getHasColorExport(F) || AMDGPU::getHasDepthExport(F);
+  bool HasColorExports = AMDGPU::getHasColorExport(F);
+  bool HasDepthExports = AMDGPU::getHasDepthExport(F);
+  bool HasExports = HasColorExports || HasDepthExports;
 
   // Prior to GFX10, hardware always expects at least one export for PS.
   bool MustExport = !AMDGPU::isGFX10Plus(TII->getSubtarget());
 
   if (IsPS && (HasExports || MustExport)) {
     // Generate "null export" if hardware is expecting PS to export.
+    const GCNSubtarget &ST = MBB.getParent()->getSubtarget<GCNSubtarget>();
+    int Target =
+        ST.hasNullExportTarget()
+            ? AMDGPU::Exp::ET_NULL
+            : (HasColorExports ? AMDGPU::Exp::ET_MRT0 : AMDGPU::Exp::ET_MRTZ);
     BuildMI(MBB, I, DL, TII->get(AMDGPU::EXP_DONE))
-        .addImm(AMDGPU::Exp::ET_NULL)
+        .addImm(Target)
         .addReg(AMDGPU::VGPR0, RegState::Undef)
         .addReg(AMDGPU::VGPR0, RegState::Undef)
         .addReg(AMDGPU::VGPR0, RegState::Undef)
