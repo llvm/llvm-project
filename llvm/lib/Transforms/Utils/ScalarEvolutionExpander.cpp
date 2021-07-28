@@ -1393,9 +1393,10 @@ SCEVExpander::getAddRecExprPHILiterally(const SCEVAddRecExpr *Normalized,
   // can ensure that IVIncrement dominates the current uses.
   PostIncLoops = SavedPostIncLoops;
 
-  // Remember this PHI, even in post-inc mode.
+  // Remember this PHI, even in post-inc mode. LSR SCEV-based salvaging is most
+  // effective when we are able to use an IV inserted here, so record it.
   InsertedValues.insert(PN);
-
+  InsertedIVs.push_back(PN);
   return PN;
 }
 
