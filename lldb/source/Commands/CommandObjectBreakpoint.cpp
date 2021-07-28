@@ -110,7 +110,19 @@ public:
     case 't': {
       lldb::tid_t thread_id = LLDB_INVALID_THREAD_ID;
       if (option_arg[0] != '\0') {
-        if (option_arg.getAsInteger(0, thread_id))
+        if (option_arg == "current") {
+          if (!execution_context) {
+            error.SetErrorStringWithFormat("No context to determine current "
+                                           "thread");
+          } else {
+            ThreadSP ctx_thread_sp = execution_context->GetThreadSP();
+            if (!ctx_thread_sp || !ctx_thread_sp->IsValid()) {
+              error.SetErrorStringWithFormat("No currently selected thread");
+            } else {
+              thread_id = ctx_thread_sp->GetID();
+            }
+          }
+        } else if (option_arg.getAsInteger(0, thread_id))
           error.SetErrorStringWithFormat("invalid thread id string '%s'",
                                          option_arg.str().c_str());
       }
