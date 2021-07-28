@@ -33,8 +33,4 @@ executable("llvm-mca") {
     "llvm-mca.cpp",
   ]
   defines = []
-  if (llvm_build_AMDGPU) {
-    deps += [ "//llvm/tools/llvm-mca/lib/AMDGPU" ]
-    defines += [ "HAS_AMDGPU" ]
-  }
 }

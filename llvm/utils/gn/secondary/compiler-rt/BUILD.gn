@@ -7,6 +7,7 @@ import("//llvm/utils/gn/build/toolchain/compiler.gni")
 # toolchains and then lipo them together for the final output.
 if (current_os == "win") {
   supported_toolchains = [ "//llvm/utils/gn/build/toolchain:stage2_win" ]
+  supported_toolchains += [ "//llvm/utils/gn/build/toolchain:stage2_win_x86" ]
 } else {
   supported_toolchains = [ "//llvm/utils/gn/build/toolchain:stage2_unix" ]
 }
