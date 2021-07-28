@@ -137,6 +137,88 @@ For example:
   fun:memcpy=uninstrumented
   fun:memcpy=custom
 
+Compilation Flags
+-----------------
+
+* ``-dfsan-abilist`` -- The additional ABI list files that control how shadow
+  parameters are passed. File names are separated by comma.
+* ``-dfsan-combine-pointer-labels-on-load`` -- Controls whether to include or
+  ignore the labels of pointers in load instructions. Its default value is true.
+  For example:
+
+.. code-block:: c++
+  v = *p;
+
+If the flag is true, the label of ``v`` is the union of the label of ``p`` and
+the label of ``*p``. If the flag is false, the label of ``v`` is the label of
+just ``*p``.
+* ``-dfsan-combine-pointer-labels-on-store`` -- Controls whether to include or
+  ignore the labels of pointers in store instructions. Its default value is
+  false. For example:
+
+.. code-block:: c++
+  *p = v;
+
+If the flag is true, the label of ``*p`` is the union of the label of ``p`` and
+the label of ``v``. If the flag is false, the label of ``*p`` is the label of
+just ``v``.
+* ``-dfsan-combine-offset-labels-on-gep`` -- Controls whether to propagate
+  labels of offsets in GEP instructions. Its default value is true. For example:
+
+.. code-block:: c++
+  p += i;
+
+If the flag is true, the label of ``p`` is the union of the label of ``p`` and
+the label of ``i``. If the flag is false, the label of ``p`` is unchanged.
+* ``-dfsan-track-select-control-flow`` -- Controls whether to track the control
+  flow of select instructions. Its default value is true. For example:
+
+.. code-block:: c++
+  v = b? v1: v2;
+
+If the flag is true, the label of ``v`` is the union of the labels of ``b``,
+``v1`` and ``v2``.  If the flag is false, the label of ``v`` is the union of the
+labels of just ``v1`` and ``v2``.
+* ``-dfsan-event-callbacks`` -- An experimental feature that inserts callbacks for
+certain data events. Currently callbacks are only inserted for loads, stores,
+memory transfers (i.e. memcpy and memmove), and comparisons. Its default value
+is false. If this flag is set to true, a user must provide definitions for the
+following callback functions:
+
+.. code-block:: c++
+  void __dfsan_load_callback(dfsan_label Label, void* Addr);
+  void __dfsan_store_callback(dfsan_label Label, void* Addr);
+  void __dfsan_mem_transfer_callback(dfsan_label *Start, size_t Len);
+  void __dfsan_cmp_callback(dfsan_label CombinedLabel);
+* ``-dfsan-track-origins`` -- Controls how to track origins. When its value is
+  0, the runtime does not track origins. When its value is 1, the runtime tracks
+  origins at memory store operations. When its value is 2, the runtime tracks
+  origins at memory load and store operations. Its default value is 0.
+* ``-dfsan-instrument-with-call-threshold`` -- If a function being instrumented
+   requires more than this number of origin stores, use callbacks instead of
+  inline checks (-1 means never use callbacks). Its default value is 3500.
+
+Environment Variables
+---------------------
+
+* ``warn_unimplemented`` -- Whether to warn on unimplemented functions. Its
+  default value is false.
+* ``strict_data_dependencies`` -- Whether to propagate labels only when there is
+  explicit obvious data dependency (e.g., when comparing strings, ignore the fact
+  that the output of the comparison might be implicit data-dependent on the
+  content of the strings). This applies only to functions with ``custom`` category
+  in ABI list. Its default value is true.
+* ``origin_history_size`` -- The limit of origin chain length. Non-positive values
+  mean unlimited. Its default value is 16.
+* ``origin_history_per_stack_limit`` -- The limit of origin node's references count.
+  Non-positive values mean unlimited. Its default value is 20000.
+* ``store_context_size`` -- The depth limit of origin tracking stack traces. Its
+  default value is 20.
+* ``zero_in_malloc`` -- Whether to zero shadow space of new allocated memory. Its
+  default value is true.
+* ``zero_in_free`` --- Whether to zero shadow space of deallocated memory. Its
+  default value is true.
+
 Example
 =======
 
