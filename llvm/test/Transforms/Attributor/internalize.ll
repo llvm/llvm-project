@@ -3,15 +3,11 @@
 
 ; RUN: opt -attributor -attributor-manifest-internal  -attributor-max-iterations-verify -attributor-annotate-decl-cs -attributor-max-iterations=1 -S < %s | FileCheck %s --check-prefixes=CHECK,NOT_CGSCC_NPM,NOT_CGSCC_OPM,NOT_TUNIT_NPM,IS__TUNIT____,IS________OPM,IS__TUNIT_OPM,CHECK_DISABLED,NOT_CGSCC_NPM_DISABLED,NOT_CGSCC_OPM_DISABLED,NOT_TUNIT_NPM_DISABLED,IS__TUNIT_____DISABLED,IS________OPM_DISABLED,IS__TUNIT_OPM_DISABLED
 ; RUN: opt -aa-pipeline=basic-aa -passes=attributor -attributor-manifest-internal  -attributor-max-iterations-verify -attributor-annotate-decl-cs -attributor-max-iterations=1  -S < %s | FileCheck %s --check-prefixes=CHECK,NOT_CGSCC_OPM,NOT_CGSCC_NPM,NOT_TUNIT_OPM,IS__TUNIT____,IS________NPM,IS__TUNIT_NPM,CHECK_DISABLED,NOT_CGSCC_OPM_DISABLED,NOT_CGSCC_NPM_DISABLED,NOT_TUNIT_OPM_DISABLED,IS__TUNIT_____DISABLED,IS________NPM_DISABLED,IS__TUNIT_NPM_DISABLED
-; RUN: opt -attributor-cgscc -attributor-manifest-internal  -attributor-annotate-decl-cs -S < %s | FileCheck %s --check-prefixes=CHECK,NOT_TUNIT_NPM,NOT_TUNIT_OPM,NOT_CGSCC_NPM,IS__CGSCC____,IS________OPM,IS__CGSCC_OPM,CHECK_DISABLED,NOT_TUNIT_NPM_DISABLED,NOT_TUNIT_OPM_DISABLED,NOT_CGSCC_NPM_DISABLED,IS__CGSCC_____DISABLED,IS________OPM_DISABLED,IS__CGSCC_OPM_DISABLED
-; RUN: opt -aa-pipeline=basic-aa -passes=attributor-cgscc -attributor-manifest-internal  -attributor-annotate-decl-cs -S < %s | FileCheck %s --check-prefixes=CHECK,NOT_TUNIT_NPM,NOT_TUNIT_OPM,NOT_CGSCC_OPM,IS__CGSCC____,IS________NPM,IS__CGSCC_NPM,CHECK_DISABLED,NOT_TUNIT_NPM_DISABLED,NOT_TUNIT_OPM_DISABLED,NOT_CGSCC_OPM_DISABLED,IS__CGSCC_____DISABLED,IS________NPM_DISABLED,IS__CGSCC_NPM_DISABLED
 
 ; Deep Wrapper enabled
 
 ; RUN: opt -attributor -attributor-manifest-internal  -attributor-max-iterations-verify -attributor-annotate-decl-cs -attributor-max-iterations=11 -attributor-allow-deep-wrappers -disable-inlining -S < %s | FileCheck %s --check-prefixes=CHECK,NOT_CGSCC_NPM,NOT_CGSCC_OPM,NOT_TUNIT_NPM,IS__TUNIT____,IS________OPM,IS__TUNIT_OPM,CHECK_ENABLED,NOT_CGSCC_NPM_ENABLED,NOT_CGSCC_OPM_ENABLED,NOT_TUNIT_NPM_ENABLED,IS__TUNIT_____ENABLED,IS________OPM_ENABLED,IS__TUNIT_OPM_ENABLED
 ; RUN: opt -aa-pipeline=basic-aa -passes=attributor -attributor-manifest-internal  -attributor-max-iterations-verify -attributor-annotate-decl-cs -attributor-max-iterations=11 -attributor-allow-deep-wrappers -disable-inlining -S < %s | FileCheck %s --check-prefixes=CHECK,NOT_CGSCC_OPM,NOT_CGSCC_NPM,NOT_TUNIT_OPM,IS__TUNIT____,IS________NPM,IS__TUNIT_NPM,CHECK_ENABLED,NOT_CGSCC_OPM_ENABLED,NOT_CGSCC_NPM_ENABLED,NOT_TUNIT_OPM_ENABLED,IS__TUNIT_____ENABLED,IS________NPM_ENABLED,IS__TUNIT_NPM_ENABLED
-; RUN: opt -attributor-cgscc -attributor-manifest-internal  -attributor-annotate-decl-cs -attributor-allow-deep-wrappers -disable-inlining -S < %s | FileCheck %s --check-prefixes=CHECK,NOT_TUNIT_NPM,NOT_TUNIT_OPM,NOT_CGSCC_NPM,IS__CGSCC____,IS________OPM,IS__CGSCC_OPM,CHECK_ENABLED,NOT_TUNIT_NPM_ENABLED,NOT_TUNIT_OPM_ENABLED,NOT_CGSCC_NPM_ENABLED,IS__CGSCC_____ENABLED,IS________OPM_ENABLED,IS__CGSCC_OPM_ENABLED
-; RUN: opt -aa-pipeline=basic-aa -passes=attributor-cgscc -attributor-manifest-internal  -attributor-annotate-decl-cs -attributor-allow-deep-wrappers -disable-inlining -S < %s | FileCheck %s --check-prefixes=CHECK,NOT_TUNIT_NPM,NOT_TUNIT_OPM,NOT_CGSCC_OPM,IS__CGSCC____,IS________NPM,IS__CGSCC_NPM,CHECK_ENABLED,NOT_TUNIT_NPM_ENABLED,NOT_TUNIT_OPM_ENABLED,NOT_CGSCC_OPM_ENABLED,IS__CGSCC_____ENABLED,IS________NPM_ENABLED,IS__CGSCC_NPM_ENABLED
 
 ; TEST 1: This function is of linkage `linkonce`, we cannot internalize this
 ;         function and use information derived from it
@@ -135,16 +131,15 @@ define void @unused_arg_caller() {
 ; CHECK_DISABLED-NEXT:    call void @unused_arg(i8 noundef 0)
 ; CHECK_DISABLED-NEXT:    ret void
 ;
-; IS__TUNIT_____ENABLED: Function Attrs: nofree noreturn nosync nounwind readnone willreturn
-; IS__TUNIT_____ENABLED-LABEL: define {{[^@]+}}@unused_arg_caller
-; IS__TUNIT_____ENABLED-SAME: () #[[ATTR1:[0-9]+]] {
-; IS__TUNIT_____ENABLED-NEXT:    unreachable
+; CHECK_ENABLED: Function Attrs: nofree noreturn nosync nounwind readnone willreturn
+; CHECK_ENABLED-LABEL: define {{[^@]+}}@unused_arg_caller
+; CHECK_ENABLED-SAME: () #[[ATTR1:[0-9]+]] {
+; CHECK_ENABLED-NEXT:    unreachable
 ;
 ; IS__CGSCC_____ENABLED: Function Attrs: nofree norecurse noreturn nosync nounwind readnone willreturn
 ; IS__CGSCC_____ENABLED-LABEL: define {{[^@]+}}@unused_arg_caller
 ; IS__CGSCC_____ENABLED-SAME: () #[[ATTR2:[0-9]+]] {
 ; IS__CGSCC_____ENABLED-NEXT:    unreachable
-;
   call void @unused_arg(i8 0)
   ret void
 }
@@ -159,12 +154,11 @@ define linkonce_odr hidden void @__clang_call_terminate() {
   unreachable
 }
 
-;.
-; IS__TUNIT_____ENABLED: attributes #[[ATTR0:[0-9]+]] = { nofree nosync nounwind readnone willreturn }
-; IS__TUNIT_____ENABLED: attributes #[[ATTR1]] = { nofree noreturn nosync nounwind readnone willreturn }
-; IS__TUNIT_____ENABLED: attributes #[[ATTR2:[0-9]+]] = { nounwind readnone }
-;.
 ; IS__CGSCC_____ENABLED: attributes #[[ATTR0:[0-9]+]] = { nofree nosync nounwind readnone willreturn }
 ; IS__CGSCC_____ENABLED: attributes #[[ATTR1:[0-9]+]] = { nofree noreturn nosync nounwind readnone willreturn }
 ; IS__CGSCC_____ENABLED: attributes #[[ATTR2]] = { nofree norecurse noreturn nosync nounwind readnone willreturn }
+;.
+; CHECK_ENABLED: attributes #[[ATTR0:[0-9]+]] = { nofree nosync nounwind readnone willreturn }
+; CHECK_ENABLED: attributes #[[ATTR1]] = { nofree noreturn nosync nounwind readnone willreturn }
+; CHECK_ENABLED: attributes #[[ATTR2:[0-9]+]] = { nounwind readnone }
 ;.
