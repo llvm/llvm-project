@@ -381,13 +381,13 @@ static int OpenWithFS(const FileSystem &fs, const char *path, int flags,
   return const_cast<FileSystem &>(fs).Open(path, flags, mode);
 }
 
-static int GetOpenFlags(uint32_t options) {
-  const bool read = options & File::eOpenOptionRead;
-  const bool write = options & File::eOpenOptionWrite;
-
+static int GetOpenFlags(File::OpenOptions options) {
   int open_flags = 0;
-  if (write) {
-    if (read)
+  File::OpenOptions rw =
+      options & (File::eOpenOptionReadOnly | File::eOpenOptionWriteOnly |
+                 File::eOpenOptionReadWrite);
+  if (rw == File::eOpenOptionWriteOnly || rw == File::eOpenOptionReadWrite) {
+    if (rw == File::eOpenOptionReadWrite)
       open_flags |= O_RDWR;
     else
       open_flags |= O_WRONLY;
@@ -403,7 +403,7 @@ static int GetOpenFlags(uint32_t options) {
 
     if (options & File::eOpenOptionCanCreateNewOnly)
       open_flags |= O_CREAT | O_EXCL;
-  } else if (read) {
+  } else if (rw == File::eOpenOptionReadOnly) {
     open_flags |= O_RDONLY;
 
 #ifndef _WIN32

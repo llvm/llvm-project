@@ -4310,8 +4310,8 @@ public:
       : IOHandler(process->GetTarget().GetDebugger(),
                   IOHandler::Type::ProcessIO),
         m_process(process),
-        m_read_file(GetInputFD(), File::eOpenOptionRead, false),
-        m_write_file(write_fd, File::eOpenOptionWrite, false) {
+        m_read_file(GetInputFD(), File::eOpenOptionReadOnly, false),
+        m_write_file(write_fd, File::eOpenOptionWriteOnly, false) {
     m_pipe.CreateNew(false);
   }
 

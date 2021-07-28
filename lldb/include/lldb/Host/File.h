@@ -44,8 +44,11 @@ public:
   // * https://sourceware.org/gdb/onlinedocs/gdb/Open-Flags.html#Open-Flags
   // * rdar://problem/46788934
   enum OpenOptions : uint32_t {
-    eOpenOptionRead = (1u << 0),  // Open file for reading
-    eOpenOptionWrite = (1u << 1), // Open file for writing
+    eOpenOptionReadOnly = (1u << 0),  // Open file for reading (only)
+    eOpenOptionWriteOnly = (1u << 1), // Open file for writing (only)
+    eOpenOptionReadWrite =
+        eOpenOptionReadOnly |
+        eOpenOptionWriteOnly, // Open file for both reading and writing
     eOpenOptionAppend =
         (1u << 2), // Don't truncate file when opening, append to end of file
     eOpenOptionTruncate = (1u << 3),    // Truncate file when opening
@@ -303,8 +306,8 @@ public:
   /// Some options like eOpenOptionDontFollowSymlinks only make
   /// sense when a file is being opened (or not at all)
   /// and may not be preserved for this method.  But any valid
-  /// File should return either or both of eOpenOptionRead and
-  /// eOpenOptionWrite here.
+  /// File should return either eOpenOptionReadOnly, eOpenOptionWriteOnly
+  /// or eOpenOptionReadWrite here.
   ///
   /// \return
   ///    OpenOptions flags for this file, or an error.

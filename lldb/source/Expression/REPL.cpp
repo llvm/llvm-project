@@ -445,7 +445,7 @@ void REPL::IOHandlerInputComplete(IOHandler &io_handler, std::string &code) {
           if (!m_repl_source_path.empty()) {
             auto file = FileSystem::Instance().Open(
                 FileSpec(m_repl_source_path),
-                File::eOpenOptionWrite | File::eOpenOptionTruncate |
+                File::eOpenOptionWriteOnly | File::eOpenOptionTruncate |
                     File::eOpenOptionCanCreate,
                 lldb::eFilePermissionsFileDefault);
             if (file) {

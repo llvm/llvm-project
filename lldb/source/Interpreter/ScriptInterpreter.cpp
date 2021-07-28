@@ -141,12 +141,12 @@ ScriptInterpreterIORedirect::Create(bool enable_io, Debugger &debugger,
         new ScriptInterpreterIORedirect(debugger, result));
 
   auto nullin = FileSystem::Instance().Open(FileSpec(FileSystem::DEV_NULL),
-                                            File::eOpenOptionRead);
+                                            File::eOpenOptionReadOnly);
   if (!nullin)
     return nullin.takeError();
 
   auto nullout = FileSystem::Instance().Open(FileSpec(FileSystem::DEV_NULL),
-                                             File::eOpenOptionWrite);
+                                             File::eOpenOptionWriteOnly);
   if (!nullout)
     return nullin.takeError();
 
