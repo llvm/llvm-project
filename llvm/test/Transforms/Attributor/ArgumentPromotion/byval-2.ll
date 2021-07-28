@@ -23,7 +23,6 @@ define internal void @f(%struct.ss* byval(%struct.ss)  %b, i32* byval(i32) %X) n
 ; IS__CGSCC_NPM-SAME: (i32 [[TMP0:%.*]], i64 [[TMP1:%.*]], i32 [[TMP2:%.*]]) #[[ATTR0:[0-9]+]] {
 ; IS__CGSCC_NPM-NEXT:  entry:
 ; IS__CGSCC_NPM-NEXT:    [[X_PRIV:%.*]] = alloca i32, align 4
-; IS__CGSCC_NPM-NEXT:    store i32 undef, i32* [[X_PRIV]], align 4
 ; IS__CGSCC_NPM-NEXT:    [[B_PRIV:%.*]] = alloca [[STRUCT_SS:%.*]], align 8
 ; IS__CGSCC_NPM-NEXT:    [[B_PRIV_CAST:%.*]] = bitcast %struct.ss* [[B_PRIV]] to i32*
 ; IS__CGSCC_NPM-NEXT:    store i32 1, i32* [[B_PRIV_CAST]], align 8
@@ -56,7 +55,6 @@ define i32 @test(i32* %X) {
 ; IS__TUNIT____-NEXT:    [[TMP1:%.*]] = getelementptr [[STRUCT_SS]], %struct.ss* [[S]], i32 0, i32 0
 ; IS__TUNIT____-NEXT:    store i32 1, i32* [[TMP1]], align 8
 ; IS__TUNIT____-NEXT:    [[TMP4:%.*]] = getelementptr [[STRUCT_SS]], %struct.ss* [[S]], i32 0, i32 1
-; IS__TUNIT____-NEXT:    store i64 2, i64* [[TMP4]], align 4
 ; IS__TUNIT____-NEXT:    ret i32 0
 ;
 ; IS__CGSCC_OPM: Function Attrs: nofree norecurse nosync nounwind readnone willreturn
@@ -67,7 +65,6 @@ define i32 @test(i32* %X) {
 ; IS__CGSCC_OPM-NEXT:    [[TMP1:%.*]] = getelementptr [[STRUCT_SS]], %struct.ss* [[S]], i32 0, i32 0
 ; IS__CGSCC_OPM-NEXT:    store i32 1, i32* [[TMP1]], align 8
 ; IS__CGSCC_OPM-NEXT:    [[TMP4:%.*]] = getelementptr [[STRUCT_SS]], %struct.ss* [[S]], i32 0, i32 1
-; IS__CGSCC_OPM-NEXT:    store i64 2, i64* [[TMP4]], align 4
 ; IS__CGSCC_OPM-NEXT:    ret i32 0
 ;
 ; IS__CGSCC_NPM: Function Attrs: nofree norecurse nosync nounwind readnone willreturn
@@ -76,9 +73,7 @@ define i32 @test(i32* %X) {
 ; IS__CGSCC_NPM-NEXT:  entry:
 ; IS__CGSCC_NPM-NEXT:    [[S:%.*]] = alloca [[STRUCT_SS:%.*]], align 8
 ; IS__CGSCC_NPM-NEXT:    [[TMP1:%.*]] = getelementptr [[STRUCT_SS]], %struct.ss* [[S]], i32 0, i32 0
-; IS__CGSCC_NPM-NEXT:    store i32 1, i32* [[TMP1]], align 8
 ; IS__CGSCC_NPM-NEXT:    [[TMP4:%.*]] = getelementptr [[STRUCT_SS]], %struct.ss* [[S]], i32 0, i32 1
-; IS__CGSCC_NPM-NEXT:    store i64 2, i64* [[TMP4]], align 4
 ; IS__CGSCC_NPM-NEXT:    ret i32 0
 ;
 entry:

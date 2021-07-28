@@ -75,7 +75,6 @@ define weak void @__omp_offloading_14_5896c35_sequential_loop_l5() #0 {
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[DOTZERO_ADDR:%.*]] = alloca i32, align 4
 ; CHECK-NEXT:    [[DOTTHREADID_TEMP_:%.*]] = alloca i32, align 4
-; CHECK-NEXT:    store i32 0, i32* [[DOTZERO_ADDR]], align 4
 ; CHECK-NEXT:    [[TMP0:%.*]] = call i32 @__kmpc_target_init(%struct.ident_t* @[[GLOB1]], i1 true, i1 false, i1 false)
 ; CHECK-NEXT:    [[EXEC_USER_CODE:%.*]] = icmp eq i32 [[TMP0]], -1
 ; CHECK-NEXT:    br i1 [[EXEC_USER_CODE]], label [[USER_CODE_ENTRY:%.*]], label [[WORKER_EXIT:%.*]]
@@ -118,7 +117,6 @@ define internal void @__omp_outlined__(i32* noalias %.global_tid., i32* noalias 
 ; CHECK-NEXT:    [[I:%.*]] = alloca i32, align 4
 ; CHECK-NEXT:    [[CAPTURED_VARS_ADDRS:%.*]] = alloca [0 x i8*], align 8
 ; CHECK-NEXT:    store i32* [[DOTGLOBAL_TID_]], i32** [[DOTGLOBAL_TID__ADDR]], align 8
-; CHECK-NEXT:    store i32* undef, i32** [[DOTBOUND_TID__ADDR]], align 8
 ; CHECK-NEXT:    store i32 0, i32* [[I]], align 4
 ; CHECK-NEXT:    br label [[FOR_COND:%.*]]
 ; CHECK:       for.cond:
@@ -178,8 +176,6 @@ define internal void @__omp_outlined__1(i32* noalias %.global_tid., i32* noalias
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[DOTGLOBAL_TID__ADDR:%.*]] = alloca i32*, align 8
 ; CHECK-NEXT:    [[DOTBOUND_TID__ADDR:%.*]] = alloca i32*, align 8
-; CHECK-NEXT:    store i32* undef, i32** [[DOTGLOBAL_TID__ADDR]], align 8
-; CHECK-NEXT:    store i32* undef, i32** [[DOTBOUND_TID__ADDR]], align 8
 ; CHECK-NEXT:    call void @unknown() #[[ATTR5:[0-9]+]]
 ; CHECK-NEXT:    ret void
 ;
@@ -238,7 +234,6 @@ define weak void @__omp_offloading_14_5896c35_sequential_loop_to_stack_var_l20()
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[DOTZERO_ADDR:%.*]] = alloca i32, align 4
 ; CHECK-NEXT:    [[DOTTHREADID_TEMP_:%.*]] = alloca i32, align 4
-; CHECK-NEXT:    store i32 0, i32* [[DOTZERO_ADDR]], align 4
 ; CHECK-NEXT:    [[TMP0:%.*]] = call i32 @__kmpc_target_init(%struct.ident_t* @[[GLOB1]], i1 true, i1 false, i1 false)
 ; CHECK-NEXT:    [[EXEC_USER_CODE:%.*]] = icmp eq i32 [[TMP0]], -1
 ; CHECK-NEXT:    br i1 [[EXEC_USER_CODE]], label [[USER_CODE_ENTRY:%.*]], label [[WORKER_EXIT:%.*]]
@@ -279,7 +274,6 @@ define internal void @__omp_outlined__2(i32* noalias %.global_tid., i32* noalias
 ; CHECK-NEXT:    [[I:%.*]] = alloca i32, align 4
 ; CHECK-NEXT:    [[CAPTURED_VARS_ADDRS:%.*]] = alloca [0 x i8*], align 8
 ; CHECK-NEXT:    store i32* [[DOTGLOBAL_TID_]], i32** [[DOTGLOBAL_TID__ADDR]], align 8
-; CHECK-NEXT:    store i32* undef, i32** [[DOTBOUND_TID__ADDR]], align 8
 ; CHECK-NEXT:    [[TMP0:%.*]] = alloca i8, i64 4, align 1
 ; CHECK-NEXT:    [[X_ON_STACK:%.*]] = bitcast i8* [[TMP0]] to i32*
 ; CHECK-NEXT:    call void @use(i32* nocapture [[X_ON_STACK]]) #[[ATTR4]]
@@ -350,8 +344,6 @@ define internal void @__omp_outlined__3(i32* noalias %.global_tid., i32* noalias
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[DOTGLOBAL_TID__ADDR:%.*]] = alloca i32*, align 8
 ; CHECK-NEXT:    [[DOTBOUND_TID__ADDR:%.*]] = alloca i32*, align 8
-; CHECK-NEXT:    store i32* undef, i32** [[DOTGLOBAL_TID__ADDR]], align 8
-; CHECK-NEXT:    store i32* undef, i32** [[DOTBOUND_TID__ADDR]], align 8
 ; CHECK-NEXT:    call void @unknown() #[[ATTR5]]
 ; CHECK-NEXT:    ret void
 ;
@@ -400,7 +392,6 @@ define weak void @__omp_offloading_14_5896c35_sequential_loop_to_shared_var_l35(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[DOTZERO_ADDR:%.*]] = alloca i32, align 4
 ; CHECK-NEXT:    [[DOTTHREADID_TEMP_:%.*]] = alloca i32, align 4
-; CHECK-NEXT:    store i32 0, i32* [[DOTZERO_ADDR]], align 4
 ; CHECK-NEXT:    [[TMP0:%.*]] = call i32 @__kmpc_target_init(%struct.ident_t* @[[GLOB1]], i1 true, i1 false, i1 false)
 ; CHECK-NEXT:    [[EXEC_USER_CODE:%.*]] = icmp eq i32 [[TMP0]], -1
 ; CHECK-NEXT:    br i1 [[EXEC_USER_CODE]], label [[USER_CODE_ENTRY:%.*]], label [[WORKER_EXIT:%.*]]
@@ -441,7 +432,6 @@ define internal void @__omp_outlined__4(i32* noalias %.global_tid., i32* noalias
 ; CHECK-NEXT:    [[I:%.*]] = alloca i32, align 4
 ; CHECK-NEXT:    [[CAPTURED_VARS_ADDRS:%.*]] = alloca [1 x i8*], align 8
 ; CHECK-NEXT:    store i32* [[DOTGLOBAL_TID_]], i32** [[DOTGLOBAL_TID__ADDR]], align 8
-; CHECK-NEXT:    store i32* undef, i32** [[DOTBOUND_TID__ADDR]], align 8
 ; CHECK-NEXT:    store i32 0, i32* [[I]], align 4
 ; CHECK-NEXT:    br label [[FOR_COND:%.*]]
 ; CHECK:       for.cond:
@@ -510,8 +500,6 @@ define internal void @__omp_outlined__5(i32* noalias %.global_tid., i32* noalias
 ; CHECK-NEXT:    [[DOTGLOBAL_TID__ADDR:%.*]] = alloca i32*, align 8
 ; CHECK-NEXT:    [[DOTBOUND_TID__ADDR:%.*]] = alloca i32*, align 8
 ; CHECK-NEXT:    [[X_ADDR:%.*]] = alloca i32*, align 8
-; CHECK-NEXT:    store i32* undef, i32** [[DOTGLOBAL_TID__ADDR]], align 8
-; CHECK-NEXT:    store i32* undef, i32** [[DOTBOUND_TID__ADDR]], align 8
 ; CHECK-NEXT:    store i32* [[X]], i32** [[X_ADDR]], align 8
 ; CHECK-NEXT:    [[TMP0:%.*]] = load i32, i32* [[X]], align 4
 ; CHECK-NEXT:    [[INC:%.*]] = add nsw i32 [[TMP0]], 1

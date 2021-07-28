@@ -229,8 +229,6 @@ define i32 @visible_local_2() {
 ; IS__CGSCC_NPM: Function Attrs: nofree norecurse nosync nounwind readnone willreturn
 ; IS__CGSCC_NPM-LABEL: define {{[^@]+}}@visible_local_2
 ; IS__CGSCC_NPM-SAME: () #[[ATTR3:[0-9]+]] {
-; IS__CGSCC_NPM-NEXT:    [[B:%.*]] = alloca i32, align 4
-; IS__CGSCC_NPM-NEXT:    store i32 5, i32* [[B]], align 4
 ; IS__CGSCC_NPM-NEXT:    [[CALL:%.*]] = call i32 @noalias_args_argmem_ro(i32 undef, i32 undef) #[[ATTR6:[0-9]+]]
 ; IS__CGSCC_NPM-NEXT:    ret i32 [[CALL]]
 ;

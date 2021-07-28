@@ -569,7 +569,6 @@ define internal void @test_byval(%struct.X* byval(%struct.X) %a) {
 ; IS__CGSCC_NPM-SAME: (i8* noalias nocapture nofree readnone [[TMP0:%.*]]) #[[ATTR1]] {
 ; IS__CGSCC_NPM-NEXT:    [[A_PRIV:%.*]] = alloca [[STRUCT_X:%.*]], align 8
 ; IS__CGSCC_NPM-NEXT:    [[A_PRIV_CAST:%.*]] = bitcast %struct.X* [[A_PRIV]] to i8**
-; IS__CGSCC_NPM-NEXT:    store i8* undef, i8** [[A_PRIV_CAST]], align 8
 ; IS__CGSCC_NPM-NEXT:    [[G0:%.*]] = getelementptr [[STRUCT_X]], %struct.X* [[A_PRIV]], i32 0, i32 0
 ; IS__CGSCC_NPM-NEXT:    store i8* null, i8** [[G0]], align 8
 ; IS__CGSCC_NPM-NEXT:    ret void

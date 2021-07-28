@@ -112,7 +112,6 @@ define internal i64 @CaptureAStruct(%struct.Foo* byval(%struct.Foo) %a) {
 ; IS________OPM:       loop:
 ; IS________OPM-NEXT:    [[PHI:%.*]] = phi %struct.Foo* [ null, [[ENTRY:%.*]] ], [ [[A]], [[LOOP]] ]
 ; IS________OPM-NEXT:    [[TMP0:%.*]] = phi %struct.Foo* [ [[A]], [[ENTRY]] ], [ [[TMP0]], [[LOOP]] ]
-; IS________OPM-NEXT:    store %struct.Foo* [[PHI]], %struct.Foo** [[A_PTR]], align 8
 ; IS________OPM-NEXT:    br label [[LOOP]]
 ;
 ; IS__TUNIT_NPM: Function Attrs: nofree noreturn nosync nounwind readnone
@@ -129,7 +128,6 @@ define internal i64 @CaptureAStruct(%struct.Foo* byval(%struct.Foo) %a) {
 ; IS__TUNIT_NPM:       loop:
 ; IS__TUNIT_NPM-NEXT:    [[PHI:%.*]] = phi %struct.Foo* [ null, [[ENTRY:%.*]] ], [ [[A_PRIV]], [[LOOP]] ]
 ; IS__TUNIT_NPM-NEXT:    [[TMP2:%.*]] = phi %struct.Foo* [ [[A_PRIV]], [[ENTRY]] ], [ [[TMP2]], [[LOOP]] ]
-; IS__TUNIT_NPM-NEXT:    store %struct.Foo* [[PHI]], %struct.Foo** [[A_PTR]], align 8
 ; IS__TUNIT_NPM-NEXT:    br label [[LOOP]]
 ;
 ; IS__CGSCC____: Function Attrs: nofree norecurse noreturn nosync nounwind readnone
@@ -138,15 +136,12 @@ define internal i64 @CaptureAStruct(%struct.Foo* byval(%struct.Foo) %a) {
 ; IS__CGSCC____-NEXT:  entry:
 ; IS__CGSCC____-NEXT:    [[A_PRIV:%.*]] = alloca [[STRUCT_FOO:%.*]], align 8
 ; IS__CGSCC____-NEXT:    [[A_PRIV_CAST:%.*]] = bitcast %struct.Foo* [[A_PRIV]] to i32*
-; IS__CGSCC____-NEXT:    store i32 undef, i32* [[A_PRIV_CAST]], align 8
 ; IS__CGSCC____-NEXT:    [[A_PRIV_0_1:%.*]] = getelementptr [[STRUCT_FOO]], %struct.Foo* [[A_PRIV]], i32 0, i32 1
-; IS__CGSCC____-NEXT:    store i64 undef, i64* [[A_PRIV_0_1]], align 8
 ; IS__CGSCC____-NEXT:    [[A_PTR:%.*]] = alloca %struct.Foo*, align 8
 ; IS__CGSCC____-NEXT:    br label [[LOOP:%.*]]
 ; IS__CGSCC____:       loop:
 ; IS__CGSCC____-NEXT:    [[PHI:%.*]] = phi %struct.Foo* [ null, [[ENTRY:%.*]] ], [ [[A_PRIV]], [[LOOP]] ]
 ; IS__CGSCC____-NEXT:    [[TMP2:%.*]] = phi %struct.Foo* [ [[A_PRIV]], [[ENTRY]] ], [ [[TMP2]], [[LOOP]] ]
-; IS__CGSCC____-NEXT:    store %struct.Foo* [[PHI]], %struct.Foo** [[A_PTR]], align 8
 ; IS__CGSCC____-NEXT:    br label [[LOOP]]
 ;
 entry:
