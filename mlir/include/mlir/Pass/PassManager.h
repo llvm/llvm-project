@@ -172,7 +172,7 @@ public:
   /// style. The created pass manager can schedule operations that match
   /// `operationName`.
   PassManager(MLIRContext *ctx, Nesting nesting = Nesting::Explicit,
-              StringRef operationName = "module");
+              StringRef operationName = "builtin.module");
   PassManager(MLIRContext *ctx, StringRef operationName)
       : PassManager(ctx, Nesting::Explicit, operationName) {}
   ~PassManager();

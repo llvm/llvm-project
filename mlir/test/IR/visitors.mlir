@@ -22,8 +22,8 @@ func @structured_cfg() {
 }
 
 // CHECK-LABEL: Op pre-order visit
-// CHECK:       Visiting op 'module'
-// CHECK:       Visiting op 'func'
+// CHECK:       Visiting op 'builtin.module'
+// CHECK:       Visiting op 'builtin.func'
 // CHECK:       Visiting op 'scf.for'
 // CHECK:       Visiting op 'use0'
 // CHECK:       Visiting op 'scf.if'
@@ -33,15 +33,15 @@ func @structured_cfg() {
 // CHECK:       Visiting op 'std.return'
 
 // CHECK-LABEL: Block pre-order visits
-// CHECK:       Visiting block ^bb0 from region 0 from operation 'module'
-// CHECK:       Visiting block ^bb0 from region 0 from operation 'func'
+// CHECK:       Visiting block ^bb0 from region 0 from operation 'builtin.module'
+// CHECK:       Visiting block ^bb0 from region 0 from operation 'builtin.func'
 // CHECK:       Visiting block ^bb0 from region 0 from operation 'scf.for'
 // CHECK:       Visiting block ^bb0 from region 0 from operation 'scf.if'
 // CHECK:       Visiting block ^bb0 from region 1 from operation 'scf.if'
 
 // CHECK-LABEL: Region pre-order visits
-// CHECK:       Visiting region 0 from operation 'module'
-// CHECK:       Visiting region 0 from operation 'func'
+// CHECK:       Visiting region 0 from operation 'builtin.module'
+// CHECK:       Visiting region 0 from operation 'builtin.func'
 // CHECK:       Visiting region 0 from operation 'scf.for'
 // CHECK:       Visiting region 0 from operation 'scf.if'
 // CHECK:       Visiting region 1 from operation 'scf.if'
@@ -54,22 +54,22 @@ func @structured_cfg() {
 // CHECK:       Visiting op 'use3'
 // CHECK:       Visiting op 'scf.for'
 // CHECK:       Visiting op 'std.return'
-// CHECK:       Visiting op 'func'
-// CHECK:       Visiting op 'module'
+// CHECK:       Visiting op 'builtin.func'
+// CHECK:       Visiting op 'builtin.module'
 
 // CHECK-LABEL: Block post-order visits
 // CHECK:       Visiting block ^bb0 from region 0 from operation 'scf.if'
 // CHECK:       Visiting block ^bb0 from region 1 from operation 'scf.if'
 // CHECK:       Visiting block ^bb0 from region 0 from operation 'scf.for'
-// CHECK:       Visiting block ^bb0 from region 0 from operation 'func'
-// CHECK:       Visiting block ^bb0 from region 0 from operation 'module'
+// CHECK:       Visiting block ^bb0 from region 0 from operation 'builtin.func'
+// CHECK:       Visiting block ^bb0 from region 0 from operation 'builtin.module'
 
 // CHECK-LABEL: Region post-order visits
 // CHECK:       Visiting region 0 from operation 'scf.if'
 // CHECK:       Visiting region 1 from operation 'scf.if'
 // CHECK:       Visiting region 0 from operation 'scf.for'
-// CHECK:       Visiting region 0 from operation 'func'
-// CHECK:       Visiting region 0 from operation 'module'
+// CHECK:       Visiting region 0 from operation 'builtin.func'
+// CHECK:       Visiting region 0 from operation 'builtin.module'
 
 // CHECK-LABEL: Op pre-order erasures
 // CHECK:       Erasing op 'scf.for'
@@ -100,15 +100,15 @@ func @structured_cfg() {
 // CHECK:       Erasing op 'use3'
 // CHECK:       Erasing op 'scf.for'
 // CHECK:       Erasing op 'std.return'
-// CHECK:       Erasing op 'func'
-// CHECK:       Erasing op 'module'
+// CHECK:       Erasing op 'builtin.func'
+// CHECK:       Erasing op 'builtin.module'
 
 // CHECK-LABEL: Block post-order erasures (no skip)
 // CHECK:       Erasing block ^bb0 from region 0 from operation 'scf.if'
 // CHECK:       Erasing block ^bb0 from region 1 from operation 'scf.if'
 // CHECK:       Erasing block ^bb0 from region 0 from operation 'scf.for'
-// CHECK:       Erasing block ^bb0 from region 0 from operation 'func'
-// CHECK:       Erasing block ^bb0 from region 0 from operation 'module'
+// CHECK:       Erasing block ^bb0 from region 0 from operation 'builtin.func'
+// CHECK:       Erasing block ^bb0 from region 0 from operation 'builtin.module'
 
 // -----
 
@@ -127,8 +127,8 @@ func @unstructured_cfg() {
 }
 
 // CHECK-LABEL: Op pre-order visits
-// CHECK:       Visiting op 'module'
-// CHECK:       Visiting op 'func'
+// CHECK:       Visiting op 'builtin.module'
+// CHECK:       Visiting op 'builtin.func'
 // CHECK:       Visiting op 'regionOp0'
 // CHECK:       Visiting op 'op0'
 // CHECK:       Visiting op 'std.br'
@@ -138,15 +138,15 @@ func @unstructured_cfg() {
 // CHECK:       Visiting op 'std.return'
 
 // CHECK-LABEL: Block pre-order visits
-// CHECK:       Visiting block ^bb0 from region 0 from operation 'module'
-// CHECK:       Visiting block ^bb0 from region 0 from operation 'func'
+// CHECK:       Visiting block ^bb0 from region 0 from operation 'builtin.module'
+// CHECK:       Visiting block ^bb0 from region 0 from operation 'builtin.func'
 // CHECK:       Visiting block ^bb0 from region 0 from operation 'regionOp0'
 // CHECK:       Visiting block ^bb1 from region 0 from operation 'regionOp0'
 // CHECK:       Visiting block ^bb2 from region 0 from operation 'regionOp0'
 
 // CHECK-LABEL: Region pre-order visits
-// CHECK:       Visiting region 0 from operation 'module'
-// CHECK:       Visiting region 0 from operation 'func'
+// CHECK:       Visiting region 0 from operation 'builtin.module'
+// CHECK:       Visiting region 0 from operation 'builtin.func'
 // CHECK:       Visiting region 0 from operation 'regionOp0'
 
 // CHECK-LABEL: Op post-order visits
@@ -157,20 +157,20 @@ func @unstructured_cfg() {
 // CHECK:       Visiting op 'op2'
 // CHECK:       Visiting op 'regionOp0'
 // CHECK:       Visiting op 'std.return'
-// CHECK:       Visiting op 'func'
-// CHECK:       Visiting op 'module'
+// CHECK:       Visiting op 'builtin.func'
+// CHECK:       Visiting op 'builtin.module'
 
 // CHECK-LABEL: Block post-order visits
 // CHECK:       Visiting block ^bb0 from region 0 from operation 'regionOp0'
 // CHECK:       Visiting block ^bb1 from region 0 from operation 'regionOp0'
 // CHECK:       Visiting block ^bb2 from region 0 from operation 'regionOp0'
-// CHECK:       Visiting block ^bb0 from region 0 from operation 'func'
-// CHECK:       Visiting block ^bb0 from region 0 from operation 'module'
+// CHECK:       Visiting block ^bb0 from region 0 from operation 'builtin.func'
+// CHECK:       Visiting block ^bb0 from region 0 from operation 'builtin.module'
 
 // CHECK-LABEL: Region post-order visits
 // CHECK:       Visiting region 0 from operation 'regionOp0'
-// CHECK:       Visiting region 0 from operation 'func'
-// CHECK:       Visiting region 0 from operation 'module'
+// CHECK:       Visiting region 0 from operation 'builtin.func'
+// CHECK:       Visiting region 0 from operation 'builtin.module'
 
 // CHECK-LABEL: Op pre-order erasures (skip)
 // CHECK:       Erasing op 'regionOp0'
@@ -208,5 +208,5 @@ func @unstructured_cfg() {
 // CHECK:       Erasing block ^bb0 from region 0 from operation 'regionOp0'
 // CHECK:       Erasing block ^bb0 from region 0 from operation 'regionOp0'
 // CHECK:       Erasing block ^bb0 from region 0 from operation 'regionOp0'
-// CHECK:       Erasing block ^bb0 from region 0 from operation 'func'
-// CHECK:       Erasing block ^bb0 from region 0 from operation 'module'
+// CHECK:       Erasing block ^bb0 from region 0 from operation 'builtin.func'
+// CHECK:       Erasing block ^bb0 from region 0 from operation 'builtin.module'

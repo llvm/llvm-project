@@ -298,10 +298,10 @@ TEST(InterfaceAttachment, Operation) {
   ModuleOp::attachInterface<TestExternalOpModel>(context);
   auto iface = dyn_cast<TestExternalOpInterface>(moduleOp.getOperation());
   ASSERT_TRUE(iface != nullptr);
-  EXPECT_EQ(iface.getNameLengthPlusArg(10), 16u);
-  EXPECT_EQ(iface.getNameLengthTimesArg(3), 18u);
-  EXPECT_EQ(iface.getNameLengthPlusArgTwice(18), 42u);
-  EXPECT_EQ(iface.getNameLengthMinusArg(5), 1u);
+  EXPECT_EQ(iface.getNameLengthPlusArg(10), 24u);
+  EXPECT_EQ(iface.getNameLengthTimesArg(3), 42u);
+  EXPECT_EQ(iface.getNameLengthPlusArgTwice(18), 50u);
+  EXPECT_EQ(iface.getNameLengthMinusArg(5), 9u);
 
   // Default implementation can be overridden.
   auto funcOp = FuncOp::create(UnknownLoc::get(&context), "function",
@@ -310,9 +310,9 @@ TEST(InterfaceAttachment, Operation) {
   FuncOp::attachInterface<TestExternalOpOverridingModel>(context);
   iface = dyn_cast<TestExternalOpInterface>(funcOp.getOperation());
   ASSERT_TRUE(iface != nullptr);
-  EXPECT_EQ(iface.getNameLengthPlusArg(10), 14u);
+  EXPECT_EQ(iface.getNameLengthPlusArg(10), 22u);
   EXPECT_EQ(iface.getNameLengthTimesArg(0), 42u);
-  EXPECT_EQ(iface.getNameLengthPlusArgTwice(8), 20u);
+  EXPECT_EQ(iface.getNameLengthPlusArgTwice(8), 28u);
   EXPECT_EQ(iface.getNameLengthMinusArg(1000), 21u);
 
   // Another context doesn't have the interfaces registered.

@@ -1,5 +1,5 @@
-// RUN: mlir-opt %s -pass-pipeline='module(test-dynamic-pipeline{op-name=inner_mod1 dynamic-pipeline=cse})'  --mlir-disable-threading  -print-ir-before-all 2>&1 | FileCheck %s --check-prefix=NOTNESTED --check-prefix=CHECK
-// RUN: mlir-opt %s -pass-pipeline='module(test-dynamic-pipeline{op-name=inner_mod1 run-on-nested-operations=1 dynamic-pipeline=cse})'  --mlir-disable-threading  -print-ir-before-all 2>&1 | FileCheck %s --check-prefix=NESTED --check-prefix=CHECK
+// RUN: mlir-opt %s -pass-pipeline='builtin.module(test-dynamic-pipeline{op-name=inner_mod1 dynamic-pipeline=cse})'  --mlir-disable-threading  -print-ir-before-all 2>&1 | FileCheck %s --check-prefix=NOTNESTED --check-prefix=CHECK
+// RUN: mlir-opt %s -pass-pipeline='builtin.module(test-dynamic-pipeline{op-name=inner_mod1 run-on-nested-operations=1 dynamic-pipeline=cse})'  --mlir-disable-threading  -print-ir-before-all 2>&1 | FileCheck %s --check-prefix=NESTED --check-prefix=CHECK
 
 
 // Verify that we can schedule a dynamic pipeline on a nested operation

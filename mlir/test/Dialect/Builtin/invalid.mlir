@@ -5,7 +5,7 @@
 //===----------------------------------------------------------------------===//
 
 // expected-error@+1 {{expected at least one result for cast operation}}
-"unrealized_conversion_cast"() : () -> ()
+"builtin.unrealized_conversion_cast"() : () -> ()
 
 // -----
 

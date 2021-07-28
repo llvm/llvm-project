@@ -580,7 +580,7 @@ run(testSingleResultProperty)
 def testPrintInvalidOperation():
   ctx = Context()
   with Location.unknown(ctx):
-    module = Operation.create("module", regions=2)
+    module = Operation.create("builtin.module", regions=2)
     # This module has two region and is invalid verify that we fallback
     # to the generic printer for safety.
     block = module.regions[0].blocks.append()
@@ -598,22 +598,22 @@ def testCreateWithInvalidAttributes():
   ctx = Context()
   with Location.unknown(ctx):
     try:
-      Operation.create("module", attributes={None:StringAttr.get("name")})
+      Operation.create("builtin.module", attributes={None:StringAttr.get("name")})
     except Exception as e:
       # CHECK: Invalid attribute key (not a string) when attempting to create the operation "module"
       print(e)
     try:
-      Operation.create("module", attributes={42:StringAttr.get("name")})
+      Operation.create("builtin.module", attributes={42:StringAttr.get("name")})
     except Exception as e:
       # CHECK: Invalid attribute key (not a string) when attempting to create the operation "module"
       print(e)
     try:
-      Operation.create("module", attributes={"some_key":ctx})
+      Operation.create("builtin.module", attributes={"some_key":ctx})
     except Exception as e:
       # CHECK: Invalid attribute value for the key "some_key" when attempting to create the operation "module"
       print(e)
     try:
-      Operation.create("module", attributes={"some_key":None})
+      Operation.create("builtin.module", attributes={"some_key":None})
     except Exception as e:
       # CHECK: Found an invalid (`None`?) attribute value for the key "some_key" when attempting to create the operation "module"
       print(e)

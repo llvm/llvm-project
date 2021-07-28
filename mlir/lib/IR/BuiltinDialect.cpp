@@ -78,8 +78,8 @@ void BuiltinDialect::initialize() {
 
 FuncOp FuncOp::create(Location location, StringRef name, FunctionType type,
                       ArrayRef<NamedAttribute> attrs) {
-  OperationState state(location, "func");
   OpBuilder builder(location->getContext());
+  OperationState state(location, getOperationName());
   FuncOp::build(builder, state, name, type, attrs);
   return cast<FuncOp>(Operation::create(state));
 }
