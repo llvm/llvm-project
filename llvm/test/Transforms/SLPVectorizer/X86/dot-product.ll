@@ -8,8 +8,8 @@
 ; dot4(float *x, float *y) - ((x[0]*y[0])+(x[1]*y[1])+(x[2]*y[2])+(x[3]*y[3]))
 ;
 
-define double @dotf64(double* dereferenceable(32) %ptrx, double* dereferenceable(32) %ptry) {
-; CHECK-LABEL: @dotf64(
+define double @dot4f64(double* dereferenceable(32) %ptrx, double* dereferenceable(32) %ptry) {
+; CHECK-LABEL: @dot4f64(
 ; CHECK-NEXT:    [[PTRX1:%.*]] = getelementptr inbounds double, double* [[PTRX:%.*]], i64 1
 ; CHECK-NEXT:    [[PTRY1:%.*]] = getelementptr inbounds double, double* [[PTRY:%.*]], i64 1
 ; CHECK-NEXT:    [[PTRX2:%.*]] = getelementptr inbounds double, double* [[PTRX]], i64 2
@@ -58,8 +58,8 @@ define double @dotf64(double* dereferenceable(32) %ptrx, double* dereferenceable
   ret double %dot0123
 }
 
-define float @dotf32(float* dereferenceable(16) %ptrx, float* dereferenceable(16) %ptry) {
-; CHECK-LABEL: @dotf32(
+define float @dot4f32(float* dereferenceable(16) %ptrx, float* dereferenceable(16) %ptry) {
+; CHECK-LABEL: @dot4f32(
 ; CHECK-NEXT:    [[PTRX1:%.*]] = getelementptr inbounds float, float* [[PTRX:%.*]], i64 1
 ; CHECK-NEXT:    [[PTRY1:%.*]] = getelementptr inbounds float, float* [[PTRY:%.*]], i64 1
 ; CHECK-NEXT:    [[PTRX2:%.*]] = getelementptr inbounds float, float* [[PTRX]], i64 2
@@ -108,8 +108,8 @@ define float @dotf32(float* dereferenceable(16) %ptrx, float* dereferenceable(16
   ret float %dot0123
 }
 
-define double @dotf64_fast(double* dereferenceable(32) %ptrx, double* dereferenceable(32) %ptry) {
-; CHECK-LABEL: @dotf64_fast(
+define double @dot4f64_fast(double* dereferenceable(32) %ptrx, double* dereferenceable(32) %ptry) {
+; CHECK-LABEL: @dot4f64_fast(
 ; CHECK-NEXT:    [[PTRX1:%.*]] = getelementptr inbounds double, double* [[PTRX:%.*]], i64 1
 ; CHECK-NEXT:    [[PTRY1:%.*]] = getelementptr inbounds double, double* [[PTRY:%.*]], i64 1
 ; CHECK-NEXT:    [[PTRX2:%.*]] = getelementptr inbounds double, double* [[PTRX]], i64 2
@@ -192,8 +192,8 @@ define float @dot4f32_fast(float* dereferenceable(16) %ptrx, float* dereferencea
 ; dot3(float *x, float *y) - ((x[0]*y[0])+(x[1]*y[1])+(x[2]*y[2]))
 ;
 
-define double @dot3_f64(double* dereferenceable(32) %ptrx, double* dereferenceable(32) %ptry) {
-; CHECK-LABEL: @dot3_f64(
+define double @dot3f64(double* dereferenceable(32) %ptrx, double* dereferenceable(32) %ptry) {
+; CHECK-LABEL: @dot3f64(
 ; CHECK-NEXT:    [[PTRX1:%.*]] = getelementptr inbounds double, double* [[PTRX:%.*]], i64 1
 ; CHECK-NEXT:    [[PTRY1:%.*]] = getelementptr inbounds double, double* [[PTRY:%.*]], i64 1
 ; CHECK-NEXT:    [[PTRX2:%.*]] = getelementptr inbounds double, double* [[PTRX]], i64 2
@@ -230,8 +230,8 @@ define double @dot3_f64(double* dereferenceable(32) %ptrx, double* dereferenceab
   ret double %dot012
 }
 
-define float @dot3_f32(float* dereferenceable(16) %ptrx, float* dereferenceable(16) %ptry) {
-; CHECK-LABEL: @dot3_f32(
+define float @dot3f32(float* dereferenceable(16) %ptrx, float* dereferenceable(16) %ptry) {
+; CHECK-LABEL: @dot3f32(
 ; CHECK-NEXT:    [[PTRX1:%.*]] = getelementptr inbounds float, float* [[PTRX:%.*]], i64 1
 ; CHECK-NEXT:    [[PTRY1:%.*]] = getelementptr inbounds float, float* [[PTRY:%.*]], i64 1
 ; CHECK-NEXT:    [[PTRX2:%.*]] = getelementptr inbounds float, float* [[PTRX]], i64 2
