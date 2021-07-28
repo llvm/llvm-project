@@ -84,12 +84,50 @@ define <4 x float> @hang_when_merging_stores_after_legalization(<8 x float> %x, 
   ret <4 x float> %z
 }
 
+define void @buildvec_dominant0_v2f32(<2 x float>* %x) {
+; CHECK-LABEL: buildvec_dominant0_v2f32:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    lui a1, %hi(.LCPI2_0)
+; CHECK-NEXT:    addi a1, a1, %lo(.LCPI2_0)
+; CHECK-NEXT:    vsetivli zero, 2, e32, mf2, ta, mu
+; CHECK-NEXT:    vlse32.v v25, (a1), zero
+; CHECK-NEXT:    fmv.w.x ft0, zero
+; CHECK-NEXT:    vsetvli zero, zero, e32, mf2, tu, mu
+; CHECK-NEXT:    vfmv.s.f v25, ft0
+; CHECK-NEXT:    vsetvli zero, zero, e32, mf2, ta, mu
+; CHECK-NEXT:    vse32.v v25, (a0)
+; CHECK-NEXT:    ret
+  store <2 x float> <float 0.0, float 1.0>, <2 x float>* %x
+  ret void
+}
+
+; FIXME: We "optimize" this one 2-element load from the constant pool to two
+; loads from the constant pool.
+
+define void @buildvec_dominant1_v2f32(<2 x float>* %x) {
+; CHECK-LABEL: buildvec_dominant1_v2f32:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    lui a1, %hi(.LCPI3_0)
+; CHECK-NEXT:    addi a1, a1, %lo(.LCPI3_0)
+; CHECK-NEXT:    vsetivli zero, 2, e32, mf2, ta, mu
+; CHECK-NEXT:    vlse32.v v25, (a1), zero
+; CHECK-NEXT:    lui a1, %hi(.LCPI3_1)
+; CHECK-NEXT:    flw ft0, %lo(.LCPI3_1)(a1)
+; CHECK-NEXT:    vsetvli zero, zero, e32, mf2, tu, mu
+; CHECK-NEXT:    vfmv.s.f v25, ft0
+; CHECK-NEXT:    vsetvli zero, zero, e32, mf2, ta, mu
+; CHECK-NEXT:    vse32.v v25, (a0)
+; CHECK-NEXT:    ret
+  store <2 x float> <float 1.0, float 2.0>, <2 x float>* %x
+  ret void
+}
+
 define void @buildvec_dominant0_v4f32(<4 x float>* %x) {
 ; CHECK-LABEL: buildvec_dominant0_v4f32:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vsetivli zero, 4, e32, m1, ta, mu
-; CHECK-NEXT:    lui a1, %hi(.LCPI2_0)
-; CHECK-NEXT:    addi a1, a1, %lo(.LCPI2_0)
+; CHECK-NEXT:    lui a1, %hi(.LCPI4_0)
+; CHECK-NEXT:    addi a1, a1, %lo(.LCPI4_0)
 ; CHECK-NEXT:    vlse32.v v25, (a1), zero
 ; CHECK-NEXT:    fmv.w.x ft0, zero
 ; CHECK-NEXT:    vfmv.s.f v26, ft0
@@ -125,8 +163,8 @@ define void @buildvec_dominant1_v4f32(<4 x float>* %x, float %f) {
 define void @buildvec_dominant2_v4f32(<4 x float>* %x, float %f) {
 ; CHECK-LABEL: buildvec_dominant2_v4f32:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    lui a1, %hi(.LCPI4_0)
-; CHECK-NEXT:    flw ft0, %lo(.LCPI4_0)(a1)
+; CHECK-NEXT:    lui a1, %hi(.LCPI6_0)
+; CHECK-NEXT:    flw ft0, %lo(.LCPI6_0)(a1)
 ; CHECK-NEXT:    vsetivli zero, 4, e32, m1, ta, mu
 ; CHECK-NEXT:    vfmv.s.f v25, ft0
 ; CHECK-NEXT:    vfmv.v.f v26, fa0
