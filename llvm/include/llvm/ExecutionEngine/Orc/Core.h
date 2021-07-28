@@ -19,12 +19,14 @@
 #include "llvm/ADT/IntrusiveRefCntPtr.h"
 #include "llvm/ExecutionEngine/JITLink/JITLinkDylib.h"
 #include "llvm/ExecutionEngine/JITSymbol.h"
-#include "llvm/ExecutionEngine/Orc/SymbolStringPool.h"
+#include "llvm/ExecutionEngine/Orc/ExecutorProcessControl.h"
+#include "llvm/ExecutionEngine/Orc/Shared/WrapperFunctionUtils.h"
 #include "llvm/ExecutionEngine/OrcV1Deprecation.h"
 #include "llvm/Support/Debug.h"
 #include "llvm/Support/ExtensibleRTTI.h"
 
 #include <atomic>
+#include <future>
 #include <memory>
 #include <vector>
 
@@ -1286,19 +1288,30 @@ public:
   /// For dispatching ORC tasks (typically materialization tasks).
   using DispatchTaskFunction = unique_function<void(std::unique_ptr<Task> T)>;
 
-  /// Construct an ExecutionSession.
-  ///
-  /// SymbolStringPools may be shared between ExecutionSessions.
-  ExecutionSession(std::shared_ptr<SymbolStringPool> SSP = nullptr);
+  /// An asynchronous wrapper-function callable from the executor via
+  /// jit-dispatch.
+  using JITDispatchHandlerFunction = unique_function<void(
+      ExecutorProcessControl::SendResultFunction SendResult,
+      const char *ArgData, size_t ArgSize)>;
+
+  /// A map associating tag names with asynchronous wrapper function
+  /// implementations in the JIT.
+  using JITDispatchHandlerAssociationMap =
+      DenseMap<SymbolStringPtr, JITDispatchHandlerFunction>;
+
+  /// Construct an ExecutionSession with the given ExecutorProcessControl
+  /// object.
+  ExecutionSession(std::unique_ptr<ExecutorProcessControl> EPC);
 
   /// End the session. Closes all JITDylibs.
   Error endSession();
 
-  /// Add a symbol name to the SymbolStringPool and return a pointer to it.
-  SymbolStringPtr intern(StringRef SymName) { return SSP->intern(SymName); }
+  /// Get the ExecutorProcessControl object associated with this
+  /// ExecutionSession.
+  ExecutorProcessControl &getExecutorProcessControl() { return *EPC; }
 
-  /// Returns a shared_ptr to the SymbolStringPool for this ExecutionSession.
-  std::shared_ptr<SymbolStringPool> getSymbolStringPool() const { return SSP; }
+  /// Add a symbol name to the SymbolStringPool and return a pointer to it.
+  SymbolStringPtr intern(StringRef SymName) { return EPC->intern(SymName); }
 
   /// Set the Platform for this ExecutionSession.
   void setPlatform(std::unique_ptr<Platform> P) { this->P = std::move(P); }
@@ -1440,6 +1453,121 @@ public:
     DispatchTask(std::move(T));
   }
 
+  /// Run a wrapper function in the executor.
+  ///
+  /// The wrapper function should be callable as:
+  ///
+  /// \code{.cpp}
+  ///   CWrapperFunctionResult fn(uint8_t *Data, uint64_t Size);
+  /// \endcode{.cpp}
+  ///
+  /// The given OnComplete function will be called to return the result.
+  void callWrapperAsync(ExecutorProcessControl::SendResultFunction OnComplete,
+                        JITTargetAddress WrapperFnAddr,
+                        ArrayRef<char> ArgBuffer) {
+    EPC->callWrapperAsync(std::move(OnComplete), WrapperFnAddr, ArgBuffer);
+  }
+
+  /// Run a wrapper function in the executor. The wrapper function should be
+  /// callable as:
+  ///
+  /// \code{.cpp}
+  ///   CWrapperFunctionResult fn(uint8_t *Data, uint64_t Size);
+  /// \endcode{.cpp}
+  shared::WrapperFunctionResult callWrapper(JITTargetAddress WrapperFnAddr,
+                                            ArrayRef<char> ArgBuffer) {
+    std::promise<shared::WrapperFunctionResult> RP;
+    auto RF = RP.get_future();
+    callWrapperAsync(
+        [&](shared::WrapperFunctionResult R) { RP.set_value(std::move(R)); },
+        WrapperFnAddr, ArgBuffer);
+    return RF.get();
+  }
+
+  /// Run a wrapper function using SPS to serialize the arguments and
+  /// deserialize the results.
+  template <typename SPSSignature, typename SendResultT, typename... ArgTs>
+  void callSPSWrapperAsync(SendResultT &&SendResult,
+                           JITTargetAddress WrapperFnAddr,
+                           const ArgTs &...Args) {
+    shared::WrapperFunction<SPSSignature>::callAsync(
+        [this,
+         WrapperFnAddr](ExecutorProcessControl::SendResultFunction SendResult,
+                        const char *ArgData, size_t ArgSize) {
+          callWrapperAsync(std::move(SendResult), WrapperFnAddr,
+                           ArrayRef<char>(ArgData, ArgSize));
+        },
+        std::move(SendResult), Args...);
+  }
+
+  /// Run a wrapper function using SPS to serialize the arguments and
+  /// deserialize the results.
+  ///
+  /// If SPSSignature is a non-void function signature then the second argument
+  /// (the first in the Args list) should be a reference to a return value.
+  template <typename SPSSignature, typename... WrapperCallArgTs>
+  Error callSPSWrapper(JITTargetAddress WrapperFnAddr,
+                       WrapperCallArgTs &&...WrapperCallArgs) {
+    return shared::WrapperFunction<SPSSignature>::call(
+        [this, WrapperFnAddr](const char *ArgData, size_t ArgSize) {
+          return callWrapper(WrapperFnAddr, ArrayRef<char>(ArgData, ArgSize));
+        },
+        std::forward<WrapperCallArgTs>(WrapperCallArgs)...);
+  }
+
+  /// Wrap a handler that takes concrete argument types (and a sender for a
+  /// concrete return type) to produce an AsyncHandlerWrapperFunction. Uses SPS
+  /// to unpack the arguments and pack the result.
+  ///
+  /// This function is intended to support easy construction of
+  /// AsyncHandlerWrapperFunctions that can be associated with a tag
+  /// (using registerJITDispatchHandler) and called from the executor.
+  template <typename SPSSignature, typename HandlerT>
+  static JITDispatchHandlerFunction wrapAsyncWithSPS(HandlerT &&H) {
+    return [H = std::forward<HandlerT>(H)](
+               ExecutorProcessControl::SendResultFunction SendResult,
+               const char *ArgData, size_t ArgSize) mutable {
+      shared::WrapperFunction<SPSSignature>::handleAsync(ArgData, ArgSize, H,
+                                                         std::move(SendResult));
+    };
+  }
+
+  /// Wrap a class method that takes concrete argument types (and a sender for
+  /// a concrete return type) to produce an AsyncHandlerWrapperFunction. Uses
+  /// SPS to unpack teh arguments and pack the result.
+  ///
+  /// This function is intended to support easy construction of
+  /// AsyncHandlerWrapperFunctions that can be associated with a tag
+  /// (using registerJITDispatchHandler) and called from the executor.
+  template <typename SPSSignature, typename ClassT, typename... MethodArgTs>
+  static JITDispatchHandlerFunction
+  wrapAsyncWithSPS(ClassT *Instance, void (ClassT::*Method)(MethodArgTs...)) {
+    return wrapAsyncWithSPS<SPSSignature>(
+        [Instance, Method](MethodArgTs &&...MethodArgs) {
+          (Instance->*Method)(std::forward<MethodArgTs>(MethodArgs)...);
+        });
+  }
+
+  /// For each tag symbol name, associate the corresponding
+  /// AsyncHandlerWrapperFunction with the address of that symbol. The
+  /// handler becomes callable from the executor using the ORC runtime
+  /// __orc_rt_jit_dispatch function and the given tag.
+  ///
+  /// Tag symbols will be looked up in JD using LookupKind::Static,
+  /// JITDylibLookupFlags::MatchAllSymbols (hidden tags will be found), and
+  /// LookupFlags::WeaklyReferencedSymbol. Missing tag definitions will not
+  /// cause an error, the handler will simply be dropped.
+  Error registerJITDispatchHandlers(JITDylib &JD,
+                                    JITDispatchHandlerAssociationMap WFs);
+
+  /// Run a registered jit-side wrapper function.
+  /// This should be called by the ExecutorProcessControl instance in response
+  /// to incoming jit-dispatch requests from the executor.
+  void
+  runJITDispatchHandler(ExecutorProcessControl::SendResultFunction SendResult,
+                        JITTargetAddress HandlerFnTagAddr,
+                        ArrayRef<char> ArgBuffer);
+
   /// Dump the state of all the JITDylibs in this session.
   void dump(raw_ostream &OS);
 
@@ -1523,7 +1651,7 @@ private:
 
   mutable std::recursive_mutex SessionMutex;
   bool SessionOpen = true;
-  std::shared_ptr<SymbolStringPool> SSP;
+  std::unique_ptr<ExecutorProcessControl> EPC;
   std::unique_ptr<Platform> P;
   ErrorReporter ReportError = logErrorsToStdErr;
   DispatchTaskFunction DispatchTask = runOnCurrentThread;
@@ -1538,6 +1666,10 @@ private:
   std::vector<std::pair<std::unique_ptr<MaterializationUnit>,
                         std::unique_ptr<MaterializationResponsibility>>>
       OutstandingMUs;
+
+  mutable std::mutex JITDispatchHandlersMutex;
+  DenseMap<JITTargetAddress, std::shared_ptr<JITDispatchHandlerFunction>>
+      JITDispatchHandlers;
 };
 
 inline ExecutionSession &MaterializationResponsibility::getExecutionSession() {

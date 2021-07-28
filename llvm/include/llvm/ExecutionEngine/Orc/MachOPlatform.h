@@ -97,13 +97,11 @@ public:
   /// setting up all aliases (including the required ones).
   static Expected<std::unique_ptr<MachOPlatform>>
   Create(ExecutionSession &ES, ObjectLinkingLayer &ObjLinkingLayer,
-         ExecutorProcessControl &EPC, JITDylib &PlatformJD,
-         const char *OrcRuntimePath,
+         JITDylib &PlatformJD, const char *OrcRuntimePath,
          Optional<SymbolAliasMap> RuntimeAliases = None);
 
   ExecutionSession &getExecutionSession() const { return ES; }
   ObjectLinkingLayer &getObjectLinkingLayer() const { return ObjLinkingLayer; }
-  ExecutorProcessControl &getExecutorProcessControl() const { return EPC; }
 
   Error setupJITDylib(JITDylib &JD) override;
   Error notifyAdding(ResourceTracker &RT,
@@ -193,7 +191,7 @@ private:
   static bool supportedTarget(const Triple &TT);
 
   MachOPlatform(ExecutionSession &ES, ObjectLinkingLayer &ObjLinkingLayer,
-                ExecutorProcessControl &EPC, JITDylib &PlatformJD,
+                JITDylib &PlatformJD,
                 std::unique_ptr<DefinitionGenerator> OrcRuntimeGenerator,
                 Error &Err);
 
@@ -228,7 +226,6 @@ private:
 
   ExecutionSession &ES;
   ObjectLinkingLayer &ObjLinkingLayer;
-  ExecutorProcessControl &EPC;
 
   SymbolStringPtr MachOHeaderStartSymbol;
   std::atomic<bool> RuntimeBootstrapped{false};

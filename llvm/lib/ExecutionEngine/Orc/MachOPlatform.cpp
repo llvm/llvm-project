@@ -36,8 +36,10 @@ public:
   void materialize(std::unique_ptr<MaterializationResponsibility> R) override {
     unsigned PointerSize;
     support::endianness Endianness;
+    const auto &TT =
+        MOP.getExecutionSession().getExecutorProcessControl().getTargetTriple();
 
-    switch (MOP.getExecutorProcessControl().getTargetTriple().getArch()) {
+    switch (TT.getArch()) {
     case Triple::aarch64:
     case Triple::x86_64:
       PointerSize = 8;
@@ -48,8 +50,8 @@ public:
     }
 
     auto G = std::make_unique<jitlink::LinkGraph>(
-        "<MachOHeaderMU>", MOP.getExecutorProcessControl().getTargetTriple(),
-        PointerSize, Endianness, jitlink::getGenericEdgeKindName);
+        "<MachOHeaderMU>", TT, PointerSize, Endianness,
+        jitlink::getGenericEdgeKindName);
     auto &HeaderSection = G->createSection("__header", sys::Memory::MF_READ);
     auto &HeaderBlock = createHeaderBlock(*G, HeaderSection);
 
@@ -148,9 +150,10 @@ namespace orc {
 
 Expected<std::unique_ptr<MachOPlatform>>
 MachOPlatform::Create(ExecutionSession &ES, ObjectLinkingLayer &ObjLinkingLayer,
-                      ExecutorProcessControl &EPC, JITDylib &PlatformJD,
-                      const char *OrcRuntimePath,
+                      JITDylib &PlatformJD, const char *OrcRuntimePath,
                       Optional<SymbolAliasMap> RuntimeAliases) {
+
+  auto &EPC = ES.getExecutorProcessControl();
 
   // If the target is not supported then bail out immediately.
   if (!supportedTarget(EPC.getTargetTriple()))
@@ -185,7 +188,7 @@ MachOPlatform::Create(ExecutionSession &ES, ObjectLinkingLayer &ObjLinkingLayer,
   // Create the instance.
   Error Err = Error::success();
   auto P = std::unique_ptr<MachOPlatform>(
-      new MachOPlatform(ES, ObjLinkingLayer, EPC, PlatformJD,
+      new MachOPlatform(ES, ObjLinkingLayer, PlatformJD,
                         std::move(*OrcRuntimeArchiveGenerator), Err));
   if (Err)
     return std::move(Err);
@@ -273,9 +276,9 @@ bool MachOPlatform::supportedTarget(const Triple &TT) {
 
 MachOPlatform::MachOPlatform(
     ExecutionSession &ES, ObjectLinkingLayer &ObjLinkingLayer,
-    ExecutorProcessControl &EPC, JITDylib &PlatformJD,
+    JITDylib &PlatformJD,
     std::unique_ptr<DefinitionGenerator> OrcRuntimeGenerator, Error &Err)
-    : ES(ES), ObjLinkingLayer(ObjLinkingLayer), EPC(EPC),
+    : ES(ES), ObjLinkingLayer(ObjLinkingLayer),
       MachOHeaderStartSymbol(ES.intern("___dso_handle")) {
   ErrorAsOutParameter _(&Err);
 
@@ -309,27 +312,27 @@ MachOPlatform::MachOPlatform(
 }
 
 Error MachOPlatform::associateRuntimeSupportFunctions(JITDylib &PlatformJD) {
-  ExecutorProcessControl::WrapperFunctionAssociationMap WFs;
+  ExecutionSession::JITDispatchHandlerAssociationMap WFs;
 
   using GetInitializersSPSSig =
       SPSExpected<SPSMachOJITDylibInitializerSequence>(SPSString);
   WFs[ES.intern("___orc_rt_macho_get_initializers_tag")] =
-      EPC.wrapAsyncWithSPS<GetInitializersSPSSig>(
+      ES.wrapAsyncWithSPS<GetInitializersSPSSig>(
           this, &MachOPlatform::rt_getInitializers);
 
   using GetDeinitializersSPSSig =
       SPSExpected<SPSMachOJITDylibDeinitializerSequence>(SPSExecutorAddress);
   WFs[ES.intern("___orc_rt_macho_get_deinitializers_tag")] =
-      EPC.wrapAsyncWithSPS<GetDeinitializersSPSSig>(
+      ES.wrapAsyncWithSPS<GetDeinitializersSPSSig>(
           this, &MachOPlatform::rt_getDeinitializers);
 
   using LookupSymbolSPSSig =
       SPSExpected<SPSExecutorAddress>(SPSExecutorAddress, SPSString);
   WFs[ES.intern("___orc_rt_macho_symbol_lookup_tag")] =
-      EPC.wrapAsyncWithSPS<LookupSymbolSPSSig>(this,
-                                               &MachOPlatform::rt_lookupSymbol);
+      ES.wrapAsyncWithSPS<LookupSymbolSPSSig>(this,
+                                              &MachOPlatform::rt_lookupSymbol);
 
-  return EPC.associateJITSideWrapperFunctions(PlatformJD, std::move(WFs));
+  return ES.registerJITDispatchHandlers(PlatformJD, std::move(WFs));
 }
 
 void MachOPlatform::getInitializersBuildSequencePhase(
@@ -520,7 +523,7 @@ Error MachOPlatform::bootstrapMachORuntime(JITDylib &PlatformJD) {
   }
 
   if (auto Err =
-          EPC.runSPSWrapper<void()>(orc_rt_macho_platform_bootstrap.getValue()))
+          ES.callSPSWrapper<void()>(orc_rt_macho_platform_bootstrap.getValue()))
     return Err;
 
   // FIXME: Ordering is fuzzy here. We're probably best off saying
@@ -589,7 +592,7 @@ Error MachOPlatform::registerPerObjectSections(
                                    inconvertibleErrorCode());
 
   Error ErrResult = Error::success();
-  if (auto Err = EPC.runSPSWrapper<shared::SPSError(
+  if (auto Err = ES.callSPSWrapper<shared::SPSError(
                      SPSMachOPerObjectSectionsToRegister)>(
           orc_rt_macho_register_object_sections.getValue(), ErrResult, POSR))
     return Err;
@@ -604,7 +607,7 @@ Expected<uint64_t> MachOPlatform::createPThreadKey() {
         inconvertibleErrorCode());
 
   Expected<uint64_t> Result(0);
-  if (auto Err = EPC.runSPSWrapper<SPSExpected<uint64_t>(void)>(
+  if (auto Err = ES.callSPSWrapper<SPSExpected<uint64_t>(void)>(
           orc_rt_macho_create_pthread_key.getValue(), Result))
     return std::move(Err);
   return Result;
