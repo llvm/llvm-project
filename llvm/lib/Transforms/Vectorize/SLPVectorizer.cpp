@@ -2636,12 +2636,13 @@ void BoUpSLP::reorderTopToBottom(bool FreeReorder) {
     if (VF == VectorizableTree.front()->Scalars.size() && !FreeReorder)
       ++OrdersUses[VectorizableTree.front()->ReorderIndices];
     // Choose the most used order.
-    ArrayRef<unsigned> BestOrder;
-    unsigned Cnt;
-    std::tie(BestOrder, Cnt) = *OrdersUses.begin();
+    ArrayRef<unsigned> BestOrder = OrdersUses.begin()->first;
+    unsigned Cnt = OrdersUses.begin()->second;
     for (const auto &Pair : llvm::drop_begin(OrdersUses)) {
-      if (Cnt < Pair.second || (Cnt == Pair.second && Pair.first.empty()))
-        std::tie(BestOrder, Cnt) = Pair;
+      if (Cnt < Pair.second || (Cnt == Pair.second && Pair.first.empty())) {
+        BestOrder = Pair.first;
+        Cnt = Pair.second;
+      }
     }
     // Set order of the user node.
     if (BestOrder.empty())
@@ -2842,12 +2843,13 @@ void BoUpSLP::reorderBottomToTop(bool FreeReorder) {
         continue;
       }
       // Choose the best order.
-      ArrayRef<unsigned> BestOrder;
-      unsigned Cnt;
-      std::tie(BestOrder, Cnt) = *OrdersUses.begin();
+      ArrayRef<unsigned> BestOrder = OrdersUses.begin()->first;
+      unsigned Cnt = OrdersUses.begin()->second;
       for (const auto &Pair : llvm::drop_begin(OrdersUses)) {
-        if (Cnt < Pair.second || (Cnt == Pair.second && Pair.first.empty()))
-          std::tie(BestOrder, Cnt) = Pair;
+        if (Cnt < Pair.second || (Cnt == Pair.second && Pair.first.empty())) {
+          BestOrder = Pair.first;
+          Cnt = Pair.second;
+        }
       }
       // Set order of the user node (reordering of operands and user nodes).
       if (BestOrder.empty()) {
