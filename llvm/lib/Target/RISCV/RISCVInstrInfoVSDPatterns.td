@@ -523,6 +523,12 @@ foreach vti = AllIntegerVectors in {
                  vti.RegClass:$rs2, simm5:$rs1, VMV0:$vm, vti.AVL, vti.Log2SEW)>;
 }
 
+// 12.1. Vector Single-Width Saturating Add and Subtract
+defm : VPatBinarySDNode_VV_VX_VI<saddsat, "PseudoVSADD">;
+defm : VPatBinarySDNode_VV_VX_VI<uaddsat, "PseudoVSADDU">;
+defm : VPatBinarySDNode_VV_VX<ssubsat, "PseudoVSSUB">;
+defm : VPatBinarySDNode_VV_VX<usubsat, "PseudoVSSUBU">;
+
 // 16.1. Vector Mask-Register Logical Instructions
 foreach mti = AllMasks in {
   def : Pat<(mti.Mask (and VR:$rs1, VR:$rs2)),
