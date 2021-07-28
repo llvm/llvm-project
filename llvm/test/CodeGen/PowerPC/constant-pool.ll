@@ -9,8 +9,8 @@
  define float @FloatConstantPool() {
 ; CHECK-LABEL: FloatConstantPool:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    xxsplti32dx vs1, 0, 0
-; CHECK-NEXT:    xxsplti32dx vs1, 1, 8388577
+; CHECK-NEXT:    xxsplti32dx vs1, 0, 940572664
+; CHECK-NEXT:    xxsplti32dx vs1, 1, 1073741824
 ; CHECK-NEXT:    # kill: def $f1 killed $f1 killed $vsl1
 ; CHECK-NEXT:    blr
 ;
