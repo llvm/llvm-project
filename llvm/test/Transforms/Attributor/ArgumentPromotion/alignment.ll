@@ -47,9 +47,8 @@ define internal void @g(i32* %a) {
 ; IS__CGSCC_NPM-LABEL: define {{[^@]+}}@g
 ; IS__CGSCC_NPM-SAME: (i32 [[TMP0:%.*]]) {
 ; IS__CGSCC_NPM-NEXT:    [[A_PRIV:%.*]] = alloca i32, align 4
-; IS__CGSCC_NPM-NEXT:    store i32 undef, i32* [[A_PRIV]], align 4
 ; IS__CGSCC_NPM-NEXT:    [[AA:%.*]] = load i32, i32* [[A_PRIV]], align 4
-; IS__CGSCC_NPM-NEXT:    call void @z(i32 [[AA]])
+; IS__CGSCC_NPM-NEXT:    call void @z(i32 undef)
 ; IS__CGSCC_NPM-NEXT:    ret void
 ;
   %aa = load i32, i32* %a, align 1
@@ -112,19 +111,18 @@ define internal i32 @test(i32* %X, i64* %Y) {
 ; IS__CGSCC_NPM-LABEL: define {{[^@]+}}@test
 ; IS__CGSCC_NPM-SAME: (i32 [[TMP0:%.*]], i64 [[TMP1:%.*]]) #[[ATTR0:[0-9]+]] {
 ; IS__CGSCC_NPM-NEXT:    [[Y_PRIV:%.*]] = alloca i64, align 8
-; IS__CGSCC_NPM-NEXT:    store i64 1, i64* [[Y_PRIV]], align 8
 ; IS__CGSCC_NPM-NEXT:    [[X_PRIV:%.*]] = alloca i32, align 4
-; IS__CGSCC_NPM-NEXT:    store i32 [[TMP0]], i32* [[X_PRIV]], align 4
+; IS__CGSCC_NPM-NEXT:    store i32 2, i32* [[X_PRIV]], align 4
 ; IS__CGSCC_NPM-NEXT:    [[A:%.*]] = load i32, i32* [[X_PRIV]], align 4
 ; IS__CGSCC_NPM-NEXT:    [[B:%.*]] = load i64, i64* [[Y_PRIV]], align 8
-; IS__CGSCC_NPM-NEXT:    [[C:%.*]] = add i32 [[TMP0]], 1
-; IS__CGSCC_NPM-NEXT:    [[D:%.*]] = add i64 [[B]], 1
-; IS__CGSCC_NPM-NEXT:    [[COND:%.*]] = icmp sgt i64 [[D]], -1
-; IS__CGSCC_NPM-NEXT:    br i1 [[COND]], label [[RETURN1:%.*]], label [[RETURN2:%.*]]
+; IS__CGSCC_NPM-NEXT:    [[C:%.*]] = add i32 2, 1
+; IS__CGSCC_NPM-NEXT:    [[D:%.*]] = add i64 1, 1
+; IS__CGSCC_NPM-NEXT:    [[COND:%.*]] = icmp sgt i64 2, -1
+; IS__CGSCC_NPM-NEXT:    br i1 true, label [[RETURN1:%.*]], label [[RETURN2:%.*]]
 ; IS__CGSCC_NPM:       Return1:
-; IS__CGSCC_NPM-NEXT:    ret i32 [[C]]
+; IS__CGSCC_NPM-NEXT:    ret i32 3
 ; IS__CGSCC_NPM:       Return2:
-; IS__CGSCC_NPM-NEXT:    ret i32 [[TMP0]]
+; IS__CGSCC_NPM-NEXT:    ret i32 2
 ;
   %A = load i32, i32* %X
   %B = load i64, i64* %Y
@@ -171,9 +169,8 @@ define internal i32 @caller(i32* %A) {
 ; IS__CGSCC_NPM-LABEL: define {{[^@]+}}@caller
 ; IS__CGSCC_NPM-SAME: (i32 [[TMP0:%.*]]) #[[ATTR0]] {
 ; IS__CGSCC_NPM-NEXT:    [[A_PRIV:%.*]] = alloca i32, align 4
-; IS__CGSCC_NPM-NEXT:    store i32 2, i32* [[A_PRIV]], align 4
 ; IS__CGSCC_NPM-NEXT:    [[TMP2:%.*]] = load i32, i32* [[A_PRIV]], align 4
-; IS__CGSCC_NPM-NEXT:    [[C:%.*]] = call i32 @test(i32 [[TMP2]], i64 undef) #[[ATTR1:[0-9]+]]
+; IS__CGSCC_NPM-NEXT:    [[C:%.*]] = call i32 @test(i32 undef, i64 undef) #[[ATTR1:[0-9]+]], !range [[RNG0:![0-9]+]]
 ; IS__CGSCC_NPM-NEXT:    ret i32 [[C]]
 ;
   %B = alloca i64
@@ -235,4 +232,6 @@ define i32 @callercaller() {
 ; IS__CGSCC_NPM: attributes #[[ATTR0]] = { nofree norecurse nosync nounwind readnone willreturn }
 ; IS__CGSCC_NPM: attributes #[[ATTR1]] = { nosync nounwind readnone willreturn }
 ; IS__CGSCC_NPM: attributes #[[ATTR2]] = { nounwind readnone willreturn }
+;.
+; IS__CGSCC_NPM: [[RNG0]] = !{i32 0, i32 4}
 ;.

@@ -4483,6 +4483,7 @@ struct AAPointerInfo : public AbstractAttribute {
       RemoteI = Other.RemoteI;
       Content = Other.Content;
       Kind = Other.Kind;
+      Ty = Other.Ty;
       return *this;
     }
     bool operator==(const Access &R) const {

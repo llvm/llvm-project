@@ -19,15 +19,25 @@ define internal fastcc void @callee_avx512_legal512_prefer512_call_avx512_legal5
 ; IS________OPM-NEXT:    store <8 x i64> [[TMP]], <8 x i64>* [[ARG]], align 64
 ; IS________OPM-NEXT:    ret void
 ;
-; IS________NPM: Function Attrs: argmemonly inlinehint nofree norecurse nosync nounwind uwtable willreturn
-; IS________NPM-LABEL: define {{[^@]+}}@callee_avx512_legal512_prefer512_call_avx512_legal512_prefer512
-; IS________NPM-SAME: (<8 x i64>* noalias nocapture nofree noundef nonnull writeonly align 64 dereferenceable(64) [[ARG:%.*]], <8 x i64> [[TMP0:%.*]]) #[[ATTR0:[0-9]+]] {
-; IS________NPM-NEXT:  bb:
-; IS________NPM-NEXT:    [[ARG1_PRIV:%.*]] = alloca <8 x i64>, align 64
-; IS________NPM-NEXT:    store <8 x i64> [[TMP0]], <8 x i64>* [[ARG1_PRIV]], align 64
-; IS________NPM-NEXT:    [[TMP:%.*]] = load <8 x i64>, <8 x i64>* [[ARG1_PRIV]], align 64
-; IS________NPM-NEXT:    store <8 x i64> [[TMP]], <8 x i64>* [[ARG]], align 64
-; IS________NPM-NEXT:    ret void
+; IS__TUNIT_NPM: Function Attrs: argmemonly inlinehint nofree norecurse nosync nounwind uwtable willreturn
+; IS__TUNIT_NPM-LABEL: define {{[^@]+}}@callee_avx512_legal512_prefer512_call_avx512_legal512_prefer512
+; IS__TUNIT_NPM-SAME: (<8 x i64>* noalias nocapture nofree noundef nonnull writeonly align 64 dereferenceable(64) [[ARG:%.*]], <8 x i64> [[TMP0:%.*]]) #[[ATTR0:[0-9]+]] {
+; IS__TUNIT_NPM-NEXT:  bb:
+; IS__TUNIT_NPM-NEXT:    [[ARG1_PRIV:%.*]] = alloca <8 x i64>, align 64
+; IS__TUNIT_NPM-NEXT:    store <8 x i64> [[TMP0]], <8 x i64>* [[ARG1_PRIV]], align 64
+; IS__TUNIT_NPM-NEXT:    [[TMP:%.*]] = load <8 x i64>, <8 x i64>* [[ARG1_PRIV]], align 64
+; IS__TUNIT_NPM-NEXT:    store <8 x i64> [[TMP]], <8 x i64>* [[ARG]], align 64
+; IS__TUNIT_NPM-NEXT:    ret void
+;
+; IS__CGSCC_NPM: Function Attrs: argmemonly inlinehint nofree norecurse nosync nounwind uwtable willreturn
+; IS__CGSCC_NPM-LABEL: define {{[^@]+}}@callee_avx512_legal512_prefer512_call_avx512_legal512_prefer512
+; IS__CGSCC_NPM-SAME: (<8 x i64>* noalias nocapture nofree noundef nonnull writeonly align 64 dereferenceable(64) [[ARG:%.*]], <8 x i64> [[TMP0:%.*]]) #[[ATTR0:[0-9]+]] {
+; IS__CGSCC_NPM-NEXT:  bb:
+; IS__CGSCC_NPM-NEXT:    [[ARG1_PRIV:%.*]] = alloca <8 x i64>, align 64
+; IS__CGSCC_NPM-NEXT:    store <8 x i64> [[TMP0]], <8 x i64>* [[ARG1_PRIV]], align 64
+; IS__CGSCC_NPM-NEXT:    [[TMP:%.*]] = load <8 x i64>, <8 x i64>* [[ARG1_PRIV]], align 64
+; IS__CGSCC_NPM-NEXT:    store <8 x i64> [[TMP0]], <8 x i64>* [[ARG]], align 64
+; IS__CGSCC_NPM-NEXT:    ret void
 ;
 bb:
   %tmp = load <8 x i64>, <8 x i64>* %arg1
@@ -113,15 +123,25 @@ define internal fastcc void @callee_avx512_legal512_prefer256_call_avx512_legal5
 ; IS________OPM-NEXT:    store <8 x i64> [[TMP]], <8 x i64>* [[ARG]], align 64
 ; IS________OPM-NEXT:    ret void
 ;
-; IS________NPM: Function Attrs: argmemonly inlinehint nofree norecurse nosync nounwind uwtable willreturn
-; IS________NPM-LABEL: define {{[^@]+}}@callee_avx512_legal512_prefer256_call_avx512_legal512_prefer256
-; IS________NPM-SAME: (<8 x i64>* noalias nocapture nofree noundef nonnull writeonly align 64 dereferenceable(64) [[ARG:%.*]], <8 x i64> [[TMP0:%.*]]) #[[ATTR1:[0-9]+]] {
-; IS________NPM-NEXT:  bb:
-; IS________NPM-NEXT:    [[ARG1_PRIV:%.*]] = alloca <8 x i64>, align 64
-; IS________NPM-NEXT:    store <8 x i64> [[TMP0]], <8 x i64>* [[ARG1_PRIV]], align 64
-; IS________NPM-NEXT:    [[TMP:%.*]] = load <8 x i64>, <8 x i64>* [[ARG1_PRIV]], align 64
-; IS________NPM-NEXT:    store <8 x i64> [[TMP]], <8 x i64>* [[ARG]], align 64
-; IS________NPM-NEXT:    ret void
+; IS__TUNIT_NPM: Function Attrs: argmemonly inlinehint nofree norecurse nosync nounwind uwtable willreturn
+; IS__TUNIT_NPM-LABEL: define {{[^@]+}}@callee_avx512_legal512_prefer256_call_avx512_legal512_prefer256
+; IS__TUNIT_NPM-SAME: (<8 x i64>* noalias nocapture nofree noundef nonnull writeonly align 64 dereferenceable(64) [[ARG:%.*]], <8 x i64> [[TMP0:%.*]]) #[[ATTR1:[0-9]+]] {
+; IS__TUNIT_NPM-NEXT:  bb:
+; IS__TUNIT_NPM-NEXT:    [[ARG1_PRIV:%.*]] = alloca <8 x i64>, align 64
+; IS__TUNIT_NPM-NEXT:    store <8 x i64> [[TMP0]], <8 x i64>* [[ARG1_PRIV]], align 64
+; IS__TUNIT_NPM-NEXT:    [[TMP:%.*]] = load <8 x i64>, <8 x i64>* [[ARG1_PRIV]], align 64
+; IS__TUNIT_NPM-NEXT:    store <8 x i64> [[TMP]], <8 x i64>* [[ARG]], align 64
+; IS__TUNIT_NPM-NEXT:    ret void
+;
+; IS__CGSCC_NPM: Function Attrs: argmemonly inlinehint nofree norecurse nosync nounwind uwtable willreturn
+; IS__CGSCC_NPM-LABEL: define {{[^@]+}}@callee_avx512_legal512_prefer256_call_avx512_legal512_prefer256
+; IS__CGSCC_NPM-SAME: (<8 x i64>* noalias nocapture nofree noundef nonnull writeonly align 64 dereferenceable(64) [[ARG:%.*]], <8 x i64> [[TMP0:%.*]]) #[[ATTR1:[0-9]+]] {
+; IS__CGSCC_NPM-NEXT:  bb:
+; IS__CGSCC_NPM-NEXT:    [[ARG1_PRIV:%.*]] = alloca <8 x i64>, align 64
+; IS__CGSCC_NPM-NEXT:    store <8 x i64> [[TMP0]], <8 x i64>* [[ARG1_PRIV]], align 64
+; IS__CGSCC_NPM-NEXT:    [[TMP:%.*]] = load <8 x i64>, <8 x i64>* [[ARG1_PRIV]], align 64
+; IS__CGSCC_NPM-NEXT:    store <8 x i64> [[TMP0]], <8 x i64>* [[ARG]], align 64
+; IS__CGSCC_NPM-NEXT:    ret void
 ;
 bb:
   %tmp = load <8 x i64>, <8 x i64>* %arg1
@@ -207,15 +227,25 @@ define internal fastcc void @callee_avx512_legal512_prefer512_call_avx512_legal5
 ; IS________OPM-NEXT:    store <8 x i64> [[TMP]], <8 x i64>* [[ARG]], align 64
 ; IS________OPM-NEXT:    ret void
 ;
-; IS________NPM: Function Attrs: argmemonly inlinehint nofree norecurse nosync nounwind uwtable willreturn
-; IS________NPM-LABEL: define {{[^@]+}}@callee_avx512_legal512_prefer512_call_avx512_legal512_prefer256
-; IS________NPM-SAME: (<8 x i64>* noalias nocapture nofree noundef nonnull writeonly align 64 dereferenceable(64) [[ARG:%.*]], <8 x i64> [[TMP0:%.*]]) #[[ATTR1]] {
-; IS________NPM-NEXT:  bb:
-; IS________NPM-NEXT:    [[ARG1_PRIV:%.*]] = alloca <8 x i64>, align 64
-; IS________NPM-NEXT:    store <8 x i64> [[TMP0]], <8 x i64>* [[ARG1_PRIV]], align 64
-; IS________NPM-NEXT:    [[TMP:%.*]] = load <8 x i64>, <8 x i64>* [[ARG1_PRIV]], align 64
-; IS________NPM-NEXT:    store <8 x i64> [[TMP]], <8 x i64>* [[ARG]], align 64
-; IS________NPM-NEXT:    ret void
+; IS__TUNIT_NPM: Function Attrs: argmemonly inlinehint nofree norecurse nosync nounwind uwtable willreturn
+; IS__TUNIT_NPM-LABEL: define {{[^@]+}}@callee_avx512_legal512_prefer512_call_avx512_legal512_prefer256
+; IS__TUNIT_NPM-SAME: (<8 x i64>* noalias nocapture nofree noundef nonnull writeonly align 64 dereferenceable(64) [[ARG:%.*]], <8 x i64> [[TMP0:%.*]]) #[[ATTR1]] {
+; IS__TUNIT_NPM-NEXT:  bb:
+; IS__TUNIT_NPM-NEXT:    [[ARG1_PRIV:%.*]] = alloca <8 x i64>, align 64
+; IS__TUNIT_NPM-NEXT:    store <8 x i64> [[TMP0]], <8 x i64>* [[ARG1_PRIV]], align 64
+; IS__TUNIT_NPM-NEXT:    [[TMP:%.*]] = load <8 x i64>, <8 x i64>* [[ARG1_PRIV]], align 64
+; IS__TUNIT_NPM-NEXT:    store <8 x i64> [[TMP]], <8 x i64>* [[ARG]], align 64
+; IS__TUNIT_NPM-NEXT:    ret void
+;
+; IS__CGSCC_NPM: Function Attrs: argmemonly inlinehint nofree norecurse nosync nounwind uwtable willreturn
+; IS__CGSCC_NPM-LABEL: define {{[^@]+}}@callee_avx512_legal512_prefer512_call_avx512_legal512_prefer256
+; IS__CGSCC_NPM-SAME: (<8 x i64>* noalias nocapture nofree noundef nonnull writeonly align 64 dereferenceable(64) [[ARG:%.*]], <8 x i64> [[TMP0:%.*]]) #[[ATTR1]] {
+; IS__CGSCC_NPM-NEXT:  bb:
+; IS__CGSCC_NPM-NEXT:    [[ARG1_PRIV:%.*]] = alloca <8 x i64>, align 64
+; IS__CGSCC_NPM-NEXT:    store <8 x i64> [[TMP0]], <8 x i64>* [[ARG1_PRIV]], align 64
+; IS__CGSCC_NPM-NEXT:    [[TMP:%.*]] = load <8 x i64>, <8 x i64>* [[ARG1_PRIV]], align 64
+; IS__CGSCC_NPM-NEXT:    store <8 x i64> [[TMP0]], <8 x i64>* [[ARG]], align 64
+; IS__CGSCC_NPM-NEXT:    ret void
 ;
 bb:
   %tmp = load <8 x i64>, <8 x i64>* %arg1
@@ -301,15 +331,25 @@ define internal fastcc void @callee_avx512_legal512_prefer256_call_avx512_legal5
 ; IS________OPM-NEXT:    store <8 x i64> [[TMP]], <8 x i64>* [[ARG]], align 64
 ; IS________OPM-NEXT:    ret void
 ;
-; IS________NPM: Function Attrs: argmemonly inlinehint nofree norecurse nosync nounwind uwtable willreturn
-; IS________NPM-LABEL: define {{[^@]+}}@callee_avx512_legal512_prefer256_call_avx512_legal512_prefer512
-; IS________NPM-SAME: (<8 x i64>* noalias nocapture nofree noundef nonnull writeonly align 64 dereferenceable(64) [[ARG:%.*]], <8 x i64> [[TMP0:%.*]]) #[[ATTR0]] {
-; IS________NPM-NEXT:  bb:
-; IS________NPM-NEXT:    [[ARG1_PRIV:%.*]] = alloca <8 x i64>, align 64
-; IS________NPM-NEXT:    store <8 x i64> [[TMP0]], <8 x i64>* [[ARG1_PRIV]], align 64
-; IS________NPM-NEXT:    [[TMP:%.*]] = load <8 x i64>, <8 x i64>* [[ARG1_PRIV]], align 64
-; IS________NPM-NEXT:    store <8 x i64> [[TMP]], <8 x i64>* [[ARG]], align 64
-; IS________NPM-NEXT:    ret void
+; IS__TUNIT_NPM: Function Attrs: argmemonly inlinehint nofree norecurse nosync nounwind uwtable willreturn
+; IS__TUNIT_NPM-LABEL: define {{[^@]+}}@callee_avx512_legal512_prefer256_call_avx512_legal512_prefer512
+; IS__TUNIT_NPM-SAME: (<8 x i64>* noalias nocapture nofree noundef nonnull writeonly align 64 dereferenceable(64) [[ARG:%.*]], <8 x i64> [[TMP0:%.*]]) #[[ATTR0]] {
+; IS__TUNIT_NPM-NEXT:  bb:
+; IS__TUNIT_NPM-NEXT:    [[ARG1_PRIV:%.*]] = alloca <8 x i64>, align 64
+; IS__TUNIT_NPM-NEXT:    store <8 x i64> [[TMP0]], <8 x i64>* [[ARG1_PRIV]], align 64
+; IS__TUNIT_NPM-NEXT:    [[TMP:%.*]] = load <8 x i64>, <8 x i64>* [[ARG1_PRIV]], align 64
+; IS__TUNIT_NPM-NEXT:    store <8 x i64> [[TMP]], <8 x i64>* [[ARG]], align 64
+; IS__TUNIT_NPM-NEXT:    ret void
+;
+; IS__CGSCC_NPM: Function Attrs: argmemonly inlinehint nofree norecurse nosync nounwind uwtable willreturn
+; IS__CGSCC_NPM-LABEL: define {{[^@]+}}@callee_avx512_legal512_prefer256_call_avx512_legal512_prefer512
+; IS__CGSCC_NPM-SAME: (<8 x i64>* noalias nocapture nofree noundef nonnull writeonly align 64 dereferenceable(64) [[ARG:%.*]], <8 x i64> [[TMP0:%.*]]) #[[ATTR0]] {
+; IS__CGSCC_NPM-NEXT:  bb:
+; IS__CGSCC_NPM-NEXT:    [[ARG1_PRIV:%.*]] = alloca <8 x i64>, align 64
+; IS__CGSCC_NPM-NEXT:    store <8 x i64> [[TMP0]], <8 x i64>* [[ARG1_PRIV]], align 64
+; IS__CGSCC_NPM-NEXT:    [[TMP:%.*]] = load <8 x i64>, <8 x i64>* [[ARG1_PRIV]], align 64
+; IS__CGSCC_NPM-NEXT:    store <8 x i64> [[TMP0]], <8 x i64>* [[ARG]], align 64
+; IS__CGSCC_NPM-NEXT:    ret void
 ;
 bb:
   %tmp = load <8 x i64>, <8 x i64>* %arg1
@@ -397,7 +437,7 @@ define internal fastcc void @callee_avx512_legal256_prefer256_call_avx512_legal5
 ;
 ; IS________NPM: Function Attrs: argmemonly inlinehint nofree norecurse nosync nounwind uwtable willreturn
 ; IS________NPM-LABEL: define {{[^@]+}}@callee_avx512_legal256_prefer256_call_avx512_legal512_prefer256
-; IS________NPM-SAME: (<8 x i64>* noalias nocapture nofree noundef nonnull writeonly align 64 dereferenceable(64) [[ARG:%.*]], <8 x i64>* noalias nocapture nofree noundef nonnull readonly align 64 dereferenceable(64) [[ARG1:%.*]]) #[[ATTR1]] {
+; IS________NPM-SAME: (<8 x i64>* noalias nocapture nofree noundef nonnull writeonly align 64 dereferenceable(64) [[ARG:%.*]], <8 x i64>* noalias nocapture nofree noundef nonnull readonly align 64 dereferenceable(64) [[ARG1:%.*]]) #[[ATTR1:[0-9]+]] {
 ; IS________NPM-NEXT:  bb:
 ; IS________NPM-NEXT:    [[TMP:%.*]] = load <8 x i64>, <8 x i64>* [[ARG1]], align 64
 ; IS________NPM-NEXT:    store <8 x i64> [[TMP]], <8 x i64>* [[ARG]], align 64
@@ -575,15 +615,25 @@ define internal fastcc void @callee_avx2_legal256_prefer256_call_avx2_legal512_p
 ; IS________OPM-NEXT:    store <8 x i64> [[TMP]], <8 x i64>* [[ARG]], align 64
 ; IS________OPM-NEXT:    ret void
 ;
-; IS________NPM: Function Attrs: argmemonly inlinehint nofree norecurse nosync nounwind uwtable willreturn
-; IS________NPM-LABEL: define {{[^@]+}}@callee_avx2_legal256_prefer256_call_avx2_legal512_prefer256
-; IS________NPM-SAME: (<8 x i64>* noalias nocapture nofree noundef nonnull writeonly align 64 dereferenceable(64) [[ARG:%.*]], <8 x i64> [[TMP0:%.*]]) #[[ATTR3:[0-9]+]] {
-; IS________NPM-NEXT:  bb:
-; IS________NPM-NEXT:    [[ARG1_PRIV:%.*]] = alloca <8 x i64>, align 64
-; IS________NPM-NEXT:    store <8 x i64> [[TMP0]], <8 x i64>* [[ARG1_PRIV]], align 64
-; IS________NPM-NEXT:    [[TMP:%.*]] = load <8 x i64>, <8 x i64>* [[ARG1_PRIV]], align 64
-; IS________NPM-NEXT:    store <8 x i64> [[TMP]], <8 x i64>* [[ARG]], align 64
-; IS________NPM-NEXT:    ret void
+; IS__TUNIT_NPM: Function Attrs: argmemonly inlinehint nofree norecurse nosync nounwind uwtable willreturn
+; IS__TUNIT_NPM-LABEL: define {{[^@]+}}@callee_avx2_legal256_prefer256_call_avx2_legal512_prefer256
+; IS__TUNIT_NPM-SAME: (<8 x i64>* noalias nocapture nofree noundef nonnull writeonly align 64 dereferenceable(64) [[ARG:%.*]], <8 x i64> [[TMP0:%.*]]) #[[ATTR3:[0-9]+]] {
+; IS__TUNIT_NPM-NEXT:  bb:
+; IS__TUNIT_NPM-NEXT:    [[ARG1_PRIV:%.*]] = alloca <8 x i64>, align 64
+; IS__TUNIT_NPM-NEXT:    store <8 x i64> [[TMP0]], <8 x i64>* [[ARG1_PRIV]], align 64
+; IS__TUNIT_NPM-NEXT:    [[TMP:%.*]] = load <8 x i64>, <8 x i64>* [[ARG1_PRIV]], align 64
+; IS__TUNIT_NPM-NEXT:    store <8 x i64> [[TMP]], <8 x i64>* [[ARG]], align 64
+; IS__TUNIT_NPM-NEXT:    ret void
+;
+; IS__CGSCC_NPM: Function Attrs: argmemonly inlinehint nofree norecurse nosync nounwind uwtable willreturn
+; IS__CGSCC_NPM-LABEL: define {{[^@]+}}@callee_avx2_legal256_prefer256_call_avx2_legal512_prefer256
+; IS__CGSCC_NPM-SAME: (<8 x i64>* noalias nocapture nofree noundef nonnull writeonly align 64 dereferenceable(64) [[ARG:%.*]], <8 x i64> [[TMP0:%.*]]) #[[ATTR3:[0-9]+]] {
+; IS__CGSCC_NPM-NEXT:  bb:
+; IS__CGSCC_NPM-NEXT:    [[ARG1_PRIV:%.*]] = alloca <8 x i64>, align 64
+; IS__CGSCC_NPM-NEXT:    store <8 x i64> [[TMP0]], <8 x i64>* [[ARG1_PRIV]], align 64
+; IS__CGSCC_NPM-NEXT:    [[TMP:%.*]] = load <8 x i64>, <8 x i64>* [[ARG1_PRIV]], align 64
+; IS__CGSCC_NPM-NEXT:    store <8 x i64> [[TMP0]], <8 x i64>* [[ARG]], align 64
+; IS__CGSCC_NPM-NEXT:    ret void
 ;
 bb:
   %tmp = load <8 x i64>, <8 x i64>* %arg1
@@ -669,15 +719,25 @@ define internal fastcc void @callee_avx2_legal512_prefer256_call_avx2_legal256_p
 ; IS________OPM-NEXT:    store <8 x i64> [[TMP]], <8 x i64>* [[ARG]], align 64
 ; IS________OPM-NEXT:    ret void
 ;
-; IS________NPM: Function Attrs: argmemonly inlinehint nofree norecurse nosync nounwind uwtable willreturn
-; IS________NPM-LABEL: define {{[^@]+}}@callee_avx2_legal512_prefer256_call_avx2_legal256_prefer256
-; IS________NPM-SAME: (<8 x i64>* noalias nocapture nofree noundef nonnull writeonly align 64 dereferenceable(64) [[ARG:%.*]], <8 x i64> [[TMP0:%.*]]) #[[ATTR4:[0-9]+]] {
-; IS________NPM-NEXT:  bb:
-; IS________NPM-NEXT:    [[ARG1_PRIV:%.*]] = alloca <8 x i64>, align 64
-; IS________NPM-NEXT:    store <8 x i64> [[TMP0]], <8 x i64>* [[ARG1_PRIV]], align 64
-; IS________NPM-NEXT:    [[TMP:%.*]] = load <8 x i64>, <8 x i64>* [[ARG1_PRIV]], align 64
-; IS________NPM-NEXT:    store <8 x i64> [[TMP]], <8 x i64>* [[ARG]], align 64
-; IS________NPM-NEXT:    ret void
+; IS__TUNIT_NPM: Function Attrs: argmemonly inlinehint nofree norecurse nosync nounwind uwtable willreturn
+; IS__TUNIT_NPM-LABEL: define {{[^@]+}}@callee_avx2_legal512_prefer256_call_avx2_legal256_prefer256
+; IS__TUNIT_NPM-SAME: (<8 x i64>* noalias nocapture nofree noundef nonnull writeonly align 64 dereferenceable(64) [[ARG:%.*]], <8 x i64> [[TMP0:%.*]]) #[[ATTR4]] {
+; IS__TUNIT_NPM-NEXT:  bb:
+; IS__TUNIT_NPM-NEXT:    [[ARG1_PRIV:%.*]] = alloca <8 x i64>, align 64
+; IS__TUNIT_NPM-NEXT:    store <8 x i64> [[TMP0]], <8 x i64>* [[ARG1_PRIV]], align 64
+; IS__TUNIT_NPM-NEXT:    [[TMP:%.*]] = load <8 x i64>, <8 x i64>* [[ARG1_PRIV]], align 64
+; IS__TUNIT_NPM-NEXT:    store <8 x i64> [[TMP]], <8 x i64>* [[ARG]], align 64
+; IS__TUNIT_NPM-NEXT:    ret void
+;
+; IS__CGSCC_NPM: Function Attrs: argmemonly inlinehint nofree norecurse nosync nounwind uwtable willreturn
+; IS__CGSCC_NPM-LABEL: define {{[^@]+}}@callee_avx2_legal512_prefer256_call_avx2_legal256_prefer256
+; IS__CGSCC_NPM-SAME: (<8 x i64>* noalias nocapture nofree noundef nonnull writeonly align 64 dereferenceable(64) [[ARG:%.*]], <8 x i64> [[TMP0:%.*]]) #[[ATTR4]] {
+; IS__CGSCC_NPM-NEXT:  bb:
+; IS__CGSCC_NPM-NEXT:    [[ARG1_PRIV:%.*]] = alloca <8 x i64>, align 64
+; IS__CGSCC_NPM-NEXT:    store <8 x i64> [[TMP0]], <8 x i64>* [[ARG1_PRIV]], align 64
+; IS__CGSCC_NPM-NEXT:    [[TMP:%.*]] = load <8 x i64>, <8 x i64>* [[ARG1_PRIV]], align 64
+; IS__CGSCC_NPM-NEXT:    store <8 x i64> [[TMP0]], <8 x i64>* [[ARG]], align 64
+; IS__CGSCC_NPM-NEXT:    ret void
 ;
 bb:
   %tmp = load <8 x i64>, <8 x i64>* %arg1
