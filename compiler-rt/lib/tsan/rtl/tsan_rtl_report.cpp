@@ -337,12 +337,15 @@ void ScopedReportBase::AddLocation(uptr addr, uptr size) {
     return;
   }
   MBlock *b = 0;
+  uptr block_begin = 0;
   Allocator *a = allocator();
   if (a->PointerIsMine((void*)addr)) {
-    void *block_begin = a->GetBlockBegin((void*)addr);
+    block_begin = (uptr)a->GetBlockBegin((void *)addr);
     if (block_begin)
-      b = ctx->metamap.GetBlock((uptr)block_begin);
+      b = ctx->metamap.GetBlock(block_begin);
   }
+  if (!b)
+    b = JavaHeapBlock(addr, &block_begin);
   if (b != 0) {
     ThreadContext *tctx = FindThreadByTidLocked(b->tid);
     ReportLocation *loc = ReportLocation::New(ReportLocationHeap);
