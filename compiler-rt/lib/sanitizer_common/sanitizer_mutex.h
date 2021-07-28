@@ -111,7 +111,7 @@ struct MutexMeta {
 
 class CheckedMutex {
  public:
-  constexpr CheckedMutex(MutexType type)
+  explicit constexpr CheckedMutex(MutexType type)
 #if SANITIZER_CHECK_DEADLOCKS
       : type_(type)
 #endif
@@ -154,7 +154,8 @@ class CheckedMutex {
 // but this attribute is not supported by some older compilers.
 class MUTEX Mutex : CheckedMutex {
  public:
-  constexpr Mutex(MutexType type = MutexUnchecked) : CheckedMutex(type) {}
+  explicit constexpr Mutex(MutexType type = MutexUnchecked)
+      : CheckedMutex(type) {}
 
   void Lock() ACQUIRE() {
     CheckedMutex::Lock();
@@ -331,6 +332,7 @@ class MUTEX Mutex : CheckedMutex {
   static constexpr u64 kWriterLock = 1ull << (3 * kCounterWidth);
   static constexpr u64 kWriterSpinWait = 1ull << (3 * kCounterWidth + 1);
 
+  Mutex(LinkerInitialized) = delete;
   Mutex(const Mutex &) = delete;
   void operator=(const Mutex &) = delete;
 };
