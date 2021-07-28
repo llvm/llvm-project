@@ -658,6 +658,7 @@ def GenericOp : LinalgStructuredBase_Op<"generic", [
 
   let verifier = [{ return ::verify(*this); }];
 
+  let hasCanonicalizer = 1;
   let hasFolder = 1;
 }
 
