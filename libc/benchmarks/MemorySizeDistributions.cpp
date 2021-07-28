@@ -1,5 +1,8 @@
 #include "MemorySizeDistributions.h"
 
+#include "llvm/Support/ErrorHandling.h"
+#include "llvm/Support/raw_ostream.h"
+
 namespace llvm {
 namespace libc_benchmarks {
 
@@ -135,5 +138,24 @@ ArrayRef<MemorySizeDistribution> getMemcmpSizeDistributions() {
   };
   return kDistributions;
 }
+
+MemorySizeDistribution
+getDistributionOrDie(ArrayRef<MemorySizeDistribution> Distributions,
+                     StringRef Name) {
+  size_t Index = 0;
+  for (const auto &MSD : Distributions) {
+    if (MSD.Name == Name)
+      return MSD;
+    ++Index;
+  }
+  std::string Message;
+  raw_string_ostream Stream(Message);
+  Stream << "Unknown MemorySizeDistribution '" << Name
+         << "', available distributions:\n";
+  for (const auto &MSD : Distributions)
+    Stream << "'" << MSD.Name << "'\n";
+  report_fatal_error(Stream.str());
+}
+
 } // namespace libc_benchmarks
 } // namespace llvm
