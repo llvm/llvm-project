@@ -17,6 +17,8 @@
 //===----------------------------------------------------------------------===//
 
 #include "llvm/Analysis/InstructionSimplify.h"
+
+#include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/SetVector.h"
 #include "llvm/ADT/SmallPtrSet.h"
 #include "llvm/ADT/Statistic.h"
@@ -4567,7 +4569,8 @@ Value *llvm::SimplifyExtractElementInst(Value *Vec, Value *Idx,
 }
 
 /// See if we can fold the given phi. If not, returns null.
-static Value *SimplifyPHINode(PHINode *PN, const SimplifyQuery &Q) {
+static Value *SimplifyPHINode(PHINode *PN, ArrayRef<Value *> IncomingValues,
+                              const SimplifyQuery &Q) {
   // WARNING: no matter how worthwhile it may seem, we can not perform PHI CSE
   //          here, because the PHI we may succeed simplifying to was not
   //          def-reachable from the original PHI!
@@ -4576,7 +4579,7 @@ static Value *SimplifyPHINode(PHINode *PN, const SimplifyQuery &Q) {
   // with the common value.
   Value *CommonValue = nullptr;
   bool HasUndefInput = false;
-  for (Value *Incoming : PN->incoming_values()) {
+  for (Value *Incoming : IncomingValues) {
     // If the incoming value is the phi node itself, it can safely be skipped.
     if (Incoming == PN) continue;
     if (Q.isUndefValue(Incoming)) {
@@ -6040,21 +6043,19 @@ static Constant *ConstructLoadOperandConstant(Value *Op) {
   return NewOp;
 }
 
-static Value *SimplifyLoadInst(LoadInst *LI, const SimplifyQuery &Q) {
+static Value *SimplifyLoadInst(LoadInst *LI, Value *PtrOp,
+                               const SimplifyQuery &Q) {
   if (LI->isVolatile())
     return nullptr;
 
-  if (auto *C = ConstantFoldInstruction(LI, Q.DL))
-    return C;
+  // Try to make the load operand a constant, specifically handle
+  // invariant.group intrinsics.
+  auto *PtrOpC = dyn_cast<Constant>(PtrOp);
+  if (!PtrOpC)
+    PtrOpC = ConstructLoadOperandConstant(PtrOp);
 
-  // The following only catches more cases than ConstantFoldInstruction() if the
-  // load operand wasn't a constant. Specifically, invariant.group intrinsics.
-  if (isa<Constant>(LI->getPointerOperand()))
-    return nullptr;
-
-  if (auto *C = dyn_cast_or_null<Constant>(
-          ConstructLoadOperandConstant(LI->getPointerOperand())))
-    return ConstantFoldLoadFromConstPtr(C, LI->getType(), Q.DL);
+  if (PtrOpC)
+    return ConstantFoldLoadFromConstPtr(PtrOpC, LI->getType(), Q.DL);
 
   return nullptr;
 }
@@ -6062,161 +6063,149 @@ static Value *SimplifyLoadInst(LoadInst *LI, const SimplifyQuery &Q) {
 /// See if we can compute a simplified version of this instruction.
 /// If not, this returns null.
 
-Value *llvm::SimplifyInstruction(Instruction *I, const SimplifyQuery &SQ,
-                                 OptimizationRemarkEmitter *ORE) {
+static Value *simplifyInstructionWithOperands(Instruction *I,
+                                              ArrayRef<Value *> NewOps,
+                                              const SimplifyQuery &SQ,
+                                              OptimizationRemarkEmitter *ORE) {
   const SimplifyQuery Q = SQ.CxtI ? SQ : SQ.getWithInstruction(I);
-  Value *Result;
+  Value *Result = nullptr;
 
   switch (I->getOpcode()) {
   default:
-    Result = ConstantFoldInstruction(I, Q.DL, Q.TLI);
+    if (llvm::all_of(NewOps, [](Value *V) { return isa<Constant>(V); })) {
+      SmallVector<Constant *, 8> NewConstOps(NewOps.size());
+      transform(NewOps, NewConstOps.begin(),
+                [](Value *V) { return cast<Constant>(V); });
+      Result = ConstantFoldInstOperands(I, NewConstOps, Q.DL, Q.TLI);
+    }
     break;
   case Instruction::FNeg:
-    Result = SimplifyFNegInst(I->getOperand(0), I->getFastMathFlags(), Q);
+    Result = SimplifyFNegInst(NewOps[0], I->getFastMathFlags(), Q);
     break;
   case Instruction::FAdd:
-    Result = SimplifyFAddInst(I->getOperand(0), I->getOperand(1),
-                              I->getFastMathFlags(), Q);
+    Result = SimplifyFAddInst(NewOps[0], NewOps[1], I->getFastMathFlags(), Q);
     break;
   case Instruction::Add:
-    Result =
-        SimplifyAddInst(I->getOperand(0), I->getOperand(1),
-                        Q.IIQ.hasNoSignedWrap(cast<BinaryOperator>(I)),
-                        Q.IIQ.hasNoUnsignedWrap(cast<BinaryOperator>(I)), Q);
+    Result = SimplifyAddInst(
+        NewOps[0], NewOps[1], Q.IIQ.hasNoSignedWrap(cast<BinaryOperator>(I)),
+        Q.IIQ.hasNoUnsignedWrap(cast<BinaryOperator>(I)), Q);
     break;
   case Instruction::FSub:
-    Result = SimplifyFSubInst(I->getOperand(0), I->getOperand(1),
-                              I->getFastMathFlags(), Q);
+    Result = SimplifyFSubInst(NewOps[0], NewOps[1], I->getFastMathFlags(), Q);
     break;
   case Instruction::Sub:
-    Result =
-        SimplifySubInst(I->getOperand(0), I->getOperand(1),
-                        Q.IIQ.hasNoSignedWrap(cast<BinaryOperator>(I)),
-                        Q.IIQ.hasNoUnsignedWrap(cast<BinaryOperator>(I)), Q);
+    Result = SimplifySubInst(
+        NewOps[0], NewOps[1], Q.IIQ.hasNoSignedWrap(cast<BinaryOperator>(I)),
+        Q.IIQ.hasNoUnsignedWrap(cast<BinaryOperator>(I)), Q);
     break;
   case Instruction::FMul:
-    Result = SimplifyFMulInst(I->getOperand(0), I->getOperand(1),
-                              I->getFastMathFlags(), Q);
+    Result = SimplifyFMulInst(NewOps[0], NewOps[1], I->getFastMathFlags(), Q);
     break;
   case Instruction::Mul:
-    Result = SimplifyMulInst(I->getOperand(0), I->getOperand(1), Q);
+    Result = SimplifyMulInst(NewOps[0], NewOps[1], Q);
     break;
   case Instruction::SDiv:
-    Result = SimplifySDivInst(I->getOperand(0), I->getOperand(1), Q);
+    Result = SimplifySDivInst(NewOps[0], NewOps[1], Q);
     break;
   case Instruction::UDiv:
-    Result = SimplifyUDivInst(I->getOperand(0), I->getOperand(1), Q);
+    Result = SimplifyUDivInst(NewOps[0], NewOps[1], Q);
     break;
   case Instruction::FDiv:
-    Result = SimplifyFDivInst(I->getOperand(0), I->getOperand(1),
-                              I->getFastMathFlags(), Q);
+    Result = SimplifyFDivInst(NewOps[0], NewOps[1], I->getFastMathFlags(), Q);
     break;
   case Instruction::SRem:
-    Result = SimplifySRemInst(I->getOperand(0), I->getOperand(1), Q);
+    Result = SimplifySRemInst(NewOps[0], NewOps[1], Q);
     break;
   case Instruction::URem:
-    Result = SimplifyURemInst(I->getOperand(0), I->getOperand(1), Q);
+    Result = SimplifyURemInst(NewOps[0], NewOps[1], Q);
     break;
   case Instruction::FRem:
-    Result = SimplifyFRemInst(I->getOperand(0), I->getOperand(1),
-                              I->getFastMathFlags(), Q);
+    Result = SimplifyFRemInst(NewOps[0], NewOps[1], I->getFastMathFlags(), Q);
     break;
   case Instruction::Shl:
-    Result =
-        SimplifyShlInst(I->getOperand(0), I->getOperand(1),
-                        Q.IIQ.hasNoSignedWrap(cast<BinaryOperator>(I)),
-                        Q.IIQ.hasNoUnsignedWrap(cast<BinaryOperator>(I)), Q);
+    Result = SimplifyShlInst(
+        NewOps[0], NewOps[1], Q.IIQ.hasNoSignedWrap(cast<BinaryOperator>(I)),
+        Q.IIQ.hasNoUnsignedWrap(cast<BinaryOperator>(I)), Q);
     break;
   case Instruction::LShr:
-    Result = SimplifyLShrInst(I->getOperand(0), I->getOperand(1),
+    Result = SimplifyLShrInst(NewOps[0], NewOps[1],
                               Q.IIQ.isExact(cast<BinaryOperator>(I)), Q);
     break;
   case Instruction::AShr:
-    Result = SimplifyAShrInst(I->getOperand(0), I->getOperand(1),
+    Result = SimplifyAShrInst(NewOps[0], NewOps[1],
                               Q.IIQ.isExact(cast<BinaryOperator>(I)), Q);
     break;
   case Instruction::And:
-    Result = SimplifyAndInst(I->getOperand(0), I->getOperand(1), Q);
+    Result = SimplifyAndInst(NewOps[0], NewOps[1], Q);
     break;
   case Instruction::Or:
-    Result = SimplifyOrInst(I->getOperand(0), I->getOperand(1), Q);
+    Result = SimplifyOrInst(NewOps[0], NewOps[1], Q);
     break;
   case Instruction::Xor:
-    Result = SimplifyXorInst(I->getOperand(0), I->getOperand(1), Q);
+    Result = SimplifyXorInst(NewOps[0], NewOps[1], Q);
     break;
   case Instruction::ICmp:
-    Result = SimplifyICmpInst(cast<ICmpInst>(I)->getPredicate(),
-                              I->getOperand(0), I->getOperand(1), Q);
+    Result = SimplifyICmpInst(cast<ICmpInst>(I)->getPredicate(), NewOps[0],
+                              NewOps[1], Q);
     break;
   case Instruction::FCmp:
-    Result =
-        SimplifyFCmpInst(cast<FCmpInst>(I)->getPredicate(), I->getOperand(0),
-                         I->getOperand(1), I->getFastMathFlags(), Q);
+    Result = SimplifyFCmpInst(cast<FCmpInst>(I)->getPredicate(), NewOps[0],
+                              NewOps[1], I->getFastMathFlags(), Q);
     break;
   case Instruction::Select:
-    Result = SimplifySelectInst(I->getOperand(0), I->getOperand(1),
-                                I->getOperand(2), Q);
+    Result = SimplifySelectInst(NewOps[0], NewOps[1], NewOps[2], Q);
     break;
   case Instruction::GetElementPtr: {
-    SmallVector<Value *, 8> Ops(I->operands());
     Result = SimplifyGEPInst(cast<GetElementPtrInst>(I)->getSourceElementType(),
-                             Ops, Q);
+                             NewOps, Q);
     break;
   }
   case Instruction::InsertValue: {
     InsertValueInst *IV = cast<InsertValueInst>(I);
-    Result = SimplifyInsertValueInst(IV->getAggregateOperand(),
-                                     IV->getInsertedValueOperand(),
-                                     IV->getIndices(), Q);
+    Result = SimplifyInsertValueInst(NewOps[0], NewOps[1], IV->getIndices(), Q);
     break;
   }
   case Instruction::InsertElement: {
-    auto *IE = cast<InsertElementInst>(I);
-    Result = SimplifyInsertElementInst(IE->getOperand(0), IE->getOperand(1),
-                                       IE->getOperand(2), Q);
+    Result = SimplifyInsertElementInst(NewOps[0], NewOps[1], NewOps[2], Q);
     break;
   }
   case Instruction::ExtractValue: {
     auto *EVI = cast<ExtractValueInst>(I);
-    Result = SimplifyExtractValueInst(EVI->getAggregateOperand(),
-                                      EVI->getIndices(), Q);
+    Result = SimplifyExtractValueInst(NewOps[0], EVI->getIndices(), Q);
     break;
   }
   case Instruction::ExtractElement: {
-    auto *EEI = cast<ExtractElementInst>(I);
-    Result = SimplifyExtractElementInst(EEI->getVectorOperand(),
-                                        EEI->getIndexOperand(), Q);
+    Result = SimplifyExtractElementInst(NewOps[0], NewOps[1], Q);
     break;
   }
   case Instruction::ShuffleVector: {
     auto *SVI = cast<ShuffleVectorInst>(I);
-    Result =
-        SimplifyShuffleVectorInst(SVI->getOperand(0), SVI->getOperand(1),
-                                  SVI->getShuffleMask(), SVI->getType(), Q);
+    Result = SimplifyShuffleVectorInst(
+        NewOps[0], NewOps[1], SVI->getShuffleMask(), SVI->getType(), Q);
     break;
   }
   case Instruction::PHI:
-    Result = SimplifyPHINode(cast<PHINode>(I), Q);
+    Result = SimplifyPHINode(cast<PHINode>(I), NewOps, Q);
     break;
   case Instruction::Call: {
+    // TODO: Use NewOps
     Result = SimplifyCall(cast<CallInst>(I), Q);
     break;
   }
   case Instruction::Freeze:
-    Result = SimplifyFreezeInst(I->getOperand(0), Q);
+    Result = llvm::SimplifyFreezeInst(NewOps[0], Q);
     break;
 #define HANDLE_CAST_INST(num, opc, clas) case Instruction::opc:
 #include "llvm/IR/Instruction.def"
 #undef HANDLE_CAST_INST
-    Result =
-        SimplifyCastInst(I->getOpcode(), I->getOperand(0), I->getType(), Q);
+    Result = SimplifyCastInst(I->getOpcode(), NewOps[0], I->getType(), Q);
     break;
   case Instruction::Alloca:
     // No simplifications for Alloca and it can't be constant folded.
     Result = nullptr;
     break;
   case Instruction::Load:
-    Result = SimplifyLoadInst(cast<LoadInst>(I), Q);
+    Result = SimplifyLoadInst(cast<LoadInst>(I), NewOps[0], Q);
     break;
   }
 
@@ -6224,6 +6213,21 @@ Value *llvm::SimplifyInstruction(Instruction *I, const SimplifyQuery &SQ,
   /// instruction simplified to itself.  Make life easier for users by
   /// detecting that case here, returning a safe value instead.
   return Result == I ? UndefValue::get(I->getType()) : Result;
+}
+
+Value *llvm::SimplifyInstructionWithOperands(Instruction *I,
+                                             ArrayRef<Value *> NewOps,
+                                             const SimplifyQuery &SQ,
+                                             OptimizationRemarkEmitter *ORE) {
+  assert(NewOps.size() == I->getNumOperands() &&
+         "Number of operands should match the instruction!");
+  return ::simplifyInstructionWithOperands(I, NewOps, SQ, ORE);
+}
+
+Value *llvm::SimplifyInstruction(Instruction *I, const SimplifyQuery &SQ,
+                                 OptimizationRemarkEmitter *ORE) {
+  SmallVector<Value *, 8> Ops(I->operands());
+  return ::simplifyInstructionWithOperands(I, Ops, SQ, ORE);
 }
 
 /// Implementation of recursive simplification through an instruction's
