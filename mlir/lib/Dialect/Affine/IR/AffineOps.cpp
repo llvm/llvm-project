@@ -1628,7 +1628,8 @@ static LogicalResult canonicalizeLoopBounds(AffineForOp forOp) {
 }
 
 namespace {
-/// This is a pattern to fold trivially empty loops.
+/// This is a pattern to fold trivially empty loop bodies.
+/// TODO: This should be moved into the folding hook.
 struct AffineForEmptyLoopFolder : public OpRewritePattern<AffineForOp> {
   using OpRewritePattern<AffineForOp>::OpRewritePattern;
 
@@ -1637,7 +1638,8 @@ struct AffineForEmptyLoopFolder : public OpRewritePattern<AffineForOp> {
     // Check that the body only contains a yield.
     if (!llvm::hasSingleElement(*forOp.getBody()))
       return failure();
-    rewriter.eraseOp(forOp);
+    // The initial values of the iteration arguments would be the op's results.
+    rewriter.replaceOp(forOp, forOp.getIterOperands());
     return success();
   }
 };

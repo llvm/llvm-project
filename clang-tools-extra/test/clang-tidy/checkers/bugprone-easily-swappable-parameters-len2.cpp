@@ -346,3 +346,31 @@ void memberTypedefDependentReference3(
 
 void functionPrototypeLosesNoexcept(void (*NonThrowing)() noexcept, void (*Throwing)()) {}
 // NO-WARN: This call cannot be swapped, even if "getCanonicalType()" believes otherwise.
+
+void attributedParam1(const __attribute__((address_space(256))) int *One,
+                      const __attribute__((address_space(256))) int *Two) {}
+// CHECK-MESSAGES: :[[@LINE-2]]:23: warning: 2 adjacent parameters of 'attributedParam1' of similar type ('const __attribute__((address_space(256))) int *') are
+// CHECK-MESSAGES: :[[@LINE-3]]:70: note: the first parameter in the range is 'One'
+// CHECK-MESSAGES: :[[@LINE-3]]:70: note: the last parameter in the range is 'Two'
+
+void attributedParam1Typedef(const __attribute__((address_space(256))) int *One,
+                             const __attribute__((address_space(256))) MyInt1 *Two) {}
+// CHECK-MESSAGES: :[[@LINE-2]]:30: warning: 2 adjacent parameters of 'attributedParam1Typedef' of similar type are
+// CHECK-MESSAGES: :[[@LINE-3]]:77: note: the first parameter in the range is 'One'
+// CHECK-MESSAGES: :[[@LINE-3]]:80: note: the last parameter in the range is 'Two'
+// CHECK-MESSAGES: :[[@LINE-5]]:30: note: after resolving type aliases, the common type of 'const __attribute__((address_space(256))) int *' and 'const __attribute__((address_space(256))) MyInt1 *' is 'const __attribute__((address_space(256))) int'
+// FIXME: The last diagnostic line is a bit bad: the common type should be a
+// pointer type -- it is not clear right now, how it would be possible to
+// properly wire a logic in that fixes it.
+
+void attributedParam2(__attribute__((address_space(256))) int *One,
+                      const __attribute__((address_space(256))) MyInt1 *Two) {}
+// NO-WARN: One is CVR-qualified, the other is not.
+
+void attributedParam3(const int *One,
+                      const __attribute__((address_space(256))) MyInt1 *Two) {}
+// NO-WARN: One is attributed, the other is not.
+
+void attributedParam4(const __attribute__((address_space(512))) int *One,
+                      const __attribute__((address_space(256))) MyInt1 *Two) {}
+// NO-WARN: Different value of the attribute.

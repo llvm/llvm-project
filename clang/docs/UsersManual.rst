@@ -2563,7 +2563,8 @@ below. If multiple flags are present, the last one is used.
    non-trivial, non-aggregate C++ class in the modules that contain a
    definition of one of its constructors. This relies on the additional
    assumption that all classes that are not trivially constructible have a
-   non-trivial constructor that is used somewhere.
+   non-trivial constructor that is used somewhere. The negation,
+   -fno-use-ctor-homing, ensures that constructor homing is not used.
 
    This flag is not enabled by default, and needs to be used with -cc1 or
    -Xclang.

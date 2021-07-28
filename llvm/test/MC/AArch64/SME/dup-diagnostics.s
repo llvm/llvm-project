@@ -25,12 +25,12 @@ dup p0.b, p0/z, p0[w12]
 // Invalid index base register register (w12-w15)
 
 dup p0.b, p0/z, p0.b[w11]
-// CHECK: [[@LINE-1]]:{{[0-9]+}}: error: invalid operand for instruction
+// CHECK: [[@LINE-1]]:{{[0-9]+}}: error: operand must be a register in range [w12, w15]
 // CHECK-NEXT: dup  p0.b, p0/z, p0.b[w11]
 // CHECK-NOT: [[@LINE-1]]:{{[0-9]+}}:
 
 dup p0.b, p0/z, p0.b[w16]
-// CHECK: [[@LINE-1]]:{{[0-9]+}}: error: invalid operand for instruction
+// CHECK: [[@LINE-1]]:{{[0-9]+}}: error: operand must be a register in range [w12, w15]
 // CHECK-NEXT: dup  p0.b, p0/z, p0.b[w16]
 // CHECK-NOT: [[@LINE-1]]:{{[0-9]+}}:
 

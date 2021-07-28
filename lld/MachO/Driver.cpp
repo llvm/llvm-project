@@ -228,6 +228,7 @@ namespace {
 struct ArchiveMember {
   MemoryBufferRef mbref;
   uint32_t modTime;
+  uint64_t offsetInArchive;
 };
 } // namespace
 
@@ -257,7 +258,7 @@ static std::vector<ArchiveMember> getArchiveMembers(MemoryBufferRef mb) {
         CHECK(c.getLastModified(), mb.getBufferIdentifier() +
                                        ": could not get the modification "
                                        "time for a child of the archive"));
-    v.push_back({mbref, modTime});
+    v.push_back({mbref, modTime, c.getChildOffset()});
   }
   if (err)
     fatal(mb.getBufferIdentifier() +
@@ -298,7 +299,8 @@ static InputFile *addFile(StringRef path, bool forceLoadArchive,
       if (Optional<MemoryBufferRef> buffer = readFile(path)) {
         for (const ArchiveMember &member : getArchiveMembers(*buffer)) {
           if (Optional<InputFile *> file = loadArchiveMember(
-                  member.mbref, member.modTime, path, /*objCOnly=*/false)) {
+                  member.mbref, member.modTime, path, /*objCOnly=*/false,
+                  member.offsetInArchive)) {
             inputFiles.insert(*file);
             printArchiveMemberLoad(
                 (forceLoadArchive ? "-force_load" : "-all_load"),
@@ -319,7 +321,8 @@ static InputFile *addFile(StringRef path, bool forceLoadArchive,
       if (Optional<MemoryBufferRef> buffer = readFile(path)) {
         for (const ArchiveMember &member : getArchiveMembers(*buffer)) {
           if (Optional<InputFile *> file = loadArchiveMember(
-                  member.mbref, member.modTime, path, /*objCOnly=*/true)) {
+                  member.mbref, member.modTime, path, /*objCOnly=*/true,
+                  member.offsetInArchive)) {
             inputFiles.insert(*file);
             printArchiveMemberLoad("-ObjC", inputFiles.back());
           }
@@ -343,7 +346,7 @@ static InputFile *addFile(StringRef path, bool forceLoadArchive,
     }
     break;
   case file_magic::bitcode:
-    newFile = make<BitcodeFile>(mbref);
+    newFile = make<BitcodeFile>(mbref, "", 0);
     break;
   case file_magic::macho_executable:
   case file_magic::macho_bundle:
@@ -1175,7 +1178,7 @@ bool macho::link(ArrayRef<const char *> argsArr, bool canExitEarly,
   }
 
   for (const Arg *arg : args.filtered(OPT_U))
-    symtab->addDynamicLookup(arg->getValue());
+    config->explicitDynamicLookups.insert(arg->getValue());
 
   config->mapFile = args.getLastArgValue(OPT_map);
   config->optimize = args::getInteger(args, OPT_O, 1);
@@ -1418,25 +1421,6 @@ bool macho::link(ArrayRef<const char *> argsArr, bool canExitEarly,
     StringRef orderFile = args.getLastArgValue(OPT_order_file);
     if (!orderFile.empty())
       parseOrderFile(orderFile);
-
-    if (config->entry)
-      if (auto *undefined = dyn_cast<Undefined>(config->entry))
-        treatUndefinedSymbol(*undefined, "the entry point");
-
-    // FIXME: This prints symbols that are undefined both in input files and
-    // via -u flag twice.
-    for (const Symbol *sym : config->explicitUndefineds) {
-      if (const auto *undefined = dyn_cast<Undefined>(sym))
-        treatUndefinedSymbol(*undefined, "-u");
-    }
-    // Literal exported-symbol names must be defined, but glob
-    // patterns need not match.
-    for (const CachedHashStringRef &cachedName :
-         config->exportedSymbols.literals) {
-      if (const Symbol *sym = symtab->find(cachedName))
-        if (const auto *undefined = dyn_cast<Undefined>(sym))
-          treatUndefinedSymbol(*undefined, "-exported_symbol(s_list)");
-    }
 
     referenceStubBinder();
 

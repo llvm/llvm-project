@@ -1461,7 +1461,8 @@ Sema::ActOnFinishSwitchStmt(SourceLocation SwitchLoc, Stmt *Switch,
 
     // If switch has default case, then ignore it.
     if (!CaseListIsErroneous && !CaseListIsIncomplete && !HasConstantCond &&
-        ET && ET->getDecl()->isCompleteDefinition()) {
+        ET && ET->getDecl()->isCompleteDefinition() &&
+        !empty(ET->getDecl()->enumerators())) {
       const EnumDecl *ED = ET->getDecl();
       EnumValsTy EnumVals;
 

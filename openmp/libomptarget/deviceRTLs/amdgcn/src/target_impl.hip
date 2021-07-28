@@ -122,12 +122,12 @@ uint32_t get_workgroup_dim(uint32_t group_id, uint32_t grid_size,
 }
 } // namespace
 
-EXTERN int GetNumberOfBlocksInKernel() {
+EXTERN int __kmpc_get_hardware_num_blocks() {
   return get_grid_dim(__builtin_amdgcn_grid_size_x(),
                       __builtin_amdgcn_workgroup_size_x());
 }
 
-EXTERN int GetNumberOfThreadsInBlock() {
+EXTERN int __kmpc_get_hardware_num_threads_in_block() {
   return get_workgroup_dim(__builtin_amdgcn_workgroup_id_x(),
                            __builtin_amdgcn_grid_size_x(),
                            __builtin_amdgcn_workgroup_size_x());
@@ -140,7 +140,7 @@ EXTERN unsigned GetLaneId() {
 }
 
 EXTERN uint32_t __kmpc_amdgcn_gpu_num_threads() {
-  return GetNumberOfThreadsInBlock();
+  return __kmpc_get_hardware_num_threads_in_block();
 }
 
 // Atomics

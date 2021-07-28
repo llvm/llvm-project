@@ -914,6 +914,23 @@ cc_library(
 )
 
 cc_library(
+    name = "DWP",
+    srcs = glob([
+        "lib/DWP/*.cpp",
+        "lib/DWP/*.h",
+    ]),
+    hdrs = glob(["include/llvm/DWP/*.h"]),
+    copts = llvm_copts,
+    deps = [
+        ":DebugInfoDWARF",
+        ":MC",
+        ":Object",
+        ":Support",
+        ":Target",
+    ],
+)
+
+cc_library(
     name = "TransformUtils",
     srcs = glob([
         "lib/Transforms/Utils/*.cpp",
@@ -2726,11 +2743,9 @@ cc_binary(
     stamp = 0,
     deps = [
         ":AllTargetsCodeGens",
-        ":DebugInfoDWARF",
+        ":DWP",
         ":MC",
-        ":Object",
         ":Support",
-        ":Target",
     ],
 )
 

@@ -160,6 +160,23 @@ multiclass ArcBinaryInst<bits<5> major, bits<6> mincode,
                             []>
   { let Defs = [STATUS32]; }
 
+  def _cc_rru6 : F32_DOP_CC_RRU6<major, mincode, 0, (outs GPR32:$A),
+                                 (ins immU6:$U6, ccond:$cc, GPR32:$B),
+                                 !strconcat(opasm, ".$cc\t$A, $B, $U6"),
+                                 []> {
+                                   let Uses = [STATUS32];
+                                   let Constraints = "$A = $B";
+                                 }
+
+  def _cc_f_rru6 : F32_DOP_CC_RRU6<major, mincode, 1, (outs GPR32:$A),
+                                   (ins immU6:$U6, ccond:$cc, GPR32:$B),
+                                   !strconcat(opasm, ".$cc.f\t$A, $B, $U6"),
+                                   []> {
+                                     let Defs = [STATUS32];
+                                     let Uses = [STATUS32];
+                                     let Constraints = "$A = $B";
+                                   }
+
   // 2 register with 32-bit immediate variant.
   def _rrlimm : F32_DOP_RLIMM<major, mincode, 0,
                               (outs GPR32:$A),
@@ -224,6 +241,8 @@ multiclass ArcBinaryEXT5Inst<bits<6> mincode, string opasm> :
 
 multiclass ArcUnaryGEN4Inst<bits<6> mincode, string opasm> :
   ArcUnaryInst<0b00100, mincode, opasm>;
+multiclass ArcUnaryEXT5Inst<bits<6> mincode, string opasm> :
+  ArcUnaryInst<0b00101, mincode, opasm>;
 
 // Pattern generation for different instruction variants.
 multiclass MultiPat<SDPatternOperator InFrag,
@@ -243,6 +262,7 @@ defm SUB : ArcBinaryGEN4Inst<0b000010, "sub">;
 defm SUB1 : ArcBinaryGEN4Inst<0b010111, "sub1">;
 defm SUB2 : ArcBinaryGEN4Inst<0b011000, "sub2">;
 defm SUB3 : ArcBinaryGEN4Inst<0b011001, "sub3">;
+defm RSUB : ArcBinaryGEN4Inst<0b001110, "rsub">;
 defm OR  : ArcBinaryGEN4Inst<0b000101, "or",1>;
 defm AND : ArcBinaryGEN4Inst<0b000100, "and",1>;
 defm XOR : ArcBinaryGEN4Inst<0b000111, "xor",1>;
@@ -279,6 +299,9 @@ defm : MultiPat<mulhu, MPYMU_rrr, MPYMU_rru6, MPYMU_rrlimm>;
 // General unary instruction definitions.
 defm SEXB : ArcUnaryGEN4Inst<0b000101, "sexb">;
 defm SEXH : ArcUnaryGEN4Inst<0b000110, "sexh">;
+
+// Extension unary instruction definitions.
+defm FLS : ArcUnaryEXT5Inst<0b010011, "fls">;
 
 // General Unary Instruction fragments.
 def : Pat<(sext_inreg i32:$a, i8), (SEXB_rr i32:$a)>;

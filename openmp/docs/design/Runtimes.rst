@@ -30,6 +30,8 @@ variables is defined below.
     * ``LIBOMPTARGET_PROFILE=<Filename>``
     * ``LIBOMPTARGET_MEMORY_MANAGER_THRESHOLD=<Num>``
     * ``LIBOMPTARGET_INFO=<Num>``
+    * ``LIBOMPTARGET_HEAP_SIZE=<Num>``
+    * ``LIBOMPTARGET_STACK_SIZE=<Num>``
 
 LIBOMPTARGET_DEBUG
 """"""""""""""""""
@@ -320,6 +322,21 @@ default. The solution is to add an explicit map clause in the target region.
     
       return sum;
     }
+
+LIBOMPTARGET_STACK_SIZE
+"""""""""""""""""""""""
+
+This environment variable sets the stack size in bytes for the CUDA plugin. This
+can be used to increase or decrease the standard amount of memory reserved for
+each thread's stack.
+
+LIBOMPTARGET_HEAP_SIZE
+"""""""""""""""""""""""
+
+This environment variable sets the amount of memory in bytes that can be
+allocated using ``malloc`` and ``free`` for the CUDA plugin. This is necessary
+for some applications that allocate too much memory either through the user or
+globalization.
 
 .. toctree::
    :hidden:

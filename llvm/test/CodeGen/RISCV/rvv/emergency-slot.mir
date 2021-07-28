@@ -53,7 +53,7 @@ body:             |
   ; CHECK:   successors: %bb.1(0x40000000), %bb.2(0x40000000)
   ; CHECK:   liveins: $x12, $x1, $x9, $x18, $x19, $x20, $x21, $x22, $x23, $x24, $x25, $x26, $x27
   ; CHECK:   $x2 = frame-setup ADDI $x2, -2032
-  ; CHECK:   CFI_INSTRUCTION def_cfa_offset 2032
+  ; CHECK:   frame-setup CFI_INSTRUCTION def_cfa_offset 2032
   ; CHECK:   SD killed $x1, $x2, 2024 :: (store (s64) into %stack.3)
   ; CHECK:   SD killed $x8, $x2, 2016 :: (store (s64) into %stack.4)
   ; CHECK:   SD killed $x9, $x2, 2008 :: (store (s64) into %stack.5)
@@ -67,27 +67,27 @@ body:             |
   ; CHECK:   SD killed $x25, $x2, 1944 :: (store (s64) into %stack.13)
   ; CHECK:   SD killed $x26, $x2, 1936 :: (store (s64) into %stack.14)
   ; CHECK:   SD killed $x27, $x2, 1928 :: (store (s64) into %stack.15)
-  ; CHECK:   CFI_INSTRUCTION offset $x1, -8
-  ; CHECK:   CFI_INSTRUCTION offset $x8, -16
-  ; CHECK:   CFI_INSTRUCTION offset $x9, -24
-  ; CHECK:   CFI_INSTRUCTION offset $x18, -32
-  ; CHECK:   CFI_INSTRUCTION offset $x19, -40
-  ; CHECK:   CFI_INSTRUCTION offset $x20, -48
-  ; CHECK:   CFI_INSTRUCTION offset $x21, -56
-  ; CHECK:   CFI_INSTRUCTION offset $x22, -64
-  ; CHECK:   CFI_INSTRUCTION offset $x23, -72
-  ; CHECK:   CFI_INSTRUCTION offset $x24, -80
-  ; CHECK:   CFI_INSTRUCTION offset $x25, -88
-  ; CHECK:   CFI_INSTRUCTION offset $x26, -96
-  ; CHECK:   CFI_INSTRUCTION offset $x27, -104
+  ; CHECK:   frame-setup CFI_INSTRUCTION offset $x1, -8
+  ; CHECK:   frame-setup CFI_INSTRUCTION offset $x8, -16
+  ; CHECK:   frame-setup CFI_INSTRUCTION offset $x9, -24
+  ; CHECK:   frame-setup CFI_INSTRUCTION offset $x18, -32
+  ; CHECK:   frame-setup CFI_INSTRUCTION offset $x19, -40
+  ; CHECK:   frame-setup CFI_INSTRUCTION offset $x20, -48
+  ; CHECK:   frame-setup CFI_INSTRUCTION offset $x21, -56
+  ; CHECK:   frame-setup CFI_INSTRUCTION offset $x22, -64
+  ; CHECK:   frame-setup CFI_INSTRUCTION offset $x23, -72
+  ; CHECK:   frame-setup CFI_INSTRUCTION offset $x24, -80
+  ; CHECK:   frame-setup CFI_INSTRUCTION offset $x25, -88
+  ; CHECK:   frame-setup CFI_INSTRUCTION offset $x26, -96
+  ; CHECK:   frame-setup CFI_INSTRUCTION offset $x27, -104
   ; CHECK:   $x8 = frame-setup ADDI $x2, 2032
-  ; CHECK:   CFI_INSTRUCTION def_cfa $x8, 0
+  ; CHECK:   frame-setup CFI_INSTRUCTION def_cfa $x8, 0
   ; CHECK:   $x2 = frame-setup ADDI $x2, -272
-  ; CHECK:   $x10 = PseudoReadVLENB
-  ; CHECK:   $x11 = ADDI $x0, 51
-  ; CHECK:   $x10 = MUL killed $x10, killed $x11
-  ; CHECK:   $x2 = SUB $x2, killed $x10
-  ; CHECK:   $x2 = ANDI $x2, -128
+  ; CHECK:   $x10 = frame-setup PseudoReadVLENB
+  ; CHECK:   $x11 = frame-setup ADDI $x0, 51
+  ; CHECK:   $x10 = frame-setup MUL killed $x10, killed $x11
+  ; CHECK:   $x2 = frame-setup SUB $x2, killed $x10
+  ; CHECK:   $x2 = frame-setup ANDI $x2, -128
   ; CHECK:   dead renamable $x15 = PseudoVSETIVLI 1, 72, implicit-def $vl, implicit-def $vtype
   ; CHECK:   renamable $v25 = PseudoVMV_V_X_M1 killed renamable $x12, $noreg, 16, implicit $vl, implicit $vtype
   ; CHECK:   $x11 = PseudoReadVLENB

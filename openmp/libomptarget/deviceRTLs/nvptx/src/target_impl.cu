@@ -96,10 +96,12 @@ EXTERN int __kmpc_get_hardware_thread_id_in_block() {
   return __nvvm_read_ptx_sreg_tid_x();
 }
 EXTERN int GetBlockIdInKernel() { return __nvvm_read_ptx_sreg_ctaid_x(); }
-EXTERN int GetNumberOfBlocksInKernel() {
+EXTERN int __kmpc_get_hardware_num_blocks() {
   return __nvvm_read_ptx_sreg_nctaid_x();
 }
-EXTERN int GetNumberOfThreadsInBlock() { return __nvvm_read_ptx_sreg_ntid_x(); }
+EXTERN int __kmpc_get_hardware_num_threads_in_block() {
+  return __nvvm_read_ptx_sreg_ntid_x();
+}
 EXTERN unsigned GetWarpId() {
   return __kmpc_get_hardware_thread_id_in_block() / WARPSIZE;
 }

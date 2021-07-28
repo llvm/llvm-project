@@ -31,6 +31,7 @@
 #include "llvm/IR/GlobalValue.h"
 #include "llvm/IR/IRBuilder.h"
 #include "llvm/IR/Instruction.h"
+#include "llvm/IR/IntrinsicInst.h"
 #include "llvm/IR/NoFolder.h"
 #include "llvm/IR/ValueHandle.h"
 #include "llvm/IR/Verifier.h"
@@ -178,6 +179,26 @@ ChangeStatus &llvm::operator&=(ChangeStatus &L, ChangeStatus R) {
   return L;
 }
 ///}
+
+bool AA::isDynamicallyUnique(Attributor &A, const AbstractAttribute &QueryingAA,
+                             const Value &V) {
+  if (auto *C = dyn_cast<Constant>(&V))
+    return !C->isThreadDependent();
+  // TODO: Inspect and cache more complex instructions.
+  if (auto *CB = dyn_cast<CallBase>(&V))
+    return CB->getNumOperands() == 0 && !CB->mayHaveSideEffects() &&
+           !CB->mayReadFromMemory();
+  const Function *Scope = nullptr;
+  if (auto *I = dyn_cast<Instruction>(&V))
+    Scope = I->getFunction();
+  if (auto *A = dyn_cast<Argument>(&V))
+    Scope = A->getParent();
+  if (!Scope)
+    return false;
+  auto &NoRecurseAA = A.getAAFor<AANoRecurse>(
+      QueryingAA, IRPosition::function(*Scope), DepClassTy::OPTIONAL);
+  return NoRecurseAA.isAssumedNoRecurse();
+}
 
 Constant *AA::getInitialValueForObj(Value &Obj, Type &Ty) {
   if (isa<AllocaInst>(Obj))
@@ -648,19 +669,19 @@ void IRPosition::verify() {
 }
 
 Optional<Constant *>
-Attributor::getAssumedConstant(const Value &V, const AbstractAttribute &AA,
+Attributor::getAssumedConstant(const IRPosition &IRP,
+                               const AbstractAttribute &AA,
                                bool &UsedAssumedInformation) {
   // First check all callbacks provided by outside AAs. If any of them returns
   // a non-null value that is different from the associated value, or None, we
   // assume it's simpliied.
-  IRPosition IRP = IRPosition::value(V, AA.getCallBaseContext());
   for (auto &CB : SimplificationCallbacks[IRP]) {
     Optional<Value *> SimplifiedV = CB(IRP, &AA, UsedAssumedInformation);
     if (!SimplifiedV.hasValue())
       return llvm::None;
-    if (*SimplifiedV && *SimplifiedV != &IRP.getAssociatedValue() &&
-        isa<Constant>(*SimplifiedV))
+    if (isa_and_nonnull<Constant>(*SimplifiedV))
       return cast<Constant>(*SimplifiedV);
+    return nullptr;
   }
   const auto &ValueSimplifyAA =
       getAAFor<AAValueSimplify>(AA, IRP, DepClassTy::NONE);
@@ -674,13 +695,12 @@ Attributor::getAssumedConstant(const Value &V, const AbstractAttribute &AA,
   }
   if (isa_and_nonnull<UndefValue>(SimplifiedV.getValue())) {
     recordDependence(ValueSimplifyAA, AA, DepClassTy::OPTIONAL);
-    return UndefValue::get(V.getType());
+    return UndefValue::get(IRP.getAssociatedType());
   }
   Constant *CI = dyn_cast_or_null<Constant>(SimplifiedV.getValue());
-  if (CI && CI->getType() != V.getType()) {
-    // TODO: Check for a save conversion.
-    return nullptr;
-  }
+  if (CI)
+    CI = dyn_cast_or_null<Constant>(
+        AA::getWithType(*CI, *IRP.getAssociatedType()));
   if (CI)
     recordDependence(ValueSimplifyAA, AA, DepClassTy::OPTIONAL);
   return CI;
@@ -693,12 +713,8 @@ Attributor::getAssumedSimplified(const IRPosition &IRP,
   // First check all callbacks provided by outside AAs. If any of them returns
   // a non-null value that is different from the associated value, or None, we
   // assume it's simpliied.
-  for (auto &CB : SimplificationCallbacks[IRP]) {
-    Optional<Value *> SimplifiedV = CB(IRP, AA, UsedAssumedInformation);
-    if (!SimplifiedV.hasValue() ||
-        (*SimplifiedV && *SimplifiedV != &IRP.getAssociatedValue()))
-      return SimplifiedV;
-  }
+  for (auto &CB : SimplificationCallbacks[IRP])
+    return CB(IRP, AA, UsedAssumedInformation);
 
   // If no high-level/outside simplification occured, use AAValueSimplify.
   const auto &ValueSimplifyAA =
@@ -880,8 +896,7 @@ bool Attributor::isAssumedDead(const IRPosition &IRP,
 
 bool Attributor::checkForAllUses(function_ref<bool(const Use &, bool &)> Pred,
                                  const AbstractAttribute &QueryingAA,
-                                 const Value &V,
-                                 bool CheckBBLivenessOnly,
+                                 const Value &V, bool CheckBBLivenessOnly,
                                  DepClassTy LivenessDepClass) {
 
   // Check the trivial case first as it catches void values.
@@ -1573,9 +1588,12 @@ ChangeStatus Attributor::cleanupIR() {
 
   for (auto &V : ToBeDeletedInsts) {
     if (Instruction *I = dyn_cast_or_null<Instruction>(V)) {
-      if (auto *CB = dyn_cast<CallBase>(I))
-        if (CB->isMustTailCall() && !isRunOn(*I->getFunction()))
+      if (auto *CB = dyn_cast<CallBase>(I)) {
+        if (!isRunOn(*I->getFunction()))
           continue;
+        if (!isa<IntrinsicInst>(CB))
+          CGUpdater.removeCallSite(*CB);
+      }
       I->dropDroppableUses();
       CGModifiedFunctions.insert(I->getFunction());
       if (!I->getType()->isVoidTy())
@@ -2583,8 +2601,9 @@ void AbstractAttribute::printWithDeps(raw_ostream &OS) const {
   OS << '\n';
 }
 
-raw_ostream &llvm::operator<<(raw_ostream &OS, const AAPointerInfo::Access &Acc) {
-  OS << " ["<< Acc.getKind() << "] " << *Acc.getRemoteInst();
+raw_ostream &llvm::operator<<(raw_ostream &OS,
+                              const AAPointerInfo::Access &Acc) {
+  OS << " [" << Acc.getKind() << "] " << *Acc.getRemoteInst();
   if (Acc.getLocalInst() != Acc.getRemoteInst())
     OS << " via " << *Acc.getLocalInst() << "\n";
   return OS;

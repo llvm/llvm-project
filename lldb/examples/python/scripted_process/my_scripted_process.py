@@ -29,6 +29,9 @@ class MyScriptedProcess(ScriptedProcess):
     def get_process_id(self) -> int:
         return 42
 
+    def should_stop(self) -> bool:
+        return True
+
     def is_alive(self) -> bool:
         return True
 

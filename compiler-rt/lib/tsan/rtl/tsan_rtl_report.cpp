@@ -129,7 +129,7 @@ bool ShouldReport(ThreadState *thr, ReportType typ) {
   // We set thr->suppress_reports in the fork context.
   // Taking any locking in the fork context can lead to deadlocks.
   // If any locks are already taken, it's too late to do this check.
-  CheckNoLocks(thr);
+  CheckedMutex::CheckNoLocks();
   // For the same reason check we didn't lock thread_registry yet.
   if (SANITIZER_DEBUG)
     ThreadRegistryLock l(ctx->thread_registry);
@@ -285,7 +285,7 @@ void ScopedReportBase::AddMutex(const SyncVar *s) {
   rm->stack = SymbolizeStackId(s->creation_stack_id);
 }
 
-u64 ScopedReportBase::AddMutex(u64 id) {
+u64 ScopedReportBase::AddMutex(u64 id) NO_THREAD_SAFETY_ANALYSIS {
   u64 uid = 0;
   u64 mid = id;
   uptr addr = SyncVar::SplitId(id, &uid);
@@ -596,7 +596,7 @@ static bool RaceBetweenAtomicAndFree(ThreadState *thr) {
 }
 
 void ReportRace(ThreadState *thr) {
-  CheckNoLocks(thr);
+  CheckedMutex::CheckNoLocks();
 
   // Symbolizer makes lots of intercepted calls. If we try to process them,
   // at best it will cause deadlocks on internal mutexes.

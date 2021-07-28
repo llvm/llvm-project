@@ -16,7 +16,7 @@
 // DFSAN_FLAG(Type, Name, DefaultValue, Description)
 // See COMMON_FLAG in sanitizer_flags.inc for more details.
 
-DFSAN_FLAG(bool, warn_unimplemented, true,
+DFSAN_FLAG(bool, warn_unimplemented, false,
            "Whether to warn on unimplemented functions.")
 DFSAN_FLAG(bool, warn_nonzero_labels, false,
            "Whether to warn on unimplemented functions.")

@@ -1,4 +1,4 @@
-//===----RTLs/hsa/src/rtl.cpp - Target RTLs Implementation -------- C++ -*-===//
+//===--- amdgpu/src/rtl.cpp --------------------------------------- C++ -*-===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -15,10 +15,7 @@
 #include <cstdio>
 #include <cstdlib>
 #include <cstring>
-#include <elf.h>
-#include <fstream>
 #include <functional>
-#include <iostream>
 #include <libelf.h>
 #include <list>
 #include <memory>
@@ -1969,7 +1966,7 @@ launchVals getLaunchVals(EnvironmentVariables Env, int ConstWGSize,
           num_groups = ((loop_tripcount - 1) / threadsPerGroup) + 1;
         } else if (ExecutionMode == GENERIC) {
           num_groups = loop_tripcount;
-        } else if (ExecutionMode == SPMD_GENERIC) {
+        } else /* ExecutionMode == SPMD_GENERIC */ {
           // This is a generic kernel that was transformed to use SPMD-mode
           // execution but uses Generic-mode semantics for scheduling.
           num_groups = loop_tripcount;

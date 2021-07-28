@@ -196,12 +196,10 @@ struct InterceptorContext {
   unsigned finalize_key;
 #endif
 
-  BlockingMutex atexit_mu;
+  Mutex atexit_mu;
   Vector<struct AtExitCtx *> AtExitStack;
 
-  InterceptorContext()
-      : libignore(LINKER_INITIALIZED), AtExitStack() {
-  }
+  InterceptorContext() : libignore(LINKER_INITIALIZED), atexit_mu(MutexTypeAtExit), AtExitStack() {}
 };
 
 static ALIGNED(64) char interceptor_placeholder[sizeof(InterceptorContext)];
@@ -267,7 +265,7 @@ ScopedInterceptor::~ScopedInterceptor() {
   if (!thr_->ignore_interceptors) {
     ProcessPendingSignals(thr_);
     FuncExit(thr_);
-    CheckNoLocks(thr_);
+    CheckedMutex::CheckNoLocks();
   }
 }
 
@@ -377,7 +375,7 @@ static void at_exit_wrapper() {
   AtExitCtx *ctx;
   {
     // Ensure thread-safety.
-    BlockingMutexLock l(&interceptor_ctx()->atexit_mu);
+    Lock l(&interceptor_ctx()->atexit_mu);
 
     // Pop AtExitCtx from the top of the stack of callback functions
     uptr element = interceptor_ctx()->AtExitStack.Size() - 1;
@@ -433,7 +431,10 @@ static int setup_at_exit_wrapper(ThreadState *thr, uptr pc, void(*f)(),
     // Store ctx in a local stack-like structure
 
     // Ensure thread-safety.
-    BlockingMutexLock l(&interceptor_ctx()->atexit_mu);
+    Lock l(&interceptor_ctx()->atexit_mu);
+    // __cxa_atexit calls calloc. If we don't ignore interceptors, we will fail
+    // due to atexit_mu held on exit from the calloc interceptor.
+    ScopedIgnoreInterceptors ignore;
 
     res = REAL(__cxa_atexit)((void (*)(void *a))at_exit_wrapper, 0, 0);
     // Push AtExitCtx on the top of the stack of callback functions
@@ -2422,6 +2423,10 @@ int sigaction_impl(int sig, const __sanitizer_sigaction *act,
   // the signal handler through rtl_sigaction, very bad things will happen.
   // The handler will run synchronously and corrupt tsan per-thread state.
   SCOPED_INTERCEPTOR_RAW(sigaction, sig, act, old);
+  if (sig <= 0 || sig >= kSigCount) {
+    errno = errno_EINVAL;
+    return -1;
+  }
   __sanitizer_sigaction *sigactions = interceptor_ctx()->sigactions;
   __sanitizer_sigaction old_stored;
   if (old) internal_memcpy(&old_stored, &sigactions[sig], sizeof(old_stored));

@@ -21,3 +21,11 @@
 // RUN: not %clang -fprofile-generate -flto=thin --target=powerpc64-ibm-aix %s 2>&1 | \
 // RUN: FileCheck %s --check-prefix=AIX-PROFILE-THINLTO
 // AIX-PROFILE-THINLTO: error: invalid argument '-fprofile-generate' only allowed with '-flto'
+
+// RUN: not %clang --target=powerpc-ibm-aix %s -mlong-double-128 2>&1 | \
+// RUN: FileCheck %s --check-prefix=AIX-LONGDOUBLE128-ERR
+// AIX-LONGDOUBLE128-ERR: error: unsupported option '-mlong-double-128' for target 'powerpc-ibm-aix'
+
+// RUN: not %clang --target=powerpc64-ibm-aix %s -mlong-double-128 2>&1 | \
+// RUN: FileCheck %s --check-prefix=AIX64-LONGDOUBLE128-ERR
+// AIX64-LONGDOUBLE128-ERR: error: unsupported option '-mlong-double-128' for target 'powerpc64-ibm-aix'

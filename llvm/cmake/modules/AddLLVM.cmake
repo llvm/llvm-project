@@ -651,10 +651,9 @@ function(llvm_add_library name)
     # property has been set to an empty value.
     set_property(TARGET ${name} PROPERTY LLVM_LINK_COMPONENTS ${ARG_LINK_COMPONENTS} ${LLVM_LINK_COMPONENTS})
 
-    # These two properties are internal properties only used to make sure the
+    # This property is an internal property only used to make sure the
     # link step applied in LLVMBuildResolveComponentsLink uses the same
-    # properties as the target_link_libraries call below.
-    set_property(TARGET ${name} PROPERTY LLVM_LINK_LIBS ${ARG_LINK_LIBS})
+    # property as the target_link_libraries call below.
     set_property(TARGET ${name} PROPERTY LLVM_LIBTYPE ${libtype})
   endif()
 
@@ -1199,6 +1198,7 @@ if(NOT LLVM_TOOLCHAIN_TOOLS)
     llvm-objcopy
     llvm-objdump
     llvm-rc
+    llvm-readobj
     llvm-size
     llvm-strings
     llvm-strip
@@ -1213,6 +1213,7 @@ if(NOT LLVM_TOOLCHAIN_TOOLS)
     nm
     objcopy
     objdump
+    readelf
     size
     strings
     strip

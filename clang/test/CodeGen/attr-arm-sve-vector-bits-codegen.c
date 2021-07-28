@@ -7,6 +7,7 @@
 
 typedef svint32_t fixed_int32_t __attribute__((arm_sve_vector_bits(N)));
 typedef svbool_t fixed_bool_t __attribute__((arm_sve_vector_bits(N)));
+typedef uint8_t uint8_vec_t __attribute__((vector_size(N / 64)));
 
 fixed_bool_t global_pred;
 fixed_int32_t global_vec;
@@ -115,26 +116,26 @@ fixed_bool_t address_of_array_idx() {
 // CHECK-NEXT:    [[RETVAL:%.*]] = alloca <16 x i32>, align 16
 // CHECK-NEXT:    [[PRED_ADDR:%.*]] = alloca <vscale x 16 x i1>, align 2
 // CHECK-NEXT:    [[VEC_ADDR:%.*]] = alloca <vscale x 4 x i32>, align 16
-// CHECK-NEXT:    [[XX:%.*]] = alloca <16 x i32>, align 16
-// CHECK-NEXT:    [[YY:%.*]] = alloca <16 x i32>, align 16
+// CHECK-NEXT:    [[XX:%.*]] = alloca <8 x i8>, align 8
+// CHECK-NEXT:    [[YY:%.*]] = alloca <8 x i8>, align 8
 // CHECK-NEXT:    [[PG:%.*]] = alloca <vscale x 16 x i1>, align 2
 // CHECK-NEXT:    [[SAVED_VALUE:%.*]] = alloca <8 x i8>, align 8
-// CHECK-NEXT:    [[SAVED_VALUE1:%.*]] = alloca <16 x i32>, align 64
+// CHECK-NEXT:    [[SAVED_VALUE1:%.*]] = alloca <8 x i8>, align 8
 // CHECK-NEXT:    store <vscale x 16 x i1> [[PRED:%.*]], <vscale x 16 x i1>* [[PRED_ADDR]], align 2
 // CHECK-NEXT:    store <vscale x 4 x i32> [[VEC:%.*]], <vscale x 4 x i32>* [[VEC_ADDR]], align 16
-// CHECK-NEXT:    store <16 x i32> <i32 1, i32 2, i32 3, i32 4, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0>, <16 x i32>* [[XX]], align 16
-// CHECK-NEXT:    store <16 x i32> <i32 2, i32 5, i32 4, i32 6, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0>, <16 x i32>* [[YY]], align 16
+// CHECK-NEXT:    store <8 x i8> <i8 1, i8 2, i8 3, i8 4, i8 0, i8 0, i8 0, i8 0>, <8 x i8>* [[XX]], align 8
+// CHECK-NEXT:    store <8 x i8> <i8 2, i8 5, i8 4, i8 6, i8 0, i8 0, i8 0, i8 0>, <8 x i8>* [[YY]], align 8
 // CHECK-NEXT:    [[TMP0:%.*]] = load <vscale x 16 x i1>, <vscale x 16 x i1>* [[PRED_ADDR]], align 2
 // CHECK-NEXT:    [[TMP1:%.*]] = load <8 x i8>, <8 x i8>* @global_pred, align 2
 // CHECK-NEXT:    store <8 x i8> [[TMP1]], <8 x i8>* [[SAVED_VALUE]], align 8
 // CHECK-NEXT:    [[CASTFIXEDSVE:%.*]] = bitcast <8 x i8>* [[SAVED_VALUE]] to <vscale x 16 x i1>*
 // CHECK-NEXT:    [[TMP2:%.*]] = load <vscale x 16 x i1>, <vscale x 16 x i1>* [[CASTFIXEDSVE]], align 8
-// CHECK-NEXT:    [[TMP3:%.*]] = load <16 x i32>, <16 x i32>* [[XX]], align 16
-// CHECK-NEXT:    [[TMP4:%.*]] = load <16 x i32>, <16 x i32>* [[YY]], align 16
-// CHECK-NEXT:    [[ADD:%.*]] = add <16 x i32> [[TMP3]], [[TMP4]]
-// CHECK-NEXT:    store <16 x i32> [[ADD]], <16 x i32>* [[SAVED_VALUE1]], align 64
-// CHECK-NEXT:    [[CASTFIXEDSVE2:%.*]] = bitcast <16 x i32>* [[SAVED_VALUE1]] to <vscale x 16 x i1>*
-// CHECK-NEXT:    [[TMP5:%.*]] = load <vscale x 16 x i1>, <vscale x 16 x i1>* [[CASTFIXEDSVE2]], align 64
+// CHECK-NEXT:    [[TMP3:%.*]] = load <8 x i8>, <8 x i8>* [[XX]], align 8
+// CHECK-NEXT:    [[TMP4:%.*]] = load <8 x i8>, <8 x i8>* [[YY]], align 8
+// CHECK-NEXT:    [[ADD:%.*]] = add <8 x i8> [[TMP3]], [[TMP4]]
+// CHECK-NEXT:    store <8 x i8> [[ADD]], <8 x i8>* [[SAVED_VALUE1]], align 8
+// CHECK-NEXT:    [[CASTFIXEDSVE2:%.*]] = bitcast <8 x i8>* [[SAVED_VALUE1]] to <vscale x 16 x i1>*
+// CHECK-NEXT:    [[TMP5:%.*]] = load <vscale x 16 x i1>, <vscale x 16 x i1>* [[CASTFIXEDSVE2]], align 8
 // CHECK-NEXT:    [[TMP6:%.*]] = call <vscale x 16 x i1> @llvm.aarch64.sve.and.z.nxv16i1(<vscale x 16 x i1> [[TMP0]], <vscale x 16 x i1> [[TMP2]], <vscale x 16 x i1> [[TMP5]])
 // CHECK-NEXT:    store <vscale x 16 x i1> [[TMP6]], <vscale x 16 x i1>* [[PG]], align 2
 // CHECK-NEXT:    [[TMP7:%.*]] = load <vscale x 16 x i1>, <vscale x 16 x i1>* [[PG]], align 2
@@ -150,8 +151,8 @@ fixed_bool_t address_of_array_idx() {
 // CHECK-NEXT:    ret <vscale x 4 x i32> [[CASTSCALABLESVE4]]
 //
 fixed_int32_t test_cast(svbool_t pred, svint32_t vec) {
-  fixed_int32_t xx = {1, 2, 3, 4};
-  fixed_int32_t yy = {2, 5, 4, 6};
+  uint8_vec_t xx = {1, 2, 3, 4};
+  uint8_vec_t yy = {2, 5, 4, 6};
   svbool_t pg = svand_z(pred, global_pred, xx + yy);
   return svadd_m(pg, global_vec, vec);
 }

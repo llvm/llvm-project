@@ -17,6 +17,9 @@ struct ExpensiveToCopyType {
   Iterator<ExpensiveToCopyType> end() const;
   void nonConstMethod();
   bool constMethod() const;
+  template <typename A>
+  const A &templatedAccessor() const;
+  operator int() const; // Implicit conversion to int.
 };
 
 struct TrivialToCopyType {
@@ -659,3 +662,54 @@ void negativeStructuredBinding() {
   C.constMethod();
   D.constMethod();
 }
+
+template <typename A>
+const A &templatedReference();
+
+template <typename A, typename B>
+void negativeTemplateTypes() {
+  A Orig;
+  // Different replaced template type params do not trigger the check. In some
+  // template instantiation this might not be a copy but an implicit
+  // conversion, so converting this to a reference might not work.
+  B AmbiguousCopy = Orig;
+  // CHECK-NOT-FIXES: B AmbiguousCopy = Orig;
+
+  B NecessaryCopy = templatedReference<A>();
+  // CHECK-NOT-FIXES: B NecessaryCopy = templatedReference<A>();
+
+  B NecessaryCopy2 = Orig.template templatedAccessor<A>();
+
+  // Non-dependent types in template still trigger the check.
+  const auto UnnecessaryCopy = ExpensiveTypeReference();
+  // CHECK-MESSAGES: [[@LINE-1]]:14: warning: the const qualified variable 'UnnecessaryCopy' is copy-constructed
+  // CHECK-FIXES: const auto& UnnecessaryCopy = ExpensiveTypeReference();
+  UnnecessaryCopy.constMethod();
+}
+
+void instantiateNegativeTemplateTypes() {
+  negativeTemplateTypes<ExpensiveToCopyType, ExpensiveToCopyType>();
+  // This template instantiation would not compile if the `AmbiguousCopy` above was made a reference.
+  negativeTemplateTypes<ExpensiveToCopyType, int>();
+}
+
+template <typename A>
+void positiveSingleTemplateType() {
+  A Orig;
+  A SingleTmplParmTypeCopy = Orig;
+  // CHECK-MESSAGES: [[@LINE-1]]:5: warning: local copy 'SingleTmplParmTypeCopy' of the variable 'Orig' is never modified
+  // CHECK-FIXES: const A& SingleTmplParmTypeCopy = Orig;
+  SingleTmplParmTypeCopy.constMethod();
+
+  A UnnecessaryCopy2 = templatedReference<A>();
+  // CHECK-MESSAGES: [[@LINE-1]]:5: warning: the variable 'UnnecessaryCopy2' is copy-constructed from a const reference
+  // CHECK-FIXES: const A& UnnecessaryCopy2 = templatedReference<A>();
+  UnnecessaryCopy2.constMethod();
+
+  A UnnecessaryCopy3 = Orig.template templatedAccessor<A>();
+  // CHECK-MESSAGES: [[@LINE-1]]:5: warning: the variable 'UnnecessaryCopy3' is copy-constructed from a const reference
+  // CHECK-FIXES: const A& UnnecessaryCopy3 = Orig.template templatedAccessor<A>();
+  UnnecessaryCopy3.constMethod();
+}
+
+void instantiatePositiveSingleTemplateType() { positiveSingleTemplateType<ExpensiveToCopyType>(); }

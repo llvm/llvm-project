@@ -150,9 +150,9 @@ public:
                                    const TargetOptions &Opts)
       : WebAssemblyTargetInfo(T, Opts) {
     if (T.isOSEmscripten())
-      resetDataLayout("e-m:e-p:32:32-i64:64-f128:64-n32:64-S128-ni:1");
+      resetDataLayout("e-m:e-p:32:32-i64:64-f128:64-n32:64-S128-ni:1:10:20");
     else
-      resetDataLayout("e-m:e-p:32:32-i64:64-n32:64-S128-ni:1");
+      resetDataLayout("e-m:e-p:32:32-i64:64-n32:64-S128-ni:1:10:20");
   }
 
 protected:
@@ -172,9 +172,9 @@ public:
     PtrDiffType = SignedLong;
     IntPtrType = SignedLong;
     if (T.isOSEmscripten())
-      resetDataLayout("e-m:e-p:64:64-i64:64-f128:64-n32:64-S128-ni:1");
+      resetDataLayout("e-m:e-p:64:64-i64:64-f128:64-n32:64-S128-ni:1:10:20");
     else
-      resetDataLayout("e-m:e-p:64:64-i64:64-n32:64-S128-ni:1");
+      resetDataLayout("e-m:e-p:64:64-i64:64-n32:64-S128-ni:1:10:20");
   }
 
 protected:

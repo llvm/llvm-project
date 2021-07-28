@@ -165,6 +165,30 @@ def conv_2d_input_nhwc_filter_ohwi_poly(
            D.ic]) * cast(U, K[D.oc, D.kh, D.kw, D.ic])
 
 @linalg_structured_op
+def conv_2d_input_nhwc_filter_ohwi_poly_q(
+    I=TensorDef(T1, S.N, S.IH, S.IW, S.IC),
+    K=TensorDef(T2, S.OC, S.KH, S.KW, S.IC),
+    IZp=ScalarDef(I32),
+    KZp=ScalarDef(I32),
+    O=TensorDef(U, S.N, S.OH, S.OW, S.OC, output=True),
+    strides=AttributeDef(S.SH, S.SW),
+    dilations=AttributeDef(S.DH, S.DW)):
+  """Performs a 2-D quantized convolution.
+
+  Numeric casting is performed on the operands to the inner multiply, promoting
+  them to the same data type as the accumulator/output. Includes zero point
+  adjustment for quantization.
+  """
+  domain(D.n, D.oh, D.ow, D.kh, D.kw, D.oc, D.ic)
+  O[D.n, D.oh, D.ow, D.oc] += ((cast(
+      U, I[D.n,
+           D.oh * S.SH + D.kh * S.DH,
+           D.ow * S.SW + D.kw * S.DW,
+           D.ic]) - cast(U, IZp)) *
+           (cast(U, K[D.oc, D.kh, D.kw, D.ic]) - cast(U, KZp)))
+
+
+@linalg_structured_op
 def depthwise_conv_2d_input_nhwc_filter_hwc_poly(
     I=TensorDef(T1, S.N, S.IH, S.IW, S.C),
     K=TensorDef(T2, S.KH, S.KW, S.C),

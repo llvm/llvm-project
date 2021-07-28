@@ -113,6 +113,7 @@ set(LLVM_TEST_DEPENDS
           llvm-sim
           llvm-size
           llvm-split
+          llvm-stress
           llvm-strings
           llvm-strip
           llvm-symbolizer

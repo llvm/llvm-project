@@ -158,12 +158,12 @@ TEST(SanitizerCommon, BlockingMutex) {
   check_locked(mtx);
 }
 
-TEST(SanitizerCommon, Mutex2) {
-  Mutex2 mtx;
-  TestData<Mutex2> data(&mtx);
+TEST(SanitizerCommon, Mutex) {
+  Mutex mtx;
+  TestData<Mutex> data(&mtx);
   pthread_t threads[kThreads];
   for (int i = 0; i < kThreads; i++)
-    PTHREAD_CREATE(&threads[i], 0, read_write_thread<Mutex2>, &data);
+    PTHREAD_CREATE(&threads[i], 0, read_write_thread<Mutex>, &data);
   for (int i = 0; i < kThreads; i++) PTHREAD_JOIN(threads[i], 0);
 }
 

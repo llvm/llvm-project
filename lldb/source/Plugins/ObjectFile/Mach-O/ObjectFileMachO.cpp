@@ -62,6 +62,7 @@
 #include <uuid/uuid.h>
 #endif
 
+#include <bitset>
 #include <memory>
 
 #if LLVM_SUPPORT_XCODE_SIGNPOSTS
@@ -5571,6 +5572,46 @@ std::string ObjectFileMachO::GetIdentifierString() {
   return result;
 }
 
+addr_t ObjectFileMachO::GetAddressMask() {
+  addr_t mask = 0;
+  ModuleSP module_sp(GetModule());
+  if (module_sp) {
+    std::lock_guard<std::recursive_mutex> guard(module_sp->GetMutex());
+    lldb::offset_t offset = MachHeaderSizeFromMagic(m_header.magic);
+    for (uint32_t i = 0; i < m_header.ncmds; ++i) {
+      const uint32_t cmd_offset = offset;
+      llvm::MachO::load_command lc;
+      if (m_data.GetU32(&offset, &lc.cmd, 2) == nullptr)
+        break;
+      if (lc.cmd == LC_NOTE) {
+        char data_owner[17];
+        m_data.CopyData(offset, 16, data_owner);
+        data_owner[16] = '\0';
+        offset += 16;
+        uint64_t fileoff = m_data.GetU64_unchecked(&offset);
+
+        // "addrable bits" has a uint32_t version and a uint32_t
+        // number of bits used in addressing.
+        if (strcmp("addrable bits", data_owner) == 0) {
+          offset = fileoff;
+          uint32_t version;
+          if (m_data.GetU32(&offset, &version, 1) != nullptr) {
+            if (version == 3) {
+              uint32_t num_addr_bits = m_data.GetU32_unchecked(&offset);
+              if (num_addr_bits != 0) {
+                mask = ~((1ULL << num_addr_bits) - 1);
+              }
+              break;
+            }
+          }
+        }
+      }
+      offset = cmd_offset + lc.cmdsize;
+    }
+  }
+  return mask;
+}
+
 bool ObjectFileMachO::GetCorefileMainBinaryInfo(addr_t &address, UUID &uuid,
                                                 ObjectFile::BinaryType &type) {
   address = LLDB_INVALID_ADDRESS;
@@ -6652,6 +6693,15 @@ bool ObjectFileMachO::SaveCore(const lldb::ProcessSP &process_sp,
           mach_header.sizeofcmds += 8 + LC_THREAD_data.GetSize();
         }
 
+        // Bits will be set to indicate which bits are NOT used in
+        // addressing in this process or 0 for unknown.
+        uint64_t address_mask = process_sp->GetCodeAddressMask();
+        if (address_mask != 0) {
+          // LC_NOTE "addrable bits"
+          mach_header.ncmds++;
+          mach_header.sizeofcmds += sizeof(llvm::MachO::note_command);
+        }
+
         // LC_NOTE "all image infos"
         mach_header.ncmds++;
         mach_header.sizeofcmds += sizeof(llvm::MachO::note_command);
@@ -6673,28 +6723,48 @@ bool ObjectFileMachO::SaveCore(const lldb::ProcessSP &process_sp,
         addr_t file_offset = buffer.GetSize() + mach_header.sizeofcmds;
 
         file_offset = llvm::alignTo(file_offset, 16);
+        std::vector<std::unique_ptr<LCNoteEntry>> lc_notes;
 
-        // Create the "all image infos" LC_NOTE payload
-        StreamString all_image_infos_payload(Stream::eBinary, addr_byte_size,
-                                             byte_order);
-        offset_t all_image_infos_payload_start = file_offset;
-        file_offset = CreateAllImageInfosPayload(process_sp, file_offset,
-                                                 all_image_infos_payload);
+        // Add "addrable bits" LC_NOTE when an address mask is available
+        if (address_mask != 0) {
+          std::unique_ptr<LCNoteEntry> addrable_bits_lcnote_up(
+              new LCNoteEntry(addr_byte_size, byte_order));
+          addrable_bits_lcnote_up->name = "addrable bits";
+          addrable_bits_lcnote_up->payload_file_offset = file_offset;
+          int bits = std::bitset<64>(~address_mask).count();
+          addrable_bits_lcnote_up->payload.PutHex32(3); // version
+          addrable_bits_lcnote_up->payload.PutHex32(
+              bits); // # of bits used for addressing
+          addrable_bits_lcnote_up->payload.PutHex64(0); // unused
 
-        // Add the "all image infos" LC_NOTE load command
-        llvm::MachO::note_command all_image_info_note = {
-            LC_NOTE,                           /* uint32_t cmd */
-            sizeof(llvm::MachO::note_command), /* uint32_t cmdsize */
-            "all image infos",                 /* char data_owner[16] */
-            all_image_infos_payload_start,     /* uint64_t offset */
-            file_offset - all_image_infos_payload_start /* uint64_t size */
-        };
-        buffer.PutHex32(all_image_info_note.cmd);
-        buffer.PutHex32(all_image_info_note.cmdsize);
-        buffer.PutRawBytes(all_image_info_note.data_owner,
-                           sizeof(all_image_info_note.data_owner));
-        buffer.PutHex64(all_image_info_note.offset);
-        buffer.PutHex64(all_image_info_note.size);
+          file_offset += addrable_bits_lcnote_up->payload.GetSize();
+
+          lc_notes.push_back(std::move(addrable_bits_lcnote_up));
+        }
+
+        // Add "all image infos" LC_NOTE
+        std::unique_ptr<LCNoteEntry> all_image_infos_lcnote_up(
+            new LCNoteEntry(addr_byte_size, byte_order));
+        all_image_infos_lcnote_up->name = "all image infos";
+        all_image_infos_lcnote_up->payload_file_offset = file_offset;
+        file_offset = CreateAllImageInfosPayload(
+            process_sp, file_offset, all_image_infos_lcnote_up->payload);
+        lc_notes.push_back(std::move(all_image_infos_lcnote_up));
+
+        // Add LC_NOTE load commands
+        for (auto &lcnote : lc_notes) {
+          // Add the LC_NOTE load command to the file.
+          buffer.PutHex32(LC_NOTE);
+          buffer.PutHex32(sizeof(llvm::MachO::note_command));
+          char namebuf[16];
+          memset(namebuf, 0, sizeof(namebuf));
+          // this is the uncommon case where strncpy is exactly
+          // the right one, doesn't need to be nul terminated.
+          strncpy(namebuf, lcnote->name.c_str(), sizeof(namebuf));
+          buffer.PutRawBytes(namebuf, sizeof(namebuf));
+          buffer.PutHex64(lcnote->payload_file_offset);
+          buffer.PutHex64(lcnote->payload.GetSize());
+        }
 
         // Align to 4096-byte page boundary for the LC_SEGMENTs.
         file_offset = llvm::alignTo(file_offset, 4096);
@@ -6749,18 +6819,20 @@ bool ObjectFileMachO::SaveCore(const lldb::ProcessSP &process_sp,
               core_file.get()->Write(buffer.GetString().data(), bytes_written);
           if (error.Success()) {
 
-            if (core_file.get()->SeekFromStart(all_image_info_note.offset) ==
-                -1) {
-              error.SetErrorStringWithFormat(
-                  "Unable to seek to corefile pos to write all iamge infos");
-              return false;
+            for (auto &lcnote : lc_notes) {
+              if (core_file.get()->SeekFromStart(lcnote->payload_file_offset) ==
+                  -1) {
+                error.SetErrorStringWithFormat("Unable to seek to corefile pos "
+                                               "to write '%s' LC_NOTE payload",
+                                               lcnote->name.c_str());
+                return false;
+              }
+              bytes_written = lcnote->payload.GetSize();
+              error = core_file.get()->Write(lcnote->payload.GetData(),
+                                             bytes_written);
+              if (!error.Success())
+                return false;
             }
-
-            bytes_written = all_image_infos_payload.GetString().size();
-            error = core_file.get()->Write(
-                all_image_infos_payload.GetString().data(), bytes_written);
-            if (!error.Success())
-              return false;
 
             // Now write the file data for all memory segments in the process
             for (const auto &segment : segment_load_commands) {

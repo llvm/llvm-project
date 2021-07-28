@@ -642,11 +642,34 @@ public:
       DeviceData[DeviceId].BlocksPerGrid = EnvTeamLimit;
     }
 
+    size_t StackLimit;
+    size_t HeapLimit;
+    if (const char *EnvStr = getenv("LIBOMPTARGET_STACK_SIZE")) {
+      StackLimit = std::stol(EnvStr);
+      if (cuCtxSetLimit(CU_LIMIT_STACK_SIZE, StackLimit) != CUDA_SUCCESS)
+        return OFFLOAD_FAIL;
+    } else {
+      if (cuCtxGetLimit(&StackLimit, CU_LIMIT_STACK_SIZE) != CUDA_SUCCESS)
+        return OFFLOAD_FAIL;
+    }
+    if (const char *EnvStr = getenv("LIBOMPTARGET_HEAP_SIZE")) {
+      HeapLimit = std::stol(EnvStr);
+      if (cuCtxSetLimit(CU_LIMIT_MALLOC_HEAP_SIZE, HeapLimit) != CUDA_SUCCESS)
+        return OFFLOAD_FAIL;
+    } else {
+      if (cuCtxGetLimit(&HeapLimit, CU_LIMIT_MALLOC_HEAP_SIZE) != CUDA_SUCCESS)
+        return OFFLOAD_FAIL;
+    }
+
     INFO(OMP_INFOTYPE_PLUGIN_KERNEL, DeviceId,
          "Device supports up to %d CUDA blocks and %d threads with a "
          "warp size of %d\n",
          DeviceData[DeviceId].BlocksPerGrid,
          DeviceData[DeviceId].ThreadsPerBlock, DeviceData[DeviceId].WarpSize);
+    INFO(OMP_INFOTYPE_PLUGIN_KERNEL, DeviceId,
+         "Device heap size is %d Bytes, device stack size is %d Bytes per "
+         "thread\n",
+         (int)HeapLimit, (int)StackLimit);
 
     // Set default number of teams
     if (EnvNumTeams > 0) {
@@ -1069,6 +1092,9 @@ public:
           // `teams distribute` region and will create var too few blocks using
           // the regular SPMD-mode method.
           CudaBlocksPerGrid = LoopTripCount;
+        } else {
+          REPORT("Unknown execution mode: %d\n", KernelInfo->ExecutionMode);
+          return OFFLOAD_FAIL;
         }
         DP("Using %d teams due to loop trip count %" PRIu32
            " and number of threads per block %d\n",
@@ -1093,9 +1119,10 @@ public:
              ? getOffloadEntry(DeviceId, TgtEntryPtr)->name
              : "(null)",
          CudaBlocksPerGrid, CudaThreadsPerBlock,
-         (KernelInfo->ExecutionMode != SPMD 
-             ? (KernelInfo->ExecutionMode == GENERIC ? "Generic" : "SPMD-Generic")
-             : "SPMD"));
+         (KernelInfo->ExecutionMode != SPMD
+              ? (KernelInfo->ExecutionMode == GENERIC ? "Generic"
+                                                      : "SPMD-Generic")
+              : "SPMD"));
 
     CUstream Stream = getStream(DeviceId, AsyncInfo);
     Err = cuLaunchKernel(KernelInfo->Func, CudaBlocksPerGrid, /* gridDimY */ 1,

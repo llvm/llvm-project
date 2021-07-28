@@ -18,8 +18,8 @@
 // Calls to the NVPTX layer (assuming 1D layout)
 EXTERN int __kmpc_get_hardware_thread_id_in_block();
 EXTERN int GetBlockIdInKernel();
-EXTERN int GetNumberOfBlocksInKernel();
-EXTERN int GetNumberOfThreadsInBlock();
+EXTERN int __kmpc_get_hardware_num_blocks();
+EXTERN int __kmpc_get_hardware_num_threads_in_block();
 EXTERN unsigned GetWarpId();
 EXTERN unsigned GetWarpSize();
 EXTERN unsigned GetLaneId();

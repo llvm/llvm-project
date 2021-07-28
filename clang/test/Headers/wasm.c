@@ -458,8 +458,8 @@ v128_t test_i8x16_splat(int8_t a) {
 // CHECK-LABEL: @test_i8x16_extract_lane(
 // CHECK-NEXT:  entry:
 // CHECK-NEXT:    [[TMP0:%.*]] = bitcast <4 x i32> [[A:%.*]] to <16 x i8>
-// CHECK-NEXT:    [[TMP1:%.*]] = extractelement <16 x i8> [[TMP0]], i32 15
-// CHECK-NEXT:    ret i8 [[TMP1]]
+// CHECK-NEXT:    [[VECEXT_I:%.*]] = extractelement <16 x i8> [[TMP0]], i32 15
+// CHECK-NEXT:    ret i8 [[VECEXT_I]]
 //
 int8_t test_i8x16_extract_lane(v128_t a) {
   return wasm_i8x16_extract_lane(a, 15);
@@ -468,8 +468,8 @@ int8_t test_i8x16_extract_lane(v128_t a) {
 // CHECK-LABEL: @test_u8x16_extract_lane(
 // CHECK-NEXT:  entry:
 // CHECK-NEXT:    [[TMP0:%.*]] = bitcast <4 x i32> [[A:%.*]] to <16 x i8>
-// CHECK-NEXT:    [[TMP1:%.*]] = extractelement <16 x i8> [[TMP0]], i32 15
-// CHECK-NEXT:    ret i8 [[TMP1]]
+// CHECK-NEXT:    [[VECEXT_I:%.*]] = extractelement <16 x i8> [[TMP0]], i32 15
+// CHECK-NEXT:    ret i8 [[VECEXT_I]]
 //
 uint8_t test_u8x16_extract_lane(v128_t a) {
   return wasm_u8x16_extract_lane(a, 15);
@@ -478,9 +478,9 @@ uint8_t test_u8x16_extract_lane(v128_t a) {
 // CHECK-LABEL: @test_i8x16_replace_lane(
 // CHECK-NEXT:  entry:
 // CHECK-NEXT:    [[TMP0:%.*]] = bitcast <4 x i32> [[A:%.*]] to <16 x i8>
-// CHECK-NEXT:    [[TMP1:%.*]] = insertelement <16 x i8> [[TMP0]], i8 [[B:%.*]], i32 15
-// CHECK-NEXT:    [[TMP2:%.*]] = bitcast <16 x i8> [[TMP1]] to <4 x i32>
-// CHECK-NEXT:    ret <4 x i32> [[TMP2]]
+// CHECK-NEXT:    [[VECINS_I:%.*]] = insertelement <16 x i8> [[TMP0]], i8 [[B:%.*]], i32 15
+// CHECK-NEXT:    [[TMP1:%.*]] = bitcast <16 x i8> [[VECINS_I]] to <4 x i32>
+// CHECK-NEXT:    ret <4 x i32> [[TMP1]]
 //
 v128_t test_i8x16_replace_lane(v128_t a, int8_t b) {
   return wasm_i8x16_replace_lane(a, 15, b);
@@ -500,8 +500,8 @@ v128_t test_i16x8_splat(int16_t a) {
 // CHECK-LABEL: @test_i16x8_extract_lane(
 // CHECK-NEXT:  entry:
 // CHECK-NEXT:    [[TMP0:%.*]] = bitcast <4 x i32> [[A:%.*]] to <8 x i16>
-// CHECK-NEXT:    [[TMP1:%.*]] = extractelement <8 x i16> [[TMP0]], i32 7
-// CHECK-NEXT:    ret i16 [[TMP1]]
+// CHECK-NEXT:    [[VECEXT_I:%.*]] = extractelement <8 x i16> [[TMP0]], i32 7
+// CHECK-NEXT:    ret i16 [[VECEXT_I]]
 //
 int16_t test_i16x8_extract_lane(v128_t a) {
   return wasm_i16x8_extract_lane(a, 7);
@@ -510,8 +510,8 @@ int16_t test_i16x8_extract_lane(v128_t a) {
 // CHECK-LABEL: @test_u16x8_extract_lane(
 // CHECK-NEXT:  entry:
 // CHECK-NEXT:    [[TMP0:%.*]] = bitcast <4 x i32> [[A:%.*]] to <8 x i16>
-// CHECK-NEXT:    [[TMP1:%.*]] = extractelement <8 x i16> [[TMP0]], i32 7
-// CHECK-NEXT:    ret i16 [[TMP1]]
+// CHECK-NEXT:    [[VECEXT_I:%.*]] = extractelement <8 x i16> [[TMP0]], i32 7
+// CHECK-NEXT:    ret i16 [[VECEXT_I]]
 //
 uint16_t test_u16x8_extract_lane(v128_t a) {
   return wasm_u16x8_extract_lane(a, 7);
@@ -520,9 +520,9 @@ uint16_t test_u16x8_extract_lane(v128_t a) {
 // CHECK-LABEL: @test_i16x8_replace_lane(
 // CHECK-NEXT:  entry:
 // CHECK-NEXT:    [[TMP0:%.*]] = bitcast <4 x i32> [[A:%.*]] to <8 x i16>
-// CHECK-NEXT:    [[TMP1:%.*]] = insertelement <8 x i16> [[TMP0]], i16 [[B:%.*]], i32 7
-// CHECK-NEXT:    [[TMP2:%.*]] = bitcast <8 x i16> [[TMP1]] to <4 x i32>
-// CHECK-NEXT:    ret <4 x i32> [[TMP2]]
+// CHECK-NEXT:    [[VECINS_I:%.*]] = insertelement <8 x i16> [[TMP0]], i16 [[B:%.*]], i32 7
+// CHECK-NEXT:    [[TMP1:%.*]] = bitcast <8 x i16> [[VECINS_I]] to <4 x i32>
+// CHECK-NEXT:    ret <4 x i32> [[TMP1]]
 //
 v128_t test_i16x8_replace_lane(v128_t a, int16_t b) {
   return wasm_i16x8_replace_lane(a, 7, b);
@@ -540,8 +540,8 @@ v128_t test_i32x4_splat(int32_t a) {
 
 // CHECK-LABEL: @test_i32x4_extract_lane(
 // CHECK-NEXT:  entry:
-// CHECK-NEXT:    [[TMP0:%.*]] = extractelement <4 x i32> [[A:%.*]], i32 3
-// CHECK-NEXT:    ret i32 [[TMP0]]
+// CHECK-NEXT:    [[VECEXT_I:%.*]] = extractelement <4 x i32> [[A:%.*]], i32 3
+// CHECK-NEXT:    ret i32 [[VECEXT_I]]
 //
 int32_t test_i32x4_extract_lane(v128_t a) {
   return wasm_i32x4_extract_lane(a, 3);
@@ -549,8 +549,8 @@ int32_t test_i32x4_extract_lane(v128_t a) {
 
 // CHECK-LABEL: @test_i32x4_replace_lane(
 // CHECK-NEXT:  entry:
-// CHECK-NEXT:    [[TMP0:%.*]] = insertelement <4 x i32> [[A:%.*]], i32 [[B:%.*]], i32 3
-// CHECK-NEXT:    ret <4 x i32> [[TMP0]]
+// CHECK-NEXT:    [[VECINS_I:%.*]] = insertelement <4 x i32> [[A:%.*]], i32 [[B:%.*]], i32 3
+// CHECK-NEXT:    ret <4 x i32> [[VECINS_I]]
 //
 v128_t test_i32x4_replace_lane(v128_t a, int32_t b) {
   return wasm_i32x4_replace_lane(a, 3, b);
@@ -570,8 +570,8 @@ v128_t test_i64x2_splat(int64_t a) {
 // CHECK-LABEL: @test_i64x2_extract_lane(
 // CHECK-NEXT:  entry:
 // CHECK-NEXT:    [[TMP0:%.*]] = bitcast <4 x i32> [[A:%.*]] to <2 x i64>
-// CHECK-NEXT:    [[TMP1:%.*]] = extractelement <2 x i64> [[TMP0]], i32 1
-// CHECK-NEXT:    ret i64 [[TMP1]]
+// CHECK-NEXT:    [[VECEXT_I:%.*]] = extractelement <2 x i64> [[TMP0]], i32 1
+// CHECK-NEXT:    ret i64 [[VECEXT_I]]
 //
 int64_t test_i64x2_extract_lane(v128_t a) {
   return wasm_i64x2_extract_lane(a, 1);
@@ -580,9 +580,9 @@ int64_t test_i64x2_extract_lane(v128_t a) {
 // CHECK-LABEL: @test_i64x2_replace_lane(
 // CHECK-NEXT:  entry:
 // CHECK-NEXT:    [[TMP0:%.*]] = bitcast <4 x i32> [[A:%.*]] to <2 x i64>
-// CHECK-NEXT:    [[TMP1:%.*]] = insertelement <2 x i64> [[TMP0]], i64 [[B:%.*]], i32 1
-// CHECK-NEXT:    [[TMP2:%.*]] = bitcast <2 x i64> [[TMP1]] to <4 x i32>
-// CHECK-NEXT:    ret <4 x i32> [[TMP2]]
+// CHECK-NEXT:    [[VECINS_I:%.*]] = insertelement <2 x i64> [[TMP0]], i64 [[B:%.*]], i32 1
+// CHECK-NEXT:    [[TMP1:%.*]] = bitcast <2 x i64> [[VECINS_I]] to <4 x i32>
+// CHECK-NEXT:    ret <4 x i32> [[TMP1]]
 //
 v128_t test_i64x2_replace_lane(v128_t a, int64_t b) {
   return wasm_i64x2_replace_lane(a, 1, b);
@@ -602,8 +602,8 @@ v128_t test_f32x4_splat(float a) {
 // CHECK-LABEL: @test_f32x4_extract_lane(
 // CHECK-NEXT:  entry:
 // CHECK-NEXT:    [[TMP0:%.*]] = bitcast <4 x i32> [[A:%.*]] to <4 x float>
-// CHECK-NEXT:    [[TMP1:%.*]] = extractelement <4 x float> [[TMP0]], i32 3
-// CHECK-NEXT:    ret float [[TMP1]]
+// CHECK-NEXT:    [[VECEXT_I:%.*]] = extractelement <4 x float> [[TMP0]], i32 3
+// CHECK-NEXT:    ret float [[VECEXT_I]]
 //
 float test_f32x4_extract_lane(v128_t a) {
   return wasm_f32x4_extract_lane(a, 3);
@@ -612,9 +612,9 @@ float test_f32x4_extract_lane(v128_t a) {
 // CHECK-LABEL: @test_f32x4_replace_lane(
 // CHECK-NEXT:  entry:
 // CHECK-NEXT:    [[TMP0:%.*]] = bitcast <4 x i32> [[A:%.*]] to <4 x float>
-// CHECK-NEXT:    [[TMP1:%.*]] = insertelement <4 x float> [[TMP0]], float [[B:%.*]], i32 3
-// CHECK-NEXT:    [[TMP2:%.*]] = bitcast <4 x float> [[TMP1]] to <4 x i32>
-// CHECK-NEXT:    ret <4 x i32> [[TMP2]]
+// CHECK-NEXT:    [[VECINS_I:%.*]] = insertelement <4 x float> [[TMP0]], float [[B:%.*]], i32 3
+// CHECK-NEXT:    [[TMP1:%.*]] = bitcast <4 x float> [[VECINS_I]] to <4 x i32>
+// CHECK-NEXT:    ret <4 x i32> [[TMP1]]
 //
 v128_t test_f32x4_replace_lane(v128_t a, float b) {
   return wasm_f32x4_replace_lane(a, 3, b);
@@ -634,8 +634,8 @@ v128_t test_f64x2_splat(double a) {
 // CHECK-LABEL: @test_f64x2_extract_lane(
 // CHECK-NEXT:  entry:
 // CHECK-NEXT:    [[TMP0:%.*]] = bitcast <4 x i32> [[A:%.*]] to <2 x double>
-// CHECK-NEXT:    [[TMP1:%.*]] = extractelement <2 x double> [[TMP0]], i32 1
-// CHECK-NEXT:    ret double [[TMP1]]
+// CHECK-NEXT:    [[VECEXT_I:%.*]] = extractelement <2 x double> [[TMP0]], i32 1
+// CHECK-NEXT:    ret double [[VECEXT_I]]
 //
 double test_f64x2_extract_lane(v128_t a) {
   return wasm_f64x2_extract_lane(a, 1);
@@ -644,9 +644,9 @@ double test_f64x2_extract_lane(v128_t a) {
 // CHECK-LABEL: @test_f64x2_replace_lane(
 // CHECK-NEXT:  entry:
 // CHECK-NEXT:    [[TMP0:%.*]] = bitcast <4 x i32> [[A:%.*]] to <2 x double>
-// CHECK-NEXT:    [[TMP1:%.*]] = insertelement <2 x double> [[TMP0]], double [[B:%.*]], i32 1
-// CHECK-NEXT:    [[TMP2:%.*]] = bitcast <2 x double> [[TMP1]] to <4 x i32>
-// CHECK-NEXT:    ret <4 x i32> [[TMP2]]
+// CHECK-NEXT:    [[VECINS_I:%.*]] = insertelement <2 x double> [[TMP0]], double [[B:%.*]], i32 1
+// CHECK-NEXT:    [[TMP1:%.*]] = bitcast <2 x double> [[VECINS_I]] to <4 x i32>
+// CHECK-NEXT:    ret <4 x i32> [[TMP1]]
 //
 v128_t test_f64x2_replace_lane(v128_t a, double b) {
   return wasm_f64x2_replace_lane(a, 1, b);

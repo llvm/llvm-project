@@ -15,7 +15,6 @@
 #include "sanitizer_common/sanitizer_stacktrace.h"
 #include "sanitizer_common/sanitizer_vector.h"
 #include "tsan_interface_ann.h"
-#include "tsan_mutex.h"
 #include "tsan_report.h"
 #include "tsan_rtl.h"
 #include "tsan_mman.h"
@@ -38,7 +37,7 @@ class ScopedAnnotation {
 
   ~ScopedAnnotation() {
     FuncExit(thr_);
-    CheckNoLocks(thr_);
+    CheckedMutex::CheckNoLocks();
   }
  private:
   ThreadState *const thr_;

@@ -3920,6 +3920,34 @@ void __kmpc_proxy_task_completed(kmp_int32 gtid, kmp_task_t *ptask) {
             gtid, taskdata));
 }
 
+void __kmpc_give_task(kmp_task_t *ptask, kmp_int32 start = 0) {
+  KMP_DEBUG_ASSERT(ptask != NULL);
+  kmp_taskdata_t *taskdata = KMP_TASK_TO_TASKDATA(ptask);
+
+  // Enqueue task to complete bottom half completion from a thread within the
+  // corresponding team
+  kmp_team_t *team = taskdata->td_team;
+  kmp_int32 nthreads = team->t.t_nproc;
+  kmp_info_t *thread;
+
+  // This should be similar to start_k = __kmp_get_random( thread ) % nthreads
+  // but we cannot use __kmp_get_random here
+  kmp_int32 start_k = start;
+  kmp_int32 pass = 1;
+  kmp_int32 k = start_k;
+
+  do {
+    // For now we're just linearly trying to find a thread
+    thread = team->t.t_threads[k];
+    k = (k + 1) % nthreads;
+
+    // we did a full pass through all the threads
+    if (k == start_k)
+      pass = pass << 1;
+
+  } while (!__kmp_give_task(thread, k, ptask, pass));
+}
+
 /*!
 @ingroup TASKING
 @param ptask Task which execution is completed
@@ -3940,28 +3968,7 @@ void __kmpc_proxy_task_completed_ooo(kmp_task_t *ptask) {
 
   __kmp_first_top_half_finish_proxy(taskdata);
 
-  // Enqueue task to complete bottom half completion from a thread within the
-  // corresponding team
-  kmp_team_t *team = taskdata->td_team;
-  kmp_int32 nthreads = team->t.t_nproc;
-  kmp_info_t *thread;
-
-  // This should be similar to start_k = __kmp_get_random( thread ) % nthreads
-  // but we cannot use __kmp_get_random here
-  kmp_int32 start_k = 0;
-  kmp_int32 pass = 1;
-  kmp_int32 k = start_k;
-
-  do {
-    // For now we're just linearly trying to find a thread
-    thread = team->t.t_threads[k];
-    k = (k + 1) % nthreads;
-
-    // we did a full pass through all the threads
-    if (k == start_k)
-      pass = pass << 1;
-
-  } while (!__kmp_give_task(thread, k, ptask, pass));
+  __kmpc_give_task(ptask);
 
   __kmp_second_top_half_finish_proxy(taskdata);
 

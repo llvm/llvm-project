@@ -525,9 +525,13 @@ ExprResult Sema::DefaultFunctionArrayConversion(Expr *E, bool Diagnose) {
     // An lvalue or rvalue of type "array of N T" or "array of unknown bound of
     // T" can be converted to an rvalue of type "pointer to T".
     //
-    if (getLangOpts().C99 || getLangOpts().CPlusPlus || E->isLValue())
-      E = ImpCastExprToType(E, Context.getArrayDecayedType(Ty),
-                            CK_ArrayToPointerDecay).get();
+    if (getLangOpts().C99 || getLangOpts().CPlusPlus || E->isLValue()) {
+      ExprResult Res = ImpCastExprToType(E, Context.getArrayDecayedType(Ty),
+                                         CK_ArrayToPointerDecay);
+      if (Res.isInvalid())
+        return ExprError();
+      E = Res.get();
+    }
   }
   return E;
 }
@@ -1540,11 +1544,6 @@ QualType Sema::UsualArithmeticConversions(ExprResult &LHS, ExprResult &RHS,
   // If both types are identical, no conversion is needed.
   if (LHSType == RHSType)
     return LHSType;
-
-  // ExtInt types aren't subject to conversions between them or normal integers,
-  // so this fails.
-  if(LHSType->isExtIntType() || RHSType->isExtIntType())
-    return QualType();
 
   // At this point, we have two different arithmetic types.
 

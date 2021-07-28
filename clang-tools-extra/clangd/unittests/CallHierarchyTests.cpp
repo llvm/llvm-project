@@ -26,6 +26,22 @@
 
 namespace clang {
 namespace clangd {
+
+llvm::raw_ostream &operator<<(llvm::raw_ostream &Stream,
+                              const CallHierarchyItem &Item) {
+  return Stream << Item.name << "@" << Item.selectionRange;
+}
+
+llvm::raw_ostream &operator<<(llvm::raw_ostream &Stream,
+                              const CallHierarchyIncomingCall &Call) {
+  Stream << "{ from: " << Call.from << ", ranges: [";
+  for (const auto &R : Call.fromRanges) {
+    Stream << R;
+    Stream << ", ";
+  }
+  return Stream << "] }";
+}
+
 namespace {
 
 using ::testing::AllOf;
@@ -250,6 +266,40 @@ TEST(CallHierarchy, IncomingMultiFile) {
   AST = Workspace.openFile("callee.cc");
   ASSERT_TRUE(bool(AST));
   CheckCallHierarchy(*AST, CalleeC.point(), testPath("callee.cc"));
+}
+
+TEST(CallHierarchy, CallInLocalVarDecl) {
+  // Tests that local variable declarations are not treated as callers
+  // (they're not indexed, so they can't be represented as call hierarchy
+  // items); instead, the caller should be the containing function.
+  // However, namespace-scope variable declarations should be treated as
+  // callers because those are indexed and there is no enclosing entity
+  // that would be a useful caller.
+  Annotations Source(R"cpp(
+    int call^ee();
+    void caller1() {
+      $call1[[callee]]();
+    }
+    void caller2() {
+      int localVar = $call2[[callee]]();
+    }
+    int caller3 = $call3[[callee]]();
+  )cpp");
+  TestTU TU = TestTU::withCode(Source.code());
+  auto AST = TU.build();
+  auto Index = TU.index();
+
+  std::vector<CallHierarchyItem> Items =
+      prepareCallHierarchy(AST, Source.point(), testPath(TU.Filename));
+  ASSERT_THAT(Items, ElementsAre(WithName("callee")));
+
+  auto Incoming = incomingCalls(Items[0], Index.get());
+  ASSERT_THAT(
+      Incoming,
+      ElementsAre(
+          AllOf(From(WithName("caller1")), FromRanges(Source.range("call1"))),
+          AllOf(From(WithName("caller2")), FromRanges(Source.range("call2"))),
+          AllOf(From(WithName("caller3")), FromRanges(Source.range("call3")))));
 }
 
 } // namespace

@@ -2771,12 +2771,15 @@ static bool FoldTwoEntryPHINode(PHINode *PN, const TargetTransformInfo &TTI,
   };
 
   // Don't fold i1 branches on PHIs which contain binary operators or
-  // select form of or/ands, unless one of the incoming values is an 'not' and
-  // another one is freely invertible.
+  // (possibly inverted) select form of or/ands,  unless one of
+  // the incoming values is an 'not' and another one is freely invertible.
   // These can often be turned into switches and other things.
   auto IsBinOpOrAnd = [](Value *V) {
     return match(
-        V, m_CombineOr(m_BinOp(), m_CombineOr(m_LogicalAnd(), m_LogicalOr())));
+        V, m_CombineOr(
+               m_BinOp(),
+               m_CombineOr(m_Select(m_Value(), m_ImmConstant(), m_Value()),
+                           m_Select(m_Value(), m_Value(), m_ImmConstant()))));
   };
   if (PN->getType()->isIntegerTy(1) &&
       (IsBinOpOrAnd(PN->getIncomingValue(0)) ||
@@ -2888,6 +2891,8 @@ bool SimplifyCFGOpt::SimplifyCondBranchToTwoReturns(BranchInst *BI,
   assert(BI->isConditional() && "Must be a conditional branch");
   BasicBlock *TrueSucc = BI->getSuccessor(0);
   BasicBlock *FalseSucc = BI->getSuccessor(1);
+  if (TrueSucc == FalseSucc)
+    return false;
   // NOTE: destinations may match, this could be degenerate uncond branch.
   ReturnInst *TrueRet = cast<ReturnInst>(TrueSucc->getTerminator());
   ReturnInst *FalseRet = cast<ReturnInst>(FalseSucc->getTerminator());
@@ -2909,13 +2914,9 @@ bool SimplifyCFGOpt::SimplifyCondBranchToTwoReturns(BranchInst *BI,
     FalseSucc->removePredecessor(BB);
     Builder.CreateRetVoid();
     EraseTerminatorAndDCECond(BI);
-    if (DTU) {
-      SmallVector<DominatorTree::UpdateType, 2> Updates;
-      Updates.push_back({DominatorTree::Delete, BB, TrueSucc});
-      if (TrueSucc != FalseSucc)
-        Updates.push_back({DominatorTree::Delete, BB, FalseSucc});
-      DTU->applyUpdates(Updates);
-    }
+    if (DTU)
+      DTU->applyUpdates({{DominatorTree::Delete, BB, TrueSucc},
+                         {DominatorTree::Delete, BB, FalseSucc}});
     return true;
   }
 
@@ -2972,13 +2973,9 @@ bool SimplifyCFGOpt::SimplifyCondBranchToTwoReturns(BranchInst *BI,
                     << *TrueSucc << "\nFALSEBLOCK: " << *FalseSucc);
 
   EraseTerminatorAndDCECond(BI);
-  if (DTU) {
-    SmallVector<DominatorTree::UpdateType, 2> Updates;
-    Updates.push_back({DominatorTree::Delete, BB, TrueSucc});
-    if (TrueSucc != FalseSucc)
-      Updates.push_back({DominatorTree::Delete, BB, FalseSucc});
-    DTU->applyUpdates(Updates);
-  }
+  if (DTU)
+    DTU->applyUpdates({{DominatorTree::Delete, BB, TrueSucc},
+                       {DominatorTree::Delete, BB, FalseSucc}});
 
   return true;
 }

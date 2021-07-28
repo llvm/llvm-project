@@ -380,13 +380,6 @@ public:
                                bool isForwardDecl, bool isInternal,
                                ClangASTMetadata *metadata = nullptr);
 
-  bool SetTagTypeKind(clang::QualType type, int kind) const;
-
-  bool SetDefaultAccessForRecordFields(clang::RecordDecl *record_decl,
-                                       int default_accessibility,
-                                       int *assigned_accessibilities,
-                                       size_t num_assigned_accessibilities);
-
   // Returns a mask containing bits from the TypeSystemClang::eTypeXXX
   // enumerations
 

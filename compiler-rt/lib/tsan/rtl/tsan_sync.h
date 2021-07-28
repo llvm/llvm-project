@@ -17,7 +17,6 @@
 #include "sanitizer_common/sanitizer_deadlock_detector_interface.h"
 #include "tsan_defs.h"
 #include "tsan_clock.h"
-#include "tsan_mutex.h"
 #include "tsan_dense_alloc.h"
 
 namespace __tsan {
