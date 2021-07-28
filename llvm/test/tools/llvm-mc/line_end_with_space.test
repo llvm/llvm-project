@@ -1,1 +1,3 @@
+# UNSUPPORTED: nanomips
+
 RUN: llvm-mc -disassemble %s
