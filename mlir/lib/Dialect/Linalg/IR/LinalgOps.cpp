@@ -1147,16 +1147,16 @@ SmallVector<AffineMap, 4> TensorCollapseShapeOp::getReassociationMaps() {
 }
 SmallVector<ReassociationExprs, 4>
 TensorCollapseShapeOp::getReassociationExprs() {
-  OpBuilder b(this->getContext());
-  return convertReassociationIndicesToExprs(b, getReassociationIndices());
+  return convertReassociationIndicesToExprs(getContext(),
+                                            getReassociationIndices());
 }
 SmallVector<AffineMap, 4> TensorExpandShapeOp::getReassociationMaps() {
   return getSymbolLessAffineMaps(getReassociationExprs());
 }
 SmallVector<ReassociationExprs, 4>
 TensorExpandShapeOp::getReassociationExprs() {
-  OpBuilder b(this->getContext());
-  return convertReassociationIndicesToExprs(b, getReassociationIndices());
+  return convertReassociationIndicesToExprs(getContext(),
+                                            getReassociationIndices());
 }
 
 /// For reshape op compute the shape at dimension `dimIndex` of the output in
@@ -1317,7 +1317,7 @@ void mlir::linalg::TensorCollapseShapeOp::build(
   auto resultType = computeTensorReshapeCollapsedType(
       src.getType().cast<RankedTensorType>(),
       getSymbolLessAffineMaps(
-          convertReassociationIndicesToExprs(b, reassociation)));
+          convertReassociationIndicesToExprs(b.getContext(), reassociation)));
   build(b, result, resultType, src, attrs);
   result.addAttribute(getReassociationAttrName(),
                       getReassociationIndicesAttribute(b, reassociation));
@@ -1330,7 +1330,7 @@ void mlir::linalg::TensorExpandShapeOp::build(
   auto resultType = computeTensorReshapeCollapsedType(
       src.getType().cast<RankedTensorType>(),
       getSymbolLessAffineMaps(
-          convertReassociationIndicesToExprs(b, reassociation)));
+          convertReassociationIndicesToExprs(b.getContext(), reassociation)));
   build(b, result, resultType, src, attrs);
   result.addAttribute(getReassociationAttrName(),
                       getReassociationIndicesAttribute(b, reassociation));
