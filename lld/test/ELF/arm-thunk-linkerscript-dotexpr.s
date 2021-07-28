@@ -5,8 +5,8 @@
 // RUN:       .text_low : { *(.text_low) *(.text_low2) . = . + 0x2000000 ; *(.text_high) *(.text_high2) } \
 // RUN:       } " > %t.script
 // RUN: ld.lld --no-rosegment --script %t.script %t -o %t2
-// RUN: llvm-objdump -d %t2 --start-address=148 --stop-address=188 | FileCheck --check-prefix=CHECK1 %s
-// RUN: llvm-objdump -d %t2 --start-address=33554620 --stop-address=33554654 | FileCheck --check-prefix=CHECK2 %s
+// RUN: llvm-objdump -d %t2 --start-address=0x94 --stop-address=0xbc | FileCheck --check-prefix=CHECK1 %s
+// RUN: llvm-objdump -d %t2 --start-address=0x20000bc --stop-address=0x20000de | FileCheck --check-prefix=CHECK2 %s
 // Test that range extension thunks can handle location expressions within
 // a Section Description
  .syntax unified
