@@ -36,7 +36,6 @@ module __Fortran_type_info
     ! Instances of parameterized derived types use the "uninstantiated"
     ! component to point to the pristine original definition.
     type(DerivedType), pointer :: uninstantiated
-    integer(kind=int64) :: typeHash
     integer(kind=int64), pointer, contiguous :: kindParameter(:) ! values of instance
     integer(1), pointer, contiguous :: lenParameterKind(:) ! INTEGER kinds of LEN types
     ! Data components appear in component order.
@@ -44,11 +43,15 @@ module __Fortran_type_info
     type(Component), pointer, contiguous :: component(:) ! data components
     type(ProcPtrComponent), pointer, contiguous :: procptr(:) ! procedure pointers
     ! Special bindings of the ancestral types are not duplicated here.
+    ! Bindings are in ascending order of their "which" code values.
     type(SpecialBinding), pointer, contiguous :: special(:)
+    ! A little-endian bit set of SpecialBinding::Which codes present in "special"
+    integer(4) :: specialBitSet
     integer(1) :: hasParent
     integer(1) :: noInitializationNeeded ! 1 if no component w/ init
     integer(1) :: noDestructionNeeded ! 1 if no component w/ dealloc/final
-    integer(1) :: __padding0(5)
+    integer(1) :: noFinalizationNeeded ! 1 if nothing finalizaable
+    integer(1) :: __padding0(4)
   end type
 
   type :: Binding
@@ -101,17 +104,17 @@ module __Fortran_type_info
   end type
 
   enum, bind(c) ! SpecialBinding::Which
-    enumerator :: Assignment = 4, ElementalAssignment = 5
-    enumerator :: Final = 8, ElementalFinal = 9, AssumedRankFinal = 10
-    enumerator :: ReadFormatted = 16, ReadUnformatted = 17
-    enumerator :: WriteFormatted = 18, WriteUnformatted = 19
+    enumerator :: ScalarAssignment = 1, ElementalAssignment = 2
+    enumerator :: ReadFormatted = 3, ReadUnformatted = 4
+    enumerator :: WriteFormatted = 5, WriteUnformatted = 6
+    enumerator :: ElementalFinal = 7, AssumedRankFinal = 8
+    enumerator :: ScalarFinal = 9 ! higher-rank final procedures follow
   end enum
 
   type, bind(c) :: SpecialBinding
     integer(1) :: which ! SpecialBinding::Which
-    integer(1) :: rank ! for which == SpecialBinding::Which::Final only
     integer(1) :: isArgDescriptorSet
-    integer(1) :: __padding0(5)
+    integer(1) :: __padding0(6)
     type(__builtin_c_funptr) :: proc
   end type
 
