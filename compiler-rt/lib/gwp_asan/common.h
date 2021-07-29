@@ -19,7 +19,22 @@
 #include <stdint.h>
 
 namespace gwp_asan {
-enum class Error {
+
+// Magic header that resides in the AllocatorState so that GWP-ASan bugreports
+// can be understood by tools at different versions. Out-of-process crash
+// handlers, like crashpad on Fuchsia, take the raw conents of the
+// AllocationMetatada array and the AllocatorState, and shove them into the
+// minidump. Online unpacking of these structs needs to know from which version
+// of GWP-ASan its extracting the information, as the structures are not stable.
+struct AllocatorVersionMagic {
+  const uint8_t Magic[4] = {'A', 'S', 'A', 'N'};
+  // Update the version number when the AllocatorState or AllocationMetadata
+  // change.
+  const uint16_t Version = 1;
+  const uint16_t Reserved = 0;
+};
+
+enum class Error : uint8_t {
   UNKNOWN,
   USE_AFTER_FREE,
   DOUBLE_FREE,
@@ -84,6 +99,7 @@ struct AllocationMetadata {
 // set of information required for understanding a GWP-ASan crash.
 struct AllocatorState {
   constexpr AllocatorState() {}
+  const AllocatorVersionMagic VersionMagic{};
 
   // Returns whether the provided pointer is a current sampled allocation that
   // is owned by this pool.
@@ -122,6 +138,39 @@ struct AllocatorState {
   Error FailureType = Error::UNKNOWN;
   uintptr_t FailureAddress = 0;
 };
+
+// Below are various compile-time checks that the layout of the internal
+// GWP-ASan structures are undisturbed. If they are disturbed, the version magic
+// number needs to be increased by one, and the asserts need to be updated.
+// Out-of-process crash handlers, like breakpad/crashpad, may copy the internal
+// GWP-ASan structures into a minidump for offline reconstruction of the crash.
+// In order to accomplish this, the offline reconstructor needs to know the
+// version of GWP-ASan internal structures that it's unpacking (along with the
+// architecture-specific layout info, which is left as an exercise to the crash
+// handler).
+static_assert(offsetof(AllocatorState, VersionMagic) == 0, "");
+static_assert(sizeof(AllocatorVersionMagic) == 8, "");
+#if defined(__x86_64__)
+static_assert(sizeof(AllocatorState) == 56, "");
+static_assert(offsetof(AllocatorState, FailureAddress) == 48, "");
+static_assert(sizeof(AllocationMetadata) == 568, "");
+static_assert(offsetof(AllocationMetadata, IsDeallocated) == 560, "");
+#elif defined(__aarch64__)
+static_assert(sizeof(AllocatorState) == 56, "");
+static_assert(offsetof(AllocatorState, FailureAddress) == 48, "");
+static_assert(sizeof(AllocationMetadata) == 568, "");
+static_assert(offsetof(AllocationMetadata, IsDeallocated) == 560, "");
+#elif defined(__i386__)
+static_assert(sizeof(AllocatorState) == 32, "");
+static_assert(offsetof(AllocatorState, FailureAddress) == 28, "");
+static_assert(sizeof(AllocationMetadata) == 548, "");
+static_assert(offsetof(AllocationMetadata, IsDeallocated) == 544, "");
+#elif defined(__arm__)
+static_assert(sizeof(AllocatorState) == 32, "");
+static_assert(offsetof(AllocatorState, FailureAddress) == 28, "");
+static_assert(sizeof(AllocationMetadata) == 560, "");
+static_assert(offsetof(AllocationMetadata, IsDeallocated) == 552, "");
+#endif // defined($ARCHITECTURE)
 
 } // namespace gwp_asan
 #endif // GWP_ASAN_COMMON_H_
