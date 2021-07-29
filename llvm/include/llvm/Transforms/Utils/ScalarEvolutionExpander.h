@@ -83,9 +83,6 @@ class SCEVExpander : public SCEVVisitor<SCEVExpander, Value *> {
   /// InsertedValues/InsertedPostIncValues.
   SmallPtrSet<Value *, 16> ReusedValues;
 
-  // The induction variables generated.
-  SmallVector<WeakVH, 2> InsertedIVs;
-
   /// A memoization of the "relevant" loop for a given SCEV.
   DenseMap<const SCEV *, const Loop *> RelevantLoops;
 
@@ -202,11 +199,9 @@ public:
     InsertedPostIncValues.clear();
     ReusedValues.clear();
     ChainedPhis.clear();
-    InsertedIVs.clear();
   }
 
   ScalarEvolution *getSE() { return &SE; }
-  const SmallVectorImpl<WeakVH> &getInsertedIVs() const { return InsertedIVs; }
 
   /// Return a vector containing all instructions inserted during expansion.
   SmallVector<Instruction *, 32> getAllInsertedInstructions() const {
