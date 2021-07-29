@@ -5784,12 +5784,10 @@ static Value *simplifyIntrinsic(CallBase *Call, const SimplifyQuery &Q) {
       auto Attr = Call->getFunction()->getFnAttribute(Attribute::VScaleRange);
       if (!Attr.isValid())
         return nullptr;
-      unsigned MinScalarVectorSize, MaxScalarVectorSize;
-      std::tie(MinScalarVectorSize, MaxScalarVectorSize) =
-          Attr.getVScaleRangeArgs();
-      if (MinScalarVectorSize == MaxScalarVectorSize &&
-          MaxScalarVectorSize != 0)
-        return ConstantInt::get(F->getReturnType(), MinScalarVectorSize);
+      unsigned VScaleMin, VScaleMax;
+      std::tie(VScaleMin, VScaleMax) = Attr.getVScaleRangeArgs();
+      if (VScaleMin == VScaleMax && VScaleMax != 0)
+        return ConstantInt::get(F->getReturnType(), VScaleMin);
       return nullptr;
     }
     default:
