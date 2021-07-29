@@ -3894,6 +3894,7 @@ Clang supports the pragma ``#pragma clang deprecated``, which can be used to
 provide deprecation warnings for macro uses. For example:
 
 .. code-block:: c
+
    #define MIN(x, y) x < y ? x : y
    #pragma clang deprecated(MIN, "use std::min instead")
 
