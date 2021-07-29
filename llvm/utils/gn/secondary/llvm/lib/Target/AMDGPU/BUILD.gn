@@ -241,6 +241,7 @@ group("AMDGPU") {
     ":LLVMAMDGPUCodeGen",
     "AsmParser",
     "Disassembler",
+    "MCA",
     "MCTargetDesc",
     "TargetInfo",
     "Utils",
