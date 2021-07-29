@@ -127,7 +127,7 @@ def main():
       # Split analysis outputs by "Printing analysis " declarations.
       for raw_tool_output in re.split(r'Printing analysis ', raw_tool_outputs):
         builder.process_run_line(common.ANALYZE_FUNCTION_RE, common.scrub_body,
-                                 raw_tool_output, prefixes)
+                                 raw_tool_output, prefixes, False)
 
     func_dict = builder.finish_and_get_func_dict()
     is_in_function = False
