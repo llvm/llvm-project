@@ -400,7 +400,9 @@ def PDL_OperationOp
 // pdl::PatternOp
 //===----------------------------------------------------------------------===//
 
-def PDL_PatternOp : PDL_Op<"pattern", [IsolatedFromAbove, Symbol]> {
+def PDL_PatternOp : PDL_Op<"pattern", [
+    IsolatedFromAbove, SingleBlock, Symbol
+  ]> {
   let summary = "Define a rewrite pattern";
   let description = [{
     `pdl.pattern` operations provide a transformable representation for a
