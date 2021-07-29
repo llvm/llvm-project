@@ -347,7 +347,7 @@ AlignTokenSequence(const FormatStyle &Style, unsigned Start, unsigned End,
         if (ScopeStart > Start + 1 &&
             Changes[ScopeStart - 2].Tok->is(tok::identifier) &&
             Changes[ScopeStart - 1].Tok->is(tok::l_paren))
-          return true;
+          return Style.BinPackArguments;
 
         // Ternary operator
         if (Changes[i].Tok->is(TT_ConditionalExpr))
