@@ -815,6 +815,19 @@ void VPlan::execute(VPTransformState *State) {
   for (VPBlockBase *Block : depth_first(Entry))
     Block->execute(State);
 
+  // Fix the latch value of the first-order recurrences in the vector loop. Only
+  // a single part is generated, regardless of the UF.
+  VPBasicBlock *Header = Entry->getEntryBasicBlock();
+  for (VPRecipeBase &R : Header->phis()) {
+    if (auto *FOR = dyn_cast<VPFirstOrderRecurrencePHIRecipe>(&R)) {
+      auto *VecPhi = cast<PHINode>(State->get(FOR, 0));
+
+      VPValue *PreviousDef = FOR->getBackedgeValue();
+      Value *Incoming = State->get(PreviousDef, State->UF - 1);
+      VecPhi->addIncoming(Incoming, VectorLatchBB);
+    }
+  }
+
   // Setup branch terminator successors for VPBBs in VPBBsToFix based on
   // VPBB's successors.
   for (auto VPBB : State->CFG.VPBBsToFix) {
