@@ -68,8 +68,10 @@ static void StackStripMain(SymbolizedStack *frames) {
   } else if (last && 0 == internal_strcmp(last, "__tsan_thread_start_func")) {
     last_frame->ClearAll();
     last_frame2->next = nullptr;
-  // Strip global ctors init.
-  } else if (last && 0 == internal_strcmp(last, "__do_global_ctors_aux")) {
+    // Strip global ctors init, .preinit_array and main caller.
+  } else if (last && (0 == internal_strcmp(last, "__do_global_ctors_aux") ||
+                      0 == internal_strcmp(last, "__libc_csu_init") ||
+                      0 == internal_strcmp(last, "__libc_start_main"))) {
     last_frame->ClearAll();
     last_frame2->next = nullptr;
   // If both are 0, then we probably just failed to symbolize.
