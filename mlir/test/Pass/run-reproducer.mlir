@@ -1,4 +1,4 @@
-// configuration: -mlir-disable-threading=true -pass-pipeline='func(cse,canonicalize)' -print-ir-before=cse
+// configuration: -mlir-disable-threading=true -pass-pipeline='builtin.func(cse,canonicalize)' -print-ir-before=cse
 
 // Test of the reproducer run option. The first line has to be the
 // configuration (matching what is produced by reproducer).

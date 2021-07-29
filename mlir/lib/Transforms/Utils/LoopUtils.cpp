@@ -2940,7 +2940,7 @@ gatherLoopsInBlock(Block *block, unsigned currLoopDepth,
   }
 }
 
-/// Gathers all AffineForOps in 'func' grouped by loop depth.
+/// Gathers all AffineForOps in 'builtin.func' grouped by loop depth.
 void mlir::gatherLoops(FuncOp func,
                        std::vector<SmallVector<AffineForOp, 2>> &depthToLoops) {
   for (auto &block : func)

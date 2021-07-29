@@ -1,7 +1,7 @@
 // RUN: mlir-opt -allow-unregistered-dialect -test-legalize-patterns -verify-diagnostics -test-legalize-mode=analysis %s | FileCheck %s
-// expected-remark@-2 {{op 'module' is legalizable}}
+// expected-remark@-2 {{op 'builtin.module' is legalizable}}
 
-// expected-remark@+1 {{op 'func' is legalizable}}
+// expected-remark@+1 {{op 'builtin.func' is legalizable}}
 func @test(%arg0: f32) {
   // expected-remark@+1 {{op 'test.illegal_op_a' is legalizable}}
   %result = "test.illegal_op_a"() : () -> (i32)

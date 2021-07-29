@@ -96,7 +96,7 @@ with `mlir-opt -test-print-nesting -allow-unregistered-dialect
 llvm-project/mlir/test/IR/print-ir-nesting.mlir`:
 
 ```mlir
-"module"() ( {
+"builtin.module"() ( {
   %0:4 = "dialect.op1"() {"attribute name" = 42 : i32} : () -> (i1, i16, i32, i64)
   "dialect.op2"() ( {
     "dialect.innerop1"(%0#0, %0#1) : (i1, i16) -> ()
@@ -116,7 +116,7 @@ llvm-project/mlir/test/IR/print-ir-nesting.mlir`:
 And will yield the following output:
 
 ```
-visiting op: 'module' with 0 operands and 0 results
+visiting op: 'builtin.module' with 0 operands and 0 results
  1 nested regions:
   Region with 1 blocks:
     Block with 0 arguments, 0 successors, and 3 operations

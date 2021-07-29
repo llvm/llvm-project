@@ -643,11 +643,8 @@ void PyThreadContextEntry::popLocation(PyLocation &location) {
 
 MlirDialect PyDialects::getDialectForKey(const std::string &key,
                                          bool attrError) {
-  // If the "std" dialect was asked for, substitute the empty namespace :(
-  static const std::string emptyKey;
-  const std::string *canonKey = key == "std" ? &emptyKey : &key;
-  MlirDialect dialect = mlirContextGetOrLoadDialect(
-      getContext()->get(), {canonKey->data(), canonKey->size()});
+  MlirDialect dialect = mlirContextGetOrLoadDialect(getContext()->get(),
+                                                    {key.data(), key.size()});
   if (mlirDialectIsNull(dialect)) {
     throw SetPyError(attrError ? PyExc_AttributeError : PyExc_IndexError,
                      Twine("Dialect '") + key + "' not found");

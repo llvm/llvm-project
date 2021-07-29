@@ -271,9 +271,9 @@ private:
   ///
   /// A pipeline is defined as a series of names, each of which may in itself
   /// recursively contain a nested pipeline. A name is either the name of a pass
-  /// (e.g. "cse") or the name of an operation type (e.g. "func"). If the name
-  /// is the name of a pass, the InnerPipeline is empty, since passes cannot
-  /// contain inner pipelines.
+  /// (e.g. "cse") or the name of an operation type (e.g. "builtin.func"). If
+  /// the name is the name of a pass, the InnerPipeline is empty, since passes
+  /// cannot contain inner pipelines.
   struct PipelineElement {
     PipelineElement(StringRef name) : name(name), registryEntry(nullptr) {}
 
