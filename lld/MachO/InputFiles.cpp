@@ -860,14 +860,37 @@ static DylibFile *loadDylib(StringRef path, DylibFile *umbrella) {
 // files.
 static DylibFile *findDylib(StringRef path, DylibFile *umbrella,
                             const InterfaceFile *currentTopLevelTapi) {
+  // Search order:
+  // 1. Install name basename in -F / -L directories.
+  {
+    StringRef stem = path::stem(path);
+    SmallString<128> frameworkName;
+    path::append(frameworkName, stem + ".framework", stem);
+    bool isFramework = path.endswith(frameworkName);
+    if (isFramework) {
+      for (StringRef dir : config->frameworkSearchPaths) {
+        SmallString<128> candidate = dir;
+        path::append(candidate, frameworkName);
+        if (Optional<std::string> dylibPath = resolveDylibPath(candidate))
+          return loadDylib(*dylibPath, umbrella);
+      }
+    } else if (Optional<StringRef> dylibPath = findPathCombination(
+                   stem, config->librarySearchPaths, {".tbd", ".dylib"}))
+      return loadDylib(*dylibPath, umbrella);
+  }
+
+  // 2. As absolute path.
   if (path::is_absolute(path, path::Style::posix))
     for (StringRef root : config->systemLibraryRoots)
       if (Optional<std::string> dylibPath =
               resolveDylibPath((root + path).str()))
         return loadDylib(*dylibPath, umbrella);
 
+  // 3. As relative path.
+
   // TODO: Handle -dylib_file
 
+  // Replace @executable_path, @loader_path, @rpath prefixes in install name.
   SmallString<128> newPath;
   if (config->outputType == MH_EXECUTE &&
       path.consume_front("@executable_path/")) {
@@ -894,6 +917,7 @@ static DylibFile *findDylib(StringRef path, DylibFile *umbrella,
     }
   }
 
+  // FIXME: Should this be further up?
   if (currentTopLevelTapi) {
     for (InterfaceFile &child :
          make_pointee_range(currentTopLevelTapi->documents())) {
