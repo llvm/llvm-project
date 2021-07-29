@@ -685,6 +685,19 @@ public:
 
   /// Try moving transposes in order to fold them away or into multiplies.
   void optimizeTransposes() {
+    auto ReplaceAllUsesWith = [this](Instruction &Old, Value *New) {
+      // We need to remove Old from the ShapeMap otherwise RAUW will replace it
+      // with New. We should only add New it it supportsShapeInfo so we insert
+      // it conditionally instead.
+      auto S = ShapeMap.find(&Old);
+      if (S != ShapeMap.end()) {
+        ShapeMap.erase(S);
+        if (supportsShapeInfo(New))
+          ShapeMap.insert({New, S->second});
+      }
+      Old.replaceAllUsesWith(New);
+    };
+
     // First sink all transposes inside matmuls, hoping that we end up with NN,
     // NT or TN variants.
     for (BasicBlock &BB : reverse(Func)) {
@@ -717,7 +730,7 @@ public:
           Value *TATA;
           if (match(TA,
                     m_Intrinsic<Intrinsic::matrix_transpose>(m_Value(TATA)))) {
-            I.replaceAllUsesWith(TATA);
+            ReplaceAllUsesWith(I, TATA);
             EraseFromParent(&I);
             EraseFromParent(TA);
           }
@@ -740,8 +753,7 @@ public:
             NewInst = Builder.CreateMatrixMultiply(T0, T1, C->getZExtValue(),
                                                    K->getZExtValue(),
                                                    R->getZExtValue(), "mmul");
-            setShapeInfo(NewInst, {C, R});
-            I.replaceAllUsesWith(NewInst);
+            ReplaceAllUsesWith(I, NewInst);
             EraseFromParent(&I);
             EraseFromParent(TA);
           }
@@ -774,8 +786,7 @@ public:
           setShapeInfo(M, {C, R});
           Value *NewInst = Builder.CreateMatrixTranspose(M, R->getZExtValue(),
                                                          C->getZExtValue());
-          setShapeInfo(NewInst, {C, R});
-          I->replaceAllUsesWith(NewInst);
+          ReplaceAllUsesWith(*I, NewInst);
           if (I->use_empty())
             I->eraseFromParent();
           if (A->use_empty())
@@ -879,10 +890,30 @@ public:
 
     // Delete the instructions backwards, as it has a reduced likelihood of
     // having to update as many def-use and use-def chains.
+    //
+    // Because we add to ToRemove during fusion we can't guarantee that defs
+    // are before uses.  Change uses to undef temporarily as these should get
+    // removed as well.
+    //
+    // For verification, we keep track of where we changed uses to undefs in
+    // UndefedInsts and then check that we in fact remove them.
+    SmallSet<Instruction *, 16> UndefedInsts;
     for (auto *Inst : reverse(ToRemove)) {
-      if (!Inst->use_empty())
-        Inst->replaceAllUsesWith(UndefValue::get(Inst->getType()));
+      for (auto I = Inst->use_begin(), E = Inst->use_end(); I != E;) {
+        Use &U = *I++;
+        if (auto *Undefed = dyn_cast<Instruction>(U.getUser()))
+          UndefedInsts.insert(Undefed);
+        U.set(UndefValue::get(Inst->getType()));
+      }
       Inst->eraseFromParent();
+      UndefedInsts.erase(Inst);
+    }
+    if (!UndefedInsts.empty()) {
+      // If we didn't remove all undefed instructions, it's a hard error.
+      dbgs() << "Undefed but present instructions:\n";
+      for (auto *I : UndefedInsts)
+        dbgs() << *I << "\n";
+      llvm_unreachable("Undefed but instruction not removed");
     }
 
     return Changed;
