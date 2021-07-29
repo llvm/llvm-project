@@ -721,6 +721,17 @@ int main(int, char**)
             assert(err == std::ios_base::failbit);
         }
     }
+    {
+      // test for err
+      const my_facet f(1);
+      std::string v = "1.23";
+      typedef cpp17_input_iterator<const char*> I;
+      long double ex = -1L;
+      std::ios_base::iostate err = std::ios_base::goodbit;
+      f.get(I(v.data()), I(v.data()), false, ios, err, ex);
+      assert(err == (std::ios_base::failbit | std::ios_base::eofbit));
+      assert(ex == -1L);
+    }
 
   return 0;
 }
