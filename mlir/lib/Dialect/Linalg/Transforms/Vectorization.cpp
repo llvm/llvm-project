@@ -245,7 +245,7 @@ static Value buildVectorWrite(OpBuilder &b, Value value,
     AffineMap map =
         reindexIndexingMap(linalgOp.getTiedIndexingMap(outputOperand));
     SmallVector<int64_t> transposeShape =
-        applyPermuationMap(inversePermutation(map), vectorType.getShape());
+        applyPermutationMap(inversePermutation(map), vectorType.getShape());
     vectorType = VectorType::get(transposeShape, vectorType.getElementType());
     SmallVector<Value> indices(linalgOp.getRank(outputOperand),
                                b.create<ConstantIndexOp>(loc, 0));
@@ -575,7 +575,7 @@ static LogicalResult vectorizeContraction(OpBuilder &b, LinalgOp linalgOp,
     if (outShape.empty()) {
       vType = op->getResult(0).getType();
     } else {
-      SmallVector<int64_t> resultShape = applyPermuationMap(
+      SmallVector<int64_t> resultShape = applyPermutationMap(
           inversePermutation(reindexIndexingMap(
               linalgOp.getTiedIndexingMap(linalgOp.getOutputOperand(0)))),
           outShape);
