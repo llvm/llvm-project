@@ -599,9 +599,3 @@ size_t SectionList::Slide(addr_t slide_amount, bool slide_children) {
   }
   return count;
 }
-
-bool Section::IsReadOnly() {
-  auto permissions = Flags(GetPermissions());
-  return !permissions.Test(ePermissionsWritable) &&
-         permissions.Test(ePermissionsReadable);
-}

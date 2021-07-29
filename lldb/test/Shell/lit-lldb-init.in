@@ -6,4 +6,3 @@ settings set symbols.clang-modules-cache-path "@LLDB_TEST_MODULE_CACHE_LLDB@"
 settings set target.auto-apply-fixits false
 settings set target.inherit-tcc true
 settings set target.detach-on-error false
-settings set target.verify-file-cache-memory-reads true
