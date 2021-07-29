@@ -5814,6 +5814,13 @@ static SDValue performANY_EXTENDCombine(SDNode *N,
     break;
   }
 
+  // Only handle cases where the result is used by a CopyToReg that likely
+  // means the value is a liveout of the basic block. This helps prevent
+  // infinite combine loops like PR51206.
+  if (none_of(N->uses(),
+              [](SDNode *User) { return User->getOpcode() == ISD::CopyToReg; }))
+    return SDValue();
+
   SmallVector<SDNode *, 4> SetCCs;
   for (SDNode::use_iterator UI = Src.getNode()->use_begin(),
                             UE = Src.getNode()->use_end();
