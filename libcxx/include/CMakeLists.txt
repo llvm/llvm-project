@@ -99,6 +99,28 @@ set(files
   __bsd_locale_fallbacks.h
   __compare/common_comparison_category.h
   __compare/ordering.h
+  __concepts/arithmetic.h
+  __concepts/assignable.h
+  __concepts/boolean_testable.h
+  __concepts/class_or_enum.h
+  __concepts/common_reference_with.h
+  __concepts/common_with.h
+  __concepts/constructible.h
+  __concepts/convertible_to.h
+  __concepts/copyable.h
+  __concepts/derived_from.h
+  __concepts/destructible.h
+  __concepts/different_from.h
+  __concepts/equality_comparable.h
+  __concepts/invocable.h
+  __concepts/movable.h
+  __concepts/predicate.h
+  __concepts/regular.h
+  __concepts/relation.h
+  __concepts/same_as.h
+  __concepts/semiregular.h
+  __concepts/swappable.h
+  __concepts/totally_ordered.h
   __config
   __debug
   __errc
