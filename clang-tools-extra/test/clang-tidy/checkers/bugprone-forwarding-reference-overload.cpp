@@ -150,3 +150,93 @@ public:
   constexpr variant(_Arg&& __arg) {}
   // CHECK-NOTES: :[[@LINE-1]]:13: warning: constructor accepting a forwarding reference can hide the copy and move constructors
 };
+
+namespace std {
+template <class T, class U> struct is_same { static constexpr bool value = false; };
+template <class T> struct is_same<T, T> { static constexpr bool value = true; };
+template <class T, class U> constexpr bool is_same_v = is_same<T, U>::value;
+template <class T> struct remove_reference { using type = T; };
+template <class T> struct remove_reference<T&> { using type = T; };
+template <class T> struct remove_reference<T&&> { using type = T; };
+template <class T> using remove_reference_t = typename remove_reference<T>::type;
+template <class T> struct remove_cv { using type = T; };
+template <class T> struct remove_cv<const T> { using type = T; };
+template <class T> struct remove_cv<volatile T> { using type = T; };
+template <class T> struct remove_cv<const volatile T> { using type = T; };
+template <class T> using remove_cv_t = typename remove_cv<T>::type;
+template <class T> struct remove_cvref { using type = remove_cv_t<remove_reference_t<T>>; };
+template <class T> using remove_cvref_t = typename remove_cvref<T>::type;
+} // namespace std
+
+// Handle enable_if when used as a non-type template parameter.
+class Test7 {
+public:
+  // Guarded with enable_if.
+  template <class T,
+    typename std::enable_if_t<std::is_same_v<std::remove_cvref_t<T>, int>, int>::type = 0>
+  Test7(T &&t);
+
+  // Guarded with enable_if.
+  template <class T,
+    std::enable_if_t<
+      !std::is_same_v<std::remove_cvref_t<T>, Test7>
+      && !std::is_same_v<std::remove_cvref_t<T>, bool>, int> = true>
+  Test7(T &&t);
+
+  Test7(const Test7 &other) = default;
+  Test7(Test7 &&other) = default;
+};
+
+// Handle enable_if when used as a non-type template parameter following
+// a variadic template parameter pack.
+class Test8 {
+public:
+  // Guarded with enable_if.
+  template <class T, class... A,
+    std::enable_if_t<
+      !std::is_same_v<std::remove_cvref_t<T>, Test8>
+      || (sizeof...(A) > 0)>* = nullptr>
+  Test8(T &&t, A &&... a);
+
+  Test8(const Test8 &other) = default;
+  Test8(Test8 &&other) = default;
+};
+
+// Non-type template parameter failure cases.
+class Test9 {
+public:
+  // Requires a default argument (such as a literal, implicit cast expression, etc.)
+  template <class T,
+    std::enable_if_t<std::is_same_v<std::remove_cvref_t<T>, bool>, int>>
+  Test9(T &&t);
+  // CHECK-NOTES: :[[@LINE-1]]:3: warning: constructor accepting a forwarding reference can hide the copy and move constructors
+  // CHECK-NOTES: 240:3: note: copy constructor declared here
+  // CHECK-NOTES: 241:3: note: move constructor declared here
+
+  // Requires a default argument (such as a literal, implicit cast expression, etc.)
+  template <class T,
+    std::enable_if_t<std::is_same_v<std::remove_cvref_t<T>, long>>*>
+  Test9(T &&t);
+  // CHECK-NOTES: :[[@LINE-1]]:3: warning: constructor accepting a forwarding reference can hide the copy and move constructors
+  // CHECK-NOTES: 240:3: note: copy constructor declared here
+  // CHECK-NOTES: 241:3: note: move constructor declared here
+
+  // Only std::enable_if or std::enable_if_t are supported
+  template <class T,
+    typename std::enable_if_nice<T>::type* = nullptr>
+  Test9(T &&t);
+  // CHECK-NOTES: :[[@LINE-1]]:3: warning: constructor accepting a forwarding reference can hide the copy and move constructors
+  // CHECK-NOTES: 240:3: note: copy constructor declared here
+  // CHECK-NOTES: 241:3: note: move constructor declared here
+
+  // Only std::enable_if or std::enable_if_t are supported
+  template <class T,
+    typename foo::enable_if<T>::type = 0>
+  Test9(T &&t);
+  // CHECK-NOTES: :[[@LINE-1]]:3: warning: constructor accepting a forwarding reference can hide the copy and move constructors
+  // CHECK-NOTES: 240:3: note: copy constructor declared here
+  // CHECK-NOTES: 241:3: note: move constructor declared here
+
+  Test9(const Test9 &other) = default;
+  Test9(Test9 &&other) = default;
+};

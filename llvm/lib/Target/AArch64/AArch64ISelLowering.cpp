@@ -4348,6 +4348,9 @@ SDValue AArch64TargetLowering::LowerMGATHER(SDValue Op,
     IndexVT = getContainerForFixedLengthVector(DAG, IndexVT);
     MemVT = IndexVT.changeVectorElementType(MemVT.getVectorElementType());
     InputVT = DAG.getValueType(MemVT.changeTypeToInteger());
+    Mask = DAG.getNode(
+        ISD::ZERO_EXTEND, DL,
+        VT.changeVectorElementType(IndexVT.getVectorElementType()), Mask);
   }
 
   if (PassThru->isUndef() || isZerosVector(PassThru.getNode()))
@@ -4452,6 +4455,9 @@ SDValue AArch64TargetLowering::LowerMSCATTER(SDValue Op,
         ISD::ANY_EXTEND, DL,
         VT.changeVectorElementType(IndexVT.getVectorElementType()), StoreVal);
     StoreVal = convertToScalableVector(DAG, IndexVT, StoreVal);
+    Mask = DAG.getNode(
+        ISD::ZERO_EXTEND, DL,
+        VT.changeVectorElementType(IndexVT.getVectorElementType()), Mask);
   } else if (VT.isFloatingPoint()) {
     // Handle FP data by casting the data so an integer scatter can be used.
     EVT StoreValVT = getPackedSVEVectorVT(VT.getVectorElementCount());
