@@ -571,8 +571,8 @@ void coro::Shape::emitDealloc(IRBuilder<> &Builder, Value *Ptr,
   llvm_unreachable("Unknown coro::ABI enum");
 }
 
-LLVM_ATTRIBUTE_NORETURN
-static void fail(const Instruction *I, const char *Reason, Value *V) {
+[[noreturn]] static void fail(const Instruction *I, const char *Reason,
+                              Value *V) {
 #ifndef NDEBUG
   I->dump();
   if (V) {

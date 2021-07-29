@@ -637,5 +637,51 @@ for.cond.cleanup:
   ret void
 }
 
+; Backedge-taken count is not predictable.
+%struct.Limits = type { i16, i16 }
+define void @backedge_count(%struct.Limits* %lim) {
+entry:
+  %N = getelementptr inbounds %struct.Limits, %struct.Limits* %lim, i32 0, i32 0
+  %M = getelementptr inbounds %struct.Limits, %struct.Limits* %lim, i32 0, i32 1
+  %0 = load i16, i16* %N, align 2
+  %cmp20 = icmp sgt i16 %0, 0
+  br i1 %cmp20, label %for.cond2.preheader.preheader, label %for.cond.cleanup
+
+for.cond2.preheader.preheader:
+  %.pre = load i16, i16* %M, align 2
+  br label %for.cond2.preheader
+
+for.cond2.preheader:
+  %1 = phi i16 [ %3, %for.cond.cleanup6 ], [ %0, %for.cond2.preheader.preheader ]
+  %2 = phi i16 [ %4, %for.cond.cleanup6 ], [ %.pre, %for.cond2.preheader.preheader ]
+  %i.021 = phi i32 [ %inc9, %for.cond.cleanup6 ], [ 0, %for.cond2.preheader.preheader ]
+  %cmp417 = icmp sgt i16 %2, 0
+  br i1 %cmp417, label %for.body7, label %for.cond.cleanup6
+
+for.cond.cleanup:
+  ret void
+
+for.cond.cleanup6.loopexit:
+  %.pre22 = load i16, i16* %N, align 2
+  br label %for.cond.cleanup6
+
+for.cond.cleanup6:
+  %3 = phi i16 [ %.pre22, %for.cond.cleanup6.loopexit ], [ %1, %for.cond2.preheader ]
+  %4 = phi i16 [ %5, %for.cond.cleanup6.loopexit ], [ %2, %for.cond2.preheader ]
+  %inc9 = add nuw nsw i32 %i.021, 1
+  %conv = sext i16 %3 to i32
+  %cmp = icmp slt i32 %inc9, %conv
+  br i1 %cmp, label %for.cond2.preheader, label %for.cond.cleanup
+
+for.body7:
+  %j.018 = phi i32 [ %inc, %for.body7 ], [ 0, %for.cond2.preheader ]
+  tail call void bitcast (void (...)* @g to void ()*)()
+  %inc = add nuw nsw i32 %j.018, 1
+  %5 = load i16, i16* %M, align 2
+  %conv3 = sext i16 %5 to i32
+  %cmp4 = icmp slt i32 %inc, %conv3
+  br i1 %cmp4, label %for.body7, label %for.cond.cleanup6.loopexit
+}
+
 declare dso_local void @f(i32*)
 declare dso_local void @g(...)

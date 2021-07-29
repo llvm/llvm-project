@@ -12,9 +12,9 @@ func @complex_create(%real: f32, %imag: f32) -> complex<f32> {
 
 // CHECK-LABEL: func @complex_extract
 // CHECK-SAME:    (%[[CPLX:.*]]: complex<f32>)
-// CHECK-NEXT:    %[[CAST0:.*]] = unrealized_conversion_cast %[[CPLX]] : complex<f32> to !llvm.struct<(f32, f32)>
+// CHECK-NEXT:    %[[CAST0:.*]] = builtin.unrealized_conversion_cast %[[CPLX]] : complex<f32> to !llvm.struct<(f32, f32)>
 // CHECK-NEXT:    %[[REAL:.*]] = llvm.extractvalue %[[CAST0]][0] : !llvm.struct<(f32, f32)>
-// CHECK-NEXT:    %[[CAST1:.*]] = unrealized_conversion_cast %[[CPLX]] : complex<f32> to !llvm.struct<(f32, f32)>
+// CHECK-NEXT:    %[[CAST1:.*]] = builtin.unrealized_conversion_cast %[[CPLX]] : complex<f32> to !llvm.struct<(f32, f32)>
 // CHECK-NEXT:    %[[IMAG:.*]] = llvm.extractvalue %[[CAST1]][1] : !llvm.struct<(f32, f32)>
 func @complex_extract(%cplx: complex<f32>) {
   %real1 = complex.re %cplx : complex<f32>
@@ -70,8 +70,8 @@ func @complex_div(%lhs: complex<f32>, %rhs: complex<f32>) -> complex<f32> {
   %div = complex.div %lhs, %rhs : complex<f32>
   return %div : complex<f32>
 }
-// CHECK: %[[CASTED_LHS:.*]] = unrealized_conversion_cast %[[LHS]] : complex<f32> to ![[C_TY:.*>]]
-// CHECK: %[[CASTED_RHS:.*]] = unrealized_conversion_cast %[[RHS]] : complex<f32> to ![[C_TY]]
+// CHECK: %[[CASTED_LHS:.*]] = builtin.unrealized_conversion_cast %[[LHS]] : complex<f32> to ![[C_TY:.*>]]
+// CHECK: %[[CASTED_RHS:.*]] = builtin.unrealized_conversion_cast %[[RHS]] : complex<f32> to ![[C_TY]]
 
 // CHECK: %[[LHS_RE:.*]] = llvm.extractvalue %[[CASTED_LHS]][0] : ![[C_TY]]
 // CHECK: %[[LHS_IM:.*]] = llvm.extractvalue %[[CASTED_LHS]][1] : ![[C_TY]]
@@ -97,7 +97,7 @@ func @complex_div(%lhs: complex<f32>, %rhs: complex<f32>) -> complex<f32> {
 // CHECK: %[[IMAG:.*]] = llvm.fdiv %[[IMAG_TMP_2]], %[[SQ_NORM]]  : f32
 // CHECK: %[[RESULT_2:.*]] = llvm.insertvalue %[[IMAG]], %[[RESULT_1]][1] : ![[C_TY]]
 //
-// CHECK: %[[CASTED_RESULT:.*]] = unrealized_conversion_cast %[[RESULT_2]] : ![[C_TY]] to complex<f32>
+// CHECK: %[[CASTED_RESULT:.*]] = builtin.unrealized_conversion_cast %[[RESULT_2]] : ![[C_TY]] to complex<f32>
 // CHECK: return %[[CASTED_RESULT]] : complex<f32>
 
 // CHECK-LABEL: func @complex_mul
@@ -106,8 +106,8 @@ func @complex_mul(%lhs: complex<f32>, %rhs: complex<f32>) -> complex<f32> {
   %mul = complex.mul %lhs, %rhs : complex<f32>
   return %mul : complex<f32>
 }
-// CHECK: %[[CASTED_LHS:.*]] = unrealized_conversion_cast %[[LHS]] : complex<f32> to ![[C_TY:.*>]]
-// CHECK: %[[CASTED_RHS:.*]] = unrealized_conversion_cast %[[RHS]] : complex<f32> to ![[C_TY]]
+// CHECK: %[[CASTED_LHS:.*]] = builtin.unrealized_conversion_cast %[[LHS]] : complex<f32> to ![[C_TY:.*>]]
+// CHECK: %[[CASTED_RHS:.*]] = builtin.unrealized_conversion_cast %[[RHS]] : complex<f32> to ![[C_TY]]
 
 // CHECK: %[[LHS_RE:.*]] = llvm.extractvalue %[[CASTED_LHS]][0] : ![[C_TY]]
 // CHECK: %[[LHS_IM:.*]] = llvm.extractvalue %[[CASTED_LHS]][1] : ![[C_TY]]
@@ -126,7 +126,7 @@ func @complex_mul(%lhs: complex<f32>, %rhs: complex<f32>) -> complex<f32> {
 // CHECK: %[[RESULT_1:.*]] = llvm.insertvalue %[[REAL]], %[[RESULT_0]][0]
 // CHECK: %[[RESULT_2:.*]] = llvm.insertvalue %[[IMAG]], %[[RESULT_1]][1]
 
-// CHECK: %[[CASTED_RESULT:.*]] = unrealized_conversion_cast %[[RESULT_2]] : ![[C_TY]] to complex<f32>
+// CHECK: %[[CASTED_RESULT:.*]] = builtin.unrealized_conversion_cast %[[RESULT_2]] : ![[C_TY]] to complex<f32>
 // CHECK: return %[[CASTED_RESULT]] : complex<f32>
 
 // CHECK-LABEL: func @complex_abs
@@ -135,7 +135,7 @@ func @complex_abs(%arg: complex<f32>) -> f32 {
   %abs = complex.abs %arg: complex<f32>
   return %abs : f32
 }
-// CHECK: %[[CASTED_ARG:.*]] = unrealized_conversion_cast %[[ARG]] : complex<f32> to ![[C_TY:.*>]]
+// CHECK: %[[CASTED_ARG:.*]] = builtin.unrealized_conversion_cast %[[ARG]] : complex<f32> to ![[C_TY:.*>]]
 // CHECK: %[[REAL:.*]] = llvm.extractvalue %[[CASTED_ARG]][0] : ![[C_TY]]
 // CHECK: %[[IMAG:.*]] = llvm.extractvalue %[[CASTED_ARG]][1] : ![[C_TY]]
 // CHECK-DAG: %[[REAL_SQ:.*]] = llvm.fmul %[[REAL]], %[[REAL]]  : f32

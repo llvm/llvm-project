@@ -6,7 +6,7 @@
 // RUN:       .text_high 0x2000000 : { *(.text_high) *(.text_high2) } \
 // RUN:       } " > %t.script
 // RUN: ld.lld --pic-veneer --no-rosegment --script %t.script %t -o %t2
-// RUN: llvm-objdump -d --triple=thumbv7a-none-linux-gnueabi %t2 | FileCheck %s
+// RUN: llvm-objdump -d %t2 | FileCheck %s
 
 // Test that we can force generation of position independent thunks even when
 // inputs are not pic.

@@ -467,8 +467,9 @@ def SPV_ModuleOp : SPV_Op<"module",
   let builders = [
     OpBuilder<(ins CArg<"Optional<StringRef>", "llvm::None">:$name)>,
     OpBuilder<(ins "spirv::AddressingModel":$addressing_model,
-      "spirv::MemoryModel":$memory_model,
-      CArg<"Optional<StringRef>", "llvm::None">:$name)>
+                   "spirv::MemoryModel":$memory_model,
+                   CArg<"Optional<spirv::VerCapExtAttr>", "llvm::None">:$vce_triple,
+                   CArg<"Optional<StringRef>", "llvm::None">:$name)>
   ];
 
   // We need to ensure the block inside the region is properly terminated;

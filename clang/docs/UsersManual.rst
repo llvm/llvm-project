@@ -1520,6 +1520,17 @@ Note that floating-point operations performed as part of constant initialization
    * ``maytrap`` The compiler avoids transformations that may raise exceptions that would not have been raised by the original code. Constant folding performed by the compiler is exempt from this option.
    * ``strict`` The compiler ensures that all transformations strictly preserve the floating point exception semantics of the original code.
 
+.. option:: -ffp-eval-method=<value>
+
+   Specify the floating-point evaluation method.
+
+   Valid values are: ``source``, ``double``, and ``extended``.
+   The default value is target-specific, typically ``source``.  Details:
+
+   * ``source`` The compiler uses the floating-point type declared in the source program as the evaluation method.
+   * ``double`` The compiler uses ``double`` as the floating-point evaluation method for all float expressions of type that is narrower than ``double``.
+   * ``extended`` The compiler uses ``long double`` as the floating-point evaluation method for all float expressions of type that is narrower than ``long double``.
+
 .. option:: -f[no-]protect-parens:
 
    This option pertains to floating-point types, complex types with

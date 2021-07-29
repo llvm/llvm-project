@@ -342,7 +342,7 @@ def PDL_OperationOp
     ```mlir
     // Define an instance with single range of types.
     %allResultTypes = pdl.types
-    %op = pdl.operation "unrealized_conversion_cast" -> (%allResultTypes : !pdl.types)
+    %op = pdl.operation "builtin.unrealized_conversion_cast" -> (%allResultTypes : !pdl.types)
     ```
 
     2) A variadic number of either !pdl.type or !pdl.range<type>:

@@ -410,8 +410,7 @@ CodeGenOpt::Level getOptLevel() {
   llvm_unreachable("Unrecognized opt level.");
 }
 
-LLVM_ATTRIBUTE_NORETURN
-static void reportError(SMDiagnostic Err, const char *ProgName) {
+[[noreturn]] static void reportError(SMDiagnostic Err, const char *ProgName) {
   Err.print(ProgName, errs());
   exit(1);
 }

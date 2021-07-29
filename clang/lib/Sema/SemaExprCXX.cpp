@@ -5891,10 +5891,8 @@ static bool TryClassUnification(Sema &Self, Expr *From, Expr *To,
   //   -- If E2 is an xvalue: E1 can be converted to match E2 if E1 can be
   //      implicitly converted to the type "rvalue reference to R2", subject to
   //      the constraint that the reference must bind directly.
-  if (To->isLValue() || To->isXValue()) {
-    QualType T = To->isLValue() ? Self.Context.getLValueReferenceType(ToType)
-                                : Self.Context.getRValueReferenceType(ToType);
-
+  if (To->isGLValue()) {
+    QualType T = Self.Context.getReferenceQualifiedType(To);
     InitializedEntity Entity = InitializedEntity::InitializeTemporary(T);
 
     InitializationSequence InitSeq(Self, Entity, Kind, From);
@@ -8743,7 +8741,7 @@ Sema::BuildExprRequirement(
     TemplateParameterList *TPL =
         ReturnTypeRequirement.getTypeConstraintTemplateParameterList();
     QualType MatchedType =
-        getDecltypeForParenthesizedExpr(E).getCanonicalType();
+        Context.getReferenceQualifiedType(E).getCanonicalType();
     llvm::SmallVector<TemplateArgument, 1> Args;
     Args.push_back(TemplateArgument(MatchedType));
     TemplateArgumentList TAL(TemplateArgumentList::OnStack, Args);

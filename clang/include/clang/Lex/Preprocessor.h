@@ -178,11 +178,16 @@ class Preprocessor {
   IdentifierInfo *Ident__is_target_vendor;         // __is_target_vendor
   IdentifierInfo *Ident__is_target_os;             // __is_target_os
   IdentifierInfo *Ident__is_target_environment;    // __is_target_environment
+  IdentifierInfo *Ident__FLT_EVAL_METHOD__ = nullptr; // __FLT_EVAL_METHOD__
 
   // Weak, only valid (and set) while InMacroArgs is true.
   Token* ArgMacro;
 
   SourceLocation DATELoc, TIMELoc;
+
+  // Corresponding to __FLT_EVAL_METHOD__. Initialized from TargetInfo
+  // or the command line. Implementation-defined values can be negative.
+  int CurrentFPEvalMethod = 0;
 
   // Next __COUNTER__ value, starts at 0.
   unsigned CounterValue = 0;
@@ -1988,6 +1993,8 @@ public:
   }
   unsigned getCounterValue() const { return CounterValue; }
   void setCounterValue(unsigned V) { CounterValue = V; }
+  int getCurrentFPEvalMethod() const { return CurrentFPEvalMethod; }
+  void setCurrentFPEvalMethod(int V) { CurrentFPEvalMethod = V; }
 
   /// Retrieves the module that we're currently building, if any.
   Module *getCurrentModule();

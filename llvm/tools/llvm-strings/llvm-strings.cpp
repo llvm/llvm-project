@@ -73,7 +73,7 @@ static bool PrintFileName;
 enum radix { none, octal, hexadecimal, decimal };
 static radix Radix;
 
-LLVM_ATTRIBUTE_NORETURN static void reportCmdLineError(const Twine &Message) {
+[[noreturn]] static void reportCmdLineError(const Twine &Message) {
   WithColor::error(errs(), ToolName) << Message << "\n";
   exit(1);
 }

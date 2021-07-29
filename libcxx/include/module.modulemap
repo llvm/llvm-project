@@ -628,6 +628,7 @@ module std [system] {
       module ref_view               { private header "__ranges/ref_view.h"              }
       module size                   { private header "__ranges/size.h"                  }
       module subrange               { private header "__ranges/subrange.h"              }
+      module take_view              { private header "__ranges/take_view.h"             }
       module transform_view         { private header "__ranges/transform_view.h"        }
       module view_interface         { private header "__ranges/view_interface.h"        }
     }

@@ -36,19 +36,19 @@ def testParseSuccess():
     # A first import is expected to fail because the pass isn't registered
     # until we import mlir.transforms
     try:
-      pm = PassManager.parse("module(func(print-op-stats))")
+      pm = PassManager.parse("builtin.module(builtin.func(print-op-stats))")
       # TODO: this error should be propagate to Python but the C API does not help right now.
       # CHECK: error: 'print-op-stats' does not refer to a registered pass or pass pipeline
     except ValueError as e:
-      # CHECK: ValueError exception: invalid pass pipeline 'module(func(print-op-stats))'.
+      # CHECK: ValueError exception: invalid pass pipeline 'builtin.module(builtin.func(print-op-stats))'.
       log("ValueError exception:", e)
     else:
       log("Exception not produced")
 
     # This will register the pass and round-trip should be possible now.
     import mlir.transforms
-    pm = PassManager.parse("module(func(print-op-stats))")
-    # CHECK: Roundtrip: module(func(print-op-stats))
+    pm = PassManager.parse("builtin.module(builtin.func(print-op-stats))")
+    # CHECK: Roundtrip: builtin.module(builtin.func(print-op-stats))
     log("Roundtrip: ", pm)
 run(testParseSuccess)
 
@@ -71,10 +71,10 @@ run(testParseFail)
 def testInvalidNesting():
   with Context():
     try:
-      pm = PassManager.parse("func(view-op-graph)")
+      pm = PassManager.parse("builtin.func(view-op-graph)")
     except ValueError as e:
-      # CHECK: Can't add pass 'ViewOpGraphPass' restricted to 'module' on a PassManager intended to run on 'func', did you intend to nest?
-      # CHECK: ValueError exception: invalid pass pipeline 'func(view-op-graph)'.
+      # CHECK: Can't add pass 'ViewOpGraphPass' restricted to 'builtin.module' on a PassManager intended to run on 'builtin.func', did you intend to nest?
+      # CHECK: ValueError exception: invalid pass pipeline 'builtin.func(view-op-graph)'.
       log("ValueError exception:", e)
     else:
       log("Exception not produced")
@@ -89,7 +89,7 @@ def testRunPipeline():
     module = Module.parse(r"""func @successfulParse() { return }""")
     pm.run(module)
 # CHECK: Operations encountered:
-# CHECK: func              , 1
-# CHECK: module            , 1
+# CHECK: builtin.func      , 1
+# CHECK: builtin.module    , 1
 # CHECK: std.return        , 1
 run(testRunPipeline)

@@ -8,12 +8,14 @@
 /// \file
 ///
 /// This file defines the AMDGPUCustomBehaviour class which inherits from
-/// CustomBehaviour.
+/// CustomBehaviour. This class is used by the tool llvm-mca to enforce
+/// target specific behaviour that is not expressed well enough in the
+/// scheduling model for mca to enforce it automatically.
 ///
 //===----------------------------------------------------------------------===//
 
-#ifndef LLVM_TOOLS_LLVM_MCA_LIB_AMDGPU_AMDGPUCUSTOMBEHAVIOUR_H
-#define LLVM_TOOLS_LLVM_MCA_LIB_AMDGPU_AMDGPUCUSTOMBEHAVIOUR_H
+#ifndef LLVM_LIB_TARGET_AMDGPU_MCA_AMDGPUCUSTOMBEHAVIOUR_H
+#define LLVM_LIB_TARGET_AMDGPU_MCA_AMDGPUCUSTOMBEHAVIOUR_H
 
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/MCA/CustomBehaviour.h"
@@ -29,14 +31,14 @@ public:
 
   ~AMDGPUInstrPostProcess() {}
 
-  void postProcessInstruction(std::unique_ptr<Instruction> &Inst,
+  void postProcessInstruction(std::unique_ptr<mca::Instruction> &Inst,
                               const MCInst &MCI) override {}
 };
 
 class AMDGPUCustomBehaviour : public CustomBehaviour {
 public:
-  AMDGPUCustomBehaviour(const MCSubtargetInfo &STI, const SourceMgr &SrcMgr,
-                        const MCInstrInfo &MCII);
+  AMDGPUCustomBehaviour(const MCSubtargetInfo &STI,
+                        const mca::SourceMgr &SrcMgr, const MCInstrInfo &MCII);
 
   ~AMDGPUCustomBehaviour() {}
 
@@ -47,11 +49,11 @@ public:
   /// register and hardware dependencies so this method should only
   /// implement custom behaviour and dependencies that are not picked up
   /// by MCA naturally.
-  unsigned checkCustomHazard(ArrayRef<InstRef> IssuedInst,
-                             const InstRef &IR) override;
+  unsigned checkCustomHazard(ArrayRef<mca::InstRef> IssuedInst,
+                             const mca::InstRef &IR) override;
 };
 
 } // namespace mca
 } // namespace llvm
 
-#endif /* LLVM_TOOLS_LLVM_MCA_LIB_AMDGPU_AMDGPUCUSTOMBEHAVIOUR_H */
+#endif

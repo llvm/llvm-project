@@ -1855,6 +1855,10 @@ public:
   ///
   static void createShallowWrapper(Function &F);
 
+  /// Returns true if the function \p F can be internalized. i.e. it has a
+  /// compatible linkage.
+  static bool isInternalizable(Function &F);
+
   /// Make another copy of the function \p F such that the copied version has
   /// internal linkage afterwards and can be analysed. Then we replace all uses
   /// of the original function to the copied one
@@ -1869,6 +1873,22 @@ public:
   /// If the function \p F failed to be internalized the return value will be a
   /// null pointer.
   static Function *internalizeFunction(Function &F, bool Force = false);
+
+  /// Make copies of each function in the set \p FnSet such that the copied
+  /// version has internal linkage afterwards and can be analysed. Then we
+  /// replace all uses of the original function to the copied one. The map
+  /// \p FnMap contains a mapping of functions to their internalized versions.
+  ///
+  /// Only non-locally linked functions that have `linkonce_odr` or `weak_odr`
+  /// linkage can be internalized because these linkages guarantee that other
+  /// definitions with the same name have the same semantics as this one.
+  ///
+  /// This version will internalize all the functions in the set \p FnSet at
+  /// once and then replace the uses. This prevents internalized functions being
+  /// called by external functions when there is an internalized version in the
+  /// module.
+  static bool internalizeFunctions(SmallPtrSetImpl<Function *> &FnSet,
+                                   DenseMap<Function *, Function *> &FnMap);
 
   /// Return the data layout associated with the anchor scope.
   const DataLayout &getDataLayout() const { return InfoCache.DL; }

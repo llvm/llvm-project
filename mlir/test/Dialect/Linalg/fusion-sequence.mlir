@@ -1,4 +1,4 @@
-// RUN: mlir-opt -pass-pipeline="func(test-linalg-tile-and-fuse{tile-sizes=16,32,64}),resolve-shaped-type-result-dims,canonicalize,cse" -split-input-file %s | FileCheck %s
+// RUN: mlir-opt -pass-pipeline="builtin.func(test-linalg-tile-and-fuse{tile-sizes=16,32,64}),resolve-shaped-type-result-dims,canonicalize,cse" -split-input-file %s | FileCheck %s
 
 module {
   func @three_op_fusion(%arg0: memref<?x?xf32>, %arg1: memref<?x?xf32>,

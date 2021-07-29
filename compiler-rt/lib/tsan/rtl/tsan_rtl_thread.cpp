@@ -99,8 +99,7 @@ void ThreadContext::OnStarted(void *arg) {
 #else
   // Setup dynamic shadow stack.
   const int kInitStackSize = 8;
-  thr->shadow_stack = (uptr*)internal_alloc(MBlockShadowStack,
-      kInitStackSize * sizeof(uptr));
+  thr->shadow_stack = (uptr *)internal_alloc(kInitStackSize * sizeof(uptr));
   thr->shadow_stack_pos = thr->shadow_stack;
   thr->shadow_stack_end = thr->shadow_stack + kInitStackSize;
 #endif
@@ -421,7 +420,7 @@ void FiberSwitchImpl(ThreadState *from, ThreadState *to) {
 }
 
 ThreadState *FiberCreate(ThreadState *thr, uptr pc, unsigned flags) {
-  void *mem = internal_alloc(MBlockThreadContex, sizeof(ThreadState));
+  void *mem = internal_alloc(sizeof(ThreadState));
   ThreadState *fiber = static_cast<ThreadState *>(mem);
   internal_memset(fiber, 0, sizeof(*fiber));
   int tid = ThreadCreate(thr, pc, 0, true);

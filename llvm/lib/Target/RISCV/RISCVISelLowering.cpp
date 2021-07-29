@@ -5814,6 +5814,13 @@ static SDValue performANY_EXTENDCombine(SDNode *N,
     break;
   }
 
+  // Only handle cases where the result is used by a CopyToReg. That likely
+  // means the value is a liveout of the basic block. This helps prevent
+  // infinite combine loops like PR51206.
+  if (none_of(N->uses(),
+              [](SDNode *User) { return User->getOpcode() == ISD::CopyToReg; }))
+    return SDValue();
+
   SmallVector<SDNode *, 4> SetCCs;
   for (SDNode::use_iterator UI = Src.getNode()->use_begin(),
                             UE = Src.getNode()->use_end();
@@ -8933,6 +8940,11 @@ bool RISCVTargetLowering::decomposeMulByConstant(LLVMContext &Context, EVT VT,
       const APInt &Imm = ConstNode->getAPIntValue();
       if ((Imm + 1).isPowerOf2() || (Imm - 1).isPowerOf2() ||
           (1 - Imm).isPowerOf2() || (-1 - Imm).isPowerOf2())
+        return true;
+      // Optimize the MUL to (SH*ADD x, (SLLI x, bits)) if Imm is not simm12.
+      if (Subtarget.hasStdExtZba() && !Imm.isSignedIntN(12) &&
+          ((Imm - 2).isPowerOf2() || (Imm - 4).isPowerOf2() ||
+           (Imm - 8).isPowerOf2()))
         return true;
       // Omit the following optimization if the sub target has the M extension
       // and the data size >= XLen.

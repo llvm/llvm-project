@@ -198,38 +198,44 @@ static void emitDialectDecl(Dialect &dialect,
   }
 
   // Emit all nested namespaces.
-  NamespaceEmitter nsEmitter(os, dialect);
+  {
+    NamespaceEmitter nsEmitter(os, dialect);
 
-  // Emit the start of the decl.
-  std::string cppName = dialect.getCppClassName();
-  os << llvm::formatv(dialectDeclBeginStr, cppName, dialect.getName(),
-                      dependentDialectRegistrations);
+    // Emit the start of the decl.
+    std::string cppName = dialect.getCppClassName();
+    os << llvm::formatv(dialectDeclBeginStr, cppName, dialect.getName(),
+                        dependentDialectRegistrations);
 
-  // Check for any attributes/types registered to this dialect.  If there are,
-  // add the hooks for parsing/printing.
-  if (!dialectAttrs.empty())
-    os << attrParserDecl;
-  if (!dialectTypes.empty())
-    os << typeParserDecl;
+    // Check for any attributes/types registered to this dialect.  If there are,
+    // add the hooks for parsing/printing.
+    if (!dialectAttrs.empty())
+      os << attrParserDecl;
+    if (!dialectTypes.empty())
+      os << typeParserDecl;
 
-  // Add the decls for the various features of the dialect.
-  if (dialect.hasCanonicalizer())
-    os << canonicalizerDecl;
-  if (dialect.hasConstantMaterializer())
-    os << constantMaterializerDecl;
-  if (dialect.hasOperationAttrVerify())
-    os << opAttrVerifierDecl;
-  if (dialect.hasRegionArgAttrVerify())
-    os << regionArgAttrVerifierDecl;
-  if (dialect.hasRegionResultAttrVerify())
-    os << regionResultAttrVerifierDecl;
-  if (dialect.hasOperationInterfaceFallback())
-    os << operationInterfaceFallbackDecl;
-  if (llvm::Optional<StringRef> extraDecl = dialect.getExtraClassDeclaration())
-    os << *extraDecl;
+    // Add the decls for the various features of the dialect.
+    if (dialect.hasCanonicalizer())
+      os << canonicalizerDecl;
+    if (dialect.hasConstantMaterializer())
+      os << constantMaterializerDecl;
+    if (dialect.hasOperationAttrVerify())
+      os << opAttrVerifierDecl;
+    if (dialect.hasRegionArgAttrVerify())
+      os << regionArgAttrVerifierDecl;
+    if (dialect.hasRegionResultAttrVerify())
+      os << regionResultAttrVerifierDecl;
+    if (dialect.hasOperationInterfaceFallback())
+      os << operationInterfaceFallbackDecl;
+    if (llvm::Optional<StringRef> extraDecl =
+            dialect.getExtraClassDeclaration())
+      os << *extraDecl;
 
-  // End the dialect decl.
-  os << "};\n";
+    // End the dialect decl.
+    os << "};\n";
+  }
+  if (!dialect.getCppNamespace().empty())
+    os << "DECLARE_EXPLICIT_TYPE_ID(" << dialect.getCppNamespace()
+       << "::" << dialect.getCppClassName() << ")\n";
 }
 
 static bool emitDialectDecls(const llvm::RecordKeeper &recordKeeper,
@@ -263,6 +269,11 @@ static const char *const dialectDestructorStr = R"(
 )";
 
 static void emitDialectDef(Dialect &dialect, raw_ostream &os) {
+  // Emit the TypeID explicit specializations to have a single symbol def.
+  if (!dialect.getCppNamespace().empty())
+    os << "DEFINE_EXPLICIT_TYPE_ID(" << dialect.getCppNamespace()
+       << "::" << dialect.getCppClassName() << ")\n";
+
   // Emit all nested namespaces.
   NamespaceEmitter nsEmitter(os, dialect);
 

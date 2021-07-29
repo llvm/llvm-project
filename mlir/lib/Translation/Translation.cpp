@@ -102,7 +102,7 @@ TranslateFromMLIRRegistration::TranslateFromMLIRRegistration(
     dialectRegistration(registry);
     context->appendDialectRegistry(registry);
     auto module = OwningModuleRef(parseSourceFile(sourceMgr, context));
-    if (!module)
+    if (!module || failed(verify(*module)))
       return failure();
     return function(module.get(), output);
   });

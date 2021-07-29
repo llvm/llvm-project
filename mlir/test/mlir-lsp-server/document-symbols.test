@@ -42,7 +42,7 @@
 // CHECK-NEXT:        }
 // CHECK-NEXT:      ],
 // CHECK-NEXT:      "kind": 3,
-// CHECK-NEXT:      "name": "<module>",
+// CHECK-NEXT:      "name": "<builtin.module>",
 // CHECK-NEXT:      "range": {
 // CHECK-NEXT:        "end": {
 // CHECK-NEXT:          "character": {{.*}},

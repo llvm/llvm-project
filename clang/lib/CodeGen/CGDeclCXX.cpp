@@ -555,7 +555,8 @@ CodeGenModule::EmitCXXGlobalVarDeclInitFunc(const VarDecl *D,
                                           PrioritizedCXXGlobalInits.size());
     PrioritizedCXXGlobalInits.push_back(std::make_pair(Key, Fn));
   } else if (isTemplateInstantiation(D->getTemplateSpecializationKind()) ||
-             getContext().GetGVALinkageForVariable(D) == GVA_DiscardableODR) {
+             getContext().GetGVALinkageForVariable(D) == GVA_DiscardableODR ||
+             D->hasAttr<SelectAnyAttr>()) {
     // C++ [basic.start.init]p2:
     //   Definitions of explicitly specialized class template static data
     //   members have ordered initialization. Other class template static data
@@ -568,17 +569,18 @@ CodeGenModule::EmitCXXGlobalVarDeclInitFunc(const VarDecl *D,
     // group with the global being initialized.  On most platforms, this is a
     // minor startup time optimization.  In the MS C++ ABI, there are no guard
     // variables, so this COMDAT key is required for correctness.
-    AddGlobalCtor(Fn, 65535, COMDATKey);
-    if (getTarget().getCXXABI().isMicrosoft() && COMDATKey) {
-      // In The MS C++, MS add template static data member in the linker
-      // drective.
-      addUsedGlobal(COMDATKey);
-    }
-  } else if (D->hasAttr<SelectAnyAttr>()) {
+    //
     // SelectAny globals will be comdat-folded. Put the initializer into a
     // COMDAT group associated with the global, so the initializers get folded
     // too.
+
     AddGlobalCtor(Fn, 65535, COMDATKey);
+    if (COMDATKey && (getTriple().isOSBinFormatELF() ||
+                      getTarget().getCXXABI().isMicrosoft())) {
+      // When COMDAT is used on ELF or in the MS C++ ABI, the key must be in
+      // llvm.used to prevent linker GC.
+      addUsedGlobal(COMDATKey);
+    }
   } else {
     I = DelayedCXXInitPosition.find(D); // Re-do lookup in case of re-hash.
     if (I == DelayedCXXInitPosition.end()) {

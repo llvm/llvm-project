@@ -18,6 +18,21 @@
 using namespace clang;
 using namespace clang::interp;
 
+unsigned Program::getOrCreateNativePointer(const void *Ptr) {
+  auto It = NativePointerIndices.find(Ptr);
+  if (It != NativePointerIndices.end())
+    return It->second;
+
+  unsigned Idx = NativePointers.size();
+  NativePointers.push_back(Ptr);
+  NativePointerIndices[Ptr] = Idx;
+  return Idx;
+}
+
+const void *Program::getNativePointer(unsigned Idx) {
+  return NativePointers[Idx];
+}
+
 unsigned Program::createGlobalString(const StringLiteral *S) {
   const size_t CharWidth = S->getCharByteWidth();
   const size_t BitWidth = CharWidth * Ctx.getCharBit();

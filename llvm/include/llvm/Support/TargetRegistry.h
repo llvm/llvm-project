@@ -59,6 +59,11 @@ class raw_ostream;
 class raw_pwrite_stream;
 class TargetMachine;
 class TargetOptions;
+namespace mca {
+class CustomBehaviour;
+class InstrPostProcess;
+class SourceMgr;
+} // namespace mca
 
 MCStreamer *createNullStreamer(MCContext &Ctx);
 // Takes ownership of \p TAB and \p CE.
@@ -113,6 +118,13 @@ MCSymbolizer *createMCSymbolizer(const Triple &TT, LLVMOpInfoCallback GetOpInfo,
                                  LLVMSymbolLookupCallback SymbolLookUp,
                                  void *DisInfo, MCContext *Ctx,
                                  std::unique_ptr<MCRelocationInfo> &&RelInfo);
+
+mca::CustomBehaviour *createCustomBehaviour(const MCSubtargetInfo &STI,
+                                            const mca::SourceMgr &SrcMgr,
+                                            const MCInstrInfo &MCII);
+
+mca::InstrPostProcess *createInstrPostProcess(const MCSubtargetInfo &STI,
+                                              const MCInstrInfo &MCII);
 
 /// Target - Wrapper for Target specific information.
 ///
@@ -205,6 +217,15 @@ public:
       const Triple &TT, LLVMOpInfoCallback GetOpInfo,
       LLVMSymbolLookupCallback SymbolLookUp, void *DisInfo, MCContext *Ctx,
       std::unique_ptr<MCRelocationInfo> &&RelInfo);
+
+  using CustomBehaviourCtorTy =
+      mca::CustomBehaviour *(*)(const MCSubtargetInfo &STI,
+                                const mca::SourceMgr &SrcMgr,
+                                const MCInstrInfo &MCII);
+
+  using InstrPostProcessCtorTy =
+      mca::InstrPostProcess *(*)(const MCSubtargetInfo &STI,
+                                 const MCInstrInfo &MCII);
 
 private:
   /// Next - The next registered target in the linked list, maintained by the
@@ -304,6 +325,14 @@ private:
   /// MCSymbolizerCtorFn - Construction function for this target's
   /// MCSymbolizer, if registered (default = llvm::createMCSymbolizer)
   MCSymbolizerCtorTy MCSymbolizerCtorFn = nullptr;
+
+  /// CustomBehaviourCtorFn - Construction function for this target's
+  /// CustomBehaviour, if registered (default = nullptr).
+  CustomBehaviourCtorTy CustomBehaviourCtorFn = nullptr;
+
+  /// InstrPostProcessCtorFn - Construction function for this target's
+  /// InstrPostProcess, if registered (default = nullptr).
+  InstrPostProcessCtorTy InstrPostProcessCtorFn = nullptr;
 
 public:
   Target() = default;
@@ -621,6 +650,25 @@ public:
         MCSymbolizerCtorFn ? MCSymbolizerCtorFn : llvm::createMCSymbolizer;
     return Fn(Triple(TT), GetOpInfo, SymbolLookUp, DisInfo, Ctx,
               std::move(RelInfo));
+  }
+
+  /// createCustomBehaviour - Create a target specific CustomBehaviour.
+  /// This class is used by llvm-mca and requires backend functionality.
+  mca::CustomBehaviour *createCustomBehaviour(const MCSubtargetInfo &STI,
+                                              const mca::SourceMgr &SrcMgr,
+                                              const MCInstrInfo &MCII) const {
+    if (CustomBehaviourCtorFn)
+      return CustomBehaviourCtorFn(STI, SrcMgr, MCII);
+    return nullptr;
+  }
+
+  /// createInstrPostProcess - Create a target specific InstrPostProcess.
+  /// This class is used by llvm-mca and requires backend functionality.
+  mca::InstrPostProcess *createInstrPostProcess(const MCSubtargetInfo &STI,
+                                                const MCInstrInfo &MCII) const {
+    if (InstrPostProcessCtorFn)
+      return InstrPostProcessCtorFn(STI, MCII);
+    return nullptr;
   }
 
   /// @}
@@ -957,6 +1005,34 @@ struct TargetRegistry {
   /// @param Fn - A function to construct an MCSymbolizer for the target.
   static void RegisterMCSymbolizer(Target &T, Target::MCSymbolizerCtorTy Fn) {
     T.MCSymbolizerCtorFn = Fn;
+  }
+
+  /// RegisterCustomBehaviour - Register a CustomBehaviour
+  /// implementation for the given target.
+  ///
+  /// Clients are responsible for ensuring that registration doesn't occur
+  /// while another thread is attempting to access the registry. Typically
+  /// this is done by initializing all targets at program startup.
+  ///
+  /// @param T - The target being registered.
+  /// @param Fn - A function to construct a CustomBehaviour for the target.
+  static void RegisterCustomBehaviour(Target &T,
+                                      Target::CustomBehaviourCtorTy Fn) {
+    T.CustomBehaviourCtorFn = Fn;
+  }
+
+  /// RegisterInstrPostProcess - Register an InstrPostProcess
+  /// implementation for the given target.
+  ///
+  /// Clients are responsible for ensuring that registration doesn't occur
+  /// while another thread is attempting to access the registry. Typically
+  /// this is done by initializing all targets at program startup.
+  ///
+  /// @param T - The target being registered.
+  /// @param Fn - A function to construct an InstrPostProcess for the target.
+  static void RegisterInstrPostProcess(Target &T,
+                                       Target::InstrPostProcessCtorTy Fn) {
+    T.InstrPostProcessCtorFn = Fn;
   }
 
   /// @}

@@ -58,6 +58,19 @@ void call_stpncpy() {
   __builtin_stpncpy(s1, s2, 20); // expected-warning {{'stpncpy' size argument is too large; destination buffer has size 10, but size argument is 20}}
 }
 
+void call_strcpy() {
+  const char *const src = "abcd";
+  char dst[4];
+  __builtin_strcpy(dst, src); // expected-warning {{'strcpy' will always overflow; destination buffer has size 4, but the source string has length 5 (including NUL byte)}}
+}
+
+void call_strcpy_nowarn() {
+  const char *const src = "abcd";
+  char dst[5];
+  // We should not get a warning here.
+  __builtin_strcpy(dst, src);
+}
+
 void call_memmove() {
   char s1[10], s2[20];
   __builtin_memmove(s2, s1, 20);

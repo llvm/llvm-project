@@ -380,6 +380,10 @@ Error MachOLayoutBuilder::layoutTail(uint64_t Offset) {
     case MachO::LC_SOURCE_VERSION:
     case MachO::LC_THREAD:
     case MachO::LC_UNIXTHREAD:
+    case MachO::LC_SUB_FRAMEWORK:
+    case MachO::LC_SUB_UMBRELLA:
+    case MachO::LC_SUB_CLIENT:
+    case MachO::LC_SUB_LIBRARY:
       // Nothing to update.
       break;
     default:

@@ -59,7 +59,7 @@ def testTraverseOpRegionBlockIterators():
 
   # CHECK: REGION 0:
   # CHECK:   BLOCK 0:
-  # CHECK:     OP 0: func
+  # CHECK:     OP 0: builtin.func
   # CHECK:       REGION 0:
   # CHECK:         BLOCK 0:
   # CHECK:           OP 0: %0 = "custom.addi"
@@ -96,14 +96,14 @@ def testTraverseOpRegionBlockIndices():
 
   # CHECK: REGION 0:
   # CHECK:   BLOCK 0:
-  # CHECK:     OP 0: func
-  # CHECK:     OP 0: parent module
+  # CHECK:     OP 0: builtin.func
+  # CHECK:     OP 0: parent builtin.module
   # CHECK:       REGION 0:
   # CHECK:         BLOCK 0:
   # CHECK:           OP 0: %0 = "custom.addi"
-  # CHECK:           OP 0: parent func
+  # CHECK:           OP 0: parent builtin.func
   # CHECK:           OP 1: return
-  # CHECK:           OP 1: parent func
+  # CHECK:           OP 1: parent builtin.func
   walk_operations("", module.operation)
 
 run(testTraverseOpRegionBlockIndices)
@@ -580,12 +580,12 @@ run(testSingleResultProperty)
 def testPrintInvalidOperation():
   ctx = Context()
   with Location.unknown(ctx):
-    module = Operation.create("module", regions=2)
+    module = Operation.create("builtin.module", regions=2)
     # This module has two region and is invalid verify that we fallback
     # to the generic printer for safety.
     block = module.regions[0].blocks.append()
     # CHECK: // Verification failed, printing generic form
-    # CHECK: "module"() ( {
+    # CHECK: "builtin.module"() ( {
     # CHECK: }) : () -> ()
     print(module)
     # CHECK: .verify = False
@@ -598,24 +598,24 @@ def testCreateWithInvalidAttributes():
   ctx = Context()
   with Location.unknown(ctx):
     try:
-      Operation.create("module", attributes={None:StringAttr.get("name")})
+      Operation.create("builtin.module", attributes={None:StringAttr.get("name")})
     except Exception as e:
-      # CHECK: Invalid attribute key (not a string) when attempting to create the operation "module"
+      # CHECK: Invalid attribute key (not a string) when attempting to create the operation "builtin.module"
       print(e)
     try:
-      Operation.create("module", attributes={42:StringAttr.get("name")})
+      Operation.create("builtin.module", attributes={42:StringAttr.get("name")})
     except Exception as e:
-      # CHECK: Invalid attribute key (not a string) when attempting to create the operation "module"
+      # CHECK: Invalid attribute key (not a string) when attempting to create the operation "builtin.module"
       print(e)
     try:
-      Operation.create("module", attributes={"some_key":ctx})
+      Operation.create("builtin.module", attributes={"some_key":ctx})
     except Exception as e:
-      # CHECK: Invalid attribute value for the key "some_key" when attempting to create the operation "module"
+      # CHECK: Invalid attribute value for the key "some_key" when attempting to create the operation "builtin.module"
       print(e)
     try:
-      Operation.create("module", attributes={"some_key":None})
+      Operation.create("builtin.module", attributes={"some_key":None})
     except Exception as e:
-      # CHECK: Found an invalid (`None`?) attribute value for the key "some_key" when attempting to create the operation "module"
+      # CHECK: Found an invalid (`None`?) attribute value for the key "some_key" when attempting to create the operation "builtin.module"
       print(e)
 run(testCreateWithInvalidAttributes)
 

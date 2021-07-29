@@ -41,7 +41,7 @@ void testRunPassOnModule() {
 
   // Run the print-op-stats pass on the top-level module:
   // CHECK-LABEL: Operations encountered:
-  // CHECK: func              , 1
+  // CHECK: builtin.func      , 1
   // CHECK: std.addi          , 1
   // CHECK: std.return        , 1
   {
@@ -83,13 +83,13 @@ void testRunPassOnNestedModule() {
 
   // Run the print-op-stats pass on functions under the top-level module:
   // CHECK-LABEL: Operations encountered:
-  // CHECK: func              , 1
+  // CHECK: builtin.func      , 1
   // CHECK: std.addi          , 1
   // CHECK: std.return        , 1
   {
     MlirPassManager pm = mlirPassManagerCreate(ctx);
     MlirOpPassManager nestedFuncPm = mlirPassManagerGetNestedUnder(
-        pm, mlirStringRefCreateFromCString("func"));
+        pm, mlirStringRefCreateFromCString("builtin.func"));
     MlirPass printOpStatPass = mlirCreateTransformsPrintOpStats();
     mlirOpPassManagerAddOwnedPass(nestedFuncPm, printOpStatPass);
     MlirLogicalResult success = mlirPassManagerRun(pm, module);
@@ -99,15 +99,15 @@ void testRunPassOnNestedModule() {
   }
   // Run the print-op-stats pass on functions under the nested module:
   // CHECK-LABEL: Operations encountered:
-  // CHECK: func              , 1
+  // CHECK: builtin.func      , 1
   // CHECK: std.addf          , 1
   // CHECK: std.return        , 1
   {
     MlirPassManager pm = mlirPassManagerCreate(ctx);
     MlirOpPassManager nestedModulePm = mlirPassManagerGetNestedUnder(
-        pm, mlirStringRefCreateFromCString("module"));
+        pm, mlirStringRefCreateFromCString("builtin.module"));
     MlirOpPassManager nestedFuncPm = mlirOpPassManagerGetNestedUnder(
-        nestedModulePm, mlirStringRefCreateFromCString("func"));
+        nestedModulePm, mlirStringRefCreateFromCString("builtin.func"));
     MlirPass printOpStatPass = mlirCreateTransformsPrintOpStats();
     mlirOpPassManagerAddOwnedPass(nestedFuncPm, printOpStatPass);
     MlirLogicalResult success = mlirPassManagerRun(pm, module);
@@ -130,21 +130,21 @@ void testPrintPassPipeline() {
   MlirPassManager pm = mlirPassManagerCreate(ctx);
   // Populate the pass-manager
   MlirOpPassManager nestedModulePm = mlirPassManagerGetNestedUnder(
-      pm, mlirStringRefCreateFromCString("module"));
+      pm, mlirStringRefCreateFromCString("builtin.module"));
   MlirOpPassManager nestedFuncPm = mlirOpPassManagerGetNestedUnder(
-      nestedModulePm, mlirStringRefCreateFromCString("func"));
+      nestedModulePm, mlirStringRefCreateFromCString("builtin.func"));
   MlirPass printOpStatPass = mlirCreateTransformsPrintOpStats();
   mlirOpPassManagerAddOwnedPass(nestedFuncPm, printOpStatPass);
 
   // Print the top level pass manager
-  // CHECK: Top-level: module(func(print-op-stats))
+  // CHECK: Top-level: builtin.module(builtin.func(print-op-stats))
   fprintf(stderr, "Top-level: ");
   mlirPrintPassPipeline(mlirPassManagerGetAsOpPassManager(pm), printToStderr,
                         NULL);
   fprintf(stderr, "\n");
 
   // Print the pipeline nested one level down
-  // CHECK: Nested Module: func(print-op-stats)
+  // CHECK: Nested Module: builtin.func(print-op-stats)
   fprintf(stderr, "Nested Module: ");
   mlirPrintPassPipeline(nestedModulePm, printToStderr, NULL);
   fprintf(stderr, "\n");
@@ -166,7 +166,7 @@ void testParsePassPipeline() {
   MlirLogicalResult status = mlirParsePassPipeline(
       mlirPassManagerGetAsOpPassManager(pm),
       mlirStringRefCreateFromCString(
-          "module(func(print-op-stats), func(print-op-stats))"));
+          "builtin.module(builtin.func(print-op-stats), builtin.func(print-op-stats))"));
   // Expect a failure, we haven't registered the print-op-stats pass yet.
   if (mlirLogicalResultIsSuccess(status)) {
     fprintf(stderr, "Unexpected success parsing pipeline without registering the pass\n");
@@ -177,14 +177,14 @@ void testParsePassPipeline() {
   status = mlirParsePassPipeline(
       mlirPassManagerGetAsOpPassManager(pm),
       mlirStringRefCreateFromCString(
-          "module(func(print-op-stats), func(print-op-stats))"));
+          "builtin.module(builtin.func(print-op-stats), builtin.func(print-op-stats))"));
   // Expect a failure, we haven't registered the print-op-stats pass yet.
   if (mlirLogicalResultIsFailure(status)) {
     fprintf(stderr, "Unexpected failure parsing pipeline after registering the pass\n");
     exit(EXIT_FAILURE);
   }
 
-  // CHECK: Round-trip: module(func(print-op-stats), func(print-op-stats))
+  // CHECK: Round-trip: builtin.module(builtin.func(print-op-stats), builtin.func(print-op-stats))
   fprintf(stderr, "Round-trip: ");
   mlirPrintPassPipeline(mlirPassManagerGetAsOpPassManager(pm), printToStderr,
                         NULL);

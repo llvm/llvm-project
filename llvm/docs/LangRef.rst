@@ -5564,7 +5564,7 @@ DILocalVariable
 
 ``DILocalVariable`` nodes represent local variables in the source language. If
 the ``arg:`` field is set to non-zero, then this variable is a subprogram
-parameter, and it will be included in the ``variables:`` field of its
+parameter, and it will be included in the ``retainedNodes:`` field of its
 :ref:`DISubprogram`.
 
 .. code-block:: text

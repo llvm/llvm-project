@@ -1,4 +1,4 @@
-// RUN: mlir-opt -allow-unregistered-dialect %s -pass-pipeline="func(sccp)" -split-input-file | FileCheck %s
+// RUN: mlir-opt -allow-unregistered-dialect %s -pass-pipeline="builtin.func(sccp)" -split-input-file | FileCheck %s
 
 /// Check that a constant is properly propagated when only one edge is taken.
 

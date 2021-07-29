@@ -64,7 +64,7 @@ module {
 
     // Read the sparse matrix from file, construct sparse storage.
     %fileName = call @getTensorFilename(%c0) : (index) -> (!Filename)
-    %a = sparse_tensor.new %fileName : !llvm.ptr<i8> to tensor<?x?xf64, #SparseMatrix>
+    %a = sparse_tensor.new %fileName : !Filename to tensor<?x?xf64, #SparseMatrix>
 
     // Initialize dense vectors.
     %bdata = memref.alloc(%c256, %c4) : memref<?x?xf64>
