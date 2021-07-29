@@ -2,6 +2,12 @@
 // RUN: %clang_cc1 -fminimize-whitespace -E -C %s 2>&1 | FileCheck %s --strict-whitespace --check-prefix=MINCCOL
 // RUN: %clang_cc1 -fminimize-whitespace -E -P %s 2>&1 | FileCheck %s --strict-whitespace --check-prefix=MINWS
 // RUN: %clang_cc1 -fminimize-whitespace -E -C -P %s 2>&1 | FileCheck %s --strict-whitespace --check-prefix=MINCWS
+// The follow empty lines ensure that a #line directive is emitted instead of newline padding after the RUN comments.
+
+
+
+
+
 
 #define NOT_OMP  omp  something
 #define HASH #
@@ -16,11 +22,11 @@ HASH  pragma  NOT_OMP
 f  ;
 
 
-// MINCOL:      {{^}}# 9 "{{.*}}minimize-whitespace.c"{{$}}
+// MINCOL:      {{^}}# 15 "{{.*}}minimize-whitespace.c"{{$}}
 // MINCOL:      {{^}}int a;{{$}}
 // MINCOL-NEXT: {{^}}int b;{{$}}
 // MINCOL-NEXT: {{^}}#pragma omp barrier{{$}}
-// MINCOL-NEXT: # 11 "{{.*}}minimize-whitespace.c"
+// MINCOL-NEXT: # 17 "{{.*}}minimize-whitespace.c"
 // MINCOL-NEXT: {{^}}x{{$}}
 // MINCOL-NEXT: {{^}}#pragma omp nothing{{$}}
 // MINCOL-NEXT: {{^ }}#pragma omp something{{$}}
@@ -28,11 +34,11 @@ f  ;
 // MINCOL-NEXT: {{^}}int f;{{$}}
 
 // FIXME: Comments after pragmas disappear, even without -fminimize-whitespace
-// MINCCOL:      {{^}}# 9 "{{.*}}minimize-whitespace.c"{{$}}
+// MINCCOL:      {{^}}# 15 "{{.*}}minimize-whitespace.c"{{$}}
 // MINCCOL:      {{^}}int a;/*  span-comment  */{{$}}
 // MINCCOL-NEXT: {{^}}int b;//  line-comment{{$}}
 // MINCCOL-NEXT: {{^}}#pragma omp barrier{{$}}
-// MINCCOL-NEXT: # 11 "{{.*}}minimize-whitespace.c"
+// MINCCOL-NEXT: # 17 "{{.*}}minimize-whitespace.c"
 // MINCCOL-NEXT: {{^}}x//  more line-comments{{$}}
 // MINCCOL-NEXT: {{^}}#pragma omp nothing{{$}}
 // MINCCOL-NEXT: {{^ }}#pragma omp something{{$}}
