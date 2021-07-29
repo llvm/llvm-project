@@ -511,6 +511,10 @@ void lto_codegen_set_should_embed_uselists(lto_code_gen_t cg,
   unwrap(cg)->setShouldEmbedUselists(ShouldEmbedUselists);
 }
 
+lto_bool_t lto_module_has_ctor_dtor(lto_module_t mod) {
+  return unwrap(mod)->hasCtorDtor();
+}
+
 // ThinLTO API below
 
 thinlto_code_gen_t thinlto_create_codegen(void) {

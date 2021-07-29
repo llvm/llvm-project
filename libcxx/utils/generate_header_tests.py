@@ -32,6 +32,7 @@ header_markup = {
 
     "experimental/filesystem": ["ifndef _LIBCPP_HAS_NO_FILESYSTEM_LIBRARY"],
     "filesystem": ["ifndef _LIBCPP_HAS_NO_FILESYSTEM_LIBRARY"],
+    "format": ["ifndef _LIBCPP_HAS_NO_INCOMPLETE_FORMAT"],
 
     "clocale": ["ifndef _LIBCPP_HAS_NO_LOCALIZATION"],
     "codecvt": ["ifndef _LIBCPP_HAS_NO_LOCALIZATION"],
@@ -43,6 +44,7 @@ header_markup = {
     "locale.h": ["ifndef _LIBCPP_HAS_NO_LOCALIZATION"],
     "locale": ["ifndef _LIBCPP_HAS_NO_LOCALIZATION"],
     "ostream": ["ifndef _LIBCPP_HAS_NO_LOCALIZATION"],
+    "ranges": ["ifndef _LIBCPP_HAS_NO_INCOMPLETE_RANGES"],
     "regex": ["ifndef _LIBCPP_HAS_NO_LOCALIZATION"],
     "sstream": ["ifndef _LIBCPP_HAS_NO_LOCALIZATION"],
     "streambuf": ["ifndef _LIBCPP_HAS_NO_LOCALIZATION"],

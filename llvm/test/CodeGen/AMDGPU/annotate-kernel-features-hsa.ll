@@ -405,12 +405,16 @@ define amdgpu_kernel void @use_flat_to_constant_addrspacecast(i32* %ptr) #1 {
 }
 
 define amdgpu_kernel void @use_is_shared(i8* %ptr) #1 {
-; HSA-LABEL: define {{[^@]+}}@use_is_shared
-; HSA-SAME: (i8* [[PTR:%.*]]) #[[ATTR11]] {
-; HSA-NEXT:    [[IS_SHARED:%.*]] = call i1 @llvm.amdgcn.is.shared(i8* [[PTR]])
-; HSA-NEXT:    [[EXT:%.*]] = zext i1 [[IS_SHARED]] to i32
-; HSA-NEXT:    store i32 [[EXT]], i32 addrspace(1)* undef, align 4
-; HSA-NEXT:    ret void
+; AKF_HSA-LABEL: define {{[^@]+}}@use_is_shared
+; AKF_HSA-SAME: (i8* [[PTR:%.*]]) #[[ATTR11]] {
+; AKF_HSA-NEXT:    [[IS_SHARED:%.*]] = call i1 @llvm.amdgcn.is.shared(i8* [[PTR]])
+; AKF_HSA-NEXT:    [[EXT:%.*]] = zext i1 [[IS_SHARED]] to i32
+; AKF_HSA-NEXT:    store i32 [[EXT]], i32 addrspace(1)* undef, align 4
+; AKF_HSA-NEXT:    ret void
+;
+; ATTRIBUTOR_HSA-LABEL: define {{[^@]+}}@use_is_shared
+; ATTRIBUTOR_HSA-SAME: (i8* [[PTR:%.*]]) #[[ATTR1]] {
+; ATTRIBUTOR_HSA-NEXT:    ret void
 ;
   %is.shared = call i1 @llvm.amdgcn.is.shared(i8* %ptr)
   %ext = zext i1 %is.shared to i32
@@ -419,12 +423,16 @@ define amdgpu_kernel void @use_is_shared(i8* %ptr) #1 {
 }
 
 define amdgpu_kernel void @use_is_private(i8* %ptr) #1 {
-; HSA-LABEL: define {{[^@]+}}@use_is_private
-; HSA-SAME: (i8* [[PTR:%.*]]) #[[ATTR11]] {
-; HSA-NEXT:    [[IS_PRIVATE:%.*]] = call i1 @llvm.amdgcn.is.private(i8* [[PTR]])
-; HSA-NEXT:    [[EXT:%.*]] = zext i1 [[IS_PRIVATE]] to i32
-; HSA-NEXT:    store i32 [[EXT]], i32 addrspace(1)* undef, align 4
-; HSA-NEXT:    ret void
+; AKF_HSA-LABEL: define {{[^@]+}}@use_is_private
+; AKF_HSA-SAME: (i8* [[PTR:%.*]]) #[[ATTR11]] {
+; AKF_HSA-NEXT:    [[IS_PRIVATE:%.*]] = call i1 @llvm.amdgcn.is.private(i8* [[PTR]])
+; AKF_HSA-NEXT:    [[EXT:%.*]] = zext i1 [[IS_PRIVATE]] to i32
+; AKF_HSA-NEXT:    store i32 [[EXT]], i32 addrspace(1)* undef, align 4
+; AKF_HSA-NEXT:    ret void
+;
+; ATTRIBUTOR_HSA-LABEL: define {{[^@]+}}@use_is_private
+; ATTRIBUTOR_HSA-SAME: (i8* [[PTR:%.*]]) #[[ATTR1]] {
+; ATTRIBUTOR_HSA-NEXT:    ret void
 ;
   %is.private = call i1 @llvm.amdgcn.is.private(i8* %ptr)
   %ext = zext i1 %is.private to i32
@@ -433,11 +441,16 @@ define amdgpu_kernel void @use_is_private(i8* %ptr) #1 {
 }
 
 define amdgpu_kernel void @use_alloca() #1 {
-; HSA-LABEL: define {{[^@]+}}@use_alloca
-; HSA-SAME: () #[[ATTR13:[0-9]+]] {
-; HSA-NEXT:    [[ALLOCA:%.*]] = alloca i32, align 4, addrspace(5)
-; HSA-NEXT:    store i32 0, i32 addrspace(5)* [[ALLOCA]], align 4
-; HSA-NEXT:    ret void
+; AKF_HSA-LABEL: define {{[^@]+}}@use_alloca
+; AKF_HSA-SAME: () #[[ATTR13:[0-9]+]] {
+; AKF_HSA-NEXT:    [[ALLOCA:%.*]] = alloca i32, align 4, addrspace(5)
+; AKF_HSA-NEXT:    store i32 0, i32 addrspace(5)* [[ALLOCA]], align 4
+; AKF_HSA-NEXT:    ret void
+;
+; ATTRIBUTOR_HSA-LABEL: define {{[^@]+}}@use_alloca
+; ATTRIBUTOR_HSA-SAME: () #[[ATTR13:[0-9]+]] {
+; ATTRIBUTOR_HSA-NEXT:    [[ALLOCA:%.*]] = alloca i32, align 4, addrspace(5)
+; ATTRIBUTOR_HSA-NEXT:    ret void
 ;
   %alloca = alloca i32, addrspace(5)
   store i32 0, i32 addrspace(5)* %alloca
@@ -445,14 +458,22 @@ define amdgpu_kernel void @use_alloca() #1 {
 }
 
 define amdgpu_kernel void @use_alloca_non_entry_block() #1 {
-; HSA-LABEL: define {{[^@]+}}@use_alloca_non_entry_block
-; HSA-SAME: () #[[ATTR13]] {
-; HSA-NEXT:  entry:
-; HSA-NEXT:    br label [[BB:%.*]]
-; HSA:       bb:
-; HSA-NEXT:    [[ALLOCA:%.*]] = alloca i32, align 4, addrspace(5)
-; HSA-NEXT:    store i32 0, i32 addrspace(5)* [[ALLOCA]], align 4
-; HSA-NEXT:    ret void
+; AKF_HSA-LABEL: define {{[^@]+}}@use_alloca_non_entry_block
+; AKF_HSA-SAME: () #[[ATTR13]] {
+; AKF_HSA-NEXT:  entry:
+; AKF_HSA-NEXT:    br label [[BB:%.*]]
+; AKF_HSA:       bb:
+; AKF_HSA-NEXT:    [[ALLOCA:%.*]] = alloca i32, align 4, addrspace(5)
+; AKF_HSA-NEXT:    store i32 0, i32 addrspace(5)* [[ALLOCA]], align 4
+; AKF_HSA-NEXT:    ret void
+;
+; ATTRIBUTOR_HSA-LABEL: define {{[^@]+}}@use_alloca_non_entry_block
+; ATTRIBUTOR_HSA-SAME: () #[[ATTR13]] {
+; ATTRIBUTOR_HSA-NEXT:  entry:
+; ATTRIBUTOR_HSA-NEXT:    br label [[BB:%.*]]
+; ATTRIBUTOR_HSA:       bb:
+; ATTRIBUTOR_HSA-NEXT:    [[ALLOCA:%.*]] = alloca i32, align 4, addrspace(5)
+; ATTRIBUTOR_HSA-NEXT:    ret void
 ;
 entry:
   br label %bb
@@ -464,11 +485,16 @@ bb:
 }
 
 define void @use_alloca_func() #1 {
-; HSA-LABEL: define {{[^@]+}}@use_alloca_func
-; HSA-SAME: () #[[ATTR13]] {
-; HSA-NEXT:    [[ALLOCA:%.*]] = alloca i32, align 4, addrspace(5)
-; HSA-NEXT:    store i32 0, i32 addrspace(5)* [[ALLOCA]], align 4
-; HSA-NEXT:    ret void
+; AKF_HSA-LABEL: define {{[^@]+}}@use_alloca_func
+; AKF_HSA-SAME: () #[[ATTR13]] {
+; AKF_HSA-NEXT:    [[ALLOCA:%.*]] = alloca i32, align 4, addrspace(5)
+; AKF_HSA-NEXT:    store i32 0, i32 addrspace(5)* [[ALLOCA]], align 4
+; AKF_HSA-NEXT:    ret void
+;
+; ATTRIBUTOR_HSA-LABEL: define {{[^@]+}}@use_alloca_func
+; ATTRIBUTOR_HSA-SAME: () #[[ATTR13]] {
+; ATTRIBUTOR_HSA-NEXT:    [[ALLOCA:%.*]] = alloca i32, align 4, addrspace(5)
+; ATTRIBUTOR_HSA-NEXT:    ret void
 ;
   %alloca = alloca i32, addrspace(5)
   store i32 0, i32 addrspace(5)* %alloca

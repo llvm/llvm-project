@@ -315,6 +315,8 @@ class LLVM_LIBRARY_VISIBILITY CodeViewDebug : public DebugHandlerBase {
   void collectDebugInfoForGlobals();
   void emitDebugInfoForGlobals();
   void emitGlobalVariableList(ArrayRef<CVGlobalVariable> Globals);
+  void emitConstantSymbolRecord(const DIType *DTy, APSInt &Value,
+                                const std::string &QualifiedName);
   void emitDebugInfoForGlobal(const CVGlobalVariable &CVGV);
   void emitStaticConstMemberList();
 

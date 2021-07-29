@@ -151,9 +151,9 @@ define void @sext_v16i8_v16i32(<16 x i8> %a, <16 x i32>* %out) #0 {
 ; VBITS_EQ_256-DAG: sunpklo [[A_WORDS_LO:z[0-9]+]].s, [[A_HALFS_LO]].h
 ; VBITS_EQ_256-DAG: sunpklo [[A_WORDS_HI:z[0-9]+]].s, [[A_HALFS_HI]].h
 ; VBITS_EQ_256-DAG: ptrue [[PG:p[0-9]+]].s, vl8
-; VBITS_EQ_256-DAG: add x[[OUT_HI:[0-9]+]], x0, #32
+; VBITS_EQ_256-DAG: mov x[[NUMELTS:[0-9]+]], #8
 ; VBITS_EQ_256-DAG: st1w { [[A_WORDS_LO]].s }, [[PG]], [x0]
-; VBITS_EQ_256-DAG: st1w { [[A_WORDS_HI]].s }, [[PG]], [x[[OUT_HI]]]
+; VBITS_EQ_256-DAG: st1w { [[A_WORDS_HI]].s }, [[PG]], [x0, x[[NUMELTS]], lsl #2]
 ; VBITS_EQ_256-NEXT: ret
   %b = sext <16 x i8> %a to <16 x i32>
   store <16 x i32> %b, <16 x i32>* %out
@@ -513,9 +513,9 @@ define void @zext_v16i8_v16i32(<16 x i8> %a, <16 x i32>* %out) #0 {
 ; VBITS_EQ_256-DAG: uunpklo [[A_WORDS_LO:z[0-9]+]].s, [[A_HALFS_LO]].h
 ; VBITS_EQ_256-DAG: uunpklo [[A_WORDS_HI:z[0-9]+]].s, [[A_HALFS_HI]].h
 ; VBITS_EQ_256-DAG: ptrue [[PG:p[0-9]+]].s, vl8
-; VBITS_EQ_256-DAG: add x[[OUT_HI:[0-9]+]], x0, #32
+; VBITS_EQ_256-DAG: mov x[[OUT_HI:[0-9]+]], #8
 ; VBITS_EQ_256-DAG: st1w { [[A_WORDS_LO]].s }, [[PG]], [x0]
-; VBITS_EQ_256-DAG: st1w { [[A_WORDS_HI]].s }, [[PG]], [x[[OUT_HI]]]
+; VBITS_EQ_256-DAG: st1w { [[A_WORDS_HI]].s }, [[PG]], [x0, x[[OUT_HI]], lsl #2]
 ; VBITS_EQ_256-NEXT: ret
   %b = zext <16 x i8> %a to <16 x i32>
   store <16 x i32> %b, <16 x i32>* %out

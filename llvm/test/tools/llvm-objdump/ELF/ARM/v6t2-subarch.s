@@ -1,4 +1,4 @@
-@ RUN: llvm-mc < %s -triple armv6t2-elf -filetype=obj | llvm-objdump --triple=thumb -d - | FileCheck %s
+@ RUN: llvm-mc < %s -triple armv6t2-elf -filetype=obj | llvm-objdump -d - | FileCheck %s
 
 .arch armv6t2
 

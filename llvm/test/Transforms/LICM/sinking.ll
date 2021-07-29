@@ -979,16 +979,16 @@ try.cont:
   ret void
 }
 
-; TODO: Should not get sunk.
 define i32 @not_willreturn(i8* %p) {
 ; CHECK-LABEL: @not_willreturn(
+; CHECK-NEXT:    [[X:%.*]] = call i32 @getv() #[[ATTR5:[0-9]+]]
 ; CHECK-NEXT:    br label [[LOOP:%.*]]
 ; CHECK:       loop:
 ; CHECK-NEXT:    store volatile i8 0, i8* [[P:%.*]], align 1
 ; CHECK-NEXT:    br i1 true, label [[LOOP]], label [[OUT:%.*]]
 ; CHECK:       out:
-; CHECK-NEXT:    [[X_LE:%.*]] = call i32 @getv() #[[ATTR5:[0-9]+]]
-; CHECK-NEXT:    ret i32 [[X_LE]]
+; CHECK-NEXT:    [[X_LCSSA:%.*]] = phi i32 [ [[X]], [[LOOP]] ]
+; CHECK-NEXT:    ret i32 [[X_LCSSA]]
 ;
   br label %loop
 

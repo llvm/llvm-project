@@ -313,3 +313,22 @@ class BreakpointCommandTestCase(TestBase):
 
         bp_3 = target.FindBreakpointByID(bp_id_3)
         self.assertTrue(bp_3.IsValid(), "DeleteMeNot didn't protect disabled breakpoint 3")
+
+        # Reset the first breakpoint, disable it, and do this again with no protected name:
+        bp_1 = target.BreakpointCreateByName("main")
+
+        bp_1.SetEnabled(False)
+
+        bp_id_1 = bp_1.GetID()
+        
+        self.runCmd("breakpoint delete --disabled")
+
+        bp_1 = target.FindBreakpointByID(bp_id_1)
+        self.assertFalse(bp_1.IsValid(), "Didn't delete disabled breakpoint 1")
+
+        bp_2 = target.FindBreakpointByID(bp_id_2)
+        self.assertTrue(bp_2.IsValid(), "Deleted enabled breakpoint 2")
+
+        bp_3 = target.FindBreakpointByID(bp_id_3)
+        self.assertFalse(bp_3.IsValid(), "Didn't delete disabled breakpoint 3")
+        

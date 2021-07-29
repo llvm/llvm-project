@@ -1631,6 +1631,8 @@ public:
   QualType getTypeOfExprType(Expr *e) const;
   QualType getTypeOfType(QualType t) const;
 
+  QualType getReferenceQualifiedType(const Expr *e) const;
+
   /// C++11 decltype.
   QualType getDecltypeType(Expr *e, QualType UnderlyingType) const;
 

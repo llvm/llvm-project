@@ -15,10 +15,6 @@
 
 # as of rocm-3.7, hsa is installed with cmake packages and kmt is found via hsa
 find_package(hsa-runtime64 QUIET 1.2.0 HINTS ${CMAKE_INSTALL_PREFIX} PATHS /opt/rocm)
-if (NOT ${hsa-runtime64_FOUND})
-  libomptarget_say("Not building AMDGPU plugin: hsa-runtime64 not found")
-  return()
-endif()
 
 if(NOT LIBOMPTARGET_DEP_LIBELF_FOUND)
   libomptarget_say("Not building AMDGPU plugin: LIBELF not found")
@@ -54,7 +50,7 @@ include_directories(
 set(LIBOMPTARGET_DLOPEN_LIBHSA OFF)
 option(LIBOMPTARGET_FORCE_DLOPEN_LIBHSA "Build with dlopened libhsa" ${LIBOMPTARGET_DLOPEN_LIBHSA})
 
-if (NOT LIBOMPTARGET_FORCE_DLOPEN_LIBHSA)
+if (${hsa-runtime64_FOUND} AND NOT LIBOMPTARGET_FORCE_DLOPEN_LIBHSA)
   libomptarget_say("Building AMDGPU plugin linked against libhsa")
   set(LIBOMPTARGET_EXTRA_SOURCE)
   set(LIBOMPTARGET_DEP_LIBRARIES hsa-runtime64::hsa-runtime64)

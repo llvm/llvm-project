@@ -373,3 +373,17 @@ win_toolchain("stage2_win") {
     "//:lld($host_toolchain)",
   ]
 }
+
+win_toolchain("stage2_win_x86") {
+  toolchain_args = {
+    current_os = host_os
+    current_cpu = "x86"
+
+    clang_base_path = root_build_dir
+    use_goma = false
+  }
+  deps = [
+    "//:clang($host_toolchain)",
+    "//:lld($host_toolchain)",
+  ]
+}

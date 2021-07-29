@@ -68,8 +68,10 @@ static void StackStripMain(SymbolizedStack *frames) {
   } else if (last && 0 == internal_strcmp(last, "__tsan_thread_start_func")) {
     last_frame->ClearAll();
     last_frame2->next = nullptr;
-  // Strip global ctors init.
-  } else if (last && 0 == internal_strcmp(last, "__do_global_ctors_aux")) {
+    // Strip global ctors init, .preinit_array and main caller.
+  } else if (last && (0 == internal_strcmp(last, "__do_global_ctors_aux") ||
+                      0 == internal_strcmp(last, "__libc_csu_init") ||
+                      0 == internal_strcmp(last, "__libc_start_main"))) {
     last_frame->ClearAll();
     last_frame2->next = nullptr;
   // If both are 0, then we probably just failed to symbolize.
@@ -132,7 +134,7 @@ bool ShouldReport(ThreadState *thr, ReportType typ) {
   CheckedMutex::CheckNoLocks();
   // For the same reason check we didn't lock thread_registry yet.
   if (SANITIZER_DEBUG)
-    ThreadRegistryLock l(ctx->thread_registry);
+    ThreadRegistryLock l(&ctx->thread_registry);
   if (!flags()->report_bugs || thr->suppress_reports)
     return false;
   switch (typ) {
@@ -154,8 +156,8 @@ bool ShouldReport(ThreadState *thr, ReportType typ) {
 }
 
 ScopedReportBase::ScopedReportBase(ReportType typ, uptr tag) {
-  ctx->thread_registry->CheckLocked();
-  void *mem = internal_alloc(MBlockReport, sizeof(ReportDesc));
+  ctx->thread_registry.CheckLocked();
+  void *mem = internal_alloc(sizeof(ReportDesc));
   rep_ = new(mem) ReportDesc;
   rep_->typ = typ;
   rep_->tag = tag;
@@ -176,7 +178,7 @@ void ScopedReportBase::AddStack(StackTrace stack, bool suppressable) {
 
 void ScopedReportBase::AddMemoryAccess(uptr addr, uptr external_tag, Shadow s,
                                        StackTrace stack, const MutexSet *mset) {
-  void *mem = internal_alloc(MBlockReportMop, sizeof(ReportMop));
+  void *mem = internal_alloc(sizeof(ReportMop));
   ReportMop *mop = new(mem) ReportMop;
   rep_->mops.PushBack(mop);
   mop->tid = s.tid();
@@ -205,7 +207,7 @@ void ScopedReportBase::AddThread(const ThreadContext *tctx, bool suppressable) {
     if ((u32)rep_->threads[i]->id == tctx->tid)
       return;
   }
-  void *mem = internal_alloc(MBlockReportThread, sizeof(ReportThread));
+  void *mem = internal_alloc(sizeof(ReportThread));
   ReportThread *rt = new(mem) ReportThread;
   rep_->threads.PushBack(rt);
   rt->id = tctx->tid;
@@ -227,16 +229,16 @@ static bool FindThreadByUidLockedCallback(ThreadContextBase *tctx, void *arg) {
 }
 
 static ThreadContext *FindThreadByUidLocked(int unique_id) {
-  ctx->thread_registry->CheckLocked();
+  ctx->thread_registry.CheckLocked();
   return static_cast<ThreadContext *>(
-      ctx->thread_registry->FindThreadContextLocked(
+      ctx->thread_registry.FindThreadContextLocked(
           FindThreadByUidLockedCallback, &unique_id));
 }
 
 static ThreadContext *FindThreadByTidLocked(int tid) {
-  ctx->thread_registry->CheckLocked();
-  return static_cast<ThreadContext*>(
-      ctx->thread_registry->GetThreadLocked(tid));
+  ctx->thread_registry.CheckLocked();
+  return static_cast<ThreadContext *>(
+      ctx->thread_registry.GetThreadLocked(tid));
 }
 
 static bool IsInStackOrTls(ThreadContextBase *tctx_base, void *arg) {
@@ -251,10 +253,10 @@ static bool IsInStackOrTls(ThreadContextBase *tctx_base, void *arg) {
 }
 
 ThreadContext *IsThreadStackOrTls(uptr addr, bool *is_stack) {
-  ctx->thread_registry->CheckLocked();
-  ThreadContext *tctx = static_cast<ThreadContext*>(
-      ctx->thread_registry->FindThreadContextLocked(IsInStackOrTls,
-                                                    (void*)addr));
+  ctx->thread_registry.CheckLocked();
+  ThreadContext *tctx =
+      static_cast<ThreadContext *>(ctx->thread_registry.FindThreadContextLocked(
+          IsInStackOrTls, (void *)addr));
   if (!tctx)
     return 0;
   ThreadState *thr = tctx->thr;
@@ -276,7 +278,7 @@ void ScopedReportBase::AddMutex(const SyncVar *s) {
     if (rep_->mutexes[i]->id == s->uid)
       return;
   }
-  void *mem = internal_alloc(MBlockReportMutex, sizeof(ReportMutex));
+  void *mem = internal_alloc(sizeof(ReportMutex));
   ReportMutex *rm = new(mem) ReportMutex;
   rep_->mutexes.PushBack(rm);
   rm->id = s->uid;
@@ -309,7 +311,7 @@ void ScopedReportBase::AddDeadMutex(u64 id) {
     if (rep_->mutexes[i]->id == id)
       return;
   }
-  void *mem = internal_alloc(MBlockReportMutex, sizeof(ReportMutex));
+  void *mem = internal_alloc(sizeof(ReportMutex));
   ReportMutex *rm = new(mem) ReportMutex;
   rep_->mutexes.PushBack(rm);
   rm->id = id;
@@ -337,12 +339,15 @@ void ScopedReportBase::AddLocation(uptr addr, uptr size) {
     return;
   }
   MBlock *b = 0;
+  uptr block_begin = 0;
   Allocator *a = allocator();
   if (a->PointerIsMine((void*)addr)) {
-    void *block_begin = a->GetBlockBegin((void*)addr);
+    block_begin = (uptr)a->GetBlockBegin((void *)addr);
     if (block_begin)
-      b = ctx->metamap.GetBlock((uptr)block_begin);
+      b = ctx->metamap.GetBlock(block_begin);
   }
+  if (!b)
+    b = JavaHeapBlock(addr, &block_begin);
   if (b != 0) {
     ThreadContext *tctx = FindThreadByTidLocked(b->tid);
     ReportLocation *loc = ReportLocation::New(ReportLocationHeap);
@@ -692,7 +697,7 @@ void ReportRace(ThreadState *thr) {
     }
   }
 
-  ThreadRegistryLock l0(ctx->thread_registry);
+  ThreadRegistryLock l0(&ctx->thread_registry);
   ScopedReport rep(typ, tag);
   for (uptr i = 0; i < kMop; i++) {
     Shadow s(thr->racy_state[i]);
@@ -702,8 +707,8 @@ void ReportRace(ThreadState *thr) {
 
   for (uptr i = 0; i < kMop; i++) {
     FastState s(thr->racy_state[i]);
-    ThreadContext *tctx = static_cast<ThreadContext*>(
-        ctx->thread_registry->GetThreadLocked(s.tid()));
+    ThreadContext *tctx = static_cast<ThreadContext *>(
+        ctx->thread_registry.GetThreadLocked(s.tid()));
     if (s.epoch() < tctx->epoch0 || s.epoch() > tctx->epoch1)
       continue;
     rep.AddThread(tctx);
@@ -739,8 +744,7 @@ ALWAYS_INLINE USED void PrintCurrentStackSlow(uptr pc) {
 #if !SANITIZER_GO
   uptr bp = GET_CURRENT_FRAME();
   BufferedStackTrace *ptrace =
-      new(internal_alloc(MBlockStackTrace, sizeof(BufferedStackTrace)))
-          BufferedStackTrace();
+      new (internal_alloc(sizeof(BufferedStackTrace))) BufferedStackTrace();
   ptrace->Unwind(pc, bp, nullptr, false);
 
   for (uptr i = 0; i < ptrace->size / 2; i++) {

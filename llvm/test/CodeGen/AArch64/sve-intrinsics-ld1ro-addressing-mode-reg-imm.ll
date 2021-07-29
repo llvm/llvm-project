@@ -104,8 +104,8 @@ define <vscale x 16 x i8> @ld1rob_i8_lower_bound(<vscale x 16 x i1> %pg, i8* %a)
 ; below lower bound
 define <vscale x 8 x i16> @ld1roh_i16_below_lower_bound(<vscale x 8 x i1> %pg, i16* %a) nounwind {
 ; CHECK-LABEL: ld1roh_i16_below_lower_bound:
-; CHECK-NEXT:  sub     x[[BASE:[0-9]+]], x0, #258
-; CHECK-NEXT:  ld1roh { z0.h }, p0/z, [x[[BASE]]]
+; CHECK-NEXT:  mov     x[[IDX:[0-9]+]], #-129
+; CHECK-NEXT:  ld1roh { z0.h }, p0/z, [x0, x[[IDX]], lsl #1]
 ; CHECK-NEXT:  ret
   %base = getelementptr i16, i16* %a, i64 -129
   %load = call <vscale x 8 x i16> @llvm.aarch64.sve.ld1ro.nxv8i16(<vscale x 8 x i1> %pg, i16* %base)
@@ -125,8 +125,8 @@ define <vscale x 16 x i8> @ld1rob_i8_below_lower_bound_01(<vscale x 16 x i1> %pg
 ; not a multiple of 32
 define<vscale x 4 x i32> @ld1row_i32_not_multiple(<vscale x 4 x i1> %pg, i32* %a) nounwind {
 ; CHECK-LABEL: ld1row_i32_not_multiple:
-; CHECK-NEXT:  add x[[BASE:[0-9]+]], x0, #12
-; CHECK-NEXT:  ld1row { z0.s }, p0/z, [x[[BASE]]]
+; CHECK-NEXT:  mov x[[IDX:[0-9]+]], #3
+; CHECK-NEXT:  ld1row { z0.s }, p0/z, [x0, x[[IDX]], lsl #2]
 ; CHECK-NEXT:  ret
   %base = getelementptr i32, i32* %a, i64 3
   %load = call <vscale x 4 x i32> @llvm.aarch64.sve.ld1ro.nxv4i32(<vscale x 4 x i1> %pg, i32* %base)

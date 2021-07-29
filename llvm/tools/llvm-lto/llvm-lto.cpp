@@ -227,6 +227,10 @@ static cl::opt<bool> ListDependentLibrariesOnly(
         "Instead of running LTO, list the dependent libraries in each IR file"),
     cl::cat(LTOCategory));
 
+static cl::opt<bool> QueryHasCtorDtor(
+    "query-hasCtorDtor", cl::init(false),
+    cl::desc("Queries LTOModule::hasCtorDtor() on each IR file"));
+
 static cl::opt<bool>
     SetMergedModule("set-merged-module", cl::init(false),
                     cl::desc("Use the first input module as the merged module"),
@@ -394,22 +398,27 @@ static void printIndexStats() {
   }
 }
 
-/// List symbols in each IR file.
+/// Load each IR file and dump certain information based on active flags.
 ///
 /// The main point here is to provide lit-testable coverage for the LTOModule
-/// functionality that's exposed by the C API to list symbols.  Moreover, this
-/// provides testing coverage for modules that have been created in their own
-/// contexts.
-static void listSymbols(const TargetOptions &Options) {
+/// functionality that's exposed by the C API. Moreover, this provides testing
+/// coverage for modules that have been created in their own contexts.
+static void testLTOModule(const TargetOptions &Options) {
   for (auto &Filename : InputFilenames) {
     std::unique_ptr<MemoryBuffer> Buffer;
     std::unique_ptr<LTOModule> Module =
         getLocalLTOModule(Filename, Buffer, Options);
 
-    // List the symbols.
-    outs() << Filename << ":\n";
-    for (int I = 0, E = Module->getSymbolCount(); I != E; ++I)
-      outs() << Module->getSymbolName(I) << "\n";
+    if (ListSymbolsOnly) {
+      // List the symbols.
+      outs() << Filename << ":\n";
+      for (int I = 0, E = Module->getSymbolCount(); I != E; ++I)
+        outs() << Module->getSymbolName(I) << "\n";
+    }
+    if (QueryHasCtorDtor)
+      outs() << Filename
+             << ": hasCtorDtor = " << (Module->hasCtorDtor() ? "true" : "false")
+             << "\n";
   }
 }
 
@@ -939,8 +948,8 @@ int main(int argc, char **argv) {
   // set up the TargetOptions for the machine
   TargetOptions Options = codegen::InitTargetOptionsFromCodeGenFlags(Triple());
 
-  if (ListSymbolsOnly) {
-    listSymbols(Options);
+  if (ListSymbolsOnly || QueryHasCtorDtor) {
+    testLTOModule(Options);
     return 0;
   }
 

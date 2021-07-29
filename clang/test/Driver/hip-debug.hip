@@ -25,7 +25,7 @@
 // DEFAULT-NOT: "-debug-info-kind=line-tables-only"
 // DEFAULT-NOT: "-amdgpu-spill-cfi-saved-regs"
 // DEFAULT-NOT: "-disable-dwarf-locations"
-// DEFAULT-DAG: "-debug-info-kind=limited"
+// DEFAULT-DAG: "-debug-info-kind=constructor"
 // DEFAULT-DAG: "-debugger-tuning=gdb"
 // DEFAULT-NOT: "-disable-O0-optnone"
 // DEFAULT-NOT: "-debug-info-kind=line-tables-only"

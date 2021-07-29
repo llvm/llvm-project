@@ -1300,8 +1300,11 @@ public:
     if (!IsSpecified())
       return;
 
-    FileSpec file(GetPath());
-    if (m_need_to_exist && !FileSystem::Instance().Exists(file)) {
+    if (!m_need_to_exist)
+      return;
+
+    FileSpec file = GetResolvedFileSpec();
+    if (!FileSystem::Instance().Exists(file)) {
       SetError("File doesn't exist!");
       return;
     }
@@ -1311,7 +1314,17 @@ public:
     }
   }
 
-  // Returns the path of the file.
+  FileSpec GetFileSpec() {
+    FileSpec file_spec(GetPath());
+    return file_spec;
+  }
+
+  FileSpec GetResolvedFileSpec() {
+    FileSpec file_spec(GetPath());
+    FileSystem::Instance().Resolve(file_spec);
+    return file_spec;
+  }
+
   const std::string &GetPath() { return m_content; }
 
 protected:
@@ -1330,8 +1343,11 @@ public:
     if (!IsSpecified())
       return;
 
-    FileSpec file(GetPath());
-    if (m_need_to_exist && !FileSystem::Instance().Exists(file)) {
+    if (!m_need_to_exist)
+      return;
+
+    FileSpec file = GetResolvedFileSpec();
+    if (!FileSystem::Instance().Exists(file)) {
       SetError("Directory doesn't exist!");
       return;
     }
@@ -1341,11 +1357,40 @@ public:
     }
   }
 
-  // Returns the path of the file.
+  FileSpec GetFileSpec() {
+    FileSpec file_spec(GetPath());
+    return file_spec;
+  }
+
+  FileSpec GetResolvedFileSpec() {
+    FileSpec file_spec(GetPath());
+    FileSystem::Instance().Resolve(file_spec);
+    return file_spec;
+  }
+
   const std::string &GetPath() { return m_content; }
 
 protected:
   bool m_need_to_exist;
+};
+
+class ArchFieldDelegate : public TextFieldDelegate {
+public:
+  ArchFieldDelegate(const char *label, const char *content, bool required)
+      : TextFieldDelegate(label, content, required) {}
+
+  void FieldDelegateExitCallback() override {
+    TextFieldDelegate::FieldDelegateExitCallback();
+    if (!IsSpecified())
+      return;
+
+    if (!GetArchSpec().IsValid())
+      SetError("Not a valid arch!");
+  }
+
+  const std::string &GetArchString() { return m_content; }
+
+  ArchSpec GetArchSpec() { return ArchSpec(GetArchString()); }
 };
 
 class BooleanFieldDelegate : public FieldDelegate {
@@ -1959,6 +2004,14 @@ public:
                                             bool need_to_exist, bool required) {
     DirectoryFieldDelegate *delegate =
         new DirectoryFieldDelegate(label, content, need_to_exist, required);
+    m_fields.push_back(FieldDelegateUP(delegate));
+    return delegate;
+  }
+
+  ArchFieldDelegate *AddArchField(const char *label, const char *content,
+                                  bool required) {
+    ArchFieldDelegate *delegate =
+        new ArchFieldDelegate(label, content, required);
     m_fields.push_back(FieldDelegateUP(delegate));
     return delegate;
   }
@@ -3335,8 +3388,13 @@ public:
 
   virtual void TreeDelegateDrawTreeItem(TreeItem &item, Window &window) = 0;
   virtual void TreeDelegateGenerateChildren(TreeItem &item) = 0;
+  virtual void TreeDelegateUpdateSelection(TreeItem &root, int &selection_index,
+                                           TreeItem *&selected_item) {
+    return;
+  }
   virtual bool TreeDelegateItemSelected(
       TreeItem &item) = 0; // Return true if we need to update views
+  virtual bool TreeDelegateExpandRootByDefault() { return false; }
 };
 
 typedef std::shared_ptr<TreeDelegate> TreeDelegateSP;
@@ -3346,7 +3404,10 @@ public:
   TreeItem(TreeItem *parent, TreeDelegate &delegate, bool might_have_children)
       : m_parent(parent), m_delegate(delegate), m_user_data(nullptr),
         m_identifier(0), m_row_idx(-1), m_children(),
-        m_might_have_children(might_have_children), m_is_expanded(false) {}
+        m_might_have_children(might_have_children), m_is_expanded(false) {
+    if (m_parent == nullptr)
+      m_is_expanded = m_delegate.TreeDelegateExpandRootByDefault();
+  }
 
   TreeItem &operator=(const TreeItem &rhs) {
     if (this != &rhs) {
@@ -3575,6 +3636,8 @@ public:
       const int num_visible_rows = NumVisibleRows();
       m_num_rows = 0;
       m_root.CalculateRowIndexes(m_num_rows);
+      m_delegate_sp->TreeDelegateUpdateSelection(m_root, m_selected_row_idx,
+                                                 m_selected_item);
 
       // If we unexpanded while having something selected our total number of
       // rows is less than the num visible rows, then make sure we show all the
@@ -3876,7 +3939,7 @@ class ThreadsTreeDelegate : public TreeDelegate {
 public:
   ThreadsTreeDelegate(Debugger &debugger)
       : TreeDelegate(), m_thread_delegate_sp(), m_debugger(debugger),
-        m_stop_id(UINT32_MAX) {
+        m_stop_id(UINT32_MAX), m_update_selection(false) {
     FormatEntity::Parse("process ${process.id}{, name = ${process.name}}",
                         m_format);
   }
@@ -3904,6 +3967,7 @@ public:
 
   void TreeDelegateGenerateChildren(TreeItem &item) override {
     ProcessSP process_sp = GetProcess();
+    m_update_selection = false;
     if (process_sp && process_sp->IsAlive()) {
       StateType state = process_sp->GetState();
       if (StateIsStoppedState(state, true)) {
@@ -3912,6 +3976,7 @@ public:
           return; // Children are already up to date
 
         m_stop_id = stop_id;
+        m_update_selection = true;
 
         if (!m_thread_delegate_sp) {
           // Always expand the thread item the first time we show it
@@ -3923,11 +3988,15 @@ public:
         TreeItem t(&item, *m_thread_delegate_sp, false);
         ThreadList &threads = process_sp->GetThreadList();
         std::lock_guard<std::recursive_mutex> guard(threads.GetMutex());
+        ThreadSP selected_thread = threads.GetSelectedThread();
         size_t num_threads = threads.GetSize();
         item.Resize(num_threads, t);
         for (size_t i = 0; i < num_threads; ++i) {
-          item[i].SetIdentifier(threads.GetThreadAtIndex(i)->GetID());
+          ThreadSP thread = threads.GetThreadAtIndex(i);
+          item[i].SetIdentifier(thread->GetID());
           item[i].SetMightHaveChildren(true);
+          if (selected_thread->GetID() == thread->GetID())
+            item[i].Expand();
         }
         return;
       }
@@ -3935,12 +4004,42 @@ public:
     item.ClearChildren();
   }
 
+  void TreeDelegateUpdateSelection(TreeItem &root, int &selection_index,
+                                   TreeItem *&selected_item) override {
+    if (!m_update_selection)
+      return;
+
+    ProcessSP process_sp = GetProcess();
+    if (!(process_sp && process_sp->IsAlive()))
+      return;
+
+    StateType state = process_sp->GetState();
+    if (!StateIsStoppedState(state, true))
+      return;
+
+    ThreadList &threads = process_sp->GetThreadList();
+    std::lock_guard<std::recursive_mutex> guard(threads.GetMutex());
+    ThreadSP selected_thread = threads.GetSelectedThread();
+    size_t num_threads = threads.GetSize();
+    for (size_t i = 0; i < num_threads; ++i) {
+      ThreadSP thread = threads.GetThreadAtIndex(i);
+      if (selected_thread->GetID() == thread->GetID()) {
+        selected_item = &root[i][thread->GetSelectedFrameIndex()];
+        selection_index = selected_item->GetRowIndex();
+        return;
+      }
+    }
+  }
+
   bool TreeDelegateItemSelected(TreeItem &item) override { return false; }
+
+  bool TreeDelegateExpandRootByDefault() override { return true; }
 
 protected:
   std::shared_ptr<ThreadTreeDelegate> m_thread_delegate_sp;
   Debugger &m_debugger;
   uint32_t m_stop_id;
+  bool m_update_selection;
   FormatEntity::Entry m_format;
 };
 

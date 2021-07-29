@@ -356,12 +356,8 @@ hsa_status_t init_hsa() {
   DEBUG_PRINT("Initializing HSA...");
   hsa_status_t err = hsa_init();
   if (err != HSA_STATUS_SUCCESS) {
-    printf("[%s:%d] %s failed: %s\n", __FILE__, __LINE__,
-           "Initializing the hsa runtime", get_error_string(err));
     return err;
   }
-  if (err != HSA_STATUS_SUCCESS)
-    return err;
 
   err = init_compute_and_memory();
   if (err != HSA_STATUS_SUCCESS)

@@ -562,26 +562,29 @@ void ForwardDataFlowSolver::visitTerminatorOperation(
     if (regionSuccessors.empty())
       return;
 
-    // If this terminator is not "region-like", conservatively mark all of the
-    // successor values as having reached the pessimistic fixpoint.
-    if (!op->hasTrait<OpTrait::ReturnLike>()) {
-      for (auto &it : regionSuccessors) {
-        // If the successor is a region, mark the entry block as executable so
-        // that we visit operations defined within. If the successor is the
-        // parent operation, we simply mark the control flow results as having
-        // reached the pessimistic state.
-        if (Region *region = it.getSuccessor())
-          markEntryBlockExecutable(region, /*markPessimisticFixpoint=*/true);
-        else
-          markAllPessimisticFixpointAndVisitUsers(it.getSuccessorInputs());
-      }
-      return;
+    // Try to get "region-like" successor operands if possible in order to
+    // propagate the operand states to the successors.
+    if (isRegionReturnLike(op)) {
+      return visitRegionSuccessors(
+          parentOp, regionSuccessors, [&](Optional<unsigned> regionIndex) {
+            // Determine the individual region successor operands for the given
+            // region index (if any).
+            return *getRegionBranchSuccessorOperands(op, regionIndex);
+          });
     }
 
-    // Otherwise, propagate the operand lattice states to the successors.
-    OperandRange operands = op->getOperands();
-    return visitRegionSuccessors(parentOp, regionSuccessors,
-                                 [&](Optional<unsigned>) { return operands; });
+    // If this terminator is not "region-like", conservatively mark all of the
+    // successor values as having reached the pessimistic fixpoint.
+    for (auto &it : regionSuccessors) {
+      // If the successor is a region, mark the entry block as executable so
+      // that we visit operations defined within. If the successor is the
+      // parent operation, we simply mark the control flow results as having
+      // reached the pessimistic state.
+      if (Region *region = it.getSuccessor())
+        markEntryBlockExecutable(region, /*markPessimisticFixpoint=*/true);
+      else
+        markAllPessimisticFixpointAndVisitUsers(it.getSuccessorInputs());
+    }
   }
 
   // Try to resolve to a specific set of successors with the current optimistic

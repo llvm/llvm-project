@@ -1738,7 +1738,7 @@ void AArch64FrameLowering::emitEpilogue(MachineFunction &MF,
 
     // Adjust local stack
     emitFrameOffset(MBB, LastPopI, DL, AArch64::SP, AArch64::SP,
-                    StackOffset::getFixed(-AFI->getLocalStackSize()), TII,
+                    StackOffset::getFixed(AFI->getLocalStackSize()), TII,
                     MachineInstr::FrameDestroy, false, NeedsWinCFI);
 
     // SP has been already adjusted while restoring callee save regs.

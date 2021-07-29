@@ -13,8 +13,6 @@
 #ifndef LLVM_CLANG_AST_INTERP_INTERP_H
 #define LLVM_CLANG_AST_INTERP_INTERP_H
 
-#include <limits>
-#include <vector>
 #include "Function.h"
 #include "InterpFrame.h"
 #include "InterpStack.h"
@@ -30,6 +28,9 @@
 #include "llvm/ADT/APFloat.h"
 #include "llvm/ADT/APSInt.h"
 #include "llvm/Support/Endian.h"
+#include <limits>
+#include <type_traits>
+#include <vector>
 
 namespace clang {
 namespace interp {
@@ -947,6 +948,23 @@ inline bool ExpandPtr(InterpState &S, CodePtr OpPC) {
   const Pointer &Ptr = S.Stk.pop<Pointer>();
   S.Stk.push<Pointer>(Ptr.expand());
   return true;
+}
+
+//===----------------------------------------------------------------------===//
+// Read opcode arguments
+//===----------------------------------------------------------------------===//
+
+template <typename T>
+inline std::enable_if_t<!std::is_pointer<T>::value, T> ReadArg(InterpState &S,
+                                                               CodePtr OpPC) {
+  return OpPC.read<T>();
+}
+
+template <typename T>
+inline std::enable_if_t<std::is_pointer<T>::value, T> ReadArg(InterpState &S,
+                                                              CodePtr OpPC) {
+  uint32_t ID = OpPC.read<uint32_t>();
+  return reinterpret_cast<T>(S.P.getNativePointer(ID));
 }
 
 /// Interpreter entry point.

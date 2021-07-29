@@ -12,7 +12,7 @@
 // CHECK-NEXT:     "diagnostics": [
 // CHECK-NEXT:       {
 // CHECK-NEXT:         "category": "Parse Error",
-// CHECK-NEXT:         "message": "custom op 'func' expected valid '@'-identifier for symbol name",
+// CHECK-NEXT:         "message": "custom op 'builtin.func' expected valid '@'-identifier for symbol name",
 // CHECK-NEXT:         "range": {
 // CHECK-NEXT:           "end": {
 // CHECK-NEXT:             "character": 7,

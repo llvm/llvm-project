@@ -20,7 +20,7 @@ def Builtin_Dialect : Dialect {
   let summary =
     "A dialect containing the builtin Attributes, Operations, and Types";
 
-  let name = "";
+  let name = "builtin";
   let cppNamespace = "::mlir";
   let extraClassDeclaration = [{
   private:

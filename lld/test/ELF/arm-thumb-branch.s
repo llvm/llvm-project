@@ -7,7 +7,7 @@
 // RUN:          .caller : { *(.text) } \
 // RUN:          .callee2 : { *(.callee_high) } } " > %t.script
 // RUN: ld.lld --script %t.script %t %tfar -o %t2
-// RUN: llvm-objdump -d --triple=thumbv7a-none-linux-gnueabi %t2 | FileCheck  %s
+// RUN: llvm-objdump -d %t2 | FileCheck  %s
 
  .syntax unified
  .thumb

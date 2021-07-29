@@ -37,7 +37,14 @@ void TestModuleCombinerPass::runOnOperation() {
   auto modules = llvm::to_vector<4>(getOperation().getOps<spirv::ModuleOp>());
 
   OpBuilder combinedModuleBuilder(modules[0]);
-  combinedModule = spirv::combine(modules, combinedModuleBuilder, nullptr);
+
+  auto listener = [](spirv::ModuleOp originalModule, StringRef oldSymbol,
+                     StringRef newSymbol) {
+    llvm::outs() << "[" << originalModule.getName() << "] " << oldSymbol
+                 << " -> " << newSymbol << "\n";
+  };
+
+  combinedModule = spirv::combine(modules, combinedModuleBuilder, listener);
 
   for (spirv::ModuleOp module : modules)
     module.erase();

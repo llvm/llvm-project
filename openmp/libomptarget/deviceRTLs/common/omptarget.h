@@ -14,13 +14,13 @@
 #ifndef OMPTARGET_H
 #define OMPTARGET_H
 
-#include "interface.h" // interfaces with omp, compiler, and user
 #include "common/allocator.h"
 #include "common/debug.h" // debug
 #include "common/state-queue.h"
 #include "common/support.h"
 #include "common/ompd-specific.h"
 #include "target_impl.h"
+#include "interface.h" // interfaces with omp, compiler, and user
 
 #define OMPTARGET_NVPTX_VERSION 1.1
 

@@ -272,6 +272,8 @@ bool PointerReplacer::collectUsers(Instruction &I) {
         return false;
     } else if (isa<MemTransferInst>(Inst)) {
       Worklist.insert(Inst);
+    } else if (Inst->isLifetimeStartOrEnd()) {
+      continue;
     } else {
       LLVM_DEBUG(dbgs() << "Cannot handle pointer user: " << *U << '\n');
       return false;

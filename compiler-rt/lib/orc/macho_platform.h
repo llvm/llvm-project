@@ -47,6 +47,7 @@ struct MachOJITDylibInitializers {
 
   std::string Name;
   ExecutorAddress MachOHeaderAddress;
+  ExecutorAddress ObjCImageInfoAddress;
 
   std::unordered_map<std::string, SectionList> InitSections;
 };
@@ -97,7 +98,7 @@ using SPSNamedExecutorAddressRangeSequenceMap =
     SPSSequence<SPSTuple<SPSString, SPSExecutorAddressRangeSequence>>;
 
 using SPSMachOJITDylibInitializers =
-    SPSTuple<SPSString, SPSExecutorAddress,
+    SPSTuple<SPSString, SPSExecutorAddress, SPSExecutorAddress,
              SPSNamedExecutorAddressRangeSequenceMap>;
 
 using SPSMachOJITDylibInitializerSequence =
@@ -110,19 +111,22 @@ class SPSSerializationTraits<SPSMachOJITDylibInitializers,
 public:
   static size_t size(const macho::MachOJITDylibInitializers &MOJDIs) {
     return SPSMachOJITDylibInitializers::AsArgList::size(
-        MOJDIs.Name, MOJDIs.MachOHeaderAddress, MOJDIs.InitSections);
+        MOJDIs.Name, MOJDIs.MachOHeaderAddress, MOJDIs.ObjCImageInfoAddress,
+        MOJDIs.InitSections);
   }
 
   static bool serialize(SPSOutputBuffer &OB,
                         const macho::MachOJITDylibInitializers &MOJDIs) {
     return SPSMachOJITDylibInitializers::AsArgList::serialize(
-        OB, MOJDIs.Name, MOJDIs.MachOHeaderAddress, MOJDIs.InitSections);
+        OB, MOJDIs.Name, MOJDIs.MachOHeaderAddress, MOJDIs.ObjCImageInfoAddress,
+        MOJDIs.InitSections);
   }
 
   static bool deserialize(SPSInputBuffer &IB,
                           macho::MachOJITDylibInitializers &MOJDIs) {
     return SPSMachOJITDylibInitializers::AsArgList::deserialize(
-        IB, MOJDIs.Name, MOJDIs.MachOHeaderAddress, MOJDIs.InitSections);
+        IB, MOJDIs.Name, MOJDIs.MachOHeaderAddress, MOJDIs.ObjCImageInfoAddress,
+        MOJDIs.InitSections);
   }
 };
 

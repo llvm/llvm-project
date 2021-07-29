@@ -3088,7 +3088,7 @@ void CompilerInvocation::setLangDefaults(LangOptions &Opts, InputKind IK,
     case Language::LLVM_IR:
       llvm_unreachable("Invalid input kind!");
     case Language::OpenCL:
-      LangStd = LangStandard::lang_opencl10;
+      LangStd = LangStandard::lang_opencl12;
       break;
     case Language::OpenCLCXX:
       LangStd = LangStandard::lang_openclcpp;
@@ -4242,8 +4242,13 @@ static bool ParsePreprocessorArgs(PreprocessorOptions &Opts, ArgList &Args,
   // Always avoid lexing editor placeholders when we're just running the
   // preprocessor as we never want to emit the
   // "editor placeholder in source file" error in PP only mode.
-  if (isStrictlyPreprocessorAction(Action))
+  // Certain predefined macros which depend upon semantic processing,
+  // for example __FLT_EVAL_METHOD__, are not expanded in PP mode, they
+  // appear in the preprocessed output as an unexpanded macro name.
+  if (isStrictlyPreprocessorAction(Action)) {
     Opts.LexEditorPlaceholders = false;
+    Opts.LexExpandSpecialBuiltins = false;
+  }
 
   return Diags.getNumErrors() == NumErrorsBefore;
 }

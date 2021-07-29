@@ -30,7 +30,7 @@ namespace __lsan {
 
 // This mutex is used to prevent races between DoLeakCheck and IgnoreObject, and
 // also to protect the global list of root regions.
-BlockingMutex global_mutex(LINKER_INITIALIZED);
+Mutex global_mutex;
 
 Flags lsan_flags;
 
@@ -742,7 +742,7 @@ static bool has_reported_leaks = false;
 bool HasReportedLeaks() { return has_reported_leaks; }
 
 void DoLeakCheck() {
-  BlockingMutexLock l(&global_mutex);
+  Lock l(&global_mutex);
   static bool already_done;
   if (already_done) return;
   already_done = true;
@@ -751,7 +751,7 @@ void DoLeakCheck() {
 }
 
 static int DoRecoverableLeakCheck() {
-  BlockingMutexLock l(&global_mutex);
+  Lock l(&global_mutex);
   bool have_leaks = CheckForLeaks();
   return have_leaks ? 1 : 0;
 }
@@ -954,7 +954,7 @@ void __lsan_ignore_object(const void *p) {
     return;
   // Cannot use PointsIntoChunk or LsanMetadata here, since the allocator is not
   // locked.
-  BlockingMutexLock l(&global_mutex);
+  Lock l(&global_mutex);
   IgnoreObjectResult res = IgnoreObjectLocked(p);
   if (res == kIgnoreObjectInvalid)
     VReport(1, "__lsan_ignore_object(): no heap object found at %p", p);
@@ -969,7 +969,7 @@ void __lsan_ignore_object(const void *p) {
 SANITIZER_INTERFACE_ATTRIBUTE
 void __lsan_register_root_region(const void *begin, uptr size) {
 #if CAN_SANITIZE_LEAKS
-  BlockingMutexLock l(&global_mutex);
+  Lock l(&global_mutex);
   CHECK(root_regions);
   RootRegion region = {reinterpret_cast<uptr>(begin), size};
   root_regions->push_back(region);
@@ -980,7 +980,7 @@ void __lsan_register_root_region(const void *begin, uptr size) {
 SANITIZER_INTERFACE_ATTRIBUTE
 void __lsan_unregister_root_region(const void *begin, uptr size) {
 #if CAN_SANITIZE_LEAKS
-  BlockingMutexLock l(&global_mutex);
+  Lock l(&global_mutex);
   CHECK(root_regions);
   bool removed = false;
   for (uptr i = 0; i < root_regions->size(); i++) {

@@ -168,6 +168,7 @@ def CopyOp : LinalgStructured_Op<"copy", [CopyOpInterface]> {
       custom<CopyOpRegion>($region, ref(type($input)), ref(type($input)))
   }];
 
+  let hasCanonicalizer = 1;
   let hasFolder = 1;
   let skipDefaultBuilders = 1;
 }
@@ -657,6 +658,7 @@ def GenericOp : LinalgStructuredBase_Op<"generic", [
 
   let verifier = [{ return ::verify(*this); }];
 
+  let hasCanonicalizer = 1;
   let hasFolder = 1;
 }
 

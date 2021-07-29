@@ -39,7 +39,6 @@ namespace orc {
 
 class KaleidoscopeJIT {
 private:
-  std::unique_ptr<ExecutorProcessControl> EPC;
   std::unique_ptr<ExecutionSession> ES;
   std::unique_ptr<EPCIndirectionUtils> EPCIU;
 
@@ -59,12 +58,11 @@ private:
   }
 
 public:
-  KaleidoscopeJIT(std::unique_ptr<ExecutorProcessControl> EPC,
-                  std::unique_ptr<ExecutionSession> ES,
+  KaleidoscopeJIT(std::unique_ptr<ExecutionSession> ES,
                   std::unique_ptr<EPCIndirectionUtils> EPCIU,
                   JITTargetMachineBuilder JTMB, DataLayout DL)
-      : EPC(std::move(EPC)), ES(std::move(ES)), EPCIU(std::move(EPCIU)),
-        DL(std::move(DL)), Mangle(*this->ES, this->DL),
+      : ES(std::move(ES)), EPCIU(std::move(EPCIU)), DL(std::move(DL)),
+        Mangle(*this->ES, this->DL),
         ObjectLayer(*this->ES,
                     []() { return std::make_unique<SectionMemoryManager>(); }),
         CompileLayer(*this->ES, ObjectLayer,
@@ -87,14 +85,13 @@ public:
   }
 
   static Expected<std::unique_ptr<KaleidoscopeJIT>> Create() {
-    auto SSP = std::make_shared<SymbolStringPool>();
-    auto EPC = SelfExecutorProcessControl::Create(SSP);
+    auto EPC = SelfExecutorProcessControl::Create();
     if (!EPC)
       return EPC.takeError();
 
-    auto ES = std::make_unique<ExecutionSession>(std::move(SSP));
+    auto ES = std::make_unique<ExecutionSession>(std::move(*EPC));
 
-    auto EPCIU = EPCIndirectionUtils::Create(**EPC);
+    auto EPCIU = EPCIndirectionUtils::Create(ES->getExecutorProcessControl());
     if (!EPCIU)
       return EPCIU.takeError();
 
@@ -104,15 +101,15 @@ public:
     if (auto Err = setUpInProcessLCTMReentryViaEPCIU(**EPCIU))
       return std::move(Err);
 
-    JITTargetMachineBuilder JTMB((*EPC)->getTargetTriple());
+    JITTargetMachineBuilder JTMB(
+        ES->getExecutorProcessControl().getTargetTriple());
 
     auto DL = JTMB.getDefaultDataLayoutForTarget();
     if (!DL)
       return DL.takeError();
 
-    return std::make_unique<KaleidoscopeJIT>(std::move(*EPC), std::move(ES),
-                                             std::move(*EPCIU), std::move(JTMB),
-                                             std::move(*DL));
+    return std::make_unique<KaleidoscopeJIT>(std::move(ES), std::move(*EPCIU),
+                                             std::move(JTMB), std::move(*DL));
   }
 
   const DataLayout &getDataLayout() const { return DL; }

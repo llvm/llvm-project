@@ -1029,7 +1029,7 @@ vector<_Tp, _Allocator>::__recommend(size_type __new_size) const
     const size_type __cap = capacity();
     if (__cap >= __ms / 2)
         return __ms;
-    return _VSTD::max<size_type>(2*__cap, __new_size);
+    return _VSTD::max<size_type>(2 * __cap, __new_size);
 }
 
 //  Default constructs __n objects starting at __end_
@@ -2575,7 +2575,7 @@ vector<bool, _Allocator>::__recommend(size_type __new_size) const
     const size_type __cap = capacity();
     if (__cap >= __ms / 2)
         return __ms;
-    return _VSTD::max(2*__cap, __align_it(__new_size));
+    return _VSTD::max(2 * __cap, __align_it(__new_size));
 }
 
 //  Default constructs __n objects starting at __end_

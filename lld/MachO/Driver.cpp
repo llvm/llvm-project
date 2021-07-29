@@ -1436,8 +1436,8 @@ bool macho::link(ArrayRef<const char *> argsArr, bool canExitEarly,
           StringRef symbolName = defined->getName();
           if (config->exportedSymbols.match(symbolName)) {
             if (defined->privateExtern) {
-              error("cannot export hidden symbol " + symbolName +
-                    "\n>>> defined in " + toString(defined->getFile()));
+              warn("cannot export hidden symbol " + symbolName +
+                   "\n>>> defined in " + toString(defined->getFile()));
             }
           } else {
             defined->privateExtern = true;

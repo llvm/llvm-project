@@ -1089,3 +1089,33 @@ llvm.func @gpu_wmma_mma_op_invalid_result(%arg0: vector<2 x f16>, %arg1: vector<
   %0 = nvvm.wmma.m16n16k16.mma.row.row.f32.f32 %arg0, %arg1, %arg2, %arg3, %arg4, %arg5, %arg6, %arg7, %arg8, %arg9, %arg10, %arg11, %arg12, %arg13, %arg14, %arg15, %arg16, %arg17, %arg18, %arg19, %arg20, %arg21, %arg22, %arg23 : (vector<2xf16>, vector<2xf16>, vector<2xf16>, vector<2xf16>, vector<2xf16>, vector<2xf16>, vector<2xf16>, vector<2xf16>, vector<2xf16>, vector<2xf16>, vector<2xf16>, vector<2xf16>, vector<2xf16>, vector<2xf16>, vector<2xf16>, vector<2xf16>, f32, f32, f32, f32, f32, f32, f32, f32) -> !llvm.struct<(f32, f32, f32, f32, f32, f32, f32, vector<2xf16>)>
   llvm.return
 }
+
+// -----
+
+llvm.func @caller() {
+  // expected-error @below {{expected function call to produce a value}}
+  llvm.call @callee() : () -> ()
+  llvm.return
+}
+
+llvm.func @callee() -> i32
+
+// -----
+
+llvm.func @caller() {
+  // expected-error @below {{calling function with void result must not produce values}}
+  %0 = llvm.call @callee() : () -> i32
+  llvm.return
+}
+
+llvm.func @callee() -> ()
+
+// -----
+
+llvm.func @caller() {
+  // expected-error @below {{expected function with 0 or 1 result}}
+  %0:2 = llvm.call @callee() : () -> (i32, f32)
+  llvm.return
+}
+
+llvm.func @callee() -> !llvm.struct<(i32, f32)>

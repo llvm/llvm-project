@@ -2014,6 +2014,25 @@ void CombinerHelper::applyCombineShlOfExtend(MachineInstr &MI,
   MI.eraseFromParent();
 }
 
+bool CombinerHelper::matchCombineMergeUnmerge(MachineInstr &MI,
+                                              Register &MatchInfo) {
+  GMerge &Merge = cast<GMerge>(MI);
+  SmallVector<Register, 16> MergedValues;
+  for (unsigned I = 0; I < Merge.getNumSources(); ++I)
+    MergedValues.emplace_back(Merge.getSourceReg(I));
+
+  auto *Unmerge = getOpcodeDef<GUnmerge>(MergedValues[0], MRI);
+  if (!Unmerge || Unmerge->getNumDefs() != Merge.getNumSources())
+    return false;
+
+  for (unsigned I = 0; I < MergedValues.size(); ++I)
+    if (MergedValues[I] != Unmerge->getReg(I))
+      return false;
+
+  MatchInfo = Unmerge->getSourceReg();
+  return true;
+}
+
 static Register peekThroughBitcast(Register Reg,
                                    const MachineRegisterInfo &MRI) {
   while (mi_match(Reg, MRI, m_GBitcast(m_Reg(Reg))))
@@ -2781,6 +2800,14 @@ bool CombinerHelper::replaceInstWithFConstant(MachineInstr &MI, double C) {
 }
 
 bool CombinerHelper::replaceInstWithConstant(MachineInstr &MI, int64_t C) {
+  assert(MI.getNumDefs() == 1 && "Expected only one def?");
+  Builder.setInstr(MI);
+  Builder.buildConstant(MI.getOperand(0), C);
+  MI.eraseFromParent();
+  return true;
+}
+
+bool CombinerHelper::replaceInstWithConstant(MachineInstr &MI, APInt C) {
   assert(MI.getNumDefs() == 1 && "Expected only one def?");
   Builder.setInstr(MI);
   Builder.buildConstant(MI.getOperand(0), C);
@@ -4225,6 +4252,16 @@ bool CombinerHelper::matchReassocPtrAdd(
     };
   }
   return !reassociationCanBreakAddressingModePattern(MI);
+}
+
+bool CombinerHelper::matchConstantFold(MachineInstr &MI, APInt &MatchInfo) {
+  Register Op1 = MI.getOperand(1).getReg();
+  Register Op2 = MI.getOperand(2).getReg();
+  auto MaybeCst = ConstantFoldBinOp(MI.getOpcode(), Op1, Op2, MRI);
+  if (!MaybeCst)
+    return false;
+  MatchInfo = *MaybeCst;
+  return true;
 }
 
 bool CombinerHelper::tryCombine(MachineInstr &MI) {

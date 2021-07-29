@@ -72,7 +72,7 @@ module {
     // Read the sparse B input from a file.
     %fileName = call @getTensorFilename(%c0) : (index) -> (!Filename)
     %b = sparse_tensor.new %fileName
-          : !llvm.ptr<i8> to tensor<?x?x?xf64, #SparseMatrix>
+          : !Filename to tensor<?x?x?xf64, #SparseMatrix>
 
     // Initialize dense C and D inputs and dense output A.
     %cdata = memref.alloc(%c3, %c5) : memref<?x?xf64>

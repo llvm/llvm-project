@@ -251,7 +251,7 @@ static void DeleteBasicBlock(BasicBlock *BB, CallGraphUpdater &CGU) {
 
   if (TokenInst) {
     if (!TokenInst->isTerminator())
-      changeToUnreachable(TokenInst->getNextNode(), /*UseLLVMTrap=*/false);
+      changeToUnreachable(TokenInst->getNextNode());
   } else {
     // Get the list of successors of this block.
     std::vector<BasicBlock *> Succs(succ_begin(BB), succ_end(BB));

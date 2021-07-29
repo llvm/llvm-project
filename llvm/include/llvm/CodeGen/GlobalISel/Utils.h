@@ -257,6 +257,10 @@ Optional<APFloat> ConstantFoldFPBinOp(unsigned Opcode, const Register Op1,
 Optional<APInt> ConstantFoldExtOp(unsigned Opcode, const Register Op1,
                                   uint64_t Imm, const MachineRegisterInfo &MRI);
 
+Optional<APFloat> ConstantFoldIntToFloat(unsigned Opcode, LLT DstTy,
+                                         Register Src,
+                                         const MachineRegisterInfo &MRI);
+
 /// Test if the given value is known to have exactly one bit set. This differs
 /// from computeKnownBits in that it doesn't necessarily determine which bit is
 /// set.

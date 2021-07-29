@@ -68,6 +68,7 @@ add_lldb_library(lldbTarget
   ThreadSpec.cpp
   Trace.cpp
   TraceCursor.cpp
+  TraceExporter.cpp
   TraceInstructionDumper.cpp
   UnixSignals.cpp
   UnwindAssembly.cpp

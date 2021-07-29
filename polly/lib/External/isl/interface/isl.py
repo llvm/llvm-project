@@ -3163,6 +3163,18 @@ class pw_aff(union_pw_aff, pw_multi_aff, multi_pw_aff):
             obj = pw_aff(ctx=ctx, ptr=res)
             return obj
         raise Error
+    def space(arg0):
+        try:
+            if not arg0.__class__ is pw_aff:
+                arg0 = pw_aff(arg0)
+        except:
+            raise
+        ctx = arg0.ctx
+        res = isl.isl_pw_aff_get_space(arg0.ptr)
+        obj = space(ctx=ctx, ptr=res)
+        return obj
+    def get_space(arg0):
+        return arg0.space()
     def sub(arg0, arg1):
         try:
             if not arg0.__class__ is pw_aff:
@@ -3334,6 +3346,8 @@ isl.isl_pw_aff_scale_val.restype = c_void_p
 isl.isl_pw_aff_scale_val.argtypes = [c_void_p, c_void_p]
 isl.isl_pw_aff_scale_down_val.restype = c_void_p
 isl.isl_pw_aff_scale_down_val.argtypes = [c_void_p, c_void_p]
+isl.isl_pw_aff_get_space.restype = c_void_p
+isl.isl_pw_aff_get_space.argtypes = [c_void_p]
 isl.isl_pw_aff_sub.restype = c_void_p
 isl.isl_pw_aff_sub.argtypes = [c_void_p, c_void_p]
 isl.isl_pw_aff_subtract_domain.restype = c_void_p
@@ -8635,6 +8649,17 @@ class map(union_map):
         res = isl.isl_map_min_multi_pw_aff(isl.isl_map_copy(arg0.ptr))
         obj = multi_pw_aff(ctx=ctx, ptr=res)
         return obj
+    def n_basic_map(arg0):
+        try:
+            if not arg0.__class__ is map:
+                arg0 = map(arg0)
+        except:
+            raise
+        ctx = arg0.ctx
+        res = isl.isl_map_n_basic_map(arg0.ptr)
+        if res < 0:
+            raise
+        return int(res)
     def polyhedral_hull(arg0):
         try:
             if not arg0.__class__ is map:
@@ -9072,6 +9097,7 @@ isl.isl_map_max_multi_pw_aff.restype = c_void_p
 isl.isl_map_max_multi_pw_aff.argtypes = [c_void_p]
 isl.isl_map_min_multi_pw_aff.restype = c_void_p
 isl.isl_map_min_multi_pw_aff.argtypes = [c_void_p]
+isl.isl_map_n_basic_map.argtypes = [c_void_p]
 isl.isl_map_polyhedral_hull.restype = c_void_p
 isl.isl_map_polyhedral_hull.argtypes = [c_void_p]
 isl.isl_map_preimage_domain_multi_aff.restype = c_void_p
@@ -10538,6 +10564,17 @@ class set(union_set):
         res = isl.isl_set_min_val(arg0.ptr, arg1.ptr)
         obj = val(ctx=ctx, ptr=res)
         return obj
+    def n_basic_set(arg0):
+        try:
+            if not arg0.__class__ is set:
+                arg0 = set(arg0)
+        except:
+            raise
+        ctx = arg0.ctx
+        res = isl.isl_set_n_basic_set(arg0.ptr)
+        if res < 0:
+            raise
+        return int(res)
     def params(arg0):
         try:
             if not arg0.__class__ is set:
@@ -10908,6 +10945,7 @@ isl.isl_set_min_multi_pw_aff.restype = c_void_p
 isl.isl_set_min_multi_pw_aff.argtypes = [c_void_p]
 isl.isl_set_min_val.restype = c_void_p
 isl.isl_set_min_val.argtypes = [c_void_p, c_void_p]
+isl.isl_set_n_basic_set.argtypes = [c_void_p]
 isl.isl_set_params.restype = c_void_p
 isl.isl_set_params.argtypes = [c_void_p]
 isl.isl_set_get_plain_multi_val_if_fixed.restype = c_void_p

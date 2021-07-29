@@ -362,9 +362,7 @@ public:
   NameSection(ArrayRef<OutputSegment *> segments)
       : SyntheticSection(llvm::wasm::WASM_SEC_CUSTOM, "name"),
         segments(segments) {}
-  bool isNeeded() const override {
-    return !config->stripDebug && !config->stripAll && numNames() > 0;
-  }
+  bool isNeeded() const override { return !config->stripAll && numNames() > 0; }
   void writeBody() override;
   unsigned numNames() const { return numNamedGlobals() + numNamedFunctions(); }
   unsigned numNamedGlobals() const;

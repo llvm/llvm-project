@@ -386,13 +386,14 @@ FindKernargPool(const std::vector<hsa_agent_t> &HSAAgents) {
 /// Class containing all the device information
 class RTLDeviceInfoTy {
   std::vector<std::list<FuncOrGblEntryTy>> FuncGblEntries;
+  bool HSAInitializeSucceeded = false;
 
 public:
   // load binary populates symbol tables and mutates various global state
   // run uses those symbol tables
   std::shared_timed_mutex load_run_lock;
 
-  int NumberOfDevices;
+  int NumberOfDevices = 0;
 
   // GPU devices
   std::vector<hsa_agent_t> HSAAgents;
@@ -548,7 +549,9 @@ public:
 
     DP("Start initializing HSA-ATMI\n");
     hsa_status_t err = core::atl_init_gpu_context();
-    if (err != HSA_STATUS_SUCCESS) {
+    if (err == HSA_STATUS_SUCCESS) {
+      HSAInitializeSucceeded = true;
+    } else {
       DP("Error when initializing HSA-ATMI\n");
       return;
     }
@@ -670,6 +673,10 @@ public:
 
   ~RTLDeviceInfoTy() {
     DP("Finalizing the HSA-ATMI DeviceInfo.\n");
+    if (!HSAInitializeSucceeded) {
+      // Then none of these can have been set up and they can't be torn down
+      return;
+    }
     // Run destructors on types that use HSA before
     // atmi_finalize removes access to it
     deviceStateStore.clear();

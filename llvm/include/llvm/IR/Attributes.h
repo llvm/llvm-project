@@ -546,12 +546,6 @@ public:
     return removeAttributes(C, ArgNo + FirstArgIndex, AttrsToRemove);
   }
 
-  /// Remove noundef attribute and other attributes that imply undefined
-  /// behavior if a `undef` or `poison` value is passed from this attribute
-  /// list. Returns a new list because attribute lists are immutable.
-  LLVM_NODISCARD AttributeList
-  removeParamUndefImplyingAttributes(LLVMContext &C, unsigned ArgNo) const;
-
   /// Remove all attributes at the specified arg index from this
   /// attribute list. Returns a new list because attribute lists are immutable.
   LLVM_NODISCARD AttributeList removeParamAttributes(LLVMContext &C,
@@ -1037,6 +1031,13 @@ namespace AttributeFuncs {
 
 /// Which attributes cannot be applied to a type.
 AttrBuilder typeIncompatible(Type *Ty);
+
+/// Get param/return attributes which imply immediate undefined behavior if an
+/// invalid value is passed. For example, this includes noundef (where undef
+/// implies UB), but not nonnull (where null implies poison). It also does not
+/// include attributes like nocapture, which constrain the function
+/// implementation rather than the passed value.
+AttrBuilder getUBImplyingAttributes();
 
 /// \returns Return true if the two functions have compatible target-independent
 /// attributes for inlining purposes.

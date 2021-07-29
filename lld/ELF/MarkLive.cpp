@@ -168,15 +168,14 @@ void MarkLive<ELFT>::scanEhFrameSection(EhInputSection &eh,
 // garbage-collected. This function returns true if a given section is such
 // section.
 static bool isReserved(InputSectionBase *sec) {
-  if (sec->nextInSectionGroup)
-    return false;
-
   switch (sec->type) {
   case SHT_FINI_ARRAY:
   case SHT_INIT_ARRAY:
   case SHT_PREINIT_ARRAY:
-  case SHT_NOTE:
     return true;
+  case SHT_NOTE:
+    // SHT_NOTE sections in a group are subject to garbage collection.
+    return !sec->nextInSectionGroup;
   default:
     StringRef s = sec->name;
     return s.startswith(".ctors") || s.startswith(".dtors") ||

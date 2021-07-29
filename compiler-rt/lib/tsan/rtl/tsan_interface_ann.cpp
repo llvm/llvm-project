@@ -43,15 +43,14 @@ class ScopedAnnotation {
   ThreadState *const thr_;
 };
 
-#define SCOPED_ANNOTATION_RET(typ, ret) \
-    if (!flags()->enable_annotations) \
-      return ret; \
-    ThreadState *thr = cur_thread(); \
-    const uptr caller_pc = (uptr)__builtin_return_address(0); \
-    ScopedAnnotation sa(thr, __func__, caller_pc); \
-    const uptr pc = StackTrace::GetCurrentPc(); \
-    (void)pc; \
-/**/
+#define SCOPED_ANNOTATION_RET(typ, ret)                     \
+  if (!flags()->enable_annotations)                         \
+    return ret;                                             \
+  ThreadState *thr = cur_thread();                          \
+  const uptr caller_pc = (uptr)__builtin_return_address(0); \
+  ScopedAnnotation sa(thr, __func__, caller_pc);            \
+  const uptr pc = StackTrace::GetCurrentPc();               \
+  (void)pc;
 
 #define SCOPED_ANNOTATION(typ) SCOPED_ANNOTATION_RET(typ, )
 
@@ -90,7 +89,7 @@ static void AddExpectRace(ExpectRace *list,
       return;
     }
   }
-  race = (ExpectRace*)internal_alloc(MBlockExpectRace, sizeof(ExpectRace));
+  race = (ExpectRace *)internal_alloc(sizeof(ExpectRace));
   race->addr = addr;
   race->size = size;
   race->file = f;
@@ -378,7 +377,7 @@ void INTERFACE_ATTRIBUTE AnnotateIgnoreReadsBegin(char *f, int l) {
 
 void INTERFACE_ATTRIBUTE AnnotateIgnoreReadsEnd(char *f, int l) {
   SCOPED_ANNOTATION(AnnotateIgnoreReadsEnd);
-  ThreadIgnoreEnd(thr, pc);
+  ThreadIgnoreEnd(thr);
 }
 
 void INTERFACE_ATTRIBUTE AnnotateIgnoreWritesBegin(char *f, int l) {
@@ -388,7 +387,7 @@ void INTERFACE_ATTRIBUTE AnnotateIgnoreWritesBegin(char *f, int l) {
 
 void INTERFACE_ATTRIBUTE AnnotateIgnoreWritesEnd(char *f, int l) {
   SCOPED_ANNOTATION(AnnotateIgnoreWritesEnd);
-  ThreadIgnoreEnd(thr, pc);
+  ThreadIgnoreEnd(thr);
 }
 
 void INTERFACE_ATTRIBUTE AnnotateIgnoreSyncBegin(char *f, int l) {
@@ -398,7 +397,7 @@ void INTERFACE_ATTRIBUTE AnnotateIgnoreSyncBegin(char *f, int l) {
 
 void INTERFACE_ATTRIBUTE AnnotateIgnoreSyncEnd(char *f, int l) {
   SCOPED_ANNOTATION(AnnotateIgnoreSyncEnd);
-  ThreadIgnoreSyncEnd(thr, pc);
+  ThreadIgnoreSyncEnd(thr);
 }
 
 void INTERFACE_ATTRIBUTE AnnotatePublishMemoryRange(
@@ -477,15 +476,15 @@ void __tsan_mutex_pre_lock(void *m, unsigned flagz) {
     else
       MutexPreLock(thr, pc, (uptr)m);
   }
-  ThreadIgnoreBegin(thr, pc, /*save_stack=*/false);
-  ThreadIgnoreSyncBegin(thr, pc, /*save_stack=*/false);
+  ThreadIgnoreBegin(thr, 0);
+  ThreadIgnoreSyncBegin(thr, 0);
 }
 
 INTERFACE_ATTRIBUTE
 void __tsan_mutex_post_lock(void *m, unsigned flagz, int rec) {
   SCOPED_ANNOTATION(__tsan_mutex_post_lock);
-  ThreadIgnoreSyncEnd(thr, pc);
-  ThreadIgnoreEnd(thr, pc);
+  ThreadIgnoreSyncEnd(thr);
+  ThreadIgnoreEnd(thr);
   if (!(flagz & MutexFlagTryLockFailed)) {
     if (flagz & MutexFlagReadLock)
       MutexPostReadLock(thr, pc, (uptr)m, flagz);
@@ -504,44 +503,44 @@ int __tsan_mutex_pre_unlock(void *m, unsigned flagz) {
   } else {
     ret = MutexUnlock(thr, pc, (uptr)m, flagz);
   }
-  ThreadIgnoreBegin(thr, pc, /*save_stack=*/false);
-  ThreadIgnoreSyncBegin(thr, pc, /*save_stack=*/false);
+  ThreadIgnoreBegin(thr, 0);
+  ThreadIgnoreSyncBegin(thr, 0);
   return ret;
 }
 
 INTERFACE_ATTRIBUTE
 void __tsan_mutex_post_unlock(void *m, unsigned flagz) {
   SCOPED_ANNOTATION(__tsan_mutex_post_unlock);
-  ThreadIgnoreSyncEnd(thr, pc);
-  ThreadIgnoreEnd(thr, pc);
+  ThreadIgnoreSyncEnd(thr);
+  ThreadIgnoreEnd(thr);
 }
 
 INTERFACE_ATTRIBUTE
 void __tsan_mutex_pre_signal(void *addr, unsigned flagz) {
   SCOPED_ANNOTATION(__tsan_mutex_pre_signal);
-  ThreadIgnoreBegin(thr, pc, /*save_stack=*/false);
-  ThreadIgnoreSyncBegin(thr, pc, /*save_stack=*/false);
+  ThreadIgnoreBegin(thr, 0);
+  ThreadIgnoreSyncBegin(thr, 0);
 }
 
 INTERFACE_ATTRIBUTE
 void __tsan_mutex_post_signal(void *addr, unsigned flagz) {
   SCOPED_ANNOTATION(__tsan_mutex_post_signal);
-  ThreadIgnoreSyncEnd(thr, pc);
-  ThreadIgnoreEnd(thr, pc);
+  ThreadIgnoreSyncEnd(thr);
+  ThreadIgnoreEnd(thr);
 }
 
 INTERFACE_ATTRIBUTE
 void __tsan_mutex_pre_divert(void *addr, unsigned flagz) {
   SCOPED_ANNOTATION(__tsan_mutex_pre_divert);
   // Exit from ignore region started in __tsan_mutex_pre_lock/unlock/signal.
-  ThreadIgnoreSyncEnd(thr, pc);
-  ThreadIgnoreEnd(thr, pc);
+  ThreadIgnoreSyncEnd(thr);
+  ThreadIgnoreEnd(thr);
 }
 
 INTERFACE_ATTRIBUTE
 void __tsan_mutex_post_divert(void *addr, unsigned flagz) {
   SCOPED_ANNOTATION(__tsan_mutex_post_divert);
-  ThreadIgnoreBegin(thr, pc, /*save_stack=*/false);
-  ThreadIgnoreSyncBegin(thr, pc, /*save_stack=*/false);
+  ThreadIgnoreBegin(thr, 0);
+  ThreadIgnoreSyncBegin(thr, 0);
 }
 }  // extern "C"

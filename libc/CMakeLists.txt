@@ -19,6 +19,7 @@ string(TOLOWER ${LIBC_TARGET_OS} LIBC_TARGET_OS)
 
 # Defines LIBC_TARGET_ARCHITECTURE and associated macros.
 include(LLVMLibCArchitectures)
+include(LLVMLibCCheckMPFR)
 
 # Flags to pass down to the compiler while building the libc functions.
 set(LIBC_COMPILE_OPTIONS_DEFAULT "" CACHE STRING "Architecture to tell clang to optimize for (e.g. -march=... or -mcpu=...)")

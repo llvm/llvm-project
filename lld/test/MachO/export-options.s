@@ -42,11 +42,17 @@
 # EXPORT-DAG: g     F __TEXT,__text _keep_lazy
 
 ## Check that exported symbol is global
-# RUN: not %lld -dylib %t/default.o -o /dev/null \
+# RUN: %no_fatal_warnings_lld -dylib %t/default.o -o %t/hidden-export \
 # RUN:         -exported_symbol _private_extern 2>&1 | \
 # RUN:     FileCheck --check-prefix=PRIVATE %s
 
-# PRIVATE: error: cannot export hidden symbol _private_extern
+# PRIVATE: warning: cannot export hidden symbol _private_extern
+
+## Check that we still hide the other symbols despite the warning
+# RUN: llvm-objdump --macho --exports-trie %t/hidden-export | \
+# RUN:     FileCheck --check-prefix=EMPTY-TRIE %s
+# EMPTY-TRIE:       Exports trie:
+# EMPTY-TRIE-EMPTY:
 
 ## Check that the export trie is unaltered
 # RUN: %lld -dylib %t/default.o -o %t/default

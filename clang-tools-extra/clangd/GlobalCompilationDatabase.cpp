@@ -276,20 +276,17 @@ bool DirectoryBasedGlobalCompilationDatabase::DirectoryCache::load(
   // For these, we know the files they read and cache their metadata so we can
   // cheaply validate whether they've changed, and hot-reload if they have.
   // (As a bonus, these are also VFS-clean)!
-  struct {
+  struct CDBFile {
     CachedFile *File;
     // Wrapper for {Fixed,JSON}CompilationDatabase::loadFromBuffer.
-    llvm::function_ref<std::unique_ptr<tooling::CompilationDatabase>(
+    std::unique_ptr<tooling::CompilationDatabase> (*Parser)(
         PathRef,
         /*Data*/ llvm::StringRef,
-        /*ErrorMsg*/ std::string &)>
-        Parser;
-  } Files[] = {
-      {&CompileCommandsJson, parseJSON},
-      {&BuildCompileCommandsJson, parseJSON},
-      {&CompileFlagsTxt, parseFixed},
+        /*ErrorMsg*/ std::string &);
   };
-  for (const auto &Entry : Files) {
+  for (const auto &Entry : {CDBFile{&CompileCommandsJson, parseJSON},
+                            CDBFile{&BuildCompileCommandsJson, parseJSON},
+                            CDBFile{&CompileFlagsTxt, parseFixed}}) {
     bool Active = ActiveCachedFile == Entry.File;
     auto Loaded = Entry.File->load(FS, Active);
     switch (Loaded.Result) {
@@ -766,7 +763,7 @@ OverlayCDB::getCompileCommand(PathRef File) const {
   if (!Cmd)
     return llvm::None;
   if (ArgsAdjuster)
-    Cmd->CommandLine = ArgsAdjuster(Cmd->CommandLine, Cmd->Filename);
+    Cmd->CommandLine = ArgsAdjuster(Cmd->CommandLine, File);
   return Cmd;
 }
 
@@ -776,7 +773,7 @@ tooling::CompileCommand OverlayCDB::getFallbackCommand(PathRef File) const {
   Cmd.CommandLine.insert(Cmd.CommandLine.end(), FallbackFlags.begin(),
                          FallbackFlags.end());
   if (ArgsAdjuster)
-    Cmd.CommandLine = ArgsAdjuster(Cmd.CommandLine, Cmd.Filename);
+    Cmd.CommandLine = ArgsAdjuster(Cmd.CommandLine, File);
   return Cmd;
 }
 

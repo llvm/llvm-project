@@ -13,6 +13,7 @@ def native_arch_defines(arch, triple):
         "LLVM_NATIVE_TARGET=LLVMInitialize{}Target".format(arch),
         "LLVM_NATIVE_TARGETINFO=LLVMInitialize{}TargetInfo".format(arch),
         "LLVM_NATIVE_TARGETMC=LLVMInitialize{}TargetMC".format(arch),
+        "LLVM_NATIVE_TARGETMCA=LLVMInitialize{}TargetMCA".format(arch),
         "LLVM_HOST_TRIPLE=\\\"{}\\\"".format(triple),
         "LLVM_DEFAULT_TARGET_TRIPLE=\\\"{}\\\"".format(triple),
     ]

@@ -723,8 +723,8 @@ void llvm::breakLoopBackedge(Loop *L, DominatorTree &DT, ScalarEvolution &SE,
   auto *BackedgeBB = SplitEdge(Latch, Header, &DT, &LI, MSSAU.get());
 
   DomTreeUpdater DTU(&DT, DomTreeUpdater::UpdateStrategy::Eager);
-  (void)changeToUnreachable(BackedgeBB->getTerminator(), /*UseTrap*/false,
-                            /*PreserveLCSSA*/true, &DTU, MSSAU.get());
+  (void)changeToUnreachable(BackedgeBB->getTerminator(),
+                            /*PreserveLCSSA*/ true, &DTU, MSSAU.get());
 
   // Erase (and destroy) this loop instance.  Handles relinking sub-loops
   // and blocks within the loop as needed.
@@ -1524,14 +1524,8 @@ struct PointerBounds {
 static PointerBounds expandBounds(const RuntimeCheckingPtrGroup *CG,
                                   Loop *TheLoop, Instruction *Loc,
                                   SCEVExpander &Exp) {
-  // TODO: Add helper to retrieve pointers to CG.
-  Value *Ptr = CG->RtCheck.Pointers[CG->Members[0]].PointerValue;
-
-  unsigned AS = Ptr->getType()->getPointerAddressSpace();
   LLVMContext &Ctx = Loc->getContext();
-
-  // Use this type for pointer arithmetic.
-  Type *PtrArithTy = Type::getInt8PtrTy(Ctx, AS);
+  Type *PtrArithTy = Type::getInt8PtrTy(Ctx, CG->AddressSpace);
 
   Value *Start = nullptr, *End = nullptr;
   LLVM_DEBUG(dbgs() << "LAA: Adding RT check for range:\n");

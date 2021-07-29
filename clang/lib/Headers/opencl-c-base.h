@@ -169,7 +169,11 @@ typedef double double8 __attribute__((ext_vector_type(8)));
 typedef double double16 __attribute__((ext_vector_type(16)));
 #endif
 
+#if defined(__OPENCL_CPP_VERSION__)
+#define NULL nullptr
+#elif defined(__OPENCL_C_VERSION__)
 #define NULL ((void*)0)
+#endif
 
 /**
  * Value of maximum non-infinite single-precision floating-point
@@ -353,7 +357,9 @@ typedef enum memory_order
   memory_order_acquire = __ATOMIC_ACQUIRE,
   memory_order_release = __ATOMIC_RELEASE,
   memory_order_acq_rel = __ATOMIC_ACQ_REL,
+#if defined(__opencl_c_atomic_order_seq_cst)
   memory_order_seq_cst = __ATOMIC_SEQ_CST
+#endif
 } memory_order;
 
 #endif // defined(__OPENCL_CPP_VERSION__) || (__OPENCL_C_VERSION__ >= CL_VERSION_2_0)

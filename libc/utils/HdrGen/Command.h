@@ -36,7 +36,7 @@ public:
   public:
     ErrorReporter(llvm::SMLoc L, llvm::SourceMgr &SM) : Loc(L), SrcMgr(SM) {}
 
-    void printFatalError(llvm::Twine Msg) const {
+    [[noreturn]] void printFatalError(llvm::Twine Msg) const {
       SrcMgr.PrintMessage(Loc, llvm::SourceMgr::DK_Error, Msg);
       std::exit(1);
     }

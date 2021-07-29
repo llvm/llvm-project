@@ -36,13 +36,13 @@ namespace std::ranges {
     inline constexpr bool enable_borrowed_range = false;
 
   template<class T>
-    using iterator_t = decltype(ranges::begin(declval<T&>()));
-  template<class T>
-    using iterator_t = decltype(ranges::begin(declval<T&>()));
+    using iterator_t = decltype(ranges::begin(declval<R&>()));
   template<range R>
     using sentinel_t = decltype(ranges::end(declval<R&>()));
   template<range R>
     using range_difference_t = iter_difference_t<iterator_t<R>>;
+  template<sized_range R>
+    using range_size_t = decltype(ranges::size(declval<R&>()));
   template<range R>
     using range_value_t = iter_value_t<iterator_t<R>>;
   template<range R>
@@ -67,6 +67,9 @@ namespace std::ranges {
     concept view = ...;
 
   // [range.refinements], other range refinements
+  template<class R, class T>
+    concept output_range = see below;
+
   template<class T>
     concept input_range = see below;
 
@@ -153,6 +156,12 @@ namespace std::ranges {
 
   template<class T>
   inline constexpr bool enable_borrowed_range<common_view<T>> = enable_borrowed_range<T>;
+
+   // [range.take], take view
+  template<view> class take_view;
+
+  template<class T>
+  inline constexpr bool enable_borrowed_range<take_view<T>> = enable_borrowed_range<T>;
 }
 
 */
@@ -170,6 +179,7 @@ namespace std::ranges {
 #include <__ranges/enable_borrowed_range.h>
 #include <__ranges/enable_view.h>
 #include <__ranges/ref_view.h>
+#include <__ranges/take_view.h>
 #include <__ranges/size.h>
 #include <__ranges/subrange.h>
 #include <__ranges/transform_view.h>
@@ -179,6 +189,10 @@ namespace std::ranges {
 #include <iterator>         // Required by the standard.
 #include <type_traits>
 #include <version>
+
+#if defined(_LIBCPP_HAS_NO_INCOMPLETE_RANGES)
+# error "The Ranges library is not supported since libc++ has been configured with LIBCXX_ENABLE_INCOMPLETE_FEATURES disabled"
+#endif
 
 #if !defined(_LIBCPP_HAS_NO_PRAGMA_SYSTEM_HEADER)
 #pragma GCC system_header

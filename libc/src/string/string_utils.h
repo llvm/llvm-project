@@ -9,6 +9,7 @@
 #ifndef LIBC_SRC_STRING_STRING_UTILS_H
 #define LIBC_SRC_STRING_STRING_UTILS_H
 
+#include "src/__support/common.h"
 #include "utils/CPP/Bitset.h"
 #include <stddef.h> // size_t
 
@@ -58,23 +59,27 @@ static inline size_t complementary_span(const char *src, const char *segment) {
 static inline char *string_token(char *__restrict src,
                                  const char *__restrict delimiter_string,
                                  char **__restrict saveptr) {
+  // Return nullptr immediately if both src AND saveptr are nullptr
+  if (unlikely(src == nullptr && ((src = *saveptr) == nullptr)))
+    return nullptr;
+
   cpp::Bitset<256> delimiter_set;
-  for (; *delimiter_string; ++delimiter_string)
+  for (; *delimiter_string != '\0'; ++delimiter_string)
     delimiter_set.set(*delimiter_string);
 
-  src = src ? src : *saveptr;
-  for (; *src && delimiter_set.test(*src); ++src)
+  for (; *src != '\0' && delimiter_set.test(*src); ++src)
     ;
-  if (!*src) {
+  if (*src == '\0') {
     *saveptr = src;
     return nullptr;
   }
   char *token = src;
-  for (; *src && !delimiter_set.test(*src); ++src)
-    ;
-  if (*src) {
-    *src = '\0';
-    ++src;
+  for (; *src != '\0'; ++src) {
+    if (delimiter_set.test(*src)) {
+      *src = '\0';
+      ++src;
+      break;
+    }
   }
   *saveptr = src;
   return token;

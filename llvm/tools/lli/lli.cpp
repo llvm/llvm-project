@@ -410,8 +410,7 @@ CodeGenOpt::Level getOptLevel() {
   llvm_unreachable("Unrecognized opt level.");
 }
 
-LLVM_ATTRIBUTE_NORETURN
-static void reportError(SMDiagnostic Err, const char *ProgName) {
+[[noreturn]] static void reportError(SMDiagnostic Err, const char *ProgName) {
   Err.print(ProgName, errs());
   exit(1);
 }
@@ -717,7 +716,8 @@ int main(int argc, char **argv, char * const *envp) {
     }
 
     // Create a remote target client running over the channel.
-    llvm::orc::ExecutionSession ES;
+    llvm::orc::ExecutionSession ES(
+        std::make_unique<orc::UnsupportedExecutorProcessControl>());
     ES.setErrorReporter([&](Error Err) { ExitOnErr(std::move(Err)); });
     typedef orc::remote::OrcRemoteTargetClient MyRemote;
     auto R = ExitOnErr(MyRemote::Create(*C, ES));
@@ -874,7 +874,8 @@ int runOrcJIT(const char *ProgName) {
   // JIT builder to instantiate a default (which would fail with an error for
   // unsupported architectures).
   if (UseJITKind != JITKind::OrcLazy) {
-    auto ES = std::make_unique<orc::ExecutionSession>();
+    auto ES = std::make_unique<orc::ExecutionSession>(
+        ExitOnErr(orc::SelfExecutorProcessControl::Create()));
     Builder.setLazyCallthroughManager(
         std::make_unique<orc::LazyCallThroughManager>(*ES, 0, nullptr));
     Builder.setExecutionSession(std::move(ES));
@@ -934,9 +935,9 @@ int runOrcJIT(const char *ProgName) {
                                                 const Triple &) {
       auto L = std::make_unique<orc::ObjectLinkingLayer>(ES, EPC->getMemMgr());
       L->addPlugin(std::make_unique<orc::EHFrameRegistrationPlugin>(
-          ES, ExitOnErr(orc::EPCEHFrameRegistrar::Create(*EPC))));
+          ES, ExitOnErr(orc::EPCEHFrameRegistrar::Create(ES))));
       L->addPlugin(std::make_unique<orc::DebugObjectManagerPlugin>(
-          ES, ExitOnErr(orc::createJITLoaderGDBRegistrar(*EPC))));
+          ES, ExitOnErr(orc::createJITLoaderGDBRegistrar(ES))));
       return L;
     });
   }

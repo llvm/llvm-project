@@ -2011,7 +2011,7 @@ Instruction *InstCombinerImpl::visitCallInst(CallInst &CI) {
             if (Arg != Vect &&
                 cast<Instruction>(Arg)->getOpcode() == Instruction::SExt)
               Res = Builder.CreateNeg(Res);
-            return replaceInstUsesWith(CI, Res);;
+            return replaceInstUsesWith(CI, Res);
           }
       }
     }

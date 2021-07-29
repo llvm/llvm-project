@@ -395,11 +395,16 @@ exit:
 }
 
 ; Inner infinite loop hidden behind a call.
-; TODO: Loop should not get deleted.
 define void @not_willreturn() {
 ; CHECK-LABEL: @not_willreturn(
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    br label [[EXIT:%.*]]
+; CHECK-NEXT:    br label [[LOOP:%.*]]
+; CHECK:       loop:
+; CHECK-NEXT:    [[IV:%.*]] = phi i32 [ 0, [[ENTRY:%.*]] ], [ [[IV_NEXT:%.*]], [[LOOP]] ]
+; CHECK-NEXT:    call void @sideeffect() #[[ATTR2:[0-9]+]]
+; CHECK-NEXT:    [[IV_NEXT]] = add nuw i32 [[IV]], 1
+; CHECK-NEXT:    [[C:%.*]] = icmp ult i32 [[IV]], 100
+; CHECK-NEXT:    br i1 [[C]], label [[LOOP]], label [[EXIT:%.*]]
 ; CHECK:       exit:
 ; CHECK-NEXT:    ret void
 ;

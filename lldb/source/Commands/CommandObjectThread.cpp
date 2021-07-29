@@ -1924,13 +1924,38 @@ public:
 
 // Next are the subcommands of CommandObjectMultiwordTrace
 
+// CommandObjectTraceExport
+
+class CommandObjectTraceExport : public CommandObjectMultiword {
+public:
+  CommandObjectTraceExport(CommandInterpreter &interpreter)
+      : CommandObjectMultiword(
+            interpreter, "trace thread export",
+            "Commands for exporting traces of the threads in the current "
+            "process to different formats.",
+            "thread trace export <export-plugin> [<subcommand objects>]") {
+
+    for (uint32_t i = 0; true; i++) {
+      if (const char *plugin_name =
+              PluginManager::GetTraceExporterPluginNameAtIndex(i)) {
+        if (ThreadTraceExportCommandCreator command_creator =
+                PluginManager::GetThreadTraceExportCommandCreatorAtIndex(i)) {
+          LoadSubCommand(plugin_name, command_creator(interpreter));
+        }
+      } else {
+        break;
+      }
+    }
+  }
+};
+
 // CommandObjectTraceStart
 
 class CommandObjectTraceStart : public CommandObjectTraceProxy {
 public:
   CommandObjectTraceStart(CommandInterpreter &interpreter)
       : CommandObjectTraceProxy(
-            /*live_debug_session_only*/ true, interpreter, "thread trace start",
+            /*live_debug_session_only=*/true, interpreter, "thread trace start",
             "Start tracing threads with the corresponding trace "
             "plug-in for the current process.",
             "thread trace start [<trace-options>]") {}
@@ -2248,6 +2273,8 @@ public:
                    CommandObjectSP(new CommandObjectTraceStart(interpreter)));
     LoadSubCommand("stop",
                    CommandObjectSP(new CommandObjectTraceStop(interpreter)));
+    LoadSubCommand("export",
+                   CommandObjectSP(new CommandObjectTraceExport(interpreter)));
   }
 
   ~CommandObjectMultiwordTrace() override = default;

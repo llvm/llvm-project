@@ -10,7 +10,6 @@
 ## .mynote.ccc is retained because it is not in a group.
 # CHECK-DEAD-NOT: Name: .myanote.aaa
 # CHECK-DEAD-NOT: Name: .mytext.aaa
-# CHECK-DEAD-NOT: Name: .myinit_array.aaa
 # CHECK-DEAD-NOT: Name: .mybss.aaa
 # CHECK-DEAD-NOT: Name: .mynote.aaa
 # CHECK-DEAD-NOT: Name: .myanote.bbb
@@ -33,7 +32,6 @@
 
 # CHECK-LIVE-GROUP: Name: .myanote.aaa
 # CHECK-LIVE-GROUP: Name: .mytext.aaa
-# CHECK-LIVE-GROUP: Name: .myinit_array.aaa
 # CHECK-LIVE-GROUP: Name: .mybss.aaa
 # CHECK-LIVE-GROUP: Name: .mynote.aaa
 # CHECK-LIVE-GROUP-NOT: Name: .myanote.bbb
@@ -56,7 +54,6 @@
 
 # CHECK-LIVE-COMDAT-NOT: Name: .myanote.aaa
 # CHECK-LIVE-COMDAT-NOT: Name: .mytext.aaa
-# CHECK-LIVE-COMDAT-NOT: Name: .myinit_array.aaa
 # CHECK-LIVE-COMDAT-NOT: Name: .mybss.aaa
 # CHECK-LIVE-COMDAT-NOT: Name: .mynote.aaa
 # CHECK-LIVE-COMDAT: Name: .myanote.bbb
@@ -74,9 +71,6 @@ anote_aaa:
 
 .section .mytext.aaa,"axG",@progbits,aaa
 aaa:
-.byte 0
-
-.section .myinit_array.aaa,"awG",@init_array,aaa
 .byte 0
 
 .section .mybss.aaa,"awG",@nobits,aaa

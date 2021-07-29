@@ -623,7 +623,7 @@ TEST(Local, ChangeToUnreachable) {
 
   ASSERT_TRUE(isa<ReturnInst>(&A));
   // One instruction should be affected.
-  EXPECT_EQ(changeToUnreachable(&A, /*UseLLVMTrap*/false), 1U);
+  EXPECT_EQ(changeToUnreachable(&A), 1U);
 
   Instruction &B = BB.front();
 

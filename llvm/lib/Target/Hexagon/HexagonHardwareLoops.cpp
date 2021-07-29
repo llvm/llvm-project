@@ -1098,12 +1098,11 @@ void HexagonHardwareLoops::removeIfDead(MachineInstr *MI) {
       for (MachineRegisterInfo::use_iterator I = MRI->use_begin(Reg),
            E = MRI->use_end(); I != E; I = nextI) {
         nextI = std::next(I);  // I is invalidated by the setReg
-        MachineOperand &Use = *I;
         MachineInstr *UseMI = I->getParent();
         if (UseMI == MI)
           continue;
-        if (Use.isDebug())
-          UseMI->getOperand(0).setReg(0U);
+        if (I->isDebug())
+          I->setReg(0U);
       }
     }
 

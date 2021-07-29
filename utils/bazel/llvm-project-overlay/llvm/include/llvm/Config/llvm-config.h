@@ -58,6 +58,9 @@
 /* LLVM name for the native target MC init function, if available */
 /* LLVM_NATIVE_TARGETMC defined in Bazel */
 
+/* LLVM name for the native target MCA init function, if available */
+/* LLVM_NATIVE_TARGETMCA defined in Bazel */
+
 /* Define if this is Unixish platform */
 /* LLVM_ON_UNIX defined in Bazel */
 

@@ -13,7 +13,7 @@ define i64 @fn2() {
 ; IS__TUNIT____-LABEL: define {{[^@]+}}@fn2
 ; IS__TUNIT____-SAME: () #[[ATTR0:[0-9]+]] {
 ; IS__TUNIT____-NEXT:  entry:
-; IS__TUNIT____-NEXT:    ret i64 undef
+; IS__TUNIT____-NEXT:    ret i64 poison
 ;
 ; IS__CGSCC____: Function Attrs: nofree norecurse nosync nounwind readnone willreturn
 ; IS__CGSCC____-LABEL: define {{[^@]+}}@fn2
@@ -21,7 +21,7 @@ define i64 @fn2() {
 ; IS__CGSCC____-NEXT:  entry:
 ; IS__CGSCC____-NEXT:    [[CONV:%.*]] = sext i32 undef to i64
 ; IS__CGSCC____-NEXT:    [[DIV:%.*]] = sdiv i64 8, 0
-; IS__CGSCC____-NEXT:    ret i64 undef
+; IS__CGSCC____-NEXT:    ret i64 poison
 ;
 entry:
   %conv = sext i32 undef to i64

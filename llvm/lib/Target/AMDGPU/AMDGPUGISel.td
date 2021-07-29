@@ -128,6 +128,8 @@ def gi_smrd_buffer_imm32 :
 
 def : GINodeEquiv<G_LOAD, AMDGPUld_glue> {
   let CheckMMOIsNonAtomic = 1;
+  let IfSignExtend = G_SEXTLOAD;
+  let IfZeroExtend = G_ZEXTLOAD;
 }
 
 def : GINodeEquiv<G_STORE, AMDGPUst_glue> {

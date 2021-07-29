@@ -215,6 +215,10 @@ def IsMemRefTypePred : CPred<"$_self.isa<::mlir::MemRefType>()">;
 def IsUnrankedMemRefTypePred
         : CPred<"$_self.isa<::mlir::UnrankedMemRefType>()">;
 
+// Whether a type is an UnrankedTensorType
+def IsUnrankedTensorTypePred
+        : CPred<"$_self.isa<::mlir::UnrankedTensorType>()">;
+
 // Whether a type is a BaseMemRefType
 def IsBaseMemRefTypePred
         : CPred<"$_self.isa<::mlir::BaseMemRefType>()">;
@@ -623,6 +627,12 @@ class RankedTensorOf<list<Type> allowedTypes> :
   "ranked tensor", "::mlir::TensorType">;
 
 def AnyTensor : TensorOf<[AnyType]>;
+
+// Unranked Memref type
+class UnrankedTensorOf<list<Type> allowedTypes> :
+    ShapedContainerType<allowedTypes,
+                        IsUnrankedTensorTypePred,
+                        "unranked.tensor", "::mlir::UnrankedTensorType">;
 
 def AnyRankedTensor : RankedTensorOf<[AnyType]>;
 
@@ -2356,10 +2366,7 @@ class TypesMatchWith<string summary, string lhsArg, string rhsArg,
 // ranged arguments.
 class RangedTypesMatchWith<string summary, string lhsArg, string rhsArg,
                            string transform>
-  : TypesMatchWith<summary, lhsArg, rhsArg, transform,
-    "[](auto &&lhs, auto &&rhs) { "
-    "return std::equal(lhs.begin(), lhs.end(), rhs.begin(), rhs.end());"
-    " }">;
+  : TypesMatchWith<summary, lhsArg, rhsArg, transform, "llvm::equal">;
 
 // Type Constraint operand `idx`'s Element type is `type`.
 class TCopVTEtIs<int idx, Type type> : And<[

@@ -504,8 +504,7 @@ bool llvm::RunningWindows8OrGreater() {
   return GetWindowsOSVersion() >= llvm::VersionTuple(6, 2, 0, 0);
 }
 
-LLVM_ATTRIBUTE_NORETURN
-void Process::ExitNoCleanup(int RetCode) {
+[[noreturn]] void Process::ExitNoCleanup(int RetCode) {
   TerminateProcess(GetCurrentProcess(), RetCode);
   llvm_unreachable("TerminateProcess doesn't return");
 }

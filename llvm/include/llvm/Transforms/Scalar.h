@@ -255,6 +255,14 @@ FunctionPass *createJumpThreadingPass(bool FreezeSelectCond = false,
 
 //===----------------------------------------------------------------------===//
 //
+// DFAJumpThreading - When a switch statement inside a loop is used to
+// implement a deterministic finite automata we can jump thread the switch
+// statement reducing number of conditional jumps.
+//
+FunctionPass *createDFAJumpThreadingPass();
+
+//===----------------------------------------------------------------------===//
+//
 // CFGSimplification - Merge basic blocks, eliminate unreachable blocks,
 // simplify terminator instructions, convert switches to lookup tables, etc.
 //

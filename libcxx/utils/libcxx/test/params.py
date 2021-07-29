@@ -53,7 +53,7 @@ def getStdFlag(cfg, std):
   return None
 
 DEFAULT_PARAMETERS = [
-  Parameter(name='target_triple', type=str, default=getHostTriple,
+  Parameter(name='target_triple', type=str,
             help="The target triple to compile the test suite for. This must be "
                  "compatible with the target that the tests will be run on.",
             actions=lambda triple: filter(None, [

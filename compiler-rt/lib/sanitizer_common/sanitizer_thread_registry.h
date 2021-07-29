@@ -135,7 +135,7 @@ class MUTEX ThreadRegistry {
   const u32 thread_quarantine_size_;
   const u32 max_reuse_;
 
-  BlockingMutex mtx_;
+  Mutex mtx_;
 
   u64 total_threads_;   // Total number of created threads. May be greater than
                         // max_threads_ if contexts were reused.

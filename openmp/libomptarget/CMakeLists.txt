@@ -90,6 +90,8 @@ add_subdirectory(deviceRTLs)
 if (OPENMP_ENABLE_LIBOMPTARGET_HSA)
   add_subdirectory(hostrpc)
 endif()
+add_subdirectory(DeviceRTL)
+add_subdirectory(tools)
 
 # Add tests.
 add_subdirectory(test)

@@ -14,13 +14,18 @@ define internal void @indirect() {
 }
 
 define amdgpu_kernel void @test_simple_indirect_call() #0 {
-; GCN-LABEL: define {{[^@]+}}@test_simple_indirect_call
-; GCN-SAME: () #[[ATTR1:[0-9]+]] {
-; GCN-NEXT:    [[FPTR:%.*]] = alloca void ()*, align 8
-; GCN-NEXT:    store void ()* @indirect, void ()** [[FPTR]], align 8
-; GCN-NEXT:    [[FP:%.*]] = load void ()*, void ()** [[FPTR]], align 8
-; GCN-NEXT:    call void [[FP]]()
-; GCN-NEXT:    ret void
+; AKF_GCN-LABEL: define {{[^@]+}}@test_simple_indirect_call
+; AKF_GCN-SAME: () #[[ATTR1:[0-9]+]] {
+; AKF_GCN-NEXT:    [[FPTR:%.*]] = alloca void ()*, align 8
+; AKF_GCN-NEXT:    store void ()* @indirect, void ()** [[FPTR]], align 8
+; AKF_GCN-NEXT:    [[FP:%.*]] = load void ()*, void ()** [[FPTR]], align 8
+; AKF_GCN-NEXT:    call void [[FP]]()
+; AKF_GCN-NEXT:    ret void
+;
+; ATTRIBUTOR_GCN-LABEL: define {{[^@]+}}@test_simple_indirect_call
+; ATTRIBUTOR_GCN-SAME: () #[[ATTR1:[0-9]+]] {
+; ATTRIBUTOR_GCN-NEXT:    call void @indirect()
+; ATTRIBUTOR_GCN-NEXT:    ret void
 ;
 ; CHECK-LABEL: define {{[^@]+}}@test_simple_indirect_call
 ; CHECK-SAME: () #[[ATTR1:[0-9]+]] {

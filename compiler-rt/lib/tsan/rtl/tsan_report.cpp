@@ -22,7 +22,7 @@ namespace __tsan {
 ReportStack::ReportStack() : frames(nullptr), suppressable(false) {}
 
 ReportStack *ReportStack::New() {
-  void *mem = internal_alloc(MBlockReportStack, sizeof(ReportStack));
+  void *mem = internal_alloc(sizeof(ReportStack));
   return new(mem) ReportStack();
 }
 
@@ -31,7 +31,7 @@ ReportLocation::ReportLocation(ReportLocationType type)
       fd(0), suppressable(false), stack(nullptr) {}
 
 ReportLocation *ReportLocation::New(ReportLocationType type) {
-  void *mem = internal_alloc(MBlockReportStack, sizeof(ReportLocation));
+  void *mem = internal_alloc(sizeof(ReportLocation));
   return new(mem) ReportLocation(type);
 }
 

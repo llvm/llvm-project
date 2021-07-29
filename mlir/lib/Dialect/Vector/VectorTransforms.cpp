@@ -391,8 +391,8 @@ struct UnrollContractionPattern
       auto extractOperand = [&](unsigned index, Value operand,
                                 AffineMap permutationMap,
                                 ArrayRef<int64_t> operandOffets) {
-        SmallVector<int64_t> operandShape =
-            applyPermuationMap(permutationMap, ArrayRef<int64_t>(*targetShape));
+        SmallVector<int64_t> operandShape = applyPermutationMap(
+            permutationMap, ArrayRef<int64_t>(*targetShape));
         SmallVector<int64_t, 4> operandStrides(operandOffets.size(), 1);
         slicesOperands[index] = rewriter.create<vector::ExtractStridedSliceOp>(
             loc, operand, operandOffets, operandShape, operandStrides);
@@ -401,7 +401,7 @@ struct UnrollContractionPattern
       // Extract the new lhs operand.
       AffineMap lhsPermutationMap = contractOp.getIndexingMaps()[0];
       SmallVector<int64_t> lhsOffets =
-          applyPermuationMap(lhsPermutationMap, ArrayRef<int64_t>(offsets));
+          applyPermutationMap(lhsPermutationMap, ArrayRef<int64_t>(offsets));
       extractOperand(0, contractOp.lhs(), lhsPermutationMap, lhsOffets);
       // If there is a mask associated to lhs, extract it as well.
       if (slicesOperands.size() > 3)
@@ -410,7 +410,7 @@ struct UnrollContractionPattern
       // Extract the new rhs operand.
       AffineMap rhsPermutationMap = contractOp.getIndexingMaps()[1];
       SmallVector<int64_t> rhsOffets =
-          applyPermuationMap(rhsPermutationMap, ArrayRef<int64_t>(offsets));
+          applyPermutationMap(rhsPermutationMap, ArrayRef<int64_t>(offsets));
       extractOperand(1, contractOp.rhs(), rhsPermutationMap, rhsOffets);
       // If there is a mask associated to rhs, extract it as well.
       if (slicesOperands.size() > 4)
@@ -418,7 +418,7 @@ struct UnrollContractionPattern
 
       AffineMap accPermutationMap = contractOp.getIndexingMaps()[2];
       SmallVector<int64_t> accOffets =
-          applyPermuationMap(accPermutationMap, ArrayRef<int64_t>(offsets));
+          applyPermutationMap(accPermutationMap, ArrayRef<int64_t>(offsets));
       // If a version of the accumulator has already been computed, use it
       // otherwise extract the first version from the original operand.
       auto accIt = accCache.find(accOffets);
@@ -428,13 +428,13 @@ struct UnrollContractionPattern
         extractOperand(2, contractOp.acc(), accPermutationMap, accOffets);
 
       SmallVector<int64_t> dstShape =
-          applyPermuationMap(dstAffineMap, ArrayRef<int64_t>(*targetShape));
+          applyPermutationMap(dstAffineMap, ArrayRef<int64_t>(*targetShape));
       auto targetType = VectorType::get(dstShape, dstVecType.getElementType());
       Operation *newOp = cloneOpWithOperandsAndTypes(
           rewriter, loc, contractOp, slicesOperands, targetType);
 
       SmallVector<int64_t> dstOffets =
-          applyPermuationMap(dstAffineMap, ArrayRef<int64_t>(offsets));
+          applyPermutationMap(dstAffineMap, ArrayRef<int64_t>(offsets));
       // Save the accumulated value untill all the loops are unrolled since
       // reduction loop keep updating the accumulator.
       accCache[dstOffets] = newOp->getResult(0);

@@ -64,6 +64,7 @@ buildCompilerInvocation(const ParseInputs &Inputs, clang::DiagnosticConsumer &D,
   // our compiler invocation set-up doesn't seem to work with it (leading
   // assertions in VerifyDiagnosticConsumer).
   CI->getDiagnosticOpts().VerifyDiagnostics = false;
+  CI->getDiagnosticOpts().ShowColors = false;
 
   // Disable any dependency outputting, we don't want to generate files or write
   // to stdout/stderr.
@@ -89,6 +90,12 @@ buildCompilerInvocation(const ParseInputs &Inputs, clang::DiagnosticConsumer &D,
   // and clang dies when faced with unknown formats.
   CI->getHeaderSearchOpts().ModuleFormat =
       PCHContainerOperations().getRawReader().getFormat().str();
+
+  CI->getFrontendOpts().Plugins.clear();
+  CI->getFrontendOpts().AddPluginActions.clear();
+  CI->getFrontendOpts().PluginArgs.clear();
+  CI->getFrontendOpts().ProgramAction = frontend::ParseSyntaxOnly;
+  CI->getFrontendOpts().ActionName.clear();
 
   return CI;
 }

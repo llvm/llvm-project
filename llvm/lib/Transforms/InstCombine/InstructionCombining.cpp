@@ -2928,14 +2928,6 @@ Instruction *InstCombinerImpl::visitUnreachableInst(UnreachableInst &I) {
     // Otherwise, this instruction can be freely erased,
     // even if it is not side-effect free.
 
-    // Temporarily disable removal of volatile stores preceding unreachable,
-    // pending a potential LangRef change permitting volatile stores to trap.
-    // TODO: Either remove this code, or properly integrate the check into
-    // isGuaranteedToTransferExecutionToSuccessor().
-    if (auto *SI = dyn_cast<StoreInst>(Prev))
-      if (SI->isVolatile())
-        return nullptr; // Can not drop this instruction. We're done here.
-
     // A value may still have uses before we process it here (for example, in
     // another unreachable block), so convert those to poison.
     replaceInstUsesWith(*Prev, PoisonValue::get(Prev->getType()));

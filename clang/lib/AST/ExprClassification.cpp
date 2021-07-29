@@ -53,8 +53,12 @@ Cl Expr::ClassifyImpl(ASTContext &Ctx, SourceLocation *Loc) const {
 
   // Enable this assertion for testing.
   switch (kind) {
-  case Cl::CL_LValue: assert(getValueKind() == VK_LValue); break;
-  case Cl::CL_XValue: assert(getValueKind() == VK_XValue); break;
+  case Cl::CL_LValue:
+    assert(isLValue());
+    break;
+  case Cl::CL_XValue:
+    assert(isXValue());
+    break;
   case Cl::CL_Function:
   case Cl::CL_Void:
   case Cl::CL_AddressableVoid:
@@ -65,7 +69,7 @@ Cl Expr::ClassifyImpl(ASTContext &Ctx, SourceLocation *Loc) const {
   case Cl::CL_ArrayTemporary:
   case Cl::CL_ObjCMessageRValue:
   case Cl::CL_PRValue:
-    assert(getValueKind() == VK_PRValue);
+    assert(isPRValue());
     break;
   }
 

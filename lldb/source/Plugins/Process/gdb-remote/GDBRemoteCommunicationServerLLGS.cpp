@@ -216,6 +216,10 @@ void GDBRemoteCommunicationServerLLGS::RegisterPacketHandlers() {
       StringExtractorGDBRemote::eServerPacketType_qMemTags,
       &GDBRemoteCommunicationServerLLGS::Handle_qMemTags);
 
+  RegisterMemberFunctionHandler(
+      StringExtractorGDBRemote::eServerPacketType_QMemTags,
+      &GDBRemoteCommunicationServerLLGS::Handle_QMemTags);
+
   RegisterPacketHandler(StringExtractorGDBRemote::eServerPacketType_k,
                         [this](StringExtractorGDBRemote packet, Status &error,
                                bool &interrupt, bool &quit) {
@@ -3490,6 +3494,94 @@ GDBRemoteCommunicationServerLLGS::Handle_qMemTags(
   response.PutChar('m');
   response.PutBytesAsRawHex8(tags.data(), tags.size());
   return SendPacketNoLock(response.GetString());
+}
+
+GDBRemoteCommunication::PacketResult
+GDBRemoteCommunicationServerLLGS::Handle_QMemTags(
+    StringExtractorGDBRemote &packet) {
+  Log *log(GetLogIfAnyCategoriesSet(LIBLLDB_LOG_PROCESS));
+
+  // Ensure we have a process.
+  if (!m_current_process ||
+      (m_current_process->GetID() == LLDB_INVALID_PROCESS_ID)) {
+    LLDB_LOGF(
+        log,
+        "GDBRemoteCommunicationServerLLGS::%s failed, no process available",
+        __FUNCTION__);
+    return SendErrorResponse(1);
+  }
+
+  // We are expecting
+  // QMemTags:<hex address>,<hex length>:<hex type>:<tags as hex bytes>
+
+  // Address
+  packet.SetFilePos(strlen("QMemTags:"));
+  const char *current_char = packet.Peek();
+  if (!current_char || *current_char == ',')
+    return SendIllFormedResponse(packet, "Missing address in QMemTags packet");
+  const lldb::addr_t addr = packet.GetHexMaxU64(/*little_endian=*/false, 0);
+
+  // Length
+  char previous_char = packet.GetChar();
+  current_char = packet.Peek();
+  // If we don't have a separator or the length field is empty
+  if (previous_char != ',' || (current_char && *current_char == ':'))
+    return SendIllFormedResponse(packet,
+                                 "Invalid addr,length pair in QMemTags packet");
+
+  if (packet.GetBytesLeft() < 1)
+    return SendIllFormedResponse(
+        packet, "Too short QMemtags: packet (looking for length)");
+  const size_t length = packet.GetHexMaxU64(/*little_endian=*/false, 0);
+
+  // Type
+  const char *invalid_type_err = "Invalid type field in QMemTags: packet";
+  if (packet.GetBytesLeft() < 1 || packet.GetChar() != ':')
+    return SendIllFormedResponse(packet, invalid_type_err);
+
+  // Our GetU64 uses strtoull which allows leading +/-, we don't want that.
+  const char *first_type_char = packet.Peek();
+  if (first_type_char && (*first_type_char == '+' || *first_type_char == '-'))
+    return SendIllFormedResponse(packet, invalid_type_err);
+
+  // The type is a signed integer but is in the packet as its raw bytes.
+  // So parse first as unsigned then cast to signed later.
+  // We extract to 64 bit, even though we only expect 32, so that we've
+  // got some invalid value we can check for.
+  uint64_t raw_type =
+      packet.GetU64(std::numeric_limits<uint64_t>::max(), /*base=*/16);
+  if (raw_type > std::numeric_limits<uint32_t>::max())
+    return SendIllFormedResponse(packet, invalid_type_err);
+  int32_t type = static_cast<int32_t>(raw_type);
+
+  // Tag data
+  if (packet.GetBytesLeft() < 1 || packet.GetChar() != ':')
+    return SendIllFormedResponse(packet,
+                                 "Missing tag data in QMemTags: packet");
+
+  // Must be 2 chars per byte
+  const char *invalid_data_err = "Invalid tag data in QMemTags: packet";
+  if (packet.GetBytesLeft() % 2)
+    return SendIllFormedResponse(packet, invalid_data_err);
+
+  // This is bytes here and is unpacked into target specific tags later
+  // We cannot assume that number of bytes == length here because the server
+  // can repeat tags to fill a given range.
+  std::vector<uint8_t> tag_data;
+  // Zero length writes will not have any tag data
+  // (but we pass them on because it will still check that tagging is enabled)
+  if (packet.GetBytesLeft()) {
+    size_t byte_count = packet.GetBytesLeft() / 2;
+    tag_data.resize(byte_count);
+    size_t converted_bytes = packet.GetHexBytes(tag_data, 0);
+    if (converted_bytes != byte_count) {
+      return SendIllFormedResponse(packet, invalid_data_err);
+    }
+  }
+
+  Status status =
+      m_current_process->WriteMemoryTags(type, addr, length, tag_data);
+  return status.Success() ? SendOKResponse() : SendErrorResponse(1);
 }
 
 void GDBRemoteCommunicationServerLLGS::MaybeCloseInferiorTerminalConnection() {

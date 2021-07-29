@@ -66,9 +66,9 @@ define void @splat_v64i8(i8 %a, <64 x i8>* %b) #0 {
 ; Ensure sensible type legalisation.
 ; VBITS_EQ_256-DAG: mov [[RES:z[0-9]+]].b, w0
 ; VBITS_EQ_256-DAG: ptrue [[PG:p[0-9]+]].b, vl32
-; VBITS_EQ_256-DAG: mov w[[OFFSET_HI:[0-9]+]], #32
+; VBITS_EQ_256-DAG: mov w[[NUMELTS:[0-9]+]], #32
 ; VBITS_EQ_256-DAG: st1b { [[RES]].b }, [[PG]], [x1]
-; VBITS_EQ_256-DAG: st1b { [[RES]].b }, [[PG]], [x1, x[[OFFSET_HI]]
+; VBITS_EQ_256-DAG: st1b { [[RES]].b }, [[PG]], [x1, x[[NUMELTS]]]
 ; VBITS_EQ_256-NEXT: ret
   %insert = insertelement <64 x i8> undef, i8 %a, i64 0
   %splat = shufflevector <64 x i8> %insert, <64 x i8> undef, <64 x i32> zeroinitializer
@@ -142,9 +142,9 @@ define void @splat_v32i16(i16 %a, <32 x i16>* %b) #0 {
 ; Ensure sensible type legalisation.
 ; VBITS_EQ_256-DAG: mov [[RES:z[0-9]+]].h, w0
 ; VBITS_EQ_256-DAG: ptrue [[PG:p[0-9]+]].h, vl16
-; VBITS_EQ_256-DAG: add x[[B_HI:[0-9]+]], x1, #32
+; VBITS_EQ_256-DAG: mov x[[NUMELTS:[0-9]+]], #16
 ; VBITS_EQ_256-DAG: st1h { [[RES]].h }, [[PG]], [x1]
-; VBITS_EQ_256-DAG: st1h { [[RES]].h }, [[PG]], [x[[B_HI]]
+; VBITS_EQ_256-DAG: st1h { [[RES]].h }, [[PG]], [x1, x[[NUMELTS]], lsl #1]
 ; VBITS_EQ_256-NEXT: ret
   %insert = insertelement <32 x i16> undef, i16 %a, i64 0
   %splat = shufflevector <32 x i16> %insert, <32 x i16> undef, <32 x i32> zeroinitializer
@@ -218,9 +218,9 @@ define void @splat_v16i32(i32 %a, <16 x i32>* %b) #0 {
 ; Ensure sensible type legalisation.
 ; VBITS_EQ_256-DAG: mov [[RES:z[0-9]+]].s, w0
 ; VBITS_EQ_256-DAG: ptrue [[PG:p[0-9]+]].s, vl8
-; VBITS_EQ_256-DAG: add x[[B_HI:[0-9]+]], x1, #32
+; VBITS_EQ_256-DAG: mov x[[NUMELTS:[0-9]+]], #8
 ; VBITS_EQ_256-DAG: st1w { [[RES]].s }, [[PG]], [x1]
-; VBITS_EQ_256-DAG: st1w { [[RES]].s }, [[PG]], [x[[B_HI]]
+; VBITS_EQ_256-DAG: st1w { [[RES]].s }, [[PG]], [x1, x[[NUMELTS]], lsl #2]
 ; VBITS_EQ_256-NEXT: ret
   %insert = insertelement <16 x i32> undef, i32 %a, i64 0
   %splat = shufflevector <16 x i32> %insert, <16 x i32> undef, <16 x i32> zeroinitializer
@@ -294,9 +294,9 @@ define void @splat_v8i64(i64 %a, <8 x i64>* %b) #0 {
 ; Ensure sensible type legalisation.
 ; VBITS_EQ_256-DAG: mov [[RES:z[0-9]+]].d, x0
 ; VBITS_EQ_256-DAG: ptrue [[PG:p[0-9]+]].d, vl4
-; VBITS_EQ_256-DAG: add x[[B_HI:[0-9]+]], x1, #32
+; VBITS_EQ_256-DAG: mov x[[NUMELTS:[0-9]+]], #4
 ; VBITS_EQ_256-DAG: st1d { [[RES]].d }, [[PG]], [x1]
-; VBITS_EQ_256-DAG: st1d { [[RES]].d }, [[PG]], [x[[B_HI]]
+; VBITS_EQ_256-DAG: st1d { [[RES]].d }, [[PG]], [x1, x[[NUMELTS]], lsl #3]
 ; VBITS_EQ_256-NEXT: ret
   %insert = insertelement <8 x i64> undef, i64 %a, i64 0
   %splat = shufflevector <8 x i64> %insert, <8 x i64> undef, <8 x i32> zeroinitializer
@@ -374,9 +374,9 @@ define void @splat_v32f16(half %a, <32 x half>* %b) #0 {
 ; Ensure sensible type legalisation.
 ; VBITS_EQ_256-DAG: mov [[RES:z[0-9]+]].h, h0
 ; VBITS_EQ_256-DAG: ptrue [[PG:p[0-9]+]].h, vl16
-; VBITS_EQ_256-DAG: add x[[B_HI:[0-9]+]], x0, #32
+; VBITS_EQ_256-DAG: mov x[[NUMELTS:[0-9]+]], #16
 ; VBITS_EQ_256-DAG: st1h { [[RES]].h }, [[PG]], [x0]
-; VBITS_EQ_256-DAG: st1h { [[RES]].h }, [[PG]], [x[[B_HI]]
+; VBITS_EQ_256-DAG: st1h { [[RES]].h }, [[PG]], [x0, x[[NUMELTS]], lsl #1]
 ; VBITS_EQ_256-NEXT: ret
   %insert = insertelement <32 x half> undef, half %a, i64 0
   %splat = shufflevector <32 x half> %insert, <32 x half> undef, <32 x i32> zeroinitializer
@@ -450,9 +450,9 @@ define void @splat_v16f32(float %a, <16 x float>* %b) #0 {
 ; Ensure sensible type legalisation.
 ; VBITS_EQ_256-DAG: mov [[RES:z[0-9]+]].s, s0
 ; VBITS_EQ_256-DAG: ptrue [[PG:p[0-9]+]].s, vl8
-; VBITS_EQ_256-DAG: add x[[B_HI:[0-9]+]], x0, #32
+; VBITS_EQ_256-DAG: mov x[[NUMELTS:[0-9]+]], #8
 ; VBITS_EQ_256-DAG: st1w { [[RES]].s }, [[PG]], [x0]
-; VBITS_EQ_256-DAG: st1w { [[RES]].s }, [[PG]], [x[[B_HI]]
+; VBITS_EQ_256-DAG: st1w { [[RES]].s }, [[PG]], [x0, x[[NUMELTS]], lsl #2]
 ; VBITS_EQ_256-NEXT: ret
   %insert = insertelement <16 x float> undef, float %a, i64 0
   %splat = shufflevector <16 x float> %insert, <16 x float> undef, <16 x i32> zeroinitializer
@@ -526,9 +526,9 @@ define void @splat_v8f64(double %a, <8 x double>* %b) #0 {
 ; Ensure sensible type legalisation.
 ; VBITS_EQ_256-DAG: mov [[RES:z[0-9]+]].d, d0
 ; VBITS_EQ_256-DAG: ptrue [[PG:p[0-9]+]].d, vl4
-; VBITS_EQ_256-DAG: add x[[B_HI:[0-9]+]], x0, #32
+; VBITS_EQ_256-DAG: mov x[[NUMELTS:[0-9]+]], #4
 ; VBITS_EQ_256-DAG: st1d { [[RES]].d }, [[PG]], [x0]
-; VBITS_EQ_256-DAG: st1d { [[RES]].d }, [[PG]], [x[[B_HI]]
+; VBITS_EQ_256-DAG: st1d { [[RES]].d }, [[PG]], [x0, x[[NUMELTS]], lsl #3]
 ; VBITS_EQ_256-NEXT: ret
   %insert = insertelement <8 x double> undef, double %a, i64 0
   %splat = shufflevector <8 x double> %insert, <8 x double> undef, <8 x i32> zeroinitializer

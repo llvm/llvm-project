@@ -661,6 +661,20 @@ func @self_copy(%arg0 : memref<2x3x?x4xf32>) {
 
 // -----
 
+// CHECK-LABEL: @self_copy_with_permutation
+func @self_copy_with_permutation(%arg0 : memref<2x3x?x4xf32>) {
+
+//   CHECK: linalg.copy
+  linalg.copy(%arg0, %arg0)
+    {inputPermutation = affine_map<(i, j, k, l) -> (j, k, i, l)>,
+     outputPermuation = affine_map<(i, j, k, l) -> (i, j, k, l)>} : memref<2x3x?x4xf32>, memref<2x3x?x4xf32>
+
+//   CHECK: return
+  return
+}
+
+// -----
+
 // CHECK-LABEL: func @fold_fill_reshape()
 func @fold_fill_reshape() -> tensor<6x4xf32> {
   %zero = constant 0.0 : f32

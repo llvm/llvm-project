@@ -157,6 +157,7 @@ bool InlineAdvisorAnalysis::Result::tryCreate(InlineParams Params,
   auto &FAM = MAM.getResult<FunctionAnalysisManagerModuleProxy>(M).getManager();
   switch (Mode) {
   case InliningAdvisorMode::Default:
+    LLVM_DEBUG(dbgs() << "Using default inliner heuristic.\n");
     Advisor.reset(new DefaultInlineAdvisor(M, FAM, Params));
     // Restrict replay to default advisor, ML advisors are stateful so
     // replay will need augmentations to interleave with them correctly.
@@ -168,6 +169,7 @@ bool InlineAdvisorAnalysis::Result::tryCreate(InlineParams Params,
     break;
   case InliningAdvisorMode::Development:
 #ifdef LLVM_HAVE_TF_API
+    LLVM_DEBUG(dbgs() << "Using development-mode inliner policy.\n");
     Advisor =
         llvm::getDevelopmentModeAdvisor(M, MAM, [&FAM, Params](CallBase &CB) {
           auto OIC = getDefaultInlineAdvice(CB, FAM, Params);
@@ -177,6 +179,7 @@ bool InlineAdvisorAnalysis::Result::tryCreate(InlineParams Params,
     break;
   case InliningAdvisorMode::Release:
 #ifdef LLVM_HAVE_TF_AOT
+    LLVM_DEBUG(dbgs() << "Using release-mode inliner policy.\n");
     Advisor = llvm::getReleaseModeAdvisor(M, MAM);
 #endif
     break;

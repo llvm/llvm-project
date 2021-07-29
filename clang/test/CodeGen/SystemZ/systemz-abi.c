@@ -17,6 +17,11 @@
 // RUN: %clang_cc1 -triple s390x-linux-gnu -target-cpu arch13 \
 // RUN:   -emit-llvm -o - %s -mfloat-abi soft | FileCheck %s \
 // RUN:   --check-prefixes=CHECK,SOFT-FLOAT
+// RUN: %clang_cc1 -triple s390x-linux-gnu -target-cpu arch14 \
+// RUN:   -emit-llvm -o - %s | FileCheck %s --check-prefixes=CHECK,HARD-FLOAT
+// RUN: %clang_cc1 -triple s390x-linux-gnu -target-cpu arch14 \
+// RUN:   -emit-llvm -o - %s -mfloat-abi soft | FileCheck %s \
+// RUN:   --check-prefixes=CHECK,SOFT-FLOAT
 
 // Scalar types
 

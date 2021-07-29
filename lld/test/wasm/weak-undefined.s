@@ -1,5 +1,5 @@
 # RUN: llvm-mc -filetype=obj -triple=wasm32-unknown-unknown -o %t.o %s
-# RUN: wasm-ld -strip-debug %t.o -o %t.wasm
+# RUN: wasm-ld -strip-all %t.o -o %t.wasm
 # RUN: obj2yaml %t.wasm | FileCheck %s
 
 # Test that undefined weak externals (global_var) and (foo) don't cause

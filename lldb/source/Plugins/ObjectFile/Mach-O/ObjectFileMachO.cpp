@@ -4697,8 +4697,10 @@ size_t ObjectFileMachO::ParseSymtab() {
                 symbol_byte_size = section_end_file_addr - symbol_file_addr;
               }
               sym[sym_idx].SetID(synthetic_sym_id++);
-              sym[sym_idx].GetMangled().SetDemangledName(
-                  GetNextSyntheticSymbolName());
+              // Don't set the name for any synthetic symbols, the Symbol
+              // object will generate one if needed when the name is accessed
+              // via accessors.
+              sym[sym_idx].GetMangled().SetDemangledName(ConstString());
               sym[sym_idx].SetType(eSymbolTypeCode);
               sym[sym_idx].SetIsSynthetic(true);
               sym[sym_idx].GetAddressRef() = symbol_addr;

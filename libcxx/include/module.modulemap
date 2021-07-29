@@ -358,6 +358,11 @@ module std [system] {
   module compare {
     header "compare"
     export *
+
+    module __compare {
+      module common_comparison_category { private header "__compare/common_comparison_category.h" }
+      module ordering                   { private header "__compare/ordering.h"                   }
+    }
   }
   module complex {
     header "complex"
@@ -485,6 +490,7 @@ module std [system] {
       module back_insert_iterator  { private header "__iterator/back_insert_iterator.h" }
       module common_iterator       { private header "__iterator/common_iterator.h" }
       module concepts              { private header "__iterator/concepts.h" }
+      module counted_iterator      { private header "__iterator/counted_iterator.h" }
       module data                  { private header "__iterator/data.h" }
       module default_sentinel      { private header "__iterator/default_sentinel.h" }
       module distance              { private header "__iterator/distance.h" }
@@ -627,6 +633,7 @@ module std [system] {
       module ref_view               { private header "__ranges/ref_view.h"              }
       module size                   { private header "__ranges/size.h"                  }
       module subrange               { private header "__ranges/subrange.h"              }
+      module take_view              { private header "__ranges/take_view.h"             }
       module transform_view         { private header "__ranges/transform_view.h"        }
       module view_interface         { private header "__ranges/view_interface.h"        }
     }

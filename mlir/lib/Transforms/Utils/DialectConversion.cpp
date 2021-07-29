@@ -2700,10 +2700,9 @@ auto ConversionTarget::isLegal(Operation *op) const
 
   // Returns true if this operation instance is known to be legal.
   auto isOpLegal = [&] {
-    // Handle dynamic legality either with the provided legality function, or
-    // the default hook on the derived instance.
+    // Handle dynamic legality either with the provided legality function.
     if (info->action == LegalizationAction::Dynamic)
-      return info->legalityFn ? info->legalityFn(op) : isDynamicallyLegal(op);
+      return info->legalityFn(op);
 
     // Otherwise, the operation is only legal if it was marked 'Legal'.
     return info->action == LegalizationAction::Legal;

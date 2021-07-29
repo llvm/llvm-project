@@ -66,6 +66,14 @@ namespace tooling {
 
 class CompilationDatabase;
 
+/// Retrieves the flags of the `-cc1` job in `Compilation` that has only source
+/// files as its inputs.
+/// Returns nullptr if there are no such jobs or multiple of them. Note that
+/// offloading jobs are ignored.
+const llvm::opt::ArgStringList *
+getCC1Arguments(DiagnosticsEngine *Diagnostics,
+                driver::Compilation *Compilation);
+
 /// Interface to process a clang::CompilerInvocation.
 ///
 /// If your tool is based on FrontendAction, you should be deriving from

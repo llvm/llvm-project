@@ -73,26 +73,7 @@ QualType CallEvent::getResultType() const {
   const Expr *E = getOriginExpr();
   if (!E)
     return Ctx.VoidTy;
-  assert(E);
-
-  QualType ResultTy = E->getType();
-
-  // A function that returns a reference to 'int' will have a result type
-  // of simply 'int'. Check the origin expr's value kind to recover the
-  // proper type.
-  switch (E->getValueKind()) {
-  case VK_LValue:
-    ResultTy = Ctx.getLValueReferenceType(ResultTy);
-    break;
-  case VK_XValue:
-    ResultTy = Ctx.getRValueReferenceType(ResultTy);
-    break;
-  case VK_PRValue:
-    // No adjustment is necessary.
-    break;
-  }
-
-  return ResultTy;
+  return Ctx.getReferenceQualifiedType(E);
 }
 
 static bool isCallback(QualType T) {

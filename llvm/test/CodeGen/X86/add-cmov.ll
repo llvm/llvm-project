@@ -88,6 +88,8 @@ define i32 @select_consts_use_i32(i32 %offset, i64 %x, i32* %p) {
   ret i32 %r
 }
 
+; Special-case LEA hacks are done before we try to push the add into a CMOV.
+
 define i32 @select_40_43_i32(i32 %offset, i64 %x) {
 ; CHECK-LABEL: select_40_43_i32:
 ; CHECK:       # %bb.0:
@@ -133,11 +135,10 @@ define i32 @select_1_0_i32(i32 %offset, i64 %x) {
 define i64 @select_max32_2_i64(i64 %offset, i64 %x) {
 ; CHECK-LABEL: select_max32_2_i64:
 ; CHECK:       # %bb.0:
+; CHECK-NEXT:    leaq 2(%rdi), %rax
+; CHECK-NEXT:    addq $2147483647, %rdi # imm = 0x7FFFFFFF
 ; CHECK-NEXT:    cmpq $41, %rsi
-; CHECK-NEXT:    movl $2147483647, %ecx # imm = 0x7FFFFFFF
-; CHECK-NEXT:    movl $2, %eax
-; CHECK-NEXT:    cmovneq %rcx, %rax
-; CHECK-NEXT:    addq %rdi, %rax
+; CHECK-NEXT:    cmovneq %rdi, %rax
 ; CHECK-NEXT:    retq
   %b = icmp ne i64 %x, 41
   %s = select i1 %b, i64 2147483647, i64 2
@@ -207,11 +208,11 @@ define i64 @select_big_bigger_i64(i64 %offset, i64 %x) {
 define i32 @select_20_43_i32(i32 %offset, i64 %x) {
 ; CHECK-LABEL: select_20_43_i32:
 ; CHECK:       # %bb.0:
+; CHECK-NEXT:    # kill: def $edi killed $edi def $rdi
+; CHECK-NEXT:    leal 43(%rdi), %eax
+; CHECK-NEXT:    addl $20, %edi
 ; CHECK-NEXT:    cmpq $42, %rsi
-; CHECK-NEXT:    movl $20, %ecx
-; CHECK-NEXT:    movl $43, %eax
-; CHECK-NEXT:    cmovgel %ecx, %eax
-; CHECK-NEXT:    addl %edi, %eax
+; CHECK-NEXT:    cmovgel %edi, %eax
 ; CHECK-NEXT:    retq
   %b = icmp sgt i64 %x, 41
   %s = select i1 %b, i32 20, i32 43
@@ -222,11 +223,11 @@ define i32 @select_20_43_i32(i32 %offset, i64 %x) {
 define i16 @select_n2_17_i16(i16 %offset, i1 %b) {
 ; CHECK-LABEL: select_n2_17_i16:
 ; CHECK:       # %bb.0:
+; CHECK-NEXT:    # kill: def $edi killed $edi def $rdi
+; CHECK-NEXT:    leal 17(%rdi), %eax
+; CHECK-NEXT:    addl $65534, %edi # imm = 0xFFFE
 ; CHECK-NEXT:    testb $1, %sil
-; CHECK-NEXT:    movl $65534, %ecx # imm = 0xFFFE
-; CHECK-NEXT:    movl $17, %eax
-; CHECK-NEXT:    cmovnel %ecx, %eax
-; CHECK-NEXT:    addl %edi, %eax
+; CHECK-NEXT:    cmovnel %edi, %eax
 ; CHECK-NEXT:    # kill: def $ax killed $ax killed $eax
 ; CHECK-NEXT:    retq
   %s = select i1 %b, i16 -2, i16 17
@@ -241,17 +242,234 @@ define i16 @select_n2_17_i16(i16 %offset, i1 %b) {
 define i16* @bullet(i1 %b, %class.btAxis* readnone %ptr, i64 %idx) {
 ; CHECK-LABEL: bullet:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    leaq (%rdx,%rdx,4), %rcx
-; CHECK-NEXT:    shlq $4, %rcx
-; CHECK-NEXT:    addq %rsi, %rcx
+; CHECK-NEXT:    leaq (%rdx,%rdx,4), %rax
+; CHECK-NEXT:    shlq $4, %rax
+; CHECK-NEXT:    leaq 60(%rsi,%rax), %rcx
+; CHECK-NEXT:    leaq 66(%rsi,%rax), %rax
 ; CHECK-NEXT:    testb $1, %dil
-; CHECK-NEXT:    movl $60, %edx
-; CHECK-NEXT:    movl $66, %eax
-; CHECK-NEXT:    cmovneq %rdx, %rax
-; CHECK-NEXT:    addq %rcx, %rax
+; CHECK-NEXT:    cmovneq %rcx, %rax
 ; CHECK-NEXT:    retq
   %gep2 = getelementptr inbounds %class.btAxis, %class.btAxis* %ptr, i64 %idx, i32 2, i64 0
   %gep1 = getelementptr inbounds %class.btAxis, %class.btAxis* %ptr, i64 %idx, i32 1, i64 0
   %sel = select i1 %b, i16* %gep1, i16* %gep2
   ret i16* %sel
+}
+
+define i16* @bullet_alt1(i1 %b, i16* readnone %ptr, i64 %idx) {
+; CHECK-LABEL: bullet_alt1:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    leaq 60(%rsi), %rax
+; CHECK-NEXT:    leaq 66(%rsi), %rcx
+; CHECK-NEXT:    testb $1, %dil
+; CHECK-NEXT:    cmovneq %rax, %rcx
+; CHECK-NEXT:    leaq (%rdx,%rdx,4), %rax
+; CHECK-NEXT:    shlq $4, %rax
+; CHECK-NEXT:    addq %rcx, %rax
+; CHECK-NEXT:    retq
+  %idx40 = mul i64 %idx, 40
+  %gep2 = getelementptr inbounds i16, i16* %ptr, i64 33
+  %gep1 = getelementptr inbounds i16, i16* %ptr, i64 30
+  %sel = select i1 %b, i16* %gep1, i16* %gep2
+  %gep3 = getelementptr inbounds i16, i16* %sel, i64 %idx40
+  ret i16* %gep3
+}
+
+define void @bullet_load_store(i32 %x, i64 %y, %class.btAxis* %p) {
+; CHECK-LABEL: bullet_load_store:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    leaq (%rsi,%rsi,4), %rax
+; CHECK-NEXT:    shlq $4, %rax
+; CHECK-NEXT:    leaq 66(%rdx), %rcx
+; CHECK-NEXT:    addq $60, %rdx
+; CHECK-NEXT:    testb $1, %dil
+; CHECK-NEXT:    cmovneq %rcx, %rdx
+; CHECK-NEXT:    decw (%rdx,%rax)
+; CHECK-NEXT:    retq
+  %and = and i32 %x, 1
+  %b = icmp eq i32 %and, 0
+  %gep2 = getelementptr inbounds %class.btAxis, %class.btAxis* %p, i64 %y, i32 2, i64 0
+  %gep1 = getelementptr inbounds %class.btAxis, %class.btAxis* %p, i64 %y, i32 1, i64 0
+  %sel = select i1 %b, i16* %gep1, i16* %gep2
+  %ld = load i16, i16* %sel, align 4
+  %dec = add i16 %ld, -1
+  store i16 %dec, i16* %sel, align 4
+  ret void
+}
+
+define void @complex_lea_alt1(i1 %b, i16* readnone %ptr, i64 %idx) {
+; CHECK-LABEL: complex_lea_alt1:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    leaq 60(%rdx), %rax
+; CHECK-NEXT:    addq $66, %rdx
+; CHECK-NEXT:    testb $1, %dil
+; CHECK-NEXT:    cmovneq %rax, %rdx
+; CHECK-NEXT:    decw (%rdx,%rsi)
+; CHECK-NEXT:    retq
+  %i = ptrtoint i16* %ptr to i64
+  %sum = add i64 %idx, %i
+  %base = inttoptr i64 %sum to i16*
+  %gep2 = getelementptr inbounds i16, i16* %base, i64 33
+  %gep1 = getelementptr inbounds i16, i16* %base, i64 30
+  %sel = select i1 %b, i16* %gep1, i16* %gep2
+  %ld = load i16, i16* %sel, align 4
+  %dec = add i16 %ld, -1
+  store i16 %dec, i16* %sel, align 4
+  ret void
+}
+
+define void @complex_lea_alt2(i1 %b, i16* readnone %ptr, i64 %idx) {
+; CHECK-LABEL: complex_lea_alt2:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    leaq 60(%rsi), %rax
+; CHECK-NEXT:    addq $66, %rsi
+; CHECK-NEXT:    testb $1, %dil
+; CHECK-NEXT:    cmovneq %rax, %rsi
+; CHECK-NEXT:    decw (%rsi,%rdx)
+; CHECK-NEXT:    retq
+  %i = ptrtoint i16* %ptr to i64
+  %sum = add i64 %i, %idx
+  %base = inttoptr i64 %sum to i16*
+  %gep2 = getelementptr inbounds i16, i16* %base, i64 33
+  %gep1 = getelementptr inbounds i16, i16* %base, i64 30
+  %sel = select i1 %b, i16* %gep1, i16* %gep2
+  %ld = load i16, i16* %sel, align 4
+  %dec = add i16 %ld, -1
+  store i16 %dec, i16* %sel, align 4
+  ret void
+}
+
+define void @complex_lea_alt3(i1 %b, i16* readnone %ptr, i64 %idx) {
+; CHECK-LABEL: complex_lea_alt3:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    leaq 60(%rsi), %rax
+; CHECK-NEXT:    addq $66, %rsi
+; CHECK-NEXT:    testb $1, %dil
+; CHECK-NEXT:    cmovneq %rax, %rsi
+; CHECK-NEXT:    decw (%rsi,%rdx)
+; CHECK-NEXT:    retq
+  %i = ptrtoint i16* %ptr to i64
+  %i66 = add i64 %i, 66
+  %i60 = add i64 %i, 60
+  %o66 = add i64 %i66, %idx
+  %o60 = add i64 %i60, %idx
+  %p66 = inttoptr i64 %o66 to i16*
+  %p60 = inttoptr i64 %o60 to i16*
+  %sel = select i1 %b, i16* %p60, i16* %p66
+  %ld = load i16, i16* %sel, align 4
+  %dec = add i16 %ld, -1
+  store i16 %dec, i16* %sel, align 4
+  ret void
+}
+
+define void @complex_lea_alt4(i1 %b, i16* readnone %ptr, i64 %idx) {
+; CHECK-LABEL: complex_lea_alt4:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    leaq 60(%rsi), %rax
+; CHECK-NEXT:    addq $66, %rsi
+; CHECK-NEXT:    testb $1, %dil
+; CHECK-NEXT:    cmovneq %rax, %rsi
+; CHECK-NEXT:    decw (%rdx,%rsi)
+; CHECK-NEXT:    retq
+  %i = ptrtoint i16* %ptr to i64
+  %i66 = add i64 %i, 66
+  %i60 = add i64 %i, 60
+  %o66 = add i64 %idx, %i66
+  %o60 = add i64 %idx, %i60
+  %p66 = inttoptr i64 %o66 to i16*
+  %p60 = inttoptr i64 %o60 to i16*
+  %sel = select i1 %b, i16* %p60, i16* %p66
+  %ld = load i16, i16* %sel, align 4
+  %dec = add i16 %ld, -1
+  store i16 %dec, i16* %sel, align 4
+  ret void
+}
+
+define void @complex_lea_alt5(i1 %b, i16* readnone %ptr, i64 %idx) {
+; CHECK-LABEL: complex_lea_alt5:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    leaq 60(%rdx), %rax
+; CHECK-NEXT:    addq $66, %rdx
+; CHECK-NEXT:    testb $1, %dil
+; CHECK-NEXT:    cmovneq %rax, %rdx
+; CHECK-NEXT:    decw (%rdx,%rsi)
+; CHECK-NEXT:    retq
+  %i = ptrtoint i16* %ptr to i64
+  %i66 = add i64 %idx, 66
+  %i60 = add i64 %idx, 60
+  %o66 = add i64 %i66, %i
+  %o60 = add i64 %i60, %i
+  %p66 = inttoptr i64 %o66 to i16*
+  %p60 = inttoptr i64 %o60 to i16*
+  %sel = select i1 %b, i16* %p60, i16* %p66
+  %ld = load i16, i16* %sel, align 4
+  %dec = add i16 %ld, -1
+  store i16 %dec, i16* %sel, align 4
+  ret void
+}
+
+define void @complex_lea_alt6(i1 %b, i16* readnone %ptr, i64 %idx) {
+; CHECK-LABEL: complex_lea_alt6:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    leaq 60(%rdx), %rax
+; CHECK-NEXT:    addq $66, %rdx
+; CHECK-NEXT:    testb $1, %dil
+; CHECK-NEXT:    cmovneq %rax, %rdx
+; CHECK-NEXT:    decw (%rsi,%rdx)
+; CHECK-NEXT:    retq
+  %i = ptrtoint i16* %ptr to i64
+  %i66 = add i64 %idx, 66
+  %i60 = add i64 %idx, 60
+  %o66 = add i64 %i, %i66
+  %o60 = add i64 %i, %i60
+  %p66 = inttoptr i64 %o66 to i16*
+  %p60 = inttoptr i64 %o60 to i16*
+  %sel = select i1 %b, i16* %p60, i16* %p66
+  %ld = load i16, i16* %sel, align 4
+  %dec = add i16 %ld, -1
+  store i16 %dec, i16* %sel, align 4
+  ret void
+}
+
+define void @complex_lea_alt7(i1 %b, i16* readnone %ptr, i64 %idx) {
+; CHECK-LABEL: complex_lea_alt7:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    leaq 60(%rdx), %rax
+; CHECK-NEXT:    addq $66, %rdx
+; CHECK-NEXT:    testb $1, %dil
+; CHECK-NEXT:    cmovneq %rax, %rdx
+; CHECK-NEXT:    decw (%rdx,%rsi)
+; CHECK-NEXT:    retq
+  %i = ptrtoint i16* %ptr to i64
+  %o = add i64 %idx, %i
+  %o66 = add i64 %o, 66
+  %o60 = add i64 %o, 60
+  %p66 = inttoptr i64 %o66 to i16*
+  %p60 = inttoptr i64 %o60 to i16*
+  %sel = select i1 %b, i16* %p60, i16* %p66
+  %ld = load i16, i16* %sel, align 4
+  %dec = add i16 %ld, -1
+  store i16 %dec, i16* %sel, align 4
+  ret void
+}
+
+define void @complex_lea_alt8(i1 %b, i16* readnone %ptr, i64 %idx) {
+; CHECK-LABEL: complex_lea_alt8:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    leaq 60(%rsi), %rax
+; CHECK-NEXT:    addq $66, %rsi
+; CHECK-NEXT:    testb $1, %dil
+; CHECK-NEXT:    cmovneq %rax, %rsi
+; CHECK-NEXT:    decw (%rsi,%rdx)
+; CHECK-NEXT:    retq
+  %i = ptrtoint i16* %ptr to i64
+  %o = add i64 %i, %idx
+  %o66 = add i64 %o, 66
+  %o60 = add i64 %o, 60
+  %p66 = inttoptr i64 %o66 to i16*
+  %p60 = inttoptr i64 %o60 to i16*
+  %sel = select i1 %b, i16* %p60, i16* %p66
+  %ld = load i16, i16* %sel, align 4
+  %dec = add i16 %ld, -1
+  store i16 %dec, i16* %sel, align 4
+  ret void
 }

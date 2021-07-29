@@ -612,13 +612,13 @@ __from_chars_integral(const char* __first, const char* __last, _Tp& __value,
 
     return __subject_seq_combinator(
         __first, __last, __value,
-        [](const char* __p, const char* __last, _Tp& __value,
+        [](const char* __p, const char* __lastx, _Tp& __value,
            int __base) -> from_chars_result {
             using __tl = numeric_limits<_Tp>;
             auto __digits = __tl::digits / log2f(float(__base));
             _Tp __a = __in_pattern(*__p++, __base).__val, __b = 0;
 
-            for (int __i = 1; __p != __last; ++__i, ++__p)
+            for (int __i = 1; __p != __lastx; ++__i, ++__p)
             {
                 if (auto __c = __in_pattern(*__p, __base))
                 {
@@ -636,7 +636,7 @@ __from_chars_integral(const char* __first, const char* __last, _Tp& __value,
                     break;
             }
 
-            if (__p == __last || !__in_pattern(*__p, __base))
+            if (__p == __lastx || !__in_pattern(*__p, __base))
             {
                 if (__tl::max() - __a >= __b)
                 {

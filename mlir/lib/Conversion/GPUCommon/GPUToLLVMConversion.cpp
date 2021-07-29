@@ -353,9 +353,7 @@ LLVM::CallOp FunctionCallBuilder::create(Location loc, OpBuilder &builder,
     return OpBuilder::atBlockEnd(module.getBody())
         .create<LLVM::LLVMFuncOp>(loc, functionName, functionType);
   }();
-  return builder.create<LLVM::CallOp>(
-      loc, const_cast<LLVM::LLVMFunctionType &>(functionType).getReturnType(),
-      builder.getSymbolRefAttr(function), arguments);
+  return builder.create<LLVM::CallOp>(loc, function, arguments);
 }
 
 // Returns whether all operands are of LLVM type.

@@ -1455,74 +1455,74 @@ wasm_u32x4_extadd_pairwise_u16x8(v128_t __a) {
 
 static __inline__ v128_t __DEFAULT_FN_ATTRS
 wasm_i16x8_extmul_low_i8x16(v128_t __a, v128_t __b) {
-  return (v128_t)__builtin_wasm_extmul_low_i8x16_s_i16x8((__i8x16)__a,
-                                                         (__i8x16)__b);
+  return (v128_t)((__i16x8)wasm_i16x8_extend_low_i8x16(__a) *
+                  (__i16x8)wasm_i16x8_extend_low_i8x16(__b));
 }
 
 static __inline__ v128_t __DEFAULT_FN_ATTRS
 wasm_i16x8_extmul_high_i8x16(v128_t __a, v128_t __b) {
-  return (v128_t)__builtin_wasm_extmul_high_i8x16_s_i16x8((__i8x16)__a,
-                                                          (__i8x16)__b);
+  return (v128_t)((__i16x8)wasm_i16x8_extend_high_i8x16(__a) *
+                  (__i16x8)wasm_i16x8_extend_high_i8x16(__b));
 }
 
 static __inline__ v128_t __DEFAULT_FN_ATTRS
 wasm_u16x8_extmul_low_u8x16(v128_t __a, v128_t __b) {
-  return (v128_t)__builtin_wasm_extmul_low_i8x16_u_i16x8((__u8x16)__a,
-                                                         (__u8x16)__b);
+  return (v128_t)((__u16x8)wasm_u16x8_extend_low_u8x16(__a) *
+                  (__u16x8)wasm_u16x8_extend_low_u8x16(__b));
 }
 
 static __inline__ v128_t __DEFAULT_FN_ATTRS
 wasm_u16x8_extmul_high_u8x16(v128_t __a, v128_t __b) {
-  return (v128_t)__builtin_wasm_extmul_high_i8x16_u_i16x8((__u8x16)__a,
-                                                          (__u8x16)__b);
+  return (v128_t)((__u16x8)wasm_u16x8_extend_high_u8x16(__a) *
+                  (__u16x8)wasm_u16x8_extend_high_u8x16(__b));
 }
 
 static __inline__ v128_t __DEFAULT_FN_ATTRS
 wasm_i32x4_extmul_low_i16x8(v128_t __a, v128_t __b) {
-  return (v128_t)__builtin_wasm_extmul_low_i16x8_s_i32x4((__i16x8)__a,
-                                                         (__i16x8)__b);
+  return (v128_t)((__i32x4)wasm_i32x4_extend_low_i16x8(__a) *
+                  (__i32x4)wasm_i32x4_extend_low_i16x8(__b));
 }
 
 static __inline__ v128_t __DEFAULT_FN_ATTRS
 wasm_i32x4_extmul_high_i16x8(v128_t __a, v128_t __b) {
-  return (v128_t)__builtin_wasm_extmul_high_i16x8_s_i32x4((__i16x8)__a,
-                                                          (__i16x8)__b);
+  return (v128_t)((__i32x4)wasm_i32x4_extend_high_i16x8(__a) *
+                  (__i32x4)wasm_i32x4_extend_high_i16x8(__b));
 }
 
 static __inline__ v128_t __DEFAULT_FN_ATTRS
 wasm_u32x4_extmul_low_u16x8(v128_t __a, v128_t __b) {
-  return (v128_t)__builtin_wasm_extmul_low_i16x8_u_i32x4((__u16x8)__a,
-                                                         (__u16x8)__b);
+  return (v128_t)((__u32x4)wasm_u32x4_extend_low_u16x8(__a) *
+                  (__u32x4)wasm_u32x4_extend_low_u16x8(__b));
 }
 
 static __inline__ v128_t __DEFAULT_FN_ATTRS
 wasm_u32x4_extmul_high_u16x8(v128_t __a, v128_t __b) {
-  return (v128_t)__builtin_wasm_extmul_high_i16x8_u_i32x4((__u16x8)__a,
-                                                          (__u16x8)__b);
+  return (v128_t)((__u32x4)wasm_u32x4_extend_high_u16x8(__a) *
+                  (__u32x4)wasm_u32x4_extend_high_u16x8(__b));
 }
 
 static __inline__ v128_t __DEFAULT_FN_ATTRS
 wasm_i64x2_extmul_low_i32x4(v128_t __a, v128_t __b) {
-  return (v128_t)__builtin_wasm_extmul_low_i32x4_s_i64x2((__i32x4)__a,
-                                                         (__i32x4)__b);
+  return (v128_t)((__i64x2)wasm_i64x2_extend_low_i32x4(__a) *
+                  (__i64x2)wasm_i64x2_extend_low_i32x4(__b));
 }
 
 static __inline__ v128_t __DEFAULT_FN_ATTRS
 wasm_i64x2_extmul_high_i32x4(v128_t __a, v128_t __b) {
-  return (v128_t)__builtin_wasm_extmul_high_i32x4_s_i64x2((__i32x4)__a,
-                                                          (__i32x4)__b);
+  return (v128_t)((__i64x2)wasm_i64x2_extend_high_i32x4(__a) *
+                  (__i64x2)wasm_i64x2_extend_high_i32x4(__b));
 }
 
 static __inline__ v128_t __DEFAULT_FN_ATTRS
 wasm_u64x2_extmul_low_u32x4(v128_t __a, v128_t __b) {
-  return (v128_t)__builtin_wasm_extmul_low_i32x4_u_i64x2((__u32x4)__a,
-                                                         (__u32x4)__b);
+  return (v128_t)((__u64x2)wasm_u64x2_extend_low_u32x4(__a) *
+                  (__u64x2)wasm_u64x2_extend_low_u32x4(__b));
 }
 
 static __inline__ v128_t __DEFAULT_FN_ATTRS
 wasm_u64x2_extmul_high_u32x4(v128_t __a, v128_t __b) {
-  return (v128_t)__builtin_wasm_extmul_high_i32x4_u_i64x2((__u32x4)__a,
-                                                          (__u32x4)__b);
+  return (v128_t)((__u64x2)wasm_u64x2_extend_high_u32x4(__a) *
+                  (__u64x2)wasm_u64x2_extend_high_u32x4(__b));
 }
 
 static __inline__ v128_t __DEFAULT_FN_ATTRS wasm_i16x8_q15mulr_sat(v128_t __a,

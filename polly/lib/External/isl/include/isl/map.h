@@ -698,6 +698,7 @@ isl_bool isl_map_plain_is_equal(__isl_keep isl_map *map1,
 
 uint32_t isl_map_get_hash(__isl_keep isl_map *map);
 
+__isl_export
 isl_size isl_map_n_basic_map(__isl_keep isl_map *map);
 __isl_export
 isl_stat isl_map_foreach_basic_map(__isl_keep isl_map *map,

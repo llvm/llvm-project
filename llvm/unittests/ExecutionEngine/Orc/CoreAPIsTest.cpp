@@ -1409,7 +1409,7 @@ TEST(JITDylibTest, GetDFSLinkOrderTree) {
   // Test that DFS ordering behaves as expected when the linkage relationships
   // form a tree.
 
-  ExecutionSession ES;
+  ExecutionSession ES{std::make_unique<UnsupportedExecutorProcessControl>()};
 
   auto &LibA = ES.createBareJITDylib("A");
   auto &LibB = ES.createBareJITDylib("B");
@@ -1450,7 +1450,7 @@ TEST(JITDylibTest, GetDFSLinkOrderDiamond) {
   // Test that DFS ordering behaves as expected when the linkage relationships
   // contain a diamond.
 
-  ExecutionSession ES;
+  ExecutionSession ES{std::make_unique<UnsupportedExecutorProcessControl>()};
   auto &LibA = ES.createBareJITDylib("A");
   auto &LibB = ES.createBareJITDylib("B");
   auto &LibC = ES.createBareJITDylib("C");
@@ -1472,7 +1472,7 @@ TEST(JITDylibTest, GetDFSLinkOrderCycle) {
   // Test that DFS ordering behaves as expected when the linkage relationships
   // contain a cycle.
 
-  ExecutionSession ES;
+  ExecutionSession ES{std::make_unique<UnsupportedExecutorProcessControl>()};
   auto &LibA = ES.createBareJITDylib("A");
   auto &LibB = ES.createBareJITDylib("B");
   auto &LibC = ES.createBareJITDylib("C");

@@ -21,7 +21,6 @@ struct sentinel {
   bool operator==(std::input_or_output_iterator auto const&) const;
 };
 
-// clang-format off
 template <template <class...> class I>
 requires std::input_or_output_iterator<I<int*> >
 struct test_range {
@@ -54,6 +53,13 @@ struct test_non_const_common_range {
   I<int*> end();
 };
 
-// clang-format on
+template <template <class...> class I>
+requires std::input_or_output_iterator<I<int*> >
+struct test_view : std::ranges::view_base {
+  I<int*> begin();
+  I<int const*> begin() const;
+  sentinel end();
+  sentinel end() const;
+};
 
 #endif // LIBCXX_TEST_SUPPORT_TEST_RANGE_H

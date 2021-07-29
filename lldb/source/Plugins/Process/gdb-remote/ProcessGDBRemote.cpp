@@ -2791,6 +2791,14 @@ ProcessGDBRemote::DoReadMemoryTags(lldb::addr_t addr, size_t len,
   return got;
 }
 
+Status ProcessGDBRemote::DoWriteMemoryTags(lldb::addr_t addr, size_t len,
+                                           int32_t type,
+                                           const std::vector<uint8_t> &tags) {
+  // By now WriteMemoryTags should have validated that tagging is enabled
+  // for this target/process.
+  return m_gdb_comm.WriteMemoryTags(addr, len, type, tags);
+}
+
 Status ProcessGDBRemote::WriteObjectFile(
     std::vector<ObjectFile::LoadableData> entries) {
   Status error;

@@ -134,9 +134,9 @@ int main(int argc, char *argv[]) {
   ExitOnErr.setBanner(std::string(argv[0]) + ": ");
 
   // (1) Create LLJIT instance.
-  auto SSP = std::make_shared<SymbolStringPool>();
-  auto EPC = ExitOnErr(SelfExecutorProcessControl::Create(std::move(SSP)));
-  auto J = ExitOnErr(LLJITBuilder().setExecutorProcessControl(*EPC).create());
+  auto EPC = ExitOnErr(SelfExecutorProcessControl::Create());
+  auto J = ExitOnErr(
+      LLJITBuilder().setExecutorProcessControl(std::move(EPC)).create());
 
   // (2) Install transform to print modules as they are compiled:
   J->getIRTransformLayer().setTransform(
@@ -154,7 +154,8 @@ int main(int argc, char *argv[]) {
       J->getExecutionSession(), pointerToJITTargetAddress(&reportErrorAndExit));
   auto ISM = EPCIU->createIndirectStubsManager();
   J->getMainJITDylib().addGenerator(
-      ExitOnErr(EPCDynamicLibrarySearchGenerator::GetForTargetProcess(*EPC)));
+      ExitOnErr(EPCDynamicLibrarySearchGenerator::GetForTargetProcess(
+          J->getExecutionSession())));
 
   // (4) Add modules.
   ExitOnErr(J->addIRModule(ExitOnErr(parseExampleModule(FooMod, "foo-mod"))));

@@ -38,6 +38,12 @@ ArrayRef<MemorySizeDistribution> getMemsetSizeDistributions();
 /// Returns a list of memcmp size distributions.
 ArrayRef<MemorySizeDistribution> getMemcmpSizeDistributions();
 
+/// Returns the first MemorySizeDistribution from Distributions with the
+/// specified Name.
+MemorySizeDistribution
+getDistributionOrDie(ArrayRef<MemorySizeDistribution> Distributions,
+                     StringRef Name);
+
 } // namespace libc_benchmarks
 } // namespace llvm
 

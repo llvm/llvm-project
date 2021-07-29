@@ -21,7 +21,7 @@ func @create_value() {
 // CHECK-LABEL: @create_group
 func @create_group() {
   // CHECK: %[[C:.*]] = constant 1 : index
-  // CHECK: %[[S:.*]] = unrealized_conversion_cast %[[C]] : index to i64
+  // CHECK: %[[S:.*]] = builtin.unrealized_conversion_cast %[[C]] : index to i64
   %c = constant 1 : index
   // CHECK: %[[GROUP:.*]] = call @mlirAsyncRuntimeCreateGroup(%[[S]])
   %0 = async.runtime.create_group  %c: !async.group

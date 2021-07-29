@@ -256,7 +256,7 @@ int main() {
 //
 //
 // CHECK1-LABEL: define {{[^@]+}}@{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}_main_l23
-// CHECK1-SAME: ([10 x [10 x [10 x i32]]]* nonnull align 4 dereferenceable(4000) [[C:%.*]], i64 [[A:%.*]], [10 x [10 x i32]]* nonnull align 4 dereferenceable(400) [[B:%.*]], i8* nonnull align 1 dereferenceable(1) [[BB:%.*]]) #[[ATTR0]] !dbg [[DBG115:![0-9]+]] {
+// CHECK1-SAME: ([10 x [10 x [10 x i32]]]* nonnull align 4 dereferenceable(4000) [[C:%.*]], i64 [[A:%.*]], [10 x [10 x i32]]* nonnull align 4 dereferenceable(400) [[B:%.*]], i8* nonnull align 1 dereferenceable(1) [[BB:%.*]]) #[[ATTR4:[0-9]+]] !dbg [[DBG98:![0-9]+]] {
 // CHECK1-NEXT:  entry:
 // CHECK1-NEXT:    [[C_ADDR:%.*]] = alloca [10 x [10 x [10 x i32]]]*, align 8
 // CHECK1-NEXT:    [[A_ADDR:%.*]] = alloca i64, align 8
@@ -466,7 +466,7 @@ int main() {
 //
 //
 // CHECK1-LABEL: define {{[^@]+}}@{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}_main_l37
-// CHECK1-SAME: ([10 x [10 x [10 x i32]]]* nonnull align 4 dereferenceable(4000) [[C:%.*]], i64 [[A:%.*]], [10 x [10 x i32]]* nonnull align 4 dereferenceable(400) [[B:%.*]], i8* nonnull align 1 dereferenceable(1) [[BB:%.*]]) #[[ATTR0]] !dbg [[DBG192:![0-9]+]] {
+// CHECK1-SAME: ([10 x [10 x [10 x i32]]]* nonnull align 4 dereferenceable(4000) [[C:%.*]], i64 [[A:%.*]], [10 x [10 x i32]]* nonnull align 4 dereferenceable(400) [[B:%.*]], i8* nonnull align 1 dereferenceable(1) [[BB:%.*]]) #[[ATTR4]] !dbg [[DBG168:![0-9]+]] {
 // CHECK1-NEXT:  entry:
 // CHECK1-NEXT:    [[C_ADDR:%.*]] = alloca [10 x [10 x [10 x i32]]]*, align 8
 // CHECK1-NEXT:    [[A_ADDR:%.*]] = alloca i64, align 8
@@ -687,7 +687,7 @@ int main() {
 //
 //
 // CHECK1-LABEL: define {{[^@]+}}@{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}_main_l51
-// CHECK1-SAME: ([10 x [10 x [10 x i32]]]* nonnull align 4 dereferenceable(4000) [[C:%.*]], i32* nonnull align 4 dereferenceable(4) [[A:%.*]], [10 x [10 x i32]]* nonnull align 4 dereferenceable(400) [[B:%.*]], i8* nonnull align 1 dereferenceable(1) [[BB:%.*]]) #[[ATTR0]] !dbg [[DBG270:![0-9]+]] {
+// CHECK1-SAME: ([10 x [10 x [10 x i32]]]* nonnull align 4 dereferenceable(4000) [[C:%.*]], i32* nonnull align 4 dereferenceable(4) [[A:%.*]], [10 x [10 x i32]]* nonnull align 4 dereferenceable(400) [[B:%.*]], i8* nonnull align 1 dereferenceable(1) [[BB:%.*]]) #[[ATTR4]] !dbg [[DBG232:![0-9]+]] {
 // CHECK1-NEXT:  entry:
 // CHECK1-NEXT:    [[C_ADDR:%.*]] = alloca [10 x [10 x [10 x i32]]]*, align 8
 // CHECK1-NEXT:    [[A_ADDR:%.*]] = alloca i32*, align 8

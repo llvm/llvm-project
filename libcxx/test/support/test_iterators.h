@@ -698,7 +698,7 @@ struct cpp20_input_iterator {
   using difference_type = std::iter_difference_t<I>;
   using iterator_concept = std::input_iterator_tag;
 
-  cpp20_input_iterator() = default;
+  cpp20_input_iterator() = delete;
 
   cpp20_input_iterator(cpp20_input_iterator&&) = default;
   cpp20_input_iterator& operator=(cpp20_input_iterator&&) = default;

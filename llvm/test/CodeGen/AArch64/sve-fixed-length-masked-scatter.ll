@@ -82,14 +82,14 @@ define void @masked_scatter_v8i8(<8 x i8>* %a, <8 x i8*>* %b) #0 {
 ; VBITS_EQ_256-DAG: ldr d[[VALS:[0-9]+]], [x0]
 ; VBITS_EQ_256-DAG: ptrue [[PG0:p[0-9]+]].d, vl4
 ; VBITS_EQ_256-DAG: ptrue [[PG1:p[0-9]+]].h, vl4
-; VBITS_EQ_256-DAG: add x8, x1, #32
+; VBITS_EQ_256-DAG: mov x[[NUMELTS:[0-9]+]], #4
 ; VBITS_EQ_256-DAG: cmeq [[ZMSK:v[0-9]+]].8b, v[[VALS]].8b, #0
 ; VBITS_EQ_256-DAG: zip1 [[VAL_LO:v[0-9]+]].8b, [[ZMSK]].8b, v[[VALS]].8b
 ; VBITS_EQ_256-DAG: zip2 [[VAL_HI:v[0-9]+]].8b, [[ZMSK]].8b, v[[VALS]].8b
 ; VBITS_EQ_256-DAG: shl [[SHL_LO:v[0-9]+]].4h, [[VAL_LO]].4h, #8
 ; VBITS_EQ_256-DAG: shl [[SHL_HI:v[0-9]+]].4h, [[VAL_HI]].4h, #8
 ; VBITS_EQ_256-DAG: ld1d { [[PTRS_LO:z[0-9]+]].d }, [[PG0]]/z, [x1]
-; VBITS_EQ_256-DAG: ld1d { [[PTRS_HI:z[0-9]+]].d }, [[PG0]]/z, [x8]
+; VBITS_EQ_256-DAG: ld1d { [[PTRS_HI:z[0-9]+]].d }, [[PG0]]/z, [x1, x[[NUMELTS]], lsl #3]
 ; VBITS_EQ_256-DAG: sshr v[[SSHR_LO:[0-9]+]].4h, [[SHL_LO]].4h, #8
 ; VBITS_EQ_256-DAG: sshr v[[SSHR_HI:[0-9]+]].4h, [[SHL_HI]].4h, #8
 ; VBITS_EQ_256-DAG: cmpne [[MASK_LO:p[0-9]+]].h, [[PG1]]/z, z[[SSHR_LO]].h, #0
@@ -208,9 +208,9 @@ define void @masked_scatter_v8i16(<8 x i16>* %a, <8 x i16*>* %b) #0 {
 ; Ensure sensible type legalisation.
 ; VBITS_EQ_256-DAG: ldr q[[VALS:[0-9]+]], [x0]
 ; VBITS_EQ_256-DAG: ptrue [[PG0:p[0-9]+]].d, vl4
-; VBITS_EQ_256-DAG: add x[[B_HI:[0-9]+]], x1, #32
+; VBITS_EQ_256-DAG: mov x[[NUMELTS:[0-9]+]], #4
 ; VBITS_EQ_256-DAG: ld1d { [[PTRS_LO:z[0-9]+]].d }, [[PG0]]/z, [x1]
-; VBITS_EQ_256-DAG: ld1d { [[PTRS_HI:z[0-9]+]].d }, [[PG0]]/z, [x[[B_HI]]]
+; VBITS_EQ_256-DAG: ld1d { [[PTRS_HI:z[0-9]+]].d }, [[PG0]]/z, [x1, x[[NUMELTS]], lsl #3]
 ; VBITS_EQ_256-DAG: ptrue [[PG1:p[0-9]+]].h, vl4
 ; VBITS_EQ_256-DAG: cmeq v[[ZMSK:[0-9]+]].8h, v[[VALS]].8h, #0
 ; VBITS_EQ_256-DAG: ext v[[EXT:[0-9]+]].16b, v[[VALS]].16b, v[[VALS]].16b, #8
@@ -321,9 +321,9 @@ define void @masked_scatter_v8i32(<8 x i32>* %a, <8 x i32*>* %b) #0 {
 ; VBITS_EQ_256-DAG: ptrue [[PG0:p[0-9]+]].s, vl8
 ; VBITS_EQ_256-DAG: ld1w { [[VALS:z[0-9]+]].s }, [[PG0]]/z, [x0]
 ; VBITS_EQ_256-DAG: ptrue [[PG1:p[0-9]+]].d, vl4
-; VBITS_EQ_256-DAG: add x8, x1, #32
+; VBITS_EQ_256-DAG: mov x[[NUMELTS:[0-9]+]], #4
 ; VBITS_EQ_256-DAG: ld1d { [[PTRS_LO:z[0-9]+]].d }, [[PG1]]/z, [x1]
-; VBITS_EQ_256-DAG: ld1d { [[PTRS_HI:z[0-9]+]].d }, [[PG1]]/z, [x8]
+; VBITS_EQ_256-DAG: ld1d { [[PTRS_HI:z[0-9]+]].d }, [[PG1]]/z, [x1, x[[NUMELTS]], lsl #3]
 ; VBITS_EQ_256-DAG: cmpeq [[MASK:p[0-9]+]].s, [[PG0]]/z, [[VALS]].s, #0
 ; VBITS_EQ_256-DAG: add x8, sp, #32
 ; VBITS_EQ_256-DAG: mov x9, sp
@@ -439,12 +439,11 @@ define void @masked_scatter_v8i64(<8 x i64>* %a, <8 x i64*>* %b) #0 {
 
 ; Ensure sensible type legalisation.
 ; VBITS_EQ_256-DAG: ptrue [[PG0:p[0-9]+]].d, vl4
-; VBITS_EQ_256-DAG: add x8, x0, #32
-; VBITS_EQ_256-DAG: add x9, x1, #32
+; VBITS_EQ_256-DAG: mov x[[NUMELTS:[0-9]+]], #4
 ; VBITS_EQ_256-DAG: ld1d { [[VALS_LO:z[0-9]+]].d }, [[PG0]]/z, [x0]
-; VBITS_EQ_256-DAG: ld1d { [[VALS_HI:z[0-9]+]].d }, [[PG0]]/z, [x8]
+; VBITS_EQ_256-DAG: ld1d { [[VALS_HI:z[0-9]+]].d }, [[PG0]]/z, [x0, x[[NUMELTS]], lsl #3]
 ; VBITS_EQ_256-DAG: ld1d { [[PTRS_LO:z[0-9]+]].d }, [[PG0]]/z, [x1]
-; VBITS_EQ_256-DAG: ld1d { [[PTRS_HI:z[0-9]+]].d }, [[PG0]]/z, [x9]
+; VBITS_EQ_256-DAG: ld1d { [[PTRS_HI:z[0-9]+]].d }, [[PG0]]/z, [x1, x[[NUMELTS]], lsl #3]
 ; VBITS_EQ_256-DAG: cmpeq [[MASK_LO:p[0-9]+]].d, [[PG0]]/z, [[VALS_LO]].d, #0
 ; VBITS_EQ_256-DAG: cmpeq [[MASK_HI:p[0-9]+]].d, [[PG0]]/z, [[VALS_HI]].d, #0
 ; VBITS_EQ_256-DAG: st1d { [[VALS_LO]].d }, [[MASK_LO]], {{\[}}[[PTRS_LO]].d]

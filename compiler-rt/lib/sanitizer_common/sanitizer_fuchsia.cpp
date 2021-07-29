@@ -112,47 +112,6 @@ void FutexWake(atomic_uint32_t *p, u32 count) {
   CHECK_EQ(status, ZX_OK);
 }
 
-enum MutexState : int { MtxUnlocked = 0, MtxLocked = 1, MtxSleeping = 2 };
-
-BlockingMutex::BlockingMutex() {
-  // NOTE!  It's important that this use internal_memset, because plain
-  // memset might be intercepted (e.g., actually be __asan_memset).
-  // Defining this so the compiler initializes each field, e.g.:
-  //   BlockingMutex::BlockingMutex() : BlockingMutex(LINKER_INITIALIZED) {}
-  // might result in the compiler generating a call to memset, which would
-  // have the same problem.
-  internal_memset(this, 0, sizeof(*this));
-}
-
-void BlockingMutex::Lock() {
-  CHECK_EQ(owner_, 0);
-  atomic_uint32_t *m = reinterpret_cast<atomic_uint32_t *>(&opaque_storage_);
-  if (atomic_exchange(m, MtxLocked, memory_order_acquire) == MtxUnlocked)
-    return;
-  while (atomic_exchange(m, MtxSleeping, memory_order_acquire) != MtxUnlocked) {
-    zx_status_t status =
-        _zx_futex_wait(reinterpret_cast<zx_futex_t *>(m), MtxSleeping,
-                       ZX_HANDLE_INVALID, ZX_TIME_INFINITE);
-    if (status != ZX_ERR_BAD_STATE)  // Normal race.
-      CHECK_EQ(status, ZX_OK);
-  }
-}
-
-void BlockingMutex::Unlock() {
-  atomic_uint32_t *m = reinterpret_cast<atomic_uint32_t *>(&opaque_storage_);
-  u32 v = atomic_exchange(m, MtxUnlocked, memory_order_release);
-  CHECK_NE(v, MtxUnlocked);
-  if (v == MtxSleeping) {
-    zx_status_t status = _zx_futex_wake(reinterpret_cast<zx_futex_t *>(m), 1);
-    CHECK_EQ(status, ZX_OK);
-  }
-}
-
-void BlockingMutex::CheckLocked() const {
-  auto m = reinterpret_cast<atomic_uint32_t const *>(&opaque_storage_);
-  CHECK_NE(MtxUnlocked, atomic_load(m, memory_order_relaxed));
-}
-
 uptr GetPageSize() { return _zx_system_get_page_size(); }
 
 uptr GetMmapGranularity() { return _zx_system_get_page_size(); }

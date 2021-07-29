@@ -155,9 +155,9 @@ size_t writeLoadCommandData<MachO::segment_command_64>(
 
 size_t writePayloadString(MachOYAML::LoadCommand &LC, raw_ostream &OS) {
   size_t BytesWritten = 0;
-  if (!LC.PayloadString.empty()) {
-    OS.write(LC.PayloadString.c_str(), LC.PayloadString.length());
-    BytesWritten = LC.PayloadString.length();
+  if (!LC.Content.empty()) {
+    OS.write(LC.Content.c_str(), LC.Content.length());
+    BytesWritten = LC.Content.length();
   }
   return BytesWritten;
 }
@@ -180,6 +180,30 @@ template <>
 size_t writeLoadCommandData<MachO::rpath_command>(MachOYAML::LoadCommand &LC,
                                                   raw_ostream &OS,
                                                   bool IsLittleEndian) {
+  return writePayloadString(LC, OS);
+}
+
+template <>
+size_t writeLoadCommandData<MachO::sub_framework_command>(
+    MachOYAML::LoadCommand &LC, raw_ostream &OS, bool IsLittleEndian) {
+  return writePayloadString(LC, OS);
+}
+
+template <>
+size_t writeLoadCommandData<MachO::sub_umbrella_command>(
+    MachOYAML::LoadCommand &LC, raw_ostream &OS, bool IsLittleEndian) {
+  return writePayloadString(LC, OS);
+}
+
+template <>
+size_t writeLoadCommandData<MachO::sub_client_command>(
+    MachOYAML::LoadCommand &LC, raw_ostream &OS, bool IsLittleEndian) {
+  return writePayloadString(LC, OS);
+}
+
+template <>
+size_t writeLoadCommandData<MachO::sub_library_command>(
+    MachOYAML::LoadCommand &LC, raw_ostream &OS, bool IsLittleEndian) {
   return writePayloadString(LC, OS);
 }
 

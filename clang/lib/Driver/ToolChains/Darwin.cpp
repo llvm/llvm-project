@@ -1113,10 +1113,7 @@ void MachO::AddLinkRuntimeLib(const ArgList &Args, ArgStringList &CmdArgs,
   // we explicitly force linking with this library).
   if ((Opts & RLO_AlwaysLink) || getVFS().exists(P)) {
     const char *LibArg = Args.MakeArgString(P);
-    if (Opts & RLO_FirstLink)
-      CmdArgs.insert(CmdArgs.begin(), LibArg);
-    else
-      CmdArgs.push_back(LibArg);
+    CmdArgs.push_back(LibArg);
   }
 
   // Adding the rpaths might negatively interact when other rpaths are involved,
@@ -1225,7 +1222,7 @@ void Darwin::addProfileRTLibs(const ArgList &Args,
     return;
 
   AddLinkRuntimeLib(Args, CmdArgs, "profile",
-                    RuntimeLinkOptions(RLO_AlwaysLink | RLO_FirstLink));
+                    RuntimeLinkOptions(RLO_AlwaysLink));
 
   bool ForGCOV = needsGCovInstrumentation(Args);
 

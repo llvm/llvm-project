@@ -32,6 +32,7 @@ add_mlir_dialect_library(MLIRGPUOps
   MLIRMemRef
   MLIRSideEffectInterfaces
   MLIRSupport
+  MLIRLLVMIR
   )
 
 add_mlir_dialect_library(MLIRGPUTransforms

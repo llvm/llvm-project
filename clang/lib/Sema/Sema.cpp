@@ -234,6 +234,12 @@ Sema::Sema(Preprocessor &pp, ASTContext &ctxt, ASTConsumer &consumer,
   SemaPPCallbackHandler = Callbacks.get();
   PP.addPPCallbacks(std::move(Callbacks));
   SemaPPCallbackHandler->set(*this);
+  if (getLangOpts().getFPEvalMethod() == LangOptions::FEM_TargetDefault)
+    // Use setting from TargetInfo.
+    PP.setCurrentFPEvalMethod(ctxt.getTargetInfo().getFPEvalMethod());
+  else
+    // Set initial value of __FLT_EVAL_METHOD__ from the command line.
+    PP.setCurrentFPEvalMethod(getLangOpts().getFPEvalMethod());
 }
 
 // Anchor Sema's type info to this TU.
@@ -632,7 +638,7 @@ ExprResult Sema::ImpCastExprToType(Expr *E, QualType Ty,
   if (Kind == CK_ArrayToPointerDecay) {
     // C++1z [conv.array]: The temporary materialization conversion is applied.
     // We also use this to fuel C++ DR1213, which applies to C++11 onwards.
-    if (getLangOpts().CPlusPlus && E->getValueKind() == VK_PRValue) {
+    if (getLangOpts().CPlusPlus && E->isPRValue()) {
       // The temporary is an lvalue in C++98 and an xvalue otherwise.
       ExprResult Materialized = CreateMaterializeTemporaryExpr(
           E->getType(), E, !getLangOpts().CPlusPlus11);
@@ -2534,4 +2540,15 @@ CapturedRegionScopeInfo *Sema::getCurCapturedRegion() {
 const llvm::MapVector<FieldDecl *, Sema::DeleteLocs> &
 Sema::getMismatchingDeleteExpressions() const {
   return DeleteExprs;
+}
+
+Sema::FPFeaturesStateRAII::FPFeaturesStateRAII(Sema &S)
+    : S(S), OldFPFeaturesState(S.CurFPFeatures),
+      OldOverrides(S.FpPragmaStack.CurrentValue),
+      OldEvalMethod(S.PP.getCurrentFPEvalMethod()) {}
+
+Sema::FPFeaturesStateRAII::~FPFeaturesStateRAII() {
+  S.CurFPFeatures = OldFPFeaturesState;
+  S.FpPragmaStack.CurrentValue = OldOverrides;
+  S.PP.setCurrentFPEvalMethod(OldEvalMethod);
 }
