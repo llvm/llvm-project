@@ -901,21 +901,51 @@ struct OperationEquivalence {
   enum Flags {
     None = 0,
 
-    /// This flag signals that operands should not be considered when checking
-    /// for equivalence. This allows for users to implement there own
-    /// equivalence schemes for operand values. The number of operands are still
-    /// checked, just not the operands themselves.
-    IgnoreOperands = 1,
+    // When provided, the location attached to the operation are ignored.
+    IgnoreLocations = 1,
 
-    LLVM_MARK_AS_BITMASK_ENUM(/* LargestValue = */ IgnoreOperands)
+    LLVM_MARK_AS_BITMASK_ENUM(/* LargestValue = */ IgnoreLocations)
   };
 
   /// Compute a hash for the given operation.
-  static llvm::hash_code computeHash(Operation *op, Flags flags = Flags::None);
+  /// The `hashOperands` and `hashResults` callbacks are expected to return a
+  /// unique hash_code for a given Value.
+  static llvm::hash_code computeHash(
+      Operation *op,
+      function_ref<llvm::hash_code(Value)> hashOperands =
+          [](Value v) { return hash_value(v); },
+      function_ref<llvm::hash_code(Value)> hashResults =
+          [](Value v) { return hash_value(v); },
+      Flags flags = Flags::None);
+
+  /// Helper that can be used with `computeHash` above to ignore operation
+  /// operands/result mapping.
+  static llvm::hash_code ignoreHashValue(Value) { return llvm::hash_code{}; }
+  /// Helper that can be used with `computeHash` above to ignore operation
+  /// operands/result mapping.
+  static llvm::hash_code directHashValue(Value v) { return hash_value(v); }
 
   /// Compare two operations and return if they are equivalent.
-  static bool isEquivalentTo(Operation *lhs, Operation *rhs,
-                             Flags flags = Flags::None);
+  /// `mapOperands` and `mapResults` are optional callbacks that allows the
+  /// caller to check the mapping of SSA value between the lhs and rhs
+  /// operations. It is expected to return success if the mapping is valid and
+  /// failure if it conflicts with a previous mapping.
+  static bool
+  isEquivalentTo(Operation *lhs, Operation *rhs,
+                 function_ref<LogicalResult(Value, Value)> mapOperands,
+                 function_ref<LogicalResult(Value, Value)> mapResults,
+                 Flags flags = Flags::None);
+
+  /// Helper that can be used with `isEquivalentTo` above to ignore operation
+  /// operands/result mapping.
+  static LogicalResult ignoreValueEquivalence(Value lhs, Value rhs) {
+    return success();
+  }
+  /// Helper that can be used with `isEquivalentTo` above to ignore operation
+  /// operands/result mapping.
+  static LogicalResult exactValueMatch(Value lhs, Value rhs) {
+    return success(lhs == rhs);
+  }
 };
 
 /// Enable Bitmask enums for OperationEquivalence::Flags.
