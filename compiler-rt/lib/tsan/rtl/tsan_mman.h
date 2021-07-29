@@ -48,13 +48,28 @@ void invoke_malloc_hook(void *ptr, uptr size);
 void invoke_free_hook(void *ptr);
 
 // For internal data structures.
-void *internal_alloc(uptr sz);
-void internal_free(void *p);
+void *Alloc(uptr sz);
+void FreeImpl(void *p);
 
 template <typename T>
-void DestroyAndFree(T *p) {
+T *New() {
+  return new (Alloc(sizeof(T))) T();
+}
+
+template <typename T>
+void Free(T *&p) {
+  if (p == nullptr)
+    return;
+  FreeImpl(p);
+  p = nullptr;
+}
+
+template <typename T>
+void DestroyAndFree(T *&p) {
+  if (p == nullptr)
+    return;
   p->~T();
-  internal_free(p);
+  Free(p);
 }
 
 }  // namespace __tsan

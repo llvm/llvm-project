@@ -19,22 +19,6 @@
 
 namespace __tsan {
 
-ReportStack::ReportStack() : frames(nullptr), suppressable(false) {}
-
-ReportStack *ReportStack::New() {
-  void *mem = internal_alloc(sizeof(ReportStack));
-  return new(mem) ReportStack();
-}
-
-ReportLocation::ReportLocation(ReportLocationType type)
-    : type(type), global(), heap_chunk_start(0), heap_chunk_size(0), tid(0),
-      fd(0), suppressable(false), stack(nullptr) {}
-
-ReportLocation *ReportLocation::New(ReportLocationType type) {
-  void *mem = internal_alloc(sizeof(ReportLocation));
-  return new(mem) ReportLocation(type);
-}
-
 class Decorator: public __sanitizer::SanitizerCommonDecorator {
  public:
   Decorator() : SanitizerCommonDecorator() { }
