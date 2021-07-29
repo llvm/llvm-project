@@ -426,6 +426,31 @@ void CopyOp::getEffects(
                        SideEffects::DefaultResource::get());
 }
 
+namespace {
+/// Remove copy operations that copy data inplace. Requirements are:
+/// 1) The input and output values are identical.
+/// 2) The input and output permutation maps are identical.
+struct EraseIdentityCopyOp : public OpRewritePattern<CopyOp> {
+  using OpRewritePattern<CopyOp>::OpRewritePattern;
+
+  LogicalResult matchAndRewrite(CopyOp copyOp,
+                                PatternRewriter &rewriter) const override {
+    assert(copyOp.hasBufferSemantics());
+    if (copyOp.input() == copyOp.output() &&
+        copyOp.inputPermutation() == copyOp.outputPermutation()) {
+      rewriter.eraseOp(copyOp);
+      return success();
+    }
+    return failure();
+  }
+};
+} // namespace
+
+void CopyOp::getCanonicalizationPatterns(RewritePatternSet &results,
+                                         MLIRContext *context) {
+  results.add<EraseIdentityCopyOp>(context);
+}
+
 //===----------------------------------------------------------------------===//
 // FillOp
 //===----------------------------------------------------------------------===//
@@ -2615,15 +2640,6 @@ struct RemoveIdentityLinalgOps : public OpInterfaceRewritePattern<LinalgOp> {
 
   LogicalResult matchAndRewrite(LinalgOp op,
                                 PatternRewriter &rewriter) const override {
-    if (auto copyOp = dyn_cast<CopyOp>(*op)) {
-      assert(copyOp.hasBufferSemantics());
-      if (copyOp.input() == copyOp.output() &&
-          copyOp.inputPermutation() == copyOp.outputPermutation()) {
-        rewriter.eraseOp(op);
-        return success();
-      }
-    }
-
     if (!isa<GenericOp>(op))
       return failure();
     if (!op.hasTensorSemantics())
