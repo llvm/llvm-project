@@ -638,7 +638,8 @@ elementwiseMatchAndRewriteHelper(Operation *operation,
 
     if (newShape.size() != rank) {
       operand = rewriter.create<tosa::ReshapeOp>(
-          loc, RankedTensorType::get(newShape, type.getElementType()), operand);
+          loc, RankedTensorType::get(newShape, type.getElementType()), operand,
+          rewriter.getI64ArrayAttr(newShape));
     }
 
     operands.push_back(operand);
