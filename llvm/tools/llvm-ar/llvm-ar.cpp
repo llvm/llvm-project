@@ -136,14 +136,14 @@ static unsigned MRILineNumber;
 static bool ParsingMRIScript;
 
 // Show the error plus the usage message, and exit.
-LLVM_ATTRIBUTE_NORETURN static void badUsage(Twine Error) {
+[[noreturn]] static void badUsage(Twine Error) {
   WithColor::error(errs(), ToolName) << Error << "\n";
   printHelpMessage();
   exit(1);
 }
 
 // Show the error message and exit.
-LLVM_ATTRIBUTE_NORETURN static void fail(Twine Error) {
+[[noreturn]] static void fail(Twine Error) {
   if (ParsingMRIScript) {
     WithColor::error(errs(), ToolName)
         << "script line " << MRILineNumber << ": " << Error << "\n";

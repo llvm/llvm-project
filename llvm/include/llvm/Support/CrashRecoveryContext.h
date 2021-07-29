@@ -99,8 +99,7 @@ public:
 
   /// Explicitly trigger a crash recovery in the current process, and
   /// return failure from RunSafely(). This function does not return.
-  LLVM_ATTRIBUTE_NORETURN
-  void HandleExit(int RetCode);
+  [[noreturn]] void HandleExit(int RetCode);
 
   /// Throw again a signal or an exception, after it was catched once by a
   /// CrashRecoveryContext.
