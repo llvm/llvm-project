@@ -134,7 +134,7 @@ bool ShouldReport(ThreadState *thr, ReportType typ) {
   CheckedMutex::CheckNoLocks();
   // For the same reason check we didn't lock thread_registry yet.
   if (SANITIZER_DEBUG)
-    ThreadRegistryLock l(ctx->thread_registry);
+    ThreadRegistryLock l(&ctx->thread_registry);
   if (!flags()->report_bugs || thr->suppress_reports)
     return false;
   switch (typ) {
@@ -156,7 +156,7 @@ bool ShouldReport(ThreadState *thr, ReportType typ) {
 }
 
 ScopedReportBase::ScopedReportBase(ReportType typ, uptr tag) {
-  ctx->thread_registry->CheckLocked();
+  ctx->thread_registry.CheckLocked();
   void *mem = internal_alloc(sizeof(ReportDesc));
   rep_ = new(mem) ReportDesc;
   rep_->typ = typ;
@@ -229,16 +229,16 @@ static bool FindThreadByUidLockedCallback(ThreadContextBase *tctx, void *arg) {
 }
 
 static ThreadContext *FindThreadByUidLocked(int unique_id) {
-  ctx->thread_registry->CheckLocked();
+  ctx->thread_registry.CheckLocked();
   return static_cast<ThreadContext *>(
-      ctx->thread_registry->FindThreadContextLocked(
+      ctx->thread_registry.FindThreadContextLocked(
           FindThreadByUidLockedCallback, &unique_id));
 }
 
 static ThreadContext *FindThreadByTidLocked(int tid) {
-  ctx->thread_registry->CheckLocked();
-  return static_cast<ThreadContext*>(
-      ctx->thread_registry->GetThreadLocked(tid));
+  ctx->thread_registry.CheckLocked();
+  return static_cast<ThreadContext *>(
+      ctx->thread_registry.GetThreadLocked(tid));
 }
 
 static bool IsInStackOrTls(ThreadContextBase *tctx_base, void *arg) {
@@ -253,10 +253,10 @@ static bool IsInStackOrTls(ThreadContextBase *tctx_base, void *arg) {
 }
 
 ThreadContext *IsThreadStackOrTls(uptr addr, bool *is_stack) {
-  ctx->thread_registry->CheckLocked();
-  ThreadContext *tctx = static_cast<ThreadContext*>(
-      ctx->thread_registry->FindThreadContextLocked(IsInStackOrTls,
-                                                    (void*)addr));
+  ctx->thread_registry.CheckLocked();
+  ThreadContext *tctx =
+      static_cast<ThreadContext *>(ctx->thread_registry.FindThreadContextLocked(
+          IsInStackOrTls, (void *)addr));
   if (!tctx)
     return 0;
   ThreadState *thr = tctx->thr;
@@ -697,7 +697,7 @@ void ReportRace(ThreadState *thr) {
     }
   }
 
-  ThreadRegistryLock l0(ctx->thread_registry);
+  ThreadRegistryLock l0(&ctx->thread_registry);
   ScopedReport rep(typ, tag);
   for (uptr i = 0; i < kMop; i++) {
     Shadow s(thr->racy_state[i]);
@@ -707,8 +707,8 @@ void ReportRace(ThreadState *thr) {
 
   for (uptr i = 0; i < kMop; i++) {
     FastState s(thr->racy_state[i]);
-    ThreadContext *tctx = static_cast<ThreadContext*>(
-        ctx->thread_registry->GetThreadLocked(s.tid()));
+    ThreadContext *tctx = static_cast<ThreadContext *>(
+        ctx->thread_registry.GetThreadLocked(s.tid()));
     if (s.epoch() < tctx->epoch0 || s.epoch() > tctx->epoch1)
       continue;
     rep.AddThread(tctx);

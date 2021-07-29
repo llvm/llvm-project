@@ -53,7 +53,7 @@ static void ReportMutexMisuse(ThreadState *thr, uptr pc, ReportType typ,
     return;
   if (!ShouldReport(thr, typ))
     return;
-  ThreadRegistryLock l(ctx->thread_registry);
+  ThreadRegistryLock l(&ctx->thread_registry);
   ScopedReport rep(typ);
   rep.AddMutex(mid);
   VarSizeStackTrace trace;
@@ -107,7 +107,7 @@ void MutexDestroy(ThreadState *thr, uptr pc, uptr addr, u32 flagz) NO_THREAD_SAF
     s->Reset(thr->proc());  // must not reset it before the report is printed
   s->mtx.Unlock();
   if (unlock_locked && ShouldReport(thr, ReportTypeMutexDestroyLocked)) {
-    ThreadRegistryLock l(ctx->thread_registry);
+    ThreadRegistryLock l(&ctx->thread_registry);
     ScopedReport rep(ReportTypeMutexDestroyLocked);
     rep.AddMutex(mid);
     VarSizeStackTrace trace;
@@ -417,9 +417,8 @@ void AcquireGlobal(ThreadState *thr) {
   DPrintf("#%d: AcquireGlobal\n", thr->tid);
   if (thr->ignore_sync)
     return;
-  ThreadRegistryLock l(ctx->thread_registry);
-  ctx->thread_registry->RunCallbackForEachThreadLocked(
-      UpdateClockCallback, thr);
+  ThreadRegistryLock l(&ctx->thread_registry);
+  ctx->thread_registry.RunCallbackForEachThreadLocked(UpdateClockCallback, thr);
 }
 
 void ReleaseStoreAcquire(ThreadState *thr, uptr pc, uptr addr) NO_THREAD_SAFETY_ANALYSIS {
@@ -473,9 +472,9 @@ void AfterSleep(ThreadState *thr, uptr pc) {
   if (thr->ignore_sync)
     return;
   thr->last_sleep_stack_id = CurrentStackId(thr, pc);
-  ThreadRegistryLock l(ctx->thread_registry);
-  ctx->thread_registry->RunCallbackForEachThreadLocked(
-      UpdateSleepClockCallback, thr);
+  ThreadRegistryLock l(&ctx->thread_registry);
+  ctx->thread_registry.RunCallbackForEachThreadLocked(UpdateSleepClockCallback,
+                                                      thr);
 }
 #endif
 
@@ -521,7 +520,7 @@ void AcquireReleaseImpl(ThreadState *thr, uptr pc, SyncClock *c) {
 void ReportDeadlock(ThreadState *thr, uptr pc, DDReport *r) {
   if (r == 0 || !ShouldReport(thr, ReportTypeDeadlock))
     return;
-  ThreadRegistryLock l(ctx->thread_registry);
+  ThreadRegistryLock l(&ctx->thread_registry);
   ScopedReport rep(ReportTypeDeadlock);
   for (int i = 0; i < r->n; i++) {
     rep.AddMutex(r->loop[i].mtx_ctx0);
