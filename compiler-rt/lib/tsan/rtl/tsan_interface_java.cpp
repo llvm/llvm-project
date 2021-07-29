@@ -62,6 +62,7 @@ MBlock *JavaHeapBlock(uptr addr, uptr *start) {
 
 void __tsan_java_init(jptr heap_begin, jptr heap_size) {
   JAVA_FUNC_ENTER(__tsan_java_init);
+  Initialize(thr);
   DPrintf("#%d: java_init(%p, %p)\n", thr->tid, heap_begin, heap_size);
   CHECK_EQ(jctx, 0);
   CHECK_GT(heap_begin, 0);
