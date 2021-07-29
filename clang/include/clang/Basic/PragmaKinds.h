@@ -32,7 +32,10 @@ enum PragmaFloatControlKind {
   PFC_Except,    // #pragma float_control(except [,on])
   PFC_NoExcept,  // #pragma float_control(except, off)
   PFC_Push,      // #pragma float_control(push)
-  PFC_Pop        // #pragma float_control(pop)
+  PFC_Pop,       // #pragma float_control(pop)
+  PFC_Source,    // #pragma float_control(source, {on|off} [,push])
+  PFC_Double,    // #pragma float_control(double, {on|off} [,push])
+  PFC_Extended,  // #pragma float_control(extended, {on|off} [,push])
 };
 }
 

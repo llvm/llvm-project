@@ -485,6 +485,21 @@ void Sema::ActOnPragmaFloatControl(SourceLocation Loc,
   switch (Value) {
   default:
     llvm_unreachable("invalid pragma float_control kind");
+  case PFC_Source:
+    PP.setCurrentFPEvalMethod(LangOptions::FEM_Source);
+    NewFPFeatures.setFPEvalMethodOverride(LangOptions::FEM_Source);
+    FpPragmaStack.Act(Loc, Action, StringRef(), NewFPFeatures);
+    break;
+  case PFC_Double:
+    PP.setCurrentFPEvalMethod(LangOptions::FEM_Double);
+    NewFPFeatures.setFPEvalMethodOverride(LangOptions::FEM_Double);
+    FpPragmaStack.Act(Loc, Action, StringRef(), NewFPFeatures);
+    break;
+  case PFC_Extended:
+    PP.setCurrentFPEvalMethod(LangOptions::FEM_Extended);
+    NewFPFeatures.setFPEvalMethodOverride(LangOptions::FEM_Extended);
+    FpPragmaStack.Act(Loc, Action, StringRef(), NewFPFeatures);
+    break;
   case PFC_Precise:
     NewFPFeatures.setFPPreciseEnabled(true);
     FpPragmaStack.Act(Loc, Action, StringRef(), NewFPFeatures);
