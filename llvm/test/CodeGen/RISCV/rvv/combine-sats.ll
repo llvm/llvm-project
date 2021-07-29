@@ -101,10 +101,7 @@ define <vscale x 2 x i64> @vselect_sub_nxv2i64(<vscale x 2 x i64> %a0, <vscale x
 ; CHECK-LABEL: vselect_sub_nxv2i64:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vsetvli a0, zero, e64, m2, ta, mu
-; CHECK-NEXT:    vmsleu.vv v0, v10, v8
-; CHECK-NEXT:    vsub.vv v26, v8, v10
-; CHECK-NEXT:    vmv.v.i v28, 0
-; CHECK-NEXT:    vmerge.vvm v8, v28, v26, v0
+; CHECK-NEXT:    vssubu.vv v8, v8, v10
 ; CHECK-NEXT:    ret
   %cmp = icmp uge <vscale x 2 x i64> %a0, %a1
   %v1 = sub <vscale x 2 x i64> %a0, %a1
@@ -131,9 +128,7 @@ define <vscale x 8 x i16> @vselect_sub_2_nxv8i16(<vscale x 8 x i16> %x, i16 zero
 ; CHECK-LABEL: vselect_sub_2_nxv8i16:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    vsetvli a1, zero, e16, m2, ta, mu
-; CHECK-NEXT:    vmsltu.vx v0, v8, a0
-; CHECK-NEXT:    vsub.vx v26, v8, a0
-; CHECK-NEXT:    vmerge.vim v8, v26, 0, v0
+; CHECK-NEXT:    vssubu.vx v8, v8, a0
 ; CHECK-NEXT:    ret
 entry:
   %0 = insertelement <vscale x 8 x i16> undef, i16 %w, i32 0
@@ -163,11 +158,9 @@ define <2 x i64> @vselect_add_const_v2i64(<2 x i64> %a0) {
 define <vscale x 2 x i64> @vselect_add_const_nxv2i64(<vscale x 2 x i64> %a0) {
 ; CHECK-LABEL: vselect_add_const_nxv2i64:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vsetvli a0, zero, e64, m2, ta, mu
-; CHECK-NEXT:    vadd.vi v26, v8, -6
-; CHECK-NEXT:    vmsgtu.vi v0, v8, 5
-; CHECK-NEXT:    vmv.v.i v28, 0
-; CHECK-NEXT:    vmerge.vvm v8, v28, v26, v0
+; CHECK-NEXT:    addi a0, zero, 6
+; CHECK-NEXT:    vsetvli a1, zero, e64, m2, ta, mu
+; CHECK-NEXT:    vssubu.vx v8, v8, a0
 ; CHECK-NEXT:    ret
   %cm1 = insertelement <vscale x 2 x i64> poison, i64 -6, i32 0
   %splatcm1 = shufflevector <vscale x 2 x i64> %cm1, <vscale x 2 x i64> poison, <vscale x 2 x i32> zeroinitializer
@@ -205,27 +198,17 @@ define <vscale x 2 x i16> @vselect_add_const_signbit_nxv2i16(<vscale x 2 x i16> 
 ; RV32-LABEL: vselect_add_const_signbit_nxv2i16:
 ; RV32:       # %bb.0:
 ; RV32-NEXT:    lui a0, 8
-; RV32-NEXT:    addi a0, a0, -2
+; RV32-NEXT:    addi a0, a0, -1
 ; RV32-NEXT:    vsetvli a1, zero, e16, mf2, ta, mu
-; RV32-NEXT:    vmsgtu.vx v0, v8, a0
-; RV32-NEXT:    lui a0, 1048568
-; RV32-NEXT:    addi a0, a0, 1
-; RV32-NEXT:    vadd.vx v25, v8, a0
-; RV32-NEXT:    vmv.v.i v26, 0
-; RV32-NEXT:    vmerge.vvm v8, v26, v25, v0
+; RV32-NEXT:    vssubu.vx v8, v8, a0
 ; RV32-NEXT:    ret
 ;
 ; RV64-LABEL: vselect_add_const_signbit_nxv2i16:
 ; RV64:       # %bb.0:
 ; RV64-NEXT:    lui a0, 8
-; RV64-NEXT:    addiw a0, a0, -2
+; RV64-NEXT:    addiw a0, a0, -1
 ; RV64-NEXT:    vsetvli a1, zero, e16, mf2, ta, mu
-; RV64-NEXT:    vmsgtu.vx v0, v8, a0
-; RV64-NEXT:    lui a0, 1048568
-; RV64-NEXT:    addiw a0, a0, 1
-; RV64-NEXT:    vadd.vx v25, v8, a0
-; RV64-NEXT:    vmv.v.i v26, 0
-; RV64-NEXT:    vmerge.vvm v8, v26, v25, v0
+; RV64-NEXT:    vssubu.vx v8, v8, a0
 ; RV64-NEXT:    ret
   %cm1 = insertelement <vscale x 2 x i16> poison, i16 32766, i32 0
   %splatcm1 = shufflevector <vscale x 2 x i16> %cm1, <vscale x 2 x i16> poison, <vscale x 2 x i32> zeroinitializer
@@ -255,12 +238,9 @@ define <2 x i16> @vselect_xor_const_signbit_v2i16(<2 x i16> %a0) {
 define <vscale x 2 x i16> @vselect_xor_const_signbit_nxv2i16(<vscale x 2 x i16> %a0) {
 ; CHECK-LABEL: vselect_xor_const_signbit_nxv2i16:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vsetvli a0, zero, e16, mf2, ta, mu
-; CHECK-NEXT:    vmsle.vi v0, v8, -1
-; CHECK-NEXT:    vmv.v.i v25, 0
-; CHECK-NEXT:    lui a0, 1048568
-; CHECK-NEXT:    vxor.vx v26, v8, a0
-; CHECK-NEXT:    vmerge.vvm v8, v25, v26, v0
+; CHECK-NEXT:    lui a0, 8
+; CHECK-NEXT:    vsetvli a1, zero, e16, mf2, ta, mu
+; CHECK-NEXT:    vssubu.vx v8, v8, a0
 ; CHECK-NEXT:    ret
   %cmp = icmp slt <vscale x 2 x i16> %a0, zeroinitializer
   %ins = insertelement <vscale x 2 x i16> poison, i16 -32768, i32 0
@@ -291,10 +271,7 @@ define <vscale x 2 x i64> @vselect_add_nxv2i64(<vscale x 2 x i64> %a0, <vscale x
 ; CHECK-LABEL: vselect_add_nxv2i64:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vsetvli a0, zero, e64, m2, ta, mu
-; CHECK-NEXT:    vadd.vv v26, v8, v10
-; CHECK-NEXT:    vmsleu.vv v0, v8, v26
-; CHECK-NEXT:    vmv.v.i v28, -1
-; CHECK-NEXT:    vmerge.vvm v8, v28, v26, v0
+; CHECK-NEXT:    vsaddu.vv v8, v8, v10
 ; CHECK-NEXT:    ret
   %v1 = add <vscale x 2 x i64> %a0, %a1
   %cmp = icmp ule <vscale x 2 x i64> %a0, %v1
@@ -323,10 +300,7 @@ define <vscale x 2 x i64> @vselect_add_const_2_nxv2i64(<vscale x 2 x i64> %a0) {
 ; CHECK-LABEL: vselect_add_const_2_nxv2i64:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vsetvli a0, zero, e64, m2, ta, mu
-; CHECK-NEXT:    vadd.vi v26, v8, 6
-; CHECK-NEXT:    vmsleu.vi v0, v8, -7
-; CHECK-NEXT:    vmv.v.i v28, -1
-; CHECK-NEXT:    vmerge.vvm v8, v28, v26, v0
+; CHECK-NEXT:    vsaddu.vi v8, v8, 6
 ; CHECK-NEXT:    ret
   %cm1 = insertelement <vscale x 2 x i64> poison, i64 6, i32 0
   %splatcm1 = shufflevector <vscale x 2 x i64> %cm1, <vscale x 2 x i64> poison, <vscale x 2 x i32> zeroinitializer
