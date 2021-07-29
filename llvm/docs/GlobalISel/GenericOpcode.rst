@@ -290,7 +290,9 @@ These each perform their respective integer arithmetic on a scalar.
 
 .. code-block:: none
 
-  %2:_(s32) = G_ADD %0:_(s32), %1:_(s32)
+  %dst:_(s32) = G_ADD %src0:_(s32), %src1:_(s32)
+
+The above exmaple adds %src1 to %src0 and stores the result in %dst.
 
 G_SDIVREM, G_UDIVREM
 ^^^^^^^^^^^^^^^^^^^^
@@ -755,27 +757,39 @@ Implement the φ node in the SSA graph representing the function.
 
 .. code-block:: none
 
-  %1(s8) = G_PHI %7(s8), %bb.0, %3(s8), %bb.1
+  %dst(s8) = G_PHI %src1(s8), %bb.<id1>, %src2(s8), %bb.<id2>
 
 G_BR
 ^^^^
 
 Unconditional branch
 
+.. code-block:: none
+  G_BR %bb.<id>
+
 G_BRCOND
 ^^^^^^^^
 
 Conditional branch
+
+.. code-block:: none
+  G_BRCOND %condition, %basicblock.<id>
 
 G_BRINDIRECT
 ^^^^^^^^^^^^
 
 Indirect branch
 
+.. code-block:: none
+  G_BRINDIRECT %src(p0)
+
 G_BRJT
 ^^^^^^
 
 Indirect branch to jump table entry
+
+.. code-block:: none
+  G_BRJT %ptr(p0), %jti, %idx(s64)
 
 G_JUMP_TABLE
 ^^^^^^^^^^^^
