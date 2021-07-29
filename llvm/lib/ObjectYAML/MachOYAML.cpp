@@ -234,6 +234,30 @@ void mapLoadCommandData<MachO::dylinker_command>(
 }
 
 template <>
+void mapLoadCommandData<MachO::sub_framework_command>(
+    IO &IO, MachOYAML::LoadCommand &LoadCommand) {
+  IO.mapOptional("Content", LoadCommand.Content);
+}
+
+template <>
+void mapLoadCommandData<MachO::sub_umbrella_command>(
+    IO &IO, MachOYAML::LoadCommand &LoadCommand) {
+  IO.mapOptional("Content", LoadCommand.Content);
+}
+
+template <>
+void mapLoadCommandData<MachO::sub_client_command>(
+    IO &IO, MachOYAML::LoadCommand &LoadCommand) {
+  IO.mapOptional("Content", LoadCommand.Content);
+}
+
+template <>
+void mapLoadCommandData<MachO::sub_library_command>(
+    IO &IO, MachOYAML::LoadCommand &LoadCommand) {
+  IO.mapOptional("Content", LoadCommand.Content);
+}
+
+template <>
 void mapLoadCommandData<MachO::build_version_command>(
     IO &IO, MachOYAML::LoadCommand &LoadCommand) {
   IO.mapOptional("Tools", LoadCommand.Tools);
