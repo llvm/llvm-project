@@ -27,7 +27,7 @@ class BreakpointLocationsTestCase(HardwareBreakpointTestBase):
         breakpoint = target.BreakpointCreateByLocation("main.c", 1)
         self.assertTrue(breakpoint.IsHardware())
 
-    @expectedFailureIfFn(supports_hw_breakpoints)
+        @expectedFailureIfFn(supports_hw_breakpoints)
     def test_step_range(self):
         """Test stepping when hardware breakpoints are required."""
         self.build()
@@ -86,6 +86,7 @@ class BreakpointLocationsTestCase(HardwareBreakpointTestBase):
                 'error: Could not create hardware breakpoint for thread plan.'
             ])
 
+    @skipIf(oslist=["linux"], archs=["arm"])
     @expectedFailureIfFn(supports_hw_breakpoints)
     def test_step_until(self):
         """Test stepping until when hardware breakpoints are required."""
