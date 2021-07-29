@@ -3091,7 +3091,7 @@ void CompilerInvocation::setLangDefaults(LangOptions &Opts, InputKind IK,
       LangStd = LangStandard::lang_opencl12;
       break;
     case Language::OpenCLCXX:
-      LangStd = LangStandard::lang_openclcpp;
+      LangStd = LangStandard::lang_openclcpp10;
       break;
     case Language::CUDA:
       LangStd = LangStandard::lang_cuda;
@@ -3164,7 +3164,7 @@ void CompilerInvocation::setLangDefaults(LangOptions &Opts, InputKind IK,
     Opts.OpenCLVersion = 200;
   else if (LangStd == LangStandard::lang_opencl30)
     Opts.OpenCLVersion = 300;
-  else if (LangStd == LangStandard::lang_openclcpp)
+  else if (LangStd == LangStandard::lang_openclcpp10)
     Opts.OpenCLCPlusPlusVersion = 100;
 
   // OpenCL has some additional defaults.
@@ -3314,7 +3314,7 @@ void CompilerInvocation::GenerateLangArgs(const LangOptions &Opts,
   case LangStandard::lang_opencl12:
   case LangStandard::lang_opencl20:
   case LangStandard::lang_opencl30:
-  case LangStandard::lang_openclcpp:
+  case LangStandard::lang_openclcpp10:
     StdOpt = OPT_cl_std_EQ;
     break;
   default:
@@ -3608,7 +3608,8 @@ bool CompilerInvocation::ParseLangArgs(LangOptions &Opts, ArgList &Args,
         .Cases("cl1.2", "CL1.2", LangStandard::lang_opencl12)
         .Cases("cl2.0", "CL2.0", LangStandard::lang_opencl20)
         .Cases("cl3.0", "CL3.0", LangStandard::lang_opencl30)
-        .Cases("clc++", "CLC++", LangStandard::lang_openclcpp)
+        .Cases("clc++", "CLC++", LangStandard::lang_openclcpp10)
+        .Cases("clc++1.0", "CLC++1.0", LangStandard::lang_openclcpp10)
         .Default(LangStandard::lang_unspecified);
 
     if (OpenCLLangStd == LangStandard::lang_unspecified) {
