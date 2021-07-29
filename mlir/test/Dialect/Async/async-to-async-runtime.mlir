@@ -328,8 +328,8 @@ func @async_value_operands() {
 
 // -----
 
-// CHECK-LABEL: @execute_asserttion
-func @execute_asserttion(%arg0: i1) {
+// CHECK-LABEL: @execute_assertion
+func @execute_assertion(%arg0: i1) {
   %token = async.execute {
     assert %arg0, "error"
     async.yield
