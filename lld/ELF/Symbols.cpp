@@ -368,8 +368,12 @@ bool elf::computeIsPreemptible(const Symbol &sym) {
 
   // If -Bsymbolic or --dynamic-list is specified, or -Bsymbolic-functions is
   // specified and the symbol is STT_FUNC, the symbol is preemptible iff it is
-  // in the dynamic list.
-  if (config->symbolic || (config->bsymbolicFunctions && sym.isFunc()))
+  // in the dynamic list. -Bsymbolic-non-weak-functions is a non-weak subset of
+  // -Bsymbolic-functions.
+  if (config->symbolic ||
+      (config->bsymbolic == BsymbolicKind::Functions && sym.isFunc()) ||
+      (config->bsymbolic == BsymbolicKind::NonWeakFunctions && sym.isFunc() &&
+       sym.binding != STB_WEAK))
     return sym.inDynamicList;
   return true;
 }
