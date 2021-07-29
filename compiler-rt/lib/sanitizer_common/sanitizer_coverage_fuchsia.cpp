@@ -89,7 +89,7 @@ class TracePcGuardController final {
   }
 
   void Dump() {
-    BlockingMutexLock locked(&setup_lock_);
+    Lock locked(&setup_lock_);
     if (array_) {
       CHECK_NE(vmo_, ZX_HANDLE_INVALID);
 
@@ -125,7 +125,7 @@ class TracePcGuardController final {
   size_t DataSize() const { return next_index_ * sizeof(uintptr_t); }
 
   u32 Setup(u32 num_guards) {
-    BlockingMutexLock locked(&setup_lock_);
+    Lock locked(&setup_lock_);
     DCHECK(common_flags()->coverage);
 
     if (next_index_ == 0) {

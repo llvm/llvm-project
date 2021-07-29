@@ -119,7 +119,7 @@ ThreadRegistry::ThreadRegistry(ThreadContextFactory factory, u32 max_threads,
 
 void ThreadRegistry::GetNumberOfThreads(uptr *total, uptr *running,
                                         uptr *alive) {
-  BlockingMutexLock l(&mtx_);
+  ThreadRegistryLock l(this);
   if (total)
     *total = threads_.size();
   if (running) *running = running_threads_;
@@ -127,13 +127,13 @@ void ThreadRegistry::GetNumberOfThreads(uptr *total, uptr *running,
 }
 
 uptr ThreadRegistry::GetMaxAliveThreads() {
-  BlockingMutexLock l(&mtx_);
+  ThreadRegistryLock l(this);
   return max_alive_threads_;
 }
 
 u32 ThreadRegistry::CreateThread(uptr user_id, bool detached, u32 parent_tid,
                                  void *arg) {
-  BlockingMutexLock l(&mtx_);
+  ThreadRegistryLock l(this);
   u32 tid = kInvalidTid;
   ThreadContextBase *tctx = QuarantinePop();
   if (tctx) {
@@ -179,7 +179,7 @@ void ThreadRegistry::RunCallbackForEachThreadLocked(ThreadCallback cb,
 }
 
 u32 ThreadRegistry::FindThread(FindThreadCallback cb, void *arg) {
-  BlockingMutexLock l(&mtx_);
+  ThreadRegistryLock l(this);
   for (u32 tid = 0; tid < threads_.size(); tid++) {
     ThreadContextBase *tctx = threads_[tid];
     if (tctx != 0 && cb(tctx, arg))
@@ -211,7 +211,7 @@ ThreadContextBase *ThreadRegistry::FindThreadContextByOsIDLocked(tid_t os_id) {
 }
 
 void ThreadRegistry::SetThreadName(u32 tid, const char *name) {
-  BlockingMutexLock l(&mtx_);
+  ThreadRegistryLock l(this);
   ThreadContextBase *tctx = threads_[tid];
   CHECK_NE(tctx, 0);
   CHECK_EQ(SANITIZER_FUCHSIA ? ThreadStatusCreated : ThreadStatusRunning,
@@ -220,7 +220,7 @@ void ThreadRegistry::SetThreadName(u32 tid, const char *name) {
 }
 
 void ThreadRegistry::SetThreadNameByUserId(uptr user_id, const char *name) {
-  BlockingMutexLock l(&mtx_);
+  ThreadRegistryLock l(this);
   for (u32 tid = 0; tid < threads_.size(); tid++) {
     ThreadContextBase *tctx = threads_[tid];
     if (tctx != 0 && tctx->user_id == user_id &&
@@ -232,7 +232,7 @@ void ThreadRegistry::SetThreadNameByUserId(uptr user_id, const char *name) {
 }
 
 void ThreadRegistry::DetachThread(u32 tid, void *arg) {
-  BlockingMutexLock l(&mtx_);
+  ThreadRegistryLock l(this);
   ThreadContextBase *tctx = threads_[tid];
   CHECK_NE(tctx, 0);
   if (tctx->status == ThreadStatusInvalid) {
@@ -252,7 +252,7 @@ void ThreadRegistry::JoinThread(u32 tid, void *arg) {
   bool destroyed = false;
   do {
     {
-      BlockingMutexLock l(&mtx_);
+      ThreadRegistryLock l(this);
       ThreadContextBase *tctx = threads_[tid];
       CHECK_NE(tctx, 0);
       if (tctx->status == ThreadStatusInvalid) {
@@ -275,7 +275,7 @@ void ThreadRegistry::JoinThread(u32 tid, void *arg) {
 // thread before trying to create it, and then failed to actually
 // create it, and so never called StartThread.
 ThreadStatus ThreadRegistry::FinishThread(u32 tid) {
-  BlockingMutexLock l(&mtx_);
+  ThreadRegistryLock l(this);
   CHECK_GT(alive_threads_, 0);
   alive_threads_--;
   ThreadContextBase *tctx = threads_[tid];
@@ -301,7 +301,7 @@ ThreadStatus ThreadRegistry::FinishThread(u32 tid) {
 
 void ThreadRegistry::StartThread(u32 tid, tid_t os_id, ThreadType thread_type,
                                  void *arg) {
-  BlockingMutexLock l(&mtx_);
+  ThreadRegistryLock l(this);
   running_threads_++;
   ThreadContextBase *tctx = threads_[tid];
   CHECK_NE(tctx, 0);
@@ -334,7 +334,7 @@ ThreadContextBase *ThreadRegistry::QuarantinePop() {
 }
 
 void ThreadRegistry::SetThreadUserId(u32 tid, uptr user_id) {
-  BlockingMutexLock l(&mtx_);
+  ThreadRegistryLock l(this);
   ThreadContextBase *tctx = threads_[tid];
   CHECK_NE(tctx, 0);
   CHECK_NE(tctx->status, ThreadStatusInvalid);

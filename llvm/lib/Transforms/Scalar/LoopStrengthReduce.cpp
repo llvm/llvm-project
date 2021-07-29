@@ -6162,6 +6162,9 @@ DbgRewriteSalvageableDVIs(llvm::Loop *L, ScalarEvolution &SE,
   bool Changed = false;
   if (const SCEVAddRecExpr *IVAddRec =
           dyn_cast<SCEVAddRecExpr>(SCEVInductionVar)) {
+    if (!IVAddRec->isAffine())
+      return false;
+
     SCEVDbgValueBuilder IterCountExpr;
     IterCountExpr.pushValue(LSRInductionVar);
     if (!IterCountExpr.SCEVToIterCountExpr(*IVAddRec, SE))

@@ -56,15 +56,12 @@ int main() {
 // CHECK:     #1 MyOuterFunc MyOuterFile.java:4321:65
 // CHECK:     #2 Caller1 CallerFile.java:111:22
 // CHECK:     #3 Caller2 CallerFile.java:333:44
-// CHECK-NOT: #4
 // CHECK:   Previous write
 // CHECK:     #0 MyInnerFunc MyInnerFile.java:1234:56
 // CHECK:     #1 MyOuterFunc MyOuterFile.java:4321:65
 // CHECK:     #2 Caller1 CallerFile.java:111:22
 // CHECK:     #3 Caller2 CallerFile.java:333:44
-// CHECK-NOT: #4
 // CHECK:   Location is heap block of size 32 at {{.*}} allocated by main thread:
 // CHECK:     #0 Allocer1 Alloc.java:11:222
 // CHECK:     #1 Allocer2 Alloc.java:33:444
-// CHECK-NOT: #2
 // CHECK: DONE

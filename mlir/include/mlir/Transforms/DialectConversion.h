@@ -646,18 +646,6 @@ public:
     addLegalOp<OpT2, OpTs...>();
   }
 
-  /// Register the given operation as dynamically legal, i.e. requiring custom
-  /// handling by the target via 'isDynamicallyLegal'.
-  template <typename OpT>
-  void addDynamicallyLegalOp() {
-    setOpAction<OpT>(LegalizationAction::Dynamic);
-  }
-  template <typename OpT, typename OpT2, typename... OpTs>
-  void addDynamicallyLegalOp() {
-    addDynamicallyLegalOp<OpT>();
-    addDynamicallyLegalOp<OpT2, OpTs...>();
-  }
-
   /// Register the given operation as dynamically legal and set the dynamic
   /// legalization callback to the one provided.
   template <typename OpT>
@@ -731,30 +719,25 @@ public:
   }
 
   /// Register the operations of the given dialects as dynamically legal, i.e.
-  /// requiring custom handling by the target via 'isDynamicallyLegal'.
+  /// requiring custom handling by the callback.
   template <typename... Names>
-  void addDynamicallyLegalDialect(StringRef name, Names... names) {
+  void addDynamicallyLegalDialect(DynamicLegalityCallbackFn callback,
+                                  StringRef name, Names... names) {
     SmallVector<StringRef, 2> dialectNames({name, names...});
     setDialectAction(dialectNames, LegalizationAction::Dynamic);
+    setLegalityCallback(dialectNames, std::move(callback));
   }
   template <typename... Args>
-  void addDynamicallyLegalDialect(DynamicLegalityCallbackFn callback = {}) {
-    SmallVector<StringRef, 2> dialectNames({Args::getDialectNamespace()...});
-    setDialectAction(dialectNames, LegalizationAction::Dynamic);
-    if (callback)
-      setLegalityCallback(dialectNames, callback);
+  void addDynamicallyLegalDialect(DynamicLegalityCallbackFn callback) {
+    addDynamicallyLegalDialect(std::move(callback),
+                               Args::getDialectNamespace()...);
   }
 
   /// Register unknown operations as dynamically legal. For operations(and
   /// dialects) that do not have a set legalization action, treat them as
-  /// dynamically legal and invoke the given callback if valid or
-  /// 'isDynamicallyLegal'.
+  /// dynamically legal and invoke the given callback.
   void markUnknownOpDynamicallyLegal(const DynamicLegalityCallbackFn &fn) {
     setLegalityCallback(fn);
-  }
-  void markUnknownOpDynamicallyLegal() {
-    setLegalityCallback(
-        [this](Operation *op) { return isDynamicallyLegal(op); });
   }
 
   /// Register the operations of the given dialects as illegal, i.e.
@@ -781,14 +764,6 @@ public:
   /// containing legality information is returned. If the operation is not
   /// legal, None is returned.
   Optional<LegalOpDetails> isLegal(Operation *op) const;
-
-protected:
-  /// Runs a custom legalization query for the given operation. This should
-  /// return true if the given operation is legal, otherwise false.
-  virtual bool isDynamicallyLegal(Operation *op) const {
-    llvm_unreachable(
-        "targets with custom legalization must override 'isDynamicallyLegal'");
-  }
 
 private:
   /// Set the dynamic legality callback for the given operation.

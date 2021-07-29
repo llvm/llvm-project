@@ -97,6 +97,8 @@ set(files
   __bits
   __bsd_locale_defaults.h
   __bsd_locale_fallbacks.h
+  __compare/common_comparison_category.h
+  __compare/ordering.h
   __config
   __debug
   __errc

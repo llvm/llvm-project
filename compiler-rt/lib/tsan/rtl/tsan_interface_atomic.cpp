@@ -845,25 +845,23 @@ void __tsan_atomic_signal_fence(morder mo) {
 
 // Go
 
-#define ATOMIC(func, ...) \
-    if (thr->ignore_sync) { \
-      NoTsanAtomic##func(__VA_ARGS__); \
-    } else { \
-      FuncEntry(thr, cpc); \
+#  define ATOMIC(func, ...)               \
+    if (thr->ignore_sync) {               \
+      NoTsanAtomic##func(__VA_ARGS__);    \
+    } else {                              \
+      FuncEntry(thr, cpc);                \
       Atomic##func(thr, pc, __VA_ARGS__); \
-      FuncExit(thr); \
-    } \
-/**/
+      FuncExit(thr);                      \
+    }
 
-#define ATOMIC_RET(func, ret, ...) \
-    if (thr->ignore_sync) { \
-      (ret) = NoTsanAtomic##func(__VA_ARGS__); \
-    } else { \
-      FuncEntry(thr, cpc); \
+#  define ATOMIC_RET(func, ret, ...)              \
+    if (thr->ignore_sync) {                       \
+      (ret) = NoTsanAtomic##func(__VA_ARGS__);    \
+    } else {                                      \
+      FuncEntry(thr, cpc);                        \
       (ret) = Atomic##func(thr, pc, __VA_ARGS__); \
-      FuncExit(thr); \
-    } \
-/**/
+      FuncExit(thr);                              \
+    }
 
 extern "C" {
 SANITIZER_INTERFACE_ATTRIBUTE

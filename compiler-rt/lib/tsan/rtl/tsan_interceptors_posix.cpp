@@ -1986,7 +1986,7 @@ static void CallUserSignalHandler(ThreadState *thr, bool sync, bool acquire,
     // StackTrace::GetNestInstructionPc(pc) is used because return address is
     // expected, OutputReport() will undo this.
     ObtainCurrentStack(thr, StackTrace::GetNextInstructionPc(pc), &stack);
-    ThreadRegistryLock l(ctx->thread_registry);
+    ThreadRegistryLock l(&ctx->thread_registry);
     ScopedReport rep(ReportTypeErrnoInSignal);
     if (!IsFiredSuppression(ctx, ReportTypeErrnoInSignal, stack)) {
       rep.AddStack(stack, true);
@@ -2348,7 +2348,7 @@ static void HandleRecvmsg(ThreadState *thr, uptr pc,
   ThreadSetName(((TsanInterceptorContext *) ctx)->thr, name)
 
 #define COMMON_INTERCEPTOR_SET_PTHREAD_NAME(ctx, thread, name) \
-  __tsan::ctx->thread_registry->SetThreadNameByUserId(thread, name)
+  __tsan::ctx->thread_registry.SetThreadNameByUserId(thread, name)
 
 #define COMMON_INTERCEPTOR_BLOCK_REAL(name) BLOCK_REAL(name)
 
@@ -2479,12 +2479,11 @@ static __sanitizer_sighandler_ptr signal_impl(int sig,
   return old.handler;
 }
 
-#define TSAN_SYSCALL() \
+#define TSAN_SYSCALL()             \
   ThreadState *thr = cur_thread(); \
-  if (thr->ignore_interceptors) \
-    return; \
-  ScopedSyscall scoped_syscall(thr) \
-/**/
+  if (thr->ignore_interceptors)    \
+    return;                        \
+  ScopedSyscall scoped_syscall(thr)
 
 struct ScopedSyscall {
   ThreadState *thr;

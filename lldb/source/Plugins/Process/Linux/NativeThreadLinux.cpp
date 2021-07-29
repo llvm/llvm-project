@@ -26,6 +26,7 @@
 #include "llvm/ADT/SmallString.h"
 
 #include "Plugins/Process/POSIX/CrashReason.h"
+#include "Plugins/Process/Utility/MemoryTagManagerAArch64MTE.h"
 
 #include <sys/syscall.h>
 // Try to define a macro to encapsulate the tgkill syscall
@@ -299,9 +300,67 @@ void NativeThreadLinux::SetStoppedBySignal(uint32_t signo,
               ? CrashReason::eInvalidAddress
               : GetCrashReason(*info);
       m_stop_description = GetCrashReasonString(reason, *info);
+
+      if (reason == CrashReason::eSyncTagCheckFault) {
+        AnnotateSyncTagCheckFault(info);
+      }
+
       break;
     }
   }
+}
+
+void NativeThreadLinux::AnnotateSyncTagCheckFault(const siginfo_t *info) {
+  int32_t allocation_tag_type = 0;
+  switch (GetProcess().GetArchitecture().GetMachine()) {
+  // aarch64_32 deliberately not here because there's no 32 bit MTE
+  case llvm::Triple::aarch64:
+  case llvm::Triple::aarch64_be:
+    allocation_tag_type = MemoryTagManagerAArch64MTE::eMTE_allocation;
+    break;
+  default:
+    return;
+  }
+
+  auto details =
+      GetRegisterContext().GetMemoryTaggingDetails(allocation_tag_type);
+  if (!details) {
+    llvm::consumeError(details.takeError());
+    return;
+  }
+
+  // We assume that the stop description is currently:
+  // signal SIGSEGV: sync tag check fault (fault address: <addr>)
+  // Remove the closing )
+  m_stop_description.pop_back();
+
+  std::stringstream ss;
+  lldb::addr_t fault_addr = reinterpret_cast<uintptr_t>(info->si_addr);
+  std::unique_ptr<MemoryTagManager> manager(std::move(details->manager));
+
+  ss << " logical tag: 0x" << std::hex << manager->GetLogicalTag(fault_addr);
+
+  std::vector<uint8_t> allocation_tag_data;
+  // The fault address may not be granule aligned. ReadMemoryTags will granule
+  // align any range you give it, potentially making it larger.
+  // To prevent this set len to 1. This always results in a range that is at
+  // most 1 granule in size and includes fault_addr.
+  Status status = GetProcess().ReadMemoryTags(allocation_tag_type, fault_addr,
+                                              1, allocation_tag_data);
+
+  if (status.Success()) {
+    llvm::Expected<std::vector<lldb::addr_t>> allocation_tag =
+        manager->UnpackTagsData(allocation_tag_data, 1);
+    if (allocation_tag) {
+      ss << " allocation tag: 0x" << std::hex << allocation_tag->front() << ")";
+    } else {
+      llvm::consumeError(allocation_tag.takeError());
+      ss << ")";
+    }
+  } else
+    ss << ")";
+
+  m_stop_description += ss.str();
 }
 
 bool NativeThreadLinux::IsStopped(int *signo) {

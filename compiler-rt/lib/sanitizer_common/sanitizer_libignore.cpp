@@ -22,7 +22,7 @@ LibIgnore::LibIgnore(LinkerInitialized) {
 }
 
 void LibIgnore::AddIgnoredLibrary(const char *name_templ) {
-  BlockingMutexLock lock(&mutex_);
+  Lock lock(&mutex_);
   if (count_ >= kMaxLibs) {
     Report("%s: too many ignored libraries (max: %d)\n", SanitizerToolName,
            kMaxLibs);
@@ -36,7 +36,7 @@ void LibIgnore::AddIgnoredLibrary(const char *name_templ) {
 }
 
 void LibIgnore::OnLibraryLoaded(const char *name) {
-  BlockingMutexLock lock(&mutex_);
+  Lock lock(&mutex_);
   // Try to match suppressions with symlink target.
   InternalMmapVector<char> buf(kMaxPathLength);
   if (name && internal_readlink(name, buf.data(), buf.size() - 1) > 0 &&

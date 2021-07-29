@@ -43,15 +43,14 @@ class ScopedAnnotation {
   ThreadState *const thr_;
 };
 
-#define SCOPED_ANNOTATION_RET(typ, ret) \
-    if (!flags()->enable_annotations) \
-      return ret; \
-    ThreadState *thr = cur_thread(); \
-    const uptr caller_pc = (uptr)__builtin_return_address(0); \
-    ScopedAnnotation sa(thr, __func__, caller_pc); \
-    const uptr pc = StackTrace::GetCurrentPc(); \
-    (void)pc; \
-/**/
+#define SCOPED_ANNOTATION_RET(typ, ret)                     \
+  if (!flags()->enable_annotations)                         \
+    return ret;                                             \
+  ThreadState *thr = cur_thread();                          \
+  const uptr caller_pc = (uptr)__builtin_return_address(0); \
+  ScopedAnnotation sa(thr, __func__, caller_pc);            \
+  const uptr pc = StackTrace::GetCurrentPc();               \
+  (void)pc;
 
 #define SCOPED_ANNOTATION(typ) SCOPED_ANNOTATION_RET(typ, )
 
