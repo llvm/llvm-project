@@ -186,7 +186,7 @@ void __kmpc_begin_sharing_variables(void ***GlobalArgs, uint64_t NumArgs);
 /// Deallocate the memory allocated by __kmpc_begin_sharing_variables.
 ///
 /// Called by the main thread after a parallel region.
-void __kmpc_end_sharing_variables(void **GlobalArgs, uint64_t NumArgs);
+void __kmpc_end_sharing_variables();
 
 /// Store the allocation address obtained via __kmpc_begin_sharing_variables in
 /// \p GlobalArgs.
