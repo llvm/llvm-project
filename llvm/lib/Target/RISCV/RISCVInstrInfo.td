@@ -893,6 +893,14 @@ def mul_oneuse : PatFrag<(ops node:$A, node:$B), (mul node:$A, node:$B), [{
   return N->hasOneUse();
 }]>;
 
+def mul_const_oneuse : PatFrag<(ops node:$A, node:$B),
+                               (mul node:$A, node:$B), [{
+  if (auto *N1C = dyn_cast<ConstantSDNode>(N->getOperand(1)))
+    if (N1C->hasOneUse())
+      return true;
+  return false;
+}]>;
+
 /// Simple arithmetic operations
 
 def : PatGprGpr<add, ADD>;

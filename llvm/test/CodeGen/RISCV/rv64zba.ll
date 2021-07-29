@@ -943,14 +943,14 @@ define i64 @mul11(i64 %a) {
 ;
 ; RV64IB-LABEL: mul11:
 ; RV64IB:       # %bb.0:
-; RV64IB-NEXT:    addi a1, zero, 11
-; RV64IB-NEXT:    mul a0, a0, a1
+; RV64IB-NEXT:    sh2add a1, a0, a0
+; RV64IB-NEXT:    sh1add a0, a1, a0
 ; RV64IB-NEXT:    ret
 ;
 ; RV64IBA-LABEL: mul11:
 ; RV64IBA:       # %bb.0:
-; RV64IBA-NEXT:    addi a1, zero, 11
-; RV64IBA-NEXT:    mul a0, a0, a1
+; RV64IBA-NEXT:    sh2add a1, a0, a0
+; RV64IBA-NEXT:    sh1add a0, a1, a0
 ; RV64IBA-NEXT:    ret
   %c = mul i64 %a, 11
   ret i64 %c
@@ -965,14 +965,14 @@ define i64 @mul19(i64 %a) {
 ;
 ; RV64IB-LABEL: mul19:
 ; RV64IB:       # %bb.0:
-; RV64IB-NEXT:    addi a1, zero, 19
-; RV64IB-NEXT:    mul a0, a0, a1
+; RV64IB-NEXT:    sh3add a1, a0, a0
+; RV64IB-NEXT:    sh1add a0, a1, a0
 ; RV64IB-NEXT:    ret
 ;
 ; RV64IBA-LABEL: mul19:
 ; RV64IBA:       # %bb.0:
-; RV64IBA-NEXT:    addi a1, zero, 19
-; RV64IBA-NEXT:    mul a0, a0, a1
+; RV64IBA-NEXT:    sh3add a1, a0, a0
+; RV64IBA-NEXT:    sh1add a0, a1, a0
 ; RV64IBA-NEXT:    ret
   %c = mul i64 %a, 19
   ret i64 %c
@@ -987,14 +987,14 @@ define i64 @mul13(i64 %a) {
 ;
 ; RV64IB-LABEL: mul13:
 ; RV64IB:       # %bb.0:
-; RV64IB-NEXT:    addi a1, zero, 13
-; RV64IB-NEXT:    mul a0, a0, a1
+; RV64IB-NEXT:    sh1add a1, a0, a0
+; RV64IB-NEXT:    sh2add a0, a1, a0
 ; RV64IB-NEXT:    ret
 ;
 ; RV64IBA-LABEL: mul13:
 ; RV64IBA:       # %bb.0:
-; RV64IBA-NEXT:    addi a1, zero, 13
-; RV64IBA-NEXT:    mul a0, a0, a1
+; RV64IBA-NEXT:    sh1add a1, a0, a0
+; RV64IBA-NEXT:    sh2add a0, a1, a0
 ; RV64IBA-NEXT:    ret
   %c = mul i64 %a, 13
   ret i64 %c
@@ -1009,14 +1009,14 @@ define i64 @mul21(i64 %a) {
 ;
 ; RV64IB-LABEL: mul21:
 ; RV64IB:       # %bb.0:
-; RV64IB-NEXT:    addi a1, zero, 21
-; RV64IB-NEXT:    mul a0, a0, a1
+; RV64IB-NEXT:    sh2add a1, a0, a0
+; RV64IB-NEXT:    sh2add a0, a1, a0
 ; RV64IB-NEXT:    ret
 ;
 ; RV64IBA-LABEL: mul21:
 ; RV64IBA:       # %bb.0:
-; RV64IBA-NEXT:    addi a1, zero, 21
-; RV64IBA-NEXT:    mul a0, a0, a1
+; RV64IBA-NEXT:    sh2add a1, a0, a0
+; RV64IBA-NEXT:    sh2add a0, a1, a0
 ; RV64IBA-NEXT:    ret
   %c = mul i64 %a, 21
   ret i64 %c
@@ -1031,14 +1031,14 @@ define i64 @mul37(i64 %a) {
 ;
 ; RV64IB-LABEL: mul37:
 ; RV64IB:       # %bb.0:
-; RV64IB-NEXT:    addi a1, zero, 37
-; RV64IB-NEXT:    mul a0, a0, a1
+; RV64IB-NEXT:    sh3add a1, a0, a0
+; RV64IB-NEXT:    sh2add a0, a1, a0
 ; RV64IB-NEXT:    ret
 ;
 ; RV64IBA-LABEL: mul37:
 ; RV64IBA:       # %bb.0:
-; RV64IBA-NEXT:    addi a1, zero, 37
-; RV64IBA-NEXT:    mul a0, a0, a1
+; RV64IBA-NEXT:    sh3add a1, a0, a0
+; RV64IBA-NEXT:    sh2add a0, a1, a0
 ; RV64IBA-NEXT:    ret
   %c = mul i64 %a, 37
   ret i64 %c
@@ -1053,14 +1053,14 @@ define i64 @mul25(i64 %a) {
 ;
 ; RV64IB-LABEL: mul25:
 ; RV64IB:       # %bb.0:
-; RV64IB-NEXT:    addi a1, zero, 25
-; RV64IB-NEXT:    mul a0, a0, a1
+; RV64IB-NEXT:    sh1add a1, a0, a0
+; RV64IB-NEXT:    sh3add a0, a1, a0
 ; RV64IB-NEXT:    ret
 ;
 ; RV64IBA-LABEL: mul25:
 ; RV64IBA:       # %bb.0:
-; RV64IBA-NEXT:    addi a1, zero, 25
-; RV64IBA-NEXT:    mul a0, a0, a1
+; RV64IBA-NEXT:    sh1add a1, a0, a0
+; RV64IBA-NEXT:    sh3add a0, a1, a0
 ; RV64IBA-NEXT:    ret
   %c = mul i64 %a, 25
   ret i64 %c
@@ -1075,14 +1075,14 @@ define i64 @mul41(i64 %a) {
 ;
 ; RV64IB-LABEL: mul41:
 ; RV64IB:       # %bb.0:
-; RV64IB-NEXT:    addi a1, zero, 41
-; RV64IB-NEXT:    mul a0, a0, a1
+; RV64IB-NEXT:    sh2add a1, a0, a0
+; RV64IB-NEXT:    sh3add a0, a1, a0
 ; RV64IB-NEXT:    ret
 ;
 ; RV64IBA-LABEL: mul41:
 ; RV64IBA:       # %bb.0:
-; RV64IBA-NEXT:    addi a1, zero, 41
-; RV64IBA-NEXT:    mul a0, a0, a1
+; RV64IBA-NEXT:    sh2add a1, a0, a0
+; RV64IBA-NEXT:    sh3add a0, a1, a0
 ; RV64IBA-NEXT:    ret
   %c = mul i64 %a, 41
   ret i64 %c
@@ -1097,14 +1097,14 @@ define i64 @mul73(i64 %a) {
 ;
 ; RV64IB-LABEL: mul73:
 ; RV64IB:       # %bb.0:
-; RV64IB-NEXT:    addi a1, zero, 73
-; RV64IB-NEXT:    mul a0, a0, a1
+; RV64IB-NEXT:    sh3add a1, a0, a0
+; RV64IB-NEXT:    sh3add a0, a1, a0
 ; RV64IB-NEXT:    ret
 ;
 ; RV64IBA-LABEL: mul73:
 ; RV64IBA:       # %bb.0:
-; RV64IBA-NEXT:    addi a1, zero, 73
-; RV64IBA-NEXT:    mul a0, a0, a1
+; RV64IBA-NEXT:    sh3add a1, a0, a0
+; RV64IBA-NEXT:    sh3add a0, a1, a0
 ; RV64IBA-NEXT:    ret
   %c = mul i64 %a, 73
   ret i64 %c
@@ -1119,14 +1119,14 @@ define i64 @mul27(i64 %a) {
 ;
 ; RV64IB-LABEL: mul27:
 ; RV64IB:       # %bb.0:
-; RV64IB-NEXT:    addi a1, zero, 27
-; RV64IB-NEXT:    mul a0, a0, a1
+; RV64IB-NEXT:    sh3add a0, a0, a0
+; RV64IB-NEXT:    sh1add a0, a0, a0
 ; RV64IB-NEXT:    ret
 ;
 ; RV64IBA-LABEL: mul27:
 ; RV64IBA:       # %bb.0:
-; RV64IBA-NEXT:    addi a1, zero, 27
-; RV64IBA-NEXT:    mul a0, a0, a1
+; RV64IBA-NEXT:    sh3add a0, a0, a0
+; RV64IBA-NEXT:    sh1add a0, a0, a0
 ; RV64IBA-NEXT:    ret
   %c = mul i64 %a, 27
   ret i64 %c
@@ -1141,14 +1141,14 @@ define i64 @mul45(i64 %a) {
 ;
 ; RV64IB-LABEL: mul45:
 ; RV64IB:       # %bb.0:
-; RV64IB-NEXT:    addi a1, zero, 45
-; RV64IB-NEXT:    mul a0, a0, a1
+; RV64IB-NEXT:    sh3add a0, a0, a0
+; RV64IB-NEXT:    sh2add a0, a0, a0
 ; RV64IB-NEXT:    ret
 ;
 ; RV64IBA-LABEL: mul45:
 ; RV64IBA:       # %bb.0:
-; RV64IBA-NEXT:    addi a1, zero, 45
-; RV64IBA-NEXT:    mul a0, a0, a1
+; RV64IBA-NEXT:    sh3add a0, a0, a0
+; RV64IBA-NEXT:    sh2add a0, a0, a0
 ; RV64IBA-NEXT:    ret
   %c = mul i64 %a, 45
   ret i64 %c
@@ -1163,14 +1163,14 @@ define i64 @mul81(i64 %a) {
 ;
 ; RV64IB-LABEL: mul81:
 ; RV64IB:       # %bb.0:
-; RV64IB-NEXT:    addi a1, zero, 81
-; RV64IB-NEXT:    mul a0, a0, a1
+; RV64IB-NEXT:    sh3add a0, a0, a0
+; RV64IB-NEXT:    sh3add a0, a0, a0
 ; RV64IB-NEXT:    ret
 ;
 ; RV64IBA-LABEL: mul81:
 ; RV64IBA:       # %bb.0:
-; RV64IBA-NEXT:    addi a1, zero, 81
-; RV64IBA-NEXT:    mul a0, a0, a1
+; RV64IBA-NEXT:    sh3add a0, a0, a0
+; RV64IBA-NEXT:    sh3add a0, a0, a0
 ; RV64IBA-NEXT:    ret
   %c = mul i64 %a, 81
   ret i64 %c
