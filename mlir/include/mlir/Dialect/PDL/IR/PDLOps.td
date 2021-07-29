@@ -576,17 +576,17 @@ def PDL_ResultsOp : PDL_Op<"results"> {
 //===----------------------------------------------------------------------===//
 
 def PDL_RewriteOp : PDL_Op<"rewrite", [
-     Terminator, HasParent<"pdl::PatternOp">,
-     SingleBlockImplicitTerminator<"pdl::RewriteEndOp">
+     Terminator, HasParent<"pdl::PatternOp">, NoTerminator, NoRegionArguments,
+     SingleBlock
   ]> {
   let summary = "Specify the rewrite of a matched pattern";
   let description = [{
     `pdl.rewrite` operations terminate the region of a `pdl.pattern` and specify
     the main rewrite of a `pdl.pattern`, on the specified root operation. The
-    rewrite is specified either via a string name (`name`) to an external
+    rewrite is specified either via a string name (`name`) to a native
     rewrite function, or via the region body. The rewrite region, if specified,
-    must contain a single block and terminate via the `pdl.rewrite_end`
-    operation. If the rewrite is external, it also takes a set of constant
+    must contain a single block. If the rewrite is external it functions
+    similarly to `pdl.apply_native_rewrite`, and takes a set of constant
     parameters and a set of additional positional values defined within the
     matcher as arguments. If the rewrite is external, the root operation is
     passed to the native function as the first argument.
@@ -616,16 +616,6 @@ def PDL_RewriteOp : PDL_Op<"rewrite", [
           ($body^)?
     attr-dict-with-keyword
   }];
-}
-
-def PDL_RewriteEndOp : PDL_Op<"rewrite_end", [Terminator,
-                                              HasParent<"pdl::RewriteOp">]> {
-  let summary = "Implicit terminator of a `pdl.rewrite` region";
-  let description = [{
-    `pdl.rewrite_end` operations terminate the region of a `pdl.rewrite`.
-  }];
-  let assemblyFormat = "attr-dict";
-  let verifier = ?;
 }
 
 //===----------------------------------------------------------------------===//
