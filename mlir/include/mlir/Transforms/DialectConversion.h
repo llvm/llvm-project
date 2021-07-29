@@ -622,6 +622,7 @@ public:
   using DynamicLegalityCallbackFn = std::function<bool(Operation *)>;
 
   ConversionTarget(MLIRContext &ctx) : ctx(ctx) {}
+  virtual ~ConversionTarget() = default;
 
   //===--------------------------------------------------------------------===//
   // Legality Registration
