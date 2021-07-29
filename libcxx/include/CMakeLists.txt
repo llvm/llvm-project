@@ -199,6 +199,8 @@ set(files
   __ranges/enable_view.h
   __ranges/non_propagating_cache.h
   __ranges/ref_view.h
+  __ranges/reverse_view.h
+  __ranges/take_view.h
   __ranges/single_view.h
   __ranges/size.h
   __ranges/subrange.h
