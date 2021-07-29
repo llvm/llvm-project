@@ -146,6 +146,34 @@ TEST(Reductions, DoubleMaxMinNorm2) {
   EXPECT_EQ(*loc.ZeroBasedIndexedElement<std::int16_t>(10), 2); // 22
   EXPECT_EQ(*loc.ZeroBasedIndexedElement<std::int16_t>(11), 2); // 22
   loc.Destroy();
+  // Test scalar result for MaxlocDim, MinlocDim, MaxvalDim, MinvalDim.
+  // A scalar result occurs when you have a rank 1 array and dim == 1.
+  std::vector<int> shape1{24};
+  auto array1{MakeArray<TypeCategory::Real, 8>(shape1, rawData)};
+  StaticDescriptor<0, true> statDesc0;
+  Descriptor &scalarResult{statDesc0.descriptor()};
+  RTNAME(MaxlocDim)
+  (scalarResult, *array1, /*KIND=*/2, /*DIM=*/1, __FILE__, __LINE__,
+      /*MASK=*/nullptr, /*BACK=*/false);
+  EXPECT_EQ(scalarResult.rank(), 0);
+  EXPECT_EQ(*scalarResult.ZeroBasedIndexedElement<std::int16_t>(0), 23);
+  scalarResult.Destroy();
+  RTNAME(MinlocDim)
+  (scalarResult, *array1, /*KIND=*/2, /*DIM=*/1, __FILE__, __LINE__,
+      /*MASK=*/nullptr, /*BACK=*/true);
+  EXPECT_EQ(scalarResult.rank(), 0);
+  EXPECT_EQ(*scalarResult.ZeroBasedIndexedElement<std::int16_t>(0), 22);
+  scalarResult.Destroy();
+  RTNAME(MaxvalDim)
+  (scalarResult, *array1, /*DIM=*/1, __FILE__, __LINE__, /*MASK=*/nullptr);
+  EXPECT_EQ(scalarResult.rank(), 0);
+  EXPECT_EQ(*scalarResult.ZeroBasedIndexedElement<double>(0), 22.0);
+  scalarResult.Destroy();
+  RTNAME(MinvalDim)
+  (scalarResult, *array1, /*DIM=*/1, __FILE__, __LINE__, /*MASK=*/nullptr);
+  EXPECT_EQ(scalarResult.rank(), 0);
+  EXPECT_EQ(*scalarResult.ZeroBasedIndexedElement<double>(0), -21.0);
+  scalarResult.Destroy();
 }
 
 TEST(Reductions, Character) {
@@ -269,6 +297,17 @@ TEST(Reductions, Logical) {
   EXPECT_EQ(*res.ZeroBasedIndexedElement<std::int32_t>(0), 0);
   EXPECT_EQ(*res.ZeroBasedIndexedElement<std::int32_t>(1), 0);
   res.Destroy();
+  // Test scalar result for AllDim.
+  // A scalar result occurs when you have a rank 1 array.
+  std::vector<int> shape1{4};
+  auto array1{MakeArray<TypeCategory::Logical, 4>(
+      shape1, std::vector<std::int32_t>{false, false, true, true})};
+  StaticDescriptor<0, true> statDesc0;
+  Descriptor &scalarResult{statDesc0.descriptor()};
+  RTNAME(AllDim)(scalarResult, *array1, /*DIM=*/1, __FILE__, __LINE__);
+  EXPECT_EQ(scalarResult.rank(), 0);
+  EXPECT_EQ(*scalarResult.ZeroBasedIndexedElement<std::int64_t>(0), 0);
+  scalarResult.Destroy();
   RTNAME(AnyDim)(res, *array, /*DIM=*/1, __FILE__, __LINE__);
   EXPECT_EQ(res.rank(), 1);
   EXPECT_EQ(res.type().raw(), (TypeCode{TypeCategory::Logical, 4}.raw()));
@@ -285,6 +324,12 @@ TEST(Reductions, Logical) {
   EXPECT_EQ(*res.ZeroBasedIndexedElement<std::int32_t>(0), 1);
   EXPECT_EQ(*res.ZeroBasedIndexedElement<std::int32_t>(1), 1);
   res.Destroy();
+  // Test scalar result for AnyDim.
+  // A scalar result occurs when you have a rank 1 array.
+  RTNAME(AnyDim)(scalarResult, *array1, /*DIM=*/1, __FILE__, __LINE__);
+  EXPECT_EQ(scalarResult.rank(), 0);
+  EXPECT_EQ(*scalarResult.ZeroBasedIndexedElement<std::int64_t>(0), 1);
+  scalarResult.Destroy();
   RTNAME(ParityDim)(res, *array, /*DIM=*/1, __FILE__, __LINE__);
   EXPECT_EQ(res.rank(), 1);
   EXPECT_EQ(res.type().raw(), (TypeCode{TypeCategory::Logical, 4}.raw()));
@@ -301,6 +346,12 @@ TEST(Reductions, Logical) {
   EXPECT_EQ(*res.ZeroBasedIndexedElement<std::int32_t>(0), 1);
   EXPECT_EQ(*res.ZeroBasedIndexedElement<std::int32_t>(1), 1);
   res.Destroy();
+  // Test scalar result for ParityDim.
+  // A scalar result occurs when you have a rank 1 array.
+  RTNAME(ParityDim)(scalarResult, *array1, /*DIM=*/1, __FILE__, __LINE__);
+  EXPECT_EQ(scalarResult.rank(), 0);
+  EXPECT_EQ(*scalarResult.ZeroBasedIndexedElement<std::int32_t>(0), 0);
+  scalarResult.Destroy();
   RTNAME(CountDim)(res, *array, /*DIM=*/1, /*KIND=*/4, __FILE__, __LINE__);
   EXPECT_EQ(res.rank(), 1);
   EXPECT_EQ(res.type().raw(), (TypeCode{TypeCategory::Integer, 4}.raw()));
@@ -317,6 +368,13 @@ TEST(Reductions, Logical) {
   EXPECT_EQ(*res.ZeroBasedIndexedElement<std::int64_t>(0), 1);
   EXPECT_EQ(*res.ZeroBasedIndexedElement<std::int64_t>(1), 1);
   res.Destroy();
+  // Test scalar result for CountDim.
+  // A scalar result occurs when you have a rank 1 array and dim == 1.
+  RTNAME(CountDim)
+  (scalarResult, *array1, /*DIM=*/1, /*KIND=*/8, __FILE__, __LINE__);
+  EXPECT_EQ(scalarResult.rank(), 0);
+  EXPECT_EQ(*scalarResult.ZeroBasedIndexedElement<std::int64_t>(0), 2);
+  scalarResult.Destroy();
   bool boolValue{false};
   Descriptor &target{statDesc[1].descriptor()};
   target.Establish(TypeCategory::Logical, 1, static_cast<void *>(&boolValue), 0,
@@ -436,6 +494,21 @@ TEST(Reductions, FindlocNumeric) {
   EXPECT_EQ(*res.ZeroBasedIndexedElement<SubscriptValue>(0), 2);
   EXPECT_EQ(*res.ZeroBasedIndexedElement<SubscriptValue>(1), 0);
   res.Destroy();
+  // Test scalar result for FindlocDim.
+  // A scalar result occurs when you have a rank 1 array, value, and dim == 1.
+  std::vector<int> shape1{6};
+  auto realArray1{MakeArray<TypeCategory::Real, 8>(shape1,
+      std::vector<double>{0.0, -0.0, 1.0, 3.14,
+          std::numeric_limits<double>::quiet_NaN(),
+          std::numeric_limits<double>::infinity()})};
+  StaticDescriptor<0, true> statDesc0;
+  Descriptor &scalarResult{statDesc0.descriptor()};
+  RTNAME(FindlocDim)
+  (scalarResult, *realArray1, target, 8, /*DIM=*/1, __FILE__, __LINE__, nullptr,
+      /*BACK=*/false);
+  EXPECT_EQ(scalarResult.rank(), 0);
+  EXPECT_EQ(*scalarResult.ZeroBasedIndexedElement<SubscriptValue>(0), 3);
+  scalarResult.Destroy();
 }
 
 TEST(Reductions, DotProduct) {
