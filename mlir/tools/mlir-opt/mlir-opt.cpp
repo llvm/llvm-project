@@ -43,6 +43,7 @@ void registerTestFunc();
 void registerTestGpuMemoryPromotionPass();
 void registerTestLoopPermutationPass();
 void registerTestMatchers();
+void registerTestOperationEqualPass();
 void registerTestPrintDefUsePass();
 void registerTestPrintNestingPass();
 void registerTestReducer();
@@ -123,6 +124,7 @@ void registerTestPasses() {
   registerTestGpuMemoryPromotionPass();
   registerTestLoopPermutationPass();
   registerTestMatchers();
+  registerTestOperationEqualPass();
   registerTestPrintDefUsePass();
   registerTestPrintNestingPass();
   registerTestReducer();
