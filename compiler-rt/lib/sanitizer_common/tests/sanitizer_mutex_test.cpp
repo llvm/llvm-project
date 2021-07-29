@@ -146,18 +146,6 @@ TEST(SanitizerCommon, SpinMutexTry) {
     PTHREAD_JOIN(threads[i], 0);
 }
 
-TEST(SanitizerCommon, BlockingMutex) {
-  u64 mtxmem[1024] = {};
-  BlockingMutex *mtx = new(mtxmem) BlockingMutex(LINKER_INITIALIZED);
-  TestData<BlockingMutex> data(mtx);
-  pthread_t threads[kThreads];
-  for (int i = 0; i < kThreads; i++)
-    PTHREAD_CREATE(&threads[i], 0, lock_thread<BlockingMutex>, &data);
-  for (int i = 0; i < kThreads; i++)
-    PTHREAD_JOIN(threads[i], 0);
-  check_locked(mtx);
-}
-
 TEST(SanitizerCommon, Mutex) {
   Mutex mtx;
   TestData<Mutex> data(&mtx);

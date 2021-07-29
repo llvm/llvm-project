@@ -340,111 +340,6 @@ class MUTEX Mutex : CheckedMutex {
 void FutexWait(atomic_uint32_t *p, u32 cmp);
 void FutexWake(atomic_uint32_t *p, u32 count);
 
-class MUTEX BlockingMutex {
- public:
-  explicit constexpr BlockingMutex(LinkerInitialized)
-      : opaque_storage_ {0, }, owner_ {0} {}
-  BlockingMutex();
-  void Lock() ACQUIRE();
-  void Unlock() RELEASE();
-
-  // This function does not guarantee an explicit check that the calling thread
-  // is the thread which owns the mutex. This behavior, while more strictly
-  // correct, causes problems in cases like StopTheWorld, where a parent thread
-  // owns the mutex but a child checks that it is locked. Rather than
-  // maintaining complex state to work around those situations, the check only
-  // checks that the mutex is owned, and assumes callers to be generally
-  // well-behaved.
-  void CheckLocked() const CHECK_LOCKED();
-
- private:
-  // Solaris mutex_t has a member that requires 64-bit alignment.
-  ALIGNED(8) uptr opaque_storage_[10];
-  uptr owner_;  // for debugging
-};
-
-// Reader-writer spin mutex.
-class MUTEX RWMutex {
- public:
-  RWMutex() {
-    atomic_store(&state_, kUnlocked, memory_order_relaxed);
-  }
-
-  ~RWMutex() {
-    CHECK_EQ(atomic_load(&state_, memory_order_relaxed), kUnlocked);
-  }
-
-  void Lock() ACQUIRE() {
-    u32 cmp = kUnlocked;
-    if (atomic_compare_exchange_strong(&state_, &cmp, kWriteLock,
-                                       memory_order_acquire))
-      return;
-    LockSlow();
-  }
-
-  void Unlock() RELEASE() {
-    u32 prev = atomic_fetch_sub(&state_, kWriteLock, memory_order_release);
-    DCHECK_NE(prev & kWriteLock, 0);
-    (void)prev;
-  }
-
-  void ReadLock() ACQUIRE_SHARED() {
-    u32 prev = atomic_fetch_add(&state_, kReadLock, memory_order_acquire);
-    if ((prev & kWriteLock) == 0)
-      return;
-    ReadLockSlow();
-  }
-
-  void ReadUnlock() RELEASE_SHARED() {
-    u32 prev = atomic_fetch_sub(&state_, kReadLock, memory_order_release);
-    DCHECK_EQ(prev & kWriteLock, 0);
-    DCHECK_GT(prev & ~kWriteLock, 0);
-    (void)prev;
-  }
-
-  void CheckLocked() const CHECK_LOCKED() {
-    CHECK_NE(atomic_load(&state_, memory_order_relaxed), kUnlocked);
-  }
-
- private:
-  atomic_uint32_t state_;
-
-  enum {
-    kUnlocked = 0,
-    kWriteLock = 1,
-    kReadLock = 2
-  };
-
-  void NOINLINE LockSlow() {
-    for (int i = 0;; i++) {
-      if (i < 10)
-        proc_yield(10);
-      else
-        internal_sched_yield();
-      u32 cmp = atomic_load(&state_, memory_order_relaxed);
-      if (cmp == kUnlocked &&
-          atomic_compare_exchange_weak(&state_, &cmp, kWriteLock,
-                                       memory_order_acquire))
-          return;
-    }
-  }
-
-  void NOINLINE ReadLockSlow() {
-    for (int i = 0;; i++) {
-      if (i < 10)
-        proc_yield(10);
-      else
-        internal_sched_yield();
-      u32 prev = atomic_load(&state_, memory_order_acquire);
-      if ((prev & kWriteLock) == 0)
-        return;
-    }
-  }
-
-  RWMutex(const RWMutex &) = delete;
-  void operator=(const RWMutex &) = delete;
-};
-
 template <typename MutexType>
 class SCOPED_LOCK GenericScopedLock {
  public:
@@ -476,6 +371,11 @@ class SCOPED_LOCK GenericScopedReadLock {
   GenericScopedReadLock(const GenericScopedReadLock &) = delete;
   void operator=(const GenericScopedReadLock &) = delete;
 };
+
+// TODO: Temporary measure for incremental migration.
+// These typedefs should be removed and all uses renamed to Mutex.
+typedef Mutex BlockingMutex;
+typedef Mutex RWMutex;
 
 typedef GenericScopedLock<StaticSpinMutex> SpinMutexLock;
 typedef GenericScopedLock<BlockingMutex> BlockingMutexLock;
