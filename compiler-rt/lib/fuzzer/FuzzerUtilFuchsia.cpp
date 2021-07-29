@@ -68,23 +68,6 @@ void AlarmHandler(int Seconds) {
   }
 }
 
-// CFAOffset is used to reference the stack pointer before entering the
-// trampoline (Stack Pointer + CFAOffset = prev Stack Pointer). Before jumping
-// to the trampoline we copy all the registers onto the stack. We need to make
-// sure that the new stack has enough space to store all the registers.
-//
-// The trampoline holds CFI information regarding the registers stored in the
-// stack, which is then used by the unwinder to restore them.
-#if defined(__x86_64__)
-// In x86_64 the crashing function might also be using the red zone (128 bytes
-// on top of their rsp).
-constexpr size_t CFAOffset = 128 + sizeof(zx_thread_state_general_regs_t);
-#elif defined(__aarch64__)
-// In aarch64 we need to always have the stack pointer aligned to 16 bytes, so we
-// make sure that we are keeping that same alignment.
-constexpr size_t CFAOffset = (sizeof(zx_thread_state_general_regs_t) + 15) & -(uintptr_t)16;
-#endif
-
 // For the crash handler, we need to call Fuzzer::StaticCrashSignalCallback
 // without POSIX signal handlers.  To achieve this, we use an assembly function
 // to add the necessary CFI unwinding information and a C function to bridge
@@ -163,10 +146,10 @@ constexpr size_t CFAOffset = (sizeof(zx_thread_state_general_regs_t) + 15) & -(u
 
 // Produces an assembler immediate operand for the named or numbered register.
 // This operand contains the offset of the register relative to the CFA.
-#define ASM_OPERAND_REG(reg) \
-  [reg] "i"(offsetof(zx_thread_state_general_regs_t, reg) - CFAOffset),
-#define ASM_OPERAND_NUM(num)                                 \
-  [x##num] "i"(offsetof(zx_thread_state_general_regs_t, r[num]) - CFAOffset),
+#define ASM_OPERAND_REG(reg)                                                   \
+  [reg] "i"(offsetof(zx_thread_state_general_regs_t, reg)),
+#define ASM_OPERAND_NUM(num)                                                   \
+  [x##num] "i"(offsetof(zx_thread_state_general_regs_t, r[num])),
 
 // Trampoline to bridge from the assembly below to the static C++ crash
 // callback.
@@ -178,59 +161,52 @@ static void StaticCrashHandler() {
   }
 }
 
-// Creates the trampoline with the necessary CFI information to unwind through
-// to the crashing call stack:
-//  * Defining the CFA so that it points to the stack pointer at the point
-//    of crash.
-//  * Storing all registers at the point of crash in the stack and refer to them
-//    via CFI information (relative to the CFA).
-//  * Setting the return column so the unwinder knows how to continue unwinding.
-//  * (x86_64) making sure rsp is aligned before calling StaticCrashHandler.
-//  * Calling StaticCrashHandler that will trigger the unwinder.
+// This trampoline function has the necessary CFI information to unwind
+// and get a backtrace:
+//  * The stack contains a copy of all the registers at the point of crash,
+//    the code has CFI directives specifying how to restore them.
+//  * A call to StaticCrashHandler, which will print the stacktrace and exit
+//    the fuzzer, generating a crash artifact.
 //
 // The __attribute__((used)) is necessary because the function
 // is never called; it's just a container around the assembly to allow it to
 // use operands for compile-time computed constants.
 __attribute__((used))
 void MakeTrampoline() {
-  __asm__(".cfi_endproc\n"
-    ".pushsection .text.CrashTrampolineAsm\n"
-    ".type CrashTrampolineAsm,STT_FUNC\n"
-"CrashTrampolineAsm:\n"
-    ".cfi_startproc simple\n"
-    ".cfi_signal_frame\n"
+  __asm__(
+      ".cfi_endproc\n"
+      ".pushsection .text.CrashTrampolineAsm\n"
+      ".type CrashTrampolineAsm,STT_FUNC\n"
+      "CrashTrampolineAsm:\n"
+      ".cfi_startproc simple\n"
+      ".cfi_signal_frame\n"
 #if defined(__x86_64__)
-    ".cfi_return_column rip\n"
-    ".cfi_def_cfa rsp, %c[CFAOffset]\n"
-    FOREACH_REGISTER(CFI_OFFSET_REG, CFI_OFFSET_NUM)
-    "mov %%rsp, %%rbp\n"
-    ".cfi_def_cfa_register rbp\n"
-    "andq $-16, %%rsp\n"
-    "call %c[StaticCrashHandler]\n"
-    "ud2\n"
+      ".cfi_return_column rip\n"
+      ".cfi_def_cfa rsp, 0\n"
+      FOREACH_REGISTER(CFI_OFFSET_REG, CFI_OFFSET_NUM)
+      "call %c[StaticCrashHandler]\n"
+      "ud2\n"
 #elif defined(__aarch64__)
-    ".cfi_return_column 33\n"
-    ".cfi_def_cfa sp, %c[CFAOffset]\n"
-    FOREACH_REGISTER(CFI_OFFSET_REG, CFI_OFFSET_NUM)
-    ".cfi_offset 33, %c[pc]\n"
-    ".cfi_offset 30, %c[lr]\n"
-    "bl %c[StaticCrashHandler]\n"
-    "brk 1\n"
+      ".cfi_return_column 33\n"
+      ".cfi_def_cfa sp, 0\n"
+      FOREACH_REGISTER(CFI_OFFSET_REG, CFI_OFFSET_NUM)
+      ".cfi_offset 33, %c[pc]\n"
+      ".cfi_offset 30, %c[lr]\n"
+      "bl %c[StaticCrashHandler]\n"
+      "brk 1\n"
 #else
 #error "Unsupported architecture for fuzzing on Fuchsia"
 #endif
-    ".cfi_endproc\n"
-    ".size CrashTrampolineAsm, . - CrashTrampolineAsm\n"
-    ".popsection\n"
-    ".cfi_startproc\n"
-    : // No outputs
-    : FOREACH_REGISTER(ASM_OPERAND_REG, ASM_OPERAND_NUM)
+     ".cfi_endproc\n"
+     ".size CrashTrampolineAsm, . - CrashTrampolineAsm\n"
+     ".popsection\n"
+     ".cfi_startproc\n"
+      : // No outputs
+      : FOREACH_REGISTER(ASM_OPERAND_REG, ASM_OPERAND_NUM)
 #if defined(__aarch64__)
-      ASM_OPERAND_REG(pc)
-      ASM_OPERAND_REG(lr)
+        ASM_OPERAND_REG(pc) ASM_OPERAND_REG(lr)
 #endif
-      [StaticCrashHandler] "i" (StaticCrashHandler),
-      [CFAOffset] "i" (CFAOffset));
+        [StaticCrashHandler] "i"(StaticCrashHandler));
 }
 
 void CrashHandler(zx_handle_t *Event) {
@@ -296,14 +272,17 @@ void CrashHandler(zx_handle_t *Event) {
     // onto the stack and jump into a trampoline with CFI instructions on how
     // to restore it.
 #if defined(__x86_64__)
-    uintptr_t StackPtr = GeneralRegisters.rsp - CFAOffset;
+    uintptr_t StackPtr =
+        (GeneralRegisters.rsp - (128 + sizeof(GeneralRegisters))) &
+        -(uintptr_t)16;
     __unsanitized_memcpy(reinterpret_cast<void *>(StackPtr), &GeneralRegisters,
                          sizeof(GeneralRegisters));
     GeneralRegisters.rsp = StackPtr;
     GeneralRegisters.rip = reinterpret_cast<zx_vaddr_t>(CrashTrampolineAsm);
 
 #elif defined(__aarch64__)
-    uintptr_t StackPtr = GeneralRegisters.sp - CFAOffset;
+    uintptr_t StackPtr =
+        (GeneralRegisters.sp - sizeof(GeneralRegisters)) & -(uintptr_t)16;
     __unsanitized_memcpy(reinterpret_cast<void *>(StackPtr), &GeneralRegisters,
                          sizeof(GeneralRegisters));
     GeneralRegisters.sp = StackPtr;
