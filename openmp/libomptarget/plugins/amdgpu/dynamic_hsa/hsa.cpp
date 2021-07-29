@@ -56,7 +56,7 @@ DLWRAP_FINALIZE();
 #endif
 
 #ifndef TARGET_NAME
-#define TARGET_NAME AMDHSA
+#error "Missing TARGET_NAME macro"
 #endif
 #define DEBUG_PREFIX "Target " GETNAME(TARGET_NAME) " RTL"
 
