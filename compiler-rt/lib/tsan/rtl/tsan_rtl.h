@@ -530,7 +530,7 @@ struct Context {
   void *background_thread;
   atomic_uint32_t stop_background_thread;
 
-  ThreadRegistry *thread_registry;
+  ThreadRegistry thread_registry;
 
   Mutex racy_mtx;
   Vector<RacyStacks> racy_stacks;

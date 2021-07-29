@@ -37,7 +37,7 @@ namespace __hwasan {
 class ScopedReport {
  public:
   ScopedReport(bool fatal = false) : error_message_(1), fatal(fatal) {
-    BlockingMutexLock lock(&error_message_lock_);
+    Lock lock(&error_message_lock_);
     error_message_ptr_ = fatal ? &error_message_ : nullptr;
     ++hwasan_report_count;
   }
@@ -45,7 +45,7 @@ class ScopedReport {
   ~ScopedReport() {
     void (*report_cb)(const char *);
     {
-      BlockingMutexLock lock(&error_message_lock_);
+      Lock lock(&error_message_lock_);
       report_cb = error_report_callback_;
       error_message_ptr_ = nullptr;
     }
@@ -61,7 +61,7 @@ class ScopedReport {
   }
 
   static void MaybeAppendToErrorMessage(const char *msg) {
-    BlockingMutexLock lock(&error_message_lock_);
+    Lock lock(&error_message_lock_);
     if (!error_message_ptr_)
       return;
     uptr len = internal_strlen(msg);
@@ -72,7 +72,7 @@ class ScopedReport {
   }
 
   static void SetErrorReportCallback(void (*callback)(const char *)) {
-    BlockingMutexLock lock(&error_message_lock_);
+    Lock lock(&error_message_lock_);
     error_report_callback_ = callback;
   }
 
@@ -82,12 +82,12 @@ class ScopedReport {
   bool fatal;
 
   static InternalMmapVector<char> *error_message_ptr_;
-  static BlockingMutex error_message_lock_;
+  static Mutex error_message_lock_;
   static void (*error_report_callback_)(const char *);
 };
 
 InternalMmapVector<char> *ScopedReport::error_message_ptr_;
-BlockingMutex ScopedReport::error_message_lock_;
+Mutex ScopedReport::error_message_lock_;
 void (*ScopedReport::error_report_callback_)(const char *);
 
 // If there is an active ScopedReport, append to its error message.

@@ -2673,7 +2673,7 @@ unsigned AArch64AsmParser::matchRegisterNameAlias(StringRef Name,
 OperandMatchResultTy
 AArch64AsmParser::tryParseScalarRegister(unsigned &RegNum) {
   MCAsmParser &Parser = getParser();
-  const AsmToken &Tok = Parser.getTok();
+  const AsmToken &Tok = getTok();
   if (Tok.isNot(AsmToken::Identifier))
     return MatchOperand_NoMatch;
 
@@ -2693,12 +2693,12 @@ AArch64AsmParser::tryParseSysCROperand(OperandVector &Operands) {
   MCAsmParser &Parser = getParser();
   SMLoc S = getLoc();
 
-  if (Parser.getTok().isNot(AsmToken::Identifier)) {
+  if (getTok().isNot(AsmToken::Identifier)) {
     Error(S, "Expected cN operand where 0 <= N <= 15");
     return MatchOperand_ParseFail;
   }
 
-  StringRef Tok = Parser.getTok().getIdentifier();
+  StringRef Tok = getTok().getIdentifier();
   if (Tok[0] != 'c' && Tok[0] != 'C') {
     Error(S, "Expected cN operand where 0 <= N <= 15");
     return MatchOperand_ParseFail;
@@ -2723,7 +2723,7 @@ OperandMatchResultTy
 AArch64AsmParser::tryParsePrefetch(OperandVector &Operands) {
   MCAsmParser &Parser = getParser();
   SMLoc S = getLoc();
-  const AsmToken &Tok = Parser.getTok();
+  const AsmToken &Tok = getTok();
 
   auto LookupByName = [](StringRef N) {
     if (IsSVEPrefetch) {
@@ -2792,7 +2792,7 @@ OperandMatchResultTy
 AArch64AsmParser::tryParsePSBHint(OperandVector &Operands) {
   MCAsmParser &Parser = getParser();
   SMLoc S = getLoc();
-  const AsmToken &Tok = Parser.getTok();
+  const AsmToken &Tok = getTok();
   if (Tok.isNot(AsmToken::Identifier)) {
     TokError("invalid operand for instruction");
     return MatchOperand_ParseFail;
@@ -2815,7 +2815,7 @@ OperandMatchResultTy
 AArch64AsmParser::tryParseBTIHint(OperandVector &Operands) {
   MCAsmParser &Parser = getParser();
   SMLoc S = getLoc();
-  const AsmToken &Tok = Parser.getTok();
+  const AsmToken &Tok = getTok();
   if (Tok.isNot(AsmToken::Identifier)) {
     TokError("invalid operand for instruction");
     return MatchOperand_ParseFail;
@@ -2841,7 +2841,7 @@ AArch64AsmParser::tryParseAdrpLabel(OperandVector &Operands) {
   SMLoc S = getLoc();
   const MCExpr *Expr = nullptr;
 
-  if (Parser.getTok().is(AsmToken::Hash)) {
+  if (getTok().is(AsmToken::Hash)) {
     Parser.Lex(); // Eat hash token.
   }
 
@@ -2894,10 +2894,10 @@ AArch64AsmParser::tryParseAdrLabel(OperandVector &Operands) {
   const MCExpr *Expr = nullptr;
 
   // Leave anything with a bracket to the default for SVE
-  if (getParser().getTok().is(AsmToken::LBrac))
+  if (getTok().is(AsmToken::LBrac))
     return MatchOperand_NoMatch;
 
-  if (getParser().getTok().is(AsmToken::Hash))
+  if (getTok().is(AsmToken::Hash))
     getParser().Lex(); // Eat hash token.
 
   if (parseSymbolicImmVal(Expr))
@@ -2935,7 +2935,7 @@ AArch64AsmParser::tryParseFPImm(OperandVector &Operands) {
   // Handle negation, as that still comes through as a separate token.
   bool isNegative = parseOptionalToken(AsmToken::Minus);
 
-  const AsmToken &Tok = Parser.getTok();
+  const AsmToken &Tok = getTok();
   if (!Tok.is(AsmToken::Real) && !Tok.is(AsmToken::Integer)) {
     if (!Hash)
       return MatchOperand_NoMatch;
@@ -2986,16 +2986,16 @@ AArch64AsmParser::tryParseImmWithOptionalShift(OperandVector &Operands) {
   MCAsmParser &Parser = getParser();
   SMLoc S = getLoc();
 
-  if (Parser.getTok().is(AsmToken::Hash))
+  if (getTok().is(AsmToken::Hash))
     Parser.Lex(); // Eat '#'
-  else if (Parser.getTok().isNot(AsmToken::Integer))
+  else if (getTok().isNot(AsmToken::Integer))
     // Operand should start from # or should be integer, emit error otherwise.
     return MatchOperand_NoMatch;
 
   const MCExpr *Imm = nullptr;
   if (parseSymbolicImmVal(Imm))
     return MatchOperand_ParseFail;
-  else if (Parser.getTok().isNot(AsmToken::Comma)) {
+  else if (getTok().isNot(AsmToken::Comma)) {
     Operands.push_back(
         AArch64Operand::CreateImm(Imm, S, getLoc(), getContext()));
     return MatchOperand_Success;
@@ -3005,8 +3005,8 @@ AArch64AsmParser::tryParseImmWithOptionalShift(OperandVector &Operands) {
   Parser.Lex();
 
   // The optional operand must be "lsl #N" where N is non-negative.
-  if (!Parser.getTok().is(AsmToken::Identifier) ||
-      !Parser.getTok().getIdentifier().equals_insensitive("lsl")) {
+  if (!getTok().is(AsmToken::Identifier) ||
+      !getTok().getIdentifier().equals_insensitive("lsl")) {
     Error(getLoc(), "only 'lsl #+N' valid after immediate");
     return MatchOperand_ParseFail;
   }
@@ -3016,12 +3016,12 @@ AArch64AsmParser::tryParseImmWithOptionalShift(OperandVector &Operands) {
 
   parseOptionalToken(AsmToken::Hash);
 
-  if (Parser.getTok().isNot(AsmToken::Integer)) {
+  if (getTok().isNot(AsmToken::Integer)) {
     Error(getLoc(), "only 'lsl #+N' valid after immediate");
     return MatchOperand_ParseFail;
   }
 
-  int64_t ShiftAmount = Parser.getTok().getIntVal();
+  int64_t ShiftAmount = getTok().getIntVal();
 
   if (ShiftAmount < 0) {
     Error(getLoc(), "positive shift amount required");
@@ -3087,7 +3087,7 @@ bool AArch64AsmParser::parseCondCode(OperandVector &Operands,
                                      bool invertCondCode) {
   MCAsmParser &Parser = getParser();
   SMLoc S = getLoc();
-  const AsmToken &Tok = Parser.getTok();
+  const AsmToken &Tok = getTok();
   assert(Tok.is(AsmToken::Identifier) && "Token is not an Identifier");
 
   StringRef Cond = Tok.getString();
@@ -3110,7 +3110,7 @@ bool AArch64AsmParser::parseCondCode(OperandVector &Operands,
 OperandMatchResultTy
 AArch64AsmParser::tryParseSVCR(OperandVector &Operands) {
   MCAsmParser &Parser = getParser();
-  const AsmToken &Tok = Parser.getTok();
+  const AsmToken &Tok = getTok();
   SMLoc S = getLoc();
 
   if (Tok.isNot(AsmToken::Identifier)) {
@@ -3132,7 +3132,7 @@ AArch64AsmParser::tryParseSVCR(OperandVector &Operands) {
 OperandMatchResultTy
 AArch64AsmParser::tryParseMatrixRegister(OperandVector &Operands) {
   MCAsmParser &Parser = getParser();
-  const AsmToken &Tok = Parser.getTok();
+  const AsmToken &Tok = getTok();
   SMLoc S = getLoc();
 
   StringRef Name = Tok.getString();
@@ -3195,7 +3195,7 @@ AArch64AsmParser::tryParseMatrixRegister(OperandVector &Operands) {
 OperandMatchResultTy
 AArch64AsmParser::tryParseOptionalShiftExtend(OperandVector &Operands) {
   MCAsmParser &Parser = getParser();
-  const AsmToken &Tok = Parser.getTok();
+  const AsmToken &Tok = getTok();
   std::string LowerID = Tok.getString().lower();
   AArch64_AM::ShiftExtendType ShOp =
       StringSwitch<AArch64_AM::ShiftExtendType>(LowerID)
@@ -3241,9 +3241,8 @@ AArch64AsmParser::tryParseOptionalShiftExtend(OperandVector &Operands) {
   // Make sure we do actually have a number, identifier or a parenthesized
   // expression.
   SMLoc E = getLoc();
-  if (!Parser.getTok().is(AsmToken::Integer) &&
-      !Parser.getTok().is(AsmToken::LParen) &&
-      !Parser.getTok().is(AsmToken::Identifier)) {
+  if (!getTok().is(AsmToken::Integer) && !getTok().is(AsmToken::LParen) &&
+      !getTok().is(AsmToken::Identifier)) {
     Error(E, "expected integer shift amount");
     return MatchOperand_ParseFail;
   }
@@ -3365,7 +3364,7 @@ bool AArch64AsmParser::parseSysAlias(StringRef Name, SMLoc NameLoc,
   Operands.push_back(AArch64Operand::CreateToken("sys", NameLoc, getContext()));
 
   MCAsmParser &Parser = getParser();
-  const AsmToken &Tok = Parser.getTok();
+  const AsmToken &Tok = getTok();
   StringRef Op = Tok.getString();
   SMLoc S = Tok.getLoc();
 
@@ -3454,7 +3453,7 @@ bool AArch64AsmParser::parseSysAlias(StringRef Name, SMLoc NameLoc,
 OperandMatchResultTy
 AArch64AsmParser::tryParseBarrierOperand(OperandVector &Operands) {
   MCAsmParser &Parser = getParser();
-  const AsmToken &Tok = Parser.getTok();
+  const AsmToken &Tok = getTok();
 
   if (Mnemonic == "tsb" && Tok.isNot(AsmToken::Identifier)) {
     TokError("'csync' operand expected");
@@ -3527,7 +3526,7 @@ AArch64AsmParser::tryParseBarrierOperand(OperandVector &Operands) {
 OperandMatchResultTy
 AArch64AsmParser::tryParseBarriernXSOperand(OperandVector &Operands) {
   MCAsmParser &Parser = getParser();
-  const AsmToken &Tok = Parser.getTok();
+  const AsmToken &Tok = getTok();
 
   assert(Mnemonic == "dsb" && "Instruction does not accept nXS operands");
   if (Mnemonic != "dsb")
@@ -3582,7 +3581,7 @@ AArch64AsmParser::tryParseBarriernXSOperand(OperandVector &Operands) {
 OperandMatchResultTy
 AArch64AsmParser::tryParseSysReg(OperandVector &Operands) {
   MCAsmParser &Parser = getParser();
-  const AsmToken &Tok = Parser.getTok();
+  const AsmToken &Tok = getTok();
 
   if (Tok.isNot(AsmToken::Identifier))
     return MatchOperand_NoMatch;
@@ -3613,8 +3612,7 @@ AArch64AsmParser::tryParseSysReg(OperandVector &Operands) {
 
 /// tryParseNeonVectorRegister - Parse a vector register operand.
 bool AArch64AsmParser::tryParseNeonVectorRegister(OperandVector &Operands) {
-  MCAsmParser &Parser = getParser();
-  if (Parser.getTok().isNot(AsmToken::Identifier))
+  if (getTok().isNot(AsmToken::Identifier))
     return true;
 
   SMLoc S = getLoc();
@@ -3676,7 +3674,7 @@ OperandMatchResultTy
 AArch64AsmParser::tryParseVectorRegister(unsigned &Reg, StringRef &Kind,
                                          RegKind MatchKind) {
   MCAsmParser &Parser = getParser();
-  const AsmToken &Tok = Parser.getTok();
+  const AsmToken &Tok = getTok();
 
   if (Tok.isNot(AsmToken::Identifier))
     return MatchOperand_NoMatch;
@@ -3734,7 +3732,7 @@ AArch64AsmParser::tryParseSVEPredicateVector(OperandVector &Operands) {
 
   // Not all predicates are followed by a '/m' or '/z'.
   MCAsmParser &Parser = getParser();
-  if (Parser.getTok().isNot(AsmToken::Slash))
+  if (getTok().isNot(AsmToken::Slash))
     return MatchOperand_Success;
 
   // But when they do they shouldn't have an element type suffix.
@@ -3749,7 +3747,7 @@ AArch64AsmParser::tryParseSVEPredicateVector(OperandVector &Operands) {
   Parser.Lex(); // Eat the slash.
 
   // Zeroing or merging?
-  auto Pred = Parser.getTok().getString().lower();
+  auto Pred = getTok().getString().lower();
   if (Pred != "z" && Pred != "m") {
     Error(getLoc(), "expecting 'm' or 'z' predication");
     return MatchOperand_ParseFail;
@@ -3784,10 +3782,10 @@ bool AArch64AsmParser::parseSymbolicImmVal(const MCExpr *&ImmVal) {
   if (parseOptionalToken(AsmToken::Colon)) {
     HasELFModifier = true;
 
-    if (Parser.getTok().isNot(AsmToken::Identifier))
+    if (getTok().isNot(AsmToken::Identifier))
       return TokError("expect relocation specifier in operand after ':'");
 
-    std::string LowerCase = Parser.getTok().getIdentifier().lower();
+    std::string LowerCase = getTok().getIdentifier().lower();
     RefKind = StringSwitch<AArch64MCExpr::VariantKind>(LowerCase)
                   .Case("lo12", AArch64MCExpr::VK_LO12)
                   .Case("abs_g3", AArch64MCExpr::VK_ABS_G3)
@@ -3974,13 +3972,13 @@ OperandMatchResultTy
 AArch64AsmParser::tryParseVectorList(OperandVector &Operands,
                                      bool ExpectMatch) {
   MCAsmParser &Parser = getParser();
-  if (!Parser.getTok().is(AsmToken::LCurly))
+  if (!getTok().is(AsmToken::LCurly))
     return MatchOperand_NoMatch;
 
   // Wrapper around parse function
-  auto ParseVector = [this, &Parser](unsigned &Reg, StringRef &Kind, SMLoc Loc,
-                                     bool NoMatchIsError) {
-    auto RegTok = Parser.getTok();
+  auto ParseVector = [this](unsigned &Reg, StringRef &Kind, SMLoc Loc,
+                            bool NoMatchIsError) {
+    auto RegTok = getTok();
     auto ParseRes = tryParseVectorRegister(Reg, Kind, VectorKind);
     if (ParseRes == MatchOperand_Success) {
       if (parseVectorKind(Kind, VectorKind))
@@ -4000,7 +3998,7 @@ AArch64AsmParser::tryParseVectorList(OperandVector &Operands,
   };
 
   SMLoc S = getLoc();
-  auto LCurly = Parser.getTok();
+  auto LCurly = getTok();
   Parser.Lex(); // Eat left bracket token.
 
   StringRef Kind;
@@ -4117,7 +4115,7 @@ AArch64AsmParser::tryParseGPR64sp0Operand(OperandVector &Operands) {
 
   parseOptionalToken(AsmToken::Hash);
 
-  if (getParser().getTok().isNot(AsmToken::Integer)) {
+  if (getTok().isNot(AsmToken::Integer)) {
     Error(getLoc(), "index must be absent or #0");
     return MatchOperand_ParseFail;
   }
@@ -4145,7 +4143,7 @@ AArch64AsmParser::tryParseGPROperand(OperandVector &Operands) {
     return Res;
 
   // No shift/extend is the default.
-  if (!ParseShiftExtend || getParser().getTok().isNot(AsmToken::Comma)) {
+  if (!ParseShiftExtend || getTok().isNot(AsmToken::Comma)) {
     Operands.push_back(AArch64Operand::CreateReg(
         RegNum, RegKind::Scalar, StartLoc, getLoc(), getContext(), EqTy));
     return MatchOperand_Success;
@@ -4178,7 +4176,7 @@ bool AArch64AsmParser::parseOptionalMulOperand(OperandVector &Operands) {
   bool NextIsVL =
       Parser.getLexer().peekTok().getString().equals_insensitive("vl");
   bool NextIsHash = Parser.getLexer().peekTok().is(AsmToken::Hash);
-  if (!Parser.getTok().getString().equals_insensitive("mul") ||
+  if (!getTok().getString().equals_insensitive("mul") ||
       !(NextIsVL || NextIsHash))
     return true;
 
@@ -4213,7 +4211,7 @@ bool AArch64AsmParser::parseOptionalMulOperand(OperandVector &Operands) {
 
 bool AArch64AsmParser::parseKeywordOperand(OperandVector &Operands) {
   MCAsmParser &Parser = getParser();
-  auto Tok = Parser.getTok();
+  auto Tok = getTok();
   if (Tok.isNot(AsmToken::Identifier))
     return true;
 
@@ -4332,7 +4330,7 @@ bool AArch64AsmParser::parseOperand(OperandVector &Operands, bool isCondCode,
 
     // Parse a negative sign
     bool isNegative = false;
-    if (Parser.getTok().is(AsmToken::Minus)) {
+    if (getTok().is(AsmToken::Minus)) {
       isNegative = true;
       // We need to consume this token only when we have a Real, otherwise
       // we let parseSymbolicImmVal take care of it
@@ -4343,7 +4341,7 @@ bool AArch64AsmParser::parseOperand(OperandVector &Operands, bool isCondCode,
     // The only Real that should come through here is a literal #0.0 for
     // the fcmp[e] r, #0.0 instructions. They expect raw token operands,
     // so convert the value.
-    const AsmToken &Tok = Parser.getTok();
+    const AsmToken &Tok = getTok();
     if (Tok.is(AsmToken::Real)) {
       APFloat RealVal(APFloat::IEEEdouble(), Tok.getString());
       uint64_t IntVal = RealVal.bitcastToAPInt().getZExtValue();
@@ -4431,8 +4429,7 @@ bool AArch64AsmParser::parseImmExpr(int64_t &Out) {
 }
 
 bool AArch64AsmParser::parseComma() {
-  if (check(getParser().getTok().isNot(AsmToken::Comma), getLoc(),
-            "expected comma"))
+  if (check(getTok().isNot(AsmToken::Comma), getLoc(), "expected comma"))
     return true;
   // Eat the comma
   getParser().Lex();
@@ -4507,7 +4504,6 @@ bool AArch64AsmParser::regsEqual(const MCParsedAsmOperand &Op1,
 bool AArch64AsmParser::ParseInstruction(ParseInstructionInfo &Info,
                                         StringRef Name, SMLoc NameLoc,
                                         OperandVector &Operands) {
-  MCAsmParser &Parser = getParser();
   Name = StringSwitch<StringRef>(Name.lower())
              .Case("beq", "b.eq")
              .Case("bne", "b.ne")
@@ -4530,8 +4526,8 @@ bool AArch64AsmParser::ParseInstruction(ParseInstructionInfo &Info,
              .Default(Name);
 
   // First check for the AArch64-specific .req directive.
-  if (Parser.getTok().is(AsmToken::Identifier) &&
-      Parser.getTok().getIdentifier().lower() == ".req") {
+  if (getTok().is(AsmToken::Identifier) &&
+      getTok().getIdentifier().lower() == ".req") {
     parseDirectiveReq(Name, NameLoc);
     // We always return 'error' for this, as we're done with this
     // statement and don't need to match the 'instruction."
@@ -6206,12 +6202,12 @@ bool AArch64AsmParser::parseDirectiveTLSDescCall(SMLoc L) {
 /// The number of arguments depends on the loh identifier.
 bool AArch64AsmParser::parseDirectiveLOH(StringRef IDVal, SMLoc Loc) {
   MCLOHType Kind;
-  if (getParser().getTok().isNot(AsmToken::Identifier)) {
-    if (getParser().getTok().isNot(AsmToken::Integer))
+  if (getTok().isNot(AsmToken::Identifier)) {
+    if (getTok().isNot(AsmToken::Integer))
       return TokError("expected an identifier or a number in directive");
     // We successfully get a numeric value for the identifier.
     // Check if it is valid.
-    int64_t Id = getParser().getTok().getIntVal();
+    int64_t Id = getTok().getIntVal();
     if (Id <= -1U && !isValidMCLOHType(Id))
       return TokError("invalid numeric identifier in directive");
     Kind = (MCLOHType)Id;
@@ -6332,7 +6328,7 @@ bool AArch64AsmParser::parseDirectiveUnreq(SMLoc L) {
   MCAsmParser &Parser = getParser();
   if (getTok().isNot(AsmToken::Identifier))
     return TokError("unexpected input in .unreq directive.");
-  RegisterReqs.erase(Parser.getTok().getIdentifier().lower());
+  RegisterReqs.erase(getTok().getIdentifier().lower());
   Parser.Lex(); // Eat the identifier.
   return parseToken(AsmToken::EndOfStatement);
 }
@@ -6359,7 +6355,7 @@ bool AArch64AsmParser::parseDirectiveCFIBKeyFrame() {
 bool AArch64AsmParser::parseDirectiveVariantPCS(SMLoc L) {
   MCAsmParser &Parser = getParser();
 
-  const AsmToken &Tok = Parser.getTok();
+  const AsmToken &Tok = getTok();
   if (Tok.isNot(AsmToken::Identifier))
     return TokError("expected symbol name");
 
@@ -6741,7 +6737,7 @@ AArch64AsmParser::tryParseGPRSeqPair(OperandVector &Operands) {
 
   SMLoc S = getLoc();
 
-  if (getParser().getTok().isNot(AsmToken::Identifier)) {
+  if (getTok().isNot(AsmToken::Identifier)) {
     Error(S, "expected register");
     return MatchOperand_ParseFail;
   }
@@ -6773,7 +6769,7 @@ AArch64AsmParser::tryParseGPRSeqPair(OperandVector &Operands) {
     return MatchOperand_ParseFail;
   }
 
-  if (getParser().getTok().isNot(AsmToken::Comma)) {
+  if (getTok().isNot(AsmToken::Comma)) {
     Error(getLoc(), "expected comma");
     return MatchOperand_ParseFail;
   }
@@ -6833,7 +6829,7 @@ AArch64AsmParser::tryParseSVEDataVector(OperandVector &Operands) {
   unsigned ElementWidth = KindRes->second;
 
   // No shift/extend is the default.
-  if (!ParseShiftExtend || getParser().getTok().isNot(AsmToken::Comma)) {
+  if (!ParseShiftExtend || getTok().isNot(AsmToken::Comma)) {
     Operands.push_back(AArch64Operand::CreateVectorReg(
         RegNum, RegKind::SVEDataVector, ElementWidth, S, S, getContext()));
 
@@ -6866,7 +6862,7 @@ AArch64AsmParser::tryParseSVEPattern(OperandVector &Operands) {
   MCAsmParser &Parser = getParser();
 
   SMLoc SS = getLoc();
-  const AsmToken &TokE = Parser.getTok();
+  const AsmToken &TokE = getTok();
   bool IsHash = TokE.is(AsmToken::Hash);
 
   if (!IsHash && TokE.isNot(AsmToken::Identifier))

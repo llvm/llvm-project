@@ -77,8 +77,6 @@ void OnInitialize() {
 }
 #endif
 
-static ALIGNED(64) char thread_registry_placeholder[sizeof(ThreadRegistry)];
-
 static ThreadContextBase *CreateThreadContext(u32 tid) {
   // Map thread trace when context is created.
   char name[50];
@@ -118,8 +116,8 @@ Context::Context()
       report_mtx(MutexTypeReport),
       nreported(),
       nmissed_expected(),
-      thread_registry(new (thread_registry_placeholder) ThreadRegistry(
-          CreateThreadContext, kMaxTid, kThreadQuarantineSize, kMaxTidReuse)),
+      thread_registry(CreateThreadContext, kMaxTid, kThreadQuarantineSize,
+                      kMaxTidReuse),
       racy_mtx(MutexTypeRacy),
       racy_stacks(),
       racy_addresses(),
@@ -161,7 +159,7 @@ ThreadState::ThreadState(Context *ctx, u32 tid, int unique_id, u64 epoch,
 static void MemoryProfiler(Context *ctx, fd_t fd, int i) {
   uptr n_threads;
   uptr n_running_threads;
-  ctx->thread_registry->GetNumberOfThreads(&n_threads, &n_running_threads);
+  ctx->thread_registry.GetNumberOfThreads(&n_threads, &n_running_threads);
   InternalMmapVector<char> buf(4096);
   WriteMemoryProfile(buf.data(), buf.size(), n_threads, n_running_threads);
   WriteToFile(fd, buf.data(), internal_strlen(buf.data()));
@@ -526,7 +524,7 @@ int Finalize(ThreadState *thr) {
 
 #if !SANITIZER_GO
 void ForkBefore(ThreadState *thr, uptr pc) NO_THREAD_SAFETY_ANALYSIS {
-  ctx->thread_registry->Lock();
+  ctx->thread_registry.Lock();
   ctx->report_mtx.Lock();
   ScopedErrorReportLock::Lock();
   // Suppress all reports in the pthread_atfork callbacks.
@@ -545,7 +543,7 @@ void ForkParentAfter(ThreadState *thr, uptr pc) NO_THREAD_SAFETY_ANALYSIS {
   thr->ignore_interceptors--;
   ScopedErrorReportLock::Unlock();
   ctx->report_mtx.Unlock();
-  ctx->thread_registry->Unlock();
+  ctx->thread_registry.Unlock();
 }
 
 void ForkChildAfter(ThreadState *thr, uptr pc) NO_THREAD_SAFETY_ANALYSIS {
@@ -553,10 +551,10 @@ void ForkChildAfter(ThreadState *thr, uptr pc) NO_THREAD_SAFETY_ANALYSIS {
   thr->ignore_interceptors--;
   ScopedErrorReportLock::Unlock();
   ctx->report_mtx.Unlock();
-  ctx->thread_registry->Unlock();
+  ctx->thread_registry.Unlock();
 
   uptr nthread = 0;
-  ctx->thread_registry->GetNumberOfThreads(0, 0, &nthread /* alive threads */);
+  ctx->thread_registry.GetNumberOfThreads(0, 0, &nthread /* alive threads */);
   VPrintf(1, "ThreadSanitizer: forked new process with pid %d,"
       " parent had %d threads\n", (int)internal_getpid(), (int)nthread);
   if (nthread == 1) {

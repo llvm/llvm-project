@@ -205,10 +205,10 @@ void ThreadFinalize(ThreadState *thr) {
 #if !SANITIZER_GO
   if (!ShouldReport(thr, ReportTypeThreadLeak))
     return;
-  ThreadRegistryLock l(ctx->thread_registry);
+  ThreadRegistryLock l(&ctx->thread_registry);
   Vector<ThreadLeak> leaks;
-  ctx->thread_registry->RunCallbackForEachThreadLocked(
-      MaybeReportThreadLeak, &leaks);
+  ctx->thread_registry.RunCallbackForEachThreadLocked(MaybeReportThreadLeak,
+                                                      &leaks);
   for (uptr i = 0; i < leaks.Size(); i++) {
     ScopedReport rep(ReportTypeThreadLeak);
     rep.AddThread(leaks[i].tctx, true);
@@ -220,15 +220,14 @@ void ThreadFinalize(ThreadState *thr) {
 
 int ThreadCount(ThreadState *thr) {
   uptr result;
-  ctx->thread_registry->GetNumberOfThreads(0, 0, &result);
+  ctx->thread_registry.GetNumberOfThreads(0, 0, &result);
   return (int)result;
 }
 
 int ThreadCreate(ThreadState *thr, uptr pc, uptr uid, bool detached) {
   OnCreatedArgs args = { thr, pc };
   u32 parent_tid = thr ? thr->tid : kInvalidTid;  // No parent for GCD workers.
-  int tid =
-      ctx->thread_registry->CreateThread(uid, detached, parent_tid, &args);
+  int tid = ctx->thread_registry.CreateThread(uid, detached, parent_tid, &args);
   DPrintf("#%d: ThreadCreate tid=%d uid=%zu\n", parent_tid, tid, uid);
   return tid;
 }
@@ -252,7 +251,7 @@ void ThreadStart(ThreadState *thr, int tid, tid_t os_id,
   }
 #endif
 
-  ThreadRegistry *tr = ctx->thread_registry;
+  ThreadRegistry *tr = &ctx->thread_registry;
   OnStartedArgs args = { thr, stk_addr, stk_size, tls_addr, tls_size };
   tr->StartThread(tid, os_id, thread_type, &args);
 
@@ -276,7 +275,7 @@ void ThreadFinish(ThreadState *thr) {
   if (thr->tls_addr && thr->tls_size)
     DontNeedShadowFor(thr->tls_addr, thr->tls_size);
   thr->is_dead = true;
-  ctx->thread_registry->FinishThread(thr->tid);
+  ctx->thread_registry.FinishThread(thr->tid);
 }
 
 struct ConsumeThreadContext {
@@ -303,7 +302,7 @@ static bool ConsumeThreadByUid(ThreadContextBase *tctx, void *arg) {
 
 int ThreadConsumeTid(ThreadState *thr, uptr pc, uptr uid) {
   ConsumeThreadContext findCtx = {uid, nullptr};
-  ctx->thread_registry->FindThread(ConsumeThreadByUid, &findCtx);
+  ctx->thread_registry.FindThread(ConsumeThreadByUid, &findCtx);
   int tid = findCtx.tctx ? findCtx.tctx->tid : kInvalidTid;
   DPrintf("#%d: ThreadTid uid=%zu tid=%d\n", thr->tid, uid, tid);
   return tid;
@@ -313,23 +312,23 @@ void ThreadJoin(ThreadState *thr, uptr pc, int tid) {
   CHECK_GT(tid, 0);
   CHECK_LT(tid, kMaxTid);
   DPrintf("#%d: ThreadJoin tid=%d\n", thr->tid, tid);
-  ctx->thread_registry->JoinThread(tid, thr);
+  ctx->thread_registry.JoinThread(tid, thr);
 }
 
 void ThreadDetach(ThreadState *thr, uptr pc, int tid) {
   CHECK_GT(tid, 0);
   CHECK_LT(tid, kMaxTid);
-  ctx->thread_registry->DetachThread(tid, thr);
+  ctx->thread_registry.DetachThread(tid, thr);
 }
 
 void ThreadNotJoined(ThreadState *thr, uptr pc, int tid, uptr uid) {
   CHECK_GT(tid, 0);
   CHECK_LT(tid, kMaxTid);
-  ctx->thread_registry->SetThreadUserId(tid, uid);
+  ctx->thread_registry.SetThreadUserId(tid, uid);
 }
 
 void ThreadSetName(ThreadState *thr, const char *name) {
-  ctx->thread_registry->SetThreadName(thr->tid, name);
+  ctx->thread_registry.SetThreadName(thr->tid, name);
 }
 
 void MemoryAccessRange(ThreadState *thr, uptr pc, uptr addr,
