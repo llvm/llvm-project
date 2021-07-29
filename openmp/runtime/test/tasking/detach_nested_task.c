@@ -23,7 +23,7 @@ int foo(int n)
   int ret = 0;
   for (int i = 0; i < n; ++i) {
     omp_event_handle_t event;
-    #pragma omp task detach(event) firstprivate(i,n) shared(ret) default(none)
+    #pragma omp task detach(event) firstprivate(i,n) shared(ret)
     {
       for (int j = 0; j < n; ++j) {
         #pragma omp task firstprivate(event,i,j,n) shared(ret) default(none) depend(out:ret)
