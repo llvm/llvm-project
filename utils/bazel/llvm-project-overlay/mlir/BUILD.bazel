@@ -531,10 +531,17 @@ cc_library(
 
 cc_library(
     name = "MLIRBindingsPythonCore",
-    srcs = glob(
-        include = ["lib/Bindings/Python/*.cpp"],
-        exclude = ["lib/Bindings/Python/MainModule.cpp"],
-    ),
+    srcs = [
+        "lib/Bindings/Python/DialectLinalg.cpp",
+        "lib/Bindings/Python/DialectSparseTensor.cpp",
+        "lib/Bindings/Python/IRAffine.cpp",
+        "lib/Bindings/Python/IRAttributes.cpp",
+        "lib/Bindings/Python/IRCore.cpp",
+        "lib/Bindings/Python/IRModule.cpp",
+        "lib/Bindings/Python/IRTypes.cpp",
+        "lib/Bindings/Python/Pass.cpp",
+        "lib/Bindings/Python/PybindUtils.cpp",
+    ],
     # These flags are needed for pybind11 to work.
     copts = [
         "-fexceptions",
@@ -551,7 +558,6 @@ cc_library(
     deps = [
         ":CAPIAsync",
         ":CAPIDebug",
-        ":CAPIExecutionEngine",
         ":CAPIGPU",
         ":CAPIIR",
         ":CAPILinalg",
@@ -607,6 +613,26 @@ cc_binary(
     ],
     deps = [
         ":CAPIConversion",
+        ":MLIRBindingsPythonHeadersAndDeps",
+        "@pybind11",
+        "@python_runtime//:headers",
+    ],
+)
+
+# Dynamic library with the MLIR Conversions Python extension.
+cc_binary(
+    name = "_mlirExecutionEngine.so",
+    srcs = ["lib/Bindings/Python/ExecutionEngineModule.cpp"],
+    copts = PYBIND11_COPTS,
+    features = PYBIND11_FEATURES,
+    linkshared = 1,
+    linkstatic = 0,
+    tags = [
+        "manual",  # External dependency
+        "nobuildkite",  # TODO(gcmn): Add support for this target
+    ],
+    deps = [
+        ":CAPIExecutionEngine",
         ":MLIRBindingsPythonHeadersAndDeps",
         "@pybind11",
         "@python_runtime//:headers",
