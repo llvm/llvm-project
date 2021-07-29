@@ -2366,10 +2366,7 @@ class TypesMatchWith<string summary, string lhsArg, string rhsArg,
 // ranged arguments.
 class RangedTypesMatchWith<string summary, string lhsArg, string rhsArg,
                            string transform>
-  : TypesMatchWith<summary, lhsArg, rhsArg, transform,
-    "[](auto &&lhs, auto &&rhs) { "
-    "return std::equal(lhs.begin(), lhs.end(), rhs.begin(), rhs.end());"
-    " }">;
+  : TypesMatchWith<summary, lhsArg, rhsArg, transform, "llvm::equal">;
 
 // Type Constraint operand `idx`'s Element type is `type`.
 class TCopVTEtIs<int idx, Type type> : And<[
