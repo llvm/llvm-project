@@ -381,12 +381,11 @@ declare {i32, i1} @llvm.sadd.with.overflow.i32(i32 %a, i32 %b)
 define i1 @sadd_add(i32 %a, i32 %b, i32* %p) {
 ; CHECK-LABEL: sadd_add:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    movl %edi, %eax
-; CHECK-NEXT:    notl %eax
-; CHECK-NEXT:    addl %esi, %eax
+; CHECK-NEXT:    notl %edi
+; CHECK-NEXT:    addl %esi, %edi
 ; CHECK-NEXT:    seto %al
-; CHECK-NEXT:    subl %edi, %esi
-; CHECK-NEXT:    movl %esi, (%rdx)
+; CHECK-NEXT:    incl %edi
+; CHECK-NEXT:    movl %edi, (%rdx)
 ; CHECK-NEXT:    retq
   %nota = xor i32 %a, -1
   %a0 = call {i32, i1} @llvm.sadd.with.overflow.i32(i32 %nota, i32 %b)
@@ -402,12 +401,11 @@ declare {i8, i1} @llvm.uadd.with.overflow.i8(i8 %a, i8 %b)
 define i1 @uadd_add(i8 %a, i8 %b, i8* %p) {
 ; CHECK-LABEL: uadd_add:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    movl %edi, %eax
-; CHECK-NEXT:    notb %al
-; CHECK-NEXT:    addb %sil, %al
+; CHECK-NEXT:    notb %dil
+; CHECK-NEXT:    addb %sil, %dil
 ; CHECK-NEXT:    setb %al
-; CHECK-NEXT:    subb %dil, %sil
-; CHECK-NEXT:    movb %sil, (%rdx)
+; CHECK-NEXT:    incb %dil
+; CHECK-NEXT:    movb %dil, (%rdx)
 ; CHECK-NEXT:    retq
   %nota = xor i8 %a, -1
   %a0 = call {i8, i1} @llvm.uadd.with.overflow.i8(i8 %nota, i8 %b)
@@ -416,4 +414,23 @@ define i1 @uadd_add(i8 %a, i8 %b, i8* %p) {
   %res = add i8 %e0, 1
   store i8 %res, i8* %p
   ret i1 %e1
+}
+
+; This would crash because we tried to transform an add-with-overflow
+; based on the wrong result value.
+
+define i1 @PR51238(i1 %b, i8 %x, i8 %y, i8 %z) {
+; CHECK-LABEL: PR51238:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    notb %cl
+; CHECK-NEXT:    addb %dl, %cl
+; CHECK-NEXT:    movb $1, %al
+; CHECK-NEXT:    adcb $0, %al
+; CHECK-NEXT:    retq
+   %ny = xor i8 %y, -1
+   %nz = xor i8 %z, -1
+   %minxz = select i1 %b, i8 %x, i8 %nz
+   %cmpyz = icmp ult i8 %ny, %nz
+   %r = add i1 %cmpyz, true
+   ret i1 %r
 }

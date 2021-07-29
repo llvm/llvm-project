@@ -2439,9 +2439,7 @@ SDValue DAGCombiner::visitADDLike(SDNode *N) {
                          N0.getOperand(0));
 
     // fold (add (add (xor a, -1), b), 1) -> (sub b, a)
-    if (N0.getOpcode() == ISD::ADD ||
-        N0.getOpcode() == ISD::UADDO ||
-        N0.getOpcode() == ISD::SADDO) {
+    if (N0.getOpcode() == ISD::ADD) {
       SDValue A, Xor;
 
       if (isBitwiseNot(N0.getOperand(0))) {
