@@ -74,14 +74,17 @@ Context::createInOrderPipeline(const PipelineOptions &Opts, SourceMgr &SrcMgr,
                                CustomBehaviour &CB) {
   const MCSchedModel &SM = STI.getSchedModel();
   auto PRF = std::make_unique<RegisterFile>(SM, MRI, Opts.RegisterFileSize);
+  auto LSU = std::make_unique<LSUnit>(SM, Opts.LoadQueueSize,
+                                      Opts.StoreQueueSize, Opts.AssumeNoAlias);
 
   // Create the pipeline stages.
   auto Entry = std::make_unique<EntryStage>(SrcMgr);
-  auto InOrderIssue = std::make_unique<InOrderIssueStage>(STI, *PRF, CB);
+  auto InOrderIssue = std::make_unique<InOrderIssueStage>(STI, *PRF, CB, *LSU);
   auto StagePipeline = std::make_unique<Pipeline>();
 
   // Pass the ownership of all the hardware units to this Context.
   addHardwareUnit(std::move(PRF));
+  addHardwareUnit(std::move(LSU));
 
   // Build the pipeline.
   StagePipeline->appendStage(std::move(Entry));
