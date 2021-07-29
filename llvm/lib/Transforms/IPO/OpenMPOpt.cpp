@@ -1833,6 +1833,8 @@ private:
     return Changed == ChangeStatus::CHANGED;
   }
 
+  void registerFoldRuntimeCall(RuntimeFunction RF);
+
   /// Populate the Attributor with abstract attribute opportunities in the
   /// function.
   void registerAAs(bool IsModulePass);
@@ -3506,6 +3508,8 @@ struct AAKernelInfoCallSite : AAKernelInfo {
     case OMPRTL___kmpc_is_spmd_exec_mode:
     case OMPRTL___kmpc_for_static_fini:
     case OMPRTL___kmpc_global_thread_num:
+    case OMPRTL___kmpc_get_hardware_num_threads_in_block:
+    case OMPRTL___kmpc_get_hardware_num_blocks:
     case OMPRTL___kmpc_single:
     case OMPRTL___kmpc_end_single:
     case OMPRTL___kmpc_master:
@@ -3710,7 +3714,6 @@ struct AAFoldRuntimeCallCallSiteReturned : AAFoldRuntimeCall {
 
   ChangeStatus updateImpl(Attributor &A) override {
     ChangeStatus Changed = ChangeStatus::UNCHANGED;
-
     switch (RFKind) {
     case OMPRTL___kmpc_is_spmd_exec_mode:
       Changed |= foldIsSPMDExecMode(A);
@@ -3720,6 +3723,12 @@ struct AAFoldRuntimeCallCallSiteReturned : AAFoldRuntimeCall {
       break;
     case OMPRTL___kmpc_parallel_level:
       Changed |= foldParallelLevel(A);
+      break;
+    case OMPRTL___kmpc_get_hardware_num_threads_in_block:
+      Changed = Changed | foldKernelFnAttribute(A, "omp_target_thread_limit");
+      break;
+    case OMPRTL___kmpc_get_hardware_num_blocks:
+      Changed = Changed | foldKernelFnAttribute(A, "omp_target_num_teams");
       break;
     default:
       llvm_unreachable("Unhandled OpenMP runtime function!");
@@ -3892,7 +3901,39 @@ private:
              "Expected only non-SPMD kernels!");
       SimplifiedValue = ConstantInt::get(Type::getInt8Ty(Ctx), 0);
     }
+    return SimplifiedValue == SimplifiedValueBefore ? ChangeStatus::UNCHANGED
+                                                    : ChangeStatus::CHANGED;
+  }
 
+  ChangeStatus foldKernelFnAttribute(Attributor &A, llvm::StringRef Attr) {
+    // Specialize only if all the calls agree with the attribute constant value
+    int32_t CurrentAttrValue = -1;
+    Optional<Value *> SimplifiedValueBefore = SimplifiedValue;
+
+    auto &CallerKernelInfoAA = A.getAAFor<AAKernelInfo>(
+        *this, IRPosition::function(*getAnchorScope()), DepClassTy::REQUIRED);
+
+    if (!CallerKernelInfoAA.ReachingKernelEntries.isValidState())
+      return indicatePessimisticFixpoint();
+
+    // Iterate over the kernels that reach this function
+    for (Kernel K : CallerKernelInfoAA.ReachingKernelEntries) {
+      int32_t NextAttrVal = -1;
+      if (K->hasFnAttribute(Attr))
+        NextAttrVal =
+            std::stoi(K->getFnAttribute(Attr).getValueAsString().str());
+
+      if (NextAttrVal == -1 ||
+          (CurrentAttrValue != -1 && CurrentAttrValue != NextAttrVal))
+        return indicatePessimisticFixpoint();
+      CurrentAttrValue = NextAttrVal;
+    }
+
+    if (CurrentAttrValue != -1) {
+      auto &Ctx = getAnchorValue().getContext();
+      SimplifiedValue =
+          ConstantInt::get(Type::getInt32Ty(Ctx), CurrentAttrValue);
+    }
     return SimplifiedValue == SimplifiedValueBefore ? ChangeStatus::UNCHANGED
                                                     : ChangeStatus::CHANGED;
   }
@@ -3907,6 +3948,21 @@ private:
 };
 
 } // namespace
+
+/// Register folding callsite
+void OpenMPOpt::registerFoldRuntimeCall(RuntimeFunction RF) {
+  auto &RFI = OMPInfoCache.RFIs[RF];
+  RFI.foreachUse(SCC, [&](Use &U, Function &F) {
+    CallInst *CI = OpenMPOpt::getCallIfRegularCall(U, &RFI);
+    if (!CI)
+      return false;
+    A.getOrCreateAAFor<AAFoldRuntimeCall>(
+        IRPosition::callsite_returned(*CI), /* QueryingAA */ nullptr,
+        DepClassTy::NONE, /* ForceUpdate */ false,
+        /* UpdateAfterInit */ false);
+    return false;
+  });
+}
 
 void OpenMPOpt::registerAAs(bool IsModulePass) {
   if (SCC.empty())
@@ -3923,43 +3979,12 @@ void OpenMPOpt::registerAAs(bool IsModulePass) {
           DepClassTy::NONE, /* ForceUpdate */ false,
           /* UpdateAfterInit */ false);
 
-    auto &IsMainRFI =
-        OMPInfoCache.RFIs[OMPRTL___kmpc_is_generic_main_thread_id];
-    IsMainRFI.foreachUse(SCC, [&](Use &U, Function &F) {
-      CallInst *CI = OpenMPOpt::getCallIfRegularCall(U, &IsMainRFI);
-      if (!CI)
-        return false;
-      A.getOrCreateAAFor<AAFoldRuntimeCall>(
-          IRPosition::callsite_returned(*CI), /* QueryingAA */ nullptr,
-          DepClassTy::NONE, /* ForceUpdate */ false,
-          /* UpdateAfterInit */ false);
-      return false;
-    });
 
-    auto &IsSPMDRFI = OMPInfoCache.RFIs[OMPRTL___kmpc_is_spmd_exec_mode];
-    IsSPMDRFI.foreachUse(SCC, [&](Use &U, Function &) {
-      CallInst *CI = OpenMPOpt::getCallIfRegularCall(U, &IsSPMDRFI);
-      if (!CI)
-        return false;
-      A.getOrCreateAAFor<AAFoldRuntimeCall>(
-          IRPosition::callsite_returned(*CI), /* QueryingAA */ nullptr,
-          DepClassTy::NONE, /* ForceUpdate */ false,
-          /* UpdateAfterInit */ false);
-      return false;
-    });
-
-    auto &ParallelLevelRFI = OMPInfoCache.RFIs[OMPRTL___kmpc_parallel_level];
-    ParallelLevelRFI.foreachUse(SCC, [&](Use &U, Function &) {
-      CallInst *CI = OpenMPOpt::getCallIfRegularCall(U, &ParallelLevelRFI);
-      if (!CI)
-        return false;
-      A.getOrCreateAAFor<AAFoldRuntimeCall>(
-          IRPosition::callsite_returned(*CI), /* QueryingAA */ nullptr,
-          DepClassTy::NONE, /* ForceUpdate */ false,
-          /* UpdateAfterInit */ false);
-
-      return false;
-    });
+    registerFoldRuntimeCall(OMPRTL___kmpc_is_generic_main_thread_id);
+    registerFoldRuntimeCall(OMPRTL___kmpc_is_spmd_exec_mode);
+    registerFoldRuntimeCall(OMPRTL___kmpc_parallel_level);
+    registerFoldRuntimeCall(OMPRTL___kmpc_get_hardware_num_threads_in_block);
+    registerFoldRuntimeCall(OMPRTL___kmpc_get_hardware_num_blocks);
   }
 
   // Create CallSite AA for all Getters.
