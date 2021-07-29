@@ -97,6 +97,15 @@ static std::string computeDataLayout(const Triple &TT, StringRef CPU,
   return Ret;
 }
 
+static std::unique_ptr<TargetLoweringObjectFile> createTLOF(const Triple &TT) {
+  if (TT.isOSzOS())
+    return std::make_unique<TargetLoweringObjectFileGOFF>();
+
+  // Note: Some times run with -triple s390x-unknown.
+  // In this case, default to ELF unless z/OS specifically provided.
+  return std::make_unique<TargetLoweringObjectFileELF>();
+}
+
 static Reloc::Model getEffectiveRelocModel(Optional<Reloc::Model> RM) {
   // Static code is suitable for use in a dynamic executable; there is no
   // separate DynamicNoPIC model.
@@ -160,7 +169,7 @@ SystemZTargetMachine::SystemZTargetMachine(const Target &T, const Triple &TT,
           getEffectiveRelocModel(RM),
           getEffectiveSystemZCodeModel(CM, getEffectiveRelocModel(RM), JIT),
           OL),
-      TLOF(std::make_unique<TargetLoweringObjectFileELF>()) {
+      TLOF(createTLOF(getTargetTriple())) {
   initAsmInfo();
 }
 

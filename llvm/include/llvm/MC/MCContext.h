@@ -52,6 +52,7 @@ namespace llvm {
   class MCSection;
   class MCSectionCOFF;
   class MCSectionELF;
+  class MCSectionGOFF;
   class MCSectionMachO;
   class MCSectionWasm;
   class MCSectionXCOFF;
@@ -74,7 +75,7 @@ namespace llvm {
     using DiagHandlerTy =
         std::function<void(const SMDiagnostic &, bool, const SourceMgr &,
                            std::vector<const MDNode *> &)>;
-    enum Environment { IsMachO, IsELF, IsCOFF, IsWasm, IsXCOFF };
+    enum Environment { IsMachO, IsELF, IsGOFF, IsCOFF, IsWasm, IsXCOFF };
 
   private:
     Environment Env;
@@ -114,6 +115,7 @@ namespace llvm {
     SpecificBumpPtrAllocator<MCSectionCOFF> COFFAllocator;
     SpecificBumpPtrAllocator<MCSectionELF> ELFAllocator;
     SpecificBumpPtrAllocator<MCSectionMachO> MachOAllocator;
+    SpecificBumpPtrAllocator<MCSectionGOFF> GOFFAllocator;
     SpecificBumpPtrAllocator<MCSectionWasm> WasmAllocator;
     SpecificBumpPtrAllocator<MCSectionXCOFF> XCOFFAllocator;
     SpecificBumpPtrAllocator<MCInst> MCInstAllocator;
@@ -323,6 +325,7 @@ namespace llvm {
     StringMap<MCSectionMachO *> MachOUniquingMap;
     std::map<ELFSectionKey, MCSectionELF *> ELFUniquingMap;
     std::map<COFFSectionKey, MCSectionCOFF *> COFFUniquingMap;
+    std::map<std::string, MCSectionGOFF *> GOFFUniquingMap;
     std::map<WasmSectionKey, MCSectionWasm *> WasmUniquingMap;
     std::map<XCOFFSectionKey, MCSectionXCOFF *> XCOFFUniquingMap;
     StringMap<bool> RelSecNames;
@@ -594,6 +597,8 @@ namespace llvm {
     Optional<unsigned> getELFUniqueIDForEntsize(StringRef SectionName,
                                                 unsigned Flags,
                                                 unsigned EntrySize);
+
+    MCSectionGOFF *getGOFFSection(StringRef Section, SectionKind Kind);
 
     MCSectionCOFF *getCOFFSection(StringRef Section, unsigned Characteristics,
                                   SectionKind Kind, StringRef COMDATSymName,

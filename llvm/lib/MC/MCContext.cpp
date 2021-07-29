@@ -25,6 +25,7 @@
 #include "llvm/MC/MCObjectFileInfo.h"
 #include "llvm/MC/MCSectionCOFF.h"
 #include "llvm/MC/MCSectionELF.h"
+#include "llvm/MC/MCSectionGOFF.h"
 #include "llvm/MC/MCSectionMachO.h"
 #include "llvm/MC/MCSectionWasm.h"
 #include "llvm/MC/MCSectionXCOFF.h"
@@ -32,6 +33,7 @@
 #include "llvm/MC/MCSymbol.h"
 #include "llvm/MC/MCSymbolCOFF.h"
 #include "llvm/MC/MCSymbolELF.h"
+#include "llvm/MC/MCSymbolGOFF.h"
 #include "llvm/MC/MCSymbolMachO.h"
 #include "llvm/MC/MCSymbolWasm.h"
 #include "llvm/MC/MCSymbolXCOFF.h"
@@ -99,7 +101,7 @@ MCContext::MCContext(const Triple &TheTriple, const MCAsmInfo *mai,
     Env = IsXCOFF;
     break;
   case Triple::GOFF:
-    report_fatal_error("Cannot initialize MC for GOFF object file format");
+    Env = IsGOFF;
     break;
   case Triple::UnknownObjectFormat:
     report_fatal_error("Cannot initialize MC for unknown object file format.");
@@ -133,6 +135,7 @@ void MCContext::reset() {
   // Call the destructors so the fragments are freed
   COFFAllocator.DestroyAll();
   ELFAllocator.DestroyAll();
+  GOFFAllocator.DestroyAll();
   MachOAllocator.DestroyAll();
   XCOFFAllocator.DestroyAll();
   MCInstAllocator.DestroyAll();
@@ -156,6 +159,7 @@ void MCContext::reset() {
 
   MachOUniquingMap.clear();
   ELFUniquingMap.clear();
+  GOFFUniquingMap.clear();
   COFFUniquingMap.clear();
   WasmUniquingMap.clear();
   XCOFFUniquingMap.clear();
@@ -231,6 +235,8 @@ MCSymbol *MCContext::createSymbolImpl(const StringMapEntry<bool> *Name,
     return new (Name, *this) MCSymbolCOFF(Name, IsTemporary);
   case MCContext::IsELF:
     return new (Name, *this) MCSymbolELF(Name, IsTemporary);
+  case MCContext::IsGOFF:
+    return new (Name, *this) MCSymbolGOFF(Name, IsTemporary);
   case MCContext::IsMachO:
     return new (Name, *this) MCSymbolMachO(Name, IsTemporary);
   case MCContext::IsWasm:
@@ -608,6 +614,15 @@ Optional<unsigned> MCContext::getELFUniqueIDForEntsize(StringRef SectionName,
   auto I = ELFEntrySizeMap.find(
       MCContext::ELFEntrySizeKey{SectionName, Flags, EntrySize});
   return (I != ELFEntrySizeMap.end()) ? Optional<unsigned>(I->second) : None;
+}
+
+MCSectionGOFF *MCContext::getGOFFSection(StringRef Section, SectionKind Kind) {
+  // Do the lookup. If we don't have a hit, return a new section.
+  auto &GOFFSection = GOFFUniquingMap[Section.str()];
+  if (!GOFFSection)
+    GOFFSection = new (GOFFAllocator.Allocate()) MCSectionGOFF(Section, Kind);
+
+  return GOFFSection;
 }
 
 MCSectionCOFF *MCContext::getCOFFSection(StringRef Section,
