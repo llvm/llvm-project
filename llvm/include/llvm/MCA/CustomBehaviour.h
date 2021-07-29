@@ -55,11 +55,11 @@ public:
 class CustomBehaviour {
 protected:
   const MCSubtargetInfo &STI;
-  const SourceMgr &SrcMgr;
+  const mca::SourceMgr &SrcMgr;
   const MCInstrInfo &MCII;
 
 public:
-  CustomBehaviour(const MCSubtargetInfo &STI, const SourceMgr &SrcMgr,
+  CustomBehaviour(const MCSubtargetInfo &STI, const mca::SourceMgr &SrcMgr,
                   const MCInstrInfo &MCII)
       : STI(STI), SrcMgr(SrcMgr), MCII(MCII) {}
 
