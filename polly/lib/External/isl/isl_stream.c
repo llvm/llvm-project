@@ -9,11 +9,12 @@
 
 #include <ctype.h>
 #include <string.h>
-#include <isl/ctx.h>
+#include <isl_ctx_private.h>
 #include <isl_stream_private.h>
 #include <isl/map.h>
 #include <isl/aff.h>
 #include <isl_val_private.h>
+#include <isl_options_private.h>
 
 struct isl_keyword {
 	char			*name;
@@ -134,6 +135,12 @@ void isl_stream_error(__isl_keep isl_stream *s, struct isl_token *tok,
 {
 	int line = tok ? tok->line : s->line;
 	int col = tok ? tok->col : s->col;
+
+	isl_ctx_set_full_error(s->ctx, isl_error_invalid, "syntax error",
+				__FILE__, __LINE__);
+
+	if (s->ctx->opt->on_error == ISL_ON_ERROR_CONTINUE)
+		return;
 	fprintf(stderr, "syntax error (%d, %d): %s\n", line, col, msg);
 	if (tok) {
 		if (tok->type < 256)
@@ -165,6 +172,8 @@ void isl_stream_error(__isl_keep isl_stream *s, struct isl_token *tok,
 		else
 			fprintf(stderr, "got token type %d\n", tok->type);
 	}
+	if (s->ctx->opt->on_error == ISL_ON_ERROR_ABORT)
+		abort();
 }
 
 static __isl_give isl_stream* isl_stream_new(struct isl_ctx *ctx)
