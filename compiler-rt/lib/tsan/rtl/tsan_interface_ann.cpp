@@ -90,7 +90,7 @@ static void AddExpectRace(ExpectRace *list,
       return;
     }
   }
-  race = (ExpectRace*)internal_alloc(MBlockExpectRace, sizeof(ExpectRace));
+  race = (ExpectRace *)internal_alloc(sizeof(ExpectRace));
   race->addr = addr;
   race->size = size;
   race->file = f;

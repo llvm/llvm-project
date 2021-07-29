@@ -27,9 +27,7 @@ bool IsExpectedReport(uptr addr, uptr size) {
   return false;
 }
 
-void *internal_alloc(MBlockType typ, uptr sz) {
-  return InternalAlloc(sz);
-}
+void *internal_alloc(uptr sz) { return InternalAlloc(sz); }
 
 void internal_free(void *p) {
   InternalFree(p);
@@ -142,8 +140,7 @@ Processor *ThreadState::proc() {
 extern "C" {
 
 static ThreadState *AllocGoroutine() {
-  ThreadState *thr = (ThreadState*)internal_alloc(MBlockThreadContex,
-      sizeof(ThreadState));
+  ThreadState *thr = (ThreadState *)internal_alloc(sizeof(ThreadState));
   internal_memset(thr, 0, sizeof(*thr));
   return thr;
 }

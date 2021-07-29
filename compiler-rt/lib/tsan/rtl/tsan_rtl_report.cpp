@@ -155,7 +155,7 @@ bool ShouldReport(ThreadState *thr, ReportType typ) {
 
 ScopedReportBase::ScopedReportBase(ReportType typ, uptr tag) {
   ctx->thread_registry->CheckLocked();
-  void *mem = internal_alloc(MBlockReport, sizeof(ReportDesc));
+  void *mem = internal_alloc(sizeof(ReportDesc));
   rep_ = new(mem) ReportDesc;
   rep_->typ = typ;
   rep_->tag = tag;
@@ -176,7 +176,7 @@ void ScopedReportBase::AddStack(StackTrace stack, bool suppressable) {
 
 void ScopedReportBase::AddMemoryAccess(uptr addr, uptr external_tag, Shadow s,
                                        StackTrace stack, const MutexSet *mset) {
-  void *mem = internal_alloc(MBlockReportMop, sizeof(ReportMop));
+  void *mem = internal_alloc(sizeof(ReportMop));
   ReportMop *mop = new(mem) ReportMop;
   rep_->mops.PushBack(mop);
   mop->tid = s.tid();
@@ -205,7 +205,7 @@ void ScopedReportBase::AddThread(const ThreadContext *tctx, bool suppressable) {
     if ((u32)rep_->threads[i]->id == tctx->tid)
       return;
   }
-  void *mem = internal_alloc(MBlockReportThread, sizeof(ReportThread));
+  void *mem = internal_alloc(sizeof(ReportThread));
   ReportThread *rt = new(mem) ReportThread;
   rep_->threads.PushBack(rt);
   rt->id = tctx->tid;
@@ -276,7 +276,7 @@ void ScopedReportBase::AddMutex(const SyncVar *s) {
     if (rep_->mutexes[i]->id == s->uid)
       return;
   }
-  void *mem = internal_alloc(MBlockReportMutex, sizeof(ReportMutex));
+  void *mem = internal_alloc(sizeof(ReportMutex));
   ReportMutex *rm = new(mem) ReportMutex;
   rep_->mutexes.PushBack(rm);
   rm->id = s->uid;
@@ -309,7 +309,7 @@ void ScopedReportBase::AddDeadMutex(u64 id) {
     if (rep_->mutexes[i]->id == id)
       return;
   }
-  void *mem = internal_alloc(MBlockReportMutex, sizeof(ReportMutex));
+  void *mem = internal_alloc(sizeof(ReportMutex));
   ReportMutex *rm = new(mem) ReportMutex;
   rep_->mutexes.PushBack(rm);
   rm->id = id;
@@ -739,8 +739,7 @@ ALWAYS_INLINE USED void PrintCurrentStackSlow(uptr pc) {
 #if !SANITIZER_GO
   uptr bp = GET_CURRENT_FRAME();
   BufferedStackTrace *ptrace =
-      new(internal_alloc(MBlockStackTrace, sizeof(BufferedStackTrace)))
-          BufferedStackTrace();
+      new (internal_alloc(sizeof(BufferedStackTrace))) BufferedStackTrace();
   ptrace->Unwind(pc, bp, nullptr, false);
 
   for (uptr i = 0; i < ptrace->size / 2; i++) {

@@ -543,9 +543,6 @@ struct Context {
   ClockAlloc clock_alloc;
 
   Flags flags;
-
-  u64 int_alloc_cnt[MBlockTypeCount];
-  u64 int_alloc_siz[MBlockTypeCount];
 };
 
 extern Context *ctx;  // The one and the only global runtime context.
