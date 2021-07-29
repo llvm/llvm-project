@@ -143,6 +143,11 @@ StringExtractorGDBRemote::GetServerPacketType() const {
         return eServerPacketType_QListThreadsInStopReply;
       break;
 
+    case 'M':
+      if (PACKET_STARTS_WITH("QMemTags"))
+        return eServerPacketType_QMemTags;
+      break;
+
     case 'R':
       if (PACKET_STARTS_WITH("QRestoreRegisterState:"))
         return eServerPacketType_QRestoreRegisterState;

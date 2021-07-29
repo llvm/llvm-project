@@ -1486,6 +1486,77 @@ Status NativeProcessLinux::ReadMemoryTags(int32_t type, lldb::addr_t addr,
   return Status();
 }
 
+Status NativeProcessLinux::WriteMemoryTags(int32_t type, lldb::addr_t addr,
+                                           size_t len,
+                                           const std::vector<uint8_t> &tags) {
+  llvm::Expected<NativeRegisterContextLinux::MemoryTaggingDetails> details =
+      GetCurrentThread()->GetRegisterContext().GetMemoryTaggingDetails(type);
+  if (!details)
+    return Status(details.takeError());
+
+  // Ignore 0 length write
+  if (!len)
+    return Status();
+
+  // lldb will align the range it requests but it is not required to by
+  // the protocol so we'll do it again just in case.
+  // Remove non address bits too. Ptrace calls may work regardless but that
+  // is not a guarantee.
+  MemoryTagManager::TagRange range(details->manager->RemoveNonAddressBits(addr),
+                                   len);
+  range = details->manager->ExpandToGranule(range);
+
+  // Not checking number of tags here, we may repeat them below
+  llvm::Expected<std::vector<lldb::addr_t>> unpacked_tags_or_err =
+      details->manager->UnpackTagsData(tags);
+  if (!unpacked_tags_or_err)
+    return Status(unpacked_tags_or_err.takeError());
+
+  llvm::Expected<std::vector<lldb::addr_t>> repeated_tags_or_err =
+      details->manager->RepeatTagsForRange(*unpacked_tags_or_err, range);
+  if (!repeated_tags_or_err)
+    return Status(repeated_tags_or_err.takeError());
+
+  // Repack them for ptrace to use
+  llvm::Expected<std::vector<uint8_t>> final_tag_data =
+      details->manager->PackTags(*repeated_tags_or_err);
+  if (!final_tag_data)
+    return Status(final_tag_data.takeError());
+
+  struct iovec tags_vec;
+  uint8_t *src = final_tag_data->data();
+  lldb::addr_t write_addr = range.GetRangeBase();
+  // unpacked tags size because the number of bytes per tag might not be 1
+  size_t num_tags = repeated_tags_or_err->size();
+
+  // This call can partially write tags, so we loop until we
+  // error or all tags have been written.
+  while (num_tags > 0) {
+    tags_vec.iov_base = src;
+    tags_vec.iov_len = num_tags;
+
+    Status error = NativeProcessLinux::PtraceWrapper(
+        details->ptrace_write_req, GetID(),
+        reinterpret_cast<void *>(write_addr), static_cast<void *>(&tags_vec), 0,
+        nullptr);
+
+    if (error.Fail()) {
+      // Don't attempt to restore the original values in the case of a partial
+      // write
+      return error;
+    }
+
+    size_t tags_written = tags_vec.iov_len;
+    assert(tags_written && (tags_written <= num_tags));
+
+    src += tags_written * details->manager->GetTagSizeInBytes();
+    write_addr += details->manager->GetGranuleSize() * tags_written;
+    num_tags -= tags_written;
+  }
+
+  return Status();
+}
+
 size_t NativeProcessLinux::UpdateThreads() {
   // The NativeProcessLinux monitoring threads are always up to date with
   // respect to thread state and they keep the thread list populated properly.
