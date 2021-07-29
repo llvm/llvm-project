@@ -15808,7 +15808,7 @@ Value *CodeGenFunction::EmitPPCBuiltinExpr(unsigned BuiltinID,
     // store.
     Value *LoadedVal = Pair.first.getScalarVal();
     Builder.CreateStore(LoadedVal, OldValAddr);
-    return Pair.second;
+    return Builder.CreateZExt(Pair.second, Builder.getInt32Ty());
   }
   case PPC::BI__builtin_ppc_fetch_and_add:
   case PPC::BI__builtin_ppc_fetch_and_addlp: {
