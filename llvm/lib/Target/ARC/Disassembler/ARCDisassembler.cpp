@@ -304,7 +304,7 @@ static DecodeStatus DecodeCCRU6Instruction(MCInst &Inst, uint64_t Insn,
   DstB = decodeBField(Insn);
   DecodeGPR32RegisterClass(Inst, DstB, Address, Decoder);
   using Field = decltype(Insn);
-  Field U6Field = fieldFromInstruction(Insn, 6, 11);
+  Field U6Field = fieldFromInstruction(Insn, 6, 6);
   Inst.addOperand(MCOperand::createImm(U6Field));
   Field CCField = fieldFromInstruction(Insn, 0, 4);
   Inst.addOperand(MCOperand::createImm(CCField));

@@ -306,7 +306,7 @@ TEST(Reductions, Logical) {
   Descriptor &scalarResult{statDesc0.descriptor()};
   RTNAME(AllDim)(scalarResult, *array1, /*DIM=*/1, __FILE__, __LINE__);
   EXPECT_EQ(scalarResult.rank(), 0);
-  EXPECT_EQ(*scalarResult.ZeroBasedIndexedElement<std::int64_t>(0), 0);
+  EXPECT_EQ(*scalarResult.ZeroBasedIndexedElement<std::int32_t>(0), 0);
   scalarResult.Destroy();
   RTNAME(AnyDim)(res, *array, /*DIM=*/1, __FILE__, __LINE__);
   EXPECT_EQ(res.rank(), 1);
@@ -328,7 +328,7 @@ TEST(Reductions, Logical) {
   // A scalar result occurs when you have a rank 1 array.
   RTNAME(AnyDim)(scalarResult, *array1, /*DIM=*/1, __FILE__, __LINE__);
   EXPECT_EQ(scalarResult.rank(), 0);
-  EXPECT_EQ(*scalarResult.ZeroBasedIndexedElement<std::int64_t>(0), 1);
+  EXPECT_EQ(*scalarResult.ZeroBasedIndexedElement<std::int32_t>(0), 1);
   scalarResult.Destroy();
   RTNAME(ParityDim)(res, *array, /*DIM=*/1, __FILE__, __LINE__);
   EXPECT_EQ(res.rank(), 1);

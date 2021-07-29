@@ -70,12 +70,12 @@ func @vector_add_2d(%M : index, %N : index) -> f32 {
   }
   affine.for %i4 = 0 to %M {
     affine.for %i5 = 0 to %N {
+      // CHECK: [[SPLAT2:%.*]] = constant dense<2.000000e+00> : vector<32x256xf32>
+      // CHECK: [[SPLAT1:%.*]] = constant dense<1.000000e+00> : vector<32x256xf32>
       // CHECK: [[A5:%.*]] = vector.transfer_read %{{.*}}[{{.*}}], %{{.*}} : memref<?x?xf32>, vector<32x256xf32>
       // CHECK: [[B5:%.*]] = vector.transfer_read %{{.*}}[{{.*}}], %{{.*}} : memref<?x?xf32>, vector<32x256xf32>
       // CHECK: [[S5:%.*]] = addf [[A5]], [[B5]] : vector<32x256xf32>
-      // CHECK: [[SPLAT1:%.*]] = constant dense<1.000000e+00> : vector<32x256xf32>
       // CHECK: [[S6:%.*]] = addf [[S5]], [[SPLAT1]] : vector<32x256xf32>
-      // CHECK: [[SPLAT2:%.*]] = constant dense<2.000000e+00> : vector<32x256xf32>
       // CHECK: [[S7:%.*]] = addf [[S5]], [[SPLAT2]] : vector<32x256xf32>
       // CHECK: [[S8:%.*]] = addf [[S7]], [[S6]] : vector<32x256xf32>
       // CHECK: vector.transfer_write [[S8]], {{.*}} : vector<32x256xf32>, memref<?x?xf32>

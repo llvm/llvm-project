@@ -337,24 +337,30 @@ def MOV_ru6 : F32_DOP_RU6<0b00100, 0b001010, 0,
                           (outs GPR32:$B), (ins immU6:$U6),
                           "mov\t$B, $U6", []>;
 
+def MOV_f_ru6 : F32_DOP_RU6<0b00100, 0b001010, 1,
+                          (outs GPR32:$B), (ins u6:$U6),
+                          "mov.f\t$B, $U6", []> {
+  let isAsCheapAsAMove=1;
+  let Defs = [STATUS32];
+}
+
 def cmov : PatFrag<(ops node:$op1, node:$op2, node:$cc),
                    (ARCcmov $op1, $op2, $cc)>;
-let Uses = [STATUS32] in {
-  def MOVcc : F32_DOP_CC_RR<0b00100, 0b001010, 0,
-                 (outs GPR32:$B),
-                 (ins GPR32:$C, GPR32:$fval, cmovpred:$cc),
-                 !strconcat("mov.", "$cc\t$B, $C"),
-                 [(set GPR32:$B, (cmov i32:$C, i32:$fval, cmovpred:$cc))]> {
-    let Constraints = "$B = $fval";
-  }
+let Uses = [STATUS32], isAsCheapAsAMove = 1, isPredicable=1,
+	  isReMaterializable = 0, Constraints = "$B = $B2" in {
+  def MOV_cc : F32_DOP_CC_RR<0b00100, 0b001010, 0,
+                 (outs GPR32:$B), (ins GPR32:$C, GPR32:$B2, cmovpred:$cc),
+                 "mov.$cc\t$B, $C",
+                 [(set GPR32:$B, (cmov i32:$C, i32:$B2, cmovpred:$cc))]>;
 
-  def MOVcc_ru6 : F32_SOP_CC_RU6<0b00100, 0b001010, 0,
-                 (outs GPR32:$b), (ins u6:$c, CCOp:$cc, GPR32:$b2),
-                 "mov.$cc\t$b, $c", []> {
-    let isAsCheapAsAMove=0;
-    let isPredicable=1;
-    let isReMaterializable=0;
-    let Constraints="$b2 = $b";
+  def MOV_cc_ru6 : F32_DOP_CC_RU6<0b00100, 0b001010, 0,
+                 (outs GPR32:$B), (ins u6:$C, CCOp:$cc, GPR32:$B2),
+                 "mov.$cc\t$B, $C", []>;
+
+  def MOV_cc_f_ru6 : F32_DOP_CC_RU6<0b00100, 0b001010, 1,
+                    (outs GPR32:$B), (ins u6:$C, CCOp:$cc, GPR32:$B2),
+                    "mov.$cc.f\t$B, $C", []> {
+    let Defs = [STATUS32];
   }
 }
 

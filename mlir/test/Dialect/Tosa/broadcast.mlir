@@ -137,6 +137,15 @@ func @test_broadcast18(%arg0: tensor<14x1xf32>, %arg1: tensor<1x15xf32>) -> tens
 }
 
 // -----
+// CHECK-LABEL: broadcast19
+func @broadcast19(%arg0: tensor<64x64x1xf32>, %arg1: tensor<1x17xf32>) -> (tensor<64x64x17xf32> ) {
+  //  CHECK: reshape
+  //  CHECK: sub
+  %0 = "tosa.sub"(%arg0, %arg1) : (tensor<64x64x1xf32>, tensor<1x17xf32>) -> tensor<64x64x17xf32>
+  return %0 : tensor<64x64x17xf32>
+}
+
+// -----
 // CHECK-LABEL: broadcast_mul
 func @test_broadcast_mul(%arg0: tensor<15x14xi32>, %arg1: tensor<17x16x15x14xi32>) -> tensor<17x16x15x14xi32> {
   //  CHECK: reshape
