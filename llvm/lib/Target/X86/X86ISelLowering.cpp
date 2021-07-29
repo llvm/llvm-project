@@ -49961,11 +49961,34 @@ static SDValue pushAddIntoCmovOfConsts(SDNode *N, SelectionDAG &DAG) {
   if (!isSuitableCmov(Cmov))
     return SDValue();
 
-  // add (cmov C1, C2), OtherOp --> cmov (add OtherOp, C1), (add OtherOp, C2)
   EVT VT = N->getValueType(0);
   SDLoc DL(N);
   SDValue FalseOp = Cmov.getOperand(0);
   SDValue TrueOp = Cmov.getOperand(1);
+
+  // We will push the add through the select, but we can potentially do better
+  // if we know there is another add in the sequence and this is pointer math.
+  // In that case, we can absorb an add into the trailing memory op and avoid
+  // a 3-operand LEA which is likely slower than a 2-operand LEA.
+  // TODO: If target has "slow3OpsLEA", do this even without the trailing memop?
+  if (OtherOp.getOpcode() == ISD::ADD && OtherOp.hasOneUse() &&
+      !isa<ConstantSDNode>(OtherOp.getOperand(0)) &&
+      all_of(N->uses(), [&](SDNode *Use) {
+        auto *MemNode = dyn_cast<MemSDNode>(Use);
+        return MemNode && MemNode->getBasePtr().getNode() == N;
+      })) {
+    // add (cmov C1, C2), add (X, Y) --> add (cmov (add X, C1), (add X, C2)), Y
+    // TODO: We are arbitrarily choosing op0 as the 1st piece of the sum, but
+    //       it is possible that choosing op1 might be better.
+    SDValue X = OtherOp.getOperand(0), Y = OtherOp.getOperand(1);
+    FalseOp = DAG.getNode(ISD::ADD, DL, VT, X, FalseOp);
+    TrueOp = DAG.getNode(ISD::ADD, DL, VT, X, TrueOp);
+    Cmov = DAG.getNode(X86ISD::CMOV, DL, VT, FalseOp, TrueOp,
+                       Cmov.getOperand(2), Cmov.getOperand(3));
+    return DAG.getNode(ISD::ADD, DL, VT, Cmov, Y);
+  }
+
+  // add (cmov C1, C2), OtherOp --> cmov (add OtherOp, C1), (add OtherOp, C2)
   FalseOp = DAG.getNode(ISD::ADD, DL, VT, OtherOp, FalseOp);
   TrueOp = DAG.getNode(ISD::ADD, DL, VT, OtherOp, TrueOp);
   return DAG.getNode(X86ISD::CMOV, DL, VT, FalseOp, TrueOp, Cmov.getOperand(2),
