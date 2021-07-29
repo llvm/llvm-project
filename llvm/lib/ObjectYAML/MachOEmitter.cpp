@@ -184,6 +184,30 @@ size_t writeLoadCommandData<MachO::rpath_command>(MachOYAML::LoadCommand &LC,
 }
 
 template <>
+size_t writeLoadCommandData<MachO::sub_framework_command>(
+    MachOYAML::LoadCommand &LC, raw_ostream &OS, bool IsLittleEndian) {
+  return writePayloadString(LC, OS);
+}
+
+template <>
+size_t writeLoadCommandData<MachO::sub_umbrella_command>(
+    MachOYAML::LoadCommand &LC, raw_ostream &OS, bool IsLittleEndian) {
+  return writePayloadString(LC, OS);
+}
+
+template <>
+size_t writeLoadCommandData<MachO::sub_client_command>(
+    MachOYAML::LoadCommand &LC, raw_ostream &OS, bool IsLittleEndian) {
+  return writePayloadString(LC, OS);
+}
+
+template <>
+size_t writeLoadCommandData<MachO::sub_library_command>(
+    MachOYAML::LoadCommand &LC, raw_ostream &OS, bool IsLittleEndian) {
+  return writePayloadString(LC, OS);
+}
+
+template <>
 size_t writeLoadCommandData<MachO::build_version_command>(
     MachOYAML::LoadCommand &LC, raw_ostream &OS, bool IsLittleEndian) {
   size_t BytesWritten = 0;

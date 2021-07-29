@@ -11,7 +11,6 @@
 #include "PybindUtils.h"
 
 #include "Dialects.h"
-#include "ExecutionEngine.h"
 #include "Globals.h"
 #include "IRModule.h"
 #include "Pass.h"
@@ -92,11 +91,6 @@ PYBIND11_MODULE(_mlir, m) {
   auto passModule =
       m.def_submodule("passmanager", "MLIR Pass Management Bindings");
   populatePassManagerSubmodule(passModule);
-
-  // Define and populate ExecutionEngine submodule.
-  auto executionEngineModule =
-      m.def_submodule("execution_engine", "MLIR JIT Execution Engine");
-  populateExecutionEngineSubmodule(executionEngineModule);
 
   // Define and populate dialect submodules.
   auto dialectsModule = m.def_submodule("dialects");
