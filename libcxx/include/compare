@@ -20,8 +20,8 @@ namespace std {
   class strong_ordering;
 
   // named comparison functions
-  constexpr bool is_eq  (partial_ordering cmp) noexcept    { return cmp == 0; }
-  constexpr bool is_neq (partial_ordering cmp) noexcept    { return cmp != 0; }
+  constexpr bool is_eq  (partial_ordering cmp) noexcept { return cmp == 0; }
+  constexpr bool is_neq (partial_ordering cmp) noexcept { return cmp != 0; }
   constexpr bool is_lt  (partial_ordering cmp) noexcept { return cmp < 0; }
   constexpr bool is_lteq(partial_ordering cmp) noexcept { return cmp <= 0; }
   constexpr bool is_gt  (partial_ordering cmp) noexcept { return cmp > 0; }
