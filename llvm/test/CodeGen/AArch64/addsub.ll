@@ -223,4 +223,48 @@ test6:
 ret:
   ret void
 }
+
+declare {i32, i1} @llvm.sadd.with.overflow.i32(i32 %a, i32 %b)
+
+define i1 @sadd_add(i32 %a, i32 %b, i32* %p) {
+; CHECK-LABEL: sadd_add:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    mvn w8, w0
+; CHECK-NEXT:    cmn w8, w1
+; CHECK-NEXT:    cset w8, vs
+; CHECK-NEXT:    sub w9, w1, w0
+; CHECK-NEXT:    mov w0, w8
+; CHECK-NEXT:    str w9, [x2]
+; CHECK-NEXT:    ret
+  %nota = xor i32 %a, -1
+  %a0 = call {i32, i1} @llvm.sadd.with.overflow.i32(i32 %nota, i32 %b)
+  %e0 = extractvalue {i32, i1} %a0, 0
+  %e1 = extractvalue {i32, i1} %a0, 1
+  %res = add i32 %e0, 1
+  store i32 %res, i32* %p
+  ret i1 %e1
+}
+
+declare {i8, i1} @llvm.uadd.with.overflow.i8(i8 %a, i8 %b)
+
+define i1 @uadd_add(i8 %a, i8 %b, i8* %p) {
+; CHECK-LABEL: uadd_add:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    mvn w8, w0
+; CHECK-NEXT:    and w8, w8, #0xff
+; CHECK-NEXT:    add w8, w8, w1, uxtb
+; CHECK-NEXT:    lsr w8, w8, #8
+; CHECK-NEXT:    sub w9, w1, w0
+; CHECK-NEXT:    mov w0, w8
+; CHECK-NEXT:    strb w9, [x2]
+; CHECK-NEXT:    ret
+  %nota = xor i8 %a, -1
+  %a0 = call {i8, i1} @llvm.uadd.with.overflow.i8(i8 %nota, i8 %b)
+  %e0 = extractvalue {i8, i1} %a0, 0
+  %e1 = extractvalue {i8, i1} %a0, 1
+  %res = add i8 %e0, 1
+  store i8 %res, i8* %p
+  ret i1 %e1
+}
+
 ; TODO: adds/subs
