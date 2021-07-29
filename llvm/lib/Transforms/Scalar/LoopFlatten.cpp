@@ -167,8 +167,7 @@ static bool findLoopComponents(
   // count computed by SCEV then this is either because the trip count variable
   // has been widened (then leave the trip count as it is), or because it is a
   // constant and another transformation has changed the compare, e.g.
-  // icmp ult %inc, tripcount -> icmp ult %j, tripcount-1, then we don't flatten
-  // the loop (yet).
+  // icmp ult %inc, tripcount -> icmp ult %j, tripcount-1.
   TripCount = Compare->getOperand(1);
   const SCEV *BackedgeTakenCount = SE->getBackedgeTakenCount(L);
   if (isa<SCEVCouldNotCompute>(BackedgeTakenCount)) {
@@ -176,12 +175,22 @@ static bool findLoopComponents(
     return false;
   }
   const SCEV *SCEVTripCount = SE->getTripCountFromExitCount(BackedgeTakenCount);
-  if (SE->getSCEV(TripCount) != SCEVTripCount) {
-    if (!IsWidened) {
-      LLVM_DEBUG(dbgs() << "Could not find valid trip count\n");
-      return false;
-    }
-    auto TripCountInst = dyn_cast<Instruction>(TripCount);
+  if (SE->getSCEV(TripCount) != SCEVTripCount && !IsWidened) {
+    ConstantInt *RHS = dyn_cast<ConstantInt>(TripCount);
+    // If the IV hasn't been widened, the only way the RHS of the Compare can be
+    // different from the SCEV trip count is if it is a constant which has been
+    // changed by another transformation.
+    assert(RHS && "Expected RHS of compare to be constant");
+    // The L->isCanonical check above ensures we only get here if the loop
+    // increments by 1 on each iteration, so the RHS of the Compare is
+    // tripcount-1 (i.e equivalent to the backedge taken count).
+    assert(SE->getSCEV(RHS) == BackedgeTakenCount &&
+           "Expected RHS of compare to be equal to the backedge taken count");
+    ConstantInt *One = ConstantInt::get(RHS->getType(), 1);
+    TripCount = ConstantInt::get(TripCount->getContext(),
+                                 RHS->getValue() + One->getValue());
+  } else if (SE->getSCEV(TripCount) != SCEVTripCount) {
+    auto *TripCountInst = dyn_cast<Instruction>(TripCount);
     if (!TripCountInst) {
       LLVM_DEBUG(dbgs() << "Could not find valid extended trip count\n");
       return false;
@@ -367,6 +376,13 @@ static bool checkIVUsers(FlattenInfo &FI) {
         return false;
       U = *U->user_begin();
     }
+
+    // If the use is in the compare (which is also the condition of the inner
+    // branch) then the compare has been altered by another transformation e.g
+    // icmp ult %inc, tripcount -> icmp ult %j, tripcount-1, where tripcount is
+    // a constant. Ignore this use as the compare gets removed later anyway.
+    if (U == FI.InnerBranch->getCondition())
+      continue;
 
     LLVM_DEBUG(dbgs() << "Found use of inner induction variable: "; U->dump());
 
