@@ -1942,6 +1942,7 @@ cc_library(
         ":LinalgToStandard",
         ":MathToLLVM",
         ":MathToLibm",
+        ":MathToSPIRV",
         ":MemRefToLLVM",
         ":OpenACCToLLVM",
         ":OpenACCToSCF",
@@ -3670,6 +3671,32 @@ cc_library(
 )
 
 cc_library(
+    name = "MathToSPIRV",
+    srcs = glob([
+        "lib/Conversion/MathToSPIRV/*.cpp",
+        "lib/Conversion/MathToSPIRV/*.h",
+    ]) + ["lib/Conversion/PassDetail.h"],
+    hdrs = glob([
+        "include/mlir/Conversion/MathToSPIRV/*.h",
+    ]),
+    includes = [
+        "include",
+        "lib/Conversion/MathToSPIRV",
+    ],
+    deps = [
+        ":ConversionPassIncGen",
+        ":IR",
+        ":MathDialect",
+        ":Pass",
+        ":SPIRVConversion",
+        ":SPIRVDialect",
+        ":Support",
+        ":Transforms",
+        "//llvm:Support",
+    ],
+)
+
+cc_library(
     name = "StandardToSPIRV",
     srcs = glob([
         "lib/Conversion/StandardToSPIRV/*.cpp",
@@ -3685,7 +3712,6 @@ cc_library(
     deps = [
         ":ConversionPassIncGen",
         ":IR",
-        ":MathDialect",
         ":MemRefDialect",
         ":Pass",
         ":SPIRVConversion",
@@ -4978,6 +5004,7 @@ cc_library(
         ":MathDialect",
         ":MathToLLVM",
         ":MathToLibm",
+        ":MathToSPIRV",
         ":MathTransforms",
         ":MemRefDialect",
         ":MemRefToLLVM",

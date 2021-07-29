@@ -269,6 +269,16 @@ def ConvertMathToLLVM : FunctionPass<"convert-math-to-llvm"> {
 }
 
 //===----------------------------------------------------------------------===//
+// MathToSPIRV
+//===----------------------------------------------------------------------===//
+
+def ConvertMathToSPIRV : Pass<"convert-math-to-spirv", "ModuleOp"> {
+  let summary = "Convert Math dialect to SPIR-V dialect";
+  let constructor = "mlir::createConvertMathToSPIRVPass()";
+  let dependentDialects = ["spirv::SPIRVDialect"];
+}
+
+//===----------------------------------------------------------------------===//
 // MemRefToLLVM
 //===----------------------------------------------------------------------===//
 

@@ -47,26 +47,8 @@ func @float32_unary_scalar(%arg0: f32) {
   %0 = absf %arg0 : f32
   // CHECK: spv.GLSL.Ceil %{{.*}}: f32
   %1 = ceilf %arg0 : f32
-  // CHECK: spv.GLSL.Cos %{{.*}}: f32
-  %2 = math.cos %arg0 : f32
-  // CHECK: spv.GLSL.Exp %{{.*}}: f32
-  %3 = math.exp %arg0 : f32
-  // CHECK: spv.GLSL.Log %{{.*}}: f32
-  %4 = math.log %arg0 : f32
-  // CHECK: %[[ONE:.+]] = spv.Constant 1.000000e+00 : f32
-  // CHECK: %[[ADDONE:.+]] = spv.FAdd %[[ONE]], %{{.+}}
-  // CHECK: spv.GLSL.Log %[[ADDONE]]
-  %40 = math.log1p %arg0 : f32
   // CHECK: spv.FNegate %{{.*}}: f32
   %5 = negf %arg0 : f32
-  // CHECK: spv.GLSL.InverseSqrt %{{.*}}: f32
-  %6 = math.rsqrt %arg0 : f32
-  // CHECK: spv.GLSL.Sqrt %{{.*}}: f32
-  %7 = math.sqrt %arg0 : f32
-  // CHECK: spv.GLSL.Tanh %{{.*}}: f32
-  %8 = math.tanh %arg0 : f32
-  // CHECK: spv.GLSL.Sin %{{.*}}: f32
-  %9 = math.sin %arg0 : f32
   // CHECK: spv.GLSL.Floor %{{.*}}: f32
   %10 = floorf %arg0 : f32
   return
@@ -85,8 +67,6 @@ func @float32_binary_scalar(%lhs: f32, %rhs: f32) {
   %3 = divf %lhs, %rhs: f32
   // CHECK: spv.FRem %{{.*}}, %{{.*}}: f32
   %4 = remf %lhs, %rhs: f32
-  // CHECK: spv.GLSL.Pow %{{.*}}: f32
-  %5 = math.powf %lhs, %rhs : f32
   return
 }
 
