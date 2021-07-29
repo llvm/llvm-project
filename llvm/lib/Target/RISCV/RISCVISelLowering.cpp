@@ -5814,7 +5814,7 @@ static SDValue performANY_EXTENDCombine(SDNode *N,
     break;
   }
 
-  // Only handle cases where the result is used by a CopyToReg that likely
+  // Only handle cases where the result is used by a CopyToReg. That likely
   // means the value is a liveout of the basic block. This helps prevent
   // infinite combine loops like PR51206.
   if (none_of(N->uses(),
