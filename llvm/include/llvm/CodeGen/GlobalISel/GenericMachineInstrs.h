@@ -195,6 +195,17 @@ public:
   }
 };
 
+/// Represents a G_PTR_ADD.
+class GPtrAdd : public GenericMachineInstr {
+public:
+  Register getBaseReg() const { return getReg(1); }
+  Register getOffsetReg() const { return getReg(2); }
+
+  static bool classof(const MachineInstr *MI) {
+    return MI->getOpcode() == TargetOpcode::G_PTR_ADD;
+  }
+};
+
 } // namespace llvm
 
 #endif // LLVM_CODEGEN_GLOBALISEL_GENERICMACHINEINSTRS_H

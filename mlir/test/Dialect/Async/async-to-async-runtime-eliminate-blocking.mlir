@@ -10,19 +10,20 @@ func @simple_callee(%arg0: f32) -> (f32 {builtin.foo = "bar"}) {
 // CHECK: %[[RETURNED_STORAGE:.*]] = async.runtime.create : !async.value<f32>
 // CHECK: %[[ID:.*]] = async.coro.id
 // CHECK: %[[HDL:.*]] = async.coro.begin %[[ID]]
-
-// CHECK: %[[VAL:.*]] = addf %[[ARG]], %[[ARG]] : f32
+// CHECK: br ^[[ORIGINAL_ENTRY:.*]]
+// CHECK  ^[[ORIGINAL_ENTRY]]:
+// CHECK:   %[[VAL:.*]] = addf %[[ARG]], %[[ARG]] : f32
   %0 = addf %arg0, %arg0 : f32
-// CHECK: %[[VAL_STORAGE:.*]] = async.runtime.create : !async.value<f32>
+// CHECK:   %[[VAL_STORAGE:.*]] = async.runtime.create : !async.value<f32>
   %1 = async.runtime.create: !async.value<f32>
-// CHECK: async.runtime.store %[[VAL]], %[[VAL_STORAGE]] : !async.value<f32>
+// CHECK:   async.runtime.store %[[VAL]], %[[VAL_STORAGE]] : !async.value<f32>
   async.runtime.store %0, %1: !async.value<f32>
-// CHECK: async.runtime.set_available %[[VAL_STORAGE]] : !async.value<f32>
+// CHECK:   async.runtime.set_available %[[VAL_STORAGE]] : !async.value<f32>
   async.runtime.set_available %1: !async.value<f32>
 
-// CHECK: %[[SAVED:.*]] = async.coro.save %[[HDL]]
-// CHECK: async.runtime.await_and_resume %[[VAL_STORAGE]], %[[HDL]]
-// CHECK: async.coro.suspend %[[SAVED]]
+// CHECK:   %[[SAVED:.*]] = async.coro.save %[[HDL]]
+// CHECK:   async.runtime.await_and_resume %[[VAL_STORAGE]], %[[HDL]]
+// CHECK:   async.coro.suspend %[[SAVED]]
 // CHECK-SAME: ^[[SUSPEND:.*]], ^[[RESUME:.*]], ^[[CLEANUP:.*]]
   %2 = async.await %1 : !async.value<f32>
 
@@ -62,13 +63,15 @@ func @simple_caller() -> f32 {
 // CHECK: %[[RETURNED_STORAGE:.*]] = async.runtime.create : !async.value<f32>
 // CHECK: %[[ID:.*]] = async.coro.id
 // CHECK: %[[HDL:.*]] = async.coro.begin %[[ID]]
+// CHECK: br ^[[ORIGINAL_ENTRY:.*]]
+// CHECK  ^[[ORIGINAL_ENTRY]]:
 
-// CHECK: %[[CONSTANT:.*]] = constant
+// CHECK:   %[[CONSTANT:.*]] = constant
   %c = constant 1.0 : f32
-// CHECK: %[[RETURNED_TO_CALLER:.*]]:2 = call @simple_callee(%[[CONSTANT]]) : (f32) -> (!async.token, !async.value<f32>)
-// CHECK: %[[SAVED:.*]] = async.coro.save %[[HDL]]
-// CHECK: async.runtime.await_and_resume %[[RETURNED_TO_CALLER]]#0, %[[HDL]]
-// CHECK: async.coro.suspend %[[SAVED]]
+// CHECK:   %[[RETURNED_TO_CALLER:.*]]:2 = call @simple_callee(%[[CONSTANT]]) : (f32) -> (!async.token, !async.value<f32>)
+// CHECK:   %[[SAVED:.*]] = async.coro.save %[[HDL]]
+// CHECK:   async.runtime.await_and_resume %[[RETURNED_TO_CALLER]]#0, %[[HDL]]
+// CHECK:   async.coro.suspend %[[SAVED]]
 // CHECK-SAME: ^[[SUSPEND:.*]], ^[[RESUME:.*]], ^[[CLEANUP:.*]]
   %r = call @simple_callee(%c): (f32) -> f32
 
@@ -109,13 +112,15 @@ func @double_caller() -> f32 {
 // CHECK: %[[RETURNED_STORAGE:.*]] = async.runtime.create : !async.value<f32>
 // CHECK: %[[ID:.*]] = async.coro.id
 // CHECK: %[[HDL:.*]] = async.coro.begin %[[ID]]
+// CHECK: br ^[[ORIGINAL_ENTRY:.*]]
+// CHECK  ^[[ORIGINAL_ENTRY]]:
 
-// CHECK: %[[CONSTANT:.*]] = constant
+// CHECK:   %[[CONSTANT:.*]] = constant
   %c = constant 1.0 : f32
-// CHECK: %[[RETURNED_TO_CALLER_1:.*]]:2 = call @simple_callee(%[[CONSTANT]]) : (f32) -> (!async.token, !async.value<f32>)
-// CHECK: %[[SAVED_1:.*]] = async.coro.save %[[HDL]]
-// CHECK: async.runtime.await_and_resume %[[RETURNED_TO_CALLER_1]]#0, %[[HDL]]
-// CHECK: async.coro.suspend %[[SAVED_1]]
+// CHECK:   %[[RETURNED_TO_CALLER_1:.*]]:2 = call @simple_callee(%[[CONSTANT]]) : (f32) -> (!async.token, !async.value<f32>)
+// CHECK:   %[[SAVED_1:.*]] = async.coro.save %[[HDL]]
+// CHECK:   async.runtime.await_and_resume %[[RETURNED_TO_CALLER_1]]#0, %[[HDL]]
+// CHECK:   async.coro.suspend %[[SAVED_1]]
 // CHECK-SAME: ^[[SUSPEND:.*]], ^[[RESUME_1:.*]], ^[[CLEANUP:.*]]
   %r = call @simple_callee(%c): (f32) -> f32
 

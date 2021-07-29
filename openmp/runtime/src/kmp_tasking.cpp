@@ -2947,8 +2947,7 @@ static inline int __kmp_execute_tasks_template(
                 (TCR_PTR(CCAST(void *, other_thread->th.th_sleep_loc)) !=
                  NULL)) {
               asleep = 1;
-              __kmp_null_resume_wrapper(__kmp_gtid_from_thread(other_thread),
-                                        other_thread->th.th_sleep_loc);
+              __kmp_null_resume_wrapper(other_thread);
               // A sleeping thread should not have any tasks on it's queue.
               // There is a slight possibility that it resumes, steals a task
               // from another thread, which spawns more tasks, all in the time
@@ -3097,6 +3096,16 @@ int __kmp_execute_tasks_64(
       thread_finished USE_ITT_BUILD_ARG(itt_sync_obj), is_constrained);
 }
 
+template <bool C, bool S>
+int __kmp_atomic_execute_tasks_64(
+    kmp_info_t *thread, kmp_int32 gtid, kmp_atomic_flag_64<C, S> *flag,
+    int final_spin, int *thread_finished USE_ITT_BUILD_ARG(void *itt_sync_obj),
+    kmp_int32 is_constrained) {
+  return __kmp_execute_tasks_template(
+      thread, gtid, flag, final_spin,
+      thread_finished USE_ITT_BUILD_ARG(itt_sync_obj), is_constrained);
+}
+
 int __kmp_execute_tasks_oncore(
     kmp_info_t *thread, kmp_int32 gtid, kmp_flag_oncore *flag, int final_spin,
     int *thread_finished USE_ITT_BUILD_ARG(void *itt_sync_obj),
@@ -3122,6 +3131,14 @@ template int __kmp_execute_tasks_64<true, false>(kmp_info_t *, kmp_int32,
                                                  int,
                                                  int *USE_ITT_BUILD_ARG(void *),
                                                  kmp_int32);
+
+template int __kmp_atomic_execute_tasks_64<false, true>(
+    kmp_info_t *, kmp_int32, kmp_atomic_flag_64<false, true> *, int,
+    int *USE_ITT_BUILD_ARG(void *), kmp_int32);
+
+template int __kmp_atomic_execute_tasks_64<true, false>(
+    kmp_info_t *, kmp_int32, kmp_atomic_flag_64<true, false> *, int,
+    int *USE_ITT_BUILD_ARG(void *), kmp_int32);
 
 // __kmp_enable_tasking: Allocate task team and resume threads sleeping at the
 // next barrier so they can assist in executing enqueued tasks.
@@ -3161,7 +3178,7 @@ static void __kmp_enable_tasking(kmp_task_team_t *task_team,
     // tasks and execute them.  In extra barrier mode, tasks do not sleep
     // at the separate tasking barrier, so this isn't a problem.
     for (i = 0; i < nthreads; i++) {
-      volatile void *sleep_loc;
+      void *sleep_loc;
       kmp_info_t *thread = threads_data[i].td.td_thr;
 
       if (i == this_thr->th.th_info.ds.ds_tid) {
@@ -3178,7 +3195,7 @@ static void __kmp_enable_tasking(kmp_task_team_t *task_team,
         KF_TRACE(50, ("__kmp_enable_tasking: T#%d waking up thread T#%d\n",
                       __kmp_gtid_from_thread(this_thr),
                       __kmp_gtid_from_thread(thread)));
-        __kmp_null_resume_wrapper(__kmp_gtid_from_thread(thread), sleep_loc);
+        __kmp_null_resume_wrapper(thread);
       } else {
         KF_TRACE(50, ("__kmp_enable_tasking: T#%d don't wake up thread T#%d\n",
                       __kmp_gtid_from_thread(this_thr),
@@ -3546,7 +3563,7 @@ void __kmp_wait_to_unref_task_teams(void) {
                     __kmp_gtid_from_thread(thread)));
 
       if (__kmp_dflt_blocktime != KMP_MAX_BLOCKTIME) {
-        volatile void *sleep_loc;
+        void *sleep_loc;
         // If the thread is sleeping, awaken it.
         if ((sleep_loc = TCR_PTR(CCAST(void *, thread->th.th_sleep_loc))) !=
             NULL) {
@@ -3554,7 +3571,7 @@ void __kmp_wait_to_unref_task_teams(void) {
               10,
               ("__kmp_wait_to_unref_task_team: T#%d waking up thread T#%d\n",
                __kmp_gtid_from_thread(thread), __kmp_gtid_from_thread(thread)));
-          __kmp_null_resume_wrapper(__kmp_gtid_from_thread(thread), sleep_loc);
+          __kmp_null_resume_wrapper(thread);
         }
       }
     }

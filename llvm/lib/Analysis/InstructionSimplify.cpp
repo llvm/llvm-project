@@ -5781,6 +5781,9 @@ static Value *simplifyIntrinsic(CallBase *Call, const SimplifyQuery &Q) {
   if (!NumOperands) {
     switch (IID) {
     case Intrinsic::vscale: {
+      // Call may not be inserted into the IR yet at point of calling simplify.
+      if (!Call->getParent() || !Call->getParent()->getParent())
+        return nullptr;
       auto Attr = Call->getFunction()->getFnAttribute(Attribute::VScaleRange);
       if (!Attr.isValid())
         return nullptr;

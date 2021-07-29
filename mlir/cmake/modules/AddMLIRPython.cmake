@@ -23,10 +23,12 @@
 #     grouping. Source groupings form a DAG.
 #   SOURCES: List of specific source files relative to ROOT_DIR to include.
 #   SOURCES_GLOB: List of glob patterns relative to ROOT_DIR to include.
+#   DEST_PREFIX: Destination prefix to prepend to files in the python
+#     package directory namespace.
 function(declare_mlir_python_sources name)
   cmake_parse_arguments(ARG
     ""
-    "ROOT_DIR;ADD_TO_PARENT"
+    "ROOT_DIR;ADD_TO_PARENT;DEST_PREFIX"
     "SOURCES;SOURCES_GLOB"
     ${ARGN})
 
@@ -54,6 +56,7 @@ function(declare_mlir_python_sources name)
   set_target_properties(${name} PROPERTIES
     PYTHON_SOURCES_TYPE pure
     PYTHON_ROOT_DIR "${ARG_ROOT_DIR}"
+    PYTHON_DEST_PREFIX "${ARG_DEST_PREFIX}"
     PYTHON_SOURCES "${ARG_SOURCES}"
     PYTHON_FILE_DEPENDS "${_file_depends}"
     PYTHON_DEPENDS ""
@@ -130,9 +133,14 @@ function(add_mlir_python_modules name)
       # Pure python sources to link into the tree.
       get_target_property(_python_root_dir ${sources_target} PYTHON_ROOT_DIR)
       get_target_property(_python_sources ${sources_target} PYTHON_SOURCES)
+      get_target_property(_specified_dest_prefix ${sources_target} PYTHON_DEST_PREFIX)
+      set(_dest_prefix "${ARG_ROOT_PREFIX}")
+      if(_specified_dest_prefix)
+        set(_dest_prefix "${_dest_prefix}/${_specified_dest_prefix}")
+      endif()
       foreach(_source_relative_path ${_python_sources})
         set(_src_path "${_python_root_dir}/${_source_relative_path}")
-        set(_dest_path "${ARG_ROOT_PREFIX}/${_source_relative_path}")
+        set(_dest_path "${_dest_prefix}/${_source_relative_path}")
 
         get_filename_component(_dest_dir "${_dest_path}" DIRECTORY)
         get_filename_component(_install_path "${ARG_INSTALL_PREFIX}/${_source_relative_path}" DIRECTORY)
