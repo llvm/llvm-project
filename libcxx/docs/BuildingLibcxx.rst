@@ -246,10 +246,10 @@ libc++ specific options
 
 .. option:: LIBCXX_ENABLE_FILESYSTEM:BOOL
 
-   **Default**: ``ON`` except on Windows.
+   **Default**: ``ON`` except on Windows when using MSVC.
 
    This option can be used to enable or disable the filesystem components on
-   platforms that may not support them. For example on Windows.
+   platforms that may not support them. For example on Windows when using MSVC.
 
 .. option:: LIBCXX_ENABLE_INCOMPLETE_FEATURES:BOOL
 
