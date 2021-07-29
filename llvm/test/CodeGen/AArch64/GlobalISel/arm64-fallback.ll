@@ -52,17 +52,6 @@ end:
   br label %block
 }
 
-; FALLBACK-WITH-REPORT-ERR: remark: <unknown>:0:0: cannot select: %{{[0-9]+}}:gpr(s32), %{{[0-9]+}}:gpr(s32) = G_UNMERGE_VALUES %{{[0-9]+}}:gpr(s64) (in function: nonpow2_add_narrowing)
-; FALLBACK-WITH-REPORT-ERR: warning: Instruction selection used fallback path for nonpow2_add_narrowing
-; FALLBACK-WITH-REPORT-OUT-LABEL: nonpow2_add_narrowing:
-define void @nonpow2_add_narrowing(i128 %x, i128 %y) {
-  %a = add i128 %x, %y
-  %b = trunc i128 %a to i96
-  %dummy = add i96 %b, %b
-  store i96 %dummy, i96* undef
-  ret void
-}
-
 ; Currently can't handle vector lengths that aren't an exact multiple of
 ; natively supported vector lengths. Test that the fall-back works for those.
 ; FALLBACK-WITH-REPORT-ERR-G_IMPLICIT_DEF-LEGALIZABLE: (FIXME: this is what is expected once we can legalize non-pow-of-2 G_IMPLICIT_DEF) remark: <unknown>:0:0: unable to legalize instruction: %1:_(<7 x s64>) = G_ADD %0, %0 (in function: nonpow2_vector_add_fewerelements
