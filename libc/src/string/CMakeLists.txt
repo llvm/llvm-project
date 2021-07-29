@@ -49,6 +49,14 @@ add_entrypoint_object(
 )
 
 add_entrypoint_object(
+  strncmp
+  SRCS
+    strncmp.cpp
+  HDRS
+    strncmp.h
+)
+
+add_entrypoint_object(
   memchr
   SRCS
     memchr.cpp
