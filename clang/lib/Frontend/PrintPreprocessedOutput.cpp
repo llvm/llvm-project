@@ -276,20 +276,27 @@ bool PrintPPOutputPPCallbacks::MoveToLine(unsigned LineNo,
   // otherwise print a #line directive.
   if (CurLine == LineNo) {
     // Nothing to do if we are already on the correct line.
-  } else if (!StartedNewLine && (!MinimizeWhitespace || !DisableLineMarkers) &&
-             LineNo - CurLine == 1) {
+  } else if (MinimizeWhitespace && DisableLineMarkers) {
+    // With -E -P -fminimize-whitespace, don't emit anything if not necessary.
+  } else if (!StartedNewLine && LineNo - CurLine == 1) {
     // Printing a single line has priority over printing a #line directive, even
     // when minimizing whitespace which otherwise would print #line directives
     // for every single line.
     OS << '\n';
     StartedNewLine = true;
-  } else if (!MinimizeWhitespace && LineNo - CurLine <= 8) {
-    const char *NewLines = "\n\n\n\n\n\n\n\n";
-    OS.write(NewLines, LineNo - CurLine);
-    StartedNewLine = true;
   } else if (!DisableLineMarkers) {
-    // Emit a #line or line marker.
-    WriteLineInfo(LineNo, nullptr, 0);
+    if (LineNo - CurLine <= 8) {
+      const char *NewLines = "\n\n\n\n\n\n\n\n";
+      OS.write(NewLines, LineNo - CurLine);
+    } else {
+      // Emit a #line or line marker.
+      WriteLineInfo(LineNo, nullptr, 0);
+    }
+    StartedNewLine = true;
+  } else if (!StartedNewLine) {
+    // If we are not on the correct line and don't need to be line-correct,
+    // at least ensure we start on a new line.
+    OS << '\n';
     StartedNewLine = true;
   }
 
