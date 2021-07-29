@@ -1,3 +1,4 @@
+; UNSUPPORTED: nanomips
 ; RUN: llc < %s -march=mips -mcpu=mips32r6 -force-mips-long-branch | FileCheck %s
 
 ; Check that when MIPS32R6 with the static relocation model with the usage of

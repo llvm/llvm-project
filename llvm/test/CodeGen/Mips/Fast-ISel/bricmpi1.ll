@@ -1,3 +1,4 @@
+; UNSUPPORTED: nanomips
 ; RUN: llc -march=mipsel -relocation-model=pic -O0 -fast-isel=true -mcpu=mips32r2 \
 ; RUN:     < %s -verify-machineinstrs | FileCheck %s
 

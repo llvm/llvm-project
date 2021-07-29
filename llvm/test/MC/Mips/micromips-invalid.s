@@ -1,3 +1,4 @@
+# UNSUPPORTED: nanomips
 # RUN: not llvm-mc %s -triple=mipsel -show-encoding -mattr=micromips 2>%t1
 # RUN: FileCheck %s < %t1
 

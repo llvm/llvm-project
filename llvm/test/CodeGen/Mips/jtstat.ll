@@ -1,3 +1,4 @@
+; UNSUPPORTED: nanomips
 ; RUN: llc -march=mipsel -mattr=mips16 -relocation-model=static < %s | FileCheck %s -check-prefix=CHECK-STATIC16
 
 @s = global i8 115, align 1

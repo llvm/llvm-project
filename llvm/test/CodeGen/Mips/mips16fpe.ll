@@ -1,3 +1,4 @@
+; UNSUPPORTED: nanomips
 ; RUN: llc -march=mipsel -mattr=mips16 -relocation-model=pic -O3 \
 ; RUN:     -verify-machineinstrs < %s | FileCheck %s -check-prefix=16hf
 

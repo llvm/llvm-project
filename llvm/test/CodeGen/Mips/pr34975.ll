@@ -1,3 +1,4 @@
+; UNSUPPORTED: nanomips
 ; RUN: llc -mtriple=mips64-unknown-freebsd -target-abi n64 -relocation-model pic -verify-machineinstrs -o /dev/null %s -O2
 
 ; Test that the presence of debug information does not cause the branch folder

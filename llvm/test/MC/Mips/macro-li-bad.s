@@ -1,3 +1,4 @@
+# UNSUPPORTED: nanomips
 # RUN: not llvm-mc %s -arch=mips -mcpu=mips32r2 2>%t1
 # RUN: FileCheck %s < %t1 --check-prefix=32-BIT
 # RUN: not llvm-mc %s -arch=mips64 -mcpu=mips64 -target-abi n32 2>&1 | \

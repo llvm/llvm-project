@@ -1,3 +1,4 @@
+# UNSUPPORTED: nanomips
 # Instructions that are valid for the current ISA but should be rejected by the assembler (e.g.
 # invalid set of operands or operand's restrictions not met).
 

@@ -1,3 +1,4 @@
+; UNSUPPORTED: nanomips
 ; RUN: llc -march=mipsel -mattr=mips16 -relocation-model=pic < %s | FileCheck %s -check-prefix=16
 
 @t = global i32 10, align 4

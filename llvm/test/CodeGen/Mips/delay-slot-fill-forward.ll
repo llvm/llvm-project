@@ -1,3 +1,4 @@
+; UNSUPPORTED: nanomips
 ; RUN: llc < %s -march=mips -mcpu=mips32r2 -O2 \
 ; RUN:     -disable-mips-df-forward-search=false \
 ; RUN:     -disable-mips-df-succbb-search=false \
