@@ -22,23 +22,19 @@ define void @f_noalias(i8* noalias nocapture %dst, i8* noalias nocapture readonl
 ; CHECK-NEXT:    [[TMP3:%.*]] = load <4 x i8>, <4 x i8>* [[TMP2]], align 1
 ; CHECK-NEXT:    [[TMP4:%.*]] = zext <4 x i8> [[TMP3]] to <4 x i32>
 ; CHECK-NEXT:    [[TMP5:%.*]] = insertelement <4 x i32> poison, i32 [[TMP0]], i32 0
-; CHECK-NEXT:    [[TMP6:%.*]] = insertelement <4 x i32> [[TMP5]], i32 [[TMP0]], i32 1
-; CHECK-NEXT:    [[TMP7:%.*]] = insertelement <4 x i32> [[TMP6]], i32 [[TMP0]], i32 2
-; CHECK-NEXT:    [[TMP8:%.*]] = insertelement <4 x i32> [[TMP7]], i32 [[TMP0]], i32 3
-; CHECK-NEXT:    [[TMP9:%.*]] = mul nsw <4 x i32> [[TMP8]], [[TMP4]]
-; CHECK-NEXT:    [[TMP10:%.*]] = insertelement <4 x i32> poison, i32 [[TMP1]], i32 0
-; CHECK-NEXT:    [[TMP11:%.*]] = insertelement <4 x i32> [[TMP10]], i32 [[TMP1]], i32 1
-; CHECK-NEXT:    [[TMP12:%.*]] = insertelement <4 x i32> [[TMP11]], i32 [[TMP1]], i32 2
-; CHECK-NEXT:    [[TMP13:%.*]] = insertelement <4 x i32> [[TMP12]], i32 [[TMP1]], i32 3
-; CHECK-NEXT:    [[TMP14:%.*]] = add nsw <4 x i32> [[TMP9]], [[TMP13]]
-; CHECK-NEXT:    [[TMP15:%.*]] = icmp ult <4 x i32> [[TMP14]], <i32 256, i32 256, i32 256, i32 256>
-; CHECK-NEXT:    [[TMP16:%.*]] = icmp sgt <4 x i32> [[TMP14]], zeroinitializer
-; CHECK-NEXT:    [[TMP17:%.*]] = sext <4 x i1> [[TMP16]] to <4 x i32>
-; CHECK-NEXT:    [[TMP18:%.*]] = select <4 x i1> [[TMP15]], <4 x i32> [[TMP14]], <4 x i32> [[TMP17]]
-; CHECK-NEXT:    [[TMP19:%.*]] = trunc <4 x i32> [[TMP18]] to <4 x i8>
+; CHECK-NEXT:    [[SHUFFLE:%.*]] = shufflevector <4 x i32> [[TMP5]], <4 x i32> poison, <4 x i32> zeroinitializer
+; CHECK-NEXT:    [[TMP6:%.*]] = mul nsw <4 x i32> [[SHUFFLE]], [[TMP4]]
+; CHECK-NEXT:    [[TMP7:%.*]] = insertelement <4 x i32> poison, i32 [[TMP1]], i32 0
+; CHECK-NEXT:    [[SHUFFLE1:%.*]] = shufflevector <4 x i32> [[TMP7]], <4 x i32> poison, <4 x i32> zeroinitializer
+; CHECK-NEXT:    [[TMP8:%.*]] = add nsw <4 x i32> [[TMP6]], [[SHUFFLE1]]
+; CHECK-NEXT:    [[TMP9:%.*]] = icmp ult <4 x i32> [[TMP8]], <i32 256, i32 256, i32 256, i32 256>
+; CHECK-NEXT:    [[TMP10:%.*]] = icmp sgt <4 x i32> [[TMP8]], zeroinitializer
+; CHECK-NEXT:    [[TMP11:%.*]] = sext <4 x i1> [[TMP10]] to <4 x i32>
+; CHECK-NEXT:    [[TMP12:%.*]] = select <4 x i1> [[TMP9]], <4 x i32> [[TMP8]], <4 x i32> [[TMP11]]
+; CHECK-NEXT:    [[TMP13:%.*]] = trunc <4 x i32> [[TMP12]] to <4 x i8>
 ; CHECK-NEXT:    [[ARRAYIDX2_3:%.*]] = getelementptr inbounds i8, i8* [[DST]], i64 3
-; CHECK-NEXT:    [[TMP20:%.*]] = bitcast i8* [[DST]] to <4 x i8>*
-; CHECK-NEXT:    store <4 x i8> [[TMP19]], <4 x i8>* [[TMP20]], align 1
+; CHECK-NEXT:    [[TMP14:%.*]] = bitcast i8* [[DST]] to <4 x i8>*
+; CHECK-NEXT:    store <4 x i8> [[TMP13]], <4 x i8>* [[TMP14]], align 1
 ; CHECK-NEXT:    ret void
 ;
 entry:
