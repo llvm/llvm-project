@@ -784,8 +784,8 @@ void *internal_start_thread(void *(*func)(void *arg), void *arg) {
 void internal_join_thread(void *th) { pthread_join((pthread_t)th, 0); }
 
 #if !SANITIZER_GO
-static BlockingMutex syslog_lock(LINKER_INITIALIZED);
-#endif
+static Mutex syslog_lock;
+#  endif
 
 void WriteOneLineToSyslog(const char *s) {
 #if !SANITIZER_GO
@@ -800,7 +800,7 @@ void WriteOneLineToSyslog(const char *s) {
 
 // buffer to store crash report application information
 static char crashreporter_info_buff[__sanitizer::kErrorMessageBufferSize] = {};
-static BlockingMutex crashreporter_info_mutex(LINKER_INITIALIZED);
+static Mutex crashreporter_info_mutex;
 
 extern "C" {
 // Integrate with crash reporter libraries.
@@ -830,7 +830,7 @@ asm(".desc ___crashreporter_info__, 0x10");
 }  // extern "C"
 
 static void CRAppendCrashLogMessage(const char *msg) {
-  BlockingMutexLock l(&crashreporter_info_mutex);
+  Lock l(&crashreporter_info_mutex);
   internal_strlcat(crashreporter_info_buff, msg,
                    sizeof(crashreporter_info_buff));
 #if HAVE_CRASHREPORTERCLIENT_H
@@ -874,7 +874,7 @@ void LogFullErrorReport(const char *buffer) {
   // the reporting thread holds the thread registry mutex, and asl_log waits
   // for GCD to dispatch a new thread, the process will deadlock, because the
   // pthread_create wrapper needs to acquire the lock as well.
-  BlockingMutexLock l(&syslog_lock);
+  Lock l(&syslog_lock);
   if (common_flags()->log_to_syslog)
     WriteToSyslog(buffer);
 
