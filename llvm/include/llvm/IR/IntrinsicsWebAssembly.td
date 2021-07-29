@@ -162,23 +162,6 @@ def int_wasm_q15mulr_sat_signed :
             [llvm_v8i16_ty, llvm_v8i16_ty],
             [IntrNoMem, IntrSpeculatable]>;
 
-def int_wasm_extmul_low_signed :
-  Intrinsic<[llvm_anyvector_ty],
-            [LLVMSubdivide2VectorType<0>, LLVMSubdivide2VectorType<0>],
-            [IntrNoMem, IntrSpeculatable]>;
-def int_wasm_extmul_high_signed :
-  Intrinsic<[llvm_anyvector_ty],
-            [LLVMSubdivide2VectorType<0>, LLVMSubdivide2VectorType<0>],
-            [IntrNoMem, IntrSpeculatable]>;
-def int_wasm_extmul_low_unsigned :
-  Intrinsic<[llvm_anyvector_ty],
-            [LLVMSubdivide2VectorType<0>, LLVMSubdivide2VectorType<0>],
-            [IntrNoMem, IntrSpeculatable]>;
-def int_wasm_extmul_high_unsigned :
-  Intrinsic<[llvm_anyvector_ty],
-            [LLVMSubdivide2VectorType<0>, LLVMSubdivide2VectorType<0>],
-            [IntrNoMem, IntrSpeculatable]>;
-
 def int_wasm_extadd_pairwise_signed :
   Intrinsic<[llvm_anyvector_ty],
             [LLVMSubdivide2VectorType<0>],
