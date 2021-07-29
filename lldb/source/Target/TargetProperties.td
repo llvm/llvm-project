@@ -175,9 +175,6 @@ let Definition = "target" in {
   def DebugUtilityExpression: Property<"debug-utility-expression", "Boolean">,
     DefaultFalse,
     Desc<"Enable debugging of LLDB-internal utility expressions.">;
-  def VerifyFileCacheMemoryReads: Property<"verify-file-cache-memory-reads", "Boolean">,
-    DefaultFalse,
-    Desc<"Verify that memory read from the file-cache is identical to the memory read from the process.">;
 }
 
 let Definition = "process_experimental" in {

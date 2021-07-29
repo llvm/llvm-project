@@ -791,6 +791,9 @@ private:
   using WarnUnusedMacroLocsTy = llvm::SmallDenseSet<SourceLocation, 32>;
   WarnUnusedMacroLocsTy WarnUnusedMacroLocs;
 
+  /// Deprecation messages for macros provided in #pragma clang deprecated
+  llvm::DenseMap<const IdentifierInfo *, std::string> MacroDeprecationMsgs;
+
   /// A "freelist" of MacroArg objects that can be
   /// reused for quick allocation.
   MacroArgs *MacroArgCache = nullptr;
@@ -2391,6 +2394,19 @@ public:
   /// A macro is used, update information about macros that need unused
   /// warnings.
   void markMacroAsUsed(MacroInfo *MI);
+
+  void addMacroDeprecationMsg(const IdentifierInfo *II, std::string Msg) {
+    MacroDeprecationMsgs.insert(std::make_pair(II, Msg));
+  }
+
+  llvm::Optional<std::string> getMacroDeprecationMsg(const IdentifierInfo *II) {
+    auto MsgEntry = MacroDeprecationMsgs.find(II);
+    if (MsgEntry == MacroDeprecationMsgs.end())
+      return llvm::None;
+    return MsgEntry->second;
+  }
+
+  void emitMacroExpansionWarnings(const Token &Identifier);
 
 private:
   Optional<unsigned>

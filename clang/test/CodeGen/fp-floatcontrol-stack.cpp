@@ -6,6 +6,10 @@
 #define FUN(n) \
   (float z) { return n * z + n; }
 
+// CHECK-DDEFAULT Function Attrs: noinline nounwind optnone mustprogress
+// CHECK-DEBSTRICT Function Attrs: noinline nounwind optnone strictfp mustprogress
+// CHECK-FAST: Function Attrs: mustprogress noinline nounwind optnone
+// CHECK-NOHONOR Function Attrs: noinline nounwind optnone mustprogress
 float fun_default FUN(1)
 //CHECK-LABEL: define {{.*}} @_Z11fun_defaultf{{.*}}
 #if DEFAULT
@@ -28,6 +32,10 @@ float fun_default FUN(1)
 // Rule: precise must be enabled
 #pragma float_control(except, on)
 #endif
+    // CHECK-FAST: Function Attrs: mustprogress noinline nounwind optnone
+    // CHECK-DDEFAULT Function Attrs: noinline nounwind optnone strictfp mustprogress
+    // CHECK-DEBSTRICT Function Attrs: noinline nounwind optnone strictfp mustprogress
+    // CHECK-NOHONOR Function Attrs: noinline nounwind optnone strictfp mustprogress
     float exc_on FUN(2)
 //CHECK-LABEL: define {{.*}} @_Z6exc_onf{{.*}}
 #if DEFAULT
@@ -46,7 +54,11 @@ float fun_default FUN(1)
 #endif
 
 #pragma float_control(pop)
-        float exc_pop FUN(5)
+    // CHECK-DDEFAULT Function Attrs: noinline nounwind optnone mustprogress
+    // CHECK-DEBSTRICT Function Attrs: noinline nounwind optnone strictfp mustprogress
+    // CHECK-FAST: Function Attrs: mustprogress noinline nounwind optnone
+    // CHECK-NOHONOR Function Attrs: noinline nounwind optnone mustprogress
+    float exc_pop FUN(5)
 //CHECK-LABEL: define {{.*}} @_Z7exc_popf{{.*}}
 #if DEFAULT
 //CHECK-DDEFAULT: call float @llvm.fmuladd{{.*}}
@@ -63,7 +75,7 @@ float fun_default FUN(1)
 #endif
 
 #pragma float_control(except, off)
-            float exc_off FUN(5)
+        float exc_off FUN(5)
 //CHECK-LABEL: define {{.*}} @_Z7exc_offf{{.*}}
 #if DEFAULT
 //CHECK-DDEFAULT: call float @llvm.fmuladd{{.*}}
@@ -80,7 +92,7 @@ float fun_default FUN(1)
 #endif
 
 #pragma float_control(precise, on, push)
-                float precise_on FUN(3)
+            float precise_on FUN(3)
 //CHECK-LABEL: define {{.*}} @_Z10precise_onf{{.*}}
 #if DEFAULT
 //CHECK-DDEFAULT: float {{.*}}llvm.fmuladd{{.*}}
@@ -97,7 +109,7 @@ float fun_default FUN(1)
 #endif
 
 #pragma float_control(pop)
-                    float precise_pop FUN(3)
+                float precise_pop FUN(3)
 //CHECK-LABEL: define {{.*}} @_Z11precise_popf{{.*}}
 #if DEFAULT
 //CHECK-DDEFAULT: float {{.*}}llvm.fmuladd{{.*}}
@@ -113,7 +125,7 @@ float fun_default FUN(1)
 //CHECK-FAST: fadd fast float
 #endif
 #pragma float_control(precise, off)
-                        float precise_off FUN(4)
+                    float precise_off FUN(4)
 //CHECK-LABEL: define {{.*}} @_Z11precise_offf{{.*}}
 #if DEFAULT
 // Note: precise_off enables fp_contract=fast and the instructions
@@ -137,7 +149,7 @@ float fun_default FUN(1)
 #endif
 
 #pragma float_control(precise, on)
-                            float precise_on2 FUN(3)
+                        float precise_on2 FUN(3)
 //CHECK-LABEL: define {{.*}} @_Z11precise_on2f{{.*}}
 #if DEFAULT
 //CHECK-DDEFAULT: llvm.fmuladd{{.*}}
@@ -154,7 +166,7 @@ float fun_default FUN(1)
 #endif
 
 #pragma float_control(push)
-                                float precise_push FUN(3)
+                            float precise_push FUN(3)
 //CHECK-LABEL: define {{.*}} @_Z12precise_pushf{{.*}}
 #if DEFAULT
 //CHECK-DDEFAULT: llvm.fmuladd{{.*}}
@@ -170,7 +182,7 @@ float fun_default FUN(1)
 #endif
 
 #pragma float_control(precise, off)
-                                    float precise_off2 FUN(4)
+                                float precise_off2 FUN(4)
 //CHECK-LABEL: define {{.*}} @_Z12precise_off2f{{.*}}
 #if DEFAULT
 //CHECK-DDEFAULT: fmul fast float
@@ -191,7 +203,7 @@ float fun_default FUN(1)
 #endif
 
 #pragma float_control(pop)
-                                        float precise_pop2 FUN(3)
+                                    float precise_pop2 FUN(3)
 //CHECK-LABEL: define {{.*}} @_Z12precise_pop2f{{.*}}
 #if DEFAULT
 //CHECK-DDEFAULT: llvm.fmuladd{{.*}}
@@ -210,27 +222,34 @@ float fun_default FUN(1)
 // Rule: precise must be enabled
 #pragma float_control(except, on)
 #endif
-                                            float y();
+                                        float y();
+// CHECK-DDEFAULT Function Attrs: noinline nounwind optnone mustprogress
+// CHECK-DEBSTRICT Function Attrs: noinline nounwind optnone strictfp mustprogress
+// CHECK-FAST: Function Attrs: mustprogress noinline nounwind optnone
+// CHECK-NOHONOR Function Attrs: noinline nounwind optnone mustprogress
 class ON {
   // Settings for top level class initializer use program source setting.
   float z = 2 + y() * 7;
 //CHECK-LABEL: define {{.*}} void @_ZN2ONC2Ev{{.*}}
 #if DEFAULT
-//CHECK-DDEFAULT: call float {{.*}}llvm.fmuladd
+// CHECK-DDEFAULT: llvm.experimental.constrained.fmul{{.*}}tonearest{{.*}}strict
 #endif
 #if EBSTRICT
-//Currently, same as default [command line options not considered]
-//CHECK-DEBSTRICT: call float {{.*}}llvm.fmuladd
+// CHECK-DEBSTRICT: llvm.experimental.constrained.fmul{{.*}}tonearest{{.*}}strict
 #endif
 #if NOHONOR
-//CHECK-NOHONOR: call float {{.*}}llvm.fmuladd
+// CHECK-NOHONOR: llvm.experimental.constrained.fmul{{.*}}tonearest{{.*}}strict
 #endif
 #if FAST
-//CHECK-FAST: float {{.*}}llvm.fmuladd{{.*}}
+// CHECK-FAST: float {{.*}}llvm.fmuladd{{.*}}
 #endif
 };
 ON on;
 #pragma float_control(except, off)
+// CHECK-DDEFAULT Function Attrs: noinline nounwind optnone
+// CHECK-DEBSTRICT Function Attrs: noinline nounwind optnone
+// CHECK-FAST: Function Attrs: noinline nounwind optnone
+// CHECK-NOHONOR Function Attrs: noinline nounwind optnone
 class OFF {
   float w = 2 + y() * 7;
 //CHECK-LABEL: define {{.*}} void @_ZN3OFFC2Ev{{.*}}
@@ -259,3 +278,9 @@ MyComplex useAdd() {
   MyComplex b (2, 4);
    return a + b;
 }
+
+// CHECK-DDEFAULT Function Attrs: noinline nounwind
+// CHECK-DEBSTRICT Function Attrs: noinline nounwind strictfp
+// CHECK-FAST: Function Attrs: noinline nounwind
+// CHECK-NOHONOR Function Attrs: noinline nounwind
+// CHECK-LABEL: define{{.*}} @_GLOBAL__sub_I_fp_floatcontrol_stack

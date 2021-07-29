@@ -1413,6 +1413,18 @@ bool Preprocessor::HandleComment(Token &result, SourceRange Comment) {
   return true;
 }
 
+void Preprocessor::emitMacroExpansionWarnings(const Token &Identifier) {
+  if (Identifier.getIdentifierInfo()->isDeprecatedMacro()) {
+    auto DepMsg = getMacroDeprecationMsg(Identifier.getIdentifierInfo());
+    if (!DepMsg)
+      Diag(Identifier, diag::warn_pragma_deprecated_macro_use)
+          << Identifier.getIdentifierInfo() << 0;
+    else
+      Diag(Identifier, diag::warn_pragma_deprecated_macro_use)
+          << Identifier.getIdentifierInfo() << 1 << *DepMsg;
+  }
+}
+
 ModuleLoader::~ModuleLoader() = default;
 
 CommentHandler::~CommentHandler() = default;

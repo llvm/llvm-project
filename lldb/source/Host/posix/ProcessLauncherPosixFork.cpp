@@ -46,8 +46,8 @@ static void FixupEnvironment(Environment &env) {
 #endif
 }
 
-static void LLVM_ATTRIBUTE_NORETURN ExitWithError(int error_fd,
-                                                  const char *operation) {
+[[noreturn]] static void ExitWithError(int error_fd,
+                                       const char *operation) {
   int err = errno;
   llvm::raw_fd_ostream os(error_fd, true);
   os << operation << " failed: " << llvm::sys::StrError(err);
@@ -88,8 +88,8 @@ static void DupDescriptor(int error_fd, const FileSpec &file_spec, int fd,
   return;
 }
 
-static void LLVM_ATTRIBUTE_NORETURN ChildFunc(int error_fd,
-                                              const ProcessLaunchInfo &info) {
+[[noreturn]] static void ChildFunc(int error_fd,
+                                   const ProcessLaunchInfo &info) {
   if (info.GetFlags().Test(eLaunchFlagLaunchInSeparateProcessGroup)) {
     if (setpgid(0, 0) != 0)
       ExitWithError(error_fd, "setpgid");

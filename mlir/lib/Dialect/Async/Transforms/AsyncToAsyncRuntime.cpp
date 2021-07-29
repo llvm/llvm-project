@@ -614,6 +614,10 @@ static void rewriteCallsiteForCoroutine(CallOp oldCall, FuncOp func) {
   oldCall.erase();
 }
 
+static bool isAllowedToBlock(FuncOp func) {
+  return !!func->getAttrOfType<UnitAttr>(AsyncDialect::kAllowedToBlockAttrName);
+}
+
 static LogicalResult
 funcsToCoroutines(ModuleOp module,
                   llvm::DenseMap<FuncOp, CoroMachinery> &outlinedFunctions) {
@@ -628,12 +632,15 @@ funcsToCoroutines(ModuleOp module,
   // Careful, it's okay to add a func to the worklist multiple times if and only
   // if the loop processing the worklist will skip the functions that have
   // already been converted to coroutines.
-  auto addToWorklist = [&outlinedFunctions, &funcWorklist](FuncOp func) {
+  auto addToWorklist = [&](FuncOp func) {
+    if (isAllowedToBlock(func))
+      return;
     // N.B. To refactor this code into a separate pass the lookup in
     // outlinedFunctions is the most obvious obstacle. Looking at an arbitrary
     // func and recognizing if it has a coroutine structure is messy. Passing
     // this dict between the passes is ugly.
-    if (outlinedFunctions.find(func) == outlinedFunctions.end()) {
+    if (isAllowedToBlock(func) ||
+        outlinedFunctions.find(func) == outlinedFunctions.end()) {
       for (Operation &op : func.body().getOps()) {
         if (dyn_cast<AwaitOp>(op) || dyn_cast<AwaitAllOp>(op)) {
           funcWorklist.push_back(func);
@@ -759,7 +766,10 @@ void AsyncToAsyncRuntimePass::runOnOperation() {
   });
 
   if (eliminateBlockingAwaitOps)
-    runtimeTarget.addIllegalOp<RuntimeAwaitOp>();
+    runtimeTarget.addDynamicallyLegalOp<RuntimeAwaitOp>(
+        [&](RuntimeAwaitOp op) -> bool {
+          return isAllowedToBlock(op->getParentOfType<FuncOp>());
+        });
 
   if (failed(applyPartialConversion(module, runtimeTarget,
                                     std::move(asyncPatterns)))) {

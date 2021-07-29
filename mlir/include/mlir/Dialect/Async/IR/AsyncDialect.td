@@ -28,6 +28,15 @@ def AsyncDialect : Dialect {
   }];
 
   let cppNamespace = "::mlir::async";
+
+  let extraClassDeclaration = [{
+    // The name of a unit attribute on funcs that are allowed to have a blocking
+    // async.runtime.await ops. Only useful in combination with
+    // 'eliminate-blocking-await-ops' option, which in absence of this attribute
+    // might convert a func to a coroutine.
+    static constexpr StringRef kAllowedToBlockAttrName = "async.allowed_to_block";
+  }];
+
 }
 
 #endif // ASYNC_DIALECT_TD
