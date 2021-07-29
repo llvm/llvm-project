@@ -82,7 +82,7 @@ Section,Description,Dependencies,Assignee,Complete
 [counted.iterator],,"| [iterator.concepts]
 | [iterator.cust.swap]
 | [iterator.cust.move]
-| [default.sentinels]",Zoe Carver,In Progress
+| [default.sentinels]",Zoe Carver,✅
 [stream.iterators],,[default.sentinels],Unassigned,Not started
 `[range.access] <http://wg21.link/range.access>`_,"| `ranges::begin <https://llvm.org/D100255>`_
 | `ranges::end <https://llvm.org/D100255>`_
