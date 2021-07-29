@@ -103,13 +103,8 @@ if config.target_triple:
 # by copying/linking sources to build.
 if config.enable_bindings_python:
     llvm_config.with_environment('PYTHONPATH', [
-        # TODO: Don't reference the llvm_obj_root here: the invariant is that
-        # the python/ must be at the same level of the lib directory
-        # where libMLIR.so is installed. This is presently not optimal from a
-        # project separation perspective and a discussion on how to better
-        # segment MLIR libraries needs to happen. See also
-        # lib/Bindings/Python/CMakeLists.txt for where this is set up.
-        os.path.join(config.llvm_obj_root, 'python'),
+        os.path.join(config.mlir_obj_root, 'python_packages', 'mlir_core'),
+        os.path.join(config.mlir_obj_root, 'python_packages', 'mlir_test'),
     ], append_path=True)
 
 if config.enable_assertions:

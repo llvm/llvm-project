@@ -54,7 +54,7 @@ endfunction()
 #   with large dependencies.
 function(add_mlir_library name)
   cmake_parse_arguments(ARG
-    "SHARED;INSTALL_WITH_TOOLCHAIN;EXCLUDE_FROM_LIBMLIR"
+    "SHARED;INSTALL_WITH_TOOLCHAIN;EXCLUDE_FROM_LIBMLIR;DISABLE_INSTALL"
     ""
     "ADDITIONAL_HEADERS;DEPENDS;LINK_COMPONENTS;LINK_LIBS"
     ${ARGN})
@@ -131,7 +131,9 @@ function(add_mlir_library name)
 
   if(TARGET ${name})
     target_link_libraries(${name} INTERFACE ${LLVM_COMMON_LIBS})
-    add_mlir_library_install(${name})
+    if(NOT ARG_DISABLE_INSTALL)
+      add_mlir_library_install(${name})
+    endif()
   else()
     # Add empty "phony" target
     add_custom_target(${name})

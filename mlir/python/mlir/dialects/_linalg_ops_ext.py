@@ -2,12 +2,16 @@
 #  See https://llvm.org/LICENSE.txt for license information.
 #  SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 
-from typing import Optional, Sequence, Union
-from ..ir import *
-from ._ods_common import get_default_loc_context
-# TODO: resolve name collision for Linalg functionality that is injected inside
-# the _mlir.dialects.linalg directly via pybind.
-from _mlir.dialects.linalg import fill_builtin_region
+try:
+  from typing import Optional, Sequence, Union
+  from ..ir import *
+  from ._ods_common import get_default_loc_context
+  # TODO: resolve name collision for Linalg functionality that is injected inside
+  # the _mlir.dialects.linalg directly via pybind.
+  from .._cext_loader import _cext
+  fill_builtin_region = _cext.dialects.linalg.fill_builtin_region
+except ImportError as e:
+  raise RuntimeError("Error loading imports from extension module") from e
 
 
 def isa(cls: Type, ty: Type):
