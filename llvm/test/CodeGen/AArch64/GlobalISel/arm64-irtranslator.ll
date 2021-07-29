@@ -929,9 +929,11 @@ define void @test_insertvalue_agg(%struct.nested* %addr, {i8, i32}* %addr2) {
 
 ; CHECK-LABEL: name: test_select
 ; CHECK: [[TST_C:%[0-9]+]]:_(s32) = COPY $w0
-; CHECK: [[TST:%[0-9]+]]:_(s1) = G_TRUNC [[TST_C]]
+; CHECK: [[TSTEXT:%[0-9]+]]:_(s8) = G_TRUNC [[TST_C]]
 ; CHECK: [[LHS:%[0-9]+]]:_(s32) = COPY $w1
 ; CHECK: [[RHS:%[0-9]+]]:_(s32) = COPY $w2
+; CHECK: [[TSTASSERT:%[0-9]+]]:_(s8) = G_ASSERT_ZEXT [[TSTEXT]], 1
+; CHECK: [[TST:%[0-9]+]]:_(s1) = G_TRUNC [[TSTASSERT]]
 ; CHECK: [[RES:%[0-9]+]]:_(s32) = G_SELECT [[TST]](s1), [[LHS]], [[RHS]]
 ; CHECK: $w0 = COPY [[RES]]
 define i32 @test_select(i1 %tst, i32 %lhs, i32 %rhs) {
@@ -941,9 +943,11 @@ define i32 @test_select(i1 %tst, i32 %lhs, i32 %rhs) {
 
 ; CHECK-LABEL: name: test_select_flags
 ; CHECK:   [[COPY:%[0-9]+]]:_(s32) = COPY $w0
-; CHECK:   [[TRUNC:%[0-9]+]]:_(s1) = G_TRUNC [[COPY]](s32)
+; CHECK:   [[TRUNC8:%[0-9]+]]:_(s8) = G_TRUNC [[COPY]]
 ; CHECK:   [[COPY1:%[0-9]+]]:_(s32) = COPY $s0
 ; CHECK:   [[COPY2:%[0-9]+]]:_(s32) = COPY $s1
+; CHECK:   [[TRUNCASSERT:%[0-9]+]]:_(s8) = G_ASSERT_ZEXT [[TRUNC8]], 1
+; CHECK:   [[TRUNC:%[0-9]+]]:_(s1) = G_TRUNC [[TRUNCASSERT]]
 ; CHECK:   [[SELECT:%[0-9]+]]:_(s32) = nnan G_SELECT [[TRUNC]](s1), [[COPY1]], [[COPY2]]
 define float @test_select_flags(i1 %tst, float %lhs, float %rhs) {
   %res = select nnan i1 %tst, float %lhs, float %rhs
@@ -966,9 +970,11 @@ define float @test_select_cmp_flags(float %cmp0, float %cmp1, float %lhs, float 
 
 ; CHECK-LABEL: name: test_select_ptr
 ; CHECK: [[TST_C:%[0-9]+]]:_(s32) = COPY $w0
-; CHECK: [[TST:%[0-9]+]]:_(s1) = G_TRUNC [[TST_C]]
+; CHECK: [[TSTEXT:%[0-9]+]]:_(s8) = G_TRUNC [[TST_C]]
 ; CHECK: [[LHS:%[0-9]+]]:_(p0) = COPY $x1
 ; CHECK: [[RHS:%[0-9]+]]:_(p0) = COPY $x2
+; CHECK: [[TSTASSERT:%[0-9]+]]:_(s8) = G_ASSERT_ZEXT [[TSTEXT]], 1
+; CHECK: [[TST:%[0-9]+]]:_(s1) = G_TRUNC [[TSTASSERT]]
 ; CHECK: [[RES:%[0-9]+]]:_(p0) = G_SELECT [[TST]](s1), [[LHS]], [[RHS]]
 ; CHECK: $x0 = COPY [[RES]]
 define i8* @test_select_ptr(i1 %tst, i8* %lhs, i8* %rhs) {
@@ -978,9 +984,11 @@ define i8* @test_select_ptr(i1 %tst, i8* %lhs, i8* %rhs) {
 
 ; CHECK-LABEL: name: test_select_vec
 ; CHECK: [[TST_C:%[0-9]+]]:_(s32) = COPY $w0
-; CHECK: [[TST:%[0-9]+]]:_(s1) = G_TRUNC [[TST_C]]
+; CHECK: [[TSTEXT:%[0-9]+]]:_(s8) = G_TRUNC [[TST_C]]
 ; CHECK: [[LHS:%[0-9]+]]:_(<4 x s32>) = COPY $q0
 ; CHECK: [[RHS:%[0-9]+]]:_(<4 x s32>) = COPY $q1
+; CHECK: [[TSTASSERT:%[0-9]+]]:_(s8) = G_ASSERT_ZEXT [[TSTEXT]], 1
+; CHECK: [[TST:%[0-9]+]]:_(s1) = G_TRUNC [[TSTASSERT]]
 ; CHECK: [[RES:%[0-9]+]]:_(<4 x s32>) = G_SELECT [[TST]](s1), [[LHS]], [[RHS]]
 ; CHECK: $q0 = COPY [[RES]]
 define <4 x i32> @test_select_vec(i1 %tst, <4 x i32> %lhs, <4 x i32> %rhs) {
@@ -1842,8 +1850,10 @@ define void @test_phi_diamond({ i8, i16, i32 }* %a.ptr, { i8, i16, i32 }* %b.ptr
 ; CHECK: [[ARG1:%[0-9]+]]:_(p0) = COPY $x0
 ; CHECK: [[ARG2:%[0-9]+]]:_(p0) = COPY $x1
 ; CHECK: [[ARG3:%[0-9]+]]:_(s32) = COPY $w2
-; CHECK: [[TRUNC:%[0-9]+]]:_(s1) = G_TRUNC [[ARG3]](s32)
+; CHECK: [[TRUNC8:%[0-9]+]]:_(s8) = G_TRUNC [[ARG3]]
 ; CHECK: [[ARG4:%[0-9]+]]:_(p0) = COPY $x3
+; CHECK: [[TRUNCASSERT:%[0-9]+]]:_(s8) = G_ASSERT_ZEXT [[TRUNC8]], 1
+; CHECK: [[TRUNC:%[0-9]+]]:_(s1) = G_TRUNC [[TRUNCASSERT]]
 ; CHECK: G_BRCOND [[TRUNC]](s1), %bb.2
 ; CHECK: G_BR %bb.3
 
@@ -2351,7 +2361,7 @@ define void @test_i1_arg_zext(void (i1)* %f) {
 ; CHECK-LABEL: name: test_i1_arg_zext
 ; CHECK: [[I1:%[0-9]+]]:_(s1) = G_CONSTANT i1 true
 ; CHECK: [[ZEXT0:%[0-9]+]]:_(s8) = G_ZEXT [[I1]](s1)
-; CHECK: [[ZEXT1:%[0-9]+]]:_(s32) = G_ZEXT [[ZEXT0]](s8)
+; CHECK: [[ZEXT1:%[0-9]+]]:_(s32) = G_ANYEXT [[ZEXT0]](s8)
 ; CHECK: $w0 = COPY [[ZEXT1]](s32)
   call void %f(i1 true)
   ret void
