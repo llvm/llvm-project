@@ -56,7 +56,7 @@ class AddrHashMap {
   static const uptr kBucketSize = 3;
 
   struct Bucket {
-    RWMutex          mtx;
+    Mutex mtx;
     atomic_uintptr_t add;
     Cell             cells[kBucketSize];
   };

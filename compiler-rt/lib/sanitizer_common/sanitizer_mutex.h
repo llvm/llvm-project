@@ -372,15 +372,7 @@ class SCOPED_LOCK GenericScopedReadLock {
   void operator=(const GenericScopedReadLock &) = delete;
 };
 
-// TODO: Temporary measure for incremental migration.
-// These typedefs should be removed and all uses renamed to Mutex.
-typedef Mutex BlockingMutex;
-typedef Mutex RWMutex;
-
 typedef GenericScopedLock<StaticSpinMutex> SpinMutexLock;
-typedef GenericScopedLock<BlockingMutex> BlockingMutexLock;
-typedef GenericScopedLock<RWMutex> RWMutexLock;
-typedef GenericScopedReadLock<RWMutex> RWMutexReadLock;
 typedef GenericScopedLock<Mutex> Lock;
 typedef GenericScopedReadLock<Mutex> ReadLock;
 
