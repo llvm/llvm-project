@@ -683,7 +683,15 @@ defm : VPatBinaryVL_VV_VX_VI<riscv_shl_vl, "PseudoVSLL", uimm5>;
 defm : VPatBinaryVL_VV_VX_VI<riscv_srl_vl, "PseudoVSRL", uimm5>;
 defm : VPatBinaryVL_VV_VX_VI<riscv_sra_vl, "PseudoVSRA", uimm5>;
 
-
+foreach vti = AllIntegerVectors in {
+  // Emit shift by 1 as an add since it might be faster.
+  def : Pat<(riscv_shl_vl (vti.Vector vti.RegClass:$rs1),
+                          (riscv_vmv_v_x_vl 1, (XLenVT srcvalue)),
+                          (vti.Mask true_mask),
+                          VLOpFrag),
+            (!cast<Instruction>("PseudoVADD_VV_"# vti.LMul.MX)
+                 vti.RegClass:$rs1, vti.RegClass:$rs1, GPR:$vl, vti.Log2SEW)>;
+}
 
 // 12.7. Vector Narrowing Integer Right Shift Instructions
 foreach vtiTowti = AllWidenableIntVectors in {
