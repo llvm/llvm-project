@@ -140,25 +140,10 @@ namespace std {
 #include <__compare/compare_three_way_result.h>
 #include <__compare/is_eq.h>
 #include <__compare/ordering.h>
+#include <__compare/partial_order.h>
+#include <__compare/strong_order.h>
 #include <__compare/three_way_comparable.h>
+#include <__compare/weak_order.h>
 #include <__config>
-
-#ifndef _LIBCPP_HAS_NO_PRAGMA_SYSTEM_HEADER
-#pragma GCC system_header
-#endif
-
-_LIBCPP_BEGIN_NAMESPACE_STD
-
-#if _LIBCPP_STD_VER > 17
-
-// [cmp.alg], comparison algorithms
-// TODO: unimplemented
-template<class _Tp> constexpr strong_ordering strong_order(const _Tp& __lhs, const _Tp& __rhs);
-template<class _Tp> constexpr weak_ordering weak_order(const _Tp& __lhs, const _Tp& __rhs);
-template<class _Tp> constexpr partial_ordering partial_order(const _Tp& __lhs, const _Tp& __rhs);
-
-#endif // _LIBCPP_STD_VER > 17
-
-_LIBCPP_END_NAMESPACE_STD
 
 #endif // _LIBCPP_COMPARE
