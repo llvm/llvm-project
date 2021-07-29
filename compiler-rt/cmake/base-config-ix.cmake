@@ -100,7 +100,13 @@ function(extend_install_path joined_path current_segment)
 endfunction()
 
 if(NOT DEFINED COMPILER_RT_OS_DIR)
-  string(TOLOWER ${CMAKE_SYSTEM_NAME} COMPILER_RT_OS_DIR)
+  if(ANDROID)
+    # The CMAKE_SYSTEM_NAME for Android is Android, but the OS is Linux and the
+    # driver will search for compiler-rt libraries in the "linux" directory.
+    set(COMPILER_RT_OS_DIR linux)
+  else()
+    string(TOLOWER ${CMAKE_SYSTEM_NAME} COMPILER_RT_OS_DIR)
+  endif()
 endif()
 if(LLVM_ENABLE_PER_TARGET_RUNTIME_DIR AND NOT APPLE)
   set(COMPILER_RT_OUTPUT_LIBRARY_DIR
