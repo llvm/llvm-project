@@ -342,4 +342,22 @@ entry:
   ret float %r
 }
 
+; If the memcpy is volatile, it should not be removed
+define float @test11_volatile(i64 %i) {
+; CHECK-LABEL: @test11_volatile(
+; CHECK-NEXT: entry:
+; CHECK-NEXT: alloca
+; CHECK: call void @llvm.lifetime.start.p0i8
+; CHECK: call void @llvm.memcpy
+
+entry:
+  %a = alloca [4 x float], align 4
+  %b = bitcast [4 x float]* %a to i8*
+  call void @llvm.lifetime.start.p0i8(i64 16, i8* %b)
+  call void @llvm.memcpy.p0i8.p1i8.i64(i8* align 4 %b, i8 addrspace(1)* align 4 bitcast ([4 x float] addrspace(1)* @I to i8 addrspace(1)*), i64 16, i1 true)
+  %g = getelementptr inbounds [4 x float], [4 x float]* %a, i64 0, i64 %i
+  %r = load float, float* %g, align 4
+  ret float %r
+}
+
 attributes #0 = { null_pointer_is_valid }
