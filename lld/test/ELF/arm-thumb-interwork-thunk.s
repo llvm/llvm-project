@@ -11,10 +11,10 @@
 // RUN:       .R_ARM_THM_JUMP_callee_2 : { *(.R_ARM_THM_JUMP_callee_high) } \
 // RUN:       .got.plt 0x18b4 : {  }  } " > %t.script
 // RUN: ld.lld --script %t.script %t -o %t2
-// RUN: llvm-objdump -d --no-show-raw-insn --triple=thumbv7a-none-linux-gnueabi %t2 | FileCheck --check-prefix=CHECK-THUMB --check-prefix=CHECK-ABS-THUMB %s
+// RUN: llvm-objdump -d --no-show-raw-insn %t2 | FileCheck --check-prefix=CHECK-THUMB --check-prefix=CHECK-ABS-THUMB %s
 // RUN: llvm-objdump -d --no-show-raw-insn --triple=armv7a-none-linux-gnueabi %t2 | FileCheck --check-prefix=CHECK-ARM --check-prefix=CHECK-ARM-ABS-ARM %s
 // RUN: ld.lld --script %t.script %t -pie -o %t3
-// RUN: llvm-objdump -d --no-show-raw-insn --triple=thumbv7a-none-linux-gnueabi %t3 | FileCheck --check-prefix=CHECK-THUMB --check-prefix=CHECK-PI-THUMB %s
+// RUN: llvm-objdump -d --no-show-raw-insn %t3 | FileCheck --check-prefix=CHECK-THUMB --check-prefix=CHECK-PI-THUMB %s
 // RUN: llvm-objdump -d --no-show-raw-insn --triple=armv7a-none-linux-gnueabi %t3 | FileCheck --check-prefix=CHECK-ARM --check-prefix=CHECK-PI-ARM %s
 // RUN: ld.lld --script %t.script %t --shared -o %t4
 // RUN: llvm-readobj -S -r %t4 | FileCheck -check-prefix=CHECK-DSO-REL %s
