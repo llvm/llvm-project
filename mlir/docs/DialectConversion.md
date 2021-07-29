@@ -67,9 +67,6 @@ legality actions below:
     -   This action signals that only some instances of a given operation are
         legal. This allows for defining fine-tune constraints, e.g. saying that
         `addi` is only legal when operating on 32-bit integers.
-    -   If a specific handler is not provided when setting the action, the
-        target must override the `isDynamicallyLegal` hook provided by
-        `ConversionTarget`.
 
 *   Illegal
 
@@ -97,10 +94,7 @@ struct MyTarget : public ConversionTarget {
 
     /// Mark all operations within Affine dialect have dynamic legality
     /// constraints.
-    addDynamicallyLegalDialect<AffineDialect>();
-
-    /// Mark `std.return` as dynamically legal.
-    addDynamicallyLegalOp<ReturnOp>();
+    addDynamicallyLegalDialect<AffineDialect>([](Operation *op) { ... });
 
     /// Mark `std.return` as dynamically legal, but provide a specific legality
     /// callback.
@@ -108,7 +102,6 @@ struct MyTarget : public ConversionTarget {
 
     /// Treat unknown operations, i.e. those without a legalization action
     /// directly set, as dynamically legal.
-    markUnknownOpDynamicallyLegal();
     markUnknownOpDynamicallyLegal([](Operation *op) { ... });
 
     //--------------------------------------------------------------------------
