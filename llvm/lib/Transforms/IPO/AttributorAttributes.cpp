@@ -6163,7 +6163,8 @@ ChangeStatus AAHeapToStackFunction::updateImpl(Attributor &A) {
                       "parameter as `__attribute__((noescape))` to override.";
           };
 
-          if (AI.LibraryFunctionId == LibFunc___kmpc_alloc_shared)
+          if (ValidUsesOnly &&
+              AI.LibraryFunctionId == LibFunc___kmpc_alloc_shared)
             A.emitRemark<OptimizationRemarkMissed>(AI.CB, "OMP113", Remark);
 
           LLVM_DEBUG(dbgs() << "[H2S] Bad user: " << *UserI << "\n");
@@ -6183,7 +6184,8 @@ ChangeStatus AAHeapToStackFunction::updateImpl(Attributor &A) {
       ValidUsesOnly = false;
       return true;
     };
-    A.checkForAllUses(Pred, *this, *AI.CB);
+    if (!A.checkForAllUses(Pred, *this, *AI.CB))
+      return false;
     return ValidUsesOnly;
   };
 
