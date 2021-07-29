@@ -49,6 +49,7 @@ LLVM_13 {
     clang_CompileCommand_getMappedSourceContent;
     clang_CompileCommand_getMappedSourcePath;
     clang_CompileCommand_getNumArgs;
+    clang_CompileCommand_getNumMappedSources;
     clang_CompileCommands_dispose;
     clang_CompileCommands_getCommand;
     clang_CompileCommands_getSize;
