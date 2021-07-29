@@ -91,7 +91,9 @@
 #    include <filesystem>
 #endif
 #include <float.h>
-#include <format>
+#ifndef _LIBCPP_HAS_NO_INCOMPLETE_FORMAT
+#    include <format>
+#endif
 #include <forward_list>
 #ifndef _LIBCPP_HAS_NO_LOCALIZATION
 #    include <fstream>
@@ -143,7 +145,9 @@
 #endif
 #include <queue>
 #include <random>
-#include <ranges>
+#ifndef _LIBCPP_HAS_NO_INCOMPLETE_RANGES
+#    include <ranges>
+#endif
 #include <ratio>
 #ifndef _LIBCPP_HAS_NO_LOCALIZATION
 #    include <regex>

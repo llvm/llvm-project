@@ -12,7 +12,6 @@ set(LIBCXX_SOURCES
   condition_variable.cpp
   condition_variable_destructor.cpp
   exception.cpp
-  format.cpp
   functional.cpp
   future.cpp
   hash.cpp
@@ -72,6 +71,12 @@ if (LIBCXX_ENABLE_LOCALIZATION)
     regex.cpp
     strstream.cpp
     )
+endif()
+
+if(LIBCXX_ENABLE_INCOMPLETE_FEATURES)
+  list(APPEND LIBCXX_SOURCES
+    format.cpp
+  )
 endif()
 
 if(WIN32)
