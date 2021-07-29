@@ -14,6 +14,7 @@
 // RUN: 2>&1 | FileCheck %s
 
 // check code object alignment in dumped llvm-mc input
+// CHECK: .protected __hip_fatbin
 // CHECK: .p2align 12
 
 // emit objects for host side path

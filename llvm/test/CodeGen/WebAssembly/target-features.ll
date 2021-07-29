@@ -6,7 +6,6 @@
 ; function attributes correctly and that features are enabled for the
 ; entire module if they are enabled for any function in the module.
 
-target datalayout = "e-m:e-p:32:32-i64:64-n32:64-S128"
 target triple = "wasm32-unknown-unknown"
 
 define void @fn_atomics(i32* %p1, float %f2) #0 {

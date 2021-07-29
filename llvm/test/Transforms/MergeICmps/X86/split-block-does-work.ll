@@ -3,7 +3,7 @@
 
 %S = type { i32, i32, i32, i32 }
 
-declare void @foo(...)  nounwind readnone
+declare void @foo(...) readonly
 
 ; We can split %entry and create a memcmp(16 bytes).
 define zeroext i1 @opeq1(
@@ -22,7 +22,7 @@ define zeroext i1 @opeq1(
 ;
 ; Make sure this call is moved to the beginning of the entry block.
   %S* nocapture readonly dereferenceable(16) %a,
-  %S* nocapture readonly dereferenceable(16) %b) local_unnamed_addr #0 {
+  %S* nocapture readonly dereferenceable(16) %b) local_unnamed_addr nofree nosync {
 entry:
   %first.i = getelementptr inbounds %S, %S* %a, i64 0, i32 0
   %0 = load i32, i32* %first.i, align 4

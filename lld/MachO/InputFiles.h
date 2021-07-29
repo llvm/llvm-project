@@ -22,7 +22,6 @@
 #include "llvm/Support/MemoryBuffer.h"
 #include "llvm/TextAPI/TextAPIReader.h"
 
-#include <map>
 #include <vector>
 
 namespace llvm {
@@ -166,9 +165,7 @@ public:
 
   unsigned numReferencedSymbols = 0;
 
-  bool isReferenced() const {
-    return numReferencedSymbols > 0;
-  }
+  bool isReferenced() const { return numReferencedSymbols > 0; }
 
   // An executable can be used as a bundle loader that will load the output
   // file being linked, and that contains symbols referenced, but not
@@ -180,6 +177,7 @@ private:
   bool handleLDSymbol(StringRef originalName);
   void handleLDPreviousSymbol(StringRef name, StringRef originalName);
   void handleLDInstallNameSymbol(StringRef name, StringRef originalName);
+  void checkAppExtensionSafety(bool dylibIsAppExtensionSafe) const;
 };
 
 // .a file
@@ -198,7 +196,8 @@ private:
 
 class BitcodeFile final : public InputFile {
 public:
-  explicit BitcodeFile(MemoryBufferRef mb);
+  explicit BitcodeFile(MemoryBufferRef mb, StringRef archiveName,
+                       uint64_t offsetInArchive);
   static bool classof(const InputFile *f) { return f->kind() == BitcodeKind; }
 
   std::unique_ptr<llvm::lto::InputFile> obj;

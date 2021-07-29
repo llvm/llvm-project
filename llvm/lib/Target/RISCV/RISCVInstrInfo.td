@@ -885,13 +885,6 @@ def assertzexti32 : PatFrag<(ops node:$src), (assertzext node:$src), [{
 }]>;
 def zexti32 : ComplexPattern<i64, 1, "selectZExti32">;
 
-// Check that it is a SLLIUW (Shift Logical Left Immediate Unsigned i32
-// on RV64). Also used to optimize the same sequence without SLLIUW.
-def SLLIUWPat : PatFrag<(ops node:$A, node:$B),
-                        (and (shl node:$A, node:$B), imm), [{
-  return MatchSLLIUW(N);
-}]>;
-
 def add_oneuse : PatFrag<(ops node:$A, node:$B), (add node:$A, node:$B), [{
   return N->hasOneUse();
 }]>;
@@ -1002,12 +995,12 @@ def PseudoBR : Pseudo<(outs), (ins simm21_lsb0_jal:$imm20), [(br bb:$imm20)]>,
                PseudoInstExpansion<(JAL X0, simm21_lsb0_jal:$imm20)>;
 
 let isBarrier = 1, isBranch = 1, isIndirectBranch = 1, isTerminator = 1 in
-def PseudoBRIND : Pseudo<(outs), (ins GPR:$rs1, simm12:$imm12), []>,
+def PseudoBRIND : Pseudo<(outs), (ins GPRJALR:$rs1, simm12:$imm12), []>,
                   PseudoInstExpansion<(JALR X0, GPR:$rs1, simm12:$imm12)>;
 
-def : Pat<(brind GPR:$rs1), (PseudoBRIND GPR:$rs1, 0)>;
-def : Pat<(brind (add GPR:$rs1, simm12:$imm12)),
-          (PseudoBRIND GPR:$rs1, simm12:$imm12)>;
+def : Pat<(brind GPRJALR:$rs1), (PseudoBRIND GPRJALR:$rs1, 0)>;
+def : Pat<(brind (add GPRJALR:$rs1, simm12:$imm12)),
+          (PseudoBRIND GPRJALR:$rs1, simm12:$imm12)>;
 
 // PseudoCALLReg is a generic pseudo instruction for calls which will eventually
 // expand to auipc and jalr while encoding, with any given register used as the
@@ -1039,8 +1032,8 @@ def : Pat<(riscv_sret_flag), (SRET X0, X0)>;
 def : Pat<(riscv_mret_flag), (MRET X0, X0)>;
 
 let isCall = 1, Defs = [X1] in
-def PseudoCALLIndirect : Pseudo<(outs), (ins GPR:$rs1),
-                                [(riscv_call GPR:$rs1)]>,
+def PseudoCALLIndirect : Pseudo<(outs), (ins GPRJALR:$rs1),
+                                [(riscv_call GPRJALR:$rs1)]>,
                          PseudoInstExpansion<(JALR X1, GPR:$rs1, 0)>;
 
 let isBarrier = 1, isReturn = 1, isTerminator = 1 in
@@ -1236,14 +1229,6 @@ def : Pat<(i64 (and GPR:$rs1, 0xffffffff)), (SRLI (SLLI GPR:$rs1, 32), 32)>;
 // shifts instead of 3. This can occur when unsigned is used to index an array.
 def : Pat<(i64 (shl (and GPR:$rs1, 0xffffffff), uimm5:$shamt)),
           (SRLI (SLLI GPR:$rs1, 32), (ImmSubFrom32 uimm5:$shamt))>;
-// shl/and can appear in the other order too.
-def : Pat<(i64 (SLLIUWPat GPR:$rs1, uimm5:$shamt)),
-          (SRLI (SLLI GPR:$rs1, 32), (ImmSubFrom32 uimm5:$shamt))>;
-
-// If we're shifting a value left by 0-31 bits, and then masking to 32-bits,
-// use 2 shifts instead of 3.
-def : Pat<(i64 (and (shl GPR:$rs1, uimm5:$shamt), 0xffffffff)),
-          (SRLI (SLLI GPR:$rs1, (ImmPlus32 uimm5:$shamt)), 32)>;
 }
 
 let Predicates = [IsRV64] in {

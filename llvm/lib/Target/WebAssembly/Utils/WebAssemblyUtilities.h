@@ -68,6 +68,12 @@ MCSymbolWasm *
 getOrCreateFunctionTableSymbol(MCContext &Ctx,
                                const WebAssemblySubtarget *Subtarget);
 
+/// Returns the __funcref_call_table, for use in funcref calls when lowered to
+/// table.set + call_indirect.
+MCSymbolWasm *
+getOrCreateFuncrefCallTableSymbol(MCContext &Ctx,
+                                  const WebAssemblySubtarget *Subtarget);
+
 /// Find a catch instruction from an EH pad. Returns null if no catch
 /// instruction found or the catch is in an invalid location.
 MachineInstr *findCatch(MachineBasicBlock *EHPad);

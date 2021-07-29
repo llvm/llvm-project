@@ -300,6 +300,12 @@ Options for ``NVPTX device RTL``
  **LIBOMPTARGET_NVPTX_DEBUG** = ``OFF|ON``
   Enable printing of debug messages from the NVPTX device RTL.
 
+**LIBOMPTARGET_LIT_ARGS** = ``""``
+  Arguments given to lit. ``make check-libomptarget`` and
+  ``make check-libomptarget-*`` are affected. For example, use
+  ``LIBOMPTARGET_LIT_ARGS="-j4"`` to force ``lit`` to start only four parallel
+  jobs instead of by default the number of threads in the system.
+
 Example Usages of CMake
 =======================
 

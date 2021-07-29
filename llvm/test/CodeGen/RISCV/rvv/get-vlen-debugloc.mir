@@ -25,14 +25,14 @@ body: |
   ; CHECK-LABEL: name: foo
   ; CHECK: bb.0:
   ; CHECK:   successors: %bb.1(0x80000000)
-  ; CHECK:   CFI_INSTRUCTION def_cfa_offset 0
-  ; CHECK:   $x10 = PseudoReadVLENB
-  ; CHECK:   $x10 = SLLI killed $x10, 1
-  ; CHECK:   $x2 = SUB $x2, killed $x10
+  ; CHECK:   frame-setup CFI_INSTRUCTION def_cfa_offset 0
+  ; CHECK:   $x10 = frame-setup PseudoReadVLENB
+  ; CHECK:   $x10 = frame-setup SLLI killed $x10, 1
+  ; CHECK:   $x2 = frame-setup SUB $x2, killed $x10
   ; CHECK: bb.1:
-  ; CHECK:   $x10 = PseudoReadVLENB
-  ; CHECK:   $x10 = SLLI killed $x10, 1
-  ; CHECK:   $x2 = ADD $x2, killed $x10
+  ; CHECK:   $x10 = frame-destroy PseudoReadVLENB
+  ; CHECK:   $x10 = frame-destroy SLLI killed $x10, 1
+  ; CHECK:   $x2 = frame-destroy ADD $x2, killed $x10
   ; CHECK:   PseudoRET
   bb.0:
   bb.1:

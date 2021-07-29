@@ -354,3 +354,165 @@ TEST_F(OrcCAPITestBase, ExecutionTest) {
   int32_t Result = SumFn(1, 1);
   ASSERT_EQ(2, Result);
 }
+
+void Destroy(void *Ctx) {}
+
+void TargetFn() {}
+
+void Materialize(void *Ctx, LLVMOrcMaterializationResponsibilityRef MR) {
+  LLVMOrcJITDylibRef JD =
+      LLVMOrcMaterializationResponsibilityGetTargetDylib(MR);
+  ASSERT_TRUE(!!JD);
+
+  LLVMOrcExecutionSessionRef ES =
+      LLVMOrcMaterializationResponsibilityGetExecutionSession(MR);
+  ASSERT_TRUE(!!ES);
+
+  LLVMOrcSymbolStringPoolEntryRef InitSym =
+      LLVMOrcMaterializationResponsibilityGetInitializerSymbol(MR);
+  ASSERT_TRUE(!InitSym);
+
+  size_t NumSymbols;
+  LLVMOrcCSymbolFlagsMapPairs Symbols =
+      LLVMOrcMaterializationResponsibilityGetSymbols(MR, &NumSymbols);
+
+  ASSERT_TRUE(!!Symbols);
+  ASSERT_EQ(NumSymbols, (size_t)1);
+
+  LLVMOrcSymbolStringPoolEntryRef *RequestedSymbols =
+      LLVMOrcMaterializationResponsibilityGetRequestedSymbols(MR, &NumSymbols);
+
+  ASSERT_TRUE(!!RequestedSymbols);
+  ASSERT_EQ(NumSymbols, (size_t)1);
+
+  LLVMOrcCSymbolFlagsMapPair TargetSym = Symbols[0];
+
+  ASSERT_EQ(RequestedSymbols[0], TargetSym.Name);
+  LLVMOrcRetainSymbolStringPoolEntry(TargetSym.Name);
+
+  LLVMOrcDisposeCSymbolFlagsMap(Symbols);
+  LLVMOrcDisposeSymbols(RequestedSymbols);
+
+  LLVMOrcJITTargetAddress Addr = (LLVMOrcJITTargetAddress)(&TargetFn);
+
+  LLVMJITSymbolFlags Flags = {
+      LLVMJITSymbolGenericFlagsExported | LLVMJITSymbolGenericFlagsCallable, 0};
+  ASSERT_EQ(TargetSym.Flags.GenericFlags, Flags.GenericFlags);
+  ASSERT_EQ(TargetSym.Flags.TargetFlags, Flags.TargetFlags);
+
+  LLVMJITEvaluatedSymbol Sym = {Addr, Flags};
+
+  LLVMOrcLLJITRef J = (LLVMOrcLLJITRef)Ctx;
+
+  LLVMOrcSymbolStringPoolEntryRef OtherSymbol =
+      LLVMOrcLLJITMangleAndIntern(J, "other");
+  LLVMOrcSymbolStringPoolEntryRef DependencySymbol =
+      LLVMOrcLLJITMangleAndIntern(J, "dependency");
+
+  LLVMOrcRetainSymbolStringPoolEntry(OtherSymbol);
+  LLVMOrcRetainSymbolStringPoolEntry(DependencySymbol);
+  LLVMOrcCSymbolFlagsMapPair NewSymbols[] = {
+      {OtherSymbol, Flags},
+      {DependencySymbol, Flags},
+  };
+  LLVMOrcMaterializationResponsibilityDefineMaterializing(MR, NewSymbols, 2);
+
+  LLVMOrcRetainSymbolStringPoolEntry(OtherSymbol);
+  LLVMOrcMaterializationResponsibilityRef OtherMR = NULL;
+  {
+    LLVMErrorRef Err = LLVMOrcMaterializationResponsibilityDelegate(
+        MR, &OtherSymbol, 1, &OtherMR);
+    if (Err) {
+      char *ErrMsg = LLVMGetErrorMessage(Err);
+      fprintf(stderr, "Error: %s\n", ErrMsg);
+      LLVMDisposeErrorMessage(ErrMsg);
+      LLVMOrcMaterializationResponsibilityFailMaterialization(MR);
+      LLVMOrcDisposeMaterializationResponsibility(MR);
+      return;
+    }
+  }
+  assert(OtherMR);
+
+  LLVMJITCSymbolMapPair OtherPair = {OtherSymbol, Sym};
+  LLVMOrcMaterializationUnitRef OtherMU = LLVMOrcAbsoluteSymbols(&OtherPair, 1);
+  // OtherSymbol is no longer owned by us
+  {
+    LLVMErrorRef Err =
+        LLVMOrcMaterializationResponsibilityReplace(OtherMR, OtherMU);
+    if (Err) {
+      char *ErrMsg = LLVMGetErrorMessage(Err);
+      fprintf(stderr, "Error: %s\n", ErrMsg);
+      LLVMDisposeErrorMessage(ErrMsg);
+
+      LLVMOrcMaterializationResponsibilityFailMaterialization(OtherMR);
+      LLVMOrcMaterializationResponsibilityFailMaterialization(MR);
+
+      LLVMOrcDisposeMaterializationResponsibility(OtherMR);
+      LLVMOrcDisposeMaterializationResponsibility(MR);
+      LLVMOrcDisposeMaterializationUnit(OtherMU);
+      return;
+    }
+  }
+  LLVMOrcDisposeMaterializationResponsibility(OtherMR);
+
+  // FIXME: Implement async lookup
+  // A real test of the dependence tracking in the success case would require
+  // async lookups. You could:
+  // 1. Materialize foo, making foo depend on other.
+  // 2. In the caller, verify that the lookup callback for foo has not run (due
+  // to the dependence)
+  // 3. Materialize other by looking it up.
+  // 4. In the caller, verify that the lookup callback for foo has now run.
+
+  LLVMOrcRetainSymbolStringPoolEntry(TargetSym.Name);
+  LLVMOrcRetainSymbolStringPoolEntry(DependencySymbol);
+  LLVMOrcCDependenceMapPair Dependency = {JD, {&DependencySymbol, 1}};
+  LLVMOrcMaterializationResponsibilityAddDependencies(MR, TargetSym.Name,
+                                                      &Dependency, 1);
+
+  LLVMOrcRetainSymbolStringPoolEntry(DependencySymbol);
+  LLVMOrcMaterializationResponsibilityAddDependenciesForAll(MR, &Dependency, 1);
+
+  // See FIXME above
+  LLVMJITCSymbolMapPair Pair = {DependencySymbol, Sym};
+  LLVMOrcMaterializationResponsibilityNotifyResolved(MR, &Pair, 1);
+  // DependencySymbol no longer owned by us
+
+  Pair = {TargetSym.Name, Sym};
+  LLVMOrcMaterializationResponsibilityNotifyResolved(MR, &Pair, 1);
+
+  LLVMOrcMaterializationResponsibilityNotifyEmitted(MR);
+  LLVMOrcDisposeMaterializationResponsibility(MR);
+  return;
+}
+
+TEST_F(OrcCAPITestBase, MaterializationResponsibility) {
+  LLVMJITSymbolFlags Flags = {
+      LLVMJITSymbolGenericFlagsExported | LLVMJITSymbolGenericFlagsCallable, 0};
+  LLVMOrcCSymbolFlagsMapPair Sym = {LLVMOrcLLJITMangleAndIntern(Jit, "foo"),
+                                    Flags};
+
+  LLVMOrcMaterializationUnitRef MU = LLVMOrcCreateCustomMaterializationUnit(
+      "MU", (void *)Jit, &Sym, 1, NULL, &Materialize, NULL, &Destroy);
+  LLVMOrcJITDylibRef JD = LLVMOrcLLJITGetMainJITDylib(Jit);
+  LLVMOrcJITDylibDefine(JD, MU);
+
+  LLVMOrcJITTargetAddress Addr;
+  if (LLVMErrorRef Err = LLVMOrcLLJITLookup(Jit, &Addr, "foo")) {
+    FAIL() << "foo was not materialized " << toString(Err);
+  }
+  ASSERT_TRUE(!!Addr);
+  ASSERT_EQ(Addr, (LLVMOrcJITTargetAddress)&TargetFn);
+
+  if (LLVMErrorRef Err = LLVMOrcLLJITLookup(Jit, &Addr, "other")) {
+    FAIL() << "other was not materialized " << toString(Err);
+  }
+  ASSERT_TRUE(!!Addr);
+  ASSERT_EQ(Addr, (LLVMOrcJITTargetAddress)&TargetFn);
+
+  if (LLVMErrorRef Err = LLVMOrcLLJITLookup(Jit, &Addr, "dependency")) {
+    FAIL() << "dependency was not materialized " << toString(Err);
+  }
+  ASSERT_TRUE(!!Addr);
+  ASSERT_EQ(Addr, (LLVMOrcJITTargetAddress)&TargetFn);
+}

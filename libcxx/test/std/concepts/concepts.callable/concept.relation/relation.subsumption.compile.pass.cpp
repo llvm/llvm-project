@@ -28,13 +28,13 @@ struct R {
 template<class F, class T, class U>
 requires std::predicate<F, T, T> && std::predicate<F, T, U> &&
          std::predicate<F, U, T> && std::predicate<F, U, U>
-[[nodiscard]] constexpr bool check_relation_subsumes_predicate() {
+constexpr bool check_relation_subsumes_predicate() {
   return false;
 }
 
 template<class F, class T, class U>
 requires std::relation<F, T, U> && true
-[[nodiscard]] constexpr bool check_relation_subsumes_predicate() {
+constexpr bool check_relation_subsumes_predicate() {
   return true;
 }
 // clang-format on
@@ -49,13 +49,13 @@ static_assert(check_relation_subsumes_predicate<R, S1, S2>());
 // clang-format off
 template<class F, class T, class U>
 requires std::relation<F, T, T> && std::relation<F, U, U>
-[[nodiscard]] constexpr bool check_relation_subsumes_itself() {
+constexpr bool check_relation_subsumes_itself() {
   return false;
 }
 
 template<class F, class T, class U>
 requires std::relation<F, T, U>
-[[nodiscard]] constexpr bool check_relation_subsumes_itself() {
+constexpr bool check_relation_subsumes_itself() {
   return true;
 }
 // clang-format on

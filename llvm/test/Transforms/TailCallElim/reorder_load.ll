@@ -15,7 +15,7 @@ target datalayout = "e-m:e-i64:64-f80:128-n8:16:32:64-S128"
 
 ; This load can be moved above the call because the function won't write to it
 ; and the call has no side effects.
-define fastcc i32 @raise_load_1(i32* %a_arg, i32 %a_len_arg, i32 %start_arg) nounwind readonly {
+define fastcc i32 @raise_load_1(i32* %a_arg, i32 %a_len_arg, i32 %start_arg) nounwind readonly willreturn {
 ; CHECK-LABEL: @raise_load_1(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    br label [[TAILRECURSE:%.*]]
@@ -99,7 +99,7 @@ recurse:		; preds = %else
 
 ; This load can be safely moved above the call (even though it's from an
 ; extern_weak global) because the call has no side effects.
-define fastcc i32 @raise_load_3(i32* %a_arg, i32 %a_len_arg, i32 %start_arg) nounwind readonly {
+define fastcc i32 @raise_load_3(i32* %a_arg, i32 %a_len_arg, i32 %start_arg) nounwind readonly willreturn {
 ; CHECK-LABEL: @raise_load_3(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    br label [[TAILRECURSE:%.*]]
@@ -186,7 +186,7 @@ recurse:		; preds = %else
 
 ; This load can be moved above the call because the function won't write to it
 ; and the a_arg is dereferenceable.
-define fastcc i32 @raise_load_5(i32* dereferenceable(4) align 4 %a_arg, i32 %a_len_arg, i32 %start_arg) readonly {
+define fastcc i32 @raise_load_5(i32* dereferenceable(4) align 4 %a_arg, i32 %a_len_arg, i32 %start_arg) readonly nofree nosync {
 ; CHECK-LABEL: @raise_load_5(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    br label [[TAILRECURSE:%.*]]

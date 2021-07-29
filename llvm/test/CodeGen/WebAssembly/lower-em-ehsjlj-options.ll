@@ -3,8 +3,21 @@
 ; RUN: llc < %s | FileCheck %s --check-prefix=NONE
 ; RUN: not --crash llc < %s -enable-emscripten-cxx-exceptions -exception-model=wasm 2>&1 | FileCheck %s --check-prefix=WASM-EH-EM-EH
 
-target datalayout = "e-m:e-p:32:32-i64:64-n32:64-S128"
 target triple = "wasm32-unknown-unknown"
+
+; EH: .functype  invoke_vi (i32, i32) -> ()
+; EH: .import_module  invoke_vi, env
+; EH: .import_name  invoke_vi, invoke_vi
+; EH-NOT: .functype  __invoke_void_i32
+; EH-NOT: .import_module  __invoke_void_i32
+; EH-NOT: .import_name  __invoke_void_i32
+
+; SJLJ: .functype  emscripten_longjmp (i32, i32) -> ()
+; SJLJ: .import_module  emscripten_longjmp, env
+; SJLJ: .import_name  emscripten_longjmp, emscripten_longjmp
+; SJLJ-NOT: .functype  emscripten_longjmp_jmpbuf
+; SJLJ-NOT: .import_module  emscripten_longjmp_jmpbuf
+; SJLJ-NOT: .import_name  emscripten_longjmp_jmpbuf
 
 %struct.__jmp_buf_tag = type { [6 x i32], i32, [32 x i32] }
 
@@ -86,19 +99,5 @@ declare void @free(i8*)
 attributes #0 = { returns_twice }
 attributes #1 = { noreturn }
 attributes #2 = { nounwind }
-
-; EH: .functype  invoke_vi (i32, i32) -> ()
-; EH: .import_module  invoke_vi, env
-; EH: .import_name  invoke_vi, invoke_vi
-; EH-NOT: .functype  __invoke_void_i32
-; EH-NOT: .import_module  __invoke_void_i32
-; EH-NOT: .import_name  __invoke_void_i32
-
-; SJLJ: .functype  emscripten_longjmp (i32, i32) -> ()
-; SJLJ: .import_module  emscripten_longjmp, env
-; SJLJ: .import_name  emscripten_longjmp, emscripten_longjmp
-; SJLJ-NOT: .functype  emscripten_longjmp_jmpbuf
-; SJLJ-NOT: .import_module  emscripten_longjmp_jmpbuf
-; SJLJ-NOT: .import_name  emscripten_longjmp_jmpbuf
 
 ; WASM-EH-EM-EH: LLVM ERROR: -exception-model=wasm not allowed with -enable-emscripten-cxx-exceptions

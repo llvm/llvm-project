@@ -10,6 +10,7 @@ entry:
   ret i32 %tmp1
 }
 
+; CHECK: @llvm.used = appending global [1 x i8*] [i8* bitcast (void ()* @tsan.module_ctor to i8*)]
 ; CHECK: @llvm.global_ctors = {{.*}}@tsan.module_ctor
 
 ; CHECK: define i32 @read_4_bytes(i32* %a)

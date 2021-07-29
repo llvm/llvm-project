@@ -123,7 +123,7 @@ static_assert(!std::is_invocable_v<RangeDataT, BeginMemberRandomAccess const&>);
 struct BeginFriendContiguousIterator {
   int buff[8];
 
-  constexpr friend ContiguousIter begin(const BeginFriendContiguousIterator &iter) {
+  friend constexpr ContiguousIter begin(const BeginFriendContiguousIterator &iter) {
     return ContiguousIter(iter.buff);
   }
 };

@@ -421,7 +421,7 @@ define dso_local <8 x i16> @testmrglb3(<8 x i8>* nocapture readonly %a) local_un
 ; CHECK-P9-BE-NEXT:    addis r3, r2, .LCPI12_0@toc@ha
 ; CHECK-P9-BE-NEXT:    xxlxor v4, v4, v4
 ; CHECK-P9-BE-NEXT:    addi r3, r3, .LCPI12_0@toc@l
-; CHECK-P9-BE-NEXT:    lxvx v3, 0, r3
+; CHECK-P9-BE-NEXT:    lxv v3, 0(r3)
 ; CHECK-P9-BE-NEXT:    vperm v2, v4, v2, v3
 ; CHECK-P9-BE-NEXT:    blr
 ;
@@ -596,7 +596,7 @@ define dso_local <4 x i32> @replace_undefs_in_splat(<4 x i32> %a) local_unnamed_
 ; CHECK-P9:       # %bb.0: # %entry
 ; CHECK-P9-NEXT:    addis r3, r2, .LCPI15_0@toc@ha
 ; CHECK-P9-NEXT:    addi r3, r3, .LCPI15_0@toc@l
-; CHECK-P9-NEXT:    lxvx v3, 0, r3
+; CHECK-P9-NEXT:    lxv v3, 0(r3)
 ; CHECK-P9-NEXT:    vmrgow v2, v3, v2
 ; CHECK-P9-NEXT:    blr
 ;
@@ -604,10 +604,10 @@ define dso_local <4 x i32> @replace_undefs_in_splat(<4 x i32> %a) local_unnamed_
 ; CHECK-P9-BE:       # %bb.0: # %entry
 ; CHECK-P9-BE-NEXT:    addis r3, r2, .LCPI15_0@toc@ha
 ; CHECK-P9-BE-NEXT:    addi r3, r3, .LCPI15_0@toc@l
-; CHECK-P9-BE-NEXT:    lxvx v3, 0, r3
+; CHECK-P9-BE-NEXT:    lxv v3, 0(r3)
 ; CHECK-P9-BE-NEXT:    addis r3, r2, .LCPI15_1@toc@ha
 ; CHECK-P9-BE-NEXT:    addi r3, r3, .LCPI15_1@toc@l
-; CHECK-P9-BE-NEXT:    lxvx v4, 0, r3
+; CHECK-P9-BE-NEXT:    lxv v4, 0(r3)
 ; CHECK-P9-BE-NEXT:    vperm v2, v2, v4, v3
 ; CHECK-P9-BE-NEXT:    blr
 ;
@@ -656,7 +656,7 @@ define dso_local <16 x i8> @no_RAUW_in_combine_during_legalize(i32* nocapture re
 ; CHECK-P9-NEXT:    lxsiwzx v2, r3, r4
 ; CHECK-P9-NEXT:    addis r3, r2, .LCPI16_0@toc@ha
 ; CHECK-P9-NEXT:    addi r3, r3, .LCPI16_0@toc@l
-; CHECK-P9-NEXT:    lxvx v3, 0, r3
+; CHECK-P9-NEXT:    lxv v3, 0(r3)
 ; CHECK-P9-NEXT:    vperm v2, v4, v2, v3
 ; CHECK-P9-NEXT:    blr
 ;
@@ -841,14 +841,14 @@ define dso_local void @testByteSplat() #0 {
 ; CHECK-P9:       # %bb.0: # %entry
 ; CHECK-P9-NEXT:    lxsibzx v2, 0, r3
 ; CHECK-P9-NEXT:    vspltb v2, v2, 7
-; CHECK-P9-NEXT:    stxvx v2, 0, r3
+; CHECK-P9-NEXT:    stxv v2, 0(r3)
 ; CHECK-P9-NEXT:    blr
 ;
 ; CHECK-P9-BE-LABEL: testByteSplat:
 ; CHECK-P9-BE:       # %bb.0: # %entry
 ; CHECK-P9-BE-NEXT:    lxsibzx v2, 0, r3
 ; CHECK-P9-BE-NEXT:    vspltb v2, v2, 7
-; CHECK-P9-BE-NEXT:    stxvx v2, 0, r3
+; CHECK-P9-BE-NEXT:    stxv v2, 0(r3)
 ; CHECK-P9-BE-NEXT:    blr
 ;
 ; CHECK-NOVSX-LABEL: testByteSplat:

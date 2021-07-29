@@ -1,0 +1,36 @@
+.. _omp130:
+
+Removing unused state machine from generic-mode kernel. [OMP130]
+================================================================
+
+This optimization remark indicates that an unused state machine was removed from
+a target region. This occurs when there are no parallel regions inside of a
+target construct. Normally, a state machine is required to schedule the threads
+inside of a parallel region. If there are no parallel regions, the state machine
+is unnecessary because there is only a single thread active at any time. 
+
+Examples
+--------
+
+This optimization should occur on any target region that does not contain any
+parallel work.
+
+.. code-block:: c++
+
+   void copy(int N, double *X, double *Y) {
+   #pragma omp target teams distribute map(tofrom: X[0:N]) map(tofrom: Y[0:N])
+     for (int i = 0; i < N; ++i)
+       Y[i] = X[i];
+   }
+
+.. code-block:: console
+
+   $ clang++ -fopenmp -fopenmp-targets=nvptx64 -O2 -Rpass=openmp-opt omp130.cpp
+   omp130.cpp:2:1: remark: Removing unused state machine from generic-mode kernel. [OMP130]
+   #pragma omp target teams distribute map(tofrom: X[0:N]) map(tofrom: Y[0:N])
+   ^
+
+Diagnostic Scope
+----------------
+
+OpenMP target offloading optimization remark.

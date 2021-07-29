@@ -5,7 +5,6 @@
 ; that atomic operations on global address load addres via @GOT or
 ; @MBREL relocations.
 
-target datalayout = "e-m:e-p:32:32-i64:64-n32:64-S128"
 target triple = "wasm32-unknown-emscripten"
 
 @external_global       = external        global i32

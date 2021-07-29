@@ -70,10 +70,7 @@ struct GlobalProc {
   Mutex mtx;
   Processor *proc;
 
-  GlobalProc()
-      : mtx(MutexTypeGlobalProc, StatMtxGlobalProc)
-      , proc(ProcCreate()) {
-  }
+  GlobalProc() : mtx(MutexTypeGlobalProc), proc(ProcCreate()) {}
 };
 
 static char global_proc_placeholder[sizeof(GlobalProc)] ALIGNED(64);

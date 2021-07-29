@@ -239,11 +239,11 @@ define amdgpu_kernel void @widen_v2i8_constant_load(<2 x i8> addrspace(4)* %arg)
 ; VI-NEXT:    s_add_i32 s1, s1, 12
 ; VI-NEXT:    v_add_u32_sdwa v0, vcc, v0, v2 dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:DWORD src1_sel:BYTE_1
 ; VI-NEXT:    s_or_b32 s0, s1, 4
-; VI-NEXT:    v_or_b32_sdwa v0, v0, v1 dst_sel:BYTE_1 dst_unused:UNUSED_PAD src0_sel:DWORD src1_sel:DWORD
-; VI-NEXT:    v_mov_b32_e32 v1, s0
-; VI-NEXT:    v_or_b32_sdwa v2, v1, v0 dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:BYTE_0 src1_sel:DWORD
+; VI-NEXT:    v_or_b32_sdwa v2, v0, v1 dst_sel:BYTE_1 dst_unused:UNUSED_PAD src0_sel:DWORD src1_sel:DWORD
+; VI-NEXT:    v_mov_b32_e32 v3, s0
 ; VI-NEXT:    v_mov_b32_e32 v0, 0
 ; VI-NEXT:    v_mov_b32_e32 v1, 0
+; VI-NEXT:    v_or_b32_sdwa v2, v3, v2 dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:BYTE_0 src1_sel:DWORD
 ; VI-NEXT:    flat_store_short v[0:1], v2
 ; VI-NEXT:    s_endpgm
   %load = load <2 x i8>, <2 x i8> addrspace(4)* %arg, align 4
@@ -283,10 +283,10 @@ define amdgpu_kernel void @no_widen_i16_constant_divergent_load(i16 addrspace(4)
 ; VI-NEXT:    v_addc_u32_e32 v1, vcc, 0, v1, vcc
 ; VI-NEXT:    flat_load_ushort v0, v[0:1]
 ; VI-NEXT:    s_waitcnt vmcnt(0)
-; VI-NEXT:    v_add_u16_e32 v0, 0x3e7, v0
-; VI-NEXT:    v_or_b32_e32 v2, 4, v0
+; VI-NEXT:    v_add_u16_e32 v2, 0x3e7, v0
 ; VI-NEXT:    v_mov_b32_e32 v0, 0
 ; VI-NEXT:    v_mov_b32_e32 v1, 0
+; VI-NEXT:    v_or_b32_e32 v2, 4, v2
 ; VI-NEXT:    flat_store_short v[0:1], v2
 ; VI-NEXT:    s_endpgm
   %tid = call i32 @llvm.amdgcn.workitem.id.x()

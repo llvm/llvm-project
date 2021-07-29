@@ -526,10 +526,6 @@ RNBRunLoopMode RNBRunLoopInferiorExecuting(RNBRemote *remote) {
       // packets
       event_mask &= ~RNBContext::event_proc_stdio_available;
       event_mask &= ~RNBContext::event_proc_profile_data;
-      // When we enable async structured data packets over another logical
-      // channel,
-      // this can be relaxed.
-      event_mask &= ~RNBContext::event_darwin_log_data_available;
     }
 
     // We want to make sure we consume all process state changes and have
@@ -554,10 +550,6 @@ RNBRunLoopMode RNBRunLoopInferiorExecuting(RNBRemote *remote) {
 
       if (set_events & RNBContext::event_proc_profile_data) {
         remote->SendAsyncProfileData();
-      }
-
-      if (set_events & RNBContext::event_darwin_log_data_available) {
-        remote->SendAsyncDarwinLogData();
       }
 
       if (set_events & RNBContext::event_read_packet_available) {

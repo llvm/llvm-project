@@ -1022,6 +1022,40 @@ static bool areOuterLoopExitPHIsSupported(Loop *OuterLoop, Loop *InnerLoop) {
   return true;
 }
 
+// In case of multi-level nested loops, it may occur that lcssa phis exist in
+// the latch of InnerLoop, i.e., when defs of the incoming values are further
+// inside the loopnest. Sometimes those incoming values are not available
+// after interchange, since the original inner latch will become the new outer
+// latch which may have predecessor paths that do not include those incoming
+// values.
+// TODO: Handle transformation of lcssa phis in the InnerLoop latch in case of
+// multi-level loop nests.
+static bool areInnerLoopLatchPHIsSupported(Loop *OuterLoop, Loop *InnerLoop) {
+  if (InnerLoop->getSubLoops().empty())
+    return true;
+  // If the original outer latch has only one predecessor, then values defined
+  // further inside the looploop, e.g., in the innermost loop, will be available
+  // at the new outer latch after interchange.
+  if (OuterLoop->getLoopLatch()->getUniquePredecessor() != nullptr)
+    return true;
+
+  // The outer latch has more than one predecessors, i.e., the inner
+  // exit and the inner header.
+  // PHI nodes in the inner latch are lcssa phis where the incoming values
+  // are defined further inside the loopnest. Check if those phis are used
+  // in the original inner latch. If that is the case then bail out since
+  // those incoming values may not be available at the new outer latch.
+  BasicBlock *InnerLoopLatch = InnerLoop->getLoopLatch();
+  for (PHINode &PHI : InnerLoopLatch->phis()) {
+    for (auto *U : PHI.users()) {
+      Instruction *UI = cast<Instruction>(U);
+      if (InnerLoopLatch == UI->getParent())
+        return false;
+    }
+  }
+  return true;
+}
+
 bool LoopInterchangeLegality::canInterchangeLoops(unsigned InnerLoopId,
                                                   unsigned OuterLoopId,
                                                   CharMatrix &DepMatrix) {
@@ -1056,6 +1090,18 @@ bool LoopInterchangeLegality::canInterchangeLoops(unsigned InnerLoopId,
 
         return false;
       }
+
+  if (!areInnerLoopLatchPHIsSupported(OuterLoop, InnerLoop)) {
+    LLVM_DEBUG(dbgs() << "Found unsupported PHI nodes in inner loop latch.\n");
+    ORE->emit([&]() {
+      return OptimizationRemarkMissed(DEBUG_TYPE, "UnsupportedInnerLatchPHI",
+                                      InnerLoop->getStartLoc(),
+                                      InnerLoop->getHeader())
+             << "Cannot interchange loops because unsupported PHI nodes found "
+                "in inner loop latch.";
+    });
+    return false;
+  }
 
   // TODO: The loops could not be interchanged due to current limitations in the
   // transform module.

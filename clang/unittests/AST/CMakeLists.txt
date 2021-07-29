@@ -29,6 +29,7 @@ add_clang_unittest(ASTTests
   SourceLocationTest.cpp
   StmtPrinterTest.cpp
   StructuralEquivalenceTest.cpp
+  TypePrinterTest.cpp
   )
 
 clang_target_link_libraries(ASTTests

@@ -48,3 +48,5 @@ void test5() try {
   throw x; // new-error {{no matching constructor for initialization}}
 } catch (...) {
 }
+
+MoveOnly test6(MoveOnly x) { return x; }

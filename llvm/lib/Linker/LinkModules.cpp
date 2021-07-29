@@ -177,9 +177,9 @@ bool ModuleLinker::computeResultingSelectionKind(StringRef ComdatName,
     // Go with Dst.
     LinkFromSrc = false;
     break;
-  case Comdat::SelectionKind::NoDuplicates:
+  case Comdat::SelectionKind::NoDeduplicate:
     return emitError("Linking COMDATs named '" + ComdatName +
-                     "': noduplicates has been violated!");
+                     "': nodeduplicate has been violated!");
   case Comdat::SelectionKind::ExactMatch:
   case Comdat::SelectionKind::Largest:
   case Comdat::SelectionKind::SameSize: {

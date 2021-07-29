@@ -97,7 +97,7 @@ template <typename T> struct NormalFloat {
     }
 
     FPBits<T> result(T(0.0));
-    result.encoding.sign = sign;
+    result.setSign(sign);
 
     constexpr int subnormalExponent = -FPBits<T>::exponentBias + 1;
     if (exponent < subnormalExponent) {
@@ -110,36 +110,36 @@ template <typename T> struct NormalFloat {
         const UIntType shiftOutMask = (UIntType(1) << shift) - 1;
         const UIntType shiftOutValue = mantissa & shiftOutMask;
         const UIntType halfwayValue = UIntType(1) << (shift - 1);
-        result.encoding.exponent = 0;
-        result.encoding.mantissa = mantissa >> shift;
-        UIntType newMantissa = result.encoding.mantissa;
+        result.setUnbiasedExponent(0);
+        result.setMantissa(mantissa >> shift);
+        UIntType newMantissa = result.getMantissa();
         if (shiftOutValue > halfwayValue) {
           newMantissa += 1;
         } else if (shiftOutValue == halfwayValue) {
           // Round to even.
-          if (result.encoding.mantissa & 0x1)
+          if (result.getMantissa() & 0x1)
             newMantissa += 1;
         }
-        result.encoding.mantissa = newMantissa;
+        result.setMantissa(newMantissa);
         // Adding 1 to mantissa can lead to overflow. This can only happen if
         // mantissa was all ones (0b111..11). For such a case, we will carry
         // the overflow into the exponent.
         if (newMantissa == one)
-          result.encoding.exponent = 1;
+          result.setUnbiasedExponent(1);
         return T(result);
       } else {
         return T(result);
       }
     }
 
-    result.encoding.exponent = exponent + FPBits<T>::exponentBias;
-    result.encoding.mantissa = mantissa;
+    result.setUnbiasedExponent(exponent + FPBits<T>::exponentBias);
+    result.setMantissa(mantissa);
     return T(result);
   }
 
 private:
   void initFromBits(FPBits<T> bits) {
-    sign = bits.encoding.sign;
+    sign = bits.getSign();
 
     if (bits.isInfOrNaN() || bits.isZero()) {
       // Ignore special bit patterns. Implementations deal with them separately
@@ -150,13 +150,13 @@ private:
     }
 
     // Normalize subnormal numbers.
-    if (bits.encoding.exponent == 0) {
-      unsigned shift = evaluateNormalizationShift(bits.encoding.mantissa);
-      mantissa = UIntType(bits.encoding.mantissa) << shift;
+    if (bits.getUnbiasedExponent() == 0) {
+      unsigned shift = evaluateNormalizationShift(bits.getMantissa());
+      mantissa = UIntType(bits.getMantissa()) << shift;
       exponent = 1 - FPBits<T>::exponentBias - shift;
     } else {
-      exponent = bits.encoding.exponent - FPBits<T>::exponentBias;
-      mantissa = one | bits.encoding.mantissa;
+      exponent = bits.getUnbiasedExponent() - FPBits<T>::exponentBias;
+      mantissa = one | bits.getMantissa();
     }
   }
 
@@ -172,7 +172,7 @@ private:
 #ifdef SPECIAL_X86_LONG_DOUBLE
 template <>
 inline void NormalFloat<long double>::initFromBits(FPBits<long double> bits) {
-  sign = bits.encoding.sign;
+  sign = bits.getSign();
 
   if (bits.isInfOrNaN() || bits.isZero()) {
     // Ignore special bit patterns. Implementations deal with them separately
@@ -182,25 +182,24 @@ inline void NormalFloat<long double>::initFromBits(FPBits<long double> bits) {
     return;
   }
 
-  if (bits.encoding.exponent == 0) {
-    if (bits.encoding.implicitBit == 0) {
+  if (bits.getUnbiasedExponent() == 0) {
+    if (bits.getImplicitBit() == 0) {
       // Since we ignore zero value, the mantissa in this case is non-zero.
-      int normalizationShift =
-          evaluateNormalizationShift(bits.encoding.mantissa);
+      int normalizationShift = evaluateNormalizationShift(bits.getMantissa());
       exponent = -16382 - normalizationShift;
-      mantissa = (bits.encoding.mantissa << normalizationShift);
+      mantissa = (bits.getMantissa() << normalizationShift);
     } else {
       exponent = -16382;
-      mantissa = one | bits.encoding.mantissa;
+      mantissa = one | bits.getMantissa();
     }
   } else {
-    if (bits.encoding.implicitBit == 0) {
+    if (bits.getImplicitBit() == 0) {
       // Invalid number so just store 0 similar to a NaN.
       exponent = 0;
       mantissa = 0;
     } else {
-      exponent = bits.encoding.exponent - 16383;
-      mantissa = one | bits.encoding.mantissa;
+      exponent = bits.getUnbiasedExponent() - 16383;
+      mantissa = one | bits.getMantissa();
     }
   }
 }
@@ -214,7 +213,7 @@ template <> inline NormalFloat<long double>::operator long double() const {
   }
 
   FPBits<long double> result(0.0l);
-  result.encoding.sign = sign;
+  result.setSign(sign);
 
   constexpr int subnormalExponent = -FPBits<long double>::exponentBias + 1;
   if (exponent < subnormalExponent) {
@@ -225,25 +224,25 @@ template <> inline NormalFloat<long double>::operator long double() const {
       const UIntType shiftOutMask = (UIntType(1) << shift) - 1;
       const UIntType shiftOutValue = mantissa & shiftOutMask;
       const UIntType halfwayValue = UIntType(1) << (shift - 1);
-      result.encoding.exponent = 0;
-      result.encoding.mantissa = mantissa >> shift;
-      UIntType newMantissa = result.encoding.mantissa;
+      result.setUnbiasedExponent(0);
+      result.setMantissa(mantissa >> shift);
+      UIntType newMantissa = result.getMantissa();
       if (shiftOutValue > halfwayValue) {
         newMantissa += 1;
       } else if (shiftOutValue == halfwayValue) {
         // Round to even.
-        if (result.encoding.mantissa & 0x1)
+        if (result.getMantissa() & 0x1)
           newMantissa += 1;
       }
-      result.encoding.mantissa = newMantissa;
+      result.setMantissa(newMantissa);
       // Adding 1 to mantissa can lead to overflow. This can only happen if
       // mantissa was all ones (0b111..11). For such a case, we will carry
       // the overflow into the exponent and set the implicit bit to 1.
       if (newMantissa == one) {
-        result.encoding.exponent = 1;
-        result.encoding.implicitBit = 1;
+        result.setUnbiasedExponent(1);
+        result.setImplicitBit(1);
       } else {
-        result.encoding.implicitBit = 0;
+        result.setImplicitBit(0);
       }
       return static_cast<long double>(result);
     } else {
@@ -251,9 +250,9 @@ template <> inline NormalFloat<long double>::operator long double() const {
     }
   }
 
-  result.encoding.exponent = biasedExponent;
-  result.encoding.mantissa = mantissa;
-  result.encoding.implicitBit = 1;
+  result.setUnbiasedExponent(biasedExponent);
+  result.setMantissa(mantissa);
+  result.setImplicitBit(1);
   return static_cast<long double>(result);
 }
 #endif // SPECIAL_X86_LONG_DOUBLE

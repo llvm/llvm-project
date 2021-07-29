@@ -7,7 +7,7 @@ declare void @llvm.memcpy.p0i8.p0i8.i64(i8* nocapture, i8* nocapture readonly, i
 declare void @llvm.memset.p0i8.i64(i8* nocapture, i8, i64, i1) nounwind
 
 ; all bytes of %dst that are touch by the memset are dereferenceable
-define void @must_remove_memcpy(i8* noalias nocapture dereferenceable(4096) %dst) {
+define void @must_remove_memcpy(i8* noalias nocapture dereferenceable(4096) %dst) nofree nosync {
 ; CHECK-LABEL: @must_remove_memcpy(
 ; CHECK-NEXT:    [[SRC:%.*]] = alloca [4096 x i8], align 1
 ; CHECK-NEXT:    [[P:%.*]] = getelementptr inbounds [4096 x i8], [4096 x i8]* [[SRC]], i64 0, i64 0
@@ -25,7 +25,7 @@ define void @must_remove_memcpy(i8* noalias nocapture dereferenceable(4096) %dst
 
 ; memset touch more bytes than those guaranteed to be dereferenceable
 ; We can't remove the memcpy, but we can turn it into an independent memset.
-define void @must_not_remove_memcpy(i8* noalias nocapture dereferenceable(1024) %dst) {
+define void @must_not_remove_memcpy(i8* noalias nocapture dereferenceable(1024) %dst) nofree nosync {
 ; CHECK-LABEL: @must_not_remove_memcpy(
 ; CHECK-NEXT:    [[SRC:%.*]] = alloca [4096 x i8], align 1
 ; CHECK-NEXT:    [[P:%.*]] = getelementptr inbounds [4096 x i8], [4096 x i8]* [[SRC]], i64 0, i64 0

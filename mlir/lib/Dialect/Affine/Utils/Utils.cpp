@@ -129,10 +129,6 @@ static AffineIfOp hoistAffineIfOp(AffineIfOp ifOp, Operation *hoistOverOp) {
   return hoistedIfOp;
 }
 
-/// Replace affine.for with a 1-d affine.parallel and clone the former's body
-/// into the latter while remapping values. Parallelizes the specified
-/// reductions. Parallelization will fail in presence of loop iteration
-/// arguments that are not listed in `parallelReductions`.
 LogicalResult
 mlir::affineParallelize(AffineForOp forOp,
                         ArrayRef<LoopReduction> parallelReductions) {

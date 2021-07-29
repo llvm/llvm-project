@@ -1369,7 +1369,8 @@ TEST_F(AArch64GISelMITest, TestKnownBitsBSwapBitReverse) {
   if (!TM)
     return;
 
-  const uint32_t TestVal = 0x11223344;
+  const uint32_t ByteSwappedVal = 0x44332211;
+  const uint32_t BitSwappedVal = 0x22cc4488;
 
   Register CopyBSwap = Copies[Copies.size() - 2];
   Register CopyBitReverse = Copies[Copies.size() - 1];
@@ -1378,13 +1379,13 @@ TEST_F(AArch64GISelMITest, TestKnownBitsBSwapBitReverse) {
 
   KnownBits BSwapKnown = Info.getKnownBits(CopyBSwap);
   EXPECT_EQ(32u, BSwapKnown.getBitWidth());
-  EXPECT_EQ(TestVal, BSwapKnown.One.getZExtValue());
-  EXPECT_EQ(~TestVal, BSwapKnown.Zero.getZExtValue());
+  EXPECT_EQ(ByteSwappedVal, BSwapKnown.One.getZExtValue());
+  EXPECT_EQ(~ByteSwappedVal, BSwapKnown.Zero.getZExtValue());
 
   KnownBits BitReverseKnown = Info.getKnownBits(CopyBitReverse);
   EXPECT_EQ(32u, BitReverseKnown.getBitWidth());
-  EXPECT_EQ(TestVal, BitReverseKnown.One.getZExtValue());
-  EXPECT_EQ(~TestVal, BitReverseKnown.Zero.getZExtValue());
+  EXPECT_EQ(BitSwappedVal, BitReverseKnown.One.getZExtValue());
+  EXPECT_EQ(~BitSwappedVal, BitReverseKnown.Zero.getZExtValue());
 }
 
 TEST_F(AArch64GISelMITest, TestKnownBitsUMAX) {

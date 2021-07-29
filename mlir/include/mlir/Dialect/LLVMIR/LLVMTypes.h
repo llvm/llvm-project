@@ -36,6 +36,13 @@ struct LLVMPointerTypeStorage;
 struct LLVMStructTypeStorage;
 struct LLVMTypeAndSizeStorage;
 } // namespace detail
+} // namespace LLVM
+} // namespace mlir
+
+#include "mlir/Dialect/LLVMIR/LLVMTypeInterfaces.h.inc"
+
+namespace mlir {
+namespace LLVM {
 
 //===----------------------------------------------------------------------===//
 // Trivial types.

@@ -721,6 +721,7 @@ def tvecshiftR64 : Operand<i32>, TImmLeaf<i32, [{
 }
 
 def Imm0_1Operand : AsmImmRange<0, 1>;
+def Imm0_3Operand : AsmImmRange<0, 3>;
 def Imm0_7Operand : AsmImmRange<0, 7>;
 def Imm0_15Operand : AsmImmRange<0, 15>;
 def Imm0_31Operand : AsmImmRange<0, 31>;
@@ -944,6 +945,13 @@ def imm0_7 : Operand<i64>, ImmLeaf<i64, [{
   return ((uint64_t)Imm) < 8;
 }]> {
   let ParserMatchClass = Imm0_7Operand;
+}
+
+// imm0_3 predicate - True if the immediate is in the range [0,3]
+def imm0_3 : Operand<i64>, ImmLeaf<i64, [{
+  return ((uint64_t)Imm) < 4;
+}]> {
+  let ParserMatchClass = Imm0_3Operand;
 }
 
 // imm32_0_7 predicate - True if the 32-bit immediate is in the range [0,7]

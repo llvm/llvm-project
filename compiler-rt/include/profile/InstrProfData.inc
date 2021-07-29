@@ -137,6 +137,7 @@ INSTR_PROF_RAW_HEADER(uint64_t, NamesSize,  NamesSize)
 INSTR_PROF_RAW_HEADER(uint64_t, CountersDelta, (uintptr_t)CountersBegin)
 INSTR_PROF_RAW_HEADER(uint64_t, NamesDelta, (uintptr_t)NamesBegin)
 INSTR_PROF_RAW_HEADER(uint64_t, ValueKindLast, IPVK_Last)
+INSTR_PROF_RAW_HEADER(uint64_t, BinaryIdsSize, __llvm_write_binary_ids(NULL))
 #undef INSTR_PROF_RAW_HEADER
 /* INSTR_PROF_RAW_HEADER  end */
 
@@ -645,7 +646,7 @@ serializeValueProfDataFrom(ValueProfRecordClosure *Closure,
         (uint64_t)'f' << 16 | (uint64_t)'R' << 8 | (uint64_t)129
 
 /* Raw profile format version (start from 1). */
-#define INSTR_PROF_RAW_VERSION 5
+#define INSTR_PROF_RAW_VERSION 6
 /* Indexed profile format version (start from 1). */
 #define INSTR_PROF_INDEX_VERSION 7
 /* Coverage mapping format version (start from 0). */
@@ -664,6 +665,7 @@ serializeValueProfDataFrom(ValueProfRecordClosure *Closure,
 #define VARIANT_MASK_INSTR_ENTRY (0x1ULL << 58)
 #define INSTR_PROF_RAW_VERSION_VAR __llvm_profile_raw_version
 #define INSTR_PROF_PROFILE_RUNTIME_VAR __llvm_profile_runtime
+#define INSTR_PROF_PROFILE_COUNTER_BIAS_VAR __llvm_profile_counter_bias
 
 /* The variable that holds the name of the profile data
  * specified via command line. */

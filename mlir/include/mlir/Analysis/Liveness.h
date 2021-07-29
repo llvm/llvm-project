@@ -43,7 +43,7 @@ class Value;
 ///   auto &allInValues = liveness.getLiveIn(block);
 ///   auto &allOutValues = liveness.getLiveOut(block);
 ///   auto allOperationsInWhichValueIsLive = liveness.resolveLiveness(value);
-///   bool lastUse = liveness.isLastUse(value, operation);
+///   bool isDeafAfter = liveness.isDeadAfter(value, operation);
 class Liveness {
 public:
   using OperationListT = std::vector<Operation *>;
@@ -74,9 +74,8 @@ public:
   /// Returns a reference to a set containing live-out values (unordered).
   const ValueSetT &getLiveOut(Block *block) const;
 
-  /// Returns true if the given operation represent the last use of the
-  /// given value.
-  bool isLastUse(Value value, Operation *operation) const;
+  /// Returns true if `value` is not live after `operation`.
+  bool isDeadAfter(Value value, Operation *operation) const;
 
   /// Dumps the liveness information in a human readable format.
   void dump() const;

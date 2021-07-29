@@ -101,6 +101,7 @@ public:
 
     // Phi-like VPValues. Need to be kept together.
     VPVBlendSC,
+    VPVFirstOrderRecurrencePHISC,
     VPVWidenPHISC,
     VPVWidenCanonicalIVSC,
     VPVWidenIntOrFpInductionSC,
@@ -331,6 +332,7 @@ public:
 
     // Phi-like recipes. Need to be kept together.
     VPBlendSC,
+    VPFirstOrderRecurrencePHISC,
     VPWidenPHISC,
     VPWidenCanonicalIVSC,
     VPWidenIntOrFpInductionSC,
@@ -371,7 +373,7 @@ public:
     assert(DefinedValues[I] && "defined value must be non-null");
     return DefinedValues[I];
   }
-  const VPValue *getVPValue(unsigned I = 0) const {
+  const VPValue *getVPValue(unsigned I) const {
     assert(DefinedValues[I] && "defined value must be non-null");
     return DefinedValues[I];
   }

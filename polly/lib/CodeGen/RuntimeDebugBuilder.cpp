@@ -134,7 +134,7 @@ prepareValuesForPrinting(PollyIRBuilder &Builder, ArrayRef<Value *> Values) {
     } else if (isa<PointerType>(Ty)) {
       if (Ty->getPointerElementType() == Builder.getInt8Ty() &&
           Ty->getPointerAddressSpace() == 4) {
-        Val = Builder.CreateGEP(Val, Builder.getInt64(0));
+        Val = Builder.CreateGEP(Builder.getInt8Ty(), Val, Builder.getInt64(0));
       } else {
         Val = Builder.CreatePtrToInt(Val, Builder.getInt64Ty());
       }
@@ -192,7 +192,8 @@ void RuntimeDebugBuilder::createGPUPrinterT(PollyIRBuilder &Builder,
 
   int Offset = 0;
   for (auto Val : ToPrint) {
-    auto Ptr = Builder.CreateGEP(DataPtr, Builder.getInt64(Offset));
+    auto Ptr = Builder.CreateGEP(Builder.getInt32Ty(), DataPtr,
+                                 Builder.getInt64(Offset));
     Type *Ty = Val->getType();
 
     if (Ty->isFloatingPointTy()) {
@@ -209,7 +210,8 @@ void RuntimeDebugBuilder::createGPUPrinterT(PollyIRBuilder &Builder,
     } else if (auto PtTy = dyn_cast<PointerType>(Ty)) {
       if (PtTy->getAddressSpace() == 4) {
         // Pointers in constant address space are printed as strings
-        Val = Builder.CreateGEP(Val, Builder.getInt64(0));
+        Val = Builder.CreateGEP(Ty->getPointerElementType(), Val,
+                                Builder.getInt64(0));
         auto F = RuntimeDebugBuilder::getAddressSpaceCast(Builder, 4, 0);
         Val = Builder.CreateCall(F, Val);
       } else {

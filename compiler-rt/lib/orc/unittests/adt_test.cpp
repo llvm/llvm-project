@@ -72,7 +72,7 @@ TEST(ADTTest, StringViewConstructFromCharPtr) {
 
   EXPECT_FALSE(S.empty()) << "Span should be non-empty";
   EXPECT_EQ(S.size(), StrLen) << "Span has unexpected size";
-  EXPECT_EQ(std::distance(S.begin(), S.end()), StrLen)
+  EXPECT_EQ(static_cast<size_t>(std::distance(S.begin(), S.end())), StrLen)
       << "Unexpected iterator range size";
   EXPECT_EQ(S.data(), &Str[0]) << "Span data has unexpected value";
   for (unsigned I = 0; I != S.size(); ++I)

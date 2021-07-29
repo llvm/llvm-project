@@ -14,6 +14,10 @@ struct CopyOnly {
 };
 TEST(CopyOnly); // cxx2b-error {{no matching constructor}}
 
+// Both ConstCopyOnly and NonConstCopyOnly are
+// "pure" C++98 tests (pretend 'delete' means 'private').
+// However we may extend implicit moves into C++98, we must make sure the
+// results in these are not changed.
 struct ConstCopyOnly {
   ConstCopyOnly();
   ConstCopyOnly(ConstCopyOnly &) = delete; // cxx98-note {{marked deleted here}}
@@ -31,51 +35,51 @@ TEST(NonConstCopyOnly); // cxx11_2b-error {{call to deleted constructor}}
 struct CopyNoMove {
   CopyNoMove();
   CopyNoMove(CopyNoMove &);
-  CopyNoMove(CopyNoMove &&) = delete; // cxx11_2b-note {{marked deleted here}}
+  CopyNoMove(CopyNoMove &&) = delete; // cxx98_2b-note {{marked deleted here}}
 };
-TEST(CopyNoMove); // cxx11_2b-error {{call to deleted constructor}}
+TEST(CopyNoMove); // cxx98_2b-error {{call to deleted constructor}}
 
 struct MoveOnly {
   MoveOnly();
-  MoveOnly(MoveOnly &) = delete; // cxx98-note {{marked deleted here}}
+  MoveOnly(MoveOnly &) = delete;
   MoveOnly(MoveOnly &&);
 };
-TEST(MoveOnly); // cxx98-error {{call to deleted constructor}}
+TEST(MoveOnly);
 
 struct NoCopyNoMove {
   NoCopyNoMove();
-  NoCopyNoMove(NoCopyNoMove &) = delete;  // cxx98-note {{marked deleted here}}
-  NoCopyNoMove(NoCopyNoMove &&) = delete; // cxx11_2b-note {{marked deleted here}}
+  NoCopyNoMove(NoCopyNoMove &) = delete;
+  NoCopyNoMove(NoCopyNoMove &&) = delete; // cxx98_2b-note {{marked deleted here}}
 };
 TEST(NoCopyNoMove); // cxx98_2b-error {{call to deleted constructor}}
 
 struct ConvertingRVRef {
   ConvertingRVRef();
-  ConvertingRVRef(ConvertingRVRef &) = delete; // cxx98-note {{marked deleted here}}
+  ConvertingRVRef(ConvertingRVRef &) = delete;
 
   struct X {};
   ConvertingRVRef(X &&);
   operator X() const & = delete;
   operator X() &&;
 };
-TEST(ConvertingRVRef); // cxx98-error {{call to deleted constructor}}
+TEST(ConvertingRVRef);
 
 struct ConvertingCLVRef {
   ConvertingCLVRef();
   ConvertingCLVRef(ConvertingCLVRef &);
 
   struct X {};
-  ConvertingCLVRef(X &&); // cxx11_2b-note {{passing argument to parameter here}}
+  ConvertingCLVRef(X &&); // cxx98_2b-note {{passing argument to parameter here}}
   operator X() const &;
-  operator X() && = delete; // cxx11_2b-note {{marked deleted here}}
+  operator X() && = delete; // cxx98_2b-note {{marked deleted here}}
 };
-TEST(ConvertingCLVRef); // cxx11_2b-error {{invokes a deleted function}}
+TEST(ConvertingCLVRef); // cxx98_2b-error {{invokes a deleted function}}
 
 struct SubSubMove {};
 struct SubMove : SubSubMove {
   SubMove();
-  SubMove(SubMove &) = delete; // cxx98-note {{marked deleted here}}
+  SubMove(SubMove &) = delete;
 
   SubMove(SubSubMove &&);
 };
-TEST(SubMove); // cxx98-error {{call to deleted constructor}}
+TEST(SubMove);

@@ -429,6 +429,7 @@ void SIFrameLowering::emitEntryFunctionPrologue(MachineFunction &MF,
   MachineRegisterInfo &MRI = MF.getRegInfo();
   const Function &F = MF.getFunction();
   const MCRegisterInfo *MCRI = MF.getMMI().getContext().getRegisterInfo();
+  MachineFrameInfo &FrameInfo = MF.getFrameInfo();
 
   assert(MFI->isEntryFunction());
 
@@ -529,7 +530,7 @@ void SIFrameLowering::emitEntryFunctionPrologue(MachineFunction &MF,
     Register SPReg = MFI->getStackPtrOffsetReg();
     assert(SPReg != AMDGPU::SP_REG);
     BuildMI(MBB, I, DL, TII->get(AMDGPU::S_MOV_B32), SPReg)
-        .addImm(MF.getFrameInfo().getStackSize() * getScratchScaleFactor(ST));
+        .addImm(FrameInfo.getStackSize() * getScratchScaleFactor(ST));
   }
 
   if (hasFP(MF)) {
@@ -538,13 +539,18 @@ void SIFrameLowering::emitEntryFunctionPrologue(MachineFunction &MF,
     BuildMI(MBB, I, DL, TII->get(AMDGPU::S_MOV_B32), FPReg).addImm(0);
   }
 
-  if ((MFI->hasFlatScratchInit() || ScratchRsrcReg) &&
+  bool NeedsFlatScratchInit =
+      MFI->hasFlatScratchInit() &&
+      (MRI.isPhysRegUsed(AMDGPU::FLAT_SCR) || FrameInfo.hasCalls() ||
+       (!allStackObjectsAreDead(MF) && ST.enableFlatScratch()));
+
+  if ((NeedsFlatScratchInit || ScratchRsrcReg) &&
       !ST.flatScratchIsArchitected()) {
     MRI.addLiveIn(PreloadedScratchWaveOffsetReg);
     MBB.addLiveIn(PreloadedScratchWaveOffsetReg);
   }
 
-  if (MFI->hasFlatScratchInit()) {
+  if (NeedsFlatScratchInit) {
     emitEntryFunctionFlatScratchInit(MF, MBB, I, DL, ScratchWaveOffsetReg);
   }
 

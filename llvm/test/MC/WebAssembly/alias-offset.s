@@ -21,14 +21,16 @@ sym_a:
   .section    .text,"",@
 main:
   .functype   main () -> ()
+  i32.const 0
   i32.const sym_a
   i32.store sym_b
   end_function
 
 # CHECK-LABEL: <main>:
 # CHECK-EMPTY:
-# CHECK-NEXT:       3: 41 84 80 80 80 00     i32.const       4
-# CHECK-NEXT:                        00000004:  R_WASM_MEMORY_ADDR_SLEB      sym_a+0
-# CHECK-NEXT:       9: 36 02 88 80 80 80 00  i32.store       8
-# CHECK-NEXT:                        0000000b:  R_WASM_MEMORY_ADDR_LEB      sym_b+0
-# CHECK-NEXT:      10: 0b            end
+# CHECK-NEXT:       3: 41 00                 i32.const       0
+# CHECK-NEXT:       5: 41 84 80 80 80 00     i32.const       4
+# CHECK-NEXT:                        00000006:  R_WASM_MEMORY_ADDR_SLEB      sym_a+0
+# CHECK-NEXT:       b: 36 02 88 80 80 80 00  i32.store       8
+# CHECK-NEXT:                        0000000d:  R_WASM_MEMORY_ADDR_LEB      sym_b+0
+# CHECK-NEXT:      12: 0b            end

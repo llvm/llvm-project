@@ -83,7 +83,7 @@ Comdat *llvm::getOrCreateFunctionComdat(Function &F, Triple &T) {
   // symbols.
   Comdat *C = M->getOrInsertComdat(F.getName());
   if (T.isOSBinFormatELF() || (T.isOSBinFormatCOFF() && !F.isWeakForLinker()))
-    C->setSelectionKind(Comdat::NoDuplicates);
+    C->setSelectionKind(Comdat::NoDeduplicate);
   F.setComdat(C);
   return C;
 }

@@ -72,6 +72,9 @@ protected:
 
   virtual llvm::Error ReadHardwareDebugInfo() = 0;
   virtual llvm::Error WriteHardwareDebugRegs(DREGType hwbType) = 0;
+  virtual lldb::addr_t FixWatchpointHitAddress(lldb::addr_t hit_addr) {
+    return hit_addr;
+  }
 };
 
 } // namespace lldb_private

@@ -970,6 +970,20 @@ static ParseResult parseExtractElementOp(OpAsmParser &parser,
   return success();
 }
 
+static LogicalResult verify(ExtractElementOp op) {
+  Type vectorType = op.vector().getType();
+  if (!LLVM::isCompatibleVectorType(vectorType))
+    return op->emitOpError("expected LLVM dialect-compatible vector type for "
+                           "operand #1, got")
+           << vectorType;
+  Type valueType = LLVM::getVectorElementType(vectorType);
+  if (valueType != op.res().getType())
+    return op.emitOpError() << "Type mismatch: extracting from " << vectorType
+                            << " should produce " << valueType
+                            << " but this op returns " << op.res().getType();
+  return success();
+}
+
 //===----------------------------------------------------------------------===//
 // Printing/parsing for LLVM::ExtractValueOp.
 //===----------------------------------------------------------------------===//
@@ -1024,6 +1038,52 @@ static Type getInsertExtractValueElementType(OpAsmParser &parser,
   return llvmType;
 }
 
+// Extract the type at `position` in the wrapped LLVM IR aggregate type
+// `containerType`. Returns null on failure.
+static Type getInsertExtractValueElementType(Type containerType,
+                                             ArrayAttr positionAttr,
+                                             Operation *op) {
+  Type llvmType = containerType;
+  if (!isCompatibleType(containerType)) {
+    op->emitError("expected LLVM IR Dialect type, got ") << containerType;
+    return {};
+  }
+
+  // Infer the element type from the structure type: iteratively step inside the
+  // type by taking the element type, indexed by the position attribute for
+  // structures.  Check the position index before accessing, it is supposed to
+  // be in bounds.
+  for (Attribute subAttr : positionAttr) {
+    auto positionElementAttr = subAttr.dyn_cast<IntegerAttr>();
+    if (!positionElementAttr) {
+      op->emitOpError("expected an array of integer literals, got: ")
+          << subAttr;
+      return {};
+    }
+    int position = positionElementAttr.getInt();
+    if (auto arrayType = llvmType.dyn_cast<LLVMArrayType>()) {
+      if (position < 0 ||
+          static_cast<unsigned>(position) >= arrayType.getNumElements()) {
+        op->emitOpError("position out of bounds: ") << position;
+        return {};
+      }
+      llvmType = arrayType.getElementType();
+    } else if (auto structType = llvmType.dyn_cast<LLVMStructType>()) {
+      if (position < 0 ||
+          static_cast<unsigned>(position) >= structType.getBody().size()) {
+        op->emitOpError("position out of bounds") << position;
+        return {};
+      }
+      llvmType = structType.getBody()[position];
+    } else {
+      op->emitOpError("expected LLVM IR structure/array type, got: ")
+          << llvmType;
+      return {};
+    }
+  }
+  return llvmType;
+}
+
 // <operation> ::= `llvm.extractvalue` ssa-use
 //                 `[` integer-literal (`,` integer-literal)* `]`
 //                 attribute-dict? `:` type
@@ -1060,6 +1120,20 @@ OpFoldResult LLVM::ExtractValueOp::fold(ArrayRef<Attribute> operands) {
     insertValueOp = insertValueOp.container().getDefiningOp<InsertValueOp>();
   }
   return {};
+}
+
+static LogicalResult verify(ExtractValueOp op) {
+  Type valueType = getInsertExtractValueElementType(op.container().getType(),
+                                                    op.positionAttr(), op);
+  if (!valueType)
+    return failure();
+
+  if (op.res().getType() != valueType)
+    return op.emitOpError()
+           << "Type mismatch: extracting from " << op.container().getType()
+           << " should produce " << valueType << " but this op returns "
+           << op.res().getType();
+  return success();
 }
 
 //===----------------------------------------------------------------------===//
@@ -1104,6 +1178,14 @@ static ParseResult parseInsertElementOp(OpAsmParser &parser,
   return success();
 }
 
+static LogicalResult verify(InsertElementOp op) {
+  Type valueType = LLVM::getVectorElementType(op.vector().getType());
+  if (valueType != op.value().getType())
+    return op.emitOpError()
+           << "Type mismatch: cannot insert " << op.value().getType()
+           << " into " << op.vector().getType();
+  return success();
+}
 //===----------------------------------------------------------------------===//
 // Printing/parsing for LLVM::InsertValueOp.
 //===----------------------------------------------------------------------===//
@@ -1144,6 +1226,20 @@ static ParseResult parseInsertValueOp(OpAsmParser &parser,
     return failure();
 
   result.addTypes(containerType);
+  return success();
+}
+
+static LogicalResult verify(InsertValueOp op) {
+  Type valueType = getInsertExtractValueElementType(op.container().getType(),
+                                                    op.positionAttr(), op);
+  if (!valueType)
+    return failure();
+
+  if (op.value().getType() != valueType)
+    return op.emitOpError()
+           << "Type mismatch: cannot insert " << op.value().getType()
+           << " into " << op.container().getType();
+
   return success();
 }
 
@@ -1321,193 +1417,6 @@ static void printGlobalOp(OpAsmPrinter &p, GlobalOp op) {
   Region &initializer = op.getInitializerRegion();
   if (!initializer.empty())
     p.printRegion(initializer, /*printEntryBlockArgs=*/false);
-}
-
-//===----------------------------------------------------------------------===//
-// Verifier for LLVM::DialectCastOp.
-//===----------------------------------------------------------------------===//
-
-/// Checks if `llvmType` is dialect cast-compatible with `index` type. Does not
-/// report the error, the user is expected to produce an appropriate message.
-// TODO: make the size depend on data layout rather than on the conversion
-// pass option, and pull that information here.
-static LogicalResult verifyCastWithIndex(Type llvmType) {
-  return success(llvmType.isa<IntegerType>());
-}
-
-/// Checks if `llvmType` is dialect cast-compatible with built-in `type` and
-/// reports errors to the location of `op`. `isElement` indicates whether the
-/// verification is performed for types that are element types inside a
-/// container; we don't want casts from X to X at the top level, but c1<X> to
-/// c2<X> may be fine.
-static LogicalResult verifyCast(DialectCastOp op, Type llvmType, Type type,
-                                bool isElement = false) {
-  // Equal element types are directly compatible.
-  if (isElement && llvmType == type)
-    return success();
-
-  // Index is compatible with any integer.
-  if (type.isIndex()) {
-    if (succeeded(verifyCastWithIndex(llvmType)))
-      return success();
-
-    return op.emitOpError("invalid cast between index and non-integer type");
-  }
-
-  if (type.isa<IntegerType>()) {
-    auto llvmIntegerType = llvmType.dyn_cast<IntegerType>();
-    if (!llvmIntegerType)
-      return op->emitOpError("invalid cast between integer and non-integer");
-    if (llvmIntegerType.getWidth() != type.getIntOrFloatBitWidth())
-      return op.emitOpError("invalid cast changing integer width");
-    return success();
-  }
-
-  // Vectors are compatible if they are 1D non-scalable, and their element types
-  // are compatible. nD vectors are compatible with (n-1)D arrays containing 1D
-  // vector.
-  if (auto vectorType = type.dyn_cast<VectorType>()) {
-    if (vectorType == llvmType && !isElement)
-      return op.emitOpError("vector types should not be casted");
-
-    if (vectorType.getRank() == 1) {
-      auto llvmVectorType = llvmType.dyn_cast<VectorType>();
-      if (!llvmVectorType || llvmVectorType.getRank() != 1)
-        return op.emitOpError("invalid cast for vector types");
-
-      return verifyCast(op, llvmVectorType.getElementType(),
-                        vectorType.getElementType(), /*isElement=*/true);
-    }
-
-    auto arrayType = llvmType.dyn_cast<LLVM::LLVMArrayType>();
-    if (!arrayType ||
-        arrayType.getNumElements() != vectorType.getShape().front())
-      return op.emitOpError("invalid cast for vector, expected array");
-    return verifyCast(op, arrayType.getElementType(),
-                      VectorType::get(vectorType.getShape().drop_front(),
-                                      vectorType.getElementType()),
-                      /*isElement=*/true);
-  }
-
-  if (auto memrefType = type.dyn_cast<MemRefType>()) {
-    // Bare pointer convention: statically-shaped memref is compatible with an
-    // LLVM pointer to the element type.
-    if (auto ptrType = llvmType.dyn_cast<LLVMPointerType>()) {
-      if (!memrefType.hasStaticShape())
-        return op->emitOpError(
-            "unexpected bare pointer for dynamically shaped memref");
-      if (memrefType.getMemorySpaceAsInt() != ptrType.getAddressSpace())
-        return op->emitError("invalid conversion between memref and pointer in "
-                             "different memory spaces");
-
-      return verifyCast(op, ptrType.getElementType(),
-                        memrefType.getElementType(), /*isElement=*/true);
-    }
-
-    // Otherwise, memrefs are convertible to a descriptor, which is a structure
-    // type.
-    auto structType = llvmType.dyn_cast<LLVMStructType>();
-    if (!structType)
-      return op->emitOpError("invalid cast between a memref and a type other "
-                             "than pointer or memref descriptor");
-
-    unsigned expectedNumElements = memrefType.getRank() == 0 ? 3 : 5;
-    if (structType.getBody().size() != expectedNumElements) {
-      return op->emitOpError() << "expected memref descriptor with "
-                               << expectedNumElements << " elements";
-    }
-
-    // The first two elements are pointers to the element type.
-    auto allocatedPtr = structType.getBody()[0].dyn_cast<LLVMPointerType>();
-    if (!allocatedPtr ||
-        allocatedPtr.getAddressSpace() != memrefType.getMemorySpaceAsInt())
-      return op->emitOpError("expected first element of a memref descriptor to "
-                             "be a pointer in the address space of the memref");
-    if (failed(verifyCast(op, allocatedPtr.getElementType(),
-                          memrefType.getElementType(), /*isElement=*/true)))
-      return failure();
-
-    auto alignedPtr = structType.getBody()[1].dyn_cast<LLVMPointerType>();
-    if (!alignedPtr ||
-        alignedPtr.getAddressSpace() != memrefType.getMemorySpaceAsInt())
-      return op->emitOpError(
-          "expected second element of a memref descriptor to "
-          "be a pointer in the address space of the memref");
-    if (failed(verifyCast(op, alignedPtr.getElementType(),
-                          memrefType.getElementType(), /*isElement=*/true)))
-      return failure();
-
-    // The second element (offset) is an equivalent of index.
-    if (failed(verifyCastWithIndex(structType.getBody()[2])))
-      return op->emitOpError("expected third element of a memref descriptor to "
-                             "be index-compatible integers");
-
-    // 0D memrefs don't have sizes/strides.
-    if (memrefType.getRank() == 0)
-      return success();
-
-    // Sizes and strides are rank-sized arrays of `index` equivalents.
-    auto sizes = structType.getBody()[3].dyn_cast<LLVMArrayType>();
-    if (!sizes || failed(verifyCastWithIndex(sizes.getElementType())) ||
-        sizes.getNumElements() != memrefType.getRank())
-      return op->emitOpError(
-          "expected fourth element of a memref descriptor "
-          "to be an array of <rank> index-compatible integers");
-
-    auto strides = structType.getBody()[4].dyn_cast<LLVMArrayType>();
-    if (!strides || failed(verifyCastWithIndex(strides.getElementType())) ||
-        strides.getNumElements() != memrefType.getRank())
-      return op->emitOpError(
-          "expected fifth element of a memref descriptor "
-          "to be an array of <rank> index-compatible integers");
-
-    return success();
-  }
-
-  // Unranked memrefs are compatible with their descriptors.
-  if (auto unrankedMemrefType = type.dyn_cast<UnrankedMemRefType>()) {
-    auto structType = llvmType.dyn_cast<LLVMStructType>();
-    if (!structType || structType.getBody().size() != 2)
-      return op->emitOpError(
-          "expected descriptor to be a struct with two elements");
-
-    if (failed(verifyCastWithIndex(structType.getBody()[0])))
-      return op->emitOpError("expected first element of a memref descriptor to "
-                             "be an index-compatible integer");
-
-    auto ptrType = structType.getBody()[1].dyn_cast<LLVMPointerType>();
-    auto ptrElementType =
-        ptrType ? ptrType.getElementType().dyn_cast<IntegerType>() : nullptr;
-    if (!ptrElementType || ptrElementType.getWidth() != 8)
-      return op->emitOpError("expected second element of a memref descriptor "
-                             "to be an !llvm.ptr<i8>");
-
-    return success();
-  }
-
-  // Complex types are compatible with the two-element structs.
-  if (auto complexType = type.dyn_cast<ComplexType>()) {
-    auto structType = llvmType.dyn_cast<LLVMStructType>();
-    if (!structType || structType.getBody().size() != 2 ||
-        structType.getBody()[0] != structType.getBody()[1] ||
-        structType.getBody()[0] != complexType.getElementType())
-      return op->emitOpError("expected 'complex' to map to two-element struct "
-                             "with identical element types");
-    return success();
-  }
-
-  // Everything else is not supported.
-  return op->emitError("unsupported cast");
-}
-
-static LogicalResult verify(DialectCastOp op) {
-  if (isCompatibleType(op.getType()))
-    return verifyCast(op, op.getType(), op.in().getType());
-
-  if (!isCompatibleType(op.in().getType()))
-    return op->emitOpError("expected one LLVM type and one built-in type");
-
-  return verifyCast(op, op.in().getType(), op.getType());
 }
 
 // Parses one of the keywords provided in the list `keywords` and returns the

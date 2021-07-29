@@ -9,19 +9,35 @@
 #include "llvm/Support/TypeSize.h"
 #include "llvm/Support/CommandLine.h"
 
+#include "DebugOptions.h"
+
 using namespace llvm;
 
-/// The ScalableErrorAsWarning is a temporary measure to suppress errors from
-/// using the wrong interface on a scalable vector.
-cl::opt<bool> ScalableErrorAsWarning(
-    "treat-scalable-fixed-error-as-warning", cl::Hidden, cl::init(false),
-    cl::desc("Treat issues where a fixed-width property is requested from a "
-             "scalable type as a warning, instead of an error."),
-    cl::ZeroOrMore);
+#ifndef STRICT_FIXED_SIZE_VECTORS
+namespace {
+struct CreateScalableErrorAsWarning {
+  /// The ScalableErrorAsWarning is a temporary measure to suppress errors from
+  /// using the wrong interface on a scalable vector.
+  static void *call() {
+    return new cl::opt<bool>(
+        "treat-scalable-fixed-error-as-warning", cl::Hidden, cl::init(false),
+        cl::desc(
+            "Treat issues where a fixed-width property is requested from a "
+            "scalable type as a warning, instead of an error."),
+        cl::ZeroOrMore);
+  }
+};
+} // namespace
+static ManagedStatic<cl::opt<bool>, CreateScalableErrorAsWarning>
+    ScalableErrorAsWarning;
+void llvm::initTypeSizeOptions() { *ScalableErrorAsWarning; }
+#else
+void llvm::initTypeSizeOptions() {}
+#endif
 
 void llvm::reportInvalidSizeRequest(const char *Msg) {
 #ifndef STRICT_FIXED_SIZE_VECTORS
-  if (ScalableErrorAsWarning) {
+  if (*ScalableErrorAsWarning) {
     WithColor::warning() << "Invalid size request on a scalable vector; " << Msg
                          << "\n";
     return;

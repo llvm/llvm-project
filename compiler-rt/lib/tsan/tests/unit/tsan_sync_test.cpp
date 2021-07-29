@@ -47,7 +47,10 @@ TEST(MetaMap, FreeRange) {
   EXPECT_EQ(mb2, (MBlock*)0);
 }
 
-TEST(MetaMap, Sync) {
+TEST(MetaMap, Sync) NO_THREAD_SAFETY_ANALYSIS {
+  // EXPECT can call memset/etc. Disable interceptors to prevent
+  // them from detecting that we exit runtime with mutexes held.
+  ScopedIgnoreInterceptors ignore;
   ThreadState *thr = cur_thread();
   MetaMap *m = &ctx->metamap;
   u64 block[4] = {};  // fake malloc block
@@ -70,7 +73,8 @@ TEST(MetaMap, Sync) {
   m->OnProcIdle(thr->proc());
 }
 
-TEST(MetaMap, MoveMemory) {
+TEST(MetaMap, MoveMemory) NO_THREAD_SAFETY_ANALYSIS {
+  ScopedIgnoreInterceptors ignore;
   ThreadState *thr = cur_thread();
   MetaMap *m = &ctx->metamap;
   u64 block1[4] = {};  // fake malloc block
@@ -107,7 +111,8 @@ TEST(MetaMap, MoveMemory) {
   m->FreeRange(thr->proc(), (uptr)&block2[0], 4 * sizeof(u64));
 }
 
-TEST(MetaMap, ResetSync) {
+TEST(MetaMap, ResetSync) NO_THREAD_SAFETY_ANALYSIS {
+  ScopedIgnoreInterceptors ignore;
   ThreadState *thr = cur_thread();
   MetaMap *m = &ctx->metamap;
   u64 block[1] = {};  // fake malloc block

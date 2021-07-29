@@ -16,7 +16,7 @@ New entries should be added directly below the "Version" header.
 Version 12.0
 ------------
 
-* [libc++] [P0482] [C++20] Implement missing bits for codecvt and codecvt_byname.
+* a984dcaf7c21 - [libc++] [P0482] [C++20] Implement missing bits for codecvt and codecvt_byname.
 
   This commit added new instantiations with char8_t for classes codecvt and
   codecvt_byname in <locale> in the library.
@@ -105,7 +105,7 @@ Version 12.0
   Symbol added: _ZNKSt3__17codecvtIDsDu11__mbstate_tE5do_inERS1_PKDuS5_RS5_PDsS7_RS7_
   Symbol added: _ZTSNSt3__114codecvt_bynameIDiDu11__mbstate_tEE
 
-* XXXXXXX - [libc++] Instantiate additional <iostream> members in the dylib
+* 997d41cdec53 - [libc++] Instantiate additional <iostream> members in the dylib
 
   This commit added new explicit instantiations for classes in <iostream> in
   the library. This was done after noticing that many programs that used streams

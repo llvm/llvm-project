@@ -20,7 +20,7 @@
 #include "read_write.h"
 
 template <class In>
-[[nodiscard]] constexpr bool check_indirectly_readable() {
+constexpr bool check_indirectly_readable() {
   constexpr bool result = std::indirectly_readable<In>;
   static_assert(std::indirectly_readable<In const> == result);
   static_assert(std::indirectly_readable<In volatile> == result);

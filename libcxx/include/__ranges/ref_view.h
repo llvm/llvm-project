@@ -47,23 +47,27 @@ public:
     template<class _Tp>
       requires __different_from<_Tp, ref_view> &&
         convertible_to<_Tp, _Range&> && requires { __fun(declval<_Tp>()); }
+    _LIBCPP_HIDE_FROM_ABI
     constexpr ref_view(_Tp&& __t)
       : __range_(_VSTD::addressof(static_cast<_Range&>(_VSTD::forward<_Tp>(__t))))
     {}
 
-    constexpr _Range& base() const { return *__range_; }
+    _LIBCPP_HIDE_FROM_ABI constexpr _Range& base() const { return *__range_; }
 
-    constexpr iterator_t<_Range> begin() const { return ranges::begin(*__range_); }
-    constexpr sentinel_t<_Range> end() const { return ranges::end(*__range_); }
+    _LIBCPP_HIDE_FROM_ABI constexpr iterator_t<_Range> begin() const { return ranges::begin(*__range_); }
+    _LIBCPP_HIDE_FROM_ABI constexpr sentinel_t<_Range> end() const { return ranges::end(*__range_); }
 
+    _LIBCPP_HIDE_FROM_ABI
     constexpr bool empty() const
       requires requires { ranges::empty(*__range_); }
     { return ranges::empty(*__range_); }
 
+    _LIBCPP_HIDE_FROM_ABI
     constexpr auto size() const
       requires sized_range<_Range>
     { return ranges::size(*__range_); }
 
+    _LIBCPP_HIDE_FROM_ABI
     constexpr auto data() const
       requires contiguous_range<_Range>
     { return ranges::data(*__range_); }

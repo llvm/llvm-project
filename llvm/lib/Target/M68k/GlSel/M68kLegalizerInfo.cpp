@@ -20,5 +20,14 @@
 using namespace llvm;
 
 M68kLegalizerInfo::M68kLegalizerInfo(const M68kSubtarget &ST) {
+  using namespace TargetOpcode;
+  const LLT S32 = LLT::scalar(32);
+  const LLT P0 = LLT::pointer(0, 32);
+  getActionDefinitionsBuilder(G_LOAD).legalFor({S32});
+  getActionDefinitionsBuilder(G_FRAME_INDEX).legalFor({P0});
+  getActionDefinitionsBuilder(G_ADD).legalFor({S32});
+  getActionDefinitionsBuilder(G_SUB).legalFor({S32});
+  getActionDefinitionsBuilder(G_MUL).legalFor({S32});
+  getActionDefinitionsBuilder(G_UDIV).legalFor({S32});
   getLegacyLegalizerInfo().computeTables();
 }

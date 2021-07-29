@@ -35,7 +35,7 @@
 // CHECK:           %[[VAL_9:.*]] = memref.buffer_cast %[[VAL_1]] : memref<32x16x8xf32>
 // CHECK:           %[[VAL_10:.*]] = memref.buffer_cast %[[VAL_2]] : memref<32x16x8xf32>
 // CHECK:           %[[VAL_11:.*]] = memref.alloc() : memref<32x16x8xf32>
-// CHECK:           linalg.copy(%[[VAL_10]], %[[VAL_11]]) : memref<32x16x8xf32>, memref<32x16x8xf32>
+// CHECK:           memref.copy %[[VAL_10]], %[[VAL_11]] : memref<32x16x8xf32> to memref<32x16x8xf32>
 // CHECK:           scf.for %[[VAL_12:.*]] = %[[VAL_6]] to %[[VAL_3]] step %[[VAL_7]] {
 // CHECK:             scf.for %[[VAL_13:.*]] = %[[VAL_6]] to %[[VAL_4]] step %[[VAL_7]] {
 // CHECK:               %[[VAL_14:.*]] = muli %[[VAL_12]], %[[VAL_4]] : index
@@ -77,7 +77,7 @@ func @add_ddd(%arga: tensor<32x16x8xf32, #Tddd>, %argb: tensor<32x16x8xf32>, %ar
 // CHECK:           %[[VAL_9:.*]] = memref.buffer_cast %[[VAL_1]] : memref<32x16x8xf32>
 // CHECK:           %[[VAL_10:.*]] = memref.buffer_cast %[[VAL_2]] : memref<32x16x8xf32>
 // CHECK:           %[[VAL_11:.*]] = memref.alloc() : memref<32x16x8xf32>
-// CHECK:           linalg.copy(%[[VAL_10]], %[[VAL_11]]) : memref<32x16x8xf32>, memref<32x16x8xf32>
+// CHECK:           memref.copy %[[VAL_10]], %[[VAL_11]] : memref<32x16x8xf32> to memref<32x16x8xf32>
 // CHECK:           scf.for %[[VAL_12:.*]] = %[[VAL_6]] to %[[VAL_3]] step %[[VAL_7]] {
 // CHECK:             scf.for %[[VAL_13:.*]] = %[[VAL_6]] to %[[VAL_4]] step %[[VAL_7]] {
 // CHECK:               %[[VAL_14:.*]] = muli %[[VAL_12]], %[[VAL_4]] : index
@@ -123,7 +123,7 @@ func @mul_ddd(%arga: tensor<32x16x8xf32, #Tddd>, %argb: tensor<32x16x8xf32>, %ar
 // CHECK:           %[[VAL_13:.*]] = memref.buffer_cast %[[VAL_1]] : memref<32x16x8xf32>
 // CHECK:           %[[VAL_14:.*]] = memref.buffer_cast %[[VAL_2]] : memref<32x16x8xf32>
 // CHECK:           %[[VAL_15:.*]] = memref.alloc() : memref<32x16x8xf32>
-// CHECK:           linalg.copy(%[[VAL_14]], %[[VAL_15]]) : memref<32x16x8xf32>, memref<32x16x8xf32>
+// CHECK:           memref.copy %[[VAL_14]], %[[VAL_15]] : memref<32x16x8xf32> to memref<32x16x8xf32>
 // CHECK:           scf.for %[[VAL_16:.*]] = %[[VAL_7]] to %[[VAL_4]] step %[[VAL_9]] {
 // CHECK:             scf.for %[[VAL_17:.*]] = %[[VAL_7]] to %[[VAL_5]] step %[[VAL_9]] {
 // CHECK:               %[[VAL_18:.*]] = muli %[[VAL_16]], %[[VAL_5]] : index
@@ -191,7 +191,7 @@ func @add_dds(%arga: tensor<32x16x8xf32, #Tdds>, %argb: tensor<32x16x8xf32>, %ar
 // CHECK:           %[[VAL_11:.*]] = memref.buffer_cast %[[VAL_1]] : memref<32x16x8xf32>
 // CHECK:           %[[VAL_12:.*]] = memref.buffer_cast %[[VAL_2]] : memref<32x16x8xf32>
 // CHECK:           %[[VAL_13:.*]] = memref.alloc() : memref<32x16x8xf32>
-// CHECK:           linalg.copy(%[[VAL_12]], %[[VAL_13]]) : memref<32x16x8xf32>, memref<32x16x8xf32>
+// CHECK:           memref.copy %[[VAL_12]], %[[VAL_13]] : memref<32x16x8xf32> to memref<32x16x8xf32>
 // CHECK:           scf.for %[[VAL_14:.*]] = %[[VAL_6]] to %[[VAL_4]] step %[[VAL_7]] {
 // CHECK:             scf.for %[[VAL_15:.*]] = %[[VAL_6]] to %[[VAL_5]] step %[[VAL_7]] {
 // CHECK:               %[[VAL_16:.*]] = muli %[[VAL_14]], %[[VAL_5]] : index
@@ -238,7 +238,7 @@ func @mul_dds(%arga: tensor<32x16x8xf32, #Tdds>, %argb: tensor<32x16x8xf32>, %ar
 // CHECK:           %[[VAL_12:.*]] = memref.buffer_cast %[[VAL_1]] : memref<32x16x8xf32>
 // CHECK:           %[[VAL_13:.*]] = memref.buffer_cast %[[VAL_2]] : memref<32x16x8xf32>
 // CHECK:           %[[VAL_14:.*]] = memref.alloc() : memref<32x16x8xf32>
-// CHECK:           linalg.copy(%[[VAL_13]], %[[VAL_14]]) : memref<32x16x8xf32>, memref<32x16x8xf32>
+// CHECK:           memref.copy %[[VAL_13]], %[[VAL_14]] : memref<32x16x8xf32> to memref<32x16x8xf32>
 // CHECK:           scf.for %[[VAL_15:.*]] = %[[VAL_7]] to %[[VAL_3]] step %[[VAL_8]] {
 // CHECK:             %[[VAL_16:.*]] = memref.load %[[VAL_9]]{{\[}}%[[VAL_15]]] : memref<?xindex>
 // CHECK:             %[[VAL_17:.*]] = addi %[[VAL_15]], %[[VAL_8]] : index
@@ -309,7 +309,7 @@ func @add_dsd(%arga: tensor<32x16x8xf32, #Tdsd>, %argb: tensor<32x16x8xf32>, %ar
 // CHECK:           %[[VAL_10:.*]] = memref.buffer_cast %[[VAL_1]] : memref<32x16x8xf32>
 // CHECK:           %[[VAL_11:.*]] = memref.buffer_cast %[[VAL_2]] : memref<32x16x8xf32>
 // CHECK:           %[[VAL_12:.*]] = memref.alloc() : memref<32x16x8xf32>
-// CHECK:           linalg.copy(%[[VAL_11]], %[[VAL_12]]) : memref<32x16x8xf32>, memref<32x16x8xf32>
+// CHECK:           memref.copy %[[VAL_11]], %[[VAL_12]] : memref<32x16x8xf32> to memref<32x16x8xf32>
 // CHECK:           scf.for %[[VAL_13:.*]] = %[[VAL_5]] to %[[VAL_3]] step %[[VAL_6]] {
 // CHECK:             %[[VAL_14:.*]] = memref.load %[[VAL_7]]{{\[}}%[[VAL_13]]] : memref<?xindex>
 // CHECK:             %[[VAL_15:.*]] = addi %[[VAL_13]], %[[VAL_6]] : index
@@ -359,7 +359,7 @@ func @mul_dsd(%arga: tensor<32x16x8xf32, #Tdsd>, %argb: tensor<32x16x8xf32>, %ar
 // CHECK:           %[[VAL_15:.*]] = memref.buffer_cast %[[VAL_1]] : memref<32x16x8xf32>
 // CHECK:           %[[VAL_16:.*]] = memref.buffer_cast %[[VAL_2]] : memref<32x16x8xf32>
 // CHECK:           %[[VAL_17:.*]] = memref.alloc() : memref<32x16x8xf32>
-// CHECK:           linalg.copy(%[[VAL_16]], %[[VAL_17]]) : memref<32x16x8xf32>, memref<32x16x8xf32>
+// CHECK:           memref.copy %[[VAL_16]], %[[VAL_17]] : memref<32x16x8xf32> to memref<32x16x8xf32>
 // CHECK:           scf.for %[[VAL_18:.*]] = %[[VAL_8]] to %[[VAL_4]] step %[[VAL_9]] {
 // CHECK:             %[[VAL_19:.*]] = memref.load %[[VAL_10]]{{\[}}%[[VAL_18]]] : memref<?xindex>
 // CHECK:             %[[VAL_20:.*]] = addi %[[VAL_18]], %[[VAL_9]] : index
@@ -456,7 +456,7 @@ func @add_dss(%arga: tensor<32x16x8xf32, #Tdss>, %argb: tensor<32x16x8xf32>, %ar
 // CHECK:           %[[VAL_12:.*]] = memref.buffer_cast %[[VAL_1]] : memref<32x16x8xf32>
 // CHECK:           %[[VAL_13:.*]] = memref.buffer_cast %[[VAL_2]] : memref<32x16x8xf32>
 // CHECK:           %[[VAL_14:.*]] = memref.alloc() : memref<32x16x8xf32>
-// CHECK:           linalg.copy(%[[VAL_13]], %[[VAL_14]]) : memref<32x16x8xf32>, memref<32x16x8xf32>
+// CHECK:           memref.copy %[[VAL_13]], %[[VAL_14]] : memref<32x16x8xf32> to memref<32x16x8xf32>
 // CHECK:           scf.for %[[VAL_15:.*]] = %[[VAL_5]] to %[[VAL_4]] step %[[VAL_6]] {
 // CHECK:             %[[VAL_16:.*]] = memref.load %[[VAL_7]]{{\[}}%[[VAL_15]]] : memref<?xindex>
 // CHECK:             %[[VAL_17:.*]] = addi %[[VAL_15]], %[[VAL_6]] : index
@@ -505,7 +505,7 @@ func @mul_dss(%arga: tensor<32x16x8xf32, #Tdss>, %argb: tensor<32x16x8xf32>, %ar
 // CHECK:           %[[VAL_12:.*]] = memref.buffer_cast %[[VAL_1]] : memref<32x16x8xf32>
 // CHECK:           %[[VAL_13:.*]] = memref.buffer_cast %[[VAL_2]] : memref<32x16x8xf32>
 // CHECK:           %[[VAL_14:.*]] = memref.alloc() : memref<32x16x8xf32>
-// CHECK:           linalg.copy(%[[VAL_13]], %[[VAL_14]]) : memref<32x16x8xf32>, memref<32x16x8xf32>
+// CHECK:           memref.copy %[[VAL_13]], %[[VAL_14]] : memref<32x16x8xf32> to memref<32x16x8xf32>
 // CHECK:           %[[VAL_15:.*]] = memref.load %[[VAL_9]]{{\[}}%[[VAL_7]]] : memref<?xindex>
 // CHECK:           %[[VAL_16:.*]] = memref.load %[[VAL_9]]{{\[}}%[[VAL_8]]] : memref<?xindex>
 // CHECK:           %[[VAL_17:.*]]:2 = scf.while (%[[VAL_18:.*]] = %[[VAL_15]], %[[VAL_19:.*]] = %[[VAL_7]]) : (index, index) -> (index, index) {
@@ -581,7 +581,7 @@ func @add_sdd(%arga: tensor<32x16x8xf32, #Tsdd>, %argb: tensor<32x16x8xf32>, %ar
 // CHECK:           %[[VAL_10:.*]] = memref.buffer_cast %[[VAL_1]] : memref<32x16x8xf32>
 // CHECK:           %[[VAL_11:.*]] = memref.buffer_cast %[[VAL_2]] : memref<32x16x8xf32>
 // CHECK:           %[[VAL_12:.*]] = memref.alloc() : memref<32x16x8xf32>
-// CHECK:           linalg.copy(%[[VAL_11]], %[[VAL_12]]) : memref<32x16x8xf32>, memref<32x16x8xf32>
+// CHECK:           memref.copy %[[VAL_11]], %[[VAL_12]] : memref<32x16x8xf32> to memref<32x16x8xf32>
 // CHECK:           %[[VAL_13:.*]] = memref.load %[[VAL_7]]{{\[}}%[[VAL_5]]] : memref<?xindex>
 // CHECK:           %[[VAL_14:.*]] = memref.load %[[VAL_7]]{{\[}}%[[VAL_6]]] : memref<?xindex>
 // CHECK:           scf.for %[[VAL_15:.*]] = %[[VAL_13]] to %[[VAL_14]] step %[[VAL_6]] {
@@ -632,7 +632,7 @@ func @mul_sdd(%arga: tensor<32x16x8xf32, #Tsdd>, %argb: tensor<32x16x8xf32>, %ar
 // CHECK:           %[[VAL_15:.*]] = memref.buffer_cast %[[VAL_1]] : memref<32x16x8xf32>
 // CHECK:           %[[VAL_16:.*]] = memref.buffer_cast %[[VAL_2]] : memref<32x16x8xf32>
 // CHECK:           %[[VAL_17:.*]] = memref.alloc() : memref<32x16x8xf32>
-// CHECK:           linalg.copy(%[[VAL_16]], %[[VAL_17]]) : memref<32x16x8xf32>, memref<32x16x8xf32>
+// CHECK:           memref.copy %[[VAL_16]], %[[VAL_17]] : memref<32x16x8xf32> to memref<32x16x8xf32>
 // CHECK:           %[[VAL_18:.*]] = memref.load %[[VAL_10]]{{\[}}%[[VAL_8]]] : memref<?xindex>
 // CHECK:           %[[VAL_19:.*]] = memref.load %[[VAL_10]]{{\[}}%[[VAL_9]]] : memref<?xindex>
 // CHECK:           %[[VAL_20:.*]]:2 = scf.while (%[[VAL_21:.*]] = %[[VAL_18]], %[[VAL_22:.*]] = %[[VAL_8]]) : (index, index) -> (index, index) {
@@ -734,7 +734,7 @@ func @add_sds(%arga: tensor<32x16x8xf32, #Tsds>, %argb: tensor<32x16x8xf32>, %ar
 // CHECK:           %[[VAL_12:.*]] = memref.buffer_cast %[[VAL_1]] : memref<32x16x8xf32>
 // CHECK:           %[[VAL_13:.*]] = memref.buffer_cast %[[VAL_2]] : memref<32x16x8xf32>
 // CHECK:           %[[VAL_14:.*]] = memref.alloc() : memref<32x16x8xf32>
-// CHECK:           linalg.copy(%[[VAL_13]], %[[VAL_14]]) : memref<32x16x8xf32>, memref<32x16x8xf32>
+// CHECK:           memref.copy %[[VAL_13]], %[[VAL_14]] : memref<32x16x8xf32> to memref<32x16x8xf32>
 // CHECK:           %[[VAL_15:.*]] = memref.load %[[VAL_7]]{{\[}}%[[VAL_5]]] : memref<?xindex>
 // CHECK:           %[[VAL_16:.*]] = memref.load %[[VAL_7]]{{\[}}%[[VAL_6]]] : memref<?xindex>
 // CHECK:           scf.for %[[VAL_17:.*]] = %[[VAL_15]] to %[[VAL_16]] step %[[VAL_6]] {
@@ -786,7 +786,7 @@ func @mul_sds(%arga: tensor<32x16x8xf32, #Tsds>, %argb: tensor<32x16x8xf32>, %ar
 // CHECK:           %[[VAL_14:.*]] = memref.buffer_cast %[[VAL_1]] : memref<32x16x8xf32>
 // CHECK:           %[[VAL_15:.*]] = memref.buffer_cast %[[VAL_2]] : memref<32x16x8xf32>
 // CHECK:           %[[VAL_16:.*]] = memref.alloc() : memref<32x16x8xf32>
-// CHECK:           linalg.copy(%[[VAL_15]], %[[VAL_16]]) : memref<32x16x8xf32>, memref<32x16x8xf32>
+// CHECK:           memref.copy %[[VAL_15]], %[[VAL_16]] : memref<32x16x8xf32> to memref<32x16x8xf32>
 // CHECK:           %[[VAL_17:.*]] = memref.load %[[VAL_9]]{{\[}}%[[VAL_7]]] : memref<?xindex>
 // CHECK:           %[[VAL_18:.*]] = memref.load %[[VAL_9]]{{\[}}%[[VAL_8]]] : memref<?xindex>
 // CHECK:           %[[VAL_19:.*]]:2 = scf.while (%[[VAL_20:.*]] = %[[VAL_17]], %[[VAL_21:.*]] = %[[VAL_7]]) : (index, index) -> (index, index) {
@@ -891,7 +891,7 @@ func @add_ssd(%arga: tensor<32x16x8xf32, #Tssd>, %argb: tensor<32x16x8xf32>, %ar
 // CHECK:           %[[VAL_11:.*]] = memref.buffer_cast %[[VAL_1]] : memref<32x16x8xf32>
 // CHECK:           %[[VAL_12:.*]] = memref.buffer_cast %[[VAL_2]] : memref<32x16x8xf32>
 // CHECK:           %[[VAL_13:.*]] = memref.alloc() : memref<32x16x8xf32>
-// CHECK:           linalg.copy(%[[VAL_12]], %[[VAL_13]]) : memref<32x16x8xf32>, memref<32x16x8xf32>
+// CHECK:           memref.copy %[[VAL_12]], %[[VAL_13]] : memref<32x16x8xf32> to memref<32x16x8xf32>
 // CHECK:           %[[VAL_14:.*]] = memref.load %[[VAL_6]]{{\[}}%[[VAL_4]]] : memref<?xindex>
 // CHECK:           %[[VAL_15:.*]] = memref.load %[[VAL_6]]{{\[}}%[[VAL_5]]] : memref<?xindex>
 // CHECK:           scf.for %[[VAL_16:.*]] = %[[VAL_14]] to %[[VAL_15]] step %[[VAL_5]] {
@@ -946,7 +946,7 @@ func @mul_ssd(%arga: tensor<32x16x8xf32, #Tssd>, %argb: tensor<32x16x8xf32>, %ar
 // CHECK:           %[[VAL_17:.*]] = memref.buffer_cast %[[VAL_1]] : memref<32x16x8xf32>
 // CHECK:           %[[VAL_18:.*]] = memref.buffer_cast %[[VAL_2]] : memref<32x16x8xf32>
 // CHECK:           %[[VAL_19:.*]] = memref.alloc() : memref<32x16x8xf32>
-// CHECK:           linalg.copy(%[[VAL_18]], %[[VAL_19]]) : memref<32x16x8xf32>, memref<32x16x8xf32>
+// CHECK:           memref.copy %[[VAL_18]], %[[VAL_19]] : memref<32x16x8xf32> to memref<32x16x8xf32>
 // CHECK:           %[[VAL_20:.*]] = memref.load %[[VAL_10]]{{\[}}%[[VAL_8]]] : memref<?xindex>
 // CHECK:           %[[VAL_21:.*]] = memref.load %[[VAL_10]]{{\[}}%[[VAL_9]]] : memref<?xindex>
 // CHECK:           %[[VAL_22:.*]]:2 = scf.while (%[[VAL_23:.*]] = %[[VAL_20]], %[[VAL_24:.*]] = %[[VAL_8]]) : (index, index) -> (index, index) {
@@ -1077,7 +1077,7 @@ func @add_sss(%arga: tensor<32x16x8xf32, #Tsss>, %argb: tensor<32x16x8xf32>, %ar
 // CHECK:           %[[VAL_13:.*]] = memref.buffer_cast %[[VAL_1]] : memref<32x16x8xf32>
 // CHECK:           %[[VAL_14:.*]] = memref.buffer_cast %[[VAL_2]] : memref<32x16x8xf32>
 // CHECK:           %[[VAL_15:.*]] = memref.alloc() : memref<32x16x8xf32>
-// CHECK:           linalg.copy(%[[VAL_14]], %[[VAL_15]]) : memref<32x16x8xf32>, memref<32x16x8xf32>
+// CHECK:           memref.copy %[[VAL_14]], %[[VAL_15]] : memref<32x16x8xf32> to memref<32x16x8xf32>
 // CHECK:           %[[VAL_16:.*]] = memref.load %[[VAL_6]]{{\[}}%[[VAL_4]]] : memref<?xindex>
 // CHECK:           %[[VAL_17:.*]] = memref.load %[[VAL_6]]{{\[}}%[[VAL_5]]] : memref<?xindex>
 // CHECK:           scf.for %[[VAL_18:.*]] = %[[VAL_16]] to %[[VAL_17]] step %[[VAL_5]] {
@@ -1142,7 +1142,7 @@ func @mul_sss(%arga: tensor<32x16x8xf32, #Tsss>, %argb: tensor<32x16x8xf32>, %ar
 // CHECK:           %[[VAL_14:.*]] = tensor.dim %[[VAL_0]], %[[VAL_6]] : tensor<?x?xf32>
 // CHECK:           %[[VAL_15:.*]] = memref.buffer_cast %[[VAL_0]] : memref<?x?xf32>
 // CHECK:           %[[VAL_16:.*]] = memref.alloc(%[[VAL_13]], %[[VAL_14]]) : memref<?x?xf32>
-// CHECK:           linalg.copy(%[[VAL_15]], %[[VAL_16]]) : memref<?x?xf32>, memref<?x?xf32>
+// CHECK:           memref.copy %[[VAL_15]], %[[VAL_16]] : memref<?x?xf32> to memref<?x?xf32>
 // CHECK:           scf.for %[[VAL_17:.*]] = %[[VAL_5]] to %[[VAL_13]] step %[[VAL_6]] {
 // CHECK:             scf.for %[[VAL_18:.*]] = %[[VAL_5]] to %[[VAL_10]] step %[[VAL_6]] {
 // CHECK:               %[[VAL_19:.*]] = muli %[[VAL_10]], %[[VAL_17]] : index
@@ -1205,7 +1205,7 @@ func @kernel_3d(%arga: tensor<?x?xf32>,
 // CHECK:           %[[VAL_8:.*]] = sparse_tensor.values %[[VAL_0]] : tensor<10x20x30xf32, #sparse_tensor.encoding<{ dimLevelType = [ "compressed", "compressed", "compressed" ], pointerBitWidth = 0, indexBitWidth = 0 }>> to memref<?xf32>
 // CHECK:           %[[VAL_9:.*]] = memref.buffer_cast %[[VAL_1]] : memref<f32>
 // CHECK:           %[[VAL_10:.*]] = memref.alloc() : memref<f32>
-// CHECK:           linalg.copy(%[[VAL_9]], %[[VAL_10]]) : memref<f32>, memref<f32>
+// CHECK:           memref.copy %[[VAL_9]], %[[VAL_10]] : memref<f32> to memref<f32>
 // CHECK:           %[[VAL_11:.*]] = memref.load %[[VAL_5]]{{\[}}%[[VAL_3]]] : memref<?xindex>
 // CHECK:           %[[VAL_12:.*]] = memref.load %[[VAL_5]]{{\[}}%[[VAL_4]]] : memref<?xindex>
 // CHECK:           scf.for %[[VAL_13:.*]] = %[[VAL_11]] to %[[VAL_12]] step %[[VAL_4]] {
@@ -1263,7 +1263,7 @@ func @sum_reduction(%arga: tensor<10x20x30xf32, #Tsss>, %argx: tensor<f32>) -> t
 // CHECK:           %[[VAL_10:.*]] = sparse_tensor.values %[[VAL_1]] : tensor<?xf32, #sparse_tensor.encoding<{ dimLevelType = [ "dense" ], pointerBitWidth = 0, indexBitWidth = 0 }>> to memref<?xf32>
 // CHECK:           %[[VAL_11:.*]] = memref.buffer_cast %[[VAL_2]] : memref<f32>
 // CHECK:           %[[VAL_12:.*]] = memref.alloc() : memref<f32>
-// CHECK:           linalg.copy(%[[VAL_11]], %[[VAL_12]]) : memref<f32>, memref<f32>
+// CHECK:           memref.copy %[[VAL_11]], %[[VAL_12]] : memref<f32> to memref<f32>
 // CHECK:           scf.for %[[VAL_13:.*]] = %[[VAL_4]] to %[[VAL_9]] step %[[VAL_5]] {
 // CHECK:             %[[VAL_14:.*]] = memref.load %[[VAL_10]]{{\[}}%[[VAL_13]]] : memref<?xf32>
 // CHECK:             scf.for %[[VAL_15:.*]] = %[[VAL_4]] to %[[VAL_6]] step %[[VAL_5]] {
@@ -1320,7 +1320,7 @@ func @sum_reduction_inv(%arga: tensor<?x?x?xf32>,
 // CHECK:           %[[VAL_11:.*]] = memref.buffer_cast %[[VAL_2]] : memref<30xf32>
 // CHECK:           %[[VAL_12:.*]] = memref.buffer_cast %[[VAL_3]] : memref<10x20x30xf32>
 // CHECK:           %[[VAL_13:.*]] = memref.alloc() : memref<10x20x30xf32>
-// CHECK:           linalg.copy(%[[VAL_12]], %[[VAL_13]]) : memref<10x20x30xf32>, memref<10x20x30xf32>
+// CHECK:           memref.copy %[[VAL_12]], %[[VAL_13]] : memref<10x20x30xf32> to memref<10x20x30xf32>
 // CHECK:           scf.for %[[VAL_14:.*]] = %[[VAL_7]] to %[[VAL_4]] step %[[VAL_8]] {
 // CHECK:             %[[VAL_15:.*]] = memref.load %[[VAL_9]]{{\[}}%[[VAL_14]]] : memref<?xf32>
 // CHECK:             scf.for %[[VAL_16:.*]] = %[[VAL_7]] to %[[VAL_5]] step %[[VAL_8]] {

@@ -155,8 +155,8 @@ class BufferizeTensorReshapeOp : public OpConversionPattern<TensorReshapeOp> {
 public:
   using OpConversionPattern<TensorReshapeOp>::OpConversionPattern;
   using ReshapeOp = typename std::conditional_t<
-      std::is_same<TensorReshapeOp, TensorExpandShapeOp>::value, ExpandShapeOp,
-      CollapseShapeOp>;
+      std::is_same<TensorReshapeOp, TensorExpandShapeOp>::value,
+      memref::ExpandShapeOp, memref::CollapseShapeOp>;
 
   LogicalResult
   matchAndRewrite(TensorReshapeOp op, ArrayRef<Value> operands,

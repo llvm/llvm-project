@@ -113,3 +113,20 @@ void copy(const T *Dest, T *Source) {}
 // CHECK-MESSAGES: :[[@LINE-2]]:20: note: the first parameter in the range is 'Dest'
 // CHECK-MESSAGES: :[[@LINE-3]]:29: note: the last parameter in the range is 'Source'
 // CHECK-MESSAGES: :[[@LINE-4]]:26: note: 'const T *' and 'T *' parameters accept and bind the same kind of values
+
+void attributedParam1TypedefRef(
+    const __attribute__((address_space(256))) int &OneR,
+    __attribute__((address_space(256))) MyInt1 &TwoR) {}
+// CHECK-MESSAGES: :[[@LINE-2]]:5: warning: 2 adjacent parameters of 'attributedParam1TypedefRef' of similar type are
+// CHECK-MESSAGES: :[[@LINE-3]]:52: note: the first parameter in the range is 'OneR'
+// CHECK-MESSAGES: :[[@LINE-3]]:49: note: the last parameter in the range is 'TwoR'
+// CHECK-MESSAGES: :[[@LINE-5]]:5: note: after resolving type aliases, the common type of 'const __attribute__((address_space(256))) int &' and '__attribute__((address_space(256))) MyInt1 &' is '__attribute__((address_space(256))) int &'
+// CHECK-MESSAGES: :[[@LINE-5]]:5: note: 'const __attribute__((address_space(256))) int &' and '__attribute__((address_space(256))) MyInt1 &' parameters accept and bind the same kind of values
+
+void attributedParam2(__attribute__((address_space(256))) int *One,
+                      const __attribute__((address_space(256))) MyInt1 *Two) {}
+// CHECK-MESSAGES: :[[@LINE-2]]:23: warning: 2 adjacent parameters of 'attributedParam2' of similar type are
+// CHECK-MESSAGES: :[[@LINE-3]]:64: note: the first parameter in the range is 'One'
+// CHECK-MESSAGES: :[[@LINE-3]]:73: note: the last parameter in the range is 'Two'
+// CHECK-MESSAGES: :[[@LINE-5]]:23: note: after resolving type aliases, '__attribute__((address_space(256))) int *' and 'const __attribute__((address_space(256))) MyInt1 *' share a common type
+// CHECK-MESSAGES: :[[@LINE-5]]:23: note: '__attribute__((address_space(256))) int *' and 'const __attribute__((address_space(256))) MyInt1 *' parameters accept and bind the same kind of values

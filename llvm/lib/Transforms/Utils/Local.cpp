@@ -491,6 +491,16 @@ bool llvm::wouldInstructionBeTriviallyDead(Instruction *I,
     if (isMathLibCallNoop(Call, TLI))
       return true;
 
+  // To express possible interaction with floating point environment constrained
+  // intrinsics are described as if they access memory. So they look like having
+  // side effect but actually do not have it unless they raise floating point
+  // exception. If FP exceptions are ignored, the intrinsic may be deleted.
+  if (auto *CI = dyn_cast<ConstrainedFPIntrinsic>(I)) {
+    Optional<fp::ExceptionBehavior> EB = CI->getExceptionBehavior();
+    if (!EB || *EB == fp::ExceptionBehavior::ebIgnore)
+      return true;
+  }
+
   return false;
 }
 
@@ -1737,11 +1747,19 @@ void llvm::salvageDebugInfoForDbgValues(
     assert(
         is_contained(DIILocation, &I) &&
         "DbgVariableIntrinsic must use salvaged instruction as its location");
-    unsigned LocNo = std::distance(DIILocation.begin(), find(DIILocation, &I));
     SmallVector<Value *, 4> AdditionalValues;
-    DIExpression *SalvagedExpr = salvageDebugInfoImpl(
-        I, DII->getExpression(), StackValue, LocNo, AdditionalValues);
-
+    // `I` may appear more than once in DII's location ops, and each use of `I`
+    // must be updated in the DIExpression and potentially have additional
+    // values added; thus we call salvageDebugInfoImpl for each `I` instance in
+    // DIILocation.
+    DIExpression *SalvagedExpr = DII->getExpression();
+    auto LocItr = find(DIILocation, &I);
+    while (SalvagedExpr && LocItr != DIILocation.end()) {
+      unsigned LocNo = std::distance(DIILocation.begin(), LocItr);
+      SalvagedExpr = salvageDebugInfoImpl(I, SalvagedExpr, StackValue, LocNo,
+                                          AdditionalValues);
+      LocItr = std::find(++LocItr, DIILocation.end(), &I);
+    }
     // salvageDebugInfoImpl should fail on examining the first element of
     // DbgUsers, or none of them.
     if (!SalvagedExpr)
@@ -1753,11 +1771,7 @@ void llvm::salvageDebugInfoForDbgValues(
     } else if (isa<DbgValueInst>(DII) &&
                DII->getNumVariableLocationOps() + AdditionalValues.size() <=
                    MaxDebugArgs) {
-      // TODO: Uncomment the line below and delete the two beneath it to enable
-      // salvaging of dbg.values with multiple location operands.
-      // DII->addVariableLocationOps(AdditionalValues, SalvagedExpr);
-      Value *Undef = UndefValue::get(I.getOperand(0)->getType());
-      DII->replaceVariableLocationOp(I.getOperand(0), Undef);
+      DII->addVariableLocationOps(AdditionalValues, SalvagedExpr);
     } else {
       // Do not salvage using DIArgList for dbg.addr/dbg.declare, as it is
       // currently only valid for stack value expressions.

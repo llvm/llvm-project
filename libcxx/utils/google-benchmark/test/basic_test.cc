@@ -98,7 +98,7 @@ BENCHMARK(BM_empty_stop_start)->ThreadPerCpu();
 
 
 void BM_KeepRunning(benchmark::State& state) {
-  size_t iter_count = 0;
+  benchmark::IterationCount iter_count = 0;
   assert(iter_count == state.iterations());
   while (state.KeepRunning()) {
     ++iter_count;
@@ -108,18 +108,33 @@ void BM_KeepRunning(benchmark::State& state) {
 BENCHMARK(BM_KeepRunning);
 
 void BM_KeepRunningBatch(benchmark::State& state) {
-  // Choose a prime batch size to avoid evenly dividing max_iterations.
-  const size_t batch_size = 101;
-  size_t iter_count = 0;
+  // Choose a batch size >1000 to skip the typical runs with iteration
+  // targets of 10, 100 and 1000.  If these are not actually skipped the
+  // bug would be detectable as consecutive runs with the same iteration
+  // count.  Below we assert that this does not happen.
+  const benchmark::IterationCount batch_size = 1009;
+
+  static benchmark::IterationCount prior_iter_count = 0;
+  benchmark::IterationCount iter_count = 0;
   while (state.KeepRunningBatch(batch_size)) {
     iter_count += batch_size;
   }
   assert(state.iterations() == iter_count);
+
+  // Verify that the iteration count always increases across runs (see
+  // comment above).
+  assert(iter_count == batch_size            // max_iterations == 1
+         || iter_count > prior_iter_count);  // max_iterations > batch_size
+  prior_iter_count = iter_count;
 }
-BENCHMARK(BM_KeepRunningBatch);
+// Register with a fixed repetition count to establish the invariant that
+// the iteration count should always change across runs.  This overrides
+// the --benchmark_repetitions command line flag, which would otherwise
+// cause this test to fail if set > 1.
+BENCHMARK(BM_KeepRunningBatch)->Repetitions(1);
 
 void BM_RangedFor(benchmark::State& state) {
-  size_t iter_count = 0;
+  benchmark::IterationCount iter_count = 0;
   for (auto _ : state) {
     ++iter_count;
   }

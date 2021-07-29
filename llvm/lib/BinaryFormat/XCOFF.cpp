@@ -117,7 +117,15 @@ Expected<SmallString<32>> XCOFF::parseParmsType(uint32_t Value,
   unsigned ParsedNum = 0;
   unsigned ParmsNum = FixedParmsNum + FloatingParmsNum;
 
-  while (Bits < 32 && ParsedNum < ParmsNum) {
+  // In the function PPCFunctionInfo::getParmsType(), when there are no vector
+  // parameters, the 31st bit of ParmsType is always zero even if it indicates a
+  // floating point parameter. The parameter type information is lost. There
+  // are only 8 GPRs used for parameters passing, the floating parameters
+  // also occupy GPRs if there are available, so the 31st bit can never be a
+  // fixed parameter. At the same time, we also do not know whether the zero of
+  // the 31st bit indicates a float or double parameter type here. Therefore, we
+  // ignore the 31st bit.
+  while (Bits < 31 && ParsedNum < ParmsNum) {
     if (++ParsedNum > 1)
       ParmsType += ", ";
     if ((Value & TracebackTable::ParmTypeIsFloatingBit) == 0) {

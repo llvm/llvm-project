@@ -1,3 +1,4 @@
+// REQUIRES: garbage
 /*
  * parallel-reduction.c -- Archer testcase
  */

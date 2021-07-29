@@ -2,6 +2,13 @@
 # RUN: wasm-ld --experimental-pic -shared -o %t.wasm %t.o
 # RUN: obj2yaml %t.wasm | FileCheck %s
 
+.functype func_external () -> ()
+
+# Linker-synthesized globals
+.globaltype __stack_pointer, i32
+.globaltype	__table_base, i32, immutable
+.globaltype	__memory_base, i32, immutable
+
 .section .data.data,"",@
 data:
   .p2align 2
@@ -115,13 +122,6 @@ get_local_func_address:
 .int8 43
 .int8 15
 .ascii "mutable-globals"
-
-.functype func_external () -> ()
-
-# Linker-synthesized globals
-.globaltype __stack_pointer, i32
-.globaltype	__table_base, i32, immutable
-.globaltype	__memory_base, i32, immutable
 
 # check for dylink section at start
 

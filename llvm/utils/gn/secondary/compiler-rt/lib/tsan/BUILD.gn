@@ -73,8 +73,6 @@ target(tsan_target_type, "tsan") {
     "rtl/tsan_md5.cpp",
     "rtl/tsan_mman.cpp",
     "rtl/tsan_mman.h",
-    "rtl/tsan_mutex.cpp",
-    "rtl/tsan_mutex.h",
     "rtl/tsan_mutexset.cpp",
     "rtl/tsan_mutexset.h",
     "rtl/tsan_platform.h",
@@ -90,8 +88,6 @@ target(tsan_target_type, "tsan") {
     "rtl/tsan_rtl_thread.cpp",
     "rtl/tsan_stack_trace.cpp",
     "rtl/tsan_stack_trace.h",
-    "rtl/tsan_stat.cpp",
-    "rtl/tsan_stat.h",
     "rtl/tsan_suppressions.cpp",
     "rtl/tsan_suppressions.h",
     "rtl/tsan_symbolize.cpp",
@@ -125,6 +121,8 @@ target(tsan_target_type, "tsan") {
     sources += [ "rtl/tsan_rtl_ppc64.S" ]
   } else if (target_cpu == "mips64") {
     sources += [ "rtl/tsan_rtl_mips64.S" ]
+  } else if (target_cpu == "s390x") {
+    sources += [ "rtl/tsan_rtl_s390x.S" ]
   }
 
   # To be able to include sanitizer_common.

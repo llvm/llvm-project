@@ -41,9 +41,6 @@ void RTNAME(TransferSize)(Descriptor &result, const Descriptor &source,
   }
   if (const DescriptorAddendum * addendum{mold.Addendum()}) {
     *result.Addendum() = *addendum;
-    auto &flags{result.Addendum()->flags()};
-    flags &= ~DescriptorAddendum::StaticDescriptor;
-    flags |= DescriptorAddendum::DoNotFinalize;
   }
   if (int stat{result.Allocate()}) {
     Terminator{sourceFile, line}.Crash(

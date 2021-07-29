@@ -1,7 +1,7 @@
-// RUN: %clang_cc1 -verify %s
-// RUN: %clang_cc1 -cl-std=CL2.0 -DCL20 -verify %s
-
-#define NULL ((void*)0)
+// RUN: %clang_cc1 -cl-std=CL1.0 -fdeclare-opencl-builtins -finclude-default-header -verify %s
+// RUN: %clang_cc1 -cl-std=CL1.1 -fdeclare-opencl-builtins -finclude-default-header -verify %s
+// RUN: %clang_cc1 -cl-std=CL1.2 -fdeclare-opencl-builtins -finclude-default-header -verify %s
+// RUN: %clang_cc1 -cl-std=CL2.0 -fdeclare-opencl-builtins -finclude-default-header -verify %s
 
 void foo(){
 
@@ -13,7 +13,7 @@ constant int* ptr3 = NULL;
 
 constant int* ptr4 = (global void*)0; // expected-error{{initializing '__constant int *__private' with an expression of type '__global void *' changes address space of pointer}}
 
-#ifdef CL20
+#if __OPENCL_C_VERSION__ == CL_VERSION_2_0
 // Accept explicitly pointer to generic address space in OpenCL v2.0.
 global int* ptr5 = (generic void*)0;
 #endif

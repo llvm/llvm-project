@@ -19,6 +19,9 @@
 
 namespace clang {
 
+class DiagnosticsEngine;
+class TargetInfo;
+
 namespace {
 // This enum maps OpenCL version(s) into value. These values are used as
 // a mask to indicate in which OpenCL version(s) extension is a core or
@@ -64,7 +67,23 @@ static inline bool isOpenCLVersionContainedInMask(const LangOptions &LO,
 
 /// OpenCL supported extensions and optional core features
 class OpenCLOptions {
+
 public:
+  // OpenCL C v1.2 s6.5 - All program scope variables must be declared in the
+  // __constant address space.
+  // OpenCL C v2.0 s6.5.1 - Variables defined at program scope and static
+  // variables inside a function can also be declared in the global
+  // address space.
+  // OpenCL C v3.0 s6.7.1 - Variables at program scope or static or extern
+  // variables inside functions can be declared in global address space if
+  // the __opencl_c_program_scope_global_variables feature is supported
+  // C++ for OpenCL inherits rule from OpenCL C v2.0.
+  bool areProgramScopeVariablesSupported(const LangOptions &Opts) const {
+    return Opts.OpenCLCPlusPlus || Opts.OpenCLVersion == 200 ||
+           (Opts.OpenCLVersion == 300 &&
+            isSupported("__opencl_c_program_scope_global_variables", Opts));
+  }
+
   struct OpenCLOptionInfo {
     // Does this option have pragma.
     bool WithPragma = false;
@@ -178,6 +197,16 @@ public:
                                         Args &&... args) {
     return OpenCLOptionInfo(std::forward<Args>(args)...).isAvailableIn(LO);
   }
+
+  // Diagnose feature dependencies for OpenCL C 3.0. Return false if target
+  // doesn't follow these requirements.
+  static bool diagnoseUnsupportedFeatureDependencies(const TargetInfo &TI,
+                                                     DiagnosticsEngine &Diags);
+
+  // Diagnose that features and equivalent extension are set to same values.
+  // Return false if target doesn't follow these requirements.
+  static bool diagnoseFeatureExtensionDifferences(const TargetInfo &TI,
+                                                  DiagnosticsEngine &Diags);
 
 private:
   // Option is enabled via pragma

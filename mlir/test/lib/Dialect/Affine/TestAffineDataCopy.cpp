@@ -126,8 +126,8 @@ void TestAffineDataCopy::runOnFunction() {
       assert(isa<AffineStoreOp>(op) && "expected affine store op");
       AffineStoreOp::getCanonicalizationPatterns(patterns, &getContext());
     }
-    (void)applyOpPatternsAndFold(op, std::move(patterns));
   }
+  (void)applyOpPatternsAndFold(copyOps, std::move(patterns), /*strict=*/true);
 }
 
 namespace mlir {

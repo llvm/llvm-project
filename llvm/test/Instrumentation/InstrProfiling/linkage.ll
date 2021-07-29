@@ -12,10 +12,10 @@
 ; MACHO: @__llvm_profile_runtime = external global i32
 ; ELF-NOT: @__llvm_profile_runtime = external global i32
 
-; ELF: $__profc_foo = comdat noduplicates
-; ELF: $__profc_foo_weak = comdat noduplicates
-; ELF: $"__profc_linkage.ll:foo_internal" = comdat noduplicates
-; ELF: $__profc_foo_inline = comdat noduplicates
+; ELF: $__profc_foo = comdat nodeduplicate
+; ELF: $__profc_foo_weak = comdat nodeduplicate
+; ELF: $"__profc_linkage.ll:foo_internal" = comdat nodeduplicate
+; ELF: $__profc_foo_inline = comdat nodeduplicate
 ; ELF: $__profc_foo_extern = comdat any
 
 @__profn_foo = private constant [3 x i8] c"foo"

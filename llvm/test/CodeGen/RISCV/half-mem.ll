@@ -98,9 +98,8 @@ define half @flh_fsh_constant(half %a) nounwind {
 ;
 ; RV64IZFH-LABEL: flh_fsh_constant:
 ; RV64IZFH:       # %bb.0:
-; RV64IZFH-NEXT:    lui a0, 56
-; RV64IZFH-NEXT:    addiw a0, a0, -1353
-; RV64IZFH-NEXT:    slli a0, a0, 14
+; RV64IZFH-NEXT:    lui a0, 228023
+; RV64IZFH-NEXT:    slli a0, a0, 2
 ; RV64IZFH-NEXT:    flh ft0, -273(a0)
 ; RV64IZFH-NEXT:    fadd.h fa0, fa0, ft0
 ; RV64IZFH-NEXT:    fsh fa0, -273(a0)

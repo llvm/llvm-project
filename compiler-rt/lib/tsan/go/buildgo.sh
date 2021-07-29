@@ -9,7 +9,6 @@ SRCS="
 	../rtl/tsan_flags.cpp
 	../rtl/tsan_interface_atomic.cpp
 	../rtl/tsan_md5.cpp
-	../rtl/tsan_mutex.cpp
 	../rtl/tsan_report.cpp
 	../rtl/tsan_rtl.cpp
 	../rtl/tsan_rtl_mutex.cpp
@@ -17,7 +16,6 @@ SRCS="
 	../rtl/tsan_rtl_thread.cpp
 	../rtl/tsan_rtl_proc.cpp
 	../rtl/tsan_stack_trace.cpp
-	../rtl/tsan_stat.cpp
 	../rtl/tsan_suppressions.cpp
 	../rtl/tsan_sync.cpp
 	../../sanitizer_common/sanitizer_allocator.cpp
@@ -28,6 +26,7 @@ SRCS="
 	../../sanitizer_common/sanitizer_flag_parser.cpp
 	../../sanitizer_common/sanitizer_flags.cpp
 	../../sanitizer_common/sanitizer_libc.cpp
+	../../sanitizer_common/sanitizer_mutex.cpp
 	../../sanitizer_common/sanitizer_persistent_allocator.cpp
 	../../sanitizer_common/sanitizer_printf.cpp
 	../../sanitizer_common/sanitizer_suppressions.cpp
@@ -56,10 +55,10 @@ if [ "`uname -a | grep Linux`" != "" ]; then
 		"
 	if [ "`uname -a | grep ppc64le`" != "" ]; then
 		SUFFIX="linux_ppc64le"
-		ARCHCFLAGS="-m64"
+		ARCHCFLAGS="-m64 -mcpu=power8 -fno-function-sections"
 	elif [ "`uname -a | grep x86_64`" != "" ]; then
 		SUFFIX="linux_amd64"
-		ARCHCFLAGS="-m64"
+		ARCHCFLAGS="-m64 -msse3"
 		OSCFLAGS="$OSCFLAGS -ffreestanding -Wno-unused-const-variable -Werror -Wno-unknown-warning-option"
 	elif [ "`uname -a | grep aarch64`" != "" ]; then
 		SUFFIX="linux_arm64"
@@ -72,6 +71,10 @@ if [ "`uname -a | grep Linux`" != "" ]; then
 			SUFFIX="linux_mips64"
 			ARCHCFLAGS="-mips64 -EB"
 		fi
+	elif [ "`uname -a | grep s390x`" != "" ]; then
+		SRCS="$SRCS ../../sanitizer_common/sanitizer_linux_s390.cpp"
+		SUFFIX="linux_s390x"
+		ARCHCFLAGS=""
 	fi
 elif [ "`uname -a | grep FreeBSD`" != "" ]; then
 	# The resulting object still depends on libc.
@@ -165,20 +168,14 @@ else
 fi
 
 SRCS="$SRCS $ADD_SRCS"
-
-rm -f $DIR/gotsan.cpp
 for F in $SRCS; do
-	cat $F >> $DIR/gotsan.cpp
-done
+	echo "#line 1 \"$F\""
+	cat $F
+done > $DIR/gotsan.cpp
 
 FLAGS=" -I../rtl -I../.. -I../../sanitizer_common -I../../../include -std=c++14 -Wall -fno-exceptions -fno-rtti -DSANITIZER_GO=1 -DSANITIZER_DEADLOCK_DETECTOR_VERSION=2 $OSCFLAGS $ARCHCFLAGS $EXTRA_CFLAGS"
 DEBUG_FLAGS="$FLAGS -DSANITIZER_DEBUG=1 -g"
 FLAGS="$FLAGS -DSANITIZER_DEBUG=0 -O3 -fomit-frame-pointer"
-if [ "$SUFFIX" = "linux_ppc64le" ]; then
-	FLAGS="$FLAGS -mcpu=power8 -fno-function-sections"
-elif [ "$SUFFIX" = "linux_amd64" ]; then
-	FLAGS="$FLAGS -msse3"
-fi
 
 if [ "$DEBUG" = "" ]; then
 	# Do a build test with debug flags.

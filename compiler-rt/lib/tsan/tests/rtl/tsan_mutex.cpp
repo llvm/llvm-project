@@ -20,7 +20,7 @@ namespace __tsan {
 
 TEST(ThreadSanitizer, BasicMutex) {
   ScopedThread t;
-  Mutex m;
+  UserMutex m;
   t.Create(m);
 
   t.Lock(m);
@@ -38,7 +38,7 @@ TEST(ThreadSanitizer, BasicMutex) {
 
 TEST(ThreadSanitizer, BasicSpinMutex) {
   ScopedThread t;
-  Mutex m(Mutex::Spin);
+  UserMutex m(UserMutex::Spin);
   t.Create(m);
 
   t.Lock(m);
@@ -56,7 +56,7 @@ TEST(ThreadSanitizer, BasicSpinMutex) {
 
 TEST(ThreadSanitizer, BasicRwMutex) {
   ScopedThread t;
-  Mutex m(Mutex::RW);
+  UserMutex m(UserMutex::RW);
   t.Create(m);
 
   t.Lock(m);
@@ -92,7 +92,7 @@ TEST(ThreadSanitizer, BasicRwMutex) {
 }
 
 TEST(ThreadSanitizer, Mutex) {
-  Mutex m;
+  UserMutex m;
   MainThread t0;
   t0.Create(m);
 
@@ -108,7 +108,7 @@ TEST(ThreadSanitizer, Mutex) {
 }
 
 TEST(ThreadSanitizer, SpinMutex) {
-  Mutex m(Mutex::Spin);
+  UserMutex m(UserMutex::Spin);
   MainThread t0;
   t0.Create(m);
 
@@ -124,7 +124,7 @@ TEST(ThreadSanitizer, SpinMutex) {
 }
 
 TEST(ThreadSanitizer, RwMutex) {
-  Mutex m(Mutex::RW);
+  UserMutex m(UserMutex::RW);
   MainThread t0;
   t0.Create(m);
 
@@ -150,7 +150,7 @@ TEST(ThreadSanitizer, RwMutex) {
 
 TEST(ThreadSanitizer, StaticMutex) {
   // Emulates statically initialized mutex.
-  Mutex m;
+  UserMutex m;
   m.StaticInit();
   {
     ScopedThread t1, t2;

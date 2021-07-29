@@ -42,6 +42,7 @@ endfunction(collect_object_file_deps)
 # Usage:
 #     add_entrypoint_library(
 #       DEPENDS <list of add_entrypoint_object targets>
+#       EXT_DEPS <list of external object targets, no type checking is done>
 #     )
 #
 # NOTE: If one wants an entrypoint to be availabe in a library, then they will
@@ -52,7 +53,7 @@ function(add_entrypoint_library target_name)
     "ENTRYPOINT_LIBRARY"
     "" # No optional arguments
     "" # No single value arguments
-    "DEPENDS" # Multi-value arguments
+    "DEPENDS;EXT_DEPS" # Multi-value arguments
     ${ARGN}
   )
   if(NOT ENTRYPOINT_LIBRARY_DEPENDS)
@@ -76,6 +77,11 @@ function(add_entrypoint_library target_name)
   foreach(dep IN LISTS all_deps)
     list(APPEND objects $<TARGET_OBJECTS:${dep}>)
   endforeach(dep)
+
+  foreach(dep IN LISTS ENTRYPOINT_LIBRARY_EXT_DEPS)
+    list(APPEND objects $<TARGET_OBJECTS:${dep}>)
+  endforeach(dep)
+
   add_library(
     ${target_name}
     STATIC

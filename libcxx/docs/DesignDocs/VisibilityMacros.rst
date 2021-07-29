@@ -5,6 +5,8 @@ Symbol Visibility Macros
 .. contents::
    :local:
 
+.. _visibility-macros:
+
 Overview
 ========
 
@@ -43,6 +45,10 @@ Visibility Macros
 **_LIBCPP_HIDE_FROM_ABI**
   Mark a function as not being part of the ABI of any final linked image that
   uses it.
+
+**_LIBCPP_INLINE_VISIBILITY**
+  Historical predecessor of ``_LIBCPP_HIDE_FROM_ABI`` -- please use
+  ``_LIBCPP_HIDE_FROM_ABI`` instead.
 
 **_LIBCPP_HIDE_FROM_ABI_AFTER_V1**
   Mark a function as being hidden from the ABI (per `_LIBCPP_HIDE_FROM_ABI`)

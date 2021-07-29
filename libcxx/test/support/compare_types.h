@@ -261,62 +261,62 @@ struct totally_ordered_with_others {
 };
 
 struct no_lt_not_totally_ordered_with {
-  [[nodiscard]] bool operator==(no_lt_not_totally_ordered_with const&) const = default;
-  [[nodiscard]] auto operator<=>(no_lt_not_totally_ordered_with const&) const = default;
+  bool operator==(no_lt_not_totally_ordered_with const&) const = default;
+  auto operator<=>(no_lt_not_totally_ordered_with const&) const = default;
   operator totally_ordered_with_others() const noexcept;
 
-  [[nodiscard]] bool operator==(totally_ordered_with_others const&) const;
-  [[nodiscard]] auto operator<=>(totally_ordered_with_others const&) const;
-  [[nodiscard]] auto operator<(totally_ordered_with_others const&) const;
+  bool operator==(totally_ordered_with_others const&) const;
+  auto operator<=>(totally_ordered_with_others const&) const;
+  auto operator<(totally_ordered_with_others const&) const;
 };
 
 struct no_gt_not_totally_ordered_with {
-  [[nodiscard]] bool operator==(no_gt_not_totally_ordered_with const&) const = default;
-  [[nodiscard]] auto operator<=>(no_gt_not_totally_ordered_with const&) const = default;
+  bool operator==(no_gt_not_totally_ordered_with const&) const = default;
+  auto operator<=>(no_gt_not_totally_ordered_with const&) const = default;
   operator totally_ordered_with_others() const noexcept;
 
-  [[nodiscard]] bool operator==(totally_ordered_with_others const&) const;
-  [[nodiscard]] auto operator<=>(totally_ordered_with_others const&) const;
-  [[nodiscard]] auto operator>(totally_ordered_with_others const&) const;
+  bool operator==(totally_ordered_with_others const&) const;
+  auto operator<=>(totally_ordered_with_others const&) const;
+  auto operator>(totally_ordered_with_others const&) const;
 };
 
 struct no_le_not_totally_ordered_with {
-  [[nodiscard]] bool operator==(no_le_not_totally_ordered_with const&) const = default;
-  [[nodiscard]] auto operator<=>(no_le_not_totally_ordered_with const&) const = default;
+  bool operator==(no_le_not_totally_ordered_with const&) const = default;
+  auto operator<=>(no_le_not_totally_ordered_with const&) const = default;
   operator totally_ordered_with_others() const noexcept;
 
-  [[nodiscard]] bool operator==(totally_ordered_with_others const&) const;
-  [[nodiscard]] auto operator<=>(totally_ordered_with_others const&) const;
-  [[nodiscard]] auto operator<=(totally_ordered_with_others const&) const;
+  bool operator==(totally_ordered_with_others const&) const;
+  auto operator<=>(totally_ordered_with_others const&) const;
+  auto operator<=(totally_ordered_with_others const&) const;
 };
 
 struct no_ge_not_totally_ordered_with {
-  [[nodiscard]] bool operator==(no_ge_not_totally_ordered_with const&) const = default;
-  [[nodiscard]] auto operator<=>(no_ge_not_totally_ordered_with const&) const = default;
+  bool operator==(no_ge_not_totally_ordered_with const&) const = default;
+  auto operator<=>(no_ge_not_totally_ordered_with const&) const = default;
   operator totally_ordered_with_others() const noexcept;
 
-  [[nodiscard]] bool operator==(totally_ordered_with_others const&) const;
-  [[nodiscard]] auto operator<=>(totally_ordered_with_others const&) const;
-  [[nodiscard]] auto operator>=(totally_ordered_with_others const&) const;
+  bool operator==(totally_ordered_with_others const&) const;
+  auto operator<=>(totally_ordered_with_others const&) const;
+  auto operator>=(totally_ordered_with_others const&) const;
 };
 
 struct partial_ordering_totally_ordered_with {
-  [[nodiscard]] auto operator<=>(partial_ordering_totally_ordered_with const&) const noexcept = default;
-  [[nodiscard]] std::partial_ordering operator<=>(totally_ordered_with_others const&) const noexcept;
+  auto operator<=>(partial_ordering_totally_ordered_with const&) const noexcept = default;
+  std::partial_ordering operator<=>(totally_ordered_with_others const&) const noexcept;
 
   operator totally_ordered_with_others() const;
 };
 
 struct weak_ordering_totally_ordered_with {
-  [[nodiscard]] auto operator<=>(weak_ordering_totally_ordered_with const&) const noexcept = default;
-  [[nodiscard]] std::weak_ordering operator<=>(totally_ordered_with_others const&) const noexcept;
+  auto operator<=>(weak_ordering_totally_ordered_with const&) const noexcept = default;
+  std::weak_ordering operator<=>(totally_ordered_with_others const&) const noexcept;
 
   operator totally_ordered_with_others() const;
 };
 
 struct strong_ordering_totally_ordered_with {
-  [[nodiscard]] auto operator<=>(strong_ordering_totally_ordered_with const&) const noexcept = default;
-  [[nodiscard]] std::strong_ordering operator<=>(totally_ordered_with_others const&) const noexcept;
+  auto operator<=>(strong_ordering_totally_ordered_with const&) const noexcept = default;
+  std::strong_ordering operator<=>(totally_ordered_with_others const&) const noexcept;
 
   operator totally_ordered_with_others() const;
 };

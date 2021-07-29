@@ -34,7 +34,7 @@ public:
     return *this;
   }
 
-  constexpr friend void swap(lvalue_adl_swappable& x,
+  friend constexpr void swap(lvalue_adl_swappable& x,
                              lvalue_adl_swappable& y) noexcept {
     std::ranges::swap(x.value_, y.value_);
   }
@@ -70,7 +70,7 @@ public:
     return *this;
   }
 
-  constexpr friend void swap(lvalue_rvalue_adl_swappable& x,
+  friend constexpr void swap(lvalue_rvalue_adl_swappable& x,
                              lvalue_rvalue_adl_swappable&& y) noexcept {
     std::ranges::swap(x.value_, y.value_);
   }
@@ -107,7 +107,7 @@ public:
     return *this;
   }
 
-  constexpr friend void swap(rvalue_lvalue_adl_swappable&& x,
+  friend constexpr void swap(rvalue_lvalue_adl_swappable&& x,
                              rvalue_lvalue_adl_swappable& y) noexcept {
     std::ranges::swap(x.value_, y.value_);
   }
@@ -142,7 +142,7 @@ public:
     return *this;
   }
 
-  constexpr friend void swap(rvalue_adl_swappable&& x,
+  friend constexpr void swap(rvalue_adl_swappable&& x,
                              rvalue_adl_swappable&& y) noexcept {
     std::ranges::swap(x.value_, y.value_);
   }
@@ -179,7 +179,7 @@ public:
     return *this;
   }
 
-  constexpr friend void swap(non_move_constructible_adl_swappable& x,
+  friend constexpr void swap(non_move_constructible_adl_swappable& x,
                              non_move_constructible_adl_swappable& y) noexcept {
     std::ranges::swap(x.value_, y.value_);
   }
@@ -212,7 +212,7 @@ public:
   constexpr non_move_assignable_adl_swappable&
   operator=(non_move_assignable_adl_swappable&& other) noexcept = delete;
 
-  constexpr friend void swap(non_move_assignable_adl_swappable& x,
+  friend constexpr void swap(non_move_assignable_adl_swappable& x,
                              non_move_assignable_adl_swappable& y) noexcept {
     std::ranges::swap(x.value_, y.value_);
   }
@@ -248,7 +248,7 @@ public:
     return *this;
   }
 
-  constexpr friend void swap(throwable_adl_swappable& X,
+  friend constexpr void swap(throwable_adl_swappable& X,
                              throwable_adl_swappable& Y) noexcept(false) {
     std::ranges::swap(X.value_, Y.value_);
   }

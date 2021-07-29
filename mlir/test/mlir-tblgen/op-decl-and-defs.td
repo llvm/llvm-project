@@ -261,6 +261,15 @@ def NS_JOp : NS_Op<"op_with_InferTypeOpInterface_interface", [DeclareOpInterface
 // CHECK: static void build(::mlir::OpBuilder &, ::mlir::OperationState &odsState, ::mlir::TypeRange resultTypes, ::mlir::ValueRange operands, ::llvm::ArrayRef<::mlir::NamedAttribute> attributes = {});
 // CHECK: static void build(::mlir::OpBuilder &odsBuilder, ::mlir::OperationState &odsState, ::mlir::ValueRange operands, ::llvm::ArrayRef<::mlir::NamedAttribute> attributes = {});
 
+// Test usage of OpTraitList getting flattened during emission.
+def NS_KOp : NS_Op<"k_op", [IsolatedFromAbove,
+    OpTraitList<[DeclareOpInterfaceMethods<InferTypeOpInterface>]>]> {
+  let arguments = (ins AnyType:$a, AnyType:$b);
+}
+
+// CHECK: class KOp : public ::mlir::Op<KOp,
+// CHECK-SAME: ::mlir::OpTrait::IsIsolatedFromAbove, ::mlir::InferTypeOpInterface::Trait
+
 // Check native OpTrait usage
 // ---
 

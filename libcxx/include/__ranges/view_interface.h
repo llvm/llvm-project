@@ -43,17 +43,19 @@ void __implicitly_convert_to(type_identity_t<_Tp>) noexcept;
 template<class _Derived>
   requires is_class_v<_Derived> && same_as<_Derived, remove_cv_t<_Derived>>
 class view_interface : public view_base {
+  _LIBCPP_HIDE_FROM_ABI
   constexpr _Derived& __derived() noexcept {
     return static_cast<_Derived&>(*this);
   }
 
+  _LIBCPP_HIDE_FROM_ABI
   constexpr _Derived const& __derived() const noexcept {
     return static_cast<_Derived const&>(*this);
   }
 
 public:
   template<class _D2 = _Derived>
-  [[nodiscard]] constexpr bool empty()
+  [[nodiscard]] _LIBCPP_HIDE_FROM_ABI constexpr bool empty()
     noexcept(noexcept(__implicitly_convert_to<bool>(ranges::begin(__derived()) == ranges::end(__derived()))))
     requires forward_range<_D2>
   {
@@ -61,7 +63,7 @@ public:
   }
 
   template<class _D2 = _Derived>
-  [[nodiscard]] constexpr bool empty() const
+  [[nodiscard]] _LIBCPP_HIDE_FROM_ABI constexpr bool empty() const
     noexcept(noexcept(__implicitly_convert_to<bool>(ranges::begin(__derived()) == ranges::end(__derived()))))
     requires forward_range<const _D2>
   {
@@ -69,6 +71,7 @@ public:
   }
 
   template<class _D2 = _Derived>
+  _LIBCPP_HIDE_FROM_ABI
   constexpr explicit operator bool()
     noexcept(noexcept(ranges::empty(declval<_D2>())))
     requires __can_empty<_D2>
@@ -77,6 +80,7 @@ public:
   }
 
   template<class _D2 = _Derived>
+  _LIBCPP_HIDE_FROM_ABI
   constexpr explicit operator bool() const
     noexcept(noexcept(ranges::empty(declval<const _D2>())))
     requires __can_empty<const _D2>
@@ -85,6 +89,7 @@ public:
   }
 
   template<class _D2 = _Derived>
+  _LIBCPP_HIDE_FROM_ABI
   constexpr auto data()
     noexcept(noexcept(_VSTD::to_address(ranges::begin(__derived()))))
     requires contiguous_iterator<iterator_t<_D2>>
@@ -93,6 +98,7 @@ public:
   }
 
   template<class _D2 = _Derived>
+  _LIBCPP_HIDE_FROM_ABI
   constexpr auto data() const
     noexcept(noexcept(_VSTD::to_address(ranges::begin(__derived()))))
     requires range<const _D2> && contiguous_iterator<iterator_t<const _D2>>
@@ -101,6 +107,7 @@ public:
   }
 
   template<class _D2 = _Derived>
+  _LIBCPP_HIDE_FROM_ABI
   constexpr auto size()
     noexcept(noexcept(ranges::end(__derived()) - ranges::begin(__derived())))
     requires forward_range<_D2>
@@ -110,6 +117,7 @@ public:
   }
 
   template<class _D2 = _Derived>
+  _LIBCPP_HIDE_FROM_ABI
   constexpr auto size() const
     noexcept(noexcept(ranges::end(__derived()) - ranges::begin(__derived())))
     requires forward_range<const _D2>
@@ -119,6 +127,7 @@ public:
   }
 
   template<class _D2 = _Derived>
+  _LIBCPP_HIDE_FROM_ABI
   constexpr decltype(auto) front()
     noexcept(noexcept(*ranges::begin(__derived())))
     requires forward_range<_D2>
@@ -129,6 +138,7 @@ public:
   }
 
   template<class _D2 = _Derived>
+  _LIBCPP_HIDE_FROM_ABI
   constexpr decltype(auto) front() const
     noexcept(noexcept(*ranges::begin(__derived())))
     requires forward_range<const _D2>
@@ -139,6 +149,7 @@ public:
   }
 
   template<class _D2 = _Derived>
+  _LIBCPP_HIDE_FROM_ABI
   constexpr decltype(auto) back()
     noexcept(noexcept(*ranges::prev(ranges::end(__derived()))))
     requires bidirectional_range<_D2> && common_range<_D2>
@@ -149,6 +160,7 @@ public:
   }
 
   template<class _D2 = _Derived>
+  _LIBCPP_HIDE_FROM_ABI
   constexpr decltype(auto) back() const
     noexcept(noexcept(*ranges::prev(ranges::end(__derived()))))
     requires bidirectional_range<const _D2> && common_range<const _D2>
@@ -159,6 +171,7 @@ public:
   }
 
   template<random_access_range _RARange = _Derived>
+  _LIBCPP_HIDE_FROM_ABI
   constexpr decltype(auto) operator[](range_difference_t<_RARange> __index)
     noexcept(noexcept(ranges::begin(__derived())[__index]))
   {
@@ -166,6 +179,7 @@ public:
   }
 
   template<random_access_range _RARange = const _Derived>
+  _LIBCPP_HIDE_FROM_ABI
   constexpr decltype(auto) operator[](range_difference_t<_RARange> __index) const
     noexcept(noexcept(ranges::begin(__derived())[__index]))
   {

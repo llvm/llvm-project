@@ -1,6 +1,5 @@
 ; RUN: llc < %s -asm-verbose=false -disable-wasm-fallthrough-return-opt -wasm-keep-registers -relocation-model=pic -fast-isel=1 | FileCheck %s
 ; RUN: llc < %s -asm-verbose=false -disable-wasm-fallthrough-return-opt -wasm-keep-registers -relocation-model=pic -fast-isel=0 | FileCheck %s
-target datalayout = "e-m:e-p:32:32-i64:64-n32:64-S128"
 target triple = "wasm32-unknown-emscripten"
 
 declare i32 @foo()

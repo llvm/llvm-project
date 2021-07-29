@@ -1,7 +1,7 @@
 # REQUIRES: x86
 # RUN: llvm-mc -filetype=obj -triple=x86_64-pc-linux %p/Inputs/at6.s -o %t.o
 # RUN: ld.lld %t.o --script %s -o %t
-# RUN: llvm-readelf -sections -program-headers %t | FileCheck %s
+# RUN: llvm-readelf -S -l %t | FileCheck %s
 
 MEMORY {
   FLASH : ORIGIN = 0x08000000, LENGTH = 0x100

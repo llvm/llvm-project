@@ -9,7 +9,7 @@
 define hidden void @ptr_arg_split_subregs(%struct.A* %arg1) #0 !dbg !9 {
 ; CHECK-LABEL: ptr_arg_split_subregs:
 ; CHECK:       .Lfunc_begin0:
-; CHECK-NEXT:    .file 1 "temp/example.cpp"
+; CHECK-NEXT:    .file 1 "temp" "example.cpp"
 ; CHECK-NEXT:    .loc 1 5 0 ; example.cpp:5:0
 ; CHECK-NEXT:    .cfi_sections .debug_frame
 ; CHECK-NEXT:    .cfi_startproc
@@ -50,7 +50,8 @@ define hidden void @ptr_arg_split_reg_mem(<31 x i32>, %struct.A* %arg2) #0 !dbg 
 ; CHECK-NEXT:    .cfi_escape 0x10, 0x10, 0x08, 0x90, 0x3e, 0x93, 0x04, 0x90, 0x3f, 0x93, 0x04 ;
 ; CHECK-NEXT:    .cfi_undefined 2560
 ; CHECK-NEXT:    .cfi_undefined 2592
-; CHECK-NEXT:    ;DEBUG_VALUE: ptr_arg_split_reg_mem:b <- [$vgpr31+0]
+;; NOTE: One dbg_value (DEBUG_VALUE: ptr_arg_split_reg_mem:b <- [$vgpr31+0]) will be considered as
+;; redundant after the virtregrewrite, so it will be removed.
 ; CHECK-NEXT:    ;DEBUG_VALUE: ptr_arg_split_reg_mem:b <- [$vgpr31+0]
 ; CHECK-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; CHECK-NEXT:    buffer_load_dword v32, off, s[0:3], s32

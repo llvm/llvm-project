@@ -63,6 +63,7 @@ static const TagNameItem tagData[] = {
     {ARMBuildAttrs::ABI_align_preserved, "Tag_ABI_align8_preserved"},
 };
 
-const TagNameMap llvm::ARMBuildAttrs::ARMAttributeTags(tagData,
-                                                       sizeof(tagData) /
-                                                           sizeof(TagNameItem));
+constexpr TagNameMap ARMAttributeTags{tagData};
+const TagNameMap &llvm::ARMBuildAttrs::getARMAttributeTags() {
+  return ARMAttributeTags;
+}

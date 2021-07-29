@@ -25,7 +25,7 @@ extern "C" int test_for_auto_loop() {
   for (auto _ : S) {
     // CHECK: .L[[LOOP_HEAD:[a-zA-Z0-9_]+]]:
     // CHECK-GNU-NEXT: subq $1, %rbx
-    // CHECK-CLANG-NEXT: {{(addq \$1,|incq)}} %rax
+    // CHECK-CLANG-NEXT: {{(addq \$1, %rax|incq %rax|addq \$-1, %rbx)}}
     // CHECK-NEXT: jne .L[[LOOP_HEAD]]
     benchmark::DoNotOptimize(x);
   }

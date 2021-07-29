@@ -134,11 +134,11 @@ extern const short *_tolower_tab_;
 
 // Platform-specific options.
 #if SANITIZER_MAC
-#define PLATFORM_HAS_DIFFERENT_MEMCPY_AND_MEMMOVE false
+#define PLATFORM_HAS_DIFFERENT_MEMCPY_AND_MEMMOVE 0
 #elif SANITIZER_WINDOWS64
-#define PLATFORM_HAS_DIFFERENT_MEMCPY_AND_MEMMOVE false
+#define PLATFORM_HAS_DIFFERENT_MEMCPY_AND_MEMMOVE 0
 #else
-#define PLATFORM_HAS_DIFFERENT_MEMCPY_AND_MEMMOVE true
+#define PLATFORM_HAS_DIFFERENT_MEMCPY_AND_MEMMOVE 1
 #endif  // SANITIZER_MAC
 
 #ifndef COMMON_INTERCEPTOR_INITIALIZE_RANGE
@@ -823,11 +823,11 @@ INTERCEPTOR(void *, memcpy, void *dst, const void *src, uptr size) {
   // N.B.: If we switch this to internal_ we'll have to use internal_memmove
   // due to memcpy being an alias of memmove on OS X.
   void *ctx;
-  if (PLATFORM_HAS_DIFFERENT_MEMCPY_AND_MEMMOVE) {
+#if PLATFORM_HAS_DIFFERENT_MEMCPY_AND_MEMMOVE
     COMMON_INTERCEPTOR_MEMCPY_IMPL(ctx, dst, src, size);
-  } else {
+#else
     COMMON_INTERCEPTOR_MEMMOVE_IMPL(ctx, dst, src, size);
-  }
+#endif
 }
 
 #define INIT_MEMCPY                                  \
@@ -957,6 +957,7 @@ INTERCEPTOR(double, frexp, double x, int *exp) {
   // Assuming frexp() always writes to |exp|.
   COMMON_INTERCEPTOR_WRITE_RANGE(ctx, exp, sizeof(*exp));
   double res = REAL(frexp)(x, exp);
+  COMMON_INTERCEPTOR_INITIALIZE_RANGE(exp, sizeof(*exp));
   return res;
 }
 
@@ -969,22 +970,18 @@ INTERCEPTOR(double, frexp, double x, int *exp) {
 INTERCEPTOR(float, frexpf, float x, int *exp) {
   void *ctx;
   COMMON_INTERCEPTOR_ENTER(ctx, frexpf, x, exp);
-  // FIXME: under ASan the call below may write to freed memory and corrupt
-  // its metadata. See
-  // https://github.com/google/sanitizers/issues/321.
-  float res = REAL(frexpf)(x, exp);
   COMMON_INTERCEPTOR_WRITE_RANGE(ctx, exp, sizeof(*exp));
+  float res = REAL(frexpf)(x, exp);
+  COMMON_INTERCEPTOR_INITIALIZE_RANGE(exp, sizeof(*exp));
   return res;
 }
 
 INTERCEPTOR(long double, frexpl, long double x, int *exp) {
   void *ctx;
   COMMON_INTERCEPTOR_ENTER(ctx, frexpl, x, exp);
-  // FIXME: under ASan the call below may write to freed memory and corrupt
-  // its metadata. See
-  // https://github.com/google/sanitizers/issues/321.
-  long double res = REAL(frexpl)(x, exp);
   COMMON_INTERCEPTOR_WRITE_RANGE(ctx, exp, sizeof(*exp));
+  long double res = REAL(frexpl)(x, exp);
+  COMMON_INTERCEPTOR_INITIALIZE_RANGE(exp, sizeof(*exp));
   return res;
 }
 
@@ -5303,6 +5300,12 @@ INTERCEPTOR(__sanitizer_clock_t, times, void *tms) {
 #define INIT_TIMES
 #endif
 
+#if SANITIZER_S390 && \
+    (SANITIZER_INTERCEPT_TLS_GET_ADDR || SANITIZER_INTERCEPT_TLS_GET_OFFSET)
+extern "C" uptr __tls_get_offset_wrapper(void *arg, uptr (*fn)(void *arg));
+DEFINE_REAL(uptr, __tls_get_offset, void *arg)
+#endif
+
 #if SANITIZER_INTERCEPT_TLS_GET_ADDR
 #if !SANITIZER_S390
 #define INIT_TLS_GET_ADDR COMMON_INTERCEPT_FUNCTION(__tls_get_addr)
@@ -5342,11 +5345,7 @@ void *__tls_get_addr_opt(void *arg);
 //   descriptor offset as an argument instead of a pointer.  GOT address
 //   is passed in r12, so it's necessary to write it in assembly.  This is
 //   the function used by the compiler.
-extern "C" uptr __tls_get_offset_wrapper(void *arg, uptr (*fn)(void *arg));
 #define INIT_TLS_GET_ADDR COMMON_INTERCEPT_FUNCTION(__tls_get_offset)
-DEFINE_REAL(uptr, __tls_get_offset, void *arg)
-extern "C" uptr __tls_get_offset(void *arg);
-extern "C" uptr __interceptor___tls_get_offset(void *arg);
 INTERCEPTOR(uptr, __tls_get_addr_internal, void *arg) {
   void *ctx;
   COMMON_INTERCEPTOR_ENTER(ctx, __tls_get_addr_internal, arg);
@@ -5362,6 +5361,15 @@ INTERCEPTOR(uptr, __tls_get_addr_internal, void *arg) {
   }
   return res;
 }
+#endif // SANITIZER_S390
+#else
+#define INIT_TLS_GET_ADDR
+#endif
+
+#if SANITIZER_S390 && \
+    (SANITIZER_INTERCEPT_TLS_GET_ADDR || SANITIZER_INTERCEPT_TLS_GET_OFFSET)
+extern "C" uptr __tls_get_offset(void *arg);
+extern "C" uptr __interceptor___tls_get_offset(void *arg);
 // We need a hidden symbol aliasing the above, so that we can jump
 // directly to it from the assembly below.
 extern "C" __attribute__((alias("__interceptor___tls_get_addr_internal"),
@@ -5400,9 +5408,6 @@ asm(
   "br %r3\n"
   ".size __tls_get_offset_wrapper, .-__tls_get_offset_wrapper\n"
 );
-#endif // SANITIZER_S390
-#else
-#define INIT_TLS_GET_ADDR
 #endif
 
 #if SANITIZER_INTERCEPT_LISTXATTR
@@ -6099,6 +6104,40 @@ INTERCEPTOR(__sanitizer_FILE *, freopen, const char *path, const char *mode,
 #define INIT_FOPEN
 #endif
 
+#if SANITIZER_INTERCEPT_FLOPEN
+INTERCEPTOR(int, flopen, const char *path, int flags, ...) {
+  void *ctx;
+  va_list ap;
+  va_start(ap, flags);
+  u16 mode = static_cast<u16>(va_arg(ap, u32));
+  va_end(ap);
+  COMMON_INTERCEPTOR_ENTER(ctx, flopen, path, flags, mode);
+  if (path) {
+    COMMON_INTERCEPTOR_READ_RANGE(ctx, path, REAL(strlen)(path) + 1);
+  }
+  return REAL(flopen)(path, flags, mode);
+}
+
+INTERCEPTOR(int, flopenat, int dirfd, const char *path, int flags, ...) {
+  void *ctx;
+  va_list ap;
+  va_start(ap, flags);
+  u16 mode = static_cast<u16>(va_arg(ap, u32));
+  va_end(ap);
+  COMMON_INTERCEPTOR_ENTER(ctx, flopen, path, flags, mode);
+  if (path) {
+    COMMON_INTERCEPTOR_READ_RANGE(ctx, path, REAL(strlen)(path) + 1);
+  }
+  return REAL(flopenat)(dirfd, path, flags, mode);
+}
+
+#define INIT_FLOPEN    \
+  COMMON_INTERCEPT_FUNCTION(flopen); \
+  COMMON_INTERCEPT_FUNCTION(flopenat);
+#else
+#define INIT_FLOPEN
+#endif
+
 #if SANITIZER_INTERCEPT_FOPEN64
 INTERCEPTOR(__sanitizer_FILE *, fopen64, const char *path, const char *mode) {
   void *ctx;
@@ -6463,7 +6502,7 @@ INTERCEPTOR(int, sem_wait, __sanitizer_sem_t *s) {
 INTERCEPTOR(int, sem_trywait, __sanitizer_sem_t *s) {
   void *ctx;
   COMMON_INTERCEPTOR_ENTER(ctx, sem_trywait, s);
-  int res = COMMON_INTERCEPTOR_BLOCK_REAL(sem_trywait)(s);
+  int res = REAL(sem_trywait)(s);
   if (res == 0) {
     COMMON_INTERCEPTOR_ACQUIRE(ctx, (uptr)s);
   }
@@ -10264,6 +10303,7 @@ static void InitializeCommonInterceptors() {
   INIT_LIBIO_INTERNALS;
   INIT_FOPEN;
   INIT_FOPEN64;
+  INIT_FLOPEN;
   INIT_OPEN_MEMSTREAM;
   INIT_OBSTACK;
   INIT_FFLUSH;

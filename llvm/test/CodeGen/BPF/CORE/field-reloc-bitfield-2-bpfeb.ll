@@ -29,7 +29,7 @@ target triple = "bpfeb"
 define dso_local i32 @test(%struct.s* %arg) local_unnamed_addr #0 !dbg !13 {
 entry:
   call void @llvm.dbg.value(metadata %struct.s* %arg, metadata !27, metadata !DIExpression()), !dbg !28
-  %0 = tail call i16* @llvm.preserve.struct.access.index.p0i16.p0s_struct.ss(%struct.s* %arg, i32 1, i32 4), !dbg !29, !llvm.preserve.access.index !18
+  %0 = tail call i16* @llvm.preserve.struct.access.index.p0i16.p0s_struct.ss(%struct.s* elementtype(%struct.s) %arg, i32 1, i32 4), !dbg !29, !llvm.preserve.access.index !18
   %1 = tail call i32 @llvm.bpf.preserve.field.info.p0i16(i16* %0, i64 0), !dbg !30
   %2 = tail call i32 @llvm.bpf.preserve.field.info.p0i16(i16* %0, i64 1), !dbg !31
   %add = add i32 %2, %1, !dbg !32

@@ -115,6 +115,15 @@ protected:
                          Value allocatedPtr, Value alignedPtr,
                          ArrayRef<Value> sizes, ArrayRef<Value> strides,
                          ConversionPatternRewriter &rewriter) const;
+
+  /// Copies the memory descriptor for any operands that were unranked
+  /// descriptors originally to heap-allocated memory (if toDynamic is true) or
+  /// to stack-allocated memory (otherwise). Also frees the previously used
+  /// memory (that is assumed to be heap-allocated) if toDynamic is false.
+  LogicalResult copyUnrankedDescriptors(OpBuilder &builder, Location loc,
+                                        TypeRange origTypes,
+                                        SmallVectorImpl<Value> &operands,
+                                        bool toDynamic) const;
 };
 
 /// Utility class for operation conversions targeting the LLVM dialect that

@@ -231,6 +231,9 @@ class Test:
         # handlers, and will be honored when the test result is supplied.
         self.xfails = []
 
+        # If true, ignore all items in self.xfails.
+        self.xfail_not = False
+
         # A list of conditions that must be satisfied before running the test.
         # Each condition is a boolean expression of features. All of them
         # must be True for the test to run.
@@ -308,6 +311,9 @@ class Test:
         executed.
         Throws ValueError if an XFAIL line has a syntax error.
         """
+
+        if self.xfail_not:
+          return False
 
         features = self.config.available_features
         triple = getattr(self.suite.config, 'target_triple', "")

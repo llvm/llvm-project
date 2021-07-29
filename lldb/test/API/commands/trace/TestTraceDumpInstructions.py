@@ -35,8 +35,9 @@ class TestTraceDumpInstructions(TraceIntelPTTestCaseBase):
             os.path.join(self.getSourceDir(), "intelpt-trace", "trace.json"),
             substrs=["intel-pt"])
 
-        self.expect("thread trace dump instructions --raw",
-            substrs=['''thread #1: tid = 3842849, total instructions = 21
+        self.expect("thread trace dump instructions --raw --count 21 --forwards",
+            substrs=['''thread #1: tid = 3842849
+    [ 0] 0x0000000000400511
     [ 1] 0x0000000000400518
     [ 2] 0x000000000040051f
     [ 3] 0x0000000000400529
@@ -58,19 +59,27 @@ class TestTraceDumpInstructions(TraceIntelPTTestCaseBase):
     [19] 0x0000000000400529
     [20] 0x000000000040052d'''])
 
-        # We check if we can pass count and position
-        self.expect("thread trace dump instructions --count 5 --position 10 --raw",
-            substrs=['''thread #1: tid = 3842849, total instructions = 21
+        # We check if we can pass count and skip
+        self.expect("thread trace dump instructions --count 5 --skip 6 --raw --forwards",
+            substrs=['''thread #1: tid = 3842849
     [ 6] 0x0000000000400525
     [ 7] 0x0000000000400529
     [ 8] 0x000000000040052d
     [ 9] 0x0000000000400521
     [10] 0x0000000000400525'''])
 
+        self.expect("thread trace dump instructions --count 5 --skip 6 --raw",
+            substrs=['''thread #1: tid = 3842849
+    [ -6] 0x0000000000400525
+    [ -7] 0x0000000000400521
+    [ -8] 0x000000000040052d
+    [ -9] 0x0000000000400529
+    [-10] 0x0000000000400525'''])
+
         # We check if we can access the thread by index id
         self.expect("thread trace dump instructions 1 --raw",
-            substrs=['''thread #1: tid = 3842849, total instructions = 21
-    [ 1] 0x0000000000400518'''])
+            substrs=['''thread #1: tid = 3842849
+    [  0] 0x000000000040052d'''])
 
         # We check that we get an error when using an invalid thread index id
         self.expect("thread trace dump instructions 10", error=True,
@@ -83,85 +92,87 @@ class TestTraceDumpInstructions(TraceIntelPTTestCaseBase):
 
         # We print the instructions of two threads simultaneously
         self.expect("thread trace dump instructions 1 2 --count 2",
-            substrs=['''thread #1: tid = 3842849, total instructions = 21
-  a.out`main + 28 at main.cpp:4
-    [19] 0x0000000000400529    cmpl   $0x3, -0x8(%rbp)
-    [20] 0x000000000040052d    jle    0x400521                  ; <+20> at main.cpp:5
-thread #2: tid = 3842850, total instructions = 21
-  a.out`main + 28 at main.cpp:4
-    [19] 0x0000000000400529    cmpl   $0x3, -0x8(%rbp)
-    [20] 0x000000000040052d    jle    0x400521                  ; <+20> at main.cpp:5'''])
+            substrs=['''thread #1: tid = 3842849
+  a.out`main + 32 at main.cpp:4
+    [ 0] 0x000000000040052d    jle    0x400521                  ; <+20> at main.cpp:5
+    [-1] 0x0000000000400529    cmpl   $0x3, -0x8(%rbp)
+thread #2: tid = 3842850
+  a.out`main + 32 at main.cpp:4
+    [ 0] 0x000000000040052d    jle    0x400521                  ; <+20> at main.cpp:5
+    [-1] 0x0000000000400529    cmpl   $0x3, -0x8(%rbp)'''])
 
-        # We use custom --count and --position, saving the command to history for later
-        self.expect("thread trace dump instructions 1 2 --count 2 --position 20", inHistory=True,
-            substrs=['''thread #1: tid = 3842849, total instructions = 21
-  a.out`main + 28 at main.cpp:4
-    [19] 0x0000000000400529    cmpl   $0x3, -0x8(%rbp)
-    [20] 0x000000000040052d    jle    0x400521                  ; <+20> at main.cpp:5
-thread #2: tid = 3842850, total instructions = 21
-  a.out`main + 28 at main.cpp:4
-    [19] 0x0000000000400529    cmpl   $0x3, -0x8(%rbp)
-    [20] 0x000000000040052d    jle    0x400521                  ; <+20> at main.cpp:5'''])
+        # We use custom --count and --skip, saving the command to history for later
+        self.expect("thread trace dump instructions 1 2 --count 2 --skip 2", inHistory=True,
+            substrs=['''thread #1: tid = 3842849
+  a.out`main + 24 at main.cpp:4
+    [-2] 0x0000000000400525    addl   $0x1, -0x8(%rbp)
+  a.out`main + 20 at main.cpp:5
+    [-3] 0x0000000000400521    xorl   $0x1, -0x4(%rbp)
+thread #2: tid = 3842850
+  a.out`main + 24 at main.cpp:4
+    [-2] 0x0000000000400525    addl   $0x1, -0x8(%rbp)
+  a.out`main + 20 at main.cpp:5
+    [-3] 0x0000000000400521    xorl   $0x1, -0x4(%rbp)'''])
 
         # We use a repeat command twice and ensure the previous count is used and the
         # start position moves with each command.
         self.expect("", inHistory=True,
-            substrs=['''thread #1: tid = 3842849, total instructions = 21
-  a.out`main + 20 at main.cpp:5
-    [17] 0x0000000000400521    xorl   $0x1, -0x4(%rbp)
-  a.out`main + 24 at main.cpp:4
-    [18] 0x0000000000400525    addl   $0x1, -0x8(%rbp)
-thread #2: tid = 3842850, total instructions = 21
-  a.out`main + 20 at main.cpp:5
-    [17] 0x0000000000400521    xorl   $0x1, -0x4(%rbp)
-  a.out`main + 24 at main.cpp:4
-    [18] 0x0000000000400525    addl   $0x1, -0x8(%rbp)'''])
+            substrs=['''thread #1: tid = 3842849
+  a.out`main + 32 at main.cpp:4
+    [-4] 0x000000000040052d    jle    0x400521                  ; <+20> at main.cpp:5
+    [-5] 0x0000000000400529    cmpl   $0x3, -0x8(%rbp)
+thread #2: tid = 3842850
+  a.out`main + 32 at main.cpp:4
+    [-4] 0x000000000040052d    jle    0x400521                  ; <+20> at main.cpp:5
+    [-5] 0x0000000000400529    cmpl   $0x3, -0x8(%rbp)'''])
 
         self.expect("", inHistory=True,
-            substrs=['''thread #1: tid = 3842849, total instructions = 21
-  a.out`main + 28 at main.cpp:4
-    [15] 0x0000000000400529    cmpl   $0x3, -0x8(%rbp)
-    [16] 0x000000000040052d    jle    0x400521                  ; <+20> at main.cpp:5
-thread #2: tid = 3842850, total instructions = 21
-  a.out`main + 28 at main.cpp:4
-    [15] 0x0000000000400529    cmpl   $0x3, -0x8(%rbp)
-    [16] 0x000000000040052d    jle    0x400521                  ; <+20> at main.cpp:5'''])
+            substrs=['''thread #1: tid = 3842849
+  a.out`main + 24 at main.cpp:4
+    [-6] 0x0000000000400525    addl   $0x1, -0x8(%rbp)
+  a.out`main + 20 at main.cpp:5
+    [-7] 0x0000000000400521    xorl   $0x1, -0x4(%rbp)
+thread #2: tid = 3842850
+  a.out`main + 24 at main.cpp:4
+    [-6] 0x0000000000400525    addl   $0x1, -0x8(%rbp)
+  a.out`main + 20 at main.cpp:5
+    [-7] 0x0000000000400521    xorl   $0x1, -0x4(%rbp)'''])
 
     def testInvalidBounds(self):
         self.expect("trace load -v " +
             os.path.join(self.getSourceDir(), "intelpt-trace", "trace.json"))
 
         # The output should be work when too many instructions are asked
-        self.expect("thread trace dump instructions --count 20 --position 2",
-            substrs=['''thread #1: tid = 3842849, total instructions = 21
+        self.expect("thread trace dump instructions --count 20 --forwards",
+            substrs=['''thread #1: tid = 3842849
   a.out`main + 4 at main.cpp:2
-    [0] 0x0000000000400511    movl   $0x0, -0x4(%rbp)
+    [ 0] 0x0000000000400511    movl   $0x0, -0x4(%rbp)
   a.out`main + 11 at main.cpp:4
-    [1] 0x0000000000400518    movl   $0x0, -0x8(%rbp)
-    [2] 0x000000000040051f    jmp    0x400529                  ; <+28> at main.cpp:4'''])
+    [ 1] 0x0000000000400518    movl   $0x0, -0x8(%rbp)
+    [ 2] 0x000000000040051f    jmp    0x400529                  ; <+28> at main.cpp:4'''])
 
         # Should print no instructions if the position is out of bounds
-        self.expect("thread trace dump instructions --position 23",
-            endstr='thread #1: tid = 3842849, total instructions = 21\n')
+        self.expect("thread trace dump instructions --skip 23",
+            endstr='no more data\n')
 
         # Should fail with negative bounds
-        self.expect("thread trace dump instructions --position -1", error=True)
+        self.expect("thread trace dump instructions --skip -1", error=True)
         self.expect("thread trace dump instructions --count -1", error=True)
 
     def testWrongImage(self):
         self.expect("trace load " +
             os.path.join(self.getSourceDir(), "intelpt-trace", "trace_bad_image.json"))
-        self.expect("thread trace dump instructions",
-            substrs=['''thread #1: tid = 3842849, total instructions = 2
-    [0] 0x0000000000400511    error: no memory mapped at this address
-    [1] 0x0000000000400518    error: no memory mapped at this address'''])
+        self.expect("thread trace dump instructions --forwards",
+            substrs=['''thread #1: tid = 3842849
+    [ 0] 0x0000000000400511    error: no memory mapped at this address
+    [ 1] 0x0000000000400518    error: no memory mapped at this address'''])
 
     def testWrongCPU(self):
         self.expect("trace load " +
             os.path.join(self.getSourceDir(), "intelpt-trace", "trace_wrong_cpu.json"))
-        self.expect("thread trace dump instructions",
-            substrs=['''thread #1: tid = 3842849, total instructions = 1
-    [0] error: unknown cpu'''])
+        self.expect("thread trace dump instructions --forwards",
+            substrs=['''thread #1: tid = 3842849
+    [ 0] error: unknown cpu'''])
 
     def testMultiFileTraceWithMissingModule(self):
         self.expect("trace load " +
@@ -181,8 +192,8 @@ thread #2: tid = 3842850, total instructions = 21
         # line is printed showing the symbol context change.
         #
         # Finally, the instruction disassembly is included in the dump.
-        self.expect("thread trace dump instructions --count 50",
-            substrs=['''thread #1: tid = 815455, total instructions = 46
+        self.expect("thread trace dump instructions --count 50 --forwards",
+            substrs=['''thread #1: tid = 815455
   a.out`main + 15 at main.cpp:10
     [ 0] 0x000000000040066f    callq  0x400540                  ; symbol stub for: foo()
   a.out`symbol stub for: foo()
@@ -252,3 +263,83 @@ thread #2: tid = 3842850, total instructions = 21
     [43] 0x00000000004006a4    movl   -0xc(%rbp), %ecx
     [44] 0x00000000004006a7    addl   %eax, %ecx
     [45] 0x00000000004006a9    movl   %ecx, -0xc(%rbp)'''])
+
+
+        self.expect("thread trace dump instructions --count 50",
+            substrs=['''thread #1: tid = 815455
+  a.out`main + 73 at main.cpp:16
+    [  0] 0x00000000004006a9    movl   %ecx, -0xc(%rbp)
+    [ -1] 0x00000000004006a7    addl   %eax, %ecx
+    [ -2] 0x00000000004006a4    movl   -0xc(%rbp), %ecx
+  libfoo.so`foo() + 35 at foo.cpp:6
+    [ -3] 0x00007ffff7bd9703    retq''',
+    '''[ -4] 0x00007ffff7bd9702    popq   %rbp
+    [ -5] 0x00007ffff7bd96fe    addq   $0x10, %rsp
+    [ -6] 0x00007ffff7bd96fb    movl   -0x4(%rbp), %eax
+  libfoo.so`foo() + 24 at foo.cpp:5
+    [ -7] 0x00007ffff7bd96f8    movl   %eax, -0x4(%rbp)
+    [ -8] 0x00007ffff7bd96f3    addl   $0x1, %eax
+    [ -9] 0x00007ffff7bd96f0    movl   -0x4(%rbp), %eax
+  libfoo.so`foo() + 13 at foo.cpp:4
+    [-10] 0x00007ffff7bd96ed    movl   %eax, -0x4(%rbp)
+  libbar.so`bar() + 26 at bar.cpp:4
+    [-11] 0x00007ffff79d76aa    retq''',
+    '''[-12] 0x00007ffff79d76a9    popq   %rbp
+    [-13] 0x00007ffff79d76a6    movl   -0x4(%rbp), %eax
+  libbar.so`bar() + 19 at bar.cpp:3
+    [-14] 0x00007ffff79d76a3    movl   %eax, -0x4(%rbp)
+    [-15] 0x00007ffff79d769e    addl   $0x1, %eax
+    [-16] 0x00007ffff79d769b    movl   -0x4(%rbp), %eax
+  libbar.so`bar() + 4 at bar.cpp:2
+    [-17] 0x00007ffff79d7694    movl   $0x1, -0x4(%rbp)
+  libbar.so`bar() + 1 at bar.cpp:1
+    [-18] 0x00007ffff79d7691    movq   %rsp, %rbp
+    [-19] 0x00007ffff79d7690    pushq  %rbp
+  libfoo.so`symbol stub for: bar()
+    [-20] 0x00007ffff7bd95d0    jmpq   *0x200a4a(%rip)           ; _GLOBAL_OFFSET_TABLE_ + 32
+  libfoo.so`foo() + 8 at foo.cpp:4
+    [-21] 0x00007ffff7bd96e8    callq  0x7ffff7bd95d0            ; symbol stub for: bar()
+    [-22] 0x00007ffff7bd96e4    subq   $0x10, %rsp
+  libfoo.so`foo() + 1 at foo.cpp:3
+    [-23] 0x00007ffff7bd96e1    movq   %rsp, %rbp
+    [-24] 0x00007ffff7bd96e0    pushq  %rbp
+  a.out`symbol stub for: foo()
+    [-25] 0x0000000000400540    jmpq   *0x200ae2(%rip)           ; _GLOBAL_OFFSET_TABLE_ + 40
+  a.out`main + 63 at main.cpp:16
+    [-26] 0x000000000040069f    callq  0x400540                  ; symbol stub for: foo()
+  a.out`main + 60 at main.cpp:14
+    [-27] 0x000000000040069c    movl   %ecx, -0xc(%rbp)
+    [-28] 0x000000000040069a    addl   %eax, %ecx
+    [-29] 0x0000000000400697    movl   -0xc(%rbp), %ecx
+  a.out`main + 52 [inlined] inline_function() + 18 at main.cpp:6
+    [-30] 0x0000000000400694    movl   -0x4(%rbp), %eax
+  a.out`main + 49 [inlined] inline_function() + 15 at main.cpp:5
+    [-31] 0x0000000000400691    movl   %eax, -0x4(%rbp)
+    [-32] 0x000000000040068c    addl   $0x1, %eax
+    [-33] 0x0000000000400689    movl   -0x4(%rbp), %eax
+  a.out`main + 34 [inlined] inline_function() at main.cpp:4
+    [-34] 0x0000000000400682    movl   $0x0, -0x4(%rbp)
+  a.out`main + 31 at main.cpp:12
+    [-35] 0x000000000040067f    movl   %eax, -0xc(%rbp)
+    [-36] 0x000000000040067a    addl   $0x1, %eax
+    [-37] 0x0000000000400677    movl   -0xc(%rbp), %eax
+  a.out`main + 20 at main.cpp:10
+    [-38] 0x0000000000400674    movl   %eax, -0xc(%rbp)
+    ...missing instructions
+    [-39] 0x00007ffff7df1950    error: no memory mapped at this address
+  a.out`(none)
+    [-40] 0x0000000000400516    jmpq   *0x200af4(%rip)           ; _GLOBAL_OFFSET_TABLE_ + 16
+    [-41] 0x0000000000400510    pushq  0x200af2(%rip)            ; _GLOBAL_OFFSET_TABLE_ + 8
+  a.out`symbol stub for: foo() + 11
+    [-42] 0x000000000040054b    jmp    0x400510
+    [-43] 0x0000000000400546    pushq  $0x2
+    [-44] 0x0000000000400540    jmpq   *0x200ae2(%rip)           ; _GLOBAL_OFFSET_TABLE_ + 40
+  a.out`main + 15 at main.cpp:10
+    [-45] 0x000000000040066f    callq  0x400540                  ; symbol stub for: foo()'''])
+
+        self.expect("thread trace dump instructions --skip 100 --forwards", inHistory=True,
+            substrs=['''thread #1: tid = 815455
+    no more data'''])
+
+        self.expect("", substrs=['''thread #1: tid = 815455
+    no more data'''])

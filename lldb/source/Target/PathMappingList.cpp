@@ -165,12 +165,17 @@ static void AppendPathComponents(FileSpec &path, llvm::StringRef components,
 }
 
 llvm::Optional<FileSpec>
-PathMappingList::RemapPath(llvm::StringRef path) const {
-  if (m_pairs.empty() || path.empty())
+PathMappingList::RemapPath(llvm::StringRef mapping_path,
+                           bool only_if_exists) const {
+  if (m_pairs.empty() || mapping_path.empty())
     return {};
   LazyBool path_is_relative = eLazyBoolCalculate;
+
   for (const auto &it : m_pairs) {
-    auto prefix = it.first.GetStringRef();
+    llvm::StringRef prefix = it.first.GetStringRef();
+    // We create a copy of mapping_path because StringRef::consume_from
+    // effectively modifies the instance itself.
+    llvm::StringRef path = mapping_path;
     if (!path.consume_front(prefix)) {
       // Relative paths won't have a leading "./" in them unless "." is the
       // only thing in the relative path so we need to work around "."
@@ -190,7 +195,8 @@ PathMappingList::RemapPath(llvm::StringRef path) const {
     auto orig_style = FileSpec::GuessPathStyle(prefix).getValueOr(
         llvm::sys::path::Style::native);
     AppendPathComponents(remapped, path, orig_style);
-    return remapped;
+    if (!only_if_exists || FileSystem::Instance().Exists(remapped))
+      return remapped;
   }
   return {};
 }
@@ -211,11 +217,9 @@ bool PathMappingList::ReverseRemapPath(const FileSpec &file, FileSpec &fixed) co
   return false;
 }
 
-
 llvm::Optional<FileSpec> PathMappingList::FindFile(const FileSpec &orig_spec) const {
-  if (auto remapped = RemapPath(orig_spec.GetPath()))
-    if (FileSystem::Instance().Exists(*remapped))
-      return remapped;
+  if (auto remapped = RemapPath(orig_spec.GetPath(), /*only_if_exists=*/true))
+    return remapped;
 
   return {};
 }

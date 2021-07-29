@@ -16,7 +16,7 @@ target triple = "bpf"
 define dso_local i32 @test(i32* %arg) local_unnamed_addr #0 !dbg !10 {
 entry:
   call void @llvm.dbg.value(metadata i32* %arg, metadata !14, metadata !DIExpression()), !dbg !15
-  %0 = tail call i32* @llvm.preserve.array.access.index.p0i32.p0i32(i32* %arg, i32 0, i32 4), !dbg !16, !llvm.preserve.access.index !4
+  %0 = tail call i32* @llvm.preserve.array.access.index.p0i32.p0i32(i32* elementtype(i32) %arg, i32 0, i32 4), !dbg !16, !llvm.preserve.access.index !4
   %call = tail call i32 @get_value(i32* %0) #4, !dbg !17
   ret i32 %call, !dbg !18
 }

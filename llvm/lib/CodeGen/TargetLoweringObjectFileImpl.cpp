@@ -532,10 +532,10 @@ static const Comdat *getELFComdat(const GlobalValue *GV) {
     return nullptr;
 
   if (C->getSelectionKind() != Comdat::Any &&
-      C->getSelectionKind() != Comdat::NoDuplicates)
+      C->getSelectionKind() != Comdat::NoDeduplicate)
     report_fatal_error("ELF COMDATs only support SelectionKind::Any and "
-                       "SelectionKind::NoDuplicates, '" + C->getName() +
-                       "' cannot be lowered.");
+                       "SelectionKind::NoDeduplicate, '" +
+                       C->getName() + "' cannot be lowered.");
 
   return C;
 }
@@ -1480,11 +1480,10 @@ static bool canUsePrivateLabel(const MCAsmInfo &AsmInfo,
   if (!AsmInfo.isSectionAtomizableBySymbols(Section))
     return true;
 
-  // If it is not dead stripped, it is safe to use private labels.
-  const MCSectionMachO &SMO = cast<MCSectionMachO>(Section);
-  if (SMO.hasAttribute(MachO::S_ATTR_NO_DEAD_STRIP))
-    return true;
-
+  // FIXME: we should be able to use private labels for sections that can't be
+  // dead-stripped (there's no issue with blocking atomization there), but `ld
+  // -r` sometimes drops the no_dead_strip attribute from sections so for safety
+  // we don't allow it.
   return false;
 }
 
@@ -1572,7 +1571,7 @@ static int getSelectionForCOFF(const GlobalValue *GV) {
         return COFF::IMAGE_COMDAT_SELECT_EXACT_MATCH;
       case Comdat::Largest:
         return COFF::IMAGE_COMDAT_SELECT_LARGEST;
-      case Comdat::NoDuplicates:
+      case Comdat::NoDeduplicate:
         return COFF::IMAGE_COMDAT_SELECT_NODUPLICATES;
       case Comdat::SameSize:
         return COFF::IMAGE_COMDAT_SELECT_SAME_SIZE;

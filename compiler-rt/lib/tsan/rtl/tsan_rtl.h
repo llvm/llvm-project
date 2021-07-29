@@ -400,9 +400,6 @@ struct ThreadState {
   Vector<JmpBuf> jmp_bufs;
   int ignore_interceptors;
 #endif
-#if TSAN_COLLECT_STATS
-  u64 stat[StatCnt];
-#endif
   const u32 tid;
   const int unique_id;
   bool in_symbolizer;
@@ -417,9 +414,6 @@ struct ThreadState {
   const uptr tls_size;
   ThreadContext *tctx;
 
-#if SANITIZER_DEBUG && !SANITIZER_GO
-  InternalDeadlockDetector internal_deadlock_detector;
-#endif
   DDLogicalThread *dd_lt;
 
   // Current wired Processor, or nullptr. Required to handle any events.
@@ -550,7 +544,6 @@ struct Context {
 
   Flags flags;
 
-  u64 stat[StatCnt];
   u64 int_alloc_cnt[MBlockTypeCount];
   u64 int_alloc_siz[MBlockTypeCount];
 };
@@ -657,22 +650,6 @@ void ObtainCurrentStack(ThreadState *thr, uptr toppc, StackTraceTy *stack,
   VarSizeStackTrace stack; \
   ObtainCurrentStack(thr, pc, &stack); \
   stack.ReverseOrder();
-
-#if TSAN_COLLECT_STATS
-void StatAggregate(u64 *dst, u64 *src);
-void StatOutput(u64 *stat);
-#endif
-
-void ALWAYS_INLINE StatInc(ThreadState *thr, StatType typ, u64 n = 1) {
-#if TSAN_COLLECT_STATS
-  thr->stat[typ] += n;
-#endif
-}
-void ALWAYS_INLINE StatSet(ThreadState *thr, StatType typ, u64 n) {
-#if TSAN_COLLECT_STATS
-  thr->stat[typ] = n;
-#endif
-}
 
 void MapShadow(uptr addr, uptr size);
 void MapThreadTrace(uptr addr, uptr size, const char *name);
@@ -854,7 +831,6 @@ void ALWAYS_INLINE TraceAddEvent(ThreadState *thr, FastState fs,
   DCHECK_GE((int)typ, 0);
   DCHECK_LE((int)typ, 7);
   DCHECK_EQ(GetLsb(addr, kEventPCBits), addr);
-  StatInc(thr, StatEvents);
   u64 pos = fs.GetTracePos();
   if (UNLIKELY((pos % kTracePartSize) == 0)) {
 #if !SANITIZER_GO

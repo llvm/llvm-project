@@ -123,7 +123,7 @@ define void @foo(i32* %.m, i32* %.n, [0 x %_elem_type_of_a]* %.a, [0 x %_elem_ty
 ; CHECK-NEXT:    sldi 31, 3, 1
 ; CHECK-NEXT:    std 8, 32(1) # 8-byte Folded Spill
 ; CHECK-NEXT:    std 9, 40(1) # 8-byte Folded Spill
-; CHECK-NEXT:    lxv 41, 0(8)
+; CHECK-NEXT:    lxv 43, 0(8)
 ; CHECK-NEXT:    mr 8, 6
 ; CHECK-NEXT:    sldi 6, 3, 3
 ; CHECK-NEXT:    std 2, 144(1) # 8-byte Folded Spill
@@ -134,21 +134,21 @@ define void @foo(i32* %.m, i32* %.n, [0 x %_elem_type_of_a]* %.a, [0 x %_elem_ty
 ; CHECK-NEXT:    add 6, 6, 23
 ; CHECK-NEXT:    lxv 7, 0(28)
 ; CHECK-NEXT:    add 28, 3, 31
-; CHECK-NEXT:    lxv 40, 0(9)
-; CHECK-NEXT:    lxv 39, 0(10)
-; CHECK-NEXT:    lxv 38, 0(15)
-; CHECK-NEXT:    lxv 33, 0(14)
-; CHECK-NEXT:    lxv 32, 0(16)
-; CHECK-NEXT:    lxv 37, 0(17)
-; CHECK-NEXT:    lxv 35, 0(18)
+; CHECK-NEXT:    lxv 42, 0(9)
+; CHECK-NEXT:    lxv 41, 0(10)
+; CHECK-NEXT:    lxv 40, 0(15)
+; CHECK-NEXT:    lxv 39, 0(14)
+; CHECK-NEXT:    lxv 38, 0(16)
+; CHECK-NEXT:    lxv 33, 0(17)
+; CHECK-NEXT:    lxv 37, 0(18)
 ; CHECK-NEXT:    lxv 13, 0(19)
 ; CHECK-NEXT:    lxv 10, 0(20)
 ; CHECK-NEXT:    lxv 8, 0(21)
 ; CHECK-NEXT:    lxv 6, 0(22)
 ; CHECK-NEXT:    lxv 4, 0(30)
 ; CHECK-NEXT:    lxv 1, 0(12)
-; CHECK-NEXT:    lxv 36, 0(24)
-; CHECK-NEXT:    lxv 34, 0(25)
+; CHECK-NEXT:    lxv 32, 0(24)
+; CHECK-NEXT:    lxv 36, 0(25)
 ; CHECK-NEXT:    lxv 12, 0(26)
 ; CHECK-NEXT:    lxv 9, 0(27)
 ; CHECK-NEXT:    lxv 5, 0(29)
@@ -216,7 +216,7 @@ define void @foo(i32* %.m, i32* %.n, [0 x %_elem_type_of_a]* %.a, [0 x %_elem_ty
 ; CHECK-NEXT:  .LBB0_4: # %_loop_2_do_
 ; CHECK-NEXT:    # Parent Loop BB0_3 Depth=1
 ; CHECK-NEXT:    # => This Inner Loop Header: Depth=2
-; CHECK-NEXT:    lxvp 42, 0(6)
+; CHECK-NEXT:    lxvp 34, 0(6)
 ; CHECK-NEXT:    lxvp 44, 0(16)
 ; CHECK-NEXT:    lxvp 46, 0(17)
 ; CHECK-NEXT:    lxvp 48, 0(18)
@@ -233,19 +233,19 @@ define void @foo(i32* %.m, i32* %.n, [0 x %_elem_type_of_a]* %.a, [0 x %_elem_ty
 ; CHECK-NEXT:    addi 17, 17, 64
 ; CHECK-NEXT:    addi 18, 18, 64
 ; CHECK-NEXT:    addi 19, 19, 64
-; CHECK-NEXT:    xvmaddadp 41, 45, 43
-; CHECK-NEXT:    xvmaddadp 40, 47, 43
-; CHECK-NEXT:    xvmaddadp 39, 49, 43
-; CHECK-NEXT:    xvmaddadp 38, 51, 43
-; CHECK-NEXT:    xvmaddadp 33, 63, 43
-; CHECK-NEXT:    xvmaddadp 32, 61, 43
-; CHECK-NEXT:    xvmaddadp 37, 44, 42
-; CHECK-NEXT:    xvmaddadp 35, 46, 42
-; CHECK-NEXT:    xvmaddadp 13, 48, 42
-; CHECK-NEXT:    xvmaddadp 11, 50, 42
-; CHECK-NEXT:    xvmaddadp 10, 62, 42
-; CHECK-NEXT:    xvmaddadp 8, 60, 42
-; CHECK-NEXT:    lxvp 42, 32(20)
+; CHECK-NEXT:    xvmaddadp 43, 45, 35
+; CHECK-NEXT:    xvmaddadp 42, 47, 35
+; CHECK-NEXT:    xvmaddadp 41, 49, 35
+; CHECK-NEXT:    xvmaddadp 40, 51, 35
+; CHECK-NEXT:    xvmaddadp 39, 63, 35
+; CHECK-NEXT:    xvmaddadp 38, 61, 35
+; CHECK-NEXT:    xvmaddadp 33, 44, 34
+; CHECK-NEXT:    xvmaddadp 37, 46, 34
+; CHECK-NEXT:    xvmaddadp 13, 48, 34
+; CHECK-NEXT:    xvmaddadp 11, 50, 34
+; CHECK-NEXT:    xvmaddadp 10, 62, 34
+; CHECK-NEXT:    xvmaddadp 8, 60, 34
+; CHECK-NEXT:    lxvp 34, 32(20)
 ; CHECK-NEXT:    lxvp 44, 32(21)
 ; CHECK-NEXT:    addi 20, 20, 64
 ; CHECK-NEXT:    addi 21, 21, 64
@@ -253,13 +253,13 @@ define void @foo(i32* %.m, i32* %.n, [0 x %_elem_type_of_a]* %.a, [0 x %_elem_ty
 ; CHECK-NEXT:    xvmaddadp 4, 55, 59
 ; CHECK-NEXT:    xvmaddadp 3, 53, 59
 ; CHECK-NEXT:    xvmaddadp 2, 31, 59
-; CHECK-NEXT:    xvmaddadp 36, 56, 58
-; CHECK-NEXT:    xvmaddadp 34, 54, 58
+; CHECK-NEXT:    xvmaddadp 32, 56, 58
+; CHECK-NEXT:    xvmaddadp 36, 54, 58
 ; CHECK-NEXT:    xvmaddadp 12, 52, 58
 ; CHECK-NEXT:    xvmaddadp 9, 30, 58
-; CHECK-NEXT:    xvmaddadp 1, 43, 59
+; CHECK-NEXT:    xvmaddadp 1, 35, 59
 ; CHECK-NEXT:    xvmaddadp 0, 45, 59
-; CHECK-NEXT:    xvmaddadp 7, 42, 58
+; CHECK-NEXT:    xvmaddadp 7, 34, 58
 ; CHECK-NEXT:    xvmaddadp 5, 44, 58
 ; CHECK-NEXT:    bdnz .LBB0_4
 ; CHECK-NEXT:  # %bb.5: # %_loop_2_endl_
@@ -276,21 +276,21 @@ define void @foo(i32* %.m, i32* %.n, [0 x %_elem_type_of_a]* %.a, [0 x %_elem_ty
 ; CHECK-NEXT:    ble 0, .LBB0_3
 ; CHECK-NEXT:  # %bb.6: # %_loop_1_loopHeader_._return_bb_crit_edge.loopexit
 ; CHECK-NEXT:    ld 3, 32(1) # 8-byte Folded Reload
-; CHECK-NEXT:    stxv 41, 0(3)
+; CHECK-NEXT:    stxv 43, 0(3)
 ; CHECK-NEXT:    ld 3, 40(1) # 8-byte Folded Reload
-; CHECK-NEXT:    stxv 40, 0(3)
+; CHECK-NEXT:    stxv 42, 0(3)
 ; CHECK-NEXT:    ld 3, 48(1) # 8-byte Folded Reload
-; CHECK-NEXT:    stxv 39, 0(3)
+; CHECK-NEXT:    stxv 41, 0(3)
 ; CHECK-NEXT:    ld 3, 56(1) # 8-byte Folded Reload
-; CHECK-NEXT:    stxv 38, 0(3)
+; CHECK-NEXT:    stxv 40, 0(3)
 ; CHECK-NEXT:    ld 3, 64(1) # 8-byte Folded Reload
-; CHECK-NEXT:    stxv 33, 0(3)
+; CHECK-NEXT:    stxv 39, 0(3)
 ; CHECK-NEXT:    ld 3, 72(1) # 8-byte Folded Reload
-; CHECK-NEXT:    stxv 32, 0(3)
+; CHECK-NEXT:    stxv 38, 0(3)
 ; CHECK-NEXT:    ld 3, 80(1) # 8-byte Folded Reload
-; CHECK-NEXT:    stxv 37, 0(3)
+; CHECK-NEXT:    stxv 33, 0(3)
 ; CHECK-NEXT:    ld 3, 88(1) # 8-byte Folded Reload
-; CHECK-NEXT:    stxv 35, 0(3)
+; CHECK-NEXT:    stxv 37, 0(3)
 ; CHECK-NEXT:    ld 3, 96(1) # 8-byte Folded Reload
 ; CHECK-NEXT:    stxv 13, 0(3)
 ; CHECK-NEXT:    ld 3, 104(1) # 8-byte Folded Reload
@@ -312,9 +312,9 @@ define void @foo(i32* %.m, i32* %.n, [0 x %_elem_type_of_a]* %.a, [0 x %_elem_ty
 ; CHECK-NEXT:    ld 3, 168(1) # 8-byte Folded Reload
 ; CHECK-NEXT:    stxv 0, 0(3)
 ; CHECK-NEXT:    ld 3, 176(1) # 8-byte Folded Reload
-; CHECK-NEXT:    stxv 36, 0(3)
+; CHECK-NEXT:    stxv 32, 0(3)
 ; CHECK-NEXT:    ld 3, 184(1) # 8-byte Folded Reload
-; CHECK-NEXT:    stxv 34, 0(3)
+; CHECK-NEXT:    stxv 36, 0(3)
 ; CHECK-NEXT:    ld 3, 192(1) # 8-byte Folded Reload
 ; CHECK-NEXT:    stxv 12, 0(3)
 ; CHECK-NEXT:    ld 3, 200(1) # 8-byte Folded Reload

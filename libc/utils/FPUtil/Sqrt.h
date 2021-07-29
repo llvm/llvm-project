@@ -102,7 +102,7 @@ static inline T sqrt(T x) {
   FPBits<T> bits(x);
 
   if (bits.isInfOrNaN()) {
-    if (bits.encoding.sign && (bits.encoding.mantissa == 0)) {
+    if (bits.getSign() && (bits.getMantissa() == 0)) {
       // sqrt(-Inf) = NaN
       return FPBits<T>::buildNaN(One >> 1);
     } else {
@@ -114,15 +114,15 @@ static inline T sqrt(T x) {
     // sqrt(+0) = +0
     // sqrt(-0) = -0
     return x;
-  } else if (bits.encoding.sign) {
+  } else if (bits.getSign()) {
     // sqrt( negative numbers ) = NaN
     return FPBits<T>::buildNaN(One >> 1);
   } else {
     int xExp = bits.getExponent();
-    UIntType xMant = bits.encoding.mantissa;
+    UIntType xMant = bits.getMantissa();
 
     // Step 1a: Normalize denormal input and append hiddent bit to the mantissa
-    if (bits.encoding.exponent == 0) {
+    if (bits.getUnbiasedExponent() == 0) {
       ++xExp; // let xExp be the correct exponent of One bit.
       internal::normalize<T>(xExp, xMant);
     } else {

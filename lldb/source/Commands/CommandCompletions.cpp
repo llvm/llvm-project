@@ -774,9 +774,7 @@ void CommandCompletions::WatchPointIDs(CommandInterpreter &interpreter,
     return;
 
   const WatchpointList &wp_list = exe_ctx.GetTargetPtr()->GetWatchpointList();
-  const size_t wp_num = wp_list.GetSize();
-  for (size_t idx = 0; idx < wp_num; ++idx) {
-    const lldb::WatchpointSP wp_sp = wp_list.GetByIndex(idx);
+  for (lldb::WatchpointSP wp_sp : wp_list.Watchpoints()) {
     StreamString strm;
     wp_sp->Dump(&strm);
     request.TryCompleteCurrentArg(std::to_string(wp_sp->GetID()),

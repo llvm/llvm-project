@@ -70,11 +70,19 @@ class IntelPTThreadTrace {
   /// \param[in] buffer_size
   ///     Size of the thread buffer in bytes.
   ///
+  /// \param[in] enable_tsc
+  ///     Whether to use enable TSC timestamps or not.
+  ///     More information in TraceIntelPT::GetStartConfigurationHelp().
+  ///
+  /// \param[in] psb_period
+  ///     This value defines the period in which PSB packets will be generated.
+  ///     More information in TraceIntelPT::GetStartConfigurationHelp().
+  ///
   /// \return
   ///     \a llvm::Error::success if tracing was successful, or an
   ///     \a llvm::Error otherwise.
-  llvm::Error StartTrace(lldb::pid_t pid, lldb::tid_t tid,
-                         uint64_t buffer_size);
+  llvm::Error StartTrace(lldb::pid_t pid, lldb::tid_t tid, uint64_t buffer_size,
+                         bool enable_tsc, llvm::Optional<size_t> psb_period);
 
   llvm::MutableArrayRef<uint8_t> GetAuxBuffer() const;
   llvm::MutableArrayRef<uint8_t> GetDataBuffer() const;
@@ -95,7 +103,8 @@ public:
   ///   A \a IntelPTThreadTrace instance if tracing was successful, or
   ///   an \a llvm::Error otherwise.
   static llvm::Expected<IntelPTThreadTraceUP>
-  Create(lldb::pid_t pid, lldb::tid_t tid, size_t buffer_size);
+  Create(lldb::pid_t pid, lldb::tid_t tid, size_t buffer_size, bool enable_tsc,
+         llvm::Optional<size_t> psb_period);
 
   /// Read the trace buffer of the currently traced thread.
   ///

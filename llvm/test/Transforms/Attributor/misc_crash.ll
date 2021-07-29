@@ -94,8 +94,7 @@ define internal void @func5(i32 %0) {
 ; CHECK-NEXT:    br label [[BLOCK:%.*]]
 ; CHECK:       block:
 ; CHECK-NEXT:    store i8* blockaddress(@func5, [[BLOCK]]), i8** [[TMP]], align 8
-; CHECK-NEXT:    [[ADDR:%.*]] = load i8*, i8** [[TMP]], align 8
-; CHECK-NEXT:    call void @func6(i8* [[ADDR]])
+; CHECK-NEXT:    call void @func6(i8* blockaddress(@func5, [[BLOCK]]))
 ; CHECK-NEXT:    ret void
 ;
   %tmp = alloca i8*

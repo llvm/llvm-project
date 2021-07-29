@@ -8,6 +8,7 @@
   .globl  _start
 _start:
   .functype _start () -> ()
+  i32.const 0
   i32.load foo
   drop
   end_function

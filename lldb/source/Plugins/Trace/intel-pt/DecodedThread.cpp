@@ -8,8 +8,13 @@
 
 #include "DecodedThread.h"
 
+#include <intel-pt.h>
+#include <memory>
+
+#include "TraceCursorIntelPT.h"
 #include "lldb/Utility/StreamString.h"
 
+using namespace lldb;
 using namespace lldb_private;
 using namespace lldb_private::trace_intel_pt;
 using namespace llvm;
@@ -30,12 +35,21 @@ void IntelPTError::log(llvm::raw_ostream &OS) const {
   OS << "error: " << libipt_error_message;
 }
 
+IntelPTInstruction::IntelPTInstruction(llvm::Error err) {
+  llvm::handleAllErrors(std::move(err),
+                        [&](std::unique_ptr<llvm::ErrorInfoBase> info) {
+                          m_error = std::move(info);
+                        });
+  m_pt_insn.ip = LLDB_INVALID_ADDRESS;
+  m_pt_insn.iclass = ptic_error;
+}
+
 bool IntelPTInstruction::IsError() const { return (bool)m_error; }
 
-Expected<lldb::addr_t> IntelPTInstruction::GetLoadAddress() const {
-  if (IsError())
-    return ToError();
-  return m_pt_insn.ip;
+lldb::addr_t IntelPTInstruction::GetLoadAddress() const { return m_pt_insn.ip; }
+
+Optional<uint64_t> IntelPTInstruction::GetTimestampCounter() const {
+  return m_timestamp;
 }
 
 Error IntelPTInstruction::ToError() const {
@@ -47,23 +61,58 @@ Error IntelPTInstruction::ToError() const {
   return make_error<StringError>(m_error->message(),
                                  m_error->convertToErrorCode());
 }
+size_t DecodedThread::GetRawTraceSize() const { return m_raw_trace_size; }
 
-size_t DecodedThread::GetLastPosition() const {
-  return m_instructions.empty() ? 0 : m_instructions.size() - 1;
+TraceInstructionControlFlowType
+IntelPTInstruction::GetControlFlowType(lldb::addr_t next_load_address) const {
+  if (IsError())
+    return (TraceInstructionControlFlowType)0;
+
+  TraceInstructionControlFlowType mask =
+      eTraceInstructionControlFlowTypeInstruction;
+
+  switch (m_pt_insn.iclass) {
+  case ptic_cond_jump:
+  case ptic_jump:
+  case ptic_far_jump:
+    mask |= eTraceInstructionControlFlowTypeBranch;
+    if (m_pt_insn.ip + m_pt_insn.size != next_load_address)
+      mask |= eTraceInstructionControlFlowTypeTakenBranch;
+    break;
+  case ptic_return:
+  case ptic_far_return:
+    mask |= eTraceInstructionControlFlowTypeReturn;
+    break;
+  case ptic_call:
+  case ptic_far_call:
+    mask |= eTraceInstructionControlFlowTypeCall;
+    break;
+  default:
+    break;
+  }
+
+  return mask;
 }
 
 ArrayRef<IntelPTInstruction> DecodedThread::GetInstructions() const {
   return makeArrayRef(m_instructions);
 }
 
-size_t DecodedThread::GetCursorPosition() const { return m_position; }
-
-size_t DecodedThread::SetCursorPosition(size_t new_position) {
-  m_position = std::min(new_position, GetLastPosition());
-  return m_position;
+DecodedThread::DecodedThread(ThreadSP thread_sp, Error error)
+    : m_thread_sp(thread_sp) {
+  m_instructions.emplace_back(std::move(error));
 }
 
-DecodedThread::DecodedThread(Error error) {
-  m_instructions.emplace_back(std::move(error));
-  m_position = GetLastPosition();
+DecodedThread::DecodedThread(ThreadSP thread_sp,
+                             std::vector<IntelPTInstruction> &&instructions,
+                             size_t raw_trace_size)
+    : m_thread_sp(thread_sp), m_instructions(std::move(instructions)),
+      m_raw_trace_size(raw_trace_size) {
+  if (m_instructions.empty())
+    m_instructions.emplace_back(
+        createStringError(inconvertibleErrorCode(), "empty trace"));
+}
+
+lldb::TraceCursorUP DecodedThread::GetCursor() {
+  return std::make_unique<TraceCursorIntelPT>(m_thread_sp, shared_from_this());
 }

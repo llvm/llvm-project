@@ -1120,21 +1120,67 @@ cbrt(_A1 __lcpp_x) _NOEXCEPT {return ::cbrt((double)__lcpp_x);}
 
 // copysign
 
-inline _LIBCPP_INLINE_VISIBILITY float copysign(float __lcpp_x,
-                                                float __lcpp_y) _NOEXCEPT {
+#if __has_builtin(__builtin_copysignf)
+_LIBCPP_CONSTEXPR
+#endif
+inline _LIBCPP_INLINE_VISIBILITY float __libcpp_copysign(float __lcpp_x, float __lcpp_y) _NOEXCEPT {
 #if __has_builtin(__builtin_copysignf)
   return __builtin_copysignf(__lcpp_x, __lcpp_y);
 #else
   return ::copysignf(__lcpp_x, __lcpp_y);
 #endif
 }
-inline _LIBCPP_INLINE_VISIBILITY long double
-copysign(long double __lcpp_x, long double __lcpp_y) _NOEXCEPT {
+
+#if __has_builtin(__builtin_copysign)
+_LIBCPP_CONSTEXPR
+#endif
+inline _LIBCPP_INLINE_VISIBILITY double __libcpp_copysign(double __lcpp_x, double __lcpp_y) _NOEXCEPT {
+#if __has_builtin(__builtin_copysign)
+  return __builtin_copysign(__lcpp_x, __lcpp_y);
+#else
+  return ::copysign(__lcpp_x, __lcpp_y);
+#endif
+}
+
+#if __has_builtin(__builtin_copysignl)
+_LIBCPP_CONSTEXPR
+#endif
+inline _LIBCPP_INLINE_VISIBILITY long double __libcpp_copysign(long double __lcpp_x, long double __lcpp_y) _NOEXCEPT {
 #if __has_builtin(__builtin_copysignl)
   return __builtin_copysignl(__lcpp_x, __lcpp_y);
 #else
   return ::copysignl(__lcpp_x, __lcpp_y);
 #endif
+}
+
+template <class _A1, class _A2>
+#if __has_builtin(__builtin_copysign)
+_LIBCPP_CONSTEXPR
+#endif
+inline _LIBCPP_INLINE_VISIBILITY
+typename std::_EnableIf
+<
+    std::is_arithmetic<_A1>::value &&
+    std::is_arithmetic<_A2>::value,
+    std::__promote<_A1, _A2>
+>::type
+__libcpp_copysign(_A1 __lcpp_x, _A2 __lcpp_y) _NOEXCEPT {
+    typedef typename std::__promote<_A1, _A2>::type __result_type;
+    static_assert((!(std::_IsSame<_A1, __result_type>::value &&
+                     std::_IsSame<_A2, __result_type>::value)), "");
+#if __has_builtin(__builtin_copysign)
+    return __builtin_copysign((__result_type)__lcpp_x, (__result_type)__lcpp_y);
+#else
+    return ::copysign((__result_type)__lcpp_x, (__result_type)__lcpp_y);
+#endif
+}
+
+inline _LIBCPP_INLINE_VISIBILITY float copysign(float __lcpp_x, float __lcpp_y) _NOEXCEPT {
+  return ::__libcpp_copysign(__lcpp_x, __lcpp_y);
+}
+
+inline _LIBCPP_INLINE_VISIBILITY long double copysign(long double __lcpp_x, long double __lcpp_y) _NOEXCEPT {
+  return ::__libcpp_copysign(__lcpp_x, __lcpp_y);
 }
 
 template <class _A1, class _A2>
@@ -1145,16 +1191,8 @@ typename std::_EnableIf
     std::is_arithmetic<_A2>::value,
     std::__promote<_A1, _A2>
 >::type
-copysign(_A1 __lcpp_x, _A2 __lcpp_y) _NOEXCEPT
-{
-    typedef typename std::__promote<_A1, _A2>::type __result_type;
-    static_assert((!(std::_IsSame<_A1, __result_type>::value &&
-                     std::_IsSame<_A2, __result_type>::value)), "");
-#if __has_builtin(__builtin_copysign)
-    return __builtin_copysign((__result_type)__lcpp_x, (__result_type)__lcpp_y);
-#else
-    return ::copysign((__result_type)__lcpp_x, (__result_type)__lcpp_y);
-#endif
+    copysign(_A1 __lcpp_x, _A2 __lcpp_y) _NOEXCEPT {
+  return ::__libcpp_copysign(__lcpp_x, __lcpp_y);
 }
 
 // erf

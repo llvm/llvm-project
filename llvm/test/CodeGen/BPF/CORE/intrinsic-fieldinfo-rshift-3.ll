@@ -25,11 +25,11 @@ entry:
   call void @llvm.dbg.value(metadata %union.u1* %arg, metadata !32, metadata !DIExpression()), !dbg !35
   %0 = tail call %union.u1* @llvm.preserve.union.access.index.p0s_union.u1s.p0s_union.u1s(%union.u1* %arg, i32 1), !dbg !36, !llvm.preserve.access.index !23
   %b2 = bitcast %union.u1* %0 to %struct.s1*, !dbg !36
-  %1 = tail call [5 x [5 x i8]]* @llvm.preserve.struct.access.index.p0a5a5i8.p0s_struct.s1s(%struct.s1* %b2, i32 0, i32 0), !dbg !37, !llvm.preserve.access.index !28
-  %2 = tail call [5 x i8]* @llvm.preserve.array.access.index.p0a5i8.p0a5a5i8([5 x [5 x i8]]* %1, i32 1, i32 3), !dbg !38, !llvm.preserve.access.index !8
+  %1 = tail call [5 x [5 x i8]]* @llvm.preserve.struct.access.index.p0a5a5i8.p0s_struct.s1s(%struct.s1* elementtype(%struct.s1) %b2, i32 0, i32 0), !dbg !37, !llvm.preserve.access.index !28
+  %2 = tail call [5 x i8]* @llvm.preserve.array.access.index.p0a5i8.p0a5a5i8([5 x [5 x i8]]* elementtype([5 x [5 x i8]]) %1, i32 1, i32 3), !dbg !38, !llvm.preserve.access.index !8
   %3 = tail call i32 @llvm.bpf.preserve.field.info.p0a5i8([5 x i8]* %2, i64 5), !dbg !39
   call void @llvm.dbg.value(metadata i32 %3, metadata !33, metadata !DIExpression()), !dbg !35
-  %4 = tail call i8* @llvm.preserve.array.access.index.p0i8.p0a5i8([5 x i8]* %2, i32 1, i32 3), !dbg !40, !llvm.preserve.access.index !12
+  %4 = tail call i8* @llvm.preserve.array.access.index.p0i8.p0a5i8([5 x i8]* elementtype([5 x i8]) %2, i32 1, i32 3), !dbg !40, !llvm.preserve.access.index !12
   %5 = tail call i32 @llvm.bpf.preserve.field.info.p0i8(i8* %4, i64 5), !dbg !41
   call void @llvm.dbg.value(metadata i32 %5, metadata !34, metadata !DIExpression()), !dbg !35
   %add = add i32 %5, %3, !dbg !42

@@ -28,7 +28,7 @@ extern void getLibcallSignature(const WebAssemblySubtarget &Subtarget,
                                 SmallVectorImpl<wasm::ValType> &Params);
 
 extern void getLibcallSignature(const WebAssemblySubtarget &Subtarget,
-                                const char *Name,
+                                StringRef Name,
                                 SmallVectorImpl<wasm::ValType> &Rets,
                                 SmallVectorImpl<wasm::ValType> &Params);
 

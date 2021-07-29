@@ -234,7 +234,7 @@ define amdgpu_ps <4 x half> @raw_buffer_load_format_v4f16__sgpr_rsrc__vgpr_voffs
   ; PACKED:   [[REG_SEQUENCE:%[0-9]+]]:sgpr_128 = REG_SEQUENCE [[COPY]], %subreg.sub0, [[COPY1]], %subreg.sub1, [[COPY2]], %subreg.sub2, [[COPY3]], %subreg.sub3
   ; PACKED:   [[COPY4:%[0-9]+]]:vgpr_32 = COPY $vgpr0
   ; PACKED:   [[COPY5:%[0-9]+]]:sreg_32 = COPY $sgpr6
-  ; PACKED:   [[BUFFER_LOAD_FORMAT_D16_XYZW_OFFEN:%[0-9]+]]:vreg_64 = BUFFER_LOAD_FORMAT_D16_XYZW_OFFEN [[COPY4]], [[REG_SEQUENCE]], [[COPY5]], 4095, 0, 0, 0, implicit $exec :: (dereferenceable load (s64) from custom "BufferResource" + 4095, align 1, addrspace 4)
+  ; PACKED:   [[BUFFER_LOAD_FORMAT_D16_XYZW_OFFEN:%[0-9]+]]:vreg_64 = BUFFER_LOAD_FORMAT_D16_XYZW_OFFEN [[COPY4]], [[REG_SEQUENCE]], [[COPY5]], 4095, 0, 0, 0, implicit $exec :: (dereferenceable load (<4 x s16>) from custom "BufferResource" + 4095, align 1, addrspace 4)
   ; PACKED:   [[COPY6:%[0-9]+]]:vgpr_32 = COPY [[BUFFER_LOAD_FORMAT_D16_XYZW_OFFEN]].sub0
   ; PACKED:   [[COPY7:%[0-9]+]]:vgpr_32 = COPY [[BUFFER_LOAD_FORMAT_D16_XYZW_OFFEN]].sub1
   ; PACKED:   $vgpr0 = COPY [[COPY6]]
@@ -250,7 +250,7 @@ define amdgpu_ps <4 x half> @raw_buffer_load_format_v4f16__sgpr_rsrc__vgpr_voffs
   ; UNPACKED:   [[REG_SEQUENCE:%[0-9]+]]:sgpr_128 = REG_SEQUENCE [[COPY]], %subreg.sub0, [[COPY1]], %subreg.sub1, [[COPY2]], %subreg.sub2, [[COPY3]], %subreg.sub3
   ; UNPACKED:   [[COPY4:%[0-9]+]]:vgpr_32 = COPY $vgpr0
   ; UNPACKED:   [[COPY5:%[0-9]+]]:sreg_32 = COPY $sgpr6
-  ; UNPACKED:   [[BUFFER_LOAD_FORMAT_D16_XYZW_gfx80_OFFEN:%[0-9]+]]:vreg_128 = BUFFER_LOAD_FORMAT_D16_XYZW_gfx80_OFFEN [[COPY4]], [[REG_SEQUENCE]], [[COPY5]], 4095, 0, 0, 0, implicit $exec :: (dereferenceable load (s64) from custom "BufferResource" + 4095, align 1, addrspace 4)
+  ; UNPACKED:   [[BUFFER_LOAD_FORMAT_D16_XYZW_gfx80_OFFEN:%[0-9]+]]:vreg_128 = BUFFER_LOAD_FORMAT_D16_XYZW_gfx80_OFFEN [[COPY4]], [[REG_SEQUENCE]], [[COPY5]], 4095, 0, 0, 0, implicit $exec :: (dereferenceable load (<4 x s16>) from custom "BufferResource" + 4095, align 1, addrspace 4)
   ; UNPACKED:   [[COPY6:%[0-9]+]]:vgpr_32 = COPY [[BUFFER_LOAD_FORMAT_D16_XYZW_gfx80_OFFEN]].sub0
   ; UNPACKED:   [[COPY7:%[0-9]+]]:vgpr_32 = COPY [[BUFFER_LOAD_FORMAT_D16_XYZW_gfx80_OFFEN]].sub1
   ; UNPACKED:   [[COPY8:%[0-9]+]]:vgpr_32 = COPY [[BUFFER_LOAD_FORMAT_D16_XYZW_gfx80_OFFEN]].sub2

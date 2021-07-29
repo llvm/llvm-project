@@ -412,10 +412,12 @@ void PruningFunctionCloner::CloneBlock(
     NewBB->getInstList().push_back(NewInst);
     hasCalls |= (isa<CallInst>(II) && !isa<DbgInfoIntrinsic>(II));
 
-    if (CodeInfo)
+    if (CodeInfo) {
+      CodeInfo->OrigVMap[&*II] = NewInst;
       if (auto *CB = dyn_cast<CallBase>(&*II))
         if (CB->hasOperandBundles())
           CodeInfo->OperandBundleCallSites.push_back(NewInst);
+    }
 
     if (const AllocaInst *AI = dyn_cast<AllocaInst>(II)) {
       if (isa<ConstantInt>(AI->getArraySize()))
@@ -469,10 +471,12 @@ void PruningFunctionCloner::CloneBlock(
     NewBB->getInstList().push_back(NewInst);
     VMap[OldTI] = NewInst; // Add instruction map to value.
 
-    if (CodeInfo)
+    if (CodeInfo) {
+      CodeInfo->OrigVMap[OldTI] = NewInst;
       if (auto *CB = dyn_cast<CallBase>(OldTI))
         if (CB->hasOperandBundles())
           CodeInfo->OperandBundleCallSites.push_back(NewInst);
+    }
 
     // Recursively clone any reachable successor blocks.
     append_range(ToClone, successors(BB->getTerminator()));
@@ -774,7 +778,7 @@ void llvm::CloneAndPruneIntoFromInst(Function *NewFunc, const Function *OldFunc,
 void llvm::CloneAndPruneFunctionInto(
     Function *NewFunc, const Function *OldFunc, ValueToValueMapTy &VMap,
     bool ModuleLevelChanges, SmallVectorImpl<ReturnInst *> &Returns,
-    const char *NameSuffix, ClonedCodeInfo *CodeInfo, Instruction *TheCall) {
+    const char *NameSuffix, ClonedCodeInfo *CodeInfo) {
   CloneAndPruneIntoFromInst(NewFunc, OldFunc, &OldFunc->front().front(), VMap,
                             ModuleLevelChanges, Returns, NameSuffix, CodeInfo);
 }

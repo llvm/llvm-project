@@ -1,3 +1,4 @@
+// REQUIRES: garbage
 /*
  * parallel-simple.c -- Archer testcase
  */

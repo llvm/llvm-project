@@ -176,10 +176,10 @@ const unsigned int NUM_PREDEF_SUBMODULE_IDS = 1;
 /// Source range/offset of a preprocessed entity.
 struct PPEntityOffset {
   /// Raw source location of beginning of range.
-  unsigned Begin;
+  SourceLocation::UIntTy Begin;
 
   /// Raw source location of end of range.
-  unsigned End;
+  SourceLocation::UIntTy End;
 
   /// Offset in the AST file relative to ModuleFile::MacroOffsetsBase.
   uint32_t BitOffset;
@@ -200,9 +200,9 @@ struct PPEntityOffset {
 /// Source range of a skipped preprocessor region
 struct PPSkippedRange {
   /// Raw source location of beginning of range.
-  unsigned Begin;
+  SourceLocation::UIntTy Begin;
   /// Raw source location of end of range.
-  unsigned End;
+  SourceLocation::UIntTy End;
 
   PPSkippedRange(SourceRange R)
       : Begin(R.getBegin().getRawEncoding()), End(R.getEnd().getRawEncoding()) {
@@ -240,7 +240,7 @@ struct UnderalignedInt64 {
 /// Source location and bit offset of a declaration.
 struct DeclOffset {
   /// Raw source location.
-  unsigned Loc = 0;
+  SourceLocation::UIntTy Loc = 0;
 
   /// Offset relative to the start of the DECLTYPES_BLOCK block. Keep
   /// structure alignment 32-bit and avoid padding gap because undefined

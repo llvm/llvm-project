@@ -14,13 +14,20 @@
 
 #include "commandlineflags.h"
 
+#include <algorithm>
 #include <cctype>
 #include <cstdlib>
 #include <cstring>
 #include <iostream>
 #include <limits>
+#include <map>
+#include <utility>
+
+#include "../src/string_util.h"
 
 namespace benchmark {
+namespace {
+
 // Parses 'str' for a 32-bit signed integer.  If successful, writes
 // the result to *value and returns true; otherwise leaves *value
 // unchanged and returns false.
@@ -75,6 +82,30 @@ bool ParseDouble(const std::string& src_text, const char* str, double* value) {
   return true;
 }
 
+// Parses 'str' into KV pairs. If successful, writes the result to *value and
+// returns true; otherwise leaves *value unchanged and returns false.
+bool ParseKvPairs(const std::string& src_text, const char* str,
+                  std::map<std::string, std::string>* value) {
+  std::map<std::string, std::string> kvs;
+  for (const auto& kvpair : StrSplit(str, ',')) {
+    const auto kv = StrSplit(kvpair, '=');
+    if (kv.size() != 2) {
+      std::cerr << src_text << " is expected to be a comma-separated list of "
+                << "<key>=<value> strings, but actually has value \"" << str
+                << "\".\n";
+      return false;
+    }
+    if (!kvs.emplace(kv[0], kv[1]).second) {
+      std::cerr << src_text << " is expected to contain unique keys but key \""
+                << kv[0] << "\" was repeated.\n";
+      return false;
+    }
+  }
+
+  *value = kvs;
+  return true;
+}
+
 // Returns the name of the environment variable corresponding to the
 // given flag.  For example, FlagToEnvVar("foo") will return
 // "BENCHMARK_FOO" in the open-source version.
@@ -85,47 +116,59 @@ static std::string FlagToEnvVar(const char* flag) {
   for (size_t i = 0; i != flag_str.length(); ++i)
     env_var += static_cast<char>(::toupper(flag_str.c_str()[i]));
 
-  return "BENCHMARK_" + env_var;
+  return env_var;
 }
 
-// Reads and returns the Boolean environment variable corresponding to
-// the given flag; if it's not set, returns default_value.
-//
-// The value is considered true iff it's not "0".
-bool BoolFromEnv(const char* flag, bool default_value) {
+}  // namespace
+
+bool BoolFromEnv(const char* flag, bool default_val) {
   const std::string env_var = FlagToEnvVar(flag);
-  const char* const string_value = getenv(env_var.c_str());
-  return string_value == nullptr ? default_value
-                                 : strcmp(string_value, "0") != 0;
+  const char* const value_str = getenv(env_var.c_str());
+  return value_str == nullptr ? default_val : IsTruthyFlagValue(value_str);
 }
 
-// Reads and returns a 32-bit integer stored in the environment
-// variable corresponding to the given flag; if it isn't set or
-// doesn't represent a valid 32-bit integer, returns default_value.
-int32_t Int32FromEnv(const char* flag, int32_t default_value) {
+int32_t Int32FromEnv(const char* flag, int32_t default_val) {
   const std::string env_var = FlagToEnvVar(flag);
-  const char* const string_value = getenv(env_var.c_str());
-  if (string_value == nullptr) {
-    // The environment variable is not set.
-    return default_value;
+  const char* const value_str = getenv(env_var.c_str());
+  int32_t value = default_val;
+  if (value_str == nullptr ||
+      !ParseInt32(std::string("Environment variable ") + env_var, value_str,
+                  &value)) {
+    return default_val;
   }
-
-  int32_t result = default_value;
-  if (!ParseInt32(std::string("Environment variable ") + env_var, string_value,
-                  &result)) {
-    std::cout << "The default value " << default_value << " is used.\n";
-    return default_value;
-  }
-
-  return result;
+  return value;
 }
 
-// Reads and returns the string environment variable corresponding to
-// the given flag; if it's not set, returns default_value.
-const char* StringFromEnv(const char* flag, const char* default_value) {
+double DoubleFromEnv(const char* flag, double default_val) {
+  const std::string env_var = FlagToEnvVar(flag);
+  const char* const value_str = getenv(env_var.c_str());
+  double value = default_val;
+  if (value_str == nullptr ||
+      !ParseDouble(std::string("Environment variable ") + env_var, value_str,
+                   &value)) {
+    return default_val;
+  }
+  return value;
+}
+
+const char* StringFromEnv(const char* flag, const char* default_val) {
   const std::string env_var = FlagToEnvVar(flag);
   const char* const value = getenv(env_var.c_str());
-  return value == nullptr ? default_value : value;
+  return value == nullptr ? default_val : value;
+}
+
+std::map<std::string, std::string> KvPairsFromEnv(
+    const char* flag, std::map<std::string, std::string> default_val) {
+  const std::string env_var = FlagToEnvVar(flag);
+  const char* const value_str = getenv(env_var.c_str());
+
+  if (value_str == nullptr) return default_val;
+
+  std::map<std::string, std::string> value;
+  if (!ParseKvPairs("Environment variable " + env_var, value_str, &value)) {
+    return default_val;
+  }
+  return value;
 }
 
 // Parses a string as a command line flag.  The string should have
@@ -205,14 +248,39 @@ bool ParseStringFlag(const char* str, const char* flag, std::string* value) {
   return true;
 }
 
+bool ParseKeyValueFlag(
+    const char* str, const char* flag,
+    std::map<std::string, std::string>* value) {
+  const char* const value_str = ParseFlagValue(str, flag, false);
+
+  if (value_str == nullptr) return false;
+
+  for (const auto& kvpair : StrSplit(value_str, ',')) {
+    const auto kv = StrSplit(kvpair, '=');
+    if (kv.size() != 2) return false;
+    value->emplace(kv[0], kv[1]);
+  }
+
+  return true;
+}
+
 bool IsFlag(const char* str, const char* flag) {
   return (ParseFlagValue(str, flag, true) != nullptr);
 }
 
 bool IsTruthyFlagValue(const std::string& value) {
-  if (value.empty()) return true;
-  char ch = value[0];
-  return isalnum(ch) &&
-         !(ch == '0' || ch == 'f' || ch == 'F' || ch == 'n' || ch == 'N');
+  if (value.size() == 1) {
+    char v = value[0];
+    return isalnum(v) &&
+           !(v == '0' || v == 'f' || v == 'F' || v == 'n' || v == 'N');
+  } else if (!value.empty()) {
+    std::string value_lower(value);
+    std::transform(value_lower.begin(), value_lower.end(), value_lower.begin(),
+                   [](char c) { return static_cast<char>(::tolower(c)); });
+    return !(value_lower == "false" || value_lower == "no" ||
+             value_lower == "off");
+  } else
+    return true;
 }
+
 }  // end namespace benchmark

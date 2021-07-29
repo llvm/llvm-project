@@ -33,7 +33,6 @@
 #include "llvm/ExecutionEngine/Orc/ExecutionUtils.h"
 #include "llvm/ExecutionEngine/Orc/JITTargetMachineBuilder.h"
 #include "llvm/ExecutionEngine/Orc/LLJIT.h"
-#include "llvm/ExecutionEngine/Orc/MachOPlatform.h"
 #include "llvm/ExecutionEngine/Orc/OrcRemoteTargetClient.h"
 #include "llvm/ExecutionEngine/Orc/RTDyldObjectLinkingLayer.h"
 #include "llvm/ExecutionEngine/Orc/SymbolStringPool.h"
@@ -228,7 +227,7 @@ namespace {
       cl::desc("Do not resolve lli process symbols in JIT'd code"),
       cl::init(false));
 
-  enum class LLJITPlatform { Inactive, DetectHost, GenericIR, MachO };
+  enum class LLJITPlatform { Inactive, DetectHost, GenericIR };
 
   cl::opt<LLJITPlatform>
       Platform("lljit-platform", cl::desc("Platform to use with LLJIT"),
@@ -237,8 +236,6 @@ namespace {
                                      "Select based on JIT target triple"),
                           clEnumValN(LLJITPlatform::GenericIR, "GenericIR",
                                      "Use LLJITGenericIRPlatform"),
-                          clEnumValN(LLJITPlatform::MachO, "MachO",
-                                     "Use LLJITMachOPlatform"),
                           clEnumValN(LLJITPlatform::Inactive, "Inactive",
                                      "Disable platform support explicitly")),
                cl::Hidden);
@@ -913,20 +910,12 @@ int runOrcJIT(const char *ProgName) {
   // Set up LLJIT platform.
   {
     LLJITPlatform P = Platform;
-    if (P == LLJITPlatform::DetectHost) {
-      if (TT->isOSBinFormatMachO())
-        P = LLJITPlatform::MachO;
-      else
-        P = LLJITPlatform::GenericIR;
-    }
+    if (P == LLJITPlatform::DetectHost)
+      P = LLJITPlatform::GenericIR;
 
     switch (P) {
     case LLJITPlatform::GenericIR:
       // Nothing to do: LLJITBuilder will use this by default.
-      break;
-    case LLJITPlatform::MachO:
-      Builder.setPlatformSetUp(orc::setUpMachOPlatform);
-      ExitOnErr(orc::enableObjCRegistration("libobjc.dylib"));
       break;
     case LLJITPlatform::Inactive:
       Builder.setPlatformSetUp(orc::setUpInactivePlatform);

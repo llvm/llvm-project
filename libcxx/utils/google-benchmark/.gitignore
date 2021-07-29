@@ -8,6 +8,7 @@
 !/cmake/*.cmake
 !/test/AssemblyTests.cmake
 *~
+*.swp
 *.pyc
 __pycache__
 
@@ -56,3 +57,10 @@ build*/
 # Visual Studio 2015/2017 cache/options directory
 .vs/
 CMakeSettings.json
+
+# Visual Studio Code cache/options directory
+.vscode/
+
+# Python build stuff
+dist/
+*.egg-info*

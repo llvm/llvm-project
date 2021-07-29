@@ -153,18 +153,27 @@ define i64 @f_to_u64(float %a) nounwind {
 ; X86-SSE3-LIN-NEXT:    addl $12, %esp
 ; X86-SSE3-LIN-NEXT:    retl
 ;
-; X64-SSE-LABEL: f_to_u64:
-; X64-SSE:       # %bb.0:
-; X64-SSE-NEXT:    movss {{.*#+}} xmm1 = mem[0],zero,zero,zero
-; X64-SSE-NEXT:    movaps %xmm0, %xmm2
-; X64-SSE-NEXT:    subss %xmm1, %xmm2
-; X64-SSE-NEXT:    cvttss2si %xmm2, %rax
-; X64-SSE-NEXT:    movabsq $-9223372036854775808, %rcx # imm = 0x8000000000000000
-; X64-SSE-NEXT:    xorq %rax, %rcx
-; X64-SSE-NEXT:    cvttss2si %xmm0, %rax
-; X64-SSE-NEXT:    ucomiss %xmm1, %xmm0
-; X64-SSE-NEXT:    cmovaeq %rcx, %rax
-; X64-SSE-NEXT:    retq
+; X64-SSE-WIN-LABEL: f_to_u64:
+; X64-SSE-WIN:       # %bb.0:
+; X64-SSE-WIN-NEXT:    cvttss2si %xmm0, %rcx
+; X64-SSE-WIN-NEXT:    movq %rcx, %rdx
+; X64-SSE-WIN-NEXT:    sarq $63, %rdx
+; X64-SSE-WIN-NEXT:    subss __real@5f000000(%rip), %xmm0
+; X64-SSE-WIN-NEXT:    cvttss2si %xmm0, %rax
+; X64-SSE-WIN-NEXT:    andq %rdx, %rax
+; X64-SSE-WIN-NEXT:    orq %rcx, %rax
+; X64-SSE-WIN-NEXT:    retq
+;
+; X64-SSE-LIN-LABEL: f_to_u64:
+; X64-SSE-LIN:       # %bb.0:
+; X64-SSE-LIN-NEXT:    cvttss2si %xmm0, %rcx
+; X64-SSE-LIN-NEXT:    movq %rcx, %rdx
+; X64-SSE-LIN-NEXT:    sarq $63, %rdx
+; X64-SSE-LIN-NEXT:    subss {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0
+; X64-SSE-LIN-NEXT:    cvttss2si %xmm0, %rax
+; X64-SSE-LIN-NEXT:    andq %rdx, %rax
+; X64-SSE-LIN-NEXT:    orq %rcx, %rax
+; X64-SSE-LIN-NEXT:    retq
 ;
 ; X86-SSE2-WIN-LABEL: f_to_u64:
 ; X86-SSE2-WIN:       # %bb.0:
@@ -577,18 +586,27 @@ define i64 @d_to_u64(double %a) nounwind {
 ; X86-SSE3-LIN-NEXT:    addl $12, %esp
 ; X86-SSE3-LIN-NEXT:    retl
 ;
-; X64-SSE-LABEL: d_to_u64:
-; X64-SSE:       # %bb.0:
-; X64-SSE-NEXT:    movsd {{.*#+}} xmm1 = mem[0],zero
-; X64-SSE-NEXT:    movapd %xmm0, %xmm2
-; X64-SSE-NEXT:    subsd %xmm1, %xmm2
-; X64-SSE-NEXT:    cvttsd2si %xmm2, %rax
-; X64-SSE-NEXT:    movabsq $-9223372036854775808, %rcx # imm = 0x8000000000000000
-; X64-SSE-NEXT:    xorq %rax, %rcx
-; X64-SSE-NEXT:    cvttsd2si %xmm0, %rax
-; X64-SSE-NEXT:    ucomisd %xmm1, %xmm0
-; X64-SSE-NEXT:    cmovaeq %rcx, %rax
-; X64-SSE-NEXT:    retq
+; X64-SSE-WIN-LABEL: d_to_u64:
+; X64-SSE-WIN:       # %bb.0:
+; X64-SSE-WIN-NEXT:    cvttsd2si %xmm0, %rcx
+; X64-SSE-WIN-NEXT:    movq %rcx, %rdx
+; X64-SSE-WIN-NEXT:    sarq $63, %rdx
+; X64-SSE-WIN-NEXT:    subsd __real@43e0000000000000(%rip), %xmm0
+; X64-SSE-WIN-NEXT:    cvttsd2si %xmm0, %rax
+; X64-SSE-WIN-NEXT:    andq %rdx, %rax
+; X64-SSE-WIN-NEXT:    orq %rcx, %rax
+; X64-SSE-WIN-NEXT:    retq
+;
+; X64-SSE-LIN-LABEL: d_to_u64:
+; X64-SSE-LIN:       # %bb.0:
+; X64-SSE-LIN-NEXT:    cvttsd2si %xmm0, %rcx
+; X64-SSE-LIN-NEXT:    movq %rcx, %rdx
+; X64-SSE-LIN-NEXT:    sarq $63, %rdx
+; X64-SSE-LIN-NEXT:    subsd {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0
+; X64-SSE-LIN-NEXT:    cvttsd2si %xmm0, %rax
+; X64-SSE-LIN-NEXT:    andq %rdx, %rax
+; X64-SSE-LIN-NEXT:    orq %rcx, %rax
+; X64-SSE-LIN-NEXT:    retq
 ;
 ; X86-SSE2-WIN-LABEL: d_to_u64:
 ; X86-SSE2-WIN:       # %bb.0:

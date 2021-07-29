@@ -4,5 +4,6 @@
 ; RUN:   | FileCheck %s
 
 ; CHECK: .file "/absolute/path/to/file"
+; CHECK-SAME: ,{{.*version}}
 
 source_filename = "/absolute/path/to/file"

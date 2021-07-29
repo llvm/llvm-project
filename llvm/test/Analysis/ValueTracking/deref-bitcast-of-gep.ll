@@ -9,7 +9,7 @@
 
 declare void @use(i32)
 
-define void @f_0(i8* align 4 dereferenceable(1024) %ptr) {
+define void @f_0(i8* align 4 dereferenceable(1024) %ptr) nofree nosync {
 ; CHECK-LABEL: @f_0(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[PTR_GEP:%.*]] = getelementptr i8, i8* [[PTR:%.*]], i32 32
@@ -35,7 +35,7 @@ loop:
   br label %loop
 }
 
-define void @f_1(i8* align 4 dereferenceable_or_null(1024) %ptr) {
+define void @f_1(i8* align 4 dereferenceable_or_null(1024) %ptr) nofree nosync {
 ; CHECK-LABEL: @f_1(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[PTR_GEP:%.*]] = getelementptr i8, i8* [[PTR:%.*]], i32 32
@@ -106,7 +106,7 @@ leave:
   ret void
 }
 
-define void @checkLaunder(i8* align 4 dereferenceable(1024) %p) {
+define void @checkLaunder(i8* align 4 dereferenceable(1024) %p) nofree nosync {
 ; CHECK-LABEL: @checkLaunder(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[L:%.*]] = call i8* @llvm.launder.invariant.group.p0i8(i8* [[P:%.*]])

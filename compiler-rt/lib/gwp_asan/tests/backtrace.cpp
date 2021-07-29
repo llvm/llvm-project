@@ -46,6 +46,11 @@ TEST_F(BacktraceGuardedPoolAllocatorDeathTest, DoubleFree) {
 }
 
 TEST_F(BacktraceGuardedPoolAllocatorDeathTest, UseAfterFree) {
+#if defined(__linux__) && __ARM_ARCH == 7
+  // Incomplete backtrace on Armv7 Linux
+  GTEST_SKIP();
+#endif
+
   void *Ptr = AllocateMemory(GPA);
   DeallocateMemory(GPA, Ptr);
 

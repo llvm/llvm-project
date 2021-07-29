@@ -42,8 +42,8 @@ define dso_local signext i32 @test() nounwind {
 ; CHECK-NEXT:    ld 4, a15@toc@l(4)
 ; CHECK-NEXT:    lfd 2, a2@toc@l(3)
 ; CHECK-NEXT:    addis 3, 2, a3@toc@ha
-; CHECK-NEXT:    lxvx 34, 0, 6
-; CHECK-NEXT:    lxvx 0, 0, 5
+; CHECK-NEXT:    lxv 34, 0(6)
+; CHECK-NEXT:    lxv 0, 0(5)
 ; CHECK-NEXT:    li 5, 152
 ; CHECK-NEXT:    lfd 3, a3@toc@l(3)
 ; CHECK-NEXT:    addis 3, 2, a4@toc@ha

@@ -36,6 +36,7 @@
 #include "llvm/ADT/StringRef.h"
 #include "llvm/ADT/Twine.h"
 #include "llvm/Analysis/AssumptionCache.h"
+#include "llvm/Analysis/BlockFrequencyInfoImpl.h"
 #include "llvm/Analysis/CallGraph.h"
 #include "llvm/Analysis/CallGraphSCCPass.h"
 #include "llvm/Analysis/InlineAdvisor.h"
@@ -413,9 +414,6 @@ protected:
 
   /// Name of the profile remapping file to load.
   std::string RemappingFilename;
-
-  /// Flag indicating whether the profile input loaded successfully.
-  bool ProfileIsValid = false;
 
   /// Flag indicating whether input profile is context-sensitive
   bool ProfileIsCS = false;
@@ -1176,6 +1174,10 @@ bool SampleProfileLoader::tryInlineCandidate(
   InlineFunctionInfo IFI(nullptr, GetAC);
   IFI.UpdateProfile = false;
   if (InlineFunction(CB, IFI).isSuccess()) {
+    // Merge the attributes based on the inlining.
+    AttributeFuncs::mergeAttributesForInlining(*BB->getParent(),
+                                               *CalledFunction);
+
     // The call to InlineFunction erases I, so we can't pass it here.
     emitInlinedInto(*ORE, DLoc, BB, *CalledFunction, *BB->getParent(), Cost,
                     true, CSINLINE_DEBUG);
@@ -1799,6 +1801,10 @@ bool SampleProfileLoader::doInitialization(Module &M,
       ProfileSizeInline = true;
     if (!CallsitePrioritizedInline.getNumOccurrences())
       CallsitePrioritizedInline = true;
+
+    // Enable iterative-BFI by default for CSSPGO.
+    if (!UseIterativeBFIInference.getNumOccurrences())
+      UseIterativeBFIInference = true;
 
     // Tracker for profiles under different context
     ContextTracker =

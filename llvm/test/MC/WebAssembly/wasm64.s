@@ -3,6 +3,9 @@
 
 # Most of our other tests are for wasm32, this one adds some wasm64 specific tests.
 
+.globaltype myglob64, i64
+.globaltype __stack_pointer, i64
+
 test:
     .functype   test (i64) -> ()
     .local      i64
@@ -31,24 +34,24 @@ test:
 
     ### basic stores
 
-    f32.const   0.0
     i64.const   0         # get i64 from constant.
+    f32.const   0.0
     f32.store   0
 
-    f32.const   0.0
     local.get   0         # get i64 from local.
+    f32.const   0.0
     f32.store   0
 
-    f32.const   0.0
     i64.const   .L.str    # get i64 relocatable.
+    f32.const   0.0
     f32.store   0
 
-    f32.const   0.0
     global.get  myglob64  # get i64 from global
+    f32.const   0.0
     f32.store   0
 
-    f32.const   0.0
     i64.const   0
+    f32.const   0.0
     f32.store   .L.str    # relocatable offset!
 
     ### 64-bit SP
@@ -66,9 +69,8 @@ test:
     .int64      .L.str    # relocatable inside data.
     .size       .L.str, 24
 
-    .globaltype myglob64, i64
-    .globaltype __stack_pointer, i64
 
+# CHECK:              .globaltype     myglob64, i64
 
 # CHECK:              .functype       test (i64) -> ()
 # CHECK-NEXT:         .local          i64
@@ -95,24 +97,24 @@ test:
 # CHECK-NEXT:         drop
 
 
-# CHECK:              f32.const       0x0p0
-# CHECK-NEXT:         i64.const       0
+# CHECK:              i64.const       0
+# CHECK-NEXT:         f32.const       0x0p0
 # CHECK-NEXT:         f32.store       0
 
-# CHECK:              f32.const       0x0p0
-# CHECK-NEXT:         local.get       0
+# CHECK:              local.get       0
+# CHECK-NEXT:         f32.const       0x0p0
 # CHECK-NEXT:         f32.store       0
 
-# CHECK:              f32.const       0x0p0
-# CHECK-NEXT:         i64.const       .L.str
+# CHECK:              i64.const       .L.str
+# CHECK-NEXT:         f32.const       0x0p0
 # CHECK-NEXT:         f32.store       0
 
-# CHECK:              f32.const       0x0p0
-# CHECK-NEXT:         global.get      myglob64
+# CHECK:              global.get      myglob64
+# CHECK-NEXT:         f32.const       0x0p0
 # CHECK-NEXT:         f32.store       0
 
-# CHECK:              f32.const       0x0p0
-# CHECK-NEXT:         i64.const       0
+# CHECK:              i64.const       0
+# CHECK-NEXT:         f32.const       0x0p0
 # CHECK-NEXT:         f32.store       .L.str
 
 
@@ -126,8 +128,6 @@ test:
 # CHECK-NEXT:         .asciz  "Hello, World!!!"
 # CHECK-NEXT:         .int64      .L.str
 # CHECK-NEXT:         .size       .L.str, 24
-
-# CHECK:              .globaltype     myglob64, i64
 
 
 
@@ -176,10 +176,10 @@ test:
 # BIN-NEXT:         Offset:          0x2F
 # BIN-NEXT:       - Type:            R_WASM_MEMORY_ADDR_SLEB64
 # BIN-NEXT:         Index:           1
-# BIN-NEXT:         Offset:          0x54
+# BIN-NEXT:         Offset:          0x4F
 # BIN-NEXT:       - Type:            R_WASM_GLOBAL_INDEX_LEB
 # BIN-NEXT:         Index:           2
-# BIN-NEXT:         Offset:          0x67
+# BIN-NEXT:         Offset:          0x62
 # BIN-NEXT:       - Type:            R_WASM_MEMORY_ADDR_LEB64
 # BIN-NEXT:         Index:           1
 # BIN-NEXT:         Offset:          0x78
@@ -191,7 +191,7 @@ test:
 # BIN-NEXT:         Locals:
 # BIN-NEXT:           - Type:            I64
 # BIN-NEXT:             Count:           1
-# BIN-NEXT:         Body:            42002A02001A20002A02001A42808080808080808080002A02001A2380808080002A02001A42002A02808080808080808080001A4300000000420038020043000000002000380200430000000042808080808080808080003802004300000000238080808000380200430000000042003802808080808080808080002381808080001A0B
+# BIN-NEXT:         Body:            42002A02001A20002A02001A42808080808080808080002A02001A2380808080002A02001A42002A02808080808080808080001A4200430000000038020020004300000000380200428080808080808080800043000000003802002380808080004300000000380200420043000000003802808080808080808080002381808080001A0B
 # BIN-NEXT:   - Type:            DATA
 # BIN-NEXT:     Relocations:
 # BIN-NEXT:       - Type:            R_WASM_MEMORY_ADDR_I64

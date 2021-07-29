@@ -251,6 +251,28 @@ libc++ specific options
    This option can be used to enable or disable the filesystem components on
    platforms that may not support them. For example on Windows.
 
+.. option:: LIBCXX_INSTALL_LIBRARY_DIR:PATH
+
+  **Default**: ``lib${LIBCXX_LIBDIR_SUFFIX}``
+
+  Path where built libc++ libraries should be installed. If a relative path,
+  relative to ``CMAKE_INSTALL_PREFIX``.
+
+.. option:: LIBCXX_INSTALL_INCLUDE_DIR:PATH
+
+  **Default**: ``include/c++/v1``
+
+  Path where target-agnostic libc++ headers should be installed. If a relative
+  path, relative to ``CMAKE_INSTALL_PREFIX``.
+
+.. option:: LIBCXX_INSTALL_INCLUDE_TARGET_DIR:PATH
+
+  **Default**: ``include/c++/v1`` or
+  ``include/${LLVM_DEFAULT_TARGET_TRIPLE}/c++/v1``
+
+  Path where target-specific libc++ headers should be installed. If a relative
+  path, relative to ``CMAKE_INSTALL_PREFIX``.
+
 .. _libc++experimental options:
 
 libc++experimental Specific Options

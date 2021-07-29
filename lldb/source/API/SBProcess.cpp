@@ -1288,6 +1288,51 @@ lldb::SBProcessInfo SBProcess::GetProcessInfo() {
   return LLDB_RECORD_RESULT(sb_proc_info);
 }
 
+lldb::addr_t SBProcess::AllocateMemory(size_t size, uint32_t permissions,
+                                       lldb::SBError &sb_error) {
+  LLDB_RECORD_METHOD(lldb::addr_t, SBProcess, AllocateMemory,
+                     (size_t, uint32_t, lldb::SBError &), size, permissions,
+                     sb_error);
+
+  lldb::addr_t addr = LLDB_INVALID_ADDRESS;
+  ProcessSP process_sp(GetSP());
+  if (process_sp) {
+    Process::StopLocker stop_locker;
+    if (stop_locker.TryLock(&process_sp->GetRunLock())) {
+      std::lock_guard<std::recursive_mutex> guard(
+          process_sp->GetTarget().GetAPIMutex());
+      addr = process_sp->AllocateMemory(size, permissions, sb_error.ref());
+    } else {
+      sb_error.SetErrorString("process is running");
+    }
+  } else {
+    sb_error.SetErrorString("SBProcess is invalid");
+  }
+  return addr;
+}
+
+lldb::SBError SBProcess::DeallocateMemory(lldb::addr_t ptr) {
+  LLDB_RECORD_METHOD(lldb::SBError, SBProcess, DeallocateMemory, (lldb::addr_t),
+                     ptr);
+
+  lldb::SBError sb_error;
+  ProcessSP process_sp(GetSP());
+  if (process_sp) {
+    Process::StopLocker stop_locker;
+    if (stop_locker.TryLock(&process_sp->GetRunLock())) {
+      std::lock_guard<std::recursive_mutex> guard(
+          process_sp->GetTarget().GetAPIMutex());
+      Status error = process_sp->DeallocateMemory(ptr);
+      sb_error.SetError(error);
+    } else {
+      sb_error.SetErrorString("process is running");
+    }
+  } else {
+    sb_error.SetErrorString("SBProcess is invalid");
+  }
+  return sb_error;
+}
+
 namespace lldb_private {
 namespace repro {
 
@@ -1417,6 +1462,10 @@ void RegisterMethods<SBProcess>(Registry &R) {
   LLDB_REGISTER_METHOD(lldb::SBMemoryRegionInfoList, SBProcess,
                        GetMemoryRegions, ());
   LLDB_REGISTER_METHOD(lldb::SBProcessInfo, SBProcess, GetProcessInfo, ());
+  LLDB_REGISTER_METHOD(lldb::addr_t, SBProcess, AllocateMemory,
+                       (size_t, uint32_t, lldb::SBError &));
+  LLDB_REGISTER_METHOD(lldb::SBError, SBProcess, DeallocateMemory,
+                       (lldb::addr_t));
 
   LLDB_REGISTER_CHAR_PTR_METHOD_CONST(size_t, SBProcess, GetSTDOUT);
   LLDB_REGISTER_CHAR_PTR_METHOD_CONST(size_t, SBProcess, GetSTDERR);

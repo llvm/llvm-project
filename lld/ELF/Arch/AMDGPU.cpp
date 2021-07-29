@@ -139,6 +139,12 @@ void AMDGPU::relocate(uint8_t *loc, const Relocation &rel, uint64_t val) const {
   case R_AMDGPU_REL32_HI:
     write32le(loc, val >> 32);
     break;
+  case R_AMDGPU_REL16: {
+    int64_t simm = (static_cast<int64_t>(val) - 4) / 4;
+    checkInt(loc, simm, 16, rel);
+    write16le(loc, simm);
+    break;
+  }
   default:
     llvm_unreachable("unknown relocation");
   }
@@ -154,6 +160,7 @@ RelExpr AMDGPU::getRelExpr(RelType type, const Symbol &s,
   case R_AMDGPU_REL32_LO:
   case R_AMDGPU_REL32_HI:
   case R_AMDGPU_REL64:
+  case R_AMDGPU_REL16:
     return R_PC;
   case R_AMDGPU_GOTPCREL:
   case R_AMDGPU_GOTPCREL32_LO:

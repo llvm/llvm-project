@@ -2,7 +2,6 @@
 
 ; ModuleID = 'debugtest.c'
 source_filename = "debugtest.c"
-target datalayout = "e-m:e-p:32:32-i64:64-n32:64-S128"
 target triple = "wasm32"
 ; Function Attrs: noinline nounwind optnone
 define hidden i32 @foo(i32 %arg) #0 !dbg !7 {

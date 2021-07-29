@@ -468,6 +468,12 @@ public:
   /// deserializing this information.
   void setDebugInstrNum(unsigned Num) { DebugInstrNum = Num; }
 
+  /// Drop any variable location debugging information associated with this
+  /// instruction. Use when an instruction is modified in such a way that it no
+  /// longer defines the value it used to. Variable locations using that value
+  /// will be dropped.
+  void dropDebugNumber() { DebugInstrNum = 0; }
+
   /// Emit an error referring to the source location of this instruction.
   /// This should only be used for inline assembly that is somehow
   /// impossible to compile. Other errors should have been handled much

@@ -11,7 +11,6 @@
 // UNSUPPORTED: gcc-10
 
 // Test the [[nodiscard]] extension in libc++.
-// REQUIRES: libc++
 
 // template<class I>
 // unspecified iter_move;

@@ -1774,10 +1774,10 @@ define void @ashr_out_of_range(i177* %A) {
 define void @ashr_out_of_range_1(i177* %A) {
 ; CHECK-LABEL: @ashr_out_of_range_1(
 ; CHECK-NEXT:    [[L:%.*]] = load i177, i177* [[A:%.*]], align 4
-; CHECK-NEXT:    [[G11:%.*]] = getelementptr i177, i177* [[A]], i64 -1
 ; CHECK-NEXT:    [[B24_LOBIT:%.*]] = ashr i177 [[L]], 175
 ; CHECK-NEXT:    [[TMP1:%.*]] = trunc i177 [[B24_LOBIT]] to i64
-; CHECK-NEXT:    [[G62:%.*]] = getelementptr i177, i177* [[G11]], i64 [[TMP1]]
+; CHECK-NEXT:    [[G62_IDX:%.*]] = add i64 [[TMP1]], -1
+; CHECK-NEXT:    [[G62:%.*]] = getelementptr i177, i177* [[A]], i64 [[G62_IDX]]
 ; CHECK-NEXT:    store i177 0, i177* [[G62]], align 4
 ; CHECK-NEXT:    ret void
 ;

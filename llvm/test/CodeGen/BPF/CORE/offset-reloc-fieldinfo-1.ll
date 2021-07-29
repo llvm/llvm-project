@@ -46,7 +46,7 @@ entry:
   call void @llvm.dbg.value(metadata %struct.s* %arg, metadata !31, metadata !DIExpression()), !dbg !37
   %0 = bitcast i64* %ull to i8*, !dbg !38
   call void @llvm.lifetime.start.p0i8(i64 8, i8* nonnull %0) #5, !dbg !38
-  %1 = tail call i16* @llvm.preserve.struct.access.index.p0i16.p0s_struct.ss(%struct.s* %arg, i32 1, i32 2), !dbg !39, !llvm.preserve.access.index !25
+  %1 = tail call i16* @llvm.preserve.struct.access.index.p0i16.p0s_struct.ss(%struct.s* elementtype(%struct.s) %arg, i32 1, i32 2), !dbg !39, !llvm.preserve.access.index !25
   %2 = tail call i32 @llvm.bpf.preserve.field.info.p0i16(i16* %1, i64 0), !dbg !40
   call void @llvm.dbg.value(metadata i32 %2, metadata !34, metadata !DIExpression()), !dbg !37
   %3 = tail call i32 @llvm.bpf.preserve.field.info.p0i16(i16* %1, i64 1), !dbg !41

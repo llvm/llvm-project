@@ -8,12 +8,12 @@ ldr x2, [x4]
 
 # CHECK:      Iterations:        5
 # CHECK-NEXT: Instructions:      10
-# CHECK-NEXT: Total Cycles:      9
+# CHECK-NEXT: Total Cycles:      8
 # CHECK-NEXT: Total uOps:        10
 
 # CHECK:      Dispatch Width:    2
-# CHECK-NEXT: uOps Per Cycle:    1.11
-# CHECK-NEXT: IPC:               1.11
+# CHECK-NEXT: uOps Per Cycle:    1.25
+# CHECK-NEXT: IPC:               1.25
 # CHECK-NEXT: Block RThroughput: 1.0
 
 # CHECK:      Instruction Info:
@@ -25,7 +25,7 @@ ldr x2, [x4]
 # CHECK-NEXT: [6]: HasSideEffects (U)
 
 # CHECK:      [1]    [2]    [3]    [4]    [5]    [6]    Instructions:
-# CHECK-NEXT:  1      4     1.00           *            str	x1, [x4]
+# CHECK-NEXT:  1      1     1.00           *            str	x1, [x4]
 # CHECK-NEXT:  1      3     1.00    *                   ldr	x2, [x4]
 
 # CHECK:      Resources:
@@ -52,18 +52,18 @@ ldr x2, [x4]
 # CHECK-NEXT:  -      -      -      -      -      -      -      -      -     1.00    -      -     ldr	x2, [x4]
 
 # CHECK:      Timeline view:
-# CHECK-NEXT: Index     012345678
+# CHECK-NEXT: Index     01234567
 
-# CHECK:      [0,0]     DeeeE.  .   str	x1, [x4]
-# CHECK-NEXT: [0,1]     .DeeE.  .   ldr	x2, [x4]
-# CHECK-NEXT: [1,0]     .DeeeE  .   str	x1, [x4]
-# CHECK-NEXT: [1,1]     . DeeE  .   ldr	x2, [x4]
-# CHECK-NEXT: [2,0]     . DeeeE .   str	x1, [x4]
-# CHECK-NEXT: [2,1]     .  DeeE .   ldr	x2, [x4]
-# CHECK-NEXT: [3,0]     .  DeeeE.   str	x1, [x4]
-# CHECK-NEXT: [3,1]     .   DeeE.   ldr	x2, [x4]
-# CHECK-NEXT: [4,0]     .   DeeeE   str	x1, [x4]
-# CHECK-NEXT: [4,1]     .    DeeE   ldr	x2, [x4]
+# CHECK:      [0,0]     DE   . .   str	x1, [x4]
+# CHECK-NEXT: [0,1]     DeeE . .   ldr	x2, [x4]
+# CHECK-NEXT: [1,0]     .DE  . .   str	x1, [x4]
+# CHECK-NEXT: [1,1]     .DeeE. .   ldr	x2, [x4]
+# CHECK-NEXT: [2,0]     . DE . .   str	x1, [x4]
+# CHECK-NEXT: [2,1]     . DeeE .   ldr	x2, [x4]
+# CHECK-NEXT: [3,0]     .  DE. .   str	x1, [x4]
+# CHECK-NEXT: [3,1]     .  DeeE.   ldr	x2, [x4]
+# CHECK-NEXT: [4,0]     .   DE .   str	x1, [x4]
+# CHECK-NEXT: [4,1]     .   DeeE   ldr	x2, [x4]
 
 # CHECK:      Average Wait times (based on the timeline view):
 # CHECK-NEXT: [0]: Executions

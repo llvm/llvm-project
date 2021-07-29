@@ -1551,9 +1551,9 @@ void ICmpTestImpl(CmpInst::Predicate Pred) {
 }
 
 TEST(ConstantRange, ICmp) {
-  for (auto Pred : seq<unsigned>(CmpInst::Predicate::FIRST_ICMP_PREDICATE,
-                                 1 + CmpInst::Predicate::LAST_ICMP_PREDICATE))
-    ICmpTestImpl((CmpInst::Predicate)Pred);
+  for (auto Pred : seq_inclusive(CmpInst::Predicate::FIRST_ICMP_PREDICATE,
+                                 CmpInst::Predicate::LAST_ICMP_PREDICATE))
+    ICmpTestImpl(Pred);
 }
 
 TEST(ConstantRange, MakeGuaranteedNoWrapRegion) {

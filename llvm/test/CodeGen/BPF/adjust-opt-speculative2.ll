@@ -56,12 +56,14 @@ if.end:                                           ; preds = %if.then, %entry
 ; CHECK-DISABLE: [[REG1:r[0-9]+]] = r0
 ; CHECK-DISABLE: [[REG1]] <<= 32
 ; CHECK-DISABLE: [[REG1]] >>= 32
-; CHECK-DISABLE: r0 = [[REG6]]
-; CHECK-DISABLE: r0 += [[REG1]]
 ; CHECK-DISABLE: [[REG2:r[0-9]+]] = 8
 ; CHECK-DISABLE: if [[REG2]] > [[REG1]] goto [[LABEL:.*]]
-; CHECK-DISABLE: r0 = [[REG6]]
+; CHECK-DISABLE: r0 = 0
 ; CHECK-DISABLE: [[LABEL]]:
+; CHECK-DISABLE: r0 <<= 32
+; CHECK-DISABLE: r0 >>= 32
+; CHECK-DISABLE: [[REG6]] += r0
+; CHECK-DISABLE: r0 = [[REG6]]
 
 ; CHECK-COMMON:  exit
 

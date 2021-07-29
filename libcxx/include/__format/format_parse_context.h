@@ -39,7 +39,7 @@ public:
   using const_iterator = typename basic_string_view<_CharT>::const_iterator;
   using iterator = const_iterator;
 
-  _LIBCPP_INLINE_VISIBILITY
+  _LIBCPP_HIDE_FROM_ABI
   constexpr explicit basic_format_parse_context(basic_string_view<_CharT> __fmt,
                                                 size_t __num_args = 0) noexcept
       : __begin_(__fmt.begin()),
@@ -52,17 +52,17 @@ public:
   basic_format_parse_context&
   operator=(const basic_format_parse_context&) = delete;
 
-  _LIBCPP_INLINE_VISIBILITY constexpr const_iterator begin() const noexcept {
+  _LIBCPP_HIDE_FROM_ABI constexpr const_iterator begin() const noexcept {
     return __begin_;
   }
-  _LIBCPP_INLINE_VISIBILITY constexpr const_iterator end() const noexcept {
+  _LIBCPP_HIDE_FROM_ABI constexpr const_iterator end() const noexcept {
     return __end_;
   }
-  _LIBCPP_INLINE_VISIBILITY constexpr void advance_to(const_iterator __it) {
+  _LIBCPP_HIDE_FROM_ABI constexpr void advance_to(const_iterator __it) {
     __begin_ = __it;
   }
 
-  _LIBCPP_INLINE_VISIBILITY constexpr size_t next_arg_id() {
+  _LIBCPP_HIDE_FROM_ABI constexpr size_t next_arg_id() {
     if (__indexing_ == __manual)
       __throw_format_error("Using automatic argument numbering in manual "
                            "argument numbering mode");
@@ -71,7 +71,7 @@ public:
       __indexing_ = __automatic;
     return __next_arg_id_++;
   }
-  _LIBCPP_INLINE_VISIBILITY constexpr void check_arg_id(size_t __id) {
+  _LIBCPP_HIDE_FROM_ABI constexpr void check_arg_id(size_t __id) {
     if (__indexing_ == __automatic)
       __throw_format_error("Using manual argument numbering in automatic "
                            "argument numbering mode");

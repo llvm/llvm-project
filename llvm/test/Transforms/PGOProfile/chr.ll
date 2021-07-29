@@ -2594,7 +2594,7 @@ define void @test_chr_with_bbs_address_taken2(i32* %i) !prof !14 {
 ; CHECK:       bb0:
 ; CHECK-NEXT:    call void @foo()
 ; CHECK-NEXT:    call void @foo()
-; CHECK-NEXT:    br label [[BB3:%.*]]
+; CHECK-NEXT:    br label [[BB6:%.*]]
 ; CHECK:       entry.split.nonchr:
 ; CHECK-NEXT:    [[TMP3:%.*]] = and i32 [[TMP0]], 1
 ; CHECK-NEXT:    [[DOTNOT:%.*]] = icmp eq i32 [[TMP3]], 0
@@ -2605,11 +2605,11 @@ define void @test_chr_with_bbs_address_taken2(i32* %i) !prof !14 {
 ; CHECK:       bb1.nonchr:
 ; CHECK-NEXT:    [[TMP4:%.*]] = and i32 [[TMP0]], 2
 ; CHECK-NEXT:    [[TMP5:%.*]] = icmp eq i32 [[TMP4]], 0
-; CHECK-NEXT:    br i1 [[TMP5]], label [[BB3]], label [[BB2_NONCHR:%.*]], !prof [[PROF16]]
+; CHECK-NEXT:    br i1 [[TMP5]], label [[BB6]], label [[BB2_NONCHR:%.*]], !prof [[PROF16]]
 ; CHECK:       bb2.nonchr:
 ; CHECK-NEXT:    call void @foo()
-; CHECK-NEXT:    br label [[BB3]]
-; CHECK:       bb3:
+; CHECK-NEXT:    br label [[BB6]]
+; CHECK:       bb6:
 ; CHECK-NEXT:    ret void
 ;
 entry:

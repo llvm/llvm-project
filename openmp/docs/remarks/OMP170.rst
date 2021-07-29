@@ -1,0 +1,41 @@
+.. _omp170:
+
+OpenMP runtime call <call> deduplicated. [OMP170]
+====================================================================
+
+This optimization remark indicates that a call to an OpenMP runtime call was
+replaced with the result of an existing one. This occurs when the compiler knows
+that the result of a runtime call is immutable. Removing duplicate calls is done
+by replacing all calls to that function with the result of the first call. This
+cannot be done automatically by the compiler because the implementations of the
+OpenMP runtime calls live in a separate library the compiler cannot see.
+
+Example
+-------
+
+This optimization will trigger for known OpenMP runtime calls whose return value
+will not change.
+
+.. code-block:: c++
+
+  void foo(int N) {
+    double *A = malloc(N * omp_get_thread_limit());
+    double *B = malloc(N * omp_get_thread_limit());
+  
+  #pragma omp parallel
+    work(&A[omp_get_thread_num() * N]);
+  #pragma omp parallel
+    work(&B[omp_get_thread_num() * N]);
+  }
+
+.. code-block:: console
+
+  $ clang -fopenmp -O2 -Rpass=openmp-opt omp170.c 
+  ompi170.c:2:26: remark: OpenMP runtime call omp_get_thread_limit deduplicated. [OMP170]
+  double *A = malloc(N * omp_get_thread_limit());
+                         ^
+
+Diagnostic Scope
+----------------
+
+OpenMP optimization remark.

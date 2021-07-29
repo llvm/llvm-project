@@ -86,7 +86,27 @@ bool isProducerLastWriteOfView(const LinalgDependenceGraph &graph,
 bool isFusableInto(const LinalgDependenceGraph &graph, LinalgOp consumer,
                    Value consumedView, LinalgOp producer);
 
-/// Creates extract_slice/subview ops for all `tiledOperands` of the given
+/// Compute tile offsets, given a list of loop `ivs` and `tileSizes`. In case a
+/// tile size is zero (i.e., no tiling), the corresponding offset is also zero.
+SmallVector<Value> computeTileOffsets(OpBuilder &b, Location loc,
+                                      ValueRange ivs, ValueRange tileSizes);
+
+/// Compute tile sizes, given a list of loop `ivs`, `tileSizes` and dimension
+/// sizes (`sizeBounds`). In case a tile size is zero (i.e., no tiling), the
+/// corresponding result size is the corresponding value from `sizeBounds`.
+/// Note: The returned tile sizes are closed intervals.
+SmallVector<Value> computeTileSizes(OpBuilder &b, Location loc, ValueRange ivs,
+                                    ValueRange tileSizes,
+                                    ArrayRef<Value> sizeBounds);
+
+/// Creates an extract_slice/subview op for a single `valueToTile` with
+/// `builder`. This new operation extracts a tile of `valueToTile`, starting
+/// at offsets `lbs` and with sizes `subShapeSizes`.
+Value makeTiledShape(OpBuilder &builder, Location loc, Value valueToTile,
+                     ValueRange tileSizes, AffineMap map, ValueRange lbs,
+                     ValueRange subShapeSizes);
+
+/// Creates extract_slice/subview ops for all `valuesToTile` of the given
 /// `linalgOp` with `builder`, assuming `linalgOp` is being fused into a loop
 /// nest for tiling with the given induction variables `ivs` and tile sizes
 /// `tileSizes`. `sizeBounds` are the iteration space bounds for *all* the
@@ -97,7 +117,7 @@ bool isFusableInto(const LinalgDependenceGraph &graph, LinalgOp consumer,
 /// number of values in `ivs`.
 SmallVector<Value, 4> makeTiledShapes(OpBuilder &builder, Location loc,
                                       LinalgOp linalgOp,
-                                      ArrayRef<Value> tiledOperands,
+                                      ArrayRef<Value> valuesToTile,
                                       ValueRange ivs, ValueRange tileSizes,
                                       ArrayRef<Value> sizeBounds);
 

@@ -233,7 +233,7 @@ static bool HandleComponent(IoStatementState &io, Descriptor &desc,
         type{addendum ? addendum->derivedType() : nullptr}) {
       if (const typeInfo::Component *
           comp{type->FindDataComponent(compName, std::strlen(compName))}) {
-        comp->EstablishDescriptor(desc, source, nullptr, handler);
+        comp->CreatePointerDescriptor(desc, source, nullptr, handler);
         return true;
       } else {
         handler.SignalError(
@@ -260,6 +260,8 @@ bool IONAME(InputNamelist)(Cookie cookie, const NamelistGroup &group) {
   ConnectionState &connection{io.GetConnectionState()};
   connection.modes.inNamelist = true;
   IoErrorHandler &handler{io.GetIoErrorHandler()};
+  auto *listInput{io.get_if<ListDirectedStatementState<Direction::Input>>()};
+  RUNTIME_CHECK(handler, listInput != nullptr);
   // Check the group header
   std::optional<char32_t> next{io.GetNextNonBlank()};
   if (!next || *next != '&') {
@@ -331,6 +333,7 @@ bool IONAME(InputNamelist)(Cookie cookie, const NamelistGroup &group) {
     }
     io.HandleRelativePosition(1);
     // Read the values into the descriptor
+    listInput->ResetForNextNamelistItem();
     if (!descr::DescriptorIO<Direction::Input>(io, *useDescriptor)) {
       return false;
     }

@@ -38,19 +38,7 @@ private:
   llvm::SmallVector<llvm::Function *, 16> Work;
 
   struct EntryFunctionState {
-    llvm::BasicBlock *ExitBB = nullptr;
-  };
-
-  class WorkerFunctionState {
-  public:
-    llvm::Function *WorkerFn;
-    const CGFunctionInfo &CGFI;
     SourceLocation Loc;
-
-    WorkerFunctionState(CodeGenModule &CGM, SourceLocation Loc);
-
-  private:
-    void createWorkerFunction(CodeGenModule &CGM);
   };
 
   ExecutionMode getExecutionMode() const;
@@ -60,20 +48,13 @@ private:
   /// Get barrier to synchronize all threads in a block.
   void syncCTAThreads(CodeGenFunction &CGF);
 
-  /// Emit the worker function for the current target region.
-  void emitWorkerFunction(WorkerFunctionState &WST);
+  /// Helper for target directive initialization.
+  void emitKernelInit(CodeGenFunction &CGF, EntryFunctionState &EST,
+                      bool IsSPMD);
 
-  /// Helper for worker function. Emit body of worker loop.
-  void emitWorkerLoop(CodeGenFunction &CGF, WorkerFunctionState &WST);
-
-  /// Helper for non-SPMD target entry function. Guide the master and
-  /// worker threads to their respective locations.
-  void emitNonSPMDEntryHeader(CodeGenFunction &CGF, EntryFunctionState &EST,
-                              WorkerFunctionState &WST);
-
-  /// Signal termination of OMP execution for non-SPMD target entry
-  /// function.
-  void emitNonSPMDEntryFooter(CodeGenFunction &CGF, EntryFunctionState &EST);
+  /// Helper for target directive finalization.
+  void emitKernelDeinit(CodeGenFunction &CGF, EntryFunctionState &EST,
+                        bool IsSPMD);
 
   void GenerateMetaData(CodeGenModule &CGM, const OMPExecutableDirective &D,
                         llvm::Function *&OutlinedFn, bool isSPMD);
@@ -84,13 +65,6 @@ private:
 
   /// Helper for generic variables globalization epilog.
   void emitGenericVarsEpilog(CodeGenFunction &CGF, bool WithSPMDCheck = false);
-
-  /// Helper for SPMD mode target directive's entry function.
-  void emitSPMDEntryHeader(CodeGenFunction &CGF, EntryFunctionState &EST,
-                           const OMPExecutableDirective &D);
-
-  /// Signal termination of SPMD mode execution.
-  void emitSPMDEntryFooter(CodeGenFunction &CGF, EntryFunctionState &EST);
 
   //
   // Base class overrides.
@@ -454,7 +428,8 @@ private:
     llvm::Optional<DeclToAddrMapTy> SecondaryLocalVarData = llvm::None;
     EscapedParamsTy EscapedParameters;
     llvm::SmallVector<const ValueDecl*, 4> EscapedVariableLengthDecls;
-    llvm::SmallVector<llvm::Value *, 4> EscapedVariableLengthDeclsAddrs;
+    llvm::SmallVector<std::pair<llvm::Value *, llvm::Value *>, 4>
+        EscapedVariableLengthDeclsAddrs;
     llvm::Value *IsInSPMDModeFlag = nullptr;
     std::unique_ptr<CodeGenFunction::OMPMapVars> MappedParams;
   };

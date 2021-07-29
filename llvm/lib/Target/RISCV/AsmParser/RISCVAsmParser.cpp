@@ -1970,7 +1970,7 @@ bool RISCVAsmParser::parseDirectiveAttribute() {
   if (Parser.getTok().is(AsmToken::Identifier)) {
     StringRef Name = Parser.getTok().getIdentifier();
     Optional<unsigned> Ret =
-        ELFAttrs::attrTypeFromString(Name, RISCVAttrs::RISCVAttributeTags);
+        ELFAttrs::attrTypeFromString(Name, RISCVAttrs::getRISCVAttributeTags());
     if (!Ret.hasValue()) {
       Error(TagLoc, "attribute name not recognised: " + Name);
       return false;
@@ -2210,13 +2210,19 @@ void RISCVAsmParser::emitToStreamer(MCStreamer &S, const MCInst &Inst) {
 
 void RISCVAsmParser::emitLoadImm(MCRegister DestReg, int64_t Value,
                                  MCStreamer &Out) {
-  RISCVMatInt::InstSeq Seq = RISCVMatInt::generateInstSeq(Value, isRV64());
+  RISCVMatInt::InstSeq Seq =
+      RISCVMatInt::generateInstSeq(Value, getSTI().getFeatureBits());
 
   MCRegister SrcReg = RISCV::X0;
   for (RISCVMatInt::Inst &Inst : Seq) {
     if (Inst.Opc == RISCV::LUI) {
       emitToStreamer(
           Out, MCInstBuilder(RISCV::LUI).addReg(DestReg).addImm(Inst.Imm));
+    } else if (Inst.Opc == RISCV::ADDUW) {
+      emitToStreamer(Out, MCInstBuilder(RISCV::ADDUW)
+                              .addReg(DestReg)
+                              .addReg(SrcReg)
+                              .addReg(RISCV::X0));
     } else {
       emitToStreamer(
           Out, MCInstBuilder(Inst.Opc).addReg(DestReg).addReg(SrcReg).addImm(

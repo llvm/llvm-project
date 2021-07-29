@@ -1750,6 +1750,49 @@ Expected<DenseMap<JITDylib *, SymbolMap>> Platform::lookupInitSymbols(
   return std::move(CompoundResult);
 }
 
+void Platform::lookupInitSymbolsAsync(
+    unique_function<void(Error)> OnComplete, ExecutionSession &ES,
+    const DenseMap<JITDylib *, SymbolLookupSet> &InitSyms) {
+
+  class TriggerOnComplete {
+  public:
+    using OnCompleteFn = unique_function<void(Error)>;
+    TriggerOnComplete(OnCompleteFn OnComplete)
+        : OnComplete(std::move(OnComplete)) {}
+    ~TriggerOnComplete() { OnComplete(std::move(LookupResult)); }
+    void reportResult(Error Err) {
+      std::lock_guard<std::mutex> Lock(ResultMutex);
+      LookupResult = joinErrors(std::move(LookupResult), std::move(Err));
+    }
+
+  private:
+    std::mutex ResultMutex;
+    Error LookupResult{Error::success()};
+    OnCompleteFn OnComplete;
+  };
+
+  LLVM_DEBUG({
+    dbgs() << "Issuing init-symbol lookup:\n";
+    for (auto &KV : InitSyms)
+      dbgs() << "  " << KV.first->getName() << ": " << KV.second << "\n";
+  });
+
+  auto TOC = std::make_shared<TriggerOnComplete>(std::move(OnComplete));
+
+  for (auto &KV : InitSyms) {
+    auto *JD = KV.first;
+    auto Names = std::move(KV.second);
+    ES.lookup(
+        LookupKind::Static,
+        JITDylibSearchOrder({{JD, JITDylibLookupFlags::MatchAllSymbols}}),
+        std::move(Names), SymbolState::Ready,
+        [TOC](Expected<SymbolMap> Result) {
+          TOC->reportResult(Result.takeError());
+        },
+        NoDependenciesToRegister);
+  }
+}
+
 void Task::anchor() {}
 
 void MaterializationTask::printDescription(raw_ostream &OS) {

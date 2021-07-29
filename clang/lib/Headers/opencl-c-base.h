@@ -21,6 +21,11 @@
 #define cl_khr_subgroup_shuffle 1
 #define cl_khr_subgroup_shuffle_relative 1
 #define cl_khr_subgroup_clustered_reduce 1
+#define cl_khr_extended_bit_ops 1
+#define cl_khr_integer_dot_product 1
+#define __opencl_c_integer_dot_product_input_4x8bit 1
+#define __opencl_c_integer_dot_product_input_4x8bit_packed 1
+
 #endif // defined(__SPIR__)
 #endif // (defined(__OPENCL_CPP_VERSION__) || __OPENCL_C_VERSION__ >= 200)
 
@@ -164,9 +169,7 @@ typedef double double8 __attribute__((ext_vector_type(8)));
 typedef double double16 __attribute__((ext_vector_type(16)));
 #endif
 
-#if defined(__OPENCL_CPP_VERSION__) || (__OPENCL_C_VERSION__ >= CL_VERSION_2_0)
 #define NULL ((void*)0)
-#endif
 
 /**
  * Value of maximum non-infinite single-precision floating-point

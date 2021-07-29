@@ -240,7 +240,7 @@ offloading provided by LLVM. It will attempt to find OpenMP target offloading
 support for your compiler. The flags necessary for OpenMP target offloading will
 be loaded into the ``OpenMPTarget::OpenMPTarget_<device>`` target or the
 ``OpenMPTarget_<device>_FLAGS`` variable if successful. Currently supported
-devices are ``AMDGCN`` and ``NVPTX``. 
+devices are ``AMDGPU`` and ``NVPTX``. 
 
 To use this module, simply add the path to CMake's current module path and call
 ``find_package``. The module will be installed with your OpenMP installation by

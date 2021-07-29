@@ -1,5 +1,5 @@
 // RUN: llvm-mc -triple x86_64-pc-linux-gnu %s -filetype=obj -o %t.o 
-// RUN: llvm-readobj --elf-section-groups %t.o | FileCheck %s
+// RUN: llvm-readobj --section-groups %t.o | FileCheck %s
 
 // Test that we can handle numeric COMDAT names.
 

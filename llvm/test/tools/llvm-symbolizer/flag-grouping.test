@@ -1,4 +1,4 @@
-RUN: llvm-symbolizer -apCi -obj=%p/Inputs/addr.exe < %p/Inputs/addr.inp | FileCheck %s
+RUN: llvm-symbolizer -apCi --obj=%p/Inputs/addr.exe < %p/Inputs/addr.inp | FileCheck %s
 RUN: llvm-symbolizer -apCie %p/Inputs/addr.exe < %p/Inputs/addr.inp | FileCheck %s
 RUN: llvm-symbolizer -apCie=%p/Inputs/addr.exe < %p/Inputs/addr.inp | FileCheck %s
 RUN: llvm-symbolizer -apCie%p/Inputs/addr.exe < %p/Inputs/addr.inp | FileCheck %s

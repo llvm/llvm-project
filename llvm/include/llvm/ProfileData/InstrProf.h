@@ -156,7 +156,7 @@ inline StringRef getInstrProfRuntimeHookVarUseFuncName() {
 }
 
 inline StringRef getInstrProfCounterBiasVarName() {
-  return "__llvm_profile_counter_bias";
+  return INSTR_PROF_QUOTE(INSTR_PROF_PROFILE_COUNTER_BIAS_VAR);
 }
 
 /// Return the marker used to separate PGO names during serialization.
@@ -1103,6 +1103,7 @@ namespace RawInstrProf {
 // raw header.
 // Version 5: Bit 60 of FuncHash is reserved for the flag for the context
 // sensitive records.
+// Version 6: Added binary id.
 const uint64_t Version = INSTR_PROF_RAW_VERSION;
 
 template <class IntPtrT> inline uint64_t getMagic();

@@ -429,6 +429,16 @@ inline bool operator!=(const WasmGlobalType &LHS, const WasmGlobalType &RHS) {
   return !(LHS == RHS);
 }
 
+inline bool operator==(const WasmLimits &LHS, const WasmLimits &RHS) {
+  return LHS.Flags == RHS.Flags && LHS.Minimum == RHS.Minimum &&
+         (LHS.Flags & WASM_LIMITS_FLAG_HAS_MAX ? LHS.Maximum == RHS.Maximum
+                                               : true);
+}
+
+inline bool operator==(const WasmTableType &LHS, const WasmTableType &RHS) {
+  return LHS.ElemType == RHS.ElemType && LHS.Limits == RHS.Limits;
+}
+
 std::string toString(WasmSymbolType type);
 std::string relocTypetoString(uint32_t type);
 bool relocTypeHasAddend(uint32_t type);

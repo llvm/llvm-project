@@ -13,7 +13,7 @@
 // we have several customizations:
 //  - preamble handling
 //  - capturing diagnostics for later access
-//  - running clang-tidy checks checks
+//  - running clang-tidy checks
 //
 //===----------------------------------------------------------------------===//
 

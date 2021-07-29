@@ -38,6 +38,7 @@ set(files
   avxvnniintrin.h
   bmi2intrin.h
   bmiintrin.h
+  builtins.h
   __clang_cuda_builtin_vars.h
   __clang_cuda_math.h
   __clang_cuda_cmath.h

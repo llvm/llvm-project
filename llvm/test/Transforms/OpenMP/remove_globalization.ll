@@ -4,22 +4,32 @@
 target datalayout = "e-i64:64-i128:128-v16:16-v32:32-n16:32:64"
 target triple = "nvptx64"
 
-; CHECK-REMARKS: remark: remove_globalization.c:4:2: Could not move globalized variable to the stack. Variable is potentially captured. Mark as noescape to override.
+; CHECK-REMARKS: remark: remove_globalization.c:4:2: Could not move globalized variable to the stack. Variable is potentially captured in call. Mark parameter as `__attribute__((noescape))` to override.
 ; CHECK-REMARKS: remark: remove_globalization.c:2:2: Moving globalized variable to the stack.
 ; CHECK-REMARKS: remark: remove_globalization.c:6:2: Moving globalized variable to the stack.
+; CHECK-REMARKS: remark: remove_globalization.c:4:2: Found thread data sharing on the GPU. Expect degraded performance due to data globalization.
 
 @S = external local_unnamed_addr global i8*
+
+%struct.ident_t = type { i32, i32, i32, i32, i8* }
+
+declare i32 @__kmpc_target_init(%struct.ident_t*, i1, i1, i1)
+declare void @__kmpc_target_deinit(%struct.ident_t*, i1, i1)
 
 define void @kernel() {
 ; CHECK-LABEL: define {{[^@]+}}@kernel() {
 ; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[TMP0:%.*]] = call i32 @__kmpc_target_init(%struct.ident_t* nonnull null, i1 false, i1 false, i1 true)
 ; CHECK-NEXT:    call void @foo() #[[ATTR0:[0-9]+]]
 ; CHECK-NEXT:    call void @bar() #[[ATTR0]]
+; CHECK-NEXT:    call void @__kmpc_target_deinit(%struct.ident_t* nonnull null, i1 false, i1 true)
 ; CHECK-NEXT:    ret void
 ;
 entry:
+  %0 = call i32 @__kmpc_target_init(%struct.ident_t* nonnull null, i1 false, i1 true, i1 true)
   call void @foo()
   call void @bar()
+  call void @__kmpc_target_deinit(%struct.ident_t* nonnull null, i1 false, i1 true)
   ret void
 }
 
@@ -33,7 +43,7 @@ define internal void @foo() {
 entry:
   %0 = call i8* @__kmpc_alloc_shared(i64 4), !dbg !12
   call void @use(i8* %0)
-  call void @__kmpc_free_shared(i8* %0)
+  call void @__kmpc_free_shared(i8* %0, i64 4)
   ret void
 }
 
@@ -41,26 +51,31 @@ define internal void @bar() {
 ; CHECK-LABEL: define {{[^@]+}}@bar
 ; CHECK-SAME: () #[[ATTR0]] {
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[TMP0:%.*]] = call i8* @__kmpc_alloc_shared(i64 noundef 4) #[[ATTR0]]
-; CHECK-NEXT:    call void @share(i8* nofree writeonly [[TMP0]]) #[[ATTR2:[0-9]+]]
-; CHECK-NEXT:    call void @__kmpc_free_shared(i8* [[TMP0]]) #[[ATTR0]]
+; CHECK-NEXT:    [[TMP0:%.*]] = call i8* @__kmpc_alloc_shared(i64 noundef 4) #[[ATTR0]], !dbg [[DBG8:![0-9]+]]
+; CHECK-NEXT:    call void @share(i8* nofree writeonly [[TMP0]]) #[[ATTR3:[0-9]+]]
+; CHECK-NEXT:    call void @__kmpc_free_shared(i8* [[TMP0]], i64 noundef 4) #[[ATTR0]]
 ; CHECK-NEXT:    ret void
 ;
 entry:
   %0 = call i8* @__kmpc_alloc_shared(i64 4), !dbg !13
   call void @share(i8* %0)
-  call void @__kmpc_free_shared(i8* %0)
+  call void @__kmpc_free_shared(i8* %0, i64 4)
   ret void
 }
 
 define internal void @use(i8* %x) {
+; CHECK-LABEL: define {{[^@]+}}@use
+; CHECK-SAME: (i8* noalias nocapture nofree readnone [[X:%.*]]) #[[ATTR1:[0-9]+]] {
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    ret void
+;
 entry:
   ret void
 }
 
 define internal void @share(i8* %x) {
 ; CHECK-LABEL: define {{[^@]+}}@share
-; CHECK-SAME: (i8* nofree writeonly [[X:%.*]]) #[[ATTR1:[0-9]+]] {
+; CHECK-SAME: (i8* nofree writeonly [[X:%.*]]) #[[ATTR2:[0-9]+]] {
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    store i8* [[X]], i8** @S, align 8
 ; CHECK-NEXT:    ret void
@@ -71,18 +86,24 @@ entry:
 }
 
 define void @unused() {
+; CHECK-LABEL: define {{[^@]+}}@unused() {
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[TMP0:%.*]] = alloca i8, i64 4, align 1
+; CHECK-NEXT:    call void @use(i8* noalias readnone undef)
+; CHECK-NEXT:    ret void
+;
 entry:
   %0 = call i8* @__kmpc_alloc_shared(i64 4), !dbg !14
   call void @use(i8* %0)
-  call void @__kmpc_free_shared(i8* %0)
+  call void @__kmpc_free_shared(i8* %0, i64 4)
   ret void
 }
 
 ; CHECK: declare i8* @__kmpc_alloc_shared(i64)
 declare i8* @__kmpc_alloc_shared(i64)
 
-; CHECK: declare void @__kmpc_free_shared(i8* nocapture)
-declare void @__kmpc_free_shared(i8*)
+; CHECK: declare void @__kmpc_free_shared(i8* nocapture, i64)
+declare void @__kmpc_free_shared(i8*, i64)
 
 !llvm.dbg.cu = !{!0}
 !llvm.module.flags = !{!3, !4, !6, !7}

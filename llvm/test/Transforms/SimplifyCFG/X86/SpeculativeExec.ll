@@ -119,18 +119,15 @@ end:
   ret i8* %x10
 }
 
-define i32* @test5(i32 %a, i32 %b, i32 %c, i32* dereferenceable(10) %ptr1, i32* dereferenceable(10) %ptr2, i32** dereferenceable(10) align 8 %ptr3) {
+define i32* @test5(i32 %a, i32 %b, i32 %c, i32* dereferenceable(10) %ptr1, i32* dereferenceable(10) %ptr2, i32** dereferenceable(10) align 8 %ptr3) nofree nosync {
 ; CHECK-LABEL: @test5(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[T1:%.*]] = icmp eq i32 [[B:%.*]], 0
-; CHECK-NEXT:    br i1 [[T1]], label [[BB1:%.*]], label [[BB3:%.*]]
-; CHECK:       bb1:
 ; CHECK-NEXT:    [[T2:%.*]] = icmp sgt i32 [[C:%.*]], 1
 ; CHECK-NEXT:    [[T3:%.*]] = load i32*, i32** [[PTR3:%.*]], align 8
 ; CHECK-NEXT:    [[SPEC_SELECT:%.*]] = select i1 [[T2]], i32* [[T3]], i32* [[PTR2:%.*]]
-; CHECK-NEXT:    ret i32* [[SPEC_SELECT]]
-; CHECK:       bb3:
-; CHECK-NEXT:    ret i32* [[PTR1:%.*]]
+; CHECK-NEXT:    [[T4:%.*]] = select i1 [[T1]], i32* [[SPEC_SELECT]], i32* [[PTR1:%.*]]
+; CHECK-NEXT:    ret i32* [[T4]]
 ;
 entry:
   %t1 = icmp eq i32 %b, 0

@@ -302,7 +302,7 @@ class ReplaceLDSUseImpl {
     // Insert required set of instructions which replace LDS within F.
     auto *V = Builder.CreateBitCast(
         Builder.CreateGEP(
-            LDSMemBaseAddr,
+            Builder.getInt8Ty(), LDSMemBaseAddr,
             Builder.CreateLoad(LDSPointer->getValueType(), LDSPointer)),
         GV->getType());
 

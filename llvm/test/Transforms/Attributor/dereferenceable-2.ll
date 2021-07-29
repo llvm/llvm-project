@@ -299,15 +299,13 @@ define void @volatile_is_not_dereferenceable(i16* %ptr) {
 ; IS__TUNIT____: Function Attrs: argmemonly nofree nounwind willreturn
 ; IS__TUNIT____-LABEL: define {{[^@]+}}@volatile_is_not_dereferenceable
 ; IS__TUNIT____-SAME: (i16* nofree align 2 [[PTR:%.*]]) #[[ATTR3:[0-9]+]] {
-; IS__TUNIT____-NEXT:    [[ARRAYIDX0:%.*]] = getelementptr i16, i16* [[PTR]], i64 0
-; IS__TUNIT____-NEXT:    [[T0:%.*]] = load volatile i16, i16* [[ARRAYIDX0]], align 2
+; IS__TUNIT____-NEXT:    [[T0:%.*]] = load volatile i16, i16* [[PTR]], align 2
 ; IS__TUNIT____-NEXT:    ret void
 ;
 ; IS__CGSCC____: Function Attrs: argmemonly nofree norecurse nounwind willreturn
 ; IS__CGSCC____-LABEL: define {{[^@]+}}@volatile_is_not_dereferenceable
 ; IS__CGSCC____-SAME: (i16* nofree align 2 [[PTR:%.*]]) #[[ATTR3:[0-9]+]] {
-; IS__CGSCC____-NEXT:    [[ARRAYIDX0:%.*]] = getelementptr i16, i16* [[PTR]], i64 0
-; IS__CGSCC____-NEXT:    [[T0:%.*]] = load volatile i16, i16* [[ARRAYIDX0]], align 2
+; IS__CGSCC____-NEXT:    [[T0:%.*]] = load volatile i16, i16* [[PTR]], align 2
 ; IS__CGSCC____-NEXT:    ret void
 ;
   %arrayidx0 = getelementptr i16, i16* %ptr, i64 0

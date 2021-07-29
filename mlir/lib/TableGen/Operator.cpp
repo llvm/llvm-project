@@ -489,11 +489,21 @@ void Operator::populateOpStructure() {
     // This is uniquing based on pointers of the trait.
     SmallPtrSet<const llvm::Init *, 32> traitSet;
     traits.reserve(traitSet.size());
-    for (auto *traitInit : *traitList) {
-      // Keep traits in the same order while skipping over duplicates.
-      if (traitSet.insert(traitInit).second)
-        traits.push_back(Trait::create(traitInit));
-    }
+
+    std::function<void(llvm::ListInit *)> insert;
+    insert = [&](llvm::ListInit *traitList) {
+      for (auto *traitInit : *traitList) {
+        auto *def = cast<DefInit>(traitInit)->getDef();
+        if (def->isSubClassOf("OpTraitList")) {
+          insert(def->getValueAsListInit("traits"));
+          continue;
+        }
+        // Keep traits in the same order while skipping over duplicates.
+        if (traitSet.insert(traitInit).second)
+          traits.push_back(Trait::create(traitInit));
+      }
+    };
+    insert(traitList);
   }
 
   populateTypeInferenceInfo(argumentsAndResultsIndex);

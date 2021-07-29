@@ -72,6 +72,7 @@ def FuncExtKhrSubgroupNonUniformArithmetic: FunctionExtension<"cl_khr_subgroup_n
 def FuncExtKhrSubgroupShuffle            : FunctionExtension<"cl_khr_subgroup_shuffle">;
 def FuncExtKhrSubgroupShuffleRelative    : FunctionExtension<"cl_khr_subgroup_shuffle_relative">;
 def FuncExtKhrSubgroupClusteredReduce    : FunctionExtension<"cl_khr_subgroup_clustered_reduce">;
+def FuncExtKhrExtendedBitOps             : FunctionExtension<"cl_khr_extended_bit_ops">;
 def FuncExtKhrGlobalInt32BaseAtomics     : FunctionExtension<"cl_khr_global_int32_base_atomics">;
 def FuncExtKhrGlobalInt32ExtendedAtomics : FunctionExtension<"cl_khr_global_int32_extended_atomics">;
 def FuncExtKhrLocalInt32BaseAtomics      : FunctionExtension<"cl_khr_local_int32_base_atomics">;
@@ -1736,6 +1737,41 @@ let Extension = FuncExtKhrSubgroupClusteredReduce in {
   foreach op = ["and", "or", "xor"] in {
     def : Builtin<"sub_group_clustered_reduce_logical_" # op, [Int, Int, UInt]>;
   }
+}
+
+// Section 40.3.1 - cl_khr_extended_bit_ops
+let Extension = FuncExtKhrExtendedBitOps in {
+  def : Builtin<"bitfield_insert", [AIGenTypeN, AIGenTypeN, AIGenTypeN, UInt, UInt], Attr.Const>;
+  def : Builtin<"bitfield_extract_signed", [SGenTypeN, SGenTypeN, UInt, UInt], Attr.Const>;
+  def : Builtin<"bitfield_extract_signed", [SGenTypeN, UGenTypeN, UInt, UInt], Attr.Const>;
+  def : Builtin<"bitfield_extract_unsigned", [UGenTypeN, SGenTypeN, UInt, UInt], Attr.Const>;
+  def : Builtin<"bitfield_extract_unsigned", [UGenTypeN, UGenTypeN, UInt, UInt], Attr.Const>;
+  def : Builtin<"bit_reverse", [AIGenTypeN, AIGenTypeN], Attr.Const>;
+}
+
+// Section 42.3 - cl_khr_integer_dot_product
+let Extension = FunctionExtension<"__opencl_c_integer_dot_product_input_4x8bit"> in {
+  def : Builtin<"dot", [UInt, VectorType<UChar, 4>, VectorType<UChar, 4>], Attr.Const>;
+  def : Builtin<"dot", [Int, VectorType<Char, 4>, VectorType<Char, 4>], Attr.Const>;
+  def : Builtin<"dot", [Int, VectorType<UChar, 4>, VectorType<Char, 4>], Attr.Const>;
+  def : Builtin<"dot", [Int, VectorType<Char, 4>, VectorType<UChar, 4>], Attr.Const>;
+
+  def : Builtin<"dot_acc_sat", [UInt, VectorType<UChar, 4>, VectorType<UChar, 4>, UInt], Attr.Const>;
+  def : Builtin<"dot_acc_sat", [Int, VectorType<Char, 4>, VectorType<Char, 4>, Int], Attr.Const>;
+  def : Builtin<"dot_acc_sat", [Int, VectorType<UChar, 4>, VectorType<Char, 4>, Int], Attr.Const>;
+  def : Builtin<"dot_acc_sat", [Int, VectorType<Char, 4>, VectorType<UChar, 4>, Int], Attr.Const>;
+}
+
+let Extension = FunctionExtension<"__opencl_c_integer_dot_product_input_4x8bit_packed"> in {
+  def : Builtin<"dot_4x8packed_uu_uint", [UInt, UInt, UInt], Attr.Const>;
+  def : Builtin<"dot_4x8packed_ss_int", [Int, UInt, UInt], Attr.Const>;
+  def : Builtin<"dot_4x8packed_us_int", [Int, UInt, UInt], Attr.Const>;
+  def : Builtin<"dot_4x8packed_su_int", [Int, UInt, UInt], Attr.Const>;
+
+  def : Builtin<"dot_acc_sat_4x8packed_uu_uint", [UInt, UInt, UInt, UInt], Attr.Const>;
+  def : Builtin<"dot_acc_sat_4x8packed_ss_int", [Int, UInt, UInt, Int], Attr.Const>;
+  def : Builtin<"dot_acc_sat_4x8packed_us_int", [Int, UInt, UInt, Int], Attr.Const>;
+  def : Builtin<"dot_acc_sat_4x8packed_su_int", [Int, UInt, UInt, Int], Attr.Const>;
 }
 
 //--------------------------------------------------------------------

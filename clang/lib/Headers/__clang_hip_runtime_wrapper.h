@@ -86,11 +86,11 @@ __attribute__((weak)) inline __device__ void *free(void *__ptr) {
 #else
 __attribute__((weak)) inline __device__ void *malloc(__hip_size_t __size) {
   __builtin_trap();
-  return nullptr;
+  return (void *)0;
 }
 __attribute__((weak)) inline __device__ void *free(void *__ptr) {
   __builtin_trap();
-  return nullptr;
+  return (void *)0;
 }
 #endif
 

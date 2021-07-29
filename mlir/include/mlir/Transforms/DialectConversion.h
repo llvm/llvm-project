@@ -621,8 +621,7 @@ public:
   /// dynamically legal on the target.
   using DynamicLegalityCallbackFn = std::function<bool(Operation *)>;
 
-  ConversionTarget(MLIRContext &ctx)
-      : unknownOpsDynamicallyLegal(false), ctx(ctx) {}
+  ConversionTarget(MLIRContext &ctx) : ctx(ctx) {}
   virtual ~ConversionTarget() = default;
 
   //===--------------------------------------------------------------------===//
@@ -739,18 +738,11 @@ public:
     setDialectAction(dialectNames, LegalizationAction::Dynamic);
   }
   template <typename... Args>
-  void addDynamicallyLegalDialect(
-      Optional<DynamicLegalityCallbackFn> callback = llvm::None) {
+  void addDynamicallyLegalDialect(DynamicLegalityCallbackFn callback = {}) {
     SmallVector<StringRef, 2> dialectNames({Args::getDialectNamespace()...});
     setDialectAction(dialectNames, LegalizationAction::Dynamic);
     if (callback)
-      setLegalityCallback(dialectNames, *callback);
-  }
-  template <typename... Args>
-  void addDynamicallyLegalDialect(DynamicLegalityCallbackFn callback) {
-    SmallVector<StringRef, 2> dialectNames({Args::getDialectNamespace()...});
-    setDialectAction(dialectNames, LegalizationAction::Dynamic);
-    setLegalityCallback(dialectNames, callback);
+      setLegalityCallback(dialectNames, callback);
   }
 
   /// Register unknown operations as dynamically legal. For operations(and
@@ -758,10 +750,12 @@ public:
   /// dynamically legal and invoke the given callback if valid or
   /// 'isDynamicallyLegal'.
   void markUnknownOpDynamicallyLegal(const DynamicLegalityCallbackFn &fn) {
-    unknownOpsDynamicallyLegal = true;
-    unknownLegalityFn = fn;
+    setLegalityCallback(fn);
   }
-  void markUnknownOpDynamicallyLegal() { unknownOpsDynamicallyLegal = true; }
+  void markUnknownOpDynamicallyLegal() {
+    setLegalityCallback(
+        [this](Operation *op) { return isDynamicallyLegal(op); });
+  }
 
   /// Register the operations of the given dialects as illegal, i.e.
   /// operations of this dialect are not supported by the target.
@@ -805,6 +799,9 @@ private:
   void setLegalityCallback(ArrayRef<StringRef> dialects,
                            const DynamicLegalityCallbackFn &callback);
 
+  /// Set the dynamic legality callback for the unknown ops.
+  void setLegalityCallback(const DynamicLegalityCallbackFn &callback);
+
   /// Set the recursive legality callback for the given operation and mark the
   /// operation as recursively legal.
   void markOpRecursivelyLegal(OperationName name,
@@ -819,7 +816,7 @@ private:
     bool isRecursivelyLegal;
 
     /// The legality callback if this operation is dynamically legal.
-    Optional<DynamicLegalityCallbackFn> legalityFn;
+    DynamicLegalityCallbackFn legalityFn;
   };
 
   /// Get the legalization information for the given operation.
@@ -841,11 +838,7 @@ private:
   llvm::StringMap<DynamicLegalityCallbackFn> dialectLegalityFns;
 
   /// An optional legality callback for unknown operations.
-  Optional<DynamicLegalityCallbackFn> unknownLegalityFn;
-
-  /// Flag indicating if unknown operations should be treated as dynamically
-  /// legal.
-  bool unknownOpsDynamicallyLegal;
+  DynamicLegalityCallbackFn unknownLegalityFn;
 
   /// The current context this target applies to.
   MLIRContext &ctx;

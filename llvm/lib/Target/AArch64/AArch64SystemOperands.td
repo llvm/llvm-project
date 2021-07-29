@@ -369,6 +369,26 @@ let Requires = [{ {AArch64::FeatureMTE} }] in
 def : PState<"TCO",     0b11100>;
 
 //===----------------------------------------------------------------------===//
+// SVCR instruction options.
+//===----------------------------------------------------------------------===//
+
+class SVCR<string name, bits<3> encoding> : SearchableTable {
+  let SearchableFields = ["Name", "Encoding"];
+  let EnumValueField = "Encoding";
+
+  string Name = name;
+  bits<3> Encoding;
+  let Encoding = encoding;
+  code Requires = [{ {} }];
+}
+
+let Requires = [{ {AArch64::FeatureSME} }] in {
+def : SVCR<"SVCRSM",   0b001>;
+def : SVCR<"SVCRZA",   0b010>;
+def : SVCR<"SVCRSMZA", 0b011>;
+}
+
+//===----------------------------------------------------------------------===//
 // PSB instruction options.
 //===----------------------------------------------------------------------===//
 
@@ -756,6 +776,12 @@ let Requires = [{ {AArch64::FeatureRME} }] in {
 def : RWSysReg<"MFAR_EL3",  0b11, 0b110, 0b0110, 0b0000, 0b101>;
 def : RWSysReg<"GPCCR_EL3", 0b11, 0b110, 0b0010, 0b0001, 0b110>;
 def : RWSysReg<"GPTBR_EL3", 0b11, 0b110, 0b0010, 0b0001, 0b100>;
+}
+
+// v9-a Scalable Matrix Extension (SME) registers
+//                                 Op0   Op1    CRn     CRm     Op2
+let Requires = [{ {AArch64::FeatureSME} }] in {
+def : ROSysReg<"ID_AA64SMFR0_EL1", 0b11, 0b000, 0b0000, 0b0100, 0b101>;
 }
 
 //===----------------------
@@ -1616,3 +1642,23 @@ def : RWSysReg<"PMSNEVFR_EL1",      0b11, 0b000, 0b1001, 0b1001, 0b001>;
 //                                 Op0    Op1     CRn     CRm    Op2
 let Requires = [{ {AArch64::ProcAppleA7} }] in
 def : RWSysReg<"CPM_IOACC_CTL_EL3", 0b11, 0b111, 0b1111, 0b0010, 0b000>;
+
+// Scalable Matrix Extension (SME)
+//                                 Op0   Op1    CRn     CRm     Op2
+let Requires = [{ {AArch64::FeatureSME} }] in {
+def : RWSysReg<"SMCR_EL1",         0b11, 0b000, 0b0001, 0b0010, 0b110>;
+def : RWSysReg<"SMCR_EL2",         0b11, 0b100, 0b0001, 0b0010, 0b110>;
+def : RWSysReg<"SMCR_EL3",         0b11, 0b110, 0b0001, 0b0010, 0b110>;
+def : RWSysReg<"SMCR_EL12",        0b11, 0b101, 0b0001, 0b0010, 0b110>;
+def : RWSysReg<"SVCR",             0b11, 0b011, 0b0100, 0b0010, 0b010>;
+def : RWSysReg<"SMPRI_EL1",        0b11, 0b000, 0b0001, 0b0010, 0b100>;
+def : RWSysReg<"SMPRIMAP_EL2",     0b11, 0b100, 0b0001, 0b0010, 0b101>;
+def : ROSysReg<"SMIDR_EL1",        0b11, 0b001, 0b0000, 0b0000, 0b110>;
+def : RWSysReg<"TPIDR2_EL0",       0b11, 0b011, 0b1101, 0b0000, 0b101>;
+} // HasSME
+
+// v8.4a MPAM and SME registers
+//                              Op0   Op1    CRn     CRm     Op2
+let Requires = [{ {AArch64::FeatureMPAM, AArch64::FeatureSME} }] in {
+def : RWSysReg<"MPAMSM_EL1",    0b11, 0b000, 0b1010, 0b0101, 0b011>;
+} // HasMPAM, HasSME

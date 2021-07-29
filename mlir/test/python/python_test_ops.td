@@ -25,4 +25,9 @@ def AttributedOp : TestOp<"attributed_op"> {
                    UnitAttr:$unit);
 }
 
+def PropertyOp : TestOp<"property_op"> {
+  let arguments = (ins I32Attr:$property,
+                   I32:$idx);
+}
+
 #endif // PYTHON_TEST_OPS

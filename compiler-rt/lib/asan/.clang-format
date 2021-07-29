@@ -1,3 +1,4 @@
 BasedOnStyle: Google
+ColumnLimit: 100
 AllowShortIfStatementsOnASingleLine: false
 IndentPPDirectives: AfterHash

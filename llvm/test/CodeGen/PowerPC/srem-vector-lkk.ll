@@ -98,7 +98,7 @@ define <4 x i16> @fold_srem_vec_1(<4 x i16> %x) {
 ; P9BE-NEXT:    addis r3, r2, .LCPI0_0@toc@ha
 ; P9BE-NEXT:    ori r4, r4, 63249
 ; P9BE-NEXT:    addi r3, r3, .LCPI0_0@toc@l
-; P9BE-NEXT:    lxvx v5, 0, r3
+; P9BE-NEXT:    lxv v5, 0(r3)
 ; P9BE-NEXT:    li r3, 6
 ; P9BE-NEXT:    vextuhlx r3, r3, v2
 ; P9BE-NEXT:    extsh r3, r3
@@ -323,7 +323,7 @@ define <4 x i16> @fold_srem_vec_2(<4 x i16> %x) {
 ; P9BE-NEXT:    mtvsrwz v4, r3
 ; P9BE-NEXT:    addis r3, r2, .LCPI1_0@toc@ha
 ; P9BE-NEXT:    addi r3, r3, .LCPI1_0@toc@l
-; P9BE-NEXT:    lxvx v5, 0, r3
+; P9BE-NEXT:    lxv v5, 0(r3)
 ; P9BE-NEXT:    li r3, 2
 ; P9BE-NEXT:    vextuhlx r3, r3, v2
 ; P9BE-NEXT:    extsh r3, r3
@@ -550,7 +550,7 @@ define <4 x i16> @combine_srem_sdiv(<4 x i16> %x) {
 ; P9BE-NEXT:    mtvsrwz v4, r3
 ; P9BE-NEXT:    addis r3, r2, .LCPI2_0@toc@ha
 ; P9BE-NEXT:    addi r3, r3, .LCPI2_0@toc@l
-; P9BE-NEXT:    lxvx v5, 0, r3
+; P9BE-NEXT:    lxv v5, 0(r3)
 ; P9BE-NEXT:    li r3, 2
 ; P9BE-NEXT:    vextuhlx r3, r3, v2
 ; P9BE-NEXT:    extsh r7, r3
@@ -781,7 +781,7 @@ define <4 x i16> @dont_fold_srem_power_of_two(<4 x i16> %x) {
 ; P9BE-NEXT:    addis r3, r2, .LCPI3_0@toc@ha
 ; P9BE-NEXT:    ori r4, r4, 37253
 ; P9BE-NEXT:    addi r3, r3, .LCPI3_0@toc@l
-; P9BE-NEXT:    lxvx v5, 0, r3
+; P9BE-NEXT:    lxv v5, 0(r3)
 ; P9BE-NEXT:    li r3, 6
 ; P9BE-NEXT:    vextuhlx r3, r3, v2
 ; P9BE-NEXT:    extsh r3, r3
@@ -975,7 +975,7 @@ define <4 x i16> @dont_fold_srem_one(<4 x i16> %x) {
 ; P9BE-NEXT:    addis r3, r2, .LCPI4_0@toc@ha
 ; P9BE-NEXT:    ori r4, r4, 30865
 ; P9BE-NEXT:    addi r3, r3, .LCPI4_0@toc@l
-; P9BE-NEXT:    lxvx v5, 0, r3
+; P9BE-NEXT:    lxv v5, 0(r3)
 ; P9BE-NEXT:    li r3, 2
 ; P9BE-NEXT:    vextuhlx r3, r3, v2
 ; P9BE-NEXT:    extsh r3, r3
@@ -1164,7 +1164,7 @@ define <4 x i16> @dont_fold_urem_i16_smax(<4 x i16> %x) {
 ; P9BE-NEXT:    mtvsrwz v4, r3
 ; P9BE-NEXT:    addis r3, r2, .LCPI5_0@toc@ha
 ; P9BE-NEXT:    addi r3, r3, .LCPI5_0@toc@l
-; P9BE-NEXT:    lxvx v5, 0, r3
+; P9BE-NEXT:    lxv v5, 0(r3)
 ; P9BE-NEXT:    li r3, 2
 ; P9BE-NEXT:    vextuhlx r3, r3, v2
 ; P9BE-NEXT:    extsh r3, r3

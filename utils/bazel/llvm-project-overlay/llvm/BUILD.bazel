@@ -914,6 +914,23 @@ cc_library(
 )
 
 cc_library(
+    name = "DWP",
+    srcs = glob([
+        "lib/DWP/*.cpp",
+        "lib/DWP/*.h",
+    ]),
+    hdrs = glob(["include/llvm/DWP/*.h"]),
+    copts = llvm_copts,
+    deps = [
+        ":DebugInfoDWARF",
+        ":MC",
+        ":Object",
+        ":Support",
+        ":Target",
+    ],
+)
+
+cc_library(
     name = "TransformUtils",
     srcs = glob([
         "lib/Transforms/Utils/*.cpp",
@@ -2726,27 +2743,9 @@ cc_binary(
     stamp = 0,
     deps = [
         ":AllTargetsCodeGens",
-        ":DebugInfoDWARF",
+        ":DWP",
         ":MC",
-        ":Object",
         ":Support",
-        ":Target",
-    ],
-)
-
-cc_binary(
-    name = "llvm-elfabi",
-    srcs = glob([
-        "tools/llvm-elfabi/*.cpp",
-        "tools/llvm-elfabi/*.h",
-    ]),
-    copts = llvm_copts,
-    stamp = 0,
-    deps = [
-        ":InterfaceStub",
-        ":Object",
-        ":Support",
-        ":TextAPI",
     ],
 )
 
@@ -3385,6 +3384,18 @@ binary_alias(
     binary = ":llvm-rc",
 )
 
+gentbl(
+    name = "ReadobjOptsTableGen",
+    strip_include_prefix = "tools/llvm-readobj",
+    tbl_outs = [(
+        "-gen-opt-parser-defs",
+        "tools/llvm-readobj/Opts.inc",
+    )],
+    tblgen = ":llvm-tblgen",
+    td_file = "tools/llvm-readobj/Opts.td",
+    td_srcs = ["include/llvm/Option/OptParser.td"],
+)
+
 cc_binary(
     name = "llvm-readobj",
     srcs = glob([
@@ -3401,6 +3412,8 @@ cc_binary(
         ":DebugInfoDWARF",
         ":Demangle",
         ":Object",
+        ":Option",
+        ":ReadobjOptsTableGen",
         ":Support",
     ],
 )

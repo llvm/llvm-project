@@ -53,58 +53,58 @@ class AArch64TargetAsmStreamer : public AArch64TargetStreamer {
     OS << "\t.variant_pcs\t" << Symbol->getName() << "\n";
   }
 
-  void EmitARM64WinCFIAllocStack(unsigned Size) override {
+  void emitARM64WinCFIAllocStack(unsigned Size) override {
     OS << "\t.seh_stackalloc\t" << Size << "\n";
   }
-  void EmitARM64WinCFISaveR19R20X(int Offset) override {
+  void emitARM64WinCFISaveR19R20X(int Offset) override {
     OS << "\t.seh_save_r19r20_x\t" << Offset << "\n";
   }
-  void EmitARM64WinCFISaveFPLR(int Offset) override {
+  void emitARM64WinCFISaveFPLR(int Offset) override {
     OS << "\t.seh_save_fplr\t" << Offset << "\n";
   }
-  void EmitARM64WinCFISaveFPLRX(int Offset) override {
+  void emitARM64WinCFISaveFPLRX(int Offset) override {
     OS << "\t.seh_save_fplr_x\t" << Offset << "\n";
   }
-  void EmitARM64WinCFISaveReg(unsigned Reg, int Offset) override {
+  void emitARM64WinCFISaveReg(unsigned Reg, int Offset) override {
     OS << "\t.seh_save_reg\tx" << Reg << ", " << Offset << "\n";
   }
-  void EmitARM64WinCFISaveRegX(unsigned Reg, int Offset) override {
+  void emitARM64WinCFISaveRegX(unsigned Reg, int Offset) override {
     OS << "\t.seh_save_reg_x\tx" << Reg << ", " << Offset << "\n";
   }
-  void EmitARM64WinCFISaveRegP(unsigned Reg, int Offset) override {
+  void emitARM64WinCFISaveRegP(unsigned Reg, int Offset) override {
     OS << "\t.seh_save_regp\tx" << Reg << ", " << Offset << "\n";
   }
-  void EmitARM64WinCFISaveRegPX(unsigned Reg, int Offset) override {
+  void emitARM64WinCFISaveRegPX(unsigned Reg, int Offset) override {
     OS << "\t.seh_save_regp_x\tx" << Reg << ", " << Offset << "\n";
   }
-  void EmitARM64WinCFISaveLRPair(unsigned Reg, int Offset) override {
+  void emitARM64WinCFISaveLRPair(unsigned Reg, int Offset) override {
     OS << "\t.seh_save_lrpair\tx" << Reg << ", " << Offset << "\n";
   }
-  void EmitARM64WinCFISaveFReg(unsigned Reg, int Offset) override {
+  void emitARM64WinCFISaveFReg(unsigned Reg, int Offset) override {
     OS << "\t.seh_save_freg\td" << Reg << ", " << Offset << "\n";
   }
-  void EmitARM64WinCFISaveFRegX(unsigned Reg, int Offset) override {
+  void emitARM64WinCFISaveFRegX(unsigned Reg, int Offset) override {
     OS << "\t.seh_save_freg_x\td" << Reg << ", " << Offset << "\n";
   }
-  void EmitARM64WinCFISaveFRegP(unsigned Reg, int Offset) override {
+  void emitARM64WinCFISaveFRegP(unsigned Reg, int Offset) override {
     OS << "\t.seh_save_fregp\td" << Reg << ", " << Offset << "\n";
   }
-  void EmitARM64WinCFISaveFRegPX(unsigned Reg, int Offset) override {
+  void emitARM64WinCFISaveFRegPX(unsigned Reg, int Offset) override {
     OS << "\t.seh_save_fregp_x\td" << Reg << ", " << Offset << "\n";
   }
-  void EmitARM64WinCFISetFP() override { OS << "\t.seh_set_fp\n"; }
-  void EmitARM64WinCFIAddFP(unsigned Size) override {
+  void emitARM64WinCFISetFP() override { OS << "\t.seh_set_fp\n"; }
+  void emitARM64WinCFIAddFP(unsigned Size) override {
     OS << "\t.seh_add_fp\t" << Size << "\n";
   }
-  void EmitARM64WinCFINop() override { OS << "\t.seh_nop\n"; }
-  void EmitARM64WinCFISaveNext() override { OS << "\t.seh_save_next\n"; }
-  void EmitARM64WinCFIPrologEnd() override { OS << "\t.seh_endprologue\n"; }
-  void EmitARM64WinCFIEpilogStart() override { OS << "\t.seh_startepilogue\n"; }
-  void EmitARM64WinCFIEpilogEnd() override { OS << "\t.seh_endepilogue\n"; }
-  void EmitARM64WinCFITrapFrame() override { OS << "\t.seh_trap_frame\n"; }
-  void EmitARM64WinCFIMachineFrame() override { OS << "\t.seh_pushframe\n"; }
-  void EmitARM64WinCFIContext() override { OS << "\t.seh_context\n"; }
-  void EmitARM64WinCFIClearUnwoundToCall() override {
+  void emitARM64WinCFINop() override { OS << "\t.seh_nop\n"; }
+  void emitARM64WinCFISaveNext() override { OS << "\t.seh_save_next\n"; }
+  void emitARM64WinCFIPrologEnd() override { OS << "\t.seh_endprologue\n"; }
+  void emitARM64WinCFIEpilogStart() override { OS << "\t.seh_startepilogue\n"; }
+  void emitARM64WinCFIEpilogEnd() override { OS << "\t.seh_endepilogue\n"; }
+  void emitARM64WinCFITrapFrame() override { OS << "\t.seh_trap_frame\n"; }
+  void emitARM64WinCFIMachineFrame() override { OS << "\t.seh_pushframe\n"; }
+  void emitARM64WinCFIContext() override { OS << "\t.seh_context\n"; }
+  void emitARM64WinCFIClearUnwoundToCall() override {
     OS << "\t.seh_clear_unwound_to_call\n";
   }
 
@@ -165,7 +165,7 @@ public:
   /// necessary.
   void emitInstruction(const MCInst &Inst,
                        const MCSubtargetInfo &STI) override {
-    EmitA64MappingSymbol();
+    emitA64MappingSymbol();
     MCELFStreamer::emitInstruction(Inst, STI);
   }
 
@@ -182,7 +182,7 @@ public:
       Inst >>= 8;
     }
 
-    EmitA64MappingSymbol();
+    emitA64MappingSymbol();
     MCELFStreamer::emitBytes(StringRef(Buffer, 4));
   }
 
@@ -217,18 +217,18 @@ private:
   void emitDataMappingSymbol() {
     if (LastEMS == EMS_Data)
       return;
-    EmitMappingSymbol("$d");
+    emitMappingSymbol("$d");
     LastEMS = EMS_Data;
   }
 
-  void EmitA64MappingSymbol() {
+  void emitA64MappingSymbol() {
     if (LastEMS == EMS_A64)
       return;
-    EmitMappingSymbol("$x");
+    emitMappingSymbol("$x");
     LastEMS = EMS_A64;
   }
 
-  void EmitMappingSymbol(StringRef Name) {
+  void emitMappingSymbol(StringRef Name) {
     auto *Symbol = cast<MCSymbolELF>(getContext().getOrCreateSymbol(
         Name + "." + Twine(MappingSymbolCounter++)));
     emitLabel(Symbol);

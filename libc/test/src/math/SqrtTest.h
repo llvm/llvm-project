@@ -39,7 +39,7 @@ public:
   void testDenormalValues(SqrtFunc func) {
     for (UIntType mant = 1; mant < HiddenBit; mant <<= 1) {
       FPBits denormal(T(0.0));
-      denormal.encoding.mantissa = mant;
+      denormal.setMantissa(mant);
 
       ASSERT_MPFR_MATCH(mpfr::Operation::Sqrt, T(denormal), func(T(denormal)),
                         T(0.5));

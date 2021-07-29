@@ -1,4 +1,7 @@
 #include "llvm/Support/DebugCounter.h"
+
+#include "DebugOptions.h"
+
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Support/Format.h"
 #include "llvm/Support/ManagedStatic.h"
@@ -40,17 +43,29 @@ private:
     }
   }
 };
+
+struct CreateDebugCounterOption {
+  static void *call() {
+    return new DebugCounterList(
+        "debug-counter", cl::Hidden,
+        cl::desc("Comma separated list of debug counter skip and count"),
+        cl::CommaSeparated, cl::ZeroOrMore,
+        cl::location(DebugCounter::instance()));
+  }
+};
 } // namespace
 
-// Create our command line option.
-static DebugCounterList DebugCounterOption(
-    "debug-counter", cl::Hidden,
-    cl::desc("Comma separated list of debug counter skip and count"),
-    cl::CommaSeparated, cl::ZeroOrMore, cl::location(DebugCounter::instance()));
+static ManagedStatic<DebugCounterList, CreateDebugCounterOption>
+    DebugCounterOption;
+static bool PrintDebugCounter;
 
-static cl::opt<bool> PrintDebugCounter(
-    "print-debug-counter", cl::Hidden, cl::init(false), cl::Optional,
-    cl::desc("Print out debug counter info after all counters accumulated"));
+void llvm::initDebugCounterOptions() {
+  *DebugCounterOption;
+  static cl::opt<bool, true> RegisterPrintDebugCounter(
+      "print-debug-counter", cl::Hidden, cl::location(PrintDebugCounter),
+      cl::init(false), cl::Optional,
+      cl::desc("Print out debug counter info after all counters accumulated"));
+}
 
 static ManagedStatic<DebugCounter> DC;
 

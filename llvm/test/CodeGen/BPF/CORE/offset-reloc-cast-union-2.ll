@@ -27,7 +27,7 @@ entry:
   call void @llvm.dbg.value(metadata %union.v3* %arg, metadata !30, metadata !DIExpression()), !dbg !31
   %0 = tail call %union.v3* @llvm.preserve.union.access.index.p0s_union.v3s.p0s_union.v3s(%union.v3* %arg, i32 1), !dbg !32, !llvm.preserve.access.index !24
   %d = getelementptr inbounds %union.v3, %union.v3* %0, i64 0, i32 0, !dbg !32
-  %1 = tail call i32* @llvm.preserve.array.access.index.p0i32.p0a40i32([40 x i32]* %d, i32 1, i32 4), !dbg !32, !llvm.preserve.access.index !11
+  %1 = tail call i32* @llvm.preserve.array.access.index.p0i32.p0a40i32([40 x i32]* elementtype([40 x i32]) %d, i32 1, i32 4), !dbg !32, !llvm.preserve.access.index !11
   %2 = bitcast i32* %1 to %union.v1*, !dbg !32
   %3 = tail call %union.v1* @llvm.preserve.union.access.index.p0s_union.v1s.p0s_union.v1s(%union.v1* %2, i32 1), !dbg !32, !llvm.preserve.access.index !6
   %b = getelementptr inbounds %union.v1, %union.v1* %3, i64 0, i32 0, !dbg !32

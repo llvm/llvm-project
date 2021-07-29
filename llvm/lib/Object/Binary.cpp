@@ -56,6 +56,7 @@ Expected<std::unique_ptr<Binary>> object::createBinary(MemoryBufferRef Buffer,
   case file_magic::elf_executable:
   case file_magic::elf_shared_object:
   case file_magic::elf_core:
+  case file_magic::goff_object:
   case file_magic::macho_object:
   case file_magic::macho_executable:
   case file_magic::macho_fixed_virtual_memory_shared_lib:

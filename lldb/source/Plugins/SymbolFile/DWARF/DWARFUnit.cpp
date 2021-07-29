@@ -490,7 +490,8 @@ void DWARFUnit::SetRangesBase(dw_addr_t ranges_base) {
   m_ranges_base = ranges_base;
 }
 
-const llvm::Optional<llvm::DWARFDebugRnglistTable> &DWARFUnit::GetRnglist() {
+const llvm::Optional<llvm::DWARFDebugRnglistTable> &
+DWARFUnit::GetRnglistTable() {
   if (GetVersion() >= 5 && !m_rnglist_table_done) {
     m_rnglist_table_done = true;
     if (auto table_or_error =
@@ -508,7 +509,7 @@ const llvm::Optional<llvm::DWARFDebugRnglistTable> &DWARFUnit::GetRnglist() {
 
 // This function is called only for DW_FORM_rnglistx.
 llvm::Expected<uint64_t> DWARFUnit::GetRnglistOffset(uint32_t Index) {
-  if (!GetRnglist())
+  if (!GetRnglistTable())
     return llvm::createStringError(errc::invalid_argument,
                                    "missing or invalid range list table");
   if (!m_ranges_base)
@@ -516,14 +517,14 @@ llvm::Expected<uint64_t> DWARFUnit::GetRnglistOffset(uint32_t Index) {
                                    "DW_FORM_rnglistx cannot be used without "
                                    "DW_AT_rnglists_base for CU at 0x%8.8x",
                                    GetOffset());
-  if (llvm::Optional<uint64_t> off = GetRnglist()->getOffsetEntry(
+  if (llvm::Optional<uint64_t> off = GetRnglistTable()->getOffsetEntry(
           m_dwarf.GetDWARFContext().getOrLoadRngListsData().GetAsLLVM(), Index))
     return *off + m_ranges_base;
   return llvm::createStringError(
       errc::invalid_argument,
       "invalid range list table index %u; OffsetEntryCount is %u, "
       "DW_AT_rnglists_base is %" PRIu64,
-      Index, GetRnglist()->getOffsetEntryCount(), m_ranges_base);
+      Index, GetRnglistTable()->getOffsetEntryCount(), m_ranges_base);
 }
 
 void DWARFUnit::SetStrOffsetsBase(dw_offset_t str_offsets_base) {
@@ -967,11 +968,11 @@ DWARFUnit::FindRnglistFromOffset(dw_offset_t offset) {
     return ranges;
   }
 
-  if (!GetRnglist())
+  if (!GetRnglistTable())
     return llvm::createStringError(errc::invalid_argument,
                                    "missing or invalid range list table");
 
-  auto range_list_or_error = GetRnglist()->findList(
+  auto range_list_or_error = GetRnglistTable()->findList(
       m_dwarf.GetDWARFContext().getOrLoadRngListsData().GetAsLLVM(), offset);
   if (!range_list_or_error)
     return range_list_or_error.takeError();

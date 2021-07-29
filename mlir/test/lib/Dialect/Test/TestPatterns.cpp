@@ -44,6 +44,11 @@ static bool getFirstI32Result(Operation *op, Value &value) {
 
 static Value bindNativeCodeCallResult(Value value) { return value; }
 
+static SmallVector<Value, 2> bindMultipleNativeCodeCallResult(Value input1,
+                                                              Value input2) {
+  return SmallVector<Value, 2>({input2, input1});
+}
+
 // Test that natives calls are only called once during rewrites.
 // OpM_Test will return Pi, increased by 1 for each subsequent calls.
 // This let us check the number of times OpM_Test was called by inspecting

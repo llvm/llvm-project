@@ -8,11 +8,11 @@
 
 #include "src/fenv/feholdexcept.h"
 
-#include "utils/FPUtil/FEnv.h"
+#include "utils/FPUtil/FEnvUtils.h"
+#include "utils/FPUtil/TestHelpers.h"
 #include "utils/UnitTest/Test.h"
 
 #include <fenv.h>
-#include <signal.h>
 
 TEST(LlvmLibcFEnvTest, RaiseAndCrash) {
   int excepts[] = {FE_DIVBYZERO, FE_INVALID, FE_INEXACT, FE_OVERFLOW,
@@ -28,10 +28,20 @@ TEST(LlvmLibcFEnvTest, RaiseAndCrash) {
     // should not crash/invoke the exception handler.
     ASSERT_EQ(__llvm_libc::fputil::raiseExcept(e), 0);
 
-    // When we put back the saved env which has the exception enabled, it
-    // should crash with SIGFPE.
-    __llvm_libc::fputil::setEnv(&env);
-    ASSERT_DEATH([=] { __llvm_libc::fputil::raiseExcept(e); },
-                 WITH_SIGNAL(SIGFPE));
+    ASSERT_RAISES_FP_EXCEPT([=] {
+      // When we put back the saved env, which has the exception enabled, it
+      // should crash with SIGFPE. Note that we set the old environment
+      // back inside this closure because in some test frameworks like Fuchsia's
+      // zxtest, this test translates to a death test in which this closure is
+      // run in a different thread. So, we set the old environment inside
+      // this closure so that the exception gets enabled for the thread running
+      // this closure.
+      __llvm_libc::fputil::setEnv(&env);
+      __llvm_libc::fputil::raiseExcept(e);
+    });
+
+    // Cleanup
+    __llvm_libc::fputil::disableExcept(FE_ALL_EXCEPT);
+    ASSERT_EQ(__llvm_libc::fputil::clearExcept(FE_ALL_EXCEPT), 0);
   }
 }

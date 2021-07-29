@@ -11,6 +11,12 @@
 .globl _Z3fooi
 .weak _Z3bari
 
+.functype _Z3bari (i32) -> ()
+
+_Z3fooi:
+  .functype _Z3fooi (i32) -> ()
+  end_function
+
 _start:
   .functype _start () -> ()
   i32.const 1
@@ -18,12 +24,6 @@ _start:
   i32.const 1
   call _Z3bari
   end_function
-
-_Z3fooi:
-  .functype _Z3fooi (i32) -> ()
-  end_function
-
-.functype _Z3bari (i32) -> ()
 
 # CHECK:        - Type:            EXPORT
 # CHECK-NEXT:     Exports:

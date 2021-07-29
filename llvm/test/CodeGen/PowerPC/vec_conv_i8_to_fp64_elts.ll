@@ -27,7 +27,7 @@ define <2 x double> @test2elt(i16 %a.coerce) local_unnamed_addr #0 {
 ; CHECK-P9-NEXT:    addis r3, r2, .LCPI0_0@toc@ha
 ; CHECK-P9-NEXT:    xxlxor v4, v4, v4
 ; CHECK-P9-NEXT:    addi r3, r3, .LCPI0_0@toc@l
-; CHECK-P9-NEXT:    lxvx v3, 0, r3
+; CHECK-P9-NEXT:    lxv v3, 0(r3)
 ; CHECK-P9-NEXT:    vperm v2, v4, v2, v3
 ; CHECK-P9-NEXT:    xvcvuxddp v2, v2
 ; CHECK-P9-NEXT:    blr
@@ -38,7 +38,7 @@ define <2 x double> @test2elt(i16 %a.coerce) local_unnamed_addr #0 {
 ; CHECK-BE-NEXT:    addis r3, r2, .LCPI0_0@toc@ha
 ; CHECK-BE-NEXT:    xxlxor v4, v4, v4
 ; CHECK-BE-NEXT:    addi r3, r3, .LCPI0_0@toc@l
-; CHECK-BE-NEXT:    lxvx v3, 0, r3
+; CHECK-BE-NEXT:    lxv v3, 0(r3)
 ; CHECK-BE-NEXT:    vperm v2, v4, v2, v3
 ; CHECK-BE-NEXT:    xvcvuxddp v2, v2
 ; CHECK-BE-NEXT:    blr
@@ -76,12 +76,12 @@ define void @test4elt(<4 x double>* noalias nocapture sret(<4 x double>) %agg.re
 ; CHECK-P9-NEXT:    addis r4, r2, .LCPI1_0@toc@ha
 ; CHECK-P9-NEXT:    xxlxor v4, v4, v4
 ; CHECK-P9-NEXT:    addi r4, r4, .LCPI1_0@toc@l
-; CHECK-P9-NEXT:    lxvx v3, 0, r4
+; CHECK-P9-NEXT:    lxv v3, 0(r4)
 ; CHECK-P9-NEXT:    addis r4, r2, .LCPI1_1@toc@ha
 ; CHECK-P9-NEXT:    addi r4, r4, .LCPI1_1@toc@l
 ; CHECK-P9-NEXT:    vperm v3, v4, v2, v3
 ; CHECK-P9-NEXT:    xvcvuxddp vs0, v3
-; CHECK-P9-NEXT:    lxvx v3, 0, r4
+; CHECK-P9-NEXT:    lxv v3, 0(r4)
 ; CHECK-P9-NEXT:    vperm v2, v4, v2, v3
 ; CHECK-P9-NEXT:    stxv vs0, 0(r3)
 ; CHECK-P9-NEXT:    xvcvuxddp vs1, v2
@@ -94,12 +94,12 @@ define void @test4elt(<4 x double>* noalias nocapture sret(<4 x double>) %agg.re
 ; CHECK-BE-NEXT:    addis r4, r2, .LCPI1_0@toc@ha
 ; CHECK-BE-NEXT:    xxlxor v4, v4, v4
 ; CHECK-BE-NEXT:    addi r4, r4, .LCPI1_0@toc@l
-; CHECK-BE-NEXT:    lxvx v3, 0, r4
+; CHECK-BE-NEXT:    lxv v3, 0(r4)
 ; CHECK-BE-NEXT:    addis r4, r2, .LCPI1_1@toc@ha
 ; CHECK-BE-NEXT:    addi r4, r4, .LCPI1_1@toc@l
 ; CHECK-BE-NEXT:    vperm v3, v4, v2, v3
 ; CHECK-BE-NEXT:    xvcvuxddp vs0, v3
-; CHECK-BE-NEXT:    lxvx v3, 0, r4
+; CHECK-BE-NEXT:    lxv v3, 0(r4)
 ; CHECK-BE-NEXT:    vperm v2, v4, v2, v3
 ; CHECK-BE-NEXT:    stxv vs0, 0(r3)
 ; CHECK-BE-NEXT:    xvcvuxddp vs1, v2
@@ -156,24 +156,24 @@ define void @test8elt(<8 x double>* noalias nocapture sret(<8 x double>) %agg.re
 ; CHECK-P9-NEXT:    addis r4, r2, .LCPI2_0@toc@ha
 ; CHECK-P9-NEXT:    xxlxor v4, v4, v4
 ; CHECK-P9-NEXT:    addi r4, r4, .LCPI2_0@toc@l
-; CHECK-P9-NEXT:    lxvx v3, 0, r4
+; CHECK-P9-NEXT:    lxv v3, 0(r4)
 ; CHECK-P9-NEXT:    addis r4, r2, .LCPI2_1@toc@ha
 ; CHECK-P9-NEXT:    addi r4, r4, .LCPI2_1@toc@l
 ; CHECK-P9-NEXT:    vperm v3, v4, v2, v3
 ; CHECK-P9-NEXT:    xvcvuxddp vs0, v3
-; CHECK-P9-NEXT:    lxvx v3, 0, r4
+; CHECK-P9-NEXT:    lxv v3, 0(r4)
 ; CHECK-P9-NEXT:    addis r4, r2, .LCPI2_2@toc@ha
 ; CHECK-P9-NEXT:    addi r4, r4, .LCPI2_2@toc@l
 ; CHECK-P9-NEXT:    vperm v3, v4, v2, v3
 ; CHECK-P9-NEXT:    stxv vs0, 0(r3)
 ; CHECK-P9-NEXT:    xvcvuxddp vs1, v3
-; CHECK-P9-NEXT:    lxvx v3, 0, r4
+; CHECK-P9-NEXT:    lxv v3, 0(r4)
 ; CHECK-P9-NEXT:    addis r4, r2, .LCPI2_3@toc@ha
 ; CHECK-P9-NEXT:    addi r4, r4, .LCPI2_3@toc@l
 ; CHECK-P9-NEXT:    vperm v3, v4, v2, v3
 ; CHECK-P9-NEXT:    stxv vs1, 16(r3)
 ; CHECK-P9-NEXT:    xvcvuxddp vs2, v3
-; CHECK-P9-NEXT:    lxvx v3, 0, r4
+; CHECK-P9-NEXT:    lxv v3, 0(r4)
 ; CHECK-P9-NEXT:    vperm v2, v4, v2, v3
 ; CHECK-P9-NEXT:    stxv vs2, 32(r3)
 ; CHECK-P9-NEXT:    xvcvuxddp vs3, v2
@@ -186,24 +186,24 @@ define void @test8elt(<8 x double>* noalias nocapture sret(<8 x double>) %agg.re
 ; CHECK-BE-NEXT:    addis r4, r2, .LCPI2_0@toc@ha
 ; CHECK-BE-NEXT:    xxlxor v4, v4, v4
 ; CHECK-BE-NEXT:    addi r4, r4, .LCPI2_0@toc@l
-; CHECK-BE-NEXT:    lxvx v3, 0, r4
+; CHECK-BE-NEXT:    lxv v3, 0(r4)
 ; CHECK-BE-NEXT:    addis r4, r2, .LCPI2_1@toc@ha
 ; CHECK-BE-NEXT:    addi r4, r4, .LCPI2_1@toc@l
 ; CHECK-BE-NEXT:    vperm v3, v4, v2, v3
 ; CHECK-BE-NEXT:    xvcvuxddp vs0, v3
-; CHECK-BE-NEXT:    lxvx v3, 0, r4
+; CHECK-BE-NEXT:    lxv v3, 0(r4)
 ; CHECK-BE-NEXT:    addis r4, r2, .LCPI2_2@toc@ha
 ; CHECK-BE-NEXT:    addi r4, r4, .LCPI2_2@toc@l
 ; CHECK-BE-NEXT:    vperm v3, v4, v2, v3
 ; CHECK-BE-NEXT:    stxv vs0, 0(r3)
 ; CHECK-BE-NEXT:    xvcvuxddp vs1, v3
-; CHECK-BE-NEXT:    lxvx v3, 0, r4
+; CHECK-BE-NEXT:    lxv v3, 0(r4)
 ; CHECK-BE-NEXT:    addis r4, r2, .LCPI2_3@toc@ha
 ; CHECK-BE-NEXT:    addi r4, r4, .LCPI2_3@toc@l
 ; CHECK-BE-NEXT:    vperm v3, v4, v2, v3
 ; CHECK-BE-NEXT:    stxv vs1, 16(r3)
 ; CHECK-BE-NEXT:    xvcvuxddp vs2, v3
-; CHECK-BE-NEXT:    lxvx v3, 0, r4
+; CHECK-BE-NEXT:    lxv v3, 0(r4)
 ; CHECK-BE-NEXT:    vperm v2, v4, v2, v3
 ; CHECK-BE-NEXT:    stxv vs2, 32(r3)
 ; CHECK-BE-NEXT:    xvcvuxddp vs3, v2
@@ -290,48 +290,48 @@ define void @test16elt(<16 x double>* noalias nocapture sret(<16 x double>) %agg
 ; CHECK-P9-NEXT:    addis r4, r2, .LCPI3_0@toc@ha
 ; CHECK-P9-NEXT:    xxlxor v4, v4, v4
 ; CHECK-P9-NEXT:    addi r4, r4, .LCPI3_0@toc@l
-; CHECK-P9-NEXT:    lxvx v3, 0, r4
+; CHECK-P9-NEXT:    lxv v3, 0(r4)
 ; CHECK-P9-NEXT:    addis r4, r2, .LCPI3_1@toc@ha
 ; CHECK-P9-NEXT:    addi r4, r4, .LCPI3_1@toc@l
 ; CHECK-P9-NEXT:    vperm v3, v4, v2, v3
 ; CHECK-P9-NEXT:    xvcvuxddp vs0, v3
-; CHECK-P9-NEXT:    lxvx v3, 0, r4
+; CHECK-P9-NEXT:    lxv v3, 0(r4)
 ; CHECK-P9-NEXT:    addis r4, r2, .LCPI3_2@toc@ha
 ; CHECK-P9-NEXT:    addi r4, r4, .LCPI3_2@toc@l
 ; CHECK-P9-NEXT:    vperm v3, v4, v2, v3
 ; CHECK-P9-NEXT:    stxv vs0, 0(r3)
 ; CHECK-P9-NEXT:    xvcvuxddp vs1, v3
-; CHECK-P9-NEXT:    lxvx v3, 0, r4
+; CHECK-P9-NEXT:    lxv v3, 0(r4)
 ; CHECK-P9-NEXT:    addis r4, r2, .LCPI3_3@toc@ha
 ; CHECK-P9-NEXT:    addi r4, r4, .LCPI3_3@toc@l
 ; CHECK-P9-NEXT:    vperm v3, v4, v2, v3
 ; CHECK-P9-NEXT:    stxv vs1, 16(r3)
 ; CHECK-P9-NEXT:    xvcvuxddp vs2, v3
-; CHECK-P9-NEXT:    lxvx v3, 0, r4
+; CHECK-P9-NEXT:    lxv v3, 0(r4)
 ; CHECK-P9-NEXT:    addis r4, r2, .LCPI3_4@toc@ha
 ; CHECK-P9-NEXT:    addi r4, r4, .LCPI3_4@toc@l
 ; CHECK-P9-NEXT:    vperm v3, v4, v2, v3
 ; CHECK-P9-NEXT:    stxv vs2, 32(r3)
 ; CHECK-P9-NEXT:    xvcvuxddp vs3, v3
-; CHECK-P9-NEXT:    lxvx v3, 0, r4
+; CHECK-P9-NEXT:    lxv v3, 0(r4)
 ; CHECK-P9-NEXT:    addis r4, r2, .LCPI3_5@toc@ha
 ; CHECK-P9-NEXT:    addi r4, r4, .LCPI3_5@toc@l
 ; CHECK-P9-NEXT:    vperm v3, v4, v2, v3
 ; CHECK-P9-NEXT:    stxv vs3, 48(r3)
 ; CHECK-P9-NEXT:    xvcvuxddp vs4, v3
-; CHECK-P9-NEXT:    lxvx v3, 0, r4
+; CHECK-P9-NEXT:    lxv v3, 0(r4)
 ; CHECK-P9-NEXT:    addis r4, r2, .LCPI3_6@toc@ha
 ; CHECK-P9-NEXT:    addi r4, r4, .LCPI3_6@toc@l
 ; CHECK-P9-NEXT:    vperm v3, v4, v2, v3
 ; CHECK-P9-NEXT:    stxv vs4, 64(r3)
 ; CHECK-P9-NEXT:    xvcvuxddp vs5, v3
-; CHECK-P9-NEXT:    lxvx v3, 0, r4
+; CHECK-P9-NEXT:    lxv v3, 0(r4)
 ; CHECK-P9-NEXT:    addis r4, r2, .LCPI3_7@toc@ha
 ; CHECK-P9-NEXT:    addi r4, r4, .LCPI3_7@toc@l
 ; CHECK-P9-NEXT:    vperm v3, v4, v2, v3
 ; CHECK-P9-NEXT:    stxv vs5, 80(r3)
 ; CHECK-P9-NEXT:    xvcvuxddp vs6, v3
-; CHECK-P9-NEXT:    lxvx v3, 0, r4
+; CHECK-P9-NEXT:    lxv v3, 0(r4)
 ; CHECK-P9-NEXT:    vperm v2, v4, v2, v3
 ; CHECK-P9-NEXT:    stxv vs6, 96(r3)
 ; CHECK-P9-NEXT:    xvcvuxddp vs7, v2
@@ -343,48 +343,48 @@ define void @test16elt(<16 x double>* noalias nocapture sret(<16 x double>) %agg
 ; CHECK-BE-NEXT:    addis r4, r2, .LCPI3_0@toc@ha
 ; CHECK-BE-NEXT:    xxlxor v4, v4, v4
 ; CHECK-BE-NEXT:    addi r4, r4, .LCPI3_0@toc@l
-; CHECK-BE-NEXT:    lxvx v3, 0, r4
+; CHECK-BE-NEXT:    lxv v3, 0(r4)
 ; CHECK-BE-NEXT:    addis r4, r2, .LCPI3_1@toc@ha
 ; CHECK-BE-NEXT:    addi r4, r4, .LCPI3_1@toc@l
 ; CHECK-BE-NEXT:    vperm v3, v4, v2, v3
 ; CHECK-BE-NEXT:    xvcvuxddp vs0, v3
-; CHECK-BE-NEXT:    lxvx v3, 0, r4
+; CHECK-BE-NEXT:    lxv v3, 0(r4)
 ; CHECK-BE-NEXT:    addis r4, r2, .LCPI3_2@toc@ha
 ; CHECK-BE-NEXT:    addi r4, r4, .LCPI3_2@toc@l
 ; CHECK-BE-NEXT:    vperm v3, v4, v2, v3
 ; CHECK-BE-NEXT:    stxv vs0, 0(r3)
 ; CHECK-BE-NEXT:    xvcvuxddp vs1, v3
-; CHECK-BE-NEXT:    lxvx v3, 0, r4
+; CHECK-BE-NEXT:    lxv v3, 0(r4)
 ; CHECK-BE-NEXT:    addis r4, r2, .LCPI3_3@toc@ha
 ; CHECK-BE-NEXT:    addi r4, r4, .LCPI3_3@toc@l
 ; CHECK-BE-NEXT:    vperm v3, v4, v2, v3
 ; CHECK-BE-NEXT:    stxv vs1, 16(r3)
 ; CHECK-BE-NEXT:    xvcvuxddp vs2, v3
-; CHECK-BE-NEXT:    lxvx v3, 0, r4
+; CHECK-BE-NEXT:    lxv v3, 0(r4)
 ; CHECK-BE-NEXT:    addis r4, r2, .LCPI3_4@toc@ha
 ; CHECK-BE-NEXT:    addi r4, r4, .LCPI3_4@toc@l
 ; CHECK-BE-NEXT:    vperm v3, v4, v2, v3
 ; CHECK-BE-NEXT:    stxv vs2, 32(r3)
 ; CHECK-BE-NEXT:    xvcvuxddp vs3, v3
-; CHECK-BE-NEXT:    lxvx v3, 0, r4
+; CHECK-BE-NEXT:    lxv v3, 0(r4)
 ; CHECK-BE-NEXT:    addis r4, r2, .LCPI3_5@toc@ha
 ; CHECK-BE-NEXT:    addi r4, r4, .LCPI3_5@toc@l
 ; CHECK-BE-NEXT:    vperm v3, v4, v2, v3
 ; CHECK-BE-NEXT:    stxv vs3, 48(r3)
 ; CHECK-BE-NEXT:    xvcvuxddp vs4, v3
-; CHECK-BE-NEXT:    lxvx v3, 0, r4
+; CHECK-BE-NEXT:    lxv v3, 0(r4)
 ; CHECK-BE-NEXT:    addis r4, r2, .LCPI3_6@toc@ha
 ; CHECK-BE-NEXT:    addi r4, r4, .LCPI3_6@toc@l
 ; CHECK-BE-NEXT:    vperm v3, v4, v2, v3
 ; CHECK-BE-NEXT:    stxv vs4, 64(r3)
 ; CHECK-BE-NEXT:    xvcvuxddp vs5, v3
-; CHECK-BE-NEXT:    lxvx v3, 0, r4
+; CHECK-BE-NEXT:    lxv v3, 0(r4)
 ; CHECK-BE-NEXT:    addis r4, r2, .LCPI3_7@toc@ha
 ; CHECK-BE-NEXT:    addi r4, r4, .LCPI3_7@toc@l
 ; CHECK-BE-NEXT:    vperm v3, v4, v2, v3
 ; CHECK-BE-NEXT:    stxv vs5, 80(r3)
 ; CHECK-BE-NEXT:    xvcvuxddp vs6, v3
-; CHECK-BE-NEXT:    lxvx v3, 0, r4
+; CHECK-BE-NEXT:    lxv v3, 0(r4)
 ; CHECK-BE-NEXT:    vperm v2, v4, v2, v3
 ; CHECK-BE-NEXT:    stxv vs6, 96(r3)
 ; CHECK-BE-NEXT:    xvcvuxddp vs7, v2
@@ -418,7 +418,7 @@ define <2 x double> @test2elt_signed(i16 %a.coerce) local_unnamed_addr #0 {
 ; CHECK-P9-NEXT:    mtvsrwz v2, r3
 ; CHECK-P9-NEXT:    addis r3, r2, .LCPI4_0@toc@ha
 ; CHECK-P9-NEXT:    addi r3, r3, .LCPI4_0@toc@l
-; CHECK-P9-NEXT:    lxvx v3, 0, r3
+; CHECK-P9-NEXT:    lxv v3, 0(r3)
 ; CHECK-P9-NEXT:    vperm v2, v2, v2, v3
 ; CHECK-P9-NEXT:    vextsb2d v2, v2
 ; CHECK-P9-NEXT:    xvcvsxddp v2, v2
@@ -429,7 +429,7 @@ define <2 x double> @test2elt_signed(i16 %a.coerce) local_unnamed_addr #0 {
 ; CHECK-BE-NEXT:    mtvsrwz v2, r3
 ; CHECK-BE-NEXT:    addis r3, r2, .LCPI4_0@toc@ha
 ; CHECK-BE-NEXT:    addi r3, r3, .LCPI4_0@toc@l
-; CHECK-BE-NEXT:    lxvx v3, 0, r3
+; CHECK-BE-NEXT:    lxv v3, 0(r3)
 ; CHECK-BE-NEXT:    vperm v2, v2, v2, v3
 ; CHECK-BE-NEXT:    vextsb2d v2, v2
 ; CHECK-BE-NEXT:    xvcvsxddp v2, v2
@@ -474,13 +474,13 @@ define void @test4elt_signed(<4 x double>* noalias nocapture sret(<4 x double>) 
 ; CHECK-P9-NEXT:    mtvsrwz v2, r4
 ; CHECK-P9-NEXT:    addis r4, r2, .LCPI5_0@toc@ha
 ; CHECK-P9-NEXT:    addi r4, r4, .LCPI5_0@toc@l
-; CHECK-P9-NEXT:    lxvx v3, 0, r4
+; CHECK-P9-NEXT:    lxv v3, 0(r4)
 ; CHECK-P9-NEXT:    addis r4, r2, .LCPI5_1@toc@ha
 ; CHECK-P9-NEXT:    addi r4, r4, .LCPI5_1@toc@l
 ; CHECK-P9-NEXT:    vperm v3, v2, v2, v3
 ; CHECK-P9-NEXT:    vextsb2d v3, v3
 ; CHECK-P9-NEXT:    xvcvsxddp vs0, v3
-; CHECK-P9-NEXT:    lxvx v3, 0, r4
+; CHECK-P9-NEXT:    lxv v3, 0(r4)
 ; CHECK-P9-NEXT:    vperm v2, v2, v2, v3
 ; CHECK-P9-NEXT:    stxv vs0, 0(r3)
 ; CHECK-P9-NEXT:    vextsb2d v2, v2
@@ -494,13 +494,13 @@ define void @test4elt_signed(<4 x double>* noalias nocapture sret(<4 x double>) 
 ; CHECK-BE-NEXT:    addis r4, r2, .LCPI5_0@toc@ha
 ; CHECK-BE-NEXT:    xxlxor v3, v3, v3
 ; CHECK-BE-NEXT:    addi r4, r4, .LCPI5_0@toc@l
-; CHECK-BE-NEXT:    lxvx v4, 0, r4
+; CHECK-BE-NEXT:    lxv v4, 0(r4)
 ; CHECK-BE-NEXT:    addis r4, r2, .LCPI5_1@toc@ha
 ; CHECK-BE-NEXT:    addi r4, r4, .LCPI5_1@toc@l
 ; CHECK-BE-NEXT:    vperm v3, v3, v2, v4
 ; CHECK-BE-NEXT:    vextsb2d v3, v3
 ; CHECK-BE-NEXT:    xvcvsxddp vs0, v3
-; CHECK-BE-NEXT:    lxvx v3, 0, r4
+; CHECK-BE-NEXT:    lxv v3, 0(r4)
 ; CHECK-BE-NEXT:    vperm v2, v2, v2, v3
 ; CHECK-BE-NEXT:    stxv vs0, 16(r3)
 ; CHECK-BE-NEXT:    vextsb2d v2, v2
@@ -568,27 +568,27 @@ define void @test8elt_signed(<8 x double>* noalias nocapture sret(<8 x double>) 
 ; CHECK-P9-NEXT:    mtvsrd v2, r4
 ; CHECK-P9-NEXT:    addis r4, r2, .LCPI6_0@toc@ha
 ; CHECK-P9-NEXT:    addi r4, r4, .LCPI6_0@toc@l
-; CHECK-P9-NEXT:    lxvx v3, 0, r4
+; CHECK-P9-NEXT:    lxv v3, 0(r4)
 ; CHECK-P9-NEXT:    addis r4, r2, .LCPI6_1@toc@ha
 ; CHECK-P9-NEXT:    addi r4, r4, .LCPI6_1@toc@l
 ; CHECK-P9-NEXT:    vperm v3, v2, v2, v3
 ; CHECK-P9-NEXT:    vextsb2d v3, v3
 ; CHECK-P9-NEXT:    xvcvsxddp vs0, v3
-; CHECK-P9-NEXT:    lxvx v3, 0, r4
+; CHECK-P9-NEXT:    lxv v3, 0(r4)
 ; CHECK-P9-NEXT:    addis r4, r2, .LCPI6_2@toc@ha
 ; CHECK-P9-NEXT:    addi r4, r4, .LCPI6_2@toc@l
 ; CHECK-P9-NEXT:    vperm v3, v2, v2, v3
 ; CHECK-P9-NEXT:    stxv vs0, 0(r3)
 ; CHECK-P9-NEXT:    vextsb2d v3, v3
 ; CHECK-P9-NEXT:    xvcvsxddp vs1, v3
-; CHECK-P9-NEXT:    lxvx v3, 0, r4
+; CHECK-P9-NEXT:    lxv v3, 0(r4)
 ; CHECK-P9-NEXT:    addis r4, r2, .LCPI6_3@toc@ha
 ; CHECK-P9-NEXT:    addi r4, r4, .LCPI6_3@toc@l
 ; CHECK-P9-NEXT:    vperm v3, v2, v2, v3
 ; CHECK-P9-NEXT:    stxv vs1, 16(r3)
 ; CHECK-P9-NEXT:    vextsb2d v3, v3
 ; CHECK-P9-NEXT:    xvcvsxddp vs2, v3
-; CHECK-P9-NEXT:    lxvx v3, 0, r4
+; CHECK-P9-NEXT:    lxv v3, 0(r4)
 ; CHECK-P9-NEXT:    vperm v2, v2, v2, v3
 ; CHECK-P9-NEXT:    stxv vs2, 32(r3)
 ; CHECK-P9-NEXT:    vextsb2d v2, v2
@@ -602,27 +602,27 @@ define void @test8elt_signed(<8 x double>* noalias nocapture sret(<8 x double>) 
 ; CHECK-BE-NEXT:    addis r4, r2, .LCPI6_0@toc@ha
 ; CHECK-BE-NEXT:    xxlxor v4, v4, v4
 ; CHECK-BE-NEXT:    addi r4, r4, .LCPI6_0@toc@l
-; CHECK-BE-NEXT:    lxvx v3, 0, r4
+; CHECK-BE-NEXT:    lxv v3, 0(r4)
 ; CHECK-BE-NEXT:    addis r4, r2, .LCPI6_1@toc@ha
 ; CHECK-BE-NEXT:    addi r4, r4, .LCPI6_1@toc@l
 ; CHECK-BE-NEXT:    vperm v3, v4, v2, v3
 ; CHECK-BE-NEXT:    vextsb2d v3, v3
 ; CHECK-BE-NEXT:    xvcvsxddp vs0, v3
-; CHECK-BE-NEXT:    lxvx v3, 0, r4
+; CHECK-BE-NEXT:    lxv v3, 0(r4)
 ; CHECK-BE-NEXT:    addis r4, r2, .LCPI6_2@toc@ha
 ; CHECK-BE-NEXT:    addi r4, r4, .LCPI6_2@toc@l
 ; CHECK-BE-NEXT:    vperm v3, v4, v2, v3
 ; CHECK-BE-NEXT:    stxv vs0, 16(r3)
 ; CHECK-BE-NEXT:    vextsb2d v3, v3
 ; CHECK-BE-NEXT:    xvcvsxddp vs1, v3
-; CHECK-BE-NEXT:    lxvx v3, 0, r4
+; CHECK-BE-NEXT:    lxv v3, 0(r4)
 ; CHECK-BE-NEXT:    addis r4, r2, .LCPI6_3@toc@ha
 ; CHECK-BE-NEXT:    addi r4, r4, .LCPI6_3@toc@l
 ; CHECK-BE-NEXT:    vperm v3, v2, v2, v3
 ; CHECK-BE-NEXT:    stxv vs1, 48(r3)
 ; CHECK-BE-NEXT:    vextsb2d v3, v3
 ; CHECK-BE-NEXT:    xvcvsxddp vs2, v3
-; CHECK-BE-NEXT:    lxvx v3, 0, r4
+; CHECK-BE-NEXT:    lxv v3, 0(r4)
 ; CHECK-BE-NEXT:    vperm v2, v2, v2, v3
 ; CHECK-BE-NEXT:    stxv vs2, 0(r3)
 ; CHECK-BE-NEXT:    vextsb2d v2, v2
@@ -728,55 +728,55 @@ define void @test16elt_signed(<16 x double>* noalias nocapture sret(<16 x double
 ; CHECK-P9:       # %bb.0: # %entry
 ; CHECK-P9-NEXT:    addis r4, r2, .LCPI7_0@toc@ha
 ; CHECK-P9-NEXT:    addi r4, r4, .LCPI7_0@toc@l
-; CHECK-P9-NEXT:    lxvx v3, 0, r4
+; CHECK-P9-NEXT:    lxv v3, 0(r4)
 ; CHECK-P9-NEXT:    addis r4, r2, .LCPI7_1@toc@ha
 ; CHECK-P9-NEXT:    addi r4, r4, .LCPI7_1@toc@l
 ; CHECK-P9-NEXT:    vperm v3, v2, v2, v3
 ; CHECK-P9-NEXT:    vextsb2d v3, v3
 ; CHECK-P9-NEXT:    xvcvsxddp vs0, v3
-; CHECK-P9-NEXT:    lxvx v3, 0, r4
+; CHECK-P9-NEXT:    lxv v3, 0(r4)
 ; CHECK-P9-NEXT:    addis r4, r2, .LCPI7_2@toc@ha
 ; CHECK-P9-NEXT:    addi r4, r4, .LCPI7_2@toc@l
 ; CHECK-P9-NEXT:    vperm v3, v2, v2, v3
 ; CHECK-P9-NEXT:    stxv vs0, 0(r3)
 ; CHECK-P9-NEXT:    vextsb2d v3, v3
 ; CHECK-P9-NEXT:    xvcvsxddp vs1, v3
-; CHECK-P9-NEXT:    lxvx v3, 0, r4
+; CHECK-P9-NEXT:    lxv v3, 0(r4)
 ; CHECK-P9-NEXT:    addis r4, r2, .LCPI7_3@toc@ha
 ; CHECK-P9-NEXT:    addi r4, r4, .LCPI7_3@toc@l
 ; CHECK-P9-NEXT:    vperm v3, v2, v2, v3
 ; CHECK-P9-NEXT:    stxv vs1, 16(r3)
 ; CHECK-P9-NEXT:    vextsb2d v3, v3
 ; CHECK-P9-NEXT:    xvcvsxddp vs2, v3
-; CHECK-P9-NEXT:    lxvx v3, 0, r4
+; CHECK-P9-NEXT:    lxv v3, 0(r4)
 ; CHECK-P9-NEXT:    addis r4, r2, .LCPI7_4@toc@ha
 ; CHECK-P9-NEXT:    addi r4, r4, .LCPI7_4@toc@l
 ; CHECK-P9-NEXT:    vperm v3, v2, v2, v3
 ; CHECK-P9-NEXT:    stxv vs2, 32(r3)
 ; CHECK-P9-NEXT:    vextsb2d v3, v3
 ; CHECK-P9-NEXT:    xvcvsxddp vs3, v3
-; CHECK-P9-NEXT:    lxvx v3, 0, r4
+; CHECK-P9-NEXT:    lxv v3, 0(r4)
 ; CHECK-P9-NEXT:    addis r4, r2, .LCPI7_5@toc@ha
 ; CHECK-P9-NEXT:    addi r4, r4, .LCPI7_5@toc@l
 ; CHECK-P9-NEXT:    vperm v3, v2, v2, v3
 ; CHECK-P9-NEXT:    stxv vs3, 48(r3)
 ; CHECK-P9-NEXT:    vextsb2d v3, v3
 ; CHECK-P9-NEXT:    xvcvsxddp vs4, v3
-; CHECK-P9-NEXT:    lxvx v3, 0, r4
+; CHECK-P9-NEXT:    lxv v3, 0(r4)
 ; CHECK-P9-NEXT:    addis r4, r2, .LCPI7_6@toc@ha
 ; CHECK-P9-NEXT:    addi r4, r4, .LCPI7_6@toc@l
 ; CHECK-P9-NEXT:    vperm v3, v2, v2, v3
 ; CHECK-P9-NEXT:    stxv vs4, 64(r3)
 ; CHECK-P9-NEXT:    vextsb2d v3, v3
 ; CHECK-P9-NEXT:    xvcvsxddp vs5, v3
-; CHECK-P9-NEXT:    lxvx v3, 0, r4
+; CHECK-P9-NEXT:    lxv v3, 0(r4)
 ; CHECK-P9-NEXT:    addis r4, r2, .LCPI7_7@toc@ha
 ; CHECK-P9-NEXT:    addi r4, r4, .LCPI7_7@toc@l
 ; CHECK-P9-NEXT:    vperm v3, v2, v2, v3
 ; CHECK-P9-NEXT:    stxv vs5, 80(r3)
 ; CHECK-P9-NEXT:    vextsb2d v3, v3
 ; CHECK-P9-NEXT:    xvcvsxddp vs6, v3
-; CHECK-P9-NEXT:    lxvx v3, 0, r4
+; CHECK-P9-NEXT:    lxv v3, 0(r4)
 ; CHECK-P9-NEXT:    vperm v2, v2, v2, v3
 ; CHECK-P9-NEXT:    stxv vs6, 96(r3)
 ; CHECK-P9-NEXT:    vextsb2d v2, v2
@@ -789,55 +789,55 @@ define void @test16elt_signed(<16 x double>* noalias nocapture sret(<16 x double
 ; CHECK-BE-NEXT:    addis r4, r2, .LCPI7_0@toc@ha
 ; CHECK-BE-NEXT:    xxlxor v3, v3, v3
 ; CHECK-BE-NEXT:    addi r4, r4, .LCPI7_0@toc@l
-; CHECK-BE-NEXT:    lxvx v4, 0, r4
+; CHECK-BE-NEXT:    lxv v4, 0(r4)
 ; CHECK-BE-NEXT:    addis r4, r2, .LCPI7_1@toc@ha
 ; CHECK-BE-NEXT:    addi r4, r4, .LCPI7_1@toc@l
 ; CHECK-BE-NEXT:    vperm v4, v3, v2, v4
 ; CHECK-BE-NEXT:    vextsb2d v4, v4
 ; CHECK-BE-NEXT:    xvcvsxddp vs0, v4
-; CHECK-BE-NEXT:    lxvx v4, 0, r4
+; CHECK-BE-NEXT:    lxv v4, 0(r4)
 ; CHECK-BE-NEXT:    addis r4, r2, .LCPI7_2@toc@ha
 ; CHECK-BE-NEXT:    addi r4, r4, .LCPI7_2@toc@l
 ; CHECK-BE-NEXT:    vperm v4, v3, v2, v4
 ; CHECK-BE-NEXT:    stxv vs0, 16(r3)
 ; CHECK-BE-NEXT:    vextsb2d v4, v4
 ; CHECK-BE-NEXT:    xvcvsxddp vs1, v4
-; CHECK-BE-NEXT:    lxvx v4, 0, r4
+; CHECK-BE-NEXT:    lxv v4, 0(r4)
 ; CHECK-BE-NEXT:    addis r4, r2, .LCPI7_3@toc@ha
 ; CHECK-BE-NEXT:    addi r4, r4, .LCPI7_3@toc@l
 ; CHECK-BE-NEXT:    vperm v4, v3, v2, v4
 ; CHECK-BE-NEXT:    stxv vs1, 48(r3)
 ; CHECK-BE-NEXT:    vextsb2d v4, v4
 ; CHECK-BE-NEXT:    xvcvsxddp vs2, v4
-; CHECK-BE-NEXT:    lxvx v4, 0, r4
+; CHECK-BE-NEXT:    lxv v4, 0(r4)
 ; CHECK-BE-NEXT:    addis r4, r2, .LCPI7_4@toc@ha
 ; CHECK-BE-NEXT:    addi r4, r4, .LCPI7_4@toc@l
 ; CHECK-BE-NEXT:    vperm v3, v3, v2, v4
 ; CHECK-BE-NEXT:    stxv vs2, 80(r3)
 ; CHECK-BE-NEXT:    vextsb2d v3, v3
 ; CHECK-BE-NEXT:    xvcvsxddp vs3, v3
-; CHECK-BE-NEXT:    lxvx v3, 0, r4
+; CHECK-BE-NEXT:    lxv v3, 0(r4)
 ; CHECK-BE-NEXT:    addis r4, r2, .LCPI7_5@toc@ha
 ; CHECK-BE-NEXT:    addi r4, r4, .LCPI7_5@toc@l
 ; CHECK-BE-NEXT:    vperm v3, v2, v2, v3
 ; CHECK-BE-NEXT:    stxv vs3, 112(r3)
 ; CHECK-BE-NEXT:    vextsb2d v3, v3
 ; CHECK-BE-NEXT:    xvcvsxddp vs4, v3
-; CHECK-BE-NEXT:    lxvx v3, 0, r4
+; CHECK-BE-NEXT:    lxv v3, 0(r4)
 ; CHECK-BE-NEXT:    addis r4, r2, .LCPI7_6@toc@ha
 ; CHECK-BE-NEXT:    addi r4, r4, .LCPI7_6@toc@l
 ; CHECK-BE-NEXT:    vperm v3, v2, v2, v3
 ; CHECK-BE-NEXT:    stxv vs4, 0(r3)
 ; CHECK-BE-NEXT:    vextsb2d v3, v3
 ; CHECK-BE-NEXT:    xvcvsxddp vs5, v3
-; CHECK-BE-NEXT:    lxvx v3, 0, r4
+; CHECK-BE-NEXT:    lxv v3, 0(r4)
 ; CHECK-BE-NEXT:    addis r4, r2, .LCPI7_7@toc@ha
 ; CHECK-BE-NEXT:    addi r4, r4, .LCPI7_7@toc@l
 ; CHECK-BE-NEXT:    vperm v3, v2, v2, v3
 ; CHECK-BE-NEXT:    stxv vs5, 32(r3)
 ; CHECK-BE-NEXT:    vextsb2d v3, v3
 ; CHECK-BE-NEXT:    xvcvsxddp vs6, v3
-; CHECK-BE-NEXT:    lxvx v3, 0, r4
+; CHECK-BE-NEXT:    lxv v3, 0(r4)
 ; CHECK-BE-NEXT:    vperm v2, v2, v2, v3
 ; CHECK-BE-NEXT:    stxv vs6, 64(r3)
 ; CHECK-BE-NEXT:    vextsb2d v2, v2

@@ -284,31 +284,31 @@ defm : X86WriteResPairUnsupported<WriteFShuffle256>;
 defm : X86WriteResPairUnsupported<WriteFVarShuffle256>;
 
 // Conversion between integer and float.
-defm : SLMWriteResPair<WriteCvtSS2I,   [SLM_FPC_RSV01], 4>;
-defm : SLMWriteResPair<WriteCvtPS2I,   [SLM_FPC_RSV01], 4>;
-defm : SLMWriteResPair<WriteCvtPS2IY,  [SLM_FPC_RSV01], 4>;
+defm : SLMWriteResPair<WriteCvtSS2I,   [SLM_FPC_RSV0], 5>;
+defm : SLMWriteResPair<WriteCvtPS2I,   [SLM_FPC_RSV0], 5, [2]>;
+defm : SLMWriteResPair<WriteCvtPS2IY,  [SLM_FPC_RSV0], 5, [2]>;
 defm : X86WriteResPairUnsupported<WriteCvtPS2IZ>;
-defm : SLMWriteResPair<WriteCvtSD2I,   [SLM_FPC_RSV01], 4>;
-defm : SLMWriteResPair<WriteCvtPD2I,   [SLM_FPC_RSV01], 4>;
-defm : SLMWriteResPair<WriteCvtPD2IY,  [SLM_FPC_RSV01], 4>;
+defm : SLMWriteResPair<WriteCvtSD2I,   [SLM_FPC_RSV0], 5>;
+defm : SLMWriteResPair<WriteCvtPD2I,   [SLM_FPC_RSV0], 5, [2]>;
+defm : SLMWriteResPair<WriteCvtPD2IY,  [SLM_FPC_RSV0], 5, [2]>;
 defm : X86WriteResPairUnsupported<WriteCvtPD2IZ>;
 
-defm : SLMWriteResPair<WriteCvtI2SS,   [SLM_FPC_RSV01], 4>;
-defm : SLMWriteResPair<WriteCvtI2PS,   [SLM_FPC_RSV01], 4>;
-defm : SLMWriteResPair<WriteCvtI2PSY,  [SLM_FPC_RSV01], 4>;
+defm : SLMWriteResPair<WriteCvtI2SS,   [SLM_FPC_RSV0], 5, [2]>;
+defm : SLMWriteResPair<WriteCvtI2PS,   [SLM_FPC_RSV0], 5, [2]>;
+defm : SLMWriteResPair<WriteCvtI2PSY,  [SLM_FPC_RSV0], 5, [2]>;
 defm : X86WriteResPairUnsupported<WriteCvtI2PSZ>;
-defm : SLMWriteResPair<WriteCvtI2SD,   [SLM_FPC_RSV01], 4>;
-defm : SLMWriteResPair<WriteCvtI2PD,   [SLM_FPC_RSV01], 4>;
-defm : SLMWriteResPair<WriteCvtI2PDY,  [SLM_FPC_RSV01], 4>;
+defm : SLMWriteResPair<WriteCvtI2SD,   [SLM_FPC_RSV0], 5, [2]>;
+defm : SLMWriteResPair<WriteCvtI2PD,   [SLM_FPC_RSV0], 5, [2]>;
+defm : SLMWriteResPair<WriteCvtI2PDY,  [SLM_FPC_RSV0], 5, [2]>;
 defm : X86WriteResPairUnsupported<WriteCvtI2PDZ>;
 
-defm : SLMWriteResPair<WriteCvtSS2SD,  [SLM_FPC_RSV01], 4>;
-defm : SLMWriteResPair<WriteCvtPS2PD,  [SLM_FPC_RSV01], 4>;
-defm : SLMWriteResPair<WriteCvtPS2PDY, [SLM_FPC_RSV01], 4>;
+defm : SLMWriteResPair<WriteCvtSS2SD,  [SLM_FPC_RSV0], 4, [2]>;
+defm : SLMWriteResPair<WriteCvtPS2PD,  [SLM_FPC_RSV0], 5, [2]>;
+defm : SLMWriteResPair<WriteCvtPS2PDY, [SLM_FPC_RSV0], 5, [2]>;
 defm : X86WriteResPairUnsupported<WriteCvtPS2PDZ>;
-defm : SLMWriteResPair<WriteCvtSD2SS,  [SLM_FPC_RSV01], 4>;
-defm : SLMWriteResPair<WriteCvtPD2PS,  [SLM_FPC_RSV01], 4>;
-defm : SLMWriteResPair<WriteCvtPD2PSY, [SLM_FPC_RSV01], 4>;
+defm : SLMWriteResPair<WriteCvtSD2SS,  [SLM_FPC_RSV0], 4, [2]>;
+defm : SLMWriteResPair<WriteCvtPD2PS,  [SLM_FPC_RSV0], 5, [2]>;
+defm : SLMWriteResPair<WriteCvtPD2PSY, [SLM_FPC_RSV0], 5, [2]>;
 defm : X86WriteResPairUnsupported<WriteCvtPD2PSZ>;
 
 defm : X86WriteResPairUnsupported<WriteCvtPH2PS>;

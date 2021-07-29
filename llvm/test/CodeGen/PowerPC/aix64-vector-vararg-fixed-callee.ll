@@ -21,10 +21,9 @@ define double @callee(i32 signext %count, <4 x i32> %vsi, double %next, ...) {
   ; CHECK:   STD killed [[ADDI8_]], 0, %stack.0.arg_list :: (store (s64) into %ir.0)
   ; CHECK:   [[ADDI8_1:%[0-9]+]]:g8rc = ADDI8 %fixed-stack.0, 15
   ; CHECK:   [[RLDICR:%[0-9]+]]:g8rc_and_g8rc_nox0 = RLDICR killed [[ADDI8_1]], 0, 59
-  ; CHECK:   [[LI8_:%[0-9]+]]:g8rc = LI8 16
-  ; CHECK:   [[XFLOADf64_:%[0-9]+]]:vsfrc = XFLOADf64 killed [[RLDICR]], killed [[LI8_]] :: (load (s64) from %ir.4, align 16)
+  ; CHECK:   [[LFD:%[0-9]+]]:f8rc = LFD 16, killed [[RLDICR]] :: (load (s64) from %ir.4, align 16)
   ; CHECK:   LIFETIME_END %stack.0.arg_list
-  ; CHECK:   $f1 = COPY [[XFLOADf64_]]
+  ; CHECK:   $f1 = COPY [[LFD]]
   ; CHECK:   BLR8 implicit $lr8, implicit $rm, implicit $f1
 entry:
   %arg_list = alloca i8*, align 8

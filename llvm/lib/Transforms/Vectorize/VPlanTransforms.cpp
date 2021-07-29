@@ -221,27 +221,6 @@ bool VPlanTransforms::mergeReplicateRegions(VPlan &Plan) {
     // region. Such dependencies should be rejected during earlier dependence
     // checks, which guarantee accesses can be re-ordered for vectorization.
     //
-    // If a recipe is used by a first-order recurrence phi, we cannot move it at
-    // the moment: a recipe R feeding a first order recurrence phi must allow
-    // for a *vector* shuffle to be inserted immediately after it, and therefore
-    // if R is *scalarized and predicated* it must appear last in its basic
-    // block. In addition, other recipes may need to "sink after" R, so best if
-    // R not be moved at all.
-    auto IsImmovableRecipe = [](VPRecipeBase &R) {
-      assert(R.getNumDefinedValues() <= 1 &&
-             "no multi-defs are expected in predicated blocks");
-      for (VPUser *U : R.getVPValue()->users()) {
-        auto *UI = dyn_cast<VPRecipeBase>(U);
-        if (!UI)
-          continue;
-        if (isa<VPWidenPHIRecipe>(UI) && !isa<VPReductionPHIRecipe>(UI))
-          return true;
-      }
-      return false;
-    };
-    if (any_of(*Then1, IsImmovableRecipe))
-      continue;
-
     // Move recipes to the successor region.
     for (VPRecipeBase &ToMove : make_early_inc_range(reverse(*Then1)))
       ToMove.moveBefore(*Then2, Then2->getFirstNonPhi());
@@ -255,12 +234,12 @@ bool VPlanTransforms::mergeReplicateRegions(VPlan &Plan) {
     for (VPRecipeBase &Phi1ToMove : make_early_inc_range(reverse(*Merge1))) {
       VPValue *PredInst1 =
           cast<VPPredInstPHIRecipe>(&Phi1ToMove)->getOperand(0);
-      for (VPUser *U : Phi1ToMove.getVPValue()->users()) {
+      for (VPUser *U : Phi1ToMove.getVPSingleValue()->users()) {
         auto *UI = dyn_cast<VPRecipeBase>(U);
         if (!UI || UI->getParent() != Then2)
           continue;
         for (unsigned I = 0, E = U->getNumOperands(); I != E; ++I) {
-          if (Phi1ToMove.getVPValue() != U->getOperand(I))
+          if (Phi1ToMove.getVPSingleValue() != U->getOperand(I))
             continue;
           U->setOperand(I, PredInst1);
         }

@@ -1,3 +1,4 @@
+// REQUIRES: garbage
 /*
  * ordered.c -- Archer testcase
  */

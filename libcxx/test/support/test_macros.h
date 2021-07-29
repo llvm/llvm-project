@@ -139,7 +139,7 @@
 # define TEST_NOEXCEPT_COND(...)
 #endif
 
-#if TEST_STD_VER >= 17
+#if TEST_STD_VER >= 11
 # define TEST_THROW_SPEC(...)
 #else
 # define TEST_THROW_SPEC(...) throw(__VA_ARGS__)

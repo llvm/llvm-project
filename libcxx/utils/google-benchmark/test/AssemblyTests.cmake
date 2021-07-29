@@ -43,3 +43,4 @@ macro(add_filecheck_test name)
         WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR})
   endforeach()
 endmacro()
+
