@@ -58,7 +58,7 @@ if [ "`uname -a | grep Linux`" != "" ]; then
 		ARCHCFLAGS="-m64 -mcpu=power8 -fno-function-sections"
 	elif [ "`uname -a | grep x86_64`" != "" ]; then
 		SUFFIX="linux_amd64"
-		ARCHCFLAGS="-m64 -msse3"
+		ARCHCFLAGS="-m64 -msse4.2"
 		OSCFLAGS="$OSCFLAGS -ffreestanding -Wno-unused-const-variable -Werror -Wno-unknown-warning-option"
 	elif [ "`uname -a | grep aarch64`" != "" ]; then
 		SUFFIX="linux_arm64"

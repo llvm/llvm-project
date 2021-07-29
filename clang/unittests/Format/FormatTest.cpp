@@ -16419,6 +16419,37 @@ TEST_F(FormatTest, AlignWithLineBreaks) {
                "}",
                Style);
   // clang-format on
+
+  Style = getLLVMStyleWithColumns(120);
+  Style.AlignConsecutiveAssignments = FormatStyle::ACS_Consecutive;
+  Style.ContinuationIndentWidth = 4;
+  Style.IndentWidth = 4;
+
+  // clang-format off
+  verifyFormat("void SomeFunc() {\n"
+               "    newWatcher.maxAgeUsec = ToLegacyTimestamp(GetMaxAge(FromLegacyTimestamp<milliseconds>(monitorFrequencyUsec),\n"
+               "                                                        seconds(std::uint64_t(maxSampleAge)), maxKeepSamples));\n"
+               "    newWatcher.maxAge     = ToLegacyTimestamp(GetMaxAge(FromLegacyTimestamp<milliseconds>(monitorFrequencyUsec),\n"
+               "                                                        seconds(std::uint64_t(maxSampleAge)), maxKeepSamples));\n"
+               "    newWatcher.max        = ToLegacyTimestamp(GetMaxAge(FromLegacyTimestamp<milliseconds>(monitorFrequencyUsec),\n"
+               "                                                        seconds(std::uint64_t(maxSampleAge)), maxKeepSamples));\n"
+               "}",
+               Style);
+  // clang-format on
+
+  Style.BinPackArguments = false;
+
+  // clang-format off
+  verifyFormat("void SomeFunc() {\n"
+               "    newWatcher.maxAgeUsec = ToLegacyTimestamp(GetMaxAge(\n"
+               "        FromLegacyTimestamp<milliseconds>(monitorFrequencyUsec), seconds(std::uint64_t(maxSampleAge)), maxKeepSamples));\n"
+               "    newWatcher.maxAge     = ToLegacyTimestamp(GetMaxAge(\n"
+               "        FromLegacyTimestamp<milliseconds>(monitorFrequencyUsec), seconds(std::uint64_t(maxSampleAge)), maxKeepSamples));\n"
+               "    newWatcher.max        = ToLegacyTimestamp(GetMaxAge(\n"
+               "        FromLegacyTimestamp<milliseconds>(monitorFrequencyUsec), seconds(std::uint64_t(maxSampleAge)), maxKeepSamples));\n"
+               "}",
+               Style);
+  // clang-format on
 }
 
 TEST_F(FormatTest, AlignWithInitializerPeriods) {

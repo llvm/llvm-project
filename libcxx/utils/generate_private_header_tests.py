@@ -13,19 +13,16 @@ def get_libcxx_paths():
     src_root = os.path.dirname(utils_path)
     include_path = os.path.join(src_root, 'include')
     assert os.path.exists(include_path)
-    docs_path = os.path.join(src_root, 'docs')
-    assert os.path.exists(docs_path)
     detail_header_test_root = os.path.join(src_root, 'test', 'libcxx',
                                            'diagnostics', 'detail.headers')
     assert os.path.exists(detail_header_test_root)
     shutil.rmtree(detail_header_test_root)
     Path(f'{detail_header_test_root}').mkdir()
     assert os.path.exists(detail_header_test_root)
-    return script_name, src_root, include_path, docs_path, detail_header_test_root
+    return script_name, include_path, detail_header_test_root
 
 
-script_name, source_root, include_path, docs_path, detail_header_test_root = get_libcxx_paths(
-)
+script_name, include_path, detail_header_test_root = get_libcxx_paths()
 
 
 def generate_test(header):

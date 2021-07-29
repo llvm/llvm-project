@@ -2479,12 +2479,11 @@ static __sanitizer_sighandler_ptr signal_impl(int sig,
   return old.handler;
 }
 
-#define TSAN_SYSCALL() \
+#define TSAN_SYSCALL()             \
   ThreadState *thr = cur_thread(); \
-  if (thr->ignore_interceptors) \
-    return; \
-  ScopedSyscall scoped_syscall(thr) \
-/**/
+  if (thr->ignore_interceptors)    \
+    return;                        \
+  ScopedSyscall scoped_syscall(thr)
 
 struct ScopedSyscall {
   ThreadState *thr;

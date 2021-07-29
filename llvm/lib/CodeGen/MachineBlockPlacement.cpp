@@ -2050,6 +2050,8 @@ MachineBlockPlacement::findBestLoopTopHelper(
   BlockChain &HeaderChain = *BlockToChain[OldTop];
   if (!LoopBlockSet.count(*HeaderChain.begin()))
     return OldTop;
+  if (OldTop != *HeaderChain.begin())
+    return OldTop;
 
   LLVM_DEBUG(dbgs() << "Finding best loop top for: " << getBlockName(OldTop)
                     << "\n");

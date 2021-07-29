@@ -56,13 +56,12 @@ MBlock *JavaHeapBlock(uptr addr, uptr *start) {
 
 }  // namespace __tsan
 
-#define SCOPED_JAVA_FUNC(func)     \
+#define JAVA_FUNC_ENTER(func)      \
   ThreadState *thr = cur_thread(); \
-  (void)thr;                       \
-  /**/
+  (void)thr;
 
 void __tsan_java_init(jptr heap_begin, jptr heap_size) {
-  SCOPED_JAVA_FUNC(__tsan_java_init);
+  JAVA_FUNC_ENTER(__tsan_java_init);
   DPrintf("#%d: java_init(%p, %p)\n", thr->tid, heap_begin, heap_size);
   CHECK_EQ(jctx, 0);
   CHECK_GT(heap_begin, 0);
@@ -74,7 +73,7 @@ void __tsan_java_init(jptr heap_begin, jptr heap_size) {
 }
 
 int  __tsan_java_fini() {
-  SCOPED_JAVA_FUNC(__tsan_java_fini);
+  JAVA_FUNC_ENTER(__tsan_java_fini);
   DPrintf("#%d: java_fini()\n", thr->tid);
   CHECK_NE(jctx, 0);
   // FIXME(dvyukov): this does not call atexit() callbacks.
@@ -84,7 +83,7 @@ int  __tsan_java_fini() {
 }
 
 void __tsan_java_alloc(jptr ptr, jptr size) {
-  SCOPED_JAVA_FUNC(__tsan_java_alloc);
+  JAVA_FUNC_ENTER(__tsan_java_alloc);
   DPrintf("#%d: java_alloc(%p, %p)\n", thr->tid, ptr, size);
   CHECK_NE(jctx, 0);
   CHECK_NE(size, 0);
@@ -97,7 +96,7 @@ void __tsan_java_alloc(jptr ptr, jptr size) {
 }
 
 void __tsan_java_free(jptr ptr, jptr size) {
-  SCOPED_JAVA_FUNC(__tsan_java_free);
+  JAVA_FUNC_ENTER(__tsan_java_free);
   DPrintf("#%d: java_free(%p, %p)\n", thr->tid, ptr, size);
   CHECK_NE(jctx, 0);
   CHECK_NE(size, 0);
@@ -110,7 +109,7 @@ void __tsan_java_free(jptr ptr, jptr size) {
 }
 
 void __tsan_java_move(jptr src, jptr dst, jptr size) {
-  SCOPED_JAVA_FUNC(__tsan_java_move);
+  JAVA_FUNC_ENTER(__tsan_java_move);
   DPrintf("#%d: java_move(%p, %p, %p)\n", thr->tid, src, dst, size);
   CHECK_NE(jctx, 0);
   CHECK_NE(size, 0);
@@ -146,7 +145,7 @@ void __tsan_java_move(jptr src, jptr dst, jptr size) {
 }
 
 jptr __tsan_java_find(jptr *from_ptr, jptr to) {
-  SCOPED_JAVA_FUNC(__tsan_java_find);
+  JAVA_FUNC_ENTER(__tsan_java_find);
   DPrintf("#%d: java_find(&%p, %p)\n", *from_ptr, to);
   CHECK_EQ((*from_ptr) % kHeapAlignment, 0);
   CHECK_EQ(to % kHeapAlignment, 0);
@@ -163,13 +162,13 @@ jptr __tsan_java_find(jptr *from_ptr, jptr to) {
 }
 
 void __tsan_java_finalize() {
-  SCOPED_JAVA_FUNC(__tsan_java_finalize);
+  JAVA_FUNC_ENTER(__tsan_java_finalize);
   DPrintf("#%d: java_mutex_finalize()\n", thr->tid);
   AcquireGlobal(thr);
 }
 
 void __tsan_java_mutex_lock(jptr addr) {
-  SCOPED_JAVA_FUNC(__tsan_java_mutex_lock);
+  JAVA_FUNC_ENTER(__tsan_java_mutex_lock);
   DPrintf("#%d: java_mutex_lock(%p)\n", thr->tid, addr);
   CHECK_NE(jctx, 0);
   CHECK_GE(addr, jctx->heap_begin);
@@ -181,7 +180,7 @@ void __tsan_java_mutex_lock(jptr addr) {
 }
 
 void __tsan_java_mutex_unlock(jptr addr) {
-  SCOPED_JAVA_FUNC(__tsan_java_mutex_unlock);
+  JAVA_FUNC_ENTER(__tsan_java_mutex_unlock);
   DPrintf("#%d: java_mutex_unlock(%p)\n", thr->tid, addr);
   CHECK_NE(jctx, 0);
   CHECK_GE(addr, jctx->heap_begin);
@@ -191,7 +190,7 @@ void __tsan_java_mutex_unlock(jptr addr) {
 }
 
 void __tsan_java_mutex_read_lock(jptr addr) {
-  SCOPED_JAVA_FUNC(__tsan_java_mutex_read_lock);
+  JAVA_FUNC_ENTER(__tsan_java_mutex_read_lock);
   DPrintf("#%d: java_mutex_read_lock(%p)\n", thr->tid, addr);
   CHECK_NE(jctx, 0);
   CHECK_GE(addr, jctx->heap_begin);
@@ -203,7 +202,7 @@ void __tsan_java_mutex_read_lock(jptr addr) {
 }
 
 void __tsan_java_mutex_read_unlock(jptr addr) {
-  SCOPED_JAVA_FUNC(__tsan_java_mutex_read_unlock);
+  JAVA_FUNC_ENTER(__tsan_java_mutex_read_unlock);
   DPrintf("#%d: java_mutex_read_unlock(%p)\n", thr->tid, addr);
   CHECK_NE(jctx, 0);
   CHECK_GE(addr, jctx->heap_begin);
@@ -213,7 +212,7 @@ void __tsan_java_mutex_read_unlock(jptr addr) {
 }
 
 void __tsan_java_mutex_lock_rec(jptr addr, int rec) {
-  SCOPED_JAVA_FUNC(__tsan_java_mutex_lock_rec);
+  JAVA_FUNC_ENTER(__tsan_java_mutex_lock_rec);
   DPrintf("#%d: java_mutex_lock_rec(%p, %d)\n", thr->tid, addr, rec);
   CHECK_NE(jctx, 0);
   CHECK_GE(addr, jctx->heap_begin);
@@ -227,7 +226,7 @@ void __tsan_java_mutex_lock_rec(jptr addr, int rec) {
 }
 
 int __tsan_java_mutex_unlock_rec(jptr addr) {
-  SCOPED_JAVA_FUNC(__tsan_java_mutex_unlock_rec);
+  JAVA_FUNC_ENTER(__tsan_java_mutex_unlock_rec);
   DPrintf("#%d: java_mutex_unlock_rec(%p)\n", thr->tid, addr);
   CHECK_NE(jctx, 0);
   CHECK_GE(addr, jctx->heap_begin);
@@ -237,7 +236,7 @@ int __tsan_java_mutex_unlock_rec(jptr addr) {
 }
 
 void __tsan_java_acquire(jptr addr) {
-  SCOPED_JAVA_FUNC(__tsan_java_acquire);
+  JAVA_FUNC_ENTER(__tsan_java_acquire);
   DPrintf("#%d: java_acquire(%p)\n", thr->tid, addr);
   CHECK_NE(jctx, 0);
   CHECK_GE(addr, jctx->heap_begin);
@@ -247,7 +246,7 @@ void __tsan_java_acquire(jptr addr) {
 }
 
 void __tsan_java_release(jptr addr) {
-  SCOPED_JAVA_FUNC(__tsan_java_release);
+  JAVA_FUNC_ENTER(__tsan_java_release);
   DPrintf("#%d: java_release(%p)\n", thr->tid, addr);
   CHECK_NE(jctx, 0);
   CHECK_GE(addr, jctx->heap_begin);
@@ -257,7 +256,7 @@ void __tsan_java_release(jptr addr) {
 }
 
 void __tsan_java_release_store(jptr addr) {
-  SCOPED_JAVA_FUNC(__tsan_java_release);
+  JAVA_FUNC_ENTER(__tsan_java_release);
   DPrintf("#%d: java_release_store(%p)\n", thr->tid, addr);
   CHECK_NE(jctx, 0);
   CHECK_GE(addr, jctx->heap_begin);

@@ -58,4 +58,5 @@ gcc ^
   -DSANITIZER_DEBUG=0 ^
   -O3 ^
   -fomit-frame-pointer ^
+  -msse4.2 ^
   -std=c++14

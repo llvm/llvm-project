@@ -358,6 +358,11 @@ module std [system] {
   module compare {
     header "compare"
     export *
+
+    module __compare {
+      module common_comparison_category { private header "__compare/common_comparison_category.h" }
+      module ordering                   { private header "__compare/ordering.h"                   }
+    }
   }
   module complex {
     header "complex"
