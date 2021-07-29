@@ -1,5 +1,6 @@
 # RUN: %PYTHON %s 2>&1 | FileCheck %s
 
+import ctypes
 import sys
 from mlir.ir import *
 from mlir.dialects import builtin
