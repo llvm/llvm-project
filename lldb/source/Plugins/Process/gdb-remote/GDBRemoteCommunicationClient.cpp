@@ -628,6 +628,24 @@ DataBufferSP GDBRemoteCommunicationClient::ReadMemoryTags(lldb::addr_t addr,
   return buffer_sp;
 }
 
+Status GDBRemoteCommunicationClient::WriteMemoryTags(
+    lldb::addr_t addr, size_t len, int32_t type,
+    const std::vector<uint8_t> &tags) {
+  // Format QMemTags:address,length:type:tags
+  StreamString packet;
+  packet.Printf("QMemTags:%" PRIx64 ",%zx:%" PRIx32 ":", addr, len, type);
+  packet.PutBytesAsRawHex8(tags.data(), tags.size());
+
+  Status status;
+  StringExtractorGDBRemote response;
+  if (SendPacketAndWaitForResponse(packet.GetString(), response) !=
+          PacketResult::Success ||
+      !response.IsOKResponse()) {
+    status.SetErrorString("QMemTags packet failed");
+  }
+  return status;
+}
+
 bool GDBRemoteCommunicationClient::GetxPacketSupported() {
   if (m_supports_x == eLazyBoolCalculate) {
     StringExtractorGDBRemote response;
