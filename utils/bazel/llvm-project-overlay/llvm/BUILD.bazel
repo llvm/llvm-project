@@ -41,6 +41,8 @@ enum_targets_gen(
     targets = llvm_targets,
 )
 
+# TODO(gcmn): We should derive these lists from the presence of CMakeLists.txt
+# files, as is done in the CMake build.
 # List of targets with ASM parsers, filtered to our list of overall targets.
 llvm_target_asm_parsers = [t for t in [
     "AArch64",
@@ -87,6 +89,19 @@ enum_targets_gen(
     targets = llvm_target_disassemblers,
 )
 
+# List of targets with mca, filtered to our list of overall targets.
+llvm_target_mcas = [t for t in [
+    "AMDGPU",
+] if t in llvm_targets]
+
+enum_targets_gen(
+    name = "target_mca_def_gen",
+    src = "include/llvm/Config/TargetMCAs.def.in",
+    out = "include/llvm/Config/TargetMCAs.def",
+    macro_name = "TARGETMCA",
+    targets = llvm_target_mcas,
+)
+
 # TODO: Need to replace this with something that actually extracts the git
 # commit from the LLVM source (submodule or http_archive).
 genrule(
@@ -130,6 +145,7 @@ cc_library(
         "include/llvm/Config/AsmPrinters.def",
         "include/llvm/Config/Disassemblers.def",
         "include/llvm/Config/Targets.def",
+        "include/llvm/Config/TargetMCAs.def",
         # Needed for include scanner to find execinfo.h
         "include/llvm/Config/config.h",
     ],
@@ -1891,6 +1907,24 @@ gentbl(
             ":" + target["name"] + "UtilsAndDesc",
         ],
     )],
+    [cc_library(
+        name = target["name"] + "TargetMCA",
+        srcs = glob([
+            "lib/Target/" + target["name"] + "/MCA/*.cpp",
+            "lib/Target/" + target["name"] + "/MCA/*.c",
+            "lib/Target/" + target["name"] + "/MCA/*.h",
+        ]),
+        copts = llvm_copts,
+        deps = [
+            ":MC",
+            ":MCA",
+            ":MCParser",
+            ":Support",
+            ":" + target["name"] + "DisassemblerInternalHeaders",
+            ":" + target["name"] + "Info",
+            ":" + target["name"] + "UtilsAndDesc",
+        ],
+    )],
 ] for target in llvm_target_lib_list]
 
 cc_library(
@@ -1916,6 +1950,15 @@ cc_library(
     copts = llvm_copts,
     deps = [
         target["name"] + "Disassembler"
+        for target in llvm_target_lib_list
+    ],
+)
+
+cc_library(
+    name = "AllTargetsMCAs",
+    copts = llvm_copts,
+    deps = [
+        target["name"] + "TargetMCA"
         for target in llvm_target_lib_list
     ],
 )
@@ -2985,6 +3028,7 @@ cc_binary(
         ":AllTargetsAsmParsers",
         ":AllTargetsCodeGens",
         ":AllTargetsDisassemblers",
+        ":AllTargetsMCAs",
         ":MC",
         ":MCA",
         ":MCParser",
