@@ -22,7 +22,7 @@ TEST(TimeIntrinsics, CpuTime) {
   // before we time out, then we should probably look into an implementation
   // for CpuTime with a better timer resolution.
   for (double end = start; end == start; end = RTNAME(CpuTime)()) {
-    ASSERT_GT(end, 0.0);
+    ASSERT_GE(end, 0.0);
     ASSERT_GE(end, start);
   }
 }
