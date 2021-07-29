@@ -41,6 +41,8 @@ enum_targets_gen(
     targets = llvm_targets,
 )
 
+# TODO(gcmn): We should derive these lists from the presence of CMakeLists.txt
+# files, as is done in the CMake build.
 # List of targets with ASM parsers, filtered to our list of overall targets.
 llvm_target_asm_parsers = [t for t in [
     "AArch64",
@@ -87,6 +89,19 @@ enum_targets_gen(
     targets = llvm_target_disassemblers,
 )
 
+# List of targets with mca, filtered to our list of overall targets.
+llvm_target_mcas = [t for t in [
+    "AMDGPU",
+] if t in llvm_targets]
+
+enum_targets_gen(
+    name = "target_mca_def_gen",
+    src = "include/llvm/Config/TargetMCAs.def.in",
+    out = "include/llvm/Config/TargetMCAs.def",
+    macro_name = "TARGETMCA",
+    targets = llvm_target_mcas,
+)
+
 # TODO: Need to replace this with something that actually extracts the git
 # commit from the LLVM source (submodule or http_archive).
 genrule(
@@ -130,6 +145,7 @@ cc_library(
         "include/llvm/Config/AsmPrinters.def",
         "include/llvm/Config/Disassemblers.def",
         "include/llvm/Config/Targets.def",
+        "include/llvm/Config/TargetMCAs.def",
         # Needed for include scanner to find execinfo.h
         "include/llvm/Config/config.h",
     ],
@@ -1491,6 +1507,21 @@ llvm_target_lib_list = [lib for lib in [
         ],
     },
     {
+        "name": "AVR",
+        "short_name": "AVR",
+        "tbl_outs": [
+            ("-gen-asm-matcher", "lib/Target/AVR/AVRGenAsmMatcher.inc"),
+            ("-gen-asm-writer", "lib/Target/AVR/AVRGenAsmWriter.inc"),
+            ("-gen-callingconv", "lib/Target/AVR/AVRGenCallingConv.inc"),
+            ("-gen-dag-isel", "lib/Target/AVR/AVRGenDAGISel.inc"),
+            ("-gen-disassembler", "lib/Target/AVR/AVRGenDisassemblerTables.inc"),
+            ("-gen-emitter", "lib/Target/AVR/AVRGenMCCodeEmitter.inc"),
+            ("-gen-instr-info", "lib/Target/AVR/AVRGenInstrInfo.inc"),
+            ("-gen-register-info", "lib/Target/AVR/AVRGenRegisterInfo.inc"),
+            ("-gen-subtarget", "lib/Target/AVR/AVRGenSubtargetInfo.inc"),
+        ],
+    },
+    {
         "name": "BPF",
         "short_name": "BPF",
         "tbl_outs": [
@@ -1537,6 +1568,41 @@ llvm_target_lib_list = [lib for lib in [
         ],
     },
     {
+        "name": "Mips",
+        "short_name": "Mips",
+        "tbl_outs": [
+            ("-gen-asm-matcher", "lib/Target/Mips/MipsGenAsmMatcher.inc"),
+            ("-gen-asm-writer", "lib/Target/Mips/MipsGenAsmWriter.inc"),
+            ("-gen-callingconv", "lib/Target/Mips/MipsGenCallingConv.inc"),
+            ("-gen-dag-isel", "lib/Target/Mips/MipsGenDAGISel.inc"),
+            ("-gen-disassembler", "lib/Target/Mips/MipsGenDisassemblerTables.inc"),
+            ("-gen-emitter", "lib/Target/Mips/MipsGenMCCodeEmitter.inc"),
+            ("-gen-exegesis", "lib/Target/Mips/MipsGenExegesis.inc"),
+            ("-gen-fast-isel", "lib/Target/Mips/MipsGenFastISel.inc"),
+            ("-gen-global-isel", "lib/Target/Mips/MipsGenGlobalISel.inc"),
+            ("-gen-instr-info", "lib/Target/Mips/MipsGenInstrInfo.inc"),
+            ("-gen-pseudo-lowering", "lib/Target/Mips/MipsGenMCPseudoLowering.inc"),
+            ("-gen-register-bank", "lib/Target/Mips/MipsGenRegisterBank.inc"),
+            ("-gen-register-info", "lib/Target/Mips/MipsGenRegisterInfo.inc"),
+            ("-gen-subtarget", "lib/Target/Mips/MipsGenSubtargetInfo.inc"),
+        ],
+    },
+    {
+        "name": "MSP430",
+        "short_name": "MSP430",
+        "tbl_outs": [
+            ("-gen-asm-matcher", "lib/Target/MSP430/MSP430GenAsmMatcher.inc"),
+            ("-gen-asm-writer", "lib/Target/MSP430/MSP430GenAsmWriter.inc"),
+            ("-gen-callingconv", "lib/Target/MSP430/MSP430GenCallingConv.inc"),
+            ("-gen-dag-isel", "lib/Target/MSP430/MSP430GenDAGISel.inc"),
+            ("-gen-disassembler", "lib/Target/MSP430/MSP430GenDisassemblerTables.inc"),
+            ("-gen-emitter", "lib/Target/MSP430/MSP430GenMCCodeEmitter.inc"),
+            ("-gen-instr-info", "lib/Target/MSP430/MSP430GenInstrInfo.inc"),
+            ("-gen-register-info", "lib/Target/MSP430/MSP430GenRegisterInfo.inc"),
+            ("-gen-subtarget", "lib/Target/MSP430/MSP430GenSubtargetInfo.inc"),
+        ],
+    },
+    {
         "name": "NVPTX",
         "short_name": "NVPTX",
         "tbl_outs": [
@@ -1578,6 +1644,21 @@ llvm_target_lib_list = [lib for lib in [
             ("-gen-callingconv", "lib/Target/Sparc/SparcGenCallingConv.inc"),
             ("-gen-subtarget", "lib/Target/Sparc/SparcGenSubtargetInfo.inc"),
             ("-gen-disassembler", "lib/Target/Sparc/SparcGenDisassemblerTables.inc"),
+        ],
+    },
+    {
+        "name": "SystemZ",
+        "short_name": "SystemZ",
+        "tbl_outs": [
+            ("-gen-asm-matcher", "lib/Target/SystemZ/SystemZGenAsmMatcher.inc"),
+            ("-gen-asm-writer", "lib/Target/SystemZ/SystemZGenAsmWriter.inc"),
+            ("-gen-callingconv", "lib/Target/SystemZ/SystemZGenCallingConv.inc"),
+            ("-gen-dag-isel", "lib/Target/SystemZ/SystemZGenDAGISel.inc"),
+            ("-gen-disassembler", "lib/Target/SystemZ/SystemZGenDisassemblerTables.inc"),
+            ("-gen-emitter", "lib/Target/SystemZ/SystemZGenMCCodeEmitter.inc"),
+            ("-gen-instr-info", "lib/Target/SystemZ/SystemZGenInstrInfo.inc"),
+            ("-gen-register-info", "lib/Target/SystemZ/SystemZGenRegisterInfo.inc"),
+            ("-gen-subtarget", "lib/Target/SystemZ/SystemZGenSubtargetInfo.inc"),
         ],
     },
     {
@@ -1632,6 +1713,19 @@ llvm_target_lib_list = [lib for lib in [
             ("-gen-subtarget", "lib/Target/X86/X86GenSubtargetInfo.inc"),
             ("-gen-x86-EVEX2VEX-tables", "lib/Target/X86/X86GenEVEX2VEXTables.inc"),
             ("-gen-exegesis", "lib/Target/X86/X86GenExegesis.inc"),
+        ],
+    },
+    {
+        "name": "XCore",
+        "short_name": "XCore",
+        "tbl_outs": [
+            ("-gen-asm-writer", "lib/Target/XCore/XCoreGenAsmWriter.inc"),
+            ("-gen-callingconv", "lib/Target/XCore/XCoreGenCallingConv.inc"),
+            ("-gen-dag-isel", "lib/Target/XCore/XCoreGenDAGISel.inc"),
+            ("-gen-disassembler", "lib/Target/XCore/XCoreGenDisassemblerTables.inc"),
+            ("-gen-instr-info", "lib/Target/XCore/XCoreGenInstrInfo.inc"),
+            ("-gen-register-info", "lib/Target/XCore/XCoreGenRegisterInfo.inc"),
+            ("-gen-subtarget", "lib/Target/XCore/XCoreGenSubtargetInfo.inc"),
         ],
     },
 ] if lib["name"] in llvm_targets]
@@ -1891,6 +1985,24 @@ gentbl(
             ":" + target["name"] + "UtilsAndDesc",
         ],
     )],
+    [cc_library(
+        name = target["name"] + "TargetMCA",
+        srcs = glob([
+            "lib/Target/" + target["name"] + "/MCA/*.cpp",
+            "lib/Target/" + target["name"] + "/MCA/*.c",
+            "lib/Target/" + target["name"] + "/MCA/*.h",
+        ]),
+        copts = llvm_copts,
+        deps = [
+            ":MC",
+            ":MCA",
+            ":MCParser",
+            ":Support",
+            ":" + target["name"] + "DisassemblerInternalHeaders",
+            ":" + target["name"] + "Info",
+            ":" + target["name"] + "UtilsAndDesc",
+        ],
+    )],
 ] for target in llvm_target_lib_list]
 
 cc_library(
@@ -1916,6 +2028,15 @@ cc_library(
     copts = llvm_copts,
     deps = [
         target["name"] + "Disassembler"
+        for target in llvm_target_lib_list
+    ],
+)
+
+cc_library(
+    name = "AllTargetsMCAs",
+    copts = llvm_copts,
+    deps = [
+        target["name"] + "TargetMCA"
         for target in llvm_target_lib_list
     ],
 )
@@ -2985,6 +3106,7 @@ cc_binary(
         ":AllTargetsAsmParsers",
         ":AllTargetsCodeGens",
         ":AllTargetsDisassemblers",
+        ":AllTargetsMCAs",
         ":MC",
         ":MCA",
         ":MCParser",

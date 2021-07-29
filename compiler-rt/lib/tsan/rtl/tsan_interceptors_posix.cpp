@@ -248,7 +248,7 @@ static ThreadSignalContext *SigCtx(ThreadState *thr) {
 
 ScopedInterceptor::ScopedInterceptor(ThreadState *thr, const char *fname,
                                      uptr pc)
-    : thr_(thr), pc_(pc), in_ignored_lib_(false), ignoring_(false) {
+    : thr_(thr), in_ignored_lib_(false), ignoring_(false) {
   Initialize(thr);
   if (!thr_->is_inited) return;
   if (!thr_->ignore_interceptors) FuncEntry(thr, pc);
@@ -271,7 +271,7 @@ ScopedInterceptor::~ScopedInterceptor() {
 
 void ScopedInterceptor::EnableIgnores() {
   if (ignoring_) {
-    ThreadIgnoreBegin(thr_, pc_, /*save_stack=*/false);
+    ThreadIgnoreBegin(thr_, 0);
     if (flags()->ignore_noninstrumented_modules) thr_->suppress_reports++;
     if (in_ignored_lib_) {
       DCHECK(!thr_->in_ignored_lib);
@@ -282,7 +282,7 @@ void ScopedInterceptor::EnableIgnores() {
 
 void ScopedInterceptor::DisableIgnores() {
   if (ignoring_) {
-    ThreadIgnoreEnd(thr_, pc_);
+    ThreadIgnoreEnd(thr_);
     if (flags()->ignore_noninstrumented_modules) thr_->suppress_reports--;
     if (in_ignored_lib_) {
       DCHECK(thr_->in_ignored_lib);
@@ -444,7 +444,7 @@ static int setup_at_exit_wrapper(ThreadState *thr, uptr pc, void(*f)(),
   } else {
     res = REAL(__cxa_atexit)(cxa_at_exit_wrapper, ctx, dso);
   }
-  ThreadIgnoreEnd(thr, pc);
+  ThreadIgnoreEnd(thr);
   return res;
 }
 
@@ -470,7 +470,7 @@ TSAN_INTERCEPTOR(int, on_exit, void(*f)(int, void*), void *arg) {
   // because we do not see synchronization around atexit callback list.
   ThreadIgnoreBegin(thr, pc);
   int res = REAL(on_exit)(on_exit_wrapper, ctx);
-  ThreadIgnoreEnd(thr, pc);
+  ThreadIgnoreEnd(thr);
   return res;
 }
 #define TSAN_MAYBE_INTERCEPT_ON_EXIT TSAN_INTERCEPT(on_exit)
@@ -955,7 +955,7 @@ extern "C" void *__tsan_thread_start_func(void *arg) {
       Printf("ThreadSanitizer: failed to set thread key\n");
       Die();
     }
-    ThreadIgnoreEnd(thr, 0);
+    ThreadIgnoreEnd(thr);
 #endif
     while ((tid = atomic_load(&p->tid, memory_order_acquire)) == 0)
       internal_sched_yield();
@@ -1008,7 +1008,7 @@ TSAN_INTERCEPTOR(int, pthread_create,
     ScopedIgnoreInterceptors ignore;
     ThreadIgnoreBegin(thr, pc);
     res = REAL(pthread_create)(th, attr, __tsan_thread_start_func, &p);
-    ThreadIgnoreEnd(thr, pc);
+    ThreadIgnoreEnd(thr);
   }
   if (res == 0) {
     int tid = ThreadCreate(thr, pc, *(uptr*)th, IsStateDetached(detached));
@@ -1034,7 +1034,7 @@ TSAN_INTERCEPTOR(int, pthread_join, void *th, void **ret) {
   int tid = ThreadConsumeTid(thr, pc, (uptr)th);
   ThreadIgnoreBegin(thr, pc);
   int res = BLOCK_REAL(pthread_join)(th, ret);
-  ThreadIgnoreEnd(thr, pc);
+  ThreadIgnoreEnd(thr);
   if (res == 0) {
     ThreadJoin(thr, pc, tid);
   }
@@ -1069,7 +1069,7 @@ TSAN_INTERCEPTOR(int, pthread_tryjoin_np, void *th, void **ret) {
   int tid = ThreadConsumeTid(thr, pc, (uptr)th);
   ThreadIgnoreBegin(thr, pc);
   int res = REAL(pthread_tryjoin_np)(th, ret);
-  ThreadIgnoreEnd(thr, pc);
+  ThreadIgnoreEnd(thr);
   if (res == 0)
     ThreadJoin(thr, pc, tid);
   else
@@ -1083,7 +1083,7 @@ TSAN_INTERCEPTOR(int, pthread_timedjoin_np, void *th, void **ret,
   int tid = ThreadConsumeTid(thr, pc, (uptr)th);
   ThreadIgnoreBegin(thr, pc);
   int res = BLOCK_REAL(pthread_timedjoin_np)(th, ret, abstime);
-  ThreadIgnoreEnd(thr, pc);
+  ThreadIgnoreEnd(thr);
   if (res == 0)
     ThreadJoin(thr, pc, tid);
   else
@@ -2143,7 +2143,7 @@ TSAN_INTERCEPTOR(int, getaddrinfo, void *node, void *service,
   // inside of getaddrinfo. So ignore memory accesses.
   ThreadIgnoreBegin(thr, pc);
   int res = REAL(getaddrinfo)(node, service, hints, rv);
-  ThreadIgnoreEnd(thr, pc);
+  ThreadIgnoreEnd(thr);
   return res;
 }
 

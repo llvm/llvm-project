@@ -7,7 +7,7 @@
 // RUN:          .R_ARM_PC11_2 : { *(.R_ARM_PC11_2) } \
 // RUN:          .text : { *(.text) } } " > %t.script
 // RUN: ld.lld --script %t.script %t %S/Inputs/arm-thumb-narrow-branch.o -o %t2
-// RUN: llvm-objdump -d --triple=thumbv7a-none-linux-gnueabi %t2 | FileCheck %s
+// RUN: llvm-objdump -d %t2 | FileCheck %s
 
 // Test the R_ARM_PC11 relocation which is used with the narrow encoding of B.N
 // the source of these relocations is a binary file arm-thumb-narrow-branch.o

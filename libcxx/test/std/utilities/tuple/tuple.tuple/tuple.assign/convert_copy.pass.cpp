@@ -7,7 +7,7 @@
 //===----------------------------------------------------------------------===//
 
 // Triggers a Clang assertion: https://bugs.llvm.org/show_bug.cgi?id=45879
-// UNSUPPORTED: clang-13
+// UNSUPPORTED: clang-13, clang-14
 
 // <tuple>
 

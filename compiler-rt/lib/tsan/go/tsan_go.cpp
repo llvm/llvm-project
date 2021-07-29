@@ -27,9 +27,7 @@ bool IsExpectedReport(uptr addr, uptr size) {
   return false;
 }
 
-void *internal_alloc(MBlockType typ, uptr sz) {
-  return InternalAlloc(sz);
-}
+void *internal_alloc(uptr sz) { return InternalAlloc(sz); }
 
 void internal_free(void *p) {
   InternalFree(p);
@@ -142,8 +140,7 @@ Processor *ThreadState::proc() {
 extern "C" {
 
 static ThreadState *AllocGoroutine() {
-  ThreadState *thr = (ThreadState*)internal_alloc(MBlockThreadContex,
-      sizeof(ThreadState));
+  ThreadState *thr = (ThreadState *)internal_alloc(sizeof(ThreadState));
   internal_memset(thr, 0, sizeof(*thr));
   return thr;
 }
@@ -256,9 +253,7 @@ void __tsan_release_merge(ThreadState *thr, void *addr) {
   Release(thr, 0, (uptr)addr);
 }
 
-void __tsan_finalizer_goroutine(ThreadState *thr) {
-  AcquireGlobal(thr, 0);
-}
+void __tsan_finalizer_goroutine(ThreadState *thr) { AcquireGlobal(thr); }
 
 void __tsan_mutex_before_lock(ThreadState *thr, uptr addr, uptr write) {
   if (write)
@@ -285,9 +280,7 @@ void __tsan_go_ignore_sync_begin(ThreadState *thr) {
   ThreadIgnoreSyncBegin(thr, 0);
 }
 
-void __tsan_go_ignore_sync_end(ThreadState *thr) {
-  ThreadIgnoreSyncEnd(thr, 0);
-}
+void __tsan_go_ignore_sync_end(ThreadState *thr) { ThreadIgnoreSyncEnd(thr); }
 
 void __tsan_report_count(u64 *pn) {
   Lock lock(&ctx->report_mtx);

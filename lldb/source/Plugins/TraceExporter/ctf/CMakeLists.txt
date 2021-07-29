@@ -10,7 +10,6 @@ CommandObjectThreadTraceExportCTF.cpp
     lldbCore
     lldbSymbol
     lldbTarget
-    lldbPluginTraceExporterCommon
   LINK_COMPONENTS
     Support
   )
