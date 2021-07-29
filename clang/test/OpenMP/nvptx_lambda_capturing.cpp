@@ -397,7 +397,7 @@ int main(int argc, char **argv) {
 //
 //
 // CHECK1-LABEL: define {{[^@]+}}@{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}_main_l43
-// CHECK1-SAME: (i32* nonnull align 4 dereferenceable(4) [[ARGC:%.*]], i32* nonnull align 4 dereferenceable(4) [[B:%.*]], i32* nonnull align 4 dereferenceable(4) [[C:%.*]], i32* [[D:%.*]], i32* nonnull align 4 dereferenceable(4) [[A:%.*]], %class.anon* nonnull align 8 dereferenceable(40) [[L:%.*]]) #[[ATTR1]] {
+// CHECK1-SAME: (i32* nonnull align 4 dereferenceable(4) [[ARGC:%.*]], i32* nonnull align 4 dereferenceable(4) [[B:%.*]], i32* nonnull align 4 dereferenceable(4) [[C:%.*]], i32* [[D:%.*]], i32* nonnull align 4 dereferenceable(4) [[A:%.*]], %class.anon* nonnull align 8 dereferenceable(40) [[L:%.*]]) #[[ATTR2:[0-9]+]] {
 // CHECK1-NEXT:  entry:
 // CHECK1-NEXT:    [[ARGC_ADDR:%.*]] = alloca i32*, align 8
 // CHECK1-NEXT:    [[B_ADDR:%.*]] = alloca i32*, align 8
@@ -630,7 +630,7 @@ int main(int argc, char **argv) {
 //
 //
 // CHECK1-LABEL: define {{[^@]+}}@{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__ZN1S3fooEv_l29
-// CHECK1-SAME: (%struct.S* [[THIS:%.*]], %class.anon.0* nonnull align 8 dereferenceable(8) [[L:%.*]]) #[[ATTR1]] {
+// CHECK1-SAME: (%struct.S* [[THIS:%.*]], %class.anon.0* nonnull align 8 dereferenceable(8) [[L:%.*]]) #[[ATTR2]] {
 // CHECK1-NEXT:  entry:
 // CHECK1-NEXT:    [[THIS_ADDR:%.*]] = alloca %struct.S*, align 8
 // CHECK1-NEXT:    [[L_ADDR:%.*]] = alloca %class.anon.0*, align 8
@@ -715,7 +715,7 @@ int main(int argc, char **argv) {
 //
 //
 // CHECK1-LABEL: define {{[^@]+}}@{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__Z3fooIZN1S3fooEvEUlvE_EiRKT__l18
-// CHECK1-SAME: (%class.anon.0* nonnull align 8 dereferenceable(8) [[T:%.*]]) #[[ATTR1]] {
+// CHECK1-SAME: (%class.anon.0* nonnull align 8 dereferenceable(8) [[T:%.*]]) #[[ATTR2]] {
 // CHECK1-NEXT:  entry:
 // CHECK1-NEXT:    [[T_ADDR:%.*]] = alloca %class.anon.0*, align 8
 // CHECK1-NEXT:    [[TMP:%.*]] = alloca %class.anon.0*, align 8
@@ -805,7 +805,7 @@ int main(int argc, char **argv) {
 //
 //
 // CHECK2-LABEL: define {{[^@]+}}@{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__ZN1S3fooEv_l29
-// CHECK2-SAME: (%struct.S* [[THIS:%.*]], %class.anon* nonnull align 8 dereferenceable(8) [[L:%.*]]) #[[ATTR0]] {
+// CHECK2-SAME: (%struct.S* [[THIS:%.*]], %class.anon* nonnull align 8 dereferenceable(8) [[L:%.*]]) #[[ATTR1:[0-9]+]] {
 // CHECK2-NEXT:  entry:
 // CHECK2-NEXT:    [[THIS_ADDR:%.*]] = alloca %struct.S*, align 8
 // CHECK2-NEXT:    [[L_ADDR:%.*]] = alloca %class.anon*, align 8
@@ -937,7 +937,7 @@ int main(int argc, char **argv) {
 //
 //
 // CHECK2-LABEL: define {{[^@]+}}@{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}_main_l43
-// CHECK2-SAME: (i32* nonnull align 4 dereferenceable(4) [[ARGC:%.*]], i32* nonnull align 4 dereferenceable(4) [[B:%.*]], i32* nonnull align 4 dereferenceable(4) [[C:%.*]], i32* [[D:%.*]], i32* nonnull align 4 dereferenceable(4) [[A:%.*]], %class.anon.0* nonnull align 8 dereferenceable(40) [[L:%.*]]) #[[ATTR0]] {
+// CHECK2-SAME: (i32* nonnull align 4 dereferenceable(4) [[ARGC:%.*]], i32* nonnull align 4 dereferenceable(4) [[B:%.*]], i32* nonnull align 4 dereferenceable(4) [[C:%.*]], i32* [[D:%.*]], i32* nonnull align 4 dereferenceable(4) [[A:%.*]], %class.anon.0* nonnull align 8 dereferenceable(40) [[L:%.*]]) #[[ATTR1]] {
 // CHECK2-NEXT:  entry:
 // CHECK2-NEXT:    [[ARGC_ADDR:%.*]] = alloca i32*, align 8
 // CHECK2-NEXT:    [[B_ADDR:%.*]] = alloca i32*, align 8
@@ -1072,7 +1072,7 @@ int main(int argc, char **argv) {
 //
 //
 // CHECK2-LABEL: define {{[^@]+}}@{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__Z3fooIZN1S3fooEvEUlvE_EiRKT__l18
-// CHECK2-SAME: (%class.anon* nonnull align 8 dereferenceable(8) [[T:%.*]]) #[[ATTR0]] {
+// CHECK2-SAME: (%class.anon* nonnull align 8 dereferenceable(8) [[T:%.*]]) #[[ATTR1]] {
 // CHECK2-NEXT:  entry:
 // CHECK2-NEXT:    [[T_ADDR:%.*]] = alloca %class.anon*, align 8
 // CHECK2-NEXT:    [[TMP:%.*]] = alloca %class.anon*, align 8
@@ -1193,7 +1193,7 @@ int main(int argc, char **argv) {
 //
 //
 // CHECK3-LABEL: define {{[^@]+}}@{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}_main_l43
-// CHECK3-SAME: (i32* nonnull align 4 dereferenceable(4) [[ARGC:%.*]], i32* nonnull align 4 dereferenceable(4) [[B:%.*]], i32* nonnull align 4 dereferenceable(4) [[C:%.*]], i32* [[D:%.*]], i32* nonnull align 4 dereferenceable(4) [[A:%.*]], %class.anon* nonnull align 8 dereferenceable(40) [[L:%.*]]) #[[ATTR0]] {
+// CHECK3-SAME: (i32* nonnull align 4 dereferenceable(4) [[ARGC:%.*]], i32* nonnull align 4 dereferenceable(4) [[B:%.*]], i32* nonnull align 4 dereferenceable(4) [[C:%.*]], i32* [[D:%.*]], i32* nonnull align 4 dereferenceable(4) [[A:%.*]], %class.anon* nonnull align 8 dereferenceable(40) [[L:%.*]]) #[[ATTR1:[0-9]+]] {
 // CHECK3-NEXT:  entry:
 // CHECK3-NEXT:    [[ARGC_ADDR:%.*]] = alloca i32*, align 8
 // CHECK3-NEXT:    [[B_ADDR:%.*]] = alloca i32*, align 8
@@ -1374,7 +1374,7 @@ int main(int argc, char **argv) {
 //
 //
 // CHECK3-LABEL: define {{[^@]+}}@{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__ZN1S3fooEv_l29
-// CHECK3-SAME: (%struct.S* [[THIS:%.*]], %class.anon.0* nonnull align 8 dereferenceable(8) [[L:%.*]]) #[[ATTR0]] {
+// CHECK3-SAME: (%struct.S* [[THIS:%.*]], %class.anon.0* nonnull align 8 dereferenceable(8) [[L:%.*]]) #[[ATTR1]] {
 // CHECK3-NEXT:  entry:
 // CHECK3-NEXT:    [[THIS_ADDR:%.*]] = alloca %struct.S*, align 8
 // CHECK3-NEXT:    [[L_ADDR:%.*]] = alloca %class.anon.0*, align 8
@@ -1436,7 +1436,7 @@ int main(int argc, char **argv) {
 //
 //
 // CHECK3-LABEL: define {{[^@]+}}@{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__Z3fooIZN1S3fooEvEUlvE_EiRKT__l18
-// CHECK3-SAME: (%class.anon.0* nonnull align 8 dereferenceable(8) [[T:%.*]]) #[[ATTR0]] {
+// CHECK3-SAME: (%class.anon.0* nonnull align 8 dereferenceable(8) [[T:%.*]]) #[[ATTR1]] {
 // CHECK3-NEXT:  entry:
 // CHECK3-NEXT:    [[T_ADDR:%.*]] = alloca %class.anon.0*, align 8
 // CHECK3-NEXT:    [[TMP:%.*]] = alloca %class.anon.0*, align 8
@@ -1557,7 +1557,7 @@ int main(int argc, char **argv) {
 //
 //
 // CHECK4-LABEL: define {{[^@]+}}@{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}_main_l43
-// CHECK4-SAME: (i32* nonnull align 4 dereferenceable(4) [[ARGC:%.*]], i32* nonnull align 4 dereferenceable(4) [[B:%.*]], i32* nonnull align 4 dereferenceable(4) [[C:%.*]], i32* [[D:%.*]], i32* nonnull align 4 dereferenceable(4) [[A:%.*]], %class.anon* nonnull align 8 dereferenceable(40) [[L:%.*]]) #[[ATTR0]] {
+// CHECK4-SAME: (i32* nonnull align 4 dereferenceable(4) [[ARGC:%.*]], i32* nonnull align 4 dereferenceable(4) [[B:%.*]], i32* nonnull align 4 dereferenceable(4) [[C:%.*]], i32* [[D:%.*]], i32* nonnull align 4 dereferenceable(4) [[A:%.*]], %class.anon* nonnull align 8 dereferenceable(40) [[L:%.*]]) #[[ATTR1:[0-9]+]] {
 // CHECK4-NEXT:  entry:
 // CHECK4-NEXT:    [[ARGC_ADDR:%.*]] = alloca i32*, align 8
 // CHECK4-NEXT:    [[B_ADDR:%.*]] = alloca i32*, align 8
@@ -1738,7 +1738,7 @@ int main(int argc, char **argv) {
 //
 //
 // CHECK4-LABEL: define {{[^@]+}}@{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__ZN1S3fooEv_l29
-// CHECK4-SAME: (%struct.S* [[THIS:%.*]], %class.anon.0* nonnull align 8 dereferenceable(8) [[L:%.*]]) #[[ATTR0]] {
+// CHECK4-SAME: (%struct.S* [[THIS:%.*]], %class.anon.0* nonnull align 8 dereferenceable(8) [[L:%.*]]) #[[ATTR1]] {
 // CHECK4-NEXT:  entry:
 // CHECK4-NEXT:    [[THIS_ADDR:%.*]] = alloca %struct.S*, align 8
 // CHECK4-NEXT:    [[L_ADDR:%.*]] = alloca %class.anon.0*, align 8
@@ -1800,7 +1800,7 @@ int main(int argc, char **argv) {
 //
 //
 // CHECK4-LABEL: define {{[^@]+}}@{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__Z3fooIZN1S3fooEvEUlvE_EiRKT__l18
-// CHECK4-SAME: (%class.anon.0* nonnull align 8 dereferenceable(8) [[T:%.*]]) #[[ATTR0]] {
+// CHECK4-SAME: (%class.anon.0* nonnull align 8 dereferenceable(8) [[T:%.*]]) #[[ATTR1]] {
 // CHECK4-NEXT:  entry:
 // CHECK4-NEXT:    [[T_ADDR:%.*]] = alloca %class.anon.0*, align 8
 // CHECK4-NEXT:    [[TMP:%.*]] = alloca %class.anon.0*, align 8
