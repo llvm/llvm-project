@@ -2660,12 +2660,14 @@ void BoUpSLP::reorderTopToBottom(bool FreeReorder) {
       if (TE->Scalars.size() != VF) {
         if (TE->ReuseShuffleIndices.size() == VF) {
           // Need to reorder the reuses masks of the operands with smaller VF to
-          // be able to find the math between the graph nodes and scalar
+          // be able to find the match between the graph nodes and scalar
           // operands of the given node during vectorization/cost estimation.
           // Build a list of such operands for future reordering.
           assert(all_of(TE->UserTreeIndices,
-                        [VF](const EdgeInfo &EI) {
-                          return EI.UserTE->Scalars.size() == VF;
+                        [VF, &TE](const EdgeInfo &EI) {
+                          return EI.UserTE->Scalars.size() == VF ||
+                                 EI.UserTE->Scalars.size() ==
+                                     TE->Scalars.size();
                         }) &&
                  "All users must be of VF size.");
           SmallOperandsToReorder.insert(TE.get());
