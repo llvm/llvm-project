@@ -4,9 +4,7 @@
 define i32 @f(i16* %p) {
 ; CHECK-LABEL: f:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    movzwl (%rdi), %eax
-; CHECK-NEXT:    andl $2048, %eax # imm = 0x800
-; CHECK-NEXT:    testw %ax, %ax
+; CHECK-NEXT:    testb $8, 1(%rdi)
 ; CHECK-NEXT:    je .LBB0_1
 ; CHECK-NEXT:  # %bb.2: # %B
 ; CHECK-NEXT:    movl $20, %eax

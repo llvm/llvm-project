@@ -1565,6 +1565,8 @@ public:
   bool isOne() const { return Value->isOne(); }
   bool isNullValue() const { return Value->isZero(); }
   bool isAllOnesValue() const { return Value->isMinusOne(); }
+  bool isMaxSignedValue() const { return Value->isMaxValue(true); }
+  bool isMinSignedValue() const { return Value->isMinValue(true); }
 
   bool isOpaque() const { return ConstantSDNodeBits.IsOpaque; }
 
