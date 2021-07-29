@@ -1,0 +1,57 @@
+name: lldb Tests
+
+on:
+  push:
+    branches:
+      - 'release/**'
+    paths:
+      - 'clang/**'
+      - 'llvm/**'
+      - 'lldb/**'
+      - '.github/workflows/lldb-tests.yml'
+  pull_request:
+    paths:
+      - 'clang/**'
+      - 'llvm/**'
+      - 'lldb/**'
+      - '.github/workflows/lldb-tests.yml'
+
+concurrency:
+  # Skip intermediate builds: always.
+  # Cancel intermediate builds: only if it is a pull request build.
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: ${{ startsWith(github.ref, 'refs/pull/') }}
+
+
+jobs:
+  build_lldb:
+    name: lldb build
+    runs-on: ${{ matrix.os }}
+    # Workaround for build faliure on Mac OS X: llvm.org/PR46190, https://github.com/actions/virtual-environments/issues/2274
+    env:
+      CPLUS_INCLUDE_PATH: /usr/local/opt/llvm/include/c++/v1:/Library/Developer/CommandLineTools/SDKs/MacOSX10.15.sdk/usr/include
+    strategy:
+      fail-fast: false
+      matrix:
+        os:
+          - ubuntu-latest
+          - windows-latest
+          - macOS-10.15
+    steps:
+    - name: Setup Windows
+      if: startsWith(matrix.os, 'windows')
+      uses: llvm/actions/setup-windows@main
+      with:
+        arch: amd64
+    - name: Install Ninja
+      uses: llvm/actions/install-ninja@main
+    - uses: actions/checkout@v1
+      with:
+        fetch-depth: 250
+    - name: Build lldb
+      uses: llvm/actions/build-test-llvm-project@main
+      with:
+        # Mac OS requries that libcxx is enabled for lldb tests, so we need  to disable them.
+        cmake_args: -G Ninja  -DLLVM_ENABLE_PROJECTS="clang;lldb" -DCMAKE_BUILD_TYPE=Release -DLLDB_INCLUDE_TESTS=OFF
+        # check-lldb is not consistent, so we only build lldb.
+        build_target: ""

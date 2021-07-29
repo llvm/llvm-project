@@ -1,0 +1,49 @@
+name: LLD Tests
+
+on:
+  push:
+    branches:
+      - 'release/**'
+    paths:
+      - 'lld/**'
+      - 'llvm/**'
+      - '.github/workflows/lld-tests.yml'
+  pull_request:
+    paths:
+      - 'lld/**'
+      - 'llvm/**'
+      - '.github/workflows/lld-tests.yml'
+
+concurrency:
+  # Skip intermediate builds: always.
+  # Cancel intermediate builds: only if it is a pull request build.
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: ${{ startsWith(github.ref, 'refs/pull/') }}
+
+jobs:
+  build_lld:
+    name: lld check-all
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        os:
+          - ubuntu-latest
+          - windows-latest
+          - macOS-latest
+    steps:
+    - name: Setup Windows
+      if: startsWith(matrix.os, 'windows')
+      uses: llvm/actions/setup-windows@main
+      with:
+        arch: amd64
+    - name: Install Ninja
+      uses: llvm/actions/install-ninja@main
+    - uses: actions/checkout@v1
+      with:
+        fetch-depth: 250
+    - name: Test lld
+      uses: llvm/actions/build-test-llvm-project@main
+      with:
+        cmake_args: -G Ninja  -DLLVM_ENABLE_PROJECTS="lld" -DCMAKE_BUILD_TYPE=Release
+        build_target: check-lld
