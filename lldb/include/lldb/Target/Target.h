@@ -229,6 +229,10 @@ public:
 
   bool GetDebugUtilityExpression() const;
 
+  void SetVerifyFileCacheMemoryReads(bool debug);
+
+  bool GetVerifyFileCacheMemoryReads() const;
+
 private:
   // Callbacks for m_launch_info.
   void Arg0ValueChangedCallback();

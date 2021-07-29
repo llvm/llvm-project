@@ -236,6 +236,8 @@ public:
 
   void SetIsRelocated(bool b) { m_relocated = b; }
 
+  bool IsReadOnly();
+
 protected:
   ObjectFile *m_obj_file;   // The object file that data for this section should
                             // be read from

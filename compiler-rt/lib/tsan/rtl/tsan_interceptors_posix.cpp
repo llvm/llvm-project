@@ -249,7 +249,7 @@ static ThreadSignalContext *SigCtx(ThreadState *thr) {
 ScopedInterceptor::ScopedInterceptor(ThreadState *thr, const char *fname,
                                      uptr pc)
     : thr_(thr), in_ignored_lib_(false), ignoring_(false) {
-  Initialize(thr);
+  LazyInitialize(thr);
   if (!thr_->is_inited) return;
   if (!thr_->ignore_interceptors) FuncEntry(thr, pc);
   DPrintf("#%d: intercept %s()\n", thr_->tid, fname);
@@ -2488,10 +2488,7 @@ static __sanitizer_sighandler_ptr signal_impl(int sig,
 struct ScopedSyscall {
   ThreadState *thr;
 
-  explicit ScopedSyscall(ThreadState *thr)
-      : thr(thr) {
-    Initialize(thr);
-  }
+  explicit ScopedSyscall(ThreadState *thr) : thr(thr) { LazyInitialize(thr); }
 
   ~ScopedSyscall() {
     ProcessPendingSignals(thr);

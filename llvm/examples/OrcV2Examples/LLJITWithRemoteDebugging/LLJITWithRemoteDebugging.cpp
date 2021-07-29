@@ -133,12 +133,12 @@ static cl::opt<bool>
 
 ExitOnError ExitOnErr;
 
-static std::unique_ptr<JITLinkExecutor> connectExecutor(const char *Argv0,
-                                                        ExecutionSession &ES) {
+static std::unique_ptr<JITLinkExecutor> connectExecutor(const char *Argv0) {
   // Connect to a running out-of-process executor through a TCP socket.
   if (!OOPExecutorConnect.empty()) {
     std::unique_ptr<TCPSocketJITLinkExecutor> Exec =
-        ExitOnErr(JITLinkExecutor::ConnectTCPSocket(OOPExecutorConnect, ES));
+        ExitOnErr(JITLinkExecutor::ConnectTCPSocket(OOPExecutorConnect,
+                                                    std::ref(ExitOnErr)));
 
     outs() << "Connected to executor at " << OOPExecutorConnect << "\n";
     if (WaitForDebugger) {
@@ -157,7 +157,7 @@ static std::unique_ptr<JITLinkExecutor> connectExecutor(const char *Argv0,
 
   outs() << "Found out-of-process executor: " << Exec->getPath() << "\n";
 
-  ExitOnErr(Exec->launch(ES));
+  ExitOnErr(Exec->launch(std::ref(ExitOnErr)));
   if (WaitForDebugger) {
     outs() << "Launched executor in subprocess: " << Exec->getPID() << "\n"
            << "Attach a debugger and press any key to continue.\n";
@@ -177,11 +177,8 @@ int main(int argc, char *argv[]) {
   ExitOnErr.setBanner(std::string(argv[0]) + ": ");
   cl::ParseCommandLineOptions(argc, argv, "LLJITWithRemoteDebugging");
 
-  auto ES = std::make_unique<ExecutionSession>();
-  ES->setErrorReporter([&](Error Err) { ExitOnErr(std::move(Err)); });
-
   // Launch/connect the out-of-process executor.
-  std::unique_ptr<JITLinkExecutor> Executor = connectExecutor(argv[0], *ES);
+  std::unique_ptr<JITLinkExecutor> Executor = connectExecutor(argv[0]);
 
   // Load the given IR files.
   std::vector<ThreadSafeModule> TSMs;
@@ -215,6 +212,8 @@ int main(int argc, char *argv[]) {
 
   // Create LLJIT and destroy it before disconnecting the target process.
   {
+    std::unique_ptr<ExecutionSession> ES = Executor->startSession();
+
     outs() << "Initializing LLJIT for remote executor\n";
     auto J = ExitOnErr(LLJITBuilder()
                            .setExecutionSession(std::move(ES))
@@ -253,6 +252,5 @@ int main(int argc, char *argv[]) {
     outs() << "Exit code: " << Result << "\n";
   }
 
-  ExitOnErr(Executor->disconnect());
   return 0;
 }

@@ -859,6 +859,19 @@ enum FiberSwitchFlags {
   FiberSwitchFlagNoSync = 1 << 0, // __tsan_switch_to_fiber_no_sync
 };
 
+extern bool is_initialized;
+
+ALWAYS_INLINE
+void LazyInitialize(ThreadState *thr) {
+  // If we can use .preinit_array, assume that __tsan_init
+  // called from .preinit_array initializes runtime before
+  // any instrumented code.
+#if !SANITIZER_CAN_USE_PREINIT_ARRAY
+  if (UNLIKELY(!is_initialized))
+    Initialize(thr);
+#endif
+}
+
 }  // namespace __tsan
 
 #endif  // TSAN_RTL_H

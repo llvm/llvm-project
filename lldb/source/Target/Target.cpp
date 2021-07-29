@@ -1763,20 +1763,33 @@ size_t Target::ReadMemory(const Address &addr, void *dst, size_t dst_len,
   // Read from file cache if read-only section.
   if (!force_live_memory && resolved_addr.IsSectionOffset()) {
     SectionSP section_sp(resolved_addr.GetSection());
-    if (section_sp) {
-      auto permissions = Flags(section_sp->GetPermissions());
-      bool is_readonly = !permissions.Test(ePermissionsWritable) &&
-                         permissions.Test(ePermissionsReadable);
-      if (is_readonly) {
-        file_cache_bytes_read =
-            ReadMemoryFromFileCache(resolved_addr, dst, dst_len, error);
-        if (file_cache_bytes_read == dst_len)
-          return file_cache_bytes_read;
-        else if (file_cache_bytes_read > 0) {
-          file_cache_read_buffer =
-              std::make_unique<uint8_t[]>(file_cache_bytes_read);
-          std::memcpy(file_cache_read_buffer.get(), dst, file_cache_bytes_read);
+    if (section_sp && section_sp->IsReadOnly()) {
+      file_cache_bytes_read =
+          ReadMemoryFromFileCache(resolved_addr, dst, dst_len, error);
+
+      if (GetVerifyFileCacheMemoryReads()) {
+        if (ProcessIsValid() && file_cache_bytes_read == dst_len) {
+          if (load_addr == LLDB_INVALID_ADDRESS)
+            load_addr = resolved_addr.GetLoadAddress(this);
+          if (load_addr != LLDB_INVALID_ADDRESS) {
+            std::unique_ptr<uint8_t[]> live_buf =
+                std::make_unique<uint8_t[]>(dst_len);
+            bytes_read = m_process_sp->ReadMemory(load_addr, live_buf.get(),
+                                                  dst_len, error);
+            if (bytes_read == dst_len) {
+              lldbassert(memcmp(live_buf.get(), dst, dst_len) == 0 &&
+                         "File cache and live memory diverge!");
+            }
+          }
         }
+      }
+
+      if (file_cache_bytes_read == dst_len)
+        return file_cache_bytes_read;
+      if (file_cache_bytes_read > 0) {
+        file_cache_read_buffer =
+            std::make_unique<uint8_t[]>(file_cache_bytes_read);
+        std::memcpy(file_cache_read_buffer.get(), dst, file_cache_bytes_read);
       }
     }
   }
@@ -4374,6 +4387,17 @@ bool TargetProperties::GetDebugUtilityExpression() const {
 void TargetProperties::SetDebugUtilityExpression(bool debug) {
   const uint32_t idx = ePropertyDebugUtilityExpression;
   m_collection_sp->SetPropertyAtIndexAsBoolean(nullptr, idx, debug);
+}
+
+bool TargetProperties::GetVerifyFileCacheMemoryReads() const {
+  const uint32_t idx = ePropertyVerifyFileCacheMemoryReads;
+  return m_collection_sp->GetPropertyAtIndexAsBoolean(
+      nullptr, idx, g_target_properties[idx].default_uint_value != 0);
+}
+
+void TargetProperties::SetVerifyFileCacheMemoryReads(bool verify) {
+  const uint32_t idx = ePropertyVerifyFileCacheMemoryReads;
+  m_collection_sp->SetPropertyAtIndexAsBoolean(nullptr, idx, verify);
 }
 
 // Target::TargetEventData

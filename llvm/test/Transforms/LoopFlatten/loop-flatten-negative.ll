@@ -341,107 +341,34 @@ for.end8:                                         ; preds = %for.inc6
   ret i32 10
 }
 
-; test_10, test_11 and test_12 are for the case when the
-; inner trip count is a constant, then the InstCombine pass
-; makes the transformation icmp ult i32 %inc, tripcount ->
-; icmp ult i32 %j, tripcount-step.
-
-; test_10: The step is not 1.
-define i32 @test_10(i32* nocapture %A) {
+; When the loop trip count is a constant (e.g. 20) and the step size is
+; 1, InstCombine causes the transformation icmp ult i32 %inc, 20 ->
+; icmp ult i32 %j, 19. In this case a valid trip count is not found so
+; the loop is not flattened. 
+define i32 @test9(i32* nocapture %A) {
 entry:
   br label %for.cond1.preheader
 
 for.cond1.preheader:
-  %i.017 = phi i32 [ 0, %entry ], [ %inc, %for.cond.cleanup3 ]
+  %i.017 = phi i32 [ 0, %entry ], [ %inc6, %for.cond.cleanup3 ]
   %mul = mul i32 %i.017, 20
   br label %for.body4
 
+for.cond.cleanup3:
+  %inc6 = add i32 %i.017, 1
+  %cmp = icmp ult i32 %inc6, 11
+  br i1 %cmp, label %for.cond1.preheader, label %for.cond.cleanup
+
 for.body4:
-  %j.016 = phi i32 [ 0, %for.cond1.preheader ], [ %add5, %for.body4 ]
+  %j.016 = phi i32 [ 0, %for.cond1.preheader ], [ %inc, %for.body4 ]
   %add = add i32 %j.016, %mul
   %arrayidx = getelementptr inbounds i32, i32* %A, i32 %add
   store i32 30, i32* %arrayidx, align 4
-  %add5 = add nuw nsw i32 %j.016, 2
-  %cmp2 = icmp ult i32 %j.016, 18
+  %inc = add nuw nsw i32 %j.016, 1
+  %cmp2 = icmp ult i32 %j.016, 19
   br i1 %cmp2, label %for.body4, label %for.cond.cleanup3
 
-for.cond.cleanup3:
-  %inc = add i32 %i.017, 1
-  %cmp = icmp ult i32 %inc, 11
-  br i1 %cmp, label %for.cond1.preheader, label %for.cond.cleanup
-
 for.cond.cleanup:
-  %0 = load i32, i32* %A, align 4
-  ret i32 %0
-}
-
-; test_11: The inner inducation variable is used in a compare which
-; isn't the condition of the inner branch.
-define i32 @test_11(i32* nocapture %A) {
-entry:
-  br label %for.cond1.preheader
-
-for.cond1.preheader:
-  %i.020 = phi i32 [ 0, %entry ], [ %inc7, %for.cond.cleanup3 ]
-  %mul = mul i32 %i.020, 20
-  br label %for.body4
-
-for.body4:
-  %j.019 = phi i32 [ 0, %for.cond1.preheader ], [ %inc, %for.body4 ]
-  %cmp5 = icmp ult i32 %j.019, 5
-  %cond = select i1 %cmp5, i32 30, i32 15
-  %add = add i32 %j.019, %mul
-  %arrayidx = getelementptr inbounds i32, i32* %A, i32 %add
-  store i32 %cond, i32* %arrayidx, align 4
-  %inc = add nuw nsw i32 %j.019, 1
-  %cmp2 = icmp ult i32 %j.019, 19
-  br i1 %cmp2, label %for.body4, label %for.cond.cleanup3
-
-for.cond.cleanup3:
-  %inc7 = add i32 %i.020, 1
-  %cmp = icmp ult i32 %inc7, 11
-  br i1 %cmp, label %for.cond1.preheader, label %for.cond.cleanup
-
-for.cond.cleanup:
-  %0 = load i32, i32* %A, align 4
-  ret i32 %0
-}
-
-; test_12: Incoming phi node value for preheader is a variable
-define i32 @test_12(i32* %A) {
-entry:
-  br label %while.cond1.preheader
-
-while.cond1.preheader:
-  %j.017 = phi i32 [ 0, %entry ], [ %j.1, %while.end ]
-  %i.016 = phi i32 [ 0, %entry ], [ %inc4, %while.end ]
-  %mul = mul i32 %i.016, 20
-  %cmp214 = icmp ult i32 %j.017, 20
-  br i1 %cmp214, label %while.body3.preheader, label %while.end
-
-while.body3.preheader:
-  br label %while.body3
-
-while.body3:
-  %j.115 = phi i32 [ %inc, %while.body3 ], [ %j.017, %while.body3.preheader ]
-  %add = add i32 %j.115, %mul
-  %arrayidx = getelementptr inbounds i32, i32* %A, i32 %add
-  store i32 30, i32* %arrayidx, align 4
-  %inc = add nuw nsw i32 %j.115, 1
-  %cmp2 = icmp ult i32 %j.115, 19
-  br i1 %cmp2, label %while.body3, label %while.end.loopexit
-
-while.end.loopexit:
-  %inc.lcssa = phi i32 [ %inc, %while.body3 ]
-  br label %while.end
-  
-while.end:
-  %j.1 = phi i32 [ %j.017, %while.cond1.preheader], [ %inc.lcssa, %while.end.loopexit ]
-  %inc4 = add i32 %i.016, 1
-  %cmp = icmp ult i32 %inc4, 11
-  br i1 %cmp, label %while.cond1.preheader, label %while.end5
-
-while.end5:
   %0 = load i32, i32* %A, align 4
   ret i32 %0
 }

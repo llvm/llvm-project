@@ -87,6 +87,7 @@ set(TSAN_HEADERS
   rtl/tsan_flags.h
   rtl/tsan_flags.inc
   rtl/tsan_ignoreset.h
+  rtl/tsan_ilist.h
   rtl/tsan_interceptors.h
   rtl/tsan_interface.h
   rtl/tsan_interface_ann.h

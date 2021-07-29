@@ -1,10 +1,10 @@
 # This test makes sure that the example builds and executes as expected.
 # Instructions for debugging can be found in LLJITWithRemoteDebugging.cpp
 
-# RUN: LLJITWithRemoteDebugging %p/Inputs/argc_sub1_elf.ll | FileCheck --check-prefix=CHECK1 %s
-# CHECK1: Parsing input IR code from: {{.*}}/Inputs/argc_sub1_elf.ll
-# CHECK1: Running: main()
-# CHECK1: Exit code: 0
+# RUN: LLJITWithRemoteDebugging %p/Inputs/argc_sub1_elf.ll | FileCheck --check-prefix=CHECK0 %s
+# CHECK0: Parsing input IR code from: {{.*}}/Inputs/argc_sub1_elf.ll
+# CHECK0: Running: main()
+# CHECK0: Exit code: 0
 
 # RUN: LLJITWithRemoteDebugging %p/Inputs/argc_sub1_elf.ll --args 2nd 3rd 4th | FileCheck --check-prefix=CHECK3 %s
 # CHECK3: Parsing input IR code from: {{.*}}/Inputs/argc_sub1_elf.ll
