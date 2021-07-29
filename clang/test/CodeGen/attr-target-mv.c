@@ -129,6 +129,16 @@ void calls_pr50025c() { pr50025c(); }
 // WINDOWS: ret i32 6
 // WINDOWS: define dso_local i32 @foo.arch_icelake-server()
 // WINDOWS: ret i32 7
+// WINDOWS: define dso_local i32 @foo.arch_cooperlake()
+// WINDOWS: ret i32 8
+// WINDOWS: define dso_local i32 @foo.arch_tigerlake()
+// WINDOWS: ret i32 9
+// WINDOWS: define dso_local i32 @foo.arch_sapphirerapids()
+// WINDOWS: ret i32 10
+// WINDOWS: define dso_local i32 @foo.arch_alderlake()
+// WINDOWS: ret i32 11
+// WINDOWS: define dso_local i32 @foo.arch_rocketlake()
+// WINDOWS: ret i32 12
 // WINDOWS: define dso_local i32 @foo()
 // WINDOWS: ret i32 2
 // WINDOWS: define dso_local i32 @bar()
