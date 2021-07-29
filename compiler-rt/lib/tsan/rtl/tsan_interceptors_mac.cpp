@@ -363,9 +363,9 @@ static uptr GetOrCreateSyncAddress(uptr addr, ThreadState *thr, uptr pc) {
   static Map Addresses;
   Map::Handle h(&Addresses, addr);
   if (h.created()) {
-    ThreadIgnoreBegin(thr, pc);
+    ThreadIgnoreBegin(thr, 0);
     *h = (uptr) user_alloc(thr, pc, /*size=*/1);
-    ThreadIgnoreEnd(thr, pc);
+    ThreadIgnoreEnd(thr);
   }
   return *h;
 }
