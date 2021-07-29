@@ -200,8 +200,6 @@ categorise_opts()
       [[ $opt == "-flarge-sizes" ]] ||
       [[ $opt == "-flogical-abbreviations" ]] ||
       [[ $opt == "-fno-color-diagnostics" ]] ||
-      [[ $opt == "-fopenacc" ]] ||
-      [[ $opt == "-fopenmp" ]] ||
       [[ $opt == "-fxor-operator" ]] ||
       [[ $opt == "-help" ]] ||
       [[ $opt == "-nocpp" ]] ||
@@ -216,8 +214,13 @@ categorise_opts()
       # `-fdebug-unparse` will always be in free form.
       [[ $opt == "-Mfixed" ]] || [[ $opt == "-Mfree" ]]; then
       :
-    elif [[ $opt =~ -I.* ]] || [[ $opt =~ -J.* ]]; then
+    elif
       # Options that are needed for both Flang and the external driver.
+      [[ $opt =~ -I.* ]] ||
+      [[ $opt =~ -J.* ]] ||
+      [[ $opt == "-fopenmp" ]] ||
+      [[ $opt == "-fopenacc" ]] ||
+      ; then
       flang_opts+=($opt)
       fc_opts+=($opt)
     else
