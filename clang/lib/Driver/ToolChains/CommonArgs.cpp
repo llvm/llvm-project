@@ -257,16 +257,6 @@ void tools::AddLinkerInputs(const ToolChain &TC, const InputInfoList &Inputs,
     // Otherwise, this is a linker input argument.
     const Arg &A = II.getInputArg();
 
-    if (A.getOption().matches(options::OPT_b)) {
-      const llvm::Triple &T = TC.getTriple();
-      if (!T.isOSAIX()) {
-        TC.getDriver().Diag(diag::err_drv_unsupported_opt_for_target)
-            << A.getAsString(Args);
-      }
-      // Pass -b prefix for AIX linker.
-      A.claim();
-      A.render(Args, CmdArgs);
-    }
     // Handle reserved library options.
     if (A.getOption().matches(options::OPT_Z_reserved_lib_stdcxx))
       TC.AddCXXStdlibLibArgs(Args, CmdArgs);
