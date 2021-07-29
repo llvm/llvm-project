@@ -30,6 +30,8 @@ ELF Improvements
   (`D102461 <https://reviews.llvm.org/D102461>`_)
 * A new linker script command ``OVERWRITE_SECTIONS`` has been added.
   (`D103303 <https://reviews.llvm.org/D103303>`_)
+* ``-Bsymbolic-non-weak-functions`` has been added as a ``STB_GLOBAL`` subset of ``-Bsymbolic-functions``.
+  (`D102570 <https://reviews.llvm.org/D102570>`_)
 
 Breaking changes
 ----------------

@@ -1356,7 +1356,7 @@ template <class ELFT> void DynamicSection<ELFT>::finalizeContents() {
   // Set DT_FLAGS and DT_FLAGS_1.
   uint32_t dtFlags = 0;
   uint32_t dtFlags1 = 0;
-  if (config->bsymbolic)
+  if (config->bsymbolic == BsymbolicKind::All)
     dtFlags |= DF_SYMBOLIC;
   if (config->zGlobal)
     dtFlags1 |= DF_1_GLOBAL;

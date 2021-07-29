@@ -43,6 +43,9 @@ def Bsymbolic: F<"Bsymbolic">, HelpText<"Bind default visibility defined symbols
 def Bsymbolic_functions: F<"Bsymbolic-functions">,
   HelpText<"Bind default visibility defined function symbols locally for -shared">;
 
+def Bsymbolic_non_weak_functions: F<"Bsymbolic-non-weak-functions">,
+  HelpText<"Bind default visibility defined STB_GLOBAL function symbols locally for -shared">;
+
 def Bdynamic: F<"Bdynamic">, HelpText<"Link against shared libraries (default)">;
 
 def Bstatic: F<"Bstatic">, HelpText<"Do not link against shared libraries">;
