@@ -290,6 +290,38 @@ void RTLsTy::RegisterRequires(int64_t flags) {
      flags, RequiresFlags);
 }
 
+void RTLsTy::initRTLonce(RTLInfoTy &R) {
+  // If this RTL is not already in use, initialize it.
+  if (!R.isUsed && R.NumberOfDevices != 0) {
+    // Initialize the device information for the RTL we are about to use.
+    DeviceTy device(&R);
+    size_t Start = PM->Devices.size();
+    PM->Devices.resize(Start + R.NumberOfDevices, device);
+    for (int32_t device_id = 0; device_id < R.NumberOfDevices; device_id++) {
+      // global device ID
+      PM->Devices[Start + device_id].DeviceID = Start + device_id;
+      // RTL local device ID
+      PM->Devices[Start + device_id].RTLDeviceID = device_id;
+    }
+
+    // Initialize the index of this RTL and save it in the used RTLs.
+    R.Idx = (UsedRTLs.empty())
+                ? 0
+                : UsedRTLs.back()->Idx + UsedRTLs.back()->NumberOfDevices;
+    assert((size_t)R.Idx == Start &&
+           "RTL index should equal the number of devices used so far.");
+    R.isUsed = true;
+    UsedRTLs.push_back(&R);
+
+    DP("RTL " DPxMOD " has index %d!\n", DPxPTR(R.LibraryHandler), R.Idx);
+  }
+}
+
+void RTLsTy::initAllRTLs() {
+  for (auto &R : AllRTLs)
+    initRTLonce(R);
+}
+
 void RTLsTy::RegisterLib(__tgt_bin_desc *desc) {
   PM->RTLsMtx.lock();
   // Register the images with the RTLs that understand them, if any.
@@ -297,7 +329,7 @@ void RTLsTy::RegisterLib(__tgt_bin_desc *desc) {
     // Obtain the image.
     __tgt_device_image *img = &desc->DeviceImages[i];
 
-    RTLInfoTy *FoundRTL = NULL;
+    RTLInfoTy *FoundRTL = nullptr;
 
     // Scan the RTLs that have associated images until we find one that supports
     // the current image.
@@ -311,31 +343,7 @@ void RTLsTy::RegisterLib(__tgt_bin_desc *desc) {
       DP("Image " DPxMOD " is compatible with RTL %s!\n",
          DPxPTR(img->ImageStart), R.RTLName.c_str());
 
-      // If this RTL is not already in use, initialize it.
-      if (!R.isUsed) {
-        // Initialize the device information for the RTL we are about to use.
-        DeviceTy device(&R);
-        size_t Start = PM->Devices.size();
-        PM->Devices.resize(Start + R.NumberOfDevices, device);
-        for (int32_t device_id = 0; device_id < R.NumberOfDevices;
-             device_id++) {
-          // global device ID
-          PM->Devices[Start + device_id].DeviceID = Start + device_id;
-          // RTL local device ID
-          PM->Devices[Start + device_id].RTLDeviceID = device_id;
-        }
-
-        // Initialize the index of this RTL and save it in the used RTLs.
-        R.Idx = (UsedRTLs.empty())
-                    ? 0
-                    : UsedRTLs.back()->Idx + UsedRTLs.back()->NumberOfDevices;
-        assert((size_t)R.Idx == Start &&
-               "RTL index should equal the number of devices used so far.");
-        R.isUsed = true;
-        UsedRTLs.push_back(&R);
-
-        DP("RTL " DPxMOD " has index %d!\n", DPxPTR(R.LibraryHandler), R.Idx);
-      }
+      initRTLonce(R);
 
       // Initialize (if necessary) translation table for this library.
       PM->TrlTblMtx.lock();
