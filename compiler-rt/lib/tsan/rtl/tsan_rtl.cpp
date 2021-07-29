@@ -1069,18 +1069,18 @@ void FuncExit(ThreadState *thr) {
   thr->shadow_stack_pos--;
 }
 
-void ThreadIgnoreBegin(ThreadState *thr, uptr pc, bool save_stack) {
+void ThreadIgnoreBegin(ThreadState *thr, uptr pc) {
   DPrintf("#%d: ThreadIgnoreBegin\n", thr->tid);
   thr->ignore_reads_and_writes++;
   CHECK_GT(thr->ignore_reads_and_writes, 0);
   thr->fast_state.SetIgnoreBit();
 #if !SANITIZER_GO
-  if (save_stack && !ctx->after_multithreaded_fork)
+  if (pc && !ctx->after_multithreaded_fork)
     thr->mop_ignore_set.Add(CurrentStackId(thr, pc));
 #endif
 }
 
-void ThreadIgnoreEnd(ThreadState *thr, uptr pc) {
+void ThreadIgnoreEnd(ThreadState *thr) {
   DPrintf("#%d: ThreadIgnoreEnd\n", thr->tid);
   CHECK_GT(thr->ignore_reads_and_writes, 0);
   thr->ignore_reads_and_writes--;
@@ -1100,17 +1100,17 @@ uptr __tsan_testonly_shadow_stack_current_size() {
 }
 #endif
 
-void ThreadIgnoreSyncBegin(ThreadState *thr, uptr pc, bool save_stack) {
+void ThreadIgnoreSyncBegin(ThreadState *thr, uptr pc) {
   DPrintf("#%d: ThreadIgnoreSyncBegin\n", thr->tid);
   thr->ignore_sync++;
   CHECK_GT(thr->ignore_sync, 0);
 #if !SANITIZER_GO
-  if (save_stack && !ctx->after_multithreaded_fork)
+  if (pc && !ctx->after_multithreaded_fork)
     thr->sync_ignore_set.Add(CurrentStackId(thr, pc));
 #endif
 }
 
-void ThreadIgnoreSyncEnd(ThreadState *thr, uptr pc) {
+void ThreadIgnoreSyncEnd(ThreadState *thr) {
   DPrintf("#%d: ThreadIgnoreSyncEnd\n", thr->tid);
   CHECK_GT(thr->ignore_sync, 0);
   thr->ignore_sync--;
