@@ -865,7 +865,7 @@ static DylibFile *findDylib(StringRef path, DylibFile *umbrella,
   {
     StringRef stem = path::stem(path);
     SmallString<128> frameworkName;
-    path::append(frameworkName, stem + ".framework", stem);
+    path::append(frameworkName, path::Style::posix, stem + ".framework", stem);
     bool isFramework = path.endswith(frameworkName);
     if (isFramework) {
       for (StringRef dir : config->frameworkSearchPaths) {
