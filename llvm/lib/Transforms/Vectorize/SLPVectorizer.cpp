@@ -4519,6 +4519,9 @@ InstructionCost BoUpSLP::getEntryCost(const TreeEntry *E,
       }
       if (!VectorizedLoads.empty()) {
         InstructionCost GatherCost = 0;
+        unsigned NumParts = TTI->getNumberOfParts(VecTy);
+        bool NeedInsertSubvectorAnalysis =
+            !NumParts || (VL.size() / VF) > NumParts;
         // Get the cost for gathered loads.
         for (unsigned I = 0, End = VL.size(); I < End; I += VF) {
           if (VectorizedLoads.contains(VL[I]))
@@ -4544,9 +4547,12 @@ InstructionCost BoUpSLP::getEntryCost(const TreeEntry *E,
                       TTI->getGatherScatterOpCost(
                           Instruction::Load, LoadTy, LI->getPointerOperand(),
                           /*VariableMask=*/false, Alignment, CostKind, LI);
-        // Add the cost for the subvectors shuffling.
-        GatherCost += ((VL.size() - VF) / VF) *
-                      TTI->getShuffleCost(TTI::SK_Select, VecTy);
+        if (NeedInsertSubvectorAnalysis) {
+          // Add the cost for the subvectors insert.
+          for (int I = VF, E = VL.size(); I < E; I += VF)
+            GatherCost += TTI->getShuffleCost(TTI::SK_InsertSubvector, VecTy,
+                                              None, I, LoadTy);
+        }
         return ReuseShuffleCost + GatherCost - ScalarsCost;
       }
     }
@@ -5011,7 +5017,9 @@ bool BoUpSLP::isFullyVectorizableTinyTree(bool ForReduction) const {
            (allConstant(TE->Scalars) || isSplat(TE->Scalars) ||
             TE->Scalars.size() < Limit ||
             (TE->getOpcode() == Instruction::ExtractElement &&
-             isFixedVectorShuffle(TE->Scalars, Mask)));
+             isFixedVectorShuffle(TE->Scalars, Mask)) ||
+            (TE->State == TreeEntry::NeedToGather &&
+             TE->getOpcode() == Instruction::Load && !TE->isAltShuffle()));
   };
 
   // We only handle trees of heights 1 and 2.
