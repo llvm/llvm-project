@@ -54,6 +54,23 @@ class ScopedJavaFunc {
 static u64 jctx_buf[sizeof(JavaContext) / sizeof(u64) + 1];
 static JavaContext *jctx;
 
+MBlock *JavaHeapBlock(uptr addr, uptr *start) {
+  if (!jctx || addr < jctx->heap_begin ||
+      addr >= jctx->heap_begin + jctx->heap_size)
+    return nullptr;
+  for (uptr p = RoundDown(addr, kMetaShadowCell); p >= jctx->heap_begin;
+       p -= kMetaShadowCell) {
+    MBlock *b = ctx->metamap.GetBlock(p);
+    if (!b)
+      continue;
+    if (p + b->siz <= addr)
+      return nullptr;
+    *start = p;
+    return b;
+  }
+  return nullptr;
+}
+
 }  // namespace __tsan
 
 #define SCOPED_JAVA_FUNC(func) \
