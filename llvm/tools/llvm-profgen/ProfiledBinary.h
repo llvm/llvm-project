@@ -140,6 +140,12 @@ class ProfiledBinary {
 
   bool UsePseudoProbes = false;
 
+  // Indicate if the base loading address is parsed from the mmap event or uses
+  // the preferred address
+  bool IsLoadedByMMap = false;
+  // Use to avoid redundant warning.
+  bool MissingMMapWarned = false;
+
   void setPreferredTextSegmentAddresses(const ELFObjectFileBase *O);
 
   template <class ELFT>
@@ -278,6 +284,14 @@ public:
   const PseudoProbeFuncDesc *getInlinerDescForProbe(const PseudoProbe *Probe) {
     return ProbeDecoder.getInlinerDescForProbe(Probe);
   }
+
+  bool getIsLoadedByMMap() { return IsLoadedByMMap; }
+
+  void setIsLoadedByMMap(bool Value) { IsLoadedByMMap = Value; }
+
+  bool getMissingMMapWarned() { return MissingMMapWarned; }
+
+  void setMissingMMapWarned(bool Value) { MissingMMapWarned = Value; }
 };
 
 } // end namespace sampleprof
