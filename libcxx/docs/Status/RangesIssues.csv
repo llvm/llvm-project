@@ -1,4 +1,4 @@
-"Number","Name","Status","Assignee"
+"Number","Name","Status","First released version"
 `P0896R4 <https://wg21.link/P0896R4>`__,<ranges>,,
 `P1035R7 <https://wg21.link/P1035R7>`__,Input Range Adaptors,,
 `P1207R4 <https://wg21.link/P1207R4>`__,Movability Of Single-Pass Iterators,,
@@ -67,7 +67,7 @@
 `LWG3505 <https://wg21.link/lwg3505>`__, split_view::outer-iterator::operator++ misspecified,,
 `LWG3517 <https://wg21.link/LWG3517>`__,"join_view::iterator's iter_swap is underconstrained",,
 `LWG3520 <https://wg21.link/LWG3520>`__,"iter_move and iter_swap are inconsistent for transform_view::iterator",,
-`LWG3522 <https://wg21.link/LWG3522>`__,"Missing requirement on InputIterator template parameter for priority_queue constructors",,
+`LWG3522 <https://wg21.link/LWG3522>`__,"Missing requirement on InputIterator template parameter for priority_queue constructors","|Complete|","14.0"
 `LWG3523 <https://wg21.link/LWG3523>`__,"iota_view::sentinel is not always iota_view's sentinel",,
 `LWG3532 <https://wg21.link/LWG3532>`__,"split_view<V, P>::inner-iterator<true>::operator++(int) should depend on Base",,
 `LWG3533 <https://wg21.link/LWG3533>`__,"Make base() const & consistent across iterator wrappers that supports input_iterators",,
