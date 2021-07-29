@@ -23,6 +23,7 @@ VERS1.0 {
     __tgt_rtl_unregister_lib;
     __tgt_rtl_supports_empty_images;
     __tgt_rtl_set_info_flag;
+    __tgt_rtl_print_device_info;
   local:
     *;
 };

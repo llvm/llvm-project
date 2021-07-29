@@ -466,3 +466,8 @@ EXTERN void __tgt_set_info_flag(uint32_t NewInfoLevel) {
       R.set_info_flag(NewInfoLevel);
   }
 }
+
+EXTERN int __tgt_print_device_info(int64_t device_id) {
+  return PM->Devices[device_id].printDeviceInfo(
+      PM->Devices[device_id].RTLDeviceID);
+}

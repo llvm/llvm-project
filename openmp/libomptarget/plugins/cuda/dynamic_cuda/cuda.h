@@ -72,6 +72,11 @@ CUresult cuDeviceGetAttribute(int *, CUdevice_attribute, CUdevice);
 CUresult cuDeviceGetCount(int *);
 CUresult cuFuncGetAttribute(int *, CUfunction_attribute, CUfunction);
 
+// Device info
+CUresult cuDeviceGetName(char *, int, CUdevice *);
+CUresult cuDeviceTotalMem(size_t *, CUdevice *);
+CUresult cuDriverGetVersion(int *);
+
 CUresult cuGetErrorString(CUresult, const char **);
 CUresult cuInit(unsigned);
 CUresult cuLaunchKernel(CUfunction, unsigned, unsigned, unsigned, unsigned,
