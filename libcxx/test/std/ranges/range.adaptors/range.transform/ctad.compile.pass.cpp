@@ -14,6 +14,7 @@
 // CTAD tests.
 
 #include <ranges>
+#include <concepts>
 
 #include "test_macros.h"
 #include "types.h"
