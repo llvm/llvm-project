@@ -71,3 +71,16 @@ void test8(write_only pipe int p, global int *ptr) {
   // CHECK: call i32 @__get_pipe_max_packets_wo(%opencl.pipe_wo_t* %{{.*}}, i32 4, i32 4)
   *ptr = get_pipe_max_packets(p);
 }
+
+struct Person {
+  const char *Name;
+  bool isFemale;
+  int ID;
+};
+
+void test9(global struct Person *SDst, read_only pipe struct Person SPipe) {
+  // CHECK: call i32 @__read_pipe_2(%opencl.pipe_ro_t* %{{.*}}, i8* %{{.*}}, i32 16, i32 8)
+  read_pipe (SPipe, SDst);
+  // CHECK: call i32 @__read_pipe_2(%opencl.pipe_ro_t* %{{.*}}, i8* %{{.*}}, i32 16, i32 8)
+  read_pipe (SPipe, SDst);
+}
