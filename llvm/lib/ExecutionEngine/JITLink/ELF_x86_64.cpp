@@ -221,6 +221,17 @@ static Error optimizeELF_x86_64_GOTAndStubs(LinkGraph &G) {
   return Error::success();
 }
 
+static const char *getELFX86_64RelocName(uint32_t Type) {
+  switch (Type) {
+#define ELF_RELOC(Name, Number)                                                \
+  case Number:                                                                 \
+    return #Name;
+#include "llvm/BinaryFormat/ELFRelocs/x86_64.def"
+#undef ELF_RELOC
+  }
+  return "Unrecognized ELF/x86-64 relocation type";
+}
+
 namespace llvm {
 namespace jitlink {
 
@@ -252,8 +263,9 @@ private:
     case ELF::R_X86_64_PLT32:
       return ELF_x86_64_Edges::ELFX86RelocationKind::Branch32;
     }
-    return make_error<JITLinkError>("Unsupported x86-64 relocation:" +
-                                    formatv("{0:d}", Type));
+    return make_error<JITLinkError>("Unsupported x86-64 relocation type " +
+                                    formatv("{0:d}: ", Type) +
+                                    getELFX86_64RelocName(Type));
   }
 
   Error addRelocations() override {

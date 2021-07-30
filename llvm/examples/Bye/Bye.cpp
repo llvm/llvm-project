@@ -55,8 +55,7 @@ llvm::PassPluginLibraryInfo getByePluginInfo() {
   return {LLVM_PLUGIN_API_VERSION, "Bye", LLVM_VERSION_STRING,
           [](PassBuilder &PB) {
             PB.registerVectorizerStartEPCallback(
-                [](llvm::FunctionPassManager &PM,
-                   llvm::PassBuilder::OptimizationLevel Level) {
+                [](llvm::FunctionPassManager &PM, OptimizationLevel Level) {
                   PM.addPass(Bye());
                 });
             PB.registerPipelineParsingCallback(

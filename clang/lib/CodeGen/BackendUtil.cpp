@@ -1069,16 +1069,16 @@ void EmitAssemblyHelper::EmitAssembly(BackendAction Action,
     DwoOS->keep();
 }
 
-static PassBuilder::OptimizationLevel mapToLevel(const CodeGenOptions &Opts) {
+static OptimizationLevel mapToLevel(const CodeGenOptions &Opts) {
   switch (Opts.OptimizationLevel) {
   default:
     llvm_unreachable("Invalid optimization level!");
 
   case 0:
-    return PassBuilder::OptimizationLevel::O0;
+    return OptimizationLevel::O0;
 
   case 1:
-    return PassBuilder::OptimizationLevel::O1;
+    return OptimizationLevel::O1;
 
   case 2:
     switch (Opts.OptimizeSize) {
@@ -1086,17 +1086,17 @@ static PassBuilder::OptimizationLevel mapToLevel(const CodeGenOptions &Opts) {
       llvm_unreachable("Invalid optimization level for size!");
 
     case 0:
-      return PassBuilder::OptimizationLevel::O2;
+      return OptimizationLevel::O2;
 
     case 1:
-      return PassBuilder::OptimizationLevel::Os;
+      return OptimizationLevel::Os;
 
     case 2:
-      return PassBuilder::OptimizationLevel::Oz;
+      return OptimizationLevel::Oz;
     }
 
   case 3:
-    return PassBuilder::OptimizationLevel::O3;
+    return OptimizationLevel::O3;
   }
 }
 
@@ -1104,7 +1104,7 @@ static void addSanitizers(const Triple &TargetTriple,
                           const CodeGenOptions &CodeGenOpts,
                           const LangOptions &LangOpts, PassBuilder &PB) {
   PB.registerOptimizerLastEPCallback([&](ModulePassManager &MPM,
-                                         PassBuilder::OptimizationLevel Level) {
+                                         OptimizationLevel Level) {
     if (CodeGenOpts.hasSanitizeCoverage()) {
       auto SancovOpts = getSancovOptsFromCGOpts(CodeGenOpts);
       MPM.addPass(ModuleSanitizerCoveragePass(
@@ -1122,7 +1122,7 @@ static void addSanitizers(const Triple &TargetTriple,
         FunctionPassManager FPM;
         FPM.addPass(
             MemorySanitizerPass({TrackOrigins, Recover, CompileKernel}));
-        if (Level != PassBuilder::OptimizationLevel::O0) {
+        if (Level != OptimizationLevel::O0) {
           // MemorySanitizer inserts complex instrumentation that mostly
           // follows the logic of the original code, but operates on
           // "shadow" values. It can benefit from re-running some
@@ -1325,26 +1325,26 @@ void EmitAssemblyHelper::EmitAssemblyWithNewPassManager(
   if (!CodeGenOpts.DisableLLVMPasses) {
     // Map our optimization levels into one of the distinct levels used to
     // configure the pipeline.
-    PassBuilder::OptimizationLevel Level = mapToLevel(CodeGenOpts);
+    OptimizationLevel Level = mapToLevel(CodeGenOpts);
 
     bool IsThinLTO = CodeGenOpts.PrepareForThinLTO;
     bool IsLTO = CodeGenOpts.PrepareForLTO;
 
     if (LangOpts.ObjCAutoRefCount) {
       PB.registerPipelineStartEPCallback(
-          [](ModulePassManager &MPM, PassBuilder::OptimizationLevel Level) {
-            if (Level != PassBuilder::OptimizationLevel::O0)
+          [](ModulePassManager &MPM, OptimizationLevel Level) {
+            if (Level != OptimizationLevel::O0)
               MPM.addPass(
                   createModuleToFunctionPassAdaptor(ObjCARCExpandPass()));
           });
       PB.registerPipelineEarlySimplificationEPCallback(
-          [](ModulePassManager &MPM, PassBuilder::OptimizationLevel Level) {
-            if (Level != PassBuilder::OptimizationLevel::O0)
+          [](ModulePassManager &MPM, OptimizationLevel Level) {
+            if (Level != OptimizationLevel::O0)
               MPM.addPass(ObjCARCAPElimPass());
           });
       PB.registerScalarOptimizerLateEPCallback(
-          [](FunctionPassManager &FPM, PassBuilder::OptimizationLevel Level) {
-            if (Level != PassBuilder::OptimizationLevel::O0)
+          [](FunctionPassManager &FPM, OptimizationLevel Level) {
+            if (Level != OptimizationLevel::O0)
               FPM.addPass(ObjCARCOptPass());
           });
     }
@@ -1357,7 +1357,7 @@ void EmitAssemblyHelper::EmitAssemblyWithNewPassManager(
     // vtables so that codegen doesn't complain.
     if (IsThinLTOPostLink)
       PB.registerPipelineStartEPCallback(
-          [](ModulePassManager &MPM, PassBuilder::OptimizationLevel Level) {
+          [](ModulePassManager &MPM, OptimizationLevel Level) {
             MPM.addPass(LowerTypeTestsPass(/*ExportSummary=*/nullptr,
                                            /*ImportSummary=*/nullptr,
                                            /*DropTypeTests=*/true));
@@ -1368,12 +1368,12 @@ void EmitAssemblyHelper::EmitAssemblyWithNewPassManager(
         CodeGenOpts.InstrumentFunctionsAfterInlining ||
         CodeGenOpts.InstrumentForProfiling) {
       PB.registerPipelineStartEPCallback(
-          [](ModulePassManager &MPM, PassBuilder::OptimizationLevel Level) {
+          [](ModulePassManager &MPM, OptimizationLevel Level) {
             MPM.addPass(createModuleToFunctionPassAdaptor(
                 EntryExitInstrumenterPass(/*PostInlining=*/false)));
           });
       PB.registerOptimizerLastEPCallback(
-          [](ModulePassManager &MPM, PassBuilder::OptimizationLevel Level) {
+          [](ModulePassManager &MPM, OptimizationLevel Level) {
             MPM.addPass(createModuleToFunctionPassAdaptor(
                 EntryExitInstrumenterPass(/*PostInlining=*/true)));
           });
@@ -1383,7 +1383,7 @@ void EmitAssemblyHelper::EmitAssemblyWithNewPassManager(
     // of the pipeline.
     if (LangOpts.Sanitize.has(SanitizerKind::LocalBounds))
       PB.registerScalarOptimizerLateEPCallback(
-          [](FunctionPassManager &FPM, PassBuilder::OptimizationLevel Level) {
+          [](FunctionPassManager &FPM, OptimizationLevel Level) {
             FPM.addPass(BoundsCheckingPass());
           });
 
@@ -1394,15 +1394,13 @@ void EmitAssemblyHelper::EmitAssemblyWithNewPassManager(
 
     if (Optional<GCOVOptions> Options = getGCOVOptions(CodeGenOpts, LangOpts))
       PB.registerPipelineStartEPCallback(
-          [Options](ModulePassManager &MPM,
-                    PassBuilder::OptimizationLevel Level) {
+          [Options](ModulePassManager &MPM, OptimizationLevel Level) {
             MPM.addPass(GCOVProfilerPass(*Options));
           });
     if (Optional<InstrProfOptions> Options =
             getInstrProfOptions(CodeGenOpts, LangOpts))
       PB.registerPipelineStartEPCallback(
-          [Options](ModulePassManager &MPM,
-                    PassBuilder::OptimizationLevel Level) {
+          [Options](ModulePassManager &MPM, OptimizationLevel Level) {
             MPM.addPass(InstrProfiling(*Options, false));
           });
 
