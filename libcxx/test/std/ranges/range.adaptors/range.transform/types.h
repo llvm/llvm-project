@@ -7,9 +7,6 @@
 
 int globalBuff[8] = {0,1,2,3,4,5,6,7};
 
-template<class T, class F>
-concept ValidDropView = requires { typename std::ranges::transform_view<T, F>; };
-
 struct ContiguousView : std::ranges::view_base {
   int start_;
   int *ptr_;

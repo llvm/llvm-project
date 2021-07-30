@@ -29,6 +29,14 @@
 #include "test_iterators.h"
 #include "types.h"
 
+template<class T, class F>
+concept ValidTransformView = requires { typename std::ranges::transform_view<T, F>; };
+
+struct BadFunction { };
+static_assert( ValidTransformView<ContiguousView, Increment>);
+static_assert(!ValidTransformView<Range, Increment>);
+static_assert(!ValidTransformView<ContiguousView, BadFunction>);
+
 template<std::ranges::range R>
 auto toUpper(R range) {
   return std::ranges::transform_view(range, [](char c) { return std::toupper(c); });
