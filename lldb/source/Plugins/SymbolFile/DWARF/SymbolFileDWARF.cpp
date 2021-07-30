@@ -687,17 +687,6 @@ static void MakeAbsoluteAndRemap(FileSpec &file_spec, DWARFUnit &dwarf_cu,
     file_spec.SetFile(*remapped_file, FileSpec::Style::native);
 }
 
-/// Return the DW_AT_(GNU_)dwo_name.
-static const char *GetDWOName(DWARFCompileUnit &dwarf_cu,
-                              const DWARFDebugInfoEntry &cu_die) {
-  const char *dwo_name =
-      cu_die.GetAttributeValueAsString(&dwarf_cu, DW_AT_GNU_dwo_name, nullptr);
-  if (!dwo_name)
-    dwo_name =
-        cu_die.GetAttributeValueAsString(&dwarf_cu, DW_AT_dwo_name, nullptr);
-  return dwo_name;
-}
-
 lldb::CompUnitSP SymbolFileDWARF::ParseCompileUnit(DWARFCompileUnit &dwarf_cu) {
   CompUnitSP cu_sp;
   CompileUnit *comp_unit = (CompileUnit *)dwarf_cu.GetUserData();
@@ -712,66 +701,25 @@ lldb::CompUnitSP SymbolFileDWARF::ParseCompileUnit(DWARFCompileUnit &dwarf_cu) {
     } else {
       ModuleSP module_sp(m_objfile_sp->GetModule());
       if (module_sp) {
-        auto initialize_cu = [&](const FileSpec &file_spec,
-                                 LanguageType cu_language) {
+        const DWARFBaseDIE cu_die =
+            dwarf_cu.GetNonSkeletonUnit().GetUnitDIEOnly();
+        if (cu_die) {
+          FileSpec cu_file_spec(cu_die.GetName(), dwarf_cu.GetPathStyle());
+          MakeAbsoluteAndRemap(cu_file_spec, dwarf_cu, module_sp);
+
+          LanguageType cu_language = SymbolFileDWARF::LanguageTypeFromDWARF(
+              cu_die.GetAttributeValueAsUnsigned(DW_AT_language, 0));
+
+          bool is_optimized = dwarf_cu.GetNonSkeletonUnit().GetIsOptimized();
           BuildCuTranslationTable();
           cu_sp = std::make_shared<CompileUnit>(
-              module_sp, &dwarf_cu, file_spec,
+              module_sp, &dwarf_cu, cu_file_spec,
               *GetDWARFUnitIndex(dwarf_cu.GetID()), cu_language,
-              eLazyBoolCalculate);
+              is_optimized ? eLazyBoolYes : eLazyBoolNo);
 
           dwarf_cu.SetUserData(cu_sp.get());
 
           SetCompileUnitAtIndex(dwarf_cu.GetID(), cu_sp);
-        };
-
-        auto lazy_initialize_cu = [&]() {
-          // If the version is < 5, we can't do lazy initialization.
-          if (dwarf_cu.GetVersion() < 5)
-            return false;
-
-          // If there is no DWO, there is no reason to initialize
-          // lazily; we will do eager initialization in that case.
-          if (GetDebugMapSymfile())
-            return false;
-          const DWARFBaseDIE cu_die = dwarf_cu.GetUnitDIEOnly();
-          if (!cu_die)
-            return false;
-          if (!GetDWOName(dwarf_cu, *cu_die.GetDIE()))
-            return false;
-
-          // With DWARFv5 we can assume that the first support
-          // file is also the name of the compile unit. This
-          // allows us to avoid loading the non-skeleton unit,
-          // which may be in a separate DWO file.
-          FileSpecList support_files;
-          if (!ParseSupportFiles(dwarf_cu, module_sp, support_files))
-            return false;
-          if (support_files.GetSize() == 0)
-            return false;
-
-          initialize_cu(support_files.GetFileSpecAtIndex(0),
-                        eLanguageTypeUnknown);
-          cu_sp->SetSupportFiles(std::move(support_files));
-          return true;
-        };
-
-        if (!lazy_initialize_cu()) {
-          // Eagerly initialize compile unit
-          const DWARFBaseDIE cu_die =
-              dwarf_cu.GetNonSkeletonUnit().GetUnitDIEOnly();
-          if (cu_die) {
-            LanguageType cu_language = SymbolFileDWARF::LanguageTypeFromDWARF(
-                dwarf_cu.GetDWARFLanguageType());
-
-            FileSpec cu_file_spec(cu_die.GetName(), dwarf_cu.GetPathStyle());
-
-            // Path needs to be remapped in this case. In the support files
-            // case ParseSupportFiles takes care of the remapping.
-            MakeAbsoluteAndRemap(cu_file_spec, dwarf_cu, module_sp);
-
-            initialize_cu(cu_file_spec, cu_language);
-          }
         }
       }
     }
@@ -859,7 +807,7 @@ lldb::LanguageType SymbolFileDWARF::ParseLanguage(CompileUnit &comp_unit) {
   std::lock_guard<std::recursive_mutex> guard(GetModuleMutex());
   DWARFUnit *dwarf_cu = GetDWARFCompileUnit(&comp_unit);
   if (dwarf_cu)
-    return GetLanguage(dwarf_cu->GetNonSkeletonUnit());
+    return GetLanguage(*dwarf_cu);
   else
     return eLanguageTypeUnknown;
 }
@@ -950,29 +898,18 @@ bool SymbolFileDWARF::ParseSupportFiles(CompileUnit &comp_unit,
   if (!dwarf_cu)
     return false;
 
-  if (!ParseSupportFiles(*dwarf_cu, comp_unit.GetModule(), support_files))
-    return false;
-
-  comp_unit.SetSupportFiles(support_files);
-  return true;
-}
-
-bool SymbolFileDWARF::ParseSupportFiles(DWARFUnit &dwarf_cu,
-                                        const ModuleSP &module,
-                                        FileSpecList &support_files) {
-
-  dw_offset_t offset = dwarf_cu.GetLineTableOffset();
+  dw_offset_t offset = dwarf_cu->GetLineTableOffset();
   if (offset == DW_INVALID_OFFSET)
     return false;
 
   llvm::DWARFDebugLine::Prologue prologue;
   if (!ParseLLVMLineTablePrologue(m_context, prologue, offset,
-                                  dwarf_cu.GetOffset()))
+                                  dwarf_cu->GetOffset()))
     return false;
 
-  support_files = ParseSupportFilesFromPrologue(
-      module, prologue, dwarf_cu.GetPathStyle(),
-      dwarf_cu.GetCompilationDirectory().GetCString());
+  comp_unit.SetSupportFiles(ParseSupportFilesFromPrologue(
+      comp_unit.GetModule(), prologue, dwarf_cu->GetPathStyle(),
+      dwarf_cu->GetCompilationDirectory().GetCString()));
 
   return true;
 }
@@ -1028,7 +965,7 @@ bool SymbolFileDWARF::ParseIsOptimized(CompileUnit &comp_unit) {
   std::lock_guard<std::recursive_mutex> guard(GetModuleMutex());
   DWARFUnit *dwarf_cu = GetDWARFCompileUnit(&comp_unit);
   if (dwarf_cu)
-    return dwarf_cu->GetNonSkeletonUnit().GetIsOptimized();
+    return dwarf_cu->GetIsOptimized();
   return false;
 }
 
@@ -1646,6 +1583,17 @@ SymbolFileDWARF::GetDIE(const DIERef &die_ref) {
   }
 
   return DebugInfo().GetDIE(die_ref);
+}
+
+/// Return the DW_AT_(GNU_)dwo_name.
+static const char *GetDWOName(DWARFCompileUnit &dwarf_cu,
+                              const DWARFDebugInfoEntry &cu_die) {
+  const char *dwo_name =
+      cu_die.GetAttributeValueAsString(&dwarf_cu, DW_AT_GNU_dwo_name, nullptr);
+  if (!dwo_name)
+    dwo_name =
+        cu_die.GetAttributeValueAsString(&dwarf_cu, DW_AT_dwo_name, nullptr);
+  return dwo_name;
 }
 
 /// Return the DW_AT_(GNU_)dwo_id.
