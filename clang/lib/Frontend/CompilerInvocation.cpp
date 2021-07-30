@@ -3173,7 +3173,7 @@ void CompilerInvocation::setLangDefaults(LangOptions &Opts, InputKind IK,
     Opts.ZVector = 0;
     Opts.setDefaultFPContractMode(LangOptions::FPM_On);
     Opts.OpenCLCPlusPlus = Opts.CPlusPlus;
-    Opts.OpenCLPipe = Opts.OpenCLCPlusPlus || Opts.OpenCLVersion == 200;
+    Opts.OpenCLPipes = Opts.OpenCLCPlusPlus || Opts.OpenCLVersion == 200;
     Opts.OpenCLGenericAddressSpace =
         Opts.OpenCLCPlusPlus || Opts.OpenCLVersion == 200;
 
