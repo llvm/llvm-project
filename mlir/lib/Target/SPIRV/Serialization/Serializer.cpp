@@ -805,11 +805,15 @@ uint32_t Serializer::prepareConstantInt(Location loc, IntegerAttr intAttr,
   auto opcode =
       isSpec ? spirv::Opcode::OpSpecConstant : spirv::Opcode::OpConstant;
 
-  // According to SPIR-V spec, "When the type's bit width is less than 32-bits,
-  // the literal's value appears in the low-order bits of the word, and the
-  // high-order bits must be 0 for a floating-point type, or 0 for an integer
-  // type with Signedness of 0, or sign extended when Signedness is 1."
-  if (bitwidth == 32 || bitwidth == 16) {
+  switch (bitwidth) {
+    // According to SPIR-V spec, "When the type's bit width is less than
+    // 32-bits, the literal's value appears in the low-order bits of the word,
+    // and the high-order bits must be 0 for a floating-point type, or 0 for an
+    // integer type with Signedness of 0, or sign extended when Signedness
+    // is 1."
+  case 32:
+  case 16:
+  case 8: {
     uint32_t word = 0;
     if (isSigned) {
       word = static_cast<int32_t>(value.getSExtValue());
@@ -818,10 +822,10 @@ uint32_t Serializer::prepareConstantInt(Location loc, IntegerAttr intAttr,
     }
     (void)encodeInstructionInto(typesGlobalValues, opcode,
                                 {typeID, resultID, word});
-  }
-  // According to SPIR-V spec: "When the type's bit width is larger than one
-  // word, the literal’s low-order words appear first."
-  else if (bitwidth == 64) {
+  } break;
+    // According to SPIR-V spec: "When the type's bit width is larger than one
+    // word, the literal’s low-order words appear first."
+  case 64: {
     struct DoubleWord {
       uint32_t word1;
       uint32_t word2;
@@ -833,7 +837,8 @@ uint32_t Serializer::prepareConstantInt(Location loc, IntegerAttr intAttr,
     }
     (void)encodeInstructionInto(typesGlobalValues, opcode,
                                 {typeID, resultID, words.word1, words.word2});
-  } else {
+  } break;
+  default: {
     std::string valueStr;
     llvm::raw_string_ostream rss(valueStr);
     value.print(rss, /*isSigned=*/false);
@@ -841,6 +846,7 @@ uint32_t Serializer::prepareConstantInt(Location loc, IntegerAttr intAttr,
     emitError(loc, "cannot serialize ")
         << bitwidth << "-bit integer literal: " << rss.str();
     return 0;
+  }
   }
 
   if (!isSpec) {
