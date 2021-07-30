@@ -27,4 +27,3 @@ float abs(float __x) { return fabs(__x); }
 double abs(double __x) { return fabs(__x); }
 
 }
-
