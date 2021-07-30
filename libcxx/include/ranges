@@ -160,6 +160,11 @@ namespace std::ranges {
 
 */
 
+// Make sure all feature tests macros are always available.
+#include <version>
+// Only enable the contents of the header when libc++ was build with LIBCXX_ENABLE_INCOMPLETE_FEATURES enabled
+#if !defined(_LIBCPP_HAS_NO_INCOMPLETE_RANGES)
+
 #include <__config>
 #include <__ranges/access.h>
 #include <__ranges/all.h>
@@ -181,11 +186,6 @@ namespace std::ranges {
 #include <initializer_list> // Required by the standard.
 #include <iterator>         // Required by the standard.
 #include <type_traits>
-#include <version>
-
-#if defined(_LIBCPP_HAS_NO_INCOMPLETE_RANGES)
-# error "The Ranges library is not supported since libc++ has been configured with LIBCXX_ENABLE_INCOMPLETE_FEATURES disabled"
-#endif
 
 #if !defined(_LIBCPP_HAS_NO_PRAGMA_SYSTEM_HEADER)
 #pragma GCC system_header
@@ -203,5 +203,7 @@ _LIBCPP_BEGIN_NAMESPACE_STD
 _LIBCPP_END_NAMESPACE_STD
 
 _LIBCPP_POP_MACROS
+
+#endif // !defined(_LIBCPP_HAS_NO_INCOMPLETE_RANGES)
 
 #endif // _LIBCPP_RANGES
