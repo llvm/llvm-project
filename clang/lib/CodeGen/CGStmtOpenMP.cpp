@@ -450,7 +450,8 @@ static llvm::Function *emitOutlinedFunctionPrologue(
         Ctx, Ctx.getTranslationUnitDecl(), FO.S->getBeginLoc(),
         SourceLocation(), DeclarationName(), FunctionTy,
         Ctx.getTrivialTypeSourceInfo(FunctionTy), SC_Static,
-        /*isInlineSpecified=*/false, /*hasWrittenPrototype=*/false);
+        /*UsesFPIntrin=*/false, /*isInlineSpecified=*/false,
+        /*hasWrittenPrototype=*/false);
   }
   for (const FieldDecl *FD : RD->fields()) {
     QualType ArgType = FD->getType();
