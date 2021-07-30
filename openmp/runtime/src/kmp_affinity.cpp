@@ -4145,14 +4145,19 @@ int __kmp_aux_set_affinity(void **mask) {
 int __kmp_aux_get_affinity(void **mask) {
   int gtid;
   int retval;
+#if KMP_OS_WINDOWS || KMP_DEBUG
   kmp_info_t *th;
-
+#endif
   if (!KMP_AFFINITY_CAPABLE()) {
     return -1;
   }
 
   gtid = __kmp_entry_gtid();
+#if KMP_OS_WINDOWS || KMP_DEBUG
   th = __kmp_threads[gtid];
+#else
+  (void)gtid; // unused variable
+#endif
   KMP_DEBUG_ASSERT(th->th.th_affin_mask != NULL);
 
   KA_TRACE(

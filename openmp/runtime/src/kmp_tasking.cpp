@@ -825,8 +825,9 @@ static void __kmp_task_finish(kmp_int32 gtid, kmp_task_t *task,
   kmp_info_t *thread = __kmp_threads[gtid];
   kmp_task_team_t *task_team =
       thread->th.th_task_team; // might be NULL for serial teams...
+#if KMP_DEBUG
   kmp_int32 children = 0;
-
+#endif
   KA_TRACE(10, ("__kmp_task_finish(enter): T#%d finishing task %p and resuming "
                 "task %p\n",
                 gtid, taskdata, resumed_task));
@@ -942,8 +943,10 @@ static void __kmp_task_finish(kmp_int32 gtid, kmp_task_t *task,
         taskdata->td_flags.hidden_helper) {
       __kmp_release_deps(gtid, taskdata);
       // Predecrement simulated by "- 1" calculation
-      children =
-          KMP_ATOMIC_DEC(&taskdata->td_parent->td_incomplete_child_tasks) - 1;
+#if KMP_DEBUG
+      children = -1 +
+#endif
+          KMP_ATOMIC_DEC(&taskdata->td_parent->td_incomplete_child_tasks);
       KMP_DEBUG_ASSERT(children >= 0);
       if (taskdata->td_taskgroup)
         KMP_ATOMIC_DEC(&taskdata->td_taskgroup->count);
@@ -2832,15 +2835,14 @@ static kmp_task_t *__kmp_steal_task(kmp_info_t *victim_thr, kmp_int32 gtid,
     // We need to un-mark this victim as a finished victim.  This must be done
     // before releasing the lock, or else other threads (starting with the
     // primary thread victim) might be prematurely released from the barrier!!!
-    kmp_int32 count;
-
-    count = KMP_ATOMIC_INC(unfinished_threads);
-
+#if KMP_DEBUG
+    kmp_int32 count =
+#endif
+        KMP_ATOMIC_INC(unfinished_threads);
     KA_TRACE(
         20,
         ("__kmp_steal_task: T#%d inc unfinished_threads to %d: task_team=%p\n",
          gtid, count + 1, task_team));
-
     *thread_finished = FALSE;
   }
   TCW_4(victim_td->td.td_deque_ntasks, ntasks - 1);
@@ -3032,9 +3034,10 @@ static inline int __kmp_execute_tasks_template(
       // done.  This decrement might be to the spin location, and result in the
       // termination condition being satisfied.
       if (!*thread_finished) {
-        kmp_int32 count;
-
-        count = KMP_ATOMIC_DEC(unfinished_threads) - 1;
+#if KMP_DEBUG
+        kmp_int32 count = -1 +
+#endif
+            KMP_ATOMIC_DEC(unfinished_threads);
         KA_TRACE(20, ("__kmp_execute_tasks_template: T#%d dec "
                       "unfinished_threads to %d task_team=%p\n",
                       gtid, count, task_team));
@@ -3885,11 +3888,12 @@ static void __kmp_first_top_half_finish_proxy(kmp_taskdata_t *taskdata) {
 }
 
 static void __kmp_second_top_half_finish_proxy(kmp_taskdata_t *taskdata) {
+#if KMP_DEBUG
   kmp_int32 children = 0;
-
   // Predecrement simulated by "- 1" calculation
-  children =
-      KMP_ATOMIC_DEC(&taskdata->td_parent->td_incomplete_child_tasks) - 1;
+  children = -1 +
+#endif
+      KMP_ATOMIC_DEC(&taskdata->td_parent->td_incomplete_child_tasks);
   KMP_DEBUG_ASSERT(children >= 0);
 
   // Remove the imaginary children
