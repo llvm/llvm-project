@@ -367,9 +367,9 @@ getMaskedTypeForICmpPair(Value *&A, Value *&B, Value *&C,
     } else {
       return None;
     }
+
+    assert(Ok && "Failed to find AND on the right side of the RHS icmp.");
   }
-  if (!Ok)
-    return None;
 
   if (L11 == A) {
     B = L12;
