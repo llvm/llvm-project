@@ -414,6 +414,8 @@ void AVR::Linker::ConstructJob(Compilation &C, const JobAction &JA,
   if (LinkStdlib) {
     assert(!CPU.empty() && "CPU name must be known in order to link stdlibs");
 
+    CmdArgs.push_back("--start-group");
+
     // Add the object file for the CRT.
     std::string CrtFileName = std::string("-l:crt") + CPU + std::string(".o");
     CmdArgs.push_back(Args.MakeArgString(CrtFileName));
@@ -424,6 +426,8 @@ void AVR::Linker::ConstructJob(Compilation &C, const JobAction &JA,
 
     // Add the link library specific to the MCU.
     CmdArgs.push_back(Args.MakeArgString(std::string("-l") + CPU));
+
+    CmdArgs.push_back("--end-group");
 
     // Specify the family name as the emulation mode to use.
     // This is almost always required because otherwise avr-ld
