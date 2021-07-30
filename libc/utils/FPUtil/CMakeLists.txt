@@ -36,6 +36,8 @@ add_header_library(
 
 add_library(
   LibcFPTestHelpers
+    FPExceptMatcher.cpp
+    FPExceptMatcher.h
     TestHelpers.cpp
     TestHelpers.h
 )
