@@ -304,6 +304,11 @@ def ConvertMemRefToSPIRV : Pass<"convert-memref-to-spirv", "ModuleOp"> {
   let summary = "Convert MemRef dialect to SPIR-V dialect";
   let constructor = "mlir::createConvertMemRefToSPIRVPass()";
   let dependentDialects = ["spirv::SPIRVDialect"];
+  let options = [
+    Option<"boolNumBits", "bool-num-bits",
+           "int", /*default=*/"8",
+           "The number of bits to store a boolean value">
+  ];
 }
 
 //===----------------------------------------------------------------------===//

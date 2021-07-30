@@ -1,9 +1,17 @@
-// RUN: mlir-opt -split-input-file -convert-memref-to-spirv %s -o - | FileCheck %s
+// RUN: mlir-opt -split-input-file -convert-memref-to-spirv="bool-num-bits=8" %s -o - | FileCheck %s
+
+// Check that with proper compute and storage extensions, we don't need to
+// perform special tricks.
 
 module attributes {
   spv.target_env = #spv.target_env<
-    #spv.vce<v1.0, [Shader, Int8, Int16, Int64, Float16, Float64],
-             [SPV_KHR_storage_buffer_storage_class]>, {}>
+    #spv.vce<v1.0,
+      [
+        Shader, Int8, Int16, Int64, Float16, Float64,
+        StorageBuffer16BitAccess, StorageUniform16, StoragePushConstant16,
+        StorageBuffer8BitAccess, UniformAndStorageBuffer8BitAccess, StoragePushConstant8
+      ],
+      [SPV_KHR_16bit_storage, SPV_KHR_8bit_storage, SPV_KHR_storage_buffer_storage_class]>, {}>
 } {
 
 // CHECK-LABEL: @load_store_zero_rank_float
@@ -57,6 +65,27 @@ func @load_store_unknown_dim(%i: index, %source: memref<?xi32>, %dest: memref<?x
   return
 }
 
+// CHECK-LABEL: func @store_i1
+//  CHECK-SAME: %[[DST:.+]]: memref<4xi1>,
+//  CHECK-SAME: %[[IDX:.+]]: index
+func @store_i1(%dst: memref<4xi1>, %i: index) {
+  %true = constant true
+  // CHECK: %[[DST_CAST:.+]] = builtin.unrealized_conversion_cast %[[DST]] : memref<4xi1> to !spv.ptr<!spv.struct<(!spv.array<4 x i8, stride=1> [0])>, StorageBuffer>
+  // CHECK: %[[IDX_CAST:.+]] = builtin.unrealized_conversion_cast %[[IDX]]
+  // CHECK: %[[ZERO_0:.+]] = spv.Constant 0 : i32
+  // CHECK: %[[ZERO_1:.+]] = spv.Constant 0 : i32
+  // CHECK: %[[ONE:.+]] = spv.Constant 1 : i32
+  // CHECK: %[[MUL:.+]] = spv.IMul %[[ONE]], %[[IDX_CAST]] : i32
+  // CHECK: %[[ADD:.+]] = spv.IAdd %[[ZERO_1]], %[[MUL]] : i32
+  // CHECK: %[[ADDR:.+]] = spv.AccessChain %[[DST_CAST]][%[[ZERO_0]], %[[ADD]]] : !spv.ptr<!spv.struct<(!spv.array<4 x i8, stride=1> [0])>, StorageBuffer>, i32, i32
+  // CHECK: %[[ZERO_I8:.+]] = spv.Constant 0 : i8
+  // CHECK: %[[ONE_I8:.+]] = spv.Constant 1 : i8
+  // CHECK: %[[RES:.+]] = spv.Select %{{.+}}, %[[ONE_I8]], %[[ZERO_I8]] : i1, i8
+  // CHECK: spv.Store "StorageBuffer" %[[ADDR]], %[[RES]] : i8
+  memref.store %true, %dst[%i]: memref<4xi1>
+  return
+}
+
 } // end module
 
 // -----
@@ -88,10 +117,7 @@ func @load_i1(%arg0: memref<i1>) -> i1 {
   //     CHECK: %[[T4:.+]] = spv.ShiftRightArithmetic %[[T3]], %[[T2]] : i32, i32
   // Convert to i1 type.
   //     CHECK: %[[ONE:.+]] = spv.Constant 1 : i32
-  //     CHECK: %[[ISONE:.+]]  = spv.IEqual %[[T4]], %[[ONE]] : i32
-  //     CHECK: %[[FALSE:.+]] = spv.Constant false
-  //     CHECK: %[[TRUE:.+]] = spv.Constant true
-  //     CHECK: %[[RES:.+]] = spv.Select %[[ISONE]], %[[TRUE]], %[[FALSE]] : i1, i1
+  //     CHECK: %[[RES:.+]]  = spv.IEqual %[[T4]], %[[ONE]] : i32
   //     CHECK: return %[[RES]]
   %0 = memref.load %arg0[] : memref<i1>
   return %0 : i1
