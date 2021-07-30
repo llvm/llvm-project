@@ -27,7 +27,7 @@ TEST(IList, Empty) {
   Node node;
 
   EXPECT_TRUE(list.Empty());
-  EXPECT_EQ(list.Size(), 0);
+  EXPECT_EQ(list.Size(), (size_t)0);
   EXPECT_EQ(list.Back(), nullptr);
   EXPECT_EQ(list.Front(), nullptr);
   EXPECT_EQ(list.PopBack(), nullptr);
@@ -41,7 +41,7 @@ TEST(IList, OneNode) {
 
   list.PushBack(&node);
   EXPECT_FALSE(list.Empty());
-  EXPECT_EQ(list.Size(), 1);
+  EXPECT_EQ(list.Size(), (size_t)1);
   EXPECT_EQ(list.Back(), &node);
   EXPECT_EQ(list.Front(), &node);
   EXPECT_TRUE(list.Queued(&node));
@@ -50,7 +50,7 @@ TEST(IList, OneNode) {
 
   EXPECT_EQ(list.PopFront(), &node);
   EXPECT_TRUE(list.Empty());
-  EXPECT_EQ(list.Size(), 0);
+  EXPECT_EQ(list.Size(), (size_t)0);
   EXPECT_FALSE(list.Queued(&node));
 }
 
@@ -62,7 +62,7 @@ TEST(IList, MultipleNodes) {
   list.PushBack(&nodes[0]);
   list.PushFront(&nodes[2]);
 
-  EXPECT_EQ(list.Size(), 3);
+  EXPECT_EQ(list.Size(), (size_t)3);
   EXPECT_EQ(list.Back(), &nodes[0]);
   EXPECT_EQ(list.Front(), &nodes[2]);
 
@@ -92,12 +92,12 @@ TEST(IList, TwoLists) {
 
   list2.PushFront(&nodes[1]);
 
-  EXPECT_EQ(list1.Size(), 3);
+  EXPECT_EQ(list1.Size(), (size_t)3);
   EXPECT_TRUE(list1.Queued(&nodes[0]));
   EXPECT_TRUE(list1.Queued(&nodes[1]));
   EXPECT_TRUE(list1.Queued(&nodes[2]));
 
-  EXPECT_EQ(list2.Size(), 1);
+  EXPECT_EQ(list2.Size(), (size_t)1);
   EXPECT_FALSE(list2.Queued(&nodes[0]));
   EXPECT_TRUE(list2.Queued(&nodes[1]));
   EXPECT_FALSE(list2.Queued(&nodes[2]));
@@ -109,17 +109,17 @@ TEST(IList, TwoLists) {
   EXPECT_EQ(list2.Prev(&nodes[1]), nullptr);
 
   list1.Remove(&nodes[1]);
-  EXPECT_EQ(list1.Size(), 2);
+  EXPECT_EQ(list1.Size(), (size_t)2);
   EXPECT_FALSE(list1.Queued(&nodes[1]));
-  EXPECT_EQ(list2.Size(), 1);
+  EXPECT_EQ(list2.Size(), (size_t)1);
   EXPECT_TRUE(list2.Queued(&nodes[1]));
 
   EXPECT_EQ(list1.PopBack(), &nodes[0]);
   EXPECT_EQ(list1.PopBack(), &nodes[2]);
-  EXPECT_EQ(list1.Size(), 0);
+  EXPECT_EQ(list1.Size(), (size_t)0);
 
   EXPECT_EQ(list2.PopBack(), &nodes[1]);
-  EXPECT_EQ(list2.Size(), 0);
+  EXPECT_EQ(list2.Size(), (size_t)0);
 }
 
 }  // namespace __tsan
