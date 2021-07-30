@@ -402,106 +402,134 @@ define <vscale x 2 x i1> @icmp_logical_or_scalablevec(<vscale x 2 x i64> %x, <vs
 
 define i1 @eq_cast_eq-1(<2 x i4> %x, <2 x i4> %y) {
 ; CHECK-LABEL: @eq_cast_eq-1(
-; CHECK-NEXT:    [[NZ:%.*]] = icmp eq <2 x i4> [[X:%.*]], [[Y:%.*]]
-; CHECK-NEXT:    [[B:%.*]] = bitcast <2 x i1> [[NZ]] to i2
+; CHECK-NEXT:    [[IC:%.*]] = icmp eq <2 x i4> [[X:%.*]], [[Y:%.*]]
+; CHECK-NEXT:    [[B:%.*]] = bitcast <2 x i1> [[IC]] to i2
 ; CHECK-NEXT:    [[R:%.*]] = icmp eq i2 [[B]], -1
 ; CHECK-NEXT:    ret i1 [[R]]
 ;
-  %nz = icmp eq <2 x i4> %x, %y
-  %b = bitcast <2 x i1> %nz to i2
+  %ic = icmp eq <2 x i4> %x, %y
+  %b = bitcast <2 x i1> %ic to i2
   %r = icmp eq i2 %b, -1
   ret i1 %r
 }
 
 define i1 @ne_cast_eq-1(<3 x i7> %x, <3 x i7> %y) {
 ; CHECK-LABEL: @ne_cast_eq-1(
-; CHECK-NEXT:    [[NZ:%.*]] = icmp ne <3 x i7> [[X:%.*]], [[Y:%.*]]
-; CHECK-NEXT:    [[B:%.*]] = bitcast <3 x i1> [[NZ]] to i3
+; CHECK-NEXT:    [[IC:%.*]] = icmp ne <3 x i7> [[X:%.*]], [[Y:%.*]]
+; CHECK-NEXT:    [[B:%.*]] = bitcast <3 x i1> [[IC]] to i3
 ; CHECK-NEXT:    [[R:%.*]] = icmp eq i3 [[B]], -1
 ; CHECK-NEXT:    ret i1 [[R]]
 ;
-  %nz = icmp ne <3 x i7> %x, %y
-  %b = bitcast <3 x i1> %nz to i3
+  %ic = icmp ne <3 x i7> %x, %y
+  %b = bitcast <3 x i1> %ic to i3
   %r = icmp eq i3 %b, -1
   ret i1 %r
 }
 
 define i1 @eq_cast_ne-1(<2 x i7> %x, <2 x i7> %y) {
 ; CHECK-LABEL: @eq_cast_ne-1(
-; CHECK-NEXT:    [[NZ:%.*]] = icmp eq <2 x i7> [[X:%.*]], [[Y:%.*]]
-; CHECK-NEXT:    [[B:%.*]] = bitcast <2 x i1> [[NZ]] to i2
+; CHECK-NEXT:    [[IC:%.*]] = icmp eq <2 x i7> [[X:%.*]], [[Y:%.*]]
+; CHECK-NEXT:    [[B:%.*]] = bitcast <2 x i1> [[IC]] to i2
 ; CHECK-NEXT:    [[R:%.*]] = icmp ne i2 [[B]], -1
 ; CHECK-NEXT:    ret i1 [[R]]
 ;
-  %nz = icmp eq <2 x i7> %x, %y
-  %b = bitcast <2 x i1> %nz to i2
+  %ic = icmp eq <2 x i7> %x, %y
+  %b = bitcast <2 x i1> %ic to i2
   %r = icmp ne i2 %b, -1
   ret i1 %r
 }
 
 define i1 @ne_cast_ne-1(<3 x i5> %x, <3 x i5> %y) {
 ; CHECK-LABEL: @ne_cast_ne-1(
-; CHECK-NEXT:    [[NZ:%.*]] = icmp ne <3 x i5> [[X:%.*]], [[Y:%.*]]
-; CHECK-NEXT:    [[B:%.*]] = bitcast <3 x i1> [[NZ]] to i3
+; CHECK-NEXT:    [[IC:%.*]] = icmp ne <3 x i5> [[X:%.*]], [[Y:%.*]]
+; CHECK-NEXT:    [[B:%.*]] = bitcast <3 x i1> [[IC]] to i3
 ; CHECK-NEXT:    [[R:%.*]] = icmp ne i3 [[B]], -1
 ; CHECK-NEXT:    ret i1 [[R]]
 ;
-  %nz = icmp ne <3 x i5> %x, %y
-  %b = bitcast <3 x i1> %nz to i3
+  %ic = icmp ne <3 x i5> %x, %y
+  %b = bitcast <3 x i1> %ic to i3
   %r = icmp ne i3 %b, -1
   ret i1 %r
 }
 
 define i1 @ugt_cast_eq-1(<2 x i4> %x, <2 x i4> %y) {
 ; CHECK-LABEL: @ugt_cast_eq-1(
-; CHECK-NEXT:    [[NZ:%.*]] = icmp ugt <2 x i4> [[X:%.*]], [[Y:%.*]]
-; CHECK-NEXT:    [[B:%.*]] = bitcast <2 x i1> [[NZ]] to i2
+; CHECK-NEXT:    [[IC:%.*]] = icmp ugt <2 x i4> [[X:%.*]], [[Y:%.*]]
+; CHECK-NEXT:    [[B:%.*]] = bitcast <2 x i1> [[IC]] to i2
 ; CHECK-NEXT:    [[R:%.*]] = icmp eq i2 [[B]], -1
 ; CHECK-NEXT:    ret i1 [[R]]
 ;
-  %nz = icmp ugt <2 x i4> %x, %y
-  %b = bitcast <2 x i1> %nz to i2
+  %ic = icmp ugt <2 x i4> %x, %y
+  %b = bitcast <2 x i1> %ic to i2
   %r = icmp eq i2 %b, -1
+  ret i1 %r
+}
+
+define i1 @slt_cast_ne-1(<2 x i4> %x, <2 x i4> %y) {
+; CHECK-LABEL: @slt_cast_ne-1(
+; CHECK-NEXT:    [[IC:%.*]] = icmp slt <2 x i4> [[X:%.*]], [[Y:%.*]]
+; CHECK-NEXT:    [[B:%.*]] = bitcast <2 x i1> [[IC]] to i2
+; CHECK-NEXT:    [[R:%.*]] = icmp ne i2 [[B]], -1
+; CHECK-NEXT:    ret i1 [[R]]
+;
+  %ic = icmp slt <2 x i4> %x, %y
+  %b = bitcast <2 x i1> %ic to i2
+  %r = icmp ne i2 %b, -1
   ret i1 %r
 }
 
 define i1 @eq_cast_sgt-1(<3 x i4> %x, <3 x i4> %y) {
 ; CHECK-LABEL: @eq_cast_sgt-1(
-; CHECK-NEXT:    [[NZ:%.*]] = icmp eq <3 x i4> [[X:%.*]], [[Y:%.*]]
-; CHECK-NEXT:    [[B:%.*]] = bitcast <3 x i1> [[NZ]] to i3
+; CHECK-NEXT:    [[IC:%.*]] = icmp eq <3 x i4> [[X:%.*]], [[Y:%.*]]
+; CHECK-NEXT:    [[B:%.*]] = bitcast <3 x i1> [[IC]] to i3
 ; CHECK-NEXT:    [[R:%.*]] = icmp sgt i3 [[B]], -1
 ; CHECK-NEXT:    ret i1 [[R]]
 ;
-  %nz = icmp eq <3 x i4> %x, %y
-  %b = bitcast <3 x i1> %nz to i3
+  %ic = icmp eq <3 x i4> %x, %y
+  %b = bitcast <3 x i1> %ic to i3
   %r = icmp sgt i3 %b, -1
   ret i1 %r
 }
 
 define i1 @eq_cast_eq1(<2 x i4> %x, <2 x i4> %y) {
 ; CHECK-LABEL: @eq_cast_eq1(
-; CHECK-NEXT:    [[NZ:%.*]] = icmp eq <2 x i4> [[X:%.*]], [[Y:%.*]]
-; CHECK-NEXT:    [[B:%.*]] = bitcast <2 x i1> [[NZ]] to i2
+; CHECK-NEXT:    [[IC:%.*]] = icmp eq <2 x i4> [[X:%.*]], [[Y:%.*]]
+; CHECK-NEXT:    [[B:%.*]] = bitcast <2 x i1> [[IC]] to i2
 ; CHECK-NEXT:    [[R:%.*]] = icmp eq i2 [[B]], 1
 ; CHECK-NEXT:    ret i1 [[R]]
 ;
-  %nz = icmp eq <2 x i4> %x, %y
-  %b = bitcast <2 x i1> %nz to i2
+  %ic = icmp eq <2 x i4> %x, %y
+  %b = bitcast <2 x i1> %ic to i2
   %r = icmp eq i2 %b, 1
   ret i1 %r
 }
 
-define i1 @eq_cast_eq-1_use(<2 x i4> %x, <2 x i4> %y, i2* %p) {
-; CHECK-LABEL: @eq_cast_eq-1_use(
-; CHECK-NEXT:    [[NZ:%.*]] = icmp sgt <2 x i4> [[X:%.*]], [[Y:%.*]]
-; CHECK-NEXT:    [[B:%.*]] = bitcast <2 x i1> [[NZ]] to i2
-; CHECK-NEXT:    [[TMP1:%.*]] = bitcast i2* [[P:%.*]] to <2 x i1>*
-; CHECK-NEXT:    store <2 x i1> [[NZ]], <2 x i1>* [[TMP1]], align 1
+define i1 @eq_cast_eq-1_use1(<2 x i4> %x, <2 x i4> %y, <2 x i1>* %p) {
+; CHECK-LABEL: @eq_cast_eq-1_use1(
+; CHECK-NEXT:    [[IC:%.*]] = icmp sgt <2 x i4> [[X:%.*]], [[Y:%.*]]
+; CHECK-NEXT:    store <2 x i1> [[IC]], <2 x i1>* [[P:%.*]], align 2
+; CHECK-NEXT:    [[B:%.*]] = bitcast <2 x i1> [[IC]] to i2
 ; CHECK-NEXT:    [[R:%.*]] = icmp eq i2 [[B]], -1
 ; CHECK-NEXT:    ret i1 [[R]]
 ;
-  %nz = icmp sgt <2 x i4> %x, %y
-  %b = bitcast <2 x i1> %nz to i2
+  %ic = icmp sgt <2 x i4> %x, %y
+  store <2 x i1> %ic, <2 x i1>* %p
+  %b = bitcast <2 x i1> %ic to i2
+  %r = icmp eq i2 %b, -1
+  ret i1 %r
+}
+
+define i1 @eq_cast_eq-1_use2(<2 x i4> %x, <2 x i4> %y, i2* %p) {
+; CHECK-LABEL: @eq_cast_eq-1_use2(
+; CHECK-NEXT:    [[IC:%.*]] = icmp sgt <2 x i4> [[X:%.*]], [[Y:%.*]]
+; CHECK-NEXT:    [[B:%.*]] = bitcast <2 x i1> [[IC]] to i2
+; CHECK-NEXT:    [[TMP1:%.*]] = bitcast i2* [[P:%.*]] to <2 x i1>*
+; CHECK-NEXT:    store <2 x i1> [[IC]], <2 x i1>* [[TMP1]], align 1
+; CHECK-NEXT:    [[R:%.*]] = icmp eq i2 [[B]], -1
+; CHECK-NEXT:    ret i1 [[R]]
+;
+  %ic = icmp sgt <2 x i4> %x, %y
+  %b = bitcast <2 x i1> %ic to i2
   store i2 %b, i2* %p
   %r = icmp eq i2 %b, -1
   ret i1 %r
