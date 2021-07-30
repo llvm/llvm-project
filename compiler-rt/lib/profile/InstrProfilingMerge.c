@@ -22,6 +22,7 @@ void (*VPMergeHook)(ValueProfData *, __llvm_profile_data *);
 COMPILER_RT_VISIBILITY
 uint64_t lprofGetLoadModuleSignature() {
   /* A very fast way to compute a module signature.  */
+  uint64_t Version = __llvm_profile_get_version();
   uint64_t CounterSize = (uint64_t)(__llvm_profile_end_counters() -
                                     __llvm_profile_begin_counters());
   uint64_t DataSize = __llvm_profile_get_data_size(__llvm_profile_begin_data(),
@@ -33,7 +34,7 @@ uint64_t lprofGetLoadModuleSignature() {
   const __llvm_profile_data *FirstD = __llvm_profile_begin_data();
 
   return (NamesSize << 40) + (CounterSize << 30) + (DataSize << 20) +
-         (NumVnodes << 10) + (DataSize > 0 ? FirstD->NameRef : 0);
+         (NumVnodes << 10) + (DataSize > 0 ? FirstD->NameRef : 0) + Version;
 }
 
 /* Returns 1 if profile is not structurally compatible.  */
@@ -44,7 +45,8 @@ int __llvm_profile_check_compatibility(const char *ProfileData,
   __llvm_profile_header *Header = (__llvm_profile_header *)ProfileData;
   __llvm_profile_data *SrcDataStart, *SrcDataEnd, *SrcData, *DstData;
   SrcDataStart =
-      (__llvm_profile_data *)(ProfileData + sizeof(__llvm_profile_header));
+      (__llvm_profile_data *)(ProfileData + sizeof(__llvm_profile_header) +
+                              Header->BinaryIdsSize);
   SrcDataEnd = SrcDataStart + Header->DataSize;
 
   if (ProfileSize < sizeof(__llvm_profile_header))
@@ -63,7 +65,7 @@ int __llvm_profile_check_compatibility(const char *ProfileData,
       Header->ValueKindLast != IPVK_Last)
     return 1;
 
-  if (ProfileSize < sizeof(__llvm_profile_header) +
+  if (ProfileSize < sizeof(__llvm_profile_header) + Header->BinaryIdsSize +
                         Header->DataSize * sizeof(__llvm_profile_data) +
                         Header->NamesSize + Header->CountersSize)
     return 1;
@@ -100,7 +102,8 @@ int __llvm_profile_merge_from_buffer(const char *ProfileData,
   uintptr_t CountersDelta = Header->CountersDelta;
 
   SrcDataStart =
-      (__llvm_profile_data *)(ProfileData + sizeof(__llvm_profile_header));
+      (__llvm_profile_data *)(ProfileData + sizeof(__llvm_profile_header) +
+                              Header->BinaryIdsSize);
   SrcDataEnd = SrcDataStart + Header->DataSize;
   SrcCountersStart = (uint64_t *)SrcDataEnd;
   SrcNameStart = (const char *)(SrcCountersStart + Header->CountersSize);
