@@ -366,6 +366,7 @@ Error RawInstrProfReader<IntPtrT>::readHeader(
   if (GET_VERSION(Version) != RawInstrProf::Version)
     return error(instrprof_error::unsupported_version);
 
+  BinaryIdsSize = swap(Header.BinaryIdsSize);
   CountersDelta = swap(Header.CountersDelta);
   NamesDelta = swap(Header.NamesDelta);
   auto DataSize = swap(Header.DataSize);
@@ -374,7 +375,6 @@ Error RawInstrProfReader<IntPtrT>::readHeader(
   auto PaddingBytesAfterCounters = swap(Header.PaddingBytesAfterCounters);
   NamesSize = swap(Header.NamesSize);
   ValueKindLast = swap(Header.ValueKindLast);
-  BinaryIdsSize = swap(Header.BinaryIdsSize);
 
   auto DataSizeInBytes = DataSize * sizeof(RawInstrProf::ProfileData<IntPtrT>);
   auto PaddingSize = getNumPaddingBytes(NamesSize);
