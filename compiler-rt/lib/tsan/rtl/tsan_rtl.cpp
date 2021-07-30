@@ -512,10 +512,6 @@ int Finalize(ThreadState *thr) {
 
   if (common_flags()->print_suppressions)
     PrintMatchedSuppressions();
-#if !SANITIZER_GO
-  if (flags()->print_benign)
-    PrintMatchedBenignRaces();
-#endif
 
   failed = OnFinalize(failed);
 
