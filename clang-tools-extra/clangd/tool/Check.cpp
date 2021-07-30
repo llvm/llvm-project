@@ -272,7 +272,10 @@ bool check(llvm::StringRef File,
 
   auto ContextProvider = ClangdServer::createConfiguredContextProvider(
       Opts.ConfigProvider, nullptr);
-  WithContext Ctx(ContextProvider(""));
+  WithContext Ctx(ContextProvider(
+      FakeFile.empty()
+          ? File
+          : /*Don't turn on local configs for an arbitrary temp path.*/ ""));
   Checker C(File, Opts);
   if (!C.buildCommand(TFS) || !C.buildInvocation(TFS, Contents) ||
       !C.buildAST())
