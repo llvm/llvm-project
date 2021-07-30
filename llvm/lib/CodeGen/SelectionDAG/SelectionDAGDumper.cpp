@@ -1012,15 +1012,12 @@ static void printrWithDepthHelper(raw_ostream &OS, const SDNode *N,
 
   N->print(OS, G);
 
-  if (depth < 1)
-    return;
-
   for (const SDValue &Op : N->op_values()) {
     // Don't follow chain operands.
     if (Op.getValueType() == MVT::Other)
       continue;
     OS << '\n';
-    printrWithDepthHelper(OS, Op.getNode(), G, depth-1, indent+2);
+    printrWithDepthHelper(OS, Op.getNode(), G, depth - 1, indent + 2);
   }
 }
 
