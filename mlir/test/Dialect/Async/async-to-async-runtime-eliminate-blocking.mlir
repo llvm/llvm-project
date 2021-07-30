@@ -302,3 +302,18 @@ return
 // CHECK:   async.coro.end %[[HDL]]
 // CHECK:   return %[[TOKEN]] : !async.token
 }
+
+// CHECK-LABEL: func @caller_allowed_to_block
+// CHECK-SAME: () -> f32
+func @caller_allowed_to_block() -> f32 attributes { async.allowed_to_block } {
+// CHECK: %[[CONSTANT:.*]] = constant
+  %c = constant 1.0 : f32
+// CHECK: %[[RETURNED_TO_CALLER:.*]]:2 = call @simple_callee(%[[CONSTANT]]) : (f32) -> (!async.token, !async.value<f32>)
+// CHECK: async.runtime.await %[[RETURNED_TO_CALLER]]#0
+// CHECK: async.runtime.await %[[RETURNED_TO_CALLER]]#1
+// CHECK: %[[RETURNED:.*]] = async.runtime.load %[[RETURNED_TO_CALLER]]#1
+  %r = call @simple_callee(%c): (f32) -> f32
+
+// CHECK:   return %[[RETURNED]] : f32
+  return %r: f32
+}

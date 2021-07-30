@@ -44,7 +44,7 @@ def AsyncToAsyncRuntime : Pass<"async-to-async-runtime", "ModuleOp"> {
     Option<"eliminateBlockingAwaitOps", "eliminate-blocking-await-ops", "bool",
             /*default=*/"false",
            "Rewrite functions with blocking async.runtime.await as coroutines "
-           "with async.runtime.await_and_resume.">
+           "with async.runtime.await_and_resume.">,
   ];
   let dependentDialects = ["async::AsyncDialect"];
 }
