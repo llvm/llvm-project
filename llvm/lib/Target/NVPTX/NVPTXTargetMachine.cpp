@@ -225,7 +225,7 @@ void NVPTXTargetMachine::registerPassBuilderCallbacks(PassBuilder &PB) {
       });
 
   PB.registerPipelineStartEPCallback(
-      [this](ModulePassManager &PM, PassBuilder::OptimizationLevel Level) {
+      [this](ModulePassManager &PM, OptimizationLevel Level) {
         FunctionPassManager FPM;
         FPM.addPass(NVVMReflectPass(Subtarget.getSmVersion()));
         // FIXME: NVVMIntrRangePass is causing numerical discrepancies,
