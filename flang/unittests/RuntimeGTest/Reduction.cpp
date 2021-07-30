@@ -150,8 +150,8 @@ TEST(Reductions, DoubleMaxMinNorm2) {
   // A scalar result occurs when you have a rank 1 array and dim == 1.
   std::vector<int> shape1{24};
   auto array1{MakeArray<TypeCategory::Real, 8>(shape1, rawData)};
-  StaticDescriptor<0, true> statDesc0;
-  Descriptor &scalarResult{statDesc0.descriptor()};
+  StaticDescriptor<1, true> statDesc0[1];
+  Descriptor &scalarResult{statDesc0[0].descriptor()};
   RTNAME(MaxlocDim)
   (scalarResult, *array1, /*KIND=*/2, /*DIM=*/1, __FILE__, __LINE__,
       /*MASK=*/nullptr, /*BACK=*/false);
@@ -302,8 +302,8 @@ TEST(Reductions, Logical) {
   std::vector<int> shape1{4};
   auto array1{MakeArray<TypeCategory::Logical, 4>(
       shape1, std::vector<std::int32_t>{false, false, true, true})};
-  StaticDescriptor<0, true> statDesc0;
-  Descriptor &scalarResult{statDesc0.descriptor()};
+  StaticDescriptor<1, true> statDesc0[1];
+  Descriptor &scalarResult{statDesc0[0].descriptor()};
   RTNAME(AllDim)(scalarResult, *array1, /*DIM=*/1, __FILE__, __LINE__);
   EXPECT_EQ(scalarResult.rank(), 0);
   EXPECT_EQ(*scalarResult.ZeroBasedIndexedElement<std::int32_t>(0), 0);
@@ -501,8 +501,8 @@ TEST(Reductions, FindlocNumeric) {
       std::vector<double>{0.0, -0.0, 1.0, 3.14,
           std::numeric_limits<double>::quiet_NaN(),
           std::numeric_limits<double>::infinity()})};
-  StaticDescriptor<0, true> statDesc0;
-  Descriptor &scalarResult{statDesc0.descriptor()};
+  StaticDescriptor<1, true> statDesc0[1];
+  Descriptor &scalarResult{statDesc0[0].descriptor()};
   RTNAME(FindlocDim)
   (scalarResult, *realArray1, target, 8, /*DIM=*/1, __FILE__, __LINE__, nullptr,
       /*BACK=*/false);
