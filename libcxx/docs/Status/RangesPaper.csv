@@ -138,12 +138,12 @@ Section,Description,Dependencies,Assignee,Complete
 `[range.view.ref] <http://wg21.link/range.view>`_,`ref-view <https://llvm.org/D102020>`_,[view.interface],Zoe Carver,✅
 `[range.filter] <http://wg21.link/range.filter>`_,filter_view,[range.all],Louis Dionne,Not started
 `[range.transform] <http://wg21.link/range.transform>`_,`transform_view <https://llvm.org/D103056>`_,[range.all],Zoe Carver,✅
-`[range.iota] <http://wg21.link/range.iota>`_,iota_view,[range.all],Louis Dionne,Not started
+`[range.iota] <http://wg21.link/range.iota>`_,iota_view,[range.all],Zoe Carver,In Progress
 `[range.take] <http://wg21.link/range.take>`_,take_view,[range.all],Zoe Carver,✅
-`[range.join] <http://wg21.link/range.join>`_,join_view,[range.all],Christopher Di Bella,Not started
+`[range.join] <http://wg21.link/range.join>`_,join_view,[range.all],Zoe Carver,In Progress
 `[range.empty] <http://wg21.link/range.empty>`_,`empty_view <https://llvm.org/D103208>`_,[view.interface],Zoe Carver,✅
 `[range.single] <http://wg21.link/range.single>`_,single_view,[view.interface],Zoe Carver,✅
-`[range.split] <http://wg21.link/range.split>`_,split_view,[range.all],Unassigned,Not started
+`[range.split] <http://wg21.link/range.split>`_,split_view,[range.all],Zoe Carver,In Progress
 `[range.counted] <http://wg21.link/range.counted>`_,view::counted,[range.subrange],Zoe Carver,Not started
 `[range.common] <http://wg21.link/range.common>`_,common_view,[range.all],Zoe Carver,✅
 `[range.reverse] <http://wg21.link/range.reverse>`_,reverse_view,[range.all],Unassigned,Not started
