@@ -7,6 +7,8 @@
 
 #include "ockl.h"
 
+#define WEAK_ATTR __attribute__((weak))
+
 // This must match the enumeration defined by the runtime in
 // ROCclr/device/devhcmessages.hpp
 typedef enum {
@@ -388,7 +390,7 @@ __ockl_printf_append_string_n(ulong msg_desc, const char *data, ulong length,
 
 /*---------------- SANITIZER SERVICE ---------------------------------*/
 
-void
+WEAK_ATTR void
 __ockl_sanitizer_report(ulong addr, ulong pc, ulong wgidx, ulong wgidy,
                         ulong wgidz, ulong wave_id, ulong is_read, ulong access_size)
 {
