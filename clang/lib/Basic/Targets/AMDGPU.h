@@ -310,9 +310,12 @@ public:
       Opts["cl_khr_mipmap_image"] = true;
       Opts["cl_khr_mipmap_image_writes"] = true;
       Opts["cl_khr_subgroups"] = true;
-      Opts["cl_khr_3d_image_writes"] = true;
       Opts["cl_amd_media_ops"] = true;
       Opts["cl_amd_media_ops2"] = true;
+
+      Opts["__opencl_c_images"] = true;
+      Opts["__opencl_c_3d_image_writes"] = true;
+      Opts["cl_khr_3d_image_writes"] = true;
     }
   }
 
