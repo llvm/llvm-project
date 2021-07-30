@@ -1,5 +1,5 @@
 // RUN: %clang_cc1 %s -O0 -ffake-address-space-map -emit-llvm -o - | FileCheck %s --check-prefixes=CHECK,SPIR
-// RUN: %clang_cc1 %s -O0 -cl-std=CL3.0 -cl-ext=-__opencl_c_generic_address_space,-__opencl_c_pipes -ffake-address-space-map -emit-llvm -o - | FileCheck %s --check-prefixes=CHECK,SPIR
+// RUN: %clang_cc1 %s -O0 -cl-std=CL3.0 -cl-ext=-__opencl_c_generic_address_space -ffake-address-space-map -emit-llvm -o - | FileCheck %s --check-prefixes=CHECK,SPIR
 // RUN: %clang_cc1 %s -O0 -DCL20 -cl-std=CL2.0 -ffake-address-space-map -emit-llvm -o - | FileCheck %s --check-prefixes=CL20,CL20SPIR
 // RUN: %clang_cc1 %s -O0 -triple amdgcn-amd-amdhsa -emit-llvm -o - | FileCheck --check-prefixes=CHECK,AMDGCN %s
 // RUN: %clang_cc1 %s -O0 -triple amdgcn-amd-amdhsa -cl-std=CL3.0 -emit-llvm -o - | FileCheck --check-prefixes=CHECK,AMDGCN %s
