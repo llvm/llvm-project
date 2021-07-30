@@ -26,8 +26,8 @@ struct FdSync {
 
 struct FdDesc {
   FdSync *sync;
-  int creation_tid;
-  u32 creation_stack;
+  Tid creation_tid;
+  StackID creation_stack;
 };
 
 struct FdContext {
@@ -140,7 +140,7 @@ void FdOnFork(ThreadState *thr, uptr pc) {
   }
 }
 
-bool FdLocation(uptr addr, int *fd, int *tid, u32 *stack) {
+bool FdLocation(uptr addr, int *fd, Tid *tid, StackID *stack) {
   for (int l1 = 0; l1 < kTableSizeL1; l1++) {
     FdDesc *tab = (FdDesc*)atomic_load(&fdctx.tab[l1], memory_order_relaxed);
     if (tab == 0)
@@ -211,8 +211,8 @@ void FdClose(ThreadState *thr, uptr pc, int fd, bool write) {
   MemoryResetRange(thr, pc, (uptr)d, 8);
   unref(thr, pc, d->sync);
   d->sync = 0;
-  d->creation_tid = 0;
-  d->creation_stack = 0;
+  d->creation_tid = kInvalidTid;
+  d->creation_stack = kInvalidStackID;
 }
 
 void FdFileCreate(ThreadState *thr, uptr pc, int fd) {

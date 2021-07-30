@@ -195,7 +195,7 @@ void ScopedReportBase::AddMemoryAccess(uptr addr, uptr external_tag, Shadow s,
   }
 }
 
-void ScopedReportBase::AddUniqueTid(int unique_tid) {
+void ScopedReportBase::AddUniqueTid(Tid unique_tid) {
   rep_->unique_tids.PushBack(unique_tid);
 }
 
@@ -224,14 +224,14 @@ static bool FindThreadByUidLockedCallback(ThreadContextBase *tctx, void *arg) {
   return tctx->unique_id == (u32)unique_id;
 }
 
-static ThreadContext *FindThreadByUidLocked(int unique_id) {
+static ThreadContext *FindThreadByUidLocked(Tid unique_id) {
   ctx->thread_registry.CheckLocked();
   return static_cast<ThreadContext *>(
       ctx->thread_registry.FindThreadContextLocked(
           FindThreadByUidLockedCallback, &unique_id));
 }
 
-static ThreadContext *FindThreadByTidLocked(int tid) {
+static ThreadContext *FindThreadByTidLocked(Tid tid) {
   ctx->thread_registry.CheckLocked();
   return static_cast<ThreadContext *>(
       ctx->thread_registry.GetThreadLocked(tid));
@@ -262,7 +262,7 @@ ThreadContext *IsThreadStackOrTls(uptr addr, bool *is_stack) {
 }
 #endif
 
-void ScopedReportBase::AddThread(int unique_tid, bool suppressable) {
+void ScopedReportBase::AddThread(Tid unique_tid, bool suppressable) {
 #if !SANITIZER_GO
   if (const ThreadContext *tctx = FindThreadByUidLocked(unique_tid))
     AddThread(tctx, suppressable);
@@ -319,8 +319,8 @@ void ScopedReportBase::AddLocation(uptr addr, uptr size) {
     return;
 #if !SANITIZER_GO
   int fd = -1;
-  int creat_tid = kInvalidTid;
-  u32 creat_stack = 0;
+  Tid creat_tid = kInvalidTid;
+  StackID creat_stack = 0;
   if (FdLocation(addr, &fd, &creat_tid, &creat_stack)) {
     auto *loc = New<ReportLocation>();
     loc->type = ReportLocationFD;
@@ -374,7 +374,7 @@ void ScopedReportBase::AddLocation(uptr addr, uptr size) {
 }
 
 #if !SANITIZER_GO
-void ScopedReportBase::AddSleep(u32 stack_id) {
+void ScopedReportBase::AddSleep(StackID stack_id) {
   rep_->sleep = SymbolizeStackId(stack_id);
 }
 #endif
@@ -388,7 +388,7 @@ ScopedReport::ScopedReport(ReportType typ, uptr tag)
 
 ScopedReport::~ScopedReport() {}
 
-void RestoreStack(int tid, const u64 epoch, VarSizeStackTrace *stk,
+void RestoreStack(Tid tid, const u64 epoch, VarSizeStackTrace *stk,
                   MutexSet *mset, uptr *tag) {
   // This function restores stack trace and mutex set for the thread/epoch.
   // It does so by getting stack trace and mutex set at the beginning of

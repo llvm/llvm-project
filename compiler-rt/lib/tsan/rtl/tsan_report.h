@@ -74,19 +74,19 @@ struct ReportLocation {
   uptr heap_chunk_start = 0;
   uptr heap_chunk_size = 0;
   uptr external_tag = 0;
-  int tid = kInvalidTid;
+  Tid tid = kInvalidTid;
   int fd = 0;
   bool suppressable = false;
   ReportStack *stack = nullptr;
 };
 
 struct ReportThread {
-  int id;
+  Tid id;
   tid_t os_id;
   bool running;
   ThreadType thread_type;
   char *name;
-  u32 parent_tid;
+  Tid parent_tid;
   ReportStack *stack;
 };
 
@@ -106,7 +106,7 @@ class ReportDesc {
   Vector<ReportLocation*> locs;
   Vector<ReportMutex*> mutexes;
   Vector<ReportThread*> threads;
-  Vector<int> unique_tids;
+  Vector<Tid> unique_tids;
   ReportStack *sleep;
   int count;
 

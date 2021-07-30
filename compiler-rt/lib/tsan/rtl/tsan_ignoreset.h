@@ -22,14 +22,14 @@ class IgnoreSet {
   static const uptr kMaxSize = 16;
 
   IgnoreSet();
-  void Add(u32 stack_id);
+  void Add(StackID stack_id);
   void Reset();
   uptr Size() const;
-  u32 At(uptr i) const;
+  StackID At(uptr i) const;
 
  private:
   uptr size_;
-  u32 stacks_[kMaxSize];
+  StackID stacks_[kMaxSize];
 };
 
 }  // namespace __tsan

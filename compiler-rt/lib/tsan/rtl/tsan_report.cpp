@@ -52,7 +52,7 @@ ReportDesc::~ReportDesc() {
 #if !SANITIZER_GO
 
 const int kThreadBufSize = 32;
-const char *thread_name(char *buf, int tid) {
+const char *thread_name(char *buf, Tid tid) {
   if (tid == kMainTid)
     return "main thread";
   internal_snprintf(buf, kThreadBufSize, "thread T%d", tid);
@@ -378,7 +378,7 @@ void PrintReport(const ReportDesc *rep) {
 
 #else  // #if !SANITIZER_GO
 
-const u32 kMainGoroutineId = 1;
+const Tid kMainGoroutineId = 1;
 
 void PrintStack(const ReportStack *ent) {
   if (ent == 0 || ent->frames == 0) {

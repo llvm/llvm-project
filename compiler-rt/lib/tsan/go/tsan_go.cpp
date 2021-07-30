@@ -220,7 +220,7 @@ void __tsan_free(uptr p, uptr sz) {
 void __tsan_go_start(ThreadState *parent, ThreadState **pthr, void *pc) {
   ThreadState *thr = AllocGoroutine();
   *pthr = thr;
-  int goid = ThreadCreate(parent, (uptr)pc, 0, true);
+  Tid goid = ThreadCreate(parent, (uptr)pc, 0, true);
   ThreadStart(thr, goid, 0, ThreadType::Regular);
 }
 
