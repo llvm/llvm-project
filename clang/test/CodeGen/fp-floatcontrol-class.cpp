@@ -1,4 +1,3 @@
-// RUN: %clang_cc1 -ffp-contract=on -triple %itanium_abi_triple -emit-llvm -o - %s | FileCheck %s
 // RUN: %clang_cc1 -ffp-contract=on -triple x86_64-linux-gnu -emit-llvm -o - %s | FileCheck %s
 // Verify that float_control does not pertain to initializer expressions
 
