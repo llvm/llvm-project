@@ -75,9 +75,7 @@ INSTR_PROF_DATA(const uint64_t, llvm::Type::getInt64Ty(Ctx), NameRef, \
 INSTR_PROF_DATA(const uint64_t, llvm::Type::getInt64Ty(Ctx), FuncHash, \
                 ConstantInt::get(llvm::Type::getInt64Ty(Ctx), \
                 Inc->getHash()->getZExtValue()))
-INSTR_PROF_DATA(const IntPtrT, llvm::Type::getInt64PtrTy(Ctx), CounterPtr, \
-                ConstantExpr::getBitCast(CounterPtr, \
-                llvm::Type::getInt64PtrTy(Ctx)))
+INSTR_PROF_DATA(const IntPtrT, IntPtrTy, CounterPtr, RelativeCounterPtr)
 /* This is used to map function pointers for the indirect call targets to
  * function name hashes during the conversion from raw to merged profile
  * data.
@@ -134,7 +132,8 @@ INSTR_PROF_RAW_HEADER(uint64_t, PaddingBytesBeforeCounters, PaddingBytesBeforeCo
 INSTR_PROF_RAW_HEADER(uint64_t, CountersSize, CountersSize)
 INSTR_PROF_RAW_HEADER(uint64_t, PaddingBytesAfterCounters, PaddingBytesAfterCounters)
 INSTR_PROF_RAW_HEADER(uint64_t, NamesSize,  NamesSize)
-INSTR_PROF_RAW_HEADER(uint64_t, CountersDelta, (uintptr_t)CountersBegin)
+INSTR_PROF_RAW_HEADER(uint64_t, CountersDelta,
+                      (uintptr_t)CountersBegin - (uintptr_t)DataBegin)
 INSTR_PROF_RAW_HEADER(uint64_t, NamesDelta, (uintptr_t)NamesBegin)
 INSTR_PROF_RAW_HEADER(uint64_t, ValueKindLast, IPVK_Last)
 INSTR_PROF_RAW_HEADER(uint64_t, BinaryIdsSize, __llvm_write_binary_ids(NULL))

@@ -437,7 +437,15 @@ Error RawInstrProfReader<IntPtrT>::readRawCounts(
   // may itself be corrupt.
   if (MaxNumCounters < 0 || NumCounters > (uint32_t)MaxNumCounters)
     return error(instrprof_error::malformed);
+
+  // We need to compute the in-buffer counter offset from the in-memory address
+  // distance. The initial CountersDelta is the in-memory address difference
+  // start(__llvm_prf_cnts)-start(__llvm_prf_data), so SrcData->CounterPtr -
+  // CountersDelta computes the offset into the in-buffer counter section.
+  //
+  // CountersDelta decreases as we advance to the next data record.
   ptrdiff_t CounterOffset = getCounterOffset(CounterPtr);
+  CountersDelta -= sizeof(*Data);
   if (CounterOffset < 0 || CounterOffset > MaxNumCounters ||
       ((uint32_t)CounterOffset + NumCounters) > (uint32_t)MaxNumCounters)
     return error(instrprof_error::malformed);

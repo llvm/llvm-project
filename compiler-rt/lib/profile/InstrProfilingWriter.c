@@ -283,6 +283,12 @@ lprofWriteDataImpl(ProfDataWriter *Writer, const __llvm_profile_data *DataBegin,
 #define INSTR_PROF_RAW_HEADER(Type, Name, Init) Header.Name = Init;
 #include "profile/InstrProfData.inc"
 
+  /* On WIN64, label differences are truncated 32-bit values. Truncate
+   * CountersDelta to match. */
+#ifdef _WIN64
+  Header.CountersDelta = (void *)(uint32_t)Header.CountersDelta;
+#endif
+
   /* Write the profile header. */
   ProfDataIOVec IOVec[] = {{&Header, sizeof(__llvm_profile_header), 1, 0}};
   if (Writer->Write(Writer, IOVec, sizeof(IOVec) / sizeof(*IOVec)))
