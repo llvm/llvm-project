@@ -17,7 +17,7 @@
 // TSan-invisible barrier.
 // Tests use it to establish necessary execution order in a way that does not
 // interfere with tsan (does not establish synchronization between threads).
-typedef unsigned long long invisible_barrier_t;
+typedef unsigned invisible_barrier_t;
 
 #ifdef __cplusplus
 extern "C" {
