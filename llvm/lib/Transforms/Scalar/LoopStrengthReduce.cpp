@@ -4082,6 +4082,14 @@ void LSRInstance::GenerateTruncates(LSRUse &LU, unsigned LUIdx, Formula Base) {
   if (DstTy->isPointerTy())
     return;
 
+  // It is invalid to extend a pointer type so exit early if ScaledReg or
+  // any of the BaseRegs are pointers.
+  if (Base.ScaledReg && Base.ScaledReg->getType()->isPointerTy())
+    return;
+  if (any_of(Base.BaseRegs,
+             [](const SCEV *S) { return S->getType()->isPointerTy(); }))
+    return;
+
   for (Type *SrcTy : Types) {
     if (SrcTy != DstTy && TTI.isTruncateFree(SrcTy, DstTy)) {
       Formula F = Base;
