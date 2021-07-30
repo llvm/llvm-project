@@ -18,7 +18,7 @@ MATH_PRIVATE(epln)(float a)
     m = BUILTIN_FLDEXP_F32(m, b);
     int e = BUILTIN_FREXP_EXP_F32(a) - b;
 
-    float2 x = div(m - 1.0f, add(m, 1.0f));
+    float2 x = div(m - 1.0f, fadd(1.0f, m));
     float2 s = sqr(x);
     float t = s.hi;
     float p = MATH_MAD(t, MATH_MAD(t, 0x1.ed89c2p-3f, 0x1.23e988p-2f), 0x1.999bdep-2f);
