@@ -14,7 +14,7 @@
 // REQUIRES: clang-driver
 // REQUIRES: x86-registered-target
 // REQUIRES: system-linux
-// XFAIL: ppc64
+// XFAIL: powerpc
 
 // CHECK: "-cc1" {{.*}} "-massembler-no-warn"
 // CHECK-NOIAS: "--no-warn"
