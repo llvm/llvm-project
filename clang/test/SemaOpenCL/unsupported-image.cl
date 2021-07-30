@@ -1,7 +1,8 @@
-// RUN: %clang_cc1 -triple spir-unknown-unknown -verify -cl-std=CL3.0 -cl-ext=-__opencl_c_images,-__opencl_c_read_write_images %s
-// RUN: %clang_cc1 -triple spir-unknown-unknown -verify -cl-std=CL3.0 -cl-ext=+__opencl_c_images %s
+// RUN: %clang_cc1 -triple spir-unknown-unknown -verify -cl-std=CL3.0 -cl-ext=-__opencl_c_images,-__opencl_c_read_write_images,-cl_khr_3d_image_writes,-__opencl_c_3d_image_writes %s
+// RUN: %clang_cc1 -triple spir-unknown-unknown -verify -cl-std=CL3.0 -cl-ext=+__opencl_c_images,+__opencl_c_read_write_images,+cl_khr_3d_image_writes,+__opencl_c_3d_image_writes %s
+// RUN: %clang_cc1 -triple spir-unknown-unknown -verify -cl-std=CL3.0 -cl-ext=+__opencl_c_images,+__opencl_c_read_write_images,-cl_khr_3d_image_writes,-__opencl_c_3d_image_writes %s
 
-#ifdef __opencl_c_images
+#if defined(__opencl_c_images) && defined(__opencl_c_3d_image_writes)
 //expected-no-diagnostics
 #endif
 
@@ -58,4 +59,11 @@ void test10(image2d_array_msaa_depth_t i) {}
 void test11(sampler_t s) {}
 #if !defined(__opencl_c_images)
 // expected-error@-2{{use of type 'sampler_t' requires __opencl_c_images support}}
+#endif
+
+void test12(write_only image3d_t i) {}
+#if !defined(__opencl_c_images)
+// expected-error@-2{{use of type '__write_only image3d_t' requires __opencl_c_images support}}
+#elif !defined(__opencl_c_3d_image_writes)
+// expected-error@-4{{use of type '__write_only image3d_t' requires cl_khr_3d_image_writes and __opencl_c_3d_image_writes support}}
 #endif
