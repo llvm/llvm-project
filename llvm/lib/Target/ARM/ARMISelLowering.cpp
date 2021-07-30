@@ -55,6 +55,7 @@
 #include "llvm/CodeGen/MachineRegisterInfo.h"
 #include "llvm/CodeGen/RuntimeLibcalls.h"
 #include "llvm/CodeGen/SelectionDAG.h"
+#include "llvm/CodeGen/SelectionDAGAddressAnalysis.h"
 #include "llvm/CodeGen/SelectionDAGNodes.h"
 #include "llvm/CodeGen/TargetInstrInfo.h"
 #include "llvm/CodeGen/TargetLowering.h"
@@ -13064,11 +13065,7 @@ static SDValue PerformADDCombineWithOperands(SDNode *N, SDValue N0, SDValue N1,
   return SDValue();
 }
 
-static SDValue PerformADDVecReduce(SDNode *N, SelectionDAG &DAG,
-                                   const ARMSubtarget *Subtarget) {
-  if (!Subtarget->hasMVEIntegerOps())
-    return SDValue();
-
+static SDValue TryDistrubutionADDVecReduce(SDNode *N, SelectionDAG &DAG) {
   EVT VT = N->getValueType(0);
   SDValue N0 = N->getOperand(0);
   SDValue N1 = N->getOperand(1);
@@ -13124,6 +13121,106 @@ static SDValue PerformADDVecReduce(SDNode *N, SelectionDAG &DAG,
     return R;
   if (SDValue R = DistrubuteAddAddVecReduce(N1, N0))
     return R;
+
+  // Distribute add(vecreduce(load(Y)), vecreduce(load(Z)))
+  // Or add(add(X, vecreduce(load(Y))), vecreduce(load(Z)))
+  // by ascending load offsets. This can help cores prefetch if the order of
+  // loads is more predictable.
+  auto DistrubuteVecReduceLoad = [&](SDValue N0, SDValue N1, bool IsForward) {
+    // Check if two reductions are known to load data where one is before/after
+    // another. Return negative if N0 loads data before N1, positive if N1 is
+    // before N0 and 0 otherwise if nothing is known.
+    auto IsKnownOrderedLoad = [&](SDValue N0, SDValue N1) {
+      // Look through to the first operand of a MUL, for the VMLA case.
+      // Currently only looks at the first operand, in the hope they are equal.
+      if (N0.getOpcode() == ISD::MUL)
+        N0 = N0.getOperand(0);
+      if (N1.getOpcode() == ISD::MUL)
+        N1 = N1.getOperand(0);
+
+      // Return true if the two operands are loads to the same object and the
+      // offset of the first is known to be less than the offset of the second.
+      LoadSDNode *Load0 = dyn_cast<LoadSDNode>(N0);
+      LoadSDNode *Load1 = dyn_cast<LoadSDNode>(N1);
+      if (!Load0 || !Load1 || Load0->getChain() != Load1->getChain() ||
+          !Load0->isSimple() || !Load1->isSimple() || Load0->isIndexed() ||
+          Load1->isIndexed())
+        return 0;
+
+      auto BaseLocDecomp0 = BaseIndexOffset::match(Load0, DAG);
+      auto BaseLocDecomp1 = BaseIndexOffset::match(Load1, DAG);
+
+      if (!BaseLocDecomp0.getBase() ||
+          BaseLocDecomp0.getBase() != BaseLocDecomp1.getBase() ||
+          !BaseLocDecomp0.hasValidOffset() || !BaseLocDecomp1.hasValidOffset())
+        return 0;
+      if (BaseLocDecomp0.getOffset() < BaseLocDecomp1.getOffset())
+        return -1;
+      if (BaseLocDecomp0.getOffset() > BaseLocDecomp1.getOffset())
+        return 1;
+      return 0;
+    };
+
+    SDValue X;
+    if (N0.getOpcode() == ISD::ADD) {
+      if (IsVecReduce(N0.getOperand(0)) && IsVecReduce(N0.getOperand(1))) {
+        int IsBefore = IsKnownOrderedLoad(N0.getOperand(0).getOperand(0),
+                                         N0.getOperand(1).getOperand(0));
+        if (IsBefore < 0) {
+          X = N0.getOperand(0);
+          N0 = N0.getOperand(1);
+        } else if (IsBefore > 0) {
+          X = N0.getOperand(1);
+          N0 = N0.getOperand(0);
+        } else
+          return SDValue();
+      } else if (IsVecReduce(N0.getOperand(0))) {
+        X = N0.getOperand(1);
+        N0 = N0.getOperand(0);
+      } else if (IsVecReduce(N0.getOperand(1))) {
+        X = N0.getOperand(0);
+        N0 = N0.getOperand(1);
+      } else
+        return SDValue();
+    } else if (IsForward && IsVecReduce(N0) && IsVecReduce(N1) &&
+               IsKnownOrderedLoad(N0.getOperand(0), N1.getOperand(0)) < 0) {
+      // Note this is backward to how you would expect. We create
+      // add(reduce(load + 16), reduce(load + 0)) so that the
+      // add(reduce(load+16), X) is combined into VADDVA(X, load+16)), leaving
+      // the X as VADDV(load + 0)
+      return DAG.getNode(ISD::ADD, dl, VT, N1, N0);
+    } else
+      return SDValue();
+
+    if (!IsVecReduce(N0) || !IsVecReduce(N1))
+      return SDValue();
+
+    if (IsKnownOrderedLoad(N1.getOperand(0), N0.getOperand(0)) >= 0)
+      return SDValue();
+
+    // Switch from add(add(X, N0), N1) to add(add(X, N1), N0)
+    SDValue Add0 = DAG.getNode(ISD::ADD, dl, VT, X, N1);
+    return DAG.getNode(ISD::ADD, dl, VT, Add0, N0);
+  };
+  if (SDValue R = DistrubuteVecReduceLoad(N0, N1, true))
+    return R;
+  if (SDValue R = DistrubuteVecReduceLoad(N1, N0, false))
+    return R;
+  return SDValue();
+}
+
+static SDValue PerformADDVecReduce(SDNode *N, SelectionDAG &DAG,
+                                   const ARMSubtarget *Subtarget) {
+  if (!Subtarget->hasMVEIntegerOps())
+    return SDValue();
+
+  if (SDValue R = TryDistrubutionADDVecReduce(N, DAG))
+    return R;
+
+  EVT VT = N->getValueType(0);
+  SDValue N0 = N->getOperand(0);
+  SDValue N1 = N->getOperand(1);
+  SDLoc dl(N);
 
   if (VT != MVT::i64)
     return SDValue();
