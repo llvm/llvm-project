@@ -24,10 +24,6 @@ void __asan_before_dynamic_init(uptr addr) {}
 
 void __asan_after_dynamic_init(void) {}
 
-void __asan_register_globals(void *start, uptr n) {}
-
-void __asan_unregister_globals(void *start, uptr n) {}
-
 void __asan_register_image_globals(uptr flag) {}
 
 void __asan_unregister_image_globals(uptr flag) {}
