@@ -55,14 +55,14 @@ namespace std {
 
 */
 
+// Make sure all feature tests macros are always available.
+#include <version>
+// Only enable the contents of the header when libc++ was build with LIBCXX_ENABLE_INCOMPLETE_FEATURES enabled
+#if !defined(_LIBCPP_HAS_NO_INCOMPLETE_FORMAT)
+
 #include <__config>
 #include <__format/format_error.h>
 #include <__format/format_parse_context.h>
-#include <version>
-
-#if defined(_LIBCPP_HAS_NO_INCOMPLETE_FORMAT)
-# error "The Format library is not supported since libc++ has been configured with LIBCXX_ENABLE_INCOMPLETE_FEATURES disabled"
-#endif
 
 #if !defined(_LIBCPP_HAS_NO_PRAGMA_SYSTEM_HEADER)
 #  pragma GCC system_header
@@ -80,5 +80,7 @@ _LIBCPP_BEGIN_NAMESPACE_STD
 _LIBCPP_END_NAMESPACE_STD
 
 _LIBCPP_POP_MACROS
+
+#endif // !defined(_LIBCPP_HAS_NO_INCOMPLETE_FORMAT)
 
 #endif // _LIBCPP_FORMAT
