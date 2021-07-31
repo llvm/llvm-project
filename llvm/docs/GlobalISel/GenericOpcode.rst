@@ -765,6 +765,7 @@ G_BR
 Unconditional branch
 
 .. code-block:: none
+
   G_BR %bb.<id>
 
 G_BRCOND
@@ -773,6 +774,7 @@ G_BRCOND
 Conditional branch
 
 .. code-block:: none
+
   G_BRCOND %condition, %basicblock.<id>
 
 G_BRINDIRECT
@@ -781,6 +783,7 @@ G_BRINDIRECT
 Indirect branch
 
 .. code-block:: none
+
   G_BRINDIRECT %src(p0)
 
 G_BRJT
@@ -789,6 +792,7 @@ G_BRJT
 Indirect branch to jump table entry
 
 .. code-block:: none
+
   G_BRJT %ptr(p0), %jti, %idx(s64)
 
 G_JUMP_TABLE

@@ -1071,35 +1071,45 @@ public:
       auto *Shuffle = dyn_cast<ShuffleVectorInst>(U);
       if (!Shuffle)
         return TTI::TCC_Basic; // FIXME
+
       auto *VecTy = cast<VectorType>(U->getType());
       auto *VecSrcTy = cast<VectorType>(U->getOperand(0)->getType());
-
-      // TODO: Identify and add costs for insert subvector, etc.
       int SubIndex;
-      if (Shuffle->isExtractSubvectorMask(SubIndex))
-        return TargetTTI->getShuffleCost(TTI::SK_ExtractSubvector, VecSrcTy,
-                                         Shuffle->getShuffleMask(), SubIndex,
-                                         VecTy);
-      else if (Shuffle->changesLength())
+
+      if (Shuffle->changesLength()) {
+        if (Shuffle->isExtractSubvectorMask(SubIndex))
+          return TargetTTI->getShuffleCost(TTI::SK_ExtractSubvector, VecSrcTy,
+                                           Shuffle->getShuffleMask(), SubIndex,
+                                           VecTy);
+
+        // TODO: Identify and add costs for insert subvector, etc.
         return CostKind == TTI::TCK_RecipThroughput ? -1 : 1;
-      else if (Shuffle->isIdentity())
+      }
+
+      if (Shuffle->isIdentity())
         return 0;
-      else if (Shuffle->isReverse())
+
+      if (Shuffle->isReverse())
         return TargetTTI->getShuffleCost(TTI::SK_Reverse, VecTy,
                                          Shuffle->getShuffleMask(), 0, nullptr);
-      else if (Shuffle->isSelect())
+
+      if (Shuffle->isSelect())
         return TargetTTI->getShuffleCost(TTI::SK_Select, VecTy,
                                          Shuffle->getShuffleMask(), 0, nullptr);
-      else if (Shuffle->isTranspose())
+
+      if (Shuffle->isTranspose())
         return TargetTTI->getShuffleCost(TTI::SK_Transpose, VecTy,
                                          Shuffle->getShuffleMask(), 0, nullptr);
-      else if (Shuffle->isZeroEltSplat())
+
+      if (Shuffle->isZeroEltSplat())
         return TargetTTI->getShuffleCost(TTI::SK_Broadcast, VecTy,
                                          Shuffle->getShuffleMask(), 0, nullptr);
-      else if (Shuffle->isSingleSource())
+
+      if (Shuffle->isSingleSource())
         return TargetTTI->getShuffleCost(TTI::SK_PermuteSingleSrc, VecTy,
                                          Shuffle->getShuffleMask(), 0, nullptr);
 
+      // TODO: Identify and add costs for insert subvector, etc.
       return TargetTTI->getShuffleCost(TTI::SK_PermuteTwoSrc, VecTy,
                                        Shuffle->getShuffleMask(), 0, nullptr);
     }

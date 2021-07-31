@@ -145,3 +145,16 @@ define void @PR50888() {
   call void @llvm.memset.p0i8.i64(i8* align 16 %array, i8 0, i64 ptrtoint (void ()* @PR50888 to i64), i1 false)
   ret void
 }
+
+; Don't crash on out-of-bounds length.
+
+define void @PR50910() {
+; CHECK-LABEL: @PR50910(
+; CHECK-NEXT:    [[T1:%.*]] = alloca i8, i64 1, align 8
+; CHECK-NEXT:    call void @llvm.memset.p0i8.i64(i8* align 8 [[T1]], i8 0, i64 1, i1 false)
+; CHECK-NEXT:    ret void
+;
+  %t1 = alloca i8, i64 1, align 8
+  call void @llvm.memset.p0i8.i64(i8* align 8 %t1, i8 0, i64 4294967296, i1 false)
+  ret void
+}

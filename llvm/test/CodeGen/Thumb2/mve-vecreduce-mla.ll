@@ -776,8 +776,7 @@ define arm_aapcs_vfpcc i64 @add_v4i8i16_v4i32_v4i64_zext(<4 x i8> %x, <4 x i16> 
 ; CHECK-NEXT:    vmov.i32 q2, #0xff
 ; CHECK-NEXT:    vmovlb.u16 q1, q1
 ; CHECK-NEXT:    vand q0, q0, q2
-; CHECK-NEXT:    vmul.i32 q0, q0, q1
-; CHECK-NEXT:    vaddlv.u32 r0, r1, q0
+; CHECK-NEXT:    vmlalv.u32 r0, r1, q0, q1
 ; CHECK-NEXT:    bx lr
 entry:
   %xx = zext <4 x i8> %x to <4 x i32>
@@ -794,8 +793,7 @@ define arm_aapcs_vfpcc i64 @add_v4i8i16_v4i32_v4i64_sext(<4 x i8> %x, <4 x i16> 
 ; CHECK-NEXT:    vmovlb.s8 q0, q0
 ; CHECK-NEXT:    vmovlb.s16 q1, q1
 ; CHECK-NEXT:    vmovlb.s16 q0, q0
-; CHECK-NEXT:    vmul.i32 q0, q0, q1
-; CHECK-NEXT:    vaddlv.s32 r0, r1, q0
+; CHECK-NEXT:    vmlalv.s32 r0, r1, q0, q1
 ; CHECK-NEXT:    bx lr
 entry:
   %xx = sext <4 x i8> %x to <4 x i32>
