@@ -52,7 +52,7 @@ def mmt4d(lhs=TensorDef(TV.LhsType, S.M, S.K, S.M0, S.K0),
       '0' suffixes below, for instance the LHS matrix shape (M, K, M0, K0) reads
       as: MxK tiles, each of shape M0xK0.
   """
-  domain(D.m, D.m0, D.n, D.n0, D.k, D.k0)
+  domain(D.m, D.n, D.m0, D.n0, D.k, D.k0)
   implements(ContractionOpInterface)
   accum[D.m, D.n, D.m0, D.n0] += cast(TV.AccumType, lhs[D.m, D.k, D.m0, D.k0]) * cast(TV.AccumType, rhs[D.n, D.k, D.n0, D.k0])
 
