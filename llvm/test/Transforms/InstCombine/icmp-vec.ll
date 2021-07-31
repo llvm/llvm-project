@@ -506,7 +506,7 @@ define i1 @not_cast_ne-1(<3 x i1> %x) {
 define i1 @not_cast_ne-1_uses(<3 x i2> %x, <3 x i2>* %p) {
 ; CHECK-LABEL: @not_cast_ne-1_uses(
 ; CHECK-NEXT:    [[NOT:%.*]] = xor <3 x i2> [[X:%.*]], <i2 -1, i2 -1, i2 -1>
-; CHECK-NEXT:    store <3 x i2> [[NOT]], <3 x i2>* [[P:%.*]], align 4
+; CHECK-NEXT:    store <3 x i2> [[NOT]], <3 x i2>* [[P:%.*]], align 1
 ; CHECK-NEXT:    [[TMP1:%.*]] = bitcast <3 x i2> [[X]] to i6
 ; CHECK-NEXT:    [[R:%.*]] = icmp ne i6 [[TMP1]], 0
 ; CHECK-NEXT:    ret i1 [[R]]
@@ -553,7 +553,7 @@ define i1 @eq_cast_eq1(<2 x i4> %x, <2 x i4> %y) {
 define i1 @eq_cast_eq-1_use1(<2 x i4> %x, <2 x i4> %y, <2 x i1>* %p) {
 ; CHECK-LABEL: @eq_cast_eq-1_use1(
 ; CHECK-NEXT:    [[IC:%.*]] = icmp sgt <2 x i4> [[X:%.*]], [[Y:%.*]]
-; CHECK-NEXT:    store <2 x i1> [[IC]], <2 x i1>* [[P:%.*]], align 2
+; CHECK-NEXT:    store <2 x i1> [[IC]], <2 x i1>* [[P:%.*]], align 1
 ; CHECK-NEXT:    [[B:%.*]] = bitcast <2 x i1> [[IC]] to i2
 ; CHECK-NEXT:    [[R:%.*]] = icmp eq i2 [[B]], -1
 ; CHECK-NEXT:    ret i1 [[R]]
