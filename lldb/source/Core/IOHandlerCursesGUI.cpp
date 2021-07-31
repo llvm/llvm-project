@@ -36,6 +36,7 @@
 
 #include "lldb/Interpreter/CommandCompletions.h"
 #include "lldb/Interpreter/CommandInterpreter.h"
+#include "lldb/Interpreter/OptionGroupPlatform.h"
 
 #if LLDB_ENABLE_CURSES
 #include "lldb/Breakpoint/BreakpointLocation.h"
@@ -2651,6 +2652,185 @@ protected:
   ProcessPluginFieldDelegate *m_plugin_field;
 };
 
+class TargetCreateFormDelegate : public FormDelegate {
+public:
+  TargetCreateFormDelegate(Debugger &debugger) : m_debugger(debugger) {
+    m_executable_field = AddFileField("Executable", "", /*need_to_exist=*/true,
+                                      /*required=*/true);
+    m_core_file_field = AddFileField("Core File", "", /*need_to_exist=*/true,
+                                     /*required=*/false);
+    m_symbol_file_field = AddFileField(
+        "Symbol File", "", /*need_to_exist=*/true, /*required=*/false);
+    m_show_advanced_field = AddBooleanField("Show advanced settings.", false);
+    m_remote_file_field = AddFileField(
+        "Remote File", "", /*need_to_exist=*/false, /*required=*/false);
+    m_arch_field = AddArchField("Architecture", "", /*required=*/false);
+    m_platform_field = AddPlatformPluginField(debugger);
+    m_load_dependent_files_field =
+        AddChoicesField("Load Dependents", 3, GetLoadDependentFilesChoices());
+
+    AddAction("Create", [this](Window &window) { CreateTarget(window); });
+  }
+
+  std::string GetName() override { return "Create Target"; }
+
+  void UpdateFieldsVisibility() override {
+    if (m_show_advanced_field->GetBoolean()) {
+      m_remote_file_field->FieldDelegateShow();
+      m_arch_field->FieldDelegateShow();
+      m_platform_field->FieldDelegateShow();
+      m_load_dependent_files_field->FieldDelegateShow();
+    } else {
+      m_remote_file_field->FieldDelegateHide();
+      m_arch_field->FieldDelegateHide();
+      m_platform_field->FieldDelegateHide();
+      m_load_dependent_files_field->FieldDelegateHide();
+    }
+  }
+
+  static constexpr const char *kLoadDependentFilesNo = "No";
+  static constexpr const char *kLoadDependentFilesYes = "Yes";
+  static constexpr const char *kLoadDependentFilesExecOnly = "Executable only";
+
+  std::vector<std::string> GetLoadDependentFilesChoices() {
+    std::vector<std::string> load_depentents_options;
+    load_depentents_options.push_back(kLoadDependentFilesExecOnly);
+    load_depentents_options.push_back(kLoadDependentFilesYes);
+    load_depentents_options.push_back(kLoadDependentFilesNo);
+    return load_depentents_options;
+  }
+
+  LoadDependentFiles GetLoadDependentFiles() {
+    std::string choice = m_load_dependent_files_field->GetChoiceContent();
+    if (choice == kLoadDependentFilesNo)
+      return eLoadDependentsNo;
+    if (choice == kLoadDependentFilesYes)
+      return eLoadDependentsYes;
+    return eLoadDependentsDefault;
+  }
+
+  OptionGroupPlatform GetPlatformOptions() {
+    OptionGroupPlatform platform_options(false);
+    platform_options.SetPlatformName(m_platform_field->GetPluginName().c_str());
+    return platform_options;
+  }
+
+  TargetSP GetTarget() {
+    OptionGroupPlatform platform_options = GetPlatformOptions();
+    TargetSP target_sp;
+    Status status = m_debugger.GetTargetList().CreateTarget(
+        m_debugger, m_executable_field->GetPath(),
+        m_arch_field->GetArchString(), GetLoadDependentFiles(),
+        &platform_options, target_sp);
+
+    if (status.Fail()) {
+      SetError(status.AsCString());
+      return nullptr;
+    }
+
+    m_debugger.GetTargetList().SetSelectedTarget(target_sp);
+
+    return target_sp;
+  }
+
+  void SetSymbolFile(TargetSP target_sp) {
+    if (!m_symbol_file_field->IsSpecified())
+      return;
+
+    ModuleSP module_sp(target_sp->GetExecutableModule());
+    if (!module_sp)
+      return;
+
+    module_sp->SetSymbolFileFileSpec(
+        m_symbol_file_field->GetResolvedFileSpec());
+  }
+
+  void SetCoreFile(TargetSP target_sp) {
+    if (!m_core_file_field->IsSpecified())
+      return;
+
+    FileSpec core_file_spec = m_core_file_field->GetResolvedFileSpec();
+
+    FileSpec core_file_directory_spec;
+    core_file_directory_spec.GetDirectory() = core_file_spec.GetDirectory();
+    target_sp->AppendExecutableSearchPaths(core_file_directory_spec);
+
+    ProcessSP process_sp(target_sp->CreateProcess(
+        m_debugger.GetListener(), llvm::StringRef(), &core_file_spec, false));
+
+    if (!process_sp) {
+      SetError("Unable to find process plug-in for core file!");
+      return;
+    }
+
+    Status status = process_sp->LoadCore();
+    if (status.Fail()) {
+      SetError("Can't find plug-in for core file!");
+      return;
+    }
+  }
+
+  void SetRemoteFile(TargetSP target_sp) {
+    if (!m_remote_file_field->IsSpecified())
+      return;
+
+    ModuleSP module_sp(target_sp->GetExecutableModule());
+    if (!module_sp)
+      return;
+
+    FileSpec remote_file_spec = m_remote_file_field->GetFileSpec();
+    module_sp->SetPlatformFileSpec(remote_file_spec);
+  }
+
+  void RemoveTarget(TargetSP target_sp) {
+    m_debugger.GetTargetList().DeleteTarget(target_sp);
+  }
+
+  void CreateTarget(Window &window) {
+    ClearError();
+
+    bool all_fields_are_valid = CheckFieldsValidity();
+    if (!all_fields_are_valid)
+      return;
+
+    TargetSP target_sp = GetTarget();
+    if (HasError())
+      return;
+
+    SetSymbolFile(target_sp);
+    if (HasError()) {
+      RemoveTarget(target_sp);
+      return;
+    }
+
+    SetCoreFile(target_sp);
+    if (HasError()) {
+      RemoveTarget(target_sp);
+      return;
+    }
+
+    SetRemoteFile(target_sp);
+    if (HasError()) {
+      RemoveTarget(target_sp);
+      return;
+    }
+
+    window.GetParent()->RemoveSubWindow(&window);
+  }
+
+protected:
+  Debugger &m_debugger;
+
+  FileFieldDelegate *m_executable_field;
+  FileFieldDelegate *m_core_file_field;
+  FileFieldDelegate *m_symbol_file_field;
+  BooleanFieldDelegate *m_show_advanced_field;
+  FileFieldDelegate *m_remote_file_field;
+  ArchFieldDelegate *m_arch_field;
+  PlatformPluginFieldDelegate *m_platform_field;
+  ChoicesFieldDelegate *m_load_dependent_files_field;
+};
+
 class MenuDelegate {
 public:
   virtual ~MenuDelegate() = default;
@@ -3078,15 +3258,15 @@ public:
     bool done = false;
     int delay_in_tenths_of_a_second = 1;
 
-    // Alas the threading model in curses is a bit lame so we need to resort to
-    // polling every 0.5 seconds. We could poll for stdin ourselves and then
-    // pass the keys down but then we need to translate all of the escape
+    // Alas the threading model in curses is a bit lame so we need to resort
+    // to polling every 0.5 seconds. We could poll for stdin ourselves and
+    // then pass the keys down but then we need to translate all of the escape
     // sequences ourselves. So we resort to polling for input because we need
     // to receive async process events while in this loop.
 
-    halfdelay(delay_in_tenths_of_a_second); // Poll using some number of tenths
-                                            // of seconds seconds when calling
-                                            // Window::GetChar()
+    halfdelay(delay_in_tenths_of_a_second); // Poll using some number of
+                                            // tenths of seconds seconds when
+                                            // calling Window::GetChar()
 
     ListenerSP listener_sp(
         Listener::MakeListener("lldb.IOHandler.curses.Application"));
@@ -4908,6 +5088,18 @@ public:
 
   MenuActionResult MenuDelegateAction(Menu &menu) override {
     switch (menu.GetIdentifier()) {
+    case eMenuID_TargetCreate: {
+      WindowSP main_window_sp = m_app.GetMainWindow();
+      FormDelegateSP form_delegate_sp =
+          FormDelegateSP(new TargetCreateFormDelegate(m_debugger));
+      Rect bounds = main_window_sp->GetCenteredRect(80, 19);
+      WindowSP form_window_sp = main_window_sp->CreateSubWindow(
+          form_delegate_sp->GetName().c_str(), bounds, true);
+      WindowDelegateSP window_delegate_sp =
+          WindowDelegateSP(new FormWindowDelegate(form_delegate_sp));
+      form_window_sp->SetDelegate(window_delegate_sp);
+      return MenuActionResult::Handled;
+    }
     case eMenuID_ThreadStepIn: {
       ExecutionContext exe_ctx =
           m_debugger.GetCommandInterpreter().GetExecutionContext();
