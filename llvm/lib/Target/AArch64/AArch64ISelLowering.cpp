@@ -246,6 +246,12 @@ AArch64TargetLowering::AArch64TargetLowering(const TargetMachine &TM,
   addRegisterClass(MVT::i32, &AArch64::GPR32allRegClass);
   addRegisterClass(MVT::i64, &AArch64::GPR64allRegClass);
 
+  if (Subtarget->hasLS64()) {
+    addRegisterClass(MVT::i64x8, &AArch64::GPR64x8ClassRegClass);
+    setOperationAction(ISD::LOAD, MVT::i64x8, Custom);
+    setOperationAction(ISD::STORE, MVT::i64x8, Custom);
+  }
+
   if (Subtarget->hasFPARMv8()) {
     addRegisterClass(MVT::f16, &AArch64::FPR16RegClass);
     addRegisterClass(MVT::bf16, &AArch64::FPR16RegClass);
@@ -2023,6 +2029,8 @@ const char *AArch64TargetLowering::getTargetNodeName(unsigned Opcode) const {
     MAKE_CASE(AArch64ISD::LASTA)
     MAKE_CASE(AArch64ISD::LASTB)
     MAKE_CASE(AArch64ISD::REINTERPRET_CAST)
+    MAKE_CASE(AArch64ISD::LS64_BUILD)
+    MAKE_CASE(AArch64ISD::LS64_EXTRACT)
     MAKE_CASE(AArch64ISD::TBL)
     MAKE_CASE(AArch64ISD::FADD_PRED)
     MAKE_CASE(AArch64ISD::FADDA_PRED)
@@ -4611,17 +4619,51 @@ SDValue AArch64TargetLowering::LowerSTORE(SDValue Op,
         {StoreNode->getChain(), Lo, Hi, StoreNode->getBasePtr()},
         StoreNode->getMemoryVT(), StoreNode->getMemOperand());
     return Result;
+  } else if (MemVT == MVT::i64x8) {
+    SDValue Value = StoreNode->getValue();
+    assert(Value->getValueType(0) == MVT::i64x8);
+    SDValue Chain = StoreNode->getChain();
+    SDValue Base = StoreNode->getBasePtr();
+    EVT PtrVT = Base.getValueType();
+    for (unsigned i = 0; i < 8; i++) {
+      SDValue Part = DAG.getNode(AArch64ISD::LS64_EXTRACT, Dl, MVT::i64,
+                                 Value, DAG.getConstant(i, Dl, MVT::i32));
+      SDValue Ptr = DAG.getNode(ISD::ADD, Dl, PtrVT, Base,
+                                DAG.getConstant(i * 8, Dl, PtrVT));
+      Chain = DAG.getStore(Chain, Dl, Part, Ptr, StoreNode->getPointerInfo(),
+                           StoreNode->getOriginalAlign());
+    }
+    return Chain;
   }
 
   return SDValue();
 }
 
-// Custom lowering for extending v4i8 vector loads.
 SDValue AArch64TargetLowering::LowerLOAD(SDValue Op,
                                          SelectionDAG &DAG) const {
   SDLoc DL(Op);
   LoadSDNode *LoadNode = cast<LoadSDNode>(Op);
   assert(LoadNode && "Expected custom lowering of a load node");
+
+  if (LoadNode->getMemoryVT() == MVT::i64x8) {
+    SmallVector<SDValue, 8> Ops;
+    SDValue Base = LoadNode->getBasePtr();
+    SDValue Chain = LoadNode->getChain();
+    EVT PtrVT = Base.getValueType();
+    for (unsigned i = 0; i < 8; i++) {
+      SDValue Ptr = DAG.getNode(ISD::ADD, DL, PtrVT, Base,
+                                DAG.getConstant(i * 8, DL, PtrVT));
+      SDValue Part = DAG.getLoad(MVT::i64, DL, Chain, Ptr,
+                                 LoadNode->getPointerInfo(),
+                                 LoadNode->getOriginalAlign());
+      Ops.push_back(Part);
+      Chain = SDValue(Part.getNode(), 1);
+    }
+    SDValue Loaded = DAG.getNode(AArch64ISD::LS64_BUILD, DL, MVT::i64x8, Ops);
+    return DAG.getMergeValues({Loaded, Chain}, DL);
+  }
+
+  // Custom lowering for extending v4i8 vector loads.
   EVT VT = Op->getValueType(0);
   assert((VT == MVT::v4i16 || VT == MVT::v4i32) && "Expected v4i16 or v4i32");
 
@@ -8179,6 +8221,8 @@ AArch64TargetLowering::getRegForInlineAsmConstraint(
     case 'r':
       if (VT.isScalableVector())
         return std::make_pair(0U, nullptr);
+      if (Subtarget->hasLS64() && VT.getSizeInBits() == 512)
+        return std::make_pair(0U, &AArch64::GPR64x8ClassRegClass);
       if (VT.getFixedSizeInBits() == 64)
         return std::make_pair(0U, &AArch64::GPR64commonRegClass);
       return std::make_pair(0U, &AArch64::GPR32commonRegClass);
@@ -8264,6 +8308,15 @@ AArch64TargetLowering::getRegForInlineAsmConstraint(
     return std::make_pair(0U, nullptr);
 
   return Res;
+}
+
+EVT AArch64TargetLowering::getAsmOperandValueType(const DataLayout &DL,
+                                                  llvm::Type *Ty,
+                                                  bool AllowUnknown) const {
+  if (Subtarget->hasLS64() && Ty->isIntegerTy(512))
+    return EVT(MVT::i64x8);
+
+  return TargetLowering::getAsmOperandValueType(DL, Ty, AllowUnknown);
 }
 
 /// LowerAsmOperandForConstraint - Lower the specified operand into the Ops
