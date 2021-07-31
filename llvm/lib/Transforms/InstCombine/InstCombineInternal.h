@@ -701,6 +701,7 @@ public:
                                              const APInt &C);
   Instruction *foldICmpEqIntrinsicWithConstant(ICmpInst &ICI, IntrinsicInst *II,
                                                const APInt &C);
+  Instruction *foldICmpBitCast(ICmpInst &Cmp);
 
   // Helpers of visitSelectInst().
   Instruction *foldSelectExtConst(SelectInst &Sel);

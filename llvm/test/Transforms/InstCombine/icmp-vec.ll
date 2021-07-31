@@ -402,9 +402,9 @@ define <vscale x 2 x i1> @icmp_logical_or_scalablevec(<vscale x 2 x i64> %x, <vs
 
 define i1 @eq_cast_eq-1(<2 x i4> %x, <2 x i4> %y) {
 ; CHECK-LABEL: @eq_cast_eq-1(
-; CHECK-NEXT:    [[IC:%.*]] = icmp eq <2 x i4> [[X:%.*]], [[Y:%.*]]
-; CHECK-NEXT:    [[B:%.*]] = bitcast <2 x i1> [[IC]] to i2
-; CHECK-NEXT:    [[R:%.*]] = icmp eq i2 [[B]], -1
+; CHECK-NEXT:    [[IC:%.*]] = icmp ne <2 x i4> [[X:%.*]], [[Y:%.*]]
+; CHECK-NEXT:    [[TMP1:%.*]] = bitcast <2 x i1> [[IC]] to i2
+; CHECK-NEXT:    [[R:%.*]] = icmp eq i2 [[TMP1]], 0
 ; CHECK-NEXT:    ret i1 [[R]]
 ;
   %ic = icmp eq <2 x i4> %x, %y
@@ -415,9 +415,9 @@ define i1 @eq_cast_eq-1(<2 x i4> %x, <2 x i4> %y) {
 
 define i1 @ne_cast_eq-1(<3 x i7> %x, <3 x i7> %y) {
 ; CHECK-LABEL: @ne_cast_eq-1(
-; CHECK-NEXT:    [[IC:%.*]] = icmp ne <3 x i7> [[X:%.*]], [[Y:%.*]]
-; CHECK-NEXT:    [[B:%.*]] = bitcast <3 x i1> [[IC]] to i3
-; CHECK-NEXT:    [[R:%.*]] = icmp eq i3 [[B]], -1
+; CHECK-NEXT:    [[IC:%.*]] = icmp eq <3 x i7> [[X:%.*]], [[Y:%.*]]
+; CHECK-NEXT:    [[TMP1:%.*]] = bitcast <3 x i1> [[IC]] to i3
+; CHECK-NEXT:    [[R:%.*]] = icmp eq i3 [[TMP1]], 0
 ; CHECK-NEXT:    ret i1 [[R]]
 ;
   %ic = icmp ne <3 x i7> %x, %y
@@ -428,9 +428,9 @@ define i1 @ne_cast_eq-1(<3 x i7> %x, <3 x i7> %y) {
 
 define i1 @eq_cast_ne-1(<2 x i7> %x, <2 x i7> %y) {
 ; CHECK-LABEL: @eq_cast_ne-1(
-; CHECK-NEXT:    [[IC:%.*]] = icmp eq <2 x i7> [[X:%.*]], [[Y:%.*]]
-; CHECK-NEXT:    [[B:%.*]] = bitcast <2 x i1> [[IC]] to i2
-; CHECK-NEXT:    [[R:%.*]] = icmp ne i2 [[B]], -1
+; CHECK-NEXT:    [[IC:%.*]] = icmp ne <2 x i7> [[X:%.*]], [[Y:%.*]]
+; CHECK-NEXT:    [[TMP1:%.*]] = bitcast <2 x i1> [[IC]] to i2
+; CHECK-NEXT:    [[R:%.*]] = icmp ne i2 [[TMP1]], 0
 ; CHECK-NEXT:    ret i1 [[R]]
 ;
   %ic = icmp eq <2 x i7> %x, %y
@@ -441,9 +441,9 @@ define i1 @eq_cast_ne-1(<2 x i7> %x, <2 x i7> %y) {
 
 define i1 @ne_cast_ne-1(<3 x i5> %x, <3 x i5> %y) {
 ; CHECK-LABEL: @ne_cast_ne-1(
-; CHECK-NEXT:    [[IC:%.*]] = icmp ne <3 x i5> [[X:%.*]], [[Y:%.*]]
-; CHECK-NEXT:    [[B:%.*]] = bitcast <3 x i1> [[IC]] to i3
-; CHECK-NEXT:    [[R:%.*]] = icmp ne i3 [[B]], -1
+; CHECK-NEXT:    [[IC:%.*]] = icmp eq <3 x i5> [[X:%.*]], [[Y:%.*]]
+; CHECK-NEXT:    [[TMP1:%.*]] = bitcast <3 x i1> [[IC]] to i3
+; CHECK-NEXT:    [[R:%.*]] = icmp ne i3 [[TMP1]], 0
 ; CHECK-NEXT:    ret i1 [[R]]
 ;
   %ic = icmp ne <3 x i5> %x, %y
@@ -454,9 +454,9 @@ define i1 @ne_cast_ne-1(<3 x i5> %x, <3 x i5> %y) {
 
 define i1 @ugt_cast_eq-1(<2 x i4> %x, <2 x i4> %y) {
 ; CHECK-LABEL: @ugt_cast_eq-1(
-; CHECK-NEXT:    [[IC:%.*]] = icmp ugt <2 x i4> [[X:%.*]], [[Y:%.*]]
-; CHECK-NEXT:    [[B:%.*]] = bitcast <2 x i1> [[IC]] to i2
-; CHECK-NEXT:    [[R:%.*]] = icmp eq i2 [[B]], -1
+; CHECK-NEXT:    [[IC:%.*]] = icmp ule <2 x i4> [[X:%.*]], [[Y:%.*]]
+; CHECK-NEXT:    [[TMP1:%.*]] = bitcast <2 x i1> [[IC]] to i2
+; CHECK-NEXT:    [[R:%.*]] = icmp eq i2 [[TMP1]], 0
 ; CHECK-NEXT:    ret i1 [[R]]
 ;
   %ic = icmp ugt <2 x i4> %x, %y
@@ -467,9 +467,9 @@ define i1 @ugt_cast_eq-1(<2 x i4> %x, <2 x i4> %y) {
 
 define i1 @slt_cast_ne-1(<2 x i4> %x, <2 x i4> %y) {
 ; CHECK-LABEL: @slt_cast_ne-1(
-; CHECK-NEXT:    [[IC:%.*]] = icmp slt <2 x i4> [[X:%.*]], [[Y:%.*]]
-; CHECK-NEXT:    [[B:%.*]] = bitcast <2 x i1> [[IC]] to i2
-; CHECK-NEXT:    [[R:%.*]] = icmp ne i2 [[B]], -1
+; CHECK-NEXT:    [[IC:%.*]] = icmp sge <2 x i4> [[X:%.*]], [[Y:%.*]]
+; CHECK-NEXT:    [[TMP1:%.*]] = bitcast <2 x i1> [[IC]] to i2
+; CHECK-NEXT:    [[R:%.*]] = icmp ne i2 [[TMP1]], 0
 ; CHECK-NEXT:    ret i1 [[R]]
 ;
   %ic = icmp slt <2 x i4> %x, %y
@@ -480,9 +480,9 @@ define i1 @slt_cast_ne-1(<2 x i4> %x, <2 x i4> %y) {
 
 define i1 @ueq_cast_eq-1(<3 x float> %x, <3 x float> %y) {
 ; CHECK-LABEL: @ueq_cast_eq-1(
-; CHECK-NEXT:    [[FC:%.*]] = fcmp ueq <3 x float> [[X:%.*]], [[Y:%.*]]
-; CHECK-NEXT:    [[B:%.*]] = bitcast <3 x i1> [[FC]] to i3
-; CHECK-NEXT:    [[R:%.*]] = icmp eq i3 [[B]], -1
+; CHECK-NEXT:    [[FC:%.*]] = fcmp one <3 x float> [[X:%.*]], [[Y:%.*]]
+; CHECK-NEXT:    [[TMP1:%.*]] = bitcast <3 x i1> [[FC]] to i3
+; CHECK-NEXT:    [[R:%.*]] = icmp eq i3 [[TMP1]], 0
 ; CHECK-NEXT:    ret i1 [[R]]
 ;
   %fc = fcmp ueq <3 x float> %x, %y
@@ -493,9 +493,8 @@ define i1 @ueq_cast_eq-1(<3 x float> %x, <3 x float> %y) {
 
 define i1 @not_cast_ne-1(<3 x i1> %x) {
 ; CHECK-LABEL: @not_cast_ne-1(
-; CHECK-NEXT:    [[NOT:%.*]] = xor <3 x i1> [[X:%.*]], <i1 true, i1 true, i1 true>
-; CHECK-NEXT:    [[B:%.*]] = bitcast <3 x i1> [[NOT]] to i3
-; CHECK-NEXT:    [[R:%.*]] = icmp ne i3 [[B]], -1
+; CHECK-NEXT:    [[TMP1:%.*]] = bitcast <3 x i1> [[X:%.*]] to i3
+; CHECK-NEXT:    [[R:%.*]] = icmp ne i3 [[TMP1]], 0
 ; CHECK-NEXT:    ret i1 [[R]]
 ;
   %not = xor <3 x i1> %x, <i1 -1, i1 -1, i1 -1>
@@ -508,8 +507,8 @@ define i1 @not_cast_ne-1_uses(<3 x i2> %x, <3 x i2>* %p) {
 ; CHECK-LABEL: @not_cast_ne-1_uses(
 ; CHECK-NEXT:    [[NOT:%.*]] = xor <3 x i2> [[X:%.*]], <i2 -1, i2 -1, i2 -1>
 ; CHECK-NEXT:    store <3 x i2> [[NOT]], <3 x i2>* [[P:%.*]], align 4
-; CHECK-NEXT:    [[B:%.*]] = bitcast <3 x i2> [[NOT]] to i6
-; CHECK-NEXT:    [[R:%.*]] = icmp ne i6 [[B]], -1
+; CHECK-NEXT:    [[TMP1:%.*]] = bitcast <3 x i2> [[X]] to i6
+; CHECK-NEXT:    [[R:%.*]] = icmp ne i6 [[TMP1]], 0
 ; CHECK-NEXT:    ret i1 [[R]]
 ;
   %not = xor <3 x i2> %x, <i2 -1, i2 -1, i2 -1>
@@ -518,6 +517,8 @@ define i1 @not_cast_ne-1_uses(<3 x i2> %x, <3 x i2>* %p) {
   %r = icmp ne i6 %b, -1
   ret i1 %r
 }
+
+; negative test - need equality pred on 2nd cmp
 
 define i1 @eq_cast_sgt-1(<3 x i4> %x, <3 x i4> %y) {
 ; CHECK-LABEL: @eq_cast_sgt-1(
@@ -532,6 +533,8 @@ define i1 @eq_cast_sgt-1(<3 x i4> %x, <3 x i4> %y) {
   ret i1 %r
 }
 
+; negative test - need all-ones constant on 2nd cmp
+
 define i1 @eq_cast_eq1(<2 x i4> %x, <2 x i4> %y) {
 ; CHECK-LABEL: @eq_cast_eq1(
 ; CHECK-NEXT:    [[IC:%.*]] = icmp eq <2 x i4> [[X:%.*]], [[Y:%.*]]
@@ -544,6 +547,8 @@ define i1 @eq_cast_eq1(<2 x i4> %x, <2 x i4> %y) {
   %r = icmp eq i2 %b, 1
   ret i1 %r
 }
+
+; negative test - extra use
 
 define i1 @eq_cast_eq-1_use1(<2 x i4> %x, <2 x i4> %y, <2 x i1>* %p) {
 ; CHECK-LABEL: @eq_cast_eq-1_use1(
@@ -559,6 +564,8 @@ define i1 @eq_cast_eq-1_use1(<2 x i4> %x, <2 x i4> %y, <2 x i1>* %p) {
   %r = icmp eq i2 %b, -1
   ret i1 %r
 }
+
+; negative test - extra use
 
 define i1 @eq_cast_eq-1_use2(<2 x i4> %x, <2 x i4> %y, i2* %p) {
 ; CHECK-LABEL: @eq_cast_eq-1_use2(
