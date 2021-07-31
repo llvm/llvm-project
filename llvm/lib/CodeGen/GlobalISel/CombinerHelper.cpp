@@ -2045,26 +2045,23 @@ bool CombinerHelper::matchCombineUnmergeMergeToPlainValues(
     MachineInstr &MI, SmallVectorImpl<Register> &Operands) {
   assert(MI.getOpcode() == TargetOpcode::G_UNMERGE_VALUES &&
          "Expected an unmerge");
-  Register SrcReg =
-      peekThroughBitcast(MI.getOperand(MI.getNumOperands() - 1).getReg(), MRI);
+  auto &Unmerge = cast<GUnmerge>(MI);
+  Register SrcReg = peekThroughBitcast(Unmerge.getSourceReg(), MRI);
 
-  MachineInstr *SrcInstr = MRI.getVRegDef(SrcReg);
-  if (SrcInstr->getOpcode() != TargetOpcode::G_MERGE_VALUES &&
-      SrcInstr->getOpcode() != TargetOpcode::G_BUILD_VECTOR &&
-      SrcInstr->getOpcode() != TargetOpcode::G_CONCAT_VECTORS)
+  auto *SrcInstr = getOpcodeDef<GMergeLikeOp>(SrcReg, MRI);
+  if (!SrcInstr)
     return false;
 
   // Check the source type of the merge.
-  LLT SrcMergeTy = MRI.getType(SrcInstr->getOperand(1).getReg());
-  LLT Dst0Ty = MRI.getType(MI.getOperand(0).getReg());
+  LLT SrcMergeTy = MRI.getType(SrcInstr->getSourceReg(0));
+  LLT Dst0Ty = MRI.getType(Unmerge.getReg(0));
   bool SameSize = Dst0Ty.getSizeInBits() == SrcMergeTy.getSizeInBits();
   if (SrcMergeTy != Dst0Ty && !SameSize)
     return false;
   // They are the same now (modulo a bitcast).
   // We can collect all the src registers.
-  for (unsigned Idx = 1, EndIdx = SrcInstr->getNumOperands(); Idx != EndIdx;
-       ++Idx)
-    Operands.push_back(SrcInstr->getOperand(Idx).getReg());
+  for (unsigned Idx = 0; Idx < SrcInstr->getNumSources(); ++Idx)
+    Operands.push_back(SrcInstr->getSourceReg(Idx));
   return true;
 }
 
