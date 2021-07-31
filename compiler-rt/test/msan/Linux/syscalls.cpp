@@ -141,5 +141,14 @@ int main(int argc, char *argv[]) {
   __sanitizer_syscall_post_epoll_pwait(max_events, 0, buf, max_events, 0, &sigset, sizeof(sigset));
   assert(__msan_test_shadow(buf, sizeof(buf)) == max_events * sizeof(epoll_event));
 
+  __msan_poison(buf, sizeof(buf));
+  sigset = {};
+  timespec timespec = {};
+  __sanitizer_syscall_pre_epoll_pwait2(0, buf, max_events, &timespec,
+                                       &sigset, sizeof(sigset));
+  __sanitizer_syscall_post_epoll_pwait2(max_events, 0, buf, max_events,
+                                        &timespec, &sigset, sizeof(sigset));
+  assert(__msan_test_shadow(buf, sizeof(buf)) == max_events * sizeof(epoll_event));
+
   return 0;
 }

@@ -2127,6 +2127,26 @@ POST_SYSCALL(epoll_pwait)
   }
 }
 
+PRE_SYSCALL(epoll_pwait2)
+(long epfd, void *events, long maxevents,
+ const sanitizer_kernel_timespec *timeout, const kernel_sigset_t *sigmask,
+ long sigsetsize) {
+  if (timeout)
+    PRE_READ(timeout, sizeof(timeout));
+  if (sigmask)
+    PRE_READ(sigmask, sigsetsize);
+}
+
+POST_SYSCALL(epoll_pwait2)
+(long res, long epfd, void *events, long maxevents,
+ const sanitizer_kernel_timespec *timeout, const void *sigmask,
+ long sigsetsize) {
+  if (res >= 0) {
+    if (events)
+      POST_WRITE(events, res * struct_epoll_event_sz);
+  }
+}
+
 PRE_SYSCALL(gethostname)(void *name, long len) {}
 
 POST_SYSCALL(gethostname)(long res, void *name, long len) {
