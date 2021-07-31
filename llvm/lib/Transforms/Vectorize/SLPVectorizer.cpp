@@ -734,6 +734,10 @@ public:
     return MinVecRegSize;
   }
 
+  unsigned getMinVF(unsigned Sz) const {
+    return std::max(2U, getMinVecRegSize() / Sz);
+  }
+
   unsigned getMaximumVF(unsigned ElemWidth, unsigned Opcode) const {
     unsigned MaxVF = MaxVFOption.getNumOccurrences() ?
       MaxVFOption : TTI->getMaximumVF(ElemWidth, Opcode);
@@ -2656,12 +2660,14 @@ void BoUpSLP::reorderTopToBottom(bool FreeReorder) {
       if (TE->Scalars.size() != VF) {
         if (TE->ReuseShuffleIndices.size() == VF) {
           // Need to reorder the reuses masks of the operands with smaller VF to
-          // be able to find the math between the graph nodes and scalar
+          // be able to find the match between the graph nodes and scalar
           // operands of the given node during vectorization/cost estimation.
           // Build a list of such operands for future reordering.
           assert(all_of(TE->UserTreeIndices,
-                        [VF](const EdgeInfo &EI) {
-                          return EI.UserTE->Scalars.size() == VF;
+                        [VF, &TE](const EdgeInfo &EI) {
+                          return EI.UserTE->Scalars.size() == VF ||
+                                 EI.UserTE->Scalars.size() ==
+                                     TE->Scalars.size();
                         }) &&
                  "All users must be of VF size.");
           SmallOperandsToReorder.insert(TE.get());
@@ -2940,6 +2946,9 @@ void BoUpSLP::buildExternalUses(
 
         Instruction *UserInst = dyn_cast<Instruction>(U);
         if (!UserInst)
+          continue;
+
+        if (isDeleted(UserInst))
           continue;
 
         // Skip in-tree scalars that become vectors
@@ -4187,8 +4196,7 @@ InstructionCost BoUpSLP::getEntryCost(const TreeEntry *E,
       unsigned VectorizedCnt = 0;
       unsigned ScatterVectorizeCnt = 0;
       const unsigned Sz = DL->getTypeSizeInBits(E->getMainOp()->getType());
-      for (unsigned MinVF = getMinVecRegSize() / (2 * Sz); VF >= MinVF;
-           VF /= 2) {
+      for (unsigned MinVF = getMinVF(2 * Sz); VF >= MinVF; VF /= 2) {
         for (unsigned Cnt = StartIdx, End = VL.size(); Cnt + VF <= End;
              Cnt += VF) {
           ArrayRef<Value *> Slice = VL.slice(Cnt, VF);
@@ -5513,11 +5521,9 @@ Value *BoUpSLP::vectorizeTree(ArrayRef<Value *> VL) {
                                   }).base());
     VF = std::max<unsigned>(VF, PowerOf2Ceil(NumValues));
     int UniqueVals = 0;
-    bool HasUndefs = false;
     for (Value *V : VL.drop_back(VL.size() - VF)) {
       if (isa<UndefValue>(V)) {
         ReuseShuffleIndicies.emplace_back(UndefMaskElem);
-        HasUndefs = true;
         continue;
       }
       if (isConstant(V)) {
@@ -5532,15 +5538,10 @@ Value *BoUpSLP::vectorizeTree(ArrayRef<Value *> VL) {
         ++UniqueVals;
       }
     }
-    if (HasUndefs && UniqueVals == 1 && UniqueValues.size() == 1) {
+    if (UniqueVals == 1 && UniqueValues.size() == 1) {
       // Emit pure splat vector.
-      // FIXME: why it is not identified as an identity.
-      unsigned NumUndefs = count(ReuseShuffleIndicies, UndefMaskElem);
-      if (NumUndefs == ReuseShuffleIndicies.size() - 1)
-        ReuseShuffleIndicies.append(VF - ReuseShuffleIndicies.size(),
-                                    UndefMaskElem);
-      else
-        ReuseShuffleIndicies.assign(VF, 0);
+      ReuseShuffleIndicies.append(VF - ReuseShuffleIndicies.size(),
+                                  UndefMaskElem);
     } else if (UniqueValues.size() >= VF - 1 || UniqueValues.size() <= 1) {
       ReuseShuffleIndicies.clear();
       UniqueValues.clear();
@@ -6309,7 +6310,9 @@ BoUpSLP::vectorizeTree(ExtraValueToDebugLocsMap &ExternallyUsedValues) {
           LLVM_DEBUG(dbgs() << "SLP: \tvalidating user:" << *U << ".\n");
 
           // It is legal to delete users in the ignorelist.
-          assert((getTreeEntry(U) || is_contained(UserIgnoreList, U)) &&
+          assert((getTreeEntry(U) || is_contained(UserIgnoreList, U) ||
+                  (isa_and_nonnull<Instruction>(U) &&
+                   isDeleted(cast<Instruction>(U)))) &&
                  "Deleting out-of-tree value");
         }
       }
@@ -6388,7 +6391,8 @@ void BoUpSLP::optimizeGatherSequence() {
       Instruction *In = &*it++;
       if (isDeleted(In))
         continue;
-      if (!isa<InsertElementInst>(In) && !isa<ExtractElementInst>(In))
+      if (!isa<InsertElementInst>(In) && !isa<ExtractElementInst>(In) &&
+          !isa<ShuffleVectorInst>(In))
         continue;
 
       // Check if we can replace this instruction with any of the
@@ -7448,7 +7452,7 @@ bool SLPVectorizerPass::vectorizeStores(ArrayRef<StoreInst *> Stores,
     unsigned EltSize = R.getVectorElementSize(Operands[0]);
     unsigned MaxElts = llvm::PowerOf2Floor(MaxVecRegSize / EltSize);
 
-    unsigned MinVF = std::max(2U, R.getMinVecRegSize() / EltSize);
+    unsigned MinVF = R.getMinVF(EltSize);
     unsigned MaxVF = std::min(R.getMaximumVF(EltSize, Instruction::Store),
                               MaxElts);
 
@@ -7559,7 +7563,7 @@ bool SLPVectorizerPass::tryToVectorizeList(ArrayRef<Value *> VL, BoUpSLP &R,
   }
 
   unsigned Sz = R.getVectorElementSize(I0);
-  unsigned MinVF = std::max(2U, R.getMinVecRegSize() / Sz);
+  unsigned MinVF = R.getMinVF(Sz);
   unsigned MaxVF = std::max<unsigned>(PowerOf2Floor(VL.size()), MinVF);
   MaxVF = std::min(R.getMaximumVF(Sz, S.getOpcode()), MaxVF);
   if (MaxVF < 2) {

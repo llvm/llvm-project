@@ -791,6 +791,9 @@ private:
   using WarnUnusedMacroLocsTy = llvm::SmallDenseSet<SourceLocation, 32>;
   WarnUnusedMacroLocsTy WarnUnusedMacroLocs;
 
+  /// Deprecation messages for macros provided in #pragma clang deprecated
+  llvm::DenseMap<const IdentifierInfo *, std::string> MacroDeprecationMsgs;
+
   /// A "freelist" of MacroArg objects that can be
   /// reused for quick allocation.
   MacroArgs *MacroArgCache = nullptr;
@@ -1958,7 +1961,8 @@ public:
   /// This either returns the EOF token and returns true, or
   /// pops a level off the include stack and returns false, at which point the
   /// client should call lex again.
-  bool HandleEndOfFile(Token &Result, bool isEndOfMacro = false);
+  bool HandleEndOfFile(Token &Result, SourceLocation Loc,
+                       bool isEndOfMacro = false);
 
   /// Callback invoked when the current TokenLexer hits the end of its
   /// token stream.
@@ -2370,12 +2374,14 @@ private:
 
   // Pragmas.
   void HandlePragmaDirective(PragmaIntroducer Introducer);
+  void ResolvePragmaIncludeInstead(SourceLocation Location) const;
 
 public:
   void HandlePragmaOnce(Token &OnceTok);
   void HandlePragmaMark(Token &MarkTok);
   void HandlePragmaPoison();
   void HandlePragmaSystemHeader(Token &SysHeaderTok);
+  void HandlePragmaIncludeInstead(Token &Tok);
   void HandlePragmaDependency(Token &DependencyTok);
   void HandlePragmaPushMacro(Token &Tok);
   void HandlePragmaPopMacro(Token &Tok);
@@ -2391,6 +2397,19 @@ public:
   /// A macro is used, update information about macros that need unused
   /// warnings.
   void markMacroAsUsed(MacroInfo *MI);
+
+  void addMacroDeprecationMsg(const IdentifierInfo *II, std::string Msg) {
+    MacroDeprecationMsgs.insert(std::make_pair(II, Msg));
+  }
+
+  llvm::Optional<std::string> getMacroDeprecationMsg(const IdentifierInfo *II) {
+    auto MsgEntry = MacroDeprecationMsgs.find(II);
+    if (MsgEntry == MacroDeprecationMsgs.end())
+      return llvm::None;
+    return MsgEntry->second;
+  }
+
+  void emitMacroExpansionWarnings(const Token &Identifier);
 
 private:
   Optional<unsigned>

@@ -1,5 +1,5 @@
 ! RUN: %flang -E %s 2>&1 | FileCheck %s
-! CHECK: res=777
+! CHECK: res = 777
 * KWM split across continuation, implicit padding
       integer, parameter :: KWM = 666
 #define KWM 777

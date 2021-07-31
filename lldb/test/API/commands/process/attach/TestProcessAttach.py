@@ -102,11 +102,11 @@ class ProcessAttachTestCase(TestBase):
 
         self.runCmd("process attach -p " + str(popen.pid))
 
-        # Make suer we did not attach to early
+        # Make sure we did not attach too early.
         lldbutil.run_break_set_by_file_and_line(
             self, "main.cpp", self.line, num_expected_locations=1, loc_exact=False)
         self.runCmd("process continue")
-        self.expect("p g_val", substrs=["$0 = 12345"])
+        self.expect("v g_val", substrs=["12345"])
 
     def tearDown(self):
         # Destroy process before TestBase.tearDown()

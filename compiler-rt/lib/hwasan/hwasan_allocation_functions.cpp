@@ -17,6 +17,8 @@
 #include "sanitizer_common/sanitizer_allocator_interface.h"
 #include "sanitizer_common/sanitizer_tls_get_addr.h"
 
+#if !SANITIZER_FUCHSIA
+
 using namespace __hwasan;
 
 static uptr allocated_for_dlsym;
@@ -36,6 +38,9 @@ static void *AllocateFromLocalPool(uptr size_in_bytes) {
   return mem;
 }
 
+extern "C" {
+
+SANITIZER_INTERFACE_ATTRIBUTE
 int __sanitizer_posix_memalign(void **memptr, uptr alignment, uptr size) {
   GET_MALLOC_STACK_TRACE;
   CHECK_NE(memptr, 0);
@@ -43,16 +48,19 @@ int __sanitizer_posix_memalign(void **memptr, uptr alignment, uptr size) {
   return res;
 }
 
+SANITIZER_INTERFACE_ATTRIBUTE
 void *__sanitizer_memalign(uptr alignment, uptr size) {
   GET_MALLOC_STACK_TRACE;
   return hwasan_memalign(alignment, size, &stack);
 }
 
+SANITIZER_INTERFACE_ATTRIBUTE
 void *__sanitizer_aligned_alloc(uptr alignment, uptr size) {
   GET_MALLOC_STACK_TRACE;
   return hwasan_aligned_alloc(alignment, size, &stack);
 }
 
+SANITIZER_INTERFACE_ATTRIBUTE
 void *__sanitizer___libc_memalign(uptr alignment, uptr size) {
   GET_MALLOC_STACK_TRACE;
   void *ptr = hwasan_memalign(alignment, size, &stack);
@@ -61,16 +69,19 @@ void *__sanitizer___libc_memalign(uptr alignment, uptr size) {
   return ptr;
 }
 
+SANITIZER_INTERFACE_ATTRIBUTE
 void *__sanitizer_valloc(uptr size) {
   GET_MALLOC_STACK_TRACE;
   return hwasan_valloc(size, &stack);
 }
 
+SANITIZER_INTERFACE_ATTRIBUTE
 void *__sanitizer_pvalloc(uptr size) {
   GET_MALLOC_STACK_TRACE;
   return hwasan_pvalloc(size, &stack);
 }
 
+SANITIZER_INTERFACE_ATTRIBUTE
 void __sanitizer_free(void *ptr) {
   GET_MALLOC_STACK_TRACE;
   if (!ptr || UNLIKELY(IsInDlsymAllocPool(ptr)))
@@ -78,6 +89,7 @@ void __sanitizer_free(void *ptr) {
   hwasan_free(ptr, &stack);
 }
 
+SANITIZER_INTERFACE_ATTRIBUTE
 void __sanitizer_cfree(void *ptr) {
   GET_MALLOC_STACK_TRACE;
   if (!ptr || UNLIKELY(IsInDlsymAllocPool(ptr)))
@@ -85,22 +97,27 @@ void __sanitizer_cfree(void *ptr) {
   hwasan_free(ptr, &stack);
 }
 
+SANITIZER_INTERFACE_ATTRIBUTE
 uptr __sanitizer_malloc_usable_size(const void *ptr) {
   return __sanitizer_get_allocated_size(ptr);
 }
 
+SANITIZER_INTERFACE_ATTRIBUTE
 struct __sanitizer_struct_mallinfo __sanitizer_mallinfo() {
   __sanitizer_struct_mallinfo sret;
   internal_memset(&sret, 0, sizeof(sret));
   return sret;
 }
 
+SANITIZER_INTERFACE_ATTRIBUTE
 int __sanitizer_mallopt(int cmd, int value) { return 0; }
 
+SANITIZER_INTERFACE_ATTRIBUTE
 void __sanitizer_malloc_stats(void) {
   // FIXME: implement, but don't call REAL(malloc_stats)!
 }
 
+SANITIZER_INTERFACE_ATTRIBUTE
 void *__sanitizer_calloc(uptr nmemb, uptr size) {
   GET_MALLOC_STACK_TRACE;
   if (UNLIKELY(!hwasan_inited))
@@ -109,6 +126,7 @@ void *__sanitizer_calloc(uptr nmemb, uptr size) {
   return hwasan_calloc(nmemb, size, &stack);
 }
 
+SANITIZER_INTERFACE_ATTRIBUTE
 void *__sanitizer_realloc(void *ptr, uptr size) {
   GET_MALLOC_STACK_TRACE;
   if (UNLIKELY(IsInDlsymAllocPool(ptr))) {
@@ -127,11 +145,13 @@ void *__sanitizer_realloc(void *ptr, uptr size) {
   return hwasan_realloc(ptr, size, &stack);
 }
 
+SANITIZER_INTERFACE_ATTRIBUTE
 void *__sanitizer_reallocarray(void *ptr, uptr nmemb, uptr size) {
   GET_MALLOC_STACK_TRACE;
   return hwasan_reallocarray(ptr, nmemb, size, &stack);
 }
 
+SANITIZER_INTERFACE_ATTRIBUTE
 void *__sanitizer_malloc(uptr size) {
   GET_MALLOC_STACK_TRACE;
   if (UNLIKELY(!hwasan_init_is_running))
@@ -141,6 +161,8 @@ void *__sanitizer_malloc(uptr size) {
     return AllocateFromLocalPool(size);
   return hwasan_malloc(size, &stack);
 }
+
+}  // extern "C"
 
 #if HWASAN_WITH_INTERCEPTORS
 #  define INTERCEPTOR_ALIAS(RET, FN, ARGS...)                                 \
@@ -170,3 +192,5 @@ INTERCEPTOR_ALIAS(int, mallopt, int cmd, int value);
 INTERCEPTOR_ALIAS(void, malloc_stats, void);
 #  endif
 #endif  // #if HWASAN_WITH_INTERCEPTORS
+
+#endif  // SANITIZER_FUCHSIA

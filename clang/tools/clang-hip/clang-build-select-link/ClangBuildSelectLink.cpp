@@ -76,7 +76,7 @@ static ExitOnError ExitOnErr;
 
 /// ---------------------------------------------
 // Show the error message and exit.
-LLVM_ATTRIBUTE_NORETURN static void fail(Twine Error) {
+[[noreturn]] static void fail(Twine Error) {
   errs() << ": " << Error << ".\n";
   exit(1);
 }

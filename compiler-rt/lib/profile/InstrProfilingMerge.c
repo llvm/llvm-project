@@ -81,6 +81,14 @@ int __llvm_profile_check_compatibility(const char *ProfileData,
   return 0;
 }
 
+static uintptr_t signextIfWin64(void *V) {
+#ifdef _WIN64
+  return (uintptr_t)(int32_t)(uintptr_t)V;
+#else
+  return (uintptr_t)V;
+#endif
+}
+
 COMPILER_RT_VISIBILITY
 int __llvm_profile_merge_from_buffer(const char *ProfileData,
                                      uint64_t ProfileSize) {
@@ -89,6 +97,7 @@ int __llvm_profile_merge_from_buffer(const char *ProfileData,
   uint64_t *SrcCountersStart;
   const char *SrcNameStart;
   const char *SrcValueProfDataStart, *SrcValueProfData;
+  uintptr_t CountersDelta = Header->CountersDelta;
 
   SrcDataStart =
       (__llvm_profile_data *)(ProfileData + sizeof(__llvm_profile_header));
@@ -105,15 +114,30 @@ int __llvm_profile_merge_from_buffer(const char *ProfileData,
       DstData = (__llvm_profile_data *)__llvm_profile_begin_data(),
       SrcValueProfData = SrcValueProfDataStart;
        SrcData < SrcDataEnd; ++SrcData, ++DstData) {
-    uint64_t *DstCounters = (uint64_t *)DstData->CounterPtr;
+    // For the in-memory destination, CounterPtr is the distance from the start
+    // address of the data to the start address of the counter. On WIN64,
+    // CounterPtr is a truncated 32-bit value due to COFF limitation. Sign
+    // extend CounterPtr to get the original value.
+    uint64_t *DstCounters =
+        (uint64_t *)((uintptr_t)DstData + signextIfWin64(DstData->CounterPtr));
     unsigned NVK = 0;
 
+    // SrcData is a serialized representation of the memory image. We need to
+    // compute the in-buffer counter offset from the in-memory address distance.
+    // The initial CountersDelta is the in-memory address difference
+    // start(__llvm_prf_cnts)-start(__llvm_prf_data), so SrcData->CounterPtr -
+    // CountersDelta computes the offset into the in-buffer counter section.
+    //
+    // On WIN64, CountersDelta is truncated as well, so no need for signext.
+    uint64_t *SrcCounters =
+        SrcCountersStart +
+        ((uintptr_t)SrcData->CounterPtr - CountersDelta) / sizeof(uint64_t);
+    // CountersDelta needs to be decreased as we advance to the next data
+    // record.
+    CountersDelta -= sizeof(*SrcData);
     unsigned NC = SrcData->NumCounters;
     if (NC == 0)
       return 1;
-    uint64_t *SrcCounters = SrcCountersStart + ((size_t)SrcData->CounterPtr -
-                                                Header->CountersDelta) /
-                                                   sizeof(uint64_t);
     if (SrcCounters < SrcCountersStart ||
         (const char *)SrcCounters >= SrcNameStart ||
         (const char *)(SrcCounters + NC) > SrcNameStart)

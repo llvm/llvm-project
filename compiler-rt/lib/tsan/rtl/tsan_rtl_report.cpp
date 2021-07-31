@@ -122,7 +122,7 @@ static ReportStack *SymbolizeStack(StackTrace trace) {
   }
   StackStripMain(top);
 
-  ReportStack *stack = ReportStack::New();
+  auto *stack = New<ReportStack>();
   stack->frames = top;
   return stack;
 }
@@ -157,8 +157,7 @@ bool ShouldReport(ThreadState *thr, ReportType typ) {
 
 ScopedReportBase::ScopedReportBase(ReportType typ, uptr tag) {
   ctx->thread_registry.CheckLocked();
-  void *mem = internal_alloc(sizeof(ReportDesc));
-  rep_ = new(mem) ReportDesc;
+  rep_ = New<ReportDesc>();
   rep_->typ = typ;
   rep_->tag = tag;
   ctx->report_mtx.Lock();
@@ -167,7 +166,6 @@ ScopedReportBase::ScopedReportBase(ReportType typ, uptr tag) {
 ScopedReportBase::~ScopedReportBase() {
   ctx->report_mtx.Unlock();
   DestroyAndFree(rep_);
-  rep_ = nullptr;
 }
 
 void ScopedReportBase::AddStack(StackTrace stack, bool suppressable) {
@@ -178,8 +176,7 @@ void ScopedReportBase::AddStack(StackTrace stack, bool suppressable) {
 
 void ScopedReportBase::AddMemoryAccess(uptr addr, uptr external_tag, Shadow s,
                                        StackTrace stack, const MutexSet *mset) {
-  void *mem = internal_alloc(sizeof(ReportMop));
-  ReportMop *mop = new(mem) ReportMop;
+  auto *mop = New<ReportMop>();
   rep_->mops.PushBack(mop);
   mop->tid = s.tid();
   mop->addr = addr + s.addr0();
@@ -207,8 +204,7 @@ void ScopedReportBase::AddThread(const ThreadContext *tctx, bool suppressable) {
     if ((u32)rep_->threads[i]->id == tctx->tid)
       return;
   }
-  void *mem = internal_alloc(sizeof(ReportThread));
-  ReportThread *rt = new(mem) ReportThread;
+  auto *rt = New<ReportThread>();
   rep_->threads.PushBack(rt);
   rt->id = tctx->tid;
   rt->os_id = tctx->os_id;
@@ -278,8 +274,7 @@ void ScopedReportBase::AddMutex(const SyncVar *s) {
     if (rep_->mutexes[i]->id == s->uid)
       return;
   }
-  void *mem = internal_alloc(sizeof(ReportMutex));
-  ReportMutex *rm = new(mem) ReportMutex;
+  auto *rm = New<ReportMutex>();
   rep_->mutexes.PushBack(rm);
   rm->id = s->uid;
   rm->addr = s->addr;
@@ -311,8 +306,7 @@ void ScopedReportBase::AddDeadMutex(u64 id) {
     if (rep_->mutexes[i]->id == id)
       return;
   }
-  void *mem = internal_alloc(sizeof(ReportMutex));
-  ReportMutex *rm = new(mem) ReportMutex;
+  auto *rm = New<ReportMutex>();
   rep_->mutexes.PushBack(rm);
   rm->id = id;
   rm->addr = 0;
@@ -328,7 +322,8 @@ void ScopedReportBase::AddLocation(uptr addr, uptr size) {
   int creat_tid = kInvalidTid;
   u32 creat_stack = 0;
   if (FdLocation(addr, &fd, &creat_tid, &creat_stack)) {
-    ReportLocation *loc = ReportLocation::New(ReportLocationFD);
+    auto *loc = New<ReportLocation>();
+    loc->type = ReportLocationFD;
     loc->fd = fd;
     loc->tid = creat_tid;
     loc->stack = SymbolizeStackId(creat_stack);
@@ -350,7 +345,8 @@ void ScopedReportBase::AddLocation(uptr addr, uptr size) {
     b = JavaHeapBlock(addr, &block_begin);
   if (b != 0) {
     ThreadContext *tctx = FindThreadByTidLocked(b->tid);
-    ReportLocation *loc = ReportLocation::New(ReportLocationHeap);
+    auto *loc = New<ReportLocation>();
+    loc->type = ReportLocationHeap;
     loc->heap_chunk_start = (uptr)allocator()->GetBlockBegin((void *)addr);
     loc->heap_chunk_size = b->siz;
     loc->external_tag = b->tag;
@@ -363,8 +359,8 @@ void ScopedReportBase::AddLocation(uptr addr, uptr size) {
   }
   bool is_stack = false;
   if (ThreadContext *tctx = IsThreadStackOrTls(addr, &is_stack)) {
-    ReportLocation *loc =
-        ReportLocation::New(is_stack ? ReportLocationStack : ReportLocationTLS);
+    auto *loc = New<ReportLocation>();
+    loc->type = is_stack ? ReportLocationStack : ReportLocationTLS;
     loc->tid = tctx->tid;
     rep_->locs.PushBack(loc);
     AddThread(tctx);
@@ -743,8 +739,7 @@ void PrintCurrentStack(ThreadState *thr, uptr pc) {
 ALWAYS_INLINE USED void PrintCurrentStackSlow(uptr pc) {
 #if !SANITIZER_GO
   uptr bp = GET_CURRENT_FRAME();
-  BufferedStackTrace *ptrace =
-      new (internal_alloc(sizeof(BufferedStackTrace))) BufferedStackTrace();
+  auto *ptrace = New<BufferedStackTrace>();
   ptrace->Unwind(pc, bp, nullptr, false);
 
   for (uptr i = 0; i < ptrace->size / 2; i++) {

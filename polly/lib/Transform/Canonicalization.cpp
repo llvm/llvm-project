@@ -64,7 +64,7 @@ void polly::registerCanonicalicationPasses(llvm::legacy::PassManagerBase &PM) {
 
 /// Adapted from llvm::PassBuilder::buildInlinerPipeline
 static ModuleInlinerWrapperPass
-buildInlinePasses(llvm::PassBuilder::OptimizationLevel Level) {
+buildInlinePasses(llvm::OptimizationLevel Level) {
   InlineParams IP = getInlineParams(200);
   ModuleInlinerWrapperPass MIWP(IP);
 
@@ -92,8 +92,9 @@ buildInlinePasses(llvm::PassBuilder::OptimizationLevel Level) {
   return MIWP;
 }
 
-FunctionPassManager polly::buildCanonicalicationPassesForNPM(
-    llvm::ModulePassManager &MPM, llvm::PassBuilder::OptimizationLevel Level) {
+FunctionPassManager
+polly::buildCanonicalicationPassesForNPM(llvm::ModulePassManager &MPM,
+                                         llvm::OptimizationLevel Level) {
   FunctionPassManager FPM;
 
   bool UseMemSSA = true;
@@ -107,7 +108,7 @@ FunctionPassManager polly::buildCanonicalicationPassesForNPM(
   FPM.addPass(ReassociatePass());
   {
     LoopPassManager LPM;
-    LPM.addPass(LoopRotatePass(Level != PassBuilder::OptimizationLevel::Oz));
+    LPM.addPass(LoopRotatePass(Level != OptimizationLevel::Oz));
     FPM.addPass(createFunctionToLoopPassAdaptor<LoopPassManager>(
         std::move(LPM), /*UseMemorySSA=*/false,
         /*UseBlockFrequencyInfo=*/false));

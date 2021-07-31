@@ -281,6 +281,16 @@ void tools::AddLinkerInputs(const ToolChain &TC, const InputInfoList &Inputs,
     // Otherwise, this is a linker input argument.
     const Arg &A = II.getInputArg();
 
+    if (A.getOption().matches(options::OPT_b)) {
+      const llvm::Triple &T = TC.getTriple();
+      if (!T.isOSAIX()) {
+        TC.getDriver().Diag(diag::err_drv_unsupported_opt_for_target)
+          << A.getSpelling() << T.str();
+      }
+      // Pass -b prefix for AIX linker.
+      A.claim();
+      A.render(Args, CmdArgs);
+    }
     // Handle reserved library options.
     if (A.getOption().matches(options::OPT_Z_reserved_lib_stdcxx))
       TC.AddCXXStdlibLibArgs(Args, CmdArgs);
@@ -436,14 +446,9 @@ std::string tools::getCPUName(const ArgList &Args, const llvm::Triple &T,
     if (!TargetCPUName.empty())
       return TargetCPUName;
 
-    if (T.isOSAIX()) {
-      unsigned major, minor, unused_micro;
-      T.getOSVersion(major, minor, unused_micro);
-      // The minimal arch level moved from pwr4 for AIX7.1 to
-      // pwr7 for AIX7.2.
-      TargetCPUName =
-          (major < 7 || (major == 7 && minor < 2)) ? "pwr4" : "pwr7";
-    } else if (T.getArch() == llvm::Triple::ppc64le)
+    if (T.isOSAIX())
+      TargetCPUName = "pwr7";
+    else if (T.getArch() == llvm::Triple::ppc64le)
       TargetCPUName = "ppc64le";
     else if (T.getArch() == llvm::Triple::ppc64)
       TargetCPUName = "ppc64";

@@ -13,7 +13,7 @@ add_custom_target(libcxx-generate-feature-test-macros
 
 add_custom_target(libcxx-generate-private-header-tests
     COMMAND "${Python3_EXECUTABLE}" "${LIBCXX_SOURCE_DIR}/utils/generate_private_header_tests.py"
-    COMMENT "Generates tests for ensuring detail headers are private")
+    COMMENT "Generate tests for ensuring that detail headers are private.")
 
 add_custom_target(libcxx-generate-files
     DEPENDS libcxx-generate-public-header-transitive-inclusion-tests

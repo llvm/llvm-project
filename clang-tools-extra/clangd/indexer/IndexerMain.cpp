@@ -10,6 +10,8 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include "CompileCommands.h"
+#include "Compiler.h"
 #include "index/IndexAction.h"
 #include "index/Merge.h"
 #include "index/Ref.h"
@@ -23,6 +25,7 @@
 #include "clang/Tooling/Tooling.h"
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Support/Signals.h"
+#include <utility>
 
 namespace clang {
 namespace clangd {
@@ -82,6 +85,15 @@ public:
         /*IncludeGraphCallback=*/nullptr);
   }
 
+  bool runInvocation(std::shared_ptr<CompilerInvocation> Invocation,
+                     FileManager *Files,
+                     std::shared_ptr<PCHContainerOperations> PCHContainerOps,
+                     DiagnosticConsumer *DiagConsumer) override {
+    disableUnsupportedOptions(*Invocation);
+    return tooling::FrontendActionFactory::runInvocation(
+        std::move(Invocation), Files, std::move(PCHContainerOps), DiagConsumer);
+  }
+
   // Awkward: we write the result in the destructor, because the executor
   // takes ownership so it's the easiest way to get our data back out.
   ~IndexActionFactory() {
@@ -135,7 +147,8 @@ int main(int argc, const char **argv) {
   clang::clangd::IndexFileIn Data;
   auto Err = Executor->get()->execute(
       std::make_unique<clang::clangd::IndexActionFactory>(Data),
-      clang::tooling::getStripPluginsAdjuster());
+      clang::tooling::ArgumentsAdjuster(
+          clang::clangd::CommandMangler::detect()));
   if (Err) {
     clang::clangd::elog("{0}", std::move(Err));
   }

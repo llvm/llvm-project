@@ -491,8 +491,7 @@ define void @first_mul_chain_jumbled(<9 x double>* %ptr.1, <4 x double>* %ptr.2)
 ; CHECK-NEXT:    [[TMP18:%.*]] = insertelement <8 x double> [[TMP17]], double [[V1_LANE_2]], i32 5
 ; CHECK-NEXT:    [[TMP19:%.*]] = insertelement <8 x double> [[TMP18]], double [[V1_LANE_3]], i32 6
 ; CHECK-NEXT:    [[TMP20:%.*]] = insertelement <8 x double> [[TMP19]], double [[V1_LANE_4]], i32 7
-; CHECK-NEXT:    [[SHUFFLE:%.*]] = shufflevector <8 x double> [[TMP10]], <8 x double> poison, <8 x i32> <i32 0, i32 1, i32 2, i32 1, i32 2, i32 0, i32 1, i32 2>
-; CHECK-NEXT:    [[TMP21:%.*]] = fmul <8 x double> [[TMP20]], [[SHUFFLE]]
+; CHECK-NEXT:    [[TMP21:%.*]] = fmul <8 x double> [[TMP20]], [[SHUFFLE2]]
 ; CHECK-NEXT:    [[B_LANE_8:%.*]] = fmul double [[V1_LANE_5]], [[V2_LANE_0]]
 ; CHECK-NEXT:    [[TMP22:%.*]] = shufflevector <8 x double> [[TMP21]], <8 x double> poison, <9 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7, i32 undef>
 ; CHECK-NEXT:    [[B_INS_71:%.*]] = shufflevector <9 x double> undef, <9 x double> [[TMP22]], <9 x i32> <i32 9, i32 10, i32 11, i32 12, i32 13, i32 14, i32 15, i32 16, i32 8>

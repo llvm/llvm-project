@@ -101,8 +101,7 @@ static ThreadContextBase *CreateThreadContext(u32 tid) {
       CHECK("unable to mprotect" && 0);
     }
   }
-  void *mem = internal_alloc(sizeof(ThreadContext));
-  return new(mem) ThreadContext(tid);
+  return New<ThreadContext>(tid);
 }
 
 #if !SANITIZER_GO
@@ -384,9 +383,10 @@ void CheckUnwind() {
   PrintCurrentStackSlow(StackTrace::GetCurrentPc());
 }
 
+bool is_initialized;
+
 void Initialize(ThreadState *thr) {
   // Thread safe because done before all threads exist.
-  static bool is_initialized = false;
   if (is_initialized)
     return;
   is_initialized = true;
@@ -576,9 +576,9 @@ NOINLINE
 void GrowShadowStack(ThreadState *thr) {
   const int sz = thr->shadow_stack_end - thr->shadow_stack;
   const int newsz = 2 * sz;
-  uptr *newstack = (uptr *)internal_alloc(newsz * sizeof(uptr));
+  auto newstack = (uptr *)Alloc(newsz * sizeof(uptr));
   internal_memcpy(newstack, thr->shadow_stack, sz * sizeof(uptr));
-  internal_free(thr->shadow_stack);
+  Free(thr->shadow_stack);
   thr->shadow_stack = newstack;
   thr->shadow_stack_pos = newstack + sz;
   thr->shadow_stack_end = newstack + newsz;

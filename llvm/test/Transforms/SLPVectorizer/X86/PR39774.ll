@@ -45,8 +45,6 @@ define void @Test(i32) {
 ; CHECK-NEXT:    [[TMP8:%.*]] = and <2 x i32> [[TMP5]], [[TMP7]]
 ; CHECK-NEXT:    [[TMP9:%.*]] = add <2 x i32> [[TMP5]], [[TMP7]]
 ; CHECK-NEXT:    [[TMP10]] = shufflevector <2 x i32> [[TMP8]], <2 x i32> [[TMP9]], <2 x i32> <i32 0, i32 3>
-; CHECK-NEXT:    [[TMP11:%.*]] = extractelement <2 x i32> [[TMP10]], i32 0
-; CHECK-NEXT:    [[TMP12:%.*]] = extractelement <2 x i32> [[TMP10]], i32 1
 ; CHECK-NEXT:    br label [[LOOP]]
 ;
 ; FORCE_REDUCTION-LABEL: @Test(

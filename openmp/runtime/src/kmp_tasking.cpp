@@ -825,8 +825,9 @@ static void __kmp_task_finish(kmp_int32 gtid, kmp_task_t *task,
   kmp_info_t *thread = __kmp_threads[gtid];
   kmp_task_team_t *task_team =
       thread->th.th_task_team; // might be NULL for serial teams...
+#if KMP_DEBUG
   kmp_int32 children = 0;
-
+#endif
   KA_TRACE(10, ("__kmp_task_finish(enter): T#%d finishing task %p and resuming "
                 "task %p\n",
                 gtid, taskdata, resumed_task));
@@ -942,8 +943,10 @@ static void __kmp_task_finish(kmp_int32 gtid, kmp_task_t *task,
         taskdata->td_flags.hidden_helper) {
       __kmp_release_deps(gtid, taskdata);
       // Predecrement simulated by "- 1" calculation
-      children =
-          KMP_ATOMIC_DEC(&taskdata->td_parent->td_incomplete_child_tasks) - 1;
+#if KMP_DEBUG
+      children = -1 +
+#endif
+          KMP_ATOMIC_DEC(&taskdata->td_parent->td_incomplete_child_tasks);
       KMP_DEBUG_ASSERT(children >= 0);
       if (taskdata->td_taskgroup)
         KMP_ATOMIC_DEC(&taskdata->td_taskgroup->count);
@@ -2832,15 +2835,14 @@ static kmp_task_t *__kmp_steal_task(kmp_info_t *victim_thr, kmp_int32 gtid,
     // We need to un-mark this victim as a finished victim.  This must be done
     // before releasing the lock, or else other threads (starting with the
     // primary thread victim) might be prematurely released from the barrier!!!
-    kmp_int32 count;
-
-    count = KMP_ATOMIC_INC(unfinished_threads);
-
+#if KMP_DEBUG
+    kmp_int32 count =
+#endif
+        KMP_ATOMIC_INC(unfinished_threads);
     KA_TRACE(
         20,
         ("__kmp_steal_task: T#%d inc unfinished_threads to %d: task_team=%p\n",
          gtid, count + 1, task_team));
-
     *thread_finished = FALSE;
   }
   TCW_4(victim_td->td.td_deque_ntasks, ntasks - 1);
@@ -2947,8 +2949,7 @@ static inline int __kmp_execute_tasks_template(
                 (TCR_PTR(CCAST(void *, other_thread->th.th_sleep_loc)) !=
                  NULL)) {
               asleep = 1;
-              __kmp_null_resume_wrapper(__kmp_gtid_from_thread(other_thread),
-                                        other_thread->th.th_sleep_loc);
+              __kmp_null_resume_wrapper(other_thread);
               // A sleeping thread should not have any tasks on it's queue.
               // There is a slight possibility that it resumes, steals a task
               // from another thread, which spawns more tasks, all in the time
@@ -3033,9 +3034,10 @@ static inline int __kmp_execute_tasks_template(
       // done.  This decrement might be to the spin location, and result in the
       // termination condition being satisfied.
       if (!*thread_finished) {
-        kmp_int32 count;
-
-        count = KMP_ATOMIC_DEC(unfinished_threads) - 1;
+#if KMP_DEBUG
+        kmp_int32 count = -1 +
+#endif
+            KMP_ATOMIC_DEC(unfinished_threads);
         KA_TRACE(20, ("__kmp_execute_tasks_template: T#%d dec "
                       "unfinished_threads to %d task_team=%p\n",
                       gtid, count, task_team));
@@ -3097,6 +3099,16 @@ int __kmp_execute_tasks_64(
       thread_finished USE_ITT_BUILD_ARG(itt_sync_obj), is_constrained);
 }
 
+template <bool C, bool S>
+int __kmp_atomic_execute_tasks_64(
+    kmp_info_t *thread, kmp_int32 gtid, kmp_atomic_flag_64<C, S> *flag,
+    int final_spin, int *thread_finished USE_ITT_BUILD_ARG(void *itt_sync_obj),
+    kmp_int32 is_constrained) {
+  return __kmp_execute_tasks_template(
+      thread, gtid, flag, final_spin,
+      thread_finished USE_ITT_BUILD_ARG(itt_sync_obj), is_constrained);
+}
+
 int __kmp_execute_tasks_oncore(
     kmp_info_t *thread, kmp_int32 gtid, kmp_flag_oncore *flag, int final_spin,
     int *thread_finished USE_ITT_BUILD_ARG(void *itt_sync_obj),
@@ -3122,6 +3134,14 @@ template int __kmp_execute_tasks_64<true, false>(kmp_info_t *, kmp_int32,
                                                  int,
                                                  int *USE_ITT_BUILD_ARG(void *),
                                                  kmp_int32);
+
+template int __kmp_atomic_execute_tasks_64<false, true>(
+    kmp_info_t *, kmp_int32, kmp_atomic_flag_64<false, true> *, int,
+    int *USE_ITT_BUILD_ARG(void *), kmp_int32);
+
+template int __kmp_atomic_execute_tasks_64<true, false>(
+    kmp_info_t *, kmp_int32, kmp_atomic_flag_64<true, false> *, int,
+    int *USE_ITT_BUILD_ARG(void *), kmp_int32);
 
 // __kmp_enable_tasking: Allocate task team and resume threads sleeping at the
 // next barrier so they can assist in executing enqueued tasks.
@@ -3161,7 +3181,7 @@ static void __kmp_enable_tasking(kmp_task_team_t *task_team,
     // tasks and execute them.  In extra barrier mode, tasks do not sleep
     // at the separate tasking barrier, so this isn't a problem.
     for (i = 0; i < nthreads; i++) {
-      volatile void *sleep_loc;
+      void *sleep_loc;
       kmp_info_t *thread = threads_data[i].td.td_thr;
 
       if (i == this_thr->th.th_info.ds.ds_tid) {
@@ -3178,7 +3198,7 @@ static void __kmp_enable_tasking(kmp_task_team_t *task_team,
         KF_TRACE(50, ("__kmp_enable_tasking: T#%d waking up thread T#%d\n",
                       __kmp_gtid_from_thread(this_thr),
                       __kmp_gtid_from_thread(thread)));
-        __kmp_null_resume_wrapper(__kmp_gtid_from_thread(thread), sleep_loc);
+        __kmp_null_resume_wrapper(thread);
       } else {
         KF_TRACE(50, ("__kmp_enable_tasking: T#%d don't wake up thread T#%d\n",
                       __kmp_gtid_from_thread(this_thr),
@@ -3546,7 +3566,7 @@ void __kmp_wait_to_unref_task_teams(void) {
                     __kmp_gtid_from_thread(thread)));
 
       if (__kmp_dflt_blocktime != KMP_MAX_BLOCKTIME) {
-        volatile void *sleep_loc;
+        void *sleep_loc;
         // If the thread is sleeping, awaken it.
         if ((sleep_loc = TCR_PTR(CCAST(void *, thread->th.th_sleep_loc))) !=
             NULL) {
@@ -3554,7 +3574,7 @@ void __kmp_wait_to_unref_task_teams(void) {
               10,
               ("__kmp_wait_to_unref_task_team: T#%d waking up thread T#%d\n",
                __kmp_gtid_from_thread(thread), __kmp_gtid_from_thread(thread)));
-          __kmp_null_resume_wrapper(__kmp_gtid_from_thread(thread), sleep_loc);
+          __kmp_null_resume_wrapper(thread);
         }
       }
     }
@@ -3868,11 +3888,12 @@ static void __kmp_first_top_half_finish_proxy(kmp_taskdata_t *taskdata) {
 }
 
 static void __kmp_second_top_half_finish_proxy(kmp_taskdata_t *taskdata) {
+#if KMP_DEBUG
   kmp_int32 children = 0;
-
   // Predecrement simulated by "- 1" calculation
-  children =
-      KMP_ATOMIC_DEC(&taskdata->td_parent->td_incomplete_child_tasks) - 1;
+  children = -1 +
+#endif
+      KMP_ATOMIC_DEC(&taskdata->td_parent->td_incomplete_child_tasks);
   KMP_DEBUG_ASSERT(children >= 0);
 
   // Remove the imaginary children

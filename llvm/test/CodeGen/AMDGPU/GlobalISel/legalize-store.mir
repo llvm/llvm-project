@@ -823,10 +823,11 @@ body: |
     ; SI: [[SHL2:%[0-9]+]]:_(s32) = G_SHL [[ZEXT1]], [[C3]](s32)
     ; SI: [[OR2:%[0-9]+]]:_(s32) = G_OR [[ZEXT]], [[SHL2]]
     ; SI: [[COPY5:%[0-9]+]]:_(s32) = COPY [[OR2]](s32)
-    ; SI: [[LSHR:%[0-9]+]]:_(s32) = G_LSHR [[COPY5]], [[C3]](s32)
+    ; SI: [[COPY6:%[0-9]+]]:_(s32) = COPY [[COPY5]](s32)
+    ; SI: [[LSHR:%[0-9]+]]:_(s32) = G_LSHR [[COPY6]], [[C3]](s32)
     ; SI: [[C4:%[0-9]+]]:_(s64) = G_CONSTANT i64 2
     ; SI: [[PTR_ADD:%[0-9]+]]:_(p1) = G_PTR_ADD [[COPY]], [[C4]](s64)
-    ; SI: G_STORE [[COPY5]](s32), [[COPY]](p1) :: (store (s16), align 4, addrspace 1)
+    ; SI: G_STORE [[COPY6]](s32), [[COPY]](p1) :: (store (s16), align 4, addrspace 1)
     ; SI: G_STORE [[LSHR]](s32), [[PTR_ADD]](p1) :: (store (s8) into unknown-address + 2, align 2, addrspace 1)
     ; VI-LABEL: name: test_store_global_v3s8_align4
     ; VI: [[COPY:%[0-9]+]]:_(p1) = COPY $vgpr0_vgpr1
@@ -853,10 +854,11 @@ body: |
     ; VI: [[SHL2:%[0-9]+]]:_(s32) = G_SHL [[ZEXT1]], [[C2]](s32)
     ; VI: [[OR2:%[0-9]+]]:_(s32) = G_OR [[ZEXT]], [[SHL2]]
     ; VI: [[COPY2:%[0-9]+]]:_(s32) = COPY [[OR2]](s32)
-    ; VI: [[LSHR:%[0-9]+]]:_(s32) = G_LSHR [[COPY2]], [[C2]](s32)
+    ; VI: [[COPY3:%[0-9]+]]:_(s32) = COPY [[COPY2]](s32)
+    ; VI: [[LSHR:%[0-9]+]]:_(s32) = G_LSHR [[COPY3]], [[C2]](s32)
     ; VI: [[C3:%[0-9]+]]:_(s64) = G_CONSTANT i64 2
     ; VI: [[PTR_ADD:%[0-9]+]]:_(p1) = G_PTR_ADD [[COPY]], [[C3]](s64)
-    ; VI: G_STORE [[COPY2]](s32), [[COPY]](p1) :: (store (s16), align 4, addrspace 1)
+    ; VI: G_STORE [[COPY3]](s32), [[COPY]](p1) :: (store (s16), align 4, addrspace 1)
     ; VI: G_STORE [[LSHR]](s32), [[PTR_ADD]](p1) :: (store (s8) into unknown-address + 2, align 2, addrspace 1)
     %0:_(p1) = COPY $vgpr0_vgpr1
     %1:_(<3 x s32>) = COPY $vgpr2_vgpr3_vgpr4

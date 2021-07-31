@@ -22,6 +22,8 @@ define i1 @phi_i1(i1 %cnd, i1 %a, i1 %b) {
 ; MIPS32-NEXT:  $BB0_3: # %cond.false
 ; MIPS32-NEXT:    lw $1, 12($sp) # 4-byte Folded Reload
 ; MIPS32-NEXT:    sw $1, 4($sp) # 4-byte Folded Spill
+; MIPS32-NEXT:    j $BB0_4
+; MIPS32-NEXT:    nop
 ; MIPS32-NEXT:  $BB0_4: # %cond.end
 ; MIPS32-NEXT:    lw $2, 4($sp) # 4-byte Folded Reload
 ; MIPS32-NEXT:    addiu $sp, $sp, 16
@@ -62,6 +64,8 @@ define i8 @phi_i8(i1 %cnd, i8 %a, i8 %b) {
 ; MIPS32-NEXT:  $BB1_3: # %cond.false
 ; MIPS32-NEXT:    lw $1, 12($sp) # 4-byte Folded Reload
 ; MIPS32-NEXT:    sw $1, 4($sp) # 4-byte Folded Spill
+; MIPS32-NEXT:    j $BB1_4
+; MIPS32-NEXT:    nop
 ; MIPS32-NEXT:  $BB1_4: # %cond.end
 ; MIPS32-NEXT:    lw $2, 4($sp) # 4-byte Folded Reload
 ; MIPS32-NEXT:    addiu $sp, $sp, 16
@@ -102,6 +106,8 @@ define i16 @phi_i16(i1 %cnd, i16 %a, i16 %b) {
 ; MIPS32-NEXT:  $BB2_3: # %cond.false
 ; MIPS32-NEXT:    lw $1, 12($sp) # 4-byte Folded Reload
 ; MIPS32-NEXT:    sw $1, 4($sp) # 4-byte Folded Spill
+; MIPS32-NEXT:    j $BB2_4
+; MIPS32-NEXT:    nop
 ; MIPS32-NEXT:  $BB2_4: # %cond.end
 ; MIPS32-NEXT:    lw $2, 4($sp) # 4-byte Folded Reload
 ; MIPS32-NEXT:    addiu $sp, $sp, 16
@@ -142,6 +148,8 @@ define i32 @phi_i32(i1 %cnd, i32 %a, i32 %b) {
 ; MIPS32-NEXT:  $BB3_3: # %cond.false
 ; MIPS32-NEXT:    lw $1, 12($sp) # 4-byte Folded Reload
 ; MIPS32-NEXT:    sw $1, 4($sp) # 4-byte Folded Spill
+; MIPS32-NEXT:    j $BB3_4
+; MIPS32-NEXT:    nop
 ; MIPS32-NEXT:  $BB3_4: # %cond.end
 ; MIPS32-NEXT:    lw $2, 4($sp) # 4-byte Folded Reload
 ; MIPS32-NEXT:    addiu $sp, $sp, 16
@@ -192,6 +200,8 @@ define i64 @phi_i64(i1 %cnd, i64 %a, i64 %b) {
 ; MIPS32-NEXT:    lw $2, 16($sp) # 4-byte Folded Reload
 ; MIPS32-NEXT:    sw $2, 0($sp) # 4-byte Folded Spill
 ; MIPS32-NEXT:    sw $1, 4($sp) # 4-byte Folded Spill
+; MIPS32-NEXT:    j $BB4_4
+; MIPS32-NEXT:    nop
 ; MIPS32-NEXT:  $BB4_4: # %cond.end
 ; MIPS32-NEXT:    lw $2, 0($sp) # 4-byte Folded Reload
 ; MIPS32-NEXT:    lw $3, 4($sp) # 4-byte Folded Reload
@@ -236,6 +246,8 @@ define void @phi_ambiguous_i64_in_fpr(i1 %cnd, i64* %i64_ptr_a, i64* %i64_ptr_b,
 ; MIPS32-NEXT:  $BB5_3: # %cond.false
 ; MIPS32-NEXT:    ldc1 $f0, 24($sp) # 8-byte Folded Reload
 ; MIPS32-NEXT:    sdc1 $f0, 0($sp) # 8-byte Folded Spill
+; MIPS32-NEXT:    j $BB5_4
+; MIPS32-NEXT:    nop
 ; MIPS32-NEXT:  $BB5_4: # %cond.end
 ; MIPS32-NEXT:    lw $1, 12($sp) # 4-byte Folded Reload
 ; MIPS32-NEXT:    ldc1 $f0, 0($sp) # 8-byte Folded Reload
@@ -281,6 +293,8 @@ define float @phi_float(i1 %cnd, float %a, float %b) {
 ; MIPS32-NEXT:  $BB6_3: # %cond.false
 ; MIPS32-NEXT:    lw $1, 12($sp) # 4-byte Folded Reload
 ; MIPS32-NEXT:    sw $1, 4($sp) # 4-byte Folded Spill
+; MIPS32-NEXT:    j $BB6_4
+; MIPS32-NEXT:    nop
 ; MIPS32-NEXT:  $BB6_4: # %cond.end
 ; MIPS32-NEXT:    lw $1, 4($sp) # 4-byte Folded Reload
 ; MIPS32-NEXT:    mtc1 $1, $f0
@@ -325,6 +339,8 @@ define void @phi_ambiguous_float_in_gpr(i1 %cnd, float* %f32_ptr_a, float* %f32_
 ; MIPS32-NEXT:  $BB7_3: # %cond.false
 ; MIPS32-NEXT:    lw $1, 12($sp) # 4-byte Folded Reload
 ; MIPS32-NEXT:    sw $1, 0($sp) # 4-byte Folded Spill
+; MIPS32-NEXT:    j $BB7_4
+; MIPS32-NEXT:    nop
 ; MIPS32-NEXT:  $BB7_4: # %cond.end
 ; MIPS32-NEXT:    lw $2, 4($sp) # 4-byte Folded Reload
 ; MIPS32-NEXT:    lw $1, 0($sp) # 4-byte Folded Reload
@@ -372,6 +388,8 @@ define double @phi_double(double %a, double %b, i1 %cnd) {
 ; MIPS32-NEXT:  $BB8_3: # %cond.false
 ; MIPS32-NEXT:    ldc1 $f0, 16($sp) # 8-byte Folded Reload
 ; MIPS32-NEXT:    sdc1 $f0, 0($sp) # 8-byte Folded Spill
+; MIPS32-NEXT:    j $BB8_4
+; MIPS32-NEXT:    nop
 ; MIPS32-NEXT:  $BB8_4: # %cond.end
 ; MIPS32-NEXT:    ldc1 $f0, 0($sp) # 8-byte Folded Reload
 ; MIPS32-NEXT:    addiu $sp, $sp, 24

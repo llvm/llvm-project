@@ -75,4 +75,13 @@ llvm_config_defines = os_defines + select({
     "@bazel_tools//src/conditions:darwin": native_arch_defines("X86", "x86_64-unknown-darwin"),
     "@bazel_tools//src/conditions:linux_aarch64": native_arch_defines("AArch64", "aarch64-unknown-linux-gnu"),
     "//conditions:default": native_arch_defines("X86", "x86_64-unknown-linux-gnu"),
-})
+}) + [
+    # These shouldn't be needed by the C++11 standard, but are for some
+    # platforms (e.g. glibc < 2.18. See
+    # https://sourceware.org/bugzilla/show_bug.cgi?id=15366). These are also
+    # included unconditionally in the CMake build:
+    # https://github.com/llvm/llvm-project/blob/cd0dd8ece8e/llvm/cmake/modules/HandleLLVMOptions.cmake#L907-L909
+    "__STDC_LIMIT_MACROS",
+    "__STDC_CONSTANT_MACROS",
+    "__STDC_FORMAT_MACROS",
+]

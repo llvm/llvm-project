@@ -17,6 +17,7 @@
 #include "mlir/Dialect/Tosa/Utils/QuantUtils.h"
 #include "mlir/IR/BuiltinTypes.h"
 #include "mlir/IR/Matchers.h"
+#include "mlir/IR/PatternMatch.h"
 #include "mlir/Transforms/FoldUtils.h"
 #include "mlir/Transforms/InliningUtils.h"
 #include "mlir/Transforms/RegionUtils.h"
@@ -99,6 +100,48 @@ Operation *TosaDialect::materializeConstant(OpBuilder &builder, Attribute value,
   if (value.isa<ElementsAttr>())
     return builder.create<tosa::ConstOp>(loc, type, value.cast<ElementsAttr>());
   return nullptr;
+}
+
+//===----------------------------------------------------------------------===//
+// Operator Canonicalizers.
+//===----------------------------------------------------------------------===//
+
+struct RemoveReshapeNoop : public OpRewritePattern<tosa::ReshapeOp> {
+  using OpRewritePattern<tosa::ReshapeOp>::OpRewritePattern;
+
+  LogicalResult matchAndRewrite(tosa::ReshapeOp op,
+                                PatternRewriter &rewriter) const override {
+    if (op.input1().getType() != op.getType())
+      return failure();
+
+    rewriter.replaceOp(op, op.input1());
+    return success();
+  }
+};
+
+struct ReshapeReshapeOptimization : public OpRewritePattern<tosa::ReshapeOp> {
+  using OpRewritePattern<tosa::ReshapeOp>::OpRewritePattern;
+
+  LogicalResult matchAndRewrite(tosa::ReshapeOp op,
+                                PatternRewriter &rewriter) const override {
+    Value input = op.input1();
+    Operation *definingOp = input.getDefiningOp();
+    if (!definingOp)
+      return failure();
+
+    if (tosa::ReshapeOp reshapeOp = dyn_cast<tosa::ReshapeOp>(definingOp)) {
+      rewriter.replaceOpWithNewOp<tosa::ReshapeOp>(
+          op, op.getType(), reshapeOp.input1(), op.new_shape());
+      return success();
+    }
+
+    return failure();
+  }
+};
+
+void ReshapeOp::getCanonicalizationPatterns(OwningRewritePatternList &results,
+                                            MLIRContext *context) {
+  results.insert<ReshapeReshapeOptimization, RemoveReshapeNoop>(context);
 }
 
 //===----------------------------------------------------------------------===//

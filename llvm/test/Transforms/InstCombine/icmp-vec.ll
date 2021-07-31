@@ -399,3 +399,179 @@ define <vscale x 2 x i1> @icmp_logical_or_scalablevec(<vscale x 2 x i64> %x, <vs
   %sel = select <vscale x 2 x i1> %cmp.ne, <vscale x 2 x i1> shufflevector (<vscale x 2 x i1> insertelement (<vscale x 2 x i1> undef, i1 true, i32 0), <vscale x 2 x i1> undef, <vscale x 2 x i32> zeroinitializer), <vscale x 2 x i1> %falseval
   ret <vscale x 2 x i1> %sel
 }
+
+define i1 @eq_cast_eq-1(<2 x i4> %x, <2 x i4> %y) {
+; CHECK-LABEL: @eq_cast_eq-1(
+; CHECK-NEXT:    [[IC:%.*]] = icmp eq <2 x i4> [[X:%.*]], [[Y:%.*]]
+; CHECK-NEXT:    [[B:%.*]] = bitcast <2 x i1> [[IC]] to i2
+; CHECK-NEXT:    [[R:%.*]] = icmp eq i2 [[B]], -1
+; CHECK-NEXT:    ret i1 [[R]]
+;
+  %ic = icmp eq <2 x i4> %x, %y
+  %b = bitcast <2 x i1> %ic to i2
+  %r = icmp eq i2 %b, -1
+  ret i1 %r
+}
+
+define i1 @ne_cast_eq-1(<3 x i7> %x, <3 x i7> %y) {
+; CHECK-LABEL: @ne_cast_eq-1(
+; CHECK-NEXT:    [[IC:%.*]] = icmp ne <3 x i7> [[X:%.*]], [[Y:%.*]]
+; CHECK-NEXT:    [[B:%.*]] = bitcast <3 x i1> [[IC]] to i3
+; CHECK-NEXT:    [[R:%.*]] = icmp eq i3 [[B]], -1
+; CHECK-NEXT:    ret i1 [[R]]
+;
+  %ic = icmp ne <3 x i7> %x, %y
+  %b = bitcast <3 x i1> %ic to i3
+  %r = icmp eq i3 %b, -1
+  ret i1 %r
+}
+
+define i1 @eq_cast_ne-1(<2 x i7> %x, <2 x i7> %y) {
+; CHECK-LABEL: @eq_cast_ne-1(
+; CHECK-NEXT:    [[IC:%.*]] = icmp eq <2 x i7> [[X:%.*]], [[Y:%.*]]
+; CHECK-NEXT:    [[B:%.*]] = bitcast <2 x i1> [[IC]] to i2
+; CHECK-NEXT:    [[R:%.*]] = icmp ne i2 [[B]], -1
+; CHECK-NEXT:    ret i1 [[R]]
+;
+  %ic = icmp eq <2 x i7> %x, %y
+  %b = bitcast <2 x i1> %ic to i2
+  %r = icmp ne i2 %b, -1
+  ret i1 %r
+}
+
+define i1 @ne_cast_ne-1(<3 x i5> %x, <3 x i5> %y) {
+; CHECK-LABEL: @ne_cast_ne-1(
+; CHECK-NEXT:    [[IC:%.*]] = icmp ne <3 x i5> [[X:%.*]], [[Y:%.*]]
+; CHECK-NEXT:    [[B:%.*]] = bitcast <3 x i1> [[IC]] to i3
+; CHECK-NEXT:    [[R:%.*]] = icmp ne i3 [[B]], -1
+; CHECK-NEXT:    ret i1 [[R]]
+;
+  %ic = icmp ne <3 x i5> %x, %y
+  %b = bitcast <3 x i1> %ic to i3
+  %r = icmp ne i3 %b, -1
+  ret i1 %r
+}
+
+define i1 @ugt_cast_eq-1(<2 x i4> %x, <2 x i4> %y) {
+; CHECK-LABEL: @ugt_cast_eq-1(
+; CHECK-NEXT:    [[IC:%.*]] = icmp ugt <2 x i4> [[X:%.*]], [[Y:%.*]]
+; CHECK-NEXT:    [[B:%.*]] = bitcast <2 x i1> [[IC]] to i2
+; CHECK-NEXT:    [[R:%.*]] = icmp eq i2 [[B]], -1
+; CHECK-NEXT:    ret i1 [[R]]
+;
+  %ic = icmp ugt <2 x i4> %x, %y
+  %b = bitcast <2 x i1> %ic to i2
+  %r = icmp eq i2 %b, -1
+  ret i1 %r
+}
+
+define i1 @slt_cast_ne-1(<2 x i4> %x, <2 x i4> %y) {
+; CHECK-LABEL: @slt_cast_ne-1(
+; CHECK-NEXT:    [[IC:%.*]] = icmp slt <2 x i4> [[X:%.*]], [[Y:%.*]]
+; CHECK-NEXT:    [[B:%.*]] = bitcast <2 x i1> [[IC]] to i2
+; CHECK-NEXT:    [[R:%.*]] = icmp ne i2 [[B]], -1
+; CHECK-NEXT:    ret i1 [[R]]
+;
+  %ic = icmp slt <2 x i4> %x, %y
+  %b = bitcast <2 x i1> %ic to i2
+  %r = icmp ne i2 %b, -1
+  ret i1 %r
+}
+
+define i1 @ueq_cast_eq-1(<3 x float> %x, <3 x float> %y) {
+; CHECK-LABEL: @ueq_cast_eq-1(
+; CHECK-NEXT:    [[FC:%.*]] = fcmp ueq <3 x float> [[X:%.*]], [[Y:%.*]]
+; CHECK-NEXT:    [[B:%.*]] = bitcast <3 x i1> [[FC]] to i3
+; CHECK-NEXT:    [[R:%.*]] = icmp eq i3 [[B]], -1
+; CHECK-NEXT:    ret i1 [[R]]
+;
+  %fc = fcmp ueq <3 x float> %x, %y
+  %b = bitcast <3 x i1> %fc to i3
+  %r = icmp eq i3 %b, -1
+  ret i1 %r
+}
+
+define i1 @not_cast_ne-1(<3 x i1> %x) {
+; CHECK-LABEL: @not_cast_ne-1(
+; CHECK-NEXT:    [[NOT:%.*]] = xor <3 x i1> [[X:%.*]], <i1 true, i1 true, i1 true>
+; CHECK-NEXT:    [[B:%.*]] = bitcast <3 x i1> [[NOT]] to i3
+; CHECK-NEXT:    [[R:%.*]] = icmp ne i3 [[B]], -1
+; CHECK-NEXT:    ret i1 [[R]]
+;
+  %not = xor <3 x i1> %x, <i1 -1, i1 -1, i1 -1>
+  %b = bitcast <3 x i1> %not to i3
+  %r = icmp ne i3 %b, -1
+  ret i1 %r
+}
+
+define i1 @not_cast_ne-1_uses(<3 x i2> %x, <3 x i2>* %p) {
+; CHECK-LABEL: @not_cast_ne-1_uses(
+; CHECK-NEXT:    [[NOT:%.*]] = xor <3 x i2> [[X:%.*]], <i2 -1, i2 -1, i2 -1>
+; CHECK-NEXT:    store <3 x i2> [[NOT]], <3 x i2>* [[P:%.*]], align 4
+; CHECK-NEXT:    [[B:%.*]] = bitcast <3 x i2> [[NOT]] to i6
+; CHECK-NEXT:    [[R:%.*]] = icmp ne i6 [[B]], -1
+; CHECK-NEXT:    ret i1 [[R]]
+;
+  %not = xor <3 x i2> %x, <i2 -1, i2 -1, i2 -1>
+  store <3 x i2> %not, <3 x i2>* %p
+  %b = bitcast <3 x i2> %not to i6
+  %r = icmp ne i6 %b, -1
+  ret i1 %r
+}
+
+define i1 @eq_cast_sgt-1(<3 x i4> %x, <3 x i4> %y) {
+; CHECK-LABEL: @eq_cast_sgt-1(
+; CHECK-NEXT:    [[IC:%.*]] = icmp eq <3 x i4> [[X:%.*]], [[Y:%.*]]
+; CHECK-NEXT:    [[B:%.*]] = bitcast <3 x i1> [[IC]] to i3
+; CHECK-NEXT:    [[R:%.*]] = icmp sgt i3 [[B]], -1
+; CHECK-NEXT:    ret i1 [[R]]
+;
+  %ic = icmp eq <3 x i4> %x, %y
+  %b = bitcast <3 x i1> %ic to i3
+  %r = icmp sgt i3 %b, -1
+  ret i1 %r
+}
+
+define i1 @eq_cast_eq1(<2 x i4> %x, <2 x i4> %y) {
+; CHECK-LABEL: @eq_cast_eq1(
+; CHECK-NEXT:    [[IC:%.*]] = icmp eq <2 x i4> [[X:%.*]], [[Y:%.*]]
+; CHECK-NEXT:    [[B:%.*]] = bitcast <2 x i1> [[IC]] to i2
+; CHECK-NEXT:    [[R:%.*]] = icmp eq i2 [[B]], 1
+; CHECK-NEXT:    ret i1 [[R]]
+;
+  %ic = icmp eq <2 x i4> %x, %y
+  %b = bitcast <2 x i1> %ic to i2
+  %r = icmp eq i2 %b, 1
+  ret i1 %r
+}
+
+define i1 @eq_cast_eq-1_use1(<2 x i4> %x, <2 x i4> %y, <2 x i1>* %p) {
+; CHECK-LABEL: @eq_cast_eq-1_use1(
+; CHECK-NEXT:    [[IC:%.*]] = icmp sgt <2 x i4> [[X:%.*]], [[Y:%.*]]
+; CHECK-NEXT:    store <2 x i1> [[IC]], <2 x i1>* [[P:%.*]], align 2
+; CHECK-NEXT:    [[B:%.*]] = bitcast <2 x i1> [[IC]] to i2
+; CHECK-NEXT:    [[R:%.*]] = icmp eq i2 [[B]], -1
+; CHECK-NEXT:    ret i1 [[R]]
+;
+  %ic = icmp sgt <2 x i4> %x, %y
+  store <2 x i1> %ic, <2 x i1>* %p
+  %b = bitcast <2 x i1> %ic to i2
+  %r = icmp eq i2 %b, -1
+  ret i1 %r
+}
+
+define i1 @eq_cast_eq-1_use2(<2 x i4> %x, <2 x i4> %y, i2* %p) {
+; CHECK-LABEL: @eq_cast_eq-1_use2(
+; CHECK-NEXT:    [[IC:%.*]] = icmp sgt <2 x i4> [[X:%.*]], [[Y:%.*]]
+; CHECK-NEXT:    [[B:%.*]] = bitcast <2 x i1> [[IC]] to i2
+; CHECK-NEXT:    [[TMP1:%.*]] = bitcast i2* [[P:%.*]] to <2 x i1>*
+; CHECK-NEXT:    store <2 x i1> [[IC]], <2 x i1>* [[TMP1]], align 1
+; CHECK-NEXT:    [[R:%.*]] = icmp eq i2 [[B]], -1
+; CHECK-NEXT:    ret i1 [[R]]
+;
+  %ic = icmp sgt <2 x i4> %x, %y
+  %b = bitcast <2 x i1> %ic to i2
+  store i2 %b, i2* %p
+  %r = icmp eq i2 %b, -1
+  ret i1 %r
+}

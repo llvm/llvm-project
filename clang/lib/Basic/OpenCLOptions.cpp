@@ -111,7 +111,9 @@ bool OpenCLOptions::diagnoseUnsupportedFeatureDependencies(
   // Feature pairs. First feature in a pair requires the second one to be
   // supported.
   static const llvm::StringMap<llvm::StringRef> DependentFeaturesMap = {
-      {"__opencl_c_read_write_images", "__opencl_c_images"}};
+      {"__opencl_c_read_write_images", "__opencl_c_images"},
+      {"__opencl_c_3d_image_writes", "__opencl_c_images"},
+      {"__opencl_c_pipes", "__opencl_c_generic_address_space"}};
 
   auto OpenCLFeaturesMap = TI.getSupportedOpenCLOpts();
 
@@ -130,7 +132,8 @@ bool OpenCLOptions::diagnoseFeatureExtensionDifferences(
     const TargetInfo &TI, DiagnosticsEngine &Diags) {
   // Extensions and equivalent feature pairs.
   static const llvm::StringMap<llvm::StringRef> FeatureExtensionMap = {
-      {"cl_khr_fp64", "__opencl_c_fp64"}};
+      {"cl_khr_fp64", "__opencl_c_fp64"},
+      {"cl_khr_3d_image_writes", "__opencl_c_3d_image_writes"}};
 
   auto OpenCLFeaturesMap = TI.getSupportedOpenCLOpts();
 

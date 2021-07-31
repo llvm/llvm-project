@@ -129,7 +129,7 @@ def main():
         triple = asm.get_triple_from_march(march_in_cmd)
 
       scrubber, function_re = asm.get_run_handler(triple)
-      builder.process_run_line(function_re, scrubber, raw_tool_output, prefixes)
+      builder.process_run_line(function_re, scrubber, raw_tool_output, prefixes, True)
 
     func_dict = builder.finish_and_get_func_dict()
 

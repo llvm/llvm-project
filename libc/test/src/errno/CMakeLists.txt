@@ -1,3 +1,7 @@
+if(NOT LLVM_LIBC_FULL_BUILD)
+  return()
+endif()
+
 add_libc_testsuite(libc_errno_unittests)
 
 add_libc_unittest(

@@ -2886,13 +2886,14 @@ LegalizerHelper::LegalizeResult LegalizerHelper::lowerLoad(GAnyLoad &LoadMI) {
   MachineMemOperand &MMO = LoadMI.getMMO();
   LLT MemTy = MMO.getMemoryType();
   MachineFunction &MF = MIRBuilder.getMF();
-  if (MemTy.isVector())
-    return UnableToLegalize;
 
   unsigned MemSizeInBits = MemTy.getSizeInBits();
   unsigned MemStoreSizeInBits = 8 * MemTy.getSizeInBytes();
 
   if (MemSizeInBits != MemStoreSizeInBits) {
+    if (MemTy.isVector())
+      return UnableToLegalize;
+
     // Promote to a byte-sized load if not loading an integral number of
     // bytes.  For example, promote EXTLOAD:i20 -> EXTLOAD:i24.
     LLT WideMemTy = LLT::scalar(MemStoreSizeInBits);
@@ -2928,16 +2929,12 @@ LegalizerHelper::LegalizeResult LegalizerHelper::lowerLoad(GAnyLoad &LoadMI) {
     return Legalized;
   }
 
-  // This load needs splitting into power of 2 sized loads.
-  if (DstTy.isVector())
-    return UnableToLegalize;
-  if (isPowerOf2_32(MemSizeInBits))
-    return UnableToLegalize; // Don't know what we're being asked to do.
-
   // Big endian lowering not implemented.
   if (MIRBuilder.getDataLayout().isBigEndian())
     return UnableToLegalize;
 
+  // This load needs splitting into power of 2 sized loads.
+  //
   // Our strategy here is to generate anyextending loads for the smaller
   // types up to next power-2 result type, and then combine the two larger
   // result values together, before truncating back down to the non-pow-2
@@ -2950,8 +2947,34 @@ LegalizerHelper::LegalizeResult LegalizerHelper::lowerLoad(GAnyLoad &LoadMI) {
   // v1 = i24 trunc v5
   // By doing this we generate the correct truncate which should get
   // combined away as an artifact with a matching extend.
-  uint64_t LargeSplitSize = PowerOf2Floor(MemSizeInBits);
-  uint64_t SmallSplitSize = MemSizeInBits - LargeSplitSize;
+
+  uint64_t LargeSplitSize, SmallSplitSize;
+
+  if (!isPowerOf2_32(MemSizeInBits)) {
+    // This load needs splitting into power of 2 sized loads.
+    LargeSplitSize = PowerOf2Floor(MemSizeInBits);
+    SmallSplitSize = MemSizeInBits - LargeSplitSize;
+  } else {
+    // This is already a power of 2, but we still need to split this in half.
+    //
+    // Assume we're being asked to decompose an unaligned load.
+    // TODO: If this requires multiple splits, handle them all at once.
+    auto &Ctx = MF.getFunction().getContext();
+    if (TLI.allowsMemoryAccess(Ctx, MIRBuilder.getDataLayout(), MemTy, MMO))
+      return UnableToLegalize;
+
+    SmallSplitSize = LargeSplitSize = MemSizeInBits / 2;
+  }
+
+  if (MemTy.isVector()) {
+    // TODO: Handle vector extloads
+    if (MemTy != DstTy)
+      return UnableToLegalize;
+
+    // TODO: We can do better than scalarizing the vector and at least split it
+    // in half.
+    return reduceLoadStoreWidth(LoadMI, 0, DstTy.getElementType());
+  }
 
   MachineMemOperand *LargeMMO =
       MF.getMachineMemOperand(&MMO, 0, LargeSplitSize / 8);
@@ -2976,9 +2999,16 @@ LegalizerHelper::LegalizeResult LegalizerHelper::lowerLoad(GAnyLoad &LoadMI) {
 
   if (AnyExtTy == DstTy)
     MIRBuilder.buildOr(DstReg, Shift, LargeLoad);
-  else {
+  else if (AnyExtTy.getSizeInBits() != DstTy.getSizeInBits()) {
     auto Or = MIRBuilder.buildOr(AnyExtTy, Shift, LargeLoad);
     MIRBuilder.buildTrunc(DstReg, {Or});
+  } else {
+    assert(DstTy.isPointer() && "expected pointer");
+    auto Or = MIRBuilder.buildOr(AnyExtTy, Shift, LargeLoad);
+
+    // FIXME: We currently consider this to be illegal for non-integral address
+    // spaces, but we need still need a way to reinterpret the bits.
+    MIRBuilder.buildIntToPtr(DstReg, Or);
   }
 
   LoadMI.eraseFromParent();

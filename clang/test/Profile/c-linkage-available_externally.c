@@ -3,7 +3,7 @@
 // RUN: %clang_cc1 -O2 -triple x86_64-apple-macosx10.9 -main-file-name c-linkage-available_externally.c %s -o - -emit-llvm -fprofile-instrument=clang | FileCheck %s
 
 // CHECK: @__profc_foo = linkonce_odr hidden global [1 x i64] zeroinitializer, section "__DATA,__llvm_prf_cnts", align 8
-// CHECK: @__profd_foo = linkonce_odr hidden global {{.*}} i64* getelementptr inbounds ([1 x i64], [1 x i64]* @__profc_foo, i32 0, i32 0){{.*}}, section "__DATA,__llvm_prf_data,regular,live_support", align 8
+// CHECK: @__profd_foo = linkonce_odr hidden global {{.*}} i64 sub (i64 ptrtoint ([1 x i64]* @__profc_foo to i64), i64 ptrtoint ({ i64, i64, i64, i8*, i8*, i32, [2 x i16] }* @__profd_foo to i64)), {{.*}}, section "__DATA,__llvm_prf_data,regular,live_support", align 8
 inline int foo(void) { return 1; }
 
 int main(void) {

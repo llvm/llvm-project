@@ -79,8 +79,6 @@ EXTERN void __tgt_target_data_begin_nowait(int64_t device_id, int32_t arg_num,
                                            void *depList, int32_t noAliasDepNum,
                                            void *noAliasDepList) {
   TIMESCOPE();
-  if (depNum + noAliasDepNum > 0)
-    __kmpc_omp_taskwait(NULL, __kmpc_global_thread_num(NULL));
 
   __tgt_target_data_begin_mapper(nullptr, device_id, arg_num, args_base, args,
                                  arg_sizes, arg_types, nullptr, nullptr);
@@ -128,8 +126,6 @@ EXTERN void __tgt_target_data_begin_nowait_mapper(
     map_var_info_t *arg_names, void **arg_mappers, int32_t depNum,
     void *depList, int32_t noAliasDepNum, void *noAliasDepList) {
   TIMESCOPE_WITH_IDENT(loc);
-  if (depNum + noAliasDepNum > 0)
-    __kmpc_omp_taskwait(loc, __kmpc_global_thread_num(loc));
 
   __tgt_target_data_begin_mapper(loc, device_id, arg_num, args_base, args,
                                  arg_sizes, arg_types, arg_names, arg_mappers);
@@ -153,8 +149,6 @@ EXTERN void __tgt_target_data_end_nowait(int64_t device_id, int32_t arg_num,
                                          int32_t noAliasDepNum,
                                          void *noAliasDepList) {
   TIMESCOPE();
-  if (depNum + noAliasDepNum > 0)
-    __kmpc_omp_taskwait(NULL, __kmpc_global_thread_num(NULL));
 
   __tgt_target_data_end_mapper(nullptr, device_id, arg_num, args_base, args,
                                arg_sizes, arg_types, nullptr, nullptr);
@@ -201,8 +195,6 @@ EXTERN void __tgt_target_data_end_nowait_mapper(
     map_var_info_t *arg_names, void **arg_mappers, int32_t depNum,
     void *depList, int32_t noAliasDepNum, void *noAliasDepList) {
   TIMESCOPE_WITH_IDENT(loc);
-  if (depNum + noAliasDepNum > 0)
-    __kmpc_omp_taskwait(loc, __kmpc_global_thread_num(loc));
 
   __tgt_target_data_end_mapper(loc, device_id, arg_num, args_base, args,
                                arg_sizes, arg_types, arg_names, arg_mappers);
@@ -221,8 +213,6 @@ EXTERN void __tgt_target_data_update_nowait(
     int64_t *arg_sizes, int64_t *arg_types, int32_t depNum, void *depList,
     int32_t noAliasDepNum, void *noAliasDepList) {
   TIMESCOPE();
-  if (depNum + noAliasDepNum > 0)
-    __kmpc_omp_taskwait(NULL, __kmpc_global_thread_num(NULL));
 
   __tgt_target_data_update_mapper(nullptr, device_id, arg_num, args_base, args,
                                   arg_sizes, arg_types, nullptr, nullptr);
@@ -260,8 +250,6 @@ EXTERN void __tgt_target_data_update_nowait_mapper(
     map_var_info_t *arg_names, void **arg_mappers, int32_t depNum,
     void *depList, int32_t noAliasDepNum, void *noAliasDepList) {
   TIMESCOPE_WITH_IDENT(loc);
-  if (depNum + noAliasDepNum > 0)
-    __kmpc_omp_taskwait(loc, __kmpc_global_thread_num(loc));
 
   __tgt_target_data_update_mapper(loc, device_id, arg_num, args_base, args,
                                   arg_sizes, arg_types, arg_names, arg_mappers);
@@ -281,8 +269,6 @@ EXTERN int __tgt_target_nowait(int64_t device_id, void *host_ptr,
                                int32_t depNum, void *depList,
                                int32_t noAliasDepNum, void *noAliasDepList) {
   TIMESCOPE();
-  if (depNum + noAliasDepNum > 0)
-    __kmpc_omp_taskwait(NULL, __kmpc_global_thread_num(NULL));
 
   return __tgt_target_mapper(nullptr, device_id, host_ptr, arg_num, args_base,
                              args, arg_sizes, arg_types, nullptr, nullptr);
@@ -330,8 +316,6 @@ EXTERN int __tgt_target_nowait_mapper(
     map_var_info_t *arg_names, void **arg_mappers, int32_t depNum,
     void *depList, int32_t noAliasDepNum, void *noAliasDepList) {
   TIMESCOPE_WITH_IDENT(loc);
-  if (depNum + noAliasDepNum > 0)
-    __kmpc_omp_taskwait(loc, __kmpc_global_thread_num(loc));
 
   return __tgt_target_mapper(loc, device_id, host_ptr, arg_num, args_base, args,
                              arg_sizes, arg_types, arg_names, arg_mappers);
@@ -355,8 +339,6 @@ EXTERN int __tgt_target_teams_nowait(int64_t device_id, void *host_ptr,
                                      void *depList, int32_t noAliasDepNum,
                                      void *noAliasDepList) {
   TIMESCOPE();
-  if (depNum + noAliasDepNum > 0)
-    __kmpc_omp_taskwait(NULL, __kmpc_global_thread_num(NULL));
 
   return __tgt_target_teams_mapper(nullptr, device_id, host_ptr, arg_num,
                                    args_base, args, arg_sizes, arg_types,
@@ -408,8 +390,6 @@ EXTERN int __tgt_target_teams_nowait_mapper(
     int32_t thread_limit, int32_t depNum, void *depList, int32_t noAliasDepNum,
     void *noAliasDepList) {
   TIMESCOPE_WITH_IDENT(loc);
-  if (depNum + noAliasDepNum > 0)
-    __kmpc_omp_taskwait(loc, __kmpc_global_thread_num(loc));
 
   return __tgt_target_teams_mapper(loc, device_id, host_ptr, arg_num, args_base,
                                    args, arg_sizes, arg_types, arg_names,

@@ -99,7 +99,7 @@ void ThreadContext::OnStarted(void *arg) {
 #else
   // Setup dynamic shadow stack.
   const int kInitStackSize = 8;
-  thr->shadow_stack = (uptr *)internal_alloc(kInitStackSize * sizeof(uptr));
+  thr->shadow_stack = (uptr *)Alloc(kInitStackSize * sizeof(uptr));
   thr->shadow_stack_pos = thr->shadow_stack;
   thr->shadow_stack_end = thr->shadow_stack + kInitStackSize;
 #endif
@@ -122,8 +122,7 @@ void ThreadContext::OnStarted(void *arg) {
 
 void ThreadContext::OnFinished() {
 #if SANITIZER_GO
-  internal_free(thr->shadow_stack);
-  thr->shadow_stack = nullptr;
+  Free(thr->shadow_stack);
   thr->shadow_stack_pos = nullptr;
   thr->shadow_stack_end = nullptr;
 #endif
@@ -419,7 +418,7 @@ void FiberSwitchImpl(ThreadState *from, ThreadState *to) {
 }
 
 ThreadState *FiberCreate(ThreadState *thr, uptr pc, unsigned flags) {
-  void *mem = internal_alloc(sizeof(ThreadState));
+  void *mem = Alloc(sizeof(ThreadState));
   ThreadState *fiber = static_cast<ThreadState *>(mem);
   internal_memset(fiber, 0, sizeof(*fiber));
   int tid = ThreadCreate(thr, pc, 0, true);
@@ -433,7 +432,7 @@ void FiberDestroy(ThreadState *thr, uptr pc, ThreadState *fiber) {
   FiberSwitchImpl(thr, fiber);
   ThreadFinish(fiber);
   FiberSwitchImpl(fiber, thr);
-  internal_free(fiber);
+  Free(fiber);
 }
 
 void FiberSwitch(ThreadState *thr, uptr pc,

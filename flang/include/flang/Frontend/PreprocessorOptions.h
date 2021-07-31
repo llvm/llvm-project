@@ -44,6 +44,12 @@ public:
 
   PPMacrosFlag macrosFlag_ = PPMacrosFlag::Unknown;
 
+  // -P: Suppress #line directives in -E output
+  bool noLineDirectives{false};
+
+  // -fno-reformat: Emit cooked character stream as -E output
+  bool noReformat{false};
+
 public:
   PreprocessorOptions() {}
 

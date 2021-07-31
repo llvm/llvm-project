@@ -85,6 +85,26 @@ static cl::opt<bool> HideMemoryTransferLatency(
              " transfers"),
     cl::Hidden, cl::init(false));
 
+static cl::opt<bool> DisableOpenMPOptDeglobalization(
+    "openmp-opt-disable-deglobalization", cl::ZeroOrMore,
+    cl::desc("Disable OpenMP optimizations involving deglobalization."),
+    cl::Hidden, cl::init(false));
+
+static cl::opt<bool> DisableOpenMPOptSPMDization(
+    "openmp-opt-disable-spmdization", cl::ZeroOrMore,
+    cl::desc("Disable OpenMP optimizations involving SPMD-ization."),
+    cl::Hidden, cl::init(false));
+
+static cl::opt<bool> DisableOpenMPOptFolding(
+    "openmp-opt-disable-folding", cl::ZeroOrMore,
+    cl::desc("Disable OpenMP optimizations involving folding."), cl::Hidden,
+    cl::init(false));
+
+static cl::opt<bool> DisableOpenMPOptStateMachineRewrite(
+    "openmp-opt-disable-state-machine-rewrite", cl::ZeroOrMore,
+    cl::desc("Disable OpenMP optimizations that replace the state machine."),
+    cl::Hidden, cl::init(false));
+
 STATISTIC(NumOpenMPRuntimeCallsDeduplicated,
           "Number of OpenMP runtime calls deduplicated");
 STATISTIC(NumOpenMPParallelRegionsDeleted,
@@ -1931,6 +1951,10 @@ bool OpenMPOpt::rewriteDeviceCodeStateMachine() {
   if (!KernelParallelRFI)
     return Changed;
 
+  // If we have disabled state machine changes, exit
+  if (DisableOpenMPOptStateMachineRewrite)
+    return Changed;
+
   for (Function *F : SCC) {
 
     // Check if the function is a use in a __kmpc_parallel_51 call at
@@ -2975,6 +2999,10 @@ struct AAKernelInfoFunction : AAKernelInfo {
   }
 
   bool changeToSPMDMode(Attributor &A) {
+    // If we have disabled SPMD-ization, stop
+    if (DisableOpenMPOptSPMDization)
+      indicatePessimisticFixpoint();
+
     auto &OMPInfoCache = static_cast<OMPInformationCache &>(A.getInfoCache());
 
     if (!SPMDCompatibilityTracker.isAssumed()) {
@@ -3055,6 +3083,10 @@ struct AAKernelInfoFunction : AAKernelInfo {
   };
 
   ChangeStatus buildCustomStateMachine(Attributor &A) {
+    // If we have disabled state machine rewrites, don't make a custom one
+    if (DisableOpenMPOptStateMachineRewrite)
+      return indicatePessimisticFixpoint();
+
     assert(ReachedKnownParallelRegions.isValidState() &&
            "Custom state machine with invalid parallel region states?");
 
@@ -3698,6 +3730,9 @@ struct AAFoldRuntimeCallCallSiteReturned : AAFoldRuntimeCall {
   }
 
   void initialize(Attributor &A) override {
+    if (DisableOpenMPOptFolding)
+      indicatePessimisticFixpoint();
+
     Function *Callee = getAssociatedFunction();
 
     auto &OMPInfoCache = static_cast<OMPInformationCache &>(A.getInfoCache());
@@ -4025,7 +4060,8 @@ void OpenMPOpt::registerAAs(bool IsModulePass) {
     A.getOrCreateAAFor<AAHeapToShared>(IRPosition::function(F));
     return false;
   };
-  GlobalizationRFI.foreachUse(SCC, CreateAA);
+  if (!DisableOpenMPOptDeglobalization)
+    GlobalizationRFI.foreachUse(SCC, CreateAA);
 
   // Create an ExecutionDomain AA for every function and a HeapToStack AA for
   // every function if there is a device kernel.
@@ -4037,7 +4073,8 @@ void OpenMPOpt::registerAAs(bool IsModulePass) {
       continue;
 
     A.getOrCreateAAFor<AAExecutionDomain>(IRPosition::function(*F));
-    A.getOrCreateAAFor<AAHeapToStack>(IRPosition::function(*F));
+    if (!DisableOpenMPOptDeglobalization)
+      A.getOrCreateAAFor<AAHeapToStack>(IRPosition::function(*F));
 
     for (auto &I : instructions(*F)) {
       if (auto *LI = dyn_cast<LoadInst>(&I)) {

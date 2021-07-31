@@ -162,9 +162,18 @@ namespace std::ranges {
 
   template<class T>
   inline constexpr bool enable_borrowed_range<take_view<T>> = enable_borrowed_range<T>;
+
+  template<copy_constructible T>
+    requires is_object_v<T>
+  class single_view;
 }
 
 */
+
+// Make sure all feature tests macros are always available.
+#include <version>
+// Only enable the contents of the header when libc++ was build with LIBCXX_ENABLE_INCOMPLETE_FEATURES enabled
+#if !defined(_LIBCPP_HAS_NO_INCOMPLETE_RANGES)
 
 #include <__config>
 #include <__ranges/access.h>
@@ -179,20 +188,16 @@ namespace std::ranges {
 #include <__ranges/enable_borrowed_range.h>
 #include <__ranges/enable_view.h>
 #include <__ranges/ref_view.h>
-#include <__ranges/take_view.h>
+#include <__ranges/single_view.h>
 #include <__ranges/size.h>
 #include <__ranges/subrange.h>
+#include <__ranges/take_view.h>
 #include <__ranges/transform_view.h>
 #include <__ranges/view_interface.h>
 #include <compare>          // Required by the standard.
 #include <initializer_list> // Required by the standard.
 #include <iterator>         // Required by the standard.
 #include <type_traits>
-#include <version>
-
-#if defined(_LIBCPP_HAS_NO_INCOMPLETE_RANGES)
-# error "The Ranges library is not supported since libc++ has been configured with LIBCXX_ENABLE_INCOMPLETE_FEATURES disabled"
-#endif
 
 #if !defined(_LIBCPP_HAS_NO_PRAGMA_SYSTEM_HEADER)
 #pragma GCC system_header
@@ -210,5 +215,7 @@ _LIBCPP_BEGIN_NAMESPACE_STD
 _LIBCPP_END_NAMESPACE_STD
 
 _LIBCPP_POP_MACROS
+
+#endif // !defined(_LIBCPP_HAS_NO_INCOMPLETE_RANGES)
 
 #endif // _LIBCPP_RANGES
