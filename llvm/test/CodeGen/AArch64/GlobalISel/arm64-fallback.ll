@@ -126,7 +126,32 @@ entry:
   ret void
 }
 
+%struct.foo = type { [8 x i64] }
+
+; FALLBACK-WITH-REPORT-ERR: remark: <unknown>:0:0: unable to translate instruction:{{.*}}ld64b{{.*}}asm_output_ls64
+; FALLBACK-WITH-REPORT-ERR: warning: Instruction selection used fallback path for asm_output_ls64
+; FALLBACK-WITH-REPORT-OUT-LABEL: asm_output_ls64
+define void @asm_output_ls64(%struct.foo* %output, i8* %addr) #2 {
+entry:
+  %val = call i512 asm sideeffect "ld64b $0,[$1]", "=r,r,~{memory}"(i8* %addr)
+  %outcast = bitcast %struct.foo* %output to i512*
+  store i512 %val, i512* %outcast, align 8
+  ret void
+}
+
+; FALLBACK-WITH-REPORT-ERR: remark: <unknown>:0:0: unable to translate instruction:{{.*}}st64b{{.*}}asm_input_ls64
+; FALLBACK-WITH-REPORT-ERR: warning: Instruction selection used fallback path for asm_input_ls64
+; FALLBACK-WITH-REPORT-OUT-LABEL: asm_input_ls64
+define void @asm_input_ls64(%struct.foo* %input, i8* %addr) #2 {
+entry:
+  %incast = bitcast %struct.foo* %input to i512*
+  %val = load i512, i512* %incast, align 8
+  call void asm sideeffect "st64b $0,[$1]", "r,r,~{memory}"(i512 %val, i8* %addr)
+  ret void
+}
+
 attributes #1 = { "target-features"="+sve" }
+attributes #2 = { "target-features"="+ls64" }
 
 declare <vscale x 16 x i1> @llvm.aarch64.sve.ptrue.nxv16i1(i32 %pattern)
 declare <vscale x 16 x i8> @llvm.aarch64.sve.ld1.nxv16i8(<vscale x 16 x i1>, i8*)

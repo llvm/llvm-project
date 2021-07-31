@@ -653,6 +653,9 @@ bool AArch64AsmPrinter::printAsmMRegister(const MachineOperand &MO, char Mode,
   case 'x':
     Reg = getXRegFromWReg(Reg);
     break;
+  case 't':
+    Reg = getXRegFromXRegTuple(Reg);
+    break;
   }
 
   O << AArch64InstPrinter::getRegisterName(Reg);
@@ -748,6 +751,10 @@ bool AArch64AsmPrinter::PrintAsmOperand(const MachineInstr *MI, unsigned OpNum,
     if (AArch64::GPR32allRegClass.contains(Reg) ||
         AArch64::GPR64allRegClass.contains(Reg))
       return printAsmMRegister(MO, 'x', O);
+
+    // If this is an x register tuple, print an x register.
+    if (AArch64::GPR64x8ClassRegClass.contains(Reg))
+      return printAsmMRegister(MO, 't', O);
 
     unsigned AltName = AArch64::NoRegAltName;
     const TargetRegisterClass *RegClass;
