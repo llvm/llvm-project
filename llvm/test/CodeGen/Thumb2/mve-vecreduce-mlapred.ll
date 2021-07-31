@@ -1530,10 +1530,9 @@ define arm_aapcs_vfpcc i64 @add_v4i8i16_v4i32_v4i64_zext(<4 x i8> %x, <4 x i16> 
 ; CHECK-NEXT:    vmov.i32 q3, #0xff
 ; CHECK-NEXT:    vmovlb.u16 q1, q1
 ; CHECK-NEXT:    vand q0, q0, q3
-; CHECK-NEXT:    vmul.i32 q0, q0, q1
-; CHECK-NEXT:    vand q1, q2, q3
-; CHECK-NEXT:    vpt.i32 eq, q1, zr
-; CHECK-NEXT:    vaddlvt.u32 r0, r1, q0
+; CHECK-NEXT:    vand q2, q2, q3
+; CHECK-NEXT:    vpt.i32 eq, q2, zr
+; CHECK-NEXT:    vmlalvt.u32 r0, r1, q0, q1
 ; CHECK-NEXT:    bx lr
 entry:
   %c = icmp eq <4 x i8> %b, zeroinitializer
@@ -1550,13 +1549,12 @@ define arm_aapcs_vfpcc i64 @add_v4i8i16_v4i32_v4i64_sext(<4 x i8> %x, <4 x i16> 
 ; CHECK-LABEL: add_v4i8i16_v4i32_v4i64_sext:
 ; CHECK:       @ %bb.0: @ %entry
 ; CHECK-NEXT:    vmovlb.s8 q0, q0
+; CHECK-NEXT:    vmov.i32 q3, #0xff
+; CHECK-NEXT:    vand q2, q2, q3
 ; CHECK-NEXT:    vmovlb.s16 q1, q1
 ; CHECK-NEXT:    vmovlb.s16 q0, q0
-; CHECK-NEXT:    vmul.i32 q0, q0, q1
-; CHECK-NEXT:    vmov.i32 q1, #0xff
-; CHECK-NEXT:    vand q1, q2, q1
-; CHECK-NEXT:    vpt.i32 eq, q1, zr
-; CHECK-NEXT:    vaddlvt.s32 r0, r1, q0
+; CHECK-NEXT:    vpt.i32 eq, q2, zr
+; CHECK-NEXT:    vmlalvt.s32 r0, r1, q0, q1
 ; CHECK-NEXT:    bx lr
 entry:
   %c = icmp eq <4 x i8> %b, zeroinitializer
