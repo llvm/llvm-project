@@ -1,5 +1,8 @@
 // Test we load dwo information lazily.
 
+// -gsplit-dwarf is supported only on Linux.
+// REQUIRES: system-linux
+
 // RUN: %clang_host %s -fno-standalone-debug -g \
 // RUN:   -gdwarf-5 -gpubnames -gsplit-dwarf -c -o %t1.o -DONE
 // RUN: %clang_host %s -fno-standalone-debug -g \

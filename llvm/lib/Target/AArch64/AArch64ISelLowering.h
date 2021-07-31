@@ -330,6 +330,10 @@ enum NodeType : unsigned {
   // Cast between vectors of the same element type but differ in length.
   REINTERPRET_CAST,
 
+  // Nodes to build an LD64B / ST64B 64-bit quantity out of i64, and vice versa
+  LS64_BUILD,
+  LS64_EXTRACT,
+
   LD1_MERGE_ZERO,
   LD1S_MERGE_ZERO,
   LDNF1_MERGE_ZERO,
@@ -823,6 +827,9 @@ public:
 
   bool isAllActivePredicate(SDValue N) const;
   EVT getPromotedVTForPredicate(EVT VT) const;
+
+  EVT getAsmOperandValueType(const DataLayout &DL, Type *Ty,
+                             bool AllowUnknown = false) const override;
 
 private:
   /// Keep a pointer to the AArch64Subtarget around so that we can

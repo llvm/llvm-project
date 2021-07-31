@@ -1,5 +1,8 @@
 // Test that optimized flag is properly included in DWARF.
 
+// -gsplit-dwarf is supported only on Linux.
+// REQUIRES: system-linux
+
 // ObjectFileELF::ApplyRelocations does not implement arm32.
 // XFAIL: target-arm && linux-gnu
 

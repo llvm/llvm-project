@@ -583,7 +583,7 @@ SANITIZER_INTERFACE_ATTRIBUTE char *__dfsw_strcat(char *dest, const char *src,
                                                   dfsan_label src_label,
                                                   dfsan_label *ret_label) {
   size_t dest_len = strlen(dest);
-  char *ret = strcat(dest, src);  // NOLINT
+  char *ret = strcat(dest, src);
   dfsan_label *sdest = shadow_for(dest + dest_len);
   const dfsan_label *ssrc = shadow_for(src);
   internal_memcpy((void *)sdest, (const void *)ssrc,
@@ -597,7 +597,7 @@ SANITIZER_INTERFACE_ATTRIBUTE char *__dfso_strcat(
     dfsan_label *ret_label, dfsan_origin dest_origin, dfsan_origin src_origin,
     dfsan_origin *ret_origin) {
   size_t dest_len = strlen(dest);
-  char *ret = strcat(dest, src);  // NOLINT
+  char *ret = strcat(dest, src);
   dfsan_label *sdest = shadow_for(dest + dest_len);
   const dfsan_label *ssrc = shadow_for(src);
   size_t src_len = strlen(src);
@@ -1088,7 +1088,7 @@ int __dfso_getrusage(int who, struct rusage *usage, dfsan_label who_label,
 SANITIZER_INTERFACE_ATTRIBUTE
 char *__dfsw_strcpy(char *dest, const char *src, dfsan_label dst_label,
                     dfsan_label src_label, dfsan_label *ret_label) {
-  char *ret = strcpy(dest, src);  // NOLINT
+  char *ret = strcpy(dest, src);
   if (ret) {
     internal_memcpy(shadow_for(dest), shadow_for(src),
                     sizeof(dfsan_label) * (strlen(src) + 1));
@@ -1102,7 +1102,7 @@ char *__dfso_strcpy(char *dest, const char *src, dfsan_label dst_label,
                     dfsan_label src_label, dfsan_label *ret_label,
                     dfsan_origin dst_origin, dfsan_origin src_origin,
                     dfsan_origin *ret_origin) {
-  char *ret = strcpy(dest, src);  // NOLINT
+  char *ret = strcpy(dest, src);
   if (ret) {
     size_t str_len = strlen(src) + 1;
     dfsan_mem_origin_transfer(dest, src, str_len);

@@ -45,13 +45,14 @@ class AllocOp;
 /// correspond to memref's indices, and its symbolic inputs if any should be
 /// provided in `symbolOperands`.
 ///
-/// `domInstFilter`, if non-null, restricts the replacement to only those
-/// operations that are dominated by the former; similarly, `postDomInstFilter`
+/// `domOpFilter`, if non-null, restricts the replacement to only those
+/// operations that are dominated by the former; similarly, `postDomOpFilter`
 /// restricts replacement to only those operations that are postdominated by it.
 ///
 /// 'allowNonDereferencingOps', if set, allows replacement of non-dereferencing
-/// uses of a memref without any requirement for access index rewrites. The
-/// default value of this flag variable is false.
+/// uses of a memref without any requirement for access index rewrites as long
+/// as the user operation has the MemRefsNormalizable trait. The default value
+/// of this flag is false.
 ///
 /// 'replaceInDeallocOp', if set, lets DeallocOp, a non-dereferencing user, to
 /// also be a candidate for replacement. The default value of this flag is
@@ -73,9 +74,9 @@ class AllocOp;
 LogicalResult replaceAllMemRefUsesWith(
     Value oldMemRef, Value newMemRef, ArrayRef<Value> extraIndices = {},
     AffineMap indexRemap = AffineMap(), ArrayRef<Value> extraOperands = {},
-    ArrayRef<Value> symbolOperands = {}, Operation *domInstFilter = nullptr,
-    Operation *postDomInstFilter = nullptr,
-    bool allowNonDereferencingOps = false, bool replaceInDeallocOp = false);
+    ArrayRef<Value> symbolOperands = {}, Operation *domOpFilter = nullptr,
+    Operation *postDomOpFilter = nullptr, bool allowNonDereferencingOps = false,
+    bool replaceInDeallocOp = false);
 
 /// Performs the same replacement as the other version above but only for the
 /// dereferencing uses of `oldMemRef` in `op`, except in cases where
