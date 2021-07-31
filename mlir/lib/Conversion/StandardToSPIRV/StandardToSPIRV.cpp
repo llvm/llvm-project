@@ -10,7 +10,6 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "mlir/Dialect/Math/IR/Math.h"
 #include "mlir/Dialect/MemRef/IR/MemRef.h"
 #include "mlir/Dialect/SPIRV/IR/SPIRVDialect.h"
 #include "mlir/Dialect/SPIRV/IR/SPIRVOps.h"
@@ -313,28 +312,6 @@ public:
           "bitwidth emulation is not implemented yet on unsigned op");
     }
     rewriter.template replaceOpWithNewOp<SPIRVOp>(operation, dstType, operands);
-    return success();
-  }
-};
-
-/// Converts math.log1p to SPIR-V ops.
-///
-/// SPIR-V does not have a direct operations for log(1+x). Explicitly lower to
-/// these operations.
-class Log1pOpPattern final : public OpConversionPattern<math::Log1pOp> {
-public:
-  using OpConversionPattern<math::Log1pOp>::OpConversionPattern;
-
-  LogicalResult
-  matchAndRewrite(math::Log1pOp operation, ArrayRef<Value> operands,
-                  ConversionPatternRewriter &rewriter) const override {
-    assert(operands.size() == 1);
-    Location loc = operation.getLoc();
-    auto type =
-        this->getTypeConverter()->convertType(operation.operand().getType());
-    auto one = spirv::ConstantOp::getOne(type, operation.getLoc(), rewriter);
-    auto onePlus = rewriter.create<spirv::FAddOp>(loc, one, operands[0]);
-    rewriter.replaceOpWithNewOp<spirv::GLSLLogOp>(operation, type, onePlus);
     return success();
   }
 };
@@ -1336,17 +1313,6 @@ void populateStandardToSPIRVPatterns(SPIRVTypeConverter &typeConverter,
   MLIRContext *context = patterns.getContext();
 
   patterns.add<
-      // Math dialect operations.
-      // TODO: Move to separate pass.
-      UnaryAndBinaryOpPattern<math::CosOp, spirv::GLSLCosOp>,
-      UnaryAndBinaryOpPattern<math::ExpOp, spirv::GLSLExpOp>,
-      UnaryAndBinaryOpPattern<math::LogOp, spirv::GLSLLogOp>,
-      UnaryAndBinaryOpPattern<math::RsqrtOp, spirv::GLSLInverseSqrtOp>,
-      UnaryAndBinaryOpPattern<math::PowFOp, spirv::GLSLPowOp>,
-      UnaryAndBinaryOpPattern<math::SinOp, spirv::GLSLSinOp>,
-      UnaryAndBinaryOpPattern<math::SqrtOp, spirv::GLSLSqrtOp>,
-      UnaryAndBinaryOpPattern<math::TanhOp, spirv::GLSLTanhOp>,
-
       // Unary and binary patterns
       BitwiseOpPattern<AndOp, spirv::LogicalAndOp, spirv::BitwiseAndOp>,
       BitwiseOpPattern<OrOp, spirv::LogicalOrOp, spirv::BitwiseOrOp>,
@@ -1369,7 +1335,7 @@ void populateStandardToSPIRVPatterns(SPIRVTypeConverter &typeConverter,
       UnaryAndBinaryOpPattern<UnsignedDivIOp, spirv::UDivOp>,
       UnaryAndBinaryOpPattern<UnsignedRemIOp, spirv::UModOp>,
       UnaryAndBinaryOpPattern<UnsignedShiftRightOp, spirv::ShiftRightLogicalOp>,
-      Log1pOpPattern, SignedRemIOpPattern, XOrOpPattern, BoolXOrOpPattern,
+      SignedRemIOpPattern, XOrOpPattern, BoolXOrOpPattern,
 
       // Comparison patterns
       BoolCmpIOpPattern, CmpFOpPattern, CmpFOpNanNonePattern, CmpIOpPattern,
