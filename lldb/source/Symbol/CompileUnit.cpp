@@ -52,7 +52,7 @@ void CompileUnit::DumpSymbolContext(Stream *s) {
 
 void CompileUnit::GetDescription(Stream *s,
                                  lldb::DescriptionLevel level) const {
-  const char *language = GetCachedLanguage();
+  const char *language = Language::GetNameForLanguageType(m_language);
   *s << "id = " << (const UserID &)*this << ", file = \""
      << this->GetPrimaryFile() << "\", language = \"" << language << '"';
 }
@@ -97,18 +97,12 @@ lldb::FunctionSP CompileUnit::FindFunction(
   return {};
 }
 
-const char *CompileUnit::GetCachedLanguage() const {
-  if (m_flags.IsClear(flagsParsedLanguage))
-    return "<not loaded>";
-  return Language::GetNameForLanguageType(m_language);
-}
-
 // Dump the current contents of this object. No functions that cause on demand
 // parsing of functions, globals, statics are called, so this is a good
 // function to call to get an idea of the current contents of the CompileUnit
 // object.
 void CompileUnit::Dump(Stream *s, bool show_context) const {
-  const char *language = GetCachedLanguage();
+  const char *language = Language::GetNameForLanguageType(m_language);
 
   s->Printf("%p: ", static_cast<const void *>(this));
   s->Indent();
