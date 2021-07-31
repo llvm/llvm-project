@@ -139,7 +139,7 @@ MATH_MANGLE(y1)(float x)
         if (x < b0) {
             const float twobypi = 0x1.45f306p-1f;
             if (x < 0x1.0p-20f)
-                ret = MATH_DIV(-twobypi, x);
+                ret = MATH_DIV(-twobypi, BUILTIN_ABS_F32(x));
             else
                 ret = MATH_MAD(ret, x, twobypi*(MATH_MANGLE(j1)(x) * MATH_MANGLE(log)(x) - MATH_RCP(x)));
             ret = x < 0.0f ? AS_FLOAT(QNANBITPATT_SP32) : ret;
