@@ -197,7 +197,7 @@ inline void PartialReduction(Descriptor &result, const Descriptor &x, int dim,
       result, x, dim, terminator, intrinsic, TypeCode{CAT, KIND});
   SubscriptValue at[maxRank];
   result.GetLowerBounds(at);
-  INTERNAL_CHECK(at[0] == 1);
+  INTERNAL_CHECK(result.rank() == 0 || at[0] == 1);
   using CppType = CppTypeFor<CAT, KIND>;
   if (mask) {
     CheckConformability(x, *mask, terminator, intrinsic, "ARRAY", "MASK");

@@ -267,7 +267,7 @@ template <LogicalReduction REDUCTION> struct LogicalReduceHelper {
           result, x, dim, terminator, intrinsic, x.type());
       SubscriptValue at[maxRank];
       result.GetLowerBounds(at);
-      INTERNAL_CHECK(at[0] == 1);
+      INTERNAL_CHECK(result.rank() == 0 || at[0] == 1);
       using CppType = CppTypeFor<TypeCategory::Logical, KIND>;
       for (auto n{result.Elements()}; n-- > 0; result.IncrementSubscripts(at)) {
         *result.Element<CppType>(at) =
@@ -315,7 +315,7 @@ template <int KIND> struct CountDimension {
         TypeCode{TypeCategory::Integer, KIND});
     SubscriptValue at[maxRank];
     result.GetLowerBounds(at);
-    INTERNAL_CHECK(at[0] == 1);
+    INTERNAL_CHECK(result.rank() == 0 || at[0] == 1);
     using CppType = CppTypeFor<TypeCategory::Integer, KIND>;
     for (auto n{result.Elements()}; n-- > 0; result.IncrementSubscripts(at)) {
       *result.Element<CppType>(at) =
