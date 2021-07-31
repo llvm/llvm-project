@@ -380,6 +380,7 @@ struct ThreadState {
   // We do not distinguish beteween ignoring reads and writes
   // for better performance.
   int ignore_reads_and_writes;
+  atomic_sint32_t pending_signals;
   int ignore_sync;
   int suppress_reports;
   // Go does not support ignores.
@@ -752,7 +753,7 @@ void ThreadDetach(ThreadState *thr, uptr pc, Tid tid);
 void ThreadFinalize(ThreadState *thr);
 void ThreadSetName(ThreadState *thr, const char *name);
 int ThreadCount(ThreadState *thr);
-void ProcessPendingSignals(ThreadState *thr);
+void ProcessPendingSignalsImpl(ThreadState *thr);
 void ThreadNotJoined(ThreadState *thr, uptr pc, Tid tid, uptr uid);
 
 Processor *ProcCreate();
@@ -857,6 +858,11 @@ void FiberSwitch(ThreadState *thr, uptr pc, ThreadState *fiber, unsigned flags);
 enum FiberSwitchFlags {
   FiberSwitchFlagNoSync = 1 << 0, // __tsan_switch_to_fiber_no_sync
 };
+
+ALWAYS_INLINE void ProcessPendingSignals(ThreadState *thr) {
+  if (UNLIKELY(atomic_load_relaxed(&thr->pending_signals)))
+    ProcessPendingSignalsImpl(thr);
+}
 
 extern bool is_initialized;
 
