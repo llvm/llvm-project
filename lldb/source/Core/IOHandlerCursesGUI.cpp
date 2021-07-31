@@ -1909,6 +1909,176 @@ protected:
   SelectionType m_selection_type;
 };
 
+template <class KeyFieldDelegateType, class ValueFieldDelegateType>
+class MappingFieldDelegate : public FieldDelegate {
+public:
+  MappingFieldDelegate(KeyFieldDelegateType key_field,
+                       ValueFieldDelegateType value_field)
+      : m_key_field(key_field), m_value_field(value_field),
+        m_selection_type(SelectionType::Key) {}
+
+  // Signify which element is selected. The key field or its value field.
+  enum class SelectionType { Key, Value };
+
+  // A mapping field is drawn as two text fields with a right arrow in between.
+  // The first field stores the key of the mapping and the second stores the
+  // value if the mapping.
+  //
+  // __[Key]_____________   __[Value]___________
+  // |                  | > |                  |
+  // |__________________|   |__________________|
+  // - Error message if it exists.
+
+  // The mapping field has a height that is equal to the maximum height between
+  // the key and value fields.
+  int FieldDelegateGetHeight() override {
+    return std::max(m_key_field.FieldDelegateGetHeight(),
+                    m_value_field.FieldDelegateGetHeight());
+  }
+
+  void DrawArrow(SubPad &surface) {
+    surface.MoveCursor(0, 1);
+    surface.PutChar(ACS_RARROW);
+  }
+
+  void FieldDelegateDraw(SubPad &surface, bool is_selected) override {
+    Rect bounds = surface.GetFrame();
+    Rect key_field_bounds, arrow_and_value_field_bounds;
+    bounds.VerticalSplit(bounds.size.width / 2, key_field_bounds,
+                         arrow_and_value_field_bounds);
+    Rect arrow_bounds, value_field_bounds;
+    arrow_and_value_field_bounds.VerticalSplit(1, arrow_bounds,
+                                               value_field_bounds);
+
+    SubPad key_field_surface = SubPad(surface, key_field_bounds);
+    SubPad arrow_surface = SubPad(surface, arrow_bounds);
+    SubPad value_field_surface = SubPad(surface, value_field_bounds);
+
+    bool key_is_selected =
+        m_selection_type == SelectionType::Key && is_selected;
+    m_key_field.FieldDelegateDraw(key_field_surface, key_is_selected);
+    DrawArrow(arrow_surface);
+    bool value_is_selected =
+        m_selection_type == SelectionType::Value && is_selected;
+    m_value_field.FieldDelegateDraw(value_field_surface, value_is_selected);
+  }
+
+  HandleCharResult SelectNext(int key) {
+    if (FieldDelegateOnLastOrOnlyElement())
+      return eKeyNotHandled;
+
+    if (!m_key_field.FieldDelegateOnLastOrOnlyElement()) {
+      return m_key_field.FieldDelegateHandleChar(key);
+    }
+
+    m_key_field.FieldDelegateExitCallback();
+    m_selection_type = SelectionType::Value;
+    m_value_field.FieldDelegateSelectFirstElement();
+    return eKeyHandled;
+  }
+
+  HandleCharResult SelectPrevious(int key) {
+    if (FieldDelegateOnFirstOrOnlyElement())
+      return eKeyNotHandled;
+
+    if (!m_value_field.FieldDelegateOnFirstOrOnlyElement()) {
+      return m_value_field.FieldDelegateHandleChar(key);
+    }
+
+    m_value_field.FieldDelegateExitCallback();
+    m_selection_type = SelectionType::Key;
+    m_key_field.FieldDelegateSelectLastElement();
+    return eKeyHandled;
+  }
+
+  HandleCharResult FieldDelegateHandleChar(int key) override {
+    switch (key) {
+    case '\t':
+      SelectNext(key);
+      return eKeyHandled;
+    case KEY_SHIFT_TAB:
+      SelectPrevious(key);
+      return eKeyHandled;
+    default:
+      break;
+    }
+
+    // If the key wasn't handled, pass the key to the selected field.
+    if (m_selection_type == SelectionType::Key)
+      return m_key_field.FieldDelegateHandleChar(key);
+    else
+      return m_value_field.FieldDelegateHandleChar(key);
+
+    return eKeyNotHandled;
+  }
+
+  bool FieldDelegateOnFirstOrOnlyElement() override {
+    return m_selection_type == SelectionType::Key;
+  }
+
+  bool FieldDelegateOnLastOrOnlyElement() override {
+    return m_selection_type == SelectionType::Value;
+  }
+
+  void FieldDelegateSelectFirstElement() override {
+    m_selection_type = SelectionType::Key;
+  }
+
+  void FieldDelegateSelectLastElement() override {
+    m_selection_type = SelectionType::Value;
+  }
+
+  bool FieldDelegateHasError() override {
+    return m_key_field.FieldDelegateHasError() ||
+           m_value_field.FieldDelegateHasError();
+  }
+
+  KeyFieldDelegateType &GetKeyField() { return m_key_field; }
+
+  ValueFieldDelegateType &GetValueField() { return m_value_field; }
+
+protected:
+  KeyFieldDelegateType m_key_field;
+  ValueFieldDelegateType m_value_field;
+  // See SelectionType class enum.
+  SelectionType m_selection_type;
+};
+
+class EnvironmentVariableNameFieldDelegate : public TextFieldDelegate {
+public:
+  EnvironmentVariableNameFieldDelegate(const char *content)
+      : TextFieldDelegate("Name", content, true) {}
+
+  // Environment variable names can't contain an equal sign.
+  bool IsAcceptableChar(int key) override {
+    return TextFieldDelegate::IsAcceptableChar(key) && key != '=';
+  }
+
+  const std::string &GetName() { return m_content; }
+};
+
+class EnvironmentVariableFieldDelegate
+    : public MappingFieldDelegate<EnvironmentVariableNameFieldDelegate,
+                                  TextFieldDelegate> {
+public:
+  EnvironmentVariableFieldDelegate()
+      : MappingFieldDelegate(
+            EnvironmentVariableNameFieldDelegate(""),
+            TextFieldDelegate("Value", "", /*required=*/false)) {}
+
+  const std::string &GetName() { return GetKeyField().GetName(); }
+
+  const std::string &GetValue() { return GetValueField().GetText(); }
+};
+
+class EnvironmentVariableListFieldDelegate
+    : public ListFieldDelegate<EnvironmentVariableFieldDelegate> {
+public:
+  EnvironmentVariableListFieldDelegate()
+      : ListFieldDelegate("Environment Variables",
+                          EnvironmentVariableFieldDelegate()) {}
+};
+
 class FormAction {
 public:
   FormAction(const char *label, std::function<void(Window &)> action)
@@ -2056,6 +2226,36 @@ public:
   ListFieldDelegate<T> *AddListField(const char *label, T default_field) {
     ListFieldDelegate<T> *delegate =
         new ListFieldDelegate<T>(label, default_field);
+    m_fields.push_back(FieldDelegateUP(delegate));
+    return delegate;
+  }
+
+  template <class K, class V>
+  MappingFieldDelegate<K, V> *AddMappingField(K key_field, V value_field) {
+    MappingFieldDelegate<K, V> *delegate =
+        new MappingFieldDelegate<K, V>(key_field, value_field);
+    m_fields.push_back(FieldDelegateUP(delegate));
+    return delegate;
+  }
+
+  EnvironmentVariableNameFieldDelegate *
+  AddEnvironmentVariableNameField(const char *content) {
+    EnvironmentVariableNameFieldDelegate *delegate =
+        new EnvironmentVariableNameFieldDelegate(content);
+    m_fields.push_back(FieldDelegateUP(delegate));
+    return delegate;
+  }
+
+  EnvironmentVariableFieldDelegate *AddEnvironmentVariableField() {
+    EnvironmentVariableFieldDelegate *delegate =
+        new EnvironmentVariableFieldDelegate();
+    m_fields.push_back(FieldDelegateUP(delegate));
+    return delegate;
+  }
+
+  EnvironmentVariableListFieldDelegate *AddEnvironmentVariableListField() {
+    EnvironmentVariableListFieldDelegate *delegate =
+        new EnvironmentVariableListFieldDelegate();
     m_fields.push_back(FieldDelegateUP(delegate));
     return delegate;
   }
