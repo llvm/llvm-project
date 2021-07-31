@@ -217,6 +217,18 @@ define double @fake_ldexp_16(i16 %x) {
   ret double %z
 }
 
+; PR50885 - this would crash in ValueTracking.
+
+declare i32 @snprintf(i8*, double, i32*)
+
+define i32 @fake_snprintf(i32 %buf, double %len, i32 * %str) {
+; CHECK-LABEL: @fake_snprintf(
+; CHECK-NEXT:    [[CALL:%.*]] = call i32 @snprintf(i8* undef, double [[LEN:%.*]], i32* [[STR:%.*]])
+; CHECK-NEXT:    ret i32 [[CALL]]
+;
+  %call = call i32 @snprintf(i8* undef, double %len, i32* %str)
+  ret i32 %call
+}
 
 attributes #0 = { nobuiltin }
 attributes #1 = { builtin }
