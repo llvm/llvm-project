@@ -297,6 +297,16 @@ def ConvertMemRefToLLVM : Pass<"convert-memref-to-llvm", "ModuleOp"> {
 }
 
 //===----------------------------------------------------------------------===//
+// MemRefToSPIRV
+//===----------------------------------------------------------------------===//
+
+def ConvertMemRefToSPIRV : Pass<"convert-memref-to-spirv", "ModuleOp"> {
+  let summary = "Convert MemRef dialect to SPIR-V dialect";
+  let constructor = "mlir::createConvertMemRefToSPIRVPass()";
+  let dependentDialects = ["spirv::SPIRVDialect"];
+}
+
+//===----------------------------------------------------------------------===//
 // OpenACCToSCF
 //===----------------------------------------------------------------------===//
 

@@ -1,8 +1,4 @@
-// RUN: mlir-opt -allow-unregistered-dialect -split-input-file -convert-std-to-spirv -canonicalize -verify-diagnostics %s -o - | FileCheck %s
-
-//===----------------------------------------------------------------------===//
-// memref allocation/deallocation ops
-//===----------------------------------------------------------------------===//
+// RUN: mlir-opt -split-input-file -convert-memref-to-spirv -canonicalize -verify-diagnostics %s -o - | FileCheck %s
 
 module attributes {
   spv.target_env = #spv.target_env<
@@ -26,7 +22,6 @@ module attributes {
 //     CHECK:   %[[STOREPTR:.+]] = spv.AccessChain %[[PTR]]
 //     CHECK:   spv.Store "Workgroup" %[[STOREPTR]], %[[VAL]] : f32
 // CHECK-NOT:   memref.dealloc
-//     CHECK:   spv.Return
 
 // -----
 
@@ -75,8 +70,7 @@ module attributes {
 // CHECK-SAME:   !spv.ptr<!spv.struct<(!spv.array<6 x i32, stride=4>)>, Workgroup>
 //  CHECK-DAG: spv.GlobalVariable @__workgroup_mem__{{[0-9]+}}
 // CHECK-SAME:   !spv.ptr<!spv.struct<(!spv.array<20 x f32, stride=4>)>, Workgroup>
-//      CHECK: spv.func @two_allocs()
-//      CHECK: spv.Return
+//      CHECK: func @two_allocs()
 
 // -----
 
@@ -96,8 +90,7 @@ module attributes {
 // CHECK-SAME:   !spv.ptr<!spv.struct<(!spv.array<2 x vector<2xi32>, stride=8>)>, Workgroup>
 //  CHECK-DAG: spv.GlobalVariable @__workgroup_mem__{{[0-9]+}}
 // CHECK-SAME:   !spv.ptr<!spv.struct<(!spv.array<4 x vector<4xf32>, stride=16>)>, Workgroup>
-//      CHECK: spv.func @two_allocs_vector()
-//      CHECK: spv.Return
+//      CHECK: func @two_allocs_vector()
 
 
 // -----
@@ -108,8 +101,7 @@ module attributes {
   }
 {
   func @alloc_dealloc_dynamic_workgroup_mem(%arg0 : index) {
-    // expected-error @+2 {{unhandled allocation type}}
-    // expected-error @+1 {{'memref.alloc' op operand #0 must be index}}
+    // expected-error @+1 {{unhandled allocation type}}
     %0 = memref.alloc(%arg0) : memref<4x?xf32, 3>
     return
   }
@@ -138,8 +130,7 @@ module attributes {
   }
 {
   func @alloc_dealloc_dynamic_workgroup_mem(%arg0 : memref<4x?xf32, 3>) {
-    // expected-error @+2 {{unhandled deallocation type}}
-    // expected-error @+1 {{'memref.dealloc' op operand #0 must be unranked.memref of any type values or memref of any type values}}
+    // expected-error @+1 {{unhandled deallocation type}}
     memref.dealloc %arg0 : memref<4x?xf32, 3>
     return
   }
@@ -153,8 +144,7 @@ module attributes {
   }
 {
   func @alloc_dealloc_mem(%arg0 : memref<4x5xf32>) {
-    // expected-error @+2 {{unhandled deallocation type}}
-    // expected-error @+1 {{op operand #0 must be unranked.memref of any type values or memref of any type values}}
+    // expected-error @+1 {{unhandled deallocation type}}
     memref.dealloc %arg0 : memref<4x5xf32>
     return
   }

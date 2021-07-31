@@ -1944,6 +1944,7 @@ cc_library(
         ":MathToLibm",
         ":MathToSPIRV",
         ":MemRefToLLVM",
+        ":MemRefToSPIRV",
         ":OpenACCToLLVM",
         ":OpenACCToSCF",
         ":OpenMPToLLVM",
@@ -3017,6 +3018,7 @@ cc_library(
         ":ConversionPassIncGen",
         ":GPUDialect",
         ":IR",
+        ":MemRefToSPIRV",
         ":Pass",
         ":SCFDialect",
         ":SCFToSPIRV",
@@ -3712,7 +3714,6 @@ cc_library(
     deps = [
         ":ConversionPassIncGen",
         ":IR",
-        ":MemRefDialect",
         ":Pass",
         ":SPIRVConversion",
         ":SPIRVDialect",
@@ -4258,6 +4259,7 @@ cc_library(
         ":Affine",
         ":ConversionPassIncGen",
         ":IR",
+        ":MemRefToSPIRV",
         ":Pass",
         ":SCFDialect",
         ":SPIRVConversion",
@@ -4381,6 +4383,32 @@ cc_library(
         ":Pass",
         ":Support",
         ":Transforms",
+    ],
+)
+
+cc_library(
+    name = "MemRefToSPIRV",
+    srcs = glob([
+        "lib/Conversion/MemRefToSPIRV/*.cpp",
+        "lib/Conversion/MemRefToSPIRV/*.h",
+    ]) + ["lib/Conversion/PassDetail.h"],
+    hdrs = glob([
+        "include/mlir/Conversion/MemRefToSPIRV/*.h",
+    ]),
+    includes = [
+        "include",
+        "lib/Conversion/MemRefToSPIRV",
+    ],
+    deps = [
+        ":ConversionPassIncGen",
+        ":IR",
+        ":MemRefDialect",
+        ":Pass",
+        ":SPIRVConversion",
+        ":SPIRVDialect",
+        ":Support",
+        ":Transforms",
+        "//llvm:Support",
     ],
 )
 
@@ -5008,6 +5036,7 @@ cc_library(
         ":MathTransforms",
         ":MemRefDialect",
         ":MemRefToLLVM",
+        ":MemRefToSPIRV",
         ":MemRefTransforms",
         ":NVVMDialect",
         ":OpenACCDialect",
