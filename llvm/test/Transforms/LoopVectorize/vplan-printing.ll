@@ -1,6 +1,6 @@
 ; REQUIRES: asserts
 
-; RUN: opt -loop-vectorize -debug-only=loop-vectorize -force-vector-interleave=1 -force-vector-width=4 -prefer-inloop-reductions -disable-output %s 2>&1 | FileCheck %s
+; RUN: opt -loop-vectorize -debug-only=loop-vectorize -force-vector-interleave=1 -force-vector-width=4 -prefer-inloop-reductions -enable-interleaved-mem-accesses=true -enable-masked-interleaved-mem-accesses -disable-output %s 2>&1 | FileCheck %s
 
 target datalayout = "e-p:64:64:64-i1:8:8-i8:8:8-i16:16:16-i32:32:32-i64:64:64-f32:32:32-f64:64:64-v64:64:64-v128:128:128-a0:0:64-s0:64:64-f80:128:128-n8:16:32:64-S128"
 
@@ -162,6 +162,68 @@ for.inc:                                          ; preds = %if.then, %for.body
   br i1 %cond, label %for.body, label %for.end
 
 for.end:                                          ; preds = %for.inc
+  ret void
+}
+
+@AB = common global [1024 x i32] zeroinitializer, align 4
+@CD = common global [1024 x i32] zeroinitializer, align 4
+
+define void @print_interleave_groups(i32 %C, i32 %D) {
+; CHECK-LABEL: Checking a loop in "print_interleave_groups"
+; CHECK:       VPlan 'Initial VPlan for VF={4},UF>=1' {
+; CHECK-NEXT:  for.body:
+; CHECK-NEXT:   WIDEN-INDUCTION %iv = phi 0, %iv.next
+; CHECK-NEXT:   CLONE ir<%gep.AB.0> = getelementptr ir<@AB>, ir<0>, ir<%iv>
+; CHECK-NEXT:   INTERLEAVE-GROUP with factor 4 at %AB.0, ir<%gep.AB.0>
+; CHECK-NEXT:     %AB.0 = load %gep.AB.0 0
+; CHECK-NEXT:     %AB.1 = load %gep.AB.1 1
+; CHECK-NEXT:     %AB.3 = load %gep.AB.3 3
+; CHECK-NEXT:   CLONE ir<%iv.plus.1> = add ir<%iv>, ir<1>
+; CHECK-NEXT:   CLONE ir<%gep.AB.1> = getelementptr ir<@AB>, ir<0>, ir<%iv.plus.1>
+; CHECK-NEXT:   CLONE ir<%iv.plus.2> = add ir<%iv>, ir<2>
+; CHECK-NEXT:   CLONE ir<%iv.plus.3> = add ir<%iv>, ir<3>
+; CHECK-NEXT:   CLONE ir<%gep.AB.3> = getelementptr ir<@AB>, ir<0>, ir<%iv.plus.3>
+; CHECK-NEXT:   WIDEN ir<%add> = add ir<%AB.0>, ir<%AB.1>
+; CHECK-NEXT:   CLONE ir<%gep.CD.0> = getelementptr ir<@CD>, ir<0>, ir<%iv>
+; CHECK-NEXT:   CLONE ir<%gep.CD.1> = getelementptr ir<@CD>, ir<0>, ir<%iv.plus.1>
+; CHECK-NEXT:   CLONE ir<%gep.CD.2> = getelementptr ir<@CD>, ir<0>, ir<%iv.plus.2>
+; CHECK-NEXT:   CLONE ir<%gep.CD.3> = getelementptr ir<@CD>, ir<0>, ir<%iv.plus.3>
+; CHECK-NEXT:   INTERLEAVE-GROUP with factor 4 at <badref>, ir<%gep.CD.3>
+; CHECK-NEXT:     store %add, %gep.CD.0 0
+; CHECK-NEXT:     store 1, %gep.CD.1 1
+; CHECK-NEXT:     store 2, %gep.CD.2 2
+; CHECK-NEXT:     store %AB.3, %gep.CD.3 3
+; CHECK-NEXT: No successors
+; CHECK-NEXT: }
+;
+entry:
+  br label %for.body
+
+for.body:
+  %iv = phi i64 [ 0, %entry ], [ %iv.next, %for.body ]
+  %gep.AB.0= getelementptr inbounds [1024 x i32], [1024 x i32]* @AB, i64 0, i64 %iv
+  %AB.0 = load i32, i32* %gep.AB.0, align 4
+  %iv.plus.1 = add i64 %iv, 1
+  %gep.AB.1 = getelementptr inbounds [1024 x i32], [1024 x i32]* @AB, i64 0, i64 %iv.plus.1
+  %AB.1 = load i32, i32* %gep.AB.1, align 4
+  %iv.plus.2 = add i64 %iv, 2
+  %iv.plus.3 = add i64 %iv, 3
+  %gep.AB.3 = getelementptr inbounds [1024 x i32], [1024 x i32]* @AB, i64 0, i64 %iv.plus.3
+  %AB.3 = load i32, i32* %gep.AB.3, align 4
+  %add = add nsw i32 %AB.0, %AB.1
+  %gep.CD.0 = getelementptr inbounds [1024 x i32], [1024 x i32]* @CD, i64 0, i64 %iv
+  store i32 %add, i32* %gep.CD.0, align 4
+  %gep.CD.1 = getelementptr inbounds [1024 x i32], [1024 x i32]* @CD, i64 0, i64 %iv.plus.1
+  store i32 1, i32* %gep.CD.1, align 4
+  %gep.CD.2 = getelementptr inbounds [1024 x i32], [1024 x i32]* @CD, i64 0, i64 %iv.plus.2
+  store i32 2, i32* %gep.CD.2, align 4
+  %gep.CD.3 = getelementptr inbounds [1024 x i32], [1024 x i32]* @CD, i64 0, i64 %iv.plus.3
+  store i32 %AB.3, i32* %gep.CD.3, align 4
+  %iv.next = add nuw nsw i64 %iv, 4
+  %cmp = icmp slt i64 %iv.next, 1024
+  br i1 %cmp, label %for.body, label %for.end
+
+for.end:
   ret void
 }
 
