@@ -1113,9 +1113,9 @@ int main() {
 // CHECK1-NEXT:    [[TMP24:%.*]] = ptrtoint %struct.S* [[ARRAYIDX14]] to i64
 // CHECK1-NEXT:    [[TMP25:%.*]] = ptrtoint %struct.S* [[ARRAYIDX9]] to i64
 // CHECK1-NEXT:    [[TMP26:%.*]] = sub i64 [[TMP24]], [[TMP25]]
-// CHECK1-NEXT:    [[TMP27:%.*]] = sdiv exact i64 [[TMP26]], ptrtoint (float* getelementptr (float, float* null, i32 1) to i64)
+// CHECK1-NEXT:    [[TMP27:%.*]] = sdiv exact i64 [[TMP26]], ptrtoint (%struct.S* getelementptr ([[STRUCT_S]], %struct.S* null, i32 1) to i64)
 // CHECK1-NEXT:    [[TMP28:%.*]] = add nuw i64 [[TMP27]], 1
-// CHECK1-NEXT:    [[TMP29:%.*]] = mul nuw i64 [[TMP28]], ptrtoint (float* getelementptr (float, float* null, i32 1) to i64)
+// CHECK1-NEXT:    [[TMP29:%.*]] = mul nuw i64 [[TMP28]], ptrtoint (%struct.S* getelementptr ([[STRUCT_S]], %struct.S* null, i32 1) to i64)
 // CHECK1-NEXT:    [[VLA15:%.*]] = alloca [[STRUCT_S]], i64 [[TMP28]], align 16
 // CHECK1-NEXT:    store i64 [[TMP28]], i64* [[__VLA_EXPR1]], align 8
 // CHECK1-NEXT:    [[TMP30:%.*]] = getelementptr [[STRUCT_S]], %struct.S* [[VLA15]], i64 [[TMP28]]
@@ -1132,7 +1132,7 @@ int main() {
 // CHECK1-NEXT:    [[TMP32:%.*]] = ptrtoint %struct.S* [[TMP31]] to i64
 // CHECK1-NEXT:    [[TMP33:%.*]] = ptrtoint %struct.S* [[ARRAYIDX9]] to i64
 // CHECK1-NEXT:    [[TMP34:%.*]] = sub i64 [[TMP32]], [[TMP33]]
-// CHECK1-NEXT:    [[TMP35:%.*]] = sdiv exact i64 [[TMP34]], ptrtoint (float* getelementptr (float, float* null, i32 1) to i64)
+// CHECK1-NEXT:    [[TMP35:%.*]] = sdiv exact i64 [[TMP34]], ptrtoint (%struct.S* getelementptr ([[STRUCT_S]], %struct.S* null, i32 1) to i64)
 // CHECK1-NEXT:    [[TMP36:%.*]] = getelementptr [[STRUCT_S]], %struct.S* [[VLA15]], i64 [[TMP35]]
 // CHECK1-NEXT:    [[TMP37:%.*]] = bitcast %struct.S* [[TMP36]] to [10 x [4 x %struct.S]]*
 // CHECK1-NEXT:    [[TMP38:%.*]] = load i32*, i32** [[DOTGLOBAL_TID__ADDR]], align 8
@@ -1855,9 +1855,9 @@ int main() {
 // CHECK1-NEXT:    [[TMP5:%.*]] = ptrtoint %struct.S* [[ARRAYIDX3]] to i64
 // CHECK1-NEXT:    [[TMP6:%.*]] = ptrtoint %struct.S* [[ARRAYIDX1]] to i64
 // CHECK1-NEXT:    [[TMP7:%.*]] = sub i64 [[TMP5]], [[TMP6]]
-// CHECK1-NEXT:    [[TMP8:%.*]] = sdiv exact i64 [[TMP7]], ptrtoint (float* getelementptr (float, float* null, i32 1) to i64)
+// CHECK1-NEXT:    [[TMP8:%.*]] = sdiv exact i64 [[TMP7]], ptrtoint (%struct.S* getelementptr ([[STRUCT_S]], %struct.S* null, i32 1) to i64)
 // CHECK1-NEXT:    [[TMP9:%.*]] = add nuw i64 [[TMP8]], 1
-// CHECK1-NEXT:    [[TMP10:%.*]] = mul nuw i64 [[TMP9]], ptrtoint (float* getelementptr (float, float* null, i32 1) to i64)
+// CHECK1-NEXT:    [[TMP10:%.*]] = mul nuw i64 [[TMP9]], ptrtoint (%struct.S* getelementptr ([[STRUCT_S]], %struct.S* null, i32 1) to i64)
 // CHECK1-NEXT:    [[TMP11:%.*]] = call i8* @llvm.stacksave()
 // CHECK1-NEXT:    store i8* [[TMP11]], i8** [[SAVED_STACK]], align 8
 // CHECK1-NEXT:    [[VLA:%.*]] = alloca [[STRUCT_S]], i64 [[TMP9]], align 16
@@ -1877,7 +1877,7 @@ int main() {
 // CHECK1-NEXT:    [[TMP15:%.*]] = ptrtoint %struct.S* [[TMP14]] to i64
 // CHECK1-NEXT:    [[TMP16:%.*]] = ptrtoint %struct.S* [[ARRAYIDX1]] to i64
 // CHECK1-NEXT:    [[TMP17:%.*]] = sub i64 [[TMP15]], [[TMP16]]
-// CHECK1-NEXT:    [[TMP18:%.*]] = sdiv exact i64 [[TMP17]], ptrtoint (float* getelementptr (float, float* null, i32 1) to i64)
+// CHECK1-NEXT:    [[TMP18:%.*]] = sdiv exact i64 [[TMP17]], ptrtoint (%struct.S* getelementptr ([[STRUCT_S]], %struct.S* null, i32 1) to i64)
 // CHECK1-NEXT:    [[TMP19:%.*]] = getelementptr [[STRUCT_S]], %struct.S* [[VLA]], i64 [[TMP18]]
 // CHECK1-NEXT:    store %struct.S** [[_TMP5]], %struct.S*** [[_TMP4]], align 8
 // CHECK1-NEXT:    store %struct.S* [[TMP19]], %struct.S** [[_TMP5]], align 8
@@ -2084,7 +2084,7 @@ int main() {
 // CHECK1-NEXT:    [[TMP8:%.*]] = ptrtoint %struct.S* [[TMP7]] to i64
 // CHECK1-NEXT:    [[TMP9:%.*]] = ptrtoint %struct.S* [[ARRAYIDX1]] to i64
 // CHECK1-NEXT:    [[TMP10:%.*]] = sub i64 [[TMP8]], [[TMP9]]
-// CHECK1-NEXT:    [[TMP11:%.*]] = sdiv exact i64 [[TMP10]], ptrtoint (float* getelementptr (float, float* null, i32 1) to i64)
+// CHECK1-NEXT:    [[TMP11:%.*]] = sdiv exact i64 [[TMP10]], ptrtoint (%struct.S* getelementptr ([[STRUCT_S]], %struct.S* null, i32 1) to i64)
 // CHECK1-NEXT:    [[TMP12:%.*]] = bitcast [1 x [6 x %struct.S]]* [[VAR24]] to %struct.S*
 // CHECK1-NEXT:    [[TMP13:%.*]] = getelementptr [[STRUCT_S]], %struct.S* [[TMP12]], i64 [[TMP11]]
 // CHECK1-NEXT:    store %struct.S** [[_TMP6]], %struct.S*** [[_TMP5]], align 8
@@ -2285,7 +2285,7 @@ int main() {
 // CHECK1-NEXT:    [[TMP8:%.*]] = ptrtoint %struct.S* [[TMP7]] to i64
 // CHECK1-NEXT:    [[TMP9:%.*]] = ptrtoint %struct.S* [[ARRAYIDX1]] to i64
 // CHECK1-NEXT:    [[TMP10:%.*]] = sub i64 [[TMP8]], [[TMP9]]
-// CHECK1-NEXT:    [[TMP11:%.*]] = sdiv exact i64 [[TMP10]], ptrtoint (float* getelementptr (float, float* null, i32 1) to i64)
+// CHECK1-NEXT:    [[TMP11:%.*]] = sdiv exact i64 [[TMP10]], ptrtoint (%struct.S* getelementptr ([[STRUCT_S]], %struct.S* null, i32 1) to i64)
 // CHECK1-NEXT:    [[TMP12:%.*]] = bitcast [1 x [6 x %struct.S]]* [[VAR24]] to %struct.S*
 // CHECK1-NEXT:    [[TMP13:%.*]] = getelementptr [[STRUCT_S]], %struct.S* [[TMP12]], i64 [[TMP11]]
 // CHECK1-NEXT:    store %struct.S** [[_TMP6]], %struct.S*** [[_TMP5]], align 8
@@ -2476,7 +2476,7 @@ int main() {
 // CHECK1-NEXT:    [[TMP7:%.*]] = ptrtoint %struct.S* [[TMP6]] to i64
 // CHECK1-NEXT:    [[TMP8:%.*]] = ptrtoint %struct.S* [[ARRAYIDX1]] to i64
 // CHECK1-NEXT:    [[TMP9:%.*]] = sub i64 [[TMP7]], [[TMP8]]
-// CHECK1-NEXT:    [[TMP10:%.*]] = sdiv exact i64 [[TMP9]], ptrtoint (float* getelementptr (float, float* null, i32 1) to i64)
+// CHECK1-NEXT:    [[TMP10:%.*]] = sdiv exact i64 [[TMP9]], ptrtoint (%struct.S* getelementptr ([[STRUCT_S]], %struct.S* null, i32 1) to i64)
 // CHECK1-NEXT:    [[TMP11:%.*]] = getelementptr [[STRUCT_S]], %struct.S* [[VAR24]], i64 [[TMP10]]
 // CHECK1-NEXT:    store %struct.S** [[_TMP6]], %struct.S*** [[_TMP5]], align 8
 // CHECK1-NEXT:    store %struct.S* [[TMP11]], %struct.S** [[_TMP6]], align 8
@@ -2616,7 +2616,7 @@ int main() {
 // CHECK1-NEXT:    [[TMP3:%.*]] = ptrtoint %struct.S* [[TMP2]] to i64
 // CHECK1-NEXT:    [[TMP4:%.*]] = ptrtoint %struct.S* [[ARRAYIDX]] to i64
 // CHECK1-NEXT:    [[TMP5:%.*]] = sub i64 [[TMP3]], [[TMP4]]
-// CHECK1-NEXT:    [[TMP6:%.*]] = sdiv exact i64 [[TMP5]], ptrtoint (float* getelementptr (float, float* null, i32 1) to i64)
+// CHECK1-NEXT:    [[TMP6:%.*]] = sdiv exact i64 [[TMP5]], ptrtoint (%struct.S* getelementptr ([[STRUCT_S]], %struct.S* null, i32 1) to i64)
 // CHECK1-NEXT:    [[TMP7:%.*]] = bitcast [5 x %struct.S]* [[VVAR22]] to %struct.S*
 // CHECK1-NEXT:    [[TMP8:%.*]] = getelementptr [[STRUCT_S]], %struct.S* [[TMP7]], i64 [[TMP6]]
 // CHECK1-NEXT:    [[TMP9:%.*]] = bitcast %struct.S* [[TMP8]] to [5 x %struct.S]*
@@ -2816,7 +2816,7 @@ int main() {
 // CHECK1-NEXT:    [[TMP7:%.*]] = ptrtoint %struct.S* [[TMP6]] to i64
 // CHECK1-NEXT:    [[TMP8:%.*]] = ptrtoint %struct.S* [[ARRAYIDX]] to i64
 // CHECK1-NEXT:    [[TMP9:%.*]] = sub i64 [[TMP7]], [[TMP8]]
-// CHECK1-NEXT:    [[TMP10:%.*]] = sdiv exact i64 [[TMP9]], ptrtoint (float* getelementptr (float, float* null, i32 1) to i64)
+// CHECK1-NEXT:    [[TMP10:%.*]] = sdiv exact i64 [[TMP9]], ptrtoint (%struct.S* getelementptr ([[STRUCT_S]], %struct.S* null, i32 1) to i64)
 // CHECK1-NEXT:    [[TMP11:%.*]] = bitcast [2 x %struct.S]* [[VAR34]] to %struct.S*
 // CHECK1-NEXT:    [[TMP12:%.*]] = getelementptr [[STRUCT_S]], %struct.S* [[TMP11]], i64 [[TMP10]]
 // CHECK1-NEXT:    [[TMP13:%.*]] = bitcast %struct.S* [[TMP12]] to [4 x %struct.S]*
@@ -3017,7 +3017,7 @@ int main() {
 // CHECK1-NEXT:    [[TMP7:%.*]] = ptrtoint %struct.S* [[TMP6]] to i64
 // CHECK1-NEXT:    [[TMP8:%.*]] = ptrtoint %struct.S* [[ARRAYIDX]] to i64
 // CHECK1-NEXT:    [[TMP9:%.*]] = sub i64 [[TMP7]], [[TMP8]]
-// CHECK1-NEXT:    [[TMP10:%.*]] = sdiv exact i64 [[TMP9]], ptrtoint (float* getelementptr (float, float* null, i32 1) to i64)
+// CHECK1-NEXT:    [[TMP10:%.*]] = sdiv exact i64 [[TMP9]], ptrtoint (%struct.S* getelementptr ([[STRUCT_S]], %struct.S* null, i32 1) to i64)
 // CHECK1-NEXT:    [[TMP11:%.*]] = bitcast [2 x %struct.S]* [[VAR34]] to %struct.S*
 // CHECK1-NEXT:    [[TMP12:%.*]] = getelementptr [[STRUCT_S]], %struct.S* [[TMP11]], i64 [[TMP10]]
 // CHECK1-NEXT:    [[TMP13:%.*]] = bitcast %struct.S* [[TMP12]] to [4 x %struct.S]*
@@ -3206,12 +3206,12 @@ int main() {
 // CHECK1-NEXT:    [[TMP4:%.*]] = ptrtoint %struct.S* [[ARRAYIDX3]] to i64
 // CHECK1-NEXT:    [[TMP5:%.*]] = ptrtoint %struct.S* [[ARRAYIDX]] to i64
 // CHECK1-NEXT:    [[TMP6:%.*]] = sub i64 [[TMP4]], [[TMP5]]
-// CHECK1-NEXT:    [[TMP7:%.*]] = sdiv exact i64 [[TMP6]], ptrtoint (float* getelementptr (float, float* null, i32 1) to i64)
+// CHECK1-NEXT:    [[TMP7:%.*]] = sdiv exact i64 [[TMP6]], ptrtoint (%struct.S* getelementptr ([[STRUCT_S:%.*]], %struct.S* null, i32 1) to i64)
 // CHECK1-NEXT:    [[TMP8:%.*]] = add nuw i64 [[TMP7]], 1
-// CHECK1-NEXT:    [[TMP9:%.*]] = mul nuw i64 [[TMP8]], ptrtoint (float* getelementptr (float, float* null, i32 1) to i64)
+// CHECK1-NEXT:    [[TMP9:%.*]] = mul nuw i64 [[TMP8]], ptrtoint (%struct.S* getelementptr ([[STRUCT_S]], %struct.S* null, i32 1) to i64)
 // CHECK1-NEXT:    [[TMP10:%.*]] = call i8* @llvm.stacksave()
 // CHECK1-NEXT:    store i8* [[TMP10]], i8** [[SAVED_STACK]], align 8
-// CHECK1-NEXT:    [[VLA:%.*]] = alloca [[STRUCT_S:%.*]], i64 [[TMP8]], align 16
+// CHECK1-NEXT:    [[VLA:%.*]] = alloca [[STRUCT_S]], i64 [[TMP8]], align 16
 // CHECK1-NEXT:    store i64 [[TMP8]], i64* [[__VLA_EXPR0]], align 8
 // CHECK1-NEXT:    [[TMP11:%.*]] = getelementptr [[STRUCT_S]], %struct.S* [[VLA]], i64 [[TMP8]]
 // CHECK1-NEXT:    [[OMP_ARRAYINIT_ISEMPTY:%.*]] = icmp eq %struct.S* [[VLA]], [[TMP11]]
@@ -3228,7 +3228,7 @@ int main() {
 // CHECK1-NEXT:    [[TMP14:%.*]] = ptrtoint %struct.S* [[TMP13]] to i64
 // CHECK1-NEXT:    [[TMP15:%.*]] = ptrtoint %struct.S* [[ARRAYIDX]] to i64
 // CHECK1-NEXT:    [[TMP16:%.*]] = sub i64 [[TMP14]], [[TMP15]]
-// CHECK1-NEXT:    [[TMP17:%.*]] = sdiv exact i64 [[TMP16]], ptrtoint (float* getelementptr (float, float* null, i32 1) to i64)
+// CHECK1-NEXT:    [[TMP17:%.*]] = sdiv exact i64 [[TMP16]], ptrtoint (%struct.S* getelementptr ([[STRUCT_S]], %struct.S* null, i32 1) to i64)
 // CHECK1-NEXT:    [[TMP18:%.*]] = getelementptr [[STRUCT_S]], %struct.S* [[VLA]], i64 [[TMP17]]
 // CHECK1-NEXT:    [[TMP19:%.*]] = bitcast %struct.S* [[TMP18]] to [4 x %struct.S]*
 // CHECK1-NEXT:    store [4 x %struct.S]* [[TMP19]], [4 x %struct.S]** [[_TMP4]], align 8
@@ -4246,7 +4246,7 @@ int main() {
 // CHECK1-NEXT:    [[TMP8:%.*]] = ptrtoint %struct.S.0* [[TMP7]] to i64
 // CHECK1-NEXT:    [[TMP9:%.*]] = ptrtoint %struct.S.0* [[ARRAYIDX]] to i64
 // CHECK1-NEXT:    [[TMP10:%.*]] = sub i64 [[TMP8]], [[TMP9]]
-// CHECK1-NEXT:    [[TMP11:%.*]] = sdiv exact i64 [[TMP10]], ptrtoint (i32* getelementptr (i32, i32* null, i32 1) to i64)
+// CHECK1-NEXT:    [[TMP11:%.*]] = sdiv exact i64 [[TMP10]], ptrtoint (%struct.S.0* getelementptr ([[STRUCT_S_0]], %struct.S.0* null, i32 1) to i64)
 // CHECK1-NEXT:    [[TMP12:%.*]] = bitcast [40 x %struct.S.0]* [[ARR4]] to %struct.S.0*
 // CHECK1-NEXT:    [[TMP13:%.*]] = getelementptr [[STRUCT_S_0]], %struct.S.0* [[TMP12]], i64 [[TMP11]]
 // CHECK1-NEXT:    [[TMP14:%.*]] = bitcast %struct.S.0* [[TMP13]] to [42 x %struct.S.0]*
@@ -5048,9 +5048,9 @@ int main() {
 // CHECK2-NEXT:    [[TMP24:%.*]] = ptrtoint %struct.S* [[ARRAYIDX14]] to i64
 // CHECK2-NEXT:    [[TMP25:%.*]] = ptrtoint %struct.S* [[ARRAYIDX9]] to i64
 // CHECK2-NEXT:    [[TMP26:%.*]] = sub i64 [[TMP24]], [[TMP25]]
-// CHECK2-NEXT:    [[TMP27:%.*]] = sdiv exact i64 [[TMP26]], ptrtoint (float* getelementptr (float, float* null, i32 1) to i64)
+// CHECK2-NEXT:    [[TMP27:%.*]] = sdiv exact i64 [[TMP26]], ptrtoint (%struct.S* getelementptr ([[STRUCT_S]], %struct.S* null, i32 1) to i64)
 // CHECK2-NEXT:    [[TMP28:%.*]] = add nuw i64 [[TMP27]], 1
-// CHECK2-NEXT:    [[TMP29:%.*]] = mul nuw i64 [[TMP28]], ptrtoint (float* getelementptr (float, float* null, i32 1) to i64)
+// CHECK2-NEXT:    [[TMP29:%.*]] = mul nuw i64 [[TMP28]], ptrtoint (%struct.S* getelementptr ([[STRUCT_S]], %struct.S* null, i32 1) to i64)
 // CHECK2-NEXT:    [[VLA15:%.*]] = alloca [[STRUCT_S]], i64 [[TMP28]], align 16
 // CHECK2-NEXT:    store i64 [[TMP28]], i64* [[__VLA_EXPR1]], align 8
 // CHECK2-NEXT:    [[TMP30:%.*]] = getelementptr [[STRUCT_S]], %struct.S* [[VLA15]], i64 [[TMP28]]
@@ -5067,7 +5067,7 @@ int main() {
 // CHECK2-NEXT:    [[TMP32:%.*]] = ptrtoint %struct.S* [[TMP31]] to i64
 // CHECK2-NEXT:    [[TMP33:%.*]] = ptrtoint %struct.S* [[ARRAYIDX9]] to i64
 // CHECK2-NEXT:    [[TMP34:%.*]] = sub i64 [[TMP32]], [[TMP33]]
-// CHECK2-NEXT:    [[TMP35:%.*]] = sdiv exact i64 [[TMP34]], ptrtoint (float* getelementptr (float, float* null, i32 1) to i64)
+// CHECK2-NEXT:    [[TMP35:%.*]] = sdiv exact i64 [[TMP34]], ptrtoint (%struct.S* getelementptr ([[STRUCT_S]], %struct.S* null, i32 1) to i64)
 // CHECK2-NEXT:    [[TMP36:%.*]] = getelementptr [[STRUCT_S]], %struct.S* [[VLA15]], i64 [[TMP35]]
 // CHECK2-NEXT:    [[TMP37:%.*]] = bitcast %struct.S* [[TMP36]] to [10 x [4 x %struct.S]]*
 // CHECK2-NEXT:    [[TMP38:%.*]] = load i32*, i32** [[DOTGLOBAL_TID__ADDR]], align 8
@@ -5790,9 +5790,9 @@ int main() {
 // CHECK2-NEXT:    [[TMP5:%.*]] = ptrtoint %struct.S* [[ARRAYIDX3]] to i64
 // CHECK2-NEXT:    [[TMP6:%.*]] = ptrtoint %struct.S* [[ARRAYIDX1]] to i64
 // CHECK2-NEXT:    [[TMP7:%.*]] = sub i64 [[TMP5]], [[TMP6]]
-// CHECK2-NEXT:    [[TMP8:%.*]] = sdiv exact i64 [[TMP7]], ptrtoint (float* getelementptr (float, float* null, i32 1) to i64)
+// CHECK2-NEXT:    [[TMP8:%.*]] = sdiv exact i64 [[TMP7]], ptrtoint (%struct.S* getelementptr ([[STRUCT_S]], %struct.S* null, i32 1) to i64)
 // CHECK2-NEXT:    [[TMP9:%.*]] = add nuw i64 [[TMP8]], 1
-// CHECK2-NEXT:    [[TMP10:%.*]] = mul nuw i64 [[TMP9]], ptrtoint (float* getelementptr (float, float* null, i32 1) to i64)
+// CHECK2-NEXT:    [[TMP10:%.*]] = mul nuw i64 [[TMP9]], ptrtoint (%struct.S* getelementptr ([[STRUCT_S]], %struct.S* null, i32 1) to i64)
 // CHECK2-NEXT:    [[TMP11:%.*]] = call i8* @llvm.stacksave()
 // CHECK2-NEXT:    store i8* [[TMP11]], i8** [[SAVED_STACK]], align 8
 // CHECK2-NEXT:    [[VLA:%.*]] = alloca [[STRUCT_S]], i64 [[TMP9]], align 16
@@ -5812,7 +5812,7 @@ int main() {
 // CHECK2-NEXT:    [[TMP15:%.*]] = ptrtoint %struct.S* [[TMP14]] to i64
 // CHECK2-NEXT:    [[TMP16:%.*]] = ptrtoint %struct.S* [[ARRAYIDX1]] to i64
 // CHECK2-NEXT:    [[TMP17:%.*]] = sub i64 [[TMP15]], [[TMP16]]
-// CHECK2-NEXT:    [[TMP18:%.*]] = sdiv exact i64 [[TMP17]], ptrtoint (float* getelementptr (float, float* null, i32 1) to i64)
+// CHECK2-NEXT:    [[TMP18:%.*]] = sdiv exact i64 [[TMP17]], ptrtoint (%struct.S* getelementptr ([[STRUCT_S]], %struct.S* null, i32 1) to i64)
 // CHECK2-NEXT:    [[TMP19:%.*]] = getelementptr [[STRUCT_S]], %struct.S* [[VLA]], i64 [[TMP18]]
 // CHECK2-NEXT:    store %struct.S** [[_TMP5]], %struct.S*** [[_TMP4]], align 8
 // CHECK2-NEXT:    store %struct.S* [[TMP19]], %struct.S** [[_TMP5]], align 8
@@ -6019,7 +6019,7 @@ int main() {
 // CHECK2-NEXT:    [[TMP8:%.*]] = ptrtoint %struct.S* [[TMP7]] to i64
 // CHECK2-NEXT:    [[TMP9:%.*]] = ptrtoint %struct.S* [[ARRAYIDX1]] to i64
 // CHECK2-NEXT:    [[TMP10:%.*]] = sub i64 [[TMP8]], [[TMP9]]
-// CHECK2-NEXT:    [[TMP11:%.*]] = sdiv exact i64 [[TMP10]], ptrtoint (float* getelementptr (float, float* null, i32 1) to i64)
+// CHECK2-NEXT:    [[TMP11:%.*]] = sdiv exact i64 [[TMP10]], ptrtoint (%struct.S* getelementptr ([[STRUCT_S]], %struct.S* null, i32 1) to i64)
 // CHECK2-NEXT:    [[TMP12:%.*]] = bitcast [1 x [6 x %struct.S]]* [[VAR24]] to %struct.S*
 // CHECK2-NEXT:    [[TMP13:%.*]] = getelementptr [[STRUCT_S]], %struct.S* [[TMP12]], i64 [[TMP11]]
 // CHECK2-NEXT:    store %struct.S** [[_TMP6]], %struct.S*** [[_TMP5]], align 8
@@ -6220,7 +6220,7 @@ int main() {
 // CHECK2-NEXT:    [[TMP8:%.*]] = ptrtoint %struct.S* [[TMP7]] to i64
 // CHECK2-NEXT:    [[TMP9:%.*]] = ptrtoint %struct.S* [[ARRAYIDX1]] to i64
 // CHECK2-NEXT:    [[TMP10:%.*]] = sub i64 [[TMP8]], [[TMP9]]
-// CHECK2-NEXT:    [[TMP11:%.*]] = sdiv exact i64 [[TMP10]], ptrtoint (float* getelementptr (float, float* null, i32 1) to i64)
+// CHECK2-NEXT:    [[TMP11:%.*]] = sdiv exact i64 [[TMP10]], ptrtoint (%struct.S* getelementptr ([[STRUCT_S]], %struct.S* null, i32 1) to i64)
 // CHECK2-NEXT:    [[TMP12:%.*]] = bitcast [1 x [6 x %struct.S]]* [[VAR24]] to %struct.S*
 // CHECK2-NEXT:    [[TMP13:%.*]] = getelementptr [[STRUCT_S]], %struct.S* [[TMP12]], i64 [[TMP11]]
 // CHECK2-NEXT:    store %struct.S** [[_TMP6]], %struct.S*** [[_TMP5]], align 8
@@ -6411,7 +6411,7 @@ int main() {
 // CHECK2-NEXT:    [[TMP7:%.*]] = ptrtoint %struct.S* [[TMP6]] to i64
 // CHECK2-NEXT:    [[TMP8:%.*]] = ptrtoint %struct.S* [[ARRAYIDX1]] to i64
 // CHECK2-NEXT:    [[TMP9:%.*]] = sub i64 [[TMP7]], [[TMP8]]
-// CHECK2-NEXT:    [[TMP10:%.*]] = sdiv exact i64 [[TMP9]], ptrtoint (float* getelementptr (float, float* null, i32 1) to i64)
+// CHECK2-NEXT:    [[TMP10:%.*]] = sdiv exact i64 [[TMP9]], ptrtoint (%struct.S* getelementptr ([[STRUCT_S]], %struct.S* null, i32 1) to i64)
 // CHECK2-NEXT:    [[TMP11:%.*]] = getelementptr [[STRUCT_S]], %struct.S* [[VAR24]], i64 [[TMP10]]
 // CHECK2-NEXT:    store %struct.S** [[_TMP6]], %struct.S*** [[_TMP5]], align 8
 // CHECK2-NEXT:    store %struct.S* [[TMP11]], %struct.S** [[_TMP6]], align 8
@@ -6551,7 +6551,7 @@ int main() {
 // CHECK2-NEXT:    [[TMP3:%.*]] = ptrtoint %struct.S* [[TMP2]] to i64
 // CHECK2-NEXT:    [[TMP4:%.*]] = ptrtoint %struct.S* [[ARRAYIDX]] to i64
 // CHECK2-NEXT:    [[TMP5:%.*]] = sub i64 [[TMP3]], [[TMP4]]
-// CHECK2-NEXT:    [[TMP6:%.*]] = sdiv exact i64 [[TMP5]], ptrtoint (float* getelementptr (float, float* null, i32 1) to i64)
+// CHECK2-NEXT:    [[TMP6:%.*]] = sdiv exact i64 [[TMP5]], ptrtoint (%struct.S* getelementptr ([[STRUCT_S]], %struct.S* null, i32 1) to i64)
 // CHECK2-NEXT:    [[TMP7:%.*]] = bitcast [5 x %struct.S]* [[VVAR22]] to %struct.S*
 // CHECK2-NEXT:    [[TMP8:%.*]] = getelementptr [[STRUCT_S]], %struct.S* [[TMP7]], i64 [[TMP6]]
 // CHECK2-NEXT:    [[TMP9:%.*]] = bitcast %struct.S* [[TMP8]] to [5 x %struct.S]*
@@ -6751,7 +6751,7 @@ int main() {
 // CHECK2-NEXT:    [[TMP7:%.*]] = ptrtoint %struct.S* [[TMP6]] to i64
 // CHECK2-NEXT:    [[TMP8:%.*]] = ptrtoint %struct.S* [[ARRAYIDX]] to i64
 // CHECK2-NEXT:    [[TMP9:%.*]] = sub i64 [[TMP7]], [[TMP8]]
-// CHECK2-NEXT:    [[TMP10:%.*]] = sdiv exact i64 [[TMP9]], ptrtoint (float* getelementptr (float, float* null, i32 1) to i64)
+// CHECK2-NEXT:    [[TMP10:%.*]] = sdiv exact i64 [[TMP9]], ptrtoint (%struct.S* getelementptr ([[STRUCT_S]], %struct.S* null, i32 1) to i64)
 // CHECK2-NEXT:    [[TMP11:%.*]] = bitcast [2 x %struct.S]* [[VAR34]] to %struct.S*
 // CHECK2-NEXT:    [[TMP12:%.*]] = getelementptr [[STRUCT_S]], %struct.S* [[TMP11]], i64 [[TMP10]]
 // CHECK2-NEXT:    [[TMP13:%.*]] = bitcast %struct.S* [[TMP12]] to [4 x %struct.S]*
@@ -6952,7 +6952,7 @@ int main() {
 // CHECK2-NEXT:    [[TMP7:%.*]] = ptrtoint %struct.S* [[TMP6]] to i64
 // CHECK2-NEXT:    [[TMP8:%.*]] = ptrtoint %struct.S* [[ARRAYIDX]] to i64
 // CHECK2-NEXT:    [[TMP9:%.*]] = sub i64 [[TMP7]], [[TMP8]]
-// CHECK2-NEXT:    [[TMP10:%.*]] = sdiv exact i64 [[TMP9]], ptrtoint (float* getelementptr (float, float* null, i32 1) to i64)
+// CHECK2-NEXT:    [[TMP10:%.*]] = sdiv exact i64 [[TMP9]], ptrtoint (%struct.S* getelementptr ([[STRUCT_S]], %struct.S* null, i32 1) to i64)
 // CHECK2-NEXT:    [[TMP11:%.*]] = bitcast [2 x %struct.S]* [[VAR34]] to %struct.S*
 // CHECK2-NEXT:    [[TMP12:%.*]] = getelementptr [[STRUCT_S]], %struct.S* [[TMP11]], i64 [[TMP10]]
 // CHECK2-NEXT:    [[TMP13:%.*]] = bitcast %struct.S* [[TMP12]] to [4 x %struct.S]*
@@ -7141,12 +7141,12 @@ int main() {
 // CHECK2-NEXT:    [[TMP4:%.*]] = ptrtoint %struct.S* [[ARRAYIDX3]] to i64
 // CHECK2-NEXT:    [[TMP5:%.*]] = ptrtoint %struct.S* [[ARRAYIDX]] to i64
 // CHECK2-NEXT:    [[TMP6:%.*]] = sub i64 [[TMP4]], [[TMP5]]
-// CHECK2-NEXT:    [[TMP7:%.*]] = sdiv exact i64 [[TMP6]], ptrtoint (float* getelementptr (float, float* null, i32 1) to i64)
+// CHECK2-NEXT:    [[TMP7:%.*]] = sdiv exact i64 [[TMP6]], ptrtoint (%struct.S* getelementptr ([[STRUCT_S:%.*]], %struct.S* null, i32 1) to i64)
 // CHECK2-NEXT:    [[TMP8:%.*]] = add nuw i64 [[TMP7]], 1
-// CHECK2-NEXT:    [[TMP9:%.*]] = mul nuw i64 [[TMP8]], ptrtoint (float* getelementptr (float, float* null, i32 1) to i64)
+// CHECK2-NEXT:    [[TMP9:%.*]] = mul nuw i64 [[TMP8]], ptrtoint (%struct.S* getelementptr ([[STRUCT_S]], %struct.S* null, i32 1) to i64)
 // CHECK2-NEXT:    [[TMP10:%.*]] = call i8* @llvm.stacksave()
 // CHECK2-NEXT:    store i8* [[TMP10]], i8** [[SAVED_STACK]], align 8
-// CHECK2-NEXT:    [[VLA:%.*]] = alloca [[STRUCT_S:%.*]], i64 [[TMP8]], align 16
+// CHECK2-NEXT:    [[VLA:%.*]] = alloca [[STRUCT_S]], i64 [[TMP8]], align 16
 // CHECK2-NEXT:    store i64 [[TMP8]], i64* [[__VLA_EXPR0]], align 8
 // CHECK2-NEXT:    [[TMP11:%.*]] = getelementptr [[STRUCT_S]], %struct.S* [[VLA]], i64 [[TMP8]]
 // CHECK2-NEXT:    [[OMP_ARRAYINIT_ISEMPTY:%.*]] = icmp eq %struct.S* [[VLA]], [[TMP11]]
@@ -7163,7 +7163,7 @@ int main() {
 // CHECK2-NEXT:    [[TMP14:%.*]] = ptrtoint %struct.S* [[TMP13]] to i64
 // CHECK2-NEXT:    [[TMP15:%.*]] = ptrtoint %struct.S* [[ARRAYIDX]] to i64
 // CHECK2-NEXT:    [[TMP16:%.*]] = sub i64 [[TMP14]], [[TMP15]]
-// CHECK2-NEXT:    [[TMP17:%.*]] = sdiv exact i64 [[TMP16]], ptrtoint (float* getelementptr (float, float* null, i32 1) to i64)
+// CHECK2-NEXT:    [[TMP17:%.*]] = sdiv exact i64 [[TMP16]], ptrtoint (%struct.S* getelementptr ([[STRUCT_S]], %struct.S* null, i32 1) to i64)
 // CHECK2-NEXT:    [[TMP18:%.*]] = getelementptr [[STRUCT_S]], %struct.S* [[VLA]], i64 [[TMP17]]
 // CHECK2-NEXT:    [[TMP19:%.*]] = bitcast %struct.S* [[TMP18]] to [4 x %struct.S]*
 // CHECK2-NEXT:    store [4 x %struct.S]* [[TMP19]], [4 x %struct.S]** [[_TMP4]], align 8
@@ -8181,7 +8181,7 @@ int main() {
 // CHECK2-NEXT:    [[TMP8:%.*]] = ptrtoint %struct.S.0* [[TMP7]] to i64
 // CHECK2-NEXT:    [[TMP9:%.*]] = ptrtoint %struct.S.0* [[ARRAYIDX]] to i64
 // CHECK2-NEXT:    [[TMP10:%.*]] = sub i64 [[TMP8]], [[TMP9]]
-// CHECK2-NEXT:    [[TMP11:%.*]] = sdiv exact i64 [[TMP10]], ptrtoint (i32* getelementptr (i32, i32* null, i32 1) to i64)
+// CHECK2-NEXT:    [[TMP11:%.*]] = sdiv exact i64 [[TMP10]], ptrtoint (%struct.S.0* getelementptr ([[STRUCT_S_0]], %struct.S.0* null, i32 1) to i64)
 // CHECK2-NEXT:    [[TMP12:%.*]] = bitcast [40 x %struct.S.0]* [[ARR4]] to %struct.S.0*
 // CHECK2-NEXT:    [[TMP13:%.*]] = getelementptr [[STRUCT_S_0]], %struct.S.0* [[TMP12]], i64 [[TMP11]]
 // CHECK2-NEXT:    [[TMP14:%.*]] = bitcast %struct.S.0* [[TMP13]] to [42 x %struct.S.0]*
@@ -8831,5 +8831,4 @@ int main() {
 // CHECK4-NEXT:    [[ADD2:%.*]] = fadd double [[TMP20]], [[TMP21]]
 // CHECK4-NEXT:    store double [[ADD2]], double* [[TMP17]], align 8
 // CHECK4-NEXT:    ret void
-//
 //

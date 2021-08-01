@@ -54,7 +54,7 @@ llvm.func @testenterdataop(%arg0: !llvm.ptr<f32>, %arg1: !llvm.ptr<f32>, %arg2: 
 // CHECK: [[ARGGEPCAST:%.*]] = bitcast i8** [[ARGGEP]] to float**
 // CHECK: store float* [[SIMPLEPTR]], float** [[ARGGEPCAST]], align 8
 // CHECK: [[SIZEGEP:%.*]] = getelementptr inbounds [2 x i64], [2 x i64]* [[SIZE_ALLOCA]], i32 0, i32 1
-// CHECK: store i64 ptrtoint (i1** getelementptr (i1*, i1** null, i32 1) to i64), i64* [[SIZEGEP]], align 4
+// CHECK: store i64 ptrtoint (float** getelementptr (float*, float** null, i32 1) to i64), i64* [[SIZEGEP]], align 4
 
 // CHECK: [[ARGBASE_ALLOCA_GEP:%.*]] = getelementptr inbounds [2 x i8*], [2 x i8*]* [[ARGBASE_ALLOCA]], i32 0, i32 0
 // CHECK: [[ARG_ALLOCA_GEP:%.*]] = getelementptr inbounds [2 x i8*], [2 x i8*]* [[ARG_ALLOCA]], i32 0, i32 0
@@ -114,7 +114,7 @@ llvm.func @testexitdataop(%arg0: !llvm.struct<(ptr<f32>, ptr<f32>, i64, array<1 
 // CHECK: [[ARGGEPCAST:%.*]] = bitcast i8** [[ARGGEP]] to float**
 // CHECK: store float* [[SIMPLEPTR]], float** [[ARGGEPCAST]], align 8
 // CHECK: [[SIZEGEP:%.*]] = getelementptr inbounds [2 x i64], [2 x i64]* [[SIZE_ALLOCA]], i32 0, i32 1
-// CHECK: store i64 ptrtoint (i1** getelementptr (i1*, i1** null, i32 1) to i64), i64* [[SIZEGEP]], align 4
+// CHECK: store i64 ptrtoint (float** getelementptr (float*, float** null, i32 1) to i64), i64* [[SIZEGEP]], align 4
 
 // CHECK: [[ARGBASE_ALLOCA_GEP:%.*]] = getelementptr inbounds [2 x i8*], [2 x i8*]* [[ARGBASE_ALLOCA]], i32 0, i32 0
 // CHECK: [[ARG_ALLOCA_GEP:%.*]] = getelementptr inbounds [2 x i8*], [2 x i8*]* [[ARG_ALLOCA]], i32 0, i32 0
@@ -173,7 +173,7 @@ llvm.func @testupdateop(%arg0: !llvm.struct<(ptr<f32>, ptr<f32>, i64, array<1 x 
 // CHECK: [[ARGGEPCAST:%.*]] = bitcast i8** [[ARGGEP]] to float**
 // CHECK: store float* [[SIMPLEPTR]], float** [[ARGGEPCAST]], align 8
 // CHECK: [[SIZEGEP:%.*]] = getelementptr inbounds [2 x i64], [2 x i64]* [[SIZE_ALLOCA]], i32 0, i32 1
-// CHECK: store i64 ptrtoint (i1** getelementptr (i1*, i1** null, i32 1) to i64), i64* [[SIZEGEP]], align 4
+// CHECK: store i64 ptrtoint (float** getelementptr (float*, float** null, i32 1) to i64), i64* [[SIZEGEP]], align 4
 
 // CHECK: [[ARGBASE_ALLOCA_GEP:%.*]] = getelementptr inbounds [2 x i8*], [2 x i8*]* [[ARGBASE_ALLOCA]], i32 0, i32 0
 // CHECK: [[ARG_ALLOCA_GEP:%.*]] = getelementptr inbounds [2 x i8*], [2 x i8*]* [[ARG_ALLOCA]], i32 0, i32 0
@@ -235,7 +235,7 @@ llvm.func @testdataop(%arg0: !llvm.struct<(ptr<f32>, ptr<f32>, i64, array<1 x i6
 // CHECK: [[ARGGEPCAST:%.*]] = bitcast i8** [[ARGGEP]] to float**
 // CHECK: store float* [[SIMPLEPTR]], float** [[ARGGEPCAST]], align 8
 // CHECK: [[SIZEGEP:%.*]] = getelementptr inbounds [2 x i64], [2 x i64]* [[SIZE_ALLOCA]], i32 0, i32 1
-// CHECK: store i64 ptrtoint (i1** getelementptr (i1*, i1** null, i32 1) to i64), i64* [[SIZEGEP]], align 4
+// CHECK: store i64 ptrtoint (float** getelementptr (float*, float** null, i32 1) to i64), i64* [[SIZEGEP]], align 4
 
 // CHECK: [[ARGBASE_ALLOCA_GEP:%.*]] = getelementptr inbounds [2 x i8*], [2 x i8*]* [[ARGBASE_ALLOCA]], i32 0, i32 0
 // CHECK: [[ARG_ALLOCA_GEP:%.*]] = getelementptr inbounds [2 x i8*], [2 x i8*]* [[ARG_ALLOCA]], i32 0, i32 0

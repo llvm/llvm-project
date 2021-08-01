@@ -18,7 +18,8 @@ define void @load_v8i1_broadcast_4_v2i1(<8 x i1>* %a0,<2 x double> %a1,<2 x doub
 ;
 ; AVX512NOTDQ-LABEL: load_v8i1_broadcast_4_v2i1:
 ; AVX512NOTDQ:       # %bb.0:
-; AVX512NOTDQ-NEXT:    kmovw (%rdi), %k0
+; AVX512NOTDQ-NEXT:    movzbl (%rdi), %eax
+; AVX512NOTDQ-NEXT:    kmovd %eax, %k0
 ; AVX512NOTDQ-NEXT:    kshiftrw $4, %k0, %k1
 ; AVX512NOTDQ-NEXT:    vpcmpeqd %xmm2, %xmm2, %xmm2
 ; AVX512NOTDQ-NEXT:    vmovdqa64 %xmm2, %xmm2 {%k1} {z}
@@ -47,7 +48,8 @@ define void @load_v8i1_broadcast_7_v2i1(<8 x i1>* %a0,<2 x double> %a1,<2 x doub
 ;
 ; AVX512NOTDQ-LABEL: load_v8i1_broadcast_7_v2i1:
 ; AVX512NOTDQ:       # %bb.0:
-; AVX512NOTDQ-NEXT:    kmovw (%rdi), %k0
+; AVX512NOTDQ-NEXT:    movzbl (%rdi), %eax
+; AVX512NOTDQ-NEXT:    kmovd %eax, %k0
 ; AVX512NOTDQ-NEXT:    kshiftrw $6, %k0, %k1
 ; AVX512NOTDQ-NEXT:    vpcmpeqd %xmm2, %xmm2, %xmm2
 ; AVX512NOTDQ-NEXT:    vmovdqa64 %xmm2, %xmm2 {%k1} {z}
@@ -678,7 +680,8 @@ define void @load_v2i1_broadcast_1_v1i1_store(<2 x i1>* %a0,<1 x i1>* %a1) {
 ;
 ; AVX512NOTDQ-LABEL: load_v2i1_broadcast_1_v1i1_store:
 ; AVX512NOTDQ:       # %bb.0:
-; AVX512NOTDQ-NEXT:    kmovw (%rdi), %k0
+; AVX512NOTDQ-NEXT:    movzbl (%rdi), %eax
+; AVX512NOTDQ-NEXT:    kmovd %eax, %k0
 ; AVX512NOTDQ-NEXT:    kshiftrw $1, %k0, %k0
 ; AVX512NOTDQ-NEXT:    kshiftlw $15, %k0, %k0
 ; AVX512NOTDQ-NEXT:    kshiftrw $15, %k0, %k0
@@ -770,7 +773,8 @@ define void @load_v4i1_broadcast_2_v1i1_store(<4 x i1>* %a0,<1 x i1>* %a1) {
 ;
 ; AVX512NOTDQ-LABEL: load_v4i1_broadcast_2_v1i1_store:
 ; AVX512NOTDQ:       # %bb.0:
-; AVX512NOTDQ-NEXT:    kmovw (%rdi), %k0
+; AVX512NOTDQ-NEXT:    movzbl (%rdi), %eax
+; AVX512NOTDQ-NEXT:    kmovd %eax, %k0
 ; AVX512NOTDQ-NEXT:    kshiftrw $2, %k0, %k0
 ; AVX512NOTDQ-NEXT:    kshiftlw $15, %k0, %k0
 ; AVX512NOTDQ-NEXT:    kshiftrw $15, %k0, %k0
@@ -794,7 +798,8 @@ define void @load_v4i1_broadcast_3_v1i1_store(<4 x i1>* %a0,<1 x i1>* %a1) {
 ;
 ; AVX512NOTDQ-LABEL: load_v4i1_broadcast_3_v1i1_store:
 ; AVX512NOTDQ:       # %bb.0:
-; AVX512NOTDQ-NEXT:    kmovw (%rdi), %k0
+; AVX512NOTDQ-NEXT:    movzbl (%rdi), %eax
+; AVX512NOTDQ-NEXT:    kmovd %eax, %k0
 ; AVX512NOTDQ-NEXT:    kshiftrw $3, %k0, %k0
 ; AVX512NOTDQ-NEXT:    kshiftlw $15, %k0, %k0
 ; AVX512NOTDQ-NEXT:    kshiftrw $15, %k0, %k0
@@ -818,7 +823,8 @@ define void @load_v8i1_broadcast_4_v1i1_store(<8 x i1>* %a0,<1 x i1>* %a1) {
 ;
 ; AVX512NOTDQ-LABEL: load_v8i1_broadcast_4_v1i1_store:
 ; AVX512NOTDQ:       # %bb.0:
-; AVX512NOTDQ-NEXT:    kmovw (%rdi), %k0
+; AVX512NOTDQ-NEXT:    movzbl (%rdi), %eax
+; AVX512NOTDQ-NEXT:    kmovd %eax, %k0
 ; AVX512NOTDQ-NEXT:    kshiftrw $4, %k0, %k0
 ; AVX512NOTDQ-NEXT:    kshiftlw $15, %k0, %k0
 ; AVX512NOTDQ-NEXT:    kshiftrw $15, %k0, %k0
@@ -843,7 +849,8 @@ define void @load_v8i1_broadcast_4_v2i1_store(<8 x i1>* %a0,<2 x i1>* %a1) {
 ;
 ; AVX512NOTDQ-LABEL: load_v8i1_broadcast_4_v2i1_store:
 ; AVX512NOTDQ:       # %bb.0:
-; AVX512NOTDQ-NEXT:    kmovw (%rdi), %k0
+; AVX512NOTDQ-NEXT:    movzbl (%rdi), %eax
+; AVX512NOTDQ-NEXT:    kmovd %eax, %k0
 ; AVX512NOTDQ-NEXT:    kshiftrw $4, %k0, %k1
 ; AVX512NOTDQ-NEXT:    vpcmpeqd %xmm0, %xmm0, %xmm0
 ; AVX512NOTDQ-NEXT:    vmovdqa64 %xmm0, %xmm0 {%k1} {z}
@@ -869,7 +876,8 @@ define void @load_v8i1_broadcast_7_v1i1_store(<8 x i1>* %a0,<1 x i1>* %a1) {
 ;
 ; AVX512NOTDQ-LABEL: load_v8i1_broadcast_7_v1i1_store:
 ; AVX512NOTDQ:       # %bb.0:
-; AVX512NOTDQ-NEXT:    kmovw (%rdi), %k0
+; AVX512NOTDQ-NEXT:    movzbl (%rdi), %eax
+; AVX512NOTDQ-NEXT:    kmovd %eax, %k0
 ; AVX512NOTDQ-NEXT:    kshiftrw $7, %k0, %k0
 ; AVX512NOTDQ-NEXT:    kshiftlw $15, %k0, %k0
 ; AVX512NOTDQ-NEXT:    kshiftrw $15, %k0, %k0
@@ -894,7 +902,8 @@ define void @load_v8i1_broadcast_7_v2i1_store(<8 x i1>* %a0,<2 x i1>* %a1) {
 ;
 ; AVX512NOTDQ-LABEL: load_v8i1_broadcast_7_v2i1_store:
 ; AVX512NOTDQ:       # %bb.0:
-; AVX512NOTDQ-NEXT:    kmovw (%rdi), %k0
+; AVX512NOTDQ-NEXT:    movzbl (%rdi), %eax
+; AVX512NOTDQ-NEXT:    kmovd %eax, %k0
 ; AVX512NOTDQ-NEXT:    kshiftrw $6, %k0, %k1
 ; AVX512NOTDQ-NEXT:    vpcmpeqd %xmm0, %xmm0, %xmm0
 ; AVX512NOTDQ-NEXT:    vmovdqa64 %xmm0, %xmm0 {%k1} {z}

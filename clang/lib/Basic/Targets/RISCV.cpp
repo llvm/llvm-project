@@ -105,7 +105,7 @@ std::string RISCVTargetInfo::convertConstraint(const char *&Constraint) const {
   std::string R;
   switch (*Constraint) {
   case 'v':
-    R = std::string("v");
+    R = std::string("^") + std::string(Constraint, 2);
     Constraint += 1;
     break;
   default:

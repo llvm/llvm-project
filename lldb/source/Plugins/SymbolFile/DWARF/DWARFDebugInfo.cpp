@@ -174,15 +174,6 @@ bool DWARFDebugInfo::ContainsTypeUnits() {
   return !m_type_hash_to_unit_index.empty();
 }
 
-DWARFDIE
-DWARFDebugInfo::GetDIEForDIEOffset(DIERef::Section section,
-                                   dw_offset_t die_offset) {
-  DWARFUnit *cu = GetUnitContainingDIEOffset(section, die_offset);
-  if (cu)
-    return cu->GetDIE(die_offset);
-  return DWARFDIE();
-}
-
 // GetDIE()
 //
 // Get the DIE (Debug Information Entry) with the specified offset.

@@ -2120,9 +2120,6 @@ let Predicates = [HasSVEorStreamingSVE] in {
   }
 
   defm Pat_Store_P16 : unpred_store_predicate<nxv16i1, STR_PXI>;
-  defm Pat_Store_P8  : unpred_store_predicate<nxv8i1, STR_PXI>;
-  defm Pat_Store_P4  : unpred_store_predicate<nxv4i1, STR_PXI>;
-  defm Pat_Store_P2  : unpred_store_predicate<nxv2i1, STR_PXI>;
 
   multiclass unpred_load_predicate<ValueType Ty, Instruction Load> {
     def _fi : Pat<(Ty (load (am_sve_fi GPR64sp:$base, simm9:$offset))),
@@ -2133,9 +2130,6 @@ let Predicates = [HasSVEorStreamingSVE] in {
   }
 
   defm Pat_Load_P16 : unpred_load_predicate<nxv16i1, LDR_PXI>;
-  defm Pat_Load_P8  : unpred_load_predicate<nxv8i1, LDR_PXI>;
-  defm Pat_Load_P4  : unpred_load_predicate<nxv4i1, LDR_PXI>;
-  defm Pat_Load_P2  : unpred_load_predicate<nxv2i1, LDR_PXI>;
 
   multiclass ld1<Instruction RegRegInst, Instruction RegImmInst, ValueType Ty,
                  SDPatternOperator Load, ValueType PredTy, ValueType MemVT, ComplexPattern AddrCP> {
