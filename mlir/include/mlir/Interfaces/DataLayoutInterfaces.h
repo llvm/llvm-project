@@ -163,7 +163,7 @@ private:
   /// Combined layout spec at the given scope.
   const DataLayoutSpecInterface originalLayout;
 
-#ifndef NDEBUG
+#if LLVM_ENABLE_ABI_BREAKING_CHECKS
   /// List of enclosing layout specs.
   SmallVector<DataLayoutSpecInterface, 2> layoutStack;
 #endif
