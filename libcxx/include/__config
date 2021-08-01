@@ -1292,10 +1292,6 @@ extern "C" _LIBCPP_FUNC_VIS void __sanitizer_annotate_contiguous_container(
 #define _LIBCPP_HAS_NO_BUILTIN_ADDRESSOF
 #endif
 
-#if !__has_builtin(__builtin_is_constant_evaluated) && _GNUC_VER < 900
-#define _LIBCPP_HAS_NO_BUILTIN_IS_CONSTANT_EVALUATED
-#endif
-
 #if __has_attribute(diagnose_if) && !defined(_LIBCPP_DISABLE_ADDITIONAL_DIAGNOSTICS)
 #  define _LIBCPP_DIAGNOSE_WARNING(...) \
      __attribute__((diagnose_if(__VA_ARGS__, "warning")))

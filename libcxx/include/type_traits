@@ -4453,7 +4453,6 @@ template <class _ValTy, class _Key, class _RawValTy>
 struct __can_extract_map_key<_ValTy, _Key, _Key, _RawValTy>
     : false_type {};
 
-#ifndef _LIBCPP_HAS_NO_BUILTIN_IS_CONSTANT_EVALUATED
 #if _LIBCPP_STD_VER > 17
 _LIBCPP_INLINE_VISIBILITY
 inline constexpr bool is_constant_evaluated() noexcept {
@@ -4463,10 +4462,6 @@ inline constexpr bool is_constant_evaluated() noexcept {
 
 inline _LIBCPP_CONSTEXPR
 bool __libcpp_is_constant_evaluated() _NOEXCEPT { return __builtin_is_constant_evaluated(); }
-#else
-inline _LIBCPP_CONSTEXPR
-bool __libcpp_is_constant_evaluated() _NOEXCEPT { return false; }
-#endif
 
 template <class _CharT>
 using _IsCharLikeType = _And<is_standard_layout<_CharT>, is_trivial<_CharT> >;

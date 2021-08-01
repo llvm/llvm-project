@@ -328,9 +328,7 @@ __cpp_lib_void_t                                        201411L <type_traits>
 #   define __cpp_lib_integer_comparison_functions       202002L
 # endif
 # define __cpp_lib_interpolate                          201902L
-# if !defined(_LIBCPP_HAS_NO_BUILTIN_IS_CONSTANT_EVALUATED)
-#   define __cpp_lib_is_constant_evaluated              201811L
-# endif
+# define __cpp_lib_is_constant_evaluated                201811L
 // # define __cpp_lib_is_layout_compatible                 201907L
 # define __cpp_lib_is_nothrow_convertible               201806L
 // # define __cpp_lib_is_pointer_interconvertible          201907L
