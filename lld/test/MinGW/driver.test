@@ -88,6 +88,7 @@ SUBSYSTEM_WINDOWS: -subsystem:windows,7.8
 
 RUN: ld.lld -### foo.o -m i386pep -stack 4194304,8192 2>&1 | FileCheck -check-prefix=STACK %s
 RUN: ld.lld -### foo.o -m i386pep --stack 4194304,8192 2>&1 | FileCheck -check-prefix=STACK %s
+RUN: ld.lld -### foo.o -m i386pep --stack=4194304,8192 2>&1 | FileCheck -check-prefix=STACK %s
 STACK: -stack:4194304,8192
 
 RUN: ld.lld -### foo.o -m i386pep -verbose 2>&1 | FileCheck -check-prefix=VERBOSE %s

@@ -85,7 +85,7 @@ defm output_def: Eq<"output-def", "Output def file">;
 defm section_alignment: Eq<"section-alignment", "Set section alignment">;
 def shared: F<"shared">, HelpText<"Build a shared object">;
 defm subs: Eq<"subsystem", "Specify subsystem">;
-def stack: S<"stack">;
+defm stack: Eq<"stack", "Set size of the initial stack">;
 def strip_all: F<"strip-all">,
     HelpText<"Omit all symbol information from the output binary">;
 def strip_debug: F<"strip-debug">,
