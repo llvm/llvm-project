@@ -34,7 +34,7 @@ DiagnosticBuilder ClangTidyCheck::diag(StringRef Message,
 
 DiagnosticBuilder
 ClangTidyCheck::configurationDiag(StringRef Description,
-                                  DiagnosticIDs::Level Level) {
+                                  DiagnosticIDs::Level Level) const {
   return Context->configurationDiag(Description, Level);
 }
 
