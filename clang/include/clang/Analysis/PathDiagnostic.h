@@ -151,11 +151,14 @@ public:
     /// Only runs visitors, no output generated.
     None,
 
-    /// Used for HTML, SARIF, and text output.
+    /// Used for SARIF and text output.
     Minimal,
 
     /// Used for plist output, used for "arrows" generation.
     Extensive,
+
+    /// Used for HTML, shows both "arrows" and control notes.
+    Everything
   };
 
   virtual PathGenerationScheme getGenerationScheme() const { return Minimal; }
@@ -164,7 +167,11 @@ public:
     return getGenerationScheme() != None;
   }
 
-  bool shouldAddPathEdges() const { return getGenerationScheme() == Extensive; }
+  bool shouldAddPathEdges() const { return getGenerationScheme() >= Extensive; }
+  bool shouldAddControlNotes() const {
+    return getGenerationScheme() == Minimal ||
+           getGenerationScheme() == Everything;
+  }
 
   virtual bool supportsLogicalOpControlFlow() const { return false; }
 

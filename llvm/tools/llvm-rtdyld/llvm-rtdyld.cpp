@@ -413,8 +413,9 @@ static int printLineInfoForInput(bool LoadObjects, bool UseDebugObj) {
       }
     }
 
-    std::unique_ptr<DIContext> Context =
-        DWARFContext::create(*SymbolObj, LoadedObjInfo.get());
+    std::unique_ptr<DIContext> Context = DWARFContext::create(
+        *SymbolObj, DWARFContext::ProcessDebugRelocations::Process,
+        LoadedObjInfo.get());
 
     std::vector<std::pair<SymbolRef, uint64_t>> SymAddr =
         object::computeSymbolSizes(*SymbolObj);
