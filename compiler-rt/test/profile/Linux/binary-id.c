@@ -10,13 +10,6 @@
 // RUN: llvm-profdata show --binary-ids  %t.profraw > %t.profraw.out
 // RUN: FileCheck %s --check-prefix=BINARY-ID-RAW-PROF < %t.profraw.out
 
-// RUN: rm -rf %t.profdir
-// RUN: env LLVM_PROFILE_FILE=%t.profdir/default_%m.profraw %run %t
-// RUN: env LLVM_PROFILE_FILE=%t.profdir/default_%m.profraw %run %t
-// RUN: env LLVM_PROFILE_FILE=%t.profdir/default_%m.profraw %run %t
-// RUN: llvm-profdata show --binary-ids  %t.profdir/default_*.profraw > %t.profraw.out
-// RUN: FileCheck %s --check-prefix=BINARY-ID-MERGE-PROF < %t.profraw.out
-
 void foo() {
 }
 
@@ -41,10 +34,3 @@ int main() {
 // BINARY-ID-RAW-PROF-NEXT: Maximum internal block count: 0
 // BINARY-ID-RAW-PROF-NEXT: Binary IDs:
 // BINARY-ID-RAW-PROF-NEXT: {{[0-9a-f]+}}
-
-// BINARY-ID-MERGE-PROF: Instrumentation level: Front-end
-// BINARY-ID-MERGE-PROF-NEXT: Total functions: 3
-// BINARY-ID-MERGE-PROF-NEXT: Maximum function count: 3
-// BINARY-ID-MERGE-PROF-NEXT: Maximum internal block count: 0
-// BINARY-ID-MERGE-PROF-NEXT: Binary IDs:
-// BINARY-ID-MERGE-PROF-NEXT: {{[0-9a-f]+}}
