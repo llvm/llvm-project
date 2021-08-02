@@ -3144,6 +3144,8 @@ def meabi : Separate<["-"], "meabi">, Group<m_Group>, Flags<[CC1Option]>,
   MarshallingInfoEnum<TargetOpts<"EABIVersion">, "Default">,
   NormalizedValuesScope<"llvm::EABI">,
   NormalizedValues<["Default", "EABI4", "EABI5", "GNU"]>;
+def mtargetos_EQ : Joined<["-"], "mtargetos=">, Group<m_Group>,
+  HelpText<"Set the deployment target to be the specified OS and OS version">;
 
 def mno_constant_cfstrings : Flag<["-"], "mno-constant-cfstrings">, Group<m_Group>;
 def mno_global_merge : Flag<["-"], "mno-global-merge">, Group<m_Group>, Flags<[CC1Option]>,
