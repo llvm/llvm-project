@@ -16,18 +16,22 @@ set(TARGET_LIBC_ENTRYPOINTS
     libc.src.ctype.toascii
     libc.src.ctype.tolower
     libc.src.ctype.toupper
+
+    # errno.h entrypoints
+    libc.src.errno.__errno_location
+
     # string.h entrypoints
     libc.src.string.bzero
     libc.src.string.memchr
     libc.src.string.memcmp
     libc.src.string.memcpy
     libc.src.string.memmove
-    libc.src.string.memset
     libc.src.string.memrchr
+    libc.src.string.memset
     libc.src.string.strcat
     libc.src.string.strchr
-    libc.src.string.strcpy
     libc.src.string.strcmp
+    libc.src.string.strcpy
     libc.src.string.strcspn
     libc.src.string.strlen
     libc.src.string.strncmp
@@ -62,6 +66,11 @@ set(TARGET_LIBM_ENTRYPOINTS
     libc.src.math.ceil
     libc.src.math.ceilf
     libc.src.math.ceill
+    libc.src.math.cos
+    libc.src.math.cosf
+    libc.src.math.expf
+    libc.src.math.exp2f
+    libc.src.math.expm1f
     libc.src.math.fabs
     libc.src.math.fabsf
     libc.src.math.fabsl
@@ -95,7 +104,7 @@ set(TARGET_LIBM_ENTRYPOINTS
     libc.src.math.llroundl
     libc.src.math.logb
     libc.src.math.logbf
-    libc.src.math.logbl 
+    libc.src.math.logbl
     libc.src.math.lround
     libc.src.math.lroundf
     libc.src.math.lroundl
@@ -120,12 +129,16 @@ set(TARGET_LIBM_ENTRYPOINTS
     libc.src.math.round
     libc.src.math.roundf
     libc.src.math.roundl
+    libc.src.math.sin
+    libc.src.math.sincosf
+    libc.src.math.sinf
     libc.src.math.sqrt
     libc.src.math.sqrtf
     libc.src.math.sqrtl
+    libc.src.math.tan
     libc.src.math.trunc
     libc.src.math.truncf
-    libc.src.math.truncl 
+    libc.src.math.truncl
 )
 
 set(TARGET_LLVMLIBC_ENTRYPOINTS
