@@ -171,3 +171,25 @@ add_libc_multi_impl_benchmark(memcpy)
 add_libc_multi_impl_benchmark(memset)
 add_libc_multi_impl_benchmark(bzero)
 add_libc_multi_impl_benchmark(memcmp)
+
+#==============================================================================
+# Google Benchmarking tool
+#==============================================================================
+
+# This target uses the Google Benchmark facility to report throughput for llvm
+# libc memory functions compiled for the host machine. This is useful to
+# continuously monitor the performance of the memory functions.
+add_executable(libc.benchmarks.memory_functions.opt_host
+  EXCLUDE_FROM_ALL
+  LibcMemoryGoogleBenchmarkMain.cpp
+)
+
+target_link_libraries(libc.benchmarks.memory_functions.opt_host
+  PRIVATE
+  libc-memory-benchmark
+  libc.src.string.memcmp_opt_host
+  libc.src.string.memcpy_opt_host
+  libc.src.string.memset_opt_host
+  libc.src.string.bzero_opt_host
+  benchmark_main
+)

@@ -168,7 +168,6 @@ struct SignalDesc {
 struct ThreadSignalContext {
   int int_signal_send;
   atomic_uintptr_t in_blocking_func;
-  atomic_uintptr_t have_pending_signals;
   SignalDesc pending_signals[kSigCount];
   // emptyset and oldset are too big for stack.
   __sanitizer_sigset_t emptyset;
@@ -322,7 +321,7 @@ struct BlockingCall {
       , ctx(SigCtx(thr)) {
     for (;;) {
       atomic_store(&ctx->in_blocking_func, 1, memory_order_relaxed);
-      if (atomic_load(&ctx->have_pending_signals, memory_order_relaxed) == 0)
+      if (atomic_load(&thr->pending_signals, memory_order_relaxed) == 0)
         break;
       atomic_store(&ctx->in_blocking_func, 0, memory_order_relaxed);
       ProcessPendingSignals(thr);
@@ -1992,12 +1991,11 @@ static void CallUserSignalHandler(ThreadState *thr, bool sync, bool acquire,
   errno = saved_errno;
 }
 
-void ProcessPendingSignals(ThreadState *thr) {
+void ProcessPendingSignalsImpl(ThreadState *thr) {
+  atomic_store(&thr->pending_signals, 0, memory_order_relaxed);
   ThreadSignalContext *sctx = SigCtx(thr);
-  if (sctx == 0 ||
-      atomic_load(&sctx->have_pending_signals, memory_order_relaxed) == 0)
+  if (sctx == 0)
     return;
-  atomic_store(&sctx->have_pending_signals, 0, memory_order_relaxed);
   atomic_fetch_add(&thr->in_signal_handler, 1, memory_order_relaxed);
   internal_sigfillset(&sctx->emptyset);
   int res = REAL(pthread_sigmask)(SIG_SETMASK, &sctx->emptyset, &sctx->oldset);
@@ -2064,7 +2062,7 @@ void sighandler(int sig, __sanitizer_siginfo *info, void *ctx) {
     signal->armed = true;
     internal_memcpy(&signal->siginfo, info, sizeof(*info));
     internal_memcpy(&signal->ctx, ctx, sizeof(signal->ctx));
-    atomic_store(&sctx->have_pending_signals, 1, memory_order_relaxed);
+    atomic_store(&thr->pending_signals, 1, memory_order_relaxed);
   }
 }
 

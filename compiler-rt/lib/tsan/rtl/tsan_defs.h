@@ -18,6 +18,24 @@
 #include "sanitizer_common/sanitizer_mutex.h"
 #include "ubsan/ubsan_platform.h"
 
+#ifndef TSAN_VECTORIZE
+#  define TSAN_VECTORIZE __SSE4_2__
+#endif
+
+#if TSAN_VECTORIZE
+// <emmintrin.h> transitively includes <stdlib.h>,
+// and it's prohibited to include std headers into tsan runtime.
+// So we do this dirty trick.
+#  define _MM_MALLOC_H_INCLUDED
+#  define __MM_MALLOC_H
+#  include <emmintrin.h>
+#  include <smmintrin.h>
+#  define VECTOR_ALIGNED ALIGNED(16)
+typedef __m128i m128;
+#else
+#  define VECTOR_ALIGNED
+#endif
+
 // Setup defaults for compile definitions.
 #ifndef TSAN_NO_HISTORY
 # define TSAN_NO_HISTORY 0
@@ -32,6 +50,14 @@
 #endif
 
 namespace __tsan {
+
+// Thread slot ID.
+enum class Sid : u8 {};
+constexpr uptr kThreadSlotCount = 256;
+
+// Abstract time unit, vector clock element.
+enum class Epoch : u16 {};
+constexpr Epoch kEpochZero = static_cast<Epoch>(0);
 
 const int kClkBits = 42;
 const unsigned kMaxTidReuse = (1 << (64 - kClkBits)) - 1;

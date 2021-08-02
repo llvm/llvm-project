@@ -372,9 +372,37 @@ class SCOPED_LOCK GenericScopedReadLock {
   void operator=(const GenericScopedReadLock &) = delete;
 };
 
+template <typename MutexType>
+class SCOPED_LOCK GenericScopedRWLock {
+ public:
+  ALWAYS_INLINE explicit GenericScopedRWLock(MutexType *mu, bool write)
+      ACQUIRE(mu)
+      : mu_(mu), write_(write) {
+    if (write_)
+      mu_->Lock();
+    else
+      mu_->ReadLock();
+  }
+
+  ALWAYS_INLINE ~GenericScopedRWLock() RELEASE() {
+    if (write_)
+      mu_->Unlock();
+    else
+      mu_->ReadUnlock();
+  }
+
+ private:
+  MutexType *mu_;
+  bool write_;
+
+  GenericScopedRWLock(const GenericScopedRWLock &) = delete;
+  void operator=(const GenericScopedRWLock &) = delete;
+};
+
 typedef GenericScopedLock<StaticSpinMutex> SpinMutexLock;
 typedef GenericScopedLock<Mutex> Lock;
 typedef GenericScopedReadLock<Mutex> ReadLock;
+typedef GenericScopedRWLock<Mutex> RWLock;
 
 }  // namespace __sanitizer
 

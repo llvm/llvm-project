@@ -74,7 +74,7 @@ bool PrescanAndParseAction::BeginSourceFileAction(CompilerInstance &c1) {
 
   Fortran::parser::Options parserOptions = ci.invocation().fortranOpts();
 
-  if (ci.invocation().frontendOpts().fortranForm_ == FortranForm::Unknown) {
+  if (ci.invocation().frontendOpts().fortranForm == FortranForm::Unknown) {
     // Switch between fixed and free form format based on the input file
     // extension.
     //
@@ -437,7 +437,7 @@ void GetDefinitionAction::ExecuteAction() {
   unsigned diagID = ci.diagnostics().getCustomDiagID(
       clang::DiagnosticsEngine::Error, "Symbol not found");
 
-  auto gdv = ci.invocation().frontendOpts().getDefVals_;
+  auto gdv = ci.invocation().frontendOpts().getDefVals;
   auto charBlock{cs.GetCharBlockFromLineAndColumns(
       gdv.line, gdv.startColumn, gdv.endColumn)};
   if (!charBlock) {

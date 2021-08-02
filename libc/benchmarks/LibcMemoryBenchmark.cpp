@@ -104,13 +104,6 @@ void ParameterBatch::checkValid(const ParameterType &P) const {
             .concat(llvm::Twine(BufferSize)));
 }
 
-const ArrayRef<MemorySizeDistribution> CopyHarness::Distributions =
-    getMemcpySizeDistributions();
-const ArrayRef<MemorySizeDistribution> ComparisonHarness::Distributions =
-    getMemcmpSizeDistributions();
-const ArrayRef<MemorySizeDistribution> SetHarness::Distributions =
-    getMemsetSizeDistributions();
-
 CopyHarness::CopyHarness()
     : ParameterBatch(2), SrcBuffer(ParameterBatch::BufferSize),
       DstBuffer(ParameterBatch::BufferSize) {}

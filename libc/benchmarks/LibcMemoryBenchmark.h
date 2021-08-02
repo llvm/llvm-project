@@ -190,7 +190,9 @@ struct ParameterBatch {
 struct CopyHarness : public ParameterBatch {
   CopyHarness();
 
-  static const ArrayRef<MemorySizeDistribution> Distributions;
+  inline static const ArrayRef<MemorySizeDistribution> getDistributions() {
+    return getMemcpySizeDistributions();
+  }
 
   inline void *Call(ParameterType Parameter,
                     void *(*memcpy)(void *__restrict, const void *__restrict,
@@ -209,7 +211,9 @@ private:
 struct SetHarness : public ParameterBatch {
   SetHarness();
 
-  static const ArrayRef<MemorySizeDistribution> Distributions;
+  inline static const ArrayRef<MemorySizeDistribution> getDistributions() {
+    return getMemsetSizeDistributions();
+  }
 
   inline void *Call(ParameterType Parameter,
                     void *(*memset)(void *, int, size_t)) {
@@ -231,7 +235,9 @@ private:
 struct ComparisonHarness : public ParameterBatch {
   ComparisonHarness();
 
-  static const ArrayRef<MemorySizeDistribution> Distributions;
+  inline static const ArrayRef<MemorySizeDistribution> getDistributions() {
+    return getMemcmpSizeDistributions();
+  }
 
   inline int Call(ParameterType Parameter,
                   int (*memcmp)(const void *, const void *, size_t)) {
