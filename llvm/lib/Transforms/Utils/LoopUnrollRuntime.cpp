@@ -46,13 +46,6 @@ using namespace llvm;
 
 STATISTIC(NumRuntimeUnrolled,
           "Number of loops unrolled with run-time trip counts");
-static cl::opt<bool> UnrollRuntimeMultiExit(
-    "unroll-runtime-multi-exit", cl::init(false), cl::Hidden,
-    cl::desc("Allow runtime unrolling for loops with multiple exits, when "
-             "epilog is generated"));
-static cl::opt<bool> UnrollRuntimeOtherExitPredictable(
-    "unroll-runtime-other-exit-predictable", cl::init(false), cl::Hidden,
-    cl::desc("Assume the non latch exit block to be predictable"));
 
 /// Connect the unrolling prolog code to the original loop.
 /// The unrolling prolog code contains code to execute the
@@ -461,61 +454,6 @@ static bool canSafelyUnrollMultiExitLoop(Loop *L, BasicBlock *LatchExit,
   return true;
 }
 
-/// Returns true if we can profitably unroll the multi-exit loop L. Currently,
-/// we return true only if UnrollRuntimeMultiExit is set to true.
-static bool canProfitablyUnrollMultiExitLoop(
-    Loop *L, SmallVectorImpl<BasicBlock *> &OtherExits, BasicBlock *LatchExit,
-    bool PreserveLCSSA, bool UseEpilogRemainder) {
-
-#if !defined(NDEBUG)
-  assert(canSafelyUnrollMultiExitLoop(L, LatchExit, PreserveLCSSA,
-                                      UseEpilogRemainder) &&
-         "Should be safe to unroll before checking profitability!");
-#endif
-
-  // Priority goes to UnrollRuntimeMultiExit if it's supplied.
-  if (UnrollRuntimeMultiExit.getNumOccurrences())
-    return UnrollRuntimeMultiExit;
-
-  // The main pain point with multi-exit loop unrolling is that once unrolled,
-  // we will not be able to merge all blocks into a straight line code.
-  // There are branches within the unrolled loop that go to the OtherExits.
-  // The second point is the increase in code size, but this is true
-  // irrespective of multiple exits.
-
-  // Note: Both the heuristics below are coarse grained. We are essentially
-  // enabling unrolling of loops that have a single side exit other than the
-  // normal LatchExit (i.e. exiting into a deoptimize block).
-  // The heuristics considered are:
-  // 1. low number of branches in the unrolled version.
-  // 2. high predictability of these extra branches.
-  // We avoid unrolling loops that have more than two exiting blocks. This
-  // limits the total number of branches in the unrolled loop to be atmost
-  // the unroll factor (since one of the exiting blocks is the latch block).
-  SmallVector<BasicBlock*, 4> ExitingBlocks;
-  L->getExitingBlocks(ExitingBlocks);
-  if (ExitingBlocks.size() > 2)
-    return false;
-
-  // Allow unrolling of loops with no non latch exit blocks.
-  if (OtherExits.size() == 0)
-    return true;
-
-  // The second heuristic is that L has one exit other than the latchexit and
-  // that exit is a deoptimize block. We know that deoptimize blocks are rarely
-  // taken, which also implies the branch leading to the deoptimize block is
-  // highly predictable. When UnrollRuntimeOtherExitPredictable is specified, we
-  // assume the other exit branch is predictable even if it has no deoptimize
-  // call.
-  return (OtherExits.size() == 1 &&
-          (UnrollRuntimeOtherExitPredictable ||
-           OtherExits[0]->getTerminatingDeoptimizeCall()));
-  // TODO: These can be fine-tuned further to consider code size or deopt states
-  // that are captured by the deoptimize exit block.
-  // Also, we can extend this to support more cases, if we actually
-  // know of kinds of multiexit loops that would benefit from unrolling.
-}
-
 // Assign the maximum possible trip count as the back edge weight for the
 // remainder loop if the original loop comes with a branch weight.
 static void updateLatchBranchWeightsForRemainderLoop(Loop *OrigLoop,
@@ -659,9 +597,7 @@ bool llvm::UnrollRuntimeLoopRemainder(
   L->getUniqueNonLatchExitBlocks(OtherExits);
   bool isMultiExitUnrollingEnabled =
       canSafelyUnrollMultiExitLoop(L, LatchExit, PreserveLCSSA,
-                                   UseEpilogRemainder) &&
-      canProfitablyUnrollMultiExitLoop(L, OtherExits, LatchExit, PreserveLCSSA,
-                                       UseEpilogRemainder);
+                                   UseEpilogRemainder);
   // Support only single exit and exiting block unless multi-exit loop unrolling is enabled.
   if (!isMultiExitUnrollingEnabled &&
       (!L->getExitingBlock() || OtherExits.size())) {
