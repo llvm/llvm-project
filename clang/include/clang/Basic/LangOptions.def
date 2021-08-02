@@ -280,6 +280,7 @@ BENIGN_LANGOPT(VisibilityInlinesHiddenStaticLocalVar, 1, 0,
                "hidden visibility for static local variables in inline C++ "
                "methods when -fvisibility-inlines hidden is enabled")
 LANGOPT(GlobalAllocationFunctionVisibilityHidden , 1, 0, "hidden visibility for global operator new and delete declaration")
+LANGOPT(NewInfallible , 1, 0, "Treats throwing global C++ operator new as always returning valid memory (annotates with __attribute__((returns_nonnull)) and throw()). This is detectable in source.")
 BENIGN_LANGOPT(ParseUnknownAnytype, 1, 0, "__unknown_anytype")
 BENIGN_LANGOPT(DebuggerSupport , 1, 0, "debugger support")
 BENIGN_LANGOPT(DebuggerCastResultToId, 1, 0, "for 'po' in the debugger, cast the result to id if it is of unknown type")
