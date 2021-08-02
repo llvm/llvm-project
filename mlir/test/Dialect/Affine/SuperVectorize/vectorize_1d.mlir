@@ -113,12 +113,12 @@ func @vector_add_2d(%M : index, %N : index) -> f32 {
   }
   affine.for %i4 = 0 to %M {
     affine.for %i5 = 0 to %N {
+      // CHECK: %[[SPLAT2:.*]] = constant dense<2.000000e+00> : vector<128xf32>
+      // CHECK: %[[SPLAT1:.*]] = constant dense<1.000000e+00> : vector<128xf32>
       // CHECK: %[[A5:.*]] = vector.transfer_read %{{.*}}[{{.*}}], %{{[a-zA-Z0-9_]*}} : memref<?x?xf32>, vector<128xf32>
       // CHECK: %[[B5:.*]] = vector.transfer_read %{{.*}}[{{.*}}], %{{[a-zA-Z0-9_]*}} : memref<?x?xf32>, vector<128xf32>
       // CHECK: %[[S5:.*]] = addf %[[A5]], %[[B5]] : vector<128xf32>
-      // CHECK: %[[SPLAT1:.*]] = constant dense<1.000000e+00> : vector<128xf32>
       // CHECK: %[[S6:.*]] = addf %[[S5]], %[[SPLAT1]] : vector<128xf32>
-      // CHECK: %[[SPLAT2:.*]] = constant dense<2.000000e+00> : vector<128xf32>
       // CHECK: %[[S7:.*]] = addf %[[S5]], %[[SPLAT2]] : vector<128xf32>
       // CHECK: %[[S8:.*]] = addf %[[S7]], %[[S6]] : vector<128xf32>
       // CHECK: vector.transfer_write %[[S8]], {{.*}} : vector<128xf32>, memref<?x?xf32>
@@ -138,6 +138,29 @@ func @vector_add_2d(%M : index, %N : index) -> f32 {
   %c42 = constant 42 : index
   %res = affine.load %C[%c7, %c42] : memref<?x?xf32, 0>
   return %res : f32
+}
+
+// -----
+
+// CHECK-LABEL: func @vec_constant_with_two_users
+func @vec_constant_with_two_users(%M : index, %N : index) -> (f32, f32) {
+  %A = memref.alloc (%M, %N) : memref<?x?xf32, 0>
+  %B = memref.alloc (%M) : memref<?xf32, 0>
+  %f1 = constant 1.0 : f32
+  affine.for %i0 = 0 to %M { // vectorized
+    // CHECK:      %[[C1:.*]] = constant dense<1.000000e+00> : vector<128xf32>
+    // CHECK-NEXT: affine.for
+    // CHECK-NEXT:   vector.transfer_write %[[C1]], {{.*}} : vector<128xf32>, memref<?x?xf32>
+    affine.for %i1 = 0 to %N {
+      affine.store %f1, %A[%i1, %i0] : memref<?x?xf32, 0>
+    }
+    // CHECK: vector.transfer_write %[[C1]], {{.*}} : vector<128xf32>, memref<?xf32>
+    affine.store %f1, %B[%i0] : memref<?xf32, 0>
+  }
+  %c12 = constant 12 : index
+  %res1 = affine.load %A[%c12, %c12] : memref<?x?xf32, 0>
+  %res2 = affine.load %B[%c12] : memref<?xf32, 0>
+  return %res1, %res2 : f32, f32
 }
 
 // -----
@@ -551,8 +574,8 @@ func @vec_non_vecdim_reductions(%in0: memref<128x256xf32>, %in1: memref<128x256x
 
 // CHECK-LABEL: @vec_non_vecdim_reductions
 // CHECK:       affine.for %{{.*}} = 0 to 256 step 128 {
-// CHECK:         %[[vzero:.*]] = constant dense<0.000000e+00> : vector<128xf32>
 // CHECK:         %[[vone:.*]] = constant dense<1> : vector<128xi32>
+// CHECK:         %[[vzero:.*]] = constant dense<0.000000e+00> : vector<128xf32>
 // CHECK:         %[[reds:.*]]:2 = affine.for %{{.*}} = 0 to 128
 // CHECK-SAME:      iter_args(%[[red_iter0:.*]] = %[[vzero]], %[[red_iter1:.*]] = %[[vone]]) -> (vector<128xf32>, vector<128xi32>) {
 // CHECK:           %[[ld0:.*]] = vector.transfer_read %{{.*}} : memref<128x256xf32>, vector<128xf32>
