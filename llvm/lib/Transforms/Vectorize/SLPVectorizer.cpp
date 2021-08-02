@@ -734,6 +734,10 @@ public:
     return MinVecRegSize;
   }
 
+  unsigned getMinVF(unsigned Sz) const {
+    return std::max(2U, getMinVecRegSize() / Sz);
+  }
+
   unsigned getMaximumVF(unsigned ElemWidth, unsigned Opcode) const {
     unsigned MaxVF = MaxVFOption.getNumOccurrences() ?
       MaxVFOption : TTI->getMaximumVF(ElemWidth, Opcode);
@@ -4187,8 +4191,7 @@ InstructionCost BoUpSLP::getEntryCost(const TreeEntry *E,
       unsigned VectorizedCnt = 0;
       unsigned ScatterVectorizeCnt = 0;
       const unsigned Sz = DL->getTypeSizeInBits(E->getMainOp()->getType());
-      for (unsigned MinVF = getMinVecRegSize() / (2 * Sz); VF >= MinVF;
-           VF /= 2) {
+      for (unsigned MinVF = getMinVF(2 * Sz); VF >= MinVF; VF /= 2) {
         for (unsigned Cnt = StartIdx, End = VL.size(); Cnt + VF <= End;
              Cnt += VF) {
           ArrayRef<Value *> Slice = VL.slice(Cnt, VF);
@@ -7448,7 +7451,7 @@ bool SLPVectorizerPass::vectorizeStores(ArrayRef<StoreInst *> Stores,
     unsigned EltSize = R.getVectorElementSize(Operands[0]);
     unsigned MaxElts = llvm::PowerOf2Floor(MaxVecRegSize / EltSize);
 
-    unsigned MinVF = std::max(2U, R.getMinVecRegSize() / EltSize);
+    unsigned MinVF = R.getMinVF(EltSize);
     unsigned MaxVF = std::min(R.getMaximumVF(EltSize, Instruction::Store),
                               MaxElts);
 
@@ -7559,7 +7562,7 @@ bool SLPVectorizerPass::tryToVectorizeList(ArrayRef<Value *> VL, BoUpSLP &R,
   }
 
   unsigned Sz = R.getVectorElementSize(I0);
-  unsigned MinVF = std::max(2U, R.getMinVecRegSize() / Sz);
+  unsigned MinVF = R.getMinVF(Sz);
   unsigned MaxVF = std::max<unsigned>(PowerOf2Floor(VL.size()), MinVF);
   MaxVF = std::min(R.getMaximumVF(Sz, S.getOpcode()), MaxVF);
   if (MaxVF < 2) {
