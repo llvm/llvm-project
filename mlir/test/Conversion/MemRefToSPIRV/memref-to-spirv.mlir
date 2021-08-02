@@ -65,6 +65,25 @@ func @load_store_unknown_dim(%i: index, %source: memref<?xi32>, %dest: memref<?x
   return
 }
 
+// CHECK-LABEL: func @load_i1
+//  CHECK-SAME: (%[[SRC:.+]]: memref<4xi1>, %[[IDX:.+]]: index)
+func @load_i1(%src: memref<4xi1>, %i : index) -> i1 {
+  // CHECK: %[[SRC_CAST:.+]] = builtin.unrealized_conversion_cast %[[SRC]] : memref<4xi1> to !spv.ptr<!spv.struct<(!spv.array<4 x i8, stride=1> [0])>, StorageBuffer>
+  // CHECK: %[[IDX_CAST:.+]] = builtin.unrealized_conversion_cast %[[IDX]]
+  // CHECK: %[[ZERO_0:.+]] = spv.Constant 0 : i32
+  // CHECK: %[[ZERO_1:.+]] = spv.Constant 0 : i32
+  // CHECK: %[[ONE:.+]] = spv.Constant 1 : i32
+  // CHECK: %[[MUL:.+]] = spv.IMul %[[ONE]], %[[IDX_CAST]] : i32
+  // CHECK: %[[ADD:.+]] = spv.IAdd %[[ZERO_1]], %[[MUL]] : i32
+  // CHECK: %[[ADDR:.+]] = spv.AccessChain %[[SRC_CAST]][%[[ZERO_0]], %[[ADD]]]
+  // CHECK: %[[VAL:.+]] = spv.Load "StorageBuffer" %[[ADDR]] : i8
+  // CHECK: %[[ONE_I8:.+]] = spv.Constant 1 : i8
+  // CHECK: %[[BOOL:.+]] = spv.IEqual %[[VAL]], %[[ONE_I8]] : i8
+  %0 = memref.load %src[%i] : memref<4xi1>
+  // CHECK: return %[[BOOL]]
+  return %0: i1
+}
+
 // CHECK-LABEL: func @store_i1
 //  CHECK-SAME: %[[DST:.+]]: memref<4xi1>,
 //  CHECK-SAME: %[[IDX:.+]]: index
@@ -77,7 +96,7 @@ func @store_i1(%dst: memref<4xi1>, %i: index) {
   // CHECK: %[[ONE:.+]] = spv.Constant 1 : i32
   // CHECK: %[[MUL:.+]] = spv.IMul %[[ONE]], %[[IDX_CAST]] : i32
   // CHECK: %[[ADD:.+]] = spv.IAdd %[[ZERO_1]], %[[MUL]] : i32
-  // CHECK: %[[ADDR:.+]] = spv.AccessChain %[[DST_CAST]][%[[ZERO_0]], %[[ADD]]] : !spv.ptr<!spv.struct<(!spv.array<4 x i8, stride=1> [0])>, StorageBuffer>, i32, i32
+  // CHECK: %[[ADDR:.+]] = spv.AccessChain %[[DST_CAST]][%[[ZERO_0]], %[[ADD]]]
   // CHECK: %[[ZERO_I8:.+]] = spv.Constant 0 : i8
   // CHECK: %[[ONE_I8:.+]] = spv.Constant 1 : i8
   // CHECK: %[[RES:.+]] = spv.Select %{{.+}}, %[[ONE_I8]], %[[ZERO_I8]] : i1, i8

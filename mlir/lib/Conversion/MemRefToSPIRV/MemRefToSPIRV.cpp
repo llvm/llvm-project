@@ -119,6 +119,15 @@ static Optional<spirv::Scope> getAtomicOpScope(MemRefType t) {
   return {};
 }
 
+/// Casts the given `srcInt` into a boolean value.
+static Value castIntNToBool(Location loc, Value srcInt, OpBuilder &builder) {
+  if (srcInt.getType().isInteger(1))
+    return srcInt;
+
+  auto one = spirv::ConstantOp::getOne(srcInt.getType(), loc, builder);
+  return builder.create<spirv::IEqualOp>(loc, srcInt, one);
+}
+
 /// Casts the given `srcBool` into an integer of `dstType`.
 static Value castBoolToIntN(Location loc, Value srcBool, Type dstType,
                             OpBuilder &builder) {
@@ -302,8 +311,11 @@ IntLoadOpPattern::matchAndRewrite(memref::LoadOp loadOp,
   // If the rewrited load op has the same bit width, use the loading value
   // directly.
   if (srcBits == dstBits) {
-    rewriter.replaceOpWithNewOp<spirv::LoadOp>(loadOp,
-                                               accessChainOp.getResult());
+    Value loadVal =
+        rewriter.create<spirv::LoadOp>(loc, accessChainOp.getResult());
+    if (isBool)
+      loadVal = castIntNToBool(loc, loadVal, rewriter);
+    rewriter.replaceOp(loadOp, loadVal);
     return success();
   }
 
@@ -346,8 +358,7 @@ IntLoadOpPattern::matchAndRewrite(memref::LoadOp loadOp,
   if (isBool) {
     dstType = typeConverter.convertType(loadOp.getType());
     mask = spirv::ConstantOp::getOne(result.getType(), loc, rewriter);
-    Value isOne = rewriter.create<spirv::IEqualOp>(loc, result, mask);
-    result = castBoolToIntN(loc, isOne, dstType, rewriter);
+    result = rewriter.create<spirv::IEqualOp>(loc, result, mask);
   } else if (result.getType().getIntOrFloatBitWidth() !=
              static_cast<unsigned>(dstBits)) {
     result = rewriter.create<spirv::SConvertOp>(loc, dstType, result);
