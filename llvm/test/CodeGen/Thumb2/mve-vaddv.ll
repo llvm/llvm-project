@@ -117,9 +117,8 @@ entry:
 define arm_aapcs_vfpcc i32 @vaddva_v8i32_i32(<8 x i32> %s1, i32 %x) {
 ; CHECK-LABEL: vaddva_v8i32_i32:
 ; CHECK:       @ %bb.0: @ %entry
-; CHECK-NEXT:    vaddv.u32 r2, q1
-; CHECK-NEXT:    vaddva.u32 r2, q0
-; CHECK-NEXT:    add r0, r2
+; CHECK-NEXT:    vaddva.u32 r0, q0
+; CHECK-NEXT:    vaddva.u32 r0, q1
 ; CHECK-NEXT:    bx lr
 entry:
   %t = call i32 @llvm.vector.reduce.add.i32.v8i32(<8 x i32> %s1)
@@ -141,9 +140,8 @@ entry:
 define arm_aapcs_vfpcc i16 @vaddva_v16i16_i16(<16 x i16> %s1, i16 %x) {
 ; CHECK-LABEL: vaddva_v16i16_i16:
 ; CHECK:       @ %bb.0: @ %entry
-; CHECK-NEXT:    vaddv.u16 r2, q1
-; CHECK-NEXT:    vaddva.u16 r2, q0
-; CHECK-NEXT:    add r0, r2
+; CHECK-NEXT:    vaddva.u16 r0, q0
+; CHECK-NEXT:    vaddva.u16 r0, q1
 ; CHECK-NEXT:    bx lr
 entry:
   %t = call i16 @llvm.vector.reduce.add.i16.v16i16(<16 x i16> %s1)
@@ -165,9 +163,8 @@ entry:
 define arm_aapcs_vfpcc i8 @vaddva_v32i8_i8(<32 x i8> %s1, i8 %x) {
 ; CHECK-LABEL: vaddva_v32i8_i8:
 ; CHECK:       @ %bb.0: @ %entry
-; CHECK-NEXT:    vaddv.u8 r2, q1
-; CHECK-NEXT:    vaddva.u8 r2, q0
-; CHECK-NEXT:    add r0, r2
+; CHECK-NEXT:    vaddva.u8 r0, q0
+; CHECK-NEXT:    vaddva.u8 r0, q1
 ; CHECK-NEXT:    bx lr
 entry:
   %t = call i8 @llvm.vector.reduce.add.i8.v32i8(<32 x i8> %s1)

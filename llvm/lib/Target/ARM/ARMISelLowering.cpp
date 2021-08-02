@@ -13066,11 +13066,67 @@ static SDValue PerformADDCombineWithOperands(SDNode *N, SDValue N0, SDValue N1,
 
 static SDValue PerformADDVecReduce(SDNode *N, SelectionDAG &DAG,
                                    const ARMSubtarget *Subtarget) {
-  if (!Subtarget->hasMVEIntegerOps() || N->getValueType(0) != MVT::i64)
+  if (!Subtarget->hasMVEIntegerOps())
     return SDValue();
 
+  EVT VT = N->getValueType(0);
   SDValue N0 = N->getOperand(0);
   SDValue N1 = N->getOperand(1);
+  SDLoc dl(N);
+
+  auto IsVecReduce = [](SDValue Op) {
+    switch (Op.getOpcode()) {
+    case ISD::VECREDUCE_ADD:
+    case ARMISD::VADDVs:
+    case ARMISD::VADDVu:
+    case ARMISD::VMLAVs:
+    case ARMISD::VMLAVu:
+      return true;
+    }
+    return false;
+  };
+
+  auto DistrubuteAddAddVecReduce = [&](SDValue N0, SDValue N1) {
+    // Distribute add(X, add(vecreduce(Y), vecreduce(Z))) ->
+    //   add(add(X, vecreduce(Y)), vecreduce(Z))
+    // to make better use of vaddva style instructions.
+    if (VT == MVT::i32 && N1.getOpcode() == ISD::ADD && !IsVecReduce(N0) &&
+        IsVecReduce(N1.getOperand(0)) && IsVecReduce(N1.getOperand(1))) {
+      SDValue Add0 = DAG.getNode(ISD::ADD, dl, VT, N0, N1.getOperand(0));
+      return DAG.getNode(ISD::ADD, dl, VT, Add0, N1.getOperand(1));
+    }
+    // And turn add(add(A, reduce(B)), add(C, reduce(D))) ->
+    //   add(add(add(A, C), reduce(B)), reduce(D))
+    if (VT == MVT::i32 && N0.getOpcode() == ISD::ADD &&
+        N1.getOpcode() == ISD::ADD) {
+      unsigned N0RedOp = 0;
+      if (!IsVecReduce(N0.getOperand(N0RedOp))) {
+        N0RedOp = 1;
+        if (!IsVecReduce(N0.getOperand(N0RedOp)))
+          return SDValue();
+      }
+
+      unsigned N1RedOp = 0;
+      if (!IsVecReduce(N1.getOperand(N1RedOp)))
+        N1RedOp = 1;
+      if (!IsVecReduce(N1.getOperand(N1RedOp)))
+        return SDValue();
+
+      SDValue Add0 = DAG.getNode(ISD::ADD, dl, VT, N0.getOperand(1 - N0RedOp),
+                                 N1.getOperand(1 - N1RedOp));
+      SDValue Add1 =
+          DAG.getNode(ISD::ADD, dl, VT, Add0, N0.getOperand(N0RedOp));
+      return DAG.getNode(ISD::ADD, dl, VT, Add1, N1.getOperand(N1RedOp));
+    }
+    return SDValue();
+  };
+  if (SDValue R = DistrubuteAddAddVecReduce(N0, N1))
+    return R;
+  if (SDValue R = DistrubuteAddAddVecReduce(N1, N0))
+    return R;
+
+  if (VT != MVT::i64)
+    return SDValue();
 
   // We are looking for a i64 add of a VADDLVx. Due to these being i64's, this
   // will look like:
@@ -13090,7 +13146,6 @@ static SDValue PerformADDVecReduce(SDNode *N, SelectionDAG &DAG,
         NB->getOperand(1) != SDValue(VecRed.getNode(), 1))
       return SDValue();
 
-    SDLoc dl(N);
     if (VecRed->getOpcode() == OpcodeA) {
       // add(NA, VADDLVA(Inp), Y) -> VADDLVA(add(NA, Inp), Y)
       SDValue Inp = DAG.getNode(ISD::BUILD_PAIR, dl, MVT::i64,
