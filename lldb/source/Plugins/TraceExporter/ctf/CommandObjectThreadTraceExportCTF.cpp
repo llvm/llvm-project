@@ -75,11 +75,9 @@ bool CommandObjectThreadTraceExportCTF::DoExecute(Args &command,
     const uint32_t num_threads = process->GetThreadList().GetSize();
     size_t tid = m_options.m_thread_index ? *m_options.m_thread_index
                                           : LLDB_INVALID_THREAD_ID;
-    result.AppendError(
-        llvm::formatv(
-            "Thread index {0} is out of range (valid values are 1 - {1}).\n",
-            tid, num_threads)
-            .str());
+    result.AppendErrorWithFormatv(
+        "Thread index {0} is out of range (valid values are 1 - {1}).\n", tid,
+        num_threads);
     return false;
   } else {
     TraceHTR htr(*thread, *trace_sp->GetCursor(*thread));
