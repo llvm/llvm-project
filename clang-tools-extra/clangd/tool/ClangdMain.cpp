@@ -561,10 +561,13 @@ const char TestScheme::TestDir[] = "/clangd-test";
 std::unique_ptr<SymbolIndex>
 loadExternalIndex(const Config::ExternalIndexSpec &External,
                   AsyncTaskRunner *Tasks) {
+  static const trace::Metric RemoteIndexUsed("used_remote_index",
+                                             trace::Metric::Value, "address");
   switch (External.Kind) {
   case Config::ExternalIndexSpec::None:
     break;
   case Config::ExternalIndexSpec::Server:
+    RemoteIndexUsed.record(1, External.Location);
     log("Associating {0} with remote index at {1}.", External.MountPoint,
         External.Location);
     return remote::getClient(External.Location, External.MountPoint);
