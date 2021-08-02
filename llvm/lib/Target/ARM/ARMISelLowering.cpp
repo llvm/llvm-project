@@ -15976,6 +15976,15 @@ static SDValue PerformVECREDUCE_ADDCombine(SDNode *N, SelectionDAG &DAG,
   SDValue N0 = N->getOperand(0);
   SDLoc dl(N);
 
+  // Try to turn vecreduce_add(add(x, y)) into vecreduce(x) + vecreduce(y)
+  if (ResVT == MVT::i32 && N0.getOpcode() == ISD::ADD &&
+      (N0.getValueType() == MVT::v4i32 || N0.getValueType() == MVT::v8i16 ||
+       N0.getValueType() == MVT::v16i8)) {
+    SDValue Red0 = DAG.getNode(ISD::VECREDUCE_ADD, dl, ResVT, N0.getOperand(0));
+    SDValue Red1 = DAG.getNode(ISD::VECREDUCE_ADD, dl, ResVT, N0.getOperand(1));
+    return DAG.getNode(ISD::ADD, dl, ResVT, Red0, Red1);
+  }
+
   // We are looking for something that will have illegal types if left alone,
   // but that we can convert to a single instruction under MVE. For example
   // vecreduce_add(sext(A, v8i32)) => VADDV.s16 A

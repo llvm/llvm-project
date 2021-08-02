@@ -522,13 +522,11 @@ define arm_aapcs_vfpcc signext i16 @add_v16i8_v16i16_szext(<16 x i8> %x, <16 x i
 ; CHECK-NEXT:    vstrw.32 q0, [r1]
 ; CHECK-NEXT:    vldrb.u16 q0, [r0, #8]
 ; CHECK-NEXT:    vldrb.s16 q1, [r1, #8]
-; CHECK-NEXT:    vldrb.s16 q2, [r1]
-; CHECK-NEXT:    vmul.i16 q0, q1, q0
-; CHECK-NEXT:    vldrb.u16 q1, [r0]
-; CHECK-NEXT:    vmul.i16 q1, q2, q1
-; CHECK-NEXT:    vadd.i16 q0, q1, q0
-; CHECK-NEXT:    vaddv.u16 r0, q0
-; CHECK-NEXT:    sxth r0, r0
+; CHECK-NEXT:    vmlav.u16 r2, q1, q0
+; CHECK-NEXT:    vldrb.u16 q0, [r0]
+; CHECK-NEXT:    vldrb.s16 q1, [r1]
+; CHECK-NEXT:    vmlava.u16 r2, q1, q0
+; CHECK-NEXT:    sxth r0, r2
 ; CHECK-NEXT:    add sp, #32
 ; CHECK-NEXT:    bx lr
 entry:
