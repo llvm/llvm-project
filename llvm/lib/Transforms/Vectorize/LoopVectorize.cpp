@@ -332,8 +332,8 @@ static cl::opt<bool>
                            cl::desc("Prefer in-loop vector reductions, "
                                     "overriding the targets preference."));
 
-cl::opt<bool> EnableStrictReductions(
-    "enable-strict-reductions", cl::init(false), cl::Hidden,
+cl::opt<bool> ForceOrderedReductions(
+    "force-ordered-reductions", cl::init(false), cl::Hidden,
     cl::desc("Enable the vectorisation of loops with in-order (strict) "
              "FP reductions"));
 
@@ -1319,7 +1319,7 @@ public:
   /// the IsOrdered flag of RdxDesc is set and we do not allow reordering
   /// of FP operations.
   bool useOrderedReductions(const RecurrenceDescriptor &RdxDesc) {
-    return EnableStrictReductions && !Hints->allowReordering() &&
+    return ForceOrderedReductions && !Hints->allowReordering() &&
            RdxDesc.isOrdered();
   }
 
@@ -10144,7 +10144,7 @@ bool LoopVectorizePass::processLoop(Loop *L) {
     return false;
   }
 
-  if (!LVL.canVectorizeFPMath(EnableStrictReductions)) {
+  if (!LVL.canVectorizeFPMath(ForceOrderedReductions)) {
     ORE->emit([&]() {
       auto *ExactFPMathInst = Requirements.getExactFPInst();
       return OptimizationRemarkAnalysisFPCommute(DEBUG_TYPE, "CantReorderFPOps",
