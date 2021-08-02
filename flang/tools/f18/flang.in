@@ -219,8 +219,7 @@ categorise_opts()
       [[ $opt =~ -I.* ]] ||
       [[ $opt =~ -J.* ]] ||
       [[ $opt == "-fopenmp" ]] ||
-      [[ $opt == "-fopenacc" ]] ||
-      ; then
+      [[ $opt == "-fopenacc" ]]; then
       flang_opts+=($opt)
       fc_opts+=($opt)
     else
