@@ -7828,8 +7828,7 @@ public:
                                  TemplateArgumentLoc &Arg,
                            SmallVectorImpl<TemplateArgument> &Converted);
 
-  bool CheckTemplateArgument(TemplateTypeParmDecl *Param,
-                             TypeSourceInfo *Arg);
+  bool CheckTemplateArgument(TypeSourceInfo *Arg);
   ExprResult CheckTemplateArgument(NonTypeTemplateParmDecl *Param,
                                    QualType InstantiatedParamType, Expr *Arg,
                                    TemplateArgument &Converted,
