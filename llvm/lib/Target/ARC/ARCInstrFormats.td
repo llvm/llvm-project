@@ -261,32 +261,6 @@ class F32_SOP_RR<bits<5> major, bits<6> subop, bit F, dag outs, dag ins,
   let Inst{5-0} = subop;
 }
 
-// Single Operand Immediate Instructions.
-// 1-register, unsigned 6-bit immediate Single Operand instruction with
-// condition code.
-// |26|25|24|23|22|21|20|19|18|17|16|15|14|13|12|11|10|9|8|7|6|5|4|3|2|1|0|
-// |B[2-0]  | 1| 1|            subop| F|B[5-3]  |U6           |1|cc       |
-class F32_SOP_CC_RU6<bits<5> major, bits<6> subop, bit F, dag outs, dag ins,
-                     string asmstr, list<dag> pattern> :
-  InstARC<4, outs, ins, asmstr, pattern> {
-
-  bits<5> cc;
-  bits<6> U6;
-  bits<6> B;
-
-  let Inst{31-27} = major;
-  let Inst{26-24} = B{2-0};
-  let Inst{23-22} = 0b11;
-  let Inst{21-16} = subop;
-  let Inst{15} = F;
-  let Inst{14-12} = B{5-3};
-  let Inst{11-6} = U6;
-  let Inst{5} = 1;
-  let Inst{4-0} = cc;
-
-  let DecoderMethod = "DecodeCCRU6Instruction";
-}
-
 // Dual Operand Instructions.  Inst[21-16] specifies the specific operation
 // for this format.
 
@@ -353,6 +327,31 @@ class F32_DOP_RU6<bits<5> major, bits<6> subop, bit F, dag outs, dag ins,
   let Inst{5-0} = A;
 }
 
+// 1-register, unsigned 6-bit, immediate Dual Operand instruction with
+// condition code.
+// |26|25|24|23|22|21|20|19|18|17|16|15|14|13|12|11|10|9|8|7|6|5|4|3|2|1|0|
+// |B[2-0]  | 1| 1|            subop| F|B[5-3]  |U6           |1|cc       |
+class F32_DOP_CC_RU6<bits<5> major, bits<6> subop, bit F, dag outs, dag ins,
+                     string asmstr, list<dag> pattern> :
+  InstARC<4, outs, ins, asmstr, pattern> {
+
+  bits<5> cc;
+  bits<6> U6;
+  bits<6> B;
+
+  let Inst{31-27} = major;
+  let Inst{26-24} = B{2-0};
+  let Inst{23-22} = 0b11;
+  let Inst{21-16} = subop;
+  let Inst{15} = F;
+  let Inst{14-12} = B{5-3};
+  let Inst{11-6} = U6;
+  let Inst{5} = 1;
+  let Inst{4-0} = cc;
+
+  let DecoderMethod = "DecodeCCRU6Instruction";
+}
+
 // 2-register, unsigned 6-bit immediate Dual Operand instruction with
 // condition code. This instruction uses B as the first 2 operands
 // (i.e, add.cc B, B, u6).
@@ -364,7 +363,6 @@ class F32_DOP_CC_RRU6<bits<5> major, bits<6> subop, bit F, dag outs, dag ins,
   bits<5> cc;
   bits<6> U6;
   bits<6> B;
-  bits<6> A;
 
   let Inst{31-27} = major;
   let Inst{26-24} = B{2-0};
