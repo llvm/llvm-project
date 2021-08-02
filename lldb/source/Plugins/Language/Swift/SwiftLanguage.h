@@ -72,6 +72,9 @@ public:
   void GetExceptionResolverDescription(bool catch_on, bool throw_on,
                                        Stream &s) override;
 
+  ConstString
+  GetDemangledFunctionNameWithoutArguments(Mangled mangled) const override;
+
   //------------------------------------------------------------------
   // Static Functions
   //------------------------------------------------------------------

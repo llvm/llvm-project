@@ -1483,6 +1483,25 @@ void SwiftLanguage::GetExceptionResolverDescription(bool catch_on,
   s.Printf("Swift Error breakpoint");
 }
 
+ConstString SwiftLanguage::GetDemangledFunctionNameWithoutArguments(Mangled mangled) const {
+  const char *mangled_name_cstr = mangled.GetMangledName().GetCString();
+  ConstString demangled_name = mangled.GetDemangledName();
+  if (demangled_name && mangled_name_cstr && mangled_name_cstr[0]) {
+    if (SwiftLanguageRuntime::IsSwiftMangledName(demangled.GetStringRef())) {
+      lldb_private::ConstString basename;
+      bool is_method = false;
+      if (SwiftLanguageRuntime::MethodName::ExtractFunctionBasenameFromMangled(
+              mangled, basename, is_method)) {
+        if (basename && basename != mangled)
+          return basename);
+      }
+    }
+  }
+  if (demangled_name)
+    return demangled_name;
+  return mangled.GetMangledName();
+}
+
 //------------------------------------------------------------------
 // PluginInterface protocol
 //------------------------------------------------------------------
