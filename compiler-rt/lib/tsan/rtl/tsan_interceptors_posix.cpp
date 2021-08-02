@@ -2916,30 +2916,36 @@ void InitializeInterceptors() {
 // Note that no_sanitize_thread attribute does not turn off atomic interception
 // so attaching it to the function defined in user code does not help.
 // That's why we now have what we have.
-constexpr uptr kBarrierThreadBits = 10;
-constexpr uptr kBarrierThreads = 1 << kBarrierThreadBits;
+constexpr u32 kBarrierThreadBits = 10;
+constexpr u32 kBarrierThreads = 1 << kBarrierThreadBits;
 
-extern "C" SANITIZER_INTERFACE_ATTRIBUTE
-void __tsan_testonly_barrier_init(u64 *barrier, u32 count) {
-  if (count >= kBarrierThreads) {
-    Printf("barrier_init: count is too large (%d)\n", count);
+extern "C" SANITIZER_INTERFACE_ATTRIBUTE void __tsan_testonly_barrier_init(
+    atomic_uint32_t *barrier, u32 num_threads) {
+  if (num_threads >= kBarrierThreads) {
+    Printf("barrier_init: count is too large (%d)\n", num_threads);
     Die();
   }
   // kBarrierThreadBits lsb is thread count,
   // the remaining are count of entered threads.
-  *barrier = count;
+  atomic_store(barrier, num_threads, memory_order_relaxed);
 }
 
-extern "C" SANITIZER_INTERFACE_ATTRIBUTE
-void __tsan_testonly_barrier_wait(u64 *barrier) {
-  constexpr uptr kThreadMask = kBarrierThreads - 1;
-  unsigned old = __atomic_fetch_add(barrier, kBarrierThreads, __ATOMIC_RELAXED);
-  unsigned old_epoch = (old >> kBarrierThreadBits) / (old & kThreadMask);
+static u32 barrier_epoch(u32 value) {
+  return (value >> kBarrierThreadBits) / (value & (kBarrierThreads - 1));
+}
+
+extern "C" SANITIZER_INTERFACE_ATTRIBUTE void __tsan_testonly_barrier_wait(
+    atomic_uint32_t *barrier) {
+  u32 old = atomic_fetch_add(barrier, kBarrierThreads, memory_order_relaxed);
+  u32 old_epoch = barrier_epoch(old);
+  if (barrier_epoch(old + kBarrierThreads) != old_epoch) {
+    FutexWake(barrier, (1 << 30));
+    return;
+  }
   for (;;) {
-    unsigned cur = __atomic_load_n(barrier, __ATOMIC_RELAXED);
-    unsigned cur_epoch = (cur >> kBarrierThreadBits) / (cur & kThreadMask);
-    if (cur_epoch != old_epoch)
-      break;
-    internal_usleep(100);
+    u32 cur = atomic_load(barrier, memory_order_relaxed);
+    if (barrier_epoch(cur) != old_epoch)
+      return;
+    FutexWait(barrier, cur);
   }
 }
