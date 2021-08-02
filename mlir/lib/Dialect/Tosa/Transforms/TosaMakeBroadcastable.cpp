@@ -143,7 +143,8 @@ static LogicalResult reshapeLowerToHigher(PatternRewriter &rewriter,
 
   SmallVector<int64_t, 4> reshapeOutputShape;
 
-  computeReshapeOutput(higherRankShape, lowerRankShape, reshapeOutputShape);
+  computeReshapeOutput(outputType.getShape(), lowerRankShape,
+                       reshapeOutputShape);
 
   auto reshapeInputType = lowerTensorValue.getType().cast<RankedTensorType>();
   auto reshapeOutputType = RankedTensorType::get(
