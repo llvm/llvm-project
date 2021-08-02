@@ -698,6 +698,7 @@ enum : AccessType {
   kAccessWrite = 0,
   kAccessRead = 1 << 0,
   kAccessAtomic = 1 << 1,
+  kAccessVptr = 1 << 2,
 };
 
 void MemoryAccess(ThreadState *thr, uptr pc, uptr addr,
@@ -738,7 +739,11 @@ void MemoryAccess(ThreadState *thr, uptr pc, uptr addr, uptr size,
   }
   bool is_write = !(typ & kAccessRead);
   bool is_atomic = typ & kAccessAtomic;
+  if (typ & kAccessVptr)
+    thr->is_vptr_access = true;
   MemoryAccess(thr, pc, addr, size_log, is_write, is_atomic);
+  if (typ & kAccessVptr)
+    thr->is_vptr_access = false;
 }
 
 void MemoryResetRange(ThreadState *thr, uptr pc, uptr addr, uptr size);

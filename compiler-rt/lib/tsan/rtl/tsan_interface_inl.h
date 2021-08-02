@@ -83,21 +83,15 @@ void __tsan_write8_pc(void *addr, void *pc) {
 }
 
 void __tsan_vptr_update(void **vptr_p, void *new_val) {
-  CHECK_EQ(sizeof(vptr_p), 8);
-  if (*vptr_p != new_val) {
-    ThreadState *thr = cur_thread();
-    thr->is_vptr_access = true;
-    MemoryAccess(thr, CALLERPC, (uptr)vptr_p, 8, kAccessWrite);
-    thr->is_vptr_access = false;
-  }
+  if (*vptr_p == new_val)
+    return;
+  MemoryAccess(cur_thread(), CALLERPC, (uptr)vptr_p, sizeof(*vptr_p),
+               kAccessWrite | kAccessVptr);
 }
 
 void __tsan_vptr_read(void **vptr_p) {
-  CHECK_EQ(sizeof(vptr_p), 8);
-  ThreadState *thr = cur_thread();
-  thr->is_vptr_access = true;
-  MemoryAccess(thr, CALLERPC, (uptr)vptr_p, 8, kAccessRead);
-  thr->is_vptr_access = false;
+  MemoryAccess(cur_thread(), CALLERPC, (uptr)vptr_p, sizeof(*vptr_p),
+               kAccessRead | kAccessVptr);
 }
 
 void __tsan_func_entry(void *pc) { FuncEntry(cur_thread(), STRIP_PAC_PC(pc)); }
