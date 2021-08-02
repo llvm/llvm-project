@@ -506,7 +506,9 @@ bool PPCRegisterInfo::getRegAllocationHints(Register VirtReg,
           VRM->hasPhys(ResultReg)) {
         Register UACCPhys = VRM->getPhys(ResultReg);
         Register HintReg = getSubReg(UACCPhys, ResultOp->getSubReg());
-        Hints.push_back(HintReg);
+        // Ensure that the hint is a VSRp register.
+        if (HintReg >= PPC::VSRp0 && HintReg <= PPC::VSRp31)
+          Hints.push_back(HintReg);
       }
       break;
     }
