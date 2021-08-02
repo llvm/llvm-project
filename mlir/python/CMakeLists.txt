@@ -46,6 +46,12 @@ declare_mlir_python_sources(MLIRPythonSources.Passes
     transforms/*.py
 )
 
+declare_mlir_python_sources(MLIRPythonCAPIHeaderSources
+  ROOT_DIR "${MLIR_SOURCE_DIR}/include"
+  SOURCES_GLOB "mlir-c/*.h"
+  DEST_PREFIX "_mlir_libs/include"
+)
+
 ################################################################################
 # Dialect bindings
 ################################################################################
@@ -304,6 +310,7 @@ add_mlir_python_modules(MLIRPythonModules
   DECLARED_SOURCES
     MLIRPythonSources
     MLIRPythonExtension.AllPassesRegistration
+    MLIRPythonCAPIHeaderSources
   COMMON_CAPI_LINK_LIBS
     MLIRPythonCAPI
   )

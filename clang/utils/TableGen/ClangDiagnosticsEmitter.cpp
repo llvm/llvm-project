@@ -614,7 +614,7 @@ struct DiagnosticTextBuilder {
     return It->second.Root;
   }
 
-  LLVM_ATTRIBUTE_NORETURN void PrintFatalError(llvm::Twine const &Msg) const {
+  [[noreturn]] void PrintFatalError(llvm::Twine const &Msg) const {
     assert(EvaluatingRecord && "not evaluating a record?");
     llvm::PrintFatalError(EvaluatingRecord->getLoc(), Msg);
   }

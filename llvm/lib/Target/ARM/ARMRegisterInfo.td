@@ -66,6 +66,8 @@ def ssub_10 : ComposedSubRegIndex<dsub_5, ssub_0>;
 def ssub_11 : ComposedSubRegIndex<dsub_5, ssub_1>;
 def ssub_12 : ComposedSubRegIndex<dsub_6, ssub_0>;
 def ssub_13 : ComposedSubRegIndex<dsub_6, ssub_1>;
+def ssub_14 : ComposedSubRegIndex<dsub_7, ssub_0>;
+def ssub_15 : ComposedSubRegIndex<dsub_7, ssub_1>;
 
 def gsub_0 : SubRegIndex<32>;
 def gsub_1 : SubRegIndex<32, 32>;

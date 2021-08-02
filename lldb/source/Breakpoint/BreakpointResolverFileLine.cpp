@@ -188,7 +188,7 @@ void BreakpointResolverFileLine::FilterContexts(SymbolContextList &sc_list,
     // is 0, then we can't do this calculation.  That can happen if
     // GetStartLineSourceInfo gets an error, or if the first line number in
     // the function really is 0 - which happens for some languages.
-    
+
     // But only do this calculation if the line number we found in the SC
     // was different from the one requested in the source file.  If we actually
     // found an exact match it must be valid.
@@ -229,18 +229,25 @@ Searcher::CallbackReturn BreakpointResolverFileLine::SearchCallback(
   const uint32_t line = m_location_spec.GetLine().getValueOr(0);
   const llvm::Optional<uint16_t> column = m_location_spec.GetColumn();
 
+  // We'll create a new SourceLocationSpec that can take into account the
+  // relative path case, and we'll use it to resolve the symbol context
+  // of the CUs.
   FileSpec search_file_spec = m_location_spec.GetFileSpec();
   const bool is_relative = search_file_spec.IsRelative();
   if (is_relative)
     search_file_spec.GetDirectory().Clear();
+  SourceLocationSpec search_location_spec(
+      search_file_spec, m_location_spec.GetLine().getValueOr(0),
+      m_location_spec.GetColumn(), m_location_spec.GetCheckInlines(),
+      m_location_spec.GetExactMatch());
 
   const size_t num_comp_units = context.module_sp->GetNumCompileUnits();
   for (size_t i = 0; i < num_comp_units; i++) {
     CompUnitSP cu_sp(context.module_sp->GetCompileUnitAtIndex(i));
     if (cu_sp) {
       if (filter.CompUnitPasses(*cu_sp))
-        cu_sp->ResolveSymbolContext(m_location_spec, eSymbolContextEverything,
-                                    sc_list);
+        cu_sp->ResolveSymbolContext(search_location_spec,
+                                    eSymbolContextEverything, sc_list);
     }
   }
 

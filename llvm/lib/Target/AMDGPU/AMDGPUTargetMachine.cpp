@@ -714,12 +714,11 @@ void AMDGPUTargetMachine::registerPassBuilderCallbacks(PassBuilder &PB) {
   });
 
   PB.registerPipelineStartEPCallback(
-      [this](ModulePassManager &PM, PassBuilder::OptimizationLevel Level) {
+      [this](ModulePassManager &PM, OptimizationLevel Level) {
         FunctionPassManager FPM;
         FPM.addPass(AMDGPUPropagateAttributesEarlyPass(*this));
         FPM.addPass(AMDGPUUseNativeCallsPass());
-        if (EnableLibCallSimplify &&
-            Level != PassBuilder::OptimizationLevel::O0)
+        if (EnableLibCallSimplify && Level != OptimizationLevel::O0)
           FPM.addPass(AMDGPUSimplifyLibCallsPass(*this));
         if (getOptLevel() >= CodeGenOpt::Default)
           FPM.addPass(AMDGPUImageIntrinsicOptimizerPass(*this));
@@ -727,8 +726,8 @@ void AMDGPUTargetMachine::registerPassBuilderCallbacks(PassBuilder &PB) {
       });
 
   PB.registerPipelineEarlySimplificationEPCallback(
-      [this](ModulePassManager &PM, PassBuilder::OptimizationLevel Level) {
-        if (Level == PassBuilder::OptimizationLevel::O0)
+      [this](ModulePassManager &PM, OptimizationLevel Level) {
+        if (Level == OptimizationLevel::O0)
           return;
 
         PM.addPass(AMDGPUUnifyMetadataPass());
@@ -746,8 +745,8 @@ void AMDGPUTargetMachine::registerPassBuilderCallbacks(PassBuilder &PB) {
       });
 
   PB.registerCGSCCOptimizerLateEPCallback(
-      [this](CGSCCPassManager &PM, PassBuilder::OptimizationLevel Level) {
-        if (Level == PassBuilder::OptimizationLevel::O0)
+      [this](CGSCCPassManager &PM, OptimizationLevel Level) {
+        if (Level == OptimizationLevel::O0)
           return;
 
         FunctionPassManager FPM;
@@ -760,7 +759,7 @@ void AMDGPUTargetMachine::registerPassBuilderCallbacks(PassBuilder &PB) {
         // anything, and before other cleanup optimizations.
         FPM.addPass(AMDGPULowerKernelAttributesPass());
 
-        if (Level != PassBuilder::OptimizationLevel::O0) {
+        if (Level != OptimizationLevel::O0) {
           // Promote alloca to vector before SROA and loop unroll. If we
           // manage to eliminate allocas before unroll we may choose to unroll
           // less.

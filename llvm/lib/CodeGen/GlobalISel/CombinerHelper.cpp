@@ -2045,26 +2045,23 @@ bool CombinerHelper::matchCombineUnmergeMergeToPlainValues(
     MachineInstr &MI, SmallVectorImpl<Register> &Operands) {
   assert(MI.getOpcode() == TargetOpcode::G_UNMERGE_VALUES &&
          "Expected an unmerge");
-  Register SrcReg =
-      peekThroughBitcast(MI.getOperand(MI.getNumOperands() - 1).getReg(), MRI);
+  auto &Unmerge = cast<GUnmerge>(MI);
+  Register SrcReg = peekThroughBitcast(Unmerge.getSourceReg(), MRI);
 
-  MachineInstr *SrcInstr = MRI.getVRegDef(SrcReg);
-  if (SrcInstr->getOpcode() != TargetOpcode::G_MERGE_VALUES &&
-      SrcInstr->getOpcode() != TargetOpcode::G_BUILD_VECTOR &&
-      SrcInstr->getOpcode() != TargetOpcode::G_CONCAT_VECTORS)
+  auto *SrcInstr = getOpcodeDef<GMergeLikeOp>(SrcReg, MRI);
+  if (!SrcInstr)
     return false;
 
   // Check the source type of the merge.
-  LLT SrcMergeTy = MRI.getType(SrcInstr->getOperand(1).getReg());
-  LLT Dst0Ty = MRI.getType(MI.getOperand(0).getReg());
+  LLT SrcMergeTy = MRI.getType(SrcInstr->getSourceReg(0));
+  LLT Dst0Ty = MRI.getType(Unmerge.getReg(0));
   bool SameSize = Dst0Ty.getSizeInBits() == SrcMergeTy.getSizeInBits();
   if (SrcMergeTy != Dst0Ty && !SameSize)
     return false;
   // They are the same now (modulo a bitcast).
   // We can collect all the src registers.
-  for (unsigned Idx = 1, EndIdx = SrcInstr->getNumOperands(); Idx != EndIdx;
-       ++Idx)
-    Operands.push_back(SrcInstr->getOperand(Idx).getReg());
+  for (unsigned Idx = 0; Idx < SrcInstr->getNumSources(); ++Idx)
+    Operands.push_back(SrcInstr->getSourceReg(Idx));
   return true;
 }
 
@@ -2410,9 +2407,9 @@ void CombinerHelper::applyCombineAddP2IToPtrAdd(
 
 bool CombinerHelper::matchCombineConstPtrAddToI2P(MachineInstr &MI,
                                                   int64_t &NewCst) {
-  assert(MI.getOpcode() == TargetOpcode::G_PTR_ADD && "Expected a G_PTR_ADD");
-  Register LHS = MI.getOperand(1).getReg();
-  Register RHS = MI.getOperand(2).getReg();
+  auto &PtrAdd = cast<GPtrAdd>(MI);
+  Register LHS = PtrAdd.getBaseReg();
+  Register RHS = PtrAdd.getOffsetReg();
   MachineRegisterInfo &MRI = Builder.getMF().getRegInfo();
 
   if (auto RHSCst = getConstantVRegSExtVal(RHS, MRI)) {
@@ -2428,12 +2425,12 @@ bool CombinerHelper::matchCombineConstPtrAddToI2P(MachineInstr &MI,
 
 void CombinerHelper::applyCombineConstPtrAddToI2P(MachineInstr &MI,
                                                   int64_t &NewCst) {
-  assert(MI.getOpcode() == TargetOpcode::G_PTR_ADD && "Expected a G_PTR_ADD");
-  Register Dst = MI.getOperand(0).getReg();
+  auto &PtrAdd = cast<GPtrAdd>(MI);
+  Register Dst = PtrAdd.getReg(0);
 
   Builder.setInstrAndDebugLoc(MI);
   Builder.buildConstant(Dst, NewCst);
-  MI.eraseFromParent();
+  PtrAdd.eraseFromParent();
 }
 
 bool CombinerHelper::matchCombineAnyExtTrunc(MachineInstr &MI, Register &Reg) {
@@ -3346,7 +3343,8 @@ void CombinerHelper::applyXorOfAndWithSameReg(
 }
 
 bool CombinerHelper::matchPtrAddZero(MachineInstr &MI) {
-  Register DstReg = MI.getOperand(0).getReg();
+  auto &PtrAdd = cast<GPtrAdd>(MI);
+  Register DstReg = PtrAdd.getReg(0);
   LLT Ty = MRI.getType(DstReg);
   const DataLayout &DL = Builder.getMF().getDataLayout();
 
@@ -3354,20 +3352,20 @@ bool CombinerHelper::matchPtrAddZero(MachineInstr &MI) {
     return false;
 
   if (Ty.isPointer()) {
-    auto ConstVal = getConstantVRegVal(MI.getOperand(1).getReg(), MRI);
+    auto ConstVal = getConstantVRegVal(PtrAdd.getBaseReg(), MRI);
     return ConstVal && *ConstVal == 0;
   }
 
   assert(Ty.isVector() && "Expecting a vector type");
-  const MachineInstr *VecMI = MRI.getVRegDef(MI.getOperand(1).getReg());
+  const MachineInstr *VecMI = MRI.getVRegDef(PtrAdd.getBaseReg());
   return isBuildVectorAllZeros(*VecMI, MRI);
 }
 
 void CombinerHelper::applyPtrAddZero(MachineInstr &MI) {
-  assert(MI.getOpcode() == TargetOpcode::G_PTR_ADD);
-  Builder.setInstrAndDebugLoc(MI);
-  Builder.buildIntToPtr(MI.getOperand(0), MI.getOperand(2));
-  MI.eraseFromParent();
+  auto &PtrAdd = cast<GPtrAdd>(MI);
+  Builder.setInstrAndDebugLoc(PtrAdd);
+  Builder.buildIntToPtr(PtrAdd.getReg(0), PtrAdd.getOffsetReg());
+  PtrAdd.eraseFromParent();
 }
 
 /// The second source operand is known to be a power of 2.

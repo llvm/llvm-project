@@ -133,6 +133,8 @@ static bool EvaluateDefined(PPValue &Result, Token &PeekTok, DefinedTracker &DT,
   Result.Val.setIsUnsigned(false); // Result is signed intmax_t.
   DT.IncludedUndefinedIds = !Macro;
 
+  PP.emitMacroExpansionWarnings(PeekTok);
+
   // If there is a macro, mark it used.
   if (Result.Val != 0 && ValueLive)
     PP.markMacroAsUsed(Macro.getMacroInfo());

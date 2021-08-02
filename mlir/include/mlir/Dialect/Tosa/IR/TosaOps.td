@@ -1414,6 +1414,8 @@ def Tosa_ReshapeOp: Tosa_Op<"reshape", [
     No data conversion happens during a reshape operation.
   }];
 
+  let hasCanonicalizer = 1;
+
   let arguments = (ins
     Tosa_Tensor:$input1,
     I64ArrayAttr:$new_shape

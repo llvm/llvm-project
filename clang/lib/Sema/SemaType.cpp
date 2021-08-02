@@ -1525,18 +1525,20 @@ static QualType ConvertDeclSpecToType(TypeProcessingState &state) {
     break;
   case DeclSpec::TST_float:   Result = Context.FloatTy; break;
   case DeclSpec::TST_double:
-    if (S.getLangOpts().OpenCL) {
-      if (!S.getOpenCLOptions().isSupported("cl_khr_fp64", S.getLangOpts()))
-        S.Diag(DS.getTypeSpecTypeLoc(),
-               diag::err_opencl_double_requires_extension)
-            << (S.getLangOpts().OpenCLVersion >= 300);
-      else if (!S.getOpenCLOptions().isAvailableOption("cl_khr_fp64", S.getLangOpts()))
-        S.Diag(DS.getTypeSpecTypeLoc(), diag::ext_opencl_double_without_pragma);
-    }
     if (DS.getTypeSpecWidth() == TypeSpecifierWidth::Long)
       Result = Context.LongDoubleTy;
     else
       Result = Context.DoubleTy;
+    if (S.getLangOpts().OpenCL) {
+      if (!S.getOpenCLOptions().isSupported("cl_khr_fp64", S.getLangOpts()))
+        S.Diag(DS.getTypeSpecTypeLoc(), diag::err_opencl_requires_extension)
+            << 0 << Result
+            << (S.getLangOpts().OpenCLVersion == 300
+                    ? "cl_khr_fp64 and __opencl_c_fp64"
+                    : "cl_khr_fp64");
+      else if (!S.getOpenCLOptions().isAvailableOption("cl_khr_fp64", S.getLangOpts()))
+        S.Diag(DS.getTypeSpecTypeLoc(), diag::ext_opencl_double_without_pragma);
+    }
     break;
   case DeclSpec::TST_float128:
     if (!S.Context.getTargetInfo().hasFloat128Type() &&
@@ -1724,21 +1726,28 @@ static QualType ConvertDeclSpecToType(TypeProcessingState &state) {
 
   if (S.getLangOpts().OpenCL) {
     const auto &OpenCLOptions = S.getOpenCLOptions();
-    StringRef OptName;
+    bool IsOpenCLC30 = (S.getLangOpts().OpenCLVersion == 300);
     // OpenCL C v3.0 s6.3.3 - OpenCL image types require __opencl_c_images
-    // support
+    // support.
+    // OpenCL C v3.0 s6.2.1 - OpenCL 3d image write types requires support
+    // for OpenCL C 2.0, or OpenCL C 3.0 or newer and the
+    // __opencl_c_3d_image_writes feature. OpenCL C v3.0 API s4.2 - For devices
+    // that support OpenCL 3.0, cl_khr_3d_image_writes must be returned when and
+    // only when the optional feature is supported
     if ((Result->isImageType() || Result->isSamplerT()) &&
-        (S.getLangOpts().OpenCLVersion >= 300 &&
-         !OpenCLOptions.isSupported("__opencl_c_images", S.getLangOpts())))
-      OptName = "__opencl_c_images";
-    else if (Result->isOCLImage3dWOType() &&
-             !OpenCLOptions.isSupported("cl_khr_3d_image_writes",
-                                        S.getLangOpts()))
-      OptName = "cl_khr_3d_image_writes";
-
-    if (!OptName.empty()) {
+        (IsOpenCLC30 &&
+         !OpenCLOptions.isSupported("__opencl_c_images", S.getLangOpts()))) {
       S.Diag(DS.getTypeSpecTypeLoc(), diag::err_opencl_requires_extension)
-          << 0 << Result << OptName;
+          << 0 << Result << "__opencl_c_images";
+      declarator.setInvalidType();
+    } else if (Result->isOCLImage3dWOType() &&
+               !OpenCLOptions.isSupported("cl_khr_3d_image_writes",
+                                          S.getLangOpts())) {
+      S.Diag(DS.getTypeSpecTypeLoc(), diag::err_opencl_requires_extension)
+          << 0 << Result
+          << (IsOpenCLC30
+                  ? "cl_khr_3d_image_writes and __opencl_c_3d_image_writes"
+                  : "cl_khr_3d_image_writes");
       declarator.setInvalidType();
     }
   }

@@ -1229,9 +1229,26 @@ struct FoldSourceTensorCast : public OpRewritePattern<PadTensorOp> {
     if (!tensor::canFoldIntoConsumerOp(castOp))
       return failure();
 
-    rewriter.updateRootInPlace(padTensorOp, [&]() {
-      padTensorOp.sourceMutable().assign(castOp.source());
-    });
+    auto newResultType = PadTensorOp::inferResultType(
+        castOp.source().getType().cast<RankedTensorType>(),
+        extractFromI64ArrayAttr(padTensorOp.static_low()),
+        extractFromI64ArrayAttr(padTensorOp.static_high()));
+
+    if (newResultType == padTensorOp.getResultType()) {
+      rewriter.updateRootInPlace(padTensorOp, [&]() {
+        padTensorOp.sourceMutable().assign(castOp.source());
+      });
+    } else {
+      auto newOp = rewriter.create<PadTensorOp>(
+          padTensorOp->getLoc(), newResultType, padTensorOp.source(),
+          padTensorOp.low(), padTensorOp.high(), padTensorOp.static_low(),
+          padTensorOp.static_high(), /*output=*/nullptr);
+      BlockAndValueMapping mapper;
+      padTensorOp.getRegion().cloneInto(&newOp.getRegion(), mapper);
+
+      rewriter.replaceOpWithNewOp<tensor::CastOp>(
+          padTensorOp, padTensorOp.getResultType(), newOp);
+    }
     return success();
   }
 };

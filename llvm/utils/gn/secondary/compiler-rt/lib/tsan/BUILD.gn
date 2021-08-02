@@ -59,6 +59,7 @@ target(tsan_target_type, "tsan") {
     "rtl/tsan_flags.inc",
     "rtl/tsan_ignoreset.cpp",
     "rtl/tsan_ignoreset.h",
+    "rtl/tsan_ilist.h",
     "rtl/tsan_interceptors.h",
     "rtl/tsan_interceptors_posix.cpp",
     "rtl/tsan_interface.cpp",

@@ -39,7 +39,7 @@
 #include "llvm/Frontend/OpenMP/OMPGridValues.h"
 
 #ifndef TARGET_NAME
-#define TARGET_NAME AMDHSA
+#error "Missing TARGET_NAME macro"
 #endif
 #define DEBUG_PREFIX "Target " GETNAME(TARGET_NAME) " RTL"
 
@@ -687,12 +687,12 @@ public:
     else
       print_kernel_trace = 0;
 
-    DP("Start initializing HSA-ATMI\n");
+    DP("Start initializing " GETNAME(TARGET_NAME) "\n");
     hsa_status_t err = core::atl_init_gpu_context();
     if (err == HSA_STATUS_SUCCESS) {
       HSAInitializeSucceeded = true;
     } else {
-      DP("Error when initializing HSA-ATMI\n");
+      DP("Error when initializing " GETNAME(TARGET_NAME) "\n");
       return;
     }
 
@@ -793,7 +793,7 @@ public:
   }
 
   ~RTLDeviceInfoTy() {
-    DP("Finalizing the HSA-ATMI DeviceInfo.\n");
+    DP("Finalizing the " GETNAME(TARGET_NAME) " DeviceInfo.\n");
     if (!HSAInitializeSucceeded) {
       // Then none of these can have been set up and they can't be torn down
       return;

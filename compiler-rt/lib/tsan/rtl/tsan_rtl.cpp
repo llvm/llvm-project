@@ -384,9 +384,10 @@ void CheckUnwind() {
   PrintCurrentStackSlow(StackTrace::GetCurrentPc());
 }
 
+bool is_initialized;
+
 void Initialize(ThreadState *thr) {
   // Thread safe because done before all threads exist.
-  static bool is_initialized = false;
   if (is_initialized)
     return;
   is_initialized = true;

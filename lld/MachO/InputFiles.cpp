@@ -1276,8 +1276,6 @@ static macho::Symbol *createBitcodeSymbol(const lto::InputFile::Symbol &objSym,
   if (objSym.isUndefined())
     return symtab->addUndefined(name, &file, /*isWeakRef=*/false);
 
-  assert(!objSym.isCommon() && "TODO: support common symbols in LTO");
-
   // TODO: Write a test demonstrating why computing isPrivateExtern before
   // LTO compilation is important.
   bool isPrivateExtern = false;
@@ -1291,6 +1289,10 @@ static macho::Symbol *createBitcodeSymbol(const lto::InputFile::Symbol &objSym,
   case GlobalValue::DefaultVisibility:
     break;
   }
+
+  if (objSym.isCommon())
+    return symtab->addCommon(name, &file, objSym.getCommonSize(),
+                             objSym.getCommonAlignment(), isPrivateExtern);
 
   return symtab->addDefined(name, &file, /*isec=*/nullptr, /*value=*/0,
                             /*size=*/0, objSym.isWeak(), isPrivateExtern,

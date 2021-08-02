@@ -47,9 +47,9 @@ private:
 public:
   using BaseT::initializeORCRPCEPCBase;
 
-  RemoteExecutorProcessControl(ExecutionSession &ES,
-                               std::unique_ptr<RPCChannel> Channel,
-                               std::unique_ptr<RPCEndpoint> Endpoint);
+  RemoteExecutorProcessControl(std::unique_ptr<RPCChannel> Channel,
+                               std::unique_ptr<RPCEndpoint> Endpoint,
+                               BaseT::ErrorReporter ReportError);
 
   void initializeMemoryManagement();
   Error disconnect() override;
@@ -64,10 +64,10 @@ private:
 };
 
 RemoteExecutorProcessControl::RemoteExecutorProcessControl(
-    ExecutionSession &ES, std::unique_ptr<RPCChannel> Channel,
-    std::unique_ptr<RPCEndpoint> Endpoint)
-    : BaseT(ES.getSymbolStringPool(), *Endpoint,
-            [&ES](Error Err) { ES.reportError(std::move(Err)); }),
+    std::unique_ptr<RPCChannel> Channel, std::unique_ptr<RPCEndpoint> Endpoint,
+    BaseT::ErrorReporter ReportError)
+    : BaseT(std::make_shared<SymbolStringPool>(), *Endpoint,
+            std::move(ReportError)),
       Channel(std::move(Channel)), Endpoint(std::move(Endpoint)) {
 
   ListenerThread = std::thread([&]() {
@@ -109,11 +109,17 @@ JITLinkExecutor::~JITLinkExecutor() = default;
 
 Expected<std::unique_ptr<ObjectLayer>>
 JITLinkExecutor::operator()(ExecutionSession &ES, const Triple &TT) {
+  assert(EPC && "RemoteExecutorProcessControl must be initialized");
   return std::make_unique<ObjectLinkingLayer>(ES, EPC->getMemMgr());
 }
 
+std::unique_ptr<ExecutionSession> JITLinkExecutor::startSession() {
+  assert(OwnedEPC && "RemoteExecutorProcessControl must be initialized");
+  return std::make_unique<ExecutionSession>(std::move(OwnedEPC));
+}
+
 Error JITLinkExecutor::addDebugSupport(ObjectLayer &ObjLayer) {
-  auto Registrar = createJITLoaderGDBRegistrar(*EPC);
+  auto Registrar = createJITLoaderGDBRegistrar(EPC->getExecutionSession());
   if (!Registrar)
     return Registrar.takeError();
 
@@ -127,7 +133,8 @@ Error JITLinkExecutor::addDebugSupport(ObjectLayer &ObjLayer) {
 Expected<std::unique_ptr<DefinitionGenerator>>
 JITLinkExecutor::loadDylib(StringRef RemotePath) {
   if (auto Handle = EPC->loadDylib(RemotePath.data()))
-    return std::make_unique<EPCDynamicLibrarySearchGenerator>(*EPC, *Handle);
+    return std::make_unique<EPCDynamicLibrarySearchGenerator>(
+        EPC->getExecutionSession(), *Handle);
   else
     return Handle.takeError();
 }
@@ -174,7 +181,8 @@ JITLinkExecutor::CreateLocal(std::string ExecutablePath) {
 
 TCPSocketJITLinkExecutor::TCPSocketJITLinkExecutor(
     std::unique_ptr<RemoteExecutorProcessControl> EPC) {
-  this->EPC = std::move(EPC);
+  this->OwnedEPC = std::move(EPC);
+  this->EPC = this->OwnedEPC.get();
 }
 
 #ifndef LLVM_ON_UNIX
@@ -197,7 +205,8 @@ JITLinkExecutor::ConnectTCPSocket(StringRef NetworkAddress,
 
 #else
 
-Error ChildProcessJITLinkExecutor::launch(ExecutionSession &ES) {
+Error ChildProcessJITLinkExecutor::launch(
+    unique_function<void(Error)> ErrorReporter) {
   constexpr int ReadEnd = 0;
   constexpr int WriteEnd = 1;
 
@@ -252,13 +261,14 @@ Error ChildProcessJITLinkExecutor::launch(ExecutionSession &ES) {
   auto Endpoint = std::make_unique<RemoteExecutorProcessControl::RPCEndpoint>(
       *Channel, true);
 
-  EPC = std::make_unique<RemoteExecutorProcessControl>(ES, std::move(Channel),
-                                                       std::move(Endpoint));
+  OwnedEPC = std::make_unique<RemoteExecutorProcessControl>(
+      std::move(Channel), std::move(Endpoint), std::move(ErrorReporter));
 
-  if (auto Err = EPC->initializeORCRPCEPCBase())
-    return joinErrors(std::move(Err), EPC->disconnect());
+  if (auto Err = OwnedEPC->initializeORCRPCEPCBase())
+    return joinErrors(std::move(Err), OwnedEPC->disconnect());
 
-  EPC->initializeMemoryManagement();
+  OwnedEPC->initializeMemoryManagement();
+  EPC = OwnedEPC.get();
 
   shared::registerStringError<RPCChannel>();
   return Error::success();
@@ -305,7 +315,7 @@ static Expected<int> connectTCPSocketImpl(std::string Host,
 
 Expected<std::unique_ptr<TCPSocketJITLinkExecutor>>
 JITLinkExecutor::ConnectTCPSocket(StringRef NetworkAddress,
-                                  ExecutionSession &ES) {
+                                  unique_function<void(Error)> ErrorReporter) {
   auto CreateErr = [NetworkAddress](StringRef Details) {
     return make_error<StringError>(
         formatv("Failed to connect TCP socket '{0}': {1}", NetworkAddress,
@@ -332,7 +342,7 @@ JITLinkExecutor::ConnectTCPSocket(StringRef NetworkAddress,
       *Channel, true);
 
   auto EPC = std::make_unique<RemoteExecutorProcessControl>(
-      ES, std::move(Channel), std::move(Endpoint));
+      std::move(Channel), std::move(Endpoint), std::move(ErrorReporter));
 
   if (auto Err = EPC->initializeORCRPCEPCBase())
     return joinErrors(std::move(Err), EPC->disconnect());
