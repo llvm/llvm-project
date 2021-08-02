@@ -58,8 +58,8 @@ N: Greg Clayton
 E: clayborg@gmail.com
 D: LLDB
 
-N: Marshall Clow
-E: mclow.lists@gmail.com
+N: Louis Dionne
+E: ldionne.2@gmail.com
 D: libc++
 
 N: Peter Collingbourne
