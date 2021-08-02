@@ -52,26 +52,12 @@ define void @splat(i8 %a, i8 %b, i8 %c) {
 ;
 ; AVX-LABEL: @splat(
 ; AVX-NEXT:    [[TMP1:%.*]] = insertelement <16 x i8> poison, i8 [[C:%.*]], i32 0
-; AVX-NEXT:    [[TMP2:%.*]] = insertelement <16 x i8> [[TMP1]], i8 [[C]], i32 1
-; AVX-NEXT:    [[TMP3:%.*]] = insertelement <16 x i8> [[TMP2]], i8 [[C]], i32 2
-; AVX-NEXT:    [[TMP4:%.*]] = insertelement <16 x i8> [[TMP3]], i8 [[C]], i32 3
-; AVX-NEXT:    [[TMP5:%.*]] = insertelement <16 x i8> [[TMP4]], i8 [[C]], i32 4
-; AVX-NEXT:    [[TMP6:%.*]] = insertelement <16 x i8> [[TMP5]], i8 [[C]], i32 5
-; AVX-NEXT:    [[TMP7:%.*]] = insertelement <16 x i8> [[TMP6]], i8 [[C]], i32 6
-; AVX-NEXT:    [[TMP8:%.*]] = insertelement <16 x i8> [[TMP7]], i8 [[C]], i32 7
-; AVX-NEXT:    [[TMP9:%.*]] = insertelement <16 x i8> [[TMP8]], i8 [[C]], i32 8
-; AVX-NEXT:    [[TMP10:%.*]] = insertelement <16 x i8> [[TMP9]], i8 [[C]], i32 9
-; AVX-NEXT:    [[TMP11:%.*]] = insertelement <16 x i8> [[TMP10]], i8 [[C]], i32 10
-; AVX-NEXT:    [[TMP12:%.*]] = insertelement <16 x i8> [[TMP11]], i8 [[C]], i32 11
-; AVX-NEXT:    [[TMP13:%.*]] = insertelement <16 x i8> [[TMP12]], i8 [[C]], i32 12
-; AVX-NEXT:    [[TMP14:%.*]] = insertelement <16 x i8> [[TMP13]], i8 [[C]], i32 13
-; AVX-NEXT:    [[TMP15:%.*]] = insertelement <16 x i8> [[TMP14]], i8 [[C]], i32 14
-; AVX-NEXT:    [[TMP16:%.*]] = insertelement <16 x i8> [[TMP15]], i8 [[C]], i32 15
-; AVX-NEXT:    [[TMP17:%.*]] = insertelement <16 x i8> poison, i8 [[A:%.*]], i32 0
-; AVX-NEXT:    [[TMP18:%.*]] = insertelement <16 x i8> [[TMP17]], i8 [[B:%.*]], i32 1
-; AVX-NEXT:    [[SHUFFLE:%.*]] = shufflevector <16 x i8> [[TMP18]], <16 x i8> poison, <16 x i32> <i32 0, i32 0, i32 0, i32 0, i32 0, i32 1, i32 0, i32 1, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0>
-; AVX-NEXT:    [[TMP19:%.*]] = xor <16 x i8> [[TMP16]], [[SHUFFLE]]
-; AVX-NEXT:    store <16 x i8> [[TMP19]], <16 x i8>* bitcast ([32 x i8]* @cle to <16 x i8>*), align 16
+; AVX-NEXT:    [[SHUFFLE:%.*]] = shufflevector <16 x i8> [[TMP1]], <16 x i8> poison, <16 x i32> zeroinitializer
+; AVX-NEXT:    [[TMP2:%.*]] = insertelement <16 x i8> poison, i8 [[A:%.*]], i32 0
+; AVX-NEXT:    [[TMP3:%.*]] = insertelement <16 x i8> [[TMP2]], i8 [[B:%.*]], i32 1
+; AVX-NEXT:    [[SHUFFLE1:%.*]] = shufflevector <16 x i8> [[TMP3]], <16 x i8> poison, <16 x i32> <i32 0, i32 0, i32 0, i32 0, i32 0, i32 1, i32 0, i32 1, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0>
+; AVX-NEXT:    [[TMP4:%.*]] = xor <16 x i8> [[SHUFFLE]], [[SHUFFLE1]]
+; AVX-NEXT:    store <16 x i8> [[TMP4]], <16 x i8>* bitcast ([32 x i8]* @cle to <16 x i8>*), align 16
 ; AVX-NEXT:    ret void
 ;
   %1 = xor i8 %c, %a
@@ -130,19 +116,15 @@ define void @same_opcode_on_one_side(i32 %a, i32 %b, i32 %c) {
 ;
 ; AVX-LABEL: @same_opcode_on_one_side(
 ; AVX-NEXT:    [[TMP1:%.*]] = insertelement <4 x i32> poison, i32 [[C:%.*]], i32 0
-; AVX-NEXT:    [[TMP2:%.*]] = insertelement <4 x i32> [[TMP1]], i32 [[C]], i32 1
-; AVX-NEXT:    [[TMP3:%.*]] = insertelement <4 x i32> [[TMP2]], i32 [[C]], i32 2
-; AVX-NEXT:    [[TMP4:%.*]] = insertelement <4 x i32> [[TMP3]], i32 [[C]], i32 3
-; AVX-NEXT:    [[TMP5:%.*]] = insertelement <4 x i32> poison, i32 [[A:%.*]], i32 0
-; AVX-NEXT:    [[TMP6:%.*]] = insertelement <4 x i32> [[TMP5]], i32 [[A]], i32 1
-; AVX-NEXT:    [[TMP7:%.*]] = insertelement <4 x i32> [[TMP6]], i32 [[A]], i32 2
-; AVX-NEXT:    [[TMP8:%.*]] = insertelement <4 x i32> [[TMP7]], i32 [[A]], i32 3
-; AVX-NEXT:    [[TMP9:%.*]] = add <4 x i32> [[TMP4]], [[TMP8]]
-; AVX-NEXT:    [[TMP10:%.*]] = insertelement <4 x i32> [[TMP5]], i32 [[B:%.*]], i32 1
-; AVX-NEXT:    [[TMP11:%.*]] = insertelement <4 x i32> [[TMP10]], i32 [[C]], i32 2
-; AVX-NEXT:    [[TMP12:%.*]] = insertelement <4 x i32> [[TMP11]], i32 [[A]], i32 3
-; AVX-NEXT:    [[TMP13:%.*]] = xor <4 x i32> [[TMP9]], [[TMP12]]
-; AVX-NEXT:    store <4 x i32> [[TMP13]], <4 x i32>* bitcast ([32 x i32]* @cle32 to <4 x i32>*), align 16
+; AVX-NEXT:    [[SHUFFLE:%.*]] = shufflevector <4 x i32> [[TMP1]], <4 x i32> poison, <4 x i32> zeroinitializer
+; AVX-NEXT:    [[TMP2:%.*]] = insertelement <4 x i32> poison, i32 [[A:%.*]], i32 0
+; AVX-NEXT:    [[SHUFFLE1:%.*]] = shufflevector <4 x i32> [[TMP2]], <4 x i32> poison, <4 x i32> zeroinitializer
+; AVX-NEXT:    [[TMP3:%.*]] = add <4 x i32> [[SHUFFLE]], [[SHUFFLE1]]
+; AVX-NEXT:    [[TMP4:%.*]] = insertelement <4 x i32> [[TMP2]], i32 [[B:%.*]], i32 1
+; AVX-NEXT:    [[TMP5:%.*]] = insertelement <4 x i32> [[TMP4]], i32 [[C]], i32 2
+; AVX-NEXT:    [[TMP6:%.*]] = insertelement <4 x i32> [[TMP5]], i32 [[A]], i32 3
+; AVX-NEXT:    [[TMP7:%.*]] = xor <4 x i32> [[TMP3]], [[TMP6]]
+; AVX-NEXT:    store <4 x i32> [[TMP7]], <4 x i32>* bitcast ([32 x i32]* @cle32 to <4 x i32>*), align 16
 ; AVX-NEXT:    ret void
 ;
   %add1 = add i32 %c, %a

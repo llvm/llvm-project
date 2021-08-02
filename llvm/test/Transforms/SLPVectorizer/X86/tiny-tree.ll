@@ -226,11 +226,9 @@ define void @store_splat(float*, float) {
 ; CHECK-NEXT:    [[TMP5:%.*]] = getelementptr inbounds float, float* [[TMP0]], i64 2
 ; CHECK-NEXT:    [[TMP6:%.*]] = getelementptr inbounds float, float* [[TMP0]], i64 3
 ; CHECK-NEXT:    [[TMP7:%.*]] = insertelement <4 x float> poison, float [[TMP1:%.*]], i32 0
-; CHECK-NEXT:    [[TMP8:%.*]] = insertelement <4 x float> [[TMP7]], float [[TMP1]], i32 1
-; CHECK-NEXT:    [[TMP9:%.*]] = insertelement <4 x float> [[TMP8]], float [[TMP1]], i32 2
-; CHECK-NEXT:    [[TMP10:%.*]] = insertelement <4 x float> [[TMP9]], float [[TMP1]], i32 3
-; CHECK-NEXT:    [[TMP11:%.*]] = bitcast float* [[TMP3]] to <4 x float>*
-; CHECK-NEXT:    store <4 x float> [[TMP10]], <4 x float>* [[TMP11]], align 4
+; CHECK-NEXT:    [[SHUFFLE:%.*]] = shufflevector <4 x float> [[TMP7]], <4 x float> poison, <4 x i32> zeroinitializer
+; CHECK-NEXT:    [[TMP8:%.*]] = bitcast float* [[TMP3]] to <4 x float>*
+; CHECK-NEXT:    store <4 x float> [[SHUFFLE]], <4 x float>* [[TMP8]], align 4
 ; CHECK-NEXT:    ret void
 ;
   %3 = getelementptr inbounds float, float* %0, i64 0
