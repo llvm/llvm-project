@@ -1278,14 +1278,15 @@ int OnExit() {
   CHECK_UNPOISONED_CTX(ctx, ptr, size)
 #define COMMON_INTERCEPTOR_INITIALIZE_RANGE(ptr, size) \
   __msan_unpoison(ptr, size)
-#define COMMON_INTERCEPTOR_ENTER(ctx, func, ...)                  \
-  if (msan_init_is_running) return REAL(func)(__VA_ARGS__);       \
-  ENSURE_MSAN_INITED();                                           \
-  MSanInterceptorContext msan_ctx = {IsInInterceptorScope()};     \
-  ctx = (void *)&msan_ctx;                                        \
-  (void)ctx;                                                      \
-  InterceptorScope interceptor_scope;                             \
-  __msan_unpoison(__errno_location(), sizeof(int)); /* NOLINT */
+#define COMMON_INTERCEPTOR_ENTER(ctx, func, ...)              \
+  if (msan_init_is_running)                                   \
+    return REAL(func)(__VA_ARGS__);                           \
+  ENSURE_MSAN_INITED();                                       \
+  MSanInterceptorContext msan_ctx = {IsInInterceptorScope()}; \
+  ctx = (void *)&msan_ctx;                                    \
+  (void)ctx;                                                  \
+  InterceptorScope interceptor_scope;                         \
+  __msan_unpoison(__errno_location(), sizeof(int));
 #define COMMON_INTERCEPTOR_DIR_ACQUIRE(ctx, path) \
   do {                                            \
   } while (false)
