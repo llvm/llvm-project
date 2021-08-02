@@ -21,14 +21,14 @@
 double math(float f, double d) {
   double r = 0;
   // INT_RETURN: call i32 @__nv_isnanf(float
-  // AMD_INT_RETURN: call i32 @__ocml_isnan_f32(float
+  // AMD_INT_RETURN: call i32 @_{{.*}}isnanf(float
   // BOOL_RETURN: call i32 @__nv_isnanf(float
-  // AMD_BOOL_RETURN: call i32 @__ocml_isnan_f32(float
+  // AMD_BOOL_RETURN: call zeroext i1 @_{{.*}}isnanf(float
   r += std::isnan(f);
   // INT_RETURN: call i32 @__nv_isnand(double
-  // AMD_INT_RETURN: call i32 @__ocml_isnan_f64(double
+  // AMD_INT_RETURN: call i32 @_{{.*}}isnand(double
   // BOOL_RETURN: call i32 @__nv_isnand(double
-  // AMD_BOOL_RETURN: call i32 @__ocml_isnan_f64(double
+  // AMD_BOOL_RETURN: call zeroext i1 @_{{.*}}isnand(double
   r += std::isnan(d);
   return r;
 }
