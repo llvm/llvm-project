@@ -600,7 +600,9 @@ LLVMSymbolizer::getOrCreateModuleInfo(const std::string &ModuleName) {
     }
   }
   if (!Context)
-    Context = DWARFContext::create(*Objects.second, nullptr, Opts.DWPName);
+    Context = DWARFContext::create(
+        *Objects.second, DWARFContext::ProcessDebugRelocations::Process,
+        nullptr, Opts.DWPName);
   return createModuleInfo(Objects.first, std::move(Context), ModuleName);
 }
 

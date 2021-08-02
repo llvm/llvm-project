@@ -387,9 +387,12 @@ public:
 
   function_ref<void(Error)> getWarningHandler() { return WarningHandler; }
 
+  enum class ProcessDebugRelocations { Process, Ignore };
+
   static std::unique_ptr<DWARFContext>
-  create(const object::ObjectFile &Obj, const LoadedObjectInfo *L = nullptr,
-         std::string DWPName = "",
+  create(const object::ObjectFile &Obj,
+         ProcessDebugRelocations RelocAction = ProcessDebugRelocations::Process,
+         const LoadedObjectInfo *L = nullptr, std::string DWPName = "",
          std::function<void(Error)> RecoverableErrorHandler =
              WithColor::defaultErrorHandler,
          std::function<void(Error)> WarningHandler =
