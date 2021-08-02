@@ -97,6 +97,8 @@ target(tsan_target_type, "tsan") {
     "rtl/tsan_sync.h",
     "rtl/tsan_trace.h",
     "rtl/tsan_update_shadow_word_inl.h",
+    "rtl/tsan_vector_clock.cpp",
+    "rtl/tsan_vector_clock.h",
   ]
   if (target_os == "mac") {
     sources += [

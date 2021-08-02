@@ -46,13 +46,6 @@ using namespace llvm;
 
 STATISTIC(NumRuntimeUnrolled,
           "Number of loops unrolled with run-time trip counts");
-static cl::opt<bool> UnrollRuntimeMultiExit(
-    "unroll-runtime-multi-exit", cl::init(false), cl::Hidden,
-    cl::desc("Allow runtime unrolling for loops with multiple exits, when "
-             "epilog is generated"));
-static cl::opt<bool> UnrollRuntimeOtherExitPredictable(
-    "unroll-runtime-other-exit-predictable", cl::init(false), cl::Hidden,
-    cl::desc("Assume the non latch exit block to be predictable"));
 
 /// Connect the unrolling prolog code to the original loop.
 /// The unrolling prolog code contains code to execute the
@@ -461,61 +454,6 @@ static bool canSafelyUnrollMultiExitLoop(Loop *L, BasicBlock *LatchExit,
   return true;
 }
 
-/// Returns true if we can profitably unroll the multi-exit loop L. Currently,
-/// we return true only if UnrollRuntimeMultiExit is set to true.
-static bool canProfitablyUnrollMultiExitLoop(
-    Loop *L, SmallVectorImpl<BasicBlock *> &OtherExits, BasicBlock *LatchExit,
-    bool PreserveLCSSA, bool UseEpilogRemainder) {
-
-#if !defined(NDEBUG)
-  assert(canSafelyUnrollMultiExitLoop(L, LatchExit, PreserveLCSSA,
-                                      UseEpilogRemainder) &&
-         "Should be safe to unroll before checking profitability!");
-#endif
-
-  // Priority goes to UnrollRuntimeMultiExit if it's supplied.
-  if (UnrollRuntimeMultiExit.getNumOccurrences())
-    return UnrollRuntimeMultiExit;
-
-  // The main pain point with multi-exit loop unrolling is that once unrolled,
-  // we will not be able to merge all blocks into a straight line code.
-  // There are branches within the unrolled loop that go to the OtherExits.
-  // The second point is the increase in code size, but this is true
-  // irrespective of multiple exits.
-
-  // Note: Both the heuristics below are coarse grained. We are essentially
-  // enabling unrolling of loops that have a single side exit other than the
-  // normal LatchExit (i.e. exiting into a deoptimize block).
-  // The heuristics considered are:
-  // 1. low number of branches in the unrolled version.
-  // 2. high predictability of these extra branches.
-  // We avoid unrolling loops that have more than two exiting blocks. This
-  // limits the total number of branches in the unrolled loop to be atmost
-  // the unroll factor (since one of the exiting blocks is the latch block).
-  SmallVector<BasicBlock*, 4> ExitingBlocks;
-  L->getExitingBlocks(ExitingBlocks);
-  if (ExitingBlocks.size() > 2)
-    return false;
-
-  // Allow unrolling of loops with no non latch exit blocks.
-  if (OtherExits.size() == 0)
-    return true;
-
-  // The second heuristic is that L has one exit other than the latchexit and
-  // that exit is a deoptimize block. We know that deoptimize blocks are rarely
-  // taken, which also implies the branch leading to the deoptimize block is
-  // highly predictable. When UnrollRuntimeOtherExitPredictable is specified, we
-  // assume the other exit branch is predictable even if it has no deoptimize
-  // call.
-  return (OtherExits.size() == 1 &&
-          (UnrollRuntimeOtherExitPredictable ||
-           OtherExits[0]->getTerminatingDeoptimizeCall()));
-  // TODO: These can be fine-tuned further to consider code size or deopt states
-  // that are captured by the deoptimize exit block.
-  // Also, we can extend this to support more cases, if we actually
-  // know of kinds of multiexit loops that would benefit from unrolling.
-}
-
 // Assign the maximum possible trip count as the back edge weight for the
 // remainder loop if the original loop comes with a branch weight.
 static void updateLatchBranchWeightsForRemainderLoop(Loop *OrigLoop,
@@ -541,6 +479,38 @@ static void updateLatchBranchWeightsForRemainderLoop(Loop *OrigLoop,
     RemainderLatchBR->setMetadata(LLVMContext::MD_prof, WeightNode);
   }
 }
+
+/// Calculate ModVal = (BECount + 1) % Count on the abstract integer domain
+/// accounting for the possibility of unsigned overflow in the 2s complement
+/// domain. Preconditions:
+/// 1) TripCount = BECount + 1 (allowing overflow)
+/// 2) Log2(Count) <= BitWidth(BECount)
+static Value *CreateTripRemainder(IRBuilder<> &B, Value *BECount,
+                                  Value *TripCount, unsigned Count) {
+  // Note that TripCount is BECount + 1.
+  if (isPowerOf2_32(Count))
+    // If the expression is zero, then either:
+    //  1. There are no iterations to be run in the prolog/epilog loop.
+    // OR
+    //  2. The addition computing TripCount overflowed.
+    //
+    // If (2) is true, we know that TripCount really is (1 << BEWidth) and so
+    // the number of iterations that remain to be run in the original loop is a
+    // multiple Count == (1 << Log2(Count)) because Log2(Count) <= BEWidth (a
+    // precondition of this method).
+    return B.CreateAnd(TripCount, Count - 1, "xtraiter");
+
+  // As (BECount + 1) can potentially unsigned overflow we count
+  // (BECount % Count) + 1 which is overflow safe as BECount % Count < Count.
+  Constant *CountC = ConstantInt::get(BECount->getType(), Count);
+  Value *ModValTmp = B.CreateURem(BECount, CountC);
+  Value *ModValAdd = B.CreateAdd(ModValTmp,
+                                 ConstantInt::get(ModValTmp->getType(), 1));
+  // At that point (BECount % Count) + 1 could be equal to Count.
+  // To handle this case we need to take mod by Count one more time.
+  return B.CreateURem(ModValAdd, CountC, "xtraiter");
+}
+
 
 /// Insert code in the prolog/epilog code when unrolling a loop with a
 /// run-time trip-count.
@@ -627,9 +597,7 @@ bool llvm::UnrollRuntimeLoopRemainder(
   L->getUniqueNonLatchExitBlocks(OtherExits);
   bool isMultiExitUnrollingEnabled =
       canSafelyUnrollMultiExitLoop(L, LatchExit, PreserveLCSSA,
-                                   UseEpilogRemainder) &&
-      canProfitablyUnrollMultiExitLoop(L, OtherExits, LatchExit, PreserveLCSSA,
-                                       UseEpilogRemainder);
+                                   UseEpilogRemainder);
   // Support only single exit and exiting block unless multi-exit loop unrolling is enabled.
   if (!isMultiExitUnrollingEnabled &&
       (!L->getExitingBlock() || OtherExits.size())) {
@@ -660,6 +628,7 @@ bool llvm::UnrollRuntimeLoopRemainder(
   unsigned BEWidth = cast<IntegerType>(BECountSC->getType())->getBitWidth();
 
   // Add 1 since the backedge count doesn't include the first loop iteration.
+  // (Note that overflow can occur, this is handled explicitly below)
   const SCEV *TripCountSC =
       SE->getAddExpr(BECountSC, SE->getConstant(BECountSC->getType(), 1));
   if (isa<SCEVCouldNotCompute>(TripCountSC)) {
@@ -752,35 +721,8 @@ bool llvm::UnrollRuntimeLoopRemainder(
   Value *BECount = Expander.expandCodeFor(BECountSC, BECountSC->getType(),
                                           PreHeaderBR);
   IRBuilder<> B(PreHeaderBR);
-  Value *ModVal;
-  // Calculate ModVal = (BECount + 1) % Count.
-  // Note that TripCount is BECount + 1.
-  if (isPowerOf2_32(Count)) {
-    // When Count is power of 2 we don't BECount for epilog case, however we'll
-    // need it for a branch around unrolling loop for prolog case.
-    ModVal = B.CreateAnd(TripCount, Count - 1, "xtraiter");
-    //  1. There are no iterations to be run in the prolog/epilog loop.
-    // OR
-    //  2. The addition computing TripCount overflowed.
-    //
-    // If (2) is true, we know that TripCount really is (1 << BEWidth) and so
-    // the number of iterations that remain to be run in the original loop is a
-    // multiple Count == (1 << Log2(Count)) because Log2(Count) <= BEWidth (we
-    // explicitly check this above).
-  } else {
-    // As (BECount + 1) can potentially unsigned overflow we count
-    // (BECount % Count) + 1 which is overflow safe as BECount % Count < Count.
-    Value *ModValTmp = B.CreateURem(BECount,
-                                    ConstantInt::get(BECount->getType(),
-                                                     Count));
-    Value *ModValAdd = B.CreateAdd(ModValTmp,
-                                   ConstantInt::get(ModValTmp->getType(), 1));
-    // At that point (BECount % Count) + 1 could be equal to Count.
-    // To handle this case we need to take mod by Count one more time.
-    ModVal = B.CreateURem(ModValAdd,
-                          ConstantInt::get(BECount->getType(), Count),
-                          "xtraiter");
-  }
+  Value * const ModVal = CreateTripRemainder(B, BECount, TripCount, Count);
+
   Value *BranchVal =
       UseEpilogRemainder ? B.CreateICmpULT(BECount,
                                            ConstantInt::get(BECount->getType(),

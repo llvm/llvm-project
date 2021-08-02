@@ -84,8 +84,6 @@
 #include "llvm/Transforms/Utils/ValueMapper.h"
 #include <algorithm>
 #include <deque>
-#include <unordered_map>
-#include <unordered_set>
 
 using namespace llvm;
 
@@ -174,6 +172,7 @@ public:
   void getAnalysisUsage(AnalysisUsage &AU) const override {
     AU.addRequired<AssumptionCacheTracker>();
     AU.addRequired<DominatorTreeWrapperPass>();
+    AU.addPreserved<DominatorTreeWrapperPass>();
     AU.addRequired<TargetTransformInfoWrapperPass>();
     AU.addRequired<OptimizationRemarkEmitterWrapperPass>();
   }
@@ -350,7 +349,7 @@ struct ClonedBlock {
 
 typedef std::deque<BasicBlock *> PathType;
 typedef std::vector<PathType> PathsType;
-typedef std::set<const BasicBlock *> VisitedBlocks;
+typedef SmallPtrSet<const BasicBlock *, 8> VisitedBlocks;
 typedef std::vector<ClonedBlock> CloneList;
 
 // This data structure keeps track of all blocks that have been cloned.  If two
@@ -621,13 +620,9 @@ private:
     // Some blocks have multiple edges to the same successor, and this set
     // is used to prevent a duplicate path from being generated
     SmallSet<BasicBlock *, 4> Successors;
-
-    for (succ_iterator SI = succ_begin(BB), E = succ_end(BB); SI != E; ++SI) {
-      BasicBlock *Succ = *SI;
-
-      if (Successors.find(Succ) != Successors.end())
+    for (BasicBlock *Succ : successors(BB)) {
+      if (!Successors.insert(Succ).second)
         continue;
-      Successors.insert(Succ);
 
       // Found a cycle through the SwitchBlock
       if (Succ == SwitchBlock) {
@@ -636,7 +631,7 @@ private:
       }
 
       // We have encountered a cycle, do not get caught in it
-      if (Visited.find(Succ) != Visited.end())
+      if (Visited.contains(Succ))
         continue;
 
       PathsType SuccPaths = paths(Succ, Visited, PathDepth + 1);

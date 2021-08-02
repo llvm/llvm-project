@@ -175,6 +175,14 @@ static cl::opt<unsigned>
                            cl::desc("Default threshold (max size of unrolled "
                                     "loop), used in all but O3 optimizations"));
 
+static cl::opt<bool> UnrollRuntimeMultiExit(
+    "unroll-runtime-multi-exit", cl::init(false), cl::Hidden,
+    cl::desc("Allow runtime unrolling for loops with multiple exits, when "
+             "epilog is generated"));
+static cl::opt<bool> UnrollRuntimeOtherExitPredictable(
+    "unroll-runtime-other-exit-predictable", cl::init(false), cl::Hidden,
+    cl::desc("Assume the non latch exit block to be predictable"));
+
 /// A magic value for use with the Threshold parameter to indicate
 /// that the loop unroll should be performed regardless of how much
 /// code expansion would result.
@@ -734,6 +742,57 @@ static unsigned getFullUnrollBoostingFactor(const EstimatedUnrollCost &Cost,
     return MaxPercentThresholdBoost;
 }
 
+/// Returns true if we can profitably unroll the multi-exit loop L. Currently,
+/// unrolling a multiple exit loop is generally considered unprofitable outside
+/// of some very restricted cases.  (TODO: Relax this!)
+static bool canProfitablyUnrollMultiExitLoop(Loop *L) {
+
+  SmallVector<BasicBlock *> OtherExits;
+  L->getUniqueNonLatchExitBlocks(OtherExits);
+
+  // Priority goes to UnrollRuntimeMultiExit if it's supplied.
+  if (UnrollRuntimeMultiExit.getNumOccurrences())
+    return UnrollRuntimeMultiExit;
+
+  // The main pain point with multi-exit loop unrolling is that once unrolled,
+  // we will not be able to merge all blocks into a straight line code.
+  // There are branches within the unrolled loop that go to the OtherExits.
+  // The second point is the increase in code size, but this is true
+  // irrespective of multiple exits.
+
+  // Note: Both the heuristics below are coarse grained. We are essentially
+  // enabling unrolling of loops that have a single side exit other than the
+  // normal LatchExit (i.e. exiting into a deoptimize block).
+  // The heuristics considered are:
+  // 1. low number of branches in the unrolled version.
+  // 2. high predictability of these extra branches.
+  // We avoid unrolling loops that have more than two exiting blocks. This
+  // limits the total number of branches in the unrolled loop to be atmost
+  // the unroll factor (since one of the exiting blocks is the latch block).
+  SmallVector<BasicBlock*, 4> ExitingBlocks;
+  L->getExitingBlocks(ExitingBlocks);
+  if (ExitingBlocks.size() > 2)
+    return false;
+
+  // Allow unrolling of loops with no non latch exit blocks.
+  if (OtherExits.size() == 0)
+    return true;
+
+  // The second heuristic is that L has one exit other than the latchexit and
+  // that exit is a deoptimize block. We know that deoptimize blocks are rarely
+  // taken, which also implies the branch leading to the deoptimize block is
+  // highly predictable. When UnrollRuntimeOtherExitPredictable is specified, we
+  // assume the other exit branch is predictable even if it has no deoptimize
+  // call.
+  return (OtherExits.size() == 1 &&
+          (UnrollRuntimeOtherExitPredictable ||
+           OtherExits[0]->getTerminatingDeoptimizeCall()));
+  // TODO: These can be fine-tuned further to consider code size or deopt states
+  // that are captured by the deoptimize exit block.
+  // Also, we can extend this to support more cases, if we actually
+  // know of kinds of multiexit loops that would benefit from unrolling.
+}
+
 // Produce an estimate of the unrolled cost of the specified loop.  This
 // is used to a) produce a cost estimate for partial unrolling and b) to
 // cheaply estimate cost for full unrolling when we don't want to symbolically
@@ -980,6 +1039,13 @@ bool llvm::computeUnrollCount(
       else
         UP.AllowExpensiveTripCount = true;
     }
+  }
+
+  // Is this is a multiple exit loop which we consider unprofitable to
+  // unroll?
+  if (!L->getExitingBlock() && !canProfitablyUnrollMultiExitLoop(L)) {
+    UP.Count = 0;
+    return false;
   }
 
   // Reduce count based on the type of unrolling and the threshold values.
