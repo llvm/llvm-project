@@ -20,7 +20,7 @@ RUN: printf '\0\0\0\0\0\0\0\0' >> %t
 
 RUN: printf '\344\023\165\112\031\035\265\067' >> %t
 RUN: printf '\0\0\0\0\0\0\0\2' >> %t
-RUN: printf '\1\0\0\10' >> %t
+RUN: printf '\0\xff\xff\xe0' >> %t
 RUN: printf '\0\0\0\0' >> %t
 RUN: printf '\0\0\0\0' >> %t
 RUN: printf '\0\0\0\2' >> %t
