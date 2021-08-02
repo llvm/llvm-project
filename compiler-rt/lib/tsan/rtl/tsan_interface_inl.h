@@ -82,6 +82,69 @@ void __tsan_write8_pc(void *addr, void *pc) {
   MemoryAccess(cur_thread(), STRIP_PAC_PC(pc), (uptr)addr, 8, kAccessWrite);
 }
 
+ALWAYS_INLINE USED void __tsan_unaligned_read2(const void *addr) {
+  UnalignedMemoryAccess(cur_thread(), CALLERPC, (uptr)addr, 2, kAccessRead);
+}
+
+ALWAYS_INLINE USED void __tsan_unaligned_read4(const void *addr) {
+  UnalignedMemoryAccess(cur_thread(), CALLERPC, (uptr)addr, 4, kAccessRead);
+}
+
+ALWAYS_INLINE USED void __tsan_unaligned_read8(const void *addr) {
+  UnalignedMemoryAccess(cur_thread(), CALLERPC, (uptr)addr, 8, kAccessRead);
+}
+
+ALWAYS_INLINE USED void __tsan_unaligned_write2(void *addr) {
+  UnalignedMemoryAccess(cur_thread(), CALLERPC, (uptr)addr, 2, kAccessWrite);
+}
+
+ALWAYS_INLINE USED void __tsan_unaligned_write4(void *addr) {
+  UnalignedMemoryAccess(cur_thread(), CALLERPC, (uptr)addr, 4, kAccessWrite);
+}
+
+ALWAYS_INLINE USED void __tsan_unaligned_write8(void *addr) {
+  UnalignedMemoryAccess(cur_thread(), CALLERPC, (uptr)addr, 8, kAccessWrite);
+}
+
+extern "C" {
+// __sanitizer_unaligned_load/store are for user instrumentation.
+SANITIZER_INTERFACE_ATTRIBUTE
+u16 __sanitizer_unaligned_load16(const uu16 *addr) {
+  __tsan_unaligned_read2(addr);
+  return *addr;
+}
+
+SANITIZER_INTERFACE_ATTRIBUTE
+u32 __sanitizer_unaligned_load32(const uu32 *addr) {
+  __tsan_unaligned_read4(addr);
+  return *addr;
+}
+
+SANITIZER_INTERFACE_ATTRIBUTE
+u64 __sanitizer_unaligned_load64(const uu64 *addr) {
+  __tsan_unaligned_read8(addr);
+  return *addr;
+}
+
+SANITIZER_INTERFACE_ATTRIBUTE
+void __sanitizer_unaligned_store16(uu16 *addr, u16 v) {
+  *addr = v;
+  __tsan_unaligned_write2(addr);
+}
+
+SANITIZER_INTERFACE_ATTRIBUTE
+void __sanitizer_unaligned_store32(uu32 *addr, u32 v) {
+  *addr = v;
+  __tsan_unaligned_write4(addr);
+}
+
+SANITIZER_INTERFACE_ATTRIBUTE
+void __sanitizer_unaligned_store64(uu64 *addr, u64 v) {
+  *addr = v;
+  __tsan_unaligned_write8(addr);
+}
+}
+
 void __tsan_vptr_update(void **vptr_p, void *new_val) {
   if (*vptr_p == new_val)
     return;
