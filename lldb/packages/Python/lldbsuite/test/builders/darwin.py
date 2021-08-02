@@ -76,6 +76,8 @@ class BuilderDarwin(Builder):
             entitlements = os.path.join(test_dir, 'make', entitlements_file)
             args['CODESIGN'] = 'codesign --entitlements {}'.format(
                 entitlements)
+        else:
+            args['CODESIGN'] = 'codesign'
 
         # Return extra args as a formatted string.
         return ' '.join(
