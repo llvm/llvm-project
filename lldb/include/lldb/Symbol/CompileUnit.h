@@ -332,6 +332,7 @@ public:
   void SetLineTable(LineTable *line_table);
 
   void SetSupportFiles(const FileSpecList &support_files);
+  void SetSupportFiles(FileSpecList &&support_files);
 
   void SetDebugMacros(const DebugMacrosSP &debug_macros);
 
