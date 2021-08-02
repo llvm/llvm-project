@@ -22,6 +22,7 @@
 #include "llvm/IR/IRBuilder.h"
 #include "llvm/IR/InstVisitor.h"
 #include "llvm/IR/PatternMatch.h"
+#include "llvm/IR/Value.h"
 #include "llvm/Support/Debug.h"
 #include "llvm/Support/KnownBits.h"
 #include "llvm/Transforms/InstCombine/InstCombineWorklist.h"
@@ -623,6 +624,7 @@ public:
   Instruction *foldPHIArgGEPIntoPHI(PHINode &PN);
   Instruction *foldPHIArgLoadIntoPHI(PHINode &PN);
   Instruction *foldPHIArgZextsIntoPHI(PHINode &PN);
+  Instruction *foldPHIArgIntToPtrToPHI(PHINode &PN);
 
   /// If an integer typed PHI has only one use which is an IntToPtr operation,
   /// replace the PHI with an existing pointer typed PHI if it exists. Otherwise
