@@ -1973,21 +1973,26 @@ Instruction *InstCombinerImpl::visitCallInst(CallInst &CI) {
     // %val = bitcast <ReduxWidth x i1> to iReduxWidth
     // %res = cmp eq iReduxWidth %val, 11111
     Value *Arg = II->getArgOperand(0);
-    Type *RetTy = II->getType();
-    if (RetTy == Builder.getInt1Ty())
-      if (auto *FVTy = dyn_cast<FixedVectorType>(Arg->getType())) {
-        Value *Res = Builder.CreateBitCast(
-            Arg, Builder.getIntNTy(FVTy->getNumElements()));
-        if (IID == Intrinsic::vector_reduce_and) {
-          Res = Builder.CreateICmpEQ(
-              Res, ConstantInt::getAllOnesValue(Res->getType()));
-        } else {
-          assert(IID == Intrinsic::vector_reduce_or &&
-                 "Expected or reduction.");
-          Res = Builder.CreateIsNotNull(Res);
+    Value *Vect;
+    if (match(Arg, m_ZExtOrSExtOrSelf(m_Value(Vect)))) {
+      if (auto *FTy = dyn_cast<FixedVectorType>(Vect->getType()))
+        if (FTy->getElementType() == Builder.getInt1Ty()) {
+          Value *Res = Builder.CreateBitCast(
+              Vect, Builder.getIntNTy(FTy->getNumElements()));
+          if (IID == Intrinsic::vector_reduce_and) {
+            Res = Builder.CreateICmpEQ(
+                Res, ConstantInt::getAllOnesValue(Res->getType()));
+          } else {
+            assert(IID == Intrinsic::vector_reduce_or &&
+                   "Expected or reduction.");
+            Res = Builder.CreateIsNotNull(Res);
+          }
+          if (Arg != Vect)
+            Res = Builder.CreateCast(cast<CastInst>(Arg)->getOpcode(), Res,
+                                     II->getType());
+          return replaceInstUsesWith(CI, Res);
         }
-        return replaceInstUsesWith(CI, Res);
-      }
+    }
     LLVM_FALLTHROUGH;
   }
   case Intrinsic::vector_reduce_add: {
@@ -2067,10 +2072,71 @@ Instruction *InstCombinerImpl::visitCallInst(CallInst &CI) {
     }
     LLVM_FALLTHROUGH;
   }
-  case Intrinsic::vector_reduce_umax:
   case Intrinsic::vector_reduce_umin:
-  case Intrinsic::vector_reduce_smax:
+  case Intrinsic::vector_reduce_umax: {
+    if (IID == Intrinsic::vector_reduce_umin ||
+        IID == Intrinsic::vector_reduce_umax) {
+      // UMin/UMax reduction over the vector with (potentially-extended)
+      // i1 element type is actually a (potentially-extended)
+      // logical `and`/`or` reduction over the original non-extended value:
+      //   vector_reduce_u{min,max}(?ext(<n x i1>))
+      //     -->
+      //   ?ext(vector_reduce_{and,or}(<n x i1>))
+      Value *Arg = II->getArgOperand(0);
+      Value *Vect;
+      if (match(Arg, m_ZExtOrSExtOrSelf(m_Value(Vect)))) {
+        if (auto *FTy = dyn_cast<FixedVectorType>(Vect->getType()))
+          if (FTy->getElementType() == Builder.getInt1Ty()) {
+            Value *Res = IID == Intrinsic::vector_reduce_umin
+                             ? Builder.CreateAndReduce(Vect)
+                             : Builder.CreateOrReduce(Vect);
+            if (Arg != Vect)
+              Res = Builder.CreateCast(cast<CastInst>(Arg)->getOpcode(), Res,
+                                       II->getType());
+            return replaceInstUsesWith(CI, Res);
+          }
+      }
+    }
+    LLVM_FALLTHROUGH;
+  }
   case Intrinsic::vector_reduce_smin:
+  case Intrinsic::vector_reduce_smax: {
+    if (IID == Intrinsic::vector_reduce_smin ||
+        IID == Intrinsic::vector_reduce_smax) {
+      // SMin/SMax reduction over the vector with (potentially-extended)
+      // i1 element type is actually a (potentially-extended)
+      // logical `and`/`or` reduction over the original non-extended value:
+      //   vector_reduce_s{min,max}(<n x i1>)
+      //     -->
+      //   vector_reduce_{or,and}(<n x i1>)
+      // and
+      //   vector_reduce_s{min,max}(sext(<n x i1>))
+      //     -->
+      //   sext(vector_reduce_{or,and}(<n x i1>))
+      // and
+      //   vector_reduce_s{min,max}(zext(<n x i1>))
+      //     -->
+      //   zext(vector_reduce_{and,or}(<n x i1>))
+      Value *Arg = II->getArgOperand(0);
+      Value *Vect;
+      if (match(Arg, m_ZExtOrSExtOrSelf(m_Value(Vect)))) {
+        if (auto *FTy = dyn_cast<FixedVectorType>(Vect->getType()))
+          if (FTy->getElementType() == Builder.getInt1Ty()) {
+            Instruction::CastOps ExtOpc = Instruction::CastOps::CastOpsEnd;
+            if (Arg != Vect)
+              ExtOpc = cast<CastInst>(Arg)->getOpcode();
+            Value *Res = ((IID == Intrinsic::vector_reduce_smin) ==
+                          (ExtOpc == Instruction::CastOps::ZExt))
+                             ? Builder.CreateAndReduce(Vect)
+                             : Builder.CreateOrReduce(Vect);
+            if (Arg != Vect)
+              Res = Builder.CreateCast(ExtOpc, Res, II->getType());
+            return replaceInstUsesWith(CI, Res);
+          }
+      }
+    }
+    LLVM_FALLTHROUGH;
+  }
   case Intrinsic::vector_reduce_fmax:
   case Intrinsic::vector_reduce_fmin:
   case Intrinsic::vector_reduce_fadd:

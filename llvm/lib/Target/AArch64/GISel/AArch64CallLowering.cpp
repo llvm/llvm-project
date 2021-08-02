@@ -181,7 +181,18 @@ struct IncomingArgHandler : public CallLowering::IncomingValueHandler {
     auto MMO = MF.getMachineMemOperand(
         MPO, MachineMemOperand::MOLoad | MachineMemOperand::MOInvariant, LocTy,
         inferAlignFromPtrInfo(MF, MPO));
-    MIRBuilder.buildLoad(ValVReg, Addr, *MMO);
+
+    switch (VA.getLocInfo()) {
+    case CCValAssign::LocInfo::ZExt:
+      MIRBuilder.buildLoadInstr(TargetOpcode::G_ZEXTLOAD, ValVReg, Addr, *MMO);
+      return;
+    case CCValAssign::LocInfo::SExt:
+      MIRBuilder.buildLoadInstr(TargetOpcode::G_SEXTLOAD, ValVReg, Addr, *MMO);
+      return;
+    default:
+      MIRBuilder.buildLoad(ValVReg, Addr, *MMO);
+      return;
+    }
   }
 
   /// How the physical register gets marked varies between formal
