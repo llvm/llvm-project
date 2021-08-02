@@ -119,14 +119,17 @@ getQualification(ASTContext &Context, const DeclContext *DestContext,
       (void)ReachedNS;
       NNS = NestedNameSpecifier::Create(Context, nullptr, false,
                                         TD->getTypeForDecl());
-    } else {
+    } else if (auto *NSD = llvm::dyn_cast<NamespaceDecl>(CurContext)) {
       ReachedNS = true;
-      auto *NSD = llvm::cast<NamespaceDecl>(CurContext);
       NNS = NestedNameSpecifier::Create(Context, nullptr, NSD);
-      // Anonymous and inline namespace names are not spelled while qualifying a
-      // name, so skip those.
+      // Anonymous and inline namespace names are not spelled while qualifying
+      // a name, so skip those.
       if (NSD->isAnonymousNamespace() || NSD->isInlineNamespace())
         continue;
+    } else {
+      // Other types of contexts cannot be spelled in code, just skip over
+      // them.
+      continue;
     }
     // Stop if this namespace is already visible at DestContext.
     if (IsVisible(NNS))
