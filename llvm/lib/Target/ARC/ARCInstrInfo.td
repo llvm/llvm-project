@@ -45,7 +45,6 @@ def SDT_ARCCallSeqStart : SDCallSeqStart<[ SDTCisVT<0, i32>,
 def SDT_ARCCallSeqEnd   : SDCallSeqEnd<[ SDTCisVT<0, i32>,
                                          SDTCisVT<1, i32> ]>;
 
-
 // Global Address.
 def ARCGAWrapper : SDNode<"ARCISD::GAWRAPPER", SDT_ARCmov, []>;
 
@@ -78,6 +77,12 @@ def callseq_start : SDNode<"ISD::CALLSEQ_START", SDT_ARCCallSeqStart,
                            [SDNPHasChain, SDNPOutGlue]>;
 def callseq_end   : SDNode<"ISD::CALLSEQ_END",   SDT_ARCCallSeqEnd,
                            [SDNPHasChain, SDNPOptInGlue, SDNPOutGlue]>;
+
+//===----------------------------------------------------------------------===//
+// Instruction predicates
+//===----------------------------------------------------------------------===//
+
+def HasNorm  :       Predicate<"Subtarget->hasNorm()">;
 
 //===----------------------------------------------------------------------===//
 // Instruction Pattern Stuff
@@ -302,6 +307,11 @@ defm SEXH : ArcUnaryGEN4Inst<0b000110, "sexh">;
 
 // Extension unary instruction definitions.
 defm FLS : ArcUnaryEXT5Inst<0b010011, "fls">;
+
+let Predicates=[HasNorm] in {
+  defm NORM  : ArcUnaryEXT5Inst<0b000001,"norm">;
+  defm NORMH : ArcUnaryEXT5Inst<0b001000,"normh">;
+}
 
 // General Unary Instruction fragments.
 def : Pat<(sext_inreg i32:$a, i8), (SEXB_rr i32:$a)>;
