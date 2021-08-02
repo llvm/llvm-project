@@ -542,6 +542,38 @@ static void updateLatchBranchWeightsForRemainderLoop(Loop *OrigLoop,
   }
 }
 
+/// Calculate ModVal = (BECount + 1) % Count on the abstract integer domain
+/// accounting for the possibility of unsigned overflow in the 2s complement
+/// domain. Preconditions:
+/// 1) TripCount = BECount + 1 (allowing overflow)
+/// 2) Log2(Count) <= BitWidth(BECount)
+static Value *CreateTripRemainder(IRBuilder<> &B, Value *BECount,
+                                  Value *TripCount, unsigned Count) {
+  // Note that TripCount is BECount + 1.
+  if (isPowerOf2_32(Count))
+    // If the expression is zero, then either:
+    //  1. There are no iterations to be run in the prolog/epilog loop.
+    // OR
+    //  2. The addition computing TripCount overflowed.
+    //
+    // If (2) is true, we know that TripCount really is (1 << BEWidth) and so
+    // the number of iterations that remain to be run in the original loop is a
+    // multiple Count == (1 << Log2(Count)) because Log2(Count) <= BEWidth (a
+    // precondition of this method).
+    return B.CreateAnd(TripCount, Count - 1, "xtraiter");
+
+  // As (BECount + 1) can potentially unsigned overflow we count
+  // (BECount % Count) + 1 which is overflow safe as BECount % Count < Count.
+  Constant *CountC = ConstantInt::get(BECount->getType(), Count);
+  Value *ModValTmp = B.CreateURem(BECount, CountC);
+  Value *ModValAdd = B.CreateAdd(ModValTmp,
+                                 ConstantInt::get(ModValTmp->getType(), 1));
+  // At that point (BECount % Count) + 1 could be equal to Count.
+  // To handle this case we need to take mod by Count one more time.
+  return B.CreateURem(ModValAdd, CountC, "xtraiter");
+}
+
+
 /// Insert code in the prolog/epilog code when unrolling a loop with a
 /// run-time trip-count.
 ///
@@ -660,6 +692,7 @@ bool llvm::UnrollRuntimeLoopRemainder(
   unsigned BEWidth = cast<IntegerType>(BECountSC->getType())->getBitWidth();
 
   // Add 1 since the backedge count doesn't include the first loop iteration.
+  // (Note that overflow can occur, this is handled explicitly below)
   const SCEV *TripCountSC =
       SE->getAddExpr(BECountSC, SE->getConstant(BECountSC->getType(), 1));
   if (isa<SCEVCouldNotCompute>(TripCountSC)) {
@@ -752,35 +785,8 @@ bool llvm::UnrollRuntimeLoopRemainder(
   Value *BECount = Expander.expandCodeFor(BECountSC, BECountSC->getType(),
                                           PreHeaderBR);
   IRBuilder<> B(PreHeaderBR);
-  Value *ModVal;
-  // Calculate ModVal = (BECount + 1) % Count.
-  // Note that TripCount is BECount + 1.
-  if (isPowerOf2_32(Count)) {
-    // When Count is power of 2 we don't BECount for epilog case, however we'll
-    // need it for a branch around unrolling loop for prolog case.
-    ModVal = B.CreateAnd(TripCount, Count - 1, "xtraiter");
-    //  1. There are no iterations to be run in the prolog/epilog loop.
-    // OR
-    //  2. The addition computing TripCount overflowed.
-    //
-    // If (2) is true, we know that TripCount really is (1 << BEWidth) and so
-    // the number of iterations that remain to be run in the original loop is a
-    // multiple Count == (1 << Log2(Count)) because Log2(Count) <= BEWidth (we
-    // explicitly check this above).
-  } else {
-    // As (BECount + 1) can potentially unsigned overflow we count
-    // (BECount % Count) + 1 which is overflow safe as BECount % Count < Count.
-    Value *ModValTmp = B.CreateURem(BECount,
-                                    ConstantInt::get(BECount->getType(),
-                                                     Count));
-    Value *ModValAdd = B.CreateAdd(ModValTmp,
-                                   ConstantInt::get(ModValTmp->getType(), 1));
-    // At that point (BECount % Count) + 1 could be equal to Count.
-    // To handle this case we need to take mod by Count one more time.
-    ModVal = B.CreateURem(ModValAdd,
-                          ConstantInt::get(BECount->getType(), Count),
-                          "xtraiter");
-  }
+  Value * const ModVal = CreateTripRemainder(B, BECount, TripCount, Count);
+
   Value *BranchVal =
       UseEpilogRemainder ? B.CreateICmpULT(BECount,
                                            ConstantInt::get(BECount->getType(),
