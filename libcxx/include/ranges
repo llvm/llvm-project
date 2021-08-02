@@ -162,6 +162,10 @@ namespace std::ranges {
 
   template<class T>
   inline constexpr bool enable_borrowed_range<take_view<T>> = enable_borrowed_range<T>;
+
+  template<copy_constructible T>
+    requires is_object_v<T>
+  class single_view;
 }
 
 */
@@ -179,9 +183,10 @@ namespace std::ranges {
 #include <__ranges/enable_borrowed_range.h>
 #include <__ranges/enable_view.h>
 #include <__ranges/ref_view.h>
-#include <__ranges/take_view.h>
+#include <__ranges/single_view.h>
 #include <__ranges/size.h>
 #include <__ranges/subrange.h>
+#include <__ranges/take_view.h>
 #include <__ranges/transform_view.h>
 #include <__ranges/view_interface.h>
 #include <compare>          // Required by the standard.
