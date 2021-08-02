@@ -19,6 +19,7 @@ class TestCase(PExpectTest):
     @skipIfAsan
     @skipIfEditlineSupportMissing
     @expectedFailureAll(oslist=['freebsd'], bugnumber='llvm.org/pr48316')
+    @skipIf(oslist=["linux"], archs=["arm", "aarch64"])
     def test_nav_arrow_up(self):
         """Tests that we can navigate back to the previous line with the up arrow"""
         self.launch()
