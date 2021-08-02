@@ -5,28 +5,28 @@
 !--------------------------
 ! FLANG DRIVER (flang)
 !--------------------------
-! RUN: %flang -E %S/Inputs/fixed-line-length-test.f  2>&1 | FileCheck %s --check-prefix=DEFAULTLENGTH
-! RUN: not %flang -E -ffixed-line-length=-2 %S/Inputs/fixed-line-length-test.f  2>&1 | FileCheck %s --check-prefix=NEGATIVELENGTH
-! RUN: not %flang -E -ffixed-line-length=3 %S/Inputs/fixed-line-length-test.f  2>&1 | FileCheck %s --check-prefix=INVALIDLENGTH
-! RUN: %flang -E -ffixed-line-length=none %S/Inputs/fixed-line-length-test.f  2>&1 | FileCheck %s --check-prefix=UNLIMITEDLENGTH
-! RUN: %flang -E -ffixed-line-length=0 %S/Inputs/fixed-line-length-test.f  2>&1 | FileCheck %s --check-prefix=UNLIMITEDLENGTH
-! RUN: %flang -E -ffixed-line-length=13 %S/Inputs/fixed-line-length-test.f  2>&1 | FileCheck %s --check-prefix=LENGTH13
+! RUN: %flang -E -Xflang -fno-reformat %S/Inputs/fixed-line-length-test.f  2>&1 | FileCheck %s --check-prefix=DEFAULTLENGTH
+! RUN: not %flang -E -Xflang -fno-reformat -ffixed-line-length=-2 %S/Inputs/fixed-line-length-test.f  2>&1 | FileCheck %s --check-prefix=NEGATIVELENGTH
+! RUN: not %flang -E -Xflang -fno-reformat -ffixed-line-length=3 %S/Inputs/fixed-line-length-test.f  2>&1 | FileCheck %s --check-prefix=INVALIDLENGTH
+! RUN: %flang -E -Xflang -fno-reformat -ffixed-line-length=none %S/Inputs/fixed-line-length-test.f  2>&1 | FileCheck %s --check-prefix=UNLIMITEDLENGTH
+! RUN: %flang -E -Xflang -fno-reformat -ffixed-line-length=0 %S/Inputs/fixed-line-length-test.f  2>&1 | FileCheck %s --check-prefix=UNLIMITEDLENGTH
+! RUN: %flang -E -Xflang -fno-reformat -ffixed-line-length=13 %S/Inputs/fixed-line-length-test.f  2>&1 | FileCheck %s --check-prefix=LENGTH13
 
 !----------------------------------------
 ! FRONTEND FLANG DRIVER (flang -fc1)
 !----------------------------------------
-! RUN: %flang_fc1 -E %S/Inputs/fixed-line-length-test.f  2>&1 | FileCheck %s --check-prefix=DEFAULTLENGTH
-! RUN: not %flang_fc1 -E -ffixed-line-length=-2 %S/Inputs/fixed-line-length-test.f  2>&1 | FileCheck %s --check-prefix=NEGATIVELENGTH
-! RUN: not %flang_fc1 -E -ffixed-line-length=3 %S/Inputs/fixed-line-length-test.f  2>&1 | FileCheck %s --check-prefix=INVALIDLENGTH
-! RUN: %flang_fc1 -E -ffixed-line-length=none %S/Inputs/fixed-line-length-test.f  2>&1 | FileCheck %s --check-prefix=UNLIMITEDLENGTH
-! RUN: %flang_fc1 -E -ffixed-line-length=0 %S/Inputs/fixed-line-length-test.f  2>&1 | FileCheck %s --check-prefix=UNLIMITEDLENGTH
-! RUN: %flang_fc1 -E -ffixed-line-length=13 %S/Inputs/fixed-line-length-test.f  2>&1 | FileCheck %s --check-prefix=LENGTH13
+! RUN: %flang_fc1 -E -fno-reformat %S/Inputs/fixed-line-length-test.f  2>&1 | FileCheck %s --check-prefix=DEFAULTLENGTH
+! RUN: not %flang_fc1 -E -fno-reformat -ffixed-line-length=-2 %S/Inputs/fixed-line-length-test.f  2>&1 | FileCheck %s --check-prefix=NEGATIVELENGTH
+! RUN: not %flang_fc1 -E -fno-reformat -ffixed-line-length=3 %S/Inputs/fixed-line-length-test.f  2>&1 | FileCheck %s --check-prefix=INVALIDLENGTH
+! RUN: %flang_fc1 -E -fno-reformat -ffixed-line-length=none %S/Inputs/fixed-line-length-test.f  2>&1 | FileCheck %s --check-prefix=UNLIMITEDLENGTH
+! RUN: %flang_fc1 -E -fno-reformat -ffixed-line-length=0 %S/Inputs/fixed-line-length-test.f  2>&1 | FileCheck %s --check-prefix=UNLIMITEDLENGTH
+! RUN: %flang_fc1 -E -fno-reformat -ffixed-line-length=13 %S/Inputs/fixed-line-length-test.f  2>&1 | FileCheck %s --check-prefix=LENGTH13
 
 !-------------------------------------
 ! COMMAND ALIAS -ffixed-line-length-n
 !-------------------------------------
-! RUN: %flang -E -ffixed-line-length-13 %S/Inputs/fixed-line-length-test.f  2>&1 | FileCheck %s --check-prefix=LENGTH13
-! RUN: %flang_fc1 -E -ffixed-line-length-13 %S/Inputs/fixed-line-length-test.f  2>&1 | FileCheck %s --check-prefix=LENGTH13
+! RUN: %flang -E -Xflang -fno-reformat -ffixed-line-length-13 %S/Inputs/fixed-line-length-test.f  2>&1 | FileCheck %s --check-prefix=LENGTH13
+! RUN: %flang_fc1 -E -fno-reformat -ffixed-line-length-13 %S/Inputs/fixed-line-length-test.f  2>&1 | FileCheck %s --check-prefix=LENGTH13
 
 !-------------------------------------
 ! EXPECTED OUTPUT WITH DEFAULT LENGTH

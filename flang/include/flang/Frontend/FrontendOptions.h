@@ -25,7 +25,7 @@ enum ActionKind {
   /// -test-io mode
   InputOutputTest,
 
-  /// -E mode.
+  /// -E mode
   PrintPreprocessedInput,
 
   /// -fsyntax-only

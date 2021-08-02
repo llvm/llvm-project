@@ -119,7 +119,7 @@ public:
   TokenSequence &ClipComment(bool skipFirst = false);
   const TokenSequence &CheckBadFortranCharacters(Messages &) const;
   void Emit(CookedSource &) const;
-  void Dump(llvm::raw_ostream &) const;
+  llvm::raw_ostream &Dump(llvm::raw_ostream &) const;
 
 private:
   std::size_t TokenBytes(std::size_t token) const {

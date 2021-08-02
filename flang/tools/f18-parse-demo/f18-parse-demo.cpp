@@ -87,9 +87,10 @@ struct DriverOptions {
   bool warnOnNonstandardUsage{false}; // -Mstandard
   bool warningsAreErrors{false}; // -Werror
   Fortran::parser::Encoding encoding{Fortran::parser::Encoding::LATIN_1};
+  bool lineDirectives{true}; // -P disables
   bool syntaxOnly{false};
   bool dumpProvenance{false};
-  bool dumpCookedChars{false};
+  bool noReformat{false}; // -E -fno-reformat
   bool dumpUnparse{false};
   bool dumpParseTree{false};
   bool timeParse{false};
@@ -176,8 +177,13 @@ std::string CompileFortran(
     parsing.DumpProvenance(llvm::outs());
     return {};
   }
-  if (driver.dumpCookedChars) {
-    parsing.DumpCookedChars(llvm::outs());
+  if (options.prescanAndReformat) {
+    parsing.messages().Emit(llvm::errs(), allCookedSources);
+    if (driver.noReformat) {
+      parsing.DumpCookedChars(llvm::outs());
+    } else {
+      parsing.EmitPreprocessedSource(llvm::outs(), driver.lineDirectives);
+    }
     return {};
   }
   parsing.Parse(llvm::outs());
@@ -302,7 +308,7 @@ int main(int argc, char *const argv[]) {
   while (!args.empty()) {
     std::string arg{std::move(args.front())};
     args.pop_front();
-    if (arg.empty()) {
+    if (arg.empty() || arg == "-Xflang") {
     } else if (arg.at(0) != '-') {
       anyFiles = true;
       auto dot{arg.rfind(".")};
@@ -353,8 +359,12 @@ int main(int argc, char *const argv[]) {
       driver.warningsAreErrors = true;
     } else if (arg == "-ed") {
       options.features.Enable(Fortran::common::LanguageFeature::OldDebugLines);
-    } else if (arg == "-E" || arg == "-fpreprocess-only") {
-      driver.dumpCookedChars = true;
+    } else if (arg == "-E") {
+      options.prescanAndReformat = true;
+    } else if (arg == "-P") {
+      driver.lineDirectives = false;
+    } else if (arg == "-fno-reformat") {
+      driver.noReformat = true;
     } else if (arg == "-fbackslash") {
       options.features.Enable(
           Fortran::common::LanguageFeature::BackslashEscapes);

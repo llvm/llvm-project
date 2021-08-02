@@ -1,5 +1,5 @@
 ! RUN: %flang -E %s 2>&1 | FileCheck %s
-! CHECK-NOT:z=111
+! CHECK-NOT:z = 111
 * #define directive amid continuations
       integer, parameter :: KWM = 222, KWM111 = 333, KWM222 = 555
       integer, parameter :: KWMKWM = 333
