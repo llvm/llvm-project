@@ -1973,21 +1973,26 @@ Instruction *InstCombinerImpl::visitCallInst(CallInst &CI) {
     // %val = bitcast <ReduxWidth x i1> to iReduxWidth
     // %res = cmp eq iReduxWidth %val, 11111
     Value *Arg = II->getArgOperand(0);
-    Type *RetTy = II->getType();
-    if (RetTy == Builder.getInt1Ty())
-      if (auto *FVTy = dyn_cast<FixedVectorType>(Arg->getType())) {
-        Value *Res = Builder.CreateBitCast(
-            Arg, Builder.getIntNTy(FVTy->getNumElements()));
-        if (IID == Intrinsic::vector_reduce_and) {
-          Res = Builder.CreateICmpEQ(
-              Res, ConstantInt::getAllOnesValue(Res->getType()));
-        } else {
-          assert(IID == Intrinsic::vector_reduce_or &&
-                 "Expected or reduction.");
-          Res = Builder.CreateIsNotNull(Res);
+    Value *Vect;
+    if (match(Arg, m_ZExtOrSExtOrSelf(m_Value(Vect)))) {
+      if (auto *FTy = dyn_cast<FixedVectorType>(Vect->getType()))
+        if (FTy->getElementType() == Builder.getInt1Ty()) {
+          Value *Res = Builder.CreateBitCast(
+              Vect, Builder.getIntNTy(FTy->getNumElements()));
+          if (IID == Intrinsic::vector_reduce_and) {
+            Res = Builder.CreateICmpEQ(
+                Res, ConstantInt::getAllOnesValue(Res->getType()));
+          } else {
+            assert(IID == Intrinsic::vector_reduce_or &&
+                   "Expected or reduction.");
+            Res = Builder.CreateIsNotNull(Res);
+          }
+          if (Arg != Vect)
+            Res = Builder.CreateCast(cast<CastInst>(Arg)->getOpcode(), Res,
+                                     II->getType());
+          return replaceInstUsesWith(CI, Res);
         }
-        return replaceInstUsesWith(CI, Res);
-      }
+    }
     LLVM_FALLTHROUGH;
   }
   case Intrinsic::vector_reduce_add: {
