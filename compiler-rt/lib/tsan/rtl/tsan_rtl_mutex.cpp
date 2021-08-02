@@ -71,9 +71,10 @@ void MutexCreate(ThreadState *thr, uptr pc, uptr addr, u32 flagz) {
     MemoryWrite(thr, pc, addr, kSizeLog1);
     thr->is_freeing = false;
   }
-  SyncVar *s = ctx->metamap.GetSyncOrCreate(thr, pc, addr);
+  SyncVar *s = ctx->metamap.GetSyncOrCreate(thr, pc, addr, true);
   Lock l(&s->mtx);
   s->SetFlags(flagz & MutexCreationFlagMask);
+  // Save stack in the case the sync object was created before as atomic.
   if (!SANITIZER_GO && s->creation_stack_id == 0)
     s->creation_stack_id = CurrentStackId(thr, pc);
 }
@@ -143,7 +144,7 @@ void MutexDestroy(ThreadState *thr, uptr pc, uptr addr, u32 flagz) {
 void MutexPreLock(ThreadState *thr, uptr pc, uptr addr, u32 flagz) {
   DPrintf("#%d: MutexPreLock %zx flagz=0x%x\n", thr->tid, addr, flagz);
   if (!(flagz & MutexFlagTryLock) && common_flags()->detect_deadlocks) {
-    SyncVar *s = ctx->metamap.GetSyncOrCreate(thr, pc, addr);
+    SyncVar *s = ctx->metamap.GetSyncOrCreate(thr, pc, addr, true);
     {
       ReadLock l(&s->mtx);
       s->UpdateFlags(flagz);
@@ -171,7 +172,7 @@ void MutexPostLock(ThreadState *thr, uptr pc, uptr addr, u32 flagz, int rec) {
   bool first = false;
   bool report_double_lock = false;
   {
-    SyncVar *s = ctx->metamap.GetSyncOrCreate(thr, pc, addr);
+    SyncVar *s = ctx->metamap.GetSyncOrCreate(thr, pc, addr, true);
     Lock l(&s->mtx);
     s->UpdateFlags(flagz);
     thr->fast_state.IncrementEpoch();
@@ -221,7 +222,7 @@ int MutexUnlock(ThreadState *thr, uptr pc, uptr addr, u32 flagz) {
   bool report_bad_unlock = false;
   int rec = 0;
   {
-    SyncVar *s = ctx->metamap.GetSyncOrCreate(thr, pc, addr);
+    SyncVar *s = ctx->metamap.GetSyncOrCreate(thr, pc, addr, true);
     Lock l(&s->mtx);
     thr->fast_state.IncrementEpoch();
     TraceAddEvent(thr, thr->fast_state, EventTypeUnlock, s->GetId());
@@ -260,7 +261,7 @@ void MutexPreReadLock(ThreadState *thr, uptr pc, uptr addr, u32 flagz) {
   DPrintf("#%d: MutexPreReadLock %zx flagz=0x%x\n", thr->tid, addr, flagz);
   if (!(flagz & MutexFlagTryLock) && common_flags()->detect_deadlocks) {
     {
-      SyncVar *s = ctx->metamap.GetSyncOrCreate(thr, pc, addr);
+      SyncVar *s = ctx->metamap.GetSyncOrCreate(thr, pc, addr, true);
       ReadLock l(&s->mtx);
       s->UpdateFlags(flagz);
       Callback cb(thr, pc);
@@ -279,7 +280,7 @@ void MutexPostReadLock(ThreadState *thr, uptr pc, uptr addr, u32 flagz) {
   bool report_bad_lock = false;
   bool pre_lock = false;
   {
-    SyncVar *s = ctx->metamap.GetSyncOrCreate(thr, pc, addr);
+    SyncVar *s = ctx->metamap.GetSyncOrCreate(thr, pc, addr, true);
     ReadLock l(&s->mtx);
     s->UpdateFlags(flagz);
     thr->fast_state.IncrementEpoch();
@@ -318,7 +319,7 @@ void MutexReadUnlock(ThreadState *thr, uptr pc, uptr addr) {
   u64 mid = 0;
   bool report_bad_unlock = false;
   {
-    SyncVar *s = ctx->metamap.GetSyncOrCreate(thr, pc, addr);
+    SyncVar *s = ctx->metamap.GetSyncOrCreate(thr, pc, addr, true);
     Lock l(&s->mtx);
     thr->fast_state.IncrementEpoch();
     TraceAddEvent(thr, thr->fast_state, EventTypeRUnlock, s->GetId());
@@ -351,7 +352,7 @@ void MutexReadOrWriteUnlock(ThreadState *thr, uptr pc, uptr addr) {
   u64 mid = 0;
   bool report_bad_unlock = false;
   {
-    SyncVar *s = ctx->metamap.GetSyncOrCreate(thr, pc, addr);
+    SyncVar *s = ctx->metamap.GetSyncOrCreate(thr, pc, addr, true);
     Lock l(&s->mtx);
     bool write = true;
     if (s->owner_tid == kInvalidTid) {
@@ -392,7 +393,7 @@ void MutexReadOrWriteUnlock(ThreadState *thr, uptr pc, uptr addr) {
 
 void MutexRepair(ThreadState *thr, uptr pc, uptr addr) {
   DPrintf("#%d: MutexRepair %zx\n", thr->tid, addr);
-  SyncVar *s = ctx->metamap.GetSyncOrCreate(thr, pc, addr);
+  SyncVar *s = ctx->metamap.GetSyncOrCreate(thr, pc, addr, true);
   Lock l(&s->mtx);
   s->owner_tid = kInvalidTid;
   s->recursion = 0;
@@ -400,7 +401,7 @@ void MutexRepair(ThreadState *thr, uptr pc, uptr addr) {
 
 void MutexInvalidAccess(ThreadState *thr, uptr pc, uptr addr) {
   DPrintf("#%d: MutexInvalidAccess %zx\n", thr->tid, addr);
-  SyncVar *s = ctx->metamap.GetSyncOrCreate(thr, pc, addr);
+  SyncVar *s = ctx->metamap.GetSyncOrCreate(thr, pc, addr, true);
   ReportMutexMisuse(thr, pc, ReportTypeMutexInvalidAccess, addr, s->GetId());
 }
 
@@ -438,7 +439,7 @@ void ReleaseStoreAcquire(ThreadState *thr, uptr pc, uptr addr) {
   DPrintf("#%d: ReleaseStoreAcquire %zx\n", thr->tid, addr);
   if (thr->ignore_sync)
     return;
-  SyncVar *s = ctx->metamap.GetSyncOrCreate(thr, pc, addr);
+  SyncVar *s = ctx->metamap.GetSyncOrCreate(thr, pc, addr, false);
   Lock l(&s->mtx);
   thr->fast_state.IncrementEpoch();
   // Can't increment epoch w/o writing to the trace as well.
@@ -450,7 +451,7 @@ void Release(ThreadState *thr, uptr pc, uptr addr) {
   DPrintf("#%d: Release %zx\n", thr->tid, addr);
   if (thr->ignore_sync)
     return;
-  SyncVar *s = ctx->metamap.GetSyncOrCreate(thr, pc, addr);
+  SyncVar *s = ctx->metamap.GetSyncOrCreate(thr, pc, addr, false);
   Lock l(&s->mtx);
   thr->fast_state.IncrementEpoch();
   // Can't increment epoch w/o writing to the trace as well.
@@ -462,7 +463,7 @@ void ReleaseStore(ThreadState *thr, uptr pc, uptr addr) {
   DPrintf("#%d: ReleaseStore %zx\n", thr->tid, addr);
   if (thr->ignore_sync)
     return;
-  SyncVar *s = ctx->metamap.GetSyncOrCreate(thr, pc, addr);
+  SyncVar *s = ctx->metamap.GetSyncOrCreate(thr, pc, addr, false);
   Lock l(&s->mtx);
   thr->fast_state.IncrementEpoch();
   // Can't increment epoch w/o writing to the trace as well.

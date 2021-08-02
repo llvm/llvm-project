@@ -268,7 +268,7 @@ static void AtomicStore(ThreadState *thr, uptr pc, volatile T *a, T v,
     return;
   }
   __sync_synchronize();
-  SyncVar *s = ctx->metamap.GetSyncOrCreate(thr, pc, (uptr)a);
+  SyncVar *s = ctx->metamap.GetSyncOrCreate(thr, pc, (uptr)a, false);
   Lock l(&s->mtx);
   thr->fast_state.IncrementEpoch();
   // Can't increment epoch w/o writing to the trace as well.
@@ -282,7 +282,7 @@ static T AtomicRMW(ThreadState *thr, uptr pc, volatile T *a, T v, morder mo) {
   MemoryWriteAtomic(thr, pc, (uptr)a, SizeLog<T>());
   if (LIKELY(mo == mo_relaxed))
     return F(a, v);
-  SyncVar *s = ctx->metamap.GetSyncOrCreate(thr, pc, (uptr)a);
+  SyncVar *s = ctx->metamap.GetSyncOrCreate(thr, pc, (uptr)a, false);
   Lock l(&s->mtx);
   thr->fast_state.IncrementEpoch();
   // Can't increment epoch w/o writing to the trace as well.
@@ -415,7 +415,7 @@ static bool AtomicCAS(ThreadState *thr, uptr pc, volatile T *a, T *c, T v,
   }
 
   bool release = IsReleaseOrder(mo);
-  SyncVar *s = ctx->metamap.GetSyncOrCreate(thr, pc, (uptr)a);
+  SyncVar *s = ctx->metamap.GetSyncOrCreate(thr, pc, (uptr)a, false);
   RWLock l(&s->mtx, release);
   T cc = *c;
   T pr = func_cas(a, cc, v);
