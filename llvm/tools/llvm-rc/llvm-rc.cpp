@@ -476,13 +476,14 @@ RcOptions parseWindresOptions(ArrayRef<const char *> ArgsArr,
   Opts.Params.CodePage = CpWin1252; // Different default
   if (InputArgs.hasArg(WINDRES_codepage)) {
     if (InputArgs.getLastArgValue(WINDRES_codepage)
-            .getAsInteger(10, Opts.Params.CodePage))
+            .getAsInteger(0, Opts.Params.CodePage))
       fatalError("Invalid code page: " +
                  InputArgs.getLastArgValue(WINDRES_codepage));
   }
   if (InputArgs.hasArg(WINDRES_language)) {
-    if (InputArgs.getLastArgValue(WINDRES_language)
-            .getAsInteger(16, Opts.LangId))
+    StringRef Val = InputArgs.getLastArgValue(WINDRES_language);
+    Val.consume_front_insensitive("0x");
+    if (Val.getAsInteger(16, Opts.LangId))
       fatalError("Invalid language id: " +
                  InputArgs.getLastArgValue(WINDRES_language));
   }
@@ -565,7 +566,9 @@ RcOptions parseRcOptions(ArrayRef<const char *> ArgsArr,
   }
   Opts.AppendNull = InputArgs.hasArg(OPT_add_null);
   if (InputArgs.hasArg(OPT_lang_id)) {
-    if (InputArgs.getLastArgValue(OPT_lang_id).getAsInteger(16, Opts.LangId))
+    StringRef Val = InputArgs.getLastArgValue(OPT_lang_id);
+    Val.consume_front_insensitive("0x");
+    if (Val.getAsInteger(16, Opts.LangId))
       fatalError("Invalid language id: " +
                  InputArgs.getLastArgValue(OPT_lang_id));
   }
