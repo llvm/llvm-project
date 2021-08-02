@@ -654,7 +654,7 @@ define <2 x i64> @PR30986(<2 x i64>* %0) {
 ; CHECK-NEXT:    [[TMP2:%.*]] = getelementptr inbounds <2 x i64>, <2 x i64>* [[TMP0:%.*]], i32 0, i32 0
 ; CHECK-NEXT:    [[TMP3:%.*]] = load i64, i64* [[TMP2]], align 16
 ; CHECK-NEXT:    [[TMP4:%.*]] = tail call i64 @llvm.ctpop.i64(i64 [[TMP3]])
-; CHECK-NEXT:    [[TMP5:%.*]] = insertelement <2 x i64> undef, i64 [[TMP4]], i32 0
+; CHECK-NEXT:    [[TMP5:%.*]] = insertelement <2 x i64> poison, i64 [[TMP4]], i32 0
 ; CHECK-NEXT:    [[TMP6:%.*]] = getelementptr inbounds <2 x i64>, <2 x i64>* [[TMP0]], i32 0, i32 1
 ; CHECK-NEXT:    [[TMP7:%.*]] = load i64, i64* [[TMP6]], align 8
 ; CHECK-NEXT:    [[TMP8:%.*]] = tail call i64 @llvm.ctpop.i64(i64 [[TMP7]])
@@ -664,7 +664,7 @@ define <2 x i64> @PR30986(<2 x i64>* %0) {
   %2 = load <2 x i64>, <2 x i64>* %0, align 16
   %3 = extractelement <2 x i64> %2, i32 0
   %4 = tail call i64 @llvm.ctpop.i64(i64 %3)
-  %5 = insertelement <2 x i64> undef, i64 %4, i32 0
+  %5 = insertelement <2 x i64> poison, i64 %4, i32 0
   %6 = extractelement <2 x i64> %2, i32 1
   %7 = tail call i64 @llvm.ctpop.i64(i64 %6)
   %8 = insertelement <2 x i64> %5, i64 %7, i32 1
