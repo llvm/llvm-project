@@ -3952,8 +3952,12 @@ void Parser::ParseDeclarationSpecifiers(DeclSpec &DS,
         Tok.getIdentifierInfo()->revertTokenIDToIdentifier();
         Tok.setKind(tok::identifier);
         goto DoneWithDeclSpec;
-      }
-      isInvalid = DS.SetTypePipe(true, Loc, PrevSpec, DiagID, Policy);
+      } else if (!getLangOpts().OpenCLPipes) {
+        DiagID = diag::err_opencl_unknown_type_specifier;
+        PrevSpec = Tok.getIdentifierInfo()->getNameStart();
+        isInvalid = true;
+      } else
+        isInvalid = DS.SetTypePipe(true, Loc, PrevSpec, DiagID, Policy);
       break;
 // We only need to enumerate each image type once.
 #define IMAGE_READ_WRITE_TYPE(Type, Id, Ext)
@@ -5126,8 +5130,10 @@ bool Parser::isDeclarationSpecifier(bool DisambiguatingWithExpression) {
   switch (Tok.getKind()) {
   default: return false;
 
+  // OpenCL 2.0 and later define this keyword.
   case tok::kw_pipe:
-    return getLangOpts().OpenCLPipe;
+    return (getLangOpts().OpenCL && getLangOpts().OpenCLVersion >= 200) ||
+           getLangOpts().OpenCLCPlusPlus;
 
   case tok::identifier:   // foo::bar
     // Unfortunate hack to support "Class.factoryMethod" notation.
@@ -5656,7 +5662,9 @@ static bool isPtrOperatorToken(tok::TokenKind Kind, const LangOptions &Lang,
   if (Kind == tok::star || Kind == tok::caret)
     return true;
 
-  if (Kind == tok::kw_pipe && Lang.OpenCLPipe)
+  // OpenCL 2.0 and later define this keyword.
+  if (Kind == tok::kw_pipe &&
+      ((Lang.OpenCL && Lang.OpenCLVersion >= 200) || Lang.OpenCLCPlusPlus))
     return true;
 
   if (!Lang.CPlusPlus)

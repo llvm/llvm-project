@@ -327,7 +327,8 @@ void Sema::Initialize() {
     if (getLangOpts().OpenCLCPlusPlus || getLangOpts().OpenCLVersion >= 200) {
       addImplicitTypedef("clk_event_t", Context.OCLClkEventTy);
       addImplicitTypedef("queue_t", Context.OCLQueueTy);
-      addImplicitTypedef("reserve_id_t", Context.OCLReserveIDTy);
+      if (getLangOpts().OpenCLPipes)
+        addImplicitTypedef("reserve_id_t", Context.OCLReserveIDTy);
       addImplicitTypedef("atomic_int", Context.getAtomicType(Context.IntTy));
       addImplicitTypedef("atomic_uint",
                          Context.getAtomicType(Context.UnsignedIntTy));

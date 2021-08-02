@@ -1,6 +1,6 @@
 // RUN: %clang_cc1 %s -verify -pedantic -fsyntax-only -cl-std=CL1.2
-// RUN: %clang_cc1 %s -verify -pedantic -fsyntax-only -cl-std=CL3.0 -cl-ext=-__opencl_c_program_scope_global_variables,-__opencl_c_generic_address_space
-// RUN: %clang_cc1 %s -verify -pedantic -fsyntax-only -cl-std=CL3.0 -cl-ext=+__opencl_c_program_scope_global_variables,-__opencl_c_generic_address_space
+// RUN: %clang_cc1 %s -verify -pedantic -fsyntax-only -cl-std=CL3.0 -cl-ext=-__opencl_c_program_scope_global_variables,-__opencl_c_generic_address_space,-__opencl_c_pipes
+// RUN: %clang_cc1 %s -verify -pedantic -fsyntax-only -cl-std=CL3.0 -cl-ext=+__opencl_c_program_scope_global_variables,-__opencl_c_generic_address_space,-__opencl_c_pipes
 // RUN: %clang_cc1 %s -verify -pedantic -fsyntax-only -cl-std=CL3.0 -cl-ext=-__opencl_c_program_scope_global_variables,+__opencl_c_generic_address_space
 // RUN: %clang_cc1 %s -verify -pedantic -fsyntax-only -cl-std=CL3.0 -cl-ext=+__opencl_c_program_scope_global_variables,+__opencl_c_generic_address_space
 static constant int G1 = 0;

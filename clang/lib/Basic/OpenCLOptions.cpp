@@ -112,7 +112,8 @@ bool OpenCLOptions::diagnoseUnsupportedFeatureDependencies(
   // supported.
   static const llvm::StringMap<llvm::StringRef> DependentFeaturesMap = {
       {"__opencl_c_read_write_images", "__opencl_c_images"},
-      {"__opencl_c_3d_image_writes", "__opencl_c_images"}};
+      {"__opencl_c_3d_image_writes", "__opencl_c_images"},
+      {"__opencl_c_pipes", "__opencl_c_generic_address_space"}};
 
   auto OpenCLFeaturesMap = TI.getSupportedOpenCLOpts();
 
