@@ -26,10 +26,6 @@ namespace clangd {
 //  - forcing the use of clangd's builtin headers rather than clang's
 //  - resolving argv0 as cc1 expects
 //  - injecting -isysroot flags on mac as the system clang does
-// FIXME: This is currently not used in all code paths that create invocations.
-// Make use of these adjusters and buildCompilerInvocation in clangd-indexer as
-// well. It should be possible to hook it up by overriding RunInvocation in
-// FrontendActionFactory.
 struct CommandMangler {
   // Absolute path to clang.
   llvm::Optional<std::string> ClangPath;
