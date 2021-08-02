@@ -620,13 +620,9 @@ private:
     // Some blocks have multiple edges to the same successor, and this set
     // is used to prevent a duplicate path from being generated
     SmallSet<BasicBlock *, 4> Successors;
-
-    for (succ_iterator SI = succ_begin(BB), E = succ_end(BB); SI != E; ++SI) {
-      BasicBlock *Succ = *SI;
-
-      if (Successors.find(Succ) != Successors.end())
+    for (BasicBlock *Succ : successors(BB)) {
+      if (!Successors.insert(Succ).second)
         continue;
-      Successors.insert(Succ);
 
       // Found a cycle through the SwitchBlock
       if (Succ == SwitchBlock) {
