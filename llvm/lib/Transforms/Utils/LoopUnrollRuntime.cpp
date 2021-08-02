@@ -436,6 +436,7 @@ static bool canSafelyUnrollMultiExitLoop(Loop *L, BasicBlock *LatchExit,
   // loop. Check for these below.
 
   // We rely on LCSSA form being preserved when the exit blocks are transformed.
+  // (Note that only an off-by-default mode of the old PM disables PreserveLCCA.)
   if (!PreserveLCSSA)
     return false;
 
