@@ -1,20 +1,52 @@
 {
-	"name": "mlir",
+	"name": "vscode-mlir",
 	"displayName": "MLIR",
 	"description": "MLIR Language Extension",
 	"version": "0.0.1",
 	"publisher": "llvm-vs-code-extensions",
-	"repository": "https://github.com/llvm/llvm-project/",
+	"homepage": "https://mlir.llvm.org/",
+	"icon": "icon.png",
 	"engines": {
 		"vscode": "^1.52.0"
 	},
 	"categories": [
 		"Programming Languages"
 	],
+	"keywords": [
+		"LLVM",
+		"MLIR"
+	],
 	"activationEvents": [
 		"onLanguage:mlir"
 	],
 	"main": "./out/extension",
+	"scripts": {
+		"vscode:prepublish": "tsc -p ./",
+		"compile": "tsc -watch -p ./",
+		"format": "clang-format -i --glob=\"{src,test}/*.ts\"",
+		"package": "vsce package",
+		"publish": "vsce publish",
+		"git-clang-format": "git-clang-format"
+	},
+	"dependencies": {
+		"chokidar": "3.5.2",
+		"vscode-languageclient": "^5.2.1",
+		"vscode-languageserver-types": "3.16.0"
+	},
+	"devDependencies": {
+		"@types/mocha": "^5.2.0",
+		"@types/node": "^8.0.0",
+		"@types/vscode": "1.52.*",
+		"clang-format": "1.4.0",
+		"tslint": "^5.16.0",
+		"typescript": "^3.5.1",
+		"vsce": "^1.75.0",
+		"vscode-test": "^1.3.0"
+	},
+	"repository": {
+			"type": "git",
+			"url": "https://github.com/llvm-project/vscode-mlir.git"
+	},
 	"contributes": {
 		"languages": [
 			{
@@ -68,29 +100,5 @@
 				"title": "mlir: Restart language server"
 			}
 		]
-	},
-	"scripts": {
-		"vscode:prepublish": "tsc -p ./",
-		"compile": "tsc -watch -p ./",
-		"format": "clang-format -i --glob=\"{src,test}/*.ts\"",
-		"test": "tsc -p ./ && node ./out/test/index.js",
-		"package": "vsce package"
-	},
-	"devDependencies": {
-		"@types/chokidar": "2.1.3",
-		"@types/mocha": "^5.2.0",
-		"@types/node": "^8.0.0",
-		"@types/vscode": "1.52.*",
-		"clang-format": "1.4.0",
-		"tslint": "^5.16.0",
-		"typescript": "^3.5.1",
-		"vsce": "^1.75.0",
-		"vscode-languageclient": "^5.2.1",
-		"vscode-test": "^1.3.0"
-	},
-	"dependencies": {
-		"chokidar": "3.5.2",
-		"vscode-languageclient": "^5.2.1",
-		"vscode-languageserver-types": "3.16.0"
 	}
 }
