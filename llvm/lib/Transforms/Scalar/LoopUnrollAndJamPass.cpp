@@ -286,8 +286,8 @@ tryToUnrollAndJamLoop(Loop *L, DominatorTree &DT, LoopInfo *LI,
                       AssumptionCache &AC, DependenceInfo &DI,
                       OptimizationRemarkEmitter &ORE, int OptLevel) {
   TargetTransformInfo::UnrollingPreferences UP =
-      gatherUnrollingPreferences(L, SE, TTI, nullptr, nullptr, OptLevel, None,
-                                 None, None, None, None, None);
+      gatherUnrollingPreferences(L, SE, TTI, nullptr, nullptr, ORE, OptLevel,
+                                 None, None, None, None, None, None);
   TargetTransformInfo::PeelingPreferences PP =
       gatherPeelingPreferences(L, SE, TTI, None, None);
 

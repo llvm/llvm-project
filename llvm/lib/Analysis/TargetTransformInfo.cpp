@@ -317,8 +317,9 @@ Optional<Value *> TargetTransformInfo::simplifyDemandedVectorEltsIntrinsic(
 }
 
 void TargetTransformInfo::getUnrollingPreferences(
-    Loop *L, ScalarEvolution &SE, UnrollingPreferences &UP) const {
-  return TTIImpl->getUnrollingPreferences(L, SE, UP);
+    Loop *L, ScalarEvolution &SE, UnrollingPreferences &UP,
+    OptimizationRemarkEmitter *ORE) const {
+  return TTIImpl->getUnrollingPreferences(L, SE, UP, ORE);
 }
 
 void TargetTransformInfo::getPeelingPreferences(Loop *L, ScalarEvolution &SE,

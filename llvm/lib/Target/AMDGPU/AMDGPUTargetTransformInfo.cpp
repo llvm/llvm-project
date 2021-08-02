@@ -101,7 +101,8 @@ AMDGPUTTIImpl::AMDGPUTTIImpl(const AMDGPUTargetMachine *TM, const Function &F)
       TLI(ST->getTargetLowering()) {}
 
 void AMDGPUTTIImpl::getUnrollingPreferences(Loop *L, ScalarEvolution &SE,
-                                            TTI::UnrollingPreferences &UP) {
+                                            TTI::UnrollingPreferences &UP,
+                                            OptimizationRemarkEmitter *ORE) {
   const Function &F = *L->getHeader()->getParent();
   UP.Threshold = AMDGPU::getIntegerAttribute(F, "amdgpu-unroll-threshold", 300);
   UP.MaxCount = std::numeric_limits<unsigned>::max();
@@ -1227,8 +1228,9 @@ unsigned GCNTTIImpl::adjustInliningThreshold(const CallBase *CB) const {
 }
 
 void GCNTTIImpl::getUnrollingPreferences(Loop *L, ScalarEvolution &SE,
-                                         TTI::UnrollingPreferences &UP) {
-  CommonTTI.getUnrollingPreferences(L, SE, UP);
+                                         TTI::UnrollingPreferences &UP,
+                                         OptimizationRemarkEmitter *ORE) {
+  CommonTTI.getUnrollingPreferences(L, SE, UP, ORE);
 }
 
 void GCNTTIImpl::getPeelingPreferences(Loop *L, ScalarEvolution &SE,
@@ -1353,8 +1355,9 @@ InstructionCost R600TTIImpl::getVectorInstrCost(unsigned Opcode, Type *ValTy,
 }
 
 void R600TTIImpl::getUnrollingPreferences(Loop *L, ScalarEvolution &SE,
-                                          TTI::UnrollingPreferences &UP) {
-  CommonTTI.getUnrollingPreferences(L, SE, UP);
+                                          TTI::UnrollingPreferences &UP,
+                                          OptimizationRemarkEmitter *ORE) {
+  CommonTTI.getUnrollingPreferences(L, SE, UP, ORE);
 }
 
 void R600TTIImpl::getPeelingPreferences(Loop *L, ScalarEvolution &SE,

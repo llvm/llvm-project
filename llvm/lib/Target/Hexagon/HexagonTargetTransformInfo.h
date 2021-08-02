@@ -61,7 +61,8 @@ public:
 
   // The Hexagon target can unroll loops with run-time trip counts.
   void getUnrollingPreferences(Loop *L, ScalarEvolution &SE,
-                               TTI::UnrollingPreferences &UP);
+                               TTI::UnrollingPreferences &UP,
+                               OptimizationRemarkEmitter *ORE);
 
   void getPeelingPreferences(Loop *L, ScalarEvolution &SE,
                              TTI::PeelingPreferences &PP);

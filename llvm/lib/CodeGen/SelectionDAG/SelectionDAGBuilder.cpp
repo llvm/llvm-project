@@ -399,29 +399,31 @@ static SDValue getCopyFromPartsVector(SelectionDAG &DAG, const SDLoc &DL,
     return Val;
 
   if (PartEVT.isVector()) {
+    // Vector/Vector bitcast.
+    if (ValueVT.getSizeInBits() == PartEVT.getSizeInBits())
+      return DAG.getNode(ISD::BITCAST, DL, ValueVT, Val);
+
     // If the element type of the source/dest vectors are the same, but the
     // parts vector has more elements than the value vector, then we have a
     // vector widening case (e.g. <2 x float> -> <4 x float>).  Extract the
     // elements we want.
-    if (PartEVT.getVectorElementType() == ValueVT.getVectorElementType()) {
+    if (PartEVT.getVectorElementCount() != ValueVT.getVectorElementCount()) {
       assert((PartEVT.getVectorElementCount().getKnownMinValue() >
               ValueVT.getVectorElementCount().getKnownMinValue()) &&
              (PartEVT.getVectorElementCount().isScalable() ==
               ValueVT.getVectorElementCount().isScalable()) &&
              "Cannot narrow, it would be a lossy transformation");
-      return DAG.getNode(ISD::EXTRACT_SUBVECTOR, DL, ValueVT, Val,
-                         DAG.getVectorIdxConstant(0, DL));
+      PartEVT =
+          EVT::getVectorVT(*DAG.getContext(), PartEVT.getVectorElementType(),
+                           ValueVT.getVectorElementCount());
+      Val = DAG.getNode(ISD::EXTRACT_SUBVECTOR, DL, PartEVT, Val,
+                        DAG.getVectorIdxConstant(0, DL));
+      if (PartEVT == ValueVT)
+        return Val;
     }
 
-    // Vector/Vector bitcast.
-    if (ValueVT.getSizeInBits() == PartEVT.getSizeInBits())
-      return DAG.getNode(ISD::BITCAST, DL, ValueVT, Val);
-
-    assert(PartEVT.getVectorElementCount() == ValueVT.getVectorElementCount() &&
-      "Cannot handle this kind of promotion");
     // Promoted vector extract
     return DAG.getAnyExtOrTrunc(Val, DL, ValueVT);
-
   }
 
   // Trivial bitcast if the types are the same size and the destination
@@ -726,15 +728,19 @@ static void getCopyToPartsVector(SelectionDAG &DAG, const SDLoc &DL,
   } else if (ValueVT.getSizeInBits() == BuiltVectorTy.getSizeInBits()) {
     // Bitconvert vector->vector case.
     Val = DAG.getNode(ISD::BITCAST, DL, BuiltVectorTy, Val);
-  } else if (SDValue Widened =
-                 widenVectorToPartType(DAG, Val, DL, BuiltVectorTy)) {
-    Val = Widened;
-  } else if (BuiltVectorTy.getVectorElementType().bitsGE(
-                 ValueVT.getVectorElementType()) &&
-             BuiltVectorTy.getVectorElementCount() ==
-                 ValueVT.getVectorElementCount()) {
-    // Promoted vector extract
-    Val = DAG.getAnyExtOrTrunc(Val, DL, BuiltVectorTy);
+  } else {
+    if (BuiltVectorTy.getVectorElementType().bitsGT(
+            ValueVT.getVectorElementType())) {
+      // Integer promotion.
+      ValueVT = EVT::getVectorVT(*DAG.getContext(),
+                                 BuiltVectorTy.getVectorElementType(),
+                                 ValueVT.getVectorElementCount());
+      Val = DAG.getNode(ISD::ANY_EXTEND, DL, ValueVT, Val);
+    }
+
+    if (SDValue Widened = widenVectorToPartType(DAG, Val, DL, BuiltVectorTy)) {
+      Val = Widened;
+    }
   }
 
   assert(Val.getValueType() == BuiltVectorTy && "Unexpected vector value type");
