@@ -485,6 +485,7 @@ function(add_mlir_python_extension libname extname)
     OUTPUT_NAME "${extname}"
     PREFIX "${PYTHON_MODULE_PREFIX}"
     SUFFIX "${PYTHON_MODULE_SUFFIX}${PYTHON_MODULE_EXTENSION}"
+    NO_SONAME ON
   )
 
   if(WIN32)
