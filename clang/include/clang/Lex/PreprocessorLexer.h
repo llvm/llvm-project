@@ -14,11 +14,13 @@
 #ifndef LLVM_CLANG_LEX_PREPROCESSORLEXER_H
 #define LLVM_CLANG_LEX_PREPROCESSORLEXER_H
 
+#include "clang/Basic/SourceLocation.h"
+#include "clang/Lex/HeaderSearch.h"
 #include "clang/Lex/MultipleIncludeOpt.h"
 #include "clang/Lex/Token.h"
-#include "clang/Basic/SourceLocation.h"
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/SmallVector.h"
+#include "llvm/ADT/StringMap.h"
 #include <cassert>
 
 namespace clang {
@@ -73,6 +75,13 @@ protected:
   /// Information about the set of \#if/\#ifdef/\#ifndef blocks
   /// we are currently in.
   SmallVector<PPConditionalInfo, 4> ConditionalStack;
+
+  struct IncludeInfo {
+    const FileEntry *File;
+    SourceLocation Location;
+  };
+  // A complete history of all the files included by the current file.
+  llvm::StringMap<IncludeInfo> IncludeHistory;
 
   PreprocessorLexer() : FID() {}
   PreprocessorLexer(Preprocessor *pp, FileID fid);
@@ -174,6 +183,15 @@ public:
   void setConditionalLevels(ArrayRef<PPConditionalInfo> CL) {
     ConditionalStack.clear();
     ConditionalStack.append(CL.begin(), CL.end());
+  }
+
+  void addInclude(StringRef Filename, const FileEntry &File,
+                  SourceLocation Location) {
+    IncludeHistory.insert({Filename, {&File, Location}});
+  }
+
+  const llvm::StringMap<IncludeInfo> &getIncludeHistory() const {
+    return IncludeHistory;
   }
 };
 

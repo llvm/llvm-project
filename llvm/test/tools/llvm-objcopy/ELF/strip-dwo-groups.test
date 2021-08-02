@@ -75,9 +75,11 @@ Sections:
 Symbols:
   - Name:    debug_before
     Section: .debug_before.dwo
-  - Name:    group2
-    Section: .text.group2
-  - Name:    group1
-    Section: .text.group1
   - Name:    debug_after
     Section: .debug_after.dwo
+  - Name:    group2
+    Section: .text.group2
+    Binding: STB_WEAK
+  - Name:    group1
+    Section: .text.group1
+    Binding: STB_WEAK

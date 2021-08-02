@@ -20,6 +20,7 @@ declare void @func() #0
 ; GCN-LABEL: {{^}}bundle_size:
 ; GCN: s_cbranch_scc0 [[BB_EXPANSION:BB[0-9]+_[0-9]+]]
 ; GCN: s_getpc_b64
+; GCN-NEXT: .Lpost_getpc{{[0-9]+}}:{{$}}
 ; GCN-NEXT: s_add_u32
 ; GCN-NEXT: s_addc_u32
 ; GCN-NEXT: s_setpc_b64

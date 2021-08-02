@@ -1838,7 +1838,10 @@ struct DSEState {
         }
 
         if (MemSet) {
-          if (F.hasFnAttribute(Attribute::SanitizeMemory))
+          if (F.hasFnAttribute(Attribute::SanitizeMemory) ||
+              F.hasFnAttribute(Attribute::SanitizeAddress) ||
+              F.hasFnAttribute(Attribute::SanitizeHWAddress) ||
+              F.getName() == "calloc")
             return false;
           auto *Malloc = const_cast<CallInst *>(dyn_cast<CallInst>(DefUOInst));
           if (!Malloc)

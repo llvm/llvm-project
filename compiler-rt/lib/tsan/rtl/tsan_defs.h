@@ -15,6 +15,7 @@
 
 #include "sanitizer_common/sanitizer_internal_defs.h"
 #include "sanitizer_common/sanitizer_libc.h"
+#include "sanitizer_common/sanitizer_mutex.h"
 #include "ubsan/ubsan_platform.h"
 
 // Setup defaults for compile definitions.
@@ -170,6 +171,17 @@ enum ExternalTag : uptr {
   kExternalTagMax = 1024,
   // Don't set kExternalTagMax over 65,536, since MBlock only stores tags
   // as 16-bit values, see tsan_defs.h.
+};
+
+enum MutexType {
+  MutexTypeTrace = MutexLastCommon,
+  MutexTypeReport,
+  MutexTypeSyncVar,
+  MutexTypeAnnotations,
+  MutexTypeAtExit,
+  MutexTypeFired,
+  MutexTypeRacy,
+  MutexTypeGlobalProc,
 };
 
 }  // namespace __tsan

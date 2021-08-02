@@ -910,7 +910,7 @@ int main (int argc, char **argv) {
 // CHECK1-NEXT:    [[TMP2:%.*]] = call i32 @__kmpc_global_thread_num(%struct.ident_t* @[[GLOB1]])
 // CHECK1-NEXT:    store i32 [[TMP2]], i32* [[DOTTHREADID_TEMP_]], align 4
 // CHECK1-NEXT:    call void @__omp_outlined__(i32* [[DOTTHREADID_TEMP_]], i32* [[DOTZERO_ADDR]], i32* [[ARGC_ON_STACK]]) #[[ATTR1:[0-9]+]]
-// CHECK1-NEXT:    call void @__kmpc_free_shared(i8* [[ARGC1]])
+// CHECK1-NEXT:    call void @__kmpc_free_shared(i8* [[ARGC1]], i64 4)
 // CHECK1-NEXT:    call void @__kmpc_target_deinit(%struct.ident_t* @[[GLOB1]], i1 false, i1 true)
 // CHECK1-NEXT:    ret void
 // CHECK1:       worker.exit:
@@ -950,7 +950,7 @@ int main (int argc, char **argv) {
 // CHECK1-NEXT:    [[TMP2:%.*]] = call i32 @__kmpc_global_thread_num(%struct.ident_t* @[[GLOB1]])
 // CHECK1-NEXT:    store i32 [[TMP2]], i32* [[DOTTHREADID_TEMP_]], align 4
 // CHECK1-NEXT:    call void @__omp_outlined__1(i32* [[DOTTHREADID_TEMP_]], i32* [[DOTZERO_ADDR]], i8*** [[ARGC_ON_STACK]]) #[[ATTR1]]
-// CHECK1-NEXT:    call void @__kmpc_free_shared(i8* [[ARGC1]])
+// CHECK1-NEXT:    call void @__kmpc_free_shared(i8* [[ARGC1]], i64 8)
 // CHECK1-NEXT:    call void @__kmpc_target_deinit(%struct.ident_t* @[[GLOB1]], i1 false, i1 true)
 // CHECK1-NEXT:    ret void
 // CHECK1:       worker.exit:
@@ -990,7 +990,7 @@ int main (int argc, char **argv) {
 // CHECK2-NEXT:    [[TMP2:%.*]] = call i32 @__kmpc_global_thread_num(%struct.ident_t* @[[GLOB1]])
 // CHECK2-NEXT:    store i32 [[TMP2]], i32* [[DOTTHREADID_TEMP_]], align 4
 // CHECK2-NEXT:    call void @__omp_outlined__(i32* [[DOTTHREADID_TEMP_]], i32* [[DOTZERO_ADDR]], i32* [[ARGC_ON_STACK]]) #[[ATTR1:[0-9]+]]
-// CHECK2-NEXT:    call void @__kmpc_free_shared(i8* [[ARGC1]])
+// CHECK2-NEXT:    call void @__kmpc_free_shared(i8* [[ARGC1]], i32 4)
 // CHECK2-NEXT:    call void @__kmpc_target_deinit(%struct.ident_t* @[[GLOB1]], i1 false, i1 true)
 // CHECK2-NEXT:    ret void
 // CHECK2:       worker.exit:
@@ -1030,7 +1030,7 @@ int main (int argc, char **argv) {
 // CHECK2-NEXT:    [[TMP2:%.*]] = call i32 @__kmpc_global_thread_num(%struct.ident_t* @[[GLOB1]])
 // CHECK2-NEXT:    store i32 [[TMP2]], i32* [[DOTTHREADID_TEMP_]], align 4
 // CHECK2-NEXT:    call void @__omp_outlined__1(i32* [[DOTTHREADID_TEMP_]], i32* [[DOTZERO_ADDR]], i8*** [[ARGC_ON_STACK]]) #[[ATTR1]]
-// CHECK2-NEXT:    call void @__kmpc_free_shared(i8* [[ARGC1]])
+// CHECK2-NEXT:    call void @__kmpc_free_shared(i8* [[ARGC1]], i32 4)
 // CHECK2-NEXT:    call void @__kmpc_target_deinit(%struct.ident_t* @[[GLOB1]], i1 false, i1 true)
 // CHECK2-NEXT:    ret void
 // CHECK2:       worker.exit:
@@ -1077,7 +1077,7 @@ int main (int argc, char **argv) {
 // CHECK3-NEXT:    [[TMP2:%.*]] = call i32 @__kmpc_global_thread_num(%struct.ident_t* @[[GLOB1]])
 // CHECK3-NEXT:    store i32 [[TMP2]], i32* [[DOTTHREADID_TEMP_]], align 4
 // CHECK3-NEXT:    call void @__omp_outlined__(i32* [[DOTTHREADID_TEMP_]], i32* [[DOTZERO_ADDR]], i32* [[ARGC_ON_STACK]]) #[[ATTR1:[0-9]+]]
-// CHECK3-NEXT:    call void @__kmpc_free_shared(i8* [[ARGC3]])
+// CHECK3-NEXT:    call void @__kmpc_free_shared(i8* [[ARGC3]], i64 4)
 // CHECK3-NEXT:    call void @__kmpc_target_deinit(%struct.ident_t* @[[GLOB1]], i1 false, i1 true)
 // CHECK3-NEXT:    ret void
 // CHECK3:       worker.exit:
@@ -1123,7 +1123,7 @@ int main (int argc, char **argv) {
 // CHECK3-NEXT:    [[TMP2:%.*]] = call i32 @__kmpc_global_thread_num(%struct.ident_t* @[[GLOB1]])
 // CHECK3-NEXT:    store i32 [[TMP2]], i32* [[DOTTHREADID_TEMP_]], align 4
 // CHECK3-NEXT:    call void @__omp_outlined__1(i32* [[DOTTHREADID_TEMP_]], i32* [[DOTZERO_ADDR]], i8*** [[ARGC_ON_STACK]]) #[[ATTR1]]
-// CHECK3-NEXT:    call void @__kmpc_free_shared(i8* [[ARGC2]])
+// CHECK3-NEXT:    call void @__kmpc_free_shared(i8* [[ARGC2]], i64 8)
 // CHECK3-NEXT:    call void @__kmpc_target_deinit(%struct.ident_t* @[[GLOB1]], i1 false, i1 true)
 // CHECK3-NEXT:    ret void
 // CHECK3:       worker.exit:
@@ -1167,7 +1167,7 @@ int main (int argc, char **argv) {
 // CHECK4-NEXT:    [[TMP2:%.*]] = call i32 @__kmpc_global_thread_num(%struct.ident_t* @[[GLOB1]])
 // CHECK4-NEXT:    store i32 [[TMP2]], i32* [[DOTTHREADID_TEMP_]], align 4
 // CHECK4-NEXT:    call void @__omp_outlined__(i32* [[DOTTHREADID_TEMP_]], i32* [[DOTZERO_ADDR]], i32* [[ARGC_ON_STACK]]) #[[ATTR1:[0-9]+]]
-// CHECK4-NEXT:    call void @__kmpc_free_shared(i8* [[ARGC1]])
+// CHECK4-NEXT:    call void @__kmpc_free_shared(i8* [[ARGC1]], i32 4)
 // CHECK4-NEXT:    call void @__kmpc_target_deinit(%struct.ident_t* @[[GLOB1]], i1 false, i1 true)
 // CHECK4-NEXT:    ret void
 // CHECK4:       worker.exit:
@@ -1211,7 +1211,7 @@ int main (int argc, char **argv) {
 // CHECK4-NEXT:    [[TMP2:%.*]] = call i32 @__kmpc_global_thread_num(%struct.ident_t* @[[GLOB1]])
 // CHECK4-NEXT:    store i32 [[TMP2]], i32* [[DOTTHREADID_TEMP_]], align 4
 // CHECK4-NEXT:    call void @__omp_outlined__1(i32* [[DOTTHREADID_TEMP_]], i32* [[DOTZERO_ADDR]], i8*** [[ARGC_ON_STACK]]) #[[ATTR1]]
-// CHECK4-NEXT:    call void @__kmpc_free_shared(i8* [[ARGC1]])
+// CHECK4-NEXT:    call void @__kmpc_free_shared(i8* [[ARGC1]], i32 4)
 // CHECK4-NEXT:    call void @__kmpc_target_deinit(%struct.ident_t* @[[GLOB1]], i1 false, i1 true)
 // CHECK4-NEXT:    ret void
 // CHECK4:       worker.exit:

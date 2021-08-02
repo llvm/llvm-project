@@ -28,16 +28,16 @@ body: |
     ; CHECK-LABEL: name: add_scalable_offset
     ; CHECK: liveins: $x10, $x11, $x1
     ; CHECK: $x2 = frame-setup ADDI $x2, -2032
-    ; CHECK: CFI_INSTRUCTION def_cfa_offset 2032
+    ; CHECK: frame-setup CFI_INSTRUCTION def_cfa_offset 2032
     ; CHECK: SD killed $x1, $x2, 2024 :: (store (s64) into %stack.3)
     ; CHECK: SD killed $x8, $x2, 2016 :: (store (s64) into %stack.4)
-    ; CHECK: CFI_INSTRUCTION offset $x1, -8
-    ; CHECK: CFI_INSTRUCTION offset $x8, -16
+    ; CHECK: frame-setup CFI_INSTRUCTION offset $x1, -8
+    ; CHECK: frame-setup CFI_INSTRUCTION offset $x8, -16
     ; CHECK: $x8 = frame-setup ADDI $x2, 2032
-    ; CHECK: CFI_INSTRUCTION def_cfa $x8, 0
+    ; CHECK: frame-setup CFI_INSTRUCTION def_cfa $x8, 0
     ; CHECK: $x2 = frame-setup ADDI $x2, -240
-    ; CHECK: $x12 = PseudoReadVLENB
-    ; CHECK: $x2 = SUB $x2, killed $x12
+    ; CHECK: $x12 = frame-setup PseudoReadVLENB
+    ; CHECK: $x2 = frame-setup SUB $x2, killed $x12
     ; CHECK: dead $x0 = PseudoVSETVLI killed renamable $x11, 88, implicit-def $vl, implicit-def $vtype
     ; CHECK: renamable $v25 = PseudoVLE64_V_M1 killed renamable $x10, $noreg, 6, implicit $vl, implicit $vtype :: (load unknown-size from %ir.pa, align 8)
     ; CHECK: $x11 = PseudoReadVLENB
@@ -46,8 +46,8 @@ body: |
     ; CHECK: $x10 = ADD $x8, killed $x10
     ; CHECK: $x10 = SUB killed $x10, killed $x11
     ; CHECK: VS1R_V killed renamable $v25, killed renamable $x10
-    ; CHECK: $x10 = PseudoReadVLENB
-    ; CHECK: $x2 = ADD $x2, killed $x10
+    ; CHECK: $x10 = frame-destroy PseudoReadVLENB
+    ; CHECK: $x2 = frame-destroy ADD $x2, killed $x10
     ; CHECK: $x2 = frame-destroy ADDI $x2, 240
     ; CHECK: $x8 = LD $x2, 2016 :: (load (s64) from %stack.4)
     ; CHECK: $x1 = LD $x2, 2024 :: (load (s64) from %stack.3)

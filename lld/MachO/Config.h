@@ -13,6 +13,7 @@
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/DenseSet.h"
 #include "llvm/ADT/StringRef.h"
+#include "llvm/ADT/StringSet.h"
 #include "llvm/BinaryFormat/MachO.h"
 #include "llvm/Support/CachePruning.h"
 #include "llvm/Support/GlobPattern.h"
@@ -158,6 +159,7 @@ struct Configuration {
   std::vector<llvm::StringRef> runtimePaths;
   std::vector<std::string> astPaths;
   std::vector<Symbol *> explicitUndefineds;
+  llvm::StringSet<> explicitDynamicLookups;
   // There are typically few custom sectionAlignments or segmentProtections,
   // so use a vector instead of a map.
   std::vector<SectionAlign> sectionAlignments;

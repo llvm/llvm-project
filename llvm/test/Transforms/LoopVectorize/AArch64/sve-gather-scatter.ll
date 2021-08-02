@@ -1,4 +1,4 @@
-; RUN: opt -loop-vectorize -dce -instcombine -mtriple aarch64-linux-gnu -mattr=+sve -S %s -scalable-vectorization=on -o - | FileCheck %s
+; RUN: opt -loop-vectorize -dce -instcombine -mtriple aarch64-linux-gnu -mattr=+sve -S %s -scalable-vectorization=preferred -force-target-instruction-cost=1 -o - | FileCheck %s
 
 define void @gather_nxv4i32_ind64(float* noalias nocapture readonly %a, i64* noalias nocapture readonly %b, float* noalias nocapture %c, i64 %n) {
 ; CHECK-LABEL: @gather_nxv4i32_ind64
@@ -119,6 +119,37 @@ for.inc:                                          ; preds = %for.body, %if.then
   br i1 %exitcond.not, label %for.cond.cleanup, label %for.body, !llvm.loop !0
 
 for.cond.cleanup:                                 ; preds = %for.inc, %entry
+  ret void
+}
+
+
+
+define void @gather_nxv4i32_ind64_stride2(float* noalias nocapture readonly %a, float* noalias nocapture readonly %b, i64 %n) {
+; CHECK-LABEL: @gather_nxv4i32_ind64_stride2
+; CHECK: vector.body:
+; CHECK:      %[[IDX:.*]] = phi i64 [ 0, %vector.ph ], [ %{{.*}}, %vector.body ]
+; CHECK-DAG:  %[[STEP:.*]] = call <vscale x 4 x i64> @llvm.experimental.stepvector.nxv4i64()
+; CHECK-DAG:  %[[IDXSPLATINS:.*]] = insertelement <vscale x 4 x i64> poison, i64 %[[IDX]], i32 0
+; CHECK-DAG:  %[[IDXSPLAT:.*]] = shufflevector <vscale x 4 x i64> %[[IDXSPLATINS]], <vscale x 4 x i64> poison, <vscale x 4 x i32> zeroinitializer
+; CHECK:      %[[ADD:.*]] = add <vscale x 4 x i64> %[[IDXSPLAT]], %[[STEP]]
+; CHECK:      %[[MUL:.*]] = shl <vscale x 4 x i64> %[[ADD]], shufflevector (<vscale x 4 x i64> insertelement (<vscale x 4 x i64> undef, i64 1, i32 0), <vscale x 4 x i64> undef, <vscale x 4 x i32> zeroinitializer)
+; CHECK:      %[[PTRS:.*]] = getelementptr inbounds float, float* %b, <vscale x 4 x i64> %[[MUL]]
+; CHECK:      call <vscale x 4 x float> @llvm.masked.gather.nxv4f32.nxv4p0f32(<vscale x 4 x float*> %[[PTRS]]
+entry:
+  br label %for.body
+
+for.body:                                         ; preds = %entry, %for.body
+  %indvars.iv = phi i64 [ %indvars.iv.next, %for.body ], [ 0, %entry ]
+  %indvars.iv.stride2 = mul i64 %indvars.iv, 2
+  %arrayidx = getelementptr inbounds float, float* %b, i64 %indvars.iv.stride2
+  %0 = load float, float* %arrayidx, align 4
+  %arrayidx2 = getelementptr inbounds float, float* %a, i64 %indvars.iv
+  store float %0, float* %arrayidx2, align 4
+  %indvars.iv.next = add nuw nsw i64 %indvars.iv, 1
+  %exitcond.not = icmp eq i64 %indvars.iv.next, %n
+  br i1 %exitcond.not, label %for.cond.cleanup, label %for.body
+
+for.cond.cleanup:                                 ; preds = %for.cond.cleanup.loopexit, %entry
   ret void
 }
 

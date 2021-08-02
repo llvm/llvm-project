@@ -17,12 +17,19 @@
 #include "llvm/InitializePasses.h"
 #include "llvm/Pass.h"
 #include "llvm/Support/ErrorHandling.h"
+#include "llvm/Support/FileSystem.h"
 
 using namespace llvm;
 
 #define DEBUG_TYPE "coro-elide"
 
 STATISTIC(NumOfCoroElided, "The # of coroutine get elided.");
+
+#ifndef NDEBUG
+static cl::opt<std::string> CoroElideInfoOutputFilename(
+    "coro-elide-info-output-file", cl::value_desc("filename"),
+    cl::desc("File to record the coroutines got elided"), cl::Hidden);
+#endif
 
 namespace {
 // Created on demand if the coro-elide pass has work to do.
@@ -120,6 +127,21 @@ static Instruction *getFirstNonAllocaInTheEntryBlock(Function *F) {
       return &I;
   llvm_unreachable("no terminator in the entry block");
 }
+
+#ifndef NDEBUG
+static std::unique_ptr<raw_fd_ostream> getOrCreateLogFile() {
+  assert(!CoroElideInfoOutputFilename.empty() &&
+         "coro-elide-info-output-file shouldn't be empty");
+  std::error_code EC;
+  auto Result = std::make_unique<raw_fd_ostream>(CoroElideInfoOutputFilename,
+                                                 EC, sys::fs::OF_Append);
+  if (!EC)
+    return Result;
+  llvm::errs() << "Error opening coro-elide-info-output-file '"
+               << CoroElideInfoOutputFilename << " for appending!\n";
+  return std::make_unique<raw_fd_ostream>(2, false); // stderr.
+}
+#endif
 
 // To elide heap allocations we need to suppress code blocks guarded by
 // llvm.coro.alloc and llvm.coro.free instructions.
@@ -344,6 +366,12 @@ bool Lowerer::processCoroId(CoroIdInst *CoroId, AAResults &AA,
                          FrameSizeAndAlign.second, AA);
     coro::replaceCoroFree(CoroId, /*Elide=*/true);
     NumOfCoroElided++;
+#ifndef NDEBUG
+    if (!CoroElideInfoOutputFilename.empty())
+      *getOrCreateLogFile()
+          << "Elide " << CoroId->getCoroutine()->getName() << " in "
+          << CoroId->getFunction()->getName() << "\n";
+#endif
   }
 
   return true;

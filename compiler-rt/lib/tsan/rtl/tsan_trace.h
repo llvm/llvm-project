@@ -13,7 +13,6 @@
 #define TSAN_TRACE_H
 
 #include "tsan_defs.h"
-#include "tsan_mutex.h"
 #include "tsan_stack_trace.h"
 #include "tsan_mutexset.h"
 

@@ -6,9 +6,9 @@
 //
 //===----------------------------------------------------------------------===//
 //
-// This files several utilities and algorithms that perform abstract dataflow
+// This file has several utilities and algorithms that perform abstract dataflow
 // analysis over the IR. These allow for users to hook into various analysis
-// propagation algorithms without needing to reinvent the traveral over the
+// propagation algorithms without needing to reinvent the traversal over the
 // different types of control structures present within MLIR, such as regions,
 // the callgraph, etc. A few of the main entry points are detailed below:
 //
@@ -75,7 +75,7 @@ public:
   virtual ChangeResult markPessimisticFixpoint() = 0;
 
   /// Mark the lattice element as having reached an optimistic fixpoint. This
-  /// means that we optimisticly assume the current value is the true state.
+  /// means that we optimistically assume the current value is the true state.
   virtual void markOptimisticFixpoint() = 0;
 
   /// Returns true if the lattice has reached a fixpoint. A fixpoint is when the
@@ -174,7 +174,7 @@ public:
   }
 
   /// Mark the lattice element as having reached an optimistic fixpoint. This
-  /// means that we optimisticly assume the current value is the true state.
+  /// means that we optimistically assume the current value is the true state.
   void markOptimisticFixpoint() final {
     assert(!isUninitialized() && "expected an initialized value");
     knownValue = *optimisticValue;
@@ -200,7 +200,7 @@ private:
 namespace detail {
 /// This class is the non-templated virtual base class for the
 /// ForwardDataFlowAnalysis. This class provides opaque hooks to the main
-/// alogrithm.
+/// algorithm.
 class ForwardDataFlowAnalysisBase {
 public:
   virtual ~ForwardDataFlowAnalysisBase();
@@ -265,9 +265,9 @@ private:
 // ForwardDataFlowAnalysis
 //===----------------------------------------------------------------------===//
 
-/// This class provides a general forward dataflow analyis driver
+/// This class provides a general forward dataflow analysis driver
 /// utilizing the lattice classes defined above, to enable the easy definition
-/// of dataflow analysis algorithms. More specically this driver is useful for
+/// of dataflow analysis algorithms. More specifically this driver is useful for
 /// defining analyses that are forward, sparse, pessimistic (except along
 /// unreached backedges) and context-insensitive for the interprocedural
 /// aspects.

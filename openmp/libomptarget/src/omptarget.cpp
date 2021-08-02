@@ -487,9 +487,10 @@ int targetDataBegin(ident_t *loc, DeviceTy &Device, int32_t arg_num,
       // entry for a global that might not already be allocated by the time the
       // PTR_AND_OBJ entry is handled below, and so the allocation might fail
       // when HasPresentModifier.
-      Pointer_TPR = Device.getOrAllocTgtPtr(
-          HstPtrBase, HstPtrBase, sizeof(void *), nullptr, IsImplicit,
-          UpdateRef, HasCloseModifier, HasPresentModifier);
+      Pointer_TPR = Device.getTargetPointer(
+          HstPtrBase, HstPtrBase, sizeof(void *), nullptr,
+          MoveDataStateTy::NONE, IsImplicit, UpdateRef, HasCloseModifier,
+          HasPresentModifier, AsyncInfo);
       PointerTgtPtrBegin = Pointer_TPR.TargetPointer;
       IsHostPtr = Pointer_TPR.Flags.IsHostPointer;
       if (!PointerTgtPtrBegin) {
@@ -511,9 +512,17 @@ int targetDataBegin(ident_t *loc, DeviceTy &Device, int32_t arg_num,
           (!FromMapper || i != 0); // subsequently update ref count of pointee
     }
 
-    auto TPR = Device.getOrAllocTgtPtr(HstPtrBegin, HstPtrBase, data_size,
-                                       HstPtrName, IsImplicit, UpdateRef,
-                                       HasCloseModifier, HasPresentModifier);
+    MoveDataStateTy MoveData = MoveDataStateTy::NONE;
+    const bool UseUSM = PM->RTLs.RequiresFlags & OMP_REQ_UNIFIED_SHARED_MEMORY;
+    const bool HasFlagTo = arg_types[i] & OMP_TGT_MAPTYPE_TO;
+    const bool HasFlagAlways = arg_types[i] & OMP_TGT_MAPTYPE_ALWAYS;
+    if (HasFlagTo && (!UseUSM || HasCloseModifier))
+      MoveData = HasFlagAlways ? MoveDataStateTy::REQUIRED
+                               : MoveData = MoveDataStateTy::UNKNOWN;
+
+    auto TPR = Device.getTargetPointer(
+        HstPtrBegin, HstPtrBase, data_size, HstPtrName, MoveData, IsImplicit,
+        UpdateRef, HasCloseModifier, HasPresentModifier, AsyncInfo);
     void *TgtPtrBegin = TPR.TargetPointer;
     IsHostPtr = TPR.Flags.IsHostPointer;
     // If data_size==0, then the argument could be a zero-length pointer to
@@ -533,26 +542,6 @@ int targetDataBegin(ident_t *loc, DeviceTy &Device, int32_t arg_num,
       void *TgtPtrBase = (void *)((uintptr_t)TgtPtrBegin - Delta);
       DP("Returning device pointer " DPxMOD "\n", DPxPTR(TgtPtrBase));
       args_base[i] = TgtPtrBase;
-    }
-
-    if (arg_types[i] & OMP_TGT_MAPTYPE_TO) {
-      bool copy = false;
-      if (!(PM->RTLs.RequiresFlags & OMP_REQ_UNIFIED_SHARED_MEMORY) ||
-          HasCloseModifier) {
-        if (TPR.Flags.IsNewEntry || (arg_types[i] & OMP_TGT_MAPTYPE_ALWAYS))
-          copy = true;
-      }
-
-      if (copy && !IsHostPtr) {
-        DP("Moving %" PRId64 " bytes (hst:" DPxMOD ") -> (tgt:" DPxMOD ")\n",
-           data_size, DPxPTR(HstPtrBegin), DPxPTR(TgtPtrBegin));
-        int rt =
-            Device.submitData(TgtPtrBegin, HstPtrBegin, data_size, AsyncInfo);
-        if (rt != OFFLOAD_SUCCESS) {
-          REPORT("Copying data to device failed.\n");
-          return OFFLOAD_FAIL;
-        }
-      }
     }
 
     if (arg_types[i] & OMP_TGT_MAPTYPE_PTR_AND_OBJ && !IsHostPtr) {
@@ -582,20 +571,27 @@ int targetDataBegin(ident_t *loc, DeviceTy &Device, int32_t arg_num,
             HstPtrBase, PointerTgtPtrBegin, ExpectedTgtPtrBase};
         UpdateDevPtr = true;
       }
-      Device.ShadowMtx.unlock();
 
       if (UpdateDevPtr) {
+        Pointer_TPR.MapTableEntry->lock();
+        Device.ShadowMtx.unlock();
+
         DP("Update pointer (" DPxMOD ") -> [" DPxMOD "]\n",
            DPxPTR(PointerTgtPtrBegin), DPxPTR(TgtPtrBegin));
+
         void *&TgtPtrBase = AsyncInfo.getVoidPtrLocation();
         TgtPtrBase = ExpectedTgtPtrBase;
+
         int rt = Device.submitData(PointerTgtPtrBegin, &TgtPtrBase,
                                    sizeof(void *), AsyncInfo);
+        Pointer_TPR.MapTableEntry->unlock();
+
         if (rt != OFFLOAD_SUCCESS) {
           REPORT("Copying data to device failed.\n");
           return OFFLOAD_FAIL;
         }
-      }
+      } else
+        Device.ShadowMtx.unlock();
     }
   }
 

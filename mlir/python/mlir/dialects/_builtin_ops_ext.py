@@ -2,11 +2,14 @@
 #  See https://llvm.org/LICENSE.txt for license information.
 #  SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 
-from typing import Optional, Sequence
+try:
+  from typing import Optional, Sequence
 
-import inspect
+  import inspect
 
-from ..ir import *
+  from ..ir import *
+except ImportError as e:
+  raise RuntimeError("Error loading imports from extension module") from e
 
 
 class ModuleOp:

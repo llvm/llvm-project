@@ -162,52 +162,6 @@ def int_wasm_q15mulr_sat_signed :
             [llvm_v8i16_ty, llvm_v8i16_ty],
             [IntrNoMem, IntrSpeculatable]>;
 
-// TODO: Replace these intrinsics with normal ISel patterns
-def int_wasm_pmin :
-  Intrinsic<[llvm_anyvector_ty],
-            [LLVMMatchType<0>, LLVMMatchType<0>],
-            [IntrNoMem, IntrSpeculatable]>;
-def int_wasm_pmax :
-  Intrinsic<[llvm_anyvector_ty],
-            [LLVMMatchType<0>, LLVMMatchType<0>],
-            [IntrNoMem, IntrSpeculatable]>;
-
-// TODO: Replace these intrinsic with normal ISel patterns once the
-// load_zero instructions are merged to the proposal.
-def int_wasm_load32_zero :
-  Intrinsic<[llvm_v4i32_ty],
-            [LLVMPointerType<llvm_i32_ty>],
-            [IntrReadMem, IntrArgMemOnly],
-             "", [SDNPMemOperand]>;
-
-def int_wasm_load64_zero :
-  Intrinsic<[llvm_v2i64_ty],
-            [LLVMPointerType<llvm_i64_ty>],
-            [IntrReadMem, IntrArgMemOnly],
-             "", [SDNPMemOperand]>;
-
-// TODO: Replace this intrinsic with normal ISel patterns once popcnt is merged
-// to the proposal.
-def int_wasm_popcnt :
-  Intrinsic<[llvm_v16i8_ty], [llvm_v16i8_ty], [IntrNoMem, IntrSpeculatable]>;
-
-def int_wasm_extmul_low_signed :
-  Intrinsic<[llvm_anyvector_ty],
-            [LLVMSubdivide2VectorType<0>, LLVMSubdivide2VectorType<0>],
-            [IntrNoMem, IntrSpeculatable]>;
-def int_wasm_extmul_high_signed :
-  Intrinsic<[llvm_anyvector_ty],
-            [LLVMSubdivide2VectorType<0>, LLVMSubdivide2VectorType<0>],
-            [IntrNoMem, IntrSpeculatable]>;
-def int_wasm_extmul_low_unsigned :
-  Intrinsic<[llvm_anyvector_ty],
-            [LLVMSubdivide2VectorType<0>, LLVMSubdivide2VectorType<0>],
-            [IntrNoMem, IntrSpeculatable]>;
-def int_wasm_extmul_high_unsigned :
-  Intrinsic<[llvm_anyvector_ty],
-            [LLVMSubdivide2VectorType<0>, LLVMSubdivide2VectorType<0>],
-            [IntrNoMem, IntrSpeculatable]>;
-
 def int_wasm_extadd_pairwise_signed :
   Intrinsic<[llvm_anyvector_ty],
             [LLVMSubdivide2VectorType<0>],

@@ -17,16 +17,17 @@ using namespace llvm;
 
 LLT::LLT(MVT VT) {
   if (VT.isVector()) {
-    init(/*IsPointer=*/false, VT.getVectorNumElements() > 1,
+    bool asVector = VT.getVectorNumElements() > 1;
+    init(/*IsPointer=*/false, asVector, /*IsScalar=*/!asVector,
          VT.getVectorElementCount(), VT.getVectorElementType().getSizeInBits(),
          /*AddressSpace=*/0);
   } else if (VT.isValid()) {
     // Aggregates are no different from real scalars as far as GlobalISel is
     // concerned.
-    assert(VT.getSizeInBits().isNonZero() && "invalid zero-sized type");
-    init(/*IsPointer=*/false, /*IsVector=*/false, ElementCount::getFixed(0),
-         VT.getSizeInBits(), /*AddressSpace=*/0);
+    init(/*IsPointer=*/false, /*IsVector=*/false, /*IsScalar=*/true,
+         ElementCount::getFixed(0), VT.getSizeInBits(), /*AddressSpace=*/0);
   } else {
+    IsScalar = false;
     IsPointer = false;
     IsVector = false;
     RawData = 0;

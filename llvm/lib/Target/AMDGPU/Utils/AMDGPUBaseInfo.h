@@ -364,9 +364,6 @@ LLVM_READONLY
 const MIMGInfo *getMIMGInfo(unsigned Opc);
 
 LLVM_READONLY
-unsigned getMIMGNSALimit(const MCSubtargetInfo &STI);
-
-LLVM_READONLY
 int getMTBUFBaseOpcode(unsigned Opc);
 
 LLVM_READONLY
@@ -698,6 +695,10 @@ uint64_t encodeMsg(uint64_t MsgId,
 
 
 unsigned getInitialPSInputAddr(const Function &F);
+
+bool getHasColorExport(const Function &F);
+
+bool getHasDepthExport(const Function &F);
 
 LLVM_READNONE
 bool isShader(CallingConv::ID CC);

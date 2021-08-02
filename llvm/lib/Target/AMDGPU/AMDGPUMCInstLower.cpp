@@ -41,9 +41,6 @@ class AMDGPUMCInstLower {
   const TargetSubtargetInfo &ST;
   const AsmPrinter &AP;
 
-  const MCExpr *getLongBranchBlockExpr(const MachineBasicBlock &SrcBB,
-                                       const MachineOperand &MO) const;
-
 public:
   AMDGPUMCInstLower(MCContext &ctx, const TargetSubtargetInfo &ST,
                     const AsmPrinter &AP);
@@ -95,54 +92,21 @@ static MCSymbolRefExpr::VariantKind getVariantKind(unsigned MOFlags) {
   }
 }
 
-const MCExpr *AMDGPUMCInstLower::getLongBranchBlockExpr(
-  const MachineBasicBlock &SrcBB,
-  const MachineOperand &MO) const {
-  const MCExpr *DestBBSym
-    = MCSymbolRefExpr::create(MO.getMBB()->getSymbol(), Ctx);
-  const MCExpr *SrcBBSym = MCSymbolRefExpr::create(SrcBB.getSymbol(), Ctx);
-
-  // FIXME: The first half of this assert should be removed. This should
-  // probably be PC relative instead of using the source block symbol, and
-  // therefore the indirect branch expansion should use a bundle.
-  assert(
-      skipDebugInstructionsForward(SrcBB.begin(), SrcBB.end())->getOpcode() ==
-          AMDGPU::S_GETPC_B64 &&
-      ST.getInstrInfo()->get(AMDGPU::S_GETPC_B64).Size == 4);
-
-  // s_getpc_b64 returns the address of next instruction.
-  const MCConstantExpr *One = MCConstantExpr::create(4, Ctx);
-  SrcBBSym = MCBinaryExpr::createAdd(SrcBBSym, One, Ctx);
-
-  if (MO.getTargetFlags() == SIInstrInfo::MO_LONG_BRANCH_FORWARD)
-    return MCBinaryExpr::createSub(DestBBSym, SrcBBSym, Ctx);
-
-  assert(MO.getTargetFlags() == SIInstrInfo::MO_LONG_BRANCH_BACKWARD);
-  return MCBinaryExpr::createSub(SrcBBSym, DestBBSym, Ctx);
-}
-
 bool AMDGPUMCInstLower::lowerOperand(const MachineOperand &MO,
                                      MCOperand &MCOp) const {
   switch (MO.getType()) {
   default:
-    llvm_unreachable("unknown operand type");
+    break;
   case MachineOperand::MO_Immediate:
     MCOp = MCOperand::createImm(MO.getImm());
     return true;
   case MachineOperand::MO_Register:
     MCOp = MCOperand::createReg(AMDGPU::getMCReg(MO.getReg(), ST));
     return true;
-  case MachineOperand::MO_MachineBasicBlock: {
-    if (MO.getTargetFlags() != 0) {
-      MCOp = MCOperand::createExpr(
-        getLongBranchBlockExpr(*MO.getParent()->getParent(), MO));
-    } else {
-      MCOp = MCOperand::createExpr(
+  case MachineOperand::MO_MachineBasicBlock:
+    MCOp = MCOperand::createExpr(
         MCSymbolRefExpr::create(MO.getMBB()->getSymbol(), Ctx));
-    }
-
     return true;
-  }
   case MachineOperand::MO_GlobalAddress: {
     const GlobalValue *GV = MO.getGlobal();
     SmallString<128> SymbolName;
@@ -168,7 +132,15 @@ bool AMDGPUMCInstLower::lowerOperand(const MachineOperand &MO,
   case MachineOperand::MO_RegisterMask:
     // Regmasks are like implicit defs.
     return false;
+  case MachineOperand::MO_MCSymbol:
+    if (MO.getTargetFlags() == SIInstrInfo::MO_FAR_BRANCH_OFFSET) {
+      MCSymbol *Sym = MO.getMCSymbol();
+      MCOp = MCOperand::createExpr(Sym->getVariableValue());
+      return true;
+    }
+    break;
   }
+  llvm_unreachable("unknown operand type");
 }
 
 void AMDGPUMCInstLower::lower(const MachineInstr *MI, MCInst &OutMI) const {

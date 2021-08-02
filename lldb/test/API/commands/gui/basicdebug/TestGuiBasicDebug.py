@@ -14,6 +14,7 @@ class TestGuiBasicDebugCommandTest(PExpectTest):
     # PExpect uses many timeouts internally and doesn't play well
     # under ASAN on a loaded machine..
     @skipIfAsan
+    @skipIf(oslist=["linux"], archs=["arm","aarch64"])
     @skipIfCursesSupportMissing
     def test_gui(self):
         self.build()
@@ -26,6 +27,7 @@ class TestGuiBasicDebugCommandTest(PExpectTest):
 
         # Start the GUI and close the welcome window.
         self.child.sendline("gui")
+        self.child.expect("Welcome to the LLDB curses GUI.")
         self.child.send(escape_key)
 
         # Simulate a simple debugging session.

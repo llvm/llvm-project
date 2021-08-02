@@ -1,4 +1,4 @@
-// RUN: mlir-opt -allow-unregistered-dialect %s -split-input-file -pass-pipeline='func(canonicalize)' | FileCheck %s
+// RUN: mlir-opt -allow-unregistered-dialect %s -split-input-file -pass-pipeline='builtin.func(canonicalize)' | FileCheck %s
 
 // -----
 
@@ -460,15 +460,36 @@ func @constant_fold_bounds(%N : index) {
 
 // -----
 
-// CHECK-LABEL:  func @fold_empty_loop() {
-func @fold_empty_loop() {
-  // CHECK-NOT: affine.for
+// CHECK-LABEL:  func @fold_empty_loops()
+func @fold_empty_loops() -> index {
+  %c0 = constant 0 : index
   affine.for %i = 0 to 10 {
   }
-  return
+  %res = affine.for %i = 0 to 10 iter_args(%arg = %c0) -> index {
+    affine.yield %arg : index
+  }
+  // CHECK-NEXT: %[[zero:.*]] = constant 0
+  // CHECK-NEXT: return %[[zero]]
+  return %res : index
 }
-// CHECK: return
 
+// -----
+
+// CHECK-LABEL:  func @fold_zero_iter_loops
+// CHECK-SAME: %[[ARG:.*]]: index
+func @fold_zero_iter_loops(%in : index) -> index {
+  %c1 = constant 1 : index
+  affine.for %i = 0 to 0 {
+    affine.for %j = 0 to -1 {
+    }
+  }
+  %res = affine.for %i = 0 to 0 iter_args(%loop_arg = %in) -> index {
+    %yield = addi %loop_arg, %c1 : index
+    affine.yield %yield : index
+  }
+  // CHECK-NEXT: return %[[ARG]]
+  return %res : index
+}
 
 // -----
 

@@ -199,8 +199,8 @@ SyncVar* MetaMap::GetIfExistsAndLock(uptr addr, bool write_lock) {
   return GetAndLock(0, 0, addr, write_lock, false);
 }
 
-SyncVar* MetaMap::GetAndLock(ThreadState *thr, uptr pc,
-                             uptr addr, bool write_lock, bool create) {
+SyncVar *MetaMap::GetAndLock(ThreadState *thr, uptr pc, uptr addr, bool write_lock,
+                             bool create) NO_THREAD_SAFETY_ANALYSIS {
   u32 *meta = MemToMeta(addr);
   u32 idx0 = *meta;
   u32 myidx = 0;

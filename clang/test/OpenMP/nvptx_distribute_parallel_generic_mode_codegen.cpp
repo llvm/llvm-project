@@ -3174,7 +3174,7 @@ int main(int argc, char **argv) {
 // CHECK4:       .omp.lastprivate.done:
 // CHECK4-NEXT:    br label [[OMP_PRECOND_END]]
 // CHECK4:       omp.precond.end:
-// CHECK4-NEXT:    call void @__kmpc_free_shared(i8* [[C1]])
+// CHECK4-NEXT:    call void @__kmpc_free_shared(i8* [[C1]], i64 40)
 // CHECK4-NEXT:    ret void
 //
 //
@@ -3503,7 +3503,7 @@ int main(int argc, char **argv) {
 // CHECK5:       .omp.lastprivate.done:
 // CHECK5-NEXT:    br label [[OMP_PRECOND_END]]
 // CHECK5:       omp.precond.end:
-// CHECK5-NEXT:    call void @__kmpc_free_shared(i8* [[C1]])
+// CHECK5-NEXT:    call void @__kmpc_free_shared(i8* [[C1]], i32 40)
 // CHECK5-NEXT:    ret void
 //
 //
@@ -3826,7 +3826,7 @@ int main(int argc, char **argv) {
 // CHECK6:       .omp.lastprivate.done:
 // CHECK6-NEXT:    br label [[OMP_PRECOND_END]]
 // CHECK6:       omp.precond.end:
-// CHECK6-NEXT:    call void @__kmpc_free_shared(i8* [[C1]])
+// CHECK6-NEXT:    call void @__kmpc_free_shared(i8* [[C1]], i32 40)
 // CHECK6-NEXT:    ret void
 //
 //

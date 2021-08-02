@@ -58,16 +58,8 @@ LLVMTypeConverter::LLVMTypeConverter(MLIRContext *ctx,
   addArgumentMaterialization([&](OpBuilder &builder, MemRefType resultType,
                                  ValueRange inputs,
                                  Location loc) -> Optional<Value> {
-    // Explicit "this" is necessary here because otherwise "options" resolves to
-    // the argument of the parent function (constructor), which is a reference
-    // and not a copy. This can lead to UB when the lambda is actually called.
-    if (this->options.useBarePtrCallConv) {
-      if (!resultType.hasStaticShape())
-        return llvm::None;
-      Value v = MemRefDescriptor::fromStaticShape(builder, loc, *this,
-                                                  resultType, inputs[0]);
-      return v;
-    }
+    // TODO: bare ptr conversion could be handled here but we would need a way
+    // to distinguish between FuncOp and other regions.
     if (inputs.size() == 1)
       return llvm::None;
     return MemRefDescriptor::pack(builder, loc, *this, resultType, inputs);

@@ -127,6 +127,10 @@ constexpr std::array<const char *, N> static getSymbolArray(
   return {{dlwrap::type::symbol<Is>::call()...}};
 }
 
+template <size_t Requested, size_t Required> constexpr void verboseAssert() {
+  static_assert(Requested == Required, "Arity Error");
+}
+
 } // namespace dlwrap
 
 #define DLWRAP_INSTANTIATE(SYM_USE, SYM_DEF, ARITY)                            \
@@ -153,12 +157,12 @@ constexpr std::array<const char *, N> static getSymbolArray(
   struct SYMBOL##_Trait : public dlwrap::trait<decltype(&SYMBOL)> {            \
     using T = dlwrap::trait<decltype(&SYMBOL)>;                                \
     static T::FunctionType get() {                                             \
+      verboseAssert<ARITY, trait<decltype(&SYMBOL)>::nargs>();                 \
       constexpr size_t Index = DLWRAP_ID() - 1;                                \
       void *P = *dlwrap::pointer(Index);                                       \
       return reinterpret_cast<T::FunctionType>(P);                             \
     }                                                                          \
   };                                                                           \
-  static_assert(ARITY == trait<decltype(&SYMBOL)>::nargs, "Arity Error");      \
   }
 
 #define DLWRAP_IMPL(SYMBOL, ARITY)                                             \

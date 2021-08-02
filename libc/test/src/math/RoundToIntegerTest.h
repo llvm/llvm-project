@@ -18,7 +18,7 @@
 #include <errno.h>
 #endif
 #if math_errhandling & MATH_ERREXCEPT
-#include "utils/FPUtil/FEnv.h"
+#include "utils/FPUtil/FEnvUtils.h"
 #endif
 
 namespace mpfr = __llvm_libc::testing::mpfr;

@@ -14,10 +14,21 @@ if (host_os != "win" && host_os != "mac") {
   # ELF targets need -fPIC to build shared libs but they aren't on by default.
   # For now, make libclang a static lib there.
   libclang_target_type = "static_library"
-}
+} else {
+  action("linker_script_to_exports") {
+    script = "linker-script-to-export-list.py"
+    inputs = [ "libclang.map" ]
+    outputs = [ "$target_gen_dir/libclang.exports" ]
+    args = [
+      rebase_path(inputs[0], root_build_dir),
+      rebase_path(outputs[0], root_build_dir),
+    ]
+  }
 
-symbol_exports("exports") {
-  exports_file = "libclang.exports"
+  symbol_exports("exports") {
+    deps = [ ":linker_script_to_exports" ]
+    exports_file = "$target_gen_dir/libclang.exports"
+  }
 }
 
 target(libclang_target_type, "libclang") {

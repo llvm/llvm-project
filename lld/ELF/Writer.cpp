@@ -1889,26 +1889,44 @@ template <class ELFT> void Writer<ELFT>::optimizeBasicBlockJumps() {
 // out to be empty.
 static void removeUnusedSyntheticSections() {
   // All input synthetic sections that can be empty are placed after
-  // all regular ones. We iterate over them all and exit at first
-  // non-synthetic.
-  for (InputSectionBase *s : llvm::reverse(inputSections)) {
-    SyntheticSection *ss = dyn_cast<SyntheticSection>(s);
-    if (!ss)
-      return;
-    OutputSection *os = ss->getParent();
-    if (!os || ss->isNeeded())
-      continue;
+  // all regular ones. Reverse iterate to find the first synthetic section
+  // after a non-synthetic one which will be our starting point.
+  auto start = std::find_if(inputSections.rbegin(), inputSections.rend(),
+                            [](InputSectionBase *s) {
+                              return !isa<SyntheticSection>(s);
+                            })
+                   .base();
 
-    // If we reach here, then ss is an unused synthetic section and we want to
-    // remove it from the corresponding input section description, and
-    // orphanSections.
-    for (BaseCommand *b : os->sectionCommands)
-      if (auto *isd = dyn_cast<InputSectionDescription>(b))
-        llvm::erase_if(isd->sections,
-                       [=](InputSection *isec) { return isec == ss; });
-    llvm::erase_if(script->orphanSections,
-                   [=](const InputSectionBase *isec) { return isec == ss; });
-  }
+  DenseSet<InputSectionDescription *> isdSet;
+  // Mark unused synthetic sections for deletion
+  auto end = std::stable_partition(
+      start, inputSections.end(), [&](InputSectionBase *s) {
+        SyntheticSection *ss = dyn_cast<SyntheticSection>(s);
+        OutputSection *os = ss->getParent();
+        if (!os || ss->isNeeded())
+          return true;
+
+        // If we reach here, then ss is an unused synthetic section and we want
+        // to remove it from the corresponding input section description, and
+        // orphanSections.
+        for (BaseCommand *b : os->sectionCommands)
+          if (auto *isd = dyn_cast<InputSectionDescription>(b))
+            isdSet.insert(isd);
+
+        llvm::erase_if(
+            script->orphanSections,
+            [=](const InputSectionBase *isec) { return isec == ss; });
+
+        return false;
+      });
+
+  DenseSet<InputSectionBase *> unused(end, inputSections.end());
+  for (auto *isd : isdSet)
+    llvm::erase_if(isd->sections,
+                   [=](InputSection *isec) { return unused.count(isec); });
+
+  // Erase unused synthetic sections.
+  inputSections.erase(end, inputSections.end());
 }
 
 // Create output section objects and add them to OutputSections.
@@ -2579,9 +2597,10 @@ static uint64_t computeFileOffset(OutputSection *os, uint64_t off) {
     return alignTo(off, os->ptLoad->p_align, os->addr);
 
   // File offsets are not significant for .bss sections other than the first one
-  // in a PT_LOAD. By convention, we keep section offsets monotonically
+  // in a PT_LOAD/PT_TLS. By convention, we keep section offsets monotonically
   // increasing rather than setting to zero.
-   if (os->type == SHT_NOBITS)
+  if (os->type == SHT_NOBITS &&
+      (!Out::tlsPhdr || Out::tlsPhdr->firstSec != os))
      return off;
 
   // If the section is not in a PT_LOAD, we just have to align it.

@@ -67,13 +67,25 @@ char &llvm::SILateBranchLoweringPassID = SILateBranchLowering::ID;
 
 static void generateEndPgm(MachineBasicBlock &MBB,
                            MachineBasicBlock::iterator I, DebugLoc DL,
-                           const SIInstrInfo *TII, bool IsPS) {
-  // "null export"
-  if (IsPS) {
+                           const SIInstrInfo *TII, MachineFunction &MF) {
+  const Function &F = MF.getFunction();
+  bool IsPS = F.getCallingConv() == CallingConv::AMDGPU_PS;
+
+  // Check if hardware has been configured to expect color or depth exports.
+  bool HasColorExports = AMDGPU::getHasColorExport(F);
+  bool HasDepthExports = AMDGPU::getHasDepthExport(F);
+  bool HasExports = HasColorExports || HasDepthExports;
+
+  // Prior to GFX10, hardware always expects at least one export for PS.
+  bool MustExport = !AMDGPU::isGFX10Plus(TII->getSubtarget());
+
+  if (IsPS && (HasExports || MustExport)) {
+    // Generate "null export" if hardware is expecting PS to export.
     const GCNSubtarget &ST = MBB.getParent()->getSubtarget<GCNSubtarget>();
+    int Target = ST.hasNullExportTarget() ? AMDGPU::Exp::ET_NULL :
+      (HasColorExports ? AMDGPU::Exp::ET_MRT0 : AMDGPU::Exp::ET_MRTZ);
     BuildMI(MBB, I, DL, TII->get(AMDGPU::EXP_DONE))
-        .addImm(ST.hasNullExportTarget() ? AMDGPU::Exp::ET_NULL
-                                         : AMDGPU::Exp::ET_MRT0)
+        .addImm(Target)
         .addReg(AMDGPU::VGPR0, RegState::Undef)
         .addReg(AMDGPU::VGPR0, RegState::Undef)
         .addReg(AMDGPU::VGPR0, RegState::Undef)
@@ -82,6 +94,7 @@ static void generateEndPgm(MachineBasicBlock &MBB,
         .addImm(0)  // compr
         .addImm(0); // en
   }
+
   // s_endpgm
   BuildMI(MBB, I, DL, TII->get(AMDGPU::S_ENDPGM)).addImm(0);
 }
@@ -170,8 +183,7 @@ bool SILateBranchLowering::runOnMachineFunction(MachineFunction &MF) {
     BuildMI(*EarlyExitBlock, EarlyExitBlock->end(), DL, TII->get(MovOpc),
             ExecReg)
         .addImm(0);
-    generateEndPgm(*EarlyExitBlock, EarlyExitBlock->end(), DL, TII,
-                   MF.getFunction().getCallingConv() == CallingConv::AMDGPU_PS);
+    generateEndPgm(*EarlyExitBlock, EarlyExitBlock->end(), DL, TII, MF);
 
     for (MachineInstr *Instr : EarlyTermInstrs) {
       // Early termination in GS does nothing

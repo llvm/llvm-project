@@ -74,6 +74,28 @@ entry:
   ret i32 %2
 }
 
+declare i32 @llvm.ppc.stbcx(i8*, i32)
+define signext i32 @test_stbcx(i8* %addr, i8 signext %val) {
+; CHECK-64-LABEL: test_stbcx:
+; CHECK-64:       # %bb.0: # %entry
+; CHECK-64-NEXT:    stbcx. 4, 0, 3
+; CHECK-64-NEXT:    mfocrf 3, 128
+; CHECK-64-NEXT:    srwi 3, 3, 28
+; CHECK-64-NEXT:    extsw 3, 3
+; CHECK-64-NEXT:    blr
+;
+; CHECK-32-LABEL: test_stbcx:
+; CHECK-32:       # %bb.0: # %entry
+; CHECK-32-NEXT:    stbcx. 4, 0, 3
+; CHECK-32-NEXT:    mfocrf 3, 128
+; CHECK-32-NEXT:    srwi 3, 3, 28
+; CHECK-32-NEXT:    blr
+entry:
+  %conv = sext i8 %val to i32
+  %0 = tail call i32 @llvm.ppc.stbcx(i8* %addr, i32 %conv)
+  ret i32 %0
+}
+
 define dso_local signext i16 @test_lharx(i16* %a) {
 ; CHECK-64-LABEL: test_lharx:
 ; CHECK-64:       # %bb.0: # %entry

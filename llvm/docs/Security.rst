@@ -31,24 +31,24 @@ Group Composition
 Security Group Members
 ----------------------
 
-The members of the group represent a wide cross-section of the community, and meet the criteria for inclusion below.
+The members of the group represent a wide cross-section of the community, and meet the criteria for inclusion below. The list is in the format `* ${full_name} (${affiliation}) [${phabricator_username}]`. If a phabricator username for an individual isn't available, the brackets will be empty.
 
-* Ahmed Bougacha (Apple)
-* Artur Pilipenko (Azul Systems Inc)
-* Dimitry Andric (individual; FreeBSD)
-* Ed Maste (individual; FreeBSD)
-* George Burgess IV (Google)
-* Josh Eads (Sony)
-* Kate McInnes (Apple)
-* Kristof Beyls (ARM)
-* Matthew Riley (Google)
-* Oliver Hunt (Apple)
-* Paul Robinson (Sony)
-* Peter Smith (ARM)
-* Pietro Albini (individual; Rust)
-* Serge Guelton (RedHat)
-* Shayne Hiet-Block (Microsoft)
-* Steve Klabnik (Oxide Computer Company; Rust)
+* Ahmed Bougacha (Apple) [ab]
+* Artur Pilipenko (Azul Systems Inc) [apilipenko]
+* Dimitry Andric (individual; FreeBSD) [dim]
+* Ed Maste (individual; FreeBSD) [emaste]
+* George Burgess IV (Google) [george.burgess.iv]
+* Josh Eads (Sony) []
+* Kate McInnes (Apple) []
+* Kristof Beyls (ARM) [kristof.beyls]
+* Matthew Riley (Google) [mattdr]
+* Oliver Hunt (Apple) [ojhunt]
+* Paul Robinson (Sony) [probinson]
+* Peter Smith (ARM) [peter.smith]
+* Pietro Albini (individual; Rust) [pietroalbini]
+* Serge Guelton (RedHat) [serge-sans-paille]
+* Shayne Hiet-Block (Microsoft) [Shayne]
+* Steve Klabnik (Oxide Computer Company; Rust) [steveklabnik]
 
 Criteria
 --------
@@ -85,8 +85,9 @@ Nomination process
 
 Anyone who feels they meet these criteria can nominate themselves, or may be nominated by a third party such as an existing LLVM Security Group member. The nomination should state whether the nominee is nominated as an individual, researcher, or as a vendor contact. It should clearly describe the grounds for nomination.
 
-*FUTURE*: where nomination occurs (mailing list, GitHub, etc), can be decided later. See `Discussion Medium`_ below.
+For the moment, nominations are generally proposed, discussed, and voted on using Phabricator. An `example nomination is available here`_. The use of Phabricator helps keep membership discussions open, transparent, and easily accessible to LLVM developers in many ways. If, for any reason, a fully-world-readable nomination seems inappropriate, you may `open a new issue`_, and a discussion can be had about the best way to approach nomination, given the constraints that individuals are under.
 
+Our recommended method of nomination may change as our `Discussion Medium`_ story evolves over time.
 
 Choosing new members
 --------------------
@@ -226,3 +227,4 @@ The parts of the LLVM Project which are currently treated as non-security sensit
 .. _GitHub security: https://help.github.com/en/articles/about-maintainer-security-advisories
 .. _llvm-dev mailing list: https://lists.llvm.org/mailman/listinfo/llvm-dev
 .. _MITRE: https://cve.mitre.org
+.. _example nomination is available here: https://reviews.llvm.org/D99232

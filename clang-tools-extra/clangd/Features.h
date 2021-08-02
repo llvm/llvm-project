@@ -19,6 +19,10 @@ namespace clangd {
 // Returns a version string for clangd, e.g. "clangd 10.0.0"
 std::string versionString();
 
+// Returns the platform triple for clangd, e.g. "x86_64-pc-linux-gnu"
+// May include both the host and target triple if they differ.
+std::string platformString();
+
 // Returns a string describing the compile-time configuration.
 // e.g. mac+debug+asan+grpc
 std::string featureString();

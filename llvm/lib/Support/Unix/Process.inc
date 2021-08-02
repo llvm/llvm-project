@@ -461,5 +461,4 @@ unsigned llvm::sys::Process::GetRandomNumber() {
 #endif
 }
 
-LLVM_ATTRIBUTE_NORETURN
-void Process::ExitNoCleanup(int RetCode) { _Exit(RetCode); }
+[[noreturn]] void Process::ExitNoCleanup(int RetCode) { _Exit(RetCode); }

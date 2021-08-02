@@ -44,6 +44,7 @@ template("symbol_exports") {
   }
 
   action(target_name) {
+    forward_variables_from(invoker, [ "deps" ])
     script = "//llvm/utils/gn/build/symbol_exports.py"
     inputs = [ invoker.exports_file ]
     outputs = [ linker_file ]

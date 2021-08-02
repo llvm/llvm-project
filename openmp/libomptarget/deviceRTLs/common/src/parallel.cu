@@ -105,7 +105,8 @@ EXTERN void __kmpc_kernel_prepare_parallel(void *WorkFn) {
 
   ASSERT(LT_FUSSY, NumThreads > 0, "bad thread request of %d threads",
          (int)NumThreads);
-  ASSERT0(LT_FUSSY, GetThreadIdInBlock() == GetMasterThreadID(),
+  ASSERT0(LT_FUSSY,
+          __kmpc_get_hardware_thread_id_in_block() == GetMasterThreadID(),
           "only team master can create parallel");
 
   // Set number of threads on work descriptor.
@@ -133,7 +134,7 @@ EXTERN bool __kmpc_kernel_parallel(void **WorkFn) {
 
   // Only the worker threads call this routine and the master warp
   // never arrives here.  Therefore, use the nvptx thread id.
-  int threadId = GetThreadIdInBlock();
+  int threadId = __kmpc_get_hardware_thread_id_in_block();
   omptarget_nvptx_WorkDescr &workDescr = getMyWorkDescriptor();
   // Set to true for workers participating in the parallel region.
   bool isActive = false;
@@ -166,7 +167,7 @@ EXTERN void __kmpc_kernel_end_parallel() {
 
   // Only the worker threads call this routine and the master warp
   // never arrives here.  Therefore, use the nvptx thread id.
-  int threadId = GetThreadIdInBlock();
+  int threadId = __kmpc_get_hardware_thread_id_in_block();
   omptarget_nvptx_TaskDescr *currTaskDescr = getMyTopTaskDescriptor(threadId);
   omptarget_nvptx_threadPrivateContext->SetTopLevelTaskDescr(
       threadId, currTaskDescr->GetPrevTaskDescr());
@@ -238,7 +239,7 @@ EXTERN void __kmpc_end_serialized_parallel(kmp_Ident *loc,
   currTaskDescr->RestoreLoopData();
 }
 
-EXTERN uint8_t __kmpc_parallel_level() {
+NOINLINE EXTERN uint8_t __kmpc_parallel_level() {
   return parallelLevel[GetWarpId()] & (OMP_ACTIVE_PARALLEL_LEVEL - 1);
 }
 
@@ -281,11 +282,11 @@ EXTERN void __kmpc_push_proc_bind(kmp_Ident *loc, uint32_t tid, int proc_bind) {
 // parallel interface
 ////////////////////////////////////////////////////////////////////////////////
 
-EXTERN void __kmpc_parallel_51(kmp_Ident *ident, kmp_int32 global_tid,
-                               kmp_int32 if_expr, kmp_int32 num_threads,
-                               int proc_bind, void *fn, void *wrapper_fn,
-                               void **args, size_t nargs) {
-
+NOINLINE EXTERN void __kmpc_parallel_51(kmp_Ident *ident, kmp_int32 global_tid,
+                                        kmp_int32 if_expr,
+                                        kmp_int32 num_threads, int proc_bind,
+                                        void *fn, void *wrapper_fn, void **args,
+                                        size_t nargs) {
   // Handle the serialized case first, same for SPMD/non-SPMD except that in
   // SPMD mode we already incremented the parallel level counter, account for
   // that.
@@ -313,6 +314,7 @@ EXTERN void __kmpc_parallel_51(kmp_Ident *ident, kmp_int32 global_tid,
     void **GlobalArgs;
     __kmpc_begin_sharing_variables(&GlobalArgs, nargs);
     // TODO: faster memcpy?
+#pragma unroll
     for (int I = 0; I < nargs; I++)
       GlobalArgs[I] = args[I];
   }

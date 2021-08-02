@@ -92,6 +92,14 @@ DarwinSDKInfo::parseDarwinSDKSettingsJSON(const llvm::json::Object *Obj) {
       VersionMappings[OSEnvPair::macOStoMacCatalystPair().Value] =
           std::move(VersionMap);
     }
+    if (const auto *Mapping = VM->getObject("iOSMac_macOS")) {
+      auto VersionMap = RelatedTargetVersionMapping::parseJSON(
+          *Mapping, *MaximumDeploymentVersion);
+      if (!VersionMap)
+        return None;
+      VersionMappings[OSEnvPair::macCatalystToMacOSPair().Value] =
+          std::move(VersionMap);
+    }
   }
 
   return DarwinSDKInfo(std::move(*Version),
@@ -115,13 +123,8 @@ clang::parseDarwinSDKInfo(llvm::vfs::FileSystem &VFS, StringRef SDKRootPath) {
     return Result.takeError();
 
   if (const auto *Obj = Result->getAsObject()) {
-    // FIXME: Switch to use parseDarwinSDKSettingsJSON.
-    auto VersionString = Obj->getString("Version");
-    if (VersionString) {
-      VersionTuple Version;
-      if (!Version.tryParse(*VersionString))
-        return DarwinSDKInfo(Version, Version);
-    }
+    if (auto SDKInfo = DarwinSDKInfo::parseDarwinSDKSettingsJSON(Obj))
+      return std::move(SDKInfo);
   }
   return llvm::make_error<llvm::StringError>("invalid SDKSettings.json",
                                              llvm::inconvertibleErrorCode());

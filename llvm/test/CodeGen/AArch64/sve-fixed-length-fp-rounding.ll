@@ -45,7 +45,7 @@ define <8 x half> @frintp_v8f16(<8 x half> %op) #0 {
 define void @frintp_v16f16(<16 x half>* %a) #0 {
 ; CHECK-LABEL: frintp_v16f16:
 ; CHECK: ptrue [[PG:p[0-9]+]].h, vl16
-; CHECK-DAG: ld1h { [[OP:z[0-9]+]].h }, [[PG]]/z, [x0]
+; CHECK-NEXT: ld1h { [[OP:z[0-9]+]].h }, [[PG]]/z, [x0]
 ; CHECK-NEXT: frintp [[RES:z[0-9]+]].h, [[PG]]/m, [[OP]].h
 ; CHECK-NEXT: st1h { [[RES]].h }, [[PG]], [x0]
 ; CHECK-NEXT: ret
@@ -58,20 +58,20 @@ define void @frintp_v16f16(<16 x half>* %a) #0 {
 define void @frintp_v32f16(<32 x half>* %a) #0 {
 ; CHECK-LABEL: frintp_v32f16:
 ; VBITS_GE_512: ptrue [[PG:p[0-9]+]].h, vl32
-; VBITS_GE_512-DAG: ld1h { [[OP:z[0-9]+]].h }, [[PG]]/z, [x0]
+; VBITS_GE_512-NEXT: ld1h { [[OP:z[0-9]+]].h }, [[PG]]/z, [x0]
 ; VBITS_GE_512-NEXT: frintp [[RES:z[0-9]+]].h, [[PG]]/m, [[OP]].h
 ; VBITS_GE_512-NEXT: st1h { [[RES]].h }, [[PG]], [x0]
 ; VBITS_GE_512-NEXT: ret
 
 ; Ensure sensible type legalisation.
 ; VBITS_EQ_256-DAG: ptrue [[PG:p[0-9]+]].h, vl16
-; VBITS_EQ_256-DAG: add x[[A_HI:[0-9]+]], x0, #32
+; VBITS_EQ_256-DAG: mov x[[NUMELTS:[0-9]+]], #16
 ; VBITS_EQ_256-DAG: ld1h { [[OP_LO:z[0-9]+]].h }, [[PG]]/z, [x0]
-; VBITS_EQ_256-DAG: ld1h { [[OP_HI:z[0-9]+]].h }, [[PG]]/z, [x[[A_HI]]]
+; VBITS_EQ_256-DAG: ld1h { [[OP_HI:z[0-9]+]].h }, [[PG]]/z, [x0, x[[NUMELTS]], lsl #1]
 ; VBITS_EQ_256-DAG: frintp [[RES_LO:z[0-9]+]].h, [[PG]]/m, [[OP_LO]].h
 ; VBITS_EQ_256-DAG: frintp [[RES_HI:z[0-9]+]].h, [[PG]]/m, [[OP_HI]].h
 ; VBITS_EQ_256-DAG: st1h { [[RES_LO]].h }, [[PG]], [x0]
-; VBITS_EQ_256-DAG: st1h { [[RES_HI]].h }, [[PG]], [x[[A_HI]]
+; VBITS_EQ_256-DAG: st1h { [[RES_HI]].h }, [[PG]], [x0, x[[NUMELTS]], lsl #1]
 ; VBITS_EQ_256-NEXT: ret
   %op = load <32 x half>, <32 x half>* %a
   %res = call <32 x half> @llvm.ceil.v32f16(<32 x half> %op)
@@ -82,7 +82,7 @@ define void @frintp_v32f16(<32 x half>* %a) #0 {
 define void @frintp_v64f16(<64 x half>* %a) #0 {
 ; CHECK-LABEL: frintp_v64f16:
 ; VBITS_GE_1024: ptrue [[PG:p[0-9]+]].h, vl64
-; VBITS_GE_1024-DAG: ld1h { [[OP:z[0-9]+]].h }, [[PG]]/z, [x0]
+; VBITS_GE_1024-NEXT: ld1h { [[OP:z[0-9]+]].h }, [[PG]]/z, [x0]
 ; VBITS_GE_1024-NEXT: frintp [[RES:z[0-9]+]].h, [[PG]]/m, [[OP]].h
 ; VBITS_GE_1024-NEXT: st1h { [[RES]].h }, [[PG]], [x0]
 ; VBITS_GE_1024-NEXT: ret
@@ -95,7 +95,7 @@ define void @frintp_v64f16(<64 x half>* %a) #0 {
 define void @frintp_v128f16(<128 x half>* %a) #0 {
 ; CHECK-LABEL: frintp_v128f16:
 ; VBITS_GE_2048: ptrue [[PG:p[0-9]+]].h, vl128
-; VBITS_GE_2048-DAG: ld1h { [[OP:z[0-9]+]].h }, [[PG]]/z, [x0]
+; VBITS_GE_2048-NEXT: ld1h { [[OP:z[0-9]+]].h }, [[PG]]/z, [x0]
 ; VBITS_GE_2048-NEXT: frintp [[RES:z[0-9]+]].h, [[PG]]/m, [[OP]].h
 ; VBITS_GE_2048-NEXT: st1h { [[RES]].h }, [[PG]], [x0]
 ; VBITS_GE_2048-NEXT: ret
@@ -126,7 +126,7 @@ define <4 x float> @frintp_v4f32(<4 x float> %op) #0 {
 define void @frintp_v8f32(<8 x float>* %a) #0 {
 ; CHECK-LABEL: frintp_v8f32:
 ; CHECK: ptrue [[PG:p[0-9]+]].s, vl8
-; CHECK-DAG: ld1w { [[OP:z[0-9]+]].s }, [[PG]]/z, [x0]
+; CHECK-NEXT: ld1w { [[OP:z[0-9]+]].s }, [[PG]]/z, [x0]
 ; CHECK-NEXT: frintp [[RES:z[0-9]+]].s, [[PG]]/m, [[OP]].s
 ; CHECK-NEXT: st1w { [[RES]].s }, [[PG]], [x0]
 ; CHECK-NEXT: ret
@@ -139,20 +139,20 @@ define void @frintp_v8f32(<8 x float>* %a) #0 {
 define void @frintp_v16f32(<16 x float>* %a) #0 {
 ; CHECK-LABEL: frintp_v16f32:
 ; VBITS_GE_512: ptrue [[PG:p[0-9]+]].s, vl16
-; VBITS_GE_512-DAG: ld1w { [[OP:z[0-9]+]].s }, [[PG]]/z, [x0]
+; VBITS_GE_512-NEXT: ld1w { [[OP:z[0-9]+]].s }, [[PG]]/z, [x0]
 ; VBITS_GE_512-NEXT: frintp [[RES:z[0-9]+]].s, [[PG]]/m, [[OP]].s
 ; VBITS_GE_512-NEXT: st1w { [[RES]].s }, [[PG]], [x0]
 ; VBITS_GE_512-NEXT: ret
 
 ; Ensure sensible type legalisation.
 ; VBITS_EQ_256-DAG: ptrue [[PG:p[0-9]+]].s, vl8
-; VBITS_EQ_256-DAG: add x[[A_HI:[0-9]+]], x0, #32
+; VBITS_EQ_256-DAG: mov x[[NUMELTS:[0-9]+]], #8
 ; VBITS_EQ_256-DAG: ld1w { [[OP_LO:z[0-9]+]].s }, [[PG]]/z, [x0]
-; VBITS_EQ_256-DAG: ld1w { [[OP_HI:z[0-9]+]].s }, [[PG]]/z, [x[[A_HI]]]
+; VBITS_EQ_256-DAG: ld1w { [[OP_HI:z[0-9]+]].s }, [[PG]]/z, [x0, x[[NUMELTS]], lsl #2]
 ; VBITS_EQ_256-DAG: frintp [[RES_LO:z[0-9]+]].s, [[PG]]/m, [[OP_LO]].s
 ; VBITS_EQ_256-DAG: frintp [[RES_HI:z[0-9]+]].s, [[PG]]/m, [[OP_HI]].s
 ; VBITS_EQ_256-DAG: st1w { [[RES_LO]].s }, [[PG]], [x0]
-; VBITS_EQ_256-DAG: st1w { [[RES_HI]].s }, [[PG]], [x[[A_HI]]
+; VBITS_EQ_256-DAG: st1w { [[RES_HI]].s }, [[PG]], [x0, x[[NUMELTS]], lsl #2]
 ; VBITS_EQ_256-NEXT: ret
   %op = load <16 x float>, <16 x float>* %a
   %res = call <16 x float> @llvm.ceil.v16f32(<16 x float> %op)
@@ -163,7 +163,7 @@ define void @frintp_v16f32(<16 x float>* %a) #0 {
 define void @frintp_v32f32(<32 x float>* %a) #0 {
 ; CHECK-LABEL: frintp_v32f32:
 ; VBITS_GE_1024: ptrue [[PG:p[0-9]+]].s, vl32
-; VBITS_GE_1024-DAG: ld1w { [[OP:z[0-9]+]].s }, [[PG]]/z, [x0]
+; VBITS_GE_1024-NEXT: ld1w { [[OP:z[0-9]+]].s }, [[PG]]/z, [x0]
 ; VBITS_GE_1024-NEXT: frintp [[RES:z[0-9]+]].s, [[PG]]/m, [[OP]].s
 ; VBITS_GE_1024-NEXT: st1w { [[RES]].s }, [[PG]], [x0]
 ; VBITS_GE_1024-NEXT: ret
@@ -176,7 +176,7 @@ define void @frintp_v32f32(<32 x float>* %a) #0 {
 define void @frintp_v64f32(<64 x float>* %a) #0 {
 ; CHECK-LABEL: frintp_v64f32:
 ; VBITS_GE_2048: ptrue [[PG:p[0-9]+]].s, vl64
-; VBITS_GE_2048-DAG: ld1w { [[OP:z[0-9]+]].s }, [[PG]]/z, [x0]
+; VBITS_GE_2048-NEXT: ld1w { [[OP:z[0-9]+]].s }, [[PG]]/z, [x0]
 ; VBITS_GE_2048-NEXT: frintp [[RES:z[0-9]+]].s, [[PG]]/m, [[OP]].s
 ; VBITS_GE_2048-NEXT: st1w { [[RES]].s }, [[PG]], [x0]
 ; VBITS_GE_2048-NEXT: ret
@@ -207,7 +207,7 @@ define <2 x double> @frintp_v2f64(<2 x double> %op) #0 {
 define void @frintp_v4f64(<4 x double>* %a) #0 {
 ; CHECK-LABEL: frintp_v4f64:
 ; CHECK: ptrue [[PG:p[0-9]+]].d, vl4
-; CHECK-DAG: ld1d { [[OP:z[0-9]+]].d }, [[PG]]/z, [x0]
+; CHECK-NEXT: ld1d { [[OP:z[0-9]+]].d }, [[PG]]/z, [x0]
 ; CHECK-NEXT: frintp [[RES:z[0-9]+]].d, [[PG]]/m, [[OP]].d
 ; CHECK-NEXT: st1d { [[RES]].d }, [[PG]], [x0]
 ; CHECK-NEXT: ret
@@ -220,20 +220,20 @@ define void @frintp_v4f64(<4 x double>* %a) #0 {
 define void @frintp_v8f64(<8 x double>* %a) #0 {
 ; CHECK-LABEL: frintp_v8f64:
 ; VBITS_GE_512: ptrue [[PG:p[0-9]+]].d, vl8
-; VBITS_GE_512-DAG: ld1d { [[OP:z[0-9]+]].d }, [[PG]]/z, [x0]
+; VBITS_GE_512-NEXT: ld1d { [[OP:z[0-9]+]].d }, [[PG]]/z, [x0]
 ; VBITS_GE_512-NEXT: frintp [[RES:z[0-9]+]].d, [[PG]]/m, [[OP]].d
 ; VBITS_GE_512-NEXT: st1d { [[RES]].d }, [[PG]], [x0]
 ; VBITS_GE_512-NEXT: ret
 
 ; Ensure sensible type legalisation.
 ; VBITS_EQ_256-DAG: ptrue [[PG:p[0-9]+]].d, vl4
-; VBITS_EQ_256-DAG: add x[[A_HI:[0-9]+]], x0, #32
+; VBITS_EQ_256-DAG: mov x[[NUMELTS:[0-9]+]], #4
 ; VBITS_EQ_256-DAG: ld1d { [[OP_LO:z[0-9]+]].d }, [[PG]]/z, [x0]
-; VBITS_EQ_256-DAG: ld1d { [[OP_HI:z[0-9]+]].d }, [[PG]]/z, [x[[A_HI]]]
+; VBITS_EQ_256-DAG: ld1d { [[OP_HI:z[0-9]+]].d }, [[PG]]/z, [x0, x[[NUMELTS]], lsl #3]
 ; VBITS_EQ_256-DAG: frintp [[RES_LO:z[0-9]+]].d, [[PG]]/m, [[OP_LO]].d
 ; VBITS_EQ_256-DAG: frintp [[RES_HI:z[0-9]+]].d, [[PG]]/m, [[OP_HI]].d
 ; VBITS_EQ_256-DAG: st1d { [[RES_LO]].d }, [[PG]], [x0]
-; VBITS_EQ_256-DAG: st1d { [[RES_HI]].d }, [[PG]], [x[[A_HI]]
+; VBITS_EQ_256-DAG: st1d { [[RES_HI]].d }, [[PG]], [x0, x[[NUMELTS]], lsl #3]
 ; VBITS_EQ_256-NEXT: ret
   %op = load <8 x double>, <8 x double>* %a
   %res = call <8 x double> @llvm.ceil.v8f64(<8 x double> %op)
@@ -244,7 +244,7 @@ define void @frintp_v8f64(<8 x double>* %a) #0 {
 define void @frintp_v16f64(<16 x double>* %a) #0 {
 ; CHECK-LABEL: frintp_v16f64:
 ; VBITS_GE_1024: ptrue [[PG:p[0-9]+]].d, vl16
-; VBITS_GE_1024-DAG: ld1d { [[OP:z[0-9]+]].d }, [[PG]]/z, [x0]
+; VBITS_GE_1024-NEXT: ld1d { [[OP:z[0-9]+]].d }, [[PG]]/z, [x0]
 ; VBITS_GE_1024-NEXT: frintp [[RES:z[0-9]+]].d, [[PG]]/m, [[OP]].d
 ; VBITS_GE_1024-NEXT: st1d { [[RES]].d }, [[PG]], [x0]
 ; VBITS_GE_1024-NEXT: ret
@@ -257,7 +257,7 @@ define void @frintp_v16f64(<16 x double>* %a) #0 {
 define void @frintp_v32f64(<32 x double>* %a) #0 {
 ; CHECK-LABEL: frintp_v32f64:
 ; VBITS_GE_2048: ptrue [[PG:p[0-9]+]].d, vl32
-; VBITS_GE_2048-DAG: ld1d { [[OP:z[0-9]+]].d }, [[PG]]/z, [x0]
+; VBITS_GE_2048-NEXT: ld1d { [[OP:z[0-9]+]].d }, [[PG]]/z, [x0]
 ; VBITS_GE_2048-NEXT: frintp [[RES:z[0-9]+]].d, [[PG]]/m, [[OP]].d
 ; VBITS_GE_2048-NEXT: st1d { [[RES]].d }, [[PG]], [x0]
 ; VBITS_GE_2048-NEXT: ret
@@ -292,7 +292,7 @@ define <8 x half> @frintm_v8f16(<8 x half> %op) #0 {
 define void @frintm_v16f16(<16 x half>* %a) #0 {
 ; CHECK-LABEL: frintm_v16f16:
 ; CHECK: ptrue [[PG:p[0-9]+]].h, vl16
-; CHECK-DAG: ld1h { [[OP:z[0-9]+]].h }, [[PG]]/z, [x0]
+; CHECK-NEXT: ld1h { [[OP:z[0-9]+]].h }, [[PG]]/z, [x0]
 ; CHECK-NEXT: frintm [[RES:z[0-9]+]].h, [[PG]]/m, [[OP]].h
 ; CHECK-NEXT: st1h { [[RES]].h }, [[PG]], [x0]
 ; CHECK-NEXT: ret
@@ -305,20 +305,20 @@ define void @frintm_v16f16(<16 x half>* %a) #0 {
 define void @frintm_v32f16(<32 x half>* %a) #0 {
 ; CHECK-LABEL: frintm_v32f16:
 ; VBITS_GE_512: ptrue [[PG:p[0-9]+]].h, vl32
-; VBITS_GE_512-DAG: ld1h { [[OP:z[0-9]+]].h }, [[PG]]/z, [x0]
+; VBITS_GE_512-NEXT: ld1h { [[OP:z[0-9]+]].h }, [[PG]]/z, [x0]
 ; VBITS_GE_512-NEXT: frintm [[RES:z[0-9]+]].h, [[PG]]/m, [[OP]].h
 ; VBITS_GE_512-NEXT: st1h { [[RES]].h }, [[PG]], [x0]
 ; VBITS_GE_512-NEXT: ret
 
 ; Ensure sensible type legalisation.
 ; VBITS_EQ_256-DAG: ptrue [[PG:p[0-9]+]].h, vl16
-; VBITS_EQ_256-DAG: add x[[A_HI:[0-9]+]], x0, #32
+; VBITS_EQ_256-DAG: mov x[[NUMELTS:[0-9]+]], #16
 ; VBITS_EQ_256-DAG: ld1h { [[OP_LO:z[0-9]+]].h }, [[PG]]/z, [x0]
-; VBITS_EQ_256-DAG: ld1h { [[OP_HI:z[0-9]+]].h }, [[PG]]/z, [x[[A_HI]]]
+; VBITS_EQ_256-DAG: ld1h { [[OP_HI:z[0-9]+]].h }, [[PG]]/z, [x0, x[[NUMELTS]], lsl #1]
 ; VBITS_EQ_256-DAG: frintm [[RES_LO:z[0-9]+]].h, [[PG]]/m, [[OP_LO]].h
 ; VBITS_EQ_256-DAG: frintm [[RES_HI:z[0-9]+]].h, [[PG]]/m, [[OP_HI]].h
 ; VBITS_EQ_256-DAG: st1h { [[RES_LO]].h }, [[PG]], [x0]
-; VBITS_EQ_256-DAG: st1h { [[RES_HI]].h }, [[PG]], [x[[A_HI]]
+; VBITS_EQ_256-DAG: st1h { [[RES_HI]].h }, [[PG]], [x0, x[[NUMELTS]], lsl #1]
 ; VBITS_EQ_256-NEXT: ret
   %op = load <32 x half>, <32 x half>* %a
   %res = call <32 x half> @llvm.floor.v32f16(<32 x half> %op)
@@ -329,7 +329,7 @@ define void @frintm_v32f16(<32 x half>* %a) #0 {
 define void @frintm_v64f16(<64 x half>* %a) #0 {
 ; CHECK-LABEL: frintm_v64f16:
 ; VBITS_GE_1024: ptrue [[PG:p[0-9]+]].h, vl64
-; VBITS_GE_1024-DAG: ld1h { [[OP:z[0-9]+]].h }, [[PG]]/z, [x0]
+; VBITS_GE_1024-NEXT: ld1h { [[OP:z[0-9]+]].h }, [[PG]]/z, [x0]
 ; VBITS_GE_1024-NEXT: frintm [[RES:z[0-9]+]].h, [[PG]]/m, [[OP]].h
 ; VBITS_GE_1024-NEXT: st1h { [[RES]].h }, [[PG]], [x0]
 ; VBITS_GE_1024-NEXT: ret
@@ -342,7 +342,7 @@ define void @frintm_v64f16(<64 x half>* %a) #0 {
 define void @frintm_v128f16(<128 x half>* %a) #0 {
 ; CHECK-LABEL: frintm_v128f16:
 ; VBITS_GE_2048: ptrue [[PG:p[0-9]+]].h, vl128
-; VBITS_GE_2048-DAG: ld1h { [[OP:z[0-9]+]].h }, [[PG]]/z, [x0]
+; VBITS_GE_2048-NEXT: ld1h { [[OP:z[0-9]+]].h }, [[PG]]/z, [x0]
 ; VBITS_GE_2048-NEXT: frintm [[RES:z[0-9]+]].h, [[PG]]/m, [[OP]].h
 ; VBITS_GE_2048-NEXT: st1h { [[RES]].h }, [[PG]], [x0]
 ; VBITS_GE_2048-NEXT: ret
@@ -373,7 +373,7 @@ define <4 x float> @frintm_v4f32(<4 x float> %op) #0 {
 define void @frintm_v8f32(<8 x float>* %a) #0 {
 ; CHECK-LABEL: frintm_v8f32:
 ; CHECK: ptrue [[PG:p[0-9]+]].s, vl8
-; CHECK-DAG: ld1w { [[OP:z[0-9]+]].s }, [[PG]]/z, [x0]
+; CHECK-NEXT: ld1w { [[OP:z[0-9]+]].s }, [[PG]]/z, [x0]
 ; CHECK-NEXT: frintm [[RES:z[0-9]+]].s, [[PG]]/m, [[OP]].s
 ; CHECK-NEXT: st1w { [[RES]].s }, [[PG]], [x0]
 ; CHECK-NEXT: ret
@@ -386,20 +386,20 @@ define void @frintm_v8f32(<8 x float>* %a) #0 {
 define void @frintm_v16f32(<16 x float>* %a) #0 {
 ; CHECK-LABEL: frintm_v16f32:
 ; VBITS_GE_512: ptrue [[PG:p[0-9]+]].s, vl16
-; VBITS_GE_512-DAG: ld1w { [[OP:z[0-9]+]].s }, [[PG]]/z, [x0]
+; VBITS_GE_512-NEXT: ld1w { [[OP:z[0-9]+]].s }, [[PG]]/z, [x0]
 ; VBITS_GE_512-NEXT: frintm [[RES:z[0-9]+]].s, [[PG]]/m, [[OP]].s
 ; VBITS_GE_512-NEXT: st1w { [[RES]].s }, [[PG]], [x0]
 ; VBITS_GE_512-NEXT: ret
 
 ; Ensure sensible type legalisation.
 ; VBITS_EQ_256-DAG: ptrue [[PG:p[0-9]+]].s, vl8
-; VBITS_EQ_256-DAG: add x[[A_HI:[0-9]+]], x0, #32
+; VBITS_EQ_256-DAG: mov x[[NUMELTS:[0-9]+]], #8
 ; VBITS_EQ_256-DAG: ld1w { [[OP_LO:z[0-9]+]].s }, [[PG]]/z, [x0]
-; VBITS_EQ_256-DAG: ld1w { [[OP_HI:z[0-9]+]].s }, [[PG]]/z, [x[[A_HI]]]
+; VBITS_EQ_256-DAG: ld1w { [[OP_HI:z[0-9]+]].s }, [[PG]]/z, [x0, x[[NUMELTS]], lsl #2]
 ; VBITS_EQ_256-DAG: frintm [[RES_LO:z[0-9]+]].s, [[PG]]/m, [[OP_LO]].s
 ; VBITS_EQ_256-DAG: frintm [[RES_HI:z[0-9]+]].s, [[PG]]/m, [[OP_HI]].s
 ; VBITS_EQ_256-DAG: st1w { [[RES_LO]].s }, [[PG]], [x0]
-; VBITS_EQ_256-DAG: st1w { [[RES_HI]].s }, [[PG]], [x[[A_HI]]
+; VBITS_EQ_256-DAG: st1w { [[RES_HI]].s }, [[PG]], [x0, x[[NUMELTS]], lsl #2]
 ; VBITS_EQ_256-NEXT: ret
   %op = load <16 x float>, <16 x float>* %a
   %res = call <16 x float> @llvm.floor.v16f32(<16 x float> %op)
@@ -410,7 +410,7 @@ define void @frintm_v16f32(<16 x float>* %a) #0 {
 define void @frintm_v32f32(<32 x float>* %a) #0 {
 ; CHECK-LABEL: frintm_v32f32:
 ; VBITS_GE_1024: ptrue [[PG:p[0-9]+]].s, vl32
-; VBITS_GE_1024-DAG: ld1w { [[OP:z[0-9]+]].s }, [[PG]]/z, [x0]
+; VBITS_GE_1024-NEXT: ld1w { [[OP:z[0-9]+]].s }, [[PG]]/z, [x0]
 ; VBITS_GE_1024-NEXT: frintm [[RES:z[0-9]+]].s, [[PG]]/m, [[OP]].s
 ; VBITS_GE_1024-NEXT: st1w { [[RES]].s }, [[PG]], [x0]
 ; VBITS_GE_1024-NEXT: ret
@@ -423,7 +423,7 @@ define void @frintm_v32f32(<32 x float>* %a) #0 {
 define void @frintm_v64f32(<64 x float>* %a) #0 {
 ; CHECK-LABEL: frintm_v64f32:
 ; VBITS_GE_2048: ptrue [[PG:p[0-9]+]].s, vl64
-; VBITS_GE_2048-DAG: ld1w { [[OP:z[0-9]+]].s }, [[PG]]/z, [x0]
+; VBITS_GE_2048-NEXT: ld1w { [[OP:z[0-9]+]].s }, [[PG]]/z, [x0]
 ; VBITS_GE_2048-NEXT: frintm [[RES:z[0-9]+]].s, [[PG]]/m, [[OP]].s
 ; VBITS_GE_2048-NEXT: st1w { [[RES]].s }, [[PG]], [x0]
 ; VBITS_GE_2048-NEXT: ret
@@ -454,7 +454,7 @@ define <2 x double> @frintm_v2f64(<2 x double> %op) #0 {
 define void @frintm_v4f64(<4 x double>* %a) #0 {
 ; CHECK-LABEL: frintm_v4f64:
 ; CHECK: ptrue [[PG:p[0-9]+]].d, vl4
-; CHECK-DAG: ld1d { [[OP:z[0-9]+]].d }, [[PG]]/z, [x0]
+; CHECK-NEXT: ld1d { [[OP:z[0-9]+]].d }, [[PG]]/z, [x0]
 ; CHECK-NEXT: frintm [[RES:z[0-9]+]].d, [[PG]]/m, [[OP]].d
 ; CHECK-NEXT: st1d { [[RES]].d }, [[PG]], [x0]
 ; CHECK-NEXT: ret
@@ -467,20 +467,20 @@ define void @frintm_v4f64(<4 x double>* %a) #0 {
 define void @frintm_v8f64(<8 x double>* %a) #0 {
 ; CHECK-LABEL: frintm_v8f64:
 ; VBITS_GE_512: ptrue [[PG:p[0-9]+]].d, vl8
-; VBITS_GE_512-DAG: ld1d { [[OP:z[0-9]+]].d }, [[PG]]/z, [x0]
+; VBITS_GE_512-NEXT: ld1d { [[OP:z[0-9]+]].d }, [[PG]]/z, [x0]
 ; VBITS_GE_512-NEXT: frintm [[RES:z[0-9]+]].d, [[PG]]/m, [[OP]].d
 ; VBITS_GE_512-NEXT: st1d { [[RES]].d }, [[PG]], [x0]
 ; VBITS_GE_512-NEXT: ret
 
 ; Ensure sensible type legalisation.
 ; VBITS_EQ_256-DAG: ptrue [[PG:p[0-9]+]].d, vl4
-; VBITS_EQ_256-DAG: add x[[A_HI:[0-9]+]], x0, #32
+; VBITS_EQ_256-DAG: mov x[[NUMELTS:[0-9]+]], #4
 ; VBITS_EQ_256-DAG: ld1d { [[OP_LO:z[0-9]+]].d }, [[PG]]/z, [x0]
-; VBITS_EQ_256-DAG: ld1d { [[OP_HI:z[0-9]+]].d }, [[PG]]/z, [x[[A_HI]]]
+; VBITS_EQ_256-DAG: ld1d { [[OP_HI:z[0-9]+]].d }, [[PG]]/z, [x0, x[[NUMELTS]], lsl #3]
 ; VBITS_EQ_256-DAG: frintm [[RES_LO:z[0-9]+]].d, [[PG]]/m, [[OP_LO]].d
 ; VBITS_EQ_256-DAG: frintm [[RES_HI:z[0-9]+]].d, [[PG]]/m, [[OP_HI]].d
 ; VBITS_EQ_256-DAG: st1d { [[RES_LO]].d }, [[PG]], [x0]
-; VBITS_EQ_256-DAG: st1d { [[RES_HI]].d }, [[PG]], [x[[A_HI]]
+; VBITS_EQ_256-DAG: st1d { [[RES_HI]].d }, [[PG]], [x0, x[[NUMELTS]], lsl #3]
 ; VBITS_EQ_256-NEXT: ret
   %op = load <8 x double>, <8 x double>* %a
   %res = call <8 x double> @llvm.floor.v8f64(<8 x double> %op)
@@ -491,7 +491,7 @@ define void @frintm_v8f64(<8 x double>* %a) #0 {
 define void @frintm_v16f64(<16 x double>* %a) #0 {
 ; CHECK-LABEL: frintm_v16f64:
 ; VBITS_GE_1024: ptrue [[PG:p[0-9]+]].d, vl16
-; VBITS_GE_1024-DAG: ld1d { [[OP:z[0-9]+]].d }, [[PG]]/z, [x0]
+; VBITS_GE_1024-NEXT: ld1d { [[OP:z[0-9]+]].d }, [[PG]]/z, [x0]
 ; VBITS_GE_1024-NEXT: frintm [[RES:z[0-9]+]].d, [[PG]]/m, [[OP]].d
 ; VBITS_GE_1024-NEXT: st1d { [[RES]].d }, [[PG]], [x0]
 ; VBITS_GE_1024-NEXT: ret
@@ -504,7 +504,7 @@ define void @frintm_v16f64(<16 x double>* %a) #0 {
 define void @frintm_v32f64(<32 x double>* %a) #0 {
 ; CHECK-LABEL: frintm_v32f64:
 ; VBITS_GE_2048: ptrue [[PG:p[0-9]+]].d, vl32
-; VBITS_GE_2048-DAG: ld1d { [[OP:z[0-9]+]].d }, [[PG]]/z, [x0]
+; VBITS_GE_2048-NEXT: ld1d { [[OP:z[0-9]+]].d }, [[PG]]/z, [x0]
 ; VBITS_GE_2048-NEXT: frintm [[RES:z[0-9]+]].d, [[PG]]/m, [[OP]].d
 ; VBITS_GE_2048-NEXT: st1d { [[RES]].d }, [[PG]], [x0]
 ; VBITS_GE_2048-NEXT: ret
@@ -539,7 +539,7 @@ define <8 x half> @frinti_v8f16(<8 x half> %op) #0 {
 define void @frinti_v16f16(<16 x half>* %a) #0 {
 ; CHECK-LABEL: frinti_v16f16:
 ; CHECK: ptrue [[PG:p[0-9]+]].h, vl16
-; CHECK-DAG: ld1h { [[OP:z[0-9]+]].h }, [[PG]]/z, [x0]
+; CHECK-NEXT: ld1h { [[OP:z[0-9]+]].h }, [[PG]]/z, [x0]
 ; CHECK-NEXT: frinti [[RES:z[0-9]+]].h, [[PG]]/m, [[OP]].h
 ; CHECK-NEXT: st1h { [[RES]].h }, [[PG]], [x0]
 ; CHECK-NEXT: ret
@@ -552,20 +552,20 @@ define void @frinti_v16f16(<16 x half>* %a) #0 {
 define void @frinti_v32f16(<32 x half>* %a) #0 {
 ; CHECK-LABEL: frinti_v32f16:
 ; VBITS_GE_512: ptrue [[PG:p[0-9]+]].h, vl32
-; VBITS_GE_512-DAG: ld1h { [[OP:z[0-9]+]].h }, [[PG]]/z, [x0]
+; VBITS_GE_512-NEXT: ld1h { [[OP:z[0-9]+]].h }, [[PG]]/z, [x0]
 ; VBITS_GE_512-NEXT: frinti [[RES:z[0-9]+]].h, [[PG]]/m, [[OP]].h
 ; VBITS_GE_512-NEXT: st1h { [[RES]].h }, [[PG]], [x0]
 ; VBITS_GE_512-NEXT: ret
 
 ; Ensure sensible type legalisation.
 ; VBITS_EQ_256-DAG: ptrue [[PG:p[0-9]+]].h, vl16
-; VBITS_EQ_256-DAG: add x[[A_HI:[0-9]+]], x0, #32
+; VBITS_EQ_256-DAG: mov x[[NUMELTS:[0-9]+]], #16
 ; VBITS_EQ_256-DAG: ld1h { [[OP_LO:z[0-9]+]].h }, [[PG]]/z, [x0]
-; VBITS_EQ_256-DAG: ld1h { [[OP_HI:z[0-9]+]].h }, [[PG]]/z, [x[[A_HI]]]
+; VBITS_EQ_256-DAG: ld1h { [[OP_HI:z[0-9]+]].h }, [[PG]]/z, [x0, x[[NUMELTS]], lsl #1]
 ; VBITS_EQ_256-DAG: frinti [[RES_LO:z[0-9]+]].h, [[PG]]/m, [[OP_LO]].h
 ; VBITS_EQ_256-DAG: frinti [[RES_HI:z[0-9]+]].h, [[PG]]/m, [[OP_HI]].h
 ; VBITS_EQ_256-DAG: st1h { [[RES_LO]].h }, [[PG]], [x0]
-; VBITS_EQ_256-DAG: st1h { [[RES_HI]].h }, [[PG]], [x[[A_HI]]
+; VBITS_EQ_256-DAG: st1h { [[RES_HI]].h }, [[PG]], [x0, x[[NUMELTS]], lsl #1]
 ; VBITS_EQ_256-NEXT: ret
   %op = load <32 x half>, <32 x half>* %a
   %res = call <32 x half> @llvm.nearbyint.v32f16(<32 x half> %op)
@@ -576,7 +576,7 @@ define void @frinti_v32f16(<32 x half>* %a) #0 {
 define void @frinti_v64f16(<64 x half>* %a) #0 {
 ; CHECK-LABEL: frinti_v64f16:
 ; VBITS_GE_1024: ptrue [[PG:p[0-9]+]].h, vl64
-; VBITS_GE_1024-DAG: ld1h { [[OP:z[0-9]+]].h }, [[PG]]/z, [x0]
+; VBITS_GE_1024-NEXT: ld1h { [[OP:z[0-9]+]].h }, [[PG]]/z, [x0]
 ; VBITS_GE_1024-NEXT: frinti [[RES:z[0-9]+]].h, [[PG]]/m, [[OP]].h
 ; VBITS_GE_1024-NEXT: st1h { [[RES]].h }, [[PG]], [x0]
 ; VBITS_GE_1024-NEXT: ret
@@ -589,7 +589,7 @@ define void @frinti_v64f16(<64 x half>* %a) #0 {
 define void @frinti_v128f16(<128 x half>* %a) #0 {
 ; CHECK-LABEL: frinti_v128f16:
 ; VBITS_GE_2048: ptrue [[PG:p[0-9]+]].h, vl128
-; VBITS_GE_2048-DAG: ld1h { [[OP:z[0-9]+]].h }, [[PG]]/z, [x0]
+; VBITS_GE_2048-NEXT: ld1h { [[OP:z[0-9]+]].h }, [[PG]]/z, [x0]
 ; VBITS_GE_2048-NEXT: frinti [[RES:z[0-9]+]].h, [[PG]]/m, [[OP]].h
 ; VBITS_GE_2048-NEXT: st1h { [[RES]].h }, [[PG]], [x0]
 ; VBITS_GE_2048-NEXT: ret
@@ -620,7 +620,7 @@ define <4 x float> @frinti_v4f32(<4 x float> %op) #0 {
 define void @frinti_v8f32(<8 x float>* %a) #0 {
 ; CHECK-LABEL: frinti_v8f32:
 ; CHECK: ptrue [[PG:p[0-9]+]].s, vl8
-; CHECK-DAG: ld1w { [[OP:z[0-9]+]].s }, [[PG]]/z, [x0]
+; CHECK-NEXT: ld1w { [[OP:z[0-9]+]].s }, [[PG]]/z, [x0]
 ; CHECK-NEXT: frinti [[RES:z[0-9]+]].s, [[PG]]/m, [[OP]].s
 ; CHECK-NEXT: st1w { [[RES]].s }, [[PG]], [x0]
 ; CHECK-NEXT: ret
@@ -633,20 +633,20 @@ define void @frinti_v8f32(<8 x float>* %a) #0 {
 define void @frinti_v16f32(<16 x float>* %a) #0 {
 ; CHECK-LABEL: frinti_v16f32:
 ; VBITS_GE_512: ptrue [[PG:p[0-9]+]].s, vl16
-; VBITS_GE_512-DAG: ld1w { [[OP:z[0-9]+]].s }, [[PG]]/z, [x0]
+; VBITS_GE_512-NEXT: ld1w { [[OP:z[0-9]+]].s }, [[PG]]/z, [x0]
 ; VBITS_GE_512-NEXT: frinti [[RES:z[0-9]+]].s, [[PG]]/m, [[OP]].s
 ; VBITS_GE_512-NEXT: st1w { [[RES]].s }, [[PG]], [x0]
 ; VBITS_GE_512-NEXT: ret
 
 ; Ensure sensible type legalisation.
 ; VBITS_EQ_256-DAG: ptrue [[PG:p[0-9]+]].s, vl8
-; VBITS_EQ_256-DAG: add x[[A_HI:[0-9]+]], x0, #32
+; VBITS_EQ_256-DAG: mov x[[NUMELTS:[0-9]+]], #8
 ; VBITS_EQ_256-DAG: ld1w { [[OP_LO:z[0-9]+]].s }, [[PG]]/z, [x0]
-; VBITS_EQ_256-DAG: ld1w { [[OP_HI:z[0-9]+]].s }, [[PG]]/z, [x[[A_HI]]]
+; VBITS_EQ_256-DAG: ld1w { [[OP_HI:z[0-9]+]].s }, [[PG]]/z, [x0, x[[NUMELTS]], lsl #2]
 ; VBITS_EQ_256-DAG: frinti [[RES_LO:z[0-9]+]].s, [[PG]]/m, [[OP_LO]].s
 ; VBITS_EQ_256-DAG: frinti [[RES_HI:z[0-9]+]].s, [[PG]]/m, [[OP_HI]].s
 ; VBITS_EQ_256-DAG: st1w { [[RES_LO]].s }, [[PG]], [x0]
-; VBITS_EQ_256-DAG: st1w { [[RES_HI]].s }, [[PG]], [x[[A_HI]]
+; VBITS_EQ_256-DAG: st1w { [[RES_HI]].s }, [[PG]], [x0, x[[NUMELTS]], lsl #2]
 ; VBITS_EQ_256-NEXT: ret
   %op = load <16 x float>, <16 x float>* %a
   %res = call <16 x float> @llvm.nearbyint.v16f32(<16 x float> %op)
@@ -657,7 +657,7 @@ define void @frinti_v16f32(<16 x float>* %a) #0 {
 define void @frinti_v32f32(<32 x float>* %a) #0 {
 ; CHECK-LABEL: frinti_v32f32:
 ; VBITS_GE_1024: ptrue [[PG:p[0-9]+]].s, vl32
-; VBITS_GE_1024-DAG: ld1w { [[OP:z[0-9]+]].s }, [[PG]]/z, [x0]
+; VBITS_GE_1024-NEXT: ld1w { [[OP:z[0-9]+]].s }, [[PG]]/z, [x0]
 ; VBITS_GE_1024-NEXT: frinti [[RES:z[0-9]+]].s, [[PG]]/m, [[OP]].s
 ; VBITS_GE_1024-NEXT: st1w { [[RES]].s }, [[PG]], [x0]
 ; VBITS_GE_1024-NEXT: ret
@@ -670,7 +670,7 @@ define void @frinti_v32f32(<32 x float>* %a) #0 {
 define void @frinti_v64f32(<64 x float>* %a) #0 {
 ; CHECK-LABEL: frinti_v64f32:
 ; VBITS_GE_2048: ptrue [[PG:p[0-9]+]].s, vl64
-; VBITS_GE_2048-DAG: ld1w { [[OP:z[0-9]+]].s }, [[PG]]/z, [x0]
+; VBITS_GE_2048-NEXT: ld1w { [[OP:z[0-9]+]].s }, [[PG]]/z, [x0]
 ; VBITS_GE_2048-NEXT: frinti [[RES:z[0-9]+]].s, [[PG]]/m, [[OP]].s
 ; VBITS_GE_2048-NEXT: st1w { [[RES]].s }, [[PG]], [x0]
 ; VBITS_GE_2048-NEXT: ret
@@ -701,7 +701,7 @@ define <2 x double> @frinti_v2f64(<2 x double> %op) #0 {
 define void @frinti_v4f64(<4 x double>* %a) #0 {
 ; CHECK-LABEL: frinti_v4f64:
 ; CHECK: ptrue [[PG:p[0-9]+]].d, vl4
-; CHECK-DAG: ld1d { [[OP:z[0-9]+]].d }, [[PG]]/z, [x0]
+; CHECK-NEXT: ld1d { [[OP:z[0-9]+]].d }, [[PG]]/z, [x0]
 ; CHECK-NEXT: frinti [[RES:z[0-9]+]].d, [[PG]]/m, [[OP]].d
 ; CHECK-NEXT: st1d { [[RES]].d }, [[PG]], [x0]
 ; CHECK-NEXT: ret
@@ -714,20 +714,20 @@ define void @frinti_v4f64(<4 x double>* %a) #0 {
 define void @frinti_v8f64(<8 x double>* %a) #0 {
 ; CHECK-LABEL: frinti_v8f64:
 ; VBITS_GE_512: ptrue [[PG:p[0-9]+]].d, vl8
-; VBITS_GE_512-DAG: ld1d { [[OP:z[0-9]+]].d }, [[PG]]/z, [x0]
+; VBITS_GE_512-NEXT: ld1d { [[OP:z[0-9]+]].d }, [[PG]]/z, [x0]
 ; VBITS_GE_512-NEXT: frinti [[RES:z[0-9]+]].d, [[PG]]/m, [[OP]].d
 ; VBITS_GE_512-NEXT: st1d { [[RES]].d }, [[PG]], [x0]
 ; VBITS_GE_512-NEXT: ret
 
 ; Ensure sensible type legalisation.
 ; VBITS_EQ_256-DAG: ptrue [[PG:p[0-9]+]].d, vl4
-; VBITS_EQ_256-DAG: add x[[A_HI:[0-9]+]], x0, #32
+; VBITS_EQ_256-DAG: mov x[[NUMELTS:[0-9]+]], #4
 ; VBITS_EQ_256-DAG: ld1d { [[OP_LO:z[0-9]+]].d }, [[PG]]/z, [x0]
-; VBITS_EQ_256-DAG: ld1d { [[OP_HI:z[0-9]+]].d }, [[PG]]/z, [x[[A_HI]]]
+; VBITS_EQ_256-DAG: ld1d { [[OP_HI:z[0-9]+]].d }, [[PG]]/z, [x0, x[[NUMELTS]], lsl #3]
 ; VBITS_EQ_256-DAG: frinti [[RES_LO:z[0-9]+]].d, [[PG]]/m, [[OP_LO]].d
 ; VBITS_EQ_256-DAG: frinti [[RES_HI:z[0-9]+]].d, [[PG]]/m, [[OP_HI]].d
 ; VBITS_EQ_256-DAG: st1d { [[RES_LO]].d }, [[PG]], [x0]
-; VBITS_EQ_256-DAG: st1d { [[RES_HI]].d }, [[PG]], [x[[A_HI]]
+; VBITS_EQ_256-DAG: st1d { [[RES_HI]].d }, [[PG]], [x0, x[[NUMELTS]], lsl #3]
 ; VBITS_EQ_256-NEXT: ret
   %op = load <8 x double>, <8 x double>* %a
   %res = call <8 x double> @llvm.nearbyint.v8f64(<8 x double> %op)
@@ -738,7 +738,7 @@ define void @frinti_v8f64(<8 x double>* %a) #0 {
 define void @frinti_v16f64(<16 x double>* %a) #0 {
 ; CHECK-LABEL: frinti_v16f64:
 ; VBITS_GE_1024: ptrue [[PG:p[0-9]+]].d, vl16
-; VBITS_GE_1024-DAG: ld1d { [[OP:z[0-9]+]].d }, [[PG]]/z, [x0]
+; VBITS_GE_1024-NEXT: ld1d { [[OP:z[0-9]+]].d }, [[PG]]/z, [x0]
 ; VBITS_GE_1024-NEXT: frinti [[RES:z[0-9]+]].d, [[PG]]/m, [[OP]].d
 ; VBITS_GE_1024-NEXT: st1d { [[RES]].d }, [[PG]], [x0]
 ; VBITS_GE_1024-NEXT: ret
@@ -751,7 +751,7 @@ define void @frinti_v16f64(<16 x double>* %a) #0 {
 define void @frinti_v32f64(<32 x double>* %a) #0 {
 ; CHECK-LABEL: frinti_v32f64:
 ; VBITS_GE_2048: ptrue [[PG:p[0-9]+]].d, vl32
-; VBITS_GE_2048-DAG: ld1d { [[OP:z[0-9]+]].d }, [[PG]]/z, [x0]
+; VBITS_GE_2048-NEXT: ld1d { [[OP:z[0-9]+]].d }, [[PG]]/z, [x0]
 ; VBITS_GE_2048-NEXT: frinti [[RES:z[0-9]+]].d, [[PG]]/m, [[OP]].d
 ; VBITS_GE_2048-NEXT: st1d { [[RES]].d }, [[PG]], [x0]
 ; VBITS_GE_2048-NEXT: ret
@@ -786,7 +786,7 @@ define <8 x half> @frintx_v8f16(<8 x half> %op) #0 {
 define void @frintx_v16f16(<16 x half>* %a) #0 {
 ; CHECK-LABEL: frintx_v16f16:
 ; CHECK: ptrue [[PG:p[0-9]+]].h, vl16
-; CHECK-DAG: ld1h { [[OP:z[0-9]+]].h }, [[PG]]/z, [x0]
+; CHECK-NEXT: ld1h { [[OP:z[0-9]+]].h }, [[PG]]/z, [x0]
 ; CHECK-NEXT: frintx [[RES:z[0-9]+]].h, [[PG]]/m, [[OP]].h
 ; CHECK-NEXT: st1h { [[RES]].h }, [[PG]], [x0]
 ; CHECK-NEXT: ret
@@ -799,20 +799,20 @@ define void @frintx_v16f16(<16 x half>* %a) #0 {
 define void @frintx_v32f16(<32 x half>* %a) #0 {
 ; CHECK-LABEL: frintx_v32f16:
 ; VBITS_GE_512: ptrue [[PG:p[0-9]+]].h, vl32
-; VBITS_GE_512-DAG: ld1h { [[OP:z[0-9]+]].h }, [[PG]]/z, [x0]
+; VBITS_GE_512-NEXT: ld1h { [[OP:z[0-9]+]].h }, [[PG]]/z, [x0]
 ; VBITS_GE_512-NEXT: frintx [[RES:z[0-9]+]].h, [[PG]]/m, [[OP]].h
 ; VBITS_GE_512-NEXT: st1h { [[RES]].h }, [[PG]], [x0]
 ; VBITS_GE_512-NEXT: ret
 
 ; Ensure sensible type legalisation.
 ; VBITS_EQ_256-DAG: ptrue [[PG:p[0-9]+]].h, vl16
-; VBITS_EQ_256-DAG: add x[[A_HI:[0-9]+]], x0, #32
+; VBITS_EQ_256-DAG: mov x[[NUMELTS:[0-9]+]], #16
 ; VBITS_EQ_256-DAG: ld1h { [[OP_LO:z[0-9]+]].h }, [[PG]]/z, [x0]
-; VBITS_EQ_256-DAG: ld1h { [[OP_HI:z[0-9]+]].h }, [[PG]]/z, [x[[A_HI]]]
+; VBITS_EQ_256-DAG: ld1h { [[OP_HI:z[0-9]+]].h }, [[PG]]/z, [x0, x[[NUMELTS]], lsl #1]
 ; VBITS_EQ_256-DAG: frintx [[RES_LO:z[0-9]+]].h, [[PG]]/m, [[OP_LO]].h
 ; VBITS_EQ_256-DAG: frintx [[RES_HI:z[0-9]+]].h, [[PG]]/m, [[OP_HI]].h
 ; VBITS_EQ_256-DAG: st1h { [[RES_LO]].h }, [[PG]], [x0]
-; VBITS_EQ_256-DAG: st1h { [[RES_HI]].h }, [[PG]], [x[[A_HI]]
+; VBITS_EQ_256-DAG: st1h { [[RES_HI]].h }, [[PG]], [x0, x[[NUMELTS]], lsl #1]
 ; VBITS_EQ_256-NEXT: ret
   %op = load <32 x half>, <32 x half>* %a
   %res = call <32 x half> @llvm.rint.v32f16(<32 x half> %op)
@@ -823,7 +823,7 @@ define void @frintx_v32f16(<32 x half>* %a) #0 {
 define void @frintx_v64f16(<64 x half>* %a) #0 {
 ; CHECK-LABEL: frintx_v64f16:
 ; VBITS_GE_1024: ptrue [[PG:p[0-9]+]].h, vl64
-; VBITS_GE_1024-DAG: ld1h { [[OP:z[0-9]+]].h }, [[PG]]/z, [x0]
+; VBITS_GE_1024-NEXT: ld1h { [[OP:z[0-9]+]].h }, [[PG]]/z, [x0]
 ; VBITS_GE_1024-NEXT: frintx [[RES:z[0-9]+]].h, [[PG]]/m, [[OP]].h
 ; VBITS_GE_1024-NEXT: st1h { [[RES]].h }, [[PG]], [x0]
 ; VBITS_GE_1024-NEXT: ret
@@ -836,7 +836,7 @@ define void @frintx_v64f16(<64 x half>* %a) #0 {
 define void @frintx_v128f16(<128 x half>* %a) #0 {
 ; CHECK-LABEL: frintx_v128f16:
 ; VBITS_GE_2048: ptrue [[PG:p[0-9]+]].h, vl128
-; VBITS_GE_2048-DAG: ld1h { [[OP:z[0-9]+]].h }, [[PG]]/z, [x0]
+; VBITS_GE_2048-NEXT: ld1h { [[OP:z[0-9]+]].h }, [[PG]]/z, [x0]
 ; VBITS_GE_2048-NEXT: frintx [[RES:z[0-9]+]].h, [[PG]]/m, [[OP]].h
 ; VBITS_GE_2048-NEXT: st1h { [[RES]].h }, [[PG]], [x0]
 ; VBITS_GE_2048-NEXT: ret
@@ -867,7 +867,7 @@ define <4 x float> @frintx_v4f32(<4 x float> %op) #0 {
 define void @frintx_v8f32(<8 x float>* %a) #0 {
 ; CHECK-LABEL: frintx_v8f32:
 ; CHECK: ptrue [[PG:p[0-9]+]].s, vl8
-; CHECK-DAG: ld1w { [[OP:z[0-9]+]].s }, [[PG]]/z, [x0]
+; CHECK-NEXT: ld1w { [[OP:z[0-9]+]].s }, [[PG]]/z, [x0]
 ; CHECK-NEXT: frintx [[RES:z[0-9]+]].s, [[PG]]/m, [[OP]].s
 ; CHECK-NEXT: st1w { [[RES]].s }, [[PG]], [x0]
 ; CHECK-NEXT: ret
@@ -880,20 +880,20 @@ define void @frintx_v8f32(<8 x float>* %a) #0 {
 define void @frintx_v16f32(<16 x float>* %a) #0 {
 ; CHECK-LABEL: frintx_v16f32:
 ; VBITS_GE_512: ptrue [[PG:p[0-9]+]].s, vl16
-; VBITS_GE_512-DAG: ld1w { [[OP:z[0-9]+]].s }, [[PG]]/z, [x0]
+; VBITS_GE_512-NEXT: ld1w { [[OP:z[0-9]+]].s }, [[PG]]/z, [x0]
 ; VBITS_GE_512-NEXT: frintx [[RES:z[0-9]+]].s, [[PG]]/m, [[OP]].s
 ; VBITS_GE_512-NEXT: st1w { [[RES]].s }, [[PG]], [x0]
 ; VBITS_GE_512-NEXT: ret
 
 ; Ensure sensible type legalisation.
 ; VBITS_EQ_256-DAG: ptrue [[PG:p[0-9]+]].s, vl8
-; VBITS_EQ_256-DAG: add x[[A_HI:[0-9]+]], x0, #32
+; VBITS_EQ_256-DAG: mov x[[NUMELTS:[0-9]+]], #8
 ; VBITS_EQ_256-DAG: ld1w { [[OP_LO:z[0-9]+]].s }, [[PG]]/z, [x0]
-; VBITS_EQ_256-DAG: ld1w { [[OP_HI:z[0-9]+]].s }, [[PG]]/z, [x[[A_HI]]]
+; VBITS_EQ_256-DAG: ld1w { [[OP_HI:z[0-9]+]].s }, [[PG]]/z, [x0, x[[NUMELTS]], lsl #2]
 ; VBITS_EQ_256-DAG: frintx [[RES_LO:z[0-9]+]].s, [[PG]]/m, [[OP_LO]].s
 ; VBITS_EQ_256-DAG: frintx [[RES_HI:z[0-9]+]].s, [[PG]]/m, [[OP_HI]].s
 ; VBITS_EQ_256-DAG: st1w { [[RES_LO]].s }, [[PG]], [x0]
-; VBITS_EQ_256-DAG: st1w { [[RES_HI]].s }, [[PG]], [x[[A_HI]]
+; VBITS_EQ_256-DAG: st1w { [[RES_HI]].s }, [[PG]], [x0, x[[NUMELTS]], lsl #2]
 ; VBITS_EQ_256-NEXT: ret
   %op = load <16 x float>, <16 x float>* %a
   %res = call <16 x float> @llvm.rint.v16f32(<16 x float> %op)
@@ -904,7 +904,7 @@ define void @frintx_v16f32(<16 x float>* %a) #0 {
 define void @frintx_v32f32(<32 x float>* %a) #0 {
 ; CHECK-LABEL: frintx_v32f32:
 ; VBITS_GE_1024: ptrue [[PG:p[0-9]+]].s, vl32
-; VBITS_GE_1024-DAG: ld1w { [[OP:z[0-9]+]].s }, [[PG]]/z, [x0]
+; VBITS_GE_1024-NEXT: ld1w { [[OP:z[0-9]+]].s }, [[PG]]/z, [x0]
 ; VBITS_GE_1024-NEXT: frintx [[RES:z[0-9]+]].s, [[PG]]/m, [[OP]].s
 ; VBITS_GE_1024-NEXT: st1w { [[RES]].s }, [[PG]], [x0]
 ; VBITS_GE_1024-NEXT: ret
@@ -917,7 +917,7 @@ define void @frintx_v32f32(<32 x float>* %a) #0 {
 define void @frintx_v64f32(<64 x float>* %a) #0 {
 ; CHECK-LABEL: frintx_v64f32:
 ; VBITS_GE_2048: ptrue [[PG:p[0-9]+]].s, vl64
-; VBITS_GE_2048-DAG: ld1w { [[OP:z[0-9]+]].s }, [[PG]]/z, [x0]
+; VBITS_GE_2048-NEXT: ld1w { [[OP:z[0-9]+]].s }, [[PG]]/z, [x0]
 ; VBITS_GE_2048-NEXT: frintx [[RES:z[0-9]+]].s, [[PG]]/m, [[OP]].s
 ; VBITS_GE_2048-NEXT: st1w { [[RES]].s }, [[PG]], [x0]
 ; VBITS_GE_2048-NEXT: ret
@@ -948,7 +948,7 @@ define <2 x double> @frintx_v2f64(<2 x double> %op) #0 {
 define void @frintx_v4f64(<4 x double>* %a) #0 {
 ; CHECK-LABEL: frintx_v4f64:
 ; CHECK: ptrue [[PG:p[0-9]+]].d, vl4
-; CHECK-DAG: ld1d { [[OP:z[0-9]+]].d }, [[PG]]/z, [x0]
+; CHECK-NEXT: ld1d { [[OP:z[0-9]+]].d }, [[PG]]/z, [x0]
 ; CHECK-NEXT: frintx [[RES:z[0-9]+]].d, [[PG]]/m, [[OP]].d
 ; CHECK-NEXT: st1d { [[RES]].d }, [[PG]], [x0]
 ; CHECK-NEXT: ret
@@ -961,20 +961,20 @@ define void @frintx_v4f64(<4 x double>* %a) #0 {
 define void @frintx_v8f64(<8 x double>* %a) #0 {
 ; CHECK-LABEL: frintx_v8f64:
 ; VBITS_GE_512: ptrue [[PG:p[0-9]+]].d, vl8
-; VBITS_GE_512-DAG: ld1d { [[OP:z[0-9]+]].d }, [[PG]]/z, [x0]
+; VBITS_GE_512-NEXT: ld1d { [[OP:z[0-9]+]].d }, [[PG]]/z, [x0]
 ; VBITS_GE_512-NEXT: frintx [[RES:z[0-9]+]].d, [[PG]]/m, [[OP]].d
 ; VBITS_GE_512-NEXT: st1d { [[RES]].d }, [[PG]], [x0]
 ; VBITS_GE_512-NEXT: ret
 
 ; Ensure sensible type legalisation.
 ; VBITS_EQ_256-DAG: ptrue [[PG:p[0-9]+]].d, vl4
-; VBITS_EQ_256-DAG: add x[[A_HI:[0-9]+]], x0, #32
+; VBITS_EQ_256-DAG: mov x[[NUMELTS:[0-9]+]], #4
 ; VBITS_EQ_256-DAG: ld1d { [[OP_LO:z[0-9]+]].d }, [[PG]]/z, [x0]
-; VBITS_EQ_256-DAG: ld1d { [[OP_HI:z[0-9]+]].d }, [[PG]]/z, [x[[A_HI]]]
+; VBITS_EQ_256-DAG: ld1d { [[OP_HI:z[0-9]+]].d }, [[PG]]/z, [x0, x[[NUMELTS]], lsl #3]
 ; VBITS_EQ_256-DAG: frintx [[RES_LO:z[0-9]+]].d, [[PG]]/m, [[OP_LO]].d
 ; VBITS_EQ_256-DAG: frintx [[RES_HI:z[0-9]+]].d, [[PG]]/m, [[OP_HI]].d
 ; VBITS_EQ_256-DAG: st1d { [[RES_LO]].d }, [[PG]], [x0]
-; VBITS_EQ_256-DAG: st1d { [[RES_HI]].d }, [[PG]], [x[[A_HI]]
+; VBITS_EQ_256-DAG: st1d { [[RES_HI]].d }, [[PG]], [x0, x[[NUMELTS]], lsl #3]
 ; VBITS_EQ_256-NEXT: ret
   %op = load <8 x double>, <8 x double>* %a
   %res = call <8 x double> @llvm.rint.v8f64(<8 x double> %op)
@@ -985,7 +985,7 @@ define void @frintx_v8f64(<8 x double>* %a) #0 {
 define void @frintx_v16f64(<16 x double>* %a) #0 {
 ; CHECK-LABEL: frintx_v16f64:
 ; VBITS_GE_1024: ptrue [[PG:p[0-9]+]].d, vl16
-; VBITS_GE_1024-DAG: ld1d { [[OP:z[0-9]+]].d }, [[PG]]/z, [x0]
+; VBITS_GE_1024-NEXT: ld1d { [[OP:z[0-9]+]].d }, [[PG]]/z, [x0]
 ; VBITS_GE_1024-NEXT: frintx [[RES:z[0-9]+]].d, [[PG]]/m, [[OP]].d
 ; VBITS_GE_1024-NEXT: st1d { [[RES]].d }, [[PG]], [x0]
 ; VBITS_GE_1024-NEXT: ret
@@ -998,7 +998,7 @@ define void @frintx_v16f64(<16 x double>* %a) #0 {
 define void @frintx_v32f64(<32 x double>* %a) #0 {
 ; CHECK-LABEL: frintx_v32f64:
 ; VBITS_GE_2048: ptrue [[PG:p[0-9]+]].d, vl32
-; VBITS_GE_2048-DAG: ld1d { [[OP:z[0-9]+]].d }, [[PG]]/z, [x0]
+; VBITS_GE_2048-NEXT: ld1d { [[OP:z[0-9]+]].d }, [[PG]]/z, [x0]
 ; VBITS_GE_2048-NEXT: frintx [[RES:z[0-9]+]].d, [[PG]]/m, [[OP]].d
 ; VBITS_GE_2048-NEXT: st1d { [[RES]].d }, [[PG]], [x0]
 ; VBITS_GE_2048-NEXT: ret
@@ -1033,7 +1033,7 @@ define <8 x half> @frinta_v8f16(<8 x half> %op) #0 {
 define void @frinta_v16f16(<16 x half>* %a) #0 {
 ; CHECK-LABEL: frinta_v16f16:
 ; CHECK: ptrue [[PG:p[0-9]+]].h, vl16
-; CHECK-DAG: ld1h { [[OP:z[0-9]+]].h }, [[PG]]/z, [x0]
+; CHECK-NEXT: ld1h { [[OP:z[0-9]+]].h }, [[PG]]/z, [x0]
 ; CHECK-NEXT: frinta [[RES:z[0-9]+]].h, [[PG]]/m, [[OP]].h
 ; CHECK-NEXT: st1h { [[RES]].h }, [[PG]], [x0]
 ; CHECK-NEXT: ret
@@ -1046,20 +1046,20 @@ define void @frinta_v16f16(<16 x half>* %a) #0 {
 define void @frinta_v32f16(<32 x half>* %a) #0 {
 ; CHECK-LABEL: frinta_v32f16:
 ; VBITS_GE_512: ptrue [[PG:p[0-9]+]].h, vl32
-; VBITS_GE_512-DAG: ld1h { [[OP:z[0-9]+]].h }, [[PG]]/z, [x0]
+; VBITS_GE_512-NEXT: ld1h { [[OP:z[0-9]+]].h }, [[PG]]/z, [x0]
 ; VBITS_GE_512-NEXT: frinta [[RES:z[0-9]+]].h, [[PG]]/m, [[OP]].h
 ; VBITS_GE_512-NEXT: st1h { [[RES]].h }, [[PG]], [x0]
 ; VBITS_GE_512-NEXT: ret
 
 ; Ensure sensible type legalisation.
 ; VBITS_EQ_256-DAG: ptrue [[PG:p[0-9]+]].h, vl16
-; VBITS_EQ_256-DAG: add x[[A_HI:[0-9]+]], x0, #32
+; VBITS_EQ_256-DAG: mov x[[NUMELTS:[0-9]+]], #16
 ; VBITS_EQ_256-DAG: ld1h { [[OP_LO:z[0-9]+]].h }, [[PG]]/z, [x0]
-; VBITS_EQ_256-DAG: ld1h { [[OP_HI:z[0-9]+]].h }, [[PG]]/z, [x[[A_HI]]]
+; VBITS_EQ_256-DAG: ld1h { [[OP_HI:z[0-9]+]].h }, [[PG]]/z, [x0, x[[NUMELTS]], lsl #1]
 ; VBITS_EQ_256-DAG: frinta [[RES_LO:z[0-9]+]].h, [[PG]]/m, [[OP_LO]].h
 ; VBITS_EQ_256-DAG: frinta [[RES_HI:z[0-9]+]].h, [[PG]]/m, [[OP_HI]].h
 ; VBITS_EQ_256-DAG: st1h { [[RES_LO]].h }, [[PG]], [x0]
-; VBITS_EQ_256-DAG: st1h { [[RES_HI]].h }, [[PG]], [x[[A_HI]]
+; VBITS_EQ_256-DAG: st1h { [[RES_HI]].h }, [[PG]], [x0, x[[NUMELTS]], lsl #1]
 ; VBITS_EQ_256-NEXT: ret
   %op = load <32 x half>, <32 x half>* %a
   %res = call <32 x half> @llvm.round.v32f16(<32 x half> %op)
@@ -1070,7 +1070,7 @@ define void @frinta_v32f16(<32 x half>* %a) #0 {
 define void @frinta_v64f16(<64 x half>* %a) #0 {
 ; CHECK-LABEL: frinta_v64f16:
 ; VBITS_GE_1024: ptrue [[PG:p[0-9]+]].h, vl64
-; VBITS_GE_1024-DAG: ld1h { [[OP:z[0-9]+]].h }, [[PG]]/z, [x0]
+; VBITS_GE_1024-NEXT: ld1h { [[OP:z[0-9]+]].h }, [[PG]]/z, [x0]
 ; VBITS_GE_1024-NEXT: frinta [[RES:z[0-9]+]].h, [[PG]]/m, [[OP]].h
 ; VBITS_GE_1024-NEXT: st1h { [[RES]].h }, [[PG]], [x0]
 ; VBITS_GE_1024-NEXT: ret
@@ -1083,7 +1083,7 @@ define void @frinta_v64f16(<64 x half>* %a) #0 {
 define void @frinta_v128f16(<128 x half>* %a) #0 {
 ; CHECK-LABEL: frinta_v128f16:
 ; VBITS_GE_2048: ptrue [[PG:p[0-9]+]].h, vl128
-; VBITS_GE_2048-DAG: ld1h { [[OP:z[0-9]+]].h }, [[PG]]/z, [x0]
+; VBITS_GE_2048-NEXT: ld1h { [[OP:z[0-9]+]].h }, [[PG]]/z, [x0]
 ; VBITS_GE_2048-NEXT: frinta [[RES:z[0-9]+]].h, [[PG]]/m, [[OP]].h
 ; VBITS_GE_2048-NEXT: st1h { [[RES]].h }, [[PG]], [x0]
 ; VBITS_GE_2048-NEXT: ret
@@ -1114,7 +1114,7 @@ define <4 x float> @frinta_v4f32(<4 x float> %op) #0 {
 define void @frinta_v8f32(<8 x float>* %a) #0 {
 ; CHECK-LABEL: frinta_v8f32:
 ; CHECK: ptrue [[PG:p[0-9]+]].s, vl8
-; CHECK-DAG: ld1w { [[OP:z[0-9]+]].s }, [[PG]]/z, [x0]
+; CHECK-NEXT: ld1w { [[OP:z[0-9]+]].s }, [[PG]]/z, [x0]
 ; CHECK-NEXT: frinta [[RES:z[0-9]+]].s, [[PG]]/m, [[OP]].s
 ; CHECK-NEXT: st1w { [[RES]].s }, [[PG]], [x0]
 ; CHECK-NEXT: ret
@@ -1127,20 +1127,20 @@ define void @frinta_v8f32(<8 x float>* %a) #0 {
 define void @frinta_v16f32(<16 x float>* %a) #0 {
 ; CHECK-LABEL: frinta_v16f32:
 ; VBITS_GE_512: ptrue [[PG:p[0-9]+]].s, vl16
-; VBITS_GE_512-DAG: ld1w { [[OP:z[0-9]+]].s }, [[PG]]/z, [x0]
+; VBITS_GE_512-NEXT: ld1w { [[OP:z[0-9]+]].s }, [[PG]]/z, [x0]
 ; VBITS_GE_512-NEXT: frinta [[RES:z[0-9]+]].s, [[PG]]/m, [[OP]].s
 ; VBITS_GE_512-NEXT: st1w { [[RES]].s }, [[PG]], [x0]
 ; VBITS_GE_512-NEXT: ret
 
 ; Ensure sensible type legalisation.
 ; VBITS_EQ_256-DAG: ptrue [[PG:p[0-9]+]].s, vl8
-; VBITS_EQ_256-DAG: add x[[A_HI:[0-9]+]], x0, #32
+; VBITS_EQ_256-DAG: mov x[[NUMELTS:[0-9]+]], #8
 ; VBITS_EQ_256-DAG: ld1w { [[OP_LO:z[0-9]+]].s }, [[PG]]/z, [x0]
-; VBITS_EQ_256-DAG: ld1w { [[OP_HI:z[0-9]+]].s }, [[PG]]/z, [x[[A_HI]]]
+; VBITS_EQ_256-DAG: ld1w { [[OP_HI:z[0-9]+]].s }, [[PG]]/z, [x0, x[[NUMELTS]], lsl #2]
 ; VBITS_EQ_256-DAG: frinta [[RES_LO:z[0-9]+]].s, [[PG]]/m, [[OP_LO]].s
 ; VBITS_EQ_256-DAG: frinta [[RES_HI:z[0-9]+]].s, [[PG]]/m, [[OP_HI]].s
 ; VBITS_EQ_256-DAG: st1w { [[RES_LO]].s }, [[PG]], [x0]
-; VBITS_EQ_256-DAG: st1w { [[RES_HI]].s }, [[PG]], [x[[A_HI]]
+; VBITS_EQ_256-DAG: st1w { [[RES_HI]].s }, [[PG]], [x0, x[[NUMELTS]], lsl #2]
 ; VBITS_EQ_256-NEXT: ret
   %op = load <16 x float>, <16 x float>* %a
   %res = call <16 x float> @llvm.round.v16f32(<16 x float> %op)
@@ -1151,7 +1151,7 @@ define void @frinta_v16f32(<16 x float>* %a) #0 {
 define void @frinta_v32f32(<32 x float>* %a) #0 {
 ; CHECK-LABEL: frinta_v32f32:
 ; VBITS_GE_1024: ptrue [[PG:p[0-9]+]].s, vl32
-; VBITS_GE_1024-DAG: ld1w { [[OP:z[0-9]+]].s }, [[PG]]/z, [x0]
+; VBITS_GE_1024-NEXT: ld1w { [[OP:z[0-9]+]].s }, [[PG]]/z, [x0]
 ; VBITS_GE_1024-NEXT: frinta [[RES:z[0-9]+]].s, [[PG]]/m, [[OP]].s
 ; VBITS_GE_1024-NEXT: st1w { [[RES]].s }, [[PG]], [x0]
 ; VBITS_GE_1024-NEXT: ret
@@ -1164,7 +1164,7 @@ define void @frinta_v32f32(<32 x float>* %a) #0 {
 define void @frinta_v64f32(<64 x float>* %a) #0 {
 ; CHECK-LABEL: frinta_v64f32:
 ; VBITS_GE_2048: ptrue [[PG:p[0-9]+]].s, vl64
-; VBITS_GE_2048-DAG: ld1w { [[OP:z[0-9]+]].s }, [[PG]]/z, [x0]
+; VBITS_GE_2048-NEXT: ld1w { [[OP:z[0-9]+]].s }, [[PG]]/z, [x0]
 ; VBITS_GE_2048-NEXT: frinta [[RES:z[0-9]+]].s, [[PG]]/m, [[OP]].s
 ; VBITS_GE_2048-NEXT: st1w { [[RES]].s }, [[PG]], [x0]
 ; VBITS_GE_2048-NEXT: ret
@@ -1195,7 +1195,7 @@ define <2 x double> @frinta_v2f64(<2 x double> %op) #0 {
 define void @frinta_v4f64(<4 x double>* %a) #0 {
 ; CHECK-LABEL: frinta_v4f64:
 ; CHECK: ptrue [[PG:p[0-9]+]].d, vl4
-; CHECK-DAG: ld1d { [[OP:z[0-9]+]].d }, [[PG]]/z, [x0]
+; CHECK-NEXT: ld1d { [[OP:z[0-9]+]].d }, [[PG]]/z, [x0]
 ; CHECK-NEXT: frinta [[RES:z[0-9]+]].d, [[PG]]/m, [[OP]].d
 ; CHECK-NEXT: st1d { [[RES]].d }, [[PG]], [x0]
 ; CHECK-NEXT: ret
@@ -1208,20 +1208,20 @@ define void @frinta_v4f64(<4 x double>* %a) #0 {
 define void @frinta_v8f64(<8 x double>* %a) #0 {
 ; CHECK-LABEL: frinta_v8f64:
 ; VBITS_GE_512: ptrue [[PG:p[0-9]+]].d, vl8
-; VBITS_GE_512-DAG: ld1d { [[OP:z[0-9]+]].d }, [[PG]]/z, [x0]
+; VBITS_GE_512-NEXT: ld1d { [[OP:z[0-9]+]].d }, [[PG]]/z, [x0]
 ; VBITS_GE_512-NEXT: frinta [[RES:z[0-9]+]].d, [[PG]]/m, [[OP]].d
 ; VBITS_GE_512-NEXT: st1d { [[RES]].d }, [[PG]], [x0]
 ; VBITS_GE_512-NEXT: ret
 
 ; Ensure sensible type legalisation.
 ; VBITS_EQ_256-DAG: ptrue [[PG:p[0-9]+]].d, vl4
-; VBITS_EQ_256-DAG: add x[[A_HI:[0-9]+]], x0, #32
+; VBITS_EQ_256-DAG: mov x[[NUMELTS:[0-9]+]], #4
 ; VBITS_EQ_256-DAG: ld1d { [[OP_LO:z[0-9]+]].d }, [[PG]]/z, [x0]
-; VBITS_EQ_256-DAG: ld1d { [[OP_HI:z[0-9]+]].d }, [[PG]]/z, [x[[A_HI]]]
+; VBITS_EQ_256-DAG: ld1d { [[OP_HI:z[0-9]+]].d }, [[PG]]/z, [x0, x[[NUMELTS]], lsl #3]
 ; VBITS_EQ_256-DAG: frinta [[RES_LO:z[0-9]+]].d, [[PG]]/m, [[OP_LO]].d
 ; VBITS_EQ_256-DAG: frinta [[RES_HI:z[0-9]+]].d, [[PG]]/m, [[OP_HI]].d
 ; VBITS_EQ_256-DAG: st1d { [[RES_LO]].d }, [[PG]], [x0]
-; VBITS_EQ_256-DAG: st1d { [[RES_HI]].d }, [[PG]], [x[[A_HI]]
+; VBITS_EQ_256-DAG: st1d { [[RES_HI]].d }, [[PG]], [x0, x[[NUMELTS]], lsl #3]
 ; VBITS_EQ_256-NEXT: ret
   %op = load <8 x double>, <8 x double>* %a
   %res = call <8 x double> @llvm.round.v8f64(<8 x double> %op)
@@ -1232,7 +1232,7 @@ define void @frinta_v8f64(<8 x double>* %a) #0 {
 define void @frinta_v16f64(<16 x double>* %a) #0 {
 ; CHECK-LABEL: frinta_v16f64:
 ; VBITS_GE_1024: ptrue [[PG:p[0-9]+]].d, vl16
-; VBITS_GE_1024-DAG: ld1d { [[OP:z[0-9]+]].d }, [[PG]]/z, [x0]
+; VBITS_GE_1024-NEXT: ld1d { [[OP:z[0-9]+]].d }, [[PG]]/z, [x0]
 ; VBITS_GE_1024-NEXT: frinta [[RES:z[0-9]+]].d, [[PG]]/m, [[OP]].d
 ; VBITS_GE_1024-NEXT: st1d { [[RES]].d }, [[PG]], [x0]
 ; VBITS_GE_1024-NEXT: ret
@@ -1245,7 +1245,7 @@ define void @frinta_v16f64(<16 x double>* %a) #0 {
 define void @frinta_v32f64(<32 x double>* %a) #0 {
 ; CHECK-LABEL: frinta_v32f64:
 ; VBITS_GE_2048: ptrue [[PG:p[0-9]+]].d, vl32
-; VBITS_GE_2048-DAG: ld1d { [[OP:z[0-9]+]].d }, [[PG]]/z, [x0]
+; VBITS_GE_2048-NEXT: ld1d { [[OP:z[0-9]+]].d }, [[PG]]/z, [x0]
 ; VBITS_GE_2048-NEXT: frinta [[RES:z[0-9]+]].d, [[PG]]/m, [[OP]].d
 ; VBITS_GE_2048-NEXT: st1d { [[RES]].d }, [[PG]], [x0]
 ; VBITS_GE_2048-NEXT: ret
@@ -1300,13 +1300,13 @@ define void @frintn_v32f16(<32 x half>* %a) #0 {
 
 ; Ensure sensible type legalisation.
 ; VBITS_EQ_256-DAG: ptrue [[PG:p[0-9]+]].h, vl16
-; VBITS_EQ_256-DAG: add x[[A_HI:[0-9]+]], x0, #32
+; VBITS_EQ_256-DAG: mov x[[NUMELTS:[0-9]+]], #16
 ; VBITS_EQ_256-DAG: ld1h { [[OP_LO:z[0-9]+]].h }, [[PG]]/z, [x0]
-; VBITS_EQ_256-DAG: ld1h { [[OP_HI:z[0-9]+]].h }, [[PG]]/z, [x[[A_HI]]]
+; VBITS_EQ_256-DAG: ld1h { [[OP_HI:z[0-9]+]].h }, [[PG]]/z, [x0, x[[NUMELTS]], lsl #1]
 ; VBITS_EQ_256-DAG: frintn [[RES_LO:z[0-9]+]].h, [[PG]]/m, [[OP_LO]].h
 ; VBITS_EQ_256-DAG: frintn [[RES_HI:z[0-9]+]].h, [[PG]]/m, [[OP_HI]].h
 ; VBITS_EQ_256-DAG: st1h { [[RES_LO]].h }, [[PG]], [x0]
-; VBITS_EQ_256-DAG: st1h { [[RES_HI]].h }, [[PG]], [x[[A_HI]]
+; VBITS_EQ_256-DAG: st1h { [[RES_HI]].h }, [[PG]], [x0, x[[NUMELTS]], lsl #1]
 ; VBITS_EQ_256-NEXT: ret
   %op = load <32 x half>, <32 x half>* %a
   %res = call <32 x half> @llvm.roundeven.v32f16(<32 x half> %op)
@@ -1381,13 +1381,13 @@ define void @frintn_v16f32(<16 x float>* %a) #0 {
 
 ; Ensure sensible type legalisation.
 ; VBITS_EQ_256-DAG: ptrue [[PG:p[0-9]+]].s, vl8
-; VBITS_EQ_256-DAG: add x[[A_HI:[0-9]+]], x0, #32
+; VBITS_EQ_256-DAG: mov x[[NUMELTS:[0-9]+]], #8
 ; VBITS_EQ_256-DAG: ld1w { [[OP_LO:z[0-9]+]].s }, [[PG]]/z, [x0]
-; VBITS_EQ_256-DAG: ld1w { [[OP_HI:z[0-9]+]].s }, [[PG]]/z, [x[[A_HI]]]
+; VBITS_EQ_256-DAG: ld1w { [[OP_HI:z[0-9]+]].s }, [[PG]]/z, [x0, x[[NUMELTS]], lsl #2]
 ; VBITS_EQ_256-DAG: frintn [[RES_LO:z[0-9]+]].s, [[PG]]/m, [[OP_LO]].s
 ; VBITS_EQ_256-DAG: frintn [[RES_HI:z[0-9]+]].s, [[PG]]/m, [[OP_HI]].s
 ; VBITS_EQ_256-DAG: st1w { [[RES_LO]].s }, [[PG]], [x0]
-; VBITS_EQ_256-DAG: st1w { [[RES_HI]].s }, [[PG]], [x[[A_HI]]
+; VBITS_EQ_256-DAG: st1w { [[RES_HI]].s }, [[PG]], [x0, x[[NUMELTS]], lsl #2]
 ; VBITS_EQ_256-NEXT: ret
   %op = load <16 x float>, <16 x float>* %a
   %res = call <16 x float> @llvm.roundeven.v16f32(<16 x float> %op)
@@ -1462,13 +1462,13 @@ define void @frintn_v8f64(<8 x double>* %a) #0 {
 
 ; Ensure sensible type legalisation.
 ; VBITS_EQ_256-DAG: ptrue [[PG:p[0-9]+]].d, vl4
-; VBITS_EQ_256-DAG: add x[[A_HI:[0-9]+]], x0, #32
+; VBITS_EQ_256-DAG: mov x[[NUMELTS:[0-9]+]], #4
 ; VBITS_EQ_256-DAG: ld1d { [[OP_LO:z[0-9]+]].d }, [[PG]]/z, [x0]
-; VBITS_EQ_256-DAG: ld1d { [[OP_HI:z[0-9]+]].d }, [[PG]]/z, [x[[A_HI]]]
+; VBITS_EQ_256-DAG: ld1d { [[OP_HI:z[0-9]+]].d }, [[PG]]/z, [x0, x[[NUMELTS]], lsl #3]
 ; VBITS_EQ_256-DAG: frintn [[RES_LO:z[0-9]+]].d, [[PG]]/m, [[OP_LO]].d
 ; VBITS_EQ_256-DAG: frintn [[RES_HI:z[0-9]+]].d, [[PG]]/m, [[OP_HI]].d
 ; VBITS_EQ_256-DAG: st1d { [[RES_LO]].d }, [[PG]], [x0]
-; VBITS_EQ_256-DAG: st1d { [[RES_HI]].d }, [[PG]], [x[[A_HI]]
+; VBITS_EQ_256-DAG: st1d { [[RES_HI]].d }, [[PG]], [x0, x[[NUMELTS]], lsl #3]
 ; VBITS_EQ_256-NEXT: ret
   %op = load <8 x double>, <8 x double>* %a
   %res = call <8 x double> @llvm.roundeven.v8f64(<8 x double> %op)
@@ -1527,7 +1527,7 @@ define <8 x half> @frintz_v8f16(<8 x half> %op) #0 {
 define void @frintz_v16f16(<16 x half>* %a) #0 {
 ; CHECK-LABEL: frintz_v16f16:
 ; CHECK: ptrue [[PG:p[0-9]+]].h, vl16
-; CHECK-DAG: ld1h { [[OP:z[0-9]+]].h }, [[PG]]/z, [x0]
+; CHECK-NEXT: ld1h { [[OP:z[0-9]+]].h }, [[PG]]/z, [x0]
 ; CHECK-NEXT: frintz [[RES:z[0-9]+]].h, [[PG]]/m, [[OP]].h
 ; CHECK-NEXT: st1h { [[RES]].h }, [[PG]], [x0]
 ; CHECK-NEXT: ret
@@ -1540,20 +1540,20 @@ define void @frintz_v16f16(<16 x half>* %a) #0 {
 define void @frintz_v32f16(<32 x half>* %a) #0 {
 ; CHECK-LABEL: frintz_v32f16:
 ; VBITS_GE_512: ptrue [[PG:p[0-9]+]].h, vl32
-; VBITS_GE_512-DAG: ld1h { [[OP:z[0-9]+]].h }, [[PG]]/z, [x0]
+; VBITS_GE_512-NEXT: ld1h { [[OP:z[0-9]+]].h }, [[PG]]/z, [x0]
 ; VBITS_GE_512-NEXT: frintz [[RES:z[0-9]+]].h, [[PG]]/m, [[OP]].h
 ; VBITS_GE_512-NEXT: st1h { [[RES]].h }, [[PG]], [x0]
 ; VBITS_GE_512-NEXT: ret
 
 ; Ensure sensible type legalisation.
 ; VBITS_EQ_256-DAG: ptrue [[PG:p[0-9]+]].h, vl16
-; VBITS_EQ_256-DAG: add x[[A_HI:[0-9]+]], x0, #32
+; VBITS_EQ_256-DAG: mov x[[NUMELTS:[0-9]+]], #16
 ; VBITS_EQ_256-DAG: ld1h { [[OP_LO:z[0-9]+]].h }, [[PG]]/z, [x0]
-; VBITS_EQ_256-DAG: ld1h { [[OP_HI:z[0-9]+]].h }, [[PG]]/z, [x[[A_HI]]]
+; VBITS_EQ_256-DAG: ld1h { [[OP_HI:z[0-9]+]].h }, [[PG]]/z, [x0, x[[NUMELTS]], lsl #1]
 ; VBITS_EQ_256-DAG: frintz [[RES_LO:z[0-9]+]].h, [[PG]]/m, [[OP_LO]].h
 ; VBITS_EQ_256-DAG: frintz [[RES_HI:z[0-9]+]].h, [[PG]]/m, [[OP_HI]].h
 ; VBITS_EQ_256-DAG: st1h { [[RES_LO]].h }, [[PG]], [x0]
-; VBITS_EQ_256-DAG: st1h { [[RES_HI]].h }, [[PG]], [x[[A_HI]]
+; VBITS_EQ_256-DAG: st1h { [[RES_HI]].h }, [[PG]], [x0, x[[NUMELTS]], lsl #1]
 ; VBITS_EQ_256-NEXT: ret
   %op = load <32 x half>, <32 x half>* %a
   %res = call <32 x half> @llvm.trunc.v32f16(<32 x half> %op)
@@ -1564,7 +1564,7 @@ define void @frintz_v32f16(<32 x half>* %a) #0 {
 define void @frintz_v64f16(<64 x half>* %a) #0 {
 ; CHECK-LABEL: frintz_v64f16:
 ; VBITS_GE_1024: ptrue [[PG:p[0-9]+]].h, vl64
-; VBITS_GE_1024-DAG: ld1h { [[OP:z[0-9]+]].h }, [[PG]]/z, [x0]
+; VBITS_GE_1024-NEXT: ld1h { [[OP:z[0-9]+]].h }, [[PG]]/z, [x0]
 ; VBITS_GE_1024-NEXT: frintz [[RES:z[0-9]+]].h, [[PG]]/m, [[OP]].h
 ; VBITS_GE_1024-NEXT: st1h { [[RES]].h }, [[PG]], [x0]
 ; VBITS_GE_1024-NEXT: ret
@@ -1577,7 +1577,7 @@ define void @frintz_v64f16(<64 x half>* %a) #0 {
 define void @frintz_v128f16(<128 x half>* %a) #0 {
 ; CHECK-LABEL: frintz_v128f16:
 ; VBITS_GE_2048: ptrue [[PG:p[0-9]+]].h, vl128
-; VBITS_GE_2048-DAG: ld1h { [[OP:z[0-9]+]].h }, [[PG]]/z, [x0]
+; VBITS_GE_2048-NEXT: ld1h { [[OP:z[0-9]+]].h }, [[PG]]/z, [x0]
 ; VBITS_GE_2048-NEXT: frintz [[RES:z[0-9]+]].h, [[PG]]/m, [[OP]].h
 ; VBITS_GE_2048-NEXT: st1h { [[RES]].h }, [[PG]], [x0]
 ; VBITS_GE_2048-NEXT: ret
@@ -1608,7 +1608,7 @@ define <4 x float> @frintz_v4f32(<4 x float> %op) #0 {
 define void @frintz_v8f32(<8 x float>* %a) #0 {
 ; CHECK-LABEL: frintz_v8f32:
 ; CHECK: ptrue [[PG:p[0-9]+]].s, vl8
-; CHECK-DAG: ld1w { [[OP:z[0-9]+]].s }, [[PG]]/z, [x0]
+; CHECK-NEXT: ld1w { [[OP:z[0-9]+]].s }, [[PG]]/z, [x0]
 ; CHECK-NEXT: frintz [[RES:z[0-9]+]].s, [[PG]]/m, [[OP]].s
 ; CHECK-NEXT: st1w { [[RES]].s }, [[PG]], [x0]
 ; CHECK-NEXT: ret
@@ -1621,20 +1621,20 @@ define void @frintz_v8f32(<8 x float>* %a) #0 {
 define void @frintz_v16f32(<16 x float>* %a) #0 {
 ; CHECK-LABEL: frintz_v16f32:
 ; VBITS_GE_512: ptrue [[PG:p[0-9]+]].s, vl16
-; VBITS_GE_512-DAG: ld1w { [[OP:z[0-9]+]].s }, [[PG]]/z, [x0]
+; VBITS_GE_512-NEXT: ld1w { [[OP:z[0-9]+]].s }, [[PG]]/z, [x0]
 ; VBITS_GE_512-NEXT: frintz [[RES:z[0-9]+]].s, [[PG]]/m, [[OP]].s
 ; VBITS_GE_512-NEXT: st1w { [[RES]].s }, [[PG]], [x0]
 ; VBITS_GE_512-NEXT: ret
 
 ; Ensure sensible type legalisation.
 ; VBITS_EQ_256-DAG: ptrue [[PG:p[0-9]+]].s, vl8
-; VBITS_EQ_256-DAG: add x[[A_HI:[0-9]+]], x0, #32
+; VBITS_EQ_256-DAG: mov x[[NUMELTS:[0-9]+]], #8
 ; VBITS_EQ_256-DAG: ld1w { [[OP_LO:z[0-9]+]].s }, [[PG]]/z, [x0]
-; VBITS_EQ_256-DAG: ld1w { [[OP_HI:z[0-9]+]].s }, [[PG]]/z, [x[[A_HI]]]
+; VBITS_EQ_256-DAG: ld1w { [[OP_HI:z[0-9]+]].s }, [[PG]]/z, [x0, x[[NUMELTS]], lsl #2]
 ; VBITS_EQ_256-DAG: frintz [[RES_LO:z[0-9]+]].s, [[PG]]/m, [[OP_LO]].s
 ; VBITS_EQ_256-DAG: frintz [[RES_HI:z[0-9]+]].s, [[PG]]/m, [[OP_HI]].s
 ; VBITS_EQ_256-DAG: st1w { [[RES_LO]].s }, [[PG]], [x0]
-; VBITS_EQ_256-DAG: st1w { [[RES_HI]].s }, [[PG]], [x[[A_HI]]
+; VBITS_EQ_256-DAG: st1w { [[RES_HI]].s }, [[PG]], [x0, x[[NUMELTS]], lsl #2]
 ; VBITS_EQ_256-NEXT: ret
   %op = load <16 x float>, <16 x float>* %a
   %res = call <16 x float> @llvm.trunc.v16f32(<16 x float> %op)
@@ -1645,7 +1645,7 @@ define void @frintz_v16f32(<16 x float>* %a) #0 {
 define void @frintz_v32f32(<32 x float>* %a) #0 {
 ; CHECK-LABEL: frintz_v32f32:
 ; VBITS_GE_1024: ptrue [[PG:p[0-9]+]].s, vl32
-; VBITS_GE_1024-DAG: ld1w { [[OP:z[0-9]+]].s }, [[PG]]/z, [x0]
+; VBITS_GE_1024-NEXT: ld1w { [[OP:z[0-9]+]].s }, [[PG]]/z, [x0]
 ; VBITS_GE_1024-NEXT: frintz [[RES:z[0-9]+]].s, [[PG]]/m, [[OP]].s
 ; VBITS_GE_1024-NEXT: st1w { [[RES]].s }, [[PG]], [x0]
 ; VBITS_GE_1024-NEXT: ret
@@ -1658,7 +1658,7 @@ define void @frintz_v32f32(<32 x float>* %a) #0 {
 define void @frintz_v64f32(<64 x float>* %a) #0 {
 ; CHECK-LABEL: frintz_v64f32:
 ; VBITS_GE_2048: ptrue [[PG:p[0-9]+]].s, vl64
-; VBITS_GE_2048-DAG: ld1w { [[OP:z[0-9]+]].s }, [[PG]]/z, [x0]
+; VBITS_GE_2048-NEXT: ld1w { [[OP:z[0-9]+]].s }, [[PG]]/z, [x0]
 ; VBITS_GE_2048-NEXT: frintz [[RES:z[0-9]+]].s, [[PG]]/m, [[OP]].s
 ; VBITS_GE_2048-NEXT: st1w { [[RES]].s }, [[PG]], [x0]
 ; VBITS_GE_2048-NEXT: ret
@@ -1689,7 +1689,7 @@ define <2 x double> @frintz_v2f64(<2 x double> %op) #0 {
 define void @frintz_v4f64(<4 x double>* %a) #0 {
 ; CHECK-LABEL: frintz_v4f64:
 ; CHECK: ptrue [[PG:p[0-9]+]].d, vl4
-; CHECK-DAG: ld1d { [[OP:z[0-9]+]].d }, [[PG]]/z, [x0]
+; CHECK-NEXT: ld1d { [[OP:z[0-9]+]].d }, [[PG]]/z, [x0]
 ; CHECK-NEXT: frintz [[RES:z[0-9]+]].d, [[PG]]/m, [[OP]].d
 ; CHECK-NEXT: st1d { [[RES]].d }, [[PG]], [x0]
 ; CHECK-NEXT: ret
@@ -1702,20 +1702,20 @@ define void @frintz_v4f64(<4 x double>* %a) #0 {
 define void @frintz_v8f64(<8 x double>* %a) #0 {
 ; CHECK-LABEL: frintz_v8f64:
 ; VBITS_GE_512: ptrue [[PG:p[0-9]+]].d, vl8
-; VBITS_GE_512-DAG: ld1d { [[OP:z[0-9]+]].d }, [[PG]]/z, [x0]
+; VBITS_GE_512-NEXT: ld1d { [[OP:z[0-9]+]].d }, [[PG]]/z, [x0]
 ; VBITS_GE_512-NEXT: frintz [[RES:z[0-9]+]].d, [[PG]]/m, [[OP]].d
 ; VBITS_GE_512-NEXT: st1d { [[RES]].d }, [[PG]], [x0]
 ; VBITS_GE_512-NEXT: ret
 
 ; Ensure sensible type legalisation.
 ; VBITS_EQ_256-DAG: ptrue [[PG:p[0-9]+]].d, vl4
-; VBITS_EQ_256-DAG: add x[[A_HI:[0-9]+]], x0, #32
+; VBITS_EQ_256-DAG: mov x[[NUMELTS:[0-9]+]], #4
 ; VBITS_EQ_256-DAG: ld1d { [[OP_LO:z[0-9]+]].d }, [[PG]]/z, [x0]
-; VBITS_EQ_256-DAG: ld1d { [[OP_HI:z[0-9]+]].d }, [[PG]]/z, [x[[A_HI]]]
+; VBITS_EQ_256-DAG: ld1d { [[OP_HI:z[0-9]+]].d }, [[PG]]/z, [x0, x[[NUMELTS]], lsl #3]
 ; VBITS_EQ_256-DAG: frintz [[RES_LO:z[0-9]+]].d, [[PG]]/m, [[OP_LO]].d
 ; VBITS_EQ_256-DAG: frintz [[RES_HI:z[0-9]+]].d, [[PG]]/m, [[OP_HI]].d
 ; VBITS_EQ_256-DAG: st1d { [[RES_LO]].d }, [[PG]], [x0]
-; VBITS_EQ_256-DAG: st1d { [[RES_HI]].d }, [[PG]], [x[[A_HI]]
+; VBITS_EQ_256-DAG: st1d { [[RES_HI]].d }, [[PG]], [x0, x[[NUMELTS]], lsl #3]
 ; VBITS_EQ_256-NEXT: ret
   %op = load <8 x double>, <8 x double>* %a
   %res = call <8 x double> @llvm.trunc.v8f64(<8 x double> %op)
@@ -1726,7 +1726,7 @@ define void @frintz_v8f64(<8 x double>* %a) #0 {
 define void @frintz_v16f64(<16 x double>* %a) #0 {
 ; CHECK-LABEL: frintz_v16f64:
 ; VBITS_GE_1024: ptrue [[PG:p[0-9]+]].d, vl16
-; VBITS_GE_1024-DAG: ld1d { [[OP:z[0-9]+]].d }, [[PG]]/z, [x0]
+; VBITS_GE_1024-NEXT: ld1d { [[OP:z[0-9]+]].d }, [[PG]]/z, [x0]
 ; VBITS_GE_1024-NEXT: frintz [[RES:z[0-9]+]].d, [[PG]]/m, [[OP]].d
 ; VBITS_GE_1024-NEXT: st1d { [[RES]].d }, [[PG]], [x0]
 ; VBITS_GE_1024-NEXT: ret
@@ -1739,7 +1739,7 @@ define void @frintz_v16f64(<16 x double>* %a) #0 {
 define void @frintz_v32f64(<32 x double>* %a) #0 {
 ; CHECK-LABEL: frintz_v32f64:
 ; VBITS_GE_2048: ptrue [[PG:p[0-9]+]].d, vl32
-; VBITS_GE_2048-DAG: ld1d { [[OP:z[0-9]+]].d }, [[PG]]/z, [x0]
+; VBITS_GE_2048-NEXT: ld1d { [[OP:z[0-9]+]].d }, [[PG]]/z, [x0]
 ; VBITS_GE_2048-NEXT: frintz [[RES:z[0-9]+]].d, [[PG]]/m, [[OP]].d
 ; VBITS_GE_2048-NEXT: st1d { [[RES]].d }, [[PG]], [x0]
 ; VBITS_GE_2048-NEXT: ret

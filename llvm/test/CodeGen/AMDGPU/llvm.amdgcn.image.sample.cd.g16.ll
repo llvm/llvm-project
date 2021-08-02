@@ -96,12 +96,14 @@ main_body:
 define amdgpu_ps <4 x float> @sample_c_cd_cl_2d(<8 x i32> inreg %rsrc, <4 x i32> inreg %samp, float %zcompare, half %dsdh, half %dtdh, half %dsdv, half %dtdv, float %s, float %t, float %clamp) {
 ; GFX10-LABEL: sample_c_cd_cl_2d:
 ; GFX10:       ; %bb.0: ; %main_body
-; GFX10-NEXT:    v_mov_b32_e32 v8, 0xffff
-; GFX10-NEXT:    v_and_b32_e32 v3, v8, v3
-; GFX10-NEXT:    v_and_b32_e32 v1, v8, v1
-; GFX10-NEXT:    v_lshl_or_b32 v3, v4, 16, v3
-; GFX10-NEXT:    v_lshl_or_b32 v1, v2, 16, v1
-; GFX10-NEXT:    image_sample_c_cd_cl_g16 v[0:3], [v0, v1, v3, v5, v6, v7], s[0:7], s[8:11] dmask:0xf dim:SQ_RSRC_IMG_2D
+; GFX10-NEXT:    v_mov_b32_e32 v8, v2
+; GFX10-NEXT:    v_mov_b32_e32 v2, v0
+; GFX10-NEXT:    v_mov_b32_e32 v0, 0xffff
+; GFX10-NEXT:    v_and_b32_e32 v3, v0, v3
+; GFX10-NEXT:    v_and_b32_e32 v0, v0, v1
+; GFX10-NEXT:    v_lshl_or_b32 v4, v4, 16, v3
+; GFX10-NEXT:    v_lshl_or_b32 v3, v8, 16, v0
+; GFX10-NEXT:    image_sample_c_cd_cl_g16 v[0:3], v[2:7], s[0:7], s[8:11] dmask:0xf dim:SQ_RSRC_IMG_2D
 ; GFX10-NEXT:    s_waitcnt vmcnt(0)
 ; GFX10-NEXT:    ; return to shader part epilog
 main_body:

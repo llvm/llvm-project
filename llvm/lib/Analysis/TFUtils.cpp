@@ -32,6 +32,9 @@
 
 using namespace llvm;
 
+using google::protobuf::Message;
+using google::protobuf::TextFormat;
+
 static cl::opt<bool>
     ProtobufTextMode("tfutils-text-log", cl::init(false), cl::Hidden,
                      cl::desc("Output textual (human-readable) protobuf."));
@@ -69,55 +72,6 @@ TFStatusPtr createTFStatus() {
 
 TFSessionOptionsPtr createTFSessionOptions() {
   return TFSessionOptionsPtr(TF_NewSessionOptions(), &TF_DeleteSessionOptions);
-}
-
-/// Write a list of tensors as a sequence of TensorFlow FeatureList protobufs.
-/// The tensors are assumed to be stored contiguously, in row-major format,
-/// in the TensorData buffer. Each tensor has the shape given by Spec. The
-/// feature name in the output is either the provided LoggingName, if
-/// specified, otherwise it's the name of the tensor (as given by Spec).
-void writeRawTensorsAsFeatureLists(tensorflow::FeatureLists *FE,
-                                   const LoggedFeatureSpec &LoggedSpec,
-                                   const char *TensorData, size_t TensorCount,
-                                   bool FinalReward = false) {
-  const auto &Spec = LoggedSpec.Spec;
-  // The 'Feature' protobuf only has 3 possible fields: float_list,
-  // int64_list, or bytes_list, so we capture int32 values as int64. We don't
-  // support any other types.
-  tensorflow::FeatureList &FL = (*FE->mutable_feature_list())[(
-      LoggedSpec.LoggingName ? *LoggedSpec.LoggingName : Spec.name())];
-
-  const char *CurrentTensor = TensorData;
-  const size_t TensorByteSize =
-      Spec.getElementCount() * Spec.getElementByteSize();
-  const size_t ElemCount = Spec.getElementCount();
-  for (size_t E = 0; E < TensorCount; ++E) {
-    const bool ShouldWrite = E + 1 == TensorCount || !FinalReward;
-
-    if (Spec.isElementType<int64_t>()) {
-      auto *MF = FL.add_feature()->mutable_int64_list()->mutable_value();
-      MF->Resize(ElemCount, 0);
-      if (ShouldWrite)
-        memcpy(MF->mutable_data(), CurrentTensor, TensorByteSize);
-    } else if (Spec.isElementType<int32_t>()) {
-      auto *MF = FL.add_feature()->mutable_int64_list()->mutable_value();
-      MF->Resize(ElemCount, 0);
-      if (ShouldWrite) {
-        const int32_t *TD = reinterpret_cast<const int32_t *>(CurrentTensor);
-        for (size_t I = 0; I < ElemCount; ++I)
-          (*MF)[I] = TD[I];
-      }
-    } else if (Spec.isElementType<float>()) {
-      auto *MF = FL.add_feature()->mutable_float_list()->mutable_value();
-      MF->Resize(ElemCount, 0.0);
-      if (ShouldWrite)
-        memcpy(MF->mutable_data(), CurrentTensor, TensorByteSize);
-    } else {
-      llvm_unreachable("Unsupported tensor type.");
-    }
-    if (ShouldWrite)
-      CurrentTensor += TensorByteSize;
-  }
 }
 } // namespace
 
@@ -304,6 +258,76 @@ private:
   bool checkReportAndInvalidate(const TF_Output &Output,
                                 const TensorSpec &OutputSpec);
 };
+
+class LoggerDataImpl {
+  const std::vector<LoggedFeatureSpec> LoggedFeatureSpecs;
+  const TensorSpec RewardSpec;
+
+  tensorflow::SequenceExample SE;
+  std::vector<tensorflow::FeatureList *> FeatureLists;
+  tensorflow::FeatureList *Reward = nullptr;
+
+public:
+  LoggerDataImpl(const std::vector<LoggedFeatureSpec> &LoggedSpecs,
+                 const TensorSpec &RewardSpec, bool IncludeReward)
+      : LoggedFeatureSpecs(LoggedSpecs), RewardSpec(RewardSpec) {
+    auto *FL = SE.mutable_feature_lists()->mutable_feature_list();
+    if (IncludeReward)
+      Reward = &(*FL)[RewardSpec.name()];
+    // Allocate first the map entries, then capture their address. We will not
+    // mutate the set of features after this (i.e. the pointers won't dangle).
+    for (const auto &LFS : LoggedSpecs) {
+      (*FL)[LFS.LoggingName ? *LFS.LoggingName : LFS.Spec.name()] = {};
+    }
+    for (const auto &LFS : LoggedSpecs)
+      FeatureLists.push_back(
+          &(*FL)[LFS.LoggingName ? *LFS.LoggingName : LFS.Spec.name()]);
+  }
+
+  void print(raw_ostream &OS) {
+    std::string OutStr;
+    if (ProtobufTextMode)
+      google::protobuf::TextFormat::PrintToString(SE, &OutStr);
+    else
+      OutStr = SE.SerializeAsString();
+
+    OS << OutStr;
+  }
+
+  char *addNewTensor(size_t FeatureID) {
+    const auto &Spec = LoggedFeatureSpecs[FeatureID].Spec;
+    if (Spec.isElementType<float>()) {
+      auto *RF = FeatureLists[FeatureID]
+                     ->add_feature()
+                     ->mutable_float_list()
+                     ->mutable_value();
+      RF->Resize(Spec.getElementCount(), 0.0);
+      return reinterpret_cast<char *>(RF->mutable_data());
+    } else if (Spec.isElementType<int32_t>() || Spec.isElementType<int64_t>()) {
+      auto *RF = FeatureLists[FeatureID]
+                     ->add_feature()
+                     ->mutable_int64_list()
+                     ->mutable_value();
+      RF->Resize(Spec.getElementCount(), 0);
+      return reinterpret_cast<char *>(RF->mutable_data());
+    }
+    llvm_unreachable("Unsupported tensor type.");
+  }
+
+  template <typename T> void logReward(T Value) {
+    if (RewardSpec.isElementType<float>())
+      Reward->add_feature()->mutable_float_list()->add_value(Value);
+    else if (RewardSpec.isElementType<int32_t>() ||
+             RewardSpec.isElementType<int64_t>())
+      Reward->add_feature()->mutable_int64_list()->add_value(Value);
+    else
+      llvm_unreachable("Unsupported tensor type.");
+  }
+
+  size_t getNrRecords() const {
+    return FeatureLists.empty() ? 0 : FeatureLists[0]->feature().size();
+  }
+};
 } // namespace llvm
 
 TFModelEvaluatorImpl::TFModelEvaluatorImpl(
@@ -448,37 +472,71 @@ TFUTILS_SUPPORTED_TYPES(TFUTILS_GETDATATYPE_IMPL)
 TFModelEvaluator::EvaluationResult::~EvaluationResult() {}
 TFModelEvaluator::~TFModelEvaluator() {}
 
-void Logger::print(raw_ostream &OS) {
-  tensorflow::SequenceExample SE;
+Logger::Logger(const std::vector<LoggedFeatureSpec> &FeatureSpecs,
+               const TensorSpec &RewardSpec, bool IncludeReward)
+    : FeatureSpecs(FeatureSpecs), RewardSpec(RewardSpec),
+      IncludeReward(IncludeReward),
+      LoggerData(std::make_unique<LoggerDataImpl>(FeatureSpecs, RewardSpec,
+                                                  IncludeReward)) {}
 
-  if (RawLogData.empty())
-    return;
-  if (RawLogData[0].empty())
-    return;
-  size_t Tensor0Size = FeatureSpecs[0].Spec.getElementCount() *
-                       FeatureSpecs[0].Spec.getElementByteSize();
-  size_t NumberOfRecords = RawLogData[0].size() / Tensor0Size;
-  if (NumberOfRecords == 0)
-    return;
-  size_t RewardSize =
-      RewardSpec.getElementCount() * RewardSpec.getElementByteSize();
-  size_t NumberOfRewards = RawLogData.back().size() / RewardSize;
+Logger::~Logger() {}
 
-  tensorflow::FeatureLists *FE = SE.mutable_feature_lists();
-  for (size_t I = 0; I < FeatureSpecs.size(); ++I)
-    writeRawTensorsAsFeatureLists(FE, FeatureSpecs[I], RawLogData[I].data(),
-                                  NumberOfRecords);
-
-  if (IncludeReward)
-    writeRawTensorsAsFeatureLists(FE, {RewardSpec, None},
-                                  RawLogData.back().data(), NumberOfRecords,
-                                  NumberOfRewards == 1);
-  std::string OutStr;
-  if (ProtobufTextMode) {
-    google::protobuf::TextFormat::PrintToString(SE, &OutStr);
-  } else {
-    OutStr = SE.SerializeAsString();
+#define LOG_REWARD(NAME, TYPE)                                                 \
+  void Logger::log##NAME##Reward(TYPE Value) {                                 \
+    assert(IncludeReward);                                                     \
+    LoggerData->logReward(Value);                                              \
   }
-  OS << OutStr;
+
+LOG_REWARD(Float, float)
+LOG_REWARD(Int32, int32_t)
+LOG_REWARD(Int64, int64_t)
+#undef LOG_REWARD
+
+#define LOG_FINAL_REWARD(NAME, TYPE)                                           \
+  void Logger::log##NAME##FinalReward(TYPE Value) {                            \
+    assert(RewardSpec.isElementType<TYPE>());                                  \
+    for (size_t I = 1; I < LoggerData->getNrRecords(); ++I)                    \
+      log##NAME##Reward(0);                                                    \
+    log##NAME##Reward(Value);                                                  \
+  }
+
+LOG_FINAL_REWARD(Float, float)
+LOG_FINAL_REWARD(Int32, int32_t)
+LOG_FINAL_REWARD(Int64, int64_t)
+#undef LOG_FINAL_REWARD
+
+void Logger::logFloatValue(size_t FeatureID, const float *Value) {
+  assert(FeatureSpecs[FeatureID].Spec.isElementType<float>());
+  logSpecifiedTensorValue(FeatureID, reinterpret_cast<const char *>(Value));
 }
+
+void Logger::logInt64Value(size_t FeatureID, const int64_t *Value) {
+  assert(FeatureSpecs[FeatureID].Spec.isElementType<int64_t>());
+  logSpecifiedTensorValue(FeatureID, reinterpret_cast<const char *>(Value));
+}
+
+void Logger::logInt32Value(size_t FeatureID, const int32_t *Value) {
+  assert(FeatureSpecs[FeatureID].Spec.isElementType<int32_t>());
+  logSpecifiedTensorValue(FeatureID, reinterpret_cast<const char *>(Value));
+}
+
+void Logger::logSpecifiedTensorValue(size_t FeatureID, const char *RawData) {
+  const auto &Spec = FeatureSpecs[FeatureID].Spec;
+  char *Buff = addEntryAndGetFloatOrInt64Buffer(FeatureID);
+  if (Spec.isElementType<int32_t>())
+    for (size_t I = 0; I < Spec.getElementCount(); ++I)
+      (reinterpret_cast<int64_t *>(Buff))[I] =
+          static_cast<int64_t>((reinterpret_cast<const int32_t *>(RawData))[I]);
+  else if (Spec.isElementType<int64_t>() || Spec.isElementType<float>())
+    std::memcpy(Buff, RawData,
+                Spec.getElementCount() * Spec.getElementByteSize());
+  else
+    llvm_unreachable("Unsupported tensor type");
+}
+
+char *Logger::addEntryAndGetFloatOrInt64Buffer(size_t FeatureID) {
+  return reinterpret_cast<char *>(LoggerData->addNewTensor(FeatureID));
+}
+
+void Logger::print(raw_ostream &OS) { LoggerData->print(OS); }
 #endif // defined(LLVM_HAVE_TF_API)

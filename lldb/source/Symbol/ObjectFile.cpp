@@ -616,16 +616,6 @@ ObjectFile::GetSymbolTypeFromName(llvm::StringRef name,
   return symbol_type_hint;
 }
 
-ConstString ObjectFile::GetNextSyntheticSymbolName() {
-  llvm::SmallString<256> name;
-  llvm::raw_svector_ostream os(name);
-  ConstString file_name = GetModule()->GetFileSpec().GetFilename();
-  ++m_synthetic_symbol_idx;
-  os << "___lldb_unnamed_symbol" << m_synthetic_symbol_idx << "$$"
-     << file_name.GetStringRef();
-  return ConstString(os.str());
-}
-
 std::vector<ObjectFile::LoadableData>
 ObjectFile::GetLoadableData(Target &target) {
   std::vector<LoadableData> loadables;

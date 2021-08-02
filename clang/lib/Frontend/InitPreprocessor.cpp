@@ -598,8 +598,7 @@ static void InitializeCPlusPlusFeatureTestMacros(const LangOptions &LangOpts,
   }
   // C++2b features.
   if (LangOpts.CPlusPlus2b) {
-    if (!LangOpts.MSVCCompat)
-      Builder.defineMacro("__cpp_implicit_move", "202011L");
+    Builder.defineMacro("__cpp_implicit_move", "202011L");
     Builder.defineMacro("__cpp_size_t_suffix", "202011L");
   }
   if (LangOpts.Char8)
@@ -1078,7 +1077,8 @@ static void InitializePredefinedMacros(const TargetInfo &TI,
   }
 
   // Macros to control C99 numerics and <float.h>
-  Builder.defineMacro("__FLT_EVAL_METHOD__", Twine(TI.getFloatEvalMethod()));
+  // Note: __FLT_EVAL_METHOD__ is not defined here since it is a special
+  // builtin macro, its value may fluctuate during compilation.
   Builder.defineMacro("__FLT_RADIX__", "2");
   Builder.defineMacro("__DECIMAL_DIG__", "__LDBL_DECIMAL_DIG__");
 

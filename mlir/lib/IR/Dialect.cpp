@@ -30,6 +30,8 @@ DialectAsmParser::~DialectAsmParser() {}
 // DialectRegistry
 //===----------------------------------------------------------------------===//
 
+DialectRegistry::DialectRegistry() { insert<BuiltinDialect>(); }
+
 void DialectRegistry::addDialectInterface(
     StringRef dialectName, TypeID interfaceTypeID,
     DialectInterfaceAllocatorFunction allocator) {
@@ -59,19 +61,11 @@ void DialectRegistry::addObjectInterface(
     StringRef dialectName, TypeID interfaceTypeID,
     ObjectInterfaceAllocatorFunction allocator) {
   assert(allocator && "unexpected null interface allocation function");
+  auto it = registry.find(dialectName.str());
+  assert(it != registry.end() &&
+         "adding an interface for an op from an unregistered dialect");
 
-  // Builtin dialect has an empty prefix and is always registered.
-  TypeID dialectTypeID;
-  if (!dialectName.empty()) {
-    auto it = registry.find(dialectName.str());
-    assert(it != registry.end() &&
-           "adding an interface for an op from an unregistered dialect");
-    dialectTypeID = it->second.first;
-  } else {
-    dialectTypeID = TypeID::get<BuiltinDialect>();
-  }
-
-  auto &ifaces = interfaces[dialectTypeID];
+  auto &ifaces = interfaces[it->second.first];
   for (const auto &kvp : ifaces.objectInterfaces) {
     if (kvp.first == interfaceTypeID) {
       LLVM_DEBUG(llvm::dbgs()
@@ -185,8 +179,6 @@ LogicalResult Dialect::printOperation(Operation *op,
 /// Utility function that returns if the given string is a valid dialect
 /// namespace.
 bool Dialect::isValidNamespace(StringRef str) {
-  if (str.empty())
-    return true;
   llvm::Regex dialectNameRegex("^[a-zA-Z_][a-zA-Z_0-9\\$]*$");
   return dialectNameRegex.match(str);
 }

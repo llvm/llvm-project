@@ -192,14 +192,6 @@ unsigned getAddrSizeMIMGOp(const MIMGBaseOpcodeInfo *BaseOpcode,
   return AddrWords;
 }
 
-unsigned getMIMGNSALimit(const MCSubtargetInfo &STI) {
-  if (isGFX11Plus(STI))
-    return 5;
-  if (isGFX10Plus(STI))
-    return 13;
-  return 0;
-}
-
 struct MUBUFInfo {
   uint16_t Opcode;
   uint16_t BaseOpcode;
@@ -1412,6 +1404,17 @@ uint64_t encodeMsg(uint64_t MsgId,
 
 unsigned getInitialPSInputAddr(const Function &F) {
   return getIntegerAttribute(F, "InitialPSInputAddr", 0);
+}
+
+bool getHasColorExport(const Function &F) {
+  // As a safe default always respond as if PS has color exports.
+  return getIntegerAttribute(
+             F, "amdgpu-color-export",
+             F.getCallingConv() == CallingConv::AMDGPU_PS ? 1 : 0) != 0;
+}
+
+bool getHasDepthExport(const Function &F) {
+  return getIntegerAttribute(F, "amdgpu-depth-export", 0) != 0;
 }
 
 bool isShader(CallingConv::ID cc) {

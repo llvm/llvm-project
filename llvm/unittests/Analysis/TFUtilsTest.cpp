@@ -169,14 +169,14 @@ TEST(TFUtilsTest, Logger) {
   const float F00[]{0.0, 0.1, 0.2, 0.3, 0.4, 0.5};
   const int64_t F01[]{2, 3};
 
-  L.logTensorValue(0, F00, 6);
-  L.logTensorValue(1, F01, 2);
-  L.logReward<float>(3.4);
+  L.logFloatValue(0, F00);
+  L.logInt64Value(1, F01);
+  L.logFloatReward(3.4);
   const float F10[]{0.0, 1.0, 2.0, 3.0, 4.0, 5.0};
   const int64_t F11[]{-2, -3};
-  L.logTensorValue(0, F10, 6);
-  L.logTensorValue(1, F11, 2);
-  L.logReward<float>(-3.0);
+  L.logFloatValue(0, F10);
+  L.logInt64Value(1, F11);
+  L.logFloatReward(-3.0);
   std::string Result;
   raw_string_ostream OS(Result);
   L.print(OS);
@@ -193,6 +193,42 @@ TEST(TFUtilsTest, Logger) {
   PROTO_CHECKER("reward", float_list, 1, R1);
 }
 
+TEST(TFUtilsTest, LoggerInt32FeaturesAndReward) {
+  std::vector<LoggedFeatureSpec> Features;
+  Features.push_back(
+      {TensorSpec::createSpec<float>("the_float", {2, 3}), None});
+  Features.push_back({TensorSpec::createSpec<int32_t>("the_int", {2}),
+                      std::string("alternate_name")});
+
+  auto Rewards = TensorSpec::createSpec<int32_t>("reward", {1});
+  Logger L(Features, Rewards, true);
+  const float F00[]{0.0, 0.1, 0.2, 0.3, 0.4, 0.5};
+  const int32_t F01[]{2, 3};
+
+  L.logFloatValue(0, F00);
+  L.logInt32Value(1, F01);
+  L.logInt32Reward(3);
+  const float F10[]{0.0, 1.0, 2.0, 3.0, 4.0, 5.0};
+  const int32_t F11[]{-2, -3};
+  L.logFloatValue(0, F10);
+  L.logInt32Value(1, F11);
+  L.logInt32Reward(-3);
+  std::string Result;
+  raw_string_ostream OS(Result);
+  L.print(OS);
+
+  tensorflow::SequenceExample Expected;
+  EXPECT_TRUE(Expected.ParseFromString(Result));
+  PROTO_CHECKER("the_float", float_list, 0, F00);
+  PROTO_CHECKER("the_float", float_list, 1, F10);
+  PROTO_CHECKER("alternate_name", int64_list, 0, F01);
+  PROTO_CHECKER("alternate_name", int64_list, 1, F11);
+  int32_t R0[]{3};
+  int32_t R1[]{-3};
+  PROTO_CHECKER("reward", int64_list, 0, R0);
+  PROTO_CHECKER("reward", int64_list, 1, R1);
+}
+
 TEST(TFUtilsTest, LoggerNoReward) {
   std::vector<LoggedFeatureSpec> Features;
   Features.push_back(
@@ -205,12 +241,12 @@ TEST(TFUtilsTest, LoggerNoReward) {
   const float F00[]{0.0, 0.1, 0.2, 0.3, 0.4, 0.5};
   const int64_t F01[]{2, 3};
 
-  L.logTensorValue(0, F00, 6);
-  L.logTensorValue(1, F01, 2);
+  L.logFloatValue(0, F00);
+  L.logInt64Value(1, F01);
   const float F10[]{0.0, 1.0, 2.0, 3.0, 4.0, 5.0};
   const int64_t F11[]{-2, -3};
-  L.logTensorValue(0, F10, 6);
-  L.logTensorValue(1, F11, 2);
+  L.logFloatValue(0, F10);
+  L.logInt64Value(1, F11);
 
   std::string Result;
   raw_string_ostream OS(Result);
@@ -230,12 +266,12 @@ TEST(TFUtilsTest, LoggerFinalReward) {
 
   auto Rewards = TensorSpec::createSpec<float>("reward", {1});
   Logger L(Features, Rewards, true);
-  for (size_t I = 0; I < 3; ++I) {
+  for (int64_t I = 0; I < 3; ++I) {
     float F = static_cast<float>(I);
-    L.logTensorValue(0, &F);
-    L.logTensorValue(1, &I);
+    L.logFloatValue(0, &F);
+    L.logInt64Value(1, &I);
   }
-  L.logFinalReward<float>(3.14);
+  L.logFloatFinalReward(3.14);
   std::string Result;
   raw_string_ostream OS(Result);
   L.print(OS);

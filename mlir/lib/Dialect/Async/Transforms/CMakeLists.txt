@@ -15,6 +15,7 @@ add_mlir_dialect_library(MLIRAsyncTransforms
   MLIRAsync
   MLIRPass
   MLIRSCF
+  MLIRSCFToStandard
   MLIRStandard
   MLIRTransforms
   MLIRTransformUtils

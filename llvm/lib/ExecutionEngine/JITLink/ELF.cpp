@@ -14,6 +14,7 @@
 #include "llvm/ExecutionEngine/JITLink/ELF.h"
 
 #include "llvm/BinaryFormat/ELF.h"
+#include "llvm/ExecutionEngine/JITLink/ELF_riscv.h"
 #include "llvm/ExecutionEngine/JITLink/ELF_x86_64.h"
 #include "llvm/Object/ELF.h"
 #include "llvm/Support/Endian.h"
@@ -64,6 +65,8 @@ createLinkGraphFromELFObject(MemoryBufferRef ObjectBuffer) {
     return TargetMachineArch.takeError();
 
   switch (*TargetMachineArch) {
+  case ELF::EM_RISCV:
+    return createLinkGraphFromELFObject_riscv(ObjectBuffer);
   case ELF::EM_X86_64:
     return createLinkGraphFromELFObject_x86_64(ObjectBuffer);
   default:
@@ -76,6 +79,10 @@ createLinkGraphFromELFObject(MemoryBufferRef ObjectBuffer) {
 void link_ELF(std::unique_ptr<LinkGraph> G,
               std::unique_ptr<JITLinkContext> Ctx) {
   switch (G->getTargetTriple().getArch()) {
+  case Triple::riscv32:
+  case Triple::riscv64:
+    link_ELF_riscv(std::move(G), std::move(Ctx));
+    return;
   case Triple::x86_64:
     link_ELF_x86_64(std::move(G), std::move(Ctx));
     return;

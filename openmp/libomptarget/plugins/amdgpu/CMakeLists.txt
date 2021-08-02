@@ -15,10 +15,6 @@
 
 # as of rocm-3.7, hsa is installed with cmake packages and kmt is found via hsa
 find_package(hsa-runtime64 QUIET 1.2.0 HINTS ${CMAKE_INSTALL_PREFIX} PATHS /opt/rocm)
-if (NOT ${hsa-runtime64_FOUND})
-  libomptarget_say("Not building AMDGPU plugin: hsa-runtime64 not found")
-  return()
-endif()
 
 if(NOT LIBOMPTARGET_DEP_LIBELF_FOUND)
   libomptarget_say("Not building AMDGPU plugin: LIBELF not found")
@@ -34,8 +30,6 @@ if (NOT LIBOMPTARGET_LLVM_INCLUDE_DIRS)
   libomptarget_say("Not building AMDGPU plugin: Missing definition for LIBOMPTARGET_LLVM_INCLUDE_DIRS")
   return()
 endif()
-
-libomptarget_say("Building amdgpu offloading plugin")
 
 ################################################################################
 # Define the suffix for the runtime messaging dumps.
@@ -53,6 +47,20 @@ include_directories(
   ${LIBOMPTARGET_LLVM_INCLUDE_DIRS}
 )
 
+set(LIBOMPTARGET_DLOPEN_LIBHSA OFF)
+option(LIBOMPTARGET_FORCE_DLOPEN_LIBHSA "Build with dlopened libhsa" ${LIBOMPTARGET_DLOPEN_LIBHSA})
+
+if (${hsa-runtime64_FOUND} AND NOT LIBOMPTARGET_FORCE_DLOPEN_LIBHSA)
+  libomptarget_say("Building AMDGPU plugin linked against libhsa")
+  set(LIBOMPTARGET_EXTRA_SOURCE)
+  set(LIBOMPTARGET_DEP_LIBRARIES hsa-runtime64::hsa-runtime64)
+else()
+  libomptarget_say("Building AMDGPU plugin for dlopened libhsa")
+  include_directories(dynamic_hsa)
+  set(LIBOMPTARGET_EXTRA_SOURCE dynamic_hsa/hsa.cpp)
+  set(LIBOMPTARGET_DEP_LIBRARIES)
+endif()
+
 add_library(omptarget.rtl.amdgpu SHARED
       impl/atmi.cpp
       impl/atmi_interop_hsa.cpp
@@ -63,6 +71,7 @@ add_library(omptarget.rtl.amdgpu SHARED
       impl/utils.cpp
       impl/msgpack.cpp
       src/rtl.cpp
+      ${LIBOMPTARGET_EXTRA_SOURCE}
       )
 
 # Install plugin under the lib destination folder.
@@ -74,8 +83,8 @@ target_link_libraries(
   omptarget.rtl.amdgpu
   PRIVATE
   elf_common
-  hsa-runtime64::hsa-runtime64
-  dl
+  ${LIBOMPTARGET_DEP_LIBRARIES}
+  ${CMAKE_DL_LIBS}
   ${LIBOMPTARGET_DEP_LIBELF_LIBRARIES}
   ${OPENMP_PTHREAD_LIB}
   "-Wl,--version-script=${CMAKE_CURRENT_SOURCE_DIR}/../exports"

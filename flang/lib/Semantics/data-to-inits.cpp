@@ -17,6 +17,7 @@
 #include "data-to-inits.h"
 #include "pointer-assignment.h"
 #include "flang/Evaluate/fold-designator.h"
+#include "flang/Evaluate/tools.h"
 #include "flang/Semantics/tools.h"
 
 namespace Fortran::semantics {
@@ -338,7 +339,7 @@ bool DataInitializationCompiler::InitElement(
           DescribeElement());
     } else if (auto converted{ConvertElement(*expr, *designatorType)}) {
       // value non-pointer initialization
-      if (std::holds_alternative<evaluate::BOZLiteralConstant>(expr->u) &&
+      if (IsBOZLiteral(*expr) &&
           designatorType->category() != TypeCategory::Integer) { // 8.6.7(11)
         exprAnalyzer_.Say(
             "BOZ literal should appear in a DATA statement only as a value for an integer object, but '%s' is '%s'"_en_US,

@@ -87,8 +87,6 @@ bb2:
 ; CHECK: body:
 ; CHECK: bb.{{[0-9]+}}.{{[a-zA-Z0-9.]+}}:
 ; CHECK-NEXT: successors: %[[END:bb.[0-9]+]](0x80000000)
-; We don't emit a branch here, as we can fallthrough to the successor.
-; CHECK-NOT: G_BR
 ; CHECK: [[END]].{{[a-zA-Z0-9.]+}}:
 ; CHECK-NEXT: RET_ReallyLR
 define void @uncondbr_fallthrough() {
@@ -137,7 +135,6 @@ false:
 ; CHECK: bb.{{[0-9]+.[a-zA-Z0-9.]+}}:
 ; Make sure we have one successor
 ; CHECK-NEXT: successors: %[[BB_L1:bb.[0-9]+]](0x80000000)
-; CHECK-NOT: G_BR
 ;
 ; Check basic block L1 has 2 successors: BBL1 and BBL2
 ; CHECK: [[BB_L1]].{{[a-zA-Z0-9.]+}} (address-taken):

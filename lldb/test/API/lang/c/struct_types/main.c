@@ -22,7 +22,6 @@ int main (int argc, char const *argv[])
 
     struct {} empty;
     //% self.expect("frame variable empty", substrs = ["empty = {}"])
-    //% self.expect("expression -- sizeof(empty)", substrs = ["= 0"])
 
     struct rect_tag {
         struct point_tag bottom_left;

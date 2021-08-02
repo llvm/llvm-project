@@ -2013,7 +2013,8 @@ define i64 @test_chr_22(i1 %i, i64* %j, i64 %v0) !prof !14 {
 ; CHECK-NEXT:    [[C1:%.*]] = icmp slt i64 [[V2]], 100
 ; CHECK-NEXT:    br i1 [[C1]], label [[BB0_SPLIT:%.*]], label [[BB0_SPLIT_NONCHR:%.*]], !prof [[PROF15]]
 ; CHECK:       common.ret:
-; CHECK-NEXT:    ret i64 99
+; CHECK-NEXT:    [[COMMON_RET_OP:%.*]] = phi i64 [ 99, [[BB0_SPLIT]] ], [ 99, [[BB0_SPLIT_NONCHR]] ]
+; CHECK-NEXT:    ret i64 [[COMMON_RET_OP]]
 ; CHECK:       bb0.split:
 ; CHECK-NEXT:    [[V299:%.*]] = mul i64 [[V2]], 7860086430977039991
 ; CHECK-NEXT:    store i64 [[V299]], i64* [[J:%.*]], align 4
@@ -2594,7 +2595,7 @@ define void @test_chr_with_bbs_address_taken2(i32* %i) !prof !14 {
 ; CHECK:       bb0:
 ; CHECK-NEXT:    call void @foo()
 ; CHECK-NEXT:    call void @foo()
-; CHECK-NEXT:    br label [[BB3:%.*]]
+; CHECK-NEXT:    br label [[BB6:%.*]]
 ; CHECK:       entry.split.nonchr:
 ; CHECK-NEXT:    [[TMP3:%.*]] = and i32 [[TMP0]], 1
 ; CHECK-NEXT:    [[DOTNOT:%.*]] = icmp eq i32 [[TMP3]], 0
@@ -2605,11 +2606,11 @@ define void @test_chr_with_bbs_address_taken2(i32* %i) !prof !14 {
 ; CHECK:       bb1.nonchr:
 ; CHECK-NEXT:    [[TMP4:%.*]] = and i32 [[TMP0]], 2
 ; CHECK-NEXT:    [[TMP5:%.*]] = icmp eq i32 [[TMP4]], 0
-; CHECK-NEXT:    br i1 [[TMP5]], label [[BB3]], label [[BB2_NONCHR:%.*]], !prof [[PROF16]]
+; CHECK-NEXT:    br i1 [[TMP5]], label [[BB6]], label [[BB2_NONCHR:%.*]], !prof [[PROF16]]
 ; CHECK:       bb2.nonchr:
 ; CHECK-NEXT:    call void @foo()
-; CHECK-NEXT:    br label [[BB3]]
-; CHECK:       bb3:
+; CHECK-NEXT:    br label [[BB6]]
+; CHECK:       bb6:
 ; CHECK-NEXT:    ret void
 ;
 entry:

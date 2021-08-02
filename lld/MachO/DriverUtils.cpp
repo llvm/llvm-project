@@ -280,7 +280,8 @@ StringRef macho::rerootPath(StringRef path) {
 Optional<InputFile *> macho::loadArchiveMember(MemoryBufferRef mb,
                                                uint32_t modTime,
                                                StringRef archiveName,
-                                               bool objCOnly) {
+                                               bool objCOnly,
+                                               uint64_t offsetInArchive) {
   if (config->zeroModTime)
     modTime = 0;
 
@@ -291,7 +292,7 @@ Optional<InputFile *> macho::loadArchiveMember(MemoryBufferRef mb,
     return None;
   case file_magic::bitcode:
     if (!objCOnly || check(isBitcodeContainingObjCCategory(mb)))
-      return make<BitcodeFile>(mb);
+      return make<BitcodeFile>(mb, archiveName, offsetInArchive);
     return None;
   default:
     error(archiveName + ": archive member " + mb.getBufferIdentifier() +

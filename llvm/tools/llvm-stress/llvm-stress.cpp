@@ -52,16 +52,20 @@
 
 namespace llvm {
 
-static cl::opt<unsigned> SeedCL("seed",
-  cl::desc("Seed used for randomness"), cl::init(0));
+static cl::OptionCategory StressCategory("Stress Options");
 
-static cl::opt<unsigned> SizeCL("size",
-  cl::desc("The estimated size of the generated function (# of instrs)"),
-  cl::init(100));
+static cl::opt<unsigned> SeedCL("seed", cl::desc("Seed used for randomness"),
+                                cl::init(0), cl::cat(StressCategory));
 
-static cl::opt<std::string>
-OutputFilename("o", cl::desc("Override output filename"),
-               cl::value_desc("filename"));
+static cl::opt<unsigned> SizeCL(
+    "size",
+    cl::desc("The estimated size of the generated function (# of instrs)"),
+    cl::init(100), cl::cat(StressCategory));
+
+static cl::opt<std::string> OutputFilename("o",
+                                           cl::desc("Override output filename"),
+                                           cl::value_desc("filename"),
+                                           cl::cat(StressCategory));
 
 static LLVMContext Context;
 
@@ -738,6 +742,7 @@ int main(int argc, char **argv) {
   using namespace llvm;
 
   InitLLVM X(argc, argv);
+  cl::HideUnrelatedOptions({&StressCategory, &getColorCategory()});
   cl::ParseCommandLineOptions(argc, argv, "llvm codegen stress-tester\n");
 
   auto M = std::make_unique<Module>("/tmp/autogen.bc", Context);

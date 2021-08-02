@@ -107,6 +107,7 @@ macro(add_cuda_bc_library)
   set(cu_cmd ${CLANG_TOOL}
     -xc++
     -c
+    -mllvm -openmp-opt-disable-internalization
     -std=c++14
     -ffreestanding
     -target amdgcn-amd-amdhsa

@@ -10,9 +10,9 @@
 // package files).
 //
 //===----------------------------------------------------------------------===//
-#include "DWP.h"
-#include "DWPError.h"
-#include "DWPStringPool.h"
+#include "llvm/DWP/DWP.h"
+#include "llvm/DWP/DWPError.h"
+#include "llvm/DWP/DWPStringPool.h"
 #include "llvm/MC/MCAsmBackend.h"
 #include "llvm/MC/MCAsmInfo.h"
 #include "llvm/MC/MCCodeEmitter.h"

@@ -416,6 +416,9 @@
 # CHECK-BE: addeo. 2, 3, 4                  # encoding: [0x7c,0x43,0x25,0x15]
 # CHECK-LE: addeo. 2, 3, 4                  # encoding: [0x15,0x25,0x43,0x7c]
             addeo. 2, 3, 4
+# CHECK-BE: addex 2, 4, 5, 0                # encoding: [0x7c,0x44,0x29,0x54]
+# CHECK-LE: addex 2, 4, 5, 0                # encoding: [0x54,0x29,0x44,0x7c]
+            addex 2, 4, 5, 0
 # CHECK-BE: subfe 2, 3, 4                   # encoding: [0x7c,0x43,0x21,0x10]
 # CHECK-LE: subfe 2, 3, 4                   # encoding: [0x10,0x21,0x43,0x7c]
             subfe 2, 3, 4

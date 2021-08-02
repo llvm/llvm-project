@@ -4,7 +4,7 @@
 // RUN: %clang_cc1 %s -triple spir64-unknown-unknown -verify -fsyntax-only -cl-std=CLC++
 // RUN: %clang_cc1 %s -triple spir64-unknown-unknown -verify -fsyntax-only -cl-std=CL2.0 -cl-ext=-cl_khr_int64_base_atomics
 
-#if defined(__OPENCL_CPP_VERSION__) || __OPENCL_C_VERSION__ >= CL_VERSION_1_2
+#if defined(__OPENCL_CPP_VERSION__) || __OPENCL_C_VERSION__ >= CL_VERSION_2_0
 #define LANG_VER_OK
 #endif
 

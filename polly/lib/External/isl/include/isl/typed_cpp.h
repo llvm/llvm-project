@@ -7235,6 +7235,7 @@ struct pw_aff<Anonymous> : public isl::pw_aff {
   template <typename Domain2>
   inline typed::pw_multi_aff<Domain2> set_range_tuple(const std::string &id) const;
   inline typed::space<Anonymous> space() const;
+  inline typed::space<Anonymous> get_space() const = delete;
   inline typed::multi_pw_aff<Anonymous> sub(const typed::multi_pw_aff<Anonymous> &multi2) const;
   inline typed::multi_union_pw_aff<Anonymous> sub(const typed::multi_union_pw_aff<Anonymous> &multi2) const;
   inline typed::pw_aff<Anonymous> sub(const typed::pw_aff<Anonymous> &pwaff2) const;
@@ -7448,6 +7449,7 @@ struct pw_aff<Domain, Anonymous> : public isl::pw_aff {
   template <typename Range2>
   inline typed::pw_multi_aff<Domain, Range2> set_range_tuple(const std::string &id) const;
   inline typed::space<Domain, Anonymous> space() const;
+  inline typed::space<Domain, Anonymous> get_space() const = delete;
   inline typed::multi_pw_aff<Domain, Anonymous> sub(const typed::multi_pw_aff<Domain, Anonymous> &multi2) const;
   inline typed::multi_union_pw_aff<Domain, Anonymous> sub(const typed::multi_union_pw_aff<Domain, Anonymous> &multi2) const;
   inline typed::pw_aff<Domain, Anonymous> sub(const typed::pw_aff<Domain, Anonymous> &pwaff2) const;
@@ -7663,6 +7665,7 @@ struct pw_aff<pair<Domain2, Range2>, Anonymous> : public isl::pw_aff {
   template <typename Arg1>
   inline typed::pw_multi_aff<pair<Domain2, Range2>, Arg1> set_range_tuple(const std::string &id) const;
   inline typed::space<pair<Domain2, Range2>, Anonymous> space() const;
+  inline typed::space<pair<Domain2, Range2>, Anonymous> get_space() const = delete;
   inline typed::multi_pw_aff<pair<Domain2, Range2>, Anonymous> sub(const typed::multi_pw_aff<pair<Domain2, Range2>, Anonymous> &multi2) const;
   inline typed::multi_union_pw_aff<pair<Domain2, Range2>, Anonymous> sub(const typed::multi_union_pw_aff<pair<Domain2, Range2>, Anonymous> &multi2) const;
   inline typed::pw_aff<pair<Domain2, Range2>, Anonymous> sub(const typed::pw_aff<pair<Domain2, Range2>, Anonymous> &pwaff2) const;

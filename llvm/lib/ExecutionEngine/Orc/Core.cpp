@@ -1802,8 +1802,11 @@ void MaterializationTask::printDescription(raw_ostream &OS) {
 
 void MaterializationTask::run() { MU->materialize(std::move(MR)); }
 
-ExecutionSession::ExecutionSession(std::shared_ptr<SymbolStringPool> SSP)
-    : SSP(SSP ? std::move(SSP) : std::make_shared<SymbolStringPool>()) {}
+ExecutionSession::ExecutionSession(std::unique_ptr<ExecutorProcessControl> EPC)
+    : EPC(std::move(EPC)) {
+  // Associated EPC and this.
+  this->EPC->ES = this;
+}
 
 Error ExecutionSession::endSession() {
   LLVM_DEBUG(dbgs() << "Ending ExecutionSession " << this << "\n");
@@ -1818,6 +1821,9 @@ Error ExecutionSession::endSession() {
   Error Err = Error::success();
   for (auto &JD : JITDylibsToClose)
     Err = joinErrors(std::move(Err), JD->clear());
+
+  Err = joinErrors(std::move(Err), EPC->disconnect());
+
   return Err;
 }
 
@@ -2046,6 +2052,58 @@ Expected<JITEvaluatedSymbol>
 ExecutionSession::lookup(ArrayRef<JITDylib *> SearchOrder, StringRef Name,
                          SymbolState RequiredState) {
   return lookup(SearchOrder, intern(Name), RequiredState);
+}
+
+Error ExecutionSession::registerJITDispatchHandlers(
+    JITDylib &JD, JITDispatchHandlerAssociationMap WFs) {
+
+  auto TagAddrs = lookup({{&JD, JITDylibLookupFlags::MatchAllSymbols}},
+                         SymbolLookupSet::fromMapKeys(
+                             WFs, SymbolLookupFlags::WeaklyReferencedSymbol));
+  if (!TagAddrs)
+    return TagAddrs.takeError();
+
+  // Associate tag addresses with implementations.
+  std::lock_guard<std::mutex> Lock(JITDispatchHandlersMutex);
+  for (auto &KV : *TagAddrs) {
+    auto TagAddr = KV.second.getAddress();
+    if (JITDispatchHandlers.count(TagAddr))
+      return make_error<StringError>("Tag " + formatv("{0:x16}", TagAddr) +
+                                         " (for " + *KV.first +
+                                         ") already registered",
+                                     inconvertibleErrorCode());
+    auto I = WFs.find(KV.first);
+    assert(I != WFs.end() && I->second &&
+           "JITDispatchHandler implementation missing");
+    JITDispatchHandlers[KV.second.getAddress()] =
+        std::make_shared<JITDispatchHandlerFunction>(std::move(I->second));
+    LLVM_DEBUG({
+      dbgs() << "Associated function tag \"" << *KV.first << "\" ("
+             << formatv("{0:x}", KV.second.getAddress()) << ") with handler\n";
+    });
+  }
+  return Error::success();
+}
+
+void ExecutionSession::runJITDispatchHandler(
+    ExecutorProcessControl::SendResultFunction SendResult,
+    JITTargetAddress HandlerFnTagAddr, ArrayRef<char> ArgBuffer) {
+
+  std::shared_ptr<JITDispatchHandlerFunction> F;
+  {
+    std::lock_guard<std::mutex> Lock(JITDispatchHandlersMutex);
+    auto I = JITDispatchHandlers.find(HandlerFnTagAddr);
+    if (I != JITDispatchHandlers.end())
+      F = I->second;
+  }
+
+  if (F)
+    (*F)(std::move(SendResult), ArgBuffer.data(), ArgBuffer.size());
+  else
+    SendResult(shared::WrapperFunctionResult::createOutOfBandError(
+        ("No function registered for tag " +
+         formatv("{0:x16}", HandlerFnTagAddr))
+            .str()));
 }
 
 void ExecutionSession::dump(raw_ostream &OS) {

@@ -1,5 +1,6 @@
 # RUN: %PYTHON %s 2>&1 | FileCheck %s
 
+import ctypes
 import sys
 from mlir.ir import *
 from mlir.dialects import builtin
@@ -125,9 +126,10 @@ def transform(module, boilerplate):
   mod = Module.parse(
       str(module.operation.regions[0].blocks[0].operations[0].operation) +
       boilerplate)
-  pm = PassManager.parse("func(convert-linalg-to-loops, lower-affine, " +
-                         "convert-scf-to-std), convert-vector-to-llvm," +
-                         "convert-memref-to-llvm,convert-std-to-llvm")
+  pm = PassManager.parse(
+      "builtin.func(convert-linalg-to-loops, lower-affine, " +
+      "convert-scf-to-std), convert-vector-to-llvm," +
+      "convert-memref-to-llvm,convert-std-to-llvm")
   pm.run(mod)
   return mod
 

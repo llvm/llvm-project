@@ -91,7 +91,7 @@ for.end:
 ; Same as predicate_store except we use a pointer PHI to maintain the address
 ;
 ; CHECK: Found new scalar instruction:   %addr = phi i32* [ %a, %entry ], [ %addr.next, %for.inc ]
-; CHECK: Found new scalar instruction:   %addr.next = getelementptr inbounds i32, i32* %addr, i64 1
+; CHECK: Found scalar instruction:   %addr.next = getelementptr inbounds i32, i32* %addr, i64 1
 ; CHECK: Scalarizing and predicating: store i32 %tmp2, i32* %addr, align 4
 ; CHECK: Found an estimated cost of 0 for VF 2 For instruction:   %addr = phi i32* [ %a, %entry ], [ %addr.next, %for.inc ]
 ; CHECK: Found an estimated cost of 3 for VF 2 For instruction: store i32 %tmp2, i32* %addr, align 4

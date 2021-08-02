@@ -122,25 +122,25 @@ uint32_t get_workgroup_dim(uint32_t group_id, uint32_t grid_size,
 }
 } // namespace
 
-EXTERN int GetNumberOfBlocksInKernel() {
+EXTERN int __kmpc_get_hardware_num_blocks() {
   return get_grid_dim(__builtin_amdgcn_grid_size_x(),
                       __builtin_amdgcn_workgroup_size_x());
 }
 
-EXTERN int GetNumberOfThreadsInBlock() {
+EXTERN int __kmpc_get_hardware_num_threads_in_block() {
   return get_workgroup_dim(__builtin_amdgcn_workgroup_id_x(),
                            __builtin_amdgcn_grid_size_x(),
                            __builtin_amdgcn_workgroup_size_x());
 }
 
-EXTERN unsigned GetWarpId() { return GetThreadIdInBlock() / WARPSIZE; }
+EXTERN unsigned GetWarpId() { return __kmpc_get_hardware_thread_id_in_block() / WARPSIZE; }
 EXTERN unsigned GetWarpSize() { return WARPSIZE; }
 EXTERN unsigned GetLaneId() {
   return __builtin_amdgcn_mbcnt_hi(~0u, __builtin_amdgcn_mbcnt_lo(~0u, 0u));
 }
 
 EXTERN uint32_t __kmpc_amdgcn_gpu_num_threads() {
-  return GetNumberOfThreadsInBlock();
+  return __kmpc_get_hardware_num_threads_in_block();
 }
 
 // Atomics
@@ -212,7 +212,7 @@ EXTERN void __kmpc_impl_threadfence_system() {
 }
 
 // Calls to the AMDGCN layer (assuming 1D layout)
-EXTERN int GetThreadIdInBlock() { return __builtin_amdgcn_workitem_id_x(); }
+EXTERN int __kmpc_get_hardware_thread_id_in_block() { return __builtin_amdgcn_workitem_id_x(); }
 EXTERN int GetBlockIdInKernel() { return __builtin_amdgcn_workgroup_id_x(); }
 
 #pragma omp end declare target

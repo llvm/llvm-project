@@ -106,6 +106,7 @@ int __kmp_str_eqf(char const *lhs, char const *rhs);
 char *__kmp_str_format(char const *format, ...);
 void __kmp_str_free(char **str);
 int __kmp_str_match(char const *target, int len, char const *data);
+bool __kmp_str_contains(char const *target, int len, char const *data);
 int __kmp_str_match_false(char const *data);
 int __kmp_str_match_true(char const *data);
 void __kmp_str_replace(char *str, char search_for, char replace_with);

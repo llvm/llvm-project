@@ -1490,6 +1490,7 @@ public:
   inline isl::checked::map_list map_list() const;
   inline isl::checked::multi_pw_aff max_multi_pw_aff() const;
   inline isl::checked::multi_pw_aff min_multi_pw_aff() const;
+  inline class size n_basic_map() const;
   inline isl::checked::basic_map polyhedral_hull() const;
   inline isl::checked::map preimage_domain(const isl::checked::multi_aff &ma) const;
   inline isl::checked::map preimage_domain(const isl::checked::multi_pw_aff &mpa) const;
@@ -1623,6 +1624,7 @@ public:
   inline isl::checked::val max_val(const isl::checked::aff &obj) const;
   inline isl::checked::multi_pw_aff min_multi_pw_aff() const;
   inline isl::checked::val min_val(const isl::checked::aff &obj) const;
+  inline class size n_basic_set() const;
   inline isl::checked::basic_set params() const;
   inline isl::checked::multi_val plain_multi_val_if_fixed() const;
   inline isl::checked::basic_set polyhedral_hull() const;
@@ -1908,6 +1910,7 @@ public:
   inline isl::checked::map_list map_list() const;
   inline isl::checked::multi_pw_aff max_multi_pw_aff() const;
   inline isl::checked::multi_pw_aff min_multi_pw_aff() const;
+  inline class size n_basic_map() const;
   inline isl::checked::basic_map polyhedral_hull() const;
   inline isl::checked::map preimage_domain(isl::checked::multi_aff ma) const;
   inline isl::checked::map preimage_domain(isl::checked::multi_pw_aff mpa) const;
@@ -2542,6 +2545,7 @@ public:
   inline isl::checked::val min_val(const isl::checked::aff &obj) const;
   inline isl::checked::multi_val multi_val() const;
   inline isl::checked::multi_val get_multi_val() const;
+  inline class size n_basic_set() const;
   inline isl::checked::basic_set params() const;
   inline isl::checked::multi_val plain_multi_val_if_fixed() const;
   inline isl::checked::basic_set polyhedral_hull() const;
@@ -2719,6 +2723,7 @@ public:
   inline isl::checked::pw_multi_aff set_range_tuple(const std::string &id) const;
   inline class size size() const;
   inline isl::checked::space space() const;
+  inline isl::checked::space get_space() const;
   inline isl::checked::multi_pw_aff sub(const isl::checked::multi_pw_aff &multi2) const;
   inline isl::checked::multi_union_pw_aff sub(const isl::checked::multi_union_pw_aff &multi2) const;
   inline isl::checked::pw_aff sub(isl::checked::pw_aff pwaff2) const;
@@ -3488,6 +3493,7 @@ public:
   inline isl::checked::val max_val(const isl::checked::aff &obj) const;
   inline isl::checked::multi_pw_aff min_multi_pw_aff() const;
   inline isl::checked::val min_val(const isl::checked::aff &obj) const;
+  inline class size n_basic_set() const;
   inline isl::checked::set params() const;
   inline isl::checked::multi_val plain_multi_val_if_fixed() const;
   inline isl::checked::multi_val get_plain_multi_val_if_fixed() const;
@@ -4993,7 +4999,7 @@ class size aff::size() const
 
 isl::checked::space aff::space() const
 {
-  return isl::checked::multi_aff(*this).space();
+  return isl::checked::pw_aff(*this).space();
 }
 
 isl::checked::aff aff::sub(isl::checked::aff aff2) const
@@ -7677,6 +7683,11 @@ isl::checked::multi_pw_aff basic_map::min_multi_pw_aff() const
   return isl::checked::map(*this).min_multi_pw_aff();
 }
 
+class size basic_map::n_basic_map() const
+{
+  return isl::checked::map(*this).n_basic_map();
+}
+
 isl::checked::basic_map basic_map::polyhedral_hull() const
 {
   return isl::checked::map(*this).polyhedral_hull();
@@ -8289,6 +8300,11 @@ isl::checked::multi_pw_aff basic_set::min_multi_pw_aff() const
 isl::checked::val basic_set::min_val(const isl::checked::aff &obj) const
 {
   return isl::checked::set(*this).min_val(obj);
+}
+
+class size basic_set::n_basic_set() const
+{
+  return isl::checked::set(*this).n_basic_set();
 }
 
 isl::checked::basic_set basic_set::params() const
@@ -9531,6 +9547,12 @@ isl::checked::multi_pw_aff map::max_multi_pw_aff() const
 isl::checked::multi_pw_aff map::min_multi_pw_aff() const
 {
   auto res = isl_map_min_multi_pw_aff(copy());
+  return manage(res);
+}
+
+class size map::n_basic_map() const
+{
+  auto res = isl_map_n_basic_map(get());
   return manage(res);
 }
 
@@ -12439,6 +12461,11 @@ isl::checked::multi_val point::get_multi_val() const
   return multi_val();
 }
 
+class size point::n_basic_set() const
+{
+  return isl::checked::basic_set(*this).n_basic_set();
+}
+
 isl::checked::basic_set point::params() const
 {
   return isl::checked::basic_set(*this).params();
@@ -13290,7 +13317,13 @@ class size pw_aff::size() const
 
 isl::checked::space pw_aff::space() const
 {
-  return isl::checked::union_pw_aff(*this).space();
+  auto res = isl_pw_aff_get_space(get());
+  return manage(res);
+}
+
+isl::checked::space pw_aff::get_space() const
+{
+  return space();
 }
 
 isl::checked::multi_pw_aff pw_aff::sub(const isl::checked::multi_pw_aff &multi2) const
@@ -16214,6 +16247,12 @@ isl::checked::multi_pw_aff set::min_multi_pw_aff() const
 isl::checked::val set::min_val(const isl::checked::aff &obj) const
 {
   auto res = isl_set_min_val(get(), obj.get());
+  return manage(res);
+}
+
+class size set::n_basic_set() const
+{
+  auto res = isl_set_n_basic_set(get());
   return manage(res);
 }
 

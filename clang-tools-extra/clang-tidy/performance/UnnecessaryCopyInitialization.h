@@ -43,6 +43,7 @@ private:
                               const Stmt &BlockStmt, const DeclStmt &Stmt,
                               bool IssueFix, ASTContext &Context);
   const std::vector<std::string> AllowedTypes;
+  const std::vector<std::string> ExcludedContainerTypes;
 };
 
 } // namespace performance

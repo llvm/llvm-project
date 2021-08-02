@@ -142,6 +142,9 @@ int32_t __tgt_rtl_synchronize(int32_t ID, __tgt_async_info *AsyncInfo);
 // Set plugin's internal information flag externally.
 void __tgt_rtl_set_info_flag(uint32_t);
 
+// Print the device information
+void __tgt_rtl_print_device_info(int32_t ID);
+
 #ifdef __cplusplus
 }
 #endif

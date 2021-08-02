@@ -12,8 +12,8 @@
 void f0(int) __attribute__((availability(maccatalyst,introduced=2.0,deprecated=9.1))); // expected-note {{'f0' has been explicitly marked deprecated here}}
 void f1(int) __attribute__((availability(maccatalyst,introduced=2.1)));
 void f2(int) __attribute__((availability(macCatalyst,introduced=2.0,deprecated=9.0))); // expected-note {{'f2' has been explicitly marked deprecated here}}
-void f3(int) __attribute__((availability(macosx,introduced=10.1),  availability(maccatalyst,introduced=3.0, obsoleted=9.0))); // expected-note {{'f3' has been explicitly marked unavailable here}}
-void f32(int) __attribute__((availability(macosx,introduced=10.1,deprecated=10.3,obsoleted=10.5),  availability(maccatalyst,introduced=3.0, obsoleted=9.0))); // expected-note {{'f32' has been explicitly marked unavailable here}}
+void f3(int) __attribute__((availability(maccatalyst,introduced=3.0, obsoleted=9.0))); // expected-note {{'f3' has been explicitly marked unavailable here}}
+void f32(int) __attribute__((availability(maccatalyst,introduced=3.0, obsoleted=9.0))); // expected-note {{'f32' has been explicitly marked unavailable here}}
 
 
 void f5(int) __attribute__((availability(maccatalyst,introduced=2.0))) __attribute__((availability(maccatalyst,deprecated=9.0))); // expected-note {{'f5' has been explicitly marked deprecated here}}

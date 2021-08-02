@@ -1859,17 +1859,6 @@ public:
     }
   }
 
-  PseudoProbeAttributes getPseudoProbeAttribute() const {
-    assert(isPseudoProbe() && "Must be a pseudo probe instruction");
-    return (PseudoProbeAttributes)getOperand(3).getImm();
-  }
-
-  void addPseudoProbeAttribute(PseudoProbeAttributes Attr) {
-    assert(isPseudoProbe() && "Must be a pseudo probe instruction");
-    MachineOperand &AttrOperand = getOperand(3);
-    AttrOperand.setImm(AttrOperand.getImm() | (uint32_t)Attr);
-  }
-
 private:
   /// If this instruction is embedded into a MachineFunction, return the
   /// MachineRegisterInfo object for the current function, otherwise

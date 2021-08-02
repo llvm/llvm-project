@@ -912,6 +912,56 @@ define void @store_lane_i32_a8(<4 x i32> %v, i32* %p) {
   ret void
 }
 
+define <4 x i32> @load_zero_i32_a1(i32* %p) {
+; CHECK-LABEL: load_zero_i32_a1:
+; CHECK:         .functype load_zero_i32_a1 (i32) -> (v128)
+; CHECK-NEXT:  # %bb.0:
+; CHECK-NEXT:    local.get 0
+; CHECK-NEXT:    v128.load32_zero 0:p2align=0
+; CHECK-NEXT:    # fallthrough-return
+  %x = load i32, i32* %p, align 1
+  %v = insertelement <4 x i32> zeroinitializer, i32 %x, i32 0
+  ret <4 x i32> %v
+}
+
+define <4 x i32> @load_zero_i32_a2(i32* %p) {
+; CHECK-LABEL: load_zero_i32_a2:
+; CHECK:         .functype load_zero_i32_a2 (i32) -> (v128)
+; CHECK-NEXT:  # %bb.0:
+; CHECK-NEXT:    local.get 0
+; CHECK-NEXT:    v128.load32_zero 0:p2align=1
+; CHECK-NEXT:    # fallthrough-return
+  %x = load i32, i32* %p, align 2
+  %v = insertelement <4 x i32> zeroinitializer, i32 %x, i32 0
+  ret <4 x i32> %v
+}
+
+; 4 is the default alignment for v128.load32_zero so no attribute is needed.
+define <4 x i32> @load_zero_i32_a4(i32* %p) {
+; CHECK-LABEL: load_zero_i32_a4:
+; CHECK:         .functype load_zero_i32_a4 (i32) -> (v128)
+; CHECK-NEXT:  # %bb.0:
+; CHECK-NEXT:    local.get 0
+; CHECK-NEXT:    v128.load32_zero 0
+; CHECK-NEXT:    # fallthrough-return
+  %x = load i32, i32* %p, align 4
+  %v = insertelement <4 x i32> zeroinitializer, i32 %x, i32 0
+  ret <4 x i32> %v
+}
+
+; 8 is greater than the default alignment so it is ignored.
+define <4 x i32> @load_zero_i32_a8(i32* %p) {
+; CHECK-LABEL: load_zero_i32_a8:
+; CHECK:         .functype load_zero_i32_a8 (i32) -> (v128)
+; CHECK-NEXT:  # %bb.0:
+; CHECK-NEXT:    local.get 0
+; CHECK-NEXT:    v128.load32_zero 0
+; CHECK-NEXT:    # fallthrough-return
+  %x = load i32, i32* %p, align 8
+  %v = insertelement <4 x i32> zeroinitializer, i32 %x, i32 0
+  ret <4 x i32> %v
+}
+
 ; ==============================================================================
 ; 2 x i64
 ; ==============================================================================
@@ -1211,6 +1261,68 @@ define void @store_lane_i64_a16(<2 x i64> %v, i64* %p) {
   %x = extractelement <2 x i64> %v, i32 0
   store i64 %x, i64* %p, align 16
   ret void
+}
+
+define <2 x i64> @load_zero_i64_a1(i64* %p) {
+; CHECK-LABEL: load_zero_i64_a1:
+; CHECK:         .functype load_zero_i64_a1 (i32) -> (v128)
+; CHECK-NEXT:  # %bb.0:
+; CHECK-NEXT:    local.get 0
+; CHECK-NEXT:    v128.load64_zero 0:p2align=0
+; CHECK-NEXT:    # fallthrough-return
+  %x = load i64, i64* %p, align 1
+  %v = insertelement <2 x i64> zeroinitializer, i64 %x, i32 0
+  ret <2 x i64> %v
+}
+
+define <2 x i64> @load_zero_i64_a2(i64* %p) {
+; CHECK-LABEL: load_zero_i64_a2:
+; CHECK:         .functype load_zero_i64_a2 (i32) -> (v128)
+; CHECK-NEXT:  # %bb.0:
+; CHECK-NEXT:    local.get 0
+; CHECK-NEXT:    v128.load64_zero 0:p2align=1
+; CHECK-NEXT:    # fallthrough-return
+  %x = load i64, i64* %p, align 2
+  %v = insertelement <2 x i64> zeroinitializer, i64 %x, i32 0
+  ret <2 x i64> %v
+}
+
+define <2 x i64> @load_zero_i64_a4(i64* %p) {
+; CHECK-LABEL: load_zero_i64_a4:
+; CHECK:         .functype load_zero_i64_a4 (i32) -> (v128)
+; CHECK-NEXT:  # %bb.0:
+; CHECK-NEXT:    local.get 0
+; CHECK-NEXT:    v128.load64_zero 0:p2align=2
+; CHECK-NEXT:    # fallthrough-return
+  %x = load i64, i64* %p, align 4
+  %v = insertelement <2 x i64> zeroinitializer, i64 %x, i32 0
+  ret <2 x i64> %v
+}
+
+; 8 is the default alignment for v128.load64_zero so no attribute is needed.
+define <2 x i64> @load_zero_i64_a8(i64* %p) {
+; CHECK-LABEL: load_zero_i64_a8:
+; CHECK:         .functype load_zero_i64_a8 (i32) -> (v128)
+; CHECK-NEXT:  # %bb.0:
+; CHECK-NEXT:    local.get 0
+; CHECK-NEXT:    v128.load64_zero 0
+; CHECK-NEXT:    # fallthrough-return
+  %x = load i64, i64* %p, align 8
+  %v = insertelement <2 x i64> zeroinitializer, i64 %x, i32 0
+  ret <2 x i64> %v
+}
+
+; 16 is greater than the default alignment so it is ignored.
+define <2 x i64> @load_zero_i64_a16(i64* %p) {
+; CHECK-LABEL: load_zero_i64_a16:
+; CHECK:         .functype load_zero_i64_a16 (i32) -> (v128)
+; CHECK-NEXT:  # %bb.0:
+; CHECK-NEXT:    local.get 0
+; CHECK-NEXT:    v128.load64_zero 0
+; CHECK-NEXT:    # fallthrough-return
+  %x = load i64, i64* %p, align 16
+  %v = insertelement <2 x i64> zeroinitializer, i64 %x, i32 0
+  ret <2 x i64> %v
 }
 
 ; ==============================================================================

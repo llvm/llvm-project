@@ -28,11 +28,6 @@ using ::testing::Property;
 namespace llvm {
 namespace exegesis {
 
-bool operator==(const BenchmarkMeasure &A, const BenchmarkMeasure &B) {
-  return std::tie(A.Key, A.PerInstructionValue, A.PerSnippetValue) ==
-         std::tie(B.Key, B.PerInstructionValue, B.PerSnippetValue);
-}
-
 static std::string Dump(const MCInst &McInst) {
   std::string Buffer;
   raw_string_ostream OS(Buffer);

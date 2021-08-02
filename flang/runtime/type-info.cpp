@@ -271,7 +271,8 @@ FILE *Component::Dump(FILE *f) const {
   std::fprintf(f, " category %d  kind %d  rank %d  offset 0x%zx\n", category_,
       kind_, rank_, static_cast<std::size_t>(offset_));
   if (initialization_) {
-    std::fprintf(f, " initialization @ 0x%p:\n", initialization_);
+    std::fprintf(f, " initialization @ 0x%p:\n",
+        reinterpret_cast<const void *>(initialization_));
     for (int j{0}; j < 128; j += sizeof(std::uint64_t)) {
       std::fprintf(f, " [%3d] 0x%016jx\n", j,
           static_cast<std::uintmax_t>(

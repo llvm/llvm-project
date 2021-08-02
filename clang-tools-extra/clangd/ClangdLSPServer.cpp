@@ -619,9 +619,10 @@ void ClangdLSPServer::onInitialize(const InitializeParams &Params,
 
   llvm::json::Object Result{
       {{"serverInfo",
-        llvm::json::Object{{"name", "clangd"},
-                           {"version", llvm::formatv("{0} {1}", versionString(),
-                                                     featureString())}}},
+        llvm::json::Object{
+            {"name", "clangd"},
+            {"version", llvm::formatv("{0} {1} {2}", versionString(),
+                                      featureString(), platformString())}}},
        {"capabilities", std::move(ServerCaps)}}};
   if (Opts.Encoding)
     Result["offsetEncoding"] = *Opts.Encoding;

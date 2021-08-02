@@ -468,6 +468,9 @@ public:
   lldb::DataBufferSP ReadMemoryTags(lldb::addr_t addr, size_t len,
                                     int32_t type);
 
+  Status WriteMemoryTags(lldb::addr_t addr, size_t len, int32_t type,
+                         const std::vector<uint8_t> &tags);
+
   /// Use qOffsets to query the offset used when relocating the target
   /// executable. If successful, the returned structure will contain at least
   /// one value in the offsets field.

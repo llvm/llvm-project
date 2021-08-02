@@ -4,7 +4,6 @@ type ^
   ..\rtl\tsan_clock.cpp ^
   ..\rtl\tsan_flags.cpp ^
   ..\rtl\tsan_md5.cpp ^
-  ..\rtl\tsan_mutex.cpp ^
   ..\rtl\tsan_report.cpp ^
   ..\rtl\tsan_rtl.cpp ^
   ..\rtl\tsan_rtl_mutex.cpp ^
@@ -59,4 +58,5 @@ gcc ^
   -DSANITIZER_DEBUG=0 ^
   -O3 ^
   -fomit-frame-pointer ^
+  -msse4.2 ^
   -std=c++14

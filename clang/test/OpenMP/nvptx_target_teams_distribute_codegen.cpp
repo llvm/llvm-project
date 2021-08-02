@@ -657,7 +657,7 @@ int bar(int n){
 // CHECK1-NEXT:    br label [[OMP_LOOP_EXIT:%.*]]
 // CHECK1:       omp.loop.exit:
 // CHECK1-NEXT:    call void @__kmpc_for_static_fini(%struct.ident_t* @[[GLOB2]], i32 [[TMP1]])
-// CHECK1-NEXT:    call void @__kmpc_free_shared(i8* [[I]])
+// CHECK1-NEXT:    call void @__kmpc_free_shared(i8* [[I]], i64 4)
 // CHECK1-NEXT:    ret void
 //
 //
@@ -779,7 +779,7 @@ int bar(int n){
 // CHECK2-NEXT:    br label [[OMP_LOOP_EXIT:%.*]]
 // CHECK2:       omp.loop.exit:
 // CHECK2-NEXT:    call void @__kmpc_for_static_fini(%struct.ident_t* @[[GLOB2]], i32 [[TMP1]])
-// CHECK2-NEXT:    call void @__kmpc_free_shared(i8* [[I]])
+// CHECK2-NEXT:    call void @__kmpc_free_shared(i8* [[I]], i32 4)
 // CHECK2-NEXT:    ret void
 //
 //
@@ -901,7 +901,7 @@ int bar(int n){
 // CHECK3-NEXT:    br label [[OMP_LOOP_EXIT:%.*]]
 // CHECK3:       omp.loop.exit:
 // CHECK3-NEXT:    call void @__kmpc_for_static_fini(%struct.ident_t* @[[GLOB2]], i32 [[TMP1]])
-// CHECK3-NEXT:    call void @__kmpc_free_shared(i8* [[I]])
+// CHECK3-NEXT:    call void @__kmpc_free_shared(i8* [[I]], i32 4)
 // CHECK3-NEXT:    ret void
 //
 //

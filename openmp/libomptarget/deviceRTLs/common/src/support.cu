@@ -53,7 +53,7 @@ bool isRuntimeInitialized() {
 //
 // Called in Generic Execution Mode only.
 int GetMasterThreadID() {
-  return (GetNumberOfThreadsInBlock() - 1) & ~(WARPSIZE - 1);
+  return (__kmpc_get_hardware_num_threads_in_block() - 1) & ~(WARPSIZE - 1);
 }
 
 // The last warp is reserved for the master; other warps are workers.
@@ -70,7 +70,7 @@ int GetNumberOfWorkersInTeam() { return GetMasterThreadID(); }
 int GetLogicalThreadIdInBlock() {
   // Implemented using control flow (predication) instead of with a modulo
   // operation.
-  int tid = GetThreadIdInBlock();
+  int tid = __kmpc_get_hardware_thread_id_in_block();
   if (__kmpc_is_generic_main_thread(tid))
     return 0;
   else
@@ -84,7 +84,7 @@ int GetLogicalThreadIdInBlock() {
 ////////////////////////////////////////////////////////////////////////////////
 
 int GetOmpThreadId() {
-  int tid = GetThreadIdInBlock();
+  int tid = __kmpc_get_hardware_thread_id_in_block();
   if (__kmpc_is_generic_main_thread(tid))
     return 0;
   // omp_thread_num
@@ -109,7 +109,7 @@ int GetNumberOfOmpThreads(bool isSPMDExecutionMode) {
   if (Level != OMP_ACTIVE_PARALLEL_LEVEL + 1) {
     rc = 1;
   } else if (isSPMDExecutionMode) {
-    rc = GetNumberOfThreadsInBlock();
+    rc = __kmpc_get_hardware_num_threads_in_block();
   } else {
     rc = threadsInTeam;
   }
@@ -127,7 +127,7 @@ int GetOmpTeamId() {
 
 int GetNumberOfOmpTeams() {
   // omp_num_teams
-  return GetNumberOfBlocksInKernel(); // assume 1 block per team
+  return __kmpc_get_hardware_num_blocks(); // assume 1 block per team
 }
 
 ////////////////////////////////////////////////////////////////////////////////
@@ -169,7 +169,7 @@ void DecParallelLevel(bool ActiveParallel, __kmpc_impl_lanemask_t Mask) {
 int GetNumberOfProcsInDevice(bool isSPMDExecutionMode) {
   if (!isSPMDExecutionMode)
     return GetNumberOfWorkersInTeam();
-  return GetNumberOfThreadsInBlock();
+  return __kmpc_get_hardware_num_threads_in_block();
 }
 
 int GetNumberOfProcsInTeam(bool isSPMDExecutionMode) {

@@ -16,11 +16,11 @@
 #include <__iterator/concepts.h>
 #include <__iterator/incrementable_traits.h>
 #include <__iterator/iterator_traits.h>
+#include <__utility/move.h>
 #include <cstdlib>
 #include <concepts>
 #include <limits>
 #include <type_traits>
-#include <utility>
 
 #if !defined(_LIBCPP_HAS_NO_PRAGMA_SYSTEM_HEADER)
 #pragma GCC system_header
@@ -32,15 +32,15 @@ _LIBCPP_PUSH_MACROS
 _LIBCPP_BEGIN_NAMESPACE_STD
 
 template <class _InputIter>
-inline _LIBCPP_INLINE_VISIBILITY _LIBCPP_CONSTEXPR_AFTER_CXX14 void
-__advance(_InputIter& __i, typename iterator_traits<_InputIter>::difference_type __n, input_iterator_tag) {
+_LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_AFTER_CXX14
+void __advance(_InputIter& __i, typename iterator_traits<_InputIter>::difference_type __n, input_iterator_tag) {
   for (; __n > 0; --__n)
     ++__i;
 }
 
 template <class _BiDirIter>
-inline _LIBCPP_INLINE_VISIBILITY _LIBCPP_CONSTEXPR_AFTER_CXX14 void
-__advance(_BiDirIter& __i, typename iterator_traits<_BiDirIter>::difference_type __n, bidirectional_iterator_tag) {
+_LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_AFTER_CXX14
+void __advance(_BiDirIter& __i, typename iterator_traits<_BiDirIter>::difference_type __n, bidirectional_iterator_tag) {
   if (__n >= 0)
     for (; __n > 0; --__n)
       ++__i;
@@ -50,17 +50,19 @@ __advance(_BiDirIter& __i, typename iterator_traits<_BiDirIter>::difference_type
 }
 
 template <class _RandIter>
-inline _LIBCPP_INLINE_VISIBILITY _LIBCPP_CONSTEXPR_AFTER_CXX14 void
-__advance(_RandIter& __i, typename iterator_traits<_RandIter>::difference_type __n, random_access_iterator_tag) {
+_LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_AFTER_CXX14
+void __advance(_RandIter& __i, typename iterator_traits<_RandIter>::difference_type __n, random_access_iterator_tag) {
   __i += __n;
 }
 
 template <
     class _InputIter, class _Distance,
-    class = typename enable_if<is_integral<decltype(_VSTD::__convert_to_integral(declval<_Distance>()))>::value>::type>
-inline _LIBCPP_INLINE_VISIBILITY _LIBCPP_CONSTEXPR_AFTER_CXX14 void advance(_InputIter& __i, _Distance __orig_n) {
-  typedef decltype(_VSTD::__convert_to_integral(__orig_n)) _IntegralSize;
-  _IntegralSize __n = __orig_n;
+    class _IntegralDistance = decltype(_VSTD::__convert_to_integral(declval<_Distance>())),
+    class = _EnableIf<is_integral<_IntegralDistance>::value> >
+_LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_AFTER_CXX14
+void advance(_InputIter& __i, _Distance __orig_n) {
+  typedef typename iterator_traits<_InputIter>::difference_type _Difference;
+  _Difference __n = static_cast<_Difference>(_VSTD::__convert_to_integral(__orig_n));
   _LIBCPP_ASSERT(__n >= 0 || __is_cpp17_bidirectional_iterator<_InputIter>::value,
                  "Attempt to advance(it, n) with negative n on a non-bidirectional iterator");
   _VSTD::__advance(__i, __n, typename iterator_traits<_InputIter>::iterator_category());
@@ -70,12 +72,12 @@ inline _LIBCPP_INLINE_VISIBILITY _LIBCPP_CONSTEXPR_AFTER_CXX14 void advance(_Inp
 
 namespace ranges {
 // [range.iter.op.advance]
-struct __advance_fn final : __function_like {
+struct __advance_fn final : private __function_like {
 private:
   template <class _Tp>
   _LIBCPP_HIDE_FROM_ABI
-  static constexpr _Tp __abs(_Tp __n) noexcept {
-    return __n < 0 ? -__n : __n;
+  static constexpr _Tp __magnitude_geq(_Tp __a, _Tp __b) noexcept {
+    return __a < 0 ? (__a <= __b) : (__a >= __b);
   }
 
   template <class _Ip>
@@ -129,7 +131,7 @@ public:
   constexpr void operator()(_Ip& __i, _Sp __bound) const {
     // If `I` and `S` model `assignable_from<I&, S>`, equivalent to `i = std::move(bound)`.
     if constexpr (assignable_from<_Ip&, _Sp>) {
-      __i = std::move(__bound);
+      __i = _VSTD::move(__bound);
     }
     // Otherwise, if `S` and `I` model `sized_sentinel_for<S, I>`, equivalent to `ranges::advance(i, bound - i)`.
     else if constexpr (sized_sentinel_for<_Sp, _Ip>) {
@@ -151,12 +153,12 @@ public:
   template <input_or_output_iterator _Ip, sentinel_for<_Ip> _Sp>
   _LIBCPP_HIDE_FROM_ABI
   constexpr iter_difference_t<_Ip> operator()(_Ip& __i, iter_difference_t<_Ip> __n, _Sp __bound) const {
-    _LIBCPP_ASSERT(__n >= 0 || (bidirectional_iterator<_Ip> && same_as<_Ip, _Sp>),
+    _LIBCPP_ASSERT((__n >= 0) || (bidirectional_iterator<_Ip> && same_as<_Ip, _Sp>),
                    "If `n < 0`, then `bidirectional_iterator<I> && same_as<I, S>` must be true.");
     // If `S` and `I` model `sized_sentinel_for<S, I>`:
     if constexpr (sized_sentinel_for<_Sp, _Ip>) {
       // If |n| >= |bound - i|, equivalent to `ranges::advance(i, bound)`.
-      if (const auto __M = __bound - __i; __abs(__n) >= __abs(__M)) {
+      if (const auto __M = __bound - __i; __magnitude_geq(__n, __M)) {
         (*this)(__i, __bound);
         return __n - __M;
       }

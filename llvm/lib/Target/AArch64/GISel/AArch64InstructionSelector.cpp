@@ -2145,17 +2145,8 @@ bool AArch64InstructionSelector::earlySelect(MachineInstr &I) {
     I.eraseFromParent();
     return true;
   }
-  case TargetOpcode::G_BR: {
-    // If the branch jumps to the fallthrough block, don't bother emitting it.
-    // Only do this for -O0 for a good code size improvement, because when
-    // optimizations are enabled we want to leave this choice to
-    // MachineBlockPlacement.
-    bool EnableOpt = MF.getTarget().getOptLevel() != CodeGenOpt::None;
-    if (EnableOpt || !MBB.isLayoutSuccessor(I.getOperand(0).getMBB()))
-      return false;
-    I.eraseFromParent();
-    return true;
-  }
+  case TargetOpcode::G_BR:
+    return false;
   case TargetOpcode::G_SHL:
     return earlySelectSHL(I, MRI);
   case TargetOpcode::G_CONSTANT: {
@@ -5042,6 +5033,7 @@ bool AArch64InstructionSelector::selectIntrinsicWithSideEffects(
         {I.getOperand(0).getReg(), I.getOperand(1).getReg()},
         {I.getOperand(3)});
     NewI.cloneMemRefs(I);
+    constrainSelectedInstRegOperands(*NewI, TII, TRI, RBI);
     break;
   }
   case Intrinsic::trap:
@@ -5079,7 +5071,7 @@ bool AArch64InstructionSelector::selectIntrinsicWithSideEffects(
       Opc = AArch64::ST2Twov4s;
     else if (Ty == LLT::fixed_vector(2, S64) || Ty == LLT::fixed_vector(2, P0))
       Opc = AArch64::ST2Twov2d;
-    else if (Ty == S64 | Ty == P0)
+    else if (Ty == S64 || Ty == P0)
       Opc = AArch64::ST1Twov1d;
     else
       llvm_unreachable("Unexpected type for st2!");

@@ -16,6 +16,7 @@
 #include <__iterator/advance.h>
 #include <__ranges/access.h>
 #include <__ranges/concepts.h>
+#include <__ranges/dangling.h>
 #include <__ranges/enable_borrowed_range.h>
 #include <__ranges/size.h>
 #include <__ranges/view_interface.h>
@@ -248,6 +249,9 @@ namespace ranges {
 
   template<class _Ip, class _Sp, subrange_kind _Kp>
   inline constexpr bool enable_borrowed_range<subrange<_Ip, _Sp, _Kp>> = true;
+
+  template<range _Rp>
+  using borrowed_subrange_t = _If<borrowed_range<_Rp>, subrange<iterator_t<_Rp> >, dangling>;
 } // namespace ranges
 
 using ranges::get;

@@ -232,20 +232,18 @@ three:
 
 define i8 @test7(i8 %a) optsize {
 ; CHECK-LABEL: @test7(
-; CHECK-NEXT:    [[TMP1:%.*]] = sub i8 [[A:%.*]], -36
-; CHECK-NEXT:    [[TMP2:%.*]] = lshr i8 [[TMP1]], 2
-; CHECK-NEXT:    [[TMP3:%.*]] = shl i8 [[TMP1]], 6
-; CHECK-NEXT:    [[TMP4:%.*]] = or i8 [[TMP2]], [[TMP3]]
-; CHECK-NEXT:    [[TMP5:%.*]] = icmp ult i8 [[TMP4]], 4
-; CHECK-NEXT:    br i1 [[TMP5]], label [[SWITCH_LOOKUP:%.*]], label [[COMMON_RET:%.*]]
-; CHECK:       switch.lookup:
-; CHECK-NEXT:    [[SWITCH_CAST:%.*]] = zext i8 [[TMP4]] to i32
+; CHECK-NEXT:  common.ret:
+; CHECK-NEXT:    [[TMP0:%.*]] = sub i8 [[A:%.*]], -36
+; CHECK-NEXT:    [[TMP1:%.*]] = lshr i8 [[TMP0]], 2
+; CHECK-NEXT:    [[TMP2:%.*]] = shl i8 [[TMP0]], 6
+; CHECK-NEXT:    [[TMP3:%.*]] = or i8 [[TMP1]], [[TMP2]]
+; CHECK-NEXT:    [[TMP4:%.*]] = icmp ult i8 [[TMP3]], 4
+; CHECK-NEXT:    [[SWITCH_CAST:%.*]] = zext i8 [[TMP3]] to i32
 ; CHECK-NEXT:    [[SWITCH_SHIFTAMT:%.*]] = mul i32 [[SWITCH_CAST]], 8
 ; CHECK-NEXT:    [[SWITCH_DOWNSHIFT:%.*]] = lshr i32 -943228976, [[SWITCH_SHIFTAMT]]
 ; CHECK-NEXT:    [[SWITCH_MASKED:%.*]] = trunc i32 [[SWITCH_DOWNSHIFT]] to i8
-; CHECK-NEXT:    ret i8 [[SWITCH_MASKED]]
-; CHECK:       common.ret:
-; CHECK-NEXT:    ret i8 -93
+; CHECK-NEXT:    [[COMMON_RET_OP:%.*]] = select i1 [[TMP4]], i8 [[SWITCH_MASKED]], i8 -93
+; CHECK-NEXT:    ret i8 [[COMMON_RET_OP]]
 ;
   switch i8 %a, label %def [
   i8 220, label %one

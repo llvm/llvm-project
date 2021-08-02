@@ -46,36 +46,6 @@ extern "C" {
 }
 #endif //__cplusplus
 
-typedef __SIZE_TYPE__ __hip_size_t;
-
-#ifdef __cplusplus
-extern "C" {
-#endif //__cplusplus
-
-#if __HIP_ENABLE_DEVICE_MALLOC__
-__device__ void *__hip_malloc(__hip_size_t __size);
-__device__ void *__hip_free(void *__ptr);
-__attribute__((weak)) inline __device__ void *malloc(__hip_size_t __size) {
-  return __hip_malloc(__size);
-}
-__attribute__((weak)) inline __device__ void *free(void *__ptr) {
-  return __hip_free(__ptr);
-}
-#else
-__attribute__((weak)) inline __device__ void *malloc(__hip_size_t __size) {
-  __builtin_trap();
-  return nullptr;
-}
-__attribute__((weak)) inline __device__ void *free(void *__ptr) {
-  __builtin_trap();
-  return nullptr;
-}
-#endif
-
-#ifdef __cplusplus
-} // extern "C"
-#endif //__cplusplus
-
 #if !defined(__HIPCC_RTC__)
 #include <cmath>
 #include <cstdlib>
@@ -98,10 +68,39 @@ typedef __SIZE_TYPE__ size_t;
 #define INT_MAX __INTMAX_MAX__
 #endif // __HIPCC_RTC__
 
+typedef __SIZE_TYPE__ __hip_size_t;
+
+#ifdef __cplusplus
+extern "C" {
+#endif //__cplusplus
+
+#if __HIP_ENABLE_DEVICE_MALLOC__
+__device__ void *__hip_malloc(__hip_size_t __size);
+__device__ void *__hip_free(void *__ptr);
+__attribute__((weak)) inline __device__ void *malloc(__hip_size_t __size) {
+  return __hip_malloc(__size);
+}
+__attribute__((weak)) inline __device__ void *free(void *__ptr) {
+  return __hip_free(__ptr);
+}
+#else
+__attribute__((weak)) inline __device__ void *malloc(__hip_size_t __size) {
+  __builtin_trap();
+  return (void *)0;
+}
+__attribute__((weak)) inline __device__ void *free(void *__ptr) {
+  __builtin_trap();
+  return (void *)0;
+}
+#endif
+
+#ifdef __cplusplus
+} // extern "C"
+#endif //__cplusplus
+
 #include <__clang_hip_libdevice_declares.h>
 #include <__clang_hip_math.h>
 
-#if !_OPENMP || __HIP_ENABLE_CUDA_WRAPPER_FOR_OPENMP__
 #if defined(__HIPCC_RTC__)
 #include <__clang_hip_cmath.h>
 #else
@@ -112,7 +111,6 @@ typedef __SIZE_TYPE__ size_t;
 #include <complex>
 #include <new>
 #endif // __HIPCC_RTC__
-#endif // !_OPENMP || __HIP_ENABLE_CUDA_WRAPPER_FOR_OPENMP__
 
 #define __CLANG_HIP_RUNTIME_WRAPPER_INCLUDED__ 1
 #if defined(__HIPCC_RTC__)

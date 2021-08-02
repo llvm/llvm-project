@@ -948,6 +948,16 @@ static ConstantOp vectorizeConstant(ConstantOp constOp,
 
   auto vecTy = getVectorType(scalarTy, state.strategy);
   auto vecAttr = DenseElementsAttr::get(vecTy, constOp.getValue());
+
+  OpBuilder::InsertionGuard guard(state.builder);
+  Operation *parentOp = state.builder.getInsertionBlock()->getParentOp();
+  // Find the innermost vectorized ancestor loop to insert the vector constant.
+  while (parentOp && !state.vecLoopToVecDim.count(parentOp))
+    parentOp = parentOp->getParentOp();
+  assert(parentOp && state.vecLoopToVecDim.count(parentOp) &&
+         isa<AffineForOp>(parentOp) && "Expected a vectorized for op");
+  auto vecForOp = cast<AffineForOp>(parentOp);
+  state.builder.setInsertionPointToStart(vecForOp.getBody());
   auto newConstOp = state.builder.create<ConstantOp>(constOp.getLoc(), vecAttr);
 
   // Register vector replacement for future uses in the scope.

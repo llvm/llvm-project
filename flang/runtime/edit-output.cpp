@@ -440,21 +440,30 @@ bool ListDirectedDefaultCharacterOutput(IoStatementState &io,
   if (modes.delim) {
     ok = ok && list.EmitLeadingSpaceOrAdvance(io);
     // Value is delimited with ' or " marks, and interior
-    // instances of that character are doubled.  When split
-    // over multiple lines, delimit each lines' part.
+    // instances of that character are doubled.
     ok = ok && io.Emit(&modes.delim, 1);
+    auto EmitOne{[&](char ch) {
+      if (connection.NeedAdvance(1)) {
+        ok = ok && io.AdvanceRecord();
+      }
+      ok = ok && io.Emit(&ch, 1);
+    }};
     for (std::size_t j{0}; j < length; ++j) {
-      if (connection.NeedAdvance(2)) {
-        ok = ok && io.Emit(&modes.delim, 1) && io.AdvanceRecord() &&
-            io.Emit(&modes.delim, 1);
-      }
+      // Doubled delimiters must be put on the same record
+      // in order to be acceptable as list-directed or NAMELIST
+      // input; however, this requirement is not always possible
+      // when the records have a fixed length, as is the case with
+      // internal output.  The standard is silent on what should
+      // happen, and no two extant Fortran implementations do
+      // the same thing when tested with this case.
+      // This runtime splits the doubled delimiters across
+      // two records for lack of a better alternative.
       if (x[j] == modes.delim) {
-        ok = ok && io.EmitRepeated(modes.delim, 2);
-      } else {
-        ok = ok && io.Emit(&x[j], 1);
+        EmitOne(x[j]);
       }
+      EmitOne(x[j]);
     }
-    ok = ok && io.Emit(&modes.delim, 1);
+    EmitOne(modes.delim);
   } else {
     // Undelimited list-directed output
     ok = ok &&

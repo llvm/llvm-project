@@ -1,4 +1,4 @@
-# REQUIRES: x86, arm
+# REQUIRES: x86, aarch64
 # RUN: rm -rf %t; split-file %s %t
 # RUN: llvm-mc -filetype=obj -triple=x86_64-apple-darwin %t/foo.s -o %t/foo.o
 # RUN: llvm-mc -filetype=obj -triple=x86_64-apple-darwin --defsym PTR64=0 %t/test.s -o %t/test.o

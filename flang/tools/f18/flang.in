@@ -200,8 +200,6 @@ categorise_opts()
       [[ $opt == "-flarge-sizes" ]] ||
       [[ $opt == "-flogical-abbreviations" ]] ||
       [[ $opt == "-fno-color-diagnostics" ]] ||
-      [[ $opt == "-fopenacc" ]] ||
-      [[ $opt == "-fopenmp" ]] ||
       [[ $opt == "-fxor-operator" ]] ||
       [[ $opt == "-help" ]] ||
       [[ $opt == "-nocpp" ]] ||
@@ -210,8 +208,19 @@ categorise_opts()
       [[ $opt =~ ^-U.* ]] ||
       [[ $opt == "-Werror" ]]; then
       flang_opts+=($opt)
-    elif [[ $opt =~ -I.* ]] || [[ $opt =~ -J.* ]]; then
+    elif
+      # These options are not supported by `flang-new`. There is also no point
+      # in forwarding them to the host compiler as the output from
+      # `-fdebug-unparse` will always be in free form.
+      [[ $opt == "-Mfixed" ]] || [[ $opt == "-Mfree" ]]; then
+      :
+    elif
       # Options that are needed for both Flang and the external driver.
+      [[ $opt =~ -I.* ]] ||
+      [[ $opt =~ -J.* ]] ||
+      [[ $opt == "-fopenmp" ]] ||
+      [[ $opt == "-fopenacc" ]] ||
+      ; then
       flang_opts+=($opt)
       fc_opts+=($opt)
     else

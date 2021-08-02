@@ -796,7 +796,7 @@ void __construct_backward_with_exception_guarantees(_Alloc&, _Tp* __begin1, _Tp*
     ptrdiff_t _Np = __end1 - __begin1;
     __end2 -= _Np;
     if (_Np > 0)
-        _VSTD::memcpy(__end2, __begin1, _Np * sizeof(_Tp));
+        _VSTD::memcpy(static_cast<void*>(__end2), static_cast<void const*>(__begin1), _Np * sizeof(_Tp));
 }
 
 struct __destruct_n

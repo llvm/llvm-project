@@ -34,7 +34,7 @@ using fallback_implementation = double;
 using preferred_implementation = int;
 
 // This is the fallback implementation, which should work everywhere.
-template <typename Unused = void> double getCpuTime(fallback_implementation) {
+template <typename Unused = void> double GetCpuTime(fallback_implementation) {
   std::clock_t timestamp{std::clock()};
   if (timestamp != std::clock_t{-1}) {
     return static_cast<double>(timestamp) / CLOCKS_PER_SEC;
@@ -47,7 +47,7 @@ template <typename Unused = void> double getCpuTime(fallback_implementation) {
 // POSIX implementation using clock_gettime. This is only enabled if
 // clock_gettime is available.
 template <typename T = int, typename U = struct timespec>
-double getCpuTime(preferred_implementation,
+double GetCpuTime(preferred_implementation,
     // We need some dummy parameters to pass to decltype(clock_gettime).
     T ClockId = 0, U *Timespec = nullptr,
     decltype(clock_gettime(ClockId, Timespec)) *Enabled = nullptr) {
@@ -73,6 +73,6 @@ double getCpuTime(preferred_implementation,
 namespace Fortran::runtime {
 extern "C" {
 
-double RTNAME(CpuTime)() { return getCpuTime(0); }
+double RTNAME(CpuTime)() { return GetCpuTime(0); }
 } // extern "C"
 } // namespace Fortran::runtime

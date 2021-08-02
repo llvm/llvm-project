@@ -1,4 +1,4 @@
-// RUN: mlir-opt %s -pass-pipeline='func(test-alias-analysis)' -split-input-file -allow-unregistered-dialect 2>&1 | FileCheck %s
+// RUN: mlir-opt %s -pass-pipeline='builtin.func(test-alias-analysis)' -split-input-file -allow-unregistered-dialect 2>&1 | FileCheck %s
 
 // CHECK-LABEL: Testing : "simple"
 // CHECK-DAG: func.region0#0 <-> func.region0#1: MayAlias

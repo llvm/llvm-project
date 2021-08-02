@@ -1,7 +1,8 @@
 ; RUN: llc -march=amdgcn -mcpu=gfx1010 -mattr=-nsa-encoding -verify-machineinstrs -show-mc-encoding < %s | FileCheck -check-prefixes=GCN,NONSA,GFX10-NONSA %s
-; RUN: llc -march=amdgcn -mcpu=gfx1010 -verify-machineinstrs -show-mc-encoding < %s | FileCheck -check-prefixes=GCN,NSA,GFX10-NSA %s
-; RUN: llc -march=amdgcn -mcpu=gfx1100 -mattr=-nsa-encoding -verify-machineinstrs -show-mc-encoding < %s | FileCheck -check-prefixes=GCN,NONSA,GFX11-NONSA %s
-; RUN: llc -march=amdgcn -mcpu=gfx1100 -verify-machineinstrs -show-mc-encoding < %s | FileCheck -check-prefixes=GCN,NSA,GFX11-NSA %s
+; RUN: llc -march=amdgcn -mcpu=gfx1010 -verify-machineinstrs < %s | FileCheck -check-prefixes=GCN,NSA,GFX1010-NSA %s
+; RUN: llc -march=amdgcn -mcpu=gfx1030 -verify-machineinstrs < %s | FileCheck -check-prefixes=GCN,NSA,GFX1030-NSA %s
+; RUN: llc -march=amdgcn -mcpu=gfx1100 -mattr=-nsa-encoding -verify-machineinstrs < %s | FileCheck -check-prefixes=GCN,NONSA,GFX11-NONSA %s
+; RUN: llc -march=amdgcn -mcpu=gfx1100 -verify-machineinstrs < %s | FileCheck -check-prefixes=GCN,NSA,GFX11-NSA %s
 
 ; GCN-LABEL: {{^}}sample_2d:
 ;
@@ -26,7 +27,8 @@ main_body:
 }
 
 ; GCN-LABEL: {{^}}sample_d_3d:
-; GFX10-NSA: image_sample_d v[0:3], [v3, v8, v7, v5, v4, v6, v0, v2, v1],
+; GFX1010-NSA: image_sample_d v[0:3], v[7:22],
+; GFX1030-NSA: image_sample_d v[0:3], [v3, v8, v7, v5, v4, v6, v0, v2, v1],
 ; GFX11-NSA: image_sample_d v[0:3], v[7:22],
 define amdgpu_ps <4 x float> @sample_d_3d(<8 x i32> inreg %rsrc, <4 x i32> inreg %samp, float %s, float %r, float %t, float %dsdh, float %dtdv, float %dsdv, float %drdv, float %drdh, float %dtdh) {
 main_body:
@@ -37,8 +39,10 @@ main_body:
 ; GCN-LABEL: {{^}}sample_contig_nsa:
 ; GFX10-NONSA: image_sample_c_l v5, v[0:4],
 ; GFX11-NONSA: image_sample_c_l v0, v[0:4],
-; GFX10-NSA: image_sample_c_l v8, v[0:4],
-; GFX10-NSA: image_sample v9, [v6, v7, v5],
+; GFX1010-NSA: image_sample_c_l v8, v[0:4],
+; GFX1010-NSA: image_sample v9, [v6, v7, v5],
+; GFX1030-NSA: image_sample_c_l v0, v[0:4],
+; GFX1030-NSA: image_sample v1, [v6, v7, v5],
 ; GFX11-NSA: image_sample_c_l v0, v[0:4],
 ; GFX11-NSA: image_sample v1, [v6, v7, v5],
 define amdgpu_ps <2 x float> @sample_contig_nsa(<8 x i32> inreg %rsrc, <4 x i32> inreg %samp, float %zcompare, float %s1, float %t1, float %r1, float %lod, float %r2, float %s2, float %t2) {
@@ -51,8 +55,10 @@ main_body:
 }
 
 ; GCN-LABEL: {{^}}sample_nsa_nsa:
-; GFX10-NSA: image_sample_c_l v8, [v1, v2, v3, v4, v0],
-; GFX10-NSA: image_sample v9, [v6, v7, v5],
+; GFX1010-NSA: image_sample_c_l v8, [v1, v2, v3, v4, v0],
+; GFX1010-NSA: image_sample v9, [v6, v7, v5],
+; GFX1030-NSA: image_sample_c_l v0, [v1, v2, v3, v4, v0],
+; GFX1030-NSA: image_sample v1, [v6, v7, v5],
 ; GFX11-NSA: image_sample_c_l v0, [v1, v2, v3, v4, v0],
 ; GFX11-NSA: image_sample v1, [v6, v7, v5],
 define amdgpu_ps <2 x float> @sample_nsa_nsa(<8 x i32> inreg %rsrc, <4 x i32> inreg %samp, float %lod, float %zcompare, float %s1, float %t1, float %r1, float %r2, float %s2, float %t2) {
@@ -65,8 +71,10 @@ main_body:
 }
 
 ; GCN-LABEL: {{^}}sample_nsa_contig:
-; GFX10-NSA: image_sample_c_l v8, [v1, v2, v3, v4, v0],
-; GFX10-NSA: image_sample v9, v[5:7],
+; GFX1010-NSA: image_sample_c_l v8, [v1, v2, v3, v4, v0],
+; GFX1010-NSA: image_sample v9, v[5:7],
+; GFX1030-NSA: image_sample_c_l v0, [v1, v2, v3, v4, v0],
+; GFX1030-NSA: image_sample v1, v[5:7],
 ; GFX11-NSA: image_sample_c_l v0, [v1, v2, v3, v4, v0],
 ; GFX11-NSA: image_sample v1, v[5:7],
 define amdgpu_ps <2 x float> @sample_nsa_contig(<8 x i32> inreg %rsrc, <4 x i32> inreg %samp, float %lod, float %zcompare, float %s1, float %t1, float %r1, float %s2, float %t2, float %r2) {
@@ -79,8 +87,10 @@ main_body:
 }
 
 ; GCN-LABEL: {{^}}sample_contig_contig:
-; GFX10-NSA: image_sample_c_l v8, v[0:4],
-; GFX10-NSA: image_sample v9, v[5:7],
+; GFX1010-NSA: image_sample_c_l v8, v[0:4],
+; GFX1010-NSA: image_sample v9, v[5:7],
+; GFX1030-NSA: image_sample_c_l v0, v[0:4],
+; GFX1030-NSA: image_sample v1, v[5:7],
 ; GFX11-NSA: image_sample_c_l v0, v[0:4],
 ; GFX11-NSA: image_sample v1, v[5:7],
 ; GFX10-NONSA: image_sample_c_l v8, v[0:4],

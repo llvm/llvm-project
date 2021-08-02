@@ -12,10 +12,19 @@ define float @fdiv_constant_fold() #0 {
 
 define float @fdiv_constant_fold_strict() #0 {
 ; CHECK-LABEL: @fdiv_constant_fold_strict(
-; CHECK-NEXT:    [[F:%.*]] = call float @llvm.experimental.constrained.fdiv.f32(float 3.000000e+00, float 2.000000e+00, metadata !"round.tonearest", metadata !"fpexcept.strict") #[[ATTR0:[0-9]+]]
-; CHECK-NEXT:    ret float [[F]]
+; CHECK-NEXT:    ret float 1.500000e+00
 ;
   %f = call float @llvm.experimental.constrained.fdiv.f32(float 3.0, float 2.0, metadata !"round.tonearest", metadata !"fpexcept.strict") #0
+
+  ret float %f
+}
+
+define float @fdiv_constant_fold_strict2() #0 {
+; CHECK-LABEL: @fdiv_constant_fold_strict2(
+; CHECK-NEXT:    [[F:%.*]] = call float @llvm.experimental.constrained.fdiv.f32(float 2.000000e+00, float 3.000000e+00, metadata !"round.tonearest", metadata !"fpexcept.strict") #[[ATTR0:[0-9]+]]
+; CHECK-NEXT:    ret float [[F]]
+;
+  %f = call float @llvm.experimental.constrained.fdiv.f32(float 2.0, float 3.0, metadata !"round.tonearest", metadata !"fpexcept.strict") #0
 
   ret float %f
 }
@@ -30,10 +39,9 @@ define float @frem_constant_fold() #0 {
 
 define float @frem_constant_fold_strict() #0 {
 ; CHECK-LABEL: @frem_constant_fold_strict(
-; CHECK-NEXT:    [[F:%.*]] = call float @llvm.experimental.constrained.fdiv.f32(float 3.000000e+00, float 2.000000e+00, metadata !"round.tonearest", metadata !"fpexcept.strict") #[[ATTR0]]
-; CHECK-NEXT:    ret float [[F]]
+; CHECK-NEXT:    ret float 1.000000e+00
 ;
-  %f = call float @llvm.experimental.constrained.fdiv.f32(float 3.0, float 2.0, metadata !"round.tonearest", metadata !"fpexcept.strict") #0
+  %f = call float @llvm.experimental.constrained.frem.f32(float 3.0, float 2.0, metadata !"round.tonearest", metadata !"fpexcept.strict") #0
   ret float %f
 }
 

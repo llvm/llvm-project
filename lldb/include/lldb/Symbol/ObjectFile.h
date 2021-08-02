@@ -495,6 +495,16 @@ public:
       return std::string();
   }
 
+  /// Some object files may have the number of bits used for addressing
+  /// embedded in them, e.g. a Mach-O core file using an LC_NOTE.  These
+  /// object files can return the address mask that should be used in
+  /// the Process.
+  /// \return
+  ///     The mask will have bits set which aren't used for addressing --
+  ///     typically, the high bits.
+  ///     Zero is returned when no address bits mask is available.
+  virtual lldb::addr_t GetAddressMask() { return 0; }
+
   /// When the ObjectFile is a core file, lldb needs to locate the "binary" in
   /// the core file.  lldb can iterate over the pages looking for a valid
   /// binary, but some core files may have metadata  describing where the main
@@ -711,8 +721,6 @@ protected:
   ///     Returns \b true if the architecture was changed, \b
   ///     false otherwise.
   bool SetModulesArchitecture(const ArchSpec &new_arch);
-
-  ConstString GetNextSyntheticSymbolName();
 
   static lldb::DataBufferSP MapFileData(const FileSpec &file, uint64_t Size,
                                         uint64_t Offset);

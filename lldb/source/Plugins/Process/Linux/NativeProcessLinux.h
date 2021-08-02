@@ -83,6 +83,9 @@ public:
   Status ReadMemoryTags(int32_t type, lldb::addr_t addr, size_t len,
                         std::vector<uint8_t> &tags) override;
 
+  Status WriteMemoryTags(int32_t type, lldb::addr_t addr, size_t len,
+                         const std::vector<uint8_t> &tags) override;
+
   size_t UpdateThreads() override;
 
   const ArchSpec &GetArchitecture() const override { return m_arch; }

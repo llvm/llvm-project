@@ -16,7 +16,9 @@
 //     common_iterator& operator=(const common_iterator<I2, S2>& x);
 
 #include <iterator>
+#ifndef _LIBCPP_HAS_NO_INCOMPLETE_RANGES
 #include <ranges>
+#endif
 #include <cassert>
 
 #include "test_macros.h"
@@ -55,6 +57,7 @@ void test() {
     assert(*commonIter2 == 2);
     assert(commonIter1 == commonIter2);
   }
+#ifndef _LIBCPP_HAS_NO_INCOMPLETE_RANGES
   {
     auto iter1 = random_access_iterator<int*>(buffer);
     auto commonIter1 = std::common_iterator<decltype(iter1), sentinel_type<int*>>(iter1);
@@ -81,6 +84,7 @@ void test() {
     assert(std::ranges::next(commonIter1, 6) == commonSent1);
     assert(std::ranges::next(commonIter1, 6) == commonSent2);
   }
+#endif
   {
     auto iter1 = assignable_iterator<int*>(buffer);
     auto iter2 = forward_iterator<int*>(buffer + 1);
@@ -99,13 +103,17 @@ void test() {
     assert(*commonIter2 == 2);
     assert(commonIter1 == commonIter2);
 
+#ifndef _LIBCPP_HAS_NO_INCOMPLETE_RANGES
     assert(std::ranges::next(commonIter1, 6) != commonSent1);
     assert(std::ranges::next(commonIter1, 6) == commonSent2);
+#endif
 
     commonSent1 = commonSent2;
 
+#ifndef _LIBCPP_HAS_NO_INCOMPLETE_RANGES
     assert(std::ranges::next(commonIter1, 6) == commonSent1);
     assert(std::ranges::next(commonIter1, 6) == commonSent2);
+#endif
 
     commonIter1 = commonSent1;
 

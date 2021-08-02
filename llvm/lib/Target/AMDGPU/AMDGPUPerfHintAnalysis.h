@@ -37,12 +37,11 @@ public:
   bool needsWaveLimiter(const Function *F) const;
 
   struct FuncInfo {
-    unsigned MemInstCount;
-    unsigned InstCount;
-    unsigned IAMInstCount; // Indirect access memory instruction count
-    unsigned LSMInstCount; // Large stride memory instruction count
-    FuncInfo() : MemInstCount(0), InstCount(0), IAMInstCount(0),
-                 LSMInstCount(0) {}
+    unsigned MemInstCost;
+    unsigned InstCost;
+    unsigned IAMInstCost; // Indirect access memory instruction count
+    unsigned LSMInstCost; // Large stride memory instruction count
+    FuncInfo() : MemInstCost(0), InstCost(0), IAMInstCost(0), LSMInstCost(0) {}
   };
 
   typedef ValueMap<const Function*, FuncInfo> FuncInfoMap;

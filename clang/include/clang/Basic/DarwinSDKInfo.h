@@ -50,6 +50,13 @@ public:
                        llvm::Triple::IOS, llvm::Triple::MacABI);
     }
 
+    /// Returns the os-environment mapping pair that's used to represent the
+    /// Mac Catalyst -> macOS version mapping.
+    static inline constexpr OSEnvPair macCatalystToMacOSPair() {
+      return OSEnvPair(llvm::Triple::IOS, llvm::Triple::MacABI,
+                       llvm::Triple::MacOSX, llvm::Triple::UnknownEnvironment);
+    }
+
   private:
     StorageType Value;
 

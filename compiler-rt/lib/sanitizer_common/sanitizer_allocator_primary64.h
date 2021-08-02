@@ -161,7 +161,7 @@ class SizeClassAllocator64 {
   void ForceReleaseToOS() {
     MemoryMapperT memory_mapper(*this);
     for (uptr class_id = 1; class_id < kNumClasses; class_id++) {
-      BlockingMutexLock l(&GetRegionInfo(class_id)->mutex);
+      Lock l(&GetRegionInfo(class_id)->mutex);
       MaybeReleaseToOS(&memory_mapper, class_id, true /*force*/);
     }
   }
@@ -178,7 +178,7 @@ class SizeClassAllocator64 {
     uptr region_beg = GetRegionBeginBySizeClass(class_id);
     CompactPtrT *free_array = GetFreeArray(region_beg);
 
-    BlockingMutexLock l(&region->mutex);
+    Lock l(&region->mutex);
     uptr old_num_chunks = region->num_freed_chunks;
     uptr new_num_freed_chunks = old_num_chunks + n_chunks;
     // Failure to allocate free array space while releasing memory is non
@@ -204,7 +204,7 @@ class SizeClassAllocator64 {
     uptr region_beg = GetRegionBeginBySizeClass(class_id);
     CompactPtrT *free_array = GetFreeArray(region_beg);
 
-    BlockingMutexLock l(&region->mutex);
+    Lock l(&region->mutex);
 #if SANITIZER_WINDOWS
     /* On Windows unmapping of memory during __sanitizer_purge_allocator is
     explicit and immediate, so unmapped regions must be explicitly mapped back
@@ -665,7 +665,7 @@ class SizeClassAllocator64 {
   };
 
   struct ALIGNED(SANITIZER_CACHE_LINE_SIZE) RegionInfo {
-    BlockingMutex mutex;
+    Mutex mutex;
     uptr num_freed_chunks;  // Number of elements in the freearray.
     uptr mapped_free_array;  // Bytes mapped for freearray.
     uptr allocated_user;  // Bytes allocated for user memory.

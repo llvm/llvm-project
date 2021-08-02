@@ -18,7 +18,7 @@ if(COMPILER_RT_TSAN_DEBUG_OUTPUT)
 endif()
 
 set(TSAN_RTL_CFLAGS ${TSAN_CFLAGS})
-append_list_if(COMPILER_RT_HAS_MSSE3_FLAG -msse3 TSAN_RTL_CFLAGS)
+append_list_if(COMPILER_RT_HAS_MSSE4_2_FLAG -msse4.2 TSAN_RTL_CFLAGS)
 append_list_if(SANITIZER_LIMIT_FRAME_SIZE -Wframe-larger-than=530
                TSAN_RTL_CFLAGS)
 append_list_if(COMPILER_RT_HAS_WGLOBAL_CONSTRUCTORS_FLAG -Wglobal-constructors
@@ -39,7 +39,6 @@ set(TSAN_SOURCES
   rtl/tsan_malloc_mac.cpp
   rtl/tsan_md5.cpp
   rtl/tsan_mman.cpp
-  rtl/tsan_mutex.cpp
   rtl/tsan_mutexset.cpp
   rtl/tsan_preinit.cpp
   rtl/tsan_report.cpp
@@ -88,13 +87,13 @@ set(TSAN_HEADERS
   rtl/tsan_flags.h
   rtl/tsan_flags.inc
   rtl/tsan_ignoreset.h
+  rtl/tsan_ilist.h
   rtl/tsan_interceptors.h
   rtl/tsan_interface.h
   rtl/tsan_interface_ann.h
   rtl/tsan_interface_inl.h
   rtl/tsan_interface_java.h
   rtl/tsan_mman.h
-  rtl/tsan_mutex.h
   rtl/tsan_mutexset.h
   rtl/tsan_platform.h
   rtl/tsan_ppc_regs.h

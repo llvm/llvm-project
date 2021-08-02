@@ -1,4 +1,4 @@
-//===----RTLs/hsa/src/rtl.cpp - Target RTLs Implementation -------- C++ -*-===//
+//===--- amdgpu/src/rtl.cpp --------------------------------------- C++ -*-===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -15,16 +15,12 @@
 #include <cstdio>
 #include <cstdlib>
 #include <cstring>
-#include <elf.h>
-#include <fstream>
 #include <functional>
-#include <iostream>
 #include <libelf.h>
 #include <list>
 #include <memory>
 #include <mutex>
 #include <shared_mutex>
-#include <thread>
 #include <unordered_map>
 #include <vector>
 
@@ -43,7 +39,7 @@
 #include "llvm/Frontend/OpenMP/OMPGridValues.h"
 
 #ifndef TARGET_NAME
-#define TARGET_NAME AMDHSA
+#error "Missing TARGET_NAME macro"
 #endif
 #define DEBUG_PREFIX "Target " GETNAME(TARGET_NAME) " RTL"
 
@@ -128,9 +124,10 @@ struct FuncOrGblEntryTy {
 };
 
 enum ExecutionModeType {
-  SPMD,    // constructors, destructors,
-           // combined constructs (`teams distribute parallel for [simd]`)
-  GENERIC, // everything else
+  SPMD,         // constructors, destructors,
+                // combined constructs (`teams distribute parallel for [simd]`)
+  GENERIC,      // everything else
+  SPMD_GENERIC, // Generic kernel with SPMD execution
   NONE
 };
 
@@ -241,6 +238,7 @@ struct KernelTy {
   // execution mode of kernel
   // 0 - SPMD mode (without master warp)
   // 1 - Generic mode (with master warp)
+  // 2 - SPMD mode execution with Generic mode semantics.
   int8_t ExecutionMode;
   int16_t ConstWGSize;
   int32_t device_id;
@@ -438,13 +436,14 @@ struct EnvironmentVariables {
 /// Class containing all the device information
 class RTLDeviceInfoTy {
   std::vector<std::list<FuncOrGblEntryTy>> FuncGblEntries;
+  bool HSAInitializeSucceeded = false;
 
 public:
   // load binary populates symbol tables and mutates various global state
   // run uses those symbol tables
   std::shared_timed_mutex load_run_lock;
 
-  int NumberOfDevices;
+  int NumberOfDevices = 0;
 
   // GPU devices
   std::vector<hsa_agent_t> HSAAgents;
@@ -688,10 +687,12 @@ public:
     else
       print_kernel_trace = 0;
 
-    DP("Start initializing HSA-ATMI\n");
+    DP("Start initializing " GETNAME(TARGET_NAME) "\n");
     hsa_status_t err = core::atl_init_gpu_context();
-    if (err != HSA_STATUS_SUCCESS) {
-      DP("Error when initializing HSA-ATMI\n");
+    if (err == HSA_STATUS_SUCCESS) {
+      HSAInitializeSucceeded = true;
+    } else {
+      DP("Error when initializing " GETNAME(TARGET_NAME) "\n");
       return;
     }
 
@@ -792,7 +793,11 @@ public:
   }
 
   ~RTLDeviceInfoTy() {
-    DP("Finalizing the HSA-ATMI DeviceInfo.\n");
+    DP("Finalizing the " GETNAME(TARGET_NAME) " DeviceInfo.\n");
+    if (!HSAInitializeSucceeded) {
+      // Then none of these can have been set up and they can't be torn down
+      return;
+    }
     // Run destructors on types that use HSA before
     // atmi_finalize removes access to it
     deviceStateStore.clear();
@@ -1731,7 +1736,7 @@ __tgt_target_table *__tgt_rtl_load_binary_locked(int32_t device_id,
         DP("After loading global for %s ExecMode = %d\n", ExecModeName,
            ExecModeVal);
 
-        if (ExecModeVal < 0 || ExecModeVal > 1) {
+        if (ExecModeVal < 0 || ExecModeVal > 2) {
           DP("Error wrong exec_mode value specified in HSA code object file: "
              "%d\n",
              ExecModeVal);
@@ -1966,7 +1971,11 @@ launchVals getLaunchVals(EnvironmentVariables Env, int ConstWGSize,
         if (ExecutionMode == SPMD) {
           // round up to the nearest integer
           num_groups = ((loop_tripcount - 1) / threadsPerGroup) + 1;
-        } else {
+        } else if (ExecutionMode == GENERIC) {
+          num_groups = loop_tripcount;
+        } else /* ExecutionMode == SPMD_GENERIC */ {
+          // This is a generic kernel that was transformed to use SPMD-mode
+          // execution but uses Generic-mode semantics for scheduling.
           num_groups = loop_tripcount;
         }
         DP("Using %d teams due to loop trip count %" PRIu64 " and number of "

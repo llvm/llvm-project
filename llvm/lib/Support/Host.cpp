@@ -324,8 +324,11 @@ StringRef getCPUNameFromS390Model(unsigned int Id, bool HaveVectorSupport) {
       return HaveVectorSupport? "z14" : "zEC12";
     case 8561:
     case 8562:
-    default:
       return HaveVectorSupport? "z15" : "zEC12";
+    case 3931:
+    case 3932:
+    default:
+      return HaveVectorSupport? "arch14" : "zEC12";
   }
 }
 } // end anonymous namespace

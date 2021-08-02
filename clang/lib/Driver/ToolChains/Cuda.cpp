@@ -8,13 +8,13 @@
 
 #include "Cuda.h"
 #include "CommonArgs.h"
-#include "InputInfo.h"
 #include "clang/Basic/Cuda.h"
 #include "clang/Config/config.h"
 #include "clang/Driver/Compilation.h"
 #include "clang/Driver/Distro.h"
 #include "clang/Driver/Driver.h"
 #include "clang/Driver/DriverDiagnostic.h"
+#include "clang/Driver/InputInfo.h"
 #include "clang/Driver/Options.h"
 #include "llvm/ADT/Optional.h"
 #include "llvm/Option/ArgList.h"
@@ -751,7 +751,13 @@ void CudaToolChain::addClangTargetOptions(
       return;
     }
 
-    std::string BitcodeSuffix = "nvptx-" + GpuArch.str();
+    std::string BitcodeSuffix;
+    if (DriverArgs.hasFlag(options::OPT_fopenmp_target_new_runtime,
+                           options::OPT_fno_openmp_target_new_runtime, false))
+      BitcodeSuffix = "new-nvptx-" + GpuArch.str();
+    else
+      BitcodeSuffix = "nvptx-" + GpuArch.str();
+
     addOpenMPDeviceRTL(getDriver(), DriverArgs, CC1Args, BitcodeSuffix,
                        getTriple());
   }

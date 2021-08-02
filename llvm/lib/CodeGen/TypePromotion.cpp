@@ -920,9 +920,6 @@ bool TypePromotion::TryToPromote(Value *V, unsigned PromotedWidth) {
   if (ToPromote < 2 || (Blocks.size() == 1 && (NonFreeArgs > SafeWrap.size())))
     return false;
 
-  if (ToPromote < 2)
-    return false;
-
   IRPromoter Promoter(*Ctx, cast<IntegerType>(OrigTy), PromotedWidth,
                       CurrentVisited, Sources, Sinks, SafeWrap);
   Promoter.Mutate();

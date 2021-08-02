@@ -34,7 +34,7 @@ static void __kmpc_generic_kernel_init() {
   if (GetLaneId() == 0)
     parallelLevel[GetWarpId()] = 0;
 
-  int threadIdInBlock = GetThreadIdInBlock();
+  int threadIdInBlock = __kmpc_get_hardware_thread_id_in_block();
   if (threadIdInBlock != GetMasterThreadID())
     return;
 
@@ -87,14 +87,16 @@ static void __kmpc_spmd_kernel_init(bool RequiresFullRuntime) {
 
   setExecutionParameters(Spmd, RequiresFullRuntime ? RuntimeInitialized
                          : RuntimeUninitialized);
-  int threadId = GetThreadIdInBlock();
+  int threadId = __kmpc_get_hardware_thread_id_in_block();
   if (threadId == 0) {
     usedSlotIdx = __kmpc_impl_smid() % MAX_SM;
   }
 
   if (GetLaneId() == 0) {
     parallelLevel[GetWarpId()] =
-        1 + (GetNumberOfThreadsInBlock() > 1 ? OMP_ACTIVE_PARALLEL_LEVEL : 0);
+        1 + (__kmpc_get_hardware_num_threads_in_block() > 1
+                 ? OMP_ACTIVE_PARALLEL_LEVEL
+                 : 0);
   }
 
   __kmpc_data_sharing_init_stack();
@@ -147,7 +149,7 @@ static void __kmpc_spmd_kernel_deinit(bool RequiresFullRuntime) {
     return;
 
   __kmpc_impl_syncthreads();
-  int threadId = GetThreadIdInBlock();
+  int threadId = __kmpc_get_hardware_thread_id_in_block();
   if (threadId == 0) {
     // Enqueue omp state object for use by another team.
     int slot = usedSlotIdx;
@@ -162,14 +164,18 @@ EXTERN int8_t __kmpc_is_spmd_exec_mode() {
 }
 
 EXTERN int8_t __kmpc_is_generic_main_thread(kmp_int32 Tid) {
-  return !__kmpc_is_spmd_exec_mode() && GetMasterThreadID() == Tid;
+  return !__kmpc_is_spmd_exec_mode() && __kmpc_is_generic_main_thread_id(Tid);
+}
+
+NOINLINE EXTERN int8_t __kmpc_is_generic_main_thread_id(kmp_int32 Tid) {
+  return GetMasterThreadID() == Tid;
 }
 
 EXTERN bool __kmpc_kernel_parallel(void**WorkFn);
 
 static void __kmpc_target_region_state_machine(ident_t *Ident) {
 
-  int TId = GetThreadIdInBlock();
+  int TId = __kmpc_get_hardware_thread_id_in_block();
   do {
     void* WorkFn = 0;
 
@@ -199,7 +205,7 @@ EXTERN
 int32_t __kmpc_target_init(ident_t *Ident, bool IsSPMD,
                            bool UseGenericStateMachine,
                            bool RequiresFullRuntime) {
-  int TId = GetThreadIdInBlock();
+  int TId = __kmpc_get_hardware_thread_id_in_block();
   if (IsSPMD)
     __kmpc_spmd_kernel_init(RequiresFullRuntime);
   else

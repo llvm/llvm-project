@@ -225,8 +225,8 @@ def Linalg_PadTensorOp : Linalg_Op<"pad_tensor",
       return getResult().getType().cast<RankedTensorType>();
     }
 
-    // Infer the shape of the result tensor given the static shapes
-    // and element type of the result tensor.
+    // Infer the shape of the result tensor given the type of the source tensor
+    // and paddings.
     static RankedTensorType inferResultType(RankedTensorType sourceType,
                                 ArrayRef<int64_t> staticLow,
                                 ArrayRef<int64_t> staticHigh);

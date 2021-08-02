@@ -8,6 +8,7 @@
 
 #include "TraceIntelPT.h"
 
+#include "../common/ThreadPostMortemTrace.h"
 #include "CommandObjectTraceStartIntelPT.h"
 #include "DecodedThread.h"
 #include "TraceIntelPTConstants.h"
@@ -15,7 +16,6 @@
 #include "lldb/Core/PluginManager.h"
 #include "lldb/Target/Process.h"
 #include "lldb/Target/Target.h"
-#include "lldb/Target/ThreadPostMortemTrace.h"
 
 using namespace lldb;
 using namespace lldb_private;
@@ -106,6 +106,24 @@ DecodedThreadSP TraceIntelPT::Decode(Thread &thread) {
 
 lldb::TraceCursorUP TraceIntelPT::GetCursor(Thread &thread) {
   return Decode(thread)->GetCursor();
+}
+
+void TraceIntelPT::DumpTraceInfo(Thread &thread, Stream &s, bool verbose) {
+  Optional<size_t> raw_size = GetRawTraceSize(thread);
+  s.Printf("\nthread #%u: tid = %" PRIu64, thread.GetIndexID(), thread.GetID());
+  if (!raw_size) {
+    s.Printf(", not traced\n");
+    return;
+  }
+  s.Printf("\n  Raw trace size: %zu bytes\n", *raw_size);
+  return;
+}
+
+Optional<size_t> TraceIntelPT::GetRawTraceSize(Thread &thread) {
+  if (IsTraced(thread))
+    return Decode(thread)->GetRawTraceSize();
+  else
+    return None;
 }
 
 Expected<pt_cpu> TraceIntelPT::GetCPUInfoForLiveProcess() {

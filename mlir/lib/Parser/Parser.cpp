@@ -730,7 +730,7 @@ Value OperationParser::createForwardRefPlaceholder(SMLoc loc, Type type) {
   // We create these placeholders as having an empty name, which we know
   // cannot be created through normal user input, allowing us to distinguish
   // them.
-  auto name = OperationName("unrealized_conversion_cast", getContext());
+  auto name = OperationName("builtin.unrealized_conversion_cast", getContext());
   auto *op = Operation::create(
       getEncodedSourceLocation(loc), name, type, /*operands=*/{},
       /*attributes=*/llvm::None, /*successors=*/{}, /*numRegions=*/0);
@@ -1857,16 +1857,17 @@ OperationParser::parseCustomOperation(ArrayRef<ResultRecord> resultIDs) {
       if (!dialect && (dialect = getContext()->getOrLoadDialect(dialectName)))
         opDefinition = AbstractOperation::lookup(opName, getContext());
     } else {
-      // If the operation name has no namespace prefix we treat it as a standard
-      // operation and prefix it with "std".
-      // TODO: Would it be better to just build a mapping of the registered
-      // operations in the standard dialect?
-      if (getContext()->getOrLoadDialect("std")) {
+      // If the operation name has no namespace prefix we treat it as a builtin
+      // or standard operation and prefix it with "builtin" or "std".
+      // TODO: Remove the special casing here.
+      opDefinition = AbstractOperation::lookup(Twine("builtin." + opName).str(),
+                                               getContext());
+      if (!opDefinition && getContext()->getOrLoadDialect("std")) {
         opDefinition = AbstractOperation::lookup(Twine("std." + opName).str(),
                                                  getContext());
-        if (opDefinition)
-          opName = opDefinition->name.strref();
       }
+      if (opDefinition)
+        opName = opDefinition->name.strref();
     }
   }
 

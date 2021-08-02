@@ -230,15 +230,24 @@ void SIOptimizeVGPRLiveRange::collectCandidateRegisters(
         if (MOReg.isPhysical() || !TRI->isVectorRegister(*MRI, MOReg))
           continue;
 
-        if (MO.isKill() && MO.readsReg()) {
+        if (MO.readsReg()) {
           LiveVariables::VarInfo &VI = LV->getVarInfo(MOReg);
           const MachineBasicBlock *DefMBB = MRI->getVRegDef(MOReg)->getParent();
           // Make sure two conditions are met:
           // a.) the value is defined before/in the IF block
           // b.) should be defined in the same loop-level.
           if ((VI.AliveBlocks.test(If->getNumber()) || DefMBB == If) &&
-              Loops->getLoopFor(DefMBB) == Loops->getLoopFor(If))
-            KillsInElse.insert(MOReg);
+              Loops->getLoopFor(DefMBB) == Loops->getLoopFor(If)) {
+            // Check if the register is live into the endif block. If not,
+            // consider it killed in the else region.
+            LiveVariables::VarInfo &VI = LV->getVarInfo(MOReg);
+            if (!VI.isLiveIn(*Endif, MOReg, *MRI)) {
+              KillsInElse.insert(MOReg);
+            } else {
+              LLVM_DEBUG(dbgs() << "Excluding " << printReg(MOReg, TRI)
+                                << " as Live in Endif\n");
+            }
+          }
         }
       }
     }

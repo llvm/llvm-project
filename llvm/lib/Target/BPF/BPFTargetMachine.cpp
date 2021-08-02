@@ -124,18 +124,18 @@ void BPFTargetMachine::adjustPassManager(PassManagerBuilder &Builder) {
 
 void BPFTargetMachine::registerPassBuilderCallbacks(PassBuilder &PB) {
   PB.registerPipelineStartEPCallback(
-      [=](ModulePassManager &MPM, PassBuilder::OptimizationLevel) {
+      [=](ModulePassManager &MPM, OptimizationLevel) {
         FunctionPassManager FPM;
         FPM.addPass(BPFAbstractMemberAccessPass(this));
         FPM.addPass(BPFPreserveDITypePass());
         MPM.addPass(createModuleToFunctionPassAdaptor(std::move(FPM)));
       });
   PB.registerPeepholeEPCallback([=](FunctionPassManager &FPM,
-                                    PassBuilder::OptimizationLevel Level) {
+                                    OptimizationLevel Level) {
     FPM.addPass(SimplifyCFGPass(SimplifyCFGOptions().hoistCommonInsts(true)));
   });
   PB.registerPipelineEarlySimplificationEPCallback(
-      [=](ModulePassManager &MPM, PassBuilder::OptimizationLevel) {
+      [=](ModulePassManager &MPM, OptimizationLevel) {
         MPM.addPass(BPFAdjustOptPass());
       });
 }

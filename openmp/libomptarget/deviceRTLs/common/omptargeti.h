@@ -54,7 +54,8 @@ INLINE void omptarget_nvptx_TaskDescr::InitLevelOneTaskDescr(
 
   items.flags = TaskDescr_InPar | TaskDescr_IsParConstr; // set flag to parallel
   items.threadId =
-      GetThreadIdInBlock();   // get ids from cuda (only called for 1st level)
+      __kmpc_get_hardware_thread_id_in_block(); // get ids from cuda (only
+                                                // called for 1st level)
   items.runtimeChunkSize = 1; // preferred chunking statik with chunk 1
   prev = parentTaskDescr;
 }
@@ -97,16 +98,16 @@ INLINE void omptarget_nvptx_TaskDescr::CopyFromWorkDescr(
   //
   // overwrite specific items;
   //
-  // The threadID should be GetThreadIdInBlock() % GetMasterThreadID().
-  // This is so that the serial master (first lane in the master warp)
-  // gets a threadId of 0.
-  // However, we know that this function is always called in a parallel
-  // region where only workers are active.  The serial master thread
-  // never enters this region.  When a parallel region is executed serially,
-  // the threadId is set to 0 elsewhere and the kmpc_serialized_* functions
-  // are called, which never activate this region.
+  // The threadID should be __kmpc_get_hardware_thread_id_in_block() %
+  // GetMasterThreadID(). This is so that the serial master (first lane in the
+  // master warp) gets a threadId of 0. However, we know that this function is
+  // always called in a parallel region where only workers are active.  The
+  // serial master thread never enters this region.  When a parallel region is
+  // executed serially, the threadId is set to 0 elsewhere and the
+  // kmpc_serialized_* functions are called, which never activate this region.
   items.threadId =
-      GetThreadIdInBlock(); // get ids from cuda (only called for 1st level)
+      __kmpc_get_hardware_thread_id_in_block(); // get ids from cuda (only
+                                                // called for 1st level)
 }
 
 INLINE void omptarget_nvptx_TaskDescr::CopyConvergentParent(

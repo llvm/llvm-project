@@ -68,14 +68,14 @@ class StringRef;
 /// standard error, followed by a newline.
 /// After the error handler is called this function will call abort(), it
 /// does not return.
-LLVM_ATTRIBUTE_NORETURN void report_fatal_error(const char *reason,
-                                                bool gen_crash_diag = true);
-LLVM_ATTRIBUTE_NORETURN void report_fatal_error(const std::string &reason,
-                                                bool gen_crash_diag = true);
-LLVM_ATTRIBUTE_NORETURN void report_fatal_error(StringRef reason,
-                                                bool gen_crash_diag = true);
-LLVM_ATTRIBUTE_NORETURN void report_fatal_error(const Twine &reason,
-                                                bool gen_crash_diag = true);
+[[noreturn]] void report_fatal_error(const char *reason,
+                                     bool gen_crash_diag = true);
+[[noreturn]] void report_fatal_error(const std::string &reason,
+                                     bool gen_crash_diag = true);
+[[noreturn]] void report_fatal_error(StringRef reason,
+                                     bool gen_crash_diag = true);
+[[noreturn]] void report_fatal_error(const Twine &reason,
+                                     bool gen_crash_diag = true);
 
 /// Installs a new bad alloc error handler that should be used whenever a
 /// bad alloc error, e.g. failing malloc/calloc, is encountered by LLVM.
@@ -113,13 +113,13 @@ void install_out_of_memory_new_handler();
 /// If no error handler is installed (default), throws a bad_alloc exception
 /// if LLVM is compiled with exception support. Otherwise prints the error
 /// to standard error and calls abort().
-LLVM_ATTRIBUTE_NORETURN void report_bad_alloc_error(const char *Reason,
-                                                    bool GenCrashDiag = true);
+[[noreturn]] void report_bad_alloc_error(const char *Reason,
+                                         bool GenCrashDiag = true);
 
 /// This function calls abort(), and prints the optional message to stderr.
 /// Use the llvm_unreachable macro (that adds location info), instead of
 /// calling this function directly.
-LLVM_ATTRIBUTE_NORETURN void
+[[noreturn]] void
 llvm_unreachable_internal(const char *msg = nullptr, const char *file = nullptr,
                           unsigned line = 0);
 }

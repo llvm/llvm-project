@@ -665,6 +665,16 @@ def FeatureGFX11ExtraVGPRs : SubtargetFeature<"gfx11-extra-vgprs",
   "GFX11 with 50% extra VGPRs and 50% larger allocation granule"
 >;
 
+class SubtargetFeatureNSAMaxSize <int Value> : SubtargetFeature <
+  "nsa-max-size-"#Value,
+  "NSAMaxSize",
+  !cast<string>(Value),
+  "The maximum non-sequential address size in VGPRs."
+>;
+
+def FeatureNSAMaxSize5 : SubtargetFeatureNSAMaxSize<5>;
+def FeatureNSAMaxSize13 : SubtargetFeatureNSAMaxSize<13>;
+
 //===------------------------------------------------------------===//
 // Subtarget Features (options and debugging)
 //===------------------------------------------------------------===//
@@ -1096,6 +1106,7 @@ def FeatureISAVersion10_1_0 : FeatureSet<
      FeatureLDSBankCount32,
      FeatureDLInsts,
      FeatureNSAEncoding,
+     FeatureNSAMaxSize5,
      FeatureWavefrontSize32,
      FeatureScalarStores,
      FeatureScalarAtomics,
@@ -1117,6 +1128,7 @@ def FeatureISAVersion10_1_1 : FeatureSet<
      FeatureDot6Insts,
      FeatureDot7Insts,
      FeatureNSAEncoding,
+     FeatureNSAMaxSize5,
      FeatureWavefrontSize32,
      FeatureScalarStores,
      FeatureScalarAtomics,
@@ -1138,6 +1150,7 @@ def FeatureISAVersion10_1_2 : FeatureSet<
      FeatureDot6Insts,
      FeatureDot7Insts,
      FeatureNSAEncoding,
+     FeatureNSAMaxSize5,
      FeatureWavefrontSize32,
      FeatureScalarStores,
      FeatureScalarAtomics,
@@ -1155,6 +1168,7 @@ def FeatureISAVersion10_1_3 : FeatureSet<
      FeatureLDSBankCount32,
      FeatureDLInsts,
      FeatureNSAEncoding,
+     FeatureNSAMaxSize5,
      FeatureWavefrontSize32,
      FeatureScalarStores,
      FeatureScalarAtomics,
@@ -1178,6 +1192,7 @@ def FeatureISAVersion10_3_0 : FeatureSet<
    FeatureDot6Insts,
    FeatureDot7Insts,
    FeatureNSAEncoding,
+   FeatureNSAMaxSize13,
    FeatureWavefrontSize32,
    FeatureShaderCyclesRegister]>;
 
@@ -1191,6 +1206,7 @@ def FeatureISAVersion11_Common : FeatureSet<
    FeatureDot7Insts,
    FeatureDot8Insts,
    FeatureNSAEncoding,
+   FeatureNSAMaxSize5,
    FeatureWavefrontSize32,
    FeatureShaderCyclesRegister,
    FeatureArchitectedFlatScratch,

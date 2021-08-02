@@ -67,18 +67,18 @@ define void @fcvt_v16f16_v16f32(<16 x half>* %a, <16 x float>* %b) #0 {
 ; VBITS_GE_512-NEXT: ret
 
 ; Ensure sensible type legalisation - fixed type extract_subvector codegen is poor currently.
-; VBITS_EQ_256: ptrue [[PG1:p[0-9]+]].h, vl16
+; VBITS_EQ_256-DAG: ptrue [[PG1:p[0-9]+]].h, vl16
 ; VBITS_EQ_256-DAG: ld1h { [[VEC:z[0-9]+]].h }, [[PG1]]/z, [x0]
 ; VBITS_EQ_256-DAG: st1h { [[VEC:z[0-9]+]].h }, [[PG1]], [x8]
 ; VBITS_EQ_256-DAG: ldp q[[LO:[0-9]+]], q[[HI:[0-9]+]], [sp]
-; VBITS_EQ_256-NEXT: ptrue [[PG2:p[0-9]+]].s, vl8
-; VBITS_EQ_256-NEXT: add x8, x1, #32
-; VBITS_EQ_256-NEXT: uunpklo [[UPK_LO:z[0-9]+]].s, z[[LO]].h
-; VBITS_EQ_256-NEXT: uunpklo [[UPK_HI:z[0-9]+]].s, z[[HI]].h
-; VBITS_EQ_256-NEXT: fcvt [[RES_LO:z[0-9]+]].s, [[PG2]]/m, [[UPK_LO]].h
-; VBITS_EQ_256-NEXT: fcvt [[RES_HI:z[0-9]+]].s, [[PG2]]/m, [[UPK_HI]].h
-; VBITS_EQ_256-DAG: st1w { [[RES_HI]].s }, [[PG2]], [x8]
+; VBITS_EQ_256-DAG: ptrue [[PG2:p[0-9]+]].s, vl8
+; VBITS_EQ_256-DAG: mov x[[NUMELTS:[0-9]+]], #8
+; VBITS_EQ_256-DAG: uunpklo [[UPK_LO:z[0-9]+]].s, z[[LO]].h
+; VBITS_EQ_256-DAG: uunpklo [[UPK_HI:z[0-9]+]].s, z[[HI]].h
+; VBITS_EQ_256-DAG: fcvt [[RES_LO:z[0-9]+]].s, [[PG2]]/m, [[UPK_LO]].h
+; VBITS_EQ_256-DAG: fcvt [[RES_HI:z[0-9]+]].s, [[PG2]]/m, [[UPK_HI]].h
 ; VBITS_EQ_256-DAG: st1w { [[RES_LO]].s }, [[PG2]], [x1]
+; VBITS_EQ_256-DAG: st1w { [[RES_HI]].s }, [[PG2]], [x1, x[[NUMELTS]], lsl #2]
   %op1 = load <16 x half>, <16 x half>* %a
   %res = fpext <16 x half> %op1 to <16 x float>
   store <16 x float> %res, <16 x float>* %b
@@ -166,18 +166,18 @@ define void @fcvt_v8f16_v8f64(<8 x half>* %a, <8 x double>* %b) #0 {
 ; VBITS_GE_512-NEXT: ret
 
 ; Ensure sensible type legalisation.
-; VBITS_EQ_256: ldr q[[OP:[0-9]+]], [x0]
-; VBITS_EQ_256-NEXT: ptrue [[PG:p[0-9]+]].d, vl4
-; VBITS_EQ_256-NEXT: add x8, x1, #32
-; VBITS_EQ_256-NEXT: ext v[[HI:[0-9]+]].16b, v[[OP]].16b, v[[OP]].16b, #8
-; VBITS_EQ_256-NEXT: uunpklo [[UPK1_LO:z[0-9]+]].s, z[[OP]].h
-; VBITS_EQ_256-NEXT: uunpklo [[UPK1_HI:z[0-9]+]].s, z[[HI]].h
-; VBITS_EQ_256-NEXT: uunpklo [[UPK2_LO:z[0-9]+]].d, [[UPK1_LO]].s
-; VBITS_EQ_256-NEXT: uunpklo [[UPK2_HI:z[0-9]+]].d, [[UPK2_HI]].s
-; VBITS_EQ_256-NEXT: fcvt [[RES_LO:z[0-9]+]].d, [[PG]]/m, [[UPK2_LO]].h
-; VBITS_EQ_256-NEXT: fcvt [[RES_HI:z[0-9]+]].d, [[PG]]/m, [[UPK2_HI]].h
-; VBITS_EQ_256-NEXT: st1d { [[RES_LO]].d }, [[PG]], [x1]
-; VBITS_EQ_256-NEXT: st1d { [[RES_HI]].d }, [[PG]], [x8]
+; VBITS_EQ_256-DAG: ldr q[[OP:[0-9]+]], [x0]
+; VBITS_EQ_256-DAG: ptrue [[PG:p[0-9]+]].d, vl4
+; VBITS_EQ_256-DAG: mov x[[NUMELTS:[0-9]+]], #4
+; VBITS_EQ_256-DAG: ext v[[HI:[0-9]+]].16b, v[[OP]].16b, v[[OP]].16b, #8
+; VBITS_EQ_256-DAG: uunpklo [[UPK1_LO:z[0-9]+]].s, z[[OP]].h
+; VBITS_EQ_256-DAG: uunpklo [[UPK1_HI:z[0-9]+]].s, z[[HI]].h
+; VBITS_EQ_256-DAG: uunpklo [[UPK2_LO:z[0-9]+]].d, [[UPK1_LO]].s
+; VBITS_EQ_256-DAG: uunpklo [[UPK2_HI:z[0-9]+]].d, [[UPK2_HI]].s
+; VBITS_EQ_256-DAG: fcvt [[RES_LO:z[0-9]+]].d, [[PG]]/m, [[UPK2_LO]].h
+; VBITS_EQ_256-DAG: fcvt [[RES_HI:z[0-9]+]].d, [[PG]]/m, [[UPK2_HI]].h
+; VBITS_EQ_256-DAG: st1d { [[RES_LO]].d }, [[PG]], [x1]
+; VBITS_EQ_256-DAG: st1d { [[RES_HI]].d }, [[PG]], [x1, x[[NUMELTS]], lsl #3]
   %op1 = load <8 x half>, <8 x half>* %a
   %res = fpext <8 x half> %op1 to <8 x double>
   store <8 x double> %res, <8 x double>* %b
@@ -263,18 +263,18 @@ define void @fcvt_v8f32_v8f64(<8 x float>* %a, <8 x double>* %b) #0 {
 ; VBITS_GE_512-NEXT: ret
 
 ; Ensure sensible type legalisation - fixed type extract_subvector codegen is poor currently.
-; VBITS_EQ_256: ptrue [[PG1:p[0-9]+]].s, vl8
+; VBITS_EQ_256-DAG: ptrue [[PG1:p[0-9]+]].s, vl8
 ; VBITS_EQ_256-DAG: ld1w { [[VEC:z[0-9]+]].s }, [[PG1]]/z, [x0]
 ; VBITS_EQ_256-DAG: st1w { [[VEC:z[0-9]+]].s }, [[PG1]], [x8]
 ; VBITS_EQ_256-DAG: ldp q[[LO:[0-9]+]], q[[HI:[0-9]+]], [sp]
-; VBITS_EQ_256-NEXT: ptrue [[PG2:p[0-9]+]].d, vl4
-; VBITS_EQ_256-NEXT: add x8, x1, #32
-; VBITS_EQ_256-NEXT: uunpklo [[UPK_LO:z[0-9]+]].d, z[[LO]].s
-; VBITS_EQ_256-NEXT: uunpklo [[UPK_HI:z[0-9]+]].d, z[[HI]].s
-; VBITS_EQ_256-NEXT: fcvt [[RES_LO:z[0-9]+]].d, [[PG2]]/m, [[UPK_LO]].s
-; VBITS_EQ_256-NEXT: fcvt [[RES_HI:z[0-9]+]].d, [[PG2]]/m, [[UPK_HI]].s
-; VBITS_EQ_256-DAG: st1d { [[RES_HI]].d }, [[PG2]], [x8]
+; VBITS_EQ_256-DAG: ptrue [[PG2:p[0-9]+]].d, vl4
+; VBITS_EQ_256-DAG: mov x[[NUMELTS:[0-9]+]], #4
+; VBITS_EQ_256-DAG: uunpklo [[UPK_LO:z[0-9]+]].d, z[[LO]].s
+; VBITS_EQ_256-DAG: uunpklo [[UPK_HI:z[0-9]+]].d, z[[HI]].s
+; VBITS_EQ_256-DAG: fcvt [[RES_LO:z[0-9]+]].d, [[PG2]]/m, [[UPK_LO]].s
+; VBITS_EQ_256-DAG: fcvt [[RES_HI:z[0-9]+]].d, [[PG2]]/m, [[UPK_HI]].s
 ; VBITS_EQ_256-DAG: st1d { [[RES_LO]].d }, [[PG2]], [x1]
+; VBITS_EQ_256-DAG: st1d { [[RES_HI]].d }, [[PG2]], [x1, x[[NUMELTS]], lsl #3]
   %op1 = load <8 x float>, <8 x float>* %a
   %res = fpext <8 x float> %op1 to <8 x double>
   store <8 x double> %res, <8 x double>* %b
@@ -358,18 +358,18 @@ define void @fcvt_v16f32_v16f16(<16 x float>* %a, <16 x half>* %b) #0 {
 ; VBITS_GE_512-NEXT: ret
 
 ; Ensure sensible type legalisation
-; VBITS_EQ_256: add x8, x0, #32
-; VBITS_EQ_256-NEXT: ptrue [[PG1:p[0-9]+]].s, vl8
-; VBITS_EQ_256-NEXT: ld1w { [[HI:z[0-9]+]].s }, [[PG1]]/z, [x8]
-; VBITS_EQ_256-NEXT: ld1w { [[LO:z[0-9]+]].s }, [[PG1]]/z, [x0]
-; VBITS_EQ_256-NEXT: ptrue [[PG2:p[0-9]+]].s
-; VBITS_EQ_256-NEXT: ptrue [[PG3:p[0-9]+]].h, vl8
-; VBITS_EQ_256-NEXT: fcvt [[CVT_HI:z[0-9]+]].h, [[PG2]]/m, [[HI]].s
-; VBITS_EQ_256-NEXT: fcvt [[CVT_LO:z[0-9]+]].h, [[PG2]]/m, [[LO]].s
-; VBITS_EQ_256-NEXT: uzp1 [[RES_LO:z[0-9]+]].h, [[CVT_LO]].h, [[CVT_LO]].h
-; VBITS_EQ_256-NEXT: uzp1 [[RES_HI:z[0-9]+]].h, [[CVT_HI]].h, [[CVT_HI]].h
-; VBITS_EQ_256-NEXT: splice [[RES:z[0-9]+]].h, [[PG3]], [[RES_LO]].h, [[RES_HI]].h
-; VBITS_EQ_256-NEXT: ptrue [[PG4:p[0-9]+]].h, vl16
+; VBITS_EQ_256-DAG: ptrue [[PG1:p[0-9]+]].s, vl8
+; VBITS_EQ_256-DAG: mov x[[NUMELTS:[0-9]+]], #8
+; VBITS_EQ_256-DAG: ld1w { [[LO:z[0-9]+]].s }, [[PG1]]/z, [x0]
+; VBITS_EQ_256-DAG: ld1w { [[HI:z[0-9]+]].s }, [[PG1]]/z, [x0, x[[NUMELTS]], lsl #2]
+; VBITS_EQ_256-DAG: ptrue [[PG2:p[0-9]+]].s
+; VBITS_EQ_256-DAG: ptrue [[PG3:p[0-9]+]].h, vl8
+; VBITS_EQ_256-DAG: fcvt [[CVT_LO:z[0-9]+]].h, [[PG2]]/m, [[LO]].s
+; VBITS_EQ_256-DAG: fcvt [[CVT_HI:z[0-9]+]].h, [[PG2]]/m, [[HI]].s
+; VBITS_EQ_256-DAG: uzp1 [[RES_LO:z[0-9]+]].h, [[CVT_LO]].h, [[CVT_LO]].h
+; VBITS_EQ_256-DAG: uzp1 [[RES_HI:z[0-9]+]].h, [[CVT_HI]].h, [[CVT_HI]].h
+; VBITS_EQ_256-DAG: splice [[RES:z[0-9]+]].h, [[PG3]], [[RES_LO]].h, [[RES_HI]].h
+; VBITS_EQ_256-DAG: ptrue [[PG4:p[0-9]+]].h, vl16
 ; VBITS_EQ_256-DAG: st1h { [[RES]].h }, [[PG4]], [x1]
   %op1 = load <16 x float>, <16 x float>* %a
   %res = fptrunc <16 x float> %op1 to <16 x half>
@@ -459,18 +459,18 @@ define <8 x half> @fcvt_v8f64_v8f16(<8 x double>* %a) #0 {
 ; VBITS_GE_512-NEXT: ret
 
 ; Ensure sensible type legalisation
-; VBITS_EQ_256: add x8, x0, #32
-; VBITS_EQ_256-NEXT: ptrue [[PG1:p[0-9]+]].d, vl4
-; VBITS_EQ_256-NEXT: ld1d { [[HI:z[0-9]+]].d }, [[PG1]]/z, [x8]
-; VBITS_EQ_256-NEXT: ld1d { [[LO:z[0-9]+]].d }, [[PG1]]/z, [x0]
-; VBITS_EQ_256-NEXT: ptrue [[PG2:p[0-9]+]].d
-; VBITS_EQ_256-NEXT: fcvt [[CVT_HI:z[0-9]+]].h, [[PG2]]/m, [[HI]].d
-; VBITS_EQ_256-NEXT: fcvt [[CVT_LO:z[0-9]+]].h, [[PG2]]/m, [[LO]].d
-; VBITS_EQ_256-NEXT: uzp1 [[UZP_LO:z[0-9]+]].s, [[CVT_LO]].s, [[CVT_LO]].s
-; VBITS_EQ_256-NEXT: uzp1 [[UZP_HI:z[0-9]+]].s, [[CVT_HI]].s, [[CVT_HI]].s
-; VBITS_EQ_256-NEXT: uzp1 z[[RES_LO:[0-9]+]].h, [[UZP_LO]].h, [[UZP_LO]].h
-; VBITS_EQ_256-NEXT: uzp1 z[[RES_HI:[0-9]+]].h, [[UZP_HI]].h, [[UZP_HI]].h
-; VBITS_EQ_256-NEXT: mov v[[RES_LO]].d[1], v[[RES_HI]].d[0]
+; VBITS_EQ_256-DAG: ptrue [[PG1:p[0-9]+]].d, vl4
+; VBITS_EQ_256-DAG: mov x[[NUMELTS:[0-9]+]], #4
+; VBITS_EQ_256-DAG: ld1d { [[LO:z[0-9]+]].d }, [[PG1]]/z, [x0]
+; VBITS_EQ_256-DAG: ld1d { [[HI:z[0-9]+]].d }, [[PG1]]/z, [x0, x[[NUMELTS]], lsl #3]
+; VBITS_EQ_256-DAG: ptrue [[PG2:p[0-9]+]].d
+; VBITS_EQ_256-DAG: fcvt [[CVT_LO:z[0-9]+]].h, [[PG2]]/m, [[LO]].d
+; VBITS_EQ_256-DAG: fcvt [[CVT_HI:z[0-9]+]].h, [[PG2]]/m, [[HI]].d
+; VBITS_EQ_256-DAG: uzp1 [[UZP_LO:z[0-9]+]].s, [[CVT_LO]].s, [[CVT_LO]].s
+; VBITS_EQ_256-DAG: uzp1 [[UZP_HI:z[0-9]+]].s, [[CVT_HI]].s, [[CVT_HI]].s
+; VBITS_EQ_256-DAG: uzp1 z0.h, [[UZP_LO]].h, [[UZP_LO]].h
+; VBITS_EQ_256-DAG: uzp1 z[[RES_HI:[0-9]+]].h, [[UZP_HI]].h, [[UZP_HI]].h
+; VBITS_EQ_256-DAG: mov v0.d[1], v[[RES_HI]].d[0]
   %op1 = load <8 x double>, <8 x double>* %a
   %res = fptrunc <8 x double> %op1 to <8 x half>
   ret <8 x half> %res
@@ -557,19 +557,20 @@ define void @fcvt_v8f64_v8f32(<8 x double>* %a, <8 x float>* %b) #0 {
 ; VBITS_GE_512-NEXT: ret
 
 ; Ensure sensible type legalisation
-; VBITS_EQ_256: add x8, x0, #32
-; VBITS_EQ_256-NEXT: ptrue [[PG1:p[0-9]+]].d, vl4
-; VBITS_EQ_256-NEXT: ld1d { [[HI:z[0-9]+]].d }, [[PG1]]/z, [x8]
-; VBITS_EQ_256-NEXT: ld1d { [[LO:z[0-9]+]].d }, [[PG1]]/z, [x0]
-; VBITS_EQ_256-NEXT: ptrue [[PG2:p[0-9]+]].d
-; VBITS_EQ_256-NEXT: ptrue [[PG3:p[0-9]+]].s, vl4
-; VBITS_EQ_256-NEXT: fcvt [[CVT_HI:z[0-9]+]].s, [[PG2]]/m, [[HI]].d
-; VBITS_EQ_256-NEXT: fcvt [[CVT_LO:z[0-9]+]].s, [[PG2]]/m, [[LO]].d
-; VBITS_EQ_256-NEXT: uzp1 [[RES_LO:z[0-9]+]].s, [[CVT_LO]].s, [[CVT_LO]].s
-; VBITS_EQ_256-NEXT: uzp1 [[RES_HI:z[0-9]+]].s, [[CVT_HI]].s, [[CVT_HI]].s
-; VBITS_EQ_256-NEXT: splice [[RES:z[0-9]+]].s, [[PG3]], [[RES_LO]].s, [[RES_HI]].s
-; VBITS_EQ_256-NEXT: ptrue [[PG4:p[0-9]+]].s, vl8
-; VBITS_EQ_256-DAG: st1w { [[RES]].s }, [[PG4]], [x1]
+; VBITS_EQ_256-DAG: ptrue [[PG1:p[0-9]+]].d, vl4
+; VBITS_EQ_256-DAG: mov x[[NUMELTS:[0-9]+]], #4
+; VBITS_EQ_256-DAG: ld1d { [[LO:z[0-9]+]].d }, [[PG1]]/z, [x0]
+; VBITS_EQ_256-DAG: ld1d { [[HI:z[0-9]+]].d }, [[PG1]]/z, [x0, x[[NUMELTS]], lsl #3]
+; VBITS_EQ_256-DAG: ptrue [[PG2:p[0-9]+]].d
+; VBITS_EQ_256-DAG: ptrue [[PG3:p[0-9]+]].s, vl4
+; VBITS_EQ_256-DAG: fcvt [[CVT_LO:z[0-9]+]].s, [[PG2]]/m, [[LO]].d
+; VBITS_EQ_256-DAG: fcvt [[CVT_HI:z[0-9]+]].s, [[PG2]]/m, [[HI]].d
+; VBITS_EQ_256-DAG: uzp1 [[RES_LO:z[0-9]+]].s, [[CVT_LO]].s, [[CVT_LO]].s
+; VBITS_EQ_256-DAG: uzp1 [[RES_HI:z[0-9]+]].s, [[CVT_HI]].s, [[CVT_HI]].s
+; VBITS_EQ_256-DAG: splice [[RES:z[0-9]+]].s, [[PG3]], [[RES_LO]].s, [[RES_HI]].s
+; VBITS_EQ_256-DAG: ptrue [[PG4:p[0-9]+]].s, vl8
+; VBITS_EQ_256-NEXT: st1w { [[RES]].s }, [[PG4]], [x1]
+; VBITS_EQ_256-NEXT: ret
   %op1 = load <8 x double>, <8 x double>* %a
   %res = fptrunc <8 x double> %op1 to <8 x float>
   store <8 x float> %res, <8 x float>* %b

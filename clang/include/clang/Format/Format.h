@@ -544,8 +544,7 @@ struct FormatStyle {
   ///   enum { A, B } myEnum;
   ///
   ///   false:
-  ///   enum
-  ///   {
+  ///   enum {
   ///     A,
   ///     B
   ///   } myEnum;

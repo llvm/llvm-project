@@ -18,38 +18,38 @@ define float @caller(<32 x float> %A) nounwind {
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    addi sp, sp, -64
 ; CHECK-NEXT:    sw ra, 60(sp) # 4-byte Folded Spill
-; CHECK-NEXT:    flw fa0, 0(a0)
-; CHECK-NEXT:    flw fa1, 4(a0)
-; CHECK-NEXT:    flw fa2, 8(a0)
-; CHECK-NEXT:    flw fa3, 12(a0)
-; CHECK-NEXT:    flw fa4, 16(a0)
-; CHECK-NEXT:    flw fa5, 20(a0)
-; CHECK-NEXT:    flw fa6, 24(a0)
-; CHECK-NEXT:    flw fa7, 28(a0)
-; CHECK-NEXT:    flw ft0, 32(a0)
-; CHECK-NEXT:    flw ft1, 36(a0)
-; CHECK-NEXT:    flw ft2, 40(a0)
-; CHECK-NEXT:    flw ft3, 44(a0)
-; CHECK-NEXT:    flw ft4, 48(a0)
-; CHECK-NEXT:    flw ft5, 52(a0)
-; CHECK-NEXT:    flw ft6, 56(a0)
-; CHECK-NEXT:    flw ft7, 60(a0)
-; CHECK-NEXT:    flw ft8, 64(a0)
-; CHECK-NEXT:    flw ft9, 68(a0)
-; CHECK-NEXT:    flw ft10, 72(a0)
-; CHECK-NEXT:    flw ft11, 76(a0)
-; CHECK-NEXT:    flw fs0, 80(a0)
-; CHECK-NEXT:    flw fs1, 84(a0)
-; CHECK-NEXT:    flw fs2, 88(a0)
-; CHECK-NEXT:    flw fs3, 92(a0)
-; CHECK-NEXT:    flw fs4, 96(a0)
-; CHECK-NEXT:    flw fs5, 100(a0)
-; CHECK-NEXT:    flw fs6, 104(a0)
-; CHECK-NEXT:    flw fs7, 108(a0)
-; CHECK-NEXT:    flw fs8, 112(a0)
-; CHECK-NEXT:    flw fs9, 116(a0)
-; CHECK-NEXT:    flw fs10, 120(a0)
-; CHECK-NEXT:    flw fs11, 124(a0)
+; CHECK-NEXT:    fmv.w.x fa0, a0
+; CHECK-NEXT:    fmv.w.x fa1, a1
+; CHECK-NEXT:    fmv.w.x fa2, a2
+; CHECK-NEXT:    fmv.w.x fa3, a3
+; CHECK-NEXT:    fmv.w.x fa4, a4
+; CHECK-NEXT:    flw ft0, 64(sp)
+; CHECK-NEXT:    flw ft1, 68(sp)
+; CHECK-NEXT:    flw ft2, 72(sp)
+; CHECK-NEXT:    flw ft3, 76(sp)
+; CHECK-NEXT:    flw ft4, 80(sp)
+; CHECK-NEXT:    flw ft5, 84(sp)
+; CHECK-NEXT:    flw ft6, 88(sp)
+; CHECK-NEXT:    flw ft7, 92(sp)
+; CHECK-NEXT:    flw ft8, 96(sp)
+; CHECK-NEXT:    flw ft9, 100(sp)
+; CHECK-NEXT:    flw ft10, 104(sp)
+; CHECK-NEXT:    flw ft11, 108(sp)
+; CHECK-NEXT:    flw fs0, 112(sp)
+; CHECK-NEXT:    flw fs1, 116(sp)
+; CHECK-NEXT:    flw fs2, 120(sp)
+; CHECK-NEXT:    flw fs3, 124(sp)
+; CHECK-NEXT:    flw fs4, 128(sp)
+; CHECK-NEXT:    flw fs5, 132(sp)
+; CHECK-NEXT:    flw fs6, 136(sp)
+; CHECK-NEXT:    flw fs7, 140(sp)
+; CHECK-NEXT:    flw fs8, 144(sp)
+; CHECK-NEXT:    flw fs9, 148(sp)
+; CHECK-NEXT:    flw fs10, 152(sp)
+; CHECK-NEXT:    flw fs11, 156(sp)
+; CHECK-NEXT:    fmv.w.x fa5, a5
+; CHECK-NEXT:    fmv.w.x fa6, a6
+; CHECK-NEXT:    fmv.w.x fa7, a7
 ; CHECK-NEXT:    fsw fs11, 44(sp)
 ; CHECK-NEXT:    fsw fs10, 40(sp)
 ; CHECK-NEXT:    fsw fs9, 36(sp)
@@ -62,7 +62,7 @@ define float @caller(<32 x float> %A) nounwind {
 ; CHECK-NEXT:    fsw fs2, 8(sp)
 ; CHECK-NEXT:    fsw fs1, 4(sp)
 ; CHECK-NEXT:    fsw fs0, 0(sp)
-; CHECK-NEXT:    call callee
+; CHECK-NEXT:    call callee@plt
 ; CHECK-NEXT:    lw ra, 60(sp) # 4-byte Folded Reload
 ; CHECK-NEXT:    addi sp, sp, 64
 ; CHECK-NEXT:    ret

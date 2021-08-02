@@ -21,18 +21,22 @@
 #include "debug_mode_helper.h"
 
 void test_null_argument() {
-  EXPECT_DEATH(std::string_view(nullptr));
-  EXPECT_DEATH(std::string_view(NULL));
+  // C++2b prohibits construction of string_view from nullptr_t.
+  const char* nullp = nullptr;
+  const char* null = NULL;
+  (void)nullp;
+  (void)null;
+  EXPECT_DEATH((std::string_view(nullp)));
+  EXPECT_DEATH((std::string_view(null)));
   EXPECT_DEATH(std::string_view(static_cast<const char*>(0)));
   {
     std::string_view v;
-    EXPECT_DEATH(((void)(v == nullptr)));
-    EXPECT_DEATH(((void)(nullptr == v)));
+    EXPECT_DEATH(((void)(v == nullp)));
+    EXPECT_DEATH(((void)(nullp == v)));
   }
 }
 
-int main(int, char**)
-{
+int main(int, char**) {
   test_null_argument();
 
   return 0;

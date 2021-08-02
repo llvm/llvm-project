@@ -135,3 +135,89 @@ define i32 @early_freeze_test3(i32 %v1) {
   %v4.fr = freeze i32 %v4
   ret i32 %v4.fr
 }
+
+; If replace all dominated uses of v to freeze(v).
+
+define void @freeze_dominated_uses_test1(i32 %v) {
+; CHECK-LABEL: @freeze_dominated_uses_test1(
+; CHECK-NEXT:    [[V_FR:%.*]] = freeze i32 [[V:%.*]]
+; CHECK-NEXT:    call void @use_i32(i32 [[V_FR]])
+; CHECK-NEXT:    call void @use_i32(i32 [[V_FR]])
+; CHECK-NEXT:    ret void
+;
+  %v.fr = freeze i32 %v
+  call void @use_i32(i32 %v)
+  call void @use_i32(i32 %v.fr)
+  ret void
+}
+
+define void @freeze_dominated_uses_test2(i32 %v) {
+; CHECK-LABEL: @freeze_dominated_uses_test2(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    call void @use_i32(i32 [[V:%.*]])
+; CHECK-NEXT:    [[COND:%.*]] = icmp eq i32 [[V]], 0
+; CHECK-NEXT:    br i1 [[COND]], label [[BB0:%.*]], label [[BB1:%.*]]
+; CHECK:       bb0:
+; CHECK-NEXT:    [[V_FR:%.*]] = freeze i32 [[V]]
+; CHECK-NEXT:    call void @use_i32(i32 [[V_FR]])
+; CHECK-NEXT:    call void @use_i32(i32 [[V_FR]])
+; CHECK-NEXT:    br label [[END:%.*]]
+; CHECK:       bb1:
+; CHECK-NEXT:    call void @use_i32(i32 [[V]])
+; CHECK-NEXT:    br label [[END]]
+; CHECK:       end:
+; CHECK-NEXT:    ret void
+;
+entry:
+  call void @use_i32(i32 %v)
+  %cond = icmp eq i32 %v, 0
+  br i1 %cond, label %bb0, label %bb1
+
+bb0:
+  %v.fr = freeze i32 %v
+  call void @use_i32(i32 %v.fr)
+  call void @use_i32(i32 %v)
+  br label %end
+
+bb1:
+  call void @use_i32(i32 %v)
+  br label %end
+
+end:
+  ret void
+}
+
+; If there is a duplicate freeze, it will be removed.
+
+define void @freeze_dominated_uses_test3(i32 %v, i1 %cond) {
+; CHECK-LABEL: @freeze_dominated_uses_test3(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[V_FR1:%.*]] = freeze i32 [[V:%.*]]
+; CHECK-NEXT:    call void @use_i32(i32 [[V_FR1]])
+; CHECK-NEXT:    br i1 [[COND:%.*]], label [[BB0:%.*]], label [[BB1:%.*]]
+; CHECK:       bb0:
+; CHECK-NEXT:    call void @use_i32(i32 [[V_FR1]])
+; CHECK-NEXT:    br label [[END:%.*]]
+; CHECK:       bb1:
+; CHECK-NEXT:    call void @use_i32(i32 [[V_FR1]])
+; CHECK-NEXT:    br label [[END]]
+; CHECK:       end:
+; CHECK-NEXT:    ret void
+;
+entry:
+  %v.fr1 = freeze i32 %v
+  call void @use_i32(i32 %v.fr1)
+  br i1 %cond, label %bb0, label %bb1
+
+bb0:
+  %v.fr2 = freeze i32 %v
+  call void @use_i32(i32 %v.fr2)
+  br label %end
+
+bb1:
+  call void @use_i32(i32 %v)
+  br label %end
+
+end:
+  ret void
+}

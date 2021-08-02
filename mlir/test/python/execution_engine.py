@@ -33,7 +33,7 @@ llvm.func @none() {
     log(repr(execution_engine_capsule))
     execution_engine._testing_release()
     execution_engine1 = ExecutionEngine._CAPICreate(execution_engine_capsule)
-    # CHECK: _mlir.execution_engine.ExecutionEngine
+    # CHECK: _mlirExecutionEngine.ExecutionEngine
     log(repr(execution_engine1))
 
 run(testCapsule)
@@ -68,7 +68,7 @@ def testInvokeVoid():
 func @void() attributes { llvm.emit_c_interface } {
   return
 }
-    """)    
+    """)
     execution_engine = ExecutionEngine(lowerToLLVM(module))
     # Nothing to check other than no exception thrown here.
     execution_engine.invoke("void")
@@ -157,7 +157,7 @@ func private @some_callback_into_python(memref<*xf32>) -> () attributes { llvm.e
         execution_engine = ExecutionEngine(lowerToLLVM(module))
         execution_engine.register_runtime("some_callback_into_python", callback)
         inp_arr = np.array([[1.0, 2.0], [3.0, 4.0]], np.float32)
-        # CHECK: Inside callback: 
+        # CHECK: Inside callback:
         # CHECK{LITERAL}: [[1. 2.]
         # CHECK{LITERAL}:  [3. 4.]]
         execution_engine.invoke(
@@ -168,7 +168,7 @@ func private @some_callback_into_python(memref<*xf32>) -> () attributes { llvm.e
         strided_arr = np.lib.stride_tricks.as_strided(
             inp_arr_1, strides=(4, 0), shape=(3, 4)
         )
-        # CHECK: Inside callback: 
+        # CHECK: Inside callback:
         # CHECK{LITERAL}: [[5. 5. 5. 5.]
         # CHECK{LITERAL}:  [6. 6. 6. 6.]
         # CHECK{LITERAL}:  [7. 7. 7. 7.]]

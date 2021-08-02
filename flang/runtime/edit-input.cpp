@@ -381,31 +381,12 @@ static bool EditDelimitedCharacterInput(
     }
     io.HandleRelativePosition(1);
     if (*ch == delimiter) {
-      if (auto next{io.GetCurrentChar()}) {
-        if (*next == delimiter) {
-          // Repeated delimiter: use as character value
-          io.HandleRelativePosition(1);
-        } else { // closing delimiter
-          break;
-        }
-      } else { // delimiter was at the end of the record
-        if (length > 0) {
-          // Look ahead on next record: if it begins with the delimiter,
-          // treat it as a split character value, ignoring both delimiters
-          ConnectionState &connection{io.GetConnectionState()};
-          auto position{connection.positionInRecord};
-          if (io.AdvanceRecord()) {
-            if (auto next{io.GetCurrentChar()}; next && *next == delimiter) {
-              // Character constant split over a record boundary
-              io.HandleRelativePosition(1);
-              continue;
-            }
-            // Not a character value split over a record boundary.
-            io.BackspaceRecord();
-            connection.HandleAbsolutePosition(position);
-          }
-        }
-        break;
+      auto next{io.GetCurrentChar()};
+      if (next && *next == delimiter) {
+        // Repeated delimiter: use as character value
+        io.HandleRelativePosition(1);
+      } else {
+        break; // closing delimiter
       }
     }
     if (length > 0) {

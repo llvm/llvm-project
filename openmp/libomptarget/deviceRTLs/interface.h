@@ -222,7 +222,7 @@ EXTERN void __kmpc_push_num_threads(kmp_Ident *loc, int32_t global_tid,
                                     int32_t num_threads);
 EXTERN void __kmpc_serialized_parallel(kmp_Ident *loc, uint32_t global_tid);
 EXTERN void __kmpc_end_serialized_parallel(kmp_Ident *loc, uint32_t global_tid);
-EXTERN uint8_t __kmpc_parallel_level();
+NOINLINE EXTERN uint8_t __kmpc_parallel_level();
 
 // proc bind
 EXTERN void __kmpc_push_proc_bind(kmp_Ident *loc, uint32_t global_tid,
@@ -441,10 +441,11 @@ EXTERN void __kmpc_get_shared_variables(void ***GlobalArgs);
 /// \param wrapper_fn  The worker wrapper function of fn.
 /// \param args        The pointer array of arguments to fn.
 /// \param nargs       The number of arguments to fn.
-EXTERN void __kmpc_parallel_51(ident_t *ident, kmp_int32 global_tid,
-                               kmp_int32 if_expr, kmp_int32 num_threads,
-                               int proc_bind, void *fn, void *wrapper_fn,
-                               void **args, size_t nargs);
+NOINLINE EXTERN void __kmpc_parallel_51(ident_t *ident, kmp_int32 global_tid,
+                                        kmp_int32 if_expr,
+                                        kmp_int32 num_threads, int proc_bind,
+                                        void *fn, void *wrapper_fn, void **args,
+                                        size_t nargs);
 
 // SPMD execution mode interrogation function.
 EXTERN int8_t __kmpc_is_spmd_exec_mode();
@@ -452,6 +453,10 @@ EXTERN int8_t __kmpc_is_spmd_exec_mode();
 /// Return true if the hardware thread id \p Tid represents the OpenMP main
 /// thread in generic mode outside of a parallel region.
 EXTERN int8_t __kmpc_is_generic_main_thread(kmp_int32 Tid);
+
+/// Return true if the hardware thread id \p Tid represents the OpenMP main
+/// thread in generic mode.
+EXTERN int8_t __kmpc_is_generic_main_thread_id(kmp_int32 Tid);
 
 EXTERN void __kmpc_get_team_static_memory(int16_t isSPMDExecutionMode,
                                           const void *buf, size_t size,
@@ -467,7 +472,8 @@ EXTERN void *__kmpc_alloc_shared(uint64_t Bytes);
 
 /// Deallocate \p Ptr. Needs to be called balanced with __kmpc_alloc_shared like
 /// a stack (push/pop). Can be called by any thread. \p Ptr must be allocated by
-/// __kmpc_alloc_shared by the same thread.
-EXTERN void __kmpc_free_shared(void *Ptr);
+/// __kmpc_alloc_shared by the same thread. \p Bytes contains the size of the
+/// paired allocation to make memory management easier.
+EXTERN void __kmpc_free_shared(void *Ptr, size_t Bytes);
 
 #endif

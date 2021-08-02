@@ -513,7 +513,12 @@ entry:
 ; CHECK-NEXT:    movl %edi, (%rcx)
 ; CHECK-NEXT:    addq $8, %rcx
 ; CHECK-NEXT:    cmpq %rdx, %rcx
-; CHECK-NEXT:    cmovbeq %rax, %rcx
+; CHECK-NEXT:    ja .LBB13_5
+; CHECK-NEXT:  # %bb.4: # %loop.body
+; CHECK-NEXT:    # in Loop: Header=BB13_1 Depth=1
+; CHECK-NEXT:    movq %rax, %rcx
+; CHECK-NEXT:  .LBB13_5: # %loop.body
+; CHECK-NEXT:    # in Loop: Header=BB13_1 Depth=1
 ; CHECK-NEXT:    movl %edi, (%rcx)
 ; CHECK-NEXT:    addl $1, %esi
 ; CHECK-NEXT:    cmpl $1024, %esi # imm = 0x400
@@ -534,7 +539,7 @@ loop.body:
   %cond = icmp slt i32 %iv.next, 1024
   br i1 %cond, label %loop.body, label %exit
 
-; CHECK-NEXT:  # %bb.4: # %exit
+; CHECK-NEXT:  # %bb.6: # %exit
 ; CHECK-NEXT:    retq
 exit:
   ret void

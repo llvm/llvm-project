@@ -57,7 +57,7 @@ ErrorCollector::~ErrorCollector() {
   }
 }
 
-LLVM_ATTRIBUTE_NORETURN void ErrorCollector::fatalUnhandledError() {
+[[noreturn]] void ErrorCollector::fatalUnhandledError() {
   errs() << "Program aborted due to unhandled Error(s):\n";
   log(errs());
   errs() << "\n";

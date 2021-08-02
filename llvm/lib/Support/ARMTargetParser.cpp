@@ -540,14 +540,6 @@ bool ARM::appendArchExtFeatures(StringRef CPU, ARM::ArchKind AK,
   return StartingNumFeatures != Features.size();
 }
 
-StringRef ARM::getHWDivName(uint64_t HWDivKind) {
-  for (const auto &D : HWDivNames) {
-    if (HWDivKind == D.ID)
-      return D.getName();
-  }
-  return StringRef();
-}
-
 StringRef ARM::getDefaultCPU(StringRef Arch) {
   ArchKind AK = parseArch(Arch);
   if (AK == ArchKind::INVALID)

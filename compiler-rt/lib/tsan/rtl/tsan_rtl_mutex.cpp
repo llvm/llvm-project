@@ -53,7 +53,7 @@ static void ReportMutexMisuse(ThreadState *thr, uptr pc, ReportType typ,
     return;
   if (!ShouldReport(thr, typ))
     return;
-  ThreadRegistryLock l(ctx->thread_registry);
+  ThreadRegistryLock l(&ctx->thread_registry);
   ScopedReport rep(typ);
   rep.AddMutex(mid);
   VarSizeStackTrace trace;
@@ -63,7 +63,7 @@ static void ReportMutexMisuse(ThreadState *thr, uptr pc, ReportType typ,
   OutputReport(thr, rep);
 }
 
-void MutexCreate(ThreadState *thr, uptr pc, uptr addr, u32 flagz) {
+void MutexCreate(ThreadState *thr, uptr pc, uptr addr, u32 flagz) NO_THREAD_SAFETY_ANALYSIS {
   DPrintf("#%d: MutexCreate %zx flagz=0x%x\n", thr->tid, addr, flagz);
   if (!(flagz & MutexFlagLinkerInit) && IsAppMem(addr)) {
     CHECK(!thr->is_freeing);
@@ -78,7 +78,7 @@ void MutexCreate(ThreadState *thr, uptr pc, uptr addr, u32 flagz) {
   s->mtx.Unlock();
 }
 
-void MutexDestroy(ThreadState *thr, uptr pc, uptr addr, u32 flagz) {
+void MutexDestroy(ThreadState *thr, uptr pc, uptr addr, u32 flagz) NO_THREAD_SAFETY_ANALYSIS {
   DPrintf("#%d: MutexDestroy %zx\n", thr->tid, addr);
   SyncVar *s = ctx->metamap.GetIfExistsAndLock(addr, true);
   if (s == 0)
@@ -107,7 +107,7 @@ void MutexDestroy(ThreadState *thr, uptr pc, uptr addr, u32 flagz) {
     s->Reset(thr->proc());  // must not reset it before the report is printed
   s->mtx.Unlock();
   if (unlock_locked && ShouldReport(thr, ReportTypeMutexDestroyLocked)) {
-    ThreadRegistryLock l(ctx->thread_registry);
+    ThreadRegistryLock l(&ctx->thread_registry);
     ScopedReport rep(ReportTypeMutexDestroyLocked);
     rep.AddMutex(mid);
     VarSizeStackTrace trace;
@@ -138,7 +138,7 @@ void MutexDestroy(ThreadState *thr, uptr pc, uptr addr, u32 flagz) {
   // s will be destroyed and freed in MetaMap::FreeBlock.
 }
 
-void MutexPreLock(ThreadState *thr, uptr pc, uptr addr, u32 flagz) {
+void MutexPreLock(ThreadState *thr, uptr pc, uptr addr, u32 flagz) NO_THREAD_SAFETY_ANALYSIS {
   DPrintf("#%d: MutexPreLock %zx flagz=0x%x\n", thr->tid, addr, flagz);
   if (!(flagz & MutexFlagTryLock) && common_flags()->detect_deadlocks) {
     SyncVar *s = ctx->metamap.GetOrCreateAndLock(thr, pc, addr, false);
@@ -154,7 +154,8 @@ void MutexPreLock(ThreadState *thr, uptr pc, uptr addr, u32 flagz) {
   }
 }
 
-void MutexPostLock(ThreadState *thr, uptr pc, uptr addr, u32 flagz, int rec) {
+void MutexPostLock(ThreadState *thr, uptr pc, uptr addr, u32 flagz,
+                   int rec) NO_THREAD_SAFETY_ANALYSIS {
   DPrintf("#%d: MutexPostLock %zx flag=0x%x rec=%d\n",
       thr->tid, addr, flagz, rec);
   if (flagz & MutexFlagRecursiveLock)
@@ -207,7 +208,7 @@ void MutexPostLock(ThreadState *thr, uptr pc, uptr addr, u32 flagz, int rec) {
   }
 }
 
-int MutexUnlock(ThreadState *thr, uptr pc, uptr addr, u32 flagz) {
+int MutexUnlock(ThreadState *thr, uptr pc, uptr addr, u32 flagz) NO_THREAD_SAFETY_ANALYSIS {
   DPrintf("#%d: MutexUnlock %zx flagz=0x%x\n", thr->tid, addr, flagz);
   if (IsAppMem(addr))
     MemoryReadAtomic(thr, pc, addr, kSizeLog1);
@@ -248,7 +249,7 @@ int MutexUnlock(ThreadState *thr, uptr pc, uptr addr, u32 flagz) {
   return rec;
 }
 
-void MutexPreReadLock(ThreadState *thr, uptr pc, uptr addr, u32 flagz) {
+void MutexPreReadLock(ThreadState *thr, uptr pc, uptr addr, u32 flagz) NO_THREAD_SAFETY_ANALYSIS {
   DPrintf("#%d: MutexPreReadLock %zx flagz=0x%x\n", thr->tid, addr, flagz);
   if (!(flagz & MutexFlagTryLock) && common_flags()->detect_deadlocks) {
     SyncVar *s = ctx->metamap.GetOrCreateAndLock(thr, pc, addr, false);
@@ -260,7 +261,7 @@ void MutexPreReadLock(ThreadState *thr, uptr pc, uptr addr, u32 flagz) {
   }
 }
 
-void MutexPostReadLock(ThreadState *thr, uptr pc, uptr addr, u32 flagz) {
+void MutexPostReadLock(ThreadState *thr, uptr pc, uptr addr, u32 flagz) NO_THREAD_SAFETY_ANALYSIS {
   DPrintf("#%d: MutexPostReadLock %zx flagz=0x%x\n", thr->tid, addr, flagz);
   if (IsAppMem(addr))
     MemoryReadAtomic(thr, pc, addr, kSizeLog1);
@@ -299,7 +300,7 @@ void MutexPostReadLock(ThreadState *thr, uptr pc, uptr addr, u32 flagz) {
   }
 }
 
-void MutexReadUnlock(ThreadState *thr, uptr pc, uptr addr) {
+void MutexReadUnlock(ThreadState *thr, uptr pc, uptr addr) NO_THREAD_SAFETY_ANALYSIS {
   DPrintf("#%d: MutexReadUnlock %zx\n", thr->tid, addr);
   if (IsAppMem(addr))
     MemoryReadAtomic(thr, pc, addr, kSizeLog1);
@@ -330,7 +331,7 @@ void MutexReadUnlock(ThreadState *thr, uptr pc, uptr addr) {
   }
 }
 
-void MutexReadOrWriteUnlock(ThreadState *thr, uptr pc, uptr addr) {
+void MutexReadOrWriteUnlock(ThreadState *thr, uptr pc, uptr addr) NO_THREAD_SAFETY_ANALYSIS {
   DPrintf("#%d: MutexReadOrWriteUnlock %zx\n", thr->tid, addr);
   if (IsAppMem(addr))
     MemoryReadAtomic(thr, pc, addr, kSizeLog1);
@@ -374,7 +375,7 @@ void MutexReadOrWriteUnlock(ThreadState *thr, uptr pc, uptr addr) {
   }
 }
 
-void MutexRepair(ThreadState *thr, uptr pc, uptr addr) {
+void MutexRepair(ThreadState *thr, uptr pc, uptr addr) NO_THREAD_SAFETY_ANALYSIS {
   DPrintf("#%d: MutexRepair %zx\n", thr->tid, addr);
   SyncVar *s = ctx->metamap.GetOrCreateAndLock(thr, pc, addr, true);
   s->owner_tid = kInvalidTid;
@@ -382,7 +383,7 @@ void MutexRepair(ThreadState *thr, uptr pc, uptr addr) {
   s->mtx.Unlock();
 }
 
-void MutexInvalidAccess(ThreadState *thr, uptr pc, uptr addr) {
+void MutexInvalidAccess(ThreadState *thr, uptr pc, uptr addr) NO_THREAD_SAFETY_ANALYSIS {
   DPrintf("#%d: MutexInvalidAccess %zx\n", thr->tid, addr);
   SyncVar *s = ctx->metamap.GetOrCreateAndLock(thr, pc, addr, true);
   u64 mid = s->GetId();
@@ -390,7 +391,7 @@ void MutexInvalidAccess(ThreadState *thr, uptr pc, uptr addr) {
   ReportMutexMisuse(thr, pc, ReportTypeMutexInvalidAccess, addr, mid);
 }
 
-void Acquire(ThreadState *thr, uptr pc, uptr addr) {
+void Acquire(ThreadState *thr, uptr pc, uptr addr) NO_THREAD_SAFETY_ANALYSIS {
   DPrintf("#%d: Acquire %zx\n", thr->tid, addr);
   if (thr->ignore_sync)
     return;
@@ -412,16 +413,15 @@ static void UpdateClockCallback(ThreadContextBase *tctx_base, void *arg) {
   thr->clock.set(&thr->proc()->clock_cache, tctx->tid, epoch);
 }
 
-void AcquireGlobal(ThreadState *thr, uptr pc) {
+void AcquireGlobal(ThreadState *thr) {
   DPrintf("#%d: AcquireGlobal\n", thr->tid);
   if (thr->ignore_sync)
     return;
-  ThreadRegistryLock l(ctx->thread_registry);
-  ctx->thread_registry->RunCallbackForEachThreadLocked(
-      UpdateClockCallback, thr);
+  ThreadRegistryLock l(&ctx->thread_registry);
+  ctx->thread_registry.RunCallbackForEachThreadLocked(UpdateClockCallback, thr);
 }
 
-void ReleaseStoreAcquire(ThreadState *thr, uptr pc, uptr addr) {
+void ReleaseStoreAcquire(ThreadState *thr, uptr pc, uptr addr) NO_THREAD_SAFETY_ANALYSIS {
   DPrintf("#%d: ReleaseStoreAcquire %zx\n", thr->tid, addr);
   if (thr->ignore_sync)
     return;
@@ -433,7 +433,7 @@ void ReleaseStoreAcquire(ThreadState *thr, uptr pc, uptr addr) {
   s->mtx.Unlock();
 }
 
-void Release(ThreadState *thr, uptr pc, uptr addr) {
+void Release(ThreadState *thr, uptr pc, uptr addr) NO_THREAD_SAFETY_ANALYSIS {
   DPrintf("#%d: Release %zx\n", thr->tid, addr);
   if (thr->ignore_sync)
     return;
@@ -445,7 +445,7 @@ void Release(ThreadState *thr, uptr pc, uptr addr) {
   s->mtx.Unlock();
 }
 
-void ReleaseStore(ThreadState *thr, uptr pc, uptr addr) {
+void ReleaseStore(ThreadState *thr, uptr pc, uptr addr) NO_THREAD_SAFETY_ANALYSIS {
   DPrintf("#%d: ReleaseStore %zx\n", thr->tid, addr);
   if (thr->ignore_sync)
     return;
@@ -472,9 +472,9 @@ void AfterSleep(ThreadState *thr, uptr pc) {
   if (thr->ignore_sync)
     return;
   thr->last_sleep_stack_id = CurrentStackId(thr, pc);
-  ThreadRegistryLock l(ctx->thread_registry);
-  ctx->thread_registry->RunCallbackForEachThreadLocked(
-      UpdateSleepClockCallback, thr);
+  ThreadRegistryLock l(&ctx->thread_registry);
+  ctx->thread_registry.RunCallbackForEachThreadLocked(UpdateSleepClockCallback,
+                                                      thr);
 }
 #endif
 
@@ -520,7 +520,7 @@ void AcquireReleaseImpl(ThreadState *thr, uptr pc, SyncClock *c) {
 void ReportDeadlock(ThreadState *thr, uptr pc, DDReport *r) {
   if (r == 0 || !ShouldReport(thr, ReportTypeDeadlock))
     return;
-  ThreadRegistryLock l(ctx->thread_registry);
+  ThreadRegistryLock l(&ctx->thread_registry);
   ScopedReport rep(ReportTypeDeadlock);
   for (int i = 0; i < r->n; i++) {
     rep.AddMutex(r->loop[i].mtx_ctx0);

@@ -67,3 +67,18 @@ namespace non_type_pack {
 
   static_assert((foo<1>(), true));
 }
+
+namespace PR47174 {
+// This checks that we don't crash with a failed substitution on the first constrained argument when
+// performing normalization.
+template <Bar2 T, True U>
+requires true struct S3; // expected-note {{template is declared here}}
+template <True T, True U>
+requires true struct S3<T, U>; // expected-error {{class template partial specialization is not more specialized than the primary template}}
+
+// Same as above, for the second position (but this was already working).
+template <True T, Bar2 U>
+requires true struct S4; // expected-note {{template is declared here}}
+template <True T, True U>
+requires true struct S4<T, U>; // expected-error {{class template partial specialization is not more specialized than the primary template}}
+} // namespace PR47174

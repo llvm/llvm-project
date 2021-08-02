@@ -34,6 +34,36 @@ ORC_RT_JIT_DISPATCH_TAG(__orc_rt_macho_symbol_lookup_tag)
 extern "C" void __register_frame(const void *);
 extern "C" void __deregister_frame(const void *);
 
+// Objective-C types.
+struct objc_class;
+struct objc_image_info;
+struct objc_object;
+struct objc_selector;
+
+using Class = objc_class *;
+using id = objc_object *;
+using SEL = objc_selector *;
+
+// Objective-C registration functions.
+// These are weakly imported. If the Objective-C runtime has not been loaded
+// then code containing Objective-C sections will generate an error.
+extern "C" id objc_msgSend(id, SEL, ...) ORC_RT_WEAK_IMPORT;
+extern "C" Class objc_readClassPair(Class,
+                                    const objc_image_info *) ORC_RT_WEAK_IMPORT;
+extern "C" SEL sel_registerName(const char *) ORC_RT_WEAK_IMPORT;
+
+// Swift types.
+class ProtocolRecord;
+class ProtocolConformanceRecord;
+
+extern "C" void
+swift_registerProtocols(const ProtocolRecord *begin,
+                        const ProtocolRecord *end) ORC_RT_WEAK_IMPORT;
+
+extern "C" void swift_registerProtocolConformances(
+    const ProtocolConformanceRecord *begin,
+    const ProtocolConformanceRecord *end) ORC_RT_WEAK_IMPORT;
+
 namespace {
 
 template <typename HandleFDEFn>
@@ -70,6 +100,108 @@ Error validatePointerSectionExtent(const char *SectionName,
   return Error::success();
 }
 
+Error registerObjCSelectors(
+    const std::vector<ExecutorAddressRange> &ObjCSelRefsSections,
+    const MachOJITDylibInitializers &MOJDIs) {
+
+  if (ORC_RT_UNLIKELY(!sel_registerName))
+    return make_error<StringError>("sel_registerName is not available");
+
+  for (const auto &ObjCSelRefs : ObjCSelRefsSections) {
+
+    if (auto Err = validatePointerSectionExtent("__objc_selrefs", ObjCSelRefs))
+      return Err;
+
+    fprintf(stderr, "Processing selrefs section at 0x%llx\n",
+            ObjCSelRefs.StartAddress.getValue());
+    for (uintptr_t SelEntry : ObjCSelRefs.toSpan<uintptr_t>()) {
+      const char *SelName = reinterpret_cast<const char *>(SelEntry);
+      fprintf(stderr, "Registering selector \"%s\"\n", SelName);
+      auto Sel = sel_registerName(SelName);
+      *reinterpret_cast<SEL *>(SelEntry) = Sel;
+    }
+  }
+
+  return Error::success();
+}
+
+Error registerObjCClasses(
+    const std::vector<ExecutorAddressRange> &ObjCClassListSections,
+    const MachOJITDylibInitializers &MOJDIs) {
+
+  if (ObjCClassListSections.empty())
+    return Error::success();
+
+  if (ORC_RT_UNLIKELY(!objc_msgSend))
+    return make_error<StringError>("objc_msgSend is not available");
+  if (ORC_RT_UNLIKELY(!objc_readClassPair))
+    return make_error<StringError>("objc_readClassPair is not available");
+
+  struct ObjCClassCompiled {
+    void *Metaclass;
+    void *Parent;
+    void *Cache1;
+    void *Cache2;
+    void *Data;
+  };
+
+  auto *ImageInfo =
+      MOJDIs.ObjCImageInfoAddress.toPtr<const objc_image_info *>();
+  auto ClassSelector = sel_registerName("class");
+
+  for (const auto &ObjCClassList : ObjCClassListSections) {
+
+    if (auto Err =
+            validatePointerSectionExtent("__objc_classlist", ObjCClassList))
+      return Err;
+
+    for (uintptr_t ClassPtr : ObjCClassList.toSpan<uintptr_t>()) {
+      auto *Cls = reinterpret_cast<Class>(ClassPtr);
+      auto *ClassCompiled = reinterpret_cast<ObjCClassCompiled *>(ClassPtr);
+      objc_msgSend(reinterpret_cast<id>(ClassCompiled->Parent), ClassSelector);
+      auto Registered = objc_readClassPair(Cls, ImageInfo);
+
+      // FIXME: Improve diagnostic by reporting the failed class's name.
+      if (Registered != Cls)
+        return make_error<StringError>("Unable to register Objective-C class");
+    }
+  }
+  return Error::success();
+}
+
+Error registerSwift5Protocols(
+    const std::vector<ExecutorAddressRange> &Swift5ProtocolSections,
+    const MachOJITDylibInitializers &MOJDIs) {
+
+  if (ORC_RT_UNLIKELY(!Swift5ProtocolSections.empty() &&
+                      !swift_registerProtocols))
+    return make_error<StringError>("swift_registerProtocols is not available");
+
+  for (const auto &Swift5Protocols : Swift5ProtocolSections)
+    swift_registerProtocols(
+        Swift5Protocols.StartAddress.toPtr<const ProtocolRecord *>(),
+        Swift5Protocols.EndAddress.toPtr<const ProtocolRecord *>());
+
+  return Error::success();
+}
+
+Error registerSwift5ProtocolConformances(
+    const std::vector<ExecutorAddressRange> &Swift5ProtocolConformanceSections,
+    const MachOJITDylibInitializers &MOJDIs) {
+
+  if (ORC_RT_UNLIKELY(!Swift5ProtocolConformanceSections.empty() &&
+                      !swift_registerProtocolConformances))
+    return make_error<StringError>(
+        "swift_registerProtocolConformances is not available");
+
+  for (const auto &ProtoConfSec : Swift5ProtocolConformanceSections)
+    swift_registerProtocolConformances(
+        ProtoConfSec.StartAddress.toPtr<const ProtocolConformanceRecord *>(),
+        ProtoConfSec.EndAddress.toPtr<const ProtocolConformanceRecord *>());
+
+  return Error::success();
+}
+
 Error runModInits(const std::vector<ExecutorAddressRange> &ModInitsSections,
                   const MachOJITDylibInitializers &MOJDIs) {
 
@@ -84,6 +216,12 @@ Error runModInits(const std::vector<ExecutorAddressRange> &ModInitsSections,
 
   return Error::success();
 }
+
+struct TLVDescriptor {
+  void *(*Thunk)(TLVDescriptor *) = nullptr;
+  unsigned long Key = 0;
+  unsigned long DataAddress = 0;
+};
 
 class MachOPlatformRuntimeState {
 private:
@@ -126,10 +264,16 @@ public:
   int registerAtExit(void (*F)(void *), void *Arg, void *DSOHandle);
   void runAtExits(void *DSOHandle);
 
+  /// Returns the base address of the section containing ThreadData.
+  Expected<std::pair<const char *, size_t>>
+  getThreadDataSectionFor(const char *ThreadData);
+
 private:
   PerJITDylibState *getJITDylibStateByHeaderAddr(void *DSOHandle);
   PerJITDylibState *getJITDylibStateByName(string_view Path);
   PerJITDylibState &getOrCreateJITDylibState(MachOJITDylibInitializers &MOJDIs);
+
+  Error registerThreadDataSection(span<const char> ThreadDataSec);
 
   Expected<ExecutorAddress> lookupSymbolInJITDylib(void *DSOHandle,
                                                    string_view Symbol);
@@ -144,8 +288,12 @@ private:
   using InitSectionHandler =
       Error (*)(const std::vector<ExecutorAddressRange> &Sections,
                 const MachOJITDylibInitializers &MOJDIs);
-  const std::vector<std::pair<string_view, InitSectionHandler>> InitSections = {
-      {"__DATA,__mod_init_func", runModInits}};
+  const std::vector<std::pair<const char *, InitSectionHandler>> InitSections =
+      {{"__DATA,__objc_selrefs", registerObjCSelectors},
+       {"__DATA,__objc_classlist", registerObjCClasses},
+       {"__TEXT,__swift5_protos", registerSwift5Protocols},
+       {"__TEXT,__swift5_proto", registerSwift5ProtocolConformances},
+       {"__DATA,__mod_init_func", runModInits}};
 
   // FIXME: Move to thread-state.
   std::string DLFcnError;
@@ -153,6 +301,9 @@ private:
   std::recursive_mutex JDStatesMutex;
   std::unordered_map<void *, PerJITDylibState> JDStates;
   std::unordered_map<std::string, void *> JDNameToHeader;
+
+  std::mutex ThreadDataSectionsMutex;
+  std::map<const char *, size_t> ThreadDataSections;
 };
 
 MachOPlatformRuntimeState *MachOPlatformRuntimeState::MOPS = nullptr;
@@ -177,6 +328,12 @@ Error MachOPlatformRuntimeState::registerObjectSections(
   if (POSR.EHFrameSection.StartAddress)
     walkEHFrameSection(POSR.EHFrameSection.toSpan<const char>(),
                        __register_frame);
+
+  if (POSR.ThreadDataSection.StartAddress) {
+    if (auto Err = registerThreadDataSection(
+            POSR.ThreadDataSection.toSpan<const char>()))
+      return Err;
+  }
 
   return Error::success();
 }
@@ -256,6 +413,19 @@ void MachOPlatformRuntimeState::runAtExits(void *DSOHandle) {
   }
 }
 
+Expected<std::pair<const char *, size_t>>
+MachOPlatformRuntimeState::getThreadDataSectionFor(const char *ThreadData) {
+  std::lock_guard<std::mutex> Lock(ThreadDataSectionsMutex);
+  auto I = ThreadDataSections.upper_bound(ThreadData);
+  // Check that we have a valid entry covering this address.
+  if (I == ThreadDataSections.begin())
+    return make_error<StringError>("No thread local data section for key");
+  I = std::prev(I);
+  if (ThreadData >= I->first + I->second)
+    return make_error<StringError>("No thread local data section for key");
+  return *I;
+}
+
 MachOPlatformRuntimeState::PerJITDylibState *
 MachOPlatformRuntimeState::getJITDylibStateByHeaderAddr(void *DSOHandle) {
   auto I = JDStates.find(DSOHandle);
@@ -293,6 +463,20 @@ MachOPlatformRuntimeState::getOrCreateJITDylibState(
   }
 
   return JDS;
+}
+
+Error MachOPlatformRuntimeState::registerThreadDataSection(
+    span<const char> ThreadDataSection) {
+  std::lock_guard<std::mutex> Lock(ThreadDataSectionsMutex);
+  auto I = ThreadDataSections.upper_bound(ThreadDataSection.data());
+  if (I != ThreadDataSections.begin()) {
+    auto J = std::prev(I);
+    if (J->first + J->second > ThreadDataSection.data())
+      return make_error<StringError>("Overlapping __thread_data sections");
+  }
+  ThreadDataSections.insert(
+      I, std::make_pair(ThreadDataSection.data(), ThreadDataSection.size()));
+  return Error::success();
 }
 
 Expected<ExecutorAddress>
@@ -356,8 +540,7 @@ Error MachOPlatformRuntimeState::initializeJITDylib(
   for (auto &KV : InitSections) {
     const auto &Name = KV.first;
     const auto &Handler = KV.second;
-    // FIXME: Remove copy once we have C++17.
-    auto I = MOJDIs.InitSections.find(to_string(Name));
+    auto I = MOJDIs.InitSections.find(Name);
     if (I != MOJDIs.InitSections.end()) {
       if (auto Err = Handler(I->second, MOJDIs))
         return Err;
@@ -365,6 +548,45 @@ Error MachOPlatformRuntimeState::initializeJITDylib(
   }
 
   return Error::success();
+}
+
+class MachOPlatformRuntimeTLVManager {
+public:
+  void *getInstance(const char *ThreadData);
+
+private:
+  std::unordered_map<const char *, char *> Instances;
+  std::unordered_map<const char *, std::unique_ptr<char[]>> AllocatedSections;
+};
+
+void *MachOPlatformRuntimeTLVManager::getInstance(const char *ThreadData) {
+  auto I = Instances.find(ThreadData);
+  if (I != Instances.end())
+    return I->second;
+
+  auto TDS =
+      MachOPlatformRuntimeState::get().getThreadDataSectionFor(ThreadData);
+  if (!TDS) {
+    __orc_rt_log_error(toString(TDS.takeError()).c_str());
+    return nullptr;
+  }
+
+  auto &Allocated = AllocatedSections[TDS->first];
+  if (!Allocated) {
+    Allocated = std::make_unique<char[]>(TDS->second);
+    memcpy(Allocated.get(), TDS->first, TDS->second);
+  }
+
+  size_t ThreadDataDelta = ThreadData - TDS->first;
+  assert(ThreadDataDelta <= TDS->second && "ThreadData outside section bounds");
+
+  char *Instance = Allocated.get() + ThreadDataDelta;
+  Instances[ThreadData] = Instance;
+  return Instance;
+}
+
+void destroyMachOTLVMgr(void *MachOTLVMgr) {
+  delete static_cast<MachOPlatformRuntimeTLVManager *>(MachOTLVMgr);
 }
 
 } // end anonymous namespace
@@ -405,6 +627,40 @@ __orc_rt_macho_deregister_object_sections(char *ArgData, size_t ArgSize) {
              [](MachOPerObjectSectionsToRegister &POSR) {
                return MachOPlatformRuntimeState::get().deregisterObjectSections(
                    std::move(POSR));
+             })
+      .release();
+}
+
+//------------------------------------------------------------------------------
+//                            TLV support
+//------------------------------------------------------------------------------
+
+ORC_RT_INTERFACE void *__orc_rt_macho_tlv_get_addr_impl(TLVDescriptor *D) {
+  auto *TLVMgr = static_cast<MachOPlatformRuntimeTLVManager *>(
+      pthread_getspecific(D->Key));
+  if (!TLVMgr) {
+    TLVMgr = new MachOPlatformRuntimeTLVManager();
+    if (pthread_setspecific(D->Key, TLVMgr)) {
+      __orc_rt_log_error("Call to pthread_setspecific failed");
+      return nullptr;
+    }
+  }
+
+  return TLVMgr->getInstance(
+      reinterpret_cast<char *>(static_cast<uintptr_t>(D->DataAddress)));
+}
+
+ORC_RT_INTERFACE __orc_rt_CWrapperFunctionResult
+__orc_rt_macho_create_pthread_key(char *ArgData, size_t ArgSize) {
+  return WrapperFunction<SPSExpected<uint64_t>(void)>::handle(
+             ArgData, ArgSize,
+             []() -> Expected<uint64_t> {
+               pthread_key_t Key;
+               if (int Err = pthread_key_create(&Key, destroyMachOTLVMgr)) {
+                 __orc_rt_log_error("Call to pthread_key_create failed");
+                 return make_error<StringError>(strerror(Err));
+               }
+               return static_cast<uint64_t>(Key);
              })
       .release();
 }

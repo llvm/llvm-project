@@ -106,6 +106,9 @@ protected:
 int main() {
   MemberTest::Base B1;
   B1.Get();
+  // Create instance of C1 so that it has debug info (due to constructor
+  // homing).
+  MemberTest::Class C1;
   MemberTest::Class::StaticMemberFunc(1, 10, 2);
   return 0;
 }

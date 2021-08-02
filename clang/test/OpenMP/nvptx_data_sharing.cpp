@@ -418,8 +418,8 @@ void test_ds(){
 // CHECK-NEXT:    store i8* [[TMP8]], i8** [[TMP7]], align 8
 // CHECK-NEXT:    [[TMP9:%.*]] = bitcast [2 x i8*]* [[CAPTURED_VARS_ADDRS1]] to i8**
 // CHECK-NEXT:    call void @__kmpc_parallel_51(%struct.ident_t* @[[GLOB1]], i32 [[TMP1]], i32 1, i32 -1, i32 -1, i8* bitcast (void (i32*, i32*, i32*, i32*)* @__omp_outlined__1 to i8*), i8* bitcast (void (i16, i32)* @__omp_outlined__1_wrapper to i8*), i8** [[TMP9]], i64 2)
-// CHECK-NEXT:    call void @__kmpc_free_shared(i8* [[B]])
-// CHECK-NEXT:    call void @__kmpc_free_shared(i8* [[A]])
+// CHECK-NEXT:    call void @__kmpc_free_shared(i8* [[B]], i64 4)
+// CHECK-NEXT:    call void @__kmpc_free_shared(i8* [[A]], i64 4)
 // CHECK-NEXT:    call void @__kmpc_target_deinit(%struct.ident_t* @[[GLOB1]], i1 false, i1 true)
 // CHECK-NEXT:    ret void
 // CHECK:       worker.exit:

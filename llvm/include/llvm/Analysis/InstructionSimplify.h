@@ -145,8 +145,7 @@ struct SimplifyQuery {
 // Please use the SimplifyQuery versions in new code.
 
 /// Given operand for an FNeg, fold the result or return null.
-Value *SimplifyFNegInst(Value *Op, FastMathFlags FMF,
-                        const SimplifyQuery &Q);
+Value *SimplifyFNegInst(Value *Op, FastMathFlags FMF, const SimplifyQuery &Q);
 
 /// Given operands for an Add, fold the result or return null.
 Value *SimplifyAddInst(Value *LHS, Value *RHS, bool isNSW, bool isNUW,
@@ -297,8 +296,8 @@ Value *SimplifyBinOp(unsigned Opcode, Value *LHS, Value *RHS,
 
 /// Given operands for a BinaryOperator, fold the result or return null.
 /// Try to use FastMathFlags when folding the result.
-Value *SimplifyBinOp(unsigned Opcode, Value *LHS, Value *RHS,
-                     FastMathFlags FMF, const SimplifyQuery &Q);
+Value *SimplifyBinOp(unsigned Opcode, Value *LHS, Value *RHS, FastMathFlags FMF,
+                     const SimplifyQuery &Q);
 
 /// Given a callsite, fold the result or return null.
 Value *SimplifyCall(CallBase *Call, const SimplifyQuery &Q);
@@ -311,6 +310,13 @@ Value *SimplifyFreezeInst(Value *Op, const SimplifyQuery &Q);
 /// return null.
 Value *SimplifyInstruction(Instruction *I, const SimplifyQuery &Q,
                            OptimizationRemarkEmitter *ORE = nullptr);
+
+/// Like \p SimplifyInstruction but the operands of \p I are replaced with
+/// \p NewOps. Returns a simplified value, or null if none was found.
+Value *
+SimplifyInstructionWithOperands(Instruction *I, ArrayRef<Value *> NewOps,
+                                const SimplifyQuery &Q,
+                                OptimizationRemarkEmitter *ORE = nullptr);
 
 /// See if V simplifies when its operand Op is replaced with RepOp. If not,
 /// return null.
@@ -345,4 +351,3 @@ const SimplifyQuery getBestSimplifyQuery(LoopStandardAnalysisResults &,
 } // end namespace llvm
 
 #endif
-

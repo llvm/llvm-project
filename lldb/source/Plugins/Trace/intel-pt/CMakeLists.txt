@@ -25,6 +25,7 @@ add_lldb_library(lldbPluginTraceIntelPT PLUGIN
     lldbCore
     lldbSymbol
     lldbTarget
+    lldbPluginTraceCommon
     ${LIBIPT_LIBRARY}
   LINK_COMPONENTS
     Support

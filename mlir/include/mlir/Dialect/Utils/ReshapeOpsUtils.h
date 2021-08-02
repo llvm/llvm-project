@@ -47,7 +47,7 @@ Optional<SmallVector<ReassociationIndices>> composeReassociationIndices(
 
 /// Convert reassociation indices to affine expressions.
 SmallVector<SmallVector<AffineExpr, 2>, 2> convertReassociationIndicesToExprs(
-    OpBuilder &b, ArrayRef<ReassociationIndices> reassociationIndices);
+    MLIRContext *context, ArrayRef<ReassociationIndices> reassociationIndices);
 
 /// Constructs affine maps out of Array<Array<AffineExpr>>.
 SmallVector<AffineMap, 4>

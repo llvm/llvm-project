@@ -78,9 +78,9 @@ define <16 x i8> @avgr_u_v16i8(<16 x i8> %x, <16 x i8> %y) {
 ; CHECK-NEXT: .functype popcnt_v16i8 (v128) -> (v128){{$}}
 ; CHECK-NEXT: i8x16.popcnt $push[[R:[0-9]+]]=, $0{{$}}
 ; CHECK-NEXT: return $pop[[R]]{{$}}
-declare <16 x i8> @llvm.wasm.popcnt(<16 x i8>)
+declare <16 x i8> @llvm.ctpop.v16i8(<16 x i8>)
 define <16 x i8> @popcnt_v16i8(<16 x i8> %x) {
- %a = call <16 x i8> @llvm.wasm.popcnt(<16 x i8> %x)
+ %a = call <16 x i8> @llvm.ctpop.v16i8(<16 x i8> %x)
  ret <16 x i8> %a
 }
 
@@ -248,54 +248,6 @@ define <8 x i16> @q15mulr_sat_s_v8i16(<8 x i16> %x, <8 x i16> %y) {
   ret <8 x i16> %a
 }
 
-; CHECK-LABEL: extmul_low_s_v8i16:
-; CHECK-NEXT: .functype extmul_low_s_v8i16 (v128, v128) -> (v128){{$}}
-; CHECK-NEXT: i16x8.extmul_low_i8x16_s $push[[R:[0-9]+]]=, $0, $1{{$}}
-; CHECK-NEXT: return $pop[[R]]{{$}}
-declare <8 x i16> @llvm.wasm.extmul.low.signed.v8i16(<16 x i8>, <16 x i8>)
-define <8 x i16> @extmul_low_s_v8i16(<16 x i8> %x, <16 x i8> %y) {
-  %a = call <8 x i16> @llvm.wasm.extmul.low.signed.v8i16(
-    <16 x i8> %x, <16 x i8> %y
-  )
-  ret <8 x i16> %a
-}
-
-; CHECK-LABEL: extmul_high_s_v8i16:
-; CHECK-NEXT: .functype extmul_high_s_v8i16 (v128, v128) -> (v128){{$}}
-; CHECK-NEXT: i16x8.extmul_high_i8x16_s $push[[R:[0-9]+]]=, $0, $1{{$}}
-; CHECK-NEXT: return $pop[[R]]{{$}}
-declare <8 x i16> @llvm.wasm.extmul.high.signed.v8i16(<16 x i8>, <16 x i8>)
-define <8 x i16> @extmul_high_s_v8i16(<16 x i8> %x, <16 x i8> %y) {
-  %a = call <8 x i16> @llvm.wasm.extmul.high.signed.v8i16(
-    <16 x i8> %x, <16 x i8> %y
-  )
-  ret <8 x i16> %a
-}
-
-; CHECK-LABEL: extmul_low_u_v8i16:
-; CHECK-NEXT: .functype extmul_low_u_v8i16 (v128, v128) -> (v128){{$}}
-; CHECK-NEXT: i16x8.extmul_low_i8x16_u $push[[R:[0-9]+]]=, $0, $1{{$}}
-; CHECK-NEXT: return $pop[[R]]{{$}}
-declare <8 x i16> @llvm.wasm.extmul.low.unsigned.v8i16(<16 x i8>, <16 x i8>)
-define <8 x i16> @extmul_low_u_v8i16(<16 x i8> %x, <16 x i8> %y) {
-  %a = call <8 x i16> @llvm.wasm.extmul.low.unsigned.v8i16(
-    <16 x i8> %x, <16 x i8> %y
-  )
-  ret <8 x i16> %a
-}
-
-; CHECK-LABEL: extmul_high_u_v8i16:
-; CHECK-NEXT: .functype extmul_high_u_v8i16 (v128, v128) -> (v128){{$}}
-; CHECK-NEXT: i16x8.extmul_high_i8x16_u $push[[R:[0-9]+]]=, $0, $1{{$}}
-; CHECK-NEXT: return $pop[[R]]{{$}}
-declare <8 x i16> @llvm.wasm.extmul.high.unsigned.v8i16(<16 x i8>, <16 x i8>)
-define <8 x i16> @extmul_high_u_v8i16(<16 x i8> %x, <16 x i8> %y) {
-  %a = call <8 x i16> @llvm.wasm.extmul.high.unsigned.v8i16(
-    <16 x i8> %x, <16 x i8> %y
-  )
-  ret <8 x i16> %a
-}
-
 ; CHECK-LABEL: extadd_pairwise_s_v8i16:
 ; CHECK-NEXT: .functype extadd_pairwise_s_v8i16 (v128) -> (v128){{$}}
 ; CHECK-NEXT: i16x8.extadd_pairwise_i8x16_s $push[[R:[0-9]+]]=, $0{{$}}
@@ -392,55 +344,6 @@ define <8 x i16> @narrow_unsigned_v8i16(<4 x i32> %low, <4 x i32> %high) {
 declare <4 x i32> @llvm.wasm.dot(<8 x i16>, <8 x i16>)
 define <4 x i32> @dot(<8 x i16> %x, <8 x i16> %y) {
   %a = call <4 x i32> @llvm.wasm.dot(<8 x i16> %x, <8 x i16> %y)
-  ret <4 x i32> %a
-}
-
-
-; CHECK-LABEL: extmul_low_s_v4i32:
-; CHECK-NEXT: .functype extmul_low_s_v4i32 (v128, v128) -> (v128){{$}}
-; CHECK-NEXT: i32x4.extmul_low_i16x8_s $push[[R:[0-9]+]]=, $0, $1{{$}}
-; CHECK-NEXT: return $pop[[R]]{{$}}
-declare <4 x i32> @llvm.wasm.extmul.low.signed.v4i32(<8 x i16>, <8 x i16>)
-define <4 x i32> @extmul_low_s_v4i32(<8 x i16> %x, <8 x i16> %y) {
-  %a = call <4 x i32> @llvm.wasm.extmul.low.signed.v4i32(
-    <8 x i16> %x, <8 x i16> %y
-  )
-  ret <4 x i32> %a
-}
-
-; CHECK-LABEL: extmul_high_s_v4i32:
-; CHECK-NEXT: .functype extmul_high_s_v4i32 (v128, v128) -> (v128){{$}}
-; CHECK-NEXT: i32x4.extmul_high_i16x8_s $push[[R:[0-9]+]]=, $0, $1{{$}}
-; CHECK-NEXT: return $pop[[R]]{{$}}
-declare <4 x i32> @llvm.wasm.extmul.high.signed.v4i32(<8 x i16>, <8 x i16>)
-define <4 x i32> @extmul_high_s_v4i32(<8 x i16> %x, <8 x i16> %y) {
-  %a = call <4 x i32> @llvm.wasm.extmul.high.signed.v4i32(
-    <8 x i16> %x, <8 x i16> %y
-  )
-  ret <4 x i32> %a
-}
-
-; CHECK-LABEL: extmul_low_u_v4i32:
-; CHECK-NEXT: .functype extmul_low_u_v4i32 (v128, v128) -> (v128){{$}}
-; CHECK-NEXT: i32x4.extmul_low_i16x8_u $push[[R:[0-9]+]]=, $0, $1{{$}}
-; CHECK-NEXT: return $pop[[R]]{{$}}
-declare <4 x i32> @llvm.wasm.extmul.low.unsigned.v4i32(<8 x i16>, <8 x i16>)
-define <4 x i32> @extmul_low_u_v4i32(<8 x i16> %x, <8 x i16> %y) {
-  %a = call <4 x i32> @llvm.wasm.extmul.low.unsigned.v4i32(
-    <8 x i16> %x, <8 x i16> %y
-  )
-  ret <4 x i32> %a
-}
-
-; CHECK-LABEL: extmul_high_u_v4i32:
-; CHECK-NEXT: .functype extmul_high_u_v4i32 (v128, v128) -> (v128){{$}}
-; CHECK-NEXT: i32x4.extmul_high_i16x8_u $push[[R:[0-9]+]]=, $0, $1{{$}}
-; CHECK-NEXT: return $pop[[R]]{{$}}
-declare <4 x i32> @llvm.wasm.extmul.high.unsigned.v4i32(<8 x i16>, <8 x i16>)
-define <4 x i32> @extmul_high_u_v4i32(<8 x i16> %x, <8 x i16> %y) {
-  %a = call <4 x i32> @llvm.wasm.extmul.high.unsigned.v4i32(
-    <8 x i16> %x, <8 x i16> %y
-  )
   ret <4 x i32> %a
 }
 
@@ -580,54 +483,6 @@ define <4 x i32> @trunc_sat_zero_u_v4i32_2(<2 x double> %x) {
 ; ==============================================================================
 ; 2 x i64
 ; ==============================================================================
-; CHECK-LABEL: extmul_low_s_v2i64:
-; CHECK-NEXT: .functype extmul_low_s_v2i64 (v128, v128) -> (v128){{$}}
-; CHECK-NEXT: i64x2.extmul_low_i32x4_s $push[[R:[0-9]+]]=, $0, $1{{$}}
-; CHECK-NEXT: return $pop[[R]]{{$}}
-declare <2 x i64> @llvm.wasm.extmul.low.signed.v2i64(<4 x i32>, <4 x i32>)
-define <2 x i64> @extmul_low_s_v2i64(<4 x i32> %x, <4 x i32> %y) {
-  %a = call <2 x i64> @llvm.wasm.extmul.low.signed.v2i64(
-    <4 x i32> %x, <4 x i32> %y
-  )
-  ret <2 x i64> %a
-}
-
-; CHECK-LABEL: extmul_high_s_v2i64:
-; CHECK-NEXT: .functype extmul_high_s_v2i64 (v128, v128) -> (v128){{$}}
-; CHECK-NEXT: i64x2.extmul_high_i32x4_s $push[[R:[0-9]+]]=, $0, $1{{$}}
-; CHECK-NEXT: return $pop[[R]]{{$}}
-declare <2 x i64> @llvm.wasm.extmul.high.signed.v2i64(<4 x i32>, <4 x i32>)
-define <2 x i64> @extmul_high_s_v2i64(<4 x i32> %x, <4 x i32> %y) {
-  %a = call <2 x i64> @llvm.wasm.extmul.high.signed.v2i64(
-    <4 x i32> %x, <4 x i32> %y
-  )
-  ret <2 x i64> %a
-}
-
-; CHECK-LABEL: extmul_low_u_v2i64:
-; CHECK-NEXT: .functype extmul_low_u_v2i64 (v128, v128) -> (v128){{$}}
-; CHECK-NEXT: i64x2.extmul_low_i32x4_u $push[[R:[0-9]+]]=, $0, $1{{$}}
-; CHECK-NEXT: return $pop[[R]]{{$}}
-declare <2 x i64> @llvm.wasm.extmul.low.unsigned.v2i64(<4 x i32>, <4 x i32>)
-define <2 x i64> @extmul_low_u_v2i64(<4 x i32> %x, <4 x i32> %y) {
-  %a = call <2 x i64> @llvm.wasm.extmul.low.unsigned.v2i64(
-    <4 x i32> %x, <4 x i32> %y
-  )
-  ret <2 x i64> %a
-}
-
-; CHECK-LABEL: extmul_high_u_v2i64:
-; CHECK-NEXT: .functype extmul_high_u_v2i64 (v128, v128) -> (v128){{$}}
-; CHECK-NEXT: i64x2.extmul_high_i32x4_u $push[[R:[0-9]+]]=, $0, $1{{$}}
-; CHECK-NEXT: return $pop[[R]]{{$}}
-declare <2 x i64> @llvm.wasm.extmul.high.unsigned.v2i64(<4 x i32>, <4 x i32>)
-define <2 x i64> @extmul_high_u_v2i64(<4 x i32> %x, <4 x i32> %y) {
-  %a = call <2 x i64> @llvm.wasm.extmul.high.unsigned.v2i64(
-    <4 x i32> %x, <4 x i32> %y
-  )
-  ret <2 x i64> %a
-}
-
 ; CHECK-LABEL: any_v2i64:
 ; CHECK-NEXT: .functype any_v2i64 (v128) -> (i32){{$}}
 ; CHECK-NEXT: v128.any_true $push[[R:[0-9]+]]=, $0{{$}}
@@ -685,26 +540,6 @@ define <4 x float> @bitselect_v4f32(<4 x float> %v1, <4 x float> %v2, <4 x float
   ret <4 x float> %a
 }
 
-; CHECK-LABEL: pmin_v4f32:
-; CHECK-NEXT: .functype pmin_v4f32 (v128, v128) -> (v128){{$}}
-; CHECK-NEXT: f32x4.pmin $push[[R:[0-9]+]]=, $0, $1{{$}}
-; CHECK-NEXT: return $pop[[R]]{{$}}
-declare <4 x float> @llvm.wasm.pmin.v4f32(<4 x float>, <4 x float>)
-define <4 x float> @pmin_v4f32(<4 x float> %a, <4 x float> %b) {
-  %v = call <4 x float> @llvm.wasm.pmin.v4f32(<4 x float> %a, <4 x float> %b)
-  ret <4 x float> %v
-}
-
-; CHECK-LABEL: pmax_v4f32:
-; CHECK-NEXT: .functype pmax_v4f32 (v128, v128) -> (v128){{$}}
-; CHECK-NEXT: f32x4.pmax $push[[R:[0-9]+]]=, $0, $1{{$}}
-; CHECK-NEXT: return $pop[[R]]{{$}}
-declare <4 x float> @llvm.wasm.pmax.v4f32(<4 x float>, <4 x float>)
-define <4 x float> @pmax_v4f32(<4 x float> %a, <4 x float> %b) {
-  %v = call <4 x float> @llvm.wasm.pmax.v4f32(<4 x float> %a, <4 x float> %b)
-  ret <4 x float> %v
-}
-
 ; CHECK-LABEL: ceil_v4f32:
 ; CHECK-NEXT: .functype ceil_v4f32 (v128) -> (v128){{$}}
 ; CHECK-NEXT: f32x4.ceil $push[[R:[0-9]+]]=, $0{{$}}
@@ -758,26 +593,6 @@ define <2 x double> @bitselect_v2f64(<2 x double> %v1, <2 x double> %v2, <2 x do
     <2 x double> %v1, <2 x double> %v2, <2 x double> %c
   )
   ret <2 x double> %a
-}
-
-; CHECK-LABEL: pmin_v2f64:
-; CHECK-NEXT: .functype pmin_v2f64 (v128, v128) -> (v128){{$}}
-; CHECK-NEXT: f64x2.pmin $push[[R:[0-9]+]]=, $0, $1{{$}}
-; CHECK-NEXT: return $pop[[R]]{{$}}
-declare <2 x double> @llvm.wasm.pmin.v2f64(<2 x double>, <2 x double>)
-define <2 x double> @pmin_v2f64(<2 x double> %a, <2 x double> %b) {
-  %v = call <2 x double> @llvm.wasm.pmin.v2f64(<2 x double> %a, <2 x double> %b)
-  ret <2 x double> %v
-}
-
-; CHECK-LABEL: pmax_v2f64:
-; CHECK-NEXT: .functype pmax_v2f64 (v128, v128) -> (v128){{$}}
-; CHECK-NEXT: f64x2.pmax $push[[R:[0-9]+]]=, $0, $1{{$}}
-; CHECK-NEXT: return $pop[[R]]{{$}}
-declare <2 x double> @llvm.wasm.pmax.v2f64(<2 x double>, <2 x double>)
-define <2 x double> @pmax_v2f64(<2 x double> %a, <2 x double> %b) {
-  %v = call <2 x double> @llvm.wasm.pmax.v2f64(<2 x double> %a, <2 x double> %b)
-  ret <2 x double> %v
 }
 
 ; CHECK-LABEL: ceil_v2f64:

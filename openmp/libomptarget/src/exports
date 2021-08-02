@@ -3,6 +3,7 @@ VERS1.0 {
     __tgt_register_requires;
     __tgt_register_lib;
     __tgt_unregister_lib;
+    __tgt_init_all_rtls;
     __tgt_target_data_begin;
     __tgt_target_data_end;
     __tgt_target_data_update;
@@ -40,6 +41,7 @@ VERS1.0 {
     llvm_omp_target_alloc_shared;
     llvm_omp_target_alloc_device;
     __tgt_set_info_flag;
+    __tgt_print_device_info;
   local:
     *;
 };

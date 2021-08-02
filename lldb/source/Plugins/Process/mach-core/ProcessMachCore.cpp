@@ -541,6 +541,11 @@ Status ProcessMachCore::DoLoadCore() {
   if (arch.IsValid())
     GetTarget().SetArchitecture(arch);
 
+  addr_t address_mask = core_objfile->GetAddressMask();
+  if (address_mask != 0) {
+    SetCodeAddressMask(address_mask);
+    SetDataAddressMask(address_mask);
+  }
   return error;
 }
 

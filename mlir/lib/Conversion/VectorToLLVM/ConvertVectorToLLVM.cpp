@@ -541,6 +541,12 @@ public:
     }
 
     // For all other cases, insert the individual values individually.
+    Type eltType;
+    llvm::errs() << llvmType << "\n";
+    if (auto arrayType = llvmType.dyn_cast<LLVM::LLVMArrayType>())
+      eltType = arrayType.getElementType();
+    else
+      eltType = llvmType.cast<VectorType>().getElementType();
     Value insert = rewriter.create<LLVM::UndefOp>(loc, llvmType);
     int64_t insPos = 0;
     for (auto en : llvm::enumerate(maskArrayAttr)) {
@@ -551,7 +557,7 @@ public:
         value = adaptor.v2();
       }
       Value extract = extractOne(rewriter, *getTypeConverter(), loc, value,
-                                 llvmType, rank, extPos);
+                                 eltType, rank, extPos);
       insert = insertOne(rewriter, *getTypeConverter(), loc, insert, extract,
                          llvmType, rank, insPos++);
     }

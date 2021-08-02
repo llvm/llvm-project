@@ -1378,7 +1378,7 @@ namespace clang {
       RSquare
     } Kind;
 
-    unsigned Location;
+    SourceLocation::UIntTy Location;
     unsigned StringLength;
     union {
       // If Kind != IntegerLiteral.

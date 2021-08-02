@@ -3,7 +3,6 @@
 ; RUN: opt < %s -aa-pipeline=basic-aa -passes='dse,verify<memoryssa>' -S | FileCheck %s
 target datalayout = "E-p:64:64:64-a0:0:8-f32:32:32-f64:64:64-i1:8:8-i8:8:8-i16:16:16-i32:32:32-i64:32:64-v64:64:64-v128:128:128"
 
-declare i8* @calloc(i64, i64)
 declare void @memset_pattern16(i8*, i8*, i64)
 
 declare void @llvm.memset.p0i8.i64(i8* nocapture, i8, i64, i1) nounwind
@@ -378,6 +377,34 @@ define i8* @notmalloc_memset(i64 %size, i8*(i64)* %notmalloc) {
   ret i8* %call1
 }
 
+; This should not create recursive call to calloc.
+define i8* @calloc(i64 %nmemb, i64 %size) {
+; CHECK-LABEL: @calloc(
+; CHECK:       entry:
+; CHECK-NEXT:    [[MUL:%.*]] = mul i64 [[SIZE:%.*]], [[NMEMB:%.*]]
+; CHECK-NEXT:    [[CALL:%.*]] = tail call noalias align 16 i8* @malloc(i64 [[MUL]])
+; CHECK-NEXT:    [[TOBOOL_NOT:%.*]] = icmp eq i8* [[CALL]], null
+; CHECK-NEXT:    br i1 [[TOBOOL_NOT]], label [[IF_END:%.*]], label [[IF_THEN:%.*]]
+; CHECK:       if.then:
+; CHECK-NEXT:    tail call void @llvm.memset.p0i8.i64(i8* nonnull align 16 [[CALL]], i8 0, i64 [[MUL]], i1 false)
+; CHECK-NEXT:    br label [[IF_END]]
+; CHECK:       if.end:
+; CHECK-NEXT:    ret i8* [[CALL]]
+;
+entry:
+  %mul = mul i64 %size, %nmemb
+  %call = tail call noalias align 16 i8* @malloc(i64 %mul)
+  %tobool.not = icmp eq i8* %call, null
+  br i1 %tobool.not, label %if.end, label %if.then
+
+if.then:                                          ; preds = %entry
+  tail call void @llvm.memset.p0i8.i64(i8* nonnull align 16 %call, i8 0, i64 %mul, i1 false)
+  br label %if.end
+
+if.end:                                           ; preds = %if.then, %entry
+  ret i8* %call
+}
+
 define float* @pr25892(i64 %size) {
 ; CHECK-LABEL: @pr25892(
 ; CHECK:       entry:
@@ -404,6 +431,7 @@ cleanup:
   ret float* %retval.0
 }
 
+define float* @pr25892_with_extra_store(i64 %size) {
 ; CHECK-LABEL: @pr25892_with_extra_store(
 ; CHECK:       entry:
 ; CHECK-NEXT:    [[CALL:%.*]] = call i8* @calloc(i64 1, i64 [[SIZE:%.*]])
@@ -416,7 +444,6 @@ cleanup:
 ; CHECK-NEXT:    [[RETVAL_0:%.*]] = phi float* [ [[BC]], [[IF_END]] ], [ null, [[ENTRY:%.*]] ]
 ; CHECK-NEXT:    ret float* [[RETVAL_0]]
 ;
-define float* @pr25892_with_extra_store(i64 %size) {
 entry:
   %call = call i8* @malloc(i64 %size) inaccessiblememonly
   %cmp = icmp eq i8* %call, null

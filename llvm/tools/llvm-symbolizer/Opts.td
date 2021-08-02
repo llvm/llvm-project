@@ -1,17 +1,17 @@
 include "llvm/Option/OptParser.td"
 
 multiclass B<string name, string help1, string help2> {
-  def NAME: Flag<["--", "-"], name>, HelpText<help1>;
-  def no_ # NAME: Flag<["--", "-"], "no-" # name>, HelpText<help2>;
+  def NAME: Flag<["--"], name>, HelpText<help1>;
+  def no_ # NAME: Flag<["--"], "no-" # name>, HelpText<help2>;
 }
 
 multiclass Eq<string name, string help> {
-  def NAME #_EQ : Joined<["--", "-"], name #"=">,
+  def NAME #_EQ : Joined<["--"], name #"=">,
                   HelpText<help>;
-  def : Separate<["--", "-"], name>, Alias<!cast<Joined>(NAME #_EQ)>;
+  def : Separate<["--"], name>, Alias<!cast<Joined>(NAME #_EQ)>;
 }
 
-class F<string name, string help>: Flag<["--", "-"], name>, HelpText<help>;
+class F<string name, string help>: Flag<["--"], name>, HelpText<help>;
 
 def grp_mach_o : OptionGroup<"kind">,
                  HelpText<"llvm-symbolizer Mach-O Specific Options">;

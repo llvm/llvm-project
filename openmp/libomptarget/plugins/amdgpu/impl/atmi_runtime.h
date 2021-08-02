@@ -1,22 +1,17 @@
-/*===--------------------------------------------------------------------------
- *              ATMI (Asynchronous Task and Memory Interface)
- *
- * This file is distributed under the MIT License. See LICENSE.txt for details.
- *===------------------------------------------------------------------------*/
+//===--- amdgpu/impl/atmi_runtime.h ------------------------------- C++ -*-===//
+//
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
+//
+//===----------------------------------------------------------------------===//
 #ifndef INCLUDE_ATMI_RUNTIME_H_
 #define INCLUDE_ATMI_RUNTIME_H_
 
 #include "atmi.h"
-#include "hsa.h"
-#include <inttypes.h>
-#include <stdlib.h>
-#ifndef __cplusplus
-#include <stdbool.h>
-#endif
+#include "hsa_api.h"
 
-#ifdef __cplusplus
 extern "C" {
-#endif
 
 /** \defgroup module_functions ATMI Module
  * @{
@@ -68,8 +63,6 @@ hsa_status_t atmi_memcpy_d2h(hsa_signal_t sig, void *hostDest,
 
 /** @} */
 
-#ifdef __cplusplus
 }
-#endif
 
 #endif // INCLUDE_ATMI_RUNTIME_H_

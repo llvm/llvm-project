@@ -138,6 +138,12 @@ class Function;
 
 /// Abstract Attribute helper functions.
 namespace AA {
+
+/// Return true if \p V is dynamically unique, that is, there are no two
+/// "instances" of \p V at runtime with different values.
+bool isDynamicallyUnique(Attributor &A, const AbstractAttribute &QueryingAA,
+                         const Value &V);
+
 /// Return true if \p V is a valid value in \p Scope, that is a constant or an
 /// instruction/argument of \p Scope.
 bool isValidInScope(const Value &V, const Function *Scope);
@@ -179,6 +185,20 @@ bool getAssumedUnderlyingObjects(Attributor &A, const Value &Ptr,
                                  SmallVectorImpl<Value *> &Objects,
                                  const AbstractAttribute &QueryingAA,
                                  const Instruction *CtxI);
+
+/// Collect all potential values of the one stored by \p SI into
+/// \p PotentialCopies. That is, the only copies that were made via the
+/// store are assumed to be known and all in \p PotentialCopies. Dependences
+/// onto \p QueryingAA are properly tracked, \p UsedAssumedInformation will
+/// inform the caller if assumed information was used.
+///
+/// \returns True if the assumed potential copies are all in \p PotentialCopies,
+///          false if something went wrong and the copies could not be
+///          determined.
+bool getPotentialCopiesOfStoredValue(
+    Attributor &A, StoreInst &SI, SmallSetVector<Value *, 4> &PotentialCopies,
+    const AbstractAttribute &QueryingAA, bool &UsedAssumedInformation);
+
 } // namespace AA
 
 /// The value passed to the line option that defines the maximal initialization
@@ -998,9 +1018,9 @@ struct InformationCache {
     const Function &F = *From.getFunction();
     bool Result = true;
     if (From.getFunction() == To.getFunction())
-      Result = isPotentiallyReachable(
-        &From, &To, nullptr, AG.getAnalysis<DominatorTreeAnalysis>(F),
-        AG.getAnalysis<LoopAnalysis>(F));
+      Result = isPotentiallyReachable(&From, &To, nullptr,
+                                      AG.getAnalysis<DominatorTreeAnalysis>(F),
+                                      AG.getAnalysis<LoopAnalysis>(F));
     PotentiallyReachableMap.insert(std::make_pair(KeyPair, Result));
     return Result;
   }
@@ -1487,17 +1507,28 @@ struct Attributor {
   /// triggers deletion of trivially dead istructions.
   void deleteAfterManifest(BasicBlock &BB) { ToBeDeletedBlocks.insert(&BB); }
 
+  // Record that \p BB is added during the manifest of an AA. Added basic blocks
+  // are preserved in the IR.
+  void registerManifestAddedBasicBlock(BasicBlock &BB) {
+    ManifestAddedBlocks.insert(&BB);
+  }
+
   /// Record that \p F is deleted after information was manifested.
   void deleteAfterManifest(Function &F) {
     if (DeleteFns)
       ToBeDeletedFunctions.insert(&F);
   }
 
-  /// If \p V is assumed to be a constant, return it, if it is unclear yet,
+  /// If \p IRP is assumed to be a constant, return it, if it is unclear yet,
   /// return None, otherwise return `nullptr`.
-  Optional<Constant *> getAssumedConstant(const Value &V,
+  Optional<Constant *> getAssumedConstant(const IRPosition &IRP,
                                           const AbstractAttribute &AA,
                                           bool &UsedAssumedInformation);
+  Optional<Constant *> getAssumedConstant(const Value &V,
+                                          const AbstractAttribute &AA,
+                                          bool &UsedAssumedInformation) {
+    return getAssumedConstant(IRPosition::value(V), AA, UsedAssumedInformation);
+  }
 
   /// If \p V is assumed simplified, return it, if it is unclear yet,
   /// return None, otherwise return `nullptr`.
@@ -1513,6 +1544,13 @@ struct Attributor {
                                 UsedAssumedInformation);
   }
 
+  /// If \p V is assumed simplified, return it, if it is unclear yet,
+  /// return None, otherwise return `nullptr`. Same as the public version
+  /// except that it can be used without recording dependences on any \p AA.
+  Optional<Value *> getAssumedSimplified(const IRPosition &V,
+                                         const AbstractAttribute *AA,
+                                         bool &UsedAssumedInformation);
+
   /// Register \p CB as a simplification callback.
   /// `Attributor::getAssumedSimplified` will use these callbacks before
   /// we it will ask `AAValueSimplify`. It is important to ensure this
@@ -1525,17 +1563,15 @@ struct Attributor {
     SimplificationCallbacks[IRP].emplace_back(CB);
   }
 
+  /// Return true if there is a simplification callback for \p IRP.
+  bool hasSimplificationCallback(const IRPosition &IRP) {
+    return SimplificationCallbacks.count(IRP);
+  }
+
 private:
   /// The vector with all simplification callbacks registered by outside AAs.
   DenseMap<IRPosition, SmallVector<SimplifictionCallbackTy, 1>>
       SimplificationCallbacks;
-
-  /// If \p V is assumed simplified, return it, if it is unclear yet,
-  /// return None, otherwise return `nullptr`. Same as the public version
-  /// except that it can be used without recording dependences on any \p AA.
-  Optional<Value *> getAssumedSimplified(const IRPosition &V,
-                                         const AbstractAttribute *AA,
-                                         bool &UsedAssumedInformation);
 
 public:
   /// Translate \p V from the callee context into the call site context.
@@ -1574,6 +1610,13 @@ public:
   bool isAssumedDead(const IRPosition &IRP, const AbstractAttribute *QueryingAA,
                      const AAIsDead *FnLivenessAA, bool &UsedAssumedInformation,
                      bool CheckBBLivenessOnly = false,
+                     DepClassTy DepClass = DepClassTy::OPTIONAL);
+
+  /// Return true if \p BB is assumed dead.
+  ///
+  /// If \p LivenessAA is not provided it is queried.
+  bool isAssumedDead(const BasicBlock &BB, const AbstractAttribute *QueryingAA,
+                     const AAIsDead *FnLivenessAA,
                      DepClassTy DepClass = DepClassTy::OPTIONAL);
 
   /// Check \p Pred on all (transitive) uses of \p V.
@@ -1812,6 +1855,10 @@ public:
   ///
   static void createShallowWrapper(Function &F);
 
+  /// Returns true if the function \p F can be internalized. i.e. it has a
+  /// compatible linkage.
+  static bool isInternalizable(Function &F);
+
   /// Make another copy of the function \p F such that the copied version has
   /// internal linkage afterwards and can be analysed. Then we replace all uses
   /// of the original function to the copied one
@@ -1826,6 +1873,22 @@ public:
   /// If the function \p F failed to be internalized the return value will be a
   /// null pointer.
   static Function *internalizeFunction(Function &F, bool Force = false);
+
+  /// Make copies of each function in the set \p FnSet such that the copied
+  /// version has internal linkage afterwards and can be analysed. Then we
+  /// replace all uses of the original function to the copied one. The map
+  /// \p FnMap contains a mapping of functions to their internalized versions.
+  ///
+  /// Only non-locally linked functions that have `linkonce_odr` or `weak_odr`
+  /// linkage can be internalized because these linkages guarantee that other
+  /// definitions with the same name have the same semantics as this one.
+  ///
+  /// This version will internalize all the functions in the set \p FnSet at
+  /// once and then replace the uses. This prevents internalized functions being
+  /// called by external functions when there is an internalized version in the
+  /// module.
+  static bool internalizeFunctions(SmallPtrSetImpl<Function *> &FnSet,
+                                   DenseMap<Function *, Function *> &FnMap);
 
   /// Return the data layout associated with the anchor scope.
   const DataLayout &getDataLayout() const { return InfoCache.DL; }
@@ -1979,6 +2042,7 @@ private:
   ///{
   SmallPtrSet<Function *, 8> ToBeDeletedFunctions;
   SmallPtrSet<BasicBlock *, 8> ToBeDeletedBlocks;
+  SmallPtrSet<BasicBlock *, 8> ManifestAddedBlocks;
   SmallDenseSet<WeakVH, 8> ToBeDeletedInsts;
   ///}
 
@@ -2452,7 +2516,8 @@ struct IntegerRangeState : public AbstractState {
 /// IRAttribute::manifest is defined in the Attributor.cpp.
 struct IRAttributeManifest {
   static ChangeStatus manifestAttrs(Attributor &A, const IRPosition &IRP,
-                                    const ArrayRef<Attribute> &DeducedAttrs);
+                                    const ArrayRef<Attribute> &DeducedAttrs,
+                                    bool ForceReplace = false);
 };
 
 /// Helper to tie a abstract state implementation to an abstract attribute.
@@ -2677,6 +2742,17 @@ struct AttributorCGSCCPass : public PassInfoMixin<AttributorCGSCCPass> {
 
 Pass *createAttributorLegacyPass();
 Pass *createAttributorCGSCCLegacyPass();
+
+/// Helper function to clamp a state \p S of type \p StateType with the
+/// information in \p R and indicate/return if \p S did change (as-in update is
+/// required to be run again).
+template <typename StateType>
+ChangeStatus clampStateAndIndicateChange(StateType &S, const StateType &R) {
+  auto Assumed = S.getAssumed();
+  S ^= R;
+  return Assumed == S.getAssumed() ? ChangeStatus::UNCHANGED
+                                   : ChangeStatus::CHANGED;
+}
 
 /// ----------------------------------------------------------------------------
 ///                       Abstract Attribute Classes
@@ -3055,9 +3131,19 @@ struct AANoReturn
 };
 
 /// An abstract interface for liveness abstract attribute.
-struct AAIsDead : public StateWrapper<BooleanState, AbstractAttribute> {
-  using Base = StateWrapper<BooleanState, AbstractAttribute>;
+struct AAIsDead
+    : public StateWrapper<BitIntegerState<uint8_t, 3, 0>, AbstractAttribute> {
+  using Base = StateWrapper<BitIntegerState<uint8_t, 3, 0>, AbstractAttribute>;
   AAIsDead(const IRPosition &IRP, Attributor &A) : Base(IRP) {}
+
+  /// State encoding bits. A set bit in the state means the property holds.
+  enum {
+    HAS_NO_EFFECT = 1 << 0,
+    IS_REMOVABLE = 1 << 1,
+
+    IS_DEAD = HAS_NO_EFFECT | IS_REMOVABLE,
+  };
+  static_assert(IS_DEAD == getBestState(), "Unexpected BEST_STATE value");
 
 protected:
   /// The query functions are protected such that other attributes need to go
@@ -3537,7 +3623,11 @@ struct AAHeapToStack : public StateWrapper<BooleanState, AbstractAttribute> {
   AAHeapToStack(const IRPosition &IRP, Attributor &A) : Base(IRP) {}
 
   /// Returns true if HeapToStack conversion is assumed to be possible.
-  virtual bool isAssumedHeapToStack(CallBase &CB) const = 0;
+  virtual bool isAssumedHeapToStack(const CallBase &CB) const = 0;
+
+  /// Returns true if HeapToStack conversion is assumed and the CB is a
+  /// callsite to a free operation to be removed.
+  virtual bool isAssumedHeapToStackRemovedFree(CallBase &CB) const = 0;
 
   /// Create an abstract attribute view for the position \p IRP.
   static AAHeapToStack &createForPosition(const IRPosition &IRP, Attributor &A);
@@ -4418,6 +4508,7 @@ struct AAPointerInfo : public AbstractAttribute {
       RemoteI = Other.RemoteI;
       Content = Other.Content;
       Kind = Other.Kind;
+      Ty = Other.Ty;
       return *this;
     }
     bool operator==(const Access &R) const {

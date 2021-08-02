@@ -512,6 +512,7 @@ isl_bool isl_set_plain_is_disjoint(__isl_keep isl_set *set1,
 
 uint32_t isl_set_get_hash(__isl_keep isl_set *set);
 
+__isl_export
 isl_size isl_set_n_basic_set(__isl_keep isl_set *set);
 __isl_export
 isl_stat isl_set_foreach_basic_set(__isl_keep isl_set *set,

@@ -17,10 +17,10 @@
 #include "llvm/ADT/StringRef.h"
 #include "llvm/ADT/Triple.h"
 #include "llvm/ExecutionEngine/JITLink/JITLinkMemoryManager.h"
-#include "llvm/ExecutionEngine/Orc/Core.h"
 #include "llvm/ExecutionEngine/Orc/Shared/ExecutorAddress.h"
 #include "llvm/ExecutionEngine/Orc/Shared/TargetProcessControlTypes.h"
 #include "llvm/ExecutionEngine/Orc/Shared/WrapperFunctionUtils.h"
+#include "llvm/ExecutionEngine/Orc/SymbolStringPool.h"
 #include "llvm/Support/DynamicLibrary.h"
 #include "llvm/Support/MSVCErrorWorkarounds.h"
 
@@ -31,21 +31,17 @@
 namespace llvm {
 namespace orc {
 
+class ExecutionSession;
+class SymbolLookupSet;
+
 /// ExecutorProcessControl supports interaction with a JIT target process.
 class ExecutorProcessControl {
+  friend class ExecutionSession;
+
 public:
   /// Sender to return the result of a WrapperFunction executed in the JIT.
   using SendResultFunction =
       unique_function<void(shared::WrapperFunctionResult)>;
-
-  /// An asynchronous wrapper-function.
-  using AsyncWrapperFunction = unique_function<void(
-      SendResultFunction SendResult, const char *ArgData, size_t ArgSize)>;
-
-  /// A map associating tag names with asynchronous wrapper function
-  /// implementations in the JIT.
-  using WrapperFunctionAssociationMap =
-      DenseMap<SymbolStringPtr, AsyncWrapperFunction>;
 
   /// APIs for manipulating memory in the target process.
   class MemoryAccess {
@@ -123,6 +119,13 @@ public:
 
   virtual ~ExecutorProcessControl();
 
+  /// Return the ExecutionSession associated with this instance.
+  /// Not callable until the ExecutionSession has been associated.
+  ExecutionSession &getExecutionSession() {
+    assert(ES && "No ExecutionSession associated yet");
+    return *ES;
+  }
+
   /// Intern a symbol name in the SymbolStringPool.
   SymbolStringPtr intern(StringRef SymName) { return SSP->intern(SymName); }
 
@@ -139,10 +142,16 @@ public:
   const JITDispatchInfo &getJITDispatchInfo() const { return JDI; }
 
   /// Return a MemoryAccess object for the target process.
-  MemoryAccess &getMemoryAccess() const { return *MemAccess; }
+  MemoryAccess &getMemoryAccess() const {
+    assert(MemAccess && "No MemAccess object set.");
+    return *MemAccess;
+  }
 
   /// Return a JITLinkMemoryManager for the target process.
-  jitlink::JITLinkMemoryManager &getMemMgr() const { return *MemMgr; }
+  jitlink::JITLinkMemoryManager &getMemMgr() const {
+    assert(MemMgr && "No MemMgr object set");
+    return *MemMgr;
+  }
 
   /// Load the dynamic library at the given path and return a handle to it.
   /// If LibraryPath is null this function will return the global handle for
@@ -163,7 +172,7 @@ public:
   virtual Expected<int32_t> runAsMain(JITTargetAddress MainFnAddr,
                                       ArrayRef<std::string> Args) = 0;
 
-  /// Run a wrapper function in the executor (async version).
+  /// Run a wrapper function in the executor.
   ///
   /// The wrapper function should be callable as:
   ///
@@ -172,94 +181,9 @@ public:
   /// \endcode{.cpp}
   ///
   /// The given OnComplete function will be called to return the result.
-  virtual void runWrapperAsync(SendResultFunction OnComplete,
-                               JITTargetAddress WrapperFnAddr,
-                               ArrayRef<char> ArgBuffer) = 0;
-
-  /// Run a wrapper function in the executor. The wrapper function should be
-  /// callable as:
-  ///
-  /// \code{.cpp}
-  ///   CWrapperFunctionResult fn(uint8_t *Data, uint64_t Size);
-  /// \endcode{.cpp}
-  shared::WrapperFunctionResult runWrapper(JITTargetAddress WrapperFnAddr,
-                                           ArrayRef<char> ArgBuffer) {
-    std::promise<shared::WrapperFunctionResult> RP;
-    auto RF = RP.get_future();
-    runWrapperAsync(
-        [&](shared::WrapperFunctionResult R) { RP.set_value(std::move(R)); },
-        WrapperFnAddr, ArgBuffer);
-    return RF.get();
-  }
-
-  /// Run a wrapper function using SPS to serialize the arguments and
-  /// deserialize the results.
-  template <typename SPSSignature, typename SendResultT, typename... ArgTs>
-  void runSPSWrapperAsync(SendResultT &&SendResult,
-                          JITTargetAddress WrapperFnAddr,
-                          const ArgTs &...Args) {
-    shared::WrapperFunction<SPSSignature>::callAsync(
-        [this, WrapperFnAddr](SendResultFunction SendResult,
-                              const char *ArgData, size_t ArgSize) {
-          runWrapperAsync(std::move(SendResult), WrapperFnAddr,
-                          ArrayRef<char>(ArgData, ArgSize));
-        },
-        std::move(SendResult), Args...);
-  }
-
-  /// Run a wrapper function using SPS to serialize the arguments and
-  /// deserialize the results.
-  ///
-  /// If SPSSignature is a non-void function signature then the second argument
-  /// (the first in the Args list) should be a reference to a return value.
-  template <typename SPSSignature, typename... WrapperCallArgTs>
-  Error runSPSWrapper(JITTargetAddress WrapperFnAddr,
-                      WrapperCallArgTs &&...WrapperCallArgs) {
-    return shared::WrapperFunction<SPSSignature>::call(
-        [this, WrapperFnAddr](const char *ArgData, size_t ArgSize) {
-          return runWrapper(WrapperFnAddr, ArrayRef<char>(ArgData, ArgSize));
-        },
-        std::forward<WrapperCallArgTs>(WrapperCallArgs)...);
-  }
-
-  /// Wrap a handler that takes concrete argument types (and a sender for a
-  /// concrete return type) to produce an AsyncWrapperFunction. Uses SPS to
-  /// unpack the arguments and pack the result.
-  ///
-  /// This function is usually used when building association maps.
-  template <typename SPSSignature, typename HandlerT>
-  static AsyncWrapperFunction wrapAsyncWithSPS(HandlerT &&H) {
-    return [H = std::forward<HandlerT>(H)](SendResultFunction SendResult,
-                                           const char *ArgData,
-                                           size_t ArgSize) mutable {
-      shared::WrapperFunction<SPSSignature>::handleAsync(ArgData, ArgSize, H,
-                                                         std::move(SendResult));
-    };
-  }
-
-  template <typename SPSSignature, typename ClassT, typename... MethodArgTs>
-  static AsyncWrapperFunction
-  wrapAsyncWithSPS(ClassT *Instance, void (ClassT::*Method)(MethodArgTs...)) {
-    return wrapAsyncWithSPS<SPSSignature>(
-        [Instance, Method](MethodArgTs &&...MethodArgs) {
-          (Instance->*Method)(std::forward<MethodArgTs>(MethodArgs)...);
-        });
-  }
-
-  /// For each symbol name, associate the AsyncWrapperFunction implementation
-  /// value with the address of that symbol.
-  ///
-  /// Symbols will be looked up using LookupKind::Static,
-  /// JITDylibLookupFlags::MatchAllSymbols (hidden tags will be found), and
-  /// LookupFlags::WeaklyReferencedSymbol (missing tags will not cause an
-  /// error, the implementations will simply be dropped).
-  Error associateJITSideWrapperFunctions(JITDylib &JD,
-                                         WrapperFunctionAssociationMap WFs);
-
-  /// Run a registered jit-side wrapper function.
-  void runJITSideWrapperFunction(SendResultFunction SendResult,
-                                 JITTargetAddress TagAddr,
-                                 ArrayRef<char> ArgBuffer);
+  virtual void callWrapperAsync(SendResultFunction OnComplete,
+                                JITTargetAddress WrapperFnAddr,
+                                ArrayRef<char> ArgBuffer) = 0;
 
   /// Disconnect from the target process.
   ///
@@ -271,29 +195,49 @@ protected:
       : SSP(std::move(SSP)) {}
 
   std::shared_ptr<SymbolStringPool> SSP;
+  ExecutionSession *ES = nullptr;
   Triple TargetTriple;
   unsigned PageSize = 0;
   JITDispatchInfo JDI;
   MemoryAccess *MemAccess = nullptr;
   jitlink::JITLinkMemoryManager *MemMgr = nullptr;
-
-  std::mutex TagToFuncMapMutex;
-  DenseMap<JITTargetAddress, std::shared_ptr<AsyncWrapperFunction>> TagToFunc;
 };
 
-/// Call a wrapper function via ExecutorProcessControl::runWrapper.
-class EPCCaller {
+/// A ExecutorProcessControl instance that asserts if any of its methods are
+/// used. Suitable for use is unit tests, and by ORC clients who haven't moved
+/// to ExecutorProcessControl-based APIs yet.
+class UnsupportedExecutorProcessControl : public ExecutorProcessControl {
 public:
-  EPCCaller(ExecutorProcessControl &EPC, JITTargetAddress WrapperFnAddr)
-      : EPC(EPC), WrapperFnAddr(WrapperFnAddr) {}
-  shared::WrapperFunctionResult operator()(const char *ArgData,
-                                           size_t ArgSize) const {
-    return EPC.runWrapper(WrapperFnAddr, ArrayRef<char>(ArgData, ArgSize));
+  UnsupportedExecutorProcessControl(
+      std::shared_ptr<SymbolStringPool> SSP = nullptr,
+      const std::string &TT = "", unsigned PageSize = 0)
+      : ExecutorProcessControl(SSP ? std::move(SSP)
+                                   : std::make_shared<SymbolStringPool>()) {
+    this->TargetTriple = Triple(TT);
+    this->PageSize = PageSize;
   }
 
-private:
-  ExecutorProcessControl &EPC;
-  JITTargetAddress WrapperFnAddr;
+  Expected<tpctypes::DylibHandle> loadDylib(const char *DylibPath) override {
+    llvm_unreachable("Unsupported");
+  }
+
+  Expected<std::vector<tpctypes::LookupResult>>
+  lookupSymbols(ArrayRef<LookupRequest> Request) override {
+    llvm_unreachable("Unsupported");
+  }
+
+  Expected<int32_t> runAsMain(JITTargetAddress MainFnAddr,
+                              ArrayRef<std::string> Args) override {
+    llvm_unreachable("Unsupported");
+  }
+
+  void callWrapperAsync(SendResultFunction OnComplete,
+                        JITTargetAddress WrapperFnAddr,
+                        ArrayRef<char> ArgBuffer) override {
+    llvm_unreachable("Unsupported");
+  }
+
+  Error disconnect() override { return Error::success(); }
 };
 
 /// A ExecutorProcessControl implementation targeting the current process.
@@ -305,11 +249,13 @@ public:
       std::shared_ptr<SymbolStringPool> SSP, Triple TargetTriple,
       unsigned PageSize, std::unique_ptr<jitlink::JITLinkMemoryManager> MemMgr);
 
-  /// Create a SelfExecutorProcessControl with the given memory manager.
+  /// Create a SelfExecutorProcessControl with the given symbol string pool and
+  /// memory manager.
+  /// If no symbol string pool is given then one will be created.
   /// If no memory manager is given a jitlink::InProcessMemoryManager will
-  /// be used by default.
+  /// be created and used by default.
   static Expected<std::unique_ptr<SelfExecutorProcessControl>>
-  Create(std::shared_ptr<SymbolStringPool> SSP,
+  Create(std::shared_ptr<SymbolStringPool> SSP = nullptr,
          std::unique_ptr<jitlink::JITLinkMemoryManager> MemMgr = nullptr);
 
   Expected<tpctypes::DylibHandle> loadDylib(const char *DylibPath) override;
@@ -320,9 +266,9 @@ public:
   Expected<int32_t> runAsMain(JITTargetAddress MainFnAddr,
                               ArrayRef<std::string> Args) override;
 
-  void runWrapperAsync(SendResultFunction OnComplete,
-                       JITTargetAddress WrapperFnAddr,
-                       ArrayRef<char> ArgBuffer) override;
+  void callWrapperAsync(SendResultFunction OnComplete,
+                        JITTargetAddress WrapperFnAddr,
+                        ArrayRef<char> ArgBuffer) override;
 
   Error disconnect() override;
 

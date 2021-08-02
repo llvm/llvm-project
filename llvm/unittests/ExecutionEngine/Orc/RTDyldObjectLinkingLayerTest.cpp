@@ -46,7 +46,7 @@ static bool testSetProcessAllSections(std::unique_ptr<MemoryBuffer> Obj,
 
   bool NonAllocSectionSeen = false;
 
-  ExecutionSession ES;
+  ExecutionSession ES(std::make_unique<UnsupportedExecutorProcessControl>());
   auto &JD = ES.createBareJITDylib("main");
   auto Foo = ES.intern("foo");
 
@@ -153,7 +153,7 @@ TEST(RTDyldObjectLinkingLayerTest, TestOverrideObjectFlags) {
   }
 
   // Create a simple stack and set the override flags option.
-  ExecutionSession ES;
+  ExecutionSession ES{std::make_unique<UnsupportedExecutorProcessControl>()};
   auto &JD = ES.createBareJITDylib("main");
   auto Foo = ES.intern("foo");
   RTDyldObjectLinkingLayer ObjLayer(
@@ -223,7 +223,7 @@ TEST(RTDyldObjectLinkingLayerTest, TestAutoClaimResponsibilityForSymbols) {
   }
 
   // Create a simple stack and set the override flags option.
-  ExecutionSession ES;
+  ExecutionSession ES{std::make_unique<UnsupportedExecutorProcessControl>()};
   auto &JD = ES.createBareJITDylib("main");
   auto Foo = ES.intern("foo");
   RTDyldObjectLinkingLayer ObjLayer(

@@ -114,6 +114,10 @@ GlobalValue *Module::getNamedValue(StringRef Name) const {
   return cast_or_null<GlobalValue>(getValueSymbolTable().lookup(Name));
 }
 
+unsigned Module::getNumNamedValues() const {
+  return getValueSymbolTable().size();
+}
+
 /// getMDKindID - Return a unique non-zero ID for the specified metadata kind.
 /// This ID is uniqued across modules in the current LLVMContext.
 unsigned Module::getMDKindID(StringRef Name) const {

@@ -25,7 +25,7 @@ entry:
   %x_on_stack = bitcast i8* %x to i32*
   %0 = bitcast i32* %x_on_stack to i8*
   call void @use(i8* %0)
-  call void @__kmpc_free_shared(i8* %x)
+  call void @__kmpc_free_shared(i8* %x, i64 4)
   call void @__kmpc_target_deinit(%struct.ident_t* @1, i1 false, i1 true)
   ret void
 }
@@ -50,7 +50,7 @@ master:
   %x_on_stack = bitcast i8* %x to [4 x i32]*
   %0 = bitcast [4 x i32]* %x_on_stack to i8*
   call void @use(i8* %0)
-  call void @__kmpc_free_shared(i8* %x)
+  call void @__kmpc_free_shared(i8* %x, i64 16)
   br label %exit
 exit:
   ret void
@@ -67,7 +67,7 @@ master:
   %y_on_stack = bitcast i8* %y to [4 x i32]*
   %1 = bitcast [4 x i32]* %y_on_stack to i8*
   call void @use(i8* %1)
-  call void @__kmpc_free_shared(i8* %y)
+  call void @__kmpc_free_shared(i8* %y, i64 4)
   br label %exit
 exit:
   ret void
@@ -79,11 +79,11 @@ entry:
   %0 = icmp eq i32 %call, -1
   br i1 %0, label %master, label %exit
 master:
-  %y = call i8* @__kmpc_alloc_shared(i64 6), !dbg !12
+  %y = call i8* @__kmpc_alloc_shared(i64 24), !dbg !12
   %y_on_stack = bitcast i8* %y to [6 x i32]*
   %1 = bitcast [6 x i32]* %y_on_stack to i8*
   call void @use(i8* %1)
-  call void @__kmpc_free_shared(i8* %y)
+  call void @__kmpc_free_shared(i8* %y, i64 24)
   br label %exit
 exit:
   ret void
@@ -98,7 +98,7 @@ entry:
 
 declare i8* @__kmpc_alloc_shared(i64)
 
-declare void @__kmpc_free_shared(i8*)
+declare void @__kmpc_free_shared(i8*, i64)
 
 declare i32 @llvm.nvvm.read.ptx.sreg.tid.x()
 

@@ -164,7 +164,7 @@ define i32 @fcvt_ui_h_multiple_use(half %x, i32* %y) {
 ; RV64IZFH-NEXT:    addi a0, zero, 1
 ; RV64IZFH-NEXT:    beqz a1, .LBB3_2
 ; RV64IZFH-NEXT:  # %bb.1:
-; RV64IZFH-NEXT:    fcvt.lu.h a0, fa0, rtz
+; RV64IZFH-NEXT:    mv a0, a1
 ; RV64IZFH-NEXT:  .LBB3_2:
 ; RV64IZFH-NEXT:    ret
 ;
@@ -174,7 +174,7 @@ define i32 @fcvt_ui_h_multiple_use(half %x, i32* %y) {
 ; RV64IDZFH-NEXT:    addi a0, zero, 1
 ; RV64IDZFH-NEXT:    beqz a1, .LBB3_2
 ; RV64IDZFH-NEXT:  # %bb.1:
-; RV64IDZFH-NEXT:    fcvt.lu.h a0, fa0, rtz
+; RV64IDZFH-NEXT:    mv a0, a1
 ; RV64IDZFH-NEXT:  .LBB3_2:
 ; RV64IDZFH-NEXT:    ret
   %a = fptoui half %x to i32
@@ -246,12 +246,12 @@ define i32 @fcvt_w_h(half %a) nounwind {
 ;
 ; RV64IZFH-LABEL: fcvt_w_h:
 ; RV64IZFH:       # %bb.0:
-; RV64IZFH-NEXT:    fcvt.l.h a0, fa0, rtz
+; RV64IZFH-NEXT:    fcvt.w.h a0, fa0, rtz
 ; RV64IZFH-NEXT:    ret
 ;
 ; RV64IDZFH-LABEL: fcvt_w_h:
 ; RV64IDZFH:       # %bb.0:
-; RV64IDZFH-NEXT:    fcvt.l.h a0, fa0, rtz
+; RV64IDZFH-NEXT:    fcvt.w.h a0, fa0, rtz
 ; RV64IDZFH-NEXT:    ret
   %1 = fptosi half %a to i32
   ret i32 %1
@@ -400,12 +400,12 @@ define i32 @fcvt_wu_h(half %a) nounwind {
 ;
 ; RV64IZFH-LABEL: fcvt_wu_h:
 ; RV64IZFH:       # %bb.0:
-; RV64IZFH-NEXT:    fcvt.lu.h a0, fa0, rtz
+; RV64IZFH-NEXT:    fcvt.wu.h a0, fa0, rtz
 ; RV64IZFH-NEXT:    ret
 ;
 ; RV64IDZFH-LABEL: fcvt_wu_h:
 ; RV64IDZFH:       # %bb.0:
-; RV64IDZFH-NEXT:    fcvt.lu.h a0, fa0, rtz
+; RV64IDZFH-NEXT:    fcvt.wu.h a0, fa0, rtz
 ; RV64IDZFH-NEXT:    ret
   %1 = fptoui half %a to i32
   ret i32 %1

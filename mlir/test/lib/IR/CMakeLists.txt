@@ -6,6 +6,7 @@ add_mlir_library(MLIRTestIR
   TestInterfaces.cpp
   TestMatchers.cpp
   TestOpaqueLoc.cpp
+  TestOperationEquals.cpp
   TestPrintDefUse.cpp
   TestPrintNesting.cpp
   TestSideEffects.cpp

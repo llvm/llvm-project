@@ -56,8 +56,8 @@ define <16 x float> @load_v16f32(<16 x float>* %a) #0 {
 ; CHECK-LABEL: load_v16f32:
 ; CHECK-DAG: ptrue [[PG:p[0-9]+]].s, vl[[#min(div(VBYTES,4),16)]]
 ; CHECK-DAG: ld1w { z{{[0-9]+}}.s }, [[PG]]/z, [x0]
-; VBITS_LE_256-DAG: add x[[A1:[0-9]+]], x0, #[[#VBYTES]]
-; VBITS_LE_256-DAG: ld1w { z{{[0-9]+}}.s }, [[PG]]/z, [x[[A1]]]
+; VBITS_LE_256-DAG: mov x[[A1:[0-9]+]], #[[#div(VBYTES,4)]]
+; VBITS_LE_256-DAG: ld1w { z{{[0-9]+}}.s }, [[PG]]/z, [x0, x[[A1]], lsl #2]
 ; CHECK: ret
   %load = load <16 x float>, <16 x float>* %a
   ret <16 x float> %load
@@ -67,12 +67,12 @@ define <32 x float> @load_v32f32(<32 x float>* %a) #0 {
 ; CHECK-LABEL: load_v32f32:
 ; CHECK-DAG: ptrue [[PG:p[0-9]+]].s, vl[[#min(div(VBYTES,4),32)]]
 ; CHECK-DAG: ld1w { z{{[0-9]+}}.s }, [[PG]]/z, [x0]
-; VBITS_LE_512-DAG: add x[[A1:[0-9]+]], x0, #[[#VBYTES]]
-; VBITS_LE_512-DAG: ld1w { z{{[0-9]+}}.s }, [[PG]]/z, [x[[A1]]]
-; VBITS_LE_256-DAG: add x[[A2:[0-9]+]], x0, #[[#mul(VBYTES,2)]]
-; VBITS_LE_256-DAG: ld1w { z{{[0-9]+}}.s }, [[PG]]/z, [x[[A2]]]
-; VBITS_LE_256-DAG: add x[[A3:[0-9]+]], x0, #[[#mul(VBYTES,3)]]
-; VBITS_LE_256-DAG: ld1w { z{{[0-9]+}}.s }, [[PG]]/z, [x[[A3]]]
+; VBITS_LE_512-DAG: mov x[[A1:[0-9]+]], #[[#div(VBYTES,4)]]
+; VBITS_LE_512-DAG: ld1w { z{{[0-9]+}}.s }, [[PG]]/z, [x0, x[[A1]], lsl #2]
+; VBITS_LE_256-DAG: mov x[[A2:[0-9]+]], #[[#mul(div(VBYTES,4),2)]]
+; VBITS_LE_256-DAG: ld1w { z{{[0-9]+}}.s }, [[PG]]/z, [x0, x[[A2]], lsl #2]
+; VBITS_LE_256-DAG: mov x[[A3:[0-9]+]], #[[#mul(div(VBYTES,4),3)]]
+; VBITS_LE_256-DAG: ld1w { z{{[0-9]+}}.s }, [[PG]]/z, [x0, x[[A3]], lsl #2]
 ; CHECK: ret
   %load = load <32 x float>, <32 x float>* %a
   ret <32 x float> %load
@@ -82,20 +82,20 @@ define <64 x float> @load_v64f32(<64 x float>* %a) #0 {
 ; CHECK-LABEL: load_v64f32:
 ; CHECK-DAG: ptrue [[PG:p[0-9]+]].s, vl[[#min(div(VBYTES,4),64)]]
 ; CHECK-DAG: ld1w { z{{[0-9]+}}.s }, [[PG]]/z, [x0]
-; VBITS_LE_1024-DAG: add x[[A1:[0-9]+]], x0, #[[#VBYTES]]
-; VBITS_LE_1024-DAG: ld1w { z{{[0-9]+}}.s }, [[PG]]/z, [x[[A1]]]
-; VBITS_LE_512-DAG:  add x[[A2:[0-9]+]], x0, #[[#mul(VBYTES,2)]]
-; VBITS_LE_512-DAG:  ld1w { z{{[0-9]+}}.s }, [[PG]]/z, [x[[A2]]]
-; VBITS_LE_512-DAG:  add x[[A3:[0-9]+]], x0, #[[#mul(VBYTES,3)]]
-; VBITS_LE_512-DAG:  ld1w { z{{[0-9]+}}.s }, [[PG]]/z, [x[[A3]]]
-; VBITS_LE_256-DAG:  add x[[A4:[0-9]+]], x0, #[[#mul(VBYTES,4)]]
-; VBITS_LE_256-DAG:  ld1w { z{{[0-9]+}}.s }, [[PG]]/z, [x[[A4]]]
-; VBITS_LE_256-DAG:  add x[[A5:[0-9]+]], x0, #[[#mul(VBYTES,5)]]
-; VBITS_LE_256-DAG:  ld1w { z{{[0-9]+}}.s }, [[PG]]/z, [x[[A5]]]
-; VBITS_LE_256-DAG:  add x[[A6:[0-9]+]], x0, #[[#mul(VBYTES,6)]]
-; VBITS_LE_256-DAG:  ld1w { z{{[0-9]+}}.s }, [[PG]]/z, [x[[A6]]]
-; VBITS_LE_256-DAG:  add x[[A7:[0-9]+]], x0, #[[#mul(VBYTES,7)]]
-; VBITS_LE_256-DAG:  ld1w { z{{[0-9]+}}.s }, [[PG]]/z, [x[[A7]]]
+; VBITS_LE_1024-DAG: mov x[[A1:[0-9]+]], #[[#div(VBYTES,4)]]
+; VBITS_LE_1024-DAG: ld1w { z{{[0-9]+}}.s }, [[PG]]/z, [x0, x[[A1]], lsl #2]
+; VBITS_LE_512-DAG:  mov x[[A2:[0-9]+]], #[[#mul(div(VBYTES,4),2)]]
+; VBITS_LE_512-DAG:  ld1w { z{{[0-9]+}}.s }, [[PG]]/z, [x0, x[[A2]], lsl #2]
+; VBITS_LE_512-DAG:  mov x[[A3:[0-9]+]], #[[#mul(div(VBYTES,4),3)]]
+; VBITS_LE_512-DAG:  ld1w { z{{[0-9]+}}.s }, [[PG]]/z, [x0, x[[A3]], lsl #2]
+; VBITS_LE_256-DAG:  mov x[[A4:[0-9]+]], #[[#mul(div(VBYTES,4),4)]]
+; VBITS_LE_256-DAG:  ld1w { z{{[0-9]+}}.s }, [[PG]]/z, [x0, x[[A4]], lsl #2]
+; VBITS_LE_256-DAG:  mov x[[A5:[0-9]+]], #[[#mul(div(VBYTES,4),5)]]
+; VBITS_LE_256-DAG:  ld1w { z{{[0-9]+}}.s }, [[PG]]/z, [x0, x[[A5]], lsl #2]
+; VBITS_LE_256-DAG:  mov x[[A6:[0-9]+]], #[[#mul(div(VBYTES,4),6)]]
+; VBITS_LE_256-DAG:  ld1w { z{{[0-9]+}}.s }, [[PG]]/z, [x0, x[[A6]], lsl #2]
+; VBITS_LE_256-DAG:  mov x[[A7:[0-9]+]], #[[#mul(div(VBYTES,4),7)]]
+; VBITS_LE_256-DAG:  ld1w { z{{[0-9]+}}.s }, [[PG]]/z, [x0, x[[A7]], lsl #2]
 ; CHECK: ret
   %load = load <64 x float>, <64 x float>* %a
   ret <64 x float> %load

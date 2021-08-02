@@ -93,7 +93,7 @@ def InferShapedTypeOpInterface : OpInterface<"InferShapedTypeOpInterface"> {
       /*methodName=*/"inferReturnTypeComponents",
       /*args=*/(ins "::mlir::MLIRContext*":$context,
                     "::mlir::Optional<::mlir::Location>":$location,
-                    "::mlir::ValueRange":$operands,
+                    "::mlir::ValueShapeRange":$operands,
                     "::mlir::DictionaryAttr":$attributes,
                     "::mlir::RegionRange":$regions,
                     "::mlir::SmallVectorImpl<::mlir::ShapedTypeComponents>&":

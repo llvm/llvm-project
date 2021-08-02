@@ -377,9 +377,6 @@ template. The string can be an arbitrary C++ expression that evaluates into some
 C++ object expected at the `NativeCodeCall` site (here it would be expecting an
 array attribute). Typically the string should be a function call.
 
-Note that currently `NativeCodeCall` must return no more than one value or
-attribute. This might change in the future.
-
 ##### `NativeCodeCall` placeholders
 
 In `NativeCodeCall`, we can use placeholders like `$_builder`, `$N` and `$N...`.
@@ -427,6 +424,30 @@ Positional range placeholders will be substituted by multiple `dag` object
 parameters at the `NativeCodeCall` use site. For example, if we define
 `SomeCall : NativeCodeCall<"someFn($1...)">` and use it like `(SomeCall $in0,
 $in1, $in2)`, then this will be translated into C++ call `someFn($in1, $in2)`.
+
+##### `NativeCodeCall` binding multi-results
+
+To bind multi-results and access the N-th result with `$<name>__N`, specify the
+number of return values in the template. Note that only `Value` type is
+supported for multiple results binding. For example,
+
+```tablegen
+
+def PackAttrs : NativeCodeCall<"packAttrs($0, $1)", 2>;
+def : Pattern<(TwoResultOp $attr1, $attr2),
+              [(OneResultOp (PackAttr:$res__0, $attr1, $attr2)),
+               (OneResultOp $res__1)]>;
+
+```
+
+Use `NativeCodeCallVoid` for case has no return value.
+
+The correct number of returned value specified in NativeCodeCall is important.
+It will be used to verify the consistency of the number of result values.
+Additionally, `mlir-tblgen` will try to capture the return value of
+NativeCodeCall in the generated code so that it will trigger a later compilation
+error if a NativeCodeCall that doesn't return a result isn't labeled with 0
+returns.
 
 ##### Customizing entire op building
 

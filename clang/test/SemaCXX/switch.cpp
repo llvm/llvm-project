@@ -130,3 +130,19 @@ void test(Opaque o, OpaqueClass oc, Defined d) {
 }
 
 }
+
+namespace EmptyEnum {
+
+enum Empty : int {};
+void test(Empty e) {
+  switch (e) {
+  case (Empty)0:
+    break;
+  }
+  switch (e) {
+  default:
+    break;
+  }
+}
+
+} // namespace EmptyEnum

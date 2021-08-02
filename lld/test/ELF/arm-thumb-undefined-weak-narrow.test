@@ -1,7 +1,7 @@
 # REQUIRES: arm
 # RUN: yaml2obj %s -o %t.o
 # RUN: ld.lld %t.o -o %t
-# RUN: llvm-objdump --triple=thumbv7a-linux-gnueabi -d %t | FileCheck %s
+# RUN: llvm-objdump -d %t | FileCheck %s
 
 # CHECK: Disassembly of section .text:
 # CHECK-EMPTY:

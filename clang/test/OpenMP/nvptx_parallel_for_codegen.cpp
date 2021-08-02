@@ -486,7 +486,7 @@ int bar(int n){
 // CHECK-NEXT:    [[TMP9:%.*]] = load i32, i32* [[ARRAYIDX]], align 4
 // CHECK-NEXT:    [[ADD:%.*]] = add nsw i32 [[TMP9]], 1
 // CHECK-NEXT:    store i32 [[ADD]], i32* [[ARRAYIDX]], align 4
-// CHECK-NEXT:    call void @__kmpc_free_shared(i8* [[D]])
+// CHECK-NEXT:    call void @__kmpc_free_shared(i8* [[D]], i64 4)
 // CHECK-NEXT:    call void @__kmpc_target_deinit(%struct.ident_t* @[[GLOB1]], i1 false, i1 true)
 // CHECK-NEXT:    ret void
 // CHECK:       worker.exit:

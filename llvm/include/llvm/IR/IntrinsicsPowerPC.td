@@ -1566,6 +1566,9 @@ let TargetPrefix = "ppc" in {
                                 [IntrWriteMem]>;
   def int_ppc_sthcx
       : Intrinsic<[llvm_i32_ty], [ llvm_ptr_ty, llvm_i32_ty ], [IntrWriteMem]>;
+  def int_ppc_stbcx : GCCBuiltin<"__builtin_ppc_stbcx">,
+                      Intrinsic<[llvm_i32_ty], [llvm_ptr_ty, llvm_i32_ty],
+                                [IntrWriteMem]>;
   def int_ppc_dcbtstt : GCCBuiltin<"__builtin_ppc_dcbtstt">,
                         Intrinsic<[], [llvm_ptr_ty],
                                   [IntrArgMemOnly, NoCapture<ArgIndex<0>>]>;
@@ -1703,6 +1706,17 @@ let TargetPrefix = "ppc" in {
   def int_ppc_fres
       : GCCBuiltin<"__builtin_ppc_fres">,
         Intrinsic <[llvm_float_ty], [llvm_float_ty], [IntrNoMem]>;
+  
+  def int_ppc_fsel : GCCBuiltin<"__builtin_ppc_fsel">,
+                     Intrinsic<[llvm_double_ty], [llvm_double_ty, llvm_double_ty, 
+                                                  llvm_double_ty], [IntrNoMem]>;
+  def int_ppc_fsels : GCCBuiltin<"__builtin_ppc_fsels">,
+                      Intrinsic<[llvm_float_ty], [llvm_float_ty, llvm_float_ty,
+                                                  llvm_float_ty], [IntrNoMem]>;
+  def int_ppc_frsqrte : GCCBuiltin<"__builtin_ppc_frsqrte">,
+                        Intrinsic<[llvm_double_ty], [llvm_double_ty], [IntrNoMem]>;
+  def int_ppc_frsqrtes : GCCBuiltin<"__builtin_ppc_frsqrtes">,
+                         Intrinsic<[llvm_float_ty], [llvm_float_ty], [IntrNoMem]>;
 }
 
 //===----------------------------------------------------------------------===//

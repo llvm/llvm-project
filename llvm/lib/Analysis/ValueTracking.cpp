@@ -5274,6 +5274,10 @@ bool llvm::isGuaranteedToTransferExecutionToSuccessor(const Instruction *I) {
   if (isa<UnreachableInst>(I))
     return false;
 
+  // Note: Do not add new checks here; instead, change Instruction::mayThrow or
+  // Instruction::willReturn.
+  //
+  // FIXME: Move this check into Instruction::willReturn.
   if (isa<CatchPadInst>(I)) {
     switch (classifyEHPersonality(I->getFunction()->getPersonalityFn())) {
     default:

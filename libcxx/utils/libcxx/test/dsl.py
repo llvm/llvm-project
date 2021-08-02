@@ -210,22 +210,6 @@ def featureTestMacros(config, flags=''):
   allMacros = compilerMacros(config, flags)
   return {m: int(v.rstrip('LlUu')) for (m, v) in allMacros.items() if m.startswith('__cpp_')}
 
-@_memoizeExpensiveOperation(lambda c: (c.substitutions, c.environment))
-def getHostTriple(config):
-  """
-  Returns the default triple of the compiler.
-
-  TODO: This shouldn't be necessary here - ideally the user would always pass
-        the triple as a parameter. This is done to support the legacy standalone
-        builds, which don't set the triple.
-  """
-  with _makeConfigTest(config) as test:
-    unparsedOutput, err, exitCode, timeoutInfo = _executeScriptInternal(test, [
-      "%{cxx} %{flags} %{compile_flags} -dumpmachine"
-    ])
-    output = re.search(r"# command output:\n(.+)\n", unparsedOutput).group(1)
-    return output
-
 def _appendToSubstitution(substitutions, key, value):
   return [(k, v + ' ' + value) if k == key else (k, v) for (k, v) in substitutions]
 

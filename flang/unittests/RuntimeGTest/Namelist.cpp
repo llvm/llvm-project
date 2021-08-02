@@ -57,7 +57,7 @@ TEST(NamelistTests, BasicSanity) {
   complexes.push_back(std::complex<float>{123.0, -0.5});
   std::vector<std::string> characters;
   characters.emplace_back("aBcDeFgHiJkLmNoPqRsTuVwXyZ");
-  characters.emplace_back("0123456789'\"              ");
+  characters.emplace_back("0123456789'\"..............");
   // Copy the data into new descriptors
   OwningPtr<Descriptor> intDesc{
       MakeArray<TypeCategory::Integer, static_cast<int>(sizeof(int))>(
@@ -97,9 +97,9 @@ TEST(NamelistTests, BasicSanity) {
                                   " -1.7976931348623157E+308       "
                                   " 2.220446049250313E-16,LOGICALS="
                                   "F T F,COMPLEXES= (123.,-.5),    "
-                                  " CHARACTERS= 'aBcDeFgHiJkLmNoPq'"
-                                  "'RsTuVwXyZ' '0123456789''\"     '"
-                                  "'         '/                    "};
+                                  " CHARACTERS= 'aBcDeFgHiJkLmNoPqR"
+                                  "sTuVwXyZ' '0123456789''\"........"
+                                  "......'/                        "};
   std::string got{buffer[0], sizeof buffer};
   EXPECT_EQ(got, expect);
 

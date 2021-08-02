@@ -726,9 +726,6 @@ static bool emitAllOps(const llvm::RecordKeeper &records, raw_ostream &os) {
   os << llvm::formatv(fileHeader, clDialectName.getValue());
   os << llvm::formatv(dialectClassTemplate, clDialectName.getValue());
 
-  if (clDialectName == "builtin")
-    clDialectName = "";
-
   for (const llvm::Record *rec : records.getAllDerivedDefinitions("Op")) {
     Operator op(rec);
     if (op.getDialectName() == clDialectName.getValue())

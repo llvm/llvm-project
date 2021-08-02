@@ -353,24 +353,22 @@ void TrainingLogger::logInlineEvent(const InlineEvent &Event,
   size_t CurrentFeature = 0;
   for (; CurrentFeature < NumberOfFeatures; ++CurrentFeature) {
     int64_t F = ModelRunner.getFeature(CurrentFeature);
-    L->logTensorValue(CurrentFeature, &F);
+    L->logInt64Value(CurrentFeature, &F);
   }
 
   for (size_t I = 1; I < OutputCount; ++I) {
     const auto &Result = *MUTR->lastEvaluationResult();
-    auto &Spec = MUTR->outputLoggedFeatureSpecs()[I].Spec;
     const char *RawData =
         reinterpret_cast<const char *>(Result.getUntypedTensorValue(I));
-    L->logTensorValue(CurrentFeature, RawData,
-                      Spec.getElementCount() * Spec.getElementByteSize());
+    L->logSpecifiedTensorValue(CurrentFeature, RawData);
     ++CurrentFeature;
   }
 
   assert(CurrentFeature == DefaultDecisionPos);
-  L->logTensorValue(DefaultDecisionPos, &Event.DefaultDecision);
-  L->logTensorValue(DecisionPos, &Event.AdvisedDecision);
+  L->logInt64Value(DefaultDecisionPos, &Event.DefaultDecision);
+  L->logInt64Value(DecisionPos, &Event.AdvisedDecision);
   if (InlineSizeEstimatorAnalysis::isEvaluatorRequested())
-    L->logReward(Event.Reward);
+    L->logInt64Reward(Event.Reward);
 
   // For debugging / later use
   Effects.push_back(Event.Effect);

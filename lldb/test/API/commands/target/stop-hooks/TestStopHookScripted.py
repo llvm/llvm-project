@@ -96,12 +96,12 @@ class TestStopHooks(TestBase):
         # Now set the breakpoint on step_out_of_me, and make sure we run the
         # expression, then continue back to main.
         bkpt = target.BreakpointCreateBySourceRegex("Set a breakpoint here and step out", self.main_source_file)
-        self.assertTrue(bkpt.GetNumLocations() > 0, "Got breakpoints in step_out_of_me")
+        self.assertNotEqual(bkpt.GetNumLocations(), 0, "Got breakpoints in step_out_of_me")
         process.Continue()
 
         var = target.FindFirstGlobalVariable("g_var")
         self.assertTrue(var.IsValid())
-        self.assertEqual(var.GetValueAsUnsigned(), 5, "Updated g_var")
+        self.assertEqual(var.GetValueAsUnsigned(), 6, "Updated g_var")
         
         func_name = process.GetSelectedThread().frames[0].GetFunctionName()
         self.assertEqual("main", func_name, "Didn't stop at the expected function.")
