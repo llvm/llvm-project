@@ -733,8 +733,11 @@ void MemoryAccessImpl1(ThreadState *thr, uptr addr,
   return;
 }
 
-void UnalignedMemoryAccess(ThreadState *thr, uptr pc, uptr addr,
-    int size, bool kAccessIsWrite, bool kIsAtomic) {
+void UnalignedMemoryAccess(ThreadState *thr, uptr pc, uptr addr, uptr size,
+                           AccessType typ) {
+  DCHECK(!(typ & kAccessAtomic));
+  const bool kAccessIsWrite = !(typ & kAccessRead);
+  const bool kIsAtomic = false;
   while (size) {
     int size1 = 1;
     int kAccessSizeLog = kSizeLog1;

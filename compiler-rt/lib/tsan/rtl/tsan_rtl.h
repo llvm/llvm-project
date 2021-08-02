@@ -692,6 +692,14 @@ int Finalize(ThreadState *thr);
 void OnUserAlloc(ThreadState *thr, uptr pc, uptr p, uptr sz, bool write);
 void OnUserFree(ThreadState *thr, uptr pc, uptr p, bool write);
 
+typedef uptr AccessType;
+
+enum : AccessType {
+  kAccessWrite = 0,
+  kAccessRead = 1 << 0,
+  kAccessAtomic = 1 << 1,
+};
+
 void MemoryAccess(ThreadState *thr, uptr pc, uptr addr,
     int kAccessSizeLog, bool kAccessIsWrite, bool kIsAtomic);
 void MemoryAccessImpl(ThreadState *thr, uptr addr,
@@ -701,32 +709,36 @@ void MemoryAccessRange(ThreadState *thr, uptr pc, uptr addr,
     uptr size, bool is_write);
 void MemoryAccessRangeStep(ThreadState *thr, uptr pc, uptr addr,
     uptr size, uptr step, bool is_write);
-void UnalignedMemoryAccess(ThreadState *thr, uptr pc, uptr addr,
-    int size, bool kAccessIsWrite, bool kIsAtomic);
+void UnalignedMemoryAccess(ThreadState *thr, uptr pc, uptr addr, uptr size,
+                           AccessType typ);
 
 const int kSizeLog1 = 0;
 const int kSizeLog2 = 1;
 const int kSizeLog4 = 2;
 const int kSizeLog8 = 3;
 
-void ALWAYS_INLINE MemoryRead(ThreadState *thr, uptr pc,
-                                     uptr addr, int kAccessSizeLog) {
-  MemoryAccess(thr, pc, addr, kAccessSizeLog, false, false);
-}
-
-void ALWAYS_INLINE MemoryWrite(ThreadState *thr, uptr pc,
-                                      uptr addr, int kAccessSizeLog) {
-  MemoryAccess(thr, pc, addr, kAccessSizeLog, true, false);
-}
-
-void ALWAYS_INLINE MemoryReadAtomic(ThreadState *thr, uptr pc,
-                                           uptr addr, int kAccessSizeLog) {
-  MemoryAccess(thr, pc, addr, kAccessSizeLog, false, true);
-}
-
-void ALWAYS_INLINE MemoryWriteAtomic(ThreadState *thr, uptr pc,
-                                            uptr addr, int kAccessSizeLog) {
-  MemoryAccess(thr, pc, addr, kAccessSizeLog, true, true);
+ALWAYS_INLINE
+void MemoryAccess(ThreadState *thr, uptr pc, uptr addr, uptr size,
+                  AccessType typ) {
+  int size_log;
+  switch (size) {
+    case 1:
+      size_log = kSizeLog1;
+      break;
+    case 2:
+      size_log = kSizeLog2;
+      break;
+    case 4:
+      size_log = kSizeLog4;
+      break;
+    default:
+      DCHECK_EQ(size, 8);
+      size_log = kSizeLog8;
+      break;
+  }
+  bool is_write = !(typ & kAccessRead);
+  bool is_atomic = typ & kAccessAtomic;
+  MemoryAccess(thr, pc, addr, size_log, is_write, is_atomic);
 }
 
 void MemoryResetRange(ThreadState *thr, uptr pc, uptr addr, uptr size);
