@@ -235,6 +235,10 @@ outlineExecuteOp(SymbolTable &symbolTable, ExecuteOp execute) {
   MLIRContext *ctx = module.getContext();
   Location loc = execute.getLoc();
 
+  // Make sure that all constants will be inside the outlined async function to
+  // reduce the number of function arguments.
+  cloneConstantsIntoTheRegion(execute.body());
+
   // Collect all outlined function inputs.
   SetVector<mlir::Value> functionInputs(execute.dependencies().begin(),
                                         execute.dependencies().end());
