@@ -17,6 +17,7 @@
 #include "WebAssemblyTargetMachine.h"
 #include "llvm/CodeGen/MachineFrameInfo.h"
 #include "llvm/CodeGen/SelectionDAGISel.h"
+#include "llvm/CodeGen/WasmEHFuncInfo.h"
 #include "llvm/IR/DiagnosticInfo.h"
 #include "llvm/IR/Function.h" // To access function attributes.
 #include "llvm/IR/IntrinsicsWebAssembly.h"
@@ -87,6 +88,15 @@ void WebAssemblyDAGToDAGISel::PreprocessISelDAG() {
   SelectionDAGISel::PreprocessISelDAG();
 }
 
+static SDValue getTagSymNode(int Tag, SelectionDAG *DAG) {
+  assert(Tag == WebAssembly::CPP_EXCEPTION);
+  auto &MF = DAG->getMachineFunction();
+  const auto &TLI = DAG->getTargetLoweringInfo();
+  MVT PtrVT = TLI.getPointerTy(DAG->getDataLayout());
+  const char *SymName = MF.createExternalSymbolName("__cpp_exception");
+  return DAG->getTargetExternalSymbol(SymName, PtrVT);
+}
+
 void WebAssemblyDAGToDAGISel::Select(SDNode *Node) {
   // If we have a custom node, we already have selected!
   if (Node->isMachineOpcode()) {
@@ -151,6 +161,7 @@ void WebAssemblyDAGToDAGISel::Select(SDNode *Node) {
       ReplaceNode(Node, TLSSize);
       return;
     }
+
     case Intrinsic::wasm_tls_align: {
       MachineSDNode *TLSAlign = CurDAG->getMachineNode(
           GlobalGetIns, DL, PtrVT,
@@ -161,8 +172,11 @@ void WebAssemblyDAGToDAGISel::Select(SDNode *Node) {
     }
     break;
   }
+
   case ISD::INTRINSIC_W_CHAIN: {
     unsigned IntNo = cast<ConstantSDNode>(Node->getOperand(1))->getZExtValue();
+    const auto &TLI = CurDAG->getTargetLoweringInfo();
+    MVT PtrVT = TLI.getPointerTy(CurDAG->getDataLayout());
     switch (IntNo) {
     case Intrinsic::wasm_tls_base: {
       MachineSDNode *TLSBase = CurDAG->getMachineNode(
@@ -172,9 +186,48 @@ void WebAssemblyDAGToDAGISel::Select(SDNode *Node) {
       ReplaceNode(Node, TLSBase);
       return;
     }
+
+    case Intrinsic::wasm_catch_exn: {
+      int Tag = Node->getConstantOperandVal(2);
+      SDValue SymNode = getTagSymNode(Tag, CurDAG);
+      MachineSDNode *Catch =
+          CurDAG->getMachineNode(WebAssembly::CATCH, DL,
+                                 {
+                                     PtrVT,     // exception pointer
+                                     MVT::Other // outchain type
+                                 },
+                                 {
+                                     SymNode,            // exception symbol
+                                     Node->getOperand(0) // inchain
+                                 });
+      ReplaceNode(Node, Catch);
+      return;
+    }
     }
     break;
   }
+
+  case ISD::INTRINSIC_VOID: {
+    unsigned IntNo = Node->getConstantOperandVal(1);
+    switch (IntNo) {
+    case Intrinsic::wasm_throw: {
+      int Tag = Node->getConstantOperandVal(2);
+      SDValue SymNode = getTagSymNode(Tag, CurDAG);
+      MachineSDNode *Throw =
+          CurDAG->getMachineNode(WebAssembly::THROW, DL,
+                                 MVT::Other, // outchain type
+                                 {
+                                     SymNode,             // exception symbol
+                                     Node->getOperand(3), // thrown value
+                                     Node->getOperand(0)  // inchain
+                                 });
+      ReplaceNode(Node, Throw);
+      return;
+    }
+    }
+    break;
+  }
+
   case WebAssemblyISD::CALL:
   case WebAssemblyISD::RET_CALL: {
     // CALL has both variable operands and variable results, but ISel only
