@@ -2162,7 +2162,6 @@ void __kmp_join_barrier(int gtid) {
   kmp_info_t *this_thr = __kmp_threads[gtid];
   kmp_team_t *team;
   kmp_uint nproc;
-  kmp_info_t *master_thread;
   int tid;
 #ifdef KMP_DEBUG
   int team_id;
@@ -2184,9 +2183,7 @@ void __kmp_join_barrier(int gtid) {
   tid = __kmp_tid_from_gtid(gtid);
 #ifdef KMP_DEBUG
   team_id = team->t.t_id;
-#endif /* KMP_DEBUG */
-  master_thread = this_thr->th.th_team_master;
-#ifdef KMP_DEBUG
+  kmp_info_t *master_thread = this_thr->th.th_team_master;
   if (master_thread != team->t.t_threads[0]) {
     __kmp_print_structure();
   }
@@ -2339,8 +2336,6 @@ void __kmp_join_barrier(int gtid) {
       kmp_uint64 cur_time = __itt_get_timestamp();
       ident_t *loc = team->t.t_ident;
       kmp_info_t **other_threads = team->t.t_threads;
-      int nproc = this_thr->th.th_team_nproc;
-      int i;
       switch (__kmp_forkjoin_frames_mode) {
       case 1:
         __kmp_itt_frame_submit(gtid, this_thr->th.th_frame_time, cur_time, 0,
@@ -2357,7 +2352,7 @@ void __kmp_join_barrier(int gtid) {
           // Set arrive time to zero to be able to check it in
           // __kmp_invoke_task(); the same is done inside the loop below
           this_thr->th.th_bar_arrive_time = 0;
-          for (i = 1; i < nproc; ++i) {
+          for (kmp_uint i = 1; i < nproc; ++i) {
             delta += (cur_time - other_threads[i]->th.th_bar_arrive_time);
             other_threads[i]->th.th_bar_arrive_time = 0;
           }
