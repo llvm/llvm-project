@@ -30,7 +30,7 @@ void registerCanonicalicationPasses(llvm::legacy::PassManagerBase &PM);
 
 llvm::FunctionPassManager
 buildCanonicalicationPassesForNPM(llvm::ModulePassManager &MPM,
-                                  llvm::PassBuilder::OptimizationLevel Level);
+                                  llvm::OptimizationLevel Level);
 
 } // namespace polly
 

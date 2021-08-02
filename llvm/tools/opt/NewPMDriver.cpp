@@ -173,58 +173,58 @@ bool tryParsePipelineText(PassBuilder &PB,
 static void registerEPCallbacks(PassBuilder &PB) {
   if (tryParsePipelineText<FunctionPassManager>(PB, PeepholeEPPipeline))
     PB.registerPeepholeEPCallback(
-        [&PB](FunctionPassManager &PM, PassBuilder::OptimizationLevel Level) {
+        [&PB](FunctionPassManager &PM, OptimizationLevel Level) {
           ExitOnError Err("Unable to parse PeepholeEP pipeline: ");
           Err(PB.parsePassPipeline(PM, PeepholeEPPipeline));
         });
   if (tryParsePipelineText<LoopPassManager>(PB,
                                             LateLoopOptimizationsEPPipeline))
     PB.registerLateLoopOptimizationsEPCallback(
-        [&PB](LoopPassManager &PM, PassBuilder::OptimizationLevel Level) {
+        [&PB](LoopPassManager &PM, OptimizationLevel Level) {
           ExitOnError Err("Unable to parse LateLoopOptimizationsEP pipeline: ");
           Err(PB.parsePassPipeline(PM, LateLoopOptimizationsEPPipeline));
         });
   if (tryParsePipelineText<LoopPassManager>(PB, LoopOptimizerEndEPPipeline))
     PB.registerLoopOptimizerEndEPCallback(
-        [&PB](LoopPassManager &PM, PassBuilder::OptimizationLevel Level) {
+        [&PB](LoopPassManager &PM, OptimizationLevel Level) {
           ExitOnError Err("Unable to parse LoopOptimizerEndEP pipeline: ");
           Err(PB.parsePassPipeline(PM, LoopOptimizerEndEPPipeline));
         });
   if (tryParsePipelineText<FunctionPassManager>(PB,
                                                 ScalarOptimizerLateEPPipeline))
     PB.registerScalarOptimizerLateEPCallback(
-        [&PB](FunctionPassManager &PM, PassBuilder::OptimizationLevel Level) {
+        [&PB](FunctionPassManager &PM, OptimizationLevel Level) {
           ExitOnError Err("Unable to parse ScalarOptimizerLateEP pipeline: ");
           Err(PB.parsePassPipeline(PM, ScalarOptimizerLateEPPipeline));
         });
   if (tryParsePipelineText<CGSCCPassManager>(PB, CGSCCOptimizerLateEPPipeline))
     PB.registerCGSCCOptimizerLateEPCallback(
-        [&PB](CGSCCPassManager &PM, PassBuilder::OptimizationLevel Level) {
+        [&PB](CGSCCPassManager &PM, OptimizationLevel Level) {
           ExitOnError Err("Unable to parse CGSCCOptimizerLateEP pipeline: ");
           Err(PB.parsePassPipeline(PM, CGSCCOptimizerLateEPPipeline));
         });
   if (tryParsePipelineText<FunctionPassManager>(PB, VectorizerStartEPPipeline))
     PB.registerVectorizerStartEPCallback(
-        [&PB](FunctionPassManager &PM, PassBuilder::OptimizationLevel Level) {
+        [&PB](FunctionPassManager &PM, OptimizationLevel Level) {
           ExitOnError Err("Unable to parse VectorizerStartEP pipeline: ");
           Err(PB.parsePassPipeline(PM, VectorizerStartEPPipeline));
         });
   if (tryParsePipelineText<ModulePassManager>(PB, PipelineStartEPPipeline))
     PB.registerPipelineStartEPCallback(
-        [&PB](ModulePassManager &PM, PassBuilder::OptimizationLevel) {
+        [&PB](ModulePassManager &PM, OptimizationLevel) {
           ExitOnError Err("Unable to parse PipelineStartEP pipeline: ");
           Err(PB.parsePassPipeline(PM, PipelineStartEPPipeline));
         });
   if (tryParsePipelineText<ModulePassManager>(
           PB, PipelineEarlySimplificationEPPipeline))
     PB.registerPipelineEarlySimplificationEPCallback(
-        [&PB](ModulePassManager &PM, PassBuilder::OptimizationLevel) {
+        [&PB](ModulePassManager &PM, OptimizationLevel) {
           ExitOnError Err("Unable to parse EarlySimplification pipeline: ");
           Err(PB.parsePassPipeline(PM, PipelineEarlySimplificationEPPipeline));
         });
   if (tryParsePipelineText<FunctionPassManager>(PB, OptimizerLastEPPipeline))
     PB.registerOptimizerLastEPCallback(
-        [&PB](ModulePassManager &PM, PassBuilder::OptimizationLevel) {
+        [&PB](ModulePassManager &PM, OptimizationLevel) {
           ExitOnError Err("Unable to parse OptimizerLastEP pipeline: ");
           Err(PB.parsePassPipeline(PM, OptimizerLastEPPipeline));
         });
