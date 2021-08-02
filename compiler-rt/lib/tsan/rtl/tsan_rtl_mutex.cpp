@@ -204,7 +204,6 @@ void MutexPostLock(ThreadState *thr, uptr pc, uptr addr, u32 flagz, int rec) {
       ctx->dd->MutexAfterLock(&cb, &s->dd, true, flagz & MutexFlagTryLock);
     }
     mid = s->GetId();
-    s->mtx.Unlock();
   }
   if (report_double_lock)
     ReportMutexMisuse(thr, pc, ReportTypeMutexDoubleLock, addr, mid);
