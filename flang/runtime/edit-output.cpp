@@ -268,6 +268,7 @@ bool RealOutputEditing<binaryPrecision>::EditFOutput(const DataEdit &edit) {
   // Multiple conversions may be needed to get the right number of
   // effective rounded fractional digits.
   int extraDigits{0};
+  bool canIncrease{true};
   while (true) {
     decimal::ConversionToDecimalResult converted{
         Convert(extraDigits + fracDigits, edit, flags)};
@@ -277,11 +278,12 @@ bool RealOutputEditing<binaryPrecision>::EditFOutput(const DataEdit &edit) {
     }
     int scale{IsZero() ? 1 : edit.modes.scale}; // kP
     int expo{converted.decimalExponent + scale};
-    if (expo > extraDigits && extraDigits >= 0) {
+    if (expo > extraDigits && extraDigits >= 0 && canIncrease) {
       extraDigits = expo;
       if (!edit.digits.has_value()) { // F0
         fracDigits = sizeof buffer_ - extraDigits - 2; // sign & NUL
       }
+      canIncrease = false; // only once
       continue;
     } else if (expo < extraDigits && extraDigits > -fracDigits) {
       extraDigits = std::max(expo, -fracDigits);
