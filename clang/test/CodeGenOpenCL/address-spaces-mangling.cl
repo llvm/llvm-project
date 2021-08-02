@@ -9,7 +9,7 @@
 // RUN: %clang_cc1 %s -triple spir-unknown-unknown -cl-std=CL2.0 -emit-llvm -o - | FileCheck -check-prefix=OCL-20 %s
 // RUN: %clang_cc1 %s -triple spir-unknown-unknown -cl-std=CL1.2 -emit-llvm -o - | FileCheck -check-prefix=OCL-12 %s
 // RUN: %clang_cc1 %s -triple spir-unknown-unknown -cl-std=CL3.0 -cl-ext=+__opencl_c_generic_address_space -emit-llvm -o - | FileCheck -check-prefix=OCL-20 %s
-// RUN: %clang_cc1 %s -triple spir-unknown-unknown -cl-std=CL3.0 -cl-ext=-__opencl_c_generic_address_space -emit-llvm -o - | FileCheck -check-prefix=OCL-12 %s
+// RUN: %clang_cc1 %s -triple spir-unknown-unknown -cl-std=CL3.0 -cl-ext=-__opencl_c_generic_address_space,-__opencl_c_pipes -emit-llvm -o - | FileCheck -check-prefix=OCL-12 %s
 
 // We can't name this f as private is equivalent to default
 // no specifier given address space so we get multiple definition

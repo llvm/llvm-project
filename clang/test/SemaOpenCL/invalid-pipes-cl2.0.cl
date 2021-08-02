@@ -1,4 +1,5 @@
 // RUN: %clang_cc1 %s -verify -pedantic -fsyntax-only -cl-std=CL2.0
+// RUN: %clang_cc1 %s -verify -pedantic -fsyntax-only -cl-std=CL3.0 -cl-ext=+__opencl_c_pipes,+__opencl_c_generic_address_space
 // RUN: %clang_cc1 %s -verify -pedantic -fsyntax-only -cl-std=clc++
 
 global pipe int gp;            // expected-error {{type '__global read_only pipe int' can only be used as a function parameter in OpenCL}}
