@@ -1,11 +1,10 @@
-// This is the ASAN test of the same name ported to HWAsan.
-
-// RUN: %clangxx_hwasan -mllvm -hwasan-use-after-scope -O0 %s -o %t && %run %t
+// RUN: %clangxx_asan -O0 -fsanitize-address-use-after-scope %s -o %t && %run %t
 
 // Function jumps over variable initialization making lifetime analysis
 // ambiguous. Asan should ignore such variable and program must not fail.
-
-// REQUIRES: aarch64-target-arch
+//
+// Not expected to work yet with HWAsan.
+// XFAIL: *
 
 #include <stdlib.h>
 

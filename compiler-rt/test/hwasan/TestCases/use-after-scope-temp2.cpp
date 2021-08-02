@@ -1,9 +1,8 @@
-// This is the ASAN test of the same name ported to HWAsan.
-
-// RUN: %clangxx_hwasan -mllvm -hwasan-use-after-scope -std=c++11 -O1 %s -o %t && \
+// RUN: %clangxx_asan %stdcxx11 -O1 -fsanitize-address-use-after-scope %s -o %t && \
 // RUN:     not %run %t 2>&1 | FileCheck %s
-
-// REQUIRES: aarch64-target-arch
+//
+// Not expected to work yet with HWAsan.
+// XFAIL: *
 
 struct IntHolder {
   __attribute__((noinline)) const IntHolder &Self() const {
@@ -17,8 +16,7 @@ const IntHolder *saved;
 int main(int argc, char *argv[]) {
   saved = &IntHolder().Self();
   int x = saved->val; // BOOM
-  // CHECK: ERROR: HWAddressSanitizer: tag-mismatch
+  // CHECK: ERROR: AddressSanitizer: stack-use-after-scope
   // CHECK:  #0 0x{{.*}} in main {{.*}}use-after-scope-temp2.cpp:[[@LINE-2]]
-  // CHECK: Cause: stack tag-mismatch
   return x;
 }

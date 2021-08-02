@@ -1,8 +1,8 @@
-// This is the ASAN test of the same name ported to HWAsan.
-
-// RUN: %clangxx_hwasan -mllvm -hwasan-use-after-scope --std=c++11 -O1 %s -o %t && not %run %t 2>&1 | FileCheck %s
-
-// REQUIRES: aarch64-target-arch
+// RUN: %clangxx_asan %stdcxx11 -O1 -fsanitize-address-use-after-scope %s -o %t && \
+// RUN:     not %run %t 2>&1 | FileCheck %s
+//
+// Not expected to work yet with HWAsan
+// XFAIL: *
 
 #include <functional>
 
@@ -12,9 +12,8 @@ int main() {
     int x = 0;
     f = [&x]() __attribute__((noinline)) {
       return x; // BOOM
-      // CHECK: ERROR: HWAddressSanitizer: tag-mismatch
+      // CHECK: ERROR: AddressSanitizer: stack-use-after-scope
       // CHECK: #0 0x{{.*}} in {{.*}}use-after-scope-capture.cpp:[[@LINE-2]]
-      // CHECK: Cause: stack tag-mismatch
     };
   }
   return f(); // BOOM
