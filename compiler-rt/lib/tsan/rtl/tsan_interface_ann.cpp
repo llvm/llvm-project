@@ -88,7 +88,7 @@ static void AddExpectRace(ExpectRace *list,
       return;
     }
   }
-  race = New<ExpectRace>();
+  race = static_cast<ExpectRace *>(Alloc(sizeof(ExpectRace)));
   race->addr = addr;
   race->size = size;
   race->file = f;
