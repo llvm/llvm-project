@@ -67,11 +67,11 @@ asan_map_check(uptr addr, uptr size)
 {
     uptr shadowptr = MEM_TO_SHADOW(addr);
     if (size <= SHADOW_GRANULARITY){
-        u8 shadowvalue = *(u8*) shadowptr;
+        u8 shadowvalue = *(__global u8*) shadowptr;
         return (((s8)((addr & ((SHADOW_GRANULARITY)-1)) + size - 1)) >=
         (s8)shadowvalue);
     } else {
-      u16 shadowvalue = *(u16*) shadowptr;
+      u16 shadowvalue = *(__global u16*) shadowptr;
       return shadowvalue != 0;
     }
 }
