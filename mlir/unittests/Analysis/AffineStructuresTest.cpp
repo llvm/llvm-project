@@ -7,6 +7,8 @@
 //===----------------------------------------------------------------------===//
 
 #include "mlir/Analysis/AffineStructures.h"
+#include "mlir/IR/IntegerSet.h"
+#include "mlir/IR/MLIRContext.h"
 
 #include <gmock/gmock.h>
 #include <gtest/gtest.h>
@@ -585,6 +587,27 @@ TEST(FlatAffineConstraintsTest, clearConstraints) {
   fac.addInequality({1, 0});
   EXPECT_EQ(fac.atIneq(0, 0), 1);
   EXPECT_EQ(fac.atIneq(0, 1), 0);
+}
+
+TEST(FlatAffineConstraintsTest, constantDivs) {
+  // This test checks if floordivs with numerator containing non zero constant
+  // term can be computed from a FlatAffineConstraints instance.
+  FlatAffineConstraints fac = makeFACFromConstraints(4, {}, {});
+
+  // Build a FlatAffineConstraints instance with floordivs containing numerator
+  // with non zero constant term.
+  fac.addLocalFloorDiv({0, 1, 0, 0, 10}, 30);
+  fac.addLocalFloorDiv({1, 0, 0, 0, 0, 99}, 101);
+
+  // Add inequalities using the local variables created above.
+  fac.addInequality({1, 0, 0, 0, 1, 0, 2});
+  fac.addInequality({1, 0, 0, 0, 0, 1, 5});
+
+  // FlatAffineConstraints::getAsIntegerSet returns a null integer set if an
+  // explicit representation for each local variable could not be found.
+  MLIRContext ctx;
+  IntegerSet iSet = fac.getAsIntegerSet(&ctx);
+  EXPECT_TRUE((bool)iSet);
 }
 
 } // namespace mlir
