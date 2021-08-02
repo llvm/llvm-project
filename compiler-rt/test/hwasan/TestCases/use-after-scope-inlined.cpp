@@ -1,15 +1,15 @@
+// This is the ASAN test of the same name ported to HWAsan.
+
 // Test with "-O2" only to make sure inlining (leading to use-after-scope)
 // happens. "always_inline" is not enough, as Clang doesn't emit
 // llvm.lifetime intrinsics at -O0.
 //
-// RUN: %clangxx_asan -O2 -fsanitize-address-use-after-scope %s -o %t && \
+// RUN: %clangxx_hwasan -mllvm -hwasan-use-after-scope -O2 %s -o %t && \
 // RUN:     not %run %t 2>&1 | FileCheck %s
-//
-// Not expected to work yet with HWAsan.
-// XFAIL: *
+
+// REQUIRES: aarch64-target-arch
 
 int *arr;
-
 __attribute__((always_inline)) void inlined(int arg) {
   int x[5];
   for (int i = 0; i < arg; i++)
@@ -20,12 +20,6 @@ __attribute__((always_inline)) void inlined(int arg) {
 int main(int argc, char *argv[]) {
   inlined(argc);
   return arr[argc - 1]; // BOOM
-  // CHECK: ERROR: AddressSanitizer: stack-use-after-scope
-  // CHECK: READ of size 4 at 0x{{.*}} thread T0
-  // CHECK:   #0 0x{{.*}} in main
-  // CHECK:      {{.*}}use-after-scope-inlined.cpp:[[@LINE-4]]
-  // CHECK: Address 0x{{.*}} is located in stack of thread T0 at offset [[OFFSET:[^ ]*]] in frame
-  // CHECK:      {{.*}} in main
-  // CHECK:   This frame has
-  // CHECK:     {{\[}}[[OFFSET]], {{.*}}) 'x.i' (line [[@LINE-15]])
+  // CHECK: ERROR: HWAddressSanitizer: tag-mismatch
+  // CHECK: Cause: stack tag-mismatch
 }
