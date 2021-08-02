@@ -19,7 +19,7 @@
 #endif
 #include <limits.h>
 #include <stdint.h>
-#endif // __HIPCC_RTC__
+#endif // !defined(__HIPCC_RTC__)
 
 // __DEVICE__ is a helper macro with common set of attributes for the wrappers
 // we implement in this file. We need static in order to avoid emitting unused
@@ -1379,7 +1379,7 @@ __host__ inline static int min(int __arg1, int __arg2) {
 __host__ inline static int max(int __arg1, int __arg2) {
   return std::max(__arg1, __arg2);
 }
-#endif // __HIPCC_RTC__
+#endif // !defined(__HIPCC_RTC__) && !defined(__OPENMP_AMDGCN__)
 #endif
 #endif // defined(__cplusplus)
 
