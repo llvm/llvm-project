@@ -2094,22 +2094,24 @@ Instruction *InstCombinerImpl::visitCallInst(CallInst &CI) {
     }
     LLVM_FALLTHROUGH;
   }
-  case Intrinsic::vector_reduce_smin: {
-    if (IID == Intrinsic::vector_reduce_smin) {
-      // SMin reduction over the vector with (potentially-extended)
+  case Intrinsic::vector_reduce_smin:
+  case Intrinsic::vector_reduce_smax: {
+    if (IID == Intrinsic::vector_reduce_smin ||
+        IID == Intrinsic::vector_reduce_smax) {
+      // SMin/SMax reduction over the vector with (potentially-extended)
       // i1 element type is actually a (potentially-extended)
       // logical `and`/`or` reduction over the original non-extended value:
-      //   vector_reduce_smin(<n x i1>)
+      //   vector_reduce_s{min,max}(<n x i1>)
       //     -->
-      //   vector_reduce_or(<n x i1>)
+      //   vector_reduce_{or,and}(<n x i1>)
       // and
-      //   vector_reduce_smin(sext(<n x i1>))
+      //   vector_reduce_s{min,max}(sext(<n x i1>))
       //     -->
-      //   sext(vector_reduce_or(<n x i1>))
+      //   sext(vector_reduce_{or,and}(<n x i1>))
       // and
-      //   vector_reduce_smin(zext(<n x i1>))
+      //   vector_reduce_s{min,max}(zext(<n x i1>))
       //     -->
-      //   zext(vector_reduce_and(<n x i1>))
+      //   zext(vector_reduce_{and,or}(<n x i1>))
       Value *Arg = II->getArgOperand(0);
       Value *Vect;
       if (match(Arg, m_ZExtOrSExtOrSelf(m_Value(Vect)))) {
@@ -2118,7 +2120,8 @@ Instruction *InstCombinerImpl::visitCallInst(CallInst &CI) {
             Instruction::CastOps ExtOpc = Instruction::CastOps::CastOpsEnd;
             if (Arg != Vect)
               ExtOpc = cast<CastInst>(Arg)->getOpcode();
-            Value *Res = ExtOpc == Instruction::CastOps::ZExt
+            Value *Res = ((IID == Intrinsic::vector_reduce_smin) ==
+                          (ExtOpc == Instruction::CastOps::ZExt))
                              ? Builder.CreateAndReduce(Vect)
                              : Builder.CreateOrReduce(Vect);
             if (Arg != Vect)
@@ -2129,7 +2132,6 @@ Instruction *InstCombinerImpl::visitCallInst(CallInst &CI) {
     }
     LLVM_FALLTHROUGH;
   }
-  case Intrinsic::vector_reduce_smax:
   case Intrinsic::vector_reduce_fmax:
   case Intrinsic::vector_reduce_fmin:
   case Intrinsic::vector_reduce_fadd:
