@@ -1752,20 +1752,26 @@ void llvm::salvageDebugInfoForDbgValues(
     // must be updated in the DIExpression and potentially have additional
     // values added; thus we call salvageDebugInfoImpl for each `I` instance in
     // DIILocation.
+    Value *Op0 = nullptr;
     DIExpression *SalvagedExpr = DII->getExpression();
     auto LocItr = find(DIILocation, &I);
     while (SalvagedExpr && LocItr != DIILocation.end()) {
+      SmallVector<uint64_t, 16> Ops;
       unsigned LocNo = std::distance(DIILocation.begin(), LocItr);
-      SalvagedExpr = salvageDebugInfoImpl(I, SalvagedExpr, StackValue, LocNo,
-                                          AdditionalValues);
+      uint64_t CurrentLocOps = SalvagedExpr->getNumLocationOperands();
+      Op0 = salvageDebugInfoImpl(I, CurrentLocOps, Ops, AdditionalValues);
+      if (!Op0)
+        break;
+      SalvagedExpr =
+          DIExpression::appendOpsToArg(SalvagedExpr, Ops, LocNo, StackValue);
       LocItr = std::find(++LocItr, DIILocation.end(), &I);
     }
     // salvageDebugInfoImpl should fail on examining the first element of
     // DbgUsers, or none of them.
-    if (!SalvagedExpr)
+    if (!Op0)
       break;
 
-    DII->replaceVariableLocationOp(&I, I.getOperand(0));
+    DII->replaceVariableLocationOp(&I, Op0);
     if (AdditionalValues.empty()) {
       DII->setExpression(SalvagedExpr);
     } else if (isa<DbgValueInst>(DII) &&
@@ -1793,16 +1799,16 @@ void llvm::salvageDebugInfoForDbgValues(
   }
 }
 
-bool getSalvageOpsForGEP(GetElementPtrInst *GEP, const DataLayout &DL,
-                         uint64_t CurrentLocOps,
-                         SmallVectorImpl<uint64_t> &Opcodes,
-                         SmallVectorImpl<Value *> &AdditionalValues) {
+Value *getSalvageOpsForGEP(GetElementPtrInst *GEP, const DataLayout &DL,
+                           uint64_t CurrentLocOps,
+                           SmallVectorImpl<uint64_t> &Opcodes,
+                           SmallVectorImpl<Value *> &AdditionalValues) {
   unsigned BitWidth = DL.getIndexSizeInBits(GEP->getPointerAddressSpace());
   // Rewrite a GEP into a DIExpression.
   MapVector<Value *, APInt> VariableOffsets;
   APInt ConstantOffset(BitWidth, 0);
   if (!GEP->collectOffset(DL, BitWidth, VariableOffsets, ConstantOffset))
-    return false;
+    return nullptr;
   if (!VariableOffsets.empty() && !CurrentLocOps) {
     Opcodes.insert(Opcodes.begin(), {dwarf::DW_OP_LLVM_arg, 0});
     CurrentLocOps = 1;
@@ -1816,7 +1822,7 @@ bool getSalvageOpsForGEP(GetElementPtrInst *GEP, const DataLayout &DL,
                     dwarf::DW_OP_plus});
   }
   DIExpression::appendOffset(Opcodes, ConstantOffset.getSExtValue());
-  return true;
+  return GEP->getOperand(0);
 }
 
 uint64_t getDwarfOpForBinOp(Instruction::BinaryOps Opcode) {
@@ -1849,14 +1855,14 @@ uint64_t getDwarfOpForBinOp(Instruction::BinaryOps Opcode) {
   }
 }
 
-bool getSalvageOpsForBinOp(BinaryOperator *BI, uint64_t CurrentLocOps,
-                           SmallVectorImpl<uint64_t> &Opcodes,
-                           SmallVectorImpl<Value *> &AdditionalValues) {
+Value *getSalvageOpsForBinOp(BinaryOperator *BI, uint64_t CurrentLocOps,
+                             SmallVectorImpl<uint64_t> &Opcodes,
+                             SmallVectorImpl<Value *> &AdditionalValues) {
   // Handle binary operations with constant integer operands as a special case.
   auto *ConstInt = dyn_cast<ConstantInt>(BI->getOperand(1));
   // Values wider than 64 bits cannot be represented within a DIExpression.
   if (ConstInt && ConstInt->getBitWidth() > 64)
-    return false;
+    return nullptr;
 
   Instruction::BinaryOps BinOpcode = BI->getOpcode();
   // Push any Constant Int operand onto the expression stack.
@@ -1867,7 +1873,7 @@ bool getSalvageOpsForBinOp(BinaryOperator *BI, uint64_t CurrentLocOps,
     if (BinOpcode == Instruction::Add || BinOpcode == Instruction::Sub) {
       uint64_t Offset = BinOpcode == Instruction::Add ? Val : -int64_t(Val);
       DIExpression::appendOffset(Opcodes, Offset);
-      return true;
+      return BI->getOperand(0);
     }
     Opcodes.append({dwarf::DW_OP_constu, Val});
   } else {
@@ -1883,39 +1889,23 @@ bool getSalvageOpsForBinOp(BinaryOperator *BI, uint64_t CurrentLocOps,
   // representation in a DIExpression.
   uint64_t DwarfBinOp = getDwarfOpForBinOp(BinOpcode);
   if (!DwarfBinOp)
-    return false;
+    return nullptr;
   Opcodes.push_back(DwarfBinOp);
-
-  return true;
+  return BI->getOperand(0);
 }
 
-DIExpression *
-llvm::salvageDebugInfoImpl(Instruction &I, DIExpression *SrcDIExpr,
-                           bool WithStackValue, unsigned LocNo,
-                           SmallVectorImpl<Value *> &AdditionalValues) {
-  uint64_t CurrentLocOps = SrcDIExpr->getNumLocationOperands();
+Value *llvm::salvageDebugInfoImpl(Instruction &I, uint64_t CurrentLocOps,
+                                  SmallVectorImpl<uint64_t> &Ops,
+                                  SmallVectorImpl<Value *> &AdditionalValues) {
   auto &M = *I.getModule();
   auto &DL = M.getDataLayout();
 
-  // Apply a vector of opcodes to the source DIExpression.
-  auto doSalvage = [&](SmallVectorImpl<uint64_t> &Ops) -> DIExpression * {
-    DIExpression *DIExpr = SrcDIExpr;
-    if (!Ops.empty()) {
-      DIExpr = DIExpression::appendOpsToArg(DIExpr, Ops, LocNo, WithStackValue);
-    }
-    return DIExpr;
-  };
-
-  // initializer-list helper for applying operators to the source DIExpression.
-  auto applyOps = [&](ArrayRef<uint64_t> Opcodes) {
-    SmallVector<uint64_t, 8> Ops(Opcodes.begin(), Opcodes.end());
-    return doSalvage(Ops);
-  };
-
   if (auto *CI = dyn_cast<CastInst>(&I)) {
+    Value *FromValue = CI->getOperand(0);
     // No-op casts are irrelevant for debug info.
-    if (CI->isNoopCast(DL))
-      return SrcDIExpr;
+    if (CI->isNoopCast(DL)) {
+      return FromValue;
+    }
 
     Type *Type = CI->getType();
     // Casts other than Trunc, SExt, or ZExt to scalar types cannot be salvaged.
@@ -1923,21 +1913,19 @@ llvm::salvageDebugInfoImpl(Instruction &I, DIExpression *SrcDIExpr,
         !(isa<TruncInst>(&I) || isa<SExtInst>(&I) || isa<ZExtInst>(&I)))
       return nullptr;
 
-    Value *FromValue = CI->getOperand(0);
     unsigned FromTypeBitSize = FromValue->getType()->getScalarSizeInBits();
     unsigned ToTypeBitSize = Type->getScalarSizeInBits();
 
-    return applyOps(DIExpression::getExtOps(FromTypeBitSize, ToTypeBitSize,
-                                            isa<SExtInst>(&I)));
+    auto ExtOps = DIExpression::getExtOps(FromTypeBitSize, ToTypeBitSize,
+                                          isa<SExtInst>(&I));
+    Ops.append(ExtOps.begin(), ExtOps.end());
+    return FromValue;
   }
 
-  SmallVector<uint64_t, 8> Ops;
-  if (auto *GEP = dyn_cast<GetElementPtrInst>(&I)) {
-    if (getSalvageOpsForGEP(GEP, DL, CurrentLocOps, Ops, AdditionalValues))
-      return doSalvage(Ops);
-  } else if (auto *BI = dyn_cast<BinaryOperator>(&I)) {
-    if (getSalvageOpsForBinOp(BI, CurrentLocOps, Ops, AdditionalValues))
-      return doSalvage(Ops);
+  if (auto *GEP = dyn_cast<GetElementPtrInst>(&I))
+    return getSalvageOpsForGEP(GEP, DL, CurrentLocOps, Ops, AdditionalValues);
+  else if (auto *BI = dyn_cast<BinaryOperator>(&I)) {
+    return getSalvageOpsForBinOp(BI, CurrentLocOps, Ops, AdditionalValues);
   }
   // *Not* to do: we should not attempt to salvage load instructions,
   // because the validity and lifetime of a dbg.value containing
