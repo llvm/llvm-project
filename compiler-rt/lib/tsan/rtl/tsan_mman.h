@@ -51,9 +51,9 @@ void invoke_free_hook(void *ptr);
 void *Alloc(uptr sz);
 void FreeImpl(void *p);
 
-template <typename T>
-T *New() {
-  return new (Alloc(sizeof(T))) T();
+template <typename T, typename... Args>
+T *New(Args &&...args) {
+  return new (Alloc(sizeof(T))) T(static_cast<Args &&>(args)...);
 }
 
 template <typename T>
