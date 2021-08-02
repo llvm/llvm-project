@@ -1,5 +1,5 @@
 ! RUN: %flang -E %s 2>&1 | FileCheck %s
-! CHECK: res = iflm (666)
+! CHECK: res = IFLM (666)
 ! FLM call name split across continuation, no leading &, with & ! comment
       integer function IFLM(x)
         integer :: x

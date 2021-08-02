@@ -38,12 +38,8 @@ enum ReportType {
 };
 
 struct ReportStack {
-  SymbolizedStack *frames;
-  bool suppressable;
-  static ReportStack *New();
-
- private:
-  ReportStack();
+  SymbolizedStack *frames = nullptr;
+  bool suppressable = false;
 };
 
 struct ReportMopMutex {
@@ -73,28 +69,24 @@ enum ReportLocationType {
 };
 
 struct ReportLocation {
-  ReportLocationType type;
-  DataInfo global;
-  uptr heap_chunk_start;
-  uptr heap_chunk_size;
-  uptr external_tag;
-  int tid;
-  int fd;
-  bool suppressable;
-  ReportStack *stack;
-
-  static ReportLocation *New(ReportLocationType type);
- private:
-  explicit ReportLocation(ReportLocationType type);
+  ReportLocationType type = ReportLocationGlobal;
+  DataInfo global = {};
+  uptr heap_chunk_start = 0;
+  uptr heap_chunk_size = 0;
+  uptr external_tag = 0;
+  Tid tid = kInvalidTid;
+  int fd = 0;
+  bool suppressable = false;
+  ReportStack *stack = nullptr;
 };
 
 struct ReportThread {
-  int id;
+  Tid id;
   tid_t os_id;
   bool running;
   ThreadType thread_type;
   char *name;
-  u32 parent_tid;
+  Tid parent_tid;
   ReportStack *stack;
 };
 
@@ -114,7 +106,7 @@ class ReportDesc {
   Vector<ReportLocation*> locs;
   Vector<ReportMutex*> mutexes;
   Vector<ReportThread*> threads;
-  Vector<int> unique_tids;
+  Vector<Tid> unique_tids;
   ReportStack *sleep;
   int count;
 

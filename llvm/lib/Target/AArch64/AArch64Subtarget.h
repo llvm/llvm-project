@@ -190,6 +190,7 @@ protected:
   bool HasSME = false;
   bool HasSMEF64 = false;
   bool HasSMEI64 = false;
+  bool HasStreamingSVE = false;
 
   // Future architecture extensions.
   bool HasETE = false;
@@ -494,6 +495,7 @@ public:
   bool hasSME() const { return HasSME; }
   bool hasSMEF64() const { return HasSMEF64; }
   bool hasSMEI64() const { return HasSMEI64; }
+  bool hasStreamingSVE() const { return HasStreamingSVE; }
 
   bool isLittleEndian() const { return IsLittle; }
 

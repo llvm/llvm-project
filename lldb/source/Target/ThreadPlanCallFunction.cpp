@@ -209,7 +209,7 @@ void ThreadPlanCallFunction::DoTakedown(bool success) {
   }
 }
 
-void ThreadPlanCallFunction::WillPop() { DoTakedown(PlanSucceeded()); }
+void ThreadPlanCallFunction::DidPop() { DoTakedown(PlanSucceeded()); }
 
 void ThreadPlanCallFunction::GetDescription(Stream *s, DescriptionLevel level) {
   if (level == eDescriptionLevelBrief) {

@@ -6100,6 +6100,13 @@ public:
   // AltiVecPixel and AltiVecBool when -faltivec-src-compat=xl is specified.
   bool ShouldSplatAltivecScalarInCast(const VectorType *VecTy);
 
+  // Checks if the -faltivec-src-compat=gcc option is specified.
+  // If so, AltiVecVector, AltiVecBool and AltiVecPixel types are
+  // treated the same way as they are when trying to initialize
+  // these vectors on gcc (an error is emitted).
+  bool CheckAltivecInitFromScalar(SourceRange R, QualType VecTy,
+                                  QualType SrcTy);
+
   /// ActOnCXXNamedCast - Parse
   /// {dynamic,static,reinterpret,const,addrspace}_cast's.
   ExprResult ActOnCXXNamedCast(SourceLocation OpLoc,

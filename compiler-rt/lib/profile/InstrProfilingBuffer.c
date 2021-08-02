@@ -116,7 +116,7 @@ uint64_t __llvm_profile_get_size_for_buffer_internal(
       DataSize, CountersSize, NamesSize, &PaddingBytesBeforeCounters,
       &PaddingBytesAfterCounters, &PaddingBytesAfterNames);
 
-  return sizeof(__llvm_profile_header) +
+  return sizeof(__llvm_profile_header) + __llvm_write_binary_ids(NULL) +
          (DataSize * sizeof(__llvm_profile_data)) + PaddingBytesBeforeCounters +
          (CountersSize * sizeof(uint64_t)) + PaddingBytesAfterCounters +
          NamesSize + PaddingBytesAfterNames;

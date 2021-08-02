@@ -26,7 +26,7 @@ for adding this configuration.
 
 1. `git clone https://github.com/llvm/llvm-project.git; cd llvm-project` if
    you don't have a checkout yet.
-2. Install Bazel at the version indicated by [.bazelversion](./bazelversion),
+2. Install Bazel at the version indicated by [.bazelversion](./.bazelversion),
    following the official instructions, if you don't have it installed yet:
    https://docs.bazel.build/versions/master/install.html.
 3. `cd utils/bazel`

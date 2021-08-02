@@ -152,7 +152,7 @@ INTERCEPTOR(uptr, malloc_usable_size, void *ptr) {
   if (__dfsan::dfsan_init_is_running)       \
     return REAL(func)(__VA_ARGS__);         \
   ENSURE_DFSAN_INITED();                    \
-  dfsan_set_label(0, __errno_location(), sizeof(int)); /* NOLINT */
+  dfsan_set_label(0, __errno_location(), sizeof(int));
 
 INTERCEPTOR(void *, mmap, void *addr, SIZE_T length, int prot, int flags,
             int fd, OFF_T offset) {

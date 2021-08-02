@@ -357,10 +357,6 @@ define void @vec_shuff_reorder() #0 {
 ; CHECK-NEXT:    [[TMP15:%.*]] = fadd <4 x float> [[TMP10]], [[TMP14]]
 ; CHECK-NEXT:    [[TMP16:%.*]] = fsub <4 x float> [[TMP10]], [[TMP14]]
 ; CHECK-NEXT:    [[TMP17:%.*]] = shufflevector <4 x float> [[TMP15]], <4 x float> [[TMP16]], <4 x i32> <i32 0, i32 5, i32 2, i32 7>
-; CHECK-NEXT:    [[TMP18:%.*]] = extractelement <2 x float> [[TMP4]], i32 1
-; CHECK-NEXT:    [[TMP19:%.*]] = extractelement <2 x float> [[TMP3]], i32 1
-; CHECK-NEXT:    [[TMP20:%.*]] = extractelement <2 x float> [[TMP4]], i32 0
-; CHECK-NEXT:    [[TMP21:%.*]] = extractelement <2 x float> [[TMP3]], i32 0
 ; CHECK-NEXT:    store <4 x float> [[TMP17]], <4 x float>* bitcast ([4 x float]* @fc to <4 x float>*), align 4
 ; CHECK-NEXT:    ret void
 ;

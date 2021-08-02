@@ -21,9 +21,21 @@
 // clusters of basic blocks. Every cluster will be emitted into a separate
 // section with its basic blocks sequenced in the given order. To get the
 // optimized performance, the clusters must form an optimal BB layout for the
-// function. Every cluster's section is labeled with a symbol to allow the
-// linker to reorder the sections in any arbitrary sequence. A global order of
-// these sections would encapsulate the function layout.
+// function. We insert a symbol at the beginning of every cluster's section to
+// allow the linker to reorder the sections in any arbitrary sequence. A global
+// order of these sections would encapsulate the function layout.
+// For example, consider the following clusters for a function foo (consisting
+// of 6 basic blocks 0, 1, ..., 5).
+//
+// 0 2
+// 1 3 5
+//
+// * Basic blocks 0 and 2 are placed in one section with symbol `foo`
+//   referencing the beginning of this section.
+// * Basic blocks 1, 3, 5 are placed in a separate section. A new symbol
+//   `foo.__part.1` will reference the beginning of this section.
+// * Basic block 4 (note that it is not referenced in the list) is placed in
+//   one section, and a new symbol `foo.cold` will point to it.
 //
 // There are a couple of challenges to be addressed:
 //

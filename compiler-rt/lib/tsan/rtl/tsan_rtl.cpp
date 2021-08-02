@@ -77,7 +77,7 @@ void OnInitialize() {
 }
 #endif
 
-static ThreadContextBase *CreateThreadContext(u32 tid) {
+static ThreadContextBase *CreateThreadContext(Tid tid) {
   // Map thread trace when context is created.
   char name[50];
   internal_snprintf(name, sizeof(name), "trace %u", tid);
@@ -101,8 +101,7 @@ static ThreadContextBase *CreateThreadContext(u32 tid) {
       CHECK("unable to mprotect" && 0);
     }
   }
-  void *mem = internal_alloc(sizeof(ThreadContext));
-  return new(mem) ThreadContext(tid);
+  return New<ThreadContext>(tid);
 }
 
 #if !SANITIZER_GO
@@ -127,7 +126,7 @@ Context::Context()
 }
 
 // The objects are allocated in TLS, so one may rely on zero-initialization.
-ThreadState::ThreadState(Context *ctx, u32 tid, int unique_id, u64 epoch,
+ThreadState::ThreadState(Context *ctx, Tid tid, int unique_id, u64 epoch,
                          unsigned reuse_count, uptr stk_addr, uptr stk_size,
                          uptr tls_addr, uptr tls_size)
     : fast_state(tid, epoch)
@@ -439,8 +438,8 @@ void Initialize(ThreadState *thr) {
           (int)internal_getpid());
 
   // Initialize thread 0.
-  int tid = ThreadCreate(thr, 0, 0, true);
-  CHECK_EQ(tid, 0);
+  Tid tid = ThreadCreate(thr, 0, 0, true);
+  CHECK_EQ(tid, kMainTid);
   ThreadStart(thr, tid, GetTid(), ThreadType::Regular);
 #if TSAN_CONTAINS_UBSAN
   __ubsan::InitAsPlugin();
@@ -513,10 +512,6 @@ int Finalize(ThreadState *thr) {
 
   if (common_flags()->print_suppressions)
     PrintMatchedSuppressions();
-#if !SANITIZER_GO
-  if (flags()->print_benign)
-    PrintMatchedBenignRaces();
-#endif
 
   failed = OnFinalize(failed);
 
@@ -577,18 +572,18 @@ NOINLINE
 void GrowShadowStack(ThreadState *thr) {
   const int sz = thr->shadow_stack_end - thr->shadow_stack;
   const int newsz = 2 * sz;
-  uptr *newstack = (uptr *)internal_alloc(newsz * sizeof(uptr));
+  auto newstack = (uptr *)Alloc(newsz * sizeof(uptr));
   internal_memcpy(newstack, thr->shadow_stack, sz * sizeof(uptr));
-  internal_free(thr->shadow_stack);
+  Free(thr->shadow_stack);
   thr->shadow_stack = newstack;
   thr->shadow_stack_pos = newstack + sz;
   thr->shadow_stack_end = newstack + newsz;
 }
 #endif
 
-u32 CurrentStackId(ThreadState *thr, uptr pc) {
+StackID CurrentStackId(ThreadState *thr, uptr pc) {
   if (!thr->is_inited)  // May happen during bootstrap.
-    return 0;
+    return kInvalidStackID;
   if (pc != 0) {
 #if !SANITIZER_GO
     DCHECK_LT(thr->shadow_stack_pos, thr->shadow_stack_end);
@@ -599,7 +594,7 @@ u32 CurrentStackId(ThreadState *thr, uptr pc) {
     thr->shadow_stack_pos[0] = pc;
     thr->shadow_stack_pos++;
   }
-  u32 id = StackDepotPut(
+  StackID id = StackDepotPut(
       StackTrace(thr->shadow_stack, thr->shadow_stack_pos - thr->shadow_stack));
   if (pc != 0)
     thr->shadow_stack_pos--;
@@ -622,9 +617,7 @@ void TraceSwitch(ThreadState *thr) {
   thr->nomalloc--;
 }
 
-Trace *ThreadTrace(int tid) {
-  return (Trace*)GetThreadTraceHeader(tid);
-}
+Trace *ThreadTrace(Tid tid) { return (Trace *)GetThreadTraceHeader(tid); }
 
 uptr TraceTopPC(ThreadState *thr) {
   Event *events = (Event*)GetThreadTrace(thr->tid);

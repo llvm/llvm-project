@@ -21,13 +21,8 @@ namespace __tsan {
 
 // ThreadContext implementation.
 
-ThreadContext::ThreadContext(int tid)
-  : ThreadContextBase(tid)
-  , thr()
-  , sync()
-  , epoch0()
-  , epoch1() {
-}
+ThreadContext::ThreadContext(Tid tid)
+    : ThreadContextBase(tid), thr(), sync(), epoch0(), epoch1() {}
 
 #if !SANITIZER_GO
 ThreadContext::~ThreadContext() {
@@ -99,7 +94,7 @@ void ThreadContext::OnStarted(void *arg) {
 #else
   // Setup dynamic shadow stack.
   const int kInitStackSize = 8;
-  thr->shadow_stack = (uptr *)internal_alloc(kInitStackSize * sizeof(uptr));
+  thr->shadow_stack = (uptr *)Alloc(kInitStackSize * sizeof(uptr));
   thr->shadow_stack_pos = thr->shadow_stack;
   thr->shadow_stack_end = thr->shadow_stack + kInitStackSize;
 #endif
@@ -122,8 +117,7 @@ void ThreadContext::OnStarted(void *arg) {
 
 void ThreadContext::OnFinished() {
 #if SANITIZER_GO
-  internal_free(thr->shadow_stack);
-  thr->shadow_stack = nullptr;
+  Free(thr->shadow_stack);
   thr->shadow_stack_pos = nullptr;
   thr->shadow_stack_end = nullptr;
 #endif
@@ -224,15 +218,15 @@ int ThreadCount(ThreadState *thr) {
   return (int)result;
 }
 
-int ThreadCreate(ThreadState *thr, uptr pc, uptr uid, bool detached) {
+Tid ThreadCreate(ThreadState *thr, uptr pc, uptr uid, bool detached) {
   OnCreatedArgs args = { thr, pc };
   u32 parent_tid = thr ? thr->tid : kInvalidTid;  // No parent for GCD workers.
-  int tid = ctx->thread_registry.CreateThread(uid, detached, parent_tid, &args);
+  Tid tid = ctx->thread_registry.CreateThread(uid, detached, parent_tid, &args);
   DPrintf("#%d: ThreadCreate tid=%d uid=%zu\n", parent_tid, tid, uid);
   return tid;
 }
 
-void ThreadStart(ThreadState *thr, int tid, tid_t os_id,
+void ThreadStart(ThreadState *thr, Tid tid, tid_t os_id,
                  ThreadType thread_type) {
   uptr stk_addr = 0;
   uptr stk_size = 0;
@@ -300,28 +294,28 @@ static bool ConsumeThreadByUid(ThreadContextBase *tctx, void *arg) {
   return false;
 }
 
-int ThreadConsumeTid(ThreadState *thr, uptr pc, uptr uid) {
+Tid ThreadConsumeTid(ThreadState *thr, uptr pc, uptr uid) {
   ConsumeThreadContext findCtx = {uid, nullptr};
   ctx->thread_registry.FindThread(ConsumeThreadByUid, &findCtx);
-  int tid = findCtx.tctx ? findCtx.tctx->tid : kInvalidTid;
+  Tid tid = findCtx.tctx ? findCtx.tctx->tid : kInvalidTid;
   DPrintf("#%d: ThreadTid uid=%zu tid=%d\n", thr->tid, uid, tid);
   return tid;
 }
 
-void ThreadJoin(ThreadState *thr, uptr pc, int tid) {
+void ThreadJoin(ThreadState *thr, uptr pc, Tid tid) {
   CHECK_GT(tid, 0);
   CHECK_LT(tid, kMaxTid);
   DPrintf("#%d: ThreadJoin tid=%d\n", thr->tid, tid);
   ctx->thread_registry.JoinThread(tid, thr);
 }
 
-void ThreadDetach(ThreadState *thr, uptr pc, int tid) {
+void ThreadDetach(ThreadState *thr, uptr pc, Tid tid) {
   CHECK_GT(tid, 0);
   CHECK_LT(tid, kMaxTid);
   ctx->thread_registry.DetachThread(tid, thr);
 }
 
-void ThreadNotJoined(ThreadState *thr, uptr pc, int tid, uptr uid) {
+void ThreadNotJoined(ThreadState *thr, uptr pc, Tid tid, uptr uid) {
   CHECK_GT(tid, 0);
   CHECK_LT(tid, kMaxTid);
   ctx->thread_registry.SetThreadUserId(tid, uid);
@@ -419,10 +413,10 @@ void FiberSwitchImpl(ThreadState *from, ThreadState *to) {
 }
 
 ThreadState *FiberCreate(ThreadState *thr, uptr pc, unsigned flags) {
-  void *mem = internal_alloc(sizeof(ThreadState));
+  void *mem = Alloc(sizeof(ThreadState));
   ThreadState *fiber = static_cast<ThreadState *>(mem);
   internal_memset(fiber, 0, sizeof(*fiber));
-  int tid = ThreadCreate(thr, pc, 0, true);
+  Tid tid = ThreadCreate(thr, pc, 0, true);
   FiberSwitchImpl(thr, fiber);
   ThreadStart(fiber, tid, 0, ThreadType::Fiber);
   FiberSwitchImpl(fiber, thr);
@@ -433,7 +427,7 @@ void FiberDestroy(ThreadState *thr, uptr pc, ThreadState *fiber) {
   FiberSwitchImpl(thr, fiber);
   ThreadFinish(fiber);
   FiberSwitchImpl(fiber, thr);
-  internal_free(fiber);
+  Free(fiber);
 }
 
 void FiberSwitch(ThreadState *thr, uptr pc,

@@ -95,6 +95,94 @@ const SourceFile *Parsing::Prescan(const std::string &path, Options options) {
   return sourceFile;
 }
 
+void Parsing::EmitPreprocessedSource(
+    llvm::raw_ostream &out, bool lineDirectives) const {
+  const SourceFile *sourceFile{nullptr};
+  int sourceLine{0};
+  int column{1};
+  bool inDirective{false};
+  bool inContinuation{false};
+  const AllSources &allSources{allCooked().allSources()};
+  for (const char &atChar : cooked().AsCharBlock()) {
+    char ch{atChar};
+    if (ch == '\n') {
+      out << '\n'; // TODO: DOS CR-LF line ending if necessary
+      column = 1;
+      inDirective = false;
+      inContinuation = false;
+      ++sourceLine;
+    } else {
+      if (ch == '!') {
+        // Other comment markers (C, *, D) in original fixed form source
+        // input card column 1 will have been deleted or normalized to !,
+        // which signifies a comment (directive) in both source forms.
+        inDirective = true;
+      }
+      auto provenance{cooked().GetProvenanceRange(CharBlock{&atChar, 1})};
+      std::optional<SourcePosition> position{provenance
+              ? allSources.GetSourcePosition(provenance->start())
+              : std::nullopt};
+      if (lineDirectives && column == 1 && position) {
+        if (&position->file != sourceFile) {
+          out << "#line \"" << position->file.path() << "\" " << position->line
+              << '\n';
+        } else if (position->line != sourceLine) {
+          if (sourceLine < position->line &&
+              sourceLine + 10 >= position->line) {
+            // Emit a few newlines to catch up when they'll likely
+            // require fewer bytes than a #line directive would have
+            // occupied.
+            while (sourceLine++ < position->line) {
+              out << '\n';
+            }
+          } else {
+            out << "#line " << position->line << '\n';
+          }
+        }
+        sourceFile = &position->file;
+        sourceLine = position->line;
+      }
+      if (column > 72) {
+        // Wrap long lines in a portable fashion that works in both
+        // of the Fortran source forms.  The first free-form continuation
+        // marker ("&") lands in column 73, which begins the card commentary
+        // field of fixed form, and the second one is put in column 6,
+        // where it signifies fixed form line continuation.
+        // The standard Fortran fixed form column limit (72) is used
+        // for output, even if the input was parsed with a nonstandard
+        // column limit override option.
+        out << "&\n     &";
+        column = 7; // start of fixed form source field
+        ++sourceLine;
+        inContinuation = true;
+      } else if (!inDirective && ch != ' ' && (ch < '0' || ch > '9')) {
+        // Put anything other than a label or directive into the
+        // Fortran fixed form source field (columns [7:72]).
+        for (; column < 7; ++column) {
+          out << ' ';
+        }
+      }
+      if (!inContinuation && position && position->column <= 72 && ch != ' ') {
+        // Preserve original indentation
+        for (; column < position->column; ++column) {
+          out << ' ';
+        }
+      }
+      if (ch >= 'a' && ch <= 'z' && provenance && provenance->size() == 1) {
+        // Preserve original case
+        if (const char *orig{allSources.GetSource(*provenance)}) {
+          auto upper{static_cast<char>(ch + 'A' - 'a')};
+          if (*orig == upper) {
+            ch = upper;
+          }
+        }
+      }
+      out << ch;
+      ++column;
+    }
+  }
+}
+
 void Parsing::DumpCookedChars(llvm::raw_ostream &out) const {
   UserState userState{allCooked_, common::LanguageFeatureControl{}};
   ParseState parseState{cooked()};

@@ -353,8 +353,8 @@ let Predicates = [HasStdExtZfh, IsRV64] in {
 // Use target specific isd nodes to help us remember the result is sign
 // extended. Matching sext_inreg+fptoui/fptosi may cause the conversion to be
 // duplicated if it has another user that didn't need the sign_extend.
-def : Pat<(riscv_fcvt_w_rv64 FPR16:$rs1),  (FCVT_W_H $rs1, 0b001)>;
-def : Pat<(riscv_fcvt_wu_rv64 FPR16:$rs1), (FCVT_WU_H $rs1, 0b001)>;
+def : Pat<(riscv_fcvt_w_rtz_rv64 FPR16:$rs1),  (FCVT_W_H $rs1, 0b001)>;
+def : Pat<(riscv_fcvt_wu_rtz_rv64 FPR16:$rs1), (FCVT_WU_H $rs1, 0b001)>;
 
 // half->[u]int64. Round-to-zero must be used.
 def : Pat<(i64 (fp_to_sint FPR16:$rs1)), (FCVT_L_H $rs1, 0b001)>;

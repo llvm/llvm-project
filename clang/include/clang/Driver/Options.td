@@ -701,7 +701,7 @@ def ObjC : Flag<["-"], "ObjC">, Flags<[NoXarchOption]>,
 def O : Joined<["-"], "O">, Group<O_Group>, Flags<[CC1Option]>;
 def O_flag : Flag<["-"], "O">, Flags<[CC1Option]>, Alias<O>, AliasArgs<["1"]>;
 def Ofast : Joined<["-"], "Ofast">, Group<O_Group>, Flags<[CC1Option]>;
-def P : Flag<["-"], "P">, Flags<[CC1Option]>, Group<Preprocessor_Group>,
+def P : Flag<["-"], "P">, Flags<[CC1Option,FlangOption,FC1Option]>, Group<Preprocessor_Group>,
   HelpText<"Disable linemarker output in -E mode">,
   MarshallingInfoNegativeFlag<PreprocessorOutputOpts<"ShowLineMarkers">>;
 def Qy : Flag<["-"], "Qy">, Flags<[CC1Option]>,
@@ -815,7 +815,9 @@ def autocomplete : Joined<["--"], "autocomplete=">;
 def bind__at__load : Flag<["-"], "bind_at_load">;
 def bundle__loader : Separate<["-"], "bundle_loader">;
 def bundle : Flag<["-"], "bundle">;
-def b : JoinedOrSeparate<["-"], "b">, Flags<[Unsupported]>;
+def b : JoinedOrSeparate<["-"], "b">, Flags<[LinkerInput, RenderAsInput]>,
+  HelpText<"Pass -b <arg> to the linker on AIX (only).">, MetaVarName<"<arg>">,
+  Group<Link_Group>;
 def cl_opt_disable : Flag<["-"], "cl-opt-disable">, Group<opencl_Group>, Flags<[CC1Option]>,
   HelpText<"OpenCL only. This option disables all optimizations. By default optimizations are enabled.">;
 def cl_strict_aliasing : Flag<["-"], "cl-strict-aliasing">, Group<opencl_Group>, Flags<[CC1Option]>,
@@ -843,7 +845,8 @@ def cl_no_signed_zeros : Flag<["-"], "cl-no-signed-zeros">, Group<opencl_Group>,
   HelpText<"OpenCL only. Allow use of less precise no signed zeros computations in the generated binary.">,
   MarshallingInfoFlag<LangOpts<"CLNoSignedZero">>;
 def cl_std_EQ : Joined<["-"], "cl-std=">, Group<opencl_Group>, Flags<[CC1Option]>,
-  HelpText<"OpenCL language standard to compile for.">, Values<"cl,CL,cl1.0,CL1.0,cl1.1,CL1.1,cl1.2,CL1.2,cl2.0,CL2.0,cl3.0,CL3.0,clc++,CLC++">;
+  HelpText<"OpenCL language standard to compile for.">,
+  Values<"cl,CL,cl1.0,CL1.0,cl1.1,CL1.1,cl1.2,CL1.2,cl2.0,CL2.0,cl3.0,CL3.0,clc++,CLC++,clc++1.0,CLC++1.0">;
 def cl_denorms_are_zero : Flag<["-"], "cl-denorms-are-zero">, Group<opencl_Group>,
   HelpText<"OpenCL only. Allow denormals to be flushed to zero.">;
 def cl_fp32_correctly_rounded_divide_sqrt : Flag<["-"], "cl-fp32-correctly-rounded-divide-sqrt">, Group<opencl_Group>, Flags<[CC1Option]>,
@@ -4567,7 +4570,7 @@ def fdebug_measure_parse_tree : Flag<["-"], "fdebug-measure-parse-tree">, Group<
   HelpText<"Measure the parse tree">;
 def fdebug_pre_fir_tree : Flag<["-"], "fdebug-pre-fir-tree">, Group<Action_Group>,
   HelpText<"Dump the pre-FIR tree">;
-def fdebug_module_writer : Flag<["-"],"fdebug-module-writer">, 
+def fdebug_module_writer : Flag<["-"],"fdebug-module-writer">,
   HelpText<"Enable debug messages while writing module files">;
 def fget_symbols_sources : Flag<["-"], "fget-symbols-sources">, Group<Action_Group>,
   HelpText<"Dump symbols and their source code locations">;
@@ -4579,7 +4582,8 @@ def fanalyzed_objects_for_unparse : Flag<["-"],
 def fno_analyzed_objects_for_unparse : Flag<["-"],
   "fno-analyzed-objects-for-unparse">,  Group<f_Group>,
   HelpText<"Do not use the analyzed objects when unparsing">;
-
+def fno_reformat : Flag<["-"], "fno-reformat">, Group<Preprocessor_Group>,
+  HelpText<"Dump the cooked character stream in -E mode">;
 }
 
 //===----------------------------------------------------------------------===//

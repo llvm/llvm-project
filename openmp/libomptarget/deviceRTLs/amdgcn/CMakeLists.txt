@@ -157,7 +157,7 @@ foreach(mcpu ${mcpus})
   add_custom_command(
     OUTPUT ${bc_libname}
     COMMAND ${LINK_TOOL} ${bc_files} | ${OPT_TOOL} --always-inline -o ${OUTPUTDIR}/${bc_libname}
-    DEPENDS ${bc_files})
+    DEPENDS ${bc_files} opt)
 
   add_custom_target(lib${libname}-${mcpu} ALL DEPENDS ${bc_libname})
 

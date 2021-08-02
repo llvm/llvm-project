@@ -51,6 +51,38 @@ def SparseTensor_NewOp : SparseTensor_Op<"new", []>,
   let assemblyFormat = "$source attr-dict `:` type($source) `to` type($result)";
 }
 
+def SparseTensor_ConvertOp : SparseTensor_Op<"convert", [SameOperandsAndResultType]>,
+    Arguments<(ins AnyTensor:$source)>,
+    Results<(outs AnyTensor:$dest)> {
+  string summary = "Converts between different tensor types";
+  string description = [{
+     Converts one sparse or dense tensor type to another tensor type. The rank
+     and dimensions of the source and destination types must match exactly,
+     only the sparse encoding of these types may be different. The name `convert`
+     was preferred over `cast`, since the operation may incur a non-trivial cost.
+
+     When converting between two different sparse tensor types, only explicitly
+     stored values are moved from one underlying sparse storage format to
+     the other. When converting from an unannotated dense tensor type to a
+     sparse tensor type, an explicit test for nonzero values is used. When
+     converting to an unannotated dense tensor type, implicit zeroes in the
+     sparse storage format are made explicit. Note that the conversions can have
+     non-trivial costs associated with them, since they may involve elaborate
+     data structure transformations. Also, conversions from sparse tensor types
+     into dense tensor types may be infeasible in terms of storage requirements.
+
+    Examples:
+
+    ```mlir
+    %0 = sparse_tensor.convert %1 : tensor<32x32xf32> to tensor<32x32xf32, #CSR>
+
+    %2 = sparse_tensor.convert %3 : tensor<8x8xi32, #CSC> to tensor<8x8xi32, #CSR>
+    ```
+
+  }];
+  let assemblyFormat = "$source attr-dict `:` type($source) `to` type($dest)";
+}
+
 def SparseTensor_ToPointersOp : SparseTensor_Op<"pointers", [NoSideEffect]>,
     Arguments<(ins AnyTensor:$tensor, Index:$dim)>,
     Results<(outs AnyStridedMemRefOfRank<1>:$result)> {

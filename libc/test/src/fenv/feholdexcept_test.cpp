@@ -9,7 +9,7 @@
 #include "src/fenv/feholdexcept.h"
 
 #include "utils/FPUtil/FEnvUtils.h"
-#include "utils/FPUtil/TestHelpers.h"
+#include "utils/FPUtil/FPExceptMatcher.h"
 #include "utils/UnitTest/Test.h"
 
 #include <fenv.h>

@@ -153,8 +153,10 @@ define i8 @select05_mem(<8 x i1>* %a.0, <8 x i1>* %m) {
 ; X86-AVX512F:       # %bb.0:
 ; X86-AVX512F-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; X86-AVX512F-NEXT:    movl {{[0-9]+}}(%esp), %ecx
-; X86-AVX512F-NEXT:    kmovw (%ecx), %k0
-; X86-AVX512F-NEXT:    kmovw (%eax), %k1
+; X86-AVX512F-NEXT:    movzbl (%ecx), %ecx
+; X86-AVX512F-NEXT:    kmovw %ecx, %k0
+; X86-AVX512F-NEXT:    movzbl (%eax), %eax
+; X86-AVX512F-NEXT:    kmovw %eax, %k1
 ; X86-AVX512F-NEXT:    korw %k1, %k0, %k0
 ; X86-AVX512F-NEXT:    kmovw %k0, %eax
 ; X86-AVX512F-NEXT:    # kill: def $al killed $al killed $eax
@@ -162,8 +164,10 @@ define i8 @select05_mem(<8 x i1>* %a.0, <8 x i1>* %m) {
 ;
 ; X64-AVX512F-LABEL: select05_mem:
 ; X64-AVX512F:       # %bb.0:
-; X64-AVX512F-NEXT:    kmovw (%rsi), %k0
-; X64-AVX512F-NEXT:    kmovw (%rdi), %k1
+; X64-AVX512F-NEXT:    movzbl (%rsi), %eax
+; X64-AVX512F-NEXT:    kmovw %eax, %k0
+; X64-AVX512F-NEXT:    movzbl (%rdi), %eax
+; X64-AVX512F-NEXT:    kmovw %eax, %k1
 ; X64-AVX512F-NEXT:    korw %k1, %k0, %k0
 ; X64-AVX512F-NEXT:    kmovw %k0, %eax
 ; X64-AVX512F-NEXT:    # kill: def $al killed $al killed $eax
@@ -173,8 +177,10 @@ define i8 @select05_mem(<8 x i1>* %a.0, <8 x i1>* %m) {
 ; X86-AVX512BW:       # %bb.0:
 ; X86-AVX512BW-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; X86-AVX512BW-NEXT:    movl {{[0-9]+}}(%esp), %ecx
-; X86-AVX512BW-NEXT:    kmovw (%ecx), %k0
-; X86-AVX512BW-NEXT:    kmovw (%eax), %k1
+; X86-AVX512BW-NEXT:    movzbl (%ecx), %ecx
+; X86-AVX512BW-NEXT:    kmovd %ecx, %k0
+; X86-AVX512BW-NEXT:    movzbl (%eax), %eax
+; X86-AVX512BW-NEXT:    kmovd %eax, %k1
 ; X86-AVX512BW-NEXT:    korw %k1, %k0, %k0
 ; X86-AVX512BW-NEXT:    kmovd %k0, %eax
 ; X86-AVX512BW-NEXT:    # kill: def $al killed $al killed $eax
@@ -182,8 +188,10 @@ define i8 @select05_mem(<8 x i1>* %a.0, <8 x i1>* %m) {
 ;
 ; X64-AVX512BW-LABEL: select05_mem:
 ; X64-AVX512BW:       # %bb.0:
-; X64-AVX512BW-NEXT:    kmovw (%rsi), %k0
-; X64-AVX512BW-NEXT:    kmovw (%rdi), %k1
+; X64-AVX512BW-NEXT:    movzbl (%rsi), %eax
+; X64-AVX512BW-NEXT:    kmovd %eax, %k0
+; X64-AVX512BW-NEXT:    movzbl (%rdi), %eax
+; X64-AVX512BW-NEXT:    kmovd %eax, %k1
 ; X64-AVX512BW-NEXT:    korw %k1, %k0, %k0
 ; X64-AVX512BW-NEXT:    kmovd %k0, %eax
 ; X64-AVX512BW-NEXT:    # kill: def $al killed $al killed $eax
@@ -220,8 +228,10 @@ define i8 @select06_mem(<8 x i1>* %a.0, <8 x i1>* %m) {
 ; X86-AVX512F:       # %bb.0:
 ; X86-AVX512F-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; X86-AVX512F-NEXT:    movl {{[0-9]+}}(%esp), %ecx
-; X86-AVX512F-NEXT:    kmovw (%ecx), %k0
-; X86-AVX512F-NEXT:    kmovw (%eax), %k1
+; X86-AVX512F-NEXT:    movzbl (%ecx), %ecx
+; X86-AVX512F-NEXT:    kmovw %ecx, %k0
+; X86-AVX512F-NEXT:    movzbl (%eax), %eax
+; X86-AVX512F-NEXT:    kmovw %eax, %k1
 ; X86-AVX512F-NEXT:    kandw %k1, %k0, %k0
 ; X86-AVX512F-NEXT:    kmovw %k0, %eax
 ; X86-AVX512F-NEXT:    # kill: def $al killed $al killed $eax
@@ -229,8 +239,10 @@ define i8 @select06_mem(<8 x i1>* %a.0, <8 x i1>* %m) {
 ;
 ; X64-AVX512F-LABEL: select06_mem:
 ; X64-AVX512F:       # %bb.0:
-; X64-AVX512F-NEXT:    kmovw (%rsi), %k0
-; X64-AVX512F-NEXT:    kmovw (%rdi), %k1
+; X64-AVX512F-NEXT:    movzbl (%rsi), %eax
+; X64-AVX512F-NEXT:    kmovw %eax, %k0
+; X64-AVX512F-NEXT:    movzbl (%rdi), %eax
+; X64-AVX512F-NEXT:    kmovw %eax, %k1
 ; X64-AVX512F-NEXT:    kandw %k1, %k0, %k0
 ; X64-AVX512F-NEXT:    kmovw %k0, %eax
 ; X64-AVX512F-NEXT:    # kill: def $al killed $al killed $eax
@@ -240,8 +252,10 @@ define i8 @select06_mem(<8 x i1>* %a.0, <8 x i1>* %m) {
 ; X86-AVX512BW:       # %bb.0:
 ; X86-AVX512BW-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; X86-AVX512BW-NEXT:    movl {{[0-9]+}}(%esp), %ecx
-; X86-AVX512BW-NEXT:    kmovw (%ecx), %k0
-; X86-AVX512BW-NEXT:    kmovw (%eax), %k1
+; X86-AVX512BW-NEXT:    movzbl (%ecx), %ecx
+; X86-AVX512BW-NEXT:    kmovd %ecx, %k0
+; X86-AVX512BW-NEXT:    movzbl (%eax), %eax
+; X86-AVX512BW-NEXT:    kmovd %eax, %k1
 ; X86-AVX512BW-NEXT:    kandw %k1, %k0, %k0
 ; X86-AVX512BW-NEXT:    kmovd %k0, %eax
 ; X86-AVX512BW-NEXT:    # kill: def $al killed $al killed $eax
@@ -249,8 +263,10 @@ define i8 @select06_mem(<8 x i1>* %a.0, <8 x i1>* %m) {
 ;
 ; X64-AVX512BW-LABEL: select06_mem:
 ; X64-AVX512BW:       # %bb.0:
-; X64-AVX512BW-NEXT:    kmovw (%rsi), %k0
-; X64-AVX512BW-NEXT:    kmovw (%rdi), %k1
+; X64-AVX512BW-NEXT:    movzbl (%rsi), %eax
+; X64-AVX512BW-NEXT:    kmovd %eax, %k0
+; X64-AVX512BW-NEXT:    movzbl (%rdi), %eax
+; X64-AVX512BW-NEXT:    kmovd %eax, %k1
 ; X64-AVX512BW-NEXT:    kandw %k1, %k0, %k0
 ; X64-AVX512BW-NEXT:    kmovd %k0, %eax
 ; X64-AVX512BW-NEXT:    # kill: def $al killed $al killed $eax

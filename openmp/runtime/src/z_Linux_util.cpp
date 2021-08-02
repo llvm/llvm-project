@@ -1051,6 +1051,8 @@ void __kmp_reap_worker(kmp_info_t *th) {
                   "exit_val = %p\n",
                   th->th.th_info.ds.ds_gtid, exit_val));
   }
+#else
+  (void)status; // unused variable
 #endif /* KMP_DEBUG */
 
   KA_TRACE(10, ("__kmp_reap_worker: done reaping T#%d\n",

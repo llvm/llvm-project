@@ -920,6 +920,7 @@ InstrProfiling::getOrCreateRegionCounters(InstrProfIncrementInst *Inc) {
   }
 
   // Create data variable.
+  auto *IntPtrTy = M->getDataLayout().getIntPtrType(M->getContext());
   auto *Int16Ty = Type::getInt16Ty(Ctx);
   auto *Int16ArrayTy = ArrayType::get(Int16Ty, IPVK_Last + 1);
   Type *DataTypes[] = {
@@ -936,10 +937,6 @@ InstrProfiling::getOrCreateRegionCounters(InstrProfIncrementInst *Inc) {
   for (uint32_t Kind = IPVK_First; Kind <= IPVK_Last; ++Kind)
     Int16ArrayVals[Kind] = ConstantInt::get(Int16Ty, PD.NumValueSites[Kind]);
 
-  Constant *DataVals[] = {
-#define INSTR_PROF_DATA(Type, LLVMType, Name, Init) Init,
-#include "llvm/ProfileData/InstrProfData.inc"
-  };
   // If the data variable is not referenced by code (if we don't emit
   // @llvm.instrprof.value.profile, NS will be 0), and the counter keeps the
   // data variable live under linker GC, the data variable can be private. This
@@ -953,8 +950,19 @@ InstrProfiling::getOrCreateRegionCounters(InstrProfIncrementInst *Inc) {
     Visibility = GlobalValue::DefaultVisibility;
   }
   auto *Data =
-      new GlobalVariable(*M, DataTy, false, Linkage,
-                         ConstantStruct::get(DataTy, DataVals), DataVarName);
+      new GlobalVariable(*M, DataTy, false, Linkage, nullptr, DataVarName);
+  // Reference the counter variable with a label difference (link-time
+  // constant).
+  auto *RelativeCounterPtr =
+      ConstantExpr::getSub(ConstantExpr::getPtrToInt(CounterPtr, IntPtrTy),
+                           ConstantExpr::getPtrToInt(Data, IntPtrTy));
+
+  Constant *DataVals[] = {
+#define INSTR_PROF_DATA(Type, LLVMType, Name, Init) Init,
+#include "llvm/ProfileData/InstrProfData.inc"
+  };
+  Data->setInitializer(ConstantStruct::get(DataTy, DataVals));
+
   Data->setVisibility(Visibility);
   Data->setSection(getInstrProfSectionName(IPSK_data, TT.getObjectFormat()));
   Data->setAlignment(Align(INSTR_PROF_DATA_ALIGNMENT));

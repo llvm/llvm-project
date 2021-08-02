@@ -84,9 +84,9 @@ define <2 x i16> @mgather_v2i16_align1(<2 x i16*> %ptrs, <2 x i1> %m, <2 x i16> 
 ; RV32-NEXT:    vslideup.vi v26, v25, 0
 ; RV32-NEXT:    vsetivli zero, 8, e8, mf2, ta, mu
 ; RV32-NEXT:    vmsne.vi v25, v26, 0
-; RV32-NEXT:    addi a0, sp, 14
+; RV32-NEXT:    addi a0, sp, 15
 ; RV32-NEXT:    vse1.v v25, (a0)
-; RV32-NEXT:    lbu a0, 14(sp)
+; RV32-NEXT:    lbu a0, 15(sp)
 ; RV32-NEXT:    andi a1, a0, 1
 ; RV32-NEXT:    beqz a1, .LBB4_2
 ; RV32-NEXT:  # %bb.1: # %cond.load
@@ -131,9 +131,9 @@ define <2 x i16> @mgather_v2i16_align1(<2 x i16*> %ptrs, <2 x i1> %m, <2 x i16> 
 ; RV64-NEXT:    vslideup.vi v26, v25, 0
 ; RV64-NEXT:    vsetivli zero, 8, e8, mf2, ta, mu
 ; RV64-NEXT:    vmsne.vi v25, v26, 0
-; RV64-NEXT:    addi a0, sp, 14
+; RV64-NEXT:    addi a0, sp, 15
 ; RV64-NEXT:    vse1.v v25, (a0)
-; RV64-NEXT:    lbu a0, 14(sp)
+; RV64-NEXT:    lbu a0, 15(sp)
 ; RV64-NEXT:    andi a1, a0, 1
 ; RV64-NEXT:    beqz a1, .LBB4_2
 ; RV64-NEXT:  # %bb.1: # %cond.load
@@ -184,9 +184,9 @@ define <2 x i64> @mgather_v2i64_align4(<2 x i64*> %ptrs, <2 x i1> %m, <2 x i64> 
 ; RV32-NEXT:    vslideup.vi v26, v25, 0
 ; RV32-NEXT:    vsetivli zero, 8, e8, mf2, ta, mu
 ; RV32-NEXT:    vmsne.vi v25, v26, 0
-; RV32-NEXT:    addi a0, sp, 14
+; RV32-NEXT:    addi a0, sp, 15
 ; RV32-NEXT:    vse1.v v25, (a0)
-; RV32-NEXT:    lbu a0, 14(sp)
+; RV32-NEXT:    lbu a0, 15(sp)
 ; RV32-NEXT:    andi a1, a0, 1
 ; RV32-NEXT:    vsetivli zero, 2, e32, m1, ta, mu
 ; RV32-NEXT:    vmv.v.i v25, 0
@@ -231,9 +231,9 @@ define <2 x i64> @mgather_v2i64_align4(<2 x i64*> %ptrs, <2 x i1> %m, <2 x i64> 
 ; RV64-NEXT:    vslideup.vi v26, v25, 0
 ; RV64-NEXT:    vsetivli zero, 8, e8, mf2, ta, mu
 ; RV64-NEXT:    vmsne.vi v25, v26, 0
-; RV64-NEXT:    addi a0, sp, 14
+; RV64-NEXT:    addi a0, sp, 15
 ; RV64-NEXT:    vse1.v v25, (a0)
-; RV64-NEXT:    lbu a0, 14(sp)
+; RV64-NEXT:    lbu a0, 15(sp)
 ; RV64-NEXT:    andi a1, a0, 1
 ; RV64-NEXT:    beqz a1, .LBB5_2
 ; RV64-NEXT:  # %bb.1: # %cond.load
@@ -284,9 +284,9 @@ define void @mscatter_v4i16_align1(<4 x i16> %val, <4 x i16*> %ptrs, <4 x i1> %m
 ; RV32-NEXT:    vslideup.vi v26, v25, 0
 ; RV32-NEXT:    vsetivli zero, 8, e8, mf2, ta, mu
 ; RV32-NEXT:    vmsne.vi v25, v26, 0
-; RV32-NEXT:    addi a0, sp, 12
+; RV32-NEXT:    addi a0, sp, 15
 ; RV32-NEXT:    vse1.v v25, (a0)
-; RV32-NEXT:    lbu a0, 12(sp)
+; RV32-NEXT:    lbu a0, 15(sp)
 ; RV32-NEXT:    andi a1, a0, 1
 ; RV32-NEXT:    bnez a1, .LBB6_5
 ; RV32-NEXT:  # %bb.1: # %else
@@ -361,9 +361,9 @@ define void @mscatter_v4i16_align1(<4 x i16> %val, <4 x i16*> %ptrs, <4 x i1> %m
 ; RV64-NEXT:    vslideup.vi v26, v25, 0
 ; RV64-NEXT:    vsetivli zero, 8, e8, mf2, ta, mu
 ; RV64-NEXT:    vmsne.vi v25, v26, 0
-; RV64-NEXT:    addi a0, sp, 12
+; RV64-NEXT:    addi a0, sp, 15
 ; RV64-NEXT:    vse1.v v25, (a0)
-; RV64-NEXT:    lbu a0, 12(sp)
+; RV64-NEXT:    lbu a0, 15(sp)
 ; RV64-NEXT:    andi a1, a0, 1
 ; RV64-NEXT:    bnez a1, .LBB6_5
 ; RV64-NEXT:  # %bb.1: # %else
@@ -444,9 +444,9 @@ define void @mscatter_v2i32_align2(<2 x i32> %val, <2 x i32*> %ptrs, <2 x i1> %m
 ; RV32-NEXT:    vslideup.vi v26, v25, 0
 ; RV32-NEXT:    vsetivli zero, 8, e8, mf2, ta, mu
 ; RV32-NEXT:    vmsne.vi v25, v26, 0
-; RV32-NEXT:    addi a0, sp, 14
+; RV32-NEXT:    addi a0, sp, 15
 ; RV32-NEXT:    vse1.v v25, (a0)
-; RV32-NEXT:    lbu a0, 14(sp)
+; RV32-NEXT:    lbu a0, 15(sp)
 ; RV32-NEXT:    andi a1, a0, 1
 ; RV32-NEXT:    bnez a1, .LBB7_3
 ; RV32-NEXT:  # %bb.1: # %else
@@ -489,9 +489,9 @@ define void @mscatter_v2i32_align2(<2 x i32> %val, <2 x i32*> %ptrs, <2 x i1> %m
 ; RV64-NEXT:    vslideup.vi v26, v25, 0
 ; RV64-NEXT:    vsetivli zero, 8, e8, mf2, ta, mu
 ; RV64-NEXT:    vmsne.vi v25, v26, 0
-; RV64-NEXT:    addi a0, sp, 14
+; RV64-NEXT:    addi a0, sp, 15
 ; RV64-NEXT:    vse1.v v25, (a0)
-; RV64-NEXT:    lbu a0, 14(sp)
+; RV64-NEXT:    lbu a0, 15(sp)
 ; RV64-NEXT:    andi a1, a0, 1
 ; RV64-NEXT:    bnez a1, .LBB7_3
 ; RV64-NEXT:  # %bb.1: # %else
@@ -543,9 +543,9 @@ define void @masked_load_v2i32_align1(<2 x i32>* %a, <2 x i32> %m, <2 x i32>* %r
 ; RV32-NEXT:    vslideup.vi v26, v25, 0
 ; RV32-NEXT:    vsetivli zero, 8, e8, mf2, ta, mu
 ; RV32-NEXT:    vmsne.vi v25, v26, 0
-; RV32-NEXT:    addi a2, sp, 14
+; RV32-NEXT:    addi a2, sp, 15
 ; RV32-NEXT:    vse1.v v25, (a2)
-; RV32-NEXT:    lbu a2, 14(sp)
+; RV32-NEXT:    lbu a2, 15(sp)
 ; RV32-NEXT:    andi a3, a2, 1
 ; RV32-NEXT:    beqz a3, .LBB8_2
 ; RV32-NEXT:  # %bb.1: # %cond.load
@@ -603,9 +603,9 @@ define void @masked_load_v2i32_align1(<2 x i32>* %a, <2 x i32> %m, <2 x i32>* %r
 ; RV64-NEXT:    vslideup.vi v26, v25, 0
 ; RV64-NEXT:    vsetivli zero, 8, e8, mf2, ta, mu
 ; RV64-NEXT:    vmsne.vi v25, v26, 0
-; RV64-NEXT:    addi a2, sp, 14
+; RV64-NEXT:    addi a2, sp, 15
 ; RV64-NEXT:    vse1.v v25, (a2)
-; RV64-NEXT:    lbu a2, 14(sp)
+; RV64-NEXT:    lbu a2, 15(sp)
 ; RV64-NEXT:    andi a3, a2, 1
 ; RV64-NEXT:    beqz a3, .LBB8_2
 ; RV64-NEXT:  # %bb.1: # %cond.load
@@ -671,9 +671,9 @@ define void @masked_store_v2i32_align2(<2 x i32> %val, <2 x i32>* %a, <2 x i32> 
 ; RV32-NEXT:    vslideup.vi v26, v25, 0
 ; RV32-NEXT:    vsetivli zero, 8, e8, mf2, ta, mu
 ; RV32-NEXT:    vmsne.vi v25, v26, 0
-; RV32-NEXT:    addi a1, sp, 14
+; RV32-NEXT:    addi a1, sp, 15
 ; RV32-NEXT:    vse1.v v25, (a1)
-; RV32-NEXT:    lbu a1, 14(sp)
+; RV32-NEXT:    lbu a1, 15(sp)
 ; RV32-NEXT:    andi a2, a1, 1
 ; RV32-NEXT:    bnez a2, .LBB9_3
 ; RV32-NEXT:  # %bb.1: # %else
@@ -714,9 +714,9 @@ define void @masked_store_v2i32_align2(<2 x i32> %val, <2 x i32>* %a, <2 x i32> 
 ; RV64-NEXT:    vslideup.vi v26, v25, 0
 ; RV64-NEXT:    vsetivli zero, 8, e8, mf2, ta, mu
 ; RV64-NEXT:    vmsne.vi v25, v26, 0
-; RV64-NEXT:    addi a1, sp, 14
+; RV64-NEXT:    addi a1, sp, 15
 ; RV64-NEXT:    vse1.v v25, (a1)
-; RV64-NEXT:    lbu a1, 14(sp)
+; RV64-NEXT:    lbu a1, 15(sp)
 ; RV64-NEXT:    andi a2, a1, 1
 ; RV64-NEXT:    bnez a2, .LBB9_3
 ; RV64-NEXT:  # %bb.1: # %else

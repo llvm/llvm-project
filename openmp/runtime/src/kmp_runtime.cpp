@@ -5537,7 +5537,6 @@ void __kmp_free_team(kmp_root_t *root,
   int use_hot_team = team == root->r.r_hot_team;
 #if KMP_NESTED_HOT_TEAMS
   int level;
-  kmp_hot_team_ptr_t *hot_teams;
   if (master) {
     level = team->t.t_active_level - 1;
     if (master->th.th_teams_microtask) { // in teams construct?
@@ -5551,7 +5550,9 @@ void __kmp_free_team(kmp_root_t *root,
         // team_of_workers before the parallel
       } // team->t.t_level will be increased inside parallel
     }
-    hot_teams = master->th.th_hot_teams;
+#if KMP_DEBUG
+    kmp_hot_team_ptr_t *hot_teams = master->th.th_hot_teams;
+#endif
     if (level < __kmp_hot_teams_max_level) {
       KMP_DEBUG_ASSERT(team == hot_teams[level].hot_team);
       use_hot_team = 1;

@@ -720,20 +720,53 @@ static bool AllUsesOfValueWillTrapIfNull(const Value *V,
 /// Return true if all uses of any loads from GV will trap if the loaded value
 /// is null.  Note that this also permits comparisons of the loaded value
 /// against null, as a special case.
-static bool AllUsesOfLoadedValueWillTrapIfNull(const GlobalVariable *GV) {
-  for (const User *U : GV->users())
-    if (const LoadInst *LI = dyn_cast<LoadInst>(U)) {
-      SmallPtrSet<const PHINode*, 8> PHIs;
-      if (!AllUsesOfValueWillTrapIfNull(LI, PHIs))
+static bool allUsesOfLoadedValueWillTrapIfNull(const GlobalVariable *GV) {
+  SmallVector<const Value *, 4> Worklist;
+  Worklist.push_back(GV);
+  while (!Worklist.empty()) {
+    const Value *P = Worklist.pop_back_val();
+    for (auto *U : P->users()) {
+      if (auto *LI = dyn_cast<LoadInst>(U)) {
+        SmallPtrSet<const PHINode *, 8> PHIs;
+        if (!AllUsesOfValueWillTrapIfNull(LI, PHIs))
+          return false;
+      } else if (auto *SI = dyn_cast<StoreInst>(U)) {
+        // Ignore stores to the global.
+        if (SI->getPointerOperand() != P)
+          return false;
+      } else if (auto *CE = dyn_cast<ConstantExpr>(U)) {
+        if (CE->stripPointerCasts() != GV)
+          return false;
+        // Check further the ConstantExpr.
+        Worklist.push_back(CE);
+      } else {
+        // We don't know or understand this user, bail out.
         return false;
-    } else if (isa<StoreInst>(U)) {
-      // Ignore stores to the global.
-    } else {
-      // We don't know or understand this user, bail out.
-      //cerr << "UNKNOWN USER OF GLOBAL!: " << *U;
-      return false;
+      }
     }
+  }
+
   return true;
+}
+
+/// Get all the loads/store uses for global variable \p GV.
+static void allUsesOfLoadAndStores(GlobalVariable *GV,
+                                   SmallVector<Value *, 4> &Uses) {
+  SmallVector<Value *, 4> Worklist;
+  Worklist.push_back(GV);
+  while (!Worklist.empty()) {
+    auto *P = Worklist.pop_back_val();
+    for (auto *U : P->users()) {
+      if (auto *CE = dyn_cast<ConstantExpr>(U)) {
+        Worklist.push_back(CE);
+        continue;
+      }
+
+      assert((isa<LoadInst>(U) || isa<StoreInst>(U)) &&
+             "Expect only load or store instructions");
+      Uses.push_back(U);
+    }
+  }
 }
 
 static bool OptimizeAwayTrappingUsesOfValue(Value *V, Constant *NewV) {
@@ -947,9 +980,11 @@ OptimizeGlobalAddressOfMalloc(GlobalVariable *GV, CallInst *CI, Type *AllocTy,
                        GV->getName()+".init", GV->getThreadLocalMode());
   bool InitBoolUsed = false;
 
-  // Loop over all uses of GV, processing them in turn.
-  while (!GV->use_empty()) {
-    if (StoreInst *SI = dyn_cast<StoreInst>(GV->user_back())) {
+  // Loop over all instruction uses of GV, processing them in turn.
+  SmallVector<Value *, 4> Guses;
+  allUsesOfLoadAndStores(GV, Guses);
+  for (auto *U : Guses) {
+    if (StoreInst *SI = dyn_cast<StoreInst>(U)) {
       // The global is initialized when the store to it occurs. If the stored
       // value is null value, the global bool is set to false, otherwise true.
       new StoreInst(ConstantInt::getBool(
@@ -961,7 +996,7 @@ OptimizeGlobalAddressOfMalloc(GlobalVariable *GV, CallInst *CI, Type *AllocTy,
       continue;
     }
 
-    LoadInst *LI = cast<LoadInst>(GV->user_back());
+    LoadInst *LI = cast<LoadInst>(U);
     while (!LI->use_empty()) {
       Use &LoadUse = *LI->use_begin();
       ICmpInst *ICI = dyn_cast<ICmpInst>(LoadUse.getUser());
@@ -1019,33 +1054,47 @@ OptimizeGlobalAddressOfMalloc(GlobalVariable *GV, CallInst *CI, Type *AllocTy,
   return NewGV;
 }
 
-/// Scan the use-list of V checking to make sure that there are no complex uses
-/// of V.  We permit simple things like dereferencing the pointer, but not
+/// Scan the use-list of GV checking to make sure that there are no complex uses
+/// of GV.  We permit simple things like dereferencing the pointer, but not
 /// storing through the address, unless it is to the specified global.
 static bool
-valueIsOnlyUsedLocallyOrStoredToOneGlobal(const Instruction *V,
+valueIsOnlyUsedLocallyOrStoredToOneGlobal(const CallInst *CI,
                                           const GlobalVariable *GV) {
-  for (const User *U : V->users()) {
-    const Instruction *Inst = cast<Instruction>(U);
+  SmallPtrSet<const Value *, 4> Visited;
+  SmallVector<const Value *, 4> Worklist;
+  Worklist.push_back(CI);
 
-    if (isa<LoadInst>(Inst) || isa<CmpInst>(Inst)) {
-      continue; // Fine, ignore.
-    }
-
-    if (const StoreInst *SI = dyn_cast<StoreInst>(Inst)) {
-      if (SI->getOperand(0) == V && SI->getOperand(1) != GV)
-        return false;  // Storing the pointer itself... bad.
-      continue; // Otherwise, storing through it, or storing into GV... fine.
-    }
-
-    if (const BitCastInst *BCI = dyn_cast<BitCastInst>(Inst)) {
-      if (!valueIsOnlyUsedLocallyOrStoredToOneGlobal(BCI, GV))
-        return false;
+  while (!Worklist.empty()) {
+    const Value *V = Worklist.pop_back_val();
+    if (!Visited.insert(V).second)
       continue;
-    }
 
-    return false;
+    for (const Use &VUse : V->uses()) {
+      const User *U = VUse.getUser();
+      if (isa<LoadInst>(U) || isa<CmpInst>(U))
+        continue; // Fine, ignore.
+
+      if (auto *SI = dyn_cast<StoreInst>(U)) {
+        if (SI->getValueOperand() == V &&
+            SI->getPointerOperand()->stripPointerCasts() != GV)
+          return false; // Storing the pointer not into GV... bad.
+        continue; // Otherwise, storing through it, or storing into GV... fine.
+      }
+
+      if (auto *BCI = dyn_cast<BitCastInst>(U)) {
+        Worklist.push_back(BCI);
+        continue;
+      }
+
+      if (auto *GEPI = dyn_cast<GetElementPtrInst>(U)) {
+        Worklist.push_back(GEPI);
+        continue;
+      }
+
+      return false;
+    }
   }
+
   return true;
 }
 
@@ -1066,12 +1115,12 @@ static bool tryToOptimizeStoreOfMallocToGlobal(GlobalVariable *GV, CallInst *CI,
   // been reached).  To do this, we check to see if all uses of the global
   // would trap if the global were null: this proves that they must all
   // happen after the malloc.
-  if (!AllUsesOfLoadedValueWillTrapIfNull(GV))
+  if (!allUsesOfLoadedValueWillTrapIfNull(GV))
     return false;
 
   // We can't optimize this if the malloc itself is used in a complex way,
   // for example, being stored into multiple globals.  This allows the
-  // malloc to be stored into the specified global, loaded icmp'd.
+  // malloc to be stored into the specified global, loaded, gep, icmp'd.
   // These are all things we could transform to using the global for.
   if (!valueIsOnlyUsedLocallyOrStoredToOneGlobal(CI, GV))
     return false;

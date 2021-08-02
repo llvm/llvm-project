@@ -64,7 +64,7 @@ entry:
 define void @insert_store_v9i4(<9 x i4>* %q, i4 zeroext %s) {
 ; CHECK-LABEL: @insert_store_v9i4(
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[TMP0:%.*]] = load <9 x i4>, <9 x i4>* [[Q:%.*]], align 16
+; CHECK-NEXT:    [[TMP0:%.*]] = load <9 x i4>, <9 x i4>* [[Q:%.*]], align 8
 ; CHECK-NEXT:    [[VECINS:%.*]] = insertelement <9 x i4> [[TMP0]], i4 [[S:%.*]], i32 3
 ; CHECK-NEXT:    store <9 x i4> [[VECINS]], <9 x i4>* [[Q]], align 1
 ; CHECK-NEXT:    ret void

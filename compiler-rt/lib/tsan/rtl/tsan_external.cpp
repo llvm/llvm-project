@@ -92,7 +92,7 @@ void __tsan_external_register_header(void *tag, const char *header) {
   header = internal_strdup(header);
   char *old_header =
       (char *)atomic_exchange(header_ptr, (uptr)header, memory_order_seq_cst);
-  if (old_header) internal_free(old_header);
+  Free(old_header);
 }
 
 SANITIZER_INTERFACE_ATTRIBUTE

@@ -85,6 +85,32 @@ spv.module Logical GLSL450 requires #spv.vce<v1.0, [Shader], []> {
     spv.Return
   }
 
+  // CHECK-LABEL: @i8_const
+  spv.func @i8_const() -> () "None" {
+    // CHECK: spv.Constant 0 : i8
+    %0 = spv.Constant 0 : i8
+    // CHECK: spv.Constant -1 : i8
+    %1 = spv.Constant 255 : i8
+
+    // CHECK: spv.Constant 0 : si8
+    %2 = spv.Constant 0 : si8
+    // CHECK: spv.Constant 127 : si8
+    %3 = spv.Constant 127 : si8
+    // CHECK: spv.Constant -128 : si8
+    %4 = spv.Constant -128 : si8
+
+    // CHECK: spv.Constant 0 : i8
+    %5 = spv.Constant 0 : ui8
+    // CHECK: spv.Constant -1 : i8
+    %6 = spv.Constant 255 : ui8
+
+    %10 = spv.IAdd %0, %1: i8
+    %11 = spv.IAdd %2, %3: si8
+    %12 = spv.IAdd %3, %4: si8
+    %13 = spv.IAdd %5, %6: ui8
+    spv.Return
+  }
+
   // CHECK-LABEL: @float_const
   spv.func @float_const() -> () "None" {
     // CHECK: spv.Constant 0.000000e+00 : f32

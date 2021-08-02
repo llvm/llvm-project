@@ -7,7 +7,6 @@
 //===----------------------------------------------------------------------===//
 
 #include "flang/Frontend/FrontendOptions.h"
-#include "flang/Evaluate/expression.h"
 
 using namespace Fortran::frontend;
 

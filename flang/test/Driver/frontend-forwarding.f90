@@ -9,8 +9,10 @@
 ! RUN:     -fdefault-integer-8 \
 ! RUN:     -fdefault-real-8 \
 ! RUN:     -flarge-sizes \
+! RUN:     -P \
 ! RUN:   | FileCheck %s
 
+! CHECK: "-P"
 ! CHECK: "-finput-charset=utf-8"
 ! CHECK: "-fdefault-double-8"
 ! CHECK: "-fdefault-integer-8"

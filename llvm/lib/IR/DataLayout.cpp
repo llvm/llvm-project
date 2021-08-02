@@ -800,15 +800,11 @@ Align DataLayout::getAlignment(Type *Ty, bool abi_or_pref) const {
 
     // By default, use natural alignment for vector types. This is consistent
     // with what clang and llvm-gcc do.
-    // TODO: This should probably not be using the alloc size.
-    unsigned Alignment =
-        getTypeAllocSize(cast<VectorType>(Ty)->getElementType());
+    //
     // We're only calculating a natural alignment, so it doesn't have to be
     // based on the full size for scalable vectors. Using the minimum element
     // count should be enough here.
-    Alignment *= cast<VectorType>(Ty)->getElementCount().getKnownMinValue();
-    Alignment = PowerOf2Ceil(Alignment);
-    return Align(Alignment);
+    return Align(PowerOf2Ceil(getTypeStoreSize(Ty).getKnownMinSize()));
   }
   case Type::X86_AMXTyID:
     return Align(64);
