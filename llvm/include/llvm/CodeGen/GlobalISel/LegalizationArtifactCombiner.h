@@ -15,6 +15,7 @@
 #define LLVM_CODEGEN_GLOBALISEL_LEGALIZATIONARTIFACTCOMBINER_H
 
 #include "llvm/ADT/SmallBitVector.h"
+#include "llvm/CodeGen/GlobalISel/GISelChangeObserver.h"
 #include "llvm/CodeGen/GlobalISel/GenericMachineInstrs.h"
 #include "llvm/CodeGen/GlobalISel/Legalizer.h"
 #include "llvm/CodeGen/GlobalISel/LegalizerInfo.h"
@@ -743,6 +744,35 @@ public:
         return Register();
       }
     }
+
+    /// Try to combine the defs of an unmerge \p MI by attempting to find
+    /// values that provides the bits for each def reg.
+    /// \returns true if all the defs of the unmerge have been made dead.
+    bool tryCombineUnmergeDefs(GUnmerge &MI, GISelChangeObserver &Observer,
+                               SmallVectorImpl<Register> &UpdatedDefs) {
+      unsigned NumDefs = MI.getNumDefs();
+      LLT DestTy = MRI.getType(MI.getReg(0));
+
+      SmallBitVector DeadDefs(NumDefs);
+      for (unsigned DefIdx = 0; DefIdx < NumDefs; ++DefIdx) {
+        Register DefReg = MI.getReg(DefIdx);
+        Register FoundVal =
+            findValueFromDef(DefReg, 0, DestTy.getSizeInBits());
+        if (!FoundVal || FoundVal == DefReg)
+          continue;
+        if (MRI.getType(FoundVal) != DestTy)
+          continue;
+
+        replaceRegOrBuildCopy(DefReg, FoundVal, MRI, MIB, UpdatedDefs,
+                              Observer);
+        // We only want to replace the uses, not the def of the old reg.
+        Observer.changingInstr(MI);
+        MI.getOperand(DefIdx).setReg(DefReg);
+        Observer.changedInstr(MI);
+        DeadDefs[DefIdx] = true;
+      }
+      return DeadDefs.all();
+    }
   };
 
   bool tryCombineUnmergeValues(GUnmerge &MI,
@@ -760,34 +790,6 @@ public:
     unsigned SrcDefIdx = getDefIndex(*SrcDef, SrcReg);
 
     Builder.setInstrAndDebugLoc(MI);
-
-    auto tryCombineViaValueFinder = [&]() {
-      ArtifactValueFinder ValueFinder(MRI, Builder, LI);
-
-      SmallBitVector DeadDefs(NumDefs);
-      for (unsigned DefIdx = 0; DefIdx < NumDefs; ++DefIdx) {
-        Register DefReg = MI.getReg(DefIdx);
-        Register FoundVal =
-            ValueFinder.findValueFromDef(DefReg, 0, DestTy.getSizeInBits());
-        if (!FoundVal || FoundVal == DefReg)
-          continue;
-        if (MRI.getType(FoundVal) != DestTy)
-          continue;
-
-        replaceRegOrBuildCopy(DefReg, FoundVal, MRI, Builder, UpdatedDefs,
-                              Observer);
-        // We only want to replace the uses, not the def of the old reg.
-        Observer.changingInstr(MI);
-        MI.getOperand(DefIdx).setReg(DefReg);
-        Observer.changedInstr(MI);
-        DeadDefs[DefIdx] = true;
-      }
-      if (DeadDefs.all()) {
-        markInstAndDefDead(MI, *SrcDef, DeadInsts, SrcDefIdx);
-        return true;
-      }
-      return false;
-    };
 
     if (auto *SrcUnmerge = dyn_cast<GUnmerge>(SrcDef)) {
       // %0:_(<4 x s16>) = G_FOO
@@ -812,8 +814,14 @@ public:
         if (ActionStep.TypeIdx == 1)
           return false;
         break;
-      default:
-        return tryCombineViaValueFinder();
+      default: {
+        ArtifactValueFinder Finder(MRI, Builder, LI);
+        if (Finder.tryCombineUnmergeDefs(MI, Observer, UpdatedDefs)) {
+          markInstAndDefDead(MI, *SrcDef, DeadInsts, SrcDefIdx);
+          return true;
+        }
+        return false;
+      }
       }
 
       auto NewUnmerge = Builder.buildUnmerge(DestTy, SrcUnmergeSrc);
@@ -849,7 +857,12 @@ public:
         return true;
 
       // Try using the value finder.
-      return tryCombineViaValueFinder();
+      ArtifactValueFinder Finder(MRI, Builder, LI);
+      if (Finder.tryCombineUnmergeDefs(MI, Observer, UpdatedDefs)) {
+        markInstAndDefDead(MI, *SrcDef, DeadInsts, SrcDefIdx);
+        return true;
+      }
+      return false;
     }
 
     const unsigned NumMergeRegs = MergeI->getNumOperands() - 1;
