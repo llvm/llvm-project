@@ -35,7 +35,7 @@ struct Callback final : public DDCallback {
     DDCallback::lt = thr->dd_lt;
   }
 
-  u32 Unwind() override { return CurrentStackId(thr, pc); }
+  StackID Unwind() override { return CurrentStackId(thr, pc); }
   int UniqueTid() override { return thr->unique_id; }
 };
 

@@ -3,7 +3,7 @@
 .arch armv8-a+sve2
 .arch armv8-a+nosve2
 tbx z0.b, z1.b, z2.b
-// CHECK: error: instruction requires: sve2
+// CHECK: error: instruction requires: streaming-sve or sve2
 // CHECK-NEXT: tbx z0.b, z1.b, z2.b
 
 .arch armv8-a+sve2-aes

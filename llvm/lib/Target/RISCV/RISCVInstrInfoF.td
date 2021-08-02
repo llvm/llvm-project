@@ -26,10 +26,10 @@ def riscv_fmv_w_x_rv64
     : SDNode<"RISCVISD::FMV_W_X_RV64", SDT_RISCVFMV_W_X_RV64>;
 def riscv_fmv_x_anyextw_rv64
     : SDNode<"RISCVISD::FMV_X_ANYEXTW_RV64", SDT_RISCVFMV_X_ANYEXTW_RV64>;
-def riscv_fcvt_w_rv64
-    : SDNode<"RISCVISD::FCVT_W_RV64", STD_RISCVFCVT_W_RV64>;
-def riscv_fcvt_wu_rv64
-    : SDNode<"RISCVISD::FCVT_WU_RV64", STD_RISCVFCVT_W_RV64>;
+def riscv_fcvt_w_rtz_rv64
+    : SDNode<"RISCVISD::FCVT_W_RTZ_RV64", STD_RISCVFCVT_W_RV64>;
+def riscv_fcvt_wu_rtz_rv64
+    : SDNode<"RISCVISD::FCVT_WU_RTZ_RV64", STD_RISCVFCVT_W_RV64>;
 
 //===----------------------------------------------------------------------===//
 // Operand and SDNode transformation definitions.
@@ -400,8 +400,8 @@ def : Pat<(sext_inreg (riscv_fmv_x_anyextw_rv64 FPR32:$src), i32),
 // Use target specific isd nodes to help us remember the result is sign
 // extended. Matching sext_inreg+fptoui/fptosi may cause the conversion to be
 // duplicated if it has another user that didn't need the sign_extend.
-def : Pat<(riscv_fcvt_w_rv64 FPR32:$rs1),  (FCVT_W_S $rs1, 0b001)>;
-def : Pat<(riscv_fcvt_wu_rv64 FPR32:$rs1), (FCVT_WU_S $rs1, 0b001)>;
+def : Pat<(riscv_fcvt_w_rtz_rv64 FPR32:$rs1),  (FCVT_W_S $rs1, 0b001)>;
+def : Pat<(riscv_fcvt_wu_rtz_rv64 FPR32:$rs1), (FCVT_WU_S $rs1, 0b001)>;
 
 // float->[u]int64. Round-to-zero must be used.
 def : Pat<(i64 (fp_to_sint FPR32:$rs1)), (FCVT_L_S $rs1, 0b001)>;

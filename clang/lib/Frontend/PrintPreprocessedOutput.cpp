@@ -646,7 +646,9 @@ void PrintPPOutputPPCallbacks::HandleWhitespaceBeforeTok(const Token &Tok,
        !Tok.is(tok::annot_module_begin) && !Tok.is(tok::annot_module_end)))
     return;
 
-  if (!RequireSameLine && MoveToLine(Tok, /*RequireStartOfLine=*/false)) {
+  // EmittedDirectiveOnThisLine takes priority over RequireSameLine.
+  if ((!RequireSameLine || EmittedDirectiveOnThisLine) &&
+      MoveToLine(Tok, /*RequireStartOfLine=*/EmittedDirectiveOnThisLine)) {
     if (MinimizeWhitespace) {
       // Avoid interpreting hash as a directive under -fpreprocessed.
       if (Tok.is(tok::hash))

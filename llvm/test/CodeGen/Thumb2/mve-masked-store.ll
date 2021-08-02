@@ -185,8 +185,8 @@ entry:
 define arm_aapcs_vfpcc void @masked_v8i16_align1(<8 x i16> *%dest, <8 x i16> %a) {
 ; CHECK-LE-LABEL: masked_v8i16_align1:
 ; CHECK-LE:       @ %bb.0: @ %entry
-; CHECK-LE-NEXT:    .pad #8
-; CHECK-LE-NEXT:    sub sp, #8
+; CHECK-LE-NEXT:    .pad #4
+; CHECK-LE-NEXT:    sub sp, #4
 ; CHECK-LE-NEXT:    vcmp.s16 gt, q0, zr
 ; CHECK-LE-NEXT:    vmrs r1, p0
 ; CHECK-LE-NEXT:    and r2, r1, #1
@@ -247,13 +247,13 @@ define arm_aapcs_vfpcc void @masked_v8i16_align1(<8 x i16> *%dest, <8 x i16> %a)
 ; CHECK-LE-NEXT:    itt mi
 ; CHECK-LE-NEXT:    vmovmi.u16 r1, q0[7]
 ; CHECK-LE-NEXT:    strhmi r1, [r0, #14]
-; CHECK-LE-NEXT:    add sp, #8
+; CHECK-LE-NEXT:    add sp, #4
 ; CHECK-LE-NEXT:    bx lr
 ;
 ; CHECK-BE-LABEL: masked_v8i16_align1:
 ; CHECK-BE:       @ %bb.0: @ %entry
-; CHECK-BE-NEXT:    .pad #8
-; CHECK-BE-NEXT:    sub sp, #8
+; CHECK-BE-NEXT:    .pad #4
+; CHECK-BE-NEXT:    sub sp, #4
 ; CHECK-BE-NEXT:    vrev64.16 q1, q0
 ; CHECK-BE-NEXT:    vcmp.s16 gt, q1, zr
 ; CHECK-BE-NEXT:    vmrs r1, p0
@@ -315,7 +315,7 @@ define arm_aapcs_vfpcc void @masked_v8i16_align1(<8 x i16> *%dest, <8 x i16> %a)
 ; CHECK-BE-NEXT:    itt ne
 ; CHECK-BE-NEXT:    vmovne.u16 r1, q1[7]
 ; CHECK-BE-NEXT:    strhne r1, [r0, #14]
-; CHECK-BE-NEXT:    add sp, #8
+; CHECK-BE-NEXT:    add sp, #4
 ; CHECK-BE-NEXT:    bx lr
 entry:
   %c = icmp sgt <8 x i16> %a, zeroinitializer
@@ -646,8 +646,8 @@ entry:
 define arm_aapcs_vfpcc void @masked_v8f16_align1(<8 x half> *%dest, <8 x half> %a, <8 x i16> %b) {
 ; CHECK-LE-LABEL: masked_v8f16_align1:
 ; CHECK-LE:       @ %bb.0: @ %entry
-; CHECK-LE-NEXT:    .pad #40
-; CHECK-LE-NEXT:    sub sp, #40
+; CHECK-LE-NEXT:    .pad #36
+; CHECK-LE-NEXT:    sub sp, #36
 ; CHECK-LE-NEXT:    vcmp.i16 ne, q1, zr
 ; CHECK-LE-NEXT:    movs r2, #0
 ; CHECK-LE-NEXT:    vmrs r1, p0
@@ -700,7 +700,7 @@ define arm_aapcs_vfpcc void @masked_v8f16_align1(<8 x half> *%dest, <8 x half> %
 ; CHECK-LE-NEXT:    lsls r1, r1, #24
 ; CHECK-LE-NEXT:    bmi .LBB16_16
 ; CHECK-LE-NEXT:  .LBB16_8: @ %else14
-; CHECK-LE-NEXT:    add sp, #40
+; CHECK-LE-NEXT:    add sp, #36
 ; CHECK-LE-NEXT:    bx lr
 ; CHECK-LE-NEXT:  .LBB16_9: @ %cond.store
 ; CHECK-LE-NEXT:    vstr.16 s0, [sp, #28]
@@ -752,13 +752,13 @@ define arm_aapcs_vfpcc void @masked_v8f16_align1(<8 x half> *%dest, <8 x half> %
 ; CHECK-LE-NEXT:    vstr.16 s0, [sp]
 ; CHECK-LE-NEXT:    ldrh.w r1, [sp]
 ; CHECK-LE-NEXT:    strh r1, [r0, #14]
-; CHECK-LE-NEXT:    add sp, #40
+; CHECK-LE-NEXT:    add sp, #36
 ; CHECK-LE-NEXT:    bx lr
 ;
 ; CHECK-BE-LABEL: masked_v8f16_align1:
 ; CHECK-BE:       @ %bb.0: @ %entry
-; CHECK-BE-NEXT:    .pad #40
-; CHECK-BE-NEXT:    sub sp, #40
+; CHECK-BE-NEXT:    .pad #36
+; CHECK-BE-NEXT:    sub sp, #36
 ; CHECK-BE-NEXT:    vrev64.16 q2, q1
 ; CHECK-BE-NEXT:    vrev64.16 q1, q0
 ; CHECK-BE-NEXT:    vcmp.i16 ne, q2, zr
@@ -813,7 +813,7 @@ define arm_aapcs_vfpcc void @masked_v8f16_align1(<8 x half> *%dest, <8 x half> %
 ; CHECK-BE-NEXT:    lsls r1, r1, #31
 ; CHECK-BE-NEXT:    bne .LBB16_16
 ; CHECK-BE-NEXT:  .LBB16_8: @ %else14
-; CHECK-BE-NEXT:    add sp, #40
+; CHECK-BE-NEXT:    add sp, #36
 ; CHECK-BE-NEXT:    bx lr
 ; CHECK-BE-NEXT:  .LBB16_9: @ %cond.store
 ; CHECK-BE-NEXT:    vstr.16 s4, [sp, #28]
@@ -865,7 +865,7 @@ define arm_aapcs_vfpcc void @masked_v8f16_align1(<8 x half> *%dest, <8 x half> %
 ; CHECK-BE-NEXT:    vstr.16 s0, [sp]
 ; CHECK-BE-NEXT:    ldrh.w r1, [sp]
 ; CHECK-BE-NEXT:    strh r1, [r0, #14]
-; CHECK-BE-NEXT:    add sp, #40
+; CHECK-BE-NEXT:    add sp, #36
 ; CHECK-BE-NEXT:    bx lr
 entry:
   %c = icmp ugt <8 x i16> %b, zeroinitializer

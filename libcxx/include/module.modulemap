@@ -632,6 +632,7 @@ module std [system] {
       module non_propagating_cache  { private header "__ranges/non_propagating_cache.h" }
       module ref_view               { private header "__ranges/ref_view.h"              }
       module size                   { private header "__ranges/size.h"                  }
+      module single_view            { private header "__ranges/single_view.h"           }
       module subrange               { private header "__ranges/subrange.h"              }
       module take_view              { private header "__ranges/take_view.h"             }
       module transform_view         { private header "__ranges/transform_view.h"        }

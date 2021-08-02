@@ -93,9 +93,10 @@ struct DriverOptions {
   bool warningsAreErrors{false}; // -Werror
   bool byteswapio{false}; // -byteswapio
   Fortran::parser::Encoding encoding{Fortran::parser::Encoding::UTF_8};
+  bool lineDirectives{true}; // -P disables
   bool syntaxOnly{false};
   bool dumpProvenance{false};
-  bool dumpCookedChars{false};
+  bool noReformat{false}; // -E -fno-reformat
   bool dumpUnparse{false};
   bool dumpUnparseWithSymbols{false};
   bool dumpParseTree{false};
@@ -221,9 +222,13 @@ std::string CompileFortran(std::string path, Fortran::parser::Options options,
     parsing.DumpProvenance(llvm::outs());
     return {};
   }
-  if (driver.dumpCookedChars) {
+  if (options.prescanAndReformat) {
     parsing.messages().Emit(llvm::errs(), allCookedSources);
-    parsing.DumpCookedChars(llvm::outs());
+    if (driver.noReformat) {
+      parsing.DumpCookedChars(llvm::outs());
+    } else {
+      parsing.EmitPreprocessedSource(llvm::outs(), driver.lineDirectives);
+    }
     return {};
   }
   parsing.Parse(llvm::outs());
@@ -471,7 +476,7 @@ int main(int argc, char *const argv[]) {
     std::string suffix{arg.substr(dot + 1)};
     std::string prefix{arg.substr(0, 2)};
     args.pop_front();
-    if (arg.empty()) {
+    if (arg.empty() || arg == "-Xflang") {
     } else if (arg.at(0) != '-') {
       anyFiles = true;
       if (dot == std::string::npos) {
@@ -512,7 +517,8 @@ int main(int argc, char *const argv[]) {
     } else if (arg == "-Munlimited" || arg == "-ffree-line-length-none" ||
         arg == "-ffree-line-length-0" || arg == "-ffixed-line-length-none" ||
         arg == "-ffixed-line-length-0") {
-      // For reparsing f18's -E output of fixed-form cooked character stream
+      // For reparsing f18's -E -fno-reformat output of fixed-form
+      // cooked character stream
       options.fixedFormColumns = 1000000;
     } else if (arg == "-Mbackslash") {
       options.features.Enable(
@@ -536,7 +542,11 @@ int main(int argc, char *const argv[]) {
     } else if (arg == "-ed") {
       options.features.Enable(Fortran::common::LanguageFeature::OldDebugLines);
     } else if (arg == "-E") {
-      driver.dumpCookedChars = true;
+      options.prescanAndReformat = true;
+    } else if (arg == "-P") {
+      driver.lineDirectives = false;
+    } else if (arg == "-fno-reformat") {
+      driver.noReformat = true;
     } else if (arg == "-fbackslash" || arg == "-fno-backslash") {
       options.features.Enable(
           Fortran::common::LanguageFeature::BackslashEscapes,

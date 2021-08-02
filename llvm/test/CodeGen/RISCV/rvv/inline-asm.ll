@@ -10,7 +10,7 @@ define <vscale x 1 x i1> @test_1xi1(<vscale x 1 x i1> %in, <vscale x 1 x i1> %in
 ; CHECK-NEXT:    #NO_APP
 ; CHECK-NEXT:    ret
 entry:
-  %0 = tail call <vscale x 1 x i1> asm "vmand.mm $0, $1, $2", "=v,v,v"(<vscale x 1 x i1> %in, <vscale x 1 x i1> %in2)
+  %0 = tail call <vscale x 1 x i1> asm "vmand.mm $0, $1, $2", "=^vm,^vm,^vm"(<vscale x 1 x i1> %in, <vscale x 1 x i1> %in2)
   ret <vscale x 1 x i1> %0
 }
 
@@ -22,7 +22,7 @@ define <vscale x 2 x i1> @test_2xi1(<vscale x 2 x i1> %in, <vscale x 2 x i1> %in
 ; CHECK-NEXT:    #NO_APP
 ; CHECK-NEXT:    ret
 entry:
-  %0 = tail call <vscale x 2 x i1> asm "vmand.mm $0, $1, $2", "=v,v,v"(<vscale x 2 x i1> %in, <vscale x 2 x i1> %in2)
+  %0 = tail call <vscale x 2 x i1> asm "vmand.mm $0, $1, $2", "=^vm,^vm,^vm"(<vscale x 2 x i1> %in, <vscale x 2 x i1> %in2)
   ret <vscale x 2 x i1> %0
 }
 
@@ -34,7 +34,7 @@ define <vscale x 4 x i1> @test_4xi1(<vscale x 4 x i1> %in, <vscale x 4 x i1> %in
 ; CHECK-NEXT:    #NO_APP
 ; CHECK-NEXT:    ret
 entry:
-  %0 = tail call <vscale x 4 x i1> asm "vmand.mm $0, $1, $2", "=v,v,v"(<vscale x 4 x i1> %in, <vscale x 4 x i1> %in2)
+  %0 = tail call <vscale x 4 x i1> asm "vmand.mm $0, $1, $2", "=^vm,^vm,^vm"(<vscale x 4 x i1> %in, <vscale x 4 x i1> %in2)
   ret <vscale x 4 x i1> %0
 }
 
@@ -46,7 +46,7 @@ define <vscale x 8 x i1> @test_8xi1(<vscale x 8 x i1> %in, <vscale x 8 x i1> %in
 ; CHECK-NEXT:    #NO_APP
 ; CHECK-NEXT:    ret
 entry:
-  %0 = tail call <vscale x 8 x i1> asm "vmand.mm $0, $1, $2", "=v,v,v"(<vscale x 8 x i1> %in, <vscale x 8 x i1> %in2)
+  %0 = tail call <vscale x 8 x i1> asm "vmand.mm $0, $1, $2", "=^vm,^vm,^vm"(<vscale x 8 x i1> %in, <vscale x 8 x i1> %in2)
   ret <vscale x 8 x i1> %0
 }
 
@@ -58,7 +58,7 @@ define <vscale x 16 x i1> @test_16xi1(<vscale x 16 x i1> %in, <vscale x 16 x i1>
 ; CHECK-NEXT:    #NO_APP
 ; CHECK-NEXT:    ret
 entry:
-  %0 = tail call <vscale x 16 x i1> asm "vmand.mm $0, $1, $2", "=v,v,v"(<vscale x 16 x i1> %in, <vscale x 16 x i1> %in2)
+  %0 = tail call <vscale x 16 x i1> asm "vmand.mm $0, $1, $2", "=^vm,^vm,^vm"(<vscale x 16 x i1> %in, <vscale x 16 x i1> %in2)
   ret <vscale x 16 x i1> %0
 }
 
@@ -70,7 +70,7 @@ define <vscale x 32 x i1> @test_32xi1(<vscale x 32 x i1> %in, <vscale x 32 x i1>
 ; CHECK-NEXT:    #NO_APP
 ; CHECK-NEXT:    ret
 entry:
-  %0 = tail call <vscale x 32 x i1> asm "vmand.mm $0, $1, $2", "=v,v,v"(<vscale x 32 x i1> %in, <vscale x 32 x i1> %in2)
+  %0 = tail call <vscale x 32 x i1> asm "vmand.mm $0, $1, $2", "=^vm,^vm,^vm"(<vscale x 32 x i1> %in, <vscale x 32 x i1> %in2)
   ret <vscale x 32 x i1> %0
 }
 
@@ -82,7 +82,7 @@ define <vscale x 64 x i1> @test_64xi1(<vscale x 64 x i1> %in, <vscale x 64 x i1>
 ; CHECK-NEXT:    #NO_APP
 ; CHECK-NEXT:    ret
 entry:
-  %0 = tail call <vscale x 64 x i1> asm "vmand.mm $0, $1, $2", "=v,v,v"(<vscale x 64 x i1> %in, <vscale x 64 x i1> %in2)
+  %0 = tail call <vscale x 64 x i1> asm "vmand.mm $0, $1, $2", "=^vm,^vm,^vm"(<vscale x 64 x i1> %in, <vscale x 64 x i1> %in2)
   ret <vscale x 64 x i1> %0
 }
 
@@ -94,7 +94,7 @@ define <vscale x 1 x i64> @test_1xi64(<vscale x 1 x i64> %in, <vscale x 1 x i64>
 ; CHECK-NEXT:    #NO_APP
 ; CHECK-NEXT:    ret
 entry:
-  %0 = tail call <vscale x 1 x i64> asm "vadd.vv $0, $1, $2", "=v,v,v"(<vscale x 1 x i64> %in, <vscale x 1 x i64> %in2)
+  %0 = tail call <vscale x 1 x i64> asm "vadd.vv $0, $1, $2", "=^vr,^vr,^vr"(<vscale x 1 x i64> %in, <vscale x 1 x i64> %in2)
   ret <vscale x 1 x i64> %0
 }
 
@@ -106,7 +106,7 @@ define <vscale x 2 x i64> @test_2xi64(<vscale x 2 x i64> %in, <vscale x 2 x i64>
 ; CHECK-NEXT:    #NO_APP
 ; CHECK-NEXT:    ret
 entry:
-  %0 = tail call <vscale x 2 x i64> asm "vadd.vv $0, $1, $2", "=v,v,v"(<vscale x 2 x i64> %in, <vscale x 2 x i64> %in2)
+  %0 = tail call <vscale x 2 x i64> asm "vadd.vv $0, $1, $2", "=^vr,^vr,^vr"(<vscale x 2 x i64> %in, <vscale x 2 x i64> %in2)
   ret <vscale x 2 x i64> %0
 }
 
@@ -118,7 +118,7 @@ define <vscale x 4 x i64> @test_4xi64(<vscale x 4 x i64> %in, <vscale x 4 x i64>
 ; CHECK-NEXT:    #NO_APP
 ; CHECK-NEXT:    ret
 entry:
-  %0 = tail call <vscale x 4 x i64> asm "vadd.vv $0, $1, $2", "=v,v,v"(<vscale x 4 x i64> %in, <vscale x 4 x i64> %in2)
+  %0 = tail call <vscale x 4 x i64> asm "vadd.vv $0, $1, $2", "=^vr,^vr,^vr"(<vscale x 4 x i64> %in, <vscale x 4 x i64> %in2)
   ret <vscale x 4 x i64> %0
 }
 
@@ -130,7 +130,7 @@ define <vscale x 8 x i64> @test_8xi64(<vscale x 8 x i64> %in, <vscale x 8 x i64>
 ; CHECK-NEXT:    #NO_APP
 ; CHECK-NEXT:    ret
 entry:
-  %0 = tail call <vscale x 8 x i64> asm "vadd.vv $0, $1, $2", "=v,v,v"(<vscale x 8 x i64> %in, <vscale x 8 x i64> %in2)
+  %0 = tail call <vscale x 8 x i64> asm "vadd.vv $0, $1, $2", "=^vr,^vr,^vr"(<vscale x 8 x i64> %in, <vscale x 8 x i64> %in2)
   ret <vscale x 8 x i64> %0
 }
 
@@ -142,7 +142,7 @@ define <vscale x 1 x i32> @test_1xi32(<vscale x 1 x i32> %in, <vscale x 1 x i32>
 ; CHECK-NEXT:    #NO_APP
 ; CHECK-NEXT:    ret
 entry:
-  %0 = tail call <vscale x 1 x i32> asm "vadd.vv $0, $1, $2", "=v,v,v"(<vscale x 1 x i32> %in, <vscale x 1 x i32> %in2)
+  %0 = tail call <vscale x 1 x i32> asm "vadd.vv $0, $1, $2", "=^vr,^vr,^vr"(<vscale x 1 x i32> %in, <vscale x 1 x i32> %in2)
   ret <vscale x 1 x i32> %0
 }
 
@@ -154,7 +154,7 @@ define <vscale x 2 x i32> @test_2xi32(<vscale x 2 x i32> %in, <vscale x 2 x i32>
 ; CHECK-NEXT:    #NO_APP
 ; CHECK-NEXT:    ret
 entry:
-  %0 = tail call <vscale x 2 x i32> asm "vadd.vv $0, $1, $2", "=v,v,v"(<vscale x 2 x i32> %in, <vscale x 2 x i32> %in2)
+  %0 = tail call <vscale x 2 x i32> asm "vadd.vv $0, $1, $2", "=^vr,^vr,^vr"(<vscale x 2 x i32> %in, <vscale x 2 x i32> %in2)
   ret <vscale x 2 x i32> %0
 }
 
@@ -166,7 +166,7 @@ define <vscale x 4 x i32> @test_4xi32(<vscale x 4 x i32> %in, <vscale x 4 x i32>
 ; CHECK-NEXT:    #NO_APP
 ; CHECK-NEXT:    ret
 entry:
-  %0 = tail call <vscale x 4 x i32> asm "vadd.vv $0, $1, $2", "=v,v,v"(<vscale x 4 x i32> %in, <vscale x 4 x i32> %in2)
+  %0 = tail call <vscale x 4 x i32> asm "vadd.vv $0, $1, $2", "=^vr,^vr,^vr"(<vscale x 4 x i32> %in, <vscale x 4 x i32> %in2)
   ret <vscale x 4 x i32> %0
 }
 
@@ -178,7 +178,7 @@ define <vscale x 8 x i32> @test_8xi32(<vscale x 8 x i32> %in, <vscale x 8 x i32>
 ; CHECK-NEXT:    #NO_APP
 ; CHECK-NEXT:    ret
 entry:
-  %0 = tail call <vscale x 8 x i32> asm "vadd.vv $0, $1, $2", "=v,v,v"(<vscale x 8 x i32> %in, <vscale x 8 x i32> %in2)
+  %0 = tail call <vscale x 8 x i32> asm "vadd.vv $0, $1, $2", "=^vr,^vr,^vr"(<vscale x 8 x i32> %in, <vscale x 8 x i32> %in2)
   ret <vscale x 8 x i32> %0
 }
 
@@ -190,7 +190,7 @@ define <vscale x 16 x i32> @test_16xi32(<vscale x 16 x i32> %in, <vscale x 16 x 
 ; CHECK-NEXT:    #NO_APP
 ; CHECK-NEXT:    ret
 entry:
-  %0 = tail call <vscale x 16 x i32> asm "vadd.vv $0, $1, $2", "=v,v,v"(<vscale x 16 x i32> %in, <vscale x 16 x i32> %in2)
+  %0 = tail call <vscale x 16 x i32> asm "vadd.vv $0, $1, $2", "=^vr,^vr,^vr"(<vscale x 16 x i32> %in, <vscale x 16 x i32> %in2)
   ret <vscale x 16 x i32> %0
 }
 
@@ -202,7 +202,7 @@ define <vscale x 1 x i16> @test_1xi16(<vscale x 1 x i16> %in, <vscale x 1 x i16>
 ; CHECK-NEXT:    #NO_APP
 ; CHECK-NEXT:    ret
 entry:
-  %0 = tail call <vscale x 1 x i16> asm "vadd.vv $0, $1, $2", "=v,v,v"(<vscale x 1 x i16> %in, <vscale x 1 x i16> %in2)
+  %0 = tail call <vscale x 1 x i16> asm "vadd.vv $0, $1, $2", "=^vr,^vr,^vr"(<vscale x 1 x i16> %in, <vscale x 1 x i16> %in2)
   ret <vscale x 1 x i16> %0
 }
 
@@ -214,7 +214,7 @@ define <vscale x 2 x i16> @test_2xi16(<vscale x 2 x i16> %in, <vscale x 2 x i16>
 ; CHECK-NEXT:    #NO_APP
 ; CHECK-NEXT:    ret
 entry:
-  %0 = tail call <vscale x 2 x i16> asm "vadd.vv $0, $1, $2", "=v,v,v"(<vscale x 2 x i16> %in, <vscale x 2 x i16> %in2)
+  %0 = tail call <vscale x 2 x i16> asm "vadd.vv $0, $1, $2", "=^vr,^vr,^vr"(<vscale x 2 x i16> %in, <vscale x 2 x i16> %in2)
   ret <vscale x 2 x i16> %0
 }
 
@@ -226,7 +226,7 @@ define <vscale x 4 x i16> @test_4xi16(<vscale x 4 x i16> %in, <vscale x 4 x i16>
 ; CHECK-NEXT:    #NO_APP
 ; CHECK-NEXT:    ret
 entry:
-  %0 = tail call <vscale x 4 x i16> asm "vadd.vv $0, $1, $2", "=v,v,v"(<vscale x 4 x i16> %in, <vscale x 4 x i16> %in2)
+  %0 = tail call <vscale x 4 x i16> asm "vadd.vv $0, $1, $2", "=^vr,^vr,^vr"(<vscale x 4 x i16> %in, <vscale x 4 x i16> %in2)
   ret <vscale x 4 x i16> %0
 }
 
@@ -238,7 +238,7 @@ define <vscale x 8 x i16> @test_8xi16(<vscale x 8 x i16> %in, <vscale x 8 x i16>
 ; CHECK-NEXT:    #NO_APP
 ; CHECK-NEXT:    ret
 entry:
-  %0 = tail call <vscale x 8 x i16> asm "vadd.vv $0, $1, $2", "=v,v,v"(<vscale x 8 x i16> %in, <vscale x 8 x i16> %in2)
+  %0 = tail call <vscale x 8 x i16> asm "vadd.vv $0, $1, $2", "=^vr,^vr,^vr"(<vscale x 8 x i16> %in, <vscale x 8 x i16> %in2)
   ret <vscale x 8 x i16> %0
 }
 
@@ -250,7 +250,7 @@ define <vscale x 16 x i16> @test_16xi16(<vscale x 16 x i16> %in, <vscale x 16 x 
 ; CHECK-NEXT:    #NO_APP
 ; CHECK-NEXT:    ret
 entry:
-  %0 = tail call <vscale x 16 x i16> asm "vadd.vv $0, $1, $2", "=v,v,v"(<vscale x 16 x i16> %in, <vscale x 16 x i16> %in2)
+  %0 = tail call <vscale x 16 x i16> asm "vadd.vv $0, $1, $2", "=^vr,^vr,^vr"(<vscale x 16 x i16> %in, <vscale x 16 x i16> %in2)
   ret <vscale x 16 x i16> %0
 }
 
@@ -262,7 +262,7 @@ define <vscale x 32 x i16> @test_32xi16(<vscale x 32 x i16> %in, <vscale x 32 x 
 ; CHECK-NEXT:    #NO_APP
 ; CHECK-NEXT:    ret
 entry:
-  %0 = tail call <vscale x 32 x i16> asm "vadd.vv $0, $1, $2", "=v,v,v"(<vscale x 32 x i16> %in, <vscale x 32 x i16> %in2)
+  %0 = tail call <vscale x 32 x i16> asm "vadd.vv $0, $1, $2", "=^vr,^vr,^vr"(<vscale x 32 x i16> %in, <vscale x 32 x i16> %in2)
   ret <vscale x 32 x i16> %0
 }
 
@@ -274,7 +274,7 @@ define <vscale x 1 x i8> @test_1xi8(<vscale x 1 x i8> %in, <vscale x 1 x i8> %in
 ; CHECK-NEXT:    #NO_APP
 ; CHECK-NEXT:    ret
 entry:
-  %0 = tail call <vscale x 1 x i8> asm "vadd.vv $0, $1, $2", "=v,v,v"(<vscale x 1 x i8> %in, <vscale x 1 x i8> %in2)
+  %0 = tail call <vscale x 1 x i8> asm "vadd.vv $0, $1, $2", "=^vr,^vr,^vr"(<vscale x 1 x i8> %in, <vscale x 1 x i8> %in2)
   ret <vscale x 1 x i8> %0
 }
 
@@ -286,7 +286,7 @@ define <vscale x 2 x i8> @test_2xi8(<vscale x 2 x i8> %in, <vscale x 2 x i8> %in
 ; CHECK-NEXT:    #NO_APP
 ; CHECK-NEXT:    ret
 entry:
-  %0 = tail call <vscale x 2 x i8> asm "vadd.vv $0, $1, $2", "=v,v,v"(<vscale x 2 x i8> %in, <vscale x 2 x i8> %in2)
+  %0 = tail call <vscale x 2 x i8> asm "vadd.vv $0, $1, $2", "=^vr,^vr,^vr"(<vscale x 2 x i8> %in, <vscale x 2 x i8> %in2)
   ret <vscale x 2 x i8> %0
 }
 
@@ -298,7 +298,7 @@ define <vscale x 4 x i8> @test_4xi8(<vscale x 4 x i8> %in, <vscale x 4 x i8> %in
 ; CHECK-NEXT:    #NO_APP
 ; CHECK-NEXT:    ret
 entry:
-  %0 = tail call <vscale x 4 x i8> asm "vadd.vv $0, $1, $2", "=v,v,v"(<vscale x 4 x i8> %in, <vscale x 4 x i8> %in2)
+  %0 = tail call <vscale x 4 x i8> asm "vadd.vv $0, $1, $2", "=^vr,^vr,^vr"(<vscale x 4 x i8> %in, <vscale x 4 x i8> %in2)
   ret <vscale x 4 x i8> %0
 }
 
@@ -310,7 +310,7 @@ define <vscale x 8 x i8> @test_8xi8(<vscale x 8 x i8> %in, <vscale x 8 x i8> %in
 ; CHECK-NEXT:    #NO_APP
 ; CHECK-NEXT:    ret
 entry:
-  %0 = tail call <vscale x 8 x i8> asm "vadd.vv $0, $1, $2", "=v,v,v"(<vscale x 8 x i8> %in, <vscale x 8 x i8> %in2)
+  %0 = tail call <vscale x 8 x i8> asm "vadd.vv $0, $1, $2", "=^vr,^vr,^vr"(<vscale x 8 x i8> %in, <vscale x 8 x i8> %in2)
   ret <vscale x 8 x i8> %0
 }
 
@@ -322,7 +322,7 @@ define <vscale x 16 x i8> @test_16xi8(<vscale x 16 x i8> %in, <vscale x 16 x i8>
 ; CHECK-NEXT:    #NO_APP
 ; CHECK-NEXT:    ret
 entry:
-  %0 = tail call <vscale x 16 x i8> asm "vadd.vv $0, $1, $2", "=v,v,v"(<vscale x 16 x i8> %in, <vscale x 16 x i8> %in2)
+  %0 = tail call <vscale x 16 x i8> asm "vadd.vv $0, $1, $2", "=^vr,^vr,^vr"(<vscale x 16 x i8> %in, <vscale x 16 x i8> %in2)
   ret <vscale x 16 x i8> %0
 }
 
@@ -334,7 +334,7 @@ define <vscale x 32 x i8> @test_32xi8(<vscale x 32 x i8> %in, <vscale x 32 x i8>
 ; CHECK-NEXT:    #NO_APP
 ; CHECK-NEXT:    ret
 entry:
-  %0 = tail call <vscale x 32 x i8> asm "vadd.vv $0, $1, $2", "=v,v,v"(<vscale x 32 x i8> %in, <vscale x 32 x i8> %in2)
+  %0 = tail call <vscale x 32 x i8> asm "vadd.vv $0, $1, $2", "=^vr,^vr,^vr"(<vscale x 32 x i8> %in, <vscale x 32 x i8> %in2)
   ret <vscale x 32 x i8> %0
 }
 
@@ -346,7 +346,7 @@ define <vscale x 64 x i8> @test_64xi8(<vscale x 64 x i8> %in, <vscale x 64 x i8>
 ; CHECK-NEXT:    #NO_APP
 ; CHECK-NEXT:    ret
 entry:
-  %0 = tail call <vscale x 64 x i8> asm "vadd.vv $0, $1, $2", "=v,v,v"(<vscale x 64 x i8> %in, <vscale x 64 x i8> %in2)
+  %0 = tail call <vscale x 64 x i8> asm "vadd.vv $0, $1, $2", "=^vr,^vr,^vr"(<vscale x 64 x i8> %in, <vscale x 64 x i8> %in2)
   ret <vscale x 64 x i8> %0
 }
 

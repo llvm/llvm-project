@@ -77,31 +77,31 @@ fixed_float64_t call_float64_ff(svbool_t pg, fixed_float64_t op1, fixed_float64_
 
 // CHECK-LABEL: @call_bool_ff(
 // CHECK-NEXT:  entry:
-// CHECK-NEXT:    [[OP1:%.*]] = alloca <8 x i8>, align 16
-// CHECK-NEXT:    [[OP2:%.*]] = alloca <8 x i8>, align 16
-// CHECK-NEXT:    [[SAVED_VALUE:%.*]] = alloca <8 x i8>, align 16
-// CHECK-NEXT:    [[SAVED_VALUE3:%.*]] = alloca <8 x i8>, align 16
-// CHECK-NEXT:    [[SAVED_VALUE5:%.*]] = alloca <vscale x 16 x i1>, align 16
-// CHECK-NEXT:    [[RETVAL_COERCE:%.*]] = alloca <vscale x 16 x i1>, align 16
+// CHECK-NEXT:    [[OP1:%.*]] = alloca <8 x i8>, align 8
+// CHECK-NEXT:    [[OP2:%.*]] = alloca <8 x i8>, align 8
+// CHECK-NEXT:    [[SAVED_VALUE:%.*]] = alloca <8 x i8>, align 8
+// CHECK-NEXT:    [[SAVED_VALUE3:%.*]] = alloca <8 x i8>, align 8
+// CHECK-NEXT:    [[SAVED_VALUE5:%.*]] = alloca <vscale x 16 x i1>, align 8
+// CHECK-NEXT:    [[RETVAL_COERCE:%.*]] = alloca <vscale x 16 x i1>, align 8
 // CHECK-NEXT:    [[TMP0:%.*]] = bitcast <8 x i8>* [[OP1]] to <vscale x 16 x i1>*
-// CHECK-NEXT:    store <vscale x 16 x i1> [[OP1_COERCE:%.*]], <vscale x 16 x i1>* [[TMP0]], align 16
-// CHECK-NEXT:    [[OP11:%.*]] = load <8 x i8>, <8 x i8>* [[OP1]], align 16, !tbaa [[TBAA6]]
+// CHECK-NEXT:    store <vscale x 16 x i1> [[OP1_COERCE:%.*]], <vscale x 16 x i1>* [[TMP0]], align 8
+// CHECK-NEXT:    [[OP11:%.*]] = load <8 x i8>, <8 x i8>* [[OP1]], align 8, !tbaa [[TBAA6]]
 // CHECK-NEXT:    [[TMP1:%.*]] = bitcast <8 x i8>* [[OP2]] to <vscale x 16 x i1>*
-// CHECK-NEXT:    store <vscale x 16 x i1> [[OP2_COERCE:%.*]], <vscale x 16 x i1>* [[TMP1]], align 16
-// CHECK-NEXT:    [[OP22:%.*]] = load <8 x i8>, <8 x i8>* [[OP2]], align 16, !tbaa [[TBAA6]]
-// CHECK-NEXT:    store <8 x i8> [[OP11]], <8 x i8>* [[SAVED_VALUE]], align 16, !tbaa [[TBAA6]]
+// CHECK-NEXT:    store <vscale x 16 x i1> [[OP2_COERCE:%.*]], <vscale x 16 x i1>* [[TMP1]], align 8
+// CHECK-NEXT:    [[OP22:%.*]] = load <8 x i8>, <8 x i8>* [[OP2]], align 8, !tbaa [[TBAA6]]
+// CHECK-NEXT:    store <8 x i8> [[OP11]], <8 x i8>* [[SAVED_VALUE]], align 8, !tbaa [[TBAA6]]
 // CHECK-NEXT:    [[CASTFIXEDSVE:%.*]] = bitcast <8 x i8>* [[SAVED_VALUE]] to <vscale x 16 x i1>*
-// CHECK-NEXT:    [[TMP2:%.*]] = load <vscale x 16 x i1>, <vscale x 16 x i1>* [[CASTFIXEDSVE]], align 16, !tbaa [[TBAA6]]
-// CHECK-NEXT:    store <8 x i8> [[OP22]], <8 x i8>* [[SAVED_VALUE3]], align 16, !tbaa [[TBAA6]]
+// CHECK-NEXT:    [[TMP2:%.*]] = load <vscale x 16 x i1>, <vscale x 16 x i1>* [[CASTFIXEDSVE]], align 8, !tbaa [[TBAA6]]
+// CHECK-NEXT:    store <8 x i8> [[OP22]], <8 x i8>* [[SAVED_VALUE3]], align 8, !tbaa [[TBAA6]]
 // CHECK-NEXT:    [[CASTFIXEDSVE4:%.*]] = bitcast <8 x i8>* [[SAVED_VALUE3]] to <vscale x 16 x i1>*
-// CHECK-NEXT:    [[TMP3:%.*]] = load <vscale x 16 x i1>, <vscale x 16 x i1>* [[CASTFIXEDSVE4]], align 16, !tbaa [[TBAA6]]
+// CHECK-NEXT:    [[TMP3:%.*]] = load <vscale x 16 x i1>, <vscale x 16 x i1>* [[CASTFIXEDSVE4]], align 8, !tbaa [[TBAA6]]
 // CHECK-NEXT:    [[TMP4:%.*]] = call <vscale x 16 x i1> @llvm.aarch64.sve.sel.nxv16i1(<vscale x 16 x i1> [[PG:%.*]], <vscale x 16 x i1> [[TMP2]], <vscale x 16 x i1> [[TMP3]])
-// CHECK-NEXT:    store <vscale x 16 x i1> [[TMP4]], <vscale x 16 x i1>* [[SAVED_VALUE5]], align 16, !tbaa [[TBAA9:![0-9]+]]
+// CHECK-NEXT:    store <vscale x 16 x i1> [[TMP4]], <vscale x 16 x i1>* [[SAVED_VALUE5]], align 8, !tbaa [[TBAA9:![0-9]+]]
 // CHECK-NEXT:    [[CASTFIXEDSVE6:%.*]] = bitcast <vscale x 16 x i1>* [[SAVED_VALUE5]] to <8 x i8>*
-// CHECK-NEXT:    [[TMP5:%.*]] = load <8 x i8>, <8 x i8>* [[CASTFIXEDSVE6]], align 16, !tbaa [[TBAA6]]
+// CHECK-NEXT:    [[TMP5:%.*]] = load <8 x i8>, <8 x i8>* [[CASTFIXEDSVE6]], align 8, !tbaa [[TBAA6]]
 // CHECK-NEXT:    [[RETVAL_0__SROA_CAST:%.*]] = bitcast <vscale x 16 x i1>* [[RETVAL_COERCE]] to <8 x i8>*
-// CHECK-NEXT:    store <8 x i8> [[TMP5]], <8 x i8>* [[RETVAL_0__SROA_CAST]], align 16
-// CHECK-NEXT:    [[TMP6:%.*]] = load <vscale x 16 x i1>, <vscale x 16 x i1>* [[RETVAL_COERCE]], align 16
+// CHECK-NEXT:    store <8 x i8> [[TMP5]], <8 x i8>* [[RETVAL_0__SROA_CAST]], align 8
+// CHECK-NEXT:    [[TMP6:%.*]] = load <vscale x 16 x i1>, <vscale x 16 x i1>* [[RETVAL_COERCE]], align 8
 // CHECK-NEXT:    ret <vscale x 16 x i1> [[TMP6]]
 //
 fixed_bool_t call_bool_ff(svbool_t pg, fixed_bool_t op1, fixed_bool_t op2) {
@@ -134,23 +134,23 @@ fixed_float64_t call_float64_fs(svbool_t pg, fixed_float64_t op1, svfloat64_t op
 
 // CHECK-LABEL: @call_bool_fs(
 // CHECK-NEXT:  entry:
-// CHECK-NEXT:    [[OP1:%.*]] = alloca <8 x i8>, align 16
-// CHECK-NEXT:    [[SAVED_VALUE:%.*]] = alloca <8 x i8>, align 16
-// CHECK-NEXT:    [[SAVED_VALUE2:%.*]] = alloca <vscale x 16 x i1>, align 16
-// CHECK-NEXT:    [[RETVAL_COERCE:%.*]] = alloca <vscale x 16 x i1>, align 16
+// CHECK-NEXT:    [[OP1:%.*]] = alloca <8 x i8>, align 8
+// CHECK-NEXT:    [[SAVED_VALUE:%.*]] = alloca <8 x i8>, align 8
+// CHECK-NEXT:    [[SAVED_VALUE2:%.*]] = alloca <vscale x 16 x i1>, align 8
+// CHECK-NEXT:    [[RETVAL_COERCE:%.*]] = alloca <vscale x 16 x i1>, align 8
 // CHECK-NEXT:    [[TMP0:%.*]] = bitcast <8 x i8>* [[OP1]] to <vscale x 16 x i1>*
-// CHECK-NEXT:    store <vscale x 16 x i1> [[OP1_COERCE:%.*]], <vscale x 16 x i1>* [[TMP0]], align 16
-// CHECK-NEXT:    [[OP11:%.*]] = load <8 x i8>, <8 x i8>* [[OP1]], align 16, !tbaa [[TBAA6]]
-// CHECK-NEXT:    store <8 x i8> [[OP11]], <8 x i8>* [[SAVED_VALUE]], align 16, !tbaa [[TBAA6]]
+// CHECK-NEXT:    store <vscale x 16 x i1> [[OP1_COERCE:%.*]], <vscale x 16 x i1>* [[TMP0]], align 8
+// CHECK-NEXT:    [[OP11:%.*]] = load <8 x i8>, <8 x i8>* [[OP1]], align 8, !tbaa [[TBAA6]]
+// CHECK-NEXT:    store <8 x i8> [[OP11]], <8 x i8>* [[SAVED_VALUE]], align 8, !tbaa [[TBAA6]]
 // CHECK-NEXT:    [[CASTFIXEDSVE:%.*]] = bitcast <8 x i8>* [[SAVED_VALUE]] to <vscale x 16 x i1>*
-// CHECK-NEXT:    [[TMP1:%.*]] = load <vscale x 16 x i1>, <vscale x 16 x i1>* [[CASTFIXEDSVE]], align 16, !tbaa [[TBAA6]]
+// CHECK-NEXT:    [[TMP1:%.*]] = load <vscale x 16 x i1>, <vscale x 16 x i1>* [[CASTFIXEDSVE]], align 8, !tbaa [[TBAA6]]
 // CHECK-NEXT:    [[TMP2:%.*]] = call <vscale x 16 x i1> @llvm.aarch64.sve.sel.nxv16i1(<vscale x 16 x i1> [[PG:%.*]], <vscale x 16 x i1> [[TMP1]], <vscale x 16 x i1> [[OP2:%.*]])
-// CHECK-NEXT:    store <vscale x 16 x i1> [[TMP2]], <vscale x 16 x i1>* [[SAVED_VALUE2]], align 16, !tbaa [[TBAA9]]
+// CHECK-NEXT:    store <vscale x 16 x i1> [[TMP2]], <vscale x 16 x i1>* [[SAVED_VALUE2]], align 8, !tbaa [[TBAA9]]
 // CHECK-NEXT:    [[CASTFIXEDSVE3:%.*]] = bitcast <vscale x 16 x i1>* [[SAVED_VALUE2]] to <8 x i8>*
-// CHECK-NEXT:    [[TMP3:%.*]] = load <8 x i8>, <8 x i8>* [[CASTFIXEDSVE3]], align 16, !tbaa [[TBAA6]]
+// CHECK-NEXT:    [[TMP3:%.*]] = load <8 x i8>, <8 x i8>* [[CASTFIXEDSVE3]], align 8, !tbaa [[TBAA6]]
 // CHECK-NEXT:    [[RETVAL_0__SROA_CAST:%.*]] = bitcast <vscale x 16 x i1>* [[RETVAL_COERCE]] to <8 x i8>*
-// CHECK-NEXT:    store <8 x i8> [[TMP3]], <8 x i8>* [[RETVAL_0__SROA_CAST]], align 16
-// CHECK-NEXT:    [[TMP4:%.*]] = load <vscale x 16 x i1>, <vscale x 16 x i1>* [[RETVAL_COERCE]], align 16
+// CHECK-NEXT:    store <8 x i8> [[TMP3]], <8 x i8>* [[RETVAL_0__SROA_CAST]], align 8
+// CHECK-NEXT:    [[TMP4:%.*]] = load <vscale x 16 x i1>, <vscale x 16 x i1>* [[RETVAL_COERCE]], align 8
 // CHECK-NEXT:    ret <vscale x 16 x i1> [[TMP4]]
 //
 fixed_bool_t call_bool_fs(svbool_t pg, fixed_bool_t op1, svbool_t op2) {
@@ -183,15 +183,15 @@ fixed_float64_t call_float64_ss(svbool_t pg, svfloat64_t op1, svfloat64_t op2) {
 
 // CHECK-LABEL: @call_bool_ss(
 // CHECK-NEXT:  entry:
-// CHECK-NEXT:    [[SAVED_VALUE:%.*]] = alloca <vscale x 16 x i1>, align 16
-// CHECK-NEXT:    [[RETVAL_COERCE:%.*]] = alloca <vscale x 16 x i1>, align 16
+// CHECK-NEXT:    [[SAVED_VALUE:%.*]] = alloca <vscale x 16 x i1>, align 8
+// CHECK-NEXT:    [[RETVAL_COERCE:%.*]] = alloca <vscale x 16 x i1>, align 8
 // CHECK-NEXT:    [[TMP0:%.*]] = call <vscale x 16 x i1> @llvm.aarch64.sve.sel.nxv16i1(<vscale x 16 x i1> [[PG:%.*]], <vscale x 16 x i1> [[OP1:%.*]], <vscale x 16 x i1> [[OP2:%.*]])
-// CHECK-NEXT:    store <vscale x 16 x i1> [[TMP0]], <vscale x 16 x i1>* [[SAVED_VALUE]], align 16, !tbaa [[TBAA9]]
+// CHECK-NEXT:    store <vscale x 16 x i1> [[TMP0]], <vscale x 16 x i1>* [[SAVED_VALUE]], align 8, !tbaa [[TBAA9]]
 // CHECK-NEXT:    [[CASTFIXEDSVE:%.*]] = bitcast <vscale x 16 x i1>* [[SAVED_VALUE]] to <8 x i8>*
-// CHECK-NEXT:    [[TMP1:%.*]] = load <8 x i8>, <8 x i8>* [[CASTFIXEDSVE]], align 16, !tbaa [[TBAA6]]
+// CHECK-NEXT:    [[TMP1:%.*]] = load <8 x i8>, <8 x i8>* [[CASTFIXEDSVE]], align 8, !tbaa [[TBAA6]]
 // CHECK-NEXT:    [[RETVAL_0__SROA_CAST:%.*]] = bitcast <vscale x 16 x i1>* [[RETVAL_COERCE]] to <8 x i8>*
-// CHECK-NEXT:    store <8 x i8> [[TMP1]], <8 x i8>* [[RETVAL_0__SROA_CAST]], align 16
-// CHECK-NEXT:    [[TMP2:%.*]] = load <vscale x 16 x i1>, <vscale x 16 x i1>* [[RETVAL_COERCE]], align 16
+// CHECK-NEXT:    store <8 x i8> [[TMP1]], <8 x i8>* [[RETVAL_0__SROA_CAST]], align 8
+// CHECK-NEXT:    [[TMP2:%.*]] = load <vscale x 16 x i1>, <vscale x 16 x i1>* [[RETVAL_COERCE]], align 8
 // CHECK-NEXT:    ret <vscale x 16 x i1> [[TMP2]]
 //
 fixed_bool_t call_bool_ss(svbool_t pg, svbool_t op1, svbool_t op2) {

@@ -11,7 +11,6 @@
 ##===----------------------------------------------------------------------===##
 
 libomptarget_say("Building the llvm-omp-device-info tool")
-libomptarget_say("llvm-omp-device-info using plugins ${LIBOMPTARGET_TESTED_PLUGINS}")
 
 add_llvm_tool(llvm-omp-device-info llvm-omp-device-info.cpp)
 

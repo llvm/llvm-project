@@ -136,6 +136,11 @@ public:
   addClangTargetOptions(const llvm::opt::ArgList &DriverArgs,
                         llvm::opt::ArgStringList &CC1Args,
                         Action::OffloadKind DeviceOffloadKind) const override;
+
+  // Returns a list of device library names shared by different languages
+  llvm::SmallVector<std::string, 12>
+  getCommonDeviceLibNames(const llvm::opt::ArgList &DriverArgs,
+                          const std::string &GPUArch) const;
 };
 
 } // end namespace toolchains

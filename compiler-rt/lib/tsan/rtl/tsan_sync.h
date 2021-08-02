@@ -52,8 +52,8 @@ struct SyncVar {
   uptr addr;  // overwritten by DenseSlabAlloc freelist
   Mutex mtx;
   u64 uid;  // Globally unique id.
-  u32 creation_stack_id;
-  u32 owner_tid;  // Set only by exclusive owners.
+  StackID creation_stack_id;
+  Tid owner_tid;  // Set only by exclusive owners.
   u64 last_lock;
   int recursion;
   atomic_uint32_t flags;

@@ -1,4 +1,4 @@
-//===- unittests/Frontend/PrintPreprocessedTest.cpp  FrontendAction tests--===//
+//===- unittests/Frontend/FrontendActionTest.cpp  FrontendAction tests-----===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -116,6 +116,7 @@ TEST_F(FrontendActionTest, PrintPreprocessedInput) {
 
   // Set-up the action kind.
   compInst_.invocation().frontendOpts().programAction_ = PrintPreprocessedInput;
+  compInst_.invocation().preprocessorOpts().noReformat = true;
 
   // Set-up the output stream. We are using output buffer wrapped as an output
   // stream, as opposed to an actual file (or a file descriptor).

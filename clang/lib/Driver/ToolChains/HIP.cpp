@@ -395,35 +395,8 @@ HIPToolChain::getHIPDeviceLibs(const llvm::opt::ArgList &DriverArgs) const {
     }
     StringRef GpuArch = getGPUArch(DriverArgs);
     assert(!GpuArch.empty() && "Must have an explicit GPU arch.");
-    (void)GpuArch;
-    auto Kind = llvm::AMDGPU::parseArchAMDGCN(GpuArch);
-    const StringRef CanonArch = llvm::AMDGPU::getArchNameAMDGCN(Kind);
-
-    std::string LibDeviceFile = RocmInstallation.getLibDeviceFile(CanonArch);
-    if (LibDeviceFile.empty()) {
-      getDriver().Diag(diag::err_drv_no_rocm_device_lib) << 1 << GpuArch;
-      return {};
-    }
 
     // If --hip-device-lib is not set, add the default bitcode libraries.
-    // TODO: There are way too many flags that change this. Do we need to check
-    // them all?
-    bool DAZ = DriverArgs.hasFlag(options::OPT_fgpu_flush_denormals_to_zero,
-                                  options::OPT_fno_gpu_flush_denormals_to_zero,
-                                  getDefaultDenormsAreZeroForTarget(Kind));
-    bool FiniteOnly =
-        DriverArgs.hasFlag(options::OPT_ffinite_math_only,
-                           options::OPT_fno_finite_math_only, false);
-    bool UnsafeMathOpt =
-        DriverArgs.hasFlag(options::OPT_funsafe_math_optimizations,
-                           options::OPT_fno_unsafe_math_optimizations, false);
-    bool FastRelaxedMath = DriverArgs.hasFlag(
-        options::OPT_ffast_math, options::OPT_fno_fast_math, false);
-    bool CorrectSqrt = DriverArgs.hasFlag(
-        options::OPT_fhip_fp32_correctly_rounded_divide_sqrt,
-        options::OPT_fno_hip_fp32_correctly_rounded_divide_sqrt);
-    bool Wave64 = isWave64(DriverArgs, Kind);
-
     if (DriverArgs.hasFlag(options::OPT_fgpu_sanitize,
                            options::OPT_fno_gpu_sanitize, false)) {
       auto AsanRTL = RocmInstallation.getAsanRTLPath();
@@ -442,10 +415,8 @@ HIPToolChain::getHIPDeviceLibs(const llvm::opt::ArgList &DriverArgs) const {
     // Add the HIP specific bitcode library.
     BCLibs.push_back(RocmInstallation.getHIPPath().str());
 
-    // Add the generic set of libraries.
-    BCLibs.append(RocmInstallation.getCommonBitcodeLibs(
-        DriverArgs, LibDeviceFile, Wave64, DAZ, FiniteOnly, UnsafeMathOpt,
-        FastRelaxedMath, CorrectSqrt));
+    // Add common device libraries like ocml etc.
+    BCLibs.append(getCommonDeviceLibNames(DriverArgs, GpuArch.str()));
 
     // Add instrument lib.
     auto InstLib =

@@ -137,53 +137,23 @@ define void @phi_float32(half %hval, float %fval) {
 ; MAX256-NEXT:    [[I6:%.*]] = fpext half [[HVAL]] to float
 ; MAX256-NEXT:    [[I9:%.*]] = fpext half [[HVAL]] to float
 ; MAX256-NEXT:    [[TMP0:%.*]] = insertelement <8 x float> poison, float [[I]], i32 0
-; MAX256-NEXT:    [[TMP1:%.*]] = insertelement <8 x float> [[TMP0]], float [[I]], i32 1
-; MAX256-NEXT:    [[TMP2:%.*]] = insertelement <8 x float> [[TMP1]], float [[I]], i32 2
-; MAX256-NEXT:    [[TMP3:%.*]] = insertelement <8 x float> [[TMP2]], float [[I]], i32 3
-; MAX256-NEXT:    [[TMP4:%.*]] = insertelement <8 x float> [[TMP3]], float [[I]], i32 4
-; MAX256-NEXT:    [[TMP5:%.*]] = insertelement <8 x float> [[TMP4]], float [[I]], i32 5
-; MAX256-NEXT:    [[TMP6:%.*]] = insertelement <8 x float> [[TMP5]], float [[I]], i32 6
-; MAX256-NEXT:    [[TMP7:%.*]] = insertelement <8 x float> [[TMP6]], float [[I]], i32 7
-; MAX256-NEXT:    [[TMP8:%.*]] = insertelement <8 x float> poison, float [[FVAL:%.*]], i32 0
-; MAX256-NEXT:    [[TMP9:%.*]] = insertelement <8 x float> [[TMP8]], float [[FVAL]], i32 1
-; MAX256-NEXT:    [[TMP10:%.*]] = insertelement <8 x float> [[TMP9]], float [[FVAL]], i32 2
-; MAX256-NEXT:    [[TMP11:%.*]] = insertelement <8 x float> [[TMP10]], float [[FVAL]], i32 3
-; MAX256-NEXT:    [[TMP12:%.*]] = insertelement <8 x float> [[TMP11]], float [[FVAL]], i32 4
-; MAX256-NEXT:    [[TMP13:%.*]] = insertelement <8 x float> [[TMP12]], float [[FVAL]], i32 5
-; MAX256-NEXT:    [[TMP14:%.*]] = insertelement <8 x float> [[TMP13]], float [[FVAL]], i32 6
-; MAX256-NEXT:    [[TMP15:%.*]] = insertelement <8 x float> [[TMP14]], float [[FVAL]], i32 7
-; MAX256-NEXT:    [[TMP16:%.*]] = fmul <8 x float> [[TMP7]], [[TMP15]]
-; MAX256-NEXT:    [[TMP17:%.*]] = fadd <8 x float> zeroinitializer, [[TMP16]]
-; MAX256-NEXT:    [[TMP18:%.*]] = insertelement <8 x float> poison, float [[I3]], i32 0
-; MAX256-NEXT:    [[TMP19:%.*]] = insertelement <8 x float> [[TMP18]], float [[I3]], i32 1
-; MAX256-NEXT:    [[TMP20:%.*]] = insertelement <8 x float> [[TMP19]], float [[I3]], i32 2
-; MAX256-NEXT:    [[TMP21:%.*]] = insertelement <8 x float> [[TMP20]], float [[I3]], i32 3
-; MAX256-NEXT:    [[TMP22:%.*]] = insertelement <8 x float> [[TMP21]], float [[I3]], i32 4
-; MAX256-NEXT:    [[TMP23:%.*]] = insertelement <8 x float> [[TMP22]], float [[I3]], i32 5
-; MAX256-NEXT:    [[TMP24:%.*]] = insertelement <8 x float> [[TMP23]], float [[I3]], i32 6
-; MAX256-NEXT:    [[TMP25:%.*]] = insertelement <8 x float> [[TMP24]], float [[I3]], i32 7
-; MAX256-NEXT:    [[TMP26:%.*]] = fmul <8 x float> [[TMP25]], [[TMP15]]
-; MAX256-NEXT:    [[TMP27:%.*]] = fadd <8 x float> zeroinitializer, [[TMP26]]
-; MAX256-NEXT:    [[TMP28:%.*]] = insertelement <8 x float> poison, float [[I6]], i32 0
-; MAX256-NEXT:    [[TMP29:%.*]] = insertelement <8 x float> [[TMP28]], float [[I6]], i32 1
-; MAX256-NEXT:    [[TMP30:%.*]] = insertelement <8 x float> [[TMP29]], float [[I6]], i32 2
-; MAX256-NEXT:    [[TMP31:%.*]] = insertelement <8 x float> [[TMP30]], float [[I6]], i32 3
-; MAX256-NEXT:    [[TMP32:%.*]] = insertelement <8 x float> [[TMP31]], float [[I6]], i32 4
-; MAX256-NEXT:    [[TMP33:%.*]] = insertelement <8 x float> [[TMP32]], float [[I6]], i32 5
-; MAX256-NEXT:    [[TMP34:%.*]] = insertelement <8 x float> [[TMP33]], float [[I6]], i32 6
-; MAX256-NEXT:    [[TMP35:%.*]] = insertelement <8 x float> [[TMP34]], float [[I6]], i32 7
-; MAX256-NEXT:    [[TMP36:%.*]] = fmul <8 x float> [[TMP35]], [[TMP15]]
-; MAX256-NEXT:    [[TMP37:%.*]] = fadd <8 x float> zeroinitializer, [[TMP36]]
-; MAX256-NEXT:    [[TMP38:%.*]] = insertelement <8 x float> poison, float [[I9]], i32 0
-; MAX256-NEXT:    [[TMP39:%.*]] = insertelement <8 x float> [[TMP38]], float [[I9]], i32 1
-; MAX256-NEXT:    [[TMP40:%.*]] = insertelement <8 x float> [[TMP39]], float [[I9]], i32 2
-; MAX256-NEXT:    [[TMP41:%.*]] = insertelement <8 x float> [[TMP40]], float [[I9]], i32 3
-; MAX256-NEXT:    [[TMP42:%.*]] = insertelement <8 x float> [[TMP41]], float [[I9]], i32 4
-; MAX256-NEXT:    [[TMP43:%.*]] = insertelement <8 x float> [[TMP42]], float [[I9]], i32 5
-; MAX256-NEXT:    [[TMP44:%.*]] = insertelement <8 x float> [[TMP43]], float [[I9]], i32 6
-; MAX256-NEXT:    [[TMP45:%.*]] = insertelement <8 x float> [[TMP44]], float [[I9]], i32 7
-; MAX256-NEXT:    [[TMP46:%.*]] = fmul <8 x float> [[TMP45]], [[TMP15]]
-; MAX256-NEXT:    [[TMP47:%.*]] = fadd <8 x float> zeroinitializer, [[TMP46]]
+; MAX256-NEXT:    [[SHUFFLE11:%.*]] = shufflevector <8 x float> [[TMP0]], <8 x float> poison, <8 x i32> zeroinitializer
+; MAX256-NEXT:    [[TMP1:%.*]] = insertelement <8 x float> poison, float [[FVAL:%.*]], i32 0
+; MAX256-NEXT:    [[SHUFFLE12:%.*]] = shufflevector <8 x float> [[TMP1]], <8 x float> poison, <8 x i32> zeroinitializer
+; MAX256-NEXT:    [[TMP2:%.*]] = fmul <8 x float> [[SHUFFLE11]], [[SHUFFLE12]]
+; MAX256-NEXT:    [[TMP3:%.*]] = fadd <8 x float> zeroinitializer, [[TMP2]]
+; MAX256-NEXT:    [[TMP4:%.*]] = insertelement <8 x float> poison, float [[I3]], i32 0
+; MAX256-NEXT:    [[SHUFFLE:%.*]] = shufflevector <8 x float> [[TMP4]], <8 x float> poison, <8 x i32> zeroinitializer
+; MAX256-NEXT:    [[TMP5:%.*]] = fmul <8 x float> [[SHUFFLE]], [[SHUFFLE12]]
+; MAX256-NEXT:    [[TMP6:%.*]] = fadd <8 x float> zeroinitializer, [[TMP5]]
+; MAX256-NEXT:    [[TMP7:%.*]] = insertelement <8 x float> poison, float [[I6]], i32 0
+; MAX256-NEXT:    [[SHUFFLE5:%.*]] = shufflevector <8 x float> [[TMP7]], <8 x float> poison, <8 x i32> zeroinitializer
+; MAX256-NEXT:    [[TMP8:%.*]] = fmul <8 x float> [[SHUFFLE5]], [[SHUFFLE12]]
+; MAX256-NEXT:    [[TMP9:%.*]] = fadd <8 x float> zeroinitializer, [[TMP8]]
+; MAX256-NEXT:    [[TMP10:%.*]] = insertelement <8 x float> poison, float [[I9]], i32 0
+; MAX256-NEXT:    [[SHUFFLE8:%.*]] = shufflevector <8 x float> [[TMP10]], <8 x float> poison, <8 x i32> zeroinitializer
+; MAX256-NEXT:    [[TMP11:%.*]] = fmul <8 x float> [[SHUFFLE8]], [[SHUFFLE12]]
+; MAX256-NEXT:    [[TMP12:%.*]] = fadd <8 x float> zeroinitializer, [[TMP11]]
 ; MAX256-NEXT:    switch i32 undef, label [[BB5:%.*]] [
 ; MAX256-NEXT:    i32 0, label [[BB2:%.*]]
 ; MAX256-NEXT:    i32 1, label [[BB3:%.*]]
@@ -196,12 +166,12 @@ define void @phi_float32(half %hval, float %fval) {
 ; MAX256:       bb5:
 ; MAX256-NEXT:    br label [[BB2]]
 ; MAX256:       bb2:
-; MAX256-NEXT:    [[TMP48:%.*]] = phi <8 x float> [ [[TMP27]], [[BB3]] ], [ [[TMP15]], [[BB4]] ], [ [[TMP15]], [[BB5]] ], [ [[TMP15]], [[BB1]] ]
-; MAX256-NEXT:    [[TMP49:%.*]] = phi <8 x float> [ [[TMP37]], [[BB3]] ], [ [[TMP15]], [[BB4]] ], [ [[TMP37]], [[BB5]] ], [ [[TMP37]], [[BB1]] ]
-; MAX256-NEXT:    [[TMP50:%.*]] = phi <8 x float> [ [[TMP47]], [[BB3]] ], [ [[TMP47]], [[BB4]] ], [ [[TMP15]], [[BB5]] ], [ [[TMP47]], [[BB1]] ]
-; MAX256-NEXT:    [[TMP51:%.*]] = phi <8 x float> [ [[TMP17]], [[BB3]] ], [ [[TMP17]], [[BB4]] ], [ [[TMP17]], [[BB5]] ], [ [[TMP15]], [[BB1]] ]
-; MAX256-NEXT:    [[TMP52:%.*]] = extractelement <8 x float> [[TMP49]], i32 7
-; MAX256-NEXT:    store float [[TMP52]], float* undef, align 4
+; MAX256-NEXT:    [[TMP13:%.*]] = phi <8 x float> [ [[TMP6]], [[BB3]] ], [ [[SHUFFLE12]], [[BB4]] ], [ [[SHUFFLE12]], [[BB5]] ], [ [[SHUFFLE12]], [[BB1]] ]
+; MAX256-NEXT:    [[TMP14:%.*]] = phi <8 x float> [ [[TMP9]], [[BB3]] ], [ [[SHUFFLE12]], [[BB4]] ], [ [[TMP9]], [[BB5]] ], [ [[TMP9]], [[BB1]] ]
+; MAX256-NEXT:    [[TMP15:%.*]] = phi <8 x float> [ [[TMP12]], [[BB3]] ], [ [[TMP12]], [[BB4]] ], [ [[SHUFFLE12]], [[BB5]] ], [ [[TMP12]], [[BB1]] ]
+; MAX256-NEXT:    [[TMP16:%.*]] = phi <8 x float> [ [[TMP3]], [[BB3]] ], [ [[TMP3]], [[BB4]] ], [ [[TMP3]], [[BB5]] ], [ [[SHUFFLE12]], [[BB1]] ]
+; MAX256-NEXT:    [[TMP17:%.*]] = extractelement <8 x float> [[TMP14]], i32 7
+; MAX256-NEXT:    store float [[TMP17]], float* undef, align 4
 ; MAX256-NEXT:    ret void
 ;
 ; MAX1024-LABEL: @phi_float32(
@@ -213,53 +183,23 @@ define void @phi_float32(half %hval, float %fval) {
 ; MAX1024-NEXT:    [[I6:%.*]] = fpext half [[HVAL]] to float
 ; MAX1024-NEXT:    [[I9:%.*]] = fpext half [[HVAL]] to float
 ; MAX1024-NEXT:    [[TMP0:%.*]] = insertelement <8 x float> poison, float [[I]], i32 0
-; MAX1024-NEXT:    [[TMP1:%.*]] = insertelement <8 x float> [[TMP0]], float [[I]], i32 1
-; MAX1024-NEXT:    [[TMP2:%.*]] = insertelement <8 x float> [[TMP1]], float [[I]], i32 2
-; MAX1024-NEXT:    [[TMP3:%.*]] = insertelement <8 x float> [[TMP2]], float [[I]], i32 3
-; MAX1024-NEXT:    [[TMP4:%.*]] = insertelement <8 x float> [[TMP3]], float [[I]], i32 4
-; MAX1024-NEXT:    [[TMP5:%.*]] = insertelement <8 x float> [[TMP4]], float [[I]], i32 5
-; MAX1024-NEXT:    [[TMP6:%.*]] = insertelement <8 x float> [[TMP5]], float [[I]], i32 6
-; MAX1024-NEXT:    [[TMP7:%.*]] = insertelement <8 x float> [[TMP6]], float [[I]], i32 7
-; MAX1024-NEXT:    [[TMP8:%.*]] = insertelement <8 x float> poison, float [[FVAL:%.*]], i32 0
-; MAX1024-NEXT:    [[TMP9:%.*]] = insertelement <8 x float> [[TMP8]], float [[FVAL]], i32 1
-; MAX1024-NEXT:    [[TMP10:%.*]] = insertelement <8 x float> [[TMP9]], float [[FVAL]], i32 2
-; MAX1024-NEXT:    [[TMP11:%.*]] = insertelement <8 x float> [[TMP10]], float [[FVAL]], i32 3
-; MAX1024-NEXT:    [[TMP12:%.*]] = insertelement <8 x float> [[TMP11]], float [[FVAL]], i32 4
-; MAX1024-NEXT:    [[TMP13:%.*]] = insertelement <8 x float> [[TMP12]], float [[FVAL]], i32 5
-; MAX1024-NEXT:    [[TMP14:%.*]] = insertelement <8 x float> [[TMP13]], float [[FVAL]], i32 6
-; MAX1024-NEXT:    [[TMP15:%.*]] = insertelement <8 x float> [[TMP14]], float [[FVAL]], i32 7
-; MAX1024-NEXT:    [[TMP16:%.*]] = fmul <8 x float> [[TMP7]], [[TMP15]]
-; MAX1024-NEXT:    [[TMP17:%.*]] = fadd <8 x float> zeroinitializer, [[TMP16]]
-; MAX1024-NEXT:    [[TMP18:%.*]] = insertelement <8 x float> poison, float [[I3]], i32 0
-; MAX1024-NEXT:    [[TMP19:%.*]] = insertelement <8 x float> [[TMP18]], float [[I3]], i32 1
-; MAX1024-NEXT:    [[TMP20:%.*]] = insertelement <8 x float> [[TMP19]], float [[I3]], i32 2
-; MAX1024-NEXT:    [[TMP21:%.*]] = insertelement <8 x float> [[TMP20]], float [[I3]], i32 3
-; MAX1024-NEXT:    [[TMP22:%.*]] = insertelement <8 x float> [[TMP21]], float [[I3]], i32 4
-; MAX1024-NEXT:    [[TMP23:%.*]] = insertelement <8 x float> [[TMP22]], float [[I3]], i32 5
-; MAX1024-NEXT:    [[TMP24:%.*]] = insertelement <8 x float> [[TMP23]], float [[I3]], i32 6
-; MAX1024-NEXT:    [[TMP25:%.*]] = insertelement <8 x float> [[TMP24]], float [[I3]], i32 7
-; MAX1024-NEXT:    [[TMP26:%.*]] = fmul <8 x float> [[TMP25]], [[TMP15]]
-; MAX1024-NEXT:    [[TMP27:%.*]] = fadd <8 x float> zeroinitializer, [[TMP26]]
-; MAX1024-NEXT:    [[TMP28:%.*]] = insertelement <8 x float> poison, float [[I6]], i32 0
-; MAX1024-NEXT:    [[TMP29:%.*]] = insertelement <8 x float> [[TMP28]], float [[I6]], i32 1
-; MAX1024-NEXT:    [[TMP30:%.*]] = insertelement <8 x float> [[TMP29]], float [[I6]], i32 2
-; MAX1024-NEXT:    [[TMP31:%.*]] = insertelement <8 x float> [[TMP30]], float [[I6]], i32 3
-; MAX1024-NEXT:    [[TMP32:%.*]] = insertelement <8 x float> [[TMP31]], float [[I6]], i32 4
-; MAX1024-NEXT:    [[TMP33:%.*]] = insertelement <8 x float> [[TMP32]], float [[I6]], i32 5
-; MAX1024-NEXT:    [[TMP34:%.*]] = insertelement <8 x float> [[TMP33]], float [[I6]], i32 6
-; MAX1024-NEXT:    [[TMP35:%.*]] = insertelement <8 x float> [[TMP34]], float [[I6]], i32 7
-; MAX1024-NEXT:    [[TMP36:%.*]] = fmul <8 x float> [[TMP35]], [[TMP15]]
-; MAX1024-NEXT:    [[TMP37:%.*]] = fadd <8 x float> zeroinitializer, [[TMP36]]
-; MAX1024-NEXT:    [[TMP38:%.*]] = insertelement <8 x float> poison, float [[I9]], i32 0
-; MAX1024-NEXT:    [[TMP39:%.*]] = insertelement <8 x float> [[TMP38]], float [[I9]], i32 1
-; MAX1024-NEXT:    [[TMP40:%.*]] = insertelement <8 x float> [[TMP39]], float [[I9]], i32 2
-; MAX1024-NEXT:    [[TMP41:%.*]] = insertelement <8 x float> [[TMP40]], float [[I9]], i32 3
-; MAX1024-NEXT:    [[TMP42:%.*]] = insertelement <8 x float> [[TMP41]], float [[I9]], i32 4
-; MAX1024-NEXT:    [[TMP43:%.*]] = insertelement <8 x float> [[TMP42]], float [[I9]], i32 5
-; MAX1024-NEXT:    [[TMP44:%.*]] = insertelement <8 x float> [[TMP43]], float [[I9]], i32 6
-; MAX1024-NEXT:    [[TMP45:%.*]] = insertelement <8 x float> [[TMP44]], float [[I9]], i32 7
-; MAX1024-NEXT:    [[TMP46:%.*]] = fmul <8 x float> [[TMP45]], [[TMP15]]
-; MAX1024-NEXT:    [[TMP47:%.*]] = fadd <8 x float> zeroinitializer, [[TMP46]]
+; MAX1024-NEXT:    [[SHUFFLE11:%.*]] = shufflevector <8 x float> [[TMP0]], <8 x float> poison, <8 x i32> zeroinitializer
+; MAX1024-NEXT:    [[TMP1:%.*]] = insertelement <8 x float> poison, float [[FVAL:%.*]], i32 0
+; MAX1024-NEXT:    [[SHUFFLE12:%.*]] = shufflevector <8 x float> [[TMP1]], <8 x float> poison, <8 x i32> zeroinitializer
+; MAX1024-NEXT:    [[TMP2:%.*]] = fmul <8 x float> [[SHUFFLE11]], [[SHUFFLE12]]
+; MAX1024-NEXT:    [[TMP3:%.*]] = fadd <8 x float> zeroinitializer, [[TMP2]]
+; MAX1024-NEXT:    [[TMP4:%.*]] = insertelement <8 x float> poison, float [[I3]], i32 0
+; MAX1024-NEXT:    [[SHUFFLE:%.*]] = shufflevector <8 x float> [[TMP4]], <8 x float> poison, <8 x i32> zeroinitializer
+; MAX1024-NEXT:    [[TMP5:%.*]] = fmul <8 x float> [[SHUFFLE]], [[SHUFFLE12]]
+; MAX1024-NEXT:    [[TMP6:%.*]] = fadd <8 x float> zeroinitializer, [[TMP5]]
+; MAX1024-NEXT:    [[TMP7:%.*]] = insertelement <8 x float> poison, float [[I6]], i32 0
+; MAX1024-NEXT:    [[SHUFFLE5:%.*]] = shufflevector <8 x float> [[TMP7]], <8 x float> poison, <8 x i32> zeroinitializer
+; MAX1024-NEXT:    [[TMP8:%.*]] = fmul <8 x float> [[SHUFFLE5]], [[SHUFFLE12]]
+; MAX1024-NEXT:    [[TMP9:%.*]] = fadd <8 x float> zeroinitializer, [[TMP8]]
+; MAX1024-NEXT:    [[TMP10:%.*]] = insertelement <8 x float> poison, float [[I9]], i32 0
+; MAX1024-NEXT:    [[SHUFFLE8:%.*]] = shufflevector <8 x float> [[TMP10]], <8 x float> poison, <8 x i32> zeroinitializer
+; MAX1024-NEXT:    [[TMP11:%.*]] = fmul <8 x float> [[SHUFFLE8]], [[SHUFFLE12]]
+; MAX1024-NEXT:    [[TMP12:%.*]] = fadd <8 x float> zeroinitializer, [[TMP11]]
 ; MAX1024-NEXT:    switch i32 undef, label [[BB5:%.*]] [
 ; MAX1024-NEXT:    i32 0, label [[BB2:%.*]]
 ; MAX1024-NEXT:    i32 1, label [[BB3:%.*]]
@@ -272,12 +212,12 @@ define void @phi_float32(half %hval, float %fval) {
 ; MAX1024:       bb5:
 ; MAX1024-NEXT:    br label [[BB2]]
 ; MAX1024:       bb2:
-; MAX1024-NEXT:    [[TMP48:%.*]] = phi <8 x float> [ [[TMP27]], [[BB3]] ], [ [[TMP15]], [[BB4]] ], [ [[TMP15]], [[BB5]] ], [ [[TMP15]], [[BB1]] ]
-; MAX1024-NEXT:    [[TMP49:%.*]] = phi <8 x float> [ [[TMP37]], [[BB3]] ], [ [[TMP15]], [[BB4]] ], [ [[TMP37]], [[BB5]] ], [ [[TMP37]], [[BB1]] ]
-; MAX1024-NEXT:    [[TMP50:%.*]] = phi <8 x float> [ [[TMP47]], [[BB3]] ], [ [[TMP47]], [[BB4]] ], [ [[TMP15]], [[BB5]] ], [ [[TMP47]], [[BB1]] ]
-; MAX1024-NEXT:    [[TMP51:%.*]] = phi <8 x float> [ [[TMP17]], [[BB3]] ], [ [[TMP17]], [[BB4]] ], [ [[TMP17]], [[BB5]] ], [ [[TMP15]], [[BB1]] ]
-; MAX1024-NEXT:    [[TMP52:%.*]] = extractelement <8 x float> [[TMP49]], i32 7
-; MAX1024-NEXT:    store float [[TMP52]], float* undef, align 4
+; MAX1024-NEXT:    [[TMP13:%.*]] = phi <8 x float> [ [[TMP6]], [[BB3]] ], [ [[SHUFFLE12]], [[BB4]] ], [ [[SHUFFLE12]], [[BB5]] ], [ [[SHUFFLE12]], [[BB1]] ]
+; MAX1024-NEXT:    [[TMP14:%.*]] = phi <8 x float> [ [[TMP9]], [[BB3]] ], [ [[SHUFFLE12]], [[BB4]] ], [ [[TMP9]], [[BB5]] ], [ [[TMP9]], [[BB1]] ]
+; MAX1024-NEXT:    [[TMP15:%.*]] = phi <8 x float> [ [[TMP12]], [[BB3]] ], [ [[TMP12]], [[BB4]] ], [ [[SHUFFLE12]], [[BB5]] ], [ [[TMP12]], [[BB1]] ]
+; MAX1024-NEXT:    [[TMP16:%.*]] = phi <8 x float> [ [[TMP3]], [[BB3]] ], [ [[TMP3]], [[BB4]] ], [ [[TMP3]], [[BB5]] ], [ [[SHUFFLE12]], [[BB1]] ]
+; MAX1024-NEXT:    [[TMP17:%.*]] = extractelement <8 x float> [[TMP14]], i32 7
+; MAX1024-NEXT:    store float [[TMP17]], float* undef, align 4
 ; MAX1024-NEXT:    ret void
 ;
 bb:

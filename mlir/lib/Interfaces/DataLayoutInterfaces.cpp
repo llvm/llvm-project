@@ -269,7 +269,7 @@ mlir::DataLayout::DataLayout() : DataLayout(ModuleOp()) {}
 
 mlir::DataLayout::DataLayout(DataLayoutOpInterface op)
     : originalLayout(getCombinedDataLayout(op)), scope(op) {
-#ifndef NDEBUG
+#if LLVM_ENABLE_ABI_BREAKING_CHECKS
   checkMissingLayout(originalLayout, op);
   collectParentLayouts(op, layoutStack);
 #endif
@@ -277,7 +277,7 @@ mlir::DataLayout::DataLayout(DataLayoutOpInterface op)
 
 mlir::DataLayout::DataLayout(ModuleOp op)
     : originalLayout(getCombinedDataLayout(op)), scope(op) {
-#ifndef NDEBUG
+#if LLVM_ENABLE_ABI_BREAKING_CHECKS
   checkMissingLayout(originalLayout, op);
   collectParentLayouts(op, layoutStack);
 #endif
@@ -297,7 +297,7 @@ mlir::DataLayout mlir::DataLayout::closest(Operation *op) {
 }
 
 void mlir::DataLayout::checkValid() const {
-#ifndef NDEBUG
+#if LLVM_ENABLE_ABI_BREAKING_CHECKS
   SmallVector<DataLayoutSpecInterface> specs;
   collectParentLayouts(scope, specs);
   assert(specs.size() == layoutStack.size() &&

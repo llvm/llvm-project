@@ -75,13 +75,11 @@ define i32 @foo(double* nocapture %A, i32 %n) {
 ; CHECK-NEXT:    [[TMP1:%.*]] = load <4 x double>, <4 x double>* [[TMP0]], align 8
 ; CHECK-NEXT:    [[TMP2:%.*]] = fmul <4 x double> [[TMP1]], <double 7.900000e+00, double 7.700000e+00, double 7.600000e+00, double 7.400000e+00>
 ; CHECK-NEXT:    [[TMP3:%.*]] = insertelement <4 x double> poison, double [[CONV]], i32 0
-; CHECK-NEXT:    [[TMP4:%.*]] = insertelement <4 x double> [[TMP3]], double [[CONV]], i32 1
-; CHECK-NEXT:    [[TMP5:%.*]] = insertelement <4 x double> [[TMP4]], double [[CONV]], i32 2
-; CHECK-NEXT:    [[TMP6:%.*]] = insertelement <4 x double> [[TMP5]], double [[CONV]], i32 3
-; CHECK-NEXT:    [[TMP7:%.*]] = fmul <4 x double> [[TMP6]], [[TMP2]]
-; CHECK-NEXT:    [[TMP8:%.*]] = fadd <4 x double> [[TMP7]], <double 6.000000e+00, double 2.000000e+00, double 3.000000e+00, double 4.000000e+00>
-; CHECK-NEXT:    [[TMP9:%.*]] = bitcast double* [[A]] to <4 x double>*
-; CHECK-NEXT:    store <4 x double> [[TMP8]], <4 x double>* [[TMP9]], align 8
+; CHECK-NEXT:    [[SHUFFLE:%.*]] = shufflevector <4 x double> [[TMP3]], <4 x double> poison, <4 x i32> zeroinitializer
+; CHECK-NEXT:    [[TMP4:%.*]] = fmul <4 x double> [[SHUFFLE]], [[TMP2]]
+; CHECK-NEXT:    [[TMP5:%.*]] = fadd <4 x double> [[TMP4]], <double 6.000000e+00, double 2.000000e+00, double 3.000000e+00, double 4.000000e+00>
+; CHECK-NEXT:    [[TMP6:%.*]] = bitcast double* [[A]] to <4 x double>*
+; CHECK-NEXT:    store <4 x double> [[TMP5]], <4 x double>* [[TMP6]], align 8
 ; CHECK-NEXT:    ret i32 undef
 ;
 entry:
@@ -209,13 +207,11 @@ define i32 @foo4(double* nocapture %A, i32 %n) {
 ; CHECK-NEXT:    [[TMP1:%.*]] = load <4 x double>, <4 x double>* [[TMP0]], align 8
 ; CHECK-NEXT:    [[TMP2:%.*]] = fmul <4 x double> [[TMP1]], <double 7.900000e+00, double 7.900000e+00, double 7.900000e+00, double 7.900000e+00>
 ; CHECK-NEXT:    [[TMP3:%.*]] = insertelement <4 x double> poison, double [[CONV]], i32 0
-; CHECK-NEXT:    [[TMP4:%.*]] = insertelement <4 x double> [[TMP3]], double [[CONV]], i32 1
-; CHECK-NEXT:    [[TMP5:%.*]] = insertelement <4 x double> [[TMP4]], double [[CONV]], i32 2
-; CHECK-NEXT:    [[TMP6:%.*]] = insertelement <4 x double> [[TMP5]], double [[CONV]], i32 3
-; CHECK-NEXT:    [[TMP7:%.*]] = fmul <4 x double> [[TMP6]], [[TMP2]]
-; CHECK-NEXT:    [[TMP8:%.*]] = fadd <4 x double> [[TMP7]], <double 6.000000e+00, double 6.000000e+00, double 6.000000e+00, double 6.000000e+00>
-; CHECK-NEXT:    [[TMP9:%.*]] = bitcast double* [[A]] to <4 x double>*
-; CHECK-NEXT:    store <4 x double> [[TMP8]], <4 x double>* [[TMP9]], align 8
+; CHECK-NEXT:    [[SHUFFLE:%.*]] = shufflevector <4 x double> [[TMP3]], <4 x double> poison, <4 x i32> zeroinitializer
+; CHECK-NEXT:    [[TMP4:%.*]] = fmul <4 x double> [[SHUFFLE]], [[TMP2]]
+; CHECK-NEXT:    [[TMP5:%.*]] = fadd <4 x double> [[TMP4]], <double 6.000000e+00, double 6.000000e+00, double 6.000000e+00, double 6.000000e+00>
+; CHECK-NEXT:    [[TMP6:%.*]] = bitcast double* [[A]] to <4 x double>*
+; CHECK-NEXT:    store <4 x double> [[TMP5]], <4 x double>* [[TMP6]], align 8
 ; CHECK-NEXT:    ret i32 undef
 ;
 entry:

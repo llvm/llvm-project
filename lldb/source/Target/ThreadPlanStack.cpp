@@ -150,10 +150,13 @@ lldb::ThreadPlanSP ThreadPlanStack::PopPlan() {
   std::lock_guard<std::recursive_mutex> guard(m_stack_mutex);
   assert(m_plans.size() > 1 && "Can't pop the base thread plan");
 
-  lldb::ThreadPlanSP plan_sp = std::move(m_plans.back());
-  m_completed_plans.push_back(plan_sp);
-  plan_sp->WillPop();
+  // Note that moving the top element of the vector would leave it in an
+  // undefined state, and break the guarantee that the stack's thread plans are
+  // all valid.
+  lldb::ThreadPlanSP plan_sp = m_plans.back();
   m_plans.pop_back();
+  m_completed_plans.push_back(plan_sp);
+  plan_sp->DidPop();
   return plan_sp;
 }
 
@@ -161,10 +164,13 @@ lldb::ThreadPlanSP ThreadPlanStack::DiscardPlan() {
   std::lock_guard<std::recursive_mutex> guard(m_stack_mutex);
   assert(m_plans.size() > 1 && "Can't discard the base thread plan");
 
-  lldb::ThreadPlanSP plan_sp = std::move(m_plans.back());
-  m_discarded_plans.push_back(plan_sp);
-  plan_sp->WillPop();
+  // Note that moving the top element of the vector would leave it in an
+  // undefined state, and break the guarantee that the stack's thread plans are
+  // all valid.
+  lldb::ThreadPlanSP plan_sp = m_plans.back();
   m_plans.pop_back();
+  m_discarded_plans.push_back(plan_sp);
+  plan_sp->DidPop();
   return plan_sp;
 }
 

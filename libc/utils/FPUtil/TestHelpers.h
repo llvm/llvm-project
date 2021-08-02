@@ -61,39 +61,6 @@ FPMatcher<T, C> getMatcher(T expectedValue) {
   return FPMatcher<T, C>(expectedValue);
 }
 
-// TODO: Make the matcher match specific exceptions instead of just identifying
-// that an exception was raised.
-class FPExceptMatcher : public __llvm_libc::testing::Matcher<bool> {
-  bool exceptionRaised;
-
-public:
-  class FunctionCaller {
-  public:
-    virtual ~FunctionCaller(){};
-    virtual void call() = 0;
-  };
-
-  template <typename Func> static FunctionCaller *getFunctionCaller(Func func) {
-    struct Callable : public FunctionCaller {
-      Func f;
-      explicit Callable(Func theFunc) : f(theFunc) {}
-      void call() override { f(); }
-    };
-
-    return new Callable(func);
-  }
-
-  // Takes ownership of func.
-  explicit FPExceptMatcher(FunctionCaller *func);
-
-  bool match(bool unused) { return exceptionRaised; }
-
-  void explainError(testutils::StreamWrapper &stream) override {
-    stream << "A floating point exception should have been raised but it "
-           << "wasn't\n";
-  }
-};
-
 } // namespace testing
 } // namespace fputil
 } // namespace __llvm_libc
@@ -130,16 +97,5 @@ public:
       actual,                                                                  \
       __llvm_libc::fputil::testing::getMatcher<__llvm_libc::testing::Cond_NE>( \
           expected))
-
-#ifdef LLVM_LIBC_TEST_USE_FUCHSIA
-#define ASSERT_RAISES_FP_EXCEPT(func) ASSERT_DEATH(func, WITH_SIGNAL(SIGFPE))
-#else
-#define ASSERT_RAISES_FP_EXCEPT(func)                                          \
-  ASSERT_THAT(                                                                 \
-      true,                                                                    \
-      __llvm_libc::fputil::testing::FPExceptMatcher(                           \
-          __llvm_libc::fputil::testing::FPExceptMatcher::getFunctionCaller(    \
-              func)))
-#endif // LLVM_LIBC_TEST_USE_FUCHSIA
 
 #endif // LLVM_LIBC_UTILS_FPUTIL_TEST_HELPERS_H

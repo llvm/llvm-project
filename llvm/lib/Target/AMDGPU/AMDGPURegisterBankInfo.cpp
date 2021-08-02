@@ -3034,6 +3034,7 @@ void AMDGPURegisterBankInfo::applyMappingImpl(
   }
   case AMDGPU::G_AMDGPU_INTRIN_BVH_INTERSECT_RAY: {
     unsigned N = MI.getNumExplicitOperands() - 2;
+    applyDefaultMapping(OpdMapper);
     executeInWaterfallLoop(MI, MRI, { N });
     return;
   }

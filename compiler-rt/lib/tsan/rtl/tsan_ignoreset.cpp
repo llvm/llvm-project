@@ -19,7 +19,7 @@ IgnoreSet::IgnoreSet()
     : size_() {
 }
 
-void IgnoreSet::Add(u32 stack_id) {
+void IgnoreSet::Add(StackID stack_id) {
   if (size_ == kMaxSize)
     return;
   for (uptr i = 0; i < size_; i++) {
@@ -37,7 +37,7 @@ uptr IgnoreSet::Size() const {
   return size_;
 }
 
-u32 IgnoreSet::At(uptr i) const {
+StackID IgnoreSet::At(uptr i) const {
   CHECK_LT(i, size_);
   CHECK_LE(size_, kMaxSize);
   return stacks_[i];

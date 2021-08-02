@@ -6,39 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 //
-// This file implements lowering sparse tensor types to actual sparse code.
+// This file implements converting sparse tensor types to actual sparse code.
 //
-// The concept of letting a compiler generate sparse code automatically was
-// pioneered for dense linear algebra code in Fortran by [Bik96] in MT1 and
-// formalized to tensor algebra by [Kjolstad17,20] for the Sparse Tensor
-// Algebra Compiler (TACO). The implementation in this file closely follows
-// the "sparse iteration theory" that forms the foundation of TACO. A rewriting
-// rule is applied to each tensor expression in linalg (MLIR's tensor index
-// notation) where the sparsity of tensors is indicated with annotation using
-// a per-dimension specification of sparse/dense storage together with a
-// specification of the order on the dimensions. Subsequently, a topologically
-// sorted iteration graph, reflecting the required order on indices with respect
-// to the dimensions of each tensor, is constructed to ensure that all tensors
-// are visited in natural index order. Next, iteration lattices are constructed
-// for the tensor expression for every index in topological order. Each
-// iteration lattice point consists of a conjunction of tensor indices together
-// with a tensor (sub)expression that needs to be evaluated for that
-// conjunction. Within the lattice, iteration points are ordered according to
-// the way indices are exhausted. As such these iteration lattices drive actual
-// sparse code generation, which consists of a tedious but relatively
-// straightforward one-to-one mapping from iteration lattices to combinations
-// of for-loops, while-loops, and if-statements.
-//
-// [Bik96] Aart J.C. Bik. Compiler Support for Sparse Matrix Computations.
-// PhD thesis, Leiden University, May 1996 (aartbik.com/sparse.php).
-// [Kjolstad17] Fredrik Berg Kjolstad, Shoaib Ashraf Kamil, Stephen Chou,
-// David Lugato, and Saman Amarasinghe. The Tensor Algebra Compiler.
-// Proceedings of the ACM on Programming Languages, October 2017.
-// [Kjolstad20] Fredrik Berg Kjolstad. Sparse Tensor Algebra Compilation.
-// PhD thesis, MIT, February, 2020 (tensor-compiler.org).
-//
-// Implementation detail: We use llvm::SmallVector for vectors with
-// variable lengths and std::vector for vectors with fixed lengths.
 //===----------------------------------------------------------------------===//
 
 #include "mlir/Dialect/Linalg/IR/LinalgOps.h"

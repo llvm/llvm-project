@@ -1,5 +1,5 @@
 // RUN: cp %s %t.cpp
-// RUN: clangd -log=verbose -check=%t.cpp 2>&1 | FileCheck -strict-whitespace %s
+// RUN: clangd -enable-config=0 -log=verbose -check=%t.cpp 2>&1 | FileCheck -strict-whitespace %s
 
 // CHECK: Testing on source file
 // CHECK: internal (cc1) args are: -cc1

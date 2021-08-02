@@ -18,7 +18,7 @@
 ; CHECK-NOT: __profn_baz
 
 ; ELF:   @__profc_foo = private global [1 x i64] zeroinitializer, section "__llvm_prf_cnts", comdat, align 8
-; ELF:   @__profd_foo = private {{.*}}, section "__llvm_prf_data", comdat($__profc_foo), align 8
+; ELF:   @__profd_foo = private global { i64, i64, i64, i8*, i8*, i32, [2 x i16] } { i64 [[#]], i64 0, i64 sub (i64 ptrtoint ([1 x i64]* @__profc_foo to i64), i64 ptrtoint ({ i64, i64, i64, i8*, i8*, i32, [2 x i16] }* @__profd_foo to i64)), i8* null, i8* null, i32 1, [2 x i16] zeroinitializer }, section "__llvm_prf_data", comdat($__profc_foo), align 8
 ; MACHO: @__profc_foo = private global [1 x i64] zeroinitializer, section "__DATA,__llvm_prf_cnts", align 8
 ; MACHO: @__profd_foo = private {{.*}}, section "__DATA,__llvm_prf_data,regular,live_support", align 8
 ; WIN:   @__profc_foo = private global [1 x i64] zeroinitializer, section ".lprfc$M", align 8
@@ -59,9 +59,9 @@ declare void @llvm.instrprof.increment(i8*, i64, i32, i32)
 ; WIN:   @llvm.compiler.used = appending global {{.*}} @__llvm_profile_runtime_user {{.*}} @__profd_foo {{.*}} @__profd_bar {{.*}} @__profd_baz
 
 ; ELF_GENERIC:      define internal void @__llvm_profile_register_functions() unnamed_addr {
-; ELF_GENERIC-NEXT:   call void @__llvm_profile_register_function(i8* bitcast ({ i64, i64, i64*, i8*, i8*, i32, [2 x i16] }* @__profd_foo to i8*))
-; ELF_GENERIC-NEXT:   call void @__llvm_profile_register_function(i8* bitcast ({ i64, i64, i64*, i8*, i8*, i32, [2 x i16] }* @__profd_bar to i8*))
-; ELF_GENERIC-NEXT:   call void @__llvm_profile_register_function(i8* bitcast ({ i64, i64, i64*, i8*, i8*, i32, [2 x i16] }* @__profd_baz to i8*))
+; ELF_GENERIC-NEXT:   call void @__llvm_profile_register_function(i8* bitcast ({ i64, i64, i64, i8*, i8*, i32, [2 x i16] }* @__profd_foo to i8*))
+; ELF_GENERIC-NEXT:   call void @__llvm_profile_register_function(i8* bitcast ({ i64, i64, i64, i8*, i8*, i32, [2 x i16] }* @__profd_bar to i8*))
+; ELF_GENERIC-NEXT:   call void @__llvm_profile_register_function(i8* bitcast ({ i64, i64, i64, i8*, i8*, i32, [2 x i16] }* @__profd_baz to i8*))
 ; ELF_GENERIC-NEXT:   call void @__llvm_profile_register_names_function(i8* getelementptr inbounds {{.*}} @__llvm_prf_nm
 ; ELF_GENERIC-NEXT:   ret void
 ; ELF_GENERIC-NEXT: }

@@ -19,12 +19,12 @@
 ; to constant fold the size of %0
 define i64 @f_i64() {
 ; CHECK-LABEL: @f_i64
-; CHECK:         ret i64 mul (i64 ptrtoint (i32* getelementptr (i32, i32* null, i32 1) to i64), i64 1099511627776)
+; CHECK:         ret i64 ptrtoint (%0* getelementptr (%0, %0* null, i32 1) to i64)
   ret i64 ptrtoint (%0* getelementptr (%0, %0* null, i32 1) to i64)
 }
 
 define i32 @f_i32() {
 ; CHECK-LABEL: @f_i32
-; CHECK:         ret i32 mul (i32 ptrtoint (i32* getelementptr (i32, i32* null, i32 1) to i32), i32 -2147483648)
+; CHECK:         ret i32 ptrtoint (%3* getelementptr (%3, %3* null, i32 1) to i32)
   ret i32 ptrtoint (%3* getelementptr (%3, %3* null, i32 1) to i32)
 }

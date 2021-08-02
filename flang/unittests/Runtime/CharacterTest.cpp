@@ -10,8 +10,8 @@
 // in Fortran.
 
 #include "../../runtime/character.h"
-#include "../../runtime/descriptor.h"
 #include "gtest/gtest.h"
+#include "../../runtime/descriptor.h"
 #include <cstring>
 #include <functional>
 #include <tuple>
@@ -264,17 +264,12 @@ template <typename CHAR> struct ExtremumTests : public ::testing::Test {};
 TYPED_TEST_SUITE(ExtremumTests, CharacterTypes, );
 
 TYPED_TEST(ExtremumTests, MinTests) {
-  static std::vector<ExtremumTestCase> tests{
-      {{}, {"a"}, {"z"}, {"a"}},
+  static std::vector<ExtremumTestCase> tests{{{}, {"a"}, {"z"}, {"a"}},
       {{1}, {"zaaa"}, {"aa"}, {"aa  "}},
       {{1, 1}, {"aaz"}, {"aaaaa"}, {"aaaaa"}},
-      {
-        { 2, 3 },
-        { "a",  "b",  "c",  "d",  "E",  "f" },
-        { "xa", "ya", "az", "dd", "Sz", "cc"},
-        { "a ", "b ", "az", "d ", "E ", "cc"}
-      }
-  };
+      {{2, 3}, {"a", "b", "c", "d", "E", "f"},
+          {"xa", "ya", "az", "dd", "Sz", "cc"},
+          {"a ", "b ", "az", "d ", "E ", "cc"}}};
   RunExtremumTests<TypeParam>("MIN", RTNAME(CharacterMin), tests);
 }
 

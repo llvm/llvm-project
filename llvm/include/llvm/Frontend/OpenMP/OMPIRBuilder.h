@@ -486,6 +486,122 @@ public:
   /// \param Loc The location where the taskyield directive was encountered.
   void createTaskyield(const LocationDescription &Loc);
 
+  /// Functions used to generate reductions. Such functions take two Values
+  /// representing LHS and RHS of the reduction, respectively, and a reference
+  /// to the value that is updated to refer to the reduction result.
+  using ReductionGenTy =
+      function_ref<InsertPointTy(InsertPointTy, Value *, Value *, Value *&)>;
+
+  /// Functions used to generate atomic reductions. Such functions take two
+  /// Values representing pointers to LHS and RHS of the reduction. They are
+  /// expected to atomically update the LHS to the reduced value.
+  using AtomicReductionGenTy =
+      function_ref<InsertPointTy(InsertPointTy, Value *, Value *)>;
+
+  /// Information about an OpenMP reduction.
+  struct ReductionInfo {
+    /// Returns the type of the element being reduced.
+    Type *getElementType() const {
+      return Variable->getType()->getPointerElementType();
+    }
+
+    /// Reduction variable of pointer type.
+    Value *Variable;
+
+    /// Thread-private partial reduction variable.
+    Value *PrivateVariable;
+
+    /// Callback for generating the reduction body. The IR produced by this will
+    /// be used to combine two values in a thread-safe context, e.g., under
+    /// lock or within the same thread, and therefore need not be atomic.
+    ReductionGenTy ReductionGen;
+
+    /// Callback for generating the atomic reduction body, may be null. The IR
+    /// produced by this will be used to atomically combine two values during
+    /// reduction. If null, the implementation will use the non-atomic version
+    /// along with the appropriate synchronization mechanisms.
+    AtomicReductionGenTy AtomicReductionGen;
+  };
+
+  // TODO: provide atomic and non-atomic reduction generators for reduction
+  // operators defined by the OpenMP specification.
+
+  /// Generator for '#omp reduction'.
+  ///
+  /// Emits the IR instructing the runtime to perform the specific kind of
+  /// reductions. Expects reduction variables to have been privatized and
+  /// initialized to reduction-neutral values separately. Emits the calls to
+  /// runtime functions as well as the reduction function and the basic blocks
+  /// performing the reduction atomically and non-atomically.
+  ///
+  /// The code emitted for the following:
+  ///
+  /// \code
+  ///   type var_1;
+  ///   type var_2;
+  ///   #pragma omp <directive> reduction(reduction-op:var_1,var_2)
+  ///   /* body */;
+  /// \endcode
+  ///
+  /// corresponds to the following sketch.
+  ///
+  /// \code
+  /// void _outlined_par() {
+  ///   // N is the number of different reductions.
+  ///   void *red_array[] = {privatized_var_1, privatized_var_2, ...};
+  ///   switch(__kmpc_reduce(..., N, /*size of data in red array*/, red_array,
+  ///                        _omp_reduction_func,
+  ///                        _gomp_critical_user.reduction.var)) {
+  ///   case 1: {
+  ///     var_1 = var_1 <reduction-op> privatized_var_1;
+  ///     var_2 = var_2 <reduction-op> privatized_var_2;
+  ///     // ...
+  ///    __kmpc_end_reduce(...);
+  ///     break;
+  ///   }
+  ///   case 2: {
+  ///     _Atomic<ReductionOp>(var_1, privatized_var_1);
+  ///     _Atomic<ReductionOp>(var_2, privatized_var_2);
+  ///     // ...
+  ///     break;
+  ///   }
+  ///   default: break;
+  ///   }
+  /// }
+  ///
+  /// void _omp_reduction_func(void **lhs, void **rhs) {
+  ///   *(type *)lhs[0] = *(type *)lhs[0] <reduction-op> *(type *)rhs[0];
+  ///   *(type *)lhs[1] = *(type *)lhs[1] <reduction-op> *(type *)rhs[1];
+  ///   // ...
+  /// }
+  /// \endcode
+  ///
+  /// \param Loc                The location where the reduction was
+  ///                           encountered. Must be within the associate
+  ///                           directive and after the last local access to the
+  ///                           reduction variables.
+  /// \param AllocaIP           An insertion point suitable for allocas usable
+  ///                           in reductions.
+  /// \param Variables          A list of variables in which the reduction
+  ///                           results will be stored (values of pointer type).
+  /// \param PrivateVariables   A list of variables in which the partial
+  ///                           reduction results are stored (values of pointer
+  ///                           type). Coindexed with Variables. Privatization
+  ///                           must be handled separately from this call.
+  /// \param ReductionGen       A list of generators for non-atomic reduction
+  ///                           bodies. Each takes a pair of partially reduced
+  ///                           values and sets a new one.
+  /// \param AtomicReductionGen A list of generators for atomic reduction
+  ///                           bodies, empty if the reduction cannot be
+  ///                           performed with atomics. Each takes a pair of
+  ///                           _pointers_ to paritally reduced values and
+  ///                           atomically stores the result into the first.
+  /// \param IsNoWait           A flag set if the reduction is marked as nowait.
+  InsertPointTy createReductions(const LocationDescription &Loc,
+                                 InsertPointTy AllocaIP,
+                                 ArrayRef<ReductionInfo> ReductionInfos,
+                                 bool IsNoWait = false);
+
   ///}
 
   /// Return the insertion point used by the underlying IRBuilder.

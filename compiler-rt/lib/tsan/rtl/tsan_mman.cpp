@@ -336,7 +336,7 @@ void invoke_free_hook(void *ptr) {
   RunFreeHooks(ptr);
 }
 
-void *internal_alloc(uptr sz) {
+void *Alloc(uptr sz) {
   ThreadState *thr = cur_thread();
   if (thr->nomalloc) {
     thr->nomalloc = 0;  // CHECK calls internal_malloc().
@@ -345,7 +345,7 @@ void *internal_alloc(uptr sz) {
   return InternalAlloc(sz, &thr->proc()->internal_alloc_cache);
 }
 
-void internal_free(void *p) {
+void FreeImpl(void *p) {
   ThreadState *thr = cur_thread();
   if (thr->nomalloc) {
     thr->nomalloc = 0;  // CHECK calls internal_malloc().
