@@ -4645,6 +4645,38 @@ static bool isMSPropertySubscriptExpr(Sema &S, Expr *Base) {
   return isa<MSPropertySubscriptExpr>(BaseNoParens);
 }
 
+// Returns the type used for LHS[RHS], given one of LHS, RHS is type-dependent.
+// Typically this is DependentTy, but can sometimes be more precise.
+//
+// There are cases when we could determine a non-dependent type:
+//  - LHS and RHS may have non-dependent types despite being type-dependent
+//    (e.g. unbounded array static members of the current instantiation)
+//  - one may be a dependent-sized array with known element type
+//  - one may be a dependent-typed valid index (enum in current instantiation)
+//
+// We *always* return a dependent type, in such cases it is DependentTy.
+// This avoids creating type-dependent expressions with non-dependent types.
+// FIXME: is this important to avoid? See https://reviews.llvm.org/D107275
+static QualType getDependentArraySubscriptType(Expr *LHS, Expr *RHS,
+                                               const ASTContext &Ctx) {
+  assert(LHS->isTypeDependent() || RHS->isTypeDependent());
+  QualType LTy = LHS->getType(), RTy = RHS->getType();
+  QualType Result = Ctx.DependentTy;
+  if (RTy->isIntegralOrUnscopedEnumerationType()) {
+    if (const PointerType *PT = LTy->getAs<PointerType>())
+      Result = PT->getPointeeType();
+    else if (const ArrayType *AT = LTy->getAsArrayTypeUnsafe())
+      Result = AT->getElementType();
+  } else if (LTy->isIntegralOrUnscopedEnumerationType()) {
+    if (const PointerType *PT = RTy->getAs<PointerType>())
+      Result = PT->getPointeeType();
+    else if (const ArrayType *AT = RTy->getAsArrayTypeUnsafe())
+      Result = AT->getElementType();
+  }
+  // Ensure we return a dependent type.
+  return Result->isDependentType() ? Result : Ctx.DependentTy;
+}
+
 ExprResult
 Sema::ActOnArraySubscriptExpr(Scope *S, Expr *base, SourceLocation lbLoc,
                               Expr *idx, SourceLocation rbLoc) {
@@ -4737,8 +4769,9 @@ Sema::ActOnArraySubscriptExpr(Scope *S, Expr *base, SourceLocation lbLoc,
   // Build an unanalyzed expression if either operand is type-dependent.
   if (getLangOpts().CPlusPlus &&
       (base->isTypeDependent() || idx->isTypeDependent())) {
-    return new (Context) ArraySubscriptExpr(base, idx, Context.DependentTy,
-                                            VK_LValue, OK_Ordinary, rbLoc);
+    return new (Context) ArraySubscriptExpr(
+        base, idx, getDependentArraySubscriptType(base, idx, getASTContext()),
+        VK_LValue, OK_Ordinary, rbLoc);
   }
 
   // MSDN, property (C++)
@@ -5492,7 +5525,8 @@ Sema::CreateBuiltinArraySubscriptExpr(Expr *Base, SourceLocation LLoc,
   if (LHSTy->isDependentType() || RHSTy->isDependentType()) {
     BaseExpr = LHSExp;
     IndexExpr = RHSExp;
-    ResultType = Context.DependentTy;
+    ResultType =
+        getDependentArraySubscriptType(LHSExp, RHSExp, getASTContext());
   } else if (const PointerType *PTy = LHSTy->getAs<PointerType>()) {
     BaseExpr = LHSExp;
     IndexExpr = RHSExp;
