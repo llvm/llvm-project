@@ -61,3 +61,10 @@
 // RUN: %clang -target i686-windows-gnu -E -### %s -municode 2>&1 | FileCheck -check-prefix=CHECK_MINGW_UNICODE %s
 // CHECK_MINGW_NO_UNICODE-NOT: "-DUNICODE"
 // CHECK_MINGW_UNICODE: "-DUNICODE"
+
+// RUN: %clang -target i686-windows-gnu -### %s 2>&1 | FileCheck -check-prefix=CHECK_NO_SUBSYS %s
+// RUN: %clang -target i686-windows-gnu -### %s -mwindows -mconsole 2>&1 | FileCheck -check-prefix=CHECK_SUBSYS_CONSOLE %s
+// RUN: %clang -target i686-windows-gnu -### %s -mconsole -mwindows 2>&1 | FileCheck -check-prefix=CHECK_SUBSYS_WINDOWS %s
+// CHECK_NO_SUBSYS-NOT: "--subsystem"
+// CHECK_SUBSYS_CONSOLE: "--subsystem" "console"
+// CHECK_SUBSYS_WINDOWS: "--subsystem" "windows"

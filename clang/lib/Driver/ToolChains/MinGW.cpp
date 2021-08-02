@@ -136,10 +136,13 @@ void tools::MinGW::Linker::ConstructJob(Compilation &C, const JobAction &JA,
     llvm_unreachable("Unsupported target architecture.");
   }
 
-  if (Args.hasArg(options::OPT_mwindows)) {
+  Arg *SubsysArg =
+      Args.getLastArg(options::OPT_mwindows, options::OPT_mconsole);
+  if (SubsysArg && SubsysArg->getOption().matches(options::OPT_mwindows)) {
     CmdArgs.push_back("--subsystem");
     CmdArgs.push_back("windows");
-  } else if (Args.hasArg(options::OPT_mconsole)) {
+  } else if (SubsysArg &&
+             SubsysArg->getOption().matches(options::OPT_mconsole)) {
     CmdArgs.push_back("--subsystem");
     CmdArgs.push_back("console");
   }
