@@ -4,10 +4,6 @@
 // CHECK-NEXT: {{^      #$}}
 // CHECK-NEXT: {{^2$}}
 // CHECK-NEXT: {{^           #$}}
-
-// RUN: %clang_cc1 -E -P -fminimize-whitespace %s | FileCheck --strict-whitespace %s --check-prefix=MINWS
-// MINWS:  {{^}}1#2#{{$}}
-
 #define EMPTY
 #define IDENTITY(X) X
 1

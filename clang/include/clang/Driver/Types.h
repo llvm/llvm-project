@@ -66,14 +66,6 @@ namespace types {
   /// isAcceptedByClang - Can clang handle this input type.
   bool isAcceptedByClang(ID Id);
 
-  /// isDerivedFromC - Is the input derived from C.
-  ///
-  /// That is, does the lexer follow the rules of
-  /// TokenConcatenation::AvoidConcat. If this is the case, the preprocessor may
-  /// add and remove whitespace between tokens. Used to determine whether the
-  /// input can be processed by -fminimize-whitespace.
-  bool isDerivedFromC(ID Id);
-
   /// isCXX - Is this a "C++" input (C++ and Obj-C++ sources and headers).
   bool isCXX(ID Id);
 
