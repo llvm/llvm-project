@@ -247,41 +247,45 @@ body: |
     ; SI: [[COPY:%[0-9]+]]:_(p1) = COPY $vgpr0_vgpr1
     ; SI: [[COPY1:%[0-9]+]]:_(s32) = COPY $vgpr2
     ; SI: [[COPY2:%[0-9]+]]:_(s32) = COPY [[COPY1]](s32)
+    ; SI: [[COPY3:%[0-9]+]]:_(s32) = COPY [[COPY2]](s32)
     ; SI: [[C:%[0-9]+]]:_(s32) = G_CONSTANT i32 16
-    ; SI: [[LSHR:%[0-9]+]]:_(s32) = G_LSHR [[COPY2]], [[C]](s32)
+    ; SI: [[LSHR:%[0-9]+]]:_(s32) = G_LSHR [[COPY3]], [[C]](s32)
     ; SI: [[C1:%[0-9]+]]:_(s64) = G_CONSTANT i64 2
     ; SI: [[PTR_ADD:%[0-9]+]]:_(p1) = G_PTR_ADD [[COPY]], [[C1]](s64)
-    ; SI: G_STORE [[COPY2]](s32), [[COPY]](p1) :: (store (s16), align 4, addrspace 1)
+    ; SI: G_STORE [[COPY3]](s32), [[COPY]](p1) :: (store (s16), align 4, addrspace 1)
     ; SI: G_STORE [[LSHR]](s32), [[PTR_ADD]](p1) :: (store (s8) into unknown-address + 2, align 2, addrspace 1)
     ; CI-LABEL: name: test_store_global_s24_align4
     ; CI: [[COPY:%[0-9]+]]:_(p1) = COPY $vgpr0_vgpr1
     ; CI: [[COPY1:%[0-9]+]]:_(s32) = COPY $vgpr2
     ; CI: [[COPY2:%[0-9]+]]:_(s32) = COPY [[COPY1]](s32)
+    ; CI: [[COPY3:%[0-9]+]]:_(s32) = COPY [[COPY2]](s32)
     ; CI: [[C:%[0-9]+]]:_(s32) = G_CONSTANT i32 16
-    ; CI: [[LSHR:%[0-9]+]]:_(s32) = G_LSHR [[COPY2]], [[C]](s32)
+    ; CI: [[LSHR:%[0-9]+]]:_(s32) = G_LSHR [[COPY3]], [[C]](s32)
     ; CI: [[C1:%[0-9]+]]:_(s64) = G_CONSTANT i64 2
     ; CI: [[PTR_ADD:%[0-9]+]]:_(p1) = G_PTR_ADD [[COPY]], [[C1]](s64)
-    ; CI: G_STORE [[COPY2]](s32), [[COPY]](p1) :: (store (s16), align 4, addrspace 1)
+    ; CI: G_STORE [[COPY3]](s32), [[COPY]](p1) :: (store (s16), align 4, addrspace 1)
     ; CI: G_STORE [[LSHR]](s32), [[PTR_ADD]](p1) :: (store (s8) into unknown-address + 2, align 2, addrspace 1)
     ; VI-LABEL: name: test_store_global_s24_align4
     ; VI: [[COPY:%[0-9]+]]:_(p1) = COPY $vgpr0_vgpr1
     ; VI: [[COPY1:%[0-9]+]]:_(s32) = COPY $vgpr2
     ; VI: [[COPY2:%[0-9]+]]:_(s32) = COPY [[COPY1]](s32)
+    ; VI: [[COPY3:%[0-9]+]]:_(s32) = COPY [[COPY2]](s32)
     ; VI: [[C:%[0-9]+]]:_(s32) = G_CONSTANT i32 16
-    ; VI: [[LSHR:%[0-9]+]]:_(s32) = G_LSHR [[COPY2]], [[C]](s32)
+    ; VI: [[LSHR:%[0-9]+]]:_(s32) = G_LSHR [[COPY3]], [[C]](s32)
     ; VI: [[C1:%[0-9]+]]:_(s64) = G_CONSTANT i64 2
     ; VI: [[PTR_ADD:%[0-9]+]]:_(p1) = G_PTR_ADD [[COPY]], [[C1]](s64)
-    ; VI: G_STORE [[COPY2]](s32), [[COPY]](p1) :: (store (s16), align 4, addrspace 1)
+    ; VI: G_STORE [[COPY3]](s32), [[COPY]](p1) :: (store (s16), align 4, addrspace 1)
     ; VI: G_STORE [[LSHR]](s32), [[PTR_ADD]](p1) :: (store (s8) into unknown-address + 2, align 2, addrspace 1)
     ; GFX9-LABEL: name: test_store_global_s24_align4
     ; GFX9: [[COPY:%[0-9]+]]:_(p1) = COPY $vgpr0_vgpr1
     ; GFX9: [[COPY1:%[0-9]+]]:_(s32) = COPY $vgpr2
     ; GFX9: [[COPY2:%[0-9]+]]:_(s32) = COPY [[COPY1]](s32)
+    ; GFX9: [[COPY3:%[0-9]+]]:_(s32) = COPY [[COPY2]](s32)
     ; GFX9: [[C:%[0-9]+]]:_(s32) = G_CONSTANT i32 16
-    ; GFX9: [[LSHR:%[0-9]+]]:_(s32) = G_LSHR [[COPY2]], [[C]](s32)
+    ; GFX9: [[LSHR:%[0-9]+]]:_(s32) = G_LSHR [[COPY3]], [[C]](s32)
     ; GFX9: [[C1:%[0-9]+]]:_(s64) = G_CONSTANT i64 2
     ; GFX9: [[PTR_ADD:%[0-9]+]]:_(p1) = G_PTR_ADD [[COPY]], [[C1]](s64)
-    ; GFX9: G_STORE [[COPY2]](s32), [[COPY]](p1) :: (store (s16), align 4, addrspace 1)
+    ; GFX9: G_STORE [[COPY3]](s32), [[COPY]](p1) :: (store (s16), align 4, addrspace 1)
     ; GFX9: G_STORE [[LSHR]](s32), [[PTR_ADD]](p1) :: (store (s8) into unknown-address + 2, align 2, addrspace 1)
     %0:_(p1) = COPY $vgpr0_vgpr1
     %1:_(s32) = COPY $vgpr2
@@ -316,11 +320,12 @@ body: |
     ; CI: [[COPY:%[0-9]+]]:_(p1) = COPY $vgpr0_vgpr1
     ; CI: [[COPY1:%[0-9]+]]:_(s32) = COPY $vgpr2
     ; CI: [[COPY2:%[0-9]+]]:_(s32) = COPY [[COPY1]](s32)
+    ; CI: [[COPY3:%[0-9]+]]:_(s32) = COPY [[COPY2]](s32)
     ; CI: [[C:%[0-9]+]]:_(s32) = G_CONSTANT i32 16
-    ; CI: [[LSHR:%[0-9]+]]:_(s32) = G_LSHR [[COPY2]], [[C]](s32)
+    ; CI: [[LSHR:%[0-9]+]]:_(s32) = G_LSHR [[COPY3]], [[C]](s32)
     ; CI: [[C1:%[0-9]+]]:_(s64) = G_CONSTANT i64 2
     ; CI: [[PTR_ADD:%[0-9]+]]:_(p1) = G_PTR_ADD [[COPY]], [[C1]](s64)
-    ; CI: G_STORE [[COPY2]](s32), [[COPY]](p1) :: (store (s16), addrspace 1)
+    ; CI: G_STORE [[COPY3]](s32), [[COPY]](p1) :: (store (s16), addrspace 1)
     ; CI: G_STORE [[LSHR]](s32), [[PTR_ADD]](p1) :: (store (s8) into unknown-address + 2, align 2, addrspace 1)
     ; VI-LABEL: name: test_store_global_s24_align2
     ; VI: [[COPY:%[0-9]+]]:_(p1) = COPY $vgpr0_vgpr1
@@ -343,11 +348,12 @@ body: |
     ; GFX9: [[COPY:%[0-9]+]]:_(p1) = COPY $vgpr0_vgpr1
     ; GFX9: [[COPY1:%[0-9]+]]:_(s32) = COPY $vgpr2
     ; GFX9: [[COPY2:%[0-9]+]]:_(s32) = COPY [[COPY1]](s32)
+    ; GFX9: [[COPY3:%[0-9]+]]:_(s32) = COPY [[COPY2]](s32)
     ; GFX9: [[C:%[0-9]+]]:_(s32) = G_CONSTANT i32 16
-    ; GFX9: [[LSHR:%[0-9]+]]:_(s32) = G_LSHR [[COPY2]], [[C]](s32)
+    ; GFX9: [[LSHR:%[0-9]+]]:_(s32) = G_LSHR [[COPY3]], [[C]](s32)
     ; GFX9: [[C1:%[0-9]+]]:_(s64) = G_CONSTANT i64 2
     ; GFX9: [[PTR_ADD:%[0-9]+]]:_(p1) = G_PTR_ADD [[COPY]], [[C1]](s64)
-    ; GFX9: G_STORE [[COPY2]](s32), [[COPY]](p1) :: (store (s16), addrspace 1)
+    ; GFX9: G_STORE [[COPY3]](s32), [[COPY]](p1) :: (store (s16), addrspace 1)
     ; GFX9: G_STORE [[LSHR]](s32), [[PTR_ADD]](p1) :: (store (s8) into unknown-address + 2, align 2, addrspace 1)
     %0:_(p1) = COPY $vgpr0_vgpr1
     %1:_(s32) = COPY $vgpr2
@@ -391,11 +397,12 @@ body: |
     ; CI: [[COPY:%[0-9]+]]:_(p1) = COPY $vgpr0_vgpr1
     ; CI: [[COPY1:%[0-9]+]]:_(s32) = COPY $vgpr2
     ; CI: [[COPY2:%[0-9]+]]:_(s32) = COPY [[COPY1]](s32)
+    ; CI: [[COPY3:%[0-9]+]]:_(s32) = COPY [[COPY2]](s32)
     ; CI: [[C:%[0-9]+]]:_(s32) = G_CONSTANT i32 16
-    ; CI: [[LSHR:%[0-9]+]]:_(s32) = G_LSHR [[COPY2]], [[C]](s32)
+    ; CI: [[LSHR:%[0-9]+]]:_(s32) = G_LSHR [[COPY3]], [[C]](s32)
     ; CI: [[C1:%[0-9]+]]:_(s64) = G_CONSTANT i64 2
     ; CI: [[PTR_ADD:%[0-9]+]]:_(p1) = G_PTR_ADD [[COPY]], [[C1]](s64)
-    ; CI: G_STORE [[COPY2]](s32), [[COPY]](p1) :: (store (s16), align 1, addrspace 1)
+    ; CI: G_STORE [[COPY3]](s32), [[COPY]](p1) :: (store (s16), align 1, addrspace 1)
     ; CI: G_STORE [[LSHR]](s32), [[PTR_ADD]](p1) :: (store (s8) into unknown-address + 2, addrspace 1)
     ; VI-LABEL: name: test_store_global_s24_align1
     ; VI: [[COPY:%[0-9]+]]:_(p1) = COPY $vgpr0_vgpr1
@@ -425,11 +432,12 @@ body: |
     ; GFX9: [[COPY:%[0-9]+]]:_(p1) = COPY $vgpr0_vgpr1
     ; GFX9: [[COPY1:%[0-9]+]]:_(s32) = COPY $vgpr2
     ; GFX9: [[COPY2:%[0-9]+]]:_(s32) = COPY [[COPY1]](s32)
+    ; GFX9: [[COPY3:%[0-9]+]]:_(s32) = COPY [[COPY2]](s32)
     ; GFX9: [[C:%[0-9]+]]:_(s32) = G_CONSTANT i32 16
-    ; GFX9: [[LSHR:%[0-9]+]]:_(s32) = G_LSHR [[COPY2]], [[C]](s32)
+    ; GFX9: [[LSHR:%[0-9]+]]:_(s32) = G_LSHR [[COPY3]], [[C]](s32)
     ; GFX9: [[C1:%[0-9]+]]:_(s64) = G_CONSTANT i64 2
     ; GFX9: [[PTR_ADD:%[0-9]+]]:_(p1) = G_PTR_ADD [[COPY]], [[C1]](s64)
-    ; GFX9: G_STORE [[COPY2]](s32), [[COPY]](p1) :: (store (s16), align 1, addrspace 1)
+    ; GFX9: G_STORE [[COPY3]](s32), [[COPY]](p1) :: (store (s16), align 1, addrspace 1)
     ; GFX9: G_STORE [[LSHR]](s32), [[PTR_ADD]](p1) :: (store (s8) into unknown-address + 2, addrspace 1)
     %0:_(p1) = COPY $vgpr0_vgpr1
     %1:_(s32) = COPY $vgpr2
@@ -818,11 +826,12 @@ body: |
     ; CI: [[COPY:%[0-9]+]]:_(p1) = COPY $vgpr0_vgpr1
     ; CI: [[COPY1:%[0-9]+]]:_(s64) = COPY $vgpr2_vgpr3
     ; CI: [[COPY2:%[0-9]+]]:_(s64) = COPY [[COPY1]](s64)
+    ; CI: [[COPY3:%[0-9]+]]:_(s64) = COPY [[COPY2]](s64)
     ; CI: [[C:%[0-9]+]]:_(s32) = G_CONSTANT i32 32
-    ; CI: [[LSHR:%[0-9]+]]:_(s64) = G_LSHR [[COPY2]], [[C]](s32)
+    ; CI: [[LSHR:%[0-9]+]]:_(s64) = G_LSHR [[COPY3]], [[C]](s32)
     ; CI: [[C1:%[0-9]+]]:_(s64) = G_CONSTANT i64 4
     ; CI: [[PTR_ADD:%[0-9]+]]:_(p1) = G_PTR_ADD [[COPY]], [[C1]](s64)
-    ; CI: [[TRUNC:%[0-9]+]]:_(s32) = G_TRUNC [[COPY2]](s64)
+    ; CI: [[TRUNC:%[0-9]+]]:_(s32) = G_TRUNC [[COPY3]](s64)
     ; CI: G_STORE [[TRUNC]](s32), [[COPY]](p1) :: (store (s32), align 1, addrspace 1)
     ; CI: [[TRUNC1:%[0-9]+]]:_(s32) = G_TRUNC [[LSHR]](s64)
     ; CI: G_STORE [[TRUNC1]](s32), [[PTR_ADD]](p1) :: (store (s16) into unknown-address + 4, align 1, addrspace 1)
@@ -866,11 +875,12 @@ body: |
     ; GFX9: [[COPY:%[0-9]+]]:_(p1) = COPY $vgpr0_vgpr1
     ; GFX9: [[COPY1:%[0-9]+]]:_(s64) = COPY $vgpr2_vgpr3
     ; GFX9: [[COPY2:%[0-9]+]]:_(s64) = COPY [[COPY1]](s64)
+    ; GFX9: [[COPY3:%[0-9]+]]:_(s64) = COPY [[COPY2]](s64)
     ; GFX9: [[C:%[0-9]+]]:_(s32) = G_CONSTANT i32 32
-    ; GFX9: [[LSHR:%[0-9]+]]:_(s64) = G_LSHR [[COPY2]], [[C]](s32)
+    ; GFX9: [[LSHR:%[0-9]+]]:_(s64) = G_LSHR [[COPY3]], [[C]](s32)
     ; GFX9: [[C1:%[0-9]+]]:_(s64) = G_CONSTANT i64 4
     ; GFX9: [[PTR_ADD:%[0-9]+]]:_(p1) = G_PTR_ADD [[COPY]], [[C1]](s64)
-    ; GFX9: [[TRUNC:%[0-9]+]]:_(s32) = G_TRUNC [[COPY2]](s64)
+    ; GFX9: [[TRUNC:%[0-9]+]]:_(s32) = G_TRUNC [[COPY3]](s64)
     ; GFX9: G_STORE [[TRUNC]](s32), [[COPY]](p1) :: (store (s32), align 1, addrspace 1)
     ; GFX9: [[TRUNC1:%[0-9]+]]:_(s32) = G_TRUNC [[LSHR]](s64)
     ; GFX9: G_STORE [[TRUNC1]](s32), [[PTR_ADD]](p1) :: (store (s16) into unknown-address + 4, align 1, addrspace 1)
@@ -909,11 +919,12 @@ body: |
     ; CI: [[COPY:%[0-9]+]]:_(p1) = COPY $vgpr0_vgpr1
     ; CI: [[COPY1:%[0-9]+]]:_(s64) = COPY $vgpr2_vgpr3
     ; CI: [[COPY2:%[0-9]+]]:_(s64) = COPY [[COPY1]](s64)
+    ; CI: [[COPY3:%[0-9]+]]:_(s64) = COPY [[COPY2]](s64)
     ; CI: [[C:%[0-9]+]]:_(s32) = G_CONSTANT i32 32
-    ; CI: [[LSHR:%[0-9]+]]:_(s64) = G_LSHR [[COPY2]], [[C]](s32)
+    ; CI: [[LSHR:%[0-9]+]]:_(s64) = G_LSHR [[COPY3]], [[C]](s32)
     ; CI: [[C1:%[0-9]+]]:_(s64) = G_CONSTANT i64 4
     ; CI: [[PTR_ADD:%[0-9]+]]:_(p1) = G_PTR_ADD [[COPY]], [[C1]](s64)
-    ; CI: [[TRUNC:%[0-9]+]]:_(s32) = G_TRUNC [[COPY2]](s64)
+    ; CI: [[TRUNC:%[0-9]+]]:_(s32) = G_TRUNC [[COPY3]](s64)
     ; CI: G_STORE [[TRUNC]](s32), [[COPY]](p1) :: (store (s32), align 2, addrspace 1)
     ; CI: [[TRUNC1:%[0-9]+]]:_(s32) = G_TRUNC [[LSHR]](s64)
     ; CI: G_STORE [[TRUNC1]](s32), [[PTR_ADD]](p1) :: (store (s16) into unknown-address + 4, addrspace 1)
@@ -940,11 +951,12 @@ body: |
     ; GFX9: [[COPY:%[0-9]+]]:_(p1) = COPY $vgpr0_vgpr1
     ; GFX9: [[COPY1:%[0-9]+]]:_(s64) = COPY $vgpr2_vgpr3
     ; GFX9: [[COPY2:%[0-9]+]]:_(s64) = COPY [[COPY1]](s64)
+    ; GFX9: [[COPY3:%[0-9]+]]:_(s64) = COPY [[COPY2]](s64)
     ; GFX9: [[C:%[0-9]+]]:_(s32) = G_CONSTANT i32 32
-    ; GFX9: [[LSHR:%[0-9]+]]:_(s64) = G_LSHR [[COPY2]], [[C]](s32)
+    ; GFX9: [[LSHR:%[0-9]+]]:_(s64) = G_LSHR [[COPY3]], [[C]](s32)
     ; GFX9: [[C1:%[0-9]+]]:_(s64) = G_CONSTANT i64 4
     ; GFX9: [[PTR_ADD:%[0-9]+]]:_(p1) = G_PTR_ADD [[COPY]], [[C1]](s64)
-    ; GFX9: [[TRUNC:%[0-9]+]]:_(s32) = G_TRUNC [[COPY2]](s64)
+    ; GFX9: [[TRUNC:%[0-9]+]]:_(s32) = G_TRUNC [[COPY3]](s64)
     ; GFX9: G_STORE [[TRUNC]](s32), [[COPY]](p1) :: (store (s32), align 2, addrspace 1)
     ; GFX9: [[TRUNC1:%[0-9]+]]:_(s32) = G_TRUNC [[LSHR]](s64)
     ; GFX9: G_STORE [[TRUNC1]](s32), [[PTR_ADD]](p1) :: (store (s16) into unknown-address + 4, addrspace 1)
