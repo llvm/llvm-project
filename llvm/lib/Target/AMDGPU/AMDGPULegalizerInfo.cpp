@@ -4770,12 +4770,20 @@ bool AMDGPULegalizerInfo::legalizeBVHIntrinsic(MachineInstr &MI,
     return false;
   }
 
-  bool IsA16 = MRI.getType(RayDir).getElementType().getSizeInBits() == 16;
-  bool Is64 =  MRI.getType(NodePtr).getSizeInBits() == 64;
-  unsigned Opcode = IsA16 ? Is64 ? AMDGPU::IMAGE_BVH64_INTERSECT_RAY_a16_nsa
-                                 : AMDGPU::IMAGE_BVH_INTERSECT_RAY_a16_nsa
-                          : Is64 ? AMDGPU::IMAGE_BVH64_INTERSECT_RAY_nsa
-                                 : AMDGPU::IMAGE_BVH_INTERSECT_RAY_nsa;
+  const bool IsA16 = MRI.getType(RayDir).getElementType().getSizeInBits() == 16;
+  const bool Is64 = MRI.getType(NodePtr).getSizeInBits() == 64;
+  const unsigned NumVAddrs = IsA16 ? (Is64 ? 9 : 8) : (Is64 ? 12 : 11);
+  const bool UseNSA = ST.hasNSAEncoding() && NumVAddrs <= ST.getNSAMaxSize();
+  const unsigned Opcodes[2][2][2] = {
+      {{AMDGPU::IMAGE_BVH_INTERSECT_RAY_sa,
+        AMDGPU::IMAGE_BVH64_INTERSECT_RAY_sa},
+       {AMDGPU::IMAGE_BVH_INTERSECT_RAY_a16_sa,
+        AMDGPU::IMAGE_BVH64_INTERSECT_RAY_a16_sa}},
+      {{AMDGPU::IMAGE_BVH_INTERSECT_RAY_nsa,
+        AMDGPU::IMAGE_BVH64_INTERSECT_RAY_nsa},
+       {AMDGPU::IMAGE_BVH_INTERSECT_RAY_a16_nsa,
+        AMDGPU::IMAGE_BVH64_INTERSECT_RAY_a16_nsa}}};
+  const unsigned Opcode = Opcodes[UseNSA][IsA16][Is64];
 
   SmallVector<Register, 12> Ops;
   if (Is64) {
@@ -4810,6 +4818,14 @@ bool AMDGPULegalizerInfo::legalizeBVHIntrinsic(MachineInstr &MI,
   } else {
     packLanes(RayDir);
     packLanes(RayInvDir);
+  }
+
+  if (!UseNSA) {
+    // Build a single vector containing all the operands so far prepared.
+    LLT OpTy = LLT::fixed_vector(Ops.size(), 32);
+    Register MergedOps = B.buildMerge(OpTy, Ops).getReg(0);
+    Ops.clear();
+    Ops.push_back(MergedOps);
   }
 
   auto MIB = B.buildInstr(AMDGPU::G_AMDGPU_INTRIN_BVH_INTERSECT_RAY)

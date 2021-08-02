@@ -282,22 +282,21 @@ void ScopedReportBase::AddMutex(const SyncVar *s) {
   rm->stack = SymbolizeStackId(s->creation_stack_id);
 }
 
-u64 ScopedReportBase::AddMutex(u64 id) NO_THREAD_SAFETY_ANALYSIS {
+u64 ScopedReportBase::AddMutex(u64 id) {
   u64 uid = 0;
   u64 mid = id;
   uptr addr = SyncVar::SplitId(id, &uid);
-  SyncVar *s = ctx->metamap.GetIfExistsAndLock(addr, true);
+  SyncVar *s = ctx->metamap.GetSyncIfExists(addr);
   // Check that the mutex is still alive.
   // Another mutex can be created at the same address,
   // so check uid as well.
   if (s && s->CheckId(uid)) {
+    Lock l(&s->mtx);
     mid = s->uid;
     AddMutex(s);
   } else {
     AddDeadMutex(id);
   }
-  if (s)
-    s->mtx.Unlock();
   return mid;
 }
 

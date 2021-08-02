@@ -1040,6 +1040,12 @@ AArch64TargetLowering::AArch64TargetLowering(const TargetMachine &TM,
     setOperationAction(ISD::BITREVERSE, MVT::v4i32, Custom);
     setOperationAction(ISD::BITREVERSE, MVT::v1i64, Custom);
     setOperationAction(ISD::BITREVERSE, MVT::v2i64, Custom);
+    for (auto VT : {MVT::v1i64, MVT::v2i64}) {
+      setOperationAction(ISD::UMAX, VT, Custom);
+      setOperationAction(ISD::SMAX, VT, Custom);
+      setOperationAction(ISD::UMIN, VT, Custom);
+      setOperationAction(ISD::SMIN, VT, Custom);
+    }
 
     // AArch64 doesn't have MUL.2d:
     setOperationAction(ISD::MUL, MVT::v2i64, Expand);
@@ -4825,17 +4831,10 @@ SDValue AArch64TargetLowering::LowerOperation(SDValue Op,
   case ISD::UDIV:
     return LowerDIV(Op, DAG);
   case ISD::SMIN:
-    return LowerToPredicatedOp(Op, DAG, AArch64ISD::SMIN_PRED,
-                               /*OverrideNEON=*/true);
   case ISD::UMIN:
-    return LowerToPredicatedOp(Op, DAG, AArch64ISD::UMIN_PRED,
-                               /*OverrideNEON=*/true);
   case ISD::SMAX:
-    return LowerToPredicatedOp(Op, DAG, AArch64ISD::SMAX_PRED,
-                               /*OverrideNEON=*/true);
   case ISD::UMAX:
-    return LowerToPredicatedOp(Op, DAG, AArch64ISD::UMAX_PRED,
-                               /*OverrideNEON=*/true);
+    return LowerMinMax(Op, DAG);
   case ISD::SRA:
   case ISD::SRL:
   case ISD::SHL:
@@ -7129,6 +7128,56 @@ SDValue AArch64TargetLowering::LowerCTTZ(SDValue Op, SelectionDAG &DAG) const {
   SDLoc DL(Op);
   SDValue RBIT = DAG.getNode(ISD::BITREVERSE, DL, VT, Op.getOperand(0));
   return DAG.getNode(ISD::CTLZ, DL, VT, RBIT);
+}
+
+SDValue AArch64TargetLowering::LowerMinMax(SDValue Op,
+                                           SelectionDAG &DAG) const {
+
+  EVT VT = Op.getValueType();
+  SDLoc DL(Op);
+  unsigned Opcode = Op.getOpcode();
+  ISD::CondCode CC;
+  switch (Opcode) {
+  default:
+    llvm_unreachable("Wrong instruction");
+  case ISD::SMAX:
+    CC = ISD::SETGT;
+    break;
+  case ISD::SMIN:
+    CC = ISD::SETLT;
+    break;
+  case ISD::UMAX:
+    CC = ISD::SETUGT;
+    break;
+  case ISD::UMIN:
+    CC = ISD::SETULT;
+    break;
+  }
+
+  if (VT.isScalableVector() ||
+      useSVEForFixedLengthVectorVT(VT, /*OverrideNEON=*/true)) {
+    switch (Opcode) {
+    default:
+      llvm_unreachable("Wrong instruction");
+    case ISD::SMAX:
+      return LowerToPredicatedOp(Op, DAG, AArch64ISD::SMAX_PRED,
+                                 /*OverrideNEON=*/true);
+    case ISD::SMIN:
+      return LowerToPredicatedOp(Op, DAG, AArch64ISD::SMIN_PRED,
+                                 /*OverrideNEON=*/true);
+    case ISD::UMAX:
+      return LowerToPredicatedOp(Op, DAG, AArch64ISD::UMAX_PRED,
+                                 /*OverrideNEON=*/true);
+    case ISD::UMIN:
+      return LowerToPredicatedOp(Op, DAG, AArch64ISD::UMIN_PRED,
+                                 /*OverrideNEON=*/true);
+    }
+  }
+
+  SDValue Op0 = Op.getOperand(0);
+  SDValue Op1 = Op.getOperand(1);
+  SDValue Cond = DAG.getSetCC(DL, VT, Op0, Op1, CC);
+  return DAG.getSelect(DL, VT, Cond, Op0, Op1);
 }
 
 SDValue AArch64TargetLowering::LowerBitreverse(SDValue Op,

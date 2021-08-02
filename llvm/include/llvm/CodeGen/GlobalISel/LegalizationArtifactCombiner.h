@@ -756,6 +756,10 @@ public:
       SmallBitVector DeadDefs(NumDefs);
       for (unsigned DefIdx = 0; DefIdx < NumDefs; ++DefIdx) {
         Register DefReg = MI.getReg(DefIdx);
+        if (MRI.use_nodbg_empty(DefReg)) {
+          DeadDefs[DefIdx] = true;
+          continue;
+        }
         Register FoundVal =
             findValueFromDef(DefReg, 0, DestTy.getSizeInBits());
         if (!FoundVal || FoundVal == DefReg)

@@ -500,6 +500,12 @@ public:
 
   /// Information about an OpenMP reduction.
   struct ReductionInfo {
+    ReductionInfo(Value *Variable, Value *PrivateVariable,
+                  ReductionGenTy ReductionGen,
+                  AtomicReductionGenTy AtomicReductionGen)
+        : Variable(Variable), PrivateVariable(PrivateVariable),
+          ReductionGen(ReductionGen), AtomicReductionGen(AtomicReductionGen) {}
+
     /// Returns the type of the element being reduced.
     Type *getElementType() const {
       return Variable->getType()->getPointerElementType();

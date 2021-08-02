@@ -25,7 +25,7 @@ public:
   ConstraintsSet() : FlatAffineConstraints() {}
 
   /// Assuming `val` is defined by `val = affine.min map (operands)`, introduce
-  /// all the constraints `val >= expr_i(operands)`, where expr_i are all the
+  /// all the constraints `val <= expr_i(operands)`, where expr_i are all the
   /// results of `map`.
   // This API avoids taking a dependence on the AffineMinOp definition.
   LogicalResult composeMin(Value val, AffineMap map, ValueRange operands) {
@@ -33,7 +33,7 @@ public:
   }
 
   /// Assuming `val` is defined by `val = affine.max map (operands)`, introduce
-  /// all the constraints `val <= expr_i(operands)`, where expr_i are all the
+  /// all the constraints `val >= expr_i(operands)`, where expr_i are all the
   /// results of `map`.
   // This API avoids taking a dependence on the AffineMaxOp definition.
   LogicalResult composeMax(Value val, AffineMap map, ValueRange operands) {

@@ -1639,7 +1639,7 @@ ARMTTIImpl::getExtendedAddReductionCost(bool IsMLA, bool IsUnsigned,
     unsigned RevVTSize = ResVT.getSizeInBits();
     if (ValVT.getSizeInBits() <= 128 &&
         ((LT.second == MVT::v16i8 && RevVTSize <= 32) ||
-         (LT.second == MVT::v8i16 && RevVTSize <= (IsMLA ? 64 : 32)) ||
+         (LT.second == MVT::v8i16 && RevVTSize <= (IsMLA ? 64u : 32u)) ||
          (LT.second == MVT::v4i32 && RevVTSize <= 64)))
       return ST->getMVEVectorCostFactor(CostKind) * LT.first;
   }

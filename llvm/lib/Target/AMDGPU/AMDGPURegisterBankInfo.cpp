@@ -4255,8 +4255,17 @@ AMDGPURegisterBankInfo::getInstrMapping(const MachineInstr &MI) const {
     unsigned N = MI.getNumExplicitOperands() - 2;
     OpdsMapping[0] = AMDGPU::getValueMapping(AMDGPU::VGPRRegBankID, 128);
     OpdsMapping[N] = getSGPROpMapping(MI.getOperand(N).getReg(), MRI, *TRI);
-    for (unsigned I = 2; I < N; ++I)
-      OpdsMapping[I] = AMDGPU::getValueMapping(AMDGPU::VGPRRegBankID, 32);
+    if (N == 3) {
+      // Sequential form: all operands combined into VGPR256/VGPR512
+      unsigned Size = MRI.getType(MI.getOperand(2).getReg()).getSizeInBits();
+      if (Size > 256)
+        Size = 512;
+      OpdsMapping[2] = AMDGPU::getValueMapping(AMDGPU::VGPRRegBankID, Size);
+    } else {
+      // NSA form
+      for (unsigned I = 2; I < N; ++I)
+        OpdsMapping[I] = AMDGPU::getValueMapping(AMDGPU::VGPRRegBankID, 32);
+    }
     break;
   }
   case AMDGPU::G_INTRINSIC_W_SIDE_EFFECTS: {

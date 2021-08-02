@@ -29,14 +29,6 @@ void IgnoreSet::Add(StackID stack_id) {
   stacks_[size_++] = stack_id;
 }
 
-void IgnoreSet::Reset() {
-  size_ = 0;
-}
-
-uptr IgnoreSet::Size() const {
-  return size_;
-}
-
 StackID IgnoreSet::At(uptr i) const {
   CHECK_LT(i, size_);
   CHECK_LE(size_, kMaxSize);
