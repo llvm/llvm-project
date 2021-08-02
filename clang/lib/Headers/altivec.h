@@ -3049,13 +3049,10 @@ static __inline__ vector unsigned char __ATTRS_o_ai
 vec_xl_len_r(const unsigned char *__a, size_t __b) {
   vector unsigned char __res =
       (vector unsigned char)__builtin_vsx_lxvll(__a, (__b << 56));
-#ifdef __LITTLE_ENDIAN__
   vector unsigned char __mask =
       (vector unsigned char)__builtin_altivec_lvsr(16 - __b, (int *)NULL);
-  __res = (vector unsigned char)__builtin_altivec_vperm_4si(
+  return (vector unsigned char)__builtin_altivec_vperm_4si(
       (vector int)__res, (vector int)__res, __mask);
-#endif
-  return __res;
 }
 
 // vec_xst_len
@@ -3130,15 +3127,11 @@ static __inline__ void __ATTRS_o_ai vec_xst_len(vector double __a, double *__b,
 static __inline__ void __ATTRS_o_ai vec_xst_len_r(vector unsigned char __a,
                                                   unsigned char *__b,
                                                   size_t __c) {
-#ifdef __LITTLE_ENDIAN__
   vector unsigned char __mask =
       (vector unsigned char)__builtin_altivec_lvsl(16 - __c, (int *)NULL);
   vector unsigned char __res =
       __builtin_altivec_vperm_4si((vector int)__a, (vector int)__a, __mask);
   return __builtin_vsx_stxvll((vector int)__res, __b, (__c << 56));
-#else
-  return __builtin_vsx_stxvll((vector int)__a, __b, (__c << 56));
-#endif
 }
 #endif
 #endif
