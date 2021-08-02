@@ -1,4 +1,4 @@
-//===-- tsan_update_shadow_word_inl.h ---------------------------*- C++ -*-===//
+//===-- tsan_update_shadow_word.inc -----------------------------*- C++ -*-===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
