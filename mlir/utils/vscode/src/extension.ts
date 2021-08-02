@@ -7,6 +7,9 @@ import {MLIRContext} from './mlirContext';
  *  activated the very first time a command is executed.
  */
 export function activate(context: vscode.ExtensionContext) {
+  const outputChannel = vscode.window.createOutputChannel('MLIR');
+  context.subscriptions.push(outputChannel);
+
   const mlirContext = new MLIRContext();
   context.subscriptions.push(mlirContext);
 
@@ -14,8 +17,8 @@ export function activate(context: vscode.ExtensionContext) {
   context.subscriptions.push(
       vscode.commands.registerCommand('mlir.restart', async () => {
         mlirContext.dispose();
-        await mlirContext.activate();
+        await mlirContext.activate(outputChannel);
       }));
 
-  mlirContext.activate();
+  mlirContext.activate(outputChannel);
 }
