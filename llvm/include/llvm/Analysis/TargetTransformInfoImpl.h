@@ -187,7 +187,8 @@ public:
   }
 
   void getUnrollingPreferences(Loop *, ScalarEvolution &,
-                               TTI::UnrollingPreferences &) const {}
+                               TTI::UnrollingPreferences &,
+                               OptimizationRemarkEmitter *) const {}
 
   void getPeelingPreferences(Loop *, ScalarEvolution &,
                              TTI::PeelingPreferences &) const {}
