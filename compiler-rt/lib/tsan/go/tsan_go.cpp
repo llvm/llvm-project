@@ -27,11 +27,9 @@ bool IsExpectedReport(uptr addr, uptr size) {
   return false;
 }
 
-void *internal_alloc(uptr sz) { return InternalAlloc(sz); }
+void *Alloc(uptr sz) { return InternalAlloc(sz); }
 
-void internal_free(void *p) {
-  InternalFree(p);
-}
+void FreeImpl(void *p) { InternalFree(p); }
 
 // Callback into Go.
 static void (*go_runtime_cb)(uptr cmd, void *ctx);
@@ -101,14 +99,16 @@ ReportLocation *SymbolizeData(uptr addr) {
     MBlock *b = ctx->metamap.GetBlock(cbctx.start);
     if (!b)
       return 0;
-    ReportLocation *loc = ReportLocation::New(ReportLocationHeap);
+    auto loc = New<ReportLocation>();
+    loc->type = ReportLocationHeap;
     loc->heap_chunk_start = cbctx.start;
     loc->heap_chunk_size = b->siz;
     loc->tid = b->tid;
     loc->stack = SymbolizeStackId(b->stk);
     return loc;
   } else {
-    ReportLocation *loc = ReportLocation::New(ReportLocationGlobal);
+    auto loc = New<ReportLocation>();
+    loc->type = ReportLocationGlobal;
     loc->global.name = internal_strdup(cbctx.name ? cbctx.name : "??");
     loc->global.file = internal_strdup(cbctx.file ? cbctx.file : "??");
     loc->global.line = cbctx.line;
@@ -140,7 +140,7 @@ Processor *ThreadState::proc() {
 extern "C" {
 
 static ThreadState *AllocGoroutine() {
-  ThreadState *thr = (ThreadState *)internal_alloc(sizeof(ThreadState));
+  auto thr = (ThreadState *)Alloc(sizeof(ThreadState));
   internal_memset(thr, 0, sizeof(*thr));
   return thr;
 }
@@ -226,7 +226,7 @@ void __tsan_go_start(ThreadState *parent, ThreadState **pthr, void *pc) {
 
 void __tsan_go_end(ThreadState *thr) {
   ThreadFinish(thr);
-  internal_free(thr);
+  Free(thr);
 }
 
 void __tsan_proc_create(Processor **pproc) {

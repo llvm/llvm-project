@@ -89,7 +89,7 @@ static void AddExpectRace(ExpectRace *list,
       return;
     }
   }
-  race = (ExpectRace *)internal_alloc(sizeof(ExpectRace));
+  race = New<ExpectRace>();
   race->addr = addr;
   race->size = size;
   race->file = f;
@@ -305,7 +305,7 @@ void INTERFACE_ATTRIBUTE AnnotateFlushExpectedRaces(char *f, int l) {
     }
     race->prev->next = race->next;
     race->next->prev = race->prev;
-    internal_free(race);
+    Free(race);
   }
 }
 
