@@ -429,10 +429,13 @@ def FeatureEnhancedCounterVirtualization :
 def FeatureRME : SubtargetFeature<"rme", "HasRME",
     "true", "Enable Realm Management Extension">;
 
-// FIXME: SME should only imply the subset of SVE(2) instructions that are
-// legal in streaming mode.
+// A subset of SVE(2) instructions are legal in Streaming SVE execution mode
+// defined by SME.
+def FeatureStreamingSVE : SubtargetFeature<"streaming-sve",
+                                           "HasStreamingSVE", "true",
+  "Enable subset of SVE(2) instructions for Streaming SVE execution mode">;
 def FeatureSME : SubtargetFeature<"sme", "HasSME", "true",
-  "Enable Scalable Matrix Extension (SME)", [FeatureSVE2, FeatureBF16]>;
+  "Enable Scalable Matrix Extension (SME)", [FeatureStreamingSVE, FeatureBF16]>;
 
 def FeatureSMEF64 : SubtargetFeature<"sme-f64", "HasSMEF64", "true",
   "Enable Scalable Matrix Extension (SME) F64F64 instructions", [FeatureSME]>;
@@ -553,7 +556,7 @@ class AArch64Unsupported { list<Predicate> F; }
 
 def SVEUnsupported : AArch64Unsupported {
   let F = [HasSVE, HasSVE2, HasSVE2AES, HasSVE2SM4, HasSVE2SHA3,
-           HasSVE2BitPerm];
+           HasSVE2BitPerm, HasSVEorStreamingSVE, HasSVE2orStreamingSVE];
 }
 
 def PAUnsupported : AArch64Unsupported {
