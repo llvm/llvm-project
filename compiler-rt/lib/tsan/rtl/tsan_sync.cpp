@@ -194,18 +194,13 @@ SyncVar *MetaMap::GetSync(ThreadState *thr, uptr pc, uptr addr, bool create) {
   u32 *meta = MemToMeta(addr);
   u32 idx0 = *meta;
   u32 myidx = 0;
-  SyncVar *mys = 0;
+  SyncVar *mys = nullptr;
   for (;;) {
-    u32 idx = idx0;
-    for (;;) {
-      if (idx == 0)
-        break;
-      if (idx & kFlagBlock)
-        break;
+    for (u32 idx = idx0; idx && !(idx & kFlagBlock);) {
       DCHECK(idx & kFlagSync);
       SyncVar * s = sync_alloc_.Map(idx & ~kFlagMask);
-      if (s->addr == addr) {
-        if (myidx != 0) {
+      if (LIKELY(s->addr == addr)) {
+        if (UNLIKELY(myidx != 0)) {
           mys->Reset(thr->proc());
           sync_alloc_.Free(&thr->proc()->sync_cache, myidx);
         }
