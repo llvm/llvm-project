@@ -442,6 +442,7 @@ private:
 
   CompileUnit(const CompileUnit &) = delete;
   const CompileUnit &operator=(const CompileUnit &) = delete;
+  const char *GetCachedLanguage() const;
 };
 
 } // namespace lldb_private
