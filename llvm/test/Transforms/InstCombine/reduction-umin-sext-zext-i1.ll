@@ -3,8 +3,9 @@
 
 define i1 @reduce_umin_self(<8 x i1> %x) {
 ; CHECK-LABEL: @reduce_umin_self(
-; CHECK-NEXT:    [[RES:%.*]] = call i1 @llvm.vector.reduce.umin.v8i1(<8 x i1> [[X:%.*]])
-; CHECK-NEXT:    ret i1 [[RES]]
+; CHECK-NEXT:    [[TMP1:%.*]] = bitcast <8 x i1> [[X:%.*]] to i8
+; CHECK-NEXT:    [[TMP2:%.*]] = icmp eq i8 [[TMP1]], -1
+; CHECK-NEXT:    ret i1 [[TMP2]]
 ;
   %res = call i1 @llvm.vector.reduce.umin.v8i32(<8 x i1> %x)
   ret i1 %res
@@ -12,9 +13,10 @@ define i1 @reduce_umin_self(<8 x i1> %x) {
 
 define i32 @reduce_umin_sext(<4 x i1> %x) {
 ; CHECK-LABEL: @reduce_umin_sext(
-; CHECK-NEXT:    [[SEXT:%.*]] = sext <4 x i1> [[X:%.*]] to <4 x i32>
-; CHECK-NEXT:    [[RES:%.*]] = call i32 @llvm.vector.reduce.umin.v4i32(<4 x i32> [[SEXT]])
-; CHECK-NEXT:    ret i32 [[RES]]
+; CHECK-NEXT:    [[TMP1:%.*]] = bitcast <4 x i1> [[X:%.*]] to i4
+; CHECK-NEXT:    [[TMP2:%.*]] = icmp eq i4 [[TMP1]], -1
+; CHECK-NEXT:    [[TMP3:%.*]] = sext i1 [[TMP2]] to i32
+; CHECK-NEXT:    ret i32 [[TMP3]]
 ;
   %sext = sext <4 x i1> %x to <4 x i32>
   %res = call i32 @llvm.vector.reduce.umin.v4i32(<4 x i32> %sext)
@@ -23,9 +25,10 @@ define i32 @reduce_umin_sext(<4 x i1> %x) {
 
 define i64 @reduce_umin_zext(<8 x i1> %x) {
 ; CHECK-LABEL: @reduce_umin_zext(
-; CHECK-NEXT:    [[ZEXT:%.*]] = zext <8 x i1> [[X:%.*]] to <8 x i64>
-; CHECK-NEXT:    [[RES:%.*]] = call i64 @llvm.vector.reduce.umin.v8i64(<8 x i64> [[ZEXT]])
-; CHECK-NEXT:    ret i64 [[RES]]
+; CHECK-NEXT:    [[TMP1:%.*]] = bitcast <8 x i1> [[X:%.*]] to i8
+; CHECK-NEXT:    [[TMP2:%.*]] = icmp eq i8 [[TMP1]], -1
+; CHECK-NEXT:    [[TMP3:%.*]] = zext i1 [[TMP2]] to i64
+; CHECK-NEXT:    ret i64 [[TMP3]]
 ;
   %zext = zext <8 x i1> %x to <8 x i64>
   %res = call i64 @llvm.vector.reduce.umin.v8i64(<8 x i64> %zext)
@@ -34,9 +37,10 @@ define i64 @reduce_umin_zext(<8 x i1> %x) {
 
 define i16 @reduce_umin_sext_same(<16 x i1> %x) {
 ; CHECK-LABEL: @reduce_umin_sext_same(
-; CHECK-NEXT:    [[SEXT:%.*]] = sext <16 x i1> [[X:%.*]] to <16 x i16>
-; CHECK-NEXT:    [[RES:%.*]] = call i16 @llvm.vector.reduce.umin.v16i16(<16 x i16> [[SEXT]])
-; CHECK-NEXT:    ret i16 [[RES]]
+; CHECK-NEXT:    [[TMP1:%.*]] = bitcast <16 x i1> [[X:%.*]] to i16
+; CHECK-NEXT:    [[TMP2:%.*]] = icmp eq i16 [[TMP1]], -1
+; CHECK-NEXT:    [[TMP3:%.*]] = sext i1 [[TMP2]] to i16
+; CHECK-NEXT:    ret i16 [[TMP3]]
 ;
   %sext = sext <16 x i1> %x to <16 x i16>
   %res = call i16 @llvm.vector.reduce.umin.v16i16(<16 x i16> %sext)
@@ -45,9 +49,10 @@ define i16 @reduce_umin_sext_same(<16 x i1> %x) {
 
 define i8 @reduce_umin_zext_long(<128 x i1> %x) {
 ; CHECK-LABEL: @reduce_umin_zext_long(
-; CHECK-NEXT:    [[SEXT:%.*]] = sext <128 x i1> [[X:%.*]] to <128 x i8>
-; CHECK-NEXT:    [[RES:%.*]] = call i8 @llvm.vector.reduce.umin.v128i8(<128 x i8> [[SEXT]])
-; CHECK-NEXT:    ret i8 [[RES]]
+; CHECK-NEXT:    [[TMP1:%.*]] = bitcast <128 x i1> [[X:%.*]] to i128
+; CHECK-NEXT:    [[TMP2:%.*]] = icmp eq i128 [[TMP1]], -1
+; CHECK-NEXT:    [[TMP3:%.*]] = sext i1 [[TMP2]] to i8
+; CHECK-NEXT:    ret i8 [[TMP3]]
 ;
   %sext = sext <128 x i1> %x to <128 x i8>
   %res = call i8 @llvm.vector.reduce.umin.v128i8(<128 x i8> %sext)
@@ -57,11 +62,13 @@ define i8 @reduce_umin_zext_long(<128 x i1> %x) {
 @glob = external global i8, align 1
 define i8 @reduce_umin_zext_long_external_use(<128 x i1> %x) {
 ; CHECK-LABEL: @reduce_umin_zext_long_external_use(
-; CHECK-NEXT:    [[SEXT:%.*]] = sext <128 x i1> [[X:%.*]] to <128 x i8>
-; CHECK-NEXT:    [[RES:%.*]] = call i8 @llvm.vector.reduce.umin.v128i8(<128 x i8> [[SEXT]])
-; CHECK-NEXT:    [[EXT:%.*]] = extractelement <128 x i8> [[SEXT]], i32 0
+; CHECK-NEXT:    [[TMP1:%.*]] = bitcast <128 x i1> [[X:%.*]] to i128
+; CHECK-NEXT:    [[TMP2:%.*]] = icmp eq i128 [[TMP1]], -1
+; CHECK-NEXT:    [[TMP3:%.*]] = sext i1 [[TMP2]] to i8
+; CHECK-NEXT:    [[TMP4:%.*]] = extractelement <128 x i1> [[X]], i32 0
+; CHECK-NEXT:    [[EXT:%.*]] = sext i1 [[TMP4]] to i8
 ; CHECK-NEXT:    store i8 [[EXT]], i8* @glob, align 1
-; CHECK-NEXT:    ret i8 [[RES]]
+; CHECK-NEXT:    ret i8 [[TMP3]]
 ;
   %sext = sext <128 x i1> %x to <128 x i8>
   %res = call i8 @llvm.vector.reduce.umin.v128i8(<128 x i8> %sext)
@@ -73,11 +80,13 @@ define i8 @reduce_umin_zext_long_external_use(<128 x i1> %x) {
 @glob1 = external global i64, align 8
 define i64 @reduce_umin_zext_external_use(<8 x i1> %x) {
 ; CHECK-LABEL: @reduce_umin_zext_external_use(
-; CHECK-NEXT:    [[ZEXT:%.*]] = zext <8 x i1> [[X:%.*]] to <8 x i64>
-; CHECK-NEXT:    [[RES:%.*]] = call i64 @llvm.vector.reduce.umin.v8i64(<8 x i64> [[ZEXT]])
-; CHECK-NEXT:    [[EXT:%.*]] = extractelement <8 x i64> [[ZEXT]], i32 0
+; CHECK-NEXT:    [[TMP1:%.*]] = bitcast <8 x i1> [[X:%.*]] to i8
+; CHECK-NEXT:    [[TMP2:%.*]] = icmp eq i8 [[TMP1]], -1
+; CHECK-NEXT:    [[TMP3:%.*]] = zext i1 [[TMP2]] to i64
+; CHECK-NEXT:    [[TMP4:%.*]] = extractelement <8 x i1> [[X]], i32 0
+; CHECK-NEXT:    [[EXT:%.*]] = zext i1 [[TMP4]] to i64
 ; CHECK-NEXT:    store i64 [[EXT]], i64* @glob1, align 8
-; CHECK-NEXT:    ret i64 [[RES]]
+; CHECK-NEXT:    ret i64 [[TMP3]]
 ;
   %zext = zext <8 x i1> %x to <8 x i64>
   %res = call i64 @llvm.vector.reduce.umin.v8i64(<8 x i64> %zext)

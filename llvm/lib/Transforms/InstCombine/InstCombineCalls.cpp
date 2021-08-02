@@ -2067,8 +2067,30 @@ Instruction *InstCombinerImpl::visitCallInst(CallInst &CI) {
     }
     LLVM_FALLTHROUGH;
   }
+  case Intrinsic::vector_reduce_umin: {
+    if (IID == Intrinsic::vector_reduce_umin) {
+      // UMin reduction over the vector with (potentially-extended)
+      // i1 element type is actually a (potentially-extended)
+      // logical `and` reduction over the original non-extended value:
+      //   vector_reduce_umin(?ext(<n x i1>))
+      //     -->
+      //   ?ext(vector_reduce_and(<n x i1>))
+      Value *Arg = II->getArgOperand(0);
+      Value *Vect;
+      if (match(Arg, m_ZExtOrSExtOrSelf(m_Value(Vect)))) {
+        if (auto *FTy = dyn_cast<FixedVectorType>(Vect->getType()))
+          if (FTy->getElementType() == Builder.getInt1Ty()) {
+            Value *Res = Builder.CreateAndReduce(Vect);
+            if (Arg != Vect)
+              Res = Builder.CreateCast(cast<CastInst>(Arg)->getOpcode(), Res,
+                                       II->getType());
+            return replaceInstUsesWith(CI, Res);
+          }
+      }
+    }
+    LLVM_FALLTHROUGH;
+  }
   case Intrinsic::vector_reduce_umax:
-  case Intrinsic::vector_reduce_umin:
   case Intrinsic::vector_reduce_smax:
   case Intrinsic::vector_reduce_smin:
   case Intrinsic::vector_reduce_fmax:
