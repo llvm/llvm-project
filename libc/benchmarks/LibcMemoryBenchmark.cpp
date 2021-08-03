@@ -104,11 +104,11 @@ void ParameterBatch::checkValid(const ParameterType &P) const {
             .concat(llvm::Twine(BufferSize)));
 }
 
-CopyHarness::CopyHarness()
+CopySetup::CopySetup()
     : ParameterBatch(2), SrcBuffer(ParameterBatch::BufferSize),
       DstBuffer(ParameterBatch::BufferSize) {}
 
-ComparisonHarness::ComparisonHarness()
+ComparisonSetup::ComparisonSetup()
     : ParameterBatch(2), LhsBuffer(ParameterBatch::BufferSize),
       RhsBuffer(ParameterBatch::BufferSize) {
   // The memcmp buffers always compare equal.
@@ -116,7 +116,7 @@ ComparisonHarness::ComparisonHarness()
   memset(RhsBuffer.begin(), 0xF, BufferSize);
 }
 
-SetHarness::SetHarness()
+SetSetup::SetSetup()
     : ParameterBatch(1), DstBuffer(ParameterBatch::BufferSize) {}
 
 } // namespace libc_benchmarks
