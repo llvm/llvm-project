@@ -51,6 +51,7 @@ set(TSAN_SOURCES
   rtl/tsan_suppressions.cpp
   rtl/tsan_symbolize.cpp
   rtl/tsan_sync.cpp
+  rtl/tsan_vector_clock.cpp
   )
 
 set(TSAN_CXX_SOURCES
@@ -105,6 +106,7 @@ set(TSAN_HEADERS
   rtl/tsan_sync.h
   rtl/tsan_trace.h
   rtl/tsan_update_shadow_word_inl.h
+  rtl/tsan_vector_clock.h
   )
 
 set(TSAN_RUNTIME_LIBRARIES)

@@ -28,16 +28,6 @@
 #include "tsan_symbolize.h"
 #include "ubsan/ubsan_init.h"
 
-#ifdef __SSE3__
-// <emmintrin.h> transitively includes <stdlib.h>,
-// and it's prohibited to include std headers into tsan runtime.
-// So we do this dirty trick.
-#define _MM_MALLOC_H_INCLUDED
-#define __MM_MALLOC_H
-#include <emmintrin.h>
-typedef __m128i m128;
-#endif
-
 volatile int __tsan_resumed = 0;
 
 extern "C" void __tsan_resume() {
@@ -779,10 +769,11 @@ bool ContainsSameAccessSlow(u64 *s, u64 a, u64 sync_epoch, bool is_write) {
   return false;
 }
 
-#if defined(__SSE3__)
-#define SHUF(v0, v1, i0, i1, i2, i3) _mm_castps_si128(_mm_shuffle_ps( \
-    _mm_castsi128_ps(v0), _mm_castsi128_ps(v1), \
-    (i0)*1 + (i1)*4 + (i2)*16 + (i3)*64))
+#if TSAN_VECTORIZE
+#  define SHUF(v0, v1, i0, i1, i2, i3)                    \
+    _mm_castps_si128(_mm_shuffle_ps(_mm_castsi128_ps(v0), \
+                                    _mm_castsi128_ps(v1), \
+                                    (i0)*1 + (i1)*4 + (i2)*16 + (i3)*64))
 ALWAYS_INLINE
 bool ContainsSameAccessFast(u64 *s, u64 a, u64 sync_epoch, bool is_write) {
   // This is an optimized version of ContainsSameAccessSlow.
@@ -839,7 +830,7 @@ bool ContainsSameAccessFast(u64 *s, u64 a, u64 sync_epoch, bool is_write) {
 
 ALWAYS_INLINE
 bool ContainsSameAccess(u64 *s, u64 a, u64 sync_epoch, bool is_write) {
-#if defined(__SSE3__)
+#if TSAN_VECTORIZE
   bool res = ContainsSameAccessFast(s, a, sync_epoch, is_write);
   // NOTE: this check can fail if the shadow is concurrently mutated
   // by other threads. But it still can be useful if you modify
