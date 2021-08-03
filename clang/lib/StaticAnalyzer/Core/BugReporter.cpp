@@ -188,6 +188,9 @@ public:
   PathPieces &getMutablePieces() { return PD->getMutablePieces(); }
 
   bool shouldAddPathEdges() const { return Consumer->shouldAddPathEdges(); }
+  bool shouldAddControlNotes() const {
+    return Consumer->shouldAddControlNotes();
+  }
   bool shouldGenerateDiagnostics() const {
     return Consumer->shouldGenerateDiagnostics();
   }
@@ -1232,8 +1235,11 @@ void PathDiagnosticBuilder::generatePathDiagnosticsForNode(
 
   } else if (auto BE = P.getAs<BlockEdge>()) {
 
-    if (!C.shouldAddPathEdges()) {
+    if (C.shouldAddControlNotes()) {
       generateMinimalDiagForBlockEdge(C, *BE);
+    }
+
+    if (!C.shouldAddPathEdges()) {
       return;
     }
 
@@ -1254,12 +1260,14 @@ void PathDiagnosticBuilder::generatePathDiagnosticsForNode(
       // do-while statements are explicitly excluded here
 
       auto p = std::make_shared<PathDiagnosticEventPiece>(
-          L, "Looping back to the head "
-          "of the loop");
+          L, "Looping back to the head of the loop");
       p->setPrunable(true);
 
       addEdgeToPath(C.getActivePath(), PrevLoc, p->getLocation());
-      C.getActivePath().push_front(std::move(p));
+      // We might've added a very similar control node already
+      if (!C.shouldAddControlNotes()) {
+        C.getActivePath().push_front(std::move(p));
+      }
 
       if (const auto *CS = dyn_cast_or_null<CompoundStmt>(Body)) {
         addEdgeToPath(C.getActivePath(), PrevLoc,
@@ -1300,10 +1308,14 @@ void PathDiagnosticBuilder::generatePathDiagnosticsForNode(
           auto PE = std::make_shared<PathDiagnosticEventPiece>(L, str);
           PE->setPrunable(true);
           addEdgeToPath(C.getActivePath(), PrevLoc, PE->getLocation());
-          C.getActivePath().push_front(std::move(PE));
+
+          // We might've added a very similar control node already
+          if (!C.shouldAddControlNotes()) {
+            C.getActivePath().push_front(std::move(PE));
+          }
         }
       } else if (isa<BreakStmt>(Term) || isa<ContinueStmt>(Term) ||
-          isa<GotoStmt>(Term)) {
+                 isa<GotoStmt>(Term)) {
         PathDiagnosticLocation L(Term, SM, C.getCurrLocationContext());
         addEdgeToPath(C.getActivePath(), PrevLoc, L);
       }

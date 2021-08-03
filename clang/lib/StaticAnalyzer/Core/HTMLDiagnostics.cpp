@@ -27,6 +27,7 @@
 #include "clang/Rewrite/Core/Rewriter.h"
 #include "clang/StaticAnalyzer/Core/PathDiagnosticConsumers.h"
 #include "llvm/ADT/ArrayRef.h"
+#include "llvm/ADT/Sequence.h"
 #include "llvm/ADT/SmallString.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/ADT/iterator_range.h"
@@ -77,59 +78,77 @@ public:
   void FlushDiagnosticsImpl(std::vector<const PathDiagnostic *> &Diags,
                             FilesMade *filesMade) override;
 
-  StringRef getName() const override {
-    return "HTMLDiagnostics";
-  }
+  StringRef getName() const override { return "HTMLDiagnostics"; }
 
   bool supportsCrossFileDiagnostics() const override {
     return SupportsCrossFileDiagnostics;
   }
 
-  unsigned ProcessMacroPiece(raw_ostream &os,
-                             const PathDiagnosticMacroPiece& P,
+  unsigned ProcessMacroPiece(raw_ostream &os, const PathDiagnosticMacroPiece &P,
                              unsigned num);
+
+  unsigned ProcessControlFlowPiece(Rewriter &R, FileID BugFileID,
+                                   const PathDiagnosticControlFlowPiece &P,
+                                   unsigned Number);
 
   void HandlePiece(Rewriter &R, FileID BugFileID, const PathDiagnosticPiece &P,
                    const std::vector<SourceRange> &PopUpRanges, unsigned num,
                    unsigned max);
 
-  void HighlightRange(Rewriter& R, FileID BugFileID, SourceRange Range,
+  void HighlightRange(Rewriter &R, FileID BugFileID, SourceRange Range,
                       const char *HighlightStart = "<span class=\"mrange\">",
                       const char *HighlightEnd = "</span>");
 
-  void ReportDiag(const PathDiagnostic& D,
-                  FilesMade *filesMade);
+  void ReportDiag(const PathDiagnostic &D, FilesMade *filesMade);
 
   // Generate the full HTML report
-  std::string GenerateHTML(const PathDiagnostic& D, Rewriter &R,
-                           const SourceManager& SMgr, const PathPieces& path,
+  std::string GenerateHTML(const PathDiagnostic &D, Rewriter &R,
+                           const SourceManager &SMgr, const PathPieces &path,
                            const char *declName);
 
   // Add HTML header/footers to file specified by FID
-  void FinalizeHTML(const PathDiagnostic& D, Rewriter &R,
-                    const SourceManager& SMgr, const PathPieces& path,
+  void FinalizeHTML(const PathDiagnostic &D, Rewriter &R,
+                    const SourceManager &SMgr, const PathPieces &path,
                     FileID FID, const FileEntry *Entry, const char *declName);
 
   // Rewrite the file specified by FID with HTML formatting.
-  void RewriteFile(Rewriter &R, const PathPieces& path, FileID FID);
+  void RewriteFile(Rewriter &R, const PathPieces &path, FileID FID);
 
+  PathGenerationScheme getGenerationScheme() const override {
+    return Everything;
+  }
 
 private:
+  void addArrowSVGs(Rewriter &R, FileID BugFileID, unsigned NumberOfArrows);
+
   /// \return Javascript for displaying shortcuts help;
   StringRef showHelpJavascript();
 
   /// \return Javascript for navigating the HTML report using j/k keys.
   StringRef generateKeyboardNavigationJavascript();
 
+  /// \return Javascript for drawing control-flow arrows.
+  StringRef generateArrowDrawingJavascript();
+
   /// \return JavaScript for an option to only show relevant lines.
-  std::string showRelevantLinesJavascript(
-    const PathDiagnostic &D, const PathPieces &path);
+  std::string showRelevantLinesJavascript(const PathDiagnostic &D,
+                                          const PathPieces &path);
 
   /// Write executed lines from \p D in JSON format into \p os.
-  void dumpCoverageData(const PathDiagnostic &D,
-                        const PathPieces &path,
+  void dumpCoverageData(const PathDiagnostic &D, const PathPieces &path,
                         llvm::raw_string_ostream &os);
 };
+
+bool isArrowPiece(const PathDiagnosticPiece &P) {
+  return isa<PathDiagnosticControlFlowPiece>(P) && P.getString().empty();
+}
+
+unsigned getPathSizeWithoutArrows(const PathPieces &Path) {
+  unsigned TotalPieces = Path.size();
+  unsigned TotalArrowPieces = llvm::count_if(
+      Path, [](const PathDiagnosticPieceRef &P) { return isArrowPiece(*P); });
+  return TotalPieces - TotalArrowPieces;
+}
 
 } // namespace
 
@@ -452,10 +471,11 @@ window.addEventListener("keydown", function (event) {
   if (event.defaultPrevented) {
     return;
   }
-  if (event.key == "S") {
+  // SHIFT + S
+  if (event.shiftKey && event.keyCode == 83) {
     var checked = document.getElementsByName("showCounterexample")[0].checked;
     filterCounterexample(!checked);
-    document.getElementsByName("showCounterexample")[0].checked = !checked;
+    document.getElementsByName("showCounterexample")[0].click();
   } else {
     return;
   }
@@ -474,6 +494,11 @@ document.addEventListener("DOMContentLoaded", function() {
     <input type="checkbox" name="showCounterexample" id="showCounterexample" />
     <label for="showCounterexample">
        Show only relevant lines
+    </label>
+    <input type="checkbox" name="showArrows"
+           id="showArrows" style="margin-left: 10px" />
+    <label for="showArrows">
+       Show control flow arrows
     </label>
 </form>
 )<<<";
@@ -502,6 +527,9 @@ void HTMLDiagnostics::FinalizeHTML(const PathDiagnostic& D, Rewriter &R,
 
   R.InsertTextBefore(SMgr.getLocForStartOfFile(FID),
                      generateKeyboardNavigationJavascript());
+
+  R.InsertTextBefore(SMgr.getLocForStartOfFile(FID),
+                     generateArrowDrawingJavascript());
 
   // Checkbox and javascript for filtering the output to the counterexample.
   R.InsertTextBefore(SMgr.getLocForStartOfFile(FID),
@@ -570,6 +598,7 @@ void HTMLDiagnostics::FinalizeHTML(const PathDiagnostic& D, Rewriter &R,
   <a href="#" onclick="toggleHelp(); return false;">Close</a>
 </div>
 )<<<";
+
     R.InsertTextBefore(SMgr.getLocForStartOfFile(FID), os.str());
   }
 
@@ -616,7 +645,7 @@ void HTMLDiagnostics::FinalizeHTML(const PathDiagnostic& D, Rewriter &R,
       << ColumnNumber
       << " -->\n";
 
-    os << "\n<!-- BUGPATHLENGTH " << path.size() << " -->\n";
+    os << "\n<!-- BUGPATHLENGTH " << getPathSizeWithoutArrows(path) << " -->\n";
 
     // Mark the end of the tags.
     os << "\n<!-- BUGMETAEND -->\n";
@@ -711,23 +740,25 @@ static void HandlePopUpPieceEndTag(Rewriter &R,
   }
 }
 
-void HTMLDiagnostics::RewriteFile(Rewriter &R,
-                                  const PathPieces& path, FileID FID) {
+void HTMLDiagnostics::RewriteFile(Rewriter &R, const PathPieces &path,
+                                  FileID FID) {
+
   // Process the path.
   // Maintain the counts of extra note pieces separately.
-  unsigned TotalPieces = path.size();
-  unsigned TotalNotePieces = std::count_if(
-      path.begin(), path.end(), [](const PathDiagnosticPieceRef &p) {
+  unsigned TotalPieces = getPathSizeWithoutArrows(path);
+  unsigned TotalNotePieces =
+      llvm::count_if(path, [](const PathDiagnosticPieceRef &p) {
         return isa<PathDiagnosticNotePiece>(*p);
       });
-  unsigned PopUpPieceCount = std::count_if(
-      path.begin(), path.end(), [](const PathDiagnosticPieceRef &p) {
+  unsigned PopUpPieceCount =
+      llvm::count_if(path, [](const PathDiagnosticPieceRef &p) {
         return isa<PathDiagnosticPopUpPiece>(*p);
       });
 
   unsigned TotalRegularPieces = TotalPieces - TotalNotePieces - PopUpPieceCount;
   unsigned NumRegularPieces = TotalRegularPieces;
   unsigned NumNotePieces = TotalNotePieces;
+  unsigned NumberOfArrows = 0;
   // Stores the count of the regular piece indices.
   std::map<int, int> IndexMap;
 
@@ -744,6 +775,11 @@ void HTMLDiagnostics::RewriteFile(Rewriter &R,
       // as a separate pass through the piece list.
       HandlePiece(R, FID, Piece, PopUpRanges, NumNotePieces, TotalNotePieces);
       --NumNotePieces;
+
+    } else if (isArrowPiece(Piece)) {
+      NumberOfArrows = ProcessControlFlowPiece(
+          R, FID, cast<PathDiagnosticControlFlowPiece>(Piece), NumberOfArrows);
+
     } else {
       HandlePiece(R, FID, Piece, PopUpRanges, NumRegularPieces,
                   TotalRegularPieces);
@@ -771,7 +807,7 @@ void HTMLDiagnostics::RewriteFile(Rewriter &R,
       if (PopUpPieceIndex > 0)
         --IndexMap[NumRegularPieces];
 
-    } else if (!isa<PathDiagnosticNotePiece>(Piece)) {
+    } else if (!isa<PathDiagnosticNotePiece>(Piece) && !isArrowPiece(Piece)) {
       --NumRegularPieces;
     }
   }
@@ -782,6 +818,8 @@ void HTMLDiagnostics::RewriteFile(Rewriter &R,
   // Add line numbers, header, footer, etc.
   html::EscapeText(R, FID);
   html::AddLineNumbers(R, FID);
+
+  addArrowSVGs(R, FID, NumberOfArrows);
 
   // If we have a preprocessor, relex the file and syntax highlight.
   // We might not have a preprocessor if we come from a deserialized AST file,
@@ -1049,6 +1087,79 @@ unsigned HTMLDiagnostics::ProcessMacroPiece(raw_ostream &os,
   return num;
 }
 
+void HTMLDiagnostics::addArrowSVGs(Rewriter &R, FileID BugFileID,
+                                   unsigned NumberOfArrows) {
+  std::string S;
+  llvm::raw_string_ostream OS(S);
+
+  OS << R"<<<(
+<style type="text/css">
+  svg {
+      position:absolute;
+      top:0;
+      left:0;
+      height:100%;
+      width:100%;
+      pointer-events: none;
+      overflow: visible
+  }
+</style>
+<svg xmlns="http://www.w3.org/2000/svg">
+  <defs>
+    <marker id="arrowhead" viewBox="0 0 10 10" refX="3" refY="5"
+            markerWidth="4" markerHeight="4" orient="auto" stroke="none" opacity="0.6" fill="blue">
+      <path d="M 0 0 L 10 5 L 0 10 z" />
+    </marker>
+  </defs>
+  <g id="arrows" fill="none" stroke="blue"
+     visibility="hidden" stroke-width="2"
+     stroke-opacity="0.6" marker-end="url(#arrowhead)">
+)<<<";
+
+  for (unsigned Index : llvm::seq(0u, NumberOfArrows)) {
+    OS << "    <path id=\"arrow" << Index << "\"/>\n";
+  }
+
+  OS << R"<<<(
+  </g>
+</svg>
+)<<<";
+
+  R.InsertTextBefore(R.getSourceMgr().getLocForStartOfFile(BugFileID),
+                     OS.str());
+}
+
+std::string getSpanBeginForControl(const char *ClassName, unsigned Index) {
+  std::string Result;
+  llvm::raw_string_ostream OS(Result);
+  OS << "<span id=\"" << ClassName << Index << "\">";
+  return OS.str();
+}
+
+std::string getSpanBeginForControlStart(unsigned Index) {
+  return getSpanBeginForControl("start", Index);
+}
+
+std::string getSpanBeginForControlEnd(unsigned Index) {
+  return getSpanBeginForControl("end", Index);
+}
+
+unsigned HTMLDiagnostics::ProcessControlFlowPiece(
+    Rewriter &R, FileID BugFileID, const PathDiagnosticControlFlowPiece &P,
+    unsigned Number) {
+  for (const PathDiagnosticLocationPair &LPair : P) {
+    std::string Start = getSpanBeginForControlStart(Number),
+                End = getSpanBeginForControlEnd(Number++);
+
+    HighlightRange(R, BugFileID, LPair.getStart().asRange().getBegin(),
+                   Start.c_str());
+    HighlightRange(R, BugFileID, LPair.getEnd().asRange().getBegin(),
+                   End.c_str());
+  }
+
+  return Number;
+}
+
 void HTMLDiagnostics::HighlightRange(Rewriter& R, FileID BugFileID,
                                      SourceRange Range,
                                      const char *HighlightStart,
@@ -1168,6 +1279,227 @@ window.addEventListener("keydown", function (event) {
   }
   event.preventDefault();
 }, true);
+</script>
+  )<<<";
+}
+
+StringRef HTMLDiagnostics::generateArrowDrawingJavascript() {
+  return R"<<<(
+<script type='text/javascript'>
+var getAbsoluteBoundingRect = function(element) {
+  const relative = element.getBoundingClientRect();
+  return {
+    left: relative.left + window.pageXOffset,
+    right: relative.right + window.pageXOffset,
+    top: relative.top + window.pageYOffset,
+    bottom: relative.bottom + window.pageYOffset,
+    height: relative.height,
+    width: relative.width
+  };
+}
+
+var drawArrow = function(index) {
+  // This function is based on the great answer from SO:
+  //   https://stackoverflow.com/a/39575674/11582326
+  var start = document.querySelector("#start" + index);
+  var end   = document.querySelector("#end" + index);
+  var arrow = document.querySelector("#arrow" + index);
+
+  var startRect = getAbsoluteBoundingRect(start);
+  var endRect   = getAbsoluteBoundingRect(end);
+
+  // It is an arrow from a token to itself, no need to visualize it.
+  if (startRect.top == endRect.top &&
+      startRect.left == endRect.left)
+    return;
+
+  // Each arrow is a very simple Bézier curve, with two nodes and
+  // two handles.  So, we need to calculate four points in the window:
+  //   * start node
+  var posStart    = { x: 0, y: 0 };
+  //   * end node
+  var posEnd      = { x: 0, y: 0 };
+  //   * handle for the start node
+  var startHandle = { x: 0, y: 0 };
+  //   * handle for the end node
+  var endHandle   = { x: 0, y: 0 };
+  // One can visualize it as follows:
+  //
+  //         start handle
+  //        /
+  //       X"""_.-""""X
+  //         .'        \
+  //        /           start node
+  //       |
+  //       |
+  //       |      end node
+  //        \    /
+  //         `->X
+  //        X-'
+  //         \
+  //          end handle
+  //
+  // NOTE: (0, 0) is the top left corner of the window.
+
+  // We have 3 similar, but still different scenarios to cover:
+  //
+  //   1. Two tokens on different lines.
+  //             -xxx
+  //           /
+  //           \
+  //             -> xxx
+  //      In this situation, we draw arrow on the left curving to the left.
+  //   2. Two tokens on the same line, and the destination is on the right.
+  //             ____
+  //            /    \
+  //           /      V
+  //        xxx        xxx
+  //      In this situation, we draw arrow above curving upwards.
+  //   3. Two tokens on the same line, and the destination is on the left.
+  //        xxx        xxx
+  //           ^      /
+  //            \____/
+  //      In this situation, we draw arrow below curving downwards.
+  const onDifferentLines = startRect.top <= endRect.top - 5 ||
+    startRect.top >= endRect.top + 5;
+  const leftToRight = startRect.left < endRect.left;
+
+  // NOTE: various magic constants are chosen empirically for
+  //       better positioning and look
+  if (onDifferentLines) {
+    // Case #1
+    const topToBottom = startRect.top < endRect.top;
+    posStart.x = startRect.left - 1;
+    // We don't want to start it at the top left corner of the token,
+    // it doesn't feel like this is where the arrow comes from.
+    // For this reason, we start it in the middle of the left side
+    // of the token.
+    posStart.y = startRect.top + startRect.height / 2;
+
+    // End node has arrow head and we give it a bit more space.
+    posEnd.x = endRect.left - 4;
+    posEnd.y = endRect.top;
+
+    // Utility object with x and y offsets for handles.
+    var curvature = {
+      // We want bottom-to-top arrow to curve a bit more, so it doesn't
+      // overlap much with top-to-bottom curves (much more frequent).
+      x: topToBottom ? 15 : 25,
+      y: Math.min((posEnd.y - posStart.y) / 3, 10)
+    }
+
+    // When destination is on the different line, we can make a
+    // curvier arrow because we have space for it.
+    // So, instead of using
+    //
+    //   startHandle.x = posStart.x - curvature.x
+    //   endHandle.x   = posEnd.x - curvature.x
+    //
+    // We use the leftmost of these two values for both handles.
+    startHandle.x = Math.min(posStart.x, posEnd.x) - curvature.x;
+    endHandle.x = startHandle.x;
+
+    // Curving downwards from the start node...
+    startHandle.y = posStart.y + curvature.y;
+    // ... and upwards from the end node.
+    endHandle.y = posEnd.y - curvature.y;
+
+  } else if (leftToRight) {
+    // Case #2
+    // Starting from the top right corner...
+    posStart.x = startRect.right - 1;
+    posStart.y = startRect.top;
+
+    // ...and ending at the top left corner of the end token.
+    posEnd.x = endRect.left + 1;
+    posEnd.y = endRect.top - 1;
+
+    // Utility object with x and y offsets for handles.
+    var curvature = {
+      x: Math.min((posEnd.x - posStart.x) / 3, 15),
+      y: 5
+    }
+
+    // Curving to the right...
+    startHandle.x = posStart.x + curvature.x;
+    // ... and upwards from the start node.
+    startHandle.y = posStart.y - curvature.y;
+
+    // And to the left...
+    endHandle.x = posEnd.x - curvature.x;
+    // ... and upwards from the end node.
+    endHandle.y = posEnd.y - curvature.y;
+
+  } else {
+    // Case #3
+    // Starting from the bottom right corner...
+    posStart.x = startRect.right;
+    posStart.y = startRect.bottom;
+
+    // ...and ending also at the bottom right corner, but of the end token.
+    posEnd.x = endRect.right - 1;
+    posEnd.y = endRect.bottom + 1;
+
+    // Utility object with x and y offsets for handles.
+    var curvature = {
+      x: Math.min((posStart.x - posEnd.x) / 3, 15),
+      y: 5
+    }
+
+    // Curving to the left...
+    startHandle.x = posStart.x - curvature.x;
+    // ... and downwards from the start node.
+    startHandle.y = posStart.y + curvature.y;
+
+    // And to the right...
+    endHandle.x = posEnd.x + curvature.x;
+    // ... and downwards from the end node.
+    endHandle.y = posEnd.y + curvature.y;
+  }
+
+  // Put it all together into a path.
+  // More information on the format:
+  //   https://developer.mozilla.org/en-US/docs/Web/SVG/Tutorial/Paths
+  var pathStr = "M" + posStart.x + "," + posStart.y + " " +
+    "C" + startHandle.x + "," + startHandle.y + " " +
+    endHandle.x + "," + endHandle.y + " " +
+    posEnd.x + "," + posEnd.y;
+
+  arrow.setAttribute("d", pathStr);
+};
+
+var drawArrows = function() {
+  const numOfArrows = document.querySelectorAll("path[id^=arrow]").length;
+  for (var i = 0; i < numOfArrows; ++i) {
+    drawArrow(i);
+  }
+}
+
+var toggleArrows = function(event) {
+  const arrows = document.querySelector("#arrows");
+  if (event.target.checked) {
+    arrows.setAttribute("visibility", "visible");
+  } else {
+    arrows.setAttribute("visibility", "hidden");
+  }
+}
+
+window.addEventListener("resize", drawArrows);
+document.addEventListener("DOMContentLoaded", function() {
+  // Whenever we show invocation, locations change, i.e. we
+  // need to redraw arrows.
+  document
+    .querySelector('input[id="showinvocation"]')
+    .addEventListener("click", drawArrows);
+  // Hiding irrelevant lines also should cause arrow rerender.
+  document
+    .querySelector('input[name="showCounterexample"]')
+    .addEventListener("change", drawArrows);
+  document
+    .querySelector('input[name="showArrows"]')
+    .addEventListener("change", toggleArrows);
+  drawArrows();
+});
 </script>
   )<<<";
 }
