@@ -78,7 +78,7 @@ define double @test_rmw_xchg_f64(double* %dst, double %new) {
 define fp128 @test_rmw_xchg_f128(fp128* %dst, fp128 %new) {
 ; NOLSE-LABEL: test_rmw_xchg_f128:
 ; NOLSE:       // %bb.0:
-; NOLSE-NEXT:    sub sp, sp, #32 // =32
+; NOLSE-NEXT:    sub sp, sp, #32
 ; NOLSE-NEXT:    .cfi_def_cfa_offset 32
 ; NOLSE-NEXT:    str q0, [sp, #16]
 ; NOLSE-NEXT:    ldp x9, x8, [sp, #16]
@@ -94,7 +94,7 @@ define fp128 @test_rmw_xchg_f128(fp128* %dst, fp128 %new) {
 ;
 ; LSE-LABEL: test_rmw_xchg_f128:
 ; LSE:       // %bb.0:
-; LSE-NEXT:    sub sp, sp, #32 // =32
+; LSE-NEXT:    sub sp, sp, #32
 ; LSE-NEXT:    .cfi_def_cfa_offset 32
 ; LSE-NEXT:    str q0, [sp, #16]
 ; LSE-NEXT:    ldp x9, x8, [sp, #16]

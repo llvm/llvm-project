@@ -506,7 +506,7 @@ define <vscale x 32 x i1> @test_predicate_insert_32xi1(<vscale x 32 x i1> %val, 
 ; CHECK-NEXT:    rdvl x10, #2
 ; CHECK-NEXT:    // kill: def $w1 killed $w1 def $x1
 ; CHECK-NEXT:    sxtw x9, w1
-; CHECK-NEXT:    sub x10, x10, #1 // =1
+; CHECK-NEXT:    sub x10, x10, #1
 ; CHECK-NEXT:    cmp x9, x10
 ; CHECK-NEXT:    mov z0.b, p1/z, #1 // =0x1
 ; CHECK-NEXT:    ptrue p1.b

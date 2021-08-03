@@ -157,8 +157,8 @@ define <4 x i16> @dont_fold_srem_power_of_two(<4 x i16> %x) {
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    // kill: def $d0 killed $d0 def $q0
 ; CHECK-NEXT:    smov w8, v0.h[1]
-; CHECK-NEXT:    add w12, w8, #31 // =31
-; CHECK-NEXT:    cmp w8, #0 // =0
+; CHECK-NEXT:    add w12, w8, #31
+; CHECK-NEXT:    cmp w8, #0
 ; CHECK-NEXT:    mov w11, #37253
 ; CHECK-NEXT:    csel w12, w12, w8, lt
 ; CHECK-NEXT:    smov w9, v0.h[0]
@@ -166,9 +166,9 @@ define <4 x i16> @dont_fold_srem_power_of_two(<4 x i16> %x) {
 ; CHECK-NEXT:    movk w11, #44150, lsl #16
 ; CHECK-NEXT:    and w12, w12, #0xffffffe0
 ; CHECK-NEXT:    sub w8, w8, w12
-; CHECK-NEXT:    add w12, w9, #63 // =63
+; CHECK-NEXT:    add w12, w9, #63
 ; CHECK-NEXT:    smull x11, w10, w11
-; CHECK-NEXT:    cmp w9, #0 // =0
+; CHECK-NEXT:    cmp w9, #0
 ; CHECK-NEXT:    lsr x11, x11, #32
 ; CHECK-NEXT:    csel w12, w12, w9, lt
 ; CHECK-NEXT:    add w11, w11, w10
@@ -178,8 +178,8 @@ define <4 x i16> @dont_fold_srem_power_of_two(<4 x i16> %x) {
 ; CHECK-NEXT:    add w11, w12, w11, lsr #31
 ; CHECK-NEXT:    smov w12, v0.h[2]
 ; CHECK-NEXT:    fmov s0, w9
-; CHECK-NEXT:    add w9, w12, #7 // =7
-; CHECK-NEXT:    cmp w12, #0 // =0
+; CHECK-NEXT:    add w9, w12, #7
+; CHECK-NEXT:    cmp w12, #0
 ; CHECK-NEXT:    csel w9, w9, w12, lt
 ; CHECK-NEXT:    and w9, w9, #0xfffffff8
 ; CHECK-NEXT:    sub w9, w12, w9
@@ -263,7 +263,7 @@ define <4 x i16> @dont_fold_srem_i16_smax(<4 x i16> %x) {
 ; CHECK-NEXT:    add w10, w10, w11
 ; CHECK-NEXT:    mov w11, #32767
 ; CHECK-NEXT:    add w11, w8, w11
-; CHECK-NEXT:    cmp w8, #0 // =0
+; CHECK-NEXT:    cmp w8, #0
 ; CHECK-NEXT:    csel w11, w11, w8, lt
 ; CHECK-NEXT:    and w11, w11, #0xffff8000
 ; CHECK-NEXT:    sub w8, w8, w11

@@ -23,7 +23,7 @@ define i32 @bzhi32_a0(i32 %val, i32 %numlowbits) nounwind {
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    mov w8, #1
 ; CHECK-NEXT:    lsl w8, w8, w1
-; CHECK-NEXT:    sub w8, w8, #1 // =1
+; CHECK-NEXT:    sub w8, w8, #1
 ; CHECK-NEXT:    and w0, w8, w0
 ; CHECK-NEXT:    ret
   %onebit = shl i32 1, %numlowbits
@@ -37,7 +37,7 @@ define i32 @bzhi32_a1_indexzext(i32 %val, i8 zeroext %numlowbits) nounwind {
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    mov w8, #1
 ; CHECK-NEXT:    lsl w8, w8, w1
-; CHECK-NEXT:    sub w8, w8, #1 // =1
+; CHECK-NEXT:    sub w8, w8, #1
 ; CHECK-NEXT:    and w0, w8, w0
 ; CHECK-NEXT:    ret
   %conv = zext i8 %numlowbits to i32
@@ -53,7 +53,7 @@ define i32 @bzhi32_a2_load(i32* %w, i32 %numlowbits) nounwind {
 ; CHECK-NEXT:    ldr w8, [x0]
 ; CHECK-NEXT:    mov w9, #1
 ; CHECK-NEXT:    lsl w9, w9, w1
-; CHECK-NEXT:    sub w9, w9, #1 // =1
+; CHECK-NEXT:    sub w9, w9, #1
 ; CHECK-NEXT:    and w0, w9, w8
 ; CHECK-NEXT:    ret
   %val = load i32, i32* %w
@@ -69,7 +69,7 @@ define i32 @bzhi32_a3_load_indexzext(i32* %w, i8 zeroext %numlowbits) nounwind {
 ; CHECK-NEXT:    ldr w8, [x0]
 ; CHECK-NEXT:    mov w9, #1
 ; CHECK-NEXT:    lsl w9, w9, w1
-; CHECK-NEXT:    sub w9, w9, #1 // =1
+; CHECK-NEXT:    sub w9, w9, #1
 ; CHECK-NEXT:    and w0, w9, w8
 ; CHECK-NEXT:    ret
   %val = load i32, i32* %w
@@ -85,7 +85,7 @@ define i32 @bzhi32_a4_commutative(i32 %val, i32 %numlowbits) nounwind {
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    mov w8, #1
 ; CHECK-NEXT:    lsl w8, w8, w1
-; CHECK-NEXT:    sub w8, w8, #1 // =1
+; CHECK-NEXT:    sub w8, w8, #1
 ; CHECK-NEXT:    and w0, w0, w8
 ; CHECK-NEXT:    ret
   %onebit = shl i32 1, %numlowbits
@@ -101,7 +101,7 @@ define i64 @bzhi64_a0(i64 %val, i64 %numlowbits) nounwind {
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    mov w8, #1
 ; CHECK-NEXT:    lsl x8, x8, x1
-; CHECK-NEXT:    sub x8, x8, #1 // =1
+; CHECK-NEXT:    sub x8, x8, #1
 ; CHECK-NEXT:    and x0, x8, x0
 ; CHECK-NEXT:    ret
   %onebit = shl i64 1, %numlowbits
@@ -116,7 +116,7 @@ define i64 @bzhi64_a1_indexzext(i64 %val, i8 zeroext %numlowbits) nounwind {
 ; CHECK-NEXT:    mov w8, #1
 ; CHECK-NEXT:    // kill: def $w1 killed $w1 def $x1
 ; CHECK-NEXT:    lsl x8, x8, x1
-; CHECK-NEXT:    sub x8, x8, #1 // =1
+; CHECK-NEXT:    sub x8, x8, #1
 ; CHECK-NEXT:    and x0, x8, x0
 ; CHECK-NEXT:    ret
   %conv = zext i8 %numlowbits to i64
@@ -132,7 +132,7 @@ define i64 @bzhi64_a2_load(i64* %w, i64 %numlowbits) nounwind {
 ; CHECK-NEXT:    ldr x8, [x0]
 ; CHECK-NEXT:    mov w9, #1
 ; CHECK-NEXT:    lsl x9, x9, x1
-; CHECK-NEXT:    sub x9, x9, #1 // =1
+; CHECK-NEXT:    sub x9, x9, #1
 ; CHECK-NEXT:    and x0, x9, x8
 ; CHECK-NEXT:    ret
   %val = load i64, i64* %w
@@ -149,7 +149,7 @@ define i64 @bzhi64_a3_load_indexzext(i64* %w, i8 zeroext %numlowbits) nounwind {
 ; CHECK-NEXT:    mov w9, #1
 ; CHECK-NEXT:    // kill: def $w1 killed $w1 def $x1
 ; CHECK-NEXT:    lsl x9, x9, x1
-; CHECK-NEXT:    sub x9, x9, #1 // =1
+; CHECK-NEXT:    sub x9, x9, #1
 ; CHECK-NEXT:    and x0, x9, x8
 ; CHECK-NEXT:    ret
   %val = load i64, i64* %w
@@ -165,7 +165,7 @@ define i64 @bzhi64_a4_commutative(i64 %val, i64 %numlowbits) nounwind {
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    mov w8, #1
 ; CHECK-NEXT:    lsl x8, x8, x1
-; CHECK-NEXT:    sub x8, x8, #1 // =1
+; CHECK-NEXT:    sub x8, x8, #1
 ; CHECK-NEXT:    and x0, x0, x8
 ; CHECK-NEXT:    ret
   %onebit = shl i64 1, %numlowbits
