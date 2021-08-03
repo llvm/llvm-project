@@ -84,8 +84,6 @@
 #include "llvm/Transforms/Utils/ValueMapper.h"
 #include <algorithm>
 #include <deque>
-#include <unordered_map>
-#include <unordered_set>
 
 using namespace llvm;
 
