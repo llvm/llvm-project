@@ -199,21 +199,24 @@ public:
 };
 
 /// FrontendOptions - Options for controlling the behavior of the frontend.
-class FrontendOptions {
-public:
+struct FrontendOptions {
+  FrontendOptions()
+      : showHelp(false), showVersion(false), instrumentedParse(false),
+        needProvenanceRangeToCharBlockMappings(false) {}
+
   /// Show the -help text.
-  unsigned showHelp_ : 1;
+  unsigned showHelp : 1;
 
   /// Show the -version text.
-  unsigned showVersion_ : 1;
+  unsigned showVersion : 1;
 
   /// Instrument the parse to get a more verbose log
-  unsigned instrumentedParse_ : 1;
+  unsigned instrumentedParse : 1;
 
   /// Enable Provenance to character-stream mapping. Allows e.g. IDEs to find
   /// symbols based on source-code location. This is not needed in regular
   /// compilation.
-  unsigned needProvenanceRangeToCharBlockMappings_ : 1;
+  unsigned needProvenanceRangeToCharBlockMappings : 1;
 
   /// Input values from `-fget-definition`
   struct GetDefinitionVals {
@@ -221,38 +224,33 @@ public:
     unsigned startColumn;
     unsigned endColumn;
   };
-  GetDefinitionVals getDefVals_;
+  GetDefinitionVals getDefVals;
 
   /// The input files and their types.
-  std::vector<FrontendInputFile> inputs_;
+  std::vector<FrontendInputFile> inputs;
 
   /// The output file, if any.
-  std::string outputFile_;
+  std::string outputFile;
 
   /// The frontend action to perform.
-  frontend::ActionKind programAction_;
+  frontend::ActionKind programAction;
 
   // The form to process files in, if specified.
-  FortranForm fortranForm_ = FortranForm::Unknown;
+  FortranForm fortranForm = FortranForm::Unknown;
 
   // The column after which characters are ignored in fixed form lines in the
   // source file.
-  int fixedFormColumns_ = 72;
+  int fixedFormColumns = 72;
 
   /// The input kind, either specified via -x argument or deduced from the input
   /// file name.
-  InputKind dashX_;
+  InputKind dashX;
 
   // Language features
-  common::LanguageFeatureControl features_;
+  common::LanguageFeatureControl features;
 
   // Source file encoding
-  Fortran::parser::Encoding encoding_{Fortran::parser::Encoding::UTF_8};
-
-public:
-  FrontendOptions()
-      : showHelp_(false), showVersion_(false), instrumentedParse_(false),
-        needProvenanceRangeToCharBlockMappings_(false) {}
+  Fortran::parser::Encoding encoding{Fortran::parser::Encoding::UTF_8};
 
   // Return the appropriate input kind for a file extension. For example,
   /// "*.f" would return Language::Fortran.
