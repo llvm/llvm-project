@@ -151,7 +151,6 @@ public:
   void printOperand(const MachineInstr *MI, int opNum, raw_ostream &O);
   void printMemOperand(const MachineInstr *MI, int opNum, raw_ostream &O);
   void printMemOperandEA(const MachineInstr *MI, int opNum, raw_ostream &O);
-  void printMemOperandGPRel(const MachineInstr *MI, int opNum, raw_ostream &O);
   void printFCCOperand(const MachineInstr *MI, int opNum, raw_ostream &O,
                        const char *Modifier = nullptr);
   void printRegisterList(const MachineInstr *MI, int opNum, raw_ostream &O);

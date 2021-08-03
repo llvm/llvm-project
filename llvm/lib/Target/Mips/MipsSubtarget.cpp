@@ -149,10 +149,13 @@ MipsSubtarget::MipsSubtarget(const Triple &TT, StringRef CPU, StringRef FS,
       report_fatal_error(ISA + " is not compatible with the DSP ASE", false);
   }
 
-  if (NoABICalls && TM.isPositionIndependent())
+  if (hasNanoMips())
+    NoABICalls = true;
+
+  if (NoABICalls && TM.isPositionIndependent() && !hasNanoMips())
     report_fatal_error("position-independent code requires '-mabicalls'");
 
-  if ((isABI_N64() && !TM.isPositionIndependent() && !hasSym32()) || isABI_P32())
+  if (isABI_N64() && !TM.isPositionIndependent() && !hasSym32())
     NoABICalls = true;
 
   // Set UseSmallSection.

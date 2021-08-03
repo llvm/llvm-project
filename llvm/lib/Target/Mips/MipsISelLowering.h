@@ -481,19 +481,18 @@ class TargetRegisterClass;
                          DAG.getNode(MipsISD::Lo, DL, Ty, Lo));
    }
 
-    // This method creates the following nodes, which are necessary for
-    // computing a symbol's address using gp-relative addressing:
-    //
-    // (add $gp, %gp_rel(sym))
-    template <class NodeTy>
-    SDValue getAddrGPRel(NodeTy *N, const SDLoc &DL, EVT Ty,
-                         SelectionDAG &DAG, bool IsN64) const {
-      SDValue GPRel = getTargetNode(N, Ty, DAG, MipsII::MO_GPREL);
-      return DAG.getNode(
-          ISD::ADD, DL, Ty,
-          DAG.getRegister(IsN64 ? Mips::GP_64 : Mips::GP, Ty),
-          DAG.getNode(MipsISD::GPRel, DL, DAG.getVTList(Ty), GPRel));
-    }
+   // This method creates the following nodes, which are necessary for
+   // computing a symbol's address using gp-relative addressing:
+   //
+   // (add $gp, %gp_rel(sym))
+   template <class NodeTy>
+   SDValue getAddrGPRel(NodeTy *N, const SDLoc &DL, EVT Ty,
+                        SelectionDAG &DAG) const {
+     SDValue GPRel = getTargetNode(N, Ty, DAG, MipsII::MO_GPREL);
+     return DAG.getNode(
+         ISD::ADD, DL, Ty, DAG.getRegister(ABI.GetGlobalPtr(), Ty),
+         DAG.getNode(MipsISD::GPRel, DL, DAG.getVTList(Ty), GPRel));
+   }
 
     /// This function fills Ops, which is the list of operands that will later
     /// be used when a function call node is created. It also generates

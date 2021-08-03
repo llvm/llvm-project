@@ -55,11 +55,6 @@ def uimm16_simm12 : Operand<i32>;
 def addrsimm9 : ComplexPattern<iPTR, 2, "selectIntAddrSImm9", [frameindex]>;
 def addruimm12 : ComplexPattern<iPTR, 2, "selectIntAddrUImm12", [frameindex]>;
 
-def mem_gprel : mem_generic {
-  let PrintMethod = "printMemOperandGPRel";
-  let MIOperandInfo = (ops ptr_rc, uimm16);
-}
-
 //===----------------------------------------------------------------------===//
 //
 // Instruction Descriptions
@@ -474,7 +469,7 @@ def UALW_NM : UnalignedLoad<"ualw", NMUnalignedLW>;
 def UASH_NM : UnalignedStore<"uash", NMUnalignedSH>;
 def UASW_NM : UnalignedStore<"uasw", NMUnalignedSW>;
 
-def LWGP_NM : LoadMemoryNM<"lwgp", GPR32NMOpnd, mem_gprel>, InstSize32;
+def LWGP_NM : LoadMemoryNM<"lw", GPR32NMOpnd, mem>, InstSize32;
 
 // TODO: 'X' load/stores reg+reg
 }
@@ -522,8 +517,10 @@ def : Pat<(NMUnalignedSH GPR32NM:$rt, GPR32NM:$rs),
           (UASH_NM GPR32NM:$rt, GPR32NM:$rs, 0)>, ISA_NANOMIPS;
 
 // GP-relative load.
-def : MipsPat<(i32 (load (MipsFullAddr tglobaladdr:$in))),
+def : MipsPat<(i32 (load (add GP_NM, (MipsGPRel tglobaladdr:$in)))),
               (LWGP_NM GP_NM, tglobaladdr:$in)>, ISA_NANOMIPS;
+def : MipsPat<(add GP_NM, (MipsGPRel tglobaladdr:$in)),
+              (ADDiu_NM GP_NM, tglobaladdr:$in)>, ISA_NANOMIPS;
 
 // Conditional Moves
 def MOVZ_NM : InstNM<(outs GPR32NMOpnd:$rd),
