@@ -664,7 +664,7 @@ define i32 @fcmpri(i32 %argc, i8** nocapture readonly %argv) {
 ; CHECK-NEXT:    cmp w19, #0
 ; CHECK-NEXT:    cinc w0, w19, gt
 ; CHECK-NEXT:    mov w1, #2
-; CHECK-NEXT:    mov v8.16b, v0.16b
+; CHECK-NEXT:    fmov d8, d0
 ; CHECK-NEXT:    bl xoo
 ; CHECK-NEXT:    fmov d0, #-1.00000000
 ; CHECK-NEXT:    fadd d0, d8, d0

@@ -916,7 +916,7 @@ define <2 x i100> @test_unsigned_v2f32_v2i100(<2 x float> %f) {
 ; CHECK-NEXT:    // kill: def $d0 killed $d0 def $q0
 ; CHECK-NEXT:    mov s8, v0.s[1]
 ; CHECK-NEXT:    str q0, [sp] // 16-byte Folded Spill
-; CHECK-NEXT:    mov v0.16b, v8.16b
+; CHECK-NEXT:    fmov s0, s8
 ; CHECK-NEXT:    bl __fixunssfti
 ; CHECK-NEXT:    mov w8, #1904214015
 ; CHECK-NEXT:    fcmp s8, #0.0
@@ -967,7 +967,7 @@ define <2 x i128> @test_unsigned_v2f32_v2i128(<2 x float> %f) {
 ; CHECK-NEXT:    // kill: def $d0 killed $d0 def $q0
 ; CHECK-NEXT:    mov s8, v0.s[1]
 ; CHECK-NEXT:    str q0, [sp] // 16-byte Folded Spill
-; CHECK-NEXT:    mov v0.16b, v8.16b
+; CHECK-NEXT:    fmov s0, s8
 ; CHECK-NEXT:    bl __fixunssfti
 ; CHECK-NEXT:    mov w8, #2139095039
 ; CHECK-NEXT:    fcmp s8, #0.0
@@ -1187,7 +1187,7 @@ define <2 x i100> @test_unsigned_v2f64_v2i100(<2 x double> %f) {
 ; CHECK-NEXT:    .cfi_offset b9, -48
 ; CHECK-NEXT:    mov d8, v0.d[1]
 ; CHECK-NEXT:    str q0, [sp] // 16-byte Folded Spill
-; CHECK-NEXT:    mov v0.16b, v8.16b
+; CHECK-NEXT:    fmov d0, d8
 ; CHECK-NEXT:    bl __fixunsdfti
 ; CHECK-NEXT:    mov x8, #5057542381537067007
 ; CHECK-NEXT:    fcmp d8, #0.0
@@ -1237,7 +1237,7 @@ define <2 x i128> @test_unsigned_v2f64_v2i128(<2 x double> %f) {
 ; CHECK-NEXT:    .cfi_offset b9, -48
 ; CHECK-NEXT:    mov d8, v0.d[1]
 ; CHECK-NEXT:    str q0, [sp] // 16-byte Folded Spill
-; CHECK-NEXT:    mov v0.16b, v8.16b
+; CHECK-NEXT:    fmov d0, d8
 ; CHECK-NEXT:    bl __fixunsdfti
 ; CHECK-NEXT:    mov x8, #5183643171103440895
 ; CHECK-NEXT:    fcmp d8, #0.0
@@ -1579,7 +1579,7 @@ define <4 x i100> @test_unsigned_v4f16_v4i100(<4 x half> %f) {
 ; CHECK-NEXT:    mov h1, v0.h[2]
 ; CHECK-NEXT:    fcvt s8, h1
 ; CHECK-NEXT:    str q0, [sp] // 16-byte Folded Spill
-; CHECK-NEXT:    mov v0.16b, v8.16b
+; CHECK-NEXT:    fmov s0, s8
 ; CHECK-NEXT:    bl __fixunssfti
 ; CHECK-NEXT:    ldr q0, [sp] // 16-byte Folded Reload
 ; CHECK-NEXT:    mov w8, #1904214015
@@ -1591,7 +1591,7 @@ define <4 x i100> @test_unsigned_v4f16_v4i100(<4 x half> %f) {
 ; CHECK-NEXT:    fcmp s8, s9
 ; CHECK-NEXT:    fcvt s8, h0
 ; CHECK-NEXT:    mov x25, #68719476735
-; CHECK-NEXT:    mov v0.16b, v8.16b
+; CHECK-NEXT:    fmov s0, s8
 ; CHECK-NEXT:    csel x19, x25, x10, gt
 ; CHECK-NEXT:    csinv x20, x9, xzr, le
 ; CHECK-NEXT:    bl __fixunssfti
@@ -1602,7 +1602,7 @@ define <4 x i100> @test_unsigned_v4f16_v4i100(<4 x half> %f) {
 ; CHECK-NEXT:    mov h0, v0.h[3]
 ; CHECK-NEXT:    fcmp s8, s9
 ; CHECK-NEXT:    fcvt s8, h0
-; CHECK-NEXT:    mov v0.16b, v8.16b
+; CHECK-NEXT:    fmov s0, s8
 ; CHECK-NEXT:    csel x21, x25, x9, gt
 ; CHECK-NEXT:    csinv x22, x8, xzr, le
 ; CHECK-NEXT:    bl __fixunssfti
@@ -1612,7 +1612,7 @@ define <4 x i100> @test_unsigned_v4f16_v4i100(<4 x half> %f) {
 ; CHECK-NEXT:    csel x9, xzr, x1, lt
 ; CHECK-NEXT:    fcmp s8, s9
 ; CHECK-NEXT:    fcvt s8, h0
-; CHECK-NEXT:    mov v0.16b, v8.16b
+; CHECK-NEXT:    fmov s0, s8
 ; CHECK-NEXT:    csel x23, x25, x9, gt
 ; CHECK-NEXT:    csinv x24, x8, xzr, le
 ; CHECK-NEXT:    bl __fixunssfti
@@ -1665,7 +1665,7 @@ define <4 x i128> @test_unsigned_v4f16_v4i128(<4 x half> %f) {
 ; CHECK-NEXT:    mov h1, v0.h[1]
 ; CHECK-NEXT:    fcvt s8, h1
 ; CHECK-NEXT:    str q0, [sp] // 16-byte Folded Spill
-; CHECK-NEXT:    mov v0.16b, v8.16b
+; CHECK-NEXT:    fmov s0, s8
 ; CHECK-NEXT:    bl __fixunssfti
 ; CHECK-NEXT:    ldr q0, [sp] // 16-byte Folded Reload
 ; CHECK-NEXT:    mov w8, #2139095039
@@ -1676,7 +1676,7 @@ define <4 x i128> @test_unsigned_v4f16_v4i128(<4 x half> %f) {
 ; CHECK-NEXT:    csel x10, xzr, x0, lt
 ; CHECK-NEXT:    fcmp s8, s9
 ; CHECK-NEXT:    fcvt s8, h0
-; CHECK-NEXT:    mov v0.16b, v8.16b
+; CHECK-NEXT:    fmov s0, s8
 ; CHECK-NEXT:    csinv x19, x10, xzr, le
 ; CHECK-NEXT:    csinv x20, x9, xzr, le
 ; CHECK-NEXT:    bl __fixunssfti
@@ -1687,7 +1687,7 @@ define <4 x i128> @test_unsigned_v4f16_v4i128(<4 x half> %f) {
 ; CHECK-NEXT:    mov h0, v0.h[3]
 ; CHECK-NEXT:    fcmp s8, s9
 ; CHECK-NEXT:    fcvt s8, h0
-; CHECK-NEXT:    mov v0.16b, v8.16b
+; CHECK-NEXT:    fmov s0, s8
 ; CHECK-NEXT:    csinv x21, x9, xzr, le
 ; CHECK-NEXT:    csinv x22, x8, xzr, le
 ; CHECK-NEXT:    bl __fixunssfti
@@ -1697,7 +1697,7 @@ define <4 x i128> @test_unsigned_v4f16_v4i128(<4 x half> %f) {
 ; CHECK-NEXT:    csel x9, xzr, x0, lt
 ; CHECK-NEXT:    fcmp s8, s9
 ; CHECK-NEXT:    fcvt s8, h0
-; CHECK-NEXT:    mov v0.16b, v8.16b
+; CHECK-NEXT:    fmov s0, s8
 ; CHECK-NEXT:    csinv x23, x9, xzr, le
 ; CHECK-NEXT:    csinv x24, x8, xzr, le
 ; CHECK-NEXT:    bl __fixunssfti

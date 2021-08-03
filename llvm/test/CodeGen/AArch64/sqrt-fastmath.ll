@@ -518,7 +518,7 @@ define double @sqrt_fdiv_common_operand_extra_use(double %x, double* %p) nounwin
 ; CHECK-NEXT:    fmul d1, d0, d1
 ; CHECK-NEXT:    fcsel d0, d0, d1, eq
 ; CHECK-NEXT:    str d0, [x0]
-; CHECK-NEXT:    mov v0.16b, v1.16b
+; CHECK-NEXT:    fmov d0, d1
 ; CHECK-NEXT:    ret
   %sqrt = call fast double @llvm.sqrt.f64(double %x)
   store double %sqrt, double* %p

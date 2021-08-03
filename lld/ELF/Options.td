@@ -156,10 +156,8 @@ def discard_none: F<"discard-none">,
 defm dynamic_linker: Eq<"dynamic-linker", "Which dynamic linker to use">;
 
 defm dynamic_list : Eq<"dynamic-list",
-   "Read a list of dynamic symbols. (executable) Put matched non-local defined"
-   "symbols to the dynamic symbol table. (shared object) References to matched"
-   "non-local STV_DEFAULT symbols shouldn't be bound to definitions within the "
-   "shared object. Implies -Bsymbolic but does not set DF_SYMBOLIC">,
+   "Similar to --export-dynamic-symbol-list. When creating a shared object, "
+   "this additionally implies -Bsymbolic but does not set DF_SYMBOLIC">,
    MetaVarName<"<file>">;
 
 def eb: F<"EB">, HelpText<"Select the big-endian format in OUTPUT_FORMAT">;
@@ -208,6 +206,10 @@ defm export_dynamic_symbol : EEq<"export-dynamic-symbol",
     "shouldn't be bound to definitions within the shared object. "
     "Does not imply -Bsymbolic.">,
     MetaVarName<"glob">;
+
+defm export_dynamic_symbol_list : EEq<"export-dynamic-symbol-list",
+   "Read a list of dynamic symbol patterns. Apply --export-dynamic-symbol on each pattern">,
+    MetaVarName<"file">;
 
 defm fatal_warnings: B<"fatal-warnings",
     "Treat warnings as errors",

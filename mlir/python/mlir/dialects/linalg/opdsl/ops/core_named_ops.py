@@ -39,7 +39,7 @@ def quantized_matmul(
 
 @linalg_structured_op
 def mmt4d(lhs=TensorDef(TV.LhsType, S.M, S.K, S.M0, S.K0),
-          rhs=TensorDef(TV.RhsType, S.N, S.K, S.N0, S.K0),
+          rhs=TensorDef(TV.RhsType, S.N, S.K, S.K0, S.N0),
           accum=TensorDef(TV.AccumType, S.M, S.N, S.M0, S.N0,
                                   output=True)):
   """Performs a matrix-matrix-transpose multiplication of two 4D inputs.
@@ -54,7 +54,7 @@ def mmt4d(lhs=TensorDef(TV.LhsType, S.M, S.K, S.M0, S.K0),
   """
   domain(D.m, D.n, D.m0, D.n0, D.k, D.k0)
   implements(ContractionOpInterface)
-  accum[D.m, D.n, D.m0, D.n0] += cast(TV.AccumType, lhs[D.m, D.k, D.m0, D.k0]) * cast(TV.AccumType, rhs[D.n, D.k, D.n0, D.k0])
+  accum[D.m, D.n, D.m0, D.n0] += cast(TV.AccumType, lhs[D.m, D.k, D.m0, D.k0]) * cast(TV.AccumType, rhs[D.n, D.k, D.k0, D.n0])
 
 @linalg_structured_op
 def batch_matmul(
