@@ -58,9 +58,6 @@
 #define VARREF_GLOBALS (int64_t)2
 #define VARREF_REGS (int64_t)3
 #define VARREF_FIRST_VAR_IDX (int64_t)4
-#define VARREF_IS_SCOPE(v) (VARREF_LOCALS <= 1 && v < VARREF_FIRST_VAR_IDX)
-#define VARIDX_TO_VARREF(i) ((i) + VARREF_FIRST_VAR_IDX)
-#define VARREF_TO_VARIDX(v) ((v)-VARREF_FIRST_VAR_IDX)
 #define NO_TYPENAME "<no-type>"
 
 namespace lldb_vscode {
@@ -83,17 +80,54 @@ enum class PacketStatus {
   JSONNotObject
 };
 
+struct Variables {
+  /// Variable_reference start index of permanent expandable variable.
+  static constexpr int64_t PermanentVariableStartIndex = (1ll << 32);
+
+  lldb::SBValueList locals;
+  lldb::SBValueList globals;
+  lldb::SBValueList registers;
+
+  int64_t next_temporary_var_ref{VARREF_FIRST_VAR_IDX};
+  int64_t next_permanent_var_ref{PermanentVariableStartIndex};
+
+  /// Expandable variables that are alive in this stop state.
+  /// Will be cleared when debuggee resumes.
+  llvm::DenseMap<int64_t, lldb::SBValue> expandable_variables;
+  /// Expandable variables that persist across entire debug session.
+  /// These are the variables evaluated from debug console REPL.
+  llvm::DenseMap<int64_t, lldb::SBValue> expandable_permanent_variables;
+
+  /// Check if \p var_ref points to a variable that should persist for the
+  /// entire duration of the debug session, e.g. repl expandable variables
+  static bool IsPermanentVariableReference(int64_t var_ref);
+
+  /// \return a new variableReference.
+  /// Specify is_permanent as true for variable that should persist entire
+  /// debug session.
+  int64_t GetNewVariableRefence(bool is_permanent);
+
+  /// \return the expandable variable corresponding with variableReference
+  /// value of \p value.
+  /// If \p var_ref is invalid an empty SBValue is returned.
+  lldb::SBValue GetVariable(int64_t var_ref) const;
+
+  /// Insert a new \p variable.
+  /// \return variableReference assigned to this expandable variable.
+  int64_t InsertExpandableVariable(lldb::SBValue variable, bool is_permanent);
+
+  /// Clear all scope variables and non-permanent expandable variables.
+  void Clear();
+};
+
 struct VSCode {
   std::string debug_adaptor_path;
   InputStream input;
   OutputStream output;
   lldb::SBDebugger debugger;
   lldb::SBTarget target;
-  lldb::SBValueList variables;
+  Variables variables;
   lldb::SBBroadcaster broadcaster;
-  int64_t num_regs;
-  int64_t num_locals;
-  int64_t num_globals;
   std::thread event_thread;
   std::thread progress_event_thread;
   std::unique_ptr<std::ofstream> log;
@@ -205,6 +239,9 @@ struct VSCode {
   ///     The callback to execute when the given request is triggered by the
   ///     IDE.
   void RegisterRequestCallback(std::string request, RequestCallback callback);
+
+  /// Debuggee will continue from stopped state.
+  void WillContinue() { variables.Clear(); }
 
 private:
   // Send the JSON in "json_str" to the "out" stream. Correctly send the
