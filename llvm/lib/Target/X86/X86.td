@@ -531,6 +531,11 @@ def FeatureUseGLMDivSqrtCosts
 def FeatureUseAA : SubtargetFeature<"use-aa", "UseAA", "true",
                                     "Use alias analysis during codegen">;
 
+//===----------------------------------------------------------------------===//
+// X86 CPU Families
+// TODO: Remove these - use general tuning features to determine codegen.
+//===----------------------------------------------------------------------===//
+
 // Bonnell
 def ProcIntelAtom : SubtargetFeature<"", "X86ProcFamily", "IntelAtom", "">;
 // Silvermont
