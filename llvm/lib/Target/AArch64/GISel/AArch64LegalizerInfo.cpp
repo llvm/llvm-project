@@ -579,7 +579,7 @@ AArch64LegalizerInfo::AArch64LegalizerInfo(const AArch64Subtarget &ST)
             [=](const LegalityQuery &Query) {
               const LLT &Ty = Query.Types[BigTyIdx];
               return !isPowerOf2_32(Ty.getSizeInBits()) &&
-                     Ty.getSizeInBits() % 64 != 0;
+                     Ty.getSizeInBits() % 64 != 0 && Ty.isScalar();
             },
             [=](const LegalityQuery &Query) {
               // Pick the next power of 2, or a multiple of 64 over 128.
