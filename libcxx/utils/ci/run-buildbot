@@ -480,15 +480,11 @@ legacy-standalone)
     ${NINJA} -vC "${BUILD_DIR}/libcxxabi" check-cxxabi
 ;;
 aarch64)
-    export CC=/usr/local/bin/cc
-    export CXX=/usr/local/bin/c++
     clean
     generate-cmake -C "${MONOREPO_ROOT}/libcxx/cmake/caches/AArch64.cmake"
     check-cxx-cxxabi
 ;;
 aarch64-noexceptions)
-    export CC=/usr/local/bin/cc
-    export CXX=/usr/local/bin/c++
     clean
     generate-cmake -C "${MONOREPO_ROOT}/libcxx/cmake/caches/AArch64.cmake" \
                    -DLIBCXX_ENABLE_EXCEPTIONS=OFF \
@@ -497,30 +493,22 @@ aarch64-noexceptions)
 ;;
 # Aka Armv8 32 bit
 armv8)
-    export CC=/usr/local/bin/cc
-    export CXX=/usr/local/bin/c++
     clean
     generate-cmake -C "${MONOREPO_ROOT}/libcxx/cmake/caches/Armv8Arm.cmake"
     check-cxx-cxxabi
 ;;
 armv8-noexceptions)
-    export CC=/usr/local/bin/cc
-    export CXX=/usr/local/bin/c++
     clean
     generate-cmake -C "${MONOREPO_ROOT}/libcxx/cmake/caches/Armv8Thumb-noexceptions.cmake"
     check-cxx-cxxabi
 ;;
 # Armv7 32 bit. One building Arm only one Thumb only code.
 armv7)
-    export CC=/usr/local/bin/cc
-    export CXX=/usr/local/bin/c++
     clean
     generate-cmake -C "${MONOREPO_ROOT}/libcxx/cmake/caches/Armv7Arm.cmake"
     check-cxx-cxxabi
 ;;
 armv7-noexceptions)
-    export CC=/usr/local/bin/cc
-    export CXX=/usr/local/bin/c++
     clean
     generate-cmake -C "${MONOREPO_ROOT}/libcxx/cmake/caches/Armv7Thumb-noexceptions.cmake"
     check-cxx-cxxabi
