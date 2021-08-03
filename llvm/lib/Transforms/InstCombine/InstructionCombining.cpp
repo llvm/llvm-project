@@ -359,7 +359,8 @@ Value *InstCombinerImpl::simplifyIntToPtrRoundTripCast(Value *Val) {
             PtrToInt->getSrcTy()->getPointerAddressSpace() &&
         DL.getPointerTypeSizeInBits(PtrToInt->getSrcTy()) ==
             DL.getTypeSizeInBits(PtrToInt->getDestTy())) {
-      return Builder.CreateBitCast(PtrToInt->getOperand(0), CastTy);
+      return CastInst::CreateBitOrPointerCast(PtrToInt->getOperand(0), CastTy,
+                                              "", PtrToInt);
     }
   }
   return nullptr;
