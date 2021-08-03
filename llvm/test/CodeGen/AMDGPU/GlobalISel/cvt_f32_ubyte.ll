@@ -1123,16 +1123,33 @@ define float @v_test_uitofp_i64_byte_to_f32(i64 %arg0) {
 ; SI-LABEL: v_test_uitofp_i64_byte_to_f32:
 ; SI:       ; %bb.0:
 ; SI-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; SI-NEXT:    v_ffbh_u32_e32 v2, 0
 ; SI-NEXT:    v_and_b32_e32 v0, 0xff, v0
-; SI-NEXT:    v_cvt_f32_ubyte0_e32 v0, v0
-; SI-NEXT:    v_ldexp_f32_e64 v0, v0, 0
+; SI-NEXT:    v_mov_b32_e32 v1, 0
+; SI-NEXT:    v_min_u32_e32 v2, 32, v2
+; SI-NEXT:    v_lshl_b64 v[0:1], v[0:1], v2
+; SI-NEXT:    v_cmp_ne_u32_e32 vcc, 0, v0
+; SI-NEXT:    v_cndmask_b32_e64 v0, 0, 1, vcc
+; SI-NEXT:    v_or_b32_e32 v0, v1, v0
+; SI-NEXT:    v_cvt_f32_u32_e32 v0, v0
+; SI-NEXT:    v_sub_i32_e32 v1, vcc, 32, v2
+; SI-NEXT:    v_ldexp_f32_e32 v0, v0, v1
 ; SI-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; VI-LABEL: v_test_uitofp_i64_byte_to_f32:
 ; VI:       ; %bb.0:
 ; VI-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; VI-NEXT:    v_cvt_f32_ubyte0_sdwa v0, v0 dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:BYTE_0
-; VI-NEXT:    v_ldexp_f32 v0, v0, 0
+; VI-NEXT:    v_ffbh_u32_e32 v2, 0
+; VI-NEXT:    v_and_b32_e32 v0, 0xff, v0
+; VI-NEXT:    v_mov_b32_e32 v1, 0
+; VI-NEXT:    v_min_u32_e32 v2, 32, v2
+; VI-NEXT:    v_lshlrev_b64 v[0:1], v2, v[0:1]
+; VI-NEXT:    v_cmp_ne_u32_e32 vcc, 0, v0
+; VI-NEXT:    v_cndmask_b32_e64 v0, 0, 1, vcc
+; VI-NEXT:    v_or_b32_e32 v0, v1, v0
+; VI-NEXT:    v_cvt_f32_u32_e32 v0, v0
+; VI-NEXT:    v_sub_u32_e32 v1, vcc, 32, v2
+; VI-NEXT:    v_ldexp_f32 v0, v0, v1
 ; VI-NEXT:    s_setpc_b64 s[30:31]
   %masked = and i64 %arg0, 255
   %itofp = uitofp i64 %masked to float
