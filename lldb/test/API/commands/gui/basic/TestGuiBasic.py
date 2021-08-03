@@ -16,6 +16,7 @@ class BasicGuiCommandTest(PExpectTest):
     @skipIfAsan
     @skipIfCursesSupportMissing
     @skipIfLinux #rdar://problem/55757360
+    @skipIf(oslist=["linux"], archs=["arm", "aarch64"])
     def test_gui(self):
         self.build()
 
