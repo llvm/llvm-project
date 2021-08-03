@@ -220,10 +220,24 @@ exit:
   ret void
 }
 
+; FUNC-LABEL: {{^}}sv_uaddo_i128:
+; GCN: v_add
+; GCN: v_addc
+; GCN: v_addc
+; GCN: v_addc
+define amdgpu_cs void @sv_uaddo_i128(i32 addrspace(1)* %out, i128 inreg %a, i128 %b) {
+  %uadd = call { i128, i1 } @llvm.uadd.with.overflow.i128(i128 %a, i128 %b)
+  %carry = extractvalue { i128, i1 } %uadd, 1
+  %carry.ext = zext i1 %carry to i32
+  store i32 %carry.ext, i32 addrspace(1)* %out
+  ret void
+}
+
 declare i32 @llvm.amdgcn.workitem.id.x() #1
 declare { i16, i1 } @llvm.uadd.with.overflow.i16(i16, i16) #1
 declare { i32, i1 } @llvm.uadd.with.overflow.i32(i32, i32) #1
 declare { i64, i1 } @llvm.uadd.with.overflow.i64(i64, i64) #1
+declare { i128, i1 } @llvm.uadd.with.overflow.i128(i128, i128) #1
 declare { <2 x i32>, <2 x i1> } @llvm.uadd.with.overflow.v2i32(<2 x i32>, <2 x i32>) nounwind readnone
 
 
