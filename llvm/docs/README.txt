@@ -55,7 +55,7 @@ running:
 Doxygen page Output
 ==============
 
-Install doxygen <http://www.stack.nl/~dimitri/doxygen/download.html> and dot2tex <https://dot2tex.readthedocs.io/en/latest>.
+Install doxygen <https://www.doxygen.nl/download.html> and dot2tex <https://dot2tex.readthedocs.io/en/latest>.
 
     cd <build-dir>
     cmake -DLLVM_ENABLE_DOXYGEN=On <llvm-top-src-dir>
