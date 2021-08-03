@@ -243,6 +243,12 @@ Changes to the LLVM tools
 Changes to LLDB
 ---------------------------------
 
+* LLDB executable is now included in pre-built LLVM binaries.
+
+* LLDB now includes full featured support for AArch64 SVE register access.
+
+* LLDB now supports AArch64 Pointer Authentication, allowing stack unwind with signed return address.
+
 * LLDB now supports debugging programs on AArch64 Linux that use memory tagging (MTE).
 * Added ``memory tag read`` and ``memory tag write`` commands.
 * The ``memory region`` command will note when a region has memory tagging enabled.
