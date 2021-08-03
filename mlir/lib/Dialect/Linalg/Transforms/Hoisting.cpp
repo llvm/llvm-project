@@ -553,7 +553,7 @@ static Value buildLoopIterationCount(OpBuilder &b, scf::ForOp outer,
 }
 
 /// Given a set of loops, assumed to be scf::ForOp, create a constraint set
-/// containing the inequalities `iv - lb >= 0` and `-iv + ub >= 0` for each
+/// containing the inequalities `iv - lb >= 0` and `-iv + ub - 1 >= 0` for each
 /// loop.
 static ConstraintsSet initLoopIvsAndBounds(ArrayRef<Operation *> loops) {
   ConstraintsSet constraints;
