@@ -847,29 +847,20 @@ bool llvm::UnrollRuntimeLoopRemainder(
   // work is to update the phi nodes in the original loop, and take in the
   // values from the cloned region.
   for (auto *BB : OtherExits) {
-   for (auto &II : *BB) {
-
-     // Given we preserve LCSSA form, we know that the values used outside the
-     // loop will be used through these phi nodes at the exit blocks that are
-     // transformed below.
-     if (!isa<PHINode>(II))
-       break;
-     PHINode *Phi = cast<PHINode>(&II);
-     unsigned oldNumOperands = Phi->getNumIncomingValues();
+    // Given we preserve LCSSA form, we know that the values used outside the
+    // loop will be used through these phi nodes at the exit blocks that are
+    // transformed below.
+    for (PHINode &PN : BB->phis()) {
+     unsigned oldNumOperands = PN.getNumIncomingValues();
      // Add the incoming values from the remainder code to the end of the phi
      // node.
-     for (unsigned i =0; i < oldNumOperands; i++){
-       Value *newVal = VMap.lookup(Phi->getIncomingValue(i));
-       // newVal can be a constant or derived from values outside the loop, and
-       // hence need not have a VMap value. Also, since lookup already generated
-       // a default "null" VMap entry for this value, we need to populate that
-       // VMap entry correctly, with the mapped entry being itself.
-       if (!newVal) {
-         newVal = Phi->getIncomingValue(i);
-         VMap[Phi->getIncomingValue(i)] = Phi->getIncomingValue(i);
-       }
-       Phi->addIncoming(newVal,
-                           cast<BasicBlock>(VMap[Phi->getIncomingBlock(i)]));
+     for (unsigned i = 0; i < oldNumOperands; i++){
+       auto *PredBB =PN.getIncomingBlock(i);
+       auto *V = PN.getIncomingValue(i);
+       if (Instruction *I = dyn_cast<Instruction>(V))
+         if (L->contains(I))
+           V = VMap.lookup(I);
+       PN.addIncoming(V, cast<BasicBlock>(VMap[PredBB]));
      }
    }
 #if defined(EXPENSIVE_CHECKS) && !defined(NDEBUG)
