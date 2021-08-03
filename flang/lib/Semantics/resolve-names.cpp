@@ -1292,6 +1292,7 @@ bool OmpVisitor::NeedsScope(const parser::OpenMPBlockConstruct &x) {
   case llvm::omp::Directive::OMPD_target_data:
   case llvm::omp::Directive::OMPD_master:
   case llvm::omp::Directive::OMPD_ordered:
+  case llvm::omp::Directive::OMPD_taskgroup:
     return false;
   default:
     return true;
