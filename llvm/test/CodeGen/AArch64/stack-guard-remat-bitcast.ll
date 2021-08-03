@@ -8,9 +8,9 @@
 define i32 @test_stack_guard_remat2() ssp {
 ; CHECK-LABEL: test_stack_guard_remat2:
 ; CHECK:       ; %bb.0: ; %entry
-; CHECK-NEXT:    sub sp, sp, #64 ; =64
+; CHECK-NEXT:    sub sp, sp, #64
 ; CHECK-NEXT:    stp x29, x30, [sp, #48] ; 16-byte Folded Spill
-; CHECK-NEXT:    add x29, sp, #48 ; =48
+; CHECK-NEXT:    add x29, sp, #48
 ; CHECK-NEXT:    .cfi_def_cfa w29, 16
 ; CHECK-NEXT:    .cfi_offset w30, -8
 ; CHECK-NEXT:    .cfi_offset w29, -16
@@ -41,7 +41,7 @@ define i32 @test_stack_guard_remat2() ssp {
 ; CHECK-NEXT:  ; %bb.1: ; %entry
 ; CHECK-NEXT:    ldp x29, x30, [sp, #48] ; 16-byte Folded Reload
 ; CHECK-NEXT:    mov w0, #-1
-; CHECK-NEXT:    add sp, sp, #64 ; =64
+; CHECK-NEXT:    add sp, sp, #64
 ; CHECK-NEXT:    ret
 ; CHECK-NEXT:  LBB0_2: ; %entry
 ; CHECK-NEXT:    bl ___stack_chk_fail

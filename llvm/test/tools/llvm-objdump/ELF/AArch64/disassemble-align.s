@@ -3,7 +3,7 @@
 
 ## Use '|' to show where the tabs line up.
 #       CHECK:0000000000000000 <$x.0>:
-#  CHECK-NEXT:       0: 62 10 00 91  |add|x2, x3, #4              // =4
+#  CHECK-NEXT:       0: 62 10 00 91  |add|x2, x3, #4{{$}}
 #  CHECK-NEXT:       4: 1f 20 03 d5  |nop
 # CHECK-EMPTY:
 #  CHECK-NEXT:0000000000000008 <$d.1>:

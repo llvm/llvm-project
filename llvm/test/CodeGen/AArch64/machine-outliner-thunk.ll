@@ -13,7 +13,7 @@ define i32 @a() {
 ; CHECK-NEXT:    .cfi_def_cfa_offset 16
 ; CHECK-NEXT:    .cfi_offset w30, -16
 ; CHECK-NEXT:    bl [[OUTLINED_DIRECT:OUTLINED_FUNCTION_[0-9]+]]
-; CHECK-NEXT:    add w0, w0, #8 // =8
+; CHECK-NEXT:    add w0, w0, #8
 ; CHECK-NEXT:    ldr x30, [sp], #16 // 8-byte Folded Reload
 ; CHECK-NEXT:    ret
 entry:
@@ -29,7 +29,7 @@ define i32 @b() {
 ; CHECK-NEXT:    .cfi_def_cfa_offset 16
 ; CHECK-NEXT:    .cfi_offset w30, -16
 ; CHECK-NEXT:    bl [[OUTLINED_DIRECT]]
-; CHECK-NEXT:    add w0, w0, #88 // =88
+; CHECK-NEXT:    add w0, w0, #88
 ; CHECK-NEXT:    ldr x30, [sp], #16 // 8-byte Folded Reload
 ; CHECK-NEXT:    ret
 entry:
@@ -45,7 +45,7 @@ define hidden i32 @c(i32 (i32, i32, i32, i32)* %fptr) {
 ; CHECK-NEXT:    .cfi_def_cfa_offset 16
 ; CHECK-NEXT:    .cfi_offset w30, -16
 ; CHECK-NEXT:    bl [[OUTLINED_INDIRECT:OUTLINED_FUNCTION_[0-9]+]]
-; CHECK-NEXT:    add w0, w0, #8 // =8
+; CHECK-NEXT:    add w0, w0, #8
 ; CHECK-NEXT:    ldr x30, [sp], #16 // 8-byte Folded Reload
 ; CHECK-NEXT:    ret
 entry:
@@ -61,7 +61,7 @@ define hidden i32 @d(i32 (i32, i32, i32, i32)* %fptr) {
 ; CHECK-NEXT:    .cfi_def_cfa_offset 16
 ; CHECK-NEXT:    .cfi_offset w30, -16
 ; CHECK-NEXT:    bl [[OUTLINED_INDIRECT]]
-; CHECK-NEXT:    add w0, w0, #88 // =88
+; CHECK-NEXT:    add w0, w0, #88
 ; CHECK-NEXT:    ldr x30, [sp], #16 // 8-byte Folded Reload
 ; CHECK-NEXT:    ret
 entry:

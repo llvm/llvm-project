@@ -20,7 +20,7 @@ define i32 @reduce_and_v1(<1 x i8> %a0, i32 %a1, i32 %a2) nounwind {
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    // kill: def $d0 killed $d0 def $q0
 ; CHECK-NEXT:    smov w8, v0.b[0]
-; CHECK-NEXT:    cmp w8, #0 // =0
+; CHECK-NEXT:    cmp w8, #0
 ; CHECK-NEXT:    csel w0, w0, w1, lt
 ; CHECK-NEXT:    ret
   %x = icmp slt <1 x i8> %a0, zeroinitializer
@@ -114,7 +114,7 @@ define i32 @reduce_or_v1(<1 x i8> %a0, i32 %a1, i32 %a2) nounwind {
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    // kill: def $d0 killed $d0 def $q0
 ; CHECK-NEXT:    smov w8, v0.b[0]
-; CHECK-NEXT:    cmp w8, #0 // =0
+; CHECK-NEXT:    cmp w8, #0
 ; CHECK-NEXT:    csel w0, w0, w1, lt
 ; CHECK-NEXT:    ret
   %x = icmp slt <1 x i8> %a0, zeroinitializer

@@ -5,7 +5,7 @@
 define void @test() nounwind {
 ; CHECK-LABEL: test:
 ; CHECK:       // %bb.0: // %entry
-; CHECK-NEXT:    sub sp, sp, #16 // =16
+; CHECK-NEXT:    sub sp, sp, #16
 ; CHECK-NEXT:    mov x1, xzr
 ; CHECK-NEXT:    mov x0, x1
 ; CHECK-NEXT:    str x1, [sp] // 8-byte Folded Spill

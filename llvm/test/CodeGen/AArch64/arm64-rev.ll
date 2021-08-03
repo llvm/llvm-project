@@ -535,7 +535,7 @@ define void @test_vrev64(<4 x i16>* nocapture %source, <2 x i16>* nocapture %dst
 ; CHECK-LABEL: test_vrev64:
 ; CHECK:       // %bb.0: // %entry
 ; CHECK-NEXT:    ldr q0, [x0]
-; CHECK-NEXT:    add x8, x1, #2 // =2
+; CHECK-NEXT:    add x8, x1, #2
 ; CHECK-NEXT:    st1.h { v0 }[5], [x8]
 ; CHECK-NEXT:    st1.h { v0 }[6], [x1]
 ; CHECK-NEXT:    ret
@@ -543,7 +543,7 @@ define void @test_vrev64(<4 x i16>* nocapture %source, <2 x i16>* nocapture %dst
 ; GISEL-LABEL: test_vrev64:
 ; GISEL:       // %bb.0: // %entry
 ; GISEL-NEXT:    ldr q0, [x0]
-; GISEL-NEXT:    add x8, x1, #2 // =2
+; GISEL-NEXT:    add x8, x1, #2
 ; GISEL-NEXT:    st1.h { v0 }[6], [x1]
 ; GISEL-NEXT:    st1.h { v0 }[5], [x8]
 ; GISEL-NEXT:    ret

@@ -81,13 +81,13 @@ entry:
 define i1 @test_relocate(i32 addrspace(1)* %a) gc "statepoint-example" {
 ; CHECK-LABEL: test_relocate:
 ; CHECK:       // %bb.0: // %entry
-; CHECK-NEXT:    sub sp, sp, #16 // =16
+; CHECK-NEXT:    sub sp, sp, #16
 ; CHECK-NEXT:    .cfi_def_cfa_offset 16
 ; CHECK-NEXT:    str x0, [sp, #8]
 ; CHECK-NEXT:    bl return_i1
 ; CHECK-NEXT:  .Ltmp7:
 ; CHECK-NEXT:    and w0, w0, #0x1
-; CHECK-NEXT:    add sp, sp, #16 // =16
+; CHECK-NEXT:    add sp, sp, #16
 ; CHECK-NEXT:    ret
 ; Check that an ununsed relocate has no code-generation impact
 entry:
@@ -176,7 +176,7 @@ declare void @consume_attributes(i32, i8* nest, i32, %struct2* byval(%struct2))
 define void @test_attributes(%struct2* byval(%struct2) %s) gc "statepoint-example" {
 ; CHECK-LABEL: test_attributes:
 ; CHECK:       // %bb.0: // %entry
-; CHECK-NEXT:    sub sp, sp, #32 // =32
+; CHECK-NEXT:    sub sp, sp, #32
 ; CHECK-NEXT:    .cfi_def_cfa_offset 32
 ; CHECK-NEXT:    ldr x8, [sp, #48]
 ; CHECK-NEXT:    ldr q0, [sp, #32]
@@ -187,7 +187,7 @@ define void @test_attributes(%struct2* byval(%struct2) %s) gc "statepoint-exampl
 ; CHECK-NEXT:    str q0, [sp]
 ; CHECK-NEXT:    bl consume_attributes
 ; CHECK-NEXT:  .Ltmp11:
-; CHECK-NEXT:    add sp, sp, #32 // =32
+; CHECK-NEXT:    add sp, sp, #32
 ; CHECK-NEXT:    ret
 entry:
 ; Check that arguments with attributes are lowered correctly.

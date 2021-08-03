@@ -64,9 +64,9 @@ define dso_local i32 @main() #0 {
 attributes #0 = { noredzone nounwind ssp uwtable "frame-pointer"="all" }
 ; CHECK-LABEL: check_boundaries:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    sub sp, sp, #48 // =48
+; CHECK-NEXT:    sub sp, sp, #48
 ; CHECK-NEXT:    stp x29, x30, [sp, #32] // 16-byte Folded Spill
-; CHECK-NEXT:    add x29, sp, #32 // =32
+; CHECK-NEXT:    add x29, sp, #32
 ; CHECK-NEXT:    .cfi_def_cfa w29, 16
 ; CHECK-NEXT:    .cfi_offset w30, -8
 ; CHECK-NEXT:    .cfi_offset w29, -16
@@ -94,9 +94,9 @@ attributes #0 = { noredzone nounwind ssp uwtable "frame-pointer"="all" }
 ;
 ; CHECK-LABEL: main:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    sub sp, sp, #48 // =48
+; CHECK-NEXT:    sub sp, sp, #48
 ; CHECK-NEXT:    stp x29, x30, [sp, #32] // 16-byte Folded Spill
-; CHECK-NEXT:    add x29, sp, #32 // =32
+; CHECK-NEXT:    add x29, sp, #32
 ; CHECK-NEXT:    .cfi_def_cfa w29, 16
 ; CHECK-NEXT:    .cfi_offset w30, -8
 ; CHECK-NEXT:    .cfi_offset w29, -16
@@ -128,5 +128,5 @@ attributes #0 = { noredzone nounwind ssp uwtable "frame-pointer"="all" }
 ; CHECK-LABEL: OUTLINED_FUNCTION_1:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    mov w0, wzr
-; CHECK-NEXT:    add sp, sp, #48 // =48
+; CHECK-NEXT:    add sp, sp, #48
 ; CHECK-NEXT:    ret

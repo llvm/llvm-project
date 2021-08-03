@@ -24,7 +24,7 @@ define <vscale x 32 x i8> @split_insert_32i8_idx(<vscale x 32 x i8> %a, i8 %elt,
 ; CHECK-NEXT:    .cfi_escape 0x0f, 0x0c, 0x8f, 0x00, 0x11, 0x10, 0x22, 0x11, 0x10, 0x92, 0x2e, 0x00, 0x1e, 0x22 // sp + 16 + 16 * VG
 ; CHECK-NEXT:    .cfi_offset w29, -16
 ; CHECK-NEXT:    rdvl x8, #2
-; CHECK-NEXT:    sub x8, x8, #1 // =1
+; CHECK-NEXT:    sub x8, x8, #1
 ; CHECK-NEXT:    cmp x1, x8
 ; CHECK-NEXT:    ptrue p0.b
 ; CHECK-NEXT:    csel x8, x1, x8, lo
@@ -49,7 +49,7 @@ define <vscale x 8 x float> @split_insert_8f32_idx(<vscale x 8 x float> %a, floa
 ; CHECK-NEXT:    .cfi_escape 0x0f, 0x0c, 0x8f, 0x00, 0x11, 0x10, 0x22, 0x11, 0x10, 0x92, 0x2e, 0x00, 0x1e, 0x22 // sp + 16 + 16 * VG
 ; CHECK-NEXT:    .cfi_offset w29, -16
 ; CHECK-NEXT:    cnth x8
-; CHECK-NEXT:    sub x8, x8, #1 // =1
+; CHECK-NEXT:    sub x8, x8, #1
 ; CHECK-NEXT:    cmp x0, x8
 ; CHECK-NEXT:    ptrue p0.s
 ; CHECK-NEXT:    csel x8, x0, x8, lo
@@ -74,7 +74,7 @@ define <vscale x 8 x i64> @split_insert_8i64_idx(<vscale x 8 x i64> %a, i64 %elt
 ; CHECK-NEXT:    .cfi_escape 0x0f, 0x0c, 0x8f, 0x00, 0x11, 0x10, 0x22, 0x11, 0x20, 0x92, 0x2e, 0x00, 0x1e, 0x22 // sp + 16 + 32 * VG
 ; CHECK-NEXT:    .cfi_offset w29, -16
 ; CHECK-NEXT:    cnth x8
-; CHECK-NEXT:    sub x8, x8, #1 // =1
+; CHECK-NEXT:    sub x8, x8, #1
 ; CHECK-NEXT:    cmp x1, x8
 ; CHECK-NEXT:    ptrue p0.d
 ; CHECK-NEXT:    csel x8, x1, x8, lo
@@ -136,9 +136,9 @@ define <vscale x 32 x i16> @split_insert_32i16(<vscale x 32 x i16> %a, i16 %elt)
 ; CHECK-NEXT:    .cfi_escape 0x0f, 0x0c, 0x8f, 0x00, 0x11, 0x10, 0x22, 0x11, 0x20, 0x92, 0x2e, 0x00, 0x1e, 0x22 // sp + 16 + 32 * VG
 ; CHECK-NEXT:    .cfi_offset w29, -16
 ; CHECK-NEXT:    rdvl x10, #2
-; CHECK-NEXT:    sub x10, x10, #1 // =1
+; CHECK-NEXT:    sub x10, x10, #1
 ; CHECK-NEXT:    mov w9, #128
-; CHECK-NEXT:    cmp x10, #128 // =128
+; CHECK-NEXT:    cmp x10, #128
 ; CHECK-NEXT:    ptrue p0.h
 ; CHECK-NEXT:    mov x8, sp
 ; CHECK-NEXT:    csel x9, x10, x9, lo
@@ -168,7 +168,7 @@ define <vscale x 8 x i32> @split_insert_8i32(<vscale x 8 x i32> %a, i32 %elt) {
 ; CHECK-NEXT:    mov w9, #16960
 ; CHECK-NEXT:    cnth x10
 ; CHECK-NEXT:    movk w9, #15, lsl #16
-; CHECK-NEXT:    sub x10, x10, #1 // =1
+; CHECK-NEXT:    sub x10, x10, #1
 ; CHECK-NEXT:    cmp x10, x9
 ; CHECK-NEXT:    ptrue p0.s
 ; CHECK-NEXT:    mov x8, sp

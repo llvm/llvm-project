@@ -71,7 +71,7 @@ define i64 @sign_i64(i64 %a) {
 define i64 @not_sign_i64(i64 %a) {
 ; CHECK-LABEL: not_sign_i64:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    cmp x0, #0 // =0
+; CHECK-NEXT:    cmp x0, #0
 ; CHECK-NEXT:    mov w8, #1
 ; CHECK-NEXT:    cneg x0, x8, le
 ; CHECK-NEXT:    ret
@@ -172,7 +172,7 @@ define <4 x i32> @sign_4xi32(<4 x i32> %a) {
 define <4 x i32> @sign_4xi32_multi_use(<4 x i32> %a) {
 ; CHECK-LABEL: sign_4xi32_multi_use:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    sub sp, sp, #32 // =32
+; CHECK-NEXT:    sub sp, sp, #32
 ; CHECK-NEXT:    str x30, [sp, #16] // 8-byte Folded Spill
 ; CHECK-NEXT:    .cfi_def_cfa_offset 32
 ; CHECK-NEXT:    .cfi_offset w30, -16
@@ -185,7 +185,7 @@ define <4 x i32> @sign_4xi32_multi_use(<4 x i32> %a) {
 ; CHECK-NEXT:    bl use_4xi1
 ; CHECK-NEXT:    ldr q0, [sp] // 16-byte Folded Reload
 ; CHECK-NEXT:    ldr x30, [sp, #16] // 8-byte Folded Reload
-; CHECK-NEXT:    add sp, sp, #32 // =32
+; CHECK-NEXT:    add sp, sp, #32
 ; CHECK-NEXT:    ret
   %c = icmp sgt <4 x i32> %a, <i32 -1, i32 -1, i32 -1, i32 -1>
   %res = select <4 x i1> %c, <4 x i32> <i32 1, i32 1, i32 1, i32 1>, <4 x i32> <i32 -1, i32 -1, i32 -1, i32 -1>

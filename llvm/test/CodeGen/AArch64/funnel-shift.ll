@@ -193,7 +193,7 @@ define i37 @fshr_i37(i37 %x, i37 %y, i37 %z) {
 ; CHECK-NEXT:    lsr x8, x8, #5
 ; CHECK-NEXT:    msub w8, w8, w9, w2
 ; CHECK-NEXT:    lsl x10, x1, #27
-; CHECK-NEXT:    add w8, w8, #27 // =27
+; CHECK-NEXT:    add w8, w8, #27
 ; CHECK-NEXT:    lsr x9, x10, x8
 ; CHECK-NEXT:    mvn w8, w8
 ; CHECK-NEXT:    lsl x10, x0, #1

@@ -24,7 +24,7 @@ define i32 @bextr32_a0(i32 %val, i32 %numskipbits, i32 %numlowbits) nounwind {
 ; CHECK-NEXT:    mov w9, #1
 ; CHECK-NEXT:    lsl w9, w9, w2
 ; CHECK-NEXT:    lsr w8, w0, w1
-; CHECK-NEXT:    sub w9, w9, #1 // =1
+; CHECK-NEXT:    sub w9, w9, #1
 ; CHECK-NEXT:    and w0, w9, w8
 ; CHECK-NEXT:    ret
   %shifted = lshr i32 %val, %numskipbits
@@ -40,7 +40,7 @@ define i32 @bextr32_a0_arithmetic(i32 %val, i32 %numskipbits, i32 %numlowbits) n
 ; CHECK-NEXT:    mov w9, #1
 ; CHECK-NEXT:    lsl w9, w9, w2
 ; CHECK-NEXT:    asr w8, w0, w1
-; CHECK-NEXT:    sub w9, w9, #1 // =1
+; CHECK-NEXT:    sub w9, w9, #1
 ; CHECK-NEXT:    and w0, w9, w8
 ; CHECK-NEXT:    ret
   %shifted = ashr i32 %val, %numskipbits
@@ -56,7 +56,7 @@ define i32 @bextr32_a1_indexzext(i32 %val, i8 zeroext %numskipbits, i8 zeroext %
 ; CHECK-NEXT:    mov w9, #1
 ; CHECK-NEXT:    lsl w9, w9, w2
 ; CHECK-NEXT:    lsr w8, w0, w1
-; CHECK-NEXT:    sub w9, w9, #1 // =1
+; CHECK-NEXT:    sub w9, w9, #1
 ; CHECK-NEXT:    and w0, w9, w8
 ; CHECK-NEXT:    ret
   %skip = zext i8 %numskipbits to i32
@@ -74,7 +74,7 @@ define i32 @bextr32_a2_load(i32* %w, i32 %numskipbits, i32 %numlowbits) nounwind
 ; CHECK-NEXT:    ldr w8, [x0]
 ; CHECK-NEXT:    mov w9, #1
 ; CHECK-NEXT:    lsl w9, w9, w2
-; CHECK-NEXT:    sub w9, w9, #1 // =1
+; CHECK-NEXT:    sub w9, w9, #1
 ; CHECK-NEXT:    lsr w8, w8, w1
 ; CHECK-NEXT:    and w0, w9, w8
 ; CHECK-NEXT:    ret
@@ -92,7 +92,7 @@ define i32 @bextr32_a3_load_indexzext(i32* %w, i8 zeroext %numskipbits, i8 zeroe
 ; CHECK-NEXT:    ldr w8, [x0]
 ; CHECK-NEXT:    mov w9, #1
 ; CHECK-NEXT:    lsl w9, w9, w2
-; CHECK-NEXT:    sub w9, w9, #1 // =1
+; CHECK-NEXT:    sub w9, w9, #1
 ; CHECK-NEXT:    lsr w8, w8, w1
 ; CHECK-NEXT:    and w0, w9, w8
 ; CHECK-NEXT:    ret
@@ -112,7 +112,7 @@ define i32 @bextr32_a4_commutative(i32 %val, i32 %numskipbits, i32 %numlowbits) 
 ; CHECK-NEXT:    mov w9, #1
 ; CHECK-NEXT:    lsl w9, w9, w2
 ; CHECK-NEXT:    lsr w8, w0, w1
-; CHECK-NEXT:    sub w9, w9, #1 // =1
+; CHECK-NEXT:    sub w9, w9, #1
 ; CHECK-NEXT:    and w0, w8, w9
 ; CHECK-NEXT:    ret
   %shifted = lshr i32 %val, %numskipbits
@@ -130,7 +130,7 @@ define i64 @bextr64_a0(i64 %val, i64 %numskipbits, i64 %numlowbits) nounwind {
 ; CHECK-NEXT:    mov w9, #1
 ; CHECK-NEXT:    lsl x9, x9, x2
 ; CHECK-NEXT:    lsr x8, x0, x1
-; CHECK-NEXT:    sub x9, x9, #1 // =1
+; CHECK-NEXT:    sub x9, x9, #1
 ; CHECK-NEXT:    and x0, x9, x8
 ; CHECK-NEXT:    ret
   %shifted = lshr i64 %val, %numskipbits
@@ -146,7 +146,7 @@ define i64 @bextr64_a0_arithmetic(i64 %val, i64 %numskipbits, i64 %numlowbits) n
 ; CHECK-NEXT:    mov w9, #1
 ; CHECK-NEXT:    lsl x9, x9, x2
 ; CHECK-NEXT:    asr x8, x0, x1
-; CHECK-NEXT:    sub x9, x9, #1 // =1
+; CHECK-NEXT:    sub x9, x9, #1
 ; CHECK-NEXT:    and x0, x9, x8
 ; CHECK-NEXT:    ret
   %shifted = ashr i64 %val, %numskipbits
@@ -164,7 +164,7 @@ define i64 @bextr64_a1_indexzext(i64 %val, i8 zeroext %numskipbits, i8 zeroext %
 ; CHECK-NEXT:    lsl x9, x9, x2
 ; CHECK-NEXT:    // kill: def $w1 killed $w1 def $x1
 ; CHECK-NEXT:    lsr x8, x0, x1
-; CHECK-NEXT:    sub x9, x9, #1 // =1
+; CHECK-NEXT:    sub x9, x9, #1
 ; CHECK-NEXT:    and x0, x9, x8
 ; CHECK-NEXT:    ret
   %skip = zext i8 %numskipbits to i64
@@ -182,7 +182,7 @@ define i64 @bextr64_a2_load(i64* %w, i64 %numskipbits, i64 %numlowbits) nounwind
 ; CHECK-NEXT:    ldr x8, [x0]
 ; CHECK-NEXT:    mov w9, #1
 ; CHECK-NEXT:    lsl x9, x9, x2
-; CHECK-NEXT:    sub x9, x9, #1 // =1
+; CHECK-NEXT:    sub x9, x9, #1
 ; CHECK-NEXT:    lsr x8, x8, x1
 ; CHECK-NEXT:    and x0, x9, x8
 ; CHECK-NEXT:    ret
@@ -202,7 +202,7 @@ define i64 @bextr64_a3_load_indexzext(i64* %w, i8 zeroext %numskipbits, i8 zeroe
 ; CHECK-NEXT:    // kill: def $w2 killed $w2 def $x2
 ; CHECK-NEXT:    lsl x9, x9, x2
 ; CHECK-NEXT:    // kill: def $w1 killed $w1 def $x1
-; CHECK-NEXT:    sub x9, x9, #1 // =1
+; CHECK-NEXT:    sub x9, x9, #1
 ; CHECK-NEXT:    lsr x8, x8, x1
 ; CHECK-NEXT:    and x0, x9, x8
 ; CHECK-NEXT:    ret
@@ -222,7 +222,7 @@ define i64 @bextr64_a4_commutative(i64 %val, i64 %numskipbits, i64 %numlowbits) 
 ; CHECK-NEXT:    mov w9, #1
 ; CHECK-NEXT:    lsl x9, x9, x2
 ; CHECK-NEXT:    lsr x8, x0, x1
-; CHECK-NEXT:    sub x9, x9, #1 // =1
+; CHECK-NEXT:    sub x9, x9, #1
 ; CHECK-NEXT:    and x0, x8, x9
 ; CHECK-NEXT:    ret
   %shifted = lshr i64 %val, %numskipbits
@@ -241,7 +241,7 @@ define i32 @bextr64_32_a0(i64 %val, i64 %numskipbits, i64 %numlowbits) nounwind 
 ; CHECK-NEXT:    mov w9, #1
 ; CHECK-NEXT:    lsl x9, x9, x2
 ; CHECK-NEXT:    lsr x8, x0, x1
-; CHECK-NEXT:    sub w9, w9, #1 // =1
+; CHECK-NEXT:    sub w9, w9, #1
 ; CHECK-NEXT:    and w0, w9, w8
 ; CHECK-NEXT:    ret
   %shifted = lshr i64 %val, %numskipbits
@@ -259,7 +259,7 @@ define i32 @bextr64_32_a1(i64 %val, i64 %numskipbits, i32 %numlowbits) nounwind 
 ; CHECK-NEXT:    mov w9, #1
 ; CHECK-NEXT:    lsl w9, w9, w2
 ; CHECK-NEXT:    lsr x8, x0, x1
-; CHECK-NEXT:    sub w9, w9, #1 // =1
+; CHECK-NEXT:    sub w9, w9, #1
 ; CHECK-NEXT:    and w0, w9, w8
 ; CHECK-NEXT:    ret
   %shifted = lshr i64 %val, %numskipbits
@@ -278,7 +278,7 @@ define i32 @bextr64_32_a2(i64 %val, i64 %numskipbits, i32 %numlowbits) nounwind 
 ; CHECK-NEXT:    mov w9, #1
 ; CHECK-NEXT:    lsl w9, w9, w2
 ; CHECK-NEXT:    lsr x8, x0, x1
-; CHECK-NEXT:    sub w9, w9, #1 // =1
+; CHECK-NEXT:    sub w9, w9, #1
 ; CHECK-NEXT:    and w0, w9, w8
 ; CHECK-NEXT:    ret
   %shifted = lshr i64 %val, %numskipbits
@@ -974,7 +974,7 @@ define void @pr38938(i32* %a0, i64* %a1) nounwind {
 ; CHECK-NEXT:    ubfx x8, x8, #21, #10
 ; CHECK-NEXT:    lsl x8, x8, #2
 ; CHECK-NEXT:    ldr w9, [x0, x8]
-; CHECK-NEXT:    add w9, w9, #1 // =1
+; CHECK-NEXT:    add w9, w9, #1
 ; CHECK-NEXT:    str w9, [x0, x8]
 ; CHECK-NEXT:    ret
   %tmp = load i64, i64* %a1, align 8

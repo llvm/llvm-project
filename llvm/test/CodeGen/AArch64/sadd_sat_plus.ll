@@ -13,7 +13,7 @@ define i32 @func32(i32 %x, i32 %y, i32 %z) nounwind {
 ; CHECK-NEXT:    mul w8, w1, w2
 ; CHECK-NEXT:    adds w10, w0, w8
 ; CHECK-NEXT:    mov w9, #2147483647
-; CHECK-NEXT:    cmp w10, #0 // =0
+; CHECK-NEXT:    cmp w10, #0
 ; CHECK-NEXT:    cinv w9, w9, ge
 ; CHECK-NEXT:    adds w8, w0, w8
 ; CHECK-NEXT:    csel w0, w9, w8, vs
@@ -28,7 +28,7 @@ define i64 @func64(i64 %x, i64 %y, i64 %z) nounwind {
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    adds x8, x0, x2
 ; CHECK-NEXT:    mov x9, #9223372036854775807
-; CHECK-NEXT:    cmp x8, #0 // =0
+; CHECK-NEXT:    cmp x8, #0
 ; CHECK-NEXT:    cinv x8, x9, ge
 ; CHECK-NEXT:    adds x9, x0, x2
 ; CHECK-NEXT:    csel x0, x8, x9, vs
@@ -63,9 +63,9 @@ define i8 @func8(i8 %x, i8 %y, i8 %z) nounwind {
 ; CHECK-NEXT:    mul w9, w1, w2
 ; CHECK-NEXT:    add w8, w8, w9, sxtb
 ; CHECK-NEXT:    mov w10, #127
-; CHECK-NEXT:    cmp w8, #127 // =127
+; CHECK-NEXT:    cmp w8, #127
 ; CHECK-NEXT:    csel w8, w8, w10, lt
-; CHECK-NEXT:    cmn w8, #128 // =128
+; CHECK-NEXT:    cmn w8, #128
 ; CHECK-NEXT:    mov w9, #-128
 ; CHECK-NEXT:    csel w0, w8, w9, gt
 ; CHECK-NEXT:    ret
@@ -82,9 +82,9 @@ define i4 @func4(i4 %x, i4 %y, i4 %z) nounwind {
 ; CHECK-NEXT:    lsl w9, w9, #28
 ; CHECK-NEXT:    add w8, w8, w9, asr #28
 ; CHECK-NEXT:    mov w10, #7
-; CHECK-NEXT:    cmp w8, #7 // =7
+; CHECK-NEXT:    cmp w8, #7
 ; CHECK-NEXT:    csel w8, w8, w10, lt
-; CHECK-NEXT:    cmn w8, #8 // =8
+; CHECK-NEXT:    cmn w8, #8
 ; CHECK-NEXT:    mov w9, #-8
 ; CHECK-NEXT:    csel w0, w8, w9, gt
 ; CHECK-NEXT:    ret

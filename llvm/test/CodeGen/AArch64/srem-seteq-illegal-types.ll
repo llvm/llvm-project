@@ -32,7 +32,7 @@ define i1 @test_srem_even(i4 %X) nounwind {
 ; CHECK-NEXT:    add w9, w9, w10
 ; CHECK-NEXT:    mov w10, #6
 ; CHECK-NEXT:    msub w8, w9, w10, w8
-; CHECK-NEXT:    cmp w8, #1 // =1
+; CHECK-NEXT:    cmp w8, #1
 ; CHECK-NEXT:    cset w0, eq
 ; CHECK-NEXT:    ret
   %srem = srem i4 %X, 6

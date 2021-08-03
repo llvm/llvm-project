@@ -154,14 +154,14 @@ entry:
 }
 ; CHECK-LABEL: novla_nodynamicrealign_nocall
 ;   Check that space is reserved for one local variable on the stack.
-; CHECK:	sub	sp, sp, #16             // =16
+; CHECK:	sub	sp, sp, #16
 ;   Check correct access to arguments passed on the stack, through stack pointer
 ; CHECK: ldr	d[[DARG:[0-9]+]], [sp, #40]
 ; CHECK: ldr	w[[IARG:[0-9]+]], [sp, #24]
 ;   Check correct access to local variable on the stack, through stack pointer
 ; CHECK: ldr	w[[ILOC:[0-9]+]], [sp, #12]
 ;   Check epilogue:
-; CHECK: add	sp, sp, #16             // =16
+; CHECK: add	sp, sp, #16
 ; CHECK: ret
 
 
@@ -394,7 +394,7 @@ entry:
 ;   bytes & the base pointer (x19) gets initialized to
 ;   this 128-byte aligned area for local variables &
 ;   spill slots
-; CHECK: sub	x9, sp, #80            // =80
+; CHECK: sub	x9, sp, #80
 ; CHECK: and	sp, x9, #0xffffffffffffff80
 ; CHECK: mov    x19, sp
 ;   Check correctness of cfi pseudo-instructions
@@ -688,7 +688,7 @@ bb1:
 ; CHECK-LABEL: realign_conditional2
 ; Extra realignment in the prologue (performance issue).
 ; CHECK:  tbz  {{.*}} .[[LABEL:.*]]
-; CHECK:  sub  x9, sp, #32            // =32
+; CHECK:  sub  x9, sp, #32
 ; CHECK:  and  sp, x9, #0xffffffffffffffe0
 ; CHECK:  mov   x19, sp
 ; Stack is realigned in a non-entry BB.

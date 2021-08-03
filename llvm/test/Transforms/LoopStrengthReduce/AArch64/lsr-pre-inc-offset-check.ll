@@ -18,15 +18,15 @@
 define void @test_lsr_pre_inc_offset_check(%"Type"* %p) {
 ; CHECK-LABEL: test_lsr_pre_inc_offset_check:
 ; CHECK:       // %bb.0: // %entry
-; CHECK-NEXT:    add x8, x0, #340 // =340
+; CHECK-NEXT:    add x8, x0, #340
 ; CHECK-NEXT:    mov w9, #165
 ; CHECK-NEXT:    mov w10, #2
 ; CHECK-NEXT:  .LBB0_1: // %main
 ; CHECK-NEXT:    // =>This Inner Loop Header: Depth=1
 ; CHECK-NEXT:    stur wzr, [x8, #-1]
 ; CHECK-NEXT:    strb w10, [x8]
-; CHECK-NEXT:    subs x9, x9, #1 // =1
-; CHECK-NEXT:    add x8, x8, #338 // =338
+; CHECK-NEXT:    subs x9, x9, #1
+; CHECK-NEXT:    add x8, x8, #338
 ; CHECK-NEXT:    b.ne .LBB0_1
 ; CHECK-NEXT:  // %bb.2: // %exit
 ; CHECK-NEXT:    ret

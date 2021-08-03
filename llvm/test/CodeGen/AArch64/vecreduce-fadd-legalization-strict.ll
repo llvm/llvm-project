@@ -141,7 +141,7 @@ define float @test_v5f32_neutral(<5 x float> %a) nounwind {
 define fp128 @test_v2f128(<2 x fp128> %a, fp128 %s) nounwind {
 ; CHECK-LABEL: test_v2f128:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    sub sp, sp, #32 // =32
+; CHECK-NEXT:    sub sp, sp, #32
 ; CHECK-NEXT:    str q1, [sp] // 16-byte Folded Spill
 ; CHECK-NEXT:    mov v1.16b, v0.16b
 ; CHECK-NEXT:    mov v0.16b, v2.16b
@@ -149,7 +149,7 @@ define fp128 @test_v2f128(<2 x fp128> %a, fp128 %s) nounwind {
 ; CHECK-NEXT:    bl __addtf3
 ; CHECK-NEXT:    ldr q1, [sp] // 16-byte Folded Reload
 ; CHECK-NEXT:    ldr x30, [sp, #16] // 8-byte Folded Reload
-; CHECK-NEXT:    add sp, sp, #32 // =32
+; CHECK-NEXT:    add sp, sp, #32
 ; CHECK-NEXT:    b __addtf3
   %b = call fp128 @llvm.vector.reduce.fadd.f128.v2f128(fp128 %s, <2 x fp128> %a)
   ret fp128 %b

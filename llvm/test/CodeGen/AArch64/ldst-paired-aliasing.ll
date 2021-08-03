@@ -12,20 +12,20 @@ define i32 @main() local_unnamed_addr #1 {
 ; Make sure the stores happen in the correct order (the exact instructions could change).
 ; CHECK-LABEL: main:
 ; CHECK:       // %bb.0: // %for.body.lr.ph.i.i.i.i.i.i63
-; CHECK-NEXT:    sub sp, sp, #112 // =112
+; CHECK-NEXT:    sub sp, sp, #112
 ; CHECK-NEXT:    str x30, [sp, #96] // 8-byte Folded Spill
 ; CHECK-NEXT:    .cfi_def_cfa_offset 112
 ; CHECK-NEXT:    .cfi_offset w30, -16
 ; CHECK-NEXT:    bl _Z5setupv
 ; CHECK-NEXT:    movi v0.4s, #1
 ; CHECK-NEXT:    mov w9, #1
-; CHECK-NEXT:    add x0, sp, #48 // =48
+; CHECK-NEXT:    add x0, sp, #48
 ; CHECK-NEXT:    mov x1, sp
 ; CHECK-NEXT:    str xzr, [sp, #80]
 ; CHECK-NEXT:    str w9, [sp, #80]
 ; CHECK-NEXT:    stp q0, q0, [sp, #48]
 ; CHECK-NEXT:    ldr w8, [sp, #48]
-; CHECK-NEXT:    cmp w8, #1 // =1
+; CHECK-NEXT:    cmp w8, #1
 ; CHECK-NEXT:    b.ne .LBB0_2
 ; CHECK-NEXT:  // %bb.1: // %for.inc
 ; CHECK-NEXT:    bl f
@@ -35,7 +35,7 @@ define i32 @main() local_unnamed_addr #1 {
 ; CHECK-NEXT:  .LBB0_3: // %common.ret
 ; CHECK-NEXT:    ldr x30, [sp, #96] // 8-byte Folded Reload
 ; CHECK-NEXT:    mov w0, wzr
-; CHECK-NEXT:    add sp, sp, #112 // =112
+; CHECK-NEXT:    add sp, sp, #112
 ; CHECK-NEXT:    ret
 
 

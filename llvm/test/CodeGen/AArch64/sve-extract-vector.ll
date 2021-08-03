@@ -18,9 +18,9 @@ define <2 x i64> @extract_v2i64_nxv2i64_idx2(<vscale x 2 x i64> %vec) nounwind {
 ; CHECK-NEXT:    str x29, [sp, #-16]! // 8-byte Folded Spill
 ; CHECK-NEXT:    addvl sp, sp, #-1
 ; CHECK-NEXT:    cntd x9
-; CHECK-NEXT:    sub x9, x9, #2 // =2
+; CHECK-NEXT:    sub x9, x9, #2
 ; CHECK-NEXT:    mov w8, #2
-; CHECK-NEXT:    cmp x9, #2 // =2
+; CHECK-NEXT:    cmp x9, #2
 ; CHECK-NEXT:    ptrue p0.d
 ; CHECK-NEXT:    csel x8, x9, x8, lo
 ; CHECK-NEXT:    st1d { z0.d }, p0, [sp]
@@ -51,9 +51,9 @@ define <4 x i32> @extract_v4i32_nxv4i32_idx4(<vscale x 4 x i32> %vec) nounwind {
 ; CHECK-NEXT:    str x29, [sp, #-16]! // 8-byte Folded Spill
 ; CHECK-NEXT:    addvl sp, sp, #-1
 ; CHECK-NEXT:    cntw x9
-; CHECK-NEXT:    sub x9, x9, #4 // =4
+; CHECK-NEXT:    sub x9, x9, #4
 ; CHECK-NEXT:    mov w8, #4
-; CHECK-NEXT:    cmp x9, #4 // =4
+; CHECK-NEXT:    cmp x9, #4
 ; CHECK-NEXT:    ptrue p0.s
 ; CHECK-NEXT:    csel x8, x9, x8, lo
 ; CHECK-NEXT:    st1w { z0.s }, p0, [sp]
@@ -84,9 +84,9 @@ define <8 x i16> @extract_v8i16_nxv8i16_idx8(<vscale x 8 x i16> %vec) nounwind {
 ; CHECK-NEXT:    str x29, [sp, #-16]! // 8-byte Folded Spill
 ; CHECK-NEXT:    addvl sp, sp, #-1
 ; CHECK-NEXT:    cnth x9
-; CHECK-NEXT:    sub x9, x9, #8 // =8
+; CHECK-NEXT:    sub x9, x9, #8
 ; CHECK-NEXT:    mov w8, #8
-; CHECK-NEXT:    cmp x9, #8 // =8
+; CHECK-NEXT:    cmp x9, #8
 ; CHECK-NEXT:    ptrue p0.h
 ; CHECK-NEXT:    csel x8, x9, x8, lo
 ; CHECK-NEXT:    st1h { z0.h }, p0, [sp]
@@ -117,10 +117,10 @@ define <16 x i8> @extract_v16i8_nxv16i8_idx16(<vscale x 16 x i8> %vec) nounwind 
 ; CHECK-NEXT:    str x29, [sp, #-16]! // 8-byte Folded Spill
 ; CHECK-NEXT:    addvl sp, sp, #-1
 ; CHECK-NEXT:    rdvl x9, #1
-; CHECK-NEXT:    sub x9, x9, #16 // =16
+; CHECK-NEXT:    sub x9, x9, #16
 ; CHECK-NEXT:    ptrue p0.b
 ; CHECK-NEXT:    mov w8, #16
-; CHECK-NEXT:    cmp x9, #16 // =16
+; CHECK-NEXT:    cmp x9, #16
 ; CHECK-NEXT:    st1b { z0.b }, p0, [sp]
 ; CHECK-NEXT:    csel x8, x9, x8, lo
 ; CHECK-NEXT:    mov x9, sp
@@ -159,9 +159,9 @@ define <2 x i64> @extract_fixed_v2i64_nxv2i64(<vscale x 2 x i64> %vec) nounwind 
 ; CHECK-NEXT:    str x29, [sp, #-16]! // 8-byte Folded Spill
 ; CHECK-NEXT:    addvl sp, sp, #-1
 ; CHECK-NEXT:    cntd x9
-; CHECK-NEXT:    sub x9, x9, #2 // =2
+; CHECK-NEXT:    sub x9, x9, #2
 ; CHECK-NEXT:    mov w8, #2
-; CHECK-NEXT:    cmp x9, #2 // =2
+; CHECK-NEXT:    cmp x9, #2
 ; CHECK-NEXT:    ptrue p0.d
 ; CHECK-NEXT:    csel x8, x9, x8, lo
 ; CHECK-NEXT:    st1d { z0.d }, p0, [sp]
@@ -181,11 +181,11 @@ define <4 x i64> @extract_fixed_v4i64_nxv2i64(<vscale x 2 x i64> %vec) nounwind 
 ; CHECK-NEXT:    str x29, [sp, #-16]! // 8-byte Folded Spill
 ; CHECK-NEXT:    addvl sp, sp, #-1
 ; CHECK-NEXT:    cntd x9
-; CHECK-NEXT:    subs x9, x9, #4 // =4
+; CHECK-NEXT:    subs x9, x9, #4
 ; CHECK-NEXT:    csel x9, xzr, x9, lo
 ; CHECK-NEXT:    ptrue p0.d
 ; CHECK-NEXT:    mov w10, #4
-; CHECK-NEXT:    cmp x9, #4 // =4
+; CHECK-NEXT:    cmp x9, #4
 ; CHECK-NEXT:    ptrue p1.d, vl4
 ; CHECK-NEXT:    st1d { z0.d }, p0, [sp]
 ; CHECK-NEXT:    csel x9, x9, x10, lo

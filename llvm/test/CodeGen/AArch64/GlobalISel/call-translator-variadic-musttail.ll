@@ -30,7 +30,7 @@ declare void @puts(i8*)
 define i32 @test_musttail_variadic_spill(i32 %arg0, ...) {
 ; CHECK-LABEL: test_musttail_variadic_spill:
 ; CHECK:       ; %bb.0:
-; CHECK-NEXT:    sub sp, sp, #224 ; =224
+; CHECK-NEXT:    sub sp, sp, #224
 ; CHECK-NEXT:    stp x28, x27, [sp, #128] ; 16-byte Folded Spill
 ; CHECK-NEXT:    stp x26, x25, [sp, #144] ; 16-byte Folded Spill
 ; CHECK-NEXT:    stp x24, x23, [sp, #160] ; 16-byte Folded Spill
@@ -87,7 +87,7 @@ define i32 @test_musttail_variadic_spill(i32 %arg0, ...) {
 ; CHECK-NEXT:    ldp x24, x23, [sp, #160] ; 16-byte Folded Reload
 ; CHECK-NEXT:    ldp x26, x25, [sp, #144] ; 16-byte Folded Reload
 ; CHECK-NEXT:    ldp x28, x27, [sp, #128] ; 16-byte Folded Reload
-; CHECK-NEXT:    add sp, sp, #224 ; =224
+; CHECK-NEXT:    add sp, sp, #224
 ; CHECK-NEXT:    b _musttail_variadic_callee
 ; CHECK-NEXT:    .loh AdrpAdd Lloh0, Lloh1
   call void @puts(i8* getelementptr ([4 x i8], [4 x i8]* @asdf, i32 0, i32 0))
@@ -102,7 +102,7 @@ declare void(i8*, ...)* @get_f(i8* %this)
 define void @f_thunk(i8* %this, ...) {
 ; CHECK-LABEL: f_thunk:
 ; CHECK:       ; %bb.0:
-; CHECK-NEXT:    sub sp, sp, #256 ; =256
+; CHECK-NEXT:    sub sp, sp, #256
 ; CHECK-NEXT:    stp x28, x27, [sp, #160] ; 16-byte Folded Spill
 ; CHECK-NEXT:    stp x26, x25, [sp, #176] ; 16-byte Folded Spill
 ; CHECK-NEXT:    stp x24, x23, [sp, #192] ; 16-byte Folded Spill
@@ -123,8 +123,8 @@ define void @f_thunk(i8* %this, ...) {
 ; CHECK-NEXT:    .cfi_offset w27, -88
 ; CHECK-NEXT:    .cfi_offset w28, -96
 ; CHECK-NEXT:    mov x27, x8
-; CHECK-NEXT:    add x8, sp, #128 ; =128
-; CHECK-NEXT:    add x9, sp, #256 ; =256
+; CHECK-NEXT:    add x8, sp, #128
+; CHECK-NEXT:    add x9, sp, #256
 ; CHECK-NEXT:    mov x19, x0
 ; CHECK-NEXT:    mov x20, x1
 ; CHECK-NEXT:    mov x21, x2
@@ -159,7 +159,7 @@ define void @f_thunk(i8* %this, ...) {
 ; CHECK-NEXT:    ldp x24, x23, [sp, #192] ; 16-byte Folded Reload
 ; CHECK-NEXT:    ldp x26, x25, [sp, #176] ; 16-byte Folded Reload
 ; CHECK-NEXT:    ldp x28, x27, [sp, #160] ; 16-byte Folded Reload
-; CHECK-NEXT:    add sp, sp, #256 ; =256
+; CHECK-NEXT:    add sp, sp, #256
 ; CHECK-NEXT:    br x9
   %ap = alloca [4 x i8*], align 16
   %ap_i8 = bitcast [4 x i8*]* %ap to i8*

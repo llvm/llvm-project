@@ -7,7 +7,7 @@ define i1 @test_urem_odd(i13 %X) nounwind {
 ; CHECK-NEXT:    mov w8, #3277
 ; CHECK-NEXT:    mul w8, w0, w8
 ; CHECK-NEXT:    and w8, w8, #0x1fff
-; CHECK-NEXT:    cmp w8, #1639 // =1639
+; CHECK-NEXT:    cmp w8, #1639
 ; CHECK-NEXT:    cset w0, lo
 ; CHECK-NEXT:    ret
   %urem = urem i13 %X, 5
@@ -40,7 +40,7 @@ define i1 @test_urem_odd_setne(i4 %X) nounwind {
 ; CHECK-NEXT:    mov w8, #13
 ; CHECK-NEXT:    mul w8, w0, w8
 ; CHECK-NEXT:    and w8, w8, #0xf
-; CHECK-NEXT:    cmp w8, #3 // =3
+; CHECK-NEXT:    cmp w8, #3
 ; CHECK-NEXT:    cset w0, hi
 ; CHECK-NEXT:    ret
   %urem = urem i4 %X, 5
@@ -54,7 +54,7 @@ define i1 @test_urem_negative_odd(i9 %X) nounwind {
 ; CHECK-NEXT:    mov w8, #307
 ; CHECK-NEXT:    mul w8, w0, w8
 ; CHECK-NEXT:    and w8, w8, #0x1ff
-; CHECK-NEXT:    cmp w8, #1 // =1
+; CHECK-NEXT:    cmp w8, #1
 ; CHECK-NEXT:    cset w0, hi
 ; CHECK-NEXT:    ret
   %urem = urem i9 %X, -5

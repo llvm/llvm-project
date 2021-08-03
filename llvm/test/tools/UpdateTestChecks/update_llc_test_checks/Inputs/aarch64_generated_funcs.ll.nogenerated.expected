@@ -5,9 +5,9 @@
 define dso_local i32 @check_boundaries() #0 {
 ; CHECK-LABEL: check_boundaries:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    sub sp, sp, #48 // =48
+; CHECK-NEXT:    sub sp, sp, #48
 ; CHECK-NEXT:    stp x29, x30, [sp, #32] // 16-byte Folded Spill
-; CHECK-NEXT:    add x29, sp, #32 // =32
+; CHECK-NEXT:    add x29, sp, #32
 ; CHECK-NEXT:    .cfi_def_cfa w29, 16
 ; CHECK-NEXT:    .cfi_offset w30, -8
 ; CHECK-NEXT:    .cfi_offset w29, -16
@@ -71,9 +71,9 @@ define dso_local i32 @check_boundaries() #0 {
 define dso_local i32 @main() #0 {
 ; CHECK-LABEL: main:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    sub sp, sp, #48 // =48
+; CHECK-NEXT:    sub sp, sp, #48
 ; CHECK-NEXT:    stp x29, x30, [sp, #32] // 16-byte Folded Spill
-; CHECK-NEXT:    add x29, sp, #32 // =32
+; CHECK-NEXT:    add x29, sp, #32
 ; CHECK-NEXT:    .cfi_def_cfa w29, 16
 ; CHECK-NEXT:    .cfi_offset w30, -8
 ; CHECK-NEXT:    .cfi_offset w29, -16

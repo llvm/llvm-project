@@ -16,7 +16,7 @@ define i32 @sink_load_and_copy(i32 %n) {
 ; CHECK-NEXT:    .cfi_offset w21, -24
 ; CHECK-NEXT:    .cfi_offset w30, -32
 ; CHECK-NEXT:    mov w19, w0
-; CHECK-NEXT:    cmp w0, #1 // =1
+; CHECK-NEXT:    cmp w0, #1
 ; CHECK-NEXT:    b.lt .LBB0_3
 ; CHECK-NEXT:  // %bb.1: // %for.body.preheader
 ; CHECK-NEXT:    adrp x8, A
@@ -26,7 +26,7 @@ define i32 @sink_load_and_copy(i32 %n) {
 ; CHECK-NEXT:    // =>This Inner Loop Header: Depth=1
 ; CHECK-NEXT:    mov w0, w21
 ; CHECK-NEXT:    bl _Z3usei
-; CHECK-NEXT:    subs w19, w19, #1 // =1
+; CHECK-NEXT:    subs w19, w19, #1
 ; CHECK-NEXT:    sdiv w20, w20, w0
 ; CHECK-NEXT:    b.ne .LBB0_2
 ; CHECK-NEXT:    b .LBB0_4
@@ -70,7 +70,7 @@ define i32 @cant_sink_successive_call(i32 %n) {
 ; CHECK-NEXT:    .cfi_offset w21, -24
 ; CHECK-NEXT:    .cfi_offset w30, -32
 ; CHECK-NEXT:    mov w19, w0
-; CHECK-NEXT:    cmp w0, #1 // =1
+; CHECK-NEXT:    cmp w0, #1
 ; CHECK-NEXT:    b.lt .LBB1_3
 ; CHECK-NEXT:  // %bb.1: // %for.body.preheader
 ; CHECK-NEXT:    adrp x8, A
@@ -82,7 +82,7 @@ define i32 @cant_sink_successive_call(i32 %n) {
 ; CHECK-NEXT:    // =>This Inner Loop Header: Depth=1
 ; CHECK-NEXT:    mov w0, w20
 ; CHECK-NEXT:    bl _Z3usei
-; CHECK-NEXT:    subs w19, w19, #1 // =1
+; CHECK-NEXT:    subs w19, w19, #1
 ; CHECK-NEXT:    sdiv w21, w21, w0
 ; CHECK-NEXT:    b.ne .LBB1_2
 ; CHECK-NEXT:    b .LBB1_4
@@ -127,7 +127,7 @@ define i32 @cant_sink_successive_store(i32* nocapture readnone %store, i32 %n) {
 ; CHECK-NEXT:    .cfi_offset w21, -24
 ; CHECK-NEXT:    .cfi_offset w30, -32
 ; CHECK-NEXT:    mov w19, w1
-; CHECK-NEXT:    cmp w1, #1 // =1
+; CHECK-NEXT:    cmp w1, #1
 ; CHECK-NEXT:    b.lt .LBB2_3
 ; CHECK-NEXT:  // %bb.1: // %for.body.preheader
 ; CHECK-NEXT:    adrp x8, A
@@ -139,7 +139,7 @@ define i32 @cant_sink_successive_store(i32* nocapture readnone %store, i32 %n) {
 ; CHECK-NEXT:    // =>This Inner Loop Header: Depth=1
 ; CHECK-NEXT:    mov w0, w20
 ; CHECK-NEXT:    bl _Z3usei
-; CHECK-NEXT:    subs w19, w19, #1 // =1
+; CHECK-NEXT:    subs w19, w19, #1
 ; CHECK-NEXT:    sdiv w21, w21, w0
 ; CHECK-NEXT:    b.ne .LBB2_2
 ; CHECK-NEXT:    b .LBB2_4

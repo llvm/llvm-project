@@ -1026,11 +1026,11 @@ void AArch64InstPrinter::printAddSubImm(const MCInst *MI, unsigned OpNum,
     unsigned Shift =
         AArch64_AM::getShiftValue(MI->getOperand(OpNum + 1).getImm());
     O << '#' << formatImm(Val);
-    if (Shift != 0)
+    if (Shift != 0) {
       printShifter(MI, OpNum + 1, STI, O);
-
-    if (CommentStream)
-      *CommentStream << '=' << formatImm(Val << Shift) << '\n';
+      if (CommentStream)
+        *CommentStream << '=' << formatImm(Val << Shift) << '\n';
+    }
   } else {
     assert(MO.isExpr() && "Unexpected operand type!");
     MO.getExpr()->print(O, &MAI);

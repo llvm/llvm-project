@@ -233,7 +233,7 @@ define void @memset_8_stack() {
 ; CHECK-LABEL: memset_8_stack:
 ; CHECK:       mov x8, #-6148914691236517206
 ; CHECK-NEXT:  stp x30, x8, [sp, #-16]!
-; CHECK-NEXT:  add x0, sp, #8 // =8
+; CHECK-NEXT:  add x0, sp, #8
 ; CHECK-NEXT:  bl something
   %buf = alloca [8 x i8], align 1
   %cast = bitcast [8 x i8]* %buf to i8*

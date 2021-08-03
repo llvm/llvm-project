@@ -281,7 +281,7 @@ define i64* @test_load_auth_da_256_pre_use(i64* %ptr, i64* %dst, i64* %dst2) {
 ; CHECK-NEXT:    mov x16, x0
 ; CHECK-NEXT:    autdza x16
 ; CHECK-NEXT:    ldr x8, [x16, #256]
-; CHECK-NEXT:    add x0, x16, #256 ; =256
+; CHECK-NEXT:    add x0, x16, #256
 ; CHECK-NEXT:    str x8, [x1]
 ; CHECK-NEXT:    str x16, [x2]
 ; CHECK-NEXT:    ret

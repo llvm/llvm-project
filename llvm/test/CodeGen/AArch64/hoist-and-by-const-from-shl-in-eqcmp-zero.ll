@@ -339,7 +339,7 @@ define i1 @scalar_i8_signbit_eq_with_nonzero(i8 %x, i8 %y) nounwind {
 ; CHECK-NEXT:    lsl w8, w8, w1
 ; CHECK-NEXT:    and w8, w8, w0
 ; CHECK-NEXT:    and w8, w8, #0x80
-; CHECK-NEXT:    cmp w8, #1 // =1
+; CHECK-NEXT:    cmp w8, #1
 ; CHECK-NEXT:    cset w0, eq
 ; CHECK-NEXT:    ret
   %t0 = shl i8 128, %y

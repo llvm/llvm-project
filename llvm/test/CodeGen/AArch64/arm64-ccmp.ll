@@ -5,7 +5,7 @@ target triple = "arm64-apple-ios"
 define i32 @single_same(i32 %a, i32 %b) nounwind ssp {
 ; CHECK-LABEL: single_same:
 ; CHECK:       ; %bb.0: ; %entry
-; CHECK-NEXT:    cmp w0, #5 ; =5
+; CHECK-NEXT:    cmp w0, #5
 ; CHECK-NEXT:    ccmp w1, #17, #4, ne
 ; CHECK-NEXT:    b.ne LBB0_2
 ; CHECK-NEXT:  ; %bb.1: ; %if.then
@@ -33,7 +33,7 @@ if.end:
 define i32 @single_different(i32 %a, i32 %b) nounwind ssp {
 ; CHECK-LABEL: single_different:
 ; CHECK:       ; %bb.0: ; %entry
-; CHECK-NEXT:    cmp w0, #6 ; =6
+; CHECK-NEXT:    cmp w0, #6
 ; CHECK-NEXT:    ccmp w1, #17, #0, ge
 ; CHECK-NEXT:    b.eq LBB1_2
 ; CHECK-NEXT:  ; %bb.1: ; %if.then
@@ -61,13 +61,13 @@ if.end:
 define i32 @single_flagclobber(i32 %a, i32 %b) nounwind ssp {
 ; CHECK-LABEL: single_flagclobber:
 ; CHECK:       ; %bb.0: ; %entry
-; CHECK-NEXT:    cmp w0, #5 ; =5
+; CHECK-NEXT:    cmp w0, #5
 ; CHECK-NEXT:    b.eq LBB2_2
 ; CHECK-NEXT:  ; %bb.1: ; %lor.lhs.false
 ; CHECK-NEXT:    lsl w8, w1, #1
-; CHECK-NEXT:    cmp w1, #7 ; =7
+; CHECK-NEXT:    cmp w1, #7
 ; CHECK-NEXT:    csinc w8, w8, w1, lt
-; CHECK-NEXT:    cmp w8, #16 ; =16
+; CHECK-NEXT:    cmp w8, #16
 ; CHECK-NEXT:    b.gt LBB2_3
 ; CHECK-NEXT:  LBB2_2: ; %if.then
 ; CHECK-NEXT:    stp x29, x30, [sp, #-16]! ; 16-byte Folded Spill
@@ -100,11 +100,11 @@ if.end:                                           ; preds = %if.then, %lor.lhs.f
 define i32 @single_flagclobber_tbz(i32 %a, i32 %b) nounwind ssp {
 ; CHECK-LABEL: single_flagclobber_tbz:
 ; CHECK:       ; %bb.0: ; %entry
-; CHECK-NEXT:    cmp w0, #5 ; =5
+; CHECK-NEXT:    cmp w0, #5
 ; CHECK-NEXT:    b.eq LBB3_2
 ; CHECK-NEXT:  ; %bb.1: ; %lor.lhs.false
 ; CHECK-NEXT:    lsl w8, w1, #1
-; CHECK-NEXT:    cmp w1, #7 ; =7
+; CHECK-NEXT:    cmp w1, #7
 ; CHECK-NEXT:    csinc w8, w8, w1, lt
 ; CHECK-NEXT:    tbz w8, #3, LBB3_3
 ; CHECK-NEXT:  LBB3_2: ; %if.then
@@ -141,7 +141,7 @@ if.end:                                           ; preds = %if.then, %lor.lhs.f
 define i32 @speculate_division(i32 %a, i32 %b) nounwind ssp {
 ; CHECK-LABEL: speculate_division:
 ; CHECK:       ; %bb.0: ; %entry
-; CHECK-NEXT:    cmp w0, #1 ; =1
+; CHECK-NEXT:    cmp w0, #1
 ; CHECK-NEXT:    sdiv w8, w1, w0
 ; CHECK-NEXT:    ccmp w8, #16, #0, ge
 ; CHECK-NEXT:    b.le LBB4_2
@@ -175,7 +175,7 @@ if.end:
 define i32 @single_fcmp(i32 %a, float %b) nounwind ssp {
 ; CHECK-LABEL: single_fcmp:
 ; CHECK:       ; %bb.0: ; %entry
-; CHECK-NEXT:    cmp w0, #1 ; =1
+; CHECK-NEXT:    cmp w0, #1
 ; CHECK-NEXT:    scvtf s1, w0
 ; CHECK-NEXT:    fdiv s0, s0, s1
 ; CHECK-NEXT:    fmov s1, #17.00000000
@@ -244,7 +244,7 @@ if.end:
 define i32 @cbz_head(i32 %a, i32 %b) nounwind ssp {
 ; CHECK-LABEL: cbz_head:
 ; CHECK:       ; %bb.0: ; %entry
-; CHECK-NEXT:    cmp w0, #0 ; =0
+; CHECK-NEXT:    cmp w0, #0
 ; CHECK-NEXT:    ccmp w1, #17, #0, ne
 ; CHECK-NEXT:    b.eq LBB7_2
 ; CHECK-NEXT:  ; %bb.1: ; %if.then
@@ -274,10 +274,10 @@ if.end:
 define i32 @immediate_range(i32 %a, i32 %b) nounwind ssp {
 ; CHECK-LABEL: immediate_range:
 ; CHECK:       ; %bb.0: ; %entry
-; CHECK-NEXT:    cmp w0, #5 ; =5
+; CHECK-NEXT:    cmp w0, #5
 ; CHECK-NEXT:    b.eq LBB8_3
 ; CHECK-NEXT:  ; %bb.1: ; %entry
-; CHECK-NEXT:    cmp w1, #32 ; =32
+; CHECK-NEXT:    cmp w1, #32
 ; CHECK-NEXT:    b.eq LBB8_3
 ; CHECK-NEXT:  ; %bb.2: ; %if.end
 ; CHECK-NEXT:    mov w0, #7
@@ -306,7 +306,7 @@ if.end:
 define i32 @cbz_second(i32 %a, i32 %b) nounwind ssp {
 ; CHECK-LABEL: cbz_second:
 ; CHECK:       ; %bb.0: ; %entry
-; CHECK-NEXT:    cmp w0, #0 ; =0
+; CHECK-NEXT:    cmp w0, #0
 ; CHECK-NEXT:    ccmp w1, #0, #0, ne
 ; CHECK-NEXT:    b.eq LBB9_2
 ; CHECK-NEXT:  ; %bb.1: ; %if.then
@@ -334,7 +334,7 @@ if.end:
 define i32 @cbnz_second(i32 %a, i32 %b) nounwind ssp {
 ; CHECK-LABEL: cbnz_second:
 ; CHECK:       ; %bb.0: ; %entry
-; CHECK-NEXT:    cmp w0, #0 ; =0
+; CHECK-NEXT:    cmp w0, #0
 ; CHECK-NEXT:    ccmp w1, #0, #4, ne
 ; CHECK-NEXT:    b.ne LBB10_2
 ; CHECK-NEXT:  ; %bb.1: ; %if.then
@@ -367,7 +367,7 @@ declare i32 @foo()
 define void @build_modify_expr() nounwind ssp {
 ; CHECK-LABEL: build_modify_expr:
 ; CHECK:       ; %bb.0: ; %entry
-; CHECK-NEXT:    cmp w8, #37 ; =37
+; CHECK-NEXT:    cmp w8, #37
 ; CHECK-NEXT:    mov w8, #1
 ; CHECK-NEXT:    lsl x8, x8, xzr
 ; CHECK-NEXT:    mov x9, #31
@@ -409,7 +409,7 @@ sw.bb.i.i:
 define i64 @select_and(i32 %w0, i32 %w1, i64 %x2, i64 %x3) {
 ; CHECK-LABEL: select_and:
 ; CHECK:       ; %bb.0:
-; CHECK-NEXT:    cmp w1, #5 ; =5
+; CHECK-NEXT:    cmp w1, #5
 ; CHECK-NEXT:    ccmp w0, w1, #0, ne
 ; CHECK-NEXT:    csel x0, x2, x3, lt
 ; CHECK-NEXT:    ret
@@ -423,7 +423,7 @@ define i64 @select_and(i32 %w0, i32 %w1, i64 %x2, i64 %x3) {
 define i64 @select_or(i32 %w0, i32 %w1, i64 %x2, i64 %x3) {
 ; CHECK-LABEL: select_or:
 ; CHECK:       ; %bb.0:
-; CHECK-NEXT:    cmp w1, #5 ; =5
+; CHECK-NEXT:    cmp w1, #5
 ; CHECK-NEXT:    ccmp w0, w1, #8, eq
 ; CHECK-NEXT:    csel x0, x2, x3, lt
 ; CHECK-NEXT:    ret
@@ -437,7 +437,7 @@ define i64 @select_or(i32 %w0, i32 %w1, i64 %x2, i64 %x3) {
 define i64 @gccbug(i64 %x0, i64 %x1) {
 ; CHECK-LABEL: gccbug:
 ; CHECK:       ; %bb.0:
-; CHECK-NEXT:    cmp x0, #2 ; =2
+; CHECK-NEXT:    cmp x0, #2
 ; CHECK-NEXT:    ccmp x0, #4, #4, ne
 ; CHECK-NEXT:    ccmp x1, #0, #0, eq
 ; CHECK-NEXT:    mov w8, #1
@@ -457,7 +457,7 @@ define i64 @gccbug(i64 %x0, i64 %x1) {
 define i32 @select_ororand(i32 %w0, i32 %w1, i32 %w2, i32 %w3) {
 ; CHECK-LABEL: select_ororand:
 ; CHECK:       ; %bb.0:
-; CHECK-NEXT:    cmp w3, #4 ; =4
+; CHECK-NEXT:    cmp w3, #4
 ; CHECK-NEXT:    ccmp w2, #2, #0, gt
 ; CHECK-NEXT:    ccmp w1, #13, #2, ge
 ; CHECK-NEXT:    ccmp w0, #0, #4, ls
@@ -494,18 +494,18 @@ define i32 @select_andor(i32 %v1, i32 %v2, i32 %v3) {
 define i64 @select_noccmp1(i64 %v1, i64 %v2, i64 %v3, i64 %r) {
 ; CHECK-LABEL: select_noccmp1:
 ; CHECK:       ; %bb.0:
-; CHECK-NEXT:    cmp x0, #0 ; =0
+; CHECK-NEXT:    cmp x0, #0
 ; CHECK-NEXT:    cset w8, lt
-; CHECK-NEXT:    cmp x0, #13 ; =13
+; CHECK-NEXT:    cmp x0, #13
 ; CHECK-NEXT:    cset w9, gt
-; CHECK-NEXT:    cmp x2, #2 ; =2
+; CHECK-NEXT:    cmp x2, #2
 ; CHECK-NEXT:    cset w10, lt
-; CHECK-NEXT:    cmp x2, #4 ; =4
+; CHECK-NEXT:    cmp x2, #4
 ; CHECK-NEXT:    cset w11, gt
 ; CHECK-NEXT:    and w8, w8, w9
 ; CHECK-NEXT:    and w9, w10, w11
 ; CHECK-NEXT:    orr w8, w8, w9
-; CHECK-NEXT:    cmp w8, #0 ; =0
+; CHECK-NEXT:    cmp w8, #0
 ; CHECK-NEXT:    csel x0, xzr, x3, ne
 ; CHECK-NEXT:    ret
   %c0 = icmp slt i64 %v1, 0
@@ -526,12 +526,12 @@ define i64 @select_noccmp1(i64 %v1, i64 %v2, i64 %v3, i64 %r) {
 define i64 @select_noccmp2(i64 %v1, i64 %v2, i64 %v3, i64 %r) {
 ; CHECK-LABEL: select_noccmp2:
 ; CHECK:       ; %bb.0:
-; CHECK-NEXT:    cmp x0, #0 ; =0
+; CHECK-NEXT:    cmp x0, #0
 ; CHECK-NEXT:    cset w8, lt
-; CHECK-NEXT:    cmp x0, #13 ; =13
+; CHECK-NEXT:    cmp x0, #13
 ; CHECK-NEXT:    cset w9, gt
 ; CHECK-NEXT:    orr w8, w8, w9
-; CHECK-NEXT:    cmp w8, #0 ; =0
+; CHECK-NEXT:    cmp w8, #0
 ; CHECK-NEXT:    csel x0, xzr, x3, ne
 ; CHECK-NEXT:    sbfx w8, w8, #0, #1
 ; CHECK-NEXT:    adrp x9, _g@PAGE
@@ -551,17 +551,17 @@ define i64 @select_noccmp2(i64 %v1, i64 %v2, i64 %v3, i64 %r) {
 define i32 @select_noccmp3(i32 %v0, i32 %v1, i32 %v2) {
 ; CHECK-LABEL: select_noccmp3:
 ; CHECK:       ; %bb.0:
-; CHECK-NEXT:    cmp w0, #0 ; =0
+; CHECK-NEXT:    cmp w0, #0
 ; CHECK-NEXT:    cset w8, lt
-; CHECK-NEXT:    cmp w0, #13 ; =13
+; CHECK-NEXT:    cmp w0, #13
 ; CHECK-NEXT:    cset w9, gt
-; CHECK-NEXT:    cmp w0, #22 ; =22
+; CHECK-NEXT:    cmp w0, #22
 ; CHECK-NEXT:    cset w10, lt
-; CHECK-NEXT:    cmp w0, #44 ; =44
+; CHECK-NEXT:    cmp w0, #44
 ; CHECK-NEXT:    cset w11, gt
-; CHECK-NEXT:    cmp w0, #99 ; =99
+; CHECK-NEXT:    cmp w0, #99
 ; CHECK-NEXT:    cset w12, eq
-; CHECK-NEXT:    cmp w0, #77 ; =77
+; CHECK-NEXT:    cmp w0, #77
 ; CHECK-NEXT:    cset w13, eq
 ; CHECK-NEXT:    orr w8, w8, w9
 ; CHECK-NEXT:    orr w9, w10, w11
@@ -787,7 +787,7 @@ define i32 @half_select_and_olt_one(half %v0, half %v1, half %v2, half %v3, i32 
 define i32 @f128_select_and_olt_oge(fp128 %v0, fp128 %v1, fp128 %v2, fp128 %v3, i32 %a, i32 %b) #0 {
 ; CHECK-LABEL: f128_select_and_olt_oge:
 ; CHECK:       ; %bb.0:
-; CHECK-NEXT:    sub sp, sp, #80 ; =80
+; CHECK-NEXT:    sub sp, sp, #80
 ; CHECK-NEXT:    stp x22, x21, [sp, #32] ; 16-byte Folded Spill
 ; CHECK-NEXT:    stp x20, x19, [sp, #48] ; 16-byte Folded Spill
 ; CHECK-NEXT:    stp x29, x30, [sp, #64] ; 16-byte Folded Spill
@@ -795,18 +795,18 @@ define i32 @f128_select_and_olt_oge(fp128 %v0, fp128 %v1, fp128 %v2, fp128 %v3, 
 ; CHECK-NEXT:    mov x20, x0
 ; CHECK-NEXT:    stp q2, q3, [sp] ; 32-byte Folded Spill
 ; CHECK-NEXT:    bl ___lttf2
-; CHECK-NEXT:    cmp w0, #0 ; =0
+; CHECK-NEXT:    cmp w0, #0
 ; CHECK-NEXT:    cset w21, lt
 ; CHECK-NEXT:    ldp q0, q1, [sp] ; 32-byte Folded Reload
 ; CHECK-NEXT:    bl ___getf2
-; CHECK-NEXT:    cmp w0, #0 ; =0
+; CHECK-NEXT:    cmp w0, #0
 ; CHECK-NEXT:    cset w8, ge
 ; CHECK-NEXT:    tst w8, w21
 ; CHECK-NEXT:    csel w0, w20, w19, ne
 ; CHECK-NEXT:    ldp x29, x30, [sp, #64] ; 16-byte Folded Reload
 ; CHECK-NEXT:    ldp x20, x19, [sp, #48] ; 16-byte Folded Reload
 ; CHECK-NEXT:    ldp x22, x21, [sp, #32] ; 16-byte Folded Reload
-; CHECK-NEXT:    add sp, sp, #80 ; =80
+; CHECK-NEXT:    add sp, sp, #80
 ; CHECK-NEXT:    ret
   %c0 = fcmp olt fp128 %v0, %v1
   %c1 = fcmp oge fp128 %v2, %v3
@@ -820,7 +820,7 @@ define i32 @f128_select_and_olt_oge(fp128 %v0, fp128 %v1, fp128 %v2, fp128 %v3, 
 define i32 @deep_or(i32 %a0, i32 %a1, i32 %a2, i32 %a3, i32 %x, i32 %y) {
 ; CHECK-LABEL: deep_or:
 ; CHECK:       ; %bb.0:
-; CHECK-NEXT:    cmp w2, #20 ; =20
+; CHECK-NEXT:    cmp w2, #20
 ; CHECK-NEXT:    ccmp w2, #15, #4, ne
 ; CHECK-NEXT:    ccmp w1, #0, #4, eq
 ; CHECK-NEXT:    ccmp w0, #0, #4, ne
@@ -842,7 +842,7 @@ define i32 @deep_or(i32 %a0, i32 %a1, i32 %a2, i32 %a3, i32 %x, i32 %y) {
 define i32 @deep_or1(i32 %a0, i32 %a1, i32 %a2, i32 %a3, i32 %x, i32 %y) {
 ; CHECK-LABEL: deep_or1:
 ; CHECK:       ; %bb.0:
-; CHECK-NEXT:    cmp w2, #20 ; =20
+; CHECK-NEXT:    cmp w2, #20
 ; CHECK-NEXT:    ccmp w2, #15, #4, ne
 ; CHECK-NEXT:    ccmp w0, #0, #4, eq
 ; CHECK-NEXT:    ccmp w1, #0, #4, ne
@@ -864,7 +864,7 @@ define i32 @deep_or1(i32 %a0, i32 %a1, i32 %a2, i32 %a3, i32 %x, i32 %y) {
 define i32 @deep_or2(i32 %a0, i32 %a1, i32 %a2, i32 %a3, i32 %x, i32 %y) {
 ; CHECK-LABEL: deep_or2:
 ; CHECK:       ; %bb.0:
-; CHECK-NEXT:    cmp w2, #20 ; =20
+; CHECK-NEXT:    cmp w2, #20
 ; CHECK-NEXT:    ccmp w2, #15, #4, ne
 ; CHECK-NEXT:    ccmp w1, #0, #4, eq
 ; CHECK-NEXT:    ccmp w0, #0, #4, ne

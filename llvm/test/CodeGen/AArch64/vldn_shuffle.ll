@@ -11,7 +11,7 @@ define void @vld2(float* nocapture readonly %pSrc, float* noalias nocapture %pDs
 ; CHECK-NEXT:    fmul v2.4s, v0.4s, v0.4s
 ; CHECK-NEXT:    fmla v2.4s, v1.4s, v1.4s
 ; CHECK-NEXT:    str q2, [x1, x8]
-; CHECK-NEXT:    add x8, x8, #16 // =16
+; CHECK-NEXT:    add x8, x8, #16
 ; CHECK-NEXT:    cmp x8, #1, lsl #12 // =4096
 ; CHECK-NEXT:    b.ne .LBB0_1
 ; CHECK-NEXT:  // %bb.2: // %while.end
@@ -52,7 +52,7 @@ define void @vld3(float* nocapture readonly %pSrc, float* noalias nocapture %pDs
 ; CHECK-NEXT:    fmla v3.4s, v1.4s, v1.4s
 ; CHECK-NEXT:    fmla v3.4s, v2.4s, v2.4s
 ; CHECK-NEXT:    str q3, [x1, x8]
-; CHECK-NEXT:    add x8, x8, #16 // =16
+; CHECK-NEXT:    add x8, x8, #16
 ; CHECK-NEXT:    cmp x8, #1, lsl #12 // =4096
 ; CHECK-NEXT:    b.ne .LBB1_1
 ; CHECK-NEXT:  // %bb.2: // %while.end
@@ -93,7 +93,7 @@ define void @vld4(float* nocapture readonly %pSrc, float* noalias nocapture %pDs
 ; CHECK-NEXT:    // =>This Inner Loop Header: Depth=1
 ; CHECK-NEXT:    ld4 { v0.4s, v1.4s, v2.4s, v3.4s }, [x0], #64
 ; CHECK-NEXT:    add x9, x1, x8
-; CHECK-NEXT:    add x8, x8, #32 // =32
+; CHECK-NEXT:    add x8, x8, #32
 ; CHECK-NEXT:    cmp x8, #2, lsl #12 // =8192
 ; CHECK-NEXT:    fmul v4.4s, v0.4s, v0.4s
 ; CHECK-NEXT:    fmla v4.4s, v1.4s, v1.4s
@@ -145,7 +145,7 @@ define void @twosrc(float* nocapture readonly %pSrc, float* nocapture readonly %
 ; CHECK-NEXT:    add x10, x1, x8
 ; CHECK-NEXT:    ld2 { v0.4s, v1.4s }, [x9]
 ; CHECK-NEXT:    ld2 { v2.4s, v3.4s }, [x10]
-; CHECK-NEXT:    add x8, x8, #32 // =32
+; CHECK-NEXT:    add x8, x8, #32
 ; CHECK-NEXT:    cmp x8, #2, lsl #12 // =8192
 ; CHECK-NEXT:    fmul v4.4s, v2.4s, v0.4s
 ; CHECK-NEXT:    fmla v4.4s, v1.4s, v3.4s

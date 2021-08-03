@@ -20,7 +20,7 @@ define float @test1(float* nocapture readonly %arr, i64 %start, float %threshold
 ; CHECK:       // %bb.0: // %entry
 ; CHECK-NEXT:    cbz x1, .LBB0_4
 ; CHECK-NEXT:  // %bb.1: // %for.body.preheader
-; CHECK-NEXT:    add x8, x0, #28 // =28
+; CHECK-NEXT:    add x8, x0, #28
 ; CHECK-NEXT:  .LBB0_2: // %for.body
 ; CHECK-NEXT:    // =>This Inner Loop Header: Depth=1
 ; CHECK-NEXT:    ldr s1, [x8, x1, lsl #2]
@@ -28,7 +28,7 @@ define float @test1(float* nocapture readonly %arr, i64 %start, float %threshold
 ; CHECK-NEXT:    b.gt .LBB0_5
 ; CHECK-NEXT:  // %bb.3: // %for.cond
 ; CHECK-NEXT:    // in Loop: Header=BB0_2 Depth=1
-; CHECK-NEXT:    add x1, x1, #1 // =1
+; CHECK-NEXT:    add x1, x1, #1
 ; CHECK-NEXT:    cbnz x1, .LBB0_2
 ; CHECK-NEXT:  .LBB0_4:
 ; CHECK-NEXT:    fmov s0, #-7.00000000
@@ -65,7 +65,7 @@ define float @test2(float* nocapture readonly %arr, i64 %start, float %threshold
 ; CHECK:       // %bb.0: // %entry
 ; CHECK-NEXT:    cbz x1, .LBB1_4
 ; CHECK-NEXT:  // %bb.1: // %for.body.preheader
-; CHECK-NEXT:    add x8, x0, #28 // =28
+; CHECK-NEXT:    add x8, x0, #28
 ; CHECK-NEXT:  .LBB1_2: // %for.body
 ; CHECK-NEXT:    // =>This Inner Loop Header: Depth=1
 ; CHECK-NEXT:    ldr s1, [x8, x1, lsl #2]
@@ -75,7 +75,7 @@ define float @test2(float* nocapture readonly %arr, i64 %start, float %threshold
 ; CHECK-NEXT:    b.gt .LBB1_5
 ; CHECK-NEXT:  // %bb.3: // %for.cond
 ; CHECK-NEXT:    // in Loop: Header=BB1_2 Depth=1
-; CHECK-NEXT:    add x1, x1, #1 // =1
+; CHECK-NEXT:    add x1, x1, #1
 ; CHECK-NEXT:    cbnz x1, .LBB1_2
 ; CHECK-NEXT:  .LBB1_4:
 ; CHECK-NEXT:    fmov s0, #-7.00000000

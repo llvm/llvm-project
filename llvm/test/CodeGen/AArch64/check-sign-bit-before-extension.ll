@@ -14,7 +14,7 @@ define i32 @f_i8_sign_extend_inreg(i8 %in, i32 %a, i32 %b) nounwind {
 ; CHECK-LABEL: f_i8_sign_extend_inreg:
 ; CHECK:       // %bb.0: // %entry
 ; CHECK-NEXT:    sxtb w8, w0
-; CHECK-NEXT:    cmp w8, #0 // =0
+; CHECK-NEXT:    cmp w8, #0
 ; CHECK-NEXT:    csel w8, w1, w2, ge
 ; CHECK-NEXT:    add w0, w8, w0, uxtb
 ; CHECK-NEXT:    ret
@@ -36,7 +36,7 @@ define i32 @f_i16_sign_extend_inreg(i16 %in, i32 %a, i32 %b) nounwind {
 ; CHECK-LABEL: f_i16_sign_extend_inreg:
 ; CHECK:       // %bb.0: // %entry
 ; CHECK-NEXT:    sxth w8, w0
-; CHECK-NEXT:    cmp w8, #0 // =0
+; CHECK-NEXT:    cmp w8, #0
 ; CHECK-NEXT:    csel w8, w1, w2, ge
 ; CHECK-NEXT:    add w0, w8, w0, uxth
 ; CHECK-NEXT:    ret
@@ -57,7 +57,7 @@ B:
 define i64 @f_i32_sign_extend_inreg(i32 %in, i64 %a, i64 %b) nounwind {
 ; CHECK-LABEL: f_i32_sign_extend_inreg:
 ; CHECK:       // %bb.0: // %entry
-; CHECK-NEXT:    cmp w0, #0 // =0
+; CHECK-NEXT:    cmp w0, #0
 ; CHECK-NEXT:    csel x8, x1, x2, ge
 ; CHECK-NEXT:    add x0, x8, w0, uxtw
 ; CHECK-NEXT:    ret
@@ -79,7 +79,7 @@ define i32 @g_i8_sign_extend_inreg(i8 %in, i32 %a, i32 %b) nounwind {
 ; CHECK-LABEL: g_i8_sign_extend_inreg:
 ; CHECK:       // %bb.0: // %entry
 ; CHECK-NEXT:    sxtb w8, w0
-; CHECK-NEXT:    cmp w8, #0 // =0
+; CHECK-NEXT:    cmp w8, #0
 ; CHECK-NEXT:    csel w8, w1, w2, lt
 ; CHECK-NEXT:    add w0, w8, w0, uxtb
 ; CHECK-NEXT:    ret
@@ -101,7 +101,7 @@ define i32 @g_i16_sign_extend_inreg(i16 %in, i32 %a, i32 %b) nounwind {
 ; CHECK-LABEL: g_i16_sign_extend_inreg:
 ; CHECK:       // %bb.0: // %entry
 ; CHECK-NEXT:    sxth w8, w0
-; CHECK-NEXT:    cmp w8, #0 // =0
+; CHECK-NEXT:    cmp w8, #0
 ; CHECK-NEXT:    csel w8, w1, w2, lt
 ; CHECK-NEXT:    add w0, w8, w0, uxth
 ; CHECK-NEXT:    ret
@@ -122,7 +122,7 @@ B:
 define i64 @g_i32_sign_extend_inreg(i32 %in, i64 %a, i64 %b) nounwind {
 ; CHECK-LABEL: g_i32_sign_extend_inreg:
 ; CHECK:       // %bb.0: // %entry
-; CHECK-NEXT:    cmp w0, #0 // =0
+; CHECK-NEXT:    cmp w0, #0
 ; CHECK-NEXT:    csel x8, x1, x2, lt
 ; CHECK-NEXT:    add x0, x8, w0, uxtw
 ; CHECK-NEXT:    ret
@@ -145,7 +145,7 @@ define i64 @f_i32_sign_extend_i64(i32 %in, i64 %a, i64 %b) nounwind {
 ; CHECK:       // %bb.0: // %entry
 ; CHECK-NEXT:    // kill: def $w0 killed $w0 def $x0
 ; CHECK-NEXT:    sxtw x8, w0
-; CHECK-NEXT:    cmp x8, #0 // =0
+; CHECK-NEXT:    cmp x8, #0
 ; CHECK-NEXT:    csel x8, x1, x2, ge
 ; CHECK-NEXT:    add x0, x8, w0, uxtw
 ; CHECK-NEXT:    ret
@@ -169,7 +169,7 @@ define i64 @g_i32_sign_extend_i64(i32 %in, i64 %a, i64 %b) nounwind {
 ; CHECK:       // %bb.0: // %entry
 ; CHECK-NEXT:    // kill: def $w0 killed $w0 def $x0
 ; CHECK-NEXT:    sxtw x8, w0
-; CHECK-NEXT:    cmp x8, #0 // =0
+; CHECK-NEXT:    cmp x8, #0
 ; CHECK-NEXT:    csel x8, x1, x2, lt
 ; CHECK-NEXT:    add x0, x8, w0, uxtw
 ; CHECK-NEXT:    ret

@@ -47,7 +47,7 @@ define void @ld_st_nxv8i16(i16* %in, i16* %out) {
 ; ASM-NEXT:    add z1.h, z1.h, z0.h
 ; ASM-NEXT:    st1h { z1.h }, p0, [x1, x8, lsl #1]
 ; ASM-NEXT:    add x8, x8, x9
-; ASM-NEXT:    cmp x8, #1024 // =1024
+; ASM-NEXT:    cmp x8, #1024
 ; ASM-NEXT:    b.ne .LBB0_1
 ; ASM-NEXT:  // %bb.2: // %exit
 ; ASM-NEXT:    ret
