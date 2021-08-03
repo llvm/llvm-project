@@ -7037,7 +7037,7 @@ ConstantRange llvm::computeConstantRange(const Value *V, bool UseInstrInfo,
       ConstantRange RHS = computeConstantRange(Cmp->getOperand(1), UseInstrInfo,
                                                AC, I, Depth + 1);
       CR = CR.intersectWith(
-          ConstantRange::makeSatisfyingICmpRegion(Cmp->getPredicate(), RHS));
+          ConstantRange::makeAllowedICmpRegion(Cmp->getPredicate(), RHS));
     }
   }
 
