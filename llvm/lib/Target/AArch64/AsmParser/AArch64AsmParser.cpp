@@ -3837,14 +3837,11 @@ bool AArch64AsmParser::parseSymbolicImmVal(const MCExpr *&ImmVal) {
 
 OperandMatchResultTy
 AArch64AsmParser::tryParseMatrixTileList(OperandVector &Operands) {
-  MCAsmParser &Parser = getParser();
-
-  if (Parser.getTok().isNot(AsmToken::LCurly))
+  if (getTok().isNot(AsmToken::LCurly))
     return MatchOperand_NoMatch;
 
-  auto ParseMatrixTile = [this, &Parser](unsigned &Reg,
-                                         unsigned &ElementWidth) {
-    StringRef Name = Parser.getTok().getString();
+  auto ParseMatrixTile = [this](unsigned &Reg, unsigned &ElementWidth) {
+    StringRef Name = getTok().getString();
     size_t DotPosition = Name.find('.');
     if (DotPosition == StringRef::npos)
       return MatchOperand_NoMatch;
@@ -3862,13 +3859,13 @@ AArch64AsmParser::tryParseMatrixTileList(OperandVector &Operands) {
     }
     ElementWidth = KindRes->second;
     Reg = RegNum;
-    Parser.Lex(); // Eat the register.
+    Lex(); // Eat the register.
     return MatchOperand_Success;
   };
 
   SMLoc S = getLoc();
-  auto LCurly = Parser.getTok();
-  Parser.Lex(); // Eat left bracket token.
+  auto LCurly = getTok();
+  Lex(); // Eat left bracket token.
 
   // Empty matrix list
   if (parseOptionalToken(AsmToken::RCurly)) {
@@ -3878,8 +3875,8 @@ AArch64AsmParser::tryParseMatrixTileList(OperandVector &Operands) {
   }
 
   // Try parse {za} alias early
-  if (Parser.getTok().getString().equals_insensitive("za")) {
-    Parser.Lex(); // Eat 'za'
+  if (getTok().getString().equals_insensitive("za")) {
+    Lex(); // Eat 'za'
 
     if (parseToken(AsmToken::RCurly, "'}' expected"))
       return MatchOperand_ParseFail;
@@ -3894,7 +3891,7 @@ AArch64AsmParser::tryParseMatrixTileList(OperandVector &Operands) {
   unsigned FirstReg, ElementWidth;
   auto ParseRes = ParseMatrixTile(FirstReg, ElementWidth);
   if (ParseRes != MatchOperand_Success) {
-    Parser.getLexer().UnLex(LCurly);
+    getLexer().UnLex(LCurly);
     return ParseRes;
   }
 

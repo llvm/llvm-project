@@ -560,8 +560,14 @@ void ReportInvalidFree(StackTrace *stack, uptr tagged_addr) {
   Printf("%s", d.Error());
   uptr pc = stack->size ? stack->trace[0] : 0;
   const char *bug_type = "invalid-free";
-  Report("ERROR: %s: %s on address %p at pc %p\n", SanitizerToolName, bug_type,
-         untagged_addr, pc);
+  const Thread *thread = GetCurrentThread();
+  if (thread) {
+    Report("ERROR: %s: %s on address %p at pc %p on thread T%zd\n",
+           SanitizerToolName, bug_type, untagged_addr, pc, thread->unique_id());
+  } else {
+    Report("ERROR: %s: %s on address %p at pc %p on unknown thread\n",
+           SanitizerToolName, bug_type, untagged_addr, pc);
+  }
   Printf("%s", d.Access());
   Printf("tags: %02x/%02x (ptr/mem)\n", ptr_tag, mem_tag);
   Printf("%s", d.Default());

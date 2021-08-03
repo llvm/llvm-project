@@ -16,6 +16,11 @@ multiclass EqLong<string name, string help> {
     HelpText<help>;
 }
 
+multiclass EqNoHelp<string name> {
+  def NAME: Separate<["--", "-"], name>;
+  def NAME # _eq: Joined<["--", "-"], name # "=">, Alias<!cast<Separate>(NAME)>;
+}
+
 multiclass B<string name, string help1, string help2> {
   def NAME: Flag<["--", "-"], name>, HelpText<help1>;
   def no_ # NAME: Flag<["--", "-"], "no-" # name>, HelpText<help2>;
@@ -57,8 +62,8 @@ defm gc_sections: B<"gc-sections",
     "Remove unused sections",
     "Don't remove unused sections">;
 def help: F<"help">, HelpText<"Print option help">;
-def icf: J<"icf=">, HelpText<"Identical code folding">;
-def image_base: S<"image-base">, HelpText<"Base address of the program">;
+defm icf: Eq<"icf", "Identical code folding">;
+defm image_base: Eq<"image-base", "Base address of the program">;
 defm insert_timestamp: B<"insert-timestamp",
     "Include PE header timestamp",
     "Don't include PE header timestamp">;
@@ -109,12 +114,11 @@ def _HASH_HASH_HASH : Flag<["-"], "###">,
     HelpText<"Print (but do not run) the commands to run for this compilation">;
 def appcontainer: F<"appcontainer">, HelpText<"Set the appcontainer flag in the executable">;
 defm delayload: Eq<"delayload", "DLL to load only on demand">;
-def mllvm: S<"mllvm">;
+defm mllvm: EqNoHelp<"mllvm">;
 defm pdb: Eq<"pdb", "Output PDB debug info file, chosen implicitly if the argument is empty">;
 defm thinlto_cache_dir: EqLong<"thinlto-cache-dir",
   "Path to ThinLTO cached object file directory">;
-def Xlink : J<"Xlink=">, MetaVarName<"<arg>">,
-    HelpText<"Pass <arg> to the COFF linker">;
+defm Xlink : Eq<"Xlink", "Pass <arg> to the COFF linker">, MetaVarName<"<arg>">;
 
 // Alias
 def alias_Bdynamic_call_shared: Flag<["-"], "call_shared">, Alias<Bdynamic>;
@@ -135,15 +139,13 @@ def: F<"enable-auto-image-base">;
 def: F<"end-group">;
 def: Flag<["--"], "full-shutdown">;
 def: F<"high-entropy-va">;
-def: S<"major-image-version">;
-def: S<"minor-image-version">;
+defm: EqNoHelp<"major-image-version">;
+defm: EqNoHelp<"minor-image-version">;
 def: F<"no-undefined">;
 def: F<"nxcompat">;
 def: F<"pic-executable">;
-def: S<"plugin">;
-def: J<"plugin=">;
-def: S<"plugin-opt">;
-def: J<"plugin-opt=">;
-def: J<"sysroot">;
+defm: EqNoHelp<"plugin">;
+defm: EqNoHelp<"plugin-opt">;
+defm: EqNoHelp<"sysroot">;
 def: F<"start-group">;
 def: F<"tsaware">;
