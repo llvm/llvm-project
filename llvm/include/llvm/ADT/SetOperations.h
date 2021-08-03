@@ -77,15 +77,6 @@ bool set_is_subset(const S1Ty &S1, const S2Ty &S2) {
   return true;
 }
 
-/// set_is_strict_subset(A, B) - Return true iff A in B and and A != B
-///
-template <class S1Ty, class S2Ty>
-bool set_is_strict_subset(const S1Ty &S1, const S2Ty &S2) {
-  if (S1.size() >= S2.size())
-    return false;
-  return set_is_subset(S1, S2);
-}
-
 } // End llvm namespace
 
 #endif
