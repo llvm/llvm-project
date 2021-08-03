@@ -115,9 +115,12 @@ class MetaMap {
   void ResetRange(Processor *proc, uptr p, uptr sz);
   MBlock* GetBlock(uptr p);
 
-  SyncVar* GetOrCreateAndLock(ThreadState *thr, uptr pc,
-                              uptr addr, bool write_lock);
-  SyncVar* GetIfExistsAndLock(uptr addr, bool write_lock);
+  SyncVar *GetSyncOrCreate(ThreadState *thr, uptr pc, uptr addr) {
+    return GetSync(thr, pc, addr, true);
+  }
+  SyncVar *GetSyncIfExists(uptr addr) {
+    return GetSync(nullptr, 0, addr, false);
+  }
 
   void MoveMemory(uptr src, uptr dst, uptr sz);
 
@@ -133,8 +136,7 @@ class MetaMap {
   SyncAlloc sync_alloc_;
   atomic_uint64_t uid_gen_;
 
-  SyncVar* GetAndLock(ThreadState *thr, uptr pc, uptr addr, bool write_lock,
-                      bool create);
+  SyncVar *GetSync(ThreadState *thr, uptr pc, uptr addr, bool create);
 };
 
 }  // namespace __tsan
