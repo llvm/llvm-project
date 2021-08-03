@@ -12,7 +12,6 @@ set(CMAKE_REQUIRED_DEFINITIONS)
 check_cxx_symbol_exists(accept4 "sys/socket.h" HAVE_ACCEPT4)
 
 check_include_file(termios.h HAVE_TERMIOS_H)
-check_include_file("sys/types.h" HAVE_SYS_TYPES_H)
 check_include_files("sys/types.h;sys/event.h" HAVE_SYS_EVENT_H)
 
 check_cxx_symbol_exists(process_vm_readv "sys/uio.h" HAVE_PROCESS_VM_READV)

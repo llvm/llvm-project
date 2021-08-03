@@ -13,9 +13,6 @@
 
 #cmakedefine01 LLDB_HAVE_EL_RFUNC_T
 
-
-#cmakedefine01 HAVE_SYS_TYPES_H
-
 #cmakedefine01 HAVE_SYS_EVENT_H
 
 #cmakedefine01 HAVE_PPOLL
