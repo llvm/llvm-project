@@ -20,13 +20,14 @@ void DDMutexInit(ThreadState *thr, uptr pc, SyncVar *s);
 
 SyncVar::SyncVar() : mtx(MutexTypeSyncVar) { Reset(0); }
 
-void SyncVar::Init(ThreadState *thr, uptr pc, uptr addr, u64 uid) {
+void SyncVar::Init(ThreadState *thr, uptr pc, uptr addr, u64 uid,
+                   bool save_stack) {
   this->addr = addr;
   this->uid = uid;
   this->next = 0;
 
   creation_stack_id = 0;
-  if (!SANITIZER_GO)  // Go does not use them
+  if (save_stack && !SANITIZER_GO)  // Go does not use them
     creation_stack_id = CurrentStackId(thr, pc);
   if (common_flags()->detect_deadlocks)
     DDMutexInit(thr, pc, this);
@@ -190,7 +191,8 @@ MBlock* MetaMap::GetBlock(uptr p) {
   }
 }
 
-SyncVar *MetaMap::GetSync(ThreadState *thr, uptr pc, uptr addr, bool create) {
+SyncVar *MetaMap::GetSync(ThreadState *thr, uptr pc, uptr addr, bool create,
+                          bool save_stack) {
   u32 *meta = MemToMeta(addr);
   u32 idx0 = *meta;
   u32 myidx = 0;
@@ -219,7 +221,7 @@ SyncVar *MetaMap::GetSync(ThreadState *thr, uptr pc, uptr addr, bool create) {
       const u64 uid = atomic_fetch_add(&uid_gen_, 1, memory_order_relaxed);
       myidx = sync_alloc_.Alloc(&thr->proc()->sync_cache);
       mys = sync_alloc_.Map(myidx);
-      mys->Init(thr, pc, addr, uid);
+      mys->Init(thr, pc, addr, uid, save_stack);
     }
     mys->next = idx0;
     if (atomic_compare_exchange_strong((atomic_uint32_t*)meta, &idx0,

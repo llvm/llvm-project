@@ -64,7 +64,7 @@ struct SyncVar {
   // with the mtx. This reduces contention for hot sync objects.
   SyncClock clock;
 
-  void Init(ThreadState *thr, uptr pc, uptr addr, u64 uid);
+  void Init(ThreadState *thr, uptr pc, uptr addr, u64 uid, bool save_stack);
   void Reset(Processor *proc);
 
   u64 GetId() const {
@@ -115,11 +115,12 @@ class MetaMap {
   void ResetRange(Processor *proc, uptr p, uptr sz);
   MBlock* GetBlock(uptr p);
 
-  SyncVar *GetSyncOrCreate(ThreadState *thr, uptr pc, uptr addr) {
-    return GetSync(thr, pc, addr, true);
+  SyncVar *GetSyncOrCreate(ThreadState *thr, uptr pc, uptr addr,
+                           bool save_stack) {
+    return GetSync(thr, pc, addr, true, save_stack);
   }
   SyncVar *GetSyncIfExists(uptr addr) {
-    return GetSync(nullptr, 0, addr, false);
+    return GetSync(nullptr, 0, addr, false, false);
   }
 
   void MoveMemory(uptr src, uptr dst, uptr sz);
@@ -136,7 +137,8 @@ class MetaMap {
   SyncAlloc sync_alloc_;
   atomic_uint64_t uid_gen_;
 
-  SyncVar *GetSync(ThreadState *thr, uptr pc, uptr addr, bool create);
+  SyncVar *GetSync(ThreadState *thr, uptr pc, uptr addr, bool create,
+                   bool save_stack);
 };
 
 }  // namespace __tsan
