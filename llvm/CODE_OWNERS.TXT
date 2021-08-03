@@ -54,6 +54,10 @@ N: Andrey Churbanov
 E: andrey.churbanov@intel.com
 D: OpenMP runtime library
 
+N: Johannes Doerfert
+E: jdoerfert@anl.gov
+D: OpenMP target offloading
+
 N: Greg Clayton
 E: clayborg@gmail.com
 D: LLDB
