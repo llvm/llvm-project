@@ -54,8 +54,10 @@ static void printAsPrintable(raw_ostream &W, const uint8_t *Start, size_t Len) {
 
 void ObjDumper::printAsStringList(StringRef StringContent,
                                   size_t StringDataOffset) {
-  if (StringContent.size() < StringDataOffset)
+  if (StringContent.size() < StringDataOffset) {
+    reportUniqueWarning("error: offset is out of string contents");
     return;
+  }
   const uint8_t *StrContent = StringContent.bytes_begin();
   // Some formats contain additional metadata at the start which should not be
   // interpreted as strings. Skip these bytes, but account for them in the
