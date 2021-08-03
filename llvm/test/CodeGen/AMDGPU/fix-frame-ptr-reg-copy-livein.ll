@@ -10,18 +10,18 @@
 define i32 @fp_save_restore_in_temp_sgpr(%struct.Data addrspace(5)* nocapture readonly byval(%struct.Data) align 4 %arg) #0 {
   ; GCN-LABEL: name: fp_save_restore_in_temp_sgpr
   ; GCN: bb.0.begin:
-  ; GCN:   liveins: $sgpr7, $sgpr30_sgpr31
-  ; GCN:   $sgpr7 = frame-setup COPY $sgpr33
+  ; GCN:   liveins: $sgpr11, $sgpr30_sgpr31
+  ; GCN:   $sgpr11 = frame-setup COPY $sgpr33
   ; GCN:   $sgpr33 = frame-setup COPY $sgpr32
   ; GCN: bb.1.lp_end:
-  ; GCN:   liveins: $sgpr6, $sgpr7, $vgpr1, $sgpr4_sgpr5, $sgpr8_sgpr9, $sgpr10_sgpr11, $sgpr30_sgpr31
+  ; GCN:   liveins: $sgpr10, $sgpr11, $vgpr1, $sgpr4_sgpr5, $sgpr6_sgpr7, $sgpr8_sgpr9, $sgpr30_sgpr31
   ; GCN: bb.2.lp_begin:
-  ; GCN:   liveins: $sgpr6, $sgpr7, $vgpr1, $sgpr4_sgpr5, $sgpr8_sgpr9, $sgpr30_sgpr31
+  ; GCN:   liveins: $sgpr10, $sgpr11, $vgpr1, $sgpr4_sgpr5, $sgpr6_sgpr7, $sgpr30_sgpr31
   ; GCN: bb.3.Flow:
-  ; GCN:   liveins: $sgpr6, $sgpr7, $vgpr0, $vgpr1, $sgpr4_sgpr5, $sgpr8_sgpr9, $sgpr10_sgpr11, $sgpr30_sgpr31
+  ; GCN:   liveins: $sgpr10, $sgpr11, $vgpr0, $vgpr1, $sgpr4_sgpr5, $sgpr6_sgpr7, $sgpr8_sgpr9, $sgpr30_sgpr31
   ; GCN: bb.4.end:
-  ; GCN:   liveins: $sgpr7, $vgpr0, $sgpr4_sgpr5, $sgpr30_sgpr31
-  ; GCN:   $sgpr33 = frame-destroy COPY $sgpr7
+  ; GCN:   liveins: $sgpr11, $vgpr0, $sgpr4_sgpr5, $sgpr30_sgpr31
+  ; GCN:   $sgpr33 = frame-destroy COPY $sgpr11
 begin:
   br label %lp_begin
 

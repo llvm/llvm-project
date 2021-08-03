@@ -70,6 +70,10 @@ public:
                                        CallingConv::ID) const override;
   const uint32_t *getNoPreservedMask() const override;
 
+  bool addAllocPriorityToGlobalRanges() const override {
+    return true;
+  }
+
   // Stack access is very expensive. CSRs are also the high registers, and we
   // want to minimize the number of used registers.
   unsigned getCSRFirstUseCost() const override {
