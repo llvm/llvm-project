@@ -806,10 +806,10 @@ def err_requires_expr_expected_type_constraint : Error<
 def err_requires_expr_simple_requirement_noexcept : Error<
   "'noexcept' can only be used in a compound requirement (with '{' '}' around "
   "the expression)">;
-def warn_requires_expr_in_simple_requirement : Warning<
-  "this requires expression will only be checked for syntactic validity; did "
+def err_requires_expr_in_simple_requirement : Error<
+  "requires expression in requirement body; did "
   "you intend to place it in a nested requirement? (add another 'requires' "
-  "before the expression)">, InGroup<DiagGroup<"requires-expression">>;
+  "before the expression)">;
 
 def err_missing_dependent_template_keyword : Error<
   "use 'template' keyword to treat '%0' as a dependent template name">;
