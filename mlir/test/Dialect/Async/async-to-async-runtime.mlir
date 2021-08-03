@@ -406,3 +406,26 @@ func @lower_scf_to_cfg(%arg0: f32, %arg1: memref<1xf32>, %arg2: i1) {
 // Check that structured control flow lowered to CFG.
 // CHECK-NOT: scf.if
 // CHECK: cond_br %[[FLAG]]
+
+// -----
+// Constants captured by the async.execute region should be cloned into the
+// outline async execute function.
+
+// CHECK-LABEL: @clone_constants
+func @clone_constants(%arg0: f32, %arg1: memref<1xf32>) {
+  %c0 = constant 0 : index
+  %token = async.execute {
+    memref.store %arg0, %arg1[%c0] : memref<1xf32>
+    async.yield
+  }
+  async.await %token : !async.token
+  return
+}
+
+// Function outlined from the async.execute operation.
+// CHECK-LABEL: func private @async_execute_fn(
+// CHECK-SAME:    %[[VALUE:arg[0-9]+]]: f32,
+// CHECK-SAME:    %[[MEMREF:arg[0-9]+]]: memref<1xf32>
+// CHECK-SAME:  ) -> !async.token
+// CHECK:         %[[CST:.*]] = constant 0 : index
+// CHECK:         memref.store %[[VALUE]], %[[MEMREF]][%[[CST]]]
