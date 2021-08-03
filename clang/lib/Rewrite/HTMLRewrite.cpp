@@ -392,7 +392,7 @@ h1 { font-size:14pt }
 .CodeInsertionHint { font-weight: bold; background-color: #10dd10 }
 .CodeRemovalHint { background-color:#de1010 }
 .CodeRemovalHint { border-bottom:1px solid #6F9DBE }
-.selected{ background-color:orange !important; }
+.msg.selected{ background-color:orange !important; }
 
 table.simpletable {
   padding: 5px;

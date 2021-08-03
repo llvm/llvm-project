@@ -16,10 +16,13 @@ int foobar(bool cond, int *x) {
 
 // CHECK:          <svg
 // CHECK:            <g
-// CHECK-COUNT-9:      <path id="arrow{{[0-9]+}}"/>
-// CHECK-NOT:          <path id="arrow{{[0-9]+}}"/>
+// CHECK-COUNT-9:      <path class="arrow" id="arrow{{[0-9]+}}"/>
+// CHECK-NOT:          <path class="arrow" id="arrow{{[0-9]+}}"/>
 // CHECK:            </g>
 // CHECK-NEXT:     </svg>
+// CHECK-NEXT:     <script type='text/javascript'>
+// CHECK-NEXT:     const arrowIndices = [ 9,8,6,5,3,2,0 ]
+// CHECK-NEXT:     </script>
 //
 // Except for arrows we still want to have grey bubbles with control notes.
 // CHECK:          <div id="Path2" class="msg msgControl"
