@@ -164,7 +164,7 @@ jptr __tsan_java_find(jptr *from_ptr, jptr to) {
 
 void __tsan_java_finalize() {
   JAVA_FUNC_ENTER(__tsan_java_finalize);
-  DPrintf("#%d: java_mutex_finalize()\n", thr->tid);
+  DPrintf("#%d: java_finalize()\n", thr->tid);
   AcquireGlobal(thr);
 }
 
