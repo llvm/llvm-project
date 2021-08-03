@@ -57,7 +57,7 @@ define <3 x i32> @umulo_v3i32(<3 x i32> %a0, <3 x i32> %a1, <3 x i32>* %p2) noun
 ; CHECK-NEXT:    umull v3.2d, v0.2s, v1.2s
 ; CHECK-NEXT:    mul v1.4s, v0.4s, v1.4s
 ; CHECK-NEXT:    uzp2 v0.4s, v3.4s, v2.4s
-; CHECK-NEXT:    add x8, x0, #8 // =8
+; CHECK-NEXT:    add x8, x0, #8
 ; CHECK-NEXT:    cmtst v0.4s, v0.4s, v0.4s
 ; CHECK-NEXT:    st1 { v1.s }[2], [x8]
 ; CHECK-NEXT:    str d1, [x0]
@@ -97,8 +97,8 @@ define <6 x i32> @umulo_v6i32(<6 x i32> %a0, <6 x i32> %a1, <6 x i32>* %p2) noun
 ; CHECK-NEXT:    mov x9, sp
 ; CHECK-NEXT:    mov v2.s[1], w7
 ; CHECK-NEXT:    ld1 { v2.s }[2], [x9]
-; CHECK-NEXT:    add x8, sp, #24 // =24
-; CHECK-NEXT:    add x10, sp, #8 // =8
+; CHECK-NEXT:    add x8, sp, #24
+; CHECK-NEXT:    add x10, sp, #8
 ; CHECK-NEXT:    ld1 { v0.s }[1], [x8]
 ; CHECK-NEXT:    fmov s3, w0
 ; CHECK-NEXT:    ldr x11, [sp, #32]
@@ -316,10 +316,10 @@ define <4 x i32> @umulo_v4i1(<4 x i1> %a0, <4 x i1> %a1, <4 x i1>* %p2) nounwind
 define <2 x i32> @umulo_v2i128(<2 x i128> %a0, <2 x i128> %a1, <2 x i128>* %p2) nounwind {
 ; CHECK-LABEL: umulo_v2i128:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    cmp x7, #0 // =0
+; CHECK-NEXT:    cmp x7, #0
 ; CHECK-NEXT:    umulh x8, x3, x6
 ; CHECK-NEXT:    cset w13, ne
-; CHECK-NEXT:    cmp x3, #0 // =0
+; CHECK-NEXT:    cmp x3, #0
 ; CHECK-NEXT:    umulh x9, x7, x2
 ; CHECK-NEXT:    mul x10, x7, x2
 ; CHECK-NEXT:    cset w14, ne
@@ -336,11 +336,11 @@ define <2 x i32> @umulo_v2i128(<2 x i128> %a0, <2 x i128> %a1, <2 x i128>* %p2) 
 ; CHECK-NEXT:    mul x12, x2, x6
 ; CHECK-NEXT:    orr w13, w13, w14
 ; CHECK-NEXT:    cset w14, hs
-; CHECK-NEXT:    cmp x5, #0 // =0
+; CHECK-NEXT:    cmp x5, #0
 ; CHECK-NEXT:    umulh x17, x1, x4
 ; CHECK-NEXT:    stp x12, x10, [x8, #16]
 ; CHECK-NEXT:    cset w10, ne
-; CHECK-NEXT:    cmp x1, #0 // =0
+; CHECK-NEXT:    cmp x1, #0
 ; CHECK-NEXT:    umulh x9, x5, x0
 ; CHECK-NEXT:    mul x11, x5, x0
 ; CHECK-NEXT:    cset w12, ne

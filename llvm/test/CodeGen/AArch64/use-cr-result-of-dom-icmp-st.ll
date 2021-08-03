@@ -18,7 +18,7 @@ define i64 @ll_a_op_b__2(i64 %a, i64 %b) {
 ; CHECK-LABEL: ll_a_op_b__2:
 ; CHECK:       // %bb.0: // %entry
 ; CHECK-NEXT:    lsl x8, x0, x1
-; CHECK-NEXT:    cmn x8, #2 // =2
+; CHECK-NEXT:    cmn x8, #2
 ; CHECK-NEXT:    csinc x8, x1, xzr, eq
 ; CHECK-NEXT:    mul x8, x8, x0
 ; CHECK-NEXT:    csel x0, x1, x8, gt
@@ -42,10 +42,10 @@ define i64 @ll_a_op_b__1(i64 %a, i64 %b) {
 ; CHECK-LABEL: ll_a_op_b__1:
 ; CHECK:       // %bb.0: // %entry
 ; CHECK-NEXT:    lsl x8, x0, x1
-; CHECK-NEXT:    cmn x8, #1 // =1
+; CHECK-NEXT:    cmn x8, #1
 ; CHECK-NEXT:    csinc x9, x1, xzr, eq
 ; CHECK-NEXT:    mul x9, x9, x0
-; CHECK-NEXT:    cmp x8, #0 // =0
+; CHECK-NEXT:    cmp x8, #0
 ; CHECK-NEXT:    csel x0, x1, x9, ge
 ; CHECK-NEXT:    ret
 entry:
@@ -67,7 +67,7 @@ define i64 @ll_a_op_b_0(i64 %a, i64 %b) {
 ; CHECK-LABEL: ll_a_op_b_0:
 ; CHECK:       // %bb.0: // %entry
 ; CHECK-NEXT:    lsl x8, x0, x1
-; CHECK-NEXT:    cmp x8, #0 // =0
+; CHECK-NEXT:    cmp x8, #0
 ; CHECK-NEXT:    csinc x8, x1, xzr, eq
 ; CHECK-NEXT:    mul x8, x8, x0
 ; CHECK-NEXT:    csel x0, x1, x8, gt
@@ -91,7 +91,7 @@ define i64 @ll_a_op_b_1(i64 %a, i64 %b) {
 ; CHECK-LABEL: ll_a_op_b_1:
 ; CHECK:       // %bb.0: // %entry
 ; CHECK-NEXT:    lsl x8, x0, x1
-; CHECK-NEXT:    cmp x8, #1 // =1
+; CHECK-NEXT:    cmp x8, #1
 ; CHECK-NEXT:    csinc x8, x1, xzr, eq
 ; CHECK-NEXT:    mul x8, x8, x0
 ; CHECK-NEXT:    csel x0, x1, x8, gt
@@ -115,7 +115,7 @@ define i64 @ll_a_op_b_2(i64 %a, i64 %b) {
 ; CHECK-LABEL: ll_a_op_b_2:
 ; CHECK:       // %bb.0: // %entry
 ; CHECK-NEXT:    lsl x8, x0, x1
-; CHECK-NEXT:    cmp x8, #2 // =2
+; CHECK-NEXT:    cmp x8, #2
 ; CHECK-NEXT:    csinc x8, x1, xzr, eq
 ; CHECK-NEXT:    mul x8, x8, x0
 ; CHECK-NEXT:    csel x0, x1, x8, gt
@@ -138,7 +138,7 @@ return:                                           ; preds = %entry
 define i64 @ll_a__2(i64 %a, i64 %b) {
 ; CHECK-LABEL: ll_a__2:
 ; CHECK:       // %bb.0: // %entry
-; CHECK-NEXT:    cmn x0, #2 // =2
+; CHECK-NEXT:    cmn x0, #2
 ; CHECK-NEXT:    csinc x8, x1, xzr, eq
 ; CHECK-NEXT:    mul x8, x8, x0
 ; CHECK-NEXT:    csel x0, x1, x8, gt
@@ -160,10 +160,10 @@ return:                                           ; preds = %entry
 define i64 @ll_a__1(i64 %a, i64 %b) {
 ; CHECK-LABEL: ll_a__1:
 ; CHECK:       // %bb.0: // %entry
-; CHECK-NEXT:    cmn x0, #1 // =1
+; CHECK-NEXT:    cmn x0, #1
 ; CHECK-NEXT:    csinc x8, x1, xzr, eq
 ; CHECK-NEXT:    mul x8, x8, x0
-; CHECK-NEXT:    cmp x0, #0 // =0
+; CHECK-NEXT:    cmp x0, #0
 ; CHECK-NEXT:    csel x0, x1, x8, ge
 ; CHECK-NEXT:    ret
 entry:
@@ -183,7 +183,7 @@ return:                                           ; preds = %entry
 define i64 @ll_a_0(i64 %a, i64 %b) {
 ; CHECK-LABEL: ll_a_0:
 ; CHECK:       // %bb.0: // %entry
-; CHECK-NEXT:    cmp x0, #0 // =0
+; CHECK-NEXT:    cmp x0, #0
 ; CHECK-NEXT:    csinc x8, x1, xzr, eq
 ; CHECK-NEXT:    mul x8, x8, x0
 ; CHECK-NEXT:    csel x0, x1, x8, gt
@@ -205,7 +205,7 @@ return:                                           ; preds = %entry
 define i64 @ll_a_1(i64 %a, i64 %b) {
 ; CHECK-LABEL: ll_a_1:
 ; CHECK:       // %bb.0: // %entry
-; CHECK-NEXT:    cmp x0, #1 // =1
+; CHECK-NEXT:    cmp x0, #1
 ; CHECK-NEXT:    csinc x8, x1, xzr, eq
 ; CHECK-NEXT:    mul x8, x8, x0
 ; CHECK-NEXT:    csel x0, x1, x8, gt
@@ -227,7 +227,7 @@ return:                                           ; preds = %entry
 define i64 @ll_a_2(i64 %a, i64 %b) {
 ; CHECK-LABEL: ll_a_2:
 ; CHECK:       // %bb.0: // %entry
-; CHECK-NEXT:    cmp x0, #2 // =2
+; CHECK-NEXT:    cmp x0, #2
 ; CHECK-NEXT:    csinc x8, x1, xzr, eq
 ; CHECK-NEXT:    mul x8, x8, x0
 ; CHECK-NEXT:    csel x0, x1, x8, gt
@@ -250,7 +250,7 @@ define i64 @i_a_op_b__2(i32 signext %a, i32 signext %b) {
 ; CHECK-LABEL: i_a_op_b__2:
 ; CHECK:       // %bb.0: // %entry
 ; CHECK-NEXT:    lsl w8, w0, w1
-; CHECK-NEXT:    cmn w8, #2 // =2
+; CHECK-NEXT:    cmn w8, #2
 ; CHECK-NEXT:    csinc w8, w1, wzr, eq
 ; CHECK-NEXT:    mul w8, w8, w0
 ; CHECK-NEXT:    csel w8, w1, w8, gt
@@ -277,10 +277,10 @@ define i64 @i_a_op_b__1(i32 signext %a, i32 signext %b) {
 ; CHECK-LABEL: i_a_op_b__1:
 ; CHECK:       // %bb.0: // %entry
 ; CHECK-NEXT:    lsl w8, w0, w1
-; CHECK-NEXT:    cmn w8, #1 // =1
+; CHECK-NEXT:    cmn w8, #1
 ; CHECK-NEXT:    csinc w9, w1, wzr, eq
 ; CHECK-NEXT:    mul w9, w9, w0
-; CHECK-NEXT:    cmp w8, #0 // =0
+; CHECK-NEXT:    cmp w8, #0
 ; CHECK-NEXT:    csel w8, w1, w9, ge
 ; CHECK-NEXT:    sxtw x0, w8
 ; CHECK-NEXT:    ret
@@ -305,7 +305,7 @@ define i64 @i_a_op_b_0(i32 signext %a, i32 signext %b) {
 ; CHECK-LABEL: i_a_op_b_0:
 ; CHECK:       // %bb.0: // %entry
 ; CHECK-NEXT:    lsl w8, w0, w1
-; CHECK-NEXT:    cmp w8, #0 // =0
+; CHECK-NEXT:    cmp w8, #0
 ; CHECK-NEXT:    csinc w8, w1, wzr, eq
 ; CHECK-NEXT:    mul w8, w8, w0
 ; CHECK-NEXT:    csel w8, w1, w8, gt
@@ -332,7 +332,7 @@ define i64 @i_a_op_b_1(i32 signext %a, i32 signext %b) {
 ; CHECK-LABEL: i_a_op_b_1:
 ; CHECK:       // %bb.0: // %entry
 ; CHECK-NEXT:    lsl w8, w0, w1
-; CHECK-NEXT:    cmp w8, #1 // =1
+; CHECK-NEXT:    cmp w8, #1
 ; CHECK-NEXT:    csinc w8, w1, wzr, eq
 ; CHECK-NEXT:    mul w8, w8, w0
 ; CHECK-NEXT:    csel w8, w1, w8, gt
@@ -359,7 +359,7 @@ define i64 @i_a_op_b_2(i32 signext %a, i32 signext %b) {
 ; CHECK-LABEL: i_a_op_b_2:
 ; CHECK:       // %bb.0: // %entry
 ; CHECK-NEXT:    lsl w8, w0, w1
-; CHECK-NEXT:    cmp w8, #2 // =2
+; CHECK-NEXT:    cmp w8, #2
 ; CHECK-NEXT:    csinc w8, w1, wzr, eq
 ; CHECK-NEXT:    mul w8, w8, w0
 ; CHECK-NEXT:    csel w8, w1, w8, gt
@@ -385,7 +385,7 @@ return:                                           ; preds = %if.end, %entry
 define i64 @i_a__2(i32 signext %a, i32 signext %b) {
 ; CHECK-LABEL: i_a__2:
 ; CHECK:       // %bb.0: // %entry
-; CHECK-NEXT:    cmn w0, #2 // =2
+; CHECK-NEXT:    cmn w0, #2
 ; CHECK-NEXT:    csinc w8, w1, wzr, eq
 ; CHECK-NEXT:    mul w8, w8, w0
 ; CHECK-NEXT:    csel w8, w1, w8, gt
@@ -410,10 +410,10 @@ return:                                           ; preds = %if.end, %entry
 define i64 @i_a__1(i32 signext %a, i32 signext %b) {
 ; CHECK-LABEL: i_a__1:
 ; CHECK:       // %bb.0: // %entry
-; CHECK-NEXT:    cmn w0, #1 // =1
+; CHECK-NEXT:    cmn w0, #1
 ; CHECK-NEXT:    csinc w8, w1, wzr, eq
 ; CHECK-NEXT:    mul w8, w8, w0
-; CHECK-NEXT:    cmp w0, #0 // =0
+; CHECK-NEXT:    cmp w0, #0
 ; CHECK-NEXT:    csel w8, w1, w8, ge
 ; CHECK-NEXT:    sxtw x0, w8
 ; CHECK-NEXT:    ret
@@ -436,7 +436,7 @@ return:                                           ; preds = %if.end, %entry
 define i64 @i_a_0(i32 signext %a, i32 signext %b) {
 ; CHECK-LABEL: i_a_0:
 ; CHECK:       // %bb.0: // %entry
-; CHECK-NEXT:    cmp w0, #0 // =0
+; CHECK-NEXT:    cmp w0, #0
 ; CHECK-NEXT:    csinc w8, w1, wzr, eq
 ; CHECK-NEXT:    mul w8, w8, w0
 ; CHECK-NEXT:    csel w8, w1, w8, gt
@@ -461,7 +461,7 @@ return:                                           ; preds = %if.end, %entry
 define i64 @i_a_1(i32 signext %a, i32 signext %b) {
 ; CHECK-LABEL: i_a_1:
 ; CHECK:       // %bb.0: // %entry
-; CHECK-NEXT:    cmp w0, #1 // =1
+; CHECK-NEXT:    cmp w0, #1
 ; CHECK-NEXT:    csinc w8, w1, wzr, eq
 ; CHECK-NEXT:    mul w8, w8, w0
 ; CHECK-NEXT:    csel w8, w1, w8, gt
@@ -486,7 +486,7 @@ return:                                           ; preds = %if.end, %entry
 define i64 @i_a_2(i32 signext %a, i32 signext %b) {
 ; CHECK-LABEL: i_a_2:
 ; CHECK:       // %bb.0: // %entry
-; CHECK-NEXT:    cmp w0, #2 // =2
+; CHECK-NEXT:    cmp w0, #2
 ; CHECK-NEXT:    csinc w8, w1, wzr, eq
 ; CHECK-NEXT:    mul w8, w8, w0
 ; CHECK-NEXT:    csel w8, w1, w8, gt

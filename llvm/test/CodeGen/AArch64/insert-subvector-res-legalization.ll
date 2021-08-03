@@ -101,9 +101,9 @@ define <vscale x 8 x i8> @vec_scalable_subvec_fixed_idx_nonzero_i8(<vscale x 8 x
 ; CHECK-NEXT:    ld1b { z0.h }, p0/z, [x0]
 ; CHECK-NEXT:    ldr d1, [x1]
 ; CHECK-NEXT:    cnth x9
-; CHECK-NEXT:    sub x9, x9, #8 // =8
+; CHECK-NEXT:    sub x9, x9, #8
 ; CHECK-NEXT:    mov w8, #8
-; CHECK-NEXT:    cmp x9, #8 // =8
+; CHECK-NEXT:    cmp x9, #8
 ; CHECK-NEXT:    csel x8, x9, x8, lo
 ; CHECK-NEXT:    lsl x8, x8, #1
 ; CHECK-NEXT:    st1h { z0.h }, p0, [sp]
@@ -150,9 +150,9 @@ define <vscale x 4 x i16> @vec_scalable_subvec_fixed_idx_nonzero_i16(<vscale x 4
 ; CHECK-NEXT:    ld1h { z0.s }, p0/z, [x0]
 ; CHECK-NEXT:    ldr d1, [x1]
 ; CHECK-NEXT:    cntw x9
-; CHECK-NEXT:    sub x9, x9, #4 // =4
+; CHECK-NEXT:    sub x9, x9, #4
 ; CHECK-NEXT:    mov w8, #4
-; CHECK-NEXT:    cmp x9, #4 // =4
+; CHECK-NEXT:    cmp x9, #4
 ; CHECK-NEXT:    csel x8, x9, x8, lo
 ; CHECK-NEXT:    lsl x8, x8, #2
 ; CHECK-NEXT:    st1w { z0.s }, p0, [sp]
@@ -199,9 +199,9 @@ define <vscale x 2 x i32> @vec_scalable_subvec_fixed_idx_nonzero_i32(<vscale x 2
 ; CHECK-NEXT:    ld1w { z0.d }, p0/z, [x0]
 ; CHECK-NEXT:    ldr d1, [x1]
 ; CHECK-NEXT:    cntd x9
-; CHECK-NEXT:    sub x9, x9, #2 // =2
+; CHECK-NEXT:    sub x9, x9, #2
 ; CHECK-NEXT:    mov w8, #2
-; CHECK-NEXT:    cmp x9, #2 // =2
+; CHECK-NEXT:    cmp x9, #2
 ; CHECK-NEXT:    csel x8, x9, x8, lo
 ; CHECK-NEXT:    lsl x8, x8, #3
 ; CHECK-NEXT:    st1d { z0.d }, p0, [sp]
@@ -228,10 +228,10 @@ define <vscale x 2 x i32> @vec_scalable_subvec_fixed_idx_nonzero_large_i32(<vsca
 ; CHECK-NEXT:    ld1w { z0.d }, p0/z, [x0]
 ; CHECK-NEXT:    ld1w { z1.s }, p1/z, [x1]
 ; CHECK-NEXT:    cntd x8
-; CHECK-NEXT:    subs x8, x8, #8 // =8
+; CHECK-NEXT:    subs x8, x8, #8
 ; CHECK-NEXT:    csel x8, xzr, x8, lo
 ; CHECK-NEXT:    mov w9, #8
-; CHECK-NEXT:    cmp x8, #8 // =8
+; CHECK-NEXT:    cmp x8, #8
 ; CHECK-NEXT:    ptrue p1.d, vl8
 ; CHECK-NEXT:    csel x8, x8, x9, lo
 ; CHECK-NEXT:    st1d { z0.d }, p0, [sp]

@@ -14,7 +14,7 @@ define i32 @combine_gt_ge_10() #0 {
 ; CHECK-NEXT:    adrp x8, :got:a
 ; CHECK-NEXT:    ldr x8, [x8, :got_lo12:a]
 ; CHECK-NEXT:    ldr w8, [x8]
-; CHECK-NEXT:    cmp w8, #10 // =10
+; CHECK-NEXT:    cmp w8, #10
 ; CHECK-NEXT:    adrp x8, :got:b
 ; CHECK-NEXT:    ldr x8, [x8, :got_lo12:b]
 ; CHECK-NEXT:    b.le .LBB0_3
@@ -79,7 +79,7 @@ define i32 @combine_gt_lt_5() #0 {
 ; CHECK-NEXT:    adrp x8, :got:a
 ; CHECK-NEXT:    ldr x8, [x8, :got_lo12:a]
 ; CHECK-NEXT:    ldr w8, [x8]
-; CHECK-NEXT:    cmp w8, #5 // =5
+; CHECK-NEXT:    cmp w8, #5
 ; CHECK-NEXT:    b.le .LBB1_3
 ; CHECK-NEXT:  // %bb.1: // %land.lhs.true
 ; CHECK-NEXT:    adrp x8, :got:b
@@ -146,7 +146,7 @@ define i32 @combine_lt_ge_5() #0 {
 ; CHECK-NEXT:    adrp x8, :got:a
 ; CHECK-NEXT:    ldr x8, [x8, :got_lo12:a]
 ; CHECK-NEXT:    ldr w8, [x8]
-; CHECK-NEXT:    cmp w8, #5 // =5
+; CHECK-NEXT:    cmp w8, #5
 ; CHECK-NEXT:    adrp x8, :got:b
 ; CHECK-NEXT:    ldr x8, [x8, :got_lo12:b]
 ; CHECK-NEXT:    b.ge .LBB2_3
@@ -211,7 +211,7 @@ define i32 @combine_lt_gt_5() #0 {
 ; CHECK-NEXT:    adrp x8, :got:a
 ; CHECK-NEXT:    ldr x8, [x8, :got_lo12:a]
 ; CHECK-NEXT:    ldr w8, [x8]
-; CHECK-NEXT:    cmp w8, #5 // =5
+; CHECK-NEXT:    cmp w8, #5
 ; CHECK-NEXT:    b.ge .LBB3_3
 ; CHECK-NEXT:  // %bb.1: // %land.lhs.true
 ; CHECK-NEXT:    adrp x8, :got:b
@@ -278,7 +278,7 @@ define i32 @combine_gt_lt_n5() #0 {
 ; CHECK-NEXT:    adrp x8, :got:a
 ; CHECK-NEXT:    ldr x8, [x8, :got_lo12:a]
 ; CHECK-NEXT:    ldr w8, [x8]
-; CHECK-NEXT:    cmn w8, #5 // =5
+; CHECK-NEXT:    cmn w8, #5
 ; CHECK-NEXT:    b.le .LBB4_3
 ; CHECK-NEXT:  // %bb.1: // %land.lhs.true
 ; CHECK-NEXT:    adrp x8, :got:b
@@ -345,7 +345,7 @@ define i32 @combine_lt_gt_n5() #0 {
 ; CHECK-NEXT:    adrp x8, :got:a
 ; CHECK-NEXT:    ldr x8, [x8, :got_lo12:a]
 ; CHECK-NEXT:    ldr w8, [x8]
-; CHECK-NEXT:    cmn w8, #5 // =5
+; CHECK-NEXT:    cmn w8, #5
 ; CHECK-NEXT:    b.ge .LBB5_3
 ; CHECK-NEXT:  // %bb.1: // %land.lhs.true
 ; CHECK-NEXT:    adrp x8, :got:b
@@ -427,17 +427,17 @@ define void @combine_non_adjacent_cmp_br(%struct.Struct* nocapture readonly %hdC
 ; CHECK-NEXT:    ldr x19, [x0]
 ; CHECK-NEXT:    mov w20, #24
 ; CHECK-NEXT:    adrp x22, glob
-; CHECK-NEXT:    add x21, x19, #2 // =2
+; CHECK-NEXT:    add x21, x19, #2
 ; CHECK-NEXT:  .LBB6_1: // %land.rhs
 ; CHECK-NEXT:    // =>This Inner Loop Header: Depth=1
 ; CHECK-NEXT:    ldr x8, [x20]
-; CHECK-NEXT:    cmp x8, #1 // =1
+; CHECK-NEXT:    cmp x8, #1
 ; CHECK-NEXT:    b.lt .LBB6_3
 ; CHECK-NEXT:  // %bb.2: // %while.body
 ; CHECK-NEXT:    // in Loop: Header=BB6_1 Depth=1
 ; CHECK-NEXT:    ldr x0, [x22, :lo12:glob]
 ; CHECK-NEXT:    bl Update
-; CHECK-NEXT:    sub x21, x21, #2 // =2
+; CHECK-NEXT:    sub x21, x21, #2
 ; CHECK-NEXT:    cmp x19, x21
 ; CHECK-NEXT:    b.lt .LBB6_1
 ; CHECK-NEXT:  .LBB6_3: // %while.end
@@ -482,19 +482,19 @@ define i32 @do_nothing_if_resultant_opcodes_would_differ() #0 {
 ; CHECK-NEXT:    adrp x19, :got:a
 ; CHECK-NEXT:    ldr x19, [x19, :got_lo12:a]
 ; CHECK-NEXT:    ldr w8, [x19]
-; CHECK-NEXT:    cmn w8, #2 // =2
+; CHECK-NEXT:    cmn w8, #2
 ; CHECK-NEXT:    b.gt .LBB7_4
 ; CHECK-NEXT:  // %bb.1: // %while.body.preheader
-; CHECK-NEXT:    sub w20, w8, #1 // =1
+; CHECK-NEXT:    sub w20, w8, #1
 ; CHECK-NEXT:  .LBB7_2: // %while.body
 ; CHECK-NEXT:    // =>This Inner Loop Header: Depth=1
 ; CHECK-NEXT:    bl do_something
-; CHECK-NEXT:    adds w20, w20, #1 // =1
+; CHECK-NEXT:    adds w20, w20, #1
 ; CHECK-NEXT:    b.mi .LBB7_2
 ; CHECK-NEXT:  // %bb.3: // %while.cond.while.end_crit_edge
 ; CHECK-NEXT:    ldr w8, [x19]
 ; CHECK-NEXT:  .LBB7_4: // %while.end
-; CHECK-NEXT:    cmp w8, #1 // =1
+; CHECK-NEXT:    cmp w8, #1
 ; CHECK-NEXT:    b.gt .LBB7_7
 ; CHECK-NEXT:  // %bb.5: // %land.lhs.true
 ; CHECK-NEXT:    adrp x8, :got:b
@@ -562,20 +562,20 @@ define i32 @do_nothing_if_compares_can_not_be_adjusted_to_each_other() #0 {
 ; CHECK-NEXT:    adrp x8, :got:a
 ; CHECK-NEXT:    ldr x8, [x8, :got_lo12:a]
 ; CHECK-NEXT:    ldr w8, [x8]
-; CHECK-NEXT:    cmp w8, #0 // =0
+; CHECK-NEXT:    cmp w8, #0
 ; CHECK-NEXT:    b.gt .LBB8_3
 ; CHECK-NEXT:  // %bb.1: // %while.body.preheader
-; CHECK-NEXT:    sub w19, w8, #1 // =1
+; CHECK-NEXT:    sub w19, w8, #1
 ; CHECK-NEXT:  .LBB8_2: // %while.body
 ; CHECK-NEXT:    // =>This Inner Loop Header: Depth=1
 ; CHECK-NEXT:    bl do_something
-; CHECK-NEXT:    adds w19, w19, #1 // =1
+; CHECK-NEXT:    adds w19, w19, #1
 ; CHECK-NEXT:    b.mi .LBB8_2
 ; CHECK-NEXT:  .LBB8_3: // %while.end
 ; CHECK-NEXT:    adrp x8, :got:c
 ; CHECK-NEXT:    ldr x8, [x8, :got_lo12:c]
 ; CHECK-NEXT:    ldr w8, [x8]
-; CHECK-NEXT:    cmn w8, #2 // =2
+; CHECK-NEXT:    cmn w8, #2
 ; CHECK-NEXT:    b.lt .LBB8_6
 ; CHECK-NEXT:  // %bb.4: // %land.lhs.true
 ; CHECK-NEXT:    adrp x8, :got:b
@@ -647,7 +647,7 @@ define i32 @fcmpri(i32 %argc, i8** nocapture readonly %argv) {
 ; CHECK-NEXT:    .cfi_offset w19, -8
 ; CHECK-NEXT:    .cfi_offset w30, -16
 ; CHECK-NEXT:    .cfi_offset b8, -32
-; CHECK-NEXT:    cmp w0, #2 // =2
+; CHECK-NEXT:    cmp w0, #2
 ; CHECK-NEXT:    b.lt .LBB9_3
 ; CHECK-NEXT:  // %bb.1: // %land.lhs.true
 ; CHECK-NEXT:    ldr x8, [x1, #8]
@@ -661,7 +661,7 @@ define i32 @fcmpri(i32 %argc, i8** nocapture readonly %argv) {
 ; CHECK-NEXT:    mov w19, w0
 ; CHECK-NEXT:    mov w0, #-1
 ; CHECK-NEXT:    bl yoo
-; CHECK-NEXT:    cmp w19, #0 // =0
+; CHECK-NEXT:    cmp w19, #0
 ; CHECK-NEXT:    cinc w0, w19, gt
 ; CHECK-NEXT:    mov w1, #2
 ; CHECK-NEXT:    mov v8.16b, v0.16b
@@ -720,7 +720,7 @@ define void @cmp_shifted(i32 %in, i32 %lhs, i32 %rhs) {
 ; CHECK-NEXT:    str x30, [sp, #-16]! // 8-byte Folded Spill
 ; CHECK-NEXT:    .cfi_def_cfa_offset 16
 ; CHECK-NEXT:    .cfi_offset w30, -16
-; CHECK-NEXT:    cmp w0, #0 // =0
+; CHECK-NEXT:    cmp w0, #0
 ; CHECK-NEXT:    mov w8, #42
 ; CHECK-NEXT:    csinc w8, w8, wzr, gt
 ; CHECK-NEXT:    cmp w0, #2, lsl #12 // =8192
@@ -757,12 +757,12 @@ define i32 @combine_gt_ge_sel(i64 %v, i64* %p) #0 {
 ; CHECK-NEXT:    adrp x8, :got:a
 ; CHECK-NEXT:    ldr x8, [x8, :got_lo12:a]
 ; CHECK-NEXT:    ldr w8, [x8]
-; CHECK-NEXT:    cmp w8, #0 // =0
+; CHECK-NEXT:    cmp w8, #0
 ; CHECK-NEXT:    csel x9, x0, xzr, gt
 ; CHECK-NEXT:    str x9, [x1]
 ; CHECK-NEXT:    b.le .LBB11_2
 ; CHECK-NEXT:  // %bb.1: // %lor.lhs.false
-; CHECK-NEXT:    cmp w8, #2 // =2
+; CHECK-NEXT:    cmp w8, #2
 ; CHECK-NEXT:    b.ge .LBB11_4
 ; CHECK-NEXT:    b .LBB11_6
 ; CHECK-NEXT:  .LBB11_2: // %land.lhs.true
