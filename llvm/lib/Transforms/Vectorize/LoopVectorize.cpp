@@ -9547,9 +9547,22 @@ void VPInterleaveRecipe::print(raw_ostream &O, const Twine &Indent,
     O << ", ";
     Mask->printAsOperand(O, SlotTracker);
   }
-  for (unsigned i = 0; i < IG->getFactor(); ++i)
-    if (Instruction *I = IG->getMember(i))
-      O << "\n" << Indent << "  " << VPlanIngredient(I) << " " << i;
+
+  unsigned OpIdx = 0;
+  for (unsigned i = 0; i < IG->getFactor(); ++i) {
+    if (!IG->getMember(i))
+      continue;
+    if (getNumStoreOperands() > 0) {
+      O << "\n" << Indent << "  store ";
+      getOperand(1 + OpIdx)->printAsOperand(O, SlotTracker);
+      O << " to index " << i;
+    } else {
+      O << "\n" << Indent << "  ";
+      getVPValue(OpIdx)->printAsOperand(O, SlotTracker);
+      O << " = load from index " << i;
+    }
+    ++OpIdx;
+  }
 }
 #endif
 
