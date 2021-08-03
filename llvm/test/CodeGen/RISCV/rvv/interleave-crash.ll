@@ -7,30 +7,28 @@ define void @interleave256(<256 x i16>* %agg.result, <128 x i16>* %0, <128 x i16
 ; RV64-1024:       # %bb.0: # %entry
 ; RV64-1024-NEXT:    addi a3, zero, 128
 ; RV64-1024-NEXT:    vsetvli zero, a3, e16, m2, ta, mu
-; RV64-1024-NEXT:    vle16.v v12, (a1)
-; RV64-1024-NEXT:    vle16.v v8, (a2)
+; RV64-1024-NEXT:    vle16.v v8, (a1)
+; RV64-1024-NEXT:    vle16.v v12, (a2)
 ; RV64-1024-NEXT:    addi a1, zero, 256
 ; RV64-1024-NEXT:    vsetvli zero, a1, e16, m4, ta, mu
 ; RV64-1024-NEXT:    vmv.v.i v28, 0
 ; RV64-1024-NEXT:    vsetvli zero, a3, e16, m4, tu, mu
 ; RV64-1024-NEXT:    vmv4r.v v16, v28
-; RV64-1024-NEXT:    vslideup.vi v16, v12, 0
+; RV64-1024-NEXT:    vslideup.vi v16, v8, 0
 ; RV64-1024-NEXT:    vsetvli zero, a3, e16, m2, ta, mu
-; RV64-1024-NEXT:    vmv.v.i v12, 0
+; RV64-1024-NEXT:    vmv.v.i v20, 0
 ; RV64-1024-NEXT:    vsetvli zero, a1, e16, m4, tu, mu
-; RV64-1024-NEXT:    vslideup.vx v16, v12, a3
-; RV64-1024-NEXT:    lui a2, %hi(.LCPI0_0)
-; RV64-1024-NEXT:    addi a2, a2, %lo(.LCPI0_0)
+; RV64-1024-NEXT:    vslideup.vx v16, v20, a3
 ; RV64-1024-NEXT:    vsetvli zero, zero, e16, m4, ta, mu
-; RV64-1024-NEXT:    vle16.v v20, (a2)
-; RV64-1024-NEXT:    vrgather.vv v24, v16, v20
+; RV64-1024-NEXT:    vid.v v24
+; RV64-1024-NEXT:    vsrl.vi v8, v24, 1
+; RV64-1024-NEXT:    vrgather.vv v0, v16, v8
 ; RV64-1024-NEXT:    vsetvli zero, a3, e16, m4, tu, mu
-; RV64-1024-NEXT:    vslideup.vi v28, v8, 0
+; RV64-1024-NEXT:    vslideup.vi v28, v12, 0
 ; RV64-1024-NEXT:    vsetvli zero, a1, e16, m4, tu, mu
-; RV64-1024-NEXT:    vslideup.vx v28, v12, a3
+; RV64-1024-NEXT:    vslideup.vx v28, v20, a3
 ; RV64-1024-NEXT:    vsetvli zero, zero, e16, m4, ta, mu
-; RV64-1024-NEXT:    vid.v v12
-; RV64-1024-NEXT:    vrgather.vv v8, v24, v12
+; RV64-1024-NEXT:    vrgather.vv v12, v0, v24
 ; RV64-1024-NEXT:    lui a2, 1026731
 ; RV64-1024-NEXT:    addiw a2, a2, -1365
 ; RV64-1024-NEXT:    slli a2, a2, 12
@@ -48,14 +46,10 @@ define void @interleave256(<256 x i16>* %agg.result, <128 x i16>* %0, <128 x i16
 ; RV64-1024-NEXT:    vslideup.vi v0, v25, 2
 ; RV64-1024-NEXT:    vsetivli zero, 4, e64, m1, tu, mu
 ; RV64-1024-NEXT:    vslideup.vi v0, v25, 3
-; RV64-1024-NEXT:    lui a2, %hi(.LCPI0_1)
-; RV64-1024-NEXT:    addi a2, a2, %lo(.LCPI0_1)
-; RV64-1024-NEXT:    vsetvli zero, a1, e16, m4, ta, mu
-; RV64-1024-NEXT:    vle16.v v12, (a2)
-; RV64-1024-NEXT:    vsetvli zero, zero, e16, m4, tu, mu
-; RV64-1024-NEXT:    vrgather.vv v8, v28, v12, v0.t
+; RV64-1024-NEXT:    vsetvli zero, a1, e16, m4, tu, mu
+; RV64-1024-NEXT:    vrgather.vv v12, v28, v8, v0.t
 ; RV64-1024-NEXT:    vsetvli zero, zero, e16, m4, ta, mu
-; RV64-1024-NEXT:    vse16.v v8, (a0)
+; RV64-1024-NEXT:    vse16.v v12, (a0)
 ; RV64-1024-NEXT:    ret
 ;
 ; RV64-2048-LABEL: interleave256:
@@ -71,21 +65,19 @@ define void @interleave256(<256 x i16>* %agg.result, <128 x i16>* %0, <128 x i16
 ; RV64-2048-NEXT:    vmv2r.v v8, v26
 ; RV64-2048-NEXT:    vslideup.vi v8, v28, 0
 ; RV64-2048-NEXT:    vsetvli zero, a3, e16, m1, ta, mu
-; RV64-2048-NEXT:    vmv.v.i v28, 0
+; RV64-2048-NEXT:    vmv.v.i v10, 0
 ; RV64-2048-NEXT:    vsetvli zero, a1, e16, m2, tu, mu
-; RV64-2048-NEXT:    vslideup.vx v8, v28, a3
-; RV64-2048-NEXT:    lui a2, %hi(.LCPI0_0)
-; RV64-2048-NEXT:    addi a2, a2, %lo(.LCPI0_0)
+; RV64-2048-NEXT:    vslideup.vx v8, v10, a3
 ; RV64-2048-NEXT:    vsetvli zero, zero, e16, m2, ta, mu
-; RV64-2048-NEXT:    vle16.v v10, (a2)
-; RV64-2048-NEXT:    vrgather.vv v12, v8, v10
+; RV64-2048-NEXT:    vid.v v12
+; RV64-2048-NEXT:    vsrl.vi v28, v12, 1
+; RV64-2048-NEXT:    vrgather.vv v14, v8, v28
 ; RV64-2048-NEXT:    vsetvli zero, a3, e16, m2, tu, mu
 ; RV64-2048-NEXT:    vslideup.vi v26, v30, 0
 ; RV64-2048-NEXT:    vsetvli zero, a1, e16, m2, tu, mu
-; RV64-2048-NEXT:    vslideup.vx v26, v28, a3
+; RV64-2048-NEXT:    vslideup.vx v26, v10, a3
 ; RV64-2048-NEXT:    vsetvli zero, zero, e16, m2, ta, mu
-; RV64-2048-NEXT:    vid.v v28
-; RV64-2048-NEXT:    vrgather.vv v30, v12, v28
+; RV64-2048-NEXT:    vrgather.vv v30, v14, v12
 ; RV64-2048-NEXT:    lui a2, 1026731
 ; RV64-2048-NEXT:    addiw a2, a2, -1365
 ; RV64-2048-NEXT:    slli a2, a2, 12
@@ -103,11 +95,7 @@ define void @interleave256(<256 x i16>* %agg.result, <128 x i16>* %0, <128 x i16
 ; RV64-2048-NEXT:    vslideup.vi v0, v25, 2
 ; RV64-2048-NEXT:    vsetivli zero, 4, e64, m1, tu, mu
 ; RV64-2048-NEXT:    vslideup.vi v0, v25, 3
-; RV64-2048-NEXT:    lui a2, %hi(.LCPI0_1)
-; RV64-2048-NEXT:    addi a2, a2, %lo(.LCPI0_1)
-; RV64-2048-NEXT:    vsetvli zero, a1, e16, m2, ta, mu
-; RV64-2048-NEXT:    vle16.v v28, (a2)
-; RV64-2048-NEXT:    vsetvli zero, zero, e16, m2, tu, mu
+; RV64-2048-NEXT:    vsetvli zero, a1, e16, m2, tu, mu
 ; RV64-2048-NEXT:    vrgather.vv v30, v26, v28, v0.t
 ; RV64-2048-NEXT:    vsetvli zero, zero, e16, m2, ta, mu
 ; RV64-2048-NEXT:    vse16.v v30, (a0)
@@ -128,7 +116,7 @@ define void @interleave512(<512 x i16>* %agg.result, <256 x i16>* %0, <256 x i16
 ; RV64-1024-NEXT:    addi sp, sp, -16
 ; RV64-1024-NEXT:    .cfi_def_cfa_offset 16
 ; RV64-1024-NEXT:    csrr a3, vlenb
-; RV64-1024-NEXT:    addi a4, zero, 24
+; RV64-1024-NEXT:    addi a4, zero, 40
 ; RV64-1024-NEXT:    mul a3, a3, a4
 ; RV64-1024-NEXT:    sub sp, sp, a3
 ; RV64-1024-NEXT:    addi a3, zero, 256
@@ -136,51 +124,65 @@ define void @interleave512(<512 x i16>* %agg.result, <256 x i16>* %0, <256 x i16
 ; RV64-1024-NEXT:    vle16.v v24, (a1)
 ; RV64-1024-NEXT:    vle16.v v8, (a2)
 ; RV64-1024-NEXT:    csrr a1, vlenb
-; RV64-1024-NEXT:    slli a1, a1, 4
+; RV64-1024-NEXT:    addi a2, zero, 24
+; RV64-1024-NEXT:    mul a1, a1, a2
 ; RV64-1024-NEXT:    add a1, sp, a1
 ; RV64-1024-NEXT:    addi a1, a1, 16
 ; RV64-1024-NEXT:    vs8r.v v8, (a1) # Unknown-size Folded Spill
 ; RV64-1024-NEXT:    addi a1, zero, 512
 ; RV64-1024-NEXT:    vsetvli zero, a1, e16, m8, ta, mu
 ; RV64-1024-NEXT:    vmv.v.i v8, 0
+; RV64-1024-NEXT:    csrr a2, vlenb
+; RV64-1024-NEXT:    slli a2, a2, 4
+; RV64-1024-NEXT:    add a2, sp, a2
+; RV64-1024-NEXT:    addi a2, a2, 16
+; RV64-1024-NEXT:    vs8r.v v8, (a2) # Unknown-size Folded Spill
 ; RV64-1024-NEXT:    vsetvli zero, a3, e16, m8, tu, mu
-; RV64-1024-NEXT:    vmv8r.v v0, v8
-; RV64-1024-NEXT:    vslideup.vi v0, v24, 0
+; RV64-1024-NEXT:    vslideup.vi v8, v24, 0
 ; RV64-1024-NEXT:    vsetvli zero, a3, e16, m4, ta, mu
 ; RV64-1024-NEXT:    vmv.v.i v16, 0
 ; RV64-1024-NEXT:    addi a2, sp, 16
 ; RV64-1024-NEXT:    vs8r.v v16, (a2) # Unknown-size Folded Spill
 ; RV64-1024-NEXT:    vsetvli zero, a1, e16, m8, tu, mu
-; RV64-1024-NEXT:    vslideup.vx v0, v16, a3
-; RV64-1024-NEXT:    lui a2, %hi(.LCPI1_0)
-; RV64-1024-NEXT:    addi a2, a2, %lo(.LCPI1_0)
+; RV64-1024-NEXT:    vslideup.vx v8, v16, a3
 ; RV64-1024-NEXT:    vsetvli zero, zero, e16, m8, ta, mu
-; RV64-1024-NEXT:    vle16.v v16, (a2)
-; RV64-1024-NEXT:    vrgather.vv v24, v0, v16
+; RV64-1024-NEXT:    vid.v v24
+; RV64-1024-NEXT:    vsrl.vi v16, v24, 1
+; RV64-1024-NEXT:    csrr a2, vlenb
+; RV64-1024-NEXT:    slli a2, a2, 5
+; RV64-1024-NEXT:    add a2, sp, a2
+; RV64-1024-NEXT:    addi a2, a2, 16
+; RV64-1024-NEXT:    vs8r.v v16, (a2) # Unknown-size Folded Spill
+; RV64-1024-NEXT:    vrgather.vv v0, v8, v16
 ; RV64-1024-NEXT:    csrr a2, vlenb
 ; RV64-1024-NEXT:    slli a2, a2, 3
 ; RV64-1024-NEXT:    add a2, sp, a2
 ; RV64-1024-NEXT:    addi a2, a2, 16
-; RV64-1024-NEXT:    vs8r.v v24, (a2) # Unknown-size Folded Spill
+; RV64-1024-NEXT:    vs8r.v v0, (a2) # Unknown-size Folded Spill
 ; RV64-1024-NEXT:    vsetvli zero, a3, e16, m8, tu, mu
 ; RV64-1024-NEXT:    csrr a2, vlenb
 ; RV64-1024-NEXT:    slli a2, a2, 4
 ; RV64-1024-NEXT:    add a2, sp, a2
 ; RV64-1024-NEXT:    addi a2, a2, 16
 ; RV64-1024-NEXT:    vl8re8.v v16, (a2) # Unknown-size Folded Reload
-; RV64-1024-NEXT:    vslideup.vi v8, v16, 0
+; RV64-1024-NEXT:    csrr a2, vlenb
+; RV64-1024-NEXT:    addi a4, zero, 24
+; RV64-1024-NEXT:    mul a2, a2, a4
+; RV64-1024-NEXT:    add a2, sp, a2
+; RV64-1024-NEXT:    addi a2, a2, 16
+; RV64-1024-NEXT:    vl8re8.v v8, (a2) # Unknown-size Folded Reload
+; RV64-1024-NEXT:    vslideup.vi v16, v8, 0
 ; RV64-1024-NEXT:    vsetvli zero, a1, e16, m8, tu, mu
 ; RV64-1024-NEXT:    addi a2, sp, 16
-; RV64-1024-NEXT:    vl8re8.v v16, (a2) # Unknown-size Folded Reload
-; RV64-1024-NEXT:    vslideup.vx v8, v16, a3
+; RV64-1024-NEXT:    vl8re8.v v8, (a2) # Unknown-size Folded Reload
+; RV64-1024-NEXT:    vslideup.vx v16, v8, a3
 ; RV64-1024-NEXT:    vsetvli zero, zero, e16, m8, ta, mu
-; RV64-1024-NEXT:    vid.v v24
 ; RV64-1024-NEXT:    csrr a2, vlenb
 ; RV64-1024-NEXT:    slli a2, a2, 3
 ; RV64-1024-NEXT:    add a2, sp, a2
 ; RV64-1024-NEXT:    addi a2, a2, 16
 ; RV64-1024-NEXT:    vl8re8.v v0, (a2) # Unknown-size Folded Reload
-; RV64-1024-NEXT:    vrgather.vv v16, v0, v24
+; RV64-1024-NEXT:    vrgather.vv v8, v0, v24
 ; RV64-1024-NEXT:    lui a2, 1026731
 ; RV64-1024-NEXT:    addiw a2, a2, -1365
 ; RV64-1024-NEXT:    slli a2, a2, 12
@@ -206,16 +208,17 @@ define void @interleave512(<512 x i16>* %agg.result, <256 x i16>* %0, <256 x i16
 ; RV64-1024-NEXT:    vslideup.vi v0, v25, 6
 ; RV64-1024-NEXT:    vsetivli zero, 8, e64, m1, tu, mu
 ; RV64-1024-NEXT:    vslideup.vi v0, v25, 7
-; RV64-1024-NEXT:    lui a2, %hi(.LCPI1_1)
-; RV64-1024-NEXT:    addi a2, a2, %lo(.LCPI1_1)
-; RV64-1024-NEXT:    vsetvli zero, a1, e16, m8, ta, mu
-; RV64-1024-NEXT:    vle16.v v24, (a2)
-; RV64-1024-NEXT:    vsetvli zero, zero, e16, m8, tu, mu
-; RV64-1024-NEXT:    vrgather.vv v16, v8, v24, v0.t
+; RV64-1024-NEXT:    vsetvli zero, a1, e16, m8, tu, mu
+; RV64-1024-NEXT:    csrr a1, vlenb
+; RV64-1024-NEXT:    slli a1, a1, 5
+; RV64-1024-NEXT:    add a1, sp, a1
+; RV64-1024-NEXT:    addi a1, a1, 16
+; RV64-1024-NEXT:    vl8re8.v v24, (a1) # Unknown-size Folded Reload
+; RV64-1024-NEXT:    vrgather.vv v8, v16, v24, v0.t
 ; RV64-1024-NEXT:    vsetvli zero, zero, e16, m8, ta, mu
-; RV64-1024-NEXT:    vse16.v v16, (a0)
+; RV64-1024-NEXT:    vse16.v v8, (a0)
 ; RV64-1024-NEXT:    csrr a0, vlenb
-; RV64-1024-NEXT:    addi a1, zero, 24
+; RV64-1024-NEXT:    addi a1, zero, 40
 ; RV64-1024-NEXT:    mul a0, a0, a1
 ; RV64-1024-NEXT:    add sp, sp, a0
 ; RV64-1024-NEXT:    addi sp, sp, 16
@@ -225,30 +228,28 @@ define void @interleave512(<512 x i16>* %agg.result, <256 x i16>* %0, <256 x i16
 ; RV64-2048:       # %bb.0: # %entry
 ; RV64-2048-NEXT:    addi a3, zero, 256
 ; RV64-2048-NEXT:    vsetvli zero, a3, e16, m2, ta, mu
-; RV64-2048-NEXT:    vle16.v v12, (a1)
-; RV64-2048-NEXT:    vle16.v v8, (a2)
+; RV64-2048-NEXT:    vle16.v v8, (a1)
+; RV64-2048-NEXT:    vle16.v v12, (a2)
 ; RV64-2048-NEXT:    addi a1, zero, 512
 ; RV64-2048-NEXT:    vsetvli zero, a1, e16, m4, ta, mu
 ; RV64-2048-NEXT:    vmv.v.i v28, 0
 ; RV64-2048-NEXT:    vsetvli zero, a3, e16, m4, tu, mu
 ; RV64-2048-NEXT:    vmv4r.v v16, v28
-; RV64-2048-NEXT:    vslideup.vi v16, v12, 0
+; RV64-2048-NEXT:    vslideup.vi v16, v8, 0
 ; RV64-2048-NEXT:    vsetvli zero, a3, e16, m2, ta, mu
-; RV64-2048-NEXT:    vmv.v.i v12, 0
+; RV64-2048-NEXT:    vmv.v.i v20, 0
 ; RV64-2048-NEXT:    vsetvli zero, a1, e16, m4, tu, mu
-; RV64-2048-NEXT:    vslideup.vx v16, v12, a3
-; RV64-2048-NEXT:    lui a2, %hi(.LCPI1_0)
-; RV64-2048-NEXT:    addi a2, a2, %lo(.LCPI1_0)
+; RV64-2048-NEXT:    vslideup.vx v16, v20, a3
 ; RV64-2048-NEXT:    vsetvli zero, zero, e16, m4, ta, mu
-; RV64-2048-NEXT:    vle16.v v20, (a2)
-; RV64-2048-NEXT:    vrgather.vv v24, v16, v20
+; RV64-2048-NEXT:    vid.v v24
+; RV64-2048-NEXT:    vsrl.vi v8, v24, 1
+; RV64-2048-NEXT:    vrgather.vv v0, v16, v8
 ; RV64-2048-NEXT:    vsetvli zero, a3, e16, m4, tu, mu
-; RV64-2048-NEXT:    vslideup.vi v28, v8, 0
+; RV64-2048-NEXT:    vslideup.vi v28, v12, 0
 ; RV64-2048-NEXT:    vsetvli zero, a1, e16, m4, tu, mu
-; RV64-2048-NEXT:    vslideup.vx v28, v12, a3
+; RV64-2048-NEXT:    vslideup.vx v28, v20, a3
 ; RV64-2048-NEXT:    vsetvli zero, zero, e16, m4, ta, mu
-; RV64-2048-NEXT:    vid.v v12
-; RV64-2048-NEXT:    vrgather.vv v8, v24, v12
+; RV64-2048-NEXT:    vrgather.vv v12, v0, v24
 ; RV64-2048-NEXT:    lui a2, 1026731
 ; RV64-2048-NEXT:    addiw a2, a2, -1365
 ; RV64-2048-NEXT:    slli a2, a2, 12
@@ -274,14 +275,10 @@ define void @interleave512(<512 x i16>* %agg.result, <256 x i16>* %0, <256 x i16
 ; RV64-2048-NEXT:    vslideup.vi v0, v25, 6
 ; RV64-2048-NEXT:    vsetivli zero, 8, e64, m1, tu, mu
 ; RV64-2048-NEXT:    vslideup.vi v0, v25, 7
-; RV64-2048-NEXT:    lui a2, %hi(.LCPI1_1)
-; RV64-2048-NEXT:    addi a2, a2, %lo(.LCPI1_1)
-; RV64-2048-NEXT:    vsetvli zero, a1, e16, m4, ta, mu
-; RV64-2048-NEXT:    vle16.v v12, (a2)
-; RV64-2048-NEXT:    vsetvli zero, zero, e16, m4, tu, mu
-; RV64-2048-NEXT:    vrgather.vv v8, v28, v12, v0.t
+; RV64-2048-NEXT:    vsetvli zero, a1, e16, m4, tu, mu
+; RV64-2048-NEXT:    vrgather.vv v12, v28, v8, v0.t
 ; RV64-2048-NEXT:    vsetvli zero, zero, e16, m4, ta, mu
-; RV64-2048-NEXT:    vse16.v v8, (a0)
+; RV64-2048-NEXT:    vse16.v v12, (a0)
 ; RV64-2048-NEXT:    ret
 entry:
   %ve = load <256 x i16>, <256 x i16>* %0, align 512
