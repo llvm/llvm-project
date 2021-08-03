@@ -40,6 +40,10 @@ class HexagonHazardRecognizer : public ScheduleHazardRecognizer {
   // The set of registers defined by instructions in the current packet.
   SmallSet<unsigned, 8> RegDefs;
 
+  // Return true if the instruction is a store that is converted to a new value
+  // store because its value is defined in the same packet.
+  bool isNewStore(MachineInstr &MI);
+
 public:
   HexagonHazardRecognizer(const InstrItineraryData *II,
                           const HexagonInstrInfo *HII,
