@@ -77,7 +77,7 @@ public:
   virtual ~JITLinkExecutor();
 
 protected:
-  std::unique_ptr<RemoteExecutorProcessControl> OwnedEPC{nullptr};
+  std::unique_ptr<RemoteExecutorProcessControl> OwnedEPC;
   RemoteExecutorProcessControl *EPC{nullptr};
 
   JITLinkExecutor();
