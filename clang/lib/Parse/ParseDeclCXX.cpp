@@ -2991,9 +2991,11 @@ Parser::ParseCXXClassMemberDeclaration(AccessSpecifier AS,
       ExprResult Init = ParseCXXMemberInitializer(
           ThisDecl, DeclaratorInfo.isDeclarationOfFunction(), EqualLoc);
 
-      if (Init.isInvalid())
+      if (Init.isInvalid()) {
+        if (ThisDecl)
+          Actions.ActOnUninitializedDecl(ThisDecl);
         SkipUntil(tok::comma, StopAtSemi | StopBeforeMatch);
-      else if (ThisDecl)
+      } else if (ThisDecl)
         Actions.AddInitializerToDecl(ThisDecl, Init.get(), EqualLoc.isInvalid());
     } else if (ThisDecl && DS.getStorageClassSpec() == DeclSpec::SCS_static)
       // No initializer.
