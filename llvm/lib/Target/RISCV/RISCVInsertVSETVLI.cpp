@@ -633,6 +633,8 @@ bool RISCVInsertVSETVLI::needVSETVLIPHI(const VSETVLIInfo &Require,
 
 void RISCVInsertVSETVLI::emitVSETVLIs(MachineBasicBlock &MBB) {
   VSETVLIInfo CurInfo;
+  // Only be set if current VSETVLIInfo is from an explicit VSET(I)VLI.
+  MachineInstr *PrevVSETVLIMI = nullptr;
 
   for (MachineInstr &MI : MBB) {
     // If this is an explicit VSETVLI or VSETIVLI, update our state.
@@ -645,6 +647,7 @@ void RISCVInsertVSETVLI::emitVSETVLIs(MachineBasicBlock &MBB) {
       MI.getOperand(3).setIsDead(false);
       MI.getOperand(4).setIsDead(false);
       CurInfo = getInfoForVSETVLI(MI);
+      PrevVSETVLIMI = &MI;
       continue;
     }
 
@@ -678,10 +681,28 @@ void RISCVInsertVSETVLI::emitVSETVLIs(MachineBasicBlock &MBB) {
         // If this instruction isn't compatible with the previous VL/VTYPE
         // we need to insert a VSETVLI.
         if (needVSETVLI(NewInfo, CurInfo)) {
-          insertVSETVLI(MBB, MI, NewInfo, CurInfo);
+          // If the previous VL/VTYPE is set by VSETVLI and do not use, Merge it
+          // with current VL/VTYPE.
+          bool NeedInsertVSETVLI = true;
+          if (PrevVSETVLIMI) {
+            bool HasSameAVL =
+                CurInfo.hasSameAVL(NewInfo) ||
+                (NewInfo.hasAVLReg() && NewInfo.getAVLReg().isVirtual() &&
+                 NewInfo.getAVLReg() == PrevVSETVLIMI->getOperand(0).getReg());
+            // If these two VSETVLI have the same AVL and the same VLMAX,
+            // we could merge these two VSETVLI.
+            if (HasSameAVL &&
+                CurInfo.getSEWLMULRatio() == NewInfo.getSEWLMULRatio()) {
+              PrevVSETVLIMI->getOperand(2).setImm(NewInfo.encodeVTYPE());
+              NeedInsertVSETVLI = false;
+            }
+          }
+          if (NeedInsertVSETVLI)
+            insertVSETVLI(MBB, MI, NewInfo, CurInfo);
           CurInfo = NewInfo;
         }
       }
+      PrevVSETVLIMI = nullptr;
     }
 
     // If this is something updates VL/VTYPE that we don't know about, set
@@ -689,6 +710,7 @@ void RISCVInsertVSETVLI::emitVSETVLIs(MachineBasicBlock &MBB) {
     if (MI.isCall() || MI.isInlineAsm() || MI.modifiesRegister(RISCV::VL) ||
         MI.modifiesRegister(RISCV::VTYPE)) {
       CurInfo = VSETVLIInfo::getUnknown();
+      PrevVSETVLIMI = nullptr;
     }
   }
 }

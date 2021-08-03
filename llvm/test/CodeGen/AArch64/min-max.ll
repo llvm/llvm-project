@@ -185,13 +185,8 @@ declare <1 x i64> @llvm.smax.v1i64(<1 x i64> %a, <1 x i64> %b) readnone
 define <1 x i64> @smax1i64(<1 x i64> %a, <1 x i64> %b) {
 ; CHECK-ISEL-LABEL: smax1i64:
 ; CHECK-ISEL:       // %bb.0:
-; CHECK-ISEL-NEXT:    // kill: def $d1 killed $d1 def $q1
-; CHECK-ISEL-NEXT:    // kill: def $d0 killed $d0 def $q0
-; CHECK-ISEL-NEXT:    fmov x8, d1
-; CHECK-ISEL-NEXT:    fmov x9, d0
-; CHECK-ISEL-NEXT:    cmp x9, x8
-; CHECK-ISEL-NEXT:    csel x8, x9, x8, gt
-; CHECK-ISEL-NEXT:    fmov d0, x8
+; CHECK-ISEL-NEXT:    cmgt d2, d0, d1
+; CHECK-ISEL-NEXT:    bif v0.8b, v1.8b, v2.8b
 ; CHECK-ISEL-NEXT:    ret
 ;
 ; CHECK-GLOBAL-LABEL: smax1i64:
@@ -210,16 +205,8 @@ declare <2 x i64> @llvm.smax.v2i64(<2 x i64> %a, <2 x i64> %b) readnone
 define <2 x i64> @smax2i64(<2 x i64> %a, <2 x i64> %b) {
 ; CHECK-ISEL-LABEL: smax2i64:
 ; CHECK-ISEL:       // %bb.0:
-; CHECK-ISEL-NEXT:    mov x8, v1.d[1]
-; CHECK-ISEL-NEXT:    mov x9, v0.d[1]
-; CHECK-ISEL-NEXT:    fmov x10, d1
-; CHECK-ISEL-NEXT:    fmov x11, d0
-; CHECK-ISEL-NEXT:    cmp x9, x8
-; CHECK-ISEL-NEXT:    csel x8, x9, x8, gt
-; CHECK-ISEL-NEXT:    cmp x11, x10
-; CHECK-ISEL-NEXT:    csel x9, x11, x10, gt
-; CHECK-ISEL-NEXT:    fmov d0, x9
-; CHECK-ISEL-NEXT:    mov v0.d[1], x8
+; CHECK-ISEL-NEXT:    cmgt v2.2d, v0.2d, v1.2d
+; CHECK-ISEL-NEXT:    bif v0.16b, v1.16b, v2.16b
 ; CHECK-ISEL-NEXT:    ret
 ;
 ; CHECK-GLOBAL-LABEL: smax2i64:
@@ -238,26 +225,10 @@ declare <4 x i64> @llvm.smax.v4i64(<4 x i64> %a, <4 x i64> %b) readnone
 define void @smax4i64(<4 x i64> %a, <4 x i64> %b, <4 x i64>* %p) {
 ; CHECK-ISEL-LABEL: smax4i64:
 ; CHECK-ISEL:       // %bb.0:
-; CHECK-ISEL-NEXT:    mov x8, v2.d[1]
-; CHECK-ISEL-NEXT:    mov x9, v0.d[1]
-; CHECK-ISEL-NEXT:    fmov x10, d2
-; CHECK-ISEL-NEXT:    fmov x11, d0
-; CHECK-ISEL-NEXT:    cmp x9, x8
-; CHECK-ISEL-NEXT:    csel x8, x9, x8, gt
-; CHECK-ISEL-NEXT:    cmp x11, x10
-; CHECK-ISEL-NEXT:    mov x9, v3.d[1]
-; CHECK-ISEL-NEXT:    csel x10, x11, x10, gt
-; CHECK-ISEL-NEXT:    mov x11, v1.d[1]
-; CHECK-ISEL-NEXT:    cmp x11, x9
-; CHECK-ISEL-NEXT:    fmov d0, x10
-; CHECK-ISEL-NEXT:    fmov x10, d3
-; CHECK-ISEL-NEXT:    csel x9, x11, x9, gt
-; CHECK-ISEL-NEXT:    fmov x11, d1
-; CHECK-ISEL-NEXT:    cmp x11, x10
-; CHECK-ISEL-NEXT:    csel x10, x11, x10, gt
-; CHECK-ISEL-NEXT:    fmov d1, x10
-; CHECK-ISEL-NEXT:    mov v0.d[1], x8
-; CHECK-ISEL-NEXT:    mov v1.d[1], x9
+; CHECK-ISEL-NEXT:    cmgt v4.2d, v0.2d, v2.2d
+; CHECK-ISEL-NEXT:    cmgt v5.2d, v1.2d, v3.2d
+; CHECK-ISEL-NEXT:    bif v0.16b, v2.16b, v4.16b
+; CHECK-ISEL-NEXT:    bif v1.16b, v3.16b, v5.16b
 ; CHECK-ISEL-NEXT:    stp q0, q1, [x0]
 ; CHECK-ISEL-NEXT:    ret
 ;
@@ -457,13 +428,8 @@ declare <1 x i64> @llvm.umax.v1i64(<1 x i64> %a, <1 x i64> %b) readnone
 define <1 x i64> @umax1i64(<1 x i64> %a, <1 x i64> %b) {
 ; CHECK-ISEL-LABEL: umax1i64:
 ; CHECK-ISEL:       // %bb.0:
-; CHECK-ISEL-NEXT:    // kill: def $d1 killed $d1 def $q1
-; CHECK-ISEL-NEXT:    // kill: def $d0 killed $d0 def $q0
-; CHECK-ISEL-NEXT:    fmov x8, d1
-; CHECK-ISEL-NEXT:    fmov x9, d0
-; CHECK-ISEL-NEXT:    cmp x9, x8
-; CHECK-ISEL-NEXT:    csel x8, x9, x8, hi
-; CHECK-ISEL-NEXT:    fmov d0, x8
+; CHECK-ISEL-NEXT:    cmhi d2, d0, d1
+; CHECK-ISEL-NEXT:    bif v0.8b, v1.8b, v2.8b
 ; CHECK-ISEL-NEXT:    ret
 ;
 ; CHECK-GLOBAL-LABEL: umax1i64:
@@ -482,8 +448,8 @@ declare <2 x i64> @llvm.umax.v2i64(<2 x i64> %a, <2 x i64> %b) readnone
 define <2 x i64> @umax2i64(<2 x i64> %a, <2 x i64> %b) {
 ; CHECK-ISEL-LABEL: umax2i64:
 ; CHECK-ISEL:       // %bb.0:
-; CHECK-ISEL-NEXT:    uqsub v1.2d, v1.2d, v0.2d
-; CHECK-ISEL-NEXT:    add v0.2d, v0.2d, v1.2d
+; CHECK-ISEL-NEXT:    cmhi v2.2d, v0.2d, v1.2d
+; CHECK-ISEL-NEXT:    bif v0.16b, v1.16b, v2.16b
 ; CHECK-ISEL-NEXT:    ret
 ;
 ; CHECK-GLOBAL-LABEL: umax2i64:
@@ -502,10 +468,10 @@ declare <4 x i64> @llvm.umax.v4i64(<4 x i64> %a, <4 x i64> %b) readnone
 define void @umax4i64(<4 x i64> %a, <4 x i64> %b, <4 x i64>* %p) {
 ; CHECK-ISEL-LABEL: umax4i64:
 ; CHECK-ISEL:       // %bb.0:
-; CHECK-ISEL-NEXT:    uqsub v2.2d, v2.2d, v0.2d
-; CHECK-ISEL-NEXT:    uqsub v3.2d, v3.2d, v1.2d
-; CHECK-ISEL-NEXT:    add v0.2d, v0.2d, v2.2d
-; CHECK-ISEL-NEXT:    add v1.2d, v1.2d, v3.2d
+; CHECK-ISEL-NEXT:    cmhi v4.2d, v0.2d, v2.2d
+; CHECK-ISEL-NEXT:    cmhi v5.2d, v1.2d, v3.2d
+; CHECK-ISEL-NEXT:    bif v0.16b, v2.16b, v4.16b
+; CHECK-ISEL-NEXT:    bif v1.16b, v3.16b, v5.16b
 ; CHECK-ISEL-NEXT:    stp q0, q1, [x0]
 ; CHECK-ISEL-NEXT:    ret
 ;
@@ -705,13 +671,8 @@ declare <1 x i64> @llvm.smin.v1i64(<1 x i64> %a, <1 x i64> %b) readnone
 define <1 x i64> @smin1i64(<1 x i64> %a, <1 x i64> %b) {
 ; CHECK-ISEL-LABEL: smin1i64:
 ; CHECK-ISEL:       // %bb.0:
-; CHECK-ISEL-NEXT:    // kill: def $d1 killed $d1 def $q1
-; CHECK-ISEL-NEXT:    // kill: def $d0 killed $d0 def $q0
-; CHECK-ISEL-NEXT:    fmov x8, d1
-; CHECK-ISEL-NEXT:    fmov x9, d0
-; CHECK-ISEL-NEXT:    cmp x9, x8
-; CHECK-ISEL-NEXT:    csel x8, x9, x8, lt
-; CHECK-ISEL-NEXT:    fmov d0, x8
+; CHECK-ISEL-NEXT:    cmgt d2, d1, d0
+; CHECK-ISEL-NEXT:    bif v0.8b, v1.8b, v2.8b
 ; CHECK-ISEL-NEXT:    ret
 ;
 ; CHECK-GLOBAL-LABEL: smin1i64:
@@ -730,16 +691,8 @@ declare <2 x i64> @llvm.smin.v2i64(<2 x i64> %a, <2 x i64> %b) readnone
 define <2 x i64> @smin2i64(<2 x i64> %a, <2 x i64> %b) {
 ; CHECK-ISEL-LABEL: smin2i64:
 ; CHECK-ISEL:       // %bb.0:
-; CHECK-ISEL-NEXT:    mov x8, v1.d[1]
-; CHECK-ISEL-NEXT:    mov x9, v0.d[1]
-; CHECK-ISEL-NEXT:    fmov x10, d1
-; CHECK-ISEL-NEXT:    fmov x11, d0
-; CHECK-ISEL-NEXT:    cmp x9, x8
-; CHECK-ISEL-NEXT:    csel x8, x9, x8, lt
-; CHECK-ISEL-NEXT:    cmp x11, x10
-; CHECK-ISEL-NEXT:    csel x9, x11, x10, lt
-; CHECK-ISEL-NEXT:    fmov d0, x9
-; CHECK-ISEL-NEXT:    mov v0.d[1], x8
+; CHECK-ISEL-NEXT:    cmgt v2.2d, v1.2d, v0.2d
+; CHECK-ISEL-NEXT:    bif v0.16b, v1.16b, v2.16b
 ; CHECK-ISEL-NEXT:    ret
 ;
 ; CHECK-GLOBAL-LABEL: smin2i64:
@@ -758,26 +711,10 @@ declare <4 x i64> @llvm.smin.v4i64(<4 x i64> %a, <4 x i64> %b) readnone
 define void @smin4i64(<4 x i64> %a, <4 x i64> %b, <4 x i64>* %p) {
 ; CHECK-ISEL-LABEL: smin4i64:
 ; CHECK-ISEL:       // %bb.0:
-; CHECK-ISEL-NEXT:    mov x8, v2.d[1]
-; CHECK-ISEL-NEXT:    mov x9, v0.d[1]
-; CHECK-ISEL-NEXT:    fmov x10, d2
-; CHECK-ISEL-NEXT:    fmov x11, d0
-; CHECK-ISEL-NEXT:    cmp x9, x8
-; CHECK-ISEL-NEXT:    csel x8, x9, x8, lt
-; CHECK-ISEL-NEXT:    cmp x11, x10
-; CHECK-ISEL-NEXT:    mov x9, v3.d[1]
-; CHECK-ISEL-NEXT:    csel x10, x11, x10, lt
-; CHECK-ISEL-NEXT:    mov x11, v1.d[1]
-; CHECK-ISEL-NEXT:    cmp x11, x9
-; CHECK-ISEL-NEXT:    fmov d0, x10
-; CHECK-ISEL-NEXT:    fmov x10, d3
-; CHECK-ISEL-NEXT:    csel x9, x11, x9, lt
-; CHECK-ISEL-NEXT:    fmov x11, d1
-; CHECK-ISEL-NEXT:    cmp x11, x10
-; CHECK-ISEL-NEXT:    csel x10, x11, x10, lt
-; CHECK-ISEL-NEXT:    fmov d1, x10
-; CHECK-ISEL-NEXT:    mov v0.d[1], x8
-; CHECK-ISEL-NEXT:    mov v1.d[1], x9
+; CHECK-ISEL-NEXT:    cmgt v4.2d, v2.2d, v0.2d
+; CHECK-ISEL-NEXT:    cmgt v5.2d, v3.2d, v1.2d
+; CHECK-ISEL-NEXT:    bif v0.16b, v2.16b, v4.16b
+; CHECK-ISEL-NEXT:    bif v1.16b, v3.16b, v5.16b
 ; CHECK-ISEL-NEXT:    stp q0, q1, [x0]
 ; CHECK-ISEL-NEXT:    ret
 ;
@@ -977,13 +914,8 @@ declare <1 x i64> @llvm.umin.v1i64(<1 x i64> %a, <1 x i64> %b) readnone
 define <1 x i64> @umin1i64(<1 x i64> %a, <1 x i64> %b) {
 ; CHECK-ISEL-LABEL: umin1i64:
 ; CHECK-ISEL:       // %bb.0:
-; CHECK-ISEL-NEXT:    // kill: def $d1 killed $d1 def $q1
-; CHECK-ISEL-NEXT:    // kill: def $d0 killed $d0 def $q0
-; CHECK-ISEL-NEXT:    fmov x8, d1
-; CHECK-ISEL-NEXT:    fmov x9, d0
-; CHECK-ISEL-NEXT:    cmp x9, x8
-; CHECK-ISEL-NEXT:    csel x8, x9, x8, lo
-; CHECK-ISEL-NEXT:    fmov d0, x8
+; CHECK-ISEL-NEXT:    cmhi d2, d1, d0
+; CHECK-ISEL-NEXT:    bif v0.8b, v1.8b, v2.8b
 ; CHECK-ISEL-NEXT:    ret
 ;
 ; CHECK-GLOBAL-LABEL: umin1i64:
@@ -1002,8 +934,8 @@ declare <2 x i64> @llvm.umin.v2i64(<2 x i64> %a, <2 x i64> %b) readnone
 define <2 x i64> @umin2i64(<2 x i64> %a, <2 x i64> %b) {
 ; CHECK-ISEL-LABEL: umin2i64:
 ; CHECK-ISEL:       // %bb.0:
-; CHECK-ISEL-NEXT:    uqsub v1.2d, v0.2d, v1.2d
-; CHECK-ISEL-NEXT:    sub v0.2d, v0.2d, v1.2d
+; CHECK-ISEL-NEXT:    cmhi v2.2d, v1.2d, v0.2d
+; CHECK-ISEL-NEXT:    bif v0.16b, v1.16b, v2.16b
 ; CHECK-ISEL-NEXT:    ret
 ;
 ; CHECK-GLOBAL-LABEL: umin2i64:
@@ -1022,10 +954,10 @@ declare <4 x i64> @llvm.umin.v4i64(<4 x i64> %a, <4 x i64> %b) readnone
 define void @umin4i64(<4 x i64> %a, <4 x i64> %b, <4 x i64>* %p) {
 ; CHECK-ISEL-LABEL: umin4i64:
 ; CHECK-ISEL:       // %bb.0:
-; CHECK-ISEL-NEXT:    uqsub v2.2d, v0.2d, v2.2d
-; CHECK-ISEL-NEXT:    uqsub v3.2d, v1.2d, v3.2d
-; CHECK-ISEL-NEXT:    sub v0.2d, v0.2d, v2.2d
-; CHECK-ISEL-NEXT:    sub v1.2d, v1.2d, v3.2d
+; CHECK-ISEL-NEXT:    cmhi v4.2d, v2.2d, v0.2d
+; CHECK-ISEL-NEXT:    cmhi v5.2d, v3.2d, v1.2d
+; CHECK-ISEL-NEXT:    bif v0.16b, v2.16b, v4.16b
+; CHECK-ISEL-NEXT:    bif v1.16b, v3.16b, v5.16b
 ; CHECK-ISEL-NEXT:    stp q0, q1, [x0]
 ; CHECK-ISEL-NEXT:    ret
 ;

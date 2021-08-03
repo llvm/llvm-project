@@ -1312,7 +1312,7 @@ public:
     // The first operand is the address, followed by the stored values, followed
     // by an optional mask.
     return ArrayRef<VPValue *>(op_begin(), getNumOperands())
-        .slice(1, getNumOperands() - (HasMask ? 2 : 1));
+        .slice(1, getNumStoreOperands());
   }
 
   /// Generate the wide load or store, and shuffles.
@@ -1325,6 +1325,12 @@ public:
 #endif
 
   const InterleaveGroup<Instruction> *getInterleaveGroup() { return IG; }
+
+  /// Returns the number of stored operands of this interleave group. Returns 0
+  /// for load interleave groups.
+  unsigned getNumStoreOperands() const {
+    return getNumOperands() - (HasMask ? 2 : 1);
+  }
 };
 
 /// A recipe to represent inloop reduction operations, performing a reduction on

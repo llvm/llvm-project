@@ -58,16 +58,19 @@ void DialectRegistry::addDialectInterface(
 }
 
 void DialectRegistry::addObjectInterface(
-    StringRef dialectName, TypeID interfaceTypeID,
+    StringRef dialectName, TypeID objectID, TypeID interfaceTypeID,
     ObjectInterfaceAllocatorFunction allocator) {
   assert(allocator && "unexpected null interface allocation function");
+
   auto it = registry.find(dialectName.str());
   assert(it != registry.end() &&
          "adding an interface for an op from an unregistered dialect");
 
-  auto &ifaces = interfaces[it->second.first];
-  for (const auto &kvp : ifaces.objectInterfaces) {
-    if (kvp.first == interfaceTypeID) {
+  auto dialectID = it->second.first;
+  auto &ifaces = interfaces[dialectID];
+
+  for (const auto &info : ifaces.objectInterfaces) {
+    if (std::get<0>(info) == objectID && std::get<1>(info) == interfaceTypeID) {
       LLVM_DEBUG(llvm::dbgs()
                  << "[" DEBUG_TYPE
                     "] repeated interface object interface registration");
@@ -75,7 +78,7 @@ void DialectRegistry::addObjectInterface(
     }
   }
 
-  ifaces.objectInterfaces.emplace_back(interfaceTypeID, allocator);
+  ifaces.objectInterfaces.emplace_back(objectID, interfaceTypeID, allocator);
 }
 
 DialectAllocatorFunctionRef
@@ -110,8 +113,8 @@ void DialectRegistry::registerDelayedInterfaces(Dialect *dialect) const {
   }
 
   // Add attribute, operation and type interfaces.
-  for (const auto &kvp : it->getSecond().objectInterfaces)
-    kvp.second(dialect->getContext());
+  for (const auto &info : it->getSecond().objectInterfaces)
+    std::get<2>(info)(dialect->getContext());
 }
 
 //===----------------------------------------------------------------------===//

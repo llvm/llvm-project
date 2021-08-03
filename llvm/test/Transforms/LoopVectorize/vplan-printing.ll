@@ -175,9 +175,9 @@ define void @print_interleave_groups(i32 %C, i32 %D) {
 ; CHECK-NEXT:   WIDEN-INDUCTION %iv = phi 0, %iv.next
 ; CHECK-NEXT:   CLONE ir<%gep.AB.0> = getelementptr ir<@AB>, ir<0>, ir<%iv>
 ; CHECK-NEXT:   INTERLEAVE-GROUP with factor 4 at %AB.0, ir<%gep.AB.0>
-; CHECK-NEXT:     %AB.0 = load %gep.AB.0 0
-; CHECK-NEXT:     %AB.1 = load %gep.AB.1 1
-; CHECK-NEXT:     %AB.3 = load %gep.AB.3 3
+; CHECK-NEXT:     ir<%AB.0> = load from index 0
+; CHECK-NEXT:     ir<%AB.1> = load from index 1
+; CHECK-NEXT:     ir<%AB.3> = load from index 3
 ; CHECK-NEXT:   CLONE ir<%iv.plus.1> = add ir<%iv>, ir<1>
 ; CHECK-NEXT:   CLONE ir<%gep.AB.1> = getelementptr ir<@AB>, ir<0>, ir<%iv.plus.1>
 ; CHECK-NEXT:   CLONE ir<%iv.plus.2> = add ir<%iv>, ir<2>
@@ -189,10 +189,10 @@ define void @print_interleave_groups(i32 %C, i32 %D) {
 ; CHECK-NEXT:   CLONE ir<%gep.CD.2> = getelementptr ir<@CD>, ir<0>, ir<%iv.plus.2>
 ; CHECK-NEXT:   CLONE ir<%gep.CD.3> = getelementptr ir<@CD>, ir<0>, ir<%iv.plus.3>
 ; CHECK-NEXT:   INTERLEAVE-GROUP with factor 4 at <badref>, ir<%gep.CD.3>
-; CHECK-NEXT:     store %add, %gep.CD.0 0
-; CHECK-NEXT:     store 1, %gep.CD.1 1
-; CHECK-NEXT:     store 2, %gep.CD.2 2
-; CHECK-NEXT:     store %AB.3, %gep.CD.3 3
+; CHECK-NEXT:     store ir<%add> to index 0
+; CHECK-NEXT:     store ir<1> to index 1
+; CHECK-NEXT:     store ir<2> to index 2
+; CHECK-NEXT:     store ir<%AB.3> to index 3
 ; CHECK-NEXT: No successors
 ; CHECK-NEXT: }
 ;

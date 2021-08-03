@@ -473,8 +473,8 @@ def OMP_TaskWait : Directive<"taskwait"> {
 }
 def OMP_TaskGroup : Directive<"taskgroup"> {
   let allowedClauses = [
-    VersionedClause<OMPC_TaskReduction>,
-    VersionedClause<OMPC_Allocate>
+    VersionedClause<OMPC_TaskReduction, 50>,
+    VersionedClause<OMPC_Allocate, 50>
   ];
 }
 def OMP_Flush : Directive<"flush"> {

@@ -4261,6 +4261,13 @@ MachineBasicBlock *SITargetLowering::EmitInstrWithCustomInserter(
     MI.eraseFromParent();
     return BB;
   }
+  case AMDGPU::V_ADDC_U32_e32:
+  case AMDGPU::V_SUBB_U32_e32:
+  case AMDGPU::V_SUBBREV_U32_e32:
+    // These instructions have an implicit use of vcc which counts towards the
+    // constant bus limit.
+    TII->legalizeOperands(MI);
+    return BB;
   case AMDGPU::DS_GWS_INIT:
   case AMDGPU::DS_GWS_SEMA_BR:
   case AMDGPU::DS_GWS_BARRIER:
@@ -7366,7 +7373,6 @@ SDValue SITargetLowering::LowerINTRINSIC_W_CHAIN(SDValue Op,
                                    Op->getVTList(), Ops, VT, M->getMemOperand());
   }
   case Intrinsic::amdgcn_image_bvh_intersect_ray: {
-    SDLoc DL(Op);
     MemSDNode *M = cast<MemSDNode>(Op);
     SDValue NodePtr = M->getOperand(2);
     SDValue RayExtent = M->getOperand(3);
@@ -7385,12 +7391,21 @@ SDValue SITargetLowering::LowerINTRINSIC_W_CHAIN(SDValue Op,
       return SDValue();
     }
 
-    bool IsA16 = RayDir.getValueType().getVectorElementType() == MVT::f16;
-    bool Is64 = NodePtr.getValueType() == MVT::i64;
-    unsigned Opcode = IsA16 ? Is64 ? AMDGPU::IMAGE_BVH64_INTERSECT_RAY_a16_nsa
-                                   : AMDGPU::IMAGE_BVH_INTERSECT_RAY_a16_nsa
-                            : Is64 ? AMDGPU::IMAGE_BVH64_INTERSECT_RAY_nsa
-                                   : AMDGPU::IMAGE_BVH_INTERSECT_RAY_nsa;
+    const bool IsA16 = RayDir.getValueType().getVectorElementType() == MVT::f16;
+    const bool Is64 = NodePtr.getValueType() == MVT::i64;
+    const unsigned NumVAddrs = IsA16 ? (Is64 ? 9 : 8) : (Is64 ? 12 : 11);
+    const bool UseNSA =
+        Subtarget->hasNSAEncoding() && NumVAddrs <= Subtarget->getNSAMaxSize();
+    const unsigned Opcodes[2][2][2] = {
+        {{AMDGPU::IMAGE_BVH_INTERSECT_RAY_sa,
+          AMDGPU::IMAGE_BVH64_INTERSECT_RAY_sa},
+         {AMDGPU::IMAGE_BVH_INTERSECT_RAY_a16_sa,
+          AMDGPU::IMAGE_BVH64_INTERSECT_RAY_a16_sa}},
+        {{AMDGPU::IMAGE_BVH_INTERSECT_RAY_nsa,
+          AMDGPU::IMAGE_BVH64_INTERSECT_RAY_nsa},
+         {AMDGPU::IMAGE_BVH_INTERSECT_RAY_a16_nsa,
+          AMDGPU::IMAGE_BVH64_INTERSECT_RAY_a16_nsa}}};
+    const unsigned Opcode = Opcodes[UseNSA][IsA16][Is64];
 
     SmallVector<SDValue, 16> Ops;
 
@@ -7430,6 +7445,20 @@ SDValue SITargetLowering::LowerINTRINSIC_W_CHAIN(SDValue Op,
     packLanes(RayOrigin, true);
     packLanes(RayDir, true);
     packLanes(RayInvDir, false);
+
+    if (!UseNSA) {
+      // Build a single vector containing all the operands so far prepared.
+      if (NumVAddrs > 8) {
+        SDValue Undef = DAG.getUNDEF(MVT::i32);
+        Ops.append(16 - Ops.size(), Undef);
+      }
+      assert(Ops.size() == 8 || Ops.size() == 16);
+      SDValue MergedOps = DAG.getBuildVector(
+          Ops.size() == 16 ? MVT::v16i32 : MVT::v8i32, DL, Ops);
+      Ops.clear();
+      Ops.push_back(MergedOps);
+    }
+
     Ops.push_back(TDescr);
     if (IsA16)
       Ops.push_back(DAG.getTargetConstant(1, DL, MVT::i1));

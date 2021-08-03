@@ -211,7 +211,7 @@ add, you will have to add a dedicated entry in that enum (e.g.
 `ParseFrontendArgs` function in the `CompilerInvocation.cpp` file, e.g.:
 ```cpp
     case clang::driver::options::OPT_fsyntax_only:
-      opts.programAction_ = ParseSyntaxOnly;
+      opts.programAction = ParseSyntaxOnly;
       break;
 ```
 Note that this simply sets the program/frontend action within the frontend

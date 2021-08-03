@@ -9937,7 +9937,7 @@ INTERCEPTOR(int, getentropy, void *buf, SIZE_T buflen) {
 typedef int (*qsort_compar_f)(const void *, const void *);
 static THREADLOCAL qsort_compar_f qsort_compar;
 static THREADLOCAL SIZE_T qsort_size;
-int wrapped_qsort_compar(const void *a, const void *b) {
+static int wrapped_qsort_compar(const void *a, const void *b) {
   COMMON_INTERCEPTOR_UNPOISON_PARAM(2);
   COMMON_INTERCEPTOR_INITIALIZE_RANGE(a, qsort_size);
   COMMON_INTERCEPTOR_INITIALIZE_RANGE(b, qsort_size);
@@ -9988,7 +9988,7 @@ INTERCEPTOR(void, qsort, void *base, SIZE_T nmemb, SIZE_T size,
 typedef int (*qsort_r_compar_f)(const void *, const void *, void *);
 static THREADLOCAL qsort_r_compar_f qsort_r_compar;
 static THREADLOCAL SIZE_T qsort_r_size;
-int wrapped_qsort_r_compar(const void *a, const void *b, void *arg) {
+static int wrapped_qsort_r_compar(const void *a, const void *b, void *arg) {
   COMMON_INTERCEPTOR_UNPOISON_PARAM(3);
   COMMON_INTERCEPTOR_INITIALIZE_RANGE(a, qsort_r_size);
   COMMON_INTERCEPTOR_INITIALIZE_RANGE(b, qsort_r_size);

@@ -62,7 +62,7 @@ protected:
     invocation_ = std::make_shared<CompilerInvocation>();
 
     compInst_.set_invocation(std::move(invocation_));
-    compInst_.frontendOpts().inputs_.push_back(
+    compInst_.frontendOpts().inputs.push_back(
         FrontendInputFile(inputFilePath_, Language::Fortran));
   }
 
@@ -86,7 +86,7 @@ TEST_F(FrontendActionTest, TestInputOutput) {
   inputFileOs_.reset();
 
   // Set-up the action kind.
-  compInst_.invocation().frontendOpts().programAction_ = InputOutputTest;
+  compInst_.invocation().frontendOpts().programAction = InputOutputTest;
 
   // Set-up the output stream. Using output buffer wrapped as an output
   // stream, as opposed to an actual file (or a file descriptor).
@@ -115,7 +115,7 @@ TEST_F(FrontendActionTest, PrintPreprocessedInput) {
   inputFileOs_.reset();
 
   // Set-up the action kind.
-  compInst_.invocation().frontendOpts().programAction_ = PrintPreprocessedInput;
+  compInst_.invocation().frontendOpts().programAction = PrintPreprocessedInput;
   compInst_.invocation().preprocessorOpts().noReformat = true;
 
   // Set-up the output stream. We are using output buffer wrapped as an output
@@ -142,7 +142,7 @@ TEST_F(FrontendActionTest, ParseSyntaxOnly) {
   inputFileOs_.reset();
 
   // Set-up the action kind.
-  compInst_.invocation().frontendOpts().programAction_ = ParseSyntaxOnly;
+  compInst_.invocation().frontendOpts().programAction = ParseSyntaxOnly;
 
   // Set-up the output stream for the semantic diagnostics.
   llvm::SmallVector<char, 256> outputDiagBuffer;

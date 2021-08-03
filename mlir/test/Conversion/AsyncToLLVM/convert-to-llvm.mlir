@@ -89,13 +89,14 @@ func @nested_async_execute(%arg0: f32, %arg1: f32, %arg2: memref<1xf32>) {
 }
 
 // Function outlined from the inner async.execute operation.
-// CHECK-LABEL: func private @async_execute_fn(%arg0: f32, %arg1: memref<1xf32>, %arg2: index)
+// CHECK-LABEL: func private @async_execute_fn(%arg0: f32, %arg1: memref<1xf32>)
 // CHECK-SAME: -> !llvm.ptr<i8>
 // CHECK: %[[RET_0:.*]] = call @mlirAsyncRuntimeCreateToken()
 // CHECK: %[[HDL_0:.*]] = llvm.intr.coro.begin
 // CHECK: call @mlirAsyncRuntimeExecute
 // CHECK: llvm.intr.coro.suspend
-// CHECK: memref.store %arg0, %arg1[%arg2] : memref<1xf32>
+// CHECK: %[[C0:.*]] = constant 0 : index
+// CHECK: memref.store %arg0, %arg1[%[[C0]]] : memref<1xf32>
 // CHECK: call @mlirAsyncRuntimeEmplaceToken(%[[RET_0]])
 
 // Function outlined from the outer async.execute operation.

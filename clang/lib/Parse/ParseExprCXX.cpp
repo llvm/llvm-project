@@ -3602,7 +3602,7 @@ ExprResult Parser::ParseRequiresExpression() {
           break;
         }
         if (!Expression.isInvalid() && PossibleRequiresExprInSimpleRequirement)
-          Diag(StartLoc, diag::warn_requires_expr_in_simple_requirement)
+          Diag(StartLoc, diag::err_requires_expr_in_simple_requirement)
               << FixItHint::CreateInsertion(StartLoc, "requires");
         if (auto *Req = Actions.ActOnSimpleRequirement(Expression.get()))
           Requirements.push_back(Req);

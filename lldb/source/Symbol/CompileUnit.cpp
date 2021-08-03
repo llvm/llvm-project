@@ -181,6 +181,10 @@ void CompileUnit::SetSupportFiles(const FileSpecList &support_files) {
   m_support_files = support_files;
 }
 
+void CompileUnit::SetSupportFiles(FileSpecList &&support_files) {
+  m_support_files = std::move(support_files);
+}
+
 DebugMacros *CompileUnit::GetDebugMacros() {
   if (m_debug_macros_sp.get() == nullptr) {
     if (m_flags.IsClear(flagsParsedDebugMacros)) {

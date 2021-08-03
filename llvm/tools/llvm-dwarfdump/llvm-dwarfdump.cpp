@@ -536,8 +536,9 @@ static bool handleBuffer(StringRef Filename, MemoryBufferRef Buffer,
   };
   if (auto *Obj = dyn_cast<ObjectFile>(BinOrErr->get())) {
     if (filterArch(*Obj)) {
-      std::unique_ptr<DWARFContext> DICtx =
-          DWARFContext::create(*Obj, nullptr, "", RecoverableErrorHandler);
+      std::unique_ptr<DWARFContext> DICtx = DWARFContext::create(
+          *Obj, DWARFContext::ProcessDebugRelocations::Process, nullptr, "",
+          RecoverableErrorHandler);
       if (!HandleObj(*Obj, *DICtx, Filename, OS))
         Result = false;
     }
@@ -548,8 +549,9 @@ static bool handleBuffer(StringRef Filename, MemoryBufferRef Buffer,
       if (auto MachOOrErr = ObjForArch.getAsObjectFile()) {
         auto &Obj = **MachOOrErr;
         if (filterArch(Obj)) {
-          std::unique_ptr<DWARFContext> DICtx =
-              DWARFContext::create(Obj, nullptr, "", RecoverableErrorHandler);
+          std::unique_ptr<DWARFContext> DICtx = DWARFContext::create(
+              Obj, DWARFContext::ProcessDebugRelocations::Process, nullptr, "",
+              RecoverableErrorHandler);
           if (!HandleObj(Obj, *DICtx, ObjName, OS))
             Result = false;
         }

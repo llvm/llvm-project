@@ -49,7 +49,8 @@ public:
   TTI::PopcntSupportKind getPopcntSupport(unsigned TyWidth) const;
 
   void getUnrollingPreferences(Loop *L, ScalarEvolution &SE,
-                               TTI::UnrollingPreferences &UP) const;
+                               TTI::UnrollingPreferences &UP,
+                               OptimizationRemarkEmitter *ORE) const;
 
   /// @}
 

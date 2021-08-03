@@ -1225,6 +1225,16 @@
   __sanitizer_syscall_post_impl_epoll_pwait(                                   \
       res, (long)(epfd), (long)(events), (long)(maxevents), (long)(timeout),   \
       (long)(sigmask), (long)(sigsetsize))
+#define __sanitizer_syscall_pre_epoll_pwait2(epfd, events, maxevents, timeout, \
+                                             sigmask, sigsetsize)              \
+  __sanitizer_syscall_pre_impl_epoll_pwait2(                                   \
+      (long)(epfd), (long)(events), (long)(maxevents), (long)(timeout),        \
+      (long)(sigmask), (long)(sigsetsize))
+#define __sanitizer_syscall_post_epoll_pwait2(res, epfd, events, maxevents,    \
+                                              timeout, sigmask, sigsetsize)    \
+  __sanitizer_syscall_post_impl_epoll_pwait2(                                  \
+      res, (long)(epfd), (long)(events), (long)(maxevents), (long)(timeout),   \
+      (long)(sigmask), (long)(sigsetsize))
 #define __sanitizer_syscall_pre_gethostname(name, len)                         \
   __sanitizer_syscall_pre_impl_gethostname((long)(name), (long)(len))
 #define __sanitizer_syscall_post_gethostname(res, name, len)                   \
@@ -2696,6 +2706,13 @@ void __sanitizer_syscall_pre_impl_epoll_pwait(long epfd, long events,
 void __sanitizer_syscall_post_impl_epoll_pwait(long res, long epfd, long events,
                                                long maxevents, long timeout,
                                                long sigmask, long sigsetsize);
+void __sanitizer_syscall_pre_impl_epoll_pwait2(long epfd, long events,
+                                               long maxevents, long timeout,
+                                               long sigmask, long sigsetsize);
+void __sanitizer_syscall_post_impl_epoll_pwait2(long res, long epfd,
+                                                long events, long maxevents,
+                                                long timeout, long sigmask,
+                                                long sigsetsize);
 void __sanitizer_syscall_pre_impl_gethostname(long name, long len);
 void __sanitizer_syscall_post_impl_gethostname(long res, long name, long len);
 void __sanitizer_syscall_pre_impl_sethostname(long name, long len);

@@ -23,8 +23,7 @@ static inline void __kmp_node_deref(kmp_info_t *thread, kmp_depnode_t *node) {
     return;
 
   kmp_int32 n = KMP_ATOMIC_DEC(&node->dn.nrefs) - 1;
-  // TODO: temporarily disable assertion until the bug with dependences is fixed
-  //  KMP_DEBUG_ASSERT(n >= 0);
+  KMP_DEBUG_ASSERT(n >= 0);
   if (n == 0) {
     KMP_ASSERT(node->dn.nrefs == 0);
 #if USE_FAST_MEMORY

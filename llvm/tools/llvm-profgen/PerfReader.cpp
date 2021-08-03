@@ -241,7 +241,7 @@ bool VirtualUnwinder::unwind(const HybridSample *Sample, uint64_t Repeat) {
   return true;
 }
 
-void PerfReader::validateCommandLine(
+void PerfReaderBase::validateCommandLine(
     cl::list<std::string> &BinaryFilenames,
     cl::list<std::string> &PerfTraceFilenames) {
   // Allow the invalid perfscript if we only use to show binary disassembly
@@ -276,16 +276,33 @@ void PerfReader::validateCommandLine(
   }
 }
 
-PerfReader::PerfReader(cl::list<std::string> &BinaryFilenames,
+std::unique_ptr<PerfReaderBase>
+PerfReaderBase::create(cl::list<std::string> &BinaryFilenames,
                        cl::list<std::string> &PerfTraceFilenames) {
   validateCommandLine(BinaryFilenames, PerfTraceFilenames);
+
+  PerfScriptType PerfType = extractPerfType(PerfTraceFilenames);
+  std::unique_ptr<PerfReaderBase> PerfReader;
+  if (PerfType == PERF_LBR_STACK) {
+    PerfReader.reset(new HybridPerfReader(BinaryFilenames));
+  } else if (PerfType == PERF_LBR) {
+    // TODO:
+    exitWithError("Unsupported perfscript!");
+  } else {
+    exitWithError("Unsupported perfscript!");
+  }
+
+  return PerfReader;
+}
+
+PerfReaderBase::PerfReaderBase(cl::list<std::string> &BinaryFilenames) {
   // Load the binaries.
   for (auto Filename : BinaryFilenames)
     loadBinary(Filename, /*AllowNameConflict*/ false);
 }
 
-ProfiledBinary &PerfReader::loadBinary(const StringRef BinaryPath,
-                                       bool AllowNameConflict) {
+ProfiledBinary &PerfReaderBase::loadBinary(const StringRef BinaryPath,
+                                           bool AllowNameConflict) {
   // The binary table is currently indexed by the binary name not the full
   // binary path. This is because the user-given path may not match the one
   // that was actually executed.
@@ -303,7 +320,7 @@ ProfiledBinary &PerfReader::loadBinary(const StringRef BinaryPath,
   return Ret.first->second;
 }
 
-void PerfReader::updateBinaryAddress(const MMapEvent &Event) {
+void PerfReaderBase::updateBinaryAddress(const MMapEvent &Event) {
   // Load the binary.
   StringRef BinaryPath = Event.BinaryPath;
   StringRef BinaryName = llvm::sys::path::filename(BinaryPath);
@@ -353,7 +370,7 @@ void PerfReader::updateBinaryAddress(const MMapEvent &Event) {
   }
 }
 
-ProfiledBinary *PerfReader::getBinary(uint64_t Address) {
+ProfiledBinary *PerfReaderBase::getBinary(uint64_t Address) {
   auto Iter = AddrToBinaryMap.lower_bound(Address);
   if (Iter == AddrToBinaryMap.end() || Iter->first != Address) {
     if (Iter == AddrToBinaryMap.begin())
@@ -415,7 +432,7 @@ static void printBranchCounter(ContextSampleCounterMap &Counter,
   printSampleCounter(OrderedCounter);
 }
 
-void PerfReader::printUnwinderOutput() {
+void HybridPerfReader::printUnwinderOutput() {
   for (auto I : BinarySampleCounters) {
     const ProfiledBinary *Binary = I.first;
     outs() << "Binary(" << Binary->getName().str() << ")'s Range Counter:\n";
@@ -425,7 +442,7 @@ void PerfReader::printUnwinderOutput() {
   }
 }
 
-void PerfReader::unwindSamples() {
+void HybridPerfReader::unwindSamples() {
   for (const auto &Item : AggregatedSamples) {
     const HybridSample *Sample = dyn_cast<HybridSample>(Item.first.getPtr());
     VirtualUnwinder Unwinder(&BinarySampleCounters[Sample->Binary],
@@ -437,9 +454,9 @@ void PerfReader::unwindSamples() {
     printUnwinderOutput();
 }
 
-bool PerfReader::extractLBRStack(TraceStream &TraceIt,
-                                 SmallVectorImpl<LBREntry> &LBRStack,
-                                 ProfiledBinary *Binary) {
+bool PerfReaderBase::extractLBRStack(TraceStream &TraceIt,
+                                     SmallVectorImpl<LBREntry> &LBRStack,
+                                     ProfiledBinary *Binary) {
   // The raw format of LBR stack is like:
   // 0x4005c8/0x4005dc/P/-/-/0 0x40062f/0x4005b0/P/-/-/0 ...
   //                           ... 0x4005c8/0x4005dc/P/-/-/0
@@ -531,8 +548,8 @@ bool PerfReader::extractLBRStack(TraceStream &TraceIt,
   return !LBRStack.empty();
 }
 
-bool PerfReader::extractCallstack(TraceStream &TraceIt,
-                                  SmallVectorImpl<uint64_t> &CallStack) {
+bool PerfReaderBase::extractCallstack(TraceStream &TraceIt,
+                                      SmallVectorImpl<uint64_t> &CallStack) {
   // The raw format of call stack is like:
   //            4005dc      # leaf frame
   //	          400634
@@ -593,7 +610,7 @@ bool PerfReader::extractCallstack(TraceStream &TraceIt,
          !Binary->addressInPrologEpilog(CallStack.front());
 }
 
-void PerfReader::parseHybridSample(TraceStream &TraceIt) {
+void HybridPerfReader::parseSample(TraceStream &TraceIt) {
   // The raw hybird sample started with call stack in FILO order and followed
   // intermediately by LBR sample
   // e.g.
@@ -631,7 +648,7 @@ void PerfReader::parseHybridSample(TraceStream &TraceIt) {
   }
 }
 
-void PerfReader::parseMMap2Event(TraceStream &TraceIt) {
+void PerfReaderBase::parseMMap2Event(TraceStream &TraceIt) {
   // Parse a line like:
   //  PERF_RECORD_MMAP2 2113428/2113428: [0x7fd4efb57000(0x204000) @ 0
   //  08:04 19532229 3585508847]: r-xp /usr/lib64/libdl-2.17.so
@@ -677,26 +694,23 @@ void PerfReader::parseMMap2Event(TraceStream &TraceIt) {
   TraceIt.advance();
 }
 
-void PerfReader::parseEventOrSample(TraceStream &TraceIt) {
+void PerfReaderBase::parseEventOrSample(TraceStream &TraceIt) {
   if (TraceIt.getCurrentLine().startswith("PERF_RECORD_MMAP2"))
     parseMMap2Event(TraceIt);
-  else if (getPerfScriptType() == PERF_LBR_STACK)
-    parseHybridSample(TraceIt);
-  else {
-    // TODO: parse other type sample
-    TraceIt.advance();
-  }
+  else
+    parseSample(TraceIt);
 }
 
-void PerfReader::parseAndAggregateTrace(StringRef Filename) {
+void PerfReaderBase::parseAndAggregateTrace(StringRef Filename) {
   // Trace line iterator
   TraceStream TraceIt(Filename);
   while (!TraceIt.isAtEoF())
     parseEventOrSample(TraceIt);
 }
 
-void PerfReader::checkAndSetPerfType(
-    cl::list<std::string> &PerfTraceFilenames) {
+PerfScriptType
+PerfReaderBase::extractPerfType(cl::list<std::string> &PerfTraceFilenames) {
+  PerfScriptType PerfType = PERF_UNKNOWN;
   for (auto FileName : PerfTraceFilenames) {
     PerfScriptType Type = checkPerfScriptType(FileName);
     if (Type == PERF_INVALID)
@@ -705,20 +719,13 @@ void PerfReader::checkAndSetPerfType(
       exitWithError("Inconsistent sample among different perf scripts");
     PerfType = Type;
   }
+  return PerfType;
 }
 
-void PerfReader::generateRawProfile() {
-  if (getPerfScriptType() == PERF_LBR_STACK) {
-    // Unwind samples if it's hybird sample
-    unwindSamples();
-  } else if (getPerfScriptType() == PERF_LBR) {
-    // TODO: range overlap computation for regular AutoFDO
-  }
-}
+void HybridPerfReader::generateRawProfile() { unwindSamples(); }
 
-void PerfReader::parsePerfTraces(cl::list<std::string> &PerfTraceFilenames) {
-  // Check and set current perfscript type
-  checkAndSetPerfType(PerfTraceFilenames);
+void PerfReaderBase::parsePerfTraces(
+    cl::list<std::string> &PerfTraceFilenames) {
   // Parse perf traces and do aggregation.
   for (auto Filename : PerfTraceFilenames)
     parseAndAggregateTrace(Filename);

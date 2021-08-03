@@ -179,7 +179,7 @@ public:
   ///
   /// \param binary     The mode to open the file in.
   /// \param baseInput  If the invocation contains no output file name (i.e.
-  ///                   outputFile_ in FrontendOptions is empty), the input path
+  ///                   outputFile in FrontendOptions is empty), the input path
   ///                   name to use for deriving the output path.
   /// \param extension  The extension to use for output names derived from
   ///                   \p baseInput.

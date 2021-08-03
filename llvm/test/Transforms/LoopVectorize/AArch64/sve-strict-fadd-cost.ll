@@ -1,7 +1,7 @@
 ; REQUIRES: asserts
-; RUN: opt < %s -loop-vectorize -debug -disable-output -enable-strict-reductions=true -hints-allow-reordering=false \
+; RUN: opt < %s -loop-vectorize -debug -disable-output -force-ordered-reductions=true -hints-allow-reordering=false \
 ; RUN:   -scalable-vectorization=on -force-vector-width=4 -force-vector-interleave=1 -S 2>&1 | FileCheck %s --check-prefix=CHECK-VF4
-; RUN: opt < %s -loop-vectorize -debug -disable-output -enable-strict-reductions=true -hints-allow-reordering=false \
+; RUN: opt < %s -loop-vectorize -debug -disable-output -force-ordered-reductions=true -hints-allow-reordering=false \
 ; RUN:   -scalable-vectorization=on -force-vector-width=8 -force-vector-interleave=1 -S 2>&1 | FileCheck %s --check-prefix=CHECK-VF8
 
 target triple="aarch64-unknown-linux-gnu"

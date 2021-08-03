@@ -1237,7 +1237,7 @@ define <4 x i16> @test_extracts_inserts_varidx_extract(<8 x i16> %x, i32 %idx) {
 ; CHECK-NEXT:    mov v1.h[2], v0.h[2]
 ; CHECK-NEXT:    mov v1.h[3], v0.h[3]
 ; CHECK-NEXT:    mov v0.16b, v1.16b
-; CHECK-NEXT:    add sp, sp, #16 // =16
+; CHECK-NEXT:    add sp, sp, #16
 ; CHECK-NEXT:    ret
   %tmp = extractelement <8 x i16> %x, i32 %idx
   %tmp2 = insertelement <4 x i16> undef, i16 %tmp, i32 0
@@ -1253,11 +1253,11 @@ define <4 x i16> @test_extracts_inserts_varidx_extract(<8 x i16> %x, i32 %idx) {
 define <4 x i16> @test_extracts_inserts_varidx_insert(<8 x i16> %x, i32 %idx) {
 ; CHECK-LABEL: test_extracts_inserts_varidx_insert:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    sub sp, sp, #16 // =16
+; CHECK-NEXT:    sub sp, sp, #16
 ; CHECK-NEXT:    .cfi_def_cfa_offset 16
 ; CHECK-NEXT:    // kill: def $w0 killed $w0 def $x0
 ; CHECK-NEXT:    and x8, x0, #0x3
-; CHECK-NEXT:    add x9, sp, #8 // =8
+; CHECK-NEXT:    add x9, sp, #8
 ; CHECK-NEXT:    bfi x9, x8, #1, #2
 ; CHECK-NEXT:    str h0, [x9]
 ; CHECK-NEXT:    ldr d1, [sp, #8]
@@ -1265,7 +1265,7 @@ define <4 x i16> @test_extracts_inserts_varidx_insert(<8 x i16> %x, i32 %idx) {
 ; CHECK-NEXT:    mov v1.h[2], v0.h[2]
 ; CHECK-NEXT:    mov v1.h[3], v0.h[3]
 ; CHECK-NEXT:    mov v0.16b, v1.16b
-; CHECK-NEXT:    add sp, sp, #16 // =16
+; CHECK-NEXT:    add sp, sp, #16
 ; CHECK-NEXT:    ret
   %tmp = extractelement <8 x i16> %x, i32 0
   %tmp2 = insertelement <4 x i16> undef, i16 %tmp, i32 %idx

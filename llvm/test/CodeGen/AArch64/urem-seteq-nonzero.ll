@@ -139,7 +139,7 @@ define i1 @t32_6_3(i32 %X) nounwind {
 ; CHECK-NEXT:    mov w8, #43691
 ; CHECK-NEXT:    movk w8, #43690, lsl #16
 ; CHECK-NEXT:    mul w8, w0, w8
-; CHECK-NEXT:    sub w8, w8, #1 // =1
+; CHECK-NEXT:    sub w8, w8, #1
 ; CHECK-NEXT:    mov w9, #43691
 ; CHECK-NEXT:    ror w8, w8, #1
 ; CHECK-NEXT:    movk w9, #10922, lsl #16
@@ -212,9 +212,9 @@ define i1 @t8_3_2(i8 %X) nounwind {
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    mov w8, #-85
 ; CHECK-NEXT:    mul w8, w0, w8
-; CHECK-NEXT:    sub w8, w8, #86 // =86
+; CHECK-NEXT:    sub w8, w8, #86
 ; CHECK-NEXT:    and w8, w8, #0xff
-; CHECK-NEXT:    cmp w8, #85 // =85
+; CHECK-NEXT:    cmp w8, #85
 ; CHECK-NEXT:    cset w0, lo
 ; CHECK-NEXT:    ret
   %urem = urem i8 %X, 3

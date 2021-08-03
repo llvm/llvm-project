@@ -204,6 +204,45 @@ convertOmpMaster(Operation &opInst, llvm::IRBuilderBase &builder,
   return success();
 }
 
+/// Converts an OpenMP 'critical' operation into LLVM IR using OpenMPIRBuilder.
+static LogicalResult
+convertOmpCritical(Operation &opInst, llvm::IRBuilderBase &builder,
+                   LLVM::ModuleTranslation &moduleTranslation) {
+  using InsertPointTy = llvm::OpenMPIRBuilder::InsertPointTy;
+  auto criticalOp = cast<omp::CriticalOp>(opInst);
+  // TODO: support error propagation in OpenMPIRBuilder and use it instead of
+  // relying on captured variables.
+  LogicalResult bodyGenStatus = success();
+
+  auto bodyGenCB = [&](InsertPointTy allocaIP, InsertPointTy codeGenIP,
+                       llvm::BasicBlock &continuationBlock) {
+    // CriticalOp has only one region associated with it.
+    auto &region = cast<omp::CriticalOp>(opInst).getRegion();
+    convertOmpOpRegions(region, "omp.critical.region", *codeGenIP.getBlock(),
+                        continuationBlock, builder, moduleTranslation,
+                        bodyGenStatus);
+  };
+
+  // TODO: Perform finalization actions for variables. This has to be
+  // called for variables which have destructors/finalizers.
+  auto finiCB = [&](InsertPointTy codeGenIP) {};
+
+  llvm::OpenMPIRBuilder::LocationDescription ompLoc(
+      builder.saveIP(), builder.getCurrentDebugLocation());
+  llvm::LLVMContext &llvmContext = moduleTranslation.getLLVMContext();
+  llvm::Constant *hint = nullptr;
+  if (criticalOp.hint().hasValue()) {
+    hint =
+        llvm::ConstantInt::get(llvm::Type::getInt32Ty(llvmContext),
+                               static_cast<int>(criticalOp.hint().getValue()));
+  } else {
+    hint = llvm::ConstantInt::get(llvm::Type::getInt32Ty(llvmContext), 0);
+  }
+  builder.restoreIP(moduleTranslation.getOpenMPBuilder()->createCritical(
+      ompLoc, bodyGenCB, finiCB, criticalOp.name().getValueOr(""), hint));
+  return success();
+}
+
 /// Converts an OpenMP workshare loop into LLVM IR using OpenMPIRBuilder.
 static LogicalResult
 convertOmpWsLoop(Operation &opInst, llvm::IRBuilderBase &builder,
@@ -364,6 +403,9 @@ LogicalResult OpenMPDialectLLVMIRTranslationInterface::convertOperation(
       })
       .Case([&](omp::MasterOp) {
         return convertOmpMaster(*op, builder, moduleTranslation);
+      })
+      .Case([&](omp::CriticalOp) {
+        return convertOmpCritical(*op, builder, moduleTranslation);
       })
       .Case([&](omp::WsLoopOp) {
         return convertOmpWsLoop(*op, builder, moduleTranslation);

@@ -692,6 +692,13 @@ TEST_F(FormatTestJS, FormatsFreestandingFunctions) {
                "  let x = 1;\n"
                "  console.log(x);\n"
                "}\n");
+  EXPECT_EQ("a = function(x) {}\n"
+            "\n"
+            "function f(x) {}",
+            format("a = function(x) {}\n"
+                   "\n"
+                   "function f(x) {}",
+                   getGoogleJSStyleWithColumns(20)));
 }
 
 TEST_F(FormatTestJS, GeneratorFunctions) {
