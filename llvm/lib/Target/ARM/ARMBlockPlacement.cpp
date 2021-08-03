@@ -44,7 +44,6 @@ public:
   bool revertWhileToDo(MachineInstr *WLS, MachineLoop *ML);
 
   void getAnalysisUsage(AnalysisUsage &AU) const override {
-    AU.setPreservesCFG();
     AU.addRequired<MachineLoopInfo>();
     MachineFunctionPass::getAnalysisUsage(AU);
   }
