@@ -124,7 +124,7 @@ bool ParseOneDictionaryEntry(const std::string &Str, Unit *U) {
   return true;
 }
 
-bool ParseDictionaryFile(const std::string &Text, Vector<Unit> *Units) {
+bool ParseDictionaryFile(const std::string &Text, std::vector<Unit> *Units) {
   if (Text.empty()) {
     Printf("ParseDictionaryFile: file does not exist or is empty\n");
     return false;
