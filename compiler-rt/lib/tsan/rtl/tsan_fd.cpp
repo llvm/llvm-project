@@ -115,7 +115,7 @@ static void init(ThreadState *thr, uptr pc, int fd, FdSync *s,
     MemoryRangeImitateWrite(thr, pc, (uptr)d, 8);
   } else {
     // See the dup-related comment in FdClose.
-    MemoryRead(thr, pc, (uptr)d, kSizeLog8);
+    MemoryAccess(thr, pc, (uptr)d, 8, kAccessRead);
   }
 }
 
@@ -163,7 +163,7 @@ void FdAcquire(ThreadState *thr, uptr pc, int fd) {
   FdDesc *d = fddesc(thr, pc, fd);
   FdSync *s = d->sync;
   DPrintf("#%d: FdAcquire(%d) -> %p\n", thr->tid, fd, s);
-  MemoryRead(thr, pc, (uptr)d, kSizeLog8);
+  MemoryAccess(thr, pc, (uptr)d, 8, kAccessRead);
   if (s)
     Acquire(thr, pc, (uptr)s);
 }
@@ -174,7 +174,7 @@ void FdRelease(ThreadState *thr, uptr pc, int fd) {
   FdDesc *d = fddesc(thr, pc, fd);
   FdSync *s = d->sync;
   DPrintf("#%d: FdRelease(%d) -> %p\n", thr->tid, fd, s);
-  MemoryRead(thr, pc, (uptr)d, kSizeLog8);
+  MemoryAccess(thr, pc, (uptr)d, 8, kAccessRead);
   if (s)
     Release(thr, pc, (uptr)s);
 }
@@ -184,7 +184,7 @@ void FdAccess(ThreadState *thr, uptr pc, int fd) {
   if (bogusfd(fd))
     return;
   FdDesc *d = fddesc(thr, pc, fd);
-  MemoryRead(thr, pc, (uptr)d, kSizeLog8);
+  MemoryAccess(thr, pc, (uptr)d, 8, kAccessRead);
 }
 
 void FdClose(ThreadState *thr, uptr pc, int fd, bool write) {
@@ -194,7 +194,7 @@ void FdClose(ThreadState *thr, uptr pc, int fd, bool write) {
   FdDesc *d = fddesc(thr, pc, fd);
   if (write) {
     // To catch races between fd usage and close.
-    MemoryWrite(thr, pc, (uptr)d, kSizeLog8);
+    MemoryAccess(thr, pc, (uptr)d, 8, kAccessWrite);
   } else {
     // This path is used only by dup2/dup3 calls.
     // We do read instead of write because there is a number of legitimate
@@ -204,7 +204,7 @@ void FdClose(ThreadState *thr, uptr pc, int fd, bool write) {
     // 2. Some daemons dup /dev/null in place of stdin/stdout.
     // On the other hand we have not seen cases when write here catches real
     // bugs.
-    MemoryRead(thr, pc, (uptr)d, kSizeLog8);
+    MemoryAccess(thr, pc, (uptr)d, 8, kAccessRead);
   }
   // We need to clear it, because if we do not intercept any call out there
   // that creates fd, we will hit false postives.
@@ -228,7 +228,7 @@ void FdDup(ThreadState *thr, uptr pc, int oldfd, int newfd, bool write) {
     return;
   // Ignore the case when user dups not yet connected socket.
   FdDesc *od = fddesc(thr, pc, oldfd);
-  MemoryRead(thr, pc, (uptr)od, kSizeLog8);
+  MemoryAccess(thr, pc, (uptr)od, 8, kAccessRead);
   FdClose(thr, pc, newfd, write);
   init(thr, pc, newfd, ref(od->sync), write);
 }

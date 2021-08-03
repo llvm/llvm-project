@@ -43,7 +43,7 @@ define dso_local void @foo(i64 %t) local_unnamed_addr #0 {
 ; CHECK:         // %bb.0: // %entry
 ; CHECK-NEXT:    stp x29, x30, [sp, #-16]! // 16-byte Folded Spill
 ; CHECK-NEXT:    mov x29, sp
-; CHECK-NEXT:    sub sp, sp, #16 // =16
+; CHECK-NEXT:    sub sp, sp, #16
 ; CHECK-NEXT:    .cfi_def_cfa w29, 16
 ; CHECK-NEXT:    .cfi_offset w30, -8
 ; CHECK-NEXT:    .cfi_offset w29, -16
@@ -58,7 +58,7 @@ define dso_local void @foo(i64 %t) local_unnamed_addr #0 {
 ; CHECK-MINUS-257-OFFSET:      sub x8, x8, #257
 ; CHECK-MINUS-257-OFFSET-NEXT: ldr x8, [x8]
 ; CHECK-NEXT:    lsl x9, x0, #2
-; CHECK-NEXT:    add x9, x9, #15 // =15
+; CHECK-NEXT:    add x9, x9, #15
 ; CHECK-NEXT:    and x9, x9, #0xfffffffffffffff0
 ; CHECK-NEXT:    stur x8, [x29, #-8]
 ; CHECK-NEXT:    mov x8, sp

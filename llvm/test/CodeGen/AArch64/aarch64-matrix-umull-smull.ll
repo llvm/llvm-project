@@ -13,8 +13,8 @@ define void @matrix_mul_unsigned(i32 %N, i32* nocapture %C, i16* nocapture reado
 ; CHECK-NEXT:    add x9, x2, w0, uxtw #1
 ; CHECK-NEXT:    ldp d1, d2, [x9]
 ; CHECK-NEXT:    add x9, x1, w0, uxtw #2
-; CHECK-NEXT:    subs x8, x8, #8 // =8
-; CHECK-NEXT:    add w0, w0, #8 // =8
+; CHECK-NEXT:    subs x8, x8, #8
+; CHECK-NEXT:    add w0, w0, #8
 ; CHECK-NEXT:    umull v1.4s, v0.4h, v1.4h
 ; CHECK-NEXT:    umull v2.4s, v0.4h, v2.4h
 ; CHECK-NEXT:    stp q1, q2, [x9]
@@ -77,8 +77,8 @@ define void @matrix_mul_signed(i32 %N, i32* nocapture %C, i16* nocapture readonl
 ; CHECK-NEXT:    add x9, x2, w0, sxtw #1
 ; CHECK-NEXT:    ldp d1, d2, [x9]
 ; CHECK-NEXT:    add x9, x1, w0, sxtw #2
-; CHECK-NEXT:    subs x8, x8, #8 // =8
-; CHECK-NEXT:    add w0, w0, #8 // =8
+; CHECK-NEXT:    subs x8, x8, #8
+; CHECK-NEXT:    add w0, w0, #8
 ; CHECK-NEXT:    smull v1.4s, v0.4h, v1.4h
 ; CHECK-NEXT:    smull v2.4s, v0.4h, v2.4h
 ; CHECK-NEXT:    stp q1, q2, [x9]
@@ -141,11 +141,11 @@ define void @matrix_mul_double_shuffle(i32 %N, i32* nocapture %C, i16* nocapture
 ; CHECK-NEXT:    // =>This Inner Loop Header: Depth=1
 ; CHECK-NEXT:    ldrh w9, [x2], #16
 ; CHECK-NEXT:    mov w10, w0
-; CHECK-NEXT:    subs x8, x8, #8 // =8
+; CHECK-NEXT:    subs x8, x8, #8
 ; CHECK-NEXT:    lsl x10, x10, #2
 ; CHECK-NEXT:    dup v1.4h, w9
 ; CHECK-NEXT:    umull v1.4s, v0.4h, v1.4h
-; CHECK-NEXT:    add w0, w0, #8 // =8
+; CHECK-NEXT:    add w0, w0, #8
 ; CHECK-NEXT:    str q1, [x1, x10]
 ; CHECK-NEXT:    b.ne .LBB2_1
 ; CHECK-NEXT:  // %bb.2: // %for.end12

@@ -293,3 +293,13 @@ func @foo(%lb : index, %ub : index, %step : index, %mem : memref<1xf32>) {
   }
   return
 }
+
+// -----
+
+func @omp_critical() -> () {
+  // expected-error @below {{must specify a name unless the effect is as if hint(none) is specified}}
+  omp.critical hint(nonspeculative) {
+    omp.terminator
+  }
+  return
+}

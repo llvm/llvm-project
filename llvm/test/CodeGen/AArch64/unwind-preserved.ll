@@ -264,7 +264,7 @@ define aarch64_vector_pcs <4 x i32> @invoke_callee_may_throw_neon(<4 x i32> %v) 
 ; CHECK:       .Lfunc_begin1:
 ; CHECK-NEXT:    .cfi_startproc
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    sub sp, sp, #304 // =304
+; CHECK-NEXT:    sub sp, sp, #304
 ; CHECK-NEXT:    stp q23, q22, [sp, #32] // 32-byte Folded Spill
 ; CHECK-NEXT:    stp q21, q20, [sp, #64] // 32-byte Folded Spill
 ; CHECK-NEXT:    stp q19, q18, [sp, #96] // 32-byte Folded Spill
@@ -310,7 +310,7 @@ define aarch64_vector_pcs <4 x i32> @invoke_callee_may_throw_neon(<4 x i32> %v) 
 ; CHECK-NEXT:    ldp q19, q18, [sp, #96] // 32-byte Folded Reload
 ; CHECK-NEXT:    ldp q21, q20, [sp, #64] // 32-byte Folded Reload
 ; CHECK-NEXT:    ldp q23, q22, [sp, #32] // 32-byte Folded Reload
-; CHECK-NEXT:    add sp, sp, #304 // =304
+; CHECK-NEXT:    add sp, sp, #304
 ; CHECK-NEXT:    ret
 ; CHECK-NEXT:  .LBB1_2: // %.Lunwind
 ; CHECK-NEXT:  .Ltmp5:
@@ -324,14 +324,14 @@ define aarch64_vector_pcs <4 x i32> @invoke_callee_may_throw_neon(<4 x i32> %v) 
 ; CHECK-NEXT:    ldp q19, q18, [sp, #96] // 32-byte Folded Reload
 ; CHECK-NEXT:    ldp q21, q20, [sp, #64] // 32-byte Folded Reload
 ; CHECK-NEXT:    ldp q23, q22, [sp, #32] // 32-byte Folded Reload
-; CHECK-NEXT:    add sp, sp, #304 // =304
+; CHECK-NEXT:    add sp, sp, #304
 ; CHECK-NEXT:    ret
 ;
 ; GISEL-LABEL: invoke_callee_may_throw_neon:
 ; GISEL:       .Lfunc_begin1:
 ; GISEL-NEXT:    .cfi_startproc
 ; GISEL-NEXT:  // %bb.0:
-; GISEL-NEXT:    sub sp, sp, #304 // =304
+; GISEL-NEXT:    sub sp, sp, #304
 ; GISEL-NEXT:    stp q23, q22, [sp, #32] // 32-byte Folded Spill
 ; GISEL-NEXT:    stp q21, q20, [sp, #64] // 32-byte Folded Spill
 ; GISEL-NEXT:    stp q19, q18, [sp, #96] // 32-byte Folded Spill
@@ -377,7 +377,7 @@ define aarch64_vector_pcs <4 x i32> @invoke_callee_may_throw_neon(<4 x i32> %v) 
 ; GISEL-NEXT:    ldp q19, q18, [sp, #96] // 32-byte Folded Reload
 ; GISEL-NEXT:    ldp q21, q20, [sp, #64] // 32-byte Folded Reload
 ; GISEL-NEXT:    ldp q23, q22, [sp, #32] // 32-byte Folded Reload
-; GISEL-NEXT:    add sp, sp, #304 // =304
+; GISEL-NEXT:    add sp, sp, #304
 ; GISEL-NEXT:    ret
 ; GISEL-NEXT:  .LBB1_2: // %.Lunwind
 ; GISEL-NEXT:  .Ltmp5:
@@ -391,7 +391,7 @@ define aarch64_vector_pcs <4 x i32> @invoke_callee_may_throw_neon(<4 x i32> %v) 
 ; GISEL-NEXT:    ldp q19, q18, [sp, #96] // 32-byte Folded Reload
 ; GISEL-NEXT:    ldp q21, q20, [sp, #64] // 32-byte Folded Reload
 ; GISEL-NEXT:    ldp q23, q22, [sp, #32] // 32-byte Folded Reload
-; GISEL-NEXT:    add sp, sp, #304 // =304
+; GISEL-NEXT:    add sp, sp, #304
 ; GISEL-NEXT:    ret
   %result = invoke aarch64_vector_pcs <4 x i32> @may_throw_neon(<4 x i32> %v) to label %.Lcontinue unwind label %.Lunwind
 .Lcontinue:

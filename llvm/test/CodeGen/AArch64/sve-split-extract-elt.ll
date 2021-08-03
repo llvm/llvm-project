@@ -26,7 +26,7 @@ define i8 @split_extract_32i8_idx(<vscale x 32 x i8> %a, i32 %idx) {
 ; CHECK-NEXT:    rdvl x10, #2
 ; CHECK-NEXT:    // kill: def $w0 killed $w0 def $x0
 ; CHECK-NEXT:    sxtw x9, w0
-; CHECK-NEXT:    sub x10, x10, #1 // =1
+; CHECK-NEXT:    sub x10, x10, #1
 ; CHECK-NEXT:    ptrue p0.b
 ; CHECK-NEXT:    mov x8, sp
 ; CHECK-NEXT:    cmp x9, x10
@@ -51,7 +51,7 @@ define i16 @split_extract_16i16_idx(<vscale x 16 x i16> %a, i32 %idx) {
 ; CHECK-NEXT:    rdvl x10, #1
 ; CHECK-NEXT:    // kill: def $w0 killed $w0 def $x0
 ; CHECK-NEXT:    sxtw x9, w0
-; CHECK-NEXT:    sub x10, x10, #1 // =1
+; CHECK-NEXT:    sub x10, x10, #1
 ; CHECK-NEXT:    ptrue p0.h
 ; CHECK-NEXT:    mov x8, sp
 ; CHECK-NEXT:    cmp x9, x10
@@ -76,7 +76,7 @@ define i32 @split_extract_8i32_idx(<vscale x 8 x i32> %a, i32 %idx) {
 ; CHECK-NEXT:    cnth x10
 ; CHECK-NEXT:    // kill: def $w0 killed $w0 def $x0
 ; CHECK-NEXT:    sxtw x9, w0
-; CHECK-NEXT:    sub x10, x10, #1 // =1
+; CHECK-NEXT:    sub x10, x10, #1
 ; CHECK-NEXT:    ptrue p0.s
 ; CHECK-NEXT:    mov x8, sp
 ; CHECK-NEXT:    cmp x9, x10
@@ -101,7 +101,7 @@ define i64 @split_extract_8i64_idx(<vscale x 8 x i64> %a, i32 %idx) {
 ; CHECK-NEXT:    cnth x10
 ; CHECK-NEXT:    // kill: def $w0 killed $w0 def $x0
 ; CHECK-NEXT:    sxtw x9, w0
-; CHECK-NEXT:    sub x10, x10, #1 // =1
+; CHECK-NEXT:    sub x10, x10, #1
 ; CHECK-NEXT:    ptrue p0.d
 ; CHECK-NEXT:    mov x8, sp
 ; CHECK-NEXT:    cmp x9, x10
@@ -146,11 +146,11 @@ define i16 @split_extract_16i16(<vscale x 16 x i16> %a) {
 ; CHECK-NEXT:    .cfi_escape 0x0f, 0x0c, 0x8f, 0x00, 0x11, 0x10, 0x22, 0x11, 0x10, 0x92, 0x2e, 0x00, 0x1e, 0x22 // sp + 16 + 16 * VG
 ; CHECK-NEXT:    .cfi_offset w29, -16
 ; CHECK-NEXT:    rdvl x10, #1
-; CHECK-NEXT:    sub x10, x10, #1 // =1
+; CHECK-NEXT:    sub x10, x10, #1
 ; CHECK-NEXT:    ptrue p0.h
 ; CHECK-NEXT:    mov x8, sp
 ; CHECK-NEXT:    mov w9, #128
-; CHECK-NEXT:    cmp x10, #128 // =128
+; CHECK-NEXT:    cmp x10, #128
 ; CHECK-NEXT:    st1h { z1.h }, p0, [x8, #1, mul vl]
 ; CHECK-NEXT:    st1h { z0.h }, p0, [sp]
 ; CHECK-NEXT:    csel x9, x10, x9, lo
@@ -172,7 +172,7 @@ define i32 @split_extract_16i32(<vscale x 16 x i32> %a) {
 ; CHECK-NEXT:    mov w9, #34464
 ; CHECK-NEXT:    rdvl x10, #1
 ; CHECK-NEXT:    movk w9, #1, lsl #16
-; CHECK-NEXT:    sub x10, x10, #1 // =1
+; CHECK-NEXT:    sub x10, x10, #1
 ; CHECK-NEXT:    ptrue p0.s
 ; CHECK-NEXT:    mov x8, sp
 ; CHECK-NEXT:    cmp x10, x9
@@ -197,11 +197,11 @@ define i64 @split_extract_4i64(<vscale x 4 x i64> %a) {
 ; CHECK-NEXT:    .cfi_escape 0x0f, 0x0c, 0x8f, 0x00, 0x11, 0x10, 0x22, 0x11, 0x10, 0x92, 0x2e, 0x00, 0x1e, 0x22 // sp + 16 + 16 * VG
 ; CHECK-NEXT:    .cfi_offset w29, -16
 ; CHECK-NEXT:    cntw x10
-; CHECK-NEXT:    sub x10, x10, #1 // =1
+; CHECK-NEXT:    sub x10, x10, #1
 ; CHECK-NEXT:    ptrue p0.d
 ; CHECK-NEXT:    mov x8, sp
 ; CHECK-NEXT:    mov w9, #10
-; CHECK-NEXT:    cmp x10, #10 // =10
+; CHECK-NEXT:    cmp x10, #10
 ; CHECK-NEXT:    st1d { z1.d }, p0, [x8, #1, mul vl]
 ; CHECK-NEXT:    st1d { z0.d }, p0, [sp]
 ; CHECK-NEXT:    csel x9, x10, x9, lo

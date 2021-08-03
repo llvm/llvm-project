@@ -45,7 +45,7 @@ define i8 @func8(i8 %x, i8 %y) nounwind {
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    and w8, w0, #0xff
 ; CHECK-NEXT:    add w8, w8, w1, uxtb
-; CHECK-NEXT:    cmp w8, #255 // =255
+; CHECK-NEXT:    cmp w8, #255
 ; CHECK-NEXT:    mov w9, #255
 ; CHECK-NEXT:    csel w0, w8, w9, lo
 ; CHECK-NEXT:    ret
@@ -59,7 +59,7 @@ define i4 @func3(i4 %x, i4 %y) nounwind {
 ; CHECK-NEXT:    and w8, w1, #0xf
 ; CHECK-NEXT:    and w9, w0, #0xf
 ; CHECK-NEXT:    add w8, w9, w8
-; CHECK-NEXT:    cmp w8, #15 // =15
+; CHECK-NEXT:    cmp w8, #15
 ; CHECK-NEXT:    mov w9, #15
 ; CHECK-NEXT:    csel w0, w8, w9, lo
 ; CHECK-NEXT:    ret

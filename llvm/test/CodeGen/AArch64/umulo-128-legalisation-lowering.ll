@@ -4,10 +4,10 @@
 define { i128, i8 } @muloti_test(i128 %l, i128 %r) unnamed_addr #0 {
 ; AARCH-LABEL: muloti_test:
 ; AARCH:       // %bb.0: // %start
-; AARCH-NEXT:    cmp x3, #0 // =0
+; AARCH-NEXT:    cmp x3, #0
 ; AARCH-NEXT:    umulh x8, x1, x2
 ; AARCH-NEXT:    cset w10, ne
-; AARCH-NEXT:    cmp x1, #0 // =0
+; AARCH-NEXT:    cmp x1, #0
 ; AARCH-NEXT:    mul x9, x3, x0
 ; AARCH-NEXT:    cset w11, ne
 ; AARCH-NEXT:    cmp xzr, x8

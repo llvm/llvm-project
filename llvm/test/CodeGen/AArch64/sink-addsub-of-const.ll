@@ -10,7 +10,7 @@ define i32 @sink_add_of_const_to_add0(i32 %a, i32 %b) {
 ; CHECK-LABEL: sink_add_of_const_to_add0:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    add w8, w0, w1
-; CHECK-NEXT:    add w0, w8, #32 // =32
+; CHECK-NEXT:    add w0, w8, #32
 ; CHECK-NEXT:    ret
   %t0 = add i32 %a, 32 ; constant always on RHS
   %r = add i32 %t0, %b
@@ -20,7 +20,7 @@ define i32 @sink_add_of_const_to_add1(i32 %a, i32 %b) {
 ; CHECK-LABEL: sink_add_of_const_to_add1:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    add w8, w0, w1
-; CHECK-NEXT:    add w0, w8, #32 // =32
+; CHECK-NEXT:    add w0, w8, #32
 ; CHECK-NEXT:    ret
   %t0 = add i32 %a, 32 ; constant always on RHS
   %r = add i32 %b, %t0
@@ -34,7 +34,7 @@ define i32 @sink_sub_of_const_to_add0(i32 %a, i32 %b) {
 ; CHECK-LABEL: sink_sub_of_const_to_add0:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    add w8, w0, w1
-; CHECK-NEXT:    sub w0, w8, #32 // =32
+; CHECK-NEXT:    sub w0, w8, #32
 ; CHECK-NEXT:    ret
   %t0 = sub i32 %a, 32
   %r = add i32 %t0, %b
@@ -44,7 +44,7 @@ define i32 @sink_sub_of_const_to_add1(i32 %a, i32 %b) {
 ; CHECK-LABEL: sink_sub_of_const_to_add1:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    add w8, w0, w1
-; CHECK-NEXT:    sub w0, w8, #32 // =32
+; CHECK-NEXT:    sub w0, w8, #32
 ; CHECK-NEXT:    ret
   %t0 = sub i32 %a, 32
   %r = add i32 %b, %t0
@@ -58,7 +58,7 @@ define i32 @sink_sub_from_const_to_add0(i32 %a, i32 %b) {
 ; CHECK-LABEL: sink_sub_from_const_to_add0:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    sub w8, w1, w0
-; CHECK-NEXT:    add w0, w8, #32 // =32
+; CHECK-NEXT:    add w0, w8, #32
 ; CHECK-NEXT:    ret
   %t0 = sub i32 32, %a
   %r = add i32 %t0, %b
@@ -68,7 +68,7 @@ define i32 @sink_sub_from_const_to_add1(i32 %a, i32 %b) {
 ; CHECK-LABEL: sink_sub_from_const_to_add1:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    sub w8, w1, w0
-; CHECK-NEXT:    add w0, w8, #32 // =32
+; CHECK-NEXT:    add w0, w8, #32
 ; CHECK-NEXT:    ret
   %t0 = sub i32 32, %a
   %r = add i32 %b, %t0
@@ -82,7 +82,7 @@ define i32 @sink_add_of_const_to_sub(i32 %a, i32 %b) {
 ; CHECK-LABEL: sink_add_of_const_to_sub:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    sub w8, w0, w1
-; CHECK-NEXT:    add w0, w8, #32 // =32
+; CHECK-NEXT:    add w0, w8, #32
 ; CHECK-NEXT:    ret
   %t0 = add i32 %a, 32 ; constant always on RHS
   %r = sub i32 %t0, %b
@@ -92,7 +92,7 @@ define i32 @sink_add_of_const_to_sub2(i32 %a, i32 %b) {
 ; CHECK-LABEL: sink_add_of_const_to_sub2:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    sub w8, w1, w0
-; CHECK-NEXT:    sub w0, w8, #32 // =32
+; CHECK-NEXT:    sub w0, w8, #32
 ; CHECK-NEXT:    ret
   %t0 = add i32 %a, 32 ; constant always on RHS
   %r = sub i32 %b, %t0
@@ -106,7 +106,7 @@ define i32 @sink_sub_of_const_to_sub(i32 %a, i32 %b) {
 ; CHECK-LABEL: sink_sub_of_const_to_sub:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    sub w8, w0, w1
-; CHECK-NEXT:    sub w0, w8, #32 // =32
+; CHECK-NEXT:    sub w0, w8, #32
 ; CHECK-NEXT:    ret
   %t0 = sub i32 %a, 32
   %r = sub i32 %t0, %b
@@ -116,7 +116,7 @@ define i32 @sink_sub_of_const_to_sub2(i32 %a, i32 %b) {
 ; CHECK-LABEL: sink_sub_of_const_to_sub2:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    sub w8, w1, w0
-; CHECK-NEXT:    add w0, w8, #32 // =32
+; CHECK-NEXT:    add w0, w8, #32
 ; CHECK-NEXT:    ret
   %t0 = sub i32 %a, 32
   %r = sub i32 %b, %t0
@@ -141,7 +141,7 @@ define i32 @sink_sub_from_const_to_sub2(i32 %a, i32 %b) {
 ; CHECK-LABEL: sink_sub_from_const_to_sub2:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    add w8, w0, w1
-; CHECK-NEXT:    sub w0, w8, #32 // =32
+; CHECK-NEXT:    sub w0, w8, #32
 ; CHECK-NEXT:    ret
   %t0 = sub i32 32, %a
   %r = sub i32 %b, %t0

@@ -1,5 +1,5 @@
 # RUN: yaml2obj %s -o %t
-# RUN: llvm-readobj --headers --symbols %t | \
+# RUN: llvm-readobj --headers --symbols --string-table %t | \
 # RUN:   FileCheck %s --check-prefix=CHECK64
 
 --- !XCOFF
@@ -134,3 +134,9 @@ Symbols:
 # CHECK64-NEXT:     NumberOfAuxEntries: 0
 # CHECK64-NEXT:   }
 # CHECK64-NEXT: ]
+# CHECK64-NEXT: StringTable {
+# CHECK64-NEXT:   [     4]   .text
+# CHECK64-NEXT:   [     a]   .abs
+# CHECK64-NEXT:   [     f]   .undef
+# CHECK64-NEXT:   [    16]   .file
+# CHECK64-NEXT: }

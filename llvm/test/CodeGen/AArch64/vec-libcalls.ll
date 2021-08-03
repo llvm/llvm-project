@@ -50,7 +50,7 @@ define <1 x float> @sin_v1f32(<1 x float> %x) nounwind {
 define <2 x float> @sin_v2f32(<2 x float> %x) nounwind {
 ; CHECK-LABEL: sin_v2f32:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    sub sp, sp, #48 // =48
+; CHECK-NEXT:    sub sp, sp, #48
 ; CHECK-NEXT:    // kill: def $d0 killed $d0 def $q0
 ; CHECK-NEXT:    str q0, [sp] // 16-byte Folded Spill
 ; CHECK-NEXT:    mov s0, v0.s[1]
@@ -65,7 +65,7 @@ define <2 x float> @sin_v2f32(<2 x float> %x) nounwind {
 ; CHECK-NEXT:    // kill: def $s0 killed $s0 def $q0
 ; CHECK-NEXT:    mov v0.s[1], v1.s[0]
 ; CHECK-NEXT:    // kill: def $d0 killed $d0 killed $q0
-; CHECK-NEXT:    add sp, sp, #48 // =48
+; CHECK-NEXT:    add sp, sp, #48
 ; CHECK-NEXT:    ret
   %r = call <2 x float> @llvm.sin.v2f32(<2 x float> %x)
   ret <2 x float> %r
@@ -74,7 +74,7 @@ define <2 x float> @sin_v2f32(<2 x float> %x) nounwind {
 define <3 x float> @sin_v3f32(<3 x float> %x) nounwind {
 ; CHECK-LABEL: sin_v3f32:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    sub sp, sp, #48 // =48
+; CHECK-NEXT:    sub sp, sp, #48
 ; CHECK-NEXT:    str q0, [sp, #16] // 16-byte Folded Spill
 ; CHECK-NEXT:    mov s0, v0.s[1]
 ; CHECK-NEXT:    str x30, [sp, #32] // 8-byte Folded Spill
@@ -95,7 +95,7 @@ define <3 x float> @sin_v3f32(<3 x float> %x) nounwind {
 ; CHECK-NEXT:    // kill: def $s0 killed $s0 def $q0
 ; CHECK-NEXT:    mov v1.s[2], v0.s[0]
 ; CHECK-NEXT:    mov v0.16b, v1.16b
-; CHECK-NEXT:    add sp, sp, #48 // =48
+; CHECK-NEXT:    add sp, sp, #48
 ; CHECK-NEXT:    ret
   %r = call <3 x float> @llvm.sin.v3f32(<3 x float> %x)
   ret <3 x float> %r
@@ -104,7 +104,7 @@ define <3 x float> @sin_v3f32(<3 x float> %x) nounwind {
 define <4 x float> @sin_v4f32(<4 x float> %x) nounwind {
 ; CHECK-LABEL: sin_v4f32:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    sub sp, sp, #48 // =48
+; CHECK-NEXT:    sub sp, sp, #48
 ; CHECK-NEXT:    str q0, [sp, #16] // 16-byte Folded Spill
 ; CHECK-NEXT:    mov s0, v0.s[1]
 ; CHECK-NEXT:    str x30, [sp, #32] // 8-byte Folded Spill
@@ -132,7 +132,7 @@ define <4 x float> @sin_v4f32(<4 x float> %x) nounwind {
 ; CHECK-NEXT:    // kill: def $s0 killed $s0 def $q0
 ; CHECK-NEXT:    mov v1.s[3], v0.s[0]
 ; CHECK-NEXT:    mov v0.16b, v1.16b
-; CHECK-NEXT:    add sp, sp, #48 // =48
+; CHECK-NEXT:    add sp, sp, #48
 ; CHECK-NEXT:    ret
   %r = call <4 x float> @llvm.sin.v4f32(<4 x float> %x)
   ret <4 x float> %r
@@ -266,7 +266,7 @@ define <3 x float> @ceil_v3f32(<3 x float> %x) nounwind {
 define <3 x float> @cos_v3f32(<3 x float> %x) nounwind {
 ; CHECK-LABEL: cos_v3f32:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    sub sp, sp, #48 // =48
+; CHECK-NEXT:    sub sp, sp, #48
 ; CHECK-NEXT:    str q0, [sp, #16] // 16-byte Folded Spill
 ; CHECK-NEXT:    mov s0, v0.s[1]
 ; CHECK-NEXT:    str x30, [sp, #32] // 8-byte Folded Spill
@@ -287,7 +287,7 @@ define <3 x float> @cos_v3f32(<3 x float> %x) nounwind {
 ; CHECK-NEXT:    // kill: def $s0 killed $s0 def $q0
 ; CHECK-NEXT:    mov v1.s[2], v0.s[0]
 ; CHECK-NEXT:    mov v0.16b, v1.16b
-; CHECK-NEXT:    add sp, sp, #48 // =48
+; CHECK-NEXT:    add sp, sp, #48
 ; CHECK-NEXT:    ret
   %r = call <3 x float> @llvm.cos.v3f32(<3 x float> %x)
   ret <3 x float> %r
@@ -296,7 +296,7 @@ define <3 x float> @cos_v3f32(<3 x float> %x) nounwind {
 define <3 x float> @exp_v3f32(<3 x float> %x) nounwind {
 ; CHECK-LABEL: exp_v3f32:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    sub sp, sp, #48 // =48
+; CHECK-NEXT:    sub sp, sp, #48
 ; CHECK-NEXT:    str q0, [sp, #16] // 16-byte Folded Spill
 ; CHECK-NEXT:    mov s0, v0.s[1]
 ; CHECK-NEXT:    str x30, [sp, #32] // 8-byte Folded Spill
@@ -317,7 +317,7 @@ define <3 x float> @exp_v3f32(<3 x float> %x) nounwind {
 ; CHECK-NEXT:    // kill: def $s0 killed $s0 def $q0
 ; CHECK-NEXT:    mov v1.s[2], v0.s[0]
 ; CHECK-NEXT:    mov v0.16b, v1.16b
-; CHECK-NEXT:    add sp, sp, #48 // =48
+; CHECK-NEXT:    add sp, sp, #48
 ; CHECK-NEXT:    ret
   %r = call <3 x float> @llvm.exp.v3f32(<3 x float> %x)
   ret <3 x float> %r
@@ -326,7 +326,7 @@ define <3 x float> @exp_v3f32(<3 x float> %x) nounwind {
 define <3 x float> @exp2_v3f32(<3 x float> %x) nounwind {
 ; CHECK-LABEL: exp2_v3f32:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    sub sp, sp, #48 // =48
+; CHECK-NEXT:    sub sp, sp, #48
 ; CHECK-NEXT:    str q0, [sp, #16] // 16-byte Folded Spill
 ; CHECK-NEXT:    mov s0, v0.s[1]
 ; CHECK-NEXT:    str x30, [sp, #32] // 8-byte Folded Spill
@@ -347,7 +347,7 @@ define <3 x float> @exp2_v3f32(<3 x float> %x) nounwind {
 ; CHECK-NEXT:    // kill: def $s0 killed $s0 def $q0
 ; CHECK-NEXT:    mov v1.s[2], v0.s[0]
 ; CHECK-NEXT:    mov v0.16b, v1.16b
-; CHECK-NEXT:    add sp, sp, #48 // =48
+; CHECK-NEXT:    add sp, sp, #48
 ; CHECK-NEXT:    ret
   %r = call <3 x float> @llvm.exp2.v3f32(<3 x float> %x)
   ret <3 x float> %r
@@ -365,7 +365,7 @@ define <3 x float> @floor_v3f32(<3 x float> %x) nounwind {
 define <3 x float> @log_v3f32(<3 x float> %x) nounwind {
 ; CHECK-LABEL: log_v3f32:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    sub sp, sp, #48 // =48
+; CHECK-NEXT:    sub sp, sp, #48
 ; CHECK-NEXT:    str q0, [sp, #16] // 16-byte Folded Spill
 ; CHECK-NEXT:    mov s0, v0.s[1]
 ; CHECK-NEXT:    str x30, [sp, #32] // 8-byte Folded Spill
@@ -386,7 +386,7 @@ define <3 x float> @log_v3f32(<3 x float> %x) nounwind {
 ; CHECK-NEXT:    // kill: def $s0 killed $s0 def $q0
 ; CHECK-NEXT:    mov v1.s[2], v0.s[0]
 ; CHECK-NEXT:    mov v0.16b, v1.16b
-; CHECK-NEXT:    add sp, sp, #48 // =48
+; CHECK-NEXT:    add sp, sp, #48
 ; CHECK-NEXT:    ret
   %r = call <3 x float> @llvm.log.v3f32(<3 x float> %x)
   ret <3 x float> %r
@@ -395,7 +395,7 @@ define <3 x float> @log_v3f32(<3 x float> %x) nounwind {
 define <3 x float> @log10_v3f32(<3 x float> %x) nounwind {
 ; CHECK-LABEL: log10_v3f32:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    sub sp, sp, #48 // =48
+; CHECK-NEXT:    sub sp, sp, #48
 ; CHECK-NEXT:    str q0, [sp, #16] // 16-byte Folded Spill
 ; CHECK-NEXT:    mov s0, v0.s[1]
 ; CHECK-NEXT:    str x30, [sp, #32] // 8-byte Folded Spill
@@ -416,7 +416,7 @@ define <3 x float> @log10_v3f32(<3 x float> %x) nounwind {
 ; CHECK-NEXT:    // kill: def $s0 killed $s0 def $q0
 ; CHECK-NEXT:    mov v1.s[2], v0.s[0]
 ; CHECK-NEXT:    mov v0.16b, v1.16b
-; CHECK-NEXT:    add sp, sp, #48 // =48
+; CHECK-NEXT:    add sp, sp, #48
 ; CHECK-NEXT:    ret
   %r = call <3 x float> @llvm.log10.v3f32(<3 x float> %x)
   ret <3 x float> %r
@@ -425,7 +425,7 @@ define <3 x float> @log10_v3f32(<3 x float> %x) nounwind {
 define <3 x float> @log2_v3f32(<3 x float> %x) nounwind {
 ; CHECK-LABEL: log2_v3f32:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    sub sp, sp, #48 // =48
+; CHECK-NEXT:    sub sp, sp, #48
 ; CHECK-NEXT:    str q0, [sp, #16] // 16-byte Folded Spill
 ; CHECK-NEXT:    mov s0, v0.s[1]
 ; CHECK-NEXT:    str x30, [sp, #32] // 8-byte Folded Spill
@@ -446,7 +446,7 @@ define <3 x float> @log2_v3f32(<3 x float> %x) nounwind {
 ; CHECK-NEXT:    // kill: def $s0 killed $s0 def $q0
 ; CHECK-NEXT:    mov v1.s[2], v0.s[0]
 ; CHECK-NEXT:    mov v0.16b, v1.16b
-; CHECK-NEXT:    add sp, sp, #48 // =48
+; CHECK-NEXT:    add sp, sp, #48
 ; CHECK-NEXT:    ret
   %r = call <3 x float> @llvm.log2.v3f32(<3 x float> %x)
   ret <3 x float> %r
