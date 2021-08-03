@@ -2482,7 +2482,7 @@ static bool isFunctionDeclarationName(const FormatToken &Current,
   //     return i + 1;
   //   }
   if (Next->Next && Next->Next->is(tok::identifier) &&
-      !(Next->MatchingParen->Next && Next->MatchingParen->Next->is(tok::semi)))
+      Line.Last->isNot(tok::semi))
     return true;
   for (const FormatToken *Tok = Next->Next; Tok && Tok != Next->MatchingParen;
        Tok = Tok->Next) {
