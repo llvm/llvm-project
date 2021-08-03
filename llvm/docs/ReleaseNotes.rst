@@ -77,7 +77,8 @@ Changes to TableGen
 Changes to the AArch64 Backend
 ------------------------------
 
-* Introduced support for Armv9-A's Realm Management Extension.
+* Introduced assembly support for Armv9-A's Realm Management Extension (RME)
+  and Scalable Matrix Extension (SME).
 
 Changes to the ARM Backend
 --------------------------
