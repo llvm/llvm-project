@@ -156,8 +156,7 @@ define i64 @test_rev_x_srl32_shift(i64 %a) {
 ;
 ; GISEL-LABEL: test_rev_x_srl32_shift:
 ; GISEL:       // %bb.0: // %entry
-; GISEL-NEXT:    lsl x8, x0, #33
-; GISEL-NEXT:    lsr x8, x8, #35
+; GISEL-NEXT:    ubfx x8, x0, #2, #29
 ; GISEL-NEXT:    rev x8, x8
 ; GISEL-NEXT:    lsr x0, x8, #32
 ; GISEL-NEXT:    ret
