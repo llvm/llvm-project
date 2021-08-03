@@ -91,7 +91,7 @@ struct X {
 template<class T> concept C1 = sizeof(T) != 0;
 template<class T> concept C2 = C1<typename T::template Y<1>::type>;
 
-template<class T> requires C1<T> void t1() = delete;          // expected-note {{candidate function}}
+template<class T> requires C1<T> void t1() {};                // expected-note {{candidate function}}
 template<class T> requires C1<T> && C2<T> void t1() = delete; // expected-note {{candidate function}}
 template void t1<X>();
 void t1() { t1<X>(); } // expected-error {{call to deleted function 't1'}}
