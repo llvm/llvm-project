@@ -632,7 +632,7 @@ public:
 
   Result operator()(const ArrayRef &x) const {
     const auto &symbol{x.GetLastSymbol()};
-    if (!(*this)(symbol)) {
+    if (!(*this)(symbol).has_value()) {
       return false;
     } else if (auto rank{CheckSubscripts(x.subscript())}) {
       // a(:)%b(1,1) is not contiguous; a(1)%b(:,:) is
@@ -645,7 +645,7 @@ public:
     return CheckSubscripts(x.subscript()).has_value();
   }
   Result operator()(const Component &x) const {
-    return x.base().Rank() == 0 && (*this)(x.GetLastSymbol());
+    return x.base().Rank() == 0 && (*this)(x.GetLastSymbol()).value_or(false);
   }
   Result operator()(const ComplexPart &) const { return false; }
   Result operator()(const Substring &) const { return false; }
