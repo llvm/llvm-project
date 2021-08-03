@@ -2107,7 +2107,7 @@ POST_SYSCALL(epoll_wait)
 (long res, long epfd, void *events, long maxevents, long timeout) {
   if (res >= 0) {
     if (events)
-      POST_WRITE(events, struct_epoll_event_sz);
+      POST_WRITE(events, res * struct_epoll_event_sz);
   }
 }
 
@@ -2123,7 +2123,7 @@ POST_SYSCALL(epoll_pwait)
  const void *sigmask, long sigsetsize) {
   if (res >= 0) {
     if (events)
-      POST_WRITE(events, struct_epoll_event_sz);
+      POST_WRITE(events, res * struct_epoll_event_sz);
   }
 }
 
