@@ -402,7 +402,7 @@ define i32 @srem_by_2_int_min_is_poison(i32 %x) {
 define <3 x i82> @srem_by_2(<3 x i82> %x, <3 x i82>* %p) {
 ; CHECK-LABEL: @srem_by_2(
 ; CHECK-NEXT:    [[S:%.*]] = srem <3 x i82> [[X:%.*]], <i82 2, i82 2, i82 2>
-; CHECK-NEXT:    store <3 x i82> [[S]], <3 x i82>* [[P:%.*]], align 64
+; CHECK-NEXT:    store <3 x i82> [[S]], <3 x i82>* [[P:%.*]], align 32
 ; CHECK-NEXT:    [[R:%.*]] = and <3 x i82> [[X]], <i82 1, i82 1, i82 1>
 ; CHECK-NEXT:    ret <3 x i82> [[R]]
 ;

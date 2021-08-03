@@ -913,33 +913,35 @@ define amdgpu_kernel void @kern_realign_i1_i1_i1_i1(i1 %arg0, i1 %arg1, i1 %arg2
 
 define amdgpu_kernel void @kern_realign_i1_v3i1(i1 %arg0, <3 x i1> %arg1) #0 {
 ; HSA-LABEL: @kern_realign_i1_v3i1(
-; HSA-NEXT:    [[KERN_REALIGN_I1_V3I1_KERNARG_SEGMENT:%.*]] = call nonnull align 16 dereferenceable(8) i8 addrspace(4)* @llvm.amdgcn.kernarg.segment.ptr()
+; HSA-NEXT:    [[KERN_REALIGN_I1_V3I1_KERNARG_SEGMENT:%.*]] = call nonnull align 16 dereferenceable(4) i8 addrspace(4)* @llvm.amdgcn.kernarg.segment.ptr()
 ; HSA-NEXT:    [[ARG0_KERNARG_OFFSET_ALIGN_DOWN:%.*]] = getelementptr inbounds i8, i8 addrspace(4)* [[KERN_REALIGN_I1_V3I1_KERNARG_SEGMENT]], i64 0
 ; HSA-NEXT:    [[ARG0_KERNARG_OFFSET_ALIGN_DOWN_CAST:%.*]] = bitcast i8 addrspace(4)* [[ARG0_KERNARG_OFFSET_ALIGN_DOWN]] to i32 addrspace(4)*
 ; HSA-NEXT:    [[TMP1:%.*]] = load i32, i32 addrspace(4)* [[ARG0_KERNARG_OFFSET_ALIGN_DOWN_CAST]], align 16, !invariant.load !0
 ; HSA-NEXT:    [[TMP2:%.*]] = trunc i32 [[TMP1]] to i1
-; HSA-NEXT:    [[ARG1_KERNARG_OFFSET_ALIGN_DOWN:%.*]] = getelementptr inbounds i8, i8 addrspace(4)* [[KERN_REALIGN_I1_V3I1_KERNARG_SEGMENT]], i64 4
+; HSA-NEXT:    [[ARG1_KERNARG_OFFSET_ALIGN_DOWN:%.*]] = getelementptr inbounds i8, i8 addrspace(4)* [[KERN_REALIGN_I1_V3I1_KERNARG_SEGMENT]], i64 0
 ; HSA-NEXT:    [[ARG1_KERNARG_OFFSET_ALIGN_DOWN_CAST:%.*]] = bitcast i8 addrspace(4)* [[ARG1_KERNARG_OFFSET_ALIGN_DOWN]] to i32 addrspace(4)*
-; HSA-NEXT:    [[TMP3:%.*]] = load i32, i32 addrspace(4)* [[ARG1_KERNARG_OFFSET_ALIGN_DOWN_CAST]], align 4, !invariant.load !0
-; HSA-NEXT:    [[TMP4:%.*]] = trunc i32 [[TMP3]] to i3
-; HSA-NEXT:    [[ARG1_LOAD:%.*]] = bitcast i3 [[TMP4]] to <3 x i1>
+; HSA-NEXT:    [[TMP3:%.*]] = load i32, i32 addrspace(4)* [[ARG1_KERNARG_OFFSET_ALIGN_DOWN_CAST]], align 16, !invariant.load !0
+; HSA-NEXT:    [[TMP4:%.*]] = lshr i32 [[TMP3]], 8
+; HSA-NEXT:    [[TMP5:%.*]] = trunc i32 [[TMP4]] to i3
+; HSA-NEXT:    [[ARG1_LOAD:%.*]] = bitcast i3 [[TMP5]] to <3 x i1>
 ; HSA-NEXT:    store volatile i1 [[TMP2]], i1 addrspace(1)* undef, align 1
-; HSA-NEXT:    store volatile <3 x i1> [[ARG1_LOAD]], <3 x i1> addrspace(1)* undef, align 4
+; HSA-NEXT:    store volatile <3 x i1> [[ARG1_LOAD]], <3 x i1> addrspace(1)* undef, align 1
 ; HSA-NEXT:    ret void
 ;
 ; MESA-LABEL: @kern_realign_i1_v3i1(
-; MESA-NEXT:    [[KERN_REALIGN_I1_V3I1_KERNARG_SEGMENT:%.*]] = call nonnull align 16 dereferenceable(44) i8 addrspace(4)* @llvm.amdgcn.kernarg.segment.ptr()
+; MESA-NEXT:    [[KERN_REALIGN_I1_V3I1_KERNARG_SEGMENT:%.*]] = call nonnull align 16 dereferenceable(40) i8 addrspace(4)* @llvm.amdgcn.kernarg.segment.ptr()
 ; MESA-NEXT:    [[ARG0_KERNARG_OFFSET_ALIGN_DOWN:%.*]] = getelementptr inbounds i8, i8 addrspace(4)* [[KERN_REALIGN_I1_V3I1_KERNARG_SEGMENT]], i64 36
 ; MESA-NEXT:    [[ARG0_KERNARG_OFFSET_ALIGN_DOWN_CAST:%.*]] = bitcast i8 addrspace(4)* [[ARG0_KERNARG_OFFSET_ALIGN_DOWN]] to i32 addrspace(4)*
 ; MESA-NEXT:    [[TMP1:%.*]] = load i32, i32 addrspace(4)* [[ARG0_KERNARG_OFFSET_ALIGN_DOWN_CAST]], align 4, !invariant.load !0
 ; MESA-NEXT:    [[TMP2:%.*]] = trunc i32 [[TMP1]] to i1
-; MESA-NEXT:    [[ARG1_KERNARG_OFFSET_ALIGN_DOWN:%.*]] = getelementptr inbounds i8, i8 addrspace(4)* [[KERN_REALIGN_I1_V3I1_KERNARG_SEGMENT]], i64 40
+; MESA-NEXT:    [[ARG1_KERNARG_OFFSET_ALIGN_DOWN:%.*]] = getelementptr inbounds i8, i8 addrspace(4)* [[KERN_REALIGN_I1_V3I1_KERNARG_SEGMENT]], i64 36
 ; MESA-NEXT:    [[ARG1_KERNARG_OFFSET_ALIGN_DOWN_CAST:%.*]] = bitcast i8 addrspace(4)* [[ARG1_KERNARG_OFFSET_ALIGN_DOWN]] to i32 addrspace(4)*
-; MESA-NEXT:    [[TMP3:%.*]] = load i32, i32 addrspace(4)* [[ARG1_KERNARG_OFFSET_ALIGN_DOWN_CAST]], align 8, !invariant.load !0
-; MESA-NEXT:    [[TMP4:%.*]] = trunc i32 [[TMP3]] to i3
-; MESA-NEXT:    [[ARG1_LOAD:%.*]] = bitcast i3 [[TMP4]] to <3 x i1>
+; MESA-NEXT:    [[TMP3:%.*]] = load i32, i32 addrspace(4)* [[ARG1_KERNARG_OFFSET_ALIGN_DOWN_CAST]], align 4, !invariant.load !0
+; MESA-NEXT:    [[TMP4:%.*]] = lshr i32 [[TMP3]], 8
+; MESA-NEXT:    [[TMP5:%.*]] = trunc i32 [[TMP4]] to i3
+; MESA-NEXT:    [[ARG1_LOAD:%.*]] = bitcast i3 [[TMP5]] to <3 x i1>
 ; MESA-NEXT:    store volatile i1 [[TMP2]], i1 addrspace(1)* undef, align 1
-; MESA-NEXT:    store volatile <3 x i1> [[ARG1_LOAD]], <3 x i1> addrspace(1)* undef, align 4
+; MESA-NEXT:    store volatile <3 x i1> [[ARG1_LOAD]], <3 x i1> addrspace(1)* undef, align 1
 ; MESA-NEXT:    ret void
 ;
   store volatile i1 %arg0, i1 addrspace(1)* undef

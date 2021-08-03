@@ -197,7 +197,7 @@ define <2 x i4> @shuf_bitcast_insert_use2(<2 x i8> %v, i8 %x, <4 x i4>* %p) {
 ; CHECK-LABEL: @shuf_bitcast_insert_use2(
 ; CHECK-NEXT:    [[I:%.*]] = insertelement <2 x i8> [[V:%.*]], i8 [[X:%.*]], i32 0
 ; CHECK-NEXT:    [[TMP1:%.*]] = bitcast <4 x i4>* [[P:%.*]] to <2 x i8>*
-; CHECK-NEXT:    store <2 x i8> [[I]], <2 x i8>* [[TMP1]], align 4
+; CHECK-NEXT:    store <2 x i8> [[I]], <2 x i8>* [[TMP1]], align 2
 ; CHECK-NEXT:    [[R:%.*]] = bitcast i8 [[X]] to <2 x i4>
 ; CHECK-NEXT:    ret <2 x i4> [[R]]
 ;
