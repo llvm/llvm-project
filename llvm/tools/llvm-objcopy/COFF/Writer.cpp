@@ -426,15 +426,13 @@ Error COFFWriter::patchDebugDirectory() {
       uint8_t *End = Ptr + Dir->Size;
       while (Ptr < End) {
         debug_directory *Debug = reinterpret_cast<debug_directory *>(Ptr);
-        if (!Debug->AddressOfRawData)
-          return createStringError(object_error::parse_failed,
-                                   "debug directory payload outside of "
-                                   "mapped sections not supported");
-        if (Expected<uint32_t> FilePosOrErr =
-                virtualAddressToFileAddress(Debug->AddressOfRawData))
-          Debug->PointerToRawData = *FilePosOrErr;
-        else
-          return FilePosOrErr.takeError();
+        if (Debug->PointerToRawData) {
+          if (Expected<uint32_t> FilePosOrErr =
+                  virtualAddressToFileAddress(Debug->AddressOfRawData))
+            Debug->PointerToRawData = *FilePosOrErr;
+          else
+            return FilePosOrErr.takeError();
+        }
         Ptr += sizeof(debug_directory);
         Offset += sizeof(debug_directory);
       }
