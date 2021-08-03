@@ -2017,8 +2017,35 @@ Instruction *InstCombinerImpl::visitCallInst(CallInst &CI) {
     }
     LLVM_FALLTHROUGH;
   }
+  case Intrinsic::vector_reduce_xor: {
+    if (IID == Intrinsic::vector_reduce_xor) {
+      // Convert vector_reduce_xor(zext(<n x i1>)) to
+      // (ZExtOrTrunc(ctpop(bitcast <n x i1> to iN) & 1)).
+      // Convert vector_reduce_xor(sext(<n x i1>)) to
+      // -(ZExtOrTrunc(ctpop(bitcast <n x i1> to iN) & 1)).
+      // Convert vector_reduce_xor(<n x i1>) to
+      // ZExtOrTrunc(ctpop(bitcast <n x i1> to iN) & 1).
+      Value *Arg = II->getArgOperand(0);
+      Value *Vect;
+      if (match(Arg, m_ZExtOrSExtOrSelf(m_Value(Vect)))) {
+        if (auto *FTy = dyn_cast<FixedVectorType>(Vect->getType()))
+          if (FTy->getElementType() == Builder.getInt1Ty()) {
+            Value *V = Builder.CreateBitCast(
+                Vect, Builder.getIntNTy(FTy->getNumElements()));
+            Value *Res = Builder.CreateUnaryIntrinsic(Intrinsic::ctpop, V);
+            Res = Builder.CreateAnd(Res, ConstantInt::get(Res->getType(), 1));
+            if (Res->getType() != II->getType())
+              Res = Builder.CreateZExtOrTrunc(Res, II->getType());
+            if (Arg != Vect &&
+                cast<Instruction>(Arg)->getOpcode() == Instruction::SExt)
+              Res = Builder.CreateNeg(Res);
+            return replaceInstUsesWith(CI, Res);
+          }
+      }
+    }
+    LLVM_FALLTHROUGH;
+  }
   case Intrinsic::vector_reduce_mul:
-  case Intrinsic::vector_reduce_xor:
   case Intrinsic::vector_reduce_umax:
   case Intrinsic::vector_reduce_umin:
   case Intrinsic::vector_reduce_smax:
