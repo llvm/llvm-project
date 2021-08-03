@@ -688,8 +688,6 @@ private:
                   int64_t Offset) const {
     MCDisassembler *Dis = Checker.Disassembler;
     StringRef SymbolMem = Checker.getSymbolContent(Symbol);
-    if (SymbolMem.size() <= Offset)
-      return false;
     ArrayRef<uint8_t> SymbolBytes(SymbolMem.bytes_begin() + Offset,
                                   SymbolMem.size() - Offset);
 
