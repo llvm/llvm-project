@@ -1074,7 +1074,7 @@ public:
 
       auto *VecTy = cast<VectorType>(U->getType());
       auto *VecSrcTy = cast<VectorType>(U->getOperand(0)->getType());
-      int SubIndex;
+      int NumSubElts, SubIndex;
 
       if (Shuffle->changesLength()) {
         if (Shuffle->isExtractSubvectorMask(SubIndex))
@@ -1082,7 +1082,12 @@ public:
                                            Shuffle->getShuffleMask(), SubIndex,
                                            VecTy);
 
-        // TODO: Identify and add costs for insert subvector, etc.
+        if (Shuffle->isInsertSubvectorMask(NumSubElts, SubIndex))
+          return TargetTTI->getShuffleCost(
+              TTI::SK_InsertSubvector, VecTy, Shuffle->getShuffleMask(),
+              SubIndex,
+              FixedVectorType::get(VecTy->getScalarType(), NumSubElts));
+
         return CostKind == TTI::TCK_RecipThroughput ? -1 : 1;
       }
 
@@ -1109,7 +1114,11 @@ public:
         return TargetTTI->getShuffleCost(TTI::SK_PermuteSingleSrc, VecTy,
                                          Shuffle->getShuffleMask(), 0, nullptr);
 
-      // TODO: Identify and add costs for insert subvector, etc.
+      if (Shuffle->isInsertSubvectorMask(NumSubElts, SubIndex))
+        return TargetTTI->getShuffleCost(
+            TTI::SK_InsertSubvector, VecTy, Shuffle->getShuffleMask(), SubIndex,
+            FixedVectorType::get(VecTy->getScalarType(), NumSubElts));
+
       return TargetTTI->getShuffleCost(TTI::SK_PermuteTwoSrc, VecTy,
                                        Shuffle->getShuffleMask(), 0, nullptr);
     }
