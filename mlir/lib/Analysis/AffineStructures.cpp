@@ -2004,6 +2004,10 @@ FlatAffineConstraints::addLowerOrUpperBound(unsigned pos, AffineMap boundMap,
   }
 
   for (const auto &flatExpr : flatExprs) {
+    // Invalid bound: pos appears among the operands.
+    if (llvm::find(positions, pos) != positions.end())
+      continue;
+
     SmallVector<int64_t, 4> ineq(getNumCols(), 0);
     ineq[pos] = lower ? 1 : -1;
     // Dims and symbols.
