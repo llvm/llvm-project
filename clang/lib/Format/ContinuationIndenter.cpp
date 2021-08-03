@@ -495,7 +495,10 @@ bool ContinuationIndenter::mustBreak(const LineState &State) {
   if (((Current.is(TT_FunctionDeclarationName) &&
         // Don't break before a C# function when no break after return type
         (!Style.isCSharp() ||
-         Style.AlwaysBreakAfterReturnType != FormatStyle::RTBS_None)) ||
+         Style.AlwaysBreakAfterReturnType != FormatStyle::RTBS_None) &&
+        // Don't always break between a JavaScript `function` and the function
+        // name.
+        Style.Language != FormatStyle::LK_JavaScript) ||
        (Current.is(tok::kw_operator) && !Previous.is(tok::coloncolon))) &&
       !Previous.is(tok::kw_template) && State.Stack.back().BreakBeforeParameter)
     return true;
