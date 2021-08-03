@@ -422,6 +422,22 @@ getIntelProcessorTypeAndSubtype(unsigned Family, unsigned Model,
       *Subtype = INTEL_COREI7_ICELAKE_CLIENT;
       break;
 
+    // Tigerlake:
+    case 0x8c:
+    case 0x8d:
+      CPU = "tigerlake";
+      *Type = INTEL_COREI7;
+      *Subtype = INTEL_COREI7_TIGERLAKE;
+      break;
+
+    // Alderlake:
+    case 0x97:
+    case 0x9a:
+      CPU = "alderlake";
+      *Type = INTEL_COREI7;
+      *Subtype = INTEL_COREI7_ALDERLAKE;
+      break;
+
     // Icelake Xeon:
     case 0x6a:
     case 0x6c:
