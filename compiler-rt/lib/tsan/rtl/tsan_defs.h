@@ -184,8 +184,8 @@ class RegionAlloc;
 struct MBlock {
   u64  siz : 48;
   u64  tag : 16;
-  u32  stk;
-  u16  tid;
+  StackID stk;
+  Tid tid;
 };
 
 COMPILER_CHECK(sizeof(MBlock) == 16);
