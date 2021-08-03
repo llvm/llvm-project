@@ -3,6 +3,7 @@
 // RUN: %clangxx_hwasan -mllvm -hwasan-use-after-scope --std=c++11 -O1 %s -o %t && not %run %t 2>&1 | FileCheck %s
 
 // REQUIRES: aarch64-target-arch
+// REQUIRES: stable-runtime
 
 #include <functional>
 
