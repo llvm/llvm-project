@@ -33,6 +33,7 @@
 #include "llvm/IR/IntrinsicsWebAssembly.h"
 #include "llvm/Support/Debug.h"
 #include "llvm/Support/ErrorHandling.h"
+#include "llvm/Support/KnownBits.h"
 #include "llvm/Support/MathExtras.h"
 #include "llvm/Support/raw_ostream.h"
 #include "llvm/Target/TargetOptions.h"
@@ -820,6 +821,30 @@ bool WebAssemblyTargetLowering::getTgtMemIntrinsic(IntrinsicInfo &Info,
     return true;
   default:
     return false;
+  }
+}
+
+void WebAssemblyTargetLowering::computeKnownBitsForTargetNode(
+    const SDValue Op, KnownBits &Known, const APInt &DemandedElts,
+    const SelectionDAG &DAG, unsigned Depth) const {
+  switch (Op.getOpcode()) {
+  default:
+    break;
+  case ISD::INTRINSIC_WO_CHAIN: {
+    unsigned IntNo = cast<ConstantSDNode>(Op.getOperand(0))->getZExtValue();
+    switch (IntNo) {
+    default:
+      break;
+    case Intrinsic::wasm_bitmask: {
+      unsigned BitWidth = Known.getBitWidth();
+      EVT VT = Op.getOperand(1).getSimpleValueType();
+      unsigned PossibleBits = VT.getVectorNumElements();
+      APInt ZeroMask = APInt::getHighBitsSet(BitWidth, BitWidth - PossibleBits);
+      Known.Zero |= ZeroMask;
+      break;
+    }
+    }
+  }
   }
 }
 
