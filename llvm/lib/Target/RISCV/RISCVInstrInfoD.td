@@ -354,8 +354,8 @@ def : Pat<(i64 (bitconvert FPR64:$rs1)), (FMV_X_D FPR64:$rs1)>;
 // Use target specific isd nodes to help us remember the result is sign
 // extended. Matching sext_inreg+fptoui/fptosi may cause the conversion to be
 // duplicated if it has another user that didn't need the sign_extend.
-def : Pat<(riscv_fcvt_w_rv64 FPR64:$rs1),  (FCVT_W_D $rs1, 0b001)>;
-def : Pat<(riscv_fcvt_wu_rv64 FPR64:$rs1), (FCVT_WU_D $rs1, 0b001)>;
+def : Pat<(riscv_fcvt_w_rtz_rv64 FPR64:$rs1),  (FCVT_W_D $rs1, 0b001)>;
+def : Pat<(riscv_fcvt_wu_rtz_rv64 FPR64:$rs1), (FCVT_WU_D $rs1, 0b001)>;
 
 // [u]int32->fp
 def : Pat<(sint_to_fp (i64 (sexti32 (i64 GPR:$rs1)))), (FCVT_D_W $rs1)>;
