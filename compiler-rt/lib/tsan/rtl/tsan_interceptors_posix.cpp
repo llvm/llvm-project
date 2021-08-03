@@ -96,9 +96,6 @@ extern "C" void _exit(int status);
 extern "C" int fileno_unlocked(void *stream);
 extern "C" int dirfd(void *dirp);
 #endif
-#if SANITIZER_GLIBC
-extern "C" int mallopt(int param, int value);
-#endif
 #if SANITIZER_NETBSD
 extern __sanitizer_FILE __sF[];
 #else
@@ -2230,7 +2227,6 @@ static int OnExit(ThreadState *thr) {
 
 struct TsanInterceptorContext {
   ThreadState *thr;
-  const uptr caller_pc;
   const uptr pc;
 };
 
@@ -2271,17 +2267,17 @@ static void HandleRecvmsg(ThreadState *thr, uptr pc,
                     ((TsanInterceptorContext *) ctx)->pc, (uptr) ptr, size, \
                     false)
 
-#define COMMON_INTERCEPTOR_ENTER(ctx, func, ...)      \
-  SCOPED_TSAN_INTERCEPTOR(func, __VA_ARGS__);         \
-  TsanInterceptorContext _ctx = {thr, caller_pc, pc}; \
-  ctx = (void *)&_ctx;                                \
-  (void) ctx;
+#define COMMON_INTERCEPTOR_ENTER(ctx, func, ...) \
+  SCOPED_TSAN_INTERCEPTOR(func, __VA_ARGS__);    \
+  TsanInterceptorContext _ctx = {thr, pc};       \
+  ctx = (void *)&_ctx;                           \
+  (void)ctx;
 
 #define COMMON_INTERCEPTOR_ENTER_NOIGNORE(ctx, func, ...) \
   SCOPED_INTERCEPTOR_RAW(func, __VA_ARGS__);              \
-  TsanInterceptorContext _ctx = {thr, caller_pc, pc};     \
+  TsanInterceptorContext _ctx = {thr, pc};                \
   ctx = (void *)&_ctx;                                    \
-  (void) ctx;
+  (void)ctx;
 
 #define COMMON_INTERCEPTOR_FILE_OPEN(ctx, file, path) \
   if (path)                                           \
@@ -2667,12 +2663,6 @@ void InitializeInterceptors() {
   // We need to setup it early, because functions like dlsym() can call it.
   REAL(memset) = internal_memset;
   REAL(memcpy) = internal_memcpy;
-#endif
-
-  // Instruct libc malloc to consume less memory.
-#if SANITIZER_GLIBC
-  mallopt(1, 0);  // M_MXFAST
-  mallopt(-3, 32*1024);  // M_MMAP_THRESHOLD
 #endif
 
   new(interceptor_ctx()) InterceptorContext();
