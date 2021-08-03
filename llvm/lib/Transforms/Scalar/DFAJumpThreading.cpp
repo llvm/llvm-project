@@ -349,7 +349,7 @@ struct ClonedBlock {
 
 typedef std::deque<BasicBlock *> PathType;
 typedef std::vector<PathType> PathsType;
-typedef std::set<const BasicBlock *> VisitedBlocks;
+typedef SmallPtrSet<const BasicBlock *, 8> VisitedBlocks;
 typedef std::vector<ClonedBlock> CloneList;
 
 // This data structure keeps track of all blocks that have been cloned.  If two
@@ -631,7 +631,7 @@ private:
       }
 
       // We have encountered a cycle, do not get caught in it
-      if (Visited.find(Succ) != Visited.end())
+      if (Visited.contains(Succ))
         continue;
 
       PathsType SuccPaths = paths(Succ, Visited, PathDepth + 1);
