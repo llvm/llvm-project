@@ -10,11 +10,10 @@ define void @foo(i8* %c, float* %d) {
 ; CHECK-NEXT:    [[ARRAYIDX17:%.*]] = getelementptr inbounds i8, i8* [[C]], i64 3
 ; CHECK-NEXT:    [[TMP0:%.*]] = bitcast i8* [[ARRAYIDX4]] to <4 x i8>*
 ; CHECK-NEXT:    [[TMP1:%.*]] = load <4 x i8>, <4 x i8>* [[TMP0]], align 1
-; CHECK-NEXT:    [[SHUFFLE:%.*]] = shufflevector <4 x i8> [[TMP1]], <4 x i8> poison, <4 x i32> <i32 1, i32 2, i32 3, i32 0>
-; CHECK-NEXT:    [[TMP2:%.*]] = zext <4 x i8> [[SHUFFLE]] to <4 x i32>
-; CHECK-NEXT:    [[TMP3:%.*]] = shl nuw nsw <4 x i32> [[TMP2]], <i32 2, i32 2, i32 3, i32 2>
-; CHECK-NEXT:    [[TMP4:%.*]] = and <4 x i32> [[TMP2]], <i32 2, i32 2, i32 3, i32 2>
-; CHECK-NEXT:    [[TMP5:%.*]] = shufflevector <4 x i32> [[TMP3]], <4 x i32> [[TMP4]], <4 x i32> <i32 0, i32 1, i32 6, i32 3>
+; CHECK-NEXT:    [[TMP2:%.*]] = zext <4 x i8> [[TMP1]] to <4 x i32>
+; CHECK-NEXT:    [[TMP3:%.*]] = shl nuw nsw <4 x i32> [[TMP2]], <i32 2, i32 2, i32 2, i32 3>
+; CHECK-NEXT:    [[TMP4:%.*]] = and <4 x i32> [[TMP2]], <i32 2, i32 2, i32 2, i32 3>
+; CHECK-NEXT:    [[TMP5:%.*]] = shufflevector <4 x i32> [[TMP3]], <4 x i32> [[TMP4]], <4 x i32> <i32 1, i32 2, i32 7, i32 0>
 ; CHECK-NEXT:    [[ADD_PTR:%.*]] = getelementptr inbounds float, float* [[D:%.*]], i64 -1
 ; CHECK-NEXT:    [[ADD_PTR37:%.*]] = getelementptr inbounds float, float* [[D]], i64 -2
 ; CHECK-NEXT:    [[ADD_PTR45:%.*]] = getelementptr inbounds float, float* [[D]], i64 -3

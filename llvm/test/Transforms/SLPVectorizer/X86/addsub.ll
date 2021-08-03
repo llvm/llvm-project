@@ -338,32 +338,26 @@ define void @reorder_alt_rightsubTree(double* nocapture %c, double* noalias noca
   ret void
 }
 
-; Dont vectorization of following code for float data type as sub is not commutative-
-;  fc[0] = fb[0]+fa[0];
-;  fc[1] = fa[1]-fb[1];
-;  fc[2] = fa[2]+fb[2];
-;  fc[3] = fb[3]-fa[3];
-;  In the above code we can swap the 1st and 2nd operation as fadd is commutative
-;  but not 2nd or 4th as fsub is not commutative.
-
-define void @no_vec_shuff_reorder() #0 {
-; CHECK-LABEL: @no_vec_shuff_reorder(
+define void @vec_shuff_reorder() #0 {
+; CHECK-LABEL: @vec_shuff_reorder(
 ; CHECK-NEXT:    [[TMP1:%.*]] = load float, float* getelementptr inbounds ([4 x float], [4 x float]* @fb, i32 0, i64 0), align 4
 ; CHECK-NEXT:    [[TMP2:%.*]] = load float, float* getelementptr inbounds ([4 x float], [4 x float]* @fa, i32 0, i64 0), align 4
-; CHECK-NEXT:    [[TMP3:%.*]] = fadd float [[TMP1]], [[TMP2]]
-; CHECK-NEXT:    store float [[TMP3]], float* getelementptr inbounds ([4 x float], [4 x float]* @fc, i32 0, i64 0), align 4
-; CHECK-NEXT:    [[TMP4:%.*]] = load float, float* getelementptr inbounds ([4 x float], [4 x float]* @fa, i32 0, i64 1), align 4
-; CHECK-NEXT:    [[TMP5:%.*]] = load float, float* getelementptr inbounds ([4 x float], [4 x float]* @fb, i32 0, i64 1), align 4
-; CHECK-NEXT:    [[TMP6:%.*]] = fsub float [[TMP4]], [[TMP5]]
-; CHECK-NEXT:    store float [[TMP6]], float* getelementptr inbounds ([4 x float], [4 x float]* @fc, i32 0, i64 1), align 4
-; CHECK-NEXT:    [[TMP7:%.*]] = load float, float* getelementptr inbounds ([4 x float], [4 x float]* @fa, i32 0, i64 2), align 4
-; CHECK-NEXT:    [[TMP8:%.*]] = load float, float* getelementptr inbounds ([4 x float], [4 x float]* @fb, i32 0, i64 2), align 4
-; CHECK-NEXT:    [[TMP9:%.*]] = fadd float [[TMP7]], [[TMP8]]
-; CHECK-NEXT:    store float [[TMP9]], float* getelementptr inbounds ([4 x float], [4 x float]* @fc, i32 0, i64 2), align 4
-; CHECK-NEXT:    [[TMP10:%.*]] = load float, float* getelementptr inbounds ([4 x float], [4 x float]* @fb, i32 0, i64 3), align 4
-; CHECK-NEXT:    [[TMP11:%.*]] = load float, float* getelementptr inbounds ([4 x float], [4 x float]* @fa, i32 0, i64 3), align 4
-; CHECK-NEXT:    [[TMP12:%.*]] = fsub float [[TMP10]], [[TMP11]]
-; CHECK-NEXT:    store float [[TMP12]], float* getelementptr inbounds ([4 x float], [4 x float]* @fc, i32 0, i64 3), align 4
+; CHECK-NEXT:    [[TMP3:%.*]] = load <2 x float>, <2 x float>* bitcast (float* getelementptr inbounds ([4 x float], [4 x float]* @fa, i32 0, i64 1) to <2 x float>*), align 4
+; CHECK-NEXT:    [[TMP4:%.*]] = load <2 x float>, <2 x float>* bitcast (float* getelementptr inbounds ([4 x float], [4 x float]* @fb, i32 0, i64 1) to <2 x float>*), align 4
+; CHECK-NEXT:    [[TMP5:%.*]] = load float, float* getelementptr inbounds ([4 x float], [4 x float]* @fb, i32 0, i64 3), align 4
+; CHECK-NEXT:    [[TMP6:%.*]] = load float, float* getelementptr inbounds ([4 x float], [4 x float]* @fa, i32 0, i64 3), align 4
+; CHECK-NEXT:    [[TMP7:%.*]] = insertelement <4 x float> poison, float [[TMP2]], i32 0
+; CHECK-NEXT:    [[TMP8:%.*]] = shufflevector <2 x float> [[TMP3]], <2 x float> poison, <4 x i32> <i32 0, i32 1, i32 undef, i32 undef>
+; CHECK-NEXT:    [[TMP9:%.*]] = shufflevector <4 x float> [[TMP7]], <4 x float> [[TMP8]], <4 x i32> <i32 0, i32 4, i32 5, i32 3>
+; CHECK-NEXT:    [[TMP10:%.*]] = insertelement <4 x float> [[TMP9]], float [[TMP5]], i32 3
+; CHECK-NEXT:    [[TMP11:%.*]] = insertelement <4 x float> poison, float [[TMP1]], i32 0
+; CHECK-NEXT:    [[TMP12:%.*]] = shufflevector <2 x float> [[TMP4]], <2 x float> poison, <4 x i32> <i32 0, i32 1, i32 undef, i32 undef>
+; CHECK-NEXT:    [[TMP13:%.*]] = shufflevector <4 x float> [[TMP11]], <4 x float> [[TMP12]], <4 x i32> <i32 0, i32 4, i32 5, i32 3>
+; CHECK-NEXT:    [[TMP14:%.*]] = insertelement <4 x float> [[TMP13]], float [[TMP6]], i32 3
+; CHECK-NEXT:    [[TMP15:%.*]] = fadd <4 x float> [[TMP10]], [[TMP14]]
+; CHECK-NEXT:    [[TMP16:%.*]] = fsub <4 x float> [[TMP10]], [[TMP14]]
+; CHECK-NEXT:    [[TMP17:%.*]] = shufflevector <4 x float> [[TMP15]], <4 x float> [[TMP16]], <4 x i32> <i32 0, i32 5, i32 2, i32 7>
+; CHECK-NEXT:    store <4 x float> [[TMP17]], <4 x float>* bitcast ([4 x float]* @fc to <4 x float>*), align 4
 ; CHECK-NEXT:    ret void
 ;
   %1 = load float, float* getelementptr inbounds ([4 x float], [4 x float]* @fb, i32 0, i64 0), align 4
