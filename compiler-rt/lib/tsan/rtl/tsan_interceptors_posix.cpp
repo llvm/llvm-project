@@ -1445,14 +1445,14 @@ TSAN_INTERCEPTOR(int, pthread_rwlock_unlock, void *m) {
 #if !SANITIZER_MAC
 TSAN_INTERCEPTOR(int, pthread_barrier_init, void *b, void *a, unsigned count) {
   SCOPED_TSAN_INTERCEPTOR(pthread_barrier_init, b, a, count);
-  MemoryWrite(thr, pc, (uptr)b, kSizeLog1);
+  MemoryAccess(thr, pc, (uptr)b, 1, kAccessWrite);
   int res = REAL(pthread_barrier_init)(b, a, count);
   return res;
 }
 
 TSAN_INTERCEPTOR(int, pthread_barrier_destroy, void *b) {
   SCOPED_TSAN_INTERCEPTOR(pthread_barrier_destroy, b);
-  MemoryWrite(thr, pc, (uptr)b, kSizeLog1);
+  MemoryAccess(thr, pc, (uptr)b, 1, kAccessWrite);
   int res = REAL(pthread_barrier_destroy)(b);
   return res;
 }
@@ -1460,9 +1460,9 @@ TSAN_INTERCEPTOR(int, pthread_barrier_destroy, void *b) {
 TSAN_INTERCEPTOR(int, pthread_barrier_wait, void *b) {
   SCOPED_TSAN_INTERCEPTOR(pthread_barrier_wait, b);
   Release(thr, pc, (uptr)b);
-  MemoryRead(thr, pc, (uptr)b, kSizeLog1);
+  MemoryAccess(thr, pc, (uptr)b, 1, kAccessRead);
   int res = REAL(pthread_barrier_wait)(b);
-  MemoryRead(thr, pc, (uptr)b, kSizeLog1);
+  MemoryAccess(thr, pc, (uptr)b, 1, kAccessRead);
   if (res == 0 || res == PTHREAD_BARRIER_SERIAL_THREAD) {
     Acquire(thr, pc, (uptr)b);
   }
