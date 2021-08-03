@@ -15,7 +15,6 @@ define i32 @fold_add_freeze_i32() {
   ret i32 %5
 }
 
-; FIXME: X86 scalarization sees through the freeze, but vector types don't.
 define <4 x i32> @fold_add_freeze_v4i32() {
 ; X86-LABEL: fold_add_freeze_v4i32:
 ; X86:       # %bb.0:
@@ -28,9 +27,7 @@ define <4 x i32> @fold_add_freeze_v4i32() {
 ;
 ; X64-LABEL: fold_add_freeze_v4i32:
 ; X64:       # %bb.0:
-; X64-NEXT:    pxor %xmm1, %xmm1
 ; X64-NEXT:    pcmpeqd %xmm0, %xmm0
-; X64-NEXT:    paddd %xmm1, %xmm0
 ; X64-NEXT:    retq
   %1 = insertelement <4 x i32> poison, i32 0, i32 0
   %2 = shufflevector <4 x i32> %1, <4 x i32> poison, <4 x i32> zeroinitializer
