@@ -696,28 +696,28 @@ void MemoryAccessImpl1(ThreadState *thr, uptr addr,
   // threads, which is not enough for the unrolled loop.
 #if SANITIZER_DEBUG
   for (int idx = 0; idx < 4; idx++) {
-#include "tsan_update_shadow_word_inl.h"
+#  include "tsan_update_shadow_word_inl.h"
   }
 #else
   int idx = 0;
-#include "tsan_update_shadow_word_inl.h"
+#  include "tsan_update_shadow_word_inl.h"
   idx = 1;
   if (stored) {
-#include "tsan_update_shadow_word_inl.h"
+#  include "tsan_update_shadow_word_inl.h"
   } else {
-#include "tsan_update_shadow_word_inl.h"
+#  include "tsan_update_shadow_word_inl.h"
   }
   idx = 2;
   if (stored) {
-#include "tsan_update_shadow_word_inl.h"
+#  include "tsan_update_shadow_word_inl.h"
   } else {
-#include "tsan_update_shadow_word_inl.h"
+#  include "tsan_update_shadow_word_inl.h"
   }
   idx = 3;
   if (stored) {
-#include "tsan_update_shadow_word_inl.h"
+#  include "tsan_update_shadow_word_inl.h"
   } else {
-#include "tsan_update_shadow_word_inl.h"
+#  include "tsan_update_shadow_word_inl.h"
   }
 #endif
 

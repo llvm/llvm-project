@@ -10,9 +10,9 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include "sanitizer_common/sanitizer_ptrauth.h"
 #include "tsan_interface.h"
 #include "tsan_rtl.h"
-#include "sanitizer_common/sanitizer_ptrauth.h"
 
 #define CALLERPC ((uptr)__builtin_return_address(0))
 
@@ -100,17 +100,11 @@ void __tsan_vptr_read(void **vptr_p) {
   thr->is_vptr_access = false;
 }
 
-void __tsan_func_entry(void *pc) {
-  FuncEntry(cur_thread(), STRIP_PAC_PC(pc));
-}
+void __tsan_func_entry(void *pc) { FuncEntry(cur_thread(), STRIP_PAC_PC(pc)); }
 
-void __tsan_func_exit() {
-  FuncExit(cur_thread());
-}
+void __tsan_func_exit() { FuncExit(cur_thread()); }
 
-void __tsan_ignore_thread_begin() {
-  ThreadIgnoreBegin(cur_thread(), CALLERPC);
-}
+void __tsan_ignore_thread_begin() { ThreadIgnoreBegin(cur_thread(), CALLERPC); }
 
 void __tsan_ignore_thread_end() { ThreadIgnoreEnd(cur_thread()); }
 
