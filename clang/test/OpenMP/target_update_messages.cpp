@@ -185,3 +185,27 @@ int main(int argc, char **argv) {
 
   return tmain(argc, argv);
 }
+
+template<typename _Tp, int _Nm> struct array {
+  _Tp & operator[](int __n) noexcept;
+};
+
+#pragma omp declare target
+extern array<double, 4> arr;
+#pragma omp end declare target
+
+void copy_host_to_device()
+{
+  #pragma omp target update from(arr)  // expected-no-error
+  arr[0] = 0;
+}
+
+struct FOO; // expected-note {{forward declaration of 'FOO'}}
+extern FOO a;
+template <typename T, int I>
+struct bar {
+  void func() {
+    #pragma omp target map(to: a) // expected-error {{incomplete type 'FOO' where a complete type is required}}
+    foo();
+  }
+};
