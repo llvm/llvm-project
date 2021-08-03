@@ -187,10 +187,6 @@ private:
   DecomposeGEPExpression(const Value *V, const DataLayout &DL,
                          AssumptionCache *AC, DominatorTree *DT);
 
-  static bool isGEPBaseAtNegativeOffset(const GEPOperator *GEPOp,
-      const DecomposedGEP &DecompGEP, const DecomposedGEP &DecompObject,
-      LocationSize ObjectAccessSize);
-
   /// A Heuristic for aliasGEP that searches for a constant offset
   /// between the variables.
   ///
