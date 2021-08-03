@@ -168,24 +168,29 @@ body:             |
   ; CHECK: bb.1:
   ; CHECK:   frame-destroy tPOP_RET 14 /* CC::al */, $noreg, def $r7, def $pc
   ; CHECK: bb.2:
-  ; CHECK:   successors: %bb.3(0x40000000), %bb.5(0x40000000)
+  ; CHECK:   successors: %bb.3(0x40000000), %bb.6(0x40000000)
   ; CHECK:   liveins: $r0, $r1, $r2
   ; CHECK:   $lr = t2WhileLoopStartLR killed renamable $r0, %bb.3, implicit-def dead $cpsr
-  ; CHECK:   t2B %bb.5, 14 /* CC::al */, $noreg
+  ; CHECK:   t2B %bb.6, 14 /* CC::al */, $noreg
   ; CHECK: bb.3:
   ; CHECK:   successors: %bb.1(0x7c000000), %bb.4(0x04000000)
   ; CHECK:   liveins: $lr, $r0, $r1, $r2
-  ; CHECK:   $lr = t2WhileLoopStartLR killed renamable $r0, %bb.1, implicit-def dead $cpsr
-  ; CHECK:   t2B %bb.4, 14 /* CC::al */, $noreg
+  ; CHECK:   t2CMPri renamable $r0, 0, 14 /* CC::al */, $noreg, implicit-def $cpsr
+  ; CHECK:   t2Bcc %bb.1, 0 /* CC::eq */, $cpsr
   ; CHECK: bb.4:
-  ; CHECK:   successors: %bb.1(0x40000000), %bb.4(0x40000000)
-  ; CHECK:   liveins: $lr, $r1, $r2
-  ; CHECK:   renamable $lr = t2LoopEndDec killed renamable $lr, %bb.4, implicit-def dead $cpsr
-  ; CHECK:   t2B %bb.1, 14 /* CC::al */, $noreg
+  ; CHECK:   successors: %bb.5(0x80000000)
+  ; CHECK:   liveins: $r2, $r1, $r0
+  ; CHECK:   $lr = t2DoLoopStart renamable $r0
+  ; CHECK:   t2B %bb.5, 14 /* CC::al */, $noreg
   ; CHECK: bb.5:
-  ; CHECK:   successors: %bb.5(0x40000000), %bb.3(0x40000000)
+  ; CHECK:   successors: %bb.1(0x40000000), %bb.5(0x40000000)
   ; CHECK:   liveins: $lr, $r1, $r2
   ; CHECK:   renamable $lr = t2LoopEndDec killed renamable $lr, %bb.5, implicit-def dead $cpsr
+  ; CHECK:   t2B %bb.1, 14 /* CC::al */, $noreg
+  ; CHECK: bb.6:
+  ; CHECK:   successors: %bb.6(0x40000000), %bb.3(0x40000000)
+  ; CHECK:   liveins: $lr, $r1, $r2
+  ; CHECK:   renamable $lr = t2LoopEndDec killed renamable $lr, %bb.6, implicit-def dead $cpsr
   ; CHECK:   t2B %bb.3, 14 /* CC::al */, $noreg
   bb.0:
     successors: %bb.2(0x80000000)

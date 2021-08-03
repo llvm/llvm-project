@@ -41,6 +41,7 @@ public:
   bool blockIsBefore(MachineBasicBlock *BB, MachineBasicBlock *Other);
   bool fixBackwardsWLS(MachineLoop *ML);
   bool processPostOrderLoops(MachineLoop *ML);
+  bool revertWhileToDo(MachineInstr *WLS, MachineLoop *ML);
 
   void getAnalysisUsage(AnalysisUsage &AU) const override {
     AU.setPreservesCFG();
@@ -80,6 +81,66 @@ static MachineInstr *findWLS(MachineLoop *ML) {
   if (Predecessor->pred_size() == 1)
     return findWLSInBlock(*Predecessor->pred_begin());
   return nullptr;
+}
+
+// Revert a WhileLoopStart to an equivalent DoLoopStart and branch. Note that
+// because of the branches this requires an extra block to be created.
+bool ARMBlockPlacement::revertWhileToDo(MachineInstr *WLS, MachineLoop *ML) {
+  //   lr = t2WhileLoopStartTP r0, r1, TgtBB
+  //   t2Br Ph
+  // ->
+  //   cmp r0, 0
+  //   brcc TgtBB
+  // block2:
+  //   LR = t2DoLoopStartTP r0, r1
+  //   t2Br Ph
+  MachineBasicBlock *Preheader = WLS->getParent();
+  assert(WLS != &Preheader->back());
+  assert(WLS->getNextNode() == &Preheader->back());
+  MachineInstr *Br = &Preheader->back();
+  assert(Br->getOpcode() == ARM::t2B);
+  assert(Br->getOperand(1).getImm() == 14);
+
+  // Clear the kill flags, as the cmp/bcc will no longer kill any operands.
+  WLS->getOperand(1).setIsKill(false);
+  if (WLS->getOpcode() == ARM::t2WhileLoopStartTP)
+    WLS->getOperand(2).setIsKill(false);
+
+  // Create the new block
+  MachineBasicBlock *NewBlock = Preheader->getParent()->CreateMachineBasicBlock(
+      Preheader->getBasicBlock());
+  Preheader->getParent()->insert(++Preheader->getIterator(), NewBlock);
+  // Move the Br to it
+  Br->removeFromParent();
+  NewBlock->insert(NewBlock->end(), Br);
+  // And setup the successors correctly.
+  Preheader->replaceSuccessor(Br->getOperand(0).getMBB(), NewBlock);
+  NewBlock->addSuccessor(Br->getOperand(0).getMBB());
+
+  // Create a new DLS to replace the WLS
+  MachineInstrBuilder MIB =
+      BuildMI(*NewBlock, Br, WLS->getDebugLoc(),
+              TII->get(WLS->getOpcode() == ARM::t2WhileLoopStartTP
+                           ? ARM::t2DoLoopStartTP
+                           : ARM::t2DoLoopStart));
+  MIB.add(WLS->getOperand(0));
+  MIB.add(WLS->getOperand(1));
+  if (WLS->getOpcode() == ARM::t2WhileLoopStartTP)
+    MIB.add(WLS->getOperand(2));
+
+  LLVM_DEBUG(dbgs() << DEBUG_PREFIX
+                    << "Reverting While Loop to Do Loop: " << *WLS << "\n");
+
+  RevertWhileLoopStartLR(WLS, TII, ARM::t2Bcc, true);
+
+  LivePhysRegs LiveRegs;
+  computeAndAddLiveIns(LiveRegs, *NewBlock);
+
+  Preheader->getParent()->RenumberBlocks();
+  BBUtils->computeAllBlockSizes();
+  BBUtils->adjustBBOffsetsAfter(Preheader);
+
+  return true;
 }
 
 /// Checks if loop has a backwards branching WLS, and if possible, fixes it.
@@ -130,7 +191,7 @@ bool ARMBlockPlacement::fixBackwardsWLS(MachineLoop *ML) {
                    << "Can't move Predecessor"
                       "block as it would convert a WLS from forward to a "
                       "backwards branching WLS\n");
-        return false;
+        return revertWhileToDo(WlsInstr, ML);
       }
     }
   }
@@ -225,5 +286,5 @@ void ARMBlockPlacement::moveBasicBlock(MachineBasicBlock *BB,
 
   F->RenumberBlocks();
   BBUtils->computeAllBlockSizes();
-  BBUtils->adjustBBOffsetsAfter(&F->front());
+  BBUtils->adjustBBOffsetsAfter(BB);
 }
