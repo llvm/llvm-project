@@ -18,8 +18,10 @@
 namespace mlir {
 
 class ConversionTarget;
+struct LogicalResult;
 class MLIRContext;
 class Region;
+class RewriterBase;
 class TypeConverter;
 class RewritePatternSet;
 using OwningRewritePatternList = RewritePatternSet;
@@ -27,6 +29,8 @@ class Operation;
 
 namespace scf {
 
+class IfOp;
+class ForOp;
 class ParallelOp;
 class ForOp;
 
@@ -34,6 +38,38 @@ class ForOp;
 /// into one scf.parallel operations. Uses a naive aliasing and dependency
 /// analysis.
 void naivelyFuseParallelOps(Region &region);
+
+/// Rewrite a for loop with bounds/step that potentially do not divide evenly
+/// into a for loop where the step divides the iteration space evenly, followed
+/// by an scf.if for the last (partial) iteration (if any). This transformation
+/// is called "loop peeling".
+///
+/// Other patterns can simplify/canonicalize operations in the body of the loop
+/// and the scf.if. This is beneficial for a wide range of transformations such
+/// as vectorization or loop tiling.
+///
+/// E.g., assuming a lower bound of 0 (for illustration purposes):
+/// ```
+/// scf.for %iv = %c0 to %ub step %c4 {
+///   (loop body)
+/// }
+/// ```
+/// is rewritten into the following pseudo IR:
+/// ```
+/// %newUb = %ub - (%ub mod %c4)
+/// scf.for %iv = %c0 to %newUb step %c4 {
+///   (loop body)
+/// }
+/// scf.if %newUb < %ub {
+///   (loop body)
+/// }
+/// ```
+///
+/// This function rewrites the given scf.for loop in-place and creates a new
+/// scf.if operation (returned via `ifOp`) for the last iteration.
+///
+/// TODO: Simplify affine.min ops inside the new loop/if statement.
+LogicalResult peelForLoop(RewriterBase &b, ForOp forOp, scf::IfOp &ifOp);
 
 /// Tile a parallel loop of the form
 ///   scf.parallel (%i0, %i1) = (%arg0, %arg1) to (%arg2, %arg3)
