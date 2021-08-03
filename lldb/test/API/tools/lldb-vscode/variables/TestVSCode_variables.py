@@ -23,7 +23,7 @@ class TestVSCode_variables(lldbvscode_testcase.VSCodeTestCaseBase):
 
     mydir = TestBase.compute_mydir(__file__)
 
-    def verify_values(self, verify_dict, actual, varref_dict=None):
+    def verify_values(self, verify_dict, actual, varref_dict=None, expression=None):
         if 'equals' in verify_dict:
             verify = verify_dict['equals']
             for key in verify:
@@ -48,9 +48,13 @@ class TestVSCode_variables(lldbvscode_testcase.VSCodeTestCaseBase):
         if hasVariablesReference:
             # Remember variable references in case we want to test further
             # by using the evaluate name.
-            varRef = actual['variablesReference']
+            varRef = actual["variablesReference"]
             if varRef != 0 and varref_dict is not None:
-                varref_dict[actual['evaluateName']] = varRef
+                if expression is None:
+                    evaluateName = actual["evaluateName"]
+                else:
+                    evaluateName = expression
+                varref_dict[evaluateName] = varRef
         if ('hasVariablesReference' in verify_dict and
                 verify_dict['hasVariablesReference']):
             self.assertTrue(hasVariablesReference,
@@ -282,3 +286,111 @@ class TestVSCode_variables(lldbvscode_testcase.VSCodeTestCaseBase):
         self.assertNotIn('x @ main.cpp:21', names)
 
         self.verify_variables(verify_locals, locals)
+
+    @skipIfWindows
+    @skipIfRemote
+    def test_scopes_and_evaluate_expansion(self):
+        """
+        Tests the evaluated expression expands successfully after "scopes" packets
+        and permanent expressions persist.
+        """
+        program = self.getBuildArtifact("a.out")
+        self.build_and_launch(program)
+        source = "main.cpp"
+        breakpoint1_line = line_number(source, "// breakpoint 1")
+        lines = [breakpoint1_line]
+        # Set breakpoint in the thread function so we can step the threads
+        breakpoint_ids = self.set_source_breakpoints(source, lines)
+        self.assertEqual(
+            len(breakpoint_ids), len(lines), "expect correct number of breakpoints"
+        )
+        self.continue_to_breakpoints(breakpoint_ids)
+
+        # Verify locals
+        locals = self.vscode.get_local_variables()
+        buffer_children = make_buffer_verify_dict(0, 32)
+        verify_locals = {
+            "argc": {"equals": {"type": "int", "value": "1"}},
+            "argv": {
+                "equals": {"type": "const char **"},
+                "startswith": {"value": "0x"},
+                "hasVariablesReference": True,
+            },
+            "pt": {
+                "equals": {"type": "PointType"},
+                "hasVariablesReference": True,
+                "children": {
+                    "x": {"equals": {"type": "int", "value": "11"}},
+                    "y": {"equals": {"type": "int", "value": "22"}},
+                    "buffer": {"children": buffer_children},
+                },
+            },
+            "x": {"equals": {"type": "int"}},
+        }
+        self.verify_variables(verify_locals, locals)
+
+        # Evaluate expandable expression twice: once permanent (from repl)
+        # the other temporary (from other UI).
+        expandable_expression = {
+            "name": "pt",
+            "response": {
+                "equals": {"type": "PointType"},
+                "startswith": {"result": "PointType @ 0x"},
+                "hasVariablesReference": True,
+            },
+            "children": {
+                "x": {"equals": {"type": "int", "value": "11"}},
+                "y": {"equals": {"type": "int", "value": "22"}},
+                "buffer": {"children": buffer_children},
+            },
+        }
+
+        # Evaluate from permanent UI.
+        permanent_expr_varref_dict = {}
+        response = self.vscode.request_evaluate(
+            expandable_expression["name"], frameIndex=0, threadId=None, context="repl"
+        )
+        self.verify_values(
+            expandable_expression["response"],
+            response["body"],
+            permanent_expr_varref_dict,
+            expandable_expression["name"],
+        )
+
+        # Evaluate from temporary UI.
+        temporary_expr_varref_dict = {}
+        response = self.vscode.request_evaluate(expandable_expression["name"])
+        self.verify_values(
+            expandable_expression["response"],
+            response["body"],
+            temporary_expr_varref_dict,
+            expandable_expression["name"],
+        )
+
+        # Evaluate locals again.
+        locals = self.vscode.get_local_variables()
+        self.verify_variables(verify_locals, locals)
+
+        # Verify the evaluated expressions before second locals evaluation
+        # can be expanded.
+        var_ref = temporary_expr_varref_dict[expandable_expression["name"]]
+        response = self.vscode.request_variables(var_ref)
+        self.verify_variables(
+            expandable_expression["children"], response["body"]["variables"]
+        )
+
+        # Continue to breakpoint 3, permanent variable should still exist
+        # after resume.
+        breakpoint3_line = line_number(source, "// breakpoint 3")
+        lines = [breakpoint3_line]
+        breakpoint_ids = self.set_source_breakpoints(source, lines)
+        self.assertEqual(
+            len(breakpoint_ids), len(lines), "expect correct number of breakpoints"
+        )
+        self.continue_to_breakpoints(breakpoint_ids)
+
+        var_ref = permanent_expr_varref_dict[expandable_expression["name"]]
+        response = self.vscode.request_variables(var_ref)
+        self.verify_variables(
+            expandable_expression["children"], response["body"]["variables"]
+        )
