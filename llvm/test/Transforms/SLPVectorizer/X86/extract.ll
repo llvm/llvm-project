@@ -30,11 +30,11 @@ define void @fextr1(double* %ptr) {
 ; CHECK-LABEL: @fextr1(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[LD:%.*]] = load <2 x double>, <2 x double>* undef, align 16
-; CHECK-NEXT:    [[SHUFFLE:%.*]] = shufflevector <2 x double> [[LD]], <2 x double> poison, <2 x i32> <i32 1, i32 0>
 ; CHECK-NEXT:    [[P1:%.*]] = getelementptr inbounds double, double* [[PTR:%.*]], i64 0
-; CHECK-NEXT:    [[TMP0:%.*]] = fadd <2 x double> [[SHUFFLE]], <double 3.400000e+00, double 1.200000e+00>
+; CHECK-NEXT:    [[TMP0:%.*]] = fadd <2 x double> [[LD]], <double 1.200000e+00, double 3.400000e+00>
+; CHECK-NEXT:    [[SHUFFLE:%.*]] = shufflevector <2 x double> [[TMP0]], <2 x double> poison, <2 x i32> <i32 1, i32 0>
 ; CHECK-NEXT:    [[TMP1:%.*]] = bitcast double* [[P1]] to <2 x double>*
-; CHECK-NEXT:    store <2 x double> [[TMP0]], <2 x double>* [[TMP1]], align 4
+; CHECK-NEXT:    store <2 x double> [[SHUFFLE]], <2 x double>* [[TMP1]], align 4
 ; CHECK-NEXT:    ret void
 ;
 entry:
