@@ -243,6 +243,12 @@ Changes to the LLVM tools
 Changes to LLDB
 ---------------------------------
 
+* LLDB now supports debugging programs on AArch64 Linux that use memory tagging (MTE).
+* Added ``memory tag read`` and ``memory tag write`` commands.
+* The ``memory region`` command will note when a region has memory tagging enabled.
+* Synchronous and asynchronous tag faults are recognised.
+* Synchronous tag faults have memory tag annotations in addition to the usual fault address.
+
 Changes to Sanitizers
 ---------------------
 
