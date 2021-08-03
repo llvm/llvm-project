@@ -1647,7 +1647,7 @@ bool ARMExpandPseudo::ExpandCMP_SWAP(MachineBasicBlock &MBB,
            "CMP_SWAP not expected to be custom expanded for Thumb1");
     assert((UxtOp == 0 || UxtOp == ARM::tUXTB || UxtOp == ARM::tUXTH) &&
            "ARMv8-M.baseline does not have t2UXTB/t2UXTH");
-    assert(ARM::tGPRRegClass.contains(DesiredReg) &&
+    assert((UxtOp == 0 || ARM::tGPRRegClass.contains(DesiredReg)) &&
            "DesiredReg used for UXT op must be tGPR");
   }
 
