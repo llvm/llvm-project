@@ -29,7 +29,7 @@ def SparseTensor_Dialect : Dialect {
     sparse code automatically was pioneered for dense linear algebra by
     [Bik96] in MT1 (see https://www.aartbik.com/sparse.php) and formalized
     to tensor algebra by [Kjolstad17,Kjolstad20] in the Sparse Tensor
-    Algebra Compiler (TACO) project (see http://tensor-compiler.org/).
+    Algebra Compiler (TACO) project (see http://tensor-compiler.org).
 
     The MLIR implementation closely follows the "sparse iteration theory"
     that forms the foundation of TACO. A rewriting rule is applied to each
