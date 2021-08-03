@@ -297,8 +297,17 @@ struct LinalgDetensorize : public LinalgDetensorizeBase<LinalgDetensorize> {
                  DenseSet<BlockArgument> &blockArgsToDetensor) override {
       SmallVector<Value> workList;
 
-      func.walk(
-          [&](CondBranchOp condBr) { workList.push_back(condBr.condition()); });
+      func.walk([&](CondBranchOp condBr) {
+        for (auto operand : condBr.getOperands()) {
+          workList.push_back(operand);
+        }
+      });
+
+      func.walk([&](BranchOp br) {
+        for (auto operand : br.getOperands()) {
+          workList.push_back(operand);
+        }
+      });
 
       DenseSet<Value> visitedValues;
       DenseSet<Operation *> visitedOps;
