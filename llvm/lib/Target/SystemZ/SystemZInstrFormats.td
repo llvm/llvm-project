@@ -5365,6 +5365,10 @@ multiclass CompareMemorySS<string mnemonic, bits<8> opcode,
                                    imm64:$length, GR64:$count256),
                       [(set CC, (loop bdaddr12only:$dest, bdaddr12only:$src,
                                       imm64:$length, GR64:$count256))]>;
+    def LoopVarLen : Pseudo<(outs), (ins bdaddr12only:$dest, bdaddr12only:$src,
+                                         GR64:$length, GR64:$count256),
+                            [(set CC, (loop bdaddr12only:$dest, bdaddr12only:$src,
+                                            GR64:$length, GR64:$count256))]>;
   }
 }
 
