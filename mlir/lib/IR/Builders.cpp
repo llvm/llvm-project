@@ -53,6 +53,8 @@ IndexType Builder::getIndexType() { return IndexType::get(context); }
 
 IntegerType Builder::getI1Type() { return IntegerType::get(context, 1); }
 
+IntegerType Builder::getI8Type() { return IntegerType::get(context, 8); }
+
 IntegerType Builder::getI32Type() { return IntegerType::get(context, 32); }
 
 IntegerType Builder::getI64Type() { return IntegerType::get(context, 64); }
