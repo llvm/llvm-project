@@ -560,12 +560,13 @@ void FlatAffineConstraints::convertLoopIVSymbolsToDims() {
   }
 }
 
-void FlatAffineConstraints::addInductionVarOrTerminalSymbol(Value id) {
+void FlatAffineConstraints::addInductionVarOrTerminalSymbol(
+    Value id, bool allowNonTerminal) {
   if (containsId(id))
     return;
 
   // Caller is expected to fully compose map/operands if necessary.
-  assert((isTopLevelValue(id) || isForInductionVar(id)) &&
+  assert((allowNonTerminal || isTopLevelValue(id) || isForInductionVar(id)) &&
          "non-terminal symbol / loop IV expected");
   // Outer loop IVs could be used in forOp's bounds.
   if (auto loop = getForInductionVarOwner(id)) {
@@ -1944,10 +1945,9 @@ void FlatAffineConstraints::getSliceBounds(unsigned offset, unsigned num,
   }
 }
 
-LogicalResult
-FlatAffineConstraints::addLowerOrUpperBound(unsigned pos, AffineMap boundMap,
-                                            ValueRange boundOperands, bool eq,
-                                            bool lower) {
+LogicalResult FlatAffineConstraints::addLowerOrUpperBound(
+    unsigned pos, AffineMap boundMap, ValueRange boundOperands, bool eq,
+    bool lower, bool composeMapAndOperands) {
   assert(pos < getNumDimAndSymbolIds() && "invalid position");
   // Equality follows the logic of lower bound except that we add an equality
   // instead of an inequality.
@@ -1959,11 +1959,13 @@ FlatAffineConstraints::addLowerOrUpperBound(unsigned pos, AffineMap boundMap,
   // transitively get to terminal symbols or loop IVs.
   auto map = boundMap;
   SmallVector<Value, 4> operands(boundOperands.begin(), boundOperands.end());
-  fullyComposeAffineMapAndOperands(&map, &operands);
+  if (composeMapAndOperands)
+    fullyComposeAffineMapAndOperands(&map, &operands);
   map = simplifyAffineMap(map);
   canonicalizeMapAndOperands(&map, &operands);
   for (auto operand : operands)
-    addInductionVarOrTerminalSymbol(operand);
+    addInductionVarOrTerminalSymbol(
+        operand, /*allowNonTerminal=*/!composeMapAndOperands);
 
   FlatAffineConstraints localVarCst;
   std::vector<SmallVector<int64_t, 8>> flatExprs;
