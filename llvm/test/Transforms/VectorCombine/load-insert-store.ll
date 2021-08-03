@@ -254,8 +254,24 @@ entry:
 
 declare void @llvm.assume(i1)
 
-define void @insert_store_nonconst_index_known_valid_by_and(<16 x i8>* %q, i8 zeroext %s, i32 %idx) {
-; CHECK-LABEL: @insert_store_nonconst_index_known_valid_by_and(
+define void @insert_store_nonconst_index_known_noundef_and_valid_by_and(<16 x i8>* %q, i8 zeroext %s, i32 noundef %idx) {
+; CHECK-LABEL: @insert_store_nonconst_index_known_noundef_and_valid_by_and(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[IDX_CLAMPED:%.*]] = and i32 [[IDX:%.*]], 7
+; CHECK-NEXT:    [[TMP0:%.*]] = getelementptr inbounds <16 x i8>, <16 x i8>* [[Q:%.*]], i32 0, i32 [[IDX_CLAMPED]]
+; CHECK-NEXT:    store i8 [[S:%.*]], i8* [[TMP0]], align 1
+; CHECK-NEXT:    ret void
+;
+entry:
+  %0 = load <16 x i8>, <16 x i8>* %q
+  %idx.clamped = and i32 %idx, 7
+  %vecins = insertelement <16 x i8> %0, i8 %s, i32 %idx.clamped
+  store <16 x i8> %vecins, <16 x i8>* %q
+  ret void
+}
+
+define void @insert_store_nonconst_index_known_valid_by_and_but_may_be_poison(<16 x i8>* %q, i8 zeroext %s, i32 %idx) {
+; CHECK-LABEL: @insert_store_nonconst_index_known_valid_by_and_but_may_be_poison(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[IDX_CLAMPED:%.*]] = and i32 [[IDX:%.*]], 7
 ; CHECK-NEXT:    [[TMP0:%.*]] = getelementptr inbounds <16 x i8>, <16 x i8>* [[Q:%.*]], i32 0, i32 [[IDX_CLAMPED]]
@@ -287,8 +303,24 @@ entry:
   ret void
 }
 
-define void @insert_store_nonconst_index_known_valid_by_urem(<16 x i8>* %q, i8 zeroext %s, i32 %idx) {
-; CHECK-LABEL: @insert_store_nonconst_index_known_valid_by_urem(
+define void @insert_store_nonconst_index_known_noundef_and_valid_by_urem(<16 x i8>* %q, i8 zeroext %s, i32 noundef %idx) {
+; CHECK-LABEL: @insert_store_nonconst_index_known_noundef_and_valid_by_urem(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[IDX_CLAMPED:%.*]] = urem i32 [[IDX:%.*]], 16
+; CHECK-NEXT:    [[TMP0:%.*]] = getelementptr inbounds <16 x i8>, <16 x i8>* [[Q:%.*]], i32 0, i32 [[IDX_CLAMPED]]
+; CHECK-NEXT:    store i8 [[S:%.*]], i8* [[TMP0]], align 1
+; CHECK-NEXT:    ret void
+;
+entry:
+  %0 = load <16 x i8>, <16 x i8>* %q
+  %idx.clamped = urem i32 %idx, 16
+  %vecins = insertelement <16 x i8> %0, i8 %s, i32 %idx.clamped
+  store <16 x i8> %vecins, <16 x i8>* %q
+  ret void
+}
+
+define void @insert_store_nonconst_index_known_valid_by_urem_but_may_be_poison(<16 x i8>* %q, i8 zeroext %s, i32 %idx) {
+; CHECK-LABEL: @insert_store_nonconst_index_known_valid_by_urem_but_may_be_poison(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[IDX_CLAMPED:%.*]] = urem i32 [[IDX:%.*]], 16
 ; CHECK-NEXT:    [[TMP0:%.*]] = getelementptr inbounds <16 x i8>, <16 x i8>* [[Q:%.*]], i32 0, i32 [[IDX_CLAMPED]]
