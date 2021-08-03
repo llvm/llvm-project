@@ -95,7 +95,7 @@ private:
 
   struct SignalInfo {
     std::list<Callback> callbacks;
-#if HAVE_SIGACTION
+#ifndef SIGNAL_POLLING_UNSUPPORTED
     struct sigaction old_action;
 #endif
     bool was_blocked : 1;

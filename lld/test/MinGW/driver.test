@@ -161,6 +161,7 @@ NO-DISABLE-DYNAMICBASE-NOT: -dynamicbase:no
 
 RUN: ld.lld -### -m i386pep foo.o --image-base 0x1230000 2>&1 | FileCheck -check-prefix IMAGE-BASE %s
 RUN: ld.lld -### -m i386pep foo.o -image-base 0x1230000 2>&1 | FileCheck -check-prefix IMAGE-BASE %s
+RUN: ld.lld -### -m i386pep foo.o --image-base=0x1230000 2>&1 | FileCheck -check-prefix IMAGE-BASE %s
 IMAGE-BASE: -base:0x1230000
 
 RUN: ld.lld -### -m i386pep foo.o 2>&1 | FileCheck -check-prefix NO-GC-SECTIONS %s
@@ -180,6 +181,7 @@ ICF-NONE: -opt:noicf
 
 RUN: ld.lld -### -m i386pep foo.o --icf=all 2>&1 | FileCheck -check-prefix ICF %s
 RUN: ld.lld -### -m i386pep foo.o -icf=all 2>&1 | FileCheck -check-prefix ICF %s
+RUN: ld.lld -### -m i386pep foo.o --icf all 2>&1 | FileCheck -check-prefix ICF %s
 ICF: -opt:icf
 
 RUN: ld.lld -### -m i386pep --start-group foo.o --end-group 2> /dev/null

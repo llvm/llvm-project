@@ -91,8 +91,8 @@ set(TSAN_HEADERS
   rtl/tsan_ilist.h
   rtl/tsan_interceptors.h
   rtl/tsan_interface.h
+  rtl/tsan_interface.inc
   rtl/tsan_interface_ann.h
-  rtl/tsan_interface_inl.h
   rtl/tsan_interface_java.h
   rtl/tsan_mman.h
   rtl/tsan_mutexset.h
@@ -105,7 +105,7 @@ set(TSAN_HEADERS
   rtl/tsan_symbolize.h
   rtl/tsan_sync.h
   rtl/tsan_trace.h
-  rtl/tsan_update_shadow_word_inl.h
+  rtl/tsan_update_shadow_word.inc
   rtl/tsan_vector_clock.h
   )
 

@@ -188,7 +188,7 @@ multiclass VOP2bInst <string opName,
       let Uses = !if(useSGPRInput, [VCC, EXEC], [EXEC]), Defs = [VCC] in {
         def _e32 : VOP2_Pseudo <opName, P, VOPPatOrNull<node,P>.ret>,
                    Commutable_REV<revOp#"_e32", !eq(revOp, opName)> {
-          let usesCustomInserter = !eq(P.NumSrcArgs, 2);
+          let usesCustomInserter = true;
         }
 
         foreach _ = BoolToList<P.HasExtSDWA>.ret in

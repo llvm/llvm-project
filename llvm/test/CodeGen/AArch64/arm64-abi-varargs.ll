@@ -7,7 +7,7 @@
 define void @fn9(i32* %a1, i32 %a2, i32 %a3, i32 %a4, i32 %a5, i32 %a6, i32 %a7, i32 %a8, i32 %a9, ...) nounwind noinline ssp {
 ; CHECK-LABEL: fn9:
 ; CHECK:       ; %bb.0:
-; CHECK-NEXT:    sub sp, sp, #64 ; =64
+; CHECK-NEXT:    sub sp, sp, #64
 ; CHECK-NEXT:    ldr w8, [sp, #64]
 ; CHECK-NEXT:    stp w2, w1, [sp, #52]
 ; CHECK-NEXT:    stp w4, w3, [sp, #44]
@@ -17,12 +17,12 @@ define void @fn9(i32* %a1, i32 %a2, i32 %a3, i32 %a4, i32 %a5, i32 %a6, i32 %a7,
 ; CHECK-NEXT:    ldr w9, [sp, #72]
 ; CHECK-NEXT:    ldr w8, [sp, #80]
 ; CHECK-NEXT:    stp w8, w9, [sp, #16]
-; CHECK-NEXT:    add x8, sp, #72 ; =72
-; CHECK-NEXT:    add x8, x8, #24 ; =24
+; CHECK-NEXT:    add x8, sp, #72
+; CHECK-NEXT:    add x8, x8, #24
 ; CHECK-NEXT:    str x8, [sp, #24]
 ; CHECK-NEXT:    ldr w8, [sp, #88]
 ; CHECK-NEXT:    str w8, [sp, #12]
-; CHECK-NEXT:    add sp, sp, #64 ; =64
+; CHECK-NEXT:    add sp, sp, #64
 ; CHECK-NEXT:    ret
   %1 = alloca i32, align 4
   %2 = alloca i32, align 4
@@ -62,7 +62,7 @@ declare void @llvm.va_start(i8*) nounwind
 define i32 @main() nounwind ssp {
 ; CHECK-LABEL: main:
 ; CHECK:       ; %bb.0:
-; CHECK-NEXT:    sub sp, sp, #96 ; =96
+; CHECK-NEXT:    sub sp, sp, #96
 ; CHECK-NEXT:    stp x29, x30, [sp, #80] ; 16-byte Folded Spill
 ; CHECK-NEXT:    mov w9, #1
 ; CHECK-NEXT:    mov w8, #2
@@ -85,7 +85,7 @@ define i32 @main() nounwind ssp {
 ; CHECK-NEXT:    stp x10, x11, [sp, #16]
 ; CHECK-NEXT:    str x9, [sp, #8]
 ; CHECK-NEXT:    str w8, [sp]
-; CHECK-NEXT:    add x0, sp, #76 ; =76
+; CHECK-NEXT:    add x0, sp, #76
 ; CHECK-NEXT:    mov w1, #2
 ; CHECK-NEXT:    mov w2, #3
 ; CHECK-NEXT:    mov w3, #4
@@ -96,7 +96,7 @@ define i32 @main() nounwind ssp {
 ; CHECK-NEXT:    bl _fn9
 ; CHECK-NEXT:    mov w0, #0
 ; CHECK-NEXT:    ldp x29, x30, [sp, #80] ; 16-byte Folded Reload
-; CHECK-NEXT:    add sp, sp, #96 ; =96
+; CHECK-NEXT:    add sp, sp, #96
 ; CHECK-NEXT:    ret
   %a1 = alloca i32, align 4
   %a2 = alloca i32, align 4
@@ -143,13 +143,13 @@ define i32 @main() nounwind ssp {
 define void @foo(i8* %fmt, ...) nounwind {
 ; CHECK-LABEL: foo:
 ; CHECK:       ; %bb.0: ; %entry
-; CHECK-NEXT:    sub sp, sp, #48 ; =48
+; CHECK-NEXT:    sub sp, sp, #48
 ; CHECK-NEXT:    ldr w8, [sp, #48]
 ; CHECK-NEXT:    str w8, [sp, #28]
-; CHECK-NEXT:    add x8, sp, #48 ; =48
-; CHECK-NEXT:    add x8, x8, #23 ; =23
+; CHECK-NEXT:    add x8, sp, #48
+; CHECK-NEXT:    add x8, x8, #23
 ; CHECK-NEXT:    and x8, x8, #0xfffffffffffffff0
-; CHECK-NEXT:    add x9, x8, #16 ; =16
+; CHECK-NEXT:    add x9, x8, #16
 ; CHECK-NEXT:    stp x9, x0, [sp, #32]
 ; CHECK-NEXT:    ldr q0, [x8]
 ; CHECK-NEXT:    str q0, [sp], #48
@@ -172,7 +172,7 @@ entry:
 define void @bar(i32 %x, <4 x i32> %y) nounwind {
 ; CHECK-LABEL: bar:
 ; CHECK:       ; %bb.0: ; %entry
-; CHECK-NEXT:    sub sp, sp, #80 ; =80
+; CHECK-NEXT:    sub sp, sp, #80
 ; CHECK-NEXT:    stp x29, x30, [sp, #64] ; 16-byte Folded Spill
 ; CHECK-NEXT:    ; kill: def $w0 killed $w0 def $x0
 ; CHECK-NEXT:    str w0, [sp, #60]
@@ -184,7 +184,7 @@ define void @bar(i32 %x, <4 x i32> %y) nounwind {
 ; CHECK-NEXT:    add x0, x0, l_.str@PAGEOFF
 ; CHECK-NEXT:    bl _foo
 ; CHECK-NEXT:    ldp x29, x30, [sp, #64] ; 16-byte Folded Reload
-; CHECK-NEXT:    add sp, sp, #80 ; =80
+; CHECK-NEXT:    add sp, sp, #80
 ; CHECK-NEXT:    ret
 ; CHECK-NEXT:    .loh AdrpAdd Lloh0, Lloh1
 entry:
@@ -205,13 +205,13 @@ entry:
 define void @foo2(i8* %fmt, ...) nounwind {
 ; CHECK-LABEL: foo2:
 ; CHECK:       ; %bb.0: ; %entry
-; CHECK-NEXT:    sub sp, sp, #48 ; =48
+; CHECK-NEXT:    sub sp, sp, #48
 ; CHECK-NEXT:    ldr w8, [sp, #48]
 ; CHECK-NEXT:    str w8, [sp, #28]
-; CHECK-NEXT:    add x8, sp, #48 ; =48
-; CHECK-NEXT:    add x8, x8, #23 ; =23
+; CHECK-NEXT:    add x8, sp, #48
+; CHECK-NEXT:    add x8, x8, #23
 ; CHECK-NEXT:    and x8, x8, #0xfffffffffffffff0
-; CHECK-NEXT:    add x9, x8, #16 ; =16
+; CHECK-NEXT:    add x9, x8, #16
 ; CHECK-NEXT:    stp x9, x0, [sp, #32]
 ; CHECK-NEXT:    ldr q0, [x8]
 ; CHECK-NEXT:    str q0, [sp], #48
@@ -244,7 +244,7 @@ declare void @llvm.memcpy.p0i8.p0i8.i64(i8* nocapture, i8* nocapture, i64, i1) n
 define void @bar2(i32 %x, i128 %s41.coerce) nounwind {
 ; CHECK-LABEL: bar2:
 ; CHECK:       ; %bb.0: ; %entry
-; CHECK-NEXT:    sub sp, sp, #80 ; =80
+; CHECK-NEXT:    sub sp, sp, #80
 ; CHECK-NEXT:    stp x29, x30, [sp, #64] ; 16-byte Folded Spill
 ; CHECK-NEXT:    ; kill: def $w0 killed $w0 def $x0
 ; CHECK-NEXT:    str w0, [sp, #60]
@@ -257,7 +257,7 @@ define void @bar2(i32 %x, i128 %s41.coerce) nounwind {
 ; CHECK-NEXT:    add x0, x0, l_.str@PAGEOFF
 ; CHECK-NEXT:    bl _foo2
 ; CHECK-NEXT:    ldp x29, x30, [sp, #64] ; 16-byte Folded Reload
-; CHECK-NEXT:    add sp, sp, #80 ; =80
+; CHECK-NEXT:    add sp, sp, #80
 ; CHECK-NEXT:    ret
 ; CHECK-NEXT:    .loh AdrpAdd Lloh2, Lloh3
 entry:

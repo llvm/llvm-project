@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef LLVM_TEXTAPI_MACHO_SYMBOL_H
-#define LLVM_TEXTAPI_MACHO_SYMBOL_H
+#ifndef LLVM_TEXTAPI_SYMBOL_H
+#define LLVM_TEXTAPI_SYMBOL_H
 
 #include "llvm/ADT/BitmaskEnum.h"
 #include "llvm/ADT/StringRef.h"
@@ -132,4 +132,4 @@ private:
 } // end namespace MachO.
 } // end namespace llvm.
 
-#endif // LLVM_TEXTAPI_MACHO_SYMBOL_H
+#endif // LLVM_TEXTAPI_SYMBOL_H

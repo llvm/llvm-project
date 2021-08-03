@@ -17,6 +17,7 @@
 #include "mlir/Support/TypeID.h"
 
 #include <map>
+#include <tuple>
 
 namespace mlir {
 class DialectAsmParser;
@@ -285,7 +286,7 @@ class DialectRegistry {
     SmallVector<std::pair<TypeID, DialectInterfaceAllocatorFunction>, 2>
         dialectInterfaces;
     /// Attribute/Operation/Type interfaces.
-    SmallVector<std::pair<TypeID, ObjectInterfaceAllocatorFunction>, 2>
+    SmallVector<std::tuple<TypeID, TypeID, ObjectInterfaceAllocatorFunction>, 2>
         objectInterfaces;
   };
 
@@ -367,7 +368,8 @@ public:
   void addOpInterface() {
     StringRef opName = OpTy::getOperationName();
     StringRef dialectName = opName.split('.').first;
-    addObjectInterface(dialectName, ModelTy::Interface::getInterfaceID(),
+    addObjectInterface(dialectName, TypeID::get<OpTy>(),
+                       ModelTy::Interface::getInterfaceID(),
                        [](MLIRContext *context) {
                          OpTy::template attachInterface<ModelTy>(*context);
                        });
@@ -401,14 +403,16 @@ private:
 
   /// Add an attribute/operation/type interface constructible with the given
   /// allocation function to the dialect identified by its namespace.
-  void addObjectInterface(StringRef dialectName, TypeID interfaceTypeID,
+  void addObjectInterface(StringRef dialectName, TypeID objectID,
+                          TypeID interfaceTypeID,
                           ObjectInterfaceAllocatorFunction allocator);
 
   /// Add an external model for an attribute/type interface to the dialect
   /// identified by its namespace.
   template <typename ObjectTy, typename ModelTy>
   void addStorageUserInterface(StringRef dialectName) {
-    addObjectInterface(dialectName, ModelTy::Interface::getInterfaceID(),
+    addObjectInterface(dialectName, TypeID::get<ObjectTy>(),
+                       ModelTy::Interface::getInterfaceID(),
                        [](MLIRContext *context) {
                          ObjectTy::template attachInterface<ModelTy>(*context);
                        });

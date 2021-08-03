@@ -22,8 +22,8 @@
 // CHECK-NOT: 2.dwo,
 // CHECK: (lldb) image lookup
 // CHECK-NOT: 2.dwo,
-// CHECK: CompileUnit: id = {0x00000000}, file =
-// CHECK-SAME: language = "c99"
+// CHECK: CompileUnit: id =
+// CHECK-SAME: /dwarf5-lazy-dwo.c", language = "c99"
 // CHECK-NOT: 2.dwo,
 
 #ifdef ONE

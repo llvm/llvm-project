@@ -10,10 +10,10 @@ define i8 @unsigned_sat_constant_i8_using_min(i8 %x) {
 ; CHECK-LABEL: unsigned_sat_constant_i8_using_min:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    and w8, w0, #0xff
-; CHECK-NEXT:    cmp w8, #213 // =213
+; CHECK-NEXT:    cmp w8, #213
 ; CHECK-NEXT:    mov w8, #-43
 ; CHECK-NEXT:    csel w8, w0, w8, lo
-; CHECK-NEXT:    add w0, w8, #42 // =42
+; CHECK-NEXT:    add w0, w8, #42
 ; CHECK-NEXT:    ret
   %c = icmp ult i8 %x, -43
   %s = select i1 %c, i8 %x, i8 -43
@@ -25,7 +25,7 @@ define i8 @unsigned_sat_constant_i8_using_cmp_sum(i8 %x) {
 ; CHECK-LABEL: unsigned_sat_constant_i8_using_cmp_sum:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    and w8, w0, #0xff
-; CHECK-NEXT:    add w8, w8, #42 // =42
+; CHECK-NEXT:    add w8, w8, #42
 ; CHECK-NEXT:    tst w8, #0x100
 ; CHECK-NEXT:    csinv w0, w8, wzr, eq
 ; CHECK-NEXT:    ret
@@ -39,8 +39,8 @@ define i8 @unsigned_sat_constant_i8_using_cmp_notval(i8 %x) {
 ; CHECK-LABEL: unsigned_sat_constant_i8_using_cmp_notval:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    and w8, w0, #0xff
-; CHECK-NEXT:    add w9, w0, #42 // =42
-; CHECK-NEXT:    cmp w8, #213 // =213
+; CHECK-NEXT:    add w9, w0, #42
+; CHECK-NEXT:    cmp w8, #213
 ; CHECK-NEXT:    csinv w0, w9, wzr, ls
 ; CHECK-NEXT:    ret
   %a = add i8 %x, 42
@@ -56,7 +56,7 @@ define i16 @unsigned_sat_constant_i16_using_min(i16 %x) {
 ; CHECK-NEXT:    cmp w8, w0, uxth
 ; CHECK-NEXT:    mov w8, #-43
 ; CHECK-NEXT:    csel w8, w0, w8, hi
-; CHECK-NEXT:    add w0, w8, #42 // =42
+; CHECK-NEXT:    add w0, w8, #42
 ; CHECK-NEXT:    ret
   %c = icmp ult i16 %x, -43
   %s = select i1 %c, i16 %x, i16 -43
@@ -68,7 +68,7 @@ define i16 @unsigned_sat_constant_i16_using_cmp_sum(i16 %x) {
 ; CHECK-LABEL: unsigned_sat_constant_i16_using_cmp_sum:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    and w8, w0, #0xffff
-; CHECK-NEXT:    add w8, w8, #42 // =42
+; CHECK-NEXT:    add w8, w8, #42
 ; CHECK-NEXT:    tst w8, #0x10000
 ; CHECK-NEXT:    csinv w0, w8, wzr, eq
 ; CHECK-NEXT:    ret
@@ -82,7 +82,7 @@ define i16 @unsigned_sat_constant_i16_using_cmp_notval(i16 %x) {
 ; CHECK-LABEL: unsigned_sat_constant_i16_using_cmp_notval:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    mov w9, #65493
-; CHECK-NEXT:    add w8, w0, #42 // =42
+; CHECK-NEXT:    add w8, w0, #42
 ; CHECK-NEXT:    cmp w9, w0, uxth
 ; CHECK-NEXT:    csinv w0, w8, wzr, hs
 ; CHECK-NEXT:    ret
@@ -95,10 +95,10 @@ define i16 @unsigned_sat_constant_i16_using_cmp_notval(i16 %x) {
 define i32 @unsigned_sat_constant_i32_using_min(i32 %x) {
 ; CHECK-LABEL: unsigned_sat_constant_i32_using_min:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    cmn w0, #43 // =43
+; CHECK-NEXT:    cmn w0, #43
 ; CHECK-NEXT:    mov w8, #-43
 ; CHECK-NEXT:    csel w8, w0, w8, lo
-; CHECK-NEXT:    add w0, w8, #42 // =42
+; CHECK-NEXT:    add w0, w8, #42
 ; CHECK-NEXT:    ret
   %c = icmp ult i32 %x, -43
   %s = select i1 %c, i32 %x, i32 -43
@@ -109,7 +109,7 @@ define i32 @unsigned_sat_constant_i32_using_min(i32 %x) {
 define i32 @unsigned_sat_constant_i32_using_cmp_sum(i32 %x) {
 ; CHECK-LABEL: unsigned_sat_constant_i32_using_cmp_sum:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    adds w8, w0, #42 // =42
+; CHECK-NEXT:    adds w8, w0, #42
 ; CHECK-NEXT:    csinv w0, w8, wzr, lo
 ; CHECK-NEXT:    ret
   %a = add i32 %x, 42
@@ -121,7 +121,7 @@ define i32 @unsigned_sat_constant_i32_using_cmp_sum(i32 %x) {
 define i32 @unsigned_sat_constant_i32_using_cmp_notval(i32 %x) {
 ; CHECK-LABEL: unsigned_sat_constant_i32_using_cmp_notval:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    adds w8, w0, #42 // =42
+; CHECK-NEXT:    adds w8, w0, #42
 ; CHECK-NEXT:    csinv w0, w8, wzr, lo
 ; CHECK-NEXT:    ret
   %a = add i32 %x, 42
@@ -133,10 +133,10 @@ define i32 @unsigned_sat_constant_i32_using_cmp_notval(i32 %x) {
 define i64 @unsigned_sat_constant_i64_using_min(i64 %x) {
 ; CHECK-LABEL: unsigned_sat_constant_i64_using_min:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    cmn x0, #43 // =43
+; CHECK-NEXT:    cmn x0, #43
 ; CHECK-NEXT:    mov x8, #-43
 ; CHECK-NEXT:    csel x8, x0, x8, lo
-; CHECK-NEXT:    add x0, x8, #42 // =42
+; CHECK-NEXT:    add x0, x8, #42
 ; CHECK-NEXT:    ret
   %c = icmp ult i64 %x, -43
   %s = select i1 %c, i64 %x, i64 -43
@@ -147,7 +147,7 @@ define i64 @unsigned_sat_constant_i64_using_min(i64 %x) {
 define i64 @unsigned_sat_constant_i64_using_cmp_sum(i64 %x) {
 ; CHECK-LABEL: unsigned_sat_constant_i64_using_cmp_sum:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    adds x8, x0, #42 // =42
+; CHECK-NEXT:    adds x8, x0, #42
 ; CHECK-NEXT:    csinv x0, x8, xzr, lo
 ; CHECK-NEXT:    ret
   %a = add i64 %x, 42
@@ -159,7 +159,7 @@ define i64 @unsigned_sat_constant_i64_using_cmp_sum(i64 %x) {
 define i64 @unsigned_sat_constant_i64_using_cmp_notval(i64 %x) {
 ; CHECK-LABEL: unsigned_sat_constant_i64_using_cmp_notval:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    adds x8, x0, #42 // =42
+; CHECK-NEXT:    adds x8, x0, #42
 ; CHECK-NEXT:    csinv x0, x8, xzr, lo
 ; CHECK-NEXT:    ret
   %a = add i64 %x, 42

@@ -70,6 +70,7 @@ public:
   IndexType getIndexType();
 
   IntegerType getI1Type();
+  IntegerType getI8Type();
   IntegerType getI32Type();
   IntegerType getI64Type();
   IntegerType getIntegerType(unsigned width);

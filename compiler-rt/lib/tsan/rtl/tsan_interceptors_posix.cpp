@@ -96,9 +96,6 @@ extern "C" void _exit(int status);
 extern "C" int fileno_unlocked(void *stream);
 extern "C" int dirfd(void *dirp);
 #endif
-#if SANITIZER_GLIBC
-extern "C" int mallopt(int param, int value);
-#endif
 #if SANITIZER_NETBSD
 extern __sanitizer_FILE __sF[];
 #else
@@ -933,14 +930,15 @@ static void thread_finalize(void *v) {
 struct ThreadParam {
   void* (*callback)(void *arg);
   void *param;
-  atomic_uintptr_t tid;
+  Tid tid;
+  Semaphore created;
+  Semaphore started;
 };
 
 extern "C" void *__tsan_thread_start_func(void *arg) {
   ThreadParam *p = (ThreadParam*)arg;
   void* (*callback)(void *arg) = p->callback;
   void *param = p->param;
-  int tid = 0;
   {
     cur_thread_init();
     ThreadState *thr = cur_thread();
@@ -955,12 +953,11 @@ extern "C" void *__tsan_thread_start_func(void *arg) {
     }
     ThreadIgnoreEnd(thr);
 #endif
-    while ((tid = atomic_load(&p->tid, memory_order_acquire)) == 0)
-      internal_sched_yield();
+    p->created.Wait();
     Processor *proc = ProcCreate();
     ProcWire(proc, thr);
-    ThreadStart(thr, tid, GetTid(), ThreadType::Regular);
-    atomic_store(&p->tid, 0, memory_order_release);
+    ThreadStart(thr, p->tid, GetTid(), ThreadType::Regular);
+    p->started.Post();
   }
   void *res = callback(param);
   // Prevent the callback from being tail called,
@@ -999,7 +996,7 @@ TSAN_INTERCEPTOR(int, pthread_create,
   ThreadParam p;
   p.callback = callback;
   p.param = param;
-  atomic_store(&p.tid, 0, memory_order_relaxed);
+  p.tid = kMainTid;
   int res = -1;
   {
     // Otherwise we see false positives in pthread stack manipulation.
@@ -1009,8 +1006,8 @@ TSAN_INTERCEPTOR(int, pthread_create,
     ThreadIgnoreEnd(thr);
   }
   if (res == 0) {
-    Tid tid = ThreadCreate(thr, pc, *(uptr *)th, IsStateDetached(detached));
-    CHECK_NE(tid, kMainTid);
+    p.tid = ThreadCreate(thr, pc, *(uptr *)th, IsStateDetached(detached));
+    CHECK_NE(p.tid, kMainTid);
     // Synchronization on p.tid serves two purposes:
     // 1. ThreadCreate must finish before the new thread starts.
     //    Otherwise the new thread can call pthread_detach, but the pthread_t
@@ -1018,9 +1015,8 @@ TSAN_INTERCEPTOR(int, pthread_create,
     // 2. ThreadStart must finish before this thread continues.
     //    Otherwise, this thread can call pthread_detach and reset thr->sync
     //    before the new thread got a chance to acquire from it in ThreadStart.
-    atomic_store(&p.tid, tid, memory_order_release);
-    while (atomic_load(&p.tid, memory_order_acquire) != 0)
-      internal_sched_yield();
+    p.created.Post();
+    p.started.Wait();
   }
   if (attr == &myattr)
     pthread_attr_destroy(&myattr);
@@ -1445,14 +1441,14 @@ TSAN_INTERCEPTOR(int, pthread_rwlock_unlock, void *m) {
 #if !SANITIZER_MAC
 TSAN_INTERCEPTOR(int, pthread_barrier_init, void *b, void *a, unsigned count) {
   SCOPED_TSAN_INTERCEPTOR(pthread_barrier_init, b, a, count);
-  MemoryWrite(thr, pc, (uptr)b, kSizeLog1);
+  MemoryAccess(thr, pc, (uptr)b, 1, kAccessWrite);
   int res = REAL(pthread_barrier_init)(b, a, count);
   return res;
 }
 
 TSAN_INTERCEPTOR(int, pthread_barrier_destroy, void *b) {
   SCOPED_TSAN_INTERCEPTOR(pthread_barrier_destroy, b);
-  MemoryWrite(thr, pc, (uptr)b, kSizeLog1);
+  MemoryAccess(thr, pc, (uptr)b, 1, kAccessWrite);
   int res = REAL(pthread_barrier_destroy)(b);
   return res;
 }
@@ -1460,9 +1456,9 @@ TSAN_INTERCEPTOR(int, pthread_barrier_destroy, void *b) {
 TSAN_INTERCEPTOR(int, pthread_barrier_wait, void *b) {
   SCOPED_TSAN_INTERCEPTOR(pthread_barrier_wait, b);
   Release(thr, pc, (uptr)b);
-  MemoryRead(thr, pc, (uptr)b, kSizeLog1);
+  MemoryAccess(thr, pc, (uptr)b, 1, kAccessRead);
   int res = REAL(pthread_barrier_wait)(b);
-  MemoryRead(thr, pc, (uptr)b, kSizeLog1);
+  MemoryAccess(thr, pc, (uptr)b, 1, kAccessRead);
   if (res == 0 || res == PTHREAD_BARRIER_SERIAL_THREAD) {
     Acquire(thr, pc, (uptr)b);
   }
@@ -2231,7 +2227,6 @@ static int OnExit(ThreadState *thr) {
 
 struct TsanInterceptorContext {
   ThreadState *thr;
-  const uptr caller_pc;
   const uptr pc;
 };
 
@@ -2272,17 +2267,17 @@ static void HandleRecvmsg(ThreadState *thr, uptr pc,
                     ((TsanInterceptorContext *) ctx)->pc, (uptr) ptr, size, \
                     false)
 
-#define COMMON_INTERCEPTOR_ENTER(ctx, func, ...)      \
-  SCOPED_TSAN_INTERCEPTOR(func, __VA_ARGS__);         \
-  TsanInterceptorContext _ctx = {thr, caller_pc, pc}; \
-  ctx = (void *)&_ctx;                                \
-  (void) ctx;
+#define COMMON_INTERCEPTOR_ENTER(ctx, func, ...) \
+  SCOPED_TSAN_INTERCEPTOR(func, __VA_ARGS__);    \
+  TsanInterceptorContext _ctx = {thr, pc};       \
+  ctx = (void *)&_ctx;                           \
+  (void)ctx;
 
 #define COMMON_INTERCEPTOR_ENTER_NOIGNORE(ctx, func, ...) \
   SCOPED_INTERCEPTOR_RAW(func, __VA_ARGS__);              \
-  TsanInterceptorContext _ctx = {thr, caller_pc, pc};     \
+  TsanInterceptorContext _ctx = {thr, pc};                \
   ctx = (void *)&_ctx;                                    \
-  (void) ctx;
+  (void)ctx;
 
 #define COMMON_INTERCEPTOR_FILE_OPEN(ctx, file, path) \
   if (path)                                           \
@@ -2668,12 +2663,6 @@ void InitializeInterceptors() {
   // We need to setup it early, because functions like dlsym() can call it.
   REAL(memset) = internal_memset;
   REAL(memcpy) = internal_memcpy;
-#endif
-
-  // Instruct libc malloc to consume less memory.
-#if SANITIZER_GLIBC
-  mallopt(1, 0);  // M_MXFAST
-  mallopt(-3, 32*1024);  // M_MMAP_THRESHOLD
 #endif
 
   new(interceptor_ctx()) InterceptorContext();

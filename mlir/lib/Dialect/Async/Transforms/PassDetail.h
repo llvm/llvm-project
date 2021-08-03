@@ -25,6 +25,24 @@ class SCFDialect;
 #define GEN_PASS_CLASSES
 #include "mlir/Dialect/Async/Passes.h.inc"
 
+// -------------------------------------------------------------------------- //
+// Utility functions shared by Async Transformations.
+// -------------------------------------------------------------------------- //
+
+// Forward declarations.
+class OpBuilder;
+
+namespace async {
+
+/// Clone ConstantLike operations that are defined above the given region and
+/// have users in the region into the region entry block. We do that to reduce
+/// the number of function arguments when we outline `async.execute` and
+/// `scf.parallel` operations body into functions.
+void cloneConstantsIntoTheRegion(Region &region);
+void cloneConstantsIntoTheRegion(Region &region, OpBuilder &builder);
+
+} // namespace async
+
 } // namespace mlir
 
 #endif // DIALECT_ASYNC_TRANSFORMS_PASSDETAIL_H_

@@ -284,7 +284,7 @@ define i32 @imp_null_check_gep_load_with_use_dep(i32* %x, i32 %a) {
 ; CHECK-NEXT:  // %bb.1: // %not_null
 ; CHECK-NEXT:    add w9, w0, w1
 ; CHECK-NEXT:    add w8, w9, w8
-; CHECK-NEXT:    add w0, w8, #4 // =4
+; CHECK-NEXT:    add w0, w8, #4
 ; CHECK-NEXT:    ret
 ; CHECK-NEXT:  .LBB11_2:
 ; CHECK-NEXT:    mov w0, #42

@@ -1379,7 +1379,8 @@ static void readConfigs(opt::InputArgList &args) {
   // symbols not specified by --dynamic-list are non-preemptible.
   config->symbolic =
       config->bsymbolic == BsymbolicKind::All || args.hasArg(OPT_dynamic_list);
-  for (auto *arg : args.filtered(OPT_dynamic_list))
+  for (auto *arg :
+       args.filtered(OPT_dynamic_list, OPT_export_dynamic_symbol_list))
     if (Optional<MemoryBufferRef> buffer = readFile(arg->getValue()))
       readDynamicList(*buffer);
 

@@ -696,28 +696,28 @@ void MemoryAccessImpl1(ThreadState *thr, uptr addr,
   // threads, which is not enough for the unrolled loop.
 #if SANITIZER_DEBUG
   for (int idx = 0; idx < 4; idx++) {
-#include "tsan_update_shadow_word_inl.h"
+#  include "tsan_update_shadow_word.inc"
   }
 #else
   int idx = 0;
-#include "tsan_update_shadow_word_inl.h"
+#  include "tsan_update_shadow_word.inc"
   idx = 1;
   if (stored) {
-#include "tsan_update_shadow_word_inl.h"
+#  include "tsan_update_shadow_word.inc"
   } else {
-#include "tsan_update_shadow_word_inl.h"
+#  include "tsan_update_shadow_word.inc"
   }
   idx = 2;
   if (stored) {
-#include "tsan_update_shadow_word_inl.h"
+#  include "tsan_update_shadow_word.inc"
   } else {
-#include "tsan_update_shadow_word_inl.h"
+#  include "tsan_update_shadow_word.inc"
   }
   idx = 3;
   if (stored) {
-#include "tsan_update_shadow_word_inl.h"
+#  include "tsan_update_shadow_word.inc"
   } else {
-#include "tsan_update_shadow_word_inl.h"
+#  include "tsan_update_shadow_word.inc"
   }
 #endif
 
@@ -733,8 +733,11 @@ void MemoryAccessImpl1(ThreadState *thr, uptr addr,
   return;
 }
 
-void UnalignedMemoryAccess(ThreadState *thr, uptr pc, uptr addr,
-    int size, bool kAccessIsWrite, bool kIsAtomic) {
+void UnalignedMemoryAccess(ThreadState *thr, uptr pc, uptr addr, uptr size,
+                           AccessType typ) {
+  DCHECK(!(typ & kAccessAtomic));
+  const bool kAccessIsWrite = !(typ & kAccessRead);
+  const bool kIsAtomic = false;
   while (size) {
     int size1 = 1;
     int kAccessSizeLog = kSizeLog1;
@@ -1137,5 +1140,5 @@ void PrintMutexPC(uptr pc) { StackTrace(&pc, 1).Print(); }
 
 #if !SANITIZER_GO
 // Must be included in this file to make sure everything is inlined.
-#  include "tsan_interface_inl.h"
+#  include "tsan_interface.inc"
 #endif

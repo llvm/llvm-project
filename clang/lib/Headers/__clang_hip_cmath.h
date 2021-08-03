@@ -174,6 +174,7 @@ __DEVICE__ __CONSTEXPR__ _Float16 pow(_Float16 __base, int __iexp) {
   return __ocml_pown_f16(__base, __iexp);
 }
 
+#ifndef __OPENMP_AMDGCN__
 // BEGIN DEF_FUN and HIP_OVERLOAD
 
 // BEGIN DEF_FUN
@@ -627,8 +628,10 @@ __DEVICE__ __CONSTEXPR__
 
 // END DEF_FUN and HIP_OVERLOAD
 
+#endif // ifndef __OPENMP_AMDGCN__
 #endif // defined(__cplusplus)
 
+#ifndef __OPENMP_AMDGCN__
 // Define these overloads inside the namespace our standard library uses.
 #if !defined(__HIPCC_RTC__)
 #ifdef _LIBCPP_BEGIN_NAMESPACE_STD
@@ -828,6 +831,7 @@ __DEVICE__ __CONSTEXPR__ __attribute__((overloadable)) float _FSinh(float x,
 #endif // defined(__cplusplus)
 #endif // defined(_MSC_VER)
 #endif // !defined(__HIPCC_RTC__)
+#endif // ifndef __OPENMP_AMDGCN__
 
 #pragma pop_macro("__DEVICE__")
 #pragma pop_macro("__CONSTEXPR__")

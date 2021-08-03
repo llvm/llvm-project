@@ -10,8 +10,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef LLVM_LIB_ASMPARSER_LLLEXER_H
-#define LLVM_LIB_ASMPARSER_LLLEXER_H
+#ifndef LLVM_ASMPARSER_LLLEXER_H
+#define LLVM_ASMPARSER_LLLEXER_H
 
 #include "LLToken.h"
 #include "llvm/ADT/APFloat.h"

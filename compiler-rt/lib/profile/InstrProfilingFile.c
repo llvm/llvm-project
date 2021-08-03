@@ -428,11 +428,6 @@ static void truncateCurrentFile(void) {
 
 // TODO: Move these functions into InstrProfilingPlatform* files.
 #if defined(__APPLE__)
-static void assertIsZero(int *i) {
-  if (*i)
-    PROF_WARN("Expected flag to be 0, but got: %d\n", *i);
-}
-
 /* Write a partial profile to \p Filename, which is required to be backed by
  * the open file object \p File. */
 static int writeProfileWithFileObject(const char *Filename, FILE *File) {
@@ -495,7 +490,7 @@ static void initializeProfileForContinuousMode(void) {
 
   /* Whether an exclusive lock on the profile must be dropped after init.
    * Use a cleanup to warn if the unlock does not occur. */
-  COMPILER_RT_CLEANUP(assertIsZero) int ProfileRequiresUnlock = 0;
+  COMPILER_RT_CLEANUP(warnIfNonZero) int ProfileRequiresUnlock = 0;
 
   if (!doMerging()) {
     /* We are not merging profiles, so open the raw profile in append mode. */

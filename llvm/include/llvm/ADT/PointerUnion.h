@@ -23,36 +23,6 @@
 
 namespace llvm {
 
-template <typename T> struct PointerUnionTypeSelectorReturn {
-  using Return = T;
-};
-
-/// Get a type based on whether two types are the same or not.
-///
-/// For:
-///
-/// \code
-///   using Ret = typename PointerUnionTypeSelector<T1, T2, EQ, NE>::Return;
-/// \endcode
-///
-/// Ret will be EQ type if T1 is same as T2 or NE type otherwise.
-template <typename T1, typename T2, typename RET_EQ, typename RET_NE>
-struct PointerUnionTypeSelector {
-  using Return = typename PointerUnionTypeSelectorReturn<RET_NE>::Return;
-};
-
-template <typename T, typename RET_EQ, typename RET_NE>
-struct PointerUnionTypeSelector<T, T, RET_EQ, RET_NE> {
-  using Return = typename PointerUnionTypeSelectorReturn<RET_EQ>::Return;
-};
-
-template <typename T1, typename T2, typename RET_EQ, typename RET_NE>
-struct PointerUnionTypeSelectorReturn<
-    PointerUnionTypeSelector<T1, T2, RET_EQ, RET_NE>> {
-  using Return =
-      typename PointerUnionTypeSelector<T1, T2, RET_EQ, RET_NE>::Return;
-};
-
 namespace pointer_union_detail {
   /// Determine the number of bits required to store integers with values < n.
   /// This is ceil(log2(n)).

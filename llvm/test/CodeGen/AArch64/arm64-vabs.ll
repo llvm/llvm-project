@@ -1628,12 +1628,12 @@ define <2 x i128> @uabd_i64(<2 x i64> %a, <2 x i64> %b) {
 ; CHECK-NEXT:    sbcs x11, x12, x14
 ; CHECK-NEXT:    negs x12, x8
 ; CHECK-NEXT:    ngcs x13, x11
-; CHECK-NEXT:    cmp x11, #0 // =0
+; CHECK-NEXT:    cmp x11, #0
 ; CHECK-NEXT:    csel x2, x12, x8, lt
 ; CHECK-NEXT:    csel x3, x13, x11, lt
 ; CHECK-NEXT:    negs x8, x9
 ; CHECK-NEXT:    ngcs x11, x10
-; CHECK-NEXT:    cmp x10, #0 // =0
+; CHECK-NEXT:    cmp x10, #0
 ; CHECK-NEXT:    csel x8, x8, x9, lt
 ; CHECK-NEXT:    csel x1, x11, x10, lt
 ; CHECK-NEXT:    fmov d0, x8

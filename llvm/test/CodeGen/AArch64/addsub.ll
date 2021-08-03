@@ -19,8 +19,8 @@ define void @add_small() {
 ; CHECK-NEXT:    ldr x9, [x9, :got_lo12:var_i64]
 ; CHECK-NEXT:    ldr w10, [x8]
 ; CHECK-NEXT:    ldr x11, [x9]
-; CHECK-NEXT:    add w10, w10, #4095 // =4095
-; CHECK-NEXT:    add x11, x11, #52 // =52
+; CHECK-NEXT:    add w10, w10, #4095
+; CHECK-NEXT:    add x11, x11, #52
 ; CHECK-NEXT:    str w10, [x8]
 ; CHECK-NEXT:    str x11, [x9]
 ; CHECK-NEXT:    ret
@@ -50,7 +50,7 @@ define void @add_small_imm(i8* %p, i64* %q, i32 %b, i32* %addr) {
 ; CHECK:       // %bb.0: // %entry
 ; CHECK-NEXT:    ldrb w8, [x0]
 ; CHECK-NEXT:    add w9, w8, w2
-; CHECK-NEXT:    add x8, x8, #12 // =12
+; CHECK-NEXT:    add x8, x8, #12
 ; CHECK-NEXT:    str w9, [x3]
 ; CHECK-NEXT:    str x8, [x1]
 ; CHECK-NEXT:    ret
@@ -105,8 +105,8 @@ define void @sub_small() {
 ; CHECK-NEXT:    ldr x9, [x9, :got_lo12:var_i64]
 ; CHECK-NEXT:    ldr w10, [x8]
 ; CHECK-NEXT:    ldr x11, [x9]
-; CHECK-NEXT:    sub w10, w10, #4095 // =4095
-; CHECK-NEXT:    sub x11, x11, #52 // =52
+; CHECK-NEXT:    sub w10, w10, #4095
+; CHECK-NEXT:    sub x11, x11, #52
 ; CHECK-NEXT:    str w10, [x8]
 ; CHECK-NEXT:    str x11, [x9]
 ; CHECK-NEXT:    ret
@@ -155,33 +155,33 @@ define void @testing() {
 ; CHECK-NEXT:    adrp x8, :got:var_i32
 ; CHECK-NEXT:    ldr x8, [x8, :got_lo12:var_i32]
 ; CHECK-NEXT:    ldr w9, [x8]
-; CHECK-NEXT:    cmp w9, #4095 // =4095
+; CHECK-NEXT:    cmp w9, #4095
 ; CHECK-NEXT:    b.ne .LBB5_6
 ; CHECK-NEXT:  // %bb.1: // %test2
 ; CHECK-NEXT:    adrp x10, :got:var2_i32
 ; CHECK-NEXT:    ldr x10, [x10, :got_lo12:var2_i32]
-; CHECK-NEXT:    add w11, w9, #1 // =1
+; CHECK-NEXT:    add w11, w9, #1
 ; CHECK-NEXT:    str w11, [x8]
 ; CHECK-NEXT:    ldr w10, [x10]
 ; CHECK-NEXT:    cmp w10, #3567, lsl #12 // =14610432
 ; CHECK-NEXT:    b.lo .LBB5_6
 ; CHECK-NEXT:  // %bb.2: // %test3
-; CHECK-NEXT:    add w11, w9, #2 // =2
-; CHECK-NEXT:    cmp w9, #123 // =123
+; CHECK-NEXT:    add w11, w9, #2
+; CHECK-NEXT:    cmp w9, #123
 ; CHECK-NEXT:    str w11, [x8]
 ; CHECK-NEXT:    b.lt .LBB5_6
 ; CHECK-NEXT:  // %bb.3: // %test4
-; CHECK-NEXT:    add w11, w9, #3 // =3
-; CHECK-NEXT:    cmp w10, #321 // =321
+; CHECK-NEXT:    add w11, w9, #3
+; CHECK-NEXT:    cmp w10, #321
 ; CHECK-NEXT:    str w11, [x8]
 ; CHECK-NEXT:    b.gt .LBB5_6
 ; CHECK-NEXT:  // %bb.4: // %test5
-; CHECK-NEXT:    add w11, w9, #4 // =4
-; CHECK-NEXT:    cmn w10, #443 // =443
+; CHECK-NEXT:    add w11, w9, #4
+; CHECK-NEXT:    cmn w10, #443
 ; CHECK-NEXT:    str w11, [x8]
 ; CHECK-NEXT:    b.ge .LBB5_6
 ; CHECK-NEXT:  // %bb.5: // %test6
-; CHECK-NEXT:    add w9, w9, #5 // =5
+; CHECK-NEXT:    add w9, w9, #5
 ; CHECK-NEXT:    str w9, [x8]
 ; CHECK-NEXT:  .LBB5_6: // %common.ret
 ; CHECK-NEXT:    ret
@@ -232,7 +232,7 @@ define i1 @sadd_add(i32 %a, i32 %b, i32* %p) {
 ; CHECK-NEXT:    mvn w8, w0
 ; CHECK-NEXT:    adds w8, w8, w1
 ; CHECK-NEXT:    cset w0, vs
-; CHECK-NEXT:    add w8, w8, #1 // =1
+; CHECK-NEXT:    add w8, w8, #1
 ; CHECK-NEXT:    str w8, [x2]
 ; CHECK-NEXT:    ret
   %nota = xor i32 %a, -1
@@ -253,7 +253,7 @@ define i1 @uadd_add(i8 %a, i8 %b, i8* %p) {
 ; CHECK-NEXT:    and w8, w8, #0xff
 ; CHECK-NEXT:    add w8, w8, w1, uxtb
 ; CHECK-NEXT:    lsr w0, w8, #8
-; CHECK-NEXT:    add w8, w8, #1 // =1
+; CHECK-NEXT:    add w8, w8, #1
 ; CHECK-NEXT:    strb w8, [x2]
 ; CHECK-NEXT:    ret
   %nota = xor i8 %a, -1

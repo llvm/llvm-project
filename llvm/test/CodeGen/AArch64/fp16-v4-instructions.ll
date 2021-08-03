@@ -138,7 +138,7 @@ define <4 x double> @h_to_d(<4 x half> %a) {
 
 define <4 x half> @bitcast_i_to_h(float, <4 x i16> %a) {
 ; CHECK-COMMON-LABEL: bitcast_i_to_h:
-; CHECK-COMMON:       mov v0.16b, v1.16b
+; CHECK-COMMON:       fmov d0, d1
 ; CHECK-COMMON-NEXT:  ret
   %2 = bitcast <4 x i16> %a to <4 x half>
   ret <4 x half> %2
@@ -146,7 +146,7 @@ define <4 x half> @bitcast_i_to_h(float, <4 x i16> %a) {
 
 define <4 x i16> @bitcast_h_to_i(float, <4 x half> %a) {
 ; CHECK-COMMON-LABEL: bitcast_h_to_i:
-; CHECK-COMMON:       mov v0.16b, v1.16b
+; CHECK-COMMON:       fmov d0, d1
 ; CHECK-COMMON-NEXT:  ret
   %2 = bitcast <4 x half> %a to <4 x i16>
   ret <4 x i16> %2

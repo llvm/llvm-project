@@ -161,16 +161,16 @@ a128 func_cas(volatile a128 *v, a128 cmp, a128 xch) {
 }
 #endif
 
-template<typename T>
-static int SizeLog() {
+template <typename T>
+static int AccessSize() {
   if (sizeof(T) <= 1)
-    return kSizeLog1;
+    return 1;
   else if (sizeof(T) <= 2)
-    return kSizeLog2;
+    return 2;
   else if (sizeof(T) <= 4)
-    return kSizeLog4;
+    return 4;
   else
-    return kSizeLog8;
+    return 8;
   // For 16-byte atomics we also use 8-byte memory access,
   // this leads to false negatives only in very obscure cases.
 }
@@ -224,7 +224,8 @@ static T AtomicLoad(ThreadState *thr, uptr pc, const volatile T *a, morder mo) {
   // This fast-path is critical for performance.
   // Assume the access is atomic.
   if (!IsAcquireOrder(mo)) {
-    MemoryReadAtomic(thr, pc, (uptr)a, SizeLog<T>());
+    MemoryAccess(thr, pc, (uptr)a, AccessSize<T>(),
+                 kAccessRead | kAccessAtomic);
     return NoTsanAtomicLoad(a, mo);
   }
   // Don't create sync object if it does not exist yet. For example, an atomic
@@ -238,7 +239,7 @@ static T AtomicLoad(ThreadState *thr, uptr pc, const volatile T *a, morder mo) {
     // of the value and the clock we acquire.
     v = NoTsanAtomicLoad(a, mo);
   }
-  MemoryReadAtomic(thr, pc, (uptr)a, SizeLog<T>());
+  MemoryAccess(thr, pc, (uptr)a, AccessSize<T>(), kAccessRead | kAccessAtomic);
   return v;
 }
 
@@ -258,7 +259,7 @@ template <typename T>
 static void AtomicStore(ThreadState *thr, uptr pc, volatile T *a, T v,
                         morder mo) {
   CHECK(IsStoreOrder(mo));
-  MemoryWriteAtomic(thr, pc, (uptr)a, SizeLog<T>());
+  MemoryAccess(thr, pc, (uptr)a, AccessSize<T>(), kAccessWrite | kAccessAtomic);
   // This fast-path is critical for performance.
   // Assume the access is atomic.
   // Strictly saying even relaxed store cuts off release sequence,
@@ -279,7 +280,7 @@ static void AtomicStore(ThreadState *thr, uptr pc, volatile T *a, T v,
 
 template <typename T, T (*F)(volatile T *v, T op)>
 static T AtomicRMW(ThreadState *thr, uptr pc, volatile T *a, T v, morder mo) {
-  MemoryWriteAtomic(thr, pc, (uptr)a, SizeLog<T>());
+  MemoryAccess(thr, pc, (uptr)a, AccessSize<T>(), kAccessWrite | kAccessAtomic);
   if (LIKELY(mo == mo_relaxed))
     return F(a, v);
   SyncVar *s = ctx->metamap.GetSyncOrCreate(thr, pc, (uptr)a, false);
@@ -404,7 +405,7 @@ static bool AtomicCAS(ThreadState *thr, uptr pc, volatile T *a, T *c, T v,
   // (mo_relaxed) when those are used.
   CHECK(IsLoadOrder(fmo));
 
-  MemoryWriteAtomic(thr, pc, (uptr)a, SizeLog<T>());
+  MemoryAccess(thr, pc, (uptr)a, AccessSize<T>(), kAccessWrite | kAccessAtomic);
   if (LIKELY(mo == mo_relaxed && fmo == mo_relaxed)) {
     T cc = *c;
     T pr = func_cas(a, cc, v);

@@ -2146,14 +2146,15 @@ bool ARMTTIImpl::emitGetActiveLaneMask() const {
   return true;
 }
 void ARMTTIImpl::getUnrollingPreferences(Loop *L, ScalarEvolution &SE,
-                                         TTI::UnrollingPreferences &UP) {
+                                         TTI::UnrollingPreferences &UP,
+                                         OptimizationRemarkEmitter *ORE) {
   // Enable Upper bound unrolling universally, not dependant upon the conditions
   // below.
   UP.UpperBound = true;
 
   // Only currently enable these preferences for M-Class cores.
   if (!ST->isMClass())
-    return BasicTTIImplBase::getUnrollingPreferences(L, SE, UP);
+    return BasicTTIImplBase::getUnrollingPreferences(L, SE, UP, ORE);
 
   // Disable loop unrolling for Oz and Os.
   UP.OptSizeThreshold = 0;

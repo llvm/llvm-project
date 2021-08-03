@@ -237,10 +237,13 @@ public:
   /// Adds a lower or an upper bound for the identifier at the specified
   /// position with constraints being drawn from the specified bound map and
   /// operands. If `eq` is true, add a single equality equal to the bound map's
-  /// first result expr.
+  /// first result expr. By default, the bound map is fully composed with the
+  /// operands before adding any bounds. This allows for bounds being expressed
+  /// in terms of values that are used by the operands.
   LogicalResult addLowerOrUpperBound(unsigned pos, AffineMap boundMap,
                                      ValueRange operands, bool eq,
-                                     bool lower = true);
+                                     bool lower = true,
+                                     bool composeMapAndOperands = true);
 
   /// Returns the bound for the identifier at `pos` from the inequality at
   /// `ineqPos` as a 1-d affine value map (affine map + operands). The returned
@@ -334,7 +337,9 @@ public:
   /// symbols or loop IVs. The identifier is added to the end of the existing
   /// dims or symbols. Additional information on the identifier is extracted
   /// from the IR and added to the constraint system.
-  void addInductionVarOrTerminalSymbol(Value id);
+  /// Note: If `allowNonTerminal`, any symbol (incl. potentially non-terminal
+  /// ones) is allowed.
+  void addInductionVarOrTerminalSymbol(Value id, bool allowNonTerminal = false);
 
   /// Composes the affine value map with this FlatAffineConstrains, adding the
   /// results of the map as dimensions at the front [0, vMap->getNumResults())

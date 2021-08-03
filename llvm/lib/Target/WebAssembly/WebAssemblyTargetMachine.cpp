@@ -332,6 +332,7 @@ public:
   void addPostRegAlloc() override;
   bool addGCPasses() override { return false; }
   void addPreEmitPass() override;
+  bool addPreISel() override;
 
   // No reg alloc
   bool addRegAssignAndRewriteFast() override { return false; }
@@ -516,6 +517,12 @@ void WebAssemblyPassConfig::addPreEmitPass() {
 
   // Collect information to prepare for MC lowering / asm printing.
   addPass(createWebAssemblyMCLowerPrePass());
+}
+
+bool WebAssemblyPassConfig::addPreISel() {
+  TargetPassConfig::addPreISel();
+  addPass(createWebAssemblyLowerRefTypesIntPtrConv());
+  return false;
 }
 
 yaml::MachineFunctionInfo *

@@ -185,19 +185,43 @@ struct ParameterBatch {
   std::vector<ParameterType> Parameters;
 };
 
+/// Memory function prototype and configuration.
+using MemcpyFunction = void *(*)(void *__restrict, const void *__restrict,
+                                 size_t);
+struct MemcpyConfiguration {
+  MemcpyFunction Function;
+  llvm::StringRef Name;
+};
+
+using MemsetFunction = void *(*)(void *, int, size_t);
+struct MemsetConfiguration {
+  MemsetFunction Function;
+  llvm::StringRef Name;
+};
+
+using BzeroFunction = void (*)(void *, size_t);
+struct BzeroConfiguration {
+  BzeroFunction Function;
+  llvm::StringRef Name;
+};
+
+using MemcmpFunction = int (*)(const void *, const void *, size_t);
+struct MemcmpConfiguration {
+  MemcmpFunction Function;
+  llvm::StringRef Name;
+};
+
 /// Provides source and destination buffers for the Copy operation as well as
 /// the associated size distributions.
-struct CopyHarness : public ParameterBatch {
-  CopyHarness();
+struct CopySetup : public ParameterBatch {
+  CopySetup();
 
   inline static const ArrayRef<MemorySizeDistribution> getDistributions() {
     return getMemcpySizeDistributions();
   }
 
-  inline void *Call(ParameterType Parameter,
-                    void *(*memcpy)(void *__restrict, const void *__restrict,
-                                    size_t)) {
-    return memcpy(DstBuffer + Parameter.OffsetBytes,
+  inline void *Call(ParameterType Parameter, MemcpyFunction Memcpy) {
+    return Memcpy(DstBuffer + Parameter.OffsetBytes,
                   SrcBuffer + Parameter.OffsetBytes, Parameter.SizeBytes);
   }
 
@@ -208,21 +232,20 @@ private:
 
 /// Provides destination buffer for the Set operation as well as the associated
 /// size distributions.
-struct SetHarness : public ParameterBatch {
-  SetHarness();
+struct SetSetup : public ParameterBatch {
+  SetSetup();
 
   inline static const ArrayRef<MemorySizeDistribution> getDistributions() {
     return getMemsetSizeDistributions();
   }
 
-  inline void *Call(ParameterType Parameter,
-                    void *(*memset)(void *, int, size_t)) {
-    return memset(DstBuffer + Parameter.OffsetBytes,
+  inline void *Call(ParameterType Parameter, MemsetFunction Memset) {
+    return Memset(DstBuffer + Parameter.OffsetBytes,
                   Parameter.OffsetBytes % 0xFF, Parameter.SizeBytes);
   }
 
-  inline void *Call(ParameterType Parameter, void (*bzero)(void *, size_t)) {
-    bzero(DstBuffer + Parameter.OffsetBytes, Parameter.SizeBytes);
+  inline void *Call(ParameterType Parameter, BzeroFunction Bzero) {
+    Bzero(DstBuffer + Parameter.OffsetBytes, Parameter.SizeBytes);
     return DstBuffer.begin();
   }
 
@@ -232,16 +255,15 @@ private:
 
 /// Provides left and right buffers for the Comparison operation as well as the
 /// associated size distributions.
-struct ComparisonHarness : public ParameterBatch {
-  ComparisonHarness();
+struct ComparisonSetup : public ParameterBatch {
+  ComparisonSetup();
 
   inline static const ArrayRef<MemorySizeDistribution> getDistributions() {
     return getMemcmpSizeDistributions();
   }
 
-  inline int Call(ParameterType Parameter,
-                  int (*memcmp)(const void *, const void *, size_t)) {
-    return memcmp(LhsBuffer + Parameter.OffsetBytes,
+  inline int Call(ParameterType Parameter, MemcmpFunction Memcmp) {
+    return Memcmp(LhsBuffer + Parameter.OffsetBytes,
                   RhsBuffer + Parameter.OffsetBytes, Parameter.SizeBytes);
   }
 

@@ -126,3 +126,23 @@ add_diff_binary(
   COMPILE_OPTIONS
     -fno-builtin
 )
+
+add_diff_binary(
+  sqrtf_diff
+  SRCS
+    sqrtf_diff.cpp
+  DEPENDS
+    .single_input_single_output_diff
+    libc.src.math.sqrtf
+)
+
+add_diff_binary(
+  sqrtf_perf
+  SRCS
+    sqrtf_perf.cpp
+  DEPENDS
+    .single_input_single_output_diff
+    libc.src.math.sqrtf
+  COMPILE_OPTIONS
+    -fno-builtin
+)

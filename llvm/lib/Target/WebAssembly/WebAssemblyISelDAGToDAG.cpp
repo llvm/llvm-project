@@ -24,6 +24,7 @@
 #include "llvm/Support/KnownBits.h"
 #include "llvm/Support/MathExtras.h"
 #include "llvm/Support/raw_ostream.h"
+
 using namespace llvm;
 
 #define DEBUG_TYPE "wasm-isel"
@@ -48,31 +49,10 @@ public:
     return "WebAssembly Instruction Selection";
   }
 
-  void checkForInvalidNodes(const Function &F) {
-    // This function will check for uses of ptrtoint on reference types and
-    // report a fatal error if these are found.
-    for (const BasicBlock &BB : F) {
-      for (const Instruction &I : BB) {
-        if (const PtrToIntInst *PTI = dyn_cast<const PtrToIntInst>(&I)) {
-          const Value *V = PTI->getPointerOperand();
-          if (WebAssemblyTargetLowering::isFuncrefType(V->getType()) ||
-              WebAssemblyTargetLowering::isExternrefType(V->getType()))
-            report_fatal_error("ptrtoint not allowed on reference types");
-        } else if (const IntToPtrInst *ITP = dyn_cast<const IntToPtrInst>(&I)) {
-          if (WebAssemblyTargetLowering::isFuncrefType(ITP->getDestTy()) ||
-              WebAssemblyTargetLowering::isExternrefType(ITP->getDestTy()))
-            report_fatal_error("inttoptr not allowed on reference types");
-        }
-      }
-    }
-  }
-
   bool runOnMachineFunction(MachineFunction &MF) override {
     LLVM_DEBUG(dbgs() << "********** ISelDAGToDAG **********\n"
                          "********** Function: "
                       << MF.getName() << '\n');
-
-    checkForInvalidNodes(MF.getFunction());
 
     Subtarget = &MF.getSubtarget<WebAssemblySubtarget>();
 

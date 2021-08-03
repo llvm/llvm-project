@@ -11,7 +11,7 @@ int main() {
   char * volatile x = (char*)malloc(40);
   free(x);
   free(x);
-// CHECK: ERROR: HWAddressSanitizer: invalid-free on address
+// CHECK: ERROR: HWAddressSanitizer: invalid-free on address {{.*}} at pc {{.*}} on thread T{{[0-9]+}}
 // CHECK: tags: [[PTR_TAG:..]]/[[MEM_TAG:..]] (ptr/mem)
 // CHECK: freed by thread {{.*}} here:
 // CHECK: previously allocated here:

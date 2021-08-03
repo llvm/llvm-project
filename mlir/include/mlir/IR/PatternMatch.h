@@ -836,6 +836,9 @@ protected:
   }
 
 private:
+  void operator=(const RewriterBase &) = delete;
+  RewriterBase(const RewriterBase &) = delete;
+
   /// 'op' and 'newOp' are known to have the same number of results, replace the
   /// uses of op with uses of newOp.
   void replaceOpWithResultsOfAnotherOp(Operation *op, Operation *newOp);

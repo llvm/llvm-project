@@ -845,6 +845,10 @@ void CheckHelper::CheckSubprogram(
       }
     }
   }
+  // See comment on the similar check in CheckProcEntity()
+  if (details.isDummy() && symbol.attrs().test(Attr::ELEMENTAL)) {
+    messages_.Say("A dummy procedure may not be ELEMENTAL"_err_en_US);
+  }
 }
 
 void CheckHelper::CheckDerivedType(

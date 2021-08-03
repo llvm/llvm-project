@@ -7,39 +7,33 @@ target triple = "riscv64-unknown-unknown-elf"
 define dso_local <16 x i16> @interleave(<8 x i16> %v0, <8 x i16> %v1) {
 ; CHECK-LABEL: interleave:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    # kill: def $v8 killed $v8 killed $v8m2 def $v8m2
+; CHECK-NEXT:    vmv1r.v v26, v9
+; CHECK-NEXT:    # kill: def $v8 killed $v8 def $v8m2
 ; CHECK-NEXT:    vsetivli zero, 16, e16, m2, ta, mu
-; CHECK-NEXT:    vmv.v.i v26, 0
+; CHECK-NEXT:    vmv.v.i v28, 0
 ; CHECK-NEXT:    vsetivli zero, 8, e16, m2, tu, mu
-; CHECK-NEXT:    vmv2r.v v28, v26
-; CHECK-NEXT:    vslideup.vi v28, v8, 0
+; CHECK-NEXT:    vmv2r.v v30, v28
+; CHECK-NEXT:    vslideup.vi v30, v8, 0
 ; CHECK-NEXT:    vsetivli zero, 8, e16, m1, ta, mu
-; CHECK-NEXT:    vmv.v.i v30, 0
+; CHECK-NEXT:    vmv.v.i v8, 0
 ; CHECK-NEXT:    vsetivli zero, 16, e16, m2, tu, mu
-; CHECK-NEXT:    vslideup.vi v28, v30, 8
-; CHECK-NEXT:    lui a0, %hi(.LCPI0_0)
-; CHECK-NEXT:    addi a0, a0, %lo(.LCPI0_0)
+; CHECK-NEXT:    vslideup.vi v30, v8, 8
 ; CHECK-NEXT:    vsetvli zero, zero, e16, m2, ta, mu
-; CHECK-NEXT:    vle16.v v10, (a0)
-; CHECK-NEXT:    vmv1r.v v8, v9
-; CHECK-NEXT:    vrgather.vv v12, v28, v10
+; CHECK-NEXT:    vid.v v10
+; CHECK-NEXT:    vsrl.vi v12, v10, 1
+; CHECK-NEXT:    vrgather.vv v14, v30, v12
 ; CHECK-NEXT:    vsetivli zero, 8, e16, m2, tu, mu
-; CHECK-NEXT:    vslideup.vi v26, v8, 0
+; CHECK-NEXT:    vslideup.vi v28, v26, 0
 ; CHECK-NEXT:    vsetivli zero, 16, e16, m2, tu, mu
-; CHECK-NEXT:    vslideup.vi v26, v30, 8
+; CHECK-NEXT:    vslideup.vi v28, v8, 8
 ; CHECK-NEXT:    vsetvli zero, zero, e16, m2, ta, mu
-; CHECK-NEXT:    vid.v v28
-; CHECK-NEXT:    vrgather.vv v8, v12, v28
+; CHECK-NEXT:    vrgather.vv v8, v14, v10
 ; CHECK-NEXT:    lui a0, 11
 ; CHECK-NEXT:    addiw a0, a0, -1366
 ; CHECK-NEXT:    vsetivli zero, 1, e16, mf4, ta, mu
 ; CHECK-NEXT:    vmv.s.x v0, a0
-; CHECK-NEXT:    lui a0, %hi(.LCPI0_1)
-; CHECK-NEXT:    addi a0, a0, %lo(.LCPI0_1)
-; CHECK-NEXT:    vsetivli zero, 16, e16, m2, ta, mu
-; CHECK-NEXT:    vle16.v v28, (a0)
-; CHECK-NEXT:    vsetvli zero, zero, e16, m2, tu, mu
-; CHECK-NEXT:    vrgather.vv v8, v26, v28, v0.t
+; CHECK-NEXT:    vsetivli zero, 16, e16, m2, tu, mu
+; CHECK-NEXT:    vrgather.vv v8, v28, v12, v0.t
 ; CHECK-NEXT:    ret
 entry:
   %v2 = shufflevector <8 x i16> %v0, <8 x i16> poison, <16 x i32> <i32 0, i32 undef, i32 1, i32 undef, i32 2, i32 undef, i32 3, i32 undef, i32 4, i32 undef, i32 5, i32 undef, i32 6, i32 undef, i32 7, i32 undef>
