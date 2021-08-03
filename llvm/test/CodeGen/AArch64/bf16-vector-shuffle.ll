@@ -150,7 +150,7 @@ define <4 x bfloat> @test_vset_lane_bf16(bfloat %a, <4 x bfloat> %v) nounwind {
 ; CHECK-NEXT:    // kill: def $d1 killed $d1 def $q1
 ; CHECK-NEXT:    // kill: def $h0 killed $h0 def $q0
 ; CHECK-NEXT:    mov v1.h[1], v0.h[0]
-; CHECK-NEXT:    mov v0.16b, v1.16b
+; CHECK-NEXT:    fmov d0, d1
 ; CHECK-NEXT:    ret
 entry:
   %vset_lane = insertelement <4 x bfloat> %v, bfloat %a, i32 1

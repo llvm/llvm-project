@@ -8,12 +8,12 @@ define i8 @popcount128(i128* nocapture nonnull readonly %0) {
 ; CHECK-NEXT:    ldr x8, [x0, #8]
 ; CHECK-NEXT:    ldr d1, [x0]
 ; CHECK-NEXT:    // implicit-def: $q0
-; CHECK-NEXT:    mov v0.16b, v1.16b
+; CHECK-NEXT:    fmov d0, d1
 ; CHECK-NEXT:    mov v0.d[1], x8
 ; CHECK-NEXT:    cnt v0.16b, v0.16b
 ; CHECK-NEXT:    uaddlv h1, v0.16b
 ; CHECK-NEXT:    // implicit-def: $q0
-; CHECK-NEXT:    mov v0.16b, v1.16b
+; CHECK-NEXT:    fmov s0, s1
 ; CHECK-NEXT:    fmov w0, s0
 ; CHECK-NEXT:    ret
 Entry:
@@ -34,21 +34,21 @@ define i16 @popcount256(i256* nocapture nonnull readonly %0) {
 ; CHECK-NEXT:    ldr x9, [x0, #24]
 ; CHECK-NEXT:    ldr d1, [x0, #16]
 ; CHECK-NEXT:    // implicit-def: $q0
-; CHECK-NEXT:    mov v0.16b, v1.16b
+; CHECK-NEXT:    fmov d0, d1
 ; CHECK-NEXT:    mov v0.d[1], x9
 ; CHECK-NEXT:    cnt v0.16b, v0.16b
 ; CHECK-NEXT:    uaddlv h1, v0.16b
 ; CHECK-NEXT:    // implicit-def: $q0
-; CHECK-NEXT:    mov v0.16b, v1.16b
+; CHECK-NEXT:    fmov s0, s1
 ; CHECK-NEXT:    fmov w9, s0
 ; CHECK-NEXT:    ldr d1, [x0]
 ; CHECK-NEXT:    // implicit-def: $q0
-; CHECK-NEXT:    mov v0.16b, v1.16b
+; CHECK-NEXT:    fmov d0, d1
 ; CHECK-NEXT:    mov v0.d[1], x8
 ; CHECK-NEXT:    cnt v0.16b, v0.16b
 ; CHECK-NEXT:    uaddlv h1, v0.16b
 ; CHECK-NEXT:    // implicit-def: $q0
-; CHECK-NEXT:    mov v0.16b, v1.16b
+; CHECK-NEXT:    fmov s0, s1
 ; CHECK-NEXT:    fmov w8, s0
 ; CHECK-NEXT:    add w0, w8, w9
 ; CHECK-NEXT:    ret
@@ -71,7 +71,7 @@ define <1 x i128> @popcount1x128(<1 x i128> %0) {
 ; CHECK-NEXT:    cnt v0.16b, v0.16b
 ; CHECK-NEXT:    uaddlv h1, v0.16b
 ; CHECK-NEXT:    // implicit-def: $q0
-; CHECK-NEXT:    mov v0.16b, v1.16b
+; CHECK-NEXT:    fmov s0, s1
 ; CHECK-NEXT:    fmov w0, s0
 ; CHECK-NEXT:    // kill: def $x0 killed $w0
 ; CHECK-NEXT:    movi v0.2d, #0000000000000000

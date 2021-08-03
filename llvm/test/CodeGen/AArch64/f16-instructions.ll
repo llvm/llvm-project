@@ -144,9 +144,9 @@ define half @test_call(half %a, half %b) #0 {
 ; CHECK-COMMON-LABEL: test_call_flipped:
 ; CHECK-COMMON-NEXT: stp x29, x30, [sp, #-16]!
 ; CHECK-COMMON-NEXT: mov  x29, sp
-; CHECK-COMMON-NEXT: mov.16b  v2, v0
-; CHECK-COMMON-NEXT: mov.16b  v0, v1
-; CHECK-COMMON-NEXT: mov.16b  v1, v2
+; CHECK-COMMON-NEXT: fmov  s2, s0
+; CHECK-COMMON-NEXT: fmov  s0, s1
+; CHECK-COMMON-NEXT: fmov  s1, s2
 ; CHECK-COMMON-NEXT: bl {{_?}}test_callee
 ; CHECK-COMMON-NEXT: ldp x29, x30, [sp], #16
 ; CHECK-COMMON-NEXT: ret
@@ -156,9 +156,9 @@ define half @test_call_flipped(half %a, half %b) #0 {
 }
 
 ; CHECK-COMMON-LABEL: test_tailcall_flipped:
-; CHECK-COMMON-NEXT: mov.16b  v2, v0
-; CHECK-COMMON-NEXT: mov.16b  v0, v1
-; CHECK-COMMON-NEXT: mov.16b  v1, v2
+; CHECK-COMMON-NEXT: fmov  s2, s0
+; CHECK-COMMON-NEXT: fmov  s0, s1
+; CHECK-COMMON-NEXT: fmov  s1, s2
 ; CHECK-COMMON-NEXT: b {{_?}}test_callee
 define half @test_tailcall_flipped(half %a, half %b) #0 {
   %r = tail call half @test_callee(half %b, half %a)
@@ -542,11 +542,11 @@ else:
 ; CHECK-COMMON: mov  x[[PTR:[0-9]+]], x0
 ; CHECK-COMMON: ldr  h[[AB:[0-9]+]], [x0]
 ; CHECK-COMMON: [[LOOP:LBB[0-9_]+]]:
-; CHECK-COMMON: mov.16b  v[[R:[0-9]+]], v[[AB]]
+; CHECK-COMMON: fmov  s[[R:[0-9]+]], s[[AB]]
 ; CHECK-COMMON: ldr  h[[AB]], [x[[PTR]]]
 ; CHECK-COMMON: mov  x0, x[[PTR]]
 ; CHECK-COMMON: bl {{_?}}test_dummy
-; CHECK-COMMON: mov.16b  v0, v[[R]]
+; CHECK-COMMON: fmov  s0, s[[R]]
 ; CHECK-COMMON: ret
 define half @test_phi(half* %p1) #0 {
 entry:

@@ -1,6 +1,4 @@
-; RUN: llc < %s -verify-machineinstrs -mtriple=arm64-eabi -aarch64-neon-syntax=apple -aarch64-enable-simd-scalar=true -asm-verbose=false -disable-adv-copy-opt=true | FileCheck %s -check-prefix=CHECK
 ; RUN: llc < %s -verify-machineinstrs -mtriple=arm64-eabi -aarch64-neon-syntax=apple -aarch64-enable-simd-scalar=true -asm-verbose=false -disable-adv-copy-opt=false | FileCheck %s -check-prefix=CHECK
-; RUN: llc < %s -verify-machineinstrs -mtriple=arm64-eabi -aarch64-neon-syntax=generic -aarch64-enable-simd-scalar=true -asm-verbose=false -disable-adv-copy-opt=true | FileCheck %s -check-prefix=GENERIC
 ; RUN: llc < %s -verify-machineinstrs -mtriple=arm64-eabi -aarch64-neon-syntax=generic -aarch64-enable-simd-scalar=true -asm-verbose=false -disable-adv-copy-opt=false | FileCheck %s -check-prefix=GENERIC
 
 define <2 x i64> @bar(<2 x i64> %a, <2 x i64> %b) nounwind readnone {

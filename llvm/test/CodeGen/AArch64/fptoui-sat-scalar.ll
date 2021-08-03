@@ -129,7 +129,7 @@ define i100 @test_unsigned_i100_f32(float %f) nounwind {
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    str d8, [sp, #-16]! // 8-byte Folded Spill
 ; CHECK-NEXT:    str x30, [sp, #8] // 8-byte Folded Spill
-; CHECK-NEXT:    mov v8.16b, v0.16b
+; CHECK-NEXT:    fmov s8, s0
 ; CHECK-NEXT:    bl __fixunssfti
 ; CHECK-NEXT:    mov w8, #1904214015
 ; CHECK-NEXT:    ldr x30, [sp, #8] // 8-byte Folded Reload
@@ -152,7 +152,7 @@ define i128 @test_unsigned_i128_f32(float %f) nounwind {
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    str d8, [sp, #-16]! // 8-byte Folded Spill
 ; CHECK-NEXT:    str x30, [sp, #8] // 8-byte Folded Spill
-; CHECK-NEXT:    mov v8.16b, v0.16b
+; CHECK-NEXT:    fmov s8, s0
 ; CHECK-NEXT:    bl __fixunssfti
 ; CHECK-NEXT:    mov w8, #2139095039
 ; CHECK-NEXT:    ldr x30, [sp, #8] // 8-byte Folded Reload
@@ -296,7 +296,7 @@ define i100 @test_unsigned_i100_f64(double %f) nounwind {
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    str d8, [sp, #-16]! // 8-byte Folded Spill
 ; CHECK-NEXT:    str x30, [sp, #8] // 8-byte Folded Spill
-; CHECK-NEXT:    mov v8.16b, v0.16b
+; CHECK-NEXT:    fmov d8, d0
 ; CHECK-NEXT:    bl __fixunsdfti
 ; CHECK-NEXT:    mov x8, #5057542381537067007
 ; CHECK-NEXT:    ldr x30, [sp, #8] // 8-byte Folded Reload
@@ -319,7 +319,7 @@ define i128 @test_unsigned_i128_f64(double %f) nounwind {
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    str d8, [sp, #-16]! // 8-byte Folded Spill
 ; CHECK-NEXT:    str x30, [sp, #8] // 8-byte Folded Spill
-; CHECK-NEXT:    mov v8.16b, v0.16b
+; CHECK-NEXT:    fmov d8, d0
 ; CHECK-NEXT:    bl __fixunsdfti
 ; CHECK-NEXT:    mov x8, #5183643171103440895
 ; CHECK-NEXT:    ldr x30, [sp, #8] // 8-byte Folded Reload
@@ -481,7 +481,7 @@ define i100 @test_unsigned_i100_f16(half %f) nounwind {
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    str d8, [sp, #-16]! // 8-byte Folded Spill
 ; CHECK-NEXT:    fcvt s8, h0
-; CHECK-NEXT:    mov v0.16b, v8.16b
+; CHECK-NEXT:    fmov s0, s8
 ; CHECK-NEXT:    str x30, [sp, #8] // 8-byte Folded Spill
 ; CHECK-NEXT:    bl __fixunssfti
 ; CHECK-NEXT:    mov w8, #1904214015
@@ -505,7 +505,7 @@ define i128 @test_unsigned_i128_f16(half %f) nounwind {
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    str d8, [sp, #-16]! // 8-byte Folded Spill
 ; CHECK-NEXT:    fcvt s8, h0
-; CHECK-NEXT:    mov v0.16b, v8.16b
+; CHECK-NEXT:    fmov s0, s8
 ; CHECK-NEXT:    str x30, [sp, #8] // 8-byte Folded Spill
 ; CHECK-NEXT:    bl __fixunssfti
 ; CHECK-NEXT:    mov w8, #2139095039

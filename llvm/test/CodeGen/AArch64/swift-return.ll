@@ -234,9 +234,9 @@ define swiftcc { i8, i8, i8, i8 } @gen9(i8 %key) {
 }
 
 ; CHECK-LABEL: _gen10
-; CHECK:  mov.16b         v1, v0
-; CHECK:  mov.16b         v2, v0
-; CHECK:  mov.16b         v3, v0
+; CHECK:  fmov         d1, d0
+; CHECK:  fmov         d2, d0
+; CHECK:  fmov         d3, d0
 ; CHECK:  mov      w1, w0
 ; CHECK:  mov      w2, w0
 ; CHECK:  mov      w3, w0
@@ -278,7 +278,7 @@ declare swiftcc { <4 x float>, <4 x float>, <4 x float>, <4 x float> } @gen11()
 ; CHECK-LABEL: _test12
 ; CHECK:  fadd.4s v0, v0, v1
 ; CHECK:  fadd.4s v0, v0, v2
-; CHECK:  mov.16b v1, v3
+; CHECK:  fmov s1, s3
 define swiftcc { <4 x float>, float } @test12() #0 {
 entry:
   %call = call swiftcc { <4 x float>, <4 x float>, <4 x float>, float } @gen12()
