@@ -1161,6 +1161,7 @@ optimizeOnceStoredGlobal(GlobalVariable *GV, Value *StoredOnceVal,
   // value was null.
   if (GV->getInitializer()->getType()->isPointerTy() &&
       GV->getInitializer()->isNullValue() &&
+      StoredOnceVal->getType()->isPointerTy() &&
       !NullPointerIsDefined(
           nullptr /* F */,
           GV->getInitializer()->getType()->getPointerAddressSpace())) {
