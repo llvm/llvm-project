@@ -188,7 +188,10 @@ XCOFFObjectFile::getStringTableEntry(uint32_t Offset) const {
 }
 
 StringRef XCOFFObjectFile::getStringTable() const {
-  return StringRef(StringTable.Data, StringTable.Size);
+  // If the size is less than or equal to 4, then the string table contains no
+  // string data.
+  return StringRef(StringTable.Data,
+                   StringTable.Size <= 4 ? 0 : StringTable.Size);
 }
 
 Expected<StringRef>
