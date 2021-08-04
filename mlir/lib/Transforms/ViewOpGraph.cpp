@@ -120,7 +120,7 @@ private:
   void emitAttrList(raw_ostream &os, const AttributeMap &map) {
     os << "[";
     interleaveComma(map, os, [&](const auto &it) {
-      os << attrStmt(it.getKey(), it.getValue());
+      os << this->attrStmt(it.getKey(), it.getValue());
     });
     os << "]";
   }
