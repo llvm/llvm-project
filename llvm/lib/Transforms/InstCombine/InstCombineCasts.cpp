@@ -1368,7 +1368,7 @@ Instruction *InstCombinerImpl::visitZExt(ZExtInst &CI) {
                                .getVScaleRangeArgs()
                                .second;
       unsigned TypeWidth = Src->getType()->getScalarSizeInBits();
-      if (Log2_32(MaxVScale) < TypeWidth) {
+      if (MaxVScale > 0 && Log2_32(MaxVScale) < TypeWidth) {
         Value *VScale = Builder.CreateVScale(ConstantInt::get(DestTy, 1));
         return replaceInstUsesWith(CI, VScale);
       }
@@ -1625,8 +1625,7 @@ Instruction *InstCombinerImpl::visitSExt(SExtInst &CI) {
                                ->getFnAttribute(Attribute::VScaleRange)
                                .getVScaleRangeArgs()
                                .second;
-      unsigned TypeWidth = Src->getType()->getScalarSizeInBits();
-      if (Log2_32(MaxVScale) < (TypeWidth - 1)) {
+      if (MaxVScale > 0 && Log2_32(MaxVScale) < (SrcBitSize - 1)) {
         Value *VScale = Builder.CreateVScale(ConstantInt::get(DestTy, 1));
         return replaceInstUsesWith(CI, VScale);
       }
