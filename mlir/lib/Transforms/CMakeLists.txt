@@ -39,7 +39,7 @@ add_mlir_library(MLIRTransforms
   MLIRMemRef
   MLIRSCF
   MLIRPass
-  MLIRSupportIndentedOstream
+  MLIRSupport
   MLIRTransformUtils
   MLIRVector
   )
