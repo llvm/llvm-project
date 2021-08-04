@@ -240,6 +240,12 @@ bool isAbstract(const Decl *D) {
   return false;
 }
 
+bool isVirtual(const Decl *D) {
+  if (const auto *CMD = llvm::dyn_cast<CXXMethodDecl>(D))
+    return CMD->isVirtual();
+  return false;
+}
+
 bool isDependent(const Decl *D) {
   if (isa<UnresolvedUsingValueDecl>(D))
     return true;
@@ -712,6 +718,8 @@ std::vector<HighlightingToken> getSemanticHighlightings(ParsedAST &AST) {
             Tok.addModifier(HighlightingModifier::Static);
           if (isAbstract(Decl))
             Tok.addModifier(HighlightingModifier::Abstract);
+          if (isVirtual(Decl))
+            Tok.addModifier(HighlightingModifier::Virtual);
           if (isDependent(Decl))
             Tok.addModifier(HighlightingModifier::DependentName);
           if (isDefaultLibrary(Decl))
@@ -898,6 +906,8 @@ llvm::StringRef toSemanticTokenModifier(HighlightingModifier Modifier) {
     return "deduced"; // nonstandard
   case HighlightingModifier::Abstract:
     return "abstract";
+  case HighlightingModifier::Virtual:
+    return "virtual";
   case HighlightingModifier::DependentName:
     return "dependentName"; // nonstandard
   case HighlightingModifier::DefaultLibrary:
