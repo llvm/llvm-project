@@ -68,6 +68,11 @@ class CollectReachableCallees {
       if (!VisitedCGNodes.insert(CGN).second)
         continue;
 
+      // Ignore call graph node which does not have associated function or
+      // associated function is not a definition.
+      if (!CGN->getFunction() || CGN->getFunction()->isDeclaration())
+        continue;
+
       for (auto GI = CGN->begin(), GE = CGN->end(); GI != GE; ++GI) {
         auto *RCB = cast<CallBase>(GI->first.getValue());
         auto *RCGN = GI->second;
