@@ -10,8 +10,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef LLVM_TEXTAPI_MACHO_ARCHITECTURESET_H
-#define LLVM_TEXTAPI_MACHO_ARCHITECTURESET_H
+#ifndef LLVM_TEXTAPI_ARCHITECTURESET_H
+#define LLVM_TEXTAPI_ARCHITECTURESET_H
 
 #include "llvm/TextAPI/Architecture.h"
 #include <cstddef>
@@ -168,4 +168,4 @@ raw_ostream &operator<<(raw_ostream &OS, ArchitectureSet Set);
 } // end namespace MachO.
 } // end namespace llvm.
 
-#endif // LLVM_TEXTAPI_MACHO_ARCHITECTURESET_H
+#endif // LLVM_TEXTAPI_ARCHITECTURESET_H

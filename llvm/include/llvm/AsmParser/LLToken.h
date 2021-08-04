@@ -10,8 +10,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef LLVM_LIB_ASMPARSER_LLTOKEN_H
-#define LLVM_LIB_ASMPARSER_LLTOKEN_H
+#ifndef LLVM_ASMPARSER_LLTOKEN_H
+#define LLVM_ASMPARSER_LLTOKEN_H
 
 namespace llvm {
 namespace lltok {
