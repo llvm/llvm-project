@@ -1068,9 +1068,9 @@ def ProcessorFeatures {
   list<SubtargetFeature> BdVer2AdditionalFeatures = [FeatureF16C,
                                                      FeatureBMI,
                                                      FeatureTBM,
-                                                     FeatureFMA,
-                                                     FeatureFastBEXTR];
-  list<SubtargetFeature> BdVer2AdditionalTuning = [FeatureFastMOVBE];
+                                                     FeatureFMA];
+  list<SubtargetFeature> BdVer2AdditionalTuning = [FeatureFastBEXTR,
+                                                   FeatureFastMOVBE];
   list<SubtargetFeature> BdVer2Tuning =
     !listconcat(BdVer1Tuning, BdVer2AdditionalTuning);
   list<SubtargetFeature> BdVer2Features =
