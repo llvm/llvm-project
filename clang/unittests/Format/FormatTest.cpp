@@ -8224,7 +8224,12 @@ TEST_F(FormatTest, ReturnTypeBreakingStyle) {
                "f(i)\n"
                "{\n"
                "  return i + 1;\n"
-               "}",
+               "}\n"
+               "int\n" // Break here.
+               "f(i)\n"
+               "{\n"
+               "  return i + 1;\n"
+               "};",
                Style);
   verifyFormat("int f(a, b, c);\n" // No break here.
                "int\n"             // Break here.
@@ -8233,8 +8238,20 @@ TEST_F(FormatTest, ReturnTypeBreakingStyle) {
                "float c;\n"
                "{\n"
                "  return a + b < c;\n"
-               "}",
+               "}\n"
+               "int\n"        // Break here.
+               "f(a, b, c)\n" // Break here.
+               "short a, b;\n"
+               "float c;\n"
+               "{\n"
+               "  return a + b < c;\n"
+               "};",
                Style);
+  // The return breaking style doesn't affect object definitions with
+  // attribute-like macros.
+  verifyFormat("Tttttttttttttttttttttttt ppppppppppppppp\n"
+               "    ABSL_GUARDED_BY(mutex) = {};",
+               getGoogleStyleWithColumns(40));
 
   Style = getGNUStyle();
 
