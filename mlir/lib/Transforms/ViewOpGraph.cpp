@@ -12,9 +12,11 @@
 #include "mlir/IR/Operation.h"
 #include "mlir/Support/IndentedOstream.h"
 #include "llvm/Support/Format.h"
+#include "llvm/Support/GraphWriter.h"
 
 using namespace mlir;
 
+static const StringRef kLineStyleControlFlow = "dashed";
 static const StringRef kLineStyleDataFlow = "solid";
 static const StringRef kShapeNode = "ellipse";
 static const StringRef kShapeNone = "plain";
@@ -76,6 +78,13 @@ public:
       processOperation(getOperation());
       emitAllEdgeStmts();
     });
+  }
+
+  /// Create a CFG graph for a region. Used in `Region::viewGraph`.
+  void emitRegionCFG(Region &region) {
+    printControlFlowEdges = true;
+    printDataFlowEdges = false;
+    emitGraph([&]() { processRegion(region); });
   }
 
 private:
@@ -151,8 +160,7 @@ private:
 
   /// Append an edge to the list of edges.
   /// Note: Edges are written to the output stream via `emitAllEdgeStmts`.
-  void emitEdgeStmt(Node n1, Node n2, std::string label,
-                    StringRef style = kLineStyleDataFlow) {
+  void emitEdgeStmt(Node n1, Node n2, std::string label, StringRef style) {
     AttributeMap attrs;
     attrs["style"] = style.str();
     // Do not label edges that start/end at a cluster boundary. Such edges are
@@ -233,14 +241,20 @@ private:
         valueToNode[blockArg] = emitNodeStmt(getLabel(blockArg));
 
       // Emit a node for each operation.
-      for (Operation &op : block)
-        processOperation(&op);
+      Optional<Node> prevNode;
+      for (Operation &op : block) {
+        Node nextNode = processOperation(&op);
+        if (printControlFlowEdges && prevNode)
+          emitEdgeStmt(*prevNode, nextNode, /*label=*/"",
+                       kLineStyleControlFlow);
+        prevNode = nextNode;
+      }
     });
   }
 
   /// Process an operation. If the operation has regions, emit a cluster.
   /// Otherwise, emit a node.
-  void processOperation(Operation *op) {
+  Node processOperation(Operation *op) {
     Node node;
     if (op->getNumRegions() > 0) {
       // Emit cluster for op with regions.
@@ -254,14 +268,19 @@ private:
       node = emitNodeStmt(getLabel(op));
     }
 
-    // Insert edges originating from each operand.
-    unsigned numOperands = op->getNumOperands();
-    for (unsigned i = 0; i < numOperands; i++)
-      emitEdgeStmt(valueToNode[op->getOperand(i)], node,
-                   /*label=*/numOperands == 1 ? "" : std::to_string(i));
+    // Insert data flow edges originating from each operand.
+    if (printDataFlowEdges) {
+      unsigned numOperands = op->getNumOperands();
+      for (unsigned i = 0; i < numOperands; i++)
+        emitEdgeStmt(valueToNode[op->getOperand(i)], node,
+                     /*label=*/numOperands == 1 ? "" : std::to_string(i),
+                     kLineStyleDataFlow);
+    }
 
     for (Value result : op->getResults())
       valueToNode[result] = node;
+
+    return node;
   }
 
   /// Process a region.
@@ -294,3 +313,25 @@ std::unique_ptr<Pass>
 mlir::createPrintOpGraphPass(raw_ostream &os) {
   return std::make_unique<PrintOpPass>(os);
 }
+
+/// Generate a CFG for a region and show it in a window.
+static void llvmViewGraph(Region &region, const Twine &name) {
+  int fd;
+  std::string filename = llvm::createGraphFilename(name.str(), fd);
+  {
+    llvm::raw_fd_ostream os(fd, /*shouldClose=*/true);
+    if (fd == -1) {
+      llvm::errs() << "error opening file '" << filename << "' for writing\n";
+      return;
+    }
+    PrintOpPass pass(os);
+    pass.emitRegionCFG(region);
+  }
+  llvm::DisplayGraph(filename, /*wait=*/false, llvm::GraphProgram::DOT);
+}
+
+void mlir::Region::viewGraph(const Twine &regionName) {
+  llvmViewGraph(*this, regionName);
+}
+
+void mlir::Region::viewGraph() { viewGraph("region"); }

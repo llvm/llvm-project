@@ -17,7 +17,6 @@
 #include "mlir/Pass/Pass.h"
 #include "mlir/Transforms/LocationSnapshot.h"
 #include "mlir/Transforms/ViewOpGraph.h"
-#include "mlir/Transforms/ViewRegionGraph.h"
 #include <limits>
 
 namespace mlir {
