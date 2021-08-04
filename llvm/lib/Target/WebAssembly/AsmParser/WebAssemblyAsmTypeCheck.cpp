@@ -213,7 +213,7 @@ bool WebAssemblyAsmTypeCheck::typeCheck(SMLoc ErrorLoc, const MCInst &Inst) {
     if (popType(ErrorLoc, {}))
       return true;
   } else if (Name == "end_block" || Name == "end_loop" || Name == "end_if" ||
-              Name == "else") {
+             Name == "else" || Name == "end_try") {
     if (checkEnd(ErrorLoc))
       return true;
   } else if (Name == "call_indirect" || Name == "return_call_indirect") {
@@ -230,6 +230,18 @@ bool WebAssemblyAsmTypeCheck::typeCheck(SMLoc ErrorLoc, const MCInst &Inst) {
       return typeError(ErrorLoc, StringRef("symbol ") + WasmSym->getName() +
                                       " missing .functype");
     if (checkSig(ErrorLoc, *Sig)) return true;
+  } else if (Name == "catch") {
+    const MCSymbolRefExpr *SymRef;
+    if (getSymRef(ErrorLoc, Inst, SymRef))
+      return true;
+    const auto *WasmSym = cast<MCSymbolWasm>(&SymRef->getSymbol());
+    const auto *Sig = WasmSym->getSignature();
+    if (!Sig || WasmSym->getType() != wasm::WASM_SYMBOL_TYPE_TAG)
+      return typeError(ErrorLoc, StringRef("symbol ") + WasmSym->getName() +
+                                     " missing .tagtype");
+    // catch instruction pushes values whose types are specified in the tag's
+    // "params" part
+    Stack.insert(Stack.end(), Sig->Params.begin(), Sig->Params.end());
   } else if (Name == "ref.null") {
     auto VT = static_cast<wasm::ValType>(Inst.getOperand(0).getImm());
     Stack.push_back(VT);
