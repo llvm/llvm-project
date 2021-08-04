@@ -1723,7 +1723,7 @@ SDValue WebAssemblyTargetLowering::LowerIntrinsic(SDValue Op,
                        });
   }
 
-  case Intrinsic::wasm_catch: {
+  case Intrinsic::wasm_catch_exn: {
     SDValue SymNode = getCppExceptionSymNode(Op, 2, DAG);
     return DAG.getNode(WebAssemblyISD::CATCH, DL,
                        {
