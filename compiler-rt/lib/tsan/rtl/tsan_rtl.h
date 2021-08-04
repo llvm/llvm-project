@@ -700,6 +700,7 @@ enum : AccessType {
   kAccessAtomic = 1 << 1,
   kAccessVptr = 1 << 2,  // read or write of an object virtual table pointer
   kAccessFree = 1 << 3,  // synthetic memory access during memory freeing
+  kAccessExternalPC = 1 << 4,  // access PC can have kExternalPCBit set
 };
 
 void MemoryAccess(ThreadState *thr, uptr pc, uptr addr,
