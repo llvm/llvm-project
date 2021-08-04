@@ -32,10 +32,9 @@ Symbols:
 
 ## There is no string table.
 # RUN: yaml2obj --docnum=3 %s -o %t3
-# RUN: llvm-readobj --string-table %t3 2>&1 | FileCheck %s --check-prefix=NO-STRTBL
+# RUN: llvm-readobj --string-table %t3 | FileCheck %s --check-prefix=NO-STRTBL
 
 # NO-STRTBL:      StringTable {
-# NO-STRTBL-NEXT: error: offset is out of string contents
 # NO-STRTBL-NEXT: }
 
 --- !XCOFF
