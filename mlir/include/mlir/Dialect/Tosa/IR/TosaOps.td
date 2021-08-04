@@ -1789,6 +1789,8 @@ def Tosa_CustomOp : Tosa_Op<"custom"> {
 // Further described in docs/Rationale/RationaleTOSADialect.md .
 //===----------------------------------------------------------------------===//
 def Tosa_IfOp : Tosa_Op<"cond_if", [
+      DeclareOpInterfaceMethods<InferShapedTypeOpInterface,
+                                ["inferReturnTypeComponents"]>,
        SingleBlockImplicitTerminator<"YieldOp">,
        RecursiveSideEffects]> {
   let summary = "Conditional if operator";
