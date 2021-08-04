@@ -5604,8 +5604,32 @@ bool SwitchLookupTable::WouldFitInRegister(const DataLayout &DL,
   return DL.fitsInLegalInteger(TableSize * IT->getBitWidth());
 }
 
+static bool isTypeLegalForLookupTable(Type *Ty, const TargetTransformInfo &TTI,
+                                      const DataLayout &DL) {
+  // Allow any legal type.
+  if (TTI.isTypeLegal(Ty))
+    return true;
+
+  auto *IT = dyn_cast<IntegerType>(Ty);
+  if (!IT)
+    return false;
+
+  // Also allow power of 2 integer types that have at least 8 bits and fit in
+  // a register. These types are common in frontend languages and targets
+  // usually support loads of these types.
+  // TODO: We could relax this to any integer that fits in a register and rely
+  // on ABI alignment and padding in the table to allow the load to be widened.
+  // Or we could widen the constants and truncate the load.
+  unsigned BitWidth = IT->getBitWidth();
+  return BitWidth >= 8 && isPowerOf2_32(BitWidth) &&
+         DL.fitsInLegalInteger(IT->getBitWidth());
+}
+
 /// Determine whether a lookup table should be built for this switch, based on
 /// the number of cases, size of the table, and the types of the results.
+// TODO: We could support larger than legal types by limiting based on the
+// number of loads required and/or table size. If the constants are small we
+// could use smaller table entries and extend after the load.
 static bool
 ShouldBuildLookupTable(SwitchInst *SI, uint64_t TableSize,
                        const TargetTransformInfo &TTI, const DataLayout &DL,
@@ -5619,7 +5643,7 @@ ShouldBuildLookupTable(SwitchInst *SI, uint64_t TableSize,
     Type *Ty = I.second;
 
     // Saturate this flag to true.
-    HasIllegalType = HasIllegalType || !TTI.isTypeLegal(Ty);
+    HasIllegalType = HasIllegalType || !isTypeLegalForLookupTable(Ty, TTI, DL);
 
     // Saturate this flag to false.
     AllTablesFitInRegister =

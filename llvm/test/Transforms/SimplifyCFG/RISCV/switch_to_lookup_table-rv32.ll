@@ -7,6 +7,12 @@ target triple = "riscv32-unknown-elf"
 ; The table for @f
 ; CHECK: @switch.table.f = private unnamed_addr constant [7 x i32] [i32 55, i32 123, i32 0, i32 -1, i32 27, i32 62, i32 1], align 4
 
+; The char table for char
+; CHECK: @switch.table.char = private unnamed_addr constant [9 x i8] c"7{\00\FF\1B>\01!T", align 1
+
+; The float table for @h
+; CHECK: @switch.table.h = private unnamed_addr constant [4 x float] [float 0x40091EB860000000, float 0x3FF3BE76C0000000, float 0x4012449BA0000000, float 0x4001AE1480000000], align 4
+
 ; The table for @foostring
 ; CHECK: @switch.table.foostring = private unnamed_addr constant [4 x i8*] [i8* getelementptr inbounds ([4 x i8], [4 x i8]* @.str, i64 0, i64 0), i8* getelementptr inbounds ([4 x i8], [4 x i8]* @.str1, i64 0, i64 0), i8* getelementptr inbounds ([4 x i8], [4 x i8]* @.str2, i64 0, i64 0), i8* getelementptr inbounds ([4 x i8], [4 x i8]* @.str3, i64 0, i64 0)], align 4
 
@@ -58,37 +64,15 @@ return:
 define i8 @char(i32 %c) {
 ; CHECK-LABEL: @char(
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    switch i32 [[C:%.*]], label [[SW_DEFAULT:%.*]] [
-; CHECK-NEXT:    i32 42, label [[RETURN:%.*]]
-; CHECK-NEXT:    i32 43, label [[SW_BB1:%.*]]
-; CHECK-NEXT:    i32 44, label [[SW_BB2:%.*]]
-; CHECK-NEXT:    i32 45, label [[SW_BB3:%.*]]
-; CHECK-NEXT:    i32 46, label [[SW_BB4:%.*]]
-; CHECK-NEXT:    i32 47, label [[SW_BB5:%.*]]
-; CHECK-NEXT:    i32 48, label [[SW_BB6:%.*]]
-; CHECK-NEXT:    i32 49, label [[SW_BB7:%.*]]
-; CHECK-NEXT:    i32 50, label [[SW_BB8:%.*]]
-; CHECK-NEXT:    ]
-; CHECK:       sw.bb1:
-; CHECK-NEXT:    br label [[RETURN]]
-; CHECK:       sw.bb2:
-; CHECK-NEXT:    br label [[RETURN]]
-; CHECK:       sw.bb3:
-; CHECK-NEXT:    br label [[RETURN]]
-; CHECK:       sw.bb4:
-; CHECK-NEXT:    br label [[RETURN]]
-; CHECK:       sw.bb5:
-; CHECK-NEXT:    br label [[RETURN]]
-; CHECK:       sw.bb6:
-; CHECK-NEXT:    br label [[RETURN]]
-; CHECK:       sw.bb7:
-; CHECK-NEXT:    br label [[RETURN]]
-; CHECK:       sw.bb8:
-; CHECK-NEXT:    br label [[RETURN]]
-; CHECK:       sw.default:
+; CHECK-NEXT:    [[SWITCH_TABLEIDX:%.*]] = sub i32 [[C:%.*]], 42
+; CHECK-NEXT:    [[TMP0:%.*]] = icmp ult i32 [[SWITCH_TABLEIDX]], 9
+; CHECK-NEXT:    br i1 [[TMP0]], label [[SWITCH_LOOKUP:%.*]], label [[RETURN:%.*]]
+; CHECK:       switch.lookup:
+; CHECK-NEXT:    [[SWITCH_GEP:%.*]] = getelementptr inbounds [9 x i8], [9 x i8]* @switch.table.char, i32 0, i32 [[SWITCH_TABLEIDX]]
+; CHECK-NEXT:    [[SWITCH_LOAD:%.*]] = load i8, i8* [[SWITCH_GEP]], align 1
 ; CHECK-NEXT:    br label [[RETURN]]
 ; CHECK:       return:
-; CHECK-NEXT:    [[RETVAL_0:%.*]] = phi i8 [ 15, [[SW_DEFAULT]] ], [ 84, [[SW_BB8]] ], [ 33, [[SW_BB7]] ], [ 1, [[SW_BB6]] ], [ 62, [[SW_BB5]] ], [ 27, [[SW_BB4]] ], [ -1, [[SW_BB3]] ], [ 0, [[SW_BB2]] ], [ 123, [[SW_BB1]] ], [ 55, [[ENTRY:%.*]] ]
+; CHECK-NEXT:    [[RETVAL_0:%.*]] = phi i8 [ [[SWITCH_LOAD]], [[SWITCH_LOOKUP]] ], [ 15, [[ENTRY:%.*]] ]
 ; CHECK-NEXT:    ret i8 [[RETVAL_0]]
 ;
 entry:
@@ -125,23 +109,18 @@ declare void @dummy(i8 signext, float)
 define void @h(i32 %x) {
 ; CHECK-LABEL: @h(
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    switch i32 [[X:%.*]], label [[SW_DEFAULT:%.*]] [
-; CHECK-NEXT:    i32 0, label [[SW_EPILOG:%.*]]
-; CHECK-NEXT:    i32 1, label [[SW_BB1:%.*]]
-; CHECK-NEXT:    i32 2, label [[SW_BB2:%.*]]
-; CHECK-NEXT:    i32 3, label [[SW_BB3:%.*]]
-; CHECK-NEXT:    ]
-; CHECK:       sw.bb1:
-; CHECK-NEXT:    br label [[SW_EPILOG]]
-; CHECK:       sw.bb2:
-; CHECK-NEXT:    br label [[SW_EPILOG]]
-; CHECK:       sw.bb3:
-; CHECK-NEXT:    br label [[SW_EPILOG]]
-; CHECK:       sw.default:
+; CHECK-NEXT:    [[TMP0:%.*]] = icmp ult i32 [[X:%.*]], 4
+; CHECK-NEXT:    br i1 [[TMP0]], label [[SWITCH_LOOKUP:%.*]], label [[SW_EPILOG:%.*]]
+; CHECK:       switch.lookup:
+; CHECK-NEXT:    [[SWITCH_SHIFTAMT:%.*]] = mul i32 [[X]], 8
+; CHECK-NEXT:    [[SWITCH_DOWNSHIFT:%.*]] = lshr i32 89655594, [[SWITCH_SHIFTAMT]]
+; CHECK-NEXT:    [[SWITCH_MASKED:%.*]] = trunc i32 [[SWITCH_DOWNSHIFT]] to i8
+; CHECK-NEXT:    [[SWITCH_GEP:%.*]] = getelementptr inbounds [4 x float], [4 x float]* @switch.table.h, i32 0, i32 [[X]]
+; CHECK-NEXT:    [[SWITCH_LOAD:%.*]] = load float, float* [[SWITCH_GEP]], align 4
 ; CHECK-NEXT:    br label [[SW_EPILOG]]
 ; CHECK:       sw.epilog:
-; CHECK-NEXT:    [[A_0:%.*]] = phi i8 [ 7, [[SW_DEFAULT]] ], [ 5, [[SW_BB3]] ], [ 88, [[SW_BB2]] ], [ 9, [[SW_BB1]] ], [ 42, [[ENTRY:%.*]] ]
-; CHECK-NEXT:    [[B_0:%.*]] = phi float [ 0x4023FAE140000000, [[SW_DEFAULT]] ], [ 0x4001AE1480000000, [[SW_BB3]] ], [ 0x4012449BA0000000, [[SW_BB2]] ], [ 0x3FF3BE76C0000000, [[SW_BB1]] ], [ 0x40091EB860000000, [[ENTRY]] ]
+; CHECK-NEXT:    [[A_0:%.*]] = phi i8 [ [[SWITCH_MASKED]], [[SWITCH_LOOKUP]] ], [ 7, [[ENTRY:%.*]] ]
+; CHECK-NEXT:    [[B_0:%.*]] = phi float [ [[SWITCH_LOAD]], [[SWITCH_LOOKUP]] ], [ 0x4023FAE140000000, [[ENTRY]] ]
 ; CHECK-NEXT:    call void @dummy(i8 signext [[A_0]], float [[B_0]])
 ; CHECK-NEXT:    ret void
 ;
