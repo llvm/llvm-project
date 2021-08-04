@@ -68,14 +68,20 @@ enum {
   HasMergeOpMask = 1 << HasMergeOpShift,
 
   // Does this instruction have a SEW operand. It will be the last explicit
-  // operand. Used by RVV Pseudos.
+  // operand unless there is a vector policy operand. Used by RVV Pseudos.
   HasSEWOpShift = HasMergeOpShift + 1,
   HasSEWOpMask = 1 << HasSEWOpShift,
 
   // Does this instruction have a VL operand. It will be the second to last
-  // explicit operand. Used by RVV Pseudos.
+  // explicit operand unless there is a vector policy operand. Used by RVV
+  // Pseudos.
   HasVLOpShift = HasSEWOpShift + 1,
   HasVLOpMask = 1 << HasVLOpShift,
+
+  // Does this instruction have a vector policy operand. It will be the last
+  // explicit operand. Used by RVV Pseudos.
+  HasVecPolicyOpShift = HasVLOpShift + 1,
+  HasVecPolicyOpMask = 1 << HasVecPolicyOpShift,
 };
 
 // Match with the definitions in RISCVInstrFormatsV.td
@@ -130,6 +136,10 @@ static inline bool hasSEWOp(uint64_t TSFlags) {
 /// \returns true if there is a VL operand for the instruction.
 static inline bool hasVLOp(uint64_t TSFlags) {
   return TSFlags & HasVLOpMask;
+}
+/// \returns true if there is a vector policy operand for this instruction.
+static inline bool hasVecPolicyOp(uint64_t TSFlags) {
+  return TSFlags & HasVecPolicyOpMask;
 }
 
 // RISC-V Specific Machine Operand Flags
