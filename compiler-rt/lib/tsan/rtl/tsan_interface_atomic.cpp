@@ -32,6 +32,7 @@ using namespace __tsan;
 static StaticSpinMutex mutex128;
 #endif
 
+#if SANITIZER_DEBUG
 static bool IsLoadOrder(morder mo) {
   return mo == mo_relaxed || mo == mo_consume
       || mo == mo_acquire || mo == mo_seq_cst;
@@ -40,6 +41,7 @@ static bool IsLoadOrder(morder mo) {
 static bool IsStoreOrder(morder mo) {
   return mo == mo_relaxed || mo == mo_release || mo == mo_seq_cst;
 }
+#endif
 
 static bool IsReleaseOrder(morder mo) {
   return mo == mo_release || mo == mo_acq_rel || mo == mo_seq_cst;
@@ -202,7 +204,7 @@ static memory_order to_mo(morder mo) {
   case mo_acq_rel: return memory_order_acq_rel;
   case mo_seq_cst: return memory_order_seq_cst;
   }
-  CHECK(0);
+  DCHECK(0);
   return memory_order_seq_cst;
 }
 
@@ -220,7 +222,7 @@ static a128 NoTsanAtomicLoad(const volatile a128 *a, morder mo) {
 
 template <typename T>
 static T AtomicLoad(ThreadState *thr, uptr pc, const volatile T *a, morder mo) {
-  CHECK(IsLoadOrder(mo));
+  DCHECK(IsLoadOrder(mo));
   // This fast-path is critical for performance.
   // Assume the access is atomic.
   if (!IsAcquireOrder(mo)) {
@@ -258,7 +260,7 @@ static void NoTsanAtomicStore(volatile a128 *a, a128 v, morder mo) {
 template <typename T>
 static void AtomicStore(ThreadState *thr, uptr pc, volatile T *a, T v,
                         morder mo) {
-  CHECK(IsStoreOrder(mo));
+  DCHECK(IsStoreOrder(mo));
   MemoryAccess(thr, pc, (uptr)a, AccessSize<T>(), kAccessWrite | kAccessAtomic);
   // This fast-path is critical for performance.
   // Assume the access is atomic.
@@ -403,7 +405,7 @@ static bool AtomicCAS(ThreadState *thr, uptr pc, volatile T *a, T *c, T v,
   // 31.7.2.18: "The failure argument shall not be memory_order_release
   // nor memory_order_acq_rel". LLVM (2021-05) fallbacks to Monotonic
   // (mo_relaxed) when those are used.
-  CHECK(IsLoadOrder(fmo));
+  DCHECK(IsLoadOrder(fmo));
 
   MemoryAccess(thr, pc, (uptr)a, AccessSize<T>(), kAccessWrite | kAccessAtomic);
   if (LIKELY(mo == mo_relaxed && fmo == mo_relaxed)) {

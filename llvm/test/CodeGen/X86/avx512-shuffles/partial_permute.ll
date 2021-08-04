@@ -4315,7 +4315,7 @@ define <4 x double> @test_masked_8xdouble_to_4xdouble_perm_mem_mask1(<8 x double
 ; CHECK-FAST-LABEL: test_masked_8xdouble_to_4xdouble_perm_mem_mask1:
 ; CHECK-FAST:       # %bb.0:
 ; CHECK-FAST-NEXT:    vmovapd (%rdi), %ymm2
-; CHECK-FAST-NEXT:    vmovapd {{.*#+}} ymm3 = [3,4,2,6]
+; CHECK-FAST-NEXT:    vmovapd {{.*#+}} ymm3 = [3,5,2,7]
 ; CHECK-FAST-NEXT:    vpermi2pd 32(%rdi){1to4}, %ymm2, %ymm3
 ; CHECK-FAST-NEXT:    vxorpd %xmm2, %xmm2, %xmm2
 ; CHECK-FAST-NEXT:    vcmpeqpd %ymm2, %ymm1, %k1
@@ -4340,7 +4340,7 @@ define <4 x double> @test_masked_z_8xdouble_to_4xdouble_perm_mem_mask1(<8 x doub
 ; CHECK-FAST-LABEL: test_masked_z_8xdouble_to_4xdouble_perm_mem_mask1:
 ; CHECK-FAST:       # %bb.0:
 ; CHECK-FAST-NEXT:    vmovapd (%rdi), %ymm2
-; CHECK-FAST-NEXT:    vmovapd {{.*#+}} ymm1 = [3,4,2,6]
+; CHECK-FAST-NEXT:    vmovapd {{.*#+}} ymm1 = [3,5,2,7]
 ; CHECK-FAST-NEXT:    vxorpd %xmm3, %xmm3, %xmm3
 ; CHECK-FAST-NEXT:    vcmpeqpd %ymm3, %ymm0, %k1
 ; CHECK-FAST-NEXT:    vpermi2pd 32(%rdi){1to4}, %ymm2, %ymm1 {%k1} {z}

@@ -404,6 +404,7 @@ cc_library(
     deps = [
         ":BinaryFormat",
         ":DebugInfoCodeView",
+        ":ProfileData",
         ":Support",
         ":config",
         ":ir_headers",
@@ -468,7 +469,6 @@ cc_library(
     features = ["-header_modules"],
     strip_include_prefix = "utils/TableGen",
     deps = [
-        ":MC",
         ":Support",
         ":TableGen",
         ":config",

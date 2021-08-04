@@ -329,6 +329,7 @@ else()
     set(LIBOMP_HAVE_OMPT_SUPPORT FALSE)
   endif()
 endif()
+set(LIBOMP_HAVE_OMPT_SUPPORT ${LIBOMP_HAVE_OMPT_SUPPORT} PARENT_SCOPE)
 
 # Check if HWLOC support is available
 if(${LIBOMP_USE_HWLOC})

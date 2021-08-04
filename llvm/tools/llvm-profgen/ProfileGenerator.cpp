@@ -443,8 +443,8 @@ void CSProfileGenerator::write(std::unique_ptr<SampleProfileWriter> Writer,
 // be added compressed while looking up function profile
 static void
 extractPrefixContextStack(SmallVectorImpl<std::string> &ContextStrStack,
-                          const SmallVectorImpl<const PseudoProbe *> &Probes,
-                          ProfiledBinary *Binary) {
+    const SmallVectorImpl<const MCDecodedPseudoProbe *> &Probes,
+    ProfiledBinary *Binary) {
   for (const auto *P : Probes) {
     Binary->getInlineContextForProbe(P, ContextStrStack, true);
   }
@@ -520,9 +520,10 @@ void PseudoProbeCSProfileGenerator::populateBodySamplesWithProbes(
   // Extract the top frame probes by looking up each address among the range in
   // the Address2ProbeMap
   extractProbesFromRange(RangeCounter, ProbeCounter, Binary);
-  std::unordered_map<PseudoProbeInlineTree *, FunctionSamples *> FrameSamples;
+  std::unordered_map<MCDecodedPseudoProbeInlineTree *, FunctionSamples *>
+      FrameSamples;
   for (auto PI : ProbeCounter) {
-    const PseudoProbe *Probe = PI.first;
+    const MCDecodedPseudoProbe *Probe = PI.first;
     uint64_t Count = PI.second;
     FunctionSamples &FunctionProfile =
         getFunctionProfileForLeafProbe(ContextStrStack, Probe, Binary);
@@ -530,7 +531,7 @@ void PseudoProbeCSProfileGenerator::populateBodySamplesWithProbes(
     // collected for non-danglie probes. This is for reporting all of the
     // zero count probes of the frame later.
     FrameSamples[Probe->getInlineTreeNode()] = &FunctionProfile;
-    FunctionProfile.addBodySamplesForProbe(Probe->Index, Count);
+    FunctionProfile.addBodySamplesForProbe(Probe->getIndex(), Count);
     FunctionProfile.addTotalSamples(Count);
     if (Probe->isEntry()) {
       FunctionProfile.addHeadSamples(Count);
@@ -565,7 +566,7 @@ void PseudoProbeCSProfileGenerator::populateBodySamplesWithProbes(
     for (auto &I : FrameSamples) {
       auto *FunctionProfile = I.second;
       for (auto *Probe : I.first->getProbes()) {
-          FunctionProfile->addBodySamplesForProbe(Probe->Index, 0);
+        FunctionProfile->addBodySamplesForProbe(Probe->getIndex(), 0);
       }
     }
   }
@@ -579,25 +580,26 @@ void PseudoProbeCSProfileGenerator::populateBoundarySamplesWithProbes(
     uint64_t TargetOffset = BI.first.second;
     uint64_t Count = BI.second;
     uint64_t SourceAddress = Binary->offsetToVirtualAddr(SourceOffset);
-    const PseudoProbe *CallProbe = Binary->getCallProbeForAddr(SourceAddress);
+    const MCDecodedPseudoProbe *CallProbe =
+        Binary->getCallProbeForAddr(SourceAddress);
     if (CallProbe == nullptr)
       continue;
     FunctionSamples &FunctionProfile =
         getFunctionProfileForLeafProbe(ContextStrStack, CallProbe, Binary);
-    FunctionProfile.addBodySamples(CallProbe->Index, 0, Count);
+    FunctionProfile.addBodySamples(CallProbe->getIndex(), 0, Count);
     FunctionProfile.addTotalSamples(Count);
     StringRef CalleeName = FunctionSamples::getCanonicalFnName(
         Binary->getFuncFromStartOffset(TargetOffset));
     if (CalleeName.size() == 0)
       continue;
-    FunctionProfile.addCalledTargetSamples(CallProbe->Index, 0, CalleeName,
+    FunctionProfile.addCalledTargetSamples(CallProbe->getIndex(), 0, CalleeName,
                                            Count);
   }
 }
 
 FunctionSamples &PseudoProbeCSProfileGenerator::getFunctionProfileForLeafProbe(
     SmallVectorImpl<std::string> &ContextStrStack,
-    const PseudoProbeFuncDesc *LeafFuncDesc, bool WasLeafInlined) {
+    const MCPseudoProbeFuncDesc *LeafFuncDesc, bool WasLeafInlined) {
   assert(ContextStrStack.size() && "Profile context must have the leaf frame");
   // Compress the context string except for the leaf frame
   std::string LeafFrame = ContextStrStack.back();
@@ -624,14 +626,15 @@ FunctionSamples &PseudoProbeCSProfileGenerator::getFunctionProfileForLeafProbe(
 }
 
 FunctionSamples &PseudoProbeCSProfileGenerator::getFunctionProfileForLeafProbe(
-    SmallVectorImpl<std::string> &ContextStrStack, const PseudoProbe *LeafProbe,
-    ProfiledBinary *Binary) {
+    SmallVectorImpl<std::string> &ContextStrStack,
+    const MCDecodedPseudoProbe *LeafProbe, ProfiledBinary *Binary) {
+
   // Explicitly copy the context for appending the leaf context
   SmallVector<std::string, 16> ContextStrStackCopy(ContextStrStack.begin(),
                                                    ContextStrStack.end());
   Binary->getInlineContextForProbe(LeafProbe, ContextStrStackCopy, true);
-  const auto *FuncDesc = Binary->getFuncDescForGUID(LeafProbe->GUID);
-  bool WasLeafInlined = LeafProbe->InlineTree->hasInlineSite();
+  const auto *FuncDesc = Binary->getFuncDescForGUID(LeafProbe->getGuid());
+  bool WasLeafInlined = LeafProbe->getInlineTreeNode()->hasInlineSite();
   return getFunctionProfileForLeafProbe(ContextStrStackCopy, FuncDesc,
                                         WasLeafInlined);
 }

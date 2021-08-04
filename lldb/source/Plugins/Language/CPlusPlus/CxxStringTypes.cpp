@@ -168,7 +168,7 @@ bool lldb_private::formatters::Char8SummaryProvider(
     stream.Printf("%s ", value.c_str());
 
   StringPrinter::ReadBufferAndDumpToStreamOptions options(valobj);
-  options.SetData(data);
+  options.SetData(std::move(data));
   options.SetStream(&stream);
   options.SetPrefixToken("u8");
   options.SetQuote('\'');
@@ -194,7 +194,7 @@ bool lldb_private::formatters::Char16SummaryProvider(
     stream.Printf("%s ", value.c_str());
 
   StringPrinter::ReadBufferAndDumpToStreamOptions options(valobj);
-  options.SetData(data);
+  options.SetData(std::move(data));
   options.SetStream(&stream);
   options.SetPrefixToken("u");
   options.SetQuote('\'');
@@ -220,7 +220,7 @@ bool lldb_private::formatters::Char32SummaryProvider(
     stream.Printf("%s ", value.c_str());
 
   StringPrinter::ReadBufferAndDumpToStreamOptions options(valobj);
-  options.SetData(data);
+  options.SetData(std::move(data));
   options.SetStream(&stream);
   options.SetPrefixToken("U");
   options.SetQuote('\'');
@@ -254,7 +254,7 @@ bool lldb_private::formatters::WCharSummaryProvider(
   const uint32_t wchar_size = *size;
 
   StringPrinter::ReadBufferAndDumpToStreamOptions options(valobj);
-  options.SetData(data);
+  options.SetData(std::move(data));
   options.SetStream(&stream);
   options.SetPrefixToken("L");
   options.SetQuote('\'');

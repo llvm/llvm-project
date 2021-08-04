@@ -612,11 +612,6 @@ def ParallelLoopCollapsing : Pass<"parallel-loop-collapsing"> {
   ];
 }
 
-def PrintCFG : FunctionPass<"print-cfg-graph"> {
-  let summary = "Print CFG graph per-Region";
-  let constructor = "mlir::createPrintCFGGraphPass()";
-}
-
 def PrintOpStats : Pass<"print-op-stats"> {
   let summary = "Print statistics of operations";
   let constructor = "mlir::createPrintOpStatsPass()";
@@ -689,13 +684,16 @@ def SymbolDCE : Pass<"symbol-dce"> {
 }
 
 def ViewOpGraphPass : Pass<"view-op-graph"> {
-  let summary = "Print Graphviz dataflow visualization of an operation";
+  let summary = "Print Graphviz visualization of an operation";
   let description = [{
-    This pass prints a Graphviz dataflow graph of a module.
+    This pass prints a Graphviz graph of a module.
 
     - Operations are represented as nodes;
-    - Uses as edges;
+    - Uses (data flow) as edges;
+    - Control flow as dashed edges;
     - Regions/blocks as subgraphs.
+
+    By default, only data flow edges are printed.
 
     Note: See https://www.graphviz.org/doc/info/lang.html for more information
     about the Graphviz DOT language.
@@ -705,6 +703,10 @@ def ViewOpGraphPass : Pass<"view-op-graph"> {
             /*default=*/"20", "Limit attribute/type length to number of chars">,
     Option<"printAttrs", "print-attrs", "bool",
            /*default=*/"true", "Print attributes of operations">,
+    Option<"printControlFlowEdges", "print-control-flow-edges", "bool",
+           /*default=*/"false", "Print control flow edges">,
+    Option<"printDataFlowEdges", "print-data-flow-edges", "bool",
+           /*default=*/"true", "Print data flow edges">,
     Option<"printResultTypes", "print-result-types", "bool",
             /*default=*/"true", "Print result types of operations">
   ];

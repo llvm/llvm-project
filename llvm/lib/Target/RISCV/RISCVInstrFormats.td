@@ -178,6 +178,9 @@ class RVInst<dag outs, dag ins, string opcodestr, string argstr,
 
   bit HasVLOp = 0;
   let TSFlags{15} = HasVLOp;
+
+  bit HasVecPolicyOp = 0;
+  let TSFlags{16} = HasVecPolicyOp;
 }
 
 // Pseudo instructions

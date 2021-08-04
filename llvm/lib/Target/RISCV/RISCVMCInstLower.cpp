@@ -148,17 +148,18 @@ static bool lowerRISCVVMachineInstrToMCInst(const MachineInstr *MI,
   assert(TRI && "TargetRegisterInfo expected");
 
   uint64_t TSFlags = MI->getDesc().TSFlags;
-  int NumOps = MI->getNumExplicitOperands();
+  unsigned NumOps = MI->getNumExplicitOperands();
 
-  for (const MachineOperand &MO : MI->explicit_operands()) {
-    int OpNo = (int)MI->getOperandNo(&MO);
-    assert(OpNo >= 0 && "Operand number doesn't fit in an 'int' type");
+  // Skip policy, VL and SEW operands which are the last operands if present.
+  if (RISCVII::hasVecPolicyOp(TSFlags))
+    --NumOps;
+  if (RISCVII::hasVLOp(TSFlags))
+    --NumOps;
+  if (RISCVII::hasSEWOp(TSFlags))
+    --NumOps;
 
-    // Skip VL and SEW operands which are the last two operands if present.
-    if (RISCVII::hasVLOp(TSFlags) && OpNo == (NumOps - 2))
-      continue;
-    if (RISCVII::hasSEWOp(TSFlags) && OpNo == (NumOps - 1))
-      continue;
+  for (unsigned OpNo = 0; OpNo != NumOps; ++OpNo) {
+    const MachineOperand &MO = MI->getOperand(OpNo);
 
     // Skip merge op. It should be the first operand after the result.
     if (RISCVII::hasMergeOp(TSFlags) && OpNo == 1) {

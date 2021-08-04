@@ -40,6 +40,7 @@ extern "C" {
 #pragma omp end declare variant
 
 #ifdef __AMDGCN__
+#pragma omp begin declare variant match(device = {arch(amdgcn)})
 
 // __NO_INLINE__ prevents some x86 optimized macro definitions in system headers
 #define __NO_INLINE__ 1
@@ -64,6 +65,11 @@ extern "C" {
 
 /// Include declarations for libdevice functions.
 #include <__clang_hip_libdevice_declares.h>
+
+#pragma pop_macro("__device__")
+#undef __OPENMP_AMDGCN__
+
+#pragma omp end declare variant
 
 #ifdef __cplusplus
 } // extern "C"

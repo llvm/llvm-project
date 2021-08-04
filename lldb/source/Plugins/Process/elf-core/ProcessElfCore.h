@@ -148,7 +148,7 @@ private:
   // Parse thread(s) data structures(prstatus, prpsinfo) from given NOTE segment
   llvm::Error ParseThreadContextsFromNoteSegment(
       const elf::ELFProgramHeader &segment_header,
-      lldb_private::DataExtractor segment_data);
+      const lldb_private::DataExtractor &segment_data);
 
   // Returns number of thread contexts stored in the core file
   uint32_t GetNumThreadContexts();

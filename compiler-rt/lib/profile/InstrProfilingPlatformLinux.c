@@ -17,6 +17,15 @@
 #include "InstrProfiling.h"
 #include "InstrProfilingInternal.h"
 
+#if defined(__FreeBSD__) && !defined(ElfW)
+/*
+ * FreeBSD's elf.h and link.h headers do not define the ElfW(type) macro yet.
+ * If this is added to all supported FreeBSD versions in the future, this
+ * compatibility macro can be removed.
+ */
+#define ElfW(type) __ElfN(type)
+#endif
+
 #define PROF_DATA_START INSTR_PROF_SECT_START(INSTR_PROF_DATA_COMMON)
 #define PROF_DATA_STOP INSTR_PROF_SECT_STOP(INSTR_PROF_DATA_COMMON)
 #define PROF_NAME_START INSTR_PROF_SECT_START(INSTR_PROF_NAME_COMMON)

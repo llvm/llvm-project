@@ -844,6 +844,47 @@ TSAN_INTERCEPTOR(int, posix_memalign, void **memptr, uptr align, uptr sz) {
 }
 #endif
 
+// Both __cxa_guard_acquire and pthread_once 0-initialize
+// the object initially. pthread_once does not have any
+// other ABI requirements. __cxa_guard_acquire assumes
+// that any non-0 value in the first byte means that
+// initialization is completed. Contents of the remaining
+// bytes are up to us.
+constexpr u32 kGuardInit = 0;
+constexpr u32 kGuardDone = 1;
+constexpr u32 kGuardRunning = 1 << 16;
+constexpr u32 kGuardWaiter = 1 << 17;
+
+static int guard_acquire(ThreadState *thr, uptr pc, atomic_uint32_t *g) {
+  OnPotentiallyBlockingRegionBegin();
+  auto on_exit = at_scope_exit(&OnPotentiallyBlockingRegionEnd);
+  for (;;) {
+    u32 cmp = atomic_load(g, memory_order_acquire);
+    if (cmp == kGuardInit) {
+      if (atomic_compare_exchange_strong(g, &cmp, kGuardRunning,
+                                         memory_order_relaxed))
+        return 1;
+    } else if (cmp == kGuardDone) {
+      if (!thr->in_ignored_lib)
+        Acquire(thr, pc, (uptr)g);
+      return 0;
+    } else {
+      if ((cmp & kGuardWaiter) ||
+          atomic_compare_exchange_strong(g, &cmp, cmp | kGuardWaiter,
+                                         memory_order_relaxed))
+        FutexWait(g, cmp | kGuardWaiter);
+    }
+  }
+}
+
+static void guard_release(ThreadState *thr, uptr pc, atomic_uint32_t *g) {
+  if (!thr->in_ignored_lib)
+    Release(thr, pc, (uptr)g);
+  u32 old = atomic_exchange(g, kGuardDone, memory_order_release);
+  if (old & kGuardWaiter)
+    FutexWake(g, 1 << 30);
+}
+
 // __cxa_guard_acquire and friends need to be intercepted in a special way -
 // regular interceptors will break statically-linked libstdc++. Linux
 // interceptors are especially defined as weak functions (so that they don't
@@ -864,31 +905,17 @@ TSAN_INTERCEPTOR(int, posix_memalign, void **memptr, uptr align, uptr sz) {
 // Used in thread-safe function static initialization.
 STDCXX_INTERCEPTOR(int, __cxa_guard_acquire, atomic_uint32_t *g) {
   SCOPED_INTERCEPTOR_RAW(__cxa_guard_acquire, g);
-  OnPotentiallyBlockingRegionBegin();
-  auto on_exit = at_scope_exit(&OnPotentiallyBlockingRegionEnd);
-  for (;;) {
-    u32 cmp = atomic_load(g, memory_order_acquire);
-    if (cmp == 0) {
-      if (atomic_compare_exchange_strong(g, &cmp, 1<<16, memory_order_relaxed))
-        return 1;
-    } else if (cmp == 1) {
-      Acquire(thr, pc, (uptr)g);
-      return 0;
-    } else {
-      internal_sched_yield();
-    }
-  }
+  return guard_acquire(thr, pc, g);
 }
 
 STDCXX_INTERCEPTOR(void, __cxa_guard_release, atomic_uint32_t *g) {
   SCOPED_INTERCEPTOR_RAW(__cxa_guard_release, g);
-  Release(thr, pc, (uptr)g);
-  atomic_store(g, 1, memory_order_release);
+  guard_release(thr, pc, g);
 }
 
 STDCXX_INTERCEPTOR(void, __cxa_guard_abort, atomic_uint32_t *g) {
   SCOPED_INTERCEPTOR_RAW(__cxa_guard_abort, g);
-  atomic_store(g, 0, memory_order_relaxed);
+  atomic_store(g, kGuardInit, memory_order_relaxed);
 }
 
 namespace __tsan {
@@ -1480,20 +1507,9 @@ TSAN_INTERCEPTOR(int, pthread_once, void *o, void (*f)()) {
   else
     a = static_cast<atomic_uint32_t*>(o);
 
-  u32 v = atomic_load(a, memory_order_acquire);
-  if (v == 0 && atomic_compare_exchange_strong(a, &v, 1,
-                                               memory_order_relaxed)) {
+  if (guard_acquire(thr, pc, a)) {
     (*f)();
-    if (!thr->in_ignored_lib)
-      Release(thr, pc, (uptr)o);
-    atomic_store(a, 2, memory_order_release);
-  } else {
-    while (v != 2) {
-      internal_sched_yield();
-      v = atomic_load(a, memory_order_acquire);
-    }
-    if (!thr->in_ignored_lib)
-      Acquire(thr, pc, (uptr)o);
+    guard_release(thr, pc, a);
   }
   return 0;
 }

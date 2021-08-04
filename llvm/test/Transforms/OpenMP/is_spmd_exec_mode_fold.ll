@@ -128,7 +128,8 @@ define internal void @is_generic_helper2() {
 ; CHECK-NEXT:    call void @foo()
 ; CHECK-NEXT:    ret void
 ; CHECK:       f:
-; CHECK-NEXT:    unreachable
+; CHECK-NEXT:    call void @bar()
+; CHECK-NEXT:    ret void
 ;
   %isSPMD = call i8 @__kmpc_is_spmd_exec_mode()
   %c = icmp eq i8 %isSPMD, 0
