@@ -4148,16 +4148,15 @@ CharUnits CodeGenModule::GetTargetTypeStoreSize(llvm::Type *Ty) const {
 }
 
 LangAS CodeGenModule::GetGlobalVarAddressSpace(const VarDecl *D) {
-  LangAS AddrSpace = LangAS::Default;
   if (LangOpts.OpenCL) {
-    AddrSpace = D ? D->getType().getAddressSpace() : LangAS::opencl_global;
-    assert(AddrSpace == LangAS::opencl_global ||
-           AddrSpace == LangAS::opencl_global_device ||
-           AddrSpace == LangAS::opencl_global_host ||
-           AddrSpace == LangAS::opencl_constant ||
-           AddrSpace == LangAS::opencl_local ||
-           AddrSpace >= LangAS::FirstTargetAddressSpace);
-    return AddrSpace;
+    LangAS AS = D ? D->getType().getAddressSpace() : LangAS::opencl_global;
+    assert(AS == LangAS::opencl_global ||
+           AS == LangAS::opencl_global_device ||
+           AS == LangAS::opencl_global_host ||
+           AS == LangAS::opencl_constant ||
+           AS == LangAS::opencl_local ||
+           AS >= LangAS::FirstTargetAddressSpace);
+    return AS;
   }
 
   if (LangOpts.SYCLIsDevice &&
