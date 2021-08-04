@@ -692,17 +692,6 @@ int Finalize(ThreadState *thr);
 void OnUserAlloc(ThreadState *thr, uptr pc, uptr p, uptr sz, bool write);
 void OnUserFree(ThreadState *thr, uptr pc, uptr p, bool write);
 
-typedef uptr AccessType;
-
-enum : AccessType {
-  kAccessWrite = 0,
-  kAccessRead = 1 << 0,
-  kAccessAtomic = 1 << 1,
-  kAccessVptr = 1 << 2,  // read or write of an object virtual table pointer
-  kAccessFree = 1 << 3,  // synthetic memory access during memory freeing
-  kAccessExternalPC = 1 << 4,  // access PC can have kExternalPCBit set
-};
-
 void MemoryAccess(ThreadState *thr, uptr pc, uptr addr,
     int kAccessSizeLog, bool kAccessIsWrite, bool kIsAtomic);
 void MemoryAccessImpl(ThreadState *thr, uptr addr,
