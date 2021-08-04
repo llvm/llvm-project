@@ -23,12 +23,28 @@ def SparseTensorEncodingAttr : SparseTensor_Attr<"SparseTensorEncoding",
   let mnemonic = "encoding";
 
   let description = [{
-    An attribute to encode "TACO"-style information (see tensor-compiler.org)
-    on sparsity properties of tensors. The encoding is eventually used by a
-    `sparse compiler` pass to generate sparse code fully automatically
-    for all tensor expressions that involve tensors with a sparse encoding.
-    Compiler passes that run before this sparse compiler pass need to be
+    An attribute to encode TACO-style information on sparsity properties
+    of tensors. The encoding is eventually used by a **sparse compiler**
+    pass to generate sparse code fully automatically for all tensor
+    expressions that involve tensors with a sparse encoding. Compiler
+    passes that run before this sparse compiler pass need to be
     aware of the semantics of tensor types with such an encoding.
+
+    Example:
+
+    ```mlir
+
+    #DCSC = #sparse_tensor.encoding<{
+      dimLevelType = [ "compressed", "compressed" ],
+      dimOrdering = affine_map<(i,j) -> (j,i)>,
+      pointerBitWidth = 32,
+      indexBitWidth = 8
+    }>
+
+
+    ... tensor<8x8xf64, #DCSR> ...
+
+    ```
   }];
 
   // Data in sparse tensor encoding.
