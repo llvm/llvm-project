@@ -2633,6 +2633,7 @@ void cl::AddExtraVersionPrinter(VersionPrinterTy func) {
 }
 
 StringMap<Option *> &cl::getRegisteredOptions(SubCommand &Sub) {
+  initCommonOptions();
   auto &Subs = GlobalParser->RegisteredSubCommands;
   (void)Subs;
   assert(is_contained(Subs, &Sub));

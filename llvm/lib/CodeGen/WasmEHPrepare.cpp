@@ -23,7 +23,7 @@
 //
 // - After:
 //   catchpad ...
-//   exn = wasm.catch(WebAssembly::CPP_EXCEPTION);
+//   exn = wasm.catch.exn(WebAssembly::CPP_EXCEPTION);
 //   // Only add below in case it's not a single catch (...)
 //   wasm.landingpad.index(index);
 //   __wasm_lpad_context.lpad_index = index;
@@ -103,7 +103,7 @@ class WasmEHPrepare : public FunctionPass {
   Function *LPadIndexF = nullptr;   // wasm.landingpad.index() intrinsic
   Function *LSDAF = nullptr;        // wasm.lsda() intrinsic
   Function *GetExnF = nullptr;      // wasm.get.exception() intrinsic
-  Function *CatchF = nullptr;       // wasm.catch() intrinsic
+  Function *CatchF = nullptr;       // wasm.catch.exn() intrinsic
   Function *GetSelectorF = nullptr; // wasm.get.ehselector() intrinsic
   FunctionCallee CallPersonalityF =
       nullptr; // _Unwind_CallPersonality() wrapper
@@ -232,9 +232,9 @@ bool WasmEHPrepare::prepareEHPads(Function &F) {
   GetExnF = Intrinsic::getDeclaration(&M, Intrinsic::wasm_get_exception);
   GetSelectorF = Intrinsic::getDeclaration(&M, Intrinsic::wasm_get_ehselector);
 
-  // wasm.catch() will be lowered down to wasm 'catch' instruction in
+  // wasm.catch.exn() will be lowered down to wasm 'catch' instruction in
   // instruction selection.
-  CatchF = Intrinsic::getDeclaration(&M, Intrinsic::wasm_catch);
+  CatchF = Intrinsic::getDeclaration(&M, Intrinsic::wasm_catch_exn);
 
   // _Unwind_CallPersonality() wrapper function, which calls the personality
   CallPersonalityF = M.getOrInsertFunction(
@@ -288,8 +288,8 @@ void WasmEHPrepare::prepareEHPad(BasicBlock *BB, bool NeedPersonality,
     return;
   }
 
-  // Replace wasm.get.exception intrinsic with wasm.catch intrinsic, which will
-  // be lowered to wasm 'catch' instruction. We do this mainly because
+  // Replace wasm.get.exception intrinsic with wasm.catch.exn intrinsic, which
+  // will be lowered to wasm 'catch' instruction. We do this mainly because
   // instruction selection cannot handle wasm.get.exception intrinsic's token
   // argument.
   Instruction *CatchCI =

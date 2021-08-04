@@ -688,21 +688,27 @@ def SymbolDCE : Pass<"symbol-dce"> {
   let constructor = "mlir::createSymbolDCEPass()";
 }
 
-def ViewOpGraphPass : Pass<"view-op-graph", "ModuleOp"> {
-  let summary = "Print graphviz view of module";
+def ViewOpGraphPass : Pass<"view-op-graph"> {
+  let summary = "Print Graphviz dataflow visualization of an operation";
   let description = [{
-    This pass prints a graphviz per block of a module.
+    This pass prints a Graphviz dataflow graph of a module.
 
-    - Op are represented as nodes;
+    - Operations are represented as nodes;
     - Uses as edges;
+    - Regions/blocks as subgraphs.
+
+    Note: See https://www.graphviz.org/doc/info/lang.html for more information
+    about the Graphviz DOT language.
   }];
-  let constructor = "mlir::createPrintOpGraphPass()";
   let options = [
-    Option<"title", "title", "std::string",
-           /*default=*/"", "The prefix of the title of the graph">,
-    Option<"shortNames", "short-names", "bool", /*default=*/"false",
-           "Use short names">
+    Option<"maxLabelLen", "max-label-len", "unsigned",
+            /*default=*/"20", "Limit attribute/type length to number of chars">,
+    Option<"printAttrs", "print-attrs", "bool",
+           /*default=*/"true", "Print attributes of operations">,
+    Option<"printResultTypes", "print-result-types", "bool",
+            /*default=*/"true", "Print result types of operations">
   ];
+  let constructor = "mlir::createPrintOpGraphPass()";
 }
 
 #endif // MLIR_TRANSFORMS_PASSES
