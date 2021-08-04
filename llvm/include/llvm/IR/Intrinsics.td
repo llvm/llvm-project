@@ -715,14 +715,6 @@ let IntrProperties = [IntrInaccessibleMemOnly, IntrWillReturn] in {
   def int_set_rounding  : DefaultAttrsIntrinsic<[], [llvm_i32_ty]>;
 }
 
-//===--------------- Floating Point Test Intrinsics -----------------------===//
-//
-
-def int_isnan
-    : DefaultAttrsIntrinsic<[LLVMScalarOrSameVectorWidth<0, llvm_i1_ty>],
-                            [llvm_anyfloat_ty],
-                            [IntrNoMem, IntrWillReturn]>;
-
 //===--------------- Constrained Floating Point Intrinsics ----------------===//
 //
 
