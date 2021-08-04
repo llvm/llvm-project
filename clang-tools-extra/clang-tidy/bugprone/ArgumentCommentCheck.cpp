@@ -20,10 +20,12 @@ namespace clang {
 namespace tidy {
 namespace bugprone {
 namespace {
-AST_MATCHER(Decl, isFromStdNamespace) {
+AST_MATCHER(Decl, isFromStdNamespaceOrSystemHeader) {
   if (const auto *D = Node.getDeclContext()->getEnclosingNamespaceContext())
-    return D->isStdNamespace();
-  return false;
+    if (D->isStdNamespace())
+      return true;
+  return Node.getASTContext().getSourceManager().isInSystemHeader(
+      Node.getLocation());
 }
 } // namespace
 
@@ -66,13 +68,13 @@ void ArgumentCommentCheck::registerMatchers(MatchFinder *Finder) {
                // not specified by the standard, and standard library
                // implementations in practice have to use reserved names to
                // avoid conflicts with same-named macros.
-               unless(hasDeclaration(isFromStdNamespace())))
+               unless(hasDeclaration(isFromStdNamespaceOrSystemHeader())))
           .bind("expr"),
       this);
-  Finder->addMatcher(
-      cxxConstructExpr(unless(hasDeclaration(isFromStdNamespace())))
-          .bind("expr"),
-      this);
+  Finder->addMatcher(cxxConstructExpr(unless(hasDeclaration(
+                                          isFromStdNamespaceOrSystemHeader())))
+                         .bind("expr"),
+                     this);
 }
 
 static std::vector<std::pair<SourceLocation, StringRef>>
