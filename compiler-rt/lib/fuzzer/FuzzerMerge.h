@@ -41,6 +41,7 @@
 #define LLVM_FUZZER_MERGE_H
 
 #include "FuzzerDefs.h"
+#include "FuzzerIO.h"
 
 #include <istream>
 #include <ostream>
