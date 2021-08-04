@@ -665,6 +665,10 @@ void MetadataStreamerV3::emitKernelAttrs(const Function &Func,
         Func.getFnAttribute("runtime-handle").getValueAsString().str(),
         /*Copy=*/true);
   }
+  if(Func.hasFnAttribute("device-init"))
+    Kern[".kind"] = Kern.getDocument()->getNode("init");
+  else if(Func.hasFnAttribute("device-fini"))
+    Kern[".kind"] = Kern.getDocument()->getNode("fini");
 }
 
 void MetadataStreamerV3::emitKernelArgs(const Function &Func,
