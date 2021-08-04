@@ -1052,11 +1052,14 @@ bool AsmParser::Run(bool NoInitialTextSection, bool NoFinalize) {
       }
     }
   }
-
   // Finalize the output stream if there are no errors and if the client wants
   // us to.
-  if (!HadError && !NoFinalize)
+  if (!HadError && !NoFinalize) {
+    if (auto *TS = Out.getTargetStreamer())
+      TS->emitConstantPools();
+
     Out.Finish(Lexer.getLoc());
+  }
 
   return HadError || getContext().hadError();
 }
