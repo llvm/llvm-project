@@ -96,9 +96,6 @@ extern "C" void _exit(int status);
 extern "C" int fileno_unlocked(void *stream);
 extern "C" int dirfd(void *dirp);
 #endif
-#if SANITIZER_GLIBC
-extern "C" int mallopt(int param, int value);
-#endif
 #if SANITIZER_NETBSD
 extern __sanitizer_FILE __sF[];
 #else
@@ -2666,12 +2663,6 @@ void InitializeInterceptors() {
   // We need to setup it early, because functions like dlsym() can call it.
   REAL(memset) = internal_memset;
   REAL(memcpy) = internal_memcpy;
-#endif
-
-  // Instruct libc malloc to consume less memory.
-#if SANITIZER_GLIBC
-  mallopt(1, 0);  // M_MXFAST
-  mallopt(-3, 32*1024);  // M_MMAP_THRESHOLD
 #endif
 
   new(interceptor_ctx()) InterceptorContext();
