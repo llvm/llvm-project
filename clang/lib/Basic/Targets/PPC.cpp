@@ -373,8 +373,6 @@ void PPCTargetInfo::getTargetDefines(const LangOptions &Opts,
     Builder.defineMacro("__MMA__");
   if (HasROPProtect)
     Builder.defineMacro("__ROP_PROTECT__");
-  if (HasPrivileged)
-    Builder.defineMacro("__PRIVILEGED__");
   if (HasP10Vector)
     Builder.defineMacro("__POWER10_VECTOR__");
   if (HasPCRelativeMemops)
