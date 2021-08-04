@@ -177,12 +177,16 @@ void ProfiledBinary::decodePseudoProbe(const ELFObjectFileBase *Obj) {
 
     if (SectionName == ".pseudo_probe_desc") {
       StringRef Contents = unwrapOrError(Section.getContents(), FileName);
-      ProbeDecoder.buildGUID2FuncDescMap(
-          reinterpret_cast<const uint8_t *>(Contents.data()), Contents.size());
+      if (!ProbeDecoder.buildGUID2FuncDescMap(
+              reinterpret_cast<const uint8_t *>(Contents.data()),
+              Contents.size()))
+        exitWithError("Pseudo Probe decoder fail in .pseudo_probe_desc section");
     } else if (SectionName == ".pseudo_probe") {
       StringRef Contents = unwrapOrError(Section.getContents(), FileName);
-      ProbeDecoder.buildAddress2ProbeMap(
-          reinterpret_cast<const uint8_t *>(Contents.data()), Contents.size());
+      if (!ProbeDecoder.buildAddress2ProbeMap(
+              reinterpret_cast<const uint8_t *>(Contents.data()),
+              Contents.size()))
+        exitWithError("Pseudo Probe decoder fail in .pseudo_probe section");
       // set UsePseudoProbes flag, used for PerfReader
       UsePseudoProbes = true;
     }

@@ -214,7 +214,8 @@ public:
   static int32_t MaxCompressionSize;
 };
 
-using ProbeCounterMap = std::unordered_map<const PseudoProbe *, uint64_t>;
+using ProbeCounterMap =
+    std::unordered_map<const MCDecodedPseudoProbe *, uint64_t>;
 
 class PseudoProbeCSProfileGenerator : public CSProfileGenerator {
 
@@ -241,12 +242,12 @@ private:
   // Helper function to get FunctionSamples for the leaf inlined context
   FunctionSamples &
   getFunctionProfileForLeafProbe(SmallVectorImpl<std::string> &ContextStrStack,
-                                 const PseudoProbeFuncDesc *LeafFuncDesc,
+                                 const MCPseudoProbeFuncDesc *LeafFuncDesc,
                                  bool WasLeafInlined);
   // Helper function to get FunctionSamples for the leaf probe
   FunctionSamples &
   getFunctionProfileForLeafProbe(SmallVectorImpl<std::string> &ContextStrStack,
-                                 const PseudoProbe *LeafProbe,
+                                 const MCDecodedPseudoProbe *LeafProbe,
                                  ProfiledBinary *Binary);
 };
 
