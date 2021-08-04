@@ -17,7 +17,6 @@ executable("llvm-profgen") {
     "PerfReader.cpp",
     "ProfileGenerator.cpp",
     "ProfiledBinary.cpp",
-    "PseudoProbe.cpp",
     "llvm-profgen.cpp",
   ]
 }
