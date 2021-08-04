@@ -366,7 +366,7 @@ struct StringBasedCtxKey : public ContextKey {
 // need to be splitted by '@' to get the last location frame, so we
 // can just use probe instead and generate the string in the end.
 struct ProbeBasedCtxKey : public ContextKey {
-  SmallVector<const PseudoProbe *, 16> Probes;
+  SmallVector<const MCDecodedPseudoProbe *, 16> Probes;
 
   ProbeBasedCtxKey() : ContextKey(CK_ProbeBased) {}
   static bool classof(const ContextKey *K) {
@@ -432,11 +432,12 @@ struct FrameStack {
 };
 
 struct ProbeStack {
-  SmallVector<const PseudoProbe *, 16> Stack;
+  SmallVector<const MCDecodedPseudoProbe *, 16> Stack;
   const ProfiledBinary *Binary;
   ProbeStack(const ProfiledBinary *B) : Binary(B) {}
   bool pushFrame(UnwindState::ProfiledFrame *Cur) {
-    const PseudoProbe *CallProbe = Binary->getCallProbeForAddr(Cur->Address);
+    const MCDecodedPseudoProbe *CallProbe =
+        Binary->getCallProbeForAddr(Cur->Address);
     // We may not find a probe for a merged or external callsite.
     // Callsite merging may cause the loss of original probe IDs.
     // Cutting off the context from here since the inliner will

@@ -266,3 +266,48 @@ body: |
     %1:_(s128) = G_FPTOSI %0
     $q0 = COPY %1
 ...
+---
+name:            test_fptosi_s88_s88
+body: |
+  bb.0:
+    liveins: $x0
+    ; CHECK-LABEL: name: test_fptosi_s88_s88
+    ; CHECK: [[DEF:%[0-9]+]]:_(s88) = G_IMPLICIT_DEF
+    ; CHECK: [[FPTOSI:%[0-9]+]]:_(s128) = G_FPTOSI [[DEF]](s88)
+    ; CHECK: [[TRUNC:%[0-9]+]]:_(s88) = G_TRUNC [[FPTOSI]](s128)
+    ; CHECK: %trunc:_(s64) = G_TRUNC [[TRUNC]](s88)
+    ; CHECK: $x0 = COPY %trunc(s64)
+    %0:_(s88) = G_IMPLICIT_DEF
+    %1:_(s88) = G_FPTOSI %0
+    %trunc:_(s64) = G_TRUNC %1
+    $x0 = COPY %trunc
+...
+---
+name:            test_fptosi_s88_s64
+body: |
+  bb.0:
+    liveins: $x0
+    ; CHECK-LABEL: name: test_fptosi_s88_s64
+    ; CHECK: [[DEF:%[0-9]+]]:_(s64) = G_IMPLICIT_DEF
+    ; CHECK: [[FPTOSI:%[0-9]+]]:_(s128) = G_FPTOSI [[DEF]](s64)
+    ; CHECK: [[TRUNC:%[0-9]+]]:_(s88) = G_TRUNC [[FPTOSI]](s128)
+    ; CHECK: %trunc:_(s64) = G_TRUNC [[TRUNC]](s88)
+    ; CHECK: $x0 = COPY %trunc(s64)
+    %0:_(s64) = G_IMPLICIT_DEF
+    %1:_(s88) = G_FPTOSI %0
+    %trunc:_(s64) = G_TRUNC %1
+    $x0 = COPY %trunc
+...
+---
+name:            test_fptosi_s64_s88
+body: |
+  bb.0:
+    liveins: $x0
+    ; CHECK-LABEL: name: test_fptosi_s64_s88
+    ; CHECK: [[DEF:%[0-9]+]]:_(s88) = G_IMPLICIT_DEF
+    ; CHECK: [[FPEXT:%[0-9]+]]:_(s128) = G_FPEXT [[DEF]](s88)
+    ; CHECK: [[FPTOSI:%[0-9]+]]:_(s64) = G_FPTOSI [[FPEXT]](s128)
+    ; CHECK: $x0 = COPY [[FPTOSI]](s64)
+    %0:_(s88) = G_IMPLICIT_DEF
+    %1:_(s64) = G_FPTOSI %0
+    $x0 = COPY %1

@@ -45,9 +45,25 @@
 #define LLVM_MC_MCPSEUDOPROBE_H
 
 #include "llvm/ADT/MapVector.h"
+#include "llvm/ADT/StringRef.h"
+#include "llvm/ADT/Twine.h"
+#include "llvm/IR/PseudoProbe.h"
 #include "llvm/MC/MCSection.h"
+#include "llvm/Support/Errc.h"
+#include "llvm/Support/Error.h"
+#include "llvm/Support/ErrorOr.h"
+#include "llvm/Support/WithColor.h"
+#include "llvm/Support/raw_ostream.h"
+#include <algorithm>
 #include <functional>
+#include <list>
 #include <map>
+#include <set>
+#include <sstream>
+#include <string>
+#include <system_error>
+#include <unordered_map>
+#include <unordered_set>
 #include <vector>
 
 namespace llvm {
@@ -62,67 +78,211 @@ enum class MCPseudoProbeFlag {
   AddressDelta = 0x1,
 };
 
+// Function descriptor decoded from .pseudo_probe_desc section
+struct MCPseudoProbeFuncDesc {
+  uint64_t FuncGUID = 0;
+  uint64_t FuncHash = 0;
+  std::string FuncName;
+
+  MCPseudoProbeFuncDesc(uint64_t GUID, uint64_t Hash, StringRef Name)
+      : FuncGUID(GUID), FuncHash(Hash), FuncName(Name){};
+
+  void print(raw_ostream &OS);
+};
+
+class MCPseudoProbe;
+class MCDecodedPseudoProbe;
+
+// An inline frame has the form <Guid, ProbeID>
+using InlineSite = std::tuple<uint64_t, uint32_t>;
+using MCPseudoProbeInlineStack = SmallVector<InlineSite, 8>;
+// GUID to PseudoProbeFuncDesc map
+using GUIDProbeFunctionMap =
+    std::unordered_map<uint64_t, MCPseudoProbeFuncDesc>;
+// Address to pseudo probes map.
+using AddressProbesMap =
+    std::unordered_map<uint64_t, std::list<MCDecodedPseudoProbe>>;
+
+class MCPseudoProbeInlineTree;
+class MCDecodedPseudoProbeInlineTree;
+
+class MCPseudoProbeBase {
+protected:
+  uint64_t Guid;
+  uint64_t Index;
+  uint8_t Attributes;
+  uint8_t Type;
+  // The value should be equal to PseudoProbeReservedId::Last + 1 which is
+  // defined in SampleProfileProbe.h. The header file is not included here to
+  // reduce the dependency from MC to IPO.
+  const static uint32_t PseudoProbeFirstId = 1;
+
+public:
+  MCPseudoProbeBase(uint64_t G, uint64_t I, uint64_t At, uint8_t T)
+      : Guid(G), Index(I), Attributes(At), Type(T) {}
+
+  bool isEntry() const { return Index == PseudoProbeFirstId; }
+
+  bool isTailCall() const {
+    return Attributes & static_cast<uint8_t>(PseudoProbeAttributes::Reserved);
+  }
+
+  uint64_t getGuid() const { return Guid; }
+
+  uint64_t getIndex() const { return Index; }
+
+  uint8_t getAttributes() const { return Attributes; }
+
+  uint8_t getType() const { return Type; }
+
+  bool isBlock() const {
+    return Type == static_cast<uint8_t>(PseudoProbeType::Block);
+  }
+
+  bool isIndirectCall() const {
+    return Type == static_cast<uint8_t>(PseudoProbeType::IndirectCall);
+  }
+
+  bool isDirectCall() const {
+    return Type == static_cast<uint8_t>(PseudoProbeType::DirectCall);
+  }
+
+  bool isCall() const { return isIndirectCall() || isDirectCall(); }
+
+  void setAttributes(uint8_t Attr) { Attributes = Attr; }
+};
+
 /// Instances of this class represent a pseudo probe instance for a pseudo probe
 /// table entry, which is created during a machine instruction is assembled and
 /// uses an address from a temporary label created at the current address in the
 /// current section.
-class MCPseudoProbe {
+class MCPseudoProbe : public MCPseudoProbeBase {
   MCSymbol *Label;
-  uint64_t Guid;
-  uint64_t Index;
-  uint8_t Type;
-  uint8_t Attributes;
 
 public:
   MCPseudoProbe(MCSymbol *Label, uint64_t Guid, uint64_t Index, uint64_t Type,
                 uint64_t Attributes)
-      : Label(Label), Guid(Guid), Index(Index), Type(Type),
-        Attributes(Attributes) {
+      : MCPseudoProbeBase(Guid, Index, Attributes, Type), Label(Label) {
     assert(Type <= 0xFF && "Probe type too big to encode, exceeding 2^8");
     assert(Attributes <= 0xFF &&
            "Probe attributes too big to encode, exceeding 2^16");
   }
 
   MCSymbol *getLabel() const { return Label; }
-
-  uint64_t getGuid() const { return Guid; }
-
-  uint64_t getIndex() const { return Index; }
-
-  uint8_t getType() const { return Type; }
-
-  uint8_t getAttributes() const { return Attributes; }
-
   void emit(MCObjectStreamer *MCOS, const MCPseudoProbe *LastProbe) const;
 };
 
-// An inline frame has the form <Guid, ProbeID>
-using InlineSite = std::tuple<uint64_t, uint32_t>;
-using MCPseudoProbeInlineStack = SmallVector<InlineSite, 8>;
+class MCDecodedPseudoProbe : public MCPseudoProbeBase {
+  uint64_t Address;
+  MCDecodedPseudoProbeInlineTree *InlineTree;
+
+public:
+  MCDecodedPseudoProbe(uint64_t Ad, uint64_t G, uint32_t I, PseudoProbeType K,
+                       uint8_t At, MCDecodedPseudoProbeInlineTree *Tree)
+      : MCPseudoProbeBase(G, I, At, static_cast<uint8_t>(K)), Address(Ad),
+        InlineTree(Tree){};
+
+  uint64_t getAddress() const { return Address; }
+
+  void setAddress(uint64_t Addr) { Address = Addr; }
+
+  MCDecodedPseudoProbeInlineTree *getInlineTreeNode() const {
+    return InlineTree;
+  }
+
+  // Get the inlined context by traversing current inline tree backwards,
+  // each tree node has its InlineSite which is taken as the context.
+  // \p ContextStack is populated in root to leaf order
+  void getInlineContext(SmallVectorImpl<std::string> &ContextStack,
+                        const GUIDProbeFunctionMap &GUID2FuncMAP,
+                        bool ShowName) const;
+
+  // Helper function to get the string from context stack
+  std::string getInlineContextStr(const GUIDProbeFunctionMap &GUID2FuncMAP,
+                                  bool ShowName) const;
+
+  // Print pseudo probe while disassembling
+  void print(raw_ostream &OS, const GUIDProbeFunctionMap &GUID2FuncMAP,
+             bool ShowName) const;
+};
+
+template <typename ProbeType, typename DerivedProbeInlineTreeType>
+class MCPseudoProbeInlineTreeBase {
+  struct InlineSiteHash {
+    uint64_t operator()(const InlineSite &Site) const {
+      return std::get<0>(Site) ^ std::get<1>(Site);
+    }
+  };
+
+protected:
+  // Track children (e.g. inlinees) of current context
+  using InlinedProbeTreeMap = std::unordered_map<
+      InlineSite, std::unique_ptr<DerivedProbeInlineTreeType>, InlineSiteHash>;
+  InlinedProbeTreeMap Children;
+  // Set of probes that come with the function.
+  std::vector<ProbeType> Probes;
+  MCPseudoProbeInlineTreeBase() {
+    static_assert(std::is_base_of<MCPseudoProbeInlineTreeBase,
+                                  DerivedProbeInlineTreeType>::value,
+                  "DerivedProbeInlineTreeType must be subclass of "
+                  "MCPseudoProbeInlineTreeBase");
+  }
+
+public:
+  uint64_t Guid = 0;
+
+  // Root node has a GUID 0.
+  bool isRoot() const { return Guid == 0; }
+  InlinedProbeTreeMap &getChildren() { return Children; }
+  const InlinedProbeTreeMap &getChildren() const { return Children; }
+  std::vector<ProbeType> &getProbes() { return Probes; }
+  void addProbes(ProbeType Probe) { Probes.push_back(Probe); }
+  // Caller node of the inline site
+  MCPseudoProbeInlineTreeBase<ProbeType, DerivedProbeInlineTreeType> *Parent;
+  DerivedProbeInlineTreeType *getOrAddNode(const InlineSite &Site) {
+    auto Ret = Children.emplace(
+        Site, std::make_unique<DerivedProbeInlineTreeType>(Site));
+    Ret.first->second->Parent = this;
+    return Ret.first->second.get();
+  };
+};
 
 // A Tri-tree based data structure to group probes by inline stack.
 // A tree is allocated for a standalone .text section. A fake
 // instance is created as the root of a tree.
 // A real instance of this class is created for each function, either an
 // unlined function that has code in .text section or an inlined function.
-class MCPseudoProbeInlineTree {
-  uint64_t Guid;
-  // Set of probes that come with the function.
-  std::vector<MCPseudoProbe> Probes;
-  // Use std::map for a deterministic output.
-  std::map<InlineSite, MCPseudoProbeInlineTree *> Inlinees;
 
-  // Root node has a GUID 0.
-  bool isRoot() { return Guid == 0; }
-  MCPseudoProbeInlineTree *getOrAddNode(InlineSite Site);
-
+class MCPseudoProbeInlineTree
+    : public MCPseudoProbeInlineTreeBase<MCPseudoProbe,
+                                         MCPseudoProbeInlineTree> {
 public:
   MCPseudoProbeInlineTree() = default;
-  MCPseudoProbeInlineTree(uint64_t Guid) : Guid(Guid) {}
-  ~MCPseudoProbeInlineTree();
+  MCPseudoProbeInlineTree(uint64_t Guid) { this->Guid = Guid; }
+  MCPseudoProbeInlineTree(const InlineSite &Site) {
+    this->Guid = std::get<0>(Site);
+  }
+
+  // MCPseudoProbeInlineTree method based on Inlinees
   void addPseudoProbe(const MCPseudoProbe &Probe,
                       const MCPseudoProbeInlineStack &InlineStack);
   void emit(MCObjectStreamer *MCOS, const MCPseudoProbe *&LastProbe);
+};
+
+// inline tree node for the decoded pseudo probe
+class MCDecodedPseudoProbeInlineTree
+    : public MCPseudoProbeInlineTreeBase<MCDecodedPseudoProbe *,
+                                         MCDecodedPseudoProbeInlineTree> {
+public:
+  InlineSite ISite;
+  // Used for decoding
+  uint32_t ChildrenToProcess = 0;
+
+  MCDecodedPseudoProbeInlineTree(){};
+  MCDecodedPseudoProbeInlineTree(const InlineSite &Site) : ISite(Site){};
+
+  // Return false if it's a dummy inline site
+  bool hasInlineSite() const { return std::get<0>(ISite) != 0; }
 };
 
 /// Instances of this class represent the pseudo probes inserted into a compile
@@ -172,6 +332,83 @@ public:
   static int DdgPrintIndent;
 #endif
 };
+
+class MCPseudoProbeDecoder {
+  // GUID to PseudoProbeFuncDesc map.
+  GUIDProbeFunctionMap GUID2FuncDescMap;
+
+  // Address to probes map.
+  AddressProbesMap Address2ProbesMap;
+
+  // The dummy root of the inline trie, all the outlined function will directly
+  // be the children of the dummy root, all the inlined function will be the
+  // children of its inlineer. So the relation would be like:
+  // DummyRoot --> OutlinedFunc --> InlinedFunc1 --> InlinedFunc2
+  MCDecodedPseudoProbeInlineTree DummyInlineRoot;
+
+  /// Points to the current location in the buffer.
+  const uint8_t *Data = nullptr;
+
+  /// Points to the end of the buffer.
+  const uint8_t *End = nullptr;
+
+  // Decoding helper function
+  template <typename T> ErrorOr<T> readUnencodedNumber();
+  template <typename T> ErrorOr<T> readUnsignedNumber();
+  template <typename T> ErrorOr<T> readSignedNumber();
+  ErrorOr<StringRef> readString(uint32_t Size);
+
+public:
+  // Decode pseudo_probe_desc section to build GUID to PseudoProbeFuncDesc map.
+  bool buildGUID2FuncDescMap(const uint8_t *Start, std::size_t Size);
+
+  // Decode pseudo_probe section to build address to probes map.
+  bool buildAddress2ProbeMap(const uint8_t *Start, std::size_t Size);
+
+  // Print pseudo_probe_desc section info
+  void printGUID2FuncDescMap(raw_ostream &OS);
+
+  // Print pseudo_probe section info, used along with show-disassembly
+  void printProbeForAddress(raw_ostream &OS, uint64_t Address);
+
+  // do printProbeForAddress for all addresses
+  void printProbesForAllAddresses(raw_ostream &OS);
+
+  // Look up the probe of a call for the input address
+  const MCDecodedPseudoProbe *getCallProbeForAddr(uint64_t Address) const;
+
+  const MCPseudoProbeFuncDesc *getFuncDescForGUID(uint64_t GUID) const;
+
+  // Helper function to populate one probe's inline stack into
+  // \p InlineContextStack.
+  // Current leaf location info will be added if IncludeLeaf is true
+  // Example:
+  //  Current probe(bar:3) inlined at foo:2 then inlined at main:1
+  //  IncludeLeaf = true,  Output: [main:1, foo:2, bar:3]
+  //  IncludeLeaf = false, Output: [main:1, foo:2]
+  void
+  getInlineContextForProbe(const MCDecodedPseudoProbe *Probe,
+                           SmallVectorImpl<std::string> &InlineContextStack,
+                           bool IncludeLeaf) const;
+
+  const AddressProbesMap &getAddress2ProbesMap() const {
+    return Address2ProbesMap;
+  }
+
+  AddressProbesMap &getAddress2ProbesMap() { return Address2ProbesMap; }
+
+  const GUIDProbeFunctionMap &getGUID2FuncDescMap() const {
+    return GUID2FuncDescMap;
+  }
+
+  const MCPseudoProbeFuncDesc *
+  getInlinerDescForProbe(const MCDecodedPseudoProbe *Probe) const;
+
+  const MCDecodedPseudoProbeInlineTree &getDummyInlineRoot() const {
+    return DummyInlineRoot;
+  }
+};
+
 } // end namespace llvm
 
 #endif // LLVM_MC_MCPSEUDOPROBE_H

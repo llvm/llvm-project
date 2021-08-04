@@ -18,19 +18,15 @@ fixed_int32_t global_vec;
 // CHECK-NEXT:    [[PRED_ADDR:%.*]] = alloca <vscale x 16 x i1>, align 2
 // CHECK-NEXT:    [[VEC_ADDR:%.*]] = alloca <vscale x 4 x i32>, align 16
 // CHECK-NEXT:    [[PG:%.*]] = alloca <vscale x 16 x i1>, align 2
-// CHECK-NEXT:    [[SAVED_VALUE:%.*]] = alloca <8 x i8>, align 8
-// CHECK-NEXT:    [[SAVED_VALUE1:%.*]] = alloca <8 x i8>, align 8
 // CHECK-NEXT:    store <vscale x 16 x i1> [[PRED:%.*]], <vscale x 16 x i1>* [[PRED_ADDR]], align 2
 // CHECK-NEXT:    store <vscale x 4 x i32> [[VEC:%.*]], <vscale x 4 x i32>* [[VEC_ADDR]], align 16
 // CHECK-NEXT:    [[TMP0:%.*]] = load <vscale x 16 x i1>, <vscale x 16 x i1>* [[PRED_ADDR]], align 2
 // CHECK-NEXT:    [[TMP1:%.*]] = load <8 x i8>, <8 x i8>* @global_pred, align 2
-// CHECK-NEXT:    store <8 x i8> [[TMP1]], <8 x i8>* [[SAVED_VALUE]], align 8
-// CHECK-NEXT:    [[CASTFIXEDSVE:%.*]] = bitcast <8 x i8>* [[SAVED_VALUE]] to <vscale x 16 x i1>*
-// CHECK-NEXT:    [[TMP2:%.*]] = load <vscale x 16 x i1>, <vscale x 16 x i1>* [[CASTFIXEDSVE]], align 8
+// CHECK-NEXT:    [[CASTFIXEDSVE:%.*]] = call <vscale x 2 x i8> @llvm.experimental.vector.insert.nxv2i8.v8i8(<vscale x 2 x i8> undef, <8 x i8> [[TMP1]], i64 0)
+// CHECK-NEXT:    [[TMP2:%.*]] = bitcast <vscale x 2 x i8> [[CASTFIXEDSVE]] to <vscale x 16 x i1>
 // CHECK-NEXT:    [[TMP3:%.*]] = load <8 x i8>, <8 x i8>* @global_pred, align 2
-// CHECK-NEXT:    store <8 x i8> [[TMP3]], <8 x i8>* [[SAVED_VALUE1]], align 8
-// CHECK-NEXT:    [[CASTFIXEDSVE2:%.*]] = bitcast <8 x i8>* [[SAVED_VALUE1]] to <vscale x 16 x i1>*
-// CHECK-NEXT:    [[TMP4:%.*]] = load <vscale x 16 x i1>, <vscale x 16 x i1>* [[CASTFIXEDSVE2]], align 8
+// CHECK-NEXT:    [[CASTFIXEDSVE2:%.*]] = call <vscale x 2 x i8> @llvm.experimental.vector.insert.nxv2i8.v8i8(<vscale x 2 x i8> undef, <8 x i8> [[TMP3]], i64 0)
+// CHECK-NEXT:    [[TMP4:%.*]] = bitcast <vscale x 2 x i8> [[CASTFIXEDSVE2]] to <vscale x 16 x i1>
 // CHECK-NEXT:    [[TMP5:%.*]] = call <vscale x 16 x i1> @llvm.aarch64.sve.and.z.nxv16i1(<vscale x 16 x i1> [[TMP0]], <vscale x 16 x i1> [[TMP2]], <vscale x 16 x i1> [[TMP4]])
 // CHECK-NEXT:    store <vscale x 16 x i1> [[TMP5]], <vscale x 16 x i1>* [[PG]], align 2
 // CHECK-NEXT:    [[TMP6:%.*]] = load <vscale x 16 x i1>, <vscale x 16 x i1>* [[PG]], align 2
@@ -92,17 +88,15 @@ fixed_int32_t array_arg(fixed_int32_t arr[]) {
 // CHECK-NEXT:    [[RETVAL:%.*]] = alloca <8 x i8>, align 2
 // CHECK-NEXT:    [[ARR:%.*]] = alloca [3 x <8 x i8>], align 2
 // CHECK-NEXT:    [[PARR:%.*]] = alloca <8 x i8>*, align 8
-// CHECK-NEXT:    [[RETVAL_COERCE:%.*]] = alloca <vscale x 16 x i1>, align 2
 // CHECK-NEXT:    [[ARRAYIDX:%.*]] = getelementptr inbounds [3 x <8 x i8>], [3 x <8 x i8>]* [[ARR]], i64 0, i64 0
 // CHECK-NEXT:    store <8 x i8>* [[ARRAYIDX]], <8 x i8>** [[PARR]], align 8
 // CHECK-NEXT:    [[TMP0:%.*]] = load <8 x i8>*, <8 x i8>** [[PARR]], align 8
 // CHECK-NEXT:    [[TMP1:%.*]] = load <8 x i8>, <8 x i8>* [[TMP0]], align 2
 // CHECK-NEXT:    store <8 x i8> [[TMP1]], <8 x i8>* [[RETVAL]], align 2
-// CHECK-NEXT:    [[TMP2:%.*]] = bitcast <vscale x 16 x i1>* [[RETVAL_COERCE]] to i8*
-// CHECK-NEXT:    [[TMP3:%.*]] = bitcast <8 x i8>* [[RETVAL]] to i8*
-// CHECK-NEXT:    call void @llvm.memcpy.p0i8.p0i8.i64(i8* align 2 [[TMP2]], i8* align 2 [[TMP3]], i64 8, i1 false)
-// CHECK-NEXT:    [[TMP4:%.*]] = load <vscale x 16 x i1>, <vscale x 16 x i1>* [[RETVAL_COERCE]], align 2
-// CHECK-NEXT:    ret <vscale x 16 x i1> [[TMP4]]
+// CHECK-NEXT:    [[TMP2:%.*]] = load <8 x i8>, <8 x i8>* [[RETVAL]], align 2
+// CHECK-NEXT:    [[CASTFIXEDSVE:%.*]] = call <vscale x 2 x i8> @llvm.experimental.vector.insert.nxv2i8.v8i8(<vscale x 2 x i8> undef, <8 x i8> [[TMP2]], i64 0)
+// CHECK-NEXT:    [[TMP3:%.*]] = bitcast <vscale x 2 x i8> [[CASTFIXEDSVE]] to <vscale x 16 x i1>
+// CHECK-NEXT:    ret <vscale x 16 x i1> [[TMP3]]
 //
 fixed_bool_t address_of_array_idx() {
   fixed_bool_t arr[3];
@@ -119,23 +113,19 @@ fixed_bool_t address_of_array_idx() {
 // CHECK-NEXT:    [[XX:%.*]] = alloca <8 x i8>, align 8
 // CHECK-NEXT:    [[YY:%.*]] = alloca <8 x i8>, align 8
 // CHECK-NEXT:    [[PG:%.*]] = alloca <vscale x 16 x i1>, align 2
-// CHECK-NEXT:    [[SAVED_VALUE:%.*]] = alloca <8 x i8>, align 8
-// CHECK-NEXT:    [[SAVED_VALUE1:%.*]] = alloca <8 x i8>, align 8
 // CHECK-NEXT:    store <vscale x 16 x i1> [[PRED:%.*]], <vscale x 16 x i1>* [[PRED_ADDR]], align 2
 // CHECK-NEXT:    store <vscale x 4 x i32> [[VEC:%.*]], <vscale x 4 x i32>* [[VEC_ADDR]], align 16
 // CHECK-NEXT:    store <8 x i8> <i8 1, i8 2, i8 3, i8 4, i8 0, i8 0, i8 0, i8 0>, <8 x i8>* [[XX]], align 8
 // CHECK-NEXT:    store <8 x i8> <i8 2, i8 5, i8 4, i8 6, i8 0, i8 0, i8 0, i8 0>, <8 x i8>* [[YY]], align 8
 // CHECK-NEXT:    [[TMP0:%.*]] = load <vscale x 16 x i1>, <vscale x 16 x i1>* [[PRED_ADDR]], align 2
 // CHECK-NEXT:    [[TMP1:%.*]] = load <8 x i8>, <8 x i8>* @global_pred, align 2
-// CHECK-NEXT:    store <8 x i8> [[TMP1]], <8 x i8>* [[SAVED_VALUE]], align 8
-// CHECK-NEXT:    [[CASTFIXEDSVE:%.*]] = bitcast <8 x i8>* [[SAVED_VALUE]] to <vscale x 16 x i1>*
-// CHECK-NEXT:    [[TMP2:%.*]] = load <vscale x 16 x i1>, <vscale x 16 x i1>* [[CASTFIXEDSVE]], align 8
+// CHECK-NEXT:    [[CASTFIXEDSVE:%.*]] = call <vscale x 2 x i8> @llvm.experimental.vector.insert.nxv2i8.v8i8(<vscale x 2 x i8> undef, <8 x i8> [[TMP1]], i64 0)
+// CHECK-NEXT:    [[TMP2:%.*]] = bitcast <vscale x 2 x i8> [[CASTFIXEDSVE]] to <vscale x 16 x i1>
 // CHECK-NEXT:    [[TMP3:%.*]] = load <8 x i8>, <8 x i8>* [[XX]], align 8
 // CHECK-NEXT:    [[TMP4:%.*]] = load <8 x i8>, <8 x i8>* [[YY]], align 8
 // CHECK-NEXT:    [[ADD:%.*]] = add <8 x i8> [[TMP3]], [[TMP4]]
-// CHECK-NEXT:    store <8 x i8> [[ADD]], <8 x i8>* [[SAVED_VALUE1]], align 8
-// CHECK-NEXT:    [[CASTFIXEDSVE2:%.*]] = bitcast <8 x i8>* [[SAVED_VALUE1]] to <vscale x 16 x i1>*
-// CHECK-NEXT:    [[TMP5:%.*]] = load <vscale x 16 x i1>, <vscale x 16 x i1>* [[CASTFIXEDSVE2]], align 8
+// CHECK-NEXT:    [[CASTFIXEDSVE2:%.*]] = call <vscale x 2 x i8> @llvm.experimental.vector.insert.nxv2i8.v8i8(<vscale x 2 x i8> undef, <8 x i8> [[ADD]], i64 0)
+// CHECK-NEXT:    [[TMP5:%.*]] = bitcast <vscale x 2 x i8> [[CASTFIXEDSVE2]] to <vscale x 16 x i1>
 // CHECK-NEXT:    [[TMP6:%.*]] = call <vscale x 16 x i1> @llvm.aarch64.sve.and.z.nxv16i1(<vscale x 16 x i1> [[TMP0]], <vscale x 16 x i1> [[TMP2]], <vscale x 16 x i1> [[TMP5]])
 // CHECK-NEXT:    store <vscale x 16 x i1> [[TMP6]], <vscale x 16 x i1>* [[PG]], align 2
 // CHECK-NEXT:    [[TMP7:%.*]] = load <vscale x 16 x i1>, <vscale x 16 x i1>* [[PG]], align 2

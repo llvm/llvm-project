@@ -2421,13 +2421,6 @@ struct kmp_taskdata { /* aligned during dynamic allocation       */
   kmp_depnode_t
       *td_depnode; // Pointer to graph node if this task has dependencies
   kmp_task_team_t *td_task_team;
-  // The global thread id of the encountering thread. We need it because when a
-  // regular task depends on a hidden helper task, and the hidden helper task
-  // is finished on a hidden helper thread, it will call __kmp_release_deps to
-  // release all dependences. If now the task is a regular task, we need to pass
-  // the encountering gtid such that the task will be picked up and executed by
-  // its encountering team instead of hidden helper team.
-  kmp_int32 encountering_gtid;
   size_t td_size_alloc; // Size of task structure, including shareds etc.
 #if defined(KMP_GOMP_COMPAT)
   // 4 or 8 byte integers for the loop bounds in GOMP_taskloop
