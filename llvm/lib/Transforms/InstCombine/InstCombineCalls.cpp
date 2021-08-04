@@ -1468,6 +1468,18 @@ Instruction *InstCombinerImpl::visitCallInst(CallInst &CI) {
 
     break;
   }
+  case Intrinsic::isnan: {
+    Value *Arg = II->getArgOperand(0);
+    if (const auto *Inst = dyn_cast<Instruction>(Arg)) {
+      // If argument of this intrinsic call is an instruction that has 'nnan'
+      // flag, we can assume that NaN cannot be produced, otherwise it is
+      // undefined behavior.
+      if (Inst->getFastMathFlags().noNaNs())
+        return replaceInstUsesWith(
+            *II, ConstantInt::get(II->getType(), APInt::getNullValue(1)));
+    }
+    break;
+  }
   case Intrinsic::copysign: {
     Value *Mag = II->getArgOperand(0), *Sign = II->getArgOperand(1);
     if (SignBitMustBeZero(Sign, &TLI)) {
