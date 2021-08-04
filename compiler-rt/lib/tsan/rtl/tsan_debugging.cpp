@@ -195,7 +195,7 @@ const char *__tsan_locate_address(uptr addr, char *name, uptr name_size,
   const char *region_kind = nullptr;
   if (name && name_size > 0) name[0] = 0;
 
-  if (IsMetaMem(addr)) {
+  if (IsMetaMem(reinterpret_cast<u32 *>(addr))) {
     region_kind = "meta shadow";
   } else if (IsShadowMem(addr)) {
     region_kind = "shadow";
