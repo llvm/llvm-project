@@ -18,7 +18,6 @@
 # WC:      UND
 # WC-NEXT: [[#]] foo4@@v2
 # WC-NEXT: [[#]] _start{{$}}
-# WC-NEXT: [[#]] foo3@v1
 # WC-NOT:  {{.}}
 
 # RUN: echo 'v1 { global: *; local: foo*; }; v2 {};' > %t3.script
@@ -27,7 +26,6 @@
 # MIX1:      UND
 # MIX1-NEXT: [[#]] foo4@@v2
 # MIX1-NEXT: [[#]] _start@@v1
-# MIX1-NEXT: [[#]] foo3@v1
 # MIX1-NOT:  {{.}}
 
 # RUN: echo 'v1 { global: foo*; local: *; }; v2 { global: foo4; local: *; };' > %t4.script
