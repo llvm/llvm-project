@@ -475,11 +475,9 @@ static bool ReadEncodedBufferAndDumpToStream(
     return true;
   }
 
-  DataExtractor data(buffer_sp, process_sp->GetByteOrder(),
-                     process_sp->GetAddressByteSize());
-
   StringPrinter::ReadBufferAndDumpToStreamOptions dump_options(options);
-  dump_options.SetData(data);
+  dump_options.SetData(DataExtractor(buffer_sp, process_sp->GetByteOrder(),
+                                     process_sp->GetAddressByteSize()));
   dump_options.SetSourceSize(sourceSize);
   dump_options.SetIsTruncated(is_truncated);
   dump_options.SetNeedsZeroTermination(needs_zero_terminator);
