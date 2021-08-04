@@ -2230,7 +2230,6 @@ static int OnExit(ThreadState *thr) {
 
 struct TsanInterceptorContext {
   ThreadState *thr;
-  const uptr caller_pc;
   const uptr pc;
 };
 
@@ -2271,17 +2270,17 @@ static void HandleRecvmsg(ThreadState *thr, uptr pc,
                     ((TsanInterceptorContext *) ctx)->pc, (uptr) ptr, size, \
                     false)
 
-#define COMMON_INTERCEPTOR_ENTER(ctx, func, ...)      \
-  SCOPED_TSAN_INTERCEPTOR(func, __VA_ARGS__);         \
-  TsanInterceptorContext _ctx = {thr, caller_pc, pc}; \
-  ctx = (void *)&_ctx;                                \
-  (void) ctx;
+#define COMMON_INTERCEPTOR_ENTER(ctx, func, ...) \
+  SCOPED_TSAN_INTERCEPTOR(func, __VA_ARGS__);    \
+  TsanInterceptorContext _ctx = {thr, pc};       \
+  ctx = (void *)&_ctx;                           \
+  (void)ctx;
 
 #define COMMON_INTERCEPTOR_ENTER_NOIGNORE(ctx, func, ...) \
   SCOPED_INTERCEPTOR_RAW(func, __VA_ARGS__);              \
-  TsanInterceptorContext _ctx = {thr, caller_pc, pc};     \
+  TsanInterceptorContext _ctx = {thr, pc};                \
   ctx = (void *)&_ctx;                                    \
-  (void) ctx;
+  (void)ctx;
 
 #define COMMON_INTERCEPTOR_FILE_OPEN(ctx, file, path) \
   if (path)                                           \
