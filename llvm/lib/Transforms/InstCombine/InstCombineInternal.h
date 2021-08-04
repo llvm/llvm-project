@@ -22,6 +22,7 @@
 #include "llvm/IR/IRBuilder.h"
 #include "llvm/IR/InstVisitor.h"
 #include "llvm/IR/PatternMatch.h"
+#include "llvm/IR/Value.h"
 #include "llvm/Support/Debug.h"
 #include "llvm/Support/KnownBits.h"
 #include "llvm/Transforms/InstCombine/InstCombineWorklist.h"
@@ -624,6 +625,7 @@ public:
   Instruction *foldPHIArgGEPIntoPHI(PHINode &PN);
   Instruction *foldPHIArgLoadIntoPHI(PHINode &PN);
   Instruction *foldPHIArgZextsIntoPHI(PHINode &PN);
+  Instruction *foldPHIArgIntToPtrToPHI(PHINode &PN);
 
   /// Helper function for FoldPHIArgXIntoPHI() to set debug location for the
   /// folded operation.
