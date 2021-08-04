@@ -68,6 +68,7 @@ class TestSwiftPlaygrounds(TestBase):
 
     @skipUnlessDarwin
     @swiftTest
+    @skipIf(setting=('symbols.use-swift-clangimporter', 'false'))
     @skipIf(debug_info=decorators.no_match("dsym"))
     def test_cross_module_extension(self):
         """Test that playgrounds work"""
@@ -123,9 +124,7 @@ class TestSwiftPlaygrounds(TestBase):
         options.SetPlaygroundTransformEnabled()
 
         self.frame().EvaluateExpression(contents, options)
-
         ret = self.frame().EvaluateExpression("get_output()")
-
         playground_output = ret.GetSummary()
         if not force_target:
             # This is expected to fail because the deployment target
@@ -139,3 +138,13 @@ class TestSwiftPlaygrounds(TestBase):
         self.assertTrue("b=\\'5\\'" in playground_output)
         self.assertTrue("=\\'8\\'" in playground_output)
         self.assertTrue("=\\'11\\'" in playground_output)
+
+        # Test concurrency
+        contents = "error"
+        with open('Concurrency.swift', 'r') as contents_file:
+            contents = contents_file.read()
+        res = self.frame().EvaluateExpression(contents, options)
+        ret = self.frame().EvaluateExpression("get_output()")
+        playground_output = ret.GetSummary()
+        self.assertTrue(playground_output is not None)
+        self.assertTrue("=\\'23\\'" in playground_output)
