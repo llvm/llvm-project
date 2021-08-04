@@ -510,7 +510,7 @@ def FeatureMacroFusion
 // generate Gathers on all AVX2 processors. But the overhead on HSW is high.
 // Skylake Client processor has faster Gathers than HSW and performance is
 // similar to Skylake Server (AVX-512).
-def FeatureHasFastGather
+def FeatureFastGather
     : SubtargetFeature<"fast-gather", "HasFastGather", "true",
                        "Indicates if gather is reasonably fast">;
 
@@ -700,7 +700,7 @@ def ProcessorFeatures {
                                                   FeatureXSAVEC,
                                                   FeatureXSAVES,
                                                   FeatureCLFLUSHOPT];
-  list<SubtargetFeature> SKLTuning = [FeatureHasFastGather,
+  list<SubtargetFeature> SKLTuning = [FeatureFastGather,
                                       FeatureMacroFusion,
                                       FeatureSlow3OpsLEA,
                                       FeatureSlowDivide64,
@@ -727,7 +727,7 @@ def ProcessorFeatures {
                                                   FeatureVLX,
                                                   FeaturePKU,
                                                   FeatureCLWB];
-  list<SubtargetFeature> SKXTuning = [FeatureHasFastGather,
+  list<SubtargetFeature> SKXTuning = [FeatureFastGather,
                                       FeatureMacroFusion,
                                       FeatureSlow3OpsLEA,
                                       FeatureSlowDivide64,
@@ -765,7 +765,7 @@ def ProcessorFeatures {
                                                   FeatureVBMI,
                                                   FeatureIFMA,
                                                   FeatureSHA];
-  list<SubtargetFeature> CNLTuning = [FeatureHasFastGather,
+  list<SubtargetFeature> CNLTuning = [FeatureFastGather,
                                       FeatureMacroFusion,
                                       FeatureSlow3OpsLEA,
                                       FeatureSlowDivide64,
@@ -974,7 +974,7 @@ def ProcessorFeatures {
                                       FeatureSlowIncDec,
                                       FeatureSlowTwoMemOps,
                                       FeaturePreferMaskRegisters,
-                                      FeatureHasFastGather,
+                                      FeatureFastGather,
                                       FeatureFastMOVBE,
                                       FeatureSlowPMADDWD];
   // TODO Add AVX5124FMAPS/AVX5124VNNIW features
