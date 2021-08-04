@@ -330,7 +330,7 @@ void MemoryAccessRange(ThreadState *thr, uptr pc, uptr addr,
   if (size == 0)
     return;
 
-  u64 *shadow_mem = (u64*)MemToShadow(addr);
+  RawShadow *shadow_mem = MemToShadow(addr);
   DPrintf2("#%d: MemoryAccessRange: @%p %p size=%d is_write=%d\n",
       thr->tid, (void*)pc, (void*)addr,
       (int)size, is_write);
@@ -344,14 +344,14 @@ void MemoryAccessRange(ThreadState *thr, uptr pc, uptr addr,
     Printf("Access to non app mem %zx\n", addr + size - 1);
     DCHECK(IsAppMem(addr + size - 1));
   }
-  if (!IsShadowMem((uptr)shadow_mem)) {
+  if (!IsShadowMem(shadow_mem)) {
     Printf("Bad shadow addr %p (%zx)\n", shadow_mem, addr);
-    DCHECK(IsShadowMem((uptr)shadow_mem));
+    DCHECK(IsShadowMem(shadow_mem));
   }
-  if (!IsShadowMem((uptr)(shadow_mem + size * kShadowCnt / 8 - 1))) {
+  if (!IsShadowMem(shadow_mem + size * kShadowCnt / 8 - 1)) {
     Printf("Bad shadow addr %p (%zx)\n",
                shadow_mem + size * kShadowCnt / 8 - 1, addr + size - 1);
-    DCHECK(IsShadowMem((uptr)(shadow_mem + size * kShadowCnt / 8 - 1)));
+    DCHECK(IsShadowMem(shadow_mem + size * kShadowCnt / 8 - 1));
   }
 #endif
 
