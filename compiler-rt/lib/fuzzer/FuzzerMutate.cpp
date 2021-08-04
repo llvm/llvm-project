@@ -485,7 +485,7 @@ void MutationDispatcher::RecordSuccessfulMutationSequence() {
 }
 
 void MutationDispatcher::PrintRecommendedDictionary() {
-  Vector<DictionaryEntry> V;
+  std::vector<DictionaryEntry> V;
   for (auto &DE : PersistentAutoDictionary)
     if (!ManualDictionary.ContainsWord(DE.GetW()))
       V.push_back(DE);
@@ -540,7 +540,7 @@ size_t MutationDispatcher::DefaultMutate(uint8_t *Data, size_t Size,
 // Mutates Data in place, returns new size.
 size_t MutationDispatcher::MutateImpl(uint8_t *Data, size_t Size,
                                       size_t MaxSize,
-                                      Vector<Mutator> &Mutators) {
+                                      std::vector<Mutator> &Mutators) {
   assert(MaxSize > 0);
   // Some mutations may fail (e.g. can't insert more bytes if Size == MaxSize),
   // in which case they will return 0.
@@ -562,7 +562,7 @@ size_t MutationDispatcher::MutateImpl(uint8_t *Data, size_t Size,
 // Mask represents the set of Data bytes that are worth mutating.
 size_t MutationDispatcher::MutateWithMask(uint8_t *Data, size_t Size,
                                           size_t MaxSize,
-                                          const Vector<uint8_t> &Mask) {
+                                          const std::vector<uint8_t> &Mask) {
   size_t MaskedSize = std::min(Size, Mask.size());
   // * Copy the worthy bytes into a temporary array T
   // * Mutate T
