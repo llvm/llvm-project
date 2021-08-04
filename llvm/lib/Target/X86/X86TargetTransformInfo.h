@@ -81,7 +81,7 @@ class X86TTIImpl : public BasicTTIImplBase<X86TTIImpl> {
       X86::FeatureUseGLMDivSqrtCosts,
 
       // Perf-tuning flags.
-      X86::FeatureHasFastGather,
+      X86::FeatureFastGather,
       X86::FeatureSlowUAMem32,
 
       // Based on whether user set the -mprefer-vector-width command line.
