@@ -114,10 +114,6 @@ ModulePass *createAMDGPUFixFunctionBitcastsPass();
 void initializeAMDGPUFixFunctionBitcastsPass(PassRegistry &);
 extern char &AMDGPUFixFunctionBitcastsID;
 
-ModulePass *createAMDGPUCtorDtorLoweringPass();
-void initializeAMDGPUCtorDtorLoweringPass(PassRegistry &);
-extern char &AMDGPUCtorDtorLoweringID;
-
 FunctionPass *createAMDGPULowerKernelArgumentsPass();
 void initializeAMDGPULowerKernelArgumentsPass(PassRegistry &);
 extern char &AMDGPULowerKernelArgumentsID;
