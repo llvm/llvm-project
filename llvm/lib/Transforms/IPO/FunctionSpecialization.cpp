@@ -11,7 +11,6 @@
 // are propagated to the callee by specializing the function.
 //
 // Current limitations:
-// - It does not handle specialization of recursive functions,
 // - It does not yet handle integer ranges.
 // - Only 1 argument per function is specialised,
 // - The cost-model could be further looked into,
@@ -68,9 +67,142 @@ static cl::opt<bool> EnableSpecializationForLiteralConstant(
     "function-specialization-for-literal-constant", cl::init(false), cl::Hidden,
     cl::desc("Make function specialization available for literal constant."));
 
+// Helper to check if \p LV is either a constant or a constant
+// range with a single element. This should cover exactly the same cases as the
+// old ValueLatticeElement::isConstant() and is intended to be used in the
+// transition to ValueLatticeElement.
+static bool isConstant(const ValueLatticeElement &LV) {
+  return LV.isConstant() ||
+         (LV.isConstantRange() && LV.getConstantRange().isSingleElement());
+}
+
 // Helper to check if \p LV is either overdefined or a constant int.
 static bool isOverdefined(const ValueLatticeElement &LV) {
-  return !LV.isUnknownOrUndef() && !LV.isConstant();
+  return !LV.isUnknownOrUndef() && !isConstant(LV);
+}
+
+static Constant *getPromotableAlloca(AllocaInst *Alloca, CallInst *Call) {
+  Value *StoreValue = nullptr;
+  for (auto *User : Alloca->users()) {
+    // We can't use llvm::isAllocaPromotable() as that would fail because of
+    // the usage in the CallInst, which is what we check here.
+    if (User == Call)
+      continue;
+    if (auto *Bitcast = dyn_cast<BitCastInst>(User)) {
+      if (!Bitcast->hasOneUse() || *Bitcast->user_begin() != Call)
+        return nullptr;
+      continue;
+    }
+
+    if (auto *Store = dyn_cast<StoreInst>(User)) {
+      // This is a duplicate store, bail out.
+      if (StoreValue || Store->isVolatile())
+        return nullptr;
+      StoreValue = Store->getValueOperand();
+      continue;
+    }
+    // Bail if there is any other unknown usage.
+    return nullptr;
+  }
+  return dyn_cast_or_null<Constant>(StoreValue);
+}
+
+// A constant stack value is an AllocaInst that has a single constant
+// value stored to it. Return this constant if such an alloca stack value
+// is a function argument.
+static Constant *getConstantStackValue(CallInst *Call, Value *Val,
+                                       SCCPSolver &Solver) {
+  if (!Val)
+    return nullptr;
+  Val = Val->stripPointerCasts();
+  if (auto *ConstVal = dyn_cast<ConstantInt>(Val))
+    return ConstVal;
+  auto *Alloca = dyn_cast<AllocaInst>(Val);
+  if (!Alloca || !Alloca->getAllocatedType()->isIntegerTy())
+    return nullptr;
+  return getPromotableAlloca(Alloca, Call);
+}
+
+// To support specializing recursive functions, it is important to propagate
+// constant arguments because after a first iteration of specialisation, a
+// reduced example may look like this:
+//
+//     define internal void @RecursiveFn(i32* arg1) {
+//       %temp = alloca i32, align 4
+//       store i32 2 i32* %temp, align 4
+//       call void @RecursiveFn.1(i32* nonnull %temp)
+//       ret void
+//     }
+//
+// Before a next iteration, we need to propagate the constant like so
+// which allows further specialization in next iterations.
+//
+//     @funcspec.arg = internal constant i32 2
+//
+//     define internal void @someFunc(i32* arg1) {
+//       call void @otherFunc(i32* nonnull @funcspec.arg)
+//       ret void
+//     }
+//
+static void constantArgPropagation(SmallVectorImpl<Function *> &WorkList,
+                                   Module &M, SCCPSolver &Solver) {
+  // Iterate over the argument tracked functions see if there
+  // are any new constant values for the call instruction via
+  // stack variables.
+  for (auto *F : WorkList) {
+    // TODO: Generalize for any read only arguments.
+    if (F->arg_size() != 1)
+      continue;
+
+    auto &Arg = *F->arg_begin();
+    if (!Arg.onlyReadsMemory() || !Arg.getType()->isPointerTy())
+      continue;
+
+    for (auto *User : F->users()) {
+      auto *Call = dyn_cast<CallInst>(User);
+      if (!Call)
+        break;
+      auto *ArgOp = Call->getArgOperand(0);
+      auto *ArgOpType = ArgOp->getType();
+      auto *ConstVal = getConstantStackValue(Call, ArgOp, Solver);
+      if (!ConstVal)
+        break;
+
+      Value *GV = new GlobalVariable(M, ConstVal->getType(), true,
+                                     GlobalValue::InternalLinkage, ConstVal,
+                                     "funcspec.arg");
+
+      if (ArgOpType != ConstVal->getType())
+        GV = ConstantExpr::getBitCast(cast<Constant>(GV), ArgOp->getType());
+
+      Call->setArgOperand(0, GV);
+
+      // Add the changed CallInst to Solver Worklist
+      Solver.visitCall(*Call);
+    }
+  }
+}
+
+// ssa_copy intrinsics are introduced by the SCCP solver. These intrinsics
+// interfere with the constantArgPropagation optimization.
+static void removeSSACopy(Function &F) {
+  for (BasicBlock &BB : F) {
+    for (BasicBlock::iterator BI = BB.begin(), E = BB.end(); BI != E;) {
+      Instruction *Inst = &*BI++;
+      auto *II = dyn_cast<IntrinsicInst>(Inst);
+      if (!II)
+        continue;
+      if (II->getIntrinsicID() != Intrinsic::ssa_copy)
+        continue;
+      Inst->replaceAllUsesWith(II->getOperand(0));
+      Inst->eraseFromParent();
+    }
+  }
+}
+
+static void removeSSACopy(Module &M) {
+  for (Function &F : M)
+    removeSSACopy(F);
 }
 
 class FunctionSpecializer {
@@ -115,9 +247,14 @@ public:
     for (auto *SpecializedFunc : CurrentSpecializations) {
       SpecializedFuncs.insert(SpecializedFunc);
 
-      // TODO: If we want to support specializing specialized functions,
-      // initialize here the state of the newly created functions, marking
-      // them argument-tracked and executable.
+      // Initialize the state of the newly created functions, marking them
+      // argument-tracked and executable.
+      if (SpecializedFunc->hasExactDefinition() &&
+          !SpecializedFunc->hasFnAttribute(Attribute::Naked))
+        Solver.addTrackedFunction(SpecializedFunc);
+      Solver.addArgumentTrackedFunction(SpecializedFunc);
+      FuncDecls.push_back(SpecializedFunc);
+      Solver.markBlockExecutable(&SpecializedFunc->front());
 
       // Replace the function arguments for the specialized functions.
       for (Argument &Arg : SpecializedFunc->args())
@@ -138,12 +275,22 @@ public:
     const ValueLatticeElement &IV = Solver.getLatticeValueFor(V);
     if (isOverdefined(IV))
       return false;
-    auto *Const = IV.isConstant() ? Solver.getConstant(IV)
-                                  : UndefValue::get(V->getType());
+    auto *Const =
+        isConstant(IV) ? Solver.getConstant(IV) : UndefValue::get(V->getType());
     V->replaceAllUsesWith(Const);
 
-    // TODO: Update the solver here if we want to specialize specialized
-    // functions.
+    for (auto *U : Const->users())
+      if (auto *I = dyn_cast<Instruction>(U))
+        if (Solver.isBlockExecutable(I->getParent()))
+          Solver.visit(I);
+
+    // Remove the instruction from Block and Solver.
+    if (auto *I = dyn_cast<Instruction>(V)) {
+      if (I->isSafeToRemove()) {
+        I->eraseFromParent();
+        Solver.removeLatticeValueFor(I);
+      }
+    }
     return true;
   }
 
@@ -151,6 +298,15 @@ private:
   // The number of functions specialised, used for collecting statistics and
   // also in the cost model.
   unsigned NbFunctionsSpecialized = 0;
+
+  /// Clone the function \p F and remove the ssa_copy intrinsics added by
+  /// the SCCPSolver in the cloned version.
+  Function *cloneCandidateFunction(Function *F) {
+    ValueToValueMapTy EmptyMap;
+    Function *Clone = CloneFunction(F, EmptyMap);
+    removeSSACopy(*Clone);
+    return Clone;
+  }
 
   /// This function decides whether to specialize function \p F based on the
   /// known constant values its arguments can take on. Specialization is
@@ -214,8 +370,7 @@ private:
       for (auto *C : Constants) {
         // Clone the function. We leave the ValueToValueMap empty to allow
         // IPSCCP to propagate the constant arguments.
-        ValueToValueMapTy EmptyMap;
-        Function *Clone = CloneFunction(F, EmptyMap);
+        Function *Clone = cloneCandidateFunction(F);
         Argument *ClonedArg = Clone->arg_begin() + A.getArgNo();
 
         // Rewrite calls to the function so that they call the clone instead.
@@ -231,9 +386,10 @@ private:
         NbFunctionsSpecialized++;
       }
 
-      // TODO: if we want to support specialize specialized functions, and if
-      // the function has been completely specialized, the original function is
-      // no longer needed, so we would need to mark it unreachable here.
+      // If the function has been completely specialized, the original function
+      // is no longer needed. Mark it unreachable.
+      if (!IsPartial)
+        Solver.markFunctionUnreachable(F);
 
       // FIXME: Only one argument per function.
       return true;
@@ -528,24 +684,6 @@ private:
   }
 };
 
-/// Function to clean up the left over intrinsics from SCCP util.
-static void cleanup(Module &M) {
-  for (Function &F : M) {
-    for (BasicBlock &BB : F) {
-      for (BasicBlock::iterator BI = BB.begin(), E = BB.end(); BI != E;) {
-        Instruction *Inst = &*BI++;
-        if (auto *II = dyn_cast<IntrinsicInst>(Inst)) {
-          if (II->getIntrinsicID() == Intrinsic::ssa_copy) {
-            Value *Op = II->getOperand(0);
-            Inst->replaceAllUsesWith(Op);
-            Inst->eraseFromParent();
-          }
-        }
-      }
-    }
-  }
-}
-
 bool llvm::runFunctionSpecialization(
     Module &M, const DataLayout &DL,
     std::function<TargetLibraryInfo &(Function &)> GetTLI,
@@ -637,14 +775,18 @@ bool llvm::runFunctionSpecialization(
   unsigned I = 0;
   while (FuncSpecializationMaxIters != I++ &&
          FS.specializeFunctions(FuncDecls, CurrentSpecializations)) {
-    // TODO: run the solver here for the specialized functions only if we want
-    // to specialize recursively.
+
+    // Run the solver for the specialized functions.
+    RunSCCPSolver(CurrentSpecializations);
+
+    // Replace some unresolved constant arguments
+    constantArgPropagation(FuncDecls, M, Solver);
 
     CurrentSpecializations.clear();
     Changed = true;
   }
 
   // Clean up the IR by removing ssa_copy intrinsics.
-  cleanup(M);
+  removeSSACopy(M);
   return Changed;
 }
