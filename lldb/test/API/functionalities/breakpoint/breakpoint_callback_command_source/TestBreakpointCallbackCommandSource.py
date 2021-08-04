@@ -19,6 +19,7 @@ class BreakpointCallbackCommandSource(PExpectTest):
     # under ASAN on a loaded machine..
     @skipIfAsan
     @skipIfEditlineSupportMissing
+    @skipIf(oslist=["linux"], archs=["arm", "aarch64"])
     @skipIf(oslist=["freebsd"], bugnumber="llvm.org/pr48316")
     def test_breakpoint_callback_command_source(self):
         self.build()
