@@ -778,20 +778,19 @@ define amdgpu_kernel void @v_ctlz_i64(i64 addrspace(1)* noalias %out, i64 addrsp
 ; GFX10-GISEL-LABEL: v_ctlz_i64:
 ; GFX10-GISEL:       ; %bb.0:
 ; GFX10-GISEL-NEXT:    s_load_dwordx2 s[2:3], s[0:1], 0x2c
-; GFX10-GISEL-NEXT:    v_lshlrev_b32_e32 v3, 3, v0
+; GFX10-GISEL-NEXT:    v_lshlrev_b32_e32 v2, 3, v0
 ; GFX10-GISEL-NEXT:    s_load_dwordx2 s[0:1], s[0:1], 0x24
 ; GFX10-GISEL-NEXT:    s_waitcnt lgkmcnt(0)
-; GFX10-GISEL-NEXT:    global_load_dwordx2 v[0:1], v3, s[2:3]
+; GFX10-GISEL-NEXT:    global_load_dwordx2 v[0:1], v2, s[2:3]
 ; GFX10-GISEL-NEXT:    s_waitcnt vmcnt(0)
-; GFX10-GISEL-NEXT:    v_ffbh_u32_e32 v2, v0
+; GFX10-GISEL-NEXT:    v_ffbh_u32_e32 v3, v0
 ; GFX10-GISEL-NEXT:    v_ffbh_u32_e32 v4, v1
-; GFX10-GISEL-NEXT:    v_cmp_eq_u32_e32 vcc_lo, 0, v1
-; GFX10-GISEL-NEXT:    v_add_nc_u32_e32 v2, 32, v2
-; GFX10-GISEL-NEXT:    v_cndmask_b32_e32 v4, v4, v2, vcc_lo
 ; GFX10-GISEL-NEXT:    v_cmp_eq_u64_e32 vcc_lo, 0, v[0:1]
-; GFX10-GISEL-NEXT:    v_mov_b32_e32 v2, 0
-; GFX10-GISEL-NEXT:    v_cndmask_b32_e64 v1, v4, 64, vcc_lo
-; GFX10-GISEL-NEXT:    global_store_dwordx2 v3, v[1:2], s[0:1]
+; GFX10-GISEL-NEXT:    v_mov_b32_e32 v1, 0
+; GFX10-GISEL-NEXT:    v_add_nc_u32_e32 v3, 32, v3
+; GFX10-GISEL-NEXT:    v_min_u32_e32 v3, v4, v3
+; GFX10-GISEL-NEXT:    v_cndmask_b32_e64 v0, v3, 64, vcc_lo
+; GFX10-GISEL-NEXT:    global_store_dwordx2 v2, v[0:1], s[0:1]
 ; GFX10-GISEL-NEXT:    s_endpgm
   %tid = call i32 @llvm.amdgcn.workitem.id.x()
   %in.gep = getelementptr i64, i64 addrspace(1)* %in, i32 %tid
@@ -900,10 +899,9 @@ define amdgpu_kernel void @v_ctlz_i64_trunc(i32 addrspace(1)* noalias %out, i64 
 ; GFX10-GISEL-NEXT:    s_waitcnt vmcnt(0)
 ; GFX10-GISEL-NEXT:    v_ffbh_u32_e32 v3, v1
 ; GFX10-GISEL-NEXT:    v_ffbh_u32_e32 v4, v2
-; GFX10-GISEL-NEXT:    v_cmp_eq_u32_e32 vcc_lo, 0, v2
-; GFX10-GISEL-NEXT:    v_add_nc_u32_e32 v3, 32, v3
-; GFX10-GISEL-NEXT:    v_cndmask_b32_e32 v3, v4, v3, vcc_lo
 ; GFX10-GISEL-NEXT:    v_cmp_eq_u64_e32 vcc_lo, 0, v[1:2]
+; GFX10-GISEL-NEXT:    v_add_nc_u32_e32 v3, 32, v3
+; GFX10-GISEL-NEXT:    v_min_u32_e32 v3, v4, v3
 ; GFX10-GISEL-NEXT:    v_cndmask_b32_e64 v1, v3, 64, vcc_lo
 ; GFX10-GISEL-NEXT:    global_store_dword v0, v1, s[0:1]
 ; GFX10-GISEL-NEXT:    s_endpgm
