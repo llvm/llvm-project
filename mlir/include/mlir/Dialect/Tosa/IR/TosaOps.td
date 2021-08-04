@@ -1582,7 +1582,10 @@ def Tosa_ScatterOp : Tosa_Op<"scatter", [
 //===----------------------------------------------------------------------===//
 // Operator: resize
 //===----------------------------------------------------------------------===//
-def Tosa_ResizeOp : Tosa_Op<"resize", [NoSideEffect]> {
+def Tosa_ResizeOp : Tosa_Op<"resize", [
+      DeclareOpInterfaceMethods<InferShapedTypeOpInterface,
+                              ["inferReturnTypeComponents"]>,
+      NoSideEffect]> {
 
   let summary = "Resize operation, supports various resize/upsample modes";
 
@@ -1617,7 +1620,9 @@ def Tosa_ResizeOp : Tosa_Op<"resize", [NoSideEffect]> {
 //===----------------------------------------------------------------------===//
 // Operator: cast
 //===----------------------------------------------------------------------===//
-def Tosa_CastOp: Tosa_Op<"cast", [NoSideEffect]> {
+def Tosa_CastOp: Tosa_Op<"cast", [NoSideEffect,
+      DeclareOpInterfaceMethods<InferShapedTypeOpInterface,
+                              ["inferReturnTypeComponents"]>]> {
 
   let summary = "Cast operation";
 
@@ -1655,7 +1660,9 @@ def Tosa_CastOp: Tosa_Op<"cast", [NoSideEffect]> {
 //===----------------------------------------------------------------------===//
 // Operator: rescale
 //===----------------------------------------------------------------------===//
-def Tosa_RescaleOp: Tosa_Op<"rescale", [NoSideEffect]> {
+def Tosa_RescaleOp: Tosa_Op<"rescale", [NoSideEffect, 
+      DeclareOpInterfaceMethods<InferShapedTypeOpInterface,
+                              ["inferReturnTypeComponents"]>]> {
   let summary = "Tosa rescale operator";
 
   let description = [{
@@ -1723,7 +1730,9 @@ def Tosa_ConstOp : Tosa_Op<"const", [ConstantLike, NoSideEffect,
 //===----------------------------------------------------------------------===//
 // Operator: identity
 //===----------------------------------------------------------------------===//
-def Tosa_IdentityOp: Tosa_Op<"identity", [NoSideEffect]> {
+def Tosa_IdentityOp: Tosa_Op<"identity", [NoSideEffect,
+      DeclareOpInterfaceMethods<InferShapedTypeOpInterface,
+                              ["inferReturnTypeComponents"]>]> {
   let summary = "Identity operator";
   let description = [{
     Returns a tensor with the same shape, size, type
