@@ -700,6 +700,14 @@ def ViewOpGraphPass : Pass<"view-op-graph"> {
     Note: See https://www.graphviz.org/doc/info/lang.html for more information
     about the Graphviz DOT language.
   }];
+  let options = [
+    Option<"maxLabelLen", "max-label-len", "unsigned",
+            /*default=*/"20", "Limit attribute/type length to number of chars">,
+    Option<"printAttrs", "print-attrs", "bool",
+           /*default=*/"true", "Print attributes of operations">,
+    Option<"printResultTypes", "print-result-types", "bool",
+            /*default=*/"true", "Print result types of operations">
+  ];
   let constructor = "mlir::createPrintOpGraphPass()";
 }
 

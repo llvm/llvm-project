@@ -143,7 +143,10 @@ private:
     }
 
     // Print all other attributes.
-    attr.print(os);
+    std::string buf;
+    llvm::raw_string_ostream ss(buf);
+    attr.print(ss);
+    os << truncateString(ss.str());
   }
 
   /// Append an edge to the list of edges.
@@ -196,14 +199,23 @@ private:
   std::string getLabel(Operation *op) {
     return strFromOs([&](raw_ostream &os) {
       // Print operation name and type.
-      os << op->getName() << " : (";
-      interleaveComma(op->getResultTypes(), os);
-      os << ")\n";
+      os << op->getName();
+      if (printResultTypes) {
+        os << " : (";
+        std::string buf;
+        llvm::raw_string_ostream ss(buf);
+        interleaveComma(op->getResultTypes(), ss);
+        os << truncateString(ss.str()) << ")";
+        os << ")";
+      }
 
       // Print attributes.
-      for (const NamedAttribute &attr : op->getAttrs()) {
-        os << '\n' << attr.first << ": ";
-        emitMlirAttr(os, attr.second);
+      if (printAttrs) {
+        os << "\n";
+        for (const NamedAttribute &attr : op->getAttrs()) {
+          os << '\n' << attr.first << ": ";
+          emitMlirAttr(os, attr.second);
+        }
       }
     });
   }
@@ -256,6 +268,13 @@ private:
   void processRegion(Region &region) {
     for (Block &block : region.getBlocks())
       processBlock(block);
+  }
+
+  /// Truncate long strings.
+  std::string truncateString(std::string str) {
+    if (str.length() <= maxLabelLen)
+      return str;
+    return str.substr(0, maxLabelLen) + "...";
   }
 
   /// Output stream to write DOT file to.
