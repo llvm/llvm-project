@@ -1075,6 +1075,18 @@ public:
   /// branch. Return true if the instruction was converted.
   bool unsetConditionalTailCall(MCInst &Inst);
 
+  /// Return offset of \p Inst in the original function, if available.
+  Optional<uint32_t> getOffset(const MCInst &Inst) const;
+
+  /// Return the offset if the annotation is present, or \p Default otherwise.
+  uint32_t getOffsetWithDefault(const MCInst &Inst, uint32_t Default) const;
+
+  /// Set offset of \p Inst in the original function.
+  bool setOffset(MCInst &Inst, uint32_t Offset, AllocatorIdTy AllocatorId = 0);
+
+  /// Remove offset annotation.
+  bool clearOffset(MCInst &Inst);
+
   /// Return MCSymbol that represents a target of this instruction at a given
   /// operand number \p OpNum. If there's no symbol associated with
   /// the operand - return nullptr.

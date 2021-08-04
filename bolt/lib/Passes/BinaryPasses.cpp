@@ -629,10 +629,9 @@ void LowerAnnotations::runOnFunctions(BinaryContext &BC) {
 
       // Now record preserved annotations separately and then strip annotations.
       for (auto II = BB->begin(); II != BB->end(); ++II) {
-        if (BF.requiresAddressTranslation() &&
-            BC.MIB->hasAnnotation(*II, "Offset"))
-          PreservedOffsetAnnotations.emplace_back(
-              &(*II), BC.MIB->getAnnotationAs<uint32_t>(*II, "Offset"));
+        if (BF.requiresAddressTranslation() && BC.MIB->getOffset(*II))
+          PreservedOffsetAnnotations.emplace_back(&(*II),
+                                                  *BC.MIB->getOffset(*II));
         BC.MIB->stripAnnotations(*II);
       }
     }
@@ -647,7 +646,7 @@ void LowerAnnotations::runOnFunctions(BinaryContext &BC) {
 
   // Reinsert preserved annotations we need during code emission.
   for (const std::pair<MCInst *, uint32_t> &Item : PreservedOffsetAnnotations)
-    BC.MIB->addAnnotation<uint32_t>(*Item.first, "Offset", Item.second);
+    BC.MIB->setOffset(*Item.first, Item.second);
 }
 
 namespace {

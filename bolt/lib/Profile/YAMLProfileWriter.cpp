@@ -53,10 +53,10 @@ void convert(const BinaryFunction &BF,
         continue;
 
       yaml::bolt::CallSiteInfo CSI;
-      auto Offset = BC.MIB->tryGetAnnotationAs<uint32_t>(Instr, "Offset");
-      if (!Offset || Offset.get() < BB->getInputOffset())
+      Optional<uint32_t> Offset = BC.MIB->getOffset(Instr);
+      if (!Offset || *Offset < BB->getInputOffset())
         continue;
-      CSI.Offset = Offset.get() - BB->getInputOffset();
+      CSI.Offset = *Offset - BB->getInputOffset();
 
       if (BC.MIB->isIndirectCall(Instr) || BC.MIB->isIndirectBranch(Instr)) {
         auto ICSP = BC.MIB->tryGetAnnotationAs<IndirectCallSiteProfile>(

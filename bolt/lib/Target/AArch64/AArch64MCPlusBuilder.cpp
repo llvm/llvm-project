@@ -805,7 +805,7 @@ public:
 
   bool convertTailCallToJmp(MCInst &Inst) override {
     removeAnnotation(Inst, MCPlus::MCAnnotation::kTailCall);
-    removeAnnotation(Inst, "Offset");
+    clearOffset(Inst);
     if (getConditionalTailCall(Inst))
       unsetConditionalTailCall(Inst);
     return true;

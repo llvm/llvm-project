@@ -1632,6 +1632,8 @@ void BinaryContext::printInstruction(raw_ostream &OS, const MCInst &Instruction,
       OS << " # UNKNOWN CONTROL FLOW";
     }
   }
+  if (Optional<uint32_t> Offset = MIB->getOffset(Instruction))
+    OS << " # Offset: " << *Offset;
 
   MIB->printAnnotations(Instruction, OS);
 
