@@ -1,12 +1,13 @@
 # REQUIRES: x86
 ## Test how .symver interacts with --version-script.
 # RUN: llvm-mc -filetype=obj -triple=x86_64 %s -o %t.o
+# RUN: echo 'call foo3; call foo4' > %tref.s
+# RUN: llvm-mc -filetype=obj -triple=x86_64 %tref.s -o %tref.o
 
 # RUN: echo 'v1 { local: foo1; }; v2 { local: foo2; };' > %t1.script
 # RUN: ld.lld --version-script %t1.script -shared %t.o -o %t1.so
 # RUN: llvm-readelf --dyn-syms %t1.so | FileCheck --check-prefix=EXACT %s
 # EXACT:      UND
-# EXACT-NEXT: [[#]] foo3{{$}}
 # EXACT-NEXT: [[#]] foo4@@v2
 # EXACT-NEXT: [[#]] _start{{$}}
 # EXACT-NEXT: [[#]] foo3@v1
@@ -34,10 +35,15 @@
 # MIX2:      UND
 # MIX2-NEXT: [[#]] foo1@@v1
 # MIX2-NEXT: [[#]] foo2@@v1
-# MIX2-NEXT: [[#]] foo3@@v1
 # MIX2-NEXT: [[#]] foo4@@v2
 # MIX2-NEXT: [[#]] foo3@v1
 # MIX2-NOT:  {{.}}
+
+# RUN: ld.lld --version-script %t4.script -shared %t.o %tref.o -o %t5.so
+# RUN: llvm-readelf -r %t5.so | FileCheck --check-prefix=RELOC %s
+
+# RELOC: R_X86_64_JUMP_SLOT {{.*}} foo3@v1 + 0
+# RELOC: R_X86_64_JUMP_SLOT {{.*}} foo4@@v2 + 0
 
 .globl foo1; foo1: ret
 .globl foo2; foo2: ret
