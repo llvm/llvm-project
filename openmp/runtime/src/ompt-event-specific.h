@@ -86,8 +86,8 @@
 
 #define ompt_callback_masked_implemented ompt_event_MAY_ALWAYS_OPTIONAL
 
-#define ompt_callback_target_map_implemented ompt_event_UNIMPLEMENTED
-#define ompt_callback_target_map_emi_implemented ompt_event_UNIMPLEMENTED
+#define ompt_callback_target_map_implemented ompt_event_MAY_ALWAYS_OPTIONAL
+#define ompt_callback_target_map_emi_implemented ompt_event_MAY_ALWAYS_OPTIONAL
 
 #define ompt_callback_sync_region_implemented ompt_event_MAY_ALWAYS_OPTIONAL
 
