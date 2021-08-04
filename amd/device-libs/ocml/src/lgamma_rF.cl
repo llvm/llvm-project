@@ -262,13 +262,17 @@ MATH_MANGLE(lgamma_r_impl)(float x)
         ret = ((x == 1.0f) | (x == 2.0f)) ? 0.0f : ret;
         s = x == 0.0f ? 0 : 1;
     } else if (ax < 0x1.0p+23f) { // x > -0x1.0p+23
-        float t = MATH_MANGLE(sinpi)(x);
-        float negadj = MATH_MANGLE(log)(MATH_DIV(pi, BUILTIN_ABS_F32(t * x)));
-        ret = negadj - ret;
-        bool z = BUILTIN_FRACTION_F32(x) == 0.0f;
-        ret = z ? AS_FLOAT(PINFBITPATT_SP32) : ret;
-        s = t < 0.0f ? -1 : 1;
-        s = z ? 0 : s;
+        if (ax > 0x1.0p-21f) {
+            float t = MATH_MANGLE(sinpi)(x);
+            float negadj = MATH_MANGLE(log)(MATH_DIV(pi, BUILTIN_ABS_F32(t * x)));
+            ret = negadj - ret;
+            bool z = BUILTIN_FRACTION_F32(x) == 0.0f;
+            ret = z ? AS_FLOAT(PINFBITPATT_SP32) : ret;
+            s = t < 0.0f ? -1 : 1;
+            s = z ? 0 : s;
+        } else {
+            s = -1;
+        }
     }
 
     if (!FINITE_ONLY_OPT()) {
