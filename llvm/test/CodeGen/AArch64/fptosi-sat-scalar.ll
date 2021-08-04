@@ -148,7 +148,7 @@ define i100 @test_signed_i100_f32(float %f) nounwind {
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    str d8, [sp, #-16]! // 8-byte Folded Spill
 ; CHECK-NEXT:    str x30, [sp, #8] // 8-byte Folded Spill
-; CHECK-NEXT:    mov v8.16b, v0.16b
+; CHECK-NEXT:    fmov s8, s0
 ; CHECK-NEXT:    bl __fixsfti
 ; CHECK-NEXT:    mov w8, #-251658240
 ; CHECK-NEXT:    fmov s0, w8
@@ -177,7 +177,7 @@ define i128 @test_signed_i128_f32(float %f) nounwind {
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    str d8, [sp, #-16]! // 8-byte Folded Spill
 ; CHECK-NEXT:    str x30, [sp, #8] // 8-byte Folded Spill
-; CHECK-NEXT:    mov v8.16b, v0.16b
+; CHECK-NEXT:    fmov s8, s0
 ; CHECK-NEXT:    bl __fixsfti
 ; CHECK-NEXT:    mov w8, #-16777216
 ; CHECK-NEXT:    fmov s0, w8
@@ -345,7 +345,7 @@ define i100 @test_signed_i100_f64(double %f) nounwind {
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    str d8, [sp, #-16]! // 8-byte Folded Spill
 ; CHECK-NEXT:    str x30, [sp, #8] // 8-byte Folded Spill
-; CHECK-NEXT:    mov v8.16b, v0.16b
+; CHECK-NEXT:    fmov d8, d0
 ; CHECK-NEXT:    bl __fixdfti
 ; CHECK-NEXT:    mov x8, #-4170333254945079296
 ; CHECK-NEXT:    fmov d0, x8
@@ -374,7 +374,7 @@ define i128 @test_signed_i128_f64(double %f) nounwind {
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    str d8, [sp, #-16]! // 8-byte Folded Spill
 ; CHECK-NEXT:    str x30, [sp, #8] // 8-byte Folded Spill
-; CHECK-NEXT:    mov v8.16b, v0.16b
+; CHECK-NEXT:    fmov d8, d0
 ; CHECK-NEXT:    bl __fixdfti
 ; CHECK-NEXT:    mov x8, #-4044232465378705408
 ; CHECK-NEXT:    fmov d0, x8
@@ -562,7 +562,7 @@ define i100 @test_signed_i100_f16(half %f) nounwind {
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    str d8, [sp, #-16]! // 8-byte Folded Spill
 ; CHECK-NEXT:    fcvt s8, h0
-; CHECK-NEXT:    mov v0.16b, v8.16b
+; CHECK-NEXT:    fmov s0, s8
 ; CHECK-NEXT:    str x30, [sp, #8] // 8-byte Folded Spill
 ; CHECK-NEXT:    bl __fixsfti
 ; CHECK-NEXT:    mov w8, #-251658240
@@ -592,7 +592,7 @@ define i128 @test_signed_i128_f16(half %f) nounwind {
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    str d8, [sp, #-16]! // 8-byte Folded Spill
 ; CHECK-NEXT:    fcvt s8, h0
-; CHECK-NEXT:    mov v0.16b, v8.16b
+; CHECK-NEXT:    fmov s0, s8
 ; CHECK-NEXT:    str x30, [sp, #8] // 8-byte Folded Spill
 ; CHECK-NEXT:    bl __fixsfti
 ; CHECK-NEXT:    mov w8, #-16777216

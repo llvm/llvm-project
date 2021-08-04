@@ -220,13 +220,13 @@ declare double @bar()
 define double @reassociate_adds_from_calls() {
 ; CHECK-LABEL: reassociate_adds_from_calls:
 ; CHECK:       bl   bar
-; CHECK-NEXT:  mov  v8.16b, v0.16b 
+; CHECK-NEXT:  fmov d8, d0
 ; CHECK-NEXT:  bl   bar
-; CHECK-NEXT:  mov  v9.16b, v0.16b
+; CHECK-NEXT:  fmov d9, d0
 ; CHECK-NEXT:  bl   bar
-; CHECK-NEXT:  mov  v10.16b, v0.16b 
+; CHECK-NEXT:  fmov d10, d0
 ; CHECK-NEXT:  bl   bar
-; CHECK:       fadd d1, d8, d9 
+; CHECK:       fadd d1, d8, d9
 ; CHECK-NEXT:  fadd d0, d10, d0
 ; CHECK-NEXT:  fadd d0, d1, d0
   %x0 = call double @bar()
@@ -242,11 +242,11 @@ define double @reassociate_adds_from_calls() {
 define double @already_reassociated() {
 ; CHECK-LABEL: already_reassociated:
 ; CHECK:       bl   bar
-; CHECK-NEXT:  mov  v8.16b, v0.16b 
+; CHECK-NEXT:  fmov d8, d0
 ; CHECK-NEXT:  bl   bar
-; CHECK-NEXT:  mov  v9.16b, v0.16b
+; CHECK-NEXT:  fmov d9, d0
 ; CHECK-NEXT:  bl   bar
-; CHECK-NEXT:  mov  v10.16b, v0.16b 
+; CHECK-NEXT:  fmov d10, d0
 ; CHECK-NEXT:  bl   bar
 ; CHECK:       fadd d1, d8, d9 
 ; CHECK-NEXT:  fadd d0, d10, d0

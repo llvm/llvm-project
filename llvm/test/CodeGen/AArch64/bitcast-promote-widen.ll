@@ -11,7 +11,7 @@ define <2 x i16> @bitcast_v2i16_v2f16(<2 x half> %x) {
 ; CHECK-NEXT:    fmov s1, w8
 ; CHECK-NEXT:    umov w8, v0.h[1]
 ; CHECK-NEXT:    mov v1.s[1], w8
-; CHECK-NEXT:    mov v0.16b, v1.16b
+; CHECK-NEXT:    fmov d0, d1
 ; CHECK-NEXT:    ret
   %y = bitcast <2 x half> %x to <2 x i16>
   ret <2 x i16> %y
