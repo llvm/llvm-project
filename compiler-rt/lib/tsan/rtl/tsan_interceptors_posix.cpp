@@ -853,6 +853,7 @@ TSAN_INTERCEPTOR(int, posix_memalign, void **memptr, uptr align, uptr sz) {
 constexpr u32 kGuardInit = 0;
 constexpr u32 kGuardDone = 1;
 constexpr u32 kGuardRunning = 1 << 16;
+constexpr u32 kGuardWaiter = 1 << 17;
 
 static int guard_acquire(ThreadState *thr, uptr pc, atomic_uint32_t *g) {
   OnPotentiallyBlockingRegionBegin();
@@ -868,7 +869,10 @@ static int guard_acquire(ThreadState *thr, uptr pc, atomic_uint32_t *g) {
         Acquire(thr, pc, (uptr)g);
       return 0;
     } else {
-      internal_sched_yield();
+      if ((cmp & kGuardWaiter) ||
+          atomic_compare_exchange_strong(g, &cmp, cmp | kGuardWaiter,
+                                         memory_order_relaxed))
+        FutexWait(g, cmp | kGuardWaiter);
     }
   }
 }
@@ -876,7 +880,9 @@ static int guard_acquire(ThreadState *thr, uptr pc, atomic_uint32_t *g) {
 static void guard_release(ThreadState *thr, uptr pc, atomic_uint32_t *g) {
   if (!thr->in_ignored_lib)
     Release(thr, pc, (uptr)g);
-  atomic_store(g, kGuardDone, memory_order_release);
+  u32 old = atomic_exchange(g, kGuardDone, memory_order_release);
+  if (old & kGuardWaiter)
+    FutexWake(g, 1 << 30);
 }
 
 // __cxa_guard_acquire and friends need to be intercepted in a special way -
