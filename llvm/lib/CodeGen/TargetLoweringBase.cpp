@@ -52,6 +52,7 @@
 #include "llvm/Support/MachineValueType.h"
 #include "llvm/Support/MathExtras.h"
 #include "llvm/Target/TargetMachine.h"
+#include "llvm/Target/TargetOptions.h"
 #include "llvm/Transforms/Utils/SizeOpts.h"
 #include <algorithm>
 #include <cassert>
@@ -2016,6 +2017,12 @@ void TargetLoweringBase::setMaximumJumpTableSize(unsigned Val) {
 
 bool TargetLoweringBase::isJumpTableRelative() const {
   return getTargetMachine().isPositionIndependent();
+}
+
+Align TargetLoweringBase::getPrefLoopAlignment(MachineLoop *ML) const {
+  if (TM.Options.LoopAlignment)
+    return Align(TM.Options.LoopAlignment);
+  return PrefLoopAlignment;
 }
 
 //===----------------------------------------------------------------------===//
