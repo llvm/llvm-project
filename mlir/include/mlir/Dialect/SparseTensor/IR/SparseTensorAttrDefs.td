@@ -33,7 +33,6 @@ def SparseTensorEncodingAttr : SparseTensor_Attr<"SparseTensorEncoding",
     Example:
 
     ```mlir
-
     #DCSC = #sparse_tensor.encoding<{
       dimLevelType = [ "compressed", "compressed" ],
       dimOrdering = affine_map<(i,j) -> (j,i)>,
@@ -42,8 +41,7 @@ def SparseTensorEncodingAttr : SparseTensor_Attr<"SparseTensorEncoding",
     }>
 
 
-    ... tensor<8x8xf64, #DCSR> ...
-
+    ... tensor<8x8xf64, #DCSC> ...
     ```
   }];
 
