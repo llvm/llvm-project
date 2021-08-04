@@ -6408,30 +6408,6 @@ void SelectionDAGBuilder::visitIntrinsicCall(const CallInst &I,
     DAG.setRoot(DAG.getNode(ISD::PCMARKER, sdl, MVT::Other, getRoot(), Tmp));
     return;
   }
-  case Intrinsic::isnan: {
-    const DataLayout DLayout = DAG.getDataLayout();
-    EVT DestVT = TLI.getValueType(DLayout, I.getType());
-    EVT ArgVT = TLI.getValueType(DLayout, I.getArgOperand(0)->getType());
-    MachineFunction &MF = DAG.getMachineFunction();
-    const Function &F = MF.getFunction();
-    SDValue Op = getValue(I.getArgOperand(0));
-    SDNodeFlags Flags;
-    Flags.setNoFPExcept(
-        !F.getAttributes().hasFnAttribute(llvm::Attribute::StrictFP));
-
-    // If ISD::ISNAN should be expanded, do it right now, because the expansion
-    // can use illegal types. Making expansion early allows to legalize these
-    // types prior to selection.
-    if (!TLI.isOperationLegalOrCustom(ISD::ISNAN, ArgVT)) {
-      SDValue Result = TLI.expandISNAN(DestVT, Op, Flags, sdl, DAG);
-      setValue(&I, Result);
-      return;
-    }
-
-    SDValue V = DAG.getNode(ISD::ISNAN, sdl, DestVT, Op, Flags);
-    setValue(&I, V);
-    return;
-  }
   case Intrinsic::readcyclecounter: {
     SDValue Op = getRoot();
     Res = DAG.getNode(ISD::READCYCLECOUNTER, sdl,

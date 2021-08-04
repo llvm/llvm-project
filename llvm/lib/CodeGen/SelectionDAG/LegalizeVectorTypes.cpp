@@ -64,7 +64,6 @@ void DAGTypeLegalizer::ScalarizeVectorResult(SDNode *N, unsigned ResNo) {
   case ISD::SETCC:             R = ScalarizeVecRes_SETCC(N); break;
   case ISD::UNDEF:             R = ScalarizeVecRes_UNDEF(N); break;
   case ISD::VECTOR_SHUFFLE:    R = ScalarizeVecRes_VECTOR_SHUFFLE(N); break;
-  case ISD::ISNAN:             R = ScalarizeVecRes_ISNAN(N); break;
   case ISD::ANY_EXTEND_VECTOR_INREG:
   case ISD::SIGN_EXTEND_VECTOR_INREG:
   case ISD::ZERO_EXTEND_VECTOR_INREG:
@@ -583,28 +582,6 @@ SDValue DAGTypeLegalizer::ScalarizeVecRes_SETCC(SDNode *N) {
   return DAG.getNode(ExtendCode, DL, NVT, Res);
 }
 
-SDValue DAGTypeLegalizer::ScalarizeVecRes_ISNAN(SDNode *N) {
-  SDLoc DL(N);
-  SDValue Arg = N->getOperand(0);
-  EVT ArgVT = Arg.getValueType();
-  EVT ResultVT = N->getValueType(0).getVectorElementType();
-
-  // Handle case where result is scalarized but operand is not.
-  if (getTypeAction(ArgVT) == TargetLowering::TypeScalarizeVector) {
-    Arg = GetScalarizedVector(Arg);
-  } else {
-    EVT VT = ArgVT.getVectorElementType();
-    Arg = DAG.getNode(ISD::EXTRACT_VECTOR_ELT, DL, VT, Arg,
-                      DAG.getVectorIdxConstant(0, DL));
-  }
-
-  SDValue Res = DAG.getNode(ISD::ISNAN, DL, MVT::i1, Arg, N->getFlags());
-  // Vectors may have a different boolean contents to scalars.  Promote the
-  // value appropriately.
-  ISD::NodeType ExtendCode =
-      TargetLowering::getExtendForContent(TLI.getBooleanContents(ArgVT));
-  return DAG.getNode(ExtendCode, DL, ResultVT, Res);
-}
 
 //===----------------------------------------------------------------------===//
 //  Operand Vector Scalarization <1 x ty> -> ty.
@@ -947,7 +924,6 @@ void DAGTypeLegalizer::SplitVectorResult(SDNode *N, unsigned ResNo) {
   case ISD::INSERT_SUBVECTOR:  SplitVecRes_INSERT_SUBVECTOR(N, Lo, Hi); break;
   case ISD::FPOWI:             SplitVecRes_FPOWI(N, Lo, Hi); break;
   case ISD::FCOPYSIGN:         SplitVecRes_FCOPYSIGN(N, Lo, Hi); break;
-  case ISD::ISNAN:             SplitVecRes_ISNAN(N, Lo, Hi); break;
   case ISD::INSERT_VECTOR_ELT: SplitVecRes_INSERT_VECTOR_ELT(N, Lo, Hi); break;
   case ISD::SPLAT_VECTOR:
   case ISD::SCALAR_TO_VECTOR:
@@ -1382,17 +1358,6 @@ void DAGTypeLegalizer::SplitVecRes_FCOPYSIGN(SDNode *N, SDValue &Lo,
 
   Lo = DAG.getNode(ISD::FCOPYSIGN, DL, LHSLo.getValueType(), LHSLo, RHSLo);
   Hi = DAG.getNode(ISD::FCOPYSIGN, DL, LHSHi.getValueType(), LHSHi, RHSHi);
-}
-
-void DAGTypeLegalizer::SplitVecRes_ISNAN(SDNode *N, SDValue &Lo, SDValue &Hi) {
-  SDLoc DL(N);
-  SDValue ArgLo, ArgHi;
-  GetSplitVector(N->getOperand(0), ArgLo, ArgHi);
-  EVT LoVT, HiVT;
-  std::tie(LoVT, HiVT) = DAG.GetSplitDestVTs(N->getValueType(0));
-
-  Lo = DAG.getNode(ISD::ISNAN, DL, LoVT, ArgLo, N->getFlags());
-  Hi = DAG.getNode(ISD::ISNAN, DL, HiVT, ArgHi, N->getFlags());
 }
 
 void DAGTypeLegalizer::SplitVecRes_InregOp(SDNode *N, SDValue &Lo,
@@ -4582,7 +4547,6 @@ bool DAGTypeLegalizer::WidenVectorOperand(SDNode *N, unsigned OpNo) {
   case ISD::STRICT_FSETCCS:     Res = WidenVecOp_STRICT_FSETCC(N); break;
   case ISD::VSELECT:            Res = WidenVecOp_VSELECT(N); break;
   case ISD::FCOPYSIGN:          Res = WidenVecOp_FCOPYSIGN(N); break;
-  case ISD::ISNAN:              Res = WidenVecOp_ISNAN(N); break;
 
   case ISD::ANY_EXTEND:
   case ISD::SIGN_EXTEND:
@@ -4716,33 +4680,6 @@ SDValue DAGTypeLegalizer::WidenVecOp_FCOPYSIGN(SDNode *N) {
   // We can't do much to fix that, so just unroll and let the extracts off of
   // the second input be widened as needed later.
   return DAG.UnrollVectorOp(N);
-}
-
-SDValue DAGTypeLegalizer::WidenVecOp_ISNAN(SDNode *N) {
-  SDLoc DL(N);
-  EVT ResultVT = N->getValueType(0);
-  SDValue WideArg = GetWidenedVector(N->getOperand(0));
-
-  // Process this node similarly to SETCC.
-  EVT WideResultVT = getSetCCResultType(WideArg.getValueType());
-  if (ResultVT.getScalarType() == MVT::i1)
-    WideResultVT = EVT::getVectorVT(*DAG.getContext(), MVT::i1,
-                                    WideResultVT.getVectorNumElements());
-
-  SDValue WideNode =
-      DAG.getNode(ISD::ISNAN, DL, WideResultVT, WideArg, N->getFlags());
-
-  // Extract the needed results from the result vector.
-  EVT ResVT =
-      EVT::getVectorVT(*DAG.getContext(), WideResultVT.getVectorElementType(),
-                       ResultVT.getVectorNumElements());
-  SDValue CC = DAG.getNode(ISD::EXTRACT_SUBVECTOR, DL, ResVT, WideNode,
-                           DAG.getVectorIdxConstant(0, DL));
-
-  EVT OpVT = N->getOperand(0).getValueType();
-  ISD::NodeType ExtendCode =
-      TargetLowering::getExtendForContent(TLI.getBooleanContents(OpVT));
-  return DAG.getNode(ExtendCode, DL, ResultVT, CC);
 }
 
 SDValue DAGTypeLegalizer::WidenVecOp_Convert(SDNode *N) {
