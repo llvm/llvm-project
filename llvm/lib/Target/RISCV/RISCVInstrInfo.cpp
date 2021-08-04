@@ -1139,7 +1139,7 @@ MachineBasicBlock::iterator RISCVInstrInfo::insertOutlinedCall(
 
 // clang-format off
 #define CASE_VFMA_OPCODE_COMMON(OP, TYPE, LMUL)                                \
-  RISCV::PseudoV##OP##_##TYPE##_##LMUL##_COMMUTABLE
+  RISCV::PseudoV##OP##_##TYPE##_##LMUL
 
 #define CASE_VFMA_OPCODE_LMULS(OP, TYPE)                                       \
   CASE_VFMA_OPCODE_COMMON(OP, TYPE, MF8):                                      \
@@ -1182,6 +1182,11 @@ bool RISCVInstrInfo::findCommutedOpIndices(const MachineInstr &MI,
   case CASE_VFMA_OPCODE_LMULS(NMSAC, VX):
   case CASE_VFMA_OPCODE_LMULS(MACC, VV):
   case CASE_VFMA_OPCODE_LMULS(NMSAC, VV): {
+    // If the tail policy is undisturbed we can't commute.
+    assert(RISCVII::hasVecPolicyOp(MI.getDesc().TSFlags));
+    if ((MI.getOperand(MI.getNumExplicitOperands() - 1).getImm() & 1) == 0)
+      return false;
+
     // For these instructions we can only swap operand 1 and operand 3 by
     // changing the opcode.
     unsigned CommutableOpIdx1 = 1;
@@ -1197,6 +1202,11 @@ bool RISCVInstrInfo::findCommutedOpIndices(const MachineInstr &MI,
   case CASE_VFMA_OPCODE_LMULS(FNMSUB, VV):
   case CASE_VFMA_OPCODE_LMULS(MADD, VV):
   case CASE_VFMA_OPCODE_LMULS(NMSUB, VV): {
+    // If the tail policy is undisturbed we can't commute.
+    assert(RISCVII::hasVecPolicyOp(MI.getDesc().TSFlags));
+    if ((MI.getOperand(MI.getNumExplicitOperands() - 1).getImm() & 1) == 0)
+      return false;
+
     // For these instructions we have more freedom. We can commute with the
     // other multiplicand or with the addend/subtrahend/minuend.
 
@@ -1261,8 +1271,8 @@ bool RISCVInstrInfo::findCommutedOpIndices(const MachineInstr &MI,
 }
 
 #define CASE_VFMA_CHANGE_OPCODE_COMMON(OLDOP, NEWOP, TYPE, LMUL)               \
-  case RISCV::PseudoV##OLDOP##_##TYPE##_##LMUL##_COMMUTABLE:                   \
-    Opc = RISCV::PseudoV##NEWOP##_##TYPE##_##LMUL##_COMMUTABLE;                \
+  case RISCV::PseudoV##OLDOP##_##TYPE##_##LMUL:                                \
+    Opc = RISCV::PseudoV##NEWOP##_##TYPE##_##LMUL;                             \
     break;
 
 #define CASE_VFMA_CHANGE_OPCODE_LMULS(OLDOP, NEWOP, TYPE)                      \

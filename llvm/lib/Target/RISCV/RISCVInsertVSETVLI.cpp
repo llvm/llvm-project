@@ -362,14 +362,7 @@ static VSETVLIInfo computeInfoForInstr(const MachineInstr &MI, uint64_t TSFlags,
                                        const MachineRegisterInfo *MRI) {
   VSETVLIInfo InstrInfo;
   unsigned NumOperands = MI.getNumExplicitOperands();
-
-  RISCVII::VLMUL VLMul = RISCVII::getLMul(TSFlags);
-
-  unsigned Log2SEW = MI.getOperand(NumOperands - 1).getImm();
-  // A Log2SEW of 0 is an operation on mask registers only.
-  bool MaskRegOp = Log2SEW == 0;
-  unsigned SEW = Log2SEW ? 1 << Log2SEW : 8;
-  assert(RISCVVType::isValidSEW(SEW) && "Unexpected SEW");
+  bool HasPolicy = RISCVII::hasVecPolicyOp(TSFlags);
 
   // Default to tail agnostic unless the destination is tied to a source.
   // Unless the source is undef. In that case the user would have some control
@@ -377,8 +370,15 @@ static VSETVLIInfo computeInfoForInstr(const MachineInstr &MI, uint64_t TSFlags,
   // despite having a tied def.
   bool ForceTailAgnostic = RISCVII::doesForceTailAgnostic(TSFlags);
   bool TailAgnostic = true;
+  // If the instruction has policy argument, use the argument.
+  if (HasPolicy) {
+    const MachineOperand &Op = MI.getOperand(MI.getNumExplicitOperands() - 1);
+    TailAgnostic = Op.getImm() & 0x1;
+  }
+
   unsigned UseOpIdx;
-  if (!ForceTailAgnostic && MI.isRegTiedToUseOperand(0, &UseOpIdx)) {
+  if (!(ForceTailAgnostic || (HasPolicy && TailAgnostic)) &&
+      MI.isRegTiedToUseOperand(0, &UseOpIdx)) {
     TailAgnostic = false;
     // If the tied operand is an IMPLICIT_DEF we can keep TailAgnostic.
     const MachineOperand &UseMO = MI.getOperand(UseOpIdx);
@@ -390,8 +390,20 @@ static VSETVLIInfo computeInfoForInstr(const MachineInstr &MI, uint64_t TSFlags,
     }
   }
 
+  // Remove the tail policy so we can find the SEW and VL.
+  if (HasPolicy)
+    --NumOperands;
+
+  RISCVII::VLMUL VLMul = RISCVII::getLMul(TSFlags);
+
+  unsigned Log2SEW = MI.getOperand(NumOperands - 1).getImm();
+  // A Log2SEW of 0 is an operation on mask registers only.
+  bool MaskRegOp = Log2SEW == 0;
+  unsigned SEW = Log2SEW ? 1 << Log2SEW : 8;
+  assert(RISCVVType::isValidSEW(SEW) && "Unexpected SEW");
+
   if (RISCVII::hasVLOp(TSFlags)) {
-    const MachineOperand &VLOp = MI.getOperand(MI.getNumExplicitOperands() - 2);
+    const MachineOperand &VLOp = MI.getOperand(NumOperands - 2);
     if (VLOp.isImm())
       InstrInfo.setAVLImm(VLOp.getImm());
     else
