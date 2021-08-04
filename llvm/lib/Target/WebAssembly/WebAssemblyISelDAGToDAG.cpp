@@ -117,8 +117,7 @@ void WebAssemblyDAGToDAGISel::Select(SDNode *Node) {
     if (!MF.getSubtarget<WebAssemblySubtarget>().hasAtomics())
       break;
 
-    uint64_t SyncScopeID =
-        cast<ConstantSDNode>(Node->getOperand(2).getNode())->getZExtValue();
+    uint64_t SyncScopeID = Node->getConstantOperandVal(2);
     MachineSDNode *Fence = nullptr;
     switch (SyncScopeID) {
     case SyncScope::SingleThread:
@@ -152,7 +151,7 @@ void WebAssemblyDAGToDAGISel::Select(SDNode *Node) {
   }
 
   case ISD::INTRINSIC_WO_CHAIN: {
-    unsigned IntNo = cast<ConstantSDNode>(Node->getOperand(0))->getZExtValue();
+    unsigned IntNo = Node->getConstantOperandVal(0);
     switch (IntNo) {
     case Intrinsic::wasm_tls_size: {
       MachineSDNode *TLSSize = CurDAG->getMachineNode(
@@ -174,7 +173,7 @@ void WebAssemblyDAGToDAGISel::Select(SDNode *Node) {
   }
 
   case ISD::INTRINSIC_W_CHAIN: {
-    unsigned IntNo = cast<ConstantSDNode>(Node->getOperand(1))->getZExtValue();
+    unsigned IntNo = Node->getConstantOperandVal(1);
     const auto &TLI = CurDAG->getTargetLoweringInfo();
     MVT PtrVT = TLI.getPointerTy(CurDAG->getDataLayout());
     switch (IntNo) {
