@@ -5251,7 +5251,7 @@ Value *BoUpSLP::vectorizeTree(TreeEntry *E) {
       if (!IsIdentity || NumElts != NumScalars)
         V = Builder.CreateShuffleVector(V, Mask);
 
-      if (NumElts != NumScalars) {
+      if ((!IsIdentity || Offset != 0) && NumElts != NumScalars) {
         SmallVector<int> InsertMask(NumElts);
         std::iota(InsertMask.begin(), InsertMask.end(), 0);
         for (unsigned I = 0; I < NumElts; I++) {
