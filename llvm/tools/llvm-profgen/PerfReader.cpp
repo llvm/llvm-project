@@ -622,7 +622,7 @@ bool PerfReaderBase::extractCallstack(TraceStream &TraceIt,
          !Binary->addressInPrologEpilog(CallStack.front());
 }
 
-void HybridPerfReader::parseSample(TraceStream &TraceIt) {
+void HybridPerfReader::parseSample(TraceStream &TraceIt, uint64_t Count) {
   // The raw hybird sample started with call stack in FILO order and followed
   // intermediately by LBR sample
   // e.g.
@@ -659,12 +659,27 @@ void HybridPerfReader::parseSample(TraceStream &TraceIt) {
       Sample->CallStack.front() = Sample->LBRStack[0].Target;
       // Record samples by aggregation
       Sample->genHashCode();
-      AggregatedSamples[Hashable<PerfSample>(Sample)]++;
+      AggregatedSamples[Hashable<PerfSample>(Sample)] += Count;
     }
   } else {
     // LBR sample is encoded in single line after stack sample
     exitWithError("'Hybrid perf sample is corrupted, No LBR sample line");
   }
+}
+
+uint64_t PerfReaderBase::parseAggregatedCount(TraceStream &TraceIt) {
+  // The aggregated count is optional, so do not skip the line and return 1 if
+  // it's unmatched
+  uint64_t Count = 1;
+  if (!TraceIt.getCurrentLine().getAsInteger(10, Count))
+    TraceIt.advance();
+  return Count;
+}
+
+void PerfReaderBase::parseSample(TraceStream &TraceIt) {
+  uint64_t Count = parseAggregatedCount(TraceIt);
+  assert(Count >= 1 && "Aggregated count should be >= 1!");
+  parseSample(TraceIt, Count);
 }
 
 void PerfReaderBase::parseMMap2Event(TraceStream &TraceIt) {

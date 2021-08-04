@@ -116,6 +116,7 @@ LogicalResult mlir::scf::peelForLoop(RewriterBase &b, ForOp forOp,
   bindDims(b.getContext(), dim0, dim1, dim2);
   // New upper bound: %ub - (%ub - %lb) mod %step
   auto modMap = AffineMap::get(3, 0, {dim1 - ((dim1 - dim0) % dim2)});
+  b.setInsertionPoint(forOp);
   Value splitBound = b.createOrFold<AffineApplyOp>(
       loc, modMap,
       ValueRange{forOp.lowerBound(), forOp.upperBound(), forOp.step()});

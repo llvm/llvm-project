@@ -10035,6 +10035,30 @@ INTERCEPTOR(void, qsort_r, void *base, SIZE_T nmemb, SIZE_T size,
 #define INIT_QSORT_R
 #endif
 
+#if SANITIZER_INTERCEPT_BSEARCH
+typedef int (*bsearch_compar_f)(const void *, const void *);
+static THREADLOCAL bsearch_compar_f bsearch_compar;
+static int wrapped_bsearch_compar(const void *a, const void *b) {
+  COMMON_INTERCEPTOR_UNPOISON_PARAM(2);
+  return bsearch_compar(a, b);
+}
+
+INTERCEPTOR(void *, bsearch, const void *key, const void *base, SIZE_T nmemb,
+            SIZE_T size, bsearch_compar_f compar) {
+  void *ctx;
+  COMMON_INTERCEPTOR_ENTER(ctx, bsearch, key, base, nmemb, size, compar);
+  // Unlike qsort, don't expect recursive implementation of bsearch.
+  CHECK_NE(compar, wrapped_bsearch_compar);
+  Swap(bsearch_compar, compar);
+  void *r = REAL(bsearch)(key, base, nmemb, size, wrapped_bsearch_compar);
+  bsearch_compar = compar;
+  return r;
+}
+#  define INIT_BSEARCH COMMON_INTERCEPT_FUNCTION(bsearch)
+#else
+#  define INIT_BSEARCH
+#endif
+
 #if SANITIZER_INTERCEPT_SIGALTSTACK
 INTERCEPTOR(int, sigaltstack, void *ss, void *oss) {
   void *ctx;
@@ -10401,6 +10425,7 @@ static void InitializeCommonInterceptors() {
   INIT_GETENTROPY;
   INIT_QSORT;
   INIT_QSORT_R;
+  INIT_BSEARCH;
   INIT_SIGALTSTACK;
   INIT_UNAME;
   INIT___XUNAME;

@@ -1,5 +1,40 @@
 ; RUN: llvm-profgen --format=text --perfscript=%S/Inputs/noinline-cs-noprobe.perfscript --binary=%S/Inputs/noinline-cs-noprobe.perfbin --output=%t --show-unwinder-output --profile-summary-cold-count=0 | FileCheck %s --check-prefix=CHECK-UNWINDER
 ; RUN: FileCheck %s --input-file %t
+; RUN: llvm-profgen --format=text --perfscript=%S/Inputs/noinline-cs-noprobe.aggperfscript --binary=%S/Inputs/noinline-cs-noprobe.perfbin --output=%t --show-unwinder-output --profile-summary-cold-count=0 | FileCheck %s --check-prefix=CHECK-AGG-UNWINDER
+; RUN: FileCheck %s --input-file %t --check-prefix=CHECK-AGG
+
+; CHECK-AGG:[main:1 @ foo]:108:0
+; CHECK-AGG: 2: 6
+; CHECK-AGG: 3: 6 bar:6
+; CHECK-AGG:[main:1 @ foo:3 @ bar]:100:6
+; CHECK-AGG: 0: 6
+; CHECK-AGG: 1: 6
+; CHECK-AGG: 2: 4
+; CHECK-AGG: 4: 2
+; CHECK-AGG: 5: 6
+
+; CHECK-AGG-UNWINDER: Binary(noinline-cs-noprobe.perfbin)'s Range Counter:
+; CHECK-AGG-UNWINDER: main:1 @ foo
+; CHECK-AGG-UNWINDER:   (5ff, 62f): 6
+; CHECK-AGG-UNWINDER:   (634, 637): 6
+; CHECK-AGG-UNWINDER:   (645, 645): 6
+; CHECK-AGG-UNWINDER: main:1 @ foo:3 @ bar
+; CHECK-AGG-UNWINDER:   (5b0, 5c8): 2
+; CHECK-AGG-UNWINDER:   (5b0, 5d7): 4
+; CHECK-AGG-UNWINDER:   (5dc, 5e9): 2
+; CHECK-AGG-UNWINDER:   (5e5, 5e9): 4
+
+; CHECK-AGG-UNWINDER: Binary(noinline-cs-noprobe.perfbin)'s Branch Counter:
+; CHECK-AGG-UNWINDER: main:1 @ foo
+; CHECK-AGG-UNWINDER:   (62f, 5b0): 6
+; CHECK-AGG-UNWINDER:   (637, 645): 6
+; CHECK-AGG-UNWINDER:   (645, 5ff): 6
+; CHECK-AGG-UNWINDER: main:1 @ foo:3 @ bar
+; CHECK-AGG-UNWINDER:   (5c8, 5dc): 4
+; CHECK-AGG-UNWINDER:   (5d7, 5e5): 4
+; CHECK-AGG-UNWINDER:   (5e9, 634): 6
+
+
 
 ; CHECK:[main:1 @ foo]:54:0
 ; CHECK: 2: 3
@@ -31,7 +66,6 @@
 ; CHECK-UNWINDER:   (5c8, 5dc): 2
 ; CHECK-UNWINDER:   (5d7, 5e5): 2
 ; CHECK-UNWINDER:   (5e9, 634): 3
-
 
 
 

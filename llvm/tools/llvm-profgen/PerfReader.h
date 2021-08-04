@@ -637,9 +637,13 @@ protected:
   bool extractLBRStack(TraceStream &TraceIt,
                        SmallVectorImpl<LBREntry> &LBRStack,
                        ProfiledBinary *Binary);
+  uint64_t parseAggregatedCount(TraceStream &TraceIt);
   // Parse one sample from multiple perf lines, override this for different
   // sample type
-  virtual void parseSample(TraceStream &TraceIt) = 0;
+  void parseSample(TraceStream &TraceIt);
+  // An aggregated count is given to indicate how many times the sample is
+  // repeated.
+  virtual void parseSample(TraceStream &TraceIt, uint64_t Count) = 0;
   // Post process the profile after trace aggregation, we will do simple range
   // overlap computation for AutoFDO, or unwind for CSSPGO(hybrid sample).
   virtual void generateRawProfile() = 0;
@@ -671,7 +675,7 @@ public:
     PerfType = PERF_LBR_STACK;
   };
   // Parse the hybrid sample including the call and LBR line
-  void parseSample(TraceStream &TraceIt) override;
+  void parseSample(TraceStream &TraceIt, uint64_t Count) override;
   void generateRawProfile() override;
 
 private:
