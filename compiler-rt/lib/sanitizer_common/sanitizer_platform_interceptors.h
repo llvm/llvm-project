@@ -571,6 +571,8 @@
 #define SANITIZER_INTERCEPT_QSORT \
   (SI_POSIX && !SI_IOSSIM && !SI_WATCHOS && !SI_TVOS && !SI_ANDROID)
 #define SANITIZER_INTERCEPT_QSORT_R SI_GLIBC
+#define SANITIZER_INTERCEPT_BSEARCH \
+  (SI_POSIX && !SI_IOSSIM && !SI_WATCHOS && !SI_TVOS && !SI_ANDROID)
 // sigaltstack on i386 macOS cannot be intercepted due to setjmp()
 // calling it and assuming that it does not clobber registers.
 #define SANITIZER_INTERCEPT_SIGALTSTACK \
