@@ -15,6 +15,7 @@
 #include "mlir/Dialect/Tosa/IR/TosaOps.h"
 #include "mlir/Dialect/StandardOps/IR/Ops.h"
 #include "mlir/Dialect/Tosa/Utils/QuantUtils.h"
+#include "mlir/Dialect/Tosa/Utils/ShapeUtils.h"
 #include "mlir/IR/BuiltinTypes.h"
 #include "mlir/IR/Matchers.h"
 #include "mlir/IR/PatternMatch.h"
@@ -1298,6 +1299,54 @@ LogicalResult TransposeConv2DOp::inferReturnTypeComponents(
   }
 
   inferredReturnShapes.push_back(ShapedTypeComponents(outputShape));
+  return success();
+}
+
+LogicalResult IfOp::inferReturnTypeComponents(
+    MLIRContext *context, ::llvm::Optional<Location> location,
+    ValueShapeRange operands, DictionaryAttr attributes, RegionRange regions,
+    SmallVectorImpl<ShapedTypeComponents> &inferredReturnShapes) {
+  llvm::SmallVector<tosa::YieldOp> yieldOps;
+  for (Region *region : regions) {
+    for (auto &block : *region)
+      if (auto returnOp = dyn_cast<tosa::YieldOp>(block.getTerminator()))
+        yieldOps.push_back(returnOp);
+  }
+
+  if (yieldOps.empty())
+    return failure();
+
+  // Get the initial type information for the yield op.
+  llvm::SmallVector<ValueKnowledge> resultKnowledge;
+  resultKnowledge.reserve(yieldOps.front().getNumOperands());
+  for (auto operand : yieldOps.front().getOperands()) {
+    resultKnowledge.push_back(
+        ValueKnowledge::getKnowledgeFromType(operand.getType()));
+  }
+
+  for (auto yieldOp : yieldOps) {
+    if (resultKnowledge.size() != yieldOp.getNumOperands())
+      return failure();
+
+    for (auto it : llvm::enumerate(yieldOp.getOperands())) {
+      int32_t index = it.index();
+      auto meet = ValueKnowledge::meet(
+          resultKnowledge[index],
+          ValueKnowledge::getKnowledgeFromType(it.value().getType()));
+      if (!meet)
+        continue;
+      resultKnowledge[index] = meet;
+    }
+  }
+
+  for (auto result : resultKnowledge) {
+    if (result.hasRank) {
+      inferredReturnShapes.push_back(ShapedTypeComponents(result.sizes));
+    } else {
+      inferredReturnShapes.push_back(ShapedTypeComponents());
+    }
+  }
+
   return success();
 }
 
