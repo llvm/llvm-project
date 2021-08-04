@@ -480,6 +480,8 @@ let RegAltNameIndices = [ABIRegAltName] in {
   def VL     : RISCVReg<0, "vl", ["vl"]>;
   def VXSAT  : RISCVReg<0, "vxsat", ["vxsat"]>;
   def VXRM   : RISCVReg<0, "vxrm", ["vxrm"]>;
+  def VLENB  : RISCVReg<0, "vlenb", ["vlenb"]>,
+               DwarfRegNum<[!add(4096, SysRegVLENB.Encoding)]>;
 }
 
 foreach m = [1, 2, 4] in {
