@@ -35,6 +35,7 @@ extern "C" {
 
 #pragma omp end declare variant
 
+#ifdef __AMDGCN__
 #pragma omp begin declare variant match(device = {arch(amdgcn)})
 
 // Import types which will be used by __clang_hip_libdevice_declares.h
@@ -54,6 +55,7 @@ extern "C" {
 #undef __OPENMP_AMDGCN__
 
 #pragma omp end declare variant
+#endif
 
 #ifdef __cplusplus
 } // extern "C"
