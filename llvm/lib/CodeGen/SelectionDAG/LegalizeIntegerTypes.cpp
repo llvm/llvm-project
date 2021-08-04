@@ -139,8 +139,6 @@ void DAGTypeLegalizer::PromoteIntegerResult(SDNode *N, unsigned ResNo) {
 
   case ISD::FLT_ROUNDS_: Res = PromoteIntRes_FLT_ROUNDS(N); break;
 
-  case ISD::ISNAN:       Res = PromoteIntRes_ISNAN(N); break;
-
   case ISD::AND:
   case ISD::OR:
   case ISD::XOR:
@@ -656,14 +654,6 @@ SDValue DAGTypeLegalizer::PromoteIntRes_FLT_ROUNDS(SDNode *N) {
   // use the new one.
   ReplaceValueWith(SDValue(N, 1), Res.getValue(1));
   return Res;
-}
-
-SDValue DAGTypeLegalizer::PromoteIntRes_ISNAN(SDNode *N) {
-  SDLoc DL(N);
-  EVT ResultVT = N->getValueType(0);
-  EVT NewResultVT = TLI.getTypeToTransformTo(*DAG.getContext(), ResultVT);
-  return DAG.getNode(N->getOpcode(), DL, NewResultVT, N->getOperand(0),
-                     N->getFlags());
 }
 
 SDValue DAGTypeLegalizer::PromoteIntRes_INT_EXTEND(SDNode *N) {
