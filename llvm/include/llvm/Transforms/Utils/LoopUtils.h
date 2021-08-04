@@ -351,6 +351,15 @@ bool canSinkOrHoistInst(Instruction &I, AAResults *AA, DominatorTree *DT,
 /// Returns the comparison predicate used when expanding a min/max reduction.
 CmpInst::Predicate getMinMaxReductionPredicate(RecurKind RK);
 
+/// See RecurrenceDescriptor::isSelectCmpPattern for a description of the
+/// pattern we are trying to match. In this pattern we are only ever selecting
+/// between two values: 1) an initial PHI start value, and 2) a loop invariant
+/// value. This function uses \p LoopExitInst to determine 2), which we then use
+/// to select between \p Left and \p Right. Any lane value in \p Left that
+/// matches 2) will be merged into \p Right.
+Value *createSelectCmpOp(IRBuilderBase &Builder, Value *StartVal, RecurKind RK,
+                         Value *Left, Value *Right);
+
 /// Returns a Min/Max operation corresponding to MinMaxRecurrenceKind.
 /// The Builder's fast-math-flags must be set to propagate the expected values.
 Value *createMinMaxOp(IRBuilderBase &Builder, RecurKind RK, Value *Left,
@@ -378,12 +387,22 @@ Value *createSimpleTargetReduction(IRBuilderBase &B,
                                    RecurKind RdxKind,
                                    ArrayRef<Value *> RedOps = None);
 
+/// Create a target reduction of the given vector \p Src for a reduction of the
+/// kind RecurKind::SelectICmp or RecurKind::SelectFCmp. The reduction operation
+/// is described by \p Desc.
+Value *createSelectCmpTargetReduction(IRBuilderBase &B,
+                                      const TargetTransformInfo *TTI,
+                                      Value *Src,
+                                      const RecurrenceDescriptor &Desc,
+                                      PHINode *OrigPhi);
+
 /// Create a generic target reduction using a recurrence descriptor \p Desc
 /// The target is queried to determine if intrinsics or shuffle sequences are
 /// required to implement the reduction.
 /// Fast-math-flags are propagated using the RecurrenceDescriptor.
 Value *createTargetReduction(IRBuilderBase &B, const TargetTransformInfo *TTI,
-                             const RecurrenceDescriptor &Desc, Value *Src);
+                             const RecurrenceDescriptor &Desc, Value *Src,
+                             PHINode *OrigPhi = nullptr);
 
 /// Create an ordered reduction intrinsic using the given recurrence
 /// descriptor \p Desc.
