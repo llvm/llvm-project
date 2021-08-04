@@ -50,6 +50,9 @@ DWARFVerifier::DieRangeInfo::insert(const DWARFAddressRange &R) {
 
 DWARFVerifier::DieRangeInfo::die_range_info_iterator
 DWARFVerifier::DieRangeInfo::insert(const DieRangeInfo &RI) {
+  if (RI.Ranges.empty())
+    return Children.end();
+
   auto End = Children.end();
   auto Iter = Children.begin();
   while (Iter != End) {
@@ -462,7 +465,7 @@ unsigned DWARFVerifier::verifyDieRanges(const DWARFDie &Die,
   }
 
   // Verify that ranges are contained within their parent.
-  bool ShouldBeContained = !Ranges.empty() && !ParentRI.Ranges.empty() &&
+  bool ShouldBeContained = !RI.Ranges.empty() && !ParentRI.Ranges.empty() &&
                            !(Die.getTag() == DW_TAG_subprogram &&
                              ParentRI.Die.getTag() == DW_TAG_subprogram);
   if (ShouldBeContained && !ParentRI.contains(RI)) {
