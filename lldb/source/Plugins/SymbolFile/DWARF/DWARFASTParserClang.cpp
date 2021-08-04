@@ -3478,7 +3478,8 @@ bool DWARFASTParserClang::CopyUniqueClassMethodTypes(
   UniqueCStringMap<DWARFDIE> dst_name_to_die;
   UniqueCStringMap<DWARFDIE> src_name_to_die_artificial;
   UniqueCStringMap<DWARFDIE> dst_name_to_die_artificial;
-  for (DWARFDIE src_die : src_class_die.children()) {
+  for (src_die = src_class_die.GetFirstChild(); src_die.IsValid();
+       src_die = src_die.GetSibling()) {
     if (src_die.Tag() == DW_TAG_subprogram) {
       // Make sure this is a declaration and not a concrete instance by looking
       // for DW_AT_declaration set to 1. Sometimes concrete function instances
@@ -3496,7 +3497,8 @@ bool DWARFASTParserClang::CopyUniqueClassMethodTypes(
       }
     }
   }
-  for (DWARFDIE dst_die : dst_class_die.children()) {
+  for (dst_die = dst_class_die.GetFirstChild(); dst_die.IsValid();
+       dst_die = dst_die.GetSibling()) {
     if (dst_die.Tag() == DW_TAG_subprogram) {
       // Make sure this is a declaration and not a concrete instance by looking
       // for DW_AT_declaration set to 1. Sometimes concrete function instances
