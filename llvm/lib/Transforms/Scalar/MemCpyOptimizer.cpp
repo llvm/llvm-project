@@ -673,7 +673,12 @@ bool MemCpyOptPass::processStore(StoreInst *SI, BasicBlock::iterator &BBI) {
         LI->getParent() == SI->getParent()) {
 
       auto *T = LI->getType();
-      if (T->isAggregateType()) {
+      // Don't introduce calls to memcpy/memmove intrinsics out of thin air if
+      // the corresponding libcalls are not available.
+      // TODO: We should really distinguish between libcall availability and
+      // our ability to introduce intrinsics.
+      if (T->isAggregateType() && TLI->has(LibFunc_memcpy) &&
+          TLI->has(LibFunc_memmove)) {
         MemoryLocation LoadLoc = MemoryLocation::get(LI);
 
         // We use alias analysis to check if an instruction may store to
@@ -795,6 +800,13 @@ bool MemCpyOptPass::processStore(StoreInst *SI, BasicBlock::iterator &BBI) {
       }
     }
   }
+
+  // The following code creates memset intrinsics out of thin air. Don't do
+  // this if the corresponding libfunc is not available.
+  // TODO: We should really distinguish between libcall availability and
+  // our ability to introduce intrinsics.
+  if (!TLI->has(LibFunc_memset))
+    return false;
 
   // There are two cases that are interesting for this code to handle: memcpy
   // and memset.  Right now we only handle memset.
@@ -1548,9 +1560,6 @@ bool MemCpyOptPass::processMemCpy(MemCpyInst *M, BasicBlock::iterator &BBI) {
 /// Transforms memmove calls to memcpy calls when the src/dst are guaranteed
 /// not to alias.
 bool MemCpyOptPass::processMemMove(MemMoveInst *M) {
-  if (!TLI->has(LibFunc_memmove))
-    return false;
-
   // See if the pointers alias.
   if (!AA->isNoAlias(MemoryLocation::getForDest(M),
                      MemoryLocation::getForSource(M)))
@@ -1754,11 +1763,6 @@ bool MemCpyOptPass::runImpl(Function &F, MemoryDependenceResults *MD_,
   MSSA = MSSA_;
   MemorySSAUpdater MSSAU_(MSSA_);
   MSSAU = MSSA_ ? &MSSAU_ : nullptr;
-  // If we don't have at least memset and memcpy, there is little point of doing
-  // anything here.  These are required by a freestanding implementation, so if
-  // even they are disabled, there is no point in trying hard.
-  if (!TLI->has(LibFunc_memset) || !TLI->has(LibFunc_memcpy))
-    return false;
 
   while (true) {
     if (!iterateOnFunction(F))

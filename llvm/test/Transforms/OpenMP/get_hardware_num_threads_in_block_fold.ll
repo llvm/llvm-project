@@ -8,15 +8,20 @@ target triple = "nvptx64"
 
 @G = external global i32
 ;.
+; CHECK: @[[KERNEL0_EXEC_MODE:[a-zA-Z0-9_$"\\.-]+]] = weak constant i8 1
 ; CHECK: @[[G:[a-zA-Z0-9_$"\\.-]+]] = external global i32
+; CHECK: @[[KERNEL1_EXEC_MODE:[a-zA-Z0-9_$"\\.-]+]] = weak constant i8 1
+; CHECK: @[[KERNEL2_EXEC_MODE:[a-zA-Z0-9_$"\\.-]+]] = weak constant i8 2
+; CHECK: @[[GLOB0:[0-9]+]] = private unnamed_addr constant [23 x i8] c"
+; CHECK: @[[GLOB1:[0-9]+]] = private unnamed_addr constant [[STRUCT_IDENT_T:%.*]] { i32 0, i32 2, i32 0, i32 0, i8* getelementptr inbounds ([23 x i8], [23 x i8]* @[[GLOB0]], i32 0, i32 0) }, align 8
 ;.
 define weak void @kernel0() #0 {
-; CHECK-LABEL: define {{[^@]+}}@kernel0()
-; CHECK: #[[ATTR0:[0-9]+]] {
+; CHECK-LABEL: define {{[^@]+}}@kernel0
+; CHECK-SAME: () #[[ATTR0:[0-9]+]] {
 ; CHECK-NEXT:    [[I:%.*]] = call i32 @__kmpc_target_init(%struct.ident_t* null, i1 true, i1 false, i1 false)
-; CHECK-NEXT:    call void @helper0()
-; CHECK-NEXT:    call void @helper1()
-; CHECK-NEXT:    call void @helper2()
+; CHECK-NEXT:    call void @helper0() #[[ATTR1:[0-9]+]]
+; CHECK-NEXT:    call void @helper1() #[[ATTR1]]
+; CHECK-NEXT:    call void @helper2() #[[ATTR1]]
 ; CHECK-NEXT:    call void @__kmpc_target_deinit(%struct.ident_t* null, i1 true, i1 false)
 ; CHECK-NEXT:    ret void
 ;
@@ -31,10 +36,10 @@ define weak void @kernel0() #0 {
 @kernel1_exec_mode = weak constant i8 1
 
 define weak void @kernel1() #0 {
-; CHECK-LABEL: define {{[^@]+}}@kernel1()
-; CHECK: #[[ATTR0]] {
+; CHECK-LABEL: define {{[^@]+}}@kernel1
+; CHECK-SAME: () #[[ATTR0]] {
 ; CHECK-NEXT:    [[I:%.*]] = call i32 @__kmpc_target_init(%struct.ident_t* null, i1 true, i1 false, i1 false)
-; CHECK-NEXT:    call void @helper1()
+; CHECK-NEXT:    call void @helper1() #[[ATTR1]]
 ; CHECK-NEXT:    call void @__kmpc_target_deinit(%struct.ident_t* null, i1 false, i1 false)
 ; CHECK-NEXT:    ret void
 ;
@@ -47,13 +52,13 @@ define weak void @kernel1() #0 {
 @kernel2_exec_mode = weak constant i8 1
 
 define weak void @kernel2() #0 {
-; CHECK-LABEL: define {{[^@]+}}@kernel2()
-; CHECK: #[[ATTR0]] {
-; CHECK-NEXT:    [[I:%.*]] = call i32 @__kmpc_target_init(%struct.ident_t* null, i1 false, i1 false, i1 false)
-; CHECK-NEXT:    call void @helper0()
-; CHECK-NEXT:    call void @helper1()
-; CHECK-NEXT:    call void @helper2()
-; CHECK-NEXT:    call void @__kmpc_target_deinit(%struct.ident_t* null, i1 false, i1 false)
+; CHECK-LABEL: define {{[^@]+}}@kernel2
+; CHECK-SAME: () #[[ATTR0]] {
+; CHECK-NEXT:    [[I:%.*]] = call i32 @__kmpc_target_init(%struct.ident_t* null, i1 true, i1 false, i1 false)
+; CHECK-NEXT:    call void @helper0() #[[ATTR1]]
+; CHECK-NEXT:    call void @helper1() #[[ATTR1]]
+; CHECK-NEXT:    call void @helper2() #[[ATTR1]]
+; CHECK-NEXT:    call void @__kmpc_target_deinit(%struct.ident_t* null, i1 true, i1 false)
 ; CHECK-NEXT:    ret void
 ;
   %i = call i32 @__kmpc_target_init(%struct.ident_t* null, i1 false, i1 false, i1 false)
@@ -65,8 +70,22 @@ define weak void @kernel2() #0 {
 }
 
 define internal void @helper0() {
-; CHECK-LABEL: define {{[^@]+}}@helper0() {{#[0-9]+}} {
+; CHECK-LABEL: define {{[^@]+}}@helper0
+; CHECK-SAME: () #[[ATTR1]] {
+; CHECK-NEXT:    br label [[REGION_CHECK_TID:%.*]]
+; CHECK:       region.check.tid:
+; CHECK-NEXT:    [[TMP1:%.*]] = call i32 @__kmpc_get_hardware_thread_id_in_block()
+; CHECK-NEXT:    [[TMP2:%.*]] = icmp eq i32 [[TMP1]], 0
+; CHECK-NEXT:    br i1 [[TMP2]], label [[REGION_GUARDED:%.*]], label [[REGION_BARRIER:%.*]]
+; CHECK:       region.guarded:
 ; CHECK-NEXT:    store i32 666, i32* @G, align 4
+; CHECK-NEXT:    br label [[REGION_GUARDED_END:%.*]]
+; CHECK:       region.guarded.end:
+; CHECK-NEXT:    br label [[REGION_BARRIER]]
+; CHECK:       region.barrier:
+; CHECK-NEXT:    call void @__kmpc_barrier_simple_spmd(%struct.ident_t* @[[GLOB1]], i32 [[TMP1]])
+; CHECK-NEXT:    br label [[REGION_EXIT:%.*]]
+; CHECK:       region.exit:
 ; CHECK-NEXT:    ret void
 ;
   %threadLimit = call i32 @__kmpc_get_hardware_num_threads_in_block()
@@ -75,7 +94,8 @@ define internal void @helper0() {
 }
 
 define internal void @helper1() {
-; CHECK-LABEL: define {{[^@]+}}@helper1() {{#[0-9]+}} {
+; CHECK-LABEL: define {{[^@]+}}@helper1
+; CHECK-SAME: () #[[ATTR1]] {
 ; CHECK-NEXT:    br label [[F:%.*]]
 ; CHECK:       t:
 ; CHECK-NEXT:    unreachable
@@ -93,8 +113,22 @@ f:
 }
 
 define internal void @helper2() {
-; CHECK-LABEL: define {{[^@]+}}@helper2() {{#[0-9]+}} {
-; CHECK-NEXT:    store i32 666, i32* @G
+; CHECK-LABEL: define {{[^@]+}}@helper2
+; CHECK-SAME: () #[[ATTR1]] {
+; CHECK-NEXT:    br label [[REGION_CHECK_TID:%.*]]
+; CHECK:       region.check.tid:
+; CHECK-NEXT:    [[TMP1:%.*]] = call i32 @__kmpc_get_hardware_thread_id_in_block()
+; CHECK-NEXT:    [[TMP2:%.*]] = icmp eq i32 [[TMP1]], 0
+; CHECK-NEXT:    br i1 [[TMP2]], label [[REGION_GUARDED:%.*]], label [[REGION_BARRIER:%.*]]
+; CHECK:       region.guarded:
+; CHECK-NEXT:    store i32 666, i32* @G, align 4
+; CHECK-NEXT:    br label [[REGION_GUARDED_END:%.*]]
+; CHECK:       region.guarded.end:
+; CHECK-NEXT:    br label [[REGION_BARRIER]]
+; CHECK:       region.barrier:
+; CHECK-NEXT:    call void @__kmpc_barrier_simple_spmd(%struct.ident_t* @[[GLOB1]], i32 [[TMP1]])
+; CHECK-NEXT:    br label [[REGION_EXIT:%.*]]
+; CHECK:       region.exit:
 ; CHECK-NEXT:    ret void
 ;
   %threadLimit = call i32 @__kmpc_get_hardware_num_threads_in_block()
@@ -117,9 +151,12 @@ attributes #0 = { "omp_target_thread_limit"="666" "omp_target_num_teams"="777"}
 !2 = !{void ()* @kernel0, !"kernel", i32 1}
 !3 = !{void ()* @kernel1, !"kernel", i32 1}
 !4 = !{void ()* @kernel2, !"kernel", i32 1}
+;
 ;.
 ; CHECK: attributes #[[ATTR0]] = { "omp_target_num_teams"="777" "omp_target_thread_limit"="666" }
-;
+; CHECK: attributes #[[ATTR1]] = { nounwind }
+; CHECK: attributes #[[ATTR2:[0-9]+]] = { convergent nounwind }
+;.
 ; CHECK: [[META0:![0-9]+]] = !{i32 7, !"openmp", i32 50}
 ; CHECK: [[META1:![0-9]+]] = !{i32 7, !"openmp-device", i32 50}
 ; CHECK: [[META2:![0-9]+]] = !{void ()* @kernel0, !"kernel", i32 1}

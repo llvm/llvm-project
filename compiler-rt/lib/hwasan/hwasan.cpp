@@ -319,7 +319,7 @@ void __hwasan_init_static() {
     InitializeSingleGlobal(global);
 }
 
-void __hwasan_init() {
+__attribute__((constructor(0))) void __hwasan_init() {
   CHECK(!hwasan_init_is_running);
   if (hwasan_inited) return;
   hwasan_init_is_running = 1;

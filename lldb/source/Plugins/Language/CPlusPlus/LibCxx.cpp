@@ -686,7 +686,7 @@ bool lldb_private::formatters::LibcxxWStringSummaryProvider(
   if (!wchar_t_size)
     return false;
 
-  options.SetData(extractor);
+  options.SetData(std::move(extractor));
   options.SetStream(&stream);
   options.SetPrefixToken("L");
   options.SetQuote('"');
@@ -743,12 +743,14 @@ bool LibcxxStringSummaryProvider(ValueObject &valobj, Stream &stream,
     }
   }
 
-  DataExtractor extractor;
-  const size_t bytes_read = location_sp->GetPointeeData(extractor, 0, size);
-  if (bytes_read < size)
-    return false;
+  {
+    DataExtractor extractor;
+    const size_t bytes_read = location_sp->GetPointeeData(extractor, 0, size);
+    if (bytes_read < size)
+      return false;
 
-  options.SetData(extractor);
+    options.SetData(std::move(extractor));
+  }
   options.SetStream(&stream);
   if (prefix_token.empty())
     options.SetPrefixToken(nullptr);
