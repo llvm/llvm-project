@@ -712,6 +712,7 @@ X86TargetLowering::X86TargetLowering(const X86TargetMachine &TM,
     setOperationAction(ISD::LLROUND, MVT::f80, Expand);
     setOperationAction(ISD::LRINT, MVT::f80, Custom);
     setOperationAction(ISD::LLRINT, MVT::f80, Custom);
+    setOperationAction(ISD::ISNAN, MVT::f80, Custom);
 
     // Handle constrained floating-point operations of scalar.
     setOperationAction(ISD::STRICT_FADD     , MVT::f80, Legal);
@@ -22155,6 +22156,45 @@ static SDValue LowerFGETSIGN(SDValue Op, SelectionDAG &DAG) {
   return Res;
 }
 
+static SDValue lowerISNAN(SDValue Op, SelectionDAG &DAG) {
+  SDLoc DL(Op);
+  SDValue Arg = Op.getOperand(0);
+  MVT ArgVT = Arg.getSimpleValueType();
+  MVT ResultVT = Op.getSimpleValueType();
+
+  // Determine classification of argument using instruction FXAM.
+  unsigned Opc;
+  switch (ArgVT.SimpleTy) {
+  default:
+    llvm_unreachable("Unexpected type!");
+  case MVT::f32:
+    Opc = X86::XAM_Fp32;
+    break;
+  case MVT::f64:
+    Opc = X86::XAM_Fp64;
+    break;
+  case MVT::f80:
+    Opc = X86::XAM_Fp80;
+    break;
+  }
+  SDValue Test(DAG.getMachineNode(Opc, DL, MVT::Glue, Arg), 0);
+
+  // Move FPSW to AX.
+  SDValue FNSTSW =
+      SDValue(DAG.getMachineNode(X86::FNSTSW16r, DL, MVT::i16, Test), 0);
+
+  // Extract upper 8-bits of AX.
+  SDValue Extract =
+      DAG.getTargetExtractSubreg(X86::sub_8bit_hi, DL, MVT::i8, FNSTSW);
+
+  // Mask all bits but C3, C2, C0.
+  Extract = DAG.getNode(ISD::AND, DL, MVT::i8, Extract,
+                        DAG.getConstant(0x45, DL, MVT::i8));
+
+  return DAG.getSetCC(DL, ResultVT, Extract, DAG.getConstant(1, DL, MVT::i8),
+                      ISD::CondCode::SETEQ);
+}
+
 /// Helper for creating a X86ISD::SETCC node.
 static SDValue getSETCC(X86::CondCode Cond, SDValue EFLAGS, const SDLoc &dl,
                         SelectionDAG &DAG) {
@@ -30495,6 +30535,7 @@ SDValue X86TargetLowering::LowerOperation(SDValue Op, SelectionDAG &DAG) const {
   case ISD::FNEG:               return LowerFABSorFNEG(Op, DAG);
   case ISD::FCOPYSIGN:          return LowerFCOPYSIGN(Op, DAG);
   case ISD::FGETSIGN:           return LowerFGETSIGN(Op, DAG);
+  case ISD::ISNAN:              return lowerISNAN(Op, DAG);
   case ISD::LRINT:
   case ISD::LLRINT:             return LowerLRINT_LLRINT(Op, DAG);
   case ISD::SETCC:
