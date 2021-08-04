@@ -27,7 +27,7 @@ def Mode16Bit : SubtargetFeature<"16bit-mode", "In16BitMode", "true",
                                   "16-bit mode (i8086)">;
 
 //===----------------------------------------------------------------------===//
-// X86 Subtarget features
+// X86 Subtarget ISA features
 //===----------------------------------------------------------------------===//
 
 def FeatureX87     : SubtargetFeature<"x87","HasX87", "true",
@@ -100,20 +100,6 @@ def Feature64Bit   : SubtargetFeature<"64bit", "HasX86_64", "true",
 def FeatureCMPXCHG16B : SubtargetFeature<"cx16", "HasCmpxchg16b", "true",
                                       "64-bit with cmpxchg16b",
                                       [FeatureCMPXCHG8B]>;
-def FeatureSlowSHLD : SubtargetFeature<"slow-shld", "IsSHLDSlow", "true",
-                                       "SHLD instruction is slow">;
-def FeatureSlowPMULLD : SubtargetFeature<"slow-pmulld", "IsPMULLDSlow", "true",
-                                        "PMULLD instruction is slow">;
-def FeatureSlowPMADDWD : SubtargetFeature<"slow-pmaddwd", "IsPMADDWDSlow",
-                                          "true",
-                                          "PMADDWD is slower than PMULLD">;
-// FIXME: This should not apply to CPUs that do not have SSE.
-def FeatureSlowUAMem16 : SubtargetFeature<"slow-unaligned-mem-16",
-                                "IsUAMem16Slow", "true",
-                                "Slow unaligned 16-byte memory access">;
-def FeatureSlowUAMem32 : SubtargetFeature<"slow-unaligned-mem-32",
-                                "IsUAMem32Slow", "true",
-                                "Slow unaligned 32-byte memory access">;
 def FeatureSSE4A   : SubtargetFeature<"sse4a", "HasSSE4A", "true",
                                       "Support SSE 4a instructions",
                                       [FeatureSSE3]>;
@@ -255,17 +241,6 @@ def FeatureAMXINT8     : SubtargetFeature<"amx-int8", "HasAMXINT8", "true",
 def FeatureAMXBF16     : SubtargetFeature<"amx-bf16", "HasAMXBF16", "true",
                                       "Support AMX-BF16 instructions",
                                       [FeatureAMXTILE]>;
-def FeatureLEAForSP : SubtargetFeature<"lea-sp", "UseLeaForSP", "true",
-                                     "Use LEA for adjusting the stack pointer">;
-def FeatureSlowDivide32 : SubtargetFeature<"idivl-to-divb",
-                                     "HasSlowDivide32", "true",
-                                     "Use 8-bit divide for positive values less than 256">;
-def FeatureSlowDivide64 : SubtargetFeature<"idivq-to-divl",
-                                     "HasSlowDivide64", "true",
-                                     "Use 32-bit divide for positive values less than 2^32">;
-def FeaturePadShortFunctions : SubtargetFeature<"pad-short-functions",
-                                     "PadShortFunctions", "true",
-                                     "Pad short functions">;
 def FeatureINVPCID : SubtargetFeature<"invpcid", "HasINVPCID", "true",
                                       "Invalidate Process-Context Identifier">;
 def FeatureSGX     : SubtargetFeature<"sgx", "HasSGX", "true",
@@ -296,89 +271,12 @@ def FeatureTSXLDTRK : SubtargetFeature<"tsxldtrk", "HasTSXLDTRK", "true",
                                        "Support TSXLDTRK instructions">;
 def FeatureUINTR : SubtargetFeature<"uintr", "HasUINTR", "true",
                                     "Has UINTR Instructions">;
-// On some processors, instructions that implicitly take two memory operands are
-// slow. In practice, this means that CALL, PUSH, and POP with memory operands
-// should be avoided in favor of a MOV + register CALL/PUSH/POP.
-def FeatureSlowTwoMemOps : SubtargetFeature<"slow-two-mem-ops",
-                                     "SlowTwoMemOps", "true",
-                                     "Two memory operand instructions are slow">;
-def FeatureLEAUsesAG : SubtargetFeature<"lea-uses-ag", "LEAUsesAG", "true",
-                                   "LEA instruction needs inputs at AG stage">;
-def FeatureSlowLEA : SubtargetFeature<"slow-lea", "SlowLEA", "true",
-                                   "LEA instruction with certain arguments is slow">;
-def FeatureSlow3OpsLEA : SubtargetFeature<"slow-3ops-lea", "Slow3OpsLEA", "true",
-                                   "LEA instruction with 3 ops or certain registers is slow">;
-def FeatureSlowIncDec : SubtargetFeature<"slow-incdec", "SlowIncDec", "true",
-                                   "INC and DEC instructions are slower than ADD and SUB">;
-def FeatureSoftFloat
-    : SubtargetFeature<"soft-float", "UseSoftFloat", "true",
-                       "Use software floating point features">;
-def FeaturePOPCNTFalseDeps : SubtargetFeature<"false-deps-popcnt",
-                                     "HasPOPCNTFalseDeps", "true",
-                                     "POPCNT has a false dependency on dest register">;
-def FeatureLZCNTFalseDeps : SubtargetFeature<"false-deps-lzcnt-tzcnt",
-                                     "HasLZCNTFalseDeps", "true",
-                                     "LZCNT/TZCNT have a false dependency on dest register">;
 def FeaturePCONFIG : SubtargetFeature<"pconfig", "HasPCONFIG", "true",
                                       "platform configuration instruction">;
-// On recent X86 (port bound) processors, its preferable to combine to a single shuffle
-// using a variable mask over multiple fixed shuffles.
-def FeatureFastVariableCrossLaneShuffle
-    : SubtargetFeature<"fast-variable-crosslane-shuffle",
-                       "HasFastVariableCrossLaneShuffle",
-                       "true", "Cross-lane shuffles with variable masks are fast">;
-def FeatureFastVariablePerLaneShuffle
-    : SubtargetFeature<"fast-variable-perlane-shuffle",
-                       "HasFastVariablePerLaneShuffle",
-                       "true", "Per-lane shuffles with variable masks are fast">;
-
-// On some X86 processors, a vzeroupper instruction should be inserted after
-// using ymm/zmm registers before executing code that may use SSE instructions.
-def FeatureInsertVZEROUPPER
-    : SubtargetFeature<"vzeroupper",
-                       "InsertVZEROUPPER",
-                       "true", "Should insert vzeroupper instructions">;
-// FeatureFastScalarFSQRT should be enabled if scalar FSQRT has shorter latency
-// than the corresponding NR code. FeatureFastVectorFSQRT should be enabled if
-// vector FSQRT has higher throughput than the corresponding NR code.
-// The idea is that throughput bound code is likely to be vectorized, so for
-// vectorized code we should care about the throughput of SQRT operations.
-// But if the code is scalar that probably means that the code has some kind of
-// dependency and we should care more about reducing the latency.
-def FeatureFastScalarFSQRT
-    : SubtargetFeature<"fast-scalar-fsqrt", "HasFastScalarFSQRT",
-                       "true", "Scalar SQRT is fast (disable Newton-Raphson)">;
-def FeatureFastVectorFSQRT
-    : SubtargetFeature<"fast-vector-fsqrt", "HasFastVectorFSQRT",
-                       "true", "Vector SQRT is fast (disable Newton-Raphson)">;
-// If lzcnt has equivalent latency/throughput to most simple integer ops, it can
-// be used to replace test/set sequences.
-def FeatureFastLZCNT
-    : SubtargetFeature<
-          "fast-lzcnt", "HasFastLZCNT", "true",
-          "LZCNT instructions are as fast as most simple integer ops">;
-// If the target can efficiently decode NOPs upto 7-bytes in length.
-def FeatureFast7ByteNOP
-    : SubtargetFeature<
-          "fast-7bytenop", "HasFast7ByteNOP", "true",
-          "Target can quickly decode up to 7 byte NOPs">;
-// If the target can efficiently decode NOPs upto 11-bytes in length.
-def FeatureFast11ByteNOP
-    : SubtargetFeature<
-          "fast-11bytenop", "HasFast11ByteNOP", "true",
-          "Target can quickly decode up to 11 byte NOPs">;
-// If the target can efficiently decode NOPs upto 15-bytes in length.
-def FeatureFast15ByteNOP
-    : SubtargetFeature<
-          "fast-15bytenop", "HasFast15ByteNOP", "true",
-          "Target can quickly decode up to 15 byte NOPs">;
-// Sandy Bridge and newer processors can use SHLD with the same source on both
-// inputs to implement rotate to avoid the partial flag update of the normal
-// rotate instructions.
-def FeatureFastSHLDRotate
-    : SubtargetFeature<
-          "fast-shld-rotate", "HasFastSHLDRotate", "true",
-          "SHLD can be used as a faster rotate">;
+def FeatureMOVDIRI  : SubtargetFeature<"movdiri", "HasMOVDIRI", "true",
+                                       "Support movdiri instruction">;
+def FeatureMOVDIR64B : SubtargetFeature<"movdir64b", "HasMOVDIR64B", "true",
+                                        "Support movdir64b instruction">;
 
 // Ivy Bridge and newer processors have enhanced REP MOVSB and STOSB (aka
 // "string operations"). See "REP String Enhancement" in the Intel Software
@@ -396,38 +294,13 @@ def FeatureFSRM
           "fsrm", "HasFSRM", "true",
           "REP MOVSB of short lengths is faster">;
 
-// Bulldozer and newer processors can merge CMP/TEST (but not other
-// instructions) with conditional branches.
-def FeatureBranchFusion
-    : SubtargetFeature<"branchfusion", "HasBranchFusion", "true",
-                 "CMP/TEST can be fused with conditional branches">;
+def FeatureSoftFloat
+    : SubtargetFeature<"soft-float", "UseSoftFloat", "true",
+                       "Use software floating point features">;
 
-// Sandy Bridge and newer processors have many instructions that can be
-// fused with conditional branches and pass through the CPU as a single
-// operation.
-def FeatureMacroFusion
-    : SubtargetFeature<"macrofusion", "HasMacroFusion", "true",
-                 "Various instructions can be fused with conditional branches">;
-
-// Gather is available since Haswell (AVX2 set). So technically, we can
-// generate Gathers on all AVX2 processors. But the overhead on HSW is high.
-// Skylake Client processor has faster Gathers than HSW and performance is
-// similar to Skylake Server (AVX-512).
-def FeatureHasFastGather
-    : SubtargetFeature<"fast-gather", "HasFastGather", "true",
-                       "Indicates if gather is reasonably fast">;
-
-def FeaturePrefer128Bit
-    : SubtargetFeature<"prefer-128-bit", "Prefer128Bit", "true",
-                       "Prefer 128-bit AVX instructions">;
-
-def FeaturePrefer256Bit
-    : SubtargetFeature<"prefer-256-bit", "Prefer256Bit", "true",
-                       "Prefer 256-bit AVX instructions">;
-
-def FeaturePreferMaskRegisters
-    : SubtargetFeature<"prefer-mask-registers", "PreferMaskRegisters", "true",
-                       "Prefer AVX512 mask registers over PTEST/MOVMSK">;
+//===----------------------------------------------------------------------===//
+// X86 Subtarget Security Mitigation features
+//===----------------------------------------------------------------------===//
 
 // Lower indirect calls using a special construct called a `retpoline` to
 // mitigate potential Spectre v2 attacks against them.
@@ -490,11 +363,168 @@ def FeatureLVILoadHardening
           "Insert LFENCE instructions to prevent data speculatively injected "
           "into loads from being used maliciously.">;
 
-// Direct Move instructions.
-def FeatureMOVDIRI  : SubtargetFeature<"movdiri", "HasMOVDIRI", "true",
-                                       "Support movdiri instruction">;
-def FeatureMOVDIR64B : SubtargetFeature<"movdir64b", "HasMOVDIR64B", "true",
-                                        "Support movdir64b instruction">;
+//===----------------------------------------------------------------------===//
+// X86 Subtarget Tuning features
+//===----------------------------------------------------------------------===//
+
+def FeatureSlowSHLD : SubtargetFeature<"slow-shld", "IsSHLDSlow", "true",
+                                       "SHLD instruction is slow">;
+
+def FeatureSlowPMULLD : SubtargetFeature<"slow-pmulld", "IsPMULLDSlow", "true",
+                                        "PMULLD instruction is slow">;
+
+def FeatureSlowPMADDWD : SubtargetFeature<"slow-pmaddwd", "IsPMADDWDSlow",
+                                          "true",
+                                          "PMADDWD is slower than PMULLD">;
+
+// FIXME: This should not apply to CPUs that do not have SSE.
+def FeatureSlowUAMem16 : SubtargetFeature<"slow-unaligned-mem-16",
+                                "IsUAMem16Slow", "true",
+                                "Slow unaligned 16-byte memory access">;
+
+def FeatureSlowUAMem32 : SubtargetFeature<"slow-unaligned-mem-32",
+                                "IsUAMem32Slow", "true",
+                                "Slow unaligned 32-byte memory access">;
+
+def FeatureLEAForSP : SubtargetFeature<"lea-sp", "UseLeaForSP", "true",
+                                     "Use LEA for adjusting the stack pointer">;
+
+def FeatureSlowDivide32 : SubtargetFeature<"idivl-to-divb",
+                                     "HasSlowDivide32", "true",
+                                     "Use 8-bit divide for positive values less than 256">;
+
+def FeatureSlowDivide64 : SubtargetFeature<"idivq-to-divl",
+                                     "HasSlowDivide64", "true",
+                                     "Use 32-bit divide for positive values less than 2^32">;
+
+def FeaturePadShortFunctions : SubtargetFeature<"pad-short-functions",
+                                     "PadShortFunctions", "true",
+                                     "Pad short functions">;
+
+// On some processors, instructions that implicitly take two memory operands are
+// slow. In practice, this means that CALL, PUSH, and POP with memory operands
+// should be avoided in favor of a MOV + register CALL/PUSH/POP.
+def FeatureSlowTwoMemOps : SubtargetFeature<"slow-two-mem-ops",
+                                     "SlowTwoMemOps", "true",
+                                     "Two memory operand instructions are slow">;
+
+def FeatureLEAUsesAG : SubtargetFeature<"lea-uses-ag", "LEAUsesAG", "true",
+                                   "LEA instruction needs inputs at AG stage">;
+
+def FeatureSlowLEA : SubtargetFeature<"slow-lea", "SlowLEA", "true",
+                                   "LEA instruction with certain arguments is slow">;
+
+def FeatureSlow3OpsLEA : SubtargetFeature<"slow-3ops-lea", "Slow3OpsLEA", "true",
+                                   "LEA instruction with 3 ops or certain registers is slow">;
+
+def FeatureSlowIncDec : SubtargetFeature<"slow-incdec", "SlowIncDec", "true",
+                                   "INC and DEC instructions are slower than ADD and SUB">;
+
+def FeaturePOPCNTFalseDeps : SubtargetFeature<"false-deps-popcnt",
+                                     "HasPOPCNTFalseDeps", "true",
+                                     "POPCNT has a false dependency on dest register">;
+
+def FeatureLZCNTFalseDeps : SubtargetFeature<"false-deps-lzcnt-tzcnt",
+                                     "HasLZCNTFalseDeps", "true",
+                                     "LZCNT/TZCNT have a false dependency on dest register">;
+
+// On recent X86 (port bound) processors, its preferable to combine to a single shuffle
+// using a variable mask over multiple fixed shuffles.
+def FeatureFastVariableCrossLaneShuffle
+    : SubtargetFeature<"fast-variable-crosslane-shuffle",
+                       "HasFastVariableCrossLaneShuffle",
+                       "true", "Cross-lane shuffles with variable masks are fast">;
+def FeatureFastVariablePerLaneShuffle
+    : SubtargetFeature<"fast-variable-perlane-shuffle",
+                       "HasFastVariablePerLaneShuffle",
+                       "true", "Per-lane shuffles with variable masks are fast">;
+
+// On some X86 processors, a vzeroupper instruction should be inserted after
+// using ymm/zmm registers before executing code that may use SSE instructions.
+def FeatureInsertVZEROUPPER
+    : SubtargetFeature<"vzeroupper",
+                       "InsertVZEROUPPER",
+                       "true", "Should insert vzeroupper instructions">;
+
+// FeatureFastScalarFSQRT should be enabled if scalar FSQRT has shorter latency
+// than the corresponding NR code. FeatureFastVectorFSQRT should be enabled if
+// vector FSQRT has higher throughput than the corresponding NR code.
+// The idea is that throughput bound code is likely to be vectorized, so for
+// vectorized code we should care about the throughput of SQRT operations.
+// But if the code is scalar that probably means that the code has some kind of
+// dependency and we should care more about reducing the latency.
+def FeatureFastScalarFSQRT
+    : SubtargetFeature<"fast-scalar-fsqrt", "HasFastScalarFSQRT",
+                       "true", "Scalar SQRT is fast (disable Newton-Raphson)">;
+def FeatureFastVectorFSQRT
+    : SubtargetFeature<"fast-vector-fsqrt", "HasFastVectorFSQRT",
+                       "true", "Vector SQRT is fast (disable Newton-Raphson)">;
+
+// If lzcnt has equivalent latency/throughput to most simple integer ops, it can
+// be used to replace test/set sequences.
+def FeatureFastLZCNT
+    : SubtargetFeature<
+          "fast-lzcnt", "HasFastLZCNT", "true",
+          "LZCNT instructions are as fast as most simple integer ops">;
+
+// If the target can efficiently decode NOPs upto 7-bytes in length.
+def FeatureFast7ByteNOP
+    : SubtargetFeature<
+          "fast-7bytenop", "HasFast7ByteNOP", "true",
+          "Target can quickly decode up to 7 byte NOPs">;
+
+// If the target can efficiently decode NOPs upto 11-bytes in length.
+def FeatureFast11ByteNOP
+    : SubtargetFeature<
+          "fast-11bytenop", "HasFast11ByteNOP", "true",
+          "Target can quickly decode up to 11 byte NOPs">;
+
+// If the target can efficiently decode NOPs upto 15-bytes in length.
+def FeatureFast15ByteNOP
+    : SubtargetFeature<
+          "fast-15bytenop", "HasFast15ByteNOP", "true",
+          "Target can quickly decode up to 15 byte NOPs">;
+
+// Sandy Bridge and newer processors can use SHLD with the same source on both
+// inputs to implement rotate to avoid the partial flag update of the normal
+// rotate instructions.
+def FeatureFastSHLDRotate
+    : SubtargetFeature<
+          "fast-shld-rotate", "HasFastSHLDRotate", "true",
+          "SHLD can be used as a faster rotate">;
+
+// Bulldozer and newer processors can merge CMP/TEST (but not other
+// instructions) with conditional branches.
+def FeatureBranchFusion
+    : SubtargetFeature<"branchfusion", "HasBranchFusion", "true",
+                 "CMP/TEST can be fused with conditional branches">;
+
+// Sandy Bridge and newer processors have many instructions that can be
+// fused with conditional branches and pass through the CPU as a single
+// operation.
+def FeatureMacroFusion
+    : SubtargetFeature<"macrofusion", "HasMacroFusion", "true",
+                 "Various instructions can be fused with conditional branches">;
+
+// Gather is available since Haswell (AVX2 set). So technically, we can
+// generate Gathers on all AVX2 processors. But the overhead on HSW is high.
+// Skylake Client processor has faster Gathers than HSW and performance is
+// similar to Skylake Server (AVX-512).
+def FeatureHasFastGather
+    : SubtargetFeature<"fast-gather", "HasFastGather", "true",
+                       "Indicates if gather is reasonably fast">;
+
+def FeaturePrefer128Bit
+    : SubtargetFeature<"prefer-128-bit", "Prefer128Bit", "true",
+                       "Prefer 128-bit AVX instructions">;
+
+def FeaturePrefer256Bit
+    : SubtargetFeature<"prefer-256-bit", "Prefer256Bit", "true",
+                       "Prefer 256-bit AVX instructions">;
+
+def FeaturePreferMaskRegisters
+    : SubtargetFeature<"prefer-mask-registers", "PreferMaskRegisters", "true",
+                       "Prefer AVX512 mask registers over PTEST/MOVMSK">;
 
 def FeatureFastBEXTR : SubtargetFeature<"fast-bextr", "HasFastBEXTR", "true",
           "Indicates that the BEXTR instruction is implemented as a single uop "
