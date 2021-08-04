@@ -88,6 +88,7 @@
 # CHECK-NEXT:            "readonly",
 # CHECK-NEXT:            "static",
 # CHECK-NEXT:            "abstract",
+# CHECK-NEXT:            "virtual",
 # CHECK-NEXT:            "dependentName",
 # CHECK-NEXT:            "defaultLibrary",
 # CHECK-NEXT:            "functionScope",

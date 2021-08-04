@@ -642,9 +642,14 @@ sizeof...($TemplateParameter[[Elements]]);
     )cpp",
       R"cpp(
       class $Class_decl_abstract[[Abstract]] {
-        virtual void $Method_decl_abstract[[pure]]() = 0;
-        virtual void $Method_decl[[impl]]();
+      public:
+        virtual void $Method_decl_abstract_virtual[[pure]]() = 0;
+        virtual void $Method_decl_virtual[[impl]]();
       };
+      void $Function_decl[[foo]]($Class_abstract[[Abstract]]* $Parameter_decl[[A]]) {
+          $Parameter[[A]]->$Method_abstract_virtual[[pure]]();
+          $Parameter[[A]]->$Method_virtual[[impl]]();
+      }
       )cpp",
       R"cpp(
       <:[deprecated]:> int $Variable_decl_deprecated[[x]];

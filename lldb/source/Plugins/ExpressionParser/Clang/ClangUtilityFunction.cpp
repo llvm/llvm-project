@@ -6,8 +6,6 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "lldb/Host/Config.h"
-
 #include "ClangUtilityFunction.h"
 #include "ClangExpressionDeclMap.h"
 #include "ClangExpressionParser.h"
@@ -15,9 +13,7 @@
 #include "ClangPersistentVariables.h"
 
 #include <cstdio>
-#if HAVE_SYS_TYPES_H
 #include <sys/types.h>
-#endif
 
 
 #include "lldb/Core/Module.h"

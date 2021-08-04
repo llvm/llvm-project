@@ -157,7 +157,7 @@ ALWAYS_INLINE uintptr_t TracePC::GetNextInstructionPc(uintptr_t PC) {
 }
 
 void TracePC::UpdateObservedPCs() {
-  Vector<uintptr_t> CoveredFuncs;
+  std::vector<uintptr_t> CoveredFuncs;
   auto ObservePC = [&](const PCTableEntry *TE) {
     if (ObservedPCs.insert(TE).second && DoPrintNewPCs) {
       PrintPC("\tNEW_PC: %p %F %L", "\tNEW_PC: %p",
@@ -300,8 +300,8 @@ void TracePC::PrintCoverage(bool PrintAllCounters) {
       FunctionStr = FunctionStr.substr(3);
     std::string LineStr = DescribePC("%l", VisualizePC);
     size_t NumEdges = Last - First;
-    Vector<uintptr_t> UncoveredPCs;
-    Vector<uintptr_t> CoveredPCs;
+    std::vector<uintptr_t> UncoveredPCs;
+    std::vector<uintptr_t> CoveredPCs;
     for (auto TE = First; TE < Last; TE++)
       if (!ObservedPCs.count(TE))
         UncoveredPCs.push_back(TE->PC);

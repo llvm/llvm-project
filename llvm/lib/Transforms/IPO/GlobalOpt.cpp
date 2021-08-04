@@ -967,9 +967,8 @@ OptimizeGlobalAddressOfMalloc(GlobalVariable *GV, CallInst *CI, Type *AllocTy,
     }
   }
 
-  Constant *RepValue = NewGV;
-  if (NewGV->getType() != GV->getValueType())
-    RepValue = ConstantExpr::getBitCast(RepValue, GV->getValueType());
+  SmallPtrSet<Constant *, 1> RepValues;
+  RepValues.insert(NewGV);
 
   // If there is a comparison against null, we will insert a global bool to
   // keep track of whether the global was initialized yet or not.
@@ -1001,7 +1000,9 @@ OptimizeGlobalAddressOfMalloc(GlobalVariable *GV, CallInst *CI, Type *AllocTy,
       Use &LoadUse = *LI->use_begin();
       ICmpInst *ICI = dyn_cast<ICmpInst>(LoadUse.getUser());
       if (!ICI) {
-        LoadUse = RepValue;
+        auto *CE = ConstantExpr::getBitCast(NewGV, LI->getType());
+        RepValues.insert(CE);
+        LoadUse.set(CE);
         continue;
       }
 
@@ -1047,9 +1048,8 @@ OptimizeGlobalAddressOfMalloc(GlobalVariable *GV, CallInst *CI, Type *AllocTy,
   // To further other optimizations, loop over all users of NewGV and try to
   // constant prop them.  This will promote GEP instructions with constant
   // indices into GEP constant-exprs, which will allow global-opt to hack on it.
-  ConstantPropUsersOf(NewGV, DL, TLI);
-  if (RepValue != NewGV)
-    ConstantPropUsersOf(RepValue, DL, TLI);
+  for (auto *CE : RepValues)
+    ConstantPropUsersOf(CE, DL, TLI);
 
   return NewGV;
 }

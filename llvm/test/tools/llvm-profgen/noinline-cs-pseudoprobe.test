@@ -1,5 +1,8 @@
 ; RUN: llvm-profgen --format=text --perfscript=%S/Inputs/noinline-cs-pseudoprobe.perfscript --binary=%S/Inputs/noinline-cs-pseudoprobe.perfbin --output=%t --show-unwinder-output --profile-summary-cold-count=0 | FileCheck %s --check-prefix=CHECK-UNWINDER
 ; RUN: FileCheck %s --input-file %t
+; RUN: llvm-profgen --format=text --perfscript=%S/Inputs/noinline-cs-pseudoprobe.aggperfscript --binary=%S/Inputs/noinline-cs-pseudoprobe.perfbin --output=%t --show-unwinder-output --profile-summary-cold-count=0 | FileCheck %s --check-prefix=CHECK-UNWINDER
+; RUN: FileCheck %s --input-file %t
+
 
 ; CHECK:     [main:2 @ foo]:75:0
 ; CHECK-NEXT: 1: 0

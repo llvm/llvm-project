@@ -50,7 +50,8 @@ def int_wasm_trunc_saturate_unsigned : Intrinsic<[llvm_anyint_ty],
 //===----------------------------------------------------------------------===//
 
 // throw / rethrow
-// The immediate argument is an index to a tag, which is 0 for C++.
+// The first immediate argument is an index to a tag, which is 0 for C++
+// exception. The second argument is the thrown exception pointer.
 def int_wasm_throw : Intrinsic<[], [llvm_i32_ty, llvm_ptr_ty],
                                [Throws, IntrNoReturn, ImmArg<ArgIndex<0>>]>;
 def int_wasm_rethrow : Intrinsic<[], [], [Throws, IntrNoReturn]>;
@@ -62,11 +63,12 @@ def int_wasm_get_exception : Intrinsic<[llvm_ptr_ty], [llvm_token_ty],
 def int_wasm_get_ehselector : Intrinsic<[llvm_i32_ty], [llvm_token_ty],
                                         [IntrHasSideEffects]>;
 
-// wasm.catch returns the pointer to the exception object caught by wasm 'catch'
-// instruction. This returns a single pointer, which is sufficient for C++
-// support. The immediate argument is an index to for a tag, which is 0 for C++.
-def int_wasm_catch : Intrinsic<[llvm_ptr_ty], [llvm_i32_ty],
-                               [IntrHasSideEffects, ImmArg<ArgIndex<0>>]>;
+// wasm.catch.exn returns the pointer to the exception object caught by wasm
+// 'catch' instruction. This returns a single pointer, which is the case for C++
+// exceptions. The immediate argument is an index to for a tag, which is 0 for
+// C++ exceptions.
+def int_wasm_catch_exn : Intrinsic<[llvm_ptr_ty], [llvm_i32_ty],
+                                   [IntrHasSideEffects, ImmArg<ArgIndex<0>>]>;
 
 // WebAssembly EH must maintain the landingpads in the order assigned to them
 // by WasmEHPrepare pass to generate landingpad table in EHStreamer. This is

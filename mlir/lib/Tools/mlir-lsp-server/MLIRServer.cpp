@@ -328,7 +328,7 @@ struct MLIRDocument {
 MLIRDocument::MLIRDocument(const lsp::URIForFile &uri, StringRef contents,
                            DialectRegistry &registry,
                            std::vector<lsp::Diagnostic> &diagnostics)
-    : context(registry) {
+    : context(registry, MLIRContext::Threading::DISABLED) {
   context.allowUnregisteredDialects();
   ScopedDiagnosticHandler handler(&context, [&](Diagnostic &diag) {
     diagnostics.push_back(getLspDiagnoticFromDiag(sourceMgr, diag, uri));

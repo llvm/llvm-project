@@ -3230,7 +3230,8 @@ Instruction *InstCombinerImpl::visitSelectInst(SelectInst &SI) {
   Value *Mask;
   if (match(TrueVal, m_Zero()) &&
       match(FalseVal, m_MaskedLoad(m_Value(), m_Value(), m_Value(Mask),
-                                   m_CombineOr(m_Undef(), m_Zero())))) {
+                                   m_CombineOr(m_Undef(), m_Zero()))) &&
+      (CondVal->getType() == Mask->getType())) {
     // We can remove the select by ensuring the load zeros all lanes the
     // select would have.  We determine this by proving there is no overlap
     // between the load and select masks.

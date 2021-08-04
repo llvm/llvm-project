@@ -71,10 +71,10 @@ run(testParseFail)
 def testInvalidNesting():
   with Context():
     try:
-      pm = PassManager.parse("builtin.func(view-op-graph)")
+      pm = PassManager.parse("builtin.func(normalize-memrefs)")
     except ValueError as e:
-      # CHECK: Can't add pass 'ViewOpGraphPass' restricted to 'builtin.module' on a PassManager intended to run on 'builtin.func', did you intend to nest?
-      # CHECK: ValueError exception: invalid pass pipeline 'builtin.func(view-op-graph)'.
+      # CHECK: Can't add pass 'NormalizeMemRefs' restricted to 'builtin.module' on a PassManager intended to run on 'builtin.func', did you intend to nest?
+      # CHECK: ValueError exception: invalid pass pipeline 'builtin.func(normalize-memrefs)'.
       log("ValueError exception:", e)
     else:
       log("Exception not produced")

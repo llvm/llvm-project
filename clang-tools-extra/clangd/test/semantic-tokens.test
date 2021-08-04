@@ -23,7 +23,7 @@
 # CHECK-NEXT:      4,
 # CHECK-NEXT:      1,
 # CHECK-NEXT:      0,
-# CHECK-NEXT:      2049
+# CHECK-NEXT:      4097
 # CHECK-NEXT:    ],
 # CHECK-NEXT:    "resultId": "1"
 # CHECK-NEXT:  }
@@ -49,7 +49,7 @@
 # CHECK-NEXT:          4,
 # CHECK-NEXT:          1,
 # CHECK-NEXT:          0,
-# CHECK-NEXT:          2049
+# CHECK-NEXT:          4097
 # CHECK-NEXT:        ],
 #                    Inserted at position 1
 # CHECK-NEXT:        "deleteCount": 0,
@@ -72,12 +72,12 @@
 # CHECK-NEXT:      4,
 # CHECK-NEXT:      1,
 # CHECK-NEXT:      0,
-# CHECK-NEXT:      2049,
+# CHECK-NEXT:      4097,
 # CHECK-NEXT:      1,
 # CHECK-NEXT:      4,
 # CHECK-NEXT:      1,
 # CHECK-NEXT:      0,
-# CHECK-NEXT:      2049
+# CHECK-NEXT:      4097
 # CHECK-NEXT:    ],
 # CHECK-NEXT:    "resultId": "3"
 # CHECK-NEXT:  }

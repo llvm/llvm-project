@@ -23,6 +23,7 @@ public:
   ~AArch64TargetStreamer() override;
 
   void finish() override;
+  void emitConstantPools() override;
 
   /// Callback used to implement the ldr= pseudo.
   /// Add a new entry to the constant pool for the current section and return an

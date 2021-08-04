@@ -491,6 +491,8 @@ void IdentifierNamingCheck::HungarianNotation::loadFileConfig(
 std::string IdentifierNamingCheck::HungarianNotation::getPrefix(
     const Decl *D,
     const IdentifierNamingCheck::HungarianNotationOption &HNOption) const {
+  if (!D)
+    return {};
   const auto *ND = dyn_cast<NamedDecl>(D);
   if (!ND)
     return {};

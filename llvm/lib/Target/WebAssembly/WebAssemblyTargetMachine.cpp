@@ -34,13 +34,13 @@ using namespace llvm;
 #define DEBUG_TYPE "wasm"
 
 // Emscripten's asm.js-style exception handling
-cl::opt<bool> EnableEmException(
+cl::opt<bool> WasmEnableEmException(
     "enable-emscripten-cxx-exceptions",
     cl::desc("WebAssembly Emscripten-style exception handling"),
     cl::init(false));
 
 // Emscripten's asm.js-style setjmp/longjmp handling
-cl::opt<bool> EnableEmSjLj(
+cl::opt<bool> WasmEnableEmSjLj(
     "enable-emscripten-sjlj",
     cl::desc("WebAssembly Emscripten-style setjmp/longjmp handling"),
     cl::init(false));
@@ -387,7 +387,7 @@ void WebAssemblyPassConfig::addIRPasses() {
   // blocks. Lowering invokes when there is no EH support is done in
   // TargetPassConfig::addPassesToHandleExceptions, but this runs after this
   // function and SjLj handling expects all invokes to be lowered before.
-  if (!EnableEmException &&
+  if (!WasmEnableEmException &&
       TM->Options.ExceptionModel == ExceptionHandling::None) {
     addPass(createLowerInvokePass());
     // The lower invoke pass may create unreachable code. Remove it in order not
@@ -396,9 +396,9 @@ void WebAssemblyPassConfig::addIRPasses() {
   }
 
   // Handle exceptions and setjmp/longjmp if enabled.
-  if (EnableEmException || EnableEmSjLj)
-    addPass(createWebAssemblyLowerEmscriptenEHSjLj(EnableEmException,
-                                                   EnableEmSjLj));
+  if (WasmEnableEmException || WasmEnableEmSjLj)
+    addPass(createWebAssemblyLowerEmscriptenEHSjLj(WasmEnableEmException,
+                                                   WasmEnableEmSjLj));
 
   // Expand indirectbr instructions to switches.
   addPass(createIndirectBrExpandPass());

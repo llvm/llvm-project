@@ -317,7 +317,13 @@ ProfiledBinary &PerfReaderBase::loadBinary(const StringRef BinaryPath,
     exitWithError(ErrorMsg);
   }
 
-  return Ret.first->second;
+  // Initialize the base address to preferred address.
+  ProfiledBinary &B = Ret.first->second;
+  uint64_t PreferredAddr = B.getPreferredBaseAddress();
+  AddrToBinaryMap[PreferredAddr] = &B;
+  B.setBaseAddress(PreferredAddr);
+
+  return B;
 }
 
 void PerfReaderBase::updateBinaryAddress(const MMapEvent &Event) {
@@ -327,11 +333,15 @@ void PerfReaderBase::updateBinaryAddress(const MMapEvent &Event) {
 
   auto I = BinaryTable.find(BinaryName);
   // Drop the event which doesn't belong to user-provided binaries
-  // or if its image is loaded at the same address
-  if (I == BinaryTable.end() || Event.Address == I->second.getBaseAddress())
+  if (I == BinaryTable.end())
     return;
 
   ProfiledBinary &Binary = I->second;
+  // Drop the event if its image is loaded at the same address
+  if (Event.Address == Binary.getBaseAddress()) {
+    Binary.setIsLoadedByMMap(true);
+    return;
+  }
 
   if (Event.Offset == Binary.getTextSegmentOffset()) {
     // A binary image could be unloaded and then reloaded at different
@@ -344,6 +354,8 @@ void PerfReaderBase::updateBinaryAddress(const MMapEvent &Event) {
 
     // Update binary load address.
     Binary.setBaseAddress(Event.Address);
+
+    Binary.setIsLoadedByMMap(true);
   } else {
     // Verify segments are loaded consecutively.
     const auto &Offsets = Binary.getTextSegmentOffsets();
@@ -610,7 +622,7 @@ bool PerfReaderBase::extractCallstack(TraceStream &TraceIt,
          !Binary->addressInPrologEpilog(CallStack.front());
 }
 
-void HybridPerfReader::parseSample(TraceStream &TraceIt) {
+void HybridPerfReader::parseSample(TraceStream &TraceIt, uint64_t Count) {
   // The raw hybird sample started with call stack in FILO order and followed
   // intermediately by LBR sample
   // e.g.
@@ -630,7 +642,14 @@ void HybridPerfReader::parseSample(TraceStream &TraceIt) {
     return;
   }
   // Set the binary current sample belongs to
-  Sample->Binary = getBinary(Sample->CallStack.front());
+  ProfiledBinary *PB = getBinary(Sample->CallStack.front());
+  Sample->Binary = PB;
+  if (!PB->getMissingMMapWarned() && !PB->getIsLoadedByMMap()) {
+    WithColor::warning() << "No relevant mmap event is matched, will use "
+                            "preferred address as the base loading address!\n";
+    // Avoid redundant warning, only warn at the first unmatched sample.
+    PB->setMissingMMapWarned(true);
+  }
 
   if (!TraceIt.isAtEoF() && TraceIt.getCurrentLine().startswith(" 0x")) {
     // Parsing LBR stack and populate into HybridSample.LBRStack
@@ -640,12 +659,27 @@ void HybridPerfReader::parseSample(TraceStream &TraceIt) {
       Sample->CallStack.front() = Sample->LBRStack[0].Target;
       // Record samples by aggregation
       Sample->genHashCode();
-      AggregatedSamples[Hashable<PerfSample>(Sample)]++;
+      AggregatedSamples[Hashable<PerfSample>(Sample)] += Count;
     }
   } else {
     // LBR sample is encoded in single line after stack sample
     exitWithError("'Hybrid perf sample is corrupted, No LBR sample line");
   }
+}
+
+uint64_t PerfReaderBase::parseAggregatedCount(TraceStream &TraceIt) {
+  // The aggregated count is optional, so do not skip the line and return 1 if
+  // it's unmatched
+  uint64_t Count = 1;
+  if (!TraceIt.getCurrentLine().getAsInteger(10, Count))
+    TraceIt.advance();
+  return Count;
+}
+
+void PerfReaderBase::parseSample(TraceStream &TraceIt) {
+  uint64_t Count = parseAggregatedCount(TraceIt);
+  assert(Count >= 1 && "Aggregated count should be >= 1!");
+  parseSample(TraceIt, Count);
 }
 
 void PerfReaderBase::parseMMap2Event(TraceStream &TraceIt) {

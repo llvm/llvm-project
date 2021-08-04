@@ -12472,6 +12472,8 @@ bool Sema::CheckUsingDeclRedeclaration(SourceLocation UsingLoc,
     return false;
   }
 
+  const NestedNameSpecifier *CNNS =
+      Context.getCanonicalNestedNameSpecifier(Qual);
   for (LookupResult::iterator I = Prev.begin(), E = Prev.end(); I != E; ++I) {
     NamedDecl *D = *I;
 
@@ -12497,8 +12499,7 @@ bool Sema::CheckUsingDeclRedeclaration(SourceLocation UsingLoc,
     // using decls differ if they name different scopes (but note that
     // template instantiation can cause this check to trigger when it
     // didn't before instantiation).
-    if (Context.getCanonicalNestedNameSpecifier(Qual) !=
-        Context.getCanonicalNestedNameSpecifier(DQual))
+    if (CNNS != Context.getCanonicalNestedNameSpecifier(DQual))
       continue;
 
     Diag(NameLoc, diag::err_using_decl_redeclaration) << SS.getRange();
