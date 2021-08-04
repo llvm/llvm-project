@@ -385,6 +385,33 @@ static UnresolvedPolicy getUnresolvedSymbolPolicy(opt::InputArgList &args) {
   return errorOrWarn;
 }
 
+// Parse --build-id or --build-id=<style>. We handle "tree" as a
+// synonym for "sha1" because all our hash functions including
+// -build-id=sha1 are actually tree hashes for performance reasons.
+static std::pair<BuildIdKind, SmallVector<uint8_t, 0>>
+getBuildId(opt::InputArgList &args) {
+  auto *arg = args.getLastArg(OPT_build_id, OPT_build_id_eq);
+  if (!arg)
+    return {BuildIdKind::None, {}};
+
+  if (arg->getOption().getID() == OPT_build_id)
+    return {BuildIdKind::Fast, {}};
+
+  StringRef s = arg->getValue();
+  if (s == "fast")
+    return {BuildIdKind::Fast, {}};
+  if (s == "sha1" || s == "tree")
+    return {BuildIdKind::Sha1, {}};
+  if (s == "uuid")
+    return {BuildIdKind::Uuid, {}};
+  if (s.startswith("0x"))
+    return {BuildIdKind::Hexstring, parseHex(s.substr(2))};
+
+  if (s != "none")
+    error("unknown --build-id style: " + s);
+  return {BuildIdKind::None, {}};
+}
+
 // Initializes Config members by the command line options.
 static void readConfigs(opt::InputArgList &args) {
   config->bsymbolic = args.hasArg(OPT_Bsymbolic);
@@ -519,6 +546,8 @@ static void readConfigs(opt::InputArgList &args) {
 
   if (args.hasArg(OPT_print_map))
     config->mapFile = "-";
+
+  std::tie(config->buildId, config->buildIdVector) = getBuildId(args);
 }
 
 // Some Config members do not directly correspond to any particular
