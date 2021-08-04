@@ -509,22 +509,21 @@ GDBRemoteCommunicationServerCommon::Handle_vFile_Open(
         // Do not close fd.
         auto file = FileSystem::Instance().Open(path_spec, flags, mode, false);
 
-        int save_errno = 0;
+        StreamString response;
+        response.PutChar('F');
+
         int descriptor = File::kInvalidDescriptor;
         if (file) {
           descriptor = file.get()->GetDescriptor();
+          response.Printf("%x", descriptor);
         } else {
+          response.PutCString("-1");
           std::error_code code = errorToErrorCode(file.takeError());
           if (code.category() == std::system_category()) {
-            save_errno = code.value();
+            response.Printf(",%x", code.value());
           }
         }
 
-        StreamString response;
-        response.PutChar('F');
-        response.Printf("%i", descriptor);
-        if (save_errno)
-          response.Printf(",%i", save_errno);
         return SendPacketNoLock(response.GetString());
       }
     }
@@ -536,7 +535,7 @@ GDBRemoteCommunication::PacketResult
 GDBRemoteCommunicationServerCommon::Handle_vFile_Close(
     StringExtractorGDBRemote &packet) {
   packet.SetFilePos(::strlen("vFile:close:"));
-  int fd = packet.GetS32(-1);
+  int fd = packet.GetS32(-1, 16);
   int err = -1;
   int save_errno = 0;
   if (fd >= 0) {
@@ -549,9 +548,9 @@ GDBRemoteCommunicationServerCommon::Handle_vFile_Close(
   }
   StreamString response;
   response.PutChar('F');
-  response.Printf("%i", err);
+  response.Printf("%x", err);
   if (save_errno)
-    response.Printf(",%i", save_errno);
+    response.Printf(",%x", save_errno);
   return SendPacketNoLock(response.GetString());
 }
 
@@ -560,28 +559,29 @@ GDBRemoteCommunicationServerCommon::Handle_vFile_pRead(
     StringExtractorGDBRemote &packet) {
   StreamGDBRemote response;
   packet.SetFilePos(::strlen("vFile:pread:"));
-  int fd = packet.GetS32(-1);
+  int fd = packet.GetS32(-1, 16);
   if (packet.GetChar() == ',') {
-    size_t count = packet.GetU64(SIZE_MAX);
+    size_t count = packet.GetHexMaxU64(false, SIZE_MAX);
     if (packet.GetChar() == ',') {
-      off_t offset = packet.GetU64(UINT32_MAX);
+      off_t offset = packet.GetHexMaxU32(false, UINT32_MAX);
       if (count == SIZE_MAX) {
-        response.Printf("F-1:%i", EINVAL);
+        response.Printf("F-1:%x", EINVAL);
         return SendPacketNoLock(response.GetString());
       }
 
       std::string buffer(count, 0);
       NativeFile file(fd, File::eOpenOptionReadOnly, false);
       Status error = file.Read(static_cast<void *>(&buffer[0]), count, offset);
-      const ssize_t bytes_read = error.Success() ? count : -1;
       const int save_errno = error.GetError();
       response.PutChar('F');
-      response.Printf("%zi", bytes_read);
-      if (save_errno)
-        response.Printf(",%i", save_errno);
-      else {
+      if (error.Success()) {
+        response.Printf("%zx", count);
         response.PutChar(';');
-        response.PutEscapedBytes(&buffer[0], bytes_read);
+        response.PutEscapedBytes(&buffer[0], count);
+      } else {
+        response.PutCString("-1");
+        if (save_errno)
+          response.Printf(",%x", save_errno);
       }
       return SendPacketNoLock(response.GetString());
     }
@@ -597,9 +597,9 @@ GDBRemoteCommunicationServerCommon::Handle_vFile_pWrite(
   StreamGDBRemote response;
   response.PutChar('F');
 
-  int fd = packet.GetU32(UINT32_MAX);
+  int fd = packet.GetS32(-1, 16);
   if (packet.GetChar() == ',') {
-    off_t offset = packet.GetU64(UINT32_MAX);
+    off_t offset = packet.GetHexMaxU32(false, UINT32_MAX);
     if (packet.GetChar() == ',') {
       std::string buffer;
       if (packet.GetEscapedBinaryData(buffer)) {
@@ -607,13 +607,16 @@ GDBRemoteCommunicationServerCommon::Handle_vFile_pWrite(
         size_t count = buffer.size();
         Status error =
             file.Write(static_cast<const void *>(&buffer[0]), count, offset);
-        const ssize_t bytes_written = error.Success() ? count : -1;
         const int save_errno = error.GetError();
-        response.Printf("%zi", bytes_written);
-        if (save_errno)
-          response.Printf(",%i", save_errno);
+        if (error.Success())
+          response.Printf("%zx", count);
+        else {
+          response.PutCString("-1");
+          if (save_errno)
+            response.Printf(",%x", save_errno);
+        }
       } else {
-        response.Printf("-1,%i", EINVAL);
+        response.Printf("-1,%x", EINVAL);
       }
       return SendPacketNoLock(response.GetString());
     }
@@ -655,9 +658,9 @@ GDBRemoteCommunicationServerCommon::Handle_vFile_Mode(
     std::error_code ec;
     const uint32_t mode = FileSystem::Instance().GetPermissions(file_spec, ec);
     StreamString response;
-    response.Printf("F%u", mode);
+    response.Printf("F%x", mode);
     if (mode == 0 || ec)
-      response.Printf(",%i", (int)Status(ec).GetError());
+      response.Printf(",%x", (int)Status(ec).GetError());
     return SendPacketNoLock(response.GetString());
   }
   return SendErrorResponse(23);
@@ -697,7 +700,7 @@ GDBRemoteCommunicationServerCommon::Handle_vFile_symlink(
   Status error = FileSystem::Instance().Symlink(src_spec, FileSpec(dst));
 
   StreamString response;
-  response.Printf("F%u,%u", error.GetError(), error.GetError());
+  response.Printf("F%x,%x", error.GetError(), error.GetError());
   return SendPacketNoLock(response.GetString());
 }
 
@@ -709,7 +712,7 @@ GDBRemoteCommunicationServerCommon::Handle_vFile_unlink(
   packet.GetHexByteString(path);
   Status error(llvm::sys::fs::remove(path));
   StreamString response;
-  response.Printf("F%u,%u", error.GetError(), error.GetError());
+  response.Printf("F%x,%x", error.GetError(), error.GetError());
   return SendPacketNoLock(response.GetString());
 }
 
@@ -791,7 +794,7 @@ GDBRemoteCommunicationServerCommon::Handle_qPlatform_mkdir(
     Status error(llvm::sys::fs::create_directory(path, mode));
 
     StreamGDBRemote response;
-    response.Printf("F%u", error.GetError());
+    response.Printf("F%x", error.GetError());
 
     return SendPacketNoLock(response.GetString());
   }
@@ -811,7 +814,7 @@ GDBRemoteCommunicationServerCommon::Handle_qPlatform_chmod(
     Status error(llvm::sys::fs::setPermissions(path, perms));
 
     StreamGDBRemote response;
-    response.Printf("F%u", error.GetError());
+    response.Printf("F%x", error.GetError());
 
     return SendPacketNoLock(response.GetString());
   }
