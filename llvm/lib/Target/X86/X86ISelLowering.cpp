@@ -35797,6 +35797,19 @@ static SDValue combineX86ShuffleChain(ArrayRef<SDValue> Inputs, SDValue Root,
                      (RootVT.isFloatingPoint() && Depth >= 1) ||
                      (RootVT.is256BitVector() && !Subtarget.hasAVX2());
 
+  // How many elements does each of the inputs have, given the current
+  // granularity of the root shuffle? Note that while currently the sizes of an
+  // inputs must match the size of the shuffle root,
+  // that restriction will be lifted in the future.
+  SmallVector<unsigned, 2> InputNumElts;
+  llvm::transform(std::initializer_list<MVT>({VT1, VT2}),
+                  std::back_inserter(InputNumElts),
+                  [BaseMaskEltSizeInBits](MVT VT) {
+                    assert(VT.getSizeInBits() % BaseMaskEltSizeInBits == 0 &&
+                           "Input is not a multiple of output element width?");
+                    return VT.getSizeInBits() / BaseMaskEltSizeInBits;
+                  });
+
   // Don't combine if we are a AVX512/EVEX target and the mask element size
   // is different from the root element size - this would prevent writemasks
   // from being reused.
@@ -35811,10 +35824,36 @@ static SDValue combineX86ShuffleChain(ArrayRef<SDValue> Inputs, SDValue Root,
   // If we are shuffling a broadcast (and not introducing zeros) then
   // we can just use the broadcast directly. This works for smaller broadcast
   // elements as well as they already repeat across each mask element
-  if (UnaryShuffle && isTargetShuffleSplat(V1) && !isAnyZero(BaseMask) &&
-      (BaseMaskEltSizeInBits % V1.getScalarValueSizeInBits()) == 0 &&
+  SmallVector<bool, 2> InputIsSplat;
+  llvm::transform(
+      std::initializer_list<SDValue>({V1, V2}),
+      std::back_inserter(InputIsSplat), [BaseMaskEltSizeInBits](SDValue V) {
+        return isTargetShuffleSplat(V) &&
+               (BaseMaskEltSizeInBits % V.getScalarValueSizeInBits()) == 0;
+      });
+  if (UnaryShuffle && InputIsSplat[0] && !isAnyZero(BaseMask) &&
       V1.getValueSizeInBits() >= RootSizeInBits) {
     return CanonicalizeShuffleInput(RootVT, V1);
+  }
+
+  // Adjust mask elements that pick from a splat input to be identity mask elts,
+  // i.e. to pick from the same lane of the input as the mask element is in.
+  // This may allow to simplify the shuffle into a blend.
+  SmallVector<int> NewMask;
+  if (InputIsSplat[0] || InputIsSplat[1]) {
+    NewMask.assign(BaseMask.begin(), BaseMask.end());
+    for (unsigned i = 0; i != NumBaseMaskElts; ++i) {
+      int &M = NewMask[i];
+      assert(isUndefOrZeroOrInRange(M, 0, 2 * NumBaseMaskElts) &&
+             "OOB mask element?");
+      if (M < 0)
+        continue; // Keep the undef/zero mask elements as-is.
+      int InputIdx = (unsigned)M < NumBaseMaskElts ? 0 : 1;
+      // Is the used input wide-enough to contain that lane, and is it a splat?
+      if (InputIsSplat[InputIdx] && i < InputNumElts[InputIdx])
+        M = i + InputIdx * NumBaseMaskElts; // Pick from the same lane of input.
+    }
+    BaseMask = std::move(NewMask);
   }
 
   // See if the shuffle is a hidden identity shuffle - repeated args in HOPs
