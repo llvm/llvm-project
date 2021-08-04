@@ -91,7 +91,7 @@ exit:
 define <4 x double> @constant_folding() {
 ; CHECK-LABEL: @constant_folding(
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    ret <4 x double> <double 2.000000e+00, double 1.000000e+00, double poison, double poison>
+; CHECK-NEXT:    ret <4 x double> <double 2.000000e+00, double 1.000000e+00, double undef, double undef>
 ;
 entry:
   %t0 = fadd double 1.000000e+00 , 0.000000e+00
