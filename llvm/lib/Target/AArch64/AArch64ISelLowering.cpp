@@ -17320,6 +17320,8 @@ void AArch64TargetLowering::ReplaceNodeResults(
     return;
   case ISD::FP_TO_UINT:
   case ISD::FP_TO_SINT:
+  case ISD::STRICT_FP_TO_SINT:
+  case ISD::STRICT_FP_TO_UINT:
     assert(N->getValueType(0) == MVT::i128 && "unexpected illegal conversion");
     // Let normal code take care of it by not adding anything to Results.
     return;
