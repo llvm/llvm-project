@@ -3,6 +3,9 @@
 // -gsplit-dwarf is supported only on Linux.
 // REQUIRES: system-linux
 
+// This test uses lldb's embedded python interpreter
+// REQUIRES: python
+
 // ObjectFileELF::ApplyRelocations does not implement arm32.
 // XFAIL: target-arm && linux-gnu
 
