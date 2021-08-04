@@ -111,16 +111,14 @@ define void @callee_with_stack_and_call() #0 {
 ; CFI-SAVES-NO-SPILL-TO-VGPR-LABEL: callee_with_stack_and_call:
 ; CFI-SAVES-NO-SPILL-TO-VGPR:       ; %bb.0:
 ; CFI-SAVES-NO-SPILL-TO-VGPR-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; CFI-SAVES-NO-SPILL-TO-VGPR-NEXT:    s_or_saveexec_b64 s[4:5], -1
 ; CFI-SAVES-NO-SPILL-TO-VGPR-NEXT:    v_mov_b32_e32 v0, s30
 ; CFI-SAVES-NO-SPILL-TO-VGPR-NEXT:    buffer_store_dword v0, off, s[0:3], s32 offset:12 ; 4-byte Folded Spill
 ; CFI-SAVES-NO-SPILL-TO-VGPR-NEXT:    v_mov_b32_e32 v0, s31
 ; CFI-SAVES-NO-SPILL-TO-VGPR-NEXT:    buffer_store_dword v0, off, s[0:3], s32 offset:16 ; 4-byte Folded Spill
-; CFI-SAVES-NO-SPILL-TO-VGPR-NEXT:    v_mov_b32_e32 v0, s4
+; CFI-SAVES-NO-SPILL-TO-VGPR-NEXT:    v_mov_b32_e32 v0, exec_lo
 ; CFI-SAVES-NO-SPILL-TO-VGPR-NEXT:    buffer_store_dword v0, off, s[0:3], s32 offset:20 ; 4-byte Folded Spill
-; CFI-SAVES-NO-SPILL-TO-VGPR-NEXT:    v_mov_b32_e32 v0, s5
+; CFI-SAVES-NO-SPILL-TO-VGPR-NEXT:    v_mov_b32_e32 v0, exec_hi
 ; CFI-SAVES-NO-SPILL-TO-VGPR-NEXT:    buffer_store_dword v0, off, s[0:3], s32 offset:24 ; 4-byte Folded Spill
-; CFI-SAVES-NO-SPILL-TO-VGPR-NEXT:    s_mov_b64 exec, s[4:5]
 ; CFI-SAVES-NO-SPILL-TO-VGPR-NEXT:    v_mov_b32_e32 v0, s33
 ; CFI-SAVES-NO-SPILL-TO-VGPR-NEXT:    buffer_store_dword v0, off, s[0:3], s32 offset:28 ; 4-byte Folded Spill
 ; CFI-SAVES-NO-SPILL-TO-VGPR-NEXT:    s_mov_b32 s33, s32

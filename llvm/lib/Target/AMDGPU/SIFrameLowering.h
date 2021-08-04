@@ -87,7 +87,7 @@ public:
   /// a free VGPR (lanes) or memory and corresponding CFI rules.
   void emitCFISavedRegSpills(MachineFunction &MF, MachineBasicBlock &MBB,
                              MachineBasicBlock::iterator MBBI,
-                             LivePhysRegs &LiveRegs, Register &ScratchExecCopy,
+                             LivePhysRegs &LiveRegs,
                              bool emitSpillsToMem) const;
 
   /// Create a CFI index for CFIInst and build a MachineInstr around it.
