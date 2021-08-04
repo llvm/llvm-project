@@ -1,5 +1,13 @@
 // RUN: %clang_cc1 -std=c++2a -fblocks %s -triple x86_64-unknown-unknown -emit-llvm -o %t.ll
 
+// This needs to be performed before #line directives which alter filename
+// RUN: %clang_cc1 -fmacro-prefix-map=%p=/UNLIKELY/PATH -emit-llvm -o - %s | FileCheck %s --check-prefix=CHECK-PREFIX-MAP
+//
+// CHECK-PREFIX-MAP: /UNLIKELY/PATH{{/|\\\\}}builtin-source-location.cpp
+void testRemap() {
+  const char *file = __builtin_FILE();
+}
+
 #line 8 "builtin-source-location.cpp"
 
 struct source_location {

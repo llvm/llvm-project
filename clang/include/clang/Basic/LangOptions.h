@@ -354,6 +354,9 @@ public:
   /// A list of all -fno-builtin-* function names (e.g., memset).
   std::vector<std::string> NoBuiltinFuncs;
 
+  /// A prefix map for __FILE__, __BASE_FILE__ and __builtin_FILE().
+  std::map<std::string, std::string, std::greater<std::string>> MacroPrefixMap;
+
   /// Triples of the OpenMP targets that the host code codegen should
   /// take into account in order to generate accurate offloading descriptors.
   std::vector<llvm::Triple> OMPTargetTriples;
@@ -460,6 +463,9 @@ public:
   }
 
   bool isSYCL() const { return SYCLIsDevice || SYCLIsHost; }
+
+  /// Remap path prefix according to -fmacro-prefix-path option.
+  void remapPathPrefix(SmallString<256> &Path) const;
 };
 
 /// Floating point control options
