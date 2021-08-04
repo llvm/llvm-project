@@ -4745,8 +4745,8 @@ QualType TreeTransform<Derived>::RebuildQualifiedType(QualType T,
   SourceLocation Loc = TL.getBeginLoc();
   Qualifiers Quals = TL.getType().getLocalQualifiers();
 
-  if (((T.getAddressSpace() != LangAS::Default &&
-        Quals.getAddressSpace() != LangAS::Default)) &&
+  if ((T.getAddressSpace() != LangAS::Default &&
+       Quals.getAddressSpace() != LangAS::Default) &&
       T.getAddressSpace() != Quals.getAddressSpace()) {
     SemaRef.Diag(Loc, diag::err_address_space_mismatch_templ_inst)
         << TL.getType() << T;
