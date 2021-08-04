@@ -349,7 +349,6 @@ extern "C" LLVM_EXTERNAL_VISIBILITY void LLVMInitializeAMDGPUTarget() {
   initializeSIOptimizeVGPRLiveRangePass(*PR);
   initializeSILoadStoreOptimizerPass(*PR);
   initializeAMDGPUFixFunctionBitcastsPass(*PR);
-  initializeAMDGPUCtorDtorLoweringPass(*PR);
   initializeAMDGPUAlwaysInlinePass(*PR);
   initializeAMDGPUAttributorPass(*PR);
   initializeAMDGPUAnnotateKernelFeaturesPass(*PR);
@@ -1015,7 +1014,6 @@ void AMDGPUPassConfig::addIRPasses() {
   disablePass(&PatchableFunctionID);
 
   addPass(createAMDGPUPrintfRuntimeBinding());
-  addPass(createAMDGPUCtorDtorLoweringPass());
 
   // This must occur before inlining, as the inliner will not look through
   // bitcast calls.
