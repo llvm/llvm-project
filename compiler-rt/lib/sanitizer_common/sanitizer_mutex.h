@@ -95,7 +95,8 @@ enum {
 
 // Go linker does not support THREADLOCAL variables,
 // so we can't use per-thread state.
-#define SANITIZER_CHECK_DEADLOCKS (SANITIZER_DEBUG && !SANITIZER_GO)
+#define SANITIZER_CHECK_DEADLOCKS \
+  (SANITIZER_DEBUG && !SANITIZER_GO && SANITIZER_SUPPORTS_THREADLOCAL)
 
 #if SANITIZER_CHECK_DEADLOCKS
 struct MutexMeta {
