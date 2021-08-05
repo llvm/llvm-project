@@ -87,10 +87,6 @@ enum ActionKind {
 /// \return True if the file extension should be processed as fixed form
 bool isFixedFormSuffix(llvm::StringRef suffix);
 
-// TODO: Find a more suitable location for this. Added for compability with
-// f18.cpp (this is equivalent to `asFortran` defined there).
-Fortran::parser::AnalyzedObjectsAsFortran getBasicAsFortran();
-
 /// \param suffix The file extension
 /// \return True if the file extension should be processed as free form
 bool isFreeFormSuffix(llvm::StringRef suffix);

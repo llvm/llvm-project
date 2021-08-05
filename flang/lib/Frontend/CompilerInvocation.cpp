@@ -571,7 +571,6 @@ void CompilerInvocation::collectMacroDefinitions() {
 void CompilerInvocation::SetDefaultFortranOpts() {
   auto &fortranOptions = fortranOpts();
 
-  // These defaults are based on the defaults in f18/f18.cpp.
   std::vector<std::string> searchDirectories{"."s};
   fortranOptions.searchDirectories = searchDirectories;
   fortranOptions.isFixedForm = false;
