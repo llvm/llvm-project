@@ -1956,11 +1956,19 @@ static void CallUserSignalHandler(ThreadState *thr, bool sync, bool acquire,
   int ignore_reads_and_writes = thr->ignore_reads_and_writes;
   int ignore_interceptors = thr->ignore_interceptors;
   int ignore_sync = thr->ignore_sync;
+  // For symbolizer we only process SIGSEGVs synchronously
+  // (bug in symbolizer or in tsan). But we want to reset
+  // in_symbolizer to fail gracefully. Symbolizer and user code
+  // use different memory allocators, so if we don't reset
+  // in_symbolizer we can get memory allocated with one being
+  // feed with another, which can cause more crashes.
+  int in_symbolizer = thr->in_symbolizer;
   if (!ctx->after_multithreaded_fork) {
     thr->ignore_reads_and_writes = 0;
     thr->fast_state.ClearIgnoreBit();
     thr->ignore_interceptors = 0;
     thr->ignore_sync = 0;
+    thr->in_symbolizer = 0;
   }
   // Ensure that the handler does not spoil errno.
   const int saved_errno = errno;
@@ -1979,6 +1987,7 @@ static void CallUserSignalHandler(ThreadState *thr, bool sync, bool acquire,
       thr->fast_state.SetIgnoreBit();
     thr->ignore_interceptors = ignore_interceptors;
     thr->ignore_sync = ignore_sync;
+    thr->in_symbolizer = in_symbolizer;
   }
   // We do not detect errno spoiling for SIGTERM,
   // because some SIGTERM handlers do spoil errno but reraise SIGTERM,
