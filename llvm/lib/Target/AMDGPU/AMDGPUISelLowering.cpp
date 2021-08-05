@@ -2211,13 +2211,10 @@ SDValue AMDGPUTargetLowering::LowerFTRUNC(SDValue Op, SelectionDAG &DAG) const {
   assert(Op.getValueType() == MVT::f64);
 
   const SDValue Zero = DAG.getConstant(0, SL, MVT::i32);
-  const SDValue One = DAG.getConstant(1, SL, MVT::i32);
-
-  SDValue VecSrc = DAG.getNode(ISD::BITCAST, SL, MVT::v2i32, Src);
 
   // Extract the upper half, since this is where we will find the sign and
   // exponent.
-  SDValue Hi = DAG.getNode(ISD::EXTRACT_VECTOR_ELT, SL, MVT::i32, VecSrc, One);
+  SDValue Hi = getHiHalf64(Src, DAG);
 
   SDValue Exp = extractF64Exponent(Hi, SL, DAG);
 
@@ -2397,13 +2394,10 @@ SDValue AMDGPUTargetLowering::LowerCTLZ_CTTZ(SDValue Op, SelectionDAG &DAG) cons
   if (ZeroUndef && Src.getValueType() == MVT::i32)
     return DAG.getNode(NewOpc, SL, MVT::i32, Src);
 
-  SDValue Vec = DAG.getNode(ISD::BITCAST, SL, MVT::v2i32, Src);
-
   const SDValue Zero = DAG.getConstant(0, SL, MVT::i32);
-  const SDValue One = DAG.getConstant(1, SL, MVT::i32);
 
-  SDValue Lo = DAG.getNode(ISD::EXTRACT_VECTOR_ELT, SL, MVT::i32, Vec, Zero);
-  SDValue Hi = DAG.getNode(ISD::EXTRACT_VECTOR_ELT, SL, MVT::i32, Vec, One);
+  SDValue Lo, Hi;
+  std::tie(Lo, Hi) = split64BitValue(Src, DAG);
 
   EVT SetCCVT = getSetCCResultType(DAG.getDataLayout(),
                                    *DAG.getContext(), MVT::i32);
@@ -2573,12 +2567,8 @@ SDValue AMDGPUTargetLowering::LowerINT_TO_FP64(SDValue Op, SelectionDAG &DAG,
   SDLoc SL(Op);
   SDValue Src = Op.getOperand(0);
 
-  SDValue BC = DAG.getNode(ISD::BITCAST, SL, MVT::v2i32, Src);
-
-  SDValue Lo = DAG.getNode(ISD::EXTRACT_VECTOR_ELT, SL, MVT::i32, BC,
-                           DAG.getConstant(0, SL, MVT::i32));
-  SDValue Hi = DAG.getNode(ISD::EXTRACT_VECTOR_ELT, SL, MVT::i32, BC,
-                           DAG.getConstant(1, SL, MVT::i32));
+  SDValue Lo, Hi;
+  std::tie(Lo, Hi) = split64BitValue(Src, DAG);
 
   SDValue CvtHi = DAG.getNode(Signed ? ISD::SINT_TO_FP : ISD::UINT_TO_FP,
                               SL, MVT::f64, Hi);
@@ -3313,11 +3303,9 @@ SDValue AMDGPUTargetLowering::performSrlCombine(SDNode *N,
   // srl i64:x, C for C >= 32
   // =>
   //   build_pair (srl hi_32(x), C - 32), 0
-  SDValue One = DAG.getConstant(1, SL, MVT::i32);
   SDValue Zero = DAG.getConstant(0, SL, MVT::i32);
 
-  SDValue VecOp = DAG.getNode(ISD::BITCAST, SL, MVT::v2i32, LHS);
-  SDValue Hi = DAG.getNode(ISD::EXTRACT_VECTOR_ELT, SL, MVT::i32, VecOp, One);
+  SDValue Hi = getHiHalf64(LHS, DAG);
 
   SDValue NewConst = DAG.getConstant(ShiftAmt - 32, SL, MVT::i32);
   SDValue NewShift = DAG.getNode(ISD::SRL, SL, MVT::i32, Hi, NewConst);
