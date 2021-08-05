@@ -109,8 +109,8 @@ AArch64LegalizerInfo::AArch64LegalizerInfo(const AArch64Subtarget &ST)
 
   getActionDefinitionsBuilder(G_BSWAP)
       .legalFor({s32, s64, v4s32, v2s32, v2s64})
-      .clampScalar(0, s32, s64)
       .widenScalarToNextPow2(0)
+      .clampScalar(0, s32, s64)
       .customIf(typeIs(0, v2s16)); // custom lower as G_REV32 + G_LSHR
 
   getActionDefinitionsBuilder({G_ADD, G_SUB, G_MUL, G_AND, G_OR, G_XOR})
