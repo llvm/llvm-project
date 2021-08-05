@@ -128,6 +128,186 @@ add_diff_binary(
 )
 
 add_diff_binary(
+  ceilf_diff
+  SRCS
+    ceilf_diff.cpp
+  DEPENDS
+    .single_input_single_output_diff
+    libc.src.math.ceilf
+)
+
+add_diff_binary(
+  ceilf_perf
+  SRCS
+    ceilf_perf.cpp
+  DEPENDS
+    .single_input_single_output_diff
+    libc.src.math.ceilf
+  COMPILE_OPTIONS
+    -fno-builtin
+)
+
+add_diff_binary(
+  exp2f_diff
+  SRCS
+    exp2f_diff.cpp
+  DEPENDS
+    .single_input_single_output_diff
+    libc.src.math.exp2f
+)
+
+add_diff_binary(
+  exp2f_perf
+  SRCS
+    exp2f_perf.cpp
+  DEPENDS
+    .single_input_single_output_diff
+    libc.src.math.exp2f
+  COMPILE_OPTIONS
+    -fno-builtin
+)
+
+add_diff_binary(
+  expf_diff
+  SRCS
+    expf_diff.cpp
+  DEPENDS
+    .single_input_single_output_diff
+    libc.src.math.expf
+)
+
+add_diff_binary(
+  expf_perf
+  SRCS
+    expf_perf.cpp
+  DEPENDS
+    .single_input_single_output_diff
+    libc.src.math.expf
+  COMPILE_OPTIONS
+    -fno-builtin
+)
+
+add_diff_binary(
+  fabsf_diff
+  SRCS
+    fabsf_diff.cpp
+  DEPENDS
+    .single_input_single_output_diff
+    libc.src.math.fabsf
+)
+
+add_diff_binary(
+  fabsf_perf
+  SRCS
+    fabsf_perf.cpp
+  DEPENDS
+    .single_input_single_output_diff
+    libc.src.math.fabsf
+  COMPILE_OPTIONS
+    -fno-builtin
+)
+
+add_diff_binary(
+  floorf_diff
+  SRCS
+    floorf_diff.cpp
+  DEPENDS
+    .single_input_single_output_diff
+    libc.src.math.floorf
+)
+
+add_diff_binary(
+  floorf_perf
+  SRCS
+    floorf_perf.cpp
+  DEPENDS
+    .single_input_single_output_diff
+    libc.src.math.floorf
+  COMPILE_OPTIONS
+    -fno-builtin
+)
+
+add_diff_binary(
+  logbf_diff
+  SRCS
+    logbf_diff.cpp
+  DEPENDS
+    .single_input_single_output_diff
+    libc.src.math.logbf
+)
+
+add_diff_binary(
+  logbf_perf
+  SRCS
+    logbf_perf.cpp
+  DEPENDS
+    .single_input_single_output_diff
+    libc.src.math.logbf
+  COMPILE_OPTIONS
+    -fno-builtin
+)
+
+add_diff_binary(
+  nearbyintf_diff
+  SRCS
+    nearbyintf_diff.cpp
+  DEPENDS
+    .single_input_single_output_diff
+    libc.src.math.nearbyintf
+)
+
+add_diff_binary(
+  nearbyintf_perf
+  SRCS
+    nearbyintf_perf.cpp
+  DEPENDS
+    .single_input_single_output_diff
+    libc.src.math.nearbyintf
+  COMPILE_OPTIONS
+    -fno-builtin
+)
+
+add_diff_binary(
+  rintf_diff
+  SRCS
+    rintf_diff.cpp
+  DEPENDS
+    .single_input_single_output_diff
+    libc.src.math.rintf
+)
+
+add_diff_binary(
+  rintf_perf
+  SRCS
+    rintf_perf.cpp
+  DEPENDS
+    .single_input_single_output_diff
+    libc.src.math.rintf
+  COMPILE_OPTIONS
+    -fno-builtin
+)
+
+add_diff_binary(
+  roundf_diff
+  SRCS
+    roundf_diff.cpp
+  DEPENDS
+    .single_input_single_output_diff
+    libc.src.math.roundf
+)
+
+add_diff_binary(
+  roundf_perf
+  SRCS
+    roundf_perf.cpp
+  DEPENDS
+    .single_input_single_output_diff
+    libc.src.math.roundf
+  COMPILE_OPTIONS
+    -fno-builtin
+)
+
+add_diff_binary(
   sqrtf_diff
   SRCS
     sqrtf_diff.cpp
@@ -143,6 +323,26 @@ add_diff_binary(
   DEPENDS
     .single_input_single_output_diff
     libc.src.math.sqrtf
+  COMPILE_OPTIONS
+    -fno-builtin
+)
+
+add_diff_binary(
+  truncf_diff
+  SRCS
+    truncf_diff.cpp
+  DEPENDS
+    .single_input_single_output_diff
+    libc.src.math.truncf
+)
+
+add_diff_binary(
+  truncf_perf
+  SRCS
+    truncf_perf.cpp
+  DEPENDS
+    .single_input_single_output_diff
+    libc.src.math.truncf
   COMPILE_OPTIONS
     -fno-builtin
 )

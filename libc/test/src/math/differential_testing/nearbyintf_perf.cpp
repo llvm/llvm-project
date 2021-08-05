@@ -1,4 +1,4 @@
-//===-- Differential test for sqrtf----------------------------------------===//
+//===-- Differential test for nearbyintf-----------------------------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -8,9 +8,9 @@
 
 #include "SingleInputSingleOutputDiff.h"
 
-#include "src/math/sqrtf.h"
+#include "src/math/nearbyintf.h"
 
 #include <math.h>
 
-SINGLE_INPUT_SINGLE_OUTPUT_DIFF(float, __llvm_libc::sqrtf, ::sqrtf,
-                                "sqrtf_diff.log")
+SINGLE_INPUT_SINGLE_OUTPUT_PERF(float, __llvm_libc::nearbyintf, ::nearbyintf,
+                                "nearbyintf_perf.log")
