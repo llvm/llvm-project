@@ -1086,11 +1086,11 @@ unsigned X86AsmBackend::getMaximumNopSize() const {
     return 4;
   if (!STI.hasFeature(X86::FeatureNOPL) && !STI.hasFeature(X86::Mode64Bit))
     return 1;
-  if (STI.getFeatureBits()[X86::FeatureFast7ByteNOP])
+  if (STI.getFeatureBits()[X86::TuningFast7ByteNOP])
     return 7;
-  if (STI.getFeatureBits()[X86::FeatureFast15ByteNOP])
+  if (STI.getFeatureBits()[X86::TuningFast15ByteNOP])
     return 15;
-  if (STI.getFeatureBits()[X86::FeatureFast11ByteNOP])
+  if (STI.getFeatureBits()[X86::TuningFast11ByteNOP])
     return 11;
   // FIXME: handle 32-bit mode
   // 15-bytes is the longest single NOP instruction, but 10-bytes is
