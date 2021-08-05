@@ -509,7 +509,9 @@ declare i64 @fwrite(i8*, i64, i64, %opaque*)
 ; CHECK: declare noundef i32 @getc(%opaque* nocapture noundef) [[NOFREE_NOUNWIND]]
 declare i32 @getc(%opaque*)
 
-; CHECK: declare noundef i32 @getc_unlocked(%opaque* nocapture noundef) [[NOFREE_NOUNWIND]]
+; CHECK-KNOWN: declare noundef i32 @getc_unlocked(%opaque* nocapture noundef) [[NOFREE_NOUNWIND]]
+; CHECK-UNKNOWN: declare i32 @getc_unlocked(%opaque*)
+; CHECK-UNKNOWN-NOT: #{{.*}}
 declare i32 @getc_unlocked(%opaque*)
 
 ; CHECK: declare noundef i32 @getchar() [[NOFREE_NOUNWIND]]
