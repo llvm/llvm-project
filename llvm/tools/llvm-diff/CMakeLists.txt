@@ -6,10 +6,10 @@ set(LLVM_LINK_COMPONENTS
 
 add_llvm_tool(llvm-diff
   llvm-diff.cpp
+  DiffConsumer.cpp
+  DiffLog.cpp
+  DifferenceEngine.cpp
 
   DEPENDS
   intrinsics_gen
   )
-
-add_subdirectory(lib)
-target_link_libraries(llvm-diff PRIVATE LLVMDiff)
