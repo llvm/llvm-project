@@ -210,7 +210,7 @@ void __tsan_malloc(ThreadState *thr, uptr pc, uptr p, uptr sz) {
   CHECK(inited);
   if (thr && pc)
     ctx->metamap.AllocBlock(thr, pc, p, sz);
-  MemoryResetRange(0, 0, (uptr)p, sz);
+  MemoryResetRange(thr, pc, (uptr)p, sz);
 }
 
 void __tsan_free(uptr p, uptr sz) {
