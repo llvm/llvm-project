@@ -65,14 +65,12 @@ public:
 
 private:
   std::vector<Symbol *> findByVersion(SymbolVersion ver);
-  std::vector<Symbol *> findAllByVersion(SymbolVersion ver,
-                                         bool includeNonDefault);
+  std::vector<Symbol *> findAllByVersion(SymbolVersion ver);
 
   llvm::StringMap<std::vector<Symbol *>> &getDemangledSyms();
-  bool assignExactVersion(SymbolVersion ver, uint16_t versionId,
+  void assignExactVersion(SymbolVersion ver, uint16_t versionId,
                           StringRef versionName);
-  void assignWildcardVersion(SymbolVersion ver, uint16_t versionId,
-                             bool includeNonDefault);
+  void assignWildcardVersion(SymbolVersion ver, uint16_t versionId);
 
   // The order the global symbols are in is not defined. We can use an arbitrary
   // order, but it has to be reproducible. That is true even when cross linking.

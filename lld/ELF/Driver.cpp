@@ -1351,19 +1351,18 @@ static void readConfigs(opt::InputArgList &args) {
   }
 
   assert(config->versionDefinitions.empty());
+  config->versionDefinitions.push_back({"local", (uint16_t)VER_NDX_LOCAL, {}});
   config->versionDefinitions.push_back(
-      {"local", (uint16_t)VER_NDX_LOCAL, {}, {}});
-  config->versionDefinitions.push_back(
-      {"global", (uint16_t)VER_NDX_GLOBAL, {}, {}});
+      {"global", (uint16_t)VER_NDX_GLOBAL, {}});
 
   // If --retain-symbol-file is used, we'll keep only the symbols listed in
   // the file and discard all others.
   if (auto *arg = args.getLastArg(OPT_retain_symbols_file)) {
-    config->versionDefinitions[VER_NDX_LOCAL].nonLocalPatterns.push_back(
+    config->versionDefinitions[VER_NDX_LOCAL].patterns.push_back(
         {"*", /*isExternCpp=*/false, /*hasWildcard=*/true});
     if (Optional<MemoryBufferRef> buffer = readFile(arg->getValue()))
       for (StringRef s : args::getLines(*buffer))
-        config->versionDefinitions[VER_NDX_GLOBAL].nonLocalPatterns.push_back(
+        config->versionDefinitions[VER_NDX_GLOBAL].patterns.push_back(
             {s, /*isExternCpp=*/false, /*hasWildcard=*/false});
   }
 
