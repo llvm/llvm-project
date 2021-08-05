@@ -16197,6 +16197,74 @@ Value *CodeGenFunction::EmitAMDGPUBuiltinExpr(unsigned BuiltinID,
     Src0 = Builder.CreatePointerBitCastOrAddrSpaceCast(Src0, PTy);
     return Builder.CreateCall(F, { Src0, Src1, Src2, Src3, Src4 });
   }
+  case AMDGPU::BI__builtin_amdgcn_global_atomic_fadd_f64:
+  case AMDGPU::BI__builtin_amdgcn_global_atomic_fadd_f32:
+  case AMDGPU::BI__builtin_amdgcn_global_atomic_fadd_v2f16:
+  case AMDGPU::BI__builtin_amdgcn_global_atomic_fmin_f64:
+  case AMDGPU::BI__builtin_amdgcn_global_atomic_fmax_f64:
+  case AMDGPU::BI__builtin_amdgcn_flat_atomic_fadd_f64:
+  case AMDGPU::BI__builtin_amdgcn_flat_atomic_fmin_f64:
+  case AMDGPU::BI__builtin_amdgcn_flat_atomic_fmax_f64: {
+    Intrinsic::ID IID;
+    llvm::Type *ArgTy = llvm::Type::getDoubleTy(getLLVMContext());
+    switch (BuiltinID) {
+    case AMDGPU::BI__builtin_amdgcn_global_atomic_fadd_f32:
+      ArgTy = llvm::Type::getFloatTy(getLLVMContext());
+      IID = Intrinsic::amdgcn_global_atomic_fadd;
+      break;
+    case AMDGPU::BI__builtin_amdgcn_global_atomic_fadd_v2f16:
+      ArgTy = llvm::FixedVectorType::get(
+          llvm::Type::getHalfTy(getLLVMContext()), 2);
+      IID = Intrinsic::amdgcn_global_atomic_fadd;
+      break;
+    case AMDGPU::BI__builtin_amdgcn_global_atomic_fadd_f64:
+      IID = Intrinsic::amdgcn_global_atomic_fadd;
+      break;
+    case AMDGPU::BI__builtin_amdgcn_global_atomic_fmin_f64:
+      IID = Intrinsic::amdgcn_global_atomic_fmin;
+      break;
+    case AMDGPU::BI__builtin_amdgcn_global_atomic_fmax_f64:
+      IID = Intrinsic::amdgcn_global_atomic_fmax;
+      break;
+    case AMDGPU::BI__builtin_amdgcn_flat_atomic_fadd_f64:
+      IID = Intrinsic::amdgcn_flat_atomic_fadd;
+      break;
+    case AMDGPU::BI__builtin_amdgcn_flat_atomic_fmin_f64:
+      IID = Intrinsic::amdgcn_flat_atomic_fmin;
+      break;
+    case AMDGPU::BI__builtin_amdgcn_flat_atomic_fmax_f64:
+      IID = Intrinsic::amdgcn_flat_atomic_fmax;
+      break;
+    }
+    llvm::Value *Addr = EmitScalarExpr(E->getArg(0));
+    llvm::Value *Val = EmitScalarExpr(E->getArg(1));
+    llvm::Function *F =
+        CGM.getIntrinsic(IID, {ArgTy, Addr->getType(), Val->getType()});
+    return Builder.CreateCall(F, {Addr, Val});
+  }
+  case AMDGPU::BI__builtin_amdgcn_ds_atomic_fadd_f64:
+  case AMDGPU::BI__builtin_amdgcn_ds_atomic_fadd_f32: {
+    Intrinsic::ID IID;
+    llvm::Type *ArgTy;
+    switch (BuiltinID) {
+    case AMDGPU::BI__builtin_amdgcn_ds_atomic_fadd_f32:
+      ArgTy = llvm::Type::getFloatTy(getLLVMContext());
+      IID = Intrinsic::amdgcn_ds_fadd;
+      break;
+    case AMDGPU::BI__builtin_amdgcn_ds_atomic_fadd_f64:
+      ArgTy = llvm::Type::getDoubleTy(getLLVMContext());
+      IID = Intrinsic::amdgcn_ds_fadd;
+      break;
+    }
+    llvm::Value *Addr = EmitScalarExpr(E->getArg(0));
+    llvm::Value *Val = EmitScalarExpr(E->getArg(1));
+    llvm::Constant *ZeroI32 = llvm::ConstantInt::getIntegerValue(
+        llvm::Type::getInt32Ty(getLLVMContext()), APInt(32, 0, true));
+    llvm::Constant *ZeroI1 = llvm::ConstantInt::getIntegerValue(
+        llvm::Type::getInt1Ty(getLLVMContext()), APInt(1, 0));
+    llvm::Function *F = CGM.getIntrinsic(IID, {ArgTy});
+    return Builder.CreateCall(F, {Addr, Val, ZeroI32, ZeroI32, ZeroI1});
+  }
   case AMDGPU::BI__builtin_amdgcn_read_exec: {
     CallInst *CI = cast<CallInst>(
       EmitSpecialRegisterBuiltin(*this, E, Int64Ty, Int64Ty, NormalRead, "exec"));
