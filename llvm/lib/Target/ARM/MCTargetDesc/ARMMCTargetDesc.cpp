@@ -443,6 +443,7 @@ public:
   }
 
   Optional<uint64_t> evaluateMemoryOperandAddress(const MCInst &Inst,
+                                                  const MCSubtargetInfo *STI,
                                                   uint64_t Addr,
                                                   uint64_t Size) const override;
 };
@@ -510,6 +511,25 @@ static Optional<uint64_t> evaluateMemOpAddrForAddrMode5(const MCInst &Inst,
 }
 
 static Optional<uint64_t>
+evaluateMemOpAddrForAddrMode5FP16(const MCInst &Inst, const MCInstrDesc &Desc,
+                                  unsigned MemOpIndex, uint64_t Addr) {
+  if (MemOpIndex + 1 >= Desc.getNumOperands())
+    return None;
+
+  const MCOperand &MO1 = Inst.getOperand(MemOpIndex);
+  const MCOperand &MO2 = Inst.getOperand(MemOpIndex + 1);
+  if (!MO1.isReg() || MO1.getReg() != ARM::PC || !MO2.isImm())
+    return None;
+
+  unsigned ImmOffs = ARM_AM::getAM5FP16Offset(MO2.getImm());
+  ARM_AM::AddrOpc Op = ARM_AM::getAM5FP16Op(MO2.getImm());
+
+  if (Op == ARM_AM::sub)
+    return Addr - ImmOffs * 2;
+  return Addr + ImmOffs * 2;
+}
+
+static Optional<uint64_t>
 // NOLINTNEXTLINE(readability-identifier-naming)
 evaluateMemOpAddrForAddrModeT2_i8s4(const MCInst &Inst, const MCInstrDesc &Desc,
                                     unsigned MemOpIndex, uint64_t Addr) {
@@ -554,7 +574,8 @@ evaluateMemOpAddrForAddrModeT1_s(const MCInst &Inst, const MCInstrDesc &Desc,
 }
 
 Optional<uint64_t> ARMMCInstrAnalysis::evaluateMemoryOperandAddress(
-    const MCInst &Inst, uint64_t Addr, uint64_t Size) const {
+    const MCInst &Inst, const MCSubtargetInfo *STI, uint64_t Addr,
+    uint64_t Size) const {
   const MCInstrDesc &Desc = Info->get(Inst.getOpcode());
 
   // Only load instructions can have PC-relative memory addressing.
@@ -588,6 +609,11 @@ Optional<uint64_t> ARMMCInstrAnalysis::evaluateMemoryOperandAddress(
   case ARMII::ThumbFrm:
     Addr += 4;
     break;
+  // VLDR* instructions share the same opcode (and thus the same form) for Arm
+  // and Thumb. Use a bit longer route through STI in that case.
+  case ARMII::VFPLdStFrm:
+    Addr += STI->getFeatureBits()[ARM::ModeThumb] ? 4 : 8;
+    break;
   }
 
   // Eveluate the address depending on the addressing mode
@@ -601,6 +627,8 @@ Optional<uint64_t> ARMMCInstrAnalysis::evaluateMemoryOperandAddress(
     return evaluateMemOpAddrForAddrMode3(Inst, Desc, OpIndex, Addr);
   case ARMII::AddrMode5:
     return evaluateMemOpAddrForAddrMode5(Inst, Desc, OpIndex, Addr);
+  case ARMII::AddrMode5FP16:
+    return evaluateMemOpAddrForAddrMode5FP16(Inst, Desc, OpIndex, Addr);
   case ARMII::AddrModeT2_i8s4:
     return evaluateMemOpAddrForAddrModeT2_i8s4(Inst, Desc, OpIndex, Addr);
   case ARMII::AddrModeT2_pc:
