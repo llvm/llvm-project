@@ -771,7 +771,6 @@ AArch64LegalizerInfo::AArch64LegalizerInfo(const AArch64Subtarget &ST)
   getActionDefinitionsBuilder({G_SBFX, G_UBFX})
       .customFor({{s32, s32}, {s64, s64}});
 
-  // TODO: Custom legalization for s128
   // TODO: Use generic lowering when custom lowering is not possible.
   auto always = [=](const LegalityQuery &Q) { return true; };
   getActionDefinitionsBuilder(G_CTPOP)
@@ -782,6 +781,7 @@ AArch64LegalizerInfo::AArch64LegalizerInfo(const AArch64Subtarget &ST)
       .maxScalarEltSameAsIf(always, 1, 0)
       .customFor({{s32, s32},
                   {s64, s64},
+                  {s128, s128},
                   {v2s64, v2s64},
                   {v2s32, v2s32},
                   {v4s32, v4s32},
@@ -1158,8 +1158,7 @@ bool AArch64LegalizerInfo::legalizeCTPOP(MachineInstr &MI,
   // v8s16,v4s32,v2s64 -> v16i8
   LLT VTy = Size == 128 ? LLT::fixed_vector(16, 8) : LLT::fixed_vector(8, 8);
   if (Ty.isScalar()) {
-    // TODO: Handle s128.
-    assert((Size == 32 || Size == 64) && "Expected only 32 or 64 bit scalars!");
+    assert((Size == 32 || Size == 64 || Size == 128) && "Expected only 32, 64, or 128 bit scalars!");
     if (Size == 32) {
       Val = MIRBuilder.buildZExt(LLT::scalar(64), Val).getReg(0);
     }
@@ -1205,7 +1204,7 @@ bool AArch64LegalizerInfo::legalizeCTPOP(MachineInstr &MI,
   }
 
   // Post-conditioning.
-  if (Ty.isScalar() && Size == 64)
+  if (Ty.isScalar() && (Size == 64 || Size == 128))
     MIRBuilder.buildZExt(Dst, UADD);
   else
     UADD->getOperand(0).setReg(Dst);
