@@ -5391,14 +5391,16 @@ def CDP2 : ABXI<0b1110, (outs), (ins p_imm:$cop, imm0_15:$opc1,
 }
 
 class ACI<dag oops, dag iops, string opc, string asm,
-            list<dag> pattern, IndexMode im = IndexModeNone>
-  : I<oops, iops, AddrModeNone, 4, im, BrFrm, NoItinerary,
+            list<dag> pattern, IndexMode im = IndexModeNone,
+            AddrMode am = AddrModeNone>
+  : I<oops, iops, am, 4, im, BrFrm, NoItinerary,
       opc, asm, "", pattern> {
   let Inst{27-25} = 0b110;
 }
 class ACInoP<dag oops, dag iops, string opc, string asm,
-          list<dag> pattern, IndexMode im = IndexModeNone>
-  : InoP<oops, iops, AddrModeNone, 4, im, BrFrm, NoItinerary,
+          list<dag> pattern, IndexMode im = IndexModeNone,
+          AddrMode am = AddrModeNone>
+  : InoP<oops, iops, am, 4, im, BrFrm, NoItinerary,
          opc, asm, "", pattern> {
   let Inst{31-28} = 0b1111;
   let Inst{27-25} = 0b110;
@@ -5407,7 +5409,8 @@ class ACInoP<dag oops, dag iops, string opc, string asm,
 let DecoderNamespace = "CoProc" in {
 multiclass LdStCop<bit load, bit Dbit, string asm, list<dag> pattern> {
   def _OFFSET : ACI<(outs), (ins p_imm:$cop, c_imm:$CRd, addrmode5:$addr),
-                    asm, "\t$cop, $CRd, $addr", pattern> {
+                    asm, "\t$cop, $CRd, $addr", pattern, IndexModeNone,
+                    AddrMode5> {
     bits<13> addr;
     bits<4> cop;
     bits<4> CRd;
@@ -5478,7 +5481,8 @@ multiclass LdStCop<bit load, bit Dbit, string asm, list<dag> pattern> {
 }
 multiclass LdSt2Cop<bit load, bit Dbit, string asm, list<dag> pattern> {
   def _OFFSET : ACInoP<(outs), (ins p_imm:$cop, c_imm:$CRd, addrmode5:$addr),
-                       asm, "\t$cop, $CRd, $addr", pattern> {
+                       asm, "\t$cop, $CRd, $addr", pattern, IndexModeNone,
+                       AddrMode5> {
     bits<13> addr;
     bits<4> cop;
     bits<4> CRd;
