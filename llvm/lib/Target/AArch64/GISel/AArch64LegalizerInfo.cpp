@@ -95,10 +95,17 @@ AArch64LegalizerInfo::AArch64LegalizerInfo(const AArch64Subtarget &ST)
             return std::make_pair(0, EltTy);
           });
 
-  getActionDefinitionsBuilder(G_PHI).legalFor({p0, s16, s32, s64})
+  getActionDefinitionsBuilder(G_PHI)
+      .legalFor({p0, s16, s32, s64})
       .legalFor(PackedVectorAllTypeList)
       .widenScalarToNextPow2(0)
-      .clampScalar(0, s16, s64);
+      .clampScalar(0, s16, s64)
+      // Maximum: sN * k = 128
+      .clampMaxNumElements(0, s8, 16)
+      .clampMaxNumElements(0, s16, 8)
+      .clampMaxNumElements(0, s32, 4)
+      .clampMaxNumElements(0, s64, 2)
+      .clampMaxNumElements(0, p0, 2);
 
   getActionDefinitionsBuilder(G_BSWAP)
       .legalFor({s32, s64, v4s32, v2s32, v2s64})
