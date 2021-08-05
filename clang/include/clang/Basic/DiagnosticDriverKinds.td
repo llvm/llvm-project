@@ -52,38 +52,46 @@ def warn_drv_avr_stdlib_not_linked: Warning<
   "standard library not linked and so no interrupt vector table or "
   "compiler runtime routines will be linked">,
   InGroup<AVRRtlibLinkingQuirks>;
-def err_drv_cuda_bad_gpu_arch : Error<"Unsupported CUDA gpu architecture: %0">;
+def err_drv_cuda_bad_gpu_arch : Error<"unsupported CUDA gpu architecture: %0">;
 def err_drv_no_cuda_installation : Error<
-  "cannot find CUDA installation. Provide its path via --cuda-path, or pass "
-  "-nocudainc to build without CUDA includes.">;
+  "cannot find CUDA installation; provide its path via '--cuda-path', or pass "
+  "'-nocudainc' to build without CUDA includes">;
 def err_drv_no_cuda_libdevice : Error<
-  "cannot find libdevice for %0. Provide path to different CUDA installation "
-  "via --cuda-path, or pass -nocudalib to build without linking with libdevice.">;
+  "cannot find libdevice for %0; provide path to different CUDA installation "
+  "via '--cuda-path', or pass '-nocudalib' to build without linking with "
+  "libdevice">;
 
 def err_drv_no_rocm_device_lib : Error<
-  "cannot find ROCm device library%select{| for %1}0. Provide its path via --rocm-path or "
-  "--rocm-device-lib-path, or pass -nogpulib to build without ROCm device library.">;
+  "cannot find ROCm device library%select{| for %1}0; provide its path via "
+  "'--rocm-path' or '--rocm-device-lib-path', or pass '-nogpulib' to build "
+  "without ROCm device library">;
 def err_drv_no_hip_runtime : Error<
-  "cannot find HIP runtime. Provide its path via --rocm-path, or pass "
-  "-nogpuinc to build without HIP runtime.">;
+  "cannot find HIP runtime; provide its path via '--rocm-path', or pass "
+  "'-nogpuinc' to build without HIP runtime">;
 
 def err_drv_undetermined_amdgpu_arch : Error<
-  "Cannot determine AMDGPU architecture: %0. Consider passing it via --march.">;
+  "cannot determine AMDGPU architecture: %0; consider passing it via "
+  "'--march'">;
 def err_drv_cuda_version_unsupported : Error<
   "GPU arch %0 is supported by CUDA versions between %1 and %2 (inclusive), "
-  "but installation at %3 is %4. Use --cuda-path to specify a different CUDA "
-  "install, pass a different GPU arch with --cuda-gpu-arch, or pass "
-  "--no-cuda-version-check.">;
+  "but installation at %3 is %4; use '--cuda-path' to specify a different CUDA "
+  "install, pass a different GPU arch with '--cuda-gpu-arch', or pass "
+  "'--no-cuda-version-check'">;
 def warn_drv_unknown_cuda_version: Warning<
-  "Unknown CUDA version. %0 Assuming the latest supported version %1">,
+  "unknown CUDA version: %0; assuming the latest supported version %1">,
   InGroup<CudaUnknownVersion>;
-def err_drv_cuda_host_arch : Error<"unsupported architecture '%0' for host compilation.">;
-def err_drv_mix_cuda_hip : Error<"Mixed Cuda and HIP compilation is not supported.">;
-def err_drv_bad_target_id : Error<"Invalid target ID: %0 (A target ID is a processor name "
-  "followed by an optional list of predefined features post-fixed by a plus or minus sign deliminated "
-  "by colon, e.g. 'gfx908:sramecc+:xnack-')">;
-def err_drv_bad_offload_arch_combo : Error<"Invalid offload arch combinations: %0 and %1 (For a specific "
-  "processor, a feature should either exist in all offload archs, or not exist in any offload archs)">;
+def err_drv_cuda_host_arch : Error<
+  "unsupported architecture '%0' for host compilation">;
+def err_drv_mix_cuda_hip : Error<
+  "mixed CUDA and HIP compilation is not supported">;
+def err_drv_bad_target_id : Error<
+  "invalid target ID '%0'; format is a processor name followed by an optional "
+  "colon-delimited list of features followed by an enable/disable sign (e.g., "
+  "'gfx908:sramecc+:xnack-')">;
+def err_drv_bad_offload_arch_combo : Error<
+  "invalid offload arch combinations: '%0' and '%1' (for a specific processor, "
+  "a feature should either exist in all offload archs, or not exist in any "
+  "offload archs)">;
 def err_drv_invalid_thread_model_for_target : Error<
   "invalid thread model '%0' in '%1' for this target">;
 def err_drv_invalid_linker_name : Error<
@@ -195,7 +203,7 @@ def err_target_unsupported_arch
 def err_cpu_unsupported_isa
   : Error<"CPU '%0' does not support '%1' execution mode">;
 def err_arch_unsupported_isa
-  : Error<"Architecture '%0' does not support '%1' execution mode">;
+  : Error<"architecture '%0' does not support '%1' execution mode">;
 
 def err_drv_I_dash_not_supported : Error<
   "'%0' not supported, please use -iquote instead">;
@@ -265,18 +273,23 @@ def err_drv_no_neon_modifier : Error<"[no]neon is not accepted as modifier, plea
 def err_drv_invalid_omp_target : Error<"OpenMP target is invalid: '%0'">;
 def err_drv_incompatible_omp_arch : Error<"OpenMP target architecture '%0' pointer size is incompatible with host '%1'">;
 def err_drv_omp_host_ir_file_not_found : Error<
-  "The provided host compiler IR file '%0' is required to generate code for OpenMP target regions but cannot be found.">;
+  "provided host compiler IR file '%0' is required to generate code for OpenMP "
+  "target regions but cannot be found">;
 def err_drv_omp_host_target_not_supported : Error<
-  "The target '%0' is not a supported OpenMP host target.">;
+  "target '%0' is not a supported OpenMP host target">;
 def err_drv_expecting_fopenmp_with_fopenmp_targets : Error<
-  "The option -fopenmp-targets must be used in conjunction with a -fopenmp option compatible with offloading, please use -fopenmp=libomp or -fopenmp=libiomp5.">;
+  "'-fopenmp-targets' must be used in conjunction with a '-fopenmp' option "
+  "compatible with offloading; e.g., '-fopenmp=libomp' or '-fopenmp=libiomp5'">;
 def err_drv_omp_offload_target_missingbcruntime : Error<
-  "No library '%0' found in the default clang lib directory or in LIBRARY_PATH. Please use --libomptarget-%1-bc-path to specify %1 bitcode library.">;
-def err_drv_omp_offload_target_bcruntime_not_found : Error<"Bitcode library '%0' does not exist.">;
-def err_drv_omp_offload_target_cuda_version_not_support : Error<"NVPTX target requires CUDA 9.2 or above. CUDA %0 is detected.">;
+  "no library '%0' found in the default clang lib directory or in LIBRARY_PATH"
+  "; use '--libomptarget-%1-bc-path' to specify %1 bitcode library">;
+def err_drv_omp_offload_target_bcruntime_not_found : Error<
+  "bitcode library '%0' does not exist">;
+def err_drv_omp_offload_target_cuda_version_not_support : Error<
+  "NVPTX target requires CUDA 9.2 or above; CUDA %0 detected">;
 def warn_drv_omp_offload_target_duplicate : Warning<
-  "The OpenMP offloading target '%0' is similar to target '%1' already specified - will be ignored.">,
-  InGroup<OpenMPTarget>;
+  "OpenMP offloading target '%0' is similar to target '%1' already specified; "
+  "will be ignored">, InGroup<OpenMPTarget>;
 def err_drv_unsupported_embed_bitcode
     : Error<"%0 is not supported with -fembed-bitcode">;
 def err_drv_bitcode_unsupported_on_toolchain : Error<
@@ -303,7 +316,8 @@ def warn_drv_unsupported_debug_info_opt_for_target : Warning<
   "debug information option '%0' is not supported for target '%1'">,
   InGroup<UnsupportedTargetOpt>;
 def warn_drv_dwarf_version_limited_by_target : Warning<
-  "debug information option '%0' is not supported. It needs DWARF-%2 but target '%1' only provides DWARF-%3.">,
+  "debug information option '%0' is not supported; requires DWARF-%2 but "
+  "target '%1' only provides DWARF-%3">,
   InGroup<UnsupportedTargetOpt>;
 def warn_c_kext : Warning<
   "ignoring -fapple-kext which is valid for C++ and Objective-C++ only">;
@@ -370,7 +384,7 @@ def err_sls_hardening_arm_not_supported : Error<
 def note_drv_command_failed_diag_msg : Note<
   "diagnostic msg: %0">;
 def note_drv_t_option_is_global : Note<
-  "The last /TC or /TP option takes precedence over earlier instances">;
+  "the last '/TC' or '/TP' option takes precedence over earlier instances">;
 def note_drv_address_sanitizer_debug_runtime : Note<
   "AddressSanitizer doesn't support linking with debug runtime libraries yet">;
 def note_drv_use_standard : Note<"use '%0'"
@@ -410,7 +424,8 @@ def err_test_module_file_extension_format : Error<
 
 def warn_slash_u_filename : Warning<"'/U%0' treated as the '/U' option">,
   InGroup<DiagGroup<"slash-u-filename">>;
-def note_use_dashdash : Note<"Use '--' to treat subsequent arguments as filenames">;
+def note_use_dashdash : Note<
+  "use '--' to treat subsequent arguments as filenames">;
 
 def err_drv_ropi_rwpi_incompatible_with_pic : Error<
   "embedded and GOT-based position independence are incompatible">;
@@ -479,14 +494,14 @@ def warn_drv_ps4_sdk_dir : Warning<
 
 def err_drv_unsupported_linker : Error<"unsupported value '%0' for -linker option">;
 def err_drv_defsym_invalid_format : Error<"defsym must be of the form: sym=value: %0">;
-def err_drv_defsym_invalid_symval : Error<"Value is not an integer: %0">;
+def err_drv_defsym_invalid_symval : Error<"value is not an integer: %0">;
 def warn_drv_msvc_not_found : Warning<
   "unable to find a Visual Studio installation; "
   "try running Clang from a developer command prompt">,
   InGroup<DiagGroup<"msvc-not-found">>;
 
 def warn_drv_fuse_ld_path : Warning<
-  "'-fuse-ld=' taking a path is deprecated. Use '--ld-path=' instead">,
+  "'-fuse-ld=' taking a path is deprecated; use '--ld-path=' instead">,
   InGroup<FUseLdPath>, DefaultIgnore;
 
 def warn_drv_fine_grained_bitfield_accesses_ignored : Warning<
@@ -506,11 +521,11 @@ def warn_drv_global_isel_incomplete_opt : Warning<
   InGroup<GlobalISel>;
 
 def warn_drv_moutline_unsupported_opt : Warning<
-  "The '%0' architecture does not support -moutline; flag ignored">,
+  "'%0' does not support '-moutline'; flag ignored">,
   InGroup<OptionIgnored>;
 
 def warn_drv_moutline_atomics_unsupported_opt : Warning<
-  "The '%0' architecture does not support -moutline-atomics; flag ignored">,
+  "'%0' does not support '-moutline-atomics'; flag ignored">,
   InGroup<OptionIgnored>;
 
 def warn_drv_darwin_sdk_invalid_settings : Warning<
@@ -518,25 +533,28 @@ def warn_drv_darwin_sdk_invalid_settings : Warning<
   InGroup<DiagGroup<"darwin-sdk-settings">>;
 
 def err_drv_trivial_auto_var_init_zero_disabled : Error<
-  "-ftrivial-auto-var-init=zero hasn't been enabled. Enable it at your own peril for benchmarking purpose only with "
-  "-enable-trivial-auto-var-init-zero-knowing-it-will-be-removed-from-clang">;
+  "'-ftrivial-auto-var-init=zero' hasn't been enabled; enable it at your own "
+  "peril for benchmarking purpose only with "
+  "'-enable-trivial-auto-var-init-zero-knowing-it-will-be-removed-from-clang'">;
 
 def err_drv_trivial_auto_var_init_stop_after_missing_dependency : Error<
-  "-ftrivial-auto-var-init-stop-after=* is used without -ftrivial-auto-var-init=zero or -ftrivial-auto-var-init=pattern.">;
+  "'-ftrivial-auto-var-init-stop-after=*' is used without "
+  "'-ftrivial-auto-var-init=zero' or '-ftrivial-auto-var-init=pattern'">;
 
 def err_drv_trivial_auto_var_init_stop_after_invalid_value : Error<
-  "-ftrivial-auto-var-init-stop-after=* only accepts positive integers.">;
+  "'-ftrivial-auto-var-init-stop-after=*' only accepts positive integers">;
 
-def warn_drv_msp430_hwmult_unsupported : Warning<"the given MCU does not "
-  "support hardware multiply, but -mhwmult is set to %0.">,
+def warn_drv_msp430_hwmult_unsupported : Warning<
+  "the given MCU does not support hardware multiply, but '-mhwmult' is set to "
+  "%0">, InGroup<InvalidCommandLineArgument>;
+def warn_drv_msp430_hwmult_mismatch : Warning<
+  "the given MCU supports %0 hardware multiply, but '-mhwmult' is set to %1">,
    InGroup<InvalidCommandLineArgument>;
-def warn_drv_msp430_hwmult_mismatch : Warning<"the given MCU supports %0 "
-  "hardware multiply, but -mhwmult is set to %1.">,
-   InGroup<InvalidCommandLineArgument>;
-def warn_drv_msp430_hwmult_no_device : Warning<"no MCU device specified, but "
-  "'-mhwmult' is set to 'auto', assuming no hardware multiply. Use -mmcu to "
-  "specify a MSP430 device, or -mhwmult to set hardware multiply type "
-  "explicitly.">, InGroup<InvalidCommandLineArgument>;
+def warn_drv_msp430_hwmult_no_device : Warning<
+  "no MCU device specified, but '-mhwmult' is set to 'auto', assuming no "
+  "hardware multiply; use '-mmcu' to specify an MSP430 device, or '-mhwmult' "
+  "to set the hardware multiply type explicitly">,
+  InGroup<InvalidCommandLineArgument>;
 
 def warn_drv_libstdcxx_not_found : Warning<
   "include path for libstdc++ headers not found; pass '-stdlib=libc++' on the "
@@ -545,17 +563,23 @@ def warn_drv_libstdcxx_not_found : Warning<
 
 def err_drv_cannot_mix_options : Error<"cannot specify '%1' along with '%0'">;
 
-def err_drv_invalid_object_mode : Error<"OBJECT_MODE setting %0 is not recognized and is not a valid setting.">;
+def err_drv_invalid_object_mode : Error<
+  "OBJECT_MODE setting %0 is not recognized and is not a valid setting">;
 
 def err_aix_unsupported_tls_model : Error<"TLS model '%0' is not yet supported on AIX">;
 
-def err_invalid_cxx_abi : Error<"Invalid C++ ABI name '%0'">;
+def err_invalid_cxx_abi : Error<"invalid C++ ABI name '%0'">;
 def err_unsupported_cxx_abi : Error<"C++ ABI '%0' is not supported on target triple '%1'">;
 
-def note_cc1_round_trip_original : Note<"Original arguments in round-trip: %0">;
-def note_cc1_round_trip_generated : Note<"Generated arguments #%0 in round-trip: %1">;
-def remark_cc1_round_trip_generated : Remark<"Generated arguments #%0 in round-trip: %1">, InGroup<RoundTripCC1Args>;
-def err_cc1_round_trip_fail_then_ok : Error<"Original arguments parse failed, then succeeded in round-trip">;
-def err_cc1_round_trip_ok_then_fail : Error<"Generated arguments parse failed in round-trip">;
-def err_cc1_round_trip_mismatch : Error<"Generated arguments do not match in round-trip">;
+def note_cc1_round_trip_original : Note<"original arguments in round-trip: %0">;
+def note_cc1_round_trip_generated : Note<
+  "generated arguments #%0 in round-trip: %1">;
+def remark_cc1_round_trip_generated : Remark<
+  "generated arguments #%0 in round-trip: %1">, InGroup<RoundTripCC1Args>;
+def err_cc1_round_trip_fail_then_ok : Error<
+  "original arguments parse failed, then succeeded in round-trip">;
+def err_cc1_round_trip_ok_then_fail : Error<
+  "generated arguments parse failed in round-trip">;
+def err_cc1_round_trip_mismatch : Error<
+  "generated arguments do not match in round-trip">;
 }

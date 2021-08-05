@@ -28,7 +28,7 @@
 // RUN: %clang_cl /TP /TC /TP -### -- %s 2>&1 | FileCheck -check-prefix=WARN %s
 // WARN: warning: overriding '/TP' option with '/TC'
 // WARN: warning: overriding '/TC' option with '/TP'
-// WARN: note: The last /TC or /TP option takes precedence over earlier instances
+// WARN: note: the last '/TC' or '/TP' option takes precedence over earlier instances
 // WARN-NOT: note
 
 // MSYS2_ARG_CONV_EXCL tells MSYS2 to skip conversion of the specified argument.

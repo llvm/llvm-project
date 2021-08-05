@@ -72,7 +72,7 @@
 // ERR_SM61: error: GPU arch sm_61 {{.*}}
 // ERR_SM61-NOT: error: GPU arch sm_61
 
-// UNKNOWN_VERSION_V: Unknown CUDA version. version.txt:{{.*}}. Assuming the latest supported version
-// UNKNOWN_VERSION_H: Unknown CUDA version. cuda.h: CUDA_VERSION={{.*}}. Assuming the latest supported version
-// UNKNOWN_VERSION: Unknown CUDA version. No version found in version.txt or cuda.h. Assuming the latest supported version
-// UNKNOWN_VERSION_CXX-NOT: Unknown CUDA version
+// UNKNOWN_VERSION_V: unknown CUDA version: version.txt:{{.*}}; assuming the latest supported version
+// UNKNOWN_VERSION_H: unknown CUDA version: cuda.h: CUDA_VERSION={{.*}}; assuming the latest supported version
+// UNKNOWN_VERSION: unknown CUDA version: no version found in version.txt or cuda.h; assuming the latest supported version
+// UNKNOWN_VERSION_CXX-NOT: unknown CUDA version
