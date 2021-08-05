@@ -1017,21 +1017,32 @@ def : GCNPat <
 /********** Extraction, Insertion, Building and Casting  **********/
 /********** ============================================ **********/
 
-foreach Index = 0-2 in {
-  def Extract_Element_v2i32_#Index : Extract_Element <
-    i32, v2i32, Index, !cast<SubRegIndex>(sub#Index)
+// Special case for 2 element vectors. REQ_SEQUENCE produces better code
+// than an INSERT_SUBREG.
+multiclass Insert_Element_V2<RegisterClass RC, ValueType elem_type, ValueType vec_type> {
+  def : GCNPat <
+    (insertelt vec_type:$vec, elem_type:$elem, 0),
+    (REG_SEQUENCE RC, $elem, sub0, (elem_type (EXTRACT_SUBREG $vec, sub1)), sub1)
   >;
-  def Insert_Element_v2i32_#Index : Insert_Element <
+
+  def : GCNPat <
+    (insertelt vec_type:$vec, elem_type:$elem, 1),
+    (REG_SEQUENCE RC, (elem_type (EXTRACT_SUBREG $vec, sub0)), sub0, $elem, sub1)
+  >;
+}
+
+foreach Index = 0-1 in {
+  def Extract_Element_v2i32_#Index : Extract_Element <
     i32, v2i32, Index, !cast<SubRegIndex>(sub#Index)
   >;
 
   def Extract_Element_v2f32_#Index : Extract_Element <
     f32, v2f32, Index, !cast<SubRegIndex>(sub#Index)
   >;
-  def Insert_Element_v2f32_#Index : Insert_Element <
-    f32, v2f32, Index, !cast<SubRegIndex>(sub#Index)
-  >;
 }
+
+defm : Insert_Element_V2 <SReg_64, i32, v2i32>;
+defm : Insert_Element_V2 <SReg_64, f32, v2f32>;
 
 foreach Index = 0-2 in {
   def Extract_Element_v3i32_#Index : Extract_Element <
