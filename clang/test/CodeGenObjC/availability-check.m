@@ -27,11 +27,11 @@ void use_at_available() {
   if (__builtin_available(macos 10.11, *))
     ;
 
-  // CHECK: call i32 @__isOSVersionAtLeast(i32 10, i32 16, i32 0)
+  // CHECK: call i32 @__isPlatformVersionAtLeast(i32 1, i32 10, i32 16, i32 0)
   // CHECK-NEXT: icmp ne
   if (__builtin_available(macos 10.16, *))
     ;
-  // CHECK: call i32 @__isOSVersionAtLeast(i32 11, i32 0, i32 0)
+  // CHECK: call i32 @__isPlatformVersionAtLeast(i32 1, i32 11, i32 0, i32 0)
   // CHECK-NEXT: icmp ne
   if (__builtin_available(macos 11.0, *))
     ;
