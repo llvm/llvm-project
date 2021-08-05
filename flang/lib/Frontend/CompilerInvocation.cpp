@@ -277,32 +277,27 @@ static bool ParseFrontendArgs(FrontendOptions &opts, llvm::opt::ArgList &args,
     }
   }
 
-  if (const llvm::opt::Arg *arg =
-          args.getLastArg(clang::driver::options::OPT_fimplicit_none,
-              clang::driver::options::OPT_fno_implicit_none)) {
-    opts.features.Enable(
-        Fortran::common::LanguageFeature::ImplicitNoneTypeAlways,
-        arg->getOption().matches(clang::driver::options::OPT_fimplicit_none));
-  }
-  if (const llvm::opt::Arg *arg =
-          args.getLastArg(clang::driver::options::OPT_fbackslash,
-              clang::driver::options::OPT_fno_backslash)) {
-    opts.features.Enable(Fortran::common::LanguageFeature::BackslashEscapes,
-        arg->getOption().matches(clang::driver::options::OPT_fbackslash));
-  }
-  if (const llvm::opt::Arg *arg =
-          args.getLastArg(clang::driver::options::OPT_flogical_abbreviations,
-              clang::driver::options::OPT_fno_logical_abbreviations)) {
-    opts.features.Enable(Fortran::common::LanguageFeature::LogicalAbbreviations,
-        arg->getOption().matches(
-            clang::driver::options::OPT_flogical_abbreviations));
-  }
-  if (const llvm::opt::Arg *arg =
-          args.getLastArg(clang::driver::options::OPT_fxor_operator,
-              clang::driver::options::OPT_fno_xor_operator)) {
-    opts.features.Enable(Fortran::common::LanguageFeature::XOROperator,
-        arg->getOption().matches(clang::driver::options::OPT_fxor_operator));
-  }
+  // -f{no-}implicit-none
+  opts.features.Enable(
+      Fortran::common::LanguageFeature::ImplicitNoneTypeAlways,
+      args.hasFlag(clang::driver::options::OPT_fimplicit_none,
+          clang::driver::options::OPT_fno_implicit_none, false));
+
+  // -f{no-}backslash
+  opts.features.Enable(Fortran::common::LanguageFeature::BackslashEscapes,
+      args.hasFlag(clang::driver::options::OPT_fbackslash,
+          clang::driver::options::OPT_fno_backslash, false));
+
+  // -f{no-}logical-abbreviations
+  opts.features.Enable(Fortran::common::LanguageFeature::LogicalAbbreviations,
+      args.hasFlag(clang::driver::options::OPT_flogical_abbreviations,
+          clang::driver::options::OPT_fno_logical_abbreviations, false));
+
+  // -f{no-}xor-operator
+  opts.features.Enable(Fortran::common::LanguageFeature::XOROperator,
+      args.hasFlag(clang::driver::options::OPT_fxor_operator,
+          clang::driver::options::OPT_fno_xor_operator, false));
+
   if (args.hasArg(
           clang::driver::options::OPT_falternative_parameter_statement)) {
     opts.features.Enable(Fortran::common::LanguageFeature::OldStyleParameter);
@@ -406,11 +401,10 @@ static bool parseSemaArgs(CompilerInvocation &res, llvm::opt::ArgList &args,
     res.SetModuleFileSuffix(moduleSuffix->getValue());
   }
 
-  // -fno-analyzed-objects-for-unparse
-  if (args.hasArg(
-          clang::driver::options::OPT_fno_analyzed_objects_for_unparse)) {
-    res.SetUseAnalyzedObjectsForUnparse(false);
-  }
+  // -f{no-}analyzed-objects-for-unparse
+  res.SetUseAnalyzedObjectsForUnparse(
+      args.hasFlag(clang::driver::options::OPT_fanalyzed_objects_for_unparse,
+          clang::driver::options::OPT_fno_analyzed_objects_for_unparse, true));
 
   return diags.getNumErrors() == numErrorsBefore;
 }
