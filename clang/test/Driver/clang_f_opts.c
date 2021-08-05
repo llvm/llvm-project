@@ -397,7 +397,6 @@
 // CHECK-WARNING-DAG: optimization flag '-falign-labels' is not supported
 // CHECK-WARNING-DAG: optimization flag '-falign-labels=100' is not supported
 // CHECK-WARNING-DAG: optimization flag '-falign-loops' is not supported
-// CHECK-WARNING-DAG: optimization flag '-falign-loops=100' is not supported
 // CHECK-WARNING-DAG: optimization flag '-falign-jumps' is not supported
 // CHECK-WARNING-DAG: optimization flag '-falign-jumps=100' is not supported
 // CHECK-WARNING-DAG: optimization flag '-fexcess-precision=100' is not supported
