@@ -781,6 +781,9 @@ static bool canScalarizeAccess(FixedVectorType *VecTy, Value *Idx,
   if (auto *C = dyn_cast<ConstantInt>(Idx))
     return C->getValue().ult(VecTy->getNumElements());
 
+  if (!isGuaranteedNotToBePoison(Idx, &AC))
+    return false;
+
   APInt Zero(Idx->getType()->getScalarSizeInBits(), 0);
   APInt MaxElts(Idx->getType()->getScalarSizeInBits(), VecTy->getNumElements());
   ConstantRange ValidIndices(Zero, MaxElts);
