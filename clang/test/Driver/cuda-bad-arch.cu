@@ -13,7 +13,7 @@
 // RUN: %clang -### -target x86_64-linux-gnu --cuda-gpu-arch=gfx900 -c %s 2>&1 \
 // RUN: | FileCheck -check-prefix BAD %s
 
-// BAD: error: Unsupported CUDA gpu architecture
+// BAD: error: unsupported CUDA gpu architecture
 
 // RUN: %clang -### -v --target=x86_64-linux-gnu --cuda-gpu-arch=sm_21 \
 // RUN:   --cuda-path=%S/Inputs/CUDA_90/usr/local/cuda %s 2>&1 \
@@ -39,5 +39,5 @@
 // RUN: | FileCheck -check-prefix HOST_AMDGCN %s
 
 // OK-NOT: error: Unsupported CUDA gpu architecture
-// HOST_NVPTX: error: unsupported architecture 'nvptx' for host compilation.
-// HOST_AMDGCN: error: unsupported architecture 'amdgcn' for host compilation.
+// HOST_NVPTX: error: unsupported architecture 'nvptx' for host compilation
+// HOST_AMDGCN: error: unsupported architecture 'amdgcn' for host compilation

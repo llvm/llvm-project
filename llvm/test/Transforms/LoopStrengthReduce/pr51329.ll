@@ -2,7 +2,10 @@
 ;
 ; Test that LSR SCEV-based salvaging does not crash when translating SCEVs
 ; that contain integers with binary representations greater than 64-bits. 
+; Also show that no salvaging attempt is made for dbg.value that are undef
+; pre-LSR.
 ;
+; CHECK: call void @llvm.dbg.value(metadata i64 undef, metadata !{{[0-9]+}}, metadata !DIExpression(DW_OP_plus_uconst, 228, DW_OP_stack_value))
 ; CHECK: call void @llvm.dbg.value(metadata i64 %var2, metadata !{{[0-9]+}}, metadata !DIExpression(DW_OP_plus_uconst, 228, DW_OP_stack_value))
 
 
@@ -23,6 +26,7 @@ init:
 
 Label_d0:                                         ; preds = %Label_d0, %init
   %var3 = phi i64 [ %var2, %init ], [ %var4, %Label_d0 ]
+  call void @llvm.dbg.value(metadata i64 undef, metadata !11, metadata !DIExpression(DW_OP_plus_uconst, 228, DW_OP_stack_value)), !dbg !12
   call void @llvm.dbg.value(metadata i64 %var2, metadata !11, metadata !DIExpression(DW_OP_plus_uconst, 228, DW_OP_stack_value)), !dbg !12
   %var4 = add i64 %var3, -1
   %var5 = icmp eq i64 %var4, 0

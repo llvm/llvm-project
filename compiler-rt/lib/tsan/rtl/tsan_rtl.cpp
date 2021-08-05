@@ -247,7 +247,8 @@ static void StopBackgroundThread() {
 #endif
 
 void DontNeedShadowFor(uptr addr, uptr size) {
-  ReleaseMemoryPagesToOS(MemToShadow(addr), MemToShadow(addr + size));
+  ReleaseMemoryPagesToOS(reinterpret_cast<uptr>(MemToShadow(addr)),
+                         reinterpret_cast<uptr>(MemToShadow(addr + size)));
 }
 
 #if !SANITIZER_GO
@@ -327,8 +328,8 @@ static void CheckShadowMapping() {
         const uptr p = RoundDown(p0 + x, kShadowCell);
         if (p < beg || p >= end)
           continue;
-        const uptr s = MemToShadow(p);
-        const uptr m = (uptr)MemToMeta(p);
+        RawShadow *const s = MemToShadow(p);
+        u32 *const m = MemToMeta(p);
         VPrintf(3, "  checking pointer %p: shadow=%p meta=%p\n", p, s, m);
         CHECK(IsAppMem(p));
         CHECK(IsShadowMem(s));
@@ -337,11 +338,10 @@ static void CheckShadowMapping() {
         if (prev) {
           // Ensure that shadow and meta mappings are linear within a single
           // user range. Lots of code that processes memory ranges assumes it.
-          const uptr prev_s = MemToShadow(prev);
-          const uptr prev_m = (uptr)MemToMeta(prev);
-          CHECK_EQ(s - prev_s, (p - prev) * kShadowMultiplier);
-          CHECK_EQ((m - prev_m) / kMetaShadowSize,
-                   (p - prev) / kMetaShadowCell);
+          RawShadow *const prev_s = MemToShadow(prev);
+          u32 *const prev_m = MemToMeta(prev);
+          CHECK_EQ((s - prev_s) * kShadowSize, (p - prev) * kShadowMultiplier);
+          CHECK_EQ(m - prev_m, (p - prev) / kMetaShadowCell);
         }
         prev = p;
       }
@@ -562,7 +562,7 @@ NOINLINE
 void GrowShadowStack(ThreadState *thr) {
   const int sz = thr->shadow_stack_end - thr->shadow_stack;
   const int newsz = 2 * sz;
-  auto newstack = (uptr *)Alloc(newsz * sizeof(uptr));
+  auto *newstack = (uptr *)Alloc(newsz * sizeof(uptr));
   internal_memcpy(newstack, thr->shadow_stack, sz * sizeof(uptr));
   Free(thr->shadow_stack);
   thr->shadow_stack = newstack;
@@ -848,7 +848,7 @@ bool ContainsSameAccess(u64 *s, u64 a, u64 sync_epoch, bool is_write) {
 ALWAYS_INLINE USED
 void MemoryAccess(ThreadState *thr, uptr pc, uptr addr,
     int kAccessSizeLog, bool kAccessIsWrite, bool kIsAtomic) {
-  u64 *shadow_mem = (u64*)MemToShadow(addr);
+  RawShadow *shadow_mem = MemToShadow(addr);
   DPrintf2("#%d: MemoryAccess: @%p %p size=%d"
       " is_write=%d shadow_mem=%p {%zx, %zx, %zx, %zx}\n",
       (int)thr->fast_state.tid(), (void*)pc, (void*)addr,
@@ -860,9 +860,9 @@ void MemoryAccess(ThreadState *thr, uptr pc, uptr addr,
     Printf("Access to non app mem %zx\n", addr);
     DCHECK(IsAppMem(addr));
   }
-  if (!IsShadowMem((uptr)shadow_mem)) {
+  if (!IsShadowMem(shadow_mem)) {
     Printf("Bad shadow addr %p (%zx)\n", shadow_mem, addr);
-    DCHECK(IsShadowMem((uptr)shadow_mem));
+    DCHECK(IsShadowMem(shadow_mem));
   }
 #endif
 
@@ -937,9 +937,9 @@ static void MemoryRangeSet(ThreadState *thr, uptr pc, uptr addr, uptr size,
   size = (size + (kShadowCell - 1)) & ~(kShadowCell - 1);
   // UnmapOrDie/MmapFixedNoReserve does not work on Windows.
   if (SANITIZER_WINDOWS || size < common_flags()->clear_shadow_mmap_threshold) {
-    u64 *p = (u64*)MemToShadow(addr);
-    CHECK(IsShadowMem((uptr)p));
-    CHECK(IsShadowMem((uptr)(p + size * kShadowCnt / kShadowCell - 1)));
+    RawShadow *p = MemToShadow(addr);
+    CHECK(IsShadowMem(p));
+    CHECK(IsShadowMem(p + size * kShadowCnt / kShadowCell - 1));
     // FIXME: may overwrite a part outside the region
     for (uptr i = 0; i < size / kShadowCell * kShadowCnt;) {
       p[i++] = val;
@@ -949,9 +949,9 @@ static void MemoryRangeSet(ThreadState *thr, uptr pc, uptr addr, uptr size,
   } else {
     // The region is big, reset only beginning and end.
     const uptr kPageSize = GetPageSizeCached();
-    u64 *begin = (u64*)MemToShadow(addr);
-    u64 *end = begin + size / kShadowCell * kShadowCnt;
-    u64 *p = begin;
+    RawShadow *begin = MemToShadow(addr);
+    RawShadow *end = begin + size / kShadowCell * kShadowCnt;
+    RawShadow *p = begin;
     // Set at least first kPageSize/2 to page boundary.
     while ((p < begin + kPageSize / kShadowSize / 2) || ((uptr)p % kPageSize)) {
       *p++ = val;
@@ -959,7 +959,7 @@ static void MemoryRangeSet(ThreadState *thr, uptr pc, uptr addr, uptr size,
         *p++ = 0;
     }
     // Reset middle part.
-    u64 *p1 = p;
+    RawShadow *p1 = p;
     p = RoundDown(end, kPageSize);
     if (!MmapFixedSuperNoReserve((uptr)p1, (uptr)p - (uptr)p1))
       Die();

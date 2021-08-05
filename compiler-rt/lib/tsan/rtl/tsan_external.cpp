@@ -10,8 +10,11 @@
 //
 //===----------------------------------------------------------------------===//
 #include "tsan_rtl.h"
-#include "tsan_interceptors.h"
 #include "sanitizer_common/sanitizer_ptrauth.h"
+
+#if !SANITIZER_GO
+#  include "tsan_interceptors.h"
+#endif
 
 namespace __tsan {
 

@@ -2211,13 +2211,10 @@ SDValue AMDGPUTargetLowering::LowerFTRUNC(SDValue Op, SelectionDAG &DAG) const {
   assert(Op.getValueType() == MVT::f64);
 
   const SDValue Zero = DAG.getConstant(0, SL, MVT::i32);
-  const SDValue One = DAG.getConstant(1, SL, MVT::i32);
-
-  SDValue VecSrc = DAG.getNode(ISD::BITCAST, SL, MVT::v2i32, Src);
 
   // Extract the upper half, since this is where we will find the sign and
   // exponent.
-  SDValue Hi = DAG.getNode(ISD::EXTRACT_VECTOR_ELT, SL, MVT::i32, VecSrc, One);
+  SDValue Hi = getHiHalf64(Src, DAG);
 
   SDValue Exp = extractF64Exponent(Hi, SL, DAG);
 
@@ -2380,72 +2377,50 @@ static bool isCttzOpc(unsigned Opc) {
 SDValue AMDGPUTargetLowering::LowerCTLZ_CTTZ(SDValue Op, SelectionDAG &DAG) const {
   SDLoc SL(Op);
   SDValue Src = Op.getOperand(0);
-  bool ZeroUndef = Op.getOpcode() == ISD::CTTZ_ZERO_UNDEF ||
-                   Op.getOpcode() == ISD::CTLZ_ZERO_UNDEF;
 
-  unsigned ISDOpc, NewOpc;
-  if (isCtlzOpc(Op.getOpcode())) {
-    ISDOpc = ISD::CTLZ_ZERO_UNDEF;
-    NewOpc = AMDGPUISD::FFBH_U32;
-  } else if (isCttzOpc(Op.getOpcode())) {
-    ISDOpc = ISD::CTTZ_ZERO_UNDEF;
-    NewOpc = AMDGPUISD::FFBL_B32;
-  } else
-    llvm_unreachable("Unexpected OPCode!!!");
+  assert(isCtlzOpc(Op.getOpcode()) || isCttzOpc(Op.getOpcode()));
+  bool Ctlz = isCtlzOpc(Op.getOpcode());
+  unsigned NewOpc = Ctlz ? AMDGPUISD::FFBH_U32 : AMDGPUISD::FFBL_B32;
 
+  bool ZeroUndef = Op.getOpcode() == ISD::CTLZ_ZERO_UNDEF ||
+                   Op.getOpcode() == ISD::CTTZ_ZERO_UNDEF;
 
-  if (ZeroUndef && Src.getValueType() == MVT::i32)
-    return DAG.getNode(NewOpc, SL, MVT::i32, Src);
-
-  SDValue Vec = DAG.getNode(ISD::BITCAST, SL, MVT::v2i32, Src);
-
-  const SDValue Zero = DAG.getConstant(0, SL, MVT::i32);
-  const SDValue One = DAG.getConstant(1, SL, MVT::i32);
-
-  SDValue Lo = DAG.getNode(ISD::EXTRACT_VECTOR_ELT, SL, MVT::i32, Vec, Zero);
-  SDValue Hi = DAG.getNode(ISD::EXTRACT_VECTOR_ELT, SL, MVT::i32, Vec, One);
-
-  EVT SetCCVT = getSetCCResultType(DAG.getDataLayout(),
-                                   *DAG.getContext(), MVT::i32);
-
-  SDValue HiOrLo = isCtlzOpc(Op.getOpcode()) ? Hi : Lo;
-  SDValue Hi0orLo0 = DAG.getSetCC(SL, SetCCVT, HiOrLo, Zero, ISD::SETEQ);
-
-  SDValue OprLo = DAG.getNode(ISDOpc, SL, MVT::i32, Lo);
-  SDValue OprHi = DAG.getNode(ISDOpc, SL, MVT::i32, Hi);
-
-  const SDValue Bits32 = DAG.getConstant(32, SL, MVT::i32);
-  SDValue Add, NewOpr;
-  if (isCtlzOpc(Op.getOpcode())) {
-    Add = DAG.getNode(ISD::ADD, SL, MVT::i32, OprLo, Bits32);
-    // ctlz(x) = hi_32(x) == 0 ? ctlz(lo_32(x)) + 32 : ctlz(hi_32(x))
-    NewOpr = DAG.getNode(ISD::SELECT, SL, MVT::i32, Hi0orLo0, Add, OprHi);
-  } else {
-    Add = DAG.getNode(ISD::ADD, SL, MVT::i32, OprHi, Bits32);
-    // cttz(x) = lo_32(x) == 0 ? cttz(hi_32(x)) + 32 : cttz(lo_32(x))
-    NewOpr = DAG.getNode(ISD::SELECT, SL, MVT::i32, Hi0orLo0, Add, OprLo);
+  if (Src.getValueType() == MVT::i32) {
+    // (ctlz hi:lo) -> (umin (ffbh src), 32)
+    // (cttz hi:lo) -> (umin (ffbl src), 32)
+    // (ctlz_zero_undef src) -> (ffbh src)
+    // (cttz_zero_undef src) -> (ffbl src)
+    SDValue NewOpr = DAG.getNode(NewOpc, SL, MVT::i32, Src);
+    if (!ZeroUndef) {
+      const SDValue Const32 = DAG.getConstant(32, SL, MVT::i32);
+      NewOpr = DAG.getNode(ISD::UMIN, SL, MVT::i32, NewOpr, Const32);
+    }
+    return NewOpr;
   }
 
+  SDValue Lo, Hi;
+  std::tie(Lo, Hi) = split64BitValue(Src, DAG);
+
+  SDValue OprLo = DAG.getNode(NewOpc, SL, MVT::i32, Lo);
+  SDValue OprHi = DAG.getNode(NewOpc, SL, MVT::i32, Hi);
+
+  // (ctlz hi:lo) -> (umin3 (ffbh hi), (uaddsat (ffbh lo), 32), 64)
+  // (cttz hi:lo) -> (umin3 (uaddsat (ffbl hi), 32), (ffbl lo), 64)
+  // (ctlz_zero_undef hi:lo) -> (umin (ffbh hi), (add (ffbh lo), 32))
+  // (cttz_zero_undef hi:lo) -> (umin (add (ffbl hi), 32), (ffbl lo))
+
+  unsigned AddOpc = ZeroUndef ? ISD::ADD : ISD::UADDSAT;
+  const SDValue Const32 = DAG.getConstant(32, SL, MVT::i32);
+  if (Ctlz)
+    OprLo = DAG.getNode(AddOpc, SL, MVT::i32, OprLo, Const32);
+  else
+    OprHi = DAG.getNode(AddOpc, SL, MVT::i32, OprHi, Const32);
+
+  SDValue NewOpr;
+  NewOpr = DAG.getNode(ISD::UMIN, SL, MVT::i32, OprLo, OprHi);
   if (!ZeroUndef) {
-    // Test if the full 64-bit input is zero.
-
-    // FIXME: DAG combines turn what should be an s_and_b64 into a v_or_b32,
-    // which we probably don't want.
-    SDValue LoOrHi = isCtlzOpc(Op.getOpcode()) ? Lo : Hi;
-    SDValue Lo0OrHi0 = DAG.getSetCC(SL, SetCCVT, LoOrHi, Zero, ISD::SETEQ);
-    SDValue SrcIsZero = DAG.getNode(ISD::AND, SL, SetCCVT, Lo0OrHi0, Hi0orLo0);
-
-    // TODO: If i64 setcc is half rate, it can result in 1 fewer instruction
-    // with the same cycles, otherwise it is slower.
-    // SDValue SrcIsZero = DAG.getSetCC(SL, SetCCVT, Src,
-    // DAG.getConstant(0, SL, MVT::i64), ISD::SETEQ);
-
-    const SDValue Bits32 = DAG.getConstant(64, SL, MVT::i32);
-
-    // The instruction returns -1 for 0 input, but the defined intrinsic
-    // behavior is to return the number of bits.
-    NewOpr = DAG.getNode(ISD::SELECT, SL, MVT::i32,
-                         SrcIsZero, Bits32, NewOpr);
+    const SDValue Const64 = DAG.getConstant(64, SL, MVT::i32);
+    NewOpr = DAG.getNode(ISD::UMIN, SL, MVT::i32, NewOpr, Const64);
   }
 
   return DAG.getNode(ISD::ZERO_EXTEND, SL, MVT::i64, NewOpr);
@@ -2573,12 +2548,8 @@ SDValue AMDGPUTargetLowering::LowerINT_TO_FP64(SDValue Op, SelectionDAG &DAG,
   SDLoc SL(Op);
   SDValue Src = Op.getOperand(0);
 
-  SDValue BC = DAG.getNode(ISD::BITCAST, SL, MVT::v2i32, Src);
-
-  SDValue Lo = DAG.getNode(ISD::EXTRACT_VECTOR_ELT, SL, MVT::i32, BC,
-                           DAG.getConstant(0, SL, MVT::i32));
-  SDValue Hi = DAG.getNode(ISD::EXTRACT_VECTOR_ELT, SL, MVT::i32, BC,
-                           DAG.getConstant(1, SL, MVT::i32));
+  SDValue Lo, Hi;
+  std::tie(Lo, Hi) = split64BitValue(Src, DAG);
 
   SDValue CvtHi = DAG.getNode(Signed ? ISD::SINT_TO_FP : ISD::UINT_TO_FP,
                               SL, MVT::f64, Hi);
@@ -3313,11 +3284,9 @@ SDValue AMDGPUTargetLowering::performSrlCombine(SDNode *N,
   // srl i64:x, C for C >= 32
   // =>
   //   build_pair (srl hi_32(x), C - 32), 0
-  SDValue One = DAG.getConstant(1, SL, MVT::i32);
   SDValue Zero = DAG.getConstant(0, SL, MVT::i32);
 
-  SDValue VecOp = DAG.getNode(ISD::BITCAST, SL, MVT::v2i32, LHS);
-  SDValue Hi = DAG.getNode(ISD::EXTRACT_VECTOR_ELT, SL, MVT::i32, VecOp, One);
+  SDValue Hi = getHiHalf64(LHS, DAG);
 
   SDValue NewConst = DAG.getConstant(ShiftAmt - 32, SL, MVT::i32);
   SDValue NewShift = DAG.getNode(ISD::SRL, SL, MVT::i32, Hi, NewConst);

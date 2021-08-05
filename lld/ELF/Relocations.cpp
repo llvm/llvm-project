@@ -527,6 +527,13 @@ static SmallSet<SharedSymbol *, 4> getSymbolsAt(SharedSymbol &ss) {
     if (auto *alias = dyn_cast_or_null<SharedSymbol>(sym))
       ret.insert(alias);
   }
+
+  // The loop does not check SHT_GNU_verneed, so ret does not contain
+  // non-default version symbols. If ss has a non-default version, ret won't
+  // contain ss. Just add ss unconditionally. If a non-default version alias is
+  // separately copy relocated, it and ss will have different addresses.
+  // Fortunately this case is impractical and fails with GNU ld as well.
+  ret.insert(&ss);
   return ret;
 }
 

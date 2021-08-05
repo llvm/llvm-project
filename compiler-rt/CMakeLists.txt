@@ -546,6 +546,14 @@ set(COMPILER_RT_GTEST_CFLAGS
   -I${COMPILER_RT_GTEST_PATH}/include
   -I${COMPILER_RT_GTEST_PATH}
 )
+if(CMAKE_SYSTEM_NAME MATCHES "FreeBSD")
+  # FreeBSD has its pthread functions marked with thread safety annotations, but
+  # googletest is not compatible with such annotations. Disable the thread
+  # safety warnings-as-errors until googletest has been fixed.
+  list(APPEND NO_THREAD_SAFETY_FLAGS ${THREAD_SAFETY_FLAGS})
+  list(TRANSFORM NO_THREAD_SAFETY_FLAGS REPLACE "error=" "no-")
+  list(APPEND COMPILER_RT_GTEST_CFLAGS ${NO_THREAD_SAFETY_FLAGS})
+endif()
 
 # Mocking support.
 set(COMPILER_RT_GMOCK_PATH ${LLVM_MAIN_SRC_DIR}/utils/unittest/googlemock)

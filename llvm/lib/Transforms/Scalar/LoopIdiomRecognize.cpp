@@ -222,7 +222,7 @@ private:
                                Instruction *TheStore,
                                SmallPtrSetImpl<Instruction *> &Stores,
                                const SCEVAddRecExpr *Ev, const SCEV *BECount,
-                               bool NegStride, bool IsLoopMemset = false);
+                               bool IsNegStride, bool IsLoopMemset = false);
   bool processLoopStoreOfLoopLoad(StoreInst *SI, const SCEV *BECount);
   bool processLoopStoreOfLoopLoad(Value *DestPtr, Value *SourcePtr,
                                   unsigned StoreSize, MaybeAlign StoreAlign,
@@ -784,13 +784,13 @@ bool LoopIdiomRecognize::processLoopStores(SmallVectorImpl<StoreInst *> &SL,
     if (StoreSize != Stride && StoreSize != -Stride)
       continue;
 
-    bool NegStride = StoreSize == -Stride;
+    bool IsNegStride = StoreSize == -Stride;
 
     const SCEV *StoreSizeSCEV = SE->getConstant(BECount->getType(), StoreSize);
     if (processLoopStridedStore(StorePtr, StoreSizeSCEV,
                                 MaybeAlign(HeadStore->getAlignment()),
                                 StoredVal, HeadStore, AdjacentStores, StoreEv,
-                                BECount, NegStride)) {
+                                BECount, IsNegStride)) {
       TransformedStores.insert(AdjacentStores.begin(), AdjacentStores.end());
       Changed = true;
     }
@@ -936,11 +936,11 @@ bool LoopIdiomRecognize::processLoopMemSet(MemSetInst *MSI,
 
   SmallPtrSet<Instruction *, 1> MSIs;
   MSIs.insert(MSI);
-  bool NegStride = SizeInBytes == -Stride;
+  bool IsNegStride = SizeInBytes == -Stride;
   return processLoopStridedStore(Pointer, SE->getSCEV(MSI->getLength()),
                                  MaybeAlign(MSI->getDestAlignment()),
-                                 SplatValue, MSI, MSIs, Ev, BECount, NegStride,
-                                 /*IsLoopMemset=*/true);
+                                 SplatValue, MSI, MSIs, Ev, BECount,
+                                 IsNegStride, /*IsLoopMemset=*/true);
 }
 
 /// mayLoopAccessLocation - Return true if the specified loop might access the
@@ -1058,7 +1058,7 @@ bool LoopIdiomRecognize::processLoopStridedStore(
     Value *DestPtr, const SCEV *StoreSizeSCEV, MaybeAlign StoreAlignment,
     Value *StoredVal, Instruction *TheStore,
     SmallPtrSetImpl<Instruction *> &Stores, const SCEVAddRecExpr *Ev,
-    const SCEV *BECount, bool NegStride, bool IsLoopMemset) {
+    const SCEV *BECount, bool IsNegStride, bool IsLoopMemset) {
   Value *SplatValue = isBytewiseValue(StoredVal, *DL);
   Constant *PatternValue = nullptr;
 
@@ -1083,7 +1083,7 @@ bool LoopIdiomRecognize::processLoopStridedStore(
   bool Changed = false;
   const SCEV *Start = Ev->getStart();
   // Handle negative strided loops.
-  if (NegStride)
+  if (IsNegStride)
     Start = getStartForNegStride(Start, BECount, IntIdxTy, StoreSizeSCEV, SE);
 
   // TODO: ideally we should still be able to generate memset if SCEV expander
@@ -1240,11 +1240,11 @@ bool LoopIdiomRecognize::processLoopStoreOfLoopLoad(
   Type *IntIdxTy = Builder.getIntNTy(DL->getIndexSizeInBits(StrAS));
 
   APInt Stride = getStoreStride(StoreEv);
-  bool NegStride = StoreSize == -Stride;
+  bool IsNegStride = StoreSize == -Stride;
 
   const SCEV *StoreSizeSCEV = SE->getConstant(BECount->getType(), StoreSize);
   // Handle negative strided loops.
-  if (NegStride)
+  if (IsNegStride)
     StrStart =
         getStartForNegStride(StrStart, BECount, IntIdxTy, StoreSizeSCEV, SE);
 
@@ -1296,7 +1296,7 @@ bool LoopIdiomRecognize::processLoopStoreOfLoopLoad(
   unsigned LdAS = SourcePtr->getType()->getPointerAddressSpace();
 
   // Handle negative strided loops.
-  if (NegStride)
+  if (IsNegStride)
     LdStart =
         getStartForNegStride(LdStart, BECount, IntIdxTy, StoreSizeSCEV, SE);
 
@@ -1332,8 +1332,8 @@ bool LoopIdiomRecognize::processLoopStoreOfLoopLoad(
         DL->getTypeSizeInBits(TheLoad->getType()).getFixedSize() / 8;
     if (BP1 != BP2 || LoadSize != int64_t(StoreSize))
       return Changed;
-    if ((!NegStride && LoadOff < StoreOff + int64_t(StoreSize)) ||
-        (NegStride && LoadOff + LoadSize > StoreOff))
+    if ((!IsNegStride && LoadOff < StoreOff + int64_t(StoreSize)) ||
+        (IsNegStride && LoadOff + LoadSize > StoreOff))
       return Changed;
   }
 

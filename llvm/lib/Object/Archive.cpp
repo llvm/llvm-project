@@ -418,7 +418,7 @@ Expected<bool> Archive::Child::isThinMember() const {
   if (!NameOrErr)
     return NameOrErr.takeError();
   StringRef Name = NameOrErr.get();
-  return Parent->IsThin && Name != "/" && Name != "//";
+  return Parent->IsThin && Name != "/" && Name != "//" && Name != "/SYM64/";
 }
 
 Expected<std::string> Archive::Child::getFullName() const {

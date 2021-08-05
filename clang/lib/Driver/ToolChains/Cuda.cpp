@@ -220,8 +220,7 @@ CudaInstallationDetector::CudaInstallationDetector(
       VersionInfo.Version = (FS.exists(LibDevicePath + "/libdevice.10.bc"))
                                 ? Version = CudaVersion::LATEST
                                 : Version = CudaVersion::CUDA_70;
-      VersionInfo.DetectedVersion =
-          "No version found in version.txt or cuda.h.";
+      VersionInfo.DetectedVersion = "no version found in version.txt or cuda.h";
     }
 
     Version = VersionInfo.Version;

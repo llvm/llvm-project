@@ -1570,20 +1570,18 @@ static void DumpSymbolContextList(ExecutionContextScope *exe_scope,
 static size_t LookupFunctionInModule(CommandInterpreter &interpreter,
                                      Stream &strm, Module *module,
                                      const char *name, bool name_is_regex,
-                                     bool include_inlines, bool include_symbols,
+                                     const ModuleFunctionSearchOptions &options,
                                      bool verbose) {
   if (module && name && name[0]) {
     SymbolContextList sc_list;
     size_t num_matches = 0;
     if (name_is_regex) {
       RegularExpression function_name_regex((llvm::StringRef(name)));
-      module->FindFunctions(function_name_regex, include_symbols,
-                            include_inlines, sc_list);
+      module->FindFunctions(function_name_regex, options, sc_list);
     } else {
       ConstString function_name(name);
       module->FindFunctions(function_name, CompilerDeclContext(),
-                            eFunctionNameTypeAuto, include_symbols,
-                            include_inlines, sc_list);
+                            eFunctionNameTypeAuto, options, sc_list);
     }
     num_matches = sc_list.GetSize();
     if (num_matches) {
@@ -3281,8 +3279,11 @@ protected:
 
     if (m_options.m_type == eLookupTypeFunctionOrSymbol) {
       ConstString function_name(m_options.m_str.c_str());
+      ModuleFunctionSearchOptions function_options;
+      function_options.include_symbols = true;
+      function_options.include_inlines = false;
       target->GetImages().FindFunctions(function_name, eFunctionNameTypeAuto,
-                                        true, false, sc_list);
+                                        function_options, sc_list);
     } else if (m_options.m_type == eLookupTypeAddress && target) {
       Address addr;
       if (target->GetSectionLoadList().ResolveLoadAddress(m_options.m_addr,
@@ -3753,13 +3754,15 @@ public:
     case eLookupTypeFunctionOrSymbol:
     case eLookupTypeFunction:
       if (!m_options.m_str.empty()) {
-        if (LookupFunctionInModule(
-                m_interpreter, result.GetOutputStream(), module,
-                m_options.m_str.c_str(), m_options.m_use_regex,
-                m_options.m_include_inlines,
-                m_options.m_type ==
-                    eLookupTypeFunctionOrSymbol, // include symbols
-                m_options.m_verbose)) {
+        ModuleFunctionSearchOptions function_options;
+        function_options.include_symbols =
+            m_options.m_type == eLookupTypeFunctionOrSymbol;
+        function_options.include_inlines = m_options.m_include_inlines;
+
+        if (LookupFunctionInModule(m_interpreter, result.GetOutputStream(),
+                                   module, m_options.m_str.c_str(),
+                                   m_options.m_use_regex, function_options,
+                                   m_options.m_verbose)) {
           result.SetStatus(eReturnStatusSuccessFinishResult);
           return true;
         }

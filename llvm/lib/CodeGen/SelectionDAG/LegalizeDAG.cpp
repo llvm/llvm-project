@@ -1181,6 +1181,7 @@ void SelectionDAGLegalize::LegalizeOp(SDNode *Node) {
         Node->getOpcode(), Node->getOperand(0).getValueType());
     break;
   case ISD::VECREDUCE_SEQ_FADD:
+  case ISD::VECREDUCE_SEQ_FMUL:
     Action = TLI.getOperationAction(
         Node->getOpcode(), Node->getOperand(1).getValueType());
     break;

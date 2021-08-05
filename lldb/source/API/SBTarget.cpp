@@ -1831,11 +1831,13 @@ lldb::SBSymbolContextList SBTarget::FindFunctions(const char *name,
   if (!target_sp)
     return LLDB_RECORD_RESULT(sb_sc_list);
 
-  const bool symbols_ok = true;
-  const bool inlines_ok = true;
+  ModuleFunctionSearchOptions function_options;
+  function_options.include_symbols = true;
+  function_options.include_inlines = true;
+
   FunctionNameType mask = static_cast<FunctionNameType>(name_type_mask);
-  target_sp->GetImages().FindFunctions(ConstString(name), mask, symbols_ok,
-                                       inlines_ok, *sb_sc_list);
+  target_sp->GetImages().FindFunctions(ConstString(name), mask,
+                                       function_options, *sb_sc_list);
   return LLDB_RECORD_RESULT(sb_sc_list);
 }
 
@@ -1851,20 +1853,25 @@ lldb::SBSymbolContextList SBTarget::FindGlobalFunctions(const char *name,
     llvm::StringRef name_ref(name);
     TargetSP target_sp(GetSP());
     if (target_sp) {
+      ModuleFunctionSearchOptions function_options;
+      function_options.include_symbols = true;
+      function_options.include_inlines = true;
+
       std::string regexstr;
       switch (matchtype) {
       case eMatchTypeRegex:
-        target_sp->GetImages().FindFunctions(RegularExpression(name_ref), true,
-                                             true, *sb_sc_list);
+        target_sp->GetImages().FindFunctions(RegularExpression(name_ref),
+                                             function_options, *sb_sc_list);
         break;
       case eMatchTypeStartsWith:
         regexstr = llvm::Regex::escape(name) + ".*";
-        target_sp->GetImages().FindFunctions(RegularExpression(regexstr), true,
-                                             true, *sb_sc_list);
+        target_sp->GetImages().FindFunctions(RegularExpression(regexstr),
+                                             function_options, *sb_sc_list);
         break;
       default:
-        target_sp->GetImages().FindFunctions(
-            ConstString(name), eFunctionNameTypeAny, true, true, *sb_sc_list);
+        target_sp->GetImages().FindFunctions(ConstString(name),
+                                             eFunctionNameTypeAny,
+                                             function_options, *sb_sc_list);
         break;
       }
     }

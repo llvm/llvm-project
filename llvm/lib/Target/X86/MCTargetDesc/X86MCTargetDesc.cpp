@@ -405,6 +405,7 @@ public:
   bool evaluateBranch(const MCInst &Inst, uint64_t Addr, uint64_t Size,
                       uint64_t &Target) const override;
   Optional<uint64_t> evaluateMemoryOperandAddress(const MCInst &Inst,
+                                                  const MCSubtargetInfo *STI,
                                                   uint64_t Addr,
                                                   uint64_t Size) const override;
 };
@@ -532,7 +533,8 @@ bool X86MCInstrAnalysis::evaluateBranch(const MCInst &Inst, uint64_t Addr,
 }
 
 Optional<uint64_t> X86MCInstrAnalysis::evaluateMemoryOperandAddress(
-    const MCInst &Inst, uint64_t Addr, uint64_t Size) const {
+    const MCInst &Inst, const MCSubtargetInfo *STI, uint64_t Addr,
+    uint64_t Size) const {
   const MCInstrDesc &MCID = Info->get(Inst.getOpcode());
   int MemOpStart = X86II::getMemoryOperandNo(MCID.TSFlags);
   if (MemOpStart == -1)

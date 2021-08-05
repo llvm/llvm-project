@@ -200,7 +200,7 @@ def t2addrmode_imm12 : MemOperand,
 }
 
 // t2ldrlabel  := imm12
-def t2ldrlabel : Operand<i32> {
+def t2ldrlabel : MemOperand {
   let EncoderMethod = "getAddrModeImm12OpValue";
   let PrintMethod = "printThumbLdrLabelOperand";
 }
@@ -1927,7 +1927,7 @@ def : InstAlias<"pli${p}.w\t$addr",
 
 // pci variant is very similar to i12, but supports negative offsets
 // from the PC. Only PLD and PLI have pci variants (not PLDW)
-class T2Iplpci<bits<1> inst, string opc> : T2Iso<(outs), (ins t2ldrlabel:$addr),
+class T2Iplpci<bits<1> inst, string opc> : T2Ipc<(outs), (ins t2ldrlabel:$addr),
                IIC_Preload, opc, "\t$addr",
                [(ARMPreload (ARMWrapper tconstpool:$addr),
                 (i32 0), (i32 inst))]>, Sched<[WritePreLd]> {
@@ -4274,8 +4274,9 @@ def t2ABS : PseudoInst<(outs rGPR:$dst), (ins rGPR:$src),
 //===----------------------------------------------------------------------===//
 // Coprocessor load/store -- for disassembly only
 //
-class T2CI<bits<4> op31_28, dag oops, dag iops, string opc, string asm, list<dag> pattern>
-  : T2I<oops, iops, NoItinerary, opc, asm, pattern> {
+class T2CI<bits<4> op31_28, dag oops, dag iops, string opc, string asm,
+           list<dag> pattern, AddrMode am = AddrModeNone>
+  : T2I<oops, iops, NoItinerary, opc, asm, pattern, am> {
   let Inst{31-28} = op31_28;
   let Inst{27-25} = 0b110;
 }
@@ -4283,7 +4284,7 @@ class T2CI<bits<4> op31_28, dag oops, dag iops, string opc, string asm, list<dag
 multiclass t2LdStCop<bits<4> op31_28, bit load, bit Dbit, string asm, list<dag> pattern> {
   def _OFFSET : T2CI<op31_28,
                      (outs), (ins p_imm:$cop, c_imm:$CRd, addrmode5:$addr),
-                     asm, "\t$cop, $CRd, $addr", pattern> {
+                     asm, "\t$cop, $CRd, $addr", pattern, AddrMode5> {
     bits<13> addr;
     bits<4> cop;
     bits<4> CRd;

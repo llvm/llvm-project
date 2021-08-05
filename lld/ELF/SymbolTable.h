@@ -70,7 +70,7 @@ private:
 
   llvm::StringMap<std::vector<Symbol *>> &getDemangledSyms();
   bool assignExactVersion(SymbolVersion ver, uint16_t versionId,
-                          StringRef versionName);
+                          StringRef versionName, bool includeNonDefault);
   void assignWildcardVersion(SymbolVersion ver, uint16_t versionId,
                              bool includeNonDefault);
 
