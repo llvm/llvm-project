@@ -31,6 +31,9 @@
 
 #include "lldb/Host/Config.h"
 
+#if LLDB_EDITLINE_USE_WCHAR
+#include <codecvt>
+#endif
 #include <locale>
 #include <sstream>
 #include <vector>
@@ -57,7 +60,29 @@
 namespace lldb_private {
 namespace line_editor {
 
-using EditlineGetCharCallbackType = int (*)(::EditLine *editline, wchar_t *c);
+// type alias's to help manage 8 bit and wide character versions of libedit
+#if LLDB_EDITLINE_USE_WCHAR
+using EditLineStringType = std::wstring;
+using EditLineStringStreamType = std::wstringstream;
+using EditLineCharType = wchar_t;
+#else
+using EditLineStringType = std::string;
+using EditLineStringStreamType = std::stringstream;
+using EditLineCharType = char;
+#endif
+
+// At one point the callback type of el_set getchar callback changed from char
+// to wchar_t. It is not possible to detect differentiate between the two
+// versions exactly, but this is a pretty good approximation and allows us to
+// build against almost any editline version out there.
+#if LLDB_EDITLINE_USE_WCHAR || defined(EL_CLIENTDATA) || LLDB_HAVE_EL_RFUNC_T
+using EditLineGetCharType = wchar_t;
+#else
+using EditLineGetCharType = char;
+#endif
+
+using EditlineGetCharCallbackType = int (*)(::EditLine *editline,
+                                            EditLineGetCharType *c);
 using EditlineCommandCallbackType = unsigned char (*)(::EditLine *editline,
                                                       int ch);
 using EditlinePromptCallbackType = const char *(*)(::EditLine *editline);
@@ -243,7 +268,7 @@ private:
   /// taking into account both
   /// the preceding prompt and a single trailing space occupied by a cursor when
   /// at the end of the line.
-  int CountRowsForLine(const std::string &content);
+  int CountRowsForLine(const EditLineStringType &content);
 
   /// Save the line currently being edited
   void SaveEditedLine();
@@ -256,7 +281,7 @@ private:
 
   /// Character reading implementation for EditLine that supports our multi-line
   /// editing trickery.
-  int GetCharacter(wchar_t *c);
+  int GetCharacter(EditLineGetCharType *c);
 
   /// Prompt implementation for EditLine.
   const char *Prompt();
@@ -315,7 +340,7 @@ private:
   /// single or multi-line editing.
   void ConfigureEditor(bool multiline);
 
-  bool CompleteCharacter(char ch, wchar_t &out);
+  bool CompleteCharacter(char ch, EditLineGetCharType &out);
 
   void ApplyTerminalSizeChange();
 
@@ -323,17 +348,21 @@ private:
   // verbose to put the editline calls into a function, but it
   // provides type safety, since the editline functions take varargs
   // parameters.
-  void AddFunctionToEditLine(const char *command, const char *helptext,
+  void AddFunctionToEditLine(const EditLineCharType *command,
+                             const EditLineCharType *helptext,
                              EditlineCommandCallbackType callbackFn);
   void SetEditLinePromptCallback(EditlinePromptCallbackType callbackFn);
   void SetGetCharacterFunction(EditlineGetCharCallbackType callbackFn);
 
+#if LLDB_EDITLINE_USE_WCHAR
+  std::wstring_convert<std::codecvt_utf8<wchar_t>> m_utf8conv;
+#endif
   ::EditLine *m_editline = nullptr;
   EditlineHistorySP m_history_sp;
   bool m_in_history = false;
-  std::vector<std::string> m_live_history_lines;
+  std::vector<EditLineStringType> m_live_history_lines;
   bool m_multiline_enabled = false;
-  std::vector<std::string> m_input_lines;
+  std::vector<EditLineStringType> m_input_lines;
   EditorStatus m_editor_status;
   bool m_color_prompts = true;
   int m_terminal_width = 0;
