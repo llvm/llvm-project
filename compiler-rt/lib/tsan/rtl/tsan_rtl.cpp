@@ -328,7 +328,7 @@ static void CheckShadowMapping() {
         if (p < beg || p >= end)
           continue;
         const uptr s = MemToShadow(p);
-        const uptr m = (uptr)MemToMeta(p);
+        u32 *const m = MemToMeta(p);
         VPrintf(3, "  checking pointer %p: shadow=%p meta=%p\n", p, s, m);
         CHECK(IsAppMem(p));
         CHECK(IsShadowMem(s));
@@ -338,10 +338,9 @@ static void CheckShadowMapping() {
           // Ensure that shadow and meta mappings are linear within a single
           // user range. Lots of code that processes memory ranges assumes it.
           const uptr prev_s = MemToShadow(prev);
-          const uptr prev_m = (uptr)MemToMeta(prev);
+          u32 *const prev_m = MemToMeta(prev);
           CHECK_EQ(s - prev_s, (p - prev) * kShadowMultiplier);
-          CHECK_EQ((m - prev_m) / kMetaShadowSize,
-                   (p - prev) / kMetaShadowCell);
+          CHECK_EQ(m - prev_m, (p - prev) / kMetaShadowCell);
         }
         prev = p;
       }

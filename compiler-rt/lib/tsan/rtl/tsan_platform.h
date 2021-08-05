@@ -892,7 +892,8 @@ bool IsMetaMemImpl(uptr mem) {
 }
 
 ALWAYS_INLINE
-bool IsMetaMem(uptr mem) {
+bool IsMetaMem(const u32 *p) {
+  uptr mem = reinterpret_cast<uptr>(p);
 #if defined(__aarch64__) && !defined(__APPLE__) && !SANITIZER_GO
   switch (vmaSize) {
     case 39: return IsMetaMemImpl<Mapping39>(mem);
@@ -925,7 +926,6 @@ bool IsMetaMem(uptr mem) {
   return IsMetaMemImpl<Mapping>(mem);
 #endif
 }
-
 
 template<typename Mapping>
 uptr MemToShadowImpl(uptr x) {
