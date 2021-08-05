@@ -7,6 +7,7 @@ set(TSAN_UNIT_TEST_SOURCES
   tsan_shadow_test.cpp
   tsan_stack_test.cpp
   tsan_sync_test.cpp
+  tsan_trace_test.cpp
   tsan_unit_test_main.cpp
   tsan_vector_clock_test.cpp
   )
