@@ -70,12 +70,10 @@ define i64 @vscale_non_pow2() nounwind {
 ;
 ; RV32-LABEL: vscale_non_pow2:
 ; RV32:       # %bb.0: # %entry
-; RV32-NEXT:    csrr a1, vlenb
-; RV32-NEXT:    slli a0, a1, 1
-; RV32-NEXT:    add a0, a0, a1
-; RV32-NEXT:    srli a1, a1, 3
-; RV32-NEXT:    addi a2, zero, 24
-; RV32-NEXT:    mulhu a1, a1, a2
+; RV32-NEXT:    csrr a0, vlenb
+; RV32-NEXT:    slli a1, a0, 1
+; RV32-NEXT:    add a0, a1, a0
+; RV32-NEXT:    mv a1, zero
 ; RV32-NEXT:    ret
 entry:
   %0 = call i64 @llvm.vscale.i64()

@@ -374,13 +374,16 @@ protected:
     Target *target = m_exe_ctx.GetTargetPtr();
     uint32_t addr_byte_size = target->GetArchitecture().GetAddressByteSize();
 
+    ModuleFunctionSearchOptions function_options;
+    function_options.include_symbols = false;
+    function_options.include_inlines = true;
+
     // Note: module_list can't be const& because FindFunctionSymbols isn't
     // const.
     ModuleList module_list =
         (m_module_list.GetSize() > 0) ? m_module_list : target->GetImages();
-    module_list.FindFunctions(name, eFunctionNameTypeAuto,
-                              /*include_symbols=*/false,
-                              /*include_inlines=*/true, sc_list_funcs);
+    module_list.FindFunctions(name, eFunctionNameTypeAuto, function_options,
+                              sc_list_funcs);
     size_t num_matches = sc_list_funcs.GetSize();
 
     if (!num_matches) {
@@ -874,11 +877,12 @@ protected:
   void FindMatchingFunctions(Target *target, ConstString name,
                              SymbolContextList &sc_list) {
     // Displaying the source for a symbol:
-    bool include_inlines = true;
-    bool include_symbols = false;
-
     if (m_options.num_lines == 0)
       m_options.num_lines = 10;
+
+    ModuleFunctionSearchOptions function_options;
+    function_options.include_symbols = true;
+    function_options.include_inlines = false;
 
     const size_t num_modules = m_options.modules.size();
     if (num_modules > 0) {
@@ -889,15 +893,14 @@ protected:
           ModuleSpec module_spec(module_file_spec);
           matching_modules.Clear();
           target->GetImages().FindModules(module_spec, matching_modules);
+
           matching_modules.FindFunctions(name, eFunctionNameTypeAuto,
-                                         include_symbols, include_inlines,
-                                         sc_list);
+                                         function_options, sc_list);
         }
       }
     } else {
       target->GetImages().FindFunctions(name, eFunctionNameTypeAuto,
-                                        include_symbols, include_inlines,
-                                        sc_list);
+                                        function_options, sc_list);
     }
   }
 

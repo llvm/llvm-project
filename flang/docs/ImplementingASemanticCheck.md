@@ -12,7 +12,7 @@
    :local:
 ```
 
-I recently added a semantic check to the f18 compiler front end.  This document
+I recently added a semantic check to the Flang compiler front end.  This document
 describes my thought process and the resulting implementation.
 
 For more information about the compiler, start with the 
@@ -67,7 +67,7 @@ of the call to `intentOutFunc()`:
 
 I also used this program to produce a parse tree for the program using the command:
 ```bash
-  f18 -fdebug-dump-parse-tree -fsyntax-only testfun.f90
+  flang-new -fc1 -fdebug-dump-parse-tree testfun.f90
 ```
 
 Here's the relevant fragment of the parse tree produced by the compiler:
@@ -295,7 +295,7 @@ In `lib/Semantics/check-do.cpp`, I added an (almost empty) implementation:
 I then built the compiler with these changes and ran it on my test program.
 This time, I made sure to invoke semantic checking.  Here's the command I used:
 ```bash
-  f18 -fdebug-resolve-names -fdebug-dump-parse-tree -funparse-with-symbols testfun.f90
+  flang-new -fc1 -fdebug-unparse-with-symbols testfun.f90
 ```
 
 This produced the output:
@@ -361,7 +361,7 @@ I noted that a `SymbolSet` did not actually contain an
 full `semantics::Symbol` objects into the set.  Ideally, we would be able to create an
 `std::set<Symbol &>` (a set of C++ references to symbols).  But C++ doesn't
 support sets that contain references.  This limitation is part of the rationale
-for the f18 implementation of type `common::Reference`, which is defined in
+for the Flang implementation of type `common::Reference`, which is defined in
   `include/flang/Common/reference.h`.
 
 `SymbolRef`, the specialization of the template `common::Reference` for

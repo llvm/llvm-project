@@ -51,6 +51,11 @@ Symbols:
 # RUN: llvm-nm --print-armap %t.a | FileCheck %s
 
 # RUN: rm -f %t.a
+# RUN: env SYM64_THRESHOLD=0 llvm-ar crTs %t.a %t.elf-x86-64 %t2.elf-x86-64
+# RUN: llvm-nm --print-armap  %t.a | FileCheck %s
+# RUN: grep '/SYM64/' %t.a
+ 
+# RUN: rm -f %t.a
 # RUN: env SYM64_THRESHOLD=836 llvm-ar rcsU %t.a %t.elf-x86-64 %t2.elf-x86-64
 # RUN: llvm-nm --print-armap %t.a | FileCheck %s
 # RUN: grep '/SYM64/' %t.a

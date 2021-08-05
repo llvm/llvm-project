@@ -264,8 +264,10 @@ BreakpointResolverName::SearchCallback(SearchFilter &filter,
   bool filter_by_cu =
       (filter.GetFilterRequiredItems() & eSymbolContextCompUnit) != 0;
   bool filter_by_language = (m_language != eLanguageTypeUnknown);
-  const bool include_symbols = !filter_by_cu;
-  const bool include_inlines = true;
+
+  ModuleFunctionSearchOptions function_options;
+  function_options.include_symbols = !filter_by_cu;
+  function_options.include_inlines = true;
 
   switch (m_match_type) {
   case Breakpoint::Exact:
@@ -274,8 +276,7 @@ BreakpointResolverName::SearchCallback(SearchFilter &filter,
         const size_t start_func_idx = func_list.GetSize();
         context.module_sp->FindFunctions(
             lookup.GetLookupName(), CompilerDeclContext(),
-            lookup.GetNameTypeMask(), include_symbols, include_inlines,
-            func_list);
+            lookup.GetNameTypeMask(), function_options, func_list);
 
         const size_t end_func_idx = func_list.GetSize();
 
@@ -286,10 +287,7 @@ BreakpointResolverName::SearchCallback(SearchFilter &filter,
     break;
   case Breakpoint::Regexp:
     if (context.module_sp) {
-      context.module_sp->FindFunctions(
-          m_regex,
-          !filter_by_cu, // include symbols only if we aren't filtering by CU
-          include_inlines, func_list);
+      context.module_sp->FindFunctions(m_regex, function_options, func_list);
     }
     break;
   case Breakpoint::Glob:

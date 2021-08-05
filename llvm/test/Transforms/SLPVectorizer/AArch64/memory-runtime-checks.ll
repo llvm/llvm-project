@@ -352,3 +352,103 @@ bb1:                                              ; preds = %bb
 bb15:                                             ; preds = %bb15, %bb14
   br label %bb15
 }
+
+%struct = type { i32, i32, float, float }
+
+; Some points we collected as candidates for runtime checks have been removed
+; before generating runtime checks. Make sure versioning is skipped.
+define void @test_bounds_removed_before_runtime_checks(%struct * %A, i32** %B, i1 %c) {
+; CHECK-LABEL: @test_bounds_removed_before_runtime_checks(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[TMP11:%.*]] = getelementptr inbounds [[STRUCT:%.*]], %struct* [[A:%.*]], i64 0, i32 0
+; CHECK-NEXT:    [[TMP12:%.*]] = getelementptr inbounds [[STRUCT]], %struct* [[A]], i64 0, i32 1
+; CHECK-NEXT:    [[TMP0:%.*]] = bitcast i32* [[TMP11]] to <2 x i32>*
+; CHECK-NEXT:    store <2 x i32> <i32 10, i32 300>, <2 x i32>* [[TMP0]], align 8
+; CHECK-NEXT:    [[TMP13:%.*]] = load i32*, i32** [[B:%.*]], align 8
+; CHECK-NEXT:    br i1 [[C:%.*]], label [[BB23:%.*]], label [[BB14:%.*]]
+; CHECK:       bb14:
+; CHECK-NEXT:    [[TMP15:%.*]] = sext i32 10 to i64
+; CHECK-NEXT:    [[TMP16:%.*]] = add nsw i64 2, [[TMP15]]
+; CHECK-NEXT:    [[TMP17:%.*]] = getelementptr inbounds i32, i32* [[TMP13]], i64 [[TMP16]]
+; CHECK-NEXT:    [[TMP18:%.*]] = bitcast i32* [[TMP17]] to i8*
+; CHECK-NEXT:    [[TMP19:%.*]] = getelementptr inbounds i8, i8* [[TMP18]], i64 3
+; CHECK-NEXT:    [[TMP20:%.*]] = getelementptr inbounds [[STRUCT]], %struct* [[A]], i64 0, i32 2
+; CHECK-NEXT:    store float 0.000000e+00, float* [[TMP20]], align 8
+; CHECK-NEXT:    [[TMP21:%.*]] = load i8, i8* [[TMP19]], align 1
+; CHECK-NEXT:    [[TMP22:%.*]] = getelementptr inbounds [[STRUCT]], %struct* [[A]], i64 0, i32 3
+; CHECK-NEXT:    store float 0.000000e+00, float* [[TMP22]], align 4
+; CHECK-NEXT:    br label [[BB23]]
+; CHECK:       bb23:
+; CHECK-NEXT:    ret void
+;
+entry:
+  %tmp1 = fmul float 10.0, 20.0
+  %tmp2 = fptosi float %tmp1 to i32
+  %tmp3 = fmul float 30.0, 20.0
+  %tmp4 = fptosi float %tmp3 to i32
+  %tmp5 = icmp sgt i32 100, %tmp2
+  %tmp6 = select i1 %tmp5, i32 %tmp2, i32 10
+  %tmp7 = select i1 false, i32 0, i32 %tmp6
+  %tmp8 = icmp sgt i32 200, %tmp4
+  %tmp9 = select i1 %tmp8, i32 %tmp4, i32 300
+  %tmp10 = select i1 false, i32 0, i32 %tmp9
+  %tmp11 = getelementptr inbounds %struct, %struct* %A, i64 0, i32 0
+  store i32 %tmp7, i32* %tmp11, align 8
+  %tmp12 = getelementptr inbounds %struct, %struct* %A, i64 0, i32 1
+  store i32 %tmp10, i32* %tmp12, align 4
+  %tmp13 = load i32*, i32** %B, align 8
+  br i1 %c, label %bb23, label %bb14
+
+bb14:
+  %tmp15 = sext i32 %tmp7 to i64
+  %tmp16 = add nsw i64 2, %tmp15
+  %tmp17 = getelementptr inbounds i32, i32* %tmp13, i64 %tmp16
+  %tmp18 = bitcast i32* %tmp17 to i8*
+  %tmp19 = getelementptr inbounds i8, i8* %tmp18, i64 3
+  %tmp20 = getelementptr inbounds %struct, %struct* %A, i64 0, i32 2
+  store float 0.0, float* %tmp20, align 8
+  %tmp21 = load i8, i8* %tmp19, align 1
+  %tmp22 = getelementptr inbounds %struct, %struct* %A, i64 0, i32 3
+  store float 0.0, float* %tmp22, align 4
+  br label %bb23
+
+bb23:
+  ret void
+}
+
+; In this test there's a single bound, do not generate runtime checks.
+define void @single_membound(double* %arg, double* %arg1, double %x) {
+; CHECK-LABEL: @single_membound(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[TMP:%.*]] = fsub double [[X:%.*]], 9.900000e+01
+; CHECK-NEXT:    [[TMP9:%.*]] = getelementptr inbounds double, double* [[ARG:%.*]], i64 1
+; CHECK-NEXT:    store double [[TMP]], double* [[TMP9]], align 8
+; CHECK-NEXT:    [[TMP10:%.*]] = getelementptr inbounds double, double* [[ARG1:%.*]], i64 0
+; CHECK-NEXT:    [[TMP12:%.*]] = load double, double* [[TMP10]], align 8
+; CHECK-NEXT:    [[TMP13:%.*]] = fsub double 1.000000e+00, [[TMP12]]
+; CHECK-NEXT:    [[TMP14:%.*]] = getelementptr inbounds double, double* [[ARG]], i64 2
+; CHECK-NEXT:    br label [[BB15:%.*]]
+; CHECK:       bb15:
+; CHECK-NEXT:    [[TMP16:%.*]] = fmul double [[TMP]], 2.000000e+01
+; CHECK-NEXT:    store double [[TMP16]], double* [[TMP9]], align 8
+; CHECK-NEXT:    [[TMP17:%.*]] = fmul double [[TMP13]], 3.000000e+01
+; CHECK-NEXT:    store double [[TMP17]], double* [[TMP14]], align 8
+; CHECK-NEXT:    ret void
+;
+entry:
+  %tmp = fsub double %x, 99.0
+  %tmp9 = getelementptr inbounds double, double* %arg, i64 1
+  store double %tmp, double* %tmp9, align 8
+  %tmp10 = getelementptr inbounds double, double* %arg1, i64 0
+  %tmp12 = load double, double* %tmp10, align 8
+  %tmp13 = fsub double 1.0, %tmp12
+  %tmp14 = getelementptr inbounds double, double* %arg, i64 2
+  br label %bb15
+
+bb15:
+  %tmp16 = fmul double %tmp, 20.0
+  store double %tmp16, double* %tmp9, align 8
+  %tmp17 = fmul double %tmp13, 30.0
+  store double %tmp17, double* %tmp14, align 8
+  ret void
+}

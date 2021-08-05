@@ -7,9 +7,7 @@
 #===------------------------------------------------------------------------===#
 
 add_subdirectory(f18)
-if(FLANG_BUILD_NEW_DRIVER)
-  add_subdirectory(flang-driver)
-endif()
+add_subdirectory(flang-driver)
 add_subdirectory(tco)
 add_subdirectory(f18-parse-demo)
 add_subdirectory(fir-opt)
