@@ -5436,6 +5436,7 @@ void LoopVectorizationCostModel::collectLoopUniforms(ElementCount VF) {
         case Intrinsic::lifetime_end:
           if (TheLoop->hasLoopInvariantOperands(&I))
             addToWorklistIfAllowed(&I);
+          LLVM_FALLTHROUGH;
         default:
           break;
         }
@@ -8991,6 +8992,7 @@ VPBasicBlock *VPRecipeBuilder::handleReplication(
       //      the effect is to poison the object, which still allows us to
       //      remove the call.
       IsUniform = true;
+      break;
     default:
       break;
     }
