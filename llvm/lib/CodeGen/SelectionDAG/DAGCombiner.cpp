@@ -21299,6 +21299,70 @@ SDValue DAGCombiner::visitVECTOR_SHUFFLE(SDNode *N) {
     }
   }
 
+  // See if we can replace a shuffle with an insert_subvector.
+  // e.g. v2i32 into v8i32:
+  // shuffle(lhs,concat(rhs0,rhs1,rhs2,rhs3),0,1,2,3,10,11,6,7).
+  // --> insert_subvector(lhs,rhs1,4).
+  if (Level < AfterLegalizeVectorOps && TLI.isTypeLegal(VT) &&
+      TLI.isOperationLegalOrCustom(ISD::INSERT_SUBVECTOR, VT)) {
+    auto ShuffleToInsert = [&](SDValue LHS, SDValue RHS, ArrayRef<int> Mask) {
+      // Ensure RHS subvectors are legal.
+      assert(RHS.getOpcode() == ISD::CONCAT_VECTORS && "Can't find subvectors");
+      EVT SubVT = RHS.getOperand(0).getValueType();
+      int NumSubVecs = RHS.getNumOperands();
+      int NumSubElts = SubVT.getVectorNumElements();
+      assert((NumElts % NumSubElts) == 0 && "Subvector mismatch");
+      if (!TLI.isTypeLegal(SubVT))
+        return SDValue();
+
+      // Don't bother if we have an unary shuffle (matches undef + LHS elts).
+      if (all_of(Mask, [NumElts](int M) { return M < (int)NumElts; }))
+        return SDValue();
+
+      // Search [NumSubElts] spans for RHS sequence.
+      // TODO: Can we avoid nested loops to increase performance?
+      SmallVector<int> InsertionMask(NumElts);
+      for (int SubVec = 0; SubVec != NumSubVecs; ++SubVec) {
+        for (int SubIdx = 0; SubIdx != (int)NumElts; SubIdx += NumSubElts) {
+          // Reset mask to identity.
+          std::iota(InsertionMask.begin(), InsertionMask.end(), 0);
+
+          // Add subvector insertion.
+          std::iota(InsertionMask.begin() + SubIdx,
+                    InsertionMask.begin() + SubIdx + NumSubElts,
+                    NumElts + (SubVec * NumSubElts));
+
+          // See if the shuffle mask matches the reference insertion mask.
+          bool MatchingShuffle = true;
+          for (int i = 0; i != (int)NumElts; ++i) {
+            int ExpectIdx = InsertionMask[i];
+            int ActualIdx = Mask[i];
+            if (0 <= ActualIdx && ExpectIdx != ActualIdx) {
+              MatchingShuffle = false;
+              break;
+            }
+          }
+
+          if (MatchingShuffle)
+            return DAG.getNode(ISD::INSERT_SUBVECTOR, SDLoc(N), VT, LHS,
+                               RHS.getOperand(SubVec),
+                               DAG.getVectorIdxConstant(SubIdx, SDLoc(N)));
+        }
+      }
+      return SDValue();
+    };
+    ArrayRef<int> Mask = SVN->getMask();
+    if (N1.getOpcode() == ISD::CONCAT_VECTORS)
+      if (SDValue InsertN1 = ShuffleToInsert(N0, N1, Mask))
+        return InsertN1;
+    if (N0.getOpcode() == ISD::CONCAT_VECTORS) {
+      SmallVector<int> CommuteMask(Mask.begin(), Mask.end());
+      ShuffleVectorSDNode::commuteMask(CommuteMask);
+      if (SDValue InsertN0 = ShuffleToInsert(N1, N0, CommuteMask))
+        return InsertN0;
+    }
+  }
+
   // Attempt to combine a shuffle of 2 inputs of 'scalar sources' -
   // BUILD_VECTOR or SCALAR_TO_VECTOR into a single BUILD_VECTOR.
   if (Level < AfterLegalizeDAG && TLI.isTypeLegal(VT))
