@@ -933,12 +933,12 @@ void VPlan::updateDominatorTree(DominatorTree *DT, BasicBlock *LoopPreHeaderBB,
 }
 
 #if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
-const Twine VPlanPrinter::getUID(const VPBlockBase *Block) {
+Twine VPlanPrinter::getUID(const VPBlockBase *Block) {
   return (isa<VPRegionBlock>(Block) ? "cluster_N" : "N") +
          Twine(getOrCreateBID(Block));
 }
 
-const Twine VPlanPrinter::getOrCreateName(const VPBlockBase *Block) {
+Twine VPlanPrinter::getOrCreateName(const VPBlockBase *Block) {
   const std::string &Name = Block->getName();
   if (!Name.empty())
     return Name;
