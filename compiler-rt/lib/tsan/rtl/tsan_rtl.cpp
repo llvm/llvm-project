@@ -562,7 +562,7 @@ NOINLINE
 void GrowShadowStack(ThreadState *thr) {
   const int sz = thr->shadow_stack_end - thr->shadow_stack;
   const int newsz = 2 * sz;
-  auto newstack = (uptr *)Alloc(newsz * sizeof(uptr));
+  auto *newstack = (uptr *)Alloc(newsz * sizeof(uptr));
   internal_memcpy(newstack, thr->shadow_stack, sz * sizeof(uptr));
   Free(thr->shadow_stack);
   thr->shadow_stack = newstack;

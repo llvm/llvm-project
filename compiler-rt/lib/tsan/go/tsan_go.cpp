@@ -99,7 +99,7 @@ ReportLocation *SymbolizeData(uptr addr) {
     MBlock *b = ctx->metamap.GetBlock(cbctx.start);
     if (!b)
       return 0;
-    auto loc = New<ReportLocation>();
+    auto *loc = New<ReportLocation>();
     loc->type = ReportLocationHeap;
     loc->heap_chunk_start = cbctx.start;
     loc->heap_chunk_size = b->siz;
@@ -107,7 +107,7 @@ ReportLocation *SymbolizeData(uptr addr) {
     loc->stack = SymbolizeStackId(b->stk);
     return loc;
   } else {
-    auto loc = New<ReportLocation>();
+    auto *loc = New<ReportLocation>();
     loc->type = ReportLocationGlobal;
     loc->global.name = internal_strdup(cbctx.name ? cbctx.name : "??");
     loc->global.file = internal_strdup(cbctx.file ? cbctx.file : "??");
@@ -140,7 +140,7 @@ Processor *ThreadState::proc() {
 extern "C" {
 
 static ThreadState *AllocGoroutine() {
-  auto thr = (ThreadState *)Alloc(sizeof(ThreadState));
+  auto *thr = (ThreadState *)Alloc(sizeof(ThreadState));
   internal_memset(thr, 0, sizeof(*thr));
   return thr;
 }
