@@ -1094,11 +1094,11 @@ static unsigned emitNop(MCStreamer &OS, unsigned NumBytes,
   if (Subtarget->is64Bit()) {
     // FIXME: We can use NOOPL on 32-bit targets with FeatureNOPL, but the
     // IndexReg/BaseReg below need to be updated.
-    if (Subtarget->hasFeature(X86::FeatureFast7ByteNOP))
+    if (Subtarget->hasFeature(X86::TuningFast7ByteNOP))
       MaxNopLength = 7;
-    else if (Subtarget->hasFeature(X86::FeatureFast15ByteNOP))
+    else if (Subtarget->hasFeature(X86::TuningFast15ByteNOP))
       MaxNopLength = 15;
-    else if (Subtarget->hasFeature(X86::FeatureFast11ByteNOP))
+    else if (Subtarget->hasFeature(X86::TuningFast11ByteNOP))
       MaxNopLength = 11;
     else
       MaxNopLength = 10;
