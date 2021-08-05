@@ -4577,6 +4577,12 @@ SDValue DAGCombiner::visitMULHU(SDNode *N) {
     }
   }
 
+  // Simplify the operands using demanded-bits information.
+  // We don't have demanded bits support for MULHU so this just enables constant
+  // folding based on known bits.
+  if (SimplifyDemandedBits(SDValue(N, 0)))
+    return SDValue(N, 0);
+
   return SDValue();
 }
 

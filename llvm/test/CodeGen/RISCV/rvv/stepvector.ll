@@ -551,11 +551,8 @@ define <vscale x 16 x i64> @mul_stepvector_nxv16i64() {
 ; RV32:       # %bb.0: # %entry
 ; RV32-NEXT:    addi sp, sp, -16
 ; RV32-NEXT:    .cfi_def_cfa_offset 16
+; RV32-NEXT:    sw zero, 12(sp)
 ; RV32-NEXT:    csrr a0, vlenb
-; RV32-NEXT:    srli a1, a0, 3
-; RV32-NEXT:    addi a2, zero, 24
-; RV32-NEXT:    mulhu a1, a1, a2
-; RV32-NEXT:    sw a1, 12(sp)
 ; RV32-NEXT:    slli a1, a0, 1
 ; RV32-NEXT:    add a0, a1, a0
 ; RV32-NEXT:    sw a0, 8(sp)
