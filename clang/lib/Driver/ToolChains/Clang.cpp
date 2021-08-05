@@ -4739,6 +4739,22 @@ void Clang::ConstructJob(Compilation &C, const JobAction &JA,
     CmdArgs.push_back(Args.MakeArgString(std::to_string(FunctionAlignment)));
   }
 
+  // We support -falign-loops=N where N is a power of 2. GCC supports more
+  // forms.
+  if (const Arg *A = Args.getLastArg(options::OPT_falign_loops_EQ)) {
+    unsigned Value = 0;
+    if (StringRef(A->getValue()).getAsInteger(10, Value) || Value > 65536)
+      TC.getDriver().Diag(diag::err_drv_invalid_int_value)
+          << A->getAsString(Args) << A->getValue();
+    else if (Value & Value - 1)
+      TC.getDriver().Diag(diag::err_drv_alignment_not_power_of_two)
+          << A->getAsString(Args) << A->getValue();
+    // Treat =0 as unspecified (use the target preference).
+    if (Value)
+      CmdArgs.push_back(Args.MakeArgString("-falign-loops=" +
+                                           Twine(std::min(Value, 65536u))));
+  }
+
   llvm::Reloc::Model RelocationModel;
   unsigned PICLevel;
   bool IsPIE;
