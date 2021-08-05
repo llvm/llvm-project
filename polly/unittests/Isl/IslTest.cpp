@@ -388,63 +388,59 @@ TEST(Isl, Foreach) {
   std::unique_ptr<isl_ctx, decltype(&isl_ctx_free)> Ctx(isl_ctx_alloc(),
                                                         &isl_ctx_free);
 
-  auto MapSpace = isl::space(Ctx.get(), 0, 1, 1);
-  auto TestBMap = isl::basic_map::universe(MapSpace);
-  TestBMap = TestBMap.fix_si(isl::dim::out, 0, 0);
-  TestBMap = TestBMap.fix_si(isl::dim::out, 0, 0);
-  isl::map TestMap = TestBMap;
-  isl::union_map TestUMap = TestMap;
+  isl::map TestMap{Ctx.get(), "{ [2] -> [7]; [5] -> [7] }"};
+  isl::union_map TestUMap{Ctx.get(), "{ A[i] -> [7]; B[i] -> [7] }"};
 
-  auto SetSpace = isl::space(Ctx.get(), 0, 1);
-  isl::basic_set TestBSet = isl::point(SetSpace);
-  isl::set TestSet = TestBSet;
-  isl::union_set TestUSet = TestSet;
+  isl::set TestSet{Ctx.get(), "{ [0,7]; [i,7]: i >= 2 }"};
+  isl::union_set TestUSet{Ctx.get(), "{ A[0,7]; B[i,7] }"};
+
+  isl::set Seven{Ctx.get(), "{ [7] }"};
 
   {
     auto NumBMaps = 0;
     isl::stat Stat =
         TestMap.foreach_basic_map([&](isl::basic_map BMap) -> isl::stat {
-          EXPECT_EQ(BMap, TestBMap);
+          EXPECT_EQ(BMap.range(), Seven);
           NumBMaps++;
           return isl::stat::ok();
         });
 
     EXPECT_TRUE(Stat.is_ok());
-    EXPECT_EQ(1, NumBMaps);
+    EXPECT_EQ(2, NumBMaps);
   }
 
   {
     auto NumBSets = 0;
     isl::stat Stat =
         TestSet.foreach_basic_set([&](isl::basic_set BSet) -> isl::stat {
-          EXPECT_EQ(BSet, TestBSet);
+          EXPECT_EQ(BSet.project_out(isl::dim::set, 0, 1), Seven);
           NumBSets++;
           return isl::stat::ok();
         });
     EXPECT_TRUE(Stat.is_ok());
-    EXPECT_EQ(1, NumBSets);
+    EXPECT_EQ(2, NumBSets);
   }
 
   {
     auto NumMaps = 0;
     isl::stat Stat = TestUMap.foreach_map([&](isl::map Map) -> isl::stat {
-      EXPECT_EQ(Map, TestMap);
+      EXPECT_EQ(Map.range(), Seven);
       NumMaps++;
       return isl::stat::ok();
     });
     EXPECT_TRUE(Stat.is_ok());
-    EXPECT_EQ(1, NumMaps);
+    EXPECT_EQ(2, NumMaps);
   }
 
   {
     auto NumSets = 0;
     isl::stat Stat = TestUSet.foreach_set([&](isl::set Set) -> isl::stat {
-      EXPECT_EQ(Set, TestSet);
+      EXPECT_EQ(Set.project_out(isl::dim::set, 0, 1), Seven);
       NumSets++;
       return isl::stat::ok();
     });
     EXPECT_TRUE(Stat.is_ok());
-    EXPECT_EQ(1, NumSets);
+    EXPECT_EQ(2, NumSets);
   }
 
   {
@@ -456,14 +452,14 @@ TEST(Isl, Foreach) {
       return isl::stat::ok();
     });
     EXPECT_TRUE(Stat.is_ok());
-    EXPECT_EQ(1, NumPwAffs);
+    EXPECT_EQ(2, NumPwAffs);
   }
 
   {
     auto NumBMaps = 0;
     EXPECT_TRUE(TestMap
                     .foreach_basic_map([&](isl::basic_map BMap) -> isl::stat {
-                      EXPECT_EQ(BMap, TestBMap);
+                      EXPECT_EQ(BMap.range(), Seven);
                       NumBMaps++;
                       return isl::stat::error();
                     })
@@ -475,7 +471,7 @@ TEST(Isl, Foreach) {
     auto NumMaps = 0;
     EXPECT_TRUE(TestUMap
                     .foreach_map([&](isl::map Map) -> isl::stat {
-                      EXPECT_EQ(Map, TestMap);
+                      EXPECT_EQ(Map.range(), Seven);
                       NumMaps++;
                       return isl::stat::error();
                     })
