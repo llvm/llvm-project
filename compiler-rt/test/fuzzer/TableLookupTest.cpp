@@ -25,7 +25,11 @@ const size_t N = 1 << 12;
 #ifdef __linux__
 __attribute__((section("__libfuzzer_extra_counters")))
 #endif
-static uint8_t Counters[N];
+#ifdef _WIN32
+#  pragma section(".data$__libfuzzer_extra_counters")
+__declspec(allocate(".data$__libfuzzer_extra_counters"))
+#endif
+    static uint8_t Counters[N];
 
 extern "C" int LLVMFuzzerTestOneInput(const uint8_t *Data, size_t Size) {
   static std::set<uint16_t> SeenIdx;
