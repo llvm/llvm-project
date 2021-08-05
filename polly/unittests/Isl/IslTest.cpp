@@ -1113,4 +1113,77 @@ TEST(DeLICM, apply) {
                 UMAP("{ DomainRangeA[] -> NewDomainRangeA[];"
                      "DomainRangeB[] -> NewDomainRangeB[] }")));
 }
+
+TEST(Isl, Quota) {
+  std::unique_ptr<isl_ctx, decltype(&isl_ctx_free)> Ctx(isl_ctx_alloc(),
+                                                        &isl_ctx_free);
+
+  isl::set TestSet1{Ctx.get(), "{ [0] }"};
+  isl::set TestSet2{Ctx.get(), "{ [i] : i > 0 }"};
+
+  {
+    IslMaxOperationsGuard MaxOpGuard(Ctx.get(), 1);
+    ASSERT_EQ(isl_options_get_on_error(Ctx.get()), ISL_ON_ERROR_CONTINUE);
+    ASSERT_EQ(isl_ctx_get_max_operations(Ctx.get()), 1ul);
+    ASSERT_FALSE(MaxOpGuard.hasQuotaExceeded());
+
+    // Intentionally exceed the quota. Each allocation will use at least one
+    // operation, guaranteed to exceed the max_operations of 1.
+    isl::id::alloc(Ctx.get(), "A", nullptr);
+    isl::id::alloc(Ctx.get(), "B", nullptr);
+    ASSERT_TRUE(MaxOpGuard.hasQuotaExceeded());
+
+    // Check returned object after exceeded quota.
+    isl::set Union = TestSet1.unite(TestSet2);
+    EXPECT_TRUE(Union.is_null());
+
+    // Check isl::boolean result after exceeded quota.
+    isl::boolean BoolResult = TestSet1.is_empty();
+    EXPECT_TRUE(BoolResult.is_error());
+    EXPECT_FALSE(BoolResult.is_false());
+    EXPECT_FALSE(BoolResult.is_true());
+    EXPECT_DEATH((bool)BoolResult,
+                 "IMPLEMENTATION ERROR: Unhandled error state");
+    EXPECT_DEATH((bool)!BoolResult,
+                 "IMPLEMENTATION ERROR: Unhandled error state");
+    EXPECT_DEATH(
+        {
+          if (BoolResult) {
+          }
+        },
+        "IMPLEMENTATION ERROR: Unhandled error state");
+    EXPECT_DEATH((void)(BoolResult == false),
+                 "IMPLEMENTATION ERROR: Unhandled error state");
+    EXPECT_DEATH((void)(BoolResult == true),
+                 "IMPLEMENTATION ERROR: Unhandled error state");
+
+    // Check isl::stat result after exceeded quota.
+    isl::stat StatResult =
+        TestSet1.foreach_point([](isl::point) { return isl::stat::ok(); });
+    EXPECT_TRUE(StatResult.is_error());
+    EXPECT_FALSE(StatResult.is_ok());
+  }
+  ASSERT_EQ(isl_ctx_last_error(Ctx.get()), isl_error_quota);
+  ASSERT_EQ(isl_options_get_on_error(Ctx.get()), ISL_ON_ERROR_WARN);
+  ASSERT_EQ(isl_ctx_get_max_operations(Ctx.get()), 0ul);
+
+  // Operations must work again after leaving the quota scope.
+  {
+    isl::set Union = TestSet1.unite(TestSet2);
+    EXPECT_FALSE(Union.is_null());
+
+    isl::boolean BoolResult = TestSet1.is_empty();
+    EXPECT_FALSE(BoolResult.is_error());
+    EXPECT_TRUE(BoolResult.is_false());
+    EXPECT_FALSE(BoolResult.is_true());
+    EXPECT_FALSE(BoolResult);
+    EXPECT_TRUE(!BoolResult);
+
+    isl::stat StatResult =
+        TestSet1.foreach_point([](isl::point) { return isl::stat::ok(); });
+    EXPECT_FALSE(StatResult.is_error());
+    EXPECT_TRUE(StatResult.is_ok());
+  }
+}
+
 } // anonymous namespace
