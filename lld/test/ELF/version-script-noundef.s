@@ -18,10 +18,6 @@
 # RUN:   %t.o -o %t.so 2>&1 | FileCheck -check-prefix=ERR3 %s
 # ERR3: version script assignment of 'local' to symbol 'und' failed: symbol not defined
 
-## Wildcard patterns do not error.
-# RUN: echo "VERSION_1.0 { global: b*; local: u*; };" > %t4.script
-# RUN: ld.lld --version-script %t4.script -shared --no-undefined-version --fatal-warnings %t.o -o /dev/null
-
 .text
 .globl foo
 .type foo,@function

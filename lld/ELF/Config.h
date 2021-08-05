@@ -86,8 +86,7 @@ struct SymbolVersion {
 struct VersionDefinition {
   llvm::StringRef name;
   uint16_t id;
-  std::vector<SymbolVersion> nonLocalPatterns;
-  std::vector<SymbolVersion> localPatterns;
+  std::vector<SymbolVersion> patterns;
 };
 
 // This struct contains the global configuration for the linker.
