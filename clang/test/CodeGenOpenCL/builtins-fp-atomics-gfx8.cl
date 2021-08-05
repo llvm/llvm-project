@@ -3,6 +3,8 @@
 // RUN: %clang_cc1 -O0 -cl-std=CL2.0 -triple amdgcn-amd-amdhsa -target-cpu gfx810 \
 // RUN:   -S -o - %s | FileCheck -check-prefix=GFX8 %s
 
+// REQUIRES: amdgpu-registered-target
+
 // CHECK-LABEL: test_fadd_local
 // CHECK: call float @llvm.amdgcn.ds.fadd.f32(float addrspace(3)* %{{.*}}, float %{{.*}}, i32 0, i32 0, i1 false)
 // GFX8-LABEL: test_fadd_local$local:
