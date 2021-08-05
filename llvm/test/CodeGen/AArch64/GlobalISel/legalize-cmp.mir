@@ -119,20 +119,17 @@ body:             |
   ; CHECK: bb.0:
   ; CHECK:   successors: %bb.1(0x40000000), %bb.2(0x40000000)
   ; CHECK:   [[DEF:%[0-9]+]]:_(s64) = G_IMPLICIT_DEF
-  ; CHECK:   [[UV:%[0-9]+]]:_(s8), [[UV1:%[0-9]+]]:_(s8), [[UV2:%[0-9]+]]:_(s8), [[UV3:%[0-9]+]]:_(s8), [[UV4:%[0-9]+]]:_(s8), [[UV5:%[0-9]+]]:_(s8), [[UV6:%[0-9]+]]:_(s8), [[UV7:%[0-9]+]]:_(s8) = G_UNMERGE_VALUES [[DEF]](s64)
-  ; CHECK:   [[UV8:%[0-9]+]]:_(s8), [[UV9:%[0-9]+]]:_(s8), [[UV10:%[0-9]+]]:_(s8), [[UV11:%[0-9]+]]:_(s8), [[UV12:%[0-9]+]]:_(s8), [[UV13:%[0-9]+]]:_(s8), [[UV14:%[0-9]+]]:_(s8), [[UV15:%[0-9]+]]:_(s8) = G_UNMERGE_VALUES [[DEF]](s64)
-  ; CHECK:   [[UV16:%[0-9]+]]:_(s8), [[UV17:%[0-9]+]]:_(s8), [[UV18:%[0-9]+]]:_(s8), [[UV19:%[0-9]+]]:_(s8), [[UV20:%[0-9]+]]:_(s8), [[UV21:%[0-9]+]]:_(s8), [[UV22:%[0-9]+]]:_(s8), [[UV23:%[0-9]+]]:_(s8) = G_UNMERGE_VALUES [[DEF]](s64)
-  ; CHECK:   [[C:%[0-9]+]]:_(s8) = G_CONSTANT i8 0
-  ; CHECK:   [[MV:%[0-9]+]]:_(s64) = G_MERGE_VALUES [[UV]](s8), [[UV1]](s8), [[UV2]](s8), [[UV3]](s8), [[UV4]](s8), [[UV5]](s8), [[UV6]](s8), [[UV7]](s8)
-  ; CHECK:   [[MV1:%[0-9]+]]:_(s64) = G_MERGE_VALUES [[UV16]](s8), [[UV17]](s8), [[UV18]](s8), [[C]](s8), [[C]](s8), [[C]](s8), [[C]](s8), [[C]](s8)
-  ; CHECK:   [[UV24:%[0-9]+]]:_(s8), [[UV25:%[0-9]+]]:_(s8), [[UV26:%[0-9]+]]:_(s8), [[UV27:%[0-9]+]]:_(s8), [[UV28:%[0-9]+]]:_(s8), [[UV29:%[0-9]+]]:_(s8), [[UV30:%[0-9]+]]:_(s8), [[UV31:%[0-9]+]]:_(s8) = G_UNMERGE_VALUES [[DEF]](s64)
-  ; CHECK:   [[MV2:%[0-9]+]]:_(s64) = G_MERGE_VALUES [[UV8]](s8), [[UV9]](s8), [[UV10]](s8), [[UV11]](s8), [[UV12]](s8), [[UV13]](s8), [[UV14]](s8), [[UV15]](s8)
-  ; CHECK:   [[MV3:%[0-9]+]]:_(s64) = G_MERGE_VALUES [[UV24]](s8), [[UV25]](s8), [[UV26]](s8), [[C]](s8), [[C]](s8), [[C]](s8), [[C]](s8), [[C]](s8)
-  ; CHECK:   [[C1:%[0-9]+]]:_(s64) = G_CONSTANT i64 0
-  ; CHECK:   [[XOR:%[0-9]+]]:_(s64) = G_XOR [[MV]], [[MV2]]
-  ; CHECK:   [[XOR1:%[0-9]+]]:_(s64) = G_XOR [[MV1]], [[MV3]]
+  ; CHECK:   [[C:%[0-9]+]]:_(s64) = G_CONSTANT i64 -1
+  ; CHECK:   [[C1:%[0-9]+]]:_(s64) = G_CONSTANT i64 16777215
+  ; CHECK:   [[AND:%[0-9]+]]:_(s64) = G_AND [[DEF]], [[C]]
+  ; CHECK:   [[AND1:%[0-9]+]]:_(s64) = G_AND [[DEF]], [[C1]]
+  ; CHECK:   [[AND2:%[0-9]+]]:_(s64) = G_AND [[DEF]], [[C]]
+  ; CHECK:   [[AND3:%[0-9]+]]:_(s64) = G_AND [[DEF]], [[C1]]
+  ; CHECK:   [[C2:%[0-9]+]]:_(s64) = G_CONSTANT i64 0
+  ; CHECK:   [[XOR:%[0-9]+]]:_(s64) = G_XOR [[AND]], [[AND2]]
+  ; CHECK:   [[XOR1:%[0-9]+]]:_(s64) = G_XOR [[AND1]], [[AND3]]
   ; CHECK:   [[OR:%[0-9]+]]:_(s64) = G_OR [[XOR]], [[XOR1]]
-  ; CHECK:   [[ICMP:%[0-9]+]]:_(s32) = G_ICMP intpred(eq), [[OR]](s64), [[C1]]
+  ; CHECK:   [[ICMP:%[0-9]+]]:_(s32) = G_ICMP intpred(eq), [[OR]](s64), [[C2]]
   ; CHECK:   %cmp:_(s1) = G_TRUNC [[ICMP]](s32)
   ; CHECK:   G_BRCOND %cmp(s1), %bb.1
   ; CHECK:   G_BR %bb.2
@@ -160,20 +157,17 @@ body:             |
   ; CHECK: bb.0:
   ; CHECK:   successors: %bb.1(0x40000000), %bb.2(0x40000000)
   ; CHECK:   [[DEF:%[0-9]+]]:_(s64) = G_IMPLICIT_DEF
-  ; CHECK:   [[UV:%[0-9]+]]:_(s8), [[UV1:%[0-9]+]]:_(s8), [[UV2:%[0-9]+]]:_(s8), [[UV3:%[0-9]+]]:_(s8), [[UV4:%[0-9]+]]:_(s8), [[UV5:%[0-9]+]]:_(s8), [[UV6:%[0-9]+]]:_(s8), [[UV7:%[0-9]+]]:_(s8) = G_UNMERGE_VALUES [[DEF]](s64)
-  ; CHECK:   [[UV8:%[0-9]+]]:_(s8), [[UV9:%[0-9]+]]:_(s8), [[UV10:%[0-9]+]]:_(s8), [[UV11:%[0-9]+]]:_(s8), [[UV12:%[0-9]+]]:_(s8), [[UV13:%[0-9]+]]:_(s8), [[UV14:%[0-9]+]]:_(s8), [[UV15:%[0-9]+]]:_(s8) = G_UNMERGE_VALUES [[DEF]](s64)
-  ; CHECK:   [[UV16:%[0-9]+]]:_(s8), [[UV17:%[0-9]+]]:_(s8), [[UV18:%[0-9]+]]:_(s8), [[UV19:%[0-9]+]]:_(s8), [[UV20:%[0-9]+]]:_(s8), [[UV21:%[0-9]+]]:_(s8), [[UV22:%[0-9]+]]:_(s8), [[UV23:%[0-9]+]]:_(s8) = G_UNMERGE_VALUES [[DEF]](s64)
-  ; CHECK:   [[C:%[0-9]+]]:_(s8) = G_CONSTANT i8 0
-  ; CHECK:   [[MV:%[0-9]+]]:_(s64) = G_MERGE_VALUES [[UV]](s8), [[UV1]](s8), [[UV2]](s8), [[UV3]](s8), [[UV4]](s8), [[UV5]](s8), [[UV6]](s8), [[UV7]](s8)
-  ; CHECK:   [[MV1:%[0-9]+]]:_(s64) = G_MERGE_VALUES [[UV16]](s8), [[UV17]](s8), [[UV18]](s8), [[C]](s8), [[C]](s8), [[C]](s8), [[C]](s8), [[C]](s8)
-  ; CHECK:   [[UV24:%[0-9]+]]:_(s8), [[UV25:%[0-9]+]]:_(s8), [[UV26:%[0-9]+]]:_(s8), [[UV27:%[0-9]+]]:_(s8), [[UV28:%[0-9]+]]:_(s8), [[UV29:%[0-9]+]]:_(s8), [[UV30:%[0-9]+]]:_(s8), [[UV31:%[0-9]+]]:_(s8) = G_UNMERGE_VALUES [[DEF]](s64)
-  ; CHECK:   [[MV2:%[0-9]+]]:_(s64) = G_MERGE_VALUES [[UV8]](s8), [[UV9]](s8), [[UV10]](s8), [[UV11]](s8), [[UV12]](s8), [[UV13]](s8), [[UV14]](s8), [[UV15]](s8)
-  ; CHECK:   [[MV3:%[0-9]+]]:_(s64) = G_MERGE_VALUES [[UV24]](s8), [[UV25]](s8), [[UV26]](s8), [[C]](s8), [[C]](s8), [[C]](s8), [[C]](s8), [[C]](s8)
-  ; CHECK:   [[C1:%[0-9]+]]:_(s64) = G_CONSTANT i64 0
-  ; CHECK:   [[XOR:%[0-9]+]]:_(s64) = G_XOR [[MV]], [[MV2]]
-  ; CHECK:   [[XOR1:%[0-9]+]]:_(s64) = G_XOR [[MV1]], [[MV3]]
+  ; CHECK:   [[C:%[0-9]+]]:_(s64) = G_CONSTANT i64 -1
+  ; CHECK:   [[C1:%[0-9]+]]:_(s64) = G_CONSTANT i64 16777215
+  ; CHECK:   [[AND:%[0-9]+]]:_(s64) = G_AND [[DEF]], [[C]]
+  ; CHECK:   [[AND1:%[0-9]+]]:_(s64) = G_AND [[DEF]], [[C1]]
+  ; CHECK:   [[AND2:%[0-9]+]]:_(s64) = G_AND [[DEF]], [[C]]
+  ; CHECK:   [[AND3:%[0-9]+]]:_(s64) = G_AND [[DEF]], [[C1]]
+  ; CHECK:   [[C2:%[0-9]+]]:_(s64) = G_CONSTANT i64 0
+  ; CHECK:   [[XOR:%[0-9]+]]:_(s64) = G_XOR [[AND]], [[AND2]]
+  ; CHECK:   [[XOR1:%[0-9]+]]:_(s64) = G_XOR [[AND1]], [[AND3]]
   ; CHECK:   [[OR:%[0-9]+]]:_(s64) = G_OR [[XOR]], [[XOR1]]
-  ; CHECK:   [[ICMP:%[0-9]+]]:_(s32) = G_ICMP intpred(ne), [[OR]](s64), [[C1]]
+  ; CHECK:   [[ICMP:%[0-9]+]]:_(s32) = G_ICMP intpred(ne), [[OR]](s64), [[C2]]
   ; CHECK:   %cmp:_(s1) = G_TRUNC [[ICMP]](s32)
   ; CHECK:   G_BRCOND %cmp(s1), %bb.1
   ; CHECK:   G_BR %bb.2
@@ -201,20 +195,17 @@ body:             |
   ; CHECK: bb.0:
   ; CHECK:   successors: %bb.1(0x40000000), %bb.2(0x40000000)
   ; CHECK:   [[DEF:%[0-9]+]]:_(s64) = G_IMPLICIT_DEF
-  ; CHECK:   [[UV:%[0-9]+]]:_(s32), [[UV1:%[0-9]+]]:_(s32) = G_UNMERGE_VALUES [[DEF]](s64)
-  ; CHECK:   [[UV2:%[0-9]+]]:_(s32), [[UV3:%[0-9]+]]:_(s32) = G_UNMERGE_VALUES [[DEF]](s64)
-  ; CHECK:   [[UV4:%[0-9]+]]:_(s32), [[UV5:%[0-9]+]]:_(s32) = G_UNMERGE_VALUES [[DEF]](s64)
-  ; CHECK:   [[C:%[0-9]+]]:_(s32) = G_CONSTANT i32 0
-  ; CHECK:   [[MV:%[0-9]+]]:_(s64) = G_MERGE_VALUES [[UV]](s32), [[UV1]](s32)
-  ; CHECK:   [[MV1:%[0-9]+]]:_(s64) = G_MERGE_VALUES [[UV4]](s32), [[C]](s32)
-  ; CHECK:   [[UV6:%[0-9]+]]:_(s32), [[UV7:%[0-9]+]]:_(s32) = G_UNMERGE_VALUES [[DEF]](s64)
-  ; CHECK:   [[MV2:%[0-9]+]]:_(s64) = G_MERGE_VALUES [[UV2]](s32), [[UV3]](s32)
-  ; CHECK:   [[MV3:%[0-9]+]]:_(s64) = G_MERGE_VALUES [[UV6]](s32), [[C]](s32)
-  ; CHECK:   [[C1:%[0-9]+]]:_(s64) = G_CONSTANT i64 0
-  ; CHECK:   [[XOR:%[0-9]+]]:_(s64) = G_XOR [[MV]], [[MV2]]
-  ; CHECK:   [[XOR1:%[0-9]+]]:_(s64) = G_XOR [[MV1]], [[MV3]]
+  ; CHECK:   [[C:%[0-9]+]]:_(s64) = G_CONSTANT i64 -1
+  ; CHECK:   [[C1:%[0-9]+]]:_(s64) = G_CONSTANT i64 4294967295
+  ; CHECK:   [[AND:%[0-9]+]]:_(s64) = G_AND [[DEF]], [[C]]
+  ; CHECK:   [[AND1:%[0-9]+]]:_(s64) = G_AND [[DEF]], [[C1]]
+  ; CHECK:   [[AND2:%[0-9]+]]:_(s64) = G_AND [[DEF]], [[C]]
+  ; CHECK:   [[AND3:%[0-9]+]]:_(s64) = G_AND [[DEF]], [[C1]]
+  ; CHECK:   [[C2:%[0-9]+]]:_(s64) = G_CONSTANT i64 0
+  ; CHECK:   [[XOR:%[0-9]+]]:_(s64) = G_XOR [[AND]], [[AND2]]
+  ; CHECK:   [[XOR1:%[0-9]+]]:_(s64) = G_XOR [[AND1]], [[AND3]]
   ; CHECK:   [[OR:%[0-9]+]]:_(s64) = G_OR [[XOR]], [[XOR1]]
-  ; CHECK:   [[ICMP:%[0-9]+]]:_(s32) = G_ICMP intpred(eq), [[OR]](s64), [[C1]]
+  ; CHECK:   [[ICMP:%[0-9]+]]:_(s32) = G_ICMP intpred(eq), [[OR]](s64), [[C2]]
   ; CHECK:   %cmp:_(s1) = G_TRUNC [[ICMP]](s32)
   ; CHECK:   G_BRCOND %cmp(s1), %bb.1
   ; CHECK:   G_BR %bb.2

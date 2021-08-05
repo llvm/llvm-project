@@ -319,9 +319,7 @@ body: |
     ; CHECK-LABEL: name: s64_from_s264
     ; CHECK: liveins: $x0
     ; CHECK: [[DEF:%[0-9]+]]:_(s64) = G_IMPLICIT_DEF
-    ; CHECK: [[UV:%[0-9]+]]:_(s8), [[UV1:%[0-9]+]]:_(s8), [[UV2:%[0-9]+]]:_(s8), [[UV3:%[0-9]+]]:_(s8), [[UV4:%[0-9]+]]:_(s8), [[UV5:%[0-9]+]]:_(s8), [[UV6:%[0-9]+]]:_(s8), [[UV7:%[0-9]+]]:_(s8) = G_UNMERGE_VALUES [[DEF]](s64)
-    ; CHECK: [[MV:%[0-9]+]]:_(s64) = G_MERGE_VALUES [[UV]](s8), [[UV1]](s8), [[UV2]](s8), [[UV3]](s8), [[UV4]](s8), [[UV5]](s8), [[UV6]](s8), [[UV7]](s8)
-    ; CHECK: %extract:_(s64) = COPY [[MV]](s64)
+    ; CHECK: %extract:_(s64) = COPY [[DEF]](s64)
     ; CHECK: $x0 = COPY %extract(s64)
     ; CHECK: RET_ReallyLR implicit $x0
     %val:_(s264) = G_IMPLICIT_DEF

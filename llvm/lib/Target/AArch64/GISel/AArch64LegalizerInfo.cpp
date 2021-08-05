@@ -80,8 +80,8 @@ AArch64LegalizerInfo::AArch64LegalizerInfo(const AArch64Subtarget &ST)
   getActionDefinitionsBuilder({G_IMPLICIT_DEF, G_FREEZE})
       .legalFor({p0, s1, s8, s16, s32, s64})
       .legalFor(PackedVectorAllTypeList)
+      .widenScalarToNextPow2(0)
       .clampScalar(0, s8, s64)
-      .widenScalarToNextPow2(0, 8)
       .fewerElementsIf(
           [=](const LegalityQuery &Query) {
             return Query.Types[0].isVector() &&
