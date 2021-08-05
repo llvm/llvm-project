@@ -94,5 +94,18 @@ define <4 x float> @masked_load_and_zero_inactive_8(<4 x float>* %ptr, <4 x i1> 
   ret <4 x float> %masked
 }
 
+define <8 x float> @masked_load_and_scalar_select_cond(<8 x float>* %ptr, <8 x i1> %mask, i1 %cond) {
+; CHECK-LABEL: @masked_load_and_scalar_select_cond(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[TMP0:%.*]] = call <8 x float> @llvm.masked.load.v8f32.p0v8f32(<8 x float>* [[PTR:%.*]], i32 32, <8 x i1> [[MASK:%.*]], <8 x float> undef)
+; CHECK-NEXT:    [[TMP1:%.*]] = select i1 [[COND:%.*]], <8 x float> zeroinitializer, <8 x float> [[TMP0]]
+; CHECK-NEXT:    ret <8 x float> [[TMP1]]
+entry:
+  %0 = call <8 x float> @llvm.masked.load.v8f32.p0v8f32(<8 x float>* %ptr, i32 32, <8 x i1> %mask, <8 x float> undef)
+  %1 = select i1 %cond, <8 x float> zeroinitializer, <8 x float> %0
+  ret <8 x float> %1
+}
+
+declare <8 x float> @llvm.masked.load.v8f32.p0v8f32(<8 x float>*, i32 immarg, <8 x i1>, <8 x float>)
 declare <4 x i32> @llvm.masked.load.v4i32.p0v4i32(<4 x i32>*, i32 immarg, <4 x i1>, <4 x i32>)
 declare <4 x float> @llvm.masked.load.v4f32.p0v4f32(<4 x float>*, i32 immarg, <4 x i1>, <4 x float>)

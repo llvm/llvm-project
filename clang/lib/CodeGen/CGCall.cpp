@@ -1271,12 +1271,26 @@ static llvm::Value *CreateCoercedLoad(Address Src, llvm::Type *Ty,
   // perform the conversion.
   if (auto *ScalableDst = dyn_cast<llvm::ScalableVectorType>(Ty)) {
     if (auto *FixedSrc = dyn_cast<llvm::FixedVectorType>(SrcTy)) {
+      // If we are casting a fixed i8 vector to a scalable 16 x i1 predicate
+      // vector, use a vector insert and bitcast the result.
+      bool NeedsBitcast = false;
+      auto PredType =
+          llvm::ScalableVectorType::get(CGF.Builder.getInt1Ty(), 16);
+      llvm::Type *OrigType = Ty;
+      if (ScalableDst == PredType &&
+          FixedSrc->getElementType() == CGF.Builder.getInt8Ty()) {
+        ScalableDst = llvm::ScalableVectorType::get(CGF.Builder.getInt8Ty(), 2);
+        NeedsBitcast = true;
+      }
       if (ScalableDst->getElementType() == FixedSrc->getElementType()) {
         auto *Load = CGF.Builder.CreateLoad(Src);
         auto *UndefVec = llvm::UndefValue::get(ScalableDst);
         auto *Zero = llvm::Constant::getNullValue(CGF.CGM.Int64Ty);
-        return CGF.Builder.CreateInsertVector(ScalableDst, UndefVec, Load, Zero,
-                                              "castScalableSve");
+        llvm::Value *Result = CGF.Builder.CreateInsertVector(
+            ScalableDst, UndefVec, Load, Zero, "castScalableSve");
+        if (NeedsBitcast)
+          Result = CGF.Builder.CreateBitCast(Result, OrigType);
+        return Result;
       }
     }
   }
@@ -2857,9 +2871,18 @@ void CodeGenFunction::EmitFunctionProlog(const CGFunctionInfo &FI,
       // llvm.experimental.vector.extract to convert back to the original
       // VLST.
       if (auto *VecTyTo = dyn_cast<llvm::FixedVectorType>(ConvertType(Ty))) {
-        auto *Coerced = Fn->getArg(FirstIRArg);
+        llvm::Value *Coerced = Fn->getArg(FirstIRArg);
         if (auto *VecTyFrom =
                 dyn_cast<llvm::ScalableVectorType>(Coerced->getType())) {
+          // If we are casting a scalable 16 x i1 predicate vector to a fixed i8
+          // vector, bitcast the source and use a vector extract.
+          auto PredType =
+              llvm::ScalableVectorType::get(Builder.getInt1Ty(), 16);
+          if (VecTyFrom == PredType &&
+              VecTyTo->getElementType() == Builder.getInt8Ty()) {
+            VecTyFrom = llvm::ScalableVectorType::get(Builder.getInt8Ty(), 2);
+            Coerced = Builder.CreateBitCast(Coerced, VecTyFrom);
+          }
           if (VecTyFrom->getElementType() == VecTyTo->getElementType()) {
             llvm::Value *Zero = llvm::Constant::getNullValue(CGM.Int64Ty);
 

@@ -124,7 +124,7 @@ entry:
 ; Check that f16 can be passed and returned (ACLE 2.0 extension)
 define half @test_half(float, half %arg) {
 ; CHECK-LABEL: test_half:
-; CHECK: mov v0.16b, v1.16b
+; CHECK: fmov s0, s1
   ret half %arg;
 }
 
@@ -138,7 +138,7 @@ define half @test_half_const() {
 ; Check that v4f16 can be passed and returned in registers
 define dso_local <4 x half> @test_v4_half_register(float, <4 x half> %arg) {
 ; CHECK-LABEL: test_v4_half_register:
-; CHECK: mov v0.16b, v1.16b
+; CHECK: fmov d0, d1
   ret <4 x half> %arg;
 }
 

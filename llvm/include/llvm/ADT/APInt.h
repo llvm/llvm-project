@@ -706,7 +706,7 @@ public:
   /// Increments *this by 1.
   ///
   /// \returns a new APInt value representing the original value of *this.
-  const APInt operator++(int) {
+  APInt operator++(int) {
     APInt API(*this);
     ++(*this);
     return API;
@@ -722,7 +722,7 @@ public:
   /// Decrements *this by 1.
   ///
   /// \returns a new APInt value representing the original value of *this.
-  const APInt operator--(int) {
+  APInt operator--(int) {
     APInt API(*this);
     --(*this);
     return API;

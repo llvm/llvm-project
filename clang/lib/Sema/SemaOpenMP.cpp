@@ -18443,11 +18443,8 @@ OMPClause *Sema::ActOnOpenMPDeviceClause(OpenMPDeviceClauseModifier Modifier,
 static bool checkTypeMappable(SourceLocation SL, SourceRange SR, Sema &SemaRef,
                               DSAStackTy *Stack, QualType QTy,
                               bool FullCheck = true) {
-  NamedDecl *ND;
-  if (QTy->isIncompleteType(&ND)) {
-    SemaRef.Diag(SL, diag::err_incomplete_type) << QTy << SR;
+  if (SemaRef.RequireCompleteType(SL, QTy, diag::err_incomplete_type))
     return false;
-  }
   if (FullCheck && !SemaRef.CurContext->isDependentContext() &&
       !QTy.isTriviallyCopyableType(SemaRef.Context))
     SemaRef.Diag(SL, diag::warn_omp_non_trivial_type_mapped) << QTy << SR;

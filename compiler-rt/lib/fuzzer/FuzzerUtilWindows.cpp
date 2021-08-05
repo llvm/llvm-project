@@ -204,7 +204,7 @@ const void *SearchMemory(const void *Data, size_t DataLen, const void *Patt,
 }
 
 std::string DisassembleCmd(const std::string &FileName) {
-  Vector<std::string> command_vector;
+  std::vector<std::string> command_vector;
   command_vector.push_back("dumpbin /summary > nul");
   if (ExecuteCommand(Command(command_vector)) == 0)
     return "dumpbin /disasm " + FileName;

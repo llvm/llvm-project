@@ -1203,18 +1203,17 @@ define amdgpu_kernel void @s_test_sdiv_k_num_i64(i64 addrspace(1)* %out, i64 %x)
 ; GCN-NEXT:    v_add_i32_e32 v0, vcc, v0, v4
 ; GCN-NEXT:    v_addc_u32_e32 v3, vcc, 0, v3, vcc
 ; GCN-NEXT:    v_mul_lo_u32 v4, v3, 24
-; GCN-NEXT:    v_mul_hi_u32 v0, 24, v0
-; GCN-NEXT:    v_mul_hi_u32 v5, 24, v3
-; GCN-NEXT:    v_mul_hi_u32 v3, 0, v3
+; GCN-NEXT:    v_mul_hi_u32 v0, v0, 24
+; GCN-NEXT:    v_mul_hi_u32 v3, v3, 24
+; GCN-NEXT:    v_mov_b32_e32 v5, s9
 ; GCN-NEXT:    v_add_i32_e32 v0, vcc, v0, v4
-; GCN-NEXT:    v_addc_u32_e32 v2, vcc, v2, v5, vcc
+; GCN-NEXT:    v_addc_u32_e32 v2, vcc, v2, v3, vcc
 ; GCN-NEXT:    v_add_i32_e32 v0, vcc, 0, v0
 ; GCN-NEXT:    v_addc_u32_e32 v0, vcc, 0, v2, vcc
-; GCN-NEXT:    v_addc_u32_e32 v1, vcc, v3, v1, vcc
+; GCN-NEXT:    v_addc_u32_e32 v1, vcc, 0, v1, vcc
 ; GCN-NEXT:    v_mul_lo_u32 v2, s8, v1
 ; GCN-NEXT:    v_mul_hi_u32 v3, s8, v0
 ; GCN-NEXT:    v_mul_lo_u32 v4, s9, v0
-; GCN-NEXT:    v_mov_b32_e32 v5, s9
 ; GCN-NEXT:    v_add_i32_e32 v2, vcc, v3, v2
 ; GCN-NEXT:    v_mul_lo_u32 v3, s8, v0
 ; GCN-NEXT:    v_add_i32_e32 v2, vcc, v2, v4
@@ -1420,14 +1419,13 @@ define i64 @v_test_sdiv_k_num_i64(i64 %x) {
 ; GCN-NEXT:    v_add_i32_e32 v3, vcc, v3, v5
 ; GCN-NEXT:    v_addc_u32_e32 v4, vcc, 0, v4, vcc
 ; GCN-NEXT:    v_mul_lo_u32 v5, v4, 24
-; GCN-NEXT:    v_mul_hi_u32 v3, 24, v3
-; GCN-NEXT:    v_mul_hi_u32 v6, 24, v4
-; GCN-NEXT:    v_mul_hi_u32 v4, 0, v4
+; GCN-NEXT:    v_mul_hi_u32 v3, v3, 24
+; GCN-NEXT:    v_mul_hi_u32 v4, v4, 24
 ; GCN-NEXT:    v_add_i32_e32 v3, vcc, v3, v5
-; GCN-NEXT:    v_addc_u32_e32 v5, vcc, v13, v6, vcc
+; GCN-NEXT:    v_addc_u32_e32 v4, vcc, v13, v4, vcc
 ; GCN-NEXT:    v_add_i32_e32 v3, vcc, 0, v3
-; GCN-NEXT:    v_addc_u32_e32 v3, vcc, 0, v5, vcc
-; GCN-NEXT:    v_addc_u32_e32 v4, vcc, v4, v12, vcc
+; GCN-NEXT:    v_addc_u32_e32 v3, vcc, 0, v4, vcc
+; GCN-NEXT:    v_addc_u32_e32 v4, vcc, 0, v12, vcc
 ; GCN-NEXT:    v_mul_lo_u32 v5, v0, v4
 ; GCN-NEXT:    v_mul_hi_u32 v6, v0, v3
 ; GCN-NEXT:    v_mul_lo_u32 v7, v1, v3
@@ -1629,17 +1627,15 @@ define i64 @v_test_sdiv_pow2_k_num_i64(i64 %x) {
 ; GCN-NEXT:    v_add_i32_e32 v4, vcc, v4, v8
 ; GCN-NEXT:    v_addc_u32_e64 v4, vcc, v4, v6, s[4:5]
 ; GCN-NEXT:    v_add_i32_e32 v3, vcc, v3, v5
-; GCN-NEXT:    s_mov_b32 s4, 0x8000
 ; GCN-NEXT:    v_addc_u32_e32 v4, vcc, 0, v4, vcc
-; GCN-NEXT:    v_mul_hi_u32 v3, s4, v3
-; GCN-NEXT:    v_mul_hi_u32 v5, s4, v4
-; GCN-NEXT:    v_lshlrev_b32_e32 v6, 15, v4
-; GCN-NEXT:    v_mul_hi_u32 v4, 0, v4
-; GCN-NEXT:    v_add_i32_e32 v3, vcc, v3, v6
-; GCN-NEXT:    v_addc_u32_e32 v5, vcc, v13, v5, vcc
+; GCN-NEXT:    v_lshrrev_b32_e32 v5, 17, v4
+; GCN-NEXT:    v_lshlrev_b32_e32 v4, 15, v4
+; GCN-NEXT:    v_lshrrev_b32_e32 v3, 17, v3
+; GCN-NEXT:    v_add_i32_e32 v3, vcc, v3, v4
+; GCN-NEXT:    v_addc_u32_e32 v4, vcc, v13, v5, vcc
 ; GCN-NEXT:    v_add_i32_e32 v3, vcc, 0, v3
-; GCN-NEXT:    v_addc_u32_e32 v3, vcc, 0, v5, vcc
-; GCN-NEXT:    v_addc_u32_e32 v4, vcc, v4, v12, vcc
+; GCN-NEXT:    v_addc_u32_e32 v3, vcc, 0, v4, vcc
+; GCN-NEXT:    v_addc_u32_e32 v4, vcc, 0, v12, vcc
 ; GCN-NEXT:    v_mul_lo_u32 v5, v0, v4
 ; GCN-NEXT:    v_mul_hi_u32 v6, v0, v3
 ; GCN-NEXT:    v_mul_lo_u32 v7, v1, v3
@@ -1647,7 +1643,7 @@ define i64 @v_test_sdiv_pow2_k_num_i64(i64 %x) {
 ; GCN-NEXT:    v_mul_lo_u32 v6, v0, v3
 ; GCN-NEXT:    v_add_i32_e32 v5, vcc, v5, v7
 ; GCN-NEXT:    v_sub_i32_e32 v7, vcc, 0, v5
-; GCN-NEXT:    v_sub_i32_e32 v6, vcc, s4, v6
+; GCN-NEXT:    v_sub_i32_e32 v6, vcc, 0x8000, v6
 ; GCN-NEXT:    v_subb_u32_e64 v7, s[4:5], v7, v1, vcc
 ; GCN-NEXT:    v_sub_i32_e64 v8, s[4:5], v6, v0
 ; GCN-NEXT:    v_subbrev_u32_e64 v7, s[4:5], 0, v7, s[4:5]

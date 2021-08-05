@@ -191,32 +191,26 @@ void write_bfloat16(struct struct_bfloat16 *s, svbfloat16_t x) {
 
 // CHECK-128-LABEL: @read_bool(
 // CHECK-128-NEXT:  entry:
-// CHECK-128-NEXT:    [[SAVED_VALUE:%.*]] = alloca <2 x i8>, align 2
 // CHECK-128-NEXT:    [[ARRAYIDX:%.*]] = getelementptr inbounds [[STRUCT_STRUCT_BOOL:%.*]], %struct.struct_bool* [[S:%.*]], i64 0, i32 1, i64 0
 // CHECK-128-NEXT:    [[TMP0:%.*]] = load <2 x i8>, <2 x i8>* [[ARRAYIDX]], align 2, !tbaa [[TBAA6]]
-// CHECK-128-NEXT:    store <2 x i8> [[TMP0]], <2 x i8>* [[SAVED_VALUE]], align 2, !tbaa [[TBAA6]]
-// CHECK-128-NEXT:    [[CASTFIXEDSVE:%.*]] = bitcast <2 x i8>* [[SAVED_VALUE]] to <vscale x 16 x i1>*
-// CHECK-128-NEXT:    [[TMP1:%.*]] = load <vscale x 16 x i1>, <vscale x 16 x i1>* [[CASTFIXEDSVE]], align 2, !tbaa [[TBAA6]]
+// CHECK-128-NEXT:    [[CASTFIXEDSVE:%.*]] = call <vscale x 2 x i8> @llvm.experimental.vector.insert.nxv2i8.v2i8(<vscale x 2 x i8> undef, <2 x i8> [[TMP0]], i64 0)
+// CHECK-128-NEXT:    [[TMP1:%.*]] = bitcast <vscale x 2 x i8> [[CASTFIXEDSVE]] to <vscale x 16 x i1>
 // CHECK-128-NEXT:    ret <vscale x 16 x i1> [[TMP1]]
 //
 // CHECK-256-LABEL: @read_bool(
 // CHECK-256-NEXT:  entry:
-// CHECK-256-NEXT:    [[SAVED_VALUE:%.*]] = alloca <4 x i8>, align 4
 // CHECK-256-NEXT:    [[ARRAYIDX:%.*]] = getelementptr inbounds [[STRUCT_STRUCT_BOOL:%.*]], %struct.struct_bool* [[S:%.*]], i64 0, i32 1, i64 0
 // CHECK-256-NEXT:    [[TMP0:%.*]] = load <4 x i8>, <4 x i8>* [[ARRAYIDX]], align 2, !tbaa [[TBAA6]]
-// CHECK-256-NEXT:    store <4 x i8> [[TMP0]], <4 x i8>* [[SAVED_VALUE]], align 4, !tbaa [[TBAA6]]
-// CHECK-256-NEXT:    [[CASTFIXEDSVE:%.*]] = bitcast <4 x i8>* [[SAVED_VALUE]] to <vscale x 16 x i1>*
-// CHECK-256-NEXT:    [[TMP1:%.*]] = load <vscale x 16 x i1>, <vscale x 16 x i1>* [[CASTFIXEDSVE]], align 4, !tbaa [[TBAA6]]
+// CHECK-256-NEXT:    [[CASTFIXEDSVE:%.*]] = call <vscale x 2 x i8> @llvm.experimental.vector.insert.nxv2i8.v4i8(<vscale x 2 x i8> undef, <4 x i8> [[TMP0]], i64 0)
+// CHECK-256-NEXT:    [[TMP1:%.*]] = bitcast <vscale x 2 x i8> [[CASTFIXEDSVE]] to <vscale x 16 x i1>
 // CHECK-256-NEXT:    ret <vscale x 16 x i1> [[TMP1]]
 //
 // CHECK-512-LABEL: @read_bool(
 // CHECK-512-NEXT:  entry:
-// CHECK-512-NEXT:    [[SAVED_VALUE:%.*]] = alloca <8 x i8>, align 8
 // CHECK-512-NEXT:    [[ARRAYIDX:%.*]] = getelementptr inbounds [[STRUCT_STRUCT_BOOL:%.*]], %struct.struct_bool* [[S:%.*]], i64 0, i32 1, i64 0
 // CHECK-512-NEXT:    [[TMP0:%.*]] = load <8 x i8>, <8 x i8>* [[ARRAYIDX]], align 2, !tbaa [[TBAA6]]
-// CHECK-512-NEXT:    store <8 x i8> [[TMP0]], <8 x i8>* [[SAVED_VALUE]], align 8, !tbaa [[TBAA6]]
-// CHECK-512-NEXT:    [[CASTFIXEDSVE:%.*]] = bitcast <8 x i8>* [[SAVED_VALUE]] to <vscale x 16 x i1>*
-// CHECK-512-NEXT:    [[TMP1:%.*]] = load <vscale x 16 x i1>, <vscale x 16 x i1>* [[CASTFIXEDSVE]], align 8, !tbaa [[TBAA6]]
+// CHECK-512-NEXT:    [[CASTFIXEDSVE:%.*]] = call <vscale x 2 x i8> @llvm.experimental.vector.insert.nxv2i8.v8i8(<vscale x 2 x i8> undef, <8 x i8> [[TMP0]], i64 0)
+// CHECK-512-NEXT:    [[TMP1:%.*]] = bitcast <vscale x 2 x i8> [[CASTFIXEDSVE]] to <vscale x 16 x i1>
 // CHECK-512-NEXT:    ret <vscale x 16 x i1> [[TMP1]]
 //
 svbool_t read_bool(struct struct_bool *s) {
@@ -225,32 +219,26 @@ svbool_t read_bool(struct struct_bool *s) {
 
 // CHECK-128-LABEL: @write_bool(
 // CHECK-128-NEXT:  entry:
-// CHECK-128-NEXT:    [[SAVED_VALUE:%.*]] = alloca <vscale x 16 x i1>, align 2
-// CHECK-128-NEXT:    store <vscale x 16 x i1> [[X:%.*]], <vscale x 16 x i1>* [[SAVED_VALUE]], align 2, !tbaa [[TBAA9:![0-9]+]]
-// CHECK-128-NEXT:    [[CASTFIXEDSVE:%.*]] = bitcast <vscale x 16 x i1>* [[SAVED_VALUE]] to <2 x i8>*
-// CHECK-128-NEXT:    [[TMP0:%.*]] = load <2 x i8>, <2 x i8>* [[CASTFIXEDSVE]], align 2, !tbaa [[TBAA6]]
+// CHECK-128-NEXT:    [[TMP0:%.*]] = bitcast <vscale x 16 x i1> %x to <vscale x 2 x i8>
+// CHECK-128-NEXT:    [[CASTFIXEDSVE:%.*]] = call <2 x i8> @llvm.experimental.vector.extract.v2i8.nxv2i8(<vscale x 2 x i8> [[TMP0]], i64 0)
 // CHECK-128-NEXT:    [[ARRAYIDX:%.*]] = getelementptr inbounds [[STRUCT_STRUCT_BOOL:%.*]], %struct.struct_bool* [[S:%.*]], i64 0, i32 1, i64 0
-// CHECK-128-NEXT:    store <2 x i8> [[TMP0]], <2 x i8>* [[ARRAYIDX]], align 2, !tbaa [[TBAA6]]
+// CHECK-128-NEXT:    store <2 x i8> [[CASTFIXEDSVE]], <2 x i8>* [[ARRAYIDX]], align 2, !tbaa [[TBAA6]]
 // CHECK-128-NEXT:    ret void
 //
 // CHECK-256-LABEL: @write_bool(
 // CHECK-256-NEXT:  entry:
-// CHECK-256-NEXT:    [[SAVED_VALUE:%.*]] = alloca <vscale x 16 x i1>, align 4
-// CHECK-256-NEXT:    store <vscale x 16 x i1> [[X:%.*]], <vscale x 16 x i1>* [[SAVED_VALUE]], align 4, !tbaa [[TBAA9:![0-9]+]]
-// CHECK-256-NEXT:    [[CASTFIXEDSVE:%.*]] = bitcast <vscale x 16 x i1>* [[SAVED_VALUE]] to <4 x i8>*
-// CHECK-256-NEXT:    [[TMP0:%.*]] = load <4 x i8>, <4 x i8>* [[CASTFIXEDSVE]], align 4, !tbaa [[TBAA6]]
+// CHECK-256-NEXT:    [[TMP0:%.*]] = bitcast <vscale x 16 x i1> %x to <vscale x 2 x i8>
+// CHECK-256-NEXT:    [[CASTFIXEDSVE:%.*]] = call <4 x i8> @llvm.experimental.vector.extract.v4i8.nxv2i8(<vscale x 2 x i8> [[TMP0]], i64 0)
 // CHECK-256-NEXT:    [[ARRAYIDX:%.*]] = getelementptr inbounds [[STRUCT_STRUCT_BOOL:%.*]], %struct.struct_bool* [[S:%.*]], i64 0, i32 1, i64 0
-// CHECK-256-NEXT:    store <4 x i8> [[TMP0]], <4 x i8>* [[ARRAYIDX]], align 2, !tbaa [[TBAA6]]
+// CHECK-256-NEXT:    store <4 x i8> [[CASTFIXEDSVE]], <4 x i8>* [[ARRAYIDX]], align 2, !tbaa [[TBAA6]]
 // CHECK-256-NEXT:    ret void
 //
 // CHECK-512-LABEL: @write_bool(
 // CHECK-512-NEXT:  entry:
-// CHECK-512-NEXT:    [[SAVED_VALUE:%.*]] = alloca <vscale x 16 x i1>, align 8
-// CHECK-512-NEXT:    store <vscale x 16 x i1> [[X:%.*]], <vscale x 16 x i1>* [[SAVED_VALUE]], align 8, !tbaa [[TBAA9:![0-9]+]]
-// CHECK-512-NEXT:    [[CASTFIXEDSVE:%.*]] = bitcast <vscale x 16 x i1>* [[SAVED_VALUE]] to <8 x i8>*
-// CHECK-512-NEXT:    [[TMP0:%.*]] = load <8 x i8>, <8 x i8>* [[CASTFIXEDSVE]], align 8, !tbaa [[TBAA6]]
+// CHECK-512-NEXT:    [[TMP0:%.*]] = bitcast <vscale x 16 x i1> %x to <vscale x 2 x i8>
+// CHECK-512-NEXT:    [[CASTFIXEDSVE:%.*]] = call <8 x i8> @llvm.experimental.vector.extract.v8i8.nxv2i8(<vscale x 2 x i8> [[TMP0]], i64 0)
 // CHECK-512-NEXT:    [[ARRAYIDX:%.*]] = getelementptr inbounds [[STRUCT_STRUCT_BOOL:%.*]], %struct.struct_bool* [[S:%.*]], i64 0, i32 1, i64 0
-// CHECK-512-NEXT:    store <8 x i8> [[TMP0]], <8 x i8>* [[ARRAYIDX]], align 2, !tbaa [[TBAA6]]
+// CHECK-512-NEXT:    store <8 x i8> [[CASTFIXEDSVE]], <8 x i8>* [[ARRAYIDX]], align 2, !tbaa [[TBAA6]]
 // CHECK-512-NEXT:    ret void
 //
 void write_bool(struct struct_bool *s, svbool_t x) {

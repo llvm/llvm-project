@@ -366,7 +366,7 @@ struct StringBasedCtxKey : public ContextKey {
 // need to be splitted by '@' to get the last location frame, so we
 // can just use probe instead and generate the string in the end.
 struct ProbeBasedCtxKey : public ContextKey {
-  SmallVector<const PseudoProbe *, 16> Probes;
+  SmallVector<const MCDecodedPseudoProbe *, 16> Probes;
 
   ProbeBasedCtxKey() : ContextKey(CK_ProbeBased) {}
   static bool classof(const ContextKey *K) {
@@ -432,11 +432,12 @@ struct FrameStack {
 };
 
 struct ProbeStack {
-  SmallVector<const PseudoProbe *, 16> Stack;
+  SmallVector<const MCDecodedPseudoProbe *, 16> Stack;
   const ProfiledBinary *Binary;
   ProbeStack(const ProfiledBinary *B) : Binary(B) {}
   bool pushFrame(UnwindState::ProfiledFrame *Cur) {
-    const PseudoProbe *CallProbe = Binary->getCallProbeForAddr(Cur->Address);
+    const MCDecodedPseudoProbe *CallProbe =
+        Binary->getCallProbeForAddr(Cur->Address);
     // We may not find a probe for a merged or external callsite.
     // Callsite merging may cause the loss of original probe IDs.
     // Cutting off the context from here since the inliner will
@@ -637,9 +638,13 @@ protected:
   bool extractLBRStack(TraceStream &TraceIt,
                        SmallVectorImpl<LBREntry> &LBRStack,
                        ProfiledBinary *Binary);
+  uint64_t parseAggregatedCount(TraceStream &TraceIt);
   // Parse one sample from multiple perf lines, override this for different
   // sample type
-  virtual void parseSample(TraceStream &TraceIt) = 0;
+  void parseSample(TraceStream &TraceIt);
+  // An aggregated count is given to indicate how many times the sample is
+  // repeated.
+  virtual void parseSample(TraceStream &TraceIt, uint64_t Count) = 0;
   // Post process the profile after trace aggregation, we will do simple range
   // overlap computation for AutoFDO, or unwind for CSSPGO(hybrid sample).
   virtual void generateRawProfile() = 0;
@@ -671,7 +676,7 @@ public:
     PerfType = PERF_LBR_STACK;
   };
   // Parse the hybrid sample including the call and LBR line
-  void parseSample(TraceStream &TraceIt) override;
+  void parseSample(TraceStream &TraceIt, uint64_t Count) override;
   void generateRawProfile() override;
 
 private:

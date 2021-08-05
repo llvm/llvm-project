@@ -282,14 +282,18 @@ static bool genBuffers(Merger &merger, CodeGen &codegen,
         codegen.indices[tensor][idx] =
             rewriter.create<ToIndicesOp>(loc, indTp, t->get(), dim);
       }
-      // Find lower and upper bound in current dimension.
+      // Find lower and upper bound in current dimension. Note that a
+      // permuted encoding queries static type dimensions accordingly,
+      // but queries dynamic type dimensions in the generated order.
       Value up;
-      if (shape[d] == MemRefType::kDynamicSize) {
+      unsigned p = perm(enc, d);
+      if (shape[p] == MemRefType::kDynamicSize) {
         up = rewriter.create<tensor::DimOp>(loc, t->get(), d);
         args.push_back(up);
       } else {
-        up = rewriter.create<ConstantIndexOp>(loc, shape[d]);
+        up = rewriter.create<ConstantIndexOp>(loc, shape[p]);
       }
+      assert(codegen.highs[tensor][idx] == nullptr);
       codegen.sizes[idx] = codegen.highs[tensor][idx] = up;
     }
     // Perform the required bufferization. Dense inputs materialize

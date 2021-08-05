@@ -15,8 +15,8 @@ define void @hoge() {
 ; CHECK-NEXT:    [[TMP1:%.*]] = sext <2 x i16> [[TMP0]] to <2 x i32>
 ; CHECK-NEXT:    [[TMP2:%.*]] = sub nsw <2 x i32> <i32 undef, i32 63>, [[TMP1]]
 ; CHECK-NEXT:    [[TMP3:%.*]] = sub <2 x i32> [[TMP2]], undef
-; CHECK-NEXT:    [[SHUFFLE10:%.*]] = shufflevector <2 x i32> [[TMP3]], <2 x i32> poison, <4 x i32> <i32 1, i32 0, i32 0, i32 0>
-; CHECK-NEXT:    [[TMP4:%.*]] = add <4 x i32> [[SHUFFLE10]], <i32 undef, i32 15, i32 31, i32 47>
+; CHECK-NEXT:    [[SHUFFLE10:%.*]] = shufflevector <2 x i32> [[TMP3]], <2 x i32> poison, <4 x i32> <i32 0, i32 0, i32 0, i32 1>
+; CHECK-NEXT:    [[TMP4:%.*]] = add <4 x i32> [[SHUFFLE10]], <i32 15, i32 31, i32 47, i32 poison>
 ; CHECK-NEXT:    [[TMP5:%.*]] = call i32 @llvm.vector.reduce.smax.v4i32(<4 x i32> [[TMP4]])
 ; CHECK-NEXT:    [[T19:%.*]] = select i1 undef, i32 [[TMP5]], i32 undef
 ; CHECK-NEXT:    [[T20:%.*]] = icmp sgt i32 [[T19]], 63

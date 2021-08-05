@@ -180,6 +180,17 @@ struct ReportStack;
 class ReportDesc;
 class RegionAlloc;
 
+typedef uptr AccessType;
+
+enum : AccessType {
+  kAccessWrite = 0,
+  kAccessRead = 1 << 0,
+  kAccessAtomic = 1 << 1,
+  kAccessVptr = 1 << 2,  // read or write of an object virtual table pointer
+  kAccessFree = 1 << 3,  // synthetic memory access during memory freeing
+  kAccessExternalPC = 1 << 4,  // access PC can have kExternalPCBit set
+};
+
 // Descriptor of user's memory block.
 struct MBlock {
   u64  siz : 48;

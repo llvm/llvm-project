@@ -4591,14 +4591,14 @@ define <32 x i8> @shuffle_v32i8_15_15_15_15_15_15_15_15_32_32_32_32_32_32_32_32_
 ; AVX2:       # %bb.0:
 ; AVX2-NEXT:    vpbroadcastb %xmm1, %xmm1
 ; AVX2-NEXT:    vpshufb {{.*#+}} xmm0 = xmm0[15,15,15,15,15,15,15,15,u,u,u,u,u,u,u,u]
-; AVX2-NEXT:    vpunpcklqdq {{.*#+}} xmm0 = xmm0[0],xmm1[0]
+; AVX2-NEXT:    vpblendd {{.*#+}} xmm0 = xmm0[0,1],xmm1[2,3]
 ; AVX2-NEXT:    retq
 ;
 ; AVX512VLBW-LABEL: shuffle_v32i8_15_15_15_15_15_15_15_15_32_32_32_32_32_32_32_32_uu_uu_uu_uu_uu_uu_uu_uu_uu_uu_uu_uu_uu_uu_uu_uu:
 ; AVX512VLBW:       # %bb.0:
 ; AVX512VLBW-NEXT:    vpbroadcastb %xmm1, %xmm1
 ; AVX512VLBW-NEXT:    vpshufb {{.*#+}} xmm0 = xmm0[15,15,15,15,15,15,15,15,u,u,u,u,u,u,u,u]
-; AVX512VLBW-NEXT:    vpunpcklqdq {{.*#+}} xmm0 = xmm0[0],xmm1[0]
+; AVX512VLBW-NEXT:    vpblendd {{.*#+}} xmm0 = xmm0[0,1],xmm1[2,3]
 ; AVX512VLBW-NEXT:    retq
 ;
 ; AVX512VLVBMI-LABEL: shuffle_v32i8_15_15_15_15_15_15_15_15_32_32_32_32_32_32_32_32_uu_uu_uu_uu_uu_uu_uu_uu_uu_uu_uu_uu_uu_uu_uu_uu:

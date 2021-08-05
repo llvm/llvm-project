@@ -10,7 +10,6 @@
 #define LLVM_TOOLS_LLVM_PROFGEN_PROFILEDBINARY_H
 
 #include "CallContext.h"
-#include "PseudoProbe.h"
 #include "llvm/ADT/Optional.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/DebugInfo/Symbolize/Symbolize.h"
@@ -22,6 +21,7 @@
 #include "llvm/MC/MCInstrAnalysis.h"
 #include "llvm/MC/MCInstrInfo.h"
 #include "llvm/MC/MCObjectFileInfo.h"
+#include "llvm/MC/MCPseudoProbe.h"
 #include "llvm/MC/MCRegisterInfo.h"
 #include "llvm/MC/MCSubtargetInfo.h"
 #include "llvm/MC/MCTargetOptions.h"
@@ -136,9 +136,15 @@ class ProfiledBinary {
   std::unique_ptr<symbolize::LLVMSymbolizer> Symbolizer;
 
   // Pseudo probe decoder
-  PseudoProbeDecoder ProbeDecoder;
+  MCPseudoProbeDecoder ProbeDecoder;
 
   bool UsePseudoProbes = false;
+
+  // Indicate if the base loading address is parsed from the mmap event or uses
+  // the preferred address
+  bool IsLoadedByMMap = false;
+  // Use to avoid redundant warning.
+  bool MissingMMapWarned = false;
 
   void setPreferredTextSegmentAddresses(const ELFObjectFileBase *O);
 
@@ -259,11 +265,12 @@ public:
   std::string getExpandedContextStr(const SmallVectorImpl<uint64_t> &Stack,
                                     bool &WasLeafInlined) const;
 
-  const PseudoProbe *getCallProbeForAddr(uint64_t Address) const {
+  const MCDecodedPseudoProbe *getCallProbeForAddr(uint64_t Address) const {
     return ProbeDecoder.getCallProbeForAddr(Address);
   }
+
   void
-  getInlineContextForProbe(const PseudoProbe *Probe,
+  getInlineContextForProbe(const MCDecodedPseudoProbe *Probe,
                            SmallVectorImpl<std::string> &InlineContextStack,
                            bool IncludeLeaf = false) const {
     return ProbeDecoder.getInlineContextForProbe(Probe, InlineContextStack,
@@ -272,12 +279,22 @@ public:
   const AddressProbesMap &getAddress2ProbesMap() const {
     return ProbeDecoder.getAddress2ProbesMap();
   }
-  const PseudoProbeFuncDesc *getFuncDescForGUID(uint64_t GUID) {
+  const MCPseudoProbeFuncDesc *getFuncDescForGUID(uint64_t GUID) {
     return ProbeDecoder.getFuncDescForGUID(GUID);
   }
-  const PseudoProbeFuncDesc *getInlinerDescForProbe(const PseudoProbe *Probe) {
+
+  const MCPseudoProbeFuncDesc *
+  getInlinerDescForProbe(const MCDecodedPseudoProbe *Probe) {
     return ProbeDecoder.getInlinerDescForProbe(Probe);
   }
+
+  bool getIsLoadedByMMap() { return IsLoadedByMMap; }
+
+  void setIsLoadedByMMap(bool Value) { IsLoadedByMMap = Value; }
+
+  bool getMissingMMapWarned() { return MissingMMapWarned; }
+
+  void setMissingMMapWarned(bool Value) { MissingMMapWarned = Value; }
 };
 
 } // end namespace sampleprof

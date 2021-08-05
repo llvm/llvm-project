@@ -1768,9 +1768,7 @@ public:
   Align getPrefFunctionAlignment() const { return PrefFunctionAlignment; }
 
   /// Return the preferred loop alignment.
-  virtual Align getPrefLoopAlignment(MachineLoop *ML = nullptr) const {
-    return PrefLoopAlignment;
-  }
+  virtual Align getPrefLoopAlignment(MachineLoop *ML = nullptr) const;
 
   /// Should loops be aligned even when the function is marked OptSize (but not
   /// MinSize).

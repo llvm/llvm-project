@@ -667,13 +667,16 @@ Constant *llvm::ConstantFoldExtractElementInstruction(Constant *Val,
     }
   }
 
+  if (Constant *C = Val->getAggregateElement(CIdx))
+    return C;
+
   // Lane < Splat minimum vector width => extractelt Splat(x), Lane -> x
   if (CIdx->getValue().ult(ValVTy->getElementCount().getKnownMinValue())) {
     if (Constant *SplatVal = Val->getSplatValue())
       return SplatVal;
   }
 
-  return Val->getAggregateElement(CIdx);
+  return nullptr;
 }
 
 Constant *llvm::ConstantFoldInsertElementInstruction(Constant *Val,

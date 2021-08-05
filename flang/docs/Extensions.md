@@ -133,6 +133,7 @@ end
   the arguments as if they were operands to an intrinsic `+` operator,
   and defining the result type accordingly.
 * DOUBLE COMPLEX intrinsics DREAL, DCMPLX, DCONJG, and DIMAG.
+* The DFLOAT intrinsic function.
 * INT_PTR_KIND intrinsic returns the kind of c_intptr_t.
 * Restricted specific conversion intrinsics FLOAT, SNGL, IDINT, IFIX, DREAL,
   and DCMPLX accept arguments of any kind instead of only the default kind or

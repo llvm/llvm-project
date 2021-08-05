@@ -97,8 +97,8 @@ AArch64LegalizerInfo::AArch64LegalizerInfo(const AArch64Subtarget &ST)
 
   getActionDefinitionsBuilder(G_PHI).legalFor({p0, s16, s32, s64})
       .legalFor(PackedVectorAllTypeList)
-      .clampScalar(0, s16, s64)
-      .widenScalarToNextPow2(0);
+      .widenScalarToNextPow2(0)
+      .clampScalar(0, s16, s64);
 
   getActionDefinitionsBuilder(G_BSWAP)
       .legalFor({s32, s64, v4s32, v2s32, v2s64})
@@ -459,10 +459,10 @@ AArch64LegalizerInfo::AArch64LegalizerInfo(const AArch64Subtarget &ST)
   // Conversions
   getActionDefinitionsBuilder({G_FPTOSI, G_FPTOUI})
       .legalForCartesianProduct({s32, s64, v2s64, v4s32, v2s32})
-      .clampScalar(0, s32, s64)
       .widenScalarToNextPow2(0)
-      .clampScalar(1, s32, s64)
-      .widenScalarToNextPow2(1);
+      .clampScalar(0, s32, s64)
+      .widenScalarToNextPow2(1)
+      .clampScalar(1, s32, s64);
 
   getActionDefinitionsBuilder({G_SITOFP, G_UITOFP})
       .legalForCartesianProduct({s32, s64, v2s64, v4s32, v2s32})
@@ -477,8 +477,8 @@ AArch64LegalizerInfo::AArch64LegalizerInfo(const AArch64Subtarget &ST)
 
   getActionDefinitionsBuilder(G_SELECT)
       .legalFor({{s32, s1}, {s64, s1}, {p0, s1}})
-      .clampScalar(0, s32, s64)
       .widenScalarToNextPow2(0)
+      .clampScalar(0, s32, s64)
       .minScalarEltSameAsIf(all(isVector(0), isVector(1)), 1, 0)
       .lowerIf(isVector(0));
 

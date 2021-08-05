@@ -1351,18 +1351,19 @@ static void readConfigs(opt::InputArgList &args) {
   }
 
   assert(config->versionDefinitions.empty());
-  config->versionDefinitions.push_back({"local", (uint16_t)VER_NDX_LOCAL, {}});
   config->versionDefinitions.push_back(
-      {"global", (uint16_t)VER_NDX_GLOBAL, {}});
+      {"local", (uint16_t)VER_NDX_LOCAL, {}, {}});
+  config->versionDefinitions.push_back(
+      {"global", (uint16_t)VER_NDX_GLOBAL, {}, {}});
 
   // If --retain-symbol-file is used, we'll keep only the symbols listed in
   // the file and discard all others.
   if (auto *arg = args.getLastArg(OPT_retain_symbols_file)) {
-    config->versionDefinitions[VER_NDX_LOCAL].patterns.push_back(
+    config->versionDefinitions[VER_NDX_LOCAL].nonLocalPatterns.push_back(
         {"*", /*isExternCpp=*/false, /*hasWildcard=*/true});
     if (Optional<MemoryBufferRef> buffer = readFile(arg->getValue()))
       for (StringRef s : args::getLines(*buffer))
-        config->versionDefinitions[VER_NDX_GLOBAL].patterns.push_back(
+        config->versionDefinitions[VER_NDX_GLOBAL].nonLocalPatterns.push_back(
             {s, /*isExternCpp=*/false, /*hasWildcard=*/false});
   }
 
@@ -1379,7 +1380,8 @@ static void readConfigs(opt::InputArgList &args) {
   // symbols not specified by --dynamic-list are non-preemptible.
   config->symbolic =
       config->bsymbolic == BsymbolicKind::All || args.hasArg(OPT_dynamic_list);
-  for (auto *arg : args.filtered(OPT_dynamic_list))
+  for (auto *arg :
+       args.filtered(OPT_dynamic_list, OPT_export_dynamic_symbol_list))
     if (Optional<MemoryBufferRef> buffer = readFile(arg->getValue()))
       readDynamicList(*buffer);
 
@@ -2069,23 +2071,37 @@ static void redirectSymbols(ArrayRef<WrappedSymbol> wrapped) {
     if (suffix1[0] != '@' || suffix1[1] == '@')
       continue;
 
-    // Check whether the default version foo@@v1 exists. If it exists, the
-    // symbol can be found by the name "foo" in the symbol table.
-    Symbol *maybeDefault = symtab->find(name);
-    if (!maybeDefault)
+    // Check the existing symbol foo. We have two special cases to handle:
+    //
+    // * There is a definition of foo@v1 and foo@@v1.
+    // * There is a definition of foo@v1 and foo.
+    Defined *sym2 = dyn_cast_or_null<Defined>(symtab->find(name));
+    if (!sym2)
       continue;
-    const char *suffix2 = maybeDefault->getVersionSuffix();
-    if (suffix2[0] != '@' || suffix2[1] != '@' ||
-        strcmp(suffix1 + 1, suffix2 + 2) != 0)
-      continue;
-
-    // foo@v1 and foo@@v1 should be merged, so redirect foo@v1 to foo@@v1.
-    map.try_emplace(sym, maybeDefault);
-    // If both foo@v1 and foo@@v1 are defined and non-weak, report a duplicate
-    // definition error.
-    maybeDefault->resolve(*sym);
-    // Eliminate foo@v1 from the symbol table.
-    sym->symbolKind = Symbol::PlaceholderKind;
+    const char *suffix2 = sym2->getVersionSuffix();
+    if (suffix2[0] == '@' && suffix2[1] == '@' &&
+        strcmp(suffix1 + 1, suffix2 + 2) == 0) {
+      // foo@v1 and foo@@v1 should be merged, so redirect foo@v1 to foo@@v1.
+      map.try_emplace(sym, sym2);
+      // If both foo@v1 and foo@@v1 are defined and non-weak, report a duplicate
+      // definition error.
+      sym2->resolve(*sym);
+      // Eliminate foo@v1 from the symbol table.
+      sym->symbolKind = Symbol::PlaceholderKind;
+    } else if (auto *sym1 = dyn_cast<Defined>(sym)) {
+      if (sym2->versionId > VER_NDX_GLOBAL
+              ? config->versionDefinitions[sym2->versionId].name == suffix1 + 1
+              : sym1->section == sym2->section && sym1->value == sym2->value) {
+        // Due to an assembler design flaw, if foo is defined, .symver foo,
+        // foo@v1 defines both foo and foo@v1. Unless foo is bound to a
+        // different version, GNU ld makes foo@v1 canonical and eliminates foo.
+        // Emulate its behavior, otherwise we would have foo or foo@@v1 beside
+        // foo@v1. foo@v1 and foo combining does not apply if they are not
+        // defined in the same place.
+        map.try_emplace(sym2, sym);
+        sym2->symbolKind = Symbol::PlaceholderKind;
+      }
+    }
   }
 
   if (map.empty())

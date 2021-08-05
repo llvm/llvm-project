@@ -56,20 +56,20 @@ def SparseTensor_ConvertOp : SparseTensor_Op<"convert", [SameOperandsAndResultTy
     Results<(outs AnyTensor:$dest)> {
   string summary = "Converts between different tensor types";
   string description = [{
-     Converts one sparse or dense tensor type to another tensor type. The rank
-     and dimensions of the source and destination types must match exactly,
-     only the sparse encoding of these types may be different. The name `convert`
-     was preferred over `cast`, since the operation may incur a non-trivial cost.
+    Converts one sparse or dense tensor type to another tensor type. The rank
+    and dimensions of the source and destination types must match exactly,
+    only the sparse encoding of these types may be different. The name `convert`
+    was preferred over `cast`, since the operation may incur a non-trivial cost.
 
-     When converting between two different sparse tensor types, only explicitly
-     stored values are moved from one underlying sparse storage format to
-     the other. When converting from an unannotated dense tensor type to a
-     sparse tensor type, an explicit test for nonzero values is used. When
-     converting to an unannotated dense tensor type, implicit zeroes in the
-     sparse storage format are made explicit. Note that the conversions can have
-     non-trivial costs associated with them, since they may involve elaborate
-     data structure transformations. Also, conversions from sparse tensor types
-     into dense tensor types may be infeasible in terms of storage requirements.
+    When converting between two different sparse tensor types, only explicitly
+    stored values are moved from one underlying sparse storage format to
+    the other. When converting from an unannotated dense tensor type to a
+    sparse tensor type, an explicit test for nonzero values is used. When
+    converting to an unannotated dense tensor type, implicit zeroes in the
+    sparse storage format are made explicit. Note that the conversions can have
+    non-trivial costs associated with them, since they may involve elaborate
+    data structure transformations. Also, conversions from sparse tensor types
+    into dense tensor types may be infeasible in terms of storage requirements.
 
     Examples:
 
@@ -88,15 +88,15 @@ def SparseTensor_ToPointersOp : SparseTensor_Op<"pointers", [NoSideEffect]>,
     Results<(outs AnyStridedMemRefOfRank<1>:$result)> {
   let summary = "Extract pointers array at given dimension from a tensor";
   let description = [{
-     Returns the pointers array of the sparse storage scheme at the
-     given dimension for the given sparse tensor. This is similar to the
-     `memref.buffer_cast` operation in the sense that it provides a bridge
-     between a tensor world view and a bufferized world view. Unlike the
-     `memref.buffer_cast` operation, however, this sparse operation actually
-     lowers into a call into a support library to obtain access to the
-     pointers array.
+    Returns the pointers array of the sparse storage scheme at the
+    given dimension for the given sparse tensor. This is similar to the
+    `memref.buffer_cast` operation in the sense that it provides a bridge
+    between a tensor world view and a bufferized world view. Unlike the
+    `memref.buffer_cast` operation, however, this sparse operation actually
+    lowers into a call into a support library to obtain access to the
+    pointers array.
 
-     Example:
+    Example:
 
     ```mlir
     %1 = sparse_tensor.pointers %0, %c1
@@ -112,15 +112,15 @@ def SparseTensor_ToIndicesOp : SparseTensor_Op<"indices", [NoSideEffect]>,
     Results<(outs AnyStridedMemRefOfRank<1>:$result)> {
   let summary = "Extract indices array at given dimension from a tensor";
   let description = [{
-     Returns the indices array of the sparse storage scheme at the
-     given dimension for the given sparse tensor. This is similar to the
-     `memref.buffer_cast` operation in the sense that it provides a bridge
-     between a tensor world view and a bufferized world view. Unlike the
-     `memref.buffer_cast` operation, however, this sparse operation actually
-     lowers into a call into a support library to obtain access to the
-     indices array.
+    Returns the indices array of the sparse storage scheme at the
+    given dimension for the given sparse tensor. This is similar to the
+    `memref.buffer_cast` operation in the sense that it provides a bridge
+    between a tensor world view and a bufferized world view. Unlike the
+    `memref.buffer_cast` operation, however, this sparse operation actually
+    lowers into a call into a support library to obtain access to the
+    indices array.
 
-     Example:
+    Example:
 
     ```mlir
     %1 = sparse_tensor.indices %0, %c1
@@ -136,15 +136,15 @@ def SparseTensor_ToValuesOp : SparseTensor_Op<"values", [NoSideEffect]>,
     Results<(outs AnyStridedMemRefOfRank<1>:$result)> {
   let summary = "Extract numerical values array from a tensor";
   let description = [{
-     Returns the values array of the sparse storage scheme for the given
-     sparse tensor, independent of the actual dimension. This is similar to
-     the `memref.buffer_cast` operation in the sense that it provides a bridge
-     between a tensor world view and a bufferized world view. Unlike the
-     `memref.buffer_cast` operation, however, this sparse operation actually
-     lowers into a call into a support library to obtain access to the
-     values array.
+    Returns the values array of the sparse storage scheme for the given
+    sparse tensor, independent of the actual dimension. This is similar to
+    the `memref.buffer_cast` operation in the sense that it provides a bridge
+    between a tensor world view and a bufferized world view. Unlike the
+    `memref.buffer_cast` operation, however, this sparse operation actually
+    lowers into a call into a support library to obtain access to the
+    values array.
 
-     Example:
+    Example:
 
     ```mlir
     %1 = sparse_tensor.values %0 : tensor<64x64xf64, #CSR> to memref<?xf64>

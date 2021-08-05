@@ -1,5 +1,5 @@
 ; RUN: opt < %s -wasm-lower-em-ehsjlj -S | FileCheck %s
-; RUN: llc < %s
+; RUN: llc < %s -verify-machineinstrs
 
 ; Tests for cases when exception handling and setjmp/longjmp handling are mixed.
 

@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef LLVM_TEXTAPI_MACHO_TARGET_H
-#define LLVM_TEXTAPI_MACHO_TARGET_H
+#ifndef LLVM_TEXTAPI_TARGET_H
+#define LLVM_TEXTAPI_TARGET_H
 
 #include "llvm/ADT/Triple.h"
 #include "llvm/Support/Error.h"
@@ -67,4 +67,4 @@ raw_ostream &operator<<(raw_ostream &OS, const Target &Target);
 } // namespace MachO
 } // namespace llvm
 
-#endif // LLVM_TEXTAPI_MACHO_TARGET_H
+#endif // LLVM_TEXTAPI_TARGET_H
