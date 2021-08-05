@@ -2659,12 +2659,14 @@ bool CombinerHelper::matchEqualDefs(const MachineOperand &MOP1,
                                     const MachineOperand &MOP2) {
   if (!MOP1.isReg() || !MOP2.isReg())
     return false;
-  MachineInstr *I1 = getDefIgnoringCopies(MOP1.getReg(), MRI);
-  if (!I1)
+  auto InstAndDef1 = getDefSrcRegIgnoringCopies(MOP1.getReg(), MRI);
+  if (!InstAndDef1)
     return false;
-  MachineInstr *I2 = getDefIgnoringCopies(MOP2.getReg(), MRI);
-  if (!I2)
+  auto InstAndDef2 = getDefSrcRegIgnoringCopies(MOP2.getReg(), MRI);
+  if (!InstAndDef2)
     return false;
+  MachineInstr *I1 = InstAndDef1->MI;
+  MachineInstr *I2 = InstAndDef2->MI;
 
   // Handle a case like this:
   //
@@ -2724,7 +2726,17 @@ bool CombinerHelper::matchEqualDefs(const MachineOperand &MOP1,
   //
   // On the off-chance that there's some target instruction feeding into the
   // instruction, let's use produceSameValue instead of isIdenticalTo.
-  return Builder.getTII().produceSameValue(*I1, *I2, &MRI);
+  if (Builder.getTII().produceSameValue(*I1, *I2, &MRI)) {
+    // Handle instructions with multiple defs that produce same values. Values
+    // are same for operands with same index.
+    // %0:_(s8), %1:_(s8), %2:_(s8), %3:_(s8) = G_UNMERGE_VALUES %4:_(<4 x s8>)
+    // %5:_(s8), %6:_(s8), %7:_(s8), %8:_(s8) = G_UNMERGE_VALUES %4:_(<4 x s8>)
+    // I1 and I2 are different instructions but produce same values,
+    // %1 and %6 are same, %1 and %7 are not the same value.
+    return I1->findRegisterDefOperandIdx(InstAndDef1->Reg) ==
+           I2->findRegisterDefOperandIdx(InstAndDef2->Reg);
+  }
+  return false;
 }
 
 bool CombinerHelper::matchConstantOp(const MachineOperand &MOP, int64_t C) {
