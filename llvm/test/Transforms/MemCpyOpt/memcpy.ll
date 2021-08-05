@@ -8,6 +8,8 @@ target triple = "i686-apple-darwin9"
 %0 = type { x86_fp80, x86_fp80 }
 %1 = type { i32, i32 }
 
+@C = external constant [0 x i8]
+
 declare void @llvm.memcpy.p1i8.p0i8.i64(i8 addrspace(1)* nocapture, i8* nocapture, i64, i1) nounwind
 declare void @llvm.memcpy.p0i8.p1i8.i64(i8* nocapture, i8 addrspace(1)* nocapture, i64, i1) nounwind
 declare void @llvm.memcpy.p1i8.p1i8.i64(i8 addrspace(1)* nocapture, i8 addrspace(1)* nocapture, i64, i1) nounwind
@@ -22,7 +24,7 @@ define void @test1(%0* sret(%0)  %agg.result, x86_fp80 %z.0, x86_fp80 %z.1) noun
 ; CHECK-NEXT:    [[TMP2:%.*]] = alloca [[TMP0:%.*]], align 16
 ; CHECK-NEXT:    [[MEMTMP:%.*]] = alloca [[TMP0]], align 16
 ; CHECK-NEXT:    [[TMP5:%.*]] = fsub x86_fp80 0xK80000000000000000000, [[Z_1:%.*]]
-; CHECK-NEXT:    call void @ccoshl(%0* sret([[TMP0]]) [[TMP2]], x86_fp80 [[TMP5]], x86_fp80 [[Z_0:%.*]]) #[[ATTR0:[0-9]+]]
+; CHECK-NEXT:    call void @ccoshl(%0* sret([[TMP0]]) [[TMP2]], x86_fp80 [[TMP5]], x86_fp80 [[Z_0:%.*]]) #[[ATTR2:[0-9]+]]
 ; CHECK-NEXT:    [[TMP219:%.*]] = bitcast %0* [[TMP2]] to i8*
 ; CHECK-NEXT:    [[MEMTMP20:%.*]] = bitcast %0* [[MEMTMP]] to i8*
 ; CHECK-NEXT:    [[AGG_RESULT21:%.*]] = bitcast %0* [[AGG_RESULT:%.*]] to i8*
@@ -58,6 +60,23 @@ define void @test2(i8* %P, i8* %Q) nounwind  {
 ;
   %memtmp = alloca %0, align 16
   %R = bitcast %0* %memtmp to i8*
+  call void @llvm.memcpy.p0i8.p0i8.i32(i8* align 16 %R, i8* align 16 %P, i32 32, i1 false)
+  call void @llvm.memcpy.p0i8.p0i8.i32(i8* align 16 %Q, i8* align 16 %R, i32 32, i1 false)
+  ret void
+
+}
+
+; The intermediate alloca and one of the memcpy's should be eliminated, the
+; other should be related with a memcpy.
+define void @test2_constant(i8* %Q) nounwind  {
+; CHECK-LABEL: @test2_constant(
+; CHECK-NEXT:    [[P:%.*]] = getelementptr inbounds [0 x i8], [0 x i8]* @C, i64 0, i64 0
+; CHECK-NEXT:    call void @llvm.memcpy.p0i8.p0i8.i32(i8* align 16 [[Q:%.*]], i8* align 16 [[P]], i32 32, i1 false)
+; CHECK-NEXT:    ret void
+;
+  %memtmp = alloca %0, align 16
+  %R = bitcast %0* %memtmp to i8*
+  %P = getelementptr inbounds [0 x i8], [0 x i8]* @C, i64 0, i64 0
   call void @llvm.memcpy.p0i8.p0i8.i32(i8* align 16 %R, i8* align 16 %P, i32 32, i1 false)
   call void @llvm.memcpy.p0i8.p0i8.i32(i8* align 16 %Q, i8* align 16 %R, i32 32, i1 false)
   ret void
@@ -299,7 +318,7 @@ define void @test6(i8 *%P) {
 define i32 @test7(%struct.p* nocapture align 8 byval(%struct.p) %q) nounwind ssp {
 ; CHECK-LABEL: @test7(
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[CALL:%.*]] = call i32 @g(%struct.p* byval([[STRUCT_P:%.*]]) align 8 [[Q:%.*]]) #[[ATTR0]]
+; CHECK-NEXT:    [[CALL:%.*]] = call i32 @g(%struct.p* byval([[STRUCT_P:%.*]]) align 8 [[Q:%.*]]) #[[ATTR2]]
 ; CHECK-NEXT:    ret i32 [[CALL]]
 ;
 entry:
