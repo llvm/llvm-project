@@ -854,11 +854,13 @@ lldb::addr_t IRExecutionUnit::FindInSymbols(
       return false;
     };
 
+    ModuleFunctionSearchOptions function_options;
+    function_options.include_symbols = true;
+    function_options.include_inlines = false;
+
     if (sc.module_sp) {
       sc.module_sp->FindFunctions(spec.name, CompilerDeclContext(), spec.mask,
-                                  true,  // include_symbols
-                                  false, // include_inlines
-                                  sc_list);
+                                  function_options, sc_list);
     }
 
     lldb::addr_t load_address = LLDB_INVALID_ADDRESS;
@@ -871,9 +873,7 @@ lldb::addr_t IRExecutionUnit::FindInSymbols(
 
     if (sc_list.GetSize() == 0 && sc.target_sp) {
       sc.target_sp->GetImages().FindFunctions(spec.name, spec.mask,
-                                              true,  // include_symbols
-                                              false, // include_inlines
-                                              sc_list);
+                                              function_options, sc_list);
     }
 
     if (get_external_load_address(load_address, sc_list, sc)) {

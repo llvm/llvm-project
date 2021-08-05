@@ -213,10 +213,10 @@ public:
                                           Address *addr) override {
     if (context.module_sp) {
       SymbolContextList sc_list;
-      const bool include_symbols = true;
-      const bool include_inlines = true;
-      context.module_sp->FindFunctions(m_regex, include_symbols,
-                                       include_inlines, sc_list);
+      ModuleFunctionSearchOptions function_options;
+      function_options.include_symbols = true;
+      function_options.include_inlines = true;
+      context.module_sp->FindFunctions(m_regex, function_options, sc_list);
 
       SymbolContext sc;
       // Now add the functions & symbols to the list - only add if unique:
