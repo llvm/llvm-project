@@ -4128,6 +4128,55 @@ bool CombinerHelper::matchBitfieldExtractFromAnd(
   return true;
 }
 
+bool CombinerHelper::matchBitfieldExtractFromShr(
+    MachineInstr &MI, std::function<void(MachineIRBuilder &)> &MatchInfo) {
+  const unsigned Opcode = MI.getOpcode();
+  assert(Opcode == TargetOpcode::G_ASHR || Opcode == TargetOpcode::G_LSHR);
+
+  const Register Dst = MI.getOperand(0).getReg();
+
+  const unsigned ExtrOpcode = Opcode == TargetOpcode::G_ASHR
+                                  ? TargetOpcode::G_SBFX
+                                  : TargetOpcode::G_UBFX;
+
+  // Check if the type we would use for the extract is legal
+  LLT Ty = MRI.getType(Dst);
+  LLT ExtractTy = getTargetLowering().getPreferredShiftAmountTy(Ty);
+  if (!LI || !LI->isLegalOrCustom({ExtrOpcode, {Ty, ExtractTy}}))
+    return false;
+
+  Register ShlSrc;
+  int64_t ShrAmt;
+  int64_t ShlAmt;
+  const unsigned Size = Ty.getScalarSizeInBits();
+
+  // Try to match shr (shl x, c1), c2
+  if (!mi_match(Dst, MRI,
+                m_BinOp(Opcode,
+                        m_OneNonDBGUse(m_GShl(m_Reg(ShlSrc), m_ICst(ShlAmt))),
+                        m_ICst(ShrAmt))))
+    return false;
+
+  // Make sure that the shift sizes can fit a bitfield extract
+  if (ShlAmt < 0 || ShlAmt > ShrAmt || ShrAmt >= Size)
+    return false;
+
+  // Skip this combine if the G_SEXT_INREG combine could handle it
+  if (Opcode == TargetOpcode::G_ASHR && ShlAmt == ShrAmt)
+    return false;
+
+  // Calculate start position and width of the extract
+  const int64_t Pos = ShrAmt - ShlAmt;
+  const int64_t Width = Size - ShrAmt;
+
+  MatchInfo = [=](MachineIRBuilder &B) {
+    auto WidthCst = B.buildConstant(ExtractTy, Width);
+    auto PosCst = B.buildConstant(ExtractTy, Pos);
+    B.buildInstr(ExtrOpcode, {Dst}, {ShlSrc, PosCst, WidthCst});
+  };
+  return true;
+}
+
 bool CombinerHelper::reassociationCanBreakAddressingModePattern(
     MachineInstr &PtrAdd) {
   assert(PtrAdd.getOpcode() == TargetOpcode::G_PTR_ADD);

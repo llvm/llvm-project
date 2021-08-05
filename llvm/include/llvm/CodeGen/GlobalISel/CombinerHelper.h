@@ -541,6 +541,10 @@ public:
   bool matchBitfieldExtractFromAnd(
       MachineInstr &MI, std::function<void(MachineIRBuilder &)> &MatchInfo);
 
+  /// Match: shr (shl x, n), k -> sbfx/ubfx x, pos, width
+  bool matchBitfieldExtractFromShr(
+      MachineInstr &MI, std::function<void(MachineIRBuilder &)> &MatchInfo);
+
   /// Reassociate pointer calculations with G_ADD involved, to allow better
   /// addressing mode usage.
   bool matchReassocPtrAdd(MachineInstr &MI,
