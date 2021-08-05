@@ -4054,6 +4054,9 @@ void Sema::AddAlignedAttr(Decl *D, const AttributeCommonInfo &CI, Expr *E,
   unsigned MaximumAlignment = Sema::MaximumAlignment;
   if (Context.getTargetInfo().getTriple().isOSBinFormatCOFF())
     MaximumAlignment = std::min(MaximumAlignment, 8192u);
+  else if (Context.getTargetInfo().getTriple().isOSAIX())
+    MaximumAlignment = std::min(MaximumAlignment, 4096u);
+
   if (AlignVal > MaximumAlignment) {
     Diag(AttrLoc, diag::err_attribute_aligned_too_great)
         << MaximumAlignment << E->getSourceRange();
