@@ -168,14 +168,9 @@ static cl::opt<std::string> OutOfProcessExecutorConnect(
     cl::desc("Connect to an out-of-process executor via TCP"),
     cl::cat(JITLinkCategory));
 
-// TODO: Default to false if compiler-rt is not built.
-static cl::opt<bool> UseOrcRuntime("use-orc-runtime",
-                                   cl::desc("Do not required/load ORC runtime"),
-                                   cl::init(true), cl::cat(JITLinkCategory));
-
 static cl::opt<std::string>
-    OrcRuntimePath("orc-runtime-path", cl::desc("Add orc runtime to session"),
-                   cl::init(""), cl::cat(JITLinkCategory));
+    OrcRuntime("orc-runtime", cl::desc("Use ORC runtime from given path"),
+               cl::init(""), cl::cat(JITLinkCategory));
 
 ExitOnError ExitOnErr;
 
@@ -924,9 +919,9 @@ Session::Session(std::unique_ptr<ExecutorProcessControl> EPC, Error &Err)
 
   // Set up the platform.
   auto &TT = ES.getExecutorProcessControl().getTargetTriple();
-  if (TT.isOSBinFormatMachO() && UseOrcRuntime) {
-    if (auto P = MachOPlatform::Create(ES, ObjLayer, *MainJD,
-                                       OrcRuntimePath.c_str()))
+  if (TT.isOSBinFormatMachO() && !OrcRuntime.empty()) {
+    if (auto P =
+            MachOPlatform::Create(ES, ObjLayer, *MainJD, OrcRuntime.c_str()))
       ES.setPlatform(std::move(*P));
     else {
       Err = P.takeError();
@@ -1114,37 +1109,11 @@ static Triple getFirstFileTriple() {
   return FirstTT;
 }
 
-static bool isOrcRuntimeSupported(const Triple &TT) {
-  switch (TT.getObjectFormat()) {
-  case Triple::MachO:
-    switch (TT.getArch()) {
-    case Triple::x86_64:
-      return true;
-    default:
-      return false;
-    }
-  default:
-    return false;
-  }
-}
-
 static Error sanitizeArguments(const Triple &TT, const char *ArgV0) {
-
-  // If we're in noexec mode and the user didn't explicitly specify
-  // -use-orc-runtime then don't use it.
-  if (NoExec && UseOrcRuntime.getNumOccurrences() == 0)
-    UseOrcRuntime = false;
 
   // -noexec and --args should not be used together.
   if (NoExec && !InputArgv.empty())
     errs() << "Warning: --args passed to -noexec run will be ignored.\n";
-
-  // Turn off UseOrcRuntime on platforms where it's not supported.
-  if (UseOrcRuntime && !isOrcRuntimeSupported(TT)) {
-    errs() << "Warning: Orc runtime not available for target platform. "
-              "Use -use-orc-runtime=false to suppress this warning.\n";
-    UseOrcRuntime = false;
-  }
 
   // Set the entry point name if not specified.
   if (EntryPointName.empty())
@@ -1177,27 +1146,6 @@ static Error sanitizeArguments(const Triple &TT, const char *ArgV0) {
     OutOfProcessExecutor = OOPExecutorPath.str().str();
   }
 
-  // If we're loading the Orc runtime then determine the path for it.
-  if (UseOrcRuntime) {
-    if (OrcRuntimePath.empty()) {
-      SmallString<256> DefaultOrcRuntimePath(sys::fs::getMainExecutable(
-          ArgV0, reinterpret_cast<void *>(&sanitizeArguments)));
-      sys::path::remove_filename(
-          DefaultOrcRuntimePath); // remove 'llvm-jitlink'
-      while (!DefaultOrcRuntimePath.empty() &&
-             DefaultOrcRuntimePath.back() == '/')
-        DefaultOrcRuntimePath.pop_back();
-      if (DefaultOrcRuntimePath.endswith("bin"))
-        sys::path::remove_filename(DefaultOrcRuntimePath); // remove 'bin'
-      sys::path::append(DefaultOrcRuntimePath,
-                        ("lib/clang/" + Twine(LLVM_VERSION_MAJOR) + "." +
-                         Twine(LLVM_VERSION_MINOR) + "." +
-                         Twine(LLVM_VERSION_PATCH) +
-                         "/lib/darwin/libclang_rt.orc_osx.a")
-                            .str());
-      OrcRuntimePath = DefaultOrcRuntimePath.str().str();
-    }
-  }
   return Error::success();
 }
 
@@ -1407,7 +1355,7 @@ static Error runChecks(Session &S) {
 static void dumpSessionStats(Session &S) {
   if (!ShowSizes)
     return;
-  if (UseOrcRuntime)
+  if (!OrcRuntime.empty())
     outs() << "Note: Session stats include runtime and entry point lookup, but "
               "not JITDylib initialization/deinitialization.\n";
   if (ShowSizes)
@@ -1500,7 +1448,7 @@ int main(int argc, char *argv[]) {
 
     // If we're running with the ORC runtime then replace the entry-point
     // with the __orc_rt_run_program symbol.
-    if (UseOrcRuntime)
+    if (!OrcRuntime.empty())
       EntryPoint = ExitOnErr(getOrcRuntimeEntryPoint(*S));
   }
 
@@ -1518,7 +1466,7 @@ int main(int argc, char *argv[]) {
   {
     LLVM_DEBUG(dbgs() << "Running \"" << EntryPointName << "\"...\n");
     TimeRegion TR(Timers ? &Timers->RunTimer : nullptr);
-    if (UseOrcRuntime)
+    if (!OrcRuntime.empty())
       Result = ExitOnErr(runWithRuntime(*S, EntryPoint.getAddress()));
     else
       Result = ExitOnErr(runWithoutRuntime(*S, EntryPoint.getAddress()));
