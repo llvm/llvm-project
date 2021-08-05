@@ -353,8 +353,3 @@ COMPILER_RT_VISIBILITY int lprofReleaseMemoryPagesToOS(uintptr_t Begin,
   }
   return 0;
 }
-
-COMPILER_RT_VISIBILITY void warnIfNonZero(int *i) {
-  if (*i)
-    PROF_WARN("Expected flag to be 0, but got: %d\n", *i);
-}
