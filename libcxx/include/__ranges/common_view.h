@@ -18,6 +18,7 @@
 #include <__ranges/enable_borrowed_range.h>
 #include <__ranges/size.h>
 #include <__ranges/view_interface.h>
+#include <__utility/move.h>
 #include <concepts>
 #include <type_traits>
 
