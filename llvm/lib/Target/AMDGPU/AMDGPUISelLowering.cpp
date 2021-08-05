@@ -2386,8 +2386,16 @@ SDValue AMDGPUTargetLowering::LowerCTLZ_CTTZ(SDValue Op, SelectionDAG &DAG) cons
                    Op.getOpcode() == ISD::CTTZ_ZERO_UNDEF;
 
   if (Src.getValueType() == MVT::i32) {
-    assert(ZeroUndef);
-    return DAG.getNode(NewOpc, SL, MVT::i32, Src);
+    // (ctlz hi:lo) -> (umin (ffbh src), 32)
+    // (cttz hi:lo) -> (umin (ffbl src), 32)
+    // (ctlz_zero_undef src) -> (ffbh src)
+    // (cttz_zero_undef src) -> (ffbl src)
+    SDValue NewOpr = DAG.getNode(NewOpc, SL, MVT::i32, Src);
+    if (!ZeroUndef) {
+      const SDValue Const32 = DAG.getConstant(32, SL, MVT::i32);
+      NewOpr = DAG.getNode(ISD::UMIN, SL, MVT::i32, NewOpr, Const32);
+    }
+    return NewOpr;
   }
 
   SDValue Lo, Hi;
