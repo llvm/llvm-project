@@ -377,4 +377,18 @@
 #define SANITIZER_SUPPORTS_INIT_FOR_DLOPEN 0
 #endif
 
+// SANITIZER_SUPPORTS_THREADLOCAL
+// 1 - THREADLOCAL macro is supported by target
+// 0 - THREADLOCAL macro is not supported by target
+#ifndef __has_feature
+// TODO: Support other compilers here
+#  define SANITIZER_SUPPORTS_THREADLOCAL 1
+#else
+#  if __has_feature(tls)
+#    define SANITIZER_SUPPORTS_THREADLOCAL 1
+#  else
+#    define SANITIZER_SUPPORTS_THREADLOCAL 0
+#  endif
+#endif
+
 #endif // SANITIZER_PLATFORM_H
