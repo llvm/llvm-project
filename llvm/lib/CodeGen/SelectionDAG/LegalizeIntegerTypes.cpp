@@ -234,6 +234,18 @@ void DAGTypeLegalizer::PromoteIntegerResult(SDNode *N, unsigned ResNo) {
     Res = PromoteIntRes_VECREDUCE(N);
     break;
 
+  case ISD::VP_REDUCE_ADD:
+  case ISD::VP_REDUCE_MUL:
+  case ISD::VP_REDUCE_AND:
+  case ISD::VP_REDUCE_OR:
+  case ISD::VP_REDUCE_XOR:
+  case ISD::VP_REDUCE_SMAX:
+  case ISD::VP_REDUCE_SMIN:
+  case ISD::VP_REDUCE_UMAX:
+  case ISD::VP_REDUCE_UMIN:
+    Res = PromoteIntRes_VP_REDUCE(N);
+    break;
+
   case ISD::FREEZE:
     Res = PromoteIntRes_FREEZE(N);
     break;
@@ -1615,6 +1627,17 @@ bool DAGTypeLegalizer::PromoteIntegerOperand(SDNode *N, unsigned OpNo) {
   case ISD::VECREDUCE_SMIN:
   case ISD::VECREDUCE_UMAX:
   case ISD::VECREDUCE_UMIN: Res = PromoteIntOp_VECREDUCE(N); break;
+  case ISD::VP_REDUCE_ADD:
+  case ISD::VP_REDUCE_MUL:
+  case ISD::VP_REDUCE_AND:
+  case ISD::VP_REDUCE_OR:
+  case ISD::VP_REDUCE_XOR:
+  case ISD::VP_REDUCE_SMAX:
+  case ISD::VP_REDUCE_SMIN:
+  case ISD::VP_REDUCE_UMAX:
+  case ISD::VP_REDUCE_UMIN:
+    Res = PromoteIntOp_VP_REDUCE(N, OpNo);
+    break;
 
   case ISD::SET_ROUNDING: Res = PromoteIntOp_SET_ROUNDING(N); break;
   }
@@ -2074,30 +2097,54 @@ SDValue DAGTypeLegalizer::PromoteIntOp_FPOWI(SDNode *N) {
   return SDValue();
 }
 
-SDValue DAGTypeLegalizer::PromoteIntOp_VECREDUCE(SDNode *N) {
-  SDLoc dl(N);
-  SDValue Op;
+static unsigned getExtendForIntVecReduction(SDNode *N) {
   switch (N->getOpcode()) {
-  default: llvm_unreachable("Expected integer vector reduction");
+  default:
+    llvm_unreachable("Expected integer vector reduction");
   case ISD::VECREDUCE_ADD:
   case ISD::VECREDUCE_MUL:
   case ISD::VECREDUCE_AND:
   case ISD::VECREDUCE_OR:
   case ISD::VECREDUCE_XOR:
-    Op = GetPromotedInteger(N->getOperand(0));
-    break;
+  case ISD::VP_REDUCE_ADD:
+  case ISD::VP_REDUCE_MUL:
+  case ISD::VP_REDUCE_AND:
+  case ISD::VP_REDUCE_OR:
+  case ISD::VP_REDUCE_XOR:
+    return ISD::ANY_EXTEND;
   case ISD::VECREDUCE_SMAX:
   case ISD::VECREDUCE_SMIN:
-    Op = SExtPromotedInteger(N->getOperand(0));
-    break;
+  case ISD::VP_REDUCE_SMAX:
+  case ISD::VP_REDUCE_SMIN:
+    return ISD::SIGN_EXTEND;
   case ISD::VECREDUCE_UMAX:
   case ISD::VECREDUCE_UMIN:
-    Op = ZExtPromotedInteger(N->getOperand(0));
-    break;
+  case ISD::VP_REDUCE_UMAX:
+  case ISD::VP_REDUCE_UMIN:
+    return ISD::ZERO_EXTEND;
   }
+}
+
+SDValue DAGTypeLegalizer::PromoteIntOpVectorReduction(SDNode *N, SDValue V) {
+  switch (getExtendForIntVecReduction(N)) {
+  default:
+    llvm_unreachable("Impossible extension kind for integer reduction");
+  case ISD::ANY_EXTEND:
+    return GetPromotedInteger(V);
+  case ISD::SIGN_EXTEND:
+    return SExtPromotedInteger(V);
+  case ISD::ZERO_EXTEND:
+    return ZExtPromotedInteger(V);
+  }
+}
+
+SDValue DAGTypeLegalizer::PromoteIntOp_VECREDUCE(SDNode *N) {
+  SDLoc dl(N);
+  SDValue Op = PromoteIntOpVectorReduction(N, N->getOperand(0));
 
   EVT EltVT = Op.getValueType().getVectorElementType();
   EVT VT = N->getValueType(0);
+
   if (VT.bitsGE(EltVT))
     return DAG.getNode(N->getOpcode(), SDLoc(N), VT, Op);
 
@@ -2105,6 +2152,38 @@ SDValue DAGTypeLegalizer::PromoteIntOp_VECREDUCE(SDNode *N) {
   // promotion, also promote the result type and then truncate.
   SDValue Reduce = DAG.getNode(N->getOpcode(), dl, EltVT, Op);
   return DAG.getNode(ISD::TRUNCATE, dl, VT, Reduce);
+}
+
+SDValue DAGTypeLegalizer::PromoteIntOp_VP_REDUCE(SDNode *N, unsigned OpNo) {
+  SDLoc DL(N);
+  SDValue Op = N->getOperand(OpNo);
+  SmallVector<SDValue, 4> NewOps(N->op_begin(), N->op_end());
+
+  if (OpNo == 2) { // Mask
+    // Update in place.
+    NewOps[2] = PromoteTargetBoolean(Op, N->getOperand(1).getValueType());
+    return SDValue(DAG.UpdateNodeOperands(N, NewOps), 0);
+  }
+
+  assert(OpNo == 1 && "Unexpected operand for promotion");
+
+  Op = PromoteIntOpVectorReduction(N, Op);
+
+  NewOps[OpNo] = Op;
+
+  EVT VT = N->getValueType(0);
+  EVT EltVT = Op.getValueType().getScalarType();
+
+  if (VT.bitsGE(EltVT))
+    return DAG.getNode(N->getOpcode(), SDLoc(N), VT, NewOps);
+
+  // Result size must be >= element/start-value size. If this is not the case
+  // after promotion, also promote both the start value and result type and
+  // then truncate.
+  NewOps[0] =
+      DAG.getNode(getExtendForIntVecReduction(N), DL, EltVT, N->getOperand(0));
+  SDValue Reduce = DAG.getNode(N->getOpcode(), DL, EltVT, NewOps);
+  return DAG.getNode(ISD::TRUNCATE, DL, VT, Reduce);
 }
 
 SDValue DAGTypeLegalizer::PromoteIntOp_SET_ROUNDING(SDNode *N) {
@@ -5061,7 +5140,17 @@ SDValue DAGTypeLegalizer::PromoteIntRes_VECREDUCE(SDNode *N) {
   // we can simply change the result type.
   SDLoc dl(N);
   EVT NVT = TLI.getTypeToTransformTo(*DAG.getContext(), N->getValueType(0));
-  return DAG.getNode(N->getOpcode(), dl, NVT, N->getOperand(0));
+  return DAG.getNode(N->getOpcode(), dl, NVT, N->ops());
+}
+
+SDValue DAGTypeLegalizer::PromoteIntRes_VP_REDUCE(SDNode *N) {
+  // The VP_REDUCE result size may be larger than the element size, so we can
+  // simply change the result type. However the start value and result must be
+  // the same.
+  SDLoc DL(N);
+  SDValue Start = PromoteIntOpVectorReduction(N, N->getOperand(0));
+  return DAG.getNode(N->getOpcode(), DL, Start.getValueType(), Start,
+                     N->getOperand(1), N->getOperand(2), N->getOperand(3));
 }
 
 SDValue DAGTypeLegalizer::PromoteIntOp_EXTRACT_VECTOR_ELT(SDNode *N) {
