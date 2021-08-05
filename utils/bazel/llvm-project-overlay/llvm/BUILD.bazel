@@ -2457,7 +2457,6 @@ cc_library(
         "tools/llvm-exegesis/lib/*.cpp",
         "tools/llvm-exegesis/lib/X86/*.cpp",
         "tools/llvm-exegesis/lib/X86/*.h",
-
         # We have to include these headers here as well as in the `hdrs` below
         # to allow the `.cpp` files to use file-relative-inclusion to find
         # them, even though consumers of this library use inclusion relative to
@@ -3831,6 +3830,17 @@ cc_library(
     ],
 )
 
+cc_library(
+    name = "Diff",
+    testonly = True,
+    srcs = glob(["tools/llvm-diff/lib/*.cpp"]),
+    hdrs = glob(["tools/llvm-diff/lib/*.h"]),
+    deps = [
+        ":Core",
+        ":Support",
+    ],
+)
+
 # A hacky library to expose some internal headers of gtest to its own
 # implementation source files using a stripped include prefix rather than
 # file-relative-inclusion.
@@ -4072,9 +4082,8 @@ cc_binary(
     copts = llvm_copts,
     stamp = 0,
     deps = [
-        ":AsmParser",
-        ":BitReader",
         ":Core",
+        ":Diff",
         ":IRReader",
         ":Support",
     ],
