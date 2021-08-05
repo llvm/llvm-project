@@ -2986,6 +2986,8 @@ def err_alignas_mismatch : Error<
   "redeclaration has different alignment requirement (%1 vs %0)">;
 def err_alignas_underaligned : Error<
   "requested alignment is less than minimum alignment of %1 for type %0">;
+def warn_aligned_attr_underaligned : Warning<err_alignas_underaligned.Text>,
+  InGroup<IgnoredAttributes>;
 def err_attribute_sizeless_type : Error<
   "%0 attribute cannot be applied to sizeless type %1">;
 def err_attribute_argument_n_type : Error<

@@ -4063,15 +4063,26 @@ void Sema::AddAlignedAttr(Decl *D, const AttributeCommonInfo &CI, Expr *E,
     return;
   }
 
-  if (Context.getTargetInfo().isTLSSupported()) {
+  const auto *VD = dyn_cast<VarDecl>(D);
+  if (VD && Context.getTargetInfo().isTLSSupported()) {
     unsigned MaxTLSAlign =
         Context.toCharUnitsFromBits(Context.getTargetInfo().getMaxTLSAlign())
             .getQuantity();
-    const auto *VD = dyn_cast<VarDecl>(D);
-    if (MaxTLSAlign && AlignVal > MaxTLSAlign && VD &&
+    if (MaxTLSAlign && AlignVal > MaxTLSAlign &&
         VD->getTLSKind() != VarDecl::TLS_None) {
       Diag(VD->getLocation(), diag::err_tls_var_aligned_over_maximum)
           << (unsigned)AlignVal << VD << MaxTLSAlign;
+      return;
+    }
+  }
+
+  // On AIX, an aligned attribute can not decrease the alignment when applied
+  // to a variable declaration with vector type.
+  if (VD && Context.getTargetInfo().getTriple().isOSAIX()) {
+    const Type *Ty = VD->getType().getTypePtr();
+    if (Ty->isVectorType() && AlignVal < 16) {
+      Diag(VD->getLocation(), diag::warn_aligned_attr_underaligned)
+          << VD->getType() << 16;
       return;
     }
   }
