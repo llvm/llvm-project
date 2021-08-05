@@ -20,6 +20,7 @@
 #include <__ranges/empty.h>
 #include <__ranges/size.h>
 #include <__ranges/view_interface.h>
+#include <__utility/forward.h>
 #include <concepts>
 #include <type_traits>
 
