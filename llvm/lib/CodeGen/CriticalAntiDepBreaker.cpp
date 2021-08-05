@@ -212,6 +212,21 @@ void CriticalAntiDepBreaker::PrescanInstruction(MachineInstr &MI) {
     if (Classes[Reg] != reinterpret_cast<TargetRegisterClass *>(-1))
       RegRefs.insert(std::make_pair(Reg, &MO));
 
+    if (MO.isUse() && Special) {
+      if (!KeepRegs.test(Reg)) {
+        for (MCSubRegIterator SubRegs(Reg, TRI, /*IncludeSelf=*/true);
+             SubRegs.isValid(); ++SubRegs)
+          KeepRegs.set(*SubRegs);
+      }
+    }
+  }
+
+  for (unsigned I = 0, E = MI.getNumOperands(); I != E; ++I) {
+    const MachineOperand &MO = MI.getOperand(I);
+    if (!MO.isReg()) continue;
+    Register Reg = MO.getReg();
+    if (!Reg.isValid())
+      continue;
     // If this reg is tied and live (Classes[Reg] is set to -1), we can't change
     // it or any of its sub or super regs. We need to use KeepRegs to mark the
     // reg because not all uses of the same reg within an instruction are
@@ -222,7 +237,7 @@ void CriticalAntiDepBreaker::PrescanInstruction(MachineInstr &MI) {
     // of a register? In the above 'xor' example, the uses of %eax are undef, so
     // earlier instructions could still replace %eax even though the 'xor'
     // itself can't be changed.
-    if (MI.isRegTiedToUseOperand(i) &&
+    if (MI.isRegTiedToUseOperand(I) &&
         Classes[Reg] == reinterpret_cast<TargetRegisterClass *>(-1)) {
       for (MCSubRegIterator SubRegs(Reg, TRI, /*IncludeSelf=*/true);
            SubRegs.isValid(); ++SubRegs) {
@@ -231,14 +246,6 @@ void CriticalAntiDepBreaker::PrescanInstruction(MachineInstr &MI) {
       for (MCSuperRegIterator SuperRegs(Reg, TRI);
            SuperRegs.isValid(); ++SuperRegs) {
         KeepRegs.set(*SuperRegs);
-      }
-    }
-
-    if (MO.isUse() && Special) {
-      if (!KeepRegs.test(Reg)) {
-        for (MCSubRegIterator SubRegs(Reg, TRI, /*IncludeSelf=*/true);
-             SubRegs.isValid(); ++SubRegs)
-          KeepRegs.set(*SubRegs);
       }
     }
   }
