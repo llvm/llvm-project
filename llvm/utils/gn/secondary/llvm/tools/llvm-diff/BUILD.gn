@@ -1,13 +1,9 @@
 executable("llvm-diff") {
   deps = [
+    "lib",
     "//llvm/lib/IR",
     "//llvm/lib/IRReader",
     "//llvm/lib/Support",
   ]
-  sources = [
-    "DiffConsumer.cpp",
-    "DiffLog.cpp",
-    "DifferenceEngine.cpp",
-    "llvm-diff.cpp",
-  ]
+  sources = [ "llvm-diff.cpp" ]
 }
