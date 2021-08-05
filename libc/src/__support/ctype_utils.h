@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef LLVM_LIBC_SRC_CTYPE_CTYPE_UTILS_H
-#define LLVM_LIBC_SRC_CTYPE_CTYPE_UTILS_H
+#ifndef LLVM_LIBC_SRC_SUPPORT_CTYPE_UTILS_H
+#define LLVM_LIBC_SRC_SUPPORT_CTYPE_UTILS_H
 
 namespace __llvm_libc {
 namespace internal {
@@ -30,7 +30,11 @@ static constexpr int islower(unsigned ch) { return (ch - 'a') < 26; }
 
 static constexpr int isupper(unsigned ch) { return (ch - 'A') < 26; }
 
+static constexpr int isspace(unsigned ch) {
+  return ch == ' ' || (ch - '\t') < 5;
+}
+
 } // namespace internal
 } // namespace __llvm_libc
 
-#endif //  LLVM_LIBC_SRC_CTYPE_CTYPE_UTILS_H
+#endif //  LLVM_LIBC_SRC_SUPPORT_CTYPE_UTILS_H

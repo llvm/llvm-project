@@ -6,14 +6,14 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef LLVM_LIBC_UTILS_FPUTIL_AARCH64_FENVIMPL_H
-#define LLVM_LIBC_UTILS_FPUTIL_AARCH64_FENVIMPL_H
+#ifndef LLVM_LIBC_SRC_SUPPORT_FPUTIL_AARCH64_FENVIMPL_H
+#define LLVM_LIBC_SRC_SUPPORT_FPUTIL_AARCH64_FENVIMPL_H
 
 #include <arm_acle.h>
 #include <fenv.h>
 #include <stdint.h>
 
-#include "utils/FPUtil/FPBits.h"
+#include "src/__support/FPUtil/FPBits.h"
 
 namespace __llvm_libc {
 namespace fputil {
@@ -232,4 +232,4 @@ static inline int setEnv(const fenv_t *envp) {
 } // namespace fputil
 } // namespace __llvm_libc
 
-#endif // LLVM_LIBC_UTILS_FPUTIL_AARCH64_FENVIMPL_H
+#endif // LLVM_LIBC_SRC_SUPPORT_FPUTIL_AARCH64_FENVIMPL_H

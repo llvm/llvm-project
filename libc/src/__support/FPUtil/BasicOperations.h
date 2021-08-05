@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef LLVM_LIBC_UTILS_FPUTIL_BASIC_OPERATIONS_H
-#define LLVM_LIBC_UTILS_FPUTIL_BASIC_OPERATIONS_H
+#ifndef LLVM_LIBC_SRC_SUPPORT_FPUTIL_BASIC_OPERATIONS_H
+#define LLVM_LIBC_SRC_SUPPORT_FPUTIL_BASIC_OPERATIONS_H
 
 #include "FPBits.h"
 
@@ -81,4 +81,4 @@ static inline T fdim(T x, T y) {
 } // namespace fputil
 } // namespace __llvm_libc
 
-#endif // LLVM_LIBC_UTILS_FPUTIL_BASIC_OPERATIONS_H
+#endif // LLVM_LIBC_SRC_SUPPORT_FPUTIL_BASIC_OPERATIONS_H

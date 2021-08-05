@@ -47,5 +47,5 @@ add_dependencies(
   LibcFPTestHelpers
   LibcUnitTest
   libc.utils.CPP.standalone_cpp
-  libc.utils.FPUtil.fputil
+  libc.src.__support.FPUtil.fputil
 )

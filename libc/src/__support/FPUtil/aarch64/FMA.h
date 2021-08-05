@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef LLVM_LIBC_UTILS_FPUTIL_AARCH64_FMA_H
-#define LLVM_LIBC_UTILS_FPUTIL_AARCH64_FMA_H
+#ifndef LLVM_LIBC_SRC_SUPPORT_FPUTIL_AARCH64_FMA_H
+#define LLVM_LIBC_SRC_SUPPORT_FPUTIL_AARCH64_FMA_H
 
 #include "utils/CPP/TypeTraits.h"
 
@@ -35,4 +35,4 @@ cpp::EnableIfType<cpp::IsSame<T, double>::Value, T> fma(T x, T y, T z) {
 } // namespace fputil
 } // namespace __llvm_libc
 
-#endif // LLVM_LIBC_UTILS_FPUTIL_AARCH64_FMA_H
+#endif // LLVM_LIBC_SRC_SUPPORT_FPUTIL_AARCH64_FMA_H

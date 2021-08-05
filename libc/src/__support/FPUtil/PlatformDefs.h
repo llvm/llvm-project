@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef LLVM_LIBC_UTILS_FPUTIL_PLATFORM_DEFS_H
-#define LLVM_LIBC_UTILS_FPUTIL_PLATFORM_DEFS_H
+#ifndef LLVM_LIBC_SRC_SUPPORT_FPUTIL_PLATFORM_DEFS_H
+#define LLVM_LIBC_SRC_SUPPORT_FPUTIL_PLATFORM_DEFS_H
 
 #if defined(__x86_64__) || defined(__i386__)
 #define X87_FPU
@@ -21,4 +21,4 @@
 #define SPECIAL_X86_LONG_DOUBLE
 #endif
 
-#endif // LLVM_LIBC_UTILS_FPUTIL_PLATFORM_DEFS_H
+#endif // LLVM_LIBC_SRC_SUPPORT_FPUTIL_PLATFORM_DEFS_H

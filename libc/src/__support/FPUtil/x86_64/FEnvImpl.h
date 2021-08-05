@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef LLVM_LIBC_UTILS_FPUTIL_X86_64_FENVIMPL_H
-#define LLVM_LIBC_UTILS_FPUTIL_X86_64_FENVIMPL_H
+#ifndef LLVM_LIBC_SRC_SUPPORT_FPUTIL_X86_64_FENVIMPL_H
+#define LLVM_LIBC_SRC_SUPPORT_FPUTIL_X86_64_FENVIMPL_H
 
 #include <fenv.h>
 #include <stdint.h>
@@ -238,7 +238,7 @@ static inline int raiseExcept(int excepts) {
   // ensure that the writes by the exception handler are maintained
   // when raising the next exception.
 
-  auto raiseHelper = [](uint16_t  singleExceptFlag) {
+  auto raiseHelper = [](uint16_t singleExceptFlag) {
     internal::X87StateDescriptor state;
     internal::getX87StateDescriptor(state);
     state.StatusWord |= singleExceptFlag;
@@ -386,4 +386,4 @@ static inline int setEnv(const fenv_t *envp) {
 } // namespace fputil
 } // namespace __llvm_libc
 
-#endif // LLVM_LIBC_UTILS_FPUTIL_X86_64_FENVIMPL_H
+#endif // LLVM_LIBC_SRC_SUPPORT_FPUTIL_X86_64_FENVIMPL_H

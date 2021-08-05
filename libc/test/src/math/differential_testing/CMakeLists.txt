@@ -56,7 +56,7 @@ function(add_diff_binary target_name)
 
   add_dependencies(
     ${fq_target_name}
-    libc.utils.FPUtil.fputil
+    libc.src.__support.FPUtil.fputil
     ${fq_deps_list}
   )
 endfunction()

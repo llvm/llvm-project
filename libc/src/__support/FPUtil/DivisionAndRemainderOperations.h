@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef LLVM_LIBC_UTILS_FPUTIL_DIVISION_AND_REMAINDER_OPERATIONS_H
-#define LLVM_LIBC_UTILS_FPUTIL_DIVISION_AND_REMAINDER_OPERATIONS_H
+#ifndef LLVM_LIBC_SRC_SUPPORT_FPUTIL_DIVISION_AND_REMAINDER_OPERATIONS_H
+#define LLVM_LIBC_SRC_SUPPORT_FPUTIL_DIVISION_AND_REMAINDER_OPERATIONS_H
 
 #include "FPBits.h"
 #include "ManipulationFunctions.h"
@@ -116,4 +116,4 @@ static inline T remquo(T x, T y, int &q) {
 } // namespace fputil
 } // namespace __llvm_libc
 
-#endif // LLVM_LIBC_UTILS_FPUTIL_DIVISION_AND_REMAINDER_OPERATIONS_H
+#endif // LLVM_LIBC_SRC_SUPPORT_FPUTIL_DIVISION_AND_REMAINDER_OPERATIONS_H

@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef LLVM_LIBC_UTILS_FPUTIL_POLYEVAL_H
-#define LLVM_LIBC_UTILS_FPUTIL_POLYEVAL_H
+#ifndef LLVM_LIBC_SRC_SUPPORT_FPUTIL_POLYEVAL_H
+#define LLVM_LIBC_SRC_SUPPORT_FPUTIL_POLYEVAL_H
 
 #include "utils/CPP/TypeTraits.h"
 
@@ -51,4 +51,4 @@ static inline T polyeval(T x, T a0, Ts... a) {
 
 #endif
 
-#endif // LLVM_LIBC_UTILS_FPUTIL_FMA_H
+#endif // LLVM_LIBC_SRC_SUPPORT_FPUTIL_FMA_H

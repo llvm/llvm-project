@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef LLVM_LIBC_UTILS_FPUTIL_NORMAL_FLOAT_H
-#define LLVM_LIBC_UTILS_FPUTIL_NORMAL_FLOAT_H
+#ifndef LLVM_LIBC_SRC_SUPPORT_FPUTIL_NORMAL_FLOAT_H
+#define LLVM_LIBC_SRC_SUPPORT_FPUTIL_NORMAL_FLOAT_H
 
 #include "FPBits.h"
 
@@ -260,4 +260,4 @@ template <> inline NormalFloat<long double>::operator long double() const {
 } // namespace fputil
 } // namespace __llvm_libc
 
-#endif // LLVM_LIBC_UTILS_FPUTIL_NORMAL_FLOAT_H
+#endif // LLVM_LIBC_SRC_SUPPORT_FPUTIL_NORMAL_FLOAT_H
