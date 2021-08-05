@@ -139,22 +139,12 @@ if.end:                                           ; preds = %if.then, %entry
 }
 
 ; Test a case when a function only calls other functions that are neither setjmp nor longjmp
-define void @only_other_func() {
+define void @other_func_only() {
+; CHECK-LABEL: @other_func_only
 entry:
   call void @foo()
   ret void
 ; CHECK: call void @foo()
-}
-
-; Test a case when a function only calls longjmp and not setjmp
-define void @only_longjmp() {
-entry:
-  %buf = alloca [1 x %struct.__jmp_buf_tag], align 16
-  %arraydecay = getelementptr inbounds [1 x %struct.__jmp_buf_tag], [1 x %struct.__jmp_buf_tag]* %buf, i32 0, i32 0
-  call void @longjmp(%struct.__jmp_buf_tag* %arraydecay, i32 5) #1
-  unreachable
-; CHECK: %[[JMPBUF:.*]] = ptrtoint
-; CHECK-NEXT: call void @emscripten_longjmp([[PTR]] %[[JMPBUF]], i32 5)
 }
 
 ; Test inline asm handling
@@ -185,10 +175,10 @@ entry:
   ret i8 *%alloc
 }
 
-; Tests if program does not crash when there's no setjmp function calls in the
-; module.
+; Test a case when a function only calls longjmp and not setjmp
 @buffer = global [1 x %struct.__jmp_buf_tag] zeroinitializer, align 16
 define void @longjmp_only() {
+; CHECK-LABEL: @longjmp_only
 entry:
   ; CHECK: call void @emscripten_longjmp
   call void @longjmp(%struct.__jmp_buf_tag* getelementptr inbounds ([1 x %struct.__jmp_buf_tag], [1 x %struct.__jmp_buf_tag]* @buffer, i32 0, i32 0), i32 1) #1
@@ -197,6 +187,7 @@ entry:
 
 ; Tests if SSA rewrite works when a use and its def are within the same BB.
 define void @ssa_rewite_in_same_bb() {
+; CHECK-LABEL: @ssa_rewite_in_same_bb
 entry:
   call void @foo()
   br label %for.cond
