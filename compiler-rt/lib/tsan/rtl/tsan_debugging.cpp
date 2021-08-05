@@ -197,7 +197,7 @@ const char *__tsan_locate_address(uptr addr, char *name, uptr name_size,
 
   if (IsMetaMem(reinterpret_cast<u32 *>(addr))) {
     region_kind = "meta shadow";
-  } else if (IsShadowMem(addr)) {
+  } else if (IsShadowMem(reinterpret_cast<RawShadow *>(addr))) {
     region_kind = "shadow";
   } else {
     bool is_stack = false;

@@ -84,7 +84,7 @@ typedef Allocator::AllocatorCache AllocatorCache;
 Allocator *allocator();
 #endif
 
-const u64 kShadowRodata = (u64)-1;  // .rodata shadow marker
+const RawShadow kShadowRodata = (RawShadow)-1;  // .rodata shadow marker
 
 // FastState (from most significant bit):
 //   ignore          : 1
@@ -393,8 +393,8 @@ struct ThreadState {
   uptr *shadow_stack;
   uptr *shadow_stack_end;
   uptr *shadow_stack_pos;
-  u64 *racy_shadow_addr;
-  u64 racy_state[2];
+  RawShadow *racy_shadow_addr;
+  RawShadow racy_state[2];
   MutexSet mset;
   ThreadClock clock;
 #if !SANITIZER_GO

@@ -2200,7 +2200,7 @@ struct dl_iterate_phdr_data {
 };
 
 static bool IsAppNotRodata(uptr addr) {
-  return IsAppMem(addr) && *(u64*)MemToShadow(addr) != kShadowRodata;
+  return IsAppMem(addr) && *MemToShadow(addr) != kShadowRodata;
 }
 
 static int dl_iterate_phdr_cb(__sanitizer_dl_phdr_info *info, SIZE_T size,

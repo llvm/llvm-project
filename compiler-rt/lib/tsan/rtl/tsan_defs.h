@@ -101,8 +101,9 @@ const uptr kShadowCnt = 4;
 // That many user bytes are mapped onto a single shadow cell.
 const uptr kShadowCell = 8;
 
-// Size of a single shadow value (u64).
-const uptr kShadowSize = 8;
+// Single shadow value.
+typedef u64 RawShadow;
+const uptr kShadowSize = sizeof(RawShadow);
 
 // Shadow memory is kShadowMultiplier times larger than user memory.
 const uptr kShadowMultiplier = kShadowSize * kShadowCnt / kShadowCell;
