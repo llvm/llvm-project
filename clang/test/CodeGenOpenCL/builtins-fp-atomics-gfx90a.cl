@@ -4,6 +4,8 @@
 // RUN: %clang_cc1 -O0 -cl-std=CL2.0 -triple amdgcn-amd-amdhsa -target-cpu gfx90a \
 // RUN:   -S -o - %s | FileCheck -check-prefix=GFX90A %s
 
+// REQUIRES: amdgpu-registered-target
+
 typedef half __attribute__((ext_vector_type(2))) half2;
 
 // CHECK-LABEL: test_global_add_f64
