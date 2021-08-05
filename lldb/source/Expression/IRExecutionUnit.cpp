@@ -769,133 +769,126 @@ void IRExecutionUnit::CollectFallbackNames(
   }
 }
 
-lldb::addr_t IRExecutionUnit::FindInSymbols(
-    const std::vector<IRExecutionUnit::SearchSpec> &specs,
-    const lldb_private::SymbolContext &sc,
-    bool &symbol_was_missing_weak) {
-  symbol_was_missing_weak = false;
-  Target *target = sc.target_sp.get();
+class LoadAddressResolver {
+public:
+  LoadAddressResolver(Target *target, bool &symbol_was_missing_weak)
+      : m_target(target), m_symbol_was_missing_weak(symbol_was_missing_weak) {}
 
-  if (!target) {
-    // we shouldn't be doing any symbol lookup at all without a target
-    return LLDB_INVALID_ADDRESS;
-  }
-
-  for (const SearchSpec &spec : specs) {
-    SymbolContextList sc_list;
-
-    lldb::addr_t best_internal_load_address = LLDB_INVALID_ADDRESS;
-
-    std::function<bool(lldb::addr_t &, SymbolContextList &,
-                       const lldb_private::SymbolContext &)>
-        get_external_load_address = [&best_internal_load_address, target,
-                                     &symbol_was_missing_weak](
-            lldb::addr_t &load_address, SymbolContextList &sc_list,
-            const lldb_private::SymbolContext &sc) -> lldb::addr_t {
-      load_address = LLDB_INVALID_ADDRESS;
-
-      if (sc_list.GetSize() == 0)
-        return false;
-
-      // missing_weak_symbol will be true only if we found only weak undefined 
-      // references to this symbol.
-      symbol_was_missing_weak = true;      
-      for (auto candidate_sc : sc_list.SymbolContexts()) {        
-        // Only symbols can be weak undefined:
-        if (!candidate_sc.symbol)
-          symbol_was_missing_weak = false;
-        else if (candidate_sc.symbol->GetType() != lldb::eSymbolTypeUndefined
-                  || !candidate_sc.symbol->IsWeak())
-          symbol_was_missing_weak = false;
-        
-        const bool is_external =
-            (candidate_sc.function) ||
-            (candidate_sc.symbol && candidate_sc.symbol->IsExternal());
-        if (candidate_sc.symbol) {
-          load_address = candidate_sc.symbol->ResolveCallableAddress(*target);
-
-          if (load_address == LLDB_INVALID_ADDRESS) {
-            if (target->GetProcessSP())
-              load_address =
-                  candidate_sc.symbol->GetAddress().GetLoadAddress(target);
-            else
-              load_address = candidate_sc.symbol->GetAddress().GetFileAddress();
-          }
-        }
-
-        if (load_address == LLDB_INVALID_ADDRESS && candidate_sc.function) {
-          if (target->GetProcessSP())
-            load_address = candidate_sc.function->GetAddressRange()
-                               .GetBaseAddress()
-                               .GetLoadAddress(target);
-          else
-            load_address = candidate_sc.function->GetAddressRange()
-                               .GetBaseAddress()
-                               .GetFileAddress();
-        }
-
-        if (load_address != LLDB_INVALID_ADDRESS) {
-          if (is_external) {
-            return true;
-          } else if (best_internal_load_address == LLDB_INVALID_ADDRESS) {
-            best_internal_load_address = load_address;
-            load_address = LLDB_INVALID_ADDRESS;
-          }
-        }
-      }
-
-      // You test the address of a weak symbol against NULL to see if it is
-      // present.  So we should return 0 for a missing weak symbol.
-      if (symbol_was_missing_weak) {
-        load_address = 0;
-        return true;
-      }
-      
-      return false;
-    };
-
-    ModuleFunctionSearchOptions function_options;
-    function_options.include_symbols = true;
-    function_options.include_inlines = false;
-
-    if (sc.module_sp) {
-      sc.module_sp->FindFunctions(spec.name, CompilerDeclContext(), spec.mask,
-                                  function_options, sc_list);
-    }
+  llvm::Optional<lldb::addr_t> Resolve(SymbolContextList &sc_list) {
+    if (sc_list.IsEmpty())
+      return llvm::None;
 
     lldb::addr_t load_address = LLDB_INVALID_ADDRESS;
 
-    if (get_external_load_address(load_address, sc_list, sc)) {
-      return load_address;
-    } else {
-      sc_list.Clear();
+    // Missing_weak_symbol will be true only if we found only weak undefined
+    // references to this symbol.
+    m_symbol_was_missing_weak = true;
+
+    for (auto candidate_sc : sc_list.SymbolContexts()) {
+      // Only symbols can be weak undefined.
+      if (!candidate_sc.symbol ||
+          candidate_sc.symbol->GetType() != lldb::eSymbolTypeUndefined ||
+          !candidate_sc.symbol->IsWeak())
+        m_symbol_was_missing_weak = false;
+
+      // First try the symbol.
+      if (candidate_sc.symbol) {
+        load_address = candidate_sc.symbol->ResolveCallableAddress(*m_target);
+        if (load_address == LLDB_INVALID_ADDRESS) {
+          Address addr = candidate_sc.symbol->GetAddress();
+          load_address = m_target->GetProcessSP()
+                             ? addr.GetLoadAddress(m_target)
+                             : addr.GetFileAddress();
+        }
+      }
+
+      // If that didn't work, try the function.
+      if (load_address == LLDB_INVALID_ADDRESS && candidate_sc.function) {
+        Address addr =
+            candidate_sc.function->GetAddressRange().GetBaseAddress();
+        load_address = m_target->GetProcessSP() ? addr.GetLoadAddress(m_target)
+                                                : addr.GetFileAddress();
+      }
+
+      // We found a load address.
+      if (load_address != LLDB_INVALID_ADDRESS) {
+        // If the load address is external, we're done.
+        const bool is_external =
+            (candidate_sc.function) ||
+            (candidate_sc.symbol && candidate_sc.symbol->IsExternal());
+        if (is_external)
+          return load_address;
+
+        // Otherwise, remember the best internal load address.
+        if (m_best_internal_load_address == LLDB_INVALID_ADDRESS)
+          m_best_internal_load_address = load_address;
+      }
     }
 
-    if (sc_list.GetSize() == 0 && sc.target_sp) {
+    // You test the address of a weak symbol against NULL to see if it is
+    // present. So we should return 0 for a missing weak symbol.
+    if (m_symbol_was_missing_weak)
+      return 0;
+
+    return llvm::None;
+  }
+
+  lldb::addr_t GetBestInternalLoadAddress() const {
+    return m_best_internal_load_address;
+  }
+
+private:
+  Target *m_target;
+  bool &m_symbol_was_missing_weak;
+  lldb::addr_t m_best_internal_load_address = LLDB_INVALID_ADDRESS;
+};
+
+lldb::addr_t IRExecutionUnit::FindInSymbols(
+    const std::vector<IRExecutionUnit::SearchSpec> &specs,
+    const lldb_private::SymbolContext &sc, bool &symbol_was_missing_weak) {
+  symbol_was_missing_weak = false;
+
+  Target *target = sc.target_sp.get();
+  if (!target) {
+    // We shouldn't be doing any symbol lookup at all without a target.
+    return LLDB_INVALID_ADDRESS;
+  }
+
+  LoadAddressResolver resolver(target, symbol_was_missing_weak);
+
+  ModuleFunctionSearchOptions function_options;
+  function_options.include_symbols = true;
+  function_options.include_inlines = false;
+
+  for (const SearchSpec &spec : specs) {
+    if (sc.module_sp) {
+      SymbolContextList sc_list;
+      sc.module_sp->FindFunctions(spec.name, CompilerDeclContext(), spec.mask,
+                                  function_options, sc_list);
+      if (auto load_addr = resolver.Resolve(sc_list))
+        return *load_addr;
+    }
+
+    if (sc.target_sp) {
+      SymbolContextList sc_list;
       sc.target_sp->GetImages().FindFunctions(spec.name, spec.mask,
                                               function_options, sc_list);
+      if (auto load_addr = resolver.Resolve(sc_list))
+        return *load_addr;
     }
 
-    if (get_external_load_address(load_address, sc_list, sc)) {
-      return load_address;
-    } else {
-      sc_list.Clear();
-    }
-
-    if (sc_list.GetSize() == 0 && sc.target_sp) {
+    if (sc.target_sp) {
+      SymbolContextList sc_list;
       sc.target_sp->GetImages().FindSymbolsWithNameAndType(
           spec.name, lldb::eSymbolTypeAny, sc_list);
+      if (auto load_addr = resolver.Resolve(sc_list))
+        return *load_addr;
     }
 
-    if (get_external_load_address(load_address, sc_list, sc)) {
-      return load_address;
-    }
-    // if there are any searches we try after this, add an sc_list.Clear() in
-    // an "else" clause here
-
-    if (best_internal_load_address != LLDB_INVALID_ADDRESS) {
+    lldb::addr_t best_internal_load_address =
+        resolver.GetBestInternalLoadAddress();
+    if (best_internal_load_address != LLDB_INVALID_ADDRESS)
       return best_internal_load_address;
-    }
   }
 
   return LLDB_INVALID_ADDRESS;
