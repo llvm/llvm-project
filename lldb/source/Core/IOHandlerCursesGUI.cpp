@@ -352,6 +352,19 @@ public:
 
   operator WINDOW *() { return m_window; }
 
+  Surface SubSurface(Rect bounds) {
+    Surface subSurface;
+    if (is_pad(m_window))
+      subSurface.m_window =
+          ::subpad(m_window, bounds.size.height, bounds.size.width,
+                   bounds.origin.y, bounds.origin.x);
+    else
+      subSurface.m_window =
+          ::derwin(m_window, bounds.size.height, bounds.size.width,
+                   bounds.origin.y, bounds.origin.x);
+    return subSurface;
+  }
+
   // Copy a region of the surface to another surface.
   void CopyToSurface(Surface &target, Point source_origin, Point target_origin,
                      Size size) {
@@ -1025,7 +1038,7 @@ public:
   // Draw the field in the given subpad surface. The surface have a height that
   // is equal to the height returned by FieldDelegateGetHeight(). If the field
   // is selected in the form window, then is_selected will be true.
-  virtual void FieldDelegateDraw(SubPad &surface, bool is_selected) = 0;
+  virtual void FieldDelegateDraw(Surface &surface, bool is_selected) = 0;
 
   // Handle the key that wasn't handled by the form window or a container field.
   virtual HandleCharResult FieldDelegateHandleChar(int key) {
@@ -1112,7 +1125,7 @@ public:
 
   int GetContentLength() { return m_content.length(); }
 
-  void DrawContent(SubPad &surface, bool is_selected) {
+  void DrawContent(Surface &surface, bool is_selected) {
     surface.MoveCursor(0, 0);
     const char *text = m_content.c_str() + m_first_visibile_char;
     surface.PutCString(text, surface.GetWidth());
@@ -1131,17 +1144,17 @@ public:
       surface.AttributeOff(A_REVERSE);
   }
 
-  void DrawField(SubPad &surface, bool is_selected) {
+  void DrawField(Surface &surface, bool is_selected) {
     surface.TitledBox(m_label.c_str());
 
     Rect content_bounds = surface.GetFrame();
     content_bounds.Inset(1, 1);
-    SubPad content_surface = SubPad(surface, content_bounds);
+    Surface content_surface = surface.SubSurface(content_bounds);
 
     DrawContent(content_surface, is_selected);
   }
 
-  void DrawError(SubPad &surface) {
+  void DrawError(Surface &surface) {
     if (!FieldDelegateHasError())
       return;
     surface.MoveCursor(0, 0);
@@ -1152,12 +1165,12 @@ public:
     surface.AttributeOff(COLOR_PAIR(RedOnBlack));
   }
 
-  void FieldDelegateDraw(SubPad &surface, bool is_selected) override {
+  void FieldDelegateDraw(Surface &surface, bool is_selected) override {
     Rect frame = surface.GetFrame();
     Rect field_bounds, error_bounds;
     frame.HorizontalSplit(GetFieldHeight(), field_bounds, error_bounds);
-    SubPad field_surface = SubPad(surface, field_bounds);
-    SubPad error_surface = SubPad(surface, error_bounds);
+    Surface field_surface = surface.SubSurface(field_bounds);
+    Surface error_surface = surface.SubSurface(error_bounds);
 
     DrawField(field_surface, is_selected);
     DrawError(error_surface);
@@ -1406,7 +1419,7 @@ public:
   // Boolean fields are have a single line.
   int FieldDelegateGetHeight() override { return 1; }
 
-  void FieldDelegateDraw(SubPad &surface, bool is_selected) override {
+  void FieldDelegateDraw(Surface &surface, bool is_selected) override {
     surface.MoveCursor(0, 0);
     surface.PutChar('[');
     if (is_selected)
@@ -1486,7 +1499,7 @@ public:
     return std::min(index, GetNumberOfChoices()) - 1;
   }
 
-  void DrawContent(SubPad &surface, bool is_selected) {
+  void DrawContent(Surface &surface, bool is_selected) {
     int choices_to_draw = GetLastVisibleChoice() - m_first_visibile_choice + 1;
     for (int i = 0; i < choices_to_draw; i++) {
       surface.MoveCursor(0, i);
@@ -1502,14 +1515,14 @@ public:
     }
   }
 
-  void FieldDelegateDraw(SubPad &surface, bool is_selected) override {
+  void FieldDelegateDraw(Surface &surface, bool is_selected) override {
     UpdateScrolling();
 
     surface.TitledBox(m_label.c_str());
 
     Rect content_bounds = surface.GetFrame();
     content_bounds.Inset(1, 1);
-    SubPad content_surface = SubPad(surface, content_bounds);
+    Surface content_surface = surface.SubSurface(content_bounds);
 
     DrawContent(content_surface, is_selected);
   }
@@ -1684,7 +1697,7 @@ public:
     return context;
   }
 
-  void DrawRemoveButton(SubPad &surface, int highlight) {
+  void DrawRemoveButton(Surface &surface, int highlight) {
     surface.MoveCursor(1, surface.GetHeight() / 2);
     if (highlight)
       surface.AttributeOn(A_REVERSE);
@@ -1693,7 +1706,7 @@ public:
       surface.AttributeOff(A_REVERSE);
   }
 
-  void DrawFields(SubPad &surface, bool is_selected) {
+  void DrawFields(Surface &surface, bool is_selected) {
     int line = 0;
     int width = surface.GetWidth();
     for (int i = 0; i < GetNumberOfFields(); i++) {
@@ -1702,8 +1715,8 @@ public:
       Rect field_bounds, remove_button_bounds;
       bounds.VerticalSplit(bounds.size.width - sizeof(" [Remove]"),
                            field_bounds, remove_button_bounds);
-      SubPad field_surface = SubPad(surface, field_bounds);
-      SubPad remove_button_surface = SubPad(surface, remove_button_bounds);
+      Surface field_surface = surface.SubSurface(field_bounds);
+      Surface remove_button_surface = surface.SubSurface(remove_button_bounds);
 
       bool is_element_selected = m_selection_index == i && is_selected;
       bool is_field_selected =
@@ -1718,7 +1731,7 @@ public:
     }
   }
 
-  void DrawNewButton(SubPad &surface, bool is_selected) {
+  void DrawNewButton(Surface &surface, bool is_selected) {
     const char *button_text = "[New]";
     int x = (surface.GetWidth() - sizeof(button_text) - 1) / 2;
     surface.MoveCursor(x, 0);
@@ -1731,7 +1744,7 @@ public:
       surface.AttributeOff(A_REVERSE);
   }
 
-  void FieldDelegateDraw(SubPad &surface, bool is_selected) override {
+  void FieldDelegateDraw(Surface &surface, bool is_selected) override {
     surface.TitledBox(m_label.c_str());
 
     Rect content_bounds = surface.GetFrame();
@@ -1739,8 +1752,8 @@ public:
     Rect fields_bounds, new_button_bounds;
     content_bounds.HorizontalSplit(content_bounds.size.height - 1,
                                    fields_bounds, new_button_bounds);
-    SubPad fields_surface = SubPad(surface, fields_bounds);
-    SubPad new_button_surface = SubPad(surface, new_button_bounds);
+    Surface fields_surface = surface.SubSurface(fields_bounds);
+    Surface new_button_surface = surface.SubSurface(new_button_bounds);
 
     DrawFields(fields_surface, is_selected);
     DrawNewButton(new_button_surface, is_selected);
@@ -1936,12 +1949,12 @@ public:
                     m_value_field.FieldDelegateGetHeight());
   }
 
-  void DrawArrow(SubPad &surface) {
+  void DrawArrow(Surface &surface) {
     surface.MoveCursor(0, 1);
     surface.PutChar(ACS_RARROW);
   }
 
-  void FieldDelegateDraw(SubPad &surface, bool is_selected) override {
+  void FieldDelegateDraw(Surface &surface, bool is_selected) override {
     Rect bounds = surface.GetFrame();
     Rect key_field_bounds, arrow_and_value_field_bounds;
     bounds.VerticalSplit(bounds.size.width / 2, key_field_bounds,
@@ -1950,9 +1963,9 @@ public:
     arrow_and_value_field_bounds.VerticalSplit(1, arrow_bounds,
                                                value_field_bounds);
 
-    SubPad key_field_surface = SubPad(surface, key_field_bounds);
-    SubPad arrow_surface = SubPad(surface, arrow_bounds);
-    SubPad value_field_surface = SubPad(surface, value_field_bounds);
+    Surface key_field_surface = surface.SubSurface(key_field_bounds);
+    Surface arrow_surface = surface.SubSurface(arrow_bounds);
+    Surface value_field_surface = surface.SubSurface(value_field_bounds);
 
     bool key_is_selected =
         m_selection_type == SelectionType::Key && is_selected;
@@ -2088,7 +2101,7 @@ public:
   }
 
   // Draw a centered [Label].
-  void Draw(SubPad &surface, bool is_selected) {
+  void Draw(Surface &surface, bool is_selected) {
     int x = (surface.GetWidth() - m_label.length()) / 2;
     surface.MoveCursor(x, 0);
     if (is_selected)
@@ -2357,7 +2370,7 @@ public:
     return context;
   }
 
-  void UpdateScrolling(DerivedWindow &surface) {
+  void UpdateScrolling(Surface &surface) {
     ScrollContext context = GetScrollContext();
     int content_height = GetContentHeight();
     int surface_height = surface.GetHeight();
@@ -2381,7 +2394,7 @@ public:
     }
   }
 
-  void DrawError(SubPad &surface) {
+  void DrawError(Surface &surface) {
     if (!m_delegate_sp->HasError())
       return;
     surface.MoveCursor(0, 0);
@@ -2395,7 +2408,7 @@ public:
     surface.HorizontalLine(surface.GetWidth());
   }
 
-  void DrawFields(SubPad &surface) {
+  void DrawFields(Surface &surface) {
     int line = 0;
     int width = surface.GetWidth();
     bool a_field_is_selected = m_selection_type == SelectionType::Field;
@@ -2406,13 +2419,13 @@ public:
       bool is_field_selected = a_field_is_selected && m_selection_index == i;
       int height = field->FieldDelegateGetHeight();
       Rect bounds = Rect(Point(0, line), Size(width, height));
-      SubPad field_surface = SubPad(surface, bounds);
+      Surface field_surface = surface.SubSurface(bounds);
       field->FieldDelegateDraw(field_surface, is_field_selected);
       line += height;
     }
   }
 
-  void DrawActions(SubPad &surface) {
+  void DrawActions(Surface &surface) {
     int number_of_actions = m_delegate_sp->GetNumberOfActions();
     int width = surface.GetWidth() / number_of_actions;
     bool an_action_is_selected = m_selection_type == SelectionType::Action;
@@ -2421,19 +2434,19 @@ public:
       bool is_action_selected = an_action_is_selected && m_selection_index == i;
       FormAction &action = m_delegate_sp->GetAction(i);
       Rect bounds = Rect(Point(x, 0), Size(width, 1));
-      SubPad action_surface = SubPad(surface, bounds);
+      Surface action_surface = surface.SubSurface(bounds);
       action.Draw(action_surface, is_action_selected);
       x += width;
     }
   }
 
-  void DrawElements(SubPad &surface) {
+  void DrawElements(Surface &surface) {
     Rect frame = surface.GetFrame();
     Rect fields_bounds, actions_bounds;
     frame.HorizontalSplit(surface.GetHeight() - GetActionsHeight(),
                           fields_bounds, actions_bounds);
-    SubPad fields_surface = SubPad(surface, fields_bounds);
-    SubPad actions_surface = SubPad(surface, actions_bounds);
+    Surface fields_surface = surface.SubSurface(fields_bounds);
+    Surface actions_surface = surface.SubSurface(actions_bounds);
 
     DrawFields(fields_surface);
     DrawActions(actions_surface);
@@ -2442,7 +2455,7 @@ public:
   // Contents are first drawn on a pad. Then a subset of that pad is copied to
   // the derived window starting at the first visible line. This essentially
   // provides scrolling functionality.
-  void DrawContent(DerivedWindow &surface) {
+  void DrawContent(Surface &surface) {
     UpdateScrolling(surface);
 
     int width = surface.GetWidth();
@@ -2452,8 +2465,8 @@ public:
     Rect frame = pad.GetFrame();
     Rect error_bounds, elements_bounds;
     frame.HorizontalSplit(GetErrorHeight(), error_bounds, elements_bounds);
-    SubPad error_surface = SubPad(pad, error_bounds);
-    SubPad elements_surface = SubPad(pad, elements_bounds);
+    Surface error_surface = pad.SubSurface(error_bounds);
+    Surface elements_surface = pad.SubSurface(elements_bounds);
 
     DrawError(error_surface);
     DrawElements(elements_surface);
@@ -2473,7 +2486,7 @@ public:
 
     Rect content_bounds = window.GetFrame();
     content_bounds.Inset(2, 2);
-    DerivedWindow content_surface = DerivedWindow(window, content_bounds);
+    Surface content_surface = window.SubSurface(content_bounds);
 
     DrawContent(content_surface);
     return true;
