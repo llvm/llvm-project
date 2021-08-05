@@ -1,3 +1,6 @@
+# FIXME: this test depends on order of tests
+# RUN: rm -f %{inputs}/shtest-keyword-parse-errors/.lit_test_times.txt
+
 # RUN: not %{lit} -j 1 -vv %{inputs}/shtest-keyword-parse-errors > %t.out
 # RUN: FileCheck -input-file %t.out %s
 #
