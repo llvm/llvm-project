@@ -4,7 +4,7 @@ unittest("DriverTests") {
   configs += [ "//llvm/utils/gn/build:lld_code" ]
   deps = [
     "//lld/lib/Driver",
-    "//lld/lib/ReaderWriter/MachO",
+    "//lld/lib/ReaderWriter/MachO:MachOOld",
   ]
   sources = [ "DarwinLdDriverTest.cpp" ]
 }

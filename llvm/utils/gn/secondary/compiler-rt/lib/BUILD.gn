@@ -1,5 +1,8 @@
 group("lib") {
-  deps = [ "//compiler-rt/lib/profile" ]
+  deps = [
+    "//compiler-rt/lib/cfi:ignorelist($host_toolchain)",
+    "//compiler-rt/lib/profile",
+  ]
   if (current_os == "linux") {
     deps += [ "//compiler-rt/lib/msan" ]
   }

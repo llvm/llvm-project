@@ -15,7 +15,7 @@ target_link_libraries(lld
   lldCOFF
   lldDriver
   lldELF
-  lldMachO2
+  lldMachO
   lldMinGW
   lldWasm
   )

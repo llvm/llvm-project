@@ -5,6 +5,7 @@
 ; RUN: opt < %s -mtriple xcore-xmos-elf -instcombine -S | FileCheck %s -check-prefixes=CHECK,CHECK-IPRINTF
 ; RUN: opt < %s -mtriple=i386-pc-windows-msvc -instcombine -S | FileCheck %s --check-prefixes=CHECK,WIN
 ; RUN: opt < %s -mtriple=i386-mingw32 -instcombine -S | FileCheck %s --check-prefixes=CHECK,WIN
+; RUN: opt < %s -mtriple=armv7-none-linux-android16 -instcombine -S | FileCheck %s --check-prefixes=CHECK,ANDROID
 
 target datalayout = "e-p:32:32:32-i1:8:8-i8:8:8-i16:16:16-i32:32:32-i64:32:64-f32:32:32-f64:32:64-v64:64:64-v128:128:128-a0:0:64-f80:128:128"
 
@@ -108,6 +109,12 @@ define i32 @test_simplify7(i8* %dst, i8* %str) {
 ; WIN-NEXT:    [[LENINC:%.*]] = add i32 [[STRLEN]], 1
 ; WIN-NEXT:    call void @llvm.memcpy.p0i8.p0i8.i32(i8* align 1 [[DST:%.*]], i8* align 1 [[STR]], i32 [[LENINC]], i1 false)
 ; WIN-NEXT:    ret i32 [[STRLEN]]
+;
+; ANDROID-LABEL: @test_simplify7(
+; ANDROID-NEXT:    [[STRLEN:%.*]] = call i32 @strlen(i8* noundef nonnull dereferenceable(1) [[STR:%.*]])
+; ANDROID-NEXT:    [[LENINC:%.*]] = add i32 [[STRLEN]], 1
+; ANDROID-NEXT:    call void @llvm.memcpy.p0i8.p0i8.i32(i8* align 1 [[DST:%.*]], i8* align 1 [[STR]], i32 [[LENINC]], i1 false)
+; ANDROID-NEXT:    ret i32 [[STRLEN]]
 ;
   %fmt = getelementptr [3 x i8], [3 x i8]* @percent_s, i32 0, i32 0
   %r = call i32 (i8*, i8*, ...) @sprintf(i8* %dst, i8* %fmt, i8* %str)

@@ -466,7 +466,7 @@ void SourceMgrDiagnosticHandler::emitDiagnostic(Diagnostic &diag) {
   SmallVector<std::pair<Location, StringRef>> locationStack;
   auto addLocToStack = [&](Location loc, StringRef locContext) {
     if (Optional<Location> showableLoc = findLocToShow(loc))
-      locationStack.emplace_back(loc, locContext);
+      locationStack.emplace_back(*showableLoc, locContext);
   };
 
   // Add locations to display for this diagnostic.

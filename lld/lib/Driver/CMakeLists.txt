@@ -15,7 +15,7 @@ add_lld_library(lldDriver
   LINK_LIBS
     lldCommon
     lldCore
-    lldMachO
+    lldMachOOld
     lldReaderWriter
     lldYAML
   )

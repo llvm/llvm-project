@@ -47,6 +47,8 @@ option(COMPILER_RT_BUILD_XRAY_NO_PREINIT "Build xray with no preinit patching" O
 mark_as_advanced(COMPILER_RT_BUILD_XRAY_NO_PREINIT)
 option(COMPILER_RT_BUILD_ORC "Build ORC runtime" ON)
 mark_as_advanced(COMPILER_RT_BUILD_ORC)
+option(COMPILER_RT_BUILD_GWP_ASAN "Build GWP-ASan, and link it into SCUDO" ON)
+mark_as_advanced(COMPILER_RT_BUILD_GWP_ASAN)
 
 set(COMPILER_RT_ASAN_SHADOW_SCALE ""
     CACHE STRING "Override the shadow scale to be used in ASan runtime")
@@ -413,6 +415,13 @@ if(MSVC)
     string(REGEX REPLACE "(^| )/Z[i7I]($| )" " /Z7 "
            "${var_to_update}" "${${var_to_update}}")
   endforeach()
+elseif(APPLE)
+  # On Apple platforms use full debug info (i.e. not `-gline-tables-only`)
+  # for all build types so that the runtime can be debugged.
+  if(NOT COMPILER_RT_HAS_G_FLAG)
+    message(FATAL_ERROR "-g is not supported by host compiler")
+  endif()
+  list(APPEND SANITIZER_COMMON_CFLAGS -g)
 elseif(COMPILER_RT_HAS_GLINE_TABLES_ONLY_FLAG AND NOT COMPILER_RT_DEBUG)
   list(APPEND SANITIZER_COMMON_CFLAGS -gline-tables-only)
 elseif(COMPILER_RT_HAS_G_FLAG)
