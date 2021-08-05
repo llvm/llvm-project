@@ -3280,6 +3280,20 @@ gentbl(
 )
 
 cc_binary(
+    name = "llvm-stress",
+    srcs = glob([
+        "tools/llvm-stress/*.cpp",
+        "tools/llvm-stress/*.h",
+    ]),
+    copts = llvm_copts,
+    stamp = 0,
+    deps = [
+        ":Core",
+        ":Support",
+    ],
+)
+
+cc_binary(
     name = "llvm-objcopy",
     srcs = glob([
         "tools/llvm-objcopy/**/*.cpp",
