@@ -122,3 +122,27 @@ image_msaa_load v5, v[1:3], s[8:15] dmask:0x1 dim:SQ_RSRC_IMG_2D_MSAA d16
 
 image_msaa_load v14, [v204,v11,v14,v19], s[40:47] dmask:0x1 dim:SQ_RSRC_IMG_2D_MSAA_ARRAY
 // NOGFX11: :[[@LINE-1]]:{{[0-9]+}}: error: operands are not valid for this GPU or mode
+
+image_bvh_intersect_ray v[4:6], v[0:15], s[4:7]
+// NOGFX11: :[[@LINE-1]]:{{[0-9]+}}: error: invalid operand for instruction
+
+image_bvh_intersect_ray v[4:7], v[0:15], s[4:7] a16
+// NOGFX11: :[[@LINE-1]]:{{[0-9]+}}: error: invalid operand for instruction
+
+image_bvh64_intersect_ray v[4:6], v[0:15], s[4:7]
+// NOGFX11: :[[@LINE-1]]:{{[0-9]+}}: error: invalid operand for instruction
+
+image_bvh64_intersect_ray v[4:7], v[0:7], s[4:7] a16
+// NOGFX11: :[[@LINE-1]]:{{[0-9]+}}: error: invalid operand for instruction
+
+image_bvh_intersect_ray v[39:42], [v50, v46, v[20:22], v[40:42], v[47:49], v0], s[12:15]
+// NOGFX11: :[[@LINE-1]]:{{[0-9]+}}: error: invalid operand for instruction
+
+image_bvh_intersect_ray v[39:42], [v50, v46, v47, v[40:42]], s[12:15] a16
+// NOGFX11: :[[@LINE-1]]:{{[0-9]+}}: error: invalid operand for instruction
+
+image_bvh64_intersect_ray v[39:42], [v50, v46, v[20:22], v[40:42], v[47:49]], s[12:15]
+// NOGFX11: :[[@LINE-1]]:{{[0-9]+}}: error: invalid operand for instruction
+
+image_bvh64_intersect_ray v[39:42], [v[50:51], v46, v[20:22]], s[12:15] a16
+// NOGFX11: :[[@LINE-1]]:{{[0-9]+}}: error: invalid operand for instruction

@@ -29,7 +29,7 @@ class SIShrinkInstructions : public MachineFunctionPass {
 public:
   static char ID;
 
-  void shrinkMIMG(MachineInstr &MI);
+  void shrinkMIMG(MachineInstr &MI, MachineRegisterInfo &MRI);
 
 public:
   SIShrinkInstructions() : MachineFunctionPass(ID) {
@@ -212,7 +212,7 @@ static void shrinkScalarCompare(const SIInstrInfo *TII, MachineInstr &MI) {
 }
 
 // Shrink NSA encoded instructions with contiguous VGPRs to non-NSA encoding.
-void SIShrinkInstructions::shrinkMIMG(MachineInstr &MI) {
+void SIShrinkInstructions::shrinkMIMG(MachineInstr &MI, MachineRegisterInfo &MRI) {
   const AMDGPU::MIMGInfo *Info = AMDGPU::getMIMGInfo(MI.getOpcode());
   if (!Info)
     return;
@@ -257,17 +257,23 @@ void SIShrinkInstructions::shrinkMIMG(MachineInstr &MI) {
     NewAddrDwords = 16;
   }
 
-  unsigned VgprBase = 0;
   bool IsUndef = true;
   bool IsKill = NewAddrDwords == Info->VAddrDwords;
-  for (unsigned i = 0; i < Info->VAddrDwords; ++i) {
-    const MachineOperand &Op = MI.getOperand(VAddr0Idx + i);
+  unsigned VgprBase = 0;
+  unsigned NextVgpr = 0;
+  for (unsigned Idx = 0; Idx < Info->VAddrOperands; ++Idx) {
+    const MachineOperand &Op = MI.getOperand(VAddr0Idx + Idx);
     unsigned Vgpr = TRI.getHWRegIndex(Op.getReg());
+    unsigned Dwords = TRI.getRegSizeInBits(Op.getReg(), MRI) / 32;
 
-    if (i == 0) {
+    if (Idx == 0) {
       VgprBase = Vgpr;
-    } else if (VgprBase + i != Vgpr)
+      NextVgpr = Vgpr + Dwords;
+    } else if (Vgpr == NextVgpr) {
+      NextVgpr = Vgpr + Dwords;
+    } else {
       return;
+    }
 
     if (!Op.isUndef())
       IsUndef = false;
@@ -308,13 +314,13 @@ void SIShrinkInstructions::shrinkMIMG(MachineInstr &MI) {
   MI.getOperand(VAddr0Idx).setIsUndef(IsUndef);
   MI.getOperand(VAddr0Idx).setIsKill(IsKill);
 
-  for (unsigned i = 1; i < Info->VAddrDwords; ++i)
+  for (int i = 1; i < Info->VAddrOperands; ++i)
     MI.RemoveOperand(VAddr0Idx + 1);
 
   if (ToUntie >= 0) {
     MI.tieOperands(
         AMDGPU::getNamedOperandIdx(MI.getOpcode(), AMDGPU::OpName::vdata),
-        ToUntie - (Info->VAddrDwords - 1));
+        ToUntie - (Info->VAddrOperands - 1));
   }
 }
 
@@ -728,7 +734,7 @@ bool SIShrinkInstructions::runOnMachineFunction(MachineFunction &MF) {
           ST.getGeneration() >= AMDGPUSubtarget::GFX10 &&
           MF.getProperties().hasProperty(
               MachineFunctionProperties::Property::NoVRegs)) {
-        shrinkMIMG(MI);
+        shrinkMIMG(MI, MRI);
         continue;
       }
 

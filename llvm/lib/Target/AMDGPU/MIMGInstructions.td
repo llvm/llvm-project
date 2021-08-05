@@ -181,12 +181,16 @@ class MIMG <dag outs, string dns = "">
   MIMGEncoding MIMGEncoding;
   bits<8> VDataDwords;
   bits<8> VAddrDwords;
+
+  // If NSA is used this counts number of operands VAddrDwords is split into.
+  bits<8> VAddrOperands;
 }
 
 def MIMGInfoTable : GenericTable {
   let FilterClass = "MIMG";
   let CppTypeName = "MIMGInfo";
-  let Fields = ["Opcode", "BaseOpcode", "MIMGEncoding", "VDataDwords", "VAddrDwords"];
+  let Fields = ["Opcode", "BaseOpcode", "MIMGEncoding", "VDataDwords",
+                "VAddrDwords", "VAddrOperands"];
   string TypeOf_BaseOpcode = "MIMGBaseOpcode";
   string TypeOf_MIMGEncoding = "MIMGEncoding";
 
@@ -201,11 +205,12 @@ def getMIMGInfo : SearchIndex {
 
 // This class used to use !foldl to memoize the AddrAsmNames list.
 // It turned out that that was much slower than using !filter.
-class MIMGNSAHelper<int num_addrs> {
+class MIMGNSAHelper<int num_addrs,
+                    list<RegisterClass> addr_types=!listsplat(VGPR_32, num_addrs)> {
   list<string> AddrAsmNames =
     !foreach(i, !filter(i, [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11],
                         !lt(i, num_addrs)), "vaddr" # i);
-  dag AddrIns = !dag(ins, !foreach(arg, AddrAsmNames, VGPR_32), AddrAsmNames);
+  dag AddrIns = !dag(ins, addr_types, AddrAsmNames);
   string AddrAsm = "[$" # !interleave(AddrAsmNames, ", $") # "]";
 
   int NSA = !if(!le(num_addrs, 1), ?,
@@ -221,6 +226,7 @@ class MIMG_gfx6789<bits<8> op, dag outs, string dns = "">
   let AssemblerPredicate = isGFX6GFX7GFX8GFX9NotGFX90A;
 
   let MIMGEncoding = MIMGEncGfx6;
+  let VAddrOperands = 1;
 
   let d16 = !if(BaseOpcode.HasD16, ?, 0);
 }
@@ -231,6 +237,7 @@ class MIMG_gfx90a<bits<8> op, dag outs, string dns = "">
   let AssemblerPredicate = isGFX90APlus;
 
   let MIMGEncoding = MIMGEncGfx90a;
+  let VAddrOperands = 1;
 
   let d16 = !if(BaseOpcode.HasD16, ?, 0);
 }
@@ -242,6 +249,7 @@ class MIMG_gfx10<int op, dag outs, string dns = "">
   let AssemblerPredicate = isGFX10Only;
 
   let MIMGEncoding = MIMGEncGfx10Default;
+  let VAddrOperands = 1;
 
   let d16 = !if(BaseOpcode.HasD16, ?, 0);
   let nsa = 0;
@@ -255,6 +263,7 @@ class MIMG_nsa_gfx10<int op, dag outs, int num_addrs, string dns="">
   let AssemblerPredicate = isGFX10Only;
 
   let MIMGEncoding = MIMGEncGfx10NSA;
+  let VAddrOperands = num_addrs;
 
   MIMGNSAHelper nsah = MIMGNSAHelper<num_addrs>;
   dag AddrIns = nsah.AddrIns;
@@ -271,6 +280,7 @@ class MIMG_gfx11<int op, dag outs, string dns = "">
   let AssemblerPredicate = isGFX11Plus;
 
   let MIMGEncoding = MIMGEncGfx11Default;
+  let VAddrOperands = 1;
 
   let d16 = !if(BaseOpcode.HasD16, ?, 0);
   let nsa = 0;
@@ -278,14 +288,18 @@ class MIMG_gfx11<int op, dag outs, string dns = "">
 
 // Base class for all NSA MIMG instructions.
 // Note that 1-dword addresses always use non-NSA variants.
-class MIMG_nsa_gfx11<int op, dag outs, int num_addrs, string dns="">
+class MIMG_nsa_gfx11<int op, dag outs, int num_addrs, string dns="",
+                     list<RegisterClass> addr_types=[]>
   : MIMG<outs, dns>, MIMGe_gfx11<op> {
   let SubtargetPredicate = isGFX11Plus;
   let AssemblerPredicate = isGFX11Plus;
 
   let MIMGEncoding = MIMGEncGfx11NSA;
+  let VAddrOperands = num_addrs;
 
-  MIMGNSAHelper nsah = MIMGNSAHelper<num_addrs>;
+  MIMGNSAHelper nsah = !if(!empty(addr_types),
+                           MIMGNSAHelper<num_addrs>,
+                           MIMGNSAHelper<num_addrs, addr_types>);
   dag AddrIns = nsah.AddrIns;
   string AddrAsm = nsah.AddrAsm;
 
@@ -1081,6 +1095,13 @@ class MIMG_IntersectRay_Helper<bit Is64, bit A16> {
   // when we only need 9, 11 or 12 depending on A16 field and ptr size.
   RegisterClass RegClass = MIMGAddrSize<num_addrs, 0>.RegClass;
   int VAddrDwords = !srl(RegClass.Size, 5);
+
+  int gfx11_nsa_addrs = !if(A16, 4, 5);
+  RegisterClass node_ptr_type = !if(Is64, VReg_64, VGPR_32);
+  list<RegisterClass> gfx11_addr_types =
+    !if(A16,
+        [node_ptr_type, VGPR_32, VReg_96, VReg_96],
+        [node_ptr_type, VGPR_32, VReg_96, VReg_96, VReg_96]);
 }
 
 class MIMG_IntersectRay_gfx10<mimgopc op, string opcode, RegisterClass AddrRC, bit A16>
@@ -1101,8 +1122,8 @@ class MIMG_IntersectRay_nsa_gfx10<mimgopc op, string opcode, int num_addrs, bit 
   let AsmString = opcode#" $vdata, "#nsah.AddrAsm#", $srsrc"#!if(A16, "$a16", "");
 }
 
-class MIMG_IntersectRay_gfx11<int op, string opcode, RegisterClass AddrRC, bit A16>
-    : MIMG_gfx10<op, (outs VReg_128:$vdata), "AMDGPU"> {
+class MIMG_IntersectRay_gfx11<mimgopc op, string opcode, RegisterClass AddrRC, bit A16>
+    : MIMG_gfx11<op.GFX11, (outs VReg_128:$vdata), "AMDGPU"> {
 
   let InOperandList = !con((ins AddrRC:$vaddr0, SReg_128:$srsrc),
                            !if(A16, (ins GFX10A16:$a16), (ins)));
@@ -1111,8 +1132,10 @@ class MIMG_IntersectRay_gfx11<int op, string opcode, RegisterClass AddrRC, bit A
   let nsa = 0;
 }
 
-class MIMG_IntersectRay_nsa_gfx11<mimgopc op, string opcode, int num_addrs, bit A16>
-    : MIMG_nsa_gfx10<op.GFX11, (outs VReg_128:$vdata), num_addrs, "AMDGPU"> {
+class MIMG_IntersectRay_nsa_gfx11<mimgopc op, string opcode, int num_addrs,
+                                  bit A16, list<RegisterClass> addr_types>
+    : MIMG_nsa_gfx11<op.GFX11, (outs VReg_128:$vdata), num_addrs, "AMDGPU",
+                     addr_types> {
   let InOperandList = !con(nsah.AddrIns,
                            (ins SReg_128:$srsrc),
                            !if(A16, (ins GFX10A16:$a16), (ins)));
@@ -1143,7 +1166,15 @@ multiclass MIMG_IntersectRay<mimgopc op, string opcode, bit Is64, bit A16> {
     def _sa_gfx10 : MIMG_IntersectRay_gfx10<op, opcode, info.RegClass, A16> {
       let VAddrDwords = info.VAddrDwords;
     }
+    def _sa_gfx11 : MIMG_IntersectRay_gfx11<op, opcode, info.RegClass, A16> {
+      let VAddrDwords = info.VAddrDwords;
+    }
     def _nsa_gfx10 : MIMG_IntersectRay_nsa_gfx10<op, opcode, info.num_addrs, A16> {
+      let VAddrDwords = info.num_addrs;
+    }
+    def _nsa_gfx11 : MIMG_IntersectRay_nsa_gfx11<op, opcode,
+                                                 info.gfx11_nsa_addrs, A16,
+                                                 info.gfx11_addr_types> {
       let VAddrDwords = info.num_addrs;
     }
   }
@@ -1298,11 +1329,10 @@ defm IMAGE_MSAA_LOAD_X : MIMG_NoSampler <mimgopc<MIMG.NOP, 0x80>, "image_msaa_lo
 let SubtargetPredicate = HasGFX10_AEncoding in
 defm IMAGE_MSAA_LOAD : MIMG_MSAA_Load <mimgopc<0x18, MIMG.NOP>, "image_msaa_load">;
 
-// GFX11 TODO: implement
-defm IMAGE_BVH_INTERSECT_RAY       : MIMG_IntersectRay<mimgopc<MIMG.NOP, 0xe6>, "image_bvh_intersect_ray", 0, 0>;
-defm IMAGE_BVH_INTERSECT_RAY_a16   : MIMG_IntersectRay<mimgopc<MIMG.NOP, 0xe6>, "image_bvh_intersect_ray", 0, 1>;
-defm IMAGE_BVH64_INTERSECT_RAY     : MIMG_IntersectRay<mimgopc<MIMG.NOP, 0xe7>, "image_bvh64_intersect_ray", 1, 0>;
-defm IMAGE_BVH64_INTERSECT_RAY_a16 : MIMG_IntersectRay<mimgopc<MIMG.NOP, 0xe7>, "image_bvh64_intersect_ray", 1, 1>;
+defm IMAGE_BVH_INTERSECT_RAY       : MIMG_IntersectRay<mimgopc<0x19, 0xe6>, "image_bvh_intersect_ray", 0, 0>;
+defm IMAGE_BVH_INTERSECT_RAY_a16   : MIMG_IntersectRay<mimgopc<0x19, 0xe6>, "image_bvh_intersect_ray", 0, 1>;
+defm IMAGE_BVH64_INTERSECT_RAY     : MIMG_IntersectRay<mimgopc<0x1a, 0xe7>, "image_bvh64_intersect_ray", 1, 0>;
+defm IMAGE_BVH64_INTERSECT_RAY_a16 : MIMG_IntersectRay<mimgopc<0x1a, 0xe7>, "image_bvh64_intersect_ray", 1, 1>;
 
 /********** ========================================= **********/
 /********** Table of dimension-aware image intrinsics **********/

@@ -1,7 +1,7 @@
-; RUN: llc -march=amdgcn -mcpu=gfx1030 -verify-machineinstrs < %s | FileCheck -check-prefix=GCN %s
-; RUN: llc -march=amdgcn -mcpu=gfx1013 -verify-machineinstrs < %s | FileCheck -check-prefix=GCN %s
+; RUN: llc -march=amdgcn -mcpu=gfx1030 -verify-machineinstrs < %s | FileCheck -check-prefixes=GCN,GFX10 %s
+; RUN: llc -march=amdgcn -mcpu=gfx1013 -verify-machineinstrs < %s | FileCheck -check-prefixes=GCN,GFX10 %s
 ; RUN: not --crash llc -march=amdgcn -mcpu=gfx1012 -verify-machineinstrs < %s 2>&1 | FileCheck -check-prefix=ERR %s
-; RUN: llc -march=amdgcn -mcpu=gfx1100 -verify-machineinstrs < %s | FileCheck -check-prefix=GCN %s
+; RUN: llc -march=amdgcn -mcpu=gfx1100 -verify-machineinstrs < %s | FileCheck -check-prefixes=GCN,GFX11 %s
 
 ; uint4 llvm.amdgcn.image.bvh.intersect.ray.i32.v4f32(uint node_ptr, float ray_extent, float4 ray_origin, float4 ray_dir, float4 ray_inv_dir, uint4 texture_descr)
 ; uint4 llvm.amdgcn.image.bvh.intersect.ray.i32.v4f16(uint node_ptr, float ray_extent, float4 ray_origin, half4 ray_dir, half4 ray_inv_dir, uint4 texture_descr)
@@ -35,7 +35,8 @@ main_body:
 }
 
 ; GCN-LABEL: {{^}}image_bvh_intersect_ray_a16:
-; GCN: image_bvh_intersect_ray v[0:3], v[{{[0-9:]+}}], s[{{[0-9:]+}}] a16{{$}}
+; GFX10: image_bvh_intersect_ray v[0:3], v[{{[0-9:]+}}], s[{{[0-9:]+}}] a16{{$}}
+; GFX11: image_bvh_intersect_ray v[0:3], [{{.*}}], s[{{[0-9:]+}}] a16{{$}}
 define amdgpu_ps <4 x float> @image_bvh_intersect_ray_a16(i32 inreg %node_ptr, float inreg %ray_extent, <4 x float> inreg %ray_origin, <4 x half> inreg %ray_dir, <4 x half> inreg %ray_inv_dir, <4 x i32> inreg %tdescr) {
 main_body:
   %v = call <4 x i32> @llvm.amdgcn.image.bvh.intersect.ray.i32.v4f16(i32 %node_ptr, float %ray_extent, <4 x float> %ray_origin, <4 x half> %ray_dir, <4 x half> %ray_inv_dir, <4 x i32> %tdescr)
@@ -65,7 +66,8 @@ main_body:
 }
 
 ; GCN-LABEL: {{^}}image_bvh64_intersect_ray_a16:
-; GCN: image_bvh64_intersect_ray v[0:3], v[{{[0-9:]+}}], s[{{[0-9:]+}}] a16{{$}}
+; GFX10: image_bvh64_intersect_ray v[0:3], v[{{[0-9:]+}}], s[{{[0-9:]+}}] a16{{$}}
+; GFX11: image_bvh64_intersect_ray v[0:3], [{{.*}}], s[{{[0-9:]+}}] a16{{$}}
 define amdgpu_ps <4 x float> @image_bvh64_intersect_ray_a16(i64 inreg %node_ptr, float inreg %ray_extent, <4 x float> inreg %ray_origin, <4 x half> inreg %ray_dir, <4 x half> inreg %ray_inv_dir, <4 x i32> inreg %tdescr) {
 main_body:
   %v = call <4 x i32> @llvm.amdgcn.image.bvh.intersect.ray.i64.v4f16(i64 %node_ptr, float %ray_extent, <4 x float> %ray_origin, <4 x half> %ray_dir, <4 x half> %ray_inv_dir, <4 x i32> %tdescr)
@@ -76,7 +78,8 @@ main_body:
 ; TODO: NSA reassign is very limited and cannot work with VGPR tuples and subregs.
 
 ; GCN-LABEL: {{^}}image_bvh_intersect_ray_nsa_reassign:
-; GCN: image_bvh_intersect_ray v[{{[0-9:]+}}], v[{{[0-9:]+}}], s[{{[0-9:]+}}]{{$}}
+; GFX10: image_bvh_intersect_ray v[{{[0-9:]+}}], v[{{[0-9:]+}}], s[{{[0-9:]+}}]{{$}}
+; GFX11: image_bvh_intersect_ray v[{{[0-9:]+}}], [{{.*}}], s[{{[0-9:]+}}]{{$}}
 define amdgpu_kernel void @image_bvh_intersect_ray_nsa_reassign(i32* %p_node_ptr, float* %p_ray, <4 x i32> inreg %tdescr) {
 main_body:
   %lid = tail call i32 @llvm.amdgcn.workitem.id.x()
@@ -99,7 +102,8 @@ main_body:
 }
 
 ; GCN-LABEL: {{^}}image_bvh_intersect_ray_a16_nsa_reassign:
-; GCN: image_bvh_intersect_ray v[{{[0-9:]+}}], v[{{[0-9:]+}}], s[{{[0-9:]+}}] a16{{$}}
+; GFX10: image_bvh_intersect_ray v[{{[0-9:]+}}], v[{{[0-9:]+}}], s[{{[0-9:]+}}] a16{{$}}
+; GFX11: image_bvh_intersect_ray v[{{[0-9:]+}}], [{{.*}}], s[{{[0-9:]+}}] a16{{$}}
 define amdgpu_kernel void @image_bvh_intersect_ray_a16_nsa_reassign(i32* %p_node_ptr, float* %p_ray, <4 x i32> inreg %tdescr) {
 main_body:
   %lid = tail call i32 @llvm.amdgcn.workitem.id.x()
@@ -122,7 +126,8 @@ main_body:
 }
 
 ; GCN-LABEL: {{^}}image_bvh64_intersect_ray_nsa_reassign:
-; GCN: image_bvh64_intersect_ray v[{{[0-9:]+}}], v[{{[0-9:]+}}], s[{{[0-9:]+}}]{{$}}
+; GFX10: image_bvh64_intersect_ray v[{{[0-9:]+}}], v[{{[0-9:]+}}], s[{{[0-9:]+}}]{{$}}
+; GFX11: image_bvh64_intersect_ray v[{{[0-9:]+}}], [{{.*}}], s[{{[0-9:]+}}]{{$}}
 define amdgpu_kernel void @image_bvh64_intersect_ray_nsa_reassign(float* %p_ray, <4 x i32> inreg %tdescr) {
 main_body:
   %lid = tail call i32 @llvm.amdgcn.workitem.id.x()
@@ -143,7 +148,8 @@ main_body:
 }
 
 ; GCN-LABEL: {{^}}image_bvh64_intersect_ray_a16_nsa_reassign:
-; GCN: image_bvh64_intersect_ray v[{{[0-9:]+}}], v[{{[0-9:]+}}], s[{{[0-9:]+}}] a16{{$}}
+; GFX10: image_bvh64_intersect_ray v[{{[0-9:]+}}], v[{{[0-9:]+}}], s[{{[0-9:]+}}] a16{{$}}
+; GFX11: image_bvh64_intersect_ray v[{{[0-9:]+}}], [{{.*}}], s[{{[0-9:]+}}] a16{{$}}
 define amdgpu_kernel void @image_bvh64_intersect_ray_a16_nsa_reassign(float* %p_ray, <4 x i32> inreg %tdescr) {
 main_body:
   %lid = tail call i32 @llvm.amdgcn.workitem.id.x()
