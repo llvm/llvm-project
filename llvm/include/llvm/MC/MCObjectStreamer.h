@@ -157,6 +157,8 @@ public:
                             unsigned MaxBytesToEmit = 0) override;
   void emitCodeAlignment(unsigned ByteAlignment, const MCSubtargetInfo *STI,
                          unsigned MaxBytesToEmit = 0) override;
+  void emitNeverAlignCodeAtEnd(unsigned ByteAlignment,
+                               const MCSubtargetInfo &STI) override;
   void emitValueToOffset(const MCExpr *Offset, unsigned char Value,
                          SMLoc Loc) override;
   void emitDwarfLocDirective(unsigned FileNo, unsigned Line, unsigned Column,

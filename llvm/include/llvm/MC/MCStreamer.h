@@ -872,6 +872,12 @@ public:
                                  const MCSubtargetInfo *STI,
                                  unsigned MaxBytesToEmit = 0);
 
+  /// If the end of the fragment following this NeverAlign fragment ever gets
+  /// aligned to \p ByteAlignment, this fragment emits a single nop before the
+  /// following fragment to break this end-alignment.
+  virtual void emitNeverAlignCodeAtEnd(unsigned ByteAlignment,
+                                       const MCSubtargetInfo &STI);
+
   /// Emit some number of copies of \p Value until the byte offset \p
   /// Offset is reached.
   ///
