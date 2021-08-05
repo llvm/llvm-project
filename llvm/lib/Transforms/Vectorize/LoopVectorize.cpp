@@ -5137,12 +5137,11 @@ void LoopVectorizationCostModel::collectLoopScalars(ElementCount VF) {
     if (Worklist.count(I))
       return;
 
-    // If all users of the pointer will be memory accesses and scalar, place the
-    // pointer in ScalarPtrs. Otherwise, place the pointer in
-    // PossibleNonScalarPtrs.
-    if (llvm::all_of(I->users(), [&](User *U) {
-          return (isa<LoadInst>(U) || isa<StoreInst>(U)) &&
-                 isScalarUse(cast<Instruction>(U), Ptr);
+    // If the use of the pointer will be a scalar use, and all users of the
+    // pointer are memory accesses, place the pointer in ScalarPtrs. Otherwise,
+    // place the pointer in PossibleNonScalarPtrs.
+    if (isScalarUse(MemAccess, Ptr) && llvm::all_of(I->users(), [&](User *U) {
+          return isa<LoadInst>(U) || isa<StoreInst>(U);
         }))
       ScalarPtrs.insert(I);
     else
