@@ -275,9 +275,6 @@ void MCDecodedPseudoProbe::print(raw_ostream &OS,
   }
   OS << "Index: " << Index << "  ";
   OS << "Type: " << PseudoProbeTypeStr[static_cast<uint8_t>(Type)] << "  ";
-  if (isTailCall()) {
-    OS << "TailCall  ";
-  }
   std::string InlineContextStr = getInlineContextStr(GUID2FuncMAP, ShowName);
   if (InlineContextStr.size()) {
     OS << "Inlined: @ ";
