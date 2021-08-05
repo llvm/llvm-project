@@ -6,7 +6,7 @@ define <8 x i8> @mla8xi8(<8 x i8> %A, <8 x i8> %B, <8 x i8> %C) {
 ; CHECK-LABEL: mla8xi8:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    mla v2.8b, v0.8b, v1.8b
-; CHECK-NEXT:    mov v0.16b, v2.16b
+; CHECK-NEXT:    fmov d0, d2
 ; CHECK-NEXT:    ret
 	%tmp1 = mul <8 x i8> %A, %B;
 	%tmp2 = add <8 x i8> %C, %tmp1;
@@ -28,7 +28,7 @@ define <4 x i16> @mla4xi16(<4 x i16> %A, <4 x i16> %B, <4 x i16> %C) {
 ; CHECK-LABEL: mla4xi16:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    mla v2.4h, v0.4h, v1.4h
-; CHECK-NEXT:    mov v0.16b, v2.16b
+; CHECK-NEXT:    fmov d0, d2
 ; CHECK-NEXT:    ret
 	%tmp1 = mul <4 x i16> %A, %B;
 	%tmp2 = add <4 x i16> %C, %tmp1;
@@ -50,7 +50,7 @@ define <2 x i32> @mla2xi32(<2 x i32> %A, <2 x i32> %B, <2 x i32> %C) {
 ; CHECK-LABEL: mla2xi32:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    mla v2.2s, v0.2s, v1.2s
-; CHECK-NEXT:    mov v0.16b, v2.16b
+; CHECK-NEXT:    fmov d0, d2
 ; CHECK-NEXT:    ret
 	%tmp1 = mul <2 x i32> %A, %B;
 	%tmp2 = add <2 x i32> %C, %tmp1;
@@ -72,7 +72,7 @@ define <8 x i8> @mls8xi8(<8 x i8> %A, <8 x i8> %B, <8 x i8> %C) {
 ; CHECK-LABEL: mls8xi8:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    mls v2.8b, v0.8b, v1.8b
-; CHECK-NEXT:    mov v0.16b, v2.16b
+; CHECK-NEXT:    fmov d0, d2
 ; CHECK-NEXT:    ret
 	%tmp1 = mul <8 x i8> %A, %B;
 	%tmp2 = sub <8 x i8> %C, %tmp1;
@@ -94,7 +94,7 @@ define <4 x i16> @mls4xi16(<4 x i16> %A, <4 x i16> %B, <4 x i16> %C) {
 ; CHECK-LABEL: mls4xi16:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    mls v2.4h, v0.4h, v1.4h
-; CHECK-NEXT:    mov v0.16b, v2.16b
+; CHECK-NEXT:    fmov d0, d2
 ; CHECK-NEXT:    ret
 	%tmp1 = mul <4 x i16> %A, %B;
 	%tmp2 = sub <4 x i16> %C, %tmp1;
@@ -116,7 +116,7 @@ define <2 x i32> @mls2xi32(<2 x i32> %A, <2 x i32> %B, <2 x i32> %C) {
 ; CHECK-LABEL: mls2xi32:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    mls v2.2s, v0.2s, v1.2s
-; CHECK-NEXT:    mov v0.16b, v2.16b
+; CHECK-NEXT:    fmov d0, d2
 ; CHECK-NEXT:    ret
 	%tmp1 = mul <2 x i32> %A, %B;
 	%tmp2 = sub <2 x i32> %C, %tmp1;
@@ -140,7 +140,7 @@ define <8 x i8> @mls2v8xi8(<8 x i8> %A, <8 x i8> %B, <8 x i8> %C) {
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    neg v2.8b, v2.8b
 ; CHECK-NEXT:    mla v2.8b, v0.8b, v1.8b
-; CHECK-NEXT:    mov v0.16b, v2.16b
+; CHECK-NEXT:    fmov d0, d2
 ; CHECK-NEXT:    ret
 	%tmp1 = mul <8 x i8> %A, %B;
 	%tmp2 = sub <8 x i8> %tmp1, %C;
@@ -164,7 +164,7 @@ define <4 x i16> @mls2v4xi16(<4 x i16> %A, <4 x i16> %B, <4 x i16> %C) {
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    neg v2.4h, v2.4h
 ; CHECK-NEXT:    mla v2.4h, v0.4h, v1.4h
-; CHECK-NEXT:    mov v0.16b, v2.16b
+; CHECK-NEXT:    fmov d0, d2
 ; CHECK-NEXT:    ret
 	%tmp1 = mul <4 x i16> %A, %B;
 	%tmp2 = sub <4 x i16> %tmp1, %C;
@@ -188,7 +188,7 @@ define <2 x i32> @mls2v2xi32(<2 x i32> %A, <2 x i32> %B, <2 x i32> %C) {
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    neg v2.2s, v2.2s
 ; CHECK-NEXT:    mla v2.2s, v0.2s, v1.2s
-; CHECK-NEXT:    mov v0.16b, v2.16b
+; CHECK-NEXT:    fmov d0, d2
 ; CHECK-NEXT:    ret
 	%tmp1 = mul <2 x i32> %A, %B;
 	%tmp2 = sub <2 x i32> %tmp1, %C;

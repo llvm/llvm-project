@@ -118,13 +118,8 @@ define amdgpu_kernel void @v_uint_to_fp_i1_f32_load(float addrspace(1)* %out, i1
 ; FIXME: Repeated here to test r600
 ; FUNC-LABEL: {{^}}s_uint_to_fp_i64_to_f32:
 ; R600: FFBH_UINT
-; R600: FFBH_UINT
 ; R600: CNDE_INT
-; R600: CNDE_INT
-
-; R600-DAG: SETGT_UINT
-; R600-DAG: SETGT_UINT
-; R600-DAG: SETE_INT
+; R600: UINT_TO_FLT
 
 define amdgpu_kernel void @s_uint_to_fp_i64_to_f32(float addrspace(1)* %out, i64 %in) #0 {
 entry:

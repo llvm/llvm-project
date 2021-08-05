@@ -23,6 +23,9 @@
 #include "mlir/Support/MathExtras.h"
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/TypeSwitch.h"
+
+#define DEBUG_TYPE "transforms-utils"
+
 using namespace mlir;
 
 // Perform the replacement in `op`.
@@ -207,8 +210,8 @@ LogicalResult mlir::replaceAllMemRefUsesWith(Value oldMemRef, Value newMemRef,
 LogicalResult mlir::replaceAllMemRefUsesWith(
     Value oldMemRef, Value newMemRef, ArrayRef<Value> extraIndices,
     AffineMap indexRemap, ArrayRef<Value> extraOperands,
-    ArrayRef<Value> symbolOperands, Operation *domInstFilter,
-    Operation *postDomInstFilter, bool allowNonDereferencingOps,
+    ArrayRef<Value> symbolOperands, Operation *domOpFilter,
+    Operation *postDomOpFilter, bool allowNonDereferencingOps,
     bool replaceInDeallocOp) {
   unsigned newMemRefRank = newMemRef.getType().cast<MemRefType>().getRank();
   (void)newMemRefRank; // unused in opt mode
@@ -230,25 +233,25 @@ LogicalResult mlir::replaceAllMemRefUsesWith(
 
   std::unique_ptr<DominanceInfo> domInfo;
   std::unique_ptr<PostDominanceInfo> postDomInfo;
-  if (domInstFilter)
-    domInfo = std::make_unique<DominanceInfo>(
-        domInstFilter->getParentOfType<FuncOp>());
+  if (domOpFilter)
+    domInfo =
+        std::make_unique<DominanceInfo>(domOpFilter->getParentOfType<FuncOp>());
 
-  if (postDomInstFilter)
+  if (postDomOpFilter)
     postDomInfo = std::make_unique<PostDominanceInfo>(
-        postDomInstFilter->getParentOfType<FuncOp>());
+        postDomOpFilter->getParentOfType<FuncOp>());
 
   // Walk all uses of old memref; collect ops to perform replacement. We use a
   // DenseSet since an operation could potentially have multiple uses of a
   // memref (although rare), and the replacement later is going to erase ops.
   DenseSet<Operation *> opsToReplace;
   for (auto *op : oldMemRef.getUsers()) {
-    // Skip this use if it's not dominated by domInstFilter.
-    if (domInstFilter && !domInfo->dominates(domInstFilter, op))
+    // Skip this use if it's not dominated by domOpFilter.
+    if (domOpFilter && !domInfo->dominates(domOpFilter, op))
       continue;
 
-    // Skip this use if it's not post-dominated by postDomInstFilter.
-    if (postDomInstFilter && !postDomInfo->postDominates(postDomInstFilter, op))
+    // Skip this use if it's not post-dominated by postDomOpFilter.
+    if (postDomOpFilter && !postDomInfo->postDominates(postDomOpFilter, op))
       continue;
 
     // Skip dealloc's - no replacement is necessary, and a memref replacement
@@ -260,13 +263,20 @@ LogicalResult mlir::replaceAllMemRefUsesWith(
     // for the memref to be used in a non-dereferencing way outside of the
     // region where this replacement is happening.
     if (!isa<AffineMapAccessInterface>(*op)) {
-      if (!allowNonDereferencingOps)
+      if (!allowNonDereferencingOps) {
+        LLVM_DEBUG(llvm::dbgs()
+                   << "Memref replacement failed: non-deferencing memref op: \n"
+                   << *op << '\n');
         return failure();
-      // Currently we support the following non-dereferencing ops to be a
-      // candidate for replacement: Dealloc, CallOp and ReturnOp.
-      // TODO: Add support for other kinds of ops.
-      if (!op->hasTrait<OpTrait::MemRefsNormalizable>())
+      }
+      // Non-dereferencing ops with the MemRefsNormalizable trait are
+      // supported for replacement.
+      if (!op->hasTrait<OpTrait::MemRefsNormalizable>()) {
+        LLVM_DEBUG(llvm::dbgs() << "Memref replacement failed: use without a "
+                                   "memrefs normalizable trait: \n"
+                                << *op << '\n');
         return failure();
+      }
     }
 
     // We'll first collect and then replace --- since replacement erases the op
@@ -661,8 +671,8 @@ LogicalResult mlir::normalizeMemRef(memref::AllocOp *allocOp) {
                                       /*indexRemap=*/layoutMap,
                                       /*extraOperands=*/{},
                                       /*symbolOperands=*/symbolOperands,
-                                      /*domInstFilter=*/nullptr,
-                                      /*postDomInstFilter=*/nullptr,
+                                      /*domOpFilter=*/nullptr,
+                                      /*postDomOpFilter=*/nullptr,
                                       /*allowDereferencingOps=*/true))) {
     // If it failed (due to escapes for example), bail out.
     newAlloc.erase();

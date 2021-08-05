@@ -146,9 +146,9 @@ std::string SDNode::getOperationName(const SelectionDAG *G) const {
     unsigned IID = cast<ConstantSDNode>(getOperand(OpNo))->getZExtValue();
     if (IID < Intrinsic::num_intrinsics)
       return Intrinsic::getBaseName((Intrinsic::ID)IID).str();
-    else if (!G)
+    if (!G)
       return "Unknown intrinsic";
-    else if (const TargetIntrinsicInfo *TII = G->getTarget().getIntrinsicInfo())
+    if (const TargetIntrinsicInfo *TII = G->getTarget().getIntrinsicInfo())
       return TII->getName(IID);
     llvm_unreachable("Invalid intrinsic ID");
   }
@@ -526,13 +526,13 @@ static void printMemOperand(raw_ostream &OS, const MachineMemOperand &MMO,
   if (G) {
     const MachineFunction *MF = &G->getMachineFunction();
     return printMemOperand(OS, MMO, MF, MF->getFunction().getParent(),
-                           &MF->getFrameInfo(), G->getSubtarget().getInstrInfo(),
-                           *G->getContext());
-  } else {
-    LLVMContext Ctx;
-    return printMemOperand(OS, MMO, /*MF=*/nullptr, /*M=*/nullptr,
-                           /*MFI=*/nullptr, /*TII=*/nullptr, Ctx);
+                           &MF->getFrameInfo(),
+                           G->getSubtarget().getInstrInfo(), *G->getContext());
   }
+
+  LLVMContext Ctx;
+  return printMemOperand(OS, MMO, /*MF=*/nullptr, /*M=*/nullptr,
+                         /*MFI=*/nullptr, /*TII=*/nullptr, Ctx);
 }
 
 #if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
@@ -948,17 +948,19 @@ static bool printOperand(raw_ostream &OS, const SelectionDAG *G,
   if (!Value.getNode()) {
     OS << "<null>";
     return false;
-  } else if (shouldPrintInline(*Value.getNode(), G)) {
+  }
+
+  if (shouldPrintInline(*Value.getNode(), G)) {
     OS << Value->getOperationName(G) << ':';
     Value->print_types(OS, G);
     Value->print_details(OS, G);
     return true;
-  } else {
-    OS << PrintNodeId(*Value.getNode());
-    if (unsigned RN = Value.getResNo())
-      OS << ':' << RN;
-    return false;
   }
+
+  OS << PrintNodeId(*Value.getNode());
+  if (unsigned RN = Value.getResNo())
+    OS << ':' << RN;
+  return false;
 }
 
 #if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
@@ -1012,15 +1014,12 @@ static void printrWithDepthHelper(raw_ostream &OS, const SDNode *N,
 
   N->print(OS, G);
 
-  if (depth < 1)
-    return;
-
   for (const SDValue &Op : N->op_values()) {
     // Don't follow chain operands.
     if (Op.getValueType() == MVT::Other)
       continue;
     OS << '\n';
-    printrWithDepthHelper(OS, Op.getNode(), G, depth-1, indent+2);
+    printrWithDepthHelper(OS, Op.getNode(), G, depth - 1, indent + 2);
   }
 }
 

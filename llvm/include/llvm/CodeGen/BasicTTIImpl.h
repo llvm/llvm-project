@@ -22,6 +22,7 @@
 #include "llvm/ADT/SmallPtrSet.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/Analysis/LoopInfo.h"
+#include "llvm/Analysis/OptimizationRemarkEmitter.h"
 #include "llvm/Analysis/TargetTransformInfo.h"
 #include "llvm/Analysis/TargetTransformInfoImpl.h"
 #include "llvm/CodeGen/ISDOpcodes.h"
@@ -484,7 +485,8 @@ public:
   int getInlinerVectorBonusPercent() { return 150; }
 
   void getUnrollingPreferences(Loop *L, ScalarEvolution &SE,
-                               TTI::UnrollingPreferences &UP) {
+                               TTI::UnrollingPreferences &UP,
+                               OptimizationRemarkEmitter *ORE) {
     // This unrolling functionality is target independent, but to provide some
     // motivation for its intended use, for x86:
 
@@ -526,6 +528,15 @@ public:
               continue;
           }
 
+          if (ORE) {
+            ORE->emit([&]() {
+              return OptimizationRemark("TTI", "DontUnroll", L->getStartLoc(),
+                                        L->getHeader())
+                     << "advising against unrolling the loop because it "
+                        "contains a "
+                     << ore::NV("Call", &I);
+            });
+          }
           return;
         }
       }

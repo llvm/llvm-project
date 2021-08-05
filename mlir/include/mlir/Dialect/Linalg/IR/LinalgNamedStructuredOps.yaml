@@ -180,7 +180,7 @@ structured_op: !LinalgStructuredOpConfig
     name: rhs
     usage: InputOperand
     type_var: RhsType
-    shape_map: affine_map<()[s0, s1, s2, s3, s4, s5] -> (s4, s1, s5, s3)>
+    shape_map: affine_map<()[s0, s1, s2, s3, s4, s5] -> (s4, s1, s3, s5)>
   - !LinalgOperandDefConfig
     name: accum
     usage: OutputOperand
@@ -190,8 +190,8 @@ structured_op: !LinalgStructuredOpConfig
     static_indexing_maps:
     - affine_map<(d0, d1, d2, d3, d4, d5)[s0, s1, s2, s3, s4, s5] -> (d0, d4, d2,
       d5)>
-    - affine_map<(d0, d1, d2, d3, d4, d5)[s0, s1, s2, s3, s4, s5] -> (d1, d4, d3,
-      d5)>
+    - affine_map<(d0, d1, d2, d3, d4, d5)[s0, s1, s2, s3, s4, s5] -> (d1, d4, d5,
+      d3)>
     - affine_map<(d0, d1, d2, d3, d4, d5)[s0, s1, s2, s3, s4, s5] -> (d0, d1, d2,
       d3)>
   iterator_types:

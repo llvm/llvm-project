@@ -10,7 +10,6 @@
 #define LLVM_TOOLS_LLVM_PROFGEN_PROFILEDBINARY_H
 
 #include "CallContext.h"
-#include "PseudoProbe.h"
 #include "llvm/ADT/Optional.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/DebugInfo/Symbolize/Symbolize.h"
@@ -22,11 +21,13 @@
 #include "llvm/MC/MCInstrAnalysis.h"
 #include "llvm/MC/MCInstrInfo.h"
 #include "llvm/MC/MCObjectFileInfo.h"
+#include "llvm/MC/MCPseudoProbe.h"
 #include "llvm/MC/MCRegisterInfo.h"
 #include "llvm/MC/MCSubtargetInfo.h"
 #include "llvm/MC/MCTargetOptions.h"
 #include "llvm/Object/ELFObjectFile.h"
 #include "llvm/ProfileData/SampleProf.h"
+#include "llvm/Support/CommandLine.h"
 #include "llvm/Support/Path.h"
 #include <list>
 #include <set>
@@ -135,9 +136,15 @@ class ProfiledBinary {
   std::unique_ptr<symbolize::LLVMSymbolizer> Symbolizer;
 
   // Pseudo probe decoder
-  PseudoProbeDecoder ProbeDecoder;
+  MCPseudoProbeDecoder ProbeDecoder;
 
   bool UsePseudoProbes = false;
+
+  // Indicate if the base loading address is parsed from the mmap event or uses
+  // the preferred address
+  bool IsLoadedByMMap = false;
+  // Use to avoid redundant warning.
+  bool MissingMMapWarned = false;
 
   void setPreferredTextSegmentAddresses(const ELFObjectFileBase *O);
 
@@ -190,7 +197,7 @@ public:
   StringRef getName() const { return llvm::sys::path::filename(Path); }
   uint64_t getBaseAddress() const { return BaseAddress; }
   void setBaseAddress(uint64_t Address) { BaseAddress = Address; }
-  
+
   // Return the preferred load address for the first executable segment.
   uint64_t getPreferredBaseAddress() const { return PreferredTextSegmentAddresses[0]; }
   // Return the file offset for the first executable segment.
@@ -258,11 +265,12 @@ public:
   std::string getExpandedContextStr(const SmallVectorImpl<uint64_t> &Stack,
                                     bool &WasLeafInlined) const;
 
-  const PseudoProbe *getCallProbeForAddr(uint64_t Address) const {
+  const MCDecodedPseudoProbe *getCallProbeForAddr(uint64_t Address) const {
     return ProbeDecoder.getCallProbeForAddr(Address);
   }
+
   void
-  getInlineContextForProbe(const PseudoProbe *Probe,
+  getInlineContextForProbe(const MCDecodedPseudoProbe *Probe,
                            SmallVectorImpl<std::string> &InlineContextStack,
                            bool IncludeLeaf = false) const {
     return ProbeDecoder.getInlineContextForProbe(Probe, InlineContextStack,
@@ -271,12 +279,22 @@ public:
   const AddressProbesMap &getAddress2ProbesMap() const {
     return ProbeDecoder.getAddress2ProbesMap();
   }
-  const PseudoProbeFuncDesc *getFuncDescForGUID(uint64_t GUID) {
+  const MCPseudoProbeFuncDesc *getFuncDescForGUID(uint64_t GUID) {
     return ProbeDecoder.getFuncDescForGUID(GUID);
   }
-  const PseudoProbeFuncDesc *getInlinerDescForProbe(const PseudoProbe *Probe) {
+
+  const MCPseudoProbeFuncDesc *
+  getInlinerDescForProbe(const MCDecodedPseudoProbe *Probe) {
     return ProbeDecoder.getInlinerDescForProbe(Probe);
   }
+
+  bool getIsLoadedByMMap() { return IsLoadedByMMap; }
+
+  void setIsLoadedByMMap(bool Value) { IsLoadedByMMap = Value; }
+
+  bool getMissingMMapWarned() { return MissingMMapWarned; }
+
+  void setMissingMMapWarned(bool Value) { MissingMMapWarned = Value; }
 };
 
 } // end namespace sampleprof

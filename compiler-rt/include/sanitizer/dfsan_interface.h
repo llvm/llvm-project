@@ -150,8 +150,7 @@ int dfsan_get_track_origins(void);
 #ifdef __cplusplus
 }  // extern "C"
 
-template <typename T>
-void dfsan_set_label(dfsan_label label, T &data) { // NOLINT
+template <typename T> void dfsan_set_label(dfsan_label label, T &data) {
   dfsan_set_label(label, (void *)&data, sizeof(T));
 }
 

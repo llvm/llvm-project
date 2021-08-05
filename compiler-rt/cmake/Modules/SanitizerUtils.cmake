@@ -3,9 +3,6 @@ include(CompilerRTUtils)
 set(SANITIZER_GEN_DYNAMIC_LIST
   ${COMPILER_RT_SOURCE_DIR}/lib/sanitizer_common/scripts/gen_dynamic_list.py)
 
-set(SANITIZER_LINT_SCRIPT
-  ${COMPILER_RT_SOURCE_DIR}/lib/sanitizer_common/scripts/check_lint.sh)
-
 if(CMAKE_NM)
   set(SANITIZER_NM "${CMAKE_NM}")
 else()
@@ -95,20 +92,3 @@ macro(add_sanitizer_rt_version_list name)
   add_custom_target(${name}-version-list ALL
     DEPENDS ${vers})
 endmacro()
-
-# Add target to check code style for sanitizer runtimes.
-if(CMAKE_HOST_UNIX AND NOT OS_NAME MATCHES "OpenBSD")
-  add_custom_target(SanitizerLintCheck
-    COMMAND env LLVM_CHECKOUT=${LLVM_MAIN_SRC_DIR} SILENT=1 TMPDIR=
-      PYTHON_EXECUTABLE=${Python3_EXECUTABLE}
-      COMPILER_RT=${COMPILER_RT_SOURCE_DIR}
-      ${SANITIZER_LINT_SCRIPT}
-    DEPENDS ${SANITIZER_LINT_SCRIPT}
-    COMMENT "Running lint check for sanitizer sources..."
-    VERBATIM)
-else()
-  add_custom_target(SanitizerLintCheck
-    COMMAND echo "No lint check")
-endif()
-set_target_properties(SanitizerLintCheck
-  PROPERTIES FOLDER "Compiler-RT Misc")

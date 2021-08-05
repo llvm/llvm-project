@@ -519,9 +519,8 @@ ProcessElfCore::parseSegment(const DataExtractor &segment) {
 
     size_t note_start = offset;
     size_t note_size = llvm::alignTo(note.n_descsz, 4);
-    DataExtractor note_data(segment, note_start, note_size);
 
-    result.push_back({note, note_data});
+    result.push_back({note, DataExtractor(segment, note_start, note_size)});
     offset += note_size;
   }
 
@@ -897,7 +896,8 @@ llvm::Error ProcessElfCore::parseLinuxNotes(llvm::ArrayRef<CoreNote> notes) {
 /// A note segment consists of one or more NOTE entries, but their types and
 /// meaning differ depending on the OS.
 llvm::Error ProcessElfCore::ParseThreadContextsFromNoteSegment(
-    const elf::ELFProgramHeader &segment_header, DataExtractor segment_data) {
+    const elf::ELFProgramHeader &segment_header,
+    const DataExtractor &segment_data) {
   assert(segment_header.p_type == llvm::ELF::PT_NOTE);
 
   auto notes_or_error = parseSegment(segment_data);

@@ -32,6 +32,7 @@ using namespace __tsan;
 static StaticSpinMutex mutex128;
 #endif
 
+#if SANITIZER_DEBUG
 static bool IsLoadOrder(morder mo) {
   return mo == mo_relaxed || mo == mo_consume
       || mo == mo_acquire || mo == mo_seq_cst;
@@ -40,6 +41,7 @@ static bool IsLoadOrder(morder mo) {
 static bool IsStoreOrder(morder mo) {
   return mo == mo_relaxed || mo == mo_release || mo == mo_seq_cst;
 }
+#endif
 
 static bool IsReleaseOrder(morder mo) {
   return mo == mo_release || mo == mo_acq_rel || mo == mo_seq_cst;
@@ -161,16 +163,16 @@ a128 func_cas(volatile a128 *v, a128 cmp, a128 xch) {
 }
 #endif
 
-template<typename T>
-static int SizeLog() {
+template <typename T>
+static int AccessSize() {
   if (sizeof(T) <= 1)
-    return kSizeLog1;
+    return 1;
   else if (sizeof(T) <= 2)
-    return kSizeLog2;
+    return 2;
   else if (sizeof(T) <= 4)
-    return kSizeLog4;
+    return 4;
   else
-    return kSizeLog8;
+    return 8;
   // For 16-byte atomics we also use 8-byte memory access,
   // this leads to false negatives only in very obscure cases.
 }
@@ -202,7 +204,7 @@ static memory_order to_mo(morder mo) {
   case mo_acq_rel: return memory_order_acq_rel;
   case mo_seq_cst: return memory_order_seq_cst;
   }
-  CHECK(0);
+  DCHECK(0);
   return memory_order_seq_cst;
 }
 
@@ -219,27 +221,27 @@ static a128 NoTsanAtomicLoad(const volatile a128 *a, morder mo) {
 #endif
 
 template <typename T>
-static T AtomicLoad(ThreadState *thr, uptr pc, const volatile T *a,
-                    morder mo) NO_THREAD_SAFETY_ANALYSIS {
-  CHECK(IsLoadOrder(mo));
+static T AtomicLoad(ThreadState *thr, uptr pc, const volatile T *a, morder mo) {
+  DCHECK(IsLoadOrder(mo));
   // This fast-path is critical for performance.
   // Assume the access is atomic.
   if (!IsAcquireOrder(mo)) {
-    MemoryReadAtomic(thr, pc, (uptr)a, SizeLog<T>());
+    MemoryAccess(thr, pc, (uptr)a, AccessSize<T>(),
+                 kAccessRead | kAccessAtomic);
     return NoTsanAtomicLoad(a, mo);
   }
   // Don't create sync object if it does not exist yet. For example, an atomic
   // pointer is initialized to nullptr and then periodically acquire-loaded.
   T v = NoTsanAtomicLoad(a, mo);
-  SyncVar *s = ctx->metamap.GetIfExistsAndLock((uptr)a, false);
+  SyncVar *s = ctx->metamap.GetSyncIfExists((uptr)a);
   if (s) {
+    ReadLock l(&s->mtx);
     AcquireImpl(thr, pc, &s->clock);
     // Re-read under sync mutex because we need a consistent snapshot
     // of the value and the clock we acquire.
     v = NoTsanAtomicLoad(a, mo);
-    s->mtx.ReadUnlock();
   }
-  MemoryReadAtomic(thr, pc, (uptr)a, SizeLog<T>());
+  MemoryAccess(thr, pc, (uptr)a, AccessSize<T>(), kAccessRead | kAccessAtomic);
   return v;
 }
 
@@ -257,9 +259,9 @@ static void NoTsanAtomicStore(volatile a128 *a, a128 v, morder mo) {
 
 template <typename T>
 static void AtomicStore(ThreadState *thr, uptr pc, volatile T *a, T v,
-                        morder mo) NO_THREAD_SAFETY_ANALYSIS {
-  CHECK(IsStoreOrder(mo));
-  MemoryWriteAtomic(thr, pc, (uptr)a, SizeLog<T>());
+                        morder mo) {
+  DCHECK(IsStoreOrder(mo));
+  MemoryAccess(thr, pc, (uptr)a, AccessSize<T>(), kAccessWrite | kAccessAtomic);
   // This fast-path is critical for performance.
   // Assume the access is atomic.
   // Strictly saying even relaxed store cuts off release sequence,
@@ -269,36 +271,32 @@ static void AtomicStore(ThreadState *thr, uptr pc, volatile T *a, T v,
     return;
   }
   __sync_synchronize();
-  SyncVar *s = ctx->metamap.GetOrCreateAndLock(thr, pc, (uptr)a, true);
+  SyncVar *s = ctx->metamap.GetSyncOrCreate(thr, pc, (uptr)a, false);
+  Lock l(&s->mtx);
   thr->fast_state.IncrementEpoch();
   // Can't increment epoch w/o writing to the trace as well.
   TraceAddEvent(thr, thr->fast_state, EventTypeMop, 0);
   ReleaseStoreImpl(thr, pc, &s->clock);
   NoTsanAtomicStore(a, v, mo);
-  s->mtx.Unlock();
 }
 
 template <typename T, T (*F)(volatile T *v, T op)>
-static T AtomicRMW(ThreadState *thr, uptr pc, volatile T *a, T v,
-                   morder mo) NO_THREAD_SAFETY_ANALYSIS {
-  MemoryWriteAtomic(thr, pc, (uptr)a, SizeLog<T>());
-  SyncVar *s = 0;
-  if (mo != mo_relaxed) {
-    s = ctx->metamap.GetOrCreateAndLock(thr, pc, (uptr)a, true);
-    thr->fast_state.IncrementEpoch();
-    // Can't increment epoch w/o writing to the trace as well.
-    TraceAddEvent(thr, thr->fast_state, EventTypeMop, 0);
-    if (IsAcqRelOrder(mo))
-      AcquireReleaseImpl(thr, pc, &s->clock);
-    else if (IsReleaseOrder(mo))
-      ReleaseImpl(thr, pc, &s->clock);
-    else if (IsAcquireOrder(mo))
-      AcquireImpl(thr, pc, &s->clock);
-  }
-  v = F(a, v);
-  if (s)
-    s->mtx.Unlock();
-  return v;
+static T AtomicRMW(ThreadState *thr, uptr pc, volatile T *a, T v, morder mo) {
+  MemoryAccess(thr, pc, (uptr)a, AccessSize<T>(), kAccessWrite | kAccessAtomic);
+  if (LIKELY(mo == mo_relaxed))
+    return F(a, v);
+  SyncVar *s = ctx->metamap.GetSyncOrCreate(thr, pc, (uptr)a, false);
+  Lock l(&s->mtx);
+  thr->fast_state.IncrementEpoch();
+  // Can't increment epoch w/o writing to the trace as well.
+  TraceAddEvent(thr, thr->fast_state, EventTypeMop, 0);
+  if (IsAcqRelOrder(mo))
+    AcquireReleaseImpl(thr, pc, &s->clock);
+  else if (IsReleaseOrder(mo))
+    ReleaseImpl(thr, pc, &s->clock);
+  else if (IsAcquireOrder(mo))
+    AcquireImpl(thr, pc, &s->clock);
+  return F(a, v);
 }
 
 template<typename T>
@@ -402,20 +400,26 @@ static T NoTsanAtomicCAS(volatile T *a, T c, T v, morder mo, morder fmo) {
 }
 
 template <typename T>
-static bool AtomicCAS(ThreadState *thr, uptr pc, volatile T *a, T *c, T v, morder mo,
-                      morder fmo) NO_THREAD_SAFETY_ANALYSIS {
+static bool AtomicCAS(ThreadState *thr, uptr pc, volatile T *a, T *c, T v,
+                      morder mo, morder fmo) {
   // 31.7.2.18: "The failure argument shall not be memory_order_release
   // nor memory_order_acq_rel". LLVM (2021-05) fallbacks to Monotonic
   // (mo_relaxed) when those are used.
-  CHECK(IsLoadOrder(fmo));
+  DCHECK(IsLoadOrder(fmo));
 
-  MemoryWriteAtomic(thr, pc, (uptr)a, SizeLog<T>());
-  SyncVar *s = 0;
-  bool write_lock = IsReleaseOrder(mo);
+  MemoryAccess(thr, pc, (uptr)a, AccessSize<T>(), kAccessWrite | kAccessAtomic);
+  if (LIKELY(mo == mo_relaxed && fmo == mo_relaxed)) {
+    T cc = *c;
+    T pr = func_cas(a, cc, v);
+    if (pr == cc)
+      return true;
+    *c = pr;
+    return false;
+  }
 
-  if (mo != mo_relaxed || fmo != mo_relaxed)
-    s = ctx->metamap.GetOrCreateAndLock(thr, pc, (uptr)a, write_lock);
-
+  bool release = IsReleaseOrder(mo);
+  SyncVar *s = ctx->metamap.GetSyncOrCreate(thr, pc, (uptr)a, false);
+  RWLock l(&s->mtx, release);
   T cc = *c;
   T pr = func_cas(a, cc, v);
   bool success = pr == cc;
@@ -423,25 +427,16 @@ static bool AtomicCAS(ThreadState *thr, uptr pc, volatile T *a, T *c, T v, morde
     *c = pr;
     mo = fmo;
   }
+  thr->fast_state.IncrementEpoch();
+  // Can't increment epoch w/o writing to the trace as well.
+  TraceAddEvent(thr, thr->fast_state, EventTypeMop, 0);
 
-  if (s) {
-    thr->fast_state.IncrementEpoch();
-    // Can't increment epoch w/o writing to the trace as well.
-    TraceAddEvent(thr, thr->fast_state, EventTypeMop, 0);
-
-    if (success && IsAcqRelOrder(mo))
-      AcquireReleaseImpl(thr, pc, &s->clock);
-    else if (success && IsReleaseOrder(mo))
-      ReleaseImpl(thr, pc, &s->clock);
-    else if (IsAcquireOrder(mo))
-      AcquireImpl(thr, pc, &s->clock);
-
-    if (write_lock)
-      s->mtx.Unlock();
-    else
-      s->mtx.ReadUnlock();
-  }
-
+  if (success && IsAcqRelOrder(mo))
+    AcquireReleaseImpl(thr, pc, &s->clock);
+  else if (success && IsReleaseOrder(mo))
+    ReleaseImpl(thr, pc, &s->clock);
+  else if (IsAcquireOrder(mo))
+    AcquireImpl(thr, pc, &s->clock);
   return success;
 }
 

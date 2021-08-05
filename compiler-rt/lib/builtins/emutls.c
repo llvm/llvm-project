@@ -374,6 +374,21 @@ emutls_get_address_array(uintptr_t index) {
   return array;
 }
 
+#ifndef _WIN32
+// Our emulated TLS implementation relies on local state (e.g. for the pthread
+// key), and if we duplicate this state across different shared libraries,
+// accesses to the same TLS variable from different shared libraries will yield
+// different results (see https://github.com/android/ndk/issues/1551 for an
+// example). __emutls_get_address is the only external entry point for emulated
+// TLS, and by making it default visibility and weak, we can rely on the dynamic
+// linker to coalesce multiple copies at runtime and ensure a single unique copy
+// of TLS state. This is a best effort; it won't work if the user is linking
+// with -Bsymbolic or -Bsymbolic-functions, and it also won't work on Windows,
+// where the dynamic linker has no notion of coalescing weak symbols at runtime.
+// A more robust solution would be to create a separate shared library for
+// emulated TLS, to ensure a single copy of its state.
+__attribute__((visibility("default"), weak))
+#endif
 void *__emutls_get_address(__emutls_control *control) {
   uintptr_t index = emutls_get_index(control);
   emutls_address_array *array = emutls_get_address_array(index--);

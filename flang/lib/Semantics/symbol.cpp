@@ -85,6 +85,7 @@ void ModuleDetails::set_scope(const Scope *scope) {
 llvm::raw_ostream &operator<<(
     llvm::raw_ostream &os, const SubprogramDetails &x) {
   DumpBool(os, "isInterface", x.isInterface_);
+  DumpBool(os, "dummy", x.isDummy_);
   DumpOptional(os, "bindName", x.bindName());
   if (x.result_) {
     DumpType(os << " result:", x.result());

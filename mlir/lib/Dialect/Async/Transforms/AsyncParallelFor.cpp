@@ -190,6 +190,10 @@ createParallelComputeFunction(scf::ParallelOp op, PatternRewriter &rewriter) {
 
   ModuleOp module = op->getParentOfType<ModuleOp>();
 
+  // Make sure that all constants will be inside the parallel operation body to
+  // reduce the number of parallel compute function arguments.
+  cloneConstantsIntoTheRegion(op.getLoopBody(), rewriter);
+
   ParallelComputeFunctionType computeFuncType =
       getParallelComputeFunctionType(op, rewriter);
 

@@ -39,7 +39,7 @@ entry:
   %tmp = load void ()*, void ()** @bar, align 8
 ; GEN: [[ICALL_TARGET:%[0-9]+]] = ptrtoint void ()* %tmp to i64
 ; GEN-NEXT: call void @llvm.instrprof.value.profile(i8* getelementptr inbounds ([3 x i8], [3 x i8]* @__profn_foo, i32 0, i32 0), i64 [[#FOO_HASH]], i64 [[ICALL_TARGET]], i32 0, i32 0)
-; LOWER: call void @__llvm_profile_instrument_target(i64 %1, i8* bitcast ({ i64, i64, i64*, i8*, i8*, i32, [2 x i16] }* @__profd_foo to i8*), i32 0)
+; LOWER: call void @__llvm_profile_instrument_target(i64 %1, i8* bitcast ({ i64, i64, i64, i8*, i8*, i32, [2 x i16] }* @__profd_foo to i8*), i32 0)
   call void %tmp()
   ret void
 }
@@ -52,7 +52,7 @@ entry:
   %tmp = load void ()*, void ()** @bar, align 8
 ; GEN: [[ICALL_TARGET:%[0-9]+]] = ptrtoint void ()* %tmp to i64
 ; GEN-NEXT: call void @llvm.instrprof.value.profile(i8* getelementptr inbounds ([9 x i8], [9 x i8]* @__profn_vp_inline, i32 0, i32 0), i64 [[#FOO_HASH]], i64 [[ICALL_TARGET]], i32 0, i32 0)
-; LOWER: call void @__llvm_profile_instrument_target(i64 %1, i8* bitcast ({ i64, i64, i64*, i8*, i8*, i32, [2 x i16] }* @__profd_vp_inline.[[#]] to i8*), i32 0)
+; LOWER: call void @__llvm_profile_instrument_target(i64 %1, i8* bitcast ({ i64, i64, i64, i8*, i8*, i32, [2 x i16] }* @__profd_vp_inline.[[#]] to i8*), i32 0)
   call void %tmp()
   ret void
 }

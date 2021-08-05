@@ -46,6 +46,7 @@
 // BE-PWR9-NEXT:    [[__A_ADDR_I:%.*]] = alloca i8*, align 8
 // BE-PWR9-NEXT:    [[__B_ADDR_I:%.*]] = alloca i64, align 8
 // BE-PWR9-NEXT:    [[__RES_I:%.*]] = alloca <16 x i8>, align 16
+// BE-PWR9-NEXT:    [[__MASK_I:%.*]] = alloca <16 x i8>, align 16
 // BE-PWR9-NEXT:    [[PTR_ADDR:%.*]] = alloca i8*, align 8
 // BE-PWR9-NEXT:    store i8* [[PTR:%.*]], i8** [[PTR_ADDR]], align 8
 // BE-PWR9-NEXT:    [[TMP0:%.*]] = load i8*, i8** [[PTR_ADDR]], align 8
@@ -54,11 +55,23 @@
 // BE-PWR9-NEXT:    [[TMP1:%.*]] = load i8*, i8** [[__A_ADDR_I]], align 8
 // BE-PWR9-NEXT:    [[TMP2:%.*]] = load i64, i64* [[__B_ADDR_I]], align 8
 // BE-PWR9-NEXT:    [[SHL_I:%.*]] = shl i64 [[TMP2]], 56
-// BE-PWR9-NEXT:    [[TMP3:%.*]] = call <4 x i32> @llvm.ppc.vsx.lxvll(i8* [[TMP1]], i64 [[SHL_I]]) #[[ATTR3:[0-9]+]]
+// BE-PWR9-NEXT:    [[TMP3:%.*]] = call <4 x i32> @llvm.ppc.vsx.lxvll(i8* [[TMP1]], i64 [[SHL_I]]) #[[ATTR4:[0-9]+]]
 // BE-PWR9-NEXT:    [[TMP4:%.*]] = bitcast <4 x i32> [[TMP3]] to <16 x i8>
 // BE-PWR9-NEXT:    store <16 x i8> [[TMP4]], <16 x i8>* [[__RES_I]], align 16
-// BE-PWR9-NEXT:    [[TMP5:%.*]] = load <16 x i8>, <16 x i8>* [[__RES_I]], align 16
-// BE-PWR9-NEXT:    ret <16 x i8> [[TMP5]]
+// BE-PWR9-NEXT:    [[TMP5:%.*]] = load i64, i64* [[__B_ADDR_I]], align 8
+// BE-PWR9-NEXT:    [[SUB_I:%.*]] = sub i64 16, [[TMP5]]
+// BE-PWR9-NEXT:    [[CONV_I:%.*]] = trunc i64 [[SUB_I]] to i8
+// BE-PWR9-NEXT:    [[TMP6:%.*]] = getelementptr i8, i8* null, i8 [[CONV_I]]
+// BE-PWR9-NEXT:    [[TMP7:%.*]] = call <16 x i8> @llvm.ppc.altivec.lvsr(i8* [[TMP6]]) #[[ATTR4]]
+// BE-PWR9-NEXT:    store <16 x i8> [[TMP7]], <16 x i8>* [[__MASK_I]], align 16
+// BE-PWR9-NEXT:    [[TMP8:%.*]] = load <16 x i8>, <16 x i8>* [[__RES_I]], align 16
+// BE-PWR9-NEXT:    [[TMP9:%.*]] = bitcast <16 x i8> [[TMP8]] to <4 x i32>
+// BE-PWR9-NEXT:    [[TMP10:%.*]] = load <16 x i8>, <16 x i8>* [[__RES_I]], align 16
+// BE-PWR9-NEXT:    [[TMP11:%.*]] = bitcast <16 x i8> [[TMP10]] to <4 x i32>
+// BE-PWR9-NEXT:    [[TMP12:%.*]] = load <16 x i8>, <16 x i8>* [[__MASK_I]], align 16
+// BE-PWR9-NEXT:    [[TMP13:%.*]] = call <4 x i32> @llvm.ppc.altivec.vperm(<4 x i32> [[TMP9]], <4 x i32> [[TMP11]], <16 x i8> [[TMP12]]) #[[ATTR4]]
+// BE-PWR9-NEXT:    [[TMP14:%.*]] = bitcast <4 x i32> [[TMP13]] to <16 x i8>
+// BE-PWR9-NEXT:    ret <16 x i8> [[TMP14]]
 //
 // LE-PWR9-LABEL: @test_ldrmb1(
 // LE-PWR9-NEXT:  entry:
@@ -90,9 +103,7 @@
 // LE-PWR9-NEXT:    [[TMP12:%.*]] = load <16 x i8>, <16 x i8>* [[__MASK_I]], align 16
 // LE-PWR9-NEXT:    [[TMP13:%.*]] = call <4 x i32> @llvm.ppc.altivec.vperm(<4 x i32> [[TMP9]], <4 x i32> [[TMP11]], <16 x i8> [[TMP12]]) #[[ATTR4]]
 // LE-PWR9-NEXT:    [[TMP14:%.*]] = bitcast <4 x i32> [[TMP13]] to <16 x i8>
-// LE-PWR9-NEXT:    store <16 x i8> [[TMP14]], <16 x i8>* [[__RES_I]], align 16
-// LE-PWR9-NEXT:    [[TMP15:%.*]] = load <16 x i8>, <16 x i8>* [[__RES_I]], align 16
-// LE-PWR9-NEXT:    ret <16 x i8> [[TMP15]]
+// LE-PWR9-NEXT:    ret <16 x i8> [[TMP14]]
 //
 // BE32-PWR9-LABEL: @test_ldrmb1(
 // BE32-PWR9-NEXT:  entry:
@@ -141,6 +152,8 @@ vector unsigned char test_ldrmb1(char *ptr) { return __vec_ldrmb(ptr, 1); }
 // BE-PWR9-NEXT:    [[__A_ADDR_I:%.*]] = alloca <16 x i8>, align 16
 // BE-PWR9-NEXT:    [[__B_ADDR_I:%.*]] = alloca i8*, align 8
 // BE-PWR9-NEXT:    [[__C_ADDR_I:%.*]] = alloca i64, align 8
+// BE-PWR9-NEXT:    [[__MASK_I:%.*]] = alloca <16 x i8>, align 16
+// BE-PWR9-NEXT:    [[__RES_I:%.*]] = alloca <16 x i8>, align 16
 // BE-PWR9-NEXT:    [[PTR_ADDR:%.*]] = alloca i8*, align 8
 // BE-PWR9-NEXT:    [[DATA_ADDR:%.*]] = alloca <16 x i8>, align 16
 // BE-PWR9-NEXT:    store i8* [[PTR:%.*]], i8** [[PTR_ADDR]], align 8
@@ -150,12 +163,26 @@ vector unsigned char test_ldrmb1(char *ptr) { return __vec_ldrmb(ptr, 1); }
 // BE-PWR9-NEXT:    store <16 x i8> [[TMP0]], <16 x i8>* [[__A_ADDR_I]], align 16
 // BE-PWR9-NEXT:    store i8* [[TMP1]], i8** [[__B_ADDR_I]], align 8
 // BE-PWR9-NEXT:    store i64 1, i64* [[__C_ADDR_I]], align 8
-// BE-PWR9-NEXT:    [[TMP2:%.*]] = load <16 x i8>, <16 x i8>* [[__A_ADDR_I]], align 16
-// BE-PWR9-NEXT:    [[TMP3:%.*]] = bitcast <16 x i8> [[TMP2]] to <4 x i32>
-// BE-PWR9-NEXT:    [[TMP4:%.*]] = load i8*, i8** [[__B_ADDR_I]], align 8
-// BE-PWR9-NEXT:    [[TMP5:%.*]] = load i64, i64* [[__C_ADDR_I]], align 8
-// BE-PWR9-NEXT:    [[SHL_I:%.*]] = shl i64 [[TMP5]], 56
-// BE-PWR9-NEXT:    call void @llvm.ppc.vsx.stxvll(<4 x i32> [[TMP3]], i8* [[TMP4]], i64 [[SHL_I]]) #[[ATTR3]]
+// BE-PWR9-NEXT:    [[TMP2:%.*]] = load i64, i64* [[__C_ADDR_I]], align 8
+// BE-PWR9-NEXT:    [[SUB_I:%.*]] = sub i64 16, [[TMP2]]
+// BE-PWR9-NEXT:    [[CONV_I:%.*]] = trunc i64 [[SUB_I]] to i8
+// BE-PWR9-NEXT:    [[TMP3:%.*]] = getelementptr i8, i8* null, i8 [[CONV_I]]
+// BE-PWR9-NEXT:    [[TMP4:%.*]] = call <16 x i8> @llvm.ppc.altivec.lvsl(i8* [[TMP3]]) #[[ATTR4]]
+// BE-PWR9-NEXT:    store <16 x i8> [[TMP4]], <16 x i8>* [[__MASK_I]], align 16
+// BE-PWR9-NEXT:    [[TMP5:%.*]] = load <16 x i8>, <16 x i8>* [[__A_ADDR_I]], align 16
+// BE-PWR9-NEXT:    [[TMP6:%.*]] = bitcast <16 x i8> [[TMP5]] to <4 x i32>
+// BE-PWR9-NEXT:    [[TMP7:%.*]] = load <16 x i8>, <16 x i8>* [[__A_ADDR_I]], align 16
+// BE-PWR9-NEXT:    [[TMP8:%.*]] = bitcast <16 x i8> [[TMP7]] to <4 x i32>
+// BE-PWR9-NEXT:    [[TMP9:%.*]] = load <16 x i8>, <16 x i8>* [[__MASK_I]], align 16
+// BE-PWR9-NEXT:    [[TMP10:%.*]] = call <4 x i32> @llvm.ppc.altivec.vperm(<4 x i32> [[TMP6]], <4 x i32> [[TMP8]], <16 x i8> [[TMP9]]) #[[ATTR4]]
+// BE-PWR9-NEXT:    [[TMP11:%.*]] = bitcast <4 x i32> [[TMP10]] to <16 x i8>
+// BE-PWR9-NEXT:    store <16 x i8> [[TMP11]], <16 x i8>* [[__RES_I]], align 16
+// BE-PWR9-NEXT:    [[TMP12:%.*]] = load <16 x i8>, <16 x i8>* [[__RES_I]], align 16
+// BE-PWR9-NEXT:    [[TMP13:%.*]] = bitcast <16 x i8> [[TMP12]] to <4 x i32>
+// BE-PWR9-NEXT:    [[TMP14:%.*]] = load i8*, i8** [[__B_ADDR_I]], align 8
+// BE-PWR9-NEXT:    [[TMP15:%.*]] = load i64, i64* [[__C_ADDR_I]], align 8
+// BE-PWR9-NEXT:    [[SHL_I:%.*]] = shl i64 [[TMP15]], 56
+// BE-PWR9-NEXT:    call void @llvm.ppc.vsx.stxvll(<4 x i32> [[TMP13]], i8* [[TMP14]], i64 [[SHL_I]]) #[[ATTR4]]
 // BE-PWR9-NEXT:    ret void
 //
 // LE-PWR9-LABEL: @test_strmb1(
@@ -249,6 +276,8 @@ void test_strmb1(char *ptr, vector unsigned char data) {
 // BE-PWR9-NEXT:    [[__A_ADDR_I:%.*]] = alloca <16 x i8>, align 16
 // BE-PWR9-NEXT:    [[__B_ADDR_I:%.*]] = alloca i8*, align 8
 // BE-PWR9-NEXT:    [[__C_ADDR_I:%.*]] = alloca i64, align 8
+// BE-PWR9-NEXT:    [[__MASK_I:%.*]] = alloca <16 x i8>, align 16
+// BE-PWR9-NEXT:    [[__RES_I:%.*]] = alloca <16 x i8>, align 16
 // BE-PWR9-NEXT:    [[PTR_ADDR:%.*]] = alloca i8*, align 8
 // BE-PWR9-NEXT:    [[DATA_ADDR:%.*]] = alloca <16 x i8>, align 16
 // BE-PWR9-NEXT:    store i8* [[PTR:%.*]], i8** [[PTR_ADDR]], align 8
@@ -258,12 +287,26 @@ void test_strmb1(char *ptr, vector unsigned char data) {
 // BE-PWR9-NEXT:    store <16 x i8> [[TMP0]], <16 x i8>* [[__A_ADDR_I]], align 16
 // BE-PWR9-NEXT:    store i8* [[TMP1]], i8** [[__B_ADDR_I]], align 8
 // BE-PWR9-NEXT:    store i64 2, i64* [[__C_ADDR_I]], align 8
-// BE-PWR9-NEXT:    [[TMP2:%.*]] = load <16 x i8>, <16 x i8>* [[__A_ADDR_I]], align 16
-// BE-PWR9-NEXT:    [[TMP3:%.*]] = bitcast <16 x i8> [[TMP2]] to <4 x i32>
-// BE-PWR9-NEXT:    [[TMP4:%.*]] = load i8*, i8** [[__B_ADDR_I]], align 8
-// BE-PWR9-NEXT:    [[TMP5:%.*]] = load i64, i64* [[__C_ADDR_I]], align 8
-// BE-PWR9-NEXT:    [[SHL_I:%.*]] = shl i64 [[TMP5]], 56
-// BE-PWR9-NEXT:    call void @llvm.ppc.vsx.stxvll(<4 x i32> [[TMP3]], i8* [[TMP4]], i64 [[SHL_I]]) #[[ATTR3]]
+// BE-PWR9-NEXT:    [[TMP2:%.*]] = load i64, i64* [[__C_ADDR_I]], align 8
+// BE-PWR9-NEXT:    [[SUB_I:%.*]] = sub i64 16, [[TMP2]]
+// BE-PWR9-NEXT:    [[CONV_I:%.*]] = trunc i64 [[SUB_I]] to i8
+// BE-PWR9-NEXT:    [[TMP3:%.*]] = getelementptr i8, i8* null, i8 [[CONV_I]]
+// BE-PWR9-NEXT:    [[TMP4:%.*]] = call <16 x i8> @llvm.ppc.altivec.lvsl(i8* [[TMP3]]) #[[ATTR4]]
+// BE-PWR9-NEXT:    store <16 x i8> [[TMP4]], <16 x i8>* [[__MASK_I]], align 16
+// BE-PWR9-NEXT:    [[TMP5:%.*]] = load <16 x i8>, <16 x i8>* [[__A_ADDR_I]], align 16
+// BE-PWR9-NEXT:    [[TMP6:%.*]] = bitcast <16 x i8> [[TMP5]] to <4 x i32>
+// BE-PWR9-NEXT:    [[TMP7:%.*]] = load <16 x i8>, <16 x i8>* [[__A_ADDR_I]], align 16
+// BE-PWR9-NEXT:    [[TMP8:%.*]] = bitcast <16 x i8> [[TMP7]] to <4 x i32>
+// BE-PWR9-NEXT:    [[TMP9:%.*]] = load <16 x i8>, <16 x i8>* [[__MASK_I]], align 16
+// BE-PWR9-NEXT:    [[TMP10:%.*]] = call <4 x i32> @llvm.ppc.altivec.vperm(<4 x i32> [[TMP6]], <4 x i32> [[TMP8]], <16 x i8> [[TMP9]]) #[[ATTR4]]
+// BE-PWR9-NEXT:    [[TMP11:%.*]] = bitcast <4 x i32> [[TMP10]] to <16 x i8>
+// BE-PWR9-NEXT:    store <16 x i8> [[TMP11]], <16 x i8>* [[__RES_I]], align 16
+// BE-PWR9-NEXT:    [[TMP12:%.*]] = load <16 x i8>, <16 x i8>* [[__RES_I]], align 16
+// BE-PWR9-NEXT:    [[TMP13:%.*]] = bitcast <16 x i8> [[TMP12]] to <4 x i32>
+// BE-PWR9-NEXT:    [[TMP14:%.*]] = load i8*, i8** [[__B_ADDR_I]], align 8
+// BE-PWR9-NEXT:    [[TMP15:%.*]] = load i64, i64* [[__C_ADDR_I]], align 8
+// BE-PWR9-NEXT:    [[SHL_I:%.*]] = shl i64 [[TMP15]], 56
+// BE-PWR9-NEXT:    call void @llvm.ppc.vsx.stxvll(<4 x i32> [[TMP13]], i8* [[TMP14]], i64 [[SHL_I]]) #[[ATTR4]]
 // BE-PWR9-NEXT:    ret void
 //
 // LE-PWR9-LABEL: @test_strmb2(
@@ -365,6 +408,8 @@ void test_strmb2(char *ptr, vector unsigned char data) {
 // BE-PWR9-NEXT:    [[__A_ADDR_I:%.*]] = alloca <16 x i8>, align 16
 // BE-PWR9-NEXT:    [[__B_ADDR_I:%.*]] = alloca i8*, align 8
 // BE-PWR9-NEXT:    [[__C_ADDR_I:%.*]] = alloca i64, align 8
+// BE-PWR9-NEXT:    [[__MASK_I:%.*]] = alloca <16 x i8>, align 16
+// BE-PWR9-NEXT:    [[__RES_I:%.*]] = alloca <16 x i8>, align 16
 // BE-PWR9-NEXT:    [[PTR_ADDR:%.*]] = alloca i8*, align 8
 // BE-PWR9-NEXT:    [[DATA_ADDR:%.*]] = alloca <16 x i8>, align 16
 // BE-PWR9-NEXT:    store i8* [[PTR:%.*]], i8** [[PTR_ADDR]], align 8
@@ -374,12 +419,26 @@ void test_strmb2(char *ptr, vector unsigned char data) {
 // BE-PWR9-NEXT:    store <16 x i8> [[TMP0]], <16 x i8>* [[__A_ADDR_I]], align 16
 // BE-PWR9-NEXT:    store i8* [[TMP1]], i8** [[__B_ADDR_I]], align 8
 // BE-PWR9-NEXT:    store i64 3, i64* [[__C_ADDR_I]], align 8
-// BE-PWR9-NEXT:    [[TMP2:%.*]] = load <16 x i8>, <16 x i8>* [[__A_ADDR_I]], align 16
-// BE-PWR9-NEXT:    [[TMP3:%.*]] = bitcast <16 x i8> [[TMP2]] to <4 x i32>
-// BE-PWR9-NEXT:    [[TMP4:%.*]] = load i8*, i8** [[__B_ADDR_I]], align 8
-// BE-PWR9-NEXT:    [[TMP5:%.*]] = load i64, i64* [[__C_ADDR_I]], align 8
-// BE-PWR9-NEXT:    [[SHL_I:%.*]] = shl i64 [[TMP5]], 56
-// BE-PWR9-NEXT:    call void @llvm.ppc.vsx.stxvll(<4 x i32> [[TMP3]], i8* [[TMP4]], i64 [[SHL_I]]) #[[ATTR3]]
+// BE-PWR9-NEXT:    [[TMP2:%.*]] = load i64, i64* [[__C_ADDR_I]], align 8
+// BE-PWR9-NEXT:    [[SUB_I:%.*]] = sub i64 16, [[TMP2]]
+// BE-PWR9-NEXT:    [[CONV_I:%.*]] = trunc i64 [[SUB_I]] to i8
+// BE-PWR9-NEXT:    [[TMP3:%.*]] = getelementptr i8, i8* null, i8 [[CONV_I]]
+// BE-PWR9-NEXT:    [[TMP4:%.*]] = call <16 x i8> @llvm.ppc.altivec.lvsl(i8* [[TMP3]]) #[[ATTR4]]
+// BE-PWR9-NEXT:    store <16 x i8> [[TMP4]], <16 x i8>* [[__MASK_I]], align 16
+// BE-PWR9-NEXT:    [[TMP5:%.*]] = load <16 x i8>, <16 x i8>* [[__A_ADDR_I]], align 16
+// BE-PWR9-NEXT:    [[TMP6:%.*]] = bitcast <16 x i8> [[TMP5]] to <4 x i32>
+// BE-PWR9-NEXT:    [[TMP7:%.*]] = load <16 x i8>, <16 x i8>* [[__A_ADDR_I]], align 16
+// BE-PWR9-NEXT:    [[TMP8:%.*]] = bitcast <16 x i8> [[TMP7]] to <4 x i32>
+// BE-PWR9-NEXT:    [[TMP9:%.*]] = load <16 x i8>, <16 x i8>* [[__MASK_I]], align 16
+// BE-PWR9-NEXT:    [[TMP10:%.*]] = call <4 x i32> @llvm.ppc.altivec.vperm(<4 x i32> [[TMP6]], <4 x i32> [[TMP8]], <16 x i8> [[TMP9]]) #[[ATTR4]]
+// BE-PWR9-NEXT:    [[TMP11:%.*]] = bitcast <4 x i32> [[TMP10]] to <16 x i8>
+// BE-PWR9-NEXT:    store <16 x i8> [[TMP11]], <16 x i8>* [[__RES_I]], align 16
+// BE-PWR9-NEXT:    [[TMP12:%.*]] = load <16 x i8>, <16 x i8>* [[__RES_I]], align 16
+// BE-PWR9-NEXT:    [[TMP13:%.*]] = bitcast <16 x i8> [[TMP12]] to <4 x i32>
+// BE-PWR9-NEXT:    [[TMP14:%.*]] = load i8*, i8** [[__B_ADDR_I]], align 8
+// BE-PWR9-NEXT:    [[TMP15:%.*]] = load i64, i64* [[__C_ADDR_I]], align 8
+// BE-PWR9-NEXT:    [[SHL_I:%.*]] = shl i64 [[TMP15]], 56
+// BE-PWR9-NEXT:    call void @llvm.ppc.vsx.stxvll(<4 x i32> [[TMP13]], i8* [[TMP14]], i64 [[SHL_I]]) #[[ATTR4]]
 // BE-PWR9-NEXT:    ret void
 //
 // LE-PWR9-LABEL: @test_strmb3(
@@ -478,6 +537,8 @@ void test_strmb3(char *ptr, vector unsigned char data) {
 // BE-PWR9-NEXT:    [[__A_ADDR_I:%.*]] = alloca <16 x i8>, align 16
 // BE-PWR9-NEXT:    [[__B_ADDR_I:%.*]] = alloca i8*, align 8
 // BE-PWR9-NEXT:    [[__C_ADDR_I:%.*]] = alloca i64, align 8
+// BE-PWR9-NEXT:    [[__MASK_I:%.*]] = alloca <16 x i8>, align 16
+// BE-PWR9-NEXT:    [[__RES_I:%.*]] = alloca <16 x i8>, align 16
 // BE-PWR9-NEXT:    [[PTR_ADDR:%.*]] = alloca i8*, align 8
 // BE-PWR9-NEXT:    [[DATA_ADDR:%.*]] = alloca <16 x i8>, align 16
 // BE-PWR9-NEXT:    store i8* [[PTR:%.*]], i8** [[PTR_ADDR]], align 8
@@ -487,12 +548,26 @@ void test_strmb3(char *ptr, vector unsigned char data) {
 // BE-PWR9-NEXT:    store <16 x i8> [[TMP0]], <16 x i8>* [[__A_ADDR_I]], align 16
 // BE-PWR9-NEXT:    store i8* [[TMP1]], i8** [[__B_ADDR_I]], align 8
 // BE-PWR9-NEXT:    store i64 4, i64* [[__C_ADDR_I]], align 8
-// BE-PWR9-NEXT:    [[TMP2:%.*]] = load <16 x i8>, <16 x i8>* [[__A_ADDR_I]], align 16
-// BE-PWR9-NEXT:    [[TMP3:%.*]] = bitcast <16 x i8> [[TMP2]] to <4 x i32>
-// BE-PWR9-NEXT:    [[TMP4:%.*]] = load i8*, i8** [[__B_ADDR_I]], align 8
-// BE-PWR9-NEXT:    [[TMP5:%.*]] = load i64, i64* [[__C_ADDR_I]], align 8
-// BE-PWR9-NEXT:    [[SHL_I:%.*]] = shl i64 [[TMP5]], 56
-// BE-PWR9-NEXT:    call void @llvm.ppc.vsx.stxvll(<4 x i32> [[TMP3]], i8* [[TMP4]], i64 [[SHL_I]]) #[[ATTR3]]
+// BE-PWR9-NEXT:    [[TMP2:%.*]] = load i64, i64* [[__C_ADDR_I]], align 8
+// BE-PWR9-NEXT:    [[SUB_I:%.*]] = sub i64 16, [[TMP2]]
+// BE-PWR9-NEXT:    [[CONV_I:%.*]] = trunc i64 [[SUB_I]] to i8
+// BE-PWR9-NEXT:    [[TMP3:%.*]] = getelementptr i8, i8* null, i8 [[CONV_I]]
+// BE-PWR9-NEXT:    [[TMP4:%.*]] = call <16 x i8> @llvm.ppc.altivec.lvsl(i8* [[TMP3]]) #[[ATTR4]]
+// BE-PWR9-NEXT:    store <16 x i8> [[TMP4]], <16 x i8>* [[__MASK_I]], align 16
+// BE-PWR9-NEXT:    [[TMP5:%.*]] = load <16 x i8>, <16 x i8>* [[__A_ADDR_I]], align 16
+// BE-PWR9-NEXT:    [[TMP6:%.*]] = bitcast <16 x i8> [[TMP5]] to <4 x i32>
+// BE-PWR9-NEXT:    [[TMP7:%.*]] = load <16 x i8>, <16 x i8>* [[__A_ADDR_I]], align 16
+// BE-PWR9-NEXT:    [[TMP8:%.*]] = bitcast <16 x i8> [[TMP7]] to <4 x i32>
+// BE-PWR9-NEXT:    [[TMP9:%.*]] = load <16 x i8>, <16 x i8>* [[__MASK_I]], align 16
+// BE-PWR9-NEXT:    [[TMP10:%.*]] = call <4 x i32> @llvm.ppc.altivec.vperm(<4 x i32> [[TMP6]], <4 x i32> [[TMP8]], <16 x i8> [[TMP9]]) #[[ATTR4]]
+// BE-PWR9-NEXT:    [[TMP11:%.*]] = bitcast <4 x i32> [[TMP10]] to <16 x i8>
+// BE-PWR9-NEXT:    store <16 x i8> [[TMP11]], <16 x i8>* [[__RES_I]], align 16
+// BE-PWR9-NEXT:    [[TMP12:%.*]] = load <16 x i8>, <16 x i8>* [[__RES_I]], align 16
+// BE-PWR9-NEXT:    [[TMP13:%.*]] = bitcast <16 x i8> [[TMP12]] to <4 x i32>
+// BE-PWR9-NEXT:    [[TMP14:%.*]] = load i8*, i8** [[__B_ADDR_I]], align 8
+// BE-PWR9-NEXT:    [[TMP15:%.*]] = load i64, i64* [[__C_ADDR_I]], align 8
+// BE-PWR9-NEXT:    [[SHL_I:%.*]] = shl i64 [[TMP15]], 56
+// BE-PWR9-NEXT:    call void @llvm.ppc.vsx.stxvll(<4 x i32> [[TMP13]], i8* [[TMP14]], i64 [[SHL_I]]) #[[ATTR4]]
 // BE-PWR9-NEXT:    ret void
 //
 // LE-PWR9-LABEL: @test_strmb4(
@@ -594,6 +669,8 @@ void test_strmb4(char *ptr, vector unsigned char data) {
 // BE-PWR9-NEXT:    [[__A_ADDR_I:%.*]] = alloca <16 x i8>, align 16
 // BE-PWR9-NEXT:    [[__B_ADDR_I:%.*]] = alloca i8*, align 8
 // BE-PWR9-NEXT:    [[__C_ADDR_I:%.*]] = alloca i64, align 8
+// BE-PWR9-NEXT:    [[__MASK_I:%.*]] = alloca <16 x i8>, align 16
+// BE-PWR9-NEXT:    [[__RES_I:%.*]] = alloca <16 x i8>, align 16
 // BE-PWR9-NEXT:    [[PTR_ADDR:%.*]] = alloca i8*, align 8
 // BE-PWR9-NEXT:    [[DATA_ADDR:%.*]] = alloca <16 x i8>, align 16
 // BE-PWR9-NEXT:    store i8* [[PTR:%.*]], i8** [[PTR_ADDR]], align 8
@@ -603,12 +680,26 @@ void test_strmb4(char *ptr, vector unsigned char data) {
 // BE-PWR9-NEXT:    store <16 x i8> [[TMP0]], <16 x i8>* [[__A_ADDR_I]], align 16
 // BE-PWR9-NEXT:    store i8* [[TMP1]], i8** [[__B_ADDR_I]], align 8
 // BE-PWR9-NEXT:    store i64 5, i64* [[__C_ADDR_I]], align 8
-// BE-PWR9-NEXT:    [[TMP2:%.*]] = load <16 x i8>, <16 x i8>* [[__A_ADDR_I]], align 16
-// BE-PWR9-NEXT:    [[TMP3:%.*]] = bitcast <16 x i8> [[TMP2]] to <4 x i32>
-// BE-PWR9-NEXT:    [[TMP4:%.*]] = load i8*, i8** [[__B_ADDR_I]], align 8
-// BE-PWR9-NEXT:    [[TMP5:%.*]] = load i64, i64* [[__C_ADDR_I]], align 8
-// BE-PWR9-NEXT:    [[SHL_I:%.*]] = shl i64 [[TMP5]], 56
-// BE-PWR9-NEXT:    call void @llvm.ppc.vsx.stxvll(<4 x i32> [[TMP3]], i8* [[TMP4]], i64 [[SHL_I]]) #[[ATTR3]]
+// BE-PWR9-NEXT:    [[TMP2:%.*]] = load i64, i64* [[__C_ADDR_I]], align 8
+// BE-PWR9-NEXT:    [[SUB_I:%.*]] = sub i64 16, [[TMP2]]
+// BE-PWR9-NEXT:    [[CONV_I:%.*]] = trunc i64 [[SUB_I]] to i8
+// BE-PWR9-NEXT:    [[TMP3:%.*]] = getelementptr i8, i8* null, i8 [[CONV_I]]
+// BE-PWR9-NEXT:    [[TMP4:%.*]] = call <16 x i8> @llvm.ppc.altivec.lvsl(i8* [[TMP3]]) #[[ATTR4]]
+// BE-PWR9-NEXT:    store <16 x i8> [[TMP4]], <16 x i8>* [[__MASK_I]], align 16
+// BE-PWR9-NEXT:    [[TMP5:%.*]] = load <16 x i8>, <16 x i8>* [[__A_ADDR_I]], align 16
+// BE-PWR9-NEXT:    [[TMP6:%.*]] = bitcast <16 x i8> [[TMP5]] to <4 x i32>
+// BE-PWR9-NEXT:    [[TMP7:%.*]] = load <16 x i8>, <16 x i8>* [[__A_ADDR_I]], align 16
+// BE-PWR9-NEXT:    [[TMP8:%.*]] = bitcast <16 x i8> [[TMP7]] to <4 x i32>
+// BE-PWR9-NEXT:    [[TMP9:%.*]] = load <16 x i8>, <16 x i8>* [[__MASK_I]], align 16
+// BE-PWR9-NEXT:    [[TMP10:%.*]] = call <4 x i32> @llvm.ppc.altivec.vperm(<4 x i32> [[TMP6]], <4 x i32> [[TMP8]], <16 x i8> [[TMP9]]) #[[ATTR4]]
+// BE-PWR9-NEXT:    [[TMP11:%.*]] = bitcast <4 x i32> [[TMP10]] to <16 x i8>
+// BE-PWR9-NEXT:    store <16 x i8> [[TMP11]], <16 x i8>* [[__RES_I]], align 16
+// BE-PWR9-NEXT:    [[TMP12:%.*]] = load <16 x i8>, <16 x i8>* [[__RES_I]], align 16
+// BE-PWR9-NEXT:    [[TMP13:%.*]] = bitcast <16 x i8> [[TMP12]] to <4 x i32>
+// BE-PWR9-NEXT:    [[TMP14:%.*]] = load i8*, i8** [[__B_ADDR_I]], align 8
+// BE-PWR9-NEXT:    [[TMP15:%.*]] = load i64, i64* [[__C_ADDR_I]], align 8
+// BE-PWR9-NEXT:    [[SHL_I:%.*]] = shl i64 [[TMP15]], 56
+// BE-PWR9-NEXT:    call void @llvm.ppc.vsx.stxvll(<4 x i32> [[TMP13]], i8* [[TMP14]], i64 [[SHL_I]]) #[[ATTR4]]
 // BE-PWR9-NEXT:    ret void
 //
 // LE-PWR9-LABEL: @test_strmb5(
@@ -718,6 +809,8 @@ void test_strmb5(char *ptr, vector unsigned char data) {
 // BE-PWR9-NEXT:    [[__A_ADDR_I:%.*]] = alloca <16 x i8>, align 16
 // BE-PWR9-NEXT:    [[__B_ADDR_I:%.*]] = alloca i8*, align 8
 // BE-PWR9-NEXT:    [[__C_ADDR_I:%.*]] = alloca i64, align 8
+// BE-PWR9-NEXT:    [[__MASK_I:%.*]] = alloca <16 x i8>, align 16
+// BE-PWR9-NEXT:    [[__RES_I:%.*]] = alloca <16 x i8>, align 16
 // BE-PWR9-NEXT:    [[PTR_ADDR:%.*]] = alloca i8*, align 8
 // BE-PWR9-NEXT:    [[DATA_ADDR:%.*]] = alloca <16 x i8>, align 16
 // BE-PWR9-NEXT:    store i8* [[PTR:%.*]], i8** [[PTR_ADDR]], align 8
@@ -727,12 +820,26 @@ void test_strmb5(char *ptr, vector unsigned char data) {
 // BE-PWR9-NEXT:    store <16 x i8> [[TMP0]], <16 x i8>* [[__A_ADDR_I]], align 16
 // BE-PWR9-NEXT:    store i8* [[TMP1]], i8** [[__B_ADDR_I]], align 8
 // BE-PWR9-NEXT:    store i64 6, i64* [[__C_ADDR_I]], align 8
-// BE-PWR9-NEXT:    [[TMP2:%.*]] = load <16 x i8>, <16 x i8>* [[__A_ADDR_I]], align 16
-// BE-PWR9-NEXT:    [[TMP3:%.*]] = bitcast <16 x i8> [[TMP2]] to <4 x i32>
-// BE-PWR9-NEXT:    [[TMP4:%.*]] = load i8*, i8** [[__B_ADDR_I]], align 8
-// BE-PWR9-NEXT:    [[TMP5:%.*]] = load i64, i64* [[__C_ADDR_I]], align 8
-// BE-PWR9-NEXT:    [[SHL_I:%.*]] = shl i64 [[TMP5]], 56
-// BE-PWR9-NEXT:    call void @llvm.ppc.vsx.stxvll(<4 x i32> [[TMP3]], i8* [[TMP4]], i64 [[SHL_I]]) #[[ATTR3]]
+// BE-PWR9-NEXT:    [[TMP2:%.*]] = load i64, i64* [[__C_ADDR_I]], align 8
+// BE-PWR9-NEXT:    [[SUB_I:%.*]] = sub i64 16, [[TMP2]]
+// BE-PWR9-NEXT:    [[CONV_I:%.*]] = trunc i64 [[SUB_I]] to i8
+// BE-PWR9-NEXT:    [[TMP3:%.*]] = getelementptr i8, i8* null, i8 [[CONV_I]]
+// BE-PWR9-NEXT:    [[TMP4:%.*]] = call <16 x i8> @llvm.ppc.altivec.lvsl(i8* [[TMP3]]) #[[ATTR4]]
+// BE-PWR9-NEXT:    store <16 x i8> [[TMP4]], <16 x i8>* [[__MASK_I]], align 16
+// BE-PWR9-NEXT:    [[TMP5:%.*]] = load <16 x i8>, <16 x i8>* [[__A_ADDR_I]], align 16
+// BE-PWR9-NEXT:    [[TMP6:%.*]] = bitcast <16 x i8> [[TMP5]] to <4 x i32>
+// BE-PWR9-NEXT:    [[TMP7:%.*]] = load <16 x i8>, <16 x i8>* [[__A_ADDR_I]], align 16
+// BE-PWR9-NEXT:    [[TMP8:%.*]] = bitcast <16 x i8> [[TMP7]] to <4 x i32>
+// BE-PWR9-NEXT:    [[TMP9:%.*]] = load <16 x i8>, <16 x i8>* [[__MASK_I]], align 16
+// BE-PWR9-NEXT:    [[TMP10:%.*]] = call <4 x i32> @llvm.ppc.altivec.vperm(<4 x i32> [[TMP6]], <4 x i32> [[TMP8]], <16 x i8> [[TMP9]]) #[[ATTR4]]
+// BE-PWR9-NEXT:    [[TMP11:%.*]] = bitcast <4 x i32> [[TMP10]] to <16 x i8>
+// BE-PWR9-NEXT:    store <16 x i8> [[TMP11]], <16 x i8>* [[__RES_I]], align 16
+// BE-PWR9-NEXT:    [[TMP12:%.*]] = load <16 x i8>, <16 x i8>* [[__RES_I]], align 16
+// BE-PWR9-NEXT:    [[TMP13:%.*]] = bitcast <16 x i8> [[TMP12]] to <4 x i32>
+// BE-PWR9-NEXT:    [[TMP14:%.*]] = load i8*, i8** [[__B_ADDR_I]], align 8
+// BE-PWR9-NEXT:    [[TMP15:%.*]] = load i64, i64* [[__C_ADDR_I]], align 8
+// BE-PWR9-NEXT:    [[SHL_I:%.*]] = shl i64 [[TMP15]], 56
+// BE-PWR9-NEXT:    call void @llvm.ppc.vsx.stxvll(<4 x i32> [[TMP13]], i8* [[TMP14]], i64 [[SHL_I]]) #[[ATTR4]]
 // BE-PWR9-NEXT:    ret void
 //
 // LE-PWR9-LABEL: @test_strmb6(
@@ -850,6 +957,8 @@ void test_strmb6(char *ptr, vector unsigned char data) {
 // BE-PWR9-NEXT:    [[__A_ADDR_I:%.*]] = alloca <16 x i8>, align 16
 // BE-PWR9-NEXT:    [[__B_ADDR_I:%.*]] = alloca i8*, align 8
 // BE-PWR9-NEXT:    [[__C_ADDR_I:%.*]] = alloca i64, align 8
+// BE-PWR9-NEXT:    [[__MASK_I:%.*]] = alloca <16 x i8>, align 16
+// BE-PWR9-NEXT:    [[__RES_I:%.*]] = alloca <16 x i8>, align 16
 // BE-PWR9-NEXT:    [[PTR_ADDR:%.*]] = alloca i8*, align 8
 // BE-PWR9-NEXT:    [[DATA_ADDR:%.*]] = alloca <16 x i8>, align 16
 // BE-PWR9-NEXT:    store i8* [[PTR:%.*]], i8** [[PTR_ADDR]], align 8
@@ -859,12 +968,26 @@ void test_strmb6(char *ptr, vector unsigned char data) {
 // BE-PWR9-NEXT:    store <16 x i8> [[TMP0]], <16 x i8>* [[__A_ADDR_I]], align 16
 // BE-PWR9-NEXT:    store i8* [[TMP1]], i8** [[__B_ADDR_I]], align 8
 // BE-PWR9-NEXT:    store i64 7, i64* [[__C_ADDR_I]], align 8
-// BE-PWR9-NEXT:    [[TMP2:%.*]] = load <16 x i8>, <16 x i8>* [[__A_ADDR_I]], align 16
-// BE-PWR9-NEXT:    [[TMP3:%.*]] = bitcast <16 x i8> [[TMP2]] to <4 x i32>
-// BE-PWR9-NEXT:    [[TMP4:%.*]] = load i8*, i8** [[__B_ADDR_I]], align 8
-// BE-PWR9-NEXT:    [[TMP5:%.*]] = load i64, i64* [[__C_ADDR_I]], align 8
-// BE-PWR9-NEXT:    [[SHL_I:%.*]] = shl i64 [[TMP5]], 56
-// BE-PWR9-NEXT:    call void @llvm.ppc.vsx.stxvll(<4 x i32> [[TMP3]], i8* [[TMP4]], i64 [[SHL_I]]) #[[ATTR3]]
+// BE-PWR9-NEXT:    [[TMP2:%.*]] = load i64, i64* [[__C_ADDR_I]], align 8
+// BE-PWR9-NEXT:    [[SUB_I:%.*]] = sub i64 16, [[TMP2]]
+// BE-PWR9-NEXT:    [[CONV_I:%.*]] = trunc i64 [[SUB_I]] to i8
+// BE-PWR9-NEXT:    [[TMP3:%.*]] = getelementptr i8, i8* null, i8 [[CONV_I]]
+// BE-PWR9-NEXT:    [[TMP4:%.*]] = call <16 x i8> @llvm.ppc.altivec.lvsl(i8* [[TMP3]]) #[[ATTR4]]
+// BE-PWR9-NEXT:    store <16 x i8> [[TMP4]], <16 x i8>* [[__MASK_I]], align 16
+// BE-PWR9-NEXT:    [[TMP5:%.*]] = load <16 x i8>, <16 x i8>* [[__A_ADDR_I]], align 16
+// BE-PWR9-NEXT:    [[TMP6:%.*]] = bitcast <16 x i8> [[TMP5]] to <4 x i32>
+// BE-PWR9-NEXT:    [[TMP7:%.*]] = load <16 x i8>, <16 x i8>* [[__A_ADDR_I]], align 16
+// BE-PWR9-NEXT:    [[TMP8:%.*]] = bitcast <16 x i8> [[TMP7]] to <4 x i32>
+// BE-PWR9-NEXT:    [[TMP9:%.*]] = load <16 x i8>, <16 x i8>* [[__MASK_I]], align 16
+// BE-PWR9-NEXT:    [[TMP10:%.*]] = call <4 x i32> @llvm.ppc.altivec.vperm(<4 x i32> [[TMP6]], <4 x i32> [[TMP8]], <16 x i8> [[TMP9]]) #[[ATTR4]]
+// BE-PWR9-NEXT:    [[TMP11:%.*]] = bitcast <4 x i32> [[TMP10]] to <16 x i8>
+// BE-PWR9-NEXT:    store <16 x i8> [[TMP11]], <16 x i8>* [[__RES_I]], align 16
+// BE-PWR9-NEXT:    [[TMP12:%.*]] = load <16 x i8>, <16 x i8>* [[__RES_I]], align 16
+// BE-PWR9-NEXT:    [[TMP13:%.*]] = bitcast <16 x i8> [[TMP12]] to <4 x i32>
+// BE-PWR9-NEXT:    [[TMP14:%.*]] = load i8*, i8** [[__B_ADDR_I]], align 8
+// BE-PWR9-NEXT:    [[TMP15:%.*]] = load i64, i64* [[__C_ADDR_I]], align 8
+// BE-PWR9-NEXT:    [[SHL_I:%.*]] = shl i64 [[TMP15]], 56
+// BE-PWR9-NEXT:    call void @llvm.ppc.vsx.stxvll(<4 x i32> [[TMP13]], i8* [[TMP14]], i64 [[SHL_I]]) #[[ATTR4]]
 // BE-PWR9-NEXT:    ret void
 //
 // LE-PWR9-LABEL: @test_strmb7(
@@ -968,6 +1091,8 @@ void test_strmb7(char *ptr, vector unsigned char data) {
 // BE-PWR9-NEXT:    [[__A_ADDR_I:%.*]] = alloca <16 x i8>, align 16
 // BE-PWR9-NEXT:    [[__B_ADDR_I:%.*]] = alloca i8*, align 8
 // BE-PWR9-NEXT:    [[__C_ADDR_I:%.*]] = alloca i64, align 8
+// BE-PWR9-NEXT:    [[__MASK_I:%.*]] = alloca <16 x i8>, align 16
+// BE-PWR9-NEXT:    [[__RES_I:%.*]] = alloca <16 x i8>, align 16
 // BE-PWR9-NEXT:    [[PTR_ADDR:%.*]] = alloca i8*, align 8
 // BE-PWR9-NEXT:    [[DATA_ADDR:%.*]] = alloca <16 x i8>, align 16
 // BE-PWR9-NEXT:    store i8* [[PTR:%.*]], i8** [[PTR_ADDR]], align 8
@@ -977,12 +1102,26 @@ void test_strmb7(char *ptr, vector unsigned char data) {
 // BE-PWR9-NEXT:    store <16 x i8> [[TMP0]], <16 x i8>* [[__A_ADDR_I]], align 16
 // BE-PWR9-NEXT:    store i8* [[TMP1]], i8** [[__B_ADDR_I]], align 8
 // BE-PWR9-NEXT:    store i64 8, i64* [[__C_ADDR_I]], align 8
-// BE-PWR9-NEXT:    [[TMP2:%.*]] = load <16 x i8>, <16 x i8>* [[__A_ADDR_I]], align 16
-// BE-PWR9-NEXT:    [[TMP3:%.*]] = bitcast <16 x i8> [[TMP2]] to <4 x i32>
-// BE-PWR9-NEXT:    [[TMP4:%.*]] = load i8*, i8** [[__B_ADDR_I]], align 8
-// BE-PWR9-NEXT:    [[TMP5:%.*]] = load i64, i64* [[__C_ADDR_I]], align 8
-// BE-PWR9-NEXT:    [[SHL_I:%.*]] = shl i64 [[TMP5]], 56
-// BE-PWR9-NEXT:    call void @llvm.ppc.vsx.stxvll(<4 x i32> [[TMP3]], i8* [[TMP4]], i64 [[SHL_I]]) #[[ATTR3]]
+// BE-PWR9-NEXT:    [[TMP2:%.*]] = load i64, i64* [[__C_ADDR_I]], align 8
+// BE-PWR9-NEXT:    [[SUB_I:%.*]] = sub i64 16, [[TMP2]]
+// BE-PWR9-NEXT:    [[CONV_I:%.*]] = trunc i64 [[SUB_I]] to i8
+// BE-PWR9-NEXT:    [[TMP3:%.*]] = getelementptr i8, i8* null, i8 [[CONV_I]]
+// BE-PWR9-NEXT:    [[TMP4:%.*]] = call <16 x i8> @llvm.ppc.altivec.lvsl(i8* [[TMP3]]) #[[ATTR4]]
+// BE-PWR9-NEXT:    store <16 x i8> [[TMP4]], <16 x i8>* [[__MASK_I]], align 16
+// BE-PWR9-NEXT:    [[TMP5:%.*]] = load <16 x i8>, <16 x i8>* [[__A_ADDR_I]], align 16
+// BE-PWR9-NEXT:    [[TMP6:%.*]] = bitcast <16 x i8> [[TMP5]] to <4 x i32>
+// BE-PWR9-NEXT:    [[TMP7:%.*]] = load <16 x i8>, <16 x i8>* [[__A_ADDR_I]], align 16
+// BE-PWR9-NEXT:    [[TMP8:%.*]] = bitcast <16 x i8> [[TMP7]] to <4 x i32>
+// BE-PWR9-NEXT:    [[TMP9:%.*]] = load <16 x i8>, <16 x i8>* [[__MASK_I]], align 16
+// BE-PWR9-NEXT:    [[TMP10:%.*]] = call <4 x i32> @llvm.ppc.altivec.vperm(<4 x i32> [[TMP6]], <4 x i32> [[TMP8]], <16 x i8> [[TMP9]]) #[[ATTR4]]
+// BE-PWR9-NEXT:    [[TMP11:%.*]] = bitcast <4 x i32> [[TMP10]] to <16 x i8>
+// BE-PWR9-NEXT:    store <16 x i8> [[TMP11]], <16 x i8>* [[__RES_I]], align 16
+// BE-PWR9-NEXT:    [[TMP12:%.*]] = load <16 x i8>, <16 x i8>* [[__RES_I]], align 16
+// BE-PWR9-NEXT:    [[TMP13:%.*]] = bitcast <16 x i8> [[TMP12]] to <4 x i32>
+// BE-PWR9-NEXT:    [[TMP14:%.*]] = load i8*, i8** [[__B_ADDR_I]], align 8
+// BE-PWR9-NEXT:    [[TMP15:%.*]] = load i64, i64* [[__C_ADDR_I]], align 8
+// BE-PWR9-NEXT:    [[SHL_I:%.*]] = shl i64 [[TMP15]], 56
+// BE-PWR9-NEXT:    call void @llvm.ppc.vsx.stxvll(<4 x i32> [[TMP13]], i8* [[TMP14]], i64 [[SHL_I]]) #[[ATTR4]]
 // BE-PWR9-NEXT:    ret void
 //
 // LE-PWR9-LABEL: @test_strmb8(
@@ -1074,6 +1213,7 @@ void test_strmb8(char *ptr, vector unsigned char data) {
 // BE-PWR9-NEXT:    [[__A_ADDR_I:%.*]] = alloca i8*, align 8
 // BE-PWR9-NEXT:    [[__B_ADDR_I:%.*]] = alloca i64, align 8
 // BE-PWR9-NEXT:    [[__RES_I:%.*]] = alloca <16 x i8>, align 16
+// BE-PWR9-NEXT:    [[__MASK_I:%.*]] = alloca <16 x i8>, align 16
 // BE-PWR9-NEXT:    [[PTR_ADDR:%.*]] = alloca i8*, align 8
 // BE-PWR9-NEXT:    store i8* [[PTR:%.*]], i8** [[PTR_ADDR]], align 8
 // BE-PWR9-NEXT:    [[TMP0:%.*]] = load i8*, i8** [[PTR_ADDR]], align 8
@@ -1082,11 +1222,23 @@ void test_strmb8(char *ptr, vector unsigned char data) {
 // BE-PWR9-NEXT:    [[TMP1:%.*]] = load i8*, i8** [[__A_ADDR_I]], align 8
 // BE-PWR9-NEXT:    [[TMP2:%.*]] = load i64, i64* [[__B_ADDR_I]], align 8
 // BE-PWR9-NEXT:    [[SHL_I:%.*]] = shl i64 [[TMP2]], 56
-// BE-PWR9-NEXT:    [[TMP3:%.*]] = call <4 x i32> @llvm.ppc.vsx.lxvll(i8* [[TMP1]], i64 [[SHL_I]]) #[[ATTR3]]
+// BE-PWR9-NEXT:    [[TMP3:%.*]] = call <4 x i32> @llvm.ppc.vsx.lxvll(i8* [[TMP1]], i64 [[SHL_I]]) #[[ATTR4]]
 // BE-PWR9-NEXT:    [[TMP4:%.*]] = bitcast <4 x i32> [[TMP3]] to <16 x i8>
 // BE-PWR9-NEXT:    store <16 x i8> [[TMP4]], <16 x i8>* [[__RES_I]], align 16
-// BE-PWR9-NEXT:    [[TMP5:%.*]] = load <16 x i8>, <16 x i8>* [[__RES_I]], align 16
-// BE-PWR9-NEXT:    ret <16 x i8> [[TMP5]]
+// BE-PWR9-NEXT:    [[TMP5:%.*]] = load i64, i64* [[__B_ADDR_I]], align 8
+// BE-PWR9-NEXT:    [[SUB_I:%.*]] = sub i64 16, [[TMP5]]
+// BE-PWR9-NEXT:    [[CONV_I:%.*]] = trunc i64 [[SUB_I]] to i8
+// BE-PWR9-NEXT:    [[TMP6:%.*]] = getelementptr i8, i8* null, i8 [[CONV_I]]
+// BE-PWR9-NEXT:    [[TMP7:%.*]] = call <16 x i8> @llvm.ppc.altivec.lvsr(i8* [[TMP6]]) #[[ATTR4]]
+// BE-PWR9-NEXT:    store <16 x i8> [[TMP7]], <16 x i8>* [[__MASK_I]], align 16
+// BE-PWR9-NEXT:    [[TMP8:%.*]] = load <16 x i8>, <16 x i8>* [[__RES_I]], align 16
+// BE-PWR9-NEXT:    [[TMP9:%.*]] = bitcast <16 x i8> [[TMP8]] to <4 x i32>
+// BE-PWR9-NEXT:    [[TMP10:%.*]] = load <16 x i8>, <16 x i8>* [[__RES_I]], align 16
+// BE-PWR9-NEXT:    [[TMP11:%.*]] = bitcast <16 x i8> [[TMP10]] to <4 x i32>
+// BE-PWR9-NEXT:    [[TMP12:%.*]] = load <16 x i8>, <16 x i8>* [[__MASK_I]], align 16
+// BE-PWR9-NEXT:    [[TMP13:%.*]] = call <4 x i32> @llvm.ppc.altivec.vperm(<4 x i32> [[TMP9]], <4 x i32> [[TMP11]], <16 x i8> [[TMP12]]) #[[ATTR4]]
+// BE-PWR9-NEXT:    [[TMP14:%.*]] = bitcast <4 x i32> [[TMP13]] to <16 x i8>
+// BE-PWR9-NEXT:    ret <16 x i8> [[TMP14]]
 //
 // LE-PWR9-LABEL: @test_ldrmb9(
 // LE-PWR9-NEXT:  entry:
@@ -1118,9 +1270,7 @@ void test_strmb8(char *ptr, vector unsigned char data) {
 // LE-PWR9-NEXT:    [[TMP12:%.*]] = load <16 x i8>, <16 x i8>* [[__MASK_I]], align 16
 // LE-PWR9-NEXT:    [[TMP13:%.*]] = call <4 x i32> @llvm.ppc.altivec.vperm(<4 x i32> [[TMP9]], <4 x i32> [[TMP11]], <16 x i8> [[TMP12]]) #[[ATTR4]]
 // LE-PWR9-NEXT:    [[TMP14:%.*]] = bitcast <4 x i32> [[TMP13]] to <16 x i8>
-// LE-PWR9-NEXT:    store <16 x i8> [[TMP14]], <16 x i8>* [[__RES_I]], align 16
-// LE-PWR9-NEXT:    [[TMP15:%.*]] = load <16 x i8>, <16 x i8>* [[__RES_I]], align 16
-// LE-PWR9-NEXT:    ret <16 x i8> [[TMP15]]
+// LE-PWR9-NEXT:    ret <16 x i8> [[TMP14]]
 //
 // BE32-PWR9-LABEL: @test_ldrmb9(
 // BE32-PWR9-NEXT:  entry:
@@ -1180,6 +1330,8 @@ vector unsigned char test_ldrmb9(char *ptr) { return __vec_ldrmb(ptr, 9); }
 // BE-PWR9-NEXT:    [[__A_ADDR_I:%.*]] = alloca <16 x i8>, align 16
 // BE-PWR9-NEXT:    [[__B_ADDR_I:%.*]] = alloca i8*, align 8
 // BE-PWR9-NEXT:    [[__C_ADDR_I:%.*]] = alloca i64, align 8
+// BE-PWR9-NEXT:    [[__MASK_I:%.*]] = alloca <16 x i8>, align 16
+// BE-PWR9-NEXT:    [[__RES_I:%.*]] = alloca <16 x i8>, align 16
 // BE-PWR9-NEXT:    [[PTR_ADDR:%.*]] = alloca i8*, align 8
 // BE-PWR9-NEXT:    [[DATA_ADDR:%.*]] = alloca <16 x i8>, align 16
 // BE-PWR9-NEXT:    store i8* [[PTR:%.*]], i8** [[PTR_ADDR]], align 8
@@ -1189,12 +1341,26 @@ vector unsigned char test_ldrmb9(char *ptr) { return __vec_ldrmb(ptr, 9); }
 // BE-PWR9-NEXT:    store <16 x i8> [[TMP0]], <16 x i8>* [[__A_ADDR_I]], align 16
 // BE-PWR9-NEXT:    store i8* [[TMP1]], i8** [[__B_ADDR_I]], align 8
 // BE-PWR9-NEXT:    store i64 9, i64* [[__C_ADDR_I]], align 8
-// BE-PWR9-NEXT:    [[TMP2:%.*]] = load <16 x i8>, <16 x i8>* [[__A_ADDR_I]], align 16
-// BE-PWR9-NEXT:    [[TMP3:%.*]] = bitcast <16 x i8> [[TMP2]] to <4 x i32>
-// BE-PWR9-NEXT:    [[TMP4:%.*]] = load i8*, i8** [[__B_ADDR_I]], align 8
-// BE-PWR9-NEXT:    [[TMP5:%.*]] = load i64, i64* [[__C_ADDR_I]], align 8
-// BE-PWR9-NEXT:    [[SHL_I:%.*]] = shl i64 [[TMP5]], 56
-// BE-PWR9-NEXT:    call void @llvm.ppc.vsx.stxvll(<4 x i32> [[TMP3]], i8* [[TMP4]], i64 [[SHL_I]]) #[[ATTR3]]
+// BE-PWR9-NEXT:    [[TMP2:%.*]] = load i64, i64* [[__C_ADDR_I]], align 8
+// BE-PWR9-NEXT:    [[SUB_I:%.*]] = sub i64 16, [[TMP2]]
+// BE-PWR9-NEXT:    [[CONV_I:%.*]] = trunc i64 [[SUB_I]] to i8
+// BE-PWR9-NEXT:    [[TMP3:%.*]] = getelementptr i8, i8* null, i8 [[CONV_I]]
+// BE-PWR9-NEXT:    [[TMP4:%.*]] = call <16 x i8> @llvm.ppc.altivec.lvsl(i8* [[TMP3]]) #[[ATTR4]]
+// BE-PWR9-NEXT:    store <16 x i8> [[TMP4]], <16 x i8>* [[__MASK_I]], align 16
+// BE-PWR9-NEXT:    [[TMP5:%.*]] = load <16 x i8>, <16 x i8>* [[__A_ADDR_I]], align 16
+// BE-PWR9-NEXT:    [[TMP6:%.*]] = bitcast <16 x i8> [[TMP5]] to <4 x i32>
+// BE-PWR9-NEXT:    [[TMP7:%.*]] = load <16 x i8>, <16 x i8>* [[__A_ADDR_I]], align 16
+// BE-PWR9-NEXT:    [[TMP8:%.*]] = bitcast <16 x i8> [[TMP7]] to <4 x i32>
+// BE-PWR9-NEXT:    [[TMP9:%.*]] = load <16 x i8>, <16 x i8>* [[__MASK_I]], align 16
+// BE-PWR9-NEXT:    [[TMP10:%.*]] = call <4 x i32> @llvm.ppc.altivec.vperm(<4 x i32> [[TMP6]], <4 x i32> [[TMP8]], <16 x i8> [[TMP9]]) #[[ATTR4]]
+// BE-PWR9-NEXT:    [[TMP11:%.*]] = bitcast <4 x i32> [[TMP10]] to <16 x i8>
+// BE-PWR9-NEXT:    store <16 x i8> [[TMP11]], <16 x i8>* [[__RES_I]], align 16
+// BE-PWR9-NEXT:    [[TMP12:%.*]] = load <16 x i8>, <16 x i8>* [[__RES_I]], align 16
+// BE-PWR9-NEXT:    [[TMP13:%.*]] = bitcast <16 x i8> [[TMP12]] to <4 x i32>
+// BE-PWR9-NEXT:    [[TMP14:%.*]] = load i8*, i8** [[__B_ADDR_I]], align 8
+// BE-PWR9-NEXT:    [[TMP15:%.*]] = load i64, i64* [[__C_ADDR_I]], align 8
+// BE-PWR9-NEXT:    [[SHL_I:%.*]] = shl i64 [[TMP15]], 56
+// BE-PWR9-NEXT:    call void @llvm.ppc.vsx.stxvll(<4 x i32> [[TMP13]], i8* [[TMP14]], i64 [[SHL_I]]) #[[ATTR4]]
 // BE-PWR9-NEXT:    ret void
 //
 // LE-PWR9-LABEL: @test_strmb9(
@@ -1304,6 +1470,8 @@ void test_strmb9(char *ptr, vector unsigned char data) {
 // BE-PWR9-NEXT:    [[__A_ADDR_I:%.*]] = alloca <16 x i8>, align 16
 // BE-PWR9-NEXT:    [[__B_ADDR_I:%.*]] = alloca i8*, align 8
 // BE-PWR9-NEXT:    [[__C_ADDR_I:%.*]] = alloca i64, align 8
+// BE-PWR9-NEXT:    [[__MASK_I:%.*]] = alloca <16 x i8>, align 16
+// BE-PWR9-NEXT:    [[__RES_I:%.*]] = alloca <16 x i8>, align 16
 // BE-PWR9-NEXT:    [[PTR_ADDR:%.*]] = alloca i8*, align 8
 // BE-PWR9-NEXT:    [[DATA_ADDR:%.*]] = alloca <16 x i8>, align 16
 // BE-PWR9-NEXT:    store i8* [[PTR:%.*]], i8** [[PTR_ADDR]], align 8
@@ -1313,12 +1481,26 @@ void test_strmb9(char *ptr, vector unsigned char data) {
 // BE-PWR9-NEXT:    store <16 x i8> [[TMP0]], <16 x i8>* [[__A_ADDR_I]], align 16
 // BE-PWR9-NEXT:    store i8* [[TMP1]], i8** [[__B_ADDR_I]], align 8
 // BE-PWR9-NEXT:    store i64 10, i64* [[__C_ADDR_I]], align 8
-// BE-PWR9-NEXT:    [[TMP2:%.*]] = load <16 x i8>, <16 x i8>* [[__A_ADDR_I]], align 16
-// BE-PWR9-NEXT:    [[TMP3:%.*]] = bitcast <16 x i8> [[TMP2]] to <4 x i32>
-// BE-PWR9-NEXT:    [[TMP4:%.*]] = load i8*, i8** [[__B_ADDR_I]], align 8
-// BE-PWR9-NEXT:    [[TMP5:%.*]] = load i64, i64* [[__C_ADDR_I]], align 8
-// BE-PWR9-NEXT:    [[SHL_I:%.*]] = shl i64 [[TMP5]], 56
-// BE-PWR9-NEXT:    call void @llvm.ppc.vsx.stxvll(<4 x i32> [[TMP3]], i8* [[TMP4]], i64 [[SHL_I]]) #[[ATTR3]]
+// BE-PWR9-NEXT:    [[TMP2:%.*]] = load i64, i64* [[__C_ADDR_I]], align 8
+// BE-PWR9-NEXT:    [[SUB_I:%.*]] = sub i64 16, [[TMP2]]
+// BE-PWR9-NEXT:    [[CONV_I:%.*]] = trunc i64 [[SUB_I]] to i8
+// BE-PWR9-NEXT:    [[TMP3:%.*]] = getelementptr i8, i8* null, i8 [[CONV_I]]
+// BE-PWR9-NEXT:    [[TMP4:%.*]] = call <16 x i8> @llvm.ppc.altivec.lvsl(i8* [[TMP3]]) #[[ATTR4]]
+// BE-PWR9-NEXT:    store <16 x i8> [[TMP4]], <16 x i8>* [[__MASK_I]], align 16
+// BE-PWR9-NEXT:    [[TMP5:%.*]] = load <16 x i8>, <16 x i8>* [[__A_ADDR_I]], align 16
+// BE-PWR9-NEXT:    [[TMP6:%.*]] = bitcast <16 x i8> [[TMP5]] to <4 x i32>
+// BE-PWR9-NEXT:    [[TMP7:%.*]] = load <16 x i8>, <16 x i8>* [[__A_ADDR_I]], align 16
+// BE-PWR9-NEXT:    [[TMP8:%.*]] = bitcast <16 x i8> [[TMP7]] to <4 x i32>
+// BE-PWR9-NEXT:    [[TMP9:%.*]] = load <16 x i8>, <16 x i8>* [[__MASK_I]], align 16
+// BE-PWR9-NEXT:    [[TMP10:%.*]] = call <4 x i32> @llvm.ppc.altivec.vperm(<4 x i32> [[TMP6]], <4 x i32> [[TMP8]], <16 x i8> [[TMP9]]) #[[ATTR4]]
+// BE-PWR9-NEXT:    [[TMP11:%.*]] = bitcast <4 x i32> [[TMP10]] to <16 x i8>
+// BE-PWR9-NEXT:    store <16 x i8> [[TMP11]], <16 x i8>* [[__RES_I]], align 16
+// BE-PWR9-NEXT:    [[TMP12:%.*]] = load <16 x i8>, <16 x i8>* [[__RES_I]], align 16
+// BE-PWR9-NEXT:    [[TMP13:%.*]] = bitcast <16 x i8> [[TMP12]] to <4 x i32>
+// BE-PWR9-NEXT:    [[TMP14:%.*]] = load i8*, i8** [[__B_ADDR_I]], align 8
+// BE-PWR9-NEXT:    [[TMP15:%.*]] = load i64, i64* [[__C_ADDR_I]], align 8
+// BE-PWR9-NEXT:    [[SHL_I:%.*]] = shl i64 [[TMP15]], 56
+// BE-PWR9-NEXT:    call void @llvm.ppc.vsx.stxvll(<4 x i32> [[TMP13]], i8* [[TMP14]], i64 [[SHL_I]]) #[[ATTR4]]
 // BE-PWR9-NEXT:    ret void
 //
 // LE-PWR9-LABEL: @test_strmb10(
@@ -1436,6 +1618,8 @@ void test_strmb10(char *ptr, vector unsigned char data) {
 // BE-PWR9-NEXT:    [[__A_ADDR_I:%.*]] = alloca <16 x i8>, align 16
 // BE-PWR9-NEXT:    [[__B_ADDR_I:%.*]] = alloca i8*, align 8
 // BE-PWR9-NEXT:    [[__C_ADDR_I:%.*]] = alloca i64, align 8
+// BE-PWR9-NEXT:    [[__MASK_I:%.*]] = alloca <16 x i8>, align 16
+// BE-PWR9-NEXT:    [[__RES_I:%.*]] = alloca <16 x i8>, align 16
 // BE-PWR9-NEXT:    [[PTR_ADDR:%.*]] = alloca i8*, align 8
 // BE-PWR9-NEXT:    [[DATA_ADDR:%.*]] = alloca <16 x i8>, align 16
 // BE-PWR9-NEXT:    store i8* [[PTR:%.*]], i8** [[PTR_ADDR]], align 8
@@ -1445,12 +1629,26 @@ void test_strmb10(char *ptr, vector unsigned char data) {
 // BE-PWR9-NEXT:    store <16 x i8> [[TMP0]], <16 x i8>* [[__A_ADDR_I]], align 16
 // BE-PWR9-NEXT:    store i8* [[TMP1]], i8** [[__B_ADDR_I]], align 8
 // BE-PWR9-NEXT:    store i64 11, i64* [[__C_ADDR_I]], align 8
-// BE-PWR9-NEXT:    [[TMP2:%.*]] = load <16 x i8>, <16 x i8>* [[__A_ADDR_I]], align 16
-// BE-PWR9-NEXT:    [[TMP3:%.*]] = bitcast <16 x i8> [[TMP2]] to <4 x i32>
-// BE-PWR9-NEXT:    [[TMP4:%.*]] = load i8*, i8** [[__B_ADDR_I]], align 8
-// BE-PWR9-NEXT:    [[TMP5:%.*]] = load i64, i64* [[__C_ADDR_I]], align 8
-// BE-PWR9-NEXT:    [[SHL_I:%.*]] = shl i64 [[TMP5]], 56
-// BE-PWR9-NEXT:    call void @llvm.ppc.vsx.stxvll(<4 x i32> [[TMP3]], i8* [[TMP4]], i64 [[SHL_I]]) #[[ATTR3]]
+// BE-PWR9-NEXT:    [[TMP2:%.*]] = load i64, i64* [[__C_ADDR_I]], align 8
+// BE-PWR9-NEXT:    [[SUB_I:%.*]] = sub i64 16, [[TMP2]]
+// BE-PWR9-NEXT:    [[CONV_I:%.*]] = trunc i64 [[SUB_I]] to i8
+// BE-PWR9-NEXT:    [[TMP3:%.*]] = getelementptr i8, i8* null, i8 [[CONV_I]]
+// BE-PWR9-NEXT:    [[TMP4:%.*]] = call <16 x i8> @llvm.ppc.altivec.lvsl(i8* [[TMP3]]) #[[ATTR4]]
+// BE-PWR9-NEXT:    store <16 x i8> [[TMP4]], <16 x i8>* [[__MASK_I]], align 16
+// BE-PWR9-NEXT:    [[TMP5:%.*]] = load <16 x i8>, <16 x i8>* [[__A_ADDR_I]], align 16
+// BE-PWR9-NEXT:    [[TMP6:%.*]] = bitcast <16 x i8> [[TMP5]] to <4 x i32>
+// BE-PWR9-NEXT:    [[TMP7:%.*]] = load <16 x i8>, <16 x i8>* [[__A_ADDR_I]], align 16
+// BE-PWR9-NEXT:    [[TMP8:%.*]] = bitcast <16 x i8> [[TMP7]] to <4 x i32>
+// BE-PWR9-NEXT:    [[TMP9:%.*]] = load <16 x i8>, <16 x i8>* [[__MASK_I]], align 16
+// BE-PWR9-NEXT:    [[TMP10:%.*]] = call <4 x i32> @llvm.ppc.altivec.vperm(<4 x i32> [[TMP6]], <4 x i32> [[TMP8]], <16 x i8> [[TMP9]]) #[[ATTR4]]
+// BE-PWR9-NEXT:    [[TMP11:%.*]] = bitcast <4 x i32> [[TMP10]] to <16 x i8>
+// BE-PWR9-NEXT:    store <16 x i8> [[TMP11]], <16 x i8>* [[__RES_I]], align 16
+// BE-PWR9-NEXT:    [[TMP12:%.*]] = load <16 x i8>, <16 x i8>* [[__RES_I]], align 16
+// BE-PWR9-NEXT:    [[TMP13:%.*]] = bitcast <16 x i8> [[TMP12]] to <4 x i32>
+// BE-PWR9-NEXT:    [[TMP14:%.*]] = load i8*, i8** [[__B_ADDR_I]], align 8
+// BE-PWR9-NEXT:    [[TMP15:%.*]] = load i64, i64* [[__C_ADDR_I]], align 8
+// BE-PWR9-NEXT:    [[SHL_I:%.*]] = shl i64 [[TMP15]], 56
+// BE-PWR9-NEXT:    call void @llvm.ppc.vsx.stxvll(<4 x i32> [[TMP13]], i8* [[TMP14]], i64 [[SHL_I]]) #[[ATTR4]]
 // BE-PWR9-NEXT:    ret void
 //
 // LE-PWR9-LABEL: @test_strmb11(
@@ -1565,6 +1763,8 @@ void test_strmb11(char *ptr, vector unsigned char data) {
 // BE-PWR9-NEXT:    [[__A_ADDR_I:%.*]] = alloca <16 x i8>, align 16
 // BE-PWR9-NEXT:    [[__B_ADDR_I:%.*]] = alloca i8*, align 8
 // BE-PWR9-NEXT:    [[__C_ADDR_I:%.*]] = alloca i64, align 8
+// BE-PWR9-NEXT:    [[__MASK_I:%.*]] = alloca <16 x i8>, align 16
+// BE-PWR9-NEXT:    [[__RES_I:%.*]] = alloca <16 x i8>, align 16
 // BE-PWR9-NEXT:    [[PTR_ADDR:%.*]] = alloca i8*, align 8
 // BE-PWR9-NEXT:    [[DATA_ADDR:%.*]] = alloca <16 x i8>, align 16
 // BE-PWR9-NEXT:    store i8* [[PTR:%.*]], i8** [[PTR_ADDR]], align 8
@@ -1574,12 +1774,26 @@ void test_strmb11(char *ptr, vector unsigned char data) {
 // BE-PWR9-NEXT:    store <16 x i8> [[TMP0]], <16 x i8>* [[__A_ADDR_I]], align 16
 // BE-PWR9-NEXT:    store i8* [[TMP1]], i8** [[__B_ADDR_I]], align 8
 // BE-PWR9-NEXT:    store i64 12, i64* [[__C_ADDR_I]], align 8
-// BE-PWR9-NEXT:    [[TMP2:%.*]] = load <16 x i8>, <16 x i8>* [[__A_ADDR_I]], align 16
-// BE-PWR9-NEXT:    [[TMP3:%.*]] = bitcast <16 x i8> [[TMP2]] to <4 x i32>
-// BE-PWR9-NEXT:    [[TMP4:%.*]] = load i8*, i8** [[__B_ADDR_I]], align 8
-// BE-PWR9-NEXT:    [[TMP5:%.*]] = load i64, i64* [[__C_ADDR_I]], align 8
-// BE-PWR9-NEXT:    [[SHL_I:%.*]] = shl i64 [[TMP5]], 56
-// BE-PWR9-NEXT:    call void @llvm.ppc.vsx.stxvll(<4 x i32> [[TMP3]], i8* [[TMP4]], i64 [[SHL_I]]) #[[ATTR3]]
+// BE-PWR9-NEXT:    [[TMP2:%.*]] = load i64, i64* [[__C_ADDR_I]], align 8
+// BE-PWR9-NEXT:    [[SUB_I:%.*]] = sub i64 16, [[TMP2]]
+// BE-PWR9-NEXT:    [[CONV_I:%.*]] = trunc i64 [[SUB_I]] to i8
+// BE-PWR9-NEXT:    [[TMP3:%.*]] = getelementptr i8, i8* null, i8 [[CONV_I]]
+// BE-PWR9-NEXT:    [[TMP4:%.*]] = call <16 x i8> @llvm.ppc.altivec.lvsl(i8* [[TMP3]]) #[[ATTR4]]
+// BE-PWR9-NEXT:    store <16 x i8> [[TMP4]], <16 x i8>* [[__MASK_I]], align 16
+// BE-PWR9-NEXT:    [[TMP5:%.*]] = load <16 x i8>, <16 x i8>* [[__A_ADDR_I]], align 16
+// BE-PWR9-NEXT:    [[TMP6:%.*]] = bitcast <16 x i8> [[TMP5]] to <4 x i32>
+// BE-PWR9-NEXT:    [[TMP7:%.*]] = load <16 x i8>, <16 x i8>* [[__A_ADDR_I]], align 16
+// BE-PWR9-NEXT:    [[TMP8:%.*]] = bitcast <16 x i8> [[TMP7]] to <4 x i32>
+// BE-PWR9-NEXT:    [[TMP9:%.*]] = load <16 x i8>, <16 x i8>* [[__MASK_I]], align 16
+// BE-PWR9-NEXT:    [[TMP10:%.*]] = call <4 x i32> @llvm.ppc.altivec.vperm(<4 x i32> [[TMP6]], <4 x i32> [[TMP8]], <16 x i8> [[TMP9]]) #[[ATTR4]]
+// BE-PWR9-NEXT:    [[TMP11:%.*]] = bitcast <4 x i32> [[TMP10]] to <16 x i8>
+// BE-PWR9-NEXT:    store <16 x i8> [[TMP11]], <16 x i8>* [[__RES_I]], align 16
+// BE-PWR9-NEXT:    [[TMP12:%.*]] = load <16 x i8>, <16 x i8>* [[__RES_I]], align 16
+// BE-PWR9-NEXT:    [[TMP13:%.*]] = bitcast <16 x i8> [[TMP12]] to <4 x i32>
+// BE-PWR9-NEXT:    [[TMP14:%.*]] = load i8*, i8** [[__B_ADDR_I]], align 8
+// BE-PWR9-NEXT:    [[TMP15:%.*]] = load i64, i64* [[__C_ADDR_I]], align 8
+// BE-PWR9-NEXT:    [[SHL_I:%.*]] = shl i64 [[TMP15]], 56
+// BE-PWR9-NEXT:    call void @llvm.ppc.vsx.stxvll(<4 x i32> [[TMP13]], i8* [[TMP14]], i64 [[SHL_I]]) #[[ATTR4]]
 // BE-PWR9-NEXT:    ret void
 //
 // LE-PWR9-LABEL: @test_strmb12(
@@ -1697,6 +1911,8 @@ void test_strmb12(char *ptr, vector unsigned char data) {
 // BE-PWR9-NEXT:    [[__A_ADDR_I:%.*]] = alloca <16 x i8>, align 16
 // BE-PWR9-NEXT:    [[__B_ADDR_I:%.*]] = alloca i8*, align 8
 // BE-PWR9-NEXT:    [[__C_ADDR_I:%.*]] = alloca i64, align 8
+// BE-PWR9-NEXT:    [[__MASK_I:%.*]] = alloca <16 x i8>, align 16
+// BE-PWR9-NEXT:    [[__RES_I:%.*]] = alloca <16 x i8>, align 16
 // BE-PWR9-NEXT:    [[PTR_ADDR:%.*]] = alloca i8*, align 8
 // BE-PWR9-NEXT:    [[DATA_ADDR:%.*]] = alloca <16 x i8>, align 16
 // BE-PWR9-NEXT:    store i8* [[PTR:%.*]], i8** [[PTR_ADDR]], align 8
@@ -1706,12 +1922,26 @@ void test_strmb12(char *ptr, vector unsigned char data) {
 // BE-PWR9-NEXT:    store <16 x i8> [[TMP0]], <16 x i8>* [[__A_ADDR_I]], align 16
 // BE-PWR9-NEXT:    store i8* [[TMP1]], i8** [[__B_ADDR_I]], align 8
 // BE-PWR9-NEXT:    store i64 13, i64* [[__C_ADDR_I]], align 8
-// BE-PWR9-NEXT:    [[TMP2:%.*]] = load <16 x i8>, <16 x i8>* [[__A_ADDR_I]], align 16
-// BE-PWR9-NEXT:    [[TMP3:%.*]] = bitcast <16 x i8> [[TMP2]] to <4 x i32>
-// BE-PWR9-NEXT:    [[TMP4:%.*]] = load i8*, i8** [[__B_ADDR_I]], align 8
-// BE-PWR9-NEXT:    [[TMP5:%.*]] = load i64, i64* [[__C_ADDR_I]], align 8
-// BE-PWR9-NEXT:    [[SHL_I:%.*]] = shl i64 [[TMP5]], 56
-// BE-PWR9-NEXT:    call void @llvm.ppc.vsx.stxvll(<4 x i32> [[TMP3]], i8* [[TMP4]], i64 [[SHL_I]]) #[[ATTR3]]
+// BE-PWR9-NEXT:    [[TMP2:%.*]] = load i64, i64* [[__C_ADDR_I]], align 8
+// BE-PWR9-NEXT:    [[SUB_I:%.*]] = sub i64 16, [[TMP2]]
+// BE-PWR9-NEXT:    [[CONV_I:%.*]] = trunc i64 [[SUB_I]] to i8
+// BE-PWR9-NEXT:    [[TMP3:%.*]] = getelementptr i8, i8* null, i8 [[CONV_I]]
+// BE-PWR9-NEXT:    [[TMP4:%.*]] = call <16 x i8> @llvm.ppc.altivec.lvsl(i8* [[TMP3]]) #[[ATTR4]]
+// BE-PWR9-NEXT:    store <16 x i8> [[TMP4]], <16 x i8>* [[__MASK_I]], align 16
+// BE-PWR9-NEXT:    [[TMP5:%.*]] = load <16 x i8>, <16 x i8>* [[__A_ADDR_I]], align 16
+// BE-PWR9-NEXT:    [[TMP6:%.*]] = bitcast <16 x i8> [[TMP5]] to <4 x i32>
+// BE-PWR9-NEXT:    [[TMP7:%.*]] = load <16 x i8>, <16 x i8>* [[__A_ADDR_I]], align 16
+// BE-PWR9-NEXT:    [[TMP8:%.*]] = bitcast <16 x i8> [[TMP7]] to <4 x i32>
+// BE-PWR9-NEXT:    [[TMP9:%.*]] = load <16 x i8>, <16 x i8>* [[__MASK_I]], align 16
+// BE-PWR9-NEXT:    [[TMP10:%.*]] = call <4 x i32> @llvm.ppc.altivec.vperm(<4 x i32> [[TMP6]], <4 x i32> [[TMP8]], <16 x i8> [[TMP9]]) #[[ATTR4]]
+// BE-PWR9-NEXT:    [[TMP11:%.*]] = bitcast <4 x i32> [[TMP10]] to <16 x i8>
+// BE-PWR9-NEXT:    store <16 x i8> [[TMP11]], <16 x i8>* [[__RES_I]], align 16
+// BE-PWR9-NEXT:    [[TMP12:%.*]] = load <16 x i8>, <16 x i8>* [[__RES_I]], align 16
+// BE-PWR9-NEXT:    [[TMP13:%.*]] = bitcast <16 x i8> [[TMP12]] to <4 x i32>
+// BE-PWR9-NEXT:    [[TMP14:%.*]] = load i8*, i8** [[__B_ADDR_I]], align 8
+// BE-PWR9-NEXT:    [[TMP15:%.*]] = load i64, i64* [[__C_ADDR_I]], align 8
+// BE-PWR9-NEXT:    [[SHL_I:%.*]] = shl i64 [[TMP15]], 56
+// BE-PWR9-NEXT:    call void @llvm.ppc.vsx.stxvll(<4 x i32> [[TMP13]], i8* [[TMP14]], i64 [[SHL_I]]) #[[ATTR4]]
 // BE-PWR9-NEXT:    ret void
 //
 // LE-PWR9-LABEL: @test_strmb13(
@@ -1837,6 +2067,8 @@ void test_strmb13(char *ptr, vector unsigned char data) {
 // BE-PWR9-NEXT:    [[__A_ADDR_I:%.*]] = alloca <16 x i8>, align 16
 // BE-PWR9-NEXT:    [[__B_ADDR_I:%.*]] = alloca i8*, align 8
 // BE-PWR9-NEXT:    [[__C_ADDR_I:%.*]] = alloca i64, align 8
+// BE-PWR9-NEXT:    [[__MASK_I:%.*]] = alloca <16 x i8>, align 16
+// BE-PWR9-NEXT:    [[__RES_I:%.*]] = alloca <16 x i8>, align 16
 // BE-PWR9-NEXT:    [[PTR_ADDR:%.*]] = alloca i8*, align 8
 // BE-PWR9-NEXT:    [[DATA_ADDR:%.*]] = alloca <16 x i8>, align 16
 // BE-PWR9-NEXT:    store i8* [[PTR:%.*]], i8** [[PTR_ADDR]], align 8
@@ -1846,12 +2078,26 @@ void test_strmb13(char *ptr, vector unsigned char data) {
 // BE-PWR9-NEXT:    store <16 x i8> [[TMP0]], <16 x i8>* [[__A_ADDR_I]], align 16
 // BE-PWR9-NEXT:    store i8* [[TMP1]], i8** [[__B_ADDR_I]], align 8
 // BE-PWR9-NEXT:    store i64 14, i64* [[__C_ADDR_I]], align 8
-// BE-PWR9-NEXT:    [[TMP2:%.*]] = load <16 x i8>, <16 x i8>* [[__A_ADDR_I]], align 16
-// BE-PWR9-NEXT:    [[TMP3:%.*]] = bitcast <16 x i8> [[TMP2]] to <4 x i32>
-// BE-PWR9-NEXT:    [[TMP4:%.*]] = load i8*, i8** [[__B_ADDR_I]], align 8
-// BE-PWR9-NEXT:    [[TMP5:%.*]] = load i64, i64* [[__C_ADDR_I]], align 8
-// BE-PWR9-NEXT:    [[SHL_I:%.*]] = shl i64 [[TMP5]], 56
-// BE-PWR9-NEXT:    call void @llvm.ppc.vsx.stxvll(<4 x i32> [[TMP3]], i8* [[TMP4]], i64 [[SHL_I]]) #[[ATTR3]]
+// BE-PWR9-NEXT:    [[TMP2:%.*]] = load i64, i64* [[__C_ADDR_I]], align 8
+// BE-PWR9-NEXT:    [[SUB_I:%.*]] = sub i64 16, [[TMP2]]
+// BE-PWR9-NEXT:    [[CONV_I:%.*]] = trunc i64 [[SUB_I]] to i8
+// BE-PWR9-NEXT:    [[TMP3:%.*]] = getelementptr i8, i8* null, i8 [[CONV_I]]
+// BE-PWR9-NEXT:    [[TMP4:%.*]] = call <16 x i8> @llvm.ppc.altivec.lvsl(i8* [[TMP3]]) #[[ATTR4]]
+// BE-PWR9-NEXT:    store <16 x i8> [[TMP4]], <16 x i8>* [[__MASK_I]], align 16
+// BE-PWR9-NEXT:    [[TMP5:%.*]] = load <16 x i8>, <16 x i8>* [[__A_ADDR_I]], align 16
+// BE-PWR9-NEXT:    [[TMP6:%.*]] = bitcast <16 x i8> [[TMP5]] to <4 x i32>
+// BE-PWR9-NEXT:    [[TMP7:%.*]] = load <16 x i8>, <16 x i8>* [[__A_ADDR_I]], align 16
+// BE-PWR9-NEXT:    [[TMP8:%.*]] = bitcast <16 x i8> [[TMP7]] to <4 x i32>
+// BE-PWR9-NEXT:    [[TMP9:%.*]] = load <16 x i8>, <16 x i8>* [[__MASK_I]], align 16
+// BE-PWR9-NEXT:    [[TMP10:%.*]] = call <4 x i32> @llvm.ppc.altivec.vperm(<4 x i32> [[TMP6]], <4 x i32> [[TMP8]], <16 x i8> [[TMP9]]) #[[ATTR4]]
+// BE-PWR9-NEXT:    [[TMP11:%.*]] = bitcast <4 x i32> [[TMP10]] to <16 x i8>
+// BE-PWR9-NEXT:    store <16 x i8> [[TMP11]], <16 x i8>* [[__RES_I]], align 16
+// BE-PWR9-NEXT:    [[TMP12:%.*]] = load <16 x i8>, <16 x i8>* [[__RES_I]], align 16
+// BE-PWR9-NEXT:    [[TMP13:%.*]] = bitcast <16 x i8> [[TMP12]] to <4 x i32>
+// BE-PWR9-NEXT:    [[TMP14:%.*]] = load i8*, i8** [[__B_ADDR_I]], align 8
+// BE-PWR9-NEXT:    [[TMP15:%.*]] = load i64, i64* [[__C_ADDR_I]], align 8
+// BE-PWR9-NEXT:    [[SHL_I:%.*]] = shl i64 [[TMP15]], 56
+// BE-PWR9-NEXT:    call void @llvm.ppc.vsx.stxvll(<4 x i32> [[TMP13]], i8* [[TMP14]], i64 [[SHL_I]]) #[[ATTR4]]
 // BE-PWR9-NEXT:    ret void
 //
 // LE-PWR9-LABEL: @test_strmb14(
@@ -1985,6 +2231,8 @@ void test_strmb14(char *ptr, vector unsigned char data) {
 // BE-PWR9-NEXT:    [[__A_ADDR_I:%.*]] = alloca <16 x i8>, align 16
 // BE-PWR9-NEXT:    [[__B_ADDR_I:%.*]] = alloca i8*, align 8
 // BE-PWR9-NEXT:    [[__C_ADDR_I:%.*]] = alloca i64, align 8
+// BE-PWR9-NEXT:    [[__MASK_I:%.*]] = alloca <16 x i8>, align 16
+// BE-PWR9-NEXT:    [[__RES_I:%.*]] = alloca <16 x i8>, align 16
 // BE-PWR9-NEXT:    [[PTR_ADDR:%.*]] = alloca i8*, align 8
 // BE-PWR9-NEXT:    [[DATA_ADDR:%.*]] = alloca <16 x i8>, align 16
 // BE-PWR9-NEXT:    store i8* [[PTR:%.*]], i8** [[PTR_ADDR]], align 8
@@ -1994,12 +2242,26 @@ void test_strmb14(char *ptr, vector unsigned char data) {
 // BE-PWR9-NEXT:    store <16 x i8> [[TMP0]], <16 x i8>* [[__A_ADDR_I]], align 16
 // BE-PWR9-NEXT:    store i8* [[TMP1]], i8** [[__B_ADDR_I]], align 8
 // BE-PWR9-NEXT:    store i64 15, i64* [[__C_ADDR_I]], align 8
-// BE-PWR9-NEXT:    [[TMP2:%.*]] = load <16 x i8>, <16 x i8>* [[__A_ADDR_I]], align 16
-// BE-PWR9-NEXT:    [[TMP3:%.*]] = bitcast <16 x i8> [[TMP2]] to <4 x i32>
-// BE-PWR9-NEXT:    [[TMP4:%.*]] = load i8*, i8** [[__B_ADDR_I]], align 8
-// BE-PWR9-NEXT:    [[TMP5:%.*]] = load i64, i64* [[__C_ADDR_I]], align 8
-// BE-PWR9-NEXT:    [[SHL_I:%.*]] = shl i64 [[TMP5]], 56
-// BE-PWR9-NEXT:    call void @llvm.ppc.vsx.stxvll(<4 x i32> [[TMP3]], i8* [[TMP4]], i64 [[SHL_I]]) #[[ATTR3]]
+// BE-PWR9-NEXT:    [[TMP2:%.*]] = load i64, i64* [[__C_ADDR_I]], align 8
+// BE-PWR9-NEXT:    [[SUB_I:%.*]] = sub i64 16, [[TMP2]]
+// BE-PWR9-NEXT:    [[CONV_I:%.*]] = trunc i64 [[SUB_I]] to i8
+// BE-PWR9-NEXT:    [[TMP3:%.*]] = getelementptr i8, i8* null, i8 [[CONV_I]]
+// BE-PWR9-NEXT:    [[TMP4:%.*]] = call <16 x i8> @llvm.ppc.altivec.lvsl(i8* [[TMP3]]) #[[ATTR4]]
+// BE-PWR9-NEXT:    store <16 x i8> [[TMP4]], <16 x i8>* [[__MASK_I]], align 16
+// BE-PWR9-NEXT:    [[TMP5:%.*]] = load <16 x i8>, <16 x i8>* [[__A_ADDR_I]], align 16
+// BE-PWR9-NEXT:    [[TMP6:%.*]] = bitcast <16 x i8> [[TMP5]] to <4 x i32>
+// BE-PWR9-NEXT:    [[TMP7:%.*]] = load <16 x i8>, <16 x i8>* [[__A_ADDR_I]], align 16
+// BE-PWR9-NEXT:    [[TMP8:%.*]] = bitcast <16 x i8> [[TMP7]] to <4 x i32>
+// BE-PWR9-NEXT:    [[TMP9:%.*]] = load <16 x i8>, <16 x i8>* [[__MASK_I]], align 16
+// BE-PWR9-NEXT:    [[TMP10:%.*]] = call <4 x i32> @llvm.ppc.altivec.vperm(<4 x i32> [[TMP6]], <4 x i32> [[TMP8]], <16 x i8> [[TMP9]]) #[[ATTR4]]
+// BE-PWR9-NEXT:    [[TMP11:%.*]] = bitcast <4 x i32> [[TMP10]] to <16 x i8>
+// BE-PWR9-NEXT:    store <16 x i8> [[TMP11]], <16 x i8>* [[__RES_I]], align 16
+// BE-PWR9-NEXT:    [[TMP12:%.*]] = load <16 x i8>, <16 x i8>* [[__RES_I]], align 16
+// BE-PWR9-NEXT:    [[TMP13:%.*]] = bitcast <16 x i8> [[TMP12]] to <4 x i32>
+// BE-PWR9-NEXT:    [[TMP14:%.*]] = load i8*, i8** [[__B_ADDR_I]], align 8
+// BE-PWR9-NEXT:    [[TMP15:%.*]] = load i64, i64* [[__C_ADDR_I]], align 8
+// BE-PWR9-NEXT:    [[SHL_I:%.*]] = shl i64 [[TMP15]], 56
+// BE-PWR9-NEXT:    call void @llvm.ppc.vsx.stxvll(<4 x i32> [[TMP13]], i8* [[TMP14]], i64 [[SHL_I]]) #[[ATTR4]]
 // BE-PWR9-NEXT:    ret void
 //
 // LE-PWR9-LABEL: @test_strmb15(
@@ -2095,6 +2357,7 @@ void test_strmb15(char *ptr, vector unsigned char data) {
 // BE-PWR9-NEXT:    [[__A_ADDR_I:%.*]] = alloca i8*, align 8
 // BE-PWR9-NEXT:    [[__B_ADDR_I:%.*]] = alloca i64, align 8
 // BE-PWR9-NEXT:    [[__RES_I:%.*]] = alloca <16 x i8>, align 16
+// BE-PWR9-NEXT:    [[__MASK_I:%.*]] = alloca <16 x i8>, align 16
 // BE-PWR9-NEXT:    [[PTR_ADDR:%.*]] = alloca i8*, align 8
 // BE-PWR9-NEXT:    store i8* [[PTR:%.*]], i8** [[PTR_ADDR]], align 8
 // BE-PWR9-NEXT:    [[TMP0:%.*]] = load i8*, i8** [[PTR_ADDR]], align 8
@@ -2103,11 +2366,23 @@ void test_strmb15(char *ptr, vector unsigned char data) {
 // BE-PWR9-NEXT:    [[TMP1:%.*]] = load i8*, i8** [[__A_ADDR_I]], align 8
 // BE-PWR9-NEXT:    [[TMP2:%.*]] = load i64, i64* [[__B_ADDR_I]], align 8
 // BE-PWR9-NEXT:    [[SHL_I:%.*]] = shl i64 [[TMP2]], 56
-// BE-PWR9-NEXT:    [[TMP3:%.*]] = call <4 x i32> @llvm.ppc.vsx.lxvll(i8* [[TMP1]], i64 [[SHL_I]]) #[[ATTR3]]
+// BE-PWR9-NEXT:    [[TMP3:%.*]] = call <4 x i32> @llvm.ppc.vsx.lxvll(i8* [[TMP1]], i64 [[SHL_I]]) #[[ATTR4]]
 // BE-PWR9-NEXT:    [[TMP4:%.*]] = bitcast <4 x i32> [[TMP3]] to <16 x i8>
 // BE-PWR9-NEXT:    store <16 x i8> [[TMP4]], <16 x i8>* [[__RES_I]], align 16
-// BE-PWR9-NEXT:    [[TMP5:%.*]] = load <16 x i8>, <16 x i8>* [[__RES_I]], align 16
-// BE-PWR9-NEXT:    ret <16 x i8> [[TMP5]]
+// BE-PWR9-NEXT:    [[TMP5:%.*]] = load i64, i64* [[__B_ADDR_I]], align 8
+// BE-PWR9-NEXT:    [[SUB_I:%.*]] = sub i64 16, [[TMP5]]
+// BE-PWR9-NEXT:    [[CONV_I:%.*]] = trunc i64 [[SUB_I]] to i8
+// BE-PWR9-NEXT:    [[TMP6:%.*]] = getelementptr i8, i8* null, i8 [[CONV_I]]
+// BE-PWR9-NEXT:    [[TMP7:%.*]] = call <16 x i8> @llvm.ppc.altivec.lvsr(i8* [[TMP6]]) #[[ATTR4]]
+// BE-PWR9-NEXT:    store <16 x i8> [[TMP7]], <16 x i8>* [[__MASK_I]], align 16
+// BE-PWR9-NEXT:    [[TMP8:%.*]] = load <16 x i8>, <16 x i8>* [[__RES_I]], align 16
+// BE-PWR9-NEXT:    [[TMP9:%.*]] = bitcast <16 x i8> [[TMP8]] to <4 x i32>
+// BE-PWR9-NEXT:    [[TMP10:%.*]] = load <16 x i8>, <16 x i8>* [[__RES_I]], align 16
+// BE-PWR9-NEXT:    [[TMP11:%.*]] = bitcast <16 x i8> [[TMP10]] to <4 x i32>
+// BE-PWR9-NEXT:    [[TMP12:%.*]] = load <16 x i8>, <16 x i8>* [[__MASK_I]], align 16
+// BE-PWR9-NEXT:    [[TMP13:%.*]] = call <4 x i32> @llvm.ppc.altivec.vperm(<4 x i32> [[TMP9]], <4 x i32> [[TMP11]], <16 x i8> [[TMP12]]) #[[ATTR4]]
+// BE-PWR9-NEXT:    [[TMP14:%.*]] = bitcast <4 x i32> [[TMP13]] to <16 x i8>
+// BE-PWR9-NEXT:    ret <16 x i8> [[TMP14]]
 //
 // LE-PWR9-LABEL: @test_ldrmb16(
 // LE-PWR9-NEXT:  entry:
@@ -2139,9 +2414,7 @@ void test_strmb15(char *ptr, vector unsigned char data) {
 // LE-PWR9-NEXT:    [[TMP12:%.*]] = load <16 x i8>, <16 x i8>* [[__MASK_I]], align 16
 // LE-PWR9-NEXT:    [[TMP13:%.*]] = call <4 x i32> @llvm.ppc.altivec.vperm(<4 x i32> [[TMP9]], <4 x i32> [[TMP11]], <16 x i8> [[TMP12]]) #[[ATTR4]]
 // LE-PWR9-NEXT:    [[TMP14:%.*]] = bitcast <4 x i32> [[TMP13]] to <16 x i8>
-// LE-PWR9-NEXT:    store <16 x i8> [[TMP14]], <16 x i8>* [[__RES_I]], align 16
-// LE-PWR9-NEXT:    [[TMP15:%.*]] = load <16 x i8>, <16 x i8>* [[__RES_I]], align 16
-// LE-PWR9-NEXT:    ret <16 x i8> [[TMP15]]
+// LE-PWR9-NEXT:    ret <16 x i8> [[TMP14]]
 //
 // BE32-PWR9-LABEL: @test_ldrmb16(
 // BE32-PWR9-NEXT:  entry:
@@ -2184,6 +2457,8 @@ vector unsigned char test_ldrmb16(char *ptr) { return __vec_ldrmb(ptr, 16); }
 // BE-PWR9-NEXT:    [[__A_ADDR_I:%.*]] = alloca <16 x i8>, align 16
 // BE-PWR9-NEXT:    [[__B_ADDR_I:%.*]] = alloca i8*, align 8
 // BE-PWR9-NEXT:    [[__C_ADDR_I:%.*]] = alloca i64, align 8
+// BE-PWR9-NEXT:    [[__MASK_I:%.*]] = alloca <16 x i8>, align 16
+// BE-PWR9-NEXT:    [[__RES_I:%.*]] = alloca <16 x i8>, align 16
 // BE-PWR9-NEXT:    [[PTR_ADDR:%.*]] = alloca i8*, align 8
 // BE-PWR9-NEXT:    [[DATA_ADDR:%.*]] = alloca <16 x i8>, align 16
 // BE-PWR9-NEXT:    store i8* [[PTR:%.*]], i8** [[PTR_ADDR]], align 8
@@ -2193,12 +2468,26 @@ vector unsigned char test_ldrmb16(char *ptr) { return __vec_ldrmb(ptr, 16); }
 // BE-PWR9-NEXT:    store <16 x i8> [[TMP0]], <16 x i8>* [[__A_ADDR_I]], align 16
 // BE-PWR9-NEXT:    store i8* [[TMP1]], i8** [[__B_ADDR_I]], align 8
 // BE-PWR9-NEXT:    store i64 16, i64* [[__C_ADDR_I]], align 8
-// BE-PWR9-NEXT:    [[TMP2:%.*]] = load <16 x i8>, <16 x i8>* [[__A_ADDR_I]], align 16
-// BE-PWR9-NEXT:    [[TMP3:%.*]] = bitcast <16 x i8> [[TMP2]] to <4 x i32>
-// BE-PWR9-NEXT:    [[TMP4:%.*]] = load i8*, i8** [[__B_ADDR_I]], align 8
-// BE-PWR9-NEXT:    [[TMP5:%.*]] = load i64, i64* [[__C_ADDR_I]], align 8
-// BE-PWR9-NEXT:    [[SHL_I:%.*]] = shl i64 [[TMP5]], 56
-// BE-PWR9-NEXT:    call void @llvm.ppc.vsx.stxvll(<4 x i32> [[TMP3]], i8* [[TMP4]], i64 [[SHL_I]]) #[[ATTR3]]
+// BE-PWR9-NEXT:    [[TMP2:%.*]] = load i64, i64* [[__C_ADDR_I]], align 8
+// BE-PWR9-NEXT:    [[SUB_I:%.*]] = sub i64 16, [[TMP2]]
+// BE-PWR9-NEXT:    [[CONV_I:%.*]] = trunc i64 [[SUB_I]] to i8
+// BE-PWR9-NEXT:    [[TMP3:%.*]] = getelementptr i8, i8* null, i8 [[CONV_I]]
+// BE-PWR9-NEXT:    [[TMP4:%.*]] = call <16 x i8> @llvm.ppc.altivec.lvsl(i8* [[TMP3]]) #[[ATTR4]]
+// BE-PWR9-NEXT:    store <16 x i8> [[TMP4]], <16 x i8>* [[__MASK_I]], align 16
+// BE-PWR9-NEXT:    [[TMP5:%.*]] = load <16 x i8>, <16 x i8>* [[__A_ADDR_I]], align 16
+// BE-PWR9-NEXT:    [[TMP6:%.*]] = bitcast <16 x i8> [[TMP5]] to <4 x i32>
+// BE-PWR9-NEXT:    [[TMP7:%.*]] = load <16 x i8>, <16 x i8>* [[__A_ADDR_I]], align 16
+// BE-PWR9-NEXT:    [[TMP8:%.*]] = bitcast <16 x i8> [[TMP7]] to <4 x i32>
+// BE-PWR9-NEXT:    [[TMP9:%.*]] = load <16 x i8>, <16 x i8>* [[__MASK_I]], align 16
+// BE-PWR9-NEXT:    [[TMP10:%.*]] = call <4 x i32> @llvm.ppc.altivec.vperm(<4 x i32> [[TMP6]], <4 x i32> [[TMP8]], <16 x i8> [[TMP9]]) #[[ATTR4]]
+// BE-PWR9-NEXT:    [[TMP11:%.*]] = bitcast <4 x i32> [[TMP10]] to <16 x i8>
+// BE-PWR9-NEXT:    store <16 x i8> [[TMP11]], <16 x i8>* [[__RES_I]], align 16
+// BE-PWR9-NEXT:    [[TMP12:%.*]] = load <16 x i8>, <16 x i8>* [[__RES_I]], align 16
+// BE-PWR9-NEXT:    [[TMP13:%.*]] = bitcast <16 x i8> [[TMP12]] to <4 x i32>
+// BE-PWR9-NEXT:    [[TMP14:%.*]] = load i8*, i8** [[__B_ADDR_I]], align 8
+// BE-PWR9-NEXT:    [[TMP15:%.*]] = load i64, i64* [[__C_ADDR_I]], align 8
+// BE-PWR9-NEXT:    [[SHL_I:%.*]] = shl i64 [[TMP15]], 56
+// BE-PWR9-NEXT:    call void @llvm.ppc.vsx.stxvll(<4 x i32> [[TMP13]], i8* [[TMP14]], i64 [[SHL_I]]) #[[ATTR4]]
 // BE-PWR9-NEXT:    ret void
 //
 // LE-PWR9-LABEL: @test_strmb16(

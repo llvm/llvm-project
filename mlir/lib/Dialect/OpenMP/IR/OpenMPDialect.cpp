@@ -974,5 +974,13 @@ static LogicalResult verifyWsLoopOp(WsLoopOp op) {
   return success();
 }
 
+static LogicalResult verifyCriticalOp(CriticalOp op) {
+  if (!op.name().hasValue() && op.hint().hasValue() &&
+      (op.hint().getValue() != SyncHintKind::none))
+    return op.emitOpError() << "must specify a name unless the effect is as if "
+                               "hint(none) is specified";
+  return success();
+}
+
 #define GET_OP_CLASSES
 #include "mlir/Dialect/OpenMP/OpenMPOps.cpp.inc"

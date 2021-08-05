@@ -15,7 +15,7 @@ export class MLIRContext implements vscode.Disposable {
   /**
    *  Activate the MLIR context, and start the language client.
    */
-  async activate() {
+  async activate(outputChannel: vscode.OutputChannel) {
     // Get the path of the mlir-lsp-server that is used to provide language
     // functionality.
     const userDefinedServerPath = config.get<string>('server_path');
@@ -43,7 +43,8 @@ export class MLIRContext implements vscode.Disposable {
         // Notify the server about file changes to *.mlir files contained in the
         // workspace.
         fileEvents : vscode.workspace.createFileSystemWatcher('**/*.mlir')
-      }
+      },
+      outputChannel : outputChannel,
     };
 
     // Create the language client and start the client.

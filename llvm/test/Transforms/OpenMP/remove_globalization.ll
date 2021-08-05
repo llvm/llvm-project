@@ -23,6 +23,7 @@ define void @kernel() {
 ; CHECK-NEXT:    [[TMP0:%.*]] = call i32 @__kmpc_target_init(%struct.ident_t* nonnull null, i1 false, i1 false, i1 true)
 ; CHECK-NEXT:    call void @foo() #[[ATTR0:[0-9]+]]
 ; CHECK-NEXT:    call void @bar() #[[ATTR0]]
+; CHECK-NEXT:    call void @unknown_no_openmp()
 ; CHECK-NEXT:    call void @__kmpc_target_deinit(%struct.ident_t* nonnull null, i1 false, i1 true)
 ; CHECK-NEXT:    ret void
 ;
@@ -31,6 +32,7 @@ define void @kernel() {
 ; CHECK-DISABLED-NEXT:    [[TMP0:%.*]] = call i32 @__kmpc_target_init(%struct.ident_t* nonnull null, i1 false, i1 false, i1 true)
 ; CHECK-DISABLED-NEXT:    call void @foo() #[[ATTR0:[0-9]+]]
 ; CHECK-DISABLED-NEXT:    call void @bar() #[[ATTR0]]
+; CHECK-DISABLED-NEXT:    call void @unknown_no_openmp()
 ; CHECK-DISABLED-NEXT:    call void @__kmpc_target_deinit(%struct.ident_t* nonnull null, i1 false, i1 true)
 ; CHECK-DISABLED-NEXT:    ret void
 ;
@@ -38,6 +40,7 @@ entry:
   %0 = call i32 @__kmpc_target_init(%struct.ident_t* nonnull null, i1 false, i1 true, i1 true)
   call void @foo()
   call void @bar()
+  call void @unknown_no_openmp()
   call void @__kmpc_target_deinit(%struct.ident_t* nonnull null, i1 false, i1 true)
   ret void
 }
@@ -67,7 +70,7 @@ define internal void @bar() {
 ; CHECK-SAME: () #[[ATTR0]] {
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[TMP0:%.*]] = call i8* @__kmpc_alloc_shared(i64 noundef 4) #[[ATTR0]], !dbg [[DBG8:![0-9]+]]
-; CHECK-NEXT:    call void @share(i8* nofree writeonly [[TMP0]]) #[[ATTR3:[0-9]+]]
+; CHECK-NEXT:    call void @share(i8* nofree writeonly [[TMP0]]) #[[ATTR4:[0-9]+]]
 ; CHECK-NEXT:    call void @__kmpc_free_shared(i8* [[TMP0]], i64 noundef 4) #[[ATTR0]]
 ; CHECK-NEXT:    ret void
 ;
@@ -75,7 +78,7 @@ define internal void @bar() {
 ; CHECK-DISABLED-SAME: () #[[ATTR0]] {
 ; CHECK-DISABLED-NEXT:  entry:
 ; CHECK-DISABLED-NEXT:    [[TMP0:%.*]] = call i8* @__kmpc_alloc_shared(i64 noundef 4) #[[ATTR0]], !dbg [[DBG8:![0-9]+]]
-; CHECK-DISABLED-NEXT:    call void @share(i8* nofree writeonly [[TMP0]]) #[[ATTR3:[0-9]+]]
+; CHECK-DISABLED-NEXT:    call void @share(i8* nofree writeonly [[TMP0]]) #[[ATTR4:[0-9]+]]
 ; CHECK-DISABLED-NEXT:    call void @__kmpc_free_shared(i8* [[TMP0]], i64 noundef 4) #[[ATTR0]]
 ; CHECK-DISABLED-NEXT:    ret void
 ;
@@ -145,6 +148,8 @@ declare i8* @__kmpc_alloc_shared(i64)
 
 ; CHECK: declare void @__kmpc_free_shared(i8* nocapture, i64)
 declare void @__kmpc_free_shared(i8*, i64)
+
+declare void @unknown_no_openmp() "llvm.assume"="omp_no_openmp"
 
 !llvm.dbg.cu = !{!0}
 !llvm.module.flags = !{!3, !4, !6, !7}

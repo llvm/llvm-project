@@ -7,7 +7,7 @@ declare i64 @llvm.abs.i64(i64, i1 immarg)
 define i64 @neg_abs64(i64 %x) {
 ; CHECK-LABEL: neg_abs64:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    cmp x0, #0 // =0
+; CHECK-NEXT:    cmp x0, #0
 ; CHECK-NEXT:    cneg x8, x0, mi
 ; CHECK-NEXT:    neg x0, x8
 ; CHECK-NEXT:    ret
@@ -21,7 +21,7 @@ declare i32 @llvm.abs.i32(i32, i1 immarg)
 define i32 @neg_abs32(i32 %x) {
 ; CHECK-LABEL: neg_abs32:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    cmp w0, #0 // =0
+; CHECK-NEXT:    cmp w0, #0
 ; CHECK-NEXT:    cneg w8, w0, mi
 ; CHECK-NEXT:    neg w0, w8
 ; CHECK-NEXT:    ret
@@ -66,7 +66,7 @@ define i128 @neg_abs128(i128 %x) {
 define i64 @abs64(i64 %x) {
 ; CHECK-LABEL: abs64:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    cmp x0, #0 // =0
+; CHECK-NEXT:    cmp x0, #0
 ; CHECK-NEXT:    cneg x0, x0, mi
 ; CHECK-NEXT:    ret
   %abs = tail call i64 @llvm.abs.i64(i64 %x, i1 true)
@@ -76,7 +76,7 @@ define i64 @abs64(i64 %x) {
 define i32 @abs32(i32 %x) {
 ; CHECK-LABEL: abs32:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    cmp w0, #0 // =0
+; CHECK-NEXT:    cmp w0, #0
 ; CHECK-NEXT:    cneg w0, w0, mi
 ; CHECK-NEXT:    ret
   %abs = tail call i32 @llvm.abs.i32(i32 %x, i1 true)
@@ -87,7 +87,7 @@ define i16 @abs16(i16 %x) {
 ; CHECK-LABEL: abs16:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    sxth w8, w0
-; CHECK-NEXT:    cmp w8, #0 // =0
+; CHECK-NEXT:    cmp w8, #0
 ; CHECK-NEXT:    cneg w0, w8, mi
 ; CHECK-NEXT:    ret
   %abs = tail call i16 @llvm.abs.i16(i16 %x, i1 true)
@@ -99,7 +99,7 @@ define i128 @abs128(i128 %x) {
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    negs x8, x0
 ; CHECK-NEXT:    ngcs x9, x1
-; CHECK-NEXT:    cmp x1, #0 // =0
+; CHECK-NEXT:    cmp x1, #0
 ; CHECK-NEXT:    csel x0, x8, x0, lt
 ; CHECK-NEXT:    csel x1, x9, x1, lt
 ; CHECK-NEXT:    ret

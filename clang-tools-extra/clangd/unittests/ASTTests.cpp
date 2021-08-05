@@ -259,6 +259,18 @@ TEST(ClangdAST, GetQualification) {
           {"ns2::", "ns2::", ""},
           {"ns1::"},
       },
+      {
+          R"cpp(
+            namespace ns {
+            extern "C" {
+            typedef int Foo;
+            }
+            }
+            void insert(); // ns::Foo
+          )cpp",
+          {"ns::"},
+          {},
+      },
   };
   for (const auto &Case : Cases) {
     Annotations Test(Case.Test);

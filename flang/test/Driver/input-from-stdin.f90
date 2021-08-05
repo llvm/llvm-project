@@ -30,8 +30,8 @@
 !-------------------------
 ! EXPECTED OUTPUT for `-E`
 !-------------------------
-! PP-NOT-DEFINED: program b
-! PP-DEFINED: program a
+! PP-NOT-DEFINED: Program B
+! PP-DEFINED: Program A
 
 !-------------------------------
 ! EXPECTED OUTPUT for `-test-io`

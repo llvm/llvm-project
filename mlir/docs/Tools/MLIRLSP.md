@@ -176,6 +176,9 @@ extra setup steps are required:
 
 *   Copy `mlir/utils/textmate/mlir.json` to the extension directory and rename
     to `grammar.json`.
+*   Copy
+    `https://mlir.llvm.org//LogoAssets/logo/PNG/full_color/mlir-identity-03.png`
+    to the extension directory and rename to `icon.png`.
 
 Please follow the existing code style when contributing to the extension, we
 recommend to run `npm run format` before sending a patch.

@@ -46,6 +46,10 @@ if config.host_os == 'Darwin':
   # 64-bit Darwin. Using more scales badly and hogs the system due to
   # inefficient handling of large mmap'd regions (terabytes) by the kernel.
   lit_config.parallelism_groups["shadow-memory"] = 3
+  # Disable libmalloc nanoallocator due to crashes running on macOS 12.0.
+  #
+  # rdar://80086125
+  config.environment['MallocNanoZone'] = '0'
 
   # The test config gets pickled and sent to multiprocessing workers, and that
   # only works for code if it is stored at the top level of some module.

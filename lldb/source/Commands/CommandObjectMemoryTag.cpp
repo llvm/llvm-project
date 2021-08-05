@@ -24,7 +24,8 @@ class CommandObjectMemoryTagRead : public CommandObjectParsed {
 public:
   CommandObjectMemoryTagRead(CommandInterpreter &interpreter)
       : CommandObjectParsed(interpreter, "tag",
-                            "Read memory tags for the given range of memory.",
+                            "Read memory tags for the given range of memory."
+                            " Mismatched tags will be marked.",
                             nullptr,
                             eCommandRequiresTarget | eCommandRequiresProcess |
                                 eCommandProcessMustBePaused) {
@@ -100,16 +101,17 @@ protected:
       return false;
     }
 
-    result.AppendMessageWithFormatv("Logical tag: {0:x}",
-                                    tag_manager->GetLogicalTag(start_addr));
+    lldb::addr_t logical_tag = tag_manager->GetLogicalTag(start_addr);
+    result.AppendMessageWithFormatv("Logical tag: {0:x}", logical_tag);
     result.AppendMessage("Allocation tags:");
 
     addr_t addr = tagged_range->GetRangeBase();
     for (auto tag : *tags) {
       addr_t next_addr = addr + tag_manager->GetGranuleSize();
       // Showing tagged adresses here until we have non address bit handling
-      result.AppendMessageWithFormatv("[{0:x}, {1:x}): {2:x}", addr, next_addr,
-                                      tag);
+      result.AppendMessageWithFormatv("[{0:x}, {1:x}): {2:x}{3}", addr,
+                                      next_addr, tag,
+                                      logical_tag == tag ? "" : " (mismatch)");
       addr = next_addr;
     }
 

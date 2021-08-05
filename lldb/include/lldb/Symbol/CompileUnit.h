@@ -332,6 +332,7 @@ public:
   void SetLineTable(LineTable *line_table);
 
   void SetSupportFiles(const FileSpecList &support_files);
+  void SetSupportFiles(FileSpecList &&support_files);
 
   void SetDebugMacros(const DebugMacrosSP &debug_macros);
 
@@ -442,6 +443,7 @@ private:
 
   CompileUnit(const CompileUnit &) = delete;
   const CompileUnit &operator=(const CompileUnit &) = delete;
+  const char *GetCachedLanguage() const;
 };
 
 } // namespace lldb_private

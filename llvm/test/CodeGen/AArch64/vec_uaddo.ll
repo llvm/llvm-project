@@ -50,7 +50,7 @@ define <3 x i32> @uaddo_v3i32(<3 x i32> %a0, <3 x i32> %a1, <3 x i32>* %p2) noun
 ; CHECK-LABEL: uaddo_v3i32:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    add v1.4s, v0.4s, v1.4s
-; CHECK-NEXT:    add x8, x0, #8 // =8
+; CHECK-NEXT:    add x8, x0, #8
 ; CHECK-NEXT:    cmhi v0.4s, v0.4s, v1.4s
 ; CHECK-NEXT:    st1 { v1.s }[2], [x8]
 ; CHECK-NEXT:    str d1, [x0]
@@ -86,8 +86,8 @@ define <6 x i32> @uaddo_v6i32(<6 x i32> %a0, <6 x i32> %a1, <6 x i32>* %p2) noun
 ; CHECK-NEXT:    mov x9, sp
 ; CHECK-NEXT:    mov v2.s[1], w7
 ; CHECK-NEXT:    ld1 { v2.s }[2], [x9]
-; CHECK-NEXT:    add x8, sp, #24 // =24
-; CHECK-NEXT:    add x10, sp, #8 // =8
+; CHECK-NEXT:    add x8, sp, #24
+; CHECK-NEXT:    add x10, sp, #8
 ; CHECK-NEXT:    ld1 { v0.s }[1], [x8]
 ; CHECK-NEXT:    fmov s3, w0
 ; CHECK-NEXT:    ldr x11, [sp, #32]

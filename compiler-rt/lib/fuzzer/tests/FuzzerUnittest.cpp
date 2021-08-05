@@ -24,7 +24,8 @@
 using namespace fuzzer;
 
 // For now, have LLVMFuzzerTestOneInput just to make it link.
-// Later we may want to make unittests that actually call LLVMFuzzerTestOneInput.
+// Later we may want to make unittests that actually call
+// LLVMFuzzerTestOneInput.
 extern "C" int LLVMFuzzerTestOneInput(const uint8_t *Data, size_t Size) {
   abort();
 }
@@ -88,7 +89,7 @@ TEST(Fuzzer, CrossOver) {
        { 0, 5, 6, 7, 1, 2 }
   };
   for (size_t Len = 1; Len < 8; Len++) {
-    Set<Unit> FoundUnits, ExpectedUnitsWitThisLength;
+    std::set<Unit> FoundUnits, ExpectedUnitsWitThisLength;
     for (int Iter = 0; Iter < 3000; Iter++) {
       C.resize(Len);
       size_t NewSize = MD->CrossOver(A.data(), A.size(), B.data(), B.size(),
@@ -242,7 +243,8 @@ void TestInsertRepeatedBytes(Mutator M, int NumIter) {
 }
 
 TEST(FuzzerMutate, InsertRepeatedBytes1) {
-  TestInsertRepeatedBytes(&MutationDispatcher::Mutate_InsertRepeatedBytes, 10000);
+  TestInsertRepeatedBytes(&MutationDispatcher::Mutate_InsertRepeatedBytes,
+                          10000);
 }
 TEST(FuzzerMutate, InsertRepeatedBytes2) {
   TestInsertRepeatedBytes(&MutationDispatcher::Mutate, 300000);
@@ -557,7 +559,7 @@ TEST(FuzzerDictionary, ParseOneDictionaryEntry) {
 }
 
 TEST(FuzzerDictionary, ParseDictionaryFile) {
-  Vector<Unit> Units;
+  std::vector<Unit> Units;
   EXPECT_FALSE(ParseDictionaryFile("zzz\n", &Units));
   EXPECT_FALSE(ParseDictionaryFile("", &Units));
   EXPECT_TRUE(ParseDictionaryFile("\n", &Units));
@@ -569,11 +571,11 @@ TEST(FuzzerDictionary, ParseDictionaryFile) {
   EXPECT_TRUE(ParseDictionaryFile("  #zzzz\n", &Units));
   EXPECT_EQ(Units.size(), 0U);
   EXPECT_TRUE(ParseDictionaryFile("  #zzzz\naaa=\"aa\"", &Units));
-  EXPECT_EQ(Units, Vector<Unit>({Unit({'a', 'a'})}));
+  EXPECT_EQ(Units, std::vector<Unit>({Unit({'a', 'a'})}));
   EXPECT_TRUE(
       ParseDictionaryFile("  #zzzz\naaa=\"aa\"\n\nabc=\"abc\"", &Units));
   EXPECT_EQ(Units,
-            Vector<Unit>({Unit({'a', 'a'}), Unit({'a', 'b', 'c'})}));
+            std::vector<Unit>({Unit({'a', 'a'}), Unit({'a', 'b', 'c'})}));
 }
 
 TEST(FuzzerUtil, Base64) {
@@ -604,7 +606,7 @@ TEST(Corpus, Distribution) {
                    /*FeatureSet*/ {}, DFT,
                    /*BaseII*/ nullptr);
 
-  Vector<size_t> Hist(N);
+  std::vector<size_t> Hist(N);
   for (size_t i = 0; i < N * TriesPerUnit; i++) {
     Hist[C->ChooseUnitIdxToMutate(Rand)]++;
   }
@@ -614,19 +616,21 @@ TEST(Corpus, Distribution) {
   }
 }
 
-template <typename T> void EQ(const Vector<T> &A, const Vector<T> &B) {
+template <typename T>
+void EQ(const std::vector<T> &A, const std::vector<T> &B) {
   EXPECT_EQ(A, B);
 }
 
-template <typename T> void EQ(const Set<T> &A, const Vector<T> &B) {
-  EXPECT_EQ(A, Set<T>(B.begin(), B.end()));
+template <typename T> void EQ(const std::set<T> &A, const std::vector<T> &B) {
+  EXPECT_EQ(A, std::set<T>(B.begin(), B.end()));
 }
 
-void EQ(const Vector<MergeFileInfo> &A, const Vector<std::string> &B) {
-  Set<std::string> a;
+void EQ(const std::vector<MergeFileInfo> &A,
+        const std::vector<std::string> &B) {
+  std::set<std::string> a;
   for (const auto &File : A)
     a.insert(File.Name);
-  Set<std::string> b(B.begin(), B.end());
+  std::set<std::string> b(B.begin(), B.end());
   EXPECT_EQ(a, b);
 }
 
@@ -746,9 +750,9 @@ TEST(Merger, Parse) {
 
 TEST(Merger, Merge) {
   Merger M;
-  Set<uint32_t> Features, NewFeatures;
-  Set<uint32_t> Cov, NewCov;
-  Vector<std::string> NewFiles;
+  std::set<uint32_t> Features, NewFeatures;
+  std::set<uint32_t> Cov, NewCov;
+  std::vector<std::string> NewFiles;
 
   // Adds new files and features
   EXPECT_TRUE(M.Parse("3\n0\nA\nB\nC\n"
@@ -968,7 +972,7 @@ TEST(Fuzzer, ForEachNonZeroByte) {
     0, 0, 0, 0, 0, 0, 0, 8,
     9, 9, 9, 9, 9, 9, 9, 9,
   };
-  typedef Vector<std::pair<size_t, uint8_t> > Vec;
+  typedef std::vector<std::pair<size_t, uint8_t>> Vec;
   Vec Res, Expected;
   auto CB = [&](size_t FirstFeature, size_t Idx, uint8_t V) {
     Res.push_back({FirstFeature + Idx, V});
@@ -993,7 +997,7 @@ TEST(Fuzzer, ForEachNonZeroByte) {
 
 // FuzzerCommand unit tests. The arguments in the two helper methods below must
 // match.
-static void makeCommandArgs(Vector<std::string> *ArgsToAdd) {
+static void makeCommandArgs(std::vector<std::string> *ArgsToAdd) {
   assert(ArgsToAdd);
   ArgsToAdd->clear();
   ArgsToAdd->push_back("foo");
@@ -1029,7 +1033,7 @@ TEST(FuzzerCommand, Create) {
   EXPECT_EQ(CmdLine, "");
 
   // Explicit constructor
-  Vector<std::string> ArgsToAdd;
+  std::vector<std::string> ArgsToAdd;
   makeCommandArgs(&ArgsToAdd);
   Command InitializedCmd(ArgsToAdd);
 
@@ -1061,7 +1065,7 @@ TEST(FuzzerCommand, Create) {
 }
 
 TEST(FuzzerCommand, ModifyArguments) {
-  Vector<std::string> ArgsToAdd;
+  std::vector<std::string> ArgsToAdd;
   makeCommandArgs(&ArgsToAdd);
   Command Cmd;
   std::string CmdLine;
@@ -1084,7 +1088,7 @@ TEST(FuzzerCommand, ModifyArguments) {
 }
 
 TEST(FuzzerCommand, ModifyFlags) {
-  Vector<std::string> ArgsToAdd;
+  std::vector<std::string> ArgsToAdd;
   makeCommandArgs(&ArgsToAdd);
   Command Cmd(ArgsToAdd);
   std::string Value, CmdLine;
@@ -1116,7 +1120,7 @@ TEST(FuzzerCommand, ModifyFlags) {
 }
 
 TEST(FuzzerCommand, SetOutput) {
-  Vector<std::string> ArgsToAdd;
+  std::vector<std::string> ArgsToAdd;
   makeCommandArgs(&ArgsToAdd);
   Command Cmd(ArgsToAdd);
   std::string CmdLine;
@@ -1196,7 +1200,8 @@ TEST(Entropic, ComputeEnergy) {
   struct EntropicOptions Entropic = {true, 0xFF, 100, false};
   std::unique_ptr<InputCorpus> C(new InputCorpus("", Entropic));
   std::unique_ptr<InputInfo> II(new InputInfo());
-  Vector<std::pair<uint32_t, uint16_t>> FeatureFreqs = {{1, 3}, {2, 3}, {3, 3}};
+  std::vector<std::pair<uint32_t, uint16_t>> FeatureFreqs = {
+      {1, 3}, {2, 3}, {3, 3}};
   II->FeatureFreqs = FeatureFreqs;
   II->NumExecutedMutations = 0;
   II->UpdateEnergy(4, false, std::chrono::microseconds(0));

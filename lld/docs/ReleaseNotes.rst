@@ -24,8 +24,8 @@ Non-comprehensive list of changes in this release
 ELF Improvements
 ----------------
 
-* ``-Bsymbolic-non-weak-functions`` has been added as a ``STB_GLOBAL`` subset of ``-Bsymbolic-functions``.
-  (`D102570 <https://reviews.llvm.org/D102570>`_)
+* ``--export-dynamic-symbol-list`` has been added.
+  (`D107317 <https://reviews.llvm.org/D107317>`_)
 
 Breaking changes
 ----------------

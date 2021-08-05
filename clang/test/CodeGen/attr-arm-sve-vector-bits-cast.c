@@ -45,15 +45,7 @@ fixed_float64_t from_svfloat64_t(svfloat64_t type) {
 
 // CHECK-LABEL: @to_svbool_t(
 // CHECK-NEXT:  entry:
-// CHECK-NEXT:    [[TYPE:%.*]] = alloca <8 x i8>, align 16
-// CHECK-NEXT:    [[TYPE_ADDR:%.*]] = alloca <8 x i8>, align 16
-// CHECK-NEXT:    [[TMP0:%.*]] = bitcast <8 x i8>* [[TYPE]] to <vscale x 16 x i1>*
-// CHECK-NEXT:    store <vscale x 16 x i1> [[TYPE_COERCE:%.*]], <vscale x 16 x i1>* [[TMP0]], align 16
-// CHECK-NEXT:    [[TYPE1:%.*]] = load <8 x i8>, <8 x i8>* [[TYPE]], align 16, !tbaa [[TBAA6:![0-9]+]]
-// CHECK-NEXT:    store <8 x i8> [[TYPE1]], <8 x i8>* [[TYPE_ADDR]], align 16, !tbaa [[TBAA6]]
-// CHECK-NEXT:    [[TMP1:%.*]] = bitcast <8 x i8>* [[TYPE_ADDR]] to <vscale x 16 x i1>*
-// CHECK-NEXT:    [[TMP2:%.*]] = load <vscale x 16 x i1>, <vscale x 16 x i1>* [[TMP1]], align 16, !tbaa [[TBAA6]]
-// CHECK-NEXT:    ret <vscale x 16 x i1> [[TMP2]]
+// CHECK-NEXT:    ret <vscale x 16 x i1> [[TYPE:%.*]]
 //
 svbool_t to_svbool_t(fixed_bool_t type) {
   return type;
@@ -61,23 +53,28 @@ svbool_t to_svbool_t(fixed_bool_t type) {
 
 // CHECK-LABEL: @from_svbool_t(
 // CHECK-NEXT:  entry:
-// CHECK-NEXT:    [[TYPE_ADDR:%.*]] = alloca <vscale x 16 x i1>, align 16
-// CHECK-NEXT:    [[RETVAL_COERCE:%.*]] = alloca <vscale x 16 x i1>, align 16
-// CHECK-NEXT:    store <vscale x 16 x i1> [[TYPE:%.*]], <vscale x 16 x i1>* [[TYPE_ADDR]], align 16, !tbaa [[TBAA9:![0-9]+]]
-// CHECK-NEXT:    [[TMP0:%.*]] = bitcast <vscale x 16 x i1>* [[TYPE_ADDR]] to <8 x i8>*
-// CHECK-NEXT:    [[TMP1:%.*]] = load <8 x i8>, <8 x i8>* [[TMP0]], align 16, !tbaa [[TBAA6]]
-// CHECK-NEXT:    [[RETVAL_0__SROA_CAST:%.*]] = bitcast <vscale x 16 x i1>* [[RETVAL_COERCE]] to <8 x i8>*
-// CHECK-NEXT:    store <8 x i8> [[TMP1]], <8 x i8>* [[RETVAL_0__SROA_CAST]], align 16
-// CHECK-NEXT:    [[TMP2:%.*]] = load <vscale x 16 x i1>, <vscale x 16 x i1>* [[RETVAL_COERCE]], align 16
-// CHECK-NEXT:    ret <vscale x 16 x i1> [[TMP2]]
+// CHECK-NEXT:    ret <vscale x 16 x i1> [[TYPE:%.*]]
 //
 fixed_bool_t from_svbool_t(svbool_t type) {
   return type;
 }
 
+// CHECK-LABEL: @lax_cast(
+// CHECK-NEXT:  entry:
+// CHECK-NEXT:    [[TMP0:%.*]] = alloca <16 x i32>, align 64
+// CHECK-NEXT:    [[CASTFIXEDSVE:%.*]] = call <16 x i32> @llvm.experimental.vector.extract.v16i32.nxv4i32(<vscale x 4 x i32> [[TYPE_COERCE:%.*]], i64 0)
+// CHECK-NEXT:    store <16 x i32> [[CASTFIXEDSVE]], <16 x i32>* [[TMP0:%.*]], align 64, !tbaa [[TBAA6:![0-9]+]]
+// CHECK-NEXT:    [[TMP1:%.*]] = bitcast <16 x i32>* [[TMP0]] to <vscale x 2 x i64>*
+// CHECK-NEXT:    [[TMP2:%.*]] = load <vscale x 2 x i64>, <vscale x 2 x i64>* [[TMP1]], align 64, !tbaa [[TBAA6]]
+// CHECK-NEXT:    ret <vscale x 2 x i64> [[TMP2]]
+//
+svint64_t lax_cast(fixed_int32_t type) {
+  return type;
+}
+
 // CHECK-LABEL: @to_svint32_t__from_gnu_int32_t(
 // CHECK-NEXT:  entry:
-// CHECK-NEXT:    [[TYPE:%.*]] = load <16 x i32>, <16 x i32>* [[TMP0:%.*]], align 16, !tbaa [[TBAA6]]
+// CHECK-NEXT:    [[TYPE:%.*]] = load <16 x i32>, <16 x i32>* [[TMP0:%.*]], align 16, !tbaa [[TBAA6:![0-9]+]]
 // CHECK-NEXT:    [[CASTSCALABLESVE:%.*]] = call <vscale x 4 x i32> @llvm.experimental.vector.insert.nxv4i32.v16i32(<vscale x 4 x i32> undef, <16 x i32> [[TYPE]], i64 0)
 // CHECK-NEXT:    ret <vscale x 4 x i32> [[CASTSCALABLESVE]]
 //

@@ -475,13 +475,13 @@ define void @multilooped_exit(i32 %b) {
 ; CHECK-NEXT:    @ in Loop: Header=BB18_3 Depth=1
 ; CHECK-NEXT:    adds r4, #1
 ; CHECK-NEXT:    cmp.w r4, #1024
-; CHECK-NEXT:    bge .LBB18_11
+; CHECK-NEXT:    bge .LBB18_12
 ; CHECK-NEXT:  .LBB18_3: @ %loop
 ; CHECK-NEXT:    @ =>This Loop Header: Depth=1
 ; CHECK-NEXT:    @ Child Loop BB18_4 Depth 2
 ; CHECK-NEXT:    @ Child Loop BB18_6 Depth 2
 ; CHECK-NEXT:    @ Child Loop BB18_8 Depth 2
-; CHECK-NEXT:    @ Child Loop BB18_10 Depth 2
+; CHECK-NEXT:    @ Child Loop BB18_11 Depth 2
 ; CHECK-NEXT:    movw r3, :lower16:arr_56
 ; CHECK-NEXT:    add.w r1, r0, #15
 ; CHECK-NEXT:    movt r3, :upper16:arr_56
@@ -510,20 +510,17 @@ define void @multilooped_exit(i32 %b) {
 ; CHECK-NEXT:    letp lr, .LBB18_8
 ; CHECK-NEXT:  .LBB18_9: @ %loop
 ; CHECK-NEXT:    @ in Loop: Header=BB18_3 Depth=1
-; CHECK-NEXT:    mov r1, r0
-; CHECK-NEXT:    subs.w lr, r12, #0
+; CHECK-NEXT:    cmp.w r12, #0
 ; CHECK-NEXT:    beq .LBB18_2
-; CHECK-NEXT:    b .LBB18_10
-; CHECK-NEXT:  .LBB18_10: @ Parent Loop BB18_3 Depth=1
+; CHECK-NEXT:  @ %bb.10: @ %loop
+; CHECK-NEXT:    @ in Loop: Header=BB18_3 Depth=1
+; CHECK-NEXT:    dlstp.8 lr, r0
+; CHECK-NEXT:  .LBB18_11: @ Parent Loop BB18_3 Depth=1
 ; CHECK-NEXT:    @ => This Inner Loop Header: Depth=2
-; CHECK-NEXT:    vctp.8 r1
-; CHECK-NEXT:    subs r1, #16
-; CHECK-NEXT:    vpst
-; CHECK-NEXT:    vstrbt.8 q0, [r3], #16
-; CHECK-NEXT:    subs.w lr, lr, #1
-; CHECK-NEXT:    bne .LBB18_10
+; CHECK-NEXT:    vstrb.8 q0, [r3], #16
+; CHECK-NEXT:    letp lr, .LBB18_11
 ; CHECK-NEXT:    b .LBB18_2
-; CHECK-NEXT:  .LBB18_11: @ %exit
+; CHECK-NEXT:  .LBB18_12: @ %exit
 ; CHECK-NEXT:    pop {r4, pc}
 entry:
   %cmp8 = icmp sgt i32 %b, 0

@@ -1112,10 +1112,10 @@ void test70(const __vector_pair *vpp, const __vector_pair *vp2) {
 
 // CHECK-LABEL: @test71(
 // CHECK-NEXT:  entry:
-// CHECK-NEXT:    [[TMP0:%.*]] = getelementptr <256 x i1>, <256 x i1>* [[VPP:%.*]], i64 128
+// CHECK-NEXT:    [[TMP0:%.*]] = getelementptr <256 x i1>, <256 x i1>* [[VPP:%.*]], i64 1024
 // CHECK-NEXT:    [[TMP1:%.*]] = bitcast <256 x i1>* [[TMP0]] to i8*
 // CHECK-NEXT:    [[TMP2:%.*]] = tail call <256 x i1> @llvm.ppc.vsx.lxvp(i8* [[TMP1]])
-// CHECK-NEXT:    [[TMP3:%.*]] = getelementptr <256 x i1>, <256 x i1>* [[VP2:%.*]], i64 128
+// CHECK-NEXT:    [[TMP3:%.*]] = getelementptr <256 x i1>, <256 x i1>* [[VP2:%.*]], i64 1024
 // CHECK-NEXT:    [[TMP4:%.*]] = bitcast <256 x i1>* [[TMP3]] to i8*
 // CHECK-NEXT:    tail call void @llvm.ppc.vsx.stxvp(<256 x i1> [[TMP2]], i8* [[TMP4]])
 // CHECK-NEXT:    ret void
@@ -1304,10 +1304,10 @@ void test82(const __vector_pair *vpp, const __vector_pair *vp2) {
 
 // CHECK-LABEL: @test83(
 // CHECK-NEXT:  entry:
-// CHECK-NEXT:    [[TMP0:%.*]] = getelementptr <256 x i1>, <256 x i1>* [[VPP:%.*]], i64 128
+// CHECK-NEXT:    [[TMP0:%.*]] = getelementptr <256 x i1>, <256 x i1>* [[VPP:%.*]], i64 1024
 // CHECK-NEXT:    [[TMP1:%.*]] = bitcast <256 x i1>* [[TMP0]] to i8*
 // CHECK-NEXT:    [[TMP2:%.*]] = tail call <256 x i1> @llvm.ppc.vsx.lxvp(i8* [[TMP1]])
-// CHECK-NEXT:    [[TMP3:%.*]] = getelementptr <256 x i1>, <256 x i1>* [[VP2:%.*]], i64 128
+// CHECK-NEXT:    [[TMP3:%.*]] = getelementptr <256 x i1>, <256 x i1>* [[VP2:%.*]], i64 1024
 // CHECK-NEXT:    [[TMP4:%.*]] = bitcast <256 x i1>* [[TMP3]] to i8*
 // CHECK-NEXT:    tail call void @llvm.ppc.vsx.stxvp(<256 x i1> [[TMP2]], i8* [[TMP4]])
 // CHECK-NEXT:    ret void

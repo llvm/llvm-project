@@ -89,7 +89,7 @@ CompilerInstance::CreateDefaultOutputFile(
 
   // Get the path of the output file
   std::string outputFilePath =
-      GetOutputFilePath(frontendOpts().outputFile_, baseName, extension);
+      GetOutputFilePath(frontendOpts().outputFile, baseName, extension);
 
   // Create the output file
   std::unique_ptr<llvm::raw_pwrite_stream> os =
@@ -150,7 +150,7 @@ bool CompilerInstance::ExecuteAction(FrontendAction &act) {
   invoc.setSemanticsOpts(*this->allCookedSources_);
 
   // Run the frontend action `act` for every input file.
-  for (const FrontendInputFile &fif : frontendOpts().inputs_) {
+  for (const FrontendInputFile &fif : frontendOpts().inputs) {
     if (act.BeginSourceFile(*this, fif)) {
       if (llvm::Error err = act.Execute()) {
         consumeError(std::move(err));

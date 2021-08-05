@@ -216,6 +216,7 @@ def untyped   : ValueType<8,    174>;  // Produces an untyped value
 def funcref   : ValueType<0,    175>;  // WebAssembly's funcref type
 def externref : ValueType<0,    176>;  // WebAssembly's externref type
 def x86amx    : ValueType<8192, 177>;  // X86 AMX value
+def i64x8     : ValueType<512,  178>;  // 8 Consecutive GPRs (AArch64)
 
 
 def token      : ValueType<0, 248>;  // TokenTy

@@ -9,12 +9,14 @@
 #include "AMDGPUOpenMP.h"
 #include "AMDGPU.h"
 #include "CommonArgs.h"
+#include "ToolChains/ROCm.h"
 #include "clang/Basic/DiagnosticDriver.h"
 #include "clang/Driver/Compilation.h"
 #include "clang/Driver/Driver.h"
 #include "clang/Driver/DriverDiagnostic.h"
 #include "clang/Driver/InputInfo.h"
 #include "clang/Driver/Options.h"
+#include "llvm/ADT/STLExtras.h"
 #include "llvm/Support/FileSystem.h"
 #include "llvm/Support/FormatAdapters.h"
 #include "llvm/Support/FormatVariadic.h"
@@ -232,6 +234,27 @@ void AMDGPUOpenMPToolChain::addClangTargetOptions(
 
   addOpenMPDeviceRTL(getDriver(), DriverArgs, CC1Args, BitcodeSuffix,
                      getTriple());
+
+  if (!DriverArgs.hasArg(options::OPT_l))
+    return;
+
+  auto Lm = DriverArgs.getAllArgValues(options::OPT_l);
+  bool HasLibm = false;
+  for (auto &Lib : Lm) {
+    if (Lib == "m") {
+      HasLibm = true;
+      break;
+    }
+  }
+
+  if (HasLibm) {
+    SmallVector<std::string, 12> BCLibs =
+        getCommonDeviceLibNames(DriverArgs, GPUArch);
+    llvm::for_each(BCLibs, [&](StringRef BCFile) {
+      CC1Args.push_back("-mlink-builtin-bitcode");
+      CC1Args.push_back(DriverArgs.MakeArgString(BCFile));
+    });
+  }
 }
 
 llvm::opt::DerivedArgList *AMDGPUOpenMPToolChain::TranslateArgs(

@@ -35,4 +35,4 @@ void link_ELF_riscv(std::unique_ptr<LinkGraph> G,
 } // end namespace jitlink
 } // end namespace llvm
 
-#endif // LLVM_EXECUTIONENGINE_JITLINK_ELF_RISCV64_H
+#endif // LLVM_EXECUTIONENGINE_JITLINK_ELF_RISCV_H

@@ -1344,14 +1344,15 @@ static int __kmp_test_queuing_lock_with_checks(kmp_queuing_lock_t *lck,
 }
 
 int __kmp_release_queuing_lock(kmp_queuing_lock_t *lck, kmp_int32 gtid) {
-  kmp_info_t *this_thr;
   volatile kmp_int32 *head_id_p = &lck->lk.head_id;
   volatile kmp_int32 *tail_id_p = &lck->lk.tail_id;
 
   KA_TRACE(1000,
            ("__kmp_release_queuing_lock: lck:%p, T#%d entering\n", lck, gtid));
   KMP_DEBUG_ASSERT(gtid >= 0);
-  this_thr = __kmp_thread_from_gtid(gtid);
+#if KMP_DEBUG || DEBUG_QUEUING_LOCKS
+  kmp_info_t *this_thr = __kmp_thread_from_gtid(gtid);
+#endif
   KMP_DEBUG_ASSERT(this_thr != NULL);
 #ifdef DEBUG_QUEUING_LOCKS
   TRACE_LOCK(gtid + 1, "rel ent");

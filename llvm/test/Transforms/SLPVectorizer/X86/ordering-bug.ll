@@ -28,9 +28,9 @@ define void @f(i1 %x) #0 {
 ; CHECK-NEXT:    br i1 [[ICMP_D0]], label [[IF_END:%.*]], label [[IF_THEN:%.*]]
 ; CHECK:       if.then:
 ; CHECK-NEXT:    [[AND0_TMP:%.*]] = and i64 [[TMP8]], 8
-; CHECK-NEXT:    [[TMP9:%.*]] = extractelement <2 x i64> [[TMP6]], i32 1
-; CHECK-NEXT:    [[TMP10:%.*]] = insertelement <2 x i64> poison, i64 [[AND0_TMP]], i32 0
-; CHECK-NEXT:    [[TMP11:%.*]] = insertelement <2 x i64> [[TMP10]], i64 [[TMP9]], i32 1
+; CHECK-NEXT:    [[TMP9:%.*]] = insertelement <2 x i64> poison, i64 [[AND0_TMP]], i32 0
+; CHECK-NEXT:    [[TMP10:%.*]] = extractelement <2 x i64> [[TMP6]], i32 1
+; CHECK-NEXT:    [[TMP11:%.*]] = insertelement <2 x i64> [[TMP9]], i64 [[TMP10]], i32 1
 ; CHECK-NEXT:    [[TMP12:%.*]] = and <2 x i64> [[TMP11]], [[TMP7]]
 ; CHECK-NEXT:    store <2 x i64> [[TMP12]], <2 x i64>* bitcast (%struct.a* @a to <2 x i64>*), align 8
 ; CHECK-NEXT:    br label [[IF_END]]

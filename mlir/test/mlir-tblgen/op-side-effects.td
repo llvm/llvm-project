@@ -25,13 +25,13 @@ def SideEffectOpB : TEST_Op<"side_effect_op_b",
 
 // CHECK: void SideEffectOpA::getEffects
 // CHECK:   for (::mlir::Value value : getODSOperands(0))
-// CHECK:     effects.emplace_back(MemoryEffects::Read::get(), value, ::mlir::SideEffects::DefaultResource::get());
-// CHECK:   effects.emplace_back(MemoryEffects::Read::get(), symbol(), ::mlir::SideEffects::DefaultResource::get());
-// CHECK:   effects.emplace_back(MemoryEffects::Write::get(), flat_symbol(), ::mlir::SideEffects::DefaultResource::get());
+// CHECK:     effects.emplace_back(::mlir::MemoryEffects::Read::get(), value, ::mlir::SideEffects::DefaultResource::get());
+// CHECK:   effects.emplace_back(::mlir::MemoryEffects::Read::get(), symbol(), ::mlir::SideEffects::DefaultResource::get());
+// CHECK:   effects.emplace_back(::mlir::MemoryEffects::Write::get(), flat_symbol(), ::mlir::SideEffects::DefaultResource::get());
 // CHECK:   if (auto symbolRef = optional_symbolAttr())
-// CHECK:     effects.emplace_back(MemoryEffects::Read::get(), symbolRef, ::mlir::SideEffects::DefaultResource::get());
+// CHECK:     effects.emplace_back(::mlir::MemoryEffects::Read::get(), symbolRef, ::mlir::SideEffects::DefaultResource::get());
 // CHECK:   for (::mlir::Value value : getODSResults(0))
-// CHECK:     effects.emplace_back(MemoryEffects::Allocate::get(), value, CustomResource::get());
+// CHECK:     effects.emplace_back(::mlir::MemoryEffects::Allocate::get(), value, CustomResource::get());
 
 // CHECK: void SideEffectOpB::getEffects
-// CHECK:   effects.emplace_back(MemoryEffects::Write::get(), CustomResource::get());
+// CHECK:   effects.emplace_back(::mlir::MemoryEffects::Write::get(), CustomResource::get());

@@ -1639,7 +1639,7 @@ ARMTTIImpl::getExtendedAddReductionCost(bool IsMLA, bool IsUnsigned,
     unsigned RevVTSize = ResVT.getSizeInBits();
     if (ValVT.getSizeInBits() <= 128 &&
         ((LT.second == MVT::v16i8 && RevVTSize <= 32) ||
-         (LT.second == MVT::v8i16 && RevVTSize <= (IsMLA ? 64 : 32)) ||
+         (LT.second == MVT::v8i16 && RevVTSize <= (IsMLA ? 64u : 32u)) ||
          (LT.second == MVT::v4i32 && RevVTSize <= 64)))
       return ST->getMVEVectorCostFactor(CostKind) * LT.first;
   }
@@ -2146,14 +2146,15 @@ bool ARMTTIImpl::emitGetActiveLaneMask() const {
   return true;
 }
 void ARMTTIImpl::getUnrollingPreferences(Loop *L, ScalarEvolution &SE,
-                                         TTI::UnrollingPreferences &UP) {
+                                         TTI::UnrollingPreferences &UP,
+                                         OptimizationRemarkEmitter *ORE) {
   // Enable Upper bound unrolling universally, not dependant upon the conditions
   // below.
   UP.UpperBound = true;
 
   // Only currently enable these preferences for M-Class cores.
   if (!ST->isMClass())
-    return BasicTTIImplBase::getUnrollingPreferences(L, SE, UP);
+    return BasicTTIImplBase::getUnrollingPreferences(L, SE, UP, ORE);
 
   // Disable loop unrolling for Oz and Os.
   UP.OptSizeThreshold = 0;

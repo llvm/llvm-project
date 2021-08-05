@@ -6,7 +6,7 @@ declare void @byval_i32(i32* byval(i32) %ptr)
 define void @call_byval_i32(i32* %incoming) {
 ; CHECK-LABEL: call_byval_i32:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    sub sp, sp, #32 // =32
+; CHECK-NEXT:    sub sp, sp, #32
 ; CHECK-NEXT:    str x30, [sp, #16] // 8-byte Folded Spill
 ; CHECK-NEXT:    .cfi_def_cfa_offset 32
 ; CHECK-NEXT:    .cfi_offset w30, -16
@@ -14,7 +14,7 @@ define void @call_byval_i32(i32* %incoming) {
 ; CHECK-NEXT:    str w8, [sp]
 ; CHECK-NEXT:    bl byval_i32
 ; CHECK-NEXT:    ldr x30, [sp, #16] // 8-byte Folded Reload
-; CHECK-NEXT:    add sp, sp, #32 // =32
+; CHECK-NEXT:    add sp, sp, #32
 ; CHECK-NEXT:    ret
   call void @byval_i32(i32* byval(i32) %incoming)
   ret void
@@ -25,10 +25,10 @@ declare void @byval_a64i32([64 x i32]* byval([64 x i32]) %ptr)
 define void @call_byval_a64i32([64 x i32]* %incoming) {
 ; CHECK-LABEL: call_byval_a64i32:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    sub sp, sp, #288 // =288
+; CHECK-NEXT:    sub sp, sp, #288
 ; CHECK-NEXT:    stp x29, x30, [sp, #256] // 16-byte Folded Spill
 ; CHECK-NEXT:    str x28, [sp, #272] // 8-byte Folded Spill
-; CHECK-NEXT:    add x29, sp, #256 // =256
+; CHECK-NEXT:    add x29, sp, #256
 ; CHECK-NEXT:    .cfi_def_cfa w29, 32
 ; CHECK-NEXT:    .cfi_offset w28, -16
 ; CHECK-NEXT:    .cfi_offset w30, -24
@@ -68,7 +68,7 @@ define void @call_byval_a64i32([64 x i32]* %incoming) {
 ; CHECK-NEXT:    bl byval_a64i32
 ; CHECK-NEXT:    ldr x28, [sp, #272] // 8-byte Folded Reload
 ; CHECK-NEXT:    ldp x29, x30, [sp, #256] // 16-byte Folded Reload
-; CHECK-NEXT:    add sp, sp, #288 // =288
+; CHECK-NEXT:    add sp, sp, #288
 ; CHECK-NEXT:    ret
   call void @byval_a64i32([64 x i32]* byval([64 x i32]) %incoming)
   ret void

@@ -1342,13 +1342,16 @@ void IHexELFBuilder::addDataSections() {
       if (R.HexData.empty())
         continue;
       RecAddr = R.Addr + SegmentAddr + BaseAddr;
-      if (!Section || Section->Addr + Section->Size != RecAddr)
+      if (!Section || Section->Addr + Section->Size != RecAddr) {
         // OriginalOffset field is only used to sort section properly, so
-        // instead of keeping track of real offset in IHEX file, we use
-        // section number.
+        // instead of keeping track of real offset in IHEX file, and as
+        // Object::sortSections() uses llvm::stable_sort(), we can just set to a
+        // constant (zero).
         Section = &Obj->addSection<OwnedDataSection>(
-            ".sec" + std::to_string(SecNo++), RecAddr,
-            ELF::SHF_ALLOC | ELF::SHF_WRITE, SecNo);
+            ".sec" + std::to_string(SecNo), RecAddr,
+            ELF::SHF_ALLOC | ELF::SHF_WRITE, 0);
+        SecNo++;
+      }
       Section->appendHexData(R.HexData);
       break;
     case IHexRecord::EndOfFile:

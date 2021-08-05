@@ -1775,11 +1775,18 @@ void ItaniumRecordLayoutBuilder::LayoutBitField(const FieldDecl *D) {
       !D->getIdentifier())
     FieldAlign = UnpackedFieldAlign = 1;
 
-  // On AIX, zero-width bitfields pad out to the alignment boundary, but then
-  // do not affect overall record alignment if there is a pragma pack or
-  // pragma align(packed).
-  if (isAIXLayout(Context) && !MaxFieldAlignment.isZero() && !FieldSize)
-    FieldAlign = std::min(FieldAlign, MaxFieldAlignmentInBits);
+  // On AIX, zero-width bitfields pad out to the natural alignment boundary,
+  // but do not increase the alignment greater than the MaxFieldAlignment, or 1
+  // if packed.
+  if (isAIXLayout(Context) && !FieldSize) {
+    if (FieldPacked)
+      FieldAlign = 1;
+    if (!MaxFieldAlignment.isZero()) {
+      UnpackedFieldAlign =
+          std::min(UnpackedFieldAlign, MaxFieldAlignmentInBits);
+      FieldAlign = std::min(FieldAlign, MaxFieldAlignmentInBits);
+    }
+  }
 
   // Diagnose differences in layout due to padding or packing.
   if (!UseExternalLayout)

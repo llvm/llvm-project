@@ -18,3 +18,21 @@ using namespace llvm;
 LLVM_INSTANTIATE_REGISTRY(GCRegistry)
 
 GCStrategy::GCStrategy() = default;
+
+std::unique_ptr<GCStrategy> llvm::getGCStrategy(const StringRef Name) {
+  for (auto &S : GCRegistry::entries())
+    if (S.getName() == Name)
+      return S.instantiate();
+
+  if (GCRegistry::begin() == GCRegistry::end()) {
+    // In normal operation, the registry should not be empty.  There should
+    // be the builtin GCs if nothing else.  The most likely scenario here is
+    // that we got here without running the initializers used by the Registry
+    // itself and it's registration mechanism.
+    const std::string error =
+        std::string("unsupported GC: ") + Name.str() +
+        " (did you remember to link and initialize the library?)";
+    report_fatal_error(error);
+  } else
+    report_fatal_error(std::string("unsupported GC: ") + Name.str());
+}

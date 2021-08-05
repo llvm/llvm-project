@@ -1162,12 +1162,16 @@ void test111(void) {
 
 vector unsigned char test112(void) {
 // CHECK-BE: @llvm.ppc.vsx.lxvll(i8* %{{.+}}, i64
+// CHECK-BE: @llvm.ppc.altivec.lvsr(i8* %{{.+}}
+// CHECK-BE: @llvm.ppc.altivec.vperm
 // CHECK: @llvm.ppc.vsx.lxvll(i8* %{{.+}}, i64
 // CHECK: @llvm.ppc.altivec.lvsr(i8* %{{.+}}
 // CHECK: @llvm.ppc.altivec.vperm
   return vec_xl_len_r(uc,0);
 }
 void test113(void) {
+// CHECK-BE: @llvm.ppc.altivec.lvsl(i8* %{{.+}}
+// CHECK-BE: @llvm.ppc.altivec.vperm
 // CHECK-BE: @llvm.ppc.vsx.stxvll(<4 x i32> %{{.+}}, i8* %{{.+}}, i64
 // CHECK: @llvm.ppc.altivec.lvsl(i8* %{{.+}}
 // CHECK: @llvm.ppc.altivec.vperm

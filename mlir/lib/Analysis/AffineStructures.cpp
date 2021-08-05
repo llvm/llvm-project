@@ -560,12 +560,13 @@ void FlatAffineConstraints::convertLoopIVSymbolsToDims() {
   }
 }
 
-void FlatAffineConstraints::addInductionVarOrTerminalSymbol(Value id) {
+void FlatAffineConstraints::addInductionVarOrTerminalSymbol(
+    Value id, bool allowNonTerminal) {
   if (containsId(id))
     return;
 
   // Caller is expected to fully compose map/operands if necessary.
-  assert((isTopLevelValue(id) || isForInductionVar(id)) &&
+  assert((allowNonTerminal || isTopLevelValue(id) || isForInductionVar(id)) &&
          "non-terminal symbol / loop IV expected");
   // Outer loop IVs could be used in forOp's bounds.
   if (auto loop = getForInductionVarOwner(id)) {
@@ -1524,59 +1525,62 @@ static bool detectAsFloorDiv(const FlatAffineConstraints &cst, unsigned pos,
   // divisor * id <=  expr                    <-- Upper bound for 'id'
   // Then, 'id' is equivalent to 'expr floordiv divisor'.  (where divisor > 1).
   //
-  // For example, if -32*k + 16*i + j >= 0
-  //                  32*k - 16*i - j + 31 >= 0   <=>
-  //             k = ( 16*i + j ) floordiv 32
-  unsigned seenDividends = 0;
+  // For example:
+  //    32*k >= 16*i + j - 31                 <-- Lower bound for 'k'
+  //    32*k  <= 16*i + j                     <-- Upper bound for 'k'
+  //    expr = 16*i + j, divisor = 32
+  //    k = ( 16*i + j ) floordiv 32
+  //
+  //    4q >= i + j - 2                       <-- Lower bound for 'q'
+  //    4q <= i + j + 1                       <-- Upper bound for 'q'
+  //    expr = i + j + 1, divisor = 4
+  //    q = (i + j + 1) floordiv 4
   for (auto ubPos : ubIndices) {
     for (auto lbPos : lbIndices) {
-      // Check if the lower bound's constant term is divisor - 1. The
-      // 'divisor' here is cst.atIneq(lbPos, pos) and we already know that it's
-      // positive (since cst.Ineq(lbPos, ...) is a lower bound expr for 'pos'.
+      // Due to the form of the inequalities, the sum of constants of upper
+      // bound and lower bound is divisor - 1. The 'divisor' here is
+      // cst.atIneq(lbPos, pos) and we already know that it's positive (since
+      // cst.Ineq(lbPos, ...) is a lower bound expr for 'pos'.
+      // Check if this sum of constants is divisor - 1.
       int64_t divisor = cst.atIneq(lbPos, pos);
-      int64_t lbConstTerm = cst.atIneq(lbPos, cst.getNumCols() - 1);
-      if (lbConstTerm != divisor - 1)
-        continue;
-      // Check if upper bound's constant term is 0.
-      if (cst.atIneq(ubPos, cst.getNumCols() - 1) != 0)
+      int64_t constantSum = cst.atIneq(lbPos, cst.getNumCols() - 1) +
+                            cst.atIneq(ubPos, cst.getNumCols() - 1);
+      if (constantSum != divisor - 1)
         continue;
       // For the remaining part, check if the lower bound expr's coeff's are
       // negations of corresponding upper bound ones'.
       unsigned c, f;
-      for (c = 0, f = cst.getNumCols() - 1; c < f; c++) {
+      for (c = 0, f = cst.getNumCols() - 1; c < f; ++c)
         if (cst.atIneq(lbPos, c) != -cst.atIneq(ubPos, c))
           break;
-        if (c != pos && cst.atIneq(lbPos, c) != 0)
-          seenDividends++;
-      }
       // Lb coeff's aren't negative of ub coeff's (for the non constant term
       // part).
       if (c < f)
         continue;
-      if (seenDividends >= 1) {
-        // Construct the dividend expression.
-        auto dividendExpr = getAffineConstantExpr(0, context);
-        unsigned c, f;
-        for (c = 0, f = cst.getNumCols() - 1; c < f; c++) {
-          if (c == pos)
-            continue;
-          int64_t ubVal = cst.atIneq(ubPos, c);
-          if (ubVal == 0)
-            continue;
-          if (!exprs[c])
-            break;
-          dividendExpr = dividendExpr + ubVal * exprs[c];
-        }
-        // Expression can't be constructed as it depends on a yet unknown
-        // identifier.
-        // TODO: Visit/compute the identifiers in an order so that this doesn't
-        // happen. More complex but much more efficient.
-        if (c < f)
+      // Due to the form of the upper bound inequality, the constant term of
+      // `expr` is the constant term of upper bound inequality.
+      int64_t divConstantTerm = cst.atIneq(ubPos, cst.getNumCols() - 1);
+      // Construct the dividend expression.
+      auto dividendExpr = getAffineConstantExpr(divConstantTerm, context);
+      for (c = 0, f = cst.getNumCols() - 1; c < f; ++c) {
+        if (c == pos)
           continue;
-        // Successfully detected the floordiv.
-        exprs[pos] = dividendExpr.floorDiv(divisor);
-        return true;
+        int64_t ubVal = cst.atIneq(ubPos, c);
+        if (ubVal == 0)
+          continue;
+        if (!exprs[c])
+          break;
+        dividendExpr = dividendExpr + ubVal * exprs[c];
       }
+      // Expression can't be constructed as it depends on a yet unknown
+      // identifier.
+      // TODO: Visit/compute the identifiers in an order so that this doesn't
+      // happen. More complex but much more efficient.
+      if (c < f)
+        continue;
+      // Successfully detected the floordiv.
+      exprs[pos] = dividendExpr.floorDiv(divisor);
+      return true;
     }
   }
   return false;
@@ -1941,10 +1945,9 @@ void FlatAffineConstraints::getSliceBounds(unsigned offset, unsigned num,
   }
 }
 
-LogicalResult
-FlatAffineConstraints::addLowerOrUpperBound(unsigned pos, AffineMap boundMap,
-                                            ValueRange boundOperands, bool eq,
-                                            bool lower) {
+LogicalResult FlatAffineConstraints::addLowerOrUpperBound(
+    unsigned pos, AffineMap boundMap, ValueRange boundOperands, bool eq,
+    bool lower, bool composeMapAndOperands) {
   assert(pos < getNumDimAndSymbolIds() && "invalid position");
   // Equality follows the logic of lower bound except that we add an equality
   // instead of an inequality.
@@ -1956,11 +1959,13 @@ FlatAffineConstraints::addLowerOrUpperBound(unsigned pos, AffineMap boundMap,
   // transitively get to terminal symbols or loop IVs.
   auto map = boundMap;
   SmallVector<Value, 4> operands(boundOperands.begin(), boundOperands.end());
-  fullyComposeAffineMapAndOperands(&map, &operands);
+  if (composeMapAndOperands)
+    fullyComposeAffineMapAndOperands(&map, &operands);
   map = simplifyAffineMap(map);
   canonicalizeMapAndOperands(&map, &operands);
   for (auto operand : operands)
-    addInductionVarOrTerminalSymbol(operand);
+    addInductionVarOrTerminalSymbol(
+        operand, /*allowNonTerminal=*/!composeMapAndOperands);
 
   FlatAffineConstraints localVarCst;
   std::vector<SmallVector<int64_t, 8>> flatExprs;
@@ -2001,6 +2006,10 @@ FlatAffineConstraints::addLowerOrUpperBound(unsigned pos, AffineMap boundMap,
   }
 
   for (const auto &flatExpr : flatExprs) {
+    // Invalid bound: pos appears among the operands.
+    if (llvm::find(positions, pos) != positions.end())
+      continue;
+
     SmallVector<int64_t, 4> ineq(getNumCols(), 0);
     ineq[pos] = lower ? 1 : -1;
     // Dims and symbols.

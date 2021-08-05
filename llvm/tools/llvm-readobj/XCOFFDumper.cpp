@@ -460,7 +460,10 @@ void XCOFFDumper::printSymbols() {
 void XCOFFDumper::printStringTable() {
   DictScope DS(W, "StringTable");
   StringRef StrTable = Obj.getStringTable();
-  printAsStringList(StrTable);
+  // Print strings from the fifth byte, since the first four bytes contain the
+  // length (in bytes) of the string table (including the length field).
+  if (StrTable.size() > 4)
+    printAsStringList(StrTable, 4);
 }
 
 void XCOFFDumper::printDynamicSymbols() {

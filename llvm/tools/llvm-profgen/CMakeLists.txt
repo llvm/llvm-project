@@ -19,5 +19,4 @@ add_llvm_tool(llvm-profgen
   CSPreInliner.cpp
   ProfiledBinary.cpp
   ProfileGenerator.cpp
-  PseudoProbe.cpp
   )

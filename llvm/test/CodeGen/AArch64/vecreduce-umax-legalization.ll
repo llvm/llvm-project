@@ -87,11 +87,11 @@ define i128 @test_v1i128(<1 x i128> %a) nounwind {
 define i64 @test_v2i64(<2 x i64> %a) nounwind {
 ; CHECK-LABEL: test_v2i64:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:   mov     x8, v0.d[1]
-; CHECK-NEXT:   fmov    x9, d0
-; CHECK-NEXT:   cmp     x9, x8
-; CHECK-NEXT:   csel    x0, x9, x8, hi
-; CHECK-NEXT:   ret
+; CHECK-NEXT:    ext v1.16b, v0.16b, v0.16b, #8
+; CHECK-NEXT:    cmhi d2, d0, d1
+; CHECK-NEXT:    bif v0.8b, v1.8b, v2.8b
+; CHECK-NEXT:    fmov x0, d0
+; CHECK-NEXT:    ret
   %b = call i64 @llvm.vector.reduce.umax.v2i64(<2 x i64> %a)
   ret i64 %b
 }

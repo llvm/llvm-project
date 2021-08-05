@@ -1924,9 +1924,10 @@ void *___kmp_page_allocate(size_t size KMP_SRC_LOC_DECL) {
    In debug mode, fill the memory block with 0xEF before call to free(). */
 void ___kmp_free(void *ptr KMP_SRC_LOC_DECL) {
   kmp_mem_descr_t descr;
+#if KMP_DEBUG
   kmp_uintptr_t addr_allocated; // Address returned by malloc().
   kmp_uintptr_t addr_aligned; // Aligned address passed by caller.
-
+#endif
   KE_TRACE(25,
            ("-> __kmp_free( %p ) called from %s:%d\n", ptr KMP_SRC_LOC_PARM));
   KMP_ASSERT(ptr != NULL);
@@ -1938,18 +1939,15 @@ void ___kmp_free(void *ptr KMP_SRC_LOC_DECL) {
                 "ptr_aligned=%p, size_aligned=%d\n",
                 descr.ptr_allocated, (int)descr.size_allocated,
                 descr.ptr_aligned, (int)descr.size_aligned));
-
+#if KMP_DEBUG
   addr_allocated = (kmp_uintptr_t)descr.ptr_allocated;
   addr_aligned = (kmp_uintptr_t)descr.ptr_aligned;
-
   KMP_DEBUG_ASSERT(addr_aligned % CACHE_LINE == 0);
   KMP_DEBUG_ASSERT(descr.ptr_aligned == ptr);
   KMP_DEBUG_ASSERT(addr_allocated + sizeof(kmp_mem_descr_t) <= addr_aligned);
   KMP_DEBUG_ASSERT(descr.size_aligned < descr.size_allocated);
   KMP_DEBUG_ASSERT(addr_aligned + descr.size_aligned <=
                    addr_allocated + descr.size_allocated);
-
-#ifdef KMP_DEBUG
   memset(descr.ptr_allocated, 0xEF, descr.size_allocated);
 // Fill memory block with 0xEF, it helps catch using freed memory.
 #endif

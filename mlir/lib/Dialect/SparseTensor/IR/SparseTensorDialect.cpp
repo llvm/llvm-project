@@ -208,9 +208,25 @@ static LogicalResult isMatchingWidth(Value result, unsigned width) {
 }
 
 static LogicalResult verify(NewOp op) {
-  if (!getSparseTensorEncoding(op.getResult().getType()))
+  if (!getSparseTensorEncoding(op.result().getType()))
     return op.emitError("expected a sparse tensor result");
   return success();
+}
+
+static LogicalResult verify(ConvertOp op) {
+  if (auto tp1 = op.source().getType().dyn_cast<RankedTensorType>()) {
+    if (auto tp2 = op.dest().getType().dyn_cast<RankedTensorType>()) {
+      assert(tp1.getRank() == tp2.getRank());
+      auto shape1 = tp1.getShape();
+      auto shape2 = tp2.getShape();
+      for (unsigned d = 0, rank = tp1.getRank(); d < rank; d++)
+        if (shape1[d] != shape2[d])
+          return op.emitError()
+                 << "unexpected conversion mismatch in dimension " << d;
+      return success();
+    }
+  }
+  return op.emitError("unexpected type in convert");
 }
 
 static LogicalResult verify(ToPointersOp op) {

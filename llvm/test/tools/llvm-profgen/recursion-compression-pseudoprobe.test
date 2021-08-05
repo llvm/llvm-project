@@ -3,6 +3,9 @@
 ; RUN: FileCheck %s --input-file %t -check-prefix=CHECK-UNCOMPRESS
 ; RUN: llvm-profgen --format=text --perfscript=%S/Inputs/recursion-compression-pseudoprobe.perfscript --binary=%S/Inputs/recursion-compression-pseudoprobe.perfbin --output=%t --show-unwinder-output --profile-summary-cold-count=0 | FileCheck %s --check-prefix=CHECK-UNWINDER
 ; RUN: FileCheck %s --input-file %t
+; RUN: llvm-profgen --format=text --perfscript=%S/Inputs/recursion-compression-pseudoprobe-nommap.perfscript --binary=%S/Inputs/recursion-compression-pseudoprobe.perfbin --output=%t --show-unwinder-output --profile-summary-cold-count=0 | FileCheck %s --check-prefix=CHECK-UNWINDER
+; RUN: FileCheck %s --input-file %t
+
 
 ; CHECK-UNCOMPRESS: [main:2 @ foo:5 @ fa:8 @ fa:7 @ fb:5 @ fb:5 @ fb:5 @ fb:5 @ fb:5 @ fb:5 @ fb:5 @ fb:5 @ fb:6 @ fa:8 @ fa:7 @ fb:6 @ fa]:4:1
 ; CHECK-UNCOMPRESS:  1: 1

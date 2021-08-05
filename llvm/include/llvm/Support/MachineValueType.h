@@ -270,9 +270,10 @@ namespace llvm {
       funcref        = 175,    // WebAssembly's funcref type
       externref      = 176,    // WebAssembly's externref type
       x86amx         = 177,    // This is an X86 AMX value
+      i64x8          = 178,    // 8 Consecutive GPRs (AArch64)
 
       FIRST_VALUETYPE =  1,    // This is always the beginning of the list.
-      LAST_VALUETYPE = x86amx, // This always remains at the end of the list.
+      LAST_VALUETYPE = i64x8,  // This always remains at the end of the list.
       VALUETYPE_SIZE = LAST_VALUETYPE + 1,
 
       // This is the current maximum for LAST_VALUETYPE.
@@ -987,6 +988,7 @@ namespace llvm {
       case nxv16f16:
       case nxv8f32:
       case nxv4f64: return TypeSize::Scalable(256);
+      case i64x8:
       case v512i1:
       case v64i8:
       case v32i16:

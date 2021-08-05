@@ -43,22 +43,22 @@ define aarch64_sve_vector_pcs <vscale x 4 x i32> @caller_with_many_sve_arg(<vsca
 ;      p3 =  %p3
 ;      x0 = &%p4
 ;      x1 = &%p5
-define aarch64_sve_vector_pcs <vscale x 4 x i1> @callee_with_many_svepred_arg(<vscale x 4 x i1> %p0, <vscale x 4 x i1> %p1, <vscale x 4 x i1> %p2, <vscale x 4 x i1> %p3, <vscale x 4 x i1> %p4, <vscale x 4 x i1> %p5) {
+define aarch64_sve_vector_pcs <vscale x 16 x i1> @callee_with_many_svepred_arg(<vscale x 16 x i1> %p0, <vscale x 16 x i1> %p1, <vscale x 16 x i1> %p2, <vscale x 16 x i1> %p3, <vscale x 16 x i1> %p4, <vscale x 16 x i1> %p5) {
 ; CHECK: name: callee_with_many_svepred_arg
 ; CHECK-DAG: [[BASE:%[0-9]+]]:gpr64common = COPY $x1
 ; CHECK-DAG: [[RES:%[0-9]+]]:ppr = LDR_PXI [[BASE]], 0
 ; CHECK-DAG: $p0 = COPY [[RES]]
 ; CHECK:     RET_ReallyLR implicit $p0
-  ret <vscale x 4 x i1> %p5
+  ret <vscale x 16 x i1> %p5
 }
 
 ; Test that p4 and p5 are passed by reference.
-define aarch64_sve_vector_pcs <vscale x 4 x i1> @caller_with_many_svepred_arg(<vscale x 4 x i1> %p) {
+define aarch64_sve_vector_pcs <vscale x 16 x i1> @caller_with_many_svepred_arg(<vscale x 16 x i1> %p) {
 ; CHECK: name: caller_with_many_svepred_arg
 ; CHECK: stack:
-; CHECK:      - { id: 0, name: '', type: default, offset: 0, size: 1, alignment: 4,
+; CHECK:      - { id: 0, name: '', type: default, offset: 0, size: 2, alignment: 2,
 ; CHECK-NEXT:     stack-id: scalable-vector
-; CHECK:      - { id: 1, name: '', type: default, offset: 0, size: 1, alignment: 4,
+; CHECK:      - { id: 1, name: '', type: default, offset: 0, size: 2, alignment: 2,
 ; CHECK-NEXT:     stack-id: scalable-vector
 ; CHECK-DAG: STR_PXI %{{[0-9]+}}, %stack.0, 0
 ; CHECK-DAG: STR_PXI %{{[0-9]+}}, %stack.1, 0
@@ -68,8 +68,8 @@ define aarch64_sve_vector_pcs <vscale x 4 x i1> @caller_with_many_svepred_arg(<v
 ; CHECK-DAG: $x1 = COPY [[BASE2]]
 ; CHECK-NEXT: BL @callee_with_many_svepred_arg
 ; CHECK:     RET_ReallyLR implicit $p0
-  %ret = call aarch64_sve_vector_pcs <vscale x 4 x i1> @callee_with_many_svepred_arg(<vscale x 4 x i1> %p, <vscale x 4 x i1> %p, <vscale x 4 x i1> %p, <vscale x 4 x i1> %p, <vscale x 4 x i1> %p, <vscale x 4 x i1> %p)
-  ret <vscale x 4 x i1> %ret
+  %ret = call aarch64_sve_vector_pcs <vscale x 16 x i1> @callee_with_many_svepred_arg(<vscale x 16 x i1> %p, <vscale x 16 x i1> %p, <vscale x 16 x i1> %p, <vscale x 16 x i1> %p, <vscale x 16 x i1> %p, <vscale x 16 x i1> %p)
+  ret <vscale x 16 x i1> %ret
 }
 
 ; Test that z8 and z9, passed by reference, are loaded from a location that is passed on the stack.

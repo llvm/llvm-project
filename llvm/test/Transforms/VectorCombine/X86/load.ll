@@ -647,3 +647,27 @@ define <8 x i16> @gep1_load_v2i16_extract_insert_v8i16(<2 x i16>* align 1 derefe
   %r = insertelement <8 x i16> undef, i16 %s, i64 0
   ret <8 x i16> %r
 }
+
+; PR30986 - split vector loads for scalarized operations
+define <2 x i64> @PR30986(<2 x i64>* %0) {
+; CHECK-LABEL: @PR30986(
+; CHECK-NEXT:    [[TMP2:%.*]] = getelementptr inbounds <2 x i64>, <2 x i64>* [[TMP0:%.*]], i32 0, i32 0
+; CHECK-NEXT:    [[TMP3:%.*]] = load i64, i64* [[TMP2]], align 16
+; CHECK-NEXT:    [[TMP4:%.*]] = tail call i64 @llvm.ctpop.i64(i64 [[TMP3]])
+; CHECK-NEXT:    [[TMP5:%.*]] = insertelement <2 x i64> undef, i64 [[TMP4]], i32 0
+; CHECK-NEXT:    [[TMP6:%.*]] = getelementptr inbounds <2 x i64>, <2 x i64>* [[TMP0]], i32 0, i32 1
+; CHECK-NEXT:    [[TMP7:%.*]] = load i64, i64* [[TMP6]], align 8
+; CHECK-NEXT:    [[TMP8:%.*]] = tail call i64 @llvm.ctpop.i64(i64 [[TMP7]])
+; CHECK-NEXT:    [[TMP9:%.*]] = insertelement <2 x i64> [[TMP5]], i64 [[TMP8]], i32 1
+; CHECK-NEXT:    ret <2 x i64> [[TMP9]]
+;
+  %2 = load <2 x i64>, <2 x i64>* %0, align 16
+  %3 = extractelement <2 x i64> %2, i32 0
+  %4 = tail call i64 @llvm.ctpop.i64(i64 %3)
+  %5 = insertelement <2 x i64> undef, i64 %4, i32 0
+  %6 = extractelement <2 x i64> %2, i32 1
+  %7 = tail call i64 @llvm.ctpop.i64(i64 %6)
+  %8 = insertelement <2 x i64> %5, i64 %7, i32 1
+  ret <2 x i64> %8
+}
+declare i64 @llvm.ctpop.i64(i64)

@@ -273,7 +273,7 @@ define i1 @add_ugecmp_bad_i16_i8_add(i16 %x, i16 %y) nounwind {
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    add w8, w0, w1
 ; CHECK-NEXT:    and w8, w8, #0xffff
-; CHECK-NEXT:    cmp w8, #255 // =255
+; CHECK-NEXT:    cmp w8, #255
 ; CHECK-NEXT:    cset w0, hi
 ; CHECK-NEXT:    ret
   %tmp0 = add i16 %x, %y
@@ -285,7 +285,7 @@ define i1 @add_ugecmp_bad_i16_i8_add(i16 %x, i16 %y) nounwind {
 define i1 @add_ugecmp_bad_i16_i8_cmp(i16 %x, i16 %y) nounwind {
 ; CHECK-LABEL: add_ugecmp_bad_i16_i8_cmp:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    add w8, w0, #128 // =128
+; CHECK-NEXT:    add w8, w0, #128
 ; CHECK-NEXT:    and w8, w8, #0xffff
 ; CHECK-NEXT:    cmp w8, w1, uxth
 ; CHECK-NEXT:    cset w0, hs
@@ -299,9 +299,9 @@ define i1 @add_ugecmp_bad_i16_i8_cmp(i16 %x, i16 %y) nounwind {
 define i1 @add_ugecmp_bad_i8_i16(i16 %x) nounwind {
 ; CHECK-LABEL: add_ugecmp_bad_i8_i16:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    add w8, w0, #128 // =128
+; CHECK-NEXT:    add w8, w0, #128
 ; CHECK-NEXT:    and w8, w8, #0xffff
-; CHECK-NEXT:    cmp w8, #127 // =127
+; CHECK-NEXT:    cmp w8, #127
 ; CHECK-NEXT:    cset w0, hi
 ; CHECK-NEXT:    ret
   %tmp0 = add i16 %x, 128 ; 1U << (8-1)
@@ -313,9 +313,9 @@ define i1 @add_ugecmp_bad_i8_i16(i16 %x) nounwind {
 define i1 @add_ugecmp_bad_i16_i8_c0notpoweroftwo(i16 %x) nounwind {
 ; CHECK-LABEL: add_ugecmp_bad_i16_i8_c0notpoweroftwo:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    add w8, w0, #192 // =192
+; CHECK-NEXT:    add w8, w0, #192
 ; CHECK-NEXT:    and w8, w8, #0xffff
-; CHECK-NEXT:    cmp w8, #255 // =255
+; CHECK-NEXT:    cmp w8, #255
 ; CHECK-NEXT:    cset w0, hi
 ; CHECK-NEXT:    ret
   %tmp0 = add i16 %x, 192 ; (1U << (8-1)) + (1U << (8-1-1))
@@ -327,9 +327,9 @@ define i1 @add_ugecmp_bad_i16_i8_c0notpoweroftwo(i16 %x) nounwind {
 define i1 @add_ugecmp_bad_i16_i8_c1notpoweroftwo(i16 %x) nounwind {
 ; CHECK-LABEL: add_ugecmp_bad_i16_i8_c1notpoweroftwo:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    add w8, w0, #128 // =128
+; CHECK-NEXT:    add w8, w0, #128
 ; CHECK-NEXT:    and w8, w8, #0xffff
-; CHECK-NEXT:    cmp w8, #767 // =767
+; CHECK-NEXT:    cmp w8, #767
 ; CHECK-NEXT:    cset w0, hi
 ; CHECK-NEXT:    ret
   %tmp0 = add i16 %x, 128 ; 1U << (8-1)
@@ -341,9 +341,9 @@ define i1 @add_ugecmp_bad_i16_i8_c1notpoweroftwo(i16 %x) nounwind {
 define i1 @add_ugecmp_bad_i16_i8_magic(i16 %x) nounwind {
 ; CHECK-LABEL: add_ugecmp_bad_i16_i8_magic:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    add w8, w0, #64 // =64
+; CHECK-NEXT:    add w8, w0, #64
 ; CHECK-NEXT:    and w8, w8, #0xffff
-; CHECK-NEXT:    cmp w8, #255 // =255
+; CHECK-NEXT:    cmp w8, #255
 ; CHECK-NEXT:    cset w0, hi
 ; CHECK-NEXT:    ret
   %tmp0 = add i16 %x, 64 ; 1U << (8-1-1)
@@ -355,9 +355,9 @@ define i1 @add_ugecmp_bad_i16_i8_magic(i16 %x) nounwind {
 define i1 @add_ugecmp_bad_i16_i4(i16 %x) nounwind {
 ; CHECK-LABEL: add_ugecmp_bad_i16_i4:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    add w8, w0, #8 // =8
+; CHECK-NEXT:    add w8, w0, #8
 ; CHECK-NEXT:    and w8, w8, #0xffff
-; CHECK-NEXT:    cmp w8, #15 // =15
+; CHECK-NEXT:    cmp w8, #15
 ; CHECK-NEXT:    cset w0, hi
 ; CHECK-NEXT:    ret
   %tmp0 = add i16 %x, 8 ; 1U << (4-1)
@@ -369,9 +369,9 @@ define i1 @add_ugecmp_bad_i16_i4(i16 %x) nounwind {
 define i1 @add_ugecmp_bad_i24_i8(i24 %x) nounwind {
 ; CHECK-LABEL: add_ugecmp_bad_i24_i8:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    add w8, w0, #128 // =128
+; CHECK-NEXT:    add w8, w0, #128
 ; CHECK-NEXT:    and w8, w8, #0xffffff
-; CHECK-NEXT:    cmp w8, #255 // =255
+; CHECK-NEXT:    cmp w8, #255
 ; CHECK-NEXT:    cset w0, hi
 ; CHECK-NEXT:    ret
   %tmp0 = add i24 %x, 128 ; 1U << (8-1)

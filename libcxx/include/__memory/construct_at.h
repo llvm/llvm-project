@@ -12,7 +12,10 @@
 
 #include <__config>
 #include <__debug>
+#include <__iterator/access.h>
+#include <__memory/addressof.h>
 #include <__utility/forward.h>
+#include <type_traits>
 #include <utility>
 
 #if !defined(_LIBCPP_HAS_NO_PRAGMA_SYSTEM_HEADER)
@@ -43,11 +46,39 @@ constexpr _Tp* construct_at(_Tp* __location, _Args&& ...__args) {
 
 #if _LIBCPP_STD_VER > 14
 
-template <class _Tp>
-inline _LIBCPP_INLINE_VISIBILITY _LIBCPP_CONSTEXPR_AFTER_CXX17
+template <class _ForwardIterator>
+_LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_AFTER_CXX17
+void destroy(_ForwardIterator, _ForwardIterator);
+
+template <class _Tp, _EnableIf<!is_array_v<_Tp>, int> = 0>
+_LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_AFTER_CXX17
 void destroy_at(_Tp* __loc) {
     _LIBCPP_ASSERT(__loc, "null pointer given to destroy_at");
     __loc->~_Tp();
+}
+
+#if _LIBCPP_STD_VER > 17
+template <class _Tp, _EnableIf<is_array_v<_Tp>, int> = 0>
+_LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_AFTER_CXX17
+void destroy_at(_Tp* __loc) {
+    _LIBCPP_ASSERT(__loc, "null pointer given to destroy_at");
+    _VSTD::destroy(_VSTD::begin(*__loc), _VSTD::end(*__loc));
+}
+#endif
+
+template <class _ForwardIterator>
+_LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_AFTER_CXX17
+void destroy(_ForwardIterator __first, _ForwardIterator __last) {
+    for (; __first != __last; ++__first)
+        _VSTD::destroy_at(_VSTD::addressof(*__first));
+}
+
+template <class _ForwardIterator, class _Size>
+_LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_AFTER_CXX17
+_ForwardIterator destroy_n(_ForwardIterator __first, _Size __n) {
+    for (; __n > 0; (void)++__first, --__n)
+        _VSTD::destroy_at(_VSTD::addressof(*__first));
+    return __first;
 }
 
 #endif

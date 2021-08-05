@@ -235,6 +235,7 @@ def warn_invalid_ios_deployment_target : Warning<
   DefaultError;
 def err_invalid_macos_32bit_deployment_target : Error<
   "32-bit targets are not supported when building for Mac Catalyst">;
+def err_drv_invalid_os_in_arg : Error<"invalid OS value '%0' in '%1'">;
 def err_drv_conflicting_deployment_targets : Error<
   "conflicting deployment targets, both '%0' and '%1' are present in environment">;
 def err_arc_unsupported_on_runtime : Error<

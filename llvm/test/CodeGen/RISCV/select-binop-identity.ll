@@ -153,3 +153,108 @@ define i64 @xor_select_all_zeros_i64(i1 zeroext %c, i64 %x, i64 %y) {
   %b = xor i64 %a, %y
   ret i64 %b
 }
+
+define signext i32 @add_select_all_zeros_i32(i1 zeroext %c, i32 signext %x, i32 signext %y) {
+; RV32I-LABEL: add_select_all_zeros_i32:
+; RV32I:       # %bb.0:
+; RV32I-NEXT:    mv a3, zero
+; RV32I-NEXT:    bnez a0, .LBB6_2
+; RV32I-NEXT:  # %bb.1:
+; RV32I-NEXT:    mv a3, a1
+; RV32I-NEXT:  .LBB6_2:
+; RV32I-NEXT:    add a0, a2, a3
+; RV32I-NEXT:    ret
+;
+; RV64I-LABEL: add_select_all_zeros_i32:
+; RV64I:       # %bb.0:
+; RV64I-NEXT:    mv a3, zero
+; RV64I-NEXT:    bnez a0, .LBB6_2
+; RV64I-NEXT:  # %bb.1:
+; RV64I-NEXT:    mv a3, a1
+; RV64I-NEXT:  .LBB6_2:
+; RV64I-NEXT:    addw a0, a2, a3
+; RV64I-NEXT:    ret
+  %a = select i1 %c, i32 0, i32 %x
+  %b = add i32 %y, %a
+  ret i32 %b
+}
+
+define i64 @add_select_all_zeros_i64(i1 zeroext %c, i64 %x, i64 %y) {
+; RV32I-LABEL: add_select_all_zeros_i64:
+; RV32I:       # %bb.0:
+; RV32I-NEXT:    bnez a0, .LBB7_2
+; RV32I-NEXT:  # %bb.1:
+; RV32I-NEXT:    mv a2, zero
+; RV32I-NEXT:    mv a1, zero
+; RV32I-NEXT:  .LBB7_2:
+; RV32I-NEXT:    add a0, a1, a3
+; RV32I-NEXT:    sltu a1, a0, a1
+; RV32I-NEXT:    add a2, a2, a4
+; RV32I-NEXT:    add a1, a2, a1
+; RV32I-NEXT:    ret
+;
+; RV64I-LABEL: add_select_all_zeros_i64:
+; RV64I:       # %bb.0:
+; RV64I-NEXT:    bnez a0, .LBB7_2
+; RV64I-NEXT:  # %bb.1:
+; RV64I-NEXT:    mv a1, zero
+; RV64I-NEXT:  .LBB7_2:
+; RV64I-NEXT:    add a0, a1, a2
+; RV64I-NEXT:    ret
+  %a = select i1 %c, i64 %x, i64 0
+  %b = add i64 %a, %y
+  ret i64 %b
+}
+
+define signext i32 @sub_select_all_zeros_i32(i1 zeroext %c, i32 signext %x, i32 signext %y) {
+; RV32I-LABEL: sub_select_all_zeros_i32:
+; RV32I:       # %bb.0:
+; RV32I-NEXT:    mv a3, zero
+; RV32I-NEXT:    bnez a0, .LBB8_2
+; RV32I-NEXT:  # %bb.1:
+; RV32I-NEXT:    mv a3, a1
+; RV32I-NEXT:  .LBB8_2:
+; RV32I-NEXT:    sub a0, a2, a3
+; RV32I-NEXT:    ret
+;
+; RV64I-LABEL: sub_select_all_zeros_i32:
+; RV64I:       # %bb.0:
+; RV64I-NEXT:    mv a3, zero
+; RV64I-NEXT:    bnez a0, .LBB8_2
+; RV64I-NEXT:  # %bb.1:
+; RV64I-NEXT:    mv a3, a1
+; RV64I-NEXT:  .LBB8_2:
+; RV64I-NEXT:    subw a0, a2, a3
+; RV64I-NEXT:    ret
+  %a = select i1 %c, i32 0, i32 %x
+  %b = sub i32 %y, %a
+  ret i32 %b
+}
+
+define i64 @sub_select_all_zeros_i64(i1 zeroext %c, i64 %x, i64 %y) {
+; RV32I-LABEL: sub_select_all_zeros_i64:
+; RV32I:       # %bb.0:
+; RV32I-NEXT:    bnez a0, .LBB9_2
+; RV32I-NEXT:  # %bb.1:
+; RV32I-NEXT:    mv a2, zero
+; RV32I-NEXT:    mv a1, zero
+; RV32I-NEXT:  .LBB9_2:
+; RV32I-NEXT:    sltu a0, a3, a1
+; RV32I-NEXT:    sub a2, a4, a2
+; RV32I-NEXT:    sub a2, a2, a0
+; RV32I-NEXT:    sub a0, a3, a1
+; RV32I-NEXT:    mv a1, a2
+; RV32I-NEXT:    ret
+;
+; RV64I-LABEL: sub_select_all_zeros_i64:
+; RV64I:       # %bb.0:
+; RV64I-NEXT:    bnez a0, .LBB9_2
+; RV64I-NEXT:  # %bb.1:
+; RV64I-NEXT:    mv a1, zero
+; RV64I-NEXT:  .LBB9_2:
+; RV64I-NEXT:    sub a0, a2, a1
+; RV64I-NEXT:    ret
+  %a = select i1 %c, i64 %x, i64 0
+  %b = sub i64 %y, %a
+  ret i64 %b
+}

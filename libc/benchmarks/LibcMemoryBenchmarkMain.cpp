@@ -66,21 +66,21 @@ static cl::opt<uint32_t>
 
 #if defined(LIBC_BENCHMARK_FUNCTION_MEMCPY)
 #define LIBC_BENCHMARK_FUNCTION LIBC_BENCHMARK_FUNCTION_MEMCPY
-using BenchmarkHarness = CopyHarness;
+using BenchmarkSetup = CopySetup;
 #elif defined(LIBC_BENCHMARK_FUNCTION_MEMSET)
 #define LIBC_BENCHMARK_FUNCTION LIBC_BENCHMARK_FUNCTION_MEMSET
-using BenchmarkHarness = SetHarness;
+using BenchmarkSetup = SetSetup;
 #elif defined(LIBC_BENCHMARK_FUNCTION_BZERO)
 #define LIBC_BENCHMARK_FUNCTION LIBC_BENCHMARK_FUNCTION_BZERO
-using BenchmarkHarness = SetHarness;
+using BenchmarkSetup = SetSetup;
 #elif defined(LIBC_BENCHMARK_FUNCTION_MEMCMP)
 #define LIBC_BENCHMARK_FUNCTION LIBC_BENCHMARK_FUNCTION_MEMCMP
-using BenchmarkHarness = ComparisonHarness;
+using BenchmarkSetup = ComparisonSetup;
 #else
 #error "Missing LIBC_BENCHMARK_FUNCTION_XXX definition"
 #endif
 
-struct MemfunctionBenchmarkBase : public BenchmarkHarness {
+struct MemfunctionBenchmarkBase : public BenchmarkSetup {
   MemfunctionBenchmarkBase() : ReportProgress(isatty(fileno(stdout))) {}
   virtual ~MemfunctionBenchmarkBase() {}
 
@@ -95,7 +95,7 @@ struct MemfunctionBenchmarkBase : public BenchmarkHarness {
 protected:
   Study createStudy() {
     Study Study;
-    // Harness study.
+    // Setup study.
     Study.StudyName = StudyName;
     Runtime &RI = Study.Runtime;
     RI.Host = HostState::get();
@@ -255,7 +255,7 @@ void main() {
     Benchmark.reset(new MemfunctionBenchmarkSweep());
   else
     Benchmark.reset(new MemfunctionBenchmarkDistribution(getDistributionOrDie(
-        BenchmarkHarness::Distributions, SizeDistributionName)));
+        BenchmarkSetup::getDistributions(), SizeDistributionName)));
   writeStudy(Benchmark->run());
 }
 

@@ -1397,13 +1397,18 @@ static SDValue lowerSPLAT_VECTOR(SDValue Op, SelectionDAG &DAG,
 }
 
 struct VIDSequence {
-  int64_t Step;
+  int64_t StepNumerator;
+  unsigned StepDenominator;
   int64_t Addend;
 };
 
 // Try to match an arithmetic-sequence BUILD_VECTOR [X,X+S,X+2*S,...,X+(N-1)*S]
 // to the (non-zero) step S and start value X. This can be then lowered as the
 // RVV sequence (VID * S) + X, for example.
+// The step S is represented as an integer numerator divided by a positive
+// denominator. Note that the implementation currently only identifies
+// sequences in which either the numerator is +/- 1 or the denominator is 1. It
+// cannot detect 2/3, for example.
 // Note that this method will also match potentially unappealing index
 // sequences, like <i32 0, i32 50939494>, however it is left to the caller to
 // determine whether this is worth generating code for.
@@ -1413,7 +1418,8 @@ static Optional<VIDSequence> isSimpleVIDSequence(SDValue Op) {
   if (!Op.getValueType().isInteger())
     return None;
 
-  Optional<int64_t> SeqStep, SeqAddend;
+  Optional<unsigned> SeqStepDenom;
+  Optional<int64_t> SeqStepNum, SeqAddend;
   Optional<std::pair<uint64_t, unsigned>> PrevElt;
   unsigned EltSizeInBits = Op.getValueType().getScalarSizeInBits();
   for (unsigned Idx = 0; Idx < NumElts; Idx++) {
@@ -1431,26 +1437,40 @@ static Optional<VIDSequence> isSimpleVIDSequence(SDValue Op) {
     if (PrevElt) {
       // Calculate the step since the last non-undef element, and ensure
       // it's consistent across the entire sequence.
-      int64_t Diff = SignExtend64(Val - PrevElt->first, EltSizeInBits);
-      // The difference must cleanly divide the element span.
-      if (Diff % (Idx - PrevElt->second) != 0)
-        return None;
-      int64_t Step = Diff / (Idx - PrevElt->second);
-      // A zero step indicates we're either a not an index sequence, or we
-      // have a fractional step. This must be handled by a more complex
-      // pattern recognition (undefs complicate things here).
-      if (Step == 0)
-        return None;
-      if (!SeqStep)
-        SeqStep = Step;
-      else if (Step != SeqStep)
-        return None;
+      unsigned IdxDiff = Idx - PrevElt->second;
+      int64_t ValDiff = SignExtend64(Val - PrevElt->first, EltSizeInBits);
+
+      // A zero-value value difference means that we're somewhere in the middle
+      // of a fractional step, e.g. <0,0,0*,0,1,1,1,1>. Wait until we notice a
+      // step change before evaluating the sequence.
+      if (ValDiff != 0) {
+        int64_t Remainder = ValDiff % IdxDiff;
+        // Normalize the step if it's greater than 1.
+        if (Remainder != ValDiff) {
+          // The difference must cleanly divide the element span.
+          if (Remainder != 0)
+            return None;
+          ValDiff /= IdxDiff;
+          IdxDiff = 1;
+        }
+
+        if (!SeqStepNum)
+          SeqStepNum = ValDiff;
+        else if (ValDiff != SeqStepNum)
+          return None;
+
+        if (!SeqStepDenom)
+          SeqStepDenom = IdxDiff;
+        else if (IdxDiff != *SeqStepDenom)
+          return None;
+      }
     }
 
     // Record and/or check any addend.
-    if (SeqStep) {
-      int64_t Addend =
-          SignExtend64(Val - (Idx * (uint64_t)*SeqStep), EltSizeInBits);
+    if (SeqStepNum && SeqStepDenom) {
+      uint64_t ExpectedVal =
+          (int64_t)(Idx * (uint64_t)*SeqStepNum) / *SeqStepDenom;
+      int64_t Addend = SignExtend64(Val - ExpectedVal, EltSizeInBits);
       if (!SeqAddend)
         SeqAddend = Addend;
       else if (SeqAddend != Addend)
@@ -1458,14 +1478,15 @@ static Optional<VIDSequence> isSimpleVIDSequence(SDValue Op) {
     }
 
     // Record this non-undef element for later.
-    PrevElt = std::make_pair(Val, Idx);
+    if (!PrevElt || PrevElt->first != Val)
+      PrevElt = std::make_pair(Val, Idx);
   }
   // We need to have logged both a step and an addend for this to count as
   // a legal index sequence.
-  if (!SeqStep || !SeqAddend)
+  if (!SeqStepNum || !SeqStepDenom || !SeqAddend)
     return None;
 
-  return VIDSequence{*SeqStep, *SeqAddend};
+  return VIDSequence{*SeqStepNum, *SeqStepDenom, *SeqAddend};
 }
 
 static SDValue lowerBUILD_VECTOR(SDValue Op, SelectionDAG &DAG,
@@ -1599,30 +1620,37 @@ static SDValue lowerBUILD_VECTOR(SDValue Op, SelectionDAG &DAG,
   // with optional modifications. An all-undef vector is matched by
   // getSplatValue, above.
   if (auto SimpleVID = isSimpleVIDSequence(Op)) {
-    int64_t Step = SimpleVID->Step;
+    int64_t StepNumerator = SimpleVID->StepNumerator;
+    unsigned StepDenominator = SimpleVID->StepDenominator;
     int64_t Addend = SimpleVID->Addend;
     // Only emit VIDs with suitably-small steps/addends. We use imm5 is a
     // threshold since it's the immediate value many RVV instructions accept.
-    if (isInt<5>(Step) && isInt<5>(Addend)) {
+    if (isInt<5>(StepNumerator) && isPowerOf2_32(StepDenominator) &&
+        isInt<5>(Addend)) {
       SDValue VID = DAG.getNode(RISCVISD::VID_VL, DL, ContainerVT, Mask, VL);
       // Convert right out of the scalable type so we can use standard ISD
       // nodes for the rest of the computation. If we used scalable types with
       // these, we'd lose the fixed-length vector info and generate worse
       // vsetvli code.
       VID = convertFromScalableVector(VT, VID, DAG, Subtarget);
-      assert(Step != 0 && "Invalid step");
+      assert(StepNumerator != 0 && "Invalid step");
       bool Negate = false;
-      if (Step != 1) {
-        int64_t SplatStepVal = Step;
+      if (StepNumerator != 1) {
+        int64_t SplatStepVal = StepNumerator;
         unsigned Opcode = ISD::MUL;
-        if (isPowerOf2_64(std::abs(Step))) {
-          Negate = Step < 0;
+        if (isPowerOf2_64(std::abs(StepNumerator))) {
+          Negate = StepNumerator < 0;
           Opcode = ISD::SHL;
-          SplatStepVal = Log2_64(std::abs(Step));
+          SplatStepVal = Log2_64(std::abs(StepNumerator));
         }
         SDValue SplatStep = DAG.getSplatVector(
             VT, DL, DAG.getConstant(SplatStepVal, DL, XLenVT));
         VID = DAG.getNode(Opcode, DL, VT, VID, SplatStep);
+      }
+      if (StepDenominator != 1) {
+        SDValue SplatStep = DAG.getSplatVector(
+            VT, DL, DAG.getConstant(Log2_64(StepDenominator), DL, XLenVT));
+        VID = DAG.getNode(ISD::SRL, DL, VT, VID, SplatStep);
       }
       if (Addend != 0 || Negate) {
         SDValue SplatAddend =
@@ -4901,7 +4929,8 @@ void RISCVTargetLowering::ReplaceNodeResults(SDNode *N,
         return;
       if (!isTypeLegal(Op0.getValueType()))
         return;
-      unsigned Opc = IsSigned ? RISCVISD::FCVT_W_RV64 : RISCVISD::FCVT_WU_RV64;
+      unsigned Opc =
+          IsSigned ? RISCVISD::FCVT_W_RTZ_RV64 : RISCVISD::FCVT_WU_RTZ_RV64;
       SDValue Res = DAG.getNode(Opc, DL, MVT::i64, Op0);
       Results.push_back(DAG.getNode(ISD::TRUNCATE, DL, MVT::i32, Res));
       return;
@@ -6642,8 +6671,8 @@ unsigned RISCVTargetLowering::ComputeNumSignBitsForTargetNode(
   case RISCVISD::UNSHFLW:
   case RISCVISD::BCOMPRESSW:
   case RISCVISD::BDECOMPRESSW:
-  case RISCVISD::FCVT_W_RV64:
-  case RISCVISD::FCVT_WU_RV64:
+  case RISCVISD::FCVT_W_RTZ_RV64:
+  case RISCVISD::FCVT_WU_RTZ_RV64:
     // TODO: As the result is sign-extended, this is conservatively correct. A
     // more precise answer could be calculated for SRAW depending on known
     // bits in the shift amount.
@@ -8356,8 +8385,8 @@ const char *RISCVTargetLowering::getTargetNodeName(unsigned Opcode) const {
   NODE_NAME_CASE(FMV_X_ANYEXTH)
   NODE_NAME_CASE(FMV_W_X_RV64)
   NODE_NAME_CASE(FMV_X_ANYEXTW_RV64)
-  NODE_NAME_CASE(FCVT_W_RV64)
-  NODE_NAME_CASE(FCVT_WU_RV64)
+  NODE_NAME_CASE(FCVT_W_RTZ_RV64)
+  NODE_NAME_CASE(FCVT_WU_RTZ_RV64)
   NODE_NAME_CASE(READ_CYCLE_WIDE)
   NODE_NAME_CASE(GREV)
   NODE_NAME_CASE(GREVW)
@@ -8473,7 +8502,6 @@ RISCVTargetLowering::getConstraintType(StringRef Constraint) const {
     default:
       break;
     case 'f':
-    case 'v':
       return C_RegisterClass;
     case 'I':
     case 'J':
@@ -8484,6 +8512,9 @@ RISCVTargetLowering::getConstraintType(StringRef Constraint) const {
     case 'S': // A symbolic address
       return C_Other;
     }
+  } else {
+    if (Constraint == "vr" || Constraint == "vm")
+      return C_RegisterClass;
   }
   return TargetLowering::getConstraintType(Constraint);
 }
@@ -8506,16 +8537,19 @@ RISCVTargetLowering::getRegForInlineAsmConstraint(const TargetRegisterInfo *TRI,
       if (Subtarget.hasStdExtD() && VT == MVT::f64)
         return std::make_pair(0U, &RISCV::FPR64RegClass);
       break;
-    case 'v':
-      for (const auto *RC :
-           {&RISCV::VMRegClass, &RISCV::VRRegClass, &RISCV::VRM2RegClass,
-            &RISCV::VRM4RegClass, &RISCV::VRM8RegClass}) {
+    default:
+      break;
+    }
+  } else {
+    if (Constraint == "vr") {
+      for (const auto *RC : {&RISCV::VRRegClass, &RISCV::VRM2RegClass,
+                             &RISCV::VRM4RegClass, &RISCV::VRM8RegClass}) {
         if (TRI->isTypeLegalForClass(*RC, VT.SimpleTy))
           return std::make_pair(0U, RC);
       }
-      break;
-    default:
-      break;
+    } else if (Constraint == "vm") {
+      if (TRI->isTypeLegalForClass(RISCV::VMRegClass, VT.SimpleTy))
+        return std::make_pair(0U, &RISCV::VMRegClass);
     }
   }
 
