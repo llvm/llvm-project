@@ -49,7 +49,11 @@ define void @test2(%struct.data* nocapture readonly %d) {
 ; CHECK:       vector.body:
 ; CHECK:         tail call void @llvm.assume(i1 [[MASKCOND]])
 ; CHECK-NEXT:    tail call void @llvm.assume(i1 [[MASKCOND]])
+; CHECK-NEXT:    tail call void @llvm.assume(i1 [[MASKCOND]])
+; CHECK-NEXT:    tail call void @llvm.assume(i1 [[MASKCOND]])
 ; CHECK:         tail call void @llvm.assume(i1 [[MASKCOND4]])
+; CHECK-NEXT:    tail call void @llvm.assume(i1 [[MASKCOND4]])
+; CHECK-NEXT:    tail call void @llvm.assume(i1 [[MASKCOND4]])
 ; CHECK-NEXT:    tail call void @llvm.assume(i1 [[MASKCOND4]])
 ; CHECK:       for.body:
 entry:
