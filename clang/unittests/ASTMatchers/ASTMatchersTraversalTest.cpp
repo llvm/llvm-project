@@ -7,6 +7,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "ASTMatchersTest.h"
+#include "clang/AST/Attrs.inc"
 #include "clang/AST/PrettyPrinter.h"
 #include "clang/ASTMatchers/ASTMatchFinder.h"
 #include "clang/ASTMatchers/ASTMatchers.h"
@@ -2820,7 +2821,7 @@ B func1() { return 42; }
     auto M = expr(unless(integerLiteral(equals(24)))).bind("intLit");
     EXPECT_TRUE(matchAndVerifyResultTrue(
         Code, traverse(TK_AsIs, M),
-        std::make_unique<VerifyIdIsBoundTo<Expr>>("intLit", 7)));
+        std::make_unique<VerifyIdIsBoundTo<Expr>>("intLit", 6)));
     EXPECT_TRUE(matchAndVerifyResultTrue(
         Code, traverse(TK_IgnoreUnlessSpelledInSource, M),
         std::make_unique<VerifyIdIsBoundTo<Expr>>("intLit", 1)));
@@ -2866,7 +2867,7 @@ B func1() { return 42; }
     auto M = expr().bind("allExprs");
     EXPECT_TRUE(matchAndVerifyResultTrue(
         Code, traverse(TK_AsIs, M),
-        std::make_unique<VerifyIdIsBoundTo<Expr>>("allExprs", 7)));
+        std::make_unique<VerifyIdIsBoundTo<Expr>>("allExprs", 6)));
     EXPECT_TRUE(matchAndVerifyResultTrue(
         Code, traverse(TK_IgnoreUnlessSpelledInSource, M),
         std::make_unique<VerifyIdIsBoundTo<Expr>>("allExprs", 1)));
@@ -5446,6 +5447,24 @@ TEST(NNSLoc, NestedNameSpecifierLocsAsDescendants) {
     // Nested names: a, a::A and a::A::B.
     std::make_unique<VerifyIdIsBoundTo<NestedNameSpecifierLoc>>("x", 3)));
 }
+
+TEST(Attr, AttrsAsDescendants) {
+  StringRef Fragment = "namespace a { struct [[clang::warn_unused_result]] "
+                       "F{}; [[noreturn]] void foo(); }";
+  EXPECT_TRUE(matches(Fragment, namespaceDecl(hasDescendant(attr()))));
+  EXPECT_TRUE(matchAndVerifyResultTrue(
+      Fragment,
+      namespaceDecl(hasName("a"),
+                    forEachDescendant(attr(unless(isImplicit())).bind("x"))),
+      std::make_unique<VerifyIdIsBoundTo<Attr>>("x", 2)));
+}
+
+TEST(Attr, ParentsOfAttrs) {
+  StringRef Fragment =
+      "namespace a { struct [[clang::warn_unused_result]] F{}; }";
+  EXPECT_TRUE(matches(Fragment, attr(hasAncestor(namespaceDecl()))));
+}
+
 template <typename T> class VerifyMatchOnNode : public BoundNodesCallback {
 public:
   VerifyMatchOnNode(StringRef Id, const internal::Matcher<T> &InnerMatcher,
