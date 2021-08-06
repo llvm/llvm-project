@@ -7,6 +7,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "Cocoa.h"
+#include "objc/runtime.h"
 
 #include "Plugins/TypeSystem/Clang/TypeSystemClang.h"
 #include "lldb/Core/Mangled.h"
@@ -455,6 +456,72 @@ bool lldb_private::formatters::NSNumberSummaryProvider(
 
   if (class_name == "NSDecimalNumber")
     return NSDecimalNumberSummaryProvider(valobj, stream, options);
+
+  if (class_name == "NSConstantIntegerNumber") {
+    Status error;
+    int64_t value = process_sp->ReadSignedIntegerFromMemory(
+        valobj_addr + 2 * ptr_size, 8, 0, error);
+    if (error.Fail())
+      return false;
+    uint64_t encoding_addr = process_sp->ReadUnsignedIntegerFromMemory(
+        valobj_addr + ptr_size, ptr_size, 0, error);
+    if (error.Fail())
+      return false;
+    char encoding =
+        process_sp->ReadUnsignedIntegerFromMemory(encoding_addr, 1, 0, error);
+    if (error.Fail())
+      return false;
+
+    switch (encoding) {
+    case _C_CHR:
+      NSNumber_FormatChar(valobj, stream, (char)value, options.GetLanguage());
+      return true;
+    case _C_SHT:
+      NSNumber_FormatShort(valobj, stream, (short)value, options.GetLanguage());
+      return true;
+    case _C_INT:
+      NSNumber_FormatInt(valobj, stream, (int)value, options.GetLanguage());
+      return true;
+    case _C_LNG:
+    case _C_LNG_LNG:
+      NSNumber_FormatLong(valobj, stream, value, options.GetLanguage());
+      return true;
+
+    case _C_UCHR:
+    case _C_USHT:
+    case _C_UINT:
+    case _C_ULNG:
+    case _C_ULNG_LNG:
+      stream.Printf("%" PRIu64, value);
+      return true;
+    }
+
+    return false;
+  }
+
+  if (class_name == "NSConstantFloatNumber") {
+    Status error;
+    uint32_t flt_as_int = process_sp->ReadUnsignedIntegerFromMemory(
+        valobj_addr + ptr_size, 4, 0, error);
+    if (error.Fail())
+      return false;
+    float flt_value = 0.0f;
+    memcpy(&flt_value, &flt_as_int, sizeof(flt_as_int));
+    NSNumber_FormatFloat(valobj, stream, flt_value, options.GetLanguage());
+    return true;
+  }
+
+  if (class_name == "NSConstantDoubleNumber") {
+    Status error;
+    uint64_t dbl_as_lng = process_sp->ReadUnsignedIntegerFromMemory(
+        valobj_addr + ptr_size, 8, 0, error);
+    if (error.Fail())
+      return false;
+    double dbl_value = 0.0;
+    memcpy(&dbl_value, &dbl_as_lng, sizeof(dbl_as_lng));
+    NSNumber_FormatDouble(valobj, stream, dbl_value, options.GetLanguage());
+    return true;
+  }
 
   if (class_name == "NSNumber" || class_name == "__NSCFNumber") {
     int64_t value = 0;

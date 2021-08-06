@@ -14,8 +14,19 @@ class ObjCDataFormatterTestCase(TestBase):
 
    mydir = TestBase.compute_mydir(__file__)
 
-   def appkit_tester_impl(self, commands):
-      self.build()
+   def appkit_tester_impl(self, commands, use_constant_classes):
+      if use_constant_classes:
+         self.build()
+      else:
+         disable_constant_classes = {
+            'CC':
+            'xcrun clang', # FIXME: Remove when flags are available upstream.
+            'CFLAGS_EXTRAS':
+            '-fno-constant-nsnumber-literals ' +
+            '-fno-constant-nsarray-literals ' +
+            '-fno-constant-nsdictionary-literals'
+         }
+         self.build(dictionary=disable_constant_classes)
       self.appkit_common_data_formatters_command()
       commands()
 
