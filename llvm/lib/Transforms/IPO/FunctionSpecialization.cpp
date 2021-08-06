@@ -340,6 +340,19 @@ private:
 
     LLVM_DEBUG(dbgs() << "FnSpecialization: Try function: " << F->getName()
                       << "\n");
+
+    // Determine if it would be profitable to create a specialization of the
+    // function where the argument takes on the given constant value. If so,
+    // add the constant to Constants.
+    auto FnSpecCost = getSpecializationCost(F);
+    if (!FnSpecCost.isValid()) {
+      LLVM_DEBUG(dbgs() << "FnSpecialization: Invalid specialisation cost.\n");
+      return false;
+    }
+
+    LLVM_DEBUG(dbgs() << "FnSpecialization: func specialisation cost: ";
+               FnSpecCost.print(dbgs()); dbgs() << "\n");
+
     // Determine if we should specialize the function based on the values the
     // argument can take on. If specialization is not profitable, we continue
     // on to the next argument.
@@ -357,7 +370,7 @@ private:
       // be set to false by isArgumentInteresting (that function only adds
       // values to the Constants list that are deemed profitable).
       SmallVector<Constant *, 4> Constants;
-      if (!isArgumentInteresting(&A, Constants, IsPartial)) {
+      if (!isArgumentInteresting(&A, Constants, FnSpecCost, IsPartial)) {
         LLVM_DEBUG(dbgs() << "FnSpecialization: Argument is not interesting\n");
         continue;
       }
@@ -541,6 +554,7 @@ private:
   /// argument.
   bool isArgumentInteresting(Argument *A,
                              SmallVectorImpl<Constant *> &Constants,
+                             const InstructionCost &FnSpecCost,
                              bool &IsPartial) {
     Function *F = A->getParent();
 
@@ -581,18 +595,6 @@ private:
                         << "the maximum number of constants threshold.\n");
       return false;
     }
-
-    // Determine if it would be profitable to create a specialization of the
-    // function where the argument takes on the given constant value. If so,
-    // add the constant to Constants.
-    auto FnSpecCost = getSpecializationCost(F);
-    if (!FnSpecCost.isValid()) {
-      LLVM_DEBUG(dbgs() << "FnSpecialization: Invalid specialisation cost.\n");
-      return false;
-    }
-
-    LLVM_DEBUG(dbgs() << "FnSpecialization: func specialisation cost: ";
-               FnSpecCost.print(dbgs()); dbgs() << "\n");
 
     for (auto *C : PossibleConstants) {
       LLVM_DEBUG(dbgs() << "FnSpecialization: Constant: " << *C << "\n");
