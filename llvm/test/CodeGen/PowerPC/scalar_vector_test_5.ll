@@ -9,14 +9,6 @@
 ; RUN:    -mtriple=powerpc64-unknown-linux-gnu < %s | FileCheck %s --check-prefix=P8BE
 
 define i8 @scalar_to_vector_half(i16* nocapture readonly %ad) {
-; CHECK-LABEL: scalar_to_vector_half:
-; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    lhz 3, 0(3)
-; CHECK-NEXT:    sldi 3, 3, 56
-; CHECK-NEXT:    mtfprd 0, 3
-; CHECK-NEXT:    mffprd 3, 0
-; CHECK-NEXT:    rldicl 3, 3, 8, 56
-; CHECK-NEXT:    blr
 ; P9LE-LABEL: scalar_to_vector_half:
 ; P9LE:       # %bb.0: # %entry
 ; P9LE-NEXT:    lhz r3, 0(r3)
