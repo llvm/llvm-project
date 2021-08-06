@@ -328,9 +328,6 @@ public:
     // FIXME: We should automatically clobber $1 only for inline assembly code
     // which actually uses it. This would allow LLVM to use $1 for inline
     // assembly operands if the user's assembly code doesn't use it.
-    if (ABI == "p32") {
-      return "~{$at_nm}";
-    }
     return "~{$1}";
   }
 
