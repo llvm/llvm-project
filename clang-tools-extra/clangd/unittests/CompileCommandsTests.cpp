@@ -45,7 +45,7 @@ TEST(CommandMangler, Everything) {
   Mangler.ClangPath = testPath("fake/clang");
   Mangler.ResourceDir = testPath("fake/resources");
   Mangler.Sysroot = testPath("fake/sysroot");
-  std::vector<std::string> Cmd = {"clang++", "--", "foo.cc"};
+  std::vector<std::string> Cmd = {"clang++", "--", "foo.cc", "bar.cc"};
   Mangler.adjust(Cmd, "foo.cc");
   EXPECT_THAT(Cmd, ElementsAre(testPath("fake/clang++"),
                                "-resource-dir=" + testPath("fake/resources"),

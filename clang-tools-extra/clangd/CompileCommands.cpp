@@ -237,21 +237,27 @@ void CommandMangler::adjust(std::vector<std::string> &Cmd,
   // If there is a single `-arch` option, keep it.
   if (ArchOptCount < 2)
     IndicesToDrop.clear();
-  // Move the inputs to the end, separated via `--` from flags. This ensures
-  // modifications done in the following steps apply in more cases (like setting
-  // -x, which only affects inputs that come after it).
-  if (!ArgList.hasArgNoClaim(driver::options::OPT__DASH_DASH)) {
-    // Drop all the inputs and only add one for the current file.
-    for (auto *Input : ArgList.filtered(driver::options::OPT_INPUT))
-      IndicesToDrop.push_back(Input->getIndex());
-    Cmd.push_back("--");
-    Cmd.push_back(File.str());
+
+  // Strip all the inputs and `--`. We'll put the input for the requested file
+  // explicitly at the end of the flags. This ensures modifications done in the
+  // following steps apply in more cases (like setting -x, which only affects
+  // inputs that come after it).
+  for (auto *Input : ArgList.filtered(driver::options::OPT_INPUT))
+    IndicesToDrop.push_back(Input->getIndex());
+  // Anything after `--` is also treated as input, drop them as well.
+  if (auto *DashDash =
+          ArgList.getLastArgNoClaim(driver::options::OPT__DASH_DASH)) {
+    Cmd.resize(DashDash->getIndex() + 1); // +1 to account for Cmd[0].
   }
   llvm::sort(IndicesToDrop);
   llvm::for_each(llvm::reverse(IndicesToDrop),
                  // +1 to account for the executable name in Cmd[0] that
                  // doesn't exist in ArgList.
                  [&Cmd](unsigned Idx) { Cmd.erase(Cmd.begin() + Idx + 1); });
+  // All the inputs are stripped, append the name for the requested file. Rest
+  // of the modifications should respect `--`.
+  Cmd.push_back("--");
+  Cmd.push_back(File.str());
 
   for (auto &Edit : Config::current().CompileFlags.Edits)
     Edit(Cmd);
