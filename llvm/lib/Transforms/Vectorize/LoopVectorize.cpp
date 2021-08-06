@@ -594,8 +594,7 @@ protected:
   /// update their users.
   void fixFirstOrderRecurrence(VPWidenPHIRecipe *PhiR, VPTransformState &State);
 
-  /// Fix a reduction cross-iteration phi. This is the second phase of
-  /// vectorizing this phi node.
+  /// Create code for the loop exit value of the reduction.
   void fixReduction(VPReductionPHIRecipe *Phi, VPTransformState &State);
 
   /// Clear NSW/NUW flags from reduction instructions if necessary.
@@ -4302,22 +4301,6 @@ void InnerLoopVectorizer::fixReduction(VPReductionPHIRecipe *PhiR,
 
   // Wrap flags are in general invalid after vectorization, clear them.
   clearReductionWrapFlags(RdxDesc, State);
-
-  // Fix the vector-loop phi.
-
-  // Reductions do not have to start at zero. They can start with
-  // any loop invariant values.
-  BasicBlock *VectorLoopLatch = LI->getLoopFor(LoopVectorBody)->getLoopLatch();
-
-  unsigned LastPartForNewPhi = PhiR->isOrdered() ? 1 : UF;
-  for (unsigned Part = 0; Part < LastPartForNewPhi; ++Part) {
-    Value *VecRdxPhi = State.get(PhiR->getVPSingleValue(), Part);
-    Value *Val = State.get(PhiR->getBackedgeValue(), Part);
-    if (PhiR->isOrdered())
-      Val = State.get(PhiR->getBackedgeValue(), UF - 1);
-
-    cast<PHINode>(VecRdxPhi)->addIncoming(Val, VectorLoopLatch);
-  }
 
   // Before each round, move the insertion point right between
   // the PHIs and the values we are going to write.
