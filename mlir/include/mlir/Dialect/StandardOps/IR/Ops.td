@@ -457,6 +457,32 @@ def AtomicYieldOp : Std_Op<"atomic_yield", [
 }
 
 //===----------------------------------------------------------------------===//
+// BitcastOp
+//===----------------------------------------------------------------------===//
+
+def BitcastOp : ArithmeticCastOp<"bitcast"> {
+  let summary = "bitcast between values of equal bit width";
+  let description = [{
+    Bitcast an integer or floating point value to an integer or floating point
+    value of equal bit width. When operating on vectors, casts elementwise.
+
+    Note that this implements a logical bitcast independent of target
+    endianness. This allows constant folding without target information and is
+    consitent with the bitcast constant folders in LLVM (see
+    https://github.com/llvm/llvm-project/blob/18c19414eb/llvm/lib/IR/ConstantFold.cpp#L168)
+    For targets where the source and target type have the same endianness (which
+    is the standard), this cast will also change no bits at runtime, but it may
+    still require an operation, for example if the machine has different
+    floating point and integer register files. For targets that have a different
+    endianness for the source and target types (e.g. float is big-endian and
+    integer is little-endian) a proper lowering would add operations to swap the
+    order of words in addition to the bitcast.
+  }];
+  let hasFolder = 1;
+}
+
+
+//===----------------------------------------------------------------------===//
 // BranchOp
 //===----------------------------------------------------------------------===//
 
