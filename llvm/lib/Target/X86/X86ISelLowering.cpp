@@ -5387,11 +5387,10 @@ bool X86TargetLowering::isLoadBitCastBeneficial(EVT LoadVT, EVT BitcastVT,
 }
 
 bool X86TargetLowering::canMergeStoresTo(unsigned AddressSpace, EVT MemVT,
-                                         const SelectionDAG &DAG) const {
+                                         const MachineFunction &MF) const {
   // Do not merge to float value size (128 bytes) if no implicit
   // float attribute is set.
-  bool NoFloat = DAG.getMachineFunction().getFunction().hasFnAttribute(
-      Attribute::NoImplicitFloat);
+  bool NoFloat = MF.getFunction().hasFnAttribute(Attribute::NoImplicitFloat);
 
   if (NoFloat) {
     unsigned MaxIntSize = Subtarget.is64Bit() ? 64 : 32;
