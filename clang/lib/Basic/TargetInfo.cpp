@@ -492,7 +492,7 @@ LangAS TargetInfo::getOpenCLTypeAddrSpace(OpenCLTypeKind TK) const {
 
 
 static StringRef removeGCCRegisterPrefix(StringRef Name) {
-  if (Name[0] == '%' || Name[0] == '#' || Name[0] == '$')
+  if (Name[0] == '%' || Name[0] == '#')
     Name = Name.substr(1);
 
   return Name;
