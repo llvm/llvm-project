@@ -98,7 +98,8 @@ Mailing Lists
 -------------
 
 If you can't find what you need in these docs, try consulting the mailing
-lists.
+lists. In addition to the traditional mailing lists there is also a 
+`Discourse server <https://llvm.discourse.group>`_ available. 
 
 `Developer's List (llvm-dev)`__
   This list is for people who want to be included in technical discussions of
@@ -227,6 +228,12 @@ This channel has several bots.
 
 * clang-bot - A `geordi <http://www.eelis.net/geordi/>`_ instance running
   near-trunk clang instead of gcc.
+
+In addition to the traditional IRC there is a 
+`Discord <https://discord.com/channels/636084430946959380/636725486533345280>`_ 
+chat server available. To sign up, please use this 
+`invitation link <https://discord.com/invite/xS7Z362>`_.
+  
 
 .. _meetups-social-events:
 
