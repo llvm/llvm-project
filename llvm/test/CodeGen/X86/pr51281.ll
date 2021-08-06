@@ -8,8 +8,8 @@
 ; CHECK-NEXT: .long   0x3eb5dbc6
 ; CHECK-NEXT: .zero   4
 ; CHECK-NEXT: .long   0x3eb5dbc6
-; CHECK-NEXT: .zero   4
-; CHECK-NEXT: .zero   4
+; CHECK-NEXT: .long   0x3eb5dbc6
+; CHECK-NEXT: .long   0x3eb5dbc6
 
 ; CHECK: .LCPI0_1:
 ; CHECK-NEXT: .long   3
