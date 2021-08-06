@@ -17,7 +17,7 @@ static int f() __attribute__((weak)); // expected-error {{weak declaration canno
 static int x __attribute__((weak)); // expected-error {{weak declaration cannot have internal linkage}}
 
 // rdar://9538608
-int C; // expected-note {{previous definition is here}}
+int C; // expected-note {{previous declaration is here}}
 extern int C __attribute__((weak_import)); // expected-warning {{an already-declared variable is made a weak_import declaration}}
 
 static int pr14946_x;
