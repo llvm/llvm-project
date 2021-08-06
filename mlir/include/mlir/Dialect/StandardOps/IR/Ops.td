@@ -1220,6 +1220,8 @@ def FPTruncOp : ArithmeticCastOp<"fptrunc"> {
     If the value cannot be exactly represented, it is rounded using the default
     rounding mode. When operating on vectors, casts elementwise.
   }];
+
+  let hasFolder = 1;
 }
 
 //===----------------------------------------------------------------------===//

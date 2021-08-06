@@ -100,6 +100,7 @@ static const char *FileOpenMode = "a+b";
 static intptr_t INSTR_PROF_PROFILE_COUNTER_BIAS_VAR;
 static void *BiasAddr = NULL;
 static void *BiasDefaultAddr = NULL;
+static int MmapFlags = MAP_FIXED | MAP_SHARED;
 #elif defined(__ELF__) || defined(_WIN32)
 
 #define INSTR_PROF_PROFILE_COUNTER_BIAS_DEFAULT_VAR                            \
@@ -133,6 +134,7 @@ static const char *FileOpenMode = "w+b";
  * used and runtime provides a weak alias so we can check if it's defined. */
 static void *BiasAddr = &INSTR_PROF_PROFILE_COUNTER_BIAS_VAR;
 static void *BiasDefaultAddr = &INSTR_PROF_PROFILE_COUNTER_BIAS_DEFAULT_VAR;
+static int MmapFlags = MAP_SHARED;
 #else
 static const int ContinuousModeSupported = 0;
 static const int UseBiasVar = 0;
@@ -140,6 +142,7 @@ static const char *FileOpenMode = "a+b";
 static intptr_t INSTR_PROF_PROFILE_COUNTER_BIAS_VAR;
 static void *BiasAddr = NULL;
 static void *BiasDefaultAddr = NULL;
+static int MmapFlags = MAP_SHARED;
 #endif
 
 static int isProfileMergeRequested() { return ProfileMergeRequested; }
@@ -518,7 +521,7 @@ static void initializeProfileForContinuousMode(void) {
     return;
 
   FILE *File = NULL;
-  off_t CurrentFileOffset = 0;
+  uint64_t CurrentFileOffset = 0;
   if (doMerging()) {
     /* We are merging profiles. Map the counter section as shared memory into
      * the profile, i.e. into each participating process. An increment in one
@@ -546,19 +549,19 @@ static void initializeProfileForContinuousMode(void) {
       /* The merged profile has a non-zero length. Check that it is compatible
        * with the data in this process. */
       char *ProfileBuffer;
-      if (mmapProfileForMerging(File, ProfileFileSize, &ProfileBuffer) == -1 ||
-          munmap(ProfileBuffer, ProfileFileSize)) {
+      if (mmapProfileForMerging(File, ProfileFileSize, &ProfileBuffer) == -1) {
         lprofUnlockFileHandle(File);
         fclose(File);
         return;
       }
+      (void)munmap(ProfileBuffer, ProfileFileSize);
     }
   } else {
     File = fopen(Filename, FileOpenMode);
     if (!File)
       return;
     /* Check that the offset within the file is page-aligned. */
-    CurrentFileOffset = ftello(File);
+    CurrentFileOffset = ftell(File);
     unsigned PageSize = getpagesize();
     if (CurrentFileOffset % PageSize != 0) {
       PROF_ERR("Continuous counter sync mode is enabled, but raw profile is not"
@@ -582,7 +585,7 @@ static void initializeProfileForContinuousMode(void) {
 
       /* Map the profile. */
       char *Profile = (char *)mmap(NULL, FileSize, PROT_READ | PROT_WRITE,
-                                   MAP_SHARED, Fileno, 0);
+                                   MmapFlags, Fileno, 0);
       if (Profile == MAP_FAILED) {
         PROF_ERR("Unable to mmap profile: %s\n", strerror(errno));
         return;
@@ -629,7 +632,7 @@ static void initializeProfileForContinuousMode(void) {
 
       uint64_t *CounterMmap =
           (uint64_t *)mmap((void *)CountersBegin, PageAlignedCountersLength,
-                           PROT_READ | PROT_WRITE, MAP_FIXED | MAP_SHARED,
+                           PROT_READ | PROT_WRITE, MmapFlags,
                            Fileno, FileOffsetToCounters);
       if (CounterMmap != CountersBegin) {
         PROF_ERR(

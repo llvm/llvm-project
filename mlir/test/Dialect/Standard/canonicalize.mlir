@@ -80,6 +80,25 @@ func @truncConstant(%arg0: i8) -> i16 {
   return %tr : i16
 }
 
+// CHECK-LABEL: @truncFPConstant
+//       CHECK:   %[[cres:.+]] = constant 1.000000e+00 : bf16
+//       CHECK:   return %[[cres]]
+func @truncFPConstant() -> bf16 {
+  %cst = constant 1.000000e+00 : f32
+  %0 = fptrunc %cst : f32 to bf16
+  return %0 : bf16
+}
+
+// Test that cases with rounding are NOT propagated
+// CHECK-LABEL: @truncFPConstantRounding
+//       CHECK:   constant 1.444000e+25 : f32
+//       CHECK:   fptrunc
+func @truncFPConstantRounding() -> bf16 {
+  %cst = constant 1.444000e+25 : f32
+  %0 = fptrunc %cst : f32 to bf16
+  return %0 : bf16
+}
+
 // CHECK-LABEL: @tripleAddAdd
 //       CHECK:   %[[cres:.+]] = constant 59 : index 
 //       CHECK:   %[[add:.+]] = addi %arg0, %[[cres]] : index 

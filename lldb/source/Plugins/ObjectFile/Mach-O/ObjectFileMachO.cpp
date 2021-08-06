@@ -2221,6 +2221,7 @@ size_t ObjectFileMachO::ParseSymtab() {
 
   llvm::MachO::symtab_command symtab_load_command = {0, 0, 0, 0, 0, 0};
   llvm::MachO::linkedit_data_command function_starts_load_command = {0, 0, 0, 0};
+  llvm::MachO::linkedit_data_command exports_trie_load_command = {0, 0, 0, 0};
   llvm::MachO::dyld_info_command dyld_info = {0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0};
   // The data element of type bool indicates that this entry is thumb
   // code.
@@ -2298,11 +2299,19 @@ size_t ObjectFileMachO::ParseSymtab() {
       }
     } break;
 
+    case LC_DYLD_EXPORTS_TRIE:
+      exports_trie_load_command.cmd = lc.cmd;
+      exports_trie_load_command.cmdsize = lc.cmdsize;
+      if (m_data.GetU32(&offset, &exports_trie_load_command.dataoff, 2) ==
+          nullptr) // fill in offset and size fields
+        memset(&exports_trie_load_command, 0,
+               sizeof(exports_trie_load_command));
+      break;
     case LC_FUNCTION_STARTS:
       function_starts_load_command.cmd = lc.cmd;
       function_starts_load_command.cmdsize = lc.cmdsize;
       if (m_data.GetU32(&offset, &function_starts_load_command.dataoff, 2) ==
-          nullptr) // fill in symoff, nsyms, stroff, strsize fields
+          nullptr) // fill in data offset and size fields
         memset(&function_starts_load_command, 0,
                sizeof(function_starts_load_command));
       break;
@@ -2446,6 +2455,7 @@ size_t ObjectFileMachO::ParseSymtab() {
       dyld_info.export_off += linkedit_slide;
       m_dysymtab.indirectsymoff += linkedit_slide;
       function_starts_load_command.dataoff += linkedit_slide;
+      exports_trie_load_command.dataoff += linkedit_slide;
     }
 
     nlist_data.SetData(m_data, symtab_load_command.symoff,
@@ -2453,9 +2463,16 @@ size_t ObjectFileMachO::ParseSymtab() {
     strtab_data.SetData(m_data, symtab_load_command.stroff,
                         strtab_data_byte_size);
 
+    // We shouldn't have exports data from both the LC_DYLD_INFO command
+    // AND the LC_DYLD_EXPORTS_TRIE command in the same binary:
+    lldbassert(!((dyld_info.export_size > 0) 
+                 && (exports_trie_load_command.datasize > 0)));
     if (dyld_info.export_size > 0) {
       dyld_trie_data.SetData(m_data, dyld_info.export_off,
                              dyld_info.export_size);
+    } else if (exports_trie_load_command.datasize > 0) {
+      dyld_trie_data.SetData(m_data, exports_trie_load_command.dataoff,
+                             exports_trie_load_command.datasize);
     }
 
     if (m_dysymtab.nindirectsyms != 0) {

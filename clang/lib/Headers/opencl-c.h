@@ -16011,7 +16011,7 @@ int __ovld get_image_num_samples(read_write image2d_array_msaa_depth_t image);
 
 // OpenCL v2.0 s6.13.15 - Work-group Functions
 
-#if defined(__OPENCL_CPP_VERSION__) || (__OPENCL_C_VERSION__ >= CL_VERSION_2_0)
+#if defined(__opencl_c_work_group_collective_functions)
 int __ovld __conv work_group_all(int predicate);
 int __ovld __conv work_group_any(int predicate);
 
@@ -16109,12 +16109,12 @@ double __ovld __conv work_group_scan_inclusive_min(double x);
 double __ovld __conv work_group_scan_inclusive_max(double x);
 #endif //cl_khr_fp64
 
-#endif //defined(__OPENCL_CPP_VERSION__) || (__OPENCL_C_VERSION__ >= CL_VERSION_2_0)
+#endif //defined(__opencl_c_work_group_collective_functions)
 
 // OpenCL v2.0 s6.13.16 - Pipe Functions
-#if defined(__OPENCL_CPP_VERSION__) || (__OPENCL_C_VERSION__ >= CL_VERSION_2_0)
+#if defined(__opencl_c_pipes)
 bool __ovld is_valid_reserve_id(reserve_id_t reserve_id);
-#endif //defined(__OPENCL_CPP_VERSION__) || (__OPENCL_C_VERSION__ >= CL_VERSION_2_0)
+#endif //defined(__opencl_c_pipes)
 
 
 // OpenCL v2.0 s6.13.17 - Enqueue Kernels
@@ -16151,7 +16151,7 @@ queue_t __ovld get_default_queue(void);
 
 // OpenCL Extension v2.0 s9.17 - Sub-groups
 
-#if defined(cl_intel_subgroups) || defined(cl_khr_subgroups)
+#if defined(cl_intel_subgroups) || defined(cl_khr_subgroups) || defined(__opencl_c_subgroups)
 // Shared Sub Group Functions
 uint    __ovld get_sub_group_size(void);
 uint    __ovld get_max_sub_group_size(void);
@@ -16250,7 +16250,7 @@ double  __ovld __conv sub_group_scan_inclusive_min(double x);
 double  __ovld __conv sub_group_scan_inclusive_max(double x);
 #endif //cl_khr_fp64
 
-#endif //cl_khr_subgroups cl_intel_subgroups
+#endif //cl_khr_subgroups cl_intel_subgroups __opencl_c_subgroups
 
 #if defined(cl_khr_subgroup_extended_types)
 char __ovld __conv sub_group_broadcast( char value, uint index );
