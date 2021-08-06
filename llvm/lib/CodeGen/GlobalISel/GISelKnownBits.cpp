@@ -9,7 +9,7 @@
 /// Provides analysis for querying information about KnownBits during GISel
 /// passes.
 //
-//===----------------------------------------------------------------------===//
+//===------------------
 #include "llvm/CodeGen/GlobalISel/GISelKnownBits.h"
 #include "llvm/Analysis/ValueTracking.h"
 #include "llvm/CodeGen/GlobalISel/Utils.h"
@@ -508,18 +508,6 @@ void GISelKnownBits::computeKnownBitsImpl(Register R, KnownBits &Known,
     Register SrcReg = MI.getOperand(1).getReg();
     computeKnownBitsImpl(SrcReg, Known, DemandedElts, Depth + 1);
     Known = Known.reverseBits();
-    break;
-  }
-  case TargetOpcode::G_CTPOP: {
-    computeKnownBitsImpl(MI.getOperand(1).getReg(), Known2, DemandedElts,
-                         Depth + 1);
-    // We can bound the space the count needs.  Also, bits known to be zero can't
-    // contribute to the population.
-    unsigned BitsPossiblySet = Known2.countMaxPopulation();
-    unsigned LowBits = Log2_32(BitsPossiblySet)+1;
-    Known.Zero.setBitsFrom(LowBits);
-    // TODO: we could bound Known.One using the lower bound on the number of
-    // bits which might be set provided by popcnt KnownOne2.
     break;
   }
   case TargetOpcode::G_UBFX: {
