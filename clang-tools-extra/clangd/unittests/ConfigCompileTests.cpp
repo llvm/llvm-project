@@ -9,7 +9,7 @@
 #include "Config.h"
 #include "ConfigFragment.h"
 #include "ConfigTesting.h"
-#include "Features.h"
+#include "Feature.h"
 #include "TestFS.h"
 #include "clang/Basic/DiagnosticSema.h"
 #include "llvm/ADT/None.h"

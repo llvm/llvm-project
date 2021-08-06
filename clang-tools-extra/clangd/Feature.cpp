@@ -1,4 +1,4 @@
-//===--- Features.cpp - Compile-time configuration ------------------------===//
+//===--- Feature.cpp - Compile-time configuration ------------------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -6,7 +6,7 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "Features.h"
+#include "Feature.h"
 #include "clang/Basic/Version.h"
 #include "llvm/Support/Compiler.h"
 #include "llvm/Support/Host.h"
