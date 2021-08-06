@@ -257,6 +257,9 @@ void PPCTargetInfo::getTargetDefines(const LangOptions &Opts,
     Builder.defineMacro("__powerpc64__");
     Builder.defineMacro("__ppc64__");
     Builder.defineMacro("__PPC64__");
+  } else if (getTriple().isOSAIX()) {
+    // The XL compilers on AIX define _ARCH_PPC64 for both 32 and 64-bit modes.
+    Builder.defineMacro("_ARCH_PPC64");
   }
   if (getTriple().isOSAIX()) {
     Builder.defineMacro("__THW_PPC__");
