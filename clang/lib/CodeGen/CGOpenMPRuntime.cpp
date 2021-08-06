@@ -2120,11 +2120,12 @@ void CGOpenMPRuntime::emitParallelCall(CodeGenFunction &CGF, SourceLocation Loc,
     OutlinedFnArgs.append(CapturedVars.begin(), CapturedVars.end());
 
     // Ensure we do not inline the function. This is trivially true for the ones
-    // passed to __kmpc_fork_call but the ones calles in serialized regions
+    // passed to __kmpc_fork_call but the ones called in serialized regions
     // could be inlined. This is not a perfect but it is closer to the invariant
     // we want, namely, every data environment starts with a new function.
     // TODO: We should pass the if condition to the runtime function and do the
     //       handling there. Much cleaner code.
+    OutlinedFn->removeFnAttr(llvm::Attribute::AlwaysInline);
     OutlinedFn->addFnAttr(llvm::Attribute::NoInline);
     RT.emitOutlinedFunctionCall(CGF, Loc, OutlinedFn, OutlinedFnArgs);
 
