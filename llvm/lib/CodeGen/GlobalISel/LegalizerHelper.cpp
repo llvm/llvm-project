@@ -2051,8 +2051,12 @@ LegalizerHelper::widenScalar(MachineInstr &MI, unsigned TypeIdx, LLT WideTy) {
 
     Register SrcReg = MI.getOperand(1).getReg();
 
-    // First ZEXT the input.
-    auto MIBSrc = MIRBuilder.buildZExt(WideTy, SrcReg);
+    // First extend the input.
+    unsigned ExtOpc = MI.getOpcode() == TargetOpcode::G_CTTZ ||
+                              MI.getOpcode() == TargetOpcode::G_CTTZ_ZERO_UNDEF
+                          ? TargetOpcode::G_ANYEXT
+                          : TargetOpcode::G_ZEXT;
+    auto MIBSrc = MIRBuilder.buildInstr(ExtOpc, {WideTy}, {SrcReg});
     LLT CurTy = MRI.getType(SrcReg);
     unsigned NewOpc = MI.getOpcode();
     if (NewOpc == TargetOpcode::G_CTTZ) {

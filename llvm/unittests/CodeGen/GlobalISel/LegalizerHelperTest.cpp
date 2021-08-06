@@ -678,8 +678,8 @@ TEST_F(AArch64GISelMITest, WidenBitCountingCTTZ_ZERO_UNDEF) {
 
   auto CheckStr = R"(
   CHECK: [[Trunc:%[0-9]+]]:_(s8) = G_TRUNC
-  CHECK: [[Zext:%[0-9]+]]:_(s16) = G_ZEXT [[Trunc]]
-  CHECK: [[CttzZu:%[0-9]+]]:_(s16) = G_CTTZ_ZERO_UNDEF [[Zext]]
+  CHECK: [[AnyExt:%[0-9]+]]:_(s16) = G_ANYEXT [[Trunc]]
+  CHECK: [[CttzZu:%[0-9]+]]:_(s16) = G_CTTZ_ZERO_UNDEF [[AnyExt]]
   CHECK: [[Trunc:%[0-9]+]]:_(s8) = G_TRUNC [[CttzZu]]
   )";
 
@@ -711,9 +711,9 @@ TEST_F(AArch64GISelMITest, WidenBitCountingCTTZ) {
 
   auto CheckStr = R"(
   CHECK: [[Trunc:%[0-9]+]]:_(s8) = G_TRUNC
-  CHECK: [[Zext:%[0-9]+]]:_(s16) = G_ZEXT [[Trunc]]
+  CHECK: [[AnyExt:%[0-9]+]]:_(s16) = G_ANYEXT [[Trunc]]
   CHECK: [[Cst:%[0-9]+]]:_(s16) = G_CONSTANT i16 256
-  CHECK: [[Or:%[0-9]+]]:_(s16) = G_OR [[Zext]]:_, [[Cst]]
+  CHECK: [[Or:%[0-9]+]]:_(s16) = G_OR [[AnyExt]]:_, [[Cst]]
   CHECK: [[Cttz:%[0-9]+]]:_(s16) = G_CTTZ_ZERO_UNDEF [[Or]]
   CHECK: [[Trunc:%[0-9]+]]:_(s8) = G_TRUNC [[Cttz]]
   )";
