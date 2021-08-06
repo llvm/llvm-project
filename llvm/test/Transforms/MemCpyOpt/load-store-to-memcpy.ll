@@ -4,6 +4,9 @@
 
 %T = type { i8, i32 }
 
+; A global constant of %T
+@C = external constant %T
+
 ; Ensure load-store forwarding of an aggregate is interpreted as
 ; a memmove when the source and dest may alias
 define void @test_memmove(%T* align 8 %a, %T* align 16 %b) {
@@ -29,6 +32,17 @@ define void @test_memcpy(%T* noalias align 8 %a, %T* noalias align 16 %b) {
 ;
   %val = load %T, %T* %a, align 8
   store %T %val, %T* %b, align 16
+  ret void
+}
+
+define void @test_memcpy_constant(%T* %d) {
+; CHECK-LABEL: @test_memcpy_constant(
+; CHECK-NEXT:    [[TMP1:%.*]] = bitcast %T* [[D:%.*]] to i8*
+; CHECK-NEXT:    call void @llvm.memcpy.p0i8.p0i8.i64(i8* align 16 [[TMP1]], i8* align 8 getelementptr inbounds ([[T:%.*]], %T* @C, i32 0, i32 0), i64 8, i1 false)
+; CHECK-NEXT:    ret void
+;
+  %val = load %T, %T* @C, align 8
+  store %T %val, %T* %d, align 16
   ret void
 }
 
