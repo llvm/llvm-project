@@ -266,8 +266,8 @@ AArch64LegalizerInfo::AArch64LegalizerInfo(const AArch64Subtarget &ST)
                                  {s64, p0, s64, 8},
                                  {p0, p0, s64, 8},
                                  {v2s32, p0, s64, 8}})
-      .clampScalar(0, s32, s64)
       .widenScalarToNextPow2(0)
+      .clampScalar(0, s32, s64)
       // TODO: We could support sum-of-pow2's but the lowering code doesn't know
       //       how to do that yet.
       .unsupportedIfMemSizeNotPow2()
