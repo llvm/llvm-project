@@ -5571,8 +5571,8 @@ def warn_undefined_inline : Warning<"inline function %q0 is not defined">,
 def err_undefined_inline_var : Error<"inline variable %q0 is not defined">;
 def note_used_here : Note<"used here">;
 
-def err_internal_linkage_redeclaration : Error<
-  "'internal_linkage' attribute does not appear on the first declaration of %0">;
+def err_attribute_missing_on_first_decl : Error<
+  "%0 attribute does not appear on the first declaration">;
 def warn_internal_linkage_local_storage : Warning<
   "'internal_linkage' attribute on a non-static local variable is ignored">,
   InGroup<IgnoredAttributes>;
@@ -9676,10 +9676,6 @@ def warn_falloff_noreturn_function : Warning<
   InGroup<InvalidNoreturn>;
 def err_noreturn_block_has_return_expr : Error<
   "block declared 'noreturn' should not return">;
-def err_noreturn_missing_on_first_decl : Error<
-  "function declared '[[noreturn]]' after its first declaration">;
-def note_noreturn_missing_first_decl : Note<
-  "declaration missing '[[noreturn]]' attribute is here">;
 def err_carries_dependency_missing_on_first_decl : Error<
   "%select{function|parameter}0 declared '[[carries_dependency]]' "
   "after its first declaration">;
