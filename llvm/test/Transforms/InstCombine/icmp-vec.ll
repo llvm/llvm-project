@@ -585,9 +585,8 @@ define i1 @eq_cast_eq-1_use2(<2 x i4> %x, <2 x i4> %y, i2* %p) {
 
 define i1 @ne_cast_sext(<3 x i1> %b) {
 ; CHECK-LABEL: @ne_cast_sext(
-; CHECK-NEXT:    [[E:%.*]] = sext <3 x i1> [[B:%.*]] to <3 x i8>
-; CHECK-NEXT:    [[BC:%.*]] = bitcast <3 x i8> [[E]] to i24
-; CHECK-NEXT:    [[R:%.*]] = icmp ne i24 [[BC]], 0
+; CHECK-NEXT:    [[TMP1:%.*]] = bitcast <3 x i1> [[B:%.*]] to i3
+; CHECK-NEXT:    [[R:%.*]] = icmp ne i3 [[TMP1]], 0
 ; CHECK-NEXT:    ret i1 [[R]]
 ;
   %e = sext <3 x i1> %b to <3 x i8>
@@ -598,9 +597,8 @@ define i1 @ne_cast_sext(<3 x i1> %b) {
 
 define i1 @eq_cast_sext(<8 x i3> %b) {
 ; CHECK-LABEL: @eq_cast_sext(
-; CHECK-NEXT:    [[E:%.*]] = sext <8 x i3> [[B:%.*]] to <8 x i8>
-; CHECK-NEXT:    [[BC:%.*]] = bitcast <8 x i8> [[E]] to i64
-; CHECK-NEXT:    [[R:%.*]] = icmp eq i64 [[BC]], 0
+; CHECK-NEXT:    [[TMP1:%.*]] = bitcast <8 x i3> [[B:%.*]] to i24
+; CHECK-NEXT:    [[R:%.*]] = icmp eq i24 [[TMP1]], 0
 ; CHECK-NEXT:    ret i1 [[R]]
 ;
   %e = sext <8 x i3> %b to <8 x i8>
@@ -611,9 +609,8 @@ define i1 @eq_cast_sext(<8 x i3> %b) {
 
 define i1 @ne_cast_zext(<4 x i1> %b) {
 ; CHECK-LABEL: @ne_cast_zext(
-; CHECK-NEXT:    [[E:%.*]] = zext <4 x i1> [[B:%.*]] to <4 x i8>
-; CHECK-NEXT:    [[BC:%.*]] = bitcast <4 x i8> [[E]] to i32
-; CHECK-NEXT:    [[R:%.*]] = icmp ne i32 [[BC]], 0
+; CHECK-NEXT:    [[TMP1:%.*]] = bitcast <4 x i1> [[B:%.*]] to i4
+; CHECK-NEXT:    [[R:%.*]] = icmp ne i4 [[TMP1]], 0
 ; CHECK-NEXT:    ret i1 [[R]]
 ;
   %e = zext <4 x i1> %b to <4 x i8>
@@ -624,9 +621,8 @@ define i1 @ne_cast_zext(<4 x i1> %b) {
 
 define i1 @eq_cast_zext(<5 x i3> %b) {
 ; CHECK-LABEL: @eq_cast_zext(
-; CHECK-NEXT:    [[E:%.*]] = zext <5 x i3> [[B:%.*]] to <5 x i7>
-; CHECK-NEXT:    [[BC:%.*]] = bitcast <5 x i7> [[E]] to i35
-; CHECK-NEXT:    [[R:%.*]] = icmp eq i35 [[BC]], 0
+; CHECK-NEXT:    [[TMP1:%.*]] = bitcast <5 x i3> [[B:%.*]] to i15
+; CHECK-NEXT:    [[R:%.*]] = icmp eq i15 [[TMP1]], 0
 ; CHECK-NEXT:    ret i1 [[R]]
 ;
   %e = zext <5 x i3> %b to <5 x i7>
@@ -634,6 +630,8 @@ define i1 @eq_cast_zext(<5 x i3> %b) {
   %r = icmp eq i35 %bc, 0
   ret i1 %r
 }
+
+; negative test - valid for eq/ne only
 
 define i1 @sgt_cast_zext(<5 x i3> %b) {
 ; CHECK-LABEL: @sgt_cast_zext(
@@ -648,6 +646,9 @@ define i1 @sgt_cast_zext(<5 x i3> %b) {
   ret i1 %r
 }
 
+; negative test - not valid with non-zero constants
+; TODO: We could handle some non-zero constants by checking for bit-loss after casts.
+
 define i1 @eq7_cast_sext(<5 x i3> %b) {
 ; CHECK-LABEL: @eq7_cast_sext(
 ; CHECK-NEXT:    [[E:%.*]] = sext <5 x i3> [[B:%.*]] to <5 x i7>
@@ -661,12 +662,14 @@ define i1 @eq7_cast_sext(<5 x i3> %b) {
   ret i1 %r
 }
 
+; extra use of extend is ok
+
 define i1 @eq_cast_zext_use1(<5 x i3> %b, <5 x i7>* %p) {
 ; CHECK-LABEL: @eq_cast_zext_use1(
 ; CHECK-NEXT:    [[E:%.*]] = zext <5 x i3> [[B:%.*]] to <5 x i7>
 ; CHECK-NEXT:    store <5 x i7> [[E]], <5 x i7>* [[P:%.*]], align 8
-; CHECK-NEXT:    [[BC:%.*]] = bitcast <5 x i7> [[E]] to i35
-; CHECK-NEXT:    [[R:%.*]] = icmp eq i35 [[BC]], 0
+; CHECK-NEXT:    [[TMP1:%.*]] = bitcast <5 x i3> [[B]] to i15
+; CHECK-NEXT:    [[R:%.*]] = icmp eq i15 [[TMP1]], 0
 ; CHECK-NEXT:    ret i1 [[R]]
 ;
   %e = zext <5 x i3> %b to <5 x i7>
@@ -675,6 +678,8 @@ define i1 @eq_cast_zext_use1(<5 x i3> %b, <5 x i7>* %p) {
   %r = icmp eq i35 %bc, 0
   ret i1 %r
 }
+
+; negative test - don't create an extra cast
 
 declare void @use35(i35)
 

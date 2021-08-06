@@ -2936,6 +2936,19 @@ Instruction *InstCombinerImpl::foldICmpBitCast(ICmpInst &Cmp) {
     return new ICmpInst(Pred, Cast, ConstantInt::getNullValue(ScalarTy));
   }
 
+  // If this is checking if all elements of an extended vector are clear or not,
+  // compare in a narrow type to eliminate the extend:
+  // icmp eq/ne (bitcast (ext X) to iN), 0 --> icmp eq/ne (bitcast X to iM), 0
+  Value *X;
+  if (Cmp.isEquality() && C->isNullValue() && Bitcast->hasOneUse() &&
+      match(BCSrcOp, m_ZExtOrSExt(m_Value(X)))) {
+    if (auto *VecTy = dyn_cast<FixedVectorType>(X->getType())) {
+      Type *NewType = Builder.getIntNTy(VecTy->getPrimitiveSizeInBits());
+      Value *NewCast = Builder.CreateBitCast(X, NewType);
+      return new ICmpInst(Pred, NewCast, ConstantInt::getNullValue(NewType));
+    }
+  }
+
   // Folding: icmp <pred> iN X, C
   //  where X = bitcast <M x iK> (shufflevector <M x iK> %vec, undef, SC)) to iN
   //    and C is a splat of a K-bit pattern
