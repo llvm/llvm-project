@@ -245,24 +245,15 @@ AArch64LegalizerInfo::AArch64LegalizerInfo(const AArch64Subtarget &ST)
       .widenScalarToNextPow2(1);
 
   getActionDefinitionsBuilder(G_EXTRACT)
-      .unsupportedIf([=](const LegalityQuery &Query) {
-        return Query.Types[0].getSizeInBits() >= Query.Types[1].getSizeInBits();
-      })
-      .legalIf([=](const LegalityQuery &Query) {
-        const LLT &Ty0 = Query.Types[0];
-        const LLT &Ty1 = Query.Types[1];
-        if (Ty1 != s32 && Ty1 != s64 && Ty1 != s128)
-          return false;
-        if (Ty1 == p0)
-          return true;
-        return isPowerOf2_32(Ty0.getSizeInBits()) &&
-               (Ty0.getSizeInBits() == 1 || Ty0.getSizeInBits() >= 8);
-      })
-      .clampScalar(1, s32, s128)
+      .legalIf(all(typeInSet(0, {s16, s32, s64, p0}),
+                   typeInSet(1, {s32, s64, s128, p0}), smallerThan(0, 1)))
       .widenScalarToNextPow2(1)
+      .clampScalar(1, s32, s128)
+      .widenScalarToNextPow2(0)
+      .minScalar(0, s16)
       .maxScalarIf(typeInSet(1, {s32}), 0, s16)
-      .maxScalarIf(typeInSet(1, {s64}), 0, s32)
-      .widenScalarToNextPow2(0);
+      .maxScalarIf(typeInSet(1, {s64, p0}), 0, s32)
+      .maxScalarIf(typeInSet(1, {s128}), 0, s64);
 
   getActionDefinitionsBuilder({G_SEXTLOAD, G_ZEXTLOAD})
       .lowerIf(atomicOrderingAtLeastOrStrongerThan(0, AtomicOrdering::Unordered))
