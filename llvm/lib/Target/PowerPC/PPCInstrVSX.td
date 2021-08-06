@@ -3547,7 +3547,7 @@ defm : ScalToVecWPermute<
   (SUBREG_TO_REG (i64 1), (MTVSRWZ $A), sub_64)>;
 defm : ScalToVecWPermute<
   v8i16, (i32 i32:$A),
-  (SUBREG_TO_REG (i64 1), MovesToVSR.BE_BYTE_0, sub_64),
+  (SUBREG_TO_REG (i64 1), MovesToVSR.BE_HALF_0, sub_64),
   (SUBREG_TO_REG (i64 1), (MTVSRWZ $A), sub_64)>;
 defm : ScalToVecWPermute<
   v4i32, (i32 i32:$A),
