@@ -582,24 +582,6 @@ Examples matches public virtual B.
 </pre></td></tr>
 
 
-<tr><td>Matcher&lt;<a href="https://clang.llvm.org/doxygen/classclang_1_1Attr.html">Attr</a>&gt;</td><td class="name" onclick="toggle('attr0')"><a name="attr0Anchor">attr</a></td><td>Matcher&lt;<a href="https://clang.llvm.org/doxygen/classclang_1_1Attr.html">Attr</a>&gt;...</td></tr>
-<tr><td colspan="4" class="doc" id="attr0"><pre>Matches attributes.
-Attributes may be attached with a variety of different syntaxes (including
-keywords, C++11 attributes, GNU ``__attribute``` and MSVC `__declspec``,
-and ``#pragma``s). They may also be implicit.
-
-Given
-  struct [[nodiscard]] Foo{};
-  void bar(int * __attribute__((nonnull)) );
-  __declspec(noinline) void baz();
-
-  #pragma omp declare simd
-  int min();
-attr()
-  matches "nodiscard", "nonnull", "noinline", and the whole "#pragma" line.
-</pre></td></tr>
-
-
 <tr><td>Matcher&lt;<a href="https://clang.llvm.org/doxygen/classclang_1_1CXXCtorInitializer.html">CXXCtorInitializer</a>&gt;</td><td class="name" onclick="toggle('cxxCtorInitializer0')"><a name="cxxCtorInitializer0Anchor">cxxCtorInitializer</a></td><td>Matcher&lt;<a href="https://clang.llvm.org/doxygen/classclang_1_1CXXCtorInitializer.html">CXXCtorInitializer</a>&gt;...</td></tr>
 <tr><td colspan="4" class="doc" id="cxxCtorInitializer0"><pre>Matches constructor initializers.
 
@@ -2762,12 +2744,6 @@ Usable as: Any Matcher
 </pre></td></tr>
 
 
-<tr><td>Matcher&lt;<a href="https://clang.llvm.org/doxygen/classclang_1_1Attr.html">Attr</a>&gt;</td><td class="name" onclick="toggle('isImplicit1')"><a name="isImplicit1Anchor">isImplicit</a></td><td></td></tr>
-<tr><td colspan="4" class="doc" id="isImplicit1"><pre>Matches an entity that has been implicitly added by the compiler (e.g.
-implicit default/copy constructors).
-</pre></td></tr>
-
-
 <tr><td>Matcher&lt;<a href="https://clang.llvm.org/doxygen/classclang_1_1BinaryOperator.html">BinaryOperator</a>&gt;</td><td class="name" onclick="toggle('hasAnyOperatorName0')"><a name="hasAnyOperatorName0Anchor">hasAnyOperatorName</a></td><td>StringRef, ..., StringRef</td></tr>
 <tr><td colspan="4" class="doc" id="hasAnyOperatorName0"><pre>Matches operator expressions (binary or unary) that have any of the
 specified names.
@@ -3832,8 +3808,8 @@ Usable as: Matcher&lt;<a href="https://clang.llvm.org/doxygen/classclang_1_1Decl
 
 
 <tr><td>Matcher&lt;<a href="https://clang.llvm.org/doxygen/classclang_1_1Decl.html">Decl</a>&gt;</td><td class="name" onclick="toggle('isImplicit0')"><a name="isImplicit0Anchor">isImplicit</a></td><td></td></tr>
-<tr><td colspan="4" class="doc" id="isImplicit0"><pre>Matches an entity that has been implicitly added by the compiler (e.g.
-implicit default/copy constructors).
+<tr><td colspan="4" class="doc" id="isImplicit0"><pre>Matches a declaration that has been implicitly added
+by the compiler (eg. implicit default/copy constructors).
 </pre></td></tr>
 
 
