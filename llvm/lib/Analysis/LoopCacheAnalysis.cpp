@@ -290,8 +290,8 @@ CacheCostTy IndexedReference::computeRefCost(const Loop &L,
     const SCEV *Coeff = getLastCoefficient();
     const SCEV *ElemSize = Sizes.back();
     const SCEV *Stride = SE.getMulExpr(Coeff, ElemSize);
-    const SCEV *CacheLineSize = SE.getConstant(Stride->getType(), CLS);
     Type *WiderType = SE.getWiderType(Stride->getType(), TripCount->getType());
+    const SCEV *CacheLineSize = SE.getConstant(WiderType, CLS);
     if (SE.isKnownNegative(Stride))
       Stride = SE.getNegativeSCEV(Stride);
     Stride = SE.getNoopOrAnyExtend(Stride, WiderType);
