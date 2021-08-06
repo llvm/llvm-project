@@ -673,6 +673,7 @@ protected:
     DefineStd(Builder, "unix", Opts);
     Builder.defineMacro("_IBMR2");
     Builder.defineMacro("_POWER");
+    Builder.defineMacro("__THW_BIG_ENDIAN__");
 
     Builder.defineMacro("_AIX");
     Builder.defineMacro("__TOS_AIX__");
