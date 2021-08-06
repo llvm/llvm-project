@@ -391,6 +391,7 @@
 // PPC-AIX-NOT:#define __64BIT__ 1
 // PPC-AIX:#define _AIX 1
 // PPC-AIX:#define _ARCH_PPC 1
+// PPC-AIX:#define _ARCH_PPC64 1
 // PPC-AIX:#define _BIG_ENDIAN 1
 // PPC-AIX:#define _IBMR2 1
 // PPC-AIX:#define _LONG_LONG 1
