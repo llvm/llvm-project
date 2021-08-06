@@ -16,12 +16,7 @@ class ObjCDataFormatterNSBundle(ObjCDataFormatterTestCase):
 
     def test_nsbundle_with_run_command(self):
         """Test formatters for NSBundle."""
-        self.appkit_tester_impl(self.nsbundle_data_formatter_commands, True)
-
-    @skipUnlessDarwin
-    def test_nsbundle_with_run_command_no_sonct(self):
-        """Test formatters for NSBundle."""
-        self.appkit_tester_impl(self.nsbundle_data_formatter_commands, False)
+        self.appkit_tester_impl(self.nsbundle_data_formatter_commands)
 
     def nsbundle_data_formatter_commands(self):
         self.expect(

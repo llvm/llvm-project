@@ -20,20 +20,6 @@ class PrintObjectArrayTestCase(TestBase):
         self.build()
         self.printarray_data_formatter_commands()
 
-    @skipUnlessDarwin
-    def test_print_array_no_const(self):
-        """Test that expr -O -Z works"""
-        disable_constant_classes = {
-            'CC':
-            'xcrun clang',  # FIXME: Remove when flags are available upstream.
-            'CFLAGS_EXTRAS':
-            '-fno-constant-nsnumber-literals ' +
-            '-fno-constant-nsarray-literals ' +
-            '-fno-constant-nsdictionary-literals'
-        }
-        self.build(dictionary=disable_constant_classes)
-        self.printarray_data_formatter_commands()
-
     def setUp(self):
         # Call super's setUp().
         TestBase.setUp(self)

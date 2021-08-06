@@ -16,12 +16,7 @@ class ObjCDataFormatterNSURL(ObjCDataFormatterTestCase):
 
     def test_nsurl_with_run_command(self):
         """Test formatters for NSURL."""
-        self.appkit_tester_impl(self.nsurl_data_formatter_commands, True)
-
-    @skipUnlessDarwin
-    def test_nsurl_with_run_command_no_const(self):
-        """Test formatters for NSURL."""
-        self.appkit_tester_impl(self.nsurl_data_formatter_commands, False)
+        self.appkit_tester_impl(self.nsurl_data_formatter_commands)
 
     def nsurl_data_formatter_commands(self):
         self.expect(
