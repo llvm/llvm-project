@@ -12,7 +12,7 @@ define <2 x double> @foo(<4 x i32> %s) {
 ;
 ; CHECK-BE-LABEL: foo:
 ; CHECK-BE:       # %bb.0: # %entry
-; CHECK-BE-NEXT:    xxsldwi 0, 34, 34, 3
+; CHECK-BE-NEXT:    xxsldwi 0, 34, 34, 1
 ; CHECK-BE-NEXT:    xvcvsxwdp 34, 0
 ; CHECK-BE-NEXT:    blr
 entry:
@@ -29,7 +29,7 @@ define <2 x double> @bar(<4 x i32> %s) {
 ;
 ; CHECK-BE-LABEL: bar:
 ; CHECK-BE:       # %bb.0: # %entry
-; CHECK-BE-NEXT:    xxsldwi 0, 34, 34, 3
+; CHECK-BE-NEXT:    xxsldwi 0, 34, 34, 1
 ; CHECK-BE-NEXT:    xvcvuxwdp 34, 0
 ; CHECK-BE-NEXT:    blr
 entry:

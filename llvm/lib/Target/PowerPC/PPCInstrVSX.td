@@ -2962,11 +2962,11 @@ def : Pat<(v2i64 (fp_to_uint
 def : Pat<WToDPExtractConv.BV02S,
           (v2f64 (XVCVSXWDP $A))>;
 def : Pat<WToDPExtractConv.BV13S,
-          (v2f64 (XVCVSXWDP (XXSLDWI $A, $A, 3)))>;
+          (v2f64 (XVCVSXWDP (XXSLDWI $A, $A, 1)))>;
 def : Pat<WToDPExtractConv.BV02U,
           (v2f64 (XVCVUXWDP $A))>;
 def : Pat<WToDPExtractConv.BV13U,
-          (v2f64 (XVCVUXWDP (XXSLDWI $A, $A, 3)))>;
+          (v2f64 (XVCVUXWDP (XXSLDWI $A, $A, 1)))>;
 def : Pat<(v2f64 (insertelt v2f64:$A, f64:$B, 0)),
           (v2f64 (XXPERMDI (SUBREG_TO_REG (i64 1), $B, sub_64), $A, 1))>;
 def : Pat<(v2f64 (insertelt v2f64:$A, f64:$B, 1)),
