@@ -104,6 +104,9 @@ Optional<TensorSpec> getTensorSpecFromJSON(LLVMContext &Ctx,
 struct LoggedFeatureSpec {
   TensorSpec Spec;
   Optional<std::string> LoggingName;
+  const std::string &getLoggingName() const {
+    return LoggingName ? *LoggingName : Spec.name();
+  }
 };
 
 /// Load the output specs. If SpecFileOverride is not empty, that path is used.
@@ -170,7 +173,9 @@ public:
   // we can consider using bytes.
   char *addEntryAndGetFloatOrInt64Buffer(size_t FeatureID);
 
-  void print(raw_ostream &OS);
+  // Flush the content of the log to the stream, clearing the stored data in the
+  // process.
+  void flush(raw_ostream &OS);
 
 private:
   std::vector<LoggedFeatureSpec> FeatureSpecs;

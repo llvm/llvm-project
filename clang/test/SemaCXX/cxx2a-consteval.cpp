@@ -594,3 +594,21 @@ void test() {
 }
 
 } // namespace special_ctor
+
+namespace unevaluated {
+
+template <typename T, typename U> struct is_same { static const bool value = false; };
+template <typename T> struct is_same<T, T> { static const bool value = true; };
+
+long f(); // expected-note {{declared here}}
+auto consteval g(auto a) {
+  return a;
+}
+
+auto e = g(f()); // expected-error {{is not a constant expression}}
+                 // expected-note@-1 {{non-constexpr function 'f' cannot be used in a constant expression}}
+
+using T = decltype(g(f()));
+static_assert(is_same<long, T>::value);
+
+} // namespace unevaluated

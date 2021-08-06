@@ -695,11 +695,9 @@ define void @PR50053(<4 x i64>* nocapture %0, <4 x i64>* nocapture readonly %1) 
 ; ALL-LABEL: PR50053:
 ; ALL:       # %bb.0:
 ; ALL-NEXT:    vmovaps (%rsi), %ymm0
-; ALL-NEXT:    vmovaps 32(%rsi), %xmm1
-; ALL-NEXT:    vmovaps 48(%rsi), %xmm2
-; ALL-NEXT:    vperm2f128 {{.*#+}} ymm1 = ymm0[0,1],ymm1[0,1]
+; ALL-NEXT:    vinsertf128 $1, 32(%rsi), %ymm0, %ymm1
+; ALL-NEXT:    vinsertf128 $0, 48(%rsi), %ymm0, %ymm0
 ; ALL-NEXT:    vmovaps %ymm1, (%rdi)
-; ALL-NEXT:    vblendps {{.*#+}} ymm0 = ymm2[0,1,2,3],ymm0[4,5,6,7]
 ; ALL-NEXT:    vmovaps %ymm0, 32(%rdi)
 ; ALL-NEXT:    vzeroupper
 ; ALL-NEXT:    retq

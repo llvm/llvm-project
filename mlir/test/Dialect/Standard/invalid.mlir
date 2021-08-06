@@ -69,3 +69,19 @@ func @complex_constant_two_different_element_types() {
   %0 = constant [1.0 : f32, -1.0 : f64] : complex<f64>
   return
 }
+
+// -----
+
+func @return_i32_f32() -> (i32, f32) {
+  %0 = constant 1 : i32
+  %1 = constant 1. : f32
+  return %0, %1 : i32, f32
+}
+
+func @call() {
+  // expected-error @+3 {{op result type mismatch at index 0}}
+  // expected-note @+2 {{op result types: 'f32', 'i32'}}
+  // expected-note @+1 {{function result types: 'i32', 'f32'}}
+  %0:2 = call @return_i32_f32() : () -> (f32, i32)
+  return
+}

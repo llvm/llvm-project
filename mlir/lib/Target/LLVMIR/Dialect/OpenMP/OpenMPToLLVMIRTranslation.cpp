@@ -252,24 +252,11 @@ convertOmpWsLoop(Operation &opInst, llvm::IRBuilderBase &builder,
   if (loop.lowerBound().empty())
     return failure();
 
-  if (loop.getNumLoops() != 1)
-    return opInst.emitOpError("collapsed loops not yet supported");
-
   // Static is the default.
   omp::ClauseScheduleKind schedule = omp::ClauseScheduleKind::Static;
   if (loop.schedule_val().hasValue())
     schedule =
         *omp::symbolizeClauseScheduleKind(loop.schedule_val().getValue());
-
-  // Find the loop configuration.
-  llvm::Value *lowerBound = moduleTranslation.lookupValue(loop.lowerBound()[0]);
-  llvm::Value *upperBound = moduleTranslation.lookupValue(loop.upperBound()[0]);
-  llvm::Value *step = moduleTranslation.lookupValue(loop.step()[0]);
-  llvm::Type *ivType = step->getType();
-  llvm::Value *chunk =
-      loop.schedule_chunk_var()
-          ? moduleTranslation.lookupValue(loop.schedule_chunk_var())
-          : llvm::ConstantInt::get(ivType, 1);
 
   // Set up the source location value for OpenMP runtime.
   llvm::DISubprogram *subprogram =
@@ -279,22 +266,29 @@ convertOmpWsLoop(Operation &opInst, llvm::IRBuilderBase &builder,
   llvm::OpenMPIRBuilder::LocationDescription ompLoc(builder.saveIP(),
                                                     llvm::DebugLoc(diLoc));
 
-  // Generator of the canonical loop body. Produces an SESE region of basic
-  // blocks.
+  // Generator of the canonical loop body.
   // TODO: support error propagation in OpenMPIRBuilder and use it instead of
   // relying on captured variables.
+  SmallVector<llvm::CanonicalLoopInfo *> loopInfos;
+  SmallVector<llvm::OpenMPIRBuilder::InsertPointTy> bodyInsertPoints;
   LogicalResult bodyGenStatus = success();
   auto bodyGen = [&](llvm::OpenMPIRBuilder::InsertPointTy ip, llvm::Value *iv) {
-    llvm::IRBuilder<>::InsertPointGuard guard(builder);
-
     // Make sure further conversions know about the induction variable.
-    moduleTranslation.mapValue(loop.getRegion().front().getArgument(0), iv);
+    moduleTranslation.mapValue(
+        loop.getRegion().front().getArgument(loopInfos.size()), iv);
 
+    // Capture the body insertion point for use in nested loops. BodyIP of the
+    // CanonicalLoopInfo always points to the beginning of the entry block of
+    // the body.
+    bodyInsertPoints.push_back(ip);
+
+    if (loopInfos.size() != loop.getNumLoops() - 1)
+      return;
+
+    // Convert the body of the loop.
     llvm::BasicBlock *entryBlock = ip.getBlock();
     llvm::BasicBlock *exitBlock =
         entryBlock->splitBasicBlock(ip.getPoint(), "omp.wsloop.exit");
-
-    // Convert the body of the loop.
     convertOmpOpRegions(loop.region(), "omp.wsloop.region", *entryBlock,
                         *exitBlock, builder, moduleTranslation, bodyGenStatus);
   };
@@ -303,21 +297,49 @@ convertOmpWsLoop(Operation &opInst, llvm::IRBuilderBase &builder,
   // TODO: this currently assumes WsLoop is semantically similar to SCF loop,
   // i.e. it has a positive step, uses signed integer semantics. Reconsider
   // this code when WsLoop clearly supports more cases.
-  llvm::CanonicalLoopInfo *loopInfo =
-      moduleTranslation.getOpenMPBuilder()->createCanonicalLoop(
-          ompLoc, bodyGen, lowerBound, upperBound, step, /*IsSigned=*/true,
-          /*InclusiveStop=*/loop.inclusive());
-  if (failed(bodyGenStatus))
-    return failure();
+  llvm::OpenMPIRBuilder *ompBuilder = moduleTranslation.getOpenMPBuilder();
+  for (unsigned i = 0, e = loop.getNumLoops(); i < e; ++i) {
+    llvm::Value *lowerBound =
+        moduleTranslation.lookupValue(loop.lowerBound()[i]);
+    llvm::Value *upperBound =
+        moduleTranslation.lookupValue(loop.upperBound()[i]);
+    llvm::Value *step = moduleTranslation.lookupValue(loop.step()[i]);
 
+    // Make sure loop trip count are emitted in the preheader of the outermost
+    // loop at the latest so that they are all available for the new collapsed
+    // loop will be created below.
+    llvm::OpenMPIRBuilder::LocationDescription loc = ompLoc;
+    llvm::OpenMPIRBuilder::InsertPointTy computeIP = ompLoc.IP;
+    if (i != 0) {
+      loc = llvm::OpenMPIRBuilder::LocationDescription(bodyInsertPoints.back(),
+                                                       llvm::DebugLoc(diLoc));
+      computeIP = loopInfos.front()->getPreheaderIP();
+    }
+    loopInfos.push_back(ompBuilder->createCanonicalLoop(
+        loc, bodyGen, lowerBound, upperBound, step,
+        /*IsSigned=*/true, loop.inclusive(), computeIP));
+
+    if (failed(bodyGenStatus))
+      return failure();
+  }
+
+  // Collapse loops. Store the insertion point because LoopInfos may get
+  // invalidated.
+  llvm::IRBuilderBase::InsertPoint afterIP = loopInfos.front()->getAfterIP();
+  llvm::CanonicalLoopInfo *loopInfo =
+      ompBuilder->collapseLoops(diLoc, loopInfos, {});
+
+  // Find the loop configuration.
+  llvm::Type *ivType = loopInfo->getIndVar()->getType();
+  llvm::Value *chunk =
+      loop.schedule_chunk_var()
+          ? moduleTranslation.lookupValue(loop.schedule_chunk_var())
+          : llvm::ConstantInt::get(ivType, 1);
   llvm::OpenMPIRBuilder::InsertPointTy allocaIP =
       findAllocaInsertPoint(builder, moduleTranslation);
-  llvm::OpenMPIRBuilder::InsertPointTy afterIP;
-  llvm::OpenMPIRBuilder *ompBuilder = moduleTranslation.getOpenMPBuilder();
   if (schedule == omp::ClauseScheduleKind::Static) {
-    loopInfo = ompBuilder->createStaticWorkshareLoop(ompLoc, loopInfo, allocaIP,
-                                                     !loop.nowait(), chunk);
-    afterIP = loopInfo->getAfterIP();
+    ompBuilder->createStaticWorkshareLoop(ompLoc, loopInfo, allocaIP,
+                                          !loop.nowait(), chunk);
   } else {
     llvm::omp::OMPScheduleType schedType;
     switch (schedule) {
@@ -338,11 +360,14 @@ convertOmpWsLoop(Operation &opInst, llvm::IRBuilderBase &builder,
       break;
     }
 
-    afterIP = ompBuilder->createDynamicWorkshareLoop(
-        ompLoc, loopInfo, allocaIP, schedType, !loop.nowait(), chunk);
+    ompBuilder->createDynamicWorkshareLoop(ompLoc, loopInfo, allocaIP,
+                                           schedType, !loop.nowait(), chunk);
   }
 
-  // Continue building IR after the loop.
+  // Continue building IR after the loop. Note that the LoopInfo returned by
+  // `collapseLoops` points inside the outermost loop and is intended for
+  // potential further loop transformations. Use the insertion point stored
+  // before collapsing loops instead.
   builder.restoreIP(afterIP);
   return success();
 }

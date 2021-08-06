@@ -6538,17 +6538,17 @@ INTERCEPTOR(int, sem_getvalue, __sanitizer_sem_t *s, int *sval) {
   }
   return res;
 }
-#define INIT_SEM                                                               \
-  COMMON_INTERCEPT_FUNCTION(sem_init);                                         \
-  COMMON_INTERCEPT_FUNCTION(sem_destroy);                                      \
-  COMMON_INTERCEPT_FUNCTION(sem_wait);                                         \
-  COMMON_INTERCEPT_FUNCTION(sem_trywait);                                      \
-  COMMON_INTERCEPT_FUNCTION(sem_timedwait);                                    \
-  COMMON_INTERCEPT_FUNCTION(sem_post);                                         \
-  COMMON_INTERCEPT_FUNCTION(sem_getvalue);
+#  define INIT_SEM                            \
+    COMMON_INTERCEPT_FUNCTION(sem_init);      \
+    COMMON_INTERCEPT_FUNCTION(sem_destroy);   \
+    COMMON_INTERCEPT_FUNCTION(sem_wait);      \
+    COMMON_INTERCEPT_FUNCTION(sem_trywait);   \
+    COMMON_INTERCEPT_FUNCTION(sem_timedwait); \
+    COMMON_INTERCEPT_FUNCTION(sem_post);      \
+    COMMON_INTERCEPT_FUNCTION(sem_getvalue);
 #else
-#define INIT_SEM
-#endif // SANITIZER_INTERCEPT_SEM
+#  define INIT_SEM
+#endif  // SANITIZER_INTERCEPT_SEM
 
 #if SANITIZER_INTERCEPT_PTHREAD_SETCANCEL
 INTERCEPTOR(int, pthread_setcancelstate, int state, int *oldstate) {

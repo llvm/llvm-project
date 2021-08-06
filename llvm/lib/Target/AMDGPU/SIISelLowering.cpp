@@ -465,11 +465,15 @@ SITargetLowering::SITargetLowering(const TargetMachine &TM,
   if (!Subtarget->hasBCNT(64))
     setOperationAction(ISD::CTPOP, MVT::i64, Expand);
 
-  if (Subtarget->hasFFBH())
+  if (Subtarget->hasFFBH()) {
+    setOperationAction(ISD::CTLZ, MVT::i32, Custom);
     setOperationAction(ISD::CTLZ_ZERO_UNDEF, MVT::i32, Custom);
+  }
 
-  if (Subtarget->hasFFBL())
+  if (Subtarget->hasFFBL()) {
+    setOperationAction(ISD::CTTZ, MVT::i32, Custom);
     setOperationAction(ISD::CTTZ_ZERO_UNDEF, MVT::i32, Custom);
+  }
 
   // We only really have 32-bit BFE instructions (and 16-bit on VI).
   //

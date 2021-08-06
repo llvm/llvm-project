@@ -1,12 +1,12 @@
 import("//llvm/utils/TableGen/tablegen.gni")
 
 tablegen("Options") {
-  visibility = [ ":MachO2" ]
+  visibility = [ ":MachO" ]
   args = [ "-gen-opt-parser-defs" ]
 }
 
-static_library("MachO2") {
-  output_name = "lldMachO2"
+static_library("MachO") {
+  output_name = "lldMachO"
   configs += [ "//llvm/utils/gn/build:lld_code" ]
   deps = [
     ":Options",

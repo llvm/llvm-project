@@ -796,7 +796,7 @@ void Module::LookupInfo::Prune(SymbolContextList &sc_list,
 void Module::FindFunctions(ConstString name,
                            const CompilerDeclContext &parent_decl_ctx,
                            FunctionNameType name_type_mask,
-                           bool include_symbols, bool include_inlines,
+                           const ModuleFunctionSearchOptions &options,
                            SymbolContextList &sc_list) {
   const size_t old_size = sc_list.GetSize();
 
@@ -808,12 +808,12 @@ void Module::FindFunctions(ConstString name,
 
     if (symbols) {
       symbols->FindFunctions(lookup_info.GetLookupName(), parent_decl_ctx,
-                             lookup_info.GetNameTypeMask(), include_inlines,
-                             sc_list);
+                             lookup_info.GetNameTypeMask(),
+                             options.include_inlines, sc_list);
 
       // Now check our symbol table for symbols that are code symbols if
       // requested
-      if (include_symbols) {
+      if (options.include_symbols) {
         Symtab *symtab = symbols->GetSymtab();
         if (symtab)
           symtab->FindFunctionSymbols(lookup_info.GetLookupName(),
@@ -828,11 +828,11 @@ void Module::FindFunctions(ConstString name,
   } else {
     if (symbols) {
       symbols->FindFunctions(name, parent_decl_ctx, name_type_mask,
-                             include_inlines, sc_list);
+                             options.include_inlines, sc_list);
 
       // Now check our symbol table for symbols that are code symbols if
       // requested
-      if (include_symbols) {
+      if (options.include_symbols) {
         Symtab *symtab = symbols->GetSymtab();
         if (symtab)
           symtab->FindFunctionSymbols(name, name_type_mask, sc_list);
@@ -841,17 +841,17 @@ void Module::FindFunctions(ConstString name,
   }
 }
 
-void Module::FindFunctions(const RegularExpression &regex, bool include_symbols,
-                           bool include_inlines,
+void Module::FindFunctions(const RegularExpression &regex,
+                           const ModuleFunctionSearchOptions &options,
                            SymbolContextList &sc_list) {
   const size_t start_size = sc_list.GetSize();
 
   if (SymbolFile *symbols = GetSymbolFile()) {
-    symbols->FindFunctions(regex, include_inlines, sc_list);
+    symbols->FindFunctions(regex, options.include_inlines, sc_list);
 
     // Now check our symbol table for symbols that are code symbols if
     // requested
-    if (include_symbols) {
+    if (options.include_symbols) {
       Symtab *symtab = symbols->GetSymtab();
       if (symtab) {
         std::vector<uint32_t> symbol_indexes;

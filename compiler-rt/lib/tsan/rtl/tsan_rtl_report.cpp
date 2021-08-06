@@ -614,7 +614,7 @@ void ReportRace(ThreadState *thr) {
     thr->racy_state[1] = s.raw();
   }
 
-  uptr addr = ShadowToMem((uptr)thr->racy_shadow_addr);
+  uptr addr = ShadowToMem(thr->racy_shadow_addr);
   uptr addr_min = 0;
   uptr addr_max = 0;
   {

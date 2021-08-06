@@ -153,11 +153,11 @@ define <4 x float> @insertps_from_broadcast_multiple_use(<4 x float> %a, <4 x fl
 ; X32-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; X32-NEXT:    movl {{[0-9]+}}(%esp), %ecx
 ; X32-NEXT:    vbroadcastss (%ecx,%eax,4), %xmm4
-; X32-NEXT:    vblendps {{.*#+}} xmm0 = xmm0[0,1,2],xmm4[3]
-; X32-NEXT:    vblendps {{.*#+}} xmm1 = xmm1[0,1,2],xmm4[3]
+; X32-NEXT:    vinsertps {{.*#+}} xmm0 = xmm0[0,1,2],xmm4[0]
+; X32-NEXT:    vinsertps {{.*#+}} xmm1 = xmm1[0,1,2],xmm4[0]
 ; X32-NEXT:    vaddps %xmm1, %xmm0, %xmm0
-; X32-NEXT:    vblendps {{.*#+}} xmm1 = xmm2[0,1,2],xmm4[3]
-; X32-NEXT:    vblendps {{.*#+}} xmm2 = xmm3[0,1,2],xmm4[3]
+; X32-NEXT:    vinsertps {{.*#+}} xmm1 = xmm2[0,1,2],xmm4[0]
+; X32-NEXT:    vinsertps {{.*#+}} xmm2 = xmm3[0,1,2],xmm4[0]
 ; X32-NEXT:    vaddps %xmm2, %xmm1, %xmm1
 ; X32-NEXT:    vaddps %xmm1, %xmm0, %xmm0
 ; X32-NEXT:    retl
@@ -165,11 +165,11 @@ define <4 x float> @insertps_from_broadcast_multiple_use(<4 x float> %a, <4 x fl
 ; X64-LABEL: insertps_from_broadcast_multiple_use:
 ; X64:       ## %bb.0:
 ; X64-NEXT:    vbroadcastss (%rdi,%rsi,4), %xmm4
-; X64-NEXT:    vblendps {{.*#+}} xmm0 = xmm0[0,1,2],xmm4[3]
-; X64-NEXT:    vblendps {{.*#+}} xmm1 = xmm1[0,1,2],xmm4[3]
+; X64-NEXT:    vinsertps {{.*#+}} xmm0 = xmm0[0,1,2],xmm4[0]
+; X64-NEXT:    vinsertps {{.*#+}} xmm1 = xmm1[0,1,2],xmm4[0]
 ; X64-NEXT:    vaddps %xmm1, %xmm0, %xmm0
-; X64-NEXT:    vblendps {{.*#+}} xmm1 = xmm2[0,1,2],xmm4[3]
-; X64-NEXT:    vblendps {{.*#+}} xmm2 = xmm3[0,1,2],xmm4[3]
+; X64-NEXT:    vinsertps {{.*#+}} xmm1 = xmm2[0,1,2],xmm4[0]
+; X64-NEXT:    vinsertps {{.*#+}} xmm2 = xmm3[0,1,2],xmm4[0]
 ; X64-NEXT:    vaddps %xmm2, %xmm1, %xmm1
 ; X64-NEXT:    vaddps %xmm1, %xmm0, %xmm0
 ; X64-NEXT:    retq

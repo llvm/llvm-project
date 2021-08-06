@@ -377,7 +377,7 @@ void TrainingLogger::logInlineEvent(const InlineEvent &Event,
 void TrainingLogger::print() {
   std::error_code EC;
   raw_fd_ostream OutFile(LogFileName, EC);
-  L->print(OutFile);
+  L->flush(OutFile);
 }
 
 DevelopmentModeMLInlineAdvisor::DevelopmentModeMLInlineAdvisor(

@@ -166,7 +166,7 @@
 // NO-LIBDEVICE: Found CUDA installation: {{.*}}/Inputs/CUDA-nolibdevice/usr/local/cuda
 // NOCUDA-NOT: Found CUDA installation:
 
-// MISSINGLIBDEVICE: error: cannot find libdevice for sm_20.
+// MISSINGLIBDEVICE: error: cannot find libdevice for sm_20;
 
 // COMMON: "-triple" "nvptx-nvidia-cuda"
 // COMMON64: "-triple" "nvptx64-nvidia-cuda"

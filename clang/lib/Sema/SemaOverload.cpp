@@ -5635,7 +5635,7 @@ static ExprResult CheckConvertedConstantExpression(Sema &S, Expr *From,
   //  expression is a constant expression and the implicit conversion
   //  sequence contains only [... list of conversions ...].
   ImplicitConversionSequence ICS =
-      CCE == Sema::CCEK_ExplicitBool
+      (CCE == Sema::CCEK_ExplicitBool || CCE == Sema::CCEK_Noexcept)
           ? TryContextuallyConvertToBool(S, From)
           : TryCopyInitialization(S, From, T,
                                   /*SuppressUserConversions=*/false,

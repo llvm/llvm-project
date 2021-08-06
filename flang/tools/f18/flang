@@ -10,7 +10,7 @@
 # experimenting. You should be able to use it as a regular compiler driver. It
 # will:
 #   * run Flang's compiler driver to unparse the input source files
-#   * use the external compiler (defined via F18_FC environment variable) to
+#   * use the external compiler (defined via FLANG_FC environment variable) to
 #   compile the unparsed source files
 #===------------------------------------------------------------------------===#
 set -euo pipefail
@@ -182,7 +182,7 @@ categorise_opts()
 
     if
       # The options claimed by Flang. This list needs to be compatible with
-      # what's supported by Flang's compiler driver (i.e. `flang-new` and f18).
+      # what's supported by Flang's compiler driver (i.e. `flang-new`).
       [[ $opt == "-cpp" ]] ||
       [[ $opt =~ ^-D.* ]] ||
       [[ $opt == "-E" ]] ||
@@ -244,7 +244,18 @@ preprocess() {
   local -n other_srcs=$2
   local -n opts=$3
 
-  local -r ext_fc="${F18_FC:-gfortran}"
+  local ext_fc=""
+  if [[ -v $FLANG_FC ]]; then
+    ext_fc="${FLANG_FC}"
+  elif [[ -v $F18_FC ]]; then
+    # We support F18_FC for backwards compatibility.
+    ext_fc="${F18_FC}"
+  else
+    ext_fc=gfortran
+  fi
+
+
+  local ext_fc="${FLANG_FC:-gfortran}"
   local -r wd=$(cd "$(dirname "$0")/.." && pwd)
 
   # Use the provided output file name.
@@ -254,9 +265,9 @@ preprocess() {
 
   # Preprocess fortran sources using Flang
   for idx in "${!fortran_srcs[@]}"; do
-    if ! "$wd/bin/@FLANG_DEFAULT_DRIVER@" -E "${opts[@]}" "${fortran_srcs[$idx]}" ${output_definition:+$output_definition}
+    if ! "$wd/bin/flang-new" -E "${opts[@]}" "${fortran_srcs[$idx]}" ${output_definition:+$output_definition}
     then status=$?
-         echo flang: in "$PWD", @FLANG_DEFAULT_DRIVER@ failed with exit status $status: "$wd/bin/@FLANG_DEFAULT_DRIVER@" "${opts[@]}" "$@" >&2
+         echo flang: in "$PWD", flang-new failed with exit status $status: "$wd/bin/flang-new" "${opts[@]}" "$@" >&2
          exit $status
     fi
   done
@@ -323,8 +334,7 @@ main() {
   # NOTE: We need `-fc1` to make sure that the frontend driver rather than
   # compiler driver is used. We also need to make sure that that's the first
   # flag that the driver will see (otherwise it assumes compiler/toolchain
-  # driver mode).`f18` will just ignore this flag when uparsing, so it's fine
-  # to add it here unconditionally.
+  # driver mode).
   local flang_options=("-fc1")
   # Options for the external Fortran Compiler
   local ext_fc_options=()
@@ -349,11 +359,11 @@ main() {
   [[ ! -z ${INTRINSICS_MOD_DIR} ]] && flang_options+=("-intrinsics-module-directory ${INTRINSICS_MOD_DIR}")
   for idx in "${!fortran_source_files[@]}"; do
     set +e
-    "$wd/bin/@FLANG_DEFAULT_DRIVER@" "${flang_options[@]}" "${fortran_source_files[$idx]}" -o "${unparsed_file_base}_${idx}.f90"
+    "$wd/bin/flang-new" "${flang_options[@]}" "${fortran_source_files[$idx]}" -o "${unparsed_file_base}_${idx}.f90"
     ret_status=$?
     set -e
     if [[ $ret_status != 0 ]]; then
-         echo flang: in "$PWD", @FLANG_DEFAULT_DRIVER@ failed with exit status "$ret_status": "$wd/bin/@FLANG_DEFAULT_DRIVER@" "${flang_options[@]}" "$@" >&2
+         echo flang: in "$PWD", flang-new failed with exit status "$ret_status": "$wd/bin/flang-new" "${flang_options[@]}" "$@" >&2
          exit "$ret_status"
     fi
   done

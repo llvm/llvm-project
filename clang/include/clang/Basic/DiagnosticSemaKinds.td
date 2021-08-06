@@ -82,11 +82,11 @@ def err_typecheck_converted_constant_expression_indirect : Error<
   "bind reference to a temporary">;
 def err_expr_not_cce : Error<
   "%select{case value|enumerator value|non-type template argument|"
-  "array size|explicit specifier argument}0 "
+  "array size|explicit specifier argument|noexcept specifier argument}0 "
   "is not a constant expression">;
 def ext_cce_narrowing : ExtWarn<
   "%select{case value|enumerator value|non-type template argument|"
-  "array size|explicit specifier argument}0 "
+  "array size|explicit specifier argument|noexcept specifier argument}0 "
   "%select{cannot be narrowed from type %2 to %3|"
   "evaluates to %2, which cannot be narrowed to type %3}1">,
   InGroup<CXX11Narrowing>, DefaultError, SFINAEFailure;
@@ -2986,6 +2986,8 @@ def err_alignas_mismatch : Error<
   "redeclaration has different alignment requirement (%1 vs %0)">;
 def err_alignas_underaligned : Error<
   "requested alignment is less than minimum alignment of %1 for type %0">;
+def warn_aligned_attr_underaligned : Warning<err_alignas_underaligned.Text>,
+  InGroup<IgnoredAttributes>;
 def err_attribute_sizeless_type : Error<
   "%0 attribute cannot be applied to sizeless type %1">;
 def err_attribute_argument_n_type : Error<
@@ -5733,7 +5735,7 @@ def warn_typecheck_function_qualifiers_unspecified : Warning<
   "'%0' qualifier on function type %1 has unspecified behavior">;
 def warn_typecheck_reference_qualifiers : Warning<
   "'%0' qualifier on reference type %1 has no effect">,
-  InGroup<IgnoredQualifiers>;
+  InGroup<IgnoredReferenceQualifiers>;
 def err_typecheck_invalid_restrict_not_pointer : Error<
   "restrict requires a pointer or reference (%0 is invalid)">;
 def err_typecheck_invalid_restrict_not_pointer_noarg : Error<

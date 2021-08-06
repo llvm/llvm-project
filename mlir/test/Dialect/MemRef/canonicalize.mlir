@@ -46,21 +46,50 @@ func @no_fold_buffer_cast_of_tensor_load(%arg0: memref<?xf32, 2>) -> memref<?xf3
 // CHECK-DAG: #[[$OFF_3:[a-z0-9]+]] = affine_map<(d0) -> (d0 + 3)>
 // CHECK-DAG: #[[$OFF_UNK:[a-z0-9]+]] = affine_map<(d0)[s0] -> (d0 + s0)>
 
-// Test case: If the memrefs are cast-compatible, canonicalize.
+// Test case: If the memrefs are definitely cast-compatible, canonicalize to
+//            cast.
 // CHECK-LABEL: func @canonicalize_buffer_cast_of_tensor_load(
 //  CHECK-SAME:   %[[M:.*]]: memref<?xf32, #[[$OFF_3]]>)
-//  CHEKC-SAME:     -> memref<?xf32, #[[$OFF_UNK]]> {
+//  CHECK-SAME:     -> memref<?xf32, #[[$OFF_UNK]]> {
 //   CHECK-NOT: memref.tensor_load
 //   CHECK-NOT: memref.buffer_cast
 //       CHECK: %[[R:.*]] = memref.cast %[[M]]
 //  CHECK-SAME:   memref<?xf32, #[[$OFF_3]]> to memref<?xf32, #[[$OFF_UNK]]>
 //       CHECK: return %[[R]]
-func @canonicalize_buffer_cast_of_tensor_load(%arg0: memref<?xf32, offset: 3, strides: [1]>)
+func @canonicalize_buffer_cast_of_tensor_load(
+  %arg0: memref<?xf32, offset: 3, strides: [1]>)
   -> memref<?xf32, offset: ?, strides: [1]>
 {
   %0 = memref.tensor_load %arg0 : memref<?xf32, offset: 3, strides: [1]>
   %1 = memref.buffer_cast %0 : memref<?xf32, offset: ?, strides: [1]>
   return %1 : memref<?xf32, offset: ?, strides: [1]>
+}
+
+// -----
+
+// CHECK-DAG: #[[$OFF_UNK:[a-z0-9]+]] = affine_map<(d0)[s0] -> (d0 + s0)>
+// CHECK-DAG: #[[$OFF_3:[a-z0-9]+]] = affine_map<(d0) -> (d0 + 3)>
+
+// Test case: If the memrefs are potentially cast-compatible, canonicalize to
+//            copy.
+// CHECK-LABEL: func @canonicalize_buffer_cast_of_tensor_load_to_copy(
+//  CHECK-SAME:   %[[M:.*]]: memref<?xf32, #[[$OFF_UNK]]>)
+//  CHECK-SAME:     -> memref<?xf32, #[[$OFF_3]]> {
+//   CHECK-NOT: memref.tensor_load
+//   CHECK-NOT: memref.buffer_cast
+//       CHECK: %[[C0:.*]] = constant 0 : index
+//       CHECK: %[[DIM:.*]] = memref.dim %[[M]], %[[C0]] : memref<?xf32, #[[$OFF_UNK]]>
+//       CHECK: %[[ALLOC:.*]] = memref.alloc(%[[DIM]]) : memref<?xf32, #[[$OFF_3]]>
+//       CHECK: memref.copy %[[M]], %[[ALLOC]]
+//  CHECK-SAME:   memref<?xf32, #[[$OFF_UNK]]> to memref<?xf32, #[[$OFF_3]]>
+//       CHECK: return %[[ALLOC]]
+func @canonicalize_buffer_cast_of_tensor_load_to_copy(
+  %arg0: memref<?xf32, offset: ?, strides: [1]>)
+  -> memref<?xf32, offset: 3, strides: [1]>
+{
+  %0 = memref.tensor_load %arg0 : memref<?xf32, offset: ?, strides: [1]>
+  %1 = memref.buffer_cast %0 : memref<?xf32, offset: 3, strides: [1]>
+  return %1 : memref<?xf32, offset: 3, strides: [1]>
 }
 
 // -----

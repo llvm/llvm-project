@@ -13,8 +13,7 @@ to helpers on the comprehension objects themselves.
 
 from typing import Dict, Optional
 
-from mlir import ir as _ir
-
+from ..... import ir as _ir
 from .comprehension import *
 from .yaml_helper import *
 

@@ -652,8 +652,15 @@ def bitfield_extract_from_sext_inreg : GICombineRule<
     [{ return Helper.matchBitfieldExtractFromSExtInReg(*${root}, ${info}); }]),
   (apply [{ Helper.applyBuildFn(*${root}, ${info}); }])>;
 
+def bitfield_extract_from_shr : GICombineRule<
+  (defs root:$root, build_fn_matchinfo:$info),
+  (match (wip_match_opcode G_ASHR, G_LSHR):$root,
+    [{ return Helper.matchBitfieldExtractFromShr(*${root}, ${info}); }]),
+  (apply [{ Helper.applyBuildFn(*${root}, ${info}); }])>;
+
 def form_bitfield_extract : GICombineGroup<[bitfield_extract_from_sext_inreg,
-                                            bitfield_extract_from_and]>;
+                                            bitfield_extract_from_and,
+                                            bitfield_extract_from_shr]>;
 def reassoc_ptradd : GICombineRule<
   (defs root:$root, build_fn_matchinfo:$matchinfo),
   (match (wip_match_opcode G_PTR_ADD):$root,

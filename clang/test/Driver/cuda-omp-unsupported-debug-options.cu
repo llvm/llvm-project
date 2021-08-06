@@ -57,7 +57,7 @@
 
 // COMMON: warning: debug information option '{{-gz|-fdebug-info-for-profiling|-gsplit-dwarf|-glldb|-gcodeview|-gmodules|-gembed-source|-fdebug-macro|-ggnu-pubnames|-gdwarf-aranges|-fdebug-types-section}}' is not supported
 // WARN-SAME: for target 'nvptx64-nvidia-cuda' [-Wunsupported-target-opt]
-// WARN-GES-SAME: It needs DWARF-5 but target 'nvptx64-nvidia-cuda' only provides DWARF-2. [-Wunsupported-target-opt]
+// WARN-GES-SAME: requires DWARF-5 but target 'nvptx64-nvidia-cuda' only provides DWARF-2 [-Wunsupported-target-opt]
 // COMMON-NOT: debug information option '{{.*}}' is not supported for target 'x86
 // COMMON: "-triple" "nvptx64-nvidia-cuda"
 // COMMON-NOT: {{-compress-debug|-fdebug-info-for-profiling|lldb|codeview|module-format|embed-source|debug-info-macro|gnu-pubnames|generate-arange-section|generate-type-units}}

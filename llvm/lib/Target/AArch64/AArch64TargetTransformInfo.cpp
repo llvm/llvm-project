@@ -14,6 +14,7 @@
 #include "llvm/CodeGen/BasicTTIImpl.h"
 #include "llvm/CodeGen/CostTable.h"
 #include "llvm/CodeGen/TargetLowering.h"
+#include "llvm/IR/Intrinsics.h"
 #include "llvm/IR/IntrinsicInst.h"
 #include "llvm/IR/IntrinsicsAArch64.h"
 #include "llvm/IR/PatternMatch.h"
@@ -1899,23 +1900,23 @@ InstructionCost
 AArch64TTIImpl::getMinMaxReductionCost(VectorType *Ty, VectorType *CondTy,
                                        bool IsUnsigned,
                                        TTI::TargetCostKind CostKind) {
-  if (!isa<ScalableVectorType>(Ty))
-    return BaseT::getMinMaxReductionCost(Ty, CondTy, IsUnsigned, CostKind);
-  assert((isa<ScalableVectorType>(Ty) && isa<ScalableVectorType>(CondTy)) &&
-         "Both vector needs to be scalable");
-
   std::pair<InstructionCost, MVT> LT = TLI->getTypeLegalizationCost(DL, Ty);
+
+  if (LT.second.getScalarType() == MVT::f16 && !ST->hasFullFP16())
+    return BaseT::getMinMaxReductionCost(Ty, CondTy, IsUnsigned, CostKind);
+
+  assert((isa<ScalableVectorType>(Ty) == isa<ScalableVectorType>(CondTy)) &&
+         "Both vector needs to be equally scalable");
+
   InstructionCost LegalizationCost = 0;
   if (LT.first > 1) {
     Type *LegalVTy = EVT(LT.second).getTypeForEVT(Ty->getContext());
-    unsigned CmpOpcode =
-        Ty->isFPOrFPVectorTy() ? Instruction::FCmp : Instruction::ICmp;
-    LegalizationCost =
-        getCmpSelInstrCost(CmpOpcode, LegalVTy, LegalVTy,
-                           CmpInst::BAD_ICMP_PREDICATE, CostKind) +
-        getCmpSelInstrCost(Instruction::Select, LegalVTy, LegalVTy,
-                           CmpInst::BAD_ICMP_PREDICATE, CostKind);
-    LegalizationCost *= LT.first - 1;
+    unsigned MinMaxOpcode =
+        Ty->isFPOrFPVectorTy()
+            ? Intrinsic::maxnum
+            : (IsUnsigned ? Intrinsic::umin : Intrinsic::smin);
+    IntrinsicCostAttributes Attrs(MinMaxOpcode, LegalVTy, {LegalVTy, LegalVTy});
+    LegalizationCost = getIntrinsicInstrCost(Attrs, CostKind) * (LT.first - 1);
   }
 
   return LegalizationCost + /*Cost of horizontal reduction*/ 2;

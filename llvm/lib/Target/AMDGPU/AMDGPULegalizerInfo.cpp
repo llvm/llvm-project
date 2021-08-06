@@ -940,7 +940,7 @@ AMDGPULegalizerInfo::AMDGPULegalizerInfo(const GCNSubtarget &ST_,
     .clampScalar(1, S32, S64)
     .widenScalarToNextPow2(0, 32)
     .widenScalarToNextPow2(1, 32)
-    .lower();
+    .custom();
 
   // The 64-bit versions produce 32-bit results, but only on the SALU.
   getActionDefinitionsBuilder({G_CTLZ_ZERO_UNDEF, G_CTTZ_ZERO_UNDEF})
@@ -1758,6 +1758,9 @@ bool AMDGPULegalizerInfo::legalizeCustom(LegalizerHelper &Helper,
     return legalizeFFloor(MI, MRI, B);
   case TargetOpcode::G_BUILD_VECTOR:
     return legalizeBuildVector(MI, MRI, B);
+  case TargetOpcode::G_CTLZ:
+  case TargetOpcode::G_CTTZ:
+    return legalizeCTLZ_CTTZ(MI, MRI, B);
   default:
     return false;
   }
@@ -2774,6 +2777,27 @@ bool AMDGPULegalizerInfo::legalizeBuildVector(
 
   auto Merge = B.buildMerge(S32, {Src0, Src1});
   B.buildBitcast(Dst, Merge);
+
+  MI.eraseFromParent();
+  return true;
+}
+
+// Legalize ctlz/cttz to ffbh/ffbl instead of the default legalization to
+// ctlz/cttz_zero_undef. This allows us to fix up the result for the zero input
+// case with a single min instruction instead of a compare+select.
+bool AMDGPULegalizerInfo::legalizeCTLZ_CTTZ(MachineInstr &MI,
+                                            MachineRegisterInfo &MRI,
+                                            MachineIRBuilder &B) const {
+  Register Dst = MI.getOperand(0).getReg();
+  Register Src = MI.getOperand(1).getReg();
+  LLT DstTy = MRI.getType(Dst);
+  LLT SrcTy = MRI.getType(Src);
+
+  unsigned NewOpc = MI.getOpcode() == AMDGPU::G_CTLZ
+                        ? AMDGPU::G_AMDGPU_FFBH_U32
+                        : AMDGPU::G_AMDGPU_FFBL_B32;
+  auto Tmp = B.buildInstr(NewOpc, {DstTy}, {Src});
+  B.buildUMin(Dst, Tmp, B.buildConstant(DstTy, SrcTy.getSizeInBits()));
 
   MI.eraseFromParent();
   return true;

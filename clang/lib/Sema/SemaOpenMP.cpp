@@ -7342,7 +7342,7 @@ bool OpenMPIterationSpaceChecker::setLCDeclAndLB(ValueDecl *NewLCDecl,
   // State consistency checking to ensure correct usage.
   assert(LCDecl == nullptr && LB == nullptr && LCRef == nullptr &&
          UB == nullptr && Step == nullptr && !TestIsLessOp && !TestIsStrictOp);
-  if (!NewLCDecl || !NewLB)
+  if (!NewLCDecl || !NewLB || NewLB->containsErrors())
     return true;
   LCDecl = getCanonicalDecl(NewLCDecl);
   LCRef = NewLCRefExpr;
@@ -7365,7 +7365,7 @@ bool OpenMPIterationSpaceChecker::setUB(Expr *NewUB,
   // State consistency checking to ensure correct usage.
   assert(LCDecl != nullptr && LB != nullptr && UB == nullptr &&
          Step == nullptr && !TestIsLessOp && !TestIsStrictOp);
-  if (!NewUB)
+  if (!NewUB || NewUB->containsErrors())
     return true;
   UB = NewUB;
   if (LessOp)
@@ -7380,7 +7380,7 @@ bool OpenMPIterationSpaceChecker::setUB(Expr *NewUB,
 bool OpenMPIterationSpaceChecker::setStep(Expr *NewStep, bool Subtract) {
   // State consistency checking to ensure correct usage.
   assert(LCDecl != nullptr && LB != nullptr && Step == nullptr);
-  if (!NewStep)
+  if (!NewStep || NewStep->containsErrors())
     return true;
   if (!NewStep->isValueDependent()) {
     // Check that the step is integer expression.

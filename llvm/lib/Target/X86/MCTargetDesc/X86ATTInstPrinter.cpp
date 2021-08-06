@@ -391,7 +391,7 @@ void X86ATTInstPrinter::printMemReference(const MCInst *MI, unsigned Op,
     uint64_t Target;
     if (MIA->evaluateBranch(*MI, 0, 0, Target))
       return;
-    if (MIA->evaluateMemoryOperandAddress(*MI, 0, 0))
+    if (MIA->evaluateMemoryOperandAddress(*MI, /*STI=*/nullptr, 0, 0))
       return;
   }
 

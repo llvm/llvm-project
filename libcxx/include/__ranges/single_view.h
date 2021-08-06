@@ -12,6 +12,9 @@
 #include <__config>
 #include <__ranges/view_interface.h>
 #include <__ranges/copyable_box.h>
+#include <__utility/forward.h>
+#include <__utility/in_place.h>
+#include <__utility/move.h>
 #include <concepts>
 #include <type_traits>
 

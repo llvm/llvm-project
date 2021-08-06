@@ -19,4 +19,4 @@
 // RUN: env OBJECT_MODE=31 \
 // RUN: not %clang -target powerpc-ibm-aix 2>&1 | FileCheck -check-prefix=DIAG %s
 
-// DIAG: error: OBJECT_MODE setting 31 is not recognized and is not a valid setting.
+// DIAG: error: OBJECT_MODE setting 31 is not recognized and is not a valid setting

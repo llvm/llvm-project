@@ -58,8 +58,7 @@ define <4 x float> @PR16739_byref(<4 x float>* nocapture readonly dereferenceabl
 ; CHECK-NEXT:    [[TMP2:%.*]] = load <2 x float>, <2 x float>* [[TMP1]], align 4
 ; CHECK-NEXT:    [[X2:%.*]] = load float, float* [[GEP2]], align 4
 ; CHECK-NEXT:    [[TMP3:%.*]] = shufflevector <2 x float> [[TMP2]], <2 x float> poison, <4 x i32> <i32 0, i32 1, i32 undef, i32 undef>
-; CHECK-NEXT:    [[I11:%.*]] = shufflevector <4 x float> poison, <4 x float> [[TMP3]], <4 x i32> <i32 4, i32 5, i32 2, i32 3>
-; CHECK-NEXT:    [[I2:%.*]] = insertelement <4 x float> [[I11]], float [[X2]], i32 2
+; CHECK-NEXT:    [[I2:%.*]] = insertelement <4 x float> [[TMP3]], float [[X2]], i32 2
 ; CHECK-NEXT:    [[I3:%.*]] = insertelement <4 x float> [[I2]], float [[X2]], i32 3
 ; CHECK-NEXT:    ret <4 x float> [[I3]]
 ;
