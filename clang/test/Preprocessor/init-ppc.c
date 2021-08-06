@@ -539,6 +539,7 @@
 // PPC-AIX:#define __SIZE_TYPE__ long unsigned int
 // PPC-AIX:#define __SIZE_WIDTH__ 32
 // PPC-AIX:#define __THW_BIG_ENDIAN__ 1
+// PPC-AIX:#define __THW_PPC__ 1
 // PPC-AIX:#define __TOS_AIX__ 1
 // PPC-AIX:#define __UINT16_C_SUFFIX__
 // PPC-AIX:#define __UINT16_MAX__ 65535
