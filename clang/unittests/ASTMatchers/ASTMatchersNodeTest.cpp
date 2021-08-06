@@ -876,7 +876,7 @@ TEST_P(ASTMatchersTest, Matcher_NoexceptExpression) {
   EXPECT_TRUE(
       matches("void foo() noexcept; bool bar = noexcept(foo());", NoExcept));
   EXPECT_TRUE(notMatches("void foo() noexcept;", NoExcept));
-  EXPECT_TRUE(notMatches("void foo() noexcept(1+1);", NoExcept));
+  EXPECT_TRUE(notMatches("void foo() noexcept(0+1);", NoExcept));
   EXPECT_TRUE(matches("void foo() noexcept(noexcept(1+1));", NoExcept));
 }
 
