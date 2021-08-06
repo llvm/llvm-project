@@ -133,6 +133,8 @@ public:
     else if (const TemplateArgumentLoc *TALoc =
                  DynNode.get<TemplateArgumentLoc>())
       traverse(*TALoc);
+    else if (const Attr *A = DynNode.get<Attr>())
+      traverse(*A);
     // FIXME: Add other base types after adding tests.
 
     // It's OK to always overwrite the bound nodes, as if there was
@@ -263,6 +265,15 @@ public:
 
     return match(*Node->getLHS()) && match(*Node->getRHS());
   }
+  bool TraverseAttr(Attr *A) {
+    if (A == nullptr ||
+        (A->isImplicit() &&
+         Finder->getASTContext().getParentMapContext().getTraversalKind() ==
+             TK_IgnoreUnlessSpelledInSource))
+      return true;
+    ScopedIncrement ScopedDepth(&CurrentDepth);
+    return traverse(*A);
+  }
   bool TraverseLambdaExpr(LambdaExpr *Node) {
     if (!Finder->isTraversalIgnoringImplicitNodes())
       return VisitorBase::TraverseLambdaExpr(Node);
@@ -344,6 +355,9 @@ private:
   }
   bool baseTraverse(TemplateArgumentLoc TAL) {
     return VisitorBase::TraverseTemplateArgumentLoc(TAL);
+  }
+  bool baseTraverse(const Attr &AttrNode) {
+    return VisitorBase::TraverseAttr(const_cast<Attr *>(&AttrNode));
   }
 
   // Sets 'Matched' to true if 'Matcher' matches 'Node' and:
@@ -489,6 +503,7 @@ public:
   bool TraverseNestedNameSpecifierLoc(NestedNameSpecifierLoc NNS);
   bool TraverseConstructorInitializer(CXXCtorInitializer *CtorInit);
   bool TraverseTemplateArgumentLoc(TemplateArgumentLoc TAL);
+  bool TraverseAttr(Attr *AttrNode);
 
   bool dataTraverseNode(Stmt *S, DataRecursionQueue *Queue) {
     if (auto *RF = dyn_cast<CXXForRangeStmt>(S)) {
@@ -694,6 +709,8 @@ public:
       match(*N);
     } else if (auto *N = Node.get<TemplateArgumentLoc>()) {
       match(*N);
+    } else if (auto *N = Node.get<Attr>()) {
+      match(*N);
     }
   }
 
@@ -893,6 +910,9 @@ private:
   }
   void matchDispatch(const TemplateArgumentLoc *Node) {
     matchWithoutFilter(*Node, Matchers->TemplateArgumentLoc);
+  }
+  void matchDispatch(const Attr *Node) {
+    matchWithoutFilter(*Node, Matchers->Attr);
   }
   void matchDispatch(const void *) { /* Do nothing. */ }
   /// @}
@@ -1300,6 +1320,11 @@ bool MatchASTVisitor::TraverseTemplateArgumentLoc(TemplateArgumentLoc Loc) {
   return RecursiveASTVisitor<MatchASTVisitor>::TraverseTemplateArgumentLoc(Loc);
 }
 
+bool MatchASTVisitor::TraverseAttr(Attr *AttrNode) {
+  match(*AttrNode);
+  return RecursiveASTVisitor<MatchASTVisitor>::TraverseAttr(AttrNode);
+}
+
 class MatchASTConsumer : public ASTConsumer {
 public:
   MatchASTConsumer(MatchFinder *Finder,
@@ -1394,6 +1419,12 @@ void MatchFinder::addMatcher(const TemplateArgumentLocMatcher &NodeMatch,
   Matchers.AllCallbacks.insert(Action);
 }
 
+void MatchFinder::addMatcher(const AttrMatcher &AttrMatch,
+                             MatchCallback *Action) {
+  Matchers.Attr.emplace_back(AttrMatch, Action);
+  Matchers.AllCallbacks.insert(Action);
+}
+
 bool MatchFinder::addDynamicMatcher(const internal::DynTypedMatcher &NodeMatch,
                                     MatchCallback *Action) {
   if (NodeMatch.canConvertTo<Decl>()) {
@@ -1419,6 +1450,9 @@ bool MatchFinder::addDynamicMatcher(const internal::DynTypedMatcher &NodeMatch,
     return true;
   } else if (NodeMatch.canConvertTo<TemplateArgumentLoc>()) {
     addMatcher(NodeMatch.convertTo<TemplateArgumentLoc>(), Action);
+    return true;
+  } else if (NodeMatch.canConvertTo<Attr>()) {
+    addMatcher(NodeMatch.convertTo<Attr>(), Action);
     return true;
   }
   return false;
