@@ -85,6 +85,7 @@ COMPILER_RT_VISIBILITY ValueProfNode *__llvm_profile_end_vnodes(void) {
 COMPILER_RT_VISIBILITY ValueProfNode *CurrentVNode = &PROF_VNODES_START;
 COMPILER_RT_VISIBILITY ValueProfNode *EndVNode = &PROF_VNODES_STOP;
 
+#ifdef NT_GNU_BUILD_ID
 static size_t RoundUp(size_t size, size_t align) {
   return (size + align - 1) & ~(align - 1);
 }
@@ -188,5 +189,14 @@ COMPILER_RT_VISIBILITY int __llvm_write_binary_ids(ProfDataWriter *Writer) {
 
   return 0;
 }
+#else /* !NT_GNU_BUILD_ID */
+/*
+ * Fallback implementation for targets that don't support the GNU
+ * extensions NT_GNU_BUILD_ID and __ehdr_start.
+ */
+COMPILER_RT_VISIBILITY int __llvm_write_binary_ids(ProfDataWriter *Writer) {
+  return 0;
+}
+#endif
 
 #endif
