@@ -6,7 +6,7 @@
 # RUN: FileCheck %t-ptx60-sm_70.ll < %t-ptx60-sm_70.ll \
 # RUN:           --check-prefixes=INTRINSICS,M16N16
 # RUN: FileCheck %t-ptx60-sm_70.ll < %t-ptx60-sm_70.ll \
-# RUN:           --check-prefixes=INTRINSICS,NOEXTGEOM,NOINT,NOSUBINT,NOMMA,NODOUBLE,NOALTFLOAT
+# RUN:           --check-prefixes=INTRINSICS,NOEXTGEOM,NOINT,NOSUBINT,NOMMA,NODOUBLE,NOALTFLOAT,NOLDMATRIX
 # RUN: llc < %t-ptx60-sm_70.ll -march=nvptx64 -mcpu=sm_70 -mattr=+ptx60 \
 # RUN:           | FileCheck %t-ptx60-sm_70.ll
 
@@ -15,7 +15,7 @@
 # RUN: FileCheck %t-ptx61-sm_70.ll < %t-ptx61-sm_70.ll \
 # RUN:           --check-prefixes=INTRINSICS,M16N16,EXTGEOM
 # RUN: FileCheck %t-ptx61-sm_70.ll < %t-ptx61-sm_70.ll \
-# RUN:           --check-prefixes=INTRINSICS,NOINT,NOSUBINT,NOMMA,NODOUBLE,NOALTFLOAT
+# RUN:           --check-prefixes=INTRINSICS,NOINT,NOSUBINT,NOMMA,NODOUBLE,NOALTFLOAT,NOLDMATRIX
 # RUN: llc < %t-ptx61-sm_70.ll -march=nvptx64 -mcpu=sm_70 -mattr=+ptx61 \
 # RUN:           | FileCheck %t-ptx61-sm_70.ll
 
@@ -24,7 +24,7 @@
 # RUN: FileCheck %t-ptx63-sm_72.ll < %t-ptx63-sm_72.ll \
 # RUN:           --check-prefixes=INTRINSICS,M16N16,EXTGEOM,INT
 # RUN: FileCheck %t-ptx63-sm_72.ll < %t-ptx63-sm_72.ll \
-# RUN:           --check-prefixes=INTRINSICS,NOSUBINT,NOMMA,NODOUBLE,NOALTFLOAT
+# RUN:           --check-prefixes=INTRINSICS,NOSUBINT,NOMMA,NODOUBLE,NOALTFLOAT,NOLDMATRIX
 # RUN: llc < %t-ptx63-sm_72.ll -march=nvptx64 -mcpu=sm_72 -mattr=+ptx63 \
 # RUN:           | FileCheck %t-ptx63-sm_72.ll
 
@@ -33,7 +33,7 @@
 # RUN: FileCheck %t-ptx63-sm_75.ll < %t-ptx63-sm_75.ll \
 # RUN:           --check-prefixes=INTRINSICS,M16N16,EXTGEOM,INT,SUBINT
 # RUN: FileCheck %t-ptx63-sm_75.ll < %t-ptx63-sm_75.ll \
-# RUN:           --check-prefixes=INTRINSICS,NOMMA,NODOUBLE,NOALTFLOAT
+# RUN:           --check-prefixes=INTRINSICS,NOMMA,NODOUBLE,NOALTFLOAT,NOLDMATRIX
 # RUN: llc < %t-ptx63-sm_75.ll -march=nvptx64 -mcpu=sm_75 -mattr=+ptx63 \
 # RUN:           | FileCheck %t-ptx63-sm_75.ll
 
@@ -42,14 +42,14 @@
 # RUN: FileCheck %t-ptx64-sm_70.ll < %t-ptx64-sm_70.ll \
 # RUN:           --check-prefixes=INTRINSICS,M16N16,EXTGEOM,MMA
 # RUN: FileCheck %t-ptx64-sm_70.ll < %t-ptx64-sm_70.ll \
-# RUN:           --check-prefixes=INTRINSICS,NOINT,NOSUBINT,NODOUBLE,NOALTFLOAT
+# RUN:           --check-prefixes=INTRINSICS,NOINT,NOSUBINT,NODOUBLE,NOALTFLOAT,NOLDMATRIX
 # RUN: llc < %t-ptx64-sm_70.ll -march=nvptx64 -mcpu=sm_70 -mattr=+ptx64 \
 # RUN:           | FileCheck %t-ptx64-sm_70.ll
 
 # Check all variants of instructions supported by PTX65 on SM75+
 # RUN: %python %s --ptx=65 --gpu-arch=75 > %t-ptx65-sm_75.ll
 # RUN: FileCheck %t-ptx65-sm_75.ll < %t-ptx65-sm_75.ll \
-# RUN:           --check-prefixes=INTRINSICS,M16N16,EXTGEOM,INT,SUBINT,MMA,PTX65MMA
+# RUN:           --check-prefixes=INTRINSICS,M16N16,EXTGEOM,INT,SUBINT,MMA,PTX65MMA,PTX65LDMATRIX
 # RUN: FileCheck %t-ptx65-sm_75.ll < %t-ptx65-sm_75.ll \
 # RUN:           --check-prefixes=INTRINSICS
 # RUN: llc < %t-ptx65-sm_75.ll -march=nvptx64 -mcpu=sm_75 -mattr=+ptx65 \
@@ -58,7 +58,7 @@
 # Check all variants of instructions supported by PTX71 on SM80+
 # RUN: %python %s --ptx=71 --gpu-arch=80 > %t-ptx71-sm_80.ll
 # RUN: FileCheck %t-ptx71-sm_80.ll < %t-ptx71-sm_80.ll \
-# RUN:           --check-prefixes=INTRINSICS,M16N16,EXTGEOM,INT,SUBINT,MMA,ALTFLOAT,DOUBLE,PTX65MMA,PTX71MMA
+# RUN:           --check-prefixes=INTRINSICS,M16N16,EXTGEOM,INT,SUBINT,MMA,ALTFLOAT,DOUBLE,PTX65MMA,PTX65LDMATRIX,PTX71MMA
 # RUN: FileCheck %t-ptx71-sm_80.ll < %t-ptx71-sm_80.ll \
 # RUN:           --check-prefixes=INTRINSICS
 # RUN: llc < %t-ptx71-sm_80.ll -march=nvptx64 -mcpu=sm_80 -mattr=+ptx71 \
@@ -78,6 +78,7 @@ class MMAType:
         "f32"  : "float",
         "f64"  : "double",
         "s32"  : "i32",
+        "b16"  : "i32",
         "s8"   : "i32",
         "u8"   : "i32",
         "s4"   : "i32",
@@ -232,6 +233,11 @@ class MMAFrag:
         "m16n8k16:d:f16": 2,
         "m16n8k16:c:f32": 4,
         "m16n8k16:d:f32": 4,
+
+        # ldmatrix
+        "m8n8:x1:b16": 1,
+        "m8n8:x2:b16": 2,
+        "m8n8:x4:b16": 4,
     }.get("%s:%s:%s" % (geom, frag, ptx_elt_type), {
         # All other FP shape/fragment/type combinations have the same size
         "a:f16" : 8,
@@ -269,6 +275,10 @@ def make_mma_ops(geoms, types_a, types_b, types_c, types_d):
   return ops
 
 def make_ldst_ops(geoms, frags, types):
+  return [MMAFrag(geom, frag, ptx_type) for (geom, frag, ptx_type)
+          in product(geoms, frags, types)]
+
+def make_ldmatrix_ops(geoms, frags, types):
   return [MMAFrag(geom, frag, ptx_type) for (geom, frag, ptx_type)
           in product(geoms, frags, types)]
 
@@ -317,6 +327,9 @@ def get_ldst_ops(kind):
               make_ldst_ops(["m16n16k8"], ["c", "d"], ["f32"]))
   return [ x for x in ldst_ops if (x.frag == "d") == (kind == "store")]
 
+def get_ldmatrix_ops():
+  return make_ldmatrix_ops(["m8n8"], ["x1", "x2", "x4"], ["b16"])
+
 def is_wmma_geom_supported(geom):
   # geometries for FP and ints.
   if geom in ["m8n32k16", "m32n8k16"]:
@@ -343,11 +356,18 @@ def is_mma_geom_supported(geom):
     return ptx_version >= 70
   assert(False) # Unexpected geometry.
 
+def is_ldmatrix_geom_supported(geom):
+  if geom in ["m8n8"]:
+    return ptx_version >= 65 and gpu_arch >= 75
+  assert(False) # Unexpected geometry.
+
 def is_type_supported(ptx_type):
   if ptx_type in ["s8", "u8", "s32"]:
     return ptx_version >= 63 and gpu_arch >= 72
   if ptx_type in ["s4", "u4", "b1"]:
     return ptx_version >= 63 and gpu_arch >= 75
+  if ptx_type == "b16":
+    return ptx_version >= 65 and gpu_arch >= 75
   if ptx_type in ["bf16", "tf32", "f64"]:
     return ptx_version >= 70
   return ptx_version >= 60 and gpu_arch >= 70
@@ -412,6 +432,12 @@ def is_ldst_variant_supported(frag, layout):
             or (frag.frag == "b" and layout == "col")
             or frag.frag in ["c", "d"])
   return True
+
+def is_ldmatrix_variant_supported(frag):
+  if not (is_type_supported(frag.mma_type.ptx_type)
+          and is_ldmatrix_geom_supported(frag.geom)):
+    return False
+  return frag.frag in ["x1", "x2", "x4"]
 
 def make_wmma_slice_ty(frag):
   return [frag.mma_type.llvm_type] * frag.nregs
@@ -584,6 +610,66 @@ define void @test_${function}_o(i8 ${as}* %src, ${args}${extra_args}) {
 
   return generated_items
 
+def gen_ldmatrix_tests():
+  ldmatrix_template = """
+declare ${ret_ty} @${intrinsic}(i8 ${as}* %src);
+
+; CHECK-LABEL: .func {{.*}}test_${function}(
+define ${ret_ty} @test_${function}(i8 ${as}* %src) {
+; CHECK: ${instruction}
+; CHECK: {${check_result}}
+; CHECK: [%rd{{[0-9]+}}]
+  %v0 = call ${ret_ty} @${intrinsic}(i8 ${as}* %src);
+  ret ${ret_ty} %v0;
+}
+
+; CHECK-LABEL: .func{{.*}}test_${function}_o(
+define ${ret_ty} @test_${function}_o(i8 ${as}* %src) {
+; CHECK: ${instruction}
+; CHECK: {${check_result}}
+; CHECK: [%rd{{[0-9]+}}+128]
+  %src1 = getelementptr i8, i8 ${as}* %src, i32 128;
+  %v0 = call ${ret_ty} @${intrinsic}(i8 ${as}* %src1);
+  ret ${ret_ty} %v0;
+}
+"""
+  intrinsic_template = "llvm.nvvm.ldmatrix.sync.aligned.${geom}.${frag}${trans}.${itype}.${pspace}"
+  instruction_template = "ldmatrix.sync.aligned.${geom}.${frag}${trans}${space}.${itype}"
+
+  generated_items = []
+
+  for frag, space, trans in product(
+      get_ldmatrix_ops(),
+      ["",".shared"],
+      ["",".trans"],
+      ):
+    if not is_ldmatrix_variant_supported(frag):
+      continue
+
+    params = {
+        "frag" : frag.frag,
+        "space" : space,
+        "trans" : trans,
+        "itype" : frag.mma_type.ptx_type,
+        "pspace" : get_pspace(space),
+        "as"     : "addrspace(%d)" % get_aspace(space),
+        "geom"   : frag.geom,
+    }
+
+    test_params = params
+    test_params["intrinsic"] = Template(intrinsic_template).substitute(params)
+    test_params["function"] = test_params["intrinsic"].replace(".","_")
+    test_params["instruction"] = Template(instruction_template).substitute(params)
+    test_params["ret_ty"] = make_wmma_ld_ret_ty(frag)
+    test_params["check_result"] = check_pattern(frag)
+
+    print(Template(ldmatrix_template).substitute(test_params))
+
+    generated_items.append((test_params["intrinsic"],
+                            test_params["instruction"]))
+
+  return generated_items
+
 def mma_signature(op):
   if op.a.mma_type.ptx_type == "f16":
     # FP16 ops identified by accumulator & result type.
@@ -744,6 +830,7 @@ def gen_check_unsupported_ops(items):
 ; NOMMA-NOT: .m8n8k4.
 ; NOALTFLOAT-NOT: .{{bf16|tf32}}
 ; NODOUBLE-NOT: .f64
+; NOLDMATRIX-NOT: ldmatrix.sync.aligned
 
 ; M16N16-DAG: m16n16k16.load.{{[ab].*}}.f16.p
 ; M16N16-DAG: m16n16k16.{{load|store}}.{{[cd].*\.(f16|f32)}}.p
@@ -819,6 +906,19 @@ def gen_check_unsupported_ops(items):
 ; PTX65MMA-DAG: mma.m8n8k32.row.col{{.*}}.s4.u4
 ; PTX65MMA-DAG: mma.m8n8k32.row.col{{.*}}.u4.s4
 
+; PTX65LDMATRIX-DAG: ldmatrix.sync.aligned.m8n8.x1.b16
+; PTX65LDMATRIX-DAG: ldmatrix.sync.aligned.m8n8.x2.b16
+; PTX65LDMATRIX-DAG: ldmatrix.sync.aligned.m8n8.x4.b16
+; PTX65LDMATRIX-DAG: ldmatrix.sync.aligned.m8n8.x1.trans.b16
+; PTX65LDMATRIX-DAG: ldmatrix.sync.aligned.m8n8.x2.trans.b16
+; PTX65LDMATRIX-DAG: ldmatrix.sync.aligned.m8n8.x4.trans.b16
+; PTX65LDMATRIX-DAG: ldmatrix.sync.aligned.m8n8.x1.shared.b16
+; PTX65LDMATRIX-DAG: ldmatrix.sync.aligned.m8n8.x2.shared.b16
+; PTX65LDMATRIX-DAG: ldmatrix.sync.aligned.m8n8.x4.shared.b16
+; PTX65LDMATRIX-DAG: ldmatrix.sync.aligned.m8n8.x1.trans.shared.b16
+; PTX65LDMATRIX-DAG: ldmatrix.sync.aligned.m8n8.x2.trans.shared.b16
+; PTX65LDMATRIX-DAG: ldmatrix.sync.aligned.m8n8.x4.trans.shared.b16
+
 ; PTX71MMA-DAG: mma.m8n8k4.row.col.f64
 ; PTX71MMA-DAG: mma.m16n8k4.row.col.tf32
 ; PTX71MMA-DAG: mma.m16n8k8.row.col.tf32
@@ -861,6 +961,7 @@ def gen_check_unsupported_ops(items):
 def gen_tests():
   items = gen_wmma_load_tests()
   items += gen_wmma_store_tests()
+  items += gen_ldmatrix_tests()
   items += gen_wmma_mma_tests()
   items += gen_mma_tests()
   gen_check_unsupported_ops(items)

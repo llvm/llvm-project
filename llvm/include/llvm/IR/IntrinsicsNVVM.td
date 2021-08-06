@@ -43,7 +43,7 @@ def llvm_shared_i64ptr_ty : LLVMQualPointerType<llvm_i64_ty, 3>; // (shared)i64*
 
 // Helper class that represents a 'fragment' of an NVPTX *MMA instruction.
 // Geom: m<M>n<N>k<K>. E.g. m8n32k16
-// Frag: [abcd]
+// Frag: [a|b|c|d] ([x1|x2|x4] for ldmatrix)
 // PtxEltType: PTX type for the element.
 class WMMA_REGS<string Geom, string Frag, string PtxEltType> {
   string geom = Geom;
@@ -190,6 +190,11 @@ class WMMA_REGS<string Geom, string Frag, string PtxEltType> {
     !eq(gft,"m16n8k256:b:b1") : !listsplat(llvm_i32_ty, 2),
     !eq(gft,"m16n8k256:c:s32") : !listsplat(llvm_i32_ty, 4),
     !eq(gft,"m16n8k256:d:s32") : !listsplat(llvm_i32_ty, 4),
+
+    // ldmatrix b16 -> s32 @ m8n8
+    !eq(gft,"m8n8:x1:b16") : !listsplat(llvm_i32_ty, 1),
+    !eq(gft,"m8n8:x2:b16") : !listsplat(llvm_i32_ty, 2),
+    !eq(gft,"m8n8:x4:b16") : !listsplat(llvm_i32_ty, 4),
   );
 }
 
@@ -256,6 +261,17 @@ class MMA_NAME<string ALayout, string BLayout, int Satfinite, string b1op,
                   !subst("llvm.", "int_", llvm));
 }
 
+class LDMATRIX_NAME<WMMA_REGS Frag, int Trans> {
+  string intr = "llvm.nvvm.ldmatrix.sync.aligned"
+                # "." # Frag.geom
+                # "." # Frag.frag
+                # !if(Trans, ".trans", "")
+                # "." # Frag.ptx_elt_type
+                ;
+  string record = !subst(".", "_",
+                  !subst("llvm.", "int_", intr));
+}
+
 // Generates list of 4-tuples of WMMA_REGS representing a valid MMA op.
 //   Geom: list of supported geometries.
 //   TypeN: PTX type of the corresponding fragment's element.
@@ -277,6 +293,16 @@ class MMA_OPS<list<string> Geom, list<string> TypeA, list<string> TypeB,
 }
 
 class MMA_LDST_OPS<list<string> Geom, list<string> Frags, list<string> Types> {
+  list<WMMA_REGS> ret =
+     !foldl([]<WMMA_REGS>, Geom, t1, geom, !listconcat(t1,
+     !foldl([]<WMMA_REGS>, Frags, t2, frag, !listconcat(t2,
+     !foldl([]<WMMA_REGS>, Types, t3, type, !listconcat(t3,
+            [WMMA_REGS<geom, frag, type>]))))));
+   // Debugging aid for readable representation of the list above.
+   list<string> ops = !foreach(x, ret, x.gft);
+}
+
+class LDMATRIX_OPS<list<string> Geom, list<string> Frags, list<string> Types> {
   list<WMMA_REGS> ret =
      !foldl([]<WMMA_REGS>, Geom, t1, geom, !listconcat(t1,
      !foldl([]<WMMA_REGS>, Frags, t2, frag, !listconcat(t2,
@@ -370,10 +396,13 @@ class NVVM_MMA_OPS<int _ = 0> {
   // Separate A/B/C fragments (loads) from D (stores).
   list<WMMA_REGS> all_ld_ops = !filter(op, all_ldst_ops, !ne(op.frag, "d"));
   list<WMMA_REGS> all_st_ops = !filter(op, all_ldst_ops, !eq(op.frag, "d"));
+
+  list<WMMA_REGS> ldmatrix_b16_ops = LDMATRIX_OPS<
+    ["m8n8"], ["x1", "x2", "x4"], ["b16"]>.ret;
+  list<WMMA_REGS> all_ldmatrix_ops = ldmatrix_b16_ops;
 }
 
 def NVVM_MMA_OPS : NVVM_MMA_OPS;
-
 
 // Returns true if this combination of fragment and layout for WMMA load/store
 // ops is supported; false otherwise.
@@ -486,6 +515,23 @@ class NVVM_MMA_SUPPORTED<list<WMMA_REGS> frags, string layout_a, string layout_b
 
     // All other are OK.
     true: true
+  );
+}
+
+// Returns true if the fragment is valid for ldmatrix ops is supported;
+// false otherwise.
+// E.g.
+// if NVVM_LDMATRIX_SUPPORTED<...>.ret then
+//   def : FOO<>; // The record will only be defined for supported ops.
+//
+class NVVM_LDMATRIX_SUPPORTED<WMMA_REGS frag> {
+  string g = frag.geom;
+  string t = frag.ptx_elt_type;
+
+  bit ret = !cond(
+    // Only currently support m8n8 and b16
+    !and(!eq(g, "m8n8"), !eq(t, "b16")): true,
+    true: false
   );
 }
 
@@ -4518,5 +4564,21 @@ foreach layout_a = ["row", "col"] in {
     } // satf
   } // layout_b
 } // layout_a
+
+// LDMATRIX
+class NVVM_LDMATRIX<WMMA_REGS Frag, int Transposed>
+  : Intrinsic<Frag.regs, [llvm_anyptr_ty],
+              [IntrReadMem, IntrArgMemOnly, ReadOnly<ArgIndex<0>>,
+               NoCapture<ArgIndex<0>>],
+              LDMATRIX_NAME<Frag, Transposed>.intr>;
+
+foreach transposed = [0, 1] in {
+  foreach frag = NVVM_MMA_OPS.all_ldmatrix_ops in {
+    if NVVM_LDMATRIX_SUPPORTED<frag>.ret then {
+      def LDMATRIX_NAME<frag, transposed>.record
+        : NVVM_LDMATRIX<frag, transposed>;
+    }
+  }
+}
 
 } // let TargetPrefix = "nvvm"
