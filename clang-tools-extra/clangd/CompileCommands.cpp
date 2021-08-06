@@ -222,22 +222,36 @@ void CommandMangler::adjust(std::vector<std::string> &Cmd,
       /*FlagsToExclude=*/driver::options::NoDriverOption |
           (IsCLMode ? 0 : driver::options::CLOption));
 
+  llvm::SmallVector<unsigned, 1> IndicesToDrop;
+  // Having multiple architecture options (e.g. when building fat binaries)
+  // results in multiple compiler jobs, which clangd cannot handle. In such
+  // cases strip all the `-arch` options and fallback to default architecture.
+  // As there are no signals to figure out which one user actually wants. They
+  // can explicitly specify one through `CompileFlags.Add` if need be.
+  unsigned ArchOptCount = 0;
+  for (auto *Input : ArgList.filtered(driver::options::OPT_arch)) {
+    ++ArchOptCount;
+    for (auto I = 0U; I <= Input->getNumValues(); ++I)
+      IndicesToDrop.push_back(Input->getIndex() + I);
+  }
+  // If there is a single `-arch` option, keep it.
+  if (ArchOptCount < 2)
+    IndicesToDrop.clear();
   // Move the inputs to the end, separated via `--` from flags. This ensures
   // modifications done in the following steps apply in more cases (like setting
   // -x, which only affects inputs that come after it).
   if (!ArgList.hasArgNoClaim(driver::options::OPT__DASH_DASH)) {
     // Drop all the inputs and only add one for the current file.
-    llvm::SmallVector<unsigned, 1> IndicesToDrop;
     for (auto *Input : ArgList.filtered(driver::options::OPT_INPUT))
       IndicesToDrop.push_back(Input->getIndex());
-    llvm::sort(IndicesToDrop);
-    llvm::for_each(llvm::reverse(IndicesToDrop),
-                   // +1 to account for the executable name in Cmd[0] that
-                   // doesn't exist in ArgList.
-                   [&Cmd](unsigned Idx) { Cmd.erase(Cmd.begin() + Idx + 1); });
     Cmd.push_back("--");
     Cmd.push_back(File.str());
   }
+  llvm::sort(IndicesToDrop);
+  llvm::for_each(llvm::reverse(IndicesToDrop),
+                 // +1 to account for the executable name in Cmd[0] that
+                 // doesn't exist in ArgList.
+                 [&Cmd](unsigned Idx) { Cmd.erase(Cmd.begin() + Idx + 1); });
 
   for (auto &Edit : Config::current().CompileFlags.Edits)
     Edit(Cmd);
