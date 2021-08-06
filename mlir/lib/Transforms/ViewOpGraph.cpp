@@ -71,7 +71,7 @@ public:
 class PrintOpPass : public ViewOpGraphPassBase<PrintOpPass> {
 public:
   PrintOpPass(raw_ostream &os) : os(os) {}
-  PrintOpPass(const PrintOpPass &o) : os(o.os.getOStream()) {}
+  PrintOpPass(const PrintOpPass &o) : PrintOpPass(o.os.getOStream()) {}
 
   void runOnOperation() override {
     emitGraph([&]() {
