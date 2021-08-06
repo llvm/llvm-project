@@ -21,6 +21,12 @@
 //   a direct way to steer function specialization, avoiding the cost-model,
 //   and thus control compile-times / code-size.
 //
+// Todos:
+// - Limit the times a recursive function get specialized when
+// `func-specialization-max-iters`
+//   increases linearly. See discussion in https://reviews.llvm.org/D106426 for
+//   details.
+//
 //===----------------------------------------------------------------------===//
 
 #include "llvm/ADT/Statistic.h"
