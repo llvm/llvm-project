@@ -100,6 +100,23 @@ entry:
 ; CHECK-NEXT: ret void
 }
 
+; Test a case where a function has a setjmp call but no other calls that can
+; longjmp. We don't need to do any transformation in this case.
+define void @setjmp_only(i8* %ptr) {
+; CHECK-LABEL: @setjmp_only
+entry:
+  %buf = alloca [1 x %struct.__jmp_buf_tag], align 16
+  %arraydecay = getelementptr inbounds [1 x %struct.__jmp_buf_tag], [1 x %struct.__jmp_buf_tag]* %buf, i32 0, i32 0
+  %call = call i32 @setjmp(%struct.__jmp_buf_tag* %arraydecay) #0
+  ; free cannot longjmp
+  call void @free(i8* %ptr)
+  ret void
+; CHECK-NOT: @malloc
+; CHECK-NOT: %setjmpTable
+; CHECK-NOT: @saveSetjmp
+; CHECK-NOT: @testSetjmp
+}
+
 ; Test SSA validity
 define void @ssa(i32 %n) {
 ; CHECK-LABEL: @ssa
