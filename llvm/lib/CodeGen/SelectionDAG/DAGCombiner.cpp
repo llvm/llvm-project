@@ -17394,7 +17394,8 @@ bool DAGCombiner::tryStoreMergeOfConstants(
         break;
 
       if (TLI.isTypeLegal(StoreTy) &&
-          TLI.canMergeStoresTo(FirstStoreAS, StoreTy, DAG) &&
+          TLI.canMergeStoresTo(FirstStoreAS, StoreTy,
+                               DAG.getMachineFunction()) &&
           TLI.allowsMemoryAccess(Context, DL, StoreTy,
                                  *FirstInChain->getMemOperand(), &IsFast) &&
           IsFast) {
@@ -17406,7 +17407,8 @@ bool DAGCombiner::tryStoreMergeOfConstants(
         EVT LegalizedStoredValTy =
             TLI.getTypeToTransformTo(Context, StoredVal.getValueType());
         if (TLI.isTruncStoreLegal(LegalizedStoredValTy, StoreTy) &&
-            TLI.canMergeStoresTo(FirstStoreAS, LegalizedStoredValTy, DAG) &&
+            TLI.canMergeStoresTo(FirstStoreAS, LegalizedStoredValTy,
+                                 DAG.getMachineFunction()) &&
             TLI.allowsMemoryAccess(Context, DL, StoreTy,
                                    *FirstInChain->getMemOperand(), &IsFast) &&
             IsFast) {
@@ -17425,7 +17427,7 @@ bool DAGCombiner::tryStoreMergeOfConstants(
         unsigned Elts = (i + 1) * NumMemElts;
         EVT Ty = EVT::getVectorVT(Context, MemVT.getScalarType(), Elts);
         if (TLI.isTypeLegal(Ty) && TLI.isTypeLegal(MemVT) &&
-            TLI.canMergeStoresTo(FirstStoreAS, Ty, DAG) &&
+            TLI.canMergeStoresTo(FirstStoreAS, Ty, DAG.getMachineFunction()) &&
             TLI.allowsMemoryAccess(Context, DL, Ty,
                                    *FirstInChain->getMemOperand(), &IsFast) &&
             IsFast)
@@ -17501,7 +17503,8 @@ bool DAGCombiner::tryStoreMergeOfExtracts(
       if (Ty.getSizeInBits() > MaximumLegalStoreInBits)
         break;
 
-      if (TLI.isTypeLegal(Ty) && TLI.canMergeStoresTo(FirstStoreAS, Ty, DAG) &&
+      if (TLI.isTypeLegal(Ty) &&
+          TLI.canMergeStoresTo(FirstStoreAS, Ty, DAG.getMachineFunction()) &&
           TLI.allowsMemoryAccess(Context, DL, Ty,
                                  *FirstInChain->getMemOperand(), &IsFast) &&
           IsFast)
@@ -17650,7 +17653,8 @@ bool DAGCombiner::tryStoreMergeOfLoads(SmallVectorImpl<MemOpLink> &StoreNodes,
       bool IsFastSt = false;
       bool IsFastLd = false;
       if (TLI.isTypeLegal(StoreTy) &&
-          TLI.canMergeStoresTo(FirstStoreAS, StoreTy, DAG) &&
+          TLI.canMergeStoresTo(FirstStoreAS, StoreTy,
+                               DAG.getMachineFunction()) &&
           TLI.allowsMemoryAccess(Context, DL, StoreTy,
                                  *FirstInChain->getMemOperand(), &IsFastSt) &&
           IsFastSt &&
@@ -17664,7 +17668,8 @@ bool DAGCombiner::tryStoreMergeOfLoads(SmallVectorImpl<MemOpLink> &StoreNodes,
       unsigned SizeInBits = (i + 1) * ElementSizeBytes * 8;
       StoreTy = EVT::getIntegerVT(Context, SizeInBits);
       if (TLI.isTypeLegal(StoreTy) &&
-          TLI.canMergeStoresTo(FirstStoreAS, StoreTy, DAG) &&
+          TLI.canMergeStoresTo(FirstStoreAS, StoreTy,
+                               DAG.getMachineFunction()) &&
           TLI.allowsMemoryAccess(Context, DL, StoreTy,
                                  *FirstInChain->getMemOperand(), &IsFastSt) &&
           IsFastSt &&
@@ -17678,7 +17683,8 @@ bool DAGCombiner::tryStoreMergeOfLoads(SmallVectorImpl<MemOpLink> &StoreNodes,
                  TargetLowering::TypePromoteInteger) {
         EVT LegalizedStoredValTy = TLI.getTypeToTransformTo(Context, StoreTy);
         if (TLI.isTruncStoreLegal(LegalizedStoredValTy, StoreTy) &&
-            TLI.canMergeStoresTo(FirstStoreAS, LegalizedStoredValTy, DAG) &&
+            TLI.canMergeStoresTo(FirstStoreAS, LegalizedStoredValTy,
+                                 DAG.getMachineFunction()) &&
             TLI.isLoadExtLegal(ISD::ZEXTLOAD, LegalizedStoredValTy, StoreTy) &&
             TLI.isLoadExtLegal(ISD::SEXTLOAD, LegalizedStoredValTy, StoreTy) &&
             TLI.isLoadExtLegal(ISD::EXTLOAD, LegalizedStoredValTy, StoreTy) &&

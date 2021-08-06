@@ -14,6 +14,7 @@
 #ifndef LLVM_LIB_TARGET_X86_X86ISELLOWERING_H
 #define LLVM_LIB_TARGET_X86_X86ISELLOWERING_H
 
+#include "llvm/CodeGen/MachineFunction.h"
 #include "llvm/CodeGen/TargetLowering.h"
 
 namespace llvm {
@@ -989,7 +990,7 @@ namespace llvm {
     }
 
     bool canMergeStoresTo(unsigned AddressSpace, EVT MemVT,
-                          const SelectionDAG &DAG) const override;
+                          const MachineFunction &MF) const override;
 
     bool isCheapToSpeculateCttz() const override;
 

@@ -309,6 +309,47 @@ public:
     return success();
   }
 };
+
+class VectorTransferReadOpConverter
+    : public OpConversionPattern<vector::TransferReadOp> {
+public:
+  using OpConversionPattern<vector::TransferReadOp>::OpConversionPattern;
+
+  LogicalResult
+  matchAndRewrite(vector::TransferReadOp readOp, ArrayRef<Value> operands,
+                  ConversionPatternRewriter &rewriter) const final {
+    if (readOp.getShapedType().isa<MemRefType>())
+      return failure();
+    vector::TransferReadOp::Adaptor adaptor(operands,
+                                            readOp->getAttrDictionary());
+    rewriter.replaceOpWithNewOp<vector::TransferReadOp>(
+        readOp, readOp.getType(), adaptor.source(), adaptor.indices(),
+        adaptor.permutation_map(), adaptor.padding(), adaptor.mask(),
+        adaptor.in_bounds());
+    return success();
+  }
+};
+
+class VectorTransferWriteOpConverter
+    : public OpConversionPattern<vector::TransferWriteOp> {
+public:
+  using OpConversionPattern<vector::TransferWriteOp>::OpConversionPattern;
+
+  LogicalResult
+  matchAndRewrite(vector::TransferWriteOp writeOp, ArrayRef<Value> operands,
+                  ConversionPatternRewriter &rewriter) const final {
+    if (writeOp.getShapedType().isa<MemRefType>())
+      return failure();
+    vector::TransferWriteOp::Adaptor adaptor(operands,
+                                             writeOp->getAttrDictionary());
+    rewriter.create<vector::TransferWriteOp>(
+        writeOp.getLoc(), adaptor.vector(), adaptor.source(), adaptor.indices(),
+        adaptor.permutation_map(),
+        adaptor.in_bounds() ? adaptor.in_bounds() : ArrayAttr());
+    rewriter.replaceOp(writeOp, adaptor.source());
+    return success();
+  }
+};
 } // namespace
 
 namespace {
@@ -332,10 +373,10 @@ struct LinalgBufferizePass : public LinalgBufferizeBase<LinalgBufferizePass> {
       return typeConverter.isLegal(op);
     };
     target.addDynamicallyLegalDialect<linalg::LinalgDialect>(isLegalOperation);
-    target.addDynamicallyLegalOp<ConstantOp>(isLegalOperation);
+    target.addDynamicallyLegalOp<ConstantOp, vector::TransferReadOp,
+                                 vector::TransferWriteOp>(isLegalOperation);
 
     RewritePatternSet patterns(&context);
-    patterns.add<GeneralizePadTensorOpPattern>(patterns.getContext());
     populateLinalgBufferizePatterns(typeConverter, patterns);
     if (failed(applyPartialConversion(getOperation(), target,
                                       std::move(patterns))))
@@ -359,7 +400,10 @@ void mlir::linalg::populateLinalgBufferizePatterns(
       BufferizeTensorReshapeOp<TensorExpandShapeOp>,
       BufferizeTensorReshapeOp<TensorCollapseShapeOp>,
       ExtractSliceOpConverter,
-      InsertSliceOpConverter
+      InsertSliceOpConverter,
+      VectorTransferReadOpConverter,
+      VectorTransferWriteOpConverter
     >(typeConverter, patterns.getContext());
   // clang-format on
+  patterns.add<GeneralizePadTensorOpPattern>(patterns.getContext());
 }
