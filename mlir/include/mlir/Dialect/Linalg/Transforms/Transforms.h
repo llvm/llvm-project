@@ -886,6 +886,13 @@ struct PadTensorOpTransformationPattern : public OpRewritePattern<PadTensorOp> {
                                 PatternRewriter &rewriter) const override;
 };
 
+/// Try to create a static bounding box around each operand of `opToPad`.
+/// If successful, `paddedOp` will be updated to the cloned static form.
+LogicalResult
+rewriteAsPaddedOp(PatternRewriter &rewriter, LinalgOp opToPad,
+                  const PaddingValueComputationFunction &paddingFunc,
+                  LinalgOp &paddedOp);
+
 using OptimizeCopyFn =
     std::function<LogicalResult(PatternRewriter &, PadTensorOp, Value)>;
 
