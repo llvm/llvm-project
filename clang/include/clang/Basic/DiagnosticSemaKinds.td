@@ -5735,7 +5735,7 @@ def warn_typecheck_function_qualifiers_unspecified : Warning<
   "'%0' qualifier on function type %1 has unspecified behavior">;
 def warn_typecheck_reference_qualifiers : Warning<
   "'%0' qualifier on reference type %1 has no effect">,
-  InGroup<IgnoredQualifiers>;
+  InGroup<IgnoredReferenceQualifiers>;
 def err_typecheck_invalid_restrict_not_pointer : Error<
   "restrict requires a pointer or reference (%0 is invalid)">;
 def err_typecheck_invalid_restrict_not_pointer_noarg : Error<
