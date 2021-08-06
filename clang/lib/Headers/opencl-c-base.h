@@ -572,6 +572,26 @@ typedef struct {
 #define as_intptr_t(x) __builtin_astype((x), intptr_t)
 #define as_uintptr_t(x) __builtin_astype((x), uintptr_t)
 
+// C++ for OpenCL - __remove_address_space
+#if defined(__OPENCL_CPP_VERSION__)
+template <typename _Tp> struct __remove_address_space { using type = _Tp; };
+template <typename _Tp> struct __remove_address_space<__generic _Tp> {
+  using type = _Tp;
+};
+template <typename _Tp> struct __remove_address_space<__global _Tp> {
+  using type = _Tp;
+};
+template <typename _Tp> struct __remove_address_space<__private _Tp> {
+  using type = _Tp;
+};
+template <typename _Tp> struct __remove_address_space<__local _Tp> {
+  using type = _Tp;
+};
+template <typename _Tp> struct __remove_address_space<__constant _Tp> {
+  using type = _Tp;
+};
+#endif
+
 // OpenCL v1.1 s6.9, v1.2/2.0 s6.10 - Function qualifiers
 
 #define __kernel_exec(X, typen) __kernel \
