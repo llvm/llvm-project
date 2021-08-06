@@ -556,8 +556,6 @@ private:
                              SmallVectorImpl<Constant *> &Constants,
                              const InstructionCost &FnSpecCost,
                              bool &IsPartial) {
-    Function *F = A->getParent();
-
     // For now, don't attempt to specialize functions based on the values of
     // composite types.
     if (!A->getType()->isSingleValueType() || A->user_empty())
