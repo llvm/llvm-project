@@ -11,8 +11,8 @@
 
 #include "Gnu.h"
 #include "clang/Driver/InputInfo.h"
-#include "clang/Driver/ToolChain.h"
 #include "clang/Driver/Tool.h"
+#include "clang/Driver/ToolChain.h"
 
 namespace clang {
 namespace driver {
@@ -25,6 +25,11 @@ public:
   void
   AddClangSystemIncludeArgs(const llvm::opt::ArgList &DriverArgs,
                             llvm::opt::ArgStringList &CC1Args) const override;
+
+  void
+  addClangTargetOptions(const llvm::opt::ArgList &DriverArgs,
+                        llvm::opt::ArgStringList &CC1Args,
+                        Action::OffloadKind DeviceOffloadKind) const override;
 
 protected:
   Tool *buildLinker() const override;
