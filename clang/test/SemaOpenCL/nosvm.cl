@@ -1,13 +1,16 @@
 // RUN: %clang_cc1 -verify %s
-// RUN: %clang_cc1 -verify -cl-std=CL2.0 -D CL20 %s
+// RUN: %clang_cc1 -verify -cl-std=CL2.0 %s
+// RUN: %clang_cc1 -verify -cl-std=clc++1.0 %s
 // RUN: %clang_cc1 -verify -x c -D NOCL %s
 
 #ifndef NOCL
 kernel void f(__attribute__((nosvm)) global int* a);
-#ifndef CL20
-// expected-error@-2 {{'nosvm' attribute requires OpenCL version 2.0}}
+#if (__OPENCL_C_VERSION__ == 200)
+// expected-warning@-2 {{'nosvm' attribute is deprecated and ignored in OpenCL C version 2.0}}
+#elif (__OPENCL_CPP_VERSION__ == 100)
+// expected-warning@-4 {{'nosvm' attribute is deprecated and ignored in C++ for OpenCL version 1.0}}
 #else
-// expected-warning@-4 {{'nosvm' attribute is deprecated and ignored in OpenCL version 2.0}}
+// expected-error@-6 {{attribute 'nosvm' is supported in the OpenCL version 2.0 onwards}}
 #endif
 
 __attribute__((nosvm)) void g(); // expected-warning {{'nosvm' attribute only applies to variables}}
