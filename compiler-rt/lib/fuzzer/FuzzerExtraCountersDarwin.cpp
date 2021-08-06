@@ -9,6 +9,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "FuzzerPlatform.h"
+#include <cstdint>
 
 #if LIBFUZZER_APPLE
 

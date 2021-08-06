@@ -1,7 +1,7 @@
 // A basic clang -cc1 command-line.
 
 // RUN: %clang %s -### -no-canonical-prefixes -target avr 2>&1 | FileCheck -check-prefix=CC1 %s
-// CC1: clang{{.*}} "-cc1" "-triple" "avr"
+// CC1: clang{{.*}} "-cc1" "-triple" "avr" {{.*}} "-fno-use-init-array"
 
 // RUN: %clang %s -### -no-canonical-prefixes -target avr --sysroot %S/Inputs/basic_avr_tree 2>&1 | FileCheck -check-prefix CC1A %s
 // CC1A: clang{{.*}} "-cc1" "-triple" "avr" {{.*}} "-internal-isystem" {{".*avr/include"}}

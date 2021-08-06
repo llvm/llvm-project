@@ -115,7 +115,7 @@ struct DotOpConversion : public ConvertOpToLLVMPattern<DotOp> {
     auto opType = adaptor.a().getType();
     Type llvmIntType = IntegerType::get(&getTypeConverter()->getContext(), 8);
     // Dot product of all elements, broadcasted to all elements.
-    auto attr = rewriter.getI8IntegerAttr(0xff);
+    auto attr = rewriter.getI8IntegerAttr(static_cast<int8_t>(0xff));
     Value scale =
         rewriter.create<LLVM::ConstantOp>(op.getLoc(), llvmIntType, attr);
     rewriter.replaceOpWithNewOp<DotIntrOp>(op, opType, adaptor.a(), adaptor.b(),

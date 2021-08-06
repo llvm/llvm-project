@@ -98,3 +98,14 @@ body: |
     %0:_(<8 x s16>) = G_IMPLICIT_DEF
     $q0 = COPY %0
 ...
+---
+name: test_implicit_def_s88
+body: |
+  bb.0:
+    liveins:
+    ; CHECK-LABEL: name: test_implicit_def_s88
+    ; CHECK: [[DEF:%[0-9]+]]:_(s64) = G_IMPLICIT_DEF
+    ; CHECK: $x0 = COPY [[DEF]](s64)
+    %undef:_(s88) = G_IMPLICIT_DEF
+    %trunc:_(s64) = G_TRUNC %undef
+    $x0 = COPY %trunc(s64)

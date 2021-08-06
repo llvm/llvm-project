@@ -253,8 +253,6 @@ class WebAssemblyLowerEmscriptenEHSjLj final : public ModulePass {
   Function *getInvokeWrapper(CallBase *CI);
 
   bool areAllExceptionsAllowed() const { return EHAllowlistSet.empty(); }
-  bool canLongjmp(const Value *Callee) const;
-  bool isEmAsmCall(const Value *Callee) const;
   bool supportsException(const Function *F) const {
     return EnableEmEH && (areAllExceptionsAllowed() ||
                           EHAllowlistSet.count(std::string(F->getName())));
@@ -505,7 +503,7 @@ Function *WebAssemblyLowerEmscriptenEHSjLj::getInvokeWrapper(CallBase *CI) {
   return F;
 }
 
-bool WebAssemblyLowerEmscriptenEHSjLj::canLongjmp(const Value *Callee) const {
+static bool canLongjmp(const Value *Callee) {
   if (auto *CalleeF = dyn_cast<Function>(Callee))
     if (CalleeF->isIntrinsic())
       return false;
@@ -543,7 +541,7 @@ bool WebAssemblyLowerEmscriptenEHSjLj::canLongjmp(const Value *Callee) const {
   return true;
 }
 
-bool WebAssemblyLowerEmscriptenEHSjLj::isEmAsmCall(const Value *Callee) const {
+static bool isEmAsmCall(const Value *Callee) {
   StringRef CalleeName = Callee->getName();
   // This is an exhaustive list from Emscripten's <emscripten/em_asm.h>.
   return CalleeName == "emscripten_asm_const_int" ||
@@ -689,6 +687,15 @@ static void replaceLongjmpWithEmscriptenLongjmp(Function *LongjmpF,
   }
 }
 
+static bool containsLongjmpableCalls(const Function *F) {
+  for (const auto &BB : *F)
+    for (const auto &I : BB)
+      if (const auto *CB = dyn_cast<CallBase>(&I))
+        if (canLongjmp(CB->getCalledOperand()))
+          return true;
+  return false;
+}
+
 bool WebAssemblyLowerEmscriptenEHSjLj::runOnModule(Module &M) {
   LLVM_DEBUG(dbgs() << "********** Lower Emscripten EH & SjLj **********\n");
 
@@ -697,9 +704,6 @@ bool WebAssemblyLowerEmscriptenEHSjLj::runOnModule(Module &M) {
 
   Function *SetjmpF = M.getFunction("setjmp");
   Function *LongjmpF = M.getFunction("longjmp");
-  bool SetjmpUsed = SetjmpF && !SetjmpF->use_empty();
-  bool LongjmpUsed = LongjmpF && !LongjmpF->use_empty();
-  DoSjLj = EnableEmSjLj && (SetjmpUsed || LongjmpUsed);
 
   auto *TPC = getAnalysisIfAvailable<TargetPassConfig>();
   assert(TPC && "Expected a TargetPassConfig");
@@ -737,6 +741,22 @@ bool WebAssemblyLowerEmscriptenEHSjLj::runOnModule(Module &M) {
     EHTypeIDF = getEmscriptenFunction(EHTypeIDTy, "llvm_eh_typeid_for", &M);
   }
 
+  if (EnableEmSjLj && SetjmpF) {
+    // Precompute setjmp users
+    for (User *U : SetjmpF->users()) {
+      Function *UserF = cast<Instruction>(U)->getFunction();
+      // If a function that calls setjmp does not contain any other calls that
+      // can longjmp, we don't need to do any transformation on that function,
+      // so can ignore it
+      if (containsLongjmpableCalls(UserF))
+        SetjmpUsers.insert(UserF);
+    }
+  }
+
+  bool SetjmpUsed = SetjmpF && !SetjmpUsers.empty();
+  bool LongjmpUsed = LongjmpF && !LongjmpF->use_empty();
+  DoSjLj = EnableEmSjLj && (SetjmpUsed || LongjmpUsed);
+
   // Function registration and data pre-gathering for setjmp/longjmp handling
   if (DoSjLj) {
     // Register emscripten_longjmp function
@@ -759,12 +779,6 @@ bool WebAssemblyLowerEmscriptenEHSjLj::runOnModule(Module &M) {
           {getAddrIntType(&M), Type::getInt32PtrTy(C), IRB.getInt32Ty()},
           false);
       TestSetjmpF = getEmscriptenFunction(FTy, "testSetjmp", &M);
-
-      // Precompute setjmp users
-      for (User *U : SetjmpF->users()) {
-        auto *UI = cast<Instruction>(U);
-        SetjmpUsers.insert(UI->getFunction());
-      }
     }
   }
 

@@ -319,12 +319,54 @@ struct TensorLoadToMemRef : public OpRewritePattern<BufferCastOp> {
     // types. `BufferCastOp::fold` handles the same type case.
     if (!tensorLoad || tensorLoad.memref().getType() == bufferCast.getType())
       return failure();
-    // If types are not cast-compatible, bail.
+    // If types are definitely not cast-compatible, bail.
     if (!CastOp::areCastCompatible(tensorLoad.memref().getType(),
                                    bufferCast.getType()))
       return failure();
-    rewriter.replaceOpWithNewOp<CastOp>(bufferCast, bufferCast.getType(),
-                                        tensorLoad.memref());
+
+    // We already know that the types are potentially cast-compatible. However
+    // in case the affine maps are different, we may need to use a copy if we go
+    // from dynamic to static offset or stride (the canonicalization cannot know
+    // at this point that it is really cast compatible).
+    auto isGuaranteedCastCompatible = [](MemRefType source, MemRefType target) {
+      int64_t sourceOffset, targetOffset;
+      SmallVector<int64_t, 4> sourceStrides, targetStrides;
+      if (failed(getStridesAndOffset(source, sourceStrides, sourceOffset)) ||
+          failed(getStridesAndOffset(target, targetStrides, targetOffset)))
+        return false;
+      auto dynamicToStatic = [](int64_t a, int64_t b) {
+        return a == MemRefType::getDynamicStrideOrOffset() &&
+               b != MemRefType::getDynamicStrideOrOffset();
+      };
+      if (dynamicToStatic(sourceOffset, targetOffset))
+        return false;
+      for (auto it : zip(sourceStrides, targetStrides))
+        if (dynamicToStatic(std::get<0>(it), std::get<1>(it)))
+          return false;
+      return true;
+    };
+
+    auto tensorLoadType = tensorLoad.memref().getType().dyn_cast<MemRefType>();
+    auto bufferCastType = bufferCast.getType().dyn_cast<MemRefType>();
+    if (tensorLoadType && bufferCastType &&
+        !isGuaranteedCastCompatible(tensorLoadType, bufferCastType)) {
+      MemRefType resultType = bufferCastType;
+      auto loc = bufferCast.getLoc();
+      SmallVector<Value, 4> dynamicOperands;
+      for (int i = 0; i < resultType.getRank(); ++i) {
+        if (resultType.getShape()[i] != ShapedType::kDynamicSize)
+          continue;
+        auto index = rewriter.createOrFold<ConstantIndexOp>(loc, i);
+        Value size = rewriter.create<tensor::DimOp>(loc, tensorLoad, index);
+        dynamicOperands.push_back(size);
+      }
+      auto copy =
+          rewriter.create<memref::AllocOp>(loc, resultType, dynamicOperands);
+      rewriter.create<CopyOp>(loc, tensorLoad.memref(), copy);
+      rewriter.replaceOp(bufferCast, {copy});
+    } else
+      rewriter.replaceOpWithNewOp<CastOp>(bufferCast, bufferCast.getType(),
+                                          tensorLoad.memref());
     return success();
   }
 };
