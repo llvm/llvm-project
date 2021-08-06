@@ -589,11 +589,15 @@ public:
       }
       std::string buffer(m_options.m_count, 0);
       Status error;
-      uint32_t retcode = platform_sp->ReadFile(
+      uint64_t retcode = platform_sp->ReadFile(
           fd, m_options.m_offset, &buffer[0], m_options.m_count, error);
-      result.AppendMessageWithFormat("Return = %d\n", retcode);
-      result.AppendMessageWithFormat("Data = \"%s\"\n", buffer.c_str());
-      result.SetStatus(eReturnStatusSuccessFinishResult);
+      if (retcode != UINT64_MAX) {
+        result.AppendMessageWithFormat("Return = %" PRIu64 "\n", retcode);
+        result.AppendMessageWithFormat("Data = \"%s\"\n", buffer.c_str());
+        result.SetStatus(eReturnStatusSuccessFinishResult);
+      } else {
+        result.AppendError(error.AsCString());
+      }
     } else {
       result.AppendError("no platform currently selected\n");
     }
@@ -678,11 +682,15 @@ public:
                                       cmd_line);
         return result.Succeeded();
       }
-      uint32_t retcode =
+      uint64_t retcode =
           platform_sp->WriteFile(fd, m_options.m_offset, &m_options.m_data[0],
                                  m_options.m_data.size(), error);
-      result.AppendMessageWithFormat("Return = %d\n", retcode);
-      result.SetStatus(eReturnStatusSuccessFinishResult);
+      if (retcode != UINT64_MAX) {
+        result.AppendMessageWithFormat("Return = %" PRIu64 "\n", retcode);
+        result.SetStatus(eReturnStatusSuccessFinishResult);
+      } else {
+        result.AppendError(error.AsCString());
+      }
     } else {
       result.AppendError("no platform currently selected\n");
     }
