@@ -34,7 +34,7 @@ class TestGDBRemotePlatformFile(GDBRemoteTestBase):
             self.match("platform file close 16",
                        [r"file 16 closed."])
             self.assertPacketLogContains([
-                "vFile:open:2f736f6d652f66696c652e747874,0000020a,000001ed",
+                "vFile:open:2f736f6d652f66696c652e747874,00000202,000001ed",
                 "vFile:pread:10,d,b",
                 "vFile:pwrite:10,b,teststring",
                 "vFile:close:10",
@@ -70,7 +70,7 @@ class TestGDBRemotePlatformFile(GDBRemoteTestBase):
                        [r"error: Invalid argument"],
                        error=True)
             self.assertPacketLogContains([
-                "vFile:open:2f736f6d652f66696c652e747874,0000020a,000001ed",
+                "vFile:open:2f736f6d652f66696c652e747874,00000202,000001ed",
                 "vFile:pread:10,d,b",
                 "vFile:pwrite:10,b,teststring",
                 "vFile:close:10",
