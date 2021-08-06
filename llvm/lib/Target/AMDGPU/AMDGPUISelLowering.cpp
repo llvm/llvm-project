@@ -2457,10 +2457,6 @@ SDValue AMDGPUTargetLowering::LowerINT_TO_FP32(SDValue Op, SelectionDAG &DAG,
   SDLoc SL(Op);
   SDValue Src = Op.getOperand(0);
 
-  EVT SetCCVT =
-      getSetCCResultType(DAG.getDataLayout(), *DAG.getContext(), MVT::i32);
-  SDValue ZeroI32 = DAG.getConstant(0, SL, MVT::i32);
-
   SDValue Lo, Hi;
   std::tie(Lo, Hi) = split64BitValue(Src, DAG);
   SDValue Sign;
@@ -2468,25 +2464,38 @@ SDValue AMDGPUTargetLowering::LowerINT_TO_FP32(SDValue Op, SelectionDAG &DAG,
   if (Signed && Subtarget->isGCN()) {
     // We also need to consider the sign bit in Lo if Hi has just sign bits,
     // i.e. Hi is 0 or -1. However, that only needs to take the MSB into
-    // account.
-    SDValue HasSameSign =
-        DAG.getSetCC(SL, SetCCVT, DAG.getNode(ISD::XOR, SL, MVT::i32, Lo, Hi),
-                     ZeroI32, ISD::SETGE);
-    SDValue MaxShAmt = DAG.getSelect(SL, MVT::i32, HasSameSign,
-                                     DAG.getConstant(33, SL, MVT::i32),
-                                     DAG.getConstant(32, SL, MVT::i32));
+    // account. That is, the maximal shift is
+    // - 32 if Lo and Hi have opposite signs;
+    // - 33 if Lo and Hi have the same sign.
+    //
+    // Or, MaxShAmt = 33 + OppositeSign, where
+    //
+    // OppositeSign is defined as ((Lo ^ Hi) >> 31), which is
+    // - -1 if Lo and Hi have opposite signs; and
+    // -  0 otherwise.
+    //
+    // All in all, ShAmt is calculated as
+    //
+    //  umin(sffbh(Hi), 33 + (Lo^Hi)>>31) - 1.
+    //
+    // or
+    //
+    //  umin(sffbh(Hi) - 1, 32 + (Lo^Hi)>>31).
+    //
+    // to reduce the critical path.
+    SDValue OppositeSign = DAG.getNode(
+        ISD::SRA, SL, MVT::i32, DAG.getNode(ISD::XOR, SL, MVT::i32, Lo, Hi),
+        DAG.getConstant(31, SL, MVT::i32));
+    SDValue MaxShAmt =
+        DAG.getNode(ISD::ADD, SL, MVT::i32, DAG.getConstant(32, SL, MVT::i32),
+                    OppositeSign);
     // Count the leading sign bits.
     ShAmt = DAG.getNode(AMDGPUISD::FFBH_I32, SL, MVT::i32, Hi);
-    ShAmt = DAG.getSelect(SL, MVT::i32,
-                          DAG.getSetCC(SL, SetCCVT, ShAmt,
-                                       DAG.getAllOnesConstant(SL, MVT::i32),
-                                       ISD::SETNE),
-                          ShAmt, MaxShAmt);
-    // The shift amount for signed integers is [1, 33].
     // Different from unsigned conversion, the shift should be one bit less to
     // preserve the sign bit.
     ShAmt = DAG.getNode(ISD::SUB, SL, MVT::i32, ShAmt,
                         DAG.getConstant(1, SL, MVT::i32));
+    ShAmt = DAG.getNode(ISD::UMIN, SL, MVT::i32, ShAmt, MaxShAmt);
   } else {
     if (Signed) {
       // Without 'ffbh_i32', only leading zeros could be counted. Take the
@@ -2507,9 +2516,9 @@ SDValue AMDGPUTargetLowering::LowerINT_TO_FP32(SDValue Op, SelectionDAG &DAG,
   // Split it again.
   std::tie(Lo, Hi) = split64BitValue(Norm, DAG);
   // Calculate the adjust bit for rounding.
-  SDValue Adjust = DAG.getSelect(
-      SL, MVT::i32, DAG.getSetCC(SL, SetCCVT, Lo, ZeroI32, ISD::SETNE),
-      DAG.getConstant(1, SL, MVT::i32), ZeroI32);
+  // (lo != 0) ? 1 : 0 => (lo >= 1) ? 1 : 0 => umin(1, lo)
+  SDValue Adjust = DAG.getNode(ISD::UMIN, SL, MVT::i32,
+                               DAG.getConstant(1, SL, MVT::i32), Lo);
   // Get the 32-bit normalized integer.
   Norm = DAG.getNode(ISD::OR, SL, MVT::i32, Hi, Adjust);
   // Convert the normalized 32-bit integer into f32.
