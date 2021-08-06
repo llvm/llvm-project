@@ -26,6 +26,8 @@
 // `func-specialization-max-iters`
 //   increases linearly. See discussion in https://reviews.llvm.org/D106426 for
 //   details.
+// - Don't transform the function if there is no function specialization
+// happens.
 //
 //===----------------------------------------------------------------------===//
 
@@ -760,7 +762,9 @@ bool llvm::runFunctionSpecialization(
         if (!Solver.isBlockExecutable(&BB))
           continue;
         for (auto &I : make_early_inc_range(BB))
-          FS.tryToReplaceWithConstant(&I);
+          // FIXME: The solver may make changes to the function here, so set Changed, even if later
+          // function specialization does not trigger.
+          Changed |= FS.tryToReplaceWithConstant(&I);
       }
     }
   };
