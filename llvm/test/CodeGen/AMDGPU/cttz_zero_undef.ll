@@ -365,8 +365,7 @@ define amdgpu_kernel void @s_cttz_zero_undef_i8_with_select(i8 addrspace(1)* noa
 ; GFX9-GISEL-NEXT:    s_load_dword s4, s[0:1], 0x2c
 ; GFX9-GISEL-NEXT:    v_mov_b32_e32 v1, 0
 ; GFX9-GISEL-NEXT:    s_waitcnt lgkmcnt(0)
-; GFX9-GISEL-NEXT:    s_and_b32 s0, s4, 0xff
-; GFX9-GISEL-NEXT:    s_ff1_i32_b32 s0, s0
+; GFX9-GISEL-NEXT:    s_ff1_i32_b32 s0, s4
 ; GFX9-GISEL-NEXT:    v_mov_b32_e32 v0, s0
 ; GFX9-GISEL-NEXT:    global_store_byte v1, v0, s[2:3]
 ; GFX9-GISEL-NEXT:    s_endpgm
@@ -437,8 +436,7 @@ define amdgpu_kernel void @s_cttz_zero_undef_i16_with_select(i16 addrspace(1)* n
 ; GFX9-GISEL-NEXT:    s_load_dword s4, s[0:1], 0x2c
 ; GFX9-GISEL-NEXT:    v_mov_b32_e32 v1, 0
 ; GFX9-GISEL-NEXT:    s_waitcnt lgkmcnt(0)
-; GFX9-GISEL-NEXT:    s_and_b32 s0, s4, 0xffff
-; GFX9-GISEL-NEXT:    s_ff1_i32_b32 s0, s0
+; GFX9-GISEL-NEXT:    s_ff1_i32_b32 s0, s4
 ; GFX9-GISEL-NEXT:    v_mov_b32_e32 v0, s0
 ; GFX9-GISEL-NEXT:    global_store_short v1, v0, s[2:3]
 ; GFX9-GISEL-NEXT:    s_endpgm
@@ -1065,16 +1063,15 @@ define amdgpu_kernel void @v_cttz_zero_undef_i64_with_select(i64 addrspace(1)* n
 ; GFX9-GISEL-NEXT:    v_or_b32_sdwa v4, v7, v8 dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:BYTE_0 src1_sel:DWORD
 ; GFX9-GISEL-NEXT:    v_bfe_u32 v3, v3, 0, 16
 ; GFX9-GISEL-NEXT:    v_bfe_u32 v4, v4, 0, 16
+; GFX9-GISEL-NEXT:    v_lshl_or_b32 v3, v4, 16, v3
 ; GFX9-GISEL-NEXT:    v_bfe_u32 v0, v0, 0, 16
 ; GFX9-GISEL-NEXT:    v_bfe_u32 v2, v2, 0, 16
-; GFX9-GISEL-NEXT:    v_lshl_or_b32 v3, v4, 16, v3
 ; GFX9-GISEL-NEXT:    v_lshl_or_b32 v2, v2, 16, v0
-; GFX9-GISEL-NEXT:    v_ffbl_b32_e32 v0, v3
-; GFX9-GISEL-NEXT:    v_ffbl_b32_e32 v4, v2
-; GFX9-GISEL-NEXT:    v_add_u32_e32 v0, 32, v0
-; GFX9-GISEL-NEXT:    v_cmp_eq_u32_e32 vcc, 0, v2
-; GFX9-GISEL-NEXT:    v_cndmask_b32_e32 v0, v4, v0, vcc
+; GFX9-GISEL-NEXT:    v_ffbl_b32_e32 v4, v3
+; GFX9-GISEL-NEXT:    v_ffbl_b32_e32 v0, v2
+; GFX9-GISEL-NEXT:    v_add_u32_e32 v4, 32, v4
 ; GFX9-GISEL-NEXT:    v_cmp_ne_u64_e32 vcc, 0, v[2:3]
+; GFX9-GISEL-NEXT:    v_min_u32_e32 v0, v0, v4
 ; GFX9-GISEL-NEXT:    v_cndmask_b32_e32 v0, 32, v0, vcc
 ; GFX9-GISEL-NEXT:    global_store_dwordx2 v1, v[0:1], s[2:3]
 ; GFX9-GISEL-NEXT:    s_endpgm
@@ -1199,9 +1196,9 @@ define amdgpu_kernel void @v_cttz_i32_sel_eq_neg1(i32 addrspace(1)* noalias %out
 ; GFX9-GISEL-NEXT:    v_lshlrev_b32_e32 v3, 24, v4
 ; GFX9-GISEL-NEXT:    v_or3_b32 v1, v1, v2, v3
 ; GFX9-GISEL-NEXT:    v_ffbl_b32_e32 v2, v1
+; GFX9-GISEL-NEXT:    v_min_u32_e32 v2, 32, v2
 ; GFX9-GISEL-NEXT:    v_cmp_eq_u32_e32 vcc, 0, v1
-; GFX9-GISEL-NEXT:    v_cndmask_b32_e64 v1, v2, 32, vcc
-; GFX9-GISEL-NEXT:    v_cndmask_b32_e64 v1, v1, -1, vcc
+; GFX9-GISEL-NEXT:    v_cndmask_b32_e64 v1, v2, -1, vcc
 ; GFX9-GISEL-NEXT:    global_store_dword v0, v1, s[2:3]
 ; GFX9-GISEL-NEXT:    s_endpgm
   %val = load i32, i32 addrspace(1)* %arrayidx, align 1
@@ -1325,8 +1322,7 @@ define amdgpu_kernel void @v_cttz_i32_sel_ne_neg1(i32 addrspace(1)* noalias %out
 ; GFX9-GISEL-NEXT:    v_lshlrev_b32_e32 v3, 24, v4
 ; GFX9-GISEL-NEXT:    v_or3_b32 v1, v1, v2, v3
 ; GFX9-GISEL-NEXT:    v_ffbl_b32_e32 v2, v1
-; GFX9-GISEL-NEXT:    v_cmp_eq_u32_e32 vcc, 0, v1
-; GFX9-GISEL-NEXT:    v_cndmask_b32_e64 v2, v2, 32, vcc
+; GFX9-GISEL-NEXT:    v_min_u32_e32 v2, 32, v2
 ; GFX9-GISEL-NEXT:    v_cmp_ne_u32_e32 vcc, 0, v1
 ; GFX9-GISEL-NEXT:    v_cndmask_b32_e32 v1, -1, v2, vcc
 ; GFX9-GISEL-NEXT:    global_store_dword v0, v1, s[2:3]
@@ -1459,9 +1455,8 @@ define amdgpu_kernel void @v_cttz_i32_sel_ne_bitwidth(i32 addrspace(1)* noalias 
 ; GFX9-GISEL-NEXT:    v_lshlrev_b32_e32 v2, 16, v3
 ; GFX9-GISEL-NEXT:    v_lshlrev_b32_e32 v3, 24, v4
 ; GFX9-GISEL-NEXT:    v_or3_b32 v1, v1, v2, v3
-; GFX9-GISEL-NEXT:    v_ffbl_b32_e32 v2, v1
-; GFX9-GISEL-NEXT:    v_cmp_eq_u32_e32 vcc, 0, v1
-; GFX9-GISEL-NEXT:    v_cndmask_b32_e64 v1, v2, 32, vcc
+; GFX9-GISEL-NEXT:    v_ffbl_b32_e32 v1, v1
+; GFX9-GISEL-NEXT:    v_min_u32_e32 v1, 32, v1
 ; GFX9-GISEL-NEXT:    v_cmp_ne_u32_e32 vcc, 32, v1
 ; GFX9-GISEL-NEXT:    v_cndmask_b32_e32 v1, -1, v1, vcc
 ; GFX9-GISEL-NEXT:    global_store_dword v0, v1, s[2:3]

@@ -9,10 +9,10 @@
 #ifndef LLVM_LIBC_TEST_SRC_MATH_NEXTAFTERTEST_H
 #define LLVM_LIBC_TEST_SRC_MATH_NEXTAFTERTEST_H
 
+#include "src/__support/FPUtil/BasicOperations.h"
+#include "src/__support/FPUtil/FPBits.h"
+#include "src/__support/FPUtil/TestHelpers.h"
 #include "utils/CPP/TypeTraits.h"
-#include "utils/FPUtil/BasicOperations.h"
-#include "utils/FPUtil/FPBits.h"
-#include "utils/FPUtil/TestHelpers.h"
 #include "utils/UnitTest/Test.h"
 #include <math.h>
 

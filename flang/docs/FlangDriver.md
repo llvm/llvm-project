@@ -129,6 +129,33 @@ is `ParseSyntaxOnlyAction`, which corresponds to `-fsyntax-only`. In other
 words, `flang-new -fc1 <input-file>` is equivalent to `flang-new -fc1 -fsyntax-only
 <input-file>`.
 
+## The `flang` script
+The `flang` wrapper script for `flang-new` was introduced as a development tool
+and to facilitate testing. While code-generation is not available in Flang, you
+can use it as a drop-in replacement for other Fortran compilers in your build
+scripts.
+
+The `flang` wrapper script will:
+* use `flang-new` to unparse the input source file (i.e. it will run `flang-new
+  -fc1 -fdebug-unparse <input-file>`), and then
+* call a host Fortran compiler, e.g. `gfortran`, to compile the unparsed file.
+
+Here's a basic breakdown of what happens inside `flang` when you run `flang
+file.f90`:
+```bash
+flang-new -fc1 -fdebug-unparse file.f90 -o file-unparsed.f90
+gfortran file-unparsed.f90
+```
+This is a simplified version for illustration purposes only. In practice,
+`flang` adds a few more frontend options and it also supports various other use
+cases (e.g. compiling C files, linking existing object files). `gfortran` is
+the default host compiler used by `flang`. You can change it by setting the
+`FLANG_FC` environment variable.
+
+Our intention is to replace `flang` with `flang-new`. Please consider `flang`
+as a temporary substitute for Flang's compiler driver while the actual driver
+is in development.
+
 ## Adding new Compiler Options
 Adding a new compiler option in Flang consists of two steps:
 * define the new option in a dedicated TableGen file,

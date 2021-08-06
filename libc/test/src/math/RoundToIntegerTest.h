@@ -9,7 +9,7 @@
 #ifndef LLVM_LIBC_TEST_SRC_MATH_ROUNDTOINTEGERTEST_H
 #define LLVM_LIBC_TEST_SRC_MATH_ROUNDTOINTEGERTEST_H
 
-#include "utils/FPUtil/FPBits.h"
+#include "src/__support/FPUtil/FPBits.h"
 #include "utils/MPFRWrapper/MPFRUtils.h"
 #include "utils/UnitTest/Test.h"
 
@@ -18,7 +18,7 @@
 #include <errno.h>
 #endif
 #if math_errhandling & MATH_ERREXCEPT
-#include "utils/FPUtil/FEnvUtils.h"
+#include "src/__support/FPUtil/FEnvUtils.h"
 #endif
 
 namespace mpfr = __llvm_libc::testing::mpfr;

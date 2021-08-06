@@ -252,7 +252,7 @@ with :ref:`-cl-ext <opencl_cl_ext>` command-line flags.
 **Library functionality**
 
 If an extension adds functionality that does not modify standard language
-parsing it should not require modifying anything other than header files or
+parsing it should not require modifying anything other than header files and
 ``OpenCLBuiltins.td`` detailed in :ref:`OpenCL builtins <opencl_builtins>`.
 Most commonly such extensions add functionality via libraries (by adding
 non-native types or functions) parsed regularly. Similar to other languages this

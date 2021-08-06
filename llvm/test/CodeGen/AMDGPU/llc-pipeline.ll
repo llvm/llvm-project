@@ -31,6 +31,7 @@
 ; GCN-O0-NEXT:    AMDGPU Printf lowering
 ; GCN-O0-NEXT:      FunctionPass Manager
 ; GCN-O0-NEXT:        Dominator Tree Construction
+; GCN-O0-NEXT:    Lower ctors and dtors for AMDGPU
 ; GCN-O0-NEXT:    Fix function bitcasts for AMDGPU
 ; GCN-O0-NEXT:    AMDGPU Lower Kernel Calls
 ; GCN-O0-NEXT:    FunctionPass Manager
@@ -166,6 +167,7 @@
 ; GCN-O1-NEXT:    AMDGPU Printf lowering
 ; GCN-O1-NEXT:      FunctionPass Manager
 ; GCN-O1-NEXT:        Dominator Tree Construction
+; GCN-O1-NEXT:    Lower ctors and dtors for AMDGPU
 ; GCN-O1-NEXT:    Fix function bitcasts for AMDGPU
 ; GCN-O1-NEXT:    AMDGPU Lower Kernel Calls
 ; GCN-O1-NEXT:    FunctionPass Manager
@@ -417,6 +419,7 @@
 ; GCN-O1-OPTS-NEXT:    AMDGPU Printf lowering
 ; GCN-O1-OPTS-NEXT:      FunctionPass Manager
 ; GCN-O1-OPTS-NEXT:        Dominator Tree Construction
+; GCN-O1-OPTS-NEXT:    Lower ctors and dtors for AMDGPU
 ; GCN-O1-OPTS-NEXT:    Fix function bitcasts for AMDGPU
 ; GCN-O1-OPTS-NEXT:    AMDGPU Lower Kernel Calls
 ; GCN-O1-OPTS-NEXT:    FunctionPass Manager
@@ -701,6 +704,7 @@
 ; GCN-O2-NEXT:    AMDGPU Printf lowering
 ; GCN-O2-NEXT:      FunctionPass Manager
 ; GCN-O2-NEXT:        Dominator Tree Construction
+; GCN-O2-NEXT:    Lower ctors and dtors for AMDGPU
 ; GCN-O2-NEXT:    Fix function bitcasts for AMDGPU
 ; GCN-O2-NEXT:    AMDGPU Lower Kernel Calls
 ; GCN-O2-NEXT:    FunctionPass Manager
@@ -987,6 +991,7 @@
 ; GCN-O3-NEXT:    AMDGPU Printf lowering
 ; GCN-O3-NEXT:      FunctionPass Manager
 ; GCN-O3-NEXT:        Dominator Tree Construction
+; GCN-O3-NEXT:    Lower ctors and dtors for AMDGPU
 ; GCN-O3-NEXT:    Fix function bitcasts for AMDGPU
 ; GCN-O3-NEXT:    AMDGPU Lower Kernel Calls
 ; GCN-O3-NEXT:    FunctionPass Manager

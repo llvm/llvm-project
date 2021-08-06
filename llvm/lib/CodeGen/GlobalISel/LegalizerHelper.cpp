@@ -2051,10 +2051,15 @@ LegalizerHelper::widenScalar(MachineInstr &MI, unsigned TypeIdx, LLT WideTy) {
 
     Register SrcReg = MI.getOperand(1).getReg();
 
-    // First ZEXT the input.
-    auto MIBSrc = MIRBuilder.buildZExt(WideTy, SrcReg);
+    // First extend the input.
+    unsigned ExtOpc = MI.getOpcode() == TargetOpcode::G_CTTZ ||
+                              MI.getOpcode() == TargetOpcode::G_CTTZ_ZERO_UNDEF
+                          ? TargetOpcode::G_ANYEXT
+                          : TargetOpcode::G_ZEXT;
+    auto MIBSrc = MIRBuilder.buildInstr(ExtOpc, {WideTy}, {SrcReg});
     LLT CurTy = MRI.getType(SrcReg);
-    if (MI.getOpcode() == TargetOpcode::G_CTTZ) {
+    unsigned NewOpc = MI.getOpcode();
+    if (NewOpc == TargetOpcode::G_CTTZ) {
       // The count is the same in the larger type except if the original
       // value was zero.  This can be handled by setting the bit just off
       // the top of the original type.
@@ -2062,10 +2067,12 @@ LegalizerHelper::widenScalar(MachineInstr &MI, unsigned TypeIdx, LLT WideTy) {
           APInt::getOneBitSet(WideTy.getSizeInBits(), CurTy.getSizeInBits());
       MIBSrc = MIRBuilder.buildOr(
         WideTy, MIBSrc, MIRBuilder.buildConstant(WideTy, TopBit));
+      // Now we know the operand is non-zero, use the more relaxed opcode.
+      NewOpc = TargetOpcode::G_CTTZ_ZERO_UNDEF;
     }
 
     // Perform the operation at the larger size.
-    auto MIBNewOp = MIRBuilder.buildInstr(MI.getOpcode(), {WideTy}, {MIBSrc});
+    auto MIBNewOp = MIRBuilder.buildInstr(NewOpc, {WideTy}, {MIBSrc});
     // This is already the correct result for CTPOP and CTTZs
     if (MI.getOpcode() == TargetOpcode::G_CTLZ ||
         MI.getOpcode() == TargetOpcode::G_CTLZ_ZERO_UNDEF) {

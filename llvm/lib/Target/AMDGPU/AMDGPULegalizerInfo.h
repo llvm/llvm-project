@@ -89,6 +89,8 @@ public:
 
   bool legalizeBuildVector(MachineInstr &MI, MachineRegisterInfo &MRI,
                            MachineIRBuilder &B) const;
+  bool legalizeCTLZ_CTTZ(MachineInstr &MI, MachineRegisterInfo &MRI,
+                         MachineIRBuilder &B) const;
 
   bool loadInputValue(Register DstReg, MachineIRBuilder &B,
                       const ArgDescriptor *Arg,

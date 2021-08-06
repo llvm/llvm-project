@@ -5945,7 +5945,7 @@ bool TreeTransform<Derived>::TransformExceptionSpec(
 
     ExceptionSpecificationType EST = ESI.Type;
     NoexceptExpr =
-        getSema().ActOnNoexceptSpec(Loc, NoexceptExpr.get(), EST);
+        getSema().ActOnNoexceptSpec(NoexceptExpr.get(), EST);
     if (NoexceptExpr.isInvalid())
       return true;
 

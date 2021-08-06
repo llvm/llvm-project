@@ -84,7 +84,7 @@ def DataLayoutSpecInterface : AttrInterface<"DataLayoutSpecInterface"> {
 
     Data layout specifications may need to be combined in case they appear on
     nested operations subject to layout, or to ensure the validity of layout
-    modification. Concerete specification attributes must implement the
+    modification. Concrete specification attributes must implement the
     corresponding hook.
   }];
   // The underlying storage being contiguous may be revised in the future, but
@@ -285,7 +285,7 @@ def DataLayoutTypeInterface : TypeInterface<"DataLayoutTypeInterface"> {
 
     The list of entries may be empty, in which case the type must provide a
     reasonable default value. The entries in the list are known to have passed
-    the spec and the entry verifiers, as well as the type-specifid verifier if
+    the spec and the entry verifiers, as well as the type-specified verifier if
     provided.
 
     In case of nested layout specs or spec changes, the type can override a hook
@@ -321,7 +321,7 @@ def DataLayoutTypeInterface : TypeInterface<"DataLayoutTypeInterface"> {
                     "::mlir::DataLayoutEntryListRef":$params)
     >,
     InterfaceMethod<
-      /*description=*/"Returns the preferred alignemnt for this type, "
+      /*description=*/"Returns the preferred alignment for this type, "
                       "in bytes.",
       /*retTy=*/"unsigned",
       /*methodName=*/"getPreferredAlignment",

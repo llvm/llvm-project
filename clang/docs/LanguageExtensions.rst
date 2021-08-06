@@ -1961,6 +1961,30 @@ between the host and device is known to be compatible.
     global OnlySL *d,
   );
 
+Remove address space builtin function
+-------------------------------------
+
+``__remove_address_space`` allows to derive types in C++ for OpenCL
+that have address space qualifiers removed. This utility only affects
+address space qualifiers, therefore, other type qualifiers such as
+``const`` or ``volatile`` remain unchanged.
+
+**Example of Use**:
+
+.. code-block:: c++
+
+  template<typename T>
+  void foo(T *par){
+    T var1; // error - local function variable with global address space
+    __private T var2; // error - conflicting address space qualifiers
+    __private __remove_address_space<T> var3; // var3 is __private int
+  }
+
+  void bar(){
+    __global int* ptr;
+    foo(ptr);
+  }
+
 Legacy 1.x atomics with generic address space
 ---------------------------------------------
 

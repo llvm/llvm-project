@@ -23,6 +23,7 @@
 #include "mlir/IR/Value.h"
 #include "mlir/Support/MathExtras.h"
 #include "mlir/Transforms/InliningUtils.h"
+#include "llvm/ADT/APFloat.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/StringSwitch.h"
 #include "llvm/Support/FormatVariadic.h"
@@ -480,6 +481,62 @@ static LogicalResult verify(AtomicYieldOp op) {
     return op.emitOpError() << "types mismatch between yield op: " << resultType
                             << " and its parent: " << parentType;
   return success();
+}
+
+//===----------------------------------------------------------------------===//
+// BitcastOp
+//===----------------------------------------------------------------------===//
+
+bool BitcastOp::areCastCompatible(TypeRange inputs, TypeRange outputs) {
+  assert(inputs.size() == 1 && outputs.size() == 1 &&
+         "bitcast op expects one operand and result");
+  Type a = inputs.front(), b = outputs.front();
+  if (a.isSignlessIntOrFloat() && b.isSignlessIntOrFloat())
+    return a.getIntOrFloatBitWidth() == b.getIntOrFloatBitWidth();
+  return areVectorCastSimpleCompatible(a, b, areCastCompatible);
+}
+
+OpFoldResult BitcastOp::fold(ArrayRef<Attribute> operands) {
+  assert(operands.size() == 1 && "bitcastop expects 1 operand");
+
+  // Bitcast of bitcast
+  auto *sourceOp = getOperand().getDefiningOp();
+  if (auto sourceBitcast = dyn_cast_or_null<BitcastOp>(sourceOp)) {
+    setOperand(sourceBitcast.getOperand());
+    return getResult();
+  }
+
+  auto operand = operands[0];
+  if (!operand)
+    return {};
+
+  Type resType = getResult().getType();
+
+  if (auto denseAttr = operand.dyn_cast<DenseFPElementsAttr>()) {
+    Type elType = getElementTypeOrSelf(resType);
+    return denseAttr.mapValues(
+        elType, [](const APFloat &f) { return f.bitcastToAPInt(); });
+  }
+  if (auto denseAttr = operand.dyn_cast<DenseIntElementsAttr>()) {
+    Type elType = getElementTypeOrSelf(resType);
+    // mapValues does its own bitcast to the target type.
+    return denseAttr.mapValues(elType, [](const APInt &i) { return i; });
+  }
+
+  APInt bits;
+  if (auto floatAttr = operand.dyn_cast<FloatAttr>())
+    bits = floatAttr.getValue().bitcastToAPInt();
+  else if (auto intAttr = operand.dyn_cast<IntegerAttr>())
+    bits = intAttr.getValue();
+  else
+    return {};
+
+  if (resType.isa<IntegerType>())
+    return IntegerAttr::get(resType, bits);
+  if (auto resFloatType = resType.dyn_cast<FloatType>())
+    return FloatAttr::get(resType,
+                          APFloat(resFloatType.getFloatSemantics(), bits));
+  return {};
 }
 
 //===----------------------------------------------------------------------===//
