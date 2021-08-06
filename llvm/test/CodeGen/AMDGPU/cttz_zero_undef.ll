@@ -1065,16 +1065,15 @@ define amdgpu_kernel void @v_cttz_zero_undef_i64_with_select(i64 addrspace(1)* n
 ; GFX9-GISEL-NEXT:    v_or_b32_sdwa v4, v7, v8 dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:BYTE_0 src1_sel:DWORD
 ; GFX9-GISEL-NEXT:    v_bfe_u32 v3, v3, 0, 16
 ; GFX9-GISEL-NEXT:    v_bfe_u32 v4, v4, 0, 16
+; GFX9-GISEL-NEXT:    v_lshl_or_b32 v3, v4, 16, v3
 ; GFX9-GISEL-NEXT:    v_bfe_u32 v0, v0, 0, 16
 ; GFX9-GISEL-NEXT:    v_bfe_u32 v2, v2, 0, 16
-; GFX9-GISEL-NEXT:    v_lshl_or_b32 v3, v4, 16, v3
 ; GFX9-GISEL-NEXT:    v_lshl_or_b32 v2, v2, 16, v0
-; GFX9-GISEL-NEXT:    v_ffbl_b32_e32 v0, v3
-; GFX9-GISEL-NEXT:    v_ffbl_b32_e32 v4, v2
-; GFX9-GISEL-NEXT:    v_add_u32_e32 v0, 32, v0
-; GFX9-GISEL-NEXT:    v_cmp_eq_u32_e32 vcc, 0, v2
-; GFX9-GISEL-NEXT:    v_cndmask_b32_e32 v0, v4, v0, vcc
+; GFX9-GISEL-NEXT:    v_ffbl_b32_e32 v4, v3
+; GFX9-GISEL-NEXT:    v_ffbl_b32_e32 v0, v2
+; GFX9-GISEL-NEXT:    v_add_u32_e32 v4, 32, v4
 ; GFX9-GISEL-NEXT:    v_cmp_ne_u64_e32 vcc, 0, v[2:3]
+; GFX9-GISEL-NEXT:    v_min_u32_e32 v0, v0, v4
 ; GFX9-GISEL-NEXT:    v_cndmask_b32_e32 v0, 32, v0, vcc
 ; GFX9-GISEL-NEXT:    global_store_dwordx2 v1, v[0:1], s[2:3]
 ; GFX9-GISEL-NEXT:    s_endpgm
