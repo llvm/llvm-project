@@ -30,7 +30,7 @@ define i8 @scalar_to_vector_half(i16* nocapture readonly %ad) {
 ; P8BE-LABEL: scalar_to_vector_half:
 ; P8BE:       # %bb.0: # %entry
 ; P8BE-NEXT:    lhz r3, 0(r3)
-; P8BE-NEXT:    sldi r3, r3, 56
+; P8BE-NEXT:    sldi r3, r3, 48
 ; P8BE-NEXT:    mtfprd f0, r3
 ; P8BE-NEXT:    mffprd r3, f0
 ; P8BE-NEXT:    rldicl r3, r3, 8, 56
