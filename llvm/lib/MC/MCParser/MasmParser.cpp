@@ -1319,7 +1319,7 @@ bool MasmParser::enabledGenDwarfForAssembly() {
 bool MasmParser::Run(bool NoInitialTextSection, bool NoFinalize) {
   // Create the initial section, if requested.
   if (!NoInitialTextSection)
-    Out.InitSections(false);
+    Out.initSections(false, getTargetParser().getSTI());
 
   // Prime the lexer.
   Lex();
@@ -1437,7 +1437,7 @@ bool MasmParser::Run(bool NoInitialTextSection, bool NoFinalize) {
 
 bool MasmParser::checkForValidSection() {
   if (!ParsingMSInlineAsm && !getStreamer().getCurrentSectionOnly()) {
-    Out.InitSections(false);
+    Out.initSections(false, getTargetParser().getSTI());
     return Error(getTok().getLoc(),
                  "expected section directive before assembly directive");
   }
