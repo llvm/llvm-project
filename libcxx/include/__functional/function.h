@@ -11,6 +11,7 @@
 #define _LIBCPP___FUNCTIONAL_FUNCTION_H
 
 #include <__config>
+#include <__debug>
 #include <__functional/binary_function.h>
 #include <__functional/invoke.h>
 #include <__functional/unary_function.h>
