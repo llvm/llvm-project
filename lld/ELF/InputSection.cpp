@@ -88,7 +88,22 @@ InputSectionBase::InputSectionBase(InputFile *file, uint64_t flags,
     if (!zlib::isAvailable())
       error(toString(file) + ": contains a compressed section, " +
             "but zlib is not available");
-    parseCompressedHeader();
+    switch (config->ekind) {
+    case ELF32LEKind:
+      parseCompressedHeader<ELF32LE>();
+      break;
+    case ELF32BEKind:
+      parseCompressedHeader<ELF32BE>();
+      break;
+    case ELF64LEKind:
+      parseCompressedHeader<ELF64LE>();
+      break;
+    case ELF64BEKind:
+      parseCompressedHeader<ELF64BE>();
+      break;
+    default:
+      llvm_unreachable("unknown ELFT");
+    }
   }
 }
 
@@ -210,10 +225,7 @@ OutputSection *SectionBase::getOutputSection() {
 // When a section is compressed, `rawData` consists with a header followed
 // by zlib-compressed data. This function parses a header to initialize
 // `uncompressedSize` member and remove the header from `rawData`.
-void InputSectionBase::parseCompressedHeader() {
-  using Chdr64 = typename ELF64LE::Chdr;
-  using Chdr32 = typename ELF32LE::Chdr;
-
+template <typename ELFT> void InputSectionBase::parseCompressedHeader() {
   // Old-style header
   if (name.startswith(".zdebug")) {
     if (!toStringRef(rawData).startswith("ZLIB")) {
@@ -239,32 +251,13 @@ void InputSectionBase::parseCompressedHeader() {
   assert(flags & SHF_COMPRESSED);
   flags &= ~(uint64_t)SHF_COMPRESSED;
 
-  // New-style 64-bit header
-  if (config->is64) {
-    if (rawData.size() < sizeof(Chdr64)) {
-      error(toString(this) + ": corrupted compressed section");
-      return;
-    }
-
-    auto *hdr = reinterpret_cast<const Chdr64 *>(rawData.data());
-    if (hdr->ch_type != ELFCOMPRESS_ZLIB) {
-      error(toString(this) + ": unsupported compression type");
-      return;
-    }
-
-    uncompressedSize = hdr->ch_size;
-    alignment = std::max<uint32_t>(hdr->ch_addralign, 1);
-    rawData = rawData.slice(sizeof(*hdr));
-    return;
-  }
-
-  // New-style 32-bit header
-  if (rawData.size() < sizeof(Chdr32)) {
+  // New-style header
+  if (rawData.size() < sizeof(typename ELFT::Chdr)) {
     error(toString(this) + ": corrupted compressed section");
     return;
   }
 
-  auto *hdr = reinterpret_cast<const Chdr32 *>(rawData.data());
+  auto *hdr = reinterpret_cast<const typename ELFT::Chdr *>(rawData.data());
   if (hdr->ch_type != ELFCOMPRESS_ZLIB) {
     error(toString(this) + ": unsupported compression type");
     return;
