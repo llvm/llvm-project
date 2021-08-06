@@ -184,6 +184,11 @@ namespace std::ranges {
 
   template<class W, class Bound>
     inline constexpr bool enable_borrowed_range<iota_view<W, Bound>> = true;
+
+  // [range.join], join view
+  template<input_range V>
+    requires view<V> && input_range<range_reference_t<V>>
+  class join_view;
 }
 
 */
@@ -207,6 +212,7 @@ namespace std::ranges {
 #include <__ranges/enable_borrowed_range.h>
 #include <__ranges/enable_view.h>
 #include <__ranges/iota_view.h>
+#include <__ranges/join_view.h>
 #include <__ranges/ref_view.h>
 #include <__ranges/reverse_view.h>
 #include <__ranges/take_view.h>
