@@ -257,6 +257,9 @@ void PPCTargetInfo::getTargetDefines(const LangOptions &Opts,
     Builder.defineMacro("__ppc64__");
     Builder.defineMacro("__PPC64__");
   }
+  if (getTriple().isOSAIX()) {
+    Builder.defineMacro("__THW_PPC__");
+  }
 
   // Target properties.
   if (getTriple().getArch() == llvm::Triple::ppc64le ||
