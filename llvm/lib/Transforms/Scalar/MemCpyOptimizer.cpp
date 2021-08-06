@@ -67,6 +67,10 @@ using namespace llvm;
 
 #define DEBUG_TYPE "memcpyopt"
 
+static cl::opt<bool> EnableMemCpyOptWithoutLibcalls(
+    "enable-memcpyopt-without-libcalls", cl::init(false), cl::Hidden,
+    cl::desc("Enable memcpyopt even when libcalls are disabled"));
+
 static cl::opt<bool>
     EnableMemorySSA("enable-memcpyopt-memoryssa", cl::init(true), cl::Hidden,
                     cl::desc("Use MemorySSA-backed MemCpyOpt."));
@@ -677,8 +681,9 @@ bool MemCpyOptPass::processStore(StoreInst *SI, BasicBlock::iterator &BBI) {
       // the corresponding libcalls are not available.
       // TODO: We should really distinguish between libcall availability and
       // our ability to introduce intrinsics.
-      if (T->isAggregateType() && TLI->has(LibFunc_memcpy) &&
-          TLI->has(LibFunc_memmove)) {
+      if (T->isAggregateType() &&
+          (EnableMemCpyOptWithoutLibcalls ||
+           (TLI->has(LibFunc_memcpy) && TLI->has(LibFunc_memmove)))) {
         MemoryLocation LoadLoc = MemoryLocation::get(LI);
 
         // We use alias analysis to check if an instruction may store to
@@ -806,7 +811,7 @@ bool MemCpyOptPass::processStore(StoreInst *SI, BasicBlock::iterator &BBI) {
   // this if the corresponding libfunc is not available.
   // TODO: We should really distinguish between libcall availability and
   // our ability to introduce intrinsics.
-  if (!TLI->has(LibFunc_memset))
+  if (!(TLI->has(LibFunc_memset) || EnableMemCpyOptWithoutLibcalls))
     return false;
 
   // There are two cases that are interesting for this code to handle: memcpy
