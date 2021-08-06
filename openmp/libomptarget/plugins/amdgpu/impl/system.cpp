@@ -35,6 +35,8 @@ typedef unsigned char *address;
 /*
  * Note descriptors.
  */
+// FreeBSD already declares Elf_Note (indirectly via <libelf.h>)
+#if !defined(__FreeBSD__)
 typedef struct {
   uint32_t n_namesz; /* Length of note's name. */
   uint32_t n_descsz; /* Length of note's value. */
@@ -43,6 +45,7 @@ typedef struct {
   // then padding, optional
   // then desc, at 4 byte alignment (not 8, despite being elf64)
 } Elf_Note;
+#endif
 
 // The following include file and following structs/enums
 // have been replicated on a per-use basis below. For example,
