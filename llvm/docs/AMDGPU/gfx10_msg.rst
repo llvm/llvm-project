@@ -47,24 +47,29 @@ or :ref:`absolute expressions<amdgpu_synid_absolute_expression>`.
 
 Each message type supports specific operations:
 
-    ================= ========== ============================== ============ ==========
-    Message name      Message Id Supported Operations           Operation Id Stream Id
-    ================= ========== ============================== ============ ==========
-    MSG_INTERRUPT     1          \-                             \-           \-
-    MSG_GS            2          GS_OP_CUT                      1            Optional
-    \                            GS_OP_EMIT                     2            Optional
-    \                            GS_OP_EMIT_CUT                 3            Optional
-    MSG_GS_DONE       3          GS_OP_NOP                      0            \-
-    \                            GS_OP_CUT                      1            Optional
-    \                            GS_OP_EMIT                     2            Optional
-    \                            GS_OP_EMIT_CUT                 3            Optional
-    MSG_GS_ALLOC_REQ  9          \-                             \-           \-
-    MSG_GET_DOORBELL  10         \-                             \-           \-
-    MSG_SYSMSG        15         SYSMSG_OP_ECC_ERR_INTERRUPT    1            \-
-    \                            SYSMSG_OP_REG_RD               2            \-
-    \                            SYSMSG_OP_HOST_TRAP_ACK        3            \-
-    \                            SYSMSG_OP_TTRACE_PC            4            \-
-    ================= ========== ============================== ============ ==========
+    =================== ========== ============================== ============ ==========
+    Message name        Message Id Supported Operations           Operation Id Stream Id
+    =================== ========== ============================== ============ ==========
+    MSG_INTERRUPT       1          \-                             \-           \-
+    MSG_GS              2          GS_OP_CUT                      1            Optional
+    \                              GS_OP_EMIT                     2            Optional
+    \                              GS_OP_EMIT_CUT                 3            Optional
+    MSG_GS_DONE         3          GS_OP_NOP                      0            \-
+    \                              GS_OP_CUT                      1            Optional
+    \                              GS_OP_EMIT                     2            Optional
+    \                              GS_OP_EMIT_CUT                 3            Optional
+    MSG_SAVEWAVE        4          \-                             \-           \-
+    MSG_STALL_WAVE_GEN  5          \-                             \-           \-
+    MSG_HALT_WAVES      6          \-                             \-           \-
+    MSG_ORDERED_PS_DONE 7          \-                             \-           \-
+    MSG_GS_ALLOC_REQ    9          \-                             \-           \-
+    MSG_GET_DOORBELL    10         \-                             \-           \-
+    MSG_GET_DDID        11         \-                             \-           \-
+    MSG_SYSMSG          15         SYSMSG_OP_ECC_ERR_INTERRUPT    1            \-
+    \                              SYSMSG_OP_REG_RD               2            \-
+    \                              SYSMSG_OP_HOST_TRAP_ACK        3            \-
+    \                              SYSMSG_OP_TTRACE_PC            4            \-
+    =================== ========== ============================== ============ ==========
 
 *Sendmsg* arguments are validated depending on how *type* value is specified:
 

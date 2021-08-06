@@ -58,6 +58,7 @@ Each message type supports specific operations:
     \                            GS_OP_CUT                      1            Optional
     \                            GS_OP_EMIT                     2            Optional
     \                            GS_OP_EMIT_CUT                 3            Optional
+    MSG_SAVEWAVE      4          \-                             \-           \-
     MSG_SYSMSG        15         SYSMSG_OP_ECC_ERR_INTERRUPT    1            \-
     \                            SYSMSG_OP_REG_RD               2            \-
     \                            SYSMSG_OP_HOST_TRAP_ACK        3            \-
