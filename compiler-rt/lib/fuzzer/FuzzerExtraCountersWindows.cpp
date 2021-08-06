@@ -12,7 +12,7 @@
 #include <cstdint>
 
 #if LIBFUZZER_WINDOWS
-#include <Windows.h>
+#include <windows.h>
 
 namespace fuzzer {
 
