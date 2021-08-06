@@ -757,7 +757,8 @@ public:
                       std::is_base_of<NestedNameSpecifier, T>::value ||
                       std::is_base_of<NestedNameSpecifierLoc, T>::value ||
                       std::is_base_of<TypeLoc, T>::value ||
-                      std::is_base_of<QualType, T>::value,
+                      std::is_base_of<QualType, T>::value ||
+                      std::is_base_of<Attr, T>::value,
                   "unsupported type for recursive matching");
     return matchesChildOf(DynTypedNode::create(Node), getASTContext(), Matcher,
                           Builder, Bind);
@@ -771,7 +772,8 @@ public:
                       std::is_base_of<NestedNameSpecifier, T>::value ||
                       std::is_base_of<NestedNameSpecifierLoc, T>::value ||
                       std::is_base_of<TypeLoc, T>::value ||
-                      std::is_base_of<QualType, T>::value,
+                      std::is_base_of<QualType, T>::value ||
+                      std::is_base_of<Attr, T>::value,
                   "unsupported type for recursive matching");
     return matchesDescendantOf(DynTypedNode::create(Node), getASTContext(),
                                Matcher, Builder, Bind);
@@ -785,7 +787,8 @@ public:
     static_assert(std::is_base_of<Decl, T>::value ||
                       std::is_base_of<NestedNameSpecifierLoc, T>::value ||
                       std::is_base_of<Stmt, T>::value ||
-                      std::is_base_of<TypeLoc, T>::value,
+                      std::is_base_of<TypeLoc, T>::value ||
+                      std::is_base_of<Attr, T>::value,
                   "type not allowed for recursive matching");
     return matchesAncestorOf(DynTypedNode::create(Node), getASTContext(),
                              Matcher, Builder, MatchMode);
@@ -954,7 +957,7 @@ class HasNameMatcher : public SingleNodeMatcherInterface<NamedDecl> {
 
   bool matchesNode(const NamedDecl &Node) const override;
 
- private:
+private:
   /// Unqualified match routine.
   ///
   /// It is much faster than the full match, but it only works for unqualified
@@ -1175,7 +1178,8 @@ struct IsBaseType {
       std::is_same<T, NestedNameSpecifier>::value ||
       std::is_same<T, NestedNameSpecifierLoc>::value ||
       std::is_same<T, CXXCtorInitializer>::value ||
-      std::is_same<T, TemplateArgumentLoc>::value;
+      std::is_same<T, TemplateArgumentLoc>::value ||
+      std::is_same<T, Attr>::value;
 };
 template <typename T>
 const bool IsBaseType<T>::value;
@@ -1185,7 +1189,7 @@ const bool IsBaseType<T>::value;
 /// Useful for matchers like \c anything and \c unless.
 using AllNodeBaseTypes =
     TypeList<Decl, Stmt, NestedNameSpecifier, NestedNameSpecifierLoc, QualType,
-             Type, TypeLoc, CXXCtorInitializer>;
+             Type, TypeLoc, CXXCtorInitializer, Attr>;
 
 /// Helper meta-function to extract the argument out of a function of
 ///   type void(Arg).
@@ -1212,7 +1216,7 @@ template <class T, class Tuple> constexpr T *new_from_tuple(Tuple &&t) {
 using AdaptativeDefaultFromTypes = AllNodeBaseTypes;
 using AdaptativeDefaultToTypes =
     TypeList<Decl, Stmt, NestedNameSpecifier, NestedNameSpecifierLoc, TypeLoc,
-             QualType>;
+             QualType, Attr>;
 
 /// All types that are supported by HasDeclarationMatcher above.
 using HasDeclarationSupportedTypes =
