@@ -1672,6 +1672,63 @@ TEST_F(AArch64GISelMITest, TestKnownBitsAssertZext) {
   EXPECT_EQ(0xFFFFFFFFFFFFFFF8u, Res.Zero.getZExtValue());
 }
 
+TEST_F(AArch64GISelMITest, TestKnownBitsCTPOP) {
+  StringRef MIRString = R"(
+   %src:_(s32) = COPY $w0
+   %unknown:_(s32) = G_CTPOP %src
+   %constant_4294967295:_(s32) = G_CONSTANT i32 4294967295
+   %thirtytwo:_(s32) = G_CTPOP %constant_4294967295
+   %thirtytwo_copy:_(s32) = COPY %thirtytwo
+   %constant_15:_(s32) = G_CONSTANT i32 15
+   %four:_(s32) = G_CTPOP %constant_15
+   %four_copy:_(s32) = COPY %four
+   %constant_1:_(s32) = G_CONSTANT i32 1
+   %one:_(s32) = G_CTPOP %constant_1
+   %one_copy:_(s32) = COPY %one
+)";
+  setUp(MIRString);
+  if (!TM)
+    return;
+
+  Register UnknownCopy = Copies[Copies.size() - 4];
+  Register ThirtytwoCopy = Copies[Copies.size() - 3];
+  Register FourCopy = Copies[Copies.size() - 2];
+  Register OneCopy = Copies[Copies.size() - 1];
+
+  GISelKnownBits Info(*MF);
+  MachineInstr *Copy;
+  Register SrcReg;
+  KnownBits Res;
+
+  Copy = MRI->getVRegDef(UnknownCopy);
+  SrcReg = Copy->getOperand(1).getReg();
+  Res = Info.getKnownBits(SrcReg);
+  EXPECT_EQ(1u, Res.getBitWidth());
+  EXPECT_EQ(0u, Res.One.getZExtValue());
+  EXPECT_EQ(0u, Res.Zero.getZExtValue());
+
+  Copy = MRI->getVRegDef(ThirtytwoCopy);
+  SrcReg = Copy->getOperand(1).getReg();
+  Res = Info.getKnownBits(SrcReg);
+  EXPECT_EQ(32u, Res.getBitWidth());
+  EXPECT_EQ(0u, Res.One.getZExtValue());
+  EXPECT_EQ(0xFFFFFFC0u, Res.Zero.getZExtValue());
+
+  Copy = MRI->getVRegDef(FourCopy);
+  SrcReg = Copy->getOperand(1).getReg();
+  Res = Info.getKnownBits(SrcReg);
+  EXPECT_EQ(32u, Res.getBitWidth());
+  EXPECT_EQ(0u, Res.One.getZExtValue());
+  EXPECT_EQ(0xFFFFFFF8u, Res.Zero.getZExtValue());
+
+  Copy = MRI->getVRegDef(OneCopy);
+  SrcReg = Copy->getOperand(1).getReg();
+  Res = Info.getKnownBits(SrcReg);
+  EXPECT_EQ(32u, Res.getBitWidth());
+  EXPECT_EQ(0u, Res.One.getZExtValue());
+  EXPECT_EQ(0xFFFFFFFEu, Res.Zero.getZExtValue());
+}
+
 TEST_F(AMDGPUGISelMITest, TestKnownBitsUBFX) {
   StringRef MIRString = "  %3:_(s32) = G_IMPLICIT_DEF\n"
                         "  %4:_(s32) = G_CONSTANT i32 12\n"
