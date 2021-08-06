@@ -85,3 +85,11 @@ func @call() {
   %0:2 = call @return_i32_f32() : () -> (f32, i32)
   return
 }
+
+// -----
+
+func @bitcast_different_bit_widths(%arg : f16) -> f32 {
+  // expected-error@+1 {{are cast incompatible}}
+  %res = bitcast %arg : f16 to f32
+  return %res : f32
+}

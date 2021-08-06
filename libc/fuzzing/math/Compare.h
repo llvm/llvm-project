@@ -9,8 +9,8 @@
 #ifndef LLVM_LIBC_FUZZING_MATH_COMPARE_H
 #define LLVM_LIBC_FUZZING_MATH_COMPARE_H
 
+#include "src/__support/FPUtil/FPBits.h"
 #include "utils/CPP/TypeTraits.h"
-#include "utils/FPUtil/FPBits.h"
 
 template <typename T>
 __llvm_libc::cpp::EnableIfType<__llvm_libc::cpp::IsFloatingPointType<T>::Value,

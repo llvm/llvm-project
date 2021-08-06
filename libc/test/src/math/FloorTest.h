@@ -6,7 +6,7 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "utils/FPUtil/TestHelpers.h"
+#include "src/__support/FPUtil/TestHelpers.h"
 #include "utils/MPFRWrapper/MPFRUtils.h"
 #include "utils/UnitTest/Test.h"
 
