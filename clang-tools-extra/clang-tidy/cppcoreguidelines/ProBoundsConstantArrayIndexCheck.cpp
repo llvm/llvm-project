@@ -38,12 +38,12 @@ void ProBoundsConstantArrayIndexCheck::registerPPCallbacks(
 void ProBoundsConstantArrayIndexCheck::registerMatchers(MatchFinder *Finder) {
   // Note: if a struct contains an array member, the compiler-generated
   // constructor has an arraySubscriptExpr.
-  Finder->addMatcher(arraySubscriptExpr(hasBase(ignoringImpCasts(hasType(
-                                            constantArrayType().bind("type")))),
-                                        hasIndex(expr().bind("index")),
-                                        unless(hasAncestor(decl(isImplicit()))))
-                         .bind("expr"),
-                     this);
+  Finder->addMatcher(
+      arraySubscriptExpr(
+          hasBase(ignoringImpCasts(hasType(constantArrayType().bind("type")))),
+          hasIndex(expr().bind("index")), unless(hasAncestor(isImplicit())))
+          .bind("expr"),
+      this);
 
   Finder->addMatcher(
       cxxOperatorCallExpr(

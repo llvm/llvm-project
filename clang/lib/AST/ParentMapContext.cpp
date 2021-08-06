@@ -429,11 +429,6 @@ private:
         [&] { return VisitorBase::TraverseNestedNameSpecifierLoc(NNSLocNode); },
         &Map.OtherParents);
   }
-  bool TraverseAttr(Attr *AttrNode) {
-    return TraverseNode(
-        AttrNode, AttrNode, [&] { return VisitorBase::TraverseAttr(AttrNode); },
-        &Map.PointerParents);
-  }
 
   // Using generic TraverseNode for Stmt would prevent data-recursion.
   bool dataTraverseStmtPre(Stmt *StmtNode) {

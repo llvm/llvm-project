@@ -167,7 +167,6 @@ public:
                   MatchCallback *Action);
   void addMatcher(const TemplateArgumentLocMatcher &NodeMatch,
                   MatchCallback *Action);
-  void addMatcher(const AttrMatcher &NodeMatch, MatchCallback *Action);
   /// @}
 
   /// Adds a matcher to execute when running over the AST.
@@ -220,7 +219,6 @@ public:
     std::vector<std::pair<CXXCtorInitializerMatcher, MatchCallback *>> CtorInit;
     std::vector<std::pair<TemplateArgumentLocMatcher, MatchCallback *>>
         TemplateArgumentLoc;
-    std::vector<std::pair<AttrMatcher, MatchCallback *>> Attr;
     /// All the callbacks in one container to simplify iteration.
     llvm::SmallPtrSet<MatchCallback *, 16> AllCallbacks;
   };

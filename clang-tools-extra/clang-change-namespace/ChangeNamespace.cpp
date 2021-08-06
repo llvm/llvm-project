@@ -442,7 +442,7 @@ void ChangeNamespaceTool::registerMatchers(ast_matchers::MatchFinder *Finder) {
                                hasDeclaration(DeclMatcher),
                                unless(templateSpecializationType()))))),
                            hasParent(nestedNameSpecifierLoc()),
-                           hasAncestor(decl(isImplicit())),
+                           hasAncestor(isImplicit()),
                            hasAncestor(UsingShadowDeclInClass),
                            hasAncestor(functionDecl(isDefaulted())))),
               hasAncestor(decl().bind("dc")))
@@ -466,7 +466,7 @@ void ChangeNamespaceTool::registerMatchers(ast_matchers::MatchFinder *Finder) {
           hasAncestor(decl(IsInMovedNs).bind("dc")),
           loc(nestedNameSpecifier(
               specifiesType(hasDeclaration(DeclMatcher.bind("from_decl"))))),
-          unless(anyOf(hasAncestor(decl(isImplicit())),
+          unless(anyOf(hasAncestor(isImplicit()),
                        hasAncestor(UsingShadowDeclInClass),
                        hasAncestor(functionDecl(isDefaulted())),
                        hasAncestor(typeLoc(loc(qualType(hasDeclaration(
@@ -495,7 +495,7 @@ void ChangeNamespaceTool::registerMatchers(ast_matchers::MatchFinder *Finder) {
                                 hasAncestor(cxxRecordDecl()))),
                    hasParent(namespaceDecl()));
   Finder->addMatcher(expr(hasAncestor(decl().bind("dc")), IsInMovedNs,
-                          unless(hasAncestor(decl(isImplicit()))),
+                          unless(hasAncestor(isImplicit())),
                           anyOf(callExpr(callee(FuncMatcher)).bind("call"),
                                 declRefExpr(to(FuncMatcher.bind("func_decl")))
                                     .bind("func_ref"))),
