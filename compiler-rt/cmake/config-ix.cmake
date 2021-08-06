@@ -17,6 +17,9 @@ check_library_exists(c fopen "" COMPILER_RT_HAS_LIBC)
 if (COMPILER_RT_USE_BUILTINS_LIBRARY)
   include(HandleCompilerRT)
   find_compiler_rt_library(builtins "" COMPILER_RT_BUILTINS_LIBRARY)
+  # TODO(PR51389): We should check COMPILER_RT_BUILTINS_LIBRARY and report an
+  # error if the value is NOTFOUND rather than silenty continuing but we first
+  # need to fix find_compiler_rt_library on Darwin.
 else()
   if (ANDROID)
     check_library_exists(gcc __gcc_personality_v0 "" COMPILER_RT_HAS_GCC_LIB)
@@ -32,7 +35,10 @@ if (COMPILER_RT_HAS_NODEFAULTLIBS_FLAG)
     list(APPEND CMAKE_REQUIRED_LIBRARIES c)
   endif ()
   if (COMPILER_RT_USE_BUILTINS_LIBRARY)
-    list(APPEND CMAKE_REQUIRED_LIBRARIES "${COMPILER_RT_BUILTINS_LIBRARY}")
+    # TODO: remote this check once we address PR51389.
+    if (${COMPILER_RT_BUILTINS_LIBRARY})
+      list(APPEND CMAKE_REQUIRED_LIBRARIES "${COMPILER_RT_BUILTINS_LIBRARY}")
+    endif()
   elseif (COMPILER_RT_HAS_GCC_S_LIB)
     list(APPEND CMAKE_REQUIRED_LIBRARIES gcc_s)
   elseif (COMPILER_RT_HAS_GCC_LIB)
