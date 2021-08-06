@@ -13,6 +13,7 @@
 // concept common_with;
 
 #include <concepts>
+#include <type_traits>
 
 template <class T, class U>
 constexpr bool CheckCommonWith() noexcept {
