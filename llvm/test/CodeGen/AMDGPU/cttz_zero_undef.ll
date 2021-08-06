@@ -549,12 +549,12 @@ define amdgpu_kernel void @s_cttz_zero_undef_i64_with_select(i64 addrspace(1)* n
 ; GFX9-GISEL-LABEL: s_cttz_zero_undef_i64_with_select:
 ; GFX9-GISEL:       ; %bb.0:
 ; GFX9-GISEL-NEXT:    s_load_dwordx4 s[0:3], s[0:1], 0x24
+; GFX9-GISEL-NEXT:    s_mov_b32 s5, 0
 ; GFX9-GISEL-NEXT:    v_mov_b32_e32 v2, 0
 ; GFX9-GISEL-NEXT:    s_waitcnt lgkmcnt(0)
-; GFX9-GISEL-NEXT:    s_ff1_i32_b64 s2, s[2:3]
-; GFX9-GISEL-NEXT:    s_bfe_u64 s[2:3], s[2:3], 0x200000
-; GFX9-GISEL-NEXT:    v_mov_b32_e32 v0, s2
-; GFX9-GISEL-NEXT:    v_mov_b32_e32 v1, s3
+; GFX9-GISEL-NEXT:    s_ff1_i32_b64 s4, s[2:3]
+; GFX9-GISEL-NEXT:    v_mov_b32_e32 v0, s4
+; GFX9-GISEL-NEXT:    v_mov_b32_e32 v1, s5
 ; GFX9-GISEL-NEXT:    global_store_dwordx2 v2, v[0:1], s[0:1]
 ; GFX9-GISEL-NEXT:    s_endpgm
   %cttz = tail call i64 @llvm.cttz.i64(i64 %val, i1 true) nounwind readnone
