@@ -342,6 +342,8 @@ public:
       : StackAlignment(assumeAligned(StackAlignment)),
         StackRealignable(StackRealignable), ForcedRealign(ForcedRealign) {}
 
+  MachineFrameInfo(const MachineFrameInfo &) = delete;
+
   /// Return true if there are any stack objects in this function.
   bool hasStackObjects() const { return !Objects.empty(); }
 

@@ -1121,7 +1121,7 @@ static bool ValidateMVEStore(MachineInstr *MI, MachineLoop *ML) {
     return false;
   int FI = GetFrameIndex(MI->memoperands().front());
 
-  MachineFrameInfo FrameInfo = MI->getParent()->getParent()->getFrameInfo();
+  auto &FrameInfo = MI->getParent()->getParent()->getFrameInfo();
   if (FI == -1 || !FrameInfo.isSpillSlotObjectIndex(FI))
     return false;
 
