@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef LLVM_LIBC_UTILS_FPUTIL_SQRT_H
-#define LLVM_LIBC_UTILS_FPUTIL_SQRT_H
+#ifndef LLVM_LIBC_SRC_SUPPORT_FPUTIL_SQRT_H
+#define LLVM_LIBC_SRC_SUPPORT_FPUTIL_SQRT_H
 
 #include "FPBits.h"
 #include "PlatformDefs.h"
@@ -189,4 +189,4 @@ static inline T sqrt(T x) {
 #include "SqrtLongDoubleX86.h"
 #endif // SPECIAL_X86_LONG_DOUBLE
 
-#endif // LLVM_LIBC_UTILS_FPUTIL_SQRT_H
+#endif // LLVM_LIBC_SRC_SUPPORT_FPUTIL_SQRT_H

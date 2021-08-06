@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef LLVM_LIBC_UTILS_FPUTIL_FENVUTILS_H
-#define LLVM_LIBC_UTILS_FPUTIL_FENVUTILS_H
+#ifndef LLVM_LIBC_SRC_SUPPORT_FPUTIL_FENVUTILS_H
+#define LLVM_LIBC_SRC_SUPPORT_FPUTIL_FENVUTILS_H
 
 #ifdef __x86_64__
 #include "x86_64/FEnvImpl.h"
@@ -17,4 +17,4 @@
 #include "DummyFEnvImpl.h"
 #endif
 
-#endif // LLVM_LIBC_UTILS_FPUTIL_FENVUTILS_H
+#endif // LLVM_LIBC_SRC_SUPPORT_FPUTIL_FENVUTILS_H

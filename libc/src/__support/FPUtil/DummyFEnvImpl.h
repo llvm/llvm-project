@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef LLVM_LIBC_UTILS_FPUTIL_DUMMY_FENVIMPL_H
-#define LLVM_LIBC_UTILS_FPUTIL_DUMMY_FENVIMPL_H
+#ifndef LLVM_LIBC_SRC_SUPPORT_FPUTIL_DUMMY_FENVIMPL_H
+#define LLVM_LIBC_SRC_SUPPORT_FPUTIL_DUMMY_FENVIMPL_H
 
 #include <fenv.h>
 #include <math.h>
@@ -36,4 +36,4 @@ static inline int setEnv(const fenv_t *) { return 0; }
 } // namespace fputil
 } // namespace __llvm_libc
 
-#endif // LLVM_LIBC_UTILS_FPUTIL_DUMMY_FENVIMPL_H
+#endif // LLVM_LIBC_SRC_SUPPORT_FPUTIL_DUMMY_FENVIMPL_H

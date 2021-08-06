@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef LLVM_LIBC_UTILS_FPUTIL_NEXT_AFTER_LONG_DOUBLE_X86_H
-#define LLVM_LIBC_UTILS_FPUTIL_NEXT_AFTER_LONG_DOUBLE_X86_H
+#ifndef LLVM_LIBC_SRC_SUPPORT_FPUTIL_NEXT_AFTER_LONG_DOUBLE_X86_H
+#define LLVM_LIBC_SRC_SUPPORT_FPUTIL_NEXT_AFTER_LONG_DOUBLE_X86_H
 
 #include "FPBits.h"
 
@@ -111,4 +111,4 @@ static inline long double nextafter(long double from, long double to) {
 } // namespace fputil
 } // namespace __llvm_libc
 
-#endif // LLVM_LIBC_UTILS_FPUTIL_NEXT_AFTER_LONG_DOUBLE_X86_H
+#endif // LLVM_LIBC_SRC_SUPPORT_FPUTIL_NEXT_AFTER_LONG_DOUBLE_X86_H

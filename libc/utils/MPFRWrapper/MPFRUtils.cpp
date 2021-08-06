@@ -8,9 +8,9 @@
 
 #include "MPFRUtils.h"
 
+#include "src/__support/FPUtil/FPBits.h"
+#include "src/__support/FPUtil/TestHelpers.h"
 #include "utils/CPP/StringView.h"
-#include "utils/FPUtil/FPBits.h"
-#include "utils/FPUtil/TestHelpers.h"
 
 #include <cmath>
 #include <memory>

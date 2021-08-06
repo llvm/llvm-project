@@ -9,7 +9,7 @@
 #include "src/fenv/fegetenv.h"
 #include "src/fenv/fesetenv.h"
 
-#include "utils/FPUtil/FEnvUtils.h"
+#include "src/__support/FPUtil/FEnvUtils.h"
 #include "utils/UnitTest/Test.h"
 
 #include <fenv.h>

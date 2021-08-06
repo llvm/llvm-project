@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef LLVM_LIBC_UTILS_FPUTIL_TEST_HELPERS_H
-#define LLVM_LIBC_UTILS_FPUTIL_TEST_HELPERS_H
+#ifndef LLVM_LIBC_SRC_SUPPORT_FPUTIL_TEST_HELPERS_H
+#define LLVM_LIBC_SRC_SUPPORT_FPUTIL_TEST_HELPERS_H
 
 #include "FPBits.h"
 
@@ -98,4 +98,4 @@ FPMatcher<T, C> getMatcher(T expectedValue) {
       __llvm_libc::fputil::testing::getMatcher<__llvm_libc::testing::Cond_NE>( \
           expected))
 
-#endif // LLVM_LIBC_UTILS_FPUTIL_TEST_HELPERS_H
+#endif // LLVM_LIBC_SRC_SUPPORT_FPUTIL_TEST_HELPERS_H

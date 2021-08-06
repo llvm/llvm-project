@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef LLVM_LIBC_UTILS_FPUTIL_FP_BITS_H
-#define LLVM_LIBC_UTILS_FPUTIL_FP_BITS_H
+#ifndef LLVM_LIBC_SRC_SUPPORT_FPUTIL_FP_BITS_H
+#define LLVM_LIBC_SRC_SUPPORT_FPUTIL_FP_BITS_H
 
 #include "PlatformDefs.h"
 
@@ -153,7 +153,7 @@ template <typename T> union FPBits {
 } // namespace __llvm_libc
 
 #ifdef SPECIAL_X86_LONG_DOUBLE
-#include "utils/FPUtil/LongDoubleBitsX86.h"
+#include "src/__support/FPUtil/LongDoubleBitsX86.h"
 #endif
 
-#endif // LLVM_LIBC_UTILS_FPUTIL_FP_BITS_H
+#endif // LLVM_LIBC_SRC_SUPPORT_FPUTIL_FP_BITS_H
