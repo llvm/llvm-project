@@ -225,6 +225,8 @@ protected:
 
   // XCOFF specific sections
   MCSection *TOCBaseSection = nullptr;
+  MCSection *ReadOnly8Section = nullptr;
+  MCSection *ReadOnly16Section = nullptr;
 
 public:
   void initMCObjectFileInfo(MCContext &MCCtx, bool PIC,

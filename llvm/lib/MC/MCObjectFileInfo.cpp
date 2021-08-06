@@ -896,6 +896,19 @@ void MCObjectFileInfo::initXCOFFMCObjectFileInfo(const Triple &T) {
       ".rodata", SectionKind::getReadOnly(),
       XCOFF::CsectProperties(XCOFF::StorageMappingClass::XMC_RO, XCOFF::XTY_SD),
       /* MultiSymbolsAllowed*/ true);
+  ReadOnlySection->setAlignment(Align(4));
+
+  ReadOnly8Section = Ctx->getXCOFFSection(
+      ".rodata.8", SectionKind::getReadOnly(),
+      XCOFF::CsectProperties(XCOFF::StorageMappingClass::XMC_RO, XCOFF::XTY_SD),
+      /* MultiSymbolsAllowed*/ true);
+  ReadOnly8Section->setAlignment(Align(8));
+
+  ReadOnly16Section = Ctx->getXCOFFSection(
+      ".rodata.16", SectionKind::getReadOnly(),
+      XCOFF::CsectProperties(XCOFF::StorageMappingClass::XMC_RO, XCOFF::XTY_SD),
+      /* MultiSymbolsAllowed*/ true);
+  ReadOnly16Section->setAlignment(Align(16));
 
   TLSDataSection = Ctx->getXCOFFSection(
       ".tdata", SectionKind::getThreadData(),
