@@ -12,8 +12,7 @@ body: |
 
     ; CHECK-LABEL: name: ffbl_b32_s
     ; CHECK: [[COPY:%[0-9]+]]:sgpr(s32) = COPY $sgpr0
-    ; CHECK: [[COPY1:%[0-9]+]]:vgpr(s32) = COPY [[COPY]](s32)
-    ; CHECK: [[AMDGPU_FFBL_B32_:%[0-9]+]]:vgpr(s32) = G_AMDGPU_FFBL_B32 [[COPY1]](s32)
+    ; CHECK: [[AMDGPU_FFBL_B32_:%[0-9]+]]:sgpr(s32) = G_AMDGPU_FFBL_B32 [[COPY]](s32)
     %0:_(s32) = COPY $sgpr0
     %1:_(s32) = G_AMDGPU_FFBL_B32 %0
 ...
