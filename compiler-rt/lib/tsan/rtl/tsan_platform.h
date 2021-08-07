@@ -136,6 +136,8 @@ struct MappingAppleAarch64 {
   static const uptr kAppMemMsk     =          0x0ull;
   static const uptr kAppMemXor     =          0x0ull;
   static const uptr kVdsoBeg       = 0x7000000000000000ull;
+  static const uptr kMidAppMemBeg = 0;
+  static const uptr kMidAppMemEnd = 0;
 };
 
 /*
@@ -258,6 +260,8 @@ struct MappingPPC64_44 {
   static const uptr kAppMemMsk     = 0x0f0000000000ull;
   static const uptr kAppMemXor     = 0x002100000000ull;
   static const uptr kVdsoBeg       = 0x3c0000000000000ull;
+  static const uptr kMidAppMemBeg = 0;
+  static const uptr kMidAppMemEnd = 0;
 };
 
 /*
@@ -290,6 +294,8 @@ struct MappingPPC64_46 {
   static const uptr kAppMemMsk     = 0x3c0000000000ull;
   static const uptr kAppMemXor     = 0x020000000000ull;
   static const uptr kVdsoBeg       = 0x7800000000000000ull;
+  static const uptr kMidAppMemBeg = 0;
+  static const uptr kMidAppMemEnd = 0;
 };
 
 /*
@@ -322,6 +328,8 @@ struct MappingPPC64_47 {
   static const uptr kAppMemMsk     = 0x7c0000000000ull;
   static const uptr kAppMemXor     = 0x020000000000ull;
   static const uptr kVdsoBeg       = 0x7800000000000000ull;
+  static const uptr kMidAppMemBeg = 0;
+  static const uptr kMidAppMemEnd = 0;
 };
 
 /*
@@ -354,6 +362,8 @@ struct MappingS390x {
   static const uptr kAppMemMsk     = 0xb00000000000ull;
   static const uptr kAppMemXor     = 0x100000000000ull;
   static const uptr kVdsoBeg       = 0xfffffffff000ull;
+  static const uptr kMidAppMemBeg = 0;
+  static const uptr kMidAppMemEnd = 0;
 };
 
 /* Go on linux, darwin and freebsd on x86_64
@@ -535,10 +545,8 @@ struct MappingGoS390x {
 
 #  if HAS_48_BIT_ADDRESS_SPACE
 typedef Mapping48AddressSpace Mapping;
-#    define TSAN_MID_APP_RANGE 1
 #  elif defined(__mips64)
 typedef MappingMips64_40 Mapping40;
-#    define TSAN_MID_APP_RANGE 1
 #    define TSAN_RUNTIME_VMA 1
 #  elif defined(__aarch64__) && defined(__APPLE__)
 typedef MappingAppleAarch64 Mapping;
@@ -554,7 +562,6 @@ typedef MappingAarch64_48 Mapping48;
 // Indicates the runtime will define the memory regions at runtime.
 #    define TSAN_RUNTIME_VMA 1
 // Indicates that mapping defines a mid range memory segment.
-#    define TSAN_MID_APP_RANGE 1
 #  elif defined(__powerpc64__)
 // PPC64 supports multiple VMA which leads to multiple address transformation
 // functions.  To support these multiple VMAS transformations and mappings TSAN
@@ -643,10 +650,8 @@ enum MappingType {
   MAPPING_LO_APP_END,
   MAPPING_HI_APP_BEG,
   MAPPING_HI_APP_END,
-#ifdef TSAN_MID_APP_RANGE
   MAPPING_MID_APP_BEG,
   MAPPING_MID_APP_END,
-#endif
   MAPPING_HEAP_BEG,
   MAPPING_HEAP_END,
   MAPPING_APP_BEG,
@@ -667,10 +672,8 @@ struct MappingField {
 #if !SANITIZER_GO
     case MAPPING_LO_APP_BEG: return Mapping::kLoAppMemBeg;
     case MAPPING_LO_APP_END: return Mapping::kLoAppMemEnd;
-# ifdef TSAN_MID_APP_RANGE
     case MAPPING_MID_APP_BEG: return Mapping::kMidAppMemBeg;
     case MAPPING_MID_APP_END: return Mapping::kMidAppMemEnd;
-# endif
     case MAPPING_HI_APP_BEG: return Mapping::kHiAppMemBeg;
     case MAPPING_HI_APP_END: return Mapping::kHiAppMemEnd;
     case MAPPING_HEAP_BEG: return Mapping::kHeapMemBeg;
@@ -703,7 +706,6 @@ uptr LoAppMemEnd(void) {
   return SelectMapping<MappingField>(MAPPING_LO_APP_END);
 }
 
-#ifdef TSAN_MID_APP_RANGE
 ALWAYS_INLINE
 uptr MidAppMemBeg(void) {
   return SelectMapping<MappingField>(MAPPING_MID_APP_BEG);
@@ -712,7 +714,6 @@ ALWAYS_INLINE
 uptr MidAppMemEnd(void) {
   return SelectMapping<MappingField>(MAPPING_MID_APP_END);
 }
-#endif
 
 ALWAYS_INLINE
 uptr HeapMemBeg(void) { return SelectMapping<MappingField>(MAPPING_HEAP_BEG); }
@@ -743,8 +744,6 @@ uptr AppMemEnd(void) { return SelectMapping<MappingField>(MAPPING_APP_END); }
 static inline
 bool GetUserRegion(int i, uptr *start, uptr *end) {
   switch (i) {
-  default:
-    return false;
 #if !SANITIZER_GO
   case 0:
     *start = LoAppMemBeg();
@@ -758,18 +757,21 @@ bool GetUserRegion(int i, uptr *start, uptr *end) {
     *start = HeapMemBeg();
     *end = HeapMemEnd();
     return true;
-# ifdef TSAN_MID_APP_RANGE
   case 3:
-    *start = MidAppMemBeg();
-    *end = MidAppMemEnd();
-    return true;
-# endif
+    if (MidAppMemBeg()) {
+      *start = MidAppMemBeg();
+      *end = MidAppMemEnd();
+      return true;
+    }
+    FALLTHROUGH;
 #else
   case 0:
     *start = AppMemBeg();
     *end = AppMemEnd();
     return true;
 #endif
+  default:
+    return false;
   }
 }
 
@@ -801,9 +803,7 @@ struct IsAppMemImpl {
   static bool Apply(uptr mem) {
 #if !SANITIZER_GO
   return (mem >= Mapping::kHeapMemBeg && mem < Mapping::kHeapMemEnd) ||
-# ifdef TSAN_MID_APP_RANGE
          (mem >= Mapping::kMidAppMemBeg && mem < Mapping::kMidAppMemEnd) ||
-# endif
          (mem >= Mapping::kLoAppMemBeg && mem < Mapping::kLoAppMemEnd) ||
          (mem >= Mapping::kHiAppMemBeg && mem < Mapping::kHiAppMemEnd);
 #else
@@ -898,13 +898,13 @@ struct ShadowToMemImpl {
   if (p >= Mapping::kLoAppMemBeg && p < Mapping::kLoAppMemEnd &&
       MemToShadowImpl::Apply<Mapping>(p) == sp)
     return p;
-# ifdef TSAN_MID_APP_RANGE
-  p = ((sp / kShadowCnt) ^ Mapping::kAppMemXor) +
-      (Mapping::kMidAppMemBeg & Mapping::kAppMemMsk);
-  if (p >= Mapping::kMidAppMemBeg && p < Mapping::kMidAppMemEnd &&
-      MemToShadowImpl::Apply<Mapping>(p) == sp)
-    return p;
-# endif
+  if (Mapping::kMidAppMemBeg) {
+    p = ((sp / kShadowCnt) ^ Mapping::kAppMemXor) +
+        (Mapping::kMidAppMemBeg & Mapping::kAppMemMsk);
+    if (p >= Mapping::kMidAppMemBeg && p < Mapping::kMidAppMemEnd &&
+        MemToShadowImpl::Apply<Mapping>(p) == sp)
+      return p;
+  }
   return ((sp / kShadowCnt) ^ Mapping::kAppMemXor) | Mapping::kAppMemMsk;
 #else  // #if !SANITIZER_GO
 # ifndef SANITIZER_WINDOWS
