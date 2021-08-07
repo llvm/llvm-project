@@ -333,7 +333,13 @@ typedef enum memory_scope {
   memory_scope_all_devices = memory_scope_all_svm_devices,
 #endif // __OPENCL_C_VERSION__ >= CL_VERSION_3_0
 #endif // defined(__opencl_c_atomic_scope_all_devices)
-#if defined(cl_intel_subgroups) || defined(cl_khr_subgroups)
+/**
+ * Subgroups have different requirements on forward progress, so just test
+ * all the relevant macros.
+ * CL 3.0 sub-groups "they are not guaranteed to make independent forward progress"
+ * KHR subgroups "Subgroups within a workgroup are independent, make forward progress with respect to each other"
+ */
+#if defined(cl_intel_subgroups) || defined(cl_khr_subgroups) || defined(__opencl_c_subgroups)
   memory_scope_sub_group = __OPENCL_MEMORY_SCOPE_SUB_GROUP
 #endif
 } memory_scope;

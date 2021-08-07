@@ -84,7 +84,4 @@ static inline size_t lprofRoundDownTo(size_t x, size_t boundary) {
 
 int lprofReleaseMemoryPagesToOS(uintptr_t Begin, uintptr_t End);
 
-/// Noisly warn if *i is non-zero. Intended for use with COMPILER_RT_CLEANUP.
-void warnIfNonZero(int *i);
-
 #endif /* PROFILE_INSTRPROFILINGUTIL_H */

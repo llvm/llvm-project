@@ -34,6 +34,7 @@
 #endif
 
 #if defined(__Fuchsia__)
+#include <zircon/process.h>
 #include <zircon/syscalls.h>
 #endif
 
@@ -352,9 +353,4 @@ COMPILER_RT_VISIBILITY int lprofReleaseMemoryPagesToOS(uintptr_t Begin,
 #endif
   }
   return 0;
-}
-
-COMPILER_RT_VISIBILITY void warnIfNonZero(int *i) {
-  if (*i)
-    PROF_WARN("Expected flag to be 0, but got: %d\n", *i);
 }

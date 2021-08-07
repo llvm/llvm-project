@@ -37,39 +37,15 @@ entry:
 define i1 @isnan_ldouble(ppc_fp128 %x) nounwind {
 ; CHECK-LABEL: isnan_ldouble:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    stwu 1, -32(1)
-; CHECK-NEXT:    stfd 1, 16(1)
-; CHECK-NEXT:    lis 3, 32752
-; CHECK-NEXT:    lwz 4, 20(1)
-; CHECK-NEXT:    stfd 2, 24(1)
-; CHECK-NEXT:    lwz 5, 28(1)
-; CHECK-NEXT:    cmplw 1, 4, 3
-; CHECK-NEXT:    lwz 3, 24(1)
-; CHECK-NEXT:    xoris 4, 4, 32752
-; CHECK-NEXT:    lwz 6, 16(1)
-; CHECK-NEXT:    clrlwi. 5, 5, 1
-; CHECK-NEXT:    cmplwi 5, 5, 0
-; CHECK-NEXT:    crandc 24, 1, 22
-; CHECK-NEXT:    cmpwi 3, 0
-; CHECK-NEXT:    crandc 20, 22, 2
-; CHECK-NEXT:    cmpwi 6, 0
-; CHECK-NEXT:    cmplwi 7, 4, 0
-; CHECK-NEXT:    or 3, 3, 5
-; CHECK-NEXT:    crandc 21, 5, 30
-; CHECK-NEXT:    crandc 22, 30, 2
-; CHECK-NEXT:    cmplwi 3, 0
-; CHECK-NEXT:    cror 20, 20, 24
-; CHECK-NEXT:    cror 21, 22, 21
-; CHECK-NEXT:    crandc 20, 20, 2
-; CHECK-NEXT:    crand 21, 2, 21
-; CHECK-NEXT:    crnor 20, 21, 20
+; CHECK-NEXT:    fcmpu 0, 1, 1
+; CHECK-NEXT:    fcmpu 1, 2, 2
+; CHECK-NEXT:    crandc 20, 7, 3
 ; CHECK-NEXT:    li 3, 1
+; CHECK-NEXT:    crnor 20, 3, 20
 ; CHECK-NEXT:    bc 12, 20, .LBB2_1
-; CHECK-NEXT:    b .LBB2_2
+; CHECK-NEXT:    blr
 ; CHECK-NEXT:  .LBB2_1: # %entry
 ; CHECK-NEXT:    li 3, 0
-; CHECK-NEXT:  .LBB2_2: # %entry
-; CHECK-NEXT:    addi 1, 1, 32
 ; CHECK-NEXT:    blr
 entry:
   %0 = tail call i1 @llvm.isnan.ppcf128(ppc_fp128 %x)
@@ -132,39 +108,15 @@ entry:
 define i1 @isnan_ldouble_strictfp(ppc_fp128 %x) strictfp nounwind {
 ; CHECK-LABEL: isnan_ldouble_strictfp:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    stwu 1, -32(1)
-; CHECK-NEXT:    stfd 1, 16(1)
-; CHECK-NEXT:    lis 3, 32752
-; CHECK-NEXT:    lwz 4, 20(1)
-; CHECK-NEXT:    stfd 2, 24(1)
-; CHECK-NEXT:    lwz 5, 28(1)
-; CHECK-NEXT:    cmplw 1, 4, 3
-; CHECK-NEXT:    lwz 3, 24(1)
-; CHECK-NEXT:    xoris 4, 4, 32752
-; CHECK-NEXT:    lwz 6, 16(1)
-; CHECK-NEXT:    clrlwi. 5, 5, 1
-; CHECK-NEXT:    cmplwi 5, 5, 0
-; CHECK-NEXT:    crandc 24, 1, 22
-; CHECK-NEXT:    cmpwi 3, 0
-; CHECK-NEXT:    crandc 20, 22, 2
-; CHECK-NEXT:    cmpwi 6, 0
-; CHECK-NEXT:    cmplwi 7, 4, 0
-; CHECK-NEXT:    or 3, 3, 5
-; CHECK-NEXT:    crandc 21, 5, 30
-; CHECK-NEXT:    crandc 22, 30, 2
-; CHECK-NEXT:    cmplwi 3, 0
-; CHECK-NEXT:    cror 20, 20, 24
-; CHECK-NEXT:    cror 21, 22, 21
-; CHECK-NEXT:    crandc 20, 20, 2
-; CHECK-NEXT:    crand 21, 2, 21
-; CHECK-NEXT:    crnor 20, 21, 20
+; CHECK-NEXT:    fcmpu 0, 1, 1
+; CHECK-NEXT:    fcmpu 1, 2, 2
+; CHECK-NEXT:    crandc 20, 7, 3
 ; CHECK-NEXT:    li 3, 1
+; CHECK-NEXT:    crnor 20, 3, 20
 ; CHECK-NEXT:    bc 12, 20, .LBB5_1
-; CHECK-NEXT:    b .LBB5_2
+; CHECK-NEXT:    blr
 ; CHECK-NEXT:  .LBB5_1: # %entry
 ; CHECK-NEXT:    li 3, 0
-; CHECK-NEXT:  .LBB5_2: # %entry
-; CHECK-NEXT:    addi 1, 1, 32
 ; CHECK-NEXT:    blr
 entry:
   %0 = tail call i1 @llvm.isnan.ppcf128(ppc_fp128 %x)

@@ -7,6 +7,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "Selection.h"
+#include "AST.h"
 #include "SourceCode.h"
 #include "support/Logger.h"
 #include "support/Trace.h"
@@ -490,7 +491,6 @@ public:
   // Two categories of nodes are not "well-behaved":
   //  - those without source range information, we don't record those
   //  - those that can't be stored in DynTypedNode.
-  // We're missing some interesting things like Attr due to the latter.
   bool TraverseDecl(Decl *X) {
     if (X && isa<TranslationUnitDecl>(X))
       return Base::TraverseDecl(X); // Already pushed by constructor.
@@ -516,6 +516,9 @@ public:
   }
   bool TraverseCXXBaseSpecifier(const CXXBaseSpecifier &X) {
     return traverseNode(&X, [&] { return Base::TraverseCXXBaseSpecifier(X); });
+  }
+  bool TraverseAttr(Attr *X) {
+    return traverseNode(X, [&] { return Base::TraverseAttr(X); });
   }
   // Stmt is the same, but this form allows the data recursion optimization.
   bool dataTraverseStmtPre(Stmt *X) {
@@ -651,6 +654,11 @@ private:
       if (auto AT = TL->getAs<AttributedTypeLoc>())
         S = AT.getModifiedLoc().getSourceRange();
     }
+    // SourceRange often doesn't manage to accurately cover attributes.
+    // Fortunately, attributes are rare.
+    if (llvm::any_of(getAttributes(N),
+                     [](const Attr *A) { return !A->isImplicit(); }))
+      return false;
     if (!SelChecker.mayHit(S)) {
       dlog("{1}skip: {0}", printNodeToString(N, PrintPolicy), indent());
       dlog("{1}skipped range = {0}", S.printToString(SM), indent(1));
