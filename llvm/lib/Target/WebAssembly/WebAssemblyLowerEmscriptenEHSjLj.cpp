@@ -205,6 +205,13 @@ using namespace llvm;
 
 #define DEBUG_TYPE "wasm-lower-em-ehsjlj"
 
+// Emscripten's asm.js-style exception handling
+extern cl::opt<bool> WasmEnableEmEH;
+// Emscripten's asm.js-style setjmp/longjmp handling
+extern cl::opt<bool> WasmEnableEmSjLj;
+// Wasm setjmp/longjmp handling using wasm EH instructions
+extern cl::opt<bool> WasmEnableSjLj;
+
 static cl::list<std::string>
     EHAllowlist("emscripten-cxx-exceptions-allowed",
                 cl::desc("The list of function names in which Emscripten-style "
@@ -214,9 +221,10 @@ static cl::list<std::string>
 
 namespace {
 class WebAssemblyLowerEmscriptenEHSjLj final : public ModulePass {
-  bool EnableEmEH;   // Enable Emscripten exception handling
-  bool EnableEmSjLj; // Enable Emscripten setjmp/longjmp handling
-  bool DoSjLj;       // Whether we actually perform setjmp/longjmp handling
+  bool EnableEmEH;     // Enable Emscripten exception handling
+  bool EnableEmSjLj;   // Enable Emscripten setjmp/longjmp handling
+  bool EnableWasmSjLj; // Enable Wasm setjmp/longjmp handling
+  bool DoSjLj;         // Whether we actually perform setjmp/longjmp handling
 
   GlobalVariable *ThrewGV = nullptr;      // __THREW__ (Emscripten)
   GlobalVariable *ThrewValueGV = nullptr; // __threwValue (Emscripten)
@@ -263,9 +271,13 @@ class WebAssemblyLowerEmscriptenEHSjLj final : public ModulePass {
 public:
   static char ID;
 
-  WebAssemblyLowerEmscriptenEHSjLj(bool EnableEmEH = true,
-                                   bool EnableEmSjLj = true)
-      : ModulePass(ID), EnableEmEH(EnableEmEH), EnableEmSjLj(EnableEmSjLj) {
+  WebAssemblyLowerEmscriptenEHSjLj()
+      : ModulePass(ID), EnableEmEH(WasmEnableEmEH),
+        EnableEmSjLj(WasmEnableEmSjLj), EnableWasmSjLj(WasmEnableSjLj) {
+    assert(!(EnableEmSjLj && EnableWasmSjLj) &&
+           "Two SjLj modes cannot be turned on at the same time");
+    assert(!(EnableEmEH && EnableWasmSjLj) &&
+           "Wasm SjLj should be only used with Wasm EH");
     EHAllowlistSet.insert(EHAllowlist.begin(), EHAllowlist.end());
   }
   bool runOnModule(Module &M) override;
@@ -281,9 +293,8 @@ INITIALIZE_PASS(WebAssemblyLowerEmscriptenEHSjLj, DEBUG_TYPE,
                 "WebAssembly Lower Emscripten Exceptions / Setjmp / Longjmp",
                 false, false)
 
-ModulePass *llvm::createWebAssemblyLowerEmscriptenEHSjLj(bool EnableEmEH,
-                                                         bool EnableEmSjLj) {
-  return new WebAssemblyLowerEmscriptenEHSjLj(EnableEmEH, EnableEmSjLj);
+ModulePass *llvm::createWebAssemblyLowerEmscriptenEHSjLj() {
+  return new WebAssemblyLowerEmscriptenEHSjLj();
 }
 
 static bool canThrow(const Value *V) {
@@ -708,10 +719,6 @@ bool WebAssemblyLowerEmscriptenEHSjLj::runOnModule(Module &M) {
   assert(TPC && "Expected a TargetPassConfig");
   auto &TM = TPC->getTM<WebAssemblyTargetMachine>();
 
-  if (EnableEmEH && TM.Options.ExceptionModel == ExceptionHandling::Wasm)
-    report_fatal_error("-exception-model=wasm not allowed with "
-                       "-enable-emscripten-cxx-exceptions");
-
   // Declare (or get) global variables __THREW__, __threwValue, and
   // getTempRet0/setTempRet0 function which are used in common for both
   // exception handling and setjmp/longjmp handling
@@ -758,6 +765,7 @@ bool WebAssemblyLowerEmscriptenEHSjLj::runOnModule(Module &M) {
 
   // Function registration and data pre-gathering for setjmp/longjmp handling
   if (DoSjLj) {
+    assert(EnableEmSjLj || EnableWasmSjLj);
     // Register emscripten_longjmp function
     FunctionType *FTy = FunctionType::get(
         IRB.getVoidTy(), {getAddrIntType(&M), IRB.getInt32Ty()}, false);
@@ -1009,6 +1017,7 @@ static DebugLoc getOrCreateDebugLoc(const Instruction *InsertBefore,
 }
 
 bool WebAssemblyLowerEmscriptenEHSjLj::runSjLjOnFunction(Function &F) {
+  assert(EnableEmSjLj || EnableWasmSjLj);
   Module &M = *F.getParent();
   LLVMContext &C = F.getContext();
   IRBuilder<> IRB(C);
