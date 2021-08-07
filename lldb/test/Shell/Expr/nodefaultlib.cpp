@@ -2,6 +2,7 @@
 // standard library (and mmap-like functions in particular).
 
 // REQUIRES: native
+// UNSUPPORTED: ld_preload-present
 // XFAIL: system-linux && !(target-x86 || target-x86_64)
 // XFAIL: system-netbsd || system-freebsd || system-darwin
 
