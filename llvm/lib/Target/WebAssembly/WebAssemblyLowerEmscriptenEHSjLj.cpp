@@ -1105,7 +1105,10 @@ bool WebAssemblyLowerEmscriptenEHSjLj::runSjLjOnFunction(Function &F) {
   for (unsigned I = 0; I < BBs.size(); I++) {
     BasicBlock *BB = BBs[I];
     for (Instruction &I : *BB) {
-      assert(!isa<InvokeInst>(&I));
+      if (isa<InvokeInst>(&I))
+        report_fatal_error("When using Wasm EH with Emscripten SjLj, there is "
+                           "a restriction that `setjmp` function call and "
+                           "exception cannot be used within the same function");
       auto *CI = dyn_cast<CallInst>(&I);
       if (!CI)
         continue;
