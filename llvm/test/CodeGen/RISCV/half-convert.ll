@@ -260,126 +260,46 @@ define i32 @fcvt_w_h(half %a) nounwind {
 define i32 @fcvt_w_h_sat(half %a) nounwind {
 ; RV32IZFH-LABEL: fcvt_w_h_sat:
 ; RV32IZFH:       # %bb.0: # %start
-; RV32IZFH-NEXT:    lui a0, %hi(.LCPI6_0)
-; RV32IZFH-NEXT:    flw ft1, %lo(.LCPI6_0)(a0)
-; RV32IZFH-NEXT:    fcvt.s.h ft0, fa0
-; RV32IZFH-NEXT:    fle.s a0, ft1, ft0
-; RV32IZFH-NEXT:    lui a1, 524288
+; RV32IZFH-NEXT:    feq.h a0, fa0, fa0
 ; RV32IZFH-NEXT:    bnez a0, .LBB6_2
 ; RV32IZFH-NEXT:  # %bb.1: # %start
-; RV32IZFH-NEXT:    lui a0, 524288
-; RV32IZFH-NEXT:    j .LBB6_3
-; RV32IZFH-NEXT:  .LBB6_2:
-; RV32IZFH-NEXT:    fcvt.w.s a0, ft0, rtz
-; RV32IZFH-NEXT:  .LBB6_3: # %start
-; RV32IZFH-NEXT:    lui a2, %hi(.LCPI6_1)
-; RV32IZFH-NEXT:    flw ft1, %lo(.LCPI6_1)(a2)
-; RV32IZFH-NEXT:    flt.s a2, ft1, ft0
-; RV32IZFH-NEXT:    bnez a2, .LBB6_6
-; RV32IZFH-NEXT:  # %bb.4: # %start
-; RV32IZFH-NEXT:    feq.s a1, ft0, ft0
-; RV32IZFH-NEXT:    beqz a1, .LBB6_7
-; RV32IZFH-NEXT:  .LBB6_5: # %start
-; RV32IZFH-NEXT:    ret
-; RV32IZFH-NEXT:  .LBB6_6:
-; RV32IZFH-NEXT:    addi a0, a1, -1
-; RV32IZFH-NEXT:    feq.s a1, ft0, ft0
-; RV32IZFH-NEXT:    bnez a1, .LBB6_5
-; RV32IZFH-NEXT:  .LBB6_7: # %start
 ; RV32IZFH-NEXT:    mv a0, zero
+; RV32IZFH-NEXT:    ret
+; RV32IZFH-NEXT:  .LBB6_2:
+; RV32IZFH-NEXT:    fcvt.w.h a0, fa0, rtz
 ; RV32IZFH-NEXT:    ret
 ;
 ; RV32IDZFH-LABEL: fcvt_w_h_sat:
 ; RV32IDZFH:       # %bb.0: # %start
-; RV32IDZFH-NEXT:    lui a0, %hi(.LCPI6_0)
-; RV32IDZFH-NEXT:    flw ft1, %lo(.LCPI6_0)(a0)
-; RV32IDZFH-NEXT:    fcvt.s.h ft0, fa0
-; RV32IDZFH-NEXT:    fle.s a0, ft1, ft0
-; RV32IDZFH-NEXT:    lui a1, 524288
+; RV32IDZFH-NEXT:    feq.h a0, fa0, fa0
 ; RV32IDZFH-NEXT:    bnez a0, .LBB6_2
 ; RV32IDZFH-NEXT:  # %bb.1: # %start
-; RV32IDZFH-NEXT:    lui a0, 524288
-; RV32IDZFH-NEXT:    j .LBB6_3
-; RV32IDZFH-NEXT:  .LBB6_2:
-; RV32IDZFH-NEXT:    fcvt.w.s a0, ft0, rtz
-; RV32IDZFH-NEXT:  .LBB6_3: # %start
-; RV32IDZFH-NEXT:    lui a2, %hi(.LCPI6_1)
-; RV32IDZFH-NEXT:    flw ft1, %lo(.LCPI6_1)(a2)
-; RV32IDZFH-NEXT:    flt.s a2, ft1, ft0
-; RV32IDZFH-NEXT:    bnez a2, .LBB6_6
-; RV32IDZFH-NEXT:  # %bb.4: # %start
-; RV32IDZFH-NEXT:    feq.s a1, ft0, ft0
-; RV32IDZFH-NEXT:    beqz a1, .LBB6_7
-; RV32IDZFH-NEXT:  .LBB6_5: # %start
-; RV32IDZFH-NEXT:    ret
-; RV32IDZFH-NEXT:  .LBB6_6:
-; RV32IDZFH-NEXT:    addi a0, a1, -1
-; RV32IDZFH-NEXT:    feq.s a1, ft0, ft0
-; RV32IDZFH-NEXT:    bnez a1, .LBB6_5
-; RV32IDZFH-NEXT:  .LBB6_7: # %start
 ; RV32IDZFH-NEXT:    mv a0, zero
+; RV32IDZFH-NEXT:    ret
+; RV32IDZFH-NEXT:  .LBB6_2:
+; RV32IDZFH-NEXT:    fcvt.w.h a0, fa0, rtz
 ; RV32IDZFH-NEXT:    ret
 ;
 ; RV64IZFH-LABEL: fcvt_w_h_sat:
 ; RV64IZFH:       # %bb.0: # %start
-; RV64IZFH-NEXT:    lui a0, %hi(.LCPI6_0)
-; RV64IZFH-NEXT:    flw ft1, %lo(.LCPI6_0)(a0)
-; RV64IZFH-NEXT:    fcvt.s.h ft0, fa0
-; RV64IZFH-NEXT:    fle.s a0, ft1, ft0
-; RV64IZFH-NEXT:    lui a1, 524288
+; RV64IZFH-NEXT:    feq.h a0, fa0, fa0
 ; RV64IZFH-NEXT:    bnez a0, .LBB6_2
 ; RV64IZFH-NEXT:  # %bb.1: # %start
-; RV64IZFH-NEXT:    lui a0, 524288
-; RV64IZFH-NEXT:    j .LBB6_3
-; RV64IZFH-NEXT:  .LBB6_2:
-; RV64IZFH-NEXT:    fcvt.l.s a0, ft0, rtz
-; RV64IZFH-NEXT:  .LBB6_3: # %start
-; RV64IZFH-NEXT:    lui a2, %hi(.LCPI6_1)
-; RV64IZFH-NEXT:    flw ft1, %lo(.LCPI6_1)(a2)
-; RV64IZFH-NEXT:    flt.s a2, ft1, ft0
-; RV64IZFH-NEXT:    bnez a2, .LBB6_6
-; RV64IZFH-NEXT:  # %bb.4: # %start
-; RV64IZFH-NEXT:    feq.s a1, ft0, ft0
-; RV64IZFH-NEXT:    beqz a1, .LBB6_7
-; RV64IZFH-NEXT:  .LBB6_5: # %start
-; RV64IZFH-NEXT:    ret
-; RV64IZFH-NEXT:  .LBB6_6:
-; RV64IZFH-NEXT:    addiw a0, a1, -1
-; RV64IZFH-NEXT:    feq.s a1, ft0, ft0
-; RV64IZFH-NEXT:    bnez a1, .LBB6_5
-; RV64IZFH-NEXT:  .LBB6_7: # %start
 ; RV64IZFH-NEXT:    mv a0, zero
+; RV64IZFH-NEXT:    ret
+; RV64IZFH-NEXT:  .LBB6_2:
+; RV64IZFH-NEXT:    fcvt.w.h a0, fa0, rtz
 ; RV64IZFH-NEXT:    ret
 ;
 ; RV64IDZFH-LABEL: fcvt_w_h_sat:
 ; RV64IDZFH:       # %bb.0: # %start
-; RV64IDZFH-NEXT:    lui a0, %hi(.LCPI6_0)
-; RV64IDZFH-NEXT:    flw ft1, %lo(.LCPI6_0)(a0)
-; RV64IDZFH-NEXT:    fcvt.s.h ft0, fa0
-; RV64IDZFH-NEXT:    fle.s a0, ft1, ft0
-; RV64IDZFH-NEXT:    lui a1, 524288
+; RV64IDZFH-NEXT:    feq.h a0, fa0, fa0
 ; RV64IDZFH-NEXT:    bnez a0, .LBB6_2
 ; RV64IDZFH-NEXT:  # %bb.1: # %start
-; RV64IDZFH-NEXT:    lui a0, 524288
-; RV64IDZFH-NEXT:    j .LBB6_3
-; RV64IDZFH-NEXT:  .LBB6_2:
-; RV64IDZFH-NEXT:    fcvt.l.s a0, ft0, rtz
-; RV64IDZFH-NEXT:  .LBB6_3: # %start
-; RV64IDZFH-NEXT:    lui a2, %hi(.LCPI6_1)
-; RV64IDZFH-NEXT:    flw ft1, %lo(.LCPI6_1)(a2)
-; RV64IDZFH-NEXT:    flt.s a2, ft1, ft0
-; RV64IDZFH-NEXT:    bnez a2, .LBB6_6
-; RV64IDZFH-NEXT:  # %bb.4: # %start
-; RV64IDZFH-NEXT:    feq.s a1, ft0, ft0
-; RV64IDZFH-NEXT:    beqz a1, .LBB6_7
-; RV64IDZFH-NEXT:  .LBB6_5: # %start
-; RV64IDZFH-NEXT:    ret
-; RV64IDZFH-NEXT:  .LBB6_6:
-; RV64IDZFH-NEXT:    addiw a0, a1, -1
-; RV64IDZFH-NEXT:    feq.s a1, ft0, ft0
-; RV64IDZFH-NEXT:    bnez a1, .LBB6_5
-; RV64IDZFH-NEXT:  .LBB6_7: # %start
 ; RV64IDZFH-NEXT:    mv a0, zero
+; RV64IDZFH-NEXT:    ret
+; RV64IDZFH-NEXT:  .LBB6_2:
+; RV64IDZFH-NEXT:    fcvt.w.h a0, fa0, rtz
 ; RV64IDZFH-NEXT:    ret
 start:
   %0 = tail call i32 @llvm.fptosi.sat.i32.f16(half %a)
@@ -414,90 +334,46 @@ define i32 @fcvt_wu_h(half %a) nounwind {
 define i32 @fcvt_wu_h_sat(half %a) nounwind {
 ; RV32IZFH-LABEL: fcvt_wu_h_sat:
 ; RV32IZFH:       # %bb.0: # %start
-; RV32IZFH-NEXT:    fcvt.s.h ft0, fa0
-; RV32IZFH-NEXT:    fmv.w.x ft1, zero
-; RV32IZFH-NEXT:    fle.s a0, ft1, ft0
+; RV32IZFH-NEXT:    feq.h a0, fa0, fa0
 ; RV32IZFH-NEXT:    bnez a0, .LBB8_2
 ; RV32IZFH-NEXT:  # %bb.1: # %start
-; RV32IZFH-NEXT:    mv a1, zero
-; RV32IZFH-NEXT:    j .LBB8_3
+; RV32IZFH-NEXT:    mv a0, zero
+; RV32IZFH-NEXT:    ret
 ; RV32IZFH-NEXT:  .LBB8_2:
-; RV32IZFH-NEXT:    fcvt.wu.s a1, ft0, rtz
-; RV32IZFH-NEXT:  .LBB8_3: # %start
-; RV32IZFH-NEXT:    lui a0, %hi(.LCPI8_0)
-; RV32IZFH-NEXT:    flw ft1, %lo(.LCPI8_0)(a0)
-; RV32IZFH-NEXT:    flt.s a2, ft1, ft0
-; RV32IZFH-NEXT:    addi a0, zero, -1
-; RV32IZFH-NEXT:    bnez a2, .LBB8_5
-; RV32IZFH-NEXT:  # %bb.4: # %start
-; RV32IZFH-NEXT:    mv a0, a1
-; RV32IZFH-NEXT:  .LBB8_5: # %start
+; RV32IZFH-NEXT:    fcvt.wu.h a0, fa0, rtz
 ; RV32IZFH-NEXT:    ret
 ;
 ; RV32IDZFH-LABEL: fcvt_wu_h_sat:
 ; RV32IDZFH:       # %bb.0: # %start
-; RV32IDZFH-NEXT:    fcvt.s.h ft0, fa0
-; RV32IDZFH-NEXT:    fmv.w.x ft1, zero
-; RV32IDZFH-NEXT:    fle.s a0, ft1, ft0
+; RV32IDZFH-NEXT:    feq.h a0, fa0, fa0
 ; RV32IDZFH-NEXT:    bnez a0, .LBB8_2
 ; RV32IDZFH-NEXT:  # %bb.1: # %start
-; RV32IDZFH-NEXT:    mv a1, zero
-; RV32IDZFH-NEXT:    j .LBB8_3
+; RV32IDZFH-NEXT:    mv a0, zero
+; RV32IDZFH-NEXT:    ret
 ; RV32IDZFH-NEXT:  .LBB8_2:
-; RV32IDZFH-NEXT:    fcvt.wu.s a1, ft0, rtz
-; RV32IDZFH-NEXT:  .LBB8_3: # %start
-; RV32IDZFH-NEXT:    lui a0, %hi(.LCPI8_0)
-; RV32IDZFH-NEXT:    flw ft1, %lo(.LCPI8_0)(a0)
-; RV32IDZFH-NEXT:    flt.s a2, ft1, ft0
-; RV32IDZFH-NEXT:    addi a0, zero, -1
-; RV32IDZFH-NEXT:    bnez a2, .LBB8_5
-; RV32IDZFH-NEXT:  # %bb.4: # %start
-; RV32IDZFH-NEXT:    mv a0, a1
-; RV32IDZFH-NEXT:  .LBB8_5: # %start
+; RV32IDZFH-NEXT:    fcvt.wu.h a0, fa0, rtz
 ; RV32IDZFH-NEXT:    ret
 ;
 ; RV64IZFH-LABEL: fcvt_wu_h_sat:
 ; RV64IZFH:       # %bb.0: # %start
-; RV64IZFH-NEXT:    fcvt.s.h ft0, fa0
-; RV64IZFH-NEXT:    fmv.w.x ft1, zero
-; RV64IZFH-NEXT:    fle.s a0, ft1, ft0
+; RV64IZFH-NEXT:    feq.h a0, fa0, fa0
 ; RV64IZFH-NEXT:    bnez a0, .LBB8_2
 ; RV64IZFH-NEXT:  # %bb.1: # %start
 ; RV64IZFH-NEXT:    mv a0, zero
-; RV64IZFH-NEXT:    j .LBB8_3
+; RV64IZFH-NEXT:    ret
 ; RV64IZFH-NEXT:  .LBB8_2:
-; RV64IZFH-NEXT:    fcvt.lu.s a0, ft0, rtz
-; RV64IZFH-NEXT:  .LBB8_3: # %start
-; RV64IZFH-NEXT:    lui a1, %hi(.LCPI8_0)
-; RV64IZFH-NEXT:    flw ft1, %lo(.LCPI8_0)(a1)
-; RV64IZFH-NEXT:    flt.s a1, ft1, ft0
-; RV64IZFH-NEXT:    beqz a1, .LBB8_5
-; RV64IZFH-NEXT:  # %bb.4:
-; RV64IZFH-NEXT:    addi a0, zero, -1
-; RV64IZFH-NEXT:    srli a0, a0, 32
-; RV64IZFH-NEXT:  .LBB8_5: # %start
+; RV64IZFH-NEXT:    fcvt.wu.h a0, fa0, rtz
 ; RV64IZFH-NEXT:    ret
 ;
 ; RV64IDZFH-LABEL: fcvt_wu_h_sat:
 ; RV64IDZFH:       # %bb.0: # %start
-; RV64IDZFH-NEXT:    fcvt.s.h ft0, fa0
-; RV64IDZFH-NEXT:    fmv.w.x ft1, zero
-; RV64IDZFH-NEXT:    fle.s a0, ft1, ft0
+; RV64IDZFH-NEXT:    feq.h a0, fa0, fa0
 ; RV64IDZFH-NEXT:    bnez a0, .LBB8_2
 ; RV64IDZFH-NEXT:  # %bb.1: # %start
 ; RV64IDZFH-NEXT:    mv a0, zero
-; RV64IDZFH-NEXT:    j .LBB8_3
+; RV64IDZFH-NEXT:    ret
 ; RV64IDZFH-NEXT:  .LBB8_2:
-; RV64IDZFH-NEXT:    fcvt.lu.s a0, ft0, rtz
-; RV64IDZFH-NEXT:  .LBB8_3: # %start
-; RV64IDZFH-NEXT:    lui a1, %hi(.LCPI8_0)
-; RV64IDZFH-NEXT:    flw ft1, %lo(.LCPI8_0)(a1)
-; RV64IDZFH-NEXT:    flt.s a1, ft1, ft0
-; RV64IDZFH-NEXT:    beqz a1, .LBB8_5
-; RV64IDZFH-NEXT:  # %bb.4:
-; RV64IDZFH-NEXT:    addi a0, zero, -1
-; RV64IDZFH-NEXT:    srli a0, a0, 32
-; RV64IDZFH-NEXT:  .LBB8_5: # %start
+; RV64IDZFH-NEXT:    fcvt.wu.h a0, fa0, rtz
 ; RV64IDZFH-NEXT:    ret
 start:
   %0 = tail call i32 @llvm.fptoui.sat.i32.f16(half %a)
@@ -652,64 +528,24 @@ define i64 @fcvt_l_h_sat(half %a) nounwind {
 ;
 ; RV64IZFH-LABEL: fcvt_l_h_sat:
 ; RV64IZFH:       # %bb.0: # %start
-; RV64IZFH-NEXT:    lui a0, %hi(.LCPI10_0)
-; RV64IZFH-NEXT:    flw ft1, %lo(.LCPI10_0)(a0)
-; RV64IZFH-NEXT:    fcvt.s.h ft0, fa0
-; RV64IZFH-NEXT:    fle.s a0, ft1, ft0
-; RV64IZFH-NEXT:    addi a1, zero, -1
+; RV64IZFH-NEXT:    feq.h a0, fa0, fa0
 ; RV64IZFH-NEXT:    bnez a0, .LBB10_2
 ; RV64IZFH-NEXT:  # %bb.1: # %start
-; RV64IZFH-NEXT:    slli a0, a1, 63
-; RV64IZFH-NEXT:    j .LBB10_3
-; RV64IZFH-NEXT:  .LBB10_2:
-; RV64IZFH-NEXT:    fcvt.l.s a0, ft0, rtz
-; RV64IZFH-NEXT:  .LBB10_3: # %start
-; RV64IZFH-NEXT:    lui a2, %hi(.LCPI10_1)
-; RV64IZFH-NEXT:    flw ft1, %lo(.LCPI10_1)(a2)
-; RV64IZFH-NEXT:    flt.s a2, ft1, ft0
-; RV64IZFH-NEXT:    bnez a2, .LBB10_6
-; RV64IZFH-NEXT:  # %bb.4: # %start
-; RV64IZFH-NEXT:    feq.s a1, ft0, ft0
-; RV64IZFH-NEXT:    beqz a1, .LBB10_7
-; RV64IZFH-NEXT:  .LBB10_5: # %start
-; RV64IZFH-NEXT:    ret
-; RV64IZFH-NEXT:  .LBB10_6:
-; RV64IZFH-NEXT:    srli a0, a1, 1
-; RV64IZFH-NEXT:    feq.s a1, ft0, ft0
-; RV64IZFH-NEXT:    bnez a1, .LBB10_5
-; RV64IZFH-NEXT:  .LBB10_7: # %start
 ; RV64IZFH-NEXT:    mv a0, zero
+; RV64IZFH-NEXT:    ret
+; RV64IZFH-NEXT:  .LBB10_2:
+; RV64IZFH-NEXT:    fcvt.l.h a0, fa0, rtz
 ; RV64IZFH-NEXT:    ret
 ;
 ; RV64IDZFH-LABEL: fcvt_l_h_sat:
 ; RV64IDZFH:       # %bb.0: # %start
-; RV64IDZFH-NEXT:    lui a0, %hi(.LCPI10_0)
-; RV64IDZFH-NEXT:    flw ft1, %lo(.LCPI10_0)(a0)
-; RV64IDZFH-NEXT:    fcvt.s.h ft0, fa0
-; RV64IDZFH-NEXT:    fle.s a0, ft1, ft0
-; RV64IDZFH-NEXT:    addi a1, zero, -1
+; RV64IDZFH-NEXT:    feq.h a0, fa0, fa0
 ; RV64IDZFH-NEXT:    bnez a0, .LBB10_2
 ; RV64IDZFH-NEXT:  # %bb.1: # %start
-; RV64IDZFH-NEXT:    slli a0, a1, 63
-; RV64IDZFH-NEXT:    j .LBB10_3
-; RV64IDZFH-NEXT:  .LBB10_2:
-; RV64IDZFH-NEXT:    fcvt.l.s a0, ft0, rtz
-; RV64IDZFH-NEXT:  .LBB10_3: # %start
-; RV64IDZFH-NEXT:    lui a2, %hi(.LCPI10_1)
-; RV64IDZFH-NEXT:    flw ft1, %lo(.LCPI10_1)(a2)
-; RV64IDZFH-NEXT:    flt.s a2, ft1, ft0
-; RV64IDZFH-NEXT:    bnez a2, .LBB10_6
-; RV64IDZFH-NEXT:  # %bb.4: # %start
-; RV64IDZFH-NEXT:    feq.s a1, ft0, ft0
-; RV64IDZFH-NEXT:    beqz a1, .LBB10_7
-; RV64IDZFH-NEXT:  .LBB10_5: # %start
-; RV64IDZFH-NEXT:    ret
-; RV64IDZFH-NEXT:  .LBB10_6:
-; RV64IDZFH-NEXT:    srli a0, a1, 1
-; RV64IDZFH-NEXT:    feq.s a1, ft0, ft0
-; RV64IDZFH-NEXT:    bnez a1, .LBB10_5
-; RV64IDZFH-NEXT:  .LBB10_7: # %start
 ; RV64IDZFH-NEXT:    mv a0, zero
+; RV64IDZFH-NEXT:    ret
+; RV64IDZFH-NEXT:  .LBB10_2:
+; RV64IDZFH-NEXT:    fcvt.l.h a0, fa0, rtz
 ; RV64IDZFH-NEXT:    ret
 start:
   %0 = tail call i64 @llvm.fptosi.sat.i64.f16(half %a)
@@ -838,46 +674,24 @@ define i64 @fcvt_lu_h_sat(half %a) nounwind {
 ;
 ; RV64IZFH-LABEL: fcvt_lu_h_sat:
 ; RV64IZFH:       # %bb.0: # %start
-; RV64IZFH-NEXT:    fcvt.s.h ft0, fa0
-; RV64IZFH-NEXT:    fmv.w.x ft1, zero
-; RV64IZFH-NEXT:    fle.s a0, ft1, ft0
+; RV64IZFH-NEXT:    feq.h a0, fa0, fa0
 ; RV64IZFH-NEXT:    bnez a0, .LBB12_2
 ; RV64IZFH-NEXT:  # %bb.1: # %start
-; RV64IZFH-NEXT:    mv a1, zero
-; RV64IZFH-NEXT:    j .LBB12_3
+; RV64IZFH-NEXT:    mv a0, zero
+; RV64IZFH-NEXT:    ret
 ; RV64IZFH-NEXT:  .LBB12_2:
-; RV64IZFH-NEXT:    fcvt.lu.s a1, ft0, rtz
-; RV64IZFH-NEXT:  .LBB12_3: # %start
-; RV64IZFH-NEXT:    lui a0, %hi(.LCPI12_0)
-; RV64IZFH-NEXT:    flw ft1, %lo(.LCPI12_0)(a0)
-; RV64IZFH-NEXT:    flt.s a2, ft1, ft0
-; RV64IZFH-NEXT:    addi a0, zero, -1
-; RV64IZFH-NEXT:    bnez a2, .LBB12_5
-; RV64IZFH-NEXT:  # %bb.4: # %start
-; RV64IZFH-NEXT:    mv a0, a1
-; RV64IZFH-NEXT:  .LBB12_5: # %start
+; RV64IZFH-NEXT:    fcvt.lu.h a0, fa0, rtz
 ; RV64IZFH-NEXT:    ret
 ;
 ; RV64IDZFH-LABEL: fcvt_lu_h_sat:
 ; RV64IDZFH:       # %bb.0: # %start
-; RV64IDZFH-NEXT:    fcvt.s.h ft0, fa0
-; RV64IDZFH-NEXT:    fmv.w.x ft1, zero
-; RV64IDZFH-NEXT:    fle.s a0, ft1, ft0
+; RV64IDZFH-NEXT:    feq.h a0, fa0, fa0
 ; RV64IDZFH-NEXT:    bnez a0, .LBB12_2
 ; RV64IDZFH-NEXT:  # %bb.1: # %start
-; RV64IDZFH-NEXT:    mv a1, zero
-; RV64IDZFH-NEXT:    j .LBB12_3
+; RV64IDZFH-NEXT:    mv a0, zero
+; RV64IDZFH-NEXT:    ret
 ; RV64IDZFH-NEXT:  .LBB12_2:
-; RV64IDZFH-NEXT:    fcvt.lu.s a1, ft0, rtz
-; RV64IDZFH-NEXT:  .LBB12_3: # %start
-; RV64IDZFH-NEXT:    lui a0, %hi(.LCPI12_0)
-; RV64IDZFH-NEXT:    flw ft1, %lo(.LCPI12_0)(a0)
-; RV64IDZFH-NEXT:    flt.s a2, ft1, ft0
-; RV64IDZFH-NEXT:    addi a0, zero, -1
-; RV64IDZFH-NEXT:    bnez a2, .LBB12_5
-; RV64IDZFH-NEXT:  # %bb.4: # %start
-; RV64IDZFH-NEXT:    mv a0, a1
-; RV64IDZFH-NEXT:  .LBB12_5: # %start
+; RV64IDZFH-NEXT:    fcvt.lu.h a0, fa0, rtz
 ; RV64IDZFH-NEXT:    ret
 start:
   %0 = tail call i64 @llvm.fptoui.sat.i64.f16(half %a)
