@@ -1414,6 +1414,27 @@ bool FPTruncOp::areCastCompatible(TypeRange inputs, TypeRange outputs) {
   return areVectorCastSimpleCompatible(a, b, areCastCompatible);
 }
 
+/// Perform safe const propagation for fptrunc, i.e. only propagate
+/// if FP value can be represented without precision loss or rounding.
+OpFoldResult FPTruncOp::fold(ArrayRef<Attribute> operands) {
+  assert(operands.size() == 1 && "unary operation takes one operand");
+
+  auto constOperand = operands.front();
+  if (!constOperand || !constOperand.isa<FloatAttr>())
+    return {};
+
+  // Convert to target type via 'double'.
+  double sourceValue =
+      constOperand.dyn_cast<FloatAttr>().getValue().convertToDouble();
+  auto targetAttr = FloatAttr::get(getType(), sourceValue);
+
+  // Propagate if constant's value does not change after truncation.
+  if (sourceValue == targetAttr.getValue().convertToDouble())
+    return targetAttr;
+
+  return {};
+}
+
 //===----------------------------------------------------------------------===//
 // IndexCastOp
 //===----------------------------------------------------------------------===//
