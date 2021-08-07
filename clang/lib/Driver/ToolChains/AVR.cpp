@@ -298,6 +298,7 @@ llvm::Optional<unsigned> GetMCUSectionAddressData(StringRef MCUName) {
 }
 
 const StringRef PossibleAVRLibcLocations[] = {
+    "/avr",
     "/usr/avr",
     "/usr/lib/avr",
 };
