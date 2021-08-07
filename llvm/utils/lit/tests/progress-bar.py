@@ -1,9 +1,6 @@
 # Check the simple progress bar.
 
-# FIXME: this test depends on order of tests
-# RUN: rm -f %{inputs}/progress-bar/.lit_test_times.txt
-
-# RUN: not %{lit} -j 1 -s %{inputs}/progress-bar > %t.out
+# RUN: not %{lit} -s %{inputs}/progress-bar > %t.out
 # RUN: FileCheck < %t.out %s
 #
 # CHECK: Testing:
