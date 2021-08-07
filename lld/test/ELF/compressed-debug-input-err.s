@@ -1,4 +1,4 @@
-# REQUIRES: zlib, x86
+# REQUIRES: zlib, ppc, x86
 
 # RUN: llvm-mc -filetype=obj -triple=x86_64-unknown-linux %s -o %t.o
 # RUN: not ld.lld %t.o -o /dev/null -shared 2>&1 | FileCheck %s
