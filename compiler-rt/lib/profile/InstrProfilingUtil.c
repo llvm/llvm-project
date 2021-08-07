@@ -34,6 +34,7 @@
 #endif
 
 #if defined(__Fuchsia__)
+#include <zircon/process.h>
 #include <zircon/syscalls.h>
 #endif
 

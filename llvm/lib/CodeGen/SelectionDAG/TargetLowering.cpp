@@ -6976,8 +6976,9 @@ SDValue TargetLowering::expandISNAN(EVT ResultVT, SDValue Op, SDNodeFlags Flags,
   assert(OperandVT.isFloatingPoint());
 
   // If floating point exceptions are ignored, expand to unordered comparison.
-  if (Flags.hasNoFPExcept() &&
-      isOperationLegalOrCustom(ISD::SETCC, OperandVT.getScalarType()))
+  if ((Flags.hasNoFPExcept() &&
+       isOperationLegalOrCustom(ISD::SETCC, OperandVT.getScalarType())) ||
+      OperandVT == MVT::ppcf128)
     return DAG.getSetCC(DL, ResultVT, Op, DAG.getConstantFP(0.0, DL, OperandVT),
                         ISD::SETUO);
 
