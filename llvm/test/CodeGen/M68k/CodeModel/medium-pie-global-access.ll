@@ -86,11 +86,11 @@ define i32 @my_access_fp_foo() #0 {
 ; CHECK-LABEL: my_access_fp_foo:
 ; CHECK:         .cfi_startproc
 ; CHECK-NEXT:  ; %bb.0: ; %entry
-; CHECK-NEXT:    sub.l #4, %sp
+; CHECK-NEXT:    suba.l #4, %sp
 ; CHECK-NEXT:    .cfi_def_cfa_offset -8
 ; CHECK-NEXT:    move.l (foo@GOTPCREL,%pc), (%sp)
 ; CHECK-NEXT:    jsr (access_fp@PLT,%pc)
-; CHECK-NEXT:    add.l #4, %sp
+; CHECK-NEXT:    adda.l #4, %sp
 ; CHECK-NEXT:    rts
 entry:
  %call = call i32 @access_fp(i32 ()* @foo)
@@ -115,11 +115,11 @@ define i32 @my_access_fp_bar() #0 {
 ; CHECK-LABEL: my_access_fp_bar:
 ; CHECK:         .cfi_startproc
 ; CHECK-NEXT:  ; %bb.0: ; %entry
-; CHECK-NEXT:    sub.l #4, %sp
+; CHECK-NEXT:    suba.l #4, %sp
 ; CHECK-NEXT:    .cfi_def_cfa_offset -8
 ; CHECK-NEXT:    move.l (bar@GOTPCREL,%pc), (%sp)
 ; CHECK-NEXT:    jsr (access_fp@PLT,%pc)
-; CHECK-NEXT:    add.l #4, %sp
+; CHECK-NEXT:    adda.l #4, %sp
 ; CHECK-NEXT:    rts
 entry:
  %call = call i32 @access_fp(i32 ()* @bar)

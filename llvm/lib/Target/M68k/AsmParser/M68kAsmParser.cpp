@@ -149,8 +149,16 @@ public:
 
   // Reg
   bool isReg() const override;
+  bool isAReg() const;
+  bool isDReg() const;
   unsigned getReg() const override;
   void addRegOperands(MCInst &Inst, unsigned N) const;
+  void addARegOperands(MCInst &Inst, unsigned N) const {
+    addRegOperands(Inst, N);
+  }
+  void addDRegOperands(MCInst &Inst, unsigned N) const {
+    addRegOperands(Inst, N);
+  }
 
   static std::unique_ptr<M68kOperand> createMemOp(M68kMemOp MemOp, SMLoc Start,
                                                   SMLoc End);
@@ -410,6 +418,18 @@ static inline bool checkRegisterClass(unsigned RegNo, bool Data, bool Address,
     llvm_unreachable("unexpected register type");
     return false;
   }
+}
+
+bool M68kOperand::isAReg() const {
+  return isReg() && checkRegisterClass(getReg(),
+                                       /*Data=*/false,
+                                       /*Address=*/true, /*SP=*/true);
+}
+
+bool M68kOperand::isDReg() const {
+  return isReg() && checkRegisterClass(getReg(),
+                                       /*Data=*/true,
+                                       /*Address=*/false, /*SP=*/false);
 }
 
 unsigned M68kAsmParser::validateTargetOperandClass(MCParsedAsmOperand &Op,

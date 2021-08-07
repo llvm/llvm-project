@@ -171,6 +171,13 @@ class MxOpClass<string name> : AsmOperandClass {
 }
 
 def MxRegClass : MxOpClass<"Reg">;
+// Splitting asm register class to avoid ambiguous on operands'
+// MatchClassKind. For instance, without this separation,
+// both ADD32dd and ADD32dr has {MCK_RegClass, MCK_RegClass} for
+// their operands, which makes AsmParser unable to pick the correct
+// one in a deterministic way.
+def MxARegClass : MxOpClass<"AReg">;
+def MxDRegClass : MxOpClass<"DReg">;
 
 class MxOperand<ValueType vt, MxSize size, string letter, RegisterClass rc, dag pat = (null_frag)> {
   ValueType VT = vt;
@@ -200,20 +207,24 @@ def MxXRD32_TC : MxRegOp<i32, XR32_TC, MxSize32, "r">;
 
 // DATA REGISTER DIRECT. The operand is in the data register specified by
 // the effective address register field.
-def MxDRD8  : MxRegOp<i8,  DR8,  MxSize8,  "d">;
-def MxDRD16 : MxRegOp<i16, DR16, MxSize16, "d">;
-def MxDRD32 : MxRegOp<i32, DR32, MxSize32, "d">;
+let ParserMatchClass = MxDRegClass in {
+  def MxDRD8  : MxRegOp<i8,  DR8,  MxSize8,  "d">;
+  def MxDRD16 : MxRegOp<i16, DR16, MxSize16, "d">;
+  def MxDRD32 : MxRegOp<i32, DR32, MxSize32, "d">;
 
-def MxDRD16_TC : MxRegOp<i16, DR16_TC, MxSize16, "d">;
-def MxDRD32_TC : MxRegOp<i32, DR32_TC, MxSize32, "d">;
+  def MxDRD16_TC : MxRegOp<i16, DR16_TC, MxSize16, "d">;
+  def MxDRD32_TC : MxRegOp<i32, DR32_TC, MxSize32, "d">;
+}
 
 // ADDRESS REGISTER DIRECT. The operand is in the address register specified by
 // the effective address register field.
-def MxARD16 : MxRegOp<i16, AR16, MxSize16, "a">;
-def MxARD32 : MxRegOp<i32, AR32, MxSize32, "a">;
+let ParserMatchClass = MxARegClass in {
+  def MxARD16 : MxRegOp<i16, AR16, MxSize16, "a">;
+  def MxARD32 : MxRegOp<i32, AR32, MxSize32, "a">;
 
-def MxARD16_TC : MxRegOp<i16, AR16_TC, MxSize16, "a">;
-def MxARD32_TC : MxRegOp<i32, AR32_TC, MxSize32, "a">;
+  def MxARD16_TC : MxRegOp<i16, AR16_TC, MxSize16, "a">;
+  def MxARD32_TC : MxRegOp<i32, AR32_TC, MxSize32, "a">;
+}
 
 class MxMemOp<dag ops, MxSize size, string letter,
               string printMethod = "printOperand",

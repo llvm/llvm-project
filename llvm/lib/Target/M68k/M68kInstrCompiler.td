@@ -23,15 +23,15 @@ def : Pat<(i32 (MxWrapper tjumptable    :$src)), (MOV32ri tjumptable    :$src)>;
 def : Pat<(i32 (MxWrapper tblockaddress :$src)), (MOV32ri tblockaddress :$src)>;
 
 def : Pat<(add MxDRD32:$src, (MxWrapper tconstpool:$opd)),
-          (ADD32ri MxDRD32:$src, tconstpool:$opd)>;
+          (ADD32di MxDRD32:$src, tconstpool:$opd)>;
 def : Pat<(add MxARD32:$src, (MxWrapper tjumptable:$opd)),
-          (ADD32ri MxARD32:$src, tjumptable:$opd)>;
+          (ADD32ai MxARD32:$src, tjumptable:$opd)>;
 def : Pat<(add MxARD32:$src, (MxWrapper tglobaladdr :$opd)),
-          (ADD32ri MxARD32:$src, tglobaladdr:$opd)>;
+          (ADD32ai MxARD32:$src, tglobaladdr:$opd)>;
 def : Pat<(add MxARD32:$src, (MxWrapper texternalsym:$opd)),
-          (ADD32ri MxARD32:$src, texternalsym:$opd)>;
+          (ADD32ai MxARD32:$src, texternalsym:$opd)>;
 def : Pat<(add MxARD32:$src, (MxWrapper tblockaddress:$opd)),
-          (ADD32ri MxARD32:$src, tblockaddress:$opd)>;
+          (ADD32ai MxARD32:$src, tblockaddress:$opd)>;
 
 def : Pat<(store (i32 (MxWrapper tglobaladdr:$src)), iPTR:$dst),
           (MOV32ji MxARI32:$dst, tglobaladdr:$src)>;

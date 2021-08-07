@@ -250,7 +250,7 @@ def MxOpMode16dEA : MxEncOpMode<MxBead3Bits<0b001>>;
 def MxOpMode32dEA : MxEncOpMode<MxBead3Bits<0b010>>;
 
 // op EA, An
-def MxOpMode16aEA : MxEncOpMode<MxBead3Bits<0b110>>;
+def MxOpMode16aEA : MxEncOpMode<MxBead3Bits<0b011>>;
 def MxOpMode32aEA : MxEncOpMode<MxBead3Bits<0b111>>;
 
 // op EA, Rn
