@@ -8,28 +8,12 @@ define void @pmuldq(<2 x i64>* nocapture %0, i32 %1, i64 %2) {
 ; CHECK-NEXT:    je .LBB0_3
 ; CHECK-NEXT:  # %bb.1:
 ; CHECK-NEXT:    movd %esi, %xmm0
-; CHECK-NEXT:    pshufd {{.*#+}} xmm1 = xmm0[0,0,0,0]
-; CHECK-NEXT:    movdqa %xmm1, %xmm0
-; CHECK-NEXT:    psllq $32, %xmm0
-; CHECK-NEXT:    psrad $31, %xmm0
-; CHECK-NEXT:    pblendw {{.*#+}} xmm0 = xmm1[0,1],xmm0[2,3],xmm1[4,5],xmm0[6,7]
-; CHECK-NEXT:    movdqa %xmm0, %xmm1
-; CHECK-NEXT:    psrlq $32, %xmm1
+; CHECK-NEXT:    pshufd {{.*#+}} xmm0 = xmm0[0,0,0,0]
 ; CHECK-NEXT:    .p2align 4, 0x90
 ; CHECK-NEXT:  .LBB0_2: # =>This Inner Loop Header: Depth=1
-; CHECK-NEXT:    movdqa (%rdi), %xmm2
-; CHECK-NEXT:    movdqa %xmm2, %xmm3
-; CHECK-NEXT:    psllq $32, %xmm3
-; CHECK-NEXT:    psrad $31, %xmm3
-; CHECK-NEXT:    movdqa %xmm2, %xmm4
-; CHECK-NEXT:    pmuludq %xmm1, %xmm4
-; CHECK-NEXT:    psrlq $32, %xmm3
-; CHECK-NEXT:    pmuludq %xmm0, %xmm3
-; CHECK-NEXT:    paddq %xmm4, %xmm3
-; CHECK-NEXT:    psllq $32, %xmm3
-; CHECK-NEXT:    pmuludq %xmm0, %xmm2
-; CHECK-NEXT:    paddq %xmm3, %xmm2
-; CHECK-NEXT:    movdqa %xmm2, (%rdi)
+; CHECK-NEXT:    movdqa (%rdi), %xmm1
+; CHECK-NEXT:    pmuldq %xmm0, %xmm1
+; CHECK-NEXT:    movdqa %xmm1, (%rdi)
 ; CHECK-NEXT:    addq $16, %rdi
 ; CHECK-NEXT:    decq %rdx
 ; CHECK-NEXT:    jne .LBB0_2
@@ -66,9 +50,7 @@ define void @pmuludq(<2 x i64>* nocapture %0, i32 %1, i64 %2) {
 ; CHECK-NEXT:    je .LBB1_3
 ; CHECK-NEXT:  # %bb.1:
 ; CHECK-NEXT:    movd %esi, %xmm0
-; CHECK-NEXT:    pshufd {{.*#+}} xmm1 = xmm0[0,0,0,0]
-; CHECK-NEXT:    pxor %xmm0, %xmm0
-; CHECK-NEXT:    pblendw {{.*#+}} xmm0 = xmm1[0,1],xmm0[2,3],xmm1[4,5],xmm0[6,7]
+; CHECK-NEXT:    pshufd {{.*#+}} xmm0 = xmm0[0,0,0,0]
 ; CHECK-NEXT:    .p2align 4, 0x90
 ; CHECK-NEXT:  .LBB1_2: # =>This Inner Loop Header: Depth=1
 ; CHECK-NEXT:    movdqa (%rdi), %xmm1
