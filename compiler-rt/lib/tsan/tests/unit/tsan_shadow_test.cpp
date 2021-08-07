@@ -120,6 +120,7 @@ struct MappingTest {
         if (!broken<Mapping>(kBrokenMapping))
           CHECK(IsShadowMemImpl::Apply<Mapping>(s));
         CHECK(IsMetaMemImpl::Apply<Mapping>(reinterpret_cast<uptr>(m)));
+        CHECK_EQ(p, RestoreAddrImpl::Apply<Mapping>(CompressAddr(p)));
         if (!broken<Mapping>(kBrokenReverseMapping))
           CHECK_EQ(p, r);
         if (prev && !broken<Mapping>(kBrokenLinearity)) {
