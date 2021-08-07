@@ -109,17 +109,14 @@ void FillProfileCallback(uptr p, uptr rss, bool file,
     mem[MemShadow] += rss;
   else if (p >= MetaShadowBeg() && p < MetaShadowEnd())
     mem[MemMeta] += rss;
-#if !SANITIZER_GO
-  else if (p >= HeapMemBeg() && p < HeapMemEnd())
-    mem[MemHeap] += rss;
   else if (p >= LoAppMemBeg() && p < LoAppMemEnd())
     mem[file ? MemFile : MemMmap] += rss;
+#  if !SANITIZER_GO
   else if (p >= HiAppMemBeg() && p < HiAppMemEnd())
     mem[file ? MemFile : MemMmap] += rss;
-#else
-  else if (p >= AppMemBeg() && p < AppMemEnd())
-    mem[file ? MemFile : MemMmap] += rss;
-#endif
+  else if (p >= HeapMemBeg() && p < HeapMemEnd())
+    mem[MemHeap] += rss;
+#  endif
   else if (p >= TraceMemBeg() && p < TraceMemEnd())
     mem[MemTrace] += rss;
   else
