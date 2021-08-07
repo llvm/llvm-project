@@ -595,6 +595,48 @@ typedef MappingGoS390x Mapping;
 extern uptr vmaSize;
 #endif
 
+template <typename Func, typename Arg>
+ALWAYS_INLINE auto SelectMapping(Arg arg) {
+#if defined(__aarch64__) && !defined(__APPLE__) && !SANITIZER_GO
+  switch (vmaSize) {
+    case 39:
+      return Func::template Apply<Mapping39>(arg);
+    case 42:
+      return Func::template Apply<Mapping42>(arg);
+    case 48:
+      return Func::template Apply<Mapping48>(arg);
+  }
+  DCHECK(0);
+  return 0;
+#elif defined(__powerpc64__)
+  switch (vmaSize) {
+#  if !SANITIZER_GO
+    case 44:
+      return Func::template Apply<Mapping44>(arg);
+#  endif
+    case 46:
+      return Func::template Apply<Mapping46>(arg);
+    case 47:
+      return Func::template Apply<Mapping47>(arg);
+  }
+  DCHECK(0);
+  return 0;
+#elif defined(__mips64)
+  switch (vmaSize) {
+#  if !SANITIZER_GO
+    case 40:
+      return Func::template Apply<Mapping40>(arg);
+#  else
+    case 47:
+      return Func::template Apply<Mapping47>(arg);
+#  endif
+  }
+  DCHECK(0);
+  return 0;
+#else
+  return Func::template Apply<Mapping>(arg);
+#endif
+}
 
 enum MappingType {
   MAPPING_LO_APP_BEG,
@@ -618,9 +660,10 @@ enum MappingType {
   MAPPING_VDSO_BEG,
 };
 
-template<typename Mapping, int Type>
-uptr MappingImpl(void) {
-  switch (Type) {
+struct MappingField {
+  template <typename Mapping>
+  static uptr Apply(MappingType type) {
+    switch (type) {
 #if !SANITIZER_GO
     case MAPPING_LO_APP_BEG: return Mapping::kLoAppMemBeg;
     case MAPPING_LO_APP_END: return Mapping::kLoAppMemEnd;
@@ -643,98 +686,57 @@ uptr MappingImpl(void) {
     case MAPPING_META_SHADOW_END: return Mapping::kMetaShadowEnd;
     case MAPPING_TRACE_BEG: return Mapping::kTraceMemBeg;
     case MAPPING_TRACE_END: return Mapping::kTraceMemEnd;
+    default:
+      DCHECK(0);
+      return 0;
+    }
   }
-}
-
-template<int Type>
-uptr MappingArchImpl(void) {
-#if defined(__aarch64__) && !defined(__APPLE__) && !SANITIZER_GO
-  switch (vmaSize) {
-    case 39: return MappingImpl<Mapping39, Type>();
-    case 42: return MappingImpl<Mapping42, Type>();
-    case 48: return MappingImpl<Mapping48, Type>();
-  }
-  DCHECK(0);
-  return 0;
-#elif defined(__powerpc64__)
-  switch (vmaSize) {
-#if !SANITIZER_GO
-    case 44: return MappingImpl<Mapping44, Type>();
-#endif
-    case 46: return MappingImpl<Mapping46, Type>();
-    case 47: return MappingImpl<Mapping47, Type>();
-  }
-  DCHECK(0);
-  return 0;
-#elif defined(__mips64)
-  switch (vmaSize) {
-#if !SANITIZER_GO
-    case 40: return MappingImpl<Mapping40, Type>();
-#else
-    case 47: return MappingImpl<Mapping47, Type>();
-#endif
-  }
-  DCHECK(0);
-  return 0;
-#else
-  return MappingImpl<Mapping, Type>();
-#endif
-}
+};
 
 #if !SANITIZER_GO
 ALWAYS_INLINE
 uptr LoAppMemBeg(void) {
-  return MappingArchImpl<MAPPING_LO_APP_BEG>();
+  return SelectMapping<MappingField>(MAPPING_LO_APP_BEG);
 }
 ALWAYS_INLINE
 uptr LoAppMemEnd(void) {
-  return MappingArchImpl<MAPPING_LO_APP_END>();
+  return SelectMapping<MappingField>(MAPPING_LO_APP_END);
 }
 
 #ifdef TSAN_MID_APP_RANGE
 ALWAYS_INLINE
 uptr MidAppMemBeg(void) {
-  return MappingArchImpl<MAPPING_MID_APP_BEG>();
+  return SelectMapping<MappingField>(MAPPING_MID_APP_BEG);
 }
 ALWAYS_INLINE
 uptr MidAppMemEnd(void) {
-  return MappingArchImpl<MAPPING_MID_APP_END>();
+  return SelectMapping<MappingField>(MAPPING_MID_APP_END);
 }
 #endif
 
 ALWAYS_INLINE
-uptr HeapMemBeg(void) {
-  return MappingArchImpl<MAPPING_HEAP_BEG>();
-}
+uptr HeapMemBeg(void) { return SelectMapping<MappingField>(MAPPING_HEAP_BEG); }
 ALWAYS_INLINE
-uptr HeapMemEnd(void) {
-  return MappingArchImpl<MAPPING_HEAP_END>();
-}
+uptr HeapMemEnd(void) { return SelectMapping<MappingField>(MAPPING_HEAP_END); }
 
 ALWAYS_INLINE
 uptr HiAppMemBeg(void) {
-  return MappingArchImpl<MAPPING_HI_APP_BEG>();
+  return SelectMapping<MappingField>(MAPPING_HI_APP_BEG);
 }
 ALWAYS_INLINE
 uptr HiAppMemEnd(void) {
-  return MappingArchImpl<MAPPING_HI_APP_END>();
+  return SelectMapping<MappingField>(MAPPING_HI_APP_END);
 }
 
 ALWAYS_INLINE
-uptr VdsoBeg(void) {
-  return MappingArchImpl<MAPPING_VDSO_BEG>();
-}
+uptr VdsoBeg(void) { return SelectMapping<MappingField>(MAPPING_VDSO_BEG); }
 
 #else
 
 ALWAYS_INLINE
-uptr AppMemBeg(void) {
-  return MappingArchImpl<MAPPING_APP_BEG>();
-}
+uptr AppMemBeg(void) { return SelectMapping<MappingField>(MAPPING_APP_BEG); }
 ALWAYS_INLINE
-uptr AppMemEnd(void) {
-  return MappingArchImpl<MAPPING_APP_END>();
-}
+uptr AppMemEnd(void) { return SelectMapping<MappingField>(MAPPING_APP_END); }
 
 #endif
 
@@ -772,35 +774,31 @@ bool GetUserRegion(int i, uptr *start, uptr *end) {
 }
 
 ALWAYS_INLINE
-uptr ShadowBeg(void) {
-  return MappingArchImpl<MAPPING_SHADOW_BEG>();
-}
+uptr ShadowBeg(void) { return SelectMapping<MappingField>(MAPPING_SHADOW_BEG); }
 ALWAYS_INLINE
-uptr ShadowEnd(void) {
-  return MappingArchImpl<MAPPING_SHADOW_END>();
-}
+uptr ShadowEnd(void) { return SelectMapping<MappingField>(MAPPING_SHADOW_END); }
 
 ALWAYS_INLINE
 uptr MetaShadowBeg(void) {
-  return MappingArchImpl<MAPPING_META_SHADOW_BEG>();
+  return SelectMapping<MappingField>(MAPPING_META_SHADOW_BEG);
 }
 ALWAYS_INLINE
 uptr MetaShadowEnd(void) {
-  return MappingArchImpl<MAPPING_META_SHADOW_END>();
+  return SelectMapping<MappingField>(MAPPING_META_SHADOW_END);
 }
 
 ALWAYS_INLINE
 uptr TraceMemBeg(void) {
-  return MappingArchImpl<MAPPING_TRACE_BEG>();
+  return SelectMapping<MappingField>(MAPPING_TRACE_BEG);
 }
 ALWAYS_INLINE
 uptr TraceMemEnd(void) {
-  return MappingArchImpl<MAPPING_TRACE_END>();
+  return SelectMapping<MappingField>(MAPPING_TRACE_END);
 }
 
-
-template<typename Mapping>
-bool IsAppMemImpl(uptr mem) {
+struct IsAppMemImpl {
+  template <typename Mapping>
+  static bool Apply(uptr mem) {
 #if !SANITIZER_GO
   return (mem >= Mapping::kHeapMemBeg && mem < Mapping::kHeapMemEnd) ||
 # ifdef TSAN_MID_APP_RANGE
@@ -811,184 +809,63 @@ bool IsAppMemImpl(uptr mem) {
 #else
   return mem >= Mapping::kAppMemBeg && mem < Mapping::kAppMemEnd;
 #endif
-}
+  }
+};
 
 ALWAYS_INLINE
-bool IsAppMem(uptr mem) {
-#if defined(__aarch64__) && !defined(__APPLE__) && !SANITIZER_GO
-  switch (vmaSize) {
-    case 39: return IsAppMemImpl<Mapping39>(mem);
-    case 42: return IsAppMemImpl<Mapping42>(mem);
-    case 48: return IsAppMemImpl<Mapping48>(mem);
-  }
-  DCHECK(0);
-  return false;
-#elif defined(__powerpc64__)
-  switch (vmaSize) {
-#if !SANITIZER_GO
-    case 44: return IsAppMemImpl<Mapping44>(mem);
-#endif
-    case 46: return IsAppMemImpl<Mapping46>(mem);
-    case 47: return IsAppMemImpl<Mapping47>(mem);
-  }
-  DCHECK(0);
-  return false;
-#elif defined(__mips64)
-  switch (vmaSize) {
-#if !SANITIZER_GO
-    case 40: return IsAppMemImpl<Mapping40>(mem);
-#else
-    case 47: return IsAppMemImpl<Mapping47>(mem);
-#endif
-  }
-  DCHECK(0);
-  return false;
-#else
-  return IsAppMemImpl<Mapping>(mem);
-#endif
-}
+bool IsAppMem(uptr mem) { return SelectMapping<IsAppMemImpl>(mem); }
 
-
-template<typename Mapping>
-bool IsShadowMemImpl(uptr mem) {
-  return mem >= Mapping::kShadowBeg && mem <= Mapping::kShadowEnd;
-}
+struct IsShadowMemImpl {
+  template <typename Mapping>
+  static bool Apply(uptr mem) {
+    return mem >= Mapping::kShadowBeg && mem <= Mapping::kShadowEnd;
+  }
+};
 
 ALWAYS_INLINE
 bool IsShadowMem(RawShadow *p) {
-  uptr mem = reinterpret_cast<uptr>(p);
-#if defined(__aarch64__) && !defined(__APPLE__) && !SANITIZER_GO
-  switch (vmaSize) {
-    case 39: return IsShadowMemImpl<Mapping39>(mem);
-    case 42: return IsShadowMemImpl<Mapping42>(mem);
-    case 48: return IsShadowMemImpl<Mapping48>(mem);
-  }
-  DCHECK(0);
-  return false;
-#elif defined(__powerpc64__)
-  switch (vmaSize) {
-#if !SANITIZER_GO
-    case 44: return IsShadowMemImpl<Mapping44>(mem);
-#endif
-    case 46: return IsShadowMemImpl<Mapping46>(mem);
-    case 47: return IsShadowMemImpl<Mapping47>(mem);
-  }
-  DCHECK(0);
-  return false;
-#elif defined(__mips64)
-  switch (vmaSize) {
-#if !SANITIZER_GO
-    case 40: return IsShadowMemImpl<Mapping40>(mem);
-#else
-    case 47: return IsShadowMemImpl<Mapping47>(mem);
-#endif
-  }
-  DCHECK(0);
-  return false;
-#else
-  return IsShadowMemImpl<Mapping>(mem);
-#endif
+  return SelectMapping<IsShadowMemImpl>(reinterpret_cast<uptr>(p));
 }
 
-template<typename Mapping>
-bool IsMetaMemImpl(uptr mem) {
-  return mem >= Mapping::kMetaShadowBeg && mem <= Mapping::kMetaShadowEnd;
-}
+struct IsMetaMemImpl {
+  template <typename Mapping>
+  static bool Apply(uptr mem) {
+    return mem >= Mapping::kMetaShadowBeg && mem <= Mapping::kMetaShadowEnd;
+  }
+};
 
 ALWAYS_INLINE
 bool IsMetaMem(const u32 *p) {
-  uptr mem = reinterpret_cast<uptr>(p);
-#if defined(__aarch64__) && !defined(__APPLE__) && !SANITIZER_GO
-  switch (vmaSize) {
-    case 39: return IsMetaMemImpl<Mapping39>(mem);
-    case 42: return IsMetaMemImpl<Mapping42>(mem);
-    case 48: return IsMetaMemImpl<Mapping48>(mem);
-  }
-  DCHECK(0);
-  return false;
-#elif defined(__powerpc64__)
-  switch (vmaSize) {
-#if !SANITIZER_GO
-    case 44: return IsMetaMemImpl<Mapping44>(mem);
-#endif
-    case 46: return IsMetaMemImpl<Mapping46>(mem);
-    case 47: return IsMetaMemImpl<Mapping47>(mem);
-  }
-  DCHECK(0);
-  return false;
-#elif defined(__mips64)
-  switch (vmaSize) {
-#if !SANITIZER_GO
-    case 40: return IsMetaMemImpl<Mapping40>(mem);
-#else
-    case 47: return IsMetaMemImpl<Mapping47>(mem);
-#endif
-  }
-  DCHECK(0);
-  return false;
-#else
-  return IsMetaMemImpl<Mapping>(mem);
-#endif
+  return SelectMapping<IsMetaMemImpl>(reinterpret_cast<uptr>(p));
 }
 
-template <typename Mapping>
-uptr MemToShadowRaw(uptr x) {
-  DCHECK(IsAppMem(x));
+struct MemToShadowImpl {
+  template <typename Mapping>
+  static uptr Apply(uptr x) {
+    DCHECK(IsAppMemImpl::Apply<Mapping>(x));
 #if !SANITIZER_GO
-  return (((x) & ~(Mapping::kAppMemMsk | (kShadowCell - 1)))
-      ^ Mapping::kAppMemXor) * kShadowCnt;
+    return (((x) & ~(Mapping::kAppMemMsk | (kShadowCell - 1))) ^
+            Mapping::kAppMemXor) *
+           kShadowCnt;
 #else
 # ifndef SANITIZER_WINDOWS
-  return ((x & ~(kShadowCell - 1)) * kShadowCnt) | Mapping::kShadowBeg;
+    return ((x & ~(kShadowCell - 1)) * kShadowCnt) | Mapping::kShadowBeg;
 # else
-  return ((x & ~(kShadowCell - 1)) * kShadowCnt) + Mapping::kShadowBeg;
+    return ((x & ~(kShadowCell - 1)) * kShadowCnt) + Mapping::kShadowBeg;
 # endif
 #endif
-}
-
-template <typename Mapping>
-RawShadow *MemToShadowImpl(uptr x) {
-  return reinterpret_cast<RawShadow *>(MemToShadowRaw<Mapping>(x));
-}
+  }
+};
 
 ALWAYS_INLINE
 RawShadow *MemToShadow(uptr x) {
-#if defined(__aarch64__) && !defined(__APPLE__) && !SANITIZER_GO
-  switch (vmaSize) {
-    case 39: return MemToShadowImpl<Mapping39>(x);
-    case 42: return MemToShadowImpl<Mapping42>(x);
-    case 48: return MemToShadowImpl<Mapping48>(x);
-  }
-  DCHECK(0);
-  return nullptr;
-#elif defined(__powerpc64__)
-  switch (vmaSize) {
-#if !SANITIZER_GO
-    case 44: return MemToShadowImpl<Mapping44>(x);
-#endif
-    case 46: return MemToShadowImpl<Mapping46>(x);
-    case 47: return MemToShadowImpl<Mapping47>(x);
-  }
-  DCHECK(0);
-  return nullptr;
-#elif defined(__mips64)
-  switch (vmaSize) {
-#if !SANITIZER_GO
-    case 40: return MemToShadowImpl<Mapping40>(x);
-#else
-    case 47: return MemToShadowImpl<Mapping47>(x);
-#endif
-  }
-  DCHECK(0);
-  return nullptr;
-#else
-  return MemToShadowImpl<Mapping>(x);
-#endif
+  return reinterpret_cast<RawShadow *>(SelectMapping<MemToShadowImpl>(x));
 }
 
-template<typename Mapping>
-u32 *MemToMetaImpl(uptr x) {
-  DCHECK(IsAppMem(x));
+struct MemToMetaImpl {
+  template <typename Mapping>
+  static u32 *Apply(uptr x) {
+    DCHECK(IsAppMemImpl::Apply<Mapping>(x));
 #if !SANITIZER_GO
   return (u32*)(((((x) & ~(Mapping::kAppMemMsk | (kMetaShadowCell - 1)))) /
       kMetaShadowCell * kMetaShadowSize) | Mapping::kMetaShadowBeg);
@@ -1001,47 +878,16 @@ u32 *MemToMetaImpl(uptr x) {
       kMetaShadowCell * kMetaShadowSize) + Mapping::kMetaShadowBeg);
 # endif
 #endif
-}
+  }
+};
 
 ALWAYS_INLINE
-u32 *MemToMeta(uptr x) {
-#if defined(__aarch64__) && !defined(__APPLE__) && !SANITIZER_GO
-  switch (vmaSize) {
-    case 39: return MemToMetaImpl<Mapping39>(x);
-    case 42: return MemToMetaImpl<Mapping42>(x);
-    case 48: return MemToMetaImpl<Mapping48>(x);
-  }
-  DCHECK(0);
-  return 0;
-#elif defined(__powerpc64__)
-  switch (vmaSize) {
-#if !SANITIZER_GO
-    case 44: return MemToMetaImpl<Mapping44>(x);
-#endif
-    case 46: return MemToMetaImpl<Mapping46>(x);
-    case 47: return MemToMetaImpl<Mapping47>(x);
-  }
-  DCHECK(0);
-  return 0;
-#elif defined(__mips64)
-  switch (vmaSize) {
-#if !SANITIZER_GO
-    case 40: return MemToMetaImpl<Mapping40>(x);
-#else
-    case 47: return MemToMetaImpl<Mapping47>(x);
-#endif
-  }
-  DCHECK(0);
-  return 0;
-#else
-  return MemToMetaImpl<Mapping>(x);
-#endif
-}
+u32 *MemToMeta(uptr x) { return SelectMapping<MemToMetaImpl>(x); }
 
-template <typename Mapping>
-uptr ShadowToMemImpl(RawShadow *s) {
-  DCHECK(IsShadowMem(s));
-  uptr sp = reinterpret_cast<uptr>(s);
+struct ShadowToMemImpl {
+  template <typename Mapping>
+  static uptr Apply(uptr sp) {
+    DCHECK(IsShadowMemImpl::Apply<Mapping>(sp));
 #if !SANITIZER_GO
   // The shadow mapping is non-linear and we've lost some bits, so we don't have
   // an easy way to restore the original app address. But the mapping is a
@@ -1050,13 +896,13 @@ uptr ShadowToMemImpl(RawShadow *s) {
   // same address.
   uptr p = (sp / kShadowCnt) ^ Mapping::kAppMemXor;
   if (p >= Mapping::kLoAppMemBeg && p < Mapping::kLoAppMemEnd &&
-      MemToShadow(p) == s)
+      MemToShadowImpl::Apply<Mapping>(p) == sp)
     return p;
 # ifdef TSAN_MID_APP_RANGE
   p = ((sp / kShadowCnt) ^ Mapping::kAppMemXor) +
       (Mapping::kMidAppMemBeg & Mapping::kAppMemMsk);
   if (p >= Mapping::kMidAppMemBeg && p < Mapping::kMidAppMemEnd &&
-      MemToShadow(p) == s)
+      MemToShadowImpl::Apply<Mapping>(p) == sp)
     return p;
 # endif
   return ((sp / kShadowCnt) ^ Mapping::kAppMemXor) | Mapping::kAppMemMsk;
@@ -1067,41 +913,12 @@ uptr ShadowToMemImpl(RawShadow *s) {
   return (sp - Mapping::kShadowBeg) / kShadowCnt;
 # endif // SANITIZER_WINDOWS
 #endif
-}
+  }
+};
 
 ALWAYS_INLINE
 uptr ShadowToMem(RawShadow *s) {
-#if defined(__aarch64__) && !defined(__APPLE__) && !SANITIZER_GO
-  switch (vmaSize) {
-    case 39: return ShadowToMemImpl<Mapping39>(s);
-    case 42: return ShadowToMemImpl<Mapping42>(s);
-    case 48: return ShadowToMemImpl<Mapping48>(s);
-  }
-  DCHECK(0);
-  return 0;
-#elif defined(__powerpc64__)
-  switch (vmaSize) {
-#if !SANITIZER_GO
-    case 44: return ShadowToMemImpl<Mapping44>(s);
-#endif
-    case 46: return ShadowToMemImpl<Mapping46>(s);
-    case 47: return ShadowToMemImpl<Mapping47>(s);
-  }
-  DCHECK(0);
-  return 0;
-#elif defined(__mips64)
-  switch (vmaSize) {
-#if !SANITIZER_GO
-    case 40: return ShadowToMemImpl<Mapping40>(s);
-#else
-    case 47: return ShadowToMemImpl<Mapping47>(s);
-#endif
-  }
-  DCHECK(0);
-  return 0;
-#else
-  return ShadowToMemImpl<Mapping>(s);
-#endif
+  return SelectMapping<ShadowToMemImpl>(reinterpret_cast<uptr>(s));
 }
 
 // The additional page is to catch shadow stack overflow as paging fault.
@@ -1109,90 +926,31 @@ uptr ShadowToMem(RawShadow *s) {
 const uptr kTotalTraceSize = (kTraceSize * sizeof(Event) + sizeof(Trace)
     + (64 << 10) + (64 << 10) - 1) & ~((64 << 10) - 1);
 
-template<typename Mapping>
-uptr GetThreadTraceImpl(int tid) {
-  uptr p = Mapping::kTraceMemBeg + (uptr)tid * kTotalTraceSize;
-  DCHECK_LT(p, Mapping::kTraceMemEnd);
-  return p;
-}
+struct GetThreadTraceImpl {
+  template <typename Mapping>
+  static uptr Apply(uptr tid) {
+    uptr p = Mapping::kTraceMemBeg + tid * kTotalTraceSize;
+    DCHECK_LT(p, Mapping::kTraceMemEnd);
+    return p;
+  }
+};
 
 ALWAYS_INLINE
-uptr GetThreadTrace(int tid) {
-#if defined(__aarch64__) && !defined(__APPLE__) && !SANITIZER_GO
-  switch (vmaSize) {
-    case 39: return GetThreadTraceImpl<Mapping39>(tid);
-    case 42: return GetThreadTraceImpl<Mapping42>(tid);
-    case 48: return GetThreadTraceImpl<Mapping48>(tid);
-  }
-  DCHECK(0);
-  return 0;
-#elif defined(__powerpc64__)
-  switch (vmaSize) {
-#if !SANITIZER_GO
-    case 44: return GetThreadTraceImpl<Mapping44>(tid);
-#endif
-    case 46: return GetThreadTraceImpl<Mapping46>(tid);
-    case 47: return GetThreadTraceImpl<Mapping47>(tid);
-  }
-  DCHECK(0);
-  return 0;
-#elif defined(__mips64)
-  switch (vmaSize) {
-#if !SANITIZER_GO
-    case 40: return GetThreadTraceImpl<Mapping40>(tid);
-#else
-    case 47: return GetThreadTraceImpl<Mapping47>(tid);
-#endif
-  }
-  DCHECK(0);
-  return 0;
-#else
-  return GetThreadTraceImpl<Mapping>(tid);
-#endif
-}
+uptr GetThreadTrace(int tid) { return SelectMapping<GetThreadTraceImpl>(tid); }
 
-
-template<typename Mapping>
-uptr GetThreadTraceHeaderImpl(int tid) {
-  uptr p = Mapping::kTraceMemBeg + (uptr)tid * kTotalTraceSize
-      + kTraceSize * sizeof(Event);
-  DCHECK_LT(p, Mapping::kTraceMemEnd);
-  return p;
-}
+struct GetThreadTraceHeaderImpl {
+  template <typename Mapping>
+  static uptr Apply(uptr tid) {
+    uptr p = Mapping::kTraceMemBeg + tid * kTotalTraceSize +
+             kTraceSize * sizeof(Event);
+    DCHECK_LT(p, Mapping::kTraceMemEnd);
+    return p;
+  }
+};
 
 ALWAYS_INLINE
 uptr GetThreadTraceHeader(int tid) {
-#if defined(__aarch64__) && !defined(__APPLE__) && !SANITIZER_GO
-  switch (vmaSize) {
-    case 39: return GetThreadTraceHeaderImpl<Mapping39>(tid);
-    case 42: return GetThreadTraceHeaderImpl<Mapping42>(tid);
-    case 48: return GetThreadTraceHeaderImpl<Mapping48>(tid);
-  }
-  DCHECK(0);
-  return 0;
-#elif defined(__powerpc64__)
-  switch (vmaSize) {
-#if !SANITIZER_GO
-    case 44: return GetThreadTraceHeaderImpl<Mapping44>(tid);
-#endif
-    case 46: return GetThreadTraceHeaderImpl<Mapping46>(tid);
-    case 47: return GetThreadTraceHeaderImpl<Mapping47>(tid);
-  }
-  DCHECK(0);
-  return 0;
-#elif defined(__mips64)
-  switch (vmaSize) {
-#if !SANITIZER_GO
-    case 40: return GetThreadTraceHeaderImpl<Mapping40>(tid);
-#else
-    case 47: return GetThreadTraceHeaderImpl<Mapping47>(tid);
-#endif
-  }
-  DCHECK(0);
-  return 0;
-#else
-  return GetThreadTraceHeaderImpl<Mapping>(tid);
-#endif
+  return SelectMapping<GetThreadTraceHeaderImpl>(tid);
 }
 
 void InitializePlatform();
