@@ -4747,7 +4747,7 @@ void Clang::ConstructJob(Compilation &C, const JobAction &JA,
     if (StringRef(A->getValue()).getAsInteger(10, Value) || Value > 65536)
       TC.getDriver().Diag(diag::err_drv_invalid_int_value)
           << A->getAsString(Args) << A->getValue();
-    else if (Value & Value - 1)
+    else if (Value & (Value - 1))
       TC.getDriver().Diag(diag::err_drv_alignment_not_power_of_two)
           << A->getAsString(Args) << A->getValue();
     // Treat =0 as unspecified (use the target preference).
