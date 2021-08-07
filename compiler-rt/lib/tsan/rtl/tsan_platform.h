@@ -66,8 +66,9 @@ struct Mapping48AddressSpace {
   static const uptr kMidAppMemEnd  = 0x568000000000ull;
   static const uptr kHiAppMemBeg   = 0x7e8000000000ull;
   static const uptr kHiAppMemEnd   = 0x800000000000ull;
-  static const uptr kAppMemMsk     = 0x780000000000ull;
-  static const uptr kAppMemXor     = 0x040000000000ull;
+  static const uptr kShadowMsk = 0x780000000000ull;
+  static const uptr kShadowXor = 0x040000000000ull;
+  static const uptr kShadowAdd = 0x000000000000ull;
   static const uptr kVdsoBeg       = 0xf000000000000000ull;
 };
 
@@ -102,8 +103,9 @@ struct MappingMips64_40 {
   static const uptr kMidAppMemEnd  = 0xab00000000ull;
   static const uptr kHiAppMemBeg   = 0xff80000000ull;
   static const uptr kHiAppMemEnd   = 0xffffffffffull;
-  static const uptr kAppMemMsk     = 0xf800000000ull;
-  static const uptr kAppMemXor     = 0x0800000000ull;
+  static const uptr kShadowMsk = 0xf800000000ull;
+  static const uptr kShadowXor = 0x0800000000ull;
+  static const uptr kShadowAdd = 0x0000000000ull;
   static const uptr kVdsoBeg       = 0xfffff00000ull;
 };
 
@@ -133,8 +135,9 @@ struct MappingAppleAarch64 {
   static const uptr kTraceMemEnd   = 0x0fc0000000ull;
   static const uptr kHiAppMemBeg   = 0x0fc0000000ull;
   static const uptr kHiAppMemEnd   = 0x0fc0000000ull;
-  static const uptr kAppMemMsk     =          0x0ull;
-  static const uptr kAppMemXor     =          0x0ull;
+  static const uptr kShadowMsk = 0x0ull;
+  static const uptr kShadowXor = 0x0ull;
+  static const uptr kShadowAdd = 0x0ull;
   static const uptr kVdsoBeg       = 0x7000000000000000ull;
   static const uptr kMidAppMemBeg = 0;
   static const uptr kMidAppMemEnd = 0;
@@ -170,8 +173,9 @@ struct MappingAarch64_39 {
   static const uptr kHeapMemEnd    = 0x7d00000000ull;
   static const uptr kHiAppMemBeg   = 0x7e00000000ull;
   static const uptr kHiAppMemEnd   = 0x7fffffffffull;
-  static const uptr kAppMemMsk     = 0x7800000000ull;
-  static const uptr kAppMemXor     = 0x0200000000ull;
+  static const uptr kShadowMsk = 0x7800000000ull;
+  static const uptr kShadowXor = 0x0200000000ull;
+  static const uptr kShadowAdd = 0x0000000000ull;
   static const uptr kVdsoBeg       = 0x7f00000000ull;
 };
 
@@ -205,8 +209,9 @@ struct MappingAarch64_42 {
   static const uptr kHeapMemEnd    = 0x3f000000000ull;
   static const uptr kHiAppMemBeg   = 0x3f000000000ull;
   static const uptr kHiAppMemEnd   = 0x3ffffffffffull;
-  static const uptr kAppMemMsk     = 0x3c000000000ull;
-  static const uptr kAppMemXor     = 0x04000000000ull;
+  static const uptr kShadowMsk = 0x3c000000000ull;
+  static const uptr kShadowXor = 0x04000000000ull;
+  static const uptr kShadowAdd = 0x00000000000ull;
   static const uptr kVdsoBeg       = 0x37f00000000ull;
 };
 
@@ -225,8 +230,9 @@ struct MappingAarch64_48 {
   static const uptr kHeapMemEnd    = 0x0ffff00000000ull;
   static const uptr kHiAppMemBeg   = 0x0ffff00000000ull;
   static const uptr kHiAppMemEnd   = 0x1000000000000ull;
-  static const uptr kAppMemMsk     = 0x0fff800000000ull;
-  static const uptr kAppMemXor     = 0x0000800000000ull;
+  static const uptr kShadowMsk = 0x0fff800000000ull;
+  static const uptr kShadowXor = 0x0000800000000ull;
+  static const uptr kShadowAdd = 0x0000000000000ull;
   static const uptr kVdsoBeg       = 0xffff000000000ull;
 };
 
@@ -257,8 +263,9 @@ struct MappingPPC64_44 {
   static const uptr kHeapMemEnd    = 0x0f5000000000ull;
   static const uptr kHiAppMemBeg   = 0x0f6000000000ull;
   static const uptr kHiAppMemEnd   = 0x100000000000ull; // 44 bits
-  static const uptr kAppMemMsk     = 0x0f0000000000ull;
-  static const uptr kAppMemXor     = 0x002100000000ull;
+  static const uptr kShadowMsk = 0x0f0000000000ull;
+  static const uptr kShadowXor = 0x002100000000ull;
+  static const uptr kShadowAdd = 0x000000000000ull;
   static const uptr kVdsoBeg       = 0x3c0000000000000ull;
   static const uptr kMidAppMemBeg = 0;
   static const uptr kMidAppMemEnd = 0;
@@ -291,8 +298,9 @@ struct MappingPPC64_46 {
   static const uptr kLoAppMemEnd   = 0x010000000000ull;
   static const uptr kHiAppMemBeg   = 0x3e8000000000ull;
   static const uptr kHiAppMemEnd   = 0x400000000000ull; // 46 bits
-  static const uptr kAppMemMsk     = 0x3c0000000000ull;
-  static const uptr kAppMemXor     = 0x020000000000ull;
+  static const uptr kShadowMsk = 0x3c0000000000ull;
+  static const uptr kShadowXor = 0x020000000000ull;
+  static const uptr kShadowAdd = 0x000000000000ull;
   static const uptr kVdsoBeg       = 0x7800000000000000ull;
   static const uptr kMidAppMemBeg = 0;
   static const uptr kMidAppMemEnd = 0;
@@ -325,8 +333,9 @@ struct MappingPPC64_47 {
   static const uptr kLoAppMemEnd   = 0x010000000000ull;
   static const uptr kHiAppMemBeg   = 0x7e8000000000ull;
   static const uptr kHiAppMemEnd   = 0x800000000000ull; // 47 bits
-  static const uptr kAppMemMsk     = 0x7c0000000000ull;
-  static const uptr kAppMemXor     = 0x020000000000ull;
+  static const uptr kShadowMsk = 0x7c0000000000ull;
+  static const uptr kShadowXor = 0x020000000000ull;
+  static const uptr kShadowAdd = 0x000000000000ull;
   static const uptr kVdsoBeg       = 0x7800000000000000ull;
   static const uptr kMidAppMemBeg = 0;
   static const uptr kMidAppMemEnd = 0;
@@ -359,8 +368,9 @@ struct MappingS390x {
   static const uptr kLoAppMemEnd   = 0x0e0000000000ull;
   static const uptr kHiAppMemBeg   = 0xc00000004000ull;
   static const uptr kHiAppMemEnd   = 0xc00000004000ull;
-  static const uptr kAppMemMsk     = 0xb00000000000ull;
-  static const uptr kAppMemXor     = 0x100000000000ull;
+  static const uptr kShadowMsk = 0xb00000000000ull;
+  static const uptr kShadowXor = 0x100000000000ull;
+  static const uptr kShadowAdd = 0x000000000000ull;
   static const uptr kVdsoBeg       = 0xfffffffff000ull;
   static const uptr kMidAppMemBeg = 0;
   static const uptr kMidAppMemEnd = 0;
@@ -395,6 +405,9 @@ struct MappingGo48 {
   static const uptr kHeapMemBeg = 0;
   static const uptr kHeapMemEnd = 0;
   static const uptr kVdsoBeg = 0;
+  static const uptr kShadowMsk = 0;
+  static const uptr kShadowXor = 0;
+  static const uptr kShadowAdd = 0x200000000000ull;
 };
 
 /* Go on windows
@@ -403,17 +416,16 @@ struct MappingGo48 {
 00c0 0000 0000 - 00e0 0000 0000: heap
 00e0 0000 0000 - 0100 0000 0000: -
 0100 0000 0000 - 0500 0000 0000: shadow
-0500 0000 0000 - 0560 0000 0000: -
-0560 0000 0000 - 0760 0000 0000: traces
-0760 0000 0000 - 07d0 0000 0000: metainfo (memory blocks and sync objects)
+0500 0000 0000 - 0700 0000 0000: traces
+0700 0000 0000 - 0770 0000 0000: metainfo (memory blocks and sync objects)
 07d0 0000 0000 - 8000 0000 0000: -
 */
 
 struct MappingGoWindows {
-  static const uptr kMetaShadowBeg = 0x076000000000ull;
-  static const uptr kMetaShadowEnd = 0x07d000000000ull;
-  static const uptr kTraceMemBeg   = 0x056000000000ull;
-  static const uptr kTraceMemEnd   = 0x076000000000ull;
+  static const uptr kMetaShadowBeg = 0x070000000000ull;
+  static const uptr kMetaShadowEnd = 0x077000000000ull;
+  static const uptr kTraceMemBeg = 0x050000000000ull;
+  static const uptr kTraceMemEnd = 0x070000000000ull;
   static const uptr kShadowBeg     = 0x010000000000ull;
   static const uptr kShadowEnd     = 0x050000000000ull;
   static const uptr kLoAppMemBeg = 0x000000001000ull;
@@ -425,6 +437,9 @@ struct MappingGoWindows {
   static const uptr kHeapMemBeg = 0;
   static const uptr kHeapMemEnd = 0;
   static const uptr kVdsoBeg = 0;
+  static const uptr kShadowMsk = 0;
+  static const uptr kShadowXor = 0;
+  static const uptr kShadowAdd = 0x010000000000ull;
 };
 
 /* Go on linux/powerpc64 (46-bit VMA)
@@ -456,6 +471,9 @@ struct MappingGoPPC64_46 {
   static const uptr kHeapMemBeg = 0;
   static const uptr kHeapMemEnd = 0;
   static const uptr kVdsoBeg = 0;
+  static const uptr kShadowMsk = 0;
+  static const uptr kShadowXor = 0;
+  static const uptr kShadowAdd = 0x200000000000ull;
 };
 
 /* Go on linux/powerpc64 (47-bit VMA)
@@ -487,6 +505,9 @@ struct MappingGoPPC64_47 {
   static const uptr kHeapMemBeg = 0;
   static const uptr kHeapMemEnd = 0;
   static const uptr kVdsoBeg = 0;
+  static const uptr kShadowMsk = 0;
+  static const uptr kShadowXor = 0;
+  static const uptr kShadowAdd = 0x200000000000ull;
 };
 
 /* Go on linux/aarch64 (48-bit VMA) and darwin/aarch64 (47-bit VMA)
@@ -517,6 +538,9 @@ struct MappingGoAarch64 {
   static const uptr kHeapMemBeg = 0;
   static const uptr kHeapMemEnd = 0;
   static const uptr kVdsoBeg = 0;
+  static const uptr kShadowMsk = 0;
+  static const uptr kShadowXor = 0;
+  static const uptr kShadowAdd = 0x200000000000ull;
 };
 
 /*
@@ -548,6 +572,9 @@ struct MappingGoMips64_47 {
   static const uptr kHeapMemBeg = 0;
   static const uptr kHeapMemEnd = 0;
   static const uptr kVdsoBeg = 0;
+  static const uptr kShadowMsk = 0;
+  static const uptr kShadowXor = 0;
+  static const uptr kShadowAdd = 0x200000000000ull;
 };
 
 /*
@@ -576,6 +603,9 @@ struct MappingGoS390x {
   static const uptr kHeapMemBeg = 0;
   static const uptr kHeapMemEnd = 0;
   static const uptr kVdsoBeg = 0;
+  static const uptr kShadowMsk = 0;
+  static const uptr kShadowXor = 0;
+  static const uptr kShadowAdd = 0x400000000000ull;
 };
 
 #if defined(__x86_64__)
@@ -862,17 +892,10 @@ struct MemToShadowImpl {
   template <typename Mapping>
   static uptr Apply(uptr x) {
     DCHECK(IsAppMemImpl::Apply<Mapping>(x));
-#if !SANITIZER_GO
-    return (((x) & ~(Mapping::kAppMemMsk | (kShadowCell - 1))) ^
-            Mapping::kAppMemXor) *
-           kShadowCnt;
-#else
-# ifndef SANITIZER_WINDOWS
-    return ((x & ~(kShadowCell - 1)) * kShadowCnt) | Mapping::kShadowBeg;
-# else
-    return ((x & ~(kShadowCell - 1)) * kShadowCnt) + Mapping::kShadowBeg;
-# endif
-#endif
+    return (((x) & ~(Mapping::kShadowMsk | (kShadowCell - 1))) ^
+            Mapping::kShadowXor) *
+               kShadowCnt +
+           Mapping::kShadowAdd;
   }
 };
 
@@ -885,18 +908,9 @@ struct MemToMetaImpl {
   template <typename Mapping>
   static u32 *Apply(uptr x) {
     DCHECK(IsAppMemImpl::Apply<Mapping>(x));
-#if !SANITIZER_GO
-  return (u32*)(((((x) & ~(Mapping::kAppMemMsk | (kMetaShadowCell - 1)))) /
-      kMetaShadowCell * kMetaShadowSize) | Mapping::kMetaShadowBeg);
-#else
-# ifndef SANITIZER_WINDOWS
-  return (u32*)(((x & ~(kMetaShadowCell - 1)) / \
-      kMetaShadowCell * kMetaShadowSize) | Mapping::kMetaShadowBeg);
-# else
-  return (u32*)(((x & ~(kMetaShadowCell - 1)) / \
-      kMetaShadowCell * kMetaShadowSize) + Mapping::kMetaShadowBeg);
-# endif
-#endif
+    return (u32 *)(((((x) & ~(Mapping::kShadowMsk | (kMetaShadowCell - 1)))) /
+                    kMetaShadowCell * kMetaShadowSize) |
+                   Mapping::kMetaShadowBeg);
   }
 };
 
@@ -907,31 +921,22 @@ struct ShadowToMemImpl {
   template <typename Mapping>
   static uptr Apply(uptr sp) {
     DCHECK(IsShadowMemImpl::Apply<Mapping>(sp));
-#if !SANITIZER_GO
   // The shadow mapping is non-linear and we've lost some bits, so we don't have
   // an easy way to restore the original app address. But the mapping is a
   // bijection, so we try to restore the address as belonging to low/mid/high
   // range consecutively and see if shadow->app->shadow mapping gives us the
   // same address.
-  uptr p = (sp / kShadowCnt) ^ Mapping::kAppMemXor;
-  if (p >= Mapping::kLoAppMemBeg && p < Mapping::kLoAppMemEnd &&
-      MemToShadowImpl::Apply<Mapping>(p) == sp)
-    return p;
-  if (Mapping::kMidAppMemBeg) {
-    p = ((sp / kShadowCnt) ^ Mapping::kAppMemXor) +
-        (Mapping::kMidAppMemBeg & Mapping::kAppMemMsk);
-    if (p >= Mapping::kMidAppMemBeg && p < Mapping::kMidAppMemEnd &&
+    uptr p = ((sp - Mapping::kShadowAdd) / kShadowCnt) ^ Mapping::kShadowXor;
+    if (p >= Mapping::kLoAppMemBeg && p < Mapping::kLoAppMemEnd &&
         MemToShadowImpl::Apply<Mapping>(p) == sp)
       return p;
-  }
-  return ((sp / kShadowCnt) ^ Mapping::kAppMemXor) | Mapping::kAppMemMsk;
-#else  // #if !SANITIZER_GO
-# ifndef SANITIZER_WINDOWS
-  return (sp & ~Mapping::kShadowBeg) / kShadowCnt;
-# else
-  return (sp - Mapping::kShadowBeg) / kShadowCnt;
-# endif // SANITIZER_WINDOWS
-#endif
+    if (Mapping::kMidAppMemBeg) {
+      uptr p_mid = p + (Mapping::kMidAppMemBeg & Mapping::kShadowMsk);
+      if (p_mid >= Mapping::kMidAppMemBeg && p_mid < Mapping::kMidAppMemEnd &&
+          MemToShadowImpl::Apply<Mapping>(p_mid) == sp)
+        return p_mid;
+    }
+    return p | Mapping::kShadowMsk;
   }
 };
 
