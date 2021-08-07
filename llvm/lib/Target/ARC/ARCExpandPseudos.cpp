@@ -35,8 +35,9 @@ public:
   StringRef getPassName() const override { return "ARC Expand Pseudos"; }
 
 private:
-  void ExpandStore(MachineFunction &, MachineBasicBlock::iterator);
-  void ExpandCTLZ(MachineFunction &, MachineBasicBlock::iterator);
+  void expandStore(MachineFunction &, MachineBasicBlock::iterator);
+  void expandCTLZ(MachineFunction &, MachineBasicBlock::iterator);
+  void expandCTTZ(MachineFunction &, MachineBasicBlock::iterator);
 
   const ARCInstrInfo *TII;
 };
@@ -58,7 +59,7 @@ static unsigned getMappedOp(unsigned PseudoOp) {
   }
 }
 
-void ARCExpandPseudos::ExpandStore(MachineFunction &MF,
+void ARCExpandPseudos::expandStore(MachineFunction &MF,
                                    MachineBasicBlock::iterator SII) {
   MachineInstr &SI = *SII;
   Register AddrReg = MF.getRegInfo().createVirtualRegister(&ARC::GPR32RegClass);
@@ -75,7 +76,7 @@ void ARCExpandPseudos::ExpandStore(MachineFunction &MF,
   SI.eraseFromParent();
 }
 
-void ARCExpandPseudos::ExpandCTLZ(MachineFunction &MF,
+void ARCExpandPseudos::expandCTLZ(MachineFunction &MF,
                                   MachineBasicBlock::iterator MII) {
   // Expand:
   //	%R2<def> = CTLZ %R0, %STATUS<imp-def>
@@ -104,6 +105,29 @@ void ARCExpandPseudos::ExpandCTLZ(MachineFunction &MF,
   MI.eraseFromParent();
 }
 
+void ARCExpandPseudos::expandCTTZ(MachineFunction &MF,
+                                  MachineBasicBlock::iterator MII) {
+  // Expand:
+  //	%R0<def> = CTTZ %R0<kill>, %STATUS<imp-def>
+  // To:
+  //	%R0<def> = FFS_f_rr %R0<kill>, %STATUS<imp-def>
+  //	%R0<def,tied1> = MOVcc_ru6 %R0<tied0>, 32, pred:1, %STATUS<imp-use>
+  MachineInstr &MI = *MII;
+  const MachineOperand &Dest = MI.getOperand(0);
+  const MachineOperand &Src = MI.getOperand(1);
+  Register R = MF.getRegInfo().createVirtualRegister(&ARC::GPR32RegClass);
+
+  BuildMI(*MI.getParent(), MI, MI.getDebugLoc(), TII->get(ARC::FFS_f_rr), R)
+      .add(Src);
+  BuildMI(*MI.getParent(), MI, MI.getDebugLoc(), TII->get(ARC::MOV_cc_ru6))
+      .add(Dest)
+      .addImm(32)
+      .addImm(ARCCC::EQ)
+      .addReg(R);
+
+  MI.eraseFromParent();
+}
+
 bool ARCExpandPseudos::runOnMachineFunction(MachineFunction &MF) {
   const ARCSubtarget *STI = &MF.getSubtarget<ARCSubtarget>();
   TII = STI->getInstrInfo();
@@ -116,11 +140,15 @@ bool ARCExpandPseudos::runOnMachineFunction(MachineFunction &MF) {
       case ARC::ST_FAR:
       case ARC::STH_FAR:
       case ARC::STB_FAR:
-        ExpandStore(MF, MBBI);
+        expandStore(MF, MBBI);
         Expanded = true;
         break;
       case ARC::CTLZ:
-        ExpandCTLZ(MF, MBBI);
+        expandCTLZ(MF, MBBI);
+        Expanded = true;
+        break;
+      case ARC::CTTZ:
+        expandCTTZ(MF, MBBI);
         Expanded = true;
         break;
       default:
