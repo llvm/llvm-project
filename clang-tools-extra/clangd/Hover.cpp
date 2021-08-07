@@ -731,7 +731,7 @@ llvm::Optional<HoverInfo> getHoverContents(const Attr *A, ParsedAST &AST) {
     llvm::raw_string_ostream OS(HI.Definition);
     A->printPretty(OS, AST.getASTContext().getPrintingPolicy());
   }
-  // FIXME: attributes have documentation, can we get at that?
+  HI.Documentation = Attr::getDocumentation(A->getKind()).str();
   return HI;
 }
 
