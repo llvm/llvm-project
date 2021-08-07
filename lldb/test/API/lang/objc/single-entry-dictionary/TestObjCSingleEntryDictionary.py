@@ -21,9 +21,27 @@ class ObjCSingleEntryDictionaryTestCase(TestBase):
         # Find the line number to break inside main().
         self.line = line_number('main.m', '// break here')
 
+    @skipUnlessDarwin
     @expectedFailureAll(oslist=['watchos'], bugnumber="rdar://problem/34642736") # bug in NSDictionary formatting on watchos
     def test_single_entry_dict(self):
         self.build()
+        self.run_tests()
+
+    @skipUnlessDarwin
+    @expectedFailureAll(oslist=['watchos'], bugnumber="rdar://problem/34642736") # bug in NSDictionary formatting on watchos
+    def test_single_entry_dict_no_const(self):
+        disable_constant_classes = {
+            'CC':
+            'xcrun clang',  # FIXME: Remove when flags are available upstream.
+            'CFLAGS_EXTRAS':
+            '-fno-constant-nsnumber-literals ' +
+            '-fno-constant-nsarray-literals ' +
+            '-fno-constant-nsdictionary-literals'
+        }
+        self.build(dictionary=disable_constant_classes)
+        self.run_tests()
+
+    def run_tests(self):
         exe = self.getBuildArtifact("a.out")
         self.runCmd("file " + exe, CURRENT_EXECUTABLE_SET)
 
