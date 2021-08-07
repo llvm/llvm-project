@@ -704,104 +704,99 @@ void ForEachMapping() {
 }
 
 enum MappingType {
-  MAPPING_LO_APP_BEG,
-  MAPPING_LO_APP_END,
-  MAPPING_HI_APP_BEG,
-  MAPPING_HI_APP_END,
-  MAPPING_MID_APP_BEG,
-  MAPPING_MID_APP_END,
-  MAPPING_HEAP_BEG,
-  MAPPING_HEAP_END,
-  MAPPING_SHADOW_BEG,
-  MAPPING_SHADOW_END,
-  MAPPING_META_SHADOW_BEG,
-  MAPPING_META_SHADOW_END,
-  MAPPING_TRACE_BEG,
-  MAPPING_TRACE_END,
-  MAPPING_VDSO_BEG,
+  kLoAppMemBeg,
+  kLoAppMemEnd,
+  kHiAppMemBeg,
+  kHiAppMemEnd,
+  kMidAppMemBeg,
+  kMidAppMemEnd,
+  kHeapMemBeg,
+  kHeapMemEnd,
+  kShadowBeg,
+  kShadowEnd,
+  kMetaShadowBeg,
+  kMetaShadowEnd,
+  kTraceMemBeg,
+  kTraceMemEnd,
+  kVdsoBeg,
 };
 
 struct MappingField {
   template <typename Mapping>
   static uptr Apply(MappingType type) {
     switch (type) {
-    case MAPPING_LO_APP_BEG: return Mapping::kLoAppMemBeg;
-    case MAPPING_LO_APP_END: return Mapping::kLoAppMemEnd;
-    case MAPPING_MID_APP_BEG: return Mapping::kMidAppMemBeg;
-    case MAPPING_MID_APP_END: return Mapping::kMidAppMemEnd;
-    case MAPPING_HI_APP_BEG: return Mapping::kHiAppMemBeg;
-    case MAPPING_HI_APP_END: return Mapping::kHiAppMemEnd;
-    case MAPPING_HEAP_BEG: return Mapping::kHeapMemBeg;
-    case MAPPING_HEAP_END: return Mapping::kHeapMemEnd;
-    case MAPPING_VDSO_BEG: return Mapping::kVdsoBeg;
-    case MAPPING_SHADOW_BEG: return Mapping::kShadowBeg;
-    case MAPPING_SHADOW_END: return Mapping::kShadowEnd;
-    case MAPPING_META_SHADOW_BEG: return Mapping::kMetaShadowBeg;
-    case MAPPING_META_SHADOW_END: return Mapping::kMetaShadowEnd;
-    case MAPPING_TRACE_BEG: return Mapping::kTraceMemBeg;
-    case MAPPING_TRACE_END: return Mapping::kTraceMemEnd;
+      case kLoAppMemBeg:
+        return Mapping::kLoAppMemBeg;
+      case kLoAppMemEnd:
+        return Mapping::kLoAppMemEnd;
+      case kMidAppMemBeg:
+        return Mapping::kMidAppMemBeg;
+      case kMidAppMemEnd:
+        return Mapping::kMidAppMemEnd;
+      case kHiAppMemBeg:
+        return Mapping::kHiAppMemBeg;
+      case kHiAppMemEnd:
+        return Mapping::kHiAppMemEnd;
+      case kHeapMemBeg:
+        return Mapping::kHeapMemBeg;
+      case kHeapMemEnd:
+        return Mapping::kHeapMemEnd;
+      case kVdsoBeg:
+        return Mapping::kVdsoBeg;
+      case kShadowBeg:
+        return Mapping::kShadowBeg;
+      case kShadowEnd:
+        return Mapping::kShadowEnd;
+      case kMetaShadowBeg:
+        return Mapping::kMetaShadowBeg;
+      case kMetaShadowEnd:
+        return Mapping::kMetaShadowEnd;
+      case kTraceMemBeg:
+        return Mapping::kTraceMemBeg;
+      case kTraceMemEnd:
+        return Mapping::kTraceMemEnd;
     }
     Die();
   }
 };
 
 ALWAYS_INLINE
-uptr LoAppMemBeg(void) {
-  return SelectMapping<MappingField>(MAPPING_LO_APP_BEG);
-}
+uptr LoAppMemBeg(void) { return SelectMapping<MappingField>(kLoAppMemBeg); }
 ALWAYS_INLINE
-uptr LoAppMemEnd(void) {
-  return SelectMapping<MappingField>(MAPPING_LO_APP_END);
-}
+uptr LoAppMemEnd(void) { return SelectMapping<MappingField>(kLoAppMemEnd); }
 
 ALWAYS_INLINE
-uptr MidAppMemBeg(void) {
-  return SelectMapping<MappingField>(MAPPING_MID_APP_BEG);
-}
+uptr MidAppMemBeg(void) { return SelectMapping<MappingField>(kMidAppMemBeg); }
 ALWAYS_INLINE
-uptr MidAppMemEnd(void) {
-  return SelectMapping<MappingField>(MAPPING_MID_APP_END);
-}
+uptr MidAppMemEnd(void) { return SelectMapping<MappingField>(kMidAppMemEnd); }
 
 ALWAYS_INLINE
-uptr HeapMemBeg(void) { return SelectMapping<MappingField>(MAPPING_HEAP_BEG); }
+uptr HeapMemBeg(void) { return SelectMapping<MappingField>(kHeapMemBeg); }
 ALWAYS_INLINE
-uptr HeapMemEnd(void) { return SelectMapping<MappingField>(MAPPING_HEAP_END); }
+uptr HeapMemEnd(void) { return SelectMapping<MappingField>(kHeapMemEnd); }
 
 ALWAYS_INLINE
-uptr HiAppMemBeg(void) {
-  return SelectMapping<MappingField>(MAPPING_HI_APP_BEG);
-}
+uptr HiAppMemBeg(void) { return SelectMapping<MappingField>(kHiAppMemBeg); }
 ALWAYS_INLINE
-uptr HiAppMemEnd(void) {
-  return SelectMapping<MappingField>(MAPPING_HI_APP_END);
-}
+uptr HiAppMemEnd(void) { return SelectMapping<MappingField>(kHiAppMemEnd); }
 
 ALWAYS_INLINE
-uptr VdsoBeg(void) { return SelectMapping<MappingField>(MAPPING_VDSO_BEG); }
+uptr VdsoBeg(void) { return SelectMapping<MappingField>(kVdsoBeg); }
 
 ALWAYS_INLINE
-uptr ShadowBeg(void) { return SelectMapping<MappingField>(MAPPING_SHADOW_BEG); }
+uptr ShadowBeg(void) { return SelectMapping<MappingField>(kShadowBeg); }
 ALWAYS_INLINE
-uptr ShadowEnd(void) { return SelectMapping<MappingField>(MAPPING_SHADOW_END); }
+uptr ShadowEnd(void) { return SelectMapping<MappingField>(kShadowEnd); }
 
 ALWAYS_INLINE
-uptr MetaShadowBeg(void) {
-  return SelectMapping<MappingField>(MAPPING_META_SHADOW_BEG);
-}
+uptr MetaShadowBeg(void) { return SelectMapping<MappingField>(kMetaShadowBeg); }
 ALWAYS_INLINE
-uptr MetaShadowEnd(void) {
-  return SelectMapping<MappingField>(MAPPING_META_SHADOW_END);
-}
+uptr MetaShadowEnd(void) { return SelectMapping<MappingField>(kMetaShadowEnd); }
 
 ALWAYS_INLINE
-uptr TraceMemBeg(void) {
-  return SelectMapping<MappingField>(MAPPING_TRACE_BEG);
-}
+uptr TraceMemBeg(void) { return SelectMapping<MappingField>(kTraceMemBeg); }
 ALWAYS_INLINE
-uptr TraceMemEnd(void) {
-  return SelectMapping<MappingField>(MAPPING_TRACE_END);
-}
+uptr TraceMemEnd(void) { return SelectMapping<MappingField>(kTraceMemEnd); }
 
 struct IsAppMemImpl {
   template <typename Mapping>
