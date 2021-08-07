@@ -84,8 +84,14 @@ enum NodeType : unsigned {
   FMV_X_ANYEXTH,
   FMV_W_X_RV64,
   FMV_X_ANYEXTW_RV64,
+  // FP to XLen int conversions. Corresponds to fcvt.l(u).s/d/h on RV64 and
+  // fcvt.w(u).s/d/h on RV32. Unlike FP_TO_S/UINT these saturate out of
+  // range inputs. These are used for FP_TO_S/UINT_SAT lowering.
+  FCVT_X_RTZ,
+  FCVT_XU_RTZ,
   // FP to 32 bit int conversions for RV64. These are used to keep track of the
-  // result being sign extended to 64 bit.
+  // result being sign extended to 64 bit. These saturate out of range inputs.
+  // Used for FP_TO_S/UINT and FP_TO_S/UINT_SAT lowering.
   FCVT_W_RTZ_RV64,
   FCVT_WU_RTZ_RV64,
   // READ_CYCLE_WIDE - A read of the 64-bit cycle CSR on a 32-bit target
