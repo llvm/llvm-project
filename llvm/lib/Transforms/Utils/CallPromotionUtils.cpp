@@ -424,6 +424,21 @@ bool llvm::isLegalToPromote(const CallBase &CB, Function *Callee,
         *FailureReason = "Argument type mismatch";
       return false;
     }
+    // Make sure that the callee and call agree on byval/inalloca. The types do
+    // not have to match.
+
+    if (Callee->hasParamAttribute(I, Attribute::ByVal) !=
+        CB.getAttributes().hasParamAttr(I, Attribute::ByVal)) {
+      if (FailureReason)
+        *FailureReason = "byval mismatch";
+      return false;
+    }
+    if (Callee->hasParamAttribute(I, Attribute::InAlloca) !=
+        CB.getAttributes().hasParamAttr(I, Attribute::InAlloca)) {
+      if (FailureReason)
+        *FailureReason = "inalloca mismatch";
+      return false;
+    }
   }
   for (; I < NumArgs; I++) {
     // Vararg functions can have more arguments than parameters.
@@ -488,10 +503,11 @@ CallBase &llvm::promoteCall(CallBase &CB, Function *Callee,
       AttrBuilder ArgAttrs(CallerPAL.getParamAttrs(ArgNo));
       ArgAttrs.remove(AttributeFuncs::typeIncompatible(FormalTy));
 
-      // If byval is used, this must be a pointer type, and the byval type must
-      // match the element type. Update it if present.
+      // We may have a different byval/inalloca type.
       if (ArgAttrs.getByValType())
         ArgAttrs.addByValAttr(Callee->getParamByValType(ArgNo));
+      if (ArgAttrs.getInAllocaType())
+        ArgAttrs.addInAllocaAttr(Callee->getParamInAllocaType(ArgNo));
 
       NewArgAttrs.push_back(AttributeSet::get(Ctx, ArgAttrs));
       AttributeChanged = true;
