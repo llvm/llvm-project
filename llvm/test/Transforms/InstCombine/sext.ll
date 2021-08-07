@@ -306,8 +306,10 @@ define i32 @test18(i16 %x) {
 
 define i10 @test19(i10 %i) {
 ; CHECK-LABEL: @test19(
-; CHECK-NEXT:    [[D1:%.*]] = shl i10 [[I:%.*]], 9
-; CHECK-NEXT:    [[D:%.*]] = ashr exact i10 [[D1]], 9
+; CHECK-NEXT:    [[A:%.*]] = trunc i10 [[I:%.*]] to i3
+; CHECK-NEXT:    [[TMP1:%.*]] = and i3 [[A]], 1
+; CHECK-NEXT:    [[C:%.*]] = sub nsw i3 0, [[TMP1]]
+; CHECK-NEXT:    [[D:%.*]] = sext i3 [[C]] to i10
 ; CHECK-NEXT:    ret i10 [[D]]
 ;
   %a = trunc i10 %i to i3

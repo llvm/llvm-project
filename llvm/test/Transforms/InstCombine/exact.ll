@@ -147,8 +147,8 @@ define <2 x i1> @ashr_icmp2_vec(<2 x i64> %X) {
 ; Make sure we don't transform the ashr here into an sdiv
 define i1 @pr9998(i32 %V) {
 ; CHECK-LABEL: @pr9998(
-; CHECK-NEXT:    [[W_MASK:%.*]] = and i32 [[V:%.*]], 1
-; CHECK-NEXT:    [[Z:%.*]] = icmp ne i32 [[W_MASK]], 0
+; CHECK-NEXT:    [[TMP1:%.*]] = and i32 [[V:%.*]], 1
+; CHECK-NEXT:    [[Z:%.*]] = icmp ne i32 [[TMP1]], 0
 ; CHECK-NEXT:    ret i1 [[Z]]
 ;
   %W = shl i32 %V, 31
@@ -161,8 +161,8 @@ define i1 @pr9998(i32 %V) {
 ; FIXME: Vectors should fold the same way.
 define <2 x i1> @pr9998vec(<2 x i32> %V) {
 ; CHECK-LABEL: @pr9998vec(
-; CHECK-NEXT:    [[W:%.*]] = shl <2 x i32> [[V:%.*]], <i32 31, i32 31>
-; CHECK-NEXT:    [[X:%.*]] = ashr exact <2 x i32> [[W]], <i32 31, i32 31>
+; CHECK-NEXT:    [[TMP1:%.*]] = and <2 x i32> [[V:%.*]], <i32 1, i32 1>
+; CHECK-NEXT:    [[X:%.*]] = sub nsw <2 x i32> zeroinitializer, [[TMP1]]
 ; CHECK-NEXT:    [[Y:%.*]] = sext <2 x i32> [[X]] to <2 x i64>
 ; CHECK-NEXT:    [[Z:%.*]] = icmp ugt <2 x i64> [[Y]], <i64 7297771788697658747, i64 7297771788697658747>
 ; CHECK-NEXT:    ret <2 x i1> [[Z]]
