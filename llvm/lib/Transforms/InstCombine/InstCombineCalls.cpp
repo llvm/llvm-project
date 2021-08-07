@@ -2036,12 +2036,12 @@ Instruction *InstCombinerImpl::visitCallInst(CallInst &CI) {
   }
   case Intrinsic::vector_reduce_xor: {
     if (IID == Intrinsic::vector_reduce_xor) {
-      // Convert vector_reduce_xor(zext(<n x i1>)) to
-      // (ZExtOrTrunc(ctpop(bitcast <n x i1> to iN) & 1)).
-      // Convert vector_reduce_xor(sext(<n x i1>)) to
-      // -(ZExtOrTrunc(ctpop(bitcast <n x i1> to iN) & 1)).
-      // Convert vector_reduce_xor(<n x i1>) to
-      // ZExtOrTrunc(ctpop(bitcast <n x i1> to iN) & 1).
+      // Exclusive disjunction reduction over the vector with
+      // (potentially-extended) i1 element type is actually a
+      // (potentially-extended) parity check:
+      //   vector_reduce_xor(?ext(<n x i1>))
+      //     -->
+      //   ?ext(trunc(vector_reduce_and(<n x i1>) to i1))
       Value *Arg = II->getArgOperand(0);
       Value *Vect;
       if (match(Arg, m_ZExtOrSExtOrSelf(m_Value(Vect)))) {
@@ -2050,12 +2050,11 @@ Instruction *InstCombinerImpl::visitCallInst(CallInst &CI) {
             Value *V = Builder.CreateBitCast(
                 Vect, Builder.getIntNTy(FTy->getNumElements()));
             Value *Res = Builder.CreateUnaryIntrinsic(Intrinsic::ctpop, V);
-            Res = Builder.CreateAnd(Res, ConstantInt::get(Res->getType(), 1));
-            if (Res->getType() != II->getType())
-              Res = Builder.CreateZExtOrTrunc(Res, II->getType());
-            if (Arg != Vect &&
-                cast<Instruction>(Arg)->getOpcode() == Instruction::SExt)
-              Res = Builder.CreateNeg(Res);
+            Res = Builder.CreateTrunc(Res,
+                                      IntegerType::get(Res->getContext(), 1));
+            if (Arg != Vect)
+              Res = Builder.CreateCast(cast<CastInst>(Arg)->getOpcode(), Res,
+                                       II->getType());
             return replaceInstUsesWith(CI, Res);
           }
       }
