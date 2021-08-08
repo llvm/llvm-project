@@ -11,7 +11,7 @@ declare { i63, i1 } @llvm.smul.with.overflow.i63(i63, i63)
 define fastcc i1 @test1(i32 %v1, i32 %v2) nounwind {
 ; CHECK-LABEL: test1:
 ; CHECK:       ; %bb.0: ; %entry
-; CHECK-NEXT:    sub.l #28, %sp
+; CHECK-NEXT:    suba.l #28, %sp
 ; CHECK-NEXT:    movem.l %d2-%d3, (20,%sp) ; 12-byte Folded Spill
 ; CHECK-NEXT:    move.l %d1, (12,%sp)
 ; CHECK-NEXT:    move.l #31, %d2
@@ -20,7 +20,7 @@ define fastcc i1 @test1(i32 %v1, i32 %v2) nounwind {
 ; CHECK-NEXT:    move.l %d0, (4,%sp)
 ; CHECK-NEXT:    asr.l %d2, %d0
 ; CHECK-NEXT:    move.l %d0, (%sp)
-; CHECK-NEXT:    jsr __muldi3
+; CHECK-NEXT:    jsr __muldi3@PLT
 ; CHECK-NEXT:    move.l %d1, %d3
 ; CHECK-NEXT:    asr.l %d2, %d3
 ; CHECK-NEXT:    sub.l %d3, %d0
@@ -30,18 +30,18 @@ define fastcc i1 @test1(i32 %v1, i32 %v2) nounwind {
 ; CHECK-NEXT:  ; %bb.2: ; %overflow
 ; CHECK-NEXT:    lea (no,%pc), %a0
 ; CHECK-NEXT:    move.l %a0, (%sp)
-; CHECK-NEXT:    jsr printf
+; CHECK-NEXT:    jsr printf@PLT
 ; CHECK-NEXT:    move.b #0, %d0
 ; CHECK-NEXT:    bra .LBB0_3
 ; CHECK-NEXT:  .LBB0_1: ; %normal
 ; CHECK-NEXT:    move.l %d1, (4,%sp)
 ; CHECK-NEXT:    lea (ok,%pc), %a0
 ; CHECK-NEXT:    move.l %a0, (%sp)
-; CHECK-NEXT:    jsr printf
+; CHECK-NEXT:    jsr printf@PLT
 ; CHECK-NEXT:    move.b #1, %d0
 ; CHECK-NEXT:  .LBB0_3: ; %overflow
 ; CHECK-NEXT:    movem.l (20,%sp), %d2-%d3 ; 12-byte Folded Reload
-; CHECK-NEXT:    add.l #28, %sp
+; CHECK-NEXT:    adda.l #28, %sp
 ; CHECK-NEXT:    rts
 entry:
   %t = call {i32, i1} @llvm.smul.with.overflow.i32(i32 %v1, i32 %v2)
@@ -61,7 +61,7 @@ overflow:
 define fastcc i1 @test2(i32 %v1, i32 %v2) nounwind {
 ; CHECK-LABEL: test2:
 ; CHECK:       ; %bb.0: ; %entry
-; CHECK-NEXT:    sub.l #28, %sp
+; CHECK-NEXT:    suba.l #28, %sp
 ; CHECK-NEXT:    movem.l %d2-%d3, (20,%sp) ; 12-byte Folded Spill
 ; CHECK-NEXT:    move.l %d1, (12,%sp)
 ; CHECK-NEXT:    move.l #31, %d2
@@ -70,7 +70,7 @@ define fastcc i1 @test2(i32 %v1, i32 %v2) nounwind {
 ; CHECK-NEXT:    move.l %d0, (4,%sp)
 ; CHECK-NEXT:    asr.l %d2, %d0
 ; CHECK-NEXT:    move.l %d0, (%sp)
-; CHECK-NEXT:    jsr __muldi3
+; CHECK-NEXT:    jsr __muldi3@PLT
 ; CHECK-NEXT:    move.l %d1, %d3
 ; CHECK-NEXT:    asr.l %d2, %d3
 ; CHECK-NEXT:    sub.l %d3, %d0
@@ -80,18 +80,18 @@ define fastcc i1 @test2(i32 %v1, i32 %v2) nounwind {
 ; CHECK-NEXT:  ; %bb.1: ; %overflow
 ; CHECK-NEXT:    lea (no,%pc), %a0
 ; CHECK-NEXT:    move.l %a0, (%sp)
-; CHECK-NEXT:    jsr printf
+; CHECK-NEXT:    jsr printf@PLT
 ; CHECK-NEXT:    move.b #0, %d0
 ; CHECK-NEXT:    bra .LBB1_2
 ; CHECK-NEXT:  .LBB1_3: ; %normal
 ; CHECK-NEXT:    move.l %d1, (4,%sp)
 ; CHECK-NEXT:    lea (ok,%pc), %a0
 ; CHECK-NEXT:    move.l %a0, (%sp)
-; CHECK-NEXT:    jsr printf
+; CHECK-NEXT:    jsr printf@PLT
 ; CHECK-NEXT:    move.b #1, %d0
 ; CHECK-NEXT:  .LBB1_2: ; %overflow
 ; CHECK-NEXT:    movem.l (20,%sp), %d2-%d3 ; 12-byte Folded Reload
-; CHECK-NEXT:    add.l #28, %sp
+; CHECK-NEXT:    adda.l #28, %sp
 ; CHECK-NEXT:    rts
 entry:
   %t = call {i32, i1} @llvm.smul.with.overflow.i32(i32 %v1, i32 %v2)

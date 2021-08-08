@@ -38,7 +38,7 @@ entry:
 define fastcc i64 @t3(i64 %x) nounwind readnone ssp {
 ; CHECK-LABEL: t3:
 ; CHECK:       ; %bb.0: ; %entry
-; CHECK-NEXT:    sub.l #4, %sp
+; CHECK-NEXT:    suba.l #4, %sp
 ; CHECK-NEXT:    movem.l %d2, (0,%sp) ; 8-byte Folded Spill
 ; CHECK-NEXT:    move.l #0, %d2
 ; CHECK-NEXT:    sub.l #18, %d1
@@ -50,7 +50,7 @@ define fastcc i64 @t3(i64 %x) nounwind readnone ssp {
 ; CHECK-NEXT:    lsl.l #6, %d1
 ; CHECK-NEXT:    move.l %d2, %d0
 ; CHECK-NEXT:    movem.l (0,%sp), %d2 ; 8-byte Folded Reload
-; CHECK-NEXT:    add.l #4, %sp
+; CHECK-NEXT:    adda.l #4, %sp
 ; CHECK-NEXT:    rts
 entry:
   %0 = icmp ult i64 %x, 18                        ; <i1> [#uses=1]

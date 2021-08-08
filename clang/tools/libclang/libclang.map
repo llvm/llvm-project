@@ -1,10 +1,8 @@
-/* If you add a symbol to this file, make sure to add it with the correct
- * version.  For example, if the LLVM main branch is LLVM 14.0.0, add new
- * symbols with the version LLVM_14.
- * On platforms where versions scripts are not used, this file will be used to
- * generate a list of exports for libclang.so
- */
-
+# If you add a symbol to this file, make sure to add it with the correct
+# version.  For example, if the LLVM main branch is LLVM 14.0.0, add new
+# symbols with the version LLVM_14.
+# On platforms where versions scripts are not used, this file will be used to
+# generate a list of exports for libclang.so
 
 LLVM_13 {
   global:
@@ -407,10 +405,9 @@ LLVM_13 {
   local: *;
 };
 
-/* Example of how to add a new symbol version entry.  If you do add a new symbol
- * version, please update the example to depend on the version you added.
- * LLVM_X {
- * global:
- *    clang_newsymbol;
- * };
- */
+# Example of how to add a new symbol version entry.  If you do add a new symbol
+# version, please update the example to depend on the version you added.
+# LLVM_X {
+# global:
+#   clang_newsymbol;
+# };

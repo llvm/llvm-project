@@ -357,7 +357,7 @@ void M68kFrameLowering::emitSPUpdate(MachineBasicBlock &MBB,
       if (Reg) {
         unsigned Opc = M68k::MOV32ri;
         BuildMI(MBB, MBBI, DL, TII.get(Opc), Reg).addImm(Offset);
-        Opc = IsSub ? M68k::SUB32rr : M68k::ADD32rr;
+        Opc = IsSub ? M68k::SUB32ar : M68k::ADD32ar;
         MachineInstr *MI = BuildMI(MBB, MBBI, DL, TII.get(Opc), StackPtr)
                                .addReg(StackPtr)
                                .addReg(Reg);
@@ -400,13 +400,13 @@ int M68kFrameLowering::mergeSPUpdates(MachineBasicBlock &MBB,
     return Offset;
   }
 
-  if (Opc == M68k::ADD32ri && PI->getOperand(0).getReg() == StackPtr) {
+  if (Opc == M68k::ADD32ai && PI->getOperand(0).getReg() == StackPtr) {
     assert(PI->getOperand(1).getReg() == StackPtr);
     Offset += PI->getOperand(2).getImm();
     MBB.erase(PI);
     if (!MergeWithPrevious)
       MBBI = NI;
-  } else if (Opc == M68k::SUB32ri && PI->getOperand(0).getReg() == StackPtr) {
+  } else if (Opc == M68k::SUB32ai && PI->getOperand(0).getReg() == StackPtr) {
     assert(PI->getOperand(1).getReg() == StackPtr);
     Offset -= PI->getOperand(2).getImm();
     MBB.erase(PI);
@@ -426,7 +426,7 @@ MachineInstrBuilder M68kFrameLowering::BuildStackAdjustment(
 
   bool IsSub = Offset < 0;
   uint64_t AbsOffset = IsSub ? -Offset : Offset;
-  unsigned Opc = IsSub ? M68k::SUB32ri : M68k::ADD32ri;
+  unsigned Opc = IsSub ? M68k::SUB32ai : M68k::ADD32ai;
 
   MachineInstrBuilder MI = BuildMI(MBB, MBBI, DL, TII.get(Opc), StackPtr)
                                .addReg(StackPtr)

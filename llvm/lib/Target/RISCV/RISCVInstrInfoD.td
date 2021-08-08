@@ -331,6 +331,10 @@ def : Pat<(f64 (fpimm0)), (FCVT_D_W (i32 X0))>;
 def : Pat<(i32 (fp_to_sint FPR64:$rs1)), (FCVT_W_D FPR64:$rs1, 0b001)>;
 def : Pat<(i32 (fp_to_uint FPR64:$rs1)), (FCVT_WU_D FPR64:$rs1, 0b001)>;
 
+// Saturating double->[u]int32.
+def : Pat<(i32 (riscv_fcvt_x_rtz FPR64:$rs1)), (FCVT_W_D $rs1, 0b001)>;
+def : Pat<(i32 (riscv_fcvt_xu_rtz FPR64:$rs1)), (FCVT_WU_D $rs1, 0b001)>;
+
 // float->int32 with current rounding mode.
 def : Pat<(i32 (lrint FPR64:$rs1)), (FCVT_W_D $rs1, 0b111)>;
 
@@ -360,6 +364,10 @@ def : Pat<(riscv_fcvt_wu_rtz_rv64 FPR64:$rs1), (FCVT_WU_D $rs1, 0b001)>;
 // [u]int32->fp
 def : Pat<(sint_to_fp (i64 (sexti32 (i64 GPR:$rs1)))), (FCVT_D_W $rs1)>;
 def : Pat<(uint_to_fp (i64 (zexti32 (i64 GPR:$rs1)))), (FCVT_D_WU $rs1)>;
+
+// Saturating double->[u]int64.
+def : Pat<(i64 (riscv_fcvt_x_rtz FPR64:$rs1)), (FCVT_L_D $rs1, 0b001)>;
+def : Pat<(i64 (riscv_fcvt_xu_rtz FPR64:$rs1)), (FCVT_LU_D $rs1, 0b001)>;
 
 // double->[u]int64. Round-to-zero must be used.
 def : Pat<(i64 (fp_to_sint FPR64:$rs1)), (FCVT_L_D FPR64:$rs1, 0b001)>;
