@@ -483,21 +483,6 @@ Expected<DWARFAddressRangesVector> DWARFDie::getAddressRanges() const {
   return DWARFAddressRangesVector();
 }
 
-void DWARFDie::collectChildrenAddressRanges(
-    DWARFAddressRangesVector &Ranges) const {
-  if (isNULL())
-    return;
-  if (isSubprogramDIE()) {
-    if (auto DIERangesOrError = getAddressRanges())
-      llvm::append_range(Ranges, DIERangesOrError.get());
-    else
-      llvm::consumeError(DIERangesOrError.takeError());
-  }
-
-  for (auto Child : children())
-    Child.collectChildrenAddressRanges(Ranges);
-}
-
 bool DWARFDie::addressRangeContainsAddress(const uint64_t Address) const {
   auto RangesOrError = getAddressRanges();
   if (!RangesOrError) {
