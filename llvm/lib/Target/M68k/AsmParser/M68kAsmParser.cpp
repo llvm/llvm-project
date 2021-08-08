@@ -153,12 +153,6 @@ public:
   bool isDReg() const;
   unsigned getReg() const override;
   void addRegOperands(MCInst &Inst, unsigned N) const;
-  void addARegOperands(MCInst &Inst, unsigned N) const {
-    addRegOperands(Inst, N);
-  }
-  void addDRegOperands(MCInst &Inst, unsigned N) const {
-    addRegOperands(Inst, N);
-  }
 
   static std::unique_ptr<M68kOperand> createMemOp(M68kMemOp MemOp, SMLoc Start,
                                                   SMLoc End);
