@@ -40,7 +40,7 @@ define fastcc void @test2_fast(i32* inreg %a) nounwind {
 define fastcc void @test3(i64* inreg %a) nounwind {
 ; CHECK-LABEL: test3:
 ; CHECK:       ; %bb.0:
-; CHECK-NEXT:    sub.l #4, %sp
+; CHECK-NEXT:    suba.l #4, %sp
 ; CHECK-NEXT:    movem.l %d2, (0,%sp) ; 8-byte Folded Spill
 ; CHECK-NEXT:    move.l (%a0), %d0
 ; CHECK-NEXT:    move.l #0, %d1
@@ -50,7 +50,7 @@ define fastcc void @test3(i64* inreg %a) nounwind {
 ; CHECK-NEXT:    move.l %d2, (4,%a0)
 ; CHECK-NEXT:    move.l %d1, (%a0)
 ; CHECK-NEXT:    movem.l (0,%sp), %d2 ; 8-byte Folded Reload
-; CHECK-NEXT:    add.l #4, %sp
+; CHECK-NEXT:    adda.l #4, %sp
 ; CHECK-NEXT:    rts
   %aa = load i64, i64* %a
   %b = add i64 %aa, 2147483648
@@ -61,7 +61,7 @@ define fastcc void @test3(i64* inreg %a) nounwind {
 define fastcc void @test4(i64* inreg %a) nounwind {
 ; CHECK-LABEL: test4:
 ; CHECK:       ; %bb.0:
-; CHECK-NEXT:    sub.l #4, %sp
+; CHECK-NEXT:    suba.l #4, %sp
 ; CHECK-NEXT:    movem.l %d2, (0,%sp) ; 8-byte Folded Spill
 ; CHECK-NEXT:    move.l (%a0), %d0
 ; CHECK-NEXT:    move.l #0, %d1
@@ -71,7 +71,7 @@ define fastcc void @test4(i64* inreg %a) nounwind {
 ; CHECK-NEXT:    move.l %d2, (4,%a0)
 ; CHECK-NEXT:    move.l %d1, (%a0)
 ; CHECK-NEXT:    movem.l (0,%sp), %d2 ; 8-byte Folded Reload
-; CHECK-NEXT:    add.l #4, %sp
+; CHECK-NEXT:    adda.l #4, %sp
 ; CHECK-NEXT:    rts
   %aa = load i64, i64* %a
   %b = add i64 %aa, 128
