@@ -502,6 +502,23 @@ static bool hasPrefix(StringRef SectionName, StringRef Prefix) {
   return SectionName.startswith(Prefix) || SectionName == Prefix.drop_back();
 }
 
+static bool allowSectionTypeMismatch(const Triple &TT, StringRef SectionName,
+                                     unsigned Type) {
+  if (TT.getArch() == Triple::x86_64) {
+    // x86-64 psABI names SHT_X86_64_UNWIND as the canonical type for .eh_frame,
+    // but GNU as emits SHT_PROGBITS .eh_frame for .cfi_* directives. Don't
+    // error for SHT_PROGBITS .eh_frame
+    return SectionName == ".eh_frame" && Type == ELF::SHT_PROGBITS;
+  }
+  if (TT.isMIPS()) {
+    // MIPS .debug_* sections should have SHT_MIPS_DWARF section type to
+    // distinguish among sections contain DWARF and ECOFF debug formats,
+    // but in assembly files these sections have SHT_PROGBITS type.
+    return hasPrefix(SectionName, ".debug_") && Type == ELF::SHT_PROGBITS;
+  }
+  return false;
+}
+
 bool ELFAsmParser::ParseSectionArguments(bool IsPush, SMLoc loc) {
   StringRef SectionName;
 
@@ -659,11 +676,9 @@ EndStmt:
       getContext().getELFSection(SectionName, Type, Flags, Size, GroupName,
                                  IsComdat, UniqueID, LinkedToSym);
   getStreamer().SwitchSection(Section, Subsection);
-  // x86-64 psABI names SHT_X86_64_UNWIND as the canonical type for .eh_frame,
-  // but GNU as emits SHT_PROGBITS .eh_frame for .cfi_* directives. Don't error
-  // for SHT_PROGBITS .eh_frame
   if (Section->getType() != Type &&
-      !(SectionName == ".eh_frame" && Type == ELF::SHT_PROGBITS))
+      !allowSectionTypeMismatch(getContext().getTargetTriple(), SectionName,
+                                Type))
     Error(loc, "changed section type for " + SectionName + ", expected: 0x" +
                    utohexstr(Section->getType()));
   // Check that flags are used consistently. However, the GNU assembler permits
