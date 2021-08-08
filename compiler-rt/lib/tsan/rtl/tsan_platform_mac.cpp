@@ -234,11 +234,11 @@ static void my_pthread_introspection_hook(unsigned int event, pthread_t thread,
 #endif
 
 void InitializePlatformEarly() {
-#if !SANITIZER_GO && !HAS_48_BIT_ADDRESS_SPACE
+#  if !SANITIZER_GO && SANITIZER_IOS
   uptr max_vm = GetMaxUserVirtualAddress() + 1;
-  if (max_vm != Mapping::kHiAppMemEnd) {
+  if (max_vm != HiAppMemEnd()) {
     Printf("ThreadSanitizer: unsupported vm address limit %p, expected %p.\n",
-           max_vm, Mapping::kHiAppMemEnd);
+           max_vm, HiAppMemEnd());
     Die();
   }
 #endif
