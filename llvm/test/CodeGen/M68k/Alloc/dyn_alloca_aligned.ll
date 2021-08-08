@@ -12,7 +12,7 @@ define i32 @A(i32 %Size) {
 ; CHECK-NEXT:    move.l %sp, %d0
 ; CHECK-NEXT:    and.l #-128, %d0
 ; CHECK-NEXT:    move.l %d0, %sp
-; CHECK-NEXT:    sub.l #128, %sp
+; CHECK-NEXT:    suba.l #128, %sp
 ; CHECK-NEXT:    move.l %sp, %a4
 ; CHECK-NEXT:    movem.l %a4, (116,%a4) ; 8-byte Folded Spill
 ; CHECK-NEXT:    move.l (8,%a6), %d1

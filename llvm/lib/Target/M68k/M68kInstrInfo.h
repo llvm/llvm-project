@@ -173,7 +173,7 @@ static inline unsigned IsCMP(unsigned Op) {
   case M68k::CMP8di:
   case M68k::CMP8dj:
   case M68k::CMP8dp:
-  case M68k::CMP16dd:
+  case M68k::CMP16dr:
   case M68k::CMP16df:
   case M68k::CMP16di:
   case M68k::CMP16dj:

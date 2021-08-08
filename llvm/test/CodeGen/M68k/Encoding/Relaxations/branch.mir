@@ -48,7 +48,7 @@ body: |
       MOV32bb 0, 0, implicit-def $ccr
       MOV32bb 0, 0, implicit-def $ccr
   bb.2:
-      $d0 = ADD32ri $d0, 0, implicit-def $ccr
+      $d0 = ADD32di $d0, 0, implicit-def $ccr
       RET 0, $d0
 
 ...
@@ -90,7 +90,7 @@ body: |
       MOV32bb 0, 0, implicit-def $ccr
       MOV32bb 0, 0, implicit-def $ccr
   bb.2:
-      $d0 = ADD32ri $d0, 0, implicit-def $ccr
+      $d0 = ADD32di $d0, 0, implicit-def $ccr
       RET 0, $d0
 
 ...
@@ -108,7 +108,7 @@ body: |
 
       BRA8 %bb.1
   bb.1:
-      $d0 = ADD32ri $d0, 0, implicit-def $ccr
+      $d0 = ADD32di $d0, 0, implicit-def $ccr
       RET 0, $d0
 
 ...
