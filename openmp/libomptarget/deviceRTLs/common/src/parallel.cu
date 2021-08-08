@@ -77,8 +77,7 @@ INLINE static uint16_t determineNumberOfThreads(uint16_t NumThreadsClause,
 
 // This routine is always called by the team master..
 EXTERN void __kmpc_kernel_prepare_parallel(void *WorkFn) {
-  PRINT0(LD_IO, "call to __kmpc_kernel_prepare_parallel\n");
-
+  PRINT0(LD_IO | LD_PAR, "call to __kmpc_kernel_prepare_parallel\n");
   omptarget_nvptx_workFn = WorkFn;
 
   // This routine is only called by the team master.  The team master is
@@ -227,7 +226,7 @@ EXTERN void __kmpc_kernel_end_parallel() {
 ////////////////////////////////////////////////////////////////////////////////
 
 EXTERN void __kmpc_serialized_parallel(kmp_Ident *loc, uint32_t global_tid) {
-  PRINT0(LD_IO, "call to __kmpc_serialized_parallel\n");
+  PRINT0(LD_IO | LD_PAR, "call to __kmpc_serialized_parallel\n");
 
   IncParallelLevel(/*ActiveParallel=*/false, __kmpc_impl_activemask());
 
@@ -285,7 +284,7 @@ EXTERN void __kmpc_serialized_parallel(kmp_Ident *loc, uint32_t global_tid) {
 
 EXTERN void __kmpc_end_serialized_parallel(kmp_Ident *loc,
                                            uint32_t global_tid) {
-  PRINT0(LD_IO, "call to __kmpc_end_serialized_parallel\n");
+  PRINT0(LD_IO | LD_PAR, "call to __kmpc_end_serialized_parallel\n");
 
   DecParallelLevel(/*ActiveParallel=*/false, __kmpc_impl_activemask());
 
@@ -358,6 +357,8 @@ NOINLINE EXTERN void __kmpc_parallel_51(kmp_Ident *ident, kmp_int32 global_tid,
                                         kmp_int32 num_threads, int proc_bind,
                                         void *fn, void *wrapper_fn, void **args,
                                         size_t nargs) {
+
+  PRINT0(LD_IO | LD_PAR, "call kmpc_parallel_51\n");
   // Handle the serialized case first, same for SPMD/non-SPMD except that in
   // SPMD mode we already incremented the parallel level counter, account for
   // that.

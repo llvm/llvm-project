@@ -75,6 +75,6 @@ enum : __kmpc_impl_lanemask_t {
 // A call to a function named printf currently hits some special case handling
 // for opencl, which translates to calls that do not presently exist for openmp
 // Therefore, for now, stub out printf while building this library.
-#define printf(...)
+EXTERN int printf(const char *, ...);
 
 #endif
