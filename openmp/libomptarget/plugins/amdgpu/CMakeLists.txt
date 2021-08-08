@@ -78,6 +78,15 @@ add_library(omptarget.rtl.amdgpu SHARED
 # When we build for debug, OPENMP_LIBDIR_SUFFIX get set to -debug
 install(TARGETS omptarget.rtl.amdgpu LIBRARY DESTINATION "lib${OPENMP_LIBDIR_SUFFIX}")
 
+if(CMAKE_SYSTEM_NAME MATCHES "FreeBSD")
+  # On FreeBSD, the 'environ' symbol is undefined at link time, but resolved by
+  # the dynamic linker at runtime. Therefore, allow the symbol to be undefined
+  # when creating a shared library.
+  set(LDFLAGS_UNDEFINED "-Wl,--allow-shlib-undefined")
+else()
+  set(LDFLAGS_UNDEFINED "-Wl,-z,defs")
+endif()
+
 set_property(TARGET omptarget.rtl.amdgpu PROPERTY INSTALL_RPATH "$ORIGIN")
 target_link_libraries(
   omptarget.rtl.amdgpu
@@ -88,7 +97,7 @@ target_link_libraries(
   ${LIBOMPTARGET_DEP_LIBELF_LIBRARIES}
   ${OPENMP_PTHREAD_LIB}
   "-Wl,--version-script=${CMAKE_CURRENT_SOURCE_DIR}/../exports"
-  "-Wl,-z,defs"
+  ${LDFLAGS_UNDEFINED}
   )
 
 if (LLVM_BINARY_DIR)
