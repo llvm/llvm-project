@@ -1212,9 +1212,9 @@ public:
     // used (those corresponding to elements [0:1] and [8:9] of the unlegalized
     // type). The other loads are unused.
     //
-    // We only scale the cost of loads since interleaved store groups aren't
-    // allowed to have gaps.
-    if (Opcode == Instruction::Load && VecTySize > VecTyLTSize) {
+    // TODO: Note that legalization can turn masked loads/stores into unmasked
+    // (legalized) loads/stores. This can be reflected in the cost.
+    if (VecTySize > VecTyLTSize) {
       // The number of loads of a legal type it will take to represent a load
       // of the unlegalized vector type.
       unsigned NumLegalInsts = divideCeil(VecTySize, VecTyLTSize);
@@ -1235,6 +1235,8 @@ public:
     }
 
     // Then plus the cost of interleave operation.
+    assert(Indices.size() <= Factor &&
+           "Interleaved memory op has too many members");
     if (Opcode == Instruction::Load) {
       // The interleave cost is similar to extract sub vectors' elements
       // from the wide vector, and insert them into sub vectors.
@@ -1244,44 +1246,49 @@ public:
       //      %v0 = shuffle %vec, undef, <0, 2, 4, 6>         ; Index 0
       // The cost is estimated as extract elements at 0, 2, 4, 6 from the
       // <8 x i32> vector and insert them into a <4 x i32> vector.
-
-      assert(Indices.size() <= Factor &&
-             "Interleaved memory op has too many members");
-
       for (unsigned Index : Indices) {
         assert(Index < Factor && "Invalid index for interleaved memory op");
 
         // Extract elements from loaded vector for each sub vector.
-        for (unsigned i = 0; i < NumSubElts; i++)
+        for (unsigned Elm = 0; Elm < NumSubElts; Elm++)
           Cost += thisT()->getVectorInstrCost(Instruction::ExtractElement, VT,
-                                              Index + i * Factor);
+                                              Index + Elm * Factor);
       }
 
       InstructionCost InsSubCost = 0;
-      for (unsigned i = 0; i < NumSubElts; i++)
+      for (unsigned Elm = 0; Elm < NumSubElts; Elm++)
         InsSubCost +=
-            thisT()->getVectorInstrCost(Instruction::InsertElement, SubVT, i);
+            thisT()->getVectorInstrCost(Instruction::InsertElement, SubVT, Elm);
 
       Cost += Indices.size() * InsSubCost;
     } else {
-      // The interleave cost is extract all elements from sub vectors, and
+      // The interleave cost is extract elements from sub vectors, and
       // insert them into the wide vector.
       //
-      // E.g. An interleaved store of factor 2:
-      //      %v0_v1 = shuffle %v0, %v1, <0, 4, 1, 5, 2, 6, 3, 7>
-      //      store <8 x i32> %interleaved.vec, <8 x i32>* %ptr
-      // The cost is estimated as extract all elements from both <4 x i32>
-      // vectors and insert into the <8 x i32> vector.
-
+      // E.g. An interleaved store of factor 3 with 2 members at indices 0,1:
+      // (using VF=4):
+      //    %v0_v1 = shuffle %v0, %v1, <0,4,undef,1,5,undef,2,6,undef,3,7,undef>
+      //    %gaps.mask = <true, true, false, true, true, false,
+      //                  true, true, false, true, true, false>
+      //    call llvm.masked.store <12 x i32> %v0_v1, <12 x i32>* %ptr,
+      //                           i32 Align, <12 x i1> %gaps.mask
+      // The cost is estimated as extract all elements (of actual members,
+      // excluding gaps) from both <4 x i32> vectors and insert into the <12 x
+      // i32> vector.
       InstructionCost ExtSubCost = 0;
-      for (unsigned i = 0; i < NumSubElts; i++)
-        ExtSubCost +=
-            thisT()->getVectorInstrCost(Instruction::ExtractElement, SubVT, i);
-      Cost += ExtSubCost * Factor;
+      for (unsigned Elm = 0; Elm < NumSubElts; Elm++)
+        ExtSubCost += thisT()->getVectorInstrCost(Instruction::ExtractElement,
+                                                  SubVT, Elm);
+      Cost += ExtSubCost * Indices.size();
 
-      for (unsigned i = 0; i < NumElts; i++)
-        Cost += static_cast<T *>(this)
-                    ->getVectorInstrCost(Instruction::InsertElement, VT, i);
+      for (unsigned Index : Indices) {
+        assert(Index < Factor && "Invalid index for interleaved memory op");
+
+        // Insert elements from loaded vector for each sub vector.
+        for (unsigned Elm = 0; Elm < NumSubElts; Elm++)
+          Cost += thisT()->getVectorInstrCost(Instruction::InsertElement, VT,
+                                              Index + Elm * Factor);
+      }
     }
 
     if (!UseMaskForCond)
