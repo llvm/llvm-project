@@ -22877,7 +22877,7 @@ SDValue DAGCombiner::BuildLogBase2(SDValue V, const SDLoc &DL) {
 
 /// Newton iteration for a function: F(X) is X_{i+1} = X_i - F(X_i)/F'(X_i)
 /// For the reciprocal, we need to find the zero of the function:
-///   F(X) = A X - 1 [which has a zero at X = 1/A]
+///   F(X) = 1/X - A [which has a zero at X = 1/A]
 ///     =>
 ///   X_{i+1} = X_i (2 - A X_i) = X_i + X_i (1 - A X_i) [this second form
 ///     does not require additional intermediate precision]
