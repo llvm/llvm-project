@@ -166,8 +166,10 @@ inline bool IsProtected(const Symbol &symbol) {
 inline bool IsImpliedDoIndex(const Symbol &symbol) {
   return symbol.owner().kind() == Scope::Kind::ImpliedDos;
 }
-bool IsFinalizable(const Symbol &);
-bool IsFinalizable(const DerivedTypeSpec &);
+bool IsFinalizable(
+    const Symbol &, std::set<const DerivedTypeSpec *> * = nullptr);
+bool IsFinalizable(
+    const DerivedTypeSpec &, std::set<const DerivedTypeSpec *> * = nullptr);
 bool HasImpureFinal(const DerivedTypeSpec &);
 bool IsCoarray(const Symbol &);
 bool IsInBlankCommon(const Symbol &);

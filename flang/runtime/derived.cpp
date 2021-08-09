@@ -95,27 +95,16 @@ int Initialize(const Descriptor &instance, const typeInfo::DerivedType &derived,
 
 static const typeInfo::SpecialBinding *FindFinal(
     const typeInfo::DerivedType &derived, int rank) {
-  const typeInfo::SpecialBinding *elemental{nullptr};
-  const Descriptor &specialDesc{derived.special()};
-  std::size_t totalSpecialBindings{specialDesc.Elements()};
-  for (std::size_t j{0}; j < totalSpecialBindings; ++j) {
-    const auto &special{
-        *specialDesc.ZeroBasedIndexedElement<typeInfo::SpecialBinding>(j)};
-    switch (special.which()) {
-    case typeInfo::SpecialBinding::Which::Final:
-      if (special.rank() == rank) {
-        return &special;
-      }
-      break;
-    case typeInfo::SpecialBinding::Which::ElementalFinal:
-      elemental = &special;
-      break;
-    case typeInfo::SpecialBinding::Which::AssumedRankFinal:
-      return &special;
-    default:;
-    }
+  if (const auto *ranked{derived.FindSpecialBinding(
+          typeInfo::SpecialBinding::RankFinal(rank))}) {
+    return ranked;
+  } else if (const auto *assumed{derived.FindSpecialBinding(
+                 typeInfo::SpecialBinding::Which::AssumedRankFinal)}) {
+    return assumed;
+  } else {
+    return derived.FindSpecialBinding(
+        typeInfo::SpecialBinding::Which::ElementalFinal);
   }
-  return elemental;
 }
 
 static void CallFinalSubroutine(
@@ -159,24 +148,22 @@ static void CallFinalSubroutine(
   }
 }
 
-// The order of finalization follows Fortran 2018 7.5.6.2, with
-// deallocation of non-parent components (and their consequent finalization)
-// taking place before parent component finalization.
-void Destroy(const Descriptor &descriptor, bool finalize,
-    const typeInfo::DerivedType &derived) {
-  if (finalize) {
-    CallFinalSubroutine(descriptor, derived);
+// Fortran 2018 subclause 7.5.6.2
+void Finalize(
+    const Descriptor &descriptor, const typeInfo::DerivedType &derived) {
+  if (derived.noFinalizationNeeded() || !descriptor.IsAllocated()) {
+    return;
   }
+  CallFinalSubroutine(descriptor, derived);
+  const auto *parentType{derived.GetParentType()};
+  bool recurse{parentType && !parentType->noFinalizationNeeded()};
+  // If there's a finalizable parent component, handle it last, as required
+  // by the Fortran standard (7.5.6.2), and do so recursively with the same
+  // descriptor so that the rank is preserved.
   const Descriptor &componentDesc{derived.component()};
   std::size_t myComponents{componentDesc.Elements()};
   std::size_t elements{descriptor.Elements()};
   std::size_t byteStride{descriptor.ElementBytes()};
-  // If there's a finalizable parent component, handle it last, as required
-  // by the Fortran standard (7.5.6.2), and do so recursively with the same
-  // descriptor so that the rank is preserved.  Otherwise, destroy the parent
-  // component like any other.
-  const auto *parentType{derived.GetParentType()};
-  bool recurse{finalize && parentType && !parentType->noDestructionNeeded()};
   for (auto k{recurse
                ? std::size_t{1} /* skip first component, it's the parent */
                : 0};
@@ -186,20 +173,18 @@ void Destroy(const Descriptor &descriptor, bool finalize,
     if (comp.genre() == typeInfo::Component::Genre::Allocatable ||
         comp.genre() == typeInfo::Component::Genre::Automatic) {
       if (const typeInfo::DerivedType * compType{comp.derivedType()}) {
-        if (!compType->noDestructionNeeded()) {
+        if (!compType->noFinalizationNeeded()) {
           for (std::size_t j{0}; j < elements; ++j) {
-            Destroy(*descriptor.OffsetElement<Descriptor>(
-                        j * byteStride + comp.offset()),
-                finalize, *compType);
+            const Descriptor &compDesc{*descriptor.OffsetElement<Descriptor>(
+                j * byteStride + comp.offset())};
+            if (compDesc.IsAllocated()) {
+              Finalize(compDesc, *compType);
+            }
           }
         }
       }
-      for (std::size_t j{0}; j < elements; ++j) {
-        descriptor.OffsetElement<Descriptor>(j * byteStride + comp.offset())
-            ->Deallocate();
-      }
     } else if (comp.genre() == typeInfo::Component::Genre::Data &&
-        comp.derivedType() && !comp.derivedType()->noDestructionNeeded()) {
+        comp.derivedType() && !comp.derivedType()->noFinalizationNeeded()) {
       SubscriptValue extent[maxRank];
       const typeInfo::Value *bounds{comp.bounds()};
       for (int dim{0}; dim < comp.rank(); ++dim) {
@@ -213,15 +198,41 @@ void Destroy(const Descriptor &descriptor, bool finalize,
         compDesc.Establish(compType,
             descriptor.OffsetElement<char>(j * byteStride + comp.offset()),
             comp.rank(), extent);
-        Destroy(compDesc, finalize, compType);
+        Finalize(compDesc, compType);
       }
     }
   }
   if (recurse) {
-    Destroy(descriptor, finalize, *parentType);
+    Finalize(descriptor, *parentType);
   }
 }
 
-// TODO: Assign()
+// The order of finalization follows Fortran 2018 7.5.6.2, with
+// elementwise deallocation of non-parent components (and their consequent
+// finalizations) taking place before parent component finalization.
+void Destroy(const Descriptor &descriptor, bool finalize,
+    const typeInfo::DerivedType &derived) {
+  if (derived.noDestructionNeeded() || !descriptor.IsAllocated()) {
+    return;
+  }
+  if (finalize && !derived.noFinalizationNeeded()) {
+    Finalize(descriptor, derived);
+  }
+  const Descriptor &componentDesc{derived.component()};
+  std::size_t myComponents{componentDesc.Elements()};
+  std::size_t elements{descriptor.Elements()};
+  std::size_t byteStride{descriptor.ElementBytes()};
+  for (std::size_t k{0}; k < myComponents; ++k) {
+    const auto &comp{
+        *componentDesc.ZeroBasedIndexedElement<typeInfo::Component>(k)};
+    if (comp.genre() == typeInfo::Component::Genre::Allocatable ||
+        comp.genre() == typeInfo::Component::Genre::Automatic) {
+      for (std::size_t j{0}; j < elements; ++j) {
+        descriptor.OffsetElement<Descriptor>(j * byteStride + comp.offset())
+            ->Deallocate();
+      }
+    }
+  }
+}
 
 } // namespace Fortran::runtime
