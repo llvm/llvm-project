@@ -102,7 +102,11 @@ class TestGdbRemotePlatformFile(GdbRemoteTestCaseBase):
         if excl:
             mode |= 0x800
 
-        server = self.connect_to_debug_monitor()
+        old_umask = os.umask(0o22)
+        try:
+            server = self.connect_to_debug_monitor()
+        finally:
+            os.umask(old_umask)
         self.assertIsNotNone(server)
 
         # create a temporary file with some data
