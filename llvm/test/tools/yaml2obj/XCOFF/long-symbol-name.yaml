@@ -24,6 +24,7 @@
 # CHECK-NEXT:   }
 # CHECK-NEXT: ]
 # CHECK-NEXT: StringTable {
+# CHECK-NEXT:   Length: 14
 # CHECK-NEXT:   [     4]   .longname
 # CHECK-NEXT: }
 

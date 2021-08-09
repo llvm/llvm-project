@@ -767,27 +767,6 @@ static DecodeStatus DecodePPR_3bRegisterClass(MCInst &Inst, unsigned RegNo,
   return DecodePPRRegisterClass(Inst, RegNo, Addr, Decoder);
 }
 
-static const unsigned VectorDecoderTable[] = {
-    AArch64::Q0,  AArch64::Q1,  AArch64::Q2,  AArch64::Q3,  AArch64::Q4,
-    AArch64::Q5,  AArch64::Q6,  AArch64::Q7,  AArch64::Q8,  AArch64::Q9,
-    AArch64::Q10, AArch64::Q11, AArch64::Q12, AArch64::Q13, AArch64::Q14,
-    AArch64::Q15, AArch64::Q16, AArch64::Q17, AArch64::Q18, AArch64::Q19,
-    AArch64::Q20, AArch64::Q21, AArch64::Q22, AArch64::Q23, AArch64::Q24,
-    AArch64::Q25, AArch64::Q26, AArch64::Q27, AArch64::Q28, AArch64::Q29,
-    AArch64::Q30, AArch64::Q31
-};
-
-static DecodeStatus DecodeVectorRegisterClass(MCInst &Inst, unsigned RegNo,
-                                              uint64_t Addr,
-                                              const void *Decoder) {
-  if (RegNo > 31)
-    return Fail;
-
-  unsigned Register = VectorDecoderTable[RegNo];
-  Inst.addOperand(MCOperand::createReg(Register));
-  return Success;
-}
-
 static const unsigned QQDecoderTable[] = {
   AArch64::Q0_Q1,   AArch64::Q1_Q2,   AArch64::Q2_Q3,   AArch64::Q3_Q4,
   AArch64::Q4_Q5,   AArch64::Q5_Q6,   AArch64::Q6_Q7,   AArch64::Q7_Q8,
@@ -1775,7 +1754,7 @@ static DecodeStatus DecodeModImmInstruction(MCInst &Inst, uint32_t insn,
   if (Inst.getOpcode() == AArch64::MOVID)
     DecodeFPR64RegisterClass(Inst, Rd, Addr, Decoder);
   else
-    DecodeVectorRegisterClass(Inst, Rd, Addr, Decoder);
+    DecodeFPR128RegisterClass(Inst, Rd, Addr, Decoder);
 
   Inst.addOperand(MCOperand::createImm(imm));
 
@@ -1812,8 +1791,8 @@ static DecodeStatus DecodeModImmTiedInstruction(MCInst &Inst, uint32_t insn,
   imm |= fieldFromInstruction(insn, 5, 5);
 
   // Tied operands added twice.
-  DecodeVectorRegisterClass(Inst, Rd, Addr, Decoder);
-  DecodeVectorRegisterClass(Inst, Rd, Addr, Decoder);
+  DecodeFPR128RegisterClass(Inst, Rd, Addr, Decoder);
+  DecodeFPR128RegisterClass(Inst, Rd, Addr, Decoder);
 
   Inst.addOperand(MCOperand::createImm(imm));
   Inst.addOperand(MCOperand::createImm((cmode & 6) << 2));

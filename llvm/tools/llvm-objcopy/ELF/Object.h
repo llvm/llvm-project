@@ -48,12 +48,12 @@ class Object;
 struct Symbol;
 
 class SectionTableRef {
-  MutableArrayRef<std::unique_ptr<SectionBase>> Sections;
+  ArrayRef<std::unique_ptr<SectionBase>> Sections;
 
 public:
-  using iterator = pointee_iterator<std::unique_ptr<SectionBase> *>;
+  using iterator = pointee_iterator<const std::unique_ptr<SectionBase> *>;
 
-  explicit SectionTableRef(MutableArrayRef<std::unique_ptr<SectionBase>> Secs)
+  explicit SectionTableRef(ArrayRef<std::unique_ptr<SectionBase>> Secs)
       : Sections(Secs) {}
   SectionTableRef(const SectionTableRef &) = default;
 
@@ -1023,10 +1023,6 @@ private:
 
 public:
   template <class T>
-  using Range = iterator_range<
-      pointee_iterator<typename std::vector<std::unique_ptr<T>>::iterator>>;
-
-  template <class T>
   using ConstRange = iterator_range<pointee_iterator<
       typename std::vector<std::unique_ptr<T>>::const_iterator>>;
 
@@ -1055,10 +1051,7 @@ public:
   SectionIndexSection *SectionIndexTable = nullptr;
 
   void sortSections();
-  SectionTableRef sections() { return SectionTableRef(Sections); }
-  ConstRange<SectionBase> sections() const {
-    return make_pointee_range(Sections);
-  }
+  SectionTableRef sections() const { return SectionTableRef(Sections); }
   iterator_range<
       filter_iterator<pointee_iterator<std::vector<SecPtr>::const_iterator>,
                       decltype(&sectionIsAlloc)>>
@@ -1073,7 +1066,6 @@ public:
   }
   SectionTableRef removedSections() { return SectionTableRef(RemovedSections); }
 
-  Range<Segment> segments() { return make_pointee_range(Segments); }
   ConstRange<Segment> segments() const { return make_pointee_range(Segments); }
 
   Error removeSections(bool AllowBrokenLinks,

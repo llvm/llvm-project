@@ -469,6 +469,25 @@ void RISCVInstrInfo::movImm(MachineBasicBlock &MBB,
   }
 }
 
+static RISCVCC::CondCode getCondFromBranchOpc(unsigned Opc) {
+  switch (Opc) {
+  default:
+    return RISCVCC::COND_INVALID;
+  case RISCV::BEQ:
+    return RISCVCC::COND_EQ;
+  case RISCV::BNE:
+    return RISCVCC::COND_NE;
+  case RISCV::BLT:
+    return RISCVCC::COND_LT;
+  case RISCV::BGE:
+    return RISCVCC::COND_GE;
+  case RISCV::BLTU:
+    return RISCVCC::COND_LTU;
+  case RISCV::BGEU:
+    return RISCVCC::COND_GEU;
+  }
+}
+
 // The contents of values added to Cond are not examined outside of
 // RISCVInstrInfo, giving us flexibility in what to push to it. For RISCV, we
 // push BranchOpcode, Reg1, Reg2.
@@ -478,27 +497,47 @@ static void parseCondBranch(MachineInstr &LastInst, MachineBasicBlock *&Target,
   assert(LastInst.getDesc().isConditionalBranch() &&
          "Unknown conditional branch");
   Target = LastInst.getOperand(2).getMBB();
-  Cond.push_back(MachineOperand::CreateImm(LastInst.getOpcode()));
+  unsigned CC = getCondFromBranchOpc(LastInst.getOpcode());
+  Cond.push_back(MachineOperand::CreateImm(CC));
   Cond.push_back(LastInst.getOperand(0));
   Cond.push_back(LastInst.getOperand(1));
 }
 
-static unsigned getOppositeBranchOpcode(int Opc) {
-  switch (Opc) {
+const MCInstrDesc &RISCVInstrInfo::getBrCond(RISCVCC::CondCode CC) const {
+  switch (CC) {
+  default:
+    llvm_unreachable("Unknown condition code!");
+  case RISCVCC::COND_EQ:
+    return get(RISCV::BEQ);
+  case RISCVCC::COND_NE:
+    return get(RISCV::BNE);
+  case RISCVCC::COND_LT:
+    return get(RISCV::BLT);
+  case RISCVCC::COND_GE:
+    return get(RISCV::BGE);
+  case RISCVCC::COND_LTU:
+    return get(RISCV::BLTU);
+  case RISCVCC::COND_GEU:
+    return get(RISCV::BGEU);
+  }
+}
+
+RISCVCC::CondCode RISCVCC::getOppositeBranchCondition(RISCVCC::CondCode CC) {
+  switch (CC) {
   default:
     llvm_unreachable("Unrecognized conditional branch");
-  case RISCV::BEQ:
-    return RISCV::BNE;
-  case RISCV::BNE:
-    return RISCV::BEQ;
-  case RISCV::BLT:
-    return RISCV::BGE;
-  case RISCV::BGE:
-    return RISCV::BLT;
-  case RISCV::BLTU:
-    return RISCV::BGEU;
-  case RISCV::BGEU:
-    return RISCV::BLTU;
+  case RISCVCC::COND_EQ:
+    return RISCVCC::COND_NE;
+  case RISCVCC::COND_NE:
+    return RISCVCC::COND_EQ;
+  case RISCVCC::COND_LT:
+    return RISCVCC::COND_GE;
+  case RISCVCC::COND_GE:
+    return RISCVCC::COND_LT;
+  case RISCVCC::COND_LTU:
+    return RISCVCC::COND_GEU;
+  case RISCVCC::COND_GEU:
+    return RISCVCC::COND_LTU;
   }
 }
 
@@ -624,9 +663,9 @@ unsigned RISCVInstrInfo::insertBranch(
   }
 
   // Either a one or two-way conditional branch.
-  unsigned Opc = Cond[0].getImm();
+  auto CC = static_cast<RISCVCC::CondCode>(Cond[0].getImm());
   MachineInstr &CondMI =
-      *BuildMI(&MBB, DL, get(Opc)).add(Cond[1]).add(Cond[2]).addMBB(TBB);
+      *BuildMI(&MBB, DL, getBrCond(CC)).add(Cond[1]).add(Cond[2]).addMBB(TBB);
   if (BytesAdded)
     *BytesAdded += getInstSizeInBytes(CondMI);
 
@@ -680,7 +719,8 @@ unsigned RISCVInstrInfo::insertIndirectBranch(MachineBasicBlock &MBB,
 bool RISCVInstrInfo::reverseBranchCondition(
     SmallVectorImpl<MachineOperand> &Cond) const {
   assert((Cond.size() == 3) && "Invalid branch condition!");
-  Cond[0].setImm(getOppositeBranchOpcode(Cond[0].getImm()));
+  auto CC = static_cast<RISCVCC::CondCode>(Cond[0].getImm());
+  Cond[0].setImm(getOppositeBranchCondition(CC));
   return false;
 }
 
