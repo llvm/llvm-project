@@ -23,9 +23,8 @@ define half @fneg(half %a) nounwind {
 ;
 ; RV32IZFH-LABEL: fneg:
 ; RV32IZFH:       # %bb.0:
-; RV32IZFH-NEXT:    fmv.h.x ft0, a0
-; RV32IZFH-NEXT:    fneg.h ft0, ft0
-; RV32IZFH-NEXT:    fmv.x.h a0, ft0
+; RV32IZFH-NEXT:    lui a1, 1048568
+; RV32IZFH-NEXT:    xor a0, a0, a1
 ; RV32IZFH-NEXT:    ret
 ;
 ; RV64I-LABEL: fneg:
@@ -36,9 +35,8 @@ define half @fneg(half %a) nounwind {
 ;
 ; RV64IZFH-LABEL: fneg:
 ; RV64IZFH:       # %bb.0:
-; RV64IZFH-NEXT:    fmv.h.x ft0, a0
-; RV64IZFH-NEXT:    fneg.h ft0, ft0
-; RV64IZFH-NEXT:    fmv.x.h a0, ft0
+; RV64IZFH-NEXT:    lui a1, 1048568
+; RV64IZFH-NEXT:    xor a0, a0, a1
 ; RV64IZFH-NEXT:    ret
   %1 = fneg half %a
   ret half %1
@@ -56,9 +54,9 @@ define half @fabs(half %a) nounwind {
 ;
 ; RV32IZFH-LABEL: fabs:
 ; RV32IZFH:       # %bb.0:
-; RV32IZFH-NEXT:    fmv.h.x ft0, a0
-; RV32IZFH-NEXT:    fabs.h ft0, ft0
-; RV32IZFH-NEXT:    fmv.x.h a0, ft0
+; RV32IZFH-NEXT:    lui a1, 8
+; RV32IZFH-NEXT:    addi a1, a1, -1
+; RV32IZFH-NEXT:    and a0, a0, a1
 ; RV32IZFH-NEXT:    ret
 ;
 ; RV64I-LABEL: fabs:
@@ -70,9 +68,9 @@ define half @fabs(half %a) nounwind {
 ;
 ; RV64IZFH-LABEL: fabs:
 ; RV64IZFH:       # %bb.0:
-; RV64IZFH-NEXT:    fmv.h.x ft0, a0
-; RV64IZFH-NEXT:    fabs.h ft0, ft0
-; RV64IZFH-NEXT:    fmv.x.h a0, ft0
+; RV64IZFH-NEXT:    lui a1, 8
+; RV64IZFH-NEXT:    addiw a1, a1, -1
+; RV64IZFH-NEXT:    and a0, a0, a1
 ; RV64IZFH-NEXT:    ret
   %1 = call half @llvm.fabs.f16(half %a)
   ret half %1
