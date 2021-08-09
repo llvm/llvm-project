@@ -799,7 +799,7 @@ public:
                         SMLoc Loc = SMLoc());
 
   virtual void emitNops(int64_t NumBytes, int64_t ControlledNopLength,
-                        SMLoc Loc);
+                        SMLoc Loc, const MCSubtargetInfo& STI);
 
   /// Emit NumBytes worth of zeros.
   /// This function properly handles data in virtual sections.

@@ -135,7 +135,7 @@ SmallString<0> DWARFExpressionCopyBytesTest::emitObjFile(StringRef ExprBytes) {
   C.Streamer->emitCFIStartProc(true);
   auto Str = EncodeDefCfaExpr(ExprBytes);
   C.Streamer->emitCFIEscape(Str);
-  C.Streamer->emitNops(4, 1, SMLoc());
+  C.Streamer->emitNops(4, 1, SMLoc(), *STI);
   C.Streamer->emitCFIEndProc();
   C.Streamer->Finish();
   return Storage;

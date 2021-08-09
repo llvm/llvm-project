@@ -164,7 +164,8 @@ public:
     llvm_unreachable("relaxInstruction() should not be called");
   }
 
-  bool writeNopData(raw_ostream &OS, uint64_t Count) const override {
+  bool writeNopData(raw_ostream &OS, uint64_t Count,
+                    const MCSubtargetInfo *STI) const override {
     if ((Count % 8) != 0)
       return false;
 

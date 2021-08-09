@@ -181,8 +181,8 @@ public:
                 SMLoc Loc = SMLoc()) override;
   void emitFill(const MCExpr &NumValues, int64_t Size, int64_t Expr,
                 SMLoc Loc = SMLoc()) override;
-  void emitNops(int64_t NumBytes, int64_t ControlledNopLength,
-                SMLoc Loc) override;
+  void emitNops(int64_t NumBytes, int64_t ControlledNopLength, SMLoc Loc,
+                const MCSubtargetInfo &STI) override;
   void emitFileDirective(StringRef Filename) override;
   void emitFileDirective(StringRef Filename, StringRef CompilerVerion,
                          StringRef TimeStamp, StringRef Description) override;

@@ -63,7 +63,8 @@ public:
                             const MCAsmLayout &Layout) const override {
     return false;
   }
-  bool writeNopData(raw_ostream &OS, uint64_t Count) const override;
+  bool writeNopData(raw_ostream &OS, uint64_t Count,
+                    const MCSubtargetInfo *STI) const override;
   std::unique_ptr<MCObjectTargetWriter>
   createObjectTargetWriter() const override {
     return createSystemZObjectWriter(OSABI);
@@ -142,7 +143,8 @@ void SystemZMCAsmBackend::applyFixup(const MCAssembler &Asm,
   }
 }
 
-bool SystemZMCAsmBackend::writeNopData(raw_ostream &OS, uint64_t Count) const {
+bool SystemZMCAsmBackend::writeNopData(raw_ostream &OS, uint64_t Count,
+                                       const MCSubtargetInfo *STI) const {
   for (uint64_t I = 0; I != Count; ++I)
     OS << '\x7';
   return true;
