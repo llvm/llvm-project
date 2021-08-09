@@ -1330,21 +1330,14 @@ static void speculatePHINodeLoads(PHINode &PN) {
 ///   %V = select i1 %cond, i32 %V1, i32 %V2
 ///
 /// We can do this to a select if its only uses are loads and if the operand
-/// to the select can be loaded unconditionally. If found an intervening bitcast
-/// with a single use of the load, allow the promotion.
+/// to the select can be loaded unconditionally.
 static bool isSafeSelectToSpeculate(SelectInst &SI) {
   Value *TValue = SI.getTrueValue();
   Value *FValue = SI.getFalseValue();
   const DataLayout &DL = SI.getModule()->getDataLayout();
 
   for (User *U : SI.users()) {
-    LoadInst *LI;
-    BitCastInst *BC = dyn_cast<BitCastInst>(U);
-    if (BC && BC->hasOneUse())
-      LI = dyn_cast<LoadInst>(*BC->user_begin());
-    else
-      LI = dyn_cast<LoadInst>(U);
-
+    LoadInst *LI = dyn_cast<LoadInst>(U);
     if (!LI || !LI->isSimple())
       return false;
 
@@ -1370,24 +1363,10 @@ static void speculateSelectInstLoads(SelectInst &SI) {
   Value *FV = SI.getFalseValue();
   // Replace the loads of the select with a select of two loads.
   while (!SI.use_empty()) {
-    LoadInst *LI;
-    BitCastInst *BC = dyn_cast<BitCastInst>(SI.user_back());
-    if (BC) {
-      assert(BC->hasOneUse() && "Bitcast should have a single use.");
-      LI = cast<LoadInst>(BC->user_back());
-    } else {
-      LI = cast<LoadInst>(SI.user_back());
-    }
-
+    LoadInst *LI = cast<LoadInst>(SI.user_back());
     assert(LI->isSimple() && "We only speculate simple loads");
 
     IRB.SetInsertPoint(LI);
-    if (BC) {
-      // Cast the operands to bitcast's target type.
-      TV = IRB.CreateBitCast(TV, BC->getType(), TV->getName() + ".sroa.cast");
-      FV = IRB.CreateBitCast(FV, BC->getType(), FV->getName() + ".sroa.cast");
-    }
-
     LoadInst *TL = IRB.CreateLoad(LI->getType(), TV,
                                   LI->getName() + ".sroa.speculate.load.true");
     LoadInst *FL = IRB.CreateLoad(LI->getType(), FV,
@@ -1411,8 +1390,6 @@ static void speculateSelectInstLoads(SelectInst &SI) {
     LLVM_DEBUG(dbgs() << "          speculated to: " << *V << "\n");
     LI->replaceAllUsesWith(V);
     LI->eraseFromParent();
-    if (BC)
-      BC->eraseFromParent();
   }
   SI.eraseFromParent();
 }
