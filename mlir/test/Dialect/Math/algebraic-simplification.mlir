@@ -49,3 +49,27 @@ func @pow_recip(%arg0: f32, %arg1 : vector<4xf32>) -> (f32, vector<4xf32>) {
   %1 = math.powf %arg1, %v : vector<4xf32>
   return %0, %1 : f32, vector<4xf32>
 }
+
+// CHECK-LABEL: @pow_sqrt
+func @pow_sqrt(%arg0: f32, %arg1 : vector<4xf32>) -> (f32, vector<4xf32>) {
+  // CHECK: %[[SCALAR:.*]] = math.sqrt %arg0
+  // CHECK: %[[VECTOR:.*]] = math.sqrt %arg1
+  // CHECK: return %[[SCALAR]], %[[VECTOR]]
+  %c = constant 0.5 : f32
+  %v = constant dense <0.5> : vector<4xf32>
+  %0 = math.powf %arg0, %c : f32
+  %1 = math.powf %arg1, %v : vector<4xf32>
+  return %0, %1 : f32, vector<4xf32>
+}
+
+// CHECK-LABEL: @pow_rsqrt
+func @pow_rsqrt(%arg0: f32, %arg1 : vector<4xf32>) -> (f32, vector<4xf32>) {
+  // CHECK: %[[SCALAR:.*]] = math.rsqrt %arg0
+  // CHECK: %[[VECTOR:.*]] = math.rsqrt %arg1
+  // CHECK: return %[[SCALAR]], %[[VECTOR]]
+  %c = constant -0.5 : f32
+  %v = constant dense <-0.5> : vector<4xf32>
+  %0 = math.powf %arg0, %c : f32
+  %1 = math.powf %arg1, %v : vector<4xf32>
+  return %0, %1 : f32, vector<4xf32>
+}

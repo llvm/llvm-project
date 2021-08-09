@@ -80,7 +80,7 @@ PowFStrengthReduction::matchAndRewrite(math::PowFOp op,
     return success();
   }
 
-  // Replace `pow(x, 2.0)` with `x * x * x`.
+  // Replace `pow(x, 3.0)` with `x * x * x`.
   if (isExponentValue(3.0)) {
     Value square = rewriter.create<MulFOp>(op.getLoc(), ValueRange({x, x}));
     rewriter.replaceOpWithNewOp<MulFOp>(op, ValueRange({x, square}));
@@ -95,9 +95,15 @@ PowFStrengthReduction::matchAndRewrite(math::PowFOp op,
     return success();
   }
 
-  // Replace `pow(x, -2.0)` with `sqrt(x)`.
-  if (isExponentValue(-1.0)) {
+  // Replace `pow(x, 0.5)` with `sqrt(x)`.
+  if (isExponentValue(0.5)) {
     rewriter.replaceOpWithNewOp<math::SqrtOp>(op, x);
+    return success();
+  }
+
+  // Replace `pow(x, -0.5)` with `rsqrt(x)`.
+  if (isExponentValue(-0.5)) {
+    rewriter.replaceOpWithNewOp<math::RsqrtOp>(op, x);
     return success();
   }
 
