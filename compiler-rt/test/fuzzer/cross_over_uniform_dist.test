@@ -1,4 +1,4 @@
-REQUIRES: linux, x86_64
+REQUIRES: x86_64-, -linux
 RUN: %cpp_compiler %S/KeepSeedTest.cpp -o %t-CrossOverUniformDistTest
 
 RUN: rm -rf %t-corpus
