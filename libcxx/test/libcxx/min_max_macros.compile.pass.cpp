@@ -10,9 +10,6 @@
 // Test that headers are not tripped up by the surrounding code defining the
 // min() and max() macros.
 
-// GCC 5 has incomplete support for C++17, so some headers fail when included.
-// UNSUPPORTED: gcc-5 && c++17
-
 // Prevent <ext/hash_map> from generating deprecated warnings for this test.
 #if defined(__DEPRECATED)
 #    undef __DEPRECATED
