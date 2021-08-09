@@ -130,10 +130,12 @@ set(files
   __functional_base
   __functional/binary_function.h
   __functional/binary_negate.h
+  __functional/bind_back.h
   __functional/bind_front.h
   __functional/bind.h
   __functional/binder1st.h
   __functional/binder2nd.h
+  __functional/compose.h
   __functional/default_searcher.h
   __functional/function.h
   __functional/hash.h
