@@ -13,7 +13,7 @@
 ; often - add another IR file with a different DW_OP_convert that's otherwise
 ; identical and demonstrate that they have different DWO IDs.
 
-; SPLIT: 0x00000000: Compile Unit: {{.*}} DWO_id = 0xafd73565c68bc661
+; SPLIT: 0x00000000: Compile Unit: {{.*}} DWO_id = 0x194b4f2ceea8a1a0
 
 ; Regression testing a fairly quirky bug where instead of hashing (see above),
 ; extra bytes would be emitted into the output assembly in no
