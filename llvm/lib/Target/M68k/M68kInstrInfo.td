@@ -176,8 +176,10 @@ def MxRegClass : MxOpClass<"Reg">;
 // both ADD32dd and ADD32dr has {MCK_RegClass, MCK_RegClass} for
 // their operands, which makes AsmParser unable to pick the correct
 // one in a deterministic way.
-def MxARegClass : MxOpClass<"AReg">;
-def MxDRegClass : MxOpClass<"DReg">;
+let RenderMethod = "addRegOperands", SuperClasses = [MxRegClass] in {
+  def MxARegClass : MxOpClass<"AReg">;
+  def MxDRegClass : MxOpClass<"DReg">;
+}
 
 class MxOperand<ValueType vt, MxSize size, string letter, RegisterClass rc, dag pat = (null_frag)> {
   ValueType VT = vt;
