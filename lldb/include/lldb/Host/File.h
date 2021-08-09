@@ -39,27 +39,29 @@ public:
   // NB this enum is used in the lldb platform gdb-remote packet
   // vFile:open: and existing values cannot be modified.
   //
-  // FIXME
-  // These values do not match the values used by GDB
+  // The first set of values is defined by gdb headers and can be found
+  // in the documentation at:
   // * https://sourceware.org/gdb/onlinedocs/gdb/Open-Flags.html#Open-Flags
-  // * rdar://problem/46788934
+  //
+  // The second half are LLDB extensions and use the highest uint32_t bits
+  // to avoid risk of collisions with future gdb remote protocol changes.
   enum OpenOptions : uint32_t {
-    eOpenOptionReadOnly = (1u << 0),  // Open file for reading (only)
-    eOpenOptionWriteOnly = (1u << 1), // Open file for writing (only)
-    eOpenOptionReadWrite =
-        eOpenOptionReadOnly |
-        eOpenOptionWriteOnly, // Open file for both reading and writing
+    eOpenOptionReadOnly = 0x0,  // Open file for reading (only)
+    eOpenOptionWriteOnly = 0x1, // Open file for writing (only)
+    eOpenOptionReadWrite = 0x2, // Open file for both reading and writing
     eOpenOptionAppend =
-        (1u << 2), // Don't truncate file when opening, append to end of file
-    eOpenOptionTruncate = (1u << 3),    // Truncate file when opening
-    eOpenOptionNonBlocking = (1u << 4), // File reads
-    eOpenOptionCanCreate = (1u << 5),   // Create file if doesn't already exist
+        0x8, // Don't truncate file when opening, append to end of file
+    eOpenOptionCanCreate = 0x200, // Create file if doesn't already exist
+    eOpenOptionTruncate = 0x400,  // Truncate file when opening
     eOpenOptionCanCreateNewOnly =
-        (1u << 6), // Can create file only if it doesn't already exist
-    eOpenOptionDontFollowSymlinks = (1u << 7),
+        0x800, // Can create file only if it doesn't already exist
+
+    eOpenOptionNonBlocking = (1u << 28), // File reads
+    eOpenOptionDontFollowSymlinks = (1u << 29),
     eOpenOptionCloseOnExec =
-        (1u << 8), // Close the file when executing a new process
-    LLVM_MARK_AS_BITMASK_ENUM(/* largest_value= */ eOpenOptionCloseOnExec)
+        (1u << 30), // Close the file when executing a new process
+    eOpenOptionInvalid = (1u << 31), // Used as invalid value
+    LLVM_MARK_AS_BITMASK_ENUM(/* largest_value= */ eOpenOptionInvalid)
   };
 
   static mode_t ConvertOpenOptionsForPOSIXOpen(OpenOptions open_options);

@@ -90,8 +90,8 @@ Expected<File::OpenOptions> File::GetOptionsFromMode(llvm::StringRef mode) {
           .Cases("a+", "ab+", "a+b",
                  eOpenOptionReadWrite | eOpenOptionAppend |
                      eOpenOptionCanCreate)
-          .Default(OpenOptions());
-  if (opts)
+          .Default(eOpenOptionInvalid);
+  if (opts != eOpenOptionInvalid)
     return opts;
   return llvm::createStringError(
       llvm::inconvertibleErrorCode(),

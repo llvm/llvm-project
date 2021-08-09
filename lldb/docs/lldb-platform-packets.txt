@@ -372,12 +372,6 @@ incompatible with the flags that gdb specifies.
 //  response is F followed by the opened file descriptor in base 10.
 //  "F-1,errno" with the errno if an error occurs.
 //
-//  COMPATIBILITY
-//    The gdb-remote serial protocol documentatio defines a vFile:open:
-//    packet which uses incompatible flag values, e.g. 1 means O_WRONLY
-//    in gdb's vFile:open:, but it means eOpenOptionReadOnly to lldb's
-//    implementation.
-
 //----------------------------------------------------------------------
 // vFile:close:
 //
