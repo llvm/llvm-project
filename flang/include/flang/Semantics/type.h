@@ -258,6 +258,7 @@ public:
   bool IsForwardReferenced() const;
   bool HasDefaultInitialization() const;
   bool HasDestruction() const;
+  bool HasFinalization() const;
 
   // The "raw" type parameter list is a simple transcription from the
   // parameter list in the parse tree, built by calling AddRawParamValue().

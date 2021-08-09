@@ -1,5 +1,4 @@
-! RUN: %S/test_symbols.sh %s %t %flang_fc1
-! REQUIRES: shell
+! RUN: %python %S/test_symbols.py %s %flang_fc1
 ! Old-style "*length" specifiers (R723)
 
 !DEF: /f1 (Function) Subprogram CHARACTER(1_8,1)

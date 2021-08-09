@@ -13,7 +13,9 @@
 // flang/module/__fortran_type_info.f90.
 
 #include "descriptor.h"
+#include "terminator.h"
 #include "flang/Common/Fortran.h"
+#include "flang/Common/bit-population-count.h"
 #include <cinttypes>
 #include <memory>
 #include <optional>
@@ -118,19 +120,23 @@ class SpecialBinding {
 public:
   enum class Which : std::uint8_t {
     None = 0,
-    Assignment = 4,
-    ElementalAssignment = 5,
-    Final = 8,
-    ElementalFinal = 9,
-    AssumedRankFinal = 10,
-    ReadFormatted = 16,
-    ReadUnformatted = 17,
-    WriteFormatted = 18,
-    WriteUnformatted = 19
+    ScalarAssignment = 1,
+    ElementalAssignment = 2,
+    ReadFormatted = 3,
+    ReadUnformatted = 4,
+    WriteFormatted = 5,
+    WriteUnformatted = 6,
+    ElementalFinal = 7,
+    AssumedRankFinal = 8,
+    ScalarFinal = 9,
+    // higher-ranked final procedures follow
   };
 
+  static constexpr Which RankFinal(int rank) {
+    return static_cast<Which>(static_cast<int>(Which::ScalarFinal) + rank);
+  }
+
   Which which() const { return which_; }
-  int rank() const { return rank_; }
   bool IsArgDescriptor(int zeroBasedArg) const {
     return (isArgDescriptorSet_ >> zeroBasedArg) & 1;
   }
@@ -142,12 +148,6 @@ public:
 
 private:
   Which which_{Which::None};
-
-  // Used for Which::Final only.  Which::Assignment always has rank 0, as
-  // type-bound defined assignment for rank > 0 must be elemental
-  // due to the required passed object dummy argument, which are scalar.
-  // User defined derived type I/O is always scalar.
-  std::uint8_t rank_{0};
 
   // The following little bit-set identifies which dummy arguments are
   // passed via descriptors for their derived type arguments.
@@ -175,6 +175,7 @@ private:
   //     When false, the user derived type I/O subroutine must have been
   //     called via a generic interface, not a generic TBP.
   std::uint8_t isArgDescriptorSet_{0};
+  std::uint8_t __padding0_[6];
 
   ProcedurePointer proc_{nullptr};
 };
@@ -186,7 +187,6 @@ public:
   const Descriptor &binding() const { return binding_.descriptor(); }
   const Descriptor &name() const { return name_.descriptor(); }
   std::uint64_t sizeInBytes() const { return sizeInBytes_; }
-  std::uint64_t typeHash() const { return typeHash_; }
   const Descriptor &uninstatiated() const {
     return uninstantiated_.descriptor();
   }
@@ -202,6 +202,7 @@ public:
   bool hasParent() const { return hasParent_; }
   bool noInitializationNeeded() const { return noInitializationNeeded_; }
   bool noDestructionNeeded() const { return noDestructionNeeded_; }
+  bool noFinalizationNeeded() const { return noFinalizationNeeded_; }
 
   std::size_t LenParameters() const { return lenParameterKind().Elements(); }
 
@@ -211,7 +212,24 @@ public:
   const Component *FindDataComponent(
       const char *name, std::size_t nameLen) const;
 
-  const SpecialBinding *FindSpecialBinding(SpecialBinding::Which) const;
+  // O(1) look-up of special procedure bindings
+  const SpecialBinding *FindSpecialBinding(SpecialBinding::Which which) const {
+    auto bitIndex{static_cast<std::uint32_t>(which)};
+    auto bit{std::uint32_t{1} << bitIndex};
+    if (specialBitSet_ & bit) {
+      // The index of this special procedure in the sorted array is the
+      // number of special bindings that are present with smaller "which"
+      // code values.
+      int offset{common::BitPopulationCount(specialBitSet_ & (bit - 1))};
+      const auto *binding{
+          special_.descriptor().ZeroBasedIndexedElement<SpecialBinding>(
+              offset)};
+      INTERNAL_CHECK(binding && binding->which() == which);
+      return binding;
+    } else {
+      return nullptr;
+    }
+  }
 
   FILE *Dump(FILE * = stdout) const;
 
@@ -235,9 +253,6 @@ private:
   // no KIND type parameters will have a null pointer here.
   StaticDescriptor<0, true> uninstantiated_; // TYPE(DERIVEDTYPE), POINTER
 
-  // TODO: flags for SEQUENCE, BIND(C), any PRIVATE component(? see 7.5.2)
-  std::uint64_t typeHash_{0};
-
   // These pointer targets include all of the items from the parent, if any.
   StaticDescriptor<1> kindParameter_; // pointer to rank-1 array of INTEGER(8)
   StaticDescriptor<1>
@@ -253,13 +268,21 @@ private:
   StaticDescriptor<1, true>
       procPtr_; // TYPE(PROCPTR), POINTER, DIMENSION(:), CONTIGUOUS
 
+  // Packed in ascending order of "which" code values.
   // Does not include special bindings from ancestral types.
   StaticDescriptor<1, true>
       special_; // TYPE(SPECIALBINDING), POINTER, DIMENSION(:), CONTIGUOUS
 
+  // Little-endian bit-set of special procedure binding "which" code values
+  // for O(1) look-up in FindSpecialBinding() above.
+  std::uint32_t specialBitSet_{0};
+
+  // Flags
   bool hasParent_{false};
   bool noInitializationNeeded_{false};
   bool noDestructionNeeded_{false};
+  bool noFinalizationNeeded_{false};
+  bool __padding0_[4];
 };
 
 } // namespace Fortran::runtime::typeInfo

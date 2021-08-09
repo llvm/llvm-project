@@ -1,5 +1,4 @@
-! RUN: %S/test_symbols.sh %s %t %flang_fc1 -fopenmp
-! REQUIRES: shell
+! RUN: %python %S/test_symbols.py %s %flang_fc1 -fopenmp
 ! OpenMP Version 4.5
 ! 2.7.1 Schedule Clause
 ! Test that does not catch non constant integer expressions like xx - xx.

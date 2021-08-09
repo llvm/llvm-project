@@ -89,15 +89,6 @@ int RTNAME(AllocatableAllocateSource)(Descriptor &, const Descriptor &source,
     bool hasStat = false, const Descriptor *errMsg = nullptr,
     const char *sourceFile = nullptr, int sourceLine = 0);
 
-// Assigns to a whole allocatable, with automatic (re)allocation when the
-// destination is unallocated or nonconforming (Fortran 2003 semantics).
-// The descriptor must be initialized.
-// Recursively assigns components with (re)allocation as necessary.
-// TODO: Consider renaming to a more general name that will work for
-// assignments to pointers, dummy arguments, and anything else with a
-// descriptor.
-void RTNAME(AllocatableAssign)(Descriptor &to, const Descriptor &from);
-
 // Implements the intrinsic subroutine MOVE_ALLOC (16.9.137 in F'2018,
 // but note the order of first two arguments is reversed for consistency
 // with the other APIs for allocatables.)  The destination descriptor
