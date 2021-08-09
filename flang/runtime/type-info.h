@@ -175,7 +175,6 @@ private:
   //     When false, the user derived type I/O subroutine must have been
   //     called via a generic interface, not a generic TBP.
   std::uint8_t isArgDescriptorSet_{0};
-  std::uint8_t __padding0_[6];
 
   ProcedurePointer proc_{nullptr};
 };
@@ -282,7 +281,6 @@ private:
   bool noInitializationNeeded_{false};
   bool noDestructionNeeded_{false};
   bool noFinalizationNeeded_{false};
-  bool __padding0_[4];
 };
 
 } // namespace Fortran::runtime::typeInfo
