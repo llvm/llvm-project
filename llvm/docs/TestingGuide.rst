@@ -443,7 +443,7 @@ with debug builds or on particular platforms. Use ``REQUIRES``
 and ``UNSUPPORTED`` to control when the test is enabled.
 
 Some tests are expected to fail. For example, there may be a known bug
-that a test detects. Use ``XFAIL`` to mark a test as an expected failure.
+that the test detect. Use ``XFAIL`` to mark a test as an expected failure.
 An ``XFAIL`` test will be successful if its execution fails, and
 will be a failure if its execution succeeds.
 
@@ -465,11 +465,9 @@ list of boolean expressions. The values in each expression may be:
   expression is satisfied if any feature matches the regular expression. Regular
   expressions can appear inside an identifier, so for example ``he{{l+}}o`` would match
   ``helo``, ``hello``, ``helllo``, and so on.
-- Substrings of the target triple. These must be exact substrings, not regular
-  expressions.
+- Substrings of the target triple (``UNSUPPORTED`` and ``XFAIL`` only).
 
-| ``REQUIRES`` disables the test if any expression is false (that is,
-  the test requires all expressions to be true).
+| ``REQUIRES`` enables the test if all expressions are true.
 | ``UNSUPPORTED`` disables the test if any expression is true.
 | ``XFAIL`` expects the test to fail if any expression is true.
 
