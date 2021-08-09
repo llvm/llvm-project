@@ -522,6 +522,22 @@ def : MipsPat<(i32 (load (add GP_NM, (MipsGPRel tglobaladdr:$in)))),
 def : MipsPat<(add GP_NM, (MipsGPRel tglobaladdr:$in)),
               (ADDiu_NM GP_NM, tglobaladdr:$in)>, ISA_NANOMIPS;
 
+
+// Atomic load patterns.
+def : MipsPat<(atomic_load_8 addr:$a), (LB_NM addr:$a)>, ISA_NANOMIPS;
+def : MipsPat<(atomic_load_16 addr:$a), (LH_NM addr:$a)>, ISA_NANOMIPS;
+def : MipsPat<(atomic_load_32 addr:$a), (LW_NM addr:$a)>, ISA_NANOMIPS;
+
+// Atomic store patterns.
+def : MipsPat<(atomic_store_8 addr:$a, GPR32:$v), (SB_NM GPR32:$v, addr:$a)>,
+  ISA_NANOMIPS;
+def : MipsPat<(atomic_store_16 addr:$a, GPR32:$v), (SH_NM GPR32:$v, addr:$a)>,
+  ISA_NANOMIPS;
+def : MipsPat<(atomic_store_32 addr:$a, GPR32:$v), (SW_NM GPR32:$v, addr:$a)>,
+  ISA_NANOMIPS;
+
+
+
 // Conditional Moves
 def MOVZ_NM : InstNM<(outs GPR32NMOpnd:$rd),
                      (ins GPR32NMOpnd:$rs, GPR32NMOpnd:$rt, GPR32NMOpnd:$F),
