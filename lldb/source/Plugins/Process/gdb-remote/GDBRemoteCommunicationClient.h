@@ -376,6 +376,12 @@ public:
 
   bool CloseFile(lldb::user_id_t fd, Status &error);
 
+  llvm::Optional<GDBRemoteFStatData> FStat(lldb::user_id_t fd);
+
+  // NB: this is just a convenience wrapper over open() + fstat().  It does not
+  // work if the file cannot be opened.
+  llvm::Optional<GDBRemoteFStatData> Stat(const FileSpec &file_spec);
+
   lldb::user_id_t GetFileSize(const FileSpec &file_spec);
 
   void AutoCompleteDiskFileOrDirectory(CompletionRequest &request,
@@ -581,7 +587,7 @@ protected:
       m_supports_QEnvironment : 1, m_supports_QEnvironmentHexEncoded : 1,
       m_supports_qSymbol : 1, m_qSymbol_requests_done : 1,
       m_supports_qModuleInfo : 1, m_supports_jThreadsInfo : 1,
-      m_supports_jModulesInfo : 1;
+      m_supports_jModulesInfo : 1, m_supports_vFileSize : 1;
 
   /// Current gdb remote protocol process identifier for all other operations
   lldb::pid_t m_curr_pid = LLDB_INVALID_PROCESS_ID;
