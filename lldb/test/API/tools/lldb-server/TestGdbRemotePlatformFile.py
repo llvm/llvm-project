@@ -52,10 +52,12 @@ class TestGdbRemotePlatformFile(GdbRemoteTestCaseBase):
     def test_platform_file_rdwr_trunc(self):
         self.vFile_test(read=True, write=True, trunc=True)
 
+    @expectedFailureAll(oslist=["windows"])
     @add_test_categories(["llgs"])
     def test_platform_file_wronly_creat(self):
         self.vFile_test(write=True, creat=True)
 
+    @expectedFailureAll(oslist=["windows"])
     @add_test_categories(["llgs"])
     def test_platform_file_wronly_creat_excl(self):
         self.vFile_test(write=True, creat=True, excl=True)
@@ -120,7 +122,7 @@ class TestGdbRemotePlatformFile(GdbRemoteTestCaseBase):
         if excl:
             mode |= 0x800
 
-        old_umask = os.umask(0)
+        old_umask = os.umask(0o22)
         try:
             server = self.connect_to_debug_monitor()
         finally:
@@ -146,7 +148,7 @@ class TestGdbRemotePlatformFile(GdbRemoteTestCaseBase):
             # open the file for reading
             self.do_handshake()
             self.test_sequence.add_log_lines(
-                ["read packet: $vFile:open:%s,%x,1b6#00" % (
+                ["read packet: $vFile:open:%s,%x,1a0#00" % (
                     binascii.b2a_hex(temp_path.encode()).decode(),
                     mode),
                  {"direction": "send",
@@ -220,7 +222,7 @@ class TestGdbRemotePlatformFile(GdbRemoteTestCaseBase):
                 if creat:
                     temp_file = open(temp_path, "rb")
                     self.assertEqual(os.fstat(temp_file.fileno()).st_mode & 0o7777,
-                                     0o666)
+                                     0o640)
                 temp_file.seek(0)
                 data = test_data.encode()
                 if trunc or creat:
