@@ -442,7 +442,7 @@ void llvm::expandMemCpyAsLoop(MemCpyInst *Memcpy,
         /* DestAlign */ Memcpy->getDestAlign().valueOrOne(),
         /* SrcIsVolatile */ Memcpy->isVolatile(),
         /* DstIsVolatile */ Memcpy->isVolatile(),
-        /* TargetTransfomrInfo */ TTI);
+        /* TargetTransformInfo */ TTI);
   }
 }
 
