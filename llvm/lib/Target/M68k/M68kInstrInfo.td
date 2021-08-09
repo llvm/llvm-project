@@ -165,9 +165,11 @@ def MxSize8  : MxSize<8,  "b", "byte">;
 def MxSize16 : MxSize<16, "w", "word">;
 def MxSize32 : MxSize<32, "l", "long">;
 
-class MxOpClass<string name> : AsmOperandClass {
+class MxOpClass<string name,
+                list<AsmOperandClass> superClasses = []> : AsmOperandClass {
   let Name = name;
   let ParserMethod = "parseMemOp";
+  let SuperClasses = superClasses;
 }
 
 def MxRegClass : MxOpClass<"Reg">;
@@ -176,7 +178,7 @@ def MxRegClass : MxOpClass<"Reg">;
 // both ADD32dd and ADD32dr has {MCK_RegClass, MCK_RegClass} for
 // their operands, which makes AsmParser unable to pick the correct
 // one in a deterministic way.
-let RenderMethod = "addRegOperands", SuperClasses = [MxRegClass] in {
+let RenderMethod = "addRegOperands", SuperClasses = [MxRegClass]in {
   def MxARegClass : MxOpClass<"AReg">;
   def MxDRegClass : MxOpClass<"DReg">;
 }
@@ -317,9 +319,17 @@ def MxARII32_TC  : MxMemOp<(ops i8imm, AR32_TC, XR32_TC), MxSize32, "f", "printA
 // extended before it is used.  The reference is classified as a data reference
 // with the exception of the jump and jump-tosubroutine instructions.
 def MxAddr     : MxOpClass<"Addr">;
-def MxAS8      : MxMemOp<(ops OtherVT), MxSize8,  "B", "printAS8Mem", MxAddr>;
-def MxAS16     : MxMemOp<(ops OtherVT), MxSize16, "B", "printAS16Mem", MxAddr>;
-def MxAS32     : MxMemOp<(ops OtherVT), MxSize32, "B", "printAS32Mem", MxAddr>;
+let RenderMethod = "addAddrOperands" in {
+  // This hierarchy ensures Addr8 will always be parsed
+  // before other larger-width variants.
+  def MxAddr32   : MxOpClass<"Addr32", [MxAddr]>;
+  def MxAddr16   : MxOpClass<"Addr16", [MxAddr32]>;
+  def MxAddr8    : MxOpClass<"Addr8",  [MxAddr16]>;
+}
+
+def MxAS8      : MxMemOp<(ops OtherVT), MxSize8,  "B", "printAS8Mem",  MxAddr8>;
+def MxAS16     : MxMemOp<(ops OtherVT), MxSize16, "B", "printAS16Mem", MxAddr16>;
+def MxAS32     : MxMemOp<(ops OtherVT), MxSize32, "B", "printAS32Mem", MxAddr32>;
 
 // ABSOLUTE LONG ADDRESS. This addressing mode requires two words of extension.
 // The address of the operand is developed by the concatenation of the extension
@@ -327,9 +337,9 @@ def MxAS32     : MxMemOp<(ops OtherVT), MxSize32, "B", "printAS32Mem", MxAddr>;
 // order part of the address is the second extension word. The reference is
 // classified as a data reference with the exception of the jump and jump
 // to-subroutine instructions.
-def MxAL8      : MxMemOp<(ops OtherVT), MxSize8,  "b", "printAL8Mem", MxAddr>;
-def MxAL16     : MxMemOp<(ops OtherVT), MxSize16, "b", "printAL16Mem", MxAddr>;
-def MxAL32     : MxMemOp<(ops OtherVT), MxSize32, "b", "printAL32Mem", MxAddr>;
+def MxAL8      : MxMemOp<(ops OtherVT), MxSize8,  "b", "printAL8Mem",  MxAddr8>;
+def MxAL16     : MxMemOp<(ops OtherVT), MxSize16, "b", "printAL16Mem", MxAddr16>;
+def MxAL32     : MxMemOp<(ops OtherVT), MxSize32, "b", "printAL32Mem", MxAddr32>;
 
 def MxPCD : MxOpClass<"PCD">;
 def MxPCI : MxOpClass<"PCI">;
@@ -383,16 +393,15 @@ def Mxi16imm : MxOp<i16, MxSize16, "i">;
 def Mxi32imm : MxOp<i32, MxSize32, "i">;
 } // OPERAND_IMMEDIATE
 
-let OperandType = "OPERAND_PCREL",
-    ParserMatchClass = MxAddr,
-    PrintMethod = "printPCRelImm" in {
-
+class MxBrTargetOperand<int N> : Operand<OtherVT> {
+  let OperandType = "OPERAND_PCREL";
+  let PrintMethod = "printPCRelImm";
+  let ParserMatchClass = !cast<AsmOperandClass>("MxAddr"#N);
+}
 // Branch targets have OtherVT type and print as pc-relative values.
-def MxBrTarget8  : Operand<OtherVT>;
-def MxBrTarget16 : Operand<OtherVT>;
-def MxBrTarget32 : Operand<OtherVT>;
-
-} // OPERAND_PCREL
+def MxBrTarget8  : MxBrTargetOperand<8>;
+def MxBrTarget16 : MxBrTargetOperand<16>;
+def MxBrTarget32 : MxBrTargetOperand<32>;
 
 // Used with MOVEM
 def MxMoveMask : MxOp<i16, MxSize16, "m"> {
