@@ -6538,29 +6538,6 @@ INTERCEPTOR(int, sem_getvalue, __sanitizer_sem_t *s, int *sval) {
   }
   return res;
 }
-
-INTERCEPTOR(__sanitizer_sem_t *, sem_open, const char *name, int oflag, ...) {
-  void *ctx;
-  va_list ap;
-  va_start(ap, oflag);
-  u32 mode = va_arg(ap, u32);
-  u32 value = va_arg(ap, u32);
-  COMMON_INTERCEPTOR_ENTER(ctx, sem_open, name, oflag, mode, value);
-  COMMON_INTERCEPTOR_READ_RANGE(ctx, name, REAL(strlen)(name) + 1);
-  __sanitizer_sem_t *s = REAL(sem_open)(name, oflag, mode, value);
-  if (s)
-    COMMON_INTERCEPTOR_INITIALIZE_RANGE(s, sizeof(*s));
-  va_end(ap);
-  return s;
-}
-
-INTERCEPTOR(int, sem_unlink, const char *name) {
-  void *ctx;
-  COMMON_INTERCEPTOR_ENTER(ctx, sem_unlink, name);
-  COMMON_INTERCEPTOR_READ_RANGE(ctx, name, REAL(strlen)(name) + 1);
-  return REAL(sem_unlink)(name);
-}
-
 #  define INIT_SEM                            \
     COMMON_INTERCEPT_FUNCTION(sem_init);      \
     COMMON_INTERCEPT_FUNCTION(sem_destroy);   \
@@ -6568,9 +6545,7 @@ INTERCEPTOR(int, sem_unlink, const char *name) {
     COMMON_INTERCEPT_FUNCTION(sem_trywait);   \
     COMMON_INTERCEPT_FUNCTION(sem_timedwait); \
     COMMON_INTERCEPT_FUNCTION(sem_post);      \
-    COMMON_INTERCEPT_FUNCTION(sem_getvalue);  \
-    COMMON_INTERCEPT_FUNCTION(sem_open);      \
-    COMMON_INTERCEPT_FUNCTION(sem_unlink);
+    COMMON_INTERCEPT_FUNCTION(sem_getvalue);
 #else
 #  define INIT_SEM
 #endif  // SANITIZER_INTERCEPT_SEM
