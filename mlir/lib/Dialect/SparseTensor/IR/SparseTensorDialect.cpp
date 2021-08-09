@@ -219,10 +219,13 @@ static LogicalResult verify(ConvertOp op) {
       assert(tp1.getRank() == tp2.getRank());
       auto shape1 = tp1.getShape();
       auto shape2 = tp2.getShape();
-      for (unsigned d = 0, rank = tp1.getRank(); d < rank; d++)
+      for (unsigned d = 0, rank = tp1.getRank(); d < rank; d++) {
         if (shape1[d] != shape2[d])
           return op.emitError()
                  << "unexpected conversion mismatch in dimension " << d;
+        if (shape1[d] == MemRefType::kDynamicSize)
+          return op.emitError("unexpected dynamic size");
+      }
       return success();
     }
   }
