@@ -1225,7 +1225,7 @@ Status Platform::PutFile(const FileSpec &source, const FileSpec &destination,
   LLDB_LOGF(log, "[PutFile] Using block by block transfer....\n");
 
   auto source_open_options =
-      File::eOpenOptionRead | File::eOpenOptionCloseOnExec;
+      File::eOpenOptionReadOnly | File::eOpenOptionCloseOnExec;
   namespace fs = llvm::sys::fs;
   if (fs::is_symlink_file(source.GetPath()))
     source_open_options |= File::eOpenOptionDontFollowSymlinks;
@@ -1240,7 +1240,7 @@ Status Platform::PutFile(const FileSpec &source, const FileSpec &destination,
     permissions = lldb::eFilePermissionsFileDefault;
 
   lldb::user_id_t dest_file = OpenFile(
-      destination, File::eOpenOptionCanCreate | File::eOpenOptionWrite |
+      destination, File::eOpenOptionCanCreate | File::eOpenOptionWriteOnly |
                        File::eOpenOptionTruncate | File::eOpenOptionCloseOnExec,
       permissions, error);
   LLDB_LOGF(log, "dest_file = %" PRIu64 "\n", dest_file);
@@ -1663,7 +1663,7 @@ Status Platform::DownloadModuleSlice(const FileSpec &src_file_spec,
     return error;
   }
 
-  auto src_fd = OpenFile(src_file_spec, File::eOpenOptionRead,
+  auto src_fd = OpenFile(src_file_spec, File::eOpenOptionReadOnly,
                          lldb::eFilePermissionsFileDefault, error);
 
   if (error.Fail()) {

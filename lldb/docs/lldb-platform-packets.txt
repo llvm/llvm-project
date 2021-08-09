@@ -375,7 +375,7 @@ incompatible with the flags that gdb specifies.
 //  COMPATIBILITY
 //    The gdb-remote serial protocol documentatio defines a vFile:open:
 //    packet which uses incompatible flag values, e.g. 1 means O_WRONLY
-//    in gdb's vFile:open:, but it means eOpenOptionRead to lldb's
+//    in gdb's vFile:open:, but it means eOpenOptionReadOnly to lldb's
 //    implementation.
 
 //----------------------------------------------------------------------

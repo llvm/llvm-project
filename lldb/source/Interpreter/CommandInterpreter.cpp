@@ -2438,7 +2438,7 @@ void CommandInterpreter::HandleCommandsFromFile(FileSpec &cmd_file,
 
   std::string cmd_file_path = cmd_file.GetPath();
   auto input_file_up =
-      FileSystem::Instance().Open(cmd_file, File::eOpenOptionRead);
+      FileSystem::Instance().Open(cmd_file, File::eOpenOptionReadOnly);
   if (!input_file_up) {
     std::string error = llvm::toString(input_file_up.takeError());
     result.AppendErrorWithFormatv(
@@ -2959,7 +2959,7 @@ bool CommandInterpreter::SaveTranscript(
     return false;
   };
 
-  File::OpenOptions flags = File::eOpenOptionWrite |
+  File::OpenOptions flags = File::eOpenOptionWriteOnly |
                             File::eOpenOptionCanCreate |
                             File::eOpenOptionTruncate;
 
