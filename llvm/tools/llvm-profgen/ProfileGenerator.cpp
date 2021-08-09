@@ -44,10 +44,16 @@ static cl::opt<bool> CSProfTrimColdContext(
     cl::desc("If the total count of the profile after all merge is done "
              "is still smaller than threshold, it will be trimmed."));
 
-static cl::opt<uint32_t> CSProfColdContextFrameDepth(
-    "csprof-frame-depth-for-cold-context", cl::init(1), cl::ZeroOrMore,
-    cl::desc("Keep the last K frames while merging cold profile. 1 means the "
+static cl::opt<uint32_t> CSProfMaxColdContextDepth(
+    "csprof-max-cold-context-depth", cl::init(1), cl::ZeroOrMore,
+    cl::desc("Keep the last K contexts while merging cold profile. 1 means the "
              "context-less base profile"));
+
+static cl::opt<int, true> CSProfMaxContextDepth(
+    "csprof-max-context-depth", cl::ZeroOrMore,
+    cl::desc("Keep the last K contexts while merging profile. -1 means no "
+             "depth limit."),
+    cl::location(llvm::sampleprof::CSProfileGenerator::MaxContextDepth));
 
 static cl::opt<bool> EnableCSPreInliner(
     "csspgo-preinliner", cl::Hidden, cl::init(false),
@@ -64,6 +70,8 @@ namespace sampleprof {
 
 // Initialize the MaxCompressionSize to -1 which means no size limit
 int32_t CSProfileGenerator::MaxCompressionSize = -1;
+
+int CSProfileGenerator::MaxContextDepth = -1;
 
 static bool
 usePseudoProbes(const BinarySampleCounterMap &BinarySampleCounters) {
@@ -415,7 +423,7 @@ void CSProfileGenerator::postProcessProfiles() {
   SampleContextTrimmer(ProfileMap)
       .trimAndMergeColdContextProfiles(
           ColdCountThreshold, CSProfTrimColdContext, CSProfMergeColdContext,
-          CSProfColdContextFrameDepth);
+          CSProfMaxColdContextDepth);
 }
 
 void CSProfileGenerator::computeSummaryAndThreshold() {
@@ -608,6 +616,7 @@ FunctionSamples &PseudoProbeCSProfileGenerator::getFunctionProfileForLeafProbe(
   std::string LeafFrame = ContextStrStack.back();
   ContextStrStack.pop_back();
   CSProfileGenerator::compressRecursionContext(ContextStrStack);
+  CSProfileGenerator::trimContext(ContextStrStack);
 
   std::ostringstream OContextStr;
   for (uint32_t I = 0; I < ContextStrStack.size(); I++) {
