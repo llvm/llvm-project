@@ -99,6 +99,18 @@ private:
   MainFileMacros &Out;
 };
 
+/// Represents a `#pragma mark` in the main file.
+///
+/// There can be at most one pragma mark per line.
+struct PragmaMark {
+  Range Rng;
+  std::string Trivia;
+};
+
+/// Collect all pragma marks from the main file.
+std::unique_ptr<PPCallbacks>
+collectPragmaMarksCallback(const SourceManager &, std::vector<PragmaMark> &Out);
+
 } // namespace clangd
 } // namespace clang
 
