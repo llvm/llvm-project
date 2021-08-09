@@ -369,7 +369,7 @@ incompatible with the flags that gdb specifies.
 //        are the constant values in enum OpenOptions from lldb's File.h
 //     3. mode bits, base 16
 //  
-//  response is F followed by the opened file descriptor in base 10.
+//  response is F followed by the opened file descriptor in base 16.
 //  "F-1,errno" with the errno if an error occurs.
 //
 //----------------------------------------------------------------------
@@ -383,7 +383,7 @@ incompatible with the flags that gdb specifies.
 //  receive: vFile:close:7
 //  send:    F0
 //
-//  File descriptor is in base 10.
+//  File descriptor is in base 16.
 //  "F-1,errno" with the errno if an error occurs.
 
 
@@ -399,17 +399,12 @@ incompatible with the flags that gdb specifies.
 //  send:    F4;a'b\00
 //
 //  request packet has the fields:
-//     1. file descriptor, base 10
-//     2. number of bytes to be read, base 10
-//     3. offset into file to start from, base 10
+//     1. file descriptor, base 16
+//     2. number of bytes to be read, base 16
+//     3. offset into file to start from, base 16
 //
-//  Response is F, followed by the number of bytes read (base 10), a
+//  Response is F, followed by the number of bytes read (base 16), a
 //  semicolon, followed by the data in the binary-escaped-data encoding.
-//
-//  COMPATIBILITY
-//    The gdb-remote serial protocol documentation says that numbers
-//    in "vFile:" packets should be hexadecimal. Instead lldb uses
-//    decimal.
 
 
 //----------------------------------------------------------------------
@@ -424,16 +419,11 @@ incompatible with the flags that gdb specifies.
 //  send:    F1024
 //
 //  request packet has the fields:
-//     1. file descriptor, base 10
-//     2. offset into file to start from, base 10
+//     1. file descriptor, base 16
+//     2. offset into file to start from, base 16
 //     3. binary-escaped-data to be written
 //
-//  Response is F, followed by the number of bytes written (base 10)
-//
-//  COMPATIBILITY
-//    The gdb-remote serial protocol documentation says that numbers
-//    in "vFile:" packets should be hexadecimal. Instead lldb uses
-//    decimal.
+//  Response is F, followed by the number of bytes written (base 16)
 
 
 
