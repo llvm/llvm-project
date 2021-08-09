@@ -136,7 +136,7 @@ void test_throwing_new_during_thread_creation() {
     for (int i=0; i <= numAllocs; ++i) {
         throw_one = i;
         f_run = false;
-        TEST_NOT_WIN32_DLL(unsigned old_outstanding = outstanding_new);
+        unsigned old_outstanding = outstanding_new;
         try {
             std::thread t(f);
             assert(i == numAllocs); // Only final iteration will not throw.
@@ -146,9 +146,7 @@ void test_throwing_new_during_thread_creation() {
             assert(i < numAllocs);
             assert(!f_run); // (2.2)
         }
-        // In DLL builds on Windows, the overridden operators new/delete won't
-        // override calls from within the DLL, so this won't match.
-        TEST_NOT_WIN32_DLL(assert(old_outstanding == outstanding_new)); // (2.3)
+        ASSERT_WITH_LIBRARY_INTERNAL_ALLOCATIONS(old_outstanding == outstanding_new); // (2.3)
     }
     f_run = false;
     throw_one = 0xFFF;

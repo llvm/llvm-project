@@ -51,11 +51,11 @@ int main(int, char**)
     DoNotOptimize(ap);
     assert(ap);
     assert(A_constructed == 3);
-    assert(new_called == 1);
+    ASSERT_WITH_OPERATOR_NEW_FALLBACKS(new_called == 1);
     delete [] ap;
     DoNotOptimize(ap);
     assert(A_constructed == 0);
-    assert(new_called == 0);
+    ASSERT_WITH_OPERATOR_NEW_FALLBACKS(new_called == 0);
 
   return 0;
 }
