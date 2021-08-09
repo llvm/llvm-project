@@ -7,16 +7,16 @@
 // -fprofile-use=<dir>        Uses the profile file <dir>/default.profdata
 // -fprofile-use=<dir>/file   Uses the profile file <dir>/file
 
-// On AIX, -flto is required with -fprofile-generate. gcc-flag-compatibility-aix.c is used to do the testing on AIX with -flto
-// XFAIL: aix
-// RUN: %clang %s -c -S -o - -emit-llvm -fprofile-generate -fno-experimental-new-pass-manager | FileCheck -check-prefix=PROFILE-GEN %s
-// RUN: %clang %s -c -S -o - -emit-llvm -fprofile-generate -fexperimental-new-pass-manager | FileCheck -check-prefix=PROFILE-GEN %s
+// On AIX, -flto is required with -fprofile-generate
+
+// RUN: %clang %s -c -S -o - -emit-llvm -target powerpc64-unknown-aix -flto -fprofile-generate -fno-experimental-new-pass-manager | FileCheck -check-prefix=PROFILE-GEN %s
+// RUN: %clang %s -c -S -o - -emit-llvm -target powerpc64-unknown-aix -flto -fprofile-generate -fexperimental-new-pass-manager | FileCheck -check-prefix=PROFILE-GEN %s
 // PROFILE-GEN: @__profc_main = {{(private|internal)}} global [2 x i64] zeroinitializer, section
 // PROFILE-GEN: @__profd_main =
 
 // Check that -fprofile-generate=/path/to generates /path/to/default.profraw
-// RUN: %clang %s -c -S -o - -emit-llvm -fprofile-generate=/path/to -fno-experimental-new-pass-manager | FileCheck -check-prefixes=PROFILE-GEN,PROFILE-GEN-EQ %s
-// RxUN: %clang %s -c -S -o - -emit-llvm -fprofile-generate=/path/to -fexperimental-new-pass-manager | FileCheck -check-prefixes=PROFILE-GEN,PROFILE-GEN-EQ %s
+// RUN: %clang %s -c -S -o - -emit-llvm -target powerpc64-unknown-aix -flto -fprofile-generate=/path/to -fno-experimental-new-pass-manager | FileCheck -check-prefixes=PROFILE-GEN,PROFILE-GEN-EQ %s
+// RxUN: %clang %s -c -S -o - -emit-llvm -target powerpc64-unknown-aix -flto -fprofile-generate=/path/to -fexperimental-new-pass-manager | FileCheck -check-prefixes=PROFILE-GEN,PROFILE-GEN-EQ %s
 // PROFILE-GEN-EQ: constant [{{.*}} x i8] c"/path/to{{/|\\\\}}{{.*}}\00"
 
 // Check that -fprofile-use=some/path reads some/path/default.profdata
