@@ -17,42 +17,52 @@ class TestGdbRemotePlatformFile(GdbRemoteTestCaseBase):
 
     mydir = TestBase.compute_mydir(__file__)
 
+    @skipIfWindows
     @add_test_categories(["llgs"])
     def test_platform_file_rdonly(self):
         self.vFile_test(read=True)
 
+    @skipIfWindows
     @add_test_categories(["llgs"])
     def test_platform_file_wronly(self):
         self.vFile_test(write=True)
 
+    @skipIfWindows
     @add_test_categories(["llgs"])
     def test_platform_file_rdwr(self):
         self.vFile_test(read=True, write=True)
 
+    @skipIfWindows
     @add_test_categories(["llgs"])
     def test_platform_file_wronly_append(self):
         self.vFile_test(write=True, append=True)
 
+    @skipIfWindows
     @add_test_categories(["llgs"])
     def test_platform_file_rdwr_append(self):
         self.vFile_test(read=True, write=True, append=True)
 
+    @skipIfWindows
     @add_test_categories(["llgs"])
     def test_platform_file_wronly_trunc(self):
         self.vFile_test(write=True, trunc=True)
 
+    @skipIfWindows
     @add_test_categories(["llgs"])
     def test_platform_file_rdwr_trunc(self):
         self.vFile_test(read=True, write=True, trunc=True)
 
+    @skipIfWindows
     @add_test_categories(["llgs"])
     def test_platform_file_wronly_creat(self):
         self.vFile_test(write=True, creat=True)
 
+    @skipIfWindows
     @add_test_categories(["llgs"])
     def test_platform_file_wronly_creat_excl(self):
         self.vFile_test(write=True, creat=True, excl=True)
 
+    @skipIfWindows
     @add_test_categories(["llgs"])
     def test_platform_file_wronly_fail(self):
         server = self.connect_to_debug_monitor()
@@ -73,6 +83,7 @@ class TestGdbRemotePlatformFile(GdbRemoteTestCaseBase):
                 True)
             self.expect_gdbremote_sequence()
 
+    @skipIfWindows
     @add_test_categories(["llgs"])
     def test_platform_file_wronly_creat_excl_fail(self):
         server = self.connect_to_debug_monitor()
