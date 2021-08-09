@@ -1984,14 +1984,15 @@ static void rewriteMaterializableInstructions(IRBuilder<> &IRB,
       if (CurrentBlock != U->getParent()) {
 
         bool IsInCoroSuspendBlock = isa<AnyCoroSuspendInst>(U);
-        CurrentBlock = IsInCoroSuspendBlock
-                           ? U->getParent()->getSinglePredecessor()
-                           : U->getParent();
+        CurrentBlock = U->getParent();
+        auto *InsertBlock = IsInCoroSuspendBlock
+                                ? CurrentBlock->getSinglePredecessor()
+                                : CurrentBlock;
         CurrentMaterialization = cast<Instruction>(Def)->clone();
         CurrentMaterialization->setName(Def->getName());
         CurrentMaterialization->insertBefore(
-            IsInCoroSuspendBlock ? CurrentBlock->getTerminator()
-                                 : &*CurrentBlock->getFirstInsertionPt());
+            IsInCoroSuspendBlock ? InsertBlock->getTerminator()
+                                 : &*InsertBlock->getFirstInsertionPt());
       }
       if (auto *PN = dyn_cast<PHINode>(U)) {
         assert(PN->getNumIncomingValues() == 1 &&
