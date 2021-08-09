@@ -21,6 +21,10 @@
 
 # After w0 is clobbered, we should get an indirect parameter entry value for "f".
 
+# DWARF-LABEL: DW_TAG_subprogram
+# DWARF:       DW_AT_name ("baz")
+
+# DWARF-LABEL: DW_TAG_subprogram
 # DWARF-LABEL: DW_TAG_formal_parameter
 # DWARF-NEXT: DW_AT_location
 # DWARF-NEXT: [0x0000000000000000, 0x0000000000000010): DW_OP_breg0 W0+0

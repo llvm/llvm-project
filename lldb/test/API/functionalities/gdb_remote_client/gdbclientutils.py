@@ -181,6 +181,8 @@ class MockGDBServerResponder:
             return self.qfProcessInfo(packet)
         if packet.startswith("qPathComplete:"):
             return self.qPathComplete()
+        if packet.startswith("vFile:"):
+            return self.vFile(packet)
 
         return self.other(packet)
 
@@ -286,6 +288,9 @@ class MockGDBServerResponder:
         return ""
 
     def qPathComplete(self):
+        return ""
+
+    def vFile(self, packet):
         return ""
 
     """

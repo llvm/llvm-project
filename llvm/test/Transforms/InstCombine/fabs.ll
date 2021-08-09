@@ -249,8 +249,7 @@ define double @multi_use_fabs_fpext(float %x) {
   ret double %fabs
 }
 
-; Negative test for the fabs folds below: we require nnan, so
-; we won't always clear the sign bit of a NaN value.
+; X <= 0.0 ? (0.0 - X) : X --> fabs(X)
 
 define double @select_fcmp_ole_zero(double %x) {
 ; CHECK-LABEL: @select_fcmp_ole_zero(
@@ -262,8 +261,6 @@ define double @select_fcmp_ole_zero(double %x) {
   %fabs = select i1 %lezero, double %negx, double %x
   ret double %fabs
 }
-
-; X <= 0.0 ? (0.0 - X) : X --> fabs(X)
 
 define double @select_fcmp_nnan_ole_zero(double %x) {
 ; CHECK-LABEL: @select_fcmp_nnan_ole_zero(

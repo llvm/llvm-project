@@ -209,11 +209,22 @@ categorise_opts()
       [[ $opt == "-Werror" ]]; then
       flang_opts+=($opt)
     elif
-      # These options are not supported by `flang-new`. There is also no point
-      # in forwarding them to the host compiler as the output from
-      # `-fdebug-unparse` will always be in free form.
+      # We translate the following into equivalents understood by `flang-new`
       [[ $opt == "-Mfixed" ]] || [[ $opt == "-Mfree" ]]; then
-      :
+        case $opt in
+          -Mfixed)
+            flang_opts+=("-ffixed-form")
+          ;;
+
+          -Mfree)
+            flang_opts+=("-ffree-form")
+          ;;
+
+        *)
+          echo "ERROR: $opt has no equivalent in 'flang-new'"
+          exit 1
+          ;;
+      esac
     elif
       # Options that are needed for both Flang and the external driver.
       [[ $opt =~ -I.* ]] ||
