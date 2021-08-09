@@ -362,9 +362,10 @@ class Test:
         return True
 
     def getMissingRequiredFeaturesFromList(self, features):
+        triple = getattr(self.suite.config, 'target_triple', "")
         try:
             return [item for item in self.requires
-                    if not BooleanExpression.evaluate(item, features)]
+                    if not BooleanExpression.evaluate(item, features, triple)]
         except ValueError as e:
             raise ValueError('Error in REQUIRES list:\n%s' % str(e))
 

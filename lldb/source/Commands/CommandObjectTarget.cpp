@@ -272,7 +272,7 @@ protected:
 
     if (core_file) {
       auto file = FileSystem::Instance().Open(
-          core_file, lldb_private::File::eOpenOptionRead);
+          core_file, lldb_private::File::eOpenOptionReadOnly);
 
       if (!file) {
         result.AppendErrorWithFormatv("Cannot open '{0}': {1}.",
@@ -286,7 +286,7 @@ protected:
       FileSpec symfile(m_symbol_file.GetOptionValue().GetCurrentValue());
       if (symfile) {
         auto file = FileSystem::Instance().Open(
-            symfile, lldb_private::File::eOpenOptionRead);
+            symfile, lldb_private::File::eOpenOptionReadOnly);
 
         if (!file) {
           result.AppendErrorWithFormatv("Cannot open '{0}': {1}.",

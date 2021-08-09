@@ -754,7 +754,7 @@ protected:
     if (outfile_spec) {
 
       File::OpenOptions open_options =
-          File::eOpenOptionWrite | File::eOpenOptionCanCreate;
+          File::eOpenOptionWriteOnly | File::eOpenOptionCanCreate;
       const bool append = m_outfile_options.GetAppend().GetCurrentValue();
       open_options |=
           append ? File::eOpenOptionAppend : File::eOpenOptionTruncate;

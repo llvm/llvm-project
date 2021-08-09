@@ -21,8 +21,8 @@ StreamFile::StreamFile(uint32_t flags, uint32_t addr_size, ByteOrder byte_order)
 }
 
 StreamFile::StreamFile(int fd, bool transfer_ownership) : Stream() {
-  m_file_sp =
-      std::make_shared<NativeFile>(fd, File::eOpenOptionWrite, transfer_ownership);
+  m_file_sp = std::make_shared<NativeFile>(fd, File::eOpenOptionWriteOnly,
+                                           transfer_ownership);
 }
 
 StreamFile::StreamFile(FILE *fh, bool transfer_ownership) : Stream() {
