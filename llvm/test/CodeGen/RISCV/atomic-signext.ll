@@ -1952,17 +1952,17 @@ define signext i16 @atomicrmw_umax_i16_monotonic(i16 *%a, i16 %b) nounwind {
 ; RV32I-NEXT:    sw s2, 16(sp) # 4-byte Folded Spill
 ; RV32I-NEXT:    sw s3, 12(sp) # 4-byte Folded Spill
 ; RV32I-NEXT:    mv s2, a1
-; RV32I-NEXT:    mv s3, a0
+; RV32I-NEXT:    mv s1, a0
 ; RV32I-NEXT:    lhu a1, 0(a0)
 ; RV32I-NEXT:    lui a0, 16
-; RV32I-NEXT:    addi s0, a0, -1
-; RV32I-NEXT:    and s1, s2, s0
+; RV32I-NEXT:    addi s3, a0, -1
+; RV32I-NEXT:    and s0, s2, s3
 ; RV32I-NEXT:    j .LBB23_2
 ; RV32I-NEXT:  .LBB23_1: # %atomicrmw.start
 ; RV32I-NEXT:    # in Loop: Header=BB23_2 Depth=1
 ; RV32I-NEXT:    sh a1, 10(sp)
 ; RV32I-NEXT:    addi a1, sp, 10
-; RV32I-NEXT:    mv a0, s3
+; RV32I-NEXT:    mv a0, s1
 ; RV32I-NEXT:    mv a3, zero
 ; RV32I-NEXT:    mv a4, zero
 ; RV32I-NEXT:    call __atomic_compare_exchange_2@plt
@@ -1970,9 +1970,9 @@ define signext i16 @atomicrmw_umax_i16_monotonic(i16 *%a, i16 %b) nounwind {
 ; RV32I-NEXT:    bnez a0, .LBB23_4
 ; RV32I-NEXT:  .LBB23_2: # %atomicrmw.start
 ; RV32I-NEXT:    # =>This Inner Loop Header: Depth=1
-; RV32I-NEXT:    and a0, a1, s0
+; RV32I-NEXT:    and a0, a1, s3
 ; RV32I-NEXT:    mv a2, a1
-; RV32I-NEXT:    bltu s1, a0, .LBB23_1
+; RV32I-NEXT:    bltu s0, a0, .LBB23_1
 ; RV32I-NEXT:  # %bb.3: # %atomicrmw.start
 ; RV32I-NEXT:    # in Loop: Header=BB23_2 Depth=1
 ; RV32I-NEXT:    mv a2, s2
@@ -2100,17 +2100,17 @@ define signext i16 @atomicrmw_umin_i16_monotonic(i16 *%a, i16 %b) nounwind {
 ; RV32I-NEXT:    sw s2, 16(sp) # 4-byte Folded Spill
 ; RV32I-NEXT:    sw s3, 12(sp) # 4-byte Folded Spill
 ; RV32I-NEXT:    mv s2, a1
-; RV32I-NEXT:    mv s3, a0
+; RV32I-NEXT:    mv s1, a0
 ; RV32I-NEXT:    lhu a1, 0(a0)
 ; RV32I-NEXT:    lui a0, 16
-; RV32I-NEXT:    addi s0, a0, -1
-; RV32I-NEXT:    and s1, s2, s0
+; RV32I-NEXT:    addi s3, a0, -1
+; RV32I-NEXT:    and s0, s2, s3
 ; RV32I-NEXT:    j .LBB24_2
 ; RV32I-NEXT:  .LBB24_1: # %atomicrmw.start
 ; RV32I-NEXT:    # in Loop: Header=BB24_2 Depth=1
 ; RV32I-NEXT:    sh a1, 10(sp)
 ; RV32I-NEXT:    addi a1, sp, 10
-; RV32I-NEXT:    mv a0, s3
+; RV32I-NEXT:    mv a0, s1
 ; RV32I-NEXT:    mv a3, zero
 ; RV32I-NEXT:    mv a4, zero
 ; RV32I-NEXT:    call __atomic_compare_exchange_2@plt
@@ -2118,9 +2118,9 @@ define signext i16 @atomicrmw_umin_i16_monotonic(i16 *%a, i16 %b) nounwind {
 ; RV32I-NEXT:    bnez a0, .LBB24_4
 ; RV32I-NEXT:  .LBB24_2: # %atomicrmw.start
 ; RV32I-NEXT:    # =>This Inner Loop Header: Depth=1
-; RV32I-NEXT:    and a0, a1, s0
+; RV32I-NEXT:    and a0, a1, s3
 ; RV32I-NEXT:    mv a2, a1
-; RV32I-NEXT:    bgeu s1, a0, .LBB24_1
+; RV32I-NEXT:    bgeu s0, a0, .LBB24_1
 ; RV32I-NEXT:  # %bb.3: # %atomicrmw.start
 ; RV32I-NEXT:    # in Loop: Header=BB24_2 Depth=1
 ; RV32I-NEXT:    mv a2, s2
