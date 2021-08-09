@@ -135,6 +135,7 @@ Symbols:
 # CHECK64-NEXT:   }
 # CHECK64-NEXT: ]
 # CHECK64-NEXT: StringTable {
+# CHECK64-NEXT:   Length: 28
 # CHECK64-NEXT:   [     4]   .text
 # CHECK64-NEXT:   [     a]   .abs
 # CHECK64-NEXT:   [     f]   .undef
