@@ -18,39 +18,49 @@ class TestGdbRemotePlatformFile(GdbRemoteTestCaseBase):
     mydir = TestBase.compute_mydir(__file__)
 
     @expectedFailureAll(oslist=["windows"])
+    @add_test_categories(["llgs"])
     def test_platform_file_rdonly(self):
         self.vFile_test(read=True)
 
     @expectedFailureAll(oslist=["windows"])
+    @add_test_categories(["llgs"])
     def test_platform_file_wronly(self):
         self.vFile_test(write=True)
 
     @expectedFailureAll(oslist=["windows"])
+    @add_test_categories(["llgs"])
     def test_platform_file_rdwr(self):
         self.vFile_test(read=True, write=True)
 
     @expectedFailureAll(oslist=["windows"])
+    @add_test_categories(["llgs"])
     def test_platform_file_wronly_append(self):
         self.vFile_test(write=True, append=True)
 
     @expectedFailureAll(oslist=["windows"])
+    @add_test_categories(["llgs"])
     def test_platform_file_rdwr_append(self):
         self.vFile_test(read=True, write=True, append=True)
 
     @expectedFailureAll(oslist=["windows"])
+    @add_test_categories(["llgs"])
     def test_platform_file_wronly_trunc(self):
         self.vFile_test(write=True, trunc=True)
 
     @expectedFailureAll(oslist=["windows"])
+    @add_test_categories(["llgs"])
     def test_platform_file_rdwr_trunc(self):
         self.vFile_test(read=True, write=True, trunc=True)
 
+    @add_test_categories(["llgs"])
     def test_platform_file_wronly_creat(self):
         self.vFile_test(write=True, creat=True)
 
+    @add_test_categories(["llgs"])
     def test_platform_file_wronly_creat_excl(self):
         self.vFile_test(write=True, creat=True, excl=True)
 
+    @add_test_categories(["llgs"])
     def test_platform_file_wronly_fail(self):
         server = self.connect_to_debug_monitor()
         self.assertIsNotNone(server)
@@ -70,6 +80,7 @@ class TestGdbRemotePlatformFile(GdbRemoteTestCaseBase):
                 True)
             self.expect_gdbremote_sequence()
 
+    @add_test_categories(["llgs"])
     def test_platform_file_wronly_creat_excl_fail(self):
         server = self.connect_to_debug_monitor()
         self.assertIsNotNone(server)
