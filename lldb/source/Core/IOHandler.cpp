@@ -251,8 +251,7 @@ IOHandlerEditline::IOHandlerEditline(
       m_delegate(delegate), m_prompt(), m_continuation_prompt(),
       m_current_lines_ptr(nullptr), m_base_line_number(line_number_start),
       m_curr_line_idx(UINT32_MAX), m_multi_line(multi_line),
-      m_color_prompts(color_prompts), m_interrupt_exits(true),
-      m_editing(false) {
+      m_color_prompts(color_prompts), m_interrupt_exits(true) {
   SetPrompt(prompt);
 
 #if LLDB_ENABLE_LIBEDIT
@@ -399,7 +398,6 @@ bool IOHandlerEditline::GetLine(std::string &line, bool &interrupted) {
   }
 
   if (!got_line && in) {
-    m_editing = true;
     while (!got_line) {
       char *r = fgets(buffer, sizeof(buffer), in);
 #ifdef _WIN32
@@ -425,7 +423,6 @@ bool IOHandlerEditline::GetLine(std::string &line, bool &interrupted) {
       m_line_buffer += buffer;
       got_line = SplitLine(m_line_buffer);
     }
-    m_editing = false;
   }
 
   if (got_line) {
