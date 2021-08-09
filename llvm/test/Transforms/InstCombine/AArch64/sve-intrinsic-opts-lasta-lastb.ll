@@ -147,7 +147,8 @@ define i8 @lastb_extractelement_invalid_predicate_pattern(<vscale x 16 x i8> %v)
 ; Return the splatted value irrespective of the predicate.
 define i8 @lasta_splat(<vscale x 16 x i1> %pg, i8 %a) #0 {
 ; OPT-LABEL: @lasta_splat(
-; OPT-NEXT:    ret i8 %a
+; OPT-NEXT:    ret i8 [[A:%.*]]
+;
   %splat_insert = insertelement <vscale x 16 x i8> poison, i8 %a, i32 0
   %splat = shufflevector <vscale x 16 x i8> %splat_insert, <vscale x 16 x i8> poison, <vscale x 16 x i32> zeroinitializer
   %last = tail call i8 @llvm.aarch64.sve.lasta.nxv16i8(<vscale x 16 x i1> %pg, <vscale x 16 x i8> %splat)
@@ -156,15 +157,155 @@ define i8 @lasta_splat(<vscale x 16 x i1> %pg, i8 %a) #0 {
 
 define i8 @lastb_splat(<vscale x 16 x i1> %pg, i8 %a) #0 {
 ; OPT-LABEL: @lastb_splat(
-; OPT-NEXT:    ret i8 %a
+; OPT-NEXT:    ret i8 [[A:%.*]]
+;
   %splat_insert = insertelement <vscale x 16 x i8> poison, i8 %a, i32 0
   %splat = shufflevector <vscale x 16 x i8> %splat_insert, <vscale x 16 x i8> poison, <vscale x 16 x i32> zeroinitializer
   %last = tail call i8 @llvm.aarch64.sve.lastb.nxv16i8(<vscale x 16 x i1> %pg, <vscale x 16 x i8> %splat)
   ret i8 %last
 }
 
+; Check that we move the lastb before the binary operation so that the new binary op is scalar.
+define i8 @lastb_binop_RHS_splat_sdiv(<vscale x 16 x i1> %pg, i8 %scalar, <vscale x 16 x i8> %vector) #0 {
+; OPT-LABEL: @lastb_binop_RHS_splat_sdiv(
+; OPT-NEXT:    [[TMP1:%.*]] = call i8 @llvm.aarch64.sve.lastb.nxv16i8(<vscale x 16 x i1> [[PG:%.*]], <vscale x 16 x i8> [[VECTOR:%.*]])
+; OPT-NEXT:    [[BINOP1:%.*]] = sdiv i8 [[TMP1]], [[SCALAR:%.*]]
+; OPT-NEXT:    ret i8 [[BINOP1]]
+;
+  %splat_insert = insertelement <vscale x 16 x i8> poison, i8 %scalar, i32 0
+  %splat = shufflevector <vscale x 16 x i8> %splat_insert, <vscale x 16 x i8> poison, <vscale x 16 x i32> zeroinitializer
+  %binop = sdiv <vscale x 16 x i8> %vector, %splat
+  %last = tail call i8 @llvm.aarch64.sve.lastb.nxv16i8(<vscale x 16 x i1> %pg, <vscale x 16 x i8> %binop)
+  ret i8 %last
+}
+
+define i8 @lastb_binop_RHS_splat_sdiv_exact(<vscale x 16 x i1> %pg, i8 %scalar, <vscale x 16 x i8> %vector) #0 {
+; OPT-LABEL: @lastb_binop_RHS_splat_sdiv_exact(
+; OPT-NEXT:    [[TMP1:%.*]] = call i8 @llvm.aarch64.sve.lastb.nxv16i8(<vscale x 16 x i1> [[PG:%.*]], <vscale x 16 x i8> [[VECTOR:%.*]])
+; OPT-NEXT:    [[BINOP1:%.*]] = sdiv exact i8 [[TMP1]], [[SCALAR:%.*]]
+; OPT-NEXT:    ret i8 [[BINOP1]]
+;
+  %splat_insert = insertelement <vscale x 16 x i8> poison, i8 %scalar, i32 0
+  %splat = shufflevector <vscale x 16 x i8> %splat_insert, <vscale x 16 x i8> poison, <vscale x 16 x i32> zeroinitializer
+  %binop = sdiv exact <vscale x 16 x i8> %vector, %splat
+  %last = tail call i8 @llvm.aarch64.sve.lastb.nxv16i8(<vscale x 16 x i1> %pg, <vscale x 16 x i8> %binop)
+  ret i8 %last
+}
+
+define float @lastb_binop_RHS_splat_fdiv_float_fast(<vscale x 4 x i1> %pg, float %scalar, <vscale x 4 x float> %vector) #0 {
+; OPT-LABEL: @lastb_binop_RHS_splat_fdiv_float_fast(
+; OPT-NEXT:    [[TMP1:%.*]] = call float @llvm.aarch64.sve.lastb.nxv4f32(<vscale x 4 x i1> [[PG:%.*]], <vscale x 4 x float> [[VECTOR:%.*]])
+; OPT-NEXT:    [[BINOP1:%.*]] = fdiv fast float [[TMP1]], [[SCALAR:%.*]]
+; OPT-NEXT:    ret float [[BINOP1]]
+;
+  %splat_insert = insertelement <vscale x 4 x float> poison, float %scalar, i32 0
+  %splat = shufflevector <vscale x 4 x float> %splat_insert, <vscale x 4 x float> poison, <vscale x 4 x i32> zeroinitializer
+  %binop = fdiv fast <vscale x 4 x float> %vector, %splat
+  %last = tail call float @llvm.aarch64.sve.lastb.nxv4f32(<vscale x 4 x i1> %pg, <vscale x 4 x float> %binop)
+  ret float %last
+}
+
+define float @lastb_binop_RHS_splat_fdiv_float(<vscale x 4 x i1> %pg, float %scalar, <vscale x 4 x float> %vector) #0 {
+; OPT-LABEL: @lastb_binop_RHS_splat_fdiv_float(
+; OPT-NEXT:    [[TMP1:%.*]] = call float @llvm.aarch64.sve.lastb.nxv4f32(<vscale x 4 x i1> [[PG:%.*]], <vscale x 4 x float> [[VECTOR:%.*]])
+; OPT-NEXT:    [[BINOP1:%.*]] = fdiv float [[TMP1]], [[SCALAR:%.*]]
+; OPT-NEXT:    ret float [[BINOP1]]
+;
+  %splat_insert = insertelement <vscale x 4 x float> poison, float %scalar, i32 0
+  %splat = shufflevector <vscale x 4 x float> %splat_insert, <vscale x 4 x float> poison, <vscale x 4 x i32> zeroinitializer
+  %binop = fdiv <vscale x 4 x float> %vector, %splat
+  %last = tail call float @llvm.aarch64.sve.lastb.nxv4f32(<vscale x 4 x i1> %pg, <vscale x 4 x float> %binop)
+  ret float %last
+}
+
+define i8 @lastb_binop_LHS_splat_sdiv(<vscale x 16 x i1> %pg, i8 %scalar, <vscale x 16 x i8> %vector) #0 {
+; OPT-LABEL: @lastb_binop_LHS_splat_sdiv(
+; OPT-NEXT:    [[TMP1:%.*]] = call i8 @llvm.aarch64.sve.lastb.nxv16i8(<vscale x 16 x i1> [[PG:%.*]], <vscale x 16 x i8> [[VECTOR:%.*]])
+; OPT-NEXT:    [[BINOP1:%.*]] = sdiv i8 [[SCALAR:%.*]], [[TMP1]]
+; OPT-NEXT:    ret i8 [[BINOP1]]
+;
+  %splat_insert = insertelement <vscale x 16 x i8> poison, i8 %scalar, i32 0
+  %splat = shufflevector <vscale x 16 x i8> %splat_insert, <vscale x 16 x i8> poison, <vscale x 16 x i32> zeroinitializer
+  %binop = sdiv <vscale x 16 x i8> %splat, %vector
+  %last = tail call i8 @llvm.aarch64.sve.lastb.nxv16i8(<vscale x 16 x i1> %pg, <vscale x 16 x i8> %binop)
+  ret i8 %last
+}
+
+define i8 @lastb_binop_LHS_splat_sdiv_exact(<vscale x 16 x i1> %pg, i8 %scalar, <vscale x 16 x i8> %vector) #0 {
+; OPT-LABEL: @lastb_binop_LHS_splat_sdiv_exact(
+; OPT-NEXT:    [[TMP1:%.*]] = call i8 @llvm.aarch64.sve.lastb.nxv16i8(<vscale x 16 x i1> [[PG:%.*]], <vscale x 16 x i8> [[VECTOR:%.*]])
+; OPT-NEXT:    [[BINOP1:%.*]] = sdiv exact i8 [[SCALAR:%.*]], [[TMP1]]
+; OPT-NEXT:    ret i8 [[BINOP1]]
+;
+  %splat_insert = insertelement <vscale x 16 x i8> poison, i8 %scalar, i32 0
+  %splat = shufflevector <vscale x 16 x i8> %splat_insert, <vscale x 16 x i8> poison, <vscale x 16 x i32> zeroinitializer
+  %binop = sdiv exact <vscale x 16 x i8> %splat, %vector
+  %last = tail call i8 @llvm.aarch64.sve.lastb.nxv16i8(<vscale x 16 x i1> %pg, <vscale x 16 x i8> %binop)
+  ret i8 %last
+}
+
+define float @lastb_binop_LHS_splat_fdiv_float_fast(<vscale x 4 x i1> %pg, float %scalar, <vscale x 4 x float> %vector) #0 {
+; OPT-LABEL: @lastb_binop_LHS_splat_fdiv_float_fast(
+; OPT-NEXT:    [[TMP1:%.*]] = call float @llvm.aarch64.sve.lastb.nxv4f32(<vscale x 4 x i1> [[PG:%.*]], <vscale x 4 x float> [[VECTOR:%.*]])
+; OPT-NEXT:    [[BINOP1:%.*]] = fdiv fast float [[SCALAR:%.*]], [[TMP1]]
+; OPT-NEXT:    ret float [[BINOP1]]
+;
+  %splat_insert = insertelement <vscale x 4 x float> poison, float %scalar, i32 0
+  %splat = shufflevector <vscale x 4 x float> %splat_insert, <vscale x 4 x float> poison, <vscale x 4 x i32> zeroinitializer
+  %binop = fdiv fast <vscale x 4 x float> %splat, %vector
+  %last = tail call float @llvm.aarch64.sve.lastb.nxv4f32(<vscale x 4 x i1> %pg, <vscale x 4 x float> %binop)
+  ret float %last
+}
+
+define float @lastb_binop_LHS_splat_fdiv_float(<vscale x 4 x i1> %pg, float %scalar, <vscale x 4 x float> %vector) #0 {
+; OPT-LABEL: @lastb_binop_LHS_splat_fdiv_float(
+; OPT-NEXT:    [[TMP1:%.*]] = call float @llvm.aarch64.sve.lastb.nxv4f32(<vscale x 4 x i1> [[PG:%.*]], <vscale x 4 x float> [[VECTOR:%.*]])
+; OPT-NEXT:    [[BINOP1:%.*]] = fdiv float [[SCALAR:%.*]], [[TMP1]]
+; OPT-NEXT:    ret float [[BINOP1]]
+;
+  %splat_insert = insertelement <vscale x 4 x float> poison, float %scalar, i32 0
+  %splat = shufflevector <vscale x 4 x float> %splat_insert, <vscale x 4 x float> poison, <vscale x 4 x i32> zeroinitializer
+  %binop = fdiv <vscale x 4 x float> %splat, %vector
+  %last = tail call float @llvm.aarch64.sve.lastb.nxv4f32(<vscale x 4 x i1> %pg, <vscale x 4 x float> %binop)
+  ret float %last
+}
+
+define i8 @lastb_binop_LHS_RHS_splat_sdiv(<vscale x 16 x i1> %pg, i8 %scalar1, i8 %scalar2) #0 {
+; OPT-LABEL: @lastb_binop_LHS_RHS_splat_sdiv(
+; OPT-NEXT:    [[BINOP1:%.*]] = sdiv i8 [[SCALAR1:%.*]], [[SCALAR2:%.*]]
+; OPT-NEXT:    ret i8 [[BINOP1]]
+;
+  %splat_insert = insertelement <vscale x 16 x i8> poison, i8 %scalar1, i8 0
+  %splat = shufflevector <vscale x 16 x i8> %splat_insert, <vscale x 16 x i8> poison, <vscale x 16 x i32> zeroinitializer
+  %splat_insert2 = insertelement <vscale x 16 x i8> poison, i8 %scalar2, i8 0
+  %splat2 = shufflevector <vscale x 16 x i8> %splat_insert2, <vscale x 16 x i8> poison, <vscale x 16 x i32> zeroinitializer
+  %binop = sdiv <vscale x 16 x i8> %splat, %splat2
+  %last = tail call i8 @llvm.aarch64.sve.lastb.nxv16i8(<vscale x 16 x i1> %pg, <vscale x 16 x i8> %binop)
+  ret i8 %last
+}
+
+; Check that we don't do anything as the binary op has multiple uses.
+define i8 @lastb_binop_nochange(<vscale x 16 x i1> %pg, i8 %scalar, <vscale x 16 x i8> %vector) #0 {
+; OPT-LABEL: @lastb_binop_nochange(
+; OPT-NEXT:    [[SPLAT_INSERT:%.*]] = insertelement <vscale x 16 x i8> poison, i8 [[SCALAR:%.*]], i32 0
+; OPT-NEXT:    [[SPLAT:%.*]] = shufflevector <vscale x 16 x i8> [[SPLAT_INSERT]], <vscale x 16 x i8> poison, <vscale x 16 x i32> zeroinitializer
+; OPT-NEXT:    [[BINOP:%.*]] = sdiv <vscale x 16 x i8> [[VECTOR:%.*]], [[SPLAT]]
+; OPT-NEXT:    [[LAST:%.*]] = tail call i8 @llvm.aarch64.sve.lastb.nxv16i8(<vscale x 16 x i1> [[PG:%.*]], <vscale x 16 x i8> [[BINOP]])
+; OPT-NEXT:    call void @use(<vscale x 16 x i8> [[BINOP]])
+; OPT-NEXT:    ret i8 [[LAST]]
+;
+  %splat_insert = insertelement <vscale x 16 x i8> poison, i8 %scalar, i32 0
+  %splat = shufflevector <vscale x 16 x i8> %splat_insert, <vscale x 16 x i8> poison, <vscale x 16 x i32> zeroinitializer
+  %binop = sdiv <vscale x 16 x i8> %vector, %splat
+  %last = tail call i8 @llvm.aarch64.sve.lastb.nxv16i8(<vscale x 16 x i1> %pg, <vscale x 16 x i8> %binop)
+  call void @use(<vscale x 16 x i8> %binop)
+  ret i8 %last
+}
+
+declare void @use(<vscale x 16 x i8>)
 declare <vscale x 16 x i1> @llvm.aarch64.sve.ptrue.nxv16i1(i32)
 declare i8 @llvm.aarch64.sve.lasta.nxv16i8(<vscale x 16 x i1>, <vscale x 16 x i8>)
 declare i8 @llvm.aarch64.sve.lastb.nxv16i8(<vscale x 16 x i1>, <vscale x 16 x i8>)
+declare float @llvm.aarch64.sve.lastb.nxv4f32(<vscale x 4 x i1>, <vscale x 4 x float>)
 
 attributes #0 = { "target-features"="+sve" }
