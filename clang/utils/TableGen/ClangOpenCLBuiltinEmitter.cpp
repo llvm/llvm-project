@@ -238,6 +238,7 @@ class OpenCLBuiltinFileEmitterBase {
 public:
   OpenCLBuiltinFileEmitterBase(RecordKeeper &Records, raw_ostream &OS)
       : Records(Records), OS(OS) {}
+  virtual ~OpenCLBuiltinFileEmitterBase() = default;
 
   // Entrypoint to generate the functions for testing all OpenCL builtin
   // functions.
