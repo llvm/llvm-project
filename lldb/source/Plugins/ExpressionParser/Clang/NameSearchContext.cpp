@@ -66,6 +66,7 @@ clang::NamedDecl *NameSearchContext::AddFunDecl(const CompilerType &type,
     context = LinkageSpecDecl::Create(
         ast, context, SourceLocation(), SourceLocation(),
         clang::LinkageSpecDecl::LanguageIDs::lang_c, false);
+    // FIXME: The LinkageSpecDecl here should be added to m_decl_context.
   }
 
   // Pass the identifier info for functions the decl_name is needed for
