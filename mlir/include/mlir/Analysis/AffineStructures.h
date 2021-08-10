@@ -64,8 +64,8 @@ public:
   /// of constraints and identifiers..
   FlatAffineConstraints(unsigned numReservedInequalities,
                         unsigned numReservedEqualities,
-                        unsigned numReservedCols, unsigned numDims = 0,
-                        unsigned numSymbols = 0, unsigned numLocals = 0,
+                        unsigned numReservedCols, unsigned numDims,
+                        unsigned numSymbols, unsigned numLocals,
                         ArrayRef<Optional<Value>> idArgs = {})
       : numIds(numDims + numSymbols + numLocals), numDims(numDims),
         numSymbols(numSymbols),

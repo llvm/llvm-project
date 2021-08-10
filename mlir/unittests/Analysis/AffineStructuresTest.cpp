@@ -56,8 +56,8 @@ static FlatAffineConstraints
 makeFACFromConstraints(unsigned ids, ArrayRef<SmallVector<int64_t, 4>> ineqs,
                        ArrayRef<SmallVector<int64_t, 4>> eqs,
                        unsigned syms = 0) {
-  FlatAffineConstraints fac(ineqs.size(), eqs.size(), ids + 1, ids - syms,
-                            syms);
+  FlatAffineConstraints fac(ineqs.size(), eqs.size(), ids + 1, ids - syms, syms,
+                            /*numLocals=*/0);
   for (const auto &eq : eqs)
     fac.addEquality(eq);
   for (const auto &ineq : ineqs)
