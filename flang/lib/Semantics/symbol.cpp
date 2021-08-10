@@ -676,4 +676,38 @@ bool GenericKind::Is(GenericKind::OtherKind x) const {
   return y && *y == x;
 }
 
+bool SymbolOffsetCompare::operator()(
+    const SymbolRef &x, const SymbolRef &y) const {
+  const Symbol *xCommon{FindCommonBlockContaining(*x)};
+  const Symbol *yCommon{FindCommonBlockContaining(*y)};
+  if (xCommon) {
+    if (yCommon) {
+      const SymbolSourcePositionCompare sourceCmp;
+      if (sourceCmp(*xCommon, *yCommon)) {
+        return true;
+      } else if (sourceCmp(*yCommon, *xCommon)) {
+        return false;
+      } else if (x->offset() == y->offset()) {
+        return x->size() > y->size();
+      } else {
+        return x->offset() < y->offset();
+      }
+    } else {
+      return false;
+    }
+  } else if (yCommon) {
+    return true;
+  } else if (x->offset() == y->offset()) {
+    return x->size() > y->size();
+  } else {
+    return x->offset() < y->offset();
+  }
+  return x->GetSemanticsContext().allCookedSources().Precedes(
+      x->name(), y->name());
+}
+bool SymbolOffsetCompare::operator()(
+    const MutableSymbolRef &x, const MutableSymbolRef &y) const {
+  return (*this)(SymbolRef{*x}, SymbolRef{*y});
+}
+
 } // namespace Fortran::semantics
