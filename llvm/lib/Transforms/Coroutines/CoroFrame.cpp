@@ -2514,8 +2514,8 @@ void coro::salvageDebugInfo(
   bool OutermostLoad = true;
   Value *Storage = DVI->getVariableLocationOp(0);
   Value *OriginalStorage = Storage;
-  while (Storage) {
-    if (auto *LdInst = dyn_cast<LoadInst>(Storage)) {
+  while (auto *Inst = dyn_cast<Instruction>(Storage)) {
+    if (auto *LdInst = dyn_cast<LoadInst>(Inst)) {
       Storage = LdInst->getOperand(0);
       // FIXME: This is a heuristic that works around the fact that
       // LLVM IR debug intrinsics cannot yet distinguish between
@@ -2526,28 +2526,23 @@ void coro::salvageDebugInfo(
       if (!OutermostLoad)
         Expr = DIExpression::prepend(Expr, DIExpression::DerefBefore);
       OutermostLoad = false;
-    } else if (auto *StInst = dyn_cast<StoreInst>(Storage)) {
+    } else if (auto *StInst = dyn_cast<StoreInst>(Inst)) {
       Storage = StInst->getOperand(0);
-    } else if (auto *GEPInst = dyn_cast<GetElementPtrInst>(Storage)) {
+    } else {
       SmallVector<uint64_t, 16> Ops;
       SmallVector<Value *, 0> AdditionalValues;
-      Storage = llvm::salvageDebugInfoImpl(
-          *GEPInst, Expr ? Expr->getNumLocationOperands() : 0, Ops,
+      Value *Op = llvm::salvageDebugInfoImpl(
+          *Inst, Expr ? Expr->getNumLocationOperands() : 0, Ops,
           AdditionalValues);
-      if (!Storage)
+      if (!Op || !AdditionalValues.empty()) {
+        // If salvaging failed or salvaging produced more than one location
+        // operand, give up.
         break;
-      // Debug declares cannot currently handle additional location
-      // operands.
-      if (!AdditionalValues.empty())
-        break;
+      }
+      Storage = Op;
       Expr = DIExpression::appendOpsToArg(Expr, Ops, 0, /*StackValue*/ false);
-    } else if (auto *BCInst = dyn_cast<llvm::BitCastInst>(Storage))
-      Storage = BCInst->getOperand(0);
-    else
-      break;
+    }
   }
-  if (!Storage)
-    return;
 
   // Store a pointer to the coroutine frame object in an alloca so it
   // is available throughout the function when producing unoptimized
