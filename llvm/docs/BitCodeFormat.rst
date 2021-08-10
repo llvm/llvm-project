@@ -104,11 +104,11 @@ value (0 through 7) is encoded directly, with the high bit set to zero.  Values
 larger than N-1 bits emit their bits in a series of N-1 bit chunks, where all
 but the last set the high bit.
 
-For example, the value 27 (0x1B) is encoded as 1011 0011 when emitted as a vbr4
-value.  The first set of four bits indicates the value 3 (011) with a
-continuation piece (indicated by a high bit of 1).  The next word indicates a
-value of 24 (011 << 3) with no continuation.  The sum (3+24) yields the value
-27.
+For example, the value 30 (0x1E) is encoded as 62 (0b0011'1110) when emitted as
+a vbr4 value.  The first set of four bits starting from the least significant
+indicates the value 6 (110) with a continuation piece (indicated by a high bit
+of 1).  The next set of four bits indicates a value of 24 (011 << 3) with no
+continuation.  The sum (6+24) yields the value 30.
 
 .. _char6-encoded value:
 
