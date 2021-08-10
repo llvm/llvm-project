@@ -110,12 +110,12 @@ void CheckAndProtect() {
 #else
   ProtectRange(LoAppMemEnd(), ShadowBeg());
   ProtectRange(ShadowEnd(), MetaShadowBeg());
-#ifdef TSAN_MID_APP_RANGE
-  ProtectRange(MetaShadowEnd(), MidAppMemBeg());
-  ProtectRange(MidAppMemEnd(), TraceMemBeg());
-#else
-  ProtectRange(MetaShadowEnd(), TraceMemBeg());
-#endif
+  if (MidAppMemBeg()) {
+    ProtectRange(MetaShadowEnd(), MidAppMemBeg());
+    ProtectRange(MidAppMemEnd(), TraceMemBeg());
+  } else {
+    ProtectRange(MetaShadowEnd(), TraceMemBeg());
+  }
   // Memory for traces is mapped lazily in MapThreadTrace.
   // Protect the whole range for now, so that user does not map something here.
   ProtectRange(TraceMemBeg(), TraceMemEnd());
