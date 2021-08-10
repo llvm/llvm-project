@@ -85,10 +85,8 @@ static void InitializeLongjmpXorKey();
 static uptr longjmp_xor_key;
 #endif
 
-#ifdef TSAN_RUNTIME_VMA
 // Runtime detected VMA size.
 uptr vmaSize;
-#endif
 
 enum {
   MemTotal  = 0,
@@ -214,7 +212,6 @@ void InitializeShadowMemoryPlatform() {
 #endif  // #if !SANITIZER_GO
 
 void InitializePlatformEarly() {
-#ifdef TSAN_RUNTIME_VMA
   vmaSize =
     (MostSignificantSetBitIndex(GET_CURRENT_FRAME()) + 1);
 #if defined(__aarch64__)
@@ -259,7 +256,6 @@ void InitializePlatformEarly() {
     Die();
   }
 # endif
-#endif
 #endif
 }
 

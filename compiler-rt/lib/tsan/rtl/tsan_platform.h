@@ -624,120 +624,62 @@ struct MappingGoS390x {
   static const uptr kShadowAdd = 0x400000000000ull;
 };
 
-#if defined(__x86_64__)
-#  define HAS_48_BIT_ADDRESS_SPACE 1
-#elif SANITIZER_IOSSIM  // arm64 iOS simulators (order of #if matters)
-#  define HAS_48_BIT_ADDRESS_SPACE 1
-#elif SANITIZER_IOS  // arm64 iOS devices (order of #if matters)
-#  define HAS_48_BIT_ADDRESS_SPACE 0
-#elif SANITIZER_MAC  // arm64 macOS (order of #if matters)
-#  define HAS_48_BIT_ADDRESS_SPACE 1
-#else
-#  define HAS_48_BIT_ADDRESS_SPACE 0
-#endif
-
-#if !SANITIZER_GO
-
-#  if HAS_48_BIT_ADDRESS_SPACE
-typedef Mapping48AddressSpace Mapping;
-#  elif defined(__mips64)
-typedef MappingMips64_40 Mapping40;
-#    define TSAN_RUNTIME_VMA 1
-#  elif defined(__aarch64__) && defined(__APPLE__)
-typedef MappingAppleAarch64 Mapping;
-#  elif defined(__aarch64__) && !defined(__APPLE__)
-// AArch64 supports multiple VMA which leads to multiple address transformation
-// functions.  To support these multiple VMAS transformations and mappings TSAN
-// runtime for AArch64 uses an external memory read (vmaSize) to select which
-// mapping to use.  Although slower, it make a same instrumented binary run on
-// multiple kernels.
-typedef MappingAarch64_39 Mapping39;
-typedef MappingAarch64_42 Mapping42;
-typedef MappingAarch64_48 Mapping48;
-// Indicates the runtime will define the memory regions at runtime.
-#    define TSAN_RUNTIME_VMA 1
-// Indicates that mapping defines a mid range memory segment.
-#  elif defined(__powerpc64__)
-// PPC64 supports multiple VMA which leads to multiple address transformation
-// functions.  To support these multiple VMAS transformations and mappings TSAN
-// runtime for PPC64 uses an external memory read (vmaSize) to select which
-// mapping to use.  Although slower, it make a same instrumented binary run on
-// multiple kernels.
-typedef MappingPPC64_44 Mapping44;
-typedef MappingPPC64_46 Mapping46;
-typedef MappingPPC64_47 Mapping47;
-// Indicates the runtime will define the memory regions at runtime.
-#    define TSAN_RUNTIME_VMA 1
-#  elif defined(__s390x__)
-typedef MappingS390x Mapping;
-#  endif
-#elif SANITIZER_GO && !SANITIZER_WINDOWS && HAS_48_BIT_ADDRESS_SPACE
-typedef MappingGo48 Mapping;
-#elif SANITIZER_GO && SANITIZER_WINDOWS
-typedef MappingGoWindows Mapping;
-#elif SANITIZER_GO && defined(__powerpc64__)
-/* Only Mapping46 and Mapping47 are currently supported for powercp64 on Go. */
-typedef MappingGoPPC64_46 Mapping46;
-typedef MappingGoPPC64_47 Mapping47;
-#  define TSAN_RUNTIME_VMA 1
-#elif SANITIZER_GO && defined(__aarch64__)
-typedef MappingGoAarch64 Mapping;
-// Indicates the runtime will define the memory regions at runtime.
-#  define TSAN_RUNTIME_VMA 1
-#elif SANITIZER_GO && defined(__mips64)
-typedef MappingGoMips64_47 Mapping47;
-#  define TSAN_RUNTIME_VMA 1
-#elif SANITIZER_GO && defined(__s390x__)
-typedef MappingGoS390x Mapping;
-#else
-#  error "Unknown platform"
-#endif
-
-#ifdef TSAN_RUNTIME_VMA
 extern uptr vmaSize;
-#endif
 
 template <typename Func, typename Arg>
 ALWAYS_INLINE auto SelectMapping(Arg arg) {
-#if defined(__aarch64__) && !defined(__APPLE__) && !SANITIZER_GO
+#if SANITIZER_GO
+#  if defined(__powerpc64__)
+  switch (vmaSize) {
+    case 46:
+      return Func::template Apply<MappingGoPPC64_46>(arg);
+    case 47:
+      return Func::template Apply<MappingGoPPC64_47>(arg);
+  }
+#  elif defined(__mips64)
+  return Func::template Apply<MappingGoMips64_47>(arg);
+#  elif defined(__s390x__)
+  return Func::template Apply<MappingGoS390x>(arg);
+#  elif defined(__aarch64__)
+  return Func::template Apply<MappingGoAarch64>(arg);
+#  elif SANITIZER_WINDOWS
+  return Func::template Apply<MappingGoWindows>(arg);
+#  else
+  return Func::template Apply<MappingGo48>(arg);
+#  endif
+#else  // SANITIZER_GO
+#  if defined(__x86_64__) || defined(SANITIZER_IOSSIM) || \
+      SANITIZER_MAC && !SANITIZER_IOS
+  return Func::template Apply<Mapping48AddressSpace>(arg);
+#  elif defined(__aarch64__) && defined(__APPLE__)
+  return Func::template Apply<MappingAppleAarch64>(arg);
+#  elif defined(__aarch64__) && !defined(__APPLE__)
   switch (vmaSize) {
     case 39:
-      return Func::template Apply<Mapping39>(arg);
+      return Func::template Apply<MappingAarch64_39>(arg);
     case 42:
-      return Func::template Apply<Mapping42>(arg);
+      return Func::template Apply<MappingAarch64_42>(arg);
     case 48:
-      return Func::template Apply<Mapping48>(arg);
+      return Func::template Apply<MappingAarch64_48>(arg);
   }
-  DCHECK(0);
-  return 0;
-#elif defined(__powerpc64__)
+#  elif defined(__powerpc64__)
   switch (vmaSize) {
-#  if !SANITIZER_GO
     case 44:
-      return Func::template Apply<Mapping44>(arg);
-#  endif
+      return Func::template Apply<MappingPPC64_44>(arg);
     case 46:
-      return Func::template Apply<Mapping46>(arg);
+      return Func::template Apply<MappingPPC64_46>(arg);
     case 47:
-      return Func::template Apply<Mapping47>(arg);
+      return Func::template Apply<MappingPPC64_47>(arg);
   }
-  DCHECK(0);
-  return 0;
-#elif defined(__mips64)
-  switch (vmaSize) {
-#  if !SANITIZER_GO
-    case 40:
-      return Func::template Apply<Mapping40>(arg);
+#  elif defined(__mips64)
+  return Func::template Apply<MappingMips64_40>(arg);
+#  elif defined(__s390x__)
+  return Func::template Apply<MappingS390x>(arg);
 #  else
-    case 47:
-      return Func::template Apply<Mapping47>(arg);
+#    error "unsupported platform"
 #  endif
-  }
-  DCHECK(0);
-  return 0;
-#else
-  return Func::template Apply<Mapping>(arg);
 #endif
+  Die();
 }
 
 template <typename Func>
