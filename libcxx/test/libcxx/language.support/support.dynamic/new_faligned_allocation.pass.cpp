@@ -9,10 +9,6 @@
 // test libc++'s implementation of align_val_t, and the relevant new/delete
 // overloads in all dialects when -faligned-allocation is present.
 
-// Libc++ defers to the underlying MSVC library to provide the new/delete
-// definitions, which does not yet provide aligned allocation
-// XFAIL: LIBCXX-WINDOWS-FIXME
-
 // The dylibs shipped before macosx10.13 do not contain the aligned allocation
 // functions, so trying to force using those with -faligned-allocation results
 // in a link error.
@@ -81,7 +77,13 @@ int main(int, char**) {
   {
     // Check that libc++ doesn't define align_val_t in a versioning namespace.
     // And that it mangles the same in C++03 through C++17
+#ifdef _MSC_VER
+    // MSVC uses a different C++ ABI with a different name mangling scheme.
+    // The type id name doesn't seem to contain the mangled form at all.
+    assert(typeid(std::align_val_t).name() == std::string("enum std::align_val_t"));
+#else
     assert(typeid(std::align_val_t).name() == std::string("St11align_val_t"));
+#endif
   }
 #endif
 
