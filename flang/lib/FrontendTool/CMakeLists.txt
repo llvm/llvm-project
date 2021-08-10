@@ -2,12 +2,11 @@ add_flang_library(flangFrontendTool
   ExecuteCompilerInvocation.cpp
 
   DEPENDS
-  clangBasic
+  clang-cpp
 
   LINK_LIBS
   flangFrontend
-  clangBasic
-  clangDriver
+  clang-cpp
 
   LINK_COMPONENTS
   Option

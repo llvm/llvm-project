@@ -9,7 +9,7 @@ add_flang_library(flangFrontend
   TextDiagnostic.cpp
 
   DEPENDS
-  clangBasic
+  clang-cpp
 
   LINK_LIBS
   FortranParser
@@ -17,8 +17,7 @@ add_flang_library(flangFrontend
   FortranEvaluate
   FortranCommon
   FortranLower
-  clangBasic
-  clangDriver
+  clang-cpp
 
   LINK_COMPONENTS
   Option
