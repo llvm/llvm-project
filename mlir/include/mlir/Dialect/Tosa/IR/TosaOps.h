@@ -14,6 +14,7 @@
 #define MLIR_DIALECT_TOSA_IR_TOSAOPS_H
 
 #include "mlir/Dialect/Quant/QuantOps.h"
+#include "mlir/Dialect/Tensor/IR/Tensor.h"
 #include "mlir/Dialect/Traits.h"
 #include "mlir/Interfaces/InferTypeOpInterface.h"
 #include "mlir/Interfaces/LoopLikeInterface.h"
