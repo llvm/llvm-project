@@ -129,9 +129,6 @@ llvm::StringRef toSourceCode(const SourceManager &SM, SourceRange R);
 // Note that clang also uses closed source ranges, which this can't handle!
 Range halfOpenToRange(const SourceManager &SM, CharSourceRange R);
 
-// Expand range `A` to also contain `B`.
-void unionRanges(Range &A, Range B);
-
 // Converts an offset to a clang line/column (1-based, columns are bytes).
 // The offset must be in range [0, Code.size()].
 // Prefer to use SourceManager if one is available.
