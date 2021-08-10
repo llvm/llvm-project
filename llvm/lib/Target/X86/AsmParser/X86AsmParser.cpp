@@ -2753,6 +2753,7 @@ bool X86AsmParser::HandleAVX512Operand(OperandVector &Operands) {
               .Case("1to4", "{1to4}")
               .Case("1to8", "{1to8}")
               .Case("1to16", "{1to16}")
+              .Case("1to32", "{1to32}")
               .Default(nullptr);
       if (!BroadcastPrimitive)
         return TokError("Invalid memory broadcast primitive.");

@@ -84,7 +84,8 @@ static void testComplementAtPoints(PresburgerSet s,
 static FlatAffineConstraints
 makeFACFromConstraints(unsigned dims, ArrayRef<SmallVector<int64_t, 4>> ineqs,
                        ArrayRef<SmallVector<int64_t, 4>> eqs) {
-  FlatAffineConstraints fac(ineqs.size(), eqs.size(), dims + 1, dims);
+  FlatAffineConstraints fac(ineqs.size(), eqs.size(), dims + 1, dims,
+                            /*numSymbols=*/0, /*numLocals=*/0);
   for (const SmallVector<int64_t, 4> &eq : eqs)
     fac.addEquality(eq);
   for (const SmallVector<int64_t, 4> &ineq : ineqs)

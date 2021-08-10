@@ -10,7 +10,8 @@
 
 // functional
 
-// template <class F, class... Args> constexpr unspecified bind_front(F&&, Args&&...);
+// template <class F, class... Args>
+// constexpr unspecified bind_front(F&&, Args&&...);
 
 #include <functional>
 

@@ -3575,6 +3575,8 @@ X86
 
 .. option:: -mavx512f, -mno-avx512f
 
+.. option:: -mavx512fp16, -mno-avx512fp16
+
 .. option:: -mavx512ifma, -mno-avx512ifma
 
 .. option:: -mavx512pf, -mno-avx512pf
