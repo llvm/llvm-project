@@ -96,6 +96,8 @@ Changes to the X86 Target
 
 During this release ...
 
+* Support for ``AVX512-FP16`` instructions has been added.
+
 Changes to the AMDGPU Target
 -----------------------------
 

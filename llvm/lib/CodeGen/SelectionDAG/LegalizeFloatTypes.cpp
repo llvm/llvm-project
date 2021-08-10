@@ -820,6 +820,7 @@ bool DAGTypeLegalizer::SoftenFloatOperand(SDNode *N, unsigned OpNo) {
 
   case ISD::BITCAST:     Res = SoftenFloatOp_BITCAST(N); break;
   case ISD::BR_CC:       Res = SoftenFloatOp_BR_CC(N); break;
+  case ISD::STRICT_FP_TO_FP16:
   case ISD::FP_TO_FP16:  // Same as FP_ROUND for softening purposes
   case ISD::STRICT_FP_ROUND:
   case ISD::FP_ROUND:    Res = SoftenFloatOp_FP_ROUND(N); break;
@@ -871,13 +872,17 @@ SDValue DAGTypeLegalizer::SoftenFloatOp_FP_ROUND(SDNode *N) {
   // We actually deal with the partially-softened FP_TO_FP16 node too, which
   // returns an i16 so doesn't meet the constraints necessary for FP_ROUND.
   assert(N->getOpcode() == ISD::FP_ROUND || N->getOpcode() == ISD::FP_TO_FP16 ||
+         N->getOpcode() == ISD::STRICT_FP_TO_FP16 ||
          N->getOpcode() == ISD::STRICT_FP_ROUND);
 
   bool IsStrict = N->isStrictFPOpcode();
   SDValue Op = N->getOperand(IsStrict ? 1 : 0);
   EVT SVT = Op.getValueType();
   EVT RVT = N->getValueType(0);
-  EVT FloatRVT = N->getOpcode() == ISD::FP_TO_FP16 ? MVT::f16 : RVT;
+  EVT FloatRVT = (N->getOpcode() == ISD::FP_TO_FP16 ||
+                  N->getOpcode() == ISD::STRICT_FP_TO_FP16)
+                     ? MVT::f16
+                     : RVT;
 
   RTLIB::Libcall LC = RTLIB::getFPROUND(SVT, FloatRVT);
   assert(LC != RTLIB::UNKNOWN_LIBCALL && "Unsupported FP_ROUND libcall");

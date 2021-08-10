@@ -133,7 +133,7 @@ CUDA Support in Clang
 X86 Support in Clang
 --------------------
 
-- ...
+- Support for ``AVX512-FP16`` instructions has been added.
 
 Internal API Changes
 --------------------
