@@ -21,9 +21,7 @@
 
 #ifdef __AMDGCN__
 #include "amdgcn/src/amdgcn_interface.h"
-#ifndef NOINLINE //fixme
-#define NOINLINE
-#endif
+#define NOINLINE __attribute__((noinline))
 #endif
 #ifdef __CUDACC__
 #include "nvptx/src/nvptx_interface.h"

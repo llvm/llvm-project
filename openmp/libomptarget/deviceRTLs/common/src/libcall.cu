@@ -309,15 +309,6 @@ EXTERN int omp_get_device_num(void) {
         omptarget_device_environment.device_num);
   return omptarget_device_environment.device_num;
 }
-#else
-EXTERN int omp_get_num_devices(void) {
-  PRINT0(LD_IO, "call omp_get_num_devices() is undef on device, returns 0\n");
-  return 0;
-}
-EXTERN int omp_get_device_num(void) {
-  PRINT0(LD_IO, "call omp_get_device_num() is undef on device, returns 0\n");
-  return 0;
-}
 #endif
 
 EXTERN int omp_get_num_teams(void) {
