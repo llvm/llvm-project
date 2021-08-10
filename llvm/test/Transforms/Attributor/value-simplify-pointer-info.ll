@@ -2890,7 +2890,9 @@ define i8 @phi_store() {
 ; IS__TUNIT_OPM-NEXT:    [[C:%.*]] = icmp eq i8 [[O]], 2
 ; IS__TUNIT_OPM-NEXT:    br i1 [[C]], label [[END:%.*]], label [[LOOP]]
 ; IS__TUNIT_OPM:       end:
-; IS__TUNIT_OPM-NEXT:    ret i8 1
+; IS__TUNIT_OPM-NEXT:    [[S:%.*]] = getelementptr i8, i8* [[B]], i64 1
+; IS__TUNIT_OPM-NEXT:    [[L:%.*]] = load i8, i8* [[S]], align 1
+; IS__TUNIT_OPM-NEXT:    ret i8 [[L]]
 ;
 ; IS__TUNIT_NPM: Function Attrs: nofree nosync nounwind readnone willreturn
 ; IS__TUNIT_NPM-LABEL: define {{[^@]+}}@phi_store
@@ -2907,7 +2909,9 @@ define i8 @phi_store() {
 ; IS__TUNIT_NPM-NEXT:    [[C:%.*]] = icmp eq i8 [[O]], 2
 ; IS__TUNIT_NPM-NEXT:    br i1 [[C]], label [[END:%.*]], label [[LOOP]]
 ; IS__TUNIT_NPM:       end:
-; IS__TUNIT_NPM-NEXT:    ret i8 1
+; IS__TUNIT_NPM-NEXT:    [[S:%.*]] = getelementptr i8, i8* [[B]], i64 1
+; IS__TUNIT_NPM-NEXT:    [[L:%.*]] = load i8, i8* [[S]], align 1
+; IS__TUNIT_NPM-NEXT:    ret i8 [[L]]
 ;
 ; IS__CGSCC_OPM: Function Attrs: nofree norecurse nosync nounwind readnone
 ; IS__CGSCC_OPM-LABEL: define {{[^@]+}}@phi_store
@@ -2924,7 +2928,9 @@ define i8 @phi_store() {
 ; IS__CGSCC_OPM-NEXT:    [[C:%.*]] = icmp eq i8 [[O]], 2
 ; IS__CGSCC_OPM-NEXT:    br i1 [[C]], label [[END:%.*]], label [[LOOP]]
 ; IS__CGSCC_OPM:       end:
-; IS__CGSCC_OPM-NEXT:    ret i8 1
+; IS__CGSCC_OPM-NEXT:    [[S:%.*]] = getelementptr i8, i8* [[B]], i64 1
+; IS__CGSCC_OPM-NEXT:    [[L:%.*]] = load i8, i8* [[S]], align 1
+; IS__CGSCC_OPM-NEXT:    ret i8 [[L]]
 ;
 ; IS__CGSCC_NPM: Function Attrs: nofree norecurse nosync nounwind readnone willreturn
 ; IS__CGSCC_NPM-LABEL: define {{[^@]+}}@phi_store
@@ -2941,7 +2947,9 @@ define i8 @phi_store() {
 ; IS__CGSCC_NPM-NEXT:    [[C:%.*]] = icmp eq i8 [[O]], 2
 ; IS__CGSCC_NPM-NEXT:    br i1 [[C]], label [[END:%.*]], label [[LOOP]]
 ; IS__CGSCC_NPM:       end:
-; IS__CGSCC_NPM-NEXT:    ret i8 1
+; IS__CGSCC_NPM-NEXT:    [[S:%.*]] = getelementptr i8, i8* [[B]], i64 1
+; IS__CGSCC_NPM-NEXT:    [[L:%.*]] = load i8, i8* [[S]], align 1
+; IS__CGSCC_NPM-NEXT:    ret i8 [[L]]
 ;
 entry:
   %a = alloca i16
@@ -2963,9 +2971,9 @@ end:
 
 ; FIXME: This function returns 1.
 define i8 @phi_no_store_1() {
-; IS__TUNIT_OPM: Function Attrs: nofree nosync nounwind writeonly
+; IS__TUNIT_OPM: Function Attrs: nofree nosync nounwind
 ; IS__TUNIT_OPM-LABEL: define {{[^@]+}}@phi_no_store_1
-; IS__TUNIT_OPM-SAME: () #[[ATTR6]] {
+; IS__TUNIT_OPM-SAME: () #[[ATTR2]] {
 ; IS__TUNIT_OPM-NEXT:  entry:
 ; IS__TUNIT_OPM-NEXT:    br label [[LOOP:%.*]]
 ; IS__TUNIT_OPM:       loop:
@@ -2976,11 +2984,14 @@ define i8 @phi_no_store_1() {
 ; IS__TUNIT_OPM-NEXT:    [[C:%.*]] = icmp eq i8 [[O]], 3
 ; IS__TUNIT_OPM-NEXT:    br i1 [[C]], label [[END:%.*]], label [[LOOP]]
 ; IS__TUNIT_OPM:       end:
-; IS__TUNIT_OPM-NEXT:    ret i8 0
+; IS__TUNIT_OPM-NEXT:    [[L11:%.*]] = load i8, i8* getelementptr (i8, i8* bitcast (i32* @a1 to i8*), i64 2), align 2
+; IS__TUNIT_OPM-NEXT:    [[L12:%.*]] = load i8, i8* getelementptr (i8, i8* bitcast (i32* @a1 to i8*), i64 3), align 1
+; IS__TUNIT_OPM-NEXT:    [[ADD:%.*]] = add i8 [[L11]], [[L12]]
+; IS__TUNIT_OPM-NEXT:    ret i8 [[ADD]]
 ;
-; IS__TUNIT_NPM: Function Attrs: nofree nosync nounwind willreturn writeonly
+; IS__TUNIT_NPM: Function Attrs: nofree nosync nounwind willreturn
 ; IS__TUNIT_NPM-LABEL: define {{[^@]+}}@phi_no_store_1
-; IS__TUNIT_NPM-SAME: () #[[ATTR4]] {
+; IS__TUNIT_NPM-SAME: () #[[ATTR2]] {
 ; IS__TUNIT_NPM-NEXT:  entry:
 ; IS__TUNIT_NPM-NEXT:    br label [[LOOP:%.*]]
 ; IS__TUNIT_NPM:       loop:
@@ -2991,9 +3002,12 @@ define i8 @phi_no_store_1() {
 ; IS__TUNIT_NPM-NEXT:    [[C:%.*]] = icmp eq i8 [[O]], 3
 ; IS__TUNIT_NPM-NEXT:    br i1 [[C]], label [[END:%.*]], label [[LOOP]]
 ; IS__TUNIT_NPM:       end:
-; IS__TUNIT_NPM-NEXT:    ret i8 0
+; IS__TUNIT_NPM-NEXT:    [[L11:%.*]] = load i8, i8* getelementptr (i8, i8* bitcast (i32* @a1 to i8*), i64 2), align 2
+; IS__TUNIT_NPM-NEXT:    [[L12:%.*]] = load i8, i8* getelementptr (i8, i8* bitcast (i32* @a1 to i8*), i64 3), align 1
+; IS__TUNIT_NPM-NEXT:    [[ADD:%.*]] = add i8 [[L11]], [[L12]]
+; IS__TUNIT_NPM-NEXT:    ret i8 [[ADD]]
 ;
-; IS__CGSCC_OPM: Function Attrs: nofree norecurse nosync nounwind writeonly
+; IS__CGSCC_OPM: Function Attrs: nofree norecurse nosync nounwind
 ; IS__CGSCC_OPM-LABEL: define {{[^@]+}}@phi_no_store_1
 ; IS__CGSCC_OPM-SAME: () #[[ATTR9:[0-9]+]] {
 ; IS__CGSCC_OPM-NEXT:  entry:
@@ -3006,11 +3020,14 @@ define i8 @phi_no_store_1() {
 ; IS__CGSCC_OPM-NEXT:    [[C:%.*]] = icmp eq i8 [[O]], 3
 ; IS__CGSCC_OPM-NEXT:    br i1 [[C]], label [[END:%.*]], label [[LOOP]]
 ; IS__CGSCC_OPM:       end:
-; IS__CGSCC_OPM-NEXT:    ret i8 0
+; IS__CGSCC_OPM-NEXT:    [[L11:%.*]] = load i8, i8* getelementptr (i8, i8* bitcast (i32* @a1 to i8*), i64 2), align 2
+; IS__CGSCC_OPM-NEXT:    [[L12:%.*]] = load i8, i8* getelementptr (i8, i8* bitcast (i32* @a1 to i8*), i64 3), align 1
+; IS__CGSCC_OPM-NEXT:    [[ADD:%.*]] = add i8 [[L11]], [[L12]]
+; IS__CGSCC_OPM-NEXT:    ret i8 [[ADD]]
 ;
-; IS__CGSCC_NPM: Function Attrs: nofree norecurse nosync nounwind willreturn writeonly
+; IS__CGSCC_NPM: Function Attrs: nofree norecurse nosync nounwind willreturn
 ; IS__CGSCC_NPM-LABEL: define {{[^@]+}}@phi_no_store_1
-; IS__CGSCC_NPM-SAME: () #[[ATTR4]] {
+; IS__CGSCC_NPM-SAME: () #[[ATTR5]] {
 ; IS__CGSCC_NPM-NEXT:  entry:
 ; IS__CGSCC_NPM-NEXT:    br label [[LOOP:%.*]]
 ; IS__CGSCC_NPM:       loop:
@@ -3021,7 +3038,10 @@ define i8 @phi_no_store_1() {
 ; IS__CGSCC_NPM-NEXT:    [[C:%.*]] = icmp eq i8 [[O]], 3
 ; IS__CGSCC_NPM-NEXT:    br i1 [[C]], label [[END:%.*]], label [[LOOP]]
 ; IS__CGSCC_NPM:       end:
-; IS__CGSCC_NPM-NEXT:    ret i8 0
+; IS__CGSCC_NPM-NEXT:    [[L11:%.*]] = load i8, i8* getelementptr (i8, i8* bitcast (i32* @a1 to i8*), i64 2), align 2
+; IS__CGSCC_NPM-NEXT:    [[L12:%.*]] = load i8, i8* getelementptr (i8, i8* bitcast (i32* @a1 to i8*), i64 3), align 1
+; IS__CGSCC_NPM-NEXT:    [[ADD:%.*]] = add i8 [[L11]], [[L12]]
+; IS__CGSCC_NPM-NEXT:    ret i8 [[ADD]]
 ;
 entry:
   %b = bitcast i32* @a1 to i8*
@@ -3080,7 +3100,7 @@ define i8 @phi_no_store_2() {
 ;
 ; IS__CGSCC_OPM: Function Attrs: nofree norecurse nosync nounwind
 ; IS__CGSCC_OPM-LABEL: define {{[^@]+}}@phi_no_store_2
-; IS__CGSCC_OPM-SAME: () #[[ATTR10:[0-9]+]] {
+; IS__CGSCC_OPM-SAME: () #[[ATTR9]] {
 ; IS__CGSCC_OPM-NEXT:  entry:
 ; IS__CGSCC_OPM-NEXT:    br label [[LOOP:%.*]]
 ; IS__CGSCC_OPM:       loop:
@@ -3162,7 +3182,7 @@ define i8 @phi_no_store_3() {
 ;
 ; IS__CGSCC_OPM: Function Attrs: nofree norecurse nosync nounwind writeonly
 ; IS__CGSCC_OPM-LABEL: define {{[^@]+}}@phi_no_store_3
-; IS__CGSCC_OPM-SAME: () #[[ATTR9]] {
+; IS__CGSCC_OPM-SAME: () #[[ATTR10:[0-9]+]] {
 ; IS__CGSCC_OPM-NEXT:  entry:
 ; IS__CGSCC_OPM-NEXT:    br label [[LOOP:%.*]]
 ; IS__CGSCC_OPM:       loop:
@@ -3274,8 +3294,8 @@ end:
 ; IS__CGSCC_OPM: attributes #[[ATTR6]] = { argmemonly nofree norecurse nosync nounwind willreturn }
 ; IS__CGSCC_OPM: attributes #[[ATTR7]] = { nofree norecurse nosync nounwind readonly willreturn }
 ; IS__CGSCC_OPM: attributes #[[ATTR8]] = { nofree norecurse nosync nounwind readnone }
-; IS__CGSCC_OPM: attributes #[[ATTR9]] = { nofree norecurse nosync nounwind writeonly }
-; IS__CGSCC_OPM: attributes #[[ATTR10]] = { nofree norecurse nosync nounwind }
+; IS__CGSCC_OPM: attributes #[[ATTR9]] = { nofree norecurse nosync nounwind }
+; IS__CGSCC_OPM: attributes #[[ATTR10]] = { nofree norecurse nosync nounwind writeonly }
 ; IS__CGSCC_OPM: attributes #[[ATTR11]] = { willreturn }
 ; IS__CGSCC_OPM: attributes #[[ATTR12]] = { nounwind willreturn writeonly }
 ; IS__CGSCC_OPM: attributes #[[ATTR13]] = { nounwind writeonly }
