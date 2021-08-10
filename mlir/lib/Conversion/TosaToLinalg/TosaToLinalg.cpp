@@ -946,7 +946,7 @@ convolutionMatchAndRewriterHelper(Operation *op,
     return success();
   }
 
-  if (isa<tosa::DepthwiseConv2DOp>(op) && !isQuantized) {
+  if (isa<tosa::DepthwiseConv2DOp>(op)) {
     ShapedType linalgConvTy =
         RankedTensorType::get({resultShape[0], resultShape[1], resultShape[2],
                                weightShape[2], weightShape[3]},
@@ -954,11 +954,23 @@ convolutionMatchAndRewriterHelper(Operation *op,
 
     Value biasReshape =
         rewriter.create<tosa::ReshapeOp>(loc, linalgConvTy, biasBroadcast);
-    Value conv = rewriter
-                     .create<linalg::DepthwiseConvInputNHWCFilterHWCFOp>(
-                         loc, linalgConvTy, ValueRange{input, weight},
-                         ValueRange{biasReshape}, dilationAttr, strideAttr)
-                     .getResult(0);
+    Value conv;
+    if (!isQuantized) {
+      conv = rewriter
+                 .create<linalg::DepthwiseConv2DNchwOp>(
+                     loc, linalgConvTy, ValueRange{input, weight},
+                     ValueRange{biasReshape}, dilationAttr, strideAttr)
+                 .getResult(0);
+    } else {
+      auto iZpVal = rewriter.create<ConstantOp>(loc, iZp);
+      auto kZpVal = rewriter.create<ConstantOp>(loc, kZp);
+      conv =
+          rewriter
+              .create<linalg::DepthwiseConv2DNchwQOp>(
+                  loc, linalgConvTy, ValueRange{input, weight, iZpVal, kZpVal},
+                  ValueRange{biasReshape}, dilationAttr, strideAttr)
+              .getResult(0);
+    }
 
     Value reshape = rewriter.create<tosa::ReshapeOp>(loc, resultTy, conv);
     rewriter.replaceOp(op, reshape);
