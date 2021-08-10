@@ -5230,14 +5230,6 @@ bool AArch64AsmParser::showMatchError(SMLoc Loc, unsigned ErrCode,
     return Error(Loc, "invalid predicate register.");
   case Match_InvalidSVEPredicate3bAnyReg:
     return Error(Loc, "invalid restricted predicate register, expected p0..p7 (without element suffix)");
-  case Match_InvalidSVEPredicate3bBReg:
-    return Error(Loc, "invalid restricted predicate register, expected p0.b..p7.b");
-  case Match_InvalidSVEPredicate3bHReg:
-    return Error(Loc, "invalid restricted predicate register, expected p0.h..p7.h");
-  case Match_InvalidSVEPredicate3bSReg:
-    return Error(Loc, "invalid restricted predicate register, expected p0.s..p7.s");
-  case Match_InvalidSVEPredicate3bDReg:
-    return Error(Loc, "invalid restricted predicate register, expected p0.d..p7.d");
   case Match_InvalidSVEExactFPImmOperandHalfOne:
     return Error(Loc, "Invalid floating point constant, expected 0.5 or 1.0.");
   case Match_InvalidSVEExactFPImmOperandHalfTwo:
@@ -5785,10 +5777,6 @@ bool AArch64AsmParser::MatchAndEmitInstruction(SMLoc IDLoc, unsigned &Opcode,
   case Match_InvalidSVEPredicateSReg:
   case Match_InvalidSVEPredicateDReg:
   case Match_InvalidSVEPredicate3bAnyReg:
-  case Match_InvalidSVEPredicate3bBReg:
-  case Match_InvalidSVEPredicate3bHReg:
-  case Match_InvalidSVEPredicate3bSReg:
-  case Match_InvalidSVEPredicate3bDReg:
   case Match_InvalidSVEExactFPImmOperandHalfOne:
   case Match_InvalidSVEExactFPImmOperandHalfTwo:
   case Match_InvalidSVEExactFPImmOperandZeroOne:
