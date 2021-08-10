@@ -4877,10 +4877,10 @@ LegalizerHelper::narrowScalarShift(MachineInstr &MI, unsigned TypeIdx,
   const LLT HalfTy = LLT::scalar(NewBitSize);
   const LLT CondTy = LLT::scalar(1);
 
-  if (const MachineInstr *KShiftAmt =
-          getOpcodeDef(TargetOpcode::G_CONSTANT, Amt, MRI)) {
-    return narrowScalarShiftByConstant(
-        MI, KShiftAmt->getOperand(1).getCImm()->getValue(), HalfTy, ShiftAmtTy);
+  if (auto VRegAndVal =
+          getConstantVRegValWithLookThrough(Amt, MRI, true, false)) {
+    return narrowScalarShiftByConstant(MI, VRegAndVal->Value, HalfTy,
+                                       ShiftAmtTy);
   }
 
   // TODO: Expand with known bits.
