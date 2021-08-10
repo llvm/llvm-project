@@ -518,7 +518,7 @@ int targetDataBegin(ident_t *loc, DeviceTy &Device, int32_t arg_num,
     const bool HasFlagAlways = arg_types[i] & OMP_TGT_MAPTYPE_ALWAYS;
     if (HasFlagTo && (!UseUSM || HasCloseModifier))
       MoveData = HasFlagAlways ? MoveDataStateTy::REQUIRED
-                               : MoveData = MoveDataStateTy::UNKNOWN;
+                               : MoveDataStateTy::UNKNOWN;
 
     auto TPR = Device.getTargetPointer(
         HstPtrBegin, HstPtrBase, data_size, HstPtrName, MoveData, IsImplicit,
