@@ -5158,6 +5158,83 @@ Instruction *InstCombinerImpl::foldICmpUsingKnownBits(ICmpInst &I) {
   if (!isa<Constant>(Op1) && Op1Min == Op1Max)
     return new ICmpInst(Pred, Op0, ConstantExpr::getIntegerValue(Ty, Op1Min));
 
+  // Don't break up a clamp pattern -- (min(max X, Y), Z) -- by replacing a
+  // min/max canonical compare with some other compare. That could lead to
+  // conflict with select canonicalization and infinite looping.
+  // FIXME: This constraint may go away if min/max intrinsics are canonical.
+  auto isMinMaxCmp = [&](Instruction &Cmp) {
+    if (!Cmp.hasOneUse())
+      return false;
+    Value *A, *B;
+    SelectPatternFlavor SPF = matchSelectPattern(Cmp.user_back(), A, B).Flavor;
+    if (!SelectPatternResult::isMinOrMax(SPF))
+      return false;
+    return match(Op0, m_MaxOrMin(m_Value(), m_Value())) ||
+           match(Op1, m_MaxOrMin(m_Value(), m_Value()));
+  };
+  if (!isMinMaxCmp(I)) {
+    switch (Pred) {
+    default:
+      break;
+    case ICmpInst::ICMP_ULT: {
+      if (Op1Min == Op0Max) // A <u B -> A != B if max(A) == min(B)
+        return new ICmpInst(ICmpInst::ICMP_NE, Op0, Op1);
+      const APInt *CmpC;
+      if (match(Op1, m_APInt(CmpC))) {
+        // A <u C -> A == C-1 if min(A)+1 == C
+        if (*CmpC == Op0Min + 1)
+          return new ICmpInst(ICmpInst::ICMP_EQ, Op0,
+                              ConstantInt::get(Op1->getType(), *CmpC - 1));
+        // X <u C --> X == 0, if the number of zero bits in the bottom of X
+        // exceeds the log2 of C.
+        if (Op0Known.countMinTrailingZeros() >= CmpC->ceilLogBase2())
+          return new ICmpInst(ICmpInst::ICMP_EQ, Op0,
+                              Constant::getNullValue(Op1->getType()));
+      }
+      break;
+    }
+    case ICmpInst::ICMP_UGT: {
+      if (Op1Max == Op0Min) // A >u B -> A != B if min(A) == max(B)
+        return new ICmpInst(ICmpInst::ICMP_NE, Op0, Op1);
+      const APInt *CmpC;
+      if (match(Op1, m_APInt(CmpC))) {
+        // A >u C -> A == C+1 if max(a)-1 == C
+        if (*CmpC == Op0Max - 1)
+          return new ICmpInst(ICmpInst::ICMP_EQ, Op0,
+                              ConstantInt::get(Op1->getType(), *CmpC + 1));
+        // X >u C --> X != 0, if the number of zero bits in the bottom of X
+        // exceeds the log2 of C.
+        if (Op0Known.countMinTrailingZeros() >= CmpC->getActiveBits())
+          return new ICmpInst(ICmpInst::ICMP_NE, Op0,
+                              Constant::getNullValue(Op1->getType()));
+      }
+      break;
+    }
+    case ICmpInst::ICMP_SLT: {
+      if (Op1Min == Op0Max) // A <s B -> A != B if max(A) == min(B)
+        return new ICmpInst(ICmpInst::ICMP_NE, Op0, Op1);
+      const APInt *CmpC;
+      if (match(Op1, m_APInt(CmpC))) {
+        if (*CmpC == Op0Min + 1) // A <s C -> A == C-1 if min(A)+1 == C
+          return new ICmpInst(ICmpInst::ICMP_EQ, Op0,
+                              ConstantInt::get(Op1->getType(), *CmpC - 1));
+      }
+      break;
+    }
+    case ICmpInst::ICMP_SGT: {
+      if (Op1Max == Op0Min) // A >s B -> A != B if min(A) == max(B)
+        return new ICmpInst(ICmpInst::ICMP_NE, Op0, Op1);
+      const APInt *CmpC;
+      if (match(Op1, m_APInt(CmpC))) {
+        if (*CmpC == Op0Max - 1) // A >s C -> A == C+1 if max(A)-1 == C
+          return new ICmpInst(ICmpInst::ICMP_EQ, Op0,
+                              ConstantInt::get(Op1->getType(), *CmpC + 1));
+      }
+      break;
+    }
+    }
+  }
+
   // Based on the range information we know about the LHS, see if we can
   // simplify this comparison.  For example, (x&4) < 8 is always true.
   switch (Pred) {
@@ -5219,21 +5296,6 @@ Instruction *InstCombinerImpl::foldICmpUsingKnownBits(ICmpInst &I) {
       return replaceInstUsesWith(I, ConstantInt::getTrue(I.getType()));
     if (Op0Min.uge(Op1Max)) // A <u B -> false if min(A) >= max(B)
       return replaceInstUsesWith(I, ConstantInt::getFalse(I.getType()));
-    if (Op1Min == Op0Max) // A <u B -> A != B if max(A) == min(B)
-      return new ICmpInst(ICmpInst::ICMP_NE, Op0, Op1);
-
-    const APInt *CmpC;
-    if (match(Op1, m_APInt(CmpC))) {
-      // A <u C -> A == C-1 if min(A)+1 == C
-      if (*CmpC == Op0Min + 1)
-        return new ICmpInst(ICmpInst::ICMP_EQ, Op0,
-                            ConstantInt::get(Op1->getType(), *CmpC - 1));
-      // X <u C --> X == 0, if the number of zero bits in the bottom of X
-      // exceeds the log2 of C.
-      if (Op0Known.countMinTrailingZeros() >= CmpC->ceilLogBase2())
-        return new ICmpInst(ICmpInst::ICMP_EQ, Op0,
-                            Constant::getNullValue(Op1->getType()));
-    }
     break;
   }
   case ICmpInst::ICMP_UGT: {
@@ -5241,21 +5303,6 @@ Instruction *InstCombinerImpl::foldICmpUsingKnownBits(ICmpInst &I) {
       return replaceInstUsesWith(I, ConstantInt::getTrue(I.getType()));
     if (Op0Max.ule(Op1Min)) // A >u B -> false if max(A) <= max(B)
       return replaceInstUsesWith(I, ConstantInt::getFalse(I.getType()));
-    if (Op1Max == Op0Min) // A >u B -> A != B if min(A) == max(B)
-      return new ICmpInst(ICmpInst::ICMP_NE, Op0, Op1);
-
-    const APInt *CmpC;
-    if (match(Op1, m_APInt(CmpC))) {
-      // A >u C -> A == C+1 if max(a)-1 == C
-      if (*CmpC == Op0Max - 1)
-        return new ICmpInst(ICmpInst::ICMP_EQ, Op0,
-                            ConstantInt::get(Op1->getType(), *CmpC + 1));
-      // X >u C --> X != 0, if the number of zero bits in the bottom of X
-      // exceeds the log2 of C.
-      if (Op0Known.countMinTrailingZeros() >= CmpC->getActiveBits())
-        return new ICmpInst(ICmpInst::ICMP_NE, Op0,
-                            Constant::getNullValue(Op1->getType()));
-    }
     break;
   }
   case ICmpInst::ICMP_SLT: {
@@ -5263,14 +5310,6 @@ Instruction *InstCombinerImpl::foldICmpUsingKnownBits(ICmpInst &I) {
       return replaceInstUsesWith(I, ConstantInt::getTrue(I.getType()));
     if (Op0Min.sge(Op1Max)) // A <s B -> false if min(A) >= max(C)
       return replaceInstUsesWith(I, ConstantInt::getFalse(I.getType()));
-    if (Op1Min == Op0Max) // A <s B -> A != B if max(A) == min(B)
-      return new ICmpInst(ICmpInst::ICMP_NE, Op0, Op1);
-    const APInt *CmpC;
-    if (match(Op1, m_APInt(CmpC))) {
-      if (*CmpC == Op0Min + 1) // A <s C -> A == C-1 if min(A)+1 == C
-        return new ICmpInst(ICmpInst::ICMP_EQ, Op0,
-                            ConstantInt::get(Op1->getType(), *CmpC - 1));
-    }
     break;
   }
   case ICmpInst::ICMP_SGT: {
@@ -5278,14 +5317,6 @@ Instruction *InstCombinerImpl::foldICmpUsingKnownBits(ICmpInst &I) {
       return replaceInstUsesWith(I, ConstantInt::getTrue(I.getType()));
     if (Op0Max.sle(Op1Min)) // A >s B -> false if max(A) <= min(B)
       return replaceInstUsesWith(I, ConstantInt::getFalse(I.getType()));
-    if (Op1Max == Op0Min) // A >s B -> A != B if min(A) == max(B)
-      return new ICmpInst(ICmpInst::ICMP_NE, Op0, Op1);
-    const APInt *CmpC;
-    if (match(Op1, m_APInt(CmpC))) {
-      if (*CmpC == Op0Max - 1) // A >s C -> A == C+1 if max(A)-1 == C
-        return new ICmpInst(ICmpInst::ICMP_EQ, Op0,
-                            ConstantInt::get(Op1->getType(), *CmpC + 1));
-    }
     break;
   }
   case ICmpInst::ICMP_SGE:
