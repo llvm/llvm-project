@@ -3664,21 +3664,11 @@ INTERCEPTOR(char *, realpath, const char *path, char *resolved_path) {
   void *ctx;
   COMMON_INTERCEPTOR_ENTER(ctx, realpath, path, resolved_path);
   if (path) COMMON_INTERCEPTOR_READ_RANGE(ctx, path, REAL(strlen)(path) + 1);
-
-  // Workaround a bug in glibc where dlsym(RTLD_NEXT, ...) returns the oldest
-  // version of a versioned symbol. For realpath(), this gives us something
-  // (called __old_realpath) that does not handle NULL in the second argument.
-  // Handle it as part of the interceptor.
-  char *allocated_path = nullptr;
-  if (!resolved_path)
-    allocated_path = resolved_path = (char *)WRAP(malloc)(path_max + 1);
-
   char *res = REAL(realpath)(path, resolved_path);
-  if (allocated_path && !res) WRAP(free)(allocated_path);
   if (res) COMMON_INTERCEPTOR_WRITE_RANGE(ctx, res, REAL(strlen)(res) + 1);
   return res;
 }
-#define INIT_REALPATH COMMON_INTERCEPT_FUNCTION(realpath);
+#define INIT_REALPATH COMMON_INTERCEPT_FUNCTION_GLIBC_VER_MIN(realpath, "GLIBC_2.3");
 #else
 #define INIT_REALPATH
 #endif

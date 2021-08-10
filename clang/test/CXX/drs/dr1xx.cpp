@@ -934,12 +934,12 @@ namespace dr182 { // dr182: yes
   template <class T> void C<T>::g() {}
 
   class A {
-    class B {}; // expected-note {{here}}
+    class B {};
     void f();
   };
 
   template void C<A::B>::f();
-  template <> void C<A::B>::g(); // expected-error {{private}}
+  template <> void C<A::B>::g();
 
   void A::f() {
     C<B> cb;

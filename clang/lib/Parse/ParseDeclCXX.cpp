@@ -1474,19 +1474,15 @@ void Parser::ParseClassSpecifier(tok::TokenKind TagTokKind,
     return;
   }
 
-  // C++03 [temp.explicit] 14.7.2/8:
-  //   The usual access checking rules do not apply to names used to specify
-  //   explicit instantiations.
-  //
-  // As an extension we do not perform access checking on the names used to
-  // specify explicit specializations either. This is important to allow
-  // specializing traits classes for private types.
-  //
-  // Note that we don't suppress if this turns out to be an elaborated
-  // type specifier.
-  bool shouldDelayDiagsInTag =
-    (TemplateInfo.Kind == ParsedTemplateInfo::ExplicitInstantiation ||
-     TemplateInfo.Kind == ParsedTemplateInfo::ExplicitSpecialization);
+  // C++20 [temp.class.spec] 13.7.5/10
+  //   The usual access checking rules do not apply to non-dependent names
+  //   used to specify template arguments of the simple-template-id of the
+  //   partial specialization.
+  // C++20 [temp.spec] 13.9/6:
+  //   The usual access checking rules do not apply to names in a declaration
+  //   of an explicit instantiation or explicit specialization...
+  const bool shouldDelayDiagsInTag =
+      (TemplateInfo.Kind != ParsedTemplateInfo::NonTemplate);
   SuppressAccessChecks diagsFromTag(*this, shouldDelayDiagsInTag);
 
   ParsedAttributesWithRange attrs(AttrFactory);
@@ -1834,14 +1830,6 @@ void Parser::ParseClassSpecifier(tok::TokenKind TagTokKind,
     }
   }
 
-  // If this is an elaborated type specifier, and we delayed
-  // diagnostics before, just merge them into the current pool.
-  if (shouldDelayDiagsInTag) {
-    diagsFromTag.done();
-    if (TUK == Sema::TUK_Reference)
-      diagsFromTag.redelay();
-  }
-
   if (!Name && !TemplateId && (DS.getTypeSpecType() == DeclSpec::TST_error ||
                                TUK != Sema::TUK_Definition)) {
     if (DS.getTypeSpecType() != DeclSpec::TST_error) {
@@ -2016,6 +2004,16 @@ void Parser::ParseClassSpecifier(tok::TokenKind TagTokKind,
       TypeResult = Actions.ActOnDependentTag(getCurScope(), TagType, TUK,
                                              SS, Name, StartLoc, NameLoc);
     }
+  }
+
+  // If this is an elaborated type specifier in function template,
+  // and we delayed diagnostics before,
+  // just merge them into the current pool.
+  if (shouldDelayDiagsInTag) {
+    diagsFromTag.done();
+    if (TUK == Sema::TUK_Reference &&
+        TemplateInfo.Kind == ParsedTemplateInfo::Template)
+      diagsFromTag.redelay();
   }
 
   // If there is a body, parse it and inform the actions module.
@@ -2713,8 +2711,21 @@ Parser::ParseCXXClassMemberDeclaration(AccessSpecifier AS,
   if (MalformedTypeSpec)
     DS.SetTypeSpecError();
 
+  // Turn off usual access checking for templates explicit specialization
+  // and instantiation.
+  // C++20 [temp.spec] 13.9/6.
+  // This disables the access checking rules for member function template
+  // explicit instantiation and explicit specialization.
+  bool IsTemplateSpecOrInst =
+      (TemplateInfo.Kind == ParsedTemplateInfo::ExplicitInstantiation ||
+       TemplateInfo.Kind == ParsedTemplateInfo::ExplicitSpecialization);
+  SuppressAccessChecks diagsFromTag(*this, IsTemplateSpecOrInst);
+
   ParseDeclarationSpecifiers(DS, TemplateInfo, AS, DeclSpecContext::DSC_class,
                              &CommonLateParsedAttrs);
+
+  if (IsTemplateSpecOrInst)
+    diagsFromTag.done();
 
   // Turn off colon protection that was set for declspec.
   X.restore();
@@ -2784,12 +2795,20 @@ Parser::ParseCXXClassMemberDeclaration(AccessSpecifier AS,
   ExprResult TrailingRequiresClause;
   bool ExpectSemi = true;
 
+  // C++20 [temp.spec] 13.9/6.
+  // This disables the access checking rules for member function template
+  // explicit instantiation and explicit specialization.
+  SuppressAccessChecks SAC(*this, IsTemplateSpecOrInst);
+
   // Parse the first declarator.
   if (ParseCXXMemberDeclaratorBeforeInitializer(
           DeclaratorInfo, VS, BitfieldSize, LateParsedAttrs)) {
     TryConsumeToken(tok::semi);
     return nullptr;
   }
+
+  if (IsTemplateSpecOrInst)
+    SAC.done();
 
   // Check for a member function definition.
   if (BitfieldSize.isUnset()) {
