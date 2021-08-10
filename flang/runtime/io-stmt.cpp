@@ -653,13 +653,13 @@ ListDirectedStatementState<Direction::Input>::GetNextDataEdit(
     comma = ';';
   }
   if (remaining_ > 0 && !realPart_) { // "r*c" repetition in progress
-    while (connection.currentRecordNumber > initialRecordNumber_) {
+    while (connection.currentRecordNumber > repeatRecordNumber_) {
       io.BackspaceRecord();
     }
-    connection.HandleAbsolutePosition(initialPositionInRecord_);
+    connection.HandleAbsolutePosition(repeatPositionInRecord_);
     if (!imaginaryPart_) {
       edit.repeat = std::min<int>(remaining_, maxRepeat);
-      auto ch{io.GetNextNonBlank()};
+      auto ch{io.GetCurrentChar()};
       if (!ch || *ch == ' ' || *ch == '\t' || *ch == comma) {
         // "r*" repeated null
         edit.descriptor = DataEdit::ListDirectedNullValue;
@@ -669,7 +669,6 @@ ListDirectedStatementState<Direction::Input>::GetNextDataEdit(
     return edit;
   }
   // Skip separators, handle a "r*c" repeat count; see 13.10.2 in Fortran 2018
-  auto ch{io.GetNextNonBlank()};
   if (imaginaryPart_) {
     imaginaryPart_ = false;
   } else if (realPart_) {
@@ -677,6 +676,15 @@ ListDirectedStatementState<Direction::Input>::GetNextDataEdit(
     imaginaryPart_ = true;
     edit.descriptor = DataEdit::ListDirectedImaginaryPart;
   }
+  auto ch{io.GetNextNonBlank()};
+  if (ch && *ch == comma && eatComma_) {
+    // Consume comma & whitespace after previous item.
+    // This includes the comma between real and imaginary components
+    // in list-directed/NAMELIST complex input.
+    io.HandleRelativePosition(1);
+    ch = io.GetNextNonBlank();
+  }
+  eatComma_ = true;
   if (!ch) {
     return std::nullopt;
   }
@@ -685,25 +693,9 @@ ListDirectedStatementState<Direction::Input>::GetNextDataEdit(
     edit.descriptor = DataEdit::ListDirectedNullValue;
     return edit;
   }
-  bool isFirstItem{isFirstItem_};
-  isFirstItem_ = false;
-  if (*ch == comma) {
-    if (isFirstItem) {
-      edit.descriptor = DataEdit::ListDirectedNullValue;
-      return edit;
-    }
-    // Consume comma & whitespace after previous item.
-    // This includes the comma between real and imaginary components
-    // in list-directed/NAMELIST complex input.
-    io.HandleRelativePosition(1);
-    ch = io.GetNextNonBlank();
-    if (!ch) {
-      return std::nullopt;
-    }
-    if (*ch == comma || *ch == '/') {
-      edit.descriptor = DataEdit::ListDirectedNullValue;
-      return edit;
-    }
+  if (*ch == comma) { // separator: null value
+    edit.descriptor = DataEdit::ListDirectedNullValue;
+    return edit;
   }
   if (imaginaryPart_) { // can't repeat components
     return edit;
@@ -734,8 +726,8 @@ ListDirectedStatementState<Direction::Input>::GetNextDataEdit(
       }
       edit.repeat = std::min<int>(r, maxRepeat);
       remaining_ = r - edit.repeat;
-      initialRecordNumber_ = connection.currentRecordNumber;
-      initialPositionInRecord_ = connection.positionInRecord;
+      repeatRecordNumber_ = connection.currentRecordNumber;
+      repeatPositionInRecord_ = connection.positionInRecord;
     } else { // not a repetition count, just an integer value; rewind
       connection.positionInRecord = start;
     }
