@@ -744,6 +744,10 @@ constexpr unsigned MaxAnalysisRecursionDepth = 6;
   /// minimum/maximum flavor.
   CmpInst::Predicate getInverseMinMaxPred(SelectPatternFlavor SPF);
 
+  /// Return the minimum or maximum constant value for the specified integer
+  /// min/max flavor and type.
+  APInt getMinMaxLimit(SelectPatternFlavor SPF, unsigned BitWidth);
+
   /// Check if the values in \p VL are select instructions that can be converted
   /// to a min or max (vector) intrinsic. Returns the intrinsic ID, if such a
   /// conversion is possible, together with a bool indicating whether all select

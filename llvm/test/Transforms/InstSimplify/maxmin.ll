@@ -3,9 +3,7 @@
 
 define i8 @smax_min_limit(i8 %x) {
 ; CHECK-LABEL: @smax_min_limit(
-; CHECK-NEXT:    [[CMP:%.*]] = icmp sgt i8 [[X:%.*]], -128
-; CHECK-NEXT:    [[SEL:%.*]] = select i1 [[CMP]], i8 [[X]], i8 -128
-; CHECK-NEXT:    ret i8 [[SEL]]
+; CHECK-NEXT:    ret i8 [[X:%.*]]
 ;
   %cmp = icmp sgt i8 %x, -128
   %sel = select i1 %cmp, i8 %x, i8 -128
@@ -14,9 +12,7 @@ define i8 @smax_min_limit(i8 %x) {
 
 define i8 @smin_max_limit(i8 %x) {
 ; CHECK-LABEL: @smin_max_limit(
-; CHECK-NEXT:    [[CMP:%.*]] = icmp slt i8 [[X:%.*]], 127
-; CHECK-NEXT:    [[SEL:%.*]] = select i1 [[CMP]], i8 [[X]], i8 127
-; CHECK-NEXT:    ret i8 [[SEL]]
+; CHECK-NEXT:    ret i8 [[X:%.*]]
 ;
   %cmp = icmp slt i8 %x, 127
   %sel = select i1 %cmp, i8 %x, i8 127
@@ -25,9 +21,7 @@ define i8 @smin_max_limit(i8 %x) {
 
 define <2 x i8> @umax_min_limit(<2 x i8> %x) {
 ; CHECK-LABEL: @umax_min_limit(
-; CHECK-NEXT:    [[CMP:%.*]] = icmp ugt <2 x i8> [[X:%.*]], zeroinitializer
-; CHECK-NEXT:    [[SEL:%.*]] = select <2 x i1> [[CMP]], <2 x i8> [[X]], <2 x i8> zeroinitializer
-; CHECK-NEXT:    ret <2 x i8> [[SEL]]
+; CHECK-NEXT:    ret <2 x i8> [[X:%.*]]
 ;
   %cmp = icmp ugt <2 x i8> %x, zeroinitializer
   %sel = select <2 x i1> %cmp, <2 x i8> %x, <2 x i8> zeroinitializer
@@ -36,14 +30,14 @@ define <2 x i8> @umax_min_limit(<2 x i8> %x) {
 
 define i8 @umin_max_limit(i8 %x) {
 ; CHECK-LABEL: @umin_max_limit(
-; CHECK-NEXT:    [[CMP:%.*]] = icmp ult i8 [[X:%.*]], -1
-; CHECK-NEXT:    [[SEL:%.*]] = select i1 [[CMP]], i8 [[X]], i8 -1
-; CHECK-NEXT:    ret i8 [[SEL]]
+; CHECK-NEXT:    ret i8 [[X:%.*]]
 ;
   %cmp = icmp ult i8 %x, 255
   %sel = select i1 %cmp, i8 %x, i8 255
   ret i8 %sel
 }
+
+; negative test - wrong limit
 
 define i8 @smax_not_min_limit(i8 %x) {
 ; CHECK-LABEL: @smax_not_min_limit(
@@ -55,6 +49,8 @@ define i8 @smax_not_min_limit(i8 %x) {
   %sel = select i1 %cmp, i8 %x, i8 -127
   ret i8 %sel
 }
+
+; negative test - wrong limit
 
 define i8 @smin_not_min_limit(i8 %x) {
 ; CHECK-LABEL: @smin_not_min_limit(
