@@ -33,44 +33,6 @@
 
 namespace __asan {
 
-#if SANITIZER_AMDGPU
-typedef enum {
-  DMC_UNKNOWN = 0,
-  DMC_AMDGPU = 1,
-} DeviceMemoryContextType;
-
-// Device memory allocation usually requires additional information, we can put
-// all the additional information into a data structure DeviceMemoryContext.
-// This is only a parent structure since different vendors may use different
-// allocation contexts.
-struct DeviceMemoryContext {
-  DeviceMemoryContext(DeviceMemoryContextType type = DMC_UNKNOWN) {
-    type_ = type;
-  }
-  DeviceMemoryContextType type_;
-};
-
-// We can put device memory allocator into CombinedAllocator, along with host's
-// PrimaryAllocator/SecondaryAllocator, but it might be too disruptive for host
-// sanitizer logic, as CombinedAllocator is really defined with host memory in
-// mind.
-// AsanAllocatorWithDevMem is basically a wrapper class of AsanAllocator with
-// device memory filter, and it only covers the functions shared by both host
-// memory allocator and device memory allocator.
-class AsanAllocatorWithDevMem {
- public:
-  void *Allocate(AllocatorCache *cache, uptr size, uptr alignment,
-                 DeviceMemoryContext *dmctx);
-  void Deallocate(AllocatorCache *cache, void *p,
-                  DeviceMemoryContext *dmctx);
-  void *GetBlockBegin(const void *p);
-};
-
-static DeviceMemoryContext dmctx_unknown;
-
-static AsanAllocatorWithDevMem &get_allocator(DeviceMemoryContext *dmctx);
-#endif
-
 // Valid redzone sizes are 16, 32, 64, ... 2048, so we encode them in 3 bits.
 // We use adaptive redzones: for larger allocation larger redzones are used.
 static u32 RZLog2Size(u32 rz_log) {
@@ -230,26 +192,13 @@ class LargeChunkHeader {
 };
 
 struct QuarantineCallback {
-#if !SANITIZER_AMDGPU
   QuarantineCallback(AllocatorCache *cache, BufferedStackTrace *stack)
       : cache_(cache),
         stack_(stack) {
   }
-#else
-  QuarantineCallback(AllocatorCache *cache, BufferedStackTrace *stack,
-      DeviceMemoryContext *dmctx = nullptr)
-      : cache_(cache),
-        stack_(stack),
-        dmctx_(dmctx) {
-  }
-#endif
 
   void Recycle(AsanChunk *m) {
-#if !SANITIZER_AMDGPU
     void *p = get_allocator().GetBlockBegin(m);
-#else
-    void *p = get_allocator(dmctx_).GetBlockBegin(m);
-#endif
     if (p != m) {
       // Clear the magic value, as allocator internals may overwrite the
       // contents of deallocated chunk, confusing GetAsanChunk lookup.
@@ -271,11 +220,7 @@ struct QuarantineCallback {
     thread_stats.real_frees++;
     thread_stats.really_freed += m->UsedSize();
 
-#if !SANITIZER_AMDGPU
     get_allocator().Deallocate(cache_, p);
-#else
-    get_allocator(dmctx_).Deallocate(cache_, p, dmctx_);
-#endif
   }
 
   void *Allocate(uptr size) {
@@ -293,9 +238,6 @@ struct QuarantineCallback {
  private:
   AllocatorCache* const cache_;
   BufferedStackTrace* const stack_;
-#if SANITIZER_AMDGPU
-  DeviceMemoryContext* const dmctx_;
-#endif
 };
 
 typedef Quarantine<QuarantineCallback, AsanChunk> AsanQuarantine;
@@ -327,18 +269,9 @@ AllocatorCache *GetAllocatorCache(AsanThreadLocalMallocStorage *ms) {
   return &ms->allocator_cache;
 }
 
-#if !SANITIZER_AMDGPU
 QuarantineCache *GetQuarantineCache(AsanThreadLocalMallocStorage *ms) {
-#else
-QuarantineCache *GetQuarantineCache(AsanThreadLocalMallocStorage *ms,
-                                    DeviceMemoryContext *dmctx = nullptr) {
-#endif
   CHECK(ms);
   CHECK_LE(sizeof(QuarantineCache), sizeof(ms->quarantine_cache));
-#if SANITIZER_AMDGPU
-  if (dmctx)
-    return reinterpret_cast<QuarantineCache *>(ms->quarantine_cache_dev);
-#endif
   return reinterpret_cast<QuarantineCache *>(ms->quarantine_cache);
 }
 
@@ -371,11 +304,6 @@ struct Allocator {
   StaticSpinMutex fallback_mutex;
   AllocatorCache fallback_allocator_cache;
   QuarantineCache fallback_quarantine_cache;
-#if SANITIZER_AMDGPU
-  AsanAllocatorWithDevMem allocator_dev;
-  AsanQuarantine quarantine_dev;
-  QuarantineCache fallback_quarantine_cache_dev;
-#endif
 
   uptr max_user_defined_malloc_size;
   atomic_uint8_t rss_limit_exceeded;
@@ -386,17 +314,9 @@ struct Allocator {
   atomic_uint8_t alloc_dealloc_mismatch;
 
   // ------------------- Initialization ------------------------
-#if !SANITIZER_AMDGPU
   explicit Allocator(LinkerInitialized)
       : quarantine(LINKER_INITIALIZED),
         fallback_quarantine_cache(LINKER_INITIALIZED) {}
-#else
-  explicit Allocator(LinkerInitialized)
-      : quarantine(LINKER_INITIALIZED),
-        fallback_quarantine_cache(LINKER_INITIALIZED),
-        quarantine_dev(LINKER_INITIALIZED),
-        fallback_quarantine_cache_dev(LINKER_INITIALIZED) {}
-#endif
 
   void CheckOptions(const AllocatorOptions &options) const {
     CHECK_GE(options.min_redzone, 16);
@@ -410,10 +330,6 @@ struct Allocator {
     CheckOptions(options);
     quarantine.Init((uptr)options.quarantine_size_mb << 20,
                     (uptr)options.thread_local_quarantine_size_kb << 10);
-#if SANITIZER_AMDGPU
-    quarantine_dev.Init((uptr)options.quarantine_size_mb << 20,
-                        (uptr)options.thread_local_quarantine_size_kb << 10);
-#endif
     atomic_store(&alloc_dealloc_mismatch, options.alloc_dealloc_mismatch,
                  memory_order_release);
     atomic_store(&min_redzone, options.min_redzone, memory_order_release);
@@ -422,7 +338,11 @@ struct Allocator {
 
   void InitLinkerInitialized(const AllocatorOptions &options) {
     SetAllocatorMayReturnNull(options.may_return_null);
+#if SANITIZER_AMDGPU
+    allocator.InitLinkerInitialized(options.release_to_os_interval_ms, true);
+#else
     allocator.InitLinkerInitialized(options.release_to_os_interval_ms);
+#endif
     SharedInitCode(options);
     max_user_defined_malloc_size = common_flags()->max_allocation_size_mb
                                        ? common_flags()->max_allocation_size_mb
@@ -565,14 +485,9 @@ struct Allocator {
   }
 
   // -------------------- Allocation/Deallocation routines ---------------
-#if !SANITIZER_AMDGPU
-  void *Allocate(uptr size, uptr alignment, BufferedStackTrace *stack,
-                 AllocType alloc_type, bool can_fill) {
-#else
   void *Allocate(uptr size, uptr alignment, BufferedStackTrace *stack,
                  AllocType alloc_type, bool can_fill,
-                 DeviceMemoryContext *dmctx = nullptr) {
-#endif
+                 DeviceAllocationInfo *da_info = nullptr) {
     if (UNLIKELY(!asan_inited))
       AsanInitFromRtl();
     if (RssLimitExceeded()) {
@@ -624,19 +539,11 @@ struct Allocator {
     void *allocated;
     if (t) {
       AllocatorCache *cache = GetAllocatorCache(&t->malloc_storage());
-#if !SANITIZER_AMDGPU
-      allocated = allocator.Allocate(cache, needed_size, 8);
-#else
-      allocated = allocator_dev.Allocate(cache, needed_size, 8, dmctx);
-#endif
+      allocated = allocator.Allocate(cache, needed_size, 8, da_info);
     } else {
       SpinMutexLock l(&fallback_mutex);
       AllocatorCache *cache = &fallback_allocator_cache;
-#if !SANITIZER_AMDGPU
-      allocated = allocator.Allocate(cache, needed_size, 8);
-#else
-      allocated = allocator_dev.Allocate(cache, needed_size, 8, dmctx);
-#endif
+      allocated = allocator.Allocate(cache, needed_size, 8, da_info);
     }
     if (UNLIKELY(!allocated)) {
       SetAllocatorOutOfMemory();
@@ -731,12 +638,7 @@ struct Allocator {
 
   // Expects the chunk to already be marked as quarantined by using
   // AtomicallySetQuarantineFlagIfAllocated.
-#if !SANITIZER_AMDGPU
   void QuarantineChunk(AsanChunk *m, void *ptr, BufferedStackTrace *stack) {
-#else
-  void QuarantineChunk(AsanChunk *m, void *ptr, BufferedStackTrace *stack,
-                       DeviceMemoryContext *dmctx = nullptr) {
-#endif
     CHECK_EQ(atomic_load(&m->chunk_state, memory_order_relaxed),
              CHUNK_QUARANTINE);
     AsanThread *t = GetCurrentThread();
@@ -763,42 +665,21 @@ struct Allocator {
     thread_stats.freed += m->UsedSize();
 
     // Push into quarantine.
-#if SANITIZER_AMDGPU
-    AsanQuarantine &quarantine_ = dmctx ? quarantine_dev : quarantine;
-    QuarantineCache &fallback_quarantine_cache_ =
-        dmctx ? fallback_quarantine_cache_dev : fallback_quarantine_cache;
-#endif
     if (t) {
       AsanThreadLocalMallocStorage *ms = &t->malloc_storage();
       AllocatorCache *ac = GetAllocatorCache(ms);
-#if !SANITIZER_AMDGPU
       quarantine.Put(GetQuarantineCache(ms), QuarantineCallback(ac, stack), m,
                      m->UsedSize());
-#else
-      quarantine_.Put(GetQuarantineCache(ms, dmctx),
-                      QuarantineCallback(ac, stack, dmctx), m, m->UsedSize());
-#endif
     } else {
       SpinMutexLock l(&fallback_mutex);
       AllocatorCache *ac = &fallback_allocator_cache;
-#if !SANITIZER_AMDGPU
       quarantine.Put(&fallback_quarantine_cache, QuarantineCallback(ac, stack),
                      m, m->UsedSize());
-#else
-      quarantine_.Put(&fallback_quarantine_cache_,
-                      QuarantineCallback(ac, stack, dmctx), m, m->UsedSize());
-#endif
     }
   }
 
-#if !SANITIZER_AMDGPU
   void Deallocate(void *ptr, uptr delete_size, uptr delete_alignment,
                   BufferedStackTrace *stack, AllocType alloc_type) {
-#else
-  void Deallocate(void *ptr, uptr delete_size, uptr delete_alignment,
-                  BufferedStackTrace *stack, AllocType alloc_type,
-                  DeviceMemoryContext *dmctx = nullptr) {
-#endif
     uptr p = reinterpret_cast<uptr>(ptr);
     if (p == 0) return;
 
@@ -835,11 +716,7 @@ struct Allocator {
       }
     }
 
-#if !SANITIZER_AMDGPU
     QuarantineChunk(m, ptr, stack);
-#else
-    QuarantineChunk(m, ptr, stack, dmctx);
-#endif
   }
 
   void *Reallocate(void *old_ptr, uptr new_size, BufferedStackTrace *stack) {
@@ -892,10 +769,6 @@ struct Allocator {
     AllocatorCache *ac = GetAllocatorCache(ms);
     quarantine.Drain(GetQuarantineCache(ms), QuarantineCallback(ac, stack));
     allocator.SwallowCache(ac);
-#if SANITIZER_AMDGPU
-    quarantine_dev.Drain(GetQuarantineCache(ms, &dmctx_unknown),
-                         QuarantineCallback(ac, stack, &dmctx_unknown));
-#endif
   }
 
   // -------------------------- Chunk lookup ----------------------
@@ -922,11 +795,7 @@ struct Allocator {
   }
 
   AsanChunk *GetAsanChunkByAddr(uptr p) {
-#if !SANITIZER_AMDGPU
     void *alloc_beg = allocator.GetBlockBegin(reinterpret_cast<void *>(p));
-#else
-    void *alloc_beg = allocator_dev.GetBlockBegin(reinterpret_cast<void *>(p));
-#endif
     return GetAsanChunk(alloc_beg);
   }
 
@@ -972,23 +841,12 @@ struct Allocator {
       quarantine.DrainAndRecycle(GetQuarantineCache(ms),
                                  QuarantineCallback(GetAllocatorCache(ms),
                                                     stack));
-#if SANITIZER_AMDGPU
-      quarantine_dev.DrainAndRecycle(GetQuarantineCache(ms, &dmctx_unknown),
-                                     QuarantineCallback(GetAllocatorCache(ms),
-                                                        stack, &dmctx_unknown));
-#endif
     }
     {
       SpinMutexLock l(&fallback_mutex);
       quarantine.DrainAndRecycle(&fallback_quarantine_cache,
                                  QuarantineCallback(&fallback_allocator_cache,
                                                     stack));
-#if SANITIZER_AMDGPU
-      quarantine_dev.DrainAndRecycle(&fallback_quarantine_cache_dev,
-                                     QuarantineCallback(
-                                         &fallback_allocator_cache, stack,
-                                         &dmctx_unknown));
-#endif
     }
 
     allocator.ForceReleaseToOS();
@@ -1408,133 +1266,42 @@ SANITIZER_INTERFACE_WEAK_DEF(void, __sanitizer_free_hook, void *ptr) {
 #endif
 
 #if SANITIZER_AMDGPU
-DECLARE_REAL(hsa_status_t, hsa_amd_memory_pool_allocate,
-  hsa_amd_memory_pool_t memory_pool, size_t size, uint32_t flags, void **ptr)
-DECLARE_REAL(hsa_status_t, hsa_amd_memory_pool_free, void *ptr)
 DECLARE_REAL(hsa_status_t, hsa_amd_agents_allow_access, uint32_t num_agents,
   const hsa_agent_t *agents, const uint32_t *flags, const void *ptr)
 
 namespace __asan {
 
-static AsanAllocatorWithDevMem &get_allocator(DeviceMemoryContext *dmctx) {
-  return instance.allocator_dev;
-}
-
-struct AmdgpuMemoryContext : public DeviceMemoryContext {
-  AmdgpuMemoryContext() : DeviceMemoryContext(DMC_AMDGPU) {
-    status = HSA_STATUS_SUCCESS;
-    func = nullptr;
-  }
-  hsa_status_t status;
-  void *func;
-  hsa_amd_memory_pool_t memory_pool;
-  size_t size;
-  uint32_t flags;
-  void *ptr;
-};
-
 // Always align to page boundary to match current ROCr behavior
 static const size_t kPageSize_ = 4096;
-
-void *AsanAllocatorWithDevMem::Allocate(AllocatorCache *cache, uptr size,
-                                        uptr alignment,
-                                        DeviceMemoryContext *dmctx) {
-  if (!dmctx)
-    return get_allocator().Allocate(cache, size, alignment);
-
-  AmdgpuMemoryContext *amctx = reinterpret_cast<AmdgpuMemoryContext *>(dmctx);
-  amctx->status = REAL(hsa_amd_memory_pool_allocate)(amctx->memory_pool, size,
-                                                     amctx->flags, &amctx->ptr);
-  if (amctx->status == HSA_STATUS_SUCCESS && amctx->ptr) {
-    __asan::PoisonShadow((uptr)amctx->ptr, size,
-                         __asan::kAsanHeapLeftRedzoneMagic);
-  }
-  return amctx->ptr;
-}
-
-void AsanAllocatorWithDevMem::Deallocate(AllocatorCache *cache, void *ptr,
-                                         DeviceMemoryContext *dmctx) {
-  if (!dmctx)
-    return get_allocator().Deallocate(cache, ptr);
-
-  AmdgpuMemoryContext *amctx = reinterpret_cast<AmdgpuMemoryContext *>(dmctx);
-  amctx->status = REAL(hsa_amd_memory_pool_free)(ptr);
-}
-
-typedef hsa_status_t (*PFN_HSA_AMD_POINTER_INFO)(
-    void *ptr, hsa_amd_pointer_info_t *info, void *(*alloc)(size_t),
-    uint32_t *num_agents_accessible, hsa_agent_t **accessible);
-
-#include <dlfcn.h> // For dlsym
-void *AsanAllocatorWithDevMem::GetBlockBegin(const void *ptr) {
-  void *alloc_beg = get_allocator().GetBlockBegin(ptr);
-  if (alloc_beg)
-    return alloc_beg;
-
-  static PFN_HSA_AMD_POINTER_INFO hsa_amd_pointer_info = nullptr;
-  if (!hsa_amd_pointer_info)
-    hsa_amd_pointer_info =
-        (PFN_HSA_AMD_POINTER_INFO)dlsym(RTLD_NEXT, "hsa_amd_pointer_info");
-  if (!hsa_amd_pointer_info)
-    return nullptr;
-
-  uptr ptr_ = reinterpret_cast<uptr>(ptr) & ~(kPageSize_ - 1);
-  hsa_amd_pointer_info_t info;
-  info.size = sizeof(hsa_amd_pointer_info_t);
-  hsa_status_t status =
-      hsa_amd_pointer_info(reinterpret_cast<void *>(ptr_), &info, 0, 0, 0);
-
-  if (status != HSA_STATUS_SUCCESS)
-    return nullptr;
-
-  AsanChunk *p = nullptr;
-  size_t size = info.sizeInBytes;
-  do {
-    p = reinterpret_cast<LargeChunkHeader *>(ptr_)->Get();
-    if (p)
-      break;
-    ptr_ -= kPageSize_;
-    size -= kPageSize_;
-  } while (size > kPageSize_);
-  if (p)
-    return reinterpret_cast<void*>(ptr_);
-  else
-    return nullptr;
-}
 
 hsa_status_t asan_hsa_amd_memory_pool_allocate(
   hsa_amd_memory_pool_t memory_pool, size_t size, uint32_t flags, void **ptr,
   BufferedStackTrace *stack) {
-  AmdgpuMemoryContext amctx;
-  amctx.func = reinterpret_cast<void *>(REAL(hsa_amd_memory_pool_allocate));
-  amctx.memory_pool = memory_pool;
-  amctx.size = size;
-  amctx.flags = flags;
-  amctx.ptr = nullptr;
+  AmdgpuAllocationInfo aa_info;
+  aa_info.alloc_func = reinterpret_cast<void *>(asan_hsa_amd_memory_pool_allocate);
+  aa_info.memory_pool = memory_pool;
+  aa_info.size = size;
+  aa_info.flags = flags;
+  aa_info.ptr = nullptr;
   SetErrnoOnNull(*ptr = instance.Allocate(size, kPageSize_, stack, FROM_MALLOC,
-                                          false, &amctx));
-  return amctx.status;
+                                          false, &aa_info));
+  return aa_info.status;
 }
 
 hsa_status_t asan_hsa_amd_memory_pool_free(
   void *ptr,
   BufferedStackTrace *stack) {
-  AmdgpuMemoryContext amctx;
-  amctx.func = reinterpret_cast<void *>(REAL(hsa_amd_memory_pool_free));
-  amctx.ptr = ptr;
-  instance.Deallocate(ptr, 0, 0, stack, FROM_MALLOC, &amctx);
-  return amctx.status;
+  instance.Deallocate(ptr, 0, 0, stack, FROM_MALLOC);
+  return HSA_STATUS_SUCCESS;
 }
 
 hsa_status_t asan_hsa_amd_agents_allow_access(
   uint32_t num_agents, const hsa_agent_t *agents, const uint32_t *flags,
   const void *ptr,
   BufferedStackTrace *stack) {
-  uptr alloc_beg = reinterpret_cast<uptr>(ptr) - kPageSize_;
-  AsanChunk *p = reinterpret_cast<LargeChunkHeader *>(alloc_beg)->Get();
+  void *p = get_allocator().GetBlockBegin(ptr);
   if (p) {
-    const void *ptr_ = reinterpret_cast<void *>(alloc_beg);
-    return REAL(hsa_amd_agents_allow_access)(num_agents, agents, flags, ptr_);
+    return REAL(hsa_amd_agents_allow_access)(num_agents, agents, flags, p);
   } else {
     return HSA_STATUS_ERROR_FATAL;
   }
