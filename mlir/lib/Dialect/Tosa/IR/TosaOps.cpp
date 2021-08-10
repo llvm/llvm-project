@@ -14,6 +14,7 @@
 
 #include "mlir/Dialect/Tosa/IR/TosaOps.h"
 #include "mlir/Dialect/StandardOps/IR/Ops.h"
+#include "mlir/Dialect/Tensor/IR/Tensor.h"
 #include "mlir/Dialect/Tosa/Utils/QuantUtils.h"
 #include "mlir/Dialect/Tosa/Utils/ShapeUtils.h"
 #include "mlir/IR/BuiltinTypes.h"
@@ -107,18 +108,30 @@ Operation *TosaDialect::materializeConstant(OpBuilder &builder, Attribute value,
 // Operator Canonicalizers.
 //===----------------------------------------------------------------------===//
 
-struct RemoveReshapeNoop : public OpRewritePattern<tosa::ReshapeOp> {
-  using OpRewritePattern<tosa::ReshapeOp>::OpRewritePattern;
+struct ConcatOptimization : public OpRewritePattern<tosa::ConcatOp> {
+  using OpRewritePattern<tosa::ConcatOp>::OpRewritePattern;
 
-  LogicalResult matchAndRewrite(tosa::ReshapeOp op,
+  LogicalResult matchAndRewrite(tosa::ConcatOp op,
                                 PatternRewriter &rewriter) const override {
-    if (op.input1().getType() != op.getType())
+    if (op.input1().size() != 1)
       return failure();
+    if (op.input1().front().getType() != op.getType()) {
+      rewriter
+          .replaceOpWithNewOp<tensor::CastOp>(op, op.getType(),
+                                              op.input1().front())
+          .getResult();
+      return success();
+    }
 
-    rewriter.replaceOp(op, op.input1());
+    rewriter.replaceOp(op, op.input1().front());
     return success();
   }
 };
+
+void ConcatOp::getCanonicalizationPatterns(OwningRewritePatternList &results,
+                                           MLIRContext *context) {
+  results.insert<ConcatOptimization>(context);
+}
 
 struct ReshapeReshapeOptimization : public OpRewritePattern<tosa::ReshapeOp> {
   using OpRewritePattern<tosa::ReshapeOp>::OpRewritePattern;
@@ -142,16 +155,86 @@ struct ReshapeReshapeOptimization : public OpRewritePattern<tosa::ReshapeOp> {
 
 void ReshapeOp::getCanonicalizationPatterns(OwningRewritePatternList &results,
                                             MLIRContext *context) {
-  results.insert<ReshapeReshapeOptimization, RemoveReshapeNoop>(context);
+  results.insert<ReshapeReshapeOptimization>(context);
 }
 
 //===----------------------------------------------------------------------===//
 // Operator Folders.
 //===----------------------------------------------------------------------===//
 
+OpFoldResult CastOp::fold(ArrayRef<Attribute> operands) {
+  if (input().getType() == getType())
+    return input();
+  return {};
+}
+
 OpFoldResult ConstOp::fold(ArrayRef<Attribute> operands) {
   assert(operands.empty() && "constant has no operands");
   return valueAttr();
+}
+
+#define ReduceFolder(OP)                                                       \
+  OpFoldResult OP::fold(ArrayRef<Attribute> operands) {                        \
+    ShapedType inputTy = input().getType().cast<ShapedType>();                 \
+    if (!inputTy.hasRank())                                                    \
+      return {};                                                               \
+    if (inputTy.getDimSize(axis()) == 1)                                       \
+      return input();                                                          \
+    return {};                                                                 \
+  }
+
+ReduceFolder(ReduceAllOp) ReduceFolder(ReduceAnyOp) ReduceFolder(ReduceMaxOp)
+    ReduceFolder(ReduceMinOp) ReduceFolder(ReduceProdOp)
+        ReduceFolder(ReduceSumOp)
+#undef ReduceFolder
+
+            OpFoldResult ReshapeOp::fold(ArrayRef<Attribute> operands) {
+  auto inputTy = input1().getType().dyn_cast<RankedTensorType>();
+  auto outputTy = getType().dyn_cast<RankedTensorType>();
+
+  if (!inputTy || !outputTy || inputTy != outputTy)
+    return {};
+  return input1();
+}
+
+OpFoldResult SliceOp::fold(ArrayRef<Attribute> operands) {
+  auto inputTy = input().getType().dyn_cast<RankedTensorType>();
+  auto outputTy = getType().dyn_cast<RankedTensorType>();
+
+  if (!inputTy || !outputTy || inputTy != outputTy)
+    return {};
+  if (inputTy.hasStaticShape())
+    return input();
+
+  return {};
+}
+
+OpFoldResult TileOp::fold(ArrayRef<Attribute> operands) {
+  bool allOnes = true;
+  for (Attribute val : multiples().getValue()) {
+    allOnes = allOnes && val.cast<IntegerAttr>().getValue().getSExtValue() == 1;
+  }
+
+  if (allOnes && input1().getType() == getType())
+    return input1();
+  return {};
+}
+
+OpFoldResult TransposeOp::fold(ArrayRef<Attribute> operands) {
+  if (!operands[1])
+    return {};
+
+  DenseIntElementsAttr perms = operands[1].cast<DenseIntElementsAttr>();
+
+  bool isRange = true;
+  for (auto it : llvm::enumerate(perms)) {
+    isRange = isRange &&
+              it.value().getSExtValue() == static_cast<int64_t>(it.index());
+  }
+
+  if (isRange && input1().getType() == getType())
+    return input1();
+  return {};
 }
 
 //===----------------------------------------------------------------------===//
