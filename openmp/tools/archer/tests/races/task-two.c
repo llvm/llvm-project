@@ -1,3 +1,4 @@
+// REQUIRES: garbage
 /*
  * task-two.c -- Archer testcase
  */
@@ -17,7 +18,7 @@
 #include <stdio.h>
 #include <unistd.h>
 
-#define NUM_THREADS 2
+#define NUM_THREADS 8
 
 int main(int argc, char *argv[]) {
   int var = 0;

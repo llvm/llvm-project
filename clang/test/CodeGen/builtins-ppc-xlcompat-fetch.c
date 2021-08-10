@@ -16,7 +16,7 @@
 // CHECK-NEXT:    [[TMP2:%.*]] = atomicrmw add i32* [[A_ADDR]], i32 [[TMP1]] monotonic, align 4
 // CHECK-NEXT:    ret void
 //
-void test_builtin_ppc_fetch_and_add(unsigned int a, unsigned int b) {
+void test_builtin_ppc_fetch_and_add(int a, int b) {
   __fetch_and_add(&a, b);
 }
 
@@ -31,7 +31,7 @@ void test_builtin_ppc_fetch_and_add(unsigned int a, unsigned int b) {
 // CHECK-NEXT:    [[TMP2:%.*]] = atomicrmw add i64* [[A_ADDR]], i64 [[TMP1]] monotonic, align 8
 // CHECK-NEXT:    ret void
 //
-void test_builtin_ppc_fetch_and_addlp(unsigned long a, unsigned long b) {
+void test_builtin_ppc_fetch_and_addlp(long a, long b) {
   __fetch_and_addlp(&a, b);
 }
 // CHECK-LABEL: @test_builtin_ppc_fetch_and_and(

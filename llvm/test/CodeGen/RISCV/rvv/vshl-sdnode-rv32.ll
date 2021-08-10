@@ -470,6 +470,18 @@ define <vscale x 1 x i64> @vshl_vx_nxv1i64_1(<vscale x 1 x i64> %va) {
   ret <vscale x 1 x i64> %vc
 }
 
+define <vscale x 1 x i64> @vshl_vx_nxv1i64_2(<vscale x 1 x i64> %va) {
+; CHECK-LABEL: vshl_vx_nxv1i64_2:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    vsetvli a0, zero, e64, m1, ta, mu
+; CHECK-NEXT:    vadd.vv v8, v8, v8
+; CHECK-NEXT:    ret
+  %head = insertelement <vscale x 1 x i64> undef, i64 1, i32 0
+  %splat = shufflevector <vscale x 1 x i64> %head, <vscale x 1 x i64> undef, <vscale x 1 x i32> zeroinitializer
+  %vc = shl <vscale x 1 x i64> %va, %splat
+  ret <vscale x 1 x i64> %vc
+}
+
 define <vscale x 2 x i64> @vshl_vx_nxv2i64(<vscale x 2 x i64> %va, i64 %b) {
 ; CHECK-LABEL: vshl_vx_nxv2i64:
 ; CHECK:       # %bb.0:
@@ -502,6 +514,18 @@ define <vscale x 2 x i64> @vshl_vx_nxv2i64_1(<vscale x 2 x i64> %va) {
 ; CHECK-NEXT:    vsll.vx v8, v8, a0
 ; CHECK-NEXT:    ret
   %head = insertelement <vscale x 2 x i64> undef, i64 32, i32 0
+  %splat = shufflevector <vscale x 2 x i64> %head, <vscale x 2 x i64> undef, <vscale x 2 x i32> zeroinitializer
+  %vc = shl <vscale x 2 x i64> %va, %splat
+  ret <vscale x 2 x i64> %vc
+}
+
+define <vscale x 2 x i64> @vshl_vx_nxv2i64_2(<vscale x 2 x i64> %va) {
+; CHECK-LABEL: vshl_vx_nxv2i64_2:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    vsetvli a0, zero, e64, m2, ta, mu
+; CHECK-NEXT:    vadd.vv v8, v8, v8
+; CHECK-NEXT:    ret
+  %head = insertelement <vscale x 2 x i64> undef, i64 1, i32 0
   %splat = shufflevector <vscale x 2 x i64> %head, <vscale x 2 x i64> undef, <vscale x 2 x i32> zeroinitializer
   %vc = shl <vscale x 2 x i64> %va, %splat
   ret <vscale x 2 x i64> %vc
@@ -544,6 +568,18 @@ define <vscale x 4 x i64> @vshl_vx_nxv4i64_1(<vscale x 4 x i64> %va) {
   ret <vscale x 4 x i64> %vc
 }
 
+define <vscale x 4 x i64> @vshl_vx_nxv4i64_2(<vscale x 4 x i64> %va) {
+; CHECK-LABEL: vshl_vx_nxv4i64_2:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    vsetvli a0, zero, e64, m4, ta, mu
+; CHECK-NEXT:    vadd.vv v8, v8, v8
+; CHECK-NEXT:    ret
+  %head = insertelement <vscale x 4 x i64> undef, i64 1, i32 0
+  %splat = shufflevector <vscale x 4 x i64> %head, <vscale x 4 x i64> undef, <vscale x 4 x i32> zeroinitializer
+  %vc = shl <vscale x 4 x i64> %va, %splat
+  ret <vscale x 4 x i64> %vc
+}
+
 define <vscale x 8 x i64> @vshl_vx_nxv8i64(<vscale x 8 x i64> %va, i64 %b) {
 ; CHECK-LABEL: vshl_vx_nxv8i64:
 ; CHECK:       # %bb.0:
@@ -581,3 +617,14 @@ define <vscale x 8 x i64> @vshl_vx_nxv8i64_1(<vscale x 8 x i64> %va) {
   ret <vscale x 8 x i64> %vc
 }
 
+define <vscale x 8 x i64> @vshl_vx_nxv8i64_2(<vscale x 8 x i64> %va) {
+; CHECK-LABEL: vshl_vx_nxv8i64_2:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    vsetvli a0, zero, e64, m8, ta, mu
+; CHECK-NEXT:    vadd.vv v8, v8, v8
+; CHECK-NEXT:    ret
+  %head = insertelement <vscale x 8 x i64> undef, i64 1, i32 0
+  %splat = shufflevector <vscale x 8 x i64> %head, <vscale x 8 x i64> undef, <vscale x 8 x i32> zeroinitializer
+  %vc = shl <vscale x 8 x i64> %va, %splat
+  ret <vscale x 8 x i64> %vc
+}

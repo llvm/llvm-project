@@ -1001,6 +1001,7 @@ SymbolAssignment *ScriptParser::readAssignment(StringRef tok) {
 }
 
 SymbolAssignment *ScriptParser::readSymbolAssignment(StringRef name) {
+  name = unquote(name);
   StringRef op = next();
   assert(op == "=" || op == "+=");
   Expr e = readExpr();
@@ -1350,7 +1351,7 @@ Expr ScriptParser::readPrimary() {
     return [=] { return alignTo(script->getDot(), e().getValue()); };
   }
   if (tok == "DEFINED") {
-    StringRef name = readParenLiteral();
+    StringRef name = unquote(readParenLiteral());
     return [=] {
       Symbol *b = symtab->find(name);
       return (b && b->isDefined()) ? 1 : 0;
@@ -1428,6 +1429,7 @@ Expr ScriptParser::readPrimary() {
     return [=] { return *val; };
 
   // Tok is a symbol name.
+  tok = unquote(tok);
   if (!isValidSymbolName(tok))
     setError("malformed number: " + tok);
   script->referencedSymbols.push_back(tok);
@@ -1494,9 +1496,9 @@ void ScriptParser::readAnonymousDeclaration() {
   std::vector<SymbolVersion> globals;
   std::tie(locals, globals) = readSymbols();
   for (const SymbolVersion &pat : locals)
-    config->versionDefinitions[VER_NDX_LOCAL].patterns.push_back(pat);
+    config->versionDefinitions[VER_NDX_LOCAL].localPatterns.push_back(pat);
   for (const SymbolVersion &pat : globals)
-    config->versionDefinitions[VER_NDX_GLOBAL].patterns.push_back(pat);
+    config->versionDefinitions[VER_NDX_GLOBAL].nonLocalPatterns.push_back(pat);
 
   expect(";");
 }
@@ -1508,13 +1510,12 @@ void ScriptParser::readVersionDeclaration(StringRef verStr) {
   std::vector<SymbolVersion> locals;
   std::vector<SymbolVersion> globals;
   std::tie(locals, globals) = readSymbols();
-  for (const SymbolVersion &pat : locals)
-    config->versionDefinitions[VER_NDX_LOCAL].patterns.push_back(pat);
 
   // Create a new version definition and add that to the global symbols.
   VersionDefinition ver;
   ver.name = verStr;
-  ver.patterns = globals;
+  ver.nonLocalPatterns = std::move(globals);
+  ver.localPatterns = std::move(locals);
   ver.id = config->versionDefinitions.size();
   config->versionDefinitions.push_back(ver);
 

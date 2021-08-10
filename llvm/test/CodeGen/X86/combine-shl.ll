@@ -466,6 +466,23 @@ define <4 x i32> @combine_vec_shl_ge_ashr_extact1(<4 x i32> %x) {
   ret <4 x i32> %2
 }
 
+; fold (shl (sr[la] exact SEL(X,Y),  C1), C2) -> (shl SEL(X,Y), (C2-C1)) if C1 <= C2
+define i32 @combine_shl_ge_sel_ashr_extact0(i32 %x, i32 %y, i32 %z) {
+; CHECK-LABEL: combine_shl_ge_sel_ashr_extact0:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    # kill: def $edi killed $edi def $rdi
+; CHECK-NEXT:    testl %edx, %edx
+; CHECK-NEXT:    cmovel %esi, %edi
+; CHECK-NEXT:    leal (,%rdi,4), %eax
+; CHECK-NEXT:    retq
+  %cmp = icmp ne i32 %z, 0
+  %ashrx = ashr exact i32 %x, 3
+  %ashry = ashr exact i32 %y, 3
+  %sel = select i1 %cmp, i32 %ashrx, i32 %ashry
+  %shl = shl i32 %sel, 5
+  ret i32 %shl
+}
+
 ; fold (shl (sr[la] exact X,  C1), C2) -> (sr[la] X, (C2-C1)) if C1  > C2
 define <4 x i32> @combine_vec_shl_lt_ashr_extact0(<4 x i32> %x) {
 ; SSE-LABEL: combine_vec_shl_lt_ashr_extact0:

@@ -11,7 +11,7 @@ endif()
 set(CMAKE_BUILD_WITH_INSTALL_NAME_DIR ON)
 
 if(NOT DEFINED LLVM_VERSION_MAJOR)
-  set(LLVM_VERSION_MAJOR 13)
+  set(LLVM_VERSION_MAJOR 14)
 endif()
 if(NOT DEFINED LLVM_VERSION_MINOR)
   set(LLVM_VERSION_MINOR 0)
@@ -81,9 +81,8 @@ if ("flang" IN_LIST LLVM_ENABLE_PROJECTS)
     list(APPEND LLVM_ENABLE_PROJECTS "mlir")
   endif()
 
-  option(FLANG_BUILD_NEW_DRIVER "Build the flang compiler driver" ON)
-  if (FLANG_BUILD_NEW_DRIVER AND NOT "clang" IN_LIST LLVM_ENABLE_PROJECTS)
-    message(FATAL_ERROR "Clang is not enabled, but it's required by the new Flang driver")
+  if (NOT "clang" IN_LIST LLVM_ENABLE_PROJECTS)
+    message(FATAL_ERROR "Clang is not enabled, but is required for the Flang driver")
   endif()
 endif()
 
@@ -718,6 +717,7 @@ set(LLVM_ENUM_TARGETS "")
 set(LLVM_ENUM_ASM_PRINTERS "")
 set(LLVM_ENUM_ASM_PARSERS "")
 set(LLVM_ENUM_DISASSEMBLERS "")
+set(LLVM_ENUM_TARGETMCAS "")
 foreach(t ${LLVM_TARGETS_TO_BUILD})
   set( td ${LLVM_MAIN_SRC_DIR}/lib/Target/${t} )
 
@@ -747,6 +747,10 @@ foreach(t ${LLVM_TARGETS_TO_BUILD})
     set(LLVM_ENUM_DISASSEMBLERS
       "${LLVM_ENUM_DISASSEMBLERS}LLVM_DISASSEMBLER(${t})\n")
   endif()
+    if( EXISTS ${td}/MCA/CMakeLists.txt )
+    set(LLVM_ENUM_TARGETMCAS
+      "${LLVM_ENUM_TARGETMCAS}LLVM_TARGETMCA(${t})\n")
+  endif()
 endforeach(t)
 
 # Produce the target definition files, which provide a way for clients to easily
@@ -766,6 +770,10 @@ configure_file(
 configure_file(
   ${LLVM_MAIN_INCLUDE_DIR}/llvm/Config/Targets.def.in
   ${LLVM_INCLUDE_DIR}/llvm/Config/Targets.def
+  )
+configure_file(
+  ${LLVM_MAIN_INCLUDE_DIR}/llvm/Config/TargetMCAs.def.in
+  ${LLVM_INCLUDE_DIR}/llvm/Config/TargetMCAs.def
   )
 
 # They are not referenced. See set_output_directory().
@@ -788,8 +796,28 @@ endif()
 set(TENSORFLOW_C_LIB_PATH "" CACHE PATH "Path to TensorFlow C library install")
 if (TENSORFLOW_C_LIB_PATH)
   find_library(tensorflow_c_api tensorflow PATHS ${TENSORFLOW_C_LIB_PATH}/lib NO_DEFAULT_PATH REQUIRED)
+  # Currently, the protobuf headers are distributed with the pip package that corresponds to the version
+  # of the C API library.
+  find_library(tensorflow_fx tensorflow_framework PATHS ${TENSORFLOW_C_LIB_PATH}/lib NO_DEFAULT_PATH REQUIRED)
   set(LLVM_HAVE_TF_API "ON" CACHE BOOL "Full Tensorflow API available")
   include_directories(${TENSORFLOW_C_LIB_PATH}/include)
+  if (NOT TF_PROTO_HEADERS)
+    message(STATUS "TF_PROTO_HEADERS not defined. Looking for tensorflow pip package.")
+    execute_process(COMMAND 
+      ${Python3_EXECUTABLE} "-m" "pip" "show" "tensorflow" 
+      OUTPUT_VARIABLE TF_PIP_OUT)
+    if ("${TF_PIP_OUT}" STREQUAL "")
+      message(FATAL ERROR "Tensorflow pip package is also required for 'development' mode (protobuf headers)")
+    endif()
+    string(REGEX MATCH "Location: ([^\n]*\n)" TF_PIP_LOC "${TF_PIP_OUT}")
+    string(REPLACE "Location: " "" TF_PIP ${TF_PIP_LOC})
+    string(STRIP ${TF_PIP} TF_PIP)
+    set(TF_PROTO_HEADERS "${TF_PIP}/tensorflow/include")
+  endif()
+  message(STATUS "Using Tensorflow headers under: ${TF_PROTO_HEADERS}")
+  include_directories(${TF_PROTO_HEADERS})
+  add_definitions("-DGOOGLE_PROTOBUF_NO_RTTI")
+  add_definitions("-D_GLIBCXX_USE_CXX11_ABI=0")
 endif()
 
 # For up-to-date instructions for installing the Tensorflow dependency, refer to

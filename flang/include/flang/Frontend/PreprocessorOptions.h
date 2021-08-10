@@ -31,9 +31,11 @@ enum class PPMacrosFlag : uint8_t {
 
 /// This class is used for passing the various options used
 /// in preprocessor initialization to the parser options.
-class PreprocessorOptions {
-public:
+struct PreprocessorOptions {
+  PreprocessorOptions() {}
+
   std::vector<std::pair<std::string, /*isUndef*/ bool>> macros;
+
   // Search directories specified by the user with -I
   // TODO: When adding support for more options related to search paths,
   // consider collecting them in a separate aggregate. For now we keep it here
@@ -42,10 +44,13 @@ public:
   // Search directories specified by the user with -fintrinsic-modules-path
   std::vector<std::string> searchDirectoriesFromIntrModPath;
 
-  PPMacrosFlag macrosFlag_ = PPMacrosFlag::Unknown;
+  PPMacrosFlag macrosFlag = PPMacrosFlag::Unknown;
 
-public:
-  PreprocessorOptions() {}
+  // -P: Suppress #line directives in -E output
+  bool noLineDirectives{false};
+
+  // -fno-reformat: Emit cooked character stream as -E output
+  bool noReformat{false};
 
   void addMacroDef(llvm::StringRef name) {
     macros.emplace_back(std::string(name), false);

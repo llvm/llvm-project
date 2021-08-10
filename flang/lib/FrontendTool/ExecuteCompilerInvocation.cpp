@@ -24,65 +24,47 @@ namespace Fortran::frontend {
 static std::unique_ptr<FrontendAction> CreateFrontendBaseAction(
     CompilerInstance &ci) {
 
-  ActionKind ak = ci.frontendOpts().programAction_;
+  ActionKind ak = ci.frontendOpts().programAction;
   switch (ak) {
   case InputOutputTest:
     return std::make_unique<InputOutputTestAction>();
-    break;
   case PrintPreprocessedInput:
     return std::make_unique<PrintPreprocessedAction>();
-    break;
   case ParseSyntaxOnly:
     return std::make_unique<ParseSyntaxOnlyAction>();
   case EmitObj:
     return std::make_unique<EmitObjAction>();
-    break;
   case DebugUnparse:
     return std::make_unique<DebugUnparseAction>();
-    break;
   case DebugUnparseNoSema:
     return std::make_unique<DebugUnparseNoSemaAction>();
-    break;
   case DebugUnparseWithSymbols:
     return std::make_unique<DebugUnparseWithSymbolsAction>();
-    break;
   case DebugDumpSymbols:
     return std::make_unique<DebugDumpSymbolsAction>();
-    break;
   case DebugDumpParseTree:
     return std::make_unique<DebugDumpParseTreeAction>();
-    break;
   case DebugDumpParseTreeNoSema:
     return std::make_unique<DebugDumpParseTreeNoSemaAction>();
-    break;
   case DebugDumpAll:
     return std::make_unique<DebugDumpAllAction>();
-    break;
   case DebugDumpProvenance:
     return std::make_unique<DebugDumpProvenanceAction>();
-    break;
   case DebugDumpParsingLog:
     return std::make_unique<DebugDumpParsingLogAction>();
-    break;
   case DebugMeasureParseTree:
     return std::make_unique<DebugMeasureParseTreeAction>();
-    break;
   case DebugPreFIRTree:
     return std::make_unique<DebugPreFIRTreeAction>();
-    break;
   case GetDefinition:
     return std::make_unique<GetDefinitionAction>();
-    break;
   case GetSymbolsSources:
     return std::make_unique<GetSymbolsSourcesAction>();
-    break;
   case InitOnly:
     return std::make_unique<InitOnlyAction>();
-    break;
   default:
     break;
     // TODO:
-    // case RunPreprocessor:
     // case ParserSyntaxOnly:
     // case EmitLLVM:
     // case EmitLLVMOnly:
@@ -102,7 +84,7 @@ std::unique_ptr<FrontendAction> CreateFrontendAction(CompilerInstance &ci) {
 }
 bool ExecuteCompilerInvocation(CompilerInstance *flang) {
   // Honor -help.
-  if (flang->frontendOpts().showHelp_) {
+  if (flang->frontendOpts().showHelp) {
     clang::driver::getDriverOptTable().printHelp(llvm::outs(),
         "flang-new -fc1 [options] file...", "LLVM 'Flang' Compiler",
         /*Include=*/clang::driver::options::FC1Option,
@@ -112,7 +94,7 @@ bool ExecuteCompilerInvocation(CompilerInstance *flang) {
   }
 
   // Honor -version.
-  if (flang->frontendOpts().showVersion_) {
+  if (flang->frontendOpts().showVersion) {
     llvm::cl::PrintVersionMessage();
     return true;
   }

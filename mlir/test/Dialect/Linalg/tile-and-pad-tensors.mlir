@@ -105,14 +105,12 @@ func @matmul_partially_padded_tensors(
 //      CHECK-1DIM-TILE:        %[[TD0:.*]] = scf.for {{.*}} to {{.*}} step {{.*}} iter_args(%[[TC0:.*]] = %[[TC]]) -> (tensor<?x?xi32>) {
 //      CHECK-1DIM-TILE:            %[[TD1:.*]] = scf.for {{.*}} to {{.*}} step {{.*}} iter_args(%[[TC1:.*]] = %[[TC0]]) -> (tensor<?x?xi32>) {
 //      CHECK-1DIM-TILE:                %[[sTA:.*]] = tensor.extract_slice %[[TA]][{{.*}}] : tensor<?x8xi8> to tensor<?x8xi8>
-//      CHECK-1DIM-TILE:                %[[sTAc:.*]] = tensor.cast %[[sTA]] : tensor<?x8xi8> to tensor<?x?xi8>
 //      CHECK-1DIM-TILE:                %[[sTB:.*]] = tensor.extract_slice %[[TB]][{{.*}}] : tensor<8x?xi8> to tensor<8x?xi8>
-//      CHECK-1DIM-TILE:                %[[sTBc:.*]] = tensor.cast %[[sTB]] : tensor<8x?xi8> to tensor<?x?xi8>
 //      CHECK-1DIM-TILE:                %[[sTC:.*]] = tensor.extract_slice %[[TC1]][{{.*}}] : tensor<?x?xi32> to tensor<?x?xi32>
-//      CHECK-1DIM-TILE:                %[[pA:.*]] = linalg.pad_tensor %[[sTAc]] low[%[[C0]], %[[C0]]] high[%{{.*}}, %{{.*}}]
-//      CHECK-1DIM-TILE:                   : tensor<?x?xi8> to tensor<2x8xi8>
-//      CHECK-1DIM-TILE:                %[[pB:.*]] = linalg.pad_tensor %[[sTBc]] low[%[[C0]], %[[C0]]] high[%{{.*}}, %{{.*}}]
-//      CHECK-1DIM-TILE:                   : tensor<?x?xi8> to tensor<8x3xi8>
+//      CHECK-1DIM-TILE:                %[[pA:.*]] = linalg.pad_tensor %[[sTA]] low[%[[C0]], %[[C0]]] high[%{{.*}}, %{{.*}}]
+//      CHECK-1DIM-TILE:                   : tensor<?x8xi8> to tensor<2x8xi8>
+//      CHECK-1DIM-TILE:                %[[pB:.*]] = linalg.pad_tensor %[[sTB]] low[%[[C0]], %[[C0]]] high[%{{.*}}, %{{.*}}]
+//      CHECK-1DIM-TILE:                   : tensor<8x?xi8> to tensor<8x3xi8>
 //      CHECK-1DIM-TILE:                %[[pC:.*]] = linalg.pad_tensor %[[sTC]] low[%[[C0]], %[[C0]]] high[%{{.*}}, %{{.*}}]
 //      CHECK-1DIM-TILE:                   : tensor<?x?xi32> to tensor<2x3xi32>
 //      CHECK-1DIM-TILE:               %[[pD:.*]] = linalg.matmul_i8_i8_i32 ins(%[[pA]], %[[pB]] : tensor<2x8xi8>, tensor<8x3xi8>)

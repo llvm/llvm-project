@@ -80,6 +80,25 @@ func @truncConstant(%arg0: i8) -> i16 {
   return %tr : i16
 }
 
+// CHECK-LABEL: @truncFPConstant
+//       CHECK:   %[[cres:.+]] = constant 1.000000e+00 : bf16
+//       CHECK:   return %[[cres]]
+func @truncFPConstant() -> bf16 {
+  %cst = constant 1.000000e+00 : f32
+  %0 = fptrunc %cst : f32 to bf16
+  return %0 : bf16
+}
+
+// Test that cases with rounding are NOT propagated
+// CHECK-LABEL: @truncFPConstantRounding
+//       CHECK:   constant 1.444000e+25 : f32
+//       CHECK:   fptrunc
+func @truncFPConstantRounding() -> bf16 {
+  %cst = constant 1.444000e+25 : f32
+  %0 = fptrunc %cst : f32 to bf16
+  return %0 : bf16
+}
+
 // CHECK-LABEL: @tripleAddAdd
 //       CHECK:   %[[cres:.+]] = constant 59 : index 
 //       CHECK:   %[[add:.+]] = addi %arg0, %[[cres]] : index 
@@ -330,4 +349,103 @@ func @selToNot(%arg0: i1) -> i1 {
   %false = constant false
   %res = select %arg0, %false, %true : i1
   return %res : i1
+}
+
+// -----
+
+// CHECK-LABEL: @bitcastSameType(
+// CHECK-SAME: %[[ARG:[a-zA-Z0-9_]*]]
+func @bitcastSameType(%arg : f32) -> f32 {
+  // CHECK: return %[[ARG]]
+  %res = bitcast %arg : f32 to f32
+  return %res : f32
+}
+
+// -----
+
+// CHECK-LABEL: @bitcastConstantFPtoI(
+func @bitcastConstantFPtoI() -> i32 {
+  // CHECK: %[[C0:.+]] = constant 0 : i32
+  // CHECK: return %[[C0]]
+  %c0 = constant 0.0 : f32
+  %res = bitcast %c0 : f32 to i32
+  return %res : i32
+}
+
+// -----
+
+// CHECK-LABEL: @bitcastConstantItoFP(
+func @bitcastConstantItoFP() -> f32 {
+  // CHECK: %[[C0:.+]] = constant 0.0{{.*}} : f32
+  // CHECK: return %[[C0]]
+  %c0 = constant 0 : i32
+  %res = bitcast %c0 : i32 to f32
+  return %res : f32
+}
+
+// -----
+
+// CHECK-LABEL: @bitcastConstantFPtoFP(
+func @bitcastConstantFPtoFP() -> f16 {
+  // CHECK: %[[C0:.+]] = constant 0.0{{.*}} : f16
+  // CHECK: return %[[C0]]
+  %c0 = constant 0.0 : bf16
+  %res = bitcast %c0 : bf16 to f16
+  return %res : f16
+}
+
+// -----
+
+// CHECK-LABEL: @bitcastConstantVecFPtoI(
+func @bitcastConstantVecFPtoI() -> vector<3xf32> {
+  // CHECK: %[[C0:.+]] = constant dense<0.0{{.*}}> : vector<3xf32>
+  // CHECK: return %[[C0]]
+  %c0 = constant dense<0> : vector<3xi32>
+  %res = bitcast %c0 : vector<3xi32> to vector<3xf32>
+  return %res : vector<3xf32>
+}
+
+// -----
+
+// CHECK-LABEL: @bitcastConstantVecItoFP(
+func @bitcastConstantVecItoFP() -> vector<3xi32> {
+  // CHECK: %[[C0:.+]] = constant dense<0> : vector<3xi32>
+  // CHECK: return %[[C0]]
+  %c0 = constant dense<0.0> : vector<3xf32>
+  %res = bitcast %c0 : vector<3xf32> to vector<3xi32>
+  return %res : vector<3xi32>
+}
+
+// -----
+
+// CHECK-LABEL: @bitcastConstantVecFPtoFP(
+func @bitcastConstantVecFPtoFP() -> vector<3xbf16> {
+  // CHECK: %[[C0:.+]] = constant dense<0.0{{.*}}> : vector<3xbf16>
+  // CHECK: return %[[C0]]
+  %c0 = constant dense<0.0> : vector<3xf16>
+  %res = bitcast %c0 : vector<3xf16> to vector<3xbf16>
+  return %res : vector<3xbf16>
+}
+
+// -----
+
+// CHECK-LABEL: @bitcastBackAndForth(
+// CHECK-SAME: %[[ARG:[a-zA-Z0-9_]*]]
+func @bitcastBackAndForth(%arg : i32) -> i32 {
+  // CHECK: return %[[ARG]]
+  %f = bitcast %arg : i32 to f32
+  %res = bitcast %f : f32 to i32
+  return %res : i32
+}
+
+// -----
+
+// CHECK-LABEL: @bitcastOfBitcast(
+// CHECK-SAME: %[[ARG:[a-zA-Z0-9_]*]]
+func @bitcastOfBitcast(%arg : i16) -> i16 {
+  // CHECK: return %[[ARG]]
+  %f = bitcast %arg : i16 to f16
+  %bf = bitcast %f : f16 to bf16
+  %res = bitcast %bf : bf16 to i16
+  return %res : i16
 }

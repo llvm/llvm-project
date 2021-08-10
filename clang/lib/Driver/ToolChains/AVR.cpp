@@ -8,9 +8,9 @@
 
 #include "AVR.h"
 #include "CommonArgs.h"
-#include "InputInfo.h"
 #include "clang/Driver/Compilation.h"
 #include "clang/Driver/DriverDiagnostic.h"
+#include "clang/Driver/InputInfo.h"
 #include "clang/Driver/Options.h"
 #include "llvm/ADT/Optional.h"
 #include "llvm/ADT/StringExtras.h"
@@ -298,6 +298,7 @@ llvm::Optional<unsigned> GetMCUSectionAddressData(StringRef MCUName) {
 }
 
 const StringRef PossibleAVRLibcLocations[] = {
+    "/avr",
     "/usr/avr",
     "/usr/lib/avr",
 };
@@ -370,6 +371,16 @@ void AVRToolChain::AddClangSystemIncludeArgs(const ArgList &DriverArgs,
     addSystemInclude(DriverArgs, CC1Args, AVRInc);
 }
 
+void AVRToolChain::addClangTargetOptions(
+    const llvm::opt::ArgList &DriverArgs, llvm::opt::ArgStringList &CC1Args,
+    Action::OffloadKind DeviceOffloadKind) const {
+  // By default, use `.ctors` (not `.init_array`), as required by libgcc, which
+  // runs constructors/destructors on AVR.
+  if (!DriverArgs.hasFlag(options::OPT_fuse_init_array,
+                          options::OPT_fno_use_init_array, false))
+    CC1Args.push_back("-fno-use-init-array");
+}
+
 Tool *AVRToolChain::buildLinker() const {
   return new tools::AVR::Linker(getTriple(), *this, LinkStdlib);
 }
@@ -414,6 +425,8 @@ void AVR::Linker::ConstructJob(Compilation &C, const JobAction &JA,
   if (LinkStdlib) {
     assert(!CPU.empty() && "CPU name must be known in order to link stdlibs");
 
+    CmdArgs.push_back("--start-group");
+
     // Add the object file for the CRT.
     std::string CrtFileName = std::string("-l:crt") + CPU + std::string(".o");
     CmdArgs.push_back(Args.MakeArgString(CrtFileName));
@@ -424,6 +437,8 @@ void AVR::Linker::ConstructJob(Compilation &C, const JobAction &JA,
 
     // Add the link library specific to the MCU.
     CmdArgs.push_back(Args.MakeArgString(std::string("-l") + CPU));
+
+    CmdArgs.push_back("--end-group");
 
     // Specify the family name as the emulation mode to use.
     // This is almost always required because otherwise avr-ld

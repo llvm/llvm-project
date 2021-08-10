@@ -18,9 +18,9 @@
 namespace __tsan {
 
 TEST(Mman, Internal) {
-  char *p = (char*)internal_alloc(MBlockScopedBuf, 10);
+  char *p = (char *)Alloc(10);
   EXPECT_NE(p, (char*)0);
-  char *p2 = (char*)internal_alloc(MBlockScopedBuf, 20);
+  char *p2 = (char *)Alloc(20);
   EXPECT_NE(p2, (char*)0);
   EXPECT_NE(p2, p);
   for (int i = 0; i < 10; i++) {
@@ -29,8 +29,8 @@ TEST(Mman, Internal) {
   for (int i = 0; i < 20; i++) {
     ((char*)p2)[i] = 42;
   }
-  internal_free(p);
-  internal_free(p2);
+  Free(p);
+  Free(p2);
 }
 
 TEST(Mman, User) {

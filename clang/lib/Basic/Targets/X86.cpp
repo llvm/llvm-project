@@ -231,6 +231,9 @@ bool X86TargetInfo::handleTargetFeatures(std::vector<std::string> &Features,
       HasAVX512BF16 = true;
     } else if (Feature == "+avx512er") {
       HasAVX512ER = true;
+    } else if (Feature == "+avx512fp16") {
+      HasAVX512FP16 = true;
+      HasFloat16 = true;
     } else if (Feature == "+avx512pf") {
       HasAVX512PF = true;
     } else if (Feature == "+avx512dq") {
@@ -668,6 +671,8 @@ void X86TargetInfo::getTargetDefines(const LangOptions &Opts,
     Builder.defineMacro("__AVX512BF16__");
   if (HasAVX512ER)
     Builder.defineMacro("__AVX512ER__");
+  if (HasAVX512FP16)
+    Builder.defineMacro("__AVX512FP16__");
   if (HasAVX512PF)
     Builder.defineMacro("__AVX512PF__");
   if (HasAVX512DQ)
@@ -856,6 +861,7 @@ bool X86TargetInfo::isValidFeatureName(StringRef Name) const {
       .Case("avx512vnni", true)
       .Case("avx512bf16", true)
       .Case("avx512er", true)
+      .Case("avx512fp16", true)
       .Case("avx512pf", true)
       .Case("avx512dq", true)
       .Case("avx512bitalg", true)
@@ -948,6 +954,7 @@ bool X86TargetInfo::hasFeature(StringRef Feature) const {
       .Case("avx512vnni", HasAVX512VNNI)
       .Case("avx512bf16", HasAVX512BF16)
       .Case("avx512er", HasAVX512ER)
+      .Case("avx512fp16", HasAVX512FP16)
       .Case("avx512pf", HasAVX512PF)
       .Case("avx512dq", HasAVX512DQ)
       .Case("avx512bitalg", HasAVX512BITALG)

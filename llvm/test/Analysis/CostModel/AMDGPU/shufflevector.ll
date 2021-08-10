@@ -53,8 +53,8 @@ define amdgpu_kernel void @shufflevector_02_v2i16(<2 x i16> addrspace(1)* %out, 
 }
 
 ; GCN-LABEL: 'shufflevector_xxx'
-; TPT: estimated cost of -1 for {{.*}} shufflevector <2 x i8> %vec, <2 x i8> undef, <4 x i32> <i32 0, i32 1, i32 undef, i32 undef>
-; CS: estimated cost of 1 for {{.*}} shufflevector <2 x i8> %vec, <2 x i8> undef, <4 x i32> <i32 0, i32 1, i32 undef, i32 undef>
+; TPT: estimated cost of 0 for {{.*}} shufflevector <2 x i8> %vec, <2 x i8> undef, <4 x i32> <i32 0, i32 1, i32 undef, i32 undef>
+; CS: estimated cost of 0 for {{.*}} shufflevector <2 x i8> %vec, <2 x i8> undef, <4 x i32> <i32 0, i32 1, i32 undef, i32 undef>
 ; Should not assert
 define amdgpu_kernel void @shufflevector_xxx(<4 x i8> addrspace(1)* %out, <2 x i8> addrspace(1)* %vaddr) {
   %vec = load <2 x i8>, <2 x i8> addrspace(1)* %vaddr

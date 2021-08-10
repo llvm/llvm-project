@@ -119,6 +119,11 @@ static cl::opt<bool> DisableDelinearizationChecks(
         "dependence vectors for languages that allow the subscript of one "
         "dimension to underflow or overflow into another dimension."));
 
+static cl::opt<unsigned> MIVMaxLevelThreshold(
+    "da-miv-max-level-threshold", cl::init(7), cl::Hidden, cl::ZeroOrMore,
+    cl::desc("Maximum depth allowed for the recursive algorithm used to "
+             "explore MIV direction vectors."));
+
 //===----------------------------------------------------------------------===//
 // basics
 
@@ -2602,6 +2607,19 @@ unsigned DependenceInfo::exploreDirections(unsigned Level, CoefficientInfo *A,
                                            const SmallBitVector &Loops,
                                            unsigned &DepthExpanded,
                                            const SCEV *Delta) const {
+  // This algorithm has worst case complexity of O(3^n), where 'n' is the number
+  // of common loop levels. To avoid excessive compile-time, pessimize all the
+  // results and immediately return when the number of common levels is beyond
+  // the given threshold.
+  if (CommonLevels > MIVMaxLevelThreshold) {
+    LLVM_DEBUG(dbgs() << "Number of common levels exceeded the threshold. MIV "
+                         "direction exploration is terminated.\n");
+    for (unsigned K = 1; K <= CommonLevels; ++K)
+      if (Loops[K])
+        Bound[K].DirSet = Dependence::DVEntry::ALL;
+    return 1;
+  }
+
   if (Level > CommonLevels) {
     // record result
     LLVM_DEBUG(dbgs() << "\t[");
@@ -3553,6 +3571,16 @@ DependenceInfo::depends(Instruction *Src, Instruction *Dst,
   const SCEV *DstSCEV = SE->getSCEV(DstPtr);
   LLVM_DEBUG(dbgs() << "    SrcSCEV = " << *SrcSCEV << "\n");
   LLVM_DEBUG(dbgs() << "    DstSCEV = " << *DstSCEV << "\n");
+  if (SE->getPointerBase(SrcSCEV) != SE->getPointerBase(DstSCEV)) {
+    // If two pointers have different bases, trying to analyze indexes won't
+    // work; we can't compare them to each other. This can happen, for example,
+    // if one is produced by an LCSSA PHI node.
+    //
+    // We check this upfront so we don't crash in cases where getMinusSCEV()
+    // returns a SCEVCouldNotCompute.
+    LLVM_DEBUG(dbgs() << "can't analyze SCEV with different pointer base\n");
+    return std::make_unique<Dependence>(Src, Dst);
+  }
   Pair[0].Src = SrcSCEV;
   Pair[0].Dst = DstSCEV;
 

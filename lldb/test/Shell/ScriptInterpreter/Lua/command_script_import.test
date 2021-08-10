@@ -1,4 +1,3 @@
-# REQUIRES: lua
 # RUN: %lldb --script-language lua -o 'command script import %S/Inputs/testmodule.lua' -o 'script testmodule.foo()' 2>&1 | FileCheck %s
 # CHECK: Hello World!
 

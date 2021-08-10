@@ -24,12 +24,12 @@ target triple = "bpf"
 define dso_local i32 @test(%struct.v3* %arg) local_unnamed_addr #0 !dbg !22 {
 entry:
   call void @llvm.dbg.value(metadata %struct.v3* %arg, metadata !32, metadata !DIExpression()), !dbg !33
-  %0 = tail call [100 x i32]* @llvm.preserve.struct.access.index.p0a100i32.p0s_struct.v3s(%struct.v3* %arg, i32 1, i32 1), !dbg !34, !llvm.preserve.access.index !26
-  %1 = tail call i32* @llvm.preserve.array.access.index.p0i32.p0a100i32([100 x i32]* %0, i32 1, i32 0), !dbg !34, !llvm.preserve.access.index !15
+  %0 = tail call [100 x i32]* @llvm.preserve.struct.access.index.p0a100i32.p0s_struct.v3s(%struct.v3* elementtype(%struct.v3) %arg, i32 1, i32 1), !dbg !34, !llvm.preserve.access.index !26
+  %1 = tail call i32* @llvm.preserve.array.access.index.p0i32.p0a100i32([100 x i32]* elementtype([100 x i32]) %0, i32 1, i32 0), !dbg !34, !llvm.preserve.access.index !15
   %2 = bitcast i32* %1 to [4 x %struct.v1]*, !dbg !34
-  %3 = tail call [4 x %struct.v1]* @llvm.preserve.array.access.index.p0a4s_struct.v1s.p0a4s_struct.v1s([4 x %struct.v1]* %2, i32 0, i32 0), !dbg !34, !llvm.preserve.access.index !4
-  %4 = tail call %struct.v1* @llvm.preserve.array.access.index.p0s_struct.v1s.p0a4s_struct.v1s([4 x %struct.v1]* %3, i32 1, i32 2), !dbg !34, !llvm.preserve.access.index !5
-  %5 = tail call i32* @llvm.preserve.struct.access.index.p0i32.p0s_struct.v1s(%struct.v1* %4, i32 1, i32 1), !dbg !34, !llvm.preserve.access.index !8
+  %3 = tail call [4 x %struct.v1]* @llvm.preserve.array.access.index.p0a4s_struct.v1s.p0a4s_struct.v1s([4 x %struct.v1]* elementtype([4 x %struct.v1]) %2, i32 0, i32 0), !dbg !34, !llvm.preserve.access.index !4
+  %4 = tail call %struct.v1* @llvm.preserve.array.access.index.p0s_struct.v1s.p0a4s_struct.v1s([4 x %struct.v1]* elementtype([4 x %struct.v1]) %3, i32 1, i32 2), !dbg !34, !llvm.preserve.access.index !5
+  %5 = tail call i32* @llvm.preserve.struct.access.index.p0i32.p0s_struct.v1s(%struct.v1* elementtype(%struct.v1) %4, i32 1, i32 1), !dbg !34, !llvm.preserve.access.index !8
   %call = tail call i32 @get_value(i32* %5) #4, !dbg !35
   ret i32 %call, !dbg !36
 }

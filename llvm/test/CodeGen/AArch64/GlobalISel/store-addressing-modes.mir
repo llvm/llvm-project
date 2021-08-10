@@ -208,11 +208,11 @@ body:             |
     ; CHECK: [[COPY1:%[0-9]+]]:gpr64sp = COPY $x1
     ; CHECK: [[COPY2:%[0-9]+]]:gpr64all = COPY $x2
     ; CHECK: [[COPY3:%[0-9]+]]:gpr64 = COPY [[COPY2]]
-    ; CHECK: STRXroX [[COPY3]], [[COPY1]], [[COPY]], 0, 1 :: (store (s64) into %ir.addr)
+    ; CHECK: STRXroX [[COPY3]], [[COPY1]], [[COPY]], 0, 1 :: (store (p0) into %ir.addr)
     %0:gpr(s64) = COPY $x0
     %1:gpr(s64) = G_CONSTANT i64 3
     %2:gpr(s64) = G_SHL %0, %1(s64)
     %3:gpr(p0) = COPY $x1
     %ptr:gpr(p0) = G_PTR_ADD %3, %2
     %4:gpr(p0) = COPY $x2
-    G_STORE %4, %ptr :: (store (s64) into %ir.addr)
+    G_STORE %4, %ptr :: (store (p0) into %ir.addr)

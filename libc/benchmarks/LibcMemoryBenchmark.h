@@ -13,6 +13,7 @@
 #define LLVM_LIBC_UTILS_BENCHMARK_MEMORY_BENCHMARK_H
 
 #include "LibcBenchmark.h"
+#include "MemorySizeDistributions.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/Support/Alignment.h"
 #include <cstdint>
@@ -160,6 +161,115 @@ public:
     // Size is too small to trigger the mismatch.
     return MismatchIndex - Size - 1;
   }
+};
+
+/// This structure holds a vector of ParameterType.
+/// It makes sure that BufferCount x BufferSize Bytes and the vector of
+/// ParameterType can all fit in the L1 cache.
+struct ParameterBatch {
+  struct ParameterType {
+    unsigned OffsetBytes : 16; // max : 16 KiB - 1
+    unsigned SizeBytes : 16;   // max : 16 KiB - 1
+  };
+
+  ParameterBatch(size_t BufferCount);
+
+  /// Verifies that memory accessed through this parameter is valid.
+  void checkValid(const ParameterType &) const;
+
+  /// Computes the number of bytes processed during within this batch.
+  size_t getBatchBytes() const;
+
+  const size_t BufferSize;
+  const size_t BatchSize;
+  std::vector<ParameterType> Parameters;
+};
+
+/// Memory function prototype and configuration.
+using MemcpyFunction = void *(*)(void *__restrict, const void *__restrict,
+                                 size_t);
+struct MemcpyConfiguration {
+  MemcpyFunction Function;
+  llvm::StringRef Name;
+};
+
+using MemsetFunction = void *(*)(void *, int, size_t);
+struct MemsetConfiguration {
+  MemsetFunction Function;
+  llvm::StringRef Name;
+};
+
+using BzeroFunction = void (*)(void *, size_t);
+struct BzeroConfiguration {
+  BzeroFunction Function;
+  llvm::StringRef Name;
+};
+
+using MemcmpFunction = int (*)(const void *, const void *, size_t);
+struct MemcmpConfiguration {
+  MemcmpFunction Function;
+  llvm::StringRef Name;
+};
+
+/// Provides source and destination buffers for the Copy operation as well as
+/// the associated size distributions.
+struct CopySetup : public ParameterBatch {
+  CopySetup();
+
+  inline static const ArrayRef<MemorySizeDistribution> getDistributions() {
+    return getMemcpySizeDistributions();
+  }
+
+  inline void *Call(ParameterType Parameter, MemcpyFunction Memcpy) {
+    return Memcpy(DstBuffer + Parameter.OffsetBytes,
+                  SrcBuffer + Parameter.OffsetBytes, Parameter.SizeBytes);
+  }
+
+private:
+  AlignedBuffer SrcBuffer;
+  AlignedBuffer DstBuffer;
+};
+
+/// Provides destination buffer for the Set operation as well as the associated
+/// size distributions.
+struct SetSetup : public ParameterBatch {
+  SetSetup();
+
+  inline static const ArrayRef<MemorySizeDistribution> getDistributions() {
+    return getMemsetSizeDistributions();
+  }
+
+  inline void *Call(ParameterType Parameter, MemsetFunction Memset) {
+    return Memset(DstBuffer + Parameter.OffsetBytes,
+                  Parameter.OffsetBytes % 0xFF, Parameter.SizeBytes);
+  }
+
+  inline void *Call(ParameterType Parameter, BzeroFunction Bzero) {
+    Bzero(DstBuffer + Parameter.OffsetBytes, Parameter.SizeBytes);
+    return DstBuffer.begin();
+  }
+
+private:
+  AlignedBuffer DstBuffer;
+};
+
+/// Provides left and right buffers for the Comparison operation as well as the
+/// associated size distributions.
+struct ComparisonSetup : public ParameterBatch {
+  ComparisonSetup();
+
+  inline static const ArrayRef<MemorySizeDistribution> getDistributions() {
+    return getMemcmpSizeDistributions();
+  }
+
+  inline int Call(ParameterType Parameter, MemcmpFunction Memcmp) {
+    return Memcmp(LhsBuffer + Parameter.OffsetBytes,
+                  RhsBuffer + Parameter.OffsetBytes, Parameter.SizeBytes);
+  }
+
+private:
+  AlignedBuffer LhsBuffer;
+  AlignedBuffer RhsBuffer;
 };
 
 } // namespace libc_benchmarks

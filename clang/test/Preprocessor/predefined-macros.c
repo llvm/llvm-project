@@ -122,7 +122,7 @@
 // CHECK-SYNC_CAS_MIPS64: #define __GCC_HAVE_SYNC_COMPARE_AND_SWAP_8 1
 
 // RUN: %clang_cc1 %s -E -dM -o - -x cl \
-// RUN:   | FileCheck -match-full-lines %s --check-prefix=CHECK-CL10
+// RUN:   | FileCheck -match-full-lines %s --check-prefix=CHECK-CL12
 // RUN: %clang_cc1 %s -E -dM -o - -x cl -cl-std=CL1.0 \
 // RUN:   | FileCheck -match-full-lines %s --check-prefix=CHECK-CL10
 // RUN: %clang_cc1 %s -E -dM -o - -x cl -cl-std=CL1.1 \

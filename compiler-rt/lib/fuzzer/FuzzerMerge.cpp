@@ -77,8 +77,8 @@ bool Merger::Parse(std::istream &IS, bool ParseCoverage) {
   size_t ExpectedStartMarker = 0;
   const size_t kInvalidStartMarker = -1;
   size_t LastSeenStartMarker = kInvalidStartMarker;
-  Vector<uint32_t> TmpFeatures;
-  Set<uint32_t> PCs;
+  std::vector<uint32_t> TmpFeatures;
+  std::set<uint32_t> PCs;
   while (std::getline(IS, Line, '\n')) {
     std::istringstream ISS1(Line);
     std::string Marker;
@@ -132,15 +132,16 @@ size_t Merger::ApproximateMemoryConsumption() const  {
 
 // Decides which files need to be merged (add those to NewFiles).
 // Returns the number of new features added.
-size_t Merger::Merge(const Set<uint32_t> &InitialFeatures,
-                     Set<uint32_t> *NewFeatures,
-                     const Set<uint32_t> &InitialCov, Set<uint32_t> *NewCov,
-                     Vector<std::string> *NewFiles) {
+size_t Merger::Merge(const std::set<uint32_t> &InitialFeatures,
+                     std::set<uint32_t> *NewFeatures,
+                     const std::set<uint32_t> &InitialCov,
+                     std::set<uint32_t> *NewCov,
+                     std::vector<std::string> *NewFiles) {
   NewFiles->clear();
   NewFeatures->clear();
   NewCov->clear();
   assert(NumFilesInFirstCorpus <= Files.size());
-  Set<uint32_t> AllFeatures = InitialFeatures;
+  std::set<uint32_t> AllFeatures = InitialFeatures;
 
   // What features are in the initial corpus?
   for (size_t i = 0; i < NumFilesInFirstCorpus; i++) {
@@ -150,7 +151,7 @@ size_t Merger::Merge(const Set<uint32_t> &InitialFeatures,
   // Remove all features that we already know from all other inputs.
   for (size_t i = NumFilesInFirstCorpus; i < Files.size(); i++) {
     auto &Cur = Files[i].Features;
-    Vector<uint32_t> Tmp;
+    std::vector<uint32_t> Tmp;
     std::set_difference(Cur.begin(), Cur.end(), AllFeatures.begin(),
                         AllFeatures.end(), std::inserter(Tmp, Tmp.begin()));
     Cur.swap(Tmp);
@@ -188,8 +189,8 @@ size_t Merger::Merge(const Set<uint32_t> &InitialFeatures,
   return NewFeatures->size();
 }
 
-Set<uint32_t> Merger::AllFeatures() const {
-  Set<uint32_t> S;
+std::set<uint32_t> Merger::AllFeatures() const {
+  std::set<uint32_t> S;
   for (auto &File : Files)
     S.insert(File.Features.begin(), File.Features.end());
   return S;
@@ -212,11 +213,11 @@ void Fuzzer::CrashResistantMergeInternalStep(const std::string &CFPath) {
          M.Files.size() - M.FirstNotProcessedFile);
 
   std::ofstream OF(CFPath, std::ofstream::out | std::ofstream::app);
-  Set<size_t> AllFeatures;
+  std::set<size_t> AllFeatures;
   auto PrintStatsWrapper = [this, &AllFeatures](const char* Where) {
     this->PrintStats(Where, "\n", 0, AllFeatures.size());
   };
-  Set<const TracePC::PCTableEntry *> AllPCs;
+  std::set<const TracePC::PCTableEntry *> AllPCs;
   for (size_t i = M.FirstNotProcessedFile; i < M.Files.size(); i++) {
     Fuzzer::MaybeExitGracefully();
     auto U = FileToVector(M.Files[i].Name);
@@ -236,7 +237,7 @@ void Fuzzer::CrashResistantMergeInternalStep(const std::string &CFPath) {
     // * Then, all other files, smallest first.
     // So it makes no sense to record all features for all files, instead we
     // only record features that were not seen before.
-    Set<size_t> UniqFeatures;
+    std::set<size_t> UniqFeatures;
     TPC.CollectFeatures([&](size_t Feature) {
       if (AllFeatures.insert(Feature).second)
         UniqFeatures.insert(Feature);
@@ -263,15 +264,16 @@ void Fuzzer::CrashResistantMergeInternalStep(const std::string &CFPath) {
   PrintStatsWrapper("DONE  ");
 }
 
-static size_t WriteNewControlFile(const std::string &CFPath,
-                                  const Vector<SizedFile> &OldCorpus,
-                                  const Vector<SizedFile> &NewCorpus,
-                                  const Vector<MergeFileInfo> &KnownFiles) {
+static size_t
+WriteNewControlFile(const std::string &CFPath,
+                    const std::vector<SizedFile> &OldCorpus,
+                    const std::vector<SizedFile> &NewCorpus,
+                    const std::vector<MergeFileInfo> &KnownFiles) {
   std::unordered_set<std::string> FilesToSkip;
   for (auto &SF: KnownFiles)
     FilesToSkip.insert(SF.Name);
 
-  Vector<std::string> FilesToUse;
+  std::vector<std::string> FilesToUse;
   auto MaybeUseFile = [=, &FilesToUse](std::string Name) {
     if (FilesToSkip.find(Name) == FilesToSkip.end())
       FilesToUse.push_back(Name);
@@ -299,19 +301,18 @@ static size_t WriteNewControlFile(const std::string &CFPath,
 }
 
 // Outer process. Does not call the target code and thus should not fail.
-void CrashResistantMerge(const Vector<std::string> &Args,
-                         const Vector<SizedFile> &OldCorpus,
-                         const Vector<SizedFile> &NewCorpus,
-                         Vector<std::string> *NewFiles,
-                         const Set<uint32_t> &InitialFeatures,
-                         Set<uint32_t> *NewFeatures,
-                         const Set<uint32_t> &InitialCov,
-                         Set<uint32_t> *NewCov,
-                         const std::string &CFPath,
+void CrashResistantMerge(const std::vector<std::string> &Args,
+                         const std::vector<SizedFile> &OldCorpus,
+                         const std::vector<SizedFile> &NewCorpus,
+                         std::vector<std::string> *NewFiles,
+                         const std::set<uint32_t> &InitialFeatures,
+                         std::set<uint32_t> *NewFeatures,
+                         const std::set<uint32_t> &InitialCov,
+                         std::set<uint32_t> *NewCov, const std::string &CFPath,
                          bool V /*Verbose*/) {
   if (NewCorpus.empty() && OldCorpus.empty()) return;  // Nothing to merge.
   size_t NumAttempts = 0;
-  Vector<MergeFileInfo> KnownFiles;
+  std::vector<MergeFileInfo> KnownFiles;
   if (FileSize(CFPath)) {
     VPrintf(V, "MERGE-OUTER: non-empty control file provided: '%s'\n",
            CFPath.c_str());

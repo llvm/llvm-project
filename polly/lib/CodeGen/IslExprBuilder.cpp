@@ -334,7 +334,8 @@ IslExprBuilder::createAccessAddress(isl_ast_expr *Expr) {
     IndexOp = createMul(IndexOp, DimSize, "polly.access.mul." + BaseName);
   }
 
-  Access = Builder.CreateGEP(Base, IndexOp, "polly.access." + BaseName);
+  Access = Builder.CreateGEP(SAI->getElementType(), Base, IndexOp,
+                             "polly.access." + BaseName);
 
   if (PollyDebugPrinting)
     RuntimeDebugBuilder::createCPUPrinter(Builder, "\n");

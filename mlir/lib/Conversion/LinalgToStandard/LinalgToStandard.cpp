@@ -186,9 +186,7 @@ void ConvertLinalgToStandardPass::runOnOperation() {
   ConversionTarget target(getContext());
   target.addLegalDialect<AffineDialect, memref::MemRefDialect, scf::SCFDialect,
                          StandardOpsDialect>();
-  target.addLegalOp<ModuleOp, FuncOp, ReturnOp>();
-  target.addLegalOp<linalg::ExpandShapeOp, linalg::CollapseShapeOp,
-                    linalg::RangeOp>();
+  target.addLegalOp<ModuleOp, FuncOp, ReturnOp, linalg::RangeOp>();
   RewritePatternSet patterns(&getContext());
   populateLinalgToStandardConversionPatterns(patterns);
   if (failed(applyFullConversion(module, target, std::move(patterns))))

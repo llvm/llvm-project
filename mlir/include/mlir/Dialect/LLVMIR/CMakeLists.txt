@@ -16,7 +16,12 @@ add_public_tablegen_target(MLIRLLVMOpsIncGen)
 
 add_mlir_doc(LLVMOps LLVMOps Dialects/ -gen-op-doc)
 
-add_mlir_interface(LLVMOpsInterfaces)
+set(LLVM_TARGET_DEFINITIONS LLVMOpsInterfaces.td)
+mlir_tablegen(LLVMOpsInterfaces.h.inc -gen-op-interface-decls)
+mlir_tablegen(LLVMOpsInterfaces.cpp.inc -gen-op-interface-defs)
+mlir_tablegen(LLVMTypeInterfaces.h.inc -gen-type-interface-decls)
+mlir_tablegen(LLVMTypeInterfaces.cpp.inc -gen-type-interface-defs)
+add_public_tablegen_target(MLIRLLVMOpsInterfacesIncGen)
 
 set(LLVM_TARGET_DEFINITIONS LLVMOps.td)
 mlir_tablegen(LLVMConversions.inc -gen-llvmir-conversions)

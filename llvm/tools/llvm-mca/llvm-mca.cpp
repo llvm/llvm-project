@@ -32,9 +32,6 @@
 #include "Views/SchedulerStatistics.h"
 #include "Views/SummaryView.h"
 #include "Views/TimelineView.h"
-#ifdef HAS_AMDGPU
-#include "lib/AMDGPU/AMDGPUCustomBehaviour.h"
-#endif
 #include "llvm/MC/MCAsmBackend.h"
 #include "llvm/MC/MCAsmInfo.h"
 #include "llvm/MC/MCCodeEmitter.h"
@@ -95,15 +92,13 @@ static cl::opt<std::string>
          cl::desc("Target a specific cpu type (-mcpu=help for details)"),
          cl::value_desc("cpu-name"), cl::cat(ToolOptions), cl::init("native"));
 
-static cl::opt<std::string>
-    MATTR("mattr",
-          cl::desc("Additional target features."),
-          cl::cat(ToolOptions));
+static cl::opt<std::string> MATTR("mattr",
+                                  cl::desc("Additional target features."),
+                                  cl::cat(ToolOptions));
 
-static cl::opt<bool>
-    PrintJson("json",
-          cl::desc("Print the output in json format"),
-          cl::cat(ToolOptions), cl::init(false));
+static cl::opt<bool> PrintJson("json",
+                               cl::desc("Print the output in json format"),
+                               cl::cat(ToolOptions), cl::init(false));
 
 static cl::opt<int>
     OutputAsmVariant("output-asm-variant",
@@ -295,39 +290,6 @@ static void processViewOptions(bool IsOutOfOrder) {
     processOptionImpl(PrintRetireStats, Default);
 }
 
-std::unique_ptr<mca::InstrPostProcess>
-createInstrPostProcess(const Triple &TheTriple, const MCSubtargetInfo &STI,
-                       const MCInstrInfo &MCII) {
-  // Might be a good idea to have a separate flag so that InstrPostProcess
-  // can be used with or without CustomBehaviour
-  if (DisableCustomBehaviour)
-    return std::make_unique<mca::InstrPostProcess>(STI, MCII);
-#ifdef HAS_AMDGPU
-  if (TheTriple.isAMDGPU())
-    return std::make_unique<mca::AMDGPUInstrPostProcess>(STI, MCII);
-#endif
-  return std::make_unique<mca::InstrPostProcess>(STI, MCII);
-}
-
-std::unique_ptr<mca::CustomBehaviour>
-createCustomBehaviour(const Triple &TheTriple, const MCSubtargetInfo &STI,
-                      const mca::SourceMgr &SrcMgr, const MCInstrInfo &MCII) {
-  // Build the appropriate CustomBehaviour object for the current target.
-  // The CustomBehaviour class should never depend on the source code,
-  // but it can depend on the list of mca::Instruction and any classes
-  // that can be built using just the target info. If you need extra
-  // information from the source code or the list of MCInst, consider
-  // adding that information to the mca::Instruction class and setting
-  // it during InstrBuilder::createInstruction().
-  if (DisableCustomBehaviour)
-    return std::make_unique<mca::CustomBehaviour>(STI, SrcMgr, MCII);
-#ifdef HAS_AMDGPU
-  if (TheTriple.isAMDGPU())
-    return std::make_unique<mca::AMDGPUCustomBehaviour>(STI, SrcMgr, MCII);
-#endif
-  return std::make_unique<mca::CustomBehaviour>(STI, SrcMgr, MCII);
-}
-
 // Returns true on success.
 static bool runPipeline(mca::Pipeline &P) {
   // Handle pipeline errors here.
@@ -346,6 +308,7 @@ int main(int argc, char **argv) {
   InitializeAllTargetInfos();
   InitializeAllTargetMCs();
   InitializeAllAsmParsers();
+  InitializeAllTargetMCAs();
 
   // Enable printing of available targets when flag --version is specified.
   cl::AddExtraVersionPrinter(TargetRegistry::printRegisteredTargetsForVersion);
@@ -529,22 +492,23 @@ int main(int argc, char **argv) {
     if (Region->empty())
       continue;
 
-    // Don't print the header of this region if it is the default region, and
-    // it doesn't have an end location.
-    if (!PrintJson &&
-        (Region->startLoc().isValid() || Region->endLoc().isValid())) {
-      TOF->os() << "\n[" << RegionIdx++ << "] Code Region";
-      StringRef Desc = Region->getDescription();
-      if (!Desc.empty())
-        TOF->os() << " - " << Desc;
-      TOF->os() << "\n\n";
-    }
+    IB.clear();
 
     // Lower the MCInst sequence into an mca::Instruction sequence.
     ArrayRef<MCInst> Insts = Region->getInstructions();
     mca::CodeEmitter CE(*STI, *MAB, *MCE, Insts);
-    std::unique_ptr<mca::InstrPostProcess> IPP =
-        createInstrPostProcess(TheTriple, *STI, *MCII);
+
+    std::unique_ptr<mca::InstrPostProcess> IPP;
+    if (!DisableCustomBehaviour) {
+      IPP = std::unique_ptr<mca::InstrPostProcess>(
+          TheTarget->createInstrPostProcess(*STI, *MCII));
+    }
+    if (!IPP)
+      // If the target doesn't have its own IPP implemented (or the
+      // -disable-cb flag is set) then we use the base class
+      // (which does nothing).
+      IPP = std::make_unique<mca::InstrPostProcess>(*STI, *MCII);
+
     std::vector<std::unique_ptr<mca::Instruction>> LoweredSequence;
     for (const MCInst &MCI : Insts) {
       Expected<std::unique_ptr<mca::Instruction>> Inst =
@@ -579,7 +543,12 @@ int main(int argc, char **argv) {
       auto P = std::make_unique<mca::Pipeline>();
       P->appendStage(std::make_unique<mca::EntryStage>(S));
       P->appendStage(std::make_unique<mca::InstructionTables>(SM));
-      mca::PipelinePrinter Printer(*P);
+
+      mca::PipelinePrinter Printer(*P, *Region, RegionIdx, *STI, PO);
+      if (PrintJson) {
+        Printer.addView(
+            std::make_unique<mca::InstructionView>(*STI, *IP, Insts));
+      }
 
       // Create the views for this pipeline, execute, and emit a report.
       if (PrintInstructionInfoView) {
@@ -593,13 +562,12 @@ int main(int argc, char **argv) {
         return 1;
 
       if (PrintJson) {
-        JSONOutput.try_emplace(!Region->getDescription().empty()
-                                   ? Region->getDescription().str()
-                                   : "main",
-                               Printer.getJSONReportRegion());
+        Printer.printReport(JSONOutput);
       } else {
         Printer.printReport(TOF->os());
       }
+
+      ++RegionIdx;
       continue;
     }
 
@@ -609,20 +577,24 @@ int main(int argc, char **argv) {
     // the source code (but it can depend on the list of
     // mca::Instruction or any objects that can be reconstructed
     // from the target information).
-    std::unique_ptr<mca::CustomBehaviour> CB =
-        createCustomBehaviour(TheTriple, *STI, S, *MCII);
+    std::unique_ptr<mca::CustomBehaviour> CB;
+    if (!DisableCustomBehaviour)
+      CB = std::unique_ptr<mca::CustomBehaviour>(
+          TheTarget->createCustomBehaviour(*STI, S, *MCII));
+    if (!CB)
+      // If the target doesn't have its own CB implemented (or the -disable-cb
+      // flag is set) then we use the base class (which does nothing).
+      CB = std::make_unique<mca::CustomBehaviour>(*STI, S, *MCII);
 
     // Create a basic pipeline simulating an out-of-order backend.
     auto P = MCA.createDefaultPipeline(PO, S, *CB);
-    mca::PipelinePrinter Printer(*P);
+
+    mca::PipelinePrinter Printer(*P, *Region, RegionIdx, *STI, PO);
 
     // When we output JSON, we add a view that contains the instructions
     // and CPU resource information.
     if (PrintJson) {
-      auto IV = std::make_unique<mca::InstructionView>(*STI, *IP, Insts, MCPU);
-      if (JSONOutput.find("Resources") == JSONOutput.end()) {
-        JSONOutput.try_emplace("Resources", IV->getJSONResources());
-      }
+      auto IV = std::make_unique<mca::InstructionView>(*STI, *IP, Insts);
       Printer.addView(std::move(IV));
     }
 
@@ -672,16 +644,12 @@ int main(int argc, char **argv) {
       return 1;
 
     if (PrintJson) {
-      JSONOutput.try_emplace(!Region->getDescription().empty()
-                                 ? Region->getDescription().str()
-                                 : "main",
-                             Printer.getJSONReportRegion());
+      Printer.printReport(JSONOutput);
     } else {
       Printer.printReport(TOF->os());
     }
 
-    // Clear the InstrBuilder internal state in preparation for another round.
-    IB.clear();
+    ++RegionIdx;
   }
 
   if (PrintJson)

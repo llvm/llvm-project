@@ -5,4 +5,5 @@
   .globl  _start
 _start:
   .functype _start (i64) -> (f32)
+  f32.const 0.0
   end_function

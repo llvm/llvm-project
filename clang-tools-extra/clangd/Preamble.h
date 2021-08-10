@@ -47,11 +47,7 @@ namespace clangd {
 /// As we must avoid re-parsing the preamble, any information that can only
 /// be obtained during parsing must be eagerly captured and stored here.
 struct PreambleData {
-  PreambleData(const ParseInputs &Inputs, PrecompiledPreamble Preamble,
-               std::vector<Diag> Diags, IncludeStructure Includes,
-               MainFileMacros Macros,
-               std::unique_ptr<PreambleFileStatusCache> StatCache,
-               CanonicalIncludes CanonIncludes);
+  PreambleData(PrecompiledPreamble Preamble) : Preamble(std::move(Preamble)) {}
 
   // Version of the ParseInputs this preamble was built from.
   std::string Version;
@@ -65,10 +61,15 @@ struct PreambleData {
   // Users care about headers vs main-file, not preamble vs non-preamble.
   // These should be treated as main-file entities e.g. for code completion.
   MainFileMacros Macros;
+  // Pragma marks defined in the preamble section of the main file.
+  std::vector<PragmaMark> Marks;
   // Cache of FS operations performed when building the preamble.
   // When reusing a preamble, this cache can be consumed to save IO.
   std::unique_ptr<PreambleFileStatusCache> StatCache;
   CanonicalIncludes CanonIncludes;
+  // Whether there was a (possibly-incomplete) include-guard on the main file.
+  // We need to propagate this information "by hand" to subsequent parses.
+  bool MainIsIncludeGuarded = false;
 };
 
 using PreambleParsedCallback =

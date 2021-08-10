@@ -4,15 +4,13 @@
 Contributing to libc++
 ======================
 
-.. contents::
-  :local:
+This file contains notes about various tasks and processes specific to contributing
+to libc++. If this is your first time contributing, please also read `this document
+<https://www.llvm.org/docs/Contributing.html>`__ on general rules for contributing to LLVM.
 
-Please read `this document <https://www.llvm.org/docs/Contributing.html>`__ on general rules to contribute to LLVM projects.
-
-Tasks and processes
-===================
-
-This file contains notes about various tasks and processes specific to libc++.
+For libc++, please make sure you follow `these instructions <https://www.llvm.org/docs/Phabricator.html#requesting-a-review-via-the-command-line>`_
+for submitting a code review from the command-line using ``arc``, since we have some
+automation (e.g. CI) that depends on the review being submitted that way.
 
 Looking for pre-existing reviews
 ================================
@@ -24,36 +22,34 @@ and clicking on ``Libc++ Open Reviews`` in the sidebar to the left. If you see
 that your feature is already being worked on, please consider chiming in instead
 of duplicating work!
 
-Post-Release TODO
-=================
+Pre-commit check list
+=====================
+
+Before committing or creating a review, please go through this check-list to make
+sure you don't forget anything:
+
+- Do you have tests for every public class and/or function you're adding or modifying?
+- Did you update the synopsis of the relevant headers?
+- Did you update the relevant files to track implementation status (in ``docs/Status/``)?
+- Did you mark all functions and type declarations with the :ref:`proper visibility macro <visibility-macros>`?
+- If you added a header:
+
+  - Did you add it to ``include/module.modulemap``?
+  - Did you add it to ``include/CMakeLists.txt``?
+  - If it's a public header, did you add a test under ``test/libcxx`` that the new header defines ``_LIBCPP_VERSION``? See ``test/libcxx/algorithms/version.pass.cpp`` for an example. NOTE: This should be automated.
+  - If it's a public header, did you update ``utils/generate_header_inclusion_tests.py``?
+
+- Did you add the relevant feature test macro(s) for your feature? Did you update the ``generate_feature_test_macro_components.py`` script with it?
+- Did you run the ``libcxx-generate-files`` target and verify its output?
+
+Post-release check list
+=======================
 
 After branching for an LLVM release:
 
 1. Update ``_LIBCPP_VERSION`` in ``include/__config``
 2. Update the ``include/__libcpp_version`` file
 3. Update the version number in ``docs/conf.py``
-
-Modifying feature-test macros
-=============================
-
-When adding or updating feature-test macros, you should update the corresponding tests.
-To do that, modify ``feature_test_macros`` table in the script
-``utils/generate_feature_test_macro_components.py``, run it, and commit updated
-files. Running ``utils/generate_feature_test_macro_components.py`` should never
-generate diffs in a clean checkout; feel free to run it in your local checkout
-any time you want.
-
-
-Adding a new header TODO
-========================
-
-When adding a new header to libc++:
-
-1. Add a test under ``test/libcxx`` that the new header defines ``_LIBCPP_VERSION``. See ``test/libcxx/algorithms/version.pass.cpp`` for an example.
-2. Run ``python utils/generate_header_tests.py``; verify and commit the changes.
-3. Modify ``python utils/generate_header_inclusion_tests.py``; run it; verify and commit the changes.
-4. Create a submodule in ``include/module.modulemap`` for the new header.
-5. Update the ``include/CMakeLists.txt`` file to include the new header.
 
 Exporting new symbols from the library
 ======================================
@@ -70,3 +66,96 @@ abilist for the platform, e.g.:
 
 * C++20 for the Linux platform.
 * MacOS C++20 for the Apple platform.
+
+Working on large features
+=========================
+
+Libc++ makes no guarantees about the implementation status or the ABI stability
+of features that have not been ratified in the C++ Standard yet. After the C++
+Standard is ratified libc++ promises a conforming and ABI-stable
+implementation. When working on a large new feature in the ratified version of
+the C++ Standard that can't be finished before the next release branch is
+created, we can't honor this promise. Another reason for not being able to
+promise ABI stability happens when the C++ Standard committee retroactively
+accepts ABI breaking papers as defect reports against the ratified C++
+Standard.
+
+When working on these features it should be possible for libc++ vendors to
+disable these incomplete features, so they can promise ABI stability to their
+customers. This is done by the CMake option
+``LIBCXX_ENABLE_INCOMPLETE_FEATURES``. When start working on a large feature
+the following steps are required to guard the new library with the CMake
+option.
+
+* ``CMakeLists.txt`` add
+
+  .. code-block:: cmake
+
+    config_define_if_not(LIBCXX_ENABLE_INCOMPLETE_FEATURES _LIBCPP_HAS_NO_INCOMPLETE_FOO)
+
+* ``libcxx/include/__config_site.in`` add
+
+  .. code-block:: c++
+
+    #cmakedefine _LIBCPP_HAS_NO_INCOMPLETE_FOO
+
+* ``include/foo`` the contents of the file should be guarded in an ``ifdef``
+  and always include ``<version>``
+
+  .. code-block:: c++
+
+    #ifndef _LIBCPP_FOO
+    #define _LIBCPP_FOO
+
+    // Make sure all feature tests macros are always available.
+    #include <version>
+    // Only enable the contents of the header when libc++ was build with LIBCXX_ENABLE_INCOMPLETE_FEATURES enabled
+    #if !defined(_LIBCPP_HAS_NO_INCOMPLETE_FOO)
+
+    ...
+
+    #endif // !defined(_LIBCPP_HAS_NO_INCOMPLETE_FO0)
+    #endif // _LIBCPP_FOO
+
+* ``src/CMakeLists.txt`` when the library has a file ``foo.cpp`` it should only
+  be added when ``LIBCXX_ENABLE_INCOMPLETE_FEATURES`` is enabled
+
+  .. code-block:: cmake
+
+    if(LIBCXX_ENABLE_INCOMPLETE_FEATURES)
+      list(APPEND LIBCXX_SOURCES
+        foo.cpp
+      )
+    endif()
+
+* ``utils/generate_feature_test_macro_components.py`` add to ``lit_markup``
+
+  .. code-block:: python
+
+    "foo": ["UNSUPPORTED: libcpp-has-no-incomplete-foo"],
+
+* ``utils/generate_header_inclusion_tests.py`` add to ``lit_markup``
+
+  .. code-block:: python
+
+    "foo": ["UNSUPPORTED: libcpp-has-no-incomplete-foo"],
+
+* ``utils/generate_header_tests.py`` add to ``header_markup``
+
+  .. code-block:: python
+
+    "foo": ["ifndef _LIBCPP_HAS_NO_INCOMPLETE_FOO"],
+
+* ``utils/libcxx/test/features.py`` add to ``macros``
+
+  .. code-block:: python
+
+    '_LIBCPP_HAS_NO_INCOMPLETE_FOO': 'libcpp-has-no-incomplete-foo',
+
+* All tests that include ``<foo>`` should contain
+
+  .. code-block:: c++
+
+    // UNSUPPORTED: libcpp-has-no-incomplete-foo
+
+Once the library is complete these changes and guards should be removed.

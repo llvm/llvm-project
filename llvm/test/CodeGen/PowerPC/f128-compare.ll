@@ -15,10 +15,10 @@ define dso_local signext i32 @greater_qp() {
 ; CHECK-NEXT:    addis r3, r2, a_qp@toc@ha
 ; CHECK-NEXT:    li r4, 1
 ; CHECK-NEXT:    addi r3, r3, a_qp@toc@l
-; CHECK-NEXT:    lxvx v2, 0, r3
+; CHECK-NEXT:    lxv v2, 0(r3)
 ; CHECK-NEXT:    addis r3, r2, b_qp@toc@ha
 ; CHECK-NEXT:    addi r3, r3, b_qp@toc@l
-; CHECK-NEXT:    lxvx v3, 0, r3
+; CHECK-NEXT:    lxv v3, 0(r3)
 ; CHECK-NEXT:    li r3, 0
 ; CHECK-NEXT:    xscmpuqp cr0, v2, v3
 ; CHECK-NEXT:    iselgt r3, r4, r3
@@ -61,10 +61,10 @@ define dso_local signext i32 @less_qp() {
 ; CHECK-NEXT:    addis r3, r2, a_qp@toc@ha
 ; CHECK-NEXT:    li r4, 1
 ; CHECK-NEXT:    addi r3, r3, a_qp@toc@l
-; CHECK-NEXT:    lxvx v2, 0, r3
+; CHECK-NEXT:    lxv v2, 0(r3)
 ; CHECK-NEXT:    addis r3, r2, b_qp@toc@ha
 ; CHECK-NEXT:    addi r3, r3, b_qp@toc@l
-; CHECK-NEXT:    lxvx v3, 0, r3
+; CHECK-NEXT:    lxv v3, 0(r3)
 ; CHECK-NEXT:    li r3, 0
 ; CHECK-NEXT:    xscmpuqp cr0, v2, v3
 ; CHECK-NEXT:    isellt r3, r4, r3
@@ -104,10 +104,10 @@ define dso_local signext i32 @greater_eq_qp() {
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    addis r3, r2, a_qp@toc@ha
 ; CHECK-NEXT:    addi r3, r3, a_qp@toc@l
-; CHECK-NEXT:    lxvx v2, 0, r3
+; CHECK-NEXT:    lxv v2, 0(r3)
 ; CHECK-NEXT:    addis r3, r2, b_qp@toc@ha
 ; CHECK-NEXT:    addi r3, r3, b_qp@toc@l
-; CHECK-NEXT:    lxvx v3, 0, r3
+; CHECK-NEXT:    lxv v3, 0(r3)
 ; CHECK-NEXT:    li r3, 1
 ; CHECK-NEXT:    xscmpuqp cr0, v2, v3
 ; CHECK-NEXT:    cror 4*cr5+lt, un, lt
@@ -149,10 +149,10 @@ define dso_local signext i32 @less_eq_qp() {
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    addis r3, r2, a_qp@toc@ha
 ; CHECK-NEXT:    addi r3, r3, a_qp@toc@l
-; CHECK-NEXT:    lxvx v2, 0, r3
+; CHECK-NEXT:    lxv v2, 0(r3)
 ; CHECK-NEXT:    addis r3, r2, b_qp@toc@ha
 ; CHECK-NEXT:    addi r3, r3, b_qp@toc@l
-; CHECK-NEXT:    lxvx v3, 0, r3
+; CHECK-NEXT:    lxv v3, 0(r3)
 ; CHECK-NEXT:    li r3, 1
 ; CHECK-NEXT:    xscmpuqp cr0, v2, v3
 ; CHECK-NEXT:    cror 4*cr5+lt, un, gt
@@ -197,10 +197,10 @@ define dso_local signext i32 @equal_qp() {
 ; CHECK-NEXT:    addis r3, r2, a_qp@toc@ha
 ; CHECK-NEXT:    li r4, 1
 ; CHECK-NEXT:    addi r3, r3, a_qp@toc@l
-; CHECK-NEXT:    lxvx v2, 0, r3
+; CHECK-NEXT:    lxv v2, 0(r3)
 ; CHECK-NEXT:    addis r3, r2, b_qp@toc@ha
 ; CHECK-NEXT:    addi r3, r3, b_qp@toc@l
-; CHECK-NEXT:    lxvx v3, 0, r3
+; CHECK-NEXT:    lxv v3, 0(r3)
 ; CHECK-NEXT:    li r3, 0
 ; CHECK-NEXT:    xscmpuqp cr0, v2, v3
 ; CHECK-NEXT:    iseleq r3, r4, r3
@@ -241,10 +241,10 @@ define dso_local signext i32 @not_greater_qp() {
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    addis r3, r2, a_qp@toc@ha
 ; CHECK-NEXT:    addi r3, r3, a_qp@toc@l
-; CHECK-NEXT:    lxvx v2, 0, r3
+; CHECK-NEXT:    lxv v2, 0(r3)
 ; CHECK-NEXT:    addis r3, r2, b_qp@toc@ha
 ; CHECK-NEXT:    addi r3, r3, b_qp@toc@l
-; CHECK-NEXT:    lxvx v3, 0, r3
+; CHECK-NEXT:    lxv v3, 0(r3)
 ; CHECK-NEXT:    li r3, 1
 ; CHECK-NEXT:    xscmpuqp cr0, v2, v3
 ; CHECK-NEXT:    iselgt r3, 0, r3
@@ -288,10 +288,10 @@ define dso_local signext i32 @not_less_qp() {
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    addis r3, r2, a_qp@toc@ha
 ; CHECK-NEXT:    addi r3, r3, a_qp@toc@l
-; CHECK-NEXT:    lxvx v2, 0, r3
+; CHECK-NEXT:    lxv v2, 0(r3)
 ; CHECK-NEXT:    addis r3, r2, b_qp@toc@ha
 ; CHECK-NEXT:    addi r3, r3, b_qp@toc@l
-; CHECK-NEXT:    lxvx v3, 0, r3
+; CHECK-NEXT:    lxv v3, 0(r3)
 ; CHECK-NEXT:    li r3, 1
 ; CHECK-NEXT:    xscmpuqp cr0, v2, v3
 ; CHECK-NEXT:    isellt r3, 0, r3
@@ -333,10 +333,10 @@ define dso_local signext i32 @not_greater_eq_qp() {
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    addis r3, r2, a_qp@toc@ha
 ; CHECK-NEXT:    addi r3, r3, a_qp@toc@l
-; CHECK-NEXT:    lxvx v2, 0, r3
+; CHECK-NEXT:    lxv v2, 0(r3)
 ; CHECK-NEXT:    addis r3, r2, b_qp@toc@ha
 ; CHECK-NEXT:    addi r3, r3, b_qp@toc@l
-; CHECK-NEXT:    lxvx v3, 0, r3
+; CHECK-NEXT:    lxv v3, 0(r3)
 ; CHECK-NEXT:    li r3, 1
 ; CHECK-NEXT:    xscmpuqp cr0, v2, v3
 ; CHECK-NEXT:    crnor 4*cr5+lt, lt, un
@@ -378,10 +378,10 @@ define dso_local signext i32 @not_less_eq_qp() {
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    addis r3, r2, a_qp@toc@ha
 ; CHECK-NEXT:    addi r3, r3, a_qp@toc@l
-; CHECK-NEXT:    lxvx v2, 0, r3
+; CHECK-NEXT:    lxv v2, 0(r3)
 ; CHECK-NEXT:    addis r3, r2, b_qp@toc@ha
 ; CHECK-NEXT:    addi r3, r3, b_qp@toc@l
-; CHECK-NEXT:    lxvx v3, 0, r3
+; CHECK-NEXT:    lxv v3, 0(r3)
 ; CHECK-NEXT:    li r3, 1
 ; CHECK-NEXT:    xscmpuqp cr0, v2, v3
 ; CHECK-NEXT:    crnor 4*cr5+lt, gt, un
@@ -425,10 +425,10 @@ define dso_local signext i32 @not_equal_qp() {
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    addis r3, r2, a_qp@toc@ha
 ; CHECK-NEXT:    addi r3, r3, a_qp@toc@l
-; CHECK-NEXT:    lxvx v2, 0, r3
+; CHECK-NEXT:    lxv v2, 0(r3)
 ; CHECK-NEXT:    addis r3, r2, b_qp@toc@ha
 ; CHECK-NEXT:    addi r3, r3, b_qp@toc@l
-; CHECK-NEXT:    lxvx v3, 0, r3
+; CHECK-NEXT:    lxv v3, 0(r3)
 ; CHECK-NEXT:    li r3, 1
 ; CHECK-NEXT:    xscmpuqp cr0, v2, v3
 ; CHECK-NEXT:    iseleq r3, 0, r3
@@ -470,10 +470,10 @@ define fp128 @greater_sel_qp() {
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    addis r3, r2, a_qp@toc@ha
 ; CHECK-NEXT:    addi r3, r3, a_qp@toc@l
-; CHECK-NEXT:    lxvx v2, 0, r3
+; CHECK-NEXT:    lxv v2, 0(r3)
 ; CHECK-NEXT:    addis r3, r2, b_qp@toc@ha
 ; CHECK-NEXT:    addi r3, r3, b_qp@toc@l
-; CHECK-NEXT:    lxvx v3, 0, r3
+; CHECK-NEXT:    lxv v3, 0(r3)
 ; CHECK-NEXT:    xscmpuqp cr0, v2, v3
 ; CHECK-NEXT:    bgtlr cr0
 ; CHECK-NEXT:  # %bb.1: # %entry
@@ -531,10 +531,10 @@ define fp128 @less_sel_qp() {
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    addis r3, r2, a_qp@toc@ha
 ; CHECK-NEXT:    addi r3, r3, a_qp@toc@l
-; CHECK-NEXT:    lxvx v2, 0, r3
+; CHECK-NEXT:    lxv v2, 0(r3)
 ; CHECK-NEXT:    addis r3, r2, b_qp@toc@ha
 ; CHECK-NEXT:    addi r3, r3, b_qp@toc@l
-; CHECK-NEXT:    lxvx v3, 0, r3
+; CHECK-NEXT:    lxv v3, 0(r3)
 ; CHECK-NEXT:    xscmpuqp cr0, v2, v3
 ; CHECK-NEXT:    bltlr cr0
 ; CHECK-NEXT:  # %bb.1: # %entry
@@ -592,10 +592,10 @@ define fp128 @greater_eq_sel_qp() {
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    addis r3, r2, a_qp@toc@ha
 ; CHECK-NEXT:    addi r3, r3, a_qp@toc@l
-; CHECK-NEXT:    lxvx v2, 0, r3
+; CHECK-NEXT:    lxv v2, 0(r3)
 ; CHECK-NEXT:    addis r3, r2, b_qp@toc@ha
 ; CHECK-NEXT:    addi r3, r3, b_qp@toc@l
-; CHECK-NEXT:    lxvx v3, 0, r3
+; CHECK-NEXT:    lxv v3, 0(r3)
 ; CHECK-NEXT:    xscmpuqp cr0, v2, v3
 ; CHECK-NEXT:    crnor 4*cr5+lt, un, lt
 ; CHECK-NEXT:    bclr 12, 4*cr5+lt, 0
@@ -654,10 +654,10 @@ define fp128 @less_eq_sel_qp() {
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    addis r3, r2, a_qp@toc@ha
 ; CHECK-NEXT:    addi r3, r3, a_qp@toc@l
-; CHECK-NEXT:    lxvx v2, 0, r3
+; CHECK-NEXT:    lxv v2, 0(r3)
 ; CHECK-NEXT:    addis r3, r2, b_qp@toc@ha
 ; CHECK-NEXT:    addi r3, r3, b_qp@toc@l
-; CHECK-NEXT:    lxvx v3, 0, r3
+; CHECK-NEXT:    lxv v3, 0(r3)
 ; CHECK-NEXT:    xscmpuqp cr0, v2, v3
 ; CHECK-NEXT:    crnor 4*cr5+lt, un, gt
 ; CHECK-NEXT:    bclr 12, 4*cr5+lt, 0
@@ -716,10 +716,10 @@ define fp128 @equal_sel_qp() {
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    addis r3, r2, a_qp@toc@ha
 ; CHECK-NEXT:    addi r3, r3, a_qp@toc@l
-; CHECK-NEXT:    lxvx v2, 0, r3
+; CHECK-NEXT:    lxv v2, 0(r3)
 ; CHECK-NEXT:    addis r3, r2, b_qp@toc@ha
 ; CHECK-NEXT:    addi r3, r3, b_qp@toc@l
-; CHECK-NEXT:    lxvx v3, 0, r3
+; CHECK-NEXT:    lxv v3, 0(r3)
 ; CHECK-NEXT:    xscmpuqp cr0, v2, v3
 ; CHECK-NEXT:    beqlr cr0
 ; CHECK-NEXT:  # %bb.1: # %entry

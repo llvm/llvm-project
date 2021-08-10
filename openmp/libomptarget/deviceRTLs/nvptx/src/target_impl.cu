@@ -60,7 +60,13 @@ EXTERN __kmpc_impl_lanemask_t __kmpc_impl_activemask() {
   return Mask;
 }
 
-EXTERN void __kmpc_impl_syncthreads() { __syncthreads(); }
+EXTERN void __kmpc_impl_syncthreads() {
+  int barrier = 2;
+  asm volatile("barrier.sync %0;"
+               :
+               : "r"(barrier)
+               : "memory");
+}
 
 EXTERN void __kmpc_impl_syncwarp(__kmpc_impl_lanemask_t Mask) {
   __nvvm_bar_warp_sync(Mask);
@@ -75,7 +81,7 @@ EXTERN void __kmpc_impl_named_sync(uint32_t num_threads) {
   // The named barrier for active parallel threads of a team in an L1 parallel
   // region to synchronize with each other.
   int barrier = 1;
-  asm volatile("bar.sync %0, %1;"
+  asm volatile("barrier.sync %0, %1;"
                :
                : "r"(barrier), "r"(num_threads)
                : "memory");
@@ -86,15 +92,23 @@ EXTERN void __kmpc_impl_threadfence_block() { __nvvm_membar_cta(); }
 EXTERN void __kmpc_impl_threadfence_system() { __nvvm_membar_sys(); }
 
 // Calls to the NVPTX layer (assuming 1D layout)
-EXTERN int GetThreadIdInBlock() { return __nvvm_read_ptx_sreg_tid_x(); }
+EXTERN int __kmpc_get_hardware_thread_id_in_block() {
+  return __nvvm_read_ptx_sreg_tid_x();
+}
 EXTERN int GetBlockIdInKernel() { return __nvvm_read_ptx_sreg_ctaid_x(); }
-EXTERN int GetNumberOfBlocksInKernel() {
+EXTERN int __kmpc_get_hardware_num_blocks() {
   return __nvvm_read_ptx_sreg_nctaid_x();
 }
-EXTERN int GetNumberOfThreadsInBlock() { return __nvvm_read_ptx_sreg_ntid_x(); }
-EXTERN unsigned GetWarpId() { return GetThreadIdInBlock() / WARPSIZE; }
+EXTERN int __kmpc_get_hardware_num_threads_in_block() {
+  return __nvvm_read_ptx_sreg_ntid_x();
+}
+EXTERN unsigned GetWarpId() {
+  return __kmpc_get_hardware_thread_id_in_block() / WARPSIZE;
+}
 EXTERN unsigned GetWarpSize() { return WARPSIZE; }
-EXTERN unsigned GetLaneId() { return GetThreadIdInBlock() & (WARPSIZE - 1); }
+EXTERN unsigned GetLaneId() {
+  return __kmpc_get_hardware_thread_id_in_block() & (WARPSIZE - 1);
+}
 
 // Atomics
 uint32_t __kmpc_atomic_add(uint32_t *Address, uint32_t Val) {

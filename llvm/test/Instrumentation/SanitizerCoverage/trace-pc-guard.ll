@@ -6,8 +6,8 @@
 
 ; RUN: opt < %s -passes='module(sancov-module)' -sanitizer-coverage-level=4 -sanitizer-coverage-trace-pc-guard -mtriple=x86_64-windows -S | FileCheck %s --check-prefixes=CHECK,COMDAT,WIN
 
-; COMDAT:     $foo = comdat noduplicates
-; COMDAT:     $CallViaVptr = comdat noduplicates
+; COMDAT:     $foo = comdat nodeduplicate
+; COMDAT:     $CallViaVptr = comdat nodeduplicate
 
 ; ELF:        @__sancov_gen_ = private global [3 x i32] zeroinitializer, section "__sancov_guards", comdat($foo), align 4{{$}}
 ; ELF-NEXT:   @__sancov_gen_.1 = private global [1 x i32] zeroinitializer, section "__sancov_guards", comdat($CallViaVptr), align 4{{$}}
@@ -18,9 +18,9 @@
 ; WIN:        @__sancov_gen_ = private global [3 x i32] zeroinitializer, section ".SCOV$GM", comdat($foo), align 4{{$}}
 ; WIN-NEXT:   @__sancov_gen_.1 = private global [1 x i32] zeroinitializer, section ".SCOV$GM", comdat($CallViaVptr), align 4{{$}}
 
-; ELF-NOT:    @llvm.used =
+; ELF:        @llvm.used = appending global [1 x i8*] [i8* bitcast (void ()* @sancov.module_ctor_trace_pc_guard to i8*)]
 ; ELF:        @llvm.compiler.used = appending global [2 x i8*] [i8* bitcast ([3 x i32]* @__sancov_gen_ to i8*), i8* bitcast ([1 x i32]* @__sancov_gen_.1 to i8*)], section "llvm.metadata"
-; MACHO:      @llvm.used = appending global [2 x i8*] [i8* bitcast ([3 x i32]* @__sancov_gen_ to i8*), i8* bitcast ([1 x i32]* @__sancov_gen_.1 to i8*)], section "llvm.metadata"
+; MACHO:      @llvm.used = appending global [3 x i8*] [i8* bitcast (void ()* @sancov.module_ctor_trace_pc_guard to i8*), i8* bitcast ([3 x i32]* @__sancov_gen_ to i8*), i8* bitcast ([1 x i32]* @__sancov_gen_.1 to i8*)]
 ; MACHO-NOT:  @llvm.compiler.used =
 ; WIN:        @llvm.used = appending global [1 x i8*] [i8* bitcast (void ()* @sancov.module_ctor_trace_pc_guard to i8*)], section "llvm.metadata"
 ; WIN-NEXT:   @llvm.compiler.used = appending global [2 x i8*] [i8* bitcast ([3 x i32]* @__sancov_gen_ to i8*), i8* bitcast ([1 x i32]* @__sancov_gen_.1 to i8*)], section "llvm.metadata"

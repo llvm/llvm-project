@@ -9,11 +9,17 @@
 #include "mlir/Transforms/ViewOpGraph.h"
 #include "PassDetail.h"
 #include "mlir/IR/Block.h"
-#include "mlir/IR/BuiltinTypes.h"
 #include "mlir/IR/Operation.h"
-#include "llvm/Support/CommandLine.h"
+#include "mlir/Support/IndentedOstream.h"
+#include "llvm/Support/Format.h"
+#include "llvm/Support/GraphWriter.h"
 
 using namespace mlir;
+
+static const StringRef kLineStyleControlFlow = "dashed";
+static const StringRef kLineStyleDataFlow = "solid";
+static const StringRef kShapeNode = "ellipse";
+static const StringRef kShapeNone = "plain";
 
 /// Return the size limits for eliding large attributes.
 static int64_t getLargeAttributeSizeLimit() {
@@ -23,145 +29,309 @@ static int64_t getLargeAttributeSizeLimit() {
   return 16;
 }
 
-namespace llvm {
+/// Return all values printed onto a stream as a string.
+static std::string strFromOs(function_ref<void(raw_ostream &)> func) {
+  std::string buf;
+  llvm::raw_string_ostream os(buf);
+  func(os);
+  return os.str();
+}
 
-// Specialize GraphTraits to treat Block as a graph of Operations as nodes and
-// uses as edges.
-template <> struct GraphTraits<Block *> {
-  using GraphType = Block *;
-  using NodeRef = Operation *;
+/// Escape special characters such as '\n' and quotation marks.
+static std::string escapeString(std::string str) {
+  return strFromOs([&](raw_ostream &os) { os.write_escaped(str); });
+}
 
-  using ChildIteratorType = Operation::user_iterator;
-  static ChildIteratorType child_begin(NodeRef n) { return n->user_begin(); }
-  static ChildIteratorType child_end(NodeRef n) { return n->user_end(); }
+/// Put quotation marks around a given string.
+static std::string quoteString(std::string str) { return "\"" + str + "\""; }
 
-  // Operation's destructor is private so use Operation* instead and use
-  // mapped iterator.
-  static Operation *AddressOf(Operation &op) { return &op; }
-  using nodes_iterator = mapped_iterator<Block::iterator, decltype(&AddressOf)>;
-  static nodes_iterator nodes_begin(Block *b) {
-    return nodes_iterator(b->begin(), &AddressOf);
-  }
-  static nodes_iterator nodes_end(Block *b) {
-    return nodes_iterator(b->end(), &AddressOf);
-  }
+using AttributeMap = llvm::StringMap<std::string>;
+
+namespace {
+
+/// This struct represents a node in the DOT language. Each node has an
+/// identifier and an optional identifier for the cluster (subgraph) that
+/// contains the node.
+/// Note: In the DOT language, edges can be drawn only from nodes to nodes, but
+/// not between clusters. However, edges can be clipped to the boundary of a
+/// cluster with `lhead` and `ltail` attributes. Therefore, when creating a new
+/// cluster, an invisible "anchor" node is created.
+struct Node {
+public:
+  Node(int id = 0, Optional<int> clusterId = llvm::None)
+      : id(id), clusterId(clusterId) {}
+
+  int id;
+  Optional<int> clusterId;
 };
 
-// Specialize DOTGraphTraits to produce more readable output.
-template <> struct DOTGraphTraits<Block *> : public DefaultDOTGraphTraits {
-  using DefaultDOTGraphTraits::DefaultDOTGraphTraits;
-  static std::string getNodeLabel(Operation *op, Block *);
-};
+/// This pass generates a Graphviz dataflow visualization of an MLIR operation.
+/// Note: See https://www.graphviz.org/doc/info/lang.html for more information
+/// about the Graphviz DOT language.
+class PrintOpPass : public ViewOpGraphPassBase<PrintOpPass> {
+public:
+  PrintOpPass(raw_ostream &os) : os(os) {}
+  PrintOpPass(const PrintOpPass &o) : PrintOpPass(o.os.getOStream()) {}
 
-std::string DOTGraphTraits<Block *>::getNodeLabel(Operation *op, Block *b) {
-  // Reuse the print output for the node labels.
-  std::string ostr;
-  raw_string_ostream os(ostr);
-  os << op->getName() << "\n";
-
-  if (!op->getLoc().isa<UnknownLoc>()) {
-    os << op->getLoc() << "\n";
+  void runOnOperation() override {
+    emitGraph([&]() {
+      processOperation(getOperation());
+      emitAllEdgeStmts();
+    });
   }
 
-  // Print resultant types
-  llvm::interleaveComma(op->getResultTypes(), os);
-  os << "\n";
+  /// Create a CFG graph for a region. Used in `Region::viewGraph`.
+  void emitRegionCFG(Region &region) {
+    printControlFlowEdges = true;
+    printDataFlowEdges = false;
+    emitGraph([&]() { processRegion(region); });
+  }
 
-  // A value used to elide large container attribute.
-  int64_t largeAttrLimit = getLargeAttributeSizeLimit();
-  for (auto attr : op->getAttrs()) {
-    os << '\n' << attr.first << ": ";
+private:
+  /// Emit all edges. This function should be called after all nodes have been
+  /// emitted.
+  void emitAllEdgeStmts() {
+    for (const std::string &edge : edges)
+      os << edge << ";\n";
+    edges.clear();
+  }
+
+  /// Emit a cluster (subgraph). The specified builder generates the body of the
+  /// cluster. Return the anchor node of the cluster.
+  Node emitClusterStmt(function_ref<void()> builder, std::string label = "") {
+    int clusterId = ++counter;
+    os << "subgraph cluster_" << clusterId << " {\n";
+    os.indent();
+    // Emit invisible anchor node from/to which arrows can be drawn.
+    Node anchorNode = emitNodeStmt(" ", kShapeNone);
+    os << attrStmt("label", quoteString(escapeString(label))) << ";\n";
+    builder();
+    os.unindent();
+    os << "}\n";
+    return Node(anchorNode.id, clusterId);
+  }
+
+  /// Generate an attribute statement.
+  std::string attrStmt(const Twine &key, const Twine &value) {
+    return (key + " = " + value).str();
+  }
+
+  /// Emit an attribute list.
+  void emitAttrList(raw_ostream &os, const AttributeMap &map) {
+    os << "[";
+    interleaveComma(map, os, [&](const auto &it) {
+      os << this->attrStmt(it.getKey(), it.getValue());
+    });
+    os << "]";
+  }
+
+  // Print an MLIR attribute to `os`. Large attributes are truncated.
+  void emitMlirAttr(raw_ostream &os, Attribute attr) {
+    // A value used to elide large container attribute.
+    int64_t largeAttrLimit = getLargeAttributeSizeLimit();
+
     // Always emit splat attributes.
-    if (attr.second.isa<SplatElementsAttr>()) {
-      attr.second.print(os);
-      continue;
+    if (attr.isa<SplatElementsAttr>()) {
+      attr.print(os);
+      return;
     }
 
     // Elide "big" elements attributes.
-    auto elements = attr.second.dyn_cast<ElementsAttr>();
+    auto elements = attr.dyn_cast<ElementsAttr>();
     if (elements && elements.getNumElements() > largeAttrLimit) {
       os << std::string(elements.getType().getRank(), '[') << "..."
          << std::string(elements.getType().getRank(), ']') << " : "
          << elements.getType();
-      continue;
+      return;
     }
 
-    auto array = attr.second.dyn_cast<ArrayAttr>();
+    auto array = attr.dyn_cast<ArrayAttr>();
     if (array && static_cast<int64_t>(array.size()) > largeAttrLimit) {
       os << "[...]";
-      continue;
+      return;
     }
 
     // Print all other attributes.
-    attr.second.print(os);
-  }
-  return os.str();
-}
-
-} // end namespace llvm
-
-namespace {
-// PrintOpPass is simple pass to write graph per function.
-// Note: this is a module pass only to avoid interleaving on the same ostream
-// due to multi-threading over functions.
-class PrintOpPass : public ViewOpGraphPassBase<PrintOpPass> {
-public:
-  PrintOpPass(raw_ostream &os, bool shortNames, const Twine &title) : os(os) {
-    this->shortNames = shortNames;
-    this->title = title.str();
+    std::string buf;
+    llvm::raw_string_ostream ss(buf);
+    attr.print(ss);
+    os << truncateString(ss.str());
   }
 
-  std::string getOpName(Operation &op) {
-    auto symbolAttr =
-        op.getAttrOfType<StringAttr>(SymbolTable::getSymbolAttrName());
-    if (symbolAttr)
-      return std::string(symbolAttr.getValue());
-    ++unnamedOpCtr;
-    return (op.getName().getStringRef() + llvm::utostr(unnamedOpCtr)).str();
+  /// Append an edge to the list of edges.
+  /// Note: Edges are written to the output stream via `emitAllEdgeStmts`.
+  void emitEdgeStmt(Node n1, Node n2, std::string label, StringRef style) {
+    AttributeMap attrs;
+    attrs["style"] = style.str();
+    // Do not label edges that start/end at a cluster boundary. Such edges are
+    // clipped at the boundary, but labels are not. This can lead to labels
+    // floating around without any edge next to them.
+    if (!n1.clusterId && !n2.clusterId)
+      attrs["label"] = quoteString(escapeString(label));
+    // Use `ltail` and `lhead` to draw edges between clusters.
+    if (n1.clusterId)
+      attrs["ltail"] = "cluster_" + std::to_string(*n1.clusterId);
+    if (n2.clusterId)
+      attrs["lhead"] = "cluster_" + std::to_string(*n2.clusterId);
+
+    edges.push_back(strFromOs([&](raw_ostream &os) {
+      os << llvm::format("v%i -> v%i ", n1.id, n2.id);
+      emitAttrList(os, attrs);
+    }));
   }
 
-  // Print all the ops in a module.
-  void processModule(ModuleOp module) {
-    for (Operation &op : module) {
-      // Modules may actually be nested, recurse on nesting.
-      if (auto nestedModule = dyn_cast<ModuleOp>(op)) {
-        processModule(nestedModule);
-        continue;
+  /// Emit a graph. The specified builder generates the body of the graph.
+  void emitGraph(function_ref<void()> builder) {
+    os << "digraph G {\n";
+    os.indent();
+    // Edges between clusters are allowed only in compound mode.
+    os << attrStmt("compound", "true") << ";\n";
+    builder();
+    os.unindent();
+    os << "}\n";
+  }
+
+  /// Emit a node statement.
+  Node emitNodeStmt(std::string label, StringRef shape = kShapeNode) {
+    int nodeId = ++counter;
+    AttributeMap attrs;
+    attrs["label"] = quoteString(escapeString(label));
+    attrs["shape"] = shape.str();
+    os << llvm::format("v%i ", nodeId);
+    emitAttrList(os, attrs);
+    os << ";\n";
+    return Node(nodeId);
+  }
+
+  /// Generate a label for an operation.
+  std::string getLabel(Operation *op) {
+    return strFromOs([&](raw_ostream &os) {
+      // Print operation name and type.
+      os << op->getName();
+      if (printResultTypes) {
+        os << " : (";
+        std::string buf;
+        llvm::raw_string_ostream ss(buf);
+        interleaveComma(op->getResultTypes(), ss);
+        os << truncateString(ss.str()) << ")";
+        os << ")";
       }
-      auto opName = getOpName(op);
-      for (Region &region : op.getRegions()) {
-        for (auto indexed_block : llvm::enumerate(region)) {
-          // Suffix block number if there are more than 1 block.
-          auto blockName = llvm::hasSingleElement(region)
-                               ? ""
-                               : ("__" + llvm::utostr(indexed_block.index()));
-          llvm::WriteGraph(os, &indexed_block.value(), shortNames,
-                           Twine(title) + opName + blockName);
+
+      // Print attributes.
+      if (printAttrs) {
+        os << "\n";
+        for (const NamedAttribute &attr : op->getAttrs()) {
+          os << '\n' << attr.first << ": ";
+          emitMlirAttr(os, attr.second);
         }
       }
-    }
+    });
   }
 
-  void runOnOperation() override { processModule(getOperation()); }
+  /// Generate a label for a block argument.
+  std::string getLabel(BlockArgument arg) {
+    return "arg" + std::to_string(arg.getArgNumber());
+  }
 
-private:
-  raw_ostream &os;
-  int unnamedOpCtr = 0;
+  /// Process a block. Emit a cluster and one node per block argument and
+  /// operation inside the cluster.
+  void processBlock(Block &block) {
+    emitClusterStmt([&]() {
+      for (BlockArgument &blockArg : block.getArguments())
+        valueToNode[blockArg] = emitNodeStmt(getLabel(blockArg));
+
+      // Emit a node for each operation.
+      Optional<Node> prevNode;
+      for (Operation &op : block) {
+        Node nextNode = processOperation(&op);
+        if (printControlFlowEdges && prevNode)
+          emitEdgeStmt(*prevNode, nextNode, /*label=*/"",
+                       kLineStyleControlFlow);
+        prevNode = nextNode;
+      }
+    });
+  }
+
+  /// Process an operation. If the operation has regions, emit a cluster.
+  /// Otherwise, emit a node.
+  Node processOperation(Operation *op) {
+    Node node;
+    if (op->getNumRegions() > 0) {
+      // Emit cluster for op with regions.
+      node = emitClusterStmt(
+          [&]() {
+            for (Region &region : op->getRegions())
+              processRegion(region);
+          },
+          getLabel(op));
+    } else {
+      node = emitNodeStmt(getLabel(op));
+    }
+
+    // Insert data flow edges originating from each operand.
+    if (printDataFlowEdges) {
+      unsigned numOperands = op->getNumOperands();
+      for (unsigned i = 0; i < numOperands; i++)
+        emitEdgeStmt(valueToNode[op->getOperand(i)], node,
+                     /*label=*/numOperands == 1 ? "" : std::to_string(i),
+                     kLineStyleDataFlow);
+    }
+
+    for (Value result : op->getResults())
+      valueToNode[result] = node;
+
+    return node;
+  }
+
+  /// Process a region.
+  void processRegion(Region &region) {
+    for (Block &block : region.getBlocks())
+      processBlock(block);
+  }
+
+  /// Truncate long strings.
+  std::string truncateString(std::string str) {
+    if (str.length() <= maxLabelLen)
+      return str;
+    return str.substr(0, maxLabelLen) + "...";
+  }
+
+  /// Output stream to write DOT file to.
+  raw_indented_ostream os;
+  /// A list of edges. For simplicity, should be emitted after all nodes were
+  /// emitted.
+  std::vector<std::string> edges;
+  /// Mapping of SSA values to Graphviz nodes/clusters.
+  DenseMap<Value, Node> valueToNode;
+  /// Counter for generating unique node/subgraph identifiers.
+  int counter = 0;
 };
+
 } // namespace
 
-void mlir::viewGraph(Block &block, const Twine &name, bool shortNames,
-                     const Twine &title, llvm::GraphProgram::Name program) {
-  llvm::ViewGraph(&block, name, shortNames, title, program);
+std::unique_ptr<Pass>
+mlir::createPrintOpGraphPass(raw_ostream &os) {
+  return std::make_unique<PrintOpPass>(os);
 }
 
-raw_ostream &mlir::writeGraph(raw_ostream &os, Block &block, bool shortNames,
-                              const Twine &title) {
-  return llvm::WriteGraph(os, &block, shortNames, title);
+/// Generate a CFG for a region and show it in a window.
+static void llvmViewGraph(Region &region, const Twine &name) {
+  int fd;
+  std::string filename = llvm::createGraphFilename(name.str(), fd);
+  {
+    llvm::raw_fd_ostream os(fd, /*shouldClose=*/true);
+    if (fd == -1) {
+      llvm::errs() << "error opening file '" << filename << "' for writing\n";
+      return;
+    }
+    PrintOpPass pass(os);
+    pass.emitRegionCFG(region);
+  }
+  llvm::DisplayGraph(filename, /*wait=*/false, llvm::GraphProgram::DOT);
 }
 
-std::unique_ptr<OperationPass<ModuleOp>>
-mlir::createPrintOpGraphPass(raw_ostream &os, bool shortNames,
-                             const Twine &title) {
-  return std::make_unique<PrintOpPass>(os, shortNames, title);
+void mlir::Region::viewGraph(const Twine &regionName) {
+  llvmViewGraph(*this, regionName);
 }
+
+void mlir::Region::viewGraph() { viewGraph("region"); }

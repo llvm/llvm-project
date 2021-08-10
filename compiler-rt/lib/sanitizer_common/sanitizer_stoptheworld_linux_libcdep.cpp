@@ -108,7 +108,7 @@ struct TracerThreadArgument {
   void *callback_argument;
   // The tracer thread waits on this mutex while the parent finishes its
   // preparations.
-  BlockingMutex mutex;
+  Mutex mutex;
   // Tracer thread signals its completion by setting done.
   atomic_uintptr_t done;
   uptr parent_pid;

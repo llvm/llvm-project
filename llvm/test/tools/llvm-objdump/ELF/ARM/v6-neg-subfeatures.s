@@ -1,4 +1,4 @@
-@ RUN: llvm-mc < %s -triple armv6 -mattr=+vfp2 -filetype=obj | llvm-objdump --triple=arm -d - | FileCheck %s
+@ RUN: llvm-mc < %s -triple armv6 -mattr=+vfp2 -filetype=obj | llvm-objdump -d - | FileCheck %s
 
 .eabi_attribute Tag_FP_arch, 1 // VFP2
 

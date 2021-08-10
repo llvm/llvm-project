@@ -89,7 +89,7 @@ void mlir::linalg::CodegenStrategy::transform(FuncOp func) const {
         .add<ContractionOpToOuterProductOpLowering,
              ContractionOpToMatmulOpLowering, ContractionOpLowering>(
             vectorTransformsOptions, context);
-    vector::populateVectorTransferLoweringPatterns(
+    vector::populateVectorTransferPermutationMapLoweringPatterns(
         vectorContractLoweringPatterns);
     (void)applyPatternsAndFoldGreedily(
         func, std::move(vectorContractLoweringPatterns));

@@ -17,6 +17,7 @@ add_lldb_library(lldbPluginTraceIntelPT PLUGIN
   CommandObjectTraceStartIntelPT.cpp
   DecodedThread.cpp
   IntelPTDecoder.cpp
+  TraceCursorIntelPT.cpp
   TraceIntelPT.cpp
   TraceIntelPTSessionFileParser.cpp
 
@@ -24,6 +25,7 @@ add_lldb_library(lldbPluginTraceIntelPT PLUGIN
     lldbCore
     lldbSymbol
     lldbTarget
+    lldbPluginTraceCommon
     ${LIBIPT_LIBRARY}
   LINK_COMPONENTS
     Support

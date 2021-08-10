@@ -429,6 +429,7 @@ void SIFrameLowering::emitEntryFunctionPrologue(MachineFunction &MF,
   MachineRegisterInfo &MRI = MF.getRegInfo();
   const Function &F = MF.getFunction();
   const MCRegisterInfo *MCRI = MF.getMMI().getContext().getRegisterInfo();
+  MachineFrameInfo &FrameInfo = MF.getFrameInfo();
 
   assert(MFI->isEntryFunction());
 
@@ -529,7 +530,7 @@ void SIFrameLowering::emitEntryFunctionPrologue(MachineFunction &MF,
     Register SPReg = MFI->getStackPtrOffsetReg();
     assert(SPReg != AMDGPU::SP_REG);
     BuildMI(MBB, I, DL, TII->get(AMDGPU::S_MOV_B32), SPReg)
-        .addImm(MF.getFrameInfo().getStackSize() * getScratchScaleFactor(ST));
+        .addImm(FrameInfo.getStackSize() * getScratchScaleFactor(ST));
   }
 
   if (hasFP(MF)) {
@@ -538,13 +539,18 @@ void SIFrameLowering::emitEntryFunctionPrologue(MachineFunction &MF,
     BuildMI(MBB, I, DL, TII->get(AMDGPU::S_MOV_B32), FPReg).addImm(0);
   }
 
-  if ((MFI->hasFlatScratchInit() || ScratchRsrcReg) &&
+  bool NeedsFlatScratchInit =
+      MFI->hasFlatScratchInit() &&
+      (MRI.isPhysRegUsed(AMDGPU::FLAT_SCR) || FrameInfo.hasCalls() ||
+       (!allStackObjectsAreDead(MF) && ST.enableFlatScratch()));
+
+  if ((NeedsFlatScratchInit || ScratchRsrcReg) &&
       !ST.flatScratchIsArchitected()) {
     MRI.addLiveIn(PreloadedScratchWaveOffsetReg);
     MBB.addLiveIn(PreloadedScratchWaveOffsetReg);
   }
 
-  if (MFI->hasFlatScratchInit()) {
+  if (NeedsFlatScratchInit) {
     emitEntryFunctionFlatScratchInit(MF, MBB, I, DL, ScratchWaveOffsetReg);
   }
 
@@ -827,7 +833,6 @@ void SIFrameLowering::emitCFISavedRegSpills(MachineFunction &MF,
                                             MachineBasicBlock &MBB,
                                             MachineBasicBlock::iterator MBBI,
                                             LivePhysRegs &LiveRegs,
-                                            Register &ScratchExecCopy,
                                             bool emitSpillsToMem) const {
   const GCNSubtarget &ST = MF.getSubtarget<GCNSubtarget>();
   const SIInstrInfo *TII = ST.getInstrInfo();
@@ -851,8 +856,7 @@ void SIFrameLowering::emitCFISavedRegSpills(MachineFunction &MF,
       const int FI = *RASaveIndex;
       assert(!MFI.isDeadObjectIndex(FI));
 
-      if (!ScratchExecCopy)
-        ScratchExecCopy = buildScratchExecCopy(LiveRegs, MF, MBB, MBBI, true);
+      initLiveRegs(LiveRegs, TRI, FuncInfo, MF, MBB, MBBI, /*IsProlog*/ true);
 
       MCPhysReg TmpVGPR = findScratchNonCalleeSaveRegister(
           MRI, LiveRegs, AMDGPU::VGPR_32RegClass);
@@ -885,14 +889,13 @@ void SIFrameLowering::emitCFISavedRegSpills(MachineFunction &MF,
       const int FI = *EXECSaveIndex;
       assert(!MFI.isDeadObjectIndex(FI));
 
-      if (!ScratchExecCopy)
-        ScratchExecCopy = buildScratchExecCopy(LiveRegs, MF, MBB, MBBI, true);
+      initLiveRegs(LiveRegs, TRI, FuncInfo, MF, MBB, MBBI, /*IsProlog*/ true);
 
       MCPhysReg TmpVGPR = findScratchNonCalleeSaveRegister(
           MRI, LiveRegs, AMDGPU::VGPR_32RegClass);
 
       BuildMI(MBB, MBBI, DL, TII->get(AMDGPU::V_MOV_B32_e32), TmpVGPR)
-          .addReg(TRI.getSubReg(ScratchExecCopy, AMDGPU::sub0));
+          .addReg(TRI.getSubReg(AMDGPU::EXEC, AMDGPU::sub0));
 
       int DwordOff = 0;
       buildPrologSpill(ST, TRI, *FuncInfo, LiveRegs, MF, MBB, MBBI, TmpVGPR, FI,
@@ -900,7 +903,7 @@ void SIFrameLowering::emitCFISavedRegSpills(MachineFunction &MF,
 
       if (!ST.isWave32()) {
         BuildMI(MBB, MBBI, DL, TII->get(AMDGPU::V_MOV_B32_e32), TmpVGPR)
-            .addReg(TRI.getSubReg(ScratchExecCopy, AMDGPU::sub1));
+            .addReg(TRI.getSubReg(AMDGPU::EXEC, AMDGPU::sub1));
 
         DwordOff = 4;
         buildPrologSpill(ST, TRI, *FuncInfo, LiveRegs, MF, MBB, MBBI, TmpVGPR,
@@ -1030,12 +1033,6 @@ void SIFrameLowering::emitPrologue(MachineFunction &MF,
                    MFI.getObjectOffset(*Reg.FI) * ST.getWavefrontSize()));
   }
 
-  if (TRI.isCFISavedRegsSpillEnabled()) {
-    bool emitSpillsToMem = true;
-    emitCFISavedRegSpills(MF, MBB, MBBI, LiveRegs, ScratchExecCopy,
-                          emitSpillsToMem);
-  }
-
   // VGPRs used for Whole Wave Mode
   for (const auto &Reg : FuncInfo->WWMReservedRegs) {
     auto VGPR = Reg.first;
@@ -1048,6 +1045,8 @@ void SIFrameLowering::emitPrologue(MachineFunction &MF,
           buildScratchExecCopy(LiveRegs, MF, MBB, MBBI, /*IsProlog*/ true);
 
     buildPrologSpill(ST, TRI, *FuncInfo, LiveRegs, MF, MBB, MBBI, VGPR, *FI);
+
+    // TODO: emit CFI?
   }
 
   if (ScratchExecCopy) {
@@ -1057,6 +1056,11 @@ void SIFrameLowering::emitPrologue(MachineFunction &MF,
     BuildMI(MBB, MBBI, DL, TII->get(ExecMov), Exec)
         .addReg(ScratchExecCopy, RegState::Kill);
     LiveRegs.addReg(ScratchExecCopy);
+  }
+
+  if (TRI.isCFISavedRegsSpillEnabled()) {
+    bool emitSpillsToMem = true;
+    emitCFISavedRegSpills(MF, MBB, MBBI, LiveRegs, emitSpillsToMem);
   }
 
   if (FPSaveIndex && spilledToMemory(MF, *FPSaveIndex)) {
@@ -1107,8 +1111,7 @@ void SIFrameLowering::emitPrologue(MachineFunction &MF,
 
   if (TRI.isCFISavedRegsSpillEnabled()) {
     bool emitSpillsToMem = false;
-    emitCFISavedRegSpills(MF, MBB, MBBI, LiveRegs, ScratchExecCopy,
-                          emitSpillsToMem);
+    emitCFISavedRegSpills(MF, MBB, MBBI, LiveRegs, emitSpillsToMem);
   }
 
   // In this case, spill the FP to a reserved VGPR.
@@ -1649,10 +1652,13 @@ void SIFrameLowering::determineCalleeSavesSGPR(MachineFunction &MF,
   // If clearing VGPRs changed the mask, we will have some CSR VGPR spills.
   const bool HaveAnyCSRVGPR = SavedRegs != AllSavedRegs;
 
-  // We have to anticipate introducing CSR VGPR spills if we don't have any
-  // stack objects already, since we require an FP if there is a call and stack.
+  // We have to anticipate introducing CSR VGPR spills or spill of caller
+  // save VGPR reserved for SGPR spills as we now always create stack entry
+  // for it, if we don't have any stack objects already, since we require
+  // an FP if there is a call and stack.
   MachineFrameInfo &FrameInfo = MF.getFrameInfo();
-  const bool WillHaveFP = FrameInfo.hasCalls() && HaveAnyCSRVGPR;
+  const bool WillHaveFP =
+      FrameInfo.hasCalls() && (HaveAnyCSRVGPR || MFI->VGPRReservedForSGPRSpill);
 
   // FP will be specially managed like SP.
   if (WillHaveFP || hasFP(MF))

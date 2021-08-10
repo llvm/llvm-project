@@ -3,7 +3,7 @@
 // REQUIRES: x86
 
 // RUN: llvm-mc -filetype=obj -triple=x86_64-pc-linux %S/Inputs/verneed1.s -o %t1.o
-// RUN: echo "v1 {}; v2 {}; v3 { local: *; };" > %t1.script
+// RUN: echo "v1 {}; v2 {}; v3 { global: f1; local: *; };" > %t1.script
 // RUN: ld.lld -shared %t1.o --version-script %t1.script -o %t1.so -soname verneed1.so.0 -z separate-code
 
 // RUN: llvm-mc %s -o %t.o -filetype=obj --triple=x86_64-unknown-linux

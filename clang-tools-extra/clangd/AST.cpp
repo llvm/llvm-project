@@ -20,7 +20,9 @@
 #include "clang/AST/NestedNameSpecifier.h"
 #include "clang/AST/PrettyPrinter.h"
 #include "clang/AST/RecursiveASTVisitor.h"
+#include "clang/AST/Stmt.h"
 #include "clang/AST/TemplateBase.h"
+#include "clang/AST/TypeLoc.h"
 #include "clang/Basic/SourceLocation.h"
 #include "clang/Basic/SourceManager.h"
 #include "clang/Basic/Specifiers.h"
@@ -119,14 +121,17 @@ getQualification(ASTContext &Context, const DeclContext *DestContext,
       (void)ReachedNS;
       NNS = NestedNameSpecifier::Create(Context, nullptr, false,
                                         TD->getTypeForDecl());
-    } else {
+    } else if (auto *NSD = llvm::dyn_cast<NamespaceDecl>(CurContext)) {
       ReachedNS = true;
-      auto *NSD = llvm::cast<NamespaceDecl>(CurContext);
       NNS = NestedNameSpecifier::Create(Context, nullptr, NSD);
-      // Anonymous and inline namespace names are not spelled while qualifying a
-      // name, so skip those.
+      // Anonymous and inline namespace names are not spelled while qualifying
+      // a name, so skip those.
       if (NSD->isAnonymousNamespace() || NSD->isInlineNamespace())
         continue;
+    } else {
+      // Other types of contexts cannot be spelled in code, just skip over
+      // them.
+      continue;
     }
     // Stop if this namespace is already visible at DestContext.
     if (IsVisible(NNS))
@@ -476,6 +481,23 @@ llvm::Optional<QualType> getDeducedType(ASTContext &ASTCtx,
   if (V.DeducedType.isNull())
     return llvm::None;
   return V.DeducedType;
+}
+
+std::vector<const Attr *> getAttributes(const DynTypedNode &N) {
+  std::vector<const Attr *> Result;
+  if (const auto *TL = N.get<TypeLoc>()) {
+    for (AttributedTypeLoc ATL = TL->getAs<AttributedTypeLoc>(); !ATL.isNull();
+         ATL = ATL.getModifiedLoc().getAs<AttributedTypeLoc>()) {
+      Result.push_back(ATL.getAttr());
+      assert(!ATL.getModifiedLoc().isNull());
+    }
+  }
+  if (const auto *S = N.get<AttributedStmt>())
+    for (; S != nullptr; S = dyn_cast<AttributedStmt>(S->getSubStmt()))
+      llvm::copy(S->getAttrs(), std::back_inserter(Result));
+  if (const auto *D = N.get<Decl>())
+    llvm::copy(D->attrs(), std::back_inserter(Result));
+  return Result;
 }
 
 std::string getQualification(ASTContext &Context,

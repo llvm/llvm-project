@@ -13,6 +13,7 @@
 
 #include "WebAssemblyISelLowering.h"
 #include "MCTargetDesc/WebAssemblyMCTargetDesc.h"
+#include "Utils/WebAssemblyTypeUtilities.h"
 #include "Utils/WebAssemblyUtilities.h"
 #include "WebAssemblyMachineFunctionInfo.h"
 #include "WebAssemblySubtarget.h"
@@ -24,7 +25,6 @@
 #include "llvm/CodeGen/MachineRegisterInfo.h"
 #include "llvm/CodeGen/SelectionDAG.h"
 #include "llvm/CodeGen/SelectionDAGNodes.h"
-#include "llvm/CodeGen/WasmEHFuncInfo.h"
 #include "llvm/IR/DiagnosticInfo.h"
 #include "llvm/IR/DiagnosticPrinter.h"
 #include "llvm/IR/Function.h"
@@ -32,6 +32,7 @@
 #include "llvm/IR/IntrinsicsWebAssembly.h"
 #include "llvm/Support/Debug.h"
 #include "llvm/Support/ErrorHandling.h"
+#include "llvm/Support/KnownBits.h"
 #include "llvm/Support/MathExtras.h"
 #include "llvm/Support/raw_ostream.h"
 #include "llvm/Target/TargetOptions.h"
@@ -66,6 +67,10 @@ WebAssemblyTargetLowering::WebAssemblyTargetLowering(
     addRegisterClass(MVT::v2i64, &WebAssembly::V128RegClass);
     addRegisterClass(MVT::v2f64, &WebAssembly::V128RegClass);
   }
+  if (Subtarget->hasReferenceTypes()) {
+    addRegisterClass(MVT::externref, &WebAssembly::EXTERNREFRegClass);
+    addRegisterClass(MVT::funcref, &WebAssembly::FUNCREFRegClass);
+  }
   // Compute derived properties from the register classes.
   computeRegisterProperties(Subtarget->getRegisterInfo());
 
@@ -78,6 +83,12 @@ WebAssemblyTargetLowering::WebAssemblyTargetLowering(
   if (Subtarget->hasSIMD128()) {
     for (auto T : {MVT::v16i8, MVT::v8i16, MVT::v4i32, MVT::v4f32, MVT::v2i64,
                    MVT::v2f64}) {
+      setOperationAction(ISD::LOAD, T, Custom);
+      setOperationAction(ISD::STORE, T, Custom);
+    }
+  }
+  if (Subtarget->hasReferenceTypes()) {
+    for (auto T : {MVT::externref, MVT::funcref}) {
       setOperationAction(ISD::LOAD, T, Custom);
       setOperationAction(ISD::STORE, T, Custom);
     }
@@ -149,12 +160,18 @@ WebAssemblyTargetLowering::WebAssemblyTargetLowering(
     setTargetDAGCombine(ISD::SIGN_EXTEND);
     setTargetDAGCombine(ISD::ZERO_EXTEND);
 
-    // Combine int_to_fp of extract_vectors and vice versa into conversions ops
+    // Combine int_to_fp or fp_extend of extract_vectors and vice versa into
+    // conversions ops
     setTargetDAGCombine(ISD::SINT_TO_FP);
     setTargetDAGCombine(ISD::UINT_TO_FP);
+    setTargetDAGCombine(ISD::FP_EXTEND);
     setTargetDAGCombine(ISD::EXTRACT_SUBVECTOR);
 
-    // Combine concat of {s,u}int_to_fp_sat to i32x4.trunc_sat_f64x2_zero_{s,u}
+    // Combine fp_to_{s,u}int_sat or fp_round of concat_vectors or vice versa
+    // into conversion ops
+    setTargetDAGCombine(ISD::FP_TO_SINT_SAT);
+    setTargetDAGCombine(ISD::FP_TO_UINT_SAT);
+    setTargetDAGCombine(ISD::FP_ROUND);
     setTargetDAGCombine(ISD::CONCAT_VECTORS);
 
     // Support saturating add for i8x16 and i16x8
@@ -205,6 +222,9 @@ WebAssemblyTargetLowering::WebAssemblyTargetLowering(
     for (auto Op : {ISD::SMIN, ISD::SMAX, ISD::UMIN, ISD::UMAX})
       for (auto T : {MVT::v16i8, MVT::v8i16, MVT::v4i32})
         setOperationAction(Op, T, Legal);
+
+    // And we have popcnt for i8x16
+    setOperationAction(ISD::CTPOP, MVT::v16i8, Legal);
 
     // Expand float operations supported for scalars but not SIMD
     for (auto Op : {ISD::FCOPYSIGN, ISD::FLOG, ISD::FLOG2, ISD::FLOG10,
@@ -488,6 +508,16 @@ LowerCallResults(MachineInstr &CallResults, DebugLoc DL, MachineBasicBlock *BB,
   bool IsIndirect = CallParams.getOperand(0).isReg();
   bool IsRetCall = CallResults.getOpcode() == WebAssembly::RET_CALL_RESULTS;
 
+  bool IsFuncrefCall = false;
+  if (IsIndirect) {
+    Register Reg = CallParams.getOperand(0).getReg();
+    const MachineFunction *MF = BB->getParent();
+    const MachineRegisterInfo &MRI = MF->getRegInfo();
+    const TargetRegisterClass *TRC = MRI.getRegClass(Reg);
+    IsFuncrefCall = (TRC == &WebAssembly::FUNCREFRegClass);
+    assert(!IsFuncrefCall || Subtarget->hasReferenceTypes());
+  }
+
   unsigned CallOp;
   if (IsIndirect && IsRetCall) {
     CallOp = WebAssembly::RET_CALL_INDIRECT;
@@ -531,8 +561,11 @@ LowerCallResults(MachineInstr &CallResults, DebugLoc DL, MachineBasicBlock *BB,
     // Placeholder for the type index.
     MIB.addImm(0);
     // The table into which this call_indirect indexes.
-    MCSymbolWasm *Table =
-        WebAssembly::getOrCreateFunctionTableSymbol(MF.getContext(), Subtarget);
+    MCSymbolWasm *Table = IsFuncrefCall
+                              ? WebAssembly::getOrCreateFuncrefCallTableSymbol(
+                                    MF.getContext(), Subtarget)
+                              : WebAssembly::getOrCreateFunctionTableSymbol(
+                                    MF.getContext(), Subtarget);
     if (Subtarget->hasReferenceTypes()) {
       MIB.addSym(Table);
     } else {
@@ -550,6 +583,39 @@ LowerCallResults(MachineInstr &CallResults, DebugLoc DL, MachineBasicBlock *BB,
   BB->insert(CallResults.getIterator(), MIB);
   CallParams.eraseFromParent();
   CallResults.eraseFromParent();
+
+  // If this is a funcref call, to avoid hidden GC roots, we need to clear the
+  // table slot with ref.null upon call_indirect return.
+  //
+  // This generates the following code, which comes right after a call_indirect
+  // of a funcref:
+  //
+  //    i32.const 0
+  //    ref.null func
+  //    table.set __funcref_call_table
+  if (IsIndirect && IsFuncrefCall) {
+    MCSymbolWasm *Table = WebAssembly::getOrCreateFuncrefCallTableSymbol(
+        MF.getContext(), Subtarget);
+    Register RegZero =
+        MF.getRegInfo().createVirtualRegister(&WebAssembly::I32RegClass);
+    MachineInstr *Const0 =
+        BuildMI(MF, DL, TII.get(WebAssembly::CONST_I32), RegZero).addImm(0);
+    BB->insertAfter(MIB.getInstr()->getIterator(), Const0);
+
+    Register RegFuncref =
+        MF.getRegInfo().createVirtualRegister(&WebAssembly::FUNCREFRegClass);
+    MachineInstr *RefNull =
+        BuildMI(MF, DL, TII.get(WebAssembly::REF_NULL_FUNCREF), RegFuncref)
+            .addImm(static_cast<int32_t>(WebAssembly::HeapType::Funcref));
+    BB->insertAfter(Const0->getIterator(), RefNull);
+
+    MachineInstr *TableSet =
+        BuildMI(MF, DL, TII.get(WebAssembly::TABLE_SET_FUNCREF))
+            .addSym(Table)
+            .addReg(RegZero)
+            .addReg(RegFuncref);
+    BB->insertAfter(RefNull->getIterator(), TableSet);
+  }
 
   return BB;
 }
@@ -752,62 +818,32 @@ bool WebAssemblyTargetLowering::getTgtMemIntrinsic(IntrinsicInfo &Info,
     Info.align = Align(8);
     Info.flags = MachineMemOperand::MOVolatile | MachineMemOperand::MOLoad;
     return true;
-  case Intrinsic::wasm_load32_zero:
-  case Intrinsic::wasm_load64_zero:
-    Info.opc = ISD::INTRINSIC_W_CHAIN;
-    Info.memVT = Intrinsic == Intrinsic::wasm_load32_zero ? MVT::i32 : MVT::i64;
-    Info.ptrVal = I.getArgOperand(0);
-    Info.offset = 0;
-    Info.align = Align(1);
-    Info.flags = MachineMemOperand::MOLoad;
-    return true;
-  case Intrinsic::wasm_load8_lane:
-  case Intrinsic::wasm_load16_lane:
-  case Intrinsic::wasm_load32_lane:
-  case Intrinsic::wasm_load64_lane:
-  case Intrinsic::wasm_store8_lane:
-  case Intrinsic::wasm_store16_lane:
-  case Intrinsic::wasm_store32_lane:
-  case Intrinsic::wasm_store64_lane: {
-    MVT MemVT;
-    switch (Intrinsic) {
-    case Intrinsic::wasm_load8_lane:
-    case Intrinsic::wasm_store8_lane:
-      MemVT = MVT::i8;
-      break;
-    case Intrinsic::wasm_load16_lane:
-    case Intrinsic::wasm_store16_lane:
-      MemVT = MVT::i16;
-      break;
-    case Intrinsic::wasm_load32_lane:
-    case Intrinsic::wasm_store32_lane:
-      MemVT = MVT::i32;
-      break;
-    case Intrinsic::wasm_load64_lane:
-    case Intrinsic::wasm_store64_lane:
-      MemVT = MVT::i64;
-      break;
-    default:
-      llvm_unreachable("unexpected intrinsic");
-    }
-    if (Intrinsic == Intrinsic::wasm_load8_lane ||
-        Intrinsic == Intrinsic::wasm_load16_lane ||
-        Intrinsic == Intrinsic::wasm_load32_lane ||
-        Intrinsic == Intrinsic::wasm_load64_lane) {
-      Info.opc = ISD::INTRINSIC_W_CHAIN;
-      Info.flags = MachineMemOperand::MOLoad;
-    } else {
-      Info.opc = ISD::INTRINSIC_VOID;
-      Info.flags = MachineMemOperand::MOStore;
-    }
-    Info.ptrVal = I.getArgOperand(0);
-    Info.memVT = MemVT;
-    Info.offset = 0;
-    Info.align = Align(1);
-    return true;
-  }
   default:
     return false;
+  }
+}
+
+void WebAssemblyTargetLowering::computeKnownBitsForTargetNode(
+    const SDValue Op, KnownBits &Known, const APInt &DemandedElts,
+    const SelectionDAG &DAG, unsigned Depth) const {
+  switch (Op.getOpcode()) {
+  default:
+    break;
+  case ISD::INTRINSIC_WO_CHAIN: {
+    unsigned IntNo = Op.getConstantOperandVal(0);
+    switch (IntNo) {
+    default:
+      break;
+    case Intrinsic::wasm_bitmask: {
+      unsigned BitWidth = Known.getBitWidth();
+      EVT VT = Op.getOperand(1).getSimpleValueType();
+      unsigned PossibleBits = VT.getVectorNumElements();
+      APInt ZeroMask = APInt::getHighBitsSet(BitWidth, BitWidth - PossibleBits);
+      Known.Zero |= ZeroMask;
+      break;
+    }
+    }
+  }
   }
 }
 
@@ -1074,6 +1110,33 @@ WebAssemblyTargetLowering::LowerCall(CallLoweringInfo &CLI,
     InTys.push_back(In.VT);
   }
 
+  // Lastly, if this is a call to a funcref we need to add an instruction
+  // table.set to the chain and transform the call.
+  if (CLI.CB && isFuncrefType(CLI.CB->getCalledOperand()->getType())) {
+    // In the absence of function references proposal where a funcref call is
+    // lowered to call_ref, using reference types we generate a table.set to set
+    // the funcref to a special table used solely for this purpose, followed by
+    // a call_indirect. Here we just generate the table set, and return the
+    // SDValue of the table.set so that LowerCall can finalize the lowering by
+    // generating the call_indirect.
+    SDValue Chain = Ops[0];
+
+    MCSymbolWasm *Table = WebAssembly::getOrCreateFuncrefCallTableSymbol(
+        MF.getContext(), Subtarget);
+    SDValue Sym = DAG.getMCSymbol(Table, PtrVT);
+    SDValue TableSlot = DAG.getConstant(0, DL, MVT::i32);
+    SDValue TableSetOps[] = {Chain, Sym, TableSlot, Callee};
+    SDValue TableSet = DAG.getMemIntrinsicNode(
+        WebAssemblyISD::TABLE_SET, DL, DAG.getVTList(MVT::Other), TableSetOps,
+        MVT::funcref,
+        // Machine Mem Operand args
+        MachinePointerInfo(WasmAddressSpace::FUNCREF),
+        CLI.CB->getCalledOperand()->getPointerAlignment(DAG.getDataLayout()),
+        MachineMemOperand::MOStore);
+
+    Ops[0] = TableSet; // The new chain is the TableSet itself
+  }
+
   if (CLI.IsTailCall) {
     // ret_calls do not return values to the current frame
     SDVTList NodeTys = DAG.getVTList(MVT::Other, MVT::Glue);
@@ -1305,6 +1368,16 @@ static Optional<unsigned> IsWebAssemblyLocal(SDValue Op, SelectionDAG &DAG) {
   return WebAssemblyFrameLowering::getLocalForStackObject(MF, FI->getIndex());
 }
 
+bool WebAssemblyTargetLowering::isFuncrefType(const Type *Ty) {
+  return isa<PointerType>(Ty) &&
+         Ty->getPointerAddressSpace() == WasmAddressSpace::FUNCREF;
+}
+
+bool WebAssemblyTargetLowering::isExternrefType(const Type *Ty) {
+  return isa<PointerType>(Ty) &&
+         Ty->getPointerAddressSpace() == WasmAddressSpace::EXTERNREF;
+}
+
 SDValue WebAssemblyTargetLowering::LowerStore(SDValue Op,
                                               SelectionDAG &DAG) const {
   SDLoc DL(Op);
@@ -1419,7 +1492,7 @@ SDValue WebAssemblyTargetLowering::LowerRETURNADDR(SDValue Op,
   if (verifyReturnAddressArgumentIsConstant(Op, DAG))
     return SDValue();
 
-  unsigned Depth = cast<ConstantSDNode>(Op.getOperand(0))->getZExtValue();
+  unsigned Depth = Op.getConstantOperandVal(0);
   MakeLibCallOptions CallOptions;
   return makeLibCall(DAG, RTLIB::RETURN_ADDRESS, Op.getValueType(),
                      {DAG.getConstant(Depth, DL, MVT::i32)}, CallOptions, DL)
@@ -1591,21 +1664,6 @@ SDValue WebAssemblyTargetLowering::LowerVASTART(SDValue Op,
                       MachinePointerInfo(SV));
 }
 
-static SDValue getCppExceptionSymNode(SDValue Op, unsigned TagIndex,
-                                      SelectionDAG &DAG) {
-  // We only support C++ exceptions for now
-  int Tag =
-      cast<ConstantSDNode>(Op.getOperand(TagIndex).getNode())->getZExtValue();
-  if (Tag != WebAssembly::CPP_EXCEPTION)
-    llvm_unreachable("Invalid tag: We only support C++ exceptions for now");
-  auto &MF = DAG.getMachineFunction();
-  const auto &TLI = DAG.getTargetLoweringInfo();
-  MVT PtrVT = TLI.getPointerTy(DAG.getDataLayout());
-  const char *SymName = MF.createExternalSymbolName("__cpp_exception");
-  return DAG.getNode(WebAssemblyISD::Wrapper, SDLoc(Op), PtrVT,
-                     DAG.getTargetExternalSymbol(SymName, PtrVT));
-}
-
 SDValue WebAssemblyTargetLowering::LowerIntrinsic(SDValue Op,
                                                   SelectionDAG &DAG) const {
   MachineFunction &MF = DAG.getMachineFunction();
@@ -1613,10 +1671,10 @@ SDValue WebAssemblyTargetLowering::LowerIntrinsic(SDValue Op,
   switch (Op.getOpcode()) {
   case ISD::INTRINSIC_VOID:
   case ISD::INTRINSIC_W_CHAIN:
-    IntNo = cast<ConstantSDNode>(Op.getOperand(1))->getZExtValue();
+    IntNo = Op.getConstantOperandVal(1);
     break;
   case ISD::INTRINSIC_WO_CHAIN:
-    IntNo = cast<ConstantSDNode>(Op.getOperand(0))->getZExtValue();
+    IntNo = Op.getConstantOperandVal(0);
     break;
   default:
     llvm_unreachable("Invalid intrinsic");
@@ -1636,30 +1694,6 @@ SDValue WebAssemblyTargetLowering::LowerIntrinsic(SDValue Op,
                                             Twine(MF.getFunctionNumber()));
     return DAG.getNode(WebAssemblyISD::Wrapper, DL, VT,
                        DAG.getMCSymbol(S, PtrVT));
-  }
-
-  case Intrinsic::wasm_throw: {
-    SDValue SymNode = getCppExceptionSymNode(Op, 2, DAG);
-    return DAG.getNode(WebAssemblyISD::THROW, DL,
-                       MVT::Other, // outchain type
-                       {
-                           Op.getOperand(0), // inchain
-                           SymNode,          // exception symbol
-                           Op.getOperand(3)  // thrown value
-                       });
-  }
-
-  case Intrinsic::wasm_catch: {
-    SDValue SymNode = getCppExceptionSymNode(Op, 2, DAG);
-    return DAG.getNode(WebAssemblyISD::CATCH, DL,
-                       {
-                           MVT::i32,  // outchain type
-                           MVT::Other // return value
-                       },
-                       {
-                           Op.getOperand(0), // inchain
-                           SymNode           // exception symbol
-                       });
   }
 
   case Intrinsic::wasm_shuffle: {
@@ -2186,102 +2220,227 @@ performVectorConvertLowCombine(SDNode *N,
   if (ResVT != MVT::v2f64)
     return SDValue();
 
-  if (N->getOpcode() == ISD::SINT_TO_FP || N->getOpcode() == ISD::UINT_TO_FP) {
-    // Combine this:
-    //
-    //   (v2f64 ({s,u}int_to_fp
-    //     (v2i32 (extract_subvector (v4i32 $x), 0))))
-    //
-    // into (f64x2.convert_low_i32x4_{s,u} $x).
-    auto Extract = N->getOperand(0);
-    if (Extract.getOpcode() != ISD::EXTRACT_SUBVECTOR)
-      return SDValue();
-    if (Extract.getValueType() != MVT::v2i32)
-      return SDValue();
-    auto Source = Extract.getOperand(0);
-    if (Source.getValueType() != MVT::v4i32)
-      return SDValue();
-    auto *IndexNode = dyn_cast<ConstantSDNode>(Extract.getOperand(1));
-    if (IndexNode == nullptr || IndexNode->getZExtValue() != 0)
-      return SDValue();
+  auto GetWasmConversionOp = [](unsigned Op) {
+    switch (Op) {
+    case ISD::SINT_TO_FP:
+      return WebAssemblyISD::CONVERT_LOW_S;
+    case ISD::UINT_TO_FP:
+      return WebAssemblyISD::CONVERT_LOW_U;
+    case ISD::FP_EXTEND:
+      return WebAssemblyISD::PROMOTE_LOW;
+    }
+    llvm_unreachable("unexpected op");
+  };
 
-    unsigned Op = N->getOpcode() == ISD::SINT_TO_FP
-                      ? WebAssemblyISD::CONVERT_LOW_S
-                      : WebAssemblyISD::CONVERT_LOW_U;
-
-    return DAG.getNode(Op, SDLoc(N), ResVT, Source);
-
-  } else if (N->getOpcode() == ISD::EXTRACT_SUBVECTOR) {
+  if (N->getOpcode() == ISD::EXTRACT_SUBVECTOR) {
     // Combine this:
     //
     //   (v2f64 (extract_subvector
     //     (v4f64 ({s,u}int_to_fp (v4i32 $x))), 0))
     //
     // into (f64x2.convert_low_i32x4_{s,u} $x).
-    auto IntToFP = N->getOperand(0);
-    if (IntToFP.getOpcode() != ISD::SINT_TO_FP &&
-        IntToFP.getOpcode() != ISD::UINT_TO_FP)
+    //
+    // Or this:
+    //
+    //  (v2f64 (extract_subvector
+    //    (v4f64 (fp_extend (v4f32 $x))), 0))
+    //
+    // into (f64x2.promote_low_f32x4 $x).
+    auto Conversion = N->getOperand(0);
+    auto ConversionOp = Conversion.getOpcode();
+    MVT ExpectedSourceType;
+    switch (ConversionOp) {
+    case ISD::SINT_TO_FP:
+    case ISD::UINT_TO_FP:
+      ExpectedSourceType = MVT::v4i32;
+      break;
+    case ISD::FP_EXTEND:
+      ExpectedSourceType = MVT::v4f32;
+      break;
+    default:
       return SDValue();
-    if (IntToFP.getValueType() != MVT::v4f64)
+    }
+
+    if (Conversion.getValueType() != MVT::v4f64)
       return SDValue();
-    auto Source = IntToFP.getOperand(0);
-    if (Source.getValueType() != MVT::v4i32)
+
+    auto Source = Conversion.getOperand(0);
+    if (Source.getValueType() != ExpectedSourceType)
       return SDValue();
+
     auto IndexNode = dyn_cast<ConstantSDNode>(N->getOperand(1));
     if (IndexNode == nullptr || IndexNode->getZExtValue() != 0)
       return SDValue();
 
-    unsigned Op = IntToFP->getOpcode() == ISD::SINT_TO_FP
-                      ? WebAssemblyISD::CONVERT_LOW_S
-                      : WebAssemblyISD::CONVERT_LOW_U;
-
+    auto Op = GetWasmConversionOp(ConversionOp);
     return DAG.getNode(Op, SDLoc(N), ResVT, Source);
-
-  } else {
-    llvm_unreachable("unexpected opcode");
   }
-}
-
-static SDValue
-performVectorTruncSatLowCombine(SDNode *N,
-                                TargetLowering::DAGCombinerInfo &DCI) {
-  auto &DAG = DCI.DAG;
-  assert(N->getOpcode() == ISD::CONCAT_VECTORS);
 
   // Combine this:
   //
-  //   (concat_vectors (v2i32 (fp_to_{s,u}int_sat $x, 32)), (v2i32 (splat 0)))
+  //   (v2f64 ({s,u}int_to_fp
+  //     (v2i32 (extract_subvector (v4i32 $x), 0))))
+  //
+  // into (f64x2.convert_low_i32x4_{s,u} $x).
+  //
+  // Or this:
+  //
+  //   (v2f64 (fp_extend
+  //     (v2f32 (extract_subvector (v4f32 $x), 0))))
+  //
+  // into (f64x2.promote_low_f32x4 $x).
+  auto ConversionOp = N->getOpcode();
+  MVT ExpectedExtractType;
+  MVT ExpectedSourceType;
+  switch (ConversionOp) {
+  case ISD::SINT_TO_FP:
+  case ISD::UINT_TO_FP:
+    ExpectedExtractType = MVT::v2i32;
+    ExpectedSourceType = MVT::v4i32;
+    break;
+  case ISD::FP_EXTEND:
+    ExpectedExtractType = MVT::v2f32;
+    ExpectedSourceType = MVT::v4f32;
+    break;
+  default:
+    llvm_unreachable("unexpected opcode");
+  }
+
+  auto Extract = N->getOperand(0);
+  if (Extract.getOpcode() != ISD::EXTRACT_SUBVECTOR)
+    return SDValue();
+
+  if (Extract.getValueType() != ExpectedExtractType)
+    return SDValue();
+
+  auto Source = Extract.getOperand(0);
+  if (Source.getValueType() != ExpectedSourceType)
+    return SDValue();
+
+  auto *IndexNode = dyn_cast<ConstantSDNode>(Extract.getOperand(1));
+  if (IndexNode == nullptr || IndexNode->getZExtValue() != 0)
+    return SDValue();
+
+  unsigned Op = GetWasmConversionOp(ConversionOp);
+  return DAG.getNode(Op, SDLoc(N), ResVT, Source);
+}
+
+static SDValue
+performVectorTruncZeroCombine(SDNode *N, TargetLowering::DAGCombinerInfo &DCI) {
+  auto &DAG = DCI.DAG;
+
+  auto GetWasmConversionOp = [](unsigned Op) {
+    switch (Op) {
+    case ISD::FP_TO_SINT_SAT:
+      return WebAssemblyISD::TRUNC_SAT_ZERO_S;
+    case ISD::FP_TO_UINT_SAT:
+      return WebAssemblyISD::TRUNC_SAT_ZERO_U;
+    case ISD::FP_ROUND:
+      return WebAssemblyISD::DEMOTE_ZERO;
+    }
+    llvm_unreachable("unexpected op");
+  };
+
+  auto IsZeroSplat = [](SDValue SplatVal) {
+    auto *Splat = dyn_cast<BuildVectorSDNode>(SplatVal.getNode());
+    APInt SplatValue, SplatUndef;
+    unsigned SplatBitSize;
+    bool HasAnyUndefs;
+    return Splat &&
+           Splat->isConstantSplat(SplatValue, SplatUndef, SplatBitSize,
+                                  HasAnyUndefs) &&
+           SplatValue == 0;
+  };
+
+  if (N->getOpcode() == ISD::CONCAT_VECTORS) {
+    // Combine this:
+    //
+    //   (concat_vectors (v2i32 (fp_to_{s,u}int_sat $x, 32)), (v2i32 (splat 0)))
+    //
+    // into (i32x4.trunc_sat_f64x2_zero_{s,u} $x).
+    //
+    // Or this:
+    //
+    //   (concat_vectors (v2f32 (fp_round (v2f64 $x))), (v2f32 (splat 0)))
+    //
+    // into (f32x4.demote_zero_f64x2 $x).
+    EVT ResVT;
+    EVT ExpectedConversionType;
+    auto Conversion = N->getOperand(0);
+    auto ConversionOp = Conversion.getOpcode();
+    switch (ConversionOp) {
+    case ISD::FP_TO_SINT_SAT:
+    case ISD::FP_TO_UINT_SAT:
+      ResVT = MVT::v4i32;
+      ExpectedConversionType = MVT::v2i32;
+      break;
+    case ISD::FP_ROUND:
+      ResVT = MVT::v4f32;
+      ExpectedConversionType = MVT::v2f32;
+      break;
+    default:
+      return SDValue();
+    }
+
+    if (N->getValueType(0) != ResVT)
+      return SDValue();
+
+    if (Conversion.getValueType() != ExpectedConversionType)
+      return SDValue();
+
+    auto Source = Conversion.getOperand(0);
+    if (Source.getValueType() != MVT::v2f64)
+      return SDValue();
+
+    if (!IsZeroSplat(N->getOperand(1)) ||
+        N->getOperand(1).getValueType() != ExpectedConversionType)
+      return SDValue();
+
+    unsigned Op = GetWasmConversionOp(ConversionOp);
+    return DAG.getNode(Op, SDLoc(N), ResVT, Source);
+  }
+
+  // Combine this:
+  //
+  //   (fp_to_{s,u}int_sat (concat_vectors $x, (v2f64 (splat 0))), 32)
   //
   // into (i32x4.trunc_sat_f64x2_zero_{s,u} $x).
-  EVT ResVT = N->getValueType(0);
-  if (ResVT != MVT::v4i32)
+  //
+  // Or this:
+  //
+  //   (v4f32 (fp_round (concat_vectors $x, (v2f64 (splat 0)))))
+  //
+  // into (f32x4.demote_zero_f64x2 $x).
+  EVT ResVT;
+  auto ConversionOp = N->getOpcode();
+  switch (ConversionOp) {
+  case ISD::FP_TO_SINT_SAT:
+  case ISD::FP_TO_UINT_SAT:
+    ResVT = MVT::v4i32;
+    break;
+  case ISD::FP_ROUND:
+    ResVT = MVT::v4f32;
+    break;
+  default:
+    llvm_unreachable("unexpected op");
+  }
+
+  if (N->getValueType(0) != ResVT)
     return SDValue();
 
-  auto FPToInt = N->getOperand(0);
-  auto FPToIntOp = FPToInt.getOpcode();
-  if (FPToIntOp != ISD::FP_TO_SINT_SAT && FPToIntOp != ISD::FP_TO_UINT_SAT)
-    return SDValue();
-  if (cast<VTSDNode>(FPToInt.getOperand(1))->getVT() != MVT::i32)
+  auto Concat = N->getOperand(0);
+  if (Concat.getValueType() != MVT::v4f64)
     return SDValue();
 
-  auto Source = FPToInt.getOperand(0);
+  auto Source = Concat.getOperand(0);
   if (Source.getValueType() != MVT::v2f64)
     return SDValue();
 
-  auto *Splat = dyn_cast<BuildVectorSDNode>(N->getOperand(1));
-  APInt SplatValue, SplatUndef;
-  unsigned SplatBitSize;
-  bool HasAnyUndefs;
-  if (!Splat || !Splat->isConstantSplat(SplatValue, SplatUndef, SplatBitSize,
-                                        HasAnyUndefs))
-    return SDValue();
-  if (SplatValue != 0)
+  if (!IsZeroSplat(Concat.getOperand(1)) ||
+      Concat.getOperand(1).getValueType() != MVT::v2f64)
     return SDValue();
 
-  unsigned Op = FPToIntOp == ISD::FP_TO_SINT_SAT
-                    ? WebAssemblyISD::TRUNC_SAT_ZERO_S
-                    : WebAssemblyISD::TRUNC_SAT_ZERO_U;
-
+  unsigned Op = GetWasmConversionOp(ConversionOp);
   return DAG.getNode(Op, SDLoc(N), ResVT, Source);
 }
 
@@ -2298,9 +2457,13 @@ WebAssemblyTargetLowering::PerformDAGCombine(SDNode *N,
     return performVectorExtendCombine(N, DCI);
   case ISD::SINT_TO_FP:
   case ISD::UINT_TO_FP:
+  case ISD::FP_EXTEND:
   case ISD::EXTRACT_SUBVECTOR:
     return performVectorConvertLowCombine(N, DCI);
+  case ISD::FP_TO_SINT_SAT:
+  case ISD::FP_TO_UINT_SAT:
+  case ISD::FP_ROUND:
   case ISD::CONCAT_VECTORS:
-    return performVectorTruncSatLowCombine(N, DCI);
+    return performVectorTruncZeroCombine(N, DCI);
   }
 }

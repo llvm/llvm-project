@@ -92,8 +92,8 @@ define void @foo5(double* %p, double* %r) nounwind {
 ;
 ; CHECK-VSX-LABEL: foo5:
 ; CHECK-VSX:       # %bb.0: # %entry
-; CHECK-VSX-NEXT:    lfdx 0, 0, 3
-; CHECK-VSX-NEXT:    stfdx 0, 0, 4
+; CHECK-VSX-NEXT:    lfd 0, 0(3)
+; CHECK-VSX-NEXT:    stfd 0, 0(4)
 ; CHECK-VSX-NEXT:    blr
 entry:
   %v = load double, double* %p, align 1

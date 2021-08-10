@@ -1,0 +1,5 @@
+# REQUIRES: amdgpu-registered-target
+## Check that functions with different IR comments in the output are not merged
+
+# RUN: cp -f %S/Inputs/amdgpu_no_merge_comments.ll %t.ll && %update_llc_test_checks %t.ll
+# RUN: diff -u %S/Inputs/amdgpu_no_merge_comments.ll.expected %t.ll

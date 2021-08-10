@@ -12,6 +12,7 @@
 #include "clang/Tooling/ArgumentsAdjusters.h"
 #include "clang/Tooling/CompilationDatabase.h"
 #include "llvm/ADT/StringMap.h"
+#include "llvm/ADT/StringRef.h"
 #include <deque>
 #include <string>
 #include <vector>
@@ -42,7 +43,7 @@ struct CommandMangler {
   //  - on mac, find clang and isysroot by querying the `xcrun` launcher
   static CommandMangler detect();
 
-  void adjust(std::vector<std::string> &Cmd) const;
+  void adjust(std::vector<std::string> &Cmd, llvm::StringRef File) const;
   explicit operator clang::tooling::ArgumentsAdjuster() &&;
 
 private:

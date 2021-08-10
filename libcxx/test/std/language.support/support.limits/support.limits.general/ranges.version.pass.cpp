@@ -11,6 +11,8 @@
 //
 // clang-format off
 
+// UNSUPPORTED: libcpp-has-no-incomplete-ranges
+
 // <ranges>
 
 // Test the feature test macros defined by <ranges>

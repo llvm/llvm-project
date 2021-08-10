@@ -23,7 +23,7 @@ using namespace mlir;
 
 /// Reports that the given type is missing the data layout information and
 /// exits.
-static LLVM_ATTRIBUTE_NORETURN void reportMissingDataLayout(Type type) {
+[[noreturn]] static void reportMissingDataLayout(Type type) {
   std::string message;
   llvm::raw_string_ostream os(message);
   os << "neither the scoping op nor the type class provide data layout "
@@ -269,7 +269,7 @@ mlir::DataLayout::DataLayout() : DataLayout(ModuleOp()) {}
 
 mlir::DataLayout::DataLayout(DataLayoutOpInterface op)
     : originalLayout(getCombinedDataLayout(op)), scope(op) {
-#ifndef NDEBUG
+#if LLVM_ENABLE_ABI_BREAKING_CHECKS
   checkMissingLayout(originalLayout, op);
   collectParentLayouts(op, layoutStack);
 #endif
@@ -277,7 +277,7 @@ mlir::DataLayout::DataLayout(DataLayoutOpInterface op)
 
 mlir::DataLayout::DataLayout(ModuleOp op)
     : originalLayout(getCombinedDataLayout(op)), scope(op) {
-#ifndef NDEBUG
+#if LLVM_ENABLE_ABI_BREAKING_CHECKS
   checkMissingLayout(originalLayout, op);
   collectParentLayouts(op, layoutStack);
 #endif
@@ -297,7 +297,7 @@ mlir::DataLayout mlir::DataLayout::closest(Operation *op) {
 }
 
 void mlir::DataLayout::checkValid() const {
-#ifndef NDEBUG
+#if LLVM_ENABLE_ABI_BREAKING_CHECKS
   SmallVector<DataLayoutSpecInterface> specs;
   collectParentLayouts(scope, specs);
   assert(specs.size() == layoutStack.size() &&

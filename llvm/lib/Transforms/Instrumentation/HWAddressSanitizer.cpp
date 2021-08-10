@@ -17,6 +17,9 @@
 #include "llvm/ADT/StringExtras.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/ADT/Triple.h"
+#include "llvm/Analysis/PostDominators.h"
+#include "llvm/Analysis/StackSafetyAnalysis.h"
+#include "llvm/Analysis/ValueTracking.h"
 #include "llvm/BinaryFormat/ELF.h"
 #include "llvm/IR/Attributes.h"
 #include "llvm/IR/BasicBlock.h"
@@ -25,6 +28,7 @@
 #include "llvm/IR/DataLayout.h"
 #include "llvm/IR/DebugInfoMetadata.h"
 #include "llvm/IR/DerivedTypes.h"
+#include "llvm/IR/Dominators.h"
 #include "llvm/IR/Function.h"
 #include "llvm/IR/IRBuilder.h"
 #include "llvm/IR/InlineAsm.h"
@@ -40,6 +44,7 @@
 #include "llvm/IR/Value.h"
 #include "llvm/InitializePasses.h"
 #include "llvm/Pass.h"
+#include "llvm/PassRegistry.h"
 #include "llvm/Support/Casting.h"
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Support/Debug.h"
@@ -108,6 +113,16 @@ static cl::opt<bool>
 static cl::opt<bool> ClInstrumentStack("hwasan-instrument-stack",
                                        cl::desc("instrument stack (allocas)"),
                                        cl::Hidden, cl::init(true));
+
+static cl::opt<bool>
+    ClUseStackSafety("hwasan-use-stack-safety", cl::Hidden, cl::init(true),
+                     cl::Hidden, cl::desc("Use Stack Safety analysis results"),
+                     cl::Optional);
+
+static cl::opt<bool>
+    ClUseAfterScope("hwasan-use-after-scope",
+                    cl::desc("detect use after scope within function"),
+                    cl::Hidden, cl::init(false));
 
 static cl::opt<bool> ClUARRetagToZero(
     "hwasan-uar-retag-to-zero",
@@ -192,13 +207,47 @@ static cl::opt<bool> ClUsePageAliases("hwasan-experimental-use-page-aliases",
 
 namespace {
 
+bool shouldUsePageAliases(const Triple &TargetTriple) {
+  return ClUsePageAliases && TargetTriple.getArch() == Triple::x86_64;
+}
+
+bool shouldInstrumentStack(const Triple &TargetTriple) {
+  return !shouldUsePageAliases(TargetTriple) && ClInstrumentStack;
+}
+
+bool shouldInstrumentWithCalls(const Triple &TargetTriple) {
+  return ClInstrumentWithCalls || TargetTriple.getArch() == Triple::x86_64;
+}
+
+bool mightUseStackSafetyAnalysis(bool DisableOptimization) {
+  return ClUseStackSafety.getNumOccurrences() ? ClUseStackSafety
+                                              : !DisableOptimization;
+}
+
+bool shouldUseStackSafetyAnalysis(const Triple &TargetTriple,
+                                  bool DisableOptimization) {
+  return shouldInstrumentStack(TargetTriple) &&
+         mightUseStackSafetyAnalysis(DisableOptimization);
+}
+
+bool shouldDetectUseAfterScope(const Triple &TargetTriple) {
+  return ClUseAfterScope && shouldInstrumentStack(TargetTriple);
+}
+
 /// An instrumentation pass implementing detection of addressability bugs
 /// using tagged pointers.
 class HWAddressSanitizer {
+private:
+  struct AllocaInfo {
+    AllocaInst *AI;
+    SmallVector<IntrinsicInst *, 2> LifetimeStart;
+    SmallVector<IntrinsicInst *, 2> LifetimeEnd;
+  };
+
 public:
-  explicit HWAddressSanitizer(Module &M, bool CompileKernel = false,
-                              bool Recover = false)
-      : M(M) {
+  HWAddressSanitizer(Module &M, bool CompileKernel, bool Recover,
+                     const StackSafetyGlobalInfo *SSI)
+      : M(M), SSI(SSI) {
     this->Recover = ClRecover.getNumOccurrences() > 0 ? ClRecover : Recover;
     this->CompileKernel = ClEnableKhwasan.getNumOccurrences() > 0
                               ? ClEnableKhwasan
@@ -207,7 +256,11 @@ public:
     initializeModule();
   }
 
-  bool sanitizeFunction(Function &F);
+  void setSSI(const StackSafetyGlobalInfo *S) { SSI = S; }
+
+  bool sanitizeFunction(Function &F,
+                        llvm::function_ref<const DominatorTree &()> GetDT,
+                        llvm::function_ref<const PostDominatorTree &()> GetPDT);
   void initializeModule();
   void createHwasanCtorComdat();
 
@@ -230,13 +283,16 @@ public:
       Instruction *I, SmallVectorImpl<InterestingMemoryOperand> &Interesting);
 
   bool isInterestingAlloca(const AllocaInst &AI);
-  bool tagAlloca(IRBuilder<> &IRB, AllocaInst *AI, Value *Tag, size_t Size);
+  void tagAlloca(IRBuilder<> &IRB, AllocaInst *AI, Value *Tag, size_t Size);
   Value *tagPointer(IRBuilder<> &IRB, Type *Ty, Value *PtrLong, Value *Tag);
   Value *untagPointer(IRBuilder<> &IRB, Value *PtrLong);
   bool instrumentStack(
-      SmallVectorImpl<AllocaInst *> &Allocas,
+      MapVector<AllocaInst *, AllocaInfo> &AllocasToInstrument,
+      SmallVector<Instruction *, 4> &UnrecognizedLifetimes,
       DenseMap<AllocaInst *, std::vector<DbgVariableIntrinsic *>> &AllocaDbgMap,
-      SmallVectorImpl<Instruction *> &RetVec, Value *StackTag);
+      SmallVectorImpl<Instruction *> &RetVec, Value *StackTag,
+      llvm::function_ref<const DominatorTree &()> GetDT,
+      llvm::function_ref<const PostDominatorTree &()> GetPDT);
   Value *readRegister(IRBuilder<> &IRB, StringRef Name);
   bool instrumentLandingPads(SmallVectorImpl<Instruction *> &RetVec);
   Value *getNextTagWithCall(IRBuilder<> &IRB);
@@ -259,6 +315,7 @@ public:
 private:
   LLVMContext *C;
   Module &M;
+  const StackSafetyGlobalInfo *SSI;
   Triple TargetTriple;
   FunctionCallee HWAsanMemmove, HWAsanMemcpy, HWAsanMemset;
   FunctionCallee HWAsanHandleVfork;
@@ -284,6 +341,7 @@ private:
     void init(Triple &TargetTriple, bool InstrumentWithCalls);
     unsigned getObjectAlignment() const { return 1U << Scale; }
   };
+
   ShadowMapping Mapping;
 
   Type *VoidTy = Type::getVoidTy(M.getContext());
@@ -300,6 +358,7 @@ private:
   bool InstrumentLandingPads;
   bool InstrumentWithCalls;
   bool InstrumentStack;
+  bool DetectUseAfterScope;
   bool UsePageAliases;
 
   bool HasMatchAllTag = false;
@@ -329,8 +388,10 @@ public:
   static char ID;
 
   explicit HWAddressSanitizerLegacyPass(bool CompileKernel = false,
-                                        bool Recover = false)
-      : FunctionPass(ID), CompileKernel(CompileKernel), Recover(Recover) {
+                                        bool Recover = false,
+                                        bool DisableOptimization = false)
+      : FunctionPass(ID), CompileKernel(CompileKernel), Recover(Recover),
+        DisableOptimization(DisableOptimization) {
     initializeHWAddressSanitizerLegacyPassPass(
         *PassRegistry::getPassRegistry());
   }
@@ -338,12 +399,27 @@ public:
   StringRef getPassName() const override { return "HWAddressSanitizer"; }
 
   bool doInitialization(Module &M) override {
-    HWASan = std::make_unique<HWAddressSanitizer>(M, CompileKernel, Recover);
+    HWASan = std::make_unique<HWAddressSanitizer>(M, CompileKernel, Recover,
+                                                  /*SSI=*/nullptr);
     return true;
   }
 
   bool runOnFunction(Function &F) override {
-    return HWASan->sanitizeFunction(F);
+    auto TargetTriple = Triple(F.getParent()->getTargetTriple());
+    if (shouldUseStackSafetyAnalysis(TargetTriple, DisableOptimization)) {
+      // We cannot call getAnalysis in doInitialization, that would cause a
+      // crash as the required analyses are not initialized yet.
+      HWASan->setSSI(
+          &getAnalysis<StackSafetyGlobalInfoWrapperPass>().getResult());
+    }
+    return HWASan->sanitizeFunction(
+        F,
+        [&]() -> const DominatorTree & {
+          return getAnalysis<DominatorTreeWrapperPass>().getDomTree();
+        },
+        [&]() -> const PostDominatorTree & {
+          return getAnalysis<PostDominatorTreeWrapperPass>().getPostDomTree();
+        });
   }
 
   bool doFinalization(Module &M) override {
@@ -351,10 +427,22 @@ public:
     return false;
   }
 
+  void getAnalysisUsage(AnalysisUsage &AU) const override {
+    // This is an over-estimation of, in case we are building for an
+    // architecture that doesn't allow stack tagging we will still load the
+    // analysis.
+    // This is so we don't need to plumb TargetTriple all the way to here.
+    if (mightUseStackSafetyAnalysis(DisableOptimization))
+      AU.addRequired<StackSafetyGlobalInfoWrapperPass>();
+    AU.addRequired<DominatorTreeWrapperPass>();
+    AU.addRequired<PostDominatorTreeWrapperPass>();
+  }
+
 private:
   std::unique_ptr<HWAddressSanitizer> HWASan;
   bool CompileKernel;
   bool Recover;
+  bool DisableOptimization;
 };
 
 } // end anonymous namespace
@@ -365,26 +453,47 @@ INITIALIZE_PASS_BEGIN(
     HWAddressSanitizerLegacyPass, "hwasan",
     "HWAddressSanitizer: detect memory bugs using tagged addressing.", false,
     false)
+INITIALIZE_PASS_DEPENDENCY(StackSafetyGlobalInfoWrapperPass)
+INITIALIZE_PASS_DEPENDENCY(DominatorTreeWrapperPass)
+INITIALIZE_PASS_DEPENDENCY(PostDominatorTreeWrapperPass)
 INITIALIZE_PASS_END(
     HWAddressSanitizerLegacyPass, "hwasan",
     "HWAddressSanitizer: detect memory bugs using tagged addressing.", false,
     false)
 
-FunctionPass *llvm::createHWAddressSanitizerLegacyPassPass(bool CompileKernel,
-                                                           bool Recover) {
+FunctionPass *
+llvm::createHWAddressSanitizerLegacyPassPass(bool CompileKernel, bool Recover,
+                                             bool DisableOptimization) {
   assert(!CompileKernel || Recover);
-  return new HWAddressSanitizerLegacyPass(CompileKernel, Recover);
+  return new HWAddressSanitizerLegacyPass(CompileKernel, Recover,
+                                          DisableOptimization);
 }
 
-HWAddressSanitizerPass::HWAddressSanitizerPass(bool CompileKernel, bool Recover)
-    : CompileKernel(CompileKernel), Recover(Recover) {}
+HWAddressSanitizerPass::HWAddressSanitizerPass(bool CompileKernel, bool Recover,
+                                               bool DisableOptimization)
+    : CompileKernel(CompileKernel), Recover(Recover),
+      DisableOptimization(DisableOptimization) {}
 
 PreservedAnalyses HWAddressSanitizerPass::run(Module &M,
                                               ModuleAnalysisManager &MAM) {
-  HWAddressSanitizer HWASan(M, CompileKernel, Recover);
+  const StackSafetyGlobalInfo *SSI = nullptr;
+  auto TargetTriple = llvm::Triple(M.getTargetTriple());
+  if (shouldUseStackSafetyAnalysis(TargetTriple, DisableOptimization))
+    SSI = &MAM.getResult<StackSafetyGlobalAnalysis>(M);
+
+  HWAddressSanitizer HWASan(M, CompileKernel, Recover, SSI);
   bool Modified = false;
-  for (Function &F : M)
-    Modified |= HWASan.sanitizeFunction(F);
+  auto &FAM = MAM.getResult<FunctionAnalysisManagerModuleProxy>(M).getManager();
+  for (Function &F : M) {
+    Modified |= HWASan.sanitizeFunction(
+        F,
+        [&]() -> const DominatorTree & {
+          return FAM.getResult<DominatorTreeAnalysis>(F);
+        },
+        [&]() -> const PostDominatorTree & {
+          return FAM.getResult<PostDominatorTreeAnalysis>(F);
+        });
+  }
   if (Modified)
     return PreservedAnalyses::none();
   return PreservedAnalyses::all();
@@ -503,9 +612,10 @@ void HWAddressSanitizer::initializeModule() {
   // - Intel LAM (default)
   // - pointer aliasing (heap only)
   bool IsX86_64 = TargetTriple.getArch() == Triple::x86_64;
-  UsePageAliases = ClUsePageAliases && IsX86_64;
-  InstrumentWithCalls = IsX86_64 ? true : ClInstrumentWithCalls;
-  InstrumentStack = UsePageAliases ? false : ClInstrumentStack;
+  UsePageAliases = shouldUsePageAliases(TargetTriple);
+  InstrumentWithCalls = shouldInstrumentWithCalls(TargetTriple);
+  InstrumentStack = shouldInstrumentStack(TargetTriple);
+  DetectUseAfterScope = shouldDetectUseAfterScope(TargetTriple);
   PointerTagShift = IsX86_64 ? 57 : 56;
   TagMaskByte = IsX86_64 ? 0x3F : 0xFF;
 
@@ -908,7 +1018,7 @@ static uint64_t getAllocaSizeInBytes(const AllocaInst &AI) {
   return SizeInBytes * ArraySize;
 }
 
-bool HWAddressSanitizer::tagAlloca(IRBuilder<> &IRB, AllocaInst *AI, Value *Tag,
+void HWAddressSanitizer::tagAlloca(IRBuilder<> &IRB, AllocaInst *AI, Value *Tag,
                                    size_t Size) {
   size_t AlignedSize = alignTo(Size, Mapping.getObjectAlignment());
   if (!UseShortGranules)
@@ -939,7 +1049,6 @@ bool HWAddressSanitizer::tagAlloca(IRBuilder<> &IRB, AllocaInst *AI, Value *Tag,
                                    AlignedSize - 1));
     }
   }
-  return true;
 }
 
 unsigned HWAddressSanitizer::retagMask(unsigned AllocaNo) {
@@ -1172,16 +1281,23 @@ bool HWAddressSanitizer::instrumentLandingPads(
 }
 
 bool HWAddressSanitizer::instrumentStack(
-    SmallVectorImpl<AllocaInst *> &Allocas,
+    MapVector<AllocaInst *, AllocaInfo> &AllocasToInstrument,
+    SmallVector<Instruction *, 4> &UnrecognizedLifetimes,
     DenseMap<AllocaInst *, std::vector<DbgVariableIntrinsic *>> &AllocaDbgMap,
-    SmallVectorImpl<Instruction *> &RetVec, Value *StackTag) {
+    SmallVectorImpl<Instruction *> &RetVec, Value *StackTag,
+    llvm::function_ref<const DominatorTree &()> GetDT,
+    llvm::function_ref<const PostDominatorTree &()> GetPDT) {
   // Ideally, we want to calculate tagged stack base pointer, and rewrite all
   // alloca addresses using that. Unfortunately, offsets are not known yet
   // (unless we use ASan-style mega-alloca). Instead we keep the base tag in a
   // temp, shift-OR it into each alloca address and xor with the retag mask.
   // This generates one extra instruction per alloca use.
-  for (unsigned N = 0; N < Allocas.size(); ++N) {
-    auto *AI = Allocas[N];
+  unsigned int I = 0;
+
+  for (auto &KV : AllocasToInstrument) {
+    auto N = I++;
+    auto *AI = KV.first;
+    AllocaInfo &Info = KV.second;
     IRBuilder<> IRB(AI->getNextNode());
 
     // Replace uses of the alloca with tagged address.
@@ -1201,24 +1317,46 @@ bool HWAddressSanitizer::instrumentStack(
       // to put it at the beginning of the expression.
       SmallVector<uint64_t, 8> NewOps = {dwarf::DW_OP_LLVM_tag_offset,
                                          retagMask(N)};
-      auto Locations = DDI->location_ops();
-      unsigned LocNo = std::distance(Locations.begin(), find(Locations, AI));
-      DDI->setExpression(
-          DIExpression::appendOpsToArg(DDI->getExpression(), NewOps, LocNo));
+      for (size_t LocNo = 0; LocNo < DDI->getNumVariableLocationOps(); ++LocNo)
+        if (DDI->getVariableLocationOp(LocNo) == AI)
+          DDI->setExpression(DIExpression::appendOpsToArg(DDI->getExpression(),
+                                                          NewOps, LocNo));
     }
 
     size_t Size = getAllocaSizeInBytes(*AI);
-    tagAlloca(IRB, AI, Tag, Size);
-
-    for (auto RI : RetVec) {
-      IRB.SetInsertPoint(RI);
-
-      // Re-tag alloca memory with the special UAR tag.
-      Value *Tag = getUARTag(IRB, StackTag);
-      tagAlloca(IRB, AI, Tag, alignTo(Size, Mapping.getObjectAlignment()));
+    size_t AlignedSize = alignTo(Size, Mapping.getObjectAlignment());
+    bool StandardLifetime = UnrecognizedLifetimes.empty() &&
+                            Info.LifetimeStart.size() == 1 &&
+                            Info.LifetimeEnd.size() == 1;
+    if (DetectUseAfterScope && StandardLifetime) {
+      IntrinsicInst *Start = Info.LifetimeStart[0];
+      IntrinsicInst *End = Info.LifetimeEnd[0];
+      IRB.SetInsertPoint(Start->getNextNode());
+      auto TagEnd = [&](Instruction *Node) {
+        IRB.SetInsertPoint(Node);
+        Value *UARTag = getUARTag(IRB, StackTag);
+        tagAlloca(IRB, AI, UARTag, AlignedSize);
+      };
+      tagAlloca(IRB, AI, Tag, Size);
+      if (!forAllReachableExits(GetDT(), GetPDT(), Start, End, RetVec, TagEnd))
+        End->eraseFromParent();
+    } else {
+      tagAlloca(IRB, AI, Tag, Size);
+      for (auto *RI : RetVec) {
+        IRB.SetInsertPoint(RI);
+        Value *UARTag = getUARTag(IRB, StackTag);
+        tagAlloca(IRB, AI, UARTag, AlignedSize);
+      }
+      if (!StandardLifetime) {
+        for (auto &II : Info.LifetimeStart)
+          II->eraseFromParent();
+        for (auto &II : Info.LifetimeEnd)
+          II->eraseFromParent();
+      }
     }
   }
-
+  for (auto &I : UnrecognizedLifetimes)
+    I->eraseFromParent();
   return true;
 }
 
@@ -1235,10 +1373,14 @@ bool HWAddressSanitizer::isInterestingAlloca(const AllocaInst &AI) {
           // dynamic alloca instrumentation for them as well.
           !AI.isUsedWithInAlloca() &&
           // swifterror allocas are register promoted by ISel
-          !AI.isSwiftError());
+          !AI.isSwiftError()) &&
+         // safe allocas are not interesting
+         !(SSI && SSI->isSafe(AI));
 }
 
-bool HWAddressSanitizer::sanitizeFunction(Function &F) {
+bool HWAddressSanitizer::sanitizeFunction(
+    Function &F, llvm::function_ref<const DominatorTree &()> GetDT,
+    llvm::function_ref<const PostDominatorTree &()> GetPDT) {
   if (&F == HwasanCtorFunction)
     return false;
 
@@ -1249,27 +1391,49 @@ bool HWAddressSanitizer::sanitizeFunction(Function &F) {
 
   SmallVector<InterestingMemoryOperand, 16> OperandsToInstrument;
   SmallVector<MemIntrinsic *, 16> IntrinToInstrument;
-  SmallVector<AllocaInst *, 8> AllocasToInstrument;
+  MapVector<AllocaInst *, AllocaInfo> AllocasToInstrument;
   SmallVector<Instruction *, 8> RetVec;
   SmallVector<Instruction *, 8> LandingPadVec;
+  SmallVector<Instruction *, 4> UnrecognizedLifetimes;
   DenseMap<AllocaInst *, std::vector<DbgVariableIntrinsic *>> AllocaDbgMap;
   for (auto &BB : F) {
     for (auto &Inst : BB) {
-      if (InstrumentStack)
+      if (InstrumentStack) {
         if (AllocaInst *AI = dyn_cast<AllocaInst>(&Inst)) {
           if (isInterestingAlloca(*AI))
-            AllocasToInstrument.push_back(AI);
+            AllocasToInstrument.insert({AI, {}});
           continue;
         }
+        auto *II = dyn_cast<IntrinsicInst>(&Inst);
+        if (II && (II->getIntrinsicID() == Intrinsic::lifetime_start ||
+                   II->getIntrinsicID() == Intrinsic::lifetime_end)) {
+          AllocaInst *AI = findAllocaForValue(II->getArgOperand(1));
+          if (!AI) {
+            UnrecognizedLifetimes.push_back(&Inst);
+            continue;
+          }
+          if (!isInterestingAlloca(*AI))
+            continue;
+          if (II->getIntrinsicID() == Intrinsic::lifetime_start)
+            AllocasToInstrument[AI].LifetimeStart.push_back(II);
+          else
+            AllocasToInstrument[AI].LifetimeEnd.push_back(II);
+          continue;
+        }
+      }
 
       if (isa<ReturnInst>(Inst) || isa<ResumeInst>(Inst) ||
           isa<CleanupReturnInst>(Inst))
         RetVec.push_back(&Inst);
 
-      if (auto *DVI = dyn_cast<DbgVariableIntrinsic>(&Inst))
-        for (Value *V : DVI->location_ops())
+      if (auto *DVI = dyn_cast<DbgVariableIntrinsic>(&Inst)) {
+        for (Value *V : DVI->location_ops()) {
           if (auto *Alloca = dyn_cast_or_null<AllocaInst>(V))
-            AllocaDbgMap[Alloca].push_back(DVI);
+            if (!AllocaDbgMap.count(Alloca) ||
+                AllocaDbgMap[Alloca].back() != DVI)
+              AllocaDbgMap[Alloca].push_back(DVI);
+        }
+      }
 
       if (InstrumentLandingPads && isa<LandingPadInst>(Inst))
         LandingPadVec.push_back(&Inst);
@@ -1311,13 +1475,15 @@ bool HWAddressSanitizer::sanitizeFunction(Function &F) {
   if (!AllocasToInstrument.empty()) {
     Value *StackTag =
         ClGenerateTagsWithCalls ? nullptr : getStackBaseTag(EntryIRB);
-    instrumentStack(AllocasToInstrument, AllocaDbgMap, RetVec, StackTag);
+    instrumentStack(AllocasToInstrument, UnrecognizedLifetimes, AllocaDbgMap,
+                    RetVec, StackTag, GetDT, GetPDT);
   }
   // Pad and align each of the allocas that we instrumented to stop small
   // uninteresting allocas from hiding in instrumented alloca's padding and so
   // that we have enough space to store real tags for short granules.
   DenseMap<AllocaInst *, AllocaInst *> AllocaToPaddedAllocaMap;
-  for (AllocaInst *AI : AllocasToInstrument) {
+  for (auto &KV : AllocasToInstrument) {
+    AllocaInst *AI = KV.first;
     uint64_t Size = getAllocaSizeInBytes(*AI);
     uint64_t AlignedSize = alignTo(Size, Mapping.getObjectAlignment());
     AI->setAlignment(

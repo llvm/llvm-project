@@ -302,9 +302,9 @@ protected:
   // symbol's section with FunctionSec when specified.
   // Returns None if no function symbol can be found for the address or in case
   // it is not defined in the specified section.
-  Optional<uint32_t>
-  getSymbolIndexForFunctionAddress(uint64_t SymValue,
-                                   Optional<const Elf_Shdr *> FunctionSec);
+  SmallVector<uint32_t>
+  getSymbolIndexesForFunctionAddress(uint64_t SymValue,
+                                     Optional<const Elf_Shdr *> FunctionSec);
   bool printFunctionStackSize(uint64_t SymValue,
                               Optional<const Elf_Shdr *> FunctionSec,
                               const Elf_Shdr &StackSizeSec, DataExtractor Data,
@@ -313,7 +313,8 @@ protected:
                       unsigned Ndx, const Elf_Shdr *SymTab,
                       const Elf_Shdr *FunctionSec, const Elf_Shdr &StackSizeSec,
                       const RelocationResolver &Resolver, DataExtractor Data);
-  virtual void printStackSizeEntry(uint64_t Size, StringRef FuncName) = 0;
+  virtual void printStackSizeEntry(uint64_t Size,
+                                   ArrayRef<std::string> FuncNames) = 0;
 
   void printRelocatableStackSizes(std::function<void()> PrintHeader);
   void printNonRelocatableStackSizes(std::function<void()> PrintHeader);
@@ -645,7 +646,8 @@ private:
   void printGNUVersionSectionProlog(const typename ELFT::Shdr &Sec,
                                     const Twine &Label, unsigned EntriesNum);
 
-  void printStackSizeEntry(uint64_t Size, StringRef FuncName) override;
+  void printStackSizeEntry(uint64_t Size,
+                           ArrayRef<std::string> FuncNames) override;
 
   void printMipsGOT(const MipsGOTParser<ELFT> &Parser) override;
   void printMipsPLT(const MipsGOTParser<ELFT> &Parser) override;
@@ -693,7 +695,8 @@ private:
                    bool /*NonVisibilityBitsUsed*/) const override;
   void printProgramHeaders() override;
   void printSectionMapping() override {}
-  void printStackSizeEntry(uint64_t Size, StringRef FuncName) override;
+  void printStackSizeEntry(uint64_t Size,
+                           ArrayRef<std::string> FuncNames) override;
 
   void printMipsGOT(const MipsGOTParser<ELFT> &Parser) override;
   void printMipsPLT(const MipsGOTParser<ELFT> &Parser) override;
@@ -5716,8 +5719,9 @@ template <class ELFT> void GNUELFDumper<ELFT>::printDependentLibs() {
 }
 
 template <class ELFT>
-Optional<uint32_t> ELFDumper<ELFT>::getSymbolIndexForFunctionAddress(
+SmallVector<uint32_t> ELFDumper<ELFT>::getSymbolIndexesForFunctionAddress(
     uint64_t SymValue, Optional<const Elf_Shdr *> FunctionSec) {
+  SmallVector<uint32_t> SymbolIndexes;
   if (!this->AddressToIndexMap.hasValue()) {
     // Populate the address to index map upon the first invocation of this
     // function.
@@ -5738,7 +5742,7 @@ Optional<uint32_t> ELFDumper<ELFT>::getSymbolIndexForFunctionAddress(
             std::string Name = this->getStaticSymbolName(Index);
             reportUniqueWarning("unable to get address of symbol '" + Name +
                                 "': " + toString(SymAddrOrErr.takeError()));
-            return None;
+            return SymbolIndexes;
           }
 
           (*this->AddressToIndexMap)[*SymAddrOrErr].push_back(Index);
@@ -5752,7 +5756,7 @@ Optional<uint32_t> ELFDumper<ELFT>::getSymbolIndexForFunctionAddress(
 
   auto Symbols = this->AddressToIndexMap->find(SymValue);
   if (Symbols == this->AddressToIndexMap->end())
-    return None;
+    return SymbolIndexes;
 
   for (uint32_t Index : Symbols->second) {
     // Check if the symbol is in the right section. FunctionSec == None
@@ -5770,28 +5774,26 @@ Optional<uint32_t> ELFDumper<ELFT>::getSymbolIndexForFunctionAddress(
         // untested.
         reportUniqueWarning("unable to get section of symbol '" + Name +
                             "': " + toString(SecOrErr.takeError()));
-        return None;
+        return SymbolIndexes;
       }
     }
 
-    return Index;
+    SymbolIndexes.push_back(Index);
   }
-  return None;
+
+  return SymbolIndexes;
 }
 
 template <class ELFT>
 bool ELFDumper<ELFT>::printFunctionStackSize(
     uint64_t SymValue, Optional<const Elf_Shdr *> FunctionSec,
     const Elf_Shdr &StackSizeSec, DataExtractor Data, uint64_t *Offset) {
-  Optional<uint32_t> FuncSymIndex =
-      this->getSymbolIndexForFunctionAddress(SymValue, FunctionSec);
-  std::string FuncName = "?";
-  if (!FuncSymIndex)
+  SmallVector<uint32_t> FuncSymIndexes =
+      this->getSymbolIndexesForFunctionAddress(SymValue, FunctionSec);
+  if (FuncSymIndexes.empty())
     reportUniqueWarning(
         "could not identify function symbol for stack size entry in " +
         describe(StackSizeSec));
-  else
-    FuncName = this->getStaticSymbolName(*FuncSymIndex);
 
   // Extract the size. The expectation is that Offset is pointing to the right
   // place, i.e. past the function address.
@@ -5803,17 +5805,27 @@ bool ELFDumper<ELFT>::printFunctionStackSize(
                         toString(std::move(Err)));
     return false;
   }
-  printStackSizeEntry(StackSize, FuncName);
+
+  if (FuncSymIndexes.empty()) {
+    printStackSizeEntry(StackSize, {"?"});
+  } else {
+    SmallVector<std::string> FuncSymNames;
+    for (uint32_t Index : FuncSymIndexes)
+      FuncSymNames.push_back(this->getStaticSymbolName(Index));
+    printStackSizeEntry(StackSize, FuncSymNames);
+  }
+
   return true;
 }
 
 template <class ELFT>
 void GNUELFDumper<ELFT>::printStackSizeEntry(uint64_t Size,
-                                             StringRef FuncName) {
+                                             ArrayRef<std::string> FuncNames) {
   OS.PadToColumn(2);
   OS << format_decimal(Size, 11);
   OS.PadToColumn(18);
-  OS << FuncName << "\n";
+
+  OS << join(FuncNames.begin(), FuncNames.end(), ", ") << "\n";
 }
 
 template <class ELFT>
@@ -6002,7 +6014,7 @@ void GNUELFDumper<ELFT>::printStackSizes() {
     OS.PadToColumn(9);
     OS << "Size";
     OS.PadToColumn(18);
-    OS << "Function\n";
+    OS << "Functions\n";
     HeaderHasBeenPrinted = true;
   };
 
@@ -6702,6 +6714,55 @@ template <class ELFT> void LLVMELFDumper<ELFT>::printHashHistograms() {
   W.startLine() << "Hash Histogram not implemented!\n";
 }
 
+// Returns true if rel/rela section exists, and populates SymbolIndices.
+// Otherwise returns false.
+template <class ELFT>
+static bool getSymbolIndices(const typename ELFT::Shdr *CGRelSection,
+                             const ELFFile<ELFT> &Obj,
+                             const LLVMELFDumper<ELFT> *Dumper,
+                             SmallVector<uint32_t, 128> &SymbolIndices) {
+  if (!CGRelSection) {
+    Dumper->reportUniqueWarning(
+        "relocation section for a call graph section doesn't exist");
+    return false;
+  }
+
+  if (CGRelSection->sh_type == SHT_REL) {
+    typename ELFT::RelRange CGProfileRel;
+    Expected<typename ELFT::RelRange> CGProfileRelOrError =
+        Obj.rels(*CGRelSection);
+    if (!CGProfileRelOrError) {
+      Dumper->reportUniqueWarning("unable to load relocations for "
+                                  "SHT_LLVM_CALL_GRAPH_PROFILE section: " +
+                                  toString(CGProfileRelOrError.takeError()));
+      return false;
+    }
+
+    CGProfileRel = *CGProfileRelOrError;
+    for (const typename ELFT::Rel &Rel : CGProfileRel)
+      SymbolIndices.push_back(Rel.getSymbol(Obj.isMips64EL()));
+  } else {
+    // MC unconditionally produces SHT_REL, but GNU strip/objcopy may convert
+    // the format to SHT_RELA
+    // (https://sourceware.org/bugzilla/show_bug.cgi?id=28035)
+    typename ELFT::RelaRange CGProfileRela;
+    Expected<typename ELFT::RelaRange> CGProfileRelaOrError =
+        Obj.relas(*CGRelSection);
+    if (!CGProfileRelaOrError) {
+      Dumper->reportUniqueWarning("unable to load relocations for "
+                                  "SHT_LLVM_CALL_GRAPH_PROFILE section: " +
+                                  toString(CGProfileRelaOrError.takeError()));
+      return false;
+    }
+
+    CGProfileRela = *CGProfileRelaOrError;
+    for (const typename ELFT::Rela &Rela : CGProfileRela)
+      SymbolIndices.push_back(Rela.getSymbol(Obj.isMips64EL()));
+  }
+
+  return true;
+}
+
 template <class ELFT> void LLVMELFDumper<ELFT>::printCGProfile() {
   llvm::MapVector<const Elf_Shdr *, const Elf_Shdr *> SecToRelocMap;
 
@@ -6723,40 +6784,22 @@ template <class ELFT> void LLVMELFDumper<ELFT>::printCGProfile() {
       return;
     }
 
-    Elf_Rel_Range CGProfileRel;
-    bool UseReloc = (CGRelSection != nullptr);
-    if (UseReloc) {
-      Expected<Elf_Rel_Range> CGProfileRelaOrError =
-          this->Obj.rels(*CGRelSection);
-      if (!CGProfileRelaOrError) {
-        this->reportUniqueWarning("unable to load relocations for "
-                                  "SHT_LLVM_CALL_GRAPH_PROFILE section: " +
-                                  toString(CGProfileRelaOrError.takeError()));
-        UseReloc = false;
-      } else
-        CGProfileRel = *CGProfileRelaOrError;
-
-      if (UseReloc && CGProfileRel.size() != (CGProfileOrErr->size() * 2)) {
-        this->reportUniqueWarning(
-            "number of from/to pairs does not match number of frequencies");
-        UseReloc = false;
-      }
-    } else
+    SmallVector<uint32_t, 128> SymbolIndices;
+    bool UseReloc =
+        getSymbolIndices<ELFT>(CGRelSection, this->Obj, this, SymbolIndices);
+    if (UseReloc && SymbolIndices.size() != CGProfileOrErr->size() * 2) {
       this->reportUniqueWarning(
-          "relocation section for a call graph section doesn't exist");
-
-    auto GetIndex = [&](uint32_t Index) {
-      const Elf_Rel_Impl<ELFT, false> &Rel = CGProfileRel[Index];
-      return Rel.getSymbol(this->Obj.isMips64EL());
-    };
+          "number of from/to pairs does not match number of frequencies");
+      UseReloc = false;
+    }
 
     ListScope L(W, "CGProfile");
     for (uint32_t I = 0, Size = CGProfileOrErr->size(); I != Size; ++I) {
       const Elf_CGProfile &CGPE = (*CGProfileOrErr)[I];
       DictScope D(W, "CGProfileEntry");
       if (UseReloc) {
-        uint32_t From = GetIndex(I * 2);
-        uint32_t To = GetIndex(I * 2 + 1);
+        uint32_t From = SymbolIndices[I * 2];
+        uint32_t To = SymbolIndices[I * 2 + 1];
         W.printNumber("From", this->getStaticSymbolName(From), From);
         W.printNumber("To", this->getStaticSymbolName(To), To);
       }
@@ -6785,15 +6828,15 @@ template <class ELFT> void LLVMELFDumper<ELFT>::printBBAddrMaps() {
     for (const Elf_BBAddrMap &AM : *BBAddrMapOrErr) {
       DictScope D(W, "Function");
       W.printHex("At", AM.Addr);
-      Optional<uint32_t> FuncSymIndex =
-          this->getSymbolIndexForFunctionAddress(AM.Addr, FunctionSec);
+      SmallVector<uint32_t> FuncSymIndex =
+          this->getSymbolIndexesForFunctionAddress(AM.Addr, FunctionSec);
       std::string FuncName = "<?>";
-      if (FuncSymIndex == None)
+      if (FuncSymIndex.empty())
         this->reportUniqueWarning(
             "could not identify function symbol for address (0x" +
             Twine::utohexstr(AM.Addr) + ") in " + this->describe(Sec));
       else
-        FuncName = this->getStaticSymbolName(*FuncSymIndex);
+        FuncName = this->getStaticSymbolName(FuncSymIndex.front());
       W.printString("Name", FuncName);
 
       ListScope L(W, "BB entries");
@@ -7009,9 +7052,10 @@ template <class ELFT> void LLVMELFDumper<ELFT>::printStackSizes() {
 }
 
 template <class ELFT>
-void LLVMELFDumper<ELFT>::printStackSizeEntry(uint64_t Size, StringRef FuncName) {
+void LLVMELFDumper<ELFT>::printStackSizeEntry(uint64_t Size,
+                                              ArrayRef<std::string> FuncNames) {
   DictScope D(W, "Entry");
-  W.printString("Function", FuncName);
+  W.printList("Functions", FuncNames);
   W.printHex("Size", Size);
 }
 

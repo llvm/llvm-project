@@ -133,10 +133,53 @@ public:
 };
 } // namespace
 
+namespace {
+class ConvertWhileOpTypes : public OpConversionPattern<WhileOp> {
+public:
+  using OpConversionPattern<WhileOp>::OpConversionPattern;
+
+  LogicalResult
+  matchAndRewrite(WhileOp op, ArrayRef<Value> operands,
+                  ConversionPatternRewriter &rewriter) const override {
+    auto *converter = getTypeConverter();
+    assert(converter);
+    SmallVector<Type> newResultTypes;
+    if (failed(converter->convertTypes(op.getResultTypes(), newResultTypes)))
+      return failure();
+
+    WhileOp::Adaptor adaptor(operands);
+    auto newOp = rewriter.create<WhileOp>(op.getLoc(), newResultTypes,
+                                          adaptor.getOperands());
+    for (auto i : {0u, 1u}) {
+      auto &dstRegion = newOp.getRegion(i);
+      rewriter.inlineRegionBefore(op.getRegion(i), dstRegion, dstRegion.end());
+      if (failed(rewriter.convertRegionTypes(&dstRegion, *converter)))
+        return rewriter.notifyMatchFailure(op, "could not convert body types");
+    }
+    rewriter.replaceOp(op, newOp.getResults());
+    return success();
+  }
+};
+} // namespace
+
+namespace {
+class ConvertConditionOpTypes : public OpConversionPattern<ConditionOp> {
+public:
+  using OpConversionPattern<ConditionOp>::OpConversionPattern;
+  LogicalResult
+  matchAndRewrite(ConditionOp op, ArrayRef<Value> operands,
+                  ConversionPatternRewriter &rewriter) const override {
+    rewriter.updateRootInPlace(op, [&]() { op->setOperands(operands); });
+    return success();
+  }
+};
+} // namespace
+
 void mlir::scf::populateSCFStructuralTypeConversionsAndLegality(
     TypeConverter &typeConverter, RewritePatternSet &patterns,
     ConversionTarget &target) {
-  patterns.add<ConvertForOpTypes, ConvertIfOpTypes, ConvertYieldOpTypes>(
+  patterns.add<ConvertForOpTypes, ConvertIfOpTypes, ConvertYieldOpTypes,
+               ConvertWhileOpTypes, ConvertConditionOpTypes>(
       typeConverter, patterns.getContext());
   target.addDynamicallyLegalOp<ForOp, IfOp>([&](Operation *op) {
     return typeConverter.isLegal(op->getResultTypes());
@@ -144,8 +187,10 @@ void mlir::scf::populateSCFStructuralTypeConversionsAndLegality(
   target.addDynamicallyLegalOp<scf::YieldOp>([&](scf::YieldOp op) {
     // We only have conversions for a subset of ops that use scf.yield
     // terminators.
-    if (!isa<ForOp, IfOp>(op->getParentOp()))
+    if (!isa<ForOp, IfOp, WhileOp>(op->getParentOp()))
       return true;
     return typeConverter.isLegal(op.getOperandTypes());
   });
+  target.addDynamicallyLegalOp<WhileOp, ConditionOp>(
+      [&](Operation *op) { return typeConverter.isLegal(op); });
 }

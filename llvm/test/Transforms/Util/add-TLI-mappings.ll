@@ -19,8 +19,8 @@ target triple = "x86_64-unknown-linux-gnu"
 ; SVML-SAME:          i8* bitcast (<8 x float> (<8 x float>)* @__svml_log10f8 to i8*),
 ; SVML-SAME:          i8* bitcast (<16 x float> (<16 x float>)* @__svml_log10f16 to i8*)
 ; MASSV-SAME:       [2 x i8*] [
-; MASSV-SAME:         i8* bitcast (<2 x double> (<2 x double>)* @__sind2_P8 to i8*),
-; MASSV-SAME:         i8* bitcast (<4 x float> (<4 x float>)* @__log10f4_P8 to i8*)
+; MASSV-SAME:         i8* bitcast (<2 x double> (<2 x double>)* @__sind2 to i8*),
+; MASSV-SAME:         i8* bitcast (<4 x float> (<4 x float>)* @__log10f4 to i8*)
 ; ACCELERATE-SAME:  [1 x i8*] [
 ; ACCELERATE-SAME:    i8* bitcast (<4 x float> (<4 x float>)* @vlog10f to i8*)
 ; LIBMVEC-X86-SAME: [2 x i8*] [
@@ -64,9 +64,9 @@ attributes #0 = { nounwind readnone }
 ; SVML-SAME:   _ZGV_LLVM_N8v_sin(__svml_sin8)" }
 
 ; MASSV:      attributes #[[SIN]] = { "vector-function-abi-variant"=
-; MASSV-SAME:   "_ZGV_LLVM_N2v_sin(__sind2_P8)" }
+; MASSV-SAME:   "_ZGV_LLVM_N2v_sin(__sind2)" }
 ; MASSV:      attributes #[[LOG10]] = { "vector-function-abi-variant"=
-; MASSV-SAME:   "_ZGV_LLVM_N4v_llvm.log10.f32(__log10f4_P8)" }
+; MASSV-SAME:   "_ZGV_LLVM_N4v_llvm.log10.f32(__log10f4)" }
 
 ; ACCELERATE:      attributes #[[LOG10]] = { "vector-function-abi-variant"=
 ; ACCELERATE-SAME:   "_ZGV_LLVM_N4v_llvm.log10.f32(vlog10f)" }

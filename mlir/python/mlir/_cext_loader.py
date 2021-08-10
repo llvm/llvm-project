@@ -3,28 +3,27 @@
 #  SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 """Common module for looking up and manipulating C-Extensions."""
 
-# Packaged installs have a top-level _mlir_libs package with symbols:
-#   load_extension(name): Loads a named extension module
-#   preload_dependency(public_name): Loads a shared-library/DLL into the
-#     namespace. TODO: Remove this in favor of a more robust mechanism.
-# Conditionally switch based on whether we are in a package context.
+# The normal layout is to have a nested _mlir_libs package that contains
+# all native libraries and extensions. If that exists, use it, but also fallback
+# to old behavior where extensions were at the top level as loose libraries.
+# TODO: Remove the fallback once downstreams adapt.
 try:
-  import _mlir_libs
+  from ._mlir_libs import *
+  # TODO: Remove these aliases once everything migrates
+  _preload_dependency = preload_dependency
+  _load_extension = load_extension
 except ModuleNotFoundError:
   # Assume that we are in-tree.
   # The _dlloader takes care of platform specific setup before we try to
   # load a shared library.
-  from ._dlloader import preload_dependency as _preload_dependency
+  # TODO: Remove _dlloader once all consolidated on the _mlir_libs approach.
+  from ._dlloader import preload_dependency
 
-  def _load_extension(name):
+  def load_extension(name):
     import importlib
     return importlib.import_module(name)  # i.e. '_mlir' at the top level
-else:
-  # Packaged distribution.
-  _load_extension = _mlir_libs.load_extension
-  _preload_dependency = _mlir_libs.preload_dependency
 
-_preload_dependency("MLIRPublicAPI")
+preload_dependency("MLIRPythonCAPI")
 
 # Expose the corresponding C-Extension module with a well-known name at this
 # top-level module. This allows relative imports like the following to
@@ -32,7 +31,7 @@ _preload_dependency("MLIRPublicAPI")
 #   from .._cext_loader import _cext
 # This reduces coupling, allowing embedding of the python sources into another
 # project that can just vary based on this top-level loader module.
-_cext = _load_extension("_mlir")
+_cext = load_extension("_mlir")
 
 
 def _reexport_cext(cext_module_name, target_module_name):

@@ -50,7 +50,7 @@ define i32 @test_srem_odd_bit30(i32 %X) nounwind {
 ; CHECK-NEXT:    movk w8, #27306, lsl #16
 ; CHECK-NEXT:    orr w9, wzr, #0x1
 ; CHECK-NEXT:    madd w8, w0, w8, w9
-; CHECK-NEXT:    cmp w8, #3 // =3
+; CHECK-NEXT:    cmp w8, #3
 ; CHECK-NEXT:    cset w0, lo
 ; CHECK-NEXT:    ret
   %srem = srem i32 %X, 1073741827
@@ -67,7 +67,7 @@ define i32 @test_srem_odd_bit31(i32 %X) nounwind {
 ; CHECK-NEXT:    movk w8, #54613, lsl #16
 ; CHECK-NEXT:    orr w9, wzr, #0x1
 ; CHECK-NEXT:    madd w8, w0, w8, w9
-; CHECK-NEXT:    cmp w8, #3 // =3
+; CHECK-NEXT:    cmp w8, #3
 ; CHECK-NEXT:    cset w0, lo
 ; CHECK-NEXT:    ret
   %srem = srem i32 %X, 2147483651
@@ -126,7 +126,7 @@ define i32 @test_srem_even_bit30(i32 %X) nounwind {
 ; CHECK-NEXT:    orr w9, wzr, #0x8
 ; CHECK-NEXT:    madd w8, w0, w8, w9
 ; CHECK-NEXT:    ror w8, w8, #3
-; CHECK-NEXT:    cmp w8, #3 // =3
+; CHECK-NEXT:    cmp w8, #3
 ; CHECK-NEXT:    cset w0, lo
 ; CHECK-NEXT:    ret
   %srem = srem i32 %X, 1073741928
@@ -144,7 +144,7 @@ define i32 @test_srem_even_bit31(i32 %X) nounwind {
 ; CHECK-NEXT:    orr w9, wzr, #0x2
 ; CHECK-NEXT:    madd w8, w0, w8, w9
 ; CHECK-NEXT:    ror w8, w8, #1
-; CHECK-NEXT:    cmp w8, #3 // =3
+; CHECK-NEXT:    cmp w8, #3
 ; CHECK-NEXT:    cset w0, lo
 ; CHECK-NEXT:    ret
   %srem = srem i32 %X, 2147483750
@@ -234,8 +234,8 @@ define i32 @test_srem_one(i32 %X) nounwind {
 define i32 @test_srem_pow2(i32 %X) nounwind {
 ; CHECK-LABEL: test_srem_pow2:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    add w8, w0, #15 // =15
-; CHECK-NEXT:    cmp w0, #0 // =0
+; CHECK-NEXT:    add w8, w0, #15
+; CHECK-NEXT:    cmp w0, #0
 ; CHECK-NEXT:    csel w8, w8, w0, lt
 ; CHECK-NEXT:    and w8, w8, #0xfffffff0
 ; CHECK-NEXT:    cmp w0, w8
@@ -253,7 +253,7 @@ define i32 @test_srem_int_min(i32 %X) nounwind {
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    mov w8, #2147483647
 ; CHECK-NEXT:    add w8, w0, w8
-; CHECK-NEXT:    cmp w0, #0 // =0
+; CHECK-NEXT:    cmp w0, #0
 ; CHECK-NEXT:    csel w8, w8, w0, lt
 ; CHECK-NEXT:    and w8, w8, #0x80000000
 ; CHECK-NEXT:    cmn w0, w8

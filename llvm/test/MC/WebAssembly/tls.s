@@ -2,15 +2,19 @@
 # RUN: llvm-mc -triple=wasm32-unknown-unknown -filetype=obj -o %t.o < %s
 # RUN: obj2yaml %t.o | FileCheck %s --check-prefix=CHECK-OBJ
 
+.globaltype __tls_base, i32
+
 tls_store:
   .functype tls_store (i32) -> ()
   # CHECK: global.get __tls_base
   # CHECK-NEXT: i32.const tls1@TLSREL
   # CHECK-NEXT: i32.add
+  # CHECK-NEXT: local.get 0
   # CHECK-NEXT: i32.store 0
   global.get __tls_base
   i32.const tls1@TLSREL
   i32.add
+  local.get 0
   i32.store 0
   end_function
 
@@ -28,7 +32,7 @@ tls2:
 
 #      CHECK-OBJ:  - Type:            CODE
 # CHECK-OBJ-NEXT:    Relocations:
-# CHECK-OBJ-NEXT:      - Type:            R_WASM_MEMORY_ADDR_LEB
+# CHECK-OBJ-NEXT:      - Type:            R_WASM_GLOBAL_INDEX_LEB
 # CHECK-OBJ-NEXT:        Index:           1
 # CHECK-OBJ-NEXT:        Offset:          0x4
 # CHECK-OBJ-NEXT:      - Type:            R_WASM_MEMORY_ADDR_TLS_SLEB
@@ -45,9 +49,10 @@ tls2:
 # CHECK-OBJ-NEXT:        Flags:           [ BINDING_LOCAL ]
 # CHECK-OBJ-NEXT:        Function:        0
 # CHECK-OBJ-NEXT:      - Index:           1
-# CHECK-OBJ-NEXT:        Kind:            DATA
+# CHECK-OBJ-NEXT:        Kind:            GLOBAL
 # CHECK-OBJ-NEXT:        Name:            __tls_base
 # CHECK-OBJ-NEXT:        Flags:           [ UNDEFINED ]
+# CHECK-OBJ-NEXT:        Global:          0
 # CHECK-OBJ-NEXT:      - Index:           2
 # CHECK-OBJ-NEXT:        Kind:            DATA
 # CHECK-OBJ-NEXT:        Name:            tls1

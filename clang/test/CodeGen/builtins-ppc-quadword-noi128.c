@@ -6,6 +6,9 @@
 // RUN: %clang_cc1 -O2 -target-feature +altivec -target-feature +power8-vector \
 // RUN:   -triple powerpc64-aix-unknown -emit-llvm %s -o - | FileCheck \
 // RUN:   %s -check-prefix=CHECK-AIX
+// RUN: %clang_cc1 -O2 -target-feature +altivec -target-feature +power8-vector \
+// RUN:   -triple powerpc-aix-unknown -emit-llvm %s -o - | FileCheck \
+// RUN:   %s -check-prefix=CHECK-AIX
 #include <altivec.h>
 // CHECK-LE-LABEL: @test_subc(
 // CHECK-LE-NEXT:  entry:

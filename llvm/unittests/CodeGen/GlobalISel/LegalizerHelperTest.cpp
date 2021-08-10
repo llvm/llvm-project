@@ -678,8 +678,8 @@ TEST_F(AArch64GISelMITest, WidenBitCountingCTTZ_ZERO_UNDEF) {
 
   auto CheckStr = R"(
   CHECK: [[Trunc:%[0-9]+]]:_(s8) = G_TRUNC
-  CHECK: [[Zext:%[0-9]+]]:_(s16) = G_ZEXT [[Trunc]]
-  CHECK: [[CttzZu:%[0-9]+]]:_(s16) = G_CTTZ_ZERO_UNDEF [[Zext]]
+  CHECK: [[AnyExt:%[0-9]+]]:_(s16) = G_ANYEXT [[Trunc]]
+  CHECK: [[CttzZu:%[0-9]+]]:_(s16) = G_CTTZ_ZERO_UNDEF [[AnyExt]]
   CHECK: [[Trunc:%[0-9]+]]:_(s8) = G_TRUNC [[CttzZu]]
   )";
 
@@ -711,10 +711,10 @@ TEST_F(AArch64GISelMITest, WidenBitCountingCTTZ) {
 
   auto CheckStr = R"(
   CHECK: [[Trunc:%[0-9]+]]:_(s8) = G_TRUNC
-  CHECK: [[Zext:%[0-9]+]]:_(s16) = G_ZEXT [[Trunc]]
+  CHECK: [[AnyExt:%[0-9]+]]:_(s16) = G_ANYEXT [[Trunc]]
   CHECK: [[Cst:%[0-9]+]]:_(s16) = G_CONSTANT i16 256
-  CHECK: [[Or:%[0-9]+]]:_(s16) = G_OR [[Zext]]:_, [[Cst]]
-  CHECK: [[Cttz:%[0-9]+]]:_(s16) = G_CTTZ [[Or]]
+  CHECK: [[Or:%[0-9]+]]:_(s16) = G_OR [[AnyExt]]:_, [[Cst]]
+  CHECK: [[Cttz:%[0-9]+]]:_(s16) = G_CTTZ_ZERO_UNDEF [[Or]]
   CHECK: [[Trunc:%[0-9]+]]:_(s8) = G_TRUNC [[Cttz]]
   )";
 
@@ -4001,6 +4001,53 @@ TEST_F(AArch64GISelMITest, widenScalarUnmerge) {
   CHECK: [[UNMERGE11:%[0-9]+]]:_(s16), [[UNMERGE12:%[0-9]+]]:_(s16), [[UNMERGE13:%[0-9]+]]:_(s16), [[UNMERGE14:%[0-9]+]]:_(s16) = G_UNMERGE_VALUES [[UNMERGE2]]
   CHECK: [[MERGE:%[0-9]+]]:_(s48) = G_MERGE_VALUES [[UNMERGE3]]:_(s16), [[UNMERGE4]]:_(s16), [[UNMERGE5]]:_(s16)
   CHECK: [[MERGE1:%[0-9]+]]:_(s48) = G_MERGE_VALUES [[UNMERGE6]]:_(s16), [[UNMERGE7]]:_(s16), [[UNMERGE8]]:_(s16)
+  )";
+
+  // Check
+  EXPECT_TRUE(CheckMachineFunction(*MF, CheckStr)) << *MF;
+}
+
+// Test moreElements of G_SHUFFLE_VECTOR.
+TEST_F(AArch64GISelMITest, moreElementsShuffle) {
+  setUp();
+  if (!TM)
+    return;
+
+  DefineLegalizerInfo(A, {});
+
+  LLT S64{LLT::scalar(64)};
+  LLT V6S64 = LLT::fixed_vector(6, S64);
+
+  auto V1 = B.buildBuildVector(V6S64, {Copies[0], Copies[1], Copies[0],
+                                       Copies[1], Copies[0], Copies[1]});
+  auto V2 = B.buildBuildVector(V6S64, {Copies[0], Copies[1], Copies[0],
+                                       Copies[1], Copies[0], Copies[1]});
+  auto Shuffle = B.buildShuffleVector(V6S64, V1, V2, {3, 4, 7, 0, 1, 11});
+
+  AInfo Info(MF->getSubtarget());
+  DummyGISelObserver Observer;
+  LegalizerHelper Helper(*MF, Info, Observer, B);
+
+  // Perform Legalization
+  B.setInsertPt(*EntryMBB, Shuffle->getIterator());
+
+  EXPECT_EQ(LegalizerHelper::LegalizeResult::Legalized,
+            Helper.moreElementsVector(*Shuffle, 0, LLT::fixed_vector(8, S64)));
+
+  const auto *CheckStr = R"(
+  CHECK: [[COPY0:%[0-9]+]]:_(s64) = COPY
+  CHECK: [[COPY1:%[0-9]+]]:_(s64) = COPY
+  CHECK: [[COPY2:%[0-9]+]]:_(s64) = COPY
+  CHECK: [[BV1:%[0-9]+]]:_(<6 x s64>) = G_BUILD_VECTOR
+  CHECK: [[BV2:%[0-9]+]]:_(<6 x s64>) = G_BUILD_VECTOR
+  CHECK: [[IMPDEF1:%[0-9]+]]:_(<8 x s64>) = G_IMPLICIT_DEF
+  CHECK: [[INSERT1:%[0-9]+]]:_(<8 x s64>) = G_INSERT [[IMPDEF1]]:_, [[BV1]]:_(<6 x s64>), 0
+  CHECK: [[IMPDEF2:%[0-9]+]]:_(<8 x s64>) = G_IMPLICIT_DEF
+  CHECK: [[INSERT2:%[0-9]+]]:_(<8 x s64>) = G_INSERT [[IMPDEF2]]:_, [[BV2]]:_(<6 x s64>), 0
+  CHECK: [[SHUF:%[0-9]+]]:_(<8 x s64>) = G_SHUFFLE_VECTOR [[INSERT1]]:_(<8 x s64>), [[INSERT2]]:_, shufflemask(3, 4, 9, 0, 1, 13, undef, undef)
+  CHECK: [[IMPDEF3:%[0-9]+]]:_(<8 x s64>) = G_IMPLICIT_DEF
+  CHECK: [[CONCAT:%[0-9]+]]:_(<24 x s64>) = G_CONCAT_VECTORS [[SHUF]]:_(<8 x s64>), [[IMPDEF3]]:_(<8 x s64>), [[IMPDEF3]]:_(<8 x s64>)
+  CHECK: [[UNMERGE:%[0-9]+]]:_(<6 x s64>), [[UNMERGE2:%[0-9]+]]:_(<6 x s64>), [[UNMERGE3:%[0-9]+]]:_(<6 x s64>), [[UNMERGE4:%[0-9]+]]:_(<6 x s64>) = G_UNMERGE_VALUES [[CONCAT]]:_(<24 x s64>)
   )";
 
   // Check

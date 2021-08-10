@@ -1369,7 +1369,8 @@ TEST_F(AArch64GISelMITest, TestKnownBitsBSwapBitReverse) {
   if (!TM)
     return;
 
-  const uint32_t TestVal = 0x11223344;
+  const uint32_t ByteSwappedVal = 0x44332211;
+  const uint32_t BitSwappedVal = 0x22cc4488;
 
   Register CopyBSwap = Copies[Copies.size() - 2];
   Register CopyBitReverse = Copies[Copies.size() - 1];
@@ -1378,13 +1379,13 @@ TEST_F(AArch64GISelMITest, TestKnownBitsBSwapBitReverse) {
 
   KnownBits BSwapKnown = Info.getKnownBits(CopyBSwap);
   EXPECT_EQ(32u, BSwapKnown.getBitWidth());
-  EXPECT_EQ(TestVal, BSwapKnown.One.getZExtValue());
-  EXPECT_EQ(~TestVal, BSwapKnown.Zero.getZExtValue());
+  EXPECT_EQ(ByteSwappedVal, BSwapKnown.One.getZExtValue());
+  EXPECT_EQ(~ByteSwappedVal, BSwapKnown.Zero.getZExtValue());
 
   KnownBits BitReverseKnown = Info.getKnownBits(CopyBitReverse);
   EXPECT_EQ(32u, BitReverseKnown.getBitWidth());
-  EXPECT_EQ(TestVal, BitReverseKnown.One.getZExtValue());
-  EXPECT_EQ(~TestVal, BitReverseKnown.Zero.getZExtValue());
+  EXPECT_EQ(BitSwappedVal, BitReverseKnown.One.getZExtValue());
+  EXPECT_EQ(~BitSwappedVal, BitReverseKnown.Zero.getZExtValue());
 }
 
 TEST_F(AArch64GISelMITest, TestKnownBitsUMAX) {
@@ -1669,6 +1670,64 @@ TEST_F(AArch64GISelMITest, TestKnownBitsAssertZext) {
   EXPECT_EQ(64u, Res.getBitWidth());
   EXPECT_EQ(0u, Res.One.getZExtValue());
   EXPECT_EQ(0xFFFFFFFFFFFFFFF8u, Res.Zero.getZExtValue());
+}
+
+TEST_F(AArch64GISelMITest, TestKnownBitsCTPOP) {
+  StringRef MIRString = R"(
+   %src:_(s32) = COPY $w0
+   %unknown:_(s32) = G_CTPOP %src
+   %unknown_copy:_(s32) = COPY %unknown
+   %constant_4294967295:_(s32) = G_CONSTANT i32 4294967295
+   %thirtytwo:_(s32) = G_CTPOP %constant_4294967295
+   %thirtytwo_copy:_(s32) = COPY %thirtytwo
+   %constant_15:_(s32) = G_CONSTANT i32 15
+   %four:_(s32) = G_CTPOP %constant_15
+   %four_copy:_(s32) = COPY %four
+   %constant_1:_(s32) = G_CONSTANT i32 1
+   %one:_(s32) = G_CTPOP %constant_1
+   %one_copy:_(s32) = COPY %one
+)";
+  setUp(MIRString);
+  if (!TM)
+    return;
+
+  Register UnknownCopy = Copies[Copies.size() - 4];
+  Register ThirtytwoCopy = Copies[Copies.size() - 3];
+  Register FourCopy = Copies[Copies.size() - 2];
+  Register OneCopy = Copies[Copies.size() - 1];
+
+  GISelKnownBits Info(*MF);
+  MachineInstr *Copy;
+  Register SrcReg;
+  KnownBits Res;
+
+  Copy = MRI->getVRegDef(UnknownCopy);
+  SrcReg = Copy->getOperand(1).getReg();
+  Res = Info.getKnownBits(SrcReg);
+  EXPECT_EQ(32u, Res.getBitWidth());
+  EXPECT_EQ(0u, Res.One.getZExtValue());
+  EXPECT_EQ(0xFFFFFFC0u, Res.Zero.getZExtValue());
+
+  Copy = MRI->getVRegDef(ThirtytwoCopy);
+  SrcReg = Copy->getOperand(1).getReg();
+  Res = Info.getKnownBits(SrcReg);
+  EXPECT_EQ(32u, Res.getBitWidth());
+  EXPECT_EQ(0u, Res.One.getZExtValue());
+  EXPECT_EQ(0xFFFFFFC0u, Res.Zero.getZExtValue());
+
+  Copy = MRI->getVRegDef(FourCopy);
+  SrcReg = Copy->getOperand(1).getReg();
+  Res = Info.getKnownBits(SrcReg);
+  EXPECT_EQ(32u, Res.getBitWidth());
+  EXPECT_EQ(0u, Res.One.getZExtValue());
+  EXPECT_EQ(0xFFFFFFF8u, Res.Zero.getZExtValue());
+
+  Copy = MRI->getVRegDef(OneCopy);
+  SrcReg = Copy->getOperand(1).getReg();
+  Res = Info.getKnownBits(SrcReg);
+  EXPECT_EQ(32u, Res.getBitWidth());
+  EXPECT_EQ(0u, Res.One.getZExtValue());
+  EXPECT_EQ(0xFFFFFFFEu, Res.Zero.getZExtValue());
 }
 
 TEST_F(AMDGPUGISelMITest, TestKnownBitsUBFX) {

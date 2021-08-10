@@ -4,6 +4,8 @@
 ; RUN: llvm-readobj %t.utf8.res | FileCheck %s --check-prefix=UTF8
 ; RUN: llvm-windres --no-preprocess --codepage 65001 %p/Inputs/utf8.rc %t.utf8.res
 ; RUN: llvm-readobj %t.utf8.res | FileCheck %s --check-prefix=UTF8
+; RUN: llvm-windres --no-preprocess --codepage 0xfde9 %p/Inputs/utf8.rc %t.utf8.res
+; RUN: llvm-readobj %t.utf8.res | FileCheck %s --check-prefix=UTF8
 
 ; UTF8:      Resource type (int): STRINGTABLE (ID 6)
 ; UTF8-NEXT: Resource name (int): 1

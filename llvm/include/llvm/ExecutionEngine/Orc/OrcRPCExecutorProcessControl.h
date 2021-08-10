@@ -13,6 +13,7 @@
 #ifndef LLVM_EXECUTIONENGINE_ORC_ORCRPCEXECUTORPROCESSCONTROL_H
 #define LLVM_EXECUTIONENGINE_ORC_ORCRPCEXECUTORPROCESSCONTROL_H
 
+#include "llvm/ExecutionEngine/Orc/Core.h"
 #include "llvm/ExecutionEngine/Orc/ExecutorProcessControl.h"
 #include "llvm/ExecutionEngine/Orc/Shared/RPCUtils.h"
 #include "llvm/ExecutionEngine/Orc/Shared/RawByteChannel.h"
@@ -283,7 +284,11 @@ public:
   OrcRPCExecutorProcessControlBase(std::shared_ptr<SymbolStringPool> SSP,
                                    RPCEndpointT &EP, ErrorReporter ReportError)
       : ExecutorProcessControl(std::move(SSP)),
-        ReportError(std::move(ReportError)), EP(EP) {}
+        ReportError(std::move(ReportError)), EP(EP) {
+    using ThisT = OrcRPCExecutorProcessControlBase<RPCEndpointT>;
+    EP.template addAsyncHandler<orcrpctpc::RunWrapper>(*this,
+                                                       &ThisT::runWrapperInJIT);
+  }
 
   void reportError(Error Err) { ReportError(std::move(Err)); }
 
@@ -354,9 +359,9 @@ public:
     return Result;
   }
 
-  void runWrapperAsync(SendResultFunction OnComplete,
-                       JITTargetAddress WrapperFnAddr,
-                       ArrayRef<char> ArgBuffer) override {
+  void callWrapperAsync(SendResultFunction OnComplete,
+                        JITTargetAddress WrapperFnAddr,
+                        ArrayRef<char> ArgBuffer) override {
     DEBUG_WITH_TYPE("orc", {
       dbgs() << "Running as wrapper function "
              << formatv("{0:x16}", WrapperFnAddr) << " with "
@@ -396,20 +401,32 @@ protected:
   /// Subclasses must call this during construction to initialize the
   /// TargetTriple and PageSize members.
   Error initializeORCRPCEPCBase() {
-    if (auto TripleOrErr = EP.template callB<orcrpctpc::GetTargetTriple>())
-      TargetTriple = Triple(*TripleOrErr);
-    else
-      return TripleOrErr.takeError();
-
-    if (auto PageSizeOrErr = EP.template callB<orcrpctpc::GetPageSize>())
-      PageSize = *PageSizeOrErr;
-    else
-      return PageSizeOrErr.takeError();
-
-    return Error::success();
+    if (auto EPI = EP.template callB<orcrpctpc::GetExecutorProcessInfo>()) {
+      this->TargetTriple = Triple(EPI->Triple);
+      this->PageSize = PageSize;
+      this->JDI = {ExecutorAddress(EPI->DispatchFuncAddr),
+                   ExecutorAddress(EPI->DispatchCtxAddr)};
+      return Error::success();
+    } else
+      return EPI.takeError();
   }
 
 private:
+  Error runWrapperInJIT(
+      std::function<Error(Expected<shared::WrapperFunctionResult>)> SendResult,
+      JITTargetAddress FunctionTag, std::vector<uint8_t> ArgBuffer) {
+
+    getExecutionSession().runJITDispatchHandler(
+        [this, SendResult = std::move(SendResult)](
+            Expected<shared::WrapperFunctionResult> R) {
+          if (auto Err = SendResult(std::move(R)))
+            ReportError(std::move(Err));
+        },
+        FunctionTag,
+        {reinterpret_cast<const char *>(ArgBuffer.data()), ArgBuffer.size()});
+    return Error::success();
+  }
+
   ErrorReporter ReportError;
   RPCEndpointT &EP;
 };

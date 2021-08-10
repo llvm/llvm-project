@@ -133,9 +133,9 @@ public:
     ReadBufferAndDumpToStreamOptions(
         const ReadStringAndDumpToStreamOptions &options);
 
-    void SetData(DataExtractor d) { m_data = d; }
+    void SetData(DataExtractor &&d) { m_data = std::move(d); }
 
-    lldb_private::DataExtractor GetData() const { return m_data; }
+    const lldb_private::DataExtractor &GetData() const { return m_data; }
 
     void SetIsTruncated(bool t) { m_is_truncated = t; }
 

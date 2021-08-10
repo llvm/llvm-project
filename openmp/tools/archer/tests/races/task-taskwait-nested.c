@@ -1,3 +1,4 @@
+// REQUIRES: garbage
 /*
  * task-taskwait-nested.c -- Archer testcase
  */
@@ -21,7 +22,7 @@
 int main(int argc, char *argv[]) {
   int var = 0, a = 0;
 
-#pragma omp parallel num_threads(2) shared(var, a)
+#pragma omp parallel num_threads(8) shared(var, a)
 #pragma omp master
   {
 #pragma omp task shared(var, a)

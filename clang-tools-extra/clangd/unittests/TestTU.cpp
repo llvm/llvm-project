@@ -7,6 +7,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "TestTU.h"
+#include "CompileCommands.h"
 #include "Compiler.h"
 #include "Diagnostics.h"
 #include "TestFS.h"
@@ -56,6 +57,9 @@ ParseInputs TestTU::inputs(MockFS &FS) const {
   // Put the file name at the end -- this allows the extra arg (-xc++) to
   // override the language setting.
   Argv.push_back(FullFilename);
+
+  auto Mangler = CommandMangler::forTests();
+  Mangler.adjust(Inputs.CompileCommand.CommandLine, FullFilename);
   Inputs.CompileCommand.Filename = FullFilename;
   Inputs.CompileCommand.Directory = testRoot();
   Inputs.Contents = Code;

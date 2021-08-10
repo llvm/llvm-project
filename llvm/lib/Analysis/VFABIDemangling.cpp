@@ -454,7 +454,7 @@ Optional<VFInfo> VFABI::tryDemangleForVFABI(StringRef MangledName,
   if (!M.getFunction(VectorName))
     return None;
 
-  const VFShape Shape({VF, IsScalable, Parameters});
+  const VFShape Shape({ElementCount::get(VF, IsScalable), Parameters});
   return VFInfo({Shape, std::string(ScalarName), std::string(VectorName), ISA});
 }
 

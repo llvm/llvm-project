@@ -121,7 +121,7 @@ public:
     llvm_unreachable("Unsupported register kind");
   }
 
-  unsigned getMinVectorRegisterBitWidth() {
+  unsigned getMinVectorRegisterBitWidth() const {
     return ST->getMinVectorRegisterBitWidth();
   }
 
@@ -129,6 +129,18 @@ public:
     if (ST->hasSVE())
       return AArch64::SVEMaxBitsPerVector / AArch64::SVEBitsPerBlock;
     return BaseT::getMaxVScale();
+  }
+
+  /// Try to return an estimate cost factor that can be used as a multiplier
+  /// when scalarizing an operation for a vector with ElementCount \p VF.
+  /// For scalable vectors this currently takes the most pessimistic view based
+  /// upon the maximum possible value for vscale.
+  unsigned getMaxNumElements(ElementCount VF) const {
+    if (!VF.isScalable())
+      return VF.getFixedValue();
+    Optional<unsigned> MaxNumVScale = getMaxVScale();
+    assert(MaxNumVScale && "Expected valid max vscale value");
+    return *MaxNumVScale * VF.getKnownMinValue();
   }
 
   unsigned getMaxInterleaveFactor(unsigned VF);
@@ -197,7 +209,8 @@ public:
   InstructionCost getCostOfKeepingLiveOverCall(ArrayRef<Type *> Tys);
 
   void getUnrollingPreferences(Loop *L, ScalarEvolution &SE,
-                               TTI::UnrollingPreferences &UP);
+                               TTI::UnrollingPreferences &UP,
+                               OptimizationRemarkEmitter *ORE);
 
   void getPeelingPreferences(Loop *L, ScalarEvolution &SE,
                              TTI::PeelingPreferences &PP);
@@ -305,7 +318,7 @@ public:
                                    ElementCount VF) const;
 
   InstructionCost getArithmeticReductionCost(
-      unsigned Opcode, VectorType *Ty,
+      unsigned Opcode, VectorType *Ty, Optional<FastMathFlags> FMF,
       TTI::TargetCostKind CostKind = TTI::TCK_RecipThroughput);
 
   InstructionCost getShuffleCost(TTI::ShuffleKind Kind, VectorType *Tp,

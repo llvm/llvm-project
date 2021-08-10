@@ -1,4 +1,4 @@
-//===- Utils.cpp - Utilities to support the MemRef dialect ----------------===//
+//===- MemRefUtils.cpp - Utilities to support the MemRef dialect ----------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -15,21 +15,27 @@
 
 using namespace mlir;
 
-/// Finds associated deallocs that can be linked to our allocation nodes (if
-/// any).
-Operation *mlir::findDealloc(Value allocValue) {
-  auto userIt = llvm::find_if(allocValue.getUsers(), [&](Operation *user) {
+/// Finds a single dealloc operation for the given allocated value.
+llvm::Optional<Operation *> mlir::findDealloc(Value allocValue) {
+  Operation *dealloc = nullptr;
+  for (Operation *user : allocValue.getUsers()) {
     auto effectInterface = dyn_cast<MemoryEffectOpInterface>(user);
     if (!effectInterface)
-      return false;
+      continue;
     // Try to find a free effect that is applied to one of our values
     // that will be automatically freed by our pass.
     SmallVector<MemoryEffects::EffectInstance, 2> effects;
     effectInterface.getEffectsOnValue(allocValue, effects);
-    return llvm::any_of(effects, [&](MemoryEffects::EffectInstance &it) {
-      return isa<MemoryEffects::Free>(it.getEffect());
-    });
-  });
-  // Assign the associated dealloc operation (if any).
-  return userIt != allocValue.user_end() ? *userIt : nullptr;
+    const bool isFree =
+        llvm::any_of(effects, [&](MemoryEffects::EffectInstance &it) {
+          return isa<MemoryEffects::Free>(it.getEffect());
+        });
+    if (!isFree)
+      continue;
+    // If we found > 1 dealloc, return None.
+    if (dealloc)
+      return llvm::None;
+    dealloc = user;
+  }
+  return dealloc;
 }

@@ -4,6 +4,9 @@
 // RUN: %clang_cc1 %s -ffake-address-space-map -verify -pedantic -fsyntax-only -DCONSTANT -cl-std=clc++
 // RUN: %clang_cc1 %s -ffake-address-space-map -verify -pedantic -fsyntax-only -DGLOBAL -cl-std=clc++
 // RUN: %clang_cc1 %s -ffake-address-space-map -verify -pedantic -fsyntax-only -DGENERIC -cl-std=clc++
+// RUN: %clang_cc1 %s -ffake-address-space-map -verify -pedantic -fsyntax-only -DCONSTANT -cl-std=CL3.0 -cl-ext=+__opencl_c_generic_address_space
+// RUN: %clang_cc1 %s -ffake-address-space-map -verify -pedantic -fsyntax-only -DGLOBAL -cl-std=CL3.0 -cl-ext=+__opencl_c_generic_address_space
+// RUN: %clang_cc1 %s -ffake-address-space-map -verify -pedantic -fsyntax-only -DGENERIC -cl-std=CL3.0 -cl-ext=+__opencl_c_generic_address_space
 
 /* OpenCLC v2.0 adds a set of restrictions for conversions between pointers to
 *  different address spaces, mainly described in Sections 6.5.5 and 6.5.6.
@@ -17,6 +20,8 @@
 *  case), and __constant, that should cover all program paths for CL address
 *  space conversions used in initialisations, assignments, casts, comparisons
 *  and arithmetic operations.
+*
+*  OpenCLC v3.0 supports generic address if __opencl_c_generic_address_space feature is supported
 */
 
 #ifdef GENERIC

@@ -296,7 +296,7 @@ TEST(FileSystemTest, OpenErrno) {
   FileSpec spec("/file/that/does/not/exist.txt");
 #endif
   FileSystem fs;
-  auto file = fs.Open(spec, File::eOpenOptionRead, 0, true);
+  auto file = fs.Open(spec, File::eOpenOptionReadOnly, 0, true);
   ASSERT_FALSE(file);
   std::error_code code = errorToErrorCode(file.takeError());
   EXPECT_EQ(code.category(), std::system_category());

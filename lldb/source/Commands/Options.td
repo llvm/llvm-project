@@ -73,7 +73,7 @@ let Command = "breakpoint modify" in {
     "index matches this argument.">;
   def breakpoint_modify_thread_id : Option<"thread-id", "t">, Group<1>,
     Arg<"ThreadID">, Desc<"The breakpoint stops only for the thread whose TID "
-    "matches this argument.">;
+    "matches this argument.  The token 'current' resolves to the current thread's ID.">;
   def breakpoint_modify_thread_name : Option<"thread-name", "T">, Group<1>,
     Arg<"ThreadName">, Desc<"The breakpoint stops only for the thread whose "
     "thread name matches this argument.">;
@@ -502,6 +502,14 @@ let Command = "memory write" in {
     Required, Desc<"Write memory using the contents of a file.">;
   def memory_write_offset : Option<"offset", "o">, Group<1>, Arg<"Offset">,
     Desc<"Start writing bytes from an offset within the input file.">;
+}
+
+let Command = "memory tag write" in {
+  def memory_write_end_addr : Option<"end-addr", "e">, Group<1>,
+  Arg<"AddressOrExpression">, Desc<
+    "Set tags for start address to end-addr, repeating tags as needed"
+    " to cover the range. (instead of calculating the range from the"
+    " number of tags given)">;
 }
 
 let Command = "register read" in {
@@ -1049,16 +1057,30 @@ let Command = "thread plan list" in {
 }
 
 let Command = "thread trace dump instructions" in {
+  def thread_trace_dump_instructions_forwards: Option<"forwards", "f">, Group<1>,
+    Desc<"If specified, the trace is traversed forwards chronologically "
+    "starting at the oldest instruction. Otherwise, it starts at the most "
+    "recent one and the traversal is backwards.">;
   def thread_trace_dump_instructions_count : Option<"count", "c">, Group<1>,
     Arg<"Count">,
-    Desc<"The number of instructions to display ending at the current position.">;
-  def thread_trace_dump_instructions_position : Option<"position", "p">,
+    Desc<"The number of instructions to display starting at the most recent "
+    "instruction, or the oldest if --forwards is provided.">;
+  def thread_trace_dump_instructions_skip: Option<"skip", "s">,
     Group<1>,
     Arg<"Index">,
-    Desc<"The position to use instead of the current position of the trace.">;
+    Desc<"How many instruction to skip from the end of the trace to start "
+    "dumping instructions, or from the beginning if --forwards is provided">;
   def thread_trace_dump_instructions_raw : Option<"raw", "r">,
     Group<1>,
     Desc<"Dump only instruction address without disassembly nor symbol information.">;
+  def thread_trace_dump_instructions_show_tsc : Option<"tsc", "t">,
+    Group<1>,
+    Desc<"For each instruction, print the corresponding timestamp counter if available.">;
+}
+
+let Command = "thread trace dump info" in {
+  def thread_trace_dump_info_verbose : Option<"verbose", "v">, Group<1>,
+    Desc<"show verbose thread trace dump info">;
 }
 
 let Command = "type summary add" in {

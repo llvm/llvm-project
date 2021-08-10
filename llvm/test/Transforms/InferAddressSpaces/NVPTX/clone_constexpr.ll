@@ -31,6 +31,51 @@ declare void @f1(i32*, i32) local_unnamed_addr #0
 declare void @f2(i64*, i64) local_unnamed_addr #0
 declare i32 @llvm.nvvm.read.ptx.sreg.tid.x() #1
 
+; Make sure we can clone GEP which uses complex constant expressions as indices.
+; https://bugs.llvm.org/show_bug.cgi?id=51099
+@g2 = internal addrspace(3) global [128 x i8] undef, align 1
+
+; CHECK-LABEL: @complex_ce(
+; CHECK: %0 = load float, float addrspace(3)* bitcast
+; CHECK-SAME:   i8 addrspace(3)* getelementptr (i8,
+; CHECK-SAME:     i8 addrspace(3)* getelementptr inbounds ([128 x i8], [128 x i8] addrspace(3)* @g2, i64 0, i64 0),
+; CHECK-SAME:     i64 sub (
+; CHECK-SAME        i64 ptrtoint (
+; CHECK-SAME          i8 addrspace(3)* getelementptr inbounds ([128 x i8], [128 x i8] addrspace(3)* @g2, i64 0, i64 123) to i64),
+; CHECK-SAME:       i64 ptrtoint (
+; CHECK-SAME:         i8 addrspace(3)* getelementptr inbounds ([128 x i8], [128 x i8] addrspace(3)* @g2, i64 2, i64 0) to i64)))
+; CHECK-SAME:   to float addrspace(3)*)
+; Function Attrs: norecurse nounwind
+define float @complex_ce(i8* nocapture readnone %a, i8* nocapture readnone %b, i8* nocapture readnone %c) local_unnamed_addr #0 {
+entry:
+  %0 = load float, float* bitcast (
+       i8* getelementptr (
+         i8, i8* getelementptr inbounds (
+           [128 x i8],
+           [128 x i8]* addrspacecast ([128 x i8] addrspace(3)* @g2 to [128 x i8]*),
+           i64 0,
+           i64 0),
+         i64 sub (
+           i64 ptrtoint (
+             i8* getelementptr inbounds (
+               [128 x i8],
+               [128 x i8]* addrspacecast ([128 x i8] addrspace(3)* @g2 to [128 x i8]*),
+               i64 0,
+               i64 123)
+             to i64),
+           i64 ptrtoint (
+             i8* getelementptr inbounds (
+               [128 x i8],
+               [128 x i8]* addrspacecast ([128 x i8] addrspace(3)* @g2 to [128 x i8]*),
+               i64 2,
+               i64 0)
+             to i64)))
+        to float*), align 4
+  ret float %0
+}
+
+
+
 attributes #0 = { convergent nounwind }
 attributes #1 = { nounwind readnone }
 attributes #2 = { nounwind }

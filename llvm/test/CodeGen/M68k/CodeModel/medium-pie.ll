@@ -41,14 +41,14 @@ define void @bar() {
 ; CHECK-LABEL: bar:
 ; CHECK:         .cfi_startproc
 ; CHECK-NEXT:  ; %bb.0: ; %entry
-; CHECK-NEXT:    sub.l #4, %sp
+; CHECK-NEXT:    suba.l #4, %sp
 ; CHECK-NEXT:    .cfi_def_cfa_offset -8
 ; CHECK-NEXT:    jsr (foo@PLT,%pc)
 ; CHECK-NEXT:    jsr (weak_odr_foo@PLT,%pc)
 ; CHECK-NEXT:    jsr (weak_foo@PLT,%pc)
 ; CHECK-NEXT:    jsr (internal_foo,%pc)
 ; CHECK-NEXT:    jsr (ext_baz@PLT,%pc)
-; CHECK-NEXT:    add.l #4, %sp
+; CHECK-NEXT:    adda.l #4, %sp
 ; CHECK-NEXT:    rts
 entry:
   call void @foo()

@@ -4346,7 +4346,7 @@ Sema::TemplateDeductionResult Sema::DeduceTemplateArguments(
     HasDeducedReturnType = true;
   }
 
-  if (!ArgFunctionType.isNull()) {
+  if (!ArgFunctionType.isNull() && !FunctionType.isNull()) {
     unsigned TDF =
         TDF_TopLevelParameterTypeList | TDF_AllowCompatibleFunctionType;
     // Deduce template arguments from the function type.

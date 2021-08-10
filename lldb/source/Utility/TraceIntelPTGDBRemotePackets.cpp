@@ -17,6 +17,8 @@ bool fromJSON(const json::Value &value, TraceIntelPTStartRequest &packet,
               Path path) {
   ObjectMapper o(value, path);
   if (!o || !fromJSON(value, (TraceStartRequest &)packet, path) ||
+      !o.map("enableTsc", packet.enableTsc) ||
+      !o.map("psbPeriod", packet.psbPeriod) ||
       !o.map("threadBufferSize", packet.threadBufferSize) ||
       !o.map("processBufferSizeLimit", packet.processBufferSizeLimit))
     return false;
@@ -36,6 +38,8 @@ json::Value toJSON(const TraceIntelPTStartRequest &packet) {
   base.getAsObject()->try_emplace("threadBufferSize", packet.threadBufferSize);
   base.getAsObject()->try_emplace("processBufferSizeLimit",
                                   packet.processBufferSizeLimit);
+  base.getAsObject()->try_emplace("psbPeriod", packet.psbPeriod);
+  base.getAsObject()->try_emplace("enableTsc", packet.enableTsc);
   return base;
 }
 

@@ -1107,10 +1107,12 @@ bool IsSaved(const Symbol &original) {
     return false; // ASSOCIATE(non-variable)
   } else if (scopeKind == Scope::Kind::Module) {
     return true; // BLOCK DATA entities must all be in COMMON, handled below
-  } else if (symbol.attrs().test(Attr::SAVE)) {
-    return true;
   } else if (scopeKind == Scope::Kind::DerivedType) {
     return false; // this is a component
+  } else if (symbol.attrs().test(Attr::SAVE)) {
+    return true;
+  } else if (symbol.test(Symbol::Flag::InDataStmt)) {
+    return true;
   } else if (IsNamedConstant(symbol)) {
     return false;
   } else if (const auto *object{symbol.detailsIf<ObjectEntityDetails>()};
@@ -1134,6 +1136,7 @@ bool IsDummy(const Symbol &symbol) {
       common::visitors{[](const EntityDetails &x) { return x.isDummy(); },
           [](const ObjectEntityDetails &x) { return x.isDummy(); },
           [](const ProcEntityDetails &x) { return x.isDummy(); },
+          [](const SubprogramDetails &x) { return x.isDummy(); },
           [](const auto &) { return false; }},
       ResolveAssociations(symbol).details());
 }

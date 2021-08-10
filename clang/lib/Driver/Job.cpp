@@ -7,10 +7,10 @@
 //===----------------------------------------------------------------------===//
 
 #include "clang/Driver/Job.h"
-#include "InputInfo.h"
 #include "clang/Basic/LLVM.h"
 #include "clang/Driver/Driver.h"
 #include "clang/Driver/DriverDiagnostic.h"
+#include "clang/Driver/InputInfo.h"
 #include "clang/Driver/Tool.h"
 #include "clang/Driver/ToolChain.h"
 #include "llvm/ADT/ArrayRef.h"
@@ -42,9 +42,10 @@ Command::Command(const Action &Source, const Tool &Creator,
     : Source(Source), Creator(Creator), ResponseSupport(ResponseSupport),
       Executable(Executable), Arguments(Arguments) {
   for (const auto &II : Inputs) {
-    if (II.isFilename())
-      InputFilenames.push_back(II.getFilename());
-    DependentActions.push_back(II.getAction());
+    if (II.isFilename()) {
+      InputInfoList.push_back(II);
+      DependentActions.push_back(II.getAction());
+    }
   }
   for (const auto &II : Outputs)
     if (II.isFilename())
@@ -239,9 +240,10 @@ void Command::Print(raw_ostream &OS, const char *Terminator, bool Quote,
         }
       }
 
-      auto Found = llvm::find_if(InputFilenames,
-                                 [&Arg](StringRef IF) { return IF == Arg; });
-      if (Found != InputFilenames.end() &&
+      auto Found = llvm::find_if(InputInfoList, [&Arg](const InputInfo &II) {
+        return II.getFilename() == Arg;
+      });
+      if (Found != InputInfoList.end() &&
           (i == 0 || StringRef(Args[i - 1]) != "-main-file-name")) {
         // Replace the input file name with the crashinfo's file name.
         OS << ' ';
@@ -304,8 +306,8 @@ void Command::setEnvironment(llvm::ArrayRef<const char *> NewEnvironment) {
 
 void Command::PrintFileNames() const {
   if (PrintInputFilenames) {
-    for (const char *Arg : InputFilenames)
-      llvm::outs() << llvm::sys::path::filename(Arg) << "\n";
+    for (const auto &Arg : InputInfoList)
+      llvm::outs() << llvm::sys::path::filename(Arg.getFilename()) << "\n";
     llvm::outs().flush();
   }
 }

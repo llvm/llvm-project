@@ -9,6 +9,7 @@
 // UNSUPPORTED: c++03, c++11, c++14, c++17
 // UNSUPPORTED: libcpp-no-concepts
 // UNSUPPORTED: gcc-10
+// UNSUPPORTED: libcpp-has-no-incomplete-ranges
 
 // std::ranges::size
 
@@ -29,6 +30,10 @@ static_assert(std::semiregular<std::remove_cv_t<RangeSizeT>>);
 
 struct SizeMember {
   constexpr size_t size() { return 42; }
+};
+
+struct StaticSizeMember {
+  constexpr static size_t size() { return 42; }
 };
 
 static_assert(!std::is_invocable_v<RangeSizeT, const SizeMember>);
@@ -80,6 +85,9 @@ bool constexpr testHasSizeMember() {
 
   assert(std::ranges::size(SizeMemberSigned()) == 42);
   ASSERT_SAME_TYPE(decltype(std::ranges::size(SizeMemberSigned())), long);
+
+  assert(std::ranges::size(StaticSizeMember()) == 42);
+  ASSERT_SAME_TYPE(decltype(std::ranges::size(StaticSizeMember())), size_t);
 
   return true;
 }

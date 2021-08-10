@@ -31,7 +31,8 @@ namespace __asan {
 // AsanInitInternal->InitializeHighMemEnd (asan_rtl.cpp).
 // Just do some additional sanity checks here.
 void InitializeShadowMemory() {
-  if (Verbosity()) PrintAddressSpaceLayout();
+  if (Verbosity())
+    PrintAddressSpaceLayout();
 
   // Make sure SHADOW_OFFSET doesn't use __asan_shadow_memory_dynamic_address.
   __asan_shadow_memory_dynamic_address = kDefaultShadowSentinel;
@@ -62,7 +63,34 @@ void AsanOnDeadlySignal(int signo, void *siginfo, void *context) {
   UNIMPLEMENTED();
 }
 
-bool PlatformUnpoisonStacks() { return false; }
+bool PlatformUnpoisonStacks() {
+  // The current sp might not point to the default stack. This
+  // could be because we are in a crash stack from fuzzing for example.
+  // Unpoison the default stack and the current stack page.
+  AsanThread *curr_thread = GetCurrentThread();
+  CHECK(curr_thread != nullptr);
+  uptr top = curr_thread->stack_top();
+  uptr bottom = curr_thread->stack_bottom();
+  // The default stack grows from top to bottom. (bottom < top).
+
+  uptr local_stack = reinterpret_cast<uptr>(__builtin_frame_address(0));
+  if (local_stack >= bottom && local_stack <= top) {
+    // The current stack is the default stack.
+    // We only need to unpoison from where we are using until the end.
+    bottom = RoundDownTo(local_stack, GetPageSize());
+    UnpoisonStack(bottom, top, "default");
+  } else {
+    // The current stack is not the default stack.
+    // Unpoison the entire default stack and the current stack page.
+    UnpoisonStack(bottom, top, "default");
+    bottom = RoundDownTo(local_stack, GetPageSize());
+    top = bottom + GetPageSize();
+    UnpoisonStack(bottom, top, "unknown");
+    return true;
+  }
+
+  return false;
+}
 
 // We can use a plain thread_local variable for TSD.
 static thread_local void *per_thread;
@@ -148,7 +176,8 @@ static void *BeforeThreadCreateHook(uptr user_id, bool detached,
                                     uptr stack_size) {
   EnsureMainThreadIDIsCorrect();
   // Strict init-order checking is thread-hostile.
-  if (flags()->strict_init_order) StopInitOrderChecking();
+  if (flags()->strict_init_order)
+    StopInitOrderChecking();
 
   GET_STACK_TRACE_THREAD;
   u32 parent_tid = GetCurrentTidOrInvalid();

@@ -17,6 +17,7 @@ set(files
   avx512dqintrin.h
   avx512erintrin.h
   avx512fintrin.h
+  avx512fp16intrin.h
   avx512ifmaintrin.h
   avx512ifmavlintrin.h
   avx512pfintrin.h
@@ -28,6 +29,7 @@ set(files
   avx512vlbwintrin.h
   avx512vlcdintrin.h
   avx512vldqintrin.h
+  avx512vlfp16intrin.h
   avx512vlintrin.h
   avx512vp2intersectintrin.h
   avx512vlvp2intersectintrin.h
@@ -38,6 +40,7 @@ set(files
   avxvnniintrin.h
   bmi2intrin.h
   bmiintrin.h
+  builtins.h
   __clang_cuda_builtin_vars.h
   __clang_cuda_math.h
   __clang_cuda_cmath.h

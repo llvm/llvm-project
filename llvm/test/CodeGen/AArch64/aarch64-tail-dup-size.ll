@@ -29,7 +29,7 @@ define dso_local void @testcase(%a** nocapture %arg){
 ; CHECK-O2-NEXT:  .LBB0_3: // %if.end
 ; CHECK-O2-NEXT:    adrp x9, global_int
 ; CHECK-O2-NEXT:    ldr w1, [x9, :lo12:global_int]
-; CHECK-O2-NEXT:    add x2, x8, #16 // =16
+; CHECK-O2-NEXT:    add x2, x8, #16
 ; CHECK-O2-NEXT:    mov w0, #10
 ; CHECK-O2-NEXT:    b externalfunc
 ;
@@ -44,14 +44,14 @@ define dso_local void @testcase(%a** nocapture %arg){
 ; CHECK-O3-NEXT:    ldr x8, [x8, :lo12:global_ptr]
 ; CHECK-O3-NEXT:    adrp x9, global_int
 ; CHECK-O3-NEXT:    ldr w1, [x9, :lo12:global_int]
-; CHECK-O3-NEXT:    add x2, x8, #16 // =16
+; CHECK-O3-NEXT:    add x2, x8, #16
 ; CHECK-O3-NEXT:    mov w0, #10
 ; CHECK-O3-NEXT:    b externalfunc
 ; CHECK-O3-NEXT:  .LBB0_2:
 ; CHECK-O3-NEXT:    mov x8, xzr
 ; CHECK-O3-NEXT:    adrp x9, global_int
 ; CHECK-O3-NEXT:    ldr w1, [x9, :lo12:global_int]
-; CHECK-O3-NEXT:    add x2, x8, #16 // =16
+; CHECK-O3-NEXT:    add x2, x8, #16
 ; CHECK-O3-NEXT:    mov w0, #10
 ; CHECK-O3-NEXT:    b externalfunc
 entry:

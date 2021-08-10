@@ -38,13 +38,12 @@ OperationName::OperationName(StringRef name, MLIRContext *context) {
 StringRef OperationName::getDialectNamespace() const {
   if (Dialect *dialect = getDialect())
     return dialect->getNamespace();
-  return representation.get<Identifier>().strref().split('.').first;
+  return getStringRef().split('.').first;
 }
 
 /// Return the operation name with dialect name stripped, if it has one.
 StringRef OperationName::stripDialect() const {
-  auto splitName = getStringRef().split(".");
-  return splitName.second.empty() ? splitName.first : splitName.second;
+  return getStringRef().split('.').second;
 }
 
 /// Return the name of this operation. This always succeeds.
@@ -176,6 +175,14 @@ Operation::Operation(Location location, OperationName name, unsigned numResults,
       numRegions(numRegions), hasOperandStorage(hasOperandStorage), name(name),
       attrs(attributes) {
   assert(attributes && "unexpected null attribute dictionary");
+#ifndef NDEBUG
+  if (!getDialect() && !getContext()->allowsUnregisteredDialects())
+    llvm::report_fatal_error(
+        name.getStringRef() +
+        " created with unregistered dialect. If this is intended, please call "
+        "allowUnregisteredDialects() on the MLIRContext, or use "
+        "-allow-unregistered-dialect with the MLIR opt tool used");
+#endif
 }
 
 // Operations are deleted through the destroy() member because they are

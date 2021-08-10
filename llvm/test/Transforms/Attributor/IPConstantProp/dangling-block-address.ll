@@ -54,7 +54,7 @@ define internal void @bar(i32* nocapture %pc) nounwind readonly {
 ;
 ; IS__CGSCC_NPM: Function Attrs: nofree norecurse nosync nounwind readnone
 ; IS__CGSCC_NPM-LABEL: define {{[^@]+}}@bar
-; IS__CGSCC_NPM-SAME: (i32* noalias nocapture nofree nonnull readonly align 536870912 dereferenceable(4294967295) [[PC:%.*]]) #[[ATTR1:[0-9]+]] {
+; IS__CGSCC_NPM-SAME: () #[[ATTR1:[0-9]+]] {
 ; IS__CGSCC_NPM-NEXT:  entry:
 ; IS__CGSCC_NPM-NEXT:    br label [[INDIRECTGOTO:%.*]]
 ; IS__CGSCC_NPM:       lab0:
@@ -64,11 +64,7 @@ define internal void @bar(i32* nocapture %pc) nounwind readonly {
 ; IS__CGSCC_NPM-NEXT:    ret void
 ; IS__CGSCC_NPM:       indirectgoto:
 ; IS__CGSCC_NPM-NEXT:    [[INDVAR]] = phi i32 [ [[INDVAR_NEXT]], [[LAB0:%.*]] ], [ 0, [[ENTRY:%.*]] ]
-; IS__CGSCC_NPM-NEXT:    [[PC_ADDR_0:%.*]] = getelementptr i32, i32* undef, i32 [[INDVAR]]
-; IS__CGSCC_NPM-NEXT:    [[TMP1_PN:%.*]] = load i32, i32* [[PC_ADDR_0]], align 4
-; IS__CGSCC_NPM-NEXT:    [[INDIRECT_GOTO_DEST_IN:%.*]] = getelementptr inbounds [2 x i8*], [2 x i8*]* @bar.l, i32 0, i32 [[TMP1_PN]]
-; IS__CGSCC_NPM-NEXT:    [[INDIRECT_GOTO_DEST:%.*]] = load i8*, i8** [[INDIRECT_GOTO_DEST_IN]], align 8
-; IS__CGSCC_NPM-NEXT:    indirectbr i8* [[INDIRECT_GOTO_DEST]], [label [[LAB0]], label %end]
+; IS__CGSCC_NPM-NEXT:    indirectbr i8* undef, [label [[LAB0]], label %end]
 ;
 entry:
   br label %indirectgoto

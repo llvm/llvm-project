@@ -29,13 +29,13 @@ entry:
   call void @llvm.dbg.value(metadata %union.u1* %arg, metadata !43, metadata !DIExpression()), !dbg !46
   %0 = tail call %union.u1* @llvm.preserve.union.access.index.p0s_union.u1s.p0s_union.u1s(%union.u1* %arg, i32 1), !dbg !47, !llvm.preserve.access.index !33
   %b2 = getelementptr inbounds %union.u1, %union.u1* %0, i64 0, i32 0, !dbg !47
-  %1 = tail call [10 x i32]* @llvm.preserve.struct.access.index.p0a10i32.p0s_struct.s1s(%struct.s1* %b2, i32 0, i32 0), !dbg !48, !llvm.preserve.access.index !38
-  %2 = tail call i32* @llvm.preserve.array.access.index.p0i32.p0a10i32([10 x i32]* %1, i32 1, i32 5), !dbg !49, !llvm.preserve.access.index !17
+  %1 = tail call [10 x i32]* @llvm.preserve.struct.access.index.p0a10i32.p0s_struct.s1s(%struct.s1* elementtype(%struct.s1) %b2, i32 0, i32 0), !dbg !48, !llvm.preserve.access.index !38
+  %2 = tail call i32* @llvm.preserve.array.access.index.p0i32.p0a10i32([10 x i32]* elementtype([10 x i32]) %1, i32 1, i32 5), !dbg !49, !llvm.preserve.access.index !17
   %3 = tail call i32 @llvm.bpf.preserve.field.info.p0i32(i32* %2, i64 3), !dbg !50
   call void @llvm.dbg.value(metadata i32 %3, metadata !44, metadata !DIExpression()), !dbg !46
-  %4 = tail call [10 x [10 x i32]]* @llvm.preserve.struct.access.index.p0a10a10i32.p0s_struct.s1s(%struct.s1* %b2, i32 1, i32 1), !dbg !51, !llvm.preserve.access.index !38
-  %5 = tail call [10 x i32]* @llvm.preserve.array.access.index.p0a10i32.p0a10a10i32([10 x [10 x i32]]* %4, i32 1, i32 5), !dbg !52, !llvm.preserve.access.index !21
-  %6 = tail call i32* @llvm.preserve.array.access.index.p0i32.p0a10i32([10 x i32]* %5, i32 1, i32 5), !dbg !52, !llvm.preserve.access.index !24
+  %4 = tail call [10 x [10 x i32]]* @llvm.preserve.struct.access.index.p0a10a10i32.p0s_struct.s1s(%struct.s1* elementtype(%struct.s1) %b2, i32 1, i32 1), !dbg !51, !llvm.preserve.access.index !38
+  %5 = tail call [10 x i32]* @llvm.preserve.array.access.index.p0a10i32.p0a10a10i32([10 x [10 x i32]]* elementtype([10 x [10 x i32]]) %4, i32 1, i32 5), !dbg !52, !llvm.preserve.access.index !21
+  %6 = tail call i32* @llvm.preserve.array.access.index.p0i32.p0a10i32([10 x i32]* elementtype([10 x i32]) %5, i32 1, i32 5), !dbg !52, !llvm.preserve.access.index !24
   %7 = tail call i32 @llvm.bpf.preserve.field.info.p0i32(i32* %6, i64 3), !dbg !53
   call void @llvm.dbg.value(metadata i32 %7, metadata !45, metadata !DIExpression()), !dbg !46
   %add = add i32 %7, %3, !dbg !54

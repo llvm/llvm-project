@@ -1,0 +1,81 @@
+.. _omp113:
+
+Could not move globalized variable to the stack. Variable is potentially captured in call. Mark parameter as `__attribute__((noescape))` to override. [OMP113]
+==============================================================================================================================================================
+
+This missed remark indicates that a globalized value could not be moved to the
+stack because it is potentially captured by a call to a function we cannot
+analyze. In order for a globalized variable to be moved to the stack, copies to
+its pointer cannot be stored. Otherwise it is considered captured and could
+potentially be shared between the threads. This can be overridden using a
+parameter level attribute as suggested in the remark text.
+
+Globalization will occur when a pointer to a thread-local variable escapes the
+current scope. In most cases it can be determined that the variable cannot be
+shared if a copy of its pointer is never made. However, this remark indicates a
+copy of the pointer is present or that sharing is possible because it is used
+outside the current translation unit.
+
+Examples
+--------
+
+If a pointer to a thread-local variable is passed to a function not visible in
+the current translation unit we need to assume a copy is made of it that can be
+shared between the threads. This prevents :ref:`OMP110 <omp110>` from
+triggering, which will result in a performance penalty when executing on the
+target device.
+
+.. code-block:: c++
+
+  extern void use(int *x);
+  
+  void foo() {
+    int x;
+    use(&x);
+  }
+  
+  int main() {
+  #pragma omp target parallel
+    foo();
+  }
+
+.. code-block:: console
+
+   $ clang++ -fopenmp -fopenmp-targets=nvptx64 -O2 -Rpass-missed=openmp-opt omp113.cpp
+   missed.cpp:4:7: remark: Could not move globalized variable to the stack. Variable is 
+   potentially captured in call. Mark parameter as `__attribute__((noescape))` to 
+   override. [OMP113]
+     int x;
+         ^
+
+As the remark suggests, this behaviour can be overridden using the ``noescape``
+attribute. This tells the compiler that no reference to the object the pointer
+points to that is derived from the parameter value will survive after the
+function returns. The user is responsible for verifying that this assertion is
+correct.
+
+.. code-block:: c++
+
+  extern void use(__attribute__((noescape)) int *x);
+
+  void foo() {
+    int x;
+    use(&x);
+  }
+  
+  int main() {
+  #pragma omp target parallel
+    foo();
+  }
+
+.. code-block:: console
+
+   $ clang++ -fopenmp -fopenmp-targets=nvptx64 -O2 -Rpass=openmp-opt omp113.cpp
+   missed.cpp:4:7: remark: Moving globalized variable to the stack. [OMP110]
+   int x;
+       ^
+
+Diagnostic Scope
+----------------
+
+OpenMP target offloading missed remark.

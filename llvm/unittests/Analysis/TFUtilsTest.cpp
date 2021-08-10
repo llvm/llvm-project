@@ -7,6 +7,8 @@
 //===----------------------------------------------------------------------===//
 
 #include "llvm/Analysis/Utils/TFUtils.h"
+#include "tensorflow/core/example/example.pb.h"
+#include "tensorflow/core/example/feature.pb.h"
 #include "llvm/AsmParser/Parser.h"
 #include "llvm/IR/Dominators.h"
 #include "llvm/IR/Instructions.h"
@@ -143,6 +145,18 @@ TEST(TFUtilsTest, TensorSpecSizesAndTypes) {
   EXPECT_EQ(Spec1D.getElementByteSize(), sizeof(int16_t));
 }
 
+#define PROTO_CHECKER(FNAME, TYPE, INDEX, EXP)                                 \
+  do {                                                                         \
+    const auto &V = Expected.feature_lists()                                   \
+                        .feature_list()                                        \
+                        .at(FNAME)                                             \
+                        .feature(INDEX)                                        \
+                        .TYPE()                                                \
+                        .value();                                              \
+    for (auto I = 0; I < V.size(); ++I)                                        \
+      EXPECT_EQ(V.at(I), EXP[I]);                                              \
+  } while (false)
+
 TEST(TFUtilsTest, Logger) {
   std::vector<LoggedFeatureSpec> Features;
   Features.push_back(
@@ -152,42 +166,67 @@ TEST(TFUtilsTest, Logger) {
 
   auto Rewards = TensorSpec::createSpec<float>("reward", {1});
   Logger L(Features, Rewards, true);
-  float F00[]{0.0, 0.1, 0.2, 0.3, 0.4, 0.5};
-  int64_t F01[]{2, 3};
+  const float F00[]{0.0, 0.1, 0.2, 0.3, 0.4, 0.5};
+  const int64_t F01[]{2, 3};
 
-  L.logTensorValue(0, F00, 6);
-  L.logTensorValue(1, F01, 2);
-  L.logReward<float>(3.4);
-  float F10[]{0.0, 1.0, 2.0, 3.0, 4.0, 5.0};
-  int64_t F11[]{-2, -3};
-  L.logTensorValue(0, F10, 6);
-  L.logTensorValue(1, F11, 2);
-  L.logReward<float>(-3.0);
-  const auto *Expected = R"(feature_lists: {
-  feature_list: {
-    key: "the_float" value: {
-      feature: { float_list: { value: [0.000000e+00, 1.000000e-01, 2.000000e-01, 3.000000e-01, 4.000000e-01, 5.000000e-01] } }
-      feature: { float_list: { value: [0.000000e+00, 1.000000e+00, 2.000000e+00, 3.000000e+00, 4.000000e+00, 5.000000e+00] } }
-    }
-  }
-  feature_list: {
-    key: "alternate_name" value: {
-      feature: { int64_list: { value: [2, 3] } }
-      feature: { int64_list: { value: [-2, -3] } }
-    }
-  }
-  feature_list: {
-    key: "reward" value: {
-      feature: { float_list: { value: [3.400000e+00] } }
-      feature: { float_list: { value: [-3.000000e+00] } }
-    }
-  }
-}
-)";
+  L.logFloatValue(0, F00);
+  L.logInt64Value(1, F01);
+  L.logFloatReward(3.4);
+  const float F10[]{0.0, 1.0, 2.0, 3.0, 4.0, 5.0};
+  const int64_t F11[]{-2, -3};
+  L.logFloatValue(0, F10);
+  L.logInt64Value(1, F11);
+  L.logFloatReward(-3.0);
   std::string Result;
   raw_string_ostream OS(Result);
-  L.print(OS);
-  EXPECT_EQ(Result, Expected);
+  L.flush(OS);
+
+  tensorflow::SequenceExample Expected;
+  EXPECT_TRUE(Expected.ParseFromString(Result));
+  PROTO_CHECKER("the_float", float_list, 0, F00);
+  PROTO_CHECKER("the_float", float_list, 1, F10);
+  PROTO_CHECKER("alternate_name", int64_list, 0, F01);
+  PROTO_CHECKER("alternate_name", int64_list, 1, F11);
+  float R0[]{3.4};
+  float R1[]{-3.0};
+  PROTO_CHECKER("reward", float_list, 0, R0);
+  PROTO_CHECKER("reward", float_list, 1, R1);
+}
+
+TEST(TFUtilsTest, LoggerInt32FeaturesAndReward) {
+  std::vector<LoggedFeatureSpec> Features;
+  Features.push_back(
+      {TensorSpec::createSpec<float>("the_float", {2, 3}), None});
+  Features.push_back({TensorSpec::createSpec<int32_t>("the_int", {2}),
+                      std::string("alternate_name")});
+
+  auto Rewards = TensorSpec::createSpec<int32_t>("reward", {1});
+  Logger L(Features, Rewards, true);
+  const float F00[]{0.0, 0.1, 0.2, 0.3, 0.4, 0.5};
+  const int32_t F01[]{2, 3};
+
+  L.logFloatValue(0, F00);
+  L.logInt32Value(1, F01);
+  L.logInt32Reward(3);
+  const float F10[]{0.0, 1.0, 2.0, 3.0, 4.0, 5.0};
+  const int32_t F11[]{-2, -3};
+  L.logFloatValue(0, F10);
+  L.logInt32Value(1, F11);
+  L.logInt32Reward(-3);
+  std::string Result;
+  raw_string_ostream OS(Result);
+  L.flush(OS);
+
+  tensorflow::SequenceExample Expected;
+  EXPECT_TRUE(Expected.ParseFromString(Result));
+  PROTO_CHECKER("the_float", float_list, 0, F00);
+  PROTO_CHECKER("the_float", float_list, 1, F10);
+  PROTO_CHECKER("alternate_name", int64_list, 0, F01);
+  PROTO_CHECKER("alternate_name", int64_list, 1, F11);
+  int32_t R0[]{3};
+  int32_t R1[]{-3};
+  PROTO_CHECKER("reward", int64_list, 0, R0);
+  PROTO_CHECKER("reward", int64_list, 1, R1);
 }
 
 TEST(TFUtilsTest, LoggerNoReward) {
@@ -199,34 +238,25 @@ TEST(TFUtilsTest, LoggerNoReward) {
 
   auto Rewards = TensorSpec::createSpec<float>("reward", {1});
   Logger L(Features, Rewards, false);
-  float F00[]{0.0, 0.1, 0.2, 0.3, 0.4, 0.5};
-  int64_t F01[]{2, 3};
+  const float F00[]{0.0, 0.1, 0.2, 0.3, 0.4, 0.5};
+  const int64_t F01[]{2, 3};
 
-  L.logTensorValue(0, F00, 6);
-  L.logTensorValue(1, F01, 2);
-  float F10[]{0.0, 1.0, 2.0, 3.0, 4.0, 5.0};
-  int64_t F11[]{-2, -3};
-  L.logTensorValue(0, F10, 6);
-  L.logTensorValue(1, F11, 2);
-  const auto *Expected = R"(feature_lists: {
-  feature_list: {
-    key: "the_float" value: {
-      feature: { float_list: { value: [0.000000e+00, 1.000000e-01, 2.000000e-01, 3.000000e-01, 4.000000e-01, 5.000000e-01] } }
-      feature: { float_list: { value: [0.000000e+00, 1.000000e+00, 2.000000e+00, 3.000000e+00, 4.000000e+00, 5.000000e+00] } }
-    }
-  }
-  feature_list: {
-    key: "alternate_name" value: {
-      feature: { int64_list: { value: [2, 3] } }
-      feature: { int64_list: { value: [-2, -3] } }
-    }
-  }
-}
-)";
+  L.logFloatValue(0, F00);
+  L.logInt64Value(1, F01);
+  const float F10[]{0.0, 1.0, 2.0, 3.0, 4.0, 5.0};
+  const int64_t F11[]{-2, -3};
+  L.logFloatValue(0, F10);
+  L.logInt64Value(1, F11);
+
   std::string Result;
   raw_string_ostream OS(Result);
-  L.print(OS);
-  EXPECT_EQ(Result, Expected);
+  L.flush(OS);
+  tensorflow::SequenceExample Expected;
+  EXPECT_TRUE(Expected.ParseFromString(Result));
+  PROTO_CHECKER("the_float", float_list, 0, F00);
+  PROTO_CHECKER("the_float", float_list, 1, F10);
+  PROTO_CHECKER("alternate_name", int64_list, 0, F01);
+  PROTO_CHECKER("alternate_name", int64_list, 1, F11);
 }
 
 TEST(TFUtilsTest, LoggerFinalReward) {
@@ -236,38 +266,20 @@ TEST(TFUtilsTest, LoggerFinalReward) {
 
   auto Rewards = TensorSpec::createSpec<float>("reward", {1});
   Logger L(Features, Rewards, true);
-  for (size_t I = 0; I < 3; ++I) {
+  for (int64_t I = 0; I < 3; ++I) {
     float F = static_cast<float>(I);
-    L.logTensorValue(0, &F);
-    L.logTensorValue(1, &I);
+    L.logFloatValue(0, &F);
+    L.logInt64Value(1, &I);
   }
-  L.logFinalReward<float>(3.14);
-  const auto *Expected = R"(feature_lists: {
-  feature_list: {
-    key: "the_float" value: {
-      feature: { float_list: { value: [0.000000e+00] } }
-      feature: { float_list: { value: [1.000000e+00] } }
-      feature: { float_list: { value: [2.000000e+00] } }
-    }
-  }
-  feature_list: {
-    key: "the_int" value: {
-      feature: { int64_list: { value: [0] } }
-      feature: { int64_list: { value: [1] } }
-      feature: { int64_list: { value: [2] } }
-    }
-  }
-  feature_list: {
-    key: "reward" value: {
-      feature: { float_list: { value: [0.000000e+00] } }
-      feature: { float_list: { value: [0.000000e+00] } }
-      feature: { float_list: { value: [3.140000e+00] } }
-    }
-  }
-}
-)";
+  L.logFloatFinalReward(3.14);
   std::string Result;
   raw_string_ostream OS(Result);
-  L.print(OS);
-  EXPECT_EQ(Result, Expected);
+  L.flush(OS);
+  const float Zero[]{0.0};
+  const float R[]{3.14};
+  tensorflow::SequenceExample Expected;
+  EXPECT_TRUE(Expected.ParseFromString(Result));
+  PROTO_CHECKER("reward", float_list, 0, Zero);
+  PROTO_CHECKER("reward", float_list, 1, Zero);
+  PROTO_CHECKER("reward", float_list, 2, R);
 }

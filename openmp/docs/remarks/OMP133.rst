@@ -1,0 +1,70 @@
+Call may contain unknown parallel regions. Use `__attribute__((assume("omp_no_parallelism")))` to override. [OMP133]
+====================================================================================================================
+
+.. _omp133:
+
+This analysis remark identifies calls that prevented :ref:`OMP131 <omp131>` from
+providing the generic-mode kernel with a fully specialized state machine. This
+remark will identify each call that may contain unknown parallel regions that
+caused the kernel to require a fallback.
+
+Examples
+--------
+
+This will occur for any generic-mode kernel that may contain unknown parallel
+regions. This is typically coupled with the :ref:`OMP132 <omp132>` remark.
+
+.. code-block:: c++
+
+   extern void setup();
+
+   void foo() {
+   #pragma omp target
+   {
+     setup();
+     #pragma omp parallel
+     {
+       work();
+     }
+   }
+   }
+
+.. code-block:: console
+
+   $ clang++ -fopenmp -fopenmp-targets=nvptx64 -O2 -Rpass-analysis=openmp-opt omp133.cpp
+   omp133.cpp:6:5: remark: Call may contain unknown parallel regions. Use 
+   `__attribute__((assume("omp_no_parallelism")))` to override. [OMP133]
+   setup();
+   ^
+
+The remark suggests marking the function with the assumption that it contains no
+parallel regions. If this is done then the kernel will be rewritten with a fully
+specialized state machine.
+
+.. code-block:: c++
+
+   __attribute__((assume("omp_no_parallelism"))) extern void setup();
+
+
+   void foo() {
+   #pragma omp target
+   {
+     setup();
+     #pragma omp parallel
+     {
+       work();
+     }
+   }
+   }
+
+.. code-block:: console
+
+   $ clang++ -fopenmp -fopenmp-targets=nvptx64 -O2 -Rpass=openmp-opt omp133.cpp
+   omp133.cpp:4:1: remark: Rewriting generic-mode kernel with a customized state machine. [OMP131]
+   #pragma omp target
+   ^
+
+Diagnostic Scope
+----------------
+
+OpenMP target offloading analysis remark.

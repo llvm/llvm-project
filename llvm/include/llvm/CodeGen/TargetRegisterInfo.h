@@ -871,6 +871,10 @@ public:
   /// (3) Bottom-up allocation is no longer guaranteed to optimally color.
   virtual bool reverseLocalAssignment() const { return false; }
 
+  /// Add the allocation priority to global and split ranges as well as the
+  /// local ranges when registers are added to the queue.
+  virtual bool addAllocPriorityToGlobalRanges() const { return false; }
+
   /// Allow the target to override the cost of using a callee-saved register for
   /// the first time. Default value of 0 means we will use a callee-saved
   /// register if it is available.

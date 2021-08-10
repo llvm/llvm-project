@@ -161,7 +161,7 @@ define void @store_unordered(i32* nocapture %0) norecurse nounwind uwtable {
 ; negative, should not deduce nosync
 ; atomic load with release ordering
 define void @load_release(i32* nocapture %0) norecurse nounwind uwtable {
-; CHECK: Function Attrs: mustprogress nofree norecurse nounwind uwtable willreturn
+; CHECK: Function Attrs: nofree norecurse nounwind uwtable
 ; CHECK-LABEL: @load_release(
 ; CHECK-NEXT:    store atomic volatile i32 10, i32* [[TMP0:%.*]] release, align 4
 ; CHECK-NEXT:    ret void
@@ -172,7 +172,7 @@ define void @load_release(i32* nocapture %0) norecurse nounwind uwtable {
 
 ; negative volatile, relaxed atomic
 define void @load_volatile_release(i32* nocapture %0) norecurse nounwind uwtable {
-; CHECK: Function Attrs: mustprogress nofree norecurse nounwind uwtable willreturn
+; CHECK: Function Attrs: nofree norecurse nounwind uwtable
 ; CHECK-LABEL: @load_volatile_release(
 ; CHECK-NEXT:    store atomic volatile i32 10, i32* [[TMP0:%.*]] release, align 4
 ; CHECK-NEXT:    ret void
@@ -183,7 +183,7 @@ define void @load_volatile_release(i32* nocapture %0) norecurse nounwind uwtable
 
 ; volatile store.
 define void @volatile_store(i32* %0) norecurse nounwind uwtable {
-; CHECK: Function Attrs: mustprogress nofree norecurse nounwind uwtable willreturn
+; CHECK: Function Attrs: nofree norecurse nounwind uwtable
 ; CHECK-LABEL: @volatile_store(
 ; CHECK-NEXT:    store volatile i32 14, i32* [[TMP0:%.*]], align 4
 ; CHECK-NEXT:    ret void

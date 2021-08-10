@@ -311,6 +311,7 @@ public:
   LazyObjFile *file;
 };
 
+// MinGW only.
 class LazyDLLSymbol : public Symbol {
 public:
   LazyDLLSymbol(DLLFile *f, DLLFile::Symbol *s, StringRef n)

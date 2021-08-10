@@ -13,6 +13,7 @@
 // concept predicate;
 
 #include <concepts>
+#include <type_traits>
 
 static_assert(std::predicate<bool()>);
 static_assert(std::predicate<bool (*)()>);
@@ -45,9 +46,9 @@ static_assert(std::predicate<Predicate&, int, double, char>);
 static_assert(!std::predicate<const Predicate, int, double, char>);
 static_assert(!std::predicate<const Predicate&, int, double, char>);
 
-[[nodiscard]] constexpr bool check_lambda(auto) { return false; }
+constexpr bool check_lambda(auto) { return false; }
 
-[[nodiscard]] constexpr bool check_lambda(std::predicate auto) { return true; }
+constexpr bool check_lambda(std::predicate auto) { return true; }
 
 static_assert(check_lambda([] { return std::true_type(); }));
 static_assert(check_lambda([]() -> int* { return nullptr; }));

@@ -79,6 +79,35 @@ struct ComparisonOpConversion : public OpConversionPattern<ComparisonOp> {
   }
 };
 
+// Default conversion which applies the BinaryStandardOp separately on the real
+// and imaginary parts. Can for example be used for complex::AddOp and
+// complex::SubOp.
+template <typename BinaryComplexOp, typename BinaryStandardOp>
+struct BinaryComplexOpConversion : public OpConversionPattern<BinaryComplexOp> {
+  using OpConversionPattern<BinaryComplexOp>::OpConversionPattern;
+
+  LogicalResult
+  matchAndRewrite(BinaryComplexOp op, ArrayRef<Value> operands,
+                  ConversionPatternRewriter &rewriter) const override {
+    typename BinaryComplexOp::Adaptor transformed(operands);
+    auto type = transformed.lhs().getType().template cast<ComplexType>();
+    auto elementType = type.getElementType().template cast<FloatType>();
+    mlir::ImplicitLocOpBuilder b(op.getLoc(), rewriter);
+
+    Value realLhs = b.create<complex::ReOp>(elementType, transformed.lhs());
+    Value realRhs = b.create<complex::ReOp>(elementType, transformed.rhs());
+    Value resultReal =
+        b.create<BinaryStandardOp>(elementType, realLhs, realRhs);
+    Value imagLhs = b.create<complex::ImOp>(elementType, transformed.lhs());
+    Value imagRhs = b.create<complex::ImOp>(elementType, transformed.rhs());
+    Value resultImag =
+        b.create<BinaryStandardOp>(elementType, imagLhs, imagRhs);
+    rewriter.replaceOpWithNewOp<complex::CreateOp>(op, type, resultReal,
+                                                   resultImag);
+    return success();
+  }
+};
+
 struct DivOpConversion : public OpConversionPattern<complex::DivOp> {
   using OpConversionPattern<complex::DivOp>::OpConversionPattern;
 
@@ -554,6 +583,8 @@ void mlir::populateComplexToStandardConversionPatterns(
       AbsOpConversion,
       ComparisonOpConversion<complex::EqualOp, CmpFPredicate::OEQ>,
       ComparisonOpConversion<complex::NotEqualOp, CmpFPredicate::UNE>,
+      BinaryComplexOpConversion<complex::AddOp, AddFOp>,
+      BinaryComplexOpConversion<complex::SubOp, SubFOp>,
       DivOpConversion,
       ExpOpConversion,
       LogOpConversion,
@@ -578,12 +609,8 @@ void ConvertComplexToStandardPass::runOnFunction() {
   populateComplexToStandardConversionPatterns(patterns);
 
   ConversionTarget target(getContext());
-  target.addLegalDialect<StandardOpsDialect, math::MathDialect,
-                         complex::ComplexDialect>();
-  target.addIllegalOp<complex::AbsOp, complex::DivOp, complex::EqualOp,
-                      complex::ExpOp, complex::LogOp, complex::Log1pOp,
-                      complex::MulOp, complex::NegOp, complex::NotEqualOp,
-                      complex::SignOp>();
+  target.addLegalDialect<StandardOpsDialect, math::MathDialect>();
+  target.addLegalOp<complex::CreateOp, complex::ImOp, complex::ReOp>();
   if (failed(applyPartialConversion(function, target, std::move(patterns))))
     signalPassFailure();
 }

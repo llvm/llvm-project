@@ -264,19 +264,19 @@ multiclass SIMDLoadZero<Vec vec, bits<32> simdop> {
   } // mayLoad = 1, UseNamedOperandTable = 1
 }
 
-// TODO: Also support v4f32 and v2f64 once the instructions are merged
-// to the proposal
 defm "" : SIMDLoadZero<I32x4, 0x5c>;
 defm "" : SIMDLoadZero<I64x2, 0x5d>;
 
+// TODO: f32x4 and f64x2 as well
 foreach vec = [I32x4, I64x2] in {
-defvar loadpat = !cast<Intrinsic>("int_wasm_load"#vec.lane_bits#"_zero");
-defvar inst = "LOAD_ZERO_"#vec;
-defm : LoadPatNoOffset<vec.vt, loadpat, inst>;
-defm : LoadPatImmOff<vec.vt, loadpat, regPlusImm, inst>;
-defm : LoadPatImmOff<vec.vt, loadpat, or_is_add, inst>;
-defm : LoadPatOffsetOnly<vec.vt, loadpat, inst>;
-defm : LoadPatGlobalAddrOffOnly<vec.vt, loadpat, inst>;
+  defvar inst = "LOAD_ZERO_"#vec;
+  defvar pat = PatFrag<(ops node:$ptr),
+    (vector_insert (vec.splat (vec.lane_vt 0)), (vec.lane_vt (load $ptr)), 0)>;
+  defm : LoadPatNoOffset<vec.vt, pat, inst>;
+  defm : LoadPatImmOff<vec.vt, pat, regPlusImm, inst>;
+  defm : LoadPatImmOff<vec.vt, pat, or_is_add, inst>;
+  defm : LoadPatOffsetOnly<vec.vt, pat, inst>;
+  defm : LoadPatGlobalAddrOffOnly<vec.vt, pat, inst>;
 }
 
 // Load lane
@@ -300,8 +300,6 @@ multiclass SIMDLoadLane<Vec vec, bits<32> simdop> {
   } // mayLoad = 1, UseNamedOperandTable = 1
 }
 
-// TODO: Also support v4f32 and v2f64 once the instructions are merged
-// to the proposal
 defm "" : SIMDLoadLane<I8x16, 0x54>;
 defm "" : SIMDLoadLane<I16x8, 0x55>;
 defm "" : SIMDLoadLane<I32x4, 0x56>;
@@ -321,10 +319,24 @@ multiclass LoadLanePatNoOffset<Vec vec, SDPatternOperator kind> {
         Requires<[HasAddr64]>;
 }
 
-defm : LoadLanePatNoOffset<I8x16, int_wasm_load8_lane>;
-defm : LoadLanePatNoOffset<I16x8, int_wasm_load16_lane>;
-defm : LoadLanePatNoOffset<I32x4, int_wasm_load32_lane>;
-defm : LoadLanePatNoOffset<I64x2, int_wasm_load64_lane>;
+def load8_lane :
+  PatFrag<(ops node:$ptr, node:$vec, node:$idx),
+          (vector_insert $vec, (i32 (extloadi8 $ptr)), $idx)>;
+def load16_lane :
+  PatFrag<(ops node:$ptr, node:$vec, node:$idx),
+          (vector_insert $vec, (i32 (extloadi16 $ptr)), $idx)>;
+def load32_lane :
+  PatFrag<(ops node:$ptr, node:$vec, node:$idx),
+          (vector_insert $vec, (i32 (load $ptr)), $idx)>;
+def load64_lane :
+  PatFrag<(ops node:$ptr, node:$vec, node:$idx),
+          (vector_insert $vec, (i64 (load $ptr)), $idx)>;
+// TODO: floating point lanes as well
+
+defm : LoadLanePatNoOffset<I8x16, load8_lane>;
+defm : LoadLanePatNoOffset<I16x8, load16_lane>;
+defm : LoadLanePatNoOffset<I32x4, load32_lane>;
+defm : LoadLanePatNoOffset<I64x2, load64_lane>;
 
 // TODO: Also support the other load patterns for load_lane once the instructions
 // are merged to the proposal.
@@ -373,15 +385,13 @@ multiclass SIMDStoreLane<Vec vec, bits<32> simdop> {
   } // mayStore = 1, UseNamedOperandTable = 1
 }
 
-// TODO: Also support v4f32 and v2f64 once the instructions are merged
-// to the proposal
 defm "" : SIMDStoreLane<I8x16, 0x58>;
 defm "" : SIMDStoreLane<I16x8, 0x59>;
 defm "" : SIMDStoreLane<I32x4, 0x5a>;
 defm "" : SIMDStoreLane<I64x2, 0x5b>;
 
 // Select stores with no constant offset.
-multiclass StoreLanePatNoOffset<Vec vec, Intrinsic kind> {
+multiclass StoreLanePatNoOffset<Vec vec, SDPatternOperator kind> {
   def : Pat<(kind (i32 I32:$addr), (vec.vt V128:$vec), (i32 vec.lane_idx:$idx)),
             (!cast<NI>("STORE_LANE_"#vec#"_A32") 0, 0, imm:$idx, $addr, $vec)>,
         Requires<[HasAddr32]>;
@@ -390,13 +400,26 @@ multiclass StoreLanePatNoOffset<Vec vec, Intrinsic kind> {
         Requires<[HasAddr64]>;
 }
 
-defm : StoreLanePatNoOffset<I8x16, int_wasm_store8_lane>;
-defm : StoreLanePatNoOffset<I16x8, int_wasm_store16_lane>;
-defm : StoreLanePatNoOffset<I32x4, int_wasm_store32_lane>;
-defm : StoreLanePatNoOffset<I64x2, int_wasm_store64_lane>;
+def store8_lane :
+  PatFrag<(ops node:$ptr, node:$vec, node:$idx),
+          (truncstorei8 (i32 (vector_extract $vec, $idx)), $ptr)>;
+def store16_lane :
+  PatFrag<(ops node:$ptr, node:$vec, node:$idx),
+          (truncstorei16 (i32 (vector_extract $vec, $idx)), $ptr)>;
+def store32_lane :
+  PatFrag<(ops node:$ptr, node:$vec, node:$idx),
+          (store (i32 (vector_extract $vec, $idx)), $ptr)>;
+def store64_lane :
+  PatFrag<(ops node:$ptr, node:$vec, node:$idx),
+          (store (i64 (vector_extract $vec, $idx)), $ptr)>;
+// TODO: floating point lanes as well
 
-// TODO: Also support the other store patterns for store_lane once the
-// instructions are merged to the proposal.
+let AddedComplexity = 1 in {
+defm : StoreLanePatNoOffset<I8x16, store8_lane>;
+defm : StoreLanePatNoOffset<I16x8, store16_lane>;
+defm : StoreLanePatNoOffset<I32x4, store32_lane>;
+defm : StoreLanePatNoOffset<I64x2, store64_lane>;
+}
 
 //===----------------------------------------------------------------------===//
 // Constructing SIMD values
@@ -810,7 +833,7 @@ defm ABS : SIMDUnaryInt<abs, "abs", 96>;
 defm NEG : SIMDUnaryInt<ivneg, "neg", 97>;
 
 // Population count: popcnt
-defm POPCNT : SIMDUnary<I8x16, int_wasm_popcnt, "popcnt", 0x62>;
+defm POPCNT : SIMDUnary<I8x16, ctpop, "popcnt", 0x62>;
 
 // Any lane true: any_true
 defm ANYTRUE : SIMD_I<(outs I32:$dst), (ins V128:$vec), (outs), (ins), [],
@@ -1005,7 +1028,14 @@ defm DOT : SIMD_I<(outs V128:$dst), (ins V128:$lhs, V128:$rhs), (outs), (ins),
                   186>;
 
 // Extending multiplication: extmul_{low,high}_P, extmul_high
-multiclass SIMDExtBinary<Vec vec, Intrinsic node, string name, bits<32> simdop> {
+def extend_t : SDTypeProfile<1, 1, [SDTCisVec<0>, SDTCisVec<1>]>;
+def extend_low_s : SDNode<"WebAssemblyISD::EXTEND_LOW_S", extend_t>;
+def extend_high_s : SDNode<"WebAssemblyISD::EXTEND_HIGH_S", extend_t>;
+def extend_low_u : SDNode<"WebAssemblyISD::EXTEND_LOW_U", extend_t>;
+def extend_high_u : SDNode<"WebAssemblyISD::EXTEND_HIGH_U", extend_t>;
+
+multiclass SIMDExtBinary<Vec vec, SDPatternOperator node, string name,
+                         bits<32> simdop> {
   defm _#vec : SIMD_I<(outs V128:$dst), (ins V128:$lhs, V128:$rhs),
                       (outs), (ins),
                       [(set (vec.vt V128:$dst), (node
@@ -1014,32 +1044,41 @@ multiclass SIMDExtBinary<Vec vec, Intrinsic node, string name, bits<32> simdop> 
                       vec.prefix#"."#name, simdop>;
 }
 
-defm EXTMUL_LOW_S :
-  SIMDExtBinary<I16x8, int_wasm_extmul_low_signed, "extmul_low_i8x16_s", 0x9c>;
-defm EXTMUL_HIGH_S :
-  SIMDExtBinary<I16x8, int_wasm_extmul_high_signed, "extmul_high_i8x16_s", 0x9d>;
-defm EXTMUL_LOW_U :
-  SIMDExtBinary<I16x8, int_wasm_extmul_low_unsigned, "extmul_low_i8x16_u", 0x9e>;
-defm EXTMUL_HIGH_U :
-  SIMDExtBinary<I16x8, int_wasm_extmul_high_unsigned, "extmul_high_i8x16_u", 0x9f>;
+class ExtMulPat<SDNode extend> :
+  PatFrag<(ops node:$lhs, node:$rhs),
+          (mul (extend $lhs), (extend $rhs))> {}
+
+def extmul_low_s : ExtMulPat<extend_low_s>;
+def extmul_high_s : ExtMulPat<extend_high_s>;
+def extmul_low_u : ExtMulPat<extend_low_u>;
+def extmul_high_u : ExtMulPat<extend_high_u>;
 
 defm EXTMUL_LOW_S :
-  SIMDExtBinary<I32x4, int_wasm_extmul_low_signed, "extmul_low_i16x8_s", 0xbc>;
+  SIMDExtBinary<I16x8, extmul_low_s, "extmul_low_i8x16_s", 0x9c>;
 defm EXTMUL_HIGH_S :
-  SIMDExtBinary<I32x4, int_wasm_extmul_high_signed, "extmul_high_i16x8_s", 0xbd>;
+  SIMDExtBinary<I16x8, extmul_high_s, "extmul_high_i8x16_s", 0x9d>;
 defm EXTMUL_LOW_U :
-  SIMDExtBinary<I32x4, int_wasm_extmul_low_unsigned, "extmul_low_i16x8_u", 0xbe>;
+  SIMDExtBinary<I16x8, extmul_low_u, "extmul_low_i8x16_u", 0x9e>;
 defm EXTMUL_HIGH_U :
-  SIMDExtBinary<I32x4, int_wasm_extmul_high_unsigned, "extmul_high_i16x8_u", 0xbf>;
+  SIMDExtBinary<I16x8, extmul_high_u, "extmul_high_i8x16_u", 0x9f>;
 
 defm EXTMUL_LOW_S :
-  SIMDExtBinary<I64x2, int_wasm_extmul_low_signed, "extmul_low_i32x4_s", 0xdc>;
+  SIMDExtBinary<I32x4, extmul_low_s, "extmul_low_i16x8_s", 0xbc>;
 defm EXTMUL_HIGH_S :
-  SIMDExtBinary<I64x2, int_wasm_extmul_high_signed, "extmul_high_i32x4_s", 0xdd>;
+  SIMDExtBinary<I32x4, extmul_high_s, "extmul_high_i16x8_s", 0xbd>;
 defm EXTMUL_LOW_U :
-  SIMDExtBinary<I64x2, int_wasm_extmul_low_unsigned, "extmul_low_i32x4_u", 0xde>;
+  SIMDExtBinary<I32x4, extmul_low_u, "extmul_low_i16x8_u", 0xbe>;
 defm EXTMUL_HIGH_U :
-  SIMDExtBinary<I64x2, int_wasm_extmul_high_unsigned, "extmul_high_i32x4_u", 0xdf>;
+  SIMDExtBinary<I32x4, extmul_high_u, "extmul_high_i16x8_u", 0xbf>;
+
+defm EXTMUL_LOW_S :
+  SIMDExtBinary<I64x2, extmul_low_s, "extmul_low_i32x4_s", 0xdc>;
+defm EXTMUL_HIGH_S :
+  SIMDExtBinary<I64x2, extmul_high_s, "extmul_high_i32x4_s", 0xdd>;
+defm EXTMUL_LOW_U :
+  SIMDExtBinary<I64x2, extmul_low_u, "extmul_low_i32x4_u", 0xde>;
+defm EXTMUL_HIGH_U :
+  SIMDExtBinary<I64x2, extmul_high_u, "extmul_high_i32x4_u", 0xdf>;
 
 //===----------------------------------------------------------------------===//
 // Floating-point unary arithmetic
@@ -1099,10 +1138,32 @@ defm MIN : SIMDBinaryFP<fminimum, "min", 232>;
 defm MAX : SIMDBinaryFP<fmaximum, "max", 233>;
 
 // Pseudo-minimum: pmin
-defm PMIN : SIMDBinaryFP<int_wasm_pmin, "pmin", 234>;
+def pmin : PatFrag<(ops node:$lhs, node:$rhs),
+                   (vselect (setolt $rhs, $lhs), $rhs, $lhs)>;
+defm PMIN : SIMDBinaryFP<pmin, "pmin", 234>;
 
 // Pseudo-maximum: pmax
-defm PMAX : SIMDBinaryFP<int_wasm_pmax, "pmax", 235>;
+def pmax : PatFrag<(ops node:$lhs, node:$rhs),
+                   (vselect (setolt $lhs, $rhs), $rhs, $lhs)>;
+defm PMAX : SIMDBinaryFP<pmax, "pmax", 235>;
+
+// Also match the pmin/pmax cases where the operands are int vectors (but the
+// comparison is still a floating point comparison). This can happen when using
+// the wasm_simd128.h intrinsics because v128_t is an integer vector.
+foreach vec = [F32x4, F64x2] in {
+defvar pmin = !cast<NI>("PMIN_"#vec);
+defvar pmax = !cast<NI>("PMAX_"#vec);
+def : Pat<(vec.int_vt (vselect
+            (setolt (vec.vt (bitconvert V128:$rhs)),
+                    (vec.vt (bitconvert V128:$lhs))),
+            V128:$rhs, V128:$lhs)),
+          (pmin $lhs, $rhs)>;
+def : Pat<(vec.int_vt (vselect
+            (setolt (vec.vt (bitconvert V128:$lhs)),
+                    (vec.vt (bitconvert V128:$rhs))),
+            V128:$rhs, V128:$lhs)),
+          (pmax $lhs, $rhs)>;
+}
 
 //===----------------------------------------------------------------------===//
 // Conversions
@@ -1146,12 +1207,6 @@ defm "" : SIMDConvert<F64x2, I32x4, convert_low_s, "convert_low_i32x4_s", 0xfe>;
 defm "" : SIMDConvert<F64x2, I32x4, convert_low_u, "convert_low_i32x4_u", 0xff>;
 
 // Extending operations
-def extend_t : SDTypeProfile<1, 1, [SDTCisVec<0>, SDTCisVec<1>]>;
-def extend_low_s : SDNode<"WebAssemblyISD::EXTEND_LOW_S", extend_t>;
-def extend_high_s : SDNode<"WebAssemblyISD::EXTEND_HIGH_S", extend_t>;
-def extend_low_u : SDNode<"WebAssemblyISD::EXTEND_LOW_U", extend_t>;
-def extend_high_u : SDNode<"WebAssemblyISD::EXTEND_HIGH_U", extend_t>;
-
 // TODO: refactor this to be uniform for i64x2 if the numbering is not changed.
 multiclass SIMDExtend<Vec vec, bits<32> baseInst> {
   defm "" : SIMDConvert<vec, vec.split, extend_low_s,
@@ -1269,14 +1324,10 @@ defm : NarrowingStorePatGlobalAddrOffOnly<I32x4, store_v4i16_trunc_v4i32>;
 
 // Bitcasts are nops
 // Matching bitcast t1 to t1 causes strange errors, so avoid repeating types
-foreach t1 = [v16i8, v8i16, v4i32, v2i64, v4f32, v2f64] in
-foreach t2 = !foldl(
-  []<ValueType>, [v16i8, v8i16, v4i32, v2i64, v4f32, v2f64],
-  acc, cur, !if(!eq(!cast<string>(t1), !cast<string>(cur)),
-    acc, !listconcat(acc, [cur])
-  )
-) in
-def : Pat<(t1 (bitconvert (t2 V128:$v))), (t1 V128:$v)>;
+foreach t1 = AllVecs in
+foreach t2 = AllVecs in
+if !ne(t1, t2) then
+def : Pat<(t1.vt (bitconvert (t2.vt V128:$v))), (t1.vt V128:$v)>;
 
 // Extended pairwise addition
 defm "" : SIMDConvert<I16x8, I8x16, int_wasm_extadd_pairwise_signed,
@@ -1288,11 +1339,15 @@ defm "" : SIMDConvert<I32x4, I16x8, int_wasm_extadd_pairwise_signed,
 defm "" : SIMDConvert<I32x4, I16x8, int_wasm_extadd_pairwise_unsigned,
                       "extadd_pairwise_i16x8_u", 0x7f>;
 
-// Prototype f64x2 conversions
-defm "" : SIMDConvert<F32x4, F64x2, int_wasm_demote_zero,
+// f64x2 <-> f32x4 conversions
+def demote_t : SDTypeProfile<1, 1, [SDTCisVec<0>, SDTCisVec<1>]>;
+def demote_zero : SDNode<"WebAssemblyISD::DEMOTE_ZERO", demote_t>;
+defm "" : SIMDConvert<F32x4, F64x2, demote_zero,
                       "demote_zero_f64x2", 0x5e>;
-defm "" : SIMDConvert<F64x2, F32x4, int_wasm_promote_low,
-                      "promote_low_f32x4", 0x5f>;
+
+def promote_t : SDTypeProfile<1, 1, [SDTCisVec<0>, SDTCisVec<1>]>;
+def promote_low : SDNode<"WebAssemblyISD::PROMOTE_LOW", promote_t>;
+defm "" : SIMDConvert<F64x2, F32x4, promote_low, "promote_low_f32x4", 0x5f>;
 
 //===----------------------------------------------------------------------===//
 // Saturating Rounding Q-Format Multiplication

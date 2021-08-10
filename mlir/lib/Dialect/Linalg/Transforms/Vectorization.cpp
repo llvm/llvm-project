@@ -191,7 +191,6 @@ getKindForOp(Operation *reductionOp) {
 static Value reduceIfNeeded(OpBuilder &b, VectorType targetVectorType,
                             Value value, OpOperand *outputOperand) {
   auto linalgOp = cast<LinalgOp>(outputOperand->getOwner());
-  assert(targetVectorType.getShape() == linalgOp.getShape(outputOperand));
   auto vecType = value.getType().dyn_cast<VectorType>();
   if (!vecType || vecType.getShape() == targetVectorType.getShape())
     return value;
@@ -245,6 +244,9 @@ static Value buildVectorWrite(OpBuilder &b, Value value,
     auto linalgOp = cast<LinalgOp>(outputOperand->getOwner());
     AffineMap map =
         reindexIndexingMap(linalgOp.getTiedIndexingMap(outputOperand));
+    SmallVector<int64_t> transposeShape =
+        applyPermutationMap(inversePermutation(map), vectorType.getShape());
+    vectorType = VectorType::get(transposeShape, vectorType.getElementType());
     SmallVector<Value> indices(linalgOp.getRank(outputOperand),
                                b.create<ConstantIndexOp>(loc, 0));
     value = broadcastIfNeeded(b, value, vectorType.getShape());
@@ -569,9 +571,16 @@ static LogicalResult vectorizeContraction(OpBuilder &b, LinalgOp linalgOp,
       return VectorizationResult{VectorizationStatus::Failure, nullptr};
     ArrayRef<int64_t> outShape =
         linalgOp.getShape(linalgOp.getOutputOperand(0));
-    auto vType = outShape.empty()
-                     ? op->getResult(0).getType()
-                     : VectorType::get(outShape, op->getResult(0).getType());
+    Type vType;
+    if (outShape.empty()) {
+      vType = op->getResult(0).getType();
+    } else {
+      SmallVector<int64_t> resultShape = applyPermutationMap(
+          inversePermutation(reindexIndexingMap(
+              linalgOp.getTiedIndexingMap(linalgOp.getOutputOperand(0)))),
+          outShape);
+      vType = VectorType::get(resultShape, op->getResult(0).getType());
+    }
     auto zero = b.create<ConstantOp>(loc, vType, b.getZeroAttr(vType));
     // Indexing maps at the time of vector.transfer_read are adjusted to order
     // vector dimensions in the same order as the canonical linalg op iteration
@@ -870,6 +879,9 @@ struct PadTensorOpVectorizationWithTransferWritePattern
     // trimPadding must remove the amount of padding that was added earlier.
     if (!hasSameTensorSize(padOp.source(), trimPadding)) return failure();
 
+    // Insert the new TransferWriteOp at position of the old TransferWriteOp.
+    rewriter.setInsertionPoint(xferOp);
+
     SmallVector<bool> inBounds(xferOp.getVectorType().getRank(), false);
     auto newXferOp = rewriter.replaceOpWithNewOp<vector::TransferWriteOp>(
         xferOp, padOp.source().getType(), xferOp.vector(), padOp.source(),
@@ -1013,6 +1025,10 @@ struct PadTensorOpVectorizationWithInsertSlicePattern
               return getConstantIntValue(std::get<0>(it)) == std::get<1>(it);
             }))
       return failure();
+
+    // Insert the TransferReadOp and TransferWriteOp at the position of the
+    // InsertSliceOp.
+    rewriter.setInsertionPoint(insertOp);
 
     // Generate TransferReadOp: Read entire source tensor and add high padding.
     SmallVector<Value> readIndices(
@@ -1170,8 +1186,8 @@ void mlir::linalg::populateConvVectorizationPatterns(
   populateVectorizationPatterns<ConvInputNHWCFilterHWCFOp, 4>(
       tiling, promotion, vectorization, tileSizes);
 
-  populateVectorizationPatterns<ConvNCHWOp, 4>(tiling, promotion, vectorization,
-                                               tileSizes);
+  populateVectorizationPatterns<Conv2DNchwOp, 4>(tiling, promotion,
+                                                 vectorization, tileSizes);
   populateVectorizationPatterns<ConvInputNCHWFilterHWCFOp, 4>(
       tiling, promotion, vectorization, tileSizes);
 

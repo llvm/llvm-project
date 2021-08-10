@@ -12,6 +12,7 @@
 
 ;.
 ; CHECK: @lds.size.8.align.8 = internal unnamed_addr addrspace(3) global [8 x i8] undef, align 8
+; CHECK: @lds.k2 = addrspace(3) global [1 x i8] undef, align 1
 ; CHECK: @llvm.amdgcn.kernel.k0.lds = internal addrspace(3) global %llvm.amdgcn.kernel.k0.lds.t undef, align 16
 ; CHECK: @llvm.amdgcn.kernel.k1.lds = internal addrspace(3) global %llvm.amdgcn.kernel.k1.lds.t undef, align 16
 ;.
@@ -60,6 +61,22 @@ define amdgpu_kernel void @k1() {
 
   %lds.size.16.align.16.bc = bitcast [16 x i8] addrspace(3)* @lds.size.16.align.16 to i8 addrspace(3)*
   store i8 16, i8 addrspace(3)* %lds.size.16.align.16.bc, align 16
+
+  ret void
+}
+
+; Do not lower LDS for graphics shaders.
+
+@lds.k2 = addrspace(3) global [1 x i8] undef, align 1
+
+define amdgpu_ps void @k2() {
+; CHECK-LABEL: @k2(
+; CHECK-NEXT:    %lds.k2.bc = bitcast [1 x i8] addrspace(3)* @lds.k2 to i8 addrspace(3)*
+; CHECK-NEXT:    store i8 1, i8 addrspace(3)* %lds.k2.bc, align 1
+; CHECK-NEXT:    ret void
+;
+  %lds.k2.bc = bitcast [1 x i8] addrspace(3)* @lds.k2 to i8 addrspace(3)*
+  store i8 1, i8 addrspace(3)* %lds.k2.bc, align 1
 
   ret void
 }

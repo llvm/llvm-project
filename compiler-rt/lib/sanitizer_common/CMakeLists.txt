@@ -16,6 +16,7 @@ set(SANITIZER_SOURCES_NOTERMINATION
   sanitizer_linux.cpp
   sanitizer_linux_s390.cpp
   sanitizer_mac.cpp
+  sanitizer_mutex.cpp
   sanitizer_netbsd.cpp
   sanitizer_persistent_allocator.cpp
   sanitizer_platform_limits_freebsd.cpp
@@ -185,6 +186,7 @@ set(SANITIZER_IMPL_HEADERS
   sanitizer_syscall_linux_riscv64.inc
   sanitizer_syscalls_netbsd.inc
   sanitizer_thread_registry.h
+  sanitizer_thread_safety.h
   sanitizer_tls_get_addr.h
   sanitizer_vector.h
   sanitizer_win.h

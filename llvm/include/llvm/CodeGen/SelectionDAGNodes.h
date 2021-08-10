@@ -1565,6 +1565,8 @@ public:
   bool isOne() const { return Value->isOne(); }
   bool isNullValue() const { return Value->isZero(); }
   bool isAllOnesValue() const { return Value->isMinusOne(); }
+  bool isMaxSignedValue() const { return Value->isMaxValue(true); }
+  bool isMinSignedValue() const { return Value->isMinValue(true); }
 
   bool isOpaque() const { return ConstantSDNodeBits.IsOpaque; }
 
@@ -2715,16 +2717,6 @@ namespace ISD {
     const StoreSDNode *St = dyn_cast<StoreSDNode>(N);
     return St && !St->isTruncatingStore() &&
       St->getAddressingMode() == ISD::UNINDEXED;
-  }
-
-  /// Returns true if the specified node is a non-truncating store.
-  inline bool isNON_TRUNCStore(const SDNode *N) {
-    return isa<StoreSDNode>(N) && !cast<StoreSDNode>(N)->isTruncatingStore();
-  }
-
-  /// Returns true if the specified node is a truncating store.
-  inline bool isTRUNCStore(const SDNode *N) {
-    return isa<StoreSDNode>(N) && cast<StoreSDNode>(N)->isTruncatingStore();
   }
 
   /// Returns true if the specified node is an unindexed store.

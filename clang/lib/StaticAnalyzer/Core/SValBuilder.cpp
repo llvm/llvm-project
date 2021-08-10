@@ -192,12 +192,19 @@ SValBuilder::getConjuredHeapSymbolVal(const Expr *E,
                                       const LocationContext *LCtx,
                                       unsigned VisitCount) {
   QualType T = E->getType();
-  assert(Loc::isLocType(T));
-  assert(SymbolManager::canSymbolicate(T));
-  if (T->isNullPtrType())
-    return makeZeroVal(T);
+  return getConjuredHeapSymbolVal(E, LCtx, T, VisitCount);
+}
 
-  SymbolRef sym = SymMgr.conjureSymbol(E, LCtx, T, VisitCount);
+DefinedOrUnknownSVal
+SValBuilder::getConjuredHeapSymbolVal(const Expr *E,
+                                      const LocationContext *LCtx,
+                                      QualType type, unsigned VisitCount) {
+  assert(Loc::isLocType(type));
+  assert(SymbolManager::canSymbolicate(type));
+  if (type->isNullPtrType())
+    return makeZeroVal(type);
+
+  SymbolRef sym = SymMgr.conjureSymbol(E, LCtx, type, VisitCount);
   return loc::MemRegionVal(MemMgr.getSymbolicHeapRegion(sym));
 }
 
@@ -712,9 +719,23 @@ SVal SValBuilder::evalCastSubKind(loc::MemRegionVal V, QualType CastTy,
           // symbols to use, only content metadata.
           return nonloc::SymbolVal(SymMgr.getExtentSymbol(FTR));
 
-    if (const SymbolicRegion *SymR = R->getSymbolicBase())
-      return makeNonLoc(SymR->getSymbol(), BO_NE,
-                        BasicVals.getZeroWithPtrWidth(), CastTy);
+    if (const SymbolicRegion *SymR = R->getSymbolicBase()) {
+      SymbolRef Sym = SymR->getSymbol();
+      QualType Ty = Sym->getType();
+      // This change is needed for architectures with varying
+      // pointer widths. See the amdgcn opencl reproducer with
+      // this change as an example: solver-sym-simplification-ptr-bool.cl
+      // FIXME: We could encounter a reference here,
+      //        try returning a concrete 'true' since it might
+      //        be easier on the solver.
+      // FIXME: Cleanup remainder of `getZeroWithPtrWidth ()`
+      //        and `getIntWithPtrWidth()` functions to prevent future
+      //        confusion
+      const llvm::APSInt &Zero = Ty->isReferenceType()
+                                     ? BasicVals.getZeroWithPtrWidth()
+                                     : BasicVals.getZeroWithTypeSize(Ty);
+      return makeNonLoc(Sym, BO_NE, Zero, CastTy);
+    }
     // Non-symbolic memory regions are always true.
     return makeTruthVal(true, CastTy);
   }

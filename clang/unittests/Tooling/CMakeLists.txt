@@ -1,5 +1,6 @@
 set(LLVM_LINK_COMPONENTS
   ${LLVM_TARGETS_TO_BUILD}
+  Option
   FrontendOpenMP
   Support
   )
@@ -68,6 +69,8 @@ clang_target_link_libraries(ToolingTests
   clangAST
   clangASTMatchers
   clangBasic
+  clangDependencyScanning
+  clangDriver
   clangFormat
   clangFrontend
   clangLex

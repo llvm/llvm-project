@@ -98,7 +98,8 @@ Mailing Lists
 -------------
 
 If you can't find what you need in these docs, try consulting the mailing
-lists.
+lists. In addition to the traditional mailing lists there is also a 
+`Discourse server <https://llvm.discourse.group>`_ available. 
 
 `Developer's List (llvm-dev)`__
   This list is for people who want to be included in technical discussions of
@@ -204,7 +205,7 @@ writing, the following sync-ups are organized:
      - `ics <https://calendar.google.com/calendar/ical/fr1qtmrmt2s9odufjvurkb6j70%40group.calendar.google.com/public/basic.ics>`__
      - `Minutes/docs <https://docs.google.com/document/d/14IDnh3YY9m6Ej_PaRKOz8tTTZlObgtLl8mYeRbytAec/edit?usp=sharing>`__
    * - MemorySSA in LLVM
-     - Monthly, first Monday of the month; 10:30amPT, 1:30pmET, 5:30pmUTC
+     - Every 8 weeks on Mondays
      - `ics <https://calendar.google.com/calendar/ical/c_1mincouiltpa24ac14of14lhi4%40group.calendar.google.com/public/basic.ics>`__
        `gcal <https://calendar.google.com/calendar/embed?src=c_1mincouiltpa24ac14of14lhi4%40group.calendar.google.com>`__
      - `Minutes/docs <https://docs.google.com/document/d/1-uEEZfmRdPThZlctOq9eXlmUaSSAAi8oKxhrPY_lpjk/edit#>`__
@@ -227,6 +228,12 @@ This channel has several bots.
 
 * clang-bot - A `geordi <http://www.eelis.net/geordi/>`_ instance running
   near-trunk clang instead of gcc.
+
+In addition to the traditional IRC there is a 
+`Discord <https://discord.com/channels/636084430946959380/636725486533345280>`_ 
+chat server available. To sign up, please use this 
+`invitation link <https://discord.com/invite/xS7Z362>`_.
+  
 
 .. _meetups-social-events:
 

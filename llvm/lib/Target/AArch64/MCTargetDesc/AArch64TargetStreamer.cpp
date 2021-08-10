@@ -48,11 +48,13 @@ void AArch64TargetStreamer::emitCurrentConstantPool() {
   ConstantPools->emitForCurrentSection(Streamer);
 }
 
+void AArch64TargetStreamer::emitConstantPools() {
+  ConstantPools->emitAll(Streamer);
+}
+
 // finish() - write out any non-empty assembler constant pools and
 //   write out note.gnu.properties if need.
 void AArch64TargetStreamer::finish() {
-  ConstantPools->emitAll(Streamer);
-
   if (MarkBTIProperty)
     emitNoteSection(ELF::GNU_PROPERTY_AARCH64_FEATURE_1_BTI);
 }

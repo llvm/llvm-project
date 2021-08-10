@@ -6,6 +6,8 @@ set(LIBFUZZER_SOURCES
   FuzzerExtFunctionsWeak.cpp
   FuzzerExtFunctionsWindows.cpp
   FuzzerExtraCounters.cpp
+  FuzzerExtraCountersDarwin.cpp
+  FuzzerExtraCountersWindows.cpp
   FuzzerFork.cpp
   FuzzerIO.cpp
   FuzzerIOPosix.cpp

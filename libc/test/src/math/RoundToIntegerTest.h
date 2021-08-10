@@ -9,7 +9,7 @@
 #ifndef LLVM_LIBC_TEST_SRC_MATH_ROUNDTOINTEGERTEST_H
 #define LLVM_LIBC_TEST_SRC_MATH_ROUNDTOINTEGERTEST_H
 
-#include "utils/FPUtil/FPBits.h"
+#include "src/__support/FPUtil/FPBits.h"
 #include "utils/MPFRWrapper/MPFRUtils.h"
 #include "utils/UnitTest/Test.h"
 
@@ -18,7 +18,7 @@
 #include <errno.h>
 #endif
 #if math_errhandling & MATH_ERREXCEPT
-#include "utils/FPUtil/FEnv.h"
+#include "src/__support/FPUtil/FEnvUtils.h"
 #endif
 
 namespace mpfr = __llvm_libc::testing::mpfr;
@@ -135,9 +135,9 @@ public:
     // We start with 1.0 so that the implicit bit for x86 long doubles
     // is set.
     FPBits bits(F(1.0));
-    bits.encoding.exponent = exponentLimit + FPBits::exponentBias;
-    bits.encoding.sign = 1;
-    bits.encoding.mantissa = 0;
+    bits.setUnbiasedExponent(exponentLimit + FPBits::exponentBias);
+    bits.setSign(1);
+    bits.setMantissa(0);
 
     F x = F(bits);
     long mpfrResult;
@@ -199,10 +199,9 @@ public:
     // We start with 1.0 so that the implicit bit for x86 long doubles
     // is set.
     FPBits bits(F(1.0));
-    bits.encoding.exponent = exponentLimit + FPBits::exponentBias;
-    bits.encoding.sign = 1;
-    bits.encoding.mantissa =
-        UIntType(0x1) << (__llvm_libc::fputil::MantissaWidth<F>::value - 1);
+    bits.setUnbiasedExponent(exponentLimit + FPBits::exponentBias);
+    bits.setSign(1);
+    bits.setMantissa(UIntType(0x1) << (__llvm_libc::fputil::MantissaWidth<F>::value - 1));
 
     F x = F(bits);
     if (TestModes) {

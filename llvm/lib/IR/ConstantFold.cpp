@@ -349,200 +349,6 @@ static Constant *ExtractConstantBytes(Constant *C, unsigned ByteStart,
   }
 }
 
-/// Wrapper around getFoldedSizeOfImpl() that adds caching.
-static Constant *getFoldedSizeOf(Type *Ty, Type *DestTy, bool Folded,
-                                 DenseMap<Type *, Constant *> &Cache);
-
-/// Return a ConstantExpr with type DestTy for sizeof on Ty, with any known
-/// factors factored out. If Folded is false, return null if no factoring was
-/// possible, to avoid endlessly bouncing an unfoldable expression back into the
-/// top-level folder.
-static Constant *getFoldedSizeOfImpl(Type *Ty, Type *DestTy, bool Folded,
-                                     DenseMap<Type *, Constant *> &Cache) {
-  // This is the actual implementation of getFoldedSizeOf(). To get the caching
-  // behavior, we need to call getFoldedSizeOf() when we recurse.
-
-  if (ArrayType *ATy = dyn_cast<ArrayType>(Ty)) {
-    Constant *N = ConstantInt::get(DestTy, ATy->getNumElements());
-    Constant *E = getFoldedSizeOf(ATy->getElementType(), DestTy, true, Cache);
-    return ConstantExpr::getNUWMul(E, N);
-  }
-
-  if (StructType *STy = dyn_cast<StructType>(Ty))
-    if (!STy->isPacked()) {
-      unsigned NumElems = STy->getNumElements();
-      // An empty struct has size zero.
-      if (NumElems == 0)
-        return ConstantExpr::getNullValue(DestTy);
-      // Check for a struct with all members having the same size.
-      Constant *MemberSize =
-          getFoldedSizeOf(STy->getElementType(0), DestTy, true, Cache);
-      bool AllSame = true;
-      for (unsigned i = 1; i != NumElems; ++i)
-        if (MemberSize !=
-            getFoldedSizeOf(STy->getElementType(i), DestTy, true, Cache)) {
-          AllSame = false;
-          break;
-        }
-      if (AllSame) {
-        Constant *N = ConstantInt::get(DestTy, NumElems);
-        return ConstantExpr::getNUWMul(MemberSize, N);
-      }
-    }
-
-  // Pointer size doesn't depend on the pointee type, so canonicalize them
-  // to an arbitrary pointee.
-  if (PointerType *PTy = dyn_cast<PointerType>(Ty))
-    if (!PTy->getElementType()->isIntegerTy(1))
-      return getFoldedSizeOf(
-          PointerType::get(IntegerType::get(PTy->getContext(), 1),
-                           PTy->getAddressSpace()),
-          DestTy, true, Cache);
-
-  // If there's no interesting folding happening, bail so that we don't create
-  // a constant that looks like it needs folding but really doesn't.
-  if (!Folded)
-    return nullptr;
-
-  // Base case: Get a regular sizeof expression.
-  Constant *C = ConstantExpr::getSizeOf(Ty);
-  C = ConstantExpr::getCast(CastInst::getCastOpcode(C, false,
-                                                    DestTy, false),
-                            C, DestTy);
-  return C;
-}
-
-static Constant *getFoldedSizeOf(Type *Ty, Type *DestTy, bool Folded,
-                                 DenseMap<Type *, Constant *> &Cache) {
-  // Check for previously generated folded size constant.
-  auto It = Cache.find(Ty);
-  if (It != Cache.end())
-    return It->second;
-  return Cache[Ty] = getFoldedSizeOfImpl(Ty, DestTy, Folded, Cache);
-}
-
-static Constant *getFoldedSizeOf(Type *Ty, Type *DestTy, bool Folded) {
-  DenseMap<Type *, Constant *> Cache;
-  return getFoldedSizeOf(Ty, DestTy, Folded, Cache);
-}
-
-/// Return a ConstantExpr with type DestTy for alignof on Ty, with any known
-/// factors factored out. If Folded is false, return null if no factoring was
-/// possible, to avoid endlessly bouncing an unfoldable expression back into the
-/// top-level folder.
-static Constant *getFoldedAlignOf(Type *Ty, Type *DestTy, bool Folded) {
-  // The alignment of an array is equal to the alignment of the
-  // array element. Note that this is not always true for vectors.
-  if (ArrayType *ATy = dyn_cast<ArrayType>(Ty)) {
-    Constant *C = ConstantExpr::getAlignOf(ATy->getElementType());
-    C = ConstantExpr::getCast(CastInst::getCastOpcode(C, false,
-                                                      DestTy,
-                                                      false),
-                              C, DestTy);
-    return C;
-  }
-
-  if (StructType *STy = dyn_cast<StructType>(Ty)) {
-    // Packed structs always have an alignment of 1.
-    if (STy->isPacked())
-      return ConstantInt::get(DestTy, 1);
-
-    // Otherwise, struct alignment is the maximum alignment of any member.
-    // Without target data, we can't compare much, but we can check to see
-    // if all the members have the same alignment.
-    unsigned NumElems = STy->getNumElements();
-    // An empty struct has minimal alignment.
-    if (NumElems == 0)
-      return ConstantInt::get(DestTy, 1);
-    // Check for a struct with all members having the same alignment.
-    Constant *MemberAlign =
-      getFoldedAlignOf(STy->getElementType(0), DestTy, true);
-    bool AllSame = true;
-    for (unsigned i = 1; i != NumElems; ++i)
-      if (MemberAlign != getFoldedAlignOf(STy->getElementType(i), DestTy, true)) {
-        AllSame = false;
-        break;
-      }
-    if (AllSame)
-      return MemberAlign;
-  }
-
-  // Pointer alignment doesn't depend on the pointee type, so canonicalize them
-  // to an arbitrary pointee.
-  if (PointerType *PTy = dyn_cast<PointerType>(Ty))
-    if (!PTy->getElementType()->isIntegerTy(1))
-      return
-        getFoldedAlignOf(PointerType::get(IntegerType::get(PTy->getContext(),
-                                                           1),
-                                          PTy->getAddressSpace()),
-                         DestTy, true);
-
-  // If there's no interesting folding happening, bail so that we don't create
-  // a constant that looks like it needs folding but really doesn't.
-  if (!Folded)
-    return nullptr;
-
-  // Base case: Get a regular alignof expression.
-  Constant *C = ConstantExpr::getAlignOf(Ty);
-  C = ConstantExpr::getCast(CastInst::getCastOpcode(C, false,
-                                                    DestTy, false),
-                            C, DestTy);
-  return C;
-}
-
-/// Return a ConstantExpr with type DestTy for offsetof on Ty and FieldNo, with
-/// any known factors factored out. If Folded is false, return null if no
-/// factoring was possible, to avoid endlessly bouncing an unfoldable expression
-/// back into the top-level folder.
-static Constant *getFoldedOffsetOf(Type *Ty, Constant *FieldNo, Type *DestTy,
-                                   bool Folded) {
-  if (ArrayType *ATy = dyn_cast<ArrayType>(Ty)) {
-    Constant *N = ConstantExpr::getCast(CastInst::getCastOpcode(FieldNo, false,
-                                                                DestTy, false),
-                                        FieldNo, DestTy);
-    Constant *E = getFoldedSizeOf(ATy->getElementType(), DestTy, true);
-    return ConstantExpr::getNUWMul(E, N);
-  }
-
-  if (StructType *STy = dyn_cast<StructType>(Ty))
-    if (!STy->isPacked()) {
-      unsigned NumElems = STy->getNumElements();
-      // An empty struct has no members.
-      if (NumElems == 0)
-        return nullptr;
-      // Check for a struct with all members having the same size.
-      Constant *MemberSize =
-        getFoldedSizeOf(STy->getElementType(0), DestTy, true);
-      bool AllSame = true;
-      for (unsigned i = 1; i != NumElems; ++i)
-        if (MemberSize !=
-            getFoldedSizeOf(STy->getElementType(i), DestTy, true)) {
-          AllSame = false;
-          break;
-        }
-      if (AllSame) {
-        Constant *N = ConstantExpr::getCast(CastInst::getCastOpcode(FieldNo,
-                                                                    false,
-                                                                    DestTy,
-                                                                    false),
-                                            FieldNo, DestTy);
-        return ConstantExpr::getNUWMul(MemberSize, N);
-      }
-    }
-
-  // If there's no interesting folding happening, bail so that we don't create
-  // a constant that looks like it needs folding but really doesn't.
-  if (!Folded)
-    return nullptr;
-
-  // Base case: Get a regular offsetof expression.
-  Constant *C = ConstantExpr::getOffsetOf(Ty, FieldNo);
-  C = ConstantExpr::getCast(CastInst::getCastOpcode(C, false,
-                                                    DestTy, false),
-                            C, DestTy);
-  return C;
-}
-
 Constant *llvm::ConstantFoldCastInstruction(unsigned opc, Constant *V,
                                             Type *DestTy) {
   if (isa<PoisonValue>(V))
@@ -666,53 +472,6 @@ Constant *llvm::ConstantFoldCastInstruction(unsigned opc, Constant *V,
     // Is it a null pointer value?
     if (V->isNullValue())
       return ConstantInt::get(DestTy, 0);
-    // If this is a sizeof-like expression, pull out multiplications by
-    // known factors to expose them to subsequent folding. If it's an
-    // alignof-like expression, factor out known factors.
-    if (ConstantExpr *CE = dyn_cast<ConstantExpr>(V))
-      if (CE->getOpcode() == Instruction::GetElementPtr &&
-          CE->getOperand(0)->isNullValue()) {
-        // FIXME: Looks like getFoldedSizeOf(), getFoldedOffsetOf() and
-        // getFoldedAlignOf() don't handle the case when DestTy is a vector of
-        // pointers yet. We end up in asserts in CastInst::getCastOpcode (see
-        // test/Analysis/ConstantFolding/cast-vector.ll). I've only seen this
-        // happen in one "real" C-code test case, so it does not seem to be an
-        // important optimization to handle vectors here. For now, simply bail
-        // out.
-        if (DestTy->isVectorTy())
-          return nullptr;
-        GEPOperator *GEPO = cast<GEPOperator>(CE);
-        Type *Ty = GEPO->getSourceElementType();
-        if (CE->getNumOperands() == 2) {
-          // Handle a sizeof-like expression.
-          Constant *Idx = CE->getOperand(1);
-          bool isOne = isa<ConstantInt>(Idx) && cast<ConstantInt>(Idx)->isOne();
-          if (Constant *C = getFoldedSizeOf(Ty, DestTy, !isOne)) {
-            Idx = ConstantExpr::getCast(CastInst::getCastOpcode(Idx, true,
-                                                                DestTy, false),
-                                        Idx, DestTy);
-            return ConstantExpr::getMul(C, Idx);
-          }
-        } else if (CE->getNumOperands() == 3 &&
-                   CE->getOperand(1)->isNullValue()) {
-          // Handle an alignof-like expression.
-          if (StructType *STy = dyn_cast<StructType>(Ty))
-            if (!STy->isPacked()) {
-              ConstantInt *CI = cast<ConstantInt>(CE->getOperand(2));
-              if (CI->isOne() &&
-                  STy->getNumElements() == 2 &&
-                  STy->getElementType(0)->isIntegerTy(1)) {
-                return getFoldedAlignOf(STy->getElementType(1), DestTy, false);
-              }
-            }
-          // Handle an offsetof-like expression.
-          if (Ty->isStructTy() || Ty->isArrayTy()) {
-            if (Constant *C = getFoldedOffsetOf(Ty, CE->getOperand(2),
-                                                DestTy, false))
-              return C;
-          }
-        }
-      }
     // Other pointer types cannot be casted
     return nullptr;
   case Instruction::UIToFP:
@@ -908,13 +667,16 @@ Constant *llvm::ConstantFoldExtractElementInstruction(Constant *Val,
     }
   }
 
+  if (Constant *C = Val->getAggregateElement(CIdx))
+    return C;
+
   // Lane < Splat minimum vector width => extractelt Splat(x), Lane -> x
   if (CIdx->getValue().ult(ValVTy->getElementCount().getKnownMinValue())) {
     if (Constant *SplatVal = Val->getSplatValue())
       return SplatVal;
   }
 
-  return Val->getAggregateElement(CIdx);
+  return nullptr;
 }
 
 Constant *llvm::ConstantFoldInsertElementInstruction(Constant *Val,
@@ -2344,6 +2106,97 @@ static bool isIndexInRangeOfArrayType(uint64_t NumElements,
   return true;
 }
 
+// Combine Indices - If the source pointer to this getelementptr instruction
+// is a getelementptr instruction, combine the indices of the two
+// getelementptr instructions into a single instruction.
+static Constant *foldGEPOfGEP(GEPOperator *GEP, Type *PointeeTy, bool InBounds,
+                              ArrayRef<Value *> Idxs) {
+  if (PointeeTy != GEP->getResultElementType())
+    return nullptr;
+
+  Constant *Idx0 = cast<Constant>(Idxs[0]);
+  if (Idx0->isNullValue()) {
+    // Handle the simple case of a zero index.
+    SmallVector<Value*, 16> NewIndices;
+    NewIndices.reserve(Idxs.size() + GEP->getNumIndices());
+    NewIndices.append(GEP->idx_begin(), GEP->idx_end());
+    NewIndices.append(Idxs.begin() + 1, Idxs.end());
+    return ConstantExpr::getGetElementPtr(
+        GEP->getSourceElementType(), cast<Constant>(GEP->getPointerOperand()),
+        NewIndices, InBounds && GEP->isInBounds(), GEP->getInRangeIndex());
+  }
+
+  gep_type_iterator LastI = gep_type_end(GEP);
+  for (gep_type_iterator I = gep_type_begin(GEP), E = gep_type_end(GEP);
+       I != E; ++I)
+    LastI = I;
+
+  // We cannot combine indices if doing so would take us outside of an
+  // array or vector.  Doing otherwise could trick us if we evaluated such a
+  // GEP as part of a load.
+  //
+  // e.g. Consider if the original GEP was:
+  // i8* getelementptr ({ [2 x i8], i32, i8, [3 x i8] }* @main.c,
+  //                    i32 0, i32 0, i64 0)
+  //
+  // If we then tried to offset it by '8' to get to the third element,
+  // an i8, we should *not* get:
+  // i8* getelementptr ({ [2 x i8], i32, i8, [3 x i8] }* @main.c,
+  //                    i32 0, i32 0, i64 8)
+  //
+  // This GEP tries to index array element '8  which runs out-of-bounds.
+  // Subsequent evaluation would get confused and produce erroneous results.
+  //
+  // The following prohibits such a GEP from being formed by checking to see
+  // if the index is in-range with respect to an array.
+  if (!LastI.isSequential())
+    return nullptr;
+  ConstantInt *CI = dyn_cast<ConstantInt>(Idx0);
+  if (!CI)
+    return nullptr;
+  if (LastI.isBoundedSequential() &&
+      !isIndexInRangeOfArrayType(LastI.getSequentialNumElements(), CI))
+    return nullptr;
+
+  // TODO: This code may be extended to handle vectors as well.
+  auto *LastIdx = cast<Constant>(GEP->getOperand(GEP->getNumOperands()-1));
+  Type *LastIdxTy = LastIdx->getType();
+  if (LastIdxTy->isVectorTy())
+    return nullptr;
+
+  SmallVector<Value*, 16> NewIndices;
+  NewIndices.reserve(Idxs.size() + GEP->getNumIndices());
+  NewIndices.append(GEP->idx_begin(), GEP->idx_end() - 1);
+
+  // Add the last index of the source with the first index of the new GEP.
+  // Make sure to handle the case when they are actually different types.
+  if (LastIdxTy != Idx0->getType()) {
+    unsigned CommonExtendedWidth =
+        std::max(LastIdxTy->getIntegerBitWidth(),
+                 Idx0->getType()->getIntegerBitWidth());
+    CommonExtendedWidth = std::max(CommonExtendedWidth, 64U);
+
+    Type *CommonTy =
+        Type::getIntNTy(LastIdxTy->getContext(), CommonExtendedWidth);
+    Idx0 = ConstantExpr::getSExtOrBitCast(Idx0, CommonTy);
+    LastIdx = ConstantExpr::getSExtOrBitCast(LastIdx, CommonTy);
+  }
+
+  NewIndices.push_back(ConstantExpr::get(Instruction::Add, Idx0, LastIdx));
+  NewIndices.append(Idxs.begin() + 1, Idxs.end());
+
+  // The combined GEP normally inherits its index inrange attribute from
+  // the inner GEP, but if the inner GEP's last index was adjusted by the
+  // outer GEP, any inbounds attribute on that index is invalidated.
+  Optional<unsigned> IRIndex = GEP->getInRangeIndex();
+  if (IRIndex && *IRIndex == GEP->getNumIndices() - 1)
+    IRIndex = None;
+
+  return ConstantExpr::getGetElementPtr(
+      GEP->getSourceElementType(), cast<Constant>(GEP->getPointerOperand()),
+      NewIndices, InBounds && GEP->isInBounds(), IRIndex);
+}
+
 Constant *llvm::ConstantFoldGetElementPtr(Type *PointeeTy, Constant *C,
                                           bool InBounds,
                                           Optional<unsigned> InRangeIndex,
@@ -2402,91 +2255,9 @@ Constant *llvm::ConstantFoldGetElementPtr(Type *PointeeTy, Constant *C,
   }
 
   if (ConstantExpr *CE = dyn_cast<ConstantExpr>(C)) {
-    // Combine Indices - If the source pointer to this getelementptr instruction
-    // is a getelementptr instruction, combine the indices of the two
-    // getelementptr instructions into a single instruction.
-    //
-    if (CE->getOpcode() == Instruction::GetElementPtr) {
-      gep_type_iterator LastI = gep_type_end(CE);
-      for (gep_type_iterator I = gep_type_begin(CE), E = gep_type_end(CE);
-           I != E; ++I)
-        LastI = I;
-
-      // We cannot combine indices if doing so would take us outside of an
-      // array or vector.  Doing otherwise could trick us if we evaluated such a
-      // GEP as part of a load.
-      //
-      // e.g. Consider if the original GEP was:
-      // i8* getelementptr ({ [2 x i8], i32, i8, [3 x i8] }* @main.c,
-      //                    i32 0, i32 0, i64 0)
-      //
-      // If we then tried to offset it by '8' to get to the third element,
-      // an i8, we should *not* get:
-      // i8* getelementptr ({ [2 x i8], i32, i8, [3 x i8] }* @main.c,
-      //                    i32 0, i32 0, i64 8)
-      //
-      // This GEP tries to index array element '8  which runs out-of-bounds.
-      // Subsequent evaluation would get confused and produce erroneous results.
-      //
-      // The following prohibits such a GEP from being formed by checking to see
-      // if the index is in-range with respect to an array.
-      // TODO: This code may be extended to handle vectors as well.
-      bool PerformFold = false;
-      if (Idx0->isNullValue())
-        PerformFold = true;
-      else if (LastI.isSequential())
-        if (ConstantInt *CI = dyn_cast<ConstantInt>(Idx0))
-          PerformFold = (!LastI.isBoundedSequential() ||
-                         isIndexInRangeOfArrayType(
-                             LastI.getSequentialNumElements(), CI)) &&
-                        !CE->getOperand(CE->getNumOperands() - 1)
-                             ->getType()
-                             ->isVectorTy();
-
-      if (PerformFold) {
-        SmallVector<Value*, 16> NewIndices;
-        NewIndices.reserve(Idxs.size() + CE->getNumOperands());
-        NewIndices.append(CE->op_begin() + 1, CE->op_end() - 1);
-
-        // Add the last index of the source with the first index of the new GEP.
-        // Make sure to handle the case when they are actually different types.
-        Constant *Combined = CE->getOperand(CE->getNumOperands()-1);
-        // Otherwise it must be an array.
-        if (!Idx0->isNullValue()) {
-          Type *IdxTy = Combined->getType();
-          if (IdxTy != Idx0->getType()) {
-            unsigned CommonExtendedWidth =
-                std::max(IdxTy->getIntegerBitWidth(),
-                         Idx0->getType()->getIntegerBitWidth());
-            CommonExtendedWidth = std::max(CommonExtendedWidth, 64U);
-
-            Type *CommonTy =
-                Type::getIntNTy(IdxTy->getContext(), CommonExtendedWidth);
-            Constant *C1 = ConstantExpr::getSExtOrBitCast(Idx0, CommonTy);
-            Constant *C2 = ConstantExpr::getSExtOrBitCast(Combined, CommonTy);
-            Combined = ConstantExpr::get(Instruction::Add, C1, C2);
-          } else {
-            Combined =
-              ConstantExpr::get(Instruction::Add, Idx0, Combined);
-          }
-        }
-
-        NewIndices.push_back(Combined);
-        NewIndices.append(Idxs.begin() + 1, Idxs.end());
-
-        // The combined GEP normally inherits its index inrange attribute from
-        // the inner GEP, but if the inner GEP's last index was adjusted by the
-        // outer GEP, any inbounds attribute on that index is invalidated.
-        Optional<unsigned> IRIndex = cast<GEPOperator>(CE)->getInRangeIndex();
-        if (IRIndex && *IRIndex == CE->getNumOperands() - 2 && !Idx0->isNullValue())
-          IRIndex = None;
-
-        return ConstantExpr::getGetElementPtr(
-            cast<GEPOperator>(CE)->getSourceElementType(), CE->getOperand(0),
-            NewIndices, InBounds && cast<GEPOperator>(CE)->isInBounds(),
-            IRIndex);
-      }
-    }
+    if (auto *GEP = dyn_cast<GEPOperator>(CE))
+      if (Constant *C = foldGEPOfGEP(GEP, PointeeTy, InBounds, Idxs))
+        return C;
 
     // Attempt to fold casts to the same type away.  For example, folding:
     //

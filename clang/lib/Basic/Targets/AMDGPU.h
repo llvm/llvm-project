@@ -310,9 +310,12 @@ public:
       Opts["cl_khr_mipmap_image"] = true;
       Opts["cl_khr_mipmap_image_writes"] = true;
       Opts["cl_khr_subgroups"] = true;
-      Opts["cl_khr_3d_image_writes"] = true;
       Opts["cl_amd_media_ops"] = true;
       Opts["cl_amd_media_ops2"] = true;
+
+      Opts["__opencl_c_images"] = true;
+      Opts["__opencl_c_3d_image_writes"] = true;
+      Opts["cl_khr_3d_image_writes"] = true;
     }
   }
 
@@ -349,7 +352,16 @@ public:
   }
 
   LangAS getCUDABuiltinAddressSpace(unsigned AS) const override {
-    return LangAS::Default;
+    switch (AS) {
+    case 1:
+      return LangAS::cuda_device;
+    case 3:
+      return LangAS::cuda_shared;
+    case 4:
+      return LangAS::cuda_constant;
+    default:
+      return getLangASFromTargetAS(AS);
+    }
   }
 
   llvm::Optional<LangAS> getConstantAddressSpace() const override {

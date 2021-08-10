@@ -1,6 +1,8 @@
 ; RUN: opt -O2 -pass-remarks-missed=openmp-opt -enable-new-pm < %s 2>&1 | FileCheck %s --check-prefix=MODULE
 target datalayout = "e-i64:64-i128:128-v16:16-v32:32-n16:32:64"
 
+%struct.ident_t = type { i32, i32, i32, i32, i8* }
+
 @.str = private unnamed_addr constant [13 x i8] c"Alloc Shared\00", align 1
 
 @S = external local_unnamed_addr global i8*
@@ -9,20 +11,17 @@ target datalayout = "e-i64:64-i128:128-v16:16-v32:32-n16:32:64"
 
 define void @foo() {
 entry:
+  %i = call i32 @__kmpc_target_init(%struct.ident_t* null, i1 false, i1 true, i1 true)
   %x = call i8* @__kmpc_alloc_shared(i64 4), !dbg !10
   %x_on_stack = bitcast i8* %x to i32*
   %0 = bitcast i32* %x_on_stack to i8*
   call void @use(i8* %0)
   call void @__kmpc_free_shared(i8* %x)
+  call void @__kmpc_target_deinit(%struct.ident_t* null, i1 false, i1 true)
   ret void
 }
 
-define void @use(i8* %0) {
-entry:
-  %.addr = alloca i8*, align 8
-  store i8* %0, i8** @S
-  ret void
-}
+declare void @use(i8* %0)
 
 define weak i8* @__kmpc_alloc_shared(i64 %DataSize) {
 entry:
@@ -34,6 +33,8 @@ entry:
 declare i8* @_Z10SafeMallocmPKc(i64 %size, i8* nocapture readnone %msg)
 
 declare void @__kmpc_free_shared(i8*)
+declare i32 @__kmpc_target_init(%struct.ident_t*, i1, i1 %use_generic_state_machine, i1)
+declare void @__kmpc_target_deinit(%struct.ident_t*, i1, i1)
 
 !llvm.dbg.cu = !{!0}
 !llvm.module.flags = !{!3, !4, !5, !6}

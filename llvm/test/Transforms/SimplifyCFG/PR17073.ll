@@ -51,9 +51,10 @@ define i32* @can_trap2() {
 ; CHECK-NEXT:    [[TOBOOL:%.*]] = icmp eq i32 [[TMP0]], 0
 ; CHECK-NEXT:    br i1 [[TOBOOL]], label [[EXIT:%.*]], label [[BLOCK1:%.*]]
 ; CHECK:       block1:
-; CHECK-NEXT:    ret i32* null
+; CHECK-NEXT:    br label [[EXIT]]
 ; CHECK:       exit:
-; CHECK-NEXT:    ret i32* select (i1 icmp eq (i64 urem (i64 2, i64 zext (i1 icmp eq (i32* bitcast (i8* @b to i32*), i32* @a) to i64)), i64 0), i32* null, i32* @a)
+; CHECK-NEXT:    [[STOREMERGE:%.*]] = phi i32* [ select (i1 icmp eq (i64 urem (i64 2, i64 zext (i1 icmp eq (i32* bitcast (i8* @b to i32*), i32* @a) to i64)), i64 0), i32* null, i32* @a), [[ENTRY:%.*]] ], [ null, [[BLOCK1]] ]
+; CHECK-NEXT:    ret i32* [[STOREMERGE]]
 ;
 entry:
   %0 = load i32, i32* @a, align 4
@@ -76,12 +77,9 @@ define i32* @cannot_trap() {
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[TMP0:%.*]] = load i32, i32* @a, align 4
 ; CHECK-NEXT:    [[TOBOOL:%.*]] = icmp eq i32 [[TMP0]], 0
-; CHECK-NEXT:    br i1 [[TOBOOL]], label [[EXIT:%.*]], label [[BLOCK1:%.*]]
-; CHECK:       block1:
 ; CHECK-NEXT:    [[SPEC_SELECT:%.*]] = select i1 icmp eq (i32* bitcast (i8* @b to i32*), i32* @a), i32* select (i1 icmp eq (i64 add (i64 zext (i1 icmp eq (i32* bitcast (i8* @b to i32*), i32* @a) to i64), i64 2), i64 0), i32* null, i32* @a), i32* null
-; CHECK-NEXT:    ret i32* [[SPEC_SELECT]]
-; CHECK:       exit:
-; CHECK-NEXT:    ret i32* null
+; CHECK-NEXT:    [[STOREMERGE:%.*]] = select i1 [[TOBOOL]], i32* null, i32* [[SPEC_SELECT]]
+; CHECK-NEXT:    ret i32* [[STOREMERGE]]
 ;
 entry:
   %0 = load i32, i32* @a, align 4

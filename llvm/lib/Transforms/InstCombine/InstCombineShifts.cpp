@@ -1139,6 +1139,10 @@ Instruction *InstCombinerImpl::visitLShr(BinaryOperator &I) {
 
     Value *Y;
     if (ShAmt == BitWidth - 1) {
+      // lshr i32 or(X,-X), 31 --> zext (X != 0)
+      if (match(Op0, m_OneUse(m_c_Or(m_Neg(m_Value(X)), m_Deferred(X)))))
+        return new ZExtInst(Builder.CreateIsNotNull(X), Ty);
+
       // lshr i32 (X -nsw Y), 31 --> zext (X < Y)
       if (match(Op0, m_OneUse(m_NSWSub(m_Value(X), m_Value(Y)))))
         return new ZExtInst(Builder.CreateICmpSLT(X, Y), Ty);
@@ -1323,11 +1327,16 @@ Instruction *InstCombinerImpl::visitAShr(BinaryOperator &I) {
       return new SExtInst(NewSh, Ty);
     }
 
-    // ashr i32 (X -nsw Y), 31 --> sext (X < Y)
-    Value *Y;
-    if (ShAmt == BitWidth - 1 &&
-        match(Op0, m_OneUse(m_NSWSub(m_Value(X), m_Value(Y)))))
-      return new SExtInst(Builder.CreateICmpSLT(X, Y), Ty);
+    if (ShAmt == BitWidth - 1) {
+      // ashr i32 or(X,-X), 31 --> sext (X != 0)
+      if (match(Op0, m_OneUse(m_c_Or(m_Neg(m_Value(X)), m_Deferred(X)))))
+        return new SExtInst(Builder.CreateIsNotNull(X), Ty);
+
+      // ashr i32 (X -nsw Y), 31 --> sext (X < Y)
+      Value *Y;
+      if (match(Op0, m_OneUse(m_NSWSub(m_Value(X), m_Value(Y)))))
+        return new SExtInst(Builder.CreateICmpSLT(X, Y), Ty);
+    }
 
     // If the shifted-out value is known-zero, then this is an exact shift.
     if (!I.isExact() &&
@@ -1335,6 +1344,22 @@ Instruction *InstCombinerImpl::visitAShr(BinaryOperator &I) {
       I.setIsExact();
       return &I;
     }
+  }
+
+  // Prefer `-(x & 1)` over `(x << (bitwidth(x)-1)) a>> (bitwidth(x)-1)`
+  // as the pattern to splat the lowest bit.
+  // FIXME: iff X is already masked, we don't need the one-use check.
+  Value *X;
+  if (match(Op1, m_SpecificIntAllowUndef(BitWidth - 1)) &&
+      match(Op0, m_OneUse(m_Shl(m_Value(X),
+                                m_SpecificIntAllowUndef(BitWidth - 1))))) {
+    Constant *Mask = ConstantInt::get(Ty, 1);
+    // Retain the knowledge about the ignored lanes.
+    Mask = Constant::mergeUndefsWith(
+        Constant::mergeUndefsWith(Mask, cast<Constant>(Op1)),
+        cast<Constant>(cast<Instruction>(Op0)->getOperand(1)));
+    X = Builder.CreateAnd(X, Mask);
+    return BinaryOperator::CreateNeg(X);
   }
 
   if (Instruction *R = foldVariableSignZeroExtensionOfVariableHighBitExtract(I))
@@ -1345,7 +1370,6 @@ Instruction *InstCombinerImpl::visitAShr(BinaryOperator &I) {
     return BinaryOperator::CreateLShr(Op0, Op1);
 
   // ashr (xor %x, -1), %y  -->  xor (ashr %x, %y), -1
-  Value *X;
   if (match(Op0, m_OneUse(m_Not(m_Value(X))))) {
     // Note that we must drop 'exact'-ness of the shift!
     // Note that we can't keep undef's in -1 vector constant!

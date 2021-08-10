@@ -122,16 +122,16 @@ body:             |
     ; CHECK: [[COPY:%[0-9]+]]:_(p0) = COPY $x0
     ; CHECK: [[C:%[0-9]+]]:_(s64) = G_CONSTANT i64 0
     ; CHECK: [[BUILD_VECTOR:%[0-9]+]]:_(<2 x s64>) = G_BUILD_VECTOR [[C]](s64), [[C]](s64)
-    ; CHECK: G_STORE [[BUILD_VECTOR]](<2 x s64>), [[COPY]](p0) :: (store (s128) into %ir.dst, align 1)
+    ; CHECK: G_STORE [[BUILD_VECTOR]](<2 x s64>), [[COPY]](p0) :: (store (<2 x s64>) into %ir.dst, align 1)
     ; CHECK: [[C1:%[0-9]+]]:_(s64) = G_CONSTANT i64 16
     ; CHECK: [[PTR_ADD:%[0-9]+]]:_(p0) = G_PTR_ADD [[COPY]], [[C1]](s64)
-    ; CHECK: G_STORE [[BUILD_VECTOR]](<2 x s64>), [[PTR_ADD]](p0) :: (store (s128) into %ir.dst + 16, align 1)
+    ; CHECK: G_STORE [[BUILD_VECTOR]](<2 x s64>), [[PTR_ADD]](p0) :: (store (<2 x s64>) into %ir.dst + 16, align 1)
     ; CHECK: [[C2:%[0-9]+]]:_(s64) = G_CONSTANT i64 32
     ; CHECK: [[PTR_ADD1:%[0-9]+]]:_(p0) = G_PTR_ADD [[COPY]], [[C2]](s64)
-    ; CHECK: G_STORE [[BUILD_VECTOR]](<2 x s64>), [[PTR_ADD1]](p0) :: (store (s128) into %ir.dst + 32, align 1)
+    ; CHECK: G_STORE [[BUILD_VECTOR]](<2 x s64>), [[PTR_ADD1]](p0) :: (store (<2 x s64>) into %ir.dst + 32, align 1)
     ; CHECK: [[C3:%[0-9]+]]:_(s64) = G_CONSTANT i64 48
     ; CHECK: [[PTR_ADD2:%[0-9]+]]:_(p0) = G_PTR_ADD [[COPY]], [[C3]](s64)
-    ; CHECK: G_STORE [[BUILD_VECTOR]](<2 x s64>), [[PTR_ADD2]](p0) :: (store (s128) into %ir.dst + 48, align 1)
+    ; CHECK: G_STORE [[BUILD_VECTOR]](<2 x s64>), [[PTR_ADD2]](p0) :: (store (<2 x s64>) into %ir.dst + 48, align 1)
     ; CHECK: RET_ReallyLR
     %0:_(p0) = COPY $x0
     %1:_(s32) = G_CONSTANT i32 0
@@ -183,16 +183,16 @@ body:             |
     ; CHECK: [[C:%[0-9]+]]:_(s64) = G_CONSTANT i64 72340172838076673
     ; CHECK: [[MUL:%[0-9]+]]:_(s64) = G_MUL [[ZEXT]], [[C]]
     ; CHECK: [[BUILD_VECTOR:%[0-9]+]]:_(<2 x s64>) = G_BUILD_VECTOR [[MUL]](s64), [[MUL]](s64)
-    ; CHECK: G_STORE [[BUILD_VECTOR]](<2 x s64>), [[COPY]](p0) :: (store (s128) into %ir.dst, align 1)
+    ; CHECK: G_STORE [[BUILD_VECTOR]](<2 x s64>), [[COPY]](p0) :: (store (<2 x s64>) into %ir.dst, align 1)
     ; CHECK: [[C1:%[0-9]+]]:_(s64) = G_CONSTANT i64 16
     ; CHECK: [[PTR_ADD:%[0-9]+]]:_(p0) = G_PTR_ADD [[COPY]], [[C1]](s64)
-    ; CHECK: G_STORE [[BUILD_VECTOR]](<2 x s64>), [[PTR_ADD]](p0) :: (store (s128) into %ir.dst + 16, align 1)
+    ; CHECK: G_STORE [[BUILD_VECTOR]](<2 x s64>), [[PTR_ADD]](p0) :: (store (<2 x s64>) into %ir.dst + 16, align 1)
     ; CHECK: [[C2:%[0-9]+]]:_(s64) = G_CONSTANT i64 32
     ; CHECK: [[PTR_ADD1:%[0-9]+]]:_(p0) = G_PTR_ADD [[COPY]], [[C2]](s64)
-    ; CHECK: G_STORE [[BUILD_VECTOR]](<2 x s64>), [[PTR_ADD1]](p0) :: (store (s128) into %ir.dst + 32, align 1)
+    ; CHECK: G_STORE [[BUILD_VECTOR]](<2 x s64>), [[PTR_ADD1]](p0) :: (store (<2 x s64>) into %ir.dst + 32, align 1)
     ; CHECK: [[C3:%[0-9]+]]:_(s64) = G_CONSTANT i64 44
     ; CHECK: [[PTR_ADD2:%[0-9]+]]:_(p0) = G_PTR_ADD [[COPY]], [[C3]](s64)
-    ; CHECK: G_STORE [[BUILD_VECTOR]](<2 x s64>), [[PTR_ADD2]](p0) :: (store (s128) into %ir.dst + 44, align 1)
+    ; CHECK: G_STORE [[BUILD_VECTOR]](<2 x s64>), [[PTR_ADD2]](p0) :: (store (<2 x s64>) into %ir.dst + 44, align 1)
     ; CHECK: RET_ReallyLR
     %0:_(p0) = COPY $x0
     %1:_(s32) = COPY $w1

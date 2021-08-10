@@ -242,14 +242,6 @@
 #define LLVM_ATTRIBUTE_ALWAYS_INLINE inline
 #endif
 
-#ifdef __GNUC__
-#define LLVM_ATTRIBUTE_NORETURN __attribute__((noreturn))
-#elif defined(_MSC_VER)
-#define LLVM_ATTRIBUTE_NORETURN __declspec(noreturn)
-#else
-#define LLVM_ATTRIBUTE_NORETURN
-#endif
-
 #if __has_attribute(returns_nonnull) || LLVM_GNUC_PREREQ(4, 9, 0)
 #define LLVM_ATTRIBUTE_RETURNS_NONNULL __attribute__((returns_nonnull))
 #elif defined(_MSC_VER)

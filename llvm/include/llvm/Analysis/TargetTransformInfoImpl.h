@@ -187,7 +187,8 @@ public:
   }
 
   void getUnrollingPreferences(Loop *, ScalarEvolution &,
-                               TTI::UnrollingPreferences &) const {}
+                               TTI::UnrollingPreferences &,
+                               OptimizationRemarkEmitter *) const {}
 
   void getPeelingPreferences(Loop *, ScalarEvolution &,
                              TTI::PeelingPreferences &) const {}
@@ -622,6 +623,7 @@ public:
   }
 
   InstructionCost getArithmeticReductionCost(unsigned, VectorType *,
+                                             Optional<FastMathFlags> FMF,
                                              TTI::TargetCostKind) const {
     return 1;
   }
@@ -1070,34 +1072,57 @@ public:
       auto *Shuffle = dyn_cast<ShuffleVectorInst>(U);
       if (!Shuffle)
         return TTI::TCC_Basic; // FIXME
+
       auto *VecTy = cast<VectorType>(U->getType());
       auto *VecSrcTy = cast<VectorType>(U->getOperand(0)->getType());
+      int NumSubElts, SubIndex;
 
-      // TODO: Identify and add costs for insert subvector, etc.
-      int SubIndex;
-      if (Shuffle->isExtractSubvectorMask(SubIndex))
-        return TargetTTI->getShuffleCost(TTI::SK_ExtractSubvector, VecSrcTy,
-                                         Shuffle->getShuffleMask(), SubIndex,
-                                         VecTy);
-      else if (Shuffle->changesLength())
+      if (Shuffle->changesLength()) {
+        // Treat a 'subvector widening' as a free shuffle.
+        if (Shuffle->increasesLength() && Shuffle->isIdentityWithPadding())
+          return 0;
+
+        if (Shuffle->isExtractSubvectorMask(SubIndex))
+          return TargetTTI->getShuffleCost(TTI::SK_ExtractSubvector, VecSrcTy,
+                                           Shuffle->getShuffleMask(), SubIndex,
+                                           VecTy);
+
+        if (Shuffle->isInsertSubvectorMask(NumSubElts, SubIndex))
+          return TargetTTI->getShuffleCost(
+              TTI::SK_InsertSubvector, VecTy, Shuffle->getShuffleMask(),
+              SubIndex,
+              FixedVectorType::get(VecTy->getScalarType(), NumSubElts));
+
         return CostKind == TTI::TCK_RecipThroughput ? -1 : 1;
-      else if (Shuffle->isIdentity())
+      }
+
+      if (Shuffle->isIdentity())
         return 0;
-      else if (Shuffle->isReverse())
+
+      if (Shuffle->isReverse())
         return TargetTTI->getShuffleCost(TTI::SK_Reverse, VecTy,
                                          Shuffle->getShuffleMask(), 0, nullptr);
-      else if (Shuffle->isSelect())
+
+      if (Shuffle->isSelect())
         return TargetTTI->getShuffleCost(TTI::SK_Select, VecTy,
                                          Shuffle->getShuffleMask(), 0, nullptr);
-      else if (Shuffle->isTranspose())
+
+      if (Shuffle->isTranspose())
         return TargetTTI->getShuffleCost(TTI::SK_Transpose, VecTy,
                                          Shuffle->getShuffleMask(), 0, nullptr);
-      else if (Shuffle->isZeroEltSplat())
+
+      if (Shuffle->isZeroEltSplat())
         return TargetTTI->getShuffleCost(TTI::SK_Broadcast, VecTy,
                                          Shuffle->getShuffleMask(), 0, nullptr);
-      else if (Shuffle->isSingleSource())
+
+      if (Shuffle->isSingleSource())
         return TargetTTI->getShuffleCost(TTI::SK_PermuteSingleSrc, VecTy,
                                          Shuffle->getShuffleMask(), 0, nullptr);
+
+      if (Shuffle->isInsertSubvectorMask(NumSubElts, SubIndex))
+        return TargetTTI->getShuffleCost(
+            TTI::SK_InsertSubvector, VecTy, Shuffle->getShuffleMask(), SubIndex,
+            FixedVectorType::get(VecTy->getScalarType(), NumSubElts));
 
       return TargetTTI->getShuffleCost(TTI::SK_PermuteTwoSrc, VecTy,
                                        Shuffle->getShuffleMask(), 0, nullptr);

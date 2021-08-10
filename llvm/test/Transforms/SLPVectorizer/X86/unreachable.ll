@@ -62,3 +62,29 @@ bb2:
   ret void
 }
 
+define void @bar() {
+; CHECK-LABEL: @bar(
+; CHECK-NEXT:  bb:
+; CHECK-NEXT:    [[TMP:%.*]] = load atomic i8*, i8** undef unordered, align 8
+; CHECK-NEXT:    br label [[BB6:%.*]]
+; CHECK:       bb5:
+; CHECK-NEXT:    [[TMP4:%.*]] = load atomic i8*, i8** undef unordered, align 8
+; CHECK-NEXT:    br label [[BB6]]
+; CHECK:       bb6:
+; CHECK-NEXT:    [[TMP7:%.*]] = phi i8* [ [[TMP]], [[BB5:%.*]] ], [ undef, [[BB:%.*]] ]
+; CHECK-NEXT:    [[TMP8:%.*]] = phi i8* [ [[TMP4]], [[BB5]] ], [ undef, [[BB]] ]
+; CHECK-NEXT:    ret void
+;
+bb:
+  %tmp = load atomic i8*, i8** undef unordered, align 8
+  br label %bb6
+
+bb5:                                              ; No predecessors!
+  %tmp4 = load atomic i8*, i8** undef unordered, align 8
+  br label %bb6
+
+bb6:                                              ; preds = %bb5, %bb
+  %tmp7 = phi i8* [ %tmp, %bb5 ], [ undef, %bb ]
+  %tmp8 = phi i8* [ %tmp4, %bb5 ], [ undef, %bb ]
+  ret void
+}

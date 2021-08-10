@@ -146,6 +146,9 @@ protected:
                        const MCSubtargetInfo &STI, raw_ostream &O,
                        StringRef LayoutSuffix);
 
+  void printMatrixTileList(const MCInst *MI, unsigned OpNum,
+                           const MCSubtargetInfo &STI, raw_ostream &O);
+
   /// Print a list of vector registers where the type suffix is implicit
   /// (i.e. attached to the instruction rather than the registers).
   void printImplicitlyTypedVectorList(const MCInst *MI, unsigned OpNum,
@@ -187,6 +190,17 @@ protected:
                           const MCSubtargetInfo &STI, raw_ostream &O);
   void printSVEPattern(const MCInst *MI, unsigned OpNum,
                        const MCSubtargetInfo &STI, raw_ostream &O);
+
+  template <bool IsVertical>
+  void printMatrixTileVector(const MCInst *MI, unsigned OpNum,
+                             const MCSubtargetInfo &STI, raw_ostream &O);
+  void printMatrixTile(const MCInst *MI, unsigned OpNum,
+                       const MCSubtargetInfo &STI, raw_ostream &O);
+  template <int EltSize>
+  void printMatrix(const MCInst *MI, unsigned OpNum, const MCSubtargetInfo &STI,
+                   raw_ostream &O);
+  void printSVCROp(const MCInst *MI, unsigned OpNum, const MCSubtargetInfo &STI,
+                   raw_ostream &O);
   template <char = 0>
   void printSVERegOp(const MCInst *MI, unsigned OpNum,
                     const MCSubtargetInfo &STI, raw_ostream &O);

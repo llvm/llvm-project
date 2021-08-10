@@ -87,6 +87,9 @@ bool RISCVTargetInfo::validateAsmConstraint(
     // An address that is held in a general-purpose register.
     Info.setAllowsMemory();
     return true;
+  case 'S': // A symbolic address
+    Info.setAllowsRegister();
+    return true;
   case 'v':
     // A vector register.
     if (Name[1] == 'r' || Name[1] == 'm') {
@@ -102,7 +105,7 @@ std::string RISCVTargetInfo::convertConstraint(const char *&Constraint) const {
   std::string R;
   switch (*Constraint) {
   case 'v':
-    R = std::string("v");
+    R = std::string("^") + std::string(Constraint, 2);
     Constraint += 1;
     break;
   default:

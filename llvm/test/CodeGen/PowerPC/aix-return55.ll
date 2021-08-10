@@ -3,7 +3,7 @@
 ; RUN: llc -mcpu=pwr4 -mattr=-altivec -mtriple=powerpc-ibm-aix-xcoff \
 ; RUN:     -verify-machineinstrs -data-sections=false -xcoff-traceback-table=false -filetype=obj -o %t.o < %s
 ; RUN: llvm-objdump -D %t.o | FileCheck --check-prefix=CHECKOBJ %s
-; RUN: llvm-readobj -sections %t.o | FileCheck --check-prefix=CHECKSECT %s
+; RUN: llvm-readobj -S %t.o | FileCheck --check-prefix=CHECKSECT %s
 
 ; RUN: not --crash llc -mtriple powerpc64-ibm-aix-xcoff -filetype=obj < %s 2>&1 | \
 ; RUN: FileCheck --check-prefix=XCOFF64 %s

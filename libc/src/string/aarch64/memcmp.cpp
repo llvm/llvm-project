@@ -12,48 +12,41 @@
 #include <stddef.h> // size_t
 
 namespace __llvm_libc {
-namespace aarch64 {
 
-static int memcmp_impl(const char *lhs, const char *rhs, size_t count) {
-  if (count == 0)
+static int memcmp_aarch64(const char *lhs, const char *rhs, size_t count) {
+  // Use aarch64 strategies (_1, _2, _3 ...)
+  using namespace __llvm_libc::aarch64;
+
+  if (count == 0) // [0, 0]
     return 0;
-  if (count == 1)
+  if (count == 1) // [1, 1]
     return ThreeWayCompare<_1>(lhs, rhs);
-  else if (count == 2)
+  if (count == 2) // [2, 2]
     return ThreeWayCompare<_2>(lhs, rhs);
-  else if (count == 3)
+  if (count == 3) // [3, 3]
     return ThreeWayCompare<_3>(lhs, rhs);
-  else if (count < 8)
+  if (count < 8) // [4, 7]
     return ThreeWayCompare<HeadTail<_4>>(lhs, rhs, count);
-  else if (count < 16)
+  if (count < 16) // [8, 15]
     return ThreeWayCompare<HeadTail<_8>>(lhs, rhs, count);
-  else if (count < 128) {
-    if (Equals<_16>(lhs, rhs)) {
-      if (count < 32)
-        return ThreeWayCompare<Tail<_16>>(lhs, rhs, count);
-      else {
-        if (Equals<_16>(lhs + 16, rhs + 16)) {
-          if (count < 64)
-            return ThreeWayCompare<Tail<_32>>(lhs, rhs, count);
-          if (count < 128)
-            return ThreeWayCompare<Loop<_16>>(lhs + 32, rhs + 32, count - 32);
-        } else
-          return ThreeWayCompare<_16>(lhs + count - 32, rhs + count - 32);
-      }
-    }
+  if (unlikely(count >= 128)) // [128, ∞]
+    return ThreeWayCompare<Align<_16>::Then<Loop<_32>>>(lhs, rhs, count);
+  if (!Equals<_16>(lhs, rhs)) // [16, 16]
     return ThreeWayCompare<_16>(lhs, rhs);
-  } else
-    return ThreeWayCompare<Align<_16, Arg::Lhs>::Then<Loop<_32>>>(lhs, rhs,
-                                                                  count);
+  if (count < 32) // [17, 31]
+    return ThreeWayCompare<Tail<_16>>(lhs, rhs, count);
+  if (!Equals<Skip<16>::Then<_16>>(lhs, rhs)) // [32, 32]
+    return ThreeWayCompare<Skip<16>::Then<_16>>(lhs, rhs);
+  if (count < 64) // [33, 63]
+    return ThreeWayCompare<Tail<_32>>(lhs, rhs, count);
+  // [64, 127]
+  return ThreeWayCompare<Skip<32>::Then<Loop<_16>>>(lhs, rhs, count);
 }
-} // namespace aarch64
 
 LLVM_LIBC_FUNCTION(int, memcmp,
                    (const void *lhs, const void *rhs, size_t count)) {
-
-  const char *_lhs = reinterpret_cast<const char *>(lhs);
-  const char *_rhs = reinterpret_cast<const char *>(rhs);
-  return aarch64::memcmp_impl(_lhs, _rhs, count);
+  return memcmp_aarch64(reinterpret_cast<const char *>(lhs),
+                        reinterpret_cast<const char *>(rhs), count);
 }
 
 } // namespace __llvm_libc

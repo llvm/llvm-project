@@ -422,44 +422,44 @@ xorpd       (%rax), %xmm2
 # CHECK-NEXT:  1      6     1.00    *                   cmpeqsd	(%rax), %xmm2
 # CHECK-NEXT:  1      3     1.00                        comisd	%xmm0, %xmm1
 # CHECK-NEXT:  1      6     1.00    *                   comisd	(%rax), %xmm1
-# CHECK-NEXT:  1      4     0.50                        cvtdq2pd	%xmm0, %xmm2
-# CHECK-NEXT:  1      7     1.00    *                   cvtdq2pd	(%rax), %xmm2
-# CHECK-NEXT:  1      4     0.50                        cvtdq2ps	%xmm0, %xmm2
-# CHECK-NEXT:  1      7     1.00    *                   cvtdq2ps	(%rax), %xmm2
-# CHECK-NEXT:  1      4     0.50                        cvtpd2dq	%xmm0, %xmm2
-# CHECK-NEXT:  1      7     1.00    *                   cvtpd2dq	(%rax), %xmm2
-# CHECK-NEXT:  1      4     0.50                        cvtpd2pi	%xmm0, %mm2
-# CHECK-NEXT:  1      7     1.00    *                   cvtpd2pi	(%rax), %mm2
-# CHECK-NEXT:  1      4     0.50                        cvtpd2ps	%xmm0, %xmm2
-# CHECK-NEXT:  1      7     1.00    *                   cvtpd2ps	(%rax), %xmm2
-# CHECK-NEXT:  1      4     0.50                        cvtpi2pd	%mm0, %xmm2
-# CHECK-NEXT:  1      7     1.00    *                   cvtpi2pd	(%rax), %xmm2
-# CHECK-NEXT:  1      4     0.50                        cvtps2dq	%xmm0, %xmm2
-# CHECK-NEXT:  1      7     1.00    *                   cvtps2dq	(%rax), %xmm2
-# CHECK-NEXT:  1      4     0.50                        cvtps2pd	%xmm0, %xmm2
-# CHECK-NEXT:  1      7     1.00    *                   cvtps2pd	(%rax), %xmm2
-# CHECK-NEXT:  1      4     0.50                        cvtsd2si	%xmm0, %ecx
-# CHECK-NEXT:  1      4     0.50                        cvtsd2si	%xmm0, %rcx
-# CHECK-NEXT:  1      7     1.00    *                   cvtsd2si	(%rax), %ecx
-# CHECK-NEXT:  1      7     1.00    *                   cvtsd2si	(%rax), %rcx
-# CHECK-NEXT:  1      4     0.50                        cvtsd2ss	%xmm0, %xmm2
-# CHECK-NEXT:  1      7     1.00    *                   cvtsd2ss	(%rax), %xmm2
-# CHECK-NEXT:  1      4     0.50                        cvtsi2sd	%ecx, %xmm2
-# CHECK-NEXT:  1      4     0.50                        cvtsi2sd	%rcx, %xmm2
-# CHECK-NEXT:  1      7     1.00    *                   cvtsi2sdl	(%rax), %xmm2
-# CHECK-NEXT:  1      7     1.00    *                   cvtsi2sdl	(%rax), %xmm2
-# CHECK-NEXT:  1      4     0.50                        cvtss2sd	%xmm0, %xmm2
-# CHECK-NEXT:  1      7     1.00    *                   cvtss2sd	(%rax), %xmm2
-# CHECK-NEXT:  1      4     0.50                        cvttpd2dq	%xmm0, %xmm2
-# CHECK-NEXT:  1      7     1.00    *                   cvttpd2dq	(%rax), %xmm2
-# CHECK-NEXT:  1      4     0.50                        cvttpd2pi	%xmm0, %mm2
-# CHECK-NEXT:  1      7     1.00    *                   cvttpd2pi	(%rax), %mm2
-# CHECK-NEXT:  1      4     0.50                        cvttps2dq	%xmm0, %xmm2
-# CHECK-NEXT:  1      7     1.00    *                   cvttps2dq	(%rax), %xmm2
-# CHECK-NEXT:  1      4     0.50                        cvttsd2si	%xmm0, %ecx
-# CHECK-NEXT:  1      4     0.50                        cvttsd2si	%xmm0, %rcx
-# CHECK-NEXT:  1      7     1.00    *                   cvttsd2si	(%rax), %ecx
-# CHECK-NEXT:  1      7     1.00    *                   cvttsd2si	(%rax), %rcx
+# CHECK-NEXT:  1      5     2.00                        cvtdq2pd	%xmm0, %xmm2
+# CHECK-NEXT:  1      8     2.00    *                   cvtdq2pd	(%rax), %xmm2
+# CHECK-NEXT:  1      5     2.00                        cvtdq2ps	%xmm0, %xmm2
+# CHECK-NEXT:  1      8     2.00    *                   cvtdq2ps	(%rax), %xmm2
+# CHECK-NEXT:  1      5     2.00                        cvtpd2dq	%xmm0, %xmm2
+# CHECK-NEXT:  1      8     2.00    *                   cvtpd2dq	(%rax), %xmm2
+# CHECK-NEXT:  1      5     2.00                        cvtpd2pi	%xmm0, %mm2
+# CHECK-NEXT:  1      8     2.00    *                   cvtpd2pi	(%rax), %mm2
+# CHECK-NEXT:  1      5     2.00                        cvtpd2ps	%xmm0, %xmm2
+# CHECK-NEXT:  1      8     2.00    *                   cvtpd2ps	(%rax), %xmm2
+# CHECK-NEXT:  1      5     2.00                        cvtpi2pd	%mm0, %xmm2
+# CHECK-NEXT:  1      8     2.00    *                   cvtpi2pd	(%rax), %xmm2
+# CHECK-NEXT:  1      5     2.00                        cvtps2dq	%xmm0, %xmm2
+# CHECK-NEXT:  1      8     2.00    *                   cvtps2dq	(%rax), %xmm2
+# CHECK-NEXT:  1      5     2.00                        cvtps2pd	%xmm0, %xmm2
+# CHECK-NEXT:  1      8     2.00    *                   cvtps2pd	(%rax), %xmm2
+# CHECK-NEXT:  1      5     1.00                        cvtsd2si	%xmm0, %ecx
+# CHECK-NEXT:  1      5     1.00                        cvtsd2si	%xmm0, %rcx
+# CHECK-NEXT:  1      8     1.00    *                   cvtsd2si	(%rax), %ecx
+# CHECK-NEXT:  1      8     1.00    *                   cvtsd2si	(%rax), %rcx
+# CHECK-NEXT:  1      4     2.00                        cvtsd2ss	%xmm0, %xmm2
+# CHECK-NEXT:  1      7     2.00    *                   cvtsd2ss	(%rax), %xmm2
+# CHECK-NEXT:  1      5     2.00                        cvtsi2sd	%ecx, %xmm2
+# CHECK-NEXT:  1      5     2.00                        cvtsi2sd	%rcx, %xmm2
+# CHECK-NEXT:  1      8     2.00    *                   cvtsi2sdl	(%rax), %xmm2
+# CHECK-NEXT:  1      8     2.00    *                   cvtsi2sdl	(%rax), %xmm2
+# CHECK-NEXT:  1      4     2.00                        cvtss2sd	%xmm0, %xmm2
+# CHECK-NEXT:  1      7     2.00    *                   cvtss2sd	(%rax), %xmm2
+# CHECK-NEXT:  1      5     2.00                        cvttpd2dq	%xmm0, %xmm2
+# CHECK-NEXT:  1      8     2.00    *                   cvttpd2dq	(%rax), %xmm2
+# CHECK-NEXT:  1      5     2.00                        cvttpd2pi	%xmm0, %mm2
+# CHECK-NEXT:  1      8     2.00    *                   cvttpd2pi	(%rax), %mm2
+# CHECK-NEXT:  1      5     2.00                        cvttps2dq	%xmm0, %xmm2
+# CHECK-NEXT:  1      8     2.00    *                   cvttps2dq	(%rax), %xmm2
+# CHECK-NEXT:  1      5     1.00                        cvttsd2si	%xmm0, %ecx
+# CHECK-NEXT:  1      5     1.00                        cvttsd2si	%xmm0, %rcx
+# CHECK-NEXT:  1      8     1.00    *                   cvttsd2si	(%rax), %ecx
+# CHECK-NEXT:  1      8     1.00    *                   cvttsd2si	(%rax), %rcx
 # CHECK-NEXT:  1      69    69.00                       divpd	%xmm0, %xmm2
 # CHECK-NEXT:  1      72    69.00   *                   divpd	(%rax), %xmm2
 # CHECK-NEXT:  1      34    32.00                       divsd	%xmm0, %xmm2
@@ -687,7 +687,7 @@ xorpd       (%rax), %xmm2
 
 # CHECK:      Resource pressure per iteration:
 # CHECK-NEXT: [0]    [1]    [2]    [3]    [4]    [5]    [6]    [7]
-# CHECK-NEXT:  -     412.00 12.00  184.50 96.50  3.00   3.00   134.00
+# CHECK-NEXT:  -     412.00 12.00  233.50 77.50  3.00   3.00   134.00
 
 # CHECK:      Resource pressure by instruction:
 # CHECK-NEXT: [0]    [1]    [2]    [3]    [4]    [5]    [6]    [7]    Instructions:
@@ -706,44 +706,44 @@ xorpd       (%rax), %xmm2
 # CHECK-NEXT:  -      -      -      -     1.00    -      -     1.00   cmpeqsd	(%rax), %xmm2
 # CHECK-NEXT:  -      -      -      -     1.00    -      -      -     comisd	%xmm0, %xmm1
 # CHECK-NEXT:  -      -      -      -     1.00    -      -     1.00   comisd	(%rax), %xmm1
-# CHECK-NEXT:  -      -      -     0.50   0.50    -      -      -     cvtdq2pd	%xmm0, %xmm2
-# CHECK-NEXT:  -      -      -     0.50   0.50    -      -     1.00   cvtdq2pd	(%rax), %xmm2
-# CHECK-NEXT:  -      -      -     0.50   0.50    -      -      -     cvtdq2ps	%xmm0, %xmm2
-# CHECK-NEXT:  -      -      -     0.50   0.50    -      -     1.00   cvtdq2ps	(%rax), %xmm2
-# CHECK-NEXT:  -      -      -     0.50   0.50    -      -      -     cvtpd2dq	%xmm0, %xmm2
-# CHECK-NEXT:  -      -      -     0.50   0.50    -      -     1.00   cvtpd2dq	(%rax), %xmm2
-# CHECK-NEXT:  -      -      -     0.50   0.50    -      -      -     cvtpd2pi	%xmm0, %mm2
-# CHECK-NEXT:  -      -      -     0.50   0.50    -      -     1.00   cvtpd2pi	(%rax), %mm2
-# CHECK-NEXT:  -      -      -     0.50   0.50    -      -      -     cvtpd2ps	%xmm0, %xmm2
-# CHECK-NEXT:  -      -      -     0.50   0.50    -      -     1.00   cvtpd2ps	(%rax), %xmm2
-# CHECK-NEXT:  -      -      -     0.50   0.50    -      -      -     cvtpi2pd	%mm0, %xmm2
-# CHECK-NEXT:  -      -      -     0.50   0.50    -      -     1.00   cvtpi2pd	(%rax), %xmm2
-# CHECK-NEXT:  -      -      -     0.50   0.50    -      -      -     cvtps2dq	%xmm0, %xmm2
-# CHECK-NEXT:  -      -      -     0.50   0.50    -      -     1.00   cvtps2dq	(%rax), %xmm2
-# CHECK-NEXT:  -      -      -     0.50   0.50    -      -      -     cvtps2pd	%xmm0, %xmm2
-# CHECK-NEXT:  -      -      -     0.50   0.50    -      -     1.00   cvtps2pd	(%rax), %xmm2
-# CHECK-NEXT:  -      -      -     0.50   0.50    -      -      -     cvtsd2si	%xmm0, %ecx
-# CHECK-NEXT:  -      -      -     0.50   0.50    -      -      -     cvtsd2si	%xmm0, %rcx
-# CHECK-NEXT:  -      -      -     0.50   0.50    -      -     1.00   cvtsd2si	(%rax), %ecx
-# CHECK-NEXT:  -      -      -     0.50   0.50    -      -     1.00   cvtsd2si	(%rax), %rcx
-# CHECK-NEXT:  -      -      -     0.50   0.50    -      -      -     cvtsd2ss	%xmm0, %xmm2
-# CHECK-NEXT:  -      -      -     0.50   0.50    -      -     1.00   cvtsd2ss	(%rax), %xmm2
-# CHECK-NEXT:  -      -      -     0.50   0.50    -      -      -     cvtsi2sd	%ecx, %xmm2
-# CHECK-NEXT:  -      -      -     0.50   0.50    -      -      -     cvtsi2sd	%rcx, %xmm2
-# CHECK-NEXT:  -      -      -     0.50   0.50    -      -     1.00   cvtsi2sdl	(%rax), %xmm2
-# CHECK-NEXT:  -      -      -     0.50   0.50    -      -     1.00   cvtsi2sdl	(%rax), %xmm2
-# CHECK-NEXT:  -      -      -     0.50   0.50    -      -      -     cvtss2sd	%xmm0, %xmm2
-# CHECK-NEXT:  -      -      -     0.50   0.50    -      -     1.00   cvtss2sd	(%rax), %xmm2
-# CHECK-NEXT:  -      -      -     0.50   0.50    -      -      -     cvttpd2dq	%xmm0, %xmm2
-# CHECK-NEXT:  -      -      -     0.50   0.50    -      -     1.00   cvttpd2dq	(%rax), %xmm2
-# CHECK-NEXT:  -      -      -     0.50   0.50    -      -      -     cvttpd2pi	%xmm0, %mm2
-# CHECK-NEXT:  -      -      -     0.50   0.50    -      -     1.00   cvttpd2pi	(%rax), %mm2
-# CHECK-NEXT:  -      -      -     0.50   0.50    -      -      -     cvttps2dq	%xmm0, %xmm2
-# CHECK-NEXT:  -      -      -     0.50   0.50    -      -     1.00   cvttps2dq	(%rax), %xmm2
-# CHECK-NEXT:  -      -      -     0.50   0.50    -      -      -     cvttsd2si	%xmm0, %ecx
-# CHECK-NEXT:  -      -      -     0.50   0.50    -      -      -     cvttsd2si	%xmm0, %rcx
-# CHECK-NEXT:  -      -      -     0.50   0.50    -      -     1.00   cvttsd2si	(%rax), %ecx
-# CHECK-NEXT:  -      -      -     0.50   0.50    -      -     1.00   cvttsd2si	(%rax), %rcx
+# CHECK-NEXT:  -      -      -     2.00    -      -      -      -     cvtdq2pd	%xmm0, %xmm2
+# CHECK-NEXT:  -      -      -     2.00    -      -      -     1.00   cvtdq2pd	(%rax), %xmm2
+# CHECK-NEXT:  -      -      -     2.00    -      -      -      -     cvtdq2ps	%xmm0, %xmm2
+# CHECK-NEXT:  -      -      -     2.00    -      -      -     1.00   cvtdq2ps	(%rax), %xmm2
+# CHECK-NEXT:  -      -      -     2.00    -      -      -      -     cvtpd2dq	%xmm0, %xmm2
+# CHECK-NEXT:  -      -      -     2.00    -      -      -     1.00   cvtpd2dq	(%rax), %xmm2
+# CHECK-NEXT:  -      -      -     2.00    -      -      -      -     cvtpd2pi	%xmm0, %mm2
+# CHECK-NEXT:  -      -      -     2.00    -      -      -     1.00   cvtpd2pi	(%rax), %mm2
+# CHECK-NEXT:  -      -      -     2.00    -      -      -      -     cvtpd2ps	%xmm0, %xmm2
+# CHECK-NEXT:  -      -      -     2.00    -      -      -     1.00   cvtpd2ps	(%rax), %xmm2
+# CHECK-NEXT:  -      -      -     2.00    -      -      -      -     cvtpi2pd	%mm0, %xmm2
+# CHECK-NEXT:  -      -      -     2.00    -      -      -     1.00   cvtpi2pd	(%rax), %xmm2
+# CHECK-NEXT:  -      -      -     2.00    -      -      -      -     cvtps2dq	%xmm0, %xmm2
+# CHECK-NEXT:  -      -      -     2.00    -      -      -     1.00   cvtps2dq	(%rax), %xmm2
+# CHECK-NEXT:  -      -      -     2.00    -      -      -      -     cvtps2pd	%xmm0, %xmm2
+# CHECK-NEXT:  -      -      -     2.00    -      -      -     1.00   cvtps2pd	(%rax), %xmm2
+# CHECK-NEXT:  -      -      -     1.00    -      -      -      -     cvtsd2si	%xmm0, %ecx
+# CHECK-NEXT:  -      -      -     1.00    -      -      -      -     cvtsd2si	%xmm0, %rcx
+# CHECK-NEXT:  -      -      -     1.00    -      -      -     1.00   cvtsd2si	(%rax), %ecx
+# CHECK-NEXT:  -      -      -     1.00    -      -      -     1.00   cvtsd2si	(%rax), %rcx
+# CHECK-NEXT:  -      -      -     2.00    -      -      -      -     cvtsd2ss	%xmm0, %xmm2
+# CHECK-NEXT:  -      -      -     2.00    -      -      -     1.00   cvtsd2ss	(%rax), %xmm2
+# CHECK-NEXT:  -      -      -     2.00    -      -      -      -     cvtsi2sd	%ecx, %xmm2
+# CHECK-NEXT:  -      -      -     2.00    -      -      -      -     cvtsi2sd	%rcx, %xmm2
+# CHECK-NEXT:  -      -      -     2.00    -      -      -     1.00   cvtsi2sdl	(%rax), %xmm2
+# CHECK-NEXT:  -      -      -     2.00    -      -      -     1.00   cvtsi2sdl	(%rax), %xmm2
+# CHECK-NEXT:  -      -      -     2.00    -      -      -      -     cvtss2sd	%xmm0, %xmm2
+# CHECK-NEXT:  -      -      -     2.00    -      -      -     1.00   cvtss2sd	(%rax), %xmm2
+# CHECK-NEXT:  -      -      -     2.00    -      -      -      -     cvttpd2dq	%xmm0, %xmm2
+# CHECK-NEXT:  -      -      -     2.00    -      -      -     1.00   cvttpd2dq	(%rax), %xmm2
+# CHECK-NEXT:  -      -      -     2.00    -      -      -      -     cvttpd2pi	%xmm0, %mm2
+# CHECK-NEXT:  -      -      -     2.00    -      -      -     1.00   cvttpd2pi	(%rax), %mm2
+# CHECK-NEXT:  -      -      -     2.00    -      -      -      -     cvttps2dq	%xmm0, %xmm2
+# CHECK-NEXT:  -      -      -     2.00    -      -      -     1.00   cvttps2dq	(%rax), %xmm2
+# CHECK-NEXT:  -      -      -     1.00    -      -      -      -     cvttsd2si	%xmm0, %ecx
+# CHECK-NEXT:  -      -      -     1.00    -      -      -      -     cvttsd2si	%xmm0, %rcx
+# CHECK-NEXT:  -      -      -     1.00    -      -      -     1.00   cvttsd2si	(%rax), %ecx
+# CHECK-NEXT:  -      -      -     1.00    -      -      -     1.00   cvttsd2si	(%rax), %rcx
 # CHECK-NEXT:  -     69.00   -     1.00    -      -      -      -     divpd	%xmm0, %xmm2
 # CHECK-NEXT:  -     69.00   -     1.00    -      -      -     1.00   divpd	(%rax), %xmm2
 # CHECK-NEXT:  -     32.00   -     1.00    -      -      -      -     divsd	%xmm0, %xmm2

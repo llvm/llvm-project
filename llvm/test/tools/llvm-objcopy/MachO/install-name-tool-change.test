@@ -96,7 +96,7 @@ LoadCommands:
         timestamp:              2
         current_version:        82115073
         compatibility_version:  65536
-    PayloadString:              '/usr/dylib/LOAD'
+    Content:                    '/usr/dylib/LOAD'
   - cmd:                        LC_LOAD_WEAK_DYLIB
     cmdsize:                    40
     dylib:
@@ -104,4 +104,4 @@ LoadCommands:
         timestamp:              2
         current_version:        82115073
         compatibility_version:  65536
-    PayloadString:              '/usr/dylib/WEAK'
+    Content:                    '/usr/dylib/WEAK'

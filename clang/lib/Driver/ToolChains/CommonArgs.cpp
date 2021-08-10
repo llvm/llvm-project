@@ -18,7 +18,6 @@
 #include "Arch/X86.h"
 #include "HIP.h"
 #include "Hexagon.h"
-#include "InputInfo.h"
 #include "clang/Basic/CharInfo.h"
 #include "clang/Basic/LangOptions.h"
 #include "clang/Basic/ObjCRuntime.h"
@@ -28,6 +27,7 @@
 #include "clang/Driver/Compilation.h"
 #include "clang/Driver/Driver.h"
 #include "clang/Driver/DriverDiagnostic.h"
+#include "clang/Driver/InputInfo.h"
 #include "clang/Driver/Job.h"
 #include "clang/Driver/Options.h"
 #include "clang/Driver/SanitizerArgs.h"
@@ -290,6 +290,15 @@ void tools::AddLinkerInputs(const ToolChain &TC, const InputInfoList &Inputs,
       // Pass -z prefix for gcc linker compatibility.
       A.claim();
       A.render(Args, CmdArgs);
+    } else if (A.getOption().matches(options::OPT_b)) {
+      const llvm::Triple &T = TC.getTriple();
+      if (!T.isOSAIX()) {
+        TC.getDriver().Diag(diag::err_drv_unsupported_opt_for_target)
+            << A.getSpelling() << T.str();
+      }
+      // Pass -b prefix for AIX linker.
+      A.claim();
+      A.render(Args, CmdArgs);
     } else {
       A.renderAsInput(Args, CmdArgs);
     }
@@ -436,14 +445,9 @@ std::string tools::getCPUName(const ArgList &Args, const llvm::Triple &T,
     if (!TargetCPUName.empty())
       return TargetCPUName;
 
-    if (T.isOSAIX()) {
-      unsigned major, minor, unused_micro;
-      T.getOSVersion(major, minor, unused_micro);
-      // The minimal arch level moved from pwr4 for AIX7.1 to
-      // pwr7 for AIX7.2.
-      TargetCPUName =
-          (major < 7 || (major == 7 && minor < 2)) ? "pwr4" : "pwr7";
-    } else if (T.getArch() == llvm::Triple::ppc64le)
+    if (T.isOSAIX())
+      TargetCPUName = "pwr7";
+    else if (T.getArch() == llvm::Triple::ppc64le)
       TargetCPUName = "ppc64le";
     else if (T.getArch() == llvm::Triple::ppc64)
       TargetCPUName = "ppc64";

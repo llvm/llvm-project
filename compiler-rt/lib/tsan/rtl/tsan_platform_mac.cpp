@@ -215,8 +215,8 @@ static void my_pthread_introspection_hook(unsigned int event, pthread_t thread,
       Processor *proc = ProcCreate();
       ProcWire(proc, thr);
       ThreadState *parent_thread_state = nullptr;  // No parent.
-      int tid = ThreadCreate(parent_thread_state, 0, (uptr)thread, true);
-      CHECK_NE(tid, 0);
+      Tid tid = ThreadCreate(parent_thread_state, 0, (uptr)thread, true);
+      CHECK_NE(tid, kMainTid);
       ThreadStart(thr, tid, GetTid(), ThreadType::Worker);
     }
   } else if (event == PTHREAD_INTROSPECTION_THREAD_TERMINATE) {

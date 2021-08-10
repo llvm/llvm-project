@@ -18,14 +18,12 @@ define void @foo() {
 ; IS__TUNIT____-LABEL: define {{[^@]+}}@foo
 ; IS__TUNIT____-SAME: () #[[ATTR0:[0-9]+]] {
 ; IS__TUNIT____-NEXT:    [[TMP:%.*]] = alloca void (i16*)*, align 8
-; IS__TUNIT____-NEXT:    store void (i16*)* @bar, void (i16*)** [[TMP]], align 8
 ; IS__TUNIT____-NEXT:    ret void
 ;
 ; IS__CGSCC____: Function Attrs: nofree norecurse nosync nounwind readnone willreturn
 ; IS__CGSCC____-LABEL: define {{[^@]+}}@foo
 ; IS__CGSCC____-SAME: () #[[ATTR0:[0-9]+]] {
 ; IS__CGSCC____-NEXT:    [[TMP:%.*]] = alloca void (i16*)*, align 8
-; IS__CGSCC____-NEXT:    store void (i16*)* @bar, void (i16*)** [[TMP]], align 8
 ; IS__CGSCC____-NEXT:    ret void
 ;
   %tmp = alloca %fun_t
@@ -34,17 +32,16 @@ define void @foo() {
 }
 
 define internal void @bar(%p_t %p)  {
-; IS__TUNIT____: Function Attrs: nofree nosync nounwind readnone willreturn
-; IS__TUNIT____-LABEL: define {{[^@]+}}@bar
-; IS__TUNIT____-SAME: (i16* nocapture nofree readnone [[P:%.*]]) #[[ATTR0]] {
-; IS__TUNIT____-NEXT:    call void @llvm.dbg.value(metadata i16* [[P]], metadata [[META3:![0-9]+]], metadata !DIExpression()) #[[ATTR2:[0-9]+]], !dbg [[DBG5:![0-9]+]]
-; IS__TUNIT____-NEXT:    ret void
+; IS__CGSCC_OPM-LABEL: define {{[^@]+}}@bar
+; IS__CGSCC_OPM-SAME: (i16* [[P:%.*]]) {
+; IS__CGSCC_OPM-NEXT:    call void @llvm.dbg.value(metadata i16* [[P]], metadata [[META3:![0-9]+]], metadata !DIExpression()), !dbg [[DBG5:![0-9]+]]
+; IS__CGSCC_OPM-NEXT:    ret void
 ;
-; IS__CGSCC____: Function Attrs: nofree nosync nounwind readnone willreturn
-; IS__CGSCC____-LABEL: define {{[^@]+}}@bar
-; IS__CGSCC____-SAME: (i16* nocapture nofree readnone [[P:%.*]]) #[[ATTR1:[0-9]+]] {
-; IS__CGSCC____-NEXT:    call void @llvm.dbg.value(metadata i16* [[P]], metadata [[META3:![0-9]+]], metadata !DIExpression()) #[[ATTR3:[0-9]+]], !dbg [[DBG5:![0-9]+]]
-; IS__CGSCC____-NEXT:    ret void
+; IS__CGSCC_NPM: Function Attrs: nofree nosync nounwind readnone willreturn
+; IS__CGSCC_NPM-LABEL: define {{[^@]+}}@bar
+; IS__CGSCC_NPM-SAME: (i16* nocapture nofree readnone [[P:%.*]]) #[[ATTR1:[0-9]+]] {
+; IS__CGSCC_NPM-NEXT:    call void @llvm.dbg.value(metadata i16* [[P]], metadata [[META3:![0-9]+]], metadata !DIExpression()) #[[ATTR3:[0-9]+]], !dbg [[DBG5:![0-9]+]]
+; IS__CGSCC_NPM-NEXT:    ret void
 ;
   call void @llvm.dbg.value(metadata %p_t %p, metadata !4, metadata !5), !dbg !6
   ret void
@@ -65,17 +62,23 @@ declare void @llvm.dbg.value(metadata, metadata, metadata)
 ;.
 ; IS__TUNIT____: attributes #[[ATTR0]] = { nofree nosync nounwind readnone willreturn }
 ; IS__TUNIT____: attributes #[[ATTR1:[0-9]+]] = { nofree nosync nounwind readnone speculatable willreturn }
-; IS__TUNIT____: attributes #[[ATTR2]] = { readnone willreturn }
 ;.
-; IS__CGSCC____: attributes #[[ATTR0]] = { nofree norecurse nosync nounwind readnone willreturn }
-; IS__CGSCC____: attributes #[[ATTR1]] = { nofree nosync nounwind readnone willreturn }
-; IS__CGSCC____: attributes #[[ATTR2:[0-9]+]] = { nofree nosync nounwind readnone speculatable willreturn }
-; IS__CGSCC____: attributes #[[ATTR3]] = { readnone willreturn }
+; IS__CGSCC_OPM: attributes #[[ATTR0]] = { nofree norecurse nosync nounwind readnone willreturn }
+; IS__CGSCC_OPM: attributes #[[ATTR1:[0-9]+]] = { nofree nosync nounwind readnone speculatable willreturn }
 ;.
-; CHECK: [[META0:![0-9]+]] = distinct !DICompileUnit(language: DW_LANG_C, file: !1, isOptimized: false, runtimeVersion: 0, emissionKind: NoDebug)
-; CHECK: [[META1:![0-9]+]] = !DIFile(filename: "test.c", directory: "")
-; CHECK: [[META2:![0-9]+]] = !{i32 2, !"Debug Info Version", i32 3}
-; CHECK: [[META3:![0-9]+]] = !DILocalVariable(name: "p", scope: !4)
-; CHECK: [[META4:![0-9]+]] = distinct !DISubprogram(name: "bar", scope: null, spFlags: DISPFlagDefinition, unit: !0)
-; CHECK: [[META5:![0-9]+]] = !DILocation(line: 1, column: 1, scope: !4)
+; IS__CGSCC_NPM: attributes #[[ATTR0]] = { nofree norecurse nosync nounwind readnone willreturn }
+; IS__CGSCC_NPM: attributes #[[ATTR1]] = { nofree nosync nounwind readnone willreturn }
+; IS__CGSCC_NPM: attributes #[[ATTR2:[0-9]+]] = { nofree nosync nounwind readnone speculatable willreturn }
+; IS__CGSCC_NPM: attributes #[[ATTR3]] = { readnone willreturn }
+;.
+; IS__TUNIT____: [[META0:![0-9]+]] = distinct !DICompileUnit(language: DW_LANG_C, file: !1, isOptimized: false, runtimeVersion: 0, emissionKind: NoDebug)
+; IS__TUNIT____: [[META1:![0-9]+]] = !DIFile(filename: "test.c", directory: "")
+; IS__TUNIT____: [[META2:![0-9]+]] = !{i32 2, !"Debug Info Version", i32 3}
+;.
+; IS__CGSCC____: [[META0:![0-9]+]] = distinct !DICompileUnit(language: DW_LANG_C, file: !1, isOptimized: false, runtimeVersion: 0, emissionKind: NoDebug)
+; IS__CGSCC____: [[META1:![0-9]+]] = !DIFile(filename: "test.c", directory: "")
+; IS__CGSCC____: [[META2:![0-9]+]] = !{i32 2, !"Debug Info Version", i32 3}
+; IS__CGSCC____: [[META3:![0-9]+]] = !DILocalVariable(name: "p", scope: !4)
+; IS__CGSCC____: [[META4:![0-9]+]] = distinct !DISubprogram(name: "bar", scope: null, spFlags: DISPFlagDefinition, unit: !0)
+; IS__CGSCC____: [[META5:![0-9]+]] = !DILocation(line: 1, column: 1, scope: !4)
 ;.

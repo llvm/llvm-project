@@ -19,7 +19,7 @@
 ## 4) .symtab_shndx has size equal to
 ##    (sizeof(.symtab) / entsize(.symtab)) * entsize(.symtab_shndx) = 0x4 * 0x180078 / 0x18 == 0x040014
 
-# RUN: llvm-readelf -sections -symbols %t | FileCheck %s
+# RUN: llvm-readelf -S -s %t | FileCheck %s
 #        [Nr] Name              Type            Address          Off    Size   ES Flg Lk Inf Al
 # CHECK: [65539] .note.GNU-stack PROGBITS       0000000000000000 000040 000000 00      0   0  1
 # CHECK: [65540] .symtab        SYMTAB          0000000000000000 000040 180078 18     65543 65539  8

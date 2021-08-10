@@ -240,6 +240,11 @@ def ARMqsub8b       : SDNode<"ARMISD::QSUB8b", SDT_ARMAnd, []>;
 def ARMqadd16b      : SDNode<"ARMISD::QADD16b", SDT_ARMAnd, []>;
 def ARMqsub16b      : SDNode<"ARMISD::QSUB16b", SDT_ARMAnd, []>;
 
+def ARMuqadd8b       : SDNode<"ARMISD::UQADD8b", SDT_ARMAnd, []>;
+def ARMuqsub8b       : SDNode<"ARMISD::UQSUB8b", SDT_ARMAnd, []>;
+def ARMuqadd16b      : SDNode<"ARMISD::UQADD16b", SDT_ARMAnd, []>;
+def ARMuqsub16b      : SDNode<"ARMISD::UQSUB16b", SDT_ARMAnd, []>;
+
 def SDT_ARMldrd     : SDTypeProfile<2, 1, [SDTCisVT<0, i32>, SDTCisSameAs<0, 1>, SDTCisPtrTy<2>]>;
 def ARMldrd         : SDNode<"ARMISD::LDRD", SDT_ARMldrd, [SDNPHasChain, SDNPMayLoad, SDNPMemOperand]>;
 
@@ -1247,7 +1252,7 @@ def addrmode5_pre : AddrMode5 {
 // addrmode5fp16 := reg +/- imm8*2
 //
 def AddrMode5FP16AsmOperand : AsmOperandClass { let Name = "AddrMode5FP16"; }
-class AddrMode5FP16 : Operand<i32>,
+class AddrMode5FP16 : MemOperand,
                       ComplexPattern<i32, 2, "SelectAddrMode5FP16", []> {
   let EncoderMethod = "getAddrMode5FP16OpValue";
   let DecoderMethod = "DecodeAddrMode5FP16Operand";
@@ -3945,6 +3950,7 @@ def : ARMV5TEPat<(saddsat rGPR:$Rm, (saddsat rGPR:$Rn, rGPR:$Rn)),
                  (QDADD rGPR:$Rm, rGPR:$Rn)>;
 def : ARMV5TEPat<(ssubsat rGPR:$Rm, (saddsat rGPR:$Rn, rGPR:$Rn)),
                  (QDSUB rGPR:$Rm, rGPR:$Rn)>;
+
 def : ARMV6Pat<(ARMqadd8b rGPR:$Rm, rGPR:$Rn),
                (QADD8 rGPR:$Rm, rGPR:$Rn)>;
 def : ARMV6Pat<(ARMqsub8b rGPR:$Rm, rGPR:$Rn),
@@ -3962,6 +3968,16 @@ def QASX    : AAIIntrinsic<0b01100010, 0b11110011, "qasx", int_arm_qasx>;
 def QSAX    : AAIIntrinsic<0b01100010, 0b11110101, "qsax", int_arm_qsax>;
 def UQASX   : AAIIntrinsic<0b01100110, 0b11110011, "uqasx", int_arm_uqasx>;
 def UQSAX   : AAIIntrinsic<0b01100110, 0b11110101, "uqsax", int_arm_uqsax>;
+
+def : ARMV6Pat<(ARMuqadd8b rGPR:$Rm, rGPR:$Rn),
+               (UQADD8 rGPR:$Rm, rGPR:$Rn)>;
+def : ARMV6Pat<(ARMuqsub8b rGPR:$Rm, rGPR:$Rn),
+               (UQSUB8 rGPR:$Rm, rGPR:$Rn)>;
+def : ARMV6Pat<(ARMuqadd16b rGPR:$Rm, rGPR:$Rn),
+               (UQADD16 rGPR:$Rm, rGPR:$Rn)>;
+def : ARMV6Pat<(ARMuqsub16b rGPR:$Rm, rGPR:$Rn),
+               (UQSUB16 rGPR:$Rm, rGPR:$Rn)>;
+
 
 // Signed/Unsigned add/subtract
 
@@ -5375,14 +5391,16 @@ def CDP2 : ABXI<0b1110, (outs), (ins p_imm:$cop, imm0_15:$opc1,
 }
 
 class ACI<dag oops, dag iops, string opc, string asm,
-            list<dag> pattern, IndexMode im = IndexModeNone>
-  : I<oops, iops, AddrModeNone, 4, im, BrFrm, NoItinerary,
+            list<dag> pattern, IndexMode im = IndexModeNone,
+            AddrMode am = AddrModeNone>
+  : I<oops, iops, am, 4, im, BrFrm, NoItinerary,
       opc, asm, "", pattern> {
   let Inst{27-25} = 0b110;
 }
 class ACInoP<dag oops, dag iops, string opc, string asm,
-          list<dag> pattern, IndexMode im = IndexModeNone>
-  : InoP<oops, iops, AddrModeNone, 4, im, BrFrm, NoItinerary,
+          list<dag> pattern, IndexMode im = IndexModeNone,
+          AddrMode am = AddrModeNone>
+  : InoP<oops, iops, am, 4, im, BrFrm, NoItinerary,
          opc, asm, "", pattern> {
   let Inst{31-28} = 0b1111;
   let Inst{27-25} = 0b110;
@@ -5391,7 +5409,8 @@ class ACInoP<dag oops, dag iops, string opc, string asm,
 let DecoderNamespace = "CoProc" in {
 multiclass LdStCop<bit load, bit Dbit, string asm, list<dag> pattern> {
   def _OFFSET : ACI<(outs), (ins p_imm:$cop, c_imm:$CRd, addrmode5:$addr),
-                    asm, "\t$cop, $CRd, $addr", pattern> {
+                    asm, "\t$cop, $CRd, $addr", pattern, IndexModeNone,
+                    AddrMode5> {
     bits<13> addr;
     bits<4> cop;
     bits<4> CRd;
@@ -5462,7 +5481,8 @@ multiclass LdStCop<bit load, bit Dbit, string asm, list<dag> pattern> {
 }
 multiclass LdSt2Cop<bit load, bit Dbit, string asm, list<dag> pattern> {
   def _OFFSET : ACInoP<(outs), (ins p_imm:$cop, c_imm:$CRd, addrmode5:$addr),
-                       asm, "\t$cop, $CRd, $addr", pattern> {
+                       asm, "\t$cop, $CRd, $addr", pattern, IndexModeNone,
+                       AddrMode5> {
     bits<13> addr;
     bits<4> cop;
     bits<4> CRd;

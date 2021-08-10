@@ -1,10 +1,6 @@
 add_subdirectory(CAPI)
 add_subdirectory(lib)
 
-if(MLIR_ENABLE_BINDINGS_PYTHON)
-  add_subdirectory(python)
-endif()
-
 llvm_canonicalize_cmake_booleans(
   MLIR_ENABLE_BINDINGS_PYTHON
   LLVM_BUILD_EXAMPLES
@@ -82,6 +78,10 @@ set(MLIR_TEST_DEPENDS
   mlir_async_runtime
   )
 
+if (MLIR_INCLUDE_INTEGRATION_TESTS)
+  list(APPEND MLIR_TEST_DEPENDS lli)
+endif()
+
 if(MLIR_ENABLE_CUDA_RUNNER)
   list(APPEND MLIR_TEST_DEPENDS mlir_cuda_runtime)
 endif()
@@ -120,11 +120,8 @@ endif()
 
 if(MLIR_ENABLE_BINDINGS_PYTHON)
   list(APPEND MLIR_TEST_DEPENDS
-    MLIRBindingsPythonExtension
-    MLIRBindingsPythonSources
-    MLIRBindingsPythonTestOps
-    MLIRTransformsBindingsPythonExtension
-    MLIRConversionsBindingsPythonExtension
+    MLIRPythonModules
+    MLIRPythonTestModules
   )
 endif()
 

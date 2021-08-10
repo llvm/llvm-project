@@ -109,6 +109,23 @@ if (NOT LIBOMP_HAVE_SHM_OPEN_NO_LRT)
   set(CMAKE_REQUIRED_LIBRARIES)
 endif()
 
+# Check for aligned memory allocator function
+check_include_file(xmmintrin.h LIBOMP_HAVE_XMMINTRIN_H)
+set(OLD_CMAKE_REQUIRED_FLAGS ${CMAKE_REQUIRED_FLAGS})
+if (LIBOMP_HAVE_XMMINTRIN_H)
+  set(CMAKE_REQUIRED_FLAGS "${CMAKE_REQUIRED_FLAGS} -DLIBOMP_HAVE_XMMINTRIN_H")
+endif()
+set(source_code "// check for _mm_malloc
+    #ifdef LIBOMP_HAVE_XMMINTRIN_H
+    #include <xmmintrin.h>
+    #endif
+    int main() { void *ptr = _mm_malloc(sizeof(int) * 1000, 64); _mm_free(ptr); return 0; }")
+check_cxx_source_compiles("${source_code}" LIBOMP_HAVE__MM_MALLOC)
+set(CMAKE_REQUIRED_FLAGS ${OLD_CMAKE_REQUIRED_FLAGS})
+check_symbol_exists(aligned_alloc "stdlib.h" LIBOMP_HAVE_ALIGNED_ALLOC)
+check_symbol_exists(posix_memalign "stdlib.h" LIBOMP_HAVE_POSIX_MEMALIGN)
+check_symbol_exists(_aligned_malloc "malloc.h" LIBOMP_HAVE__ALIGNED_MALLOC)
+
 # Check linker flags
 if(WIN32)
   libomp_check_linker_flag(/SAFESEH LIBOMP_HAVE_SAFESEH_FLAG)
@@ -312,6 +329,7 @@ else()
     set(LIBOMP_HAVE_OMPT_SUPPORT FALSE)
   endif()
 endif()
+set(LIBOMP_HAVE_OMPT_SUPPORT ${LIBOMP_HAVE_OMPT_SUPPORT} PARENT_SCOPE)
 
 # Check if HWLOC support is available
 if(${LIBOMP_USE_HWLOC})

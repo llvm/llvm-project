@@ -123,6 +123,8 @@ public:
   /// This is used to emit bytes in \p Data as sequence of .byte directives.
   virtual void emitRawBytes(StringRef Data);
 
+  virtual void emitConstantPools();
+
   virtual void finish();
 };
 
@@ -165,7 +167,7 @@ public:
 
   virtual void emitThumbSet(MCSymbol *Symbol, const MCExpr *Value);
 
-  void finish() override;
+  void emitConstantPools() override;
 
   /// Reset any state between object emissions, i.e. the equivalent of
   /// MCStreamer's reset method.
@@ -853,6 +855,10 @@ public:
   /// Switch to a new logical file.  This is used to implement the '.file
   /// "foo.c"' assembler directive.
   virtual void emitFileDirective(StringRef Filename);
+
+  /// Emit ".file assembler diretive with additioal info.
+  virtual void emitFileDirective(StringRef Filename, StringRef CompilerVerion,
+                                 StringRef TimeStamp, StringRef Description);
 
   /// Emit the "identifiers" directive.  This implements the
   /// '.ident "version foo"' assembler directive.

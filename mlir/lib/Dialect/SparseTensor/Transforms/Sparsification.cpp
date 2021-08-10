@@ -6,39 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 //
-// This file implements lowering sparse tensor types to actual sparse code.
+// This file implements converting sparse tensor types to actual sparse code.
 //
-// The concept of letting a compiler generate sparse code automatically was
-// pioneered for dense linear algebra code in Fortran by [Bik96] in MT1 and
-// formalized to tensor algebra by [Kjolstad17,20] for the Sparse Tensor
-// Algebra Compiler (TACO). The implementation in this file closely follows
-// the "sparse iteration theory" that forms the foundation of TACO. A rewriting
-// rule is applied to each tensor expression in linalg (MLIR's tensor index
-// notation) where the sparsity of tensors is indicated with annotation using
-// a per-dimension specification of sparse/dense storage together with a
-// specification of the order on the dimensions. Subsequently, a topologically
-// sorted iteration graph, reflecting the required order on indices with respect
-// to the dimensions of each tensor, is constructed to ensure that all tensors
-// are visited in natural index order. Next, iteration lattices are constructed
-// for the tensor expression for every index in topological order. Each
-// iteration lattice point consists of a conjunction of tensor indices together
-// with a tensor (sub)expression that needs to be evaluated for that
-// conjunction. Within the lattice, iteration points are ordered according to
-// the way indices are exhausted. As such these iteration lattices drive actual
-// sparse code generation, which consists of a tedious but relatively
-// straightforward one-to-one mapping from iteration lattices to combinations
-// of for-loops, while-loops, and if-statements.
-//
-// [Bik96] Aart J.C. Bik. Compiler Support for Sparse Matrix Computations.
-// PhD thesis, Leiden University, May 1996 (aartbik.com/sparse.php).
-// [Kjolstad17] Fredrik Berg Kjolstad, Shoaib Ashraf Kamil, Stephen Chou,
-// David Lugato, and Saman Amarasinghe. The Tensor Algebra Compiler.
-// Proceedings of the ACM on Programming Languages, October 2017.
-// [Kjolstad20] Fredrik Berg Kjolstad. Sparse Tensor Algebra Compilation.
-// PhD thesis, MIT, February, 2020 (tensor-compiler.org).
-//
-// Implementation detail: We use llvm::SmallVector for vectors with
-// variable lengths and std::vector for vectors with fixed lengths.
 //===----------------------------------------------------------------------===//
 
 #include "mlir/Dialect/Linalg/IR/LinalgOps.h"
@@ -208,22 +177,6 @@ static bool computeIterationGraph(Merger &merger, linalg::GenericOp op,
   return true;
 }
 
-/// Returns true if given tensor co-iterates with conjunction only.
-/// For the output tensor, this defines a "simply dynamic" operation.
-/// For instance: A(I) = A(I) * B(I) * C(I)
-static unsigned isConjunction(Merger &merger, unsigned tensor, unsigned exp) {
-  switch (merger.exp(exp).kind) {
-  case Kind::kTensor:
-    return merger.exp(exp).tensor == tensor;
-  case Kind::kMulF:
-  case Kind::kMulI:
-    return isConjunction(merger, tensor, merger.exp(exp).children.e0) ||
-           isConjunction(merger, tensor, merger.exp(exp).children.e1);
-  default:
-    return false;
-  }
-}
-
 /// Returns true when the tensor expression is admissable for codegen.
 /// Since all sparse input tensors are admissable, we just need to check
 /// whether the output tensor in the tensor expression codegen is admissable.
@@ -250,7 +203,7 @@ static bool isAdmissableTensorExp(Merger &merger, linalg::GenericOp op,
   // A tensor expression with a sparse output tensor that changes its values
   // but not its nonzero structure, an operation called "simply dynamic" in
   // [Bik96,Ch9], is also admissable without special codegen.
-  if (isConjunction(merger, tensor, exp))
+  if (merger.isConjunction(tensor, exp))
     return true;
   // Reject for now since this requires changes to the nonzero structure.
   // TODO: implement "workspaces" [Kjolstad2019]
@@ -292,7 +245,7 @@ static Value genOutputBuffer(CodeGen &codegen, PatternRewriter &rewriter,
   // impact the running complexity of the sparse kernel.
   Value init = rewriter.create<memref::BufferCastOp>(loc, denseTp, tensor);
   Value alloc = rewriter.create<memref::AllocOp>(loc, denseTp, args);
-  rewriter.create<linalg::CopyOp>(loc, init, alloc);
+  rewriter.create<memref::CopyOp>(loc, init, alloc);
   return alloc;
 }
 
@@ -329,14 +282,18 @@ static bool genBuffers(Merger &merger, CodeGen &codegen,
         codegen.indices[tensor][idx] =
             rewriter.create<ToIndicesOp>(loc, indTp, t->get(), dim);
       }
-      // Find lower and upper bound in current dimension.
+      // Find lower and upper bound in current dimension. Note that a
+      // permuted encoding queries static type dimensions accordingly,
+      // but queries dynamic type dimensions in the generated order.
       Value up;
-      if (shape[d] == MemRefType::kDynamicSize) {
+      unsigned p = perm(enc, d);
+      if (shape[p] == MemRefType::kDynamicSize) {
         up = rewriter.create<tensor::DimOp>(loc, t->get(), d);
         args.push_back(up);
       } else {
-        up = rewriter.create<ConstantIndexOp>(loc, shape[d]);
+        up = rewriter.create<ConstantIndexOp>(loc, shape[p]);
       }
+      assert(codegen.highs[tensor][idx] == nullptr);
       codegen.sizes[idx] = codegen.highs[tensor][idx] = up;
     }
     // Perform the required bufferization. Dense inputs materialize
@@ -625,43 +582,31 @@ static void genReductionEnd(Merger &merger, CodeGen &codegen,
 static Value genExp(Merger &merger, CodeGen &codegen, PatternRewriter &rewriter,
                     linalg::GenericOp op, unsigned exp) {
   Location loc = op.getLoc();
+  if (exp == -1u)
+    return Value();
   if (merger.exp(exp).kind == Kind::kTensor)
     return genTensorLoad(merger, codegen, rewriter, op, exp);
   if (merger.exp(exp).kind == Kind::kInvariant)
     return genInvariantValue(merger, codegen, rewriter, exp);
-  if (merger.exp(exp).kind == Kind::kZero) {
-    Type tp = op.getOutputTensorTypes()[0].getElementType();
-    merger.exp(exp).val =
-        rewriter.create<ConstantOp>(loc, tp, rewriter.getZeroAttr(tp));
-    return genInvariantValue(merger, codegen, rewriter, exp);
-  }
   Value v0 = genExp(merger, codegen, rewriter, op, merger.exp(exp).children.e0);
   Value v1 = genExp(merger, codegen, rewriter, op, merger.exp(exp).children.e1);
-  switch (merger.exp(exp).kind) {
-  case Kind::kTensor:
-  case Kind::kInvariant:
-  case Kind::kZero:
-    llvm_unreachable("handled above");
-  case Kind::kMulF:
-    return rewriter.create<MulFOp>(loc, v0, v1);
-  case Kind::kMulI:
-    return rewriter.create<MulIOp>(loc, v0, v1);
-  case Kind::kAddF:
-    return rewriter.create<AddFOp>(loc, v0, v1);
-  case Kind::kAddI:
-    return rewriter.create<AddIOp>(loc, v0, v1);
-  case Kind::kSubF:
-    return rewriter.create<SubFOp>(loc, v0, v1);
-  case Kind::kSubI:
-    return rewriter.create<SubIOp>(loc, v0, v1);
+  if (merger.exp(exp).kind == Kind::kNegI) {
+    // TODO: no negi in std, need to make zero explicit.
+    Type tp = op.getOutputTensorTypes()[0].getElementType();
+    v1 = v0;
+    v0 = rewriter.create<ConstantOp>(loc, tp, rewriter.getZeroAttr(tp));
+    if (codegen.curVecLength > 1)
+      v0 = genVectorInvariantValue(codegen, rewriter, v0);
   }
-  llvm_unreachable("unexpected expression kind");
+  return merger.buildExp(rewriter, loc, exp, v0, v1);
 }
 
 /// Hoists loop invariant tensor loads for which indices have been exhausted.
 static void genInvariants(Merger &merger, CodeGen &codegen,
                           PatternRewriter &rewriter, linalg::GenericOp op,
                           unsigned exp, unsigned ldx, bool hoist) {
+  if (exp == -1u)
+    return;
   if (merger.exp(exp).kind == Kind::kTensor) {
     // Inspect tensor indices.
     bool atLevel = ldx == -1u;
@@ -683,8 +628,7 @@ static void genInvariants(Merger &merger, CodeGen &codegen,
       merger.exp(exp).val =
           hoist ? genTensorLoad(merger, codegen, rewriter, op, exp) : Value();
     }
-  } else if (merger.exp(exp).kind != Kind::kInvariant &&
-             merger.exp(exp).kind != Kind::kZero) {
+  } else if (merger.exp(exp).kind != Kind::kInvariant) {
     // Traverse into the binary operations. Note that we only hoist
     // tensor loads, since subsequent MLIR/LLVM passes know how to
     // deal with all other kinds of derived loop invariants.

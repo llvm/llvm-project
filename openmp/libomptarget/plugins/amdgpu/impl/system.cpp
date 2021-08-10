@@ -1,15 +1,13 @@
-/*===--------------------------------------------------------------------------
- *              ATMI (Asynchronous Task and Memory Interface)
- *
- * This file is distributed under the MIT License. See LICENSE.txt for details.
- *===------------------------------------------------------------------------*/
-#include <gelf.h>
+//===--- amdgpu/impl/system.cpp ----------------------------------- C++ -*-===//
+//
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
+//
+//===----------------------------------------------------------------------===//
 #include <libelf.h>
 
 #include <cassert>
-#include <fstream>
-#include <iomanip>
-#include <set>
 #include <sstream>
 #include <string>
 
@@ -37,6 +35,8 @@ typedef unsigned char *address;
 /*
  * Note descriptors.
  */
+// FreeBSD already declares Elf_Note (indirectly via <libelf.h>)
+#if !defined(__FreeBSD__)
 typedef struct {
   uint32_t n_namesz; /* Length of note's name. */
   uint32_t n_descsz; /* Length of note's value. */
@@ -45,6 +45,7 @@ typedef struct {
   // then padding, optional
   // then desc, at 4 byte alignment (not 8, despite being elf64)
 } Elf_Note;
+#endif
 
 // The following include file and following structs/enums
 // have been replicated on a per-use basis below. For example,
@@ -358,12 +359,8 @@ hsa_status_t init_hsa() {
   DEBUG_PRINT("Initializing HSA...");
   hsa_status_t err = hsa_init();
   if (err != HSA_STATUS_SUCCESS) {
-    printf("[%s:%d] %s failed: %s\n", __FILE__, __LINE__,
-           "Initializing the hsa runtime", get_error_string(err));
     return err;
   }
-  if (err != HSA_STATUS_SUCCESS)
-    return err;
 
   err = init_compute_and_memory();
   if (err != HSA_STATUS_SUCCESS)
@@ -465,11 +462,10 @@ find_metadata(void *binary, size_t binSize) {
     return failure;
   }
 
+  Elf64_Phdr *pHdrs = elf64_getphdr(e);
   for (size_t i = 0; i < numpHdrs; ++i) {
-    GElf_Phdr pHdr;
-    if (gelf_getphdr(e, i, &pHdr) != &pHdr) {
-      continue;
-    }
+    Elf64_Phdr pHdr = pHdrs[i];
+
     // Look for the runtime metadata note
     if (pHdr.p_type == PT_NOTE && pHdr.p_align >= sizeof(int)) {
       // Iterate over the notes in this segment

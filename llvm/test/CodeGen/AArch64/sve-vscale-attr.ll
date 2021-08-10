@@ -62,17 +62,16 @@ attributes #1 = { "target-features"="+sve" vscale_range(1,1) }
 define void @func_vscale2_2(<16 x i32>* %a, <16 x i32>* %b) #2 {
 ; CHECK-LABEL: func_vscale2_2:
 ; CHECK:       // %bb.0:
+; CHECK-NEXT:    mov x8, #8
 ; CHECK-NEXT:    ptrue p0.s, vl8
-; CHECK-NEXT:    add x8, x0, #32 // =32
-; CHECK-NEXT:    add x9, x1, #32 // =32
-; CHECK-NEXT:    ld1w { z0.s }, p0/z, [x0]
-; CHECK-NEXT:    ld1w { z1.s }, p0/z, [x8]
-; CHECK-NEXT:    ld1w { z2.s }, p0/z, [x1]
-; CHECK-NEXT:    ld1w { z3.s }, p0/z, [x9]
+; CHECK-NEXT:    ld1w { z0.s }, p0/z, [x0, x8, lsl #2]
+; CHECK-NEXT:    ld1w { z1.s }, p0/z, [x0]
+; CHECK-NEXT:    ld1w { z2.s }, p0/z, [x1, x8, lsl #2]
+; CHECK-NEXT:    ld1w { z3.s }, p0/z, [x1]
 ; CHECK-NEXT:    add z0.s, p0/m, z0.s, z2.s
 ; CHECK-NEXT:    add z1.s, p0/m, z1.s, z3.s
-; CHECK-NEXT:    st1w { z0.s }, p0, [x0]
-; CHECK-NEXT:    st1w { z1.s }, p0, [x8]
+; CHECK-NEXT:    st1w { z0.s }, p0, [x0, x8, lsl #2]
+; CHECK-NEXT:    st1w { z1.s }, p0, [x0]
 ; CHECK-NEXT:    ret
   %op1 = load <16 x i32>, <16 x i32>* %a
   %op2 = load <16 x i32>, <16 x i32>* %b
@@ -86,17 +85,16 @@ attributes #2 = { "target-features"="+sve" vscale_range(2,2) }
 define void @func_vscale2_4(<16 x i32>* %a, <16 x i32>* %b) #3 {
 ; CHECK-LABEL: func_vscale2_4:
 ; CHECK:       // %bb.0:
+; CHECK-NEXT:    mov x8, #8
 ; CHECK-NEXT:    ptrue p0.s, vl8
-; CHECK-NEXT:    add x8, x0, #32 // =32
-; CHECK-NEXT:    add x9, x1, #32 // =32
-; CHECK-NEXT:    ld1w { z0.s }, p0/z, [x0]
-; CHECK-NEXT:    ld1w { z1.s }, p0/z, [x8]
-; CHECK-NEXT:    ld1w { z2.s }, p0/z, [x1]
-; CHECK-NEXT:    ld1w { z3.s }, p0/z, [x9]
+; CHECK-NEXT:    ld1w { z0.s }, p0/z, [x0, x8, lsl #2]
+; CHECK-NEXT:    ld1w { z1.s }, p0/z, [x0]
+; CHECK-NEXT:    ld1w { z2.s }, p0/z, [x1, x8, lsl #2]
+; CHECK-NEXT:    ld1w { z3.s }, p0/z, [x1]
 ; CHECK-NEXT:    add z0.s, p0/m, z0.s, z2.s
 ; CHECK-NEXT:    add z1.s, p0/m, z1.s, z3.s
-; CHECK-NEXT:    st1w { z0.s }, p0, [x0]
-; CHECK-NEXT:    st1w { z1.s }, p0, [x8]
+; CHECK-NEXT:    st1w { z0.s }, p0, [x0, x8, lsl #2]
+; CHECK-NEXT:    st1w { z1.s }, p0, [x0]
 ; CHECK-NEXT:    ret
   %op1 = load <16 x i32>, <16 x i32>* %a
   %op2 = load <16 x i32>, <16 x i32>* %b

@@ -1,0 +1,143 @@
+# RUN: yaml2obj %s -o %t
+# RUN: llvm-readobj --headers --symbols --string-table %t | \
+# RUN:   FileCheck %s --check-prefix=CHECK64
+
+--- !XCOFF
+FileHeader:
+  MagicNumber:     0x01F7
+Sections:
+  - Name:            .text
+    Flags:           [ STYP_TEXT ]
+  - Name:            .data
+    Flags:           [ STYP_DATA ]
+    SectionData:     "0000000000000FC0"
+  - Name:            .bss
+    Flags:           [ STYP_BSS ]
+    Relocations:
+      - Type:        0x02
+  - Name:            .debug
+    Address:         0x0
+    Size:            0x60
+    Flags:           [ STYP_DEBUG, STYP_DATA ]
+    SectionData:     01110103
+Symbols:
+  - Name:            .file
+    Section:         N_DEBUG
+  - Name:            .undef
+  - Name:            .abs
+    Section:         N_ABS
+  - Name:            .text
+    Value:           0x0
+    Section:         .text
+    Type:            0x0
+    StorageClass:    C_HIDEXT
+
+# CHECK64:      AddressSize: 64bit
+# CHECK64-NEXT: FileHeader {
+# CHECK64-NEXT:   Magic: 0x1F7
+# CHECK64-NEXT:   NumberOfSections: 4
+# CHECK64-NEXT:   TimeStamp: None (0x0)
+# CHECK64-NEXT:   SymbolTableOffset: 0x152
+# CHECK64-NEXT:   SymbolTableEntries: 4
+# CHECK64-NEXT:   OptionalHeaderSize: 0x0
+# CHECK64-NEXT:   Flags: 0x0
+# CHECK64-NEXT: }
+# CHECK64-NEXT: Sections [
+# CHECK64-NEXT:   Section {
+# CHECK64-NEXT:     Index: 1
+# CHECK64-NEXT:     Name: .text
+# CHECK64-NEXT:     PhysicalAddress: 0x0
+# CHECK64-NEXT:     VirtualAddress: 0x0
+# CHECK64-NEXT:     Size: 0x0
+# CHECK64-NEXT:     RawDataOffset: 0x0
+# CHECK64-NEXT:     RelocationPointer: 0x0
+# CHECK64-NEXT:     LineNumberPointer: 0x0
+# CHECK64-NEXT:     NumberOfRelocations: 0
+# CHECK64-NEXT:     NumberOfLineNumbers: 0
+# CHECK64-NEXT:     Type: STYP_TEXT (0x20)
+# CHECK64-NEXT:   }
+# CHECK64-NEXT:   Section {
+# CHECK64-NEXT:     Index: 2
+# CHECK64-NEXT:     Name: .data
+# CHECK64-NEXT:     PhysicalAddress: 0x0
+# CHECK64-NEXT:     VirtualAddress: 0x0
+# CHECK64-NEXT:     Size: 0x8
+# CHECK64-NEXT:     RawDataOffset: 0x138
+# CHECK64-NEXT:     RelocationPointer: 0x0
+# CHECK64-NEXT:     LineNumberPointer: 0x0
+# CHECK64-NEXT:     NumberOfRelocations: 0
+# CHECK64-NEXT:     NumberOfLineNumbers: 0
+# CHECK64-NEXT:     Type: STYP_DATA (0x40)
+# CHECK64-NEXT:   }
+# CHECK64-NEXT:   Section {
+# CHECK64-NEXT:     Index: 3
+# CHECK64-NEXT:     Name: .bss
+# CHECK64-NEXT:     PhysicalAddress: 0x8
+# CHECK64-NEXT:     VirtualAddress: 0x8
+# CHECK64-NEXT:     Size: 0x0
+# CHECK64-NEXT:     RawDataOffset: 0x0
+# CHECK64-NEXT:     RelocationPointer: 0x144
+# CHECK64-NEXT:     LineNumberPointer: 0x0
+# CHECK64-NEXT:     NumberOfRelocations: 1
+# CHECK64-NEXT:     NumberOfLineNumbers: 0
+# CHECK64-NEXT:     Type: STYP_BSS (0x80)
+# CHECK64-NEXT:   }
+# CHECK64-NEXT:   Section {
+# CHECK64-NEXT:     Index: 4
+# CHECK64-NEXT:     Name: .debug
+# CHECK64-NEXT:     PhysicalAddress: 0x0
+# CHECK64-NEXT:     VirtualAddress: 0x0
+# CHECK64-NEXT:     Size: 0x60
+# CHECK64-NEXT:     RawDataOffset: 0x140
+# CHECK64-NEXT:     RelocationPointer: 0x0
+# CHECK64-NEXT:     LineNumberPointer: 0x0
+# CHECK64-NEXT:     NumberOfRelocations: 0
+# CHECK64-NEXT:     NumberOfLineNumbers: 0
+# CHECK64-NEXT:     Type: 0x2040
+# CHECK64-NEXT:   }
+# CHECK64-NEXT: ]
+# CHECK64-NEXT: Symbols [
+# CHECK64-NEXT:   Symbol {
+# CHECK64-NEXT:     Index: 0
+# CHECK64-NEXT:     Name: .file
+# CHECK64-NEXT:     Value: 0x0
+# CHECK64-NEXT:     Section: N_DEBUG
+# CHECK64-NEXT:     Type: 0x0
+# CHECK64-NEXT:     StorageClass: C_NULL (0x0)
+# CHECK64-NEXT:     NumberOfAuxEntries: 0
+# CHECK64-NEXT:   }
+# CHECK64-NEXT:   Symbol {
+# CHECK64-NEXT:     Index: 1
+# CHECK64-NEXT:     Name: .undef
+# CHECK64-NEXT:     Value: 0x0
+# CHECK64-NEXT:     Section: N_UNDEF
+# CHECK64-NEXT:     Type: 0x0
+# CHECK64-NEXT:     StorageClass: C_NULL (0x0)
+# CHECK64-NEXT:     NumberOfAuxEntries: 0
+# CHECK64-NEXT:   }
+# CHECK64-NEXT:   Symbol {
+# CHECK64-NEXT:     Index: 2
+# CHECK64-NEXT:     Name: .abs
+# CHECK64-NEXT:     Value: 0x0
+# CHECK64-NEXT:     Section: N_ABS
+# CHECK64-NEXT:     Type: 0x0
+# CHECK64-NEXT:     StorageClass: C_NULL (0x0)
+# CHECK64-NEXT:     NumberOfAuxEntries: 0
+# CHECK64-NEXT:   }
+# CHECK64-NEXT:   Symbol {
+# CHECK64-NEXT:     Index: 3
+# CHECK64-NEXT:     Name: .text
+# CHECK64-NEXT:     Value (RelocatableAddress): 0x0
+# CHECK64-NEXT:     Section: .text
+# CHECK64-NEXT:     Type: 0x0
+# CHECK64-NEXT:     StorageClass: C_HIDEXT (0x6B)
+# CHECK64-NEXT:     NumberOfAuxEntries: 0
+# CHECK64-NEXT:   }
+# CHECK64-NEXT: ]
+# CHECK64-NEXT: StringTable {
+# CHECK64-NEXT:   Length: 28
+# CHECK64-NEXT:   [     4]   .text
+# CHECK64-NEXT:   [     a]   .abs
+# CHECK64-NEXT:   [     f]   .undef
+# CHECK64-NEXT:   [    16]   .file
+# CHECK64-NEXT: }

@@ -12,6 +12,7 @@ set(LLVM_OPTIONAL_SOURCES
 add_mlir_library(MLIRSupport
   DebugCounter.cpp
   FileUtilities.cpp
+  IndentedOstream.cpp
   InterfaceSupport.cpp
   StorageUniquer.cpp
   Timing.cpp

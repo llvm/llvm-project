@@ -1,3 +1,4 @@
+// REQUIRES: garbage
 /*
  * task-dependency.c -- Archer testcase
  */

@@ -1,6 +1,6 @@
 // RUN: mlir-opt %s \
 // RUN:   --sparsification --sparse-tensor-conversion \
-// RUN:   --convert-linalg-to-loops --convert-vector-to-scf --convert-scf-to-std \
+// RUN:   --convert-vector-to-scf --convert-scf-to-std \
 // RUN:   --func-bufferize --tensor-constant-bufferize --tensor-bufferize \
 // RUN:   --std-bufferize --finalizing-bufferize  \
 // RUN:   --convert-vector-to-llvm --convert-memref-to-llvm --convert-std-to-llvm | \
@@ -88,7 +88,7 @@ module {
 
     // Read the sparse matrix from file, construct sparse storage.
     %fileName = call @getTensorFilename(%c0) : (index) -> (!Filename)
-    %s = sparse_tensor.new %fileName : !llvm.ptr<i8> to tensor<?x?xf32, #SparseMatrix>
+    %s = sparse_tensor.new %fileName : !Filename to tensor<?x?xf32, #SparseMatrix>
 
     // Call the kernel.
     %0 = call @sampled_dense_dense(%s, %a, %b, %x)

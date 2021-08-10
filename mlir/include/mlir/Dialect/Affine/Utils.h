@@ -30,11 +30,12 @@ class Operation;
 
 using ReductionLoopMap = DenseMap<Operation *, SmallVector<LoopReduction, 2>>;
 
-/// Replaces parallel affine.for op with 1-d affine.parallel op.
-/// mlir::isLoopParallel detects the parallel affine.for ops.
-/// Parallelizes the specified reductions. Parallelization will fail in presence
-/// of loop iteration arguments that are not listed in `parallelReductions`.
-/// There is no cost model currently used to drive this parallelization.
+/// Replaces a parallel affine.for op with a 1-d affine.parallel op. `forOp`'s
+/// body is taken by the affine.parallel op and the former is erased.
+/// (mlir::isLoopParallel can be used to detect a parallel affine.for op.) The
+/// reductions specified in `parallelReductions` are also parallelized.
+/// Parallelization will fail in the presence of loop iteration arguments that
+/// are not listed in `parallelReductions`.
 LogicalResult
 affineParallelize(AffineForOp forOp,
                   ArrayRef<LoopReduction> parallelReductions = {});

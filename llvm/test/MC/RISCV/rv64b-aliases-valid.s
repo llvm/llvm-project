@@ -362,3 +362,17 @@ grevw x5, x6, 13
 # CHECK-S-OBJ-NOALIAS: gorciw t0, t1, 13
 # CHECK-S-OBJ: gorciw t0, t1, 13
 gorcw x5, x6, 13
+
+# CHECK-S-OBJ-NOALIAS: addi t1, zero, -2
+# CHECK-S-OBJ-NOALIAS-NEXT: add.uw t1, t1, zero
+# CHECK-S-OBJ: addi t1, zero, -2
+# CHECK-S-OBJ-NEXT: zext.w t1, t1
+li x6, 0xfffffffe
+
+# CHECK-S-OBJ-NOALIAS: lui t2, 699051
+# CHECK-S-OBJ-NOALIAS-NEXT: addiw t2, t2, -1366
+# CHECK-S-OBJ-NOALIAS-NEXT: add.uw t2, t2, zero
+# CHECK-S-OBJ: lui t2, 699051
+# CHECK-S-OBJ-NEXT: addiw t2, t2, -1366
+# CHECK-S-OBJ-NEXT: zext.w t2, t2
+li x7, 0xaaaaaaaa

@@ -167,6 +167,10 @@ public:
 
   Expected<uint32_t> getMachOCPUSubType() const;
 
+  /// Returns true if the module has either the @llvm.global_ctors or the
+  /// @llvm.global_dtors symbol. Otherwise returns false.
+  bool hasCtorDtor() const;
+
 private:
   /// Parse metadata from the module
   // FIXME: it only parses "llvm.linker.options" metadata at the moment

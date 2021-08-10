@@ -9,14 +9,15 @@ define i32 @test(i32 %X, ...) {
 ; CHECK-LABEL: test:
 ; CHECK:         .cfi_startproc
 ; CHECK-NEXT:  ; %bb.0:
-; CHECK-NEXT:    sub.l #8, %sp
+; CHECK-NEXT:    suba.l #8, %sp
 ; CHECK-NEXT:    .cfi_def_cfa_offset -12
 ; CHECK-NEXT:    lea (16,%sp), %a0
-; CHECK-NEXT:    add.l #4, %a0
-; CHECK-NEXT:    move.l %a0, (4,%sp)
-; CHECK-NEXT:    move.l %a0, (0,%sp)
+; CHECK-NEXT:    move.l %a0, %d0
+; CHECK-NEXT:    add.l #4, %d0
+; CHECK-NEXT:    move.l %d0, (4,%sp)
+; CHECK-NEXT:    move.l %d0, (0,%sp)
 ; CHECK-NEXT:    move.l (16,%sp), %d0
-; CHECK-NEXT:    add.l #8, %sp
+; CHECK-NEXT:    adda.l #8, %sp
 ; CHECK-NEXT:    rts
   %ap = alloca %struct.va_list
   %ap2 = bitcast %struct.va_list* %ap to i8*

@@ -601,11 +601,29 @@ Non-integral pointer types represent pointers that have an *unspecified* bitwise
 representation; that is, the integral representation may be target dependent or
 unstable (not backed by a fixed integer).
 
-``inttoptr`` and ``ptrtoint`` instructions converting integers to non-integral
-pointer types or vice versa are implementation defined, and subject to likely
-future revision in semantics. Vector versions of said instructions are as well.
-Users of non-integral-pointer types are advised not to design around current
-semantics as they may very well change in the nearish future.
+``inttoptr`` and ``ptrtoint`` instructions have the same semantics as for
+integral (i.e. normal) pointers in that they convert integers to and from
+corresponding pointer types, but there are additional implications to be
+aware of.  Because the bit-representation of a non-integral pointer may
+not be stable, two identical casts of the same operand may or may not
+return the same value.  Said differently, the conversion to or from the
+non-integral type depends on environmental state in an implementation
+defined manner.
+
+If the frontend wishes to observe a *particular* value following a cast, the
+generated IR must fence with the underlying environment in an implementation
+defined manner. (In practice, this tends to require ``noinline`` routines for
+such operations.)
+
+From the perspective of the optimizer, ``inttoptr`` and ``ptrtoint`` for
+non-integral types are analogous to ones on integral types with one
+key exception: the optimizer may not, in general, insert new dynamic
+occurrences of such casts.  If a new cast is inserted, the optimizer would
+need to either ensure that a) all possible values are valid, or b)
+appropriate fencing is inserted.  Since the appropriate fencing is
+implementation defined, the optimizer can't do the latter.  The former is
+challenging as many commonly expected properties, such as
+``ptrtoint(v)-ptrtoint(v) == 0``, don't hold for non-integral types.  
 
 .. _globalvars:
 
@@ -897,21 +915,24 @@ Syntax::
 Comdats
 -------
 
-Comdat IR provides access to COFF and ELF object file COMDAT functionality.
+Comdat IR provides access to object file COMDAT/section group functionality
+which represents interrelated sections.
 
-Comdats have a name which represents the COMDAT key. All global objects that
-specify this key will only end up in the final object file if the linker chooses
-that key over some other key. Aliases are placed in the same COMDAT that their
-aliasee computes to, if any.
+Comdats have a name which represents the COMDAT key and a selection kind to
+provide input on how the linker deduplicates comdats with the same key in two
+different object files. A comdat must be included or omitted as a unit.
+Discarding the whole comdat is allowed but discarding a subset is not.
 
-Comdats have a selection kind to provide input on how the linker should
-choose between keys in two different object files.
+A global object may be a member of at most one comdat. Aliases are placed in the
+same COMDAT that their aliasee computes to, if any.
 
 Syntax::
 
     $<Name> = comdat SelectionKind
 
-The selection kind must be one of the following:
+For selection kinds other than ``nodeduplicate``, only one of the duplicate
+comdats may be retained by the linker and the members of the remaining comdats
+must be discarded. The following selection kinds are supported:
 
 ``any``
     The linker may choose any COMDAT key, the choice is arbitrary.
@@ -920,16 +941,19 @@ The selection kind must be one of the following:
     same data.
 ``largest``
     The linker will choose the section containing the largest COMDAT key.
-``noduplicates``
-    The linker requires that only section with this COMDAT key exist.
+``nodeduplicate``
+    No deduplication is performed.
 ``samesize``
     The linker may choose any COMDAT key but the sections must contain the
     same amount of data.
 
-Note that XCOFF and the Mach-O platform don't support COMDATs, and ELF and
-WebAssembly only support ``any`` as a selection kind.
+- XCOFF and Mach-O don't support COMDATs.
+- COFF supports all selection kinds. Non-``nodeduplicate`` selection kinds need
+  a non-local linkage COMDAT symbol.
+- ELF supports ``any`` and ``nodeduplicate``.
+- WebAssembly only supports ``any``.
 
-Here is an example of a COMDAT group where a function will only be selected if
+Here is an example of a COFF COMDAT where a function will only be selected if
 the COMDAT key's section is the largest:
 
 .. code-block:: text
@@ -941,6 +965,12 @@ the COMDAT key's section is the largest:
      ret void
    }
 
+In a COFF object file, this will create a COMDAT section with selection kind
+``IMAGE_COMDAT_SELECT_LARGEST`` containing the contents of the ``@foo`` symbol
+and another COMDAT section with selection kind
+``IMAGE_COMDAT_SELECT_ASSOCIATIVE`` which is associated with the first COMDAT
+section and contains the contents of the ``@bar`` symbol.
+
 As a syntactic sugar the ``$name`` can be omitted if the name is the same as
 the global name:
 
@@ -948,13 +978,7 @@ the global name:
 
   $foo = comdat any
   @foo = global i32 2, comdat
-
-
-In a COFF object file, this will create a COMDAT section with selection kind
-``IMAGE_COMDAT_SELECT_LARGEST`` containing the contents of the ``@foo`` symbol
-and another COMDAT section with selection kind
-``IMAGE_COMDAT_SELECT_ASSOCIATIVE`` which is associated with the first COMDAT
-section and contains the contents of the ``@bar`` symbol.
+  @bar = global i32 3, comdat($foo)
 
 There are some restrictions on the properties of the global object.
 It, or an alias to it, must have the same name as the COMDAT group when
@@ -1164,6 +1188,24 @@ Currently, only the following parameter attributes are defined:
 
     The sret type argument specifies the in memory type, which must be
     the same as the pointee type of the argument.
+
+.. _attr_elementtype:
+
+``elementtype(<ty>)``
+
+    The ``elementtype`` argument attribute can be used to specify a pointer
+    element type in a way that is compatible with `opaque pointers
+    <OpaquePointers.html>`.
+
+    The ``elementtype`` attribute by itself does not carry any specific
+    semantics. However, certain intrinsics may require this attribute to be
+    present and assign it particular semantics. This will be documented on
+    individual intrinsics.
+
+    The attribute may only be applied to pointer typed arguments of intrinsic
+    calls. It cannot be applied to non-intrinsic calls, and cannot be applied
+    to parameters on function declarations. For non-opaque pointers, the type
+    passed to ``elementtype`` must match the pointer element type.
 
 .. _attr_align:
 
@@ -2824,6 +2866,12 @@ A volatile operation may not call any code in the current module.
 The compiler may assume execution will continue after a volatile operation,
 so operations which modify memory or may have undefined behavior can be
 hoisted past a volatile operation.
+
+As an exception to the preceding rule, the compiler may not assume execution
+will continue after a volatile store operation. This restriction is necessary
+to support the somewhat common pattern in C of intentionally storing to an
+invalid pointer to crash the program. In the future, it might make sense to
+allow frontends to control this behavior.
 
 IR-level volatile loads and stores cannot safely be optimized into llvm.memcpy
 or llvm.memmove intrinsics even when those intrinsics are flagged volatile.
@@ -4731,6 +4779,8 @@ RISC-V:
 - ``f``: A 32- or 64-bit floating-point register (requires F or D extension).
 - ``r``: A 32- or 64-bit general-purpose register (depending on the platform
   ``XLEN``).
+- ``vr``: A vector register. (requires V extension).
+- ``vm``: A vector mask register. (requires V extension).
 
 Sparc:
 
@@ -4999,8 +5049,8 @@ occurs on.
 Metadata
 ========
 
-LLVM IR allows metadata to be attached to instructions in the program
-that can convey extra information about the code to the optimizers and
+LLVM IR allows metadata to be attached to instructions and global objects in the
+program that can convey extra information about the code to the optimizers and
 code generator. One example application of metadata is source-level
 debug information. There are two metadata primitives: strings and nodes.
 
@@ -5060,6 +5110,9 @@ to the ``add`` instruction using the ``!dbg`` identifier:
 
     %indvar.next = add i64 %indvar, 1, !dbg !21
 
+Instructions may not have multiple metadata attachments with the same
+identifier.
+
 Metadata can also be attached to a function or a global variable. Here metadata
 ``!22`` is attached to the ``f1`` and ``f2`` functions, and the globals ``g1``
 and ``g2`` using the ``!dbg`` identifier:
@@ -5073,6 +5126,9 @@ and ``g2`` using the ``!dbg`` identifier:
 
     @g1 = global i32 0, !dbg !22
     @g2 = external global i32, !dbg !22
+
+Unlike instructions, global objects (functions and global variables) may have
+multiple metadata attachments with the same identifier.
 
 A transformation is required to drop any metadata attachment that it does not
 know or know it can't preserve. Currently there is an exception for metadata
@@ -5511,7 +5567,7 @@ DILocalVariable
 
 ``DILocalVariable`` nodes represent local variables in the source language. If
 the ``arg:`` field is set to non-zero, then this variable is a subprogram
-parameter, and it will be included in the ``variables:`` field of its
+parameter, and it will be included in the ``retainedNodes:`` field of its
 :ref:`DISubprogram`.
 
 .. code-block:: text
@@ -7699,6 +7755,7 @@ functions with the same priority is not defined.
 If the third field is non-null, and points to a global variable
 or function, the initializer function will only run if the associated
 data from the current module is not discarded.
+On ELF the referenced global variable or function must be in a comdat.
 
 .. _llvmglobaldtors:
 
@@ -7719,6 +7776,7 @@ order of functions with the same priority is not defined.
 If the third field is non-null, and points to a global variable
 or function, the destructor function will only run if the associated
 data from the current module is not discarded.
+On ELF the referenced global variable or function must be in a comdat.
 
 Instruction Reference
 =====================
@@ -14158,7 +14216,7 @@ all types however.
 
 ::
 
-      declare float     @llvm.maxnum.f32(float  %Val0, float  %Val1l)
+      declare float     @llvm.maxnum.f32(float  %Val0, float  %Val1)
       declare double    @llvm.maxnum.f64(double %Val0, double %Val1)
       declare x86_fp80  @llvm.maxnum.f80(x86_fp80  %Val0, x86_fp80  %Val1)
       declare fp128     @llvm.maxnum.f128(fp128 %Val0, fp128 %Val1)
@@ -20931,6 +20989,52 @@ return any value and uses platform-independent representation of IEEE rounding
 modes.
 
 
+Floating Point Test Intrinsics
+------------------------------
+
+These functions get properties of floating point values.
+
+
+'``llvm.isnan``' Intrinsic
+^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+Syntax:
+"""""""
+
+::
+
+      declare i1 @llvm.isnan(<fptype> <op>)
+      declare <N x i1> @llvm.isnan(<vector-fptype> <op>)
+
+Overview:
+"""""""""
+
+The '``llvm.isnan``' intrinsic returns a boolean value or vector of boolean
+values depending on whether the value is NaN.
+
+If the operand is a floating-point scalar, then the result type is a
+boolean (:ref:`i1 <t_integer>`).
+
+If the operand is a floating-point vector, then the result type is a
+vector of boolean with the same number of elements as the operand.
+
+Arguments:
+""""""""""
+
+The argument to the '``llvm.isnan``' intrinsic must be
+:ref:`floating-point <t_floating>` or :ref:`vector <t_vector>`
+of floating-point values.
+
+
+Semantics:
+""""""""""
+
+The function tests if ``op`` is NaN. If ``op`` is a vector, then the
+check is made element by element. Each test yields an :ref:`i1 <t_integer>`
+result, which is ``true``, if the value is NaN. The function never raises
+floating point exceptions.
+
+
 General Intrinsics
 ------------------
 
@@ -22523,6 +22627,10 @@ The ``base`` is the array base address.  The ``dim`` is the array dimension.
 The ``base`` is a pointer if ``dim`` equals 0.
 The ``index`` is the last access index into the array or pointer.
 
+The ``base`` argument must be annotated with an :ref:`elementtype
+<attr_elementtype>` attribute at the call-site. This attribute specifies the
+getelementptr element type.
+
 Semantics:
 """"""""""
 
@@ -22587,6 +22695,10 @@ Arguments:
 
 The ``base`` is the structure base address. The ``gep_index`` is the struct member index
 based on IR structures. The ``di_index`` is the struct member index based on debuginfo.
+
+The ``base`` argument must be annotated with an :ref:`elementtype
+<attr_elementtype>` attribute at the call-site. This attribute specifies the
+getelementptr element type.
 
 Semantics:
 """"""""""

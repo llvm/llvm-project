@@ -1121,7 +1121,10 @@ void X86DAGToDAGISel::PreprocessISelDAG() {
       if (VT.isVector() || VT == MVT::f128)
         break;
 
-      MVT VecVT = VT == MVT::f64 ? MVT::v2f64 : MVT::v4f32;
+      MVT VecVT = VT == MVT::f64   ? MVT::v2f64
+                  : VT == MVT::f32 ? MVT::v4f32
+                                   : MVT::v8f16;
+
       SDLoc dl(N);
       SDValue Op0 = CurDAG->getNode(ISD::SCALAR_TO_VECTOR, dl, VecVT,
                                     N->getOperand(0));
@@ -5446,6 +5449,9 @@ void X86DAGToDAGISel::Select(SDNode *Node) {
       ConstantSDNode *C = dyn_cast<ConstantSDNode>(N0.getOperand(1));
       if (!C) break;
       uint64_t Mask = C->getZExtValue();
+      // We may have looked through a truncate so mask off any bits that
+      // shouldn't be part of the compare.
+      Mask &= maskTrailingOnes<uint64_t>(CmpVT.getScalarSizeInBits());
 
       // Check if we can replace AND+IMM64 with a shift. This is possible for
       // masks/ like 0xFF000000 or 0x00FFFFFF and if we care only about the zero

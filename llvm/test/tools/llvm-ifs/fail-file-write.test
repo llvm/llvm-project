@@ -1,0 +1,18 @@
+## Test failing to write output file on non-windows platforms.
+
+# UNSUPPORTED: system-windows
+# RUN: rm -rf %t.TestDir
+# RUN: mkdir %t.TestDir
+# RUN: touch %t.TestDir/Output.TestFile
+# RUN: chmod 400 %t.TestDir
+# RUN: not llvm-ifs --output-format=ELF --output=%t.TestDir/Output.TestFile %s 2>&1 | FileCheck -DMSG=%errc_EACCES %s --check-prefix=ERR
+# RUN: chmod 777 %t.TestDir
+# RUN: rm -rf %t.TestDir
+
+--- !ifs-v1
+IfsVersion: 3.0
+Target: { ObjectFormat: ELF, Arch: AArch64, Endianness: little, BitWidth: 64 }
+Symbols: []
+...
+
+# ERR: [[MSG]] when trying to open `{{.*}}.TestDir/Output.TestFile` for writing

@@ -19,6 +19,7 @@
 
 #include <memory>
 #include <cassert>
+#include <type_traits>
 
 #include "test_macros.h"
 #include "test_iterators.h"
@@ -31,36 +32,92 @@ struct Counted {
     friend void operator&(Counted) = delete;
 };
 
-TEST_CONSTEXPR_CXX20 bool test()
-{
-    using Alloc = std::allocator<Counted>;
-    int counter = 0;
-    int const N = 5;
-    Alloc alloc;
-    Counted* pool = std::allocator_traits<Alloc>::allocate(alloc, N);
+#if TEST_STD_VER > 17
+constexpr bool test_arrays()  {
+    {
+        using Array = Counted[3];
+        using Alloc = std::allocator<Array>;
+        int counter = 0;
+        Alloc alloc;
+        Array* pool = std::allocator_traits<Alloc>::allocate(alloc, 5);
 
-    for (Counted* p = pool; p != pool + N; ++p)
-        std::allocator_traits<Alloc>::construct(alloc, p, &counter);
-    assert(counter == 5);
+        for (Array* p = pool; p != pool + 5; ++p) {
+            Array& arr = *p;
+            for (int i = 0; i != 3; ++i) {
+                std::allocator_traits<Alloc>::construct(alloc, std::addressof(arr[i]), &counter);
+            }
+        }
+        assert(counter == 5 * 3);
 
-    Counted* np = std::destroy_n(pool, 1);
-    assert(np == pool + 1);
-    assert(counter == 4);
+        Array* p = std::destroy_n(pool, 5);
+        ASSERT_SAME_TYPE(decltype(std::destroy_n(pool, 5)), Array*);
+        assert(p == pool + 5);
+        assert(counter == 0);
 
-    forward_iterator<Counted*> it = std::destroy_n(forward_iterator<Counted*>(pool + 1), 4);
-    assert(it == forward_iterator<Counted*>(pool + 5));
-    assert(counter == 0);
+        std::allocator_traits<Alloc>::deallocate(alloc, pool, 5);
+    }
+    {
+        using Array = Counted[3][2];
+        using Alloc = std::allocator<Array>;
+        int counter = 0;
+        Alloc alloc;
+        Array* pool = std::allocator_traits<Alloc>::allocate(alloc, 5);
 
-    std::allocator_traits<Alloc>::deallocate(alloc, pool, N);
+        for (Array* p = pool; p != pool + 5; ++p) {
+            Array& arr = *p;
+            for (int i = 0; i != 3; ++i) {
+                for (int j = 0; j != 2; ++j) {
+                    std::allocator_traits<Alloc>::construct(alloc, std::addressof(arr[i][j]), &counter);
+                }
+            }
+        }
+        assert(counter == 5 * 3 * 2);
+
+        Array* p = std::destroy_n(pool, 5);
+        ASSERT_SAME_TYPE(decltype(std::destroy_n(pool, 5)), Array*);
+        assert(p == pool + 5);
+        assert(counter == 0);
+
+        std::allocator_traits<Alloc>::deallocate(alloc, pool, 5);
+    }
 
     return true;
 }
+#endif
 
-int main(int, char**)
-{
-    test();
+template <class It>
+TEST_CONSTEXPR_CXX20 void test() {
+    using Alloc = std::allocator<Counted>;
+    int counter = 0;
+    Alloc alloc;
+    Counted* pool = std::allocator_traits<Alloc>::allocate(alloc, 5);
+
+    for (Counted* p = pool; p != pool + 5; ++p)
+        std::allocator_traits<Alloc>::construct(alloc, p, &counter);
+    assert(counter == 5);
+
+    It it = std::destroy_n(It(pool), 5);
+    ASSERT_SAME_TYPE(decltype(std::destroy_n(It(pool), 5)), It);
+    assert(it == It(pool + 5));
+    assert(counter == 0);
+
+    std::allocator_traits<Alloc>::deallocate(alloc, pool, 5);
+}
+
+TEST_CONSTEXPR_CXX20 bool tests() {
+    test<Counted*>();
+    test<forward_iterator<Counted*>>();
+    return true;
+}
+
+int main(int, char**) {
+    tests();
 #if TEST_STD_VER > 17
-    static_assert(test());
+    test_arrays();
+    static_assert(tests());
+    // TODO: Until std::construct_at has support for arrays, it's impossible to test this
+    //       in a constexpr context.
+    // static_assert(test_arrays());
 #endif
     return 0;
 }

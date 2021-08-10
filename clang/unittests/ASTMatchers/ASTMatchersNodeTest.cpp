@@ -876,7 +876,7 @@ TEST_P(ASTMatchersTest, Matcher_NoexceptExpression) {
   EXPECT_TRUE(
       matches("void foo() noexcept; bool bar = noexcept(foo());", NoExcept));
   EXPECT_TRUE(notMatches("void foo() noexcept;", NoExcept));
-  EXPECT_TRUE(notMatches("void foo() noexcept(1+1);", NoExcept));
+  EXPECT_TRUE(notMatches("void foo() noexcept(0+1);", NoExcept));
   EXPECT_TRUE(matches("void foo() noexcept(noexcept(1+1));", NoExcept));
 }
 
@@ -1883,6 +1883,29 @@ TEST_P(ASTMatchersTest, NestedNameSpecifier) {
   EXPECT_TRUE(
       notMatches("struct A { static void f() {} }; void g(A* a) { a->f(); }",
                  nestedNameSpecifier()));
+}
+
+TEST_P(ASTMatchersTest, Attr) {
+  // Windows adds some implicit attributes.
+  bool AutomaticAttributes = StringRef(GetParam().Target).contains("win32");
+  if (GetParam().isCXX11OrLater()) {
+    EXPECT_TRUE(matches("struct [[clang::warn_unused_result]] F{};", attr()));
+
+    // Unknown attributes are not parsed into an AST node.
+    if (!AutomaticAttributes) {
+      EXPECT_TRUE(notMatches("int x [[unknownattr]];", attr()));
+    }
+  }
+  if (GetParam().isCXX17OrLater()) {
+    EXPECT_TRUE(matches("struct [[nodiscard]] F{};", attr()));
+  }
+  EXPECT_TRUE(matches("int x(int * __attribute__((nonnull)) );", attr()));
+  if (!AutomaticAttributes) {
+    EXPECT_TRUE(notMatches("struct F{}; int x(int *);", attr()));
+    // Some known attributes are not parsed into an AST node.
+    EXPECT_TRUE(notMatches("typedef int x __attribute__((ext_vector_type(1)));",
+                           attr()));
+  }
 }
 
 TEST_P(ASTMatchersTest, NullStmt) {

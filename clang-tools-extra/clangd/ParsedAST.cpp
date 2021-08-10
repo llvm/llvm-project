@@ -14,6 +14,7 @@
 #include "Compiler.h"
 #include "Config.h"
 #include "Diagnostics.h"
+#include "Feature.h"
 #include "FeatureModule.h"
 #include "Headers.h"
 #include "HeuristicResolver.h"
@@ -60,8 +61,10 @@
 
 // Force the linker to link in Clang-tidy modules.
 // clangd doesn't support the static analyzer.
+#if CLANGD_TIDY_CHECKS
 #define CLANG_TIDY_DISABLE_STATIC_ANALYZER_CHECKS
 #include "../clang-tidy/ClangTidyForceLinker.h"
+#endif
 
 namespace clang {
 namespace clangd {
@@ -306,6 +309,16 @@ ParsedAST::build(llvm::StringRef Filename, const ParseInputs &Inputs,
         MainInput.getFile());
     return None;
   }
+  // If we saw an include guard in the preamble section of the main file,
+  // mark the main-file as include-guarded.
+  // This information is part of the HeaderFileInfo but is not loaded from the
+  // preamble as the file's size is part of its identity and may have changed.
+  // (The rest of HeaderFileInfo is not relevant for our purposes).
+  if (Preamble && Preamble->MainIsIncludeGuarded) {
+    const SourceManager &SM = Clang->getSourceManager();
+    const FileEntry *MainFE = SM.getFileEntryForID(SM.getMainFileID());
+    Clang->getPreprocessor().getHeaderSearchInfo().MarkFileIncludeOnce(MainFE);
+  }
 
   // Set up ClangTidy. Must happen after BeginSourceFile() so ASTContext exists.
   // Clang-tidy has some limitations to ensure reasonable performance:
@@ -423,6 +436,13 @@ ParsedAST::build(llvm::StringRef Filename, const ParseInputs &Inputs,
       std::make_unique<CollectMainFileMacros>(Clang->getSourceManager(),
                                               Macros));
 
+  std::vector<PragmaMark> Marks;
+  // FIXME: We need to patch the marks for stale preambles.
+  if (Preamble)
+    Marks = Preamble->Marks;
+  Clang->getPreprocessor().addPPCallbacks(
+      collectPragmaMarksCallback(Clang->getSourceManager(), Marks));
+
   // Copy over the includes from the preamble, then combine with the
   // non-preamble includes below.
   CanonicalIncludes CanonIncludes;
@@ -484,7 +504,7 @@ ParsedAST::build(llvm::StringRef Filename, const ParseInputs &Inputs,
   }
   return ParsedAST(Inputs.Version, std::move(Preamble), std::move(Clang),
                    std::move(Action), std::move(Tokens), std::move(Macros),
-                   std::move(ParsedDecls), std::move(Diags),
+                   std::move(Marks), std::move(ParsedDecls), std::move(Diags),
                    std::move(Includes), std::move(CanonIncludes));
 }
 
@@ -524,6 +544,7 @@ llvm::ArrayRef<Decl *> ParsedAST::getLocalTopLevelDecls() {
 }
 
 const MainFileMacros &ParsedAST::getMacros() const { return Macros; }
+const std::vector<PragmaMark> &ParsedAST::getMarks() const { return Marks; }
 
 std::size_t ParsedAST::getUsedBytes() const {
   auto &AST = getASTContext();
@@ -570,12 +591,14 @@ ParsedAST::ParsedAST(llvm::StringRef Version,
                      std::unique_ptr<CompilerInstance> Clang,
                      std::unique_ptr<FrontendAction> Action,
                      syntax::TokenBuffer Tokens, MainFileMacros Macros,
+                     std::vector<PragmaMark> Marks,
                      std::vector<Decl *> LocalTopLevelDecls,
                      llvm::Optional<std::vector<Diag>> Diags,
                      IncludeStructure Includes, CanonicalIncludes CanonIncludes)
     : Version(Version), Preamble(std::move(Preamble)), Clang(std::move(Clang)),
       Action(std::move(Action)), Tokens(std::move(Tokens)),
-      Macros(std::move(Macros)), Diags(std::move(Diags)),
+      Macros(std::move(Macros)), Marks(std::move(Marks)),
+      Diags(std::move(Diags)),
       LocalTopLevelDecls(std::move(LocalTopLevelDecls)),
       Includes(std::move(Includes)), CanonIncludes(std::move(CanonIncludes)) {
   Resolver = std::make_unique<HeuristicResolver>(getASTContext());

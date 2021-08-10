@@ -36,13 +36,13 @@ namespace std::ranges {
     inline constexpr bool enable_borrowed_range = false;
 
   template<class T>
-    using iterator_t = decltype(ranges::begin(declval<T&>()));
-  template<class T>
-    using iterator_t = decltype(ranges::begin(declval<T&>()));
+    using iterator_t = decltype(ranges::begin(declval<R&>()));
   template<range R>
     using sentinel_t = decltype(ranges::end(declval<R&>()));
   template<range R>
     using range_difference_t = iter_difference_t<iterator_t<R>>;
+  template<sized_range R>
+    using range_size_t = decltype(ranges::size(declval<R&>()));
   template<range R>
     using range_value_t = iter_value_t<iterator_t<R>>;
   template<range R>
@@ -50,7 +50,7 @@ namespace std::ranges {
   template<range R>
     using range_rvalue_reference_t = iter_rvalue_reference_t<iterator_t<R>>;
 
-  // [range.sized]
+  // [range.sized], sized ranges
   template<class>
     inline constexpr bool disable_sized_range = false;
 
@@ -67,6 +67,9 @@ namespace std::ranges {
     concept view = ...;
 
   // [range.refinements], other range refinements
+  template<class R, class T>
+    concept output_range = see below;
+
   template<class T>
     concept input_range = see below;
 
@@ -85,15 +88,52 @@ namespace std::ranges {
   template <class _Tp>
     concept common_range = see below;
 
+  template<class T>
+  concept viewable_range = see below;
+
   // [view.interface], class template view_interface
   template<class D>
     requires is_class_v<D> && same_as<D, remove_cv_t<D>>
   class view_interface;
 
+  // [range.subrange], sub-ranges
+  enum class subrange_kind : bool { unsized, sized };
+
+  template<input_or_output_iterator I, sentinel_for<I> S = I, subrange_kind K = see below>
+    requires (K == subrange_kind::sized || !sized_sentinel_for<S, I>)
+  class subrange;
+
+  template<class I, class S, subrange_kind K>
+    inline constexpr bool enable_borrowed_range<subrange<I, S, K>> = true;
+
+  // [range.dangling], dangling iterator handling
+  struct dangling;
+
+  template<range R>
+    using borrowed_iterator_t = see below;
+
+  template<range R>
+    using borrowed_subrange_t = see below;
+
   // [range.empty], empty view
   template<class T>
     requires is_object_v<T>
   class empty_view;
+
+  // [range.all], all view
+  namespace views {
+    inline constexpr unspecified all = unspecified;
+
+    template<viewable_range R>
+      using all_t = decltype(all(declval<R>()));
+  }
+
+  template<range R>
+    requires is_object_v<R>
+  class ref_view;
+
+  template<class T>
+    inline constexpr bool enable_borrowed_range<ref_view<T>> = true;
 
   // [range.drop], drop view
   template<view V>
@@ -109,14 +149,46 @@ namespace std::ranges {
              can-reference<invoke_result_t<F&, range_reference_t<V>>>
   class transform_view;
 
+  // [range.common], common view
+  template<view V>
+    requires (!common_range<V> && copyable<iterator_t<V>>)
+  class common_view;
+
+ // [range.reverse], reverse view
+  template<view V>
+    requires bidirectional_range<V>
+  class reverse_view;
+
+  template<class T>
+    inline constexpr bool enable_borrowed_range<reverse_view<T>> = enable_borrowed_range<T>;
+
+  template<class T>
+  inline constexpr bool enable_borrowed_range<common_view<T>> = enable_borrowed_range<T>;
+
+   // [range.take], take view
+  template<view> class take_view;
+
+  template<class T>
+  inline constexpr bool enable_borrowed_range<take_view<T>> = enable_borrowed_range<T>;
+
+  template<copy_constructible T>
+    requires is_object_v<T>
+  class single_view;
 }
 
 */
 
+// Make sure all feature tests macros are always available.
+#include <version>
+// Only enable the contents of the header when libc++ was build with LIBCXX_ENABLE_INCOMPLETE_FEATURES enabled
+#if !defined(_LIBCPP_HAS_NO_INCOMPLETE_RANGES)
+
 #include <__config>
 #include <__ranges/access.h>
 #include <__ranges/all.h>
+#include <__ranges/common_view.h>
 #include <__ranges/concepts.h>
+#include <__ranges/dangling.h>
 #include <__ranges/data.h>
 #include <__ranges/drop_view.h>
 #include <__ranges/empty.h>
@@ -124,15 +196,18 @@ namespace std::ranges {
 #include <__ranges/enable_borrowed_range.h>
 #include <__ranges/enable_view.h>
 #include <__ranges/ref_view.h>
+#include <__ranges/reverse_view.h>
+#include <__ranges/take_view.h>
+#include <__ranges/single_view.h>
 #include <__ranges/size.h>
 #include <__ranges/subrange.h>
+#include <__ranges/take_view.h>
 #include <__ranges/transform_view.h>
 #include <__ranges/view_interface.h>
 #include <compare>          // Required by the standard.
 #include <initializer_list> // Required by the standard.
 #include <iterator>         // Required by the standard.
 #include <type_traits>
-#include <version>
 
 #if !defined(_LIBCPP_HAS_NO_PRAGMA_SYSTEM_HEADER)
 #pragma GCC system_header
@@ -150,5 +225,7 @@ _LIBCPP_BEGIN_NAMESPACE_STD
 _LIBCPP_END_NAMESPACE_STD
 
 _LIBCPP_POP_MACROS
+
+#endif // !defined(_LIBCPP_HAS_NO_INCOMPLETE_RANGES)
 
 #endif // _LIBCPP_RANGES

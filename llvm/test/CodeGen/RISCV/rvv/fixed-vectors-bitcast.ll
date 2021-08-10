@@ -17,7 +17,7 @@ define <32 x i1> @bitcast_v4i8_v32i1(<4 x i8> %a, <32 x i1> %b) {
 define i8 @bitcast_v1i8_i8(<1 x i8> %a) {
 ; CHECK-LABEL: bitcast_v1i8_i8:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vsetvli zero, zero, e8, mf8, ta, mu
+; CHECK-NEXT:    vsetivli zero, 0, e8, mf8, ta, mu
 ; CHECK-NEXT:    vmv.x.s a0, v8
 ; CHECK-NEXT:    ret
   %b = bitcast <1 x i8> %a to i8
@@ -27,7 +27,7 @@ define i8 @bitcast_v1i8_i8(<1 x i8> %a) {
 define i16 @bitcast_v2i8_i16(<2 x i8> %a) {
 ; CHECK-LABEL: bitcast_v2i8_i16:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vsetvli zero, zero, e16, mf4, ta, mu
+; CHECK-NEXT:    vsetivli zero, 0, e16, mf4, ta, mu
 ; CHECK-NEXT:    vmv.x.s a0, v8
 ; CHECK-NEXT:    ret
   %b = bitcast <2 x i8> %a to i16
@@ -37,7 +37,7 @@ define i16 @bitcast_v2i8_i16(<2 x i8> %a) {
 define i16 @bitcast_v1i16_i16(<1 x i16> %a) {
 ; CHECK-LABEL: bitcast_v1i16_i16:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vsetvli zero, zero, e16, mf4, ta, mu
+; CHECK-NEXT:    vsetivli zero, 0, e16, mf4, ta, mu
 ; CHECK-NEXT:    vmv.x.s a0, v8
 ; CHECK-NEXT:    ret
   %b = bitcast <1 x i16> %a to i16
@@ -47,7 +47,7 @@ define i16 @bitcast_v1i16_i16(<1 x i16> %a) {
 define i32 @bitcast_v4i8_i32(<4 x i8> %a) {
 ; CHECK-LABEL: bitcast_v4i8_i32:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vsetvli zero, zero, e32, mf2, ta, mu
+; CHECK-NEXT:    vsetivli zero, 0, e32, mf2, ta, mu
 ; CHECK-NEXT:    vmv.x.s a0, v8
 ; CHECK-NEXT:    ret
   %b = bitcast <4 x i8> %a to i32
@@ -57,7 +57,7 @@ define i32 @bitcast_v4i8_i32(<4 x i8> %a) {
 define i32 @bitcast_v2i16_i32(<2 x i16> %a) {
 ; CHECK-LABEL: bitcast_v2i16_i32:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vsetvli zero, zero, e32, mf2, ta, mu
+; CHECK-NEXT:    vsetivli zero, 0, e32, mf2, ta, mu
 ; CHECK-NEXT:    vmv.x.s a0, v8
 ; CHECK-NEXT:    ret
   %b = bitcast <2 x i16> %a to i32
@@ -67,7 +67,7 @@ define i32 @bitcast_v2i16_i32(<2 x i16> %a) {
 define i32 @bitcast_v1i32_i32(<1 x i32> %a) {
 ; CHECK-LABEL: bitcast_v1i32_i32:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vsetvli zero, zero, e32, mf2, ta, mu
+; CHECK-NEXT:    vsetivli zero, 0, e32, mf2, ta, mu
 ; CHECK-NEXT:    vmv.x.s a0, v8
 ; CHECK-NEXT:    ret
   %b = bitcast <1 x i32> %a to i32
@@ -86,7 +86,7 @@ define i64 @bitcast_v8i8_i64(<8 x i8> %a) {
 ;
 ; RV64-LABEL: bitcast_v8i8_i64:
 ; RV64:       # %bb.0:
-; RV64-NEXT:    vsetvli zero, zero, e64, m1, ta, mu
+; RV64-NEXT:    vsetivli zero, 0, e64, m1, ta, mu
 ; RV64-NEXT:    vmv.x.s a0, v8
 ; RV64-NEXT:    ret
   %b = bitcast <8 x i8> %a to i64
@@ -105,7 +105,7 @@ define i64 @bitcast_v4i16_i64(<4 x i16> %a) {
 ;
 ; RV64-LABEL: bitcast_v4i16_i64:
 ; RV64:       # %bb.0:
-; RV64-NEXT:    vsetvli zero, zero, e64, m1, ta, mu
+; RV64-NEXT:    vsetivli zero, 0, e64, m1, ta, mu
 ; RV64-NEXT:    vmv.x.s a0, v8
 ; RV64-NEXT:    ret
   %b = bitcast <4 x i16> %a to i64
@@ -124,7 +124,7 @@ define i64 @bitcast_v2i32_i64(<2 x i32> %a) {
 ;
 ; RV64-LABEL: bitcast_v2i32_i64:
 ; RV64:       # %bb.0:
-; RV64-NEXT:    vsetvli zero, zero, e64, m1, ta, mu
+; RV64-NEXT:    vsetivli zero, 0, e64, m1, ta, mu
 ; RV64-NEXT:    vmv.x.s a0, v8
 ; RV64-NEXT:    ret
   %b = bitcast <2 x i32> %a to i64
@@ -143,7 +143,7 @@ define i64 @bitcast_v1i64_i64(<1 x i64> %a) {
 ;
 ; RV64-LABEL: bitcast_v1i64_i64:
 ; RV64:       # %bb.0:
-; RV64-NEXT:    vsetvli zero, zero, e64, m1, ta, mu
+; RV64-NEXT:    vsetivli zero, 0, e64, m1, ta, mu
 ; RV64-NEXT:    vmv.x.s a0, v8
 ; RV64-NEXT:    ret
   %b = bitcast <1 x i64> %a to i64
@@ -153,7 +153,7 @@ define i64 @bitcast_v1i64_i64(<1 x i64> %a) {
 define half @bitcast_v2i8_f16(<2 x i8> %a) {
 ; CHECK-LABEL: bitcast_v2i8_f16:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vsetvli zero, zero, e16, mf4, ta, mu
+; CHECK-NEXT:    vsetivli zero, 0, e16, mf4, ta, mu
 ; CHECK-NEXT:    vmv.x.s a0, v8
 ; CHECK-NEXT:    ret
   %b = bitcast <2 x i8> %a to half
@@ -163,7 +163,7 @@ define half @bitcast_v2i8_f16(<2 x i8> %a) {
 define half @bitcast_v1i16_f16(<1 x i16> %a) {
 ; CHECK-LABEL: bitcast_v1i16_f16:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vsetvli zero, zero, e16, mf4, ta, mu
+; CHECK-NEXT:    vsetivli zero, 0, e16, mf4, ta, mu
 ; CHECK-NEXT:    vmv.x.s a0, v8
 ; CHECK-NEXT:    ret
   %b = bitcast <1 x i16> %a to half
@@ -173,7 +173,7 @@ define half @bitcast_v1i16_f16(<1 x i16> %a) {
 define float @bitcast_v4i8_f32(<4 x i8> %a) {
 ; CHECK-LABEL: bitcast_v4i8_f32:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vsetvli zero, zero, e32, mf2, ta, mu
+; CHECK-NEXT:    vsetivli zero, 0, e32, mf2, ta, mu
 ; CHECK-NEXT:    vmv.x.s a0, v8
 ; CHECK-NEXT:    ret
   %b = bitcast <4 x i8> %a to float
@@ -183,7 +183,7 @@ define float @bitcast_v4i8_f32(<4 x i8> %a) {
 define float @bitcast_v2i16_f32(<2 x i16> %a) {
 ; CHECK-LABEL: bitcast_v2i16_f32:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vsetvli zero, zero, e32, mf2, ta, mu
+; CHECK-NEXT:    vsetivli zero, 0, e32, mf2, ta, mu
 ; CHECK-NEXT:    vmv.x.s a0, v8
 ; CHECK-NEXT:    ret
   %b = bitcast <2 x i16> %a to float
@@ -193,7 +193,7 @@ define float @bitcast_v2i16_f32(<2 x i16> %a) {
 define float @bitcast_v1i32_f32(<1 x i32> %a) {
 ; CHECK-LABEL: bitcast_v1i32_f32:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vsetvli zero, zero, e32, mf2, ta, mu
+; CHECK-NEXT:    vsetivli zero, 0, e32, mf2, ta, mu
 ; CHECK-NEXT:    vmv.x.s a0, v8
 ; CHECK-NEXT:    ret
   %b = bitcast <1 x i32> %a to float
@@ -212,7 +212,7 @@ define double @bitcast_v8i8_f64(<8 x i8> %a) {
 ;
 ; RV64-LABEL: bitcast_v8i8_f64:
 ; RV64:       # %bb.0:
-; RV64-NEXT:    vsetvli zero, zero, e64, m1, ta, mu
+; RV64-NEXT:    vsetivli zero, 0, e64, m1, ta, mu
 ; RV64-NEXT:    vmv.x.s a0, v8
 ; RV64-NEXT:    ret
   %b = bitcast <8 x i8> %a to double
@@ -231,7 +231,7 @@ define double @bitcast_v4i16_f64(<4 x i16> %a) {
 ;
 ; RV64-LABEL: bitcast_v4i16_f64:
 ; RV64:       # %bb.0:
-; RV64-NEXT:    vsetvli zero, zero, e64, m1, ta, mu
+; RV64-NEXT:    vsetivli zero, 0, e64, m1, ta, mu
 ; RV64-NEXT:    vmv.x.s a0, v8
 ; RV64-NEXT:    ret
   %b = bitcast <4 x i16> %a to double
@@ -250,7 +250,7 @@ define double @bitcast_v2i32_f64(<2 x i32> %a) {
 ;
 ; RV64-LABEL: bitcast_v2i32_f64:
 ; RV64:       # %bb.0:
-; RV64-NEXT:    vsetvli zero, zero, e64, m1, ta, mu
+; RV64-NEXT:    vsetivli zero, 0, e64, m1, ta, mu
 ; RV64-NEXT:    vmv.x.s a0, v8
 ; RV64-NEXT:    ret
   %b = bitcast <2 x i32> %a to double
@@ -269,7 +269,7 @@ define double @bitcast_v1i64_f64(<1 x i64> %a) {
 ;
 ; RV64-LABEL: bitcast_v1i64_f64:
 ; RV64:       # %bb.0:
-; RV64-NEXT:    vsetvli zero, zero, e64, m1, ta, mu
+; RV64-NEXT:    vsetivli zero, 0, e64, m1, ta, mu
 ; RV64-NEXT:    vmv.x.s a0, v8
 ; RV64-NEXT:    ret
   %b = bitcast <1 x i64> %a to double

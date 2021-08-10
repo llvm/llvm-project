@@ -162,7 +162,8 @@ public:
     bool Changed = processUsedLDS(M);
 
     for (Function &F : M.functions()) {
-      if (!AMDGPU::isKernelCC(&F))
+      // Only lower compute kernels' LDS.
+      if (!AMDGPU::isKernel(F.getCallingConv()))
         continue;
       Changed |= processUsedLDS(M, &F);
     }

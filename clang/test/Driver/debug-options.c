@@ -306,18 +306,18 @@
 // GLIO_ONLY_DWARF2: "-dwarf-version=2"
 //
 // G_ONLY: "-cc1"
-// G_ONLY: "-debug-info-kind=limited"
+// G_ONLY: "-debug-info-kind=constructor"
 //
 // These tests assert that "-gline-tables-only" "-g" uses the latter,
 // but otherwise not caring about the DebugInfoKind.
 // G_ONLY_DWARF2: "-cc1"
-// G_ONLY_DWARF2: "-debug-info-kind={{standalone|limited}}"
+// G_ONLY_DWARF2: "-debug-info-kind={{standalone|constructor}}"
 // G_ONLY_DWARF2: "-dwarf-version=2"
 //
 // G_STANDALONE: "-cc1"
 // G_STANDALONE: "-debug-info-kind=standalone"
 // G_LIMITED: "-cc1"
-// G_LIMITED: "-debug-info-kind=limited"
+// G_LIMITED: "-debug-info-kind=constructor"
 // G_DWARF2: "-dwarf-version=2"
 // G_DWARF4: "-dwarf-version=4"
 //
@@ -375,7 +375,7 @@
 // NOCI: "-gno-column-info"
 //
 // GEXTREFS: "-dwarf-ext-refs" "-fmodule-format=obj"
-// GEXTREFS: "-debug-info-kind={{standalone|limited}}"
+// GEXTREFS: "-debug-info-kind={{standalone|constructor}}"
 
 // RUN: not %clang -cc1 -debug-info-kind=watkind 2>&1 | FileCheck -check-prefix=BADSTRING1 %s
 // BADSTRING1: error: invalid value 'watkind' in '-debug-info-kind=watkind'
@@ -406,7 +406,7 @@
 // RUN:        | FileCheck -check-prefix=NO_DEBUG_UNUSED_TYPES %s
 // RUN: %clang -### -fno-eliminate-unused-debug-types -g1 -c %s 2>&1 \
 // RUN:        | FileCheck -check-prefix=NO_DEBUG_UNUSED_TYPES %s
-// NO_DEBUG_UNUSED_TYPES: "-debug-info-kind={{limited|line-tables-only|standalone}}"
+// NO_DEBUG_UNUSED_TYPES: "-debug-info-kind={{constructor|line-tables-only|standalone}}"
 // NO_DEBUG_UNUSED_TYPES-NOT: "-debug-info-kind=unused-types"
 //
 // RUN: %clang -### -c -gdwarf-5 -gdwarf64 -target x86_64 %s 2>&1 | FileCheck -check-prefix=GDWARF64_ON %s
@@ -424,3 +424,14 @@
 // GDWARF64_VER:  error: invalid argument '-gdwarf64' only allowed with 'DWARFv3 or greater'
 // GDWARF64_32ARCH: error: invalid argument '-gdwarf64' only allowed with '64 bit architecture'
 // GDWARF64_ELF: error: invalid argument '-gdwarf64' only allowed with 'ELF platforms'
+
+/// Default to -fno-dwarf-directory-asm for -fno-integrated-as before DWARF v5.
+// RUN: %clang -### -target x86_64 -c -gdwarf-2 %s 2>&1 | FileCheck --check-prefix=DIRECTORY %s
+// RUN: %clang -### -target x86_64 -c -gdwarf-5 %s 2>&1 | FileCheck --check-prefix=DIRECTORY %s
+// RUN: %clang -### -target x86_64 -c -gdwarf-4 -fno-integrated-as %s 2>&1 | FileCheck --check-prefix=NODIRECTORY %s
+// RUN: %clang -### -target x86_64 -c -gdwarf-5 -fno-integrated-as %s 2>&1 | FileCheck --check-prefix=DIRECTORY %s
+
+// RUN: %clang -### -target x86_64 -c -gdwarf-4 -fno-dwarf-directory-asm %s 2>&1 | FileCheck --check-prefix=NODIRECTORY %s
+
+// DIRECTORY-NOT: "-fno-dwarf-directory-asm"
+// NODIRECTORY: "-fno-dwarf-directory-asm"

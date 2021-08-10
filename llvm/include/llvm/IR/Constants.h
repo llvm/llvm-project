@@ -454,8 +454,7 @@ public:
   template <typename... Csts>
   static std::enable_if_t<are_base_of<Constant, Csts...>::value, Constant *>
   get(StructType *T, Csts *...Vs) {
-    SmallVector<Constant *, 8> Values({Vs...});
-    return get(T, Values);
+    return get(T, ArrayRef<Constant *>({Vs...}));
   }
 
   /// Return an anonymous struct that has the specified elements.

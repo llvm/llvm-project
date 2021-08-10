@@ -342,8 +342,9 @@ bool ISD::matchBinaryPredicate(
       return Match(LHSCst, RHSCst);
 
   // TODO: Add support for vector UNDEF cases?
-  if (ISD::BUILD_VECTOR != LHS.getOpcode() ||
-      ISD::BUILD_VECTOR != RHS.getOpcode())
+  if (LHS.getOpcode() != RHS.getOpcode() ||
+      (LHS.getOpcode() != ISD::BUILD_VECTOR &&
+       LHS.getOpcode() != ISD::SPLAT_VECTOR))
     return false;
 
   EVT SVT = LHS.getValueType().getScalarType();
@@ -1747,15 +1748,22 @@ SDValue SelectionDAG::getCondCode(ISD::CondCode Cond) {
   return SDValue(CondCodeNodes[Cond], 0);
 }
 
-SDValue SelectionDAG::getStepVector(const SDLoc &DL, EVT ResVT, SDValue Step) {
-  if (ResVT.isScalableVector())
-    return getNode(ISD::STEP_VECTOR, DL, ResVT, Step);
+SDValue SelectionDAG::getStepVector(const SDLoc &DL, EVT ResVT) {
+  APInt One(ResVT.getScalarSizeInBits(), 1);
+  return getStepVector(DL, ResVT, One);
+}
 
-  EVT OpVT = Step.getValueType();
-  APInt StepVal = cast<ConstantSDNode>(Step)->getAPIntValue();
+SDValue SelectionDAG::getStepVector(const SDLoc &DL, EVT ResVT, APInt StepVal) {
+  assert(ResVT.getScalarSizeInBits() == StepVal.getBitWidth());
+  if (ResVT.isScalableVector())
+    return getNode(
+        ISD::STEP_VECTOR, DL, ResVT,
+        getTargetConstant(StepVal, DL, ResVT.getVectorElementType()));
+
   SmallVector<SDValue, 16> OpsStepConstants;
   for (uint64_t i = 0; i < ResVT.getVectorNumElements(); i++)
-    OpsStepConstants.push_back(getConstant(StepVal * i, DL, OpVT));
+    OpsStepConstants.push_back(
+        getConstant(StepVal * i, DL, ResVT.getVectorElementType()));
   return getBuildVector(ResVT, DL, OpsStepConstants);
 }
 
@@ -2439,15 +2447,6 @@ bool SelectionDAG::MaskedValueIsZero(SDValue V, const APInt &Mask,
                                      const APInt &DemandedElts,
                                      unsigned Depth) const {
   return Mask.isSubsetOf(computeKnownBits(V, DemandedElts, Depth).Zero);
-}
-
-/// Return true if the DemandedElts of the vector Op are all zero.  We
-/// use this predicate to simplify operations downstream.
-bool SelectionDAG::MaskedElementsAreZero(SDValue Op, const APInt &DemandedElts,
-                                         unsigned Depth) const {
-  unsigned BitWidth = Op.getScalarValueSizeInBits();
-  APInt DemandedBits = APInt::getAllOnesValue(BitWidth);
-  return MaskedValueIsZero(Op, DemandedBits, DemandedElts, Depth);
 }
 
 /// MaskedValueIsAllOnes - Return true if '(Op & Mask) == Mask'.
@@ -4249,6 +4248,71 @@ unsigned SelectionDAG::ComputeNumSignBits(SDValue Op, const APInt &DemandedElts,
   return std::max(FirstAnswer, Mask.countLeadingOnes());
 }
 
+bool SelectionDAG::isGuaranteedNotToBeUndefOrPoison(SDValue Op, bool PoisonOnly,
+                                                    unsigned Depth) const {
+  // Early out for FREEZE.
+  if (Op.getOpcode() == ISD::FREEZE)
+    return true;
+
+  // TODO: Assume we don't know anything for now.
+  EVT VT = Op.getValueType();
+  if (VT.isScalableVector())
+    return false;
+
+  APInt DemandedElts = VT.isVector()
+                           ? APInt::getAllOnesValue(VT.getVectorNumElements())
+                           : APInt(1, 1);
+  return isGuaranteedNotToBeUndefOrPoison(Op, DemandedElts, PoisonOnly, Depth);
+}
+
+bool SelectionDAG::isGuaranteedNotToBeUndefOrPoison(SDValue Op,
+                                                    const APInt &DemandedElts,
+                                                    bool PoisonOnly,
+                                                    unsigned Depth) const {
+  unsigned Opcode = Op.getOpcode();
+
+  // Early out for FREEZE.
+  if (Opcode == ISD::FREEZE)
+    return true;
+
+  if (Depth >= MaxRecursionDepth)
+    return false; // Limit search depth.
+
+  if (isIntOrFPConstant(Op))
+    return true;
+
+  switch (Opcode) {
+  case ISD::UNDEF:
+    return PoisonOnly;
+
+  case ISD::BUILD_VECTOR:
+    // NOTE: BUILD_VECTOR has implicit truncation of wider scalar elements -
+    // this shouldn't affect the result.
+    for (unsigned i = 0, e = Op.getNumOperands(); i < e; ++i) {
+      if (!DemandedElts[i])
+        continue;
+      if (!isGuaranteedNotToBeUndefOrPoison(Op.getOperand(i), PoisonOnly,
+                                            Depth + 1))
+        return false;
+    }
+    return true;
+
+  // TODO: Search for noundef attributes from library functions.
+
+  // TODO: Pointers dereferenced by ISD::LOAD/STORE ops are noundef.
+
+  default:
+    // Allow the target to implement this method for its nodes.
+    if (Opcode >= ISD::BUILTIN_OP_END || Opcode == ISD::INTRINSIC_WO_CHAIN ||
+        Opcode == ISD::INTRINSIC_W_CHAIN || Opcode == ISD::INTRINSIC_VOID)
+      return TLI->isGuaranteedNotToBeUndefOrPoisonForTargetNode(
+          Op, DemandedElts, *this, PoisonOnly, Depth);
+    break;
+  }
+
+  return false;
+}
+
 bool SelectionDAG::isBaseWithConstantOffset(SDValue Op) const {
   if ((Op.getOpcode() != ISD::ADD && Op.getOpcode() != ISD::OR) ||
       !isa<ConstantSDNode>(Op.getOperand(1)))
@@ -4609,8 +4673,14 @@ SDValue SelectionDAG::getNode(unsigned Opcode, const SDLoc &DL, EVT VT,
       if (C->isOpaque())
         break;
       LLVM_FALLTHROUGH;
-    case ISD::ANY_EXTEND:
     case ISD::ZERO_EXTEND:
+      return getConstant(Val.zextOrTrunc(VT.getSizeInBits()), DL, VT,
+                         C->isTargetOpcode(), C->isOpaque());
+    case ISD::ANY_EXTEND:
+      // Some targets like RISCV prefer to sign extend some types.
+      if (TLI->isSExtCheaperThanZExt(Operand.getValueType(), VT))
+        return getConstant(Val.sextOrTrunc(VT.getSizeInBits()), DL, VT,
+                           C->isTargetOpcode(), C->isOpaque());
       return getConstant(Val.zextOrTrunc(VT.getSizeInBits()), DL, VT,
                          C->isTargetOpcode(), C->isOpaque());
     case ISD::UINT_TO_FP:
@@ -4778,14 +4848,9 @@ SDValue SelectionDAG::getNode(unsigned Opcode, const SDLoc &DL, EVT VT,
   case ISD::STEP_VECTOR:
     assert(VT.isScalableVector() &&
            "STEP_VECTOR can only be used with scalable types");
-    assert(VT.getScalarSizeInBits() >= 8 &&
-           "STEP_VECTOR can only be used with vectors of integers that are at "
-           "least 8 bits wide");
-    assert(isa<ConstantSDNode>(Operand) &&
-           cast<ConstantSDNode>(Operand)->getAPIntValue().isSignedIntN(
-               VT.getScalarSizeInBits()) &&
-           "Expected STEP_VECTOR integer constant to fit in "
-           "the vector element type");
+    assert(OpOpcode == ISD::TargetConstant &&
+           VT.getVectorElementType() == Operand.getValueType() &&
+           "Unexpected step operand");
     break;
   case ISD::FREEZE:
     assert(VT == Operand.getValueType() && "Unexpected VT!");

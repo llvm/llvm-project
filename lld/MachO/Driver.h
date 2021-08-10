@@ -22,6 +22,7 @@
 namespace llvm {
 namespace MachO {
 class InterfaceFile;
+enum class PlatformKind : unsigned;
 } // namespace MachO
 } // namespace llvm
 
@@ -69,11 +70,15 @@ llvm::StringRef rerootPath(llvm::StringRef path);
 
 llvm::Optional<InputFile *> loadArchiveMember(MemoryBufferRef, uint32_t modTime,
                                               StringRef archiveName,
-                                              bool objCOnly);
+                                              bool objCOnly,
+                                              uint64_t offsetInArchive);
 
 uint32_t getModTime(llvm::StringRef path);
 
 void printArchiveMemberLoad(StringRef reason, const InputFile *);
+
+// Map simulator platforms to their underlying device platform.
+llvm::MachO::PlatformKind removeSimulator(llvm::MachO::PlatformKind platform);
 
 // Helper class to export dependency info.
 class DependencyTracker {

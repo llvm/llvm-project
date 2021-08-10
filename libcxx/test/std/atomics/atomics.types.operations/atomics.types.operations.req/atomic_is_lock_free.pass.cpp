@@ -27,10 +27,11 @@ template <class T>
 struct TestFn {
   void operator()() const {
     typedef std::atomic<T> A;
-    A t = T();
-    bool b1 = std::atomic_is_lock_free(static_cast<const A*>(&t));
-    volatile A vt = T();
-    bool b2 = std::atomic_is_lock_free(static_cast<const volatile A*>(&vt));
+    T t = T();
+    A a(t);
+    bool b1 = std::atomic_is_lock_free(static_cast<const A*>(&a));
+    volatile A va(t);
+    bool b2 = std::atomic_is_lock_free(static_cast<const volatile A*>(&va));
     assert(b1 == b2);
   }
 };

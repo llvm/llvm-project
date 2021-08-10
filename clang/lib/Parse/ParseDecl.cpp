@@ -3952,8 +3952,12 @@ void Parser::ParseDeclarationSpecifiers(DeclSpec &DS,
         Tok.getIdentifierInfo()->revertTokenIDToIdentifier();
         Tok.setKind(tok::identifier);
         goto DoneWithDeclSpec;
-      }
-      isInvalid = DS.SetTypePipe(true, Loc, PrevSpec, DiagID, Policy);
+      } else if (!getLangOpts().OpenCLPipes) {
+        DiagID = diag::err_opencl_unknown_type_specifier;
+        PrevSpec = Tok.getIdentifierInfo()->getNameStart();
+        isInvalid = true;
+      } else
+        isInvalid = DS.SetTypePipe(true, Loc, PrevSpec, DiagID, Policy);
       break;
 // We only need to enumerate each image type once.
 #define IMAGE_READ_WRITE_TYPE(Type, Id, Ext)
@@ -4072,6 +4076,8 @@ void Parser::ParseDeclarationSpecifiers(DeclSpec &DS,
     case tok::kw___generic:
       // generic address space is introduced only in OpenCL v2.0
       // see OpenCL C Spec v2.0 s6.5.5
+      // OpenCL v3.0 introduces __opencl_c_generic_address_space
+      // feature macro to indicate if generic address space is supported
       if (!Actions.getLangOpts().OpenCLGenericAddressSpace) {
         DiagID = diag::err_opencl_unknown_type_specifier;
         PrevSpec = Tok.getIdentifierInfo()->getNameStart();
@@ -4301,7 +4307,7 @@ void Parser::ParseStructUnionBody(SourceLocation RecordLoc,
       continue;
     }
 
-    if (Tok.is(tok::annot_pragma_openmp)) {
+    if (Tok.isOneOf(tok::annot_pragma_openmp, tok::annot_attr_openmp)) {
       // Result can be ignored, because it must be always empty.
       AccessSpecifier AS = AS_none;
       ParsedAttributesWithRange Attrs(AttrFactory);
@@ -5124,8 +5130,10 @@ bool Parser::isDeclarationSpecifier(bool DisambiguatingWithExpression) {
   switch (Tok.getKind()) {
   default: return false;
 
+  // OpenCL 2.0 and later define this keyword.
   case tok::kw_pipe:
-    return getLangOpts().OpenCLPipe;
+    return (getLangOpts().OpenCL && getLangOpts().OpenCLVersion >= 200) ||
+           getLangOpts().OpenCLCPlusPlus;
 
   case tok::identifier:   // foo::bar
     // Unfortunate hack to support "Class.factoryMethod" notation.
@@ -5654,7 +5662,9 @@ static bool isPtrOperatorToken(tok::TokenKind Kind, const LangOptions &Lang,
   if (Kind == tok::star || Kind == tok::caret)
     return true;
 
-  if (Kind == tok::kw_pipe && Lang.OpenCLPipe)
+  // OpenCL 2.0 and later define this keyword.
+  if (Kind == tok::kw_pipe &&
+      ((Lang.OpenCL && Lang.OpenCLVersion >= 200) || Lang.OpenCLCPlusPlus))
     return true;
 
   if (!Lang.CPlusPlus)

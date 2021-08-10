@@ -28,10 +28,10 @@ entry:
   %b2 = getelementptr inbounds %union.u1, %union.u1* %0, i64 0, i32 0, !dbg !32
   %1 = tail call i32 @llvm.bpf.preserve.field.info.p0s_struct.s1s(%struct.s1* %b2, i64 1), !dbg !33
   call void @llvm.dbg.value(metadata i32 %1, metadata !28, metadata !DIExpression()), !dbg !31
-  %2 = tail call i32* @llvm.preserve.struct.access.index.p0i32.p0s_struct.s1s(%struct.s1* %b2, i32 0, i32 0), !dbg !34, !llvm.preserve.access.index !21
+  %2 = tail call i32* @llvm.preserve.struct.access.index.p0i32.p0s_struct.s1s(%struct.s1* elementtype(%struct.s1) %b2, i32 0, i32 0), !dbg !34, !llvm.preserve.access.index !21
   %3 = tail call i32 @llvm.bpf.preserve.field.info.p0i32(i32* %2, i64 1), !dbg !35
   call void @llvm.dbg.value(metadata i32 %3, metadata !29, metadata !DIExpression()), !dbg !31
-  %4 = tail call i8* @llvm.preserve.struct.access.index.p0i8.p0s_struct.s1s(%struct.s1* %b2, i32 1, i32 1), !dbg !36, !llvm.preserve.access.index !21
+  %4 = tail call i8* @llvm.preserve.struct.access.index.p0i8.p0s_struct.s1s(%struct.s1* elementtype(%struct.s1) %b2, i32 1, i32 1), !dbg !36, !llvm.preserve.access.index !21
   %5 = tail call i32 @llvm.bpf.preserve.field.info.p0i8(i8* %4, i64 1), !dbg !37
   call void @llvm.dbg.value(metadata i32 %5, metadata !30, metadata !DIExpression()), !dbg !31
   %add = add i32 %3, %1, !dbg !38

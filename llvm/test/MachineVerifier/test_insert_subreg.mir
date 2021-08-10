@@ -1,0 +1,36 @@
+#RUN: not --crash llc -march=aarch64 -o - -run-pass=none -verify-machineinstrs %s 2>&1 | FileCheck %s
+# REQUIRES: aarch64-registered-target
+
+---
+name:            test_insert_subreg
+legalized:       true
+regBankSelected: false
+selected:        false
+tracksRegLiveness: true
+liveins:
+body:             |
+  bb.0:
+    liveins: $s0, $h1, $q2
+
+    %0:fpr32 = COPY $s0
+
+    ; FIXME: we can't diagnose this case because the ARM backend treats fp16
+    ; values as being ssub regs, creating a contradiction in the sizes.
+    ; CHECK-NOT: *** Bad machine code:
+    %1:fpr128 = IMPLICIT_DEF
+    %2:fpr128 = INSERT_SUBREG %1:fpr128, %0:fpr32, %subreg.hsub
+
+    ; CHECK: *** Bad machine code: INSERT_SUBREG expected inserted value to have equal or lesser size than the subreg it was inserted into ***
+    %3:fpr128 = IMPLICIT_DEF
+    %4:fpr128 = INSERT_SUBREG %3:fpr128, %0:fpr32, %subreg.dsub
+
+    ; CHECK-NOT: *** Bad machine code:
+    %7:fpr128 = IMPLICIT_DEF
+    %8:fpr128 = INSERT_SUBREG %7:fpr128, %0:fpr32, %subreg.ssub
+
+    ; CHECK-NOT: *** Bad machine code:
+    %9:fpr128 = COPY $q2
+    %10:fpr128 = IMPLICIT_DEF
+    %11:fpr128 = INSERT_SUBREG %10:fpr128, %9.ssub, %subreg.ssub
+
+...

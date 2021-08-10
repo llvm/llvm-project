@@ -337,6 +337,7 @@ write_cmake_config("llvm-config") {
     "LLVM_NATIVE_TARGET=1",
     "LLVM_NATIVE_TARGETINFO=1",
     "LLVM_NATIVE_TARGETMC=1",
+    "LLVM_NATIVE_TARGETMCA=1",
 
     # FIXME: Set to 1 on mac once the 10.14 SDK is in common use.
     "LLVM_SUPPORT_XCODE_SIGNPOSTS=",
@@ -431,6 +432,12 @@ write_target_def_file("Targets.def") {
   value = "LLVM_TARGET"
 }
 
+write_target_def_file("TargetMCAs.def") {
+  key = "LLVM_ENUM_TARGETMCAS"
+  value = "LLVM_TARGETMCA"
+  all_targets = []
+}
+
 group("write_target_def_files") {
   visibility = [
     "//llvm/lib/Support",
@@ -440,6 +447,7 @@ group("write_target_def_files") {
     ":AsmParsers.def",
     ":AsmPrinters.def",
     ":Disassemblers.def",
+    ":TargetMCAs.def",
     ":Targets.def",
   ]
 }

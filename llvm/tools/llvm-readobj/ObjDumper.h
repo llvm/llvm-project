@@ -110,7 +110,7 @@ public:
 
   virtual void printStackMap() const = 0;
 
-  void printAsStringList(StringRef StringContent);
+  void printAsStringList(StringRef StringContent, size_t StringDataOffset = 0);
 
   void printSectionsAsString(const object::ObjectFile &Obj,
                              ArrayRef<std::string> Sections);

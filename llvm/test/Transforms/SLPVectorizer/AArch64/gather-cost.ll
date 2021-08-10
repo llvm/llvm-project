@@ -10,7 +10,7 @@ target triple = "aarch64--linux-gnu"
 ; REMARK-LABEL: Function: gather_multiple_use
 ; REMARK:       Args:
 ; REMARK-NEXT:    - String: 'Vectorized horizontal reduction with cost '
-; REMARK-NEXT:    - Cost: '-7'
+; REMARK-NEXT:    - Cost: '-6'
 ;
 ; REMARK-NOT: Function: gather_load
 

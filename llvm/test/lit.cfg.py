@@ -165,9 +165,9 @@ tools.extend([
     'llvm-link', 'llvm-lto', 'llvm-lto2', 'llvm-mc', 'llvm-mca',
     'llvm-modextract', 'llvm-nm', 'llvm-objcopy', 'llvm-objdump', 'llvm-otool',
     'llvm-pdbutil', 'llvm-profdata', 'llvm-profgen', 'llvm-ranlib', 'llvm-rc', 'llvm-readelf',
-    'llvm-readobj', 'llvm-rtdyld', 'llvm-sim', 'llvm-size', 'llvm-split', 'llvm-strings',
-    'llvm-strip', 'llvm-tblgen', 'llvm-tapi-diff', 'llvm-undname', 'llvm-windres',
-    'llvm-c-test', 'llvm-cxxfilt',
+    'llvm-readobj', 'llvm-rtdyld', 'llvm-sim', 'llvm-size', 'llvm-split',
+    'llvm-stress', 'llvm-strings', 'llvm-strip', 'llvm-tblgen', 'llvm-tapi-diff',
+    'llvm-undname', 'llvm-windres', 'llvm-c-test', 'llvm-cxxfilt',
     'llvm-xray', 'yaml2obj', 'obj2yaml', 'yaml-bench', 'verify-uselistorder',
     'bugpoint', 'llc', 'llvm-symbolizer', 'opt', 'sancov', 'sanstats'])
 
@@ -187,7 +187,8 @@ tools.extend([
     ToolSubst('OrcV2CBindingsAddObjectFile', unresolved='ignore'),
     ToolSubst('OrcV2CBindingsRemovableCode', unresolved='ignore'),
     ToolSubst('OrcV2CBindingsReflectProcessSymbols', unresolved='ignore'),
-    ToolSubst('OrcV2CBindingsLazy', unresolved='ignore')])
+    ToolSubst('OrcV2CBindingsLazy', unresolved='ignore'),
+    ToolSubst('OrcV2CBindingsVeryLazy', unresolved='ignore')])
 
 llvm_config.add_tool_substitutions(tools, config.llvm_tools_dir)
 
@@ -253,7 +254,7 @@ def have_cxx_shared_library():
 
     try:
         readobj_cmd = subprocess.Popen(
-            [readobj_exe, '-needed-libs', readobj_exe], stdout=subprocess.PIPE)
+            [readobj_exe, '--needed-libs', readobj_exe], stdout=subprocess.PIPE)
     except OSError:
         print('could not exec llvm-readobj')
         return False
@@ -369,8 +370,8 @@ if 'darwin' == sys.platform:
         if 'hw.optional.fma: 1' in result:
             config.available_features.add('fma3')
 
-# .debug_frame is not emitted for targeting Windows x64.
-if not re.match(r'^x86_64.*-(windows-gnu|windows-msvc)', config.target_triple):
+# .debug_frame is not emitted for targeting Windows x64 or arm64.
+if not re.match(r'^(x86_64|arm64).*-(windows-gnu|windows-msvc)', config.target_triple):
     config.available_features.add('debug_frame')
 
 if config.have_libxar:

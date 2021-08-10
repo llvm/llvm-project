@@ -170,7 +170,10 @@ def _find_common_parent_commit(git_dir: str, ref_a: str, ref_b: str) -> str:
 
 
 def find_reverts(git_dir: str, across_ref: str, root: str) -> List[Revert]:
-  """Finds reverts across `across_ref` in `git_dir`, starting from `root`."""
+  """Finds reverts across `across_ref` in `git_dir`, starting from `root`.
+
+  These reverts are returned in order of oldest reverts first.
+  """
   across_sha = _rev_parse(git_dir, across_ref)
   root_sha = _rev_parse(git_dir, root)
 
@@ -180,7 +183,7 @@ def find_reverts(git_dir: str, across_ref: str, root: str) -> List[Revert]:
                      '(common ancestor: {common_ancestor})')
 
   intermediate_commits = set(_shas_between(git_dir, across_sha, root_sha))
-  assert across_ref not in intermediate_commits
+  assert across_sha not in intermediate_commits
 
   logging.debug('%d commits appear between %s and %s',
                 len(intermediate_commits), across_sha, root_sha)
@@ -217,6 +220,10 @@ def find_reverts(git_dir: str, across_ref: str, root: str) -> List[Revert]:
       logging.error("%s claims to revert %s -- which isn't a commit -- %s", sha,
                     object_type, reverted_sha)
 
+  # Since `all_reverts` contains reverts in log order (e.g., newer comes before
+  # older), we need to reverse this to keep with our guarantee of older =
+  # earlier in the result.
+  all_reverts.reverse()
   return all_reverts
 
 

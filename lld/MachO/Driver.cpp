@@ -195,10 +195,40 @@ getFrameworkSearchPaths(InputArgList &args,
                         {"/Library/Frameworks", "/System/Library/Frameworks"});
 }
 
+static llvm::CachePruningPolicy getLTOCachePolicy(InputArgList &args) {
+  SmallString<128> ltoPolicy;
+  auto add = [&ltoPolicy](Twine val) {
+    if (!ltoPolicy.empty())
+      ltoPolicy += ":";
+    val.toVector(ltoPolicy);
+  };
+  for (const Arg *arg :
+       args.filtered(OPT_thinlto_cache_policy, OPT_prune_interval_lto,
+                     OPT_prune_after_lto, OPT_max_relative_cache_size_lto)) {
+    switch (arg->getOption().getID()) {
+    case OPT_thinlto_cache_policy: add(arg->getValue()); break;
+    case OPT_prune_interval_lto:
+      if (!strcmp("-1", arg->getValue()))
+        add("prune_interval=87600h"); // 10 years
+      else
+        add(Twine("prune_interval=") + arg->getValue() + "s");
+      break;
+    case OPT_prune_after_lto:
+      add(Twine("prune_after=") + arg->getValue() + "s");
+      break;
+    case OPT_max_relative_cache_size_lto:
+      add(Twine("cache_size=") + arg->getValue() + "%");
+      break;
+    }
+  }
+  return CHECK(parseCachePruningPolicy(ltoPolicy), "invalid LTO cache policy");
+}
+
 namespace {
 struct ArchiveMember {
   MemoryBufferRef mbref;
   uint32_t modTime;
+  uint64_t offsetInArchive;
 };
 } // namespace
 
@@ -228,7 +258,7 @@ static std::vector<ArchiveMember> getArchiveMembers(MemoryBufferRef mb) {
         CHECK(c.getLastModified(), mb.getBufferIdentifier() +
                                        ": could not get the modification "
                                        "time for a child of the archive"));
-    v.push_back({mbref, modTime});
+    v.push_back({mbref, modTime, c.getChildOffset()});
   }
   if (err)
     fatal(mb.getBufferIdentifier() +
@@ -240,8 +270,7 @@ static std::vector<ArchiveMember> getArchiveMembers(MemoryBufferRef mb) {
 static DenseMap<StringRef, ArchiveFile *> loadedArchives;
 
 static InputFile *addFile(StringRef path, bool forceLoadArchive,
-                          bool isExplicit = true,
-                          bool isBundleLoader = false) {
+                          bool isExplicit = true, bool isBundleLoader = false) {
   Optional<MemoryBufferRef> buffer = readFile(path);
   if (!buffer)
     return nullptr;
@@ -270,7 +299,8 @@ static InputFile *addFile(StringRef path, bool forceLoadArchive,
       if (Optional<MemoryBufferRef> buffer = readFile(path)) {
         for (const ArchiveMember &member : getArchiveMembers(*buffer)) {
           if (Optional<InputFile *> file = loadArchiveMember(
-                  member.mbref, member.modTime, path, /*objCOnly=*/false)) {
+                  member.mbref, member.modTime, path, /*objCOnly=*/false,
+                  member.offsetInArchive)) {
             inputFiles.insert(*file);
             printArchiveMemberLoad(
                 (forceLoadArchive ? "-force_load" : "-all_load"),
@@ -291,7 +321,8 @@ static InputFile *addFile(StringRef path, bool forceLoadArchive,
       if (Optional<MemoryBufferRef> buffer = readFile(path)) {
         for (const ArchiveMember &member : getArchiveMembers(*buffer)) {
           if (Optional<InputFile *> file = loadArchiveMember(
-                  member.mbref, member.modTime, path, /*objCOnly=*/true)) {
+                  member.mbref, member.modTime, path, /*objCOnly=*/true,
+                  member.offsetInArchive)) {
             inputFiles.insert(*file);
             printArchiveMemberLoad("-ObjC", inputFiles.back());
           }
@@ -308,14 +339,14 @@ static InputFile *addFile(StringRef path, bool forceLoadArchive,
   case file_magic::macho_dynamically_linked_shared_lib:
   case file_magic::macho_dynamically_linked_shared_lib_stub:
   case file_magic::tapi_file:
-    if (DylibFile * dylibFile = loadDylib(mbref)) {
+    if (DylibFile *dylibFile = loadDylib(mbref)) {
       if (isExplicit)
         dylibFile->explicitlyLinked = true;
       newFile = dylibFile;
     }
     break;
   case file_magic::bitcode:
-    newFile = make<BitcodeFile>(mbref);
+    newFile = make<BitcodeFile>(mbref, "", 0);
     break;
   case file_magic::macho_executable:
   case file_magic::macho_bundle:
@@ -549,6 +580,7 @@ static void compileBitcodeFiles() {
 // any CommonSymbols.
 static void replaceCommonSymbols() {
   TimeTraceScope timeScope("Replace common symbols");
+  ConcatOutputSection *osec = nullptr;
   for (Symbol *sym : symtab->getSymbols()) {
     auto *common = dyn_cast<CommonSymbol>(sym);
     if (common == nullptr)
@@ -561,6 +593,9 @@ static void replaceCommonSymbols() {
     auto *isec = make<ConcatInputSection>(
         segment_names::data, section_names::common, common->getFile(), data,
         common->align, S_ZEROFILL);
+    if (!osec)
+      osec = ConcatOutputSection::getOrCreateForInput(isec);
+    isec->parent = osec;
     inputSections.push_back(isec);
 
     // FIXME: CommonSymbol should store isReferencedDynamically, noDeadStrip
@@ -849,17 +884,29 @@ static std::vector<SectionAlign> parseSectAlign(const opt::InputArgList &args) {
   return sectAligns;
 }
 
+PlatformKind macho::removeSimulator(PlatformKind platform) {
+  switch (platform) {
+  case PlatformKind::iOSSimulator:
+    return PlatformKind::iOS;
+  case PlatformKind::tvOSSimulator:
+    return PlatformKind::tvOS;
+  case PlatformKind::watchOSSimulator:
+    return PlatformKind::watchOS;
+  default:
+    return platform;
+  }
+}
+
 static bool dataConstDefault(const InputArgList &args) {
-  static const std::map<PlatformKind, VersionTuple> minVersion = {
+  static const std::vector<std::pair<PlatformKind, VersionTuple>> minVersion = {
       {PlatformKind::macOS, VersionTuple(10, 15)},
       {PlatformKind::iOS, VersionTuple(13, 0)},
-      {PlatformKind::iOSSimulator, VersionTuple(13, 0)},
       {PlatformKind::tvOS, VersionTuple(13, 0)},
-      {PlatformKind::tvOSSimulator, VersionTuple(13, 0)},
       {PlatformKind::watchOS, VersionTuple(6, 0)},
-      {PlatformKind::watchOSSimulator, VersionTuple(6, 0)},
       {PlatformKind::bridgeOS, VersionTuple(4, 0)}};
-  auto it = minVersion.find(config->platformInfo.target.Platform);
+  PlatformKind platform = removeSimulator(config->platformInfo.target.Platform);
+  auto it = llvm::find_if(minVersion,
+                          [&](const auto &p) { return p.first == platform; });
   if (it != minVersion.end())
     if (config->platformInfo.minimum < it->second)
       return false;
@@ -902,7 +949,7 @@ bool SymbolPatterns::matchLiteral(StringRef symbolName) const {
 }
 
 bool SymbolPatterns::matchGlob(StringRef symbolName) const {
-  for (const llvm::GlobPattern &glob : globs)
+  for (const GlobPattern &glob : globs)
     if (glob.match(symbolName))
       return true;
   return false;
@@ -997,6 +1044,7 @@ static void gatherInputSections() {
   int inputOrder = 0;
   for (const InputFile *file : inputFiles) {
     for (const SubsectionMap &map : file->subsections) {
+      ConcatOutputSection *osec = nullptr;
       for (const SubsectionEntry &entry : map) {
         if (auto *isec = dyn_cast<ConcatInputSection>(entry.isec)) {
           if (isec->isCoalescedWeak())
@@ -1007,6 +1055,9 @@ static void gatherInputSections() {
             continue;
           }
           isec->outSecOff = inputOrder++;
+          if (!osec)
+            osec = ConcatOutputSection::getOrCreateForInput(isec);
+          isec->parent = osec;
           inputSections.push_back(isec);
         } else if (auto *isec = dyn_cast<CStringInputSection>(entry.isec)) {
           if (in.cStringSection->inputOrder == UnspecifiedInputOrder)
@@ -1032,6 +1083,23 @@ static void foldIdenticalLiterals() {
   in.cStringSection->finalizeContents();
   if (in.wordLiteralSection)
     in.wordLiteralSection->finalizeContents();
+}
+
+static void referenceStubBinder() {
+  bool needsStubHelper = config->outputType == MH_DYLIB ||
+                         config->outputType == MH_EXECUTE ||
+                         config->outputType == MH_BUNDLE;
+  if (!needsStubHelper || !symtab->find("dyld_stub_binder"))
+    return;
+
+  // dyld_stub_binder is used by dyld to resolve lazy bindings. This code here
+  // adds a opportunistic reference to dyld_stub_binder if it happens to exist.
+  // dyld_stub_binder is in libSystem.dylib, which is usually linked in. This
+  // isn't needed for correctness, but the presence of that symbol suppresses
+  // "no symbols" diagnostics from `nm`.
+  // StubHelperSection::setup() adds a reference and errors out if
+  // dyld_stub_binder doesn't exist in case it is actually needed.
+  symtab->addUndefined("dyld_stub_binder", /*file=*/nullptr, /*isWeak=*/false);
 }
 
 bool macho::link(ArrayRef<const char *> argsArr, bool canExitEarly,
@@ -1110,14 +1178,13 @@ bool macho::link(ArrayRef<const char *> argsArr, bool canExitEarly,
   }
 
   for (const Arg *arg : args.filtered(OPT_U))
-    symtab->addDynamicLookup(arg->getValue());
+    config->explicitDynamicLookups.insert(arg->getValue());
 
   config->mapFile = args.getLastArgValue(OPT_map);
+  config->optimize = args::getInteger(args, OPT_O, 1);
   config->outputFile = args.getLastArgValue(OPT_o, "a.out");
-  if (const Arg *arg = args.getLastArg(OPT_final_output))
-    config->finalOutput = arg->getValue();
-  else
-    config->finalOutput = config->outputFile;
+  config->finalOutput =
+      args.getLastArgValue(OPT_final_output, config->outputFile);
   config->astPaths = args.getAllArgValues(OPT_add_ast_path);
   config->headerPad = args::getHex(args, OPT_headerpad, /*Default=*/32);
   config->headerPadMaxInstallNames =
@@ -1145,9 +1212,13 @@ bool macho::link(ArrayRef<const char *> argsArr, bool canExitEarly,
   config->ltoo = args::getInteger(args, OPT_lto_O, 2);
   if (config->ltoo > 3)
     error("--lto-O: invalid optimization level: " + Twine(config->ltoo));
+  config->thinLTOCacheDir = args.getLastArgValue(OPT_cache_path_lto);
+  config->thinLTOCachePolicy = getLTOCachePolicy(args);
   config->runtimePaths = args::getStrings(args, OPT_rpath);
   config->allLoad = args.hasArg(OPT_all_load);
   config->archMultiple = args.hasArg(OPT_arch_multiple);
+  config->applicationExtension = args.hasFlag(
+      OPT_application_extension, OPT_no_application_extension, false);
   config->exportDynamic = args.hasArg(OPT_export_dynamic);
   config->forceLoadObjC = args.hasArg(OPT_ObjC);
   config->forceLoadSwift = args.hasArg(OPT_force_load_swift_libs);
@@ -1351,24 +1422,7 @@ bool macho::link(ArrayRef<const char *> argsArr, bool canExitEarly,
     if (!orderFile.empty())
       parseOrderFile(orderFile);
 
-    if (config->entry)
-      if (auto *undefined = dyn_cast<Undefined>(config->entry))
-        treatUndefinedSymbol(*undefined, "the entry point");
-
-    // FIXME: This prints symbols that are undefined both in input files and
-    // via -u flag twice.
-    for (const Symbol *sym : config->explicitUndefineds) {
-      if (const auto *undefined = dyn_cast<Undefined>(sym))
-        treatUndefinedSymbol(*undefined, "-u");
-    }
-    // Literal exported-symbol names must be defined, but glob
-    // patterns need not match.
-    for (const CachedHashStringRef &cachedName :
-         config->exportedSymbols.literals) {
-      if (const Symbol *sym = symtab->find(cachedName))
-        if (const auto *undefined = dyn_cast<Undefined>(sym))
-          treatUndefinedSymbol(*undefined, "-exported_symbol(s_list)");
-    }
+    referenceStubBinder();
 
     // FIXME: should terminate the link early based on errors encountered so
     // far?
@@ -1382,8 +1436,8 @@ bool macho::link(ArrayRef<const char *> argsArr, bool canExitEarly,
           StringRef symbolName = defined->getName();
           if (config->exportedSymbols.match(symbolName)) {
             if (defined->privateExtern) {
-              error("cannot export hidden symbol " + symbolName +
-                    "\n>>> defined in " + toString(defined->getFile()));
+              warn("cannot export hidden symbol " + symbolName +
+                   "\n>>> defined in " + toString(defined->getFile()));
             }
           } else {
             defined->privateExtern = true;

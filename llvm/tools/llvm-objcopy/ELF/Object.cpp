@@ -1069,6 +1069,12 @@ Error Section::removeSectionReferences(
 void GroupSection::finalize() {
   this->Info = Sym ? Sym->Index : 0;
   this->Link = SymTab ? SymTab->Index : 0;
+  // Linker deduplication for GRP_COMDAT is based on Sym->Name. The local/global
+  // status is not part of the equation. If Sym is localized, the intention is
+  // likely to make the group fully localized. Drop GRP_COMDAT to suppress
+  // deduplication. See https://groups.google.com/g/generic-abi/c/2X6mR-s2zoc
+  if ((FlagWord & GRP_COMDAT) && Sym && Sym->Binding == STB_LOCAL)
+    this->FlagWord &= ~GRP_COMDAT;
 }
 
 Error GroupSection::removeSectionReferences(
@@ -1181,7 +1187,7 @@ template <class ELFT>
 Error ELFSectionWriter<ELFT>::visit(const GroupSection &Sec) {
   ELF::Elf32_Word *Buf =
       reinterpret_cast<ELF::Elf32_Word *>(Out.getBufferStart() + Sec.Offset);
-  *Buf++ = Sec.FlagWord;
+  support::endian::write32<ELFT::TargetEndianness>(Buf++, Sec.FlagWord);
   for (SectionBase *S : Sec.GroupMembers)
     support::endian::write32<ELFT::TargetEndianness>(Buf++, S->Index);
   return Error::success();
@@ -1336,13 +1342,16 @@ void IHexELFBuilder::addDataSections() {
       if (R.HexData.empty())
         continue;
       RecAddr = R.Addr + SegmentAddr + BaseAddr;
-      if (!Section || Section->Addr + Section->Size != RecAddr)
+      if (!Section || Section->Addr + Section->Size != RecAddr) {
         // OriginalOffset field is only used to sort section properly, so
-        // instead of keeping track of real offset in IHEX file, we use
-        // section number.
+        // instead of keeping track of real offset in IHEX file, and as
+        // Object::sortSections() uses llvm::stable_sort(), we can just set to a
+        // constant (zero).
         Section = &Obj->addSection<OwnedDataSection>(
-            ".sec" + std::to_string(SecNo++), RecAddr,
-            ELF::SHF_ALLOC | ELF::SHF_WRITE, SecNo);
+            ".sec" + std::to_string(SecNo), RecAddr,
+            ELF::SHF_ALLOC | ELF::SHF_WRITE, 0);
+        SecNo++;
+      }
       Section->appendHexData(R.HexData);
       break;
     case IHexRecord::EndOfFile:
@@ -1511,7 +1520,8 @@ Error ELFBuilder<ELFT>::initGroupSection(GroupSection *GroupSec) {
       reinterpret_cast<const ELF::Elf32_Word *>(GroupSec->Contents.data());
   const ELF::Elf32_Word *End =
       Word + GroupSec->Contents.size() / sizeof(ELF::Elf32_Word);
-  GroupSec->setFlagWord(*Word++);
+  GroupSec->setFlagWord(
+      support::endian::read32<ELFT::TargetEndianness>(Word++));
   for (; Word != End; ++Word) {
     uint32_t Index = support::endian::read32<ELFT::TargetEndianness>(Word);
     Expected<SectionBase *> Sec = SecTable.getSection(

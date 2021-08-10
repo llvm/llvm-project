@@ -1,5 +1,27 @@
 // UNSUPPORTED: system-windows
 
+/// Test native GCC installation on Arch Linux i686.
+// RUN: %clang -### %s --target=i686-linux-gnu --sysroot=%S/Inputs/archlinux_i686_tree \
+// RUN:   -ccc-install-dir %S/Inputs/basic_linux_tree/usr/bin -resource-dir=%S/Inputs/resource_dir \
+// RUN:   --stdlib=platform --rtlib=platform 2>&1 | FileCheck %s --check-prefix=ARCH_I686
+// ARCH_I686:      "-resource-dir" "[[RESOURCE:[^"]+]]"
+// ARCH_I686:      "-internal-isystem"
+// ARCH_I686-SAME: {{^}} "[[SYSROOT:[^"]+]]/usr/lib/gcc/i686-pc-linux-gnu/11.1.0/../../../../include/c++/11.1.0"
+// ARCH_I686-SAME: {{^}} "-internal-isystem" "[[SYSROOT:[^"]+]]/usr/lib/gcc/i686-pc-linux-gnu/11.1.0/../../../../include/c++/11.1.0/i686-pc-linux-gnu"
+// ARCH_I686-SAME: {{^}} "-internal-isystem" "[[SYSROOT:[^"]+]]/usr/lib/gcc/i686-pc-linux-gnu/11.1.0/../../../../include/c++/11.1.0/backward"
+// ARCH_I686-SAME: {{^}} "-internal-isystem" "[[RESOURCE]]/include"
+// ARCH_I686-SAME: {{^}} "-internal-isystem" "[[SYSROOT]]/usr/local/include"
+/// This resolves to /usr/i686-linux-gnu/include. Because it does not exist,
+/// having it does no harm albeit not ideal.
+// ARCH_I686-SAME: {{^}} "-internal-isystem" "[[SYSROOT:[^"]+]]/usr/lib/gcc/i686-pc-linux-gnu/11.1.0/../../../../i686-pc-linux-gnu/include"
+// ARCH_I686:      "-internal-externc-isystem"
+// ARCH_I686-SAME: {{^}} "[[SYSROOT]]/include"
+// ARCH_I686-SAME: {{^}} "-internal-externc-isystem" "[[SYSROOT]]/usr/include"
+// ARCH_I686:      "-L
+// ARCH_I686-SAME: {{^}}[[SYSROOT]]/usr/lib/gcc/i686-pc-linux-gnu/11.1.0"
+// ARCH_I686-SAME: {{^}} "-L[[SYSROOT]]/lib"
+// ARCH_I686-SAME: {{^}} "-L[[SYSROOT]]/usr/lib"
+
 /// Test native x86-64 in the tree.
 // RUN: %clang -### %s --target=x86_64-linux-gnu --sysroot=%S/Inputs/debian_multiarch_tree \
 // RUN:   -ccc-install-dir %S/Inputs/basic_linux_tree/usr/bin -resource-dir=%S/Inputs/resource_dir \

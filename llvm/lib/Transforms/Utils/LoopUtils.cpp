@@ -723,8 +723,8 @@ void llvm::breakLoopBackedge(Loop *L, DominatorTree &DT, ScalarEvolution &SE,
   auto *BackedgeBB = SplitEdge(Latch, Header, &DT, &LI, MSSAU.get());
 
   DomTreeUpdater DTU(&DT, DomTreeUpdater::UpdateStrategy::Eager);
-  (void)changeToUnreachable(BackedgeBB->getTerminator(), /*UseTrap*/false,
-                            /*PreserveLCSSA*/true, &DTU, MSSAU.get());
+  (void)changeToUnreachable(BackedgeBB->getTerminator(),
+                            /*PreserveLCSSA*/ true, &DTU, MSSAU.get());
 
   // Erase (and destroy) this loop instance.  Handles relinking sub-loops
   // and blocks within the loop as needed.
@@ -1524,39 +1524,15 @@ struct PointerBounds {
 static PointerBounds expandBounds(const RuntimeCheckingPtrGroup *CG,
                                   Loop *TheLoop, Instruction *Loc,
                                   SCEVExpander &Exp) {
-  ScalarEvolution *SE = Exp.getSE();
-  // TODO: Add helper to retrieve pointers to CG.
-  Value *Ptr = CG->RtCheck.Pointers[CG->Members[0]].PointerValue;
-  const SCEV *Sc = SE->getSCEV(Ptr);
-
-  unsigned AS = Ptr->getType()->getPointerAddressSpace();
   LLVMContext &Ctx = Loc->getContext();
+  Type *PtrArithTy = Type::getInt8PtrTy(Ctx, CG->AddressSpace);
 
-  // Use this type for pointer arithmetic.
-  Type *PtrArithTy = Type::getInt8PtrTy(Ctx, AS);
-
-  if (SE->isLoopInvariant(Sc, TheLoop)) {
-    LLVM_DEBUG(dbgs() << "LAA: Adding RT check for a loop invariant ptr:"
-                      << *Ptr << "\n");
-    // Ptr could be in the loop body. If so, expand a new one at the correct
-    // location.
-    Instruction *Inst = dyn_cast<Instruction>(Ptr);
-    Value *NewPtr = (Inst && TheLoop->contains(Inst))
-                        ? Exp.expandCodeFor(Sc, PtrArithTy, Loc)
-                        : Ptr;
-    // We must return a half-open range, which means incrementing Sc.
-    const SCEV *ScPlusOne = SE->getAddExpr(Sc, SE->getOne(PtrArithTy));
-    Value *NewPtrPlusOne = Exp.expandCodeFor(ScPlusOne, PtrArithTy, Loc);
-    return {NewPtr, NewPtrPlusOne};
-  } else {
-    Value *Start = nullptr, *End = nullptr;
-    LLVM_DEBUG(dbgs() << "LAA: Adding RT check for range:\n");
-    Start = Exp.expandCodeFor(CG->Low, PtrArithTy, Loc);
-    End = Exp.expandCodeFor(CG->High, PtrArithTy, Loc);
-    LLVM_DEBUG(dbgs() << "Start: " << *CG->Low << " End: " << *CG->High
-                      << "\n");
-    return {Start, End};
-  }
+  Value *Start = nullptr, *End = nullptr;
+  LLVM_DEBUG(dbgs() << "LAA: Adding RT check for range:\n");
+  Start = Exp.expandCodeFor(CG->Low, PtrArithTy, Loc);
+  End = Exp.expandCodeFor(CG->High, PtrArithTy, Loc);
+  LLVM_DEBUG(dbgs() << "Start: " << *CG->Low << " End: " << *CG->High << "\n");
+  return {Start, End};
 }
 
 /// Turns a collection of checks into a collection of expanded upper and

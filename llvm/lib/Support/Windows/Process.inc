@@ -194,7 +194,7 @@ static std::error_code WildcardExpand(StringRef Arg,
 
     // Append FileName to Dir, and remove it afterwards.
     llvm::sys::path::append(Dir, FileName);
-    Args.push_back(Saver.save(StringRef(Dir)).data());
+    Args.push_back(Saver.save(Dir.str()).data());
     Dir.resize(DirSize);
   } while (FindNextFileW(FindHandle, &FileData));
 
@@ -504,8 +504,7 @@ bool llvm::RunningWindows8OrGreater() {
   return GetWindowsOSVersion() >= llvm::VersionTuple(6, 2, 0, 0);
 }
 
-LLVM_ATTRIBUTE_NORETURN
-void Process::ExitNoCleanup(int RetCode) {
+[[noreturn]] void Process::ExitNoCleanup(int RetCode) {
   TerminateProcess(GetCurrentProcess(), RetCode);
   llvm_unreachable("TerminateProcess doesn't return");
 }

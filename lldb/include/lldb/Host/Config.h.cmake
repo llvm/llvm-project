@@ -13,16 +13,11 @@
 
 #cmakedefine01 LLDB_HAVE_EL_RFUNC_T
 
-
-#cmakedefine01 HAVE_SYS_TYPES_H
-
 #cmakedefine01 HAVE_SYS_EVENT_H
 
 #cmakedefine01 HAVE_PPOLL
 
 #cmakedefine01 HAVE_PTSNAME_R
-
-#cmakedefine01 HAVE_SIGACTION
 
 #cmakedefine01 HAVE_PROCESS_VM_READV
 

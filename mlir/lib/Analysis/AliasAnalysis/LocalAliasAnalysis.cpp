@@ -74,12 +74,14 @@ static void collectUnderlyingAddressValues(RegionBranchOpInterface branch,
   };
 
   // Check branches from the parent operation.
+  Optional<unsigned> regionIndex;
   if (region) {
+    // Determine the actual region number from the passed region.
+    regionIndex = region->getRegionNumber();
     if (Optional<unsigned> operandIndex =
             getOperandIndexIfPred(/*predIndex=*/llvm::None)) {
       collectUnderlyingAddressValues(
-          branch.getSuccessorEntryOperands(
-              region->getRegionNumber())[*operandIndex],
+          branch.getSuccessorEntryOperands(*regionIndex)[*operandIndex],
           maxDepth, visited, output);
     }
   }
@@ -89,8 +91,12 @@ static void collectUnderlyingAddressValues(RegionBranchOpInterface branch,
     if (Optional<unsigned> operandIndex = getOperandIndexIfPred(i)) {
       for (Block &block : op->getRegion(i)) {
         Operation *term = block.getTerminator();
-        if (term->hasTrait<OpTrait::ReturnLike>()) {
-          collectUnderlyingAddressValues(term->getOperand(*operandIndex),
+        // Try to determine possible region-branch successor operands for the
+        // current region.
+        auto successorOperands =
+            getRegionBranchSuccessorOperands(term, regionIndex);
+        if (successorOperands) {
+          collectUnderlyingAddressValues((*successorOperands)[*operandIndex],
                                          maxDepth, visited, output);
         } else if (term->getNumSuccessors()) {
           // Otherwise, if this terminator may exit the region we can't make

@@ -12,8 +12,10 @@
 //===----------------------------------------------------------------------===//
 
 #include "PassDetail.h"
+#include "mlir/Conversion/SCFToStandard/SCFToStandard.h"
 #include "mlir/Dialect/Async/IR/Async.h"
 #include "mlir/Dialect/Async/Passes.h"
+#include "mlir/Dialect/SCF/SCF.h"
 #include "mlir/Dialect/StandardOps/IR/Ops.h"
 #include "mlir/IR/BlockAndValueMapping.h"
 #include "mlir/IR/ImplicitLocOpBuilder.h"
@@ -65,14 +67,24 @@ struct CoroMachinery {
   llvm::SmallVector<Value, 4> returnValues; // returned async values
 
   Value coroHandle; // coroutine handle (!async.coro.handle value)
+  Block *entry;     // coroutine entry block
   Block *setError;  // switch completion token and all values to error state
   Block *cleanup;   // coroutine cleanup block
   Block *suspend;   // coroutine suspension block
 };
 } // namespace
 
-/// Builds an coroutine template compatible with LLVM coroutines switched-resume
-/// lowering using `async.runtime.*` and `async.coro.*` operations.
+/// Utility to partially update the regular function CFG to the coroutine CFG
+/// compatible with LLVM coroutines switched-resume lowering using
+/// `async.runtime.*` and `async.coro.*` operations. Adds a new entry block
+/// that branches into preexisting entry block. Also inserts trailing blocks.
+///
+/// The result types of the passed `func` must start with an `async.token`
+/// and be continued with some number of `async.value`s.
+///
+/// The func given to this function needs to have been preprocessed to have
+/// either branch or yield ops as terminators. Branches to the cleanup block are
+/// inserted after each yield.
 ///
 /// See LLVM coroutines documentation: https://llvm.org/docs/Coroutines.html
 ///
@@ -85,15 +97,16 @@ struct CoroMachinery {
 ///
 /// Coroutine structure (only the important bits):
 ///
-///   func @async_execute_fn(<function-arguments>)
-///        -> (!async.token, !async.value<T>)
+///   func @some_fn(<function-arguments>) -> (!async.token, !async.value<T>)
 ///   {
 ///     ^entry(<function-arguments>):
 ///       %token = <async token> : !async.token    // create async runtime token
 ///       %value = <async value> : !async.value<T> // create async value
 ///       %id = async.coro.id                      // create a coroutine id
 ///       %hdl = async.coro.begin %id              // create a coroutine handle
-///       br ^cleanup
+///       br ^preexisting_entry_block
+///
+///     /*  preexisting blocks modified to branch to the cleanup block */
 ///
 ///     ^set_error: // this block created lazily only if needed (see code below)
 ///       async.runtime.set_error %token : !async.token
@@ -109,16 +122,13 @@ struct CoroMachinery {
 ///       return %token, %value : !async.token, !async.value<T>
 ///   }
 ///
-/// The actual code for the async.execute operation body region will be inserted
-/// before the entry block terminator.
-///
-///
 static CoroMachinery setupCoroMachinery(FuncOp func) {
-  assert(func.getBody().empty() && "Function must have empty body");
+  assert(!func.getBlocks().empty() && "Function must have an entry block");
 
   MLIRContext *ctx = func.getContext();
-  Block *entryBlock = func.addEntryBlock();
-
+  Block *entryBlock = &func.getBlocks().front();
+  Block *originalEntryBlock =
+      entryBlock->splitBlock(entryBlock->getOperations().begin());
   auto builder = ImplicitLocOpBuilder::atBlockBegin(func->getLoc(), entryBlock);
 
   // ------------------------------------------------------------------------ //
@@ -136,6 +146,7 @@ static CoroMachinery setupCoroMachinery(FuncOp func) {
   auto coroIdOp = builder.create<CoroIdOp>(CoroIdType::get(ctx));
   auto coroHdlOp =
       builder.create<CoroBeginOp>(CoroHandleType::get(ctx), coroIdOp.id());
+  builder.create<BranchOp>(originalEntryBlock);
 
   Block *cleanupBlock = func.addBlock();
   Block *suspendBlock = func.addBlock();
@@ -164,18 +175,26 @@ static CoroMachinery setupCoroMachinery(FuncOp func) {
   ret.insert(ret.end(), retValues.begin(), retValues.end());
   builder.create<ReturnOp>(ret);
 
-  // Branch from the entry block to the cleanup block to create a valid CFG.
-  builder.setInsertionPointToEnd(entryBlock);
-  builder.create<BranchOp>(cleanupBlock);
-
   // `async.await` op lowering will create resume blocks for async
   // continuations, and will conditionally branch to cleanup or suspend blocks.
+
+  for (Block &block : func.body().getBlocks()) {
+    if (&block == entryBlock || &block == cleanupBlock ||
+        &block == suspendBlock)
+      continue;
+    Operation *terminator = block.getTerminator();
+    if (auto yield = dyn_cast<YieldOp>(terminator)) {
+      builder.setInsertionPointToEnd(&block);
+      builder.create<BranchOp>(cleanupBlock);
+    }
+  }
 
   CoroMachinery machinery;
   machinery.func = func;
   machinery.asyncToken = retToken;
   machinery.returnValues = retValues;
   machinery.coroHandle = coroHdlOp.handle();
+  machinery.entry = entryBlock;
   machinery.setError = nullptr; // created lazily only if needed
   machinery.cleanup = cleanupBlock;
   machinery.suspend = suspendBlock;
@@ -216,6 +235,10 @@ outlineExecuteOp(SymbolTable &symbolTable, ExecuteOp execute) {
   MLIRContext *ctx = module.getContext();
   Location loc = execute.getLoc();
 
+  // Make sure that all constants will be inside the outlined async function to
+  // reduce the number of function arguments.
+  cloneConstantsIntoTheRegion(execute.body());
+
   // Collect all outlined function inputs.
   SetVector<mlir::Value> functionInputs(execute.dependencies().begin(),
                                         execute.dependencies().end());
@@ -237,66 +260,69 @@ outlineExecuteOp(SymbolTable &symbolTable, ExecuteOp execute) {
   symbolTable.insert(func);
 
   SymbolTable::setSymbolVisibility(func, SymbolTable::Visibility::Private);
+  auto builder = ImplicitLocOpBuilder::atBlockBegin(loc, func.addEntryBlock());
 
-  // Prepare a function for coroutine lowering by adding entry/cleanup/suspend
-  // blocks, adding async.coro operations and setting up control flow.
+  // Prepare for coroutine conversion by creating the body of the function.
+  {
+    size_t numDependencies = execute.dependencies().size();
+    size_t numOperands = execute.operands().size();
+
+    // Await on all dependencies before starting to execute the body region.
+    for (size_t i = 0; i < numDependencies; ++i)
+      builder.create<AwaitOp>(func.getArgument(i));
+
+    // Await on all async value operands and unwrap the payload.
+    SmallVector<Value, 4> unwrappedOperands(numOperands);
+    for (size_t i = 0; i < numOperands; ++i) {
+      Value operand = func.getArgument(numDependencies + i);
+      unwrappedOperands[i] = builder.create<AwaitOp>(loc, operand).result();
+    }
+
+    // Map from function inputs defined above the execute op to the function
+    // arguments.
+    BlockAndValueMapping valueMapping;
+    valueMapping.map(functionInputs, func.getArguments());
+    valueMapping.map(execute.body().getArguments(), unwrappedOperands);
+
+    // Clone all operations from the execute operation body into the outlined
+    // function body.
+    for (Operation &op : execute.body().getOps())
+      builder.clone(op, valueMapping);
+  }
+
+  // Adding entry/cleanup/suspend blocks.
   CoroMachinery coro = setupCoroMachinery(func);
 
   // Suspend async function at the end of an entry block, and resume it using
   // Async resume operation (execution will be resumed in a thread managed by
   // the async runtime).
-  Block *entryBlock = &func.getBlocks().front();
-  auto builder = ImplicitLocOpBuilder::atBlockTerminator(loc, entryBlock);
+  {
+    BranchOp branch = cast<BranchOp>(coro.entry->getTerminator());
+    builder.setInsertionPointToEnd(coro.entry);
 
-  // Save the coroutine state: async.coro.save
-  auto coroSaveOp =
-      builder.create<CoroSaveOp>(CoroStateType::get(ctx), coro.coroHandle);
+    // Save the coroutine state: async.coro.save
+    auto coroSaveOp =
+        builder.create<CoroSaveOp>(CoroStateType::get(ctx), coro.coroHandle);
 
-  // Pass coroutine to the runtime to be resumed on a runtime managed thread.
-  builder.create<RuntimeResumeOp>(coro.coroHandle);
+    // Pass coroutine to the runtime to be resumed on a runtime managed
+    // thread.
+    builder.create<RuntimeResumeOp>(coro.coroHandle);
 
-  // Split the entry block before the terminator (branch to suspend block).
-  auto *terminatorOp = entryBlock->getTerminator();
-  Block *suspended = terminatorOp->getBlock();
-  Block *resume = suspended->splitBlock(terminatorOp);
+    // Add async.coro.suspend as a suspended block terminator.
+    builder.create<CoroSuspendOp>(coroSaveOp.state(), coro.suspend,
+                                  branch.getDest(), coro.cleanup);
 
-  // Add async.coro.suspend as a suspended block terminator.
-  builder.setInsertionPointToEnd(suspended);
-  builder.create<CoroSuspendOp>(coroSaveOp.state(), coro.suspend, resume,
-                                coro.cleanup);
-
-  size_t numDependencies = execute.dependencies().size();
-  size_t numOperands = execute.operands().size();
-
-  // Await on all dependencies before starting to execute the body region.
-  builder.setInsertionPointToStart(resume);
-  for (size_t i = 0; i < numDependencies; ++i)
-    builder.create<AwaitOp>(func.getArgument(i));
-
-  // Await on all async value operands and unwrap the payload.
-  SmallVector<Value, 4> unwrappedOperands(numOperands);
-  for (size_t i = 0; i < numOperands; ++i) {
-    Value operand = func.getArgument(numDependencies + i);
-    unwrappedOperands[i] = builder.create<AwaitOp>(loc, operand).result();
+    branch.erase();
   }
 
-  // Map from function inputs defined above the execute op to the function
-  // arguments.
-  BlockAndValueMapping valueMapping;
-  valueMapping.map(functionInputs, func.getArguments());
-  valueMapping.map(execute.body().getArguments(), unwrappedOperands);
-
-  // Clone all operations from the execute operation body into the outlined
-  // function body.
-  for (Operation &op : execute.body().getOps())
-    builder.clone(op, valueMapping);
-
   // Replace the original `async.execute` with a call to outlined function.
-  ImplicitLocOpBuilder callBuilder(loc, execute);
-  auto callOutlinedFunc = callBuilder.create<CallOp>(
-      func.getName(), execute.getResultTypes(), functionInputs.getArrayRef());
-  execute.replaceAllUsesWith(callOutlinedFunc.getResults());
-  execute.erase();
+  {
+    ImplicitLocOpBuilder callBuilder(loc, execute);
+    auto callOutlinedFunc = callBuilder.create<CallOp>(
+        func.getName(), execute.getResultTypes(), functionInputs.getArrayRef());
+    execute.replaceAllUsesWith(callOutlinedFunc.getResults());
+    execute.erase();
+  }
 
   return {func, coro};
 }
@@ -555,6 +581,134 @@ private:
 
 //===----------------------------------------------------------------------===//
 
+/// Rewrite a func as a coroutine by:
+/// 1) Wrapping the results into `async.value`.
+/// 2) Prepending the results with `async.token`.
+/// 3) Setting up coroutine blocks.
+/// 4) Rewriting return ops as yield op and branch op into the suspend block.
+static CoroMachinery rewriteFuncAsCoroutine(FuncOp func) {
+  auto *ctx = func->getContext();
+  auto loc = func.getLoc();
+  SmallVector<Type> resultTypes;
+  resultTypes.reserve(func.getCallableResults().size());
+  llvm::transform(func.getCallableResults(), std::back_inserter(resultTypes),
+                  [](Type type) { return ValueType::get(type); });
+  func.setType(FunctionType::get(ctx, func.getType().getInputs(), resultTypes));
+  func.insertResult(0, TokenType::get(ctx), {});
+  for (Block &block : func.getBlocks()) {
+    Operation *terminator = block.getTerminator();
+    if (auto returnOp = dyn_cast<ReturnOp>(*terminator)) {
+      ImplicitLocOpBuilder builder(loc, returnOp);
+      builder.create<YieldOp>(returnOp.getOperands());
+      returnOp.erase();
+    }
+  }
+  return setupCoroMachinery(func);
+}
+
+/// Rewrites a call into a function that has been rewritten as a coroutine.
+///
+/// The invocation of this function is safe only when call ops are traversed in
+/// reverse order of how they appear in a single block. See `funcsToCoroutines`.
+static void rewriteCallsiteForCoroutine(CallOp oldCall, FuncOp func) {
+  auto loc = func.getLoc();
+  ImplicitLocOpBuilder callBuilder(loc, oldCall);
+  auto newCall = callBuilder.create<CallOp>(
+      func.getName(), func.getCallableResults(), oldCall.getArgOperands());
+
+  // Await on the async token and all the value results and unwrap the latter.
+  callBuilder.create<AwaitOp>(loc, newCall.getResults().front());
+  SmallVector<Value> unwrappedResults;
+  unwrappedResults.reserve(newCall->getResults().size() - 1);
+  for (Value result : newCall.getResults().drop_front())
+    unwrappedResults.push_back(
+        callBuilder.create<AwaitOp>(loc, result).result());
+  // Careful, when result of a call is piped into another call this could lead
+  // to a dangling pointer.
+  oldCall.replaceAllUsesWith(unwrappedResults);
+  oldCall.erase();
+}
+
+static bool isAllowedToBlock(FuncOp func) {
+  return !!func->getAttrOfType<UnitAttr>(AsyncDialect::kAllowedToBlockAttrName);
+}
+
+static LogicalResult
+funcsToCoroutines(ModuleOp module,
+                  llvm::DenseMap<FuncOp, CoroMachinery> &outlinedFunctions) {
+  // The following code supports the general case when 2 functions mutually
+  // recurse into each other. Because of this and that we are relying on
+  // SymbolUserMap to find pointers to calling FuncOps, we cannot simply erase
+  // a FuncOp while inserting an equivalent coroutine, because that could lead
+  // to dangling pointers.
+
+  SmallVector<FuncOp> funcWorklist;
+
+  // Careful, it's okay to add a func to the worklist multiple times if and only
+  // if the loop processing the worklist will skip the functions that have
+  // already been converted to coroutines.
+  auto addToWorklist = [&](FuncOp func) {
+    if (isAllowedToBlock(func))
+      return;
+    // N.B. To refactor this code into a separate pass the lookup in
+    // outlinedFunctions is the most obvious obstacle. Looking at an arbitrary
+    // func and recognizing if it has a coroutine structure is messy. Passing
+    // this dict between the passes is ugly.
+    if (isAllowedToBlock(func) ||
+        outlinedFunctions.find(func) == outlinedFunctions.end()) {
+      for (Operation &op : func.body().getOps()) {
+        if (dyn_cast<AwaitOp>(op) || dyn_cast<AwaitAllOp>(op)) {
+          funcWorklist.push_back(func);
+          break;
+        }
+      }
+    }
+  };
+
+  // Traverse in post-order collecting for each func op the await ops it has.
+  for (FuncOp func : module.getOps<FuncOp>())
+    addToWorklist(func);
+
+  SymbolTableCollection symbolTable;
+  SymbolUserMap symbolUserMap(symbolTable, module);
+
+  // Rewrite funcs, while updating call sites and adding them to the worklist.
+  while (!funcWorklist.empty()) {
+    auto func = funcWorklist.pop_back_val();
+    auto insertion = outlinedFunctions.insert({func, CoroMachinery{}});
+    if (!insertion.second)
+      // This function has already been processed because this is either
+      // the corecursive case, or a caller with multiple calls to a newly
+      // created corouting. Either way, skip updating the call sites.
+      continue;
+    insertion.first->second = rewriteFuncAsCoroutine(func);
+    SmallVector<Operation *> users(symbolUserMap.getUsers(func).begin(),
+                                   symbolUserMap.getUsers(func).end());
+    // If there are multiple calls from the same block they need to be traversed
+    // in reverse order so that symbolUserMap references are not invalidated
+    // when updating the users of the call op which is earlier in the block.
+    llvm::sort(users, [](Operation *a, Operation *b) {
+      Block *blockA = a->getBlock();
+      Block *blockB = b->getBlock();
+      // Impose arbitrary order on blocks so that there is a well-defined order.
+      return blockA > blockB || (blockA == blockB && !a->isBeforeInBlock(b));
+    });
+    // Rewrite the callsites to await on results of the newly created coroutine.
+    for (Operation *op : users) {
+      if (CallOp call = dyn_cast<mlir::CallOp>(*op)) {
+        FuncOp caller = call->getParentOfType<FuncOp>();
+        rewriteCallsiteForCoroutine(call, func); // Careful, erases the call op.
+        addToWorklist(caller);
+      } else {
+        op->emitError("Unexpected reference to func referenced by symbol");
+        return failure();
+      }
+    }
+  }
+  return success();
+}
+
+//===----------------------------------------------------------------------===//
 void AsyncToAsyncRuntimePass::runOnOperation() {
   ModuleOp module = getOperation();
   SymbolTable symbolTable(module);
@@ -571,9 +725,27 @@ void AsyncToAsyncRuntimePass::runOnOperation() {
                  << " functions built from async.execute operations\n";
   });
 
+  // Returns true if operation is inside the coroutine.
+  auto isInCoroutine = [&](Operation *op) -> bool {
+    auto parentFunc = op->getParentOfType<FuncOp>();
+    return outlinedFunctions.find(parentFunc) != outlinedFunctions.end();
+  };
+
+  if (eliminateBlockingAwaitOps &&
+      failed(funcsToCoroutines(module, outlinedFunctions))) {
+    signalPassFailure();
+    return;
+  }
+
   // Lower async operations to async.runtime operations.
   MLIRContext *ctx = module->getContext();
   RewritePatternSet asyncPatterns(ctx);
+
+  // Conversion to async runtime augments original CFG with the coroutine CFG,
+  // and we have to make sure that structured control flow operations with async
+  // operations in nested regions will be converted to branch-based control flow
+  // before we add the coroutine basic blocks.
+  populateLoopToStdConversionPatterns(asyncPatterns);
 
   // Async lowering does not use type converter because it must preserve all
   // types for async.runtime operations.
@@ -591,12 +763,28 @@ void AsyncToAsyncRuntimePass::runOnOperation() {
   runtimeTarget.addIllegalOp<CreateGroupOp, AddToGroupOp>();
   runtimeTarget.addIllegalOp<ExecuteOp, AwaitOp, AwaitAllOp, async::YieldOp>();
 
+  // Decide if structured control flow has to be lowered to branch-based CFG.
+  runtimeTarget.addDynamicallyLegalDialect<scf::SCFDialect>([&](Operation *op) {
+    auto walkResult = op->walk([&](Operation *nested) {
+      bool isAsync = isa<async::AsyncDialect>(nested->getDialect());
+      return isAsync && isInCoroutine(nested) ? WalkResult::interrupt()
+                                              : WalkResult::advance();
+    });
+    return !walkResult.wasInterrupted();
+  });
+  runtimeTarget.addLegalOp<BranchOp, CondBranchOp>();
+
   // Assertions must be converted to runtime errors inside async functions.
   runtimeTarget.addDynamicallyLegalOp<AssertOp>([&](AssertOp op) -> bool {
     auto func = op->getParentOfType<FuncOp>();
     return outlinedFunctions.find(func) == outlinedFunctions.end();
   });
-  runtimeTarget.addLegalOp<CondBranchOp>();
+
+  if (eliminateBlockingAwaitOps)
+    runtimeTarget.addDynamicallyLegalOp<RuntimeAwaitOp>(
+        [&](RuntimeAwaitOp op) -> bool {
+          return isAllowedToBlock(op->getParentOfType<FuncOp>());
+        });
 
   if (failed(applyPartialConversion(module, runtimeTarget,
                                     std::move(asyncPatterns)))) {

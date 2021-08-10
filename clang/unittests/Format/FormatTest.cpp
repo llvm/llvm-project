@@ -2451,6 +2451,14 @@ TEST_F(FormatTest, ShortEnums) {
   Style.AllowShortEnumsOnASingleLine = true;
   verifyFormat("enum { A, B, C } ShortEnum1, ShortEnum2;", Style);
   Style.AllowShortEnumsOnASingleLine = false;
+  verifyFormat("enum {\n"
+               "  A,\n"
+               "  B,\n"
+               "  C\n"
+               "} ShortEnum1, ShortEnum2;",
+               Style);
+  Style.BreakBeforeBraces = FormatStyle::BS_Custom;
+  Style.BraceWrapping.AfterEnum = true;
   verifyFormat("enum\n"
                "{\n"
                "  A,\n"
@@ -8209,6 +8217,42 @@ TEST_F(FormatTest, ReturnTypeBreakingStyle) {
                "}\n",
                Style);
 
+  Style.BreakBeforeBraces = FormatStyle::BS_Custom;
+  Style.BraceWrapping.AfterFunction = true;
+  verifyFormat("int f(i);\n" // No break here.
+               "int\n"       // Break here.
+               "f(i)\n"
+               "{\n"
+               "  return i + 1;\n"
+               "}\n"
+               "int\n" // Break here.
+               "f(i)\n"
+               "{\n"
+               "  return i + 1;\n"
+               "};",
+               Style);
+  verifyFormat("int f(a, b, c);\n" // No break here.
+               "int\n"             // Break here.
+               "f(a, b, c)\n"      // Break here.
+               "short a, b;\n"
+               "float c;\n"
+               "{\n"
+               "  return a + b < c;\n"
+               "}\n"
+               "int\n"        // Break here.
+               "f(a, b, c)\n" // Break here.
+               "short a, b;\n"
+               "float c;\n"
+               "{\n"
+               "  return a + b < c;\n"
+               "};",
+               Style);
+  // The return breaking style doesn't affect object definitions with
+  // attribute-like macros.
+  verifyFormat("Tttttttttttttttttttttttt ppppppppppppppp\n"
+               "    ABSL_GUARDED_BY(mutex) = {};",
+               getGoogleStyleWithColumns(40));
+
   Style = getGNUStyle();
 
   // Test for comments at the end of function declarations.
@@ -9413,7 +9457,7 @@ TEST_F(FormatTest, UnderstandsUsesOfStarAndAmp) {
   verifyFormat("vector<A(uint64_t) * attr> v;", TypeMacros); // multiplication
 
   FormatStyle CustomQualifier = getLLVMStyle();
-  // Add indentifers that should not be parsed as a qualifier by default.
+  // Add identifiers that should not be parsed as a qualifier by default.
   CustomQualifier.AttributeMacros.push_back("__my_qualifier");
   CustomQualifier.AttributeMacros.push_back("_My_qualifier");
   CustomQualifier.AttributeMacros.push_back("my_other_qualifier");
@@ -16392,6 +16436,37 @@ TEST_F(FormatTest, AlignWithLineBreaks) {
                "}",
                Style);
   // clang-format on
+
+  Style = getLLVMStyleWithColumns(120);
+  Style.AlignConsecutiveAssignments = FormatStyle::ACS_Consecutive;
+  Style.ContinuationIndentWidth = 4;
+  Style.IndentWidth = 4;
+
+  // clang-format off
+  verifyFormat("void SomeFunc() {\n"
+               "    newWatcher.maxAgeUsec = ToLegacyTimestamp(GetMaxAge(FromLegacyTimestamp<milliseconds>(monitorFrequencyUsec),\n"
+               "                                                        seconds(std::uint64_t(maxSampleAge)), maxKeepSamples));\n"
+               "    newWatcher.maxAge     = ToLegacyTimestamp(GetMaxAge(FromLegacyTimestamp<milliseconds>(monitorFrequencyUsec),\n"
+               "                                                        seconds(std::uint64_t(maxSampleAge)), maxKeepSamples));\n"
+               "    newWatcher.max        = ToLegacyTimestamp(GetMaxAge(FromLegacyTimestamp<milliseconds>(monitorFrequencyUsec),\n"
+               "                                                        seconds(std::uint64_t(maxSampleAge)), maxKeepSamples));\n"
+               "}",
+               Style);
+  // clang-format on
+
+  Style.BinPackArguments = false;
+
+  // clang-format off
+  verifyFormat("void SomeFunc() {\n"
+               "    newWatcher.maxAgeUsec = ToLegacyTimestamp(GetMaxAge(\n"
+               "        FromLegacyTimestamp<milliseconds>(monitorFrequencyUsec), seconds(std::uint64_t(maxSampleAge)), maxKeepSamples));\n"
+               "    newWatcher.maxAge     = ToLegacyTimestamp(GetMaxAge(\n"
+               "        FromLegacyTimestamp<milliseconds>(monitorFrequencyUsec), seconds(std::uint64_t(maxSampleAge)), maxKeepSamples));\n"
+               "    newWatcher.max        = ToLegacyTimestamp(GetMaxAge(\n"
+               "        FromLegacyTimestamp<milliseconds>(monitorFrequencyUsec), seconds(std::uint64_t(maxSampleAge)), maxKeepSamples));\n"
+               "}",
+               Style);
+  // clang-format on
 }
 
 TEST_F(FormatTest, AlignWithInitializerPeriods) {
@@ -22104,8 +22179,7 @@ TEST_F(FormatTest, IndentAccessModifiers) {
                Style);
   // Enumerations are not records and should be unaffected.
   Style.AllowShortEnumsOnASingleLine = false;
-  verifyFormat("enum class E\n"
-               "{\n"
+  verifyFormat("enum class E {\n"
                "  A,\n"
                "  B\n"
                "};\n",

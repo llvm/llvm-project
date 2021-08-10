@@ -23,7 +23,7 @@ define void @test(double* %cast) {
 ; CHECK-NEXT:    bl cos
 ; CHECK-NEXT:    nop
 ; CHECK-NEXT:    addi 30, 30, 8
-; CHECK-NEXT:    stfdx 1, 0, 29
+; CHECK-NEXT:    stfd 1, 0(29)
 ; CHECK-NEXT:    cmpldi 30, 2040
 ; CHECK-NEXT:    bne 0, .LBB0_1
 ; CHECK-NEXT:  # %bb.2: # %exit
@@ -62,7 +62,7 @@ define void @test2(double* %cast) {
 ; CHECK-NEXT:    #
 ; CHECK-NEXT:    lfdu 0, 8(3)
 ; CHECK-NEXT:    xssqrtdp 0, 0
-; CHECK-NEXT:    stfdx 0, 0, 3
+; CHECK-NEXT:    stfd 0, 0(3)
 ; CHECK-NEXT:    bdnz .LBB1_1
 ; CHECK-NEXT:  # %bb.2: # %exit
 ; CHECK-NEXT:    blr

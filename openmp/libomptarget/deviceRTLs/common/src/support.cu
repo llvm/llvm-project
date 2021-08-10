@@ -35,57 +35,6 @@ bool isRuntimeInitialized() {
 }
 
 ////////////////////////////////////////////////////////////////////////////////
-// Execution Modes based on location parameter fields
-////////////////////////////////////////////////////////////////////////////////
-
-bool checkSPMDMode(kmp_Ident *loc) {
-  if (!loc)
-    return __kmpc_is_spmd_exec_mode();
-
-  // If SPMD is true then we are not in the UNDEFINED state so
-  // we can return immediately.
-  if (loc->reserved_2 & KMP_IDENT_SPMD_MODE)
-    return true;
-
-  // If not in SPMD mode and runtime required is a valid
-  // combination of flags so we can return immediately.
-  if (!(loc->reserved_2 & KMP_IDENT_SIMPLE_RT_MODE))
-    return false;
-
-  // We are in underfined state.
-  return __kmpc_is_spmd_exec_mode();
-}
-
-bool checkGenericMode(kmp_Ident *loc) { return !checkSPMDMode(loc); }
-
-bool checkRuntimeUninitialized(kmp_Ident *loc) {
-  if (!loc)
-    return isRuntimeUninitialized();
-
-  // If runtime is required then we know we can't be
-  // in the undefined mode. We can return immediately.
-  if (!(loc->reserved_2 & KMP_IDENT_SIMPLE_RT_MODE))
-    return false;
-
-  // If runtime is required then we need to check is in
-  // SPMD mode or not. If not in SPMD mode then we end
-  // up in the UNDEFINED state that marks the orphaned
-  // functions.
-  if (loc->reserved_2 & KMP_IDENT_SPMD_MODE)
-    return true;
-
-  // Check if we are in an UNDEFINED state. Undefined is denoted by
-  // non-SPMD + noRuntimeRequired which is a combination that
-  // cannot actually happen. Undefined states is used to mark orphaned
-  // functions.
-  return isRuntimeUninitialized();
-}
-
-bool checkRuntimeInitialized(kmp_Ident *loc) {
-  return !checkRuntimeUninitialized(loc);
-}
-
-////////////////////////////////////////////////////////////////////////////////
 // support: get info from machine
 ////////////////////////////////////////////////////////////////////////////////
 
@@ -104,7 +53,7 @@ bool checkRuntimeInitialized(kmp_Ident *loc) {
 //
 // Called in Generic Execution Mode only.
 int GetMasterThreadID() {
-  return (GetNumberOfThreadsInBlock() - 1) & ~(WARPSIZE - 1);
+  return (__kmpc_get_hardware_num_threads_in_block() - 1) & ~(WARPSIZE - 1);
 }
 
 // The last warp is reserved for the master; other warps are workers.
@@ -118,11 +67,11 @@ int GetNumberOfWorkersInTeam() { return GetMasterThreadID(); }
 // or a serial region by the master.  If the master (whose CUDA thread
 // id is GetMasterThreadID()) calls this routine, we return 0 because
 // it is a shadow for the first worker.
-int GetLogicalThreadIdInBlock(bool isSPMDExecutionMode) {
+int GetLogicalThreadIdInBlock() {
   // Implemented using control flow (predication) instead of with a modulo
   // operation.
-  int tid = GetThreadIdInBlock();
-  if (!isSPMDExecutionMode && tid >= GetMasterThreadID())
+  int tid = __kmpc_get_hardware_thread_id_in_block();
+  if (__kmpc_is_generic_main_thread(tid))
     return 0;
   else
     return tid;
@@ -134,16 +83,19 @@ int GetLogicalThreadIdInBlock(bool isSPMDExecutionMode) {
 //
 ////////////////////////////////////////////////////////////////////////////////
 
-int GetOmpThreadId(int threadId, bool isSPMDExecutionMode) {
+int GetOmpThreadId() {
+  int tid = __kmpc_get_hardware_thread_id_in_block();
+  if (__kmpc_is_generic_main_thread(tid))
+    return 0;
   // omp_thread_num
   int rc;
-  if ((parallelLevel[GetWarpId()] & (OMP_ACTIVE_PARALLEL_LEVEL - 1)) > 1) {
+  if (__kmpc_parallel_level() > 1) {
     rc = 0;
-  } else if (isSPMDExecutionMode) {
-    rc = GetThreadIdInBlock();
+  } else if (__kmpc_is_spmd_exec_mode()) {
+    rc = tid;
   } else {
     omptarget_nvptx_TaskDescr *currTaskDescr =
-        omptarget_nvptx_threadPrivateContext->GetTopLevelTaskDescr(threadId);
+        omptarget_nvptx_threadPrivateContext->GetTopLevelTaskDescr(tid);
     ASSERT0(LT_FUSSY, currTaskDescr, "expected a top task descr");
     rc = currTaskDescr->ThreadId();
   }
@@ -157,7 +109,7 @@ int GetNumberOfOmpThreads(bool isSPMDExecutionMode) {
   if (Level != OMP_ACTIVE_PARALLEL_LEVEL + 1) {
     rc = 1;
   } else if (isSPMDExecutionMode) {
-    rc = GetNumberOfThreadsInBlock();
+    rc = __kmpc_get_hardware_num_threads_in_block();
   } else {
     rc = threadsInTeam;
   }
@@ -175,7 +127,7 @@ int GetOmpTeamId() {
 
 int GetNumberOfOmpTeams() {
   // omp_num_teams
-  return GetNumberOfBlocksInKernel(); // assume 1 block per team
+  return __kmpc_get_hardware_num_blocks(); // assume 1 block per team
 }
 
 ////////////////////////////////////////////////////////////////////////////////
@@ -217,7 +169,7 @@ void DecParallelLevel(bool ActiveParallel, __kmpc_impl_lanemask_t Mask) {
 int GetNumberOfProcsInDevice(bool isSPMDExecutionMode) {
   if (!isSPMDExecutionMode)
     return GetNumberOfWorkersInTeam();
-  return GetNumberOfThreadsInBlock();
+  return __kmpc_get_hardware_num_threads_in_block();
 }
 
 int GetNumberOfProcsInTeam(bool isSPMDExecutionMode) {

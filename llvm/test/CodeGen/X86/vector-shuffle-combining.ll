@@ -3287,3 +3287,131 @@ define void @PR45604(<32 x i16>* %dst, <8 x i16>* %src) {
   store <32 x i16> %v3, <32 x i16>* %dst, align 16
   ret void
 }
+
+; Test case reported on D105827
+define void @SpinningCube() {
+; SSE2-LABEL: SpinningCube:
+; SSE2:       # %bb.0: # %entry
+; SSE2-NEXT:    movl $1065353216, (%rax) # imm = 0x3F800000
+; SSE2-NEXT:    movaps {{.*#+}} xmm0 = <u,u,u,1.0E+0>
+; SSE2-NEXT:    movaps {{.*#+}} xmm1 = <0.0E+0,-2.0E+0,u,u>
+; SSE2-NEXT:    movss {{.*#+}} xmm2 = mem[0],zero,zero,zero
+; SSE2-NEXT:    movaps %xmm2, %xmm3
+; SSE2-NEXT:    shufps {{.*#+}} xmm3 = xmm3[0,1],xmm1[1,3]
+; SSE2-NEXT:    xorps %xmm4, %xmm4
+; SSE2-NEXT:    shufps {{.*#+}} xmm4 = xmm4[0,1],xmm3[2,0]
+; SSE2-NEXT:    shufps {{.*#+}} xmm2 = xmm2[0,0],xmm0[2,3]
+; SSE2-NEXT:    addps %xmm4, %xmm2
+; SSE2-NEXT:    movaps %xmm2, (%rax)
+; SSE2-NEXT:    movss {{.*#+}} xmm2 = mem[0],zero,zero,zero
+; SSE2-NEXT:    shufps {{.*#+}} xmm2 = xmm2[0,0,0,0]
+; SSE2-NEXT:    shufps {{.*#+}} xmm1 = xmm1[0,0,1,3]
+; SSE2-NEXT:    mulps %xmm2, %xmm1
+; SSE2-NEXT:    addps %xmm0, %xmm1
+; SSE2-NEXT:    movaps %xmm1, (%rax)
+; SSE2-NEXT:    retq
+;
+; SSSE3-LABEL: SpinningCube:
+; SSSE3:       # %bb.0: # %entry
+; SSSE3-NEXT:    movl $1065353216, (%rax) # imm = 0x3F800000
+; SSSE3-NEXT:    movaps {{.*#+}} xmm0 = <u,u,u,1.0E+0>
+; SSSE3-NEXT:    movaps {{.*#+}} xmm1 = <0.0E+0,-2.0E+0,u,u>
+; SSSE3-NEXT:    movss {{.*#+}} xmm2 = mem[0],zero,zero,zero
+; SSSE3-NEXT:    movaps %xmm2, %xmm3
+; SSSE3-NEXT:    shufps {{.*#+}} xmm3 = xmm3[0,1],xmm1[1,3]
+; SSSE3-NEXT:    xorps %xmm4, %xmm4
+; SSSE3-NEXT:    shufps {{.*#+}} xmm4 = xmm4[0,1],xmm3[2,0]
+; SSSE3-NEXT:    shufps {{.*#+}} xmm2 = xmm2[0,0],xmm0[2,3]
+; SSSE3-NEXT:    addps %xmm4, %xmm2
+; SSSE3-NEXT:    movaps %xmm2, (%rax)
+; SSSE3-NEXT:    movss {{.*#+}} xmm2 = mem[0],zero,zero,zero
+; SSSE3-NEXT:    shufps {{.*#+}} xmm1 = xmm1[0,0,1,3]
+; SSSE3-NEXT:    shufps {{.*#+}} xmm2 = xmm2[0,0,0,2]
+; SSSE3-NEXT:    mulps %xmm1, %xmm2
+; SSSE3-NEXT:    addps %xmm0, %xmm2
+; SSSE3-NEXT:    movaps %xmm2, (%rax)
+; SSSE3-NEXT:    retq
+;
+; SSE41-LABEL: SpinningCube:
+; SSE41:       # %bb.0: # %entry
+; SSE41-NEXT:    movl $1065353216, (%rax) # imm = 0x3F800000
+; SSE41-NEXT:    movaps {{.*#+}} xmm0 = <u,u,u,1.0E+0>
+; SSE41-NEXT:    movaps {{.*#+}} xmm1 = <0.0E+0,-2.0E+0,u,u>
+; SSE41-NEXT:    shufps {{.*#+}} xmm1 = xmm1[0,0,1,3]
+; SSE41-NEXT:    movss {{.*#+}} xmm2 = mem[0],zero,zero,zero
+; SSE41-NEXT:    movaps %xmm1, %xmm3
+; SSE41-NEXT:    insertps {{.*#+}} xmm3 = xmm3[0,1,2],xmm2[0]
+; SSE41-NEXT:    movaps %xmm0, %xmm4
+; SSE41-NEXT:    insertps {{.*#+}} xmm4 = xmm4[0],xmm2[0],xmm4[2,3]
+; SSE41-NEXT:    addps %xmm3, %xmm4
+; SSE41-NEXT:    movaps %xmm4, (%rax)
+; SSE41-NEXT:    movss {{.*#+}} xmm2 = mem[0],zero,zero,zero
+; SSE41-NEXT:    shufps {{.*#+}} xmm2 = xmm2[0,0,0,2]
+; SSE41-NEXT:    mulps %xmm1, %xmm2
+; SSE41-NEXT:    addps %xmm0, %xmm2
+; SSE41-NEXT:    movaps %xmm2, (%rax)
+; SSE41-NEXT:    retq
+;
+; AVX1-LABEL: SpinningCube:
+; AVX1:       # %bb.0: # %entry
+; AVX1-NEXT:    movl $1065353216, (%rax) # imm = 0x3F800000
+; AVX1-NEXT:    vmovaps {{.*#+}} xmm0 = <u,u,u,1.0E+0>
+; AVX1-NEXT:    vmovaps {{.*#+}} xmm1 = <0.0E+0,-2.0E+0,u,u>
+; AVX1-NEXT:    vpermilps {{.*#+}} xmm2 = xmm1[0,0,1,3]
+; AVX1-NEXT:    vmovss {{.*#+}} xmm3 = mem[0],zero,zero,zero
+; AVX1-NEXT:    vinsertps {{.*#+}} xmm2 = xmm2[0,1,2],xmm3[0]
+; AVX1-NEXT:    vinsertps {{.*#+}} xmm3 = xmm0[0],xmm3[0],xmm0[2,3]
+; AVX1-NEXT:    vaddps %xmm3, %xmm2, %xmm2
+; AVX1-NEXT:    vmovaps %xmm2, (%rax)
+; AVX1-NEXT:    vbroadcastss (%rax), %xmm2
+; AVX1-NEXT:    vmulps %xmm1, %xmm2, %xmm1
+; AVX1-NEXT:    vpermilps {{.*#+}} xmm1 = xmm1[0,0,1,3]
+; AVX1-NEXT:    vaddps %xmm0, %xmm1, %xmm0
+; AVX1-NEXT:    vmovaps %xmm0, (%rax)
+; AVX1-NEXT:    retq
+;
+; AVX2-LABEL: SpinningCube:
+; AVX2:       # %bb.0: # %entry
+; AVX2-NEXT:    movl $1065353216, (%rax) # imm = 0x3F800000
+; AVX2-NEXT:    vbroadcastss {{.*#+}} xmm0 = [1.0E+0,1.0E+0,1.0E+0,1.0E+0]
+; AVX2-NEXT:    vmovaps {{.*#+}} xmm1 = <0.0E+0,-2.0E+0,u,u>
+; AVX2-NEXT:    vpermilps {{.*#+}} xmm2 = xmm1[0,0,1,3]
+; AVX2-NEXT:    vmovss {{.*#+}} xmm3 = mem[0],zero,zero,zero
+; AVX2-NEXT:    vinsertps {{.*#+}} xmm2 = xmm2[0,1,2],xmm3[0]
+; AVX2-NEXT:    vinsertps {{.*#+}} xmm3 = xmm0[0],xmm3[0],xmm0[2,3]
+; AVX2-NEXT:    vaddps %xmm3, %xmm2, %xmm2
+; AVX2-NEXT:    vmovaps %xmm2, (%rax)
+; AVX2-NEXT:    vbroadcastss (%rax), %xmm2
+; AVX2-NEXT:    vmulps %xmm1, %xmm2, %xmm1
+; AVX2-NEXT:    vpermilps {{.*#+}} xmm1 = xmm1[0,0,1,3]
+; AVX2-NEXT:    vaddps %xmm0, %xmm1, %xmm0
+; AVX2-NEXT:    vmovaps %xmm0, (%rax)
+; AVX2-NEXT:    retq
+entry:
+  store float 1.000000e+00, float* undef, align 4
+  %0 = load float, float* undef, align 4
+  %1 = fmul float undef, 0.000000e+00
+  %2 = insertelement <4 x float> poison, float %0, i32 3
+  %3 = load float, float* undef, align 4
+  %4 = insertelement <2 x float> poison, float %3, i32 0
+  %5 = shufflevector <2 x float> %4, <2 x float> poison, <2 x i32> zeroinitializer
+  %6 = fmul <2 x float> %5, <float 0.000000e+00, float -2.000000e+00>
+  %7 = fadd float %1, undef
+  %8 = shufflevector <2 x float> %6, <2 x float> poison, <4 x i32> <i32 0, i32 1, i32 undef, i32 undef>
+  %9 = shufflevector <4 x float> undef, <4 x float> %8, <4 x i32> <i32 0, i32 4, i32 5, i32 undef>
+  %10 = insertelement <4 x float> %9, float %7, i32 3
+  %11 = insertelement <4 x float> %2, float 0x7FF8000000000000, i32 1
+  %12 = insertelement <4 x float> %11, float undef, i32 0
+  %13 = insertelement <4 x float> %12, float undef, i32 2
+  %14 = fadd <4 x float> %10, %13
+  store <4 x float> %14, <4 x float>* undef, align 16
+  %15 = load float, float* undef, align 4
+  %16 = insertelement <2 x float> poison, float %15, i32 0
+  %17 = shufflevector <2 x float> %16, <2 x float> poison, <2 x i32> zeroinitializer
+  %18 = fmul <2 x float> %17, <float 0.000000e+00, float -2.000000e+00>
+  %19 = shufflevector <2 x float> %18, <2 x float> poison, <4 x i32> <i32 0, i32 1, i32 undef, i32 undef>
+  %20 = shufflevector <4 x float> undef, <4 x float> %19, <4 x i32> <i32 0, i32 4, i32 5, i32 undef>
+  %21 = fadd <4 x float> %20, %2
+  store <4 x float> %21, <4 x float>* undef, align 16
+  ret void
+}

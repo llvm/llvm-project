@@ -30,7 +30,6 @@
 // PPC603E:#define __FLT_DENORM_MIN__ 1.40129846e-45F
 // PPC603E:#define __FLT_DIG__ 6
 // PPC603E:#define __FLT_EPSILON__ 1.19209290e-7F
-// PPC603E:#define __FLT_EVAL_METHOD__ 0
 // PPC603E:#define __FLT_HAS_DENORM__ 1
 // PPC603E:#define __FLT_HAS_INFINITY__ 1
 // PPC603E:#define __FLT_HAS_QUIET_NAN__ 1
@@ -224,7 +223,6 @@
 // PPC:#define __FLT_DENORM_MIN__ 1.40129846e-45F
 // PPC:#define __FLT_DIG__ 6
 // PPC:#define __FLT_EPSILON__ 1.19209290e-7F
-// PPC:#define __FLT_EVAL_METHOD__ 0
 // PPC:#define __FLT_HAS_DENORM__ 1
 // PPC:#define __FLT_HAS_INFINITY__ 1
 // PPC:#define __FLT_HAS_QUIET_NAN__ 1
@@ -393,6 +391,7 @@
 // PPC-AIX-NOT:#define __64BIT__ 1
 // PPC-AIX:#define _AIX 1
 // PPC-AIX:#define _ARCH_PPC 1
+// PPC-AIX:#define _ARCH_PPC64 1
 // PPC-AIX:#define _BIG_ENDIAN 1
 // PPC-AIX:#define _IBMR2 1
 // PPC-AIX:#define _LONG_LONG 1
@@ -422,7 +421,6 @@
 // PPC-AIX:#define __FLT_DENORM_MIN__ 1.40129846e-45F
 // PPC-AIX:#define __FLT_DIG__ 6
 // PPC-AIX:#define __FLT_EPSILON__ 1.19209290e-7F
-// PPC-AIX:#define __FLT_EVAL_METHOD__ 1
 // PPC-AIX:#define __FLT_HAS_DENORM__ 1
 // PPC-AIX:#define __FLT_HAS_INFINITY__ 1
 // PPC-AIX:#define __FLT_HAS_QUIET_NAN__ 1
@@ -541,6 +539,8 @@
 // PPC-AIX:#define __SIZE_MAX__ 4294967295UL
 // PPC-AIX:#define __SIZE_TYPE__ long unsigned int
 // PPC-AIX:#define __SIZE_WIDTH__ 32
+// PPC-AIX:#define __THW_BIG_ENDIAN__ 1
+// PPC-AIX:#define __THW_PPC__ 1
 // PPC-AIX:#define __TOS_AIX__ 1
 // PPC-AIX:#define __UINT16_C_SUFFIX__
 // PPC-AIX:#define __UINT16_MAX__ 65535
@@ -758,6 +758,9 @@
 // PPC-AIX-STDC-N-NOT:#define __STDC_NO_ATOMICS__ 1
 // PPC-AIX-STDC-N-NOT:#define __STDC_NO_THREADS__ 1
 
+// RUN: %clang_cc1 -E -dM -ffreestanding -triple=powerpc-ibm-aix7.1.0.0 -mlong-double-64 < /dev/null | FileCheck -match-full-lines -check-prefix PPC-AIX-LD64 %s
+// PPC-AIX-LD64:#define __LONGDOUBLE64 1
+
 // RUN: %clang_cc1 -E -dM -ffreestanding -triple=powerpc-unknown-linux-gnu -fno-signed-char < /dev/null | FileCheck -match-full-lines -check-prefix PPC-LINUX %s
 //
 // PPC-LINUX:#define _ARCH_PPC 1
@@ -787,7 +790,6 @@
 // PPC-LINUX:#define __FLT_DENORM_MIN__ 1.40129846e-45F
 // PPC-LINUX:#define __FLT_DIG__ 6
 // PPC-LINUX:#define __FLT_EPSILON__ 1.19209290e-7F
-// PPC-LINUX:#define __FLT_EVAL_METHOD__ 0
 // PPC-LINUX:#define __FLT_HAS_DENORM__ 1
 // PPC-LINUX:#define __FLT_HAS_INFINITY__ 1
 // PPC-LINUX:#define __FLT_HAS_QUIET_NAN__ 1
@@ -995,7 +997,6 @@
 // PPC-DARWIN:#define __FLT_DENORM_MIN__ 1.40129846e-45F
 // PPC-DARWIN:#define __FLT_DIG__ 6
 // PPC-DARWIN:#define __FLT_EPSILON__ 1.19209290e-7F
-// PPC-DARWIN:#define __FLT_EVAL_METHOD__ 0
 // PPC-DARWIN:#define __FLT_HAS_DENORM__ 1
 // PPC-DARWIN:#define __FLT_HAS_INFINITY__ 1
 // PPC-DARWIN:#define __FLT_HAS_QUIET_NAN__ 1

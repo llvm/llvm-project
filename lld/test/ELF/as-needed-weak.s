@@ -6,7 +6,7 @@
 
 # RUN: llvm-mc -filetype=obj -triple=x86_64-unknown-linux %s -o %t2.o
 # RUN: ld.lld -o %t.exe %t2.o --as-needed %t1.so
-# RUN: llvm-readelf -dynamic-table -dyn-symbols %t.exe | FileCheck %s
+# RUN: llvm-readelf -d --dyn-syms %t.exe | FileCheck %s
 
 # CHECK-NOT: libfoo
 

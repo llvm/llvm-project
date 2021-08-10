@@ -10,15 +10,17 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "clang/Frontend/Utils.h"
 #include "clang/Basic/DiagnosticOptions.h"
+#include "clang/Driver/Action.h"
 #include "clang/Driver/Compilation.h"
 #include "clang/Driver/Driver.h"
-#include "clang/Driver/Action.h"
 #include "clang/Driver/Options.h"
 #include "clang/Driver/Tool.h"
 #include "clang/Frontend/CompilerInstance.h"
 #include "clang/Frontend/FrontendDiagnostic.h"
+#include "clang/Frontend/Utils.h"
+#include "llvm/ADT/STLExtras.h"
+#include "llvm/ADT/StringRef.h"
 #include "llvm/Option/ArgList.h"
 #include "llvm/Support/Host.h"
 using namespace clang;
@@ -37,7 +39,10 @@ std::unique_ptr<CompilerInvocation> clang::createInvocationFromCommandLine(
   SmallVector<const char *, 16> Args(ArgList.begin(), ArgList.end());
 
   // FIXME: Find a cleaner way to force the driver into restricted modes.
-  Args.push_back("-fsyntax-only");
+  Args.insert(
+      llvm::find_if(
+          Args, [](const char *Elem) { return llvm::StringRef(Elem) == "--"; }),
+      "-fsyntax-only");
 
   // FIXME: We shouldn't have to pass in the path info.
   driver::Driver TheDriver(Args[0], llvm::sys::getDefaultTargetTriple(), *Diags,

@@ -12,8 +12,8 @@ target triple = "x86_64-pc-windows-msvc19.0.24215"
 
 $mystr = comdat any
 
-; CHECK: $dead_global = comdat noduplicates
-; CHECK: $private_str = comdat noduplicates
+; CHECK: $dead_global = comdat nodeduplicate
+; CHECK: $private_str = comdat nodeduplicate
 
 ; CHECK: @dead_global = global { i32, [28 x i8] } { i32 42, [28 x i8] zeroinitializer }, comdat, align 32
 ; CHECK: @private_str = internal constant { [8 x i8], [24 x i8] } { [8 x i8] c"private\00", [24 x i8] zeroinitializer }, comdat, align 32

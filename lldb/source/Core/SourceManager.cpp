@@ -339,11 +339,14 @@ bool SourceManager::GetDefaultFileAndLine(FileSpec &file_spec, uint32_t &line) {
       if (executable_ptr) {
         SymbolContextList sc_list;
         ConstString main_name("main");
-        bool symbols_okay = false; // Force it to be a debug symbol.
-        bool inlines_okay = true;
+
+        ModuleFunctionSearchOptions function_options;
+        function_options.include_symbols =
+            false; // Force it to be a debug symbol.
+        function_options.include_inlines = true;
         executable_ptr->FindFunctions(main_name, CompilerDeclContext(),
-                                      lldb::eFunctionNameTypeBase, inlines_okay,
-                                      symbols_okay, sc_list);
+                                      lldb::eFunctionNameTypeBase,
+                                      function_options, sc_list);
         size_t num_matches = sc_list.GetSize();
         for (size_t idx = 0; idx < num_matches; idx++) {
           SymbolContext sc;

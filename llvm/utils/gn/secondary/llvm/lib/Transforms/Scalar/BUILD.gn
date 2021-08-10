@@ -19,6 +19,7 @@ static_library("Scalar") {
     "ConstraintElimination.cpp",
     "CorrelatedValuePropagation.cpp",
     "DCE.cpp",
+    "DFAJumpThreading.cpp",
     "DeadStoreElimination.cpp",
     "DivRemPairs.cpp",
     "EarlyCSE.cpp",

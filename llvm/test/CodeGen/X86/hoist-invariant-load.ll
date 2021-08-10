@@ -234,7 +234,7 @@ define void @test_multi_def(i64* dereferenceable(8) %x1,
 ; CHECK-NEXT:  ## %bb.3: ## %exit
 ; CHECK-NEXT:    retq
                             i64* dereferenceable(8) %x2,
-                            i128* %y, i64 %count) nounwind {
+                            i128* %y, i64 %count) nounwind nofree nosync {
 entry:
   br label %for.body
 
@@ -282,7 +282,7 @@ define void @test_div_def(i32* dereferenceable(8) %x1,
 ; CHECK-NEXT:  ## %bb.3: ## %exit
 ; CHECK-NEXT:    retq
                           i32* dereferenceable(8) %x2,
-                          i32* %y, i32 %count) nounwind {
+                          i32* %y, i32 %count) nounwind nofree nosync {
 entry:
   br label %for.body
 

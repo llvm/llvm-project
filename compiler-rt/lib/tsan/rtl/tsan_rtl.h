@@ -84,7 +84,7 @@ typedef Allocator::AllocatorCache AllocatorCache;
 Allocator *allocator();
 #endif
 
-const u64 kShadowRodata = (u64)-1;  // .rodata shadow marker
+const RawShadow kShadowRodata = (RawShadow)-1;  // .rodata shadow marker
 
 // FastState (from most significant bit):
 //   ignore          : 1
@@ -380,6 +380,7 @@ struct ThreadState {
   // We do not distinguish beteween ignoring reads and writes
   // for better performance.
   int ignore_reads_and_writes;
+  atomic_sint32_t pending_signals;
   int ignore_sync;
   int suppress_reports;
   // Go does not support ignores.
@@ -392,18 +393,15 @@ struct ThreadState {
   uptr *shadow_stack;
   uptr *shadow_stack_end;
   uptr *shadow_stack_pos;
-  u64 *racy_shadow_addr;
-  u64 racy_state[2];
+  RawShadow *racy_shadow_addr;
+  RawShadow racy_state[2];
   MutexSet mset;
   ThreadClock clock;
 #if !SANITIZER_GO
   Vector<JmpBuf> jmp_bufs;
   int ignore_interceptors;
 #endif
-#if TSAN_COLLECT_STATS
-  u64 stat[StatCnt];
-#endif
-  const u32 tid;
+  const Tid tid;
   const int unique_id;
   bool in_symbolizer;
   bool in_ignored_lib;
@@ -417,9 +415,6 @@ struct ThreadState {
   const uptr tls_size;
   ThreadContext *tctx;
 
-#if SANITIZER_DEBUG && !SANITIZER_GO
-  InternalDeadlockDetector internal_deadlock_detector;
-#endif
   DDLogicalThread *dd_lt;
 
   // Current wired Processor, or nullptr. Required to handle any events.
@@ -434,7 +429,7 @@ struct ThreadState {
   ThreadSignalContext *signal_ctx;
 
 #if !SANITIZER_GO
-  u32 last_sleep_stack_id;
+  StackID last_sleep_stack_id;
   ThreadClock last_sleep_clock;
 #endif
 
@@ -444,7 +439,7 @@ struct ThreadState {
 
   const ReportDesc *current_report;
 
-  explicit ThreadState(Context *ctx, u32 tid, int unique_id, u64 epoch,
+  explicit ThreadState(Context *ctx, Tid tid, int unique_id, u64 epoch,
                        unsigned reuse_count, uptr stk_addr, uptr stk_size,
                        uptr tls_addr, uptr tls_size);
 };
@@ -475,10 +470,10 @@ inline void cur_thread_finalize() { }
 
 class ThreadContext final : public ThreadContextBase {
  public:
-  explicit ThreadContext(int tid);
+  explicit ThreadContext(Tid tid);
   ~ThreadContext();
   ThreadState *thr;
-  u32 creation_stack_id;
+  StackID creation_stack_id;
   SyncClock sync;
   // Epoch at which the thread had started.
   // If we see an event from the thread stamped by an older epoch,
@@ -536,7 +531,7 @@ struct Context {
   void *background_thread;
   atomic_uint32_t stop_background_thread;
 
-  ThreadRegistry *thread_registry;
+  ThreadRegistry thread_registry;
 
   Mutex racy_mtx;
   Vector<RacyStacks> racy_stacks;
@@ -549,10 +544,6 @@ struct Context {
   ClockAlloc clock_alloc;
 
   Flags flags;
-
-  u64 stat[StatCnt];
-  u64 int_alloc_cnt[MBlockTypeCount];
-  u64 int_alloc_siz[MBlockTypeCount];
 };
 
 extern Context *ctx;  // The one and the only global runtime context.
@@ -585,12 +576,12 @@ class ScopedReportBase {
                        const MutexSet *mset);
   void AddStack(StackTrace stack, bool suppressable = false);
   void AddThread(const ThreadContext *tctx, bool suppressable = false);
-  void AddThread(int unique_tid, bool suppressable = false);
-  void AddUniqueTid(int unique_tid);
+  void AddThread(Tid unique_tid, bool suppressable = false);
+  void AddUniqueTid(Tid unique_tid);
   void AddMutex(const SyncVar *s);
   u64 AddMutex(u64 id);
   void AddLocation(uptr addr, uptr size);
-  void AddSleep(u32 stack_id);
+  void AddSleep(StackID stack_id);
   void SetCount(int count);
 
   const ReportDesc *GetReport() const;
@@ -622,7 +613,7 @@ class ScopedReport : public ScopedReportBase {
 
 bool ShouldReport(ThreadState *thr, ReportType typ);
 ThreadContext *IsThreadStackOrTls(uptr addr, bool *is_stack);
-void RestoreStack(int tid, const u64 epoch, VarSizeStackTrace *stk,
+void RestoreStack(Tid tid, const u64 epoch, VarSizeStackTrace *stk,
                   MutexSet *mset, uptr *tag = nullptr);
 
 // The stack could look like:
@@ -658,22 +649,6 @@ void ObtainCurrentStack(ThreadState *thr, uptr toppc, StackTraceTy *stack,
   ObtainCurrentStack(thr, pc, &stack); \
   stack.ReverseOrder();
 
-#if TSAN_COLLECT_STATS
-void StatAggregate(u64 *dst, u64 *src);
-void StatOutput(u64 *stat);
-#endif
-
-void ALWAYS_INLINE StatInc(ThreadState *thr, StatType typ, u64 n = 1) {
-#if TSAN_COLLECT_STATS
-  thr->stat[typ] += n;
-#endif
-}
-void ALWAYS_INLINE StatSet(ThreadState *thr, StatType typ, u64 n) {
-#if TSAN_COLLECT_STATS
-  thr->stat[typ] = n;
-#endif
-}
-
 void MapShadow(uptr addr, uptr size);
 void MapThreadTrace(uptr addr, uptr size, const char *name);
 void DontNeedShadowFor(uptr addr, uptr size);
@@ -691,7 +666,6 @@ void ReportRace(ThreadState *thr);
 bool OutputReport(ThreadState *thr, const ScopedReport &srep);
 bool IsFiredSuppression(Context *ctx, ReportType type, StackTrace trace);
 bool IsExpectedReport(uptr addr, uptr size);
-void PrintMatchedBenignRaces();
 
 #if defined(TSAN_DEBUG_OUTPUT) && TSAN_DEBUG_OUTPUT >= 1
 # define DPrintf Printf
@@ -705,10 +679,11 @@ void PrintMatchedBenignRaces();
 # define DPrintf2(...)
 #endif
 
-u32 CurrentStackId(ThreadState *thr, uptr pc);
-ReportStack *SymbolizeStackId(u32 stack_id);
+StackID CurrentStackId(ThreadState *thr, uptr pc);
+ReportStack *SymbolizeStackId(StackID stack_id);
 void PrintCurrentStack(ThreadState *thr, uptr pc);
 void PrintCurrentStackSlow(uptr pc);  // uses libunwind
+MBlock *JavaHeapBlock(uptr addr, uptr *start);
 
 void Initialize(ThreadState *thr);
 void MaybeSpawnBackgroundThread();
@@ -724,34 +699,44 @@ void MemoryAccessImpl(ThreadState *thr, uptr addr,
     u64 *shadow_mem, Shadow cur);
 void MemoryAccessRange(ThreadState *thr, uptr pc, uptr addr,
     uptr size, bool is_write);
-void MemoryAccessRangeStep(ThreadState *thr, uptr pc, uptr addr,
-    uptr size, uptr step, bool is_write);
-void UnalignedMemoryAccess(ThreadState *thr, uptr pc, uptr addr,
-    int size, bool kAccessIsWrite, bool kIsAtomic);
+void UnalignedMemoryAccess(ThreadState *thr, uptr pc, uptr addr, uptr size,
+                           AccessType typ);
 
 const int kSizeLog1 = 0;
 const int kSizeLog2 = 1;
 const int kSizeLog4 = 2;
 const int kSizeLog8 = 3;
 
-void ALWAYS_INLINE MemoryRead(ThreadState *thr, uptr pc,
-                                     uptr addr, int kAccessSizeLog) {
-  MemoryAccess(thr, pc, addr, kAccessSizeLog, false, false);
-}
-
-void ALWAYS_INLINE MemoryWrite(ThreadState *thr, uptr pc,
-                                      uptr addr, int kAccessSizeLog) {
-  MemoryAccess(thr, pc, addr, kAccessSizeLog, true, false);
-}
-
-void ALWAYS_INLINE MemoryReadAtomic(ThreadState *thr, uptr pc,
-                                           uptr addr, int kAccessSizeLog) {
-  MemoryAccess(thr, pc, addr, kAccessSizeLog, false, true);
-}
-
-void ALWAYS_INLINE MemoryWriteAtomic(ThreadState *thr, uptr pc,
-                                            uptr addr, int kAccessSizeLog) {
-  MemoryAccess(thr, pc, addr, kAccessSizeLog, true, true);
+ALWAYS_INLINE
+void MemoryAccess(ThreadState *thr, uptr pc, uptr addr, uptr size,
+                  AccessType typ) {
+  int size_log;
+  switch (size) {
+    case 1:
+      size_log = kSizeLog1;
+      break;
+    case 2:
+      size_log = kSizeLog2;
+      break;
+    case 4:
+      size_log = kSizeLog4;
+      break;
+    default:
+      DCHECK_EQ(size, 8);
+      size_log = kSizeLog8;
+      break;
+  }
+  bool is_write = !(typ & kAccessRead);
+  bool is_atomic = typ & kAccessAtomic;
+  if (typ & kAccessVptr)
+    thr->is_vptr_access = true;
+  if (typ & kAccessFree)
+    thr->is_freeing = true;
+  MemoryAccess(thr, pc, addr, size_log, is_write, is_atomic);
+  if (typ & kAccessVptr)
+    thr->is_vptr_access = false;
+  if (typ & kAccessFree)
+    thr->is_freeing = false;
 }
 
 void MemoryResetRange(ThreadState *thr, uptr pc, uptr addr, uptr size);
@@ -760,26 +745,26 @@ void MemoryRangeImitateWrite(ThreadState *thr, uptr pc, uptr addr, uptr size);
 void MemoryRangeImitateWriteOrResetRange(ThreadState *thr, uptr pc, uptr addr,
                                          uptr size);
 
-void ThreadIgnoreBegin(ThreadState *thr, uptr pc, bool save_stack = true);
-void ThreadIgnoreEnd(ThreadState *thr, uptr pc);
-void ThreadIgnoreSyncBegin(ThreadState *thr, uptr pc, bool save_stack = true);
-void ThreadIgnoreSyncEnd(ThreadState *thr, uptr pc);
+void ThreadIgnoreBegin(ThreadState *thr, uptr pc);
+void ThreadIgnoreEnd(ThreadState *thr);
+void ThreadIgnoreSyncBegin(ThreadState *thr, uptr pc);
+void ThreadIgnoreSyncEnd(ThreadState *thr);
 
 void FuncEntry(ThreadState *thr, uptr pc);
 void FuncExit(ThreadState *thr);
 
-int ThreadCreate(ThreadState *thr, uptr pc, uptr uid, bool detached);
-void ThreadStart(ThreadState *thr, int tid, tid_t os_id,
+Tid ThreadCreate(ThreadState *thr, uptr pc, uptr uid, bool detached);
+void ThreadStart(ThreadState *thr, Tid tid, tid_t os_id,
                  ThreadType thread_type);
 void ThreadFinish(ThreadState *thr);
-int ThreadConsumeTid(ThreadState *thr, uptr pc, uptr uid);
-void ThreadJoin(ThreadState *thr, uptr pc, int tid);
-void ThreadDetach(ThreadState *thr, uptr pc, int tid);
+Tid ThreadConsumeTid(ThreadState *thr, uptr pc, uptr uid);
+void ThreadJoin(ThreadState *thr, uptr pc, Tid tid);
+void ThreadDetach(ThreadState *thr, uptr pc, Tid tid);
 void ThreadFinalize(ThreadState *thr);
 void ThreadSetName(ThreadState *thr, const char *name);
 int ThreadCount(ThreadState *thr);
-void ProcessPendingSignals(ThreadState *thr);
-void ThreadNotJoined(ThreadState *thr, uptr pc, int tid, uptr uid);
+void ProcessPendingSignalsImpl(ThreadState *thr);
+void ThreadNotJoined(ThreadState *thr, uptr pc, Tid tid, uptr uid);
 
 Processor *ProcCreate();
 void ProcDestroy(Processor *proc);
@@ -808,7 +793,7 @@ void Acquire(ThreadState *thr, uptr pc, uptr addr);
 // handle Go finalizers. Namely, finalizer goroutine executes AcquireGlobal
 // right before executing finalizers. This provides a coarse, but simple
 // approximation of the actual required synchronization.
-void AcquireGlobal(ThreadState *thr, uptr pc);
+void AcquireGlobal(ThreadState *thr);
 void Release(ThreadState *thr, uptr pc, uptr addr);
 void ReleaseStoreAcquire(ThreadState *thr, uptr pc, uptr addr);
 void ReleaseStore(ThreadState *thr, uptr pc, uptr addr);
@@ -844,7 +829,7 @@ void TraceSwitch(ThreadState *thr);
 uptr TraceTopPC(ThreadState *thr);
 uptr TraceSize();
 uptr TraceParts();
-Trace *ThreadTrace(int tid);
+Trace *ThreadTrace(Tid tid);
 
 extern "C" void __tsan_trace_switch();
 void ALWAYS_INLINE TraceAddEvent(ThreadState *thr, FastState fs,
@@ -854,7 +839,6 @@ void ALWAYS_INLINE TraceAddEvent(ThreadState *thr, FastState fs,
   DCHECK_GE((int)typ, 0);
   DCHECK_LE((int)typ, 7);
   DCHECK_EQ(GetLsb(addr, kEventPCBits), addr);
-  StatInc(thr, StatEvents);
   u64 pos = fs.GetTracePos();
   if (UNLIKELY((pos % kTracePartSize) == 0)) {
 #if !SANITIZER_GO
@@ -884,6 +868,24 @@ void FiberSwitch(ThreadState *thr, uptr pc, ThreadState *fiber, unsigned flags);
 enum FiberSwitchFlags {
   FiberSwitchFlagNoSync = 1 << 0, // __tsan_switch_to_fiber_no_sync
 };
+
+ALWAYS_INLINE void ProcessPendingSignals(ThreadState *thr) {
+  if (UNLIKELY(atomic_load_relaxed(&thr->pending_signals)))
+    ProcessPendingSignalsImpl(thr);
+}
+
+extern bool is_initialized;
+
+ALWAYS_INLINE
+void LazyInitialize(ThreadState *thr) {
+  // If we can use .preinit_array, assume that __tsan_init
+  // called from .preinit_array initializes runtime before
+  // any instrumented code.
+#if !SANITIZER_CAN_USE_PREINIT_ARRAY
+  if (UNLIKELY(!is_initialized))
+    Initialize(thr);
+#endif
+}
 
 }  // namespace __tsan
 

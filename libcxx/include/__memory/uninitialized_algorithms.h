@@ -123,21 +123,6 @@ uninitialized_fill_n(_ForwardIterator __f, _Size __n, const _Tp& __x)
 #if _LIBCPP_STD_VER > 14
 
 template <class _ForwardIterator>
-inline _LIBCPP_INLINE_VISIBILITY _LIBCPP_CONSTEXPR_AFTER_CXX17
-void destroy(_ForwardIterator __first, _ForwardIterator __last) {
-    for (; __first != __last; ++__first)
-        _VSTD::destroy_at(_VSTD::addressof(*__first));
-}
-
-template <class _ForwardIterator, class _Size>
-inline _LIBCPP_INLINE_VISIBILITY _LIBCPP_CONSTEXPR_AFTER_CXX17
-_ForwardIterator destroy_n(_ForwardIterator __first, _Size __n) {
-    for (; __n > 0; (void)++__first, --__n)
-        _VSTD::destroy_at(_VSTD::addressof(*__first));
-    return __first;
-}
-
-template <class _ForwardIterator>
 inline _LIBCPP_INLINE_VISIBILITY
 void uninitialized_default_construct(_ForwardIterator __first, _ForwardIterator __last) {
     using _Vt = typename iterator_traits<_ForwardIterator>::value_type;

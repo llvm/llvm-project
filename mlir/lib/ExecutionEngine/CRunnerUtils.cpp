@@ -15,7 +15,11 @@
 #include "mlir/ExecutionEngine/CRunnerUtils.h"
 
 #ifndef _WIN32
+#if defined(__FreeBSD__) || defined(__NetBSD__)
+#include <cstdlib>
+#else
 #include <alloca.h>
+#endif
 #include <sys/time.h>
 #else
 #include "malloc.h"
@@ -47,12 +51,22 @@ memrefCopy(int64_t elemSize, UnrankedMemRefType<char> *srcArg,
   DynamicMemRefType<char> dst(*dstArg);
 
   int64_t rank = src.rank;
-  int64_t *indices = static_cast<int64_t *>(alloca(sizeof(int64_t) * rank));
-  int64_t *srcStrides = static_cast<int64_t *>(alloca(sizeof(int64_t) * rank));
-  int64_t *dstStrides = static_cast<int64_t *>(alloca(sizeof(int64_t) * rank));
+  // Handle empty shapes -> nothing to copy.
+  for (int rankp = 0; rankp < rank; ++rankp)
+    if (src.sizes[rankp] == 0)
+      return;
 
   char *srcPtr = src.data + src.offset * elemSize;
   char *dstPtr = dst.data + dst.offset * elemSize;
+
+  if (rank == 0) {
+    memcpy(dstPtr, srcPtr, elemSize);
+    return;
+  }
+
+  int64_t *indices = static_cast<int64_t *>(alloca(sizeof(int64_t) * rank));
+  int64_t *srcStrides = static_cast<int64_t *>(alloca(sizeof(int64_t) * rank));
+  int64_t *dstStrides = static_cast<int64_t *>(alloca(sizeof(int64_t) * rank));
 
   // Initialize index and scale strides.
   for (int rankp = 0; rankp < rank; ++rankp) {
@@ -78,7 +92,7 @@ memrefCopy(int64_t elemSize, UnrankedMemRefType<char> *srcArg,
       if (axis == 0)
         return;
       // Else, reset to 0 and undo the advancement of the linear index that
-      // this axis had. The continue with the axis one outer.
+      // this axis had. Then continue with the axis one outer.
       indices[axis] = 0;
       readIndex -= src.sizes[axis] * srcStrides[axis];
       writeIndex -= dst.sizes[axis] * dstStrides[axis];

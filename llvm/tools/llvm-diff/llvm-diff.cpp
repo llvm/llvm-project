@@ -10,8 +10,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "DiffLog.h"
-#include "DifferenceEngine.h"
+#include "lib/DiffLog.h"
+#include "lib/DifferenceEngine.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/IR/LLVMContext.h"
 #include "llvm/IR/Module.h"
@@ -55,16 +55,20 @@ static void diffGlobal(DifferenceEngine &Engine, Module &L, Module &R,
     errs() << "No function named @" << Name << " in right module\n";
 }
 
+cl::OptionCategory DiffCategory("Diff Options");
+
 static cl::opt<std::string> LeftFilename(cl::Positional,
-                                         cl::desc("<first file>"),
-                                         cl::Required);
+                                         cl::desc("<first file>"), cl::Required,
+                                         cl::cat(DiffCategory));
 static cl::opt<std::string> RightFilename(cl::Positional,
                                           cl::desc("<second file>"),
-                                          cl::Required);
+                                          cl::Required, cl::cat(DiffCategory));
 static cl::list<std::string> GlobalsToCompare(cl::Positional,
-                                              cl::desc("<globals to compare>"));
+                                              cl::desc("<globals to compare>"),
+                                              cl::cat(DiffCategory));
 
 int main(int argc, char **argv) {
+  cl::HideUnrelatedOptions({&DiffCategory, &getColorCategory()});
   cl::ParseCommandLineOptions(argc, argv);
 
   LLVMContext Context;

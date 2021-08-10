@@ -346,6 +346,26 @@ static bool simplifyAssocCastAssoc(BinaryOperator *BinOp1,
   return true;
 }
 
+// Simplifies IntToPtr/PtrToInt RoundTrip Cast To BitCast.
+// inttoptr ( ptrtoint (x) ) --> x
+Value *InstCombinerImpl::simplifyIntToPtrRoundTripCast(Value *Val) {
+  auto *IntToPtr = dyn_cast<IntToPtrInst>(Val);
+  if (IntToPtr && DL.getPointerTypeSizeInBits(IntToPtr->getDestTy()) ==
+                      DL.getTypeSizeInBits(IntToPtr->getSrcTy())) {
+    auto *PtrToInt = dyn_cast<PtrToIntInst>(IntToPtr->getOperand(0));
+    Type *CastTy = IntToPtr->getDestTy();
+    if (PtrToInt &&
+        CastTy->getPointerAddressSpace() ==
+            PtrToInt->getSrcTy()->getPointerAddressSpace() &&
+        DL.getPointerTypeSizeInBits(PtrToInt->getSrcTy()) ==
+            DL.getTypeSizeInBits(PtrToInt->getDestTy())) {
+      return CastInst::CreateBitOrPointerCast(PtrToInt->getOperand(0), CastTy,
+                                              "", PtrToInt);
+    }
+  }
+  return nullptr;
+}
+
 /// This performs a few simplifications for operators that are associative or
 /// commutative:
 ///
@@ -2057,53 +2077,69 @@ Instruction *InstCombinerImpl::visitGetElementPtrInst(GetElementPtrInst &GEP) {
     if (!shouldMergeGEPs(*cast<GEPOperator>(&GEP), *Src))
       return nullptr;
 
-    // Try to reassociate loop invariant GEP chains to enable LICM.
-    if (LI && Src->getNumOperands() == 2 && GEP.getNumOperands() == 2 &&
+    if (Src->getNumOperands() == 2 && GEP.getNumOperands() == 2 &&
         Src->hasOneUse()) {
-      if (Loop *L = LI->getLoopFor(GEP.getParent())) {
-        Value *GO1 = GEP.getOperand(1);
-        Value *SO1 = Src->getOperand(1);
-        // Reassociate the two GEPs if SO1 is variant in the loop and GO1 is
-        // invariant: this breaks the dependence between GEPs and allows LICM
-        // to hoist the invariant part out of the loop.
-        if (L->isLoopInvariant(GO1) && !L->isLoopInvariant(SO1)) {
-          // We have to be careful here.
-          // We have something like:
-          //  %src = getelementptr <ty>, <ty>* %base, <ty> %idx
-          //  %gep = getelementptr <ty>, <ty>* %src, <ty> %idx2
-          // If we just swap idx & idx2 then we could inadvertantly
-          // change %src from a vector to a scalar, or vice versa.
-          // Cases:
-          //  1) %base a scalar & idx a scalar & idx2 a vector
-          //      => Swapping idx & idx2 turns %src into a vector type.
-          //  2) %base a scalar & idx a vector & idx2 a scalar
-          //      => Swapping idx & idx2 turns %src in a scalar type
-          //  3) %base, %idx, and %idx2 are scalars
-          //      => %src & %gep are scalars
-          //      => swapping idx & idx2 is safe
-          //  4) %base a vector
-          //      => %src is a vector
-          //      => swapping idx & idx2 is safe.
-          auto *SO0 = Src->getOperand(0);
-          auto *SO0Ty = SO0->getType();
-          if (!isa<VectorType>(GEPType) || // case 3
-              isa<VectorType>(SO0Ty)) {    // case 4
-            Src->setOperand(1, GO1);
-            GEP.setOperand(1, SO1);
-            return &GEP;
-          } else {
-            // Case 1 or 2
-            // -- have to recreate %src & %gep
-            // put NewSrc at same location as %src
-            Builder.SetInsertPoint(cast<Instruction>(PtrOp));
-            auto *NewSrc = cast<GetElementPtrInst>(
-                Builder.CreateGEP(GEPEltType, SO0, GO1, Src->getName()));
-            NewSrc->setIsInBounds(Src->isInBounds());
-            auto *NewGEP = GetElementPtrInst::Create(GEPEltType, NewSrc, {SO1});
-            NewGEP->setIsInBounds(GEP.isInBounds());
-            return NewGEP;
+      Value *GO1 = GEP.getOperand(1);
+      Value *SO1 = Src->getOperand(1);
+
+      if (LI) {
+        // Try to reassociate loop invariant GEP chains to enable LICM.
+        if (Loop *L = LI->getLoopFor(GEP.getParent())) {
+          // Reassociate the two GEPs if SO1 is variant in the loop and GO1 is
+          // invariant: this breaks the dependence between GEPs and allows LICM
+          // to hoist the invariant part out of the loop.
+          if (L->isLoopInvariant(GO1) && !L->isLoopInvariant(SO1)) {
+            // We have to be careful here.
+            // We have something like:
+            //  %src = getelementptr <ty>, <ty>* %base, <ty> %idx
+            //  %gep = getelementptr <ty>, <ty>* %src, <ty> %idx2
+            // If we just swap idx & idx2 then we could inadvertantly
+            // change %src from a vector to a scalar, or vice versa.
+            // Cases:
+            //  1) %base a scalar & idx a scalar & idx2 a vector
+            //      => Swapping idx & idx2 turns %src into a vector type.
+            //  2) %base a scalar & idx a vector & idx2 a scalar
+            //      => Swapping idx & idx2 turns %src in a scalar type
+            //  3) %base, %idx, and %idx2 are scalars
+            //      => %src & %gep are scalars
+            //      => swapping idx & idx2 is safe
+            //  4) %base a vector
+            //      => %src is a vector
+            //      => swapping idx & idx2 is safe.
+            auto *SO0 = Src->getOperand(0);
+            auto *SO0Ty = SO0->getType();
+            if (!isa<VectorType>(GEPType) || // case 3
+                isa<VectorType>(SO0Ty)) {    // case 4
+              Src->setOperand(1, GO1);
+              GEP.setOperand(1, SO1);
+              return &GEP;
+            } else {
+              // Case 1 or 2
+              // -- have to recreate %src & %gep
+              // put NewSrc at same location as %src
+              Builder.SetInsertPoint(cast<Instruction>(PtrOp));
+              auto *NewSrc = cast<GetElementPtrInst>(
+                  Builder.CreateGEP(GEPEltType, SO0, GO1, Src->getName()));
+              NewSrc->setIsInBounds(Src->isInBounds());
+              auto *NewGEP =
+                  GetElementPtrInst::Create(GEPEltType, NewSrc, {SO1});
+              NewGEP->setIsInBounds(GEP.isInBounds());
+              return NewGEP;
+            }
           }
         }
+      }
+
+      // Fold (gep(gep(Ptr,Idx0),Idx1) -> gep(Ptr,add(Idx0,Idx1))
+      if (GO1->getType() == SO1->getType()) {
+        bool NewInBounds = GEP.isInBounds() && Src->isInBounds();
+        auto *NewIdx =
+            Builder.CreateAdd(GO1, SO1, GEP.getName() + ".idx",
+                              /*HasNUW*/ false, /*HasNSW*/ NewInBounds);
+        auto *NewGEP = GetElementPtrInst::Create(
+            GEPEltType, Src->getPointerOperand(), {NewIdx});
+        NewGEP->setIsInBounds(NewInBounds);
+        return NewGEP;
       }
     }
 
@@ -2600,6 +2636,11 @@ static bool isAllocSiteRemovable(Instruction *AI,
           case Intrinsic::objectsize:
             Users.emplace_back(I);
             continue;
+          case Intrinsic::launder_invariant_group:
+          case Intrinsic::strip_invariant_group:
+            Users.emplace_back(I);
+            Worklist.push_back(I);
+            continue;
           }
         }
 
@@ -2887,14 +2928,6 @@ Instruction *InstCombinerImpl::visitUnreachableInst(UnreachableInst &I) {
       return nullptr; // Can not drop any more instructions. We're done here.
     // Otherwise, this instruction can be freely erased,
     // even if it is not side-effect free.
-
-    // Temporarily disable removal of volatile stores preceding unreachable,
-    // pending a potential LangRef change permitting volatile stores to trap.
-    // TODO: Either remove this code, or properly integrate the check into
-    // isGuaranteedToTransferExecutionToSuccessor().
-    if (auto *SI = dyn_cast<StoreInst>(Prev))
-      if (SI->isVolatile())
-        return nullptr; // Can not drop this instruction. We're done here.
 
     // A value may still have uses before we process it here (for example, in
     // another unreachable block), so convert those to poison.
@@ -3514,6 +3547,73 @@ Instruction *InstCombinerImpl::visitLandingPadInst(LandingPadInst &LI) {
   return nullptr;
 }
 
+Value *
+InstCombinerImpl::pushFreezeToPreventPoisonFromPropagating(FreezeInst &OrigFI) {
+  // Try to push freeze through instructions that propagate but don't produce
+  // poison as far as possible.  If an operand of freeze follows three
+  // conditions 1) one-use, 2) does not produce poison, and 3) has all but one
+  // guaranteed-non-poison operands then push the freeze through to the one
+  // operand that is not guaranteed non-poison.  The actual transform is as
+  // follows.
+  //   Op1 = ...                        ; Op1 can be posion
+  //   Op0 = Inst(Op1, NonPoisonOps...) ; Op0 has only one use and only have
+  //                                    ; single guaranteed-non-poison operands
+  //   ... = Freeze(Op0)
+  // =>
+  //   Op1 = ...
+  //   Op1.fr = Freeze(Op1)
+  //   ... = Inst(Op1.fr, NonPoisonOps...)
+  auto *OrigOp = OrigFI.getOperand(0);
+  auto *OrigOpInst = dyn_cast<Instruction>(OrigOp);
+
+  // While we could change the other users of OrigOp to use freeze(OrigOp), that
+  // potentially reduces their optimization potential, so let's only do this iff
+  // the OrigOp is only used by the freeze.
+  if (!OrigOpInst || !OrigOpInst->hasOneUse() || isa<PHINode>(OrigOp) ||
+      canCreateUndefOrPoison(dyn_cast<Operator>(OrigOp)))
+    return nullptr;
+
+  // If operand is guaranteed not to be poison, there is no need to add freeze
+  // to the operand. So we first find the operand that is not guaranteed to be
+  // poison.
+  Use *MaybePoisonOperand = nullptr;
+  for (Use &U : OrigOpInst->operands()) {
+    if (isGuaranteedNotToBeUndefOrPoison(U.get()))
+      continue;
+    if (!MaybePoisonOperand)
+      MaybePoisonOperand = &U;
+    else
+      return nullptr;
+  }
+
+  // If all operands are guaranteed to be non-poison, we can drop freeze.
+  if (!MaybePoisonOperand)
+    return OrigOp;
+
+  auto *FrozenMaybePoisonOperand = new FreezeInst(
+      MaybePoisonOperand->get(), MaybePoisonOperand->get()->getName() + ".fr");
+
+  replaceUse(*MaybePoisonOperand, FrozenMaybePoisonOperand);
+  FrozenMaybePoisonOperand->insertBefore(OrigOpInst);
+  return OrigOp;
+}
+
+bool InstCombinerImpl::freezeDominatedUses(FreezeInst &FI) {
+  Value *Op = FI.getOperand(0);
+
+  if (isa<Constant>(Op))
+    return false;
+
+  bool Changed = false;
+  Op->replaceUsesWithIf(&FI, [&](Use &U) -> bool {
+    bool Dominates = DT.dominates(&FI, U);
+    Changed |= Dominates;
+    return Dominates;
+  });
+
+  return Changed;
+}
+
 Instruction *InstCombinerImpl::visitFreeze(FreezeInst &I) {
   Value *Op0 = I.getOperand(0);
 
@@ -3525,6 +3625,9 @@ Instruction *InstCombinerImpl::visitFreeze(FreezeInst &I) {
     if (Instruction *NV = foldOpIntoPhi(I, PN))
       return NV;
   }
+
+  if (Value *NI = pushFreezeToPreventPoisonFromPropagating(I))
+    return replaceInstUsesWith(I, NI);
 
   if (match(Op0, m_Undef())) {
     // If I is freeze(undef), see its uses and fold it to the best constant.
@@ -3553,6 +3656,10 @@ Instruction *InstCombinerImpl::visitFreeze(FreezeInst &I) {
 
     return replaceInstUsesWith(I, BestValue);
   }
+
+  // Replace all dominated uses of Op to freeze(Op).
+  if (freezeDominatedUses(I))
+    return &I;
 
   return nullptr;
 }

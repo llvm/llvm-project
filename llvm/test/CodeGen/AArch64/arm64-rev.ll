@@ -156,8 +156,7 @@ define i64 @test_rev_x_srl32_shift(i64 %a) {
 ;
 ; GISEL-LABEL: test_rev_x_srl32_shift:
 ; GISEL:       // %bb.0: // %entry
-; GISEL-NEXT:    lsl x8, x0, #33
-; GISEL-NEXT:    lsr x8, x8, #35
+; GISEL-NEXT:    ubfx x8, x0, #2, #29
 ; GISEL-NEXT:    rev x8, x8
 ; GISEL-NEXT:    lsr x0, x8, #32
 ; GISEL-NEXT:    ret
@@ -535,7 +534,7 @@ define void @test_vrev64(<4 x i16>* nocapture %source, <2 x i16>* nocapture %dst
 ; CHECK-LABEL: test_vrev64:
 ; CHECK:       // %bb.0: // %entry
 ; CHECK-NEXT:    ldr q0, [x0]
-; CHECK-NEXT:    add x8, x1, #2 // =2
+; CHECK-NEXT:    add x8, x1, #2
 ; CHECK-NEXT:    st1.h { v0 }[5], [x8]
 ; CHECK-NEXT:    st1.h { v0 }[6], [x1]
 ; CHECK-NEXT:    ret
@@ -543,9 +542,9 @@ define void @test_vrev64(<4 x i16>* nocapture %source, <2 x i16>* nocapture %dst
 ; GISEL-LABEL: test_vrev64:
 ; GISEL:       // %bb.0: // %entry
 ; GISEL-NEXT:    ldr q0, [x0]
-; GISEL-NEXT:    add x8, x1, #2 // =2
-; GISEL-NEXT:    st1.h { v0 }[5], [x8]
+; GISEL-NEXT:    add x8, x1, #2
 ; GISEL-NEXT:    st1.h { v0 }[6], [x1]
+; GISEL-NEXT:    st1.h { v0 }[5], [x8]
 ; GISEL-NEXT:    ret
 entry:
   %0 = bitcast <4 x i16>* %source to <8 x i16>*

@@ -6,7 +6,6 @@
 ; test case FastISel falls back to DAG ISel, which combines away the
 ; comparison, invalidating FastISel's assumption.
 
-target datalayout = "e-m:e-p:32:32-i64:64-n32:64-S128"
 target triple = "wasm32-unknown-unknown"
 
 ; CHECK:  i32.sub $[[BASE:[0-9]+]]=,

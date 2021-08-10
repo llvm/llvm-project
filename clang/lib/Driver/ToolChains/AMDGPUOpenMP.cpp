@@ -9,13 +9,14 @@
 #include "AMDGPUOpenMP.h"
 #include "AMDGPU.h"
 #include "CommonArgs.h"
-#include "InputInfo.h"
-#include "clang/Basic/Cuda.h"
+#include "ToolChains/ROCm.h"
 #include "clang/Basic/DiagnosticDriver.h"
 #include "clang/Driver/Compilation.h"
 #include "clang/Driver/Driver.h"
 #include "clang/Driver/DriverDiagnostic.h"
+#include "clang/Driver/InputInfo.h"
 #include "clang/Driver/Options.h"
+#include "llvm/ADT/STLExtras.h"
 #include "llvm/Support/FileSystem.h"
 #include "llvm/Support/FormatAdapters.h"
 #include "llvm/Support/FormatVariadic.h"
@@ -287,6 +288,10 @@ const char *AMDGCN::OpenMPLinker::constructOptCommand(
   OptArgs.push_back("-mtriple=amdgcn-amd-amdhsa");
   OptArgs.push_back(Args.MakeArgString("-mcpu=" + SubArchName));
 
+  // Optimization bug in amdgpu backend, this sweeps under rug
+  if (!Args.getLastArg(options::OPT_O0)) {
+    OptArgs.push_back("-O0");
+  }
   // Get the environment variable ROCM_OPT_ARGS and add to opt.
   Optional<std::string> OptEnv = llvm::sys::Process::GetEnv("ROCM_OPT_ARGS");
   if (OptEnv.hasValue()) {
@@ -581,6 +586,27 @@ void AMDGPUOpenMPToolChain::addClangTargetOptions(
         DriverArgs, LibDeviceFile, Wave64, DAZ, FiniteOnly, UnsafeMathOpt,
         FastRelaxedMath, CorrectSqrt));
 
+    llvm::for_each(BCLibs, [&](StringRef BCFile) {
+      CC1Args.push_back("-mlink-builtin-bitcode");
+      CC1Args.push_back(DriverArgs.MakeArgString(BCFile));
+    });
+  }
+
+  if (!DriverArgs.hasArg(options::OPT_l))
+    return;
+
+  auto Lm = DriverArgs.getAllArgValues(options::OPT_l);
+  bool HasLibm = false;
+  for (auto &Lib : Lm) {
+    if (Lib == "m") {
+      HasLibm = true;
+      break;
+    }
+  }
+
+  if (HasLibm) {
+    SmallVector<std::string, 12> BCLibs =
+        getCommonDeviceLibNames(DriverArgs, GPUArch);
     llvm::for_each(BCLibs, [&](StringRef BCFile) {
       CC1Args.push_back("-mlink-builtin-bitcode");
       CC1Args.push_back(DriverArgs.MakeArgString(BCFile));

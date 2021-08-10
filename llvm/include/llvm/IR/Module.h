@@ -324,6 +324,9 @@ public:
   /// name is not found.
   GlobalValue *getNamedValue(StringRef Name) const;
 
+  /// Return the number of global values in the module.
+  unsigned getNumNamedValues() const;
+
   /// Return a unique non-zero ID for the specified metadata kind. This ID is
   /// uniqued across modules in the current LLVMContext.
   unsigned getMDKindID(StringRef Name) const;

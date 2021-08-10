@@ -236,6 +236,16 @@ void ExecuteRegionOp::getCanonicalizationPatterns(RewritePatternSet &results,
 }
 
 //===----------------------------------------------------------------------===//
+// ConditionOp
+//===----------------------------------------------------------------------===//
+
+MutableOperandRange
+ConditionOp::getMutableSuccessorOperands(Optional<unsigned> index) {
+  // Pass all operands except the condition to the successor region.
+  return argsMutable();
+}
+
+//===----------------------------------------------------------------------===//
 // ForOp
 //===----------------------------------------------------------------------===//
 
@@ -2171,18 +2181,6 @@ static LogicalResult verify(scf::WhileOp op) {
       op, op.before(),
       "expects the 'before' region to terminate with 'scf.condition'");
   if (!beforeTerminator)
-    return failure();
-
-  TypeRange trailingTerminatorOperands = beforeTerminator.args().getTypes();
-  if (failed(verifyTypeRangesMatch(op, trailingTerminatorOperands,
-                                   op.after().getArgumentTypes(),
-                                   "trailing operands of the 'before' block "
-                                   "terminator and 'after' region arguments")))
-    return failure();
-
-  if (failed(verifyTypeRangesMatch(
-          op, trailingTerminatorOperands, op.getResultTypes(),
-          "trailing operands of the 'before' block terminator and op results")))
     return failure();
 
   auto afterTerminator = verifyAndGetTerminator<scf::YieldOp>(

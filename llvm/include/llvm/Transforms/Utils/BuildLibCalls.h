@@ -205,8 +205,8 @@ namespace llvm {
                     const TargetLibraryInfo *TLI);
 
   /// Emit a call to the calloc function.
-  Value *emitCalloc(Value *Num, Value *Size, const AttributeList &Attrs,
-                    IRBuilderBase &B, const TargetLibraryInfo &TLI);
+  Value *emitCalloc(Value *Num, Value *Size, IRBuilderBase &B,
+                    const TargetLibraryInfo &TLI);
 }
 
 #endif

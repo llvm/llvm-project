@@ -17,6 +17,13 @@ def SCFBufferize : FunctionPass<"scf-bufferize"> {
   let dependentDialects = ["memref::MemRefDialect"];
 }
 
+def SCFForLoopPeeling
+    : FunctionPass<"for-loop-peeling"> {
+  let summary = "Peel `for` loops at their upper bounds.";
+  let constructor = "mlir::createForLoopPeelingPass()";
+  let dependentDialects = ["AffineDialect"];
+}
+
 def SCFForLoopSpecialization
     : FunctionPass<"for-loop-specialization"> {
   let summary = "Specialize `for` loops for vectorization";

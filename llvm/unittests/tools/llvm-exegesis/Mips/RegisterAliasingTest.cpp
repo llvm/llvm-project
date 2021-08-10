@@ -22,9 +22,9 @@ namespace llvm {
 namespace exegesis {
 namespace {
 
-class RegisterAliasingTest : public MipsTestBase {};
+class MipsRegisterAliasingTest : public MipsTestBase {};
 
-TEST_F(RegisterAliasingTest, TrackSimpleRegister) {
+TEST_F(MipsRegisterAliasingTest, TrackSimpleRegister) {
   const auto &RegInfo = State.getRegInfo();
   const RegisterAliasingTracker tracker(RegInfo, Mips::T0_64);
   std::set<MCPhysReg> ActualAliasedRegisters;
@@ -37,7 +37,7 @@ TEST_F(RegisterAliasingTest, TrackSimpleRegister) {
   }
 }
 
-TEST_F(RegisterAliasingTest, TrackRegisterClass) {
+TEST_F(MipsRegisterAliasingTest, TrackRegisterClass) {
   // The alias bits for
   // GPR64_with_sub_32_in_GPRMM16MoveP_and_GPRMM16ZeroRegClassID
   // are the union of the alias bits for ZERO_64, V0_64, V1_64 and S1_64.
@@ -58,7 +58,7 @@ TEST_F(RegisterAliasingTest, TrackRegisterClass) {
   ASSERT_THAT(RegClassTracker.aliasedBits(), sum);
 }
 
-TEST_F(RegisterAliasingTest, TrackRegisterClassCache) {
+TEST_F(MipsRegisterAliasingTest, TrackRegisterClassCache) {
   // Fetching the same tracker twice yields the same pointers.
   const auto &RegInfo = State.getRegInfo();
   const BitVector NoReservedReg(RegInfo.getNumRegs());

@@ -45,6 +45,30 @@ bool reportFatalSemanticErrors(const Fortran::semantics::Semantics &semantics,
   return false;
 }
 
+template <unsigned N>
+static bool reportFatalErrors(
+    const FrontendAction *act, const char (&message)[N]) {
+  CompilerInstance &ci = act->instance();
+  if (!ci.parsing().messages().empty() &&
+      (ci.invocation().warnAsErr() ||
+          ci.parsing().messages().AnyFatalError())) {
+    const unsigned diagID = ci.diagnostics().getCustomDiagID(
+        clang::DiagnosticsEngine::Error, message);
+    ci.diagnostics().Report(diagID) << act->GetCurrentFileOrBufferName();
+    ci.parsing().messages().Emit(llvm::errs(), ci.allCookedSources());
+    return true;
+  }
+  return false;
+}
+
+inline bool reportFatalScanningErrors(const FrontendAction *act) {
+  return reportFatalErrors(act, "Could not scan %0");
+}
+
+inline bool reportFatalParsingErrors(const FrontendAction *act) {
+  return reportFatalErrors(act, "Could not parse %0");
+}
+
 bool PrescanAction::BeginSourceFileAction(CompilerInstance &c1) {
   CompilerInstance &ci = this->instance();
   std::string currentInputPath{GetCurrentFileOrBufferName()};
@@ -53,18 +77,7 @@ bool PrescanAction::BeginSourceFileAction(CompilerInstance &c1) {
   // Prescan. In case of failure, report and return.
   ci.parsing().Prescan(currentInputPath, parserOptions);
 
-  if (!ci.parsing().messages().empty() &&
-      (ci.invocation().warnAsErr() ||
-          ci.parsing().messages().AnyFatalError())) {
-    const unsigned diagID = ci.diagnostics().getCustomDiagID(
-        clang::DiagnosticsEngine::Error, "Could not scan %0");
-    ci.diagnostics().Report(diagID) << GetCurrentFileOrBufferName();
-    ci.parsing().messages().Emit(llvm::errs(), ci.allCookedSources());
-
-    return false;
-  }
-
-  return true;
+  return !reportFatalScanningErrors(this);
 }
 
 bool PrescanAndParseAction::BeginSourceFileAction(CompilerInstance &c1) {
@@ -74,7 +87,7 @@ bool PrescanAndParseAction::BeginSourceFileAction(CompilerInstance &c1) {
 
   Fortran::parser::Options parserOptions = ci.invocation().fortranOpts();
 
-  if (ci.invocation().frontendOpts().fortranForm_ == FortranForm::Unknown) {
+  if (ci.invocation().frontendOpts().fortranForm == FortranForm::Unknown) {
     // Switch between fixed and free form format based on the input file
     // extension.
     //
@@ -88,27 +101,14 @@ bool PrescanAndParseAction::BeginSourceFileAction(CompilerInstance &c1) {
   // Prescan. In case of failure, report and return.
   ci.parsing().Prescan(currentInputPath, parserOptions);
 
-  if (ci.parsing().messages().AnyFatalError()) {
-    const unsigned diagID = ci.diagnostics().getCustomDiagID(
-        clang::DiagnosticsEngine::Error, "Could not scan %0");
-    ci.diagnostics().Report(diagID) << GetCurrentFileOrBufferName();
-    ci.parsing().messages().Emit(llvm::errs(), ci.allCookedSources());
-
+  if (reportFatalScanningErrors(this))
     return false;
-  }
 
   // Parse. In case of failure, report and return.
   ci.parsing().Parse(llvm::outs());
 
-  if (ci.parsing().messages().AnyFatalError()) {
-    unsigned diagID = ci.diagnostics().getCustomDiagID(
-        clang::DiagnosticsEngine::Error, "Could not parse %0");
-    ci.diagnostics().Report(diagID) << GetCurrentFileOrBufferName();
-
-    ci.parsing().messages().Emit(
-        llvm::errs(), this->instance().allCookedSources());
+  if (reportFatalParsingErrors(this))
     return false;
-  }
 
   // Report the diagnostics from parsing
   ci.parsing().messages().Emit(llvm::errs(), ci.allCookedSources());
@@ -124,31 +124,14 @@ bool PrescanAndSemaAction::BeginSourceFileAction(CompilerInstance &c1) {
   // Prescan. In case of failure, report and return.
   ci.parsing().Prescan(currentInputPath, parserOptions);
 
-  if (!ci.parsing().messages().empty() &&
-      (ci.invocation().warnAsErr() ||
-          ci.parsing().messages().AnyFatalError())) {
-    const unsigned diagID = ci.diagnostics().getCustomDiagID(
-        clang::DiagnosticsEngine::Error, "Could not scan %0");
-    ci.diagnostics().Report(diagID) << GetCurrentFileOrBufferName();
-    ci.parsing().messages().Emit(llvm::errs(), ci.allCookedSources());
-
+  if (reportFatalScanningErrors(this))
     return false;
-  }
 
   // Parse. In case of failure, report and return.
   ci.parsing().Parse(llvm::outs());
 
-  if (!ci.parsing().messages().empty() &&
-      (ci.invocation().warnAsErr() ||
-          ci.parsing().messages().AnyFatalError())) {
-    unsigned diagID = ci.diagnostics().getCustomDiagID(
-        clang::DiagnosticsEngine::Error, "Could not parse %0");
-    ci.diagnostics().Report(diagID) << GetCurrentFileOrBufferName();
-
-    ci.parsing().messages().Emit(
-        llvm::errs(), this->instance().allCookedSources());
+  if (reportFatalParsingErrors(this))
     return false;
-  }
 
   // Report the diagnostics from parsing
   ci.parsing().messages().Emit(llvm::errs(), ci.allCookedSources());
@@ -208,9 +191,14 @@ void PrintPreprocessedAction::ExecuteAction() {
   std::string buf;
   llvm::raw_string_ostream outForPP{buf};
 
-  // Run the preprocessor
+  // Format or dump the prescanner's output
   CompilerInstance &ci = this->instance();
-  ci.parsing().DumpCookedChars(outForPP);
+  if (ci.invocation().preprocessorOpts().noReformat) {
+    ci.parsing().DumpCookedChars(outForPP);
+  } else {
+    ci.parsing().EmitPreprocessedSource(
+        outForPP, !ci.invocation().preprocessorOpts().noLineDirectives);
+  }
 
   // If a pre-defined output stream exists, dump the preprocessed content there
   if (!ci.IsOutputStreamNull()) {
@@ -219,7 +207,7 @@ void PrintPreprocessedAction::ExecuteAction() {
     return;
   }
 
-  // Print diagnostics from the preprocessor
+  // Print diagnostics from the prescanner
   ci.parsing().messages().Emit(llvm::errs(), ci.allCookedSources());
 
   // Create a file and save the preprocessed output there
@@ -228,7 +216,6 @@ void PrintPreprocessedAction::ExecuteAction() {
     (*os) << outForPP.str();
   } else {
     llvm::errs() << "Unable to create the output file\n";
-    return;
   }
 }
 
@@ -433,7 +420,7 @@ void GetDefinitionAction::ExecuteAction() {
   unsigned diagID = ci.diagnostics().getCustomDiagID(
       clang::DiagnosticsEngine::Error, "Symbol not found");
 
-  auto gdv = ci.invocation().frontendOpts().getDefVals_;
+  auto gdv = ci.invocation().frontendOpts().getDefVals;
   auto charBlock{cs.GetCharBlockFromLineAndColumns(
       gdv.line, gdv.startColumn, gdv.endColumn)};
   if (!charBlock) {

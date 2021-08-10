@@ -190,7 +190,7 @@
 // NOARCH-SM30-NOT: "-cc1"{{.*}}"-target-cpu" "sm_30"
 // ARCH-SM35: "-cc1"{{.*}}"-target-cpu" "sm_35"
 // NOARCH-SM35-NOT: "-cc1"{{.*}}"-target-cpu" "sm_35"
-// ARCHALLERROR: error: Unsupported CUDA gpu architecture: all
+// ARCHALLERROR: error: unsupported CUDA gpu architecture: all
 
 // Match device-side preprocessor and compiler phases with -save-temps.
 // DEVICE-SAVE: "-cc1" "-triple" "nvptx64-nvidia-cuda"

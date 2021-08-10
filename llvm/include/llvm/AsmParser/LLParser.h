@@ -10,8 +10,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef LLVM_LIB_ASMPARSER_LLPARSER_H
-#define LLVM_LIB_ASMPARSER_LLPARSER_H
+#ifndef LLVM_ASMPARSER_LLPARSER_H
+#define LLVM_ASMPARSER_LLPARSER_H
 
 #include "LLLexer.h"
 #include "llvm/ADT/Optional.h"
@@ -92,21 +92,6 @@ namespace llvm {
     // Summary index being parsed, null if we are only parsing Module.
     ModuleSummaryIndex *Index;
     SlotMapping *Slots;
-
-    // Instruction metadata resolution.  Each instruction can have a list of
-    // MDRef info associated with them.
-    //
-    // The simpler approach of just creating temporary MDNodes and then calling
-    // RAUW on them when the definition is processed doesn't work because some
-    // instruction metadata kinds, such as dbg, get stored in the IR in an
-    // "optimized" format which doesn't participate in the normal value use
-    // lists. This means that RAUW doesn't work, even on temporary MDNodes
-    // which otherwise support RAUW. Instead, we defer resolving MDNode
-    // references until the definitions have been processed.
-    struct MDRef {
-      SMLoc Loc;
-      unsigned MDKind, MDSlot;
-    };
 
     SmallVector<Instruction*, 64> InstsWithTBAATag;
 
@@ -258,8 +243,15 @@ namespace llvm {
       return parseOptionalAddrSpace(
           AddrSpace, M->getDataLayout().getProgramAddressSpace());
     };
-    bool parseOptionalParamAttrs(AttrBuilder &B);
-    bool parseOptionalReturnAttrs(AttrBuilder &B);
+    bool parseEnumAttribute(Attribute::AttrKind Attr, AttrBuilder &B,
+                            bool InAttrGroup);
+    bool parseOptionalParamOrReturnAttrs(AttrBuilder &B, bool IsParam);
+    bool parseOptionalParamAttrs(AttrBuilder &B) {
+      return parseOptionalParamOrReturnAttrs(B, true);
+    }
+    bool parseOptionalReturnAttrs(AttrBuilder &B) {
+      return parseOptionalParamOrReturnAttrs(B, false);
+    }
     bool parseOptionalLinkage(unsigned &Res, bool &HasLinkage,
                               unsigned &Visibility, unsigned &DLLStorageClass,
                               bool &DSOLocal);
@@ -278,7 +270,6 @@ namespace llvm {
     bool parseOptionalCommaAlign(MaybeAlign &Alignment, bool &AteExtraComma);
     bool parseOptionalCommaAddrSpace(unsigned &AddrSpace, LocTy &Loc,
                                      bool &AteExtraComma);
-    bool parseOptionalCommaInAlloca(bool &IsInAlloca);
     bool parseAllocSizeArguments(unsigned &BaseSizeArg,
                                  Optional<unsigned> &HowManyArg);
     bool parseVScaleRangeArguments(unsigned &MinValue, unsigned &MaxValue);

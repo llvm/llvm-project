@@ -75,8 +75,16 @@ TEST_F(AttributorTestBase, TestCast) {
 
 TEST_F(AttributorTestBase, AAReachabilityTest) {
   const char *ModuleString = R"(
-    declare void @func4()
-    declare void @func3()
+    @x = global i32 0
+    define void @func4() {
+      store i32 0, i32* @x
+      ret void
+    }
+
+    define void @func3() {
+      store i32 0, i32* @x
+      ret void
+    }
 
     define void @func2() {
     entry:

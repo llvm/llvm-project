@@ -93,7 +93,7 @@ static const char ore_name[] = "Machine Optimization Remark Emitter";
 #define ORE_NAME "machine-opt-remark-emitter"
 
 INITIALIZE_PASS_BEGIN(MachineOptimizationRemarkEmitterPass, ORE_NAME, ore_name,
-                      false, true)
+                      true, true)
 INITIALIZE_PASS_DEPENDENCY(LazyMachineBlockFrequencyInfoPass)
 INITIALIZE_PASS_END(MachineOptimizationRemarkEmitterPass, ORE_NAME, ore_name,
-                    false, true)
+                    true, true)

@@ -49,7 +49,7 @@
 ORC_RT_C_EXTERN_C_BEGIN
 
 typedef union {
-  const char *ValuePtr;
+  char *ValuePtr;
   char Value[sizeof(ValuePtr)];
 } __orc_rt_CWrapperFunctionResultDataUnion;
 
@@ -94,14 +94,12 @@ __orc_rt_CWrapperFunctionResultInit(__orc_rt_CWrapperFunctionResult *R) {
 static inline char *
 __orc_rt_CWrapperFunctionResultAllocate(__orc_rt_CWrapperFunctionResult *R,
                                         size_t Size) {
-  char *DataPtr;
   R->Size = Size;
-  if (Size > sizeof(R->Data.Value)) {
-    DataPtr = (char *)malloc(Size);
-    R->Data.ValuePtr = DataPtr;
-  } else
-    DataPtr = R->Data.Value;
-  return DataPtr;
+  if (Size <= sizeof(R->Data.Value))
+    return R->Data.Value;
+
+  R->Data.ValuePtr = (char *)malloc(Size);
+  return R->Data.ValuePtr;
 }
 
 /**
@@ -158,7 +156,7 @@ static inline void
 __orc_rt_DisposeCWrapperFunctionResult(__orc_rt_CWrapperFunctionResult *R) {
   if (R->Size > sizeof(R->Data.Value) ||
       (R->Size == 0 && R->Data.ValuePtr))
-    free((void *)R->Data.ValuePtr);
+    free(R->Data.ValuePtr);
 }
 
 /**

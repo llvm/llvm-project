@@ -1,18 +1,16 @@
-# RUN: llvm-ifs -action write-ifs -o - %s | FileCheck %s --check-prefixes=CHECK-IFS
+# RUN: llvm-ifs --input-format=IFS --output-format=IFS -o - %s | FileCheck %s --check-prefixes=CHECK-IFS
 
-# CHECK-IFS: --- !experimental-ifs-v2
-# CHECK-IFS-NEXT: IfsVersion: 2.0
-# CHECK-IFS-NEXT: Triple: x86_64-unknown-linux-gnu
-# CHECK-IFS-NEXT: ObjectFileFormat: ELF
+# CHECK-IFS: --- !ifs-v1
+# CHECK-IFS-NEXT: IfsVersion: 3.0
+# CHECK-IFS-NEXT: Target: x86_64-unknown-linux-gnu
 # CHECK-IFS-NEXT: Symbols:
 # CHECK-IFS-DAG:   - { Name: _Z8weakFuncv, Type: Func, Weak: true }
 # CHECK-IFS-DAG:   - { Name: _Z10strongFuncv, Type: Func }
 # CHECK-IFS: ...
 
---- !experimental-ifs-v2
-IfsVersion: 2.0
-Triple: x86_64-unknown-linux-gnu
-ObjectFileFormat: ELF
+--- !ifs-v1
+IfsVersion: 3.0
+Target: x86_64-unknown-linux-gnu
 Symbols:
   - { Name: _Z8weakFuncv, Type: Func, Weak: true }
   - { Name: _Z10strongFuncv, Type: Func }

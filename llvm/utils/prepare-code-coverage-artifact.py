@@ -35,7 +35,7 @@ def merge_raw_profiles(host_llvm_profdata, profile_data_dir, preserve_profiles):
     return profdata_path
 
 def prepare_html_report(host_llvm_cov, profile, report_dir, binaries,
-                        restricted_dirs):
+                        restricted_dirs, compilation_dir):
     print(':: Preparing html report for {0}...'.format(binaries), end='')
     sys.stdout.flush()
     objects = []
@@ -48,6 +48,8 @@ def prepare_html_report(host_llvm_cov, profile, report_dir, binaries,
                   '-instr-profile', profile, '-o', report_dir,
                   '-show-line-counts-or-regions', '-Xdemangler', 'c++filt',
                   '-Xdemangler', '-n'] + restricted_dirs
+    if compilation_dir:
+        invocation += ['-compilation-dir=' + compilation_dir]
     subprocess.check_call(invocation)
     with open(os.path.join(report_dir, 'summary.txt'), 'wb') as Summary:
         subprocess.check_call([host_llvm_cov, 'report'] + objects +
@@ -56,16 +58,16 @@ def prepare_html_report(host_llvm_cov, profile, report_dir, binaries,
     print('Done!')
 
 def prepare_html_reports(host_llvm_cov, profdata_path, report_dir, binaries,
-                         unified_report, restricted_dirs):
+                         unified_report, restricted_dirs, compilation_dir):
     if unified_report:
         prepare_html_report(host_llvm_cov, profdata_path, report_dir, binaries,
-                            restricted_dirs)
+                            restricted_dirs, compilation_dir)
     else:
         for binary in binaries:
             binary_report_dir = os.path.join(report_dir,
                                              os.path.basename(binary))
             prepare_html_report(host_llvm_cov, profdata_path, binary_report_dir,
-                                [binary], restricted_dirs)
+                                [binary], restricted_dirs, compilation_dir)
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser(description=__doc__)
@@ -90,6 +92,8 @@ if __name__ == '__main__':
                        default=[],
                        help='Restrict the reporting to the given source paths'
                    ' (must be specified after all other positional arguments)')
+    parser.add_argument('-C', '--compilation-dir', type=str, default="",
+                       help='The compilation directory of the binary')
     args = parser.parse_args()
 
     if args.use_existing_profdata and args.only_merge:
@@ -109,4 +113,5 @@ if __name__ == '__main__':
 
     if not args.only_merge:
         prepare_html_reports(args.host_llvm_cov, profdata_path, args.report_dir,
-                            args.binaries, args.unified_report, args.restrict)
+                             args.binaries, args.unified_report, args.restrict, 
+                             args.compilation_dir)

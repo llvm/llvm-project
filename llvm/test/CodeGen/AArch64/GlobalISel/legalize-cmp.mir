@@ -79,3 +79,147 @@ body:             |
     RET_ReallyLR
 
 ...
+---
+name:            test_s128_eq
+tracksRegLiveness: true
+body:             |
+  ; CHECK-LABEL: name: test_s128_eq
+  ; CHECK: bb.0:
+  ; CHECK:   successors: %bb.1(0x40000000), %bb.2(0x40000000)
+  ; CHECK:   [[DEF:%[0-9]+]]:_(s64) = G_IMPLICIT_DEF
+  ; CHECK:   [[C:%[0-9]+]]:_(s64) = G_CONSTANT i64 0
+  ; CHECK:   [[XOR:%[0-9]+]]:_(s64) = G_XOR [[DEF]], [[DEF]]
+  ; CHECK:   [[XOR1:%[0-9]+]]:_(s64) = G_XOR [[DEF]], [[DEF]]
+  ; CHECK:   [[OR:%[0-9]+]]:_(s64) = G_OR [[XOR]], [[XOR1]]
+  ; CHECK:   [[ICMP:%[0-9]+]]:_(s32) = G_ICMP intpred(eq), [[OR]](s64), [[C]]
+  ; CHECK:   %cmp:_(s1) = G_TRUNC [[ICMP]](s32)
+  ; CHECK:   G_BRCOND %cmp(s1), %bb.1
+  ; CHECK:   G_BR %bb.2
+  ; CHECK: bb.1:
+  ; CHECK:   successors:
+  ; CHECK: bb.2:
+  ; CHECK:   RET_ReallyLR
+  bb.1:
+    %lhs:_(s128) = G_IMPLICIT_DEF
+    %rhs:_(s128) = G_IMPLICIT_DEF
+    %cmp:_(s1) = G_ICMP intpred(eq), %lhs(s128), %rhs
+    G_BRCOND %cmp(s1), %bb.2
+    G_BR %bb.3
+  bb.2:
+    successors:
+  bb.3:
+    RET_ReallyLR
+
+...
+---
+name:            test_s88_eq
+tracksRegLiveness: true
+body:             |
+  ; CHECK-LABEL: name: test_s88_eq
+  ; CHECK: bb.0:
+  ; CHECK:   successors: %bb.1(0x40000000), %bb.2(0x40000000)
+  ; CHECK:   [[DEF:%[0-9]+]]:_(s64) = G_IMPLICIT_DEF
+  ; CHECK:   [[C:%[0-9]+]]:_(s64) = G_CONSTANT i64 -1
+  ; CHECK:   [[C1:%[0-9]+]]:_(s64) = G_CONSTANT i64 16777215
+  ; CHECK:   [[AND:%[0-9]+]]:_(s64) = G_AND [[DEF]], [[C]]
+  ; CHECK:   [[AND1:%[0-9]+]]:_(s64) = G_AND [[DEF]], [[C1]]
+  ; CHECK:   [[AND2:%[0-9]+]]:_(s64) = G_AND [[DEF]], [[C]]
+  ; CHECK:   [[AND3:%[0-9]+]]:_(s64) = G_AND [[DEF]], [[C1]]
+  ; CHECK:   [[C2:%[0-9]+]]:_(s64) = G_CONSTANT i64 0
+  ; CHECK:   [[XOR:%[0-9]+]]:_(s64) = G_XOR [[AND]], [[AND2]]
+  ; CHECK:   [[XOR1:%[0-9]+]]:_(s64) = G_XOR [[AND1]], [[AND3]]
+  ; CHECK:   [[OR:%[0-9]+]]:_(s64) = G_OR [[XOR]], [[XOR1]]
+  ; CHECK:   [[ICMP:%[0-9]+]]:_(s32) = G_ICMP intpred(eq), [[OR]](s64), [[C2]]
+  ; CHECK:   %cmp:_(s1) = G_TRUNC [[ICMP]](s32)
+  ; CHECK:   G_BRCOND %cmp(s1), %bb.1
+  ; CHECK:   G_BR %bb.2
+  ; CHECK: bb.1:
+  ; CHECK:   successors:
+  ; CHECK: bb.2:
+  ; CHECK:   RET_ReallyLR
+  bb.1:
+    %lhs:_(s88) = G_IMPLICIT_DEF
+    %rhs:_(s88) = G_IMPLICIT_DEF
+    %cmp:_(s1) = G_ICMP intpred(eq), %lhs(s88), %rhs
+    G_BRCOND %cmp(s1), %bb.2
+    G_BR %bb.3
+  bb.2:
+    successors:
+  bb.3:
+    RET_ReallyLR
+
+...
+---
+name:            test_s88_ne
+tracksRegLiveness: true
+body:             |
+  ; CHECK-LABEL: name: test_s88_ne
+  ; CHECK: bb.0:
+  ; CHECK:   successors: %bb.1(0x40000000), %bb.2(0x40000000)
+  ; CHECK:   [[DEF:%[0-9]+]]:_(s64) = G_IMPLICIT_DEF
+  ; CHECK:   [[C:%[0-9]+]]:_(s64) = G_CONSTANT i64 -1
+  ; CHECK:   [[C1:%[0-9]+]]:_(s64) = G_CONSTANT i64 16777215
+  ; CHECK:   [[AND:%[0-9]+]]:_(s64) = G_AND [[DEF]], [[C]]
+  ; CHECK:   [[AND1:%[0-9]+]]:_(s64) = G_AND [[DEF]], [[C1]]
+  ; CHECK:   [[AND2:%[0-9]+]]:_(s64) = G_AND [[DEF]], [[C]]
+  ; CHECK:   [[AND3:%[0-9]+]]:_(s64) = G_AND [[DEF]], [[C1]]
+  ; CHECK:   [[C2:%[0-9]+]]:_(s64) = G_CONSTANT i64 0
+  ; CHECK:   [[XOR:%[0-9]+]]:_(s64) = G_XOR [[AND]], [[AND2]]
+  ; CHECK:   [[XOR1:%[0-9]+]]:_(s64) = G_XOR [[AND1]], [[AND3]]
+  ; CHECK:   [[OR:%[0-9]+]]:_(s64) = G_OR [[XOR]], [[XOR1]]
+  ; CHECK:   [[ICMP:%[0-9]+]]:_(s32) = G_ICMP intpred(ne), [[OR]](s64), [[C2]]
+  ; CHECK:   %cmp:_(s1) = G_TRUNC [[ICMP]](s32)
+  ; CHECK:   G_BRCOND %cmp(s1), %bb.1
+  ; CHECK:   G_BR %bb.2
+  ; CHECK: bb.1:
+  ; CHECK:   successors:
+  ; CHECK: bb.2:
+  ; CHECK:   RET_ReallyLR
+  bb.1:
+    %lhs:_(s88) = G_IMPLICIT_DEF
+    %rhs:_(s88) = G_IMPLICIT_DEF
+    %cmp:_(s1) = G_ICMP intpred(ne), %lhs(s88), %rhs
+    G_BRCOND %cmp(s1), %bb.2
+    G_BR %bb.3
+  bb.2:
+    successors:
+  bb.3:
+    RET_ReallyLR
+
+...
+---
+name:            test_s96_eq
+tracksRegLiveness: true
+body:             |
+  ; CHECK-LABEL: name: test_s96_eq
+  ; CHECK: bb.0:
+  ; CHECK:   successors: %bb.1(0x40000000), %bb.2(0x40000000)
+  ; CHECK:   [[DEF:%[0-9]+]]:_(s64) = G_IMPLICIT_DEF
+  ; CHECK:   [[C:%[0-9]+]]:_(s64) = G_CONSTANT i64 -1
+  ; CHECK:   [[C1:%[0-9]+]]:_(s64) = G_CONSTANT i64 4294967295
+  ; CHECK:   [[AND:%[0-9]+]]:_(s64) = G_AND [[DEF]], [[C]]
+  ; CHECK:   [[AND1:%[0-9]+]]:_(s64) = G_AND [[DEF]], [[C1]]
+  ; CHECK:   [[AND2:%[0-9]+]]:_(s64) = G_AND [[DEF]], [[C]]
+  ; CHECK:   [[AND3:%[0-9]+]]:_(s64) = G_AND [[DEF]], [[C1]]
+  ; CHECK:   [[C2:%[0-9]+]]:_(s64) = G_CONSTANT i64 0
+  ; CHECK:   [[XOR:%[0-9]+]]:_(s64) = G_XOR [[AND]], [[AND2]]
+  ; CHECK:   [[XOR1:%[0-9]+]]:_(s64) = G_XOR [[AND1]], [[AND3]]
+  ; CHECK:   [[OR:%[0-9]+]]:_(s64) = G_OR [[XOR]], [[XOR1]]
+  ; CHECK:   [[ICMP:%[0-9]+]]:_(s32) = G_ICMP intpred(eq), [[OR]](s64), [[C2]]
+  ; CHECK:   %cmp:_(s1) = G_TRUNC [[ICMP]](s32)
+  ; CHECK:   G_BRCOND %cmp(s1), %bb.1
+  ; CHECK:   G_BR %bb.2
+  ; CHECK: bb.1:
+  ; CHECK:   successors:
+  ; CHECK: bb.2:
+  ; CHECK:   RET_ReallyLR
+  bb.1:
+    %lhs:_(s96) = G_IMPLICIT_DEF
+    %rhs:_(s96) = G_IMPLICIT_DEF
+    %cmp:_(s1) = G_ICMP intpred(eq), %lhs(s96), %rhs
+    G_BRCOND %cmp(s1), %bb.2
+    G_BR %bb.3
+  bb.2:
+    successors:
+  bb.3:
+    RET_ReallyLR

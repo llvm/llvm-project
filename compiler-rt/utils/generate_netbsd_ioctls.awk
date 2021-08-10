@@ -337,7 +337,7 @@ END {
   }
 
   pcmd("#undef _")
-  pcmd("}   // NOLINT")
+  pcmd("}")
   pcmd("")
   pcmd("static bool ioctl_initialized = false;")
   pcmd("")

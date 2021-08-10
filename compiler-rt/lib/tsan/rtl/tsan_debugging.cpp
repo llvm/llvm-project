@@ -195,9 +195,9 @@ const char *__tsan_locate_address(uptr addr, char *name, uptr name_size,
   const char *region_kind = nullptr;
   if (name && name_size > 0) name[0] = 0;
 
-  if (IsMetaMem(addr)) {
+  if (IsMetaMem(reinterpret_cast<u32 *>(addr))) {
     region_kind = "meta shadow";
-  } else if (IsShadowMem(addr)) {
+  } else if (IsShadowMem(reinterpret_cast<RawShadow *>(addr))) {
     region_kind = "shadow";
   } else {
     bool is_stack = false;
@@ -215,9 +215,9 @@ const char *__tsan_locate_address(uptr addr, char *name, uptr name_size,
     } else {
       // TODO(kuba.brecka): We should not lock. This is supposed to be called
       // from within the debugger when other threads are stopped.
-      ctx->thread_registry->Lock();
+      ctx->thread_registry.Lock();
       ThreadContext *tctx = IsThreadStackOrTls(addr, &is_stack);
-      ctx->thread_registry->Unlock();
+      ctx->thread_registry.Unlock();
       if (tctx) {
         region_kind = is_stack ? "stack" : "tls";
       } else {
@@ -252,7 +252,7 @@ int __tsan_get_alloc_stack(uptr addr, uptr *trace, uptr size, int *thread_id,
   *thread_id = b->tid;
   // No locking.  This is supposed to be called from within the debugger when
   // other threads are stopped.
-  ThreadContextBase *tctx = ctx->thread_registry->GetThreadLocked(b->tid);
+  ThreadContextBase *tctx = ctx->thread_registry.GetThreadLocked(b->tid);
   *os_id = tctx->os_id;
 
   StackTrace stack = StackDepotGet(b->stk);

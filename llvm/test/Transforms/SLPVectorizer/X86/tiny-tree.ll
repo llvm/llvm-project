@@ -226,11 +226,9 @@ define void @store_splat(float*, float) {
 ; CHECK-NEXT:    [[TMP5:%.*]] = getelementptr inbounds float, float* [[TMP0]], i64 2
 ; CHECK-NEXT:    [[TMP6:%.*]] = getelementptr inbounds float, float* [[TMP0]], i64 3
 ; CHECK-NEXT:    [[TMP7:%.*]] = insertelement <4 x float> poison, float [[TMP1:%.*]], i32 0
-; CHECK-NEXT:    [[TMP8:%.*]] = insertelement <4 x float> [[TMP7]], float [[TMP1]], i32 1
-; CHECK-NEXT:    [[TMP9:%.*]] = insertelement <4 x float> [[TMP8]], float [[TMP1]], i32 2
-; CHECK-NEXT:    [[TMP10:%.*]] = insertelement <4 x float> [[TMP9]], float [[TMP1]], i32 3
-; CHECK-NEXT:    [[TMP11:%.*]] = bitcast float* [[TMP3]] to <4 x float>*
-; CHECK-NEXT:    store <4 x float> [[TMP10]], <4 x float>* [[TMP11]], align 4
+; CHECK-NEXT:    [[SHUFFLE:%.*]] = shufflevector <4 x float> [[TMP7]], <4 x float> poison, <4 x i32> zeroinitializer
+; CHECK-NEXT:    [[TMP8:%.*]] = bitcast float* [[TMP3]] to <4 x float>*
+; CHECK-NEXT:    store <4 x float> [[SHUFFLE]], <4 x float>* [[TMP8]], align 4
 ; CHECK-NEXT:    ret void
 ;
   %3 = getelementptr inbounds float, float* %0, i64 0
@@ -272,18 +270,21 @@ define void @tiny_vector_gather(i32 *%a, i32 *%v1, i32 *%v2) {
 ; CHECK-NEXT:    [[TMP1:%.*]] = load i32, i32* [[V1:%.*]], align 4
 ; CHECK-NEXT:    [[TMP2:%.*]] = load i32, i32* [[V2:%.*]], align 4
 ; CHECK-NEXT:    [[PTR0:%.*]] = getelementptr inbounds i32, i32* [[A:%.*]], i64 0
+; CHECK-NEXT:    store i32 [[TMP1]], i32* [[PTR0]], align 16
 ; CHECK-NEXT:    [[PTR1:%.*]] = getelementptr inbounds i32, i32* [[A]], i64 1
+; CHECK-NEXT:    store i32 [[TMP2]], i32* [[PTR1]], align 4
 ; CHECK-NEXT:    [[PTR2:%.*]] = getelementptr inbounds i32, i32* [[A]], i64 2
+; CHECK-NEXT:    store i32 [[TMP1]], i32* [[PTR2]], align 8
 ; CHECK-NEXT:    [[PTR3:%.*]] = getelementptr inbounds i32, i32* [[A]], i64 3
+; CHECK-NEXT:    store i32 [[TMP2]], i32* [[PTR3]], align 4
 ; CHECK-NEXT:    [[PTR4:%.*]] = getelementptr inbounds i32, i32* [[A]], i64 4
+; CHECK-NEXT:    store i32 [[TMP1]], i32* [[PTR4]], align 16
 ; CHECK-NEXT:    [[PTR5:%.*]] = getelementptr inbounds i32, i32* [[A]], i64 5
+; CHECK-NEXT:    store i32 [[TMP2]], i32* [[PTR5]], align 4
 ; CHECK-NEXT:    [[PTR6:%.*]] = getelementptr inbounds i32, i32* [[A]], i64 6
+; CHECK-NEXT:    store i32 [[TMP1]], i32* [[PTR6]], align 8
 ; CHECK-NEXT:    [[PTR7:%.*]] = getelementptr inbounds i32, i32* [[A]], i64 7
-; CHECK-NEXT:    [[TMP3:%.*]] = insertelement <8 x i32> poison, i32 [[TMP1]], i32 0
-; CHECK-NEXT:    [[TMP4:%.*]] = insertelement <8 x i32> [[TMP3]], i32 [[TMP2]], i32 1
-; CHECK-NEXT:    [[SHUFFLE:%.*]] = shufflevector <8 x i32> [[TMP4]], <8 x i32> poison, <8 x i32> <i32 0, i32 1, i32 0, i32 1, i32 0, i32 1, i32 0, i32 1>
-; CHECK-NEXT:    [[TMP5:%.*]] = bitcast i32* [[PTR0]] to <8 x i32>*
-; CHECK-NEXT:    store <8 x i32> [[SHUFFLE]], <8 x i32>* [[TMP5]], align 16
+; CHECK-NEXT:    store i32 [[TMP2]], i32* [[PTR7]], align 4
 ; CHECK-NEXT:    ret void
 ;
   %1 = load i32, i32* %v1, align 4

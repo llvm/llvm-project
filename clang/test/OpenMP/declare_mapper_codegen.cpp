@@ -497,7 +497,7 @@ void foo(int a){
 // CK0: }
 
 // CK0: define internal void [[OUTLINED:@.+]](i32 {{.*}}{{[^,]+}}, [[ANON_T]]* noalias [[CTXARG:%.+]])
-// CK0-DAG: call i32 @__tgt_target_nowait_mapper(%struct.ident_t* @{{.+}}, i64 {{.+}}, i8* {{.+}}, i32 1, i8** [[BPGEP:%[0-9]+]], i8** [[PGEP:%[0-9]+]], {{.+}}[[SIZEGEP:%[0-9]+]], {{.+}}[[NWTYPES]]{{.+}}, i8** null, i8** [[MPRGEP:%.+]])
+// CK0-DAG: call i32 @__tgt_target_nowait_mapper(%struct.ident_t* @{{.+}}, i64 {{.+}}, i8* {{.+}}, i32 1, i8** [[BPGEP:%[0-9]+]], i8** [[PGEP:%[0-9]+]], {{.+}}[[SIZEGEP:%[0-9]+]], {{.+}}[[NWTYPES]]{{.+}}, i8** null, i8** [[MPRGEP:%.+]], i32 0, i8* null, i32 0, i8* null)
 // CK0-DAG: [[BPGEP]] = getelementptr inbounds [1 x i8*], [1 x i8*]* [[BPFPADDR:%.+]], i[[SZ]] 0, i[[SZ]] 0
 // CK0-DAG: [[PGEP]] = getelementptr inbounds [1 x i8*], [1 x i8*]* [[PFPADDR:%.+]], i[[SZ]] 0, i[[SZ]] 0
 // CK0-DAG: [[SIZEGEP]] = getelementptr inbounds [1 x i64], [1 x i64]* [[SIZEFPADDR:%.+]], i[[SZ]] 0, i[[SZ]] 0
@@ -529,7 +529,7 @@ void foo(int a){
 // CK0: }
 
 // CK0: define internal void [[OUTLINE_1:@.+]](i32 {{.*}}%.global_tid.{{.+}}, [[ANON_T_0]]* noalias [[CTXARG:%.+]])
-// CK0-DAG: call i32 @__tgt_target_teams_nowait_mapper(%struct.ident_t* @{{.+}}, i64 {{.+}}, i8* {{.+}}, i32 1, i8** [[BPGEP:%[0-9]+]], i8** [[PGEP:%[0-9]+]], i64* [[SIZEGEP:%[0-9]+]], {{.+}}[[TEAMNWTYPES]]{{.+}}, i8** null, i8** [[MPRGEP:%.+]], i32 0, i32 0)
+// CK0-DAG: call i32 @__tgt_target_teams_nowait_mapper(%struct.ident_t* @{{.+}}, i64 {{.+}}, i8* {{.+}}, i32 1, i8** [[BPGEP:%[0-9]+]], i8** [[PGEP:%[0-9]+]], i64* [[SIZEGEP:%[0-9]+]], {{.+}}[[TEAMNWTYPES]]{{.+}}, i8** null, i8** [[MPRGEP:%.+]], i32 0, i32 0, i32 0, i8* null, i32 0, i8* null)
 // CK0-DAG: [[BPGEP]] = getelementptr inbounds [1 x i8*], [1 x i8*]* [[BPFPADDR:%.+]], i[[SZ]] 0, i[[SZ]] 0
 // CK0-DAG: [[PGEP]] = getelementptr inbounds [1 x i8*], [1 x i8*]* [[PFPADDR:%.+]], i[[SZ]] 0, i[[SZ]] 0
 // CK0-DAG: [[SIZEGEP]] = getelementptr inbounds [1 x i64], [1 x i64]* [[SIZEFPADDR:%.+]], i[[SZ]] 0, i[[SZ]] 0

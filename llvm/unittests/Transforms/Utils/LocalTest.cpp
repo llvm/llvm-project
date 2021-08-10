@@ -8,6 +8,7 @@
 
 #include "llvm/Transforms/Utils/Local.h"
 #include "llvm/Analysis/DomTreeUpdater.h"
+#include "llvm/Analysis/InstructionSimplify.h"
 #include "llvm/Analysis/PostDominators.h"
 #include "llvm/Analysis/TargetTransformInfo.h"
 #include "llvm/AsmParser/Parser.h"
@@ -586,6 +587,20 @@ TEST_F(SalvageDebugInfoTest, RecursiveBlockSimplification) {
   verifyDebugValuesAreSalvaged();
 }
 
+TEST(Local, SimplifyVScaleWithRange) {
+  LLVMContext C;
+  Module M("Module", C);
+
+  IntegerType *Ty = Type::getInt32Ty(C);
+  Function *VScale = Intrinsic::getDeclaration(&M, Intrinsic::vscale, {Ty});
+  auto *CI = CallInst::Create(VScale, {}, "vscale");
+
+  // Test that SimplifyCall won't try to query it's parent function for
+  // vscale_range attributes in order to simplify llvm.vscale -> constant.
+  EXPECT_EQ(SimplifyCall(CI, SimplifyQuery(M.getDataLayout())), nullptr);
+  delete CI;
+}
+
 TEST(Local, ChangeToUnreachable) {
   LLVMContext Ctx;
 
@@ -623,7 +638,7 @@ TEST(Local, ChangeToUnreachable) {
 
   ASSERT_TRUE(isa<ReturnInst>(&A));
   // One instruction should be affected.
-  EXPECT_EQ(changeToUnreachable(&A, /*UseLLVMTrap*/false), 1U);
+  EXPECT_EQ(changeToUnreachable(&A), 1U);
 
   Instruction &B = BB.front();
 

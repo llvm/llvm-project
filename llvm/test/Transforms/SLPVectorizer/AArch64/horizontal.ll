@@ -15,7 +15,7 @@ target triple = "aarch64--linux"
 ; YAML-NEXT: Function:        test_select
 ; YAML-NEXT: Args:
 ; YAML-NEXT:   - String:          'Vectorized horizontal reduction with cost '
-; YAML-NEXT:   - Cost:            '-20'
+; YAML-NEXT:   - Cost:            '-19'
 ; YAML-NEXT:   - String:          ' and with tree size '
 ; YAML-NEXT:   - TreeSize:        '8'
 
@@ -143,7 +143,7 @@ define i32 @reduction_with_br(i32* noalias nocapture readonly %blk1, i32* noalia
 ; YAML-NEXT: Function:        reduction_with_br
 ; YAML-NEXT: Args:
 ; YAML-NEXT:   - String:          'Vectorized horizontal reduction with cost '
-; YAML-NEXT:   - Cost:            '-11'
+; YAML-NEXT:   - Cost:            '-10'
 ; YAML-NEXT:   - String:          ' and with tree size '
 ; YAML-NEXT:   - TreeSize:        '3'
 ; CHECK-LABEL: @reduction_with_br(
@@ -244,7 +244,7 @@ for.end:                                          ; preds = %for.end.loopexit, %
 ; YAML-NEXT: Function:        test_unrolled_select
 ; YAML-NEXT: Args:
 ; YAML-NEXT:   - String:          'Vectorized horizontal reduction with cost '
-; YAML-NEXT:   - Cost:            '-37'
+; YAML-NEXT:   - Cost:            '-36'
 ; YAML-NEXT:   - String:          ' and with tree size '
 ; YAML-NEXT:   - TreeSize:        '10'
 

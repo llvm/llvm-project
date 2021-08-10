@@ -21,7 +21,7 @@ target triple = "bpf"
 ; Function Attrs: nounwind
 define dso_local i32 @test() local_unnamed_addr #0 !dbg !16 {
 entry:
-  %0 = tail call i32* @llvm.preserve.struct.access.index.p0i32.p0s_struct.v3s(%struct.v3* nonnull @g, i32 1, i32 1), !dbg !19, !llvm.preserve.access.index !7
+  %0 = tail call i32* @llvm.preserve.struct.access.index.p0i32.p0s_struct.v3s(%struct.v3* elementtype(%struct.v3) nonnull @g, i32 1, i32 1), !dbg !19, !llvm.preserve.access.index !7
   %call = tail call i32 @get_value(i32* %0) #3, !dbg !20
   ret i32 %call, !dbg !21
 }

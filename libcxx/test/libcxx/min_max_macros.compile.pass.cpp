@@ -136,8 +136,10 @@ TEST_MACROS();
 #endif
 #include <float.h>
 TEST_MACROS();
-#include <format>
+#ifndef _LIBCPP_HAS_NO_INCOMPLETE_FORMAT
+#    include <format>
 TEST_MACROS();
+#endif
 #include <forward_list>
 TEST_MACROS();
 #ifndef _LIBCPP_HAS_NO_LOCALIZATION
@@ -218,8 +220,10 @@ TEST_MACROS();
 TEST_MACROS();
 #include <random>
 TEST_MACROS();
-#include <ranges>
+#ifndef _LIBCPP_HAS_NO_INCOMPLETE_RANGES
+#    include <ranges>
 TEST_MACROS();
+#endif
 #include <ratio>
 TEST_MACROS();
 #ifndef _LIBCPP_HAS_NO_LOCALIZATION

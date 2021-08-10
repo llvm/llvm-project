@@ -1,14 +1,15 @@
-/*===--------------------------------------------------------------------------
- *              ATMI (Asynchronous Task and Memory Interface)
- *
- * This file is distributed under the MIT License. See LICENSE.txt for details.
- *===------------------------------------------------------------------------*/
+//===--- amdgpu/impl/machine.cpp ---------------------------------- C++ -*-===//
+//
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
+//
+//===----------------------------------------------------------------------===//
 #include "machine.h"
 #include "atmi_runtime.h"
+#include "hsa_api.h"
 #include "internal.h"
 #include <cassert>
-#include <hsa.h>
-#include <hsa_ext_amd.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <vector>

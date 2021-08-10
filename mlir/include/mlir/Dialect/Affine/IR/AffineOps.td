@@ -21,7 +21,7 @@ include "mlir/Interfaces/SideEffectInterfaces.td"
 
 def Affine_Dialect : Dialect {
   let name = "affine";
-  let cppNamespace = "";
+  let cppNamespace = "mlir";
   let hasConstantMaterializer = 1;
 }
 
@@ -178,18 +178,19 @@ def AffineForOp : Affine_Op<"for",
       return
     }
     ```
-    `affine.for` can also operate on loop-carried variables and return the final
-    values after loop termination. The initial values of the variables are
-    passed as additional SSA operands to the "affine.for" following the 2 loop
-    control values lower bound, upper bound. The operation region has equivalent
-    arguments for each variable representing the value of the variable at the
-    current iteration.
+    `affine.for` can also operate on loop-carried variables (`iter_args`) and
+    return the final values after loop termination. The initial values of the
+    variables are passed as additional SSA operands to the `affine.for`
+    following the operands for the loop's lower and upper bounds. The
+    operation's region has equivalent arguments for each variable representing
+    the value of the variable at the current iteration.
 
     The region must terminate with an `affine.yield` that passes all the current
-    iteration variables to the next iteration, or to the `affine.for` result, if
-    at the last iteration.
+    iteration variables to the next iteration, or to the `affine.for`'s results
+    if at the last iteration. For `affine.for`'s that execute zero iterations, the
+    initial values of the loop-carried variables (corresponding to the SSA
+    operands) will be the op's results.
 
-    `affine.for` results hold the final values after the last iteration.
     For example, to sum-reduce a memref:
 
      ```mlir
@@ -206,6 +207,15 @@ def AffineForOp : Affine_Op<"for",
         affine.yield %sum_next : f32
       }
       return %sum : f32
+    }
+    ```
+
+    ```mlir
+    %res:2 = affine.for %i = 0 to 128 iter_args(%arg0 = %init0, %arg1 = %init1)
+               -> (index, index) {
+      %y0 = addi %arg0, %c1 : index
+      %y1 = addi %arg1, %c2 : index
+      affine.yield %y0, %y1 : index, index
     }
     ```
     If the `affine.for` defines any values, a yield terminator must be

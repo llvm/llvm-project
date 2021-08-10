@@ -316,27 +316,14 @@ void GpuToLLVMConversionPass::runOnOperation() {
   LLVMConversionTarget target(getContext());
 
   target.addIllegalDialect<gpu::GPUDialect>();
+  target.addIllegalOp<UnrealizedConversionCastOp>();
 
   populateVectorToLLVMConversionPatterns(converter, patterns);
   populateMemRefToLLVMConversionPatterns(converter, patterns);
   populateStdToLLVMConversionPatterns(converter, patterns);
   populateAsyncStructuralTypeConversionsAndLegality(converter, patterns,
                                                     target);
-
-  converter.addConversion(
-      [context = &converter.getContext()](gpu::AsyncTokenType type) -> Type {
-        return LLVM::LLVMPointerType::get(IntegerType::get(context, 8));
-      });
-  patterns.add<ConvertAllocOpToGpuRuntimeCallPattern,
-               ConvertDeallocOpToGpuRuntimeCallPattern,
-               ConvertHostRegisterOpToGpuRuntimeCallPattern,
-               ConvertMemcpyOpToGpuRuntimeCallPattern,
-               ConvertWaitAsyncOpToGpuRuntimeCallPattern,
-               ConvertWaitOpToGpuRuntimeCallPattern,
-               ConvertAsyncYieldToGpuRuntimeCallPattern>(converter);
-  patterns.add<ConvertLaunchFuncOpToGpuRuntimeCallPattern>(converter,
-                                                           gpuBinaryAnnotation);
-  patterns.add<EraseGpuModuleOpPattern>(&converter.getContext());
+  populateGpuToLLVMConversionPatterns(converter, patterns, gpuBinaryAnnotation);
 
   if (failed(
           applyPartialConversion(getOperation(), target, std::move(patterns))))
@@ -352,9 +339,7 @@ LLVM::CallOp FunctionCallBuilder::create(Location loc, OpBuilder &builder,
     return OpBuilder::atBlockEnd(module.getBody())
         .create<LLVM::LLVMFuncOp>(loc, functionName, functionType);
   }();
-  return builder.create<LLVM::CallOp>(
-      loc, const_cast<LLVM::LLVMFunctionType &>(functionType).getReturnType(),
-      builder.getSymbolRefAttr(function), arguments);
+  return builder.create<LLVM::CallOp>(loc, function, arguments);
 }
 
 // Returns whether all operands are of LLVM type.
@@ -804,4 +789,23 @@ LogicalResult ConvertMemcpyOpToGpuRuntimeCallPattern::matchAndRewrite(
 std::unique_ptr<mlir::OperationPass<mlir::ModuleOp>>
 mlir::createGpuToLLVMConversionPass() {
   return std::make_unique<GpuToLLVMConversionPass>();
+}
+
+void mlir::populateGpuToLLVMConversionPatterns(
+    LLVMTypeConverter &converter, OwningRewritePatternList &patterns,
+    StringRef gpuBinaryAnnotation) {
+  converter.addConversion(
+      [context = &converter.getContext()](gpu::AsyncTokenType type) -> Type {
+        return LLVM::LLVMPointerType::get(IntegerType::get(context, 8));
+      });
+  patterns.add<ConvertAllocOpToGpuRuntimeCallPattern,
+               ConvertDeallocOpToGpuRuntimeCallPattern,
+               ConvertHostRegisterOpToGpuRuntimeCallPattern,
+               ConvertMemcpyOpToGpuRuntimeCallPattern,
+               ConvertWaitAsyncOpToGpuRuntimeCallPattern,
+               ConvertWaitOpToGpuRuntimeCallPattern,
+               ConvertAsyncYieldToGpuRuntimeCallPattern>(converter);
+  patterns.add<ConvertLaunchFuncOpToGpuRuntimeCallPattern>(converter,
+                                                           gpuBinaryAnnotation);
+  patterns.add<EraseGpuModuleOpPattern>(&converter.getContext());
 }

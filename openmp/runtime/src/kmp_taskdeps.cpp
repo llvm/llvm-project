@@ -344,6 +344,13 @@ __kmp_process_deps(kmp_int32 gtid, kmp_depnode_t *node, kmp_dephash_t **hash,
         // link node as successor of all nodes in the prev_set if any
         npredecessors +=
             __kmp_depnode_link_successor(gtid, thread, task, node, prev_set);
+        if (dep_barrier) {
+          // clean last_out and prev_set if any; don't touch last_set
+          __kmp_node_deref(thread, last_out);
+          info->last_out = NULL;
+          __kmp_depnode_list_free(thread, prev_set);
+          info->prev_set = NULL;
+        }
       } else { // last_set is of different dep kind, make it prev_set
         // link node as successor of all nodes in the last_set
         npredecessors +=
@@ -353,13 +360,21 @@ __kmp_process_deps(kmp_int32 gtid, kmp_depnode_t *node, kmp_dephash_t **hash,
         info->last_out = NULL;
         // clean prev_set if any
         __kmp_depnode_list_free(thread, prev_set);
-        // move last_set to prev_set, new last_set will be allocated
-        info->prev_set = last_set;
+        if (!dep_barrier) {
+          // move last_set to prev_set, new last_set will be allocated
+          info->prev_set = last_set;
+        } else {
+          info->prev_set = NULL;
+          info->last_flag = 0;
+        }
         info->last_set = NULL;
       }
-      info->last_flag = dep->flag; // store dep kind of the last_set
-      info->last_set = __kmp_add_node(thread, info->last_set, node);
-
+      // for dep_barrier last_flag value should remain:
+      // 0 if last_set is empty, unchanged otherwise
+      if (!dep_barrier) {
+        info->last_flag = dep->flag; // store dep kind of the last_set
+        info->last_set = __kmp_add_node(thread, info->last_set, node);
+      }
       // check if we are processing MTX dependency
       if (dep->flag == KMP_DEP_MTX) {
         if (info->mtx_lock == NULL) {
@@ -756,8 +771,6 @@ void __kmpc_omp_wait_deps(ident_t *loc_ref, kmp_int32 gtid, kmp_int32 ndeps,
 
   kmp_depnode_t node = {0};
   __kmp_init_node(&node);
-  // the stack owns the node
-  __kmp_node_ref(&node);
 
   if (!__kmp_check_deps(gtid, &node, NULL, &current_task->td_dephash,
                         DEP_BARRIER, ndeps, dep_list, ndeps_noalias,

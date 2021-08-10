@@ -206,6 +206,7 @@ fun:symlink=discard
 fun:syscall=discard
 fun:unlink=discard
 fun:uselocale=discard
+fun:vfprintf=discard
 
 # Functions that produce output does not depend on the input (need to zero the
 # shadow manually).

@@ -47,7 +47,7 @@ INLINE static void gpu_irregular_warp_reduce(void *reduce_data,
 INLINE static uint32_t
 gpu_irregular_simd_reduce(void *reduce_data, kmp_ShuffleReductFctPtr shflFct) {
   uint32_t size, remote_id, physical_lane_id;
-  physical_lane_id = GetThreadIdInBlock() % WARPSIZE;
+  physical_lane_id = __kmpc_get_hardware_thread_id_in_block() % WARPSIZE;
   __kmpc_impl_lanemask_t lanemask_lt = __kmpc_impl_lanemask_lt();
   __kmpc_impl_lanemask_t Liveness = __kmpc_impl_activemask();
   uint32_t logical_lane_id = __kmpc_impl_popc(Liveness & lanemask_lt) * 2;
@@ -69,7 +69,7 @@ static int32_t nvptx_parallel_reduce_nowait(
     int32_t global_tid, int32_t num_vars, size_t reduce_size, void *reduce_data,
     kmp_ShuffleReductFctPtr shflFct, kmp_InterWarpCopyFctPtr cpyFct,
     bool isSPMDExecutionMode, bool isRuntimeUninitialized) {
-  uint32_t BlockThreadId = GetLogicalThreadIdInBlock(isSPMDExecutionMode);
+  uint32_t BlockThreadId = GetLogicalThreadIdInBlock();
   uint32_t NumThreads = GetNumberOfOmpThreads(isSPMDExecutionMode);
   if (NumThreads == 1)
     return 1;
@@ -98,9 +98,10 @@ static int32_t nvptx_parallel_reduce_nowait(
   if ((NumThreads % WARPSIZE == 0) || (WarpId < WarpsNeeded - 1))
     gpu_regular_warp_reduce(reduce_data, shflFct);
   else if (NumThreads > 1) // Only SPMD execution mode comes thru this case.
-    gpu_irregular_warp_reduce(reduce_data, shflFct,
-                              /*LaneCount=*/NumThreads % WARPSIZE,
-                              /*LaneId=*/GetThreadIdInBlock() % WARPSIZE);
+    gpu_irregular_warp_reduce(
+        reduce_data, shflFct,
+        /*LaneCount=*/NumThreads % WARPSIZE,
+        /*LaneId=*/__kmpc_get_hardware_thread_id_in_block() % WARPSIZE);
 
   // When we have more than [warpsize] number of threads
   // a block reduction is performed here.
@@ -126,9 +127,10 @@ static int32_t nvptx_parallel_reduce_nowait(
   if (Liveness == __kmpc_impl_all_lanes) // Full warp
     gpu_regular_warp_reduce(reduce_data, shflFct);
   else if (!(Liveness & (Liveness + 1))) // Partial warp but contiguous lanes
-    gpu_irregular_warp_reduce(reduce_data, shflFct,
-                              /*LaneCount=*/__kmpc_impl_popc(Liveness),
-                              /*LaneId=*/GetThreadIdInBlock() % WARPSIZE);
+    gpu_irregular_warp_reduce(
+        reduce_data, shflFct,
+        /*LaneCount=*/__kmpc_impl_popc(Liveness),
+        /*LaneId=*/__kmpc_get_hardware_thread_id_in_block() % WARPSIZE);
   else if (!isRuntimeUninitialized) // Dispersed lanes. Only threads in L2
                                     // parallel region may enter here; return
                                     // early.
@@ -177,7 +179,7 @@ int32_t __kmpc_nvptx_parallel_reduce_nowait_v2(
     kmp_InterWarpCopyFctPtr cpyFct) {
   return nvptx_parallel_reduce_nowait(
       global_tid, num_vars, reduce_size, reduce_data, shflFct, cpyFct,
-      checkSPMDMode(loc), checkRuntimeUninitialized(loc));
+      __kmpc_is_spmd_exec_mode(), isRuntimeUninitialized());
 }
 
 // This apparently unused function is currently called by flang
@@ -191,7 +193,7 @@ int32_t __kmpc_nvptx_parallel_reduce_nowait_simple_spmd(
 }
 
 INLINE static bool isMaster(kmp_Ident *loc, uint32_t ThreadId) {
-  return checkGenericMode(loc) || IsTeamMaster(ThreadId);
+  return !__kmpc_is_spmd_exec_mode() || IsTeamMaster(ThreadId);
 }
 
 INLINE static uint32_t roundToWarpsize(uint32_t s) {
@@ -212,23 +214,24 @@ EXTERN int32_t __kmpc_nvptx_teams_reduce_nowait_v2(
     kmp_ListGlobalFctPtr glredFct) {
 
   // Terminate all threads in non-SPMD mode except for the master thread.
-  if (checkGenericMode(loc) && GetThreadIdInBlock() != GetMasterThreadID())
+  if (!__kmpc_is_spmd_exec_mode() &&
+      !__kmpc_is_generic_main_thread(__kmpc_get_hardware_thread_id_in_block()))
     return 0;
 
 #ifdef OMPD_SUPPORT
     ompd_set_device_thread_state(omp_state_work_reduction);
 #endif /*OMPD_SUPPORT*/
 
-  uint32_t ThreadId = GetLogicalThreadIdInBlock(checkSPMDMode(loc));
+  uint32_t ThreadId = GetLogicalThreadIdInBlock();
 
   // In non-generic mode all workers participate in the teams reduction.
   // In generic mode only the team master participates in the teams
   // reduction because the workers are waiting for parallel work.
   uint32_t NumThreads =
-      checkSPMDMode(loc) ? GetNumberOfOmpThreads(/*isSPMDExecutionMode=*/true)
+      __kmpc_is_spmd_exec_mode() ? GetNumberOfOmpThreads(/*isSPMDExecutionMode=*/true)
                          : /*Master thread only*/ 1;
   uint32_t TeamId = GetBlockIdInKernel();
-  uint32_t NumTeams = GetNumberOfBlocksInKernel();
+  uint32_t NumTeams = __kmpc_get_hardware_num_blocks();
   static unsigned SHARED(Bound);
   static unsigned SHARED(ChunkTeamCount);
 
@@ -257,7 +260,7 @@ EXTERN int32_t __kmpc_nvptx_teams_reduce_nowait_v2(
     __kmpc_impl_threadfence_system();
   }
   // Synchronize
-  if (checkSPMDMode(loc))
+  if (__kmpc_is_spmd_exec_mode())
     __kmpc_barrier(loc, global_tid);
 
   // reduce_data is global or shared so before being reduced within the

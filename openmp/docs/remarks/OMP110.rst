@@ -1,0 +1,83 @@
+.. _omp110:
+
+Moving globalized variable to the stack. [OMP110]
+=================================================
+
+This optimization remark indicates that a globalized variable was moved back to
+thread-local stack memory on the device. This occurs when the optimization pass
+can determine that a globalized variable cannot possibly be shared between
+threads and globalization was ultimately unnecessary. Using stack memory is the
+best-case scenario for data globalization as the variable can now be stored in
+fast register files on the device. This optimization requires full visibility of
+each variable.
+
+Globalization typically occurs when a pointer to a thread-local variable escapes
+the current scope. The compiler needs to be pessimistic and assume that the
+pointer could be shared between multiple threads according to the OpenMP
+standard. This is expensive on target offloading devices that do not allow
+threads to share data by default. Instead, this data must be moved to memory
+that can be shared, such as shared or global memory. This optimization moves the
+data back from shared or global memory to thread-local stack memory if the data
+is not actually shared between the threads.
+
+Examples
+--------
+
+A trivial example of globalization occurring can be seen with this example. The
+compiler sees that a pointer to the thread-local variable ``x`` escapes the
+current scope and must globalize it even though it is not actually necessary.
+Fortunately, this optimization can undo this by looking at its usage.
+
+.. code-block:: c++
+
+  void use(int *x) { }
+  
+  void foo() {
+    int x;
+    use(&x);
+  }
+  
+  int main() {
+  #pragma omp target parallel
+    foo();
+  }
+
+.. code-block:: console
+
+  $ clang++ -fopenmp -fopenmp-targets=nvptx64 omp110.cpp -O1 -Rpass=openmp-opt
+  omp110.cpp:6:7: remark: Moving globalized variable to the stack. [OMP110]
+    int x;
+        ^
+
+A less trivial example can be seen using C++'s complex numbers. In this case the
+overloaded arithmetic operators cause pointers to the complex numbers to escape
+the current scope, but they can again be removed once the usage is visible.
+
+.. code-block:: c++
+
+  #include <complex>
+  
+  using complex = std::complex<double>;
+  
+  void zaxpy(complex *X, complex *Y, const complex D, int N) {
+  #pragma omp target teams distribute parallel for firstprivate(D)
+    for (int i = 0; i < N; ++i)
+      Y[i] = D * X[i] + Y[i];
+  }
+
+.. code-block:: console
+
+  $ clang++ -fopenmp -fopenmp-targets=nvptx64 omp110.cpp -O1 -Rpass=openmp-opt
+  In file included from omp110.cpp:1:
+  In file included from /usr/bin/clang/lib/clang/13.0.0/include/openmp_wrappers/complex:27:
+  /usr/include/c++/8/complex:328:20: remark: Moving globalized variable to the stack. [OMP110]
+        complex<_Tp> __r = __x;
+                     ^
+  /usr/include/c++/8/complex:388:20: remark: Moving globalized variable to the stack. [OMP110]
+        complex<_Tp> __r = __x;
+                     ^
+
+Diagnostic Scope
+----------------
+
+OpenMP target offloading optimization remark.

@@ -546,8 +546,7 @@ private:
   void verifyTailCCMustTailAttrs(AttrBuilder Attrs, StringRef Context);
   void verifyMustTailCall(CallInst &CI);
   bool verifyAttributeCount(AttributeList Attrs, unsigned Params);
-  void verifyAttributeTypes(AttributeSet Attrs, bool IsFunction,
-                            const Value *V);
+  void verifyAttributeTypes(AttributeSet Attrs, const Value *V);
   void verifyParameterAttrs(AttributeSet Attrs, Type *Ty, const Value *V);
   void checkUnsignedBaseTenFuncAttr(AttributeList Attrs, StringRef Attr,
                                     const Value *V);
@@ -1712,76 +1711,7 @@ void Verifier::visitModuleFlagCGProfileEntry(const MDOperand &MDO) {
          "expected an integer constant", Node->getOperand(2));
 }
 
-/// Return true if this attribute kind only applies to functions.
-static bool isFuncOnlyAttr(Attribute::AttrKind Kind) {
-  switch (Kind) {
-  case Attribute::NoMerge:
-  case Attribute::NoReturn:
-  case Attribute::NoSync:
-  case Attribute::WillReturn:
-  case Attribute::NoCallback:
-  case Attribute::NoCfCheck:
-  case Attribute::NoUnwind:
-  case Attribute::NoInline:
-  case Attribute::NoSanitizeCoverage:
-  case Attribute::AlwaysInline:
-  case Attribute::OptimizeForSize:
-  case Attribute::StackProtect:
-  case Attribute::StackProtectReq:
-  case Attribute::StackProtectStrong:
-  case Attribute::SafeStack:
-  case Attribute::ShadowCallStack:
-  case Attribute::NoRedZone:
-  case Attribute::NoImplicitFloat:
-  case Attribute::Naked:
-  case Attribute::InlineHint:
-  case Attribute::UWTable:
-  case Attribute::VScaleRange:
-  case Attribute::NonLazyBind:
-  case Attribute::ReturnsTwice:
-  case Attribute::SanitizeAddress:
-  case Attribute::SanitizeHWAddress:
-  case Attribute::SanitizeMemTag:
-  case Attribute::SanitizeThread:
-  case Attribute::SanitizeMemory:
-  case Attribute::MinSize:
-  case Attribute::NoDuplicate:
-  case Attribute::Builtin:
-  case Attribute::NoBuiltin:
-  case Attribute::Cold:
-  case Attribute::Hot:
-  case Attribute::OptForFuzzing:
-  case Attribute::OptimizeNone:
-  case Attribute::JumpTable:
-  case Attribute::Convergent:
-  case Attribute::ArgMemOnly:
-  case Attribute::NoRecurse:
-  case Attribute::InaccessibleMemOnly:
-  case Attribute::InaccessibleMemOrArgMemOnly:
-  case Attribute::AllocSize:
-  case Attribute::SpeculativeLoadHardening:
-  case Attribute::Speculatable:
-  case Attribute::StrictFP:
-  case Attribute::NullPointerIsValid:
-  case Attribute::MustProgress:
-  case Attribute::NoProfile:
-    return true;
-  default:
-    break;
-  }
-  return false;
-}
-
-/// Return true if this is a function attribute that can also appear on
-/// arguments.
-static bool isFuncOrArgAttr(Attribute::AttrKind Kind) {
-  return Kind == Attribute::ReadOnly || Kind == Attribute::WriteOnly ||
-         Kind == Attribute::ReadNone || Kind == Attribute::NoFree ||
-         Kind == Attribute::Preallocated || Kind == Attribute::StackAlignment;
-}
-
-void Verifier::verifyAttributeTypes(AttributeSet Attrs, bool IsFunction,
-                                    const Value *V) {
+void Verifier::verifyAttributeTypes(AttributeSet Attrs, const Value *V) {
   for (Attribute A : Attrs) {
 
     if (A.isStringAttribute()) {
@@ -1799,23 +1729,8 @@ void Verifier::verifyAttributeTypes(AttributeSet Attrs, bool IsFunction,
       continue;
     }
 
-    if (A.isIntAttribute() !=
-        Attribute::doesAttrKindHaveArgument(A.getKindAsEnum())) {
+    if (A.isIntAttribute() != Attribute::isIntAttrKind(A.getKindAsEnum())) {
       CheckFailed("Attribute '" + A.getAsString() + "' should have an Argument",
-                  V);
-      return;
-    }
-
-    if (isFuncOnlyAttr(A.getKindAsEnum())) {
-      if (!IsFunction) {
-        CheckFailed("Attribute '" + A.getAsString() +
-                        "' only applies to functions!",
-                    V);
-        return;
-      }
-    } else if (IsFunction && !isFuncOrArgAttr(A.getKindAsEnum())) {
-      CheckFailed("Attribute '" + A.getAsString() +
-                      "' does not apply to functions!",
                   V);
       return;
     }
@@ -1829,7 +1744,14 @@ void Verifier::verifyParameterAttrs(AttributeSet Attrs, Type *Ty,
   if (!Attrs.hasAttributes())
     return;
 
-  verifyAttributeTypes(Attrs, /*IsFunction=*/false, V);
+  verifyAttributeTypes(Attrs, V);
+
+  for (Attribute Attr : Attrs)
+    Assert(Attr.isStringAttribute() ||
+           Attribute::canUseAsParamAttr(Attr.getKindAsEnum()),
+           "Attribute '" + Attr.getAsString() +
+               "' does not apply to parameters",
+           V);
 
   if (Attrs.hasAttribute(Attribute::ImmArg)) {
     Assert(Attrs.getNumAttributes() == 1,
@@ -1894,10 +1816,14 @@ void Verifier::verifyParameterAttrs(AttributeSet Attrs, Type *Ty,
          V);
 
   AttrBuilder IncompatibleAttrs = AttributeFuncs::typeIncompatible(Ty);
-  Assert(!AttrBuilder(Attrs).overlaps(IncompatibleAttrs),
-         "Wrong types for attribute: " +
-             AttributeSet::get(Context, IncompatibleAttrs).getAsString(),
-         V);
+  for (Attribute Attr : Attrs) {
+    if (!Attr.isStringAttribute() &&
+        IncompatibleAttrs.contains(Attr.getKindAsEnum())) {
+      CheckFailed("Attribute '" + Attr.getAsString() +
+                  "' applied to incompatible type!", V);
+      return;
+    }
+  }
 
   if (PointerType *PTy = dyn_cast<PointerType>(Ty)) {
     if (Attrs.hasAttribute(Attribute::ByVal)) {
@@ -1945,18 +1871,12 @@ void Verifier::verifyParameterAttrs(AttributeSet Attrs, Type *Ty,
         Assert(Attrs.getInAllocaType() == PTy->getElementType(),
                "Attribute 'inalloca' type does not match parameter!", V);
       }
+
+      if (Attrs.hasAttribute(Attribute::ElementType)) {
+        Assert(Attrs.getElementType() == PTy->getElementType(),
+               "Attribute 'elementtype' type does not match parameter!", V);
+      }
     }
-  } else {
-    Assert(!Attrs.hasAttribute(Attribute::ByVal),
-           "Attribute 'byval' only applies to parameters with pointer type!",
-           V);
-    Assert(!Attrs.hasAttribute(Attribute::ByRef),
-           "Attribute 'byref' only applies to parameters with pointer type!",
-           V);
-    Assert(!Attrs.hasAttribute(Attribute::SwiftError),
-           "Attribute 'swifterror' only applies to parameters "
-           "with pointer type!",
-           V);
   }
 }
 
@@ -2000,29 +1920,13 @@ void Verifier::verifyFunctionAttrs(FunctionType *FT, AttributeList Attrs,
 
   // Verify return value attributes.
   AttributeSet RetAttrs = Attrs.getRetAttributes();
-  Assert((!RetAttrs.hasAttribute(Attribute::ByVal) &&
-          !RetAttrs.hasAttribute(Attribute::Nest) &&
-          !RetAttrs.hasAttribute(Attribute::StructRet) &&
-          !RetAttrs.hasAttribute(Attribute::NoCapture) &&
-          !RetAttrs.hasAttribute(Attribute::NoFree) &&
-          !RetAttrs.hasAttribute(Attribute::Returned) &&
-          !RetAttrs.hasAttribute(Attribute::InAlloca) &&
-          !RetAttrs.hasAttribute(Attribute::Preallocated) &&
-          !RetAttrs.hasAttribute(Attribute::ByRef) &&
-          !RetAttrs.hasAttribute(Attribute::SwiftSelf) &&
-          !RetAttrs.hasAttribute(Attribute::SwiftAsync) &&
-          !RetAttrs.hasAttribute(Attribute::SwiftError)),
-         "Attributes 'byval', 'inalloca', 'preallocated', 'byref', "
-         "'nest', 'sret', 'nocapture', 'nofree', "
-         "'returned', 'swiftself', 'swiftasync', and 'swifterror'"
-         " do not apply to return values!",
-         V);
-  Assert((!RetAttrs.hasAttribute(Attribute::ReadOnly) &&
-          !RetAttrs.hasAttribute(Attribute::WriteOnly) &&
-          !RetAttrs.hasAttribute(Attribute::ReadNone)),
-         "Attribute '" + RetAttrs.getAsString() +
-             "' does not apply to function returns",
-         V);
+  for (Attribute RetAttr : RetAttrs)
+    Assert(RetAttr.isStringAttribute() ||
+           Attribute::canUseAsRetAttr(RetAttr.getKindAsEnum()),
+           "Attribute '" + RetAttr.getAsString() +
+               "' does not apply to function return values",
+           V);
+
   verifyParameterAttrs(RetAttrs, FT->getReturnType(), V);
 
   // Verify parameter attributes.
@@ -2033,6 +1937,8 @@ void Verifier::verifyFunctionAttrs(FunctionType *FT, AttributeList Attrs,
     if (!IsIntrinsic) {
       Assert(!ArgAttrs.hasAttribute(Attribute::ImmArg),
              "immarg attribute only applies to intrinsics",V);
+      Assert(!ArgAttrs.hasAttribute(Attribute::ElementType),
+             "Attribute 'elementtype' can only be applied to intrinsics.", V);
     }
 
     verifyParameterAttrs(ArgAttrs, Ty, V);
@@ -2083,7 +1989,13 @@ void Verifier::verifyFunctionAttrs(FunctionType *FT, AttributeList Attrs,
   if (!Attrs.hasAttributes(AttributeList::FunctionIndex))
     return;
 
-  verifyAttributeTypes(Attrs.getFnAttributes(), /*IsFunction=*/true, V);
+  verifyAttributeTypes(Attrs.getFnAttributes(), V);
+  for (Attribute FnAttr : Attrs.getFnAttributes())
+    Assert(FnAttr.isStringAttribute() ||
+           Attribute::canUseAsFnAttr(FnAttr.getKindAsEnum()),
+           "Attribute '" + FnAttr.getAsString() +
+               "' does not apply to functions!",
+           V);
 
   Assert(!(Attrs.hasFnAttribute(Attribute::ReadNone) &&
            Attrs.hasFnAttribute(Attribute::ReadOnly)),
@@ -2472,17 +2384,19 @@ void Verifier::visitFunction(const Function &F) {
   Assert(verifyAttributeCount(Attrs, FT->getNumParams()),
          "Attribute after last parameter!", &F);
 
-  bool isLLVMdotName = F.getName().size() >= 5 &&
-                       F.getName().substr(0, 5) == "llvm.";
+  bool IsIntrinsic = F.isIntrinsic();
 
   // Check function attributes.
-  verifyFunctionAttrs(FT, Attrs, &F, isLLVMdotName);
+  verifyFunctionAttrs(FT, Attrs, &F, IsIntrinsic);
 
   // On function declarations/definitions, we do not support the builtin
   // attribute. We do not check this in VerifyFunctionAttrs since that is
   // checking for Attributes that can/can not ever be on functions.
   Assert(!Attrs.hasFnAttribute(Attribute::Builtin),
          "Attribute 'builtin' can only be applied to a callsite.", &F);
+
+  Assert(!Attrs.hasAttrSomewhere(Attribute::ElementType),
+         "Attribute 'elementtype' can only be applied to a callsite.", &F);
 
   // Check that this function meets the restrictions on this calling convention.
   // Sometimes varargs is used for perfectly forwarding thunks, so some of these
@@ -2550,7 +2464,7 @@ void Verifier::visitFunction(const Function &F) {
            FT->getParamType(i));
     Assert(Arg.getType()->isFirstClassType(),
            "Function arguments must have first-class types!", &Arg);
-    if (!isLLVMdotName) {
+    if (!IsIntrinsic) {
       Assert(!Arg.getType()->isMetadataTy(),
              "Function takes metadata but isn't an intrinsic", &Arg, &F);
       Assert(!Arg.getType()->isTokenTy(),
@@ -2566,7 +2480,7 @@ void Verifier::visitFunction(const Function &F) {
     ++i;
   }
 
-  if (!isLLVMdotName) {
+  if (!IsIntrinsic) {
     Assert(!F.getReturnType()->isTokenTy(),
            "Function returns a token but isn't an intrinsic", &F);
     Assert(!F.getReturnType()->isX86_AMXTy(),
@@ -2610,7 +2524,7 @@ void Verifier::visitFunction(const Function &F) {
   } else {
     // Verify that this function (which has a body) is not named "llvm.*".  It
     // is not legal to define intrinsics.
-    Assert(!isLLVMdotName, "llvm intrinsics cannot be defined!", &F);
+    Assert(!IsIntrinsic, "llvm intrinsics cannot be defined!", &F);
 
     // Check the entry node
     const BasicBlock *Entry = &F.getEntryBlock();
@@ -2665,7 +2579,7 @@ void Verifier::visitFunction(const Function &F) {
   // direct call/invokes, never having its "address taken".
   // Only do this if the module is materialized, otherwise we don't have all the
   // uses.
-  if (F.getIntrinsicID() && F.getParent()->isMaterialized()) {
+  if (F.isIntrinsic() && F.getParent()->isMaterialized()) {
     const User *U;
     if (F.hasAddressTaken(&U))
       Assert(false, "Invalid user of intrinsic instruction!", U);
@@ -3208,11 +3122,12 @@ void Verifier::visitCallBase(CallBase &Call) {
   Assert(verifyAttributeCount(Attrs, Call.arg_size()),
          "Attribute after last parameter!", Call);
 
-  bool IsIntrinsic = Call.getCalledFunction() &&
-                     Call.getCalledFunction()->getName().startswith("llvm.");
-
   Function *Callee =
       dyn_cast<Function>(Call.getCalledOperand()->stripPointerCasts());
+  bool IsIntrinsic = Callee && Callee->isIntrinsic();
+  if (IsIntrinsic)
+    Assert(Callee->getValueType() == FTy,
+           "Intrinsic called with incompatible signature", Call);
 
   if (Attrs.hasFnAttribute(Attribute::Speculatable)) {
     // Don't allow speculatable on call sites, unless the underlying function
@@ -3466,8 +3381,9 @@ static AttrBuilder getParameterABIAttributes(int I, AttributeList Attrs) {
       Attribute::ByRef};
   AttrBuilder Copy;
   for (auto AK : ABIAttrs) {
-    if (Attrs.hasParamAttribute(I, AK))
-      Copy.addAttribute(AK);
+    Attribute Attr = Attrs.getParamAttributes(I).getAttribute(AK);
+    if (Attr.isValid())
+      Copy.addAttribute(Attr);
   }
 
   // `align` is ABI-affecting only in combination with `byval` or `byref`.
@@ -4760,14 +4676,14 @@ void Verifier::visitIntrinsicCall(Intrinsic::ID ID, CallBase &Call) {
       Assert(ArgCount <= 2, "to many arguments");
       if (Kind == Attribute::None)
         break;
-      if (Attribute::doesAttrKindHaveArgument(Kind)) {
+      if (Attribute::isIntAttrKind(Kind)) {
         Assert(ArgCount == 2, "this attribute should have 2 arguments");
         Assert(isa<ConstantInt>(Call.getOperand(Elem.Begin + 1)),
                "the second argument should be a constant integral value");
-      } else if (isFuncOnlyAttr(Kind)) {
-        Assert((ArgCount) == 0, "this attribute has no argument");
-      } else if (!isFuncOrArgAttr(Kind)) {
+      } else if (Attribute::canUseAsParamAttr(Kind)) {
         Assert((ArgCount) == 1, "this attribute should have one argument");
+      } else if (Attribute::canUseAsFnAttr(Kind)) {
+        Assert((ArgCount) == 0, "this attribute has no argument");
       }
     }
     break;
@@ -5439,6 +5355,14 @@ void Verifier::visitIntrinsicCall(Intrinsic::ID ID, CallBase &Call) {
   }
   case Intrinsic::experimental_noalias_scope_decl: {
     NoAliasScopeDecls.push_back(cast<IntrinsicInst>(&Call));
+    break;
+  }
+  case Intrinsic::preserve_array_access_index:
+  case Intrinsic::preserve_struct_access_index: {
+    Type *ElemTy = Call.getAttributes().getParamElementType(0);
+    Assert(ElemTy,
+           "Intrinsic requires elementtype attribute on first argument.",
+           &Call);
     break;
   }
   };

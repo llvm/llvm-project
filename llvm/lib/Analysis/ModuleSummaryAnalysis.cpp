@@ -264,7 +264,20 @@ static void computeFunctionSummary(
   std::vector<const Instruction *> NonVolatileStores;
 
   bool HasInlineAsmMaybeReferencingInternal = false;
-  for (const BasicBlock &BB : F)
+  bool HasIndirBranchToBlockAddress = false;
+  for (const BasicBlock &BB : F) {
+    // We don't allow inlining of function with indirect branch to blockaddress.
+    // If the blockaddress escapes the function, e.g., via a global variable,
+    // inlining may lead to an invalid cross-function reference. So we shouldn't
+    // import such function either.
+    if (BB.hasAddressTaken()) {
+      for (User *U : BlockAddress::get(const_cast<BasicBlock *>(&BB))->users())
+        if (!isa<CallBrInst>(*U)) {
+          HasIndirBranchToBlockAddress = true;
+          break;
+        }
+    }
+
     for (const Instruction &I : BB) {
       if (isa<DbgInfoIntrinsic>(I))
         continue;
@@ -386,6 +399,7 @@ static void computeFunctionSummary(
               .updateHotness(getHotness(Candidate.Count, PSI));
       }
     }
+  }
   Index.addBlockCount(F.size());
 
   std::vector<ValueInfo> Refs;
@@ -452,8 +466,9 @@ static void computeFunctionSummary(
             : CalleeInfo::HotnessType::Critical);
 
   bool NonRenamableLocal = isNonRenamableLocal(F);
-  bool NotEligibleForImport =
-      NonRenamableLocal || HasInlineAsmMaybeReferencingInternal;
+  bool NotEligibleForImport = NonRenamableLocal ||
+                              HasInlineAsmMaybeReferencingInternal ||
+                              HasIndirBranchToBlockAddress;
   GlobalValueSummary::GVFlags Flags(
       F.getLinkage(), F.getVisibility(), NotEligibleForImport,
       /* Live = */ false, F.isDSOLocal(),

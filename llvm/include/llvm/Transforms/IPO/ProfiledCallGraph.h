@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef LLVM_TOOLS_LLVM_PROFGEN_PROFILEDCALLGRAPH_H
-#define LLVM_TOOLS_LLVM_PROFGEN_PROFILEDCALLGRAPH_H
+#ifndef LLVM_TRANSFORMS_IPO_PROFILEDCALLGRAPH_H
+#define LLVM_TRANSFORMS_IPO_PROFILEDCALLGRAPH_H
 
 #include "llvm/ADT/GraphTraits.h"
 #include "llvm/ADT/StringMap.h"

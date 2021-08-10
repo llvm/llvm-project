@@ -131,6 +131,9 @@ public:
 /// GCMetadataPrinterRegistery as well.
 using GCRegistry = Registry<GCStrategy>;
 
+/// Lookup the GCStrategy object associated with the given gc name.
+std::unique_ptr<GCStrategy> getGCStrategy(const StringRef Name);
+
 } // end namespace llvm
 
 #endif // LLVM_IR_GCSTRATEGY_H

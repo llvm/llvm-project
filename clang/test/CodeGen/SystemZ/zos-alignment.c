@@ -147,7 +147,7 @@ struct s10 {
 } S10;
 // CHECK:              0 | struct s10
 // CHECK-NEXT:         0 |   unsigned int a
-// CHECK-NEXT:           | [sizeof=16, align=16]
+// CHECK-NEXT:           | [sizeof=8, align=8]
 
 struct s11 {
   char a;

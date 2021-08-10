@@ -10,8 +10,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef LLVM_EXECUTIONENGINE_ORC_WRAPPERFUNCTIONUTILS_H
-#define LLVM_EXECUTIONENGINE_ORC_WRAPPERFUNCTIONUTILS_H
+#ifndef LLVM_EXECUTIONENGINE_ORC_SHARED_WRAPPERFUNCTIONUTILS_H
+#define LLVM_EXECUTIONENGINE_ORC_SHARED_WRAPPERFUNCTIONUTILS_H
 
 #include "llvm/ExecutionEngine/Orc/Shared/SimplePackedSerialization.h"
 #include "llvm/Support/Error.h"
@@ -298,7 +298,7 @@ public:
           SendWFR(ResultSerializer<ResultT>::serialize(std::move(Result)));
         };
 
-    callAsync(std::forward<HandlerT>(H), std::move(SendResult), Args,
+    callAsync(std::forward<HandlerT>(H), std::move(SendResult), std::move(Args),
               ArgIndices{});
   }
 
@@ -314,9 +314,9 @@ private:
             typename ArgTupleT, std::size_t... I>
   static void callAsync(HandlerT &&H,
                         SerializeAndSendResultT &&SerializeAndSendResult,
-                        ArgTupleT &Args, std::index_sequence<I...>) {
+                        ArgTupleT Args, std::index_sequence<I...>) {
     return std::forward<HandlerT>(H)(std::move(SerializeAndSendResult),
-                                     std::get<I>(Args)...);
+                                     std::move(std::get<I>(Args))...);
   }
 };
 
@@ -555,4 +555,4 @@ public:
 } // end namespace orc
 } // end namespace llvm
 
-#endif // LLVM_EXECUTIONENGINE_ORC_WRAPPERFUNCTIONUTILS_H
+#endif // LLVM_EXECUTIONENGINE_ORC_SHARED_WRAPPERFUNCTIONUTILS_H

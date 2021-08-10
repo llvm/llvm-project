@@ -298,10 +298,10 @@ TEST(InterfaceAttachment, Operation) {
   ModuleOp::attachInterface<TestExternalOpModel>(context);
   auto iface = dyn_cast<TestExternalOpInterface>(moduleOp.getOperation());
   ASSERT_TRUE(iface != nullptr);
-  EXPECT_EQ(iface.getNameLengthPlusArg(10), 16u);
-  EXPECT_EQ(iface.getNameLengthTimesArg(3), 18u);
-  EXPECT_EQ(iface.getNameLengthPlusArgTwice(18), 42u);
-  EXPECT_EQ(iface.getNameLengthMinusArg(5), 1u);
+  EXPECT_EQ(iface.getNameLengthPlusArg(10), 24u);
+  EXPECT_EQ(iface.getNameLengthTimesArg(3), 42u);
+  EXPECT_EQ(iface.getNameLengthPlusArgTwice(18), 50u);
+  EXPECT_EQ(iface.getNameLengthMinusArg(5), 9u);
 
   // Default implementation can be overridden.
   auto funcOp = FuncOp::create(UnknownLoc::get(&context), "function",
@@ -310,9 +310,9 @@ TEST(InterfaceAttachment, Operation) {
   FuncOp::attachInterface<TestExternalOpOverridingModel>(context);
   iface = dyn_cast<TestExternalOpInterface>(funcOp.getOperation());
   ASSERT_TRUE(iface != nullptr);
-  EXPECT_EQ(iface.getNameLengthPlusArg(10), 14u);
+  EXPECT_EQ(iface.getNameLengthPlusArg(10), 22u);
   EXPECT_EQ(iface.getNameLengthTimesArg(0), 42u);
-  EXPECT_EQ(iface.getNameLengthPlusArgTwice(8), 20u);
+  EXPECT_EQ(iface.getNameLengthPlusArgTwice(8), 28u);
   EXPECT_EQ(iface.getNameLengthMinusArg(1000), 21u);
 
   // Another context doesn't have the interfaces registered.
@@ -321,15 +321,16 @@ TEST(InterfaceAttachment, Operation) {
   ASSERT_FALSE(isa<TestExternalOpInterface>(otherModuleOp.getOperation()));
 }
 
+template <class ConcreteOp>
 struct TestExternalTestOpModel
-    : public TestExternalOpInterface::ExternalModel<TestExternalTestOpModel,
-                                                    test::OpJ> {
+    : public TestExternalOpInterface::ExternalModel<
+          TestExternalTestOpModel<ConcreteOp>, ConcreteOp> {
   unsigned getNameLengthPlusArg(Operation *op, unsigned arg) const {
     return op->getName().getStringRef().size() + arg;
   }
 
   static unsigned getNameLengthPlusArgTwice(unsigned arg) {
-    return test::OpJ::getOperationName().size() + 2 * arg;
+    return ConcreteOp::getOperationName().size() + 2 * arg;
   }
 };
 
@@ -337,39 +338,61 @@ TEST(InterfaceAttachment, OperationDelayedContextConstruct) {
   DialectRegistry registry;
   registry.insert<test::TestDialect>();
   registry.addOpInterface<ModuleOp, TestExternalOpModel>();
-  registry.addOpInterface<test::OpJ, TestExternalTestOpModel>();
+  registry.addOpInterface<test::OpJ, TestExternalTestOpModel<test::OpJ>>();
+  registry.addOpInterface<test::OpH, TestExternalTestOpModel<test::OpH>>();
 
   // Construct the context directly from a registry. The interfaces are expected
   // to be readily available on operations.
   MLIRContext context(registry);
   context.loadDialect<test::TestDialect>();
+
   ModuleOp module = ModuleOp::create(UnknownLoc::get(&context));
   OpBuilder builder(module);
-  auto op =
+  auto opJ =
       builder.create<test::OpJ>(builder.getUnknownLoc(), builder.getI32Type());
+  auto opH =
+      builder.create<test::OpH>(builder.getUnknownLoc(), opJ.getResult());
+  auto opI =
+      builder.create<test::OpI>(builder.getUnknownLoc(), opJ.getResult());
+
   EXPECT_TRUE(isa<TestExternalOpInterface>(module.getOperation()));
-  EXPECT_TRUE(isa<TestExternalOpInterface>(op.getOperation()));
+  EXPECT_TRUE(isa<TestExternalOpInterface>(opJ.getOperation()));
+  EXPECT_TRUE(isa<TestExternalOpInterface>(opH.getOperation()));
+  EXPECT_FALSE(isa<TestExternalOpInterface>(opI.getOperation()));
 }
 
 TEST(InterfaceAttachment, OperationDelayedContextAppend) {
   DialectRegistry registry;
   registry.insert<test::TestDialect>();
   registry.addOpInterface<ModuleOp, TestExternalOpModel>();
-  registry.addOpInterface<test::OpJ, TestExternalTestOpModel>();
+  registry.addOpInterface<test::OpJ, TestExternalTestOpModel<test::OpJ>>();
+  registry.addOpInterface<test::OpH, TestExternalTestOpModel<test::OpH>>();
 
   // Construct the context, create ops, and only then append the registry. The
   // interfaces are expected to be available after appending the registry.
   MLIRContext context;
   context.loadDialect<test::TestDialect>();
+
   ModuleOp module = ModuleOp::create(UnknownLoc::get(&context));
   OpBuilder builder(module);
-  auto op =
+  auto opJ =
       builder.create<test::OpJ>(builder.getUnknownLoc(), builder.getI32Type());
+  auto opH =
+      builder.create<test::OpH>(builder.getUnknownLoc(), opJ.getResult());
+  auto opI =
+      builder.create<test::OpI>(builder.getUnknownLoc(), opJ.getResult());
+
   EXPECT_FALSE(isa<TestExternalOpInterface>(module.getOperation()));
-  EXPECT_FALSE(isa<TestExternalOpInterface>(op.getOperation()));
+  EXPECT_FALSE(isa<TestExternalOpInterface>(opJ.getOperation()));
+  EXPECT_FALSE(isa<TestExternalOpInterface>(opH.getOperation()));
+  EXPECT_FALSE(isa<TestExternalOpInterface>(opI.getOperation()));
+
   context.appendDialectRegistry(registry);
+
   EXPECT_TRUE(isa<TestExternalOpInterface>(module.getOperation()));
-  EXPECT_TRUE(isa<TestExternalOpInterface>(op.getOperation()));
+  EXPECT_TRUE(isa<TestExternalOpInterface>(opJ.getOperation()));
+  EXPECT_TRUE(isa<TestExternalOpInterface>(opH.getOperation()));
+  EXPECT_FALSE(isa<TestExternalOpInterface>(opI.getOperation()));
 }
 
 } // end namespace

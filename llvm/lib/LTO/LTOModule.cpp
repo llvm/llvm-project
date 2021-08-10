@@ -688,3 +688,16 @@ Expected<uint32_t> LTOModule::getMachOCPUType() const {
 Expected<uint32_t> LTOModule::getMachOCPUSubType() const {
   return MachO::getCPUSubType(Triple(Mod->getTargetTriple()));
 }
+
+bool LTOModule::hasCtorDtor() const {
+  for (auto Sym : SymTab.symbols()) {
+    if (auto *GV = Sym.dyn_cast<GlobalValue *>()) {
+      StringRef Name = GV->getName();
+      if (Name.consume_front("llvm.global_")) {
+        if (Name.equals("ctors") || Name.equals("dtors"))
+          return true;
+      }
+    }
+  }
+  return false;
+}

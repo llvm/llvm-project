@@ -8,7 +8,7 @@ target triple = "x86_64"
 
 ; bb1 references a gep introduced in bb0. The gep must remain available after
 ; the merge.
-define i1 @bug(%Triple* nonnull dereferenceable(16) %lhs, %Triple* nonnull dereferenceable(16) %rhs) {
+define i1 @bug(%Triple* nonnull dereferenceable(16) %lhs, %Triple* nonnull dereferenceable(16) %rhs) nofree nosync {
 ; CHECK-LABEL: @bug(
 ; CHECK-NEXT:  bb0:
 ; CHECK-NEXT:    store i32 1, i32* @g, align 4

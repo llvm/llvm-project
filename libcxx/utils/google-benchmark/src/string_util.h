@@ -12,7 +12,9 @@ void AppendHumanReadable(int n, std::string* str);
 
 std::string HumanReadableNumber(double n, double one_k = 1024.0);
 
-#ifdef __GNUC__
+#if defined(__MINGW32__)
+__attribute__((format(__MINGW_PRINTF_FORMAT, 1, 2)))
+#elif defined(__GNUC__)
 __attribute__((format(printf, 1, 2)))
 #endif
 std::string
@@ -35,8 +37,7 @@ inline std::string StrCat(Args&&... args) {
   return ss.str();
 }
 
-void ReplaceAll(std::string* str, const std::string& from,
-                const std::string& to);
+std::vector<std::string> StrSplit(const std::string& str, char delim);
 
 #ifdef BENCHMARK_STL_ANDROID_GNUSTL
 /*

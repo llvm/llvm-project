@@ -673,6 +673,19 @@ Optional<APInt> llvm::ConstantFoldExtOp(unsigned Opcode, const Register Op1,
   return None;
 }
 
+Optional<APFloat> llvm::ConstantFoldIntToFloat(unsigned Opcode, LLT DstTy,
+                                               Register Src,
+                                               const MachineRegisterInfo &MRI) {
+  assert(Opcode == TargetOpcode::G_SITOFP || Opcode == TargetOpcode::G_UITOFP);
+  if (auto MaybeSrcVal = getConstantVRegVal(Src, MRI)) {
+    APFloat DstVal(getFltSemanticForLLT(DstTy));
+    DstVal.convertFromAPInt(*MaybeSrcVal, Opcode == TargetOpcode::G_SITOFP,
+                            APFloat::rmNearestTiesToEven);
+    return DstVal;
+  }
+  return None;
+}
+
 bool llvm::isKnownToBeAPowerOfTwo(Register Reg, const MachineRegisterInfo &MRI,
                                   GISelKnownBits *KB) {
   Optional<DefinitionAndSourceRegister> DefSrcReg =
@@ -997,13 +1010,4 @@ bool llvm::shouldOptForSize(const MachineBasicBlock &MBB,
   const auto &F = MBB.getParent()->getFunction();
   return F.hasOptSize() || F.hasMinSize() ||
          llvm::shouldOptimizeForSize(MBB.getBasicBlock(), PSI, BFI);
-}
-
-unsigned llvm::getIntrinsicID(const MachineInstr &MI) {
-#ifndef NDEBUG
-  unsigned Opc = MI.getOpcode();
-  assert(Opc == TargetOpcode::G_INTRINSIC ||
-         Opc == TargetOpcode::G_INTRINSIC_W_SIDE_EFFECTS);
-#endif
-  return MI.getOperand(MI.getNumExplicitDefs()).getIntrinsicID();
 }

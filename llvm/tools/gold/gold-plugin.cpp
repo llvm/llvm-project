@@ -623,8 +623,10 @@ static ld_plugin_status claim_file_hook(const ld_plugin_input_file *file,
     sym.comdat_key = nullptr;
     int CI = Sym.getComdatIndex();
     if (CI != -1) {
-      StringRef C = Obj->getComdatTable()[CI];
-      sym.comdat_key = strdup(C.str().c_str());
+      // Not setting comdat_key for nodeduplicate ensuress we don't deduplicate.
+      std::pair<StringRef, Comdat::SelectionKind> C = Obj->getComdatTable()[CI];
+      if (C.second != Comdat::NoDeduplicate)
+        sym.comdat_key = strdup(C.first.str().c_str());
     }
 
     sym.resolution = LDPR_UNKNOWN;

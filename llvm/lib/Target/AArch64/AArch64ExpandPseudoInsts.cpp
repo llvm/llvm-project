@@ -279,21 +279,46 @@ bool AArch64ExpandPseudo::expandCMP_SWAP_128(
   Register NewLoReg = MI.getOperand(6).getReg();
   Register NewHiReg = MI.getOperand(7).getReg();
 
+  unsigned LdxpOp, StxpOp;
+
+  switch (MI.getOpcode()) {
+  case AArch64::CMP_SWAP_128_MONOTONIC:
+    LdxpOp = AArch64::LDXPX;
+    StxpOp = AArch64::STXPX;
+    break;
+  case AArch64::CMP_SWAP_128_RELEASE:
+    LdxpOp = AArch64::LDXPX;
+    StxpOp = AArch64::STLXPX;
+    break;
+  case AArch64::CMP_SWAP_128_ACQUIRE:
+    LdxpOp = AArch64::LDAXPX;
+    StxpOp = AArch64::STXPX;
+    break;
+  case AArch64::CMP_SWAP_128:
+    LdxpOp = AArch64::LDAXPX;
+    StxpOp = AArch64::STLXPX;
+    break;
+  default:
+    llvm_unreachable("Unexpected opcode");
+  }
+
   MachineFunction *MF = MBB.getParent();
   auto LoadCmpBB = MF->CreateMachineBasicBlock(MBB.getBasicBlock());
   auto StoreBB = MF->CreateMachineBasicBlock(MBB.getBasicBlock());
+  auto FailBB = MF->CreateMachineBasicBlock(MBB.getBasicBlock());
   auto DoneBB = MF->CreateMachineBasicBlock(MBB.getBasicBlock());
 
   MF->insert(++MBB.getIterator(), LoadCmpBB);
   MF->insert(++LoadCmpBB->getIterator(), StoreBB);
-  MF->insert(++StoreBB->getIterator(), DoneBB);
+  MF->insert(++StoreBB->getIterator(), FailBB);
+  MF->insert(++FailBB->getIterator(), DoneBB);
 
   // .Lloadcmp:
   //     ldaxp xDestLo, xDestHi, [xAddr]
   //     cmp xDestLo, xDesiredLo
   //     sbcs xDestHi, xDesiredHi
   //     b.ne .Ldone
-  BuildMI(LoadCmpBB, DL, TII->get(AArch64::LDAXPX))
+  BuildMI(LoadCmpBB, DL, TII->get(LdxpOp))
       .addReg(DestLo.getReg(), RegState::Define)
       .addReg(DestHi.getReg(), RegState::Define)
       .addReg(AddrReg);
@@ -315,22 +340,36 @@ bool AArch64ExpandPseudo::expandCMP_SWAP_128(
       .addImm(AArch64CC::EQ);
   BuildMI(LoadCmpBB, DL, TII->get(AArch64::CBNZW))
       .addUse(StatusReg, getKillRegState(StatusDead))
-      .addMBB(DoneBB);
-  LoadCmpBB->addSuccessor(DoneBB);
+      .addMBB(FailBB);
+  LoadCmpBB->addSuccessor(FailBB);
   LoadCmpBB->addSuccessor(StoreBB);
 
   // .Lstore:
   //     stlxp wStatus, xNewLo, xNewHi, [xAddr]
   //     cbnz wStatus, .Lloadcmp
-  BuildMI(StoreBB, DL, TII->get(AArch64::STLXPX), StatusReg)
+  BuildMI(StoreBB, DL, TII->get(StxpOp), StatusReg)
       .addReg(NewLoReg)
       .addReg(NewHiReg)
       .addReg(AddrReg);
   BuildMI(StoreBB, DL, TII->get(AArch64::CBNZW))
       .addReg(StatusReg, getKillRegState(StatusDead))
       .addMBB(LoadCmpBB);
+  BuildMI(StoreBB, DL, TII->get(AArch64::B)).addMBB(DoneBB);
   StoreBB->addSuccessor(LoadCmpBB);
   StoreBB->addSuccessor(DoneBB);
+
+  // .Lfail:
+  //     stlxp wStatus, xDestLo, xDestHi, [xAddr]
+  //     cbnz wStatus, .Lloadcmp
+  BuildMI(FailBB, DL, TII->get(StxpOp), StatusReg)
+      .addReg(DestLo.getReg())
+      .addReg(DestHi.getReg())
+      .addReg(AddrReg);
+  BuildMI(FailBB, DL, TII->get(AArch64::CBNZW))
+      .addReg(StatusReg, getKillRegState(StatusDead))
+      .addMBB(LoadCmpBB);
+  FailBB->addSuccessor(LoadCmpBB);
+  FailBB->addSuccessor(DoneBB);
 
   DoneBB->splice(DoneBB->end(), &MBB, MI, MBB.end());
   DoneBB->transferSuccessors(&MBB);
@@ -343,9 +382,13 @@ bool AArch64ExpandPseudo::expandCMP_SWAP_128(
   // Recompute liveness bottom up.
   LivePhysRegs LiveRegs;
   computeAndAddLiveIns(LiveRegs, *DoneBB);
+  computeAndAddLiveIns(LiveRegs, *FailBB);
   computeAndAddLiveIns(LiveRegs, *StoreBB);
   computeAndAddLiveIns(LiveRegs, *LoadCmpBB);
+
   // Do an extra pass in the loop to get the loop carried dependencies right.
+  FailBB->clearLiveIns();
+  computeAndAddLiveIns(LiveRegs, *FailBB);
   StoreBB->clearLiveIns();
   computeAndAddLiveIns(LiveRegs, *StoreBB);
   LoadCmpBB->clearLiveIns();
@@ -423,6 +466,9 @@ bool AArch64ExpandPseudo::expand_DestructiveOp(
   case AArch64::DestructiveBinaryImm:
     std::tie(PredIdx, DOPIdx, SrcIdx) = std::make_tuple(1, 2, 3);
     break;
+  case AArch64::DestructiveUnaryPassthru:
+    std::tie(PredIdx, DOPIdx, SrcIdx) = std::make_tuple(2, 3, 3);
+    break;
   case AArch64::DestructiveTernaryCommWithRev:
     std::tie(PredIdx, DOPIdx, SrcIdx, Src2Idx) = std::make_tuple(1, 2, 3, 4);
     if (DstReg == MI.getOperand(3).getReg()) {
@@ -451,6 +497,7 @@ bool AArch64ExpandPseudo::expand_DestructiveOp(
       DstReg != MI.getOperand(DOPIdx).getReg() ||
       MI.getOperand(DOPIdx).getReg() != MI.getOperand(SrcIdx).getReg();
     break;
+  case AArch64::DestructiveUnaryPassthru:
   case AArch64::DestructiveBinaryImm:
     DOPRegIsUnique = true;
     break;
@@ -535,6 +582,11 @@ bool AArch64ExpandPseudo::expand_DestructiveOp(
     .addReg(DstReg, RegState::Define | getDeadRegState(DstIsDead));
 
   switch (DType) {
+  case AArch64::DestructiveUnaryPassthru:
+    DOP.addReg(MI.getOperand(DOPIdx).getReg(), RegState::Kill)
+        .add(MI.getOperand(PredIdx))
+        .add(MI.getOperand(SrcIdx));
+    break;
   case AArch64::DestructiveBinaryImm:
   case AArch64::DestructiveBinaryComm:
   case AArch64::DestructiveBinaryCommWithRev:
@@ -1093,6 +1145,9 @@ bool AArch64ExpandPseudo::expandMI(MachineBasicBlock &MBB,
                           AArch64_AM::getShifterImm(AArch64_AM::LSL, 0),
                           AArch64::XZR, NextMBBI);
   case AArch64::CMP_SWAP_128:
+  case AArch64::CMP_SWAP_128_RELEASE:
+  case AArch64::CMP_SWAP_128_ACQUIRE:
+  case AArch64::CMP_SWAP_128_MONOTONIC:
     return expandCMP_SWAP_128(MBB, MBBI, NextMBBI);
 
   case AArch64::AESMCrrTied:

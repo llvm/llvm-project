@@ -1013,7 +1013,7 @@ The integer codes are mapped to well-known attributes as follows.
 * code 9: ``noalias``
 * code 10: ``nobuiltin``
 * code 11: ``nocapture``
-* code 12: ``noduplicates``
+* code 12: ``nodeduplicate``
 * code 13: ``noimplicitfloat``
 * code 14: ``noinline``
 * code 15: ``nonlazybind``

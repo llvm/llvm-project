@@ -13,21 +13,11 @@
 ;.
 define internal i32 @test(i32** %x) {
 ;
-; IS__TUNIT____: Function Attrs: nofree nosync nounwind readonly willreturn
-; IS__TUNIT____-LABEL: define {{[^@]+}}@test
-; IS__TUNIT____-SAME: () #[[ATTR0:[0-9]+]] {
-; IS__TUNIT____-NEXT:  entry:
-; IS__TUNIT____-NEXT:    [[Y:%.*]] = load i32*, i32** @G2, align 8
-; IS__TUNIT____-NEXT:    [[Z:%.*]] = load i32, i32* [[Y]], align 4
-; IS__TUNIT____-NEXT:    ret i32 [[Z]]
-;
-; IS__CGSCC____: Function Attrs: nofree norecurse nosync nounwind readonly willreturn
+; IS__CGSCC____: Function Attrs: nofree norecurse nosync nounwind readnone willreturn
 ; IS__CGSCC____-LABEL: define {{[^@]+}}@test
 ; IS__CGSCC____-SAME: () #[[ATTR0:[0-9]+]] {
 ; IS__CGSCC____-NEXT:  entry:
-; IS__CGSCC____-NEXT:    [[Y:%.*]] = load i32*, i32** @G2, align 8
-; IS__CGSCC____-NEXT:    [[Z:%.*]] = load i32, i32* [[Y]], align 4
-; IS__CGSCC____-NEXT:    ret i32 [[Z]]
+; IS__CGSCC____-NEXT:    ret i32 undef
 ;
 entry:
   %y = load i32*, i32** %x
@@ -36,19 +26,17 @@ entry:
 }
 
 define i32 @caller() {
-; IS__TUNIT____: Function Attrs: nofree nosync nounwind readonly willreturn
+; IS__TUNIT____: Function Attrs: nofree nosync nounwind readnone willreturn
 ; IS__TUNIT____-LABEL: define {{[^@]+}}@caller
-; IS__TUNIT____-SAME: () #[[ATTR0]] {
+; IS__TUNIT____-SAME: () #[[ATTR0:[0-9]+]] {
 ; IS__TUNIT____-NEXT:  entry:
-; IS__TUNIT____-NEXT:    [[X:%.*]] = call i32 @test() #[[ATTR0]]
-; IS__TUNIT____-NEXT:    ret i32 [[X]]
+; IS__TUNIT____-NEXT:    ret i32 0
 ;
-; IS__CGSCC____: Function Attrs: nofree norecurse nosync nounwind readonly willreturn
+; IS__CGSCC____: Function Attrs: nofree norecurse nosync nounwind readnone willreturn
 ; IS__CGSCC____-LABEL: define {{[^@]+}}@caller
 ; IS__CGSCC____-SAME: () #[[ATTR0]] {
 ; IS__CGSCC____-NEXT:  entry:
-; IS__CGSCC____-NEXT:    [[X:%.*]] = call i32 @test() #[[ATTR1:[0-9]+]]
-; IS__CGSCC____-NEXT:    ret i32 [[X]]
+; IS__CGSCC____-NEXT:    ret i32 0
 ;
 entry:
   %x = call i32 @test(i32** @G2)
@@ -56,8 +44,7 @@ entry:
 }
 
 ;.
-; IS__TUNIT____: attributes #[[ATTR0]] = { nofree nosync nounwind readonly willreturn }
+; IS__TUNIT____: attributes #[[ATTR0]] = { nofree nosync nounwind readnone willreturn }
 ;.
-; IS__CGSCC____: attributes #[[ATTR0]] = { nofree norecurse nosync nounwind readonly willreturn }
-; IS__CGSCC____: attributes #[[ATTR1]] = { readonly willreturn }
+; IS__CGSCC____: attributes #[[ATTR0]] = { nofree norecurse nosync nounwind readnone willreturn }
 ;.

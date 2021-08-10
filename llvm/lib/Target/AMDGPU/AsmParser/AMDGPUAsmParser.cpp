@@ -3448,13 +3448,11 @@ bool AMDGPUAsmParser::validateMIMGAddrSize(const MCInst &Inst) {
   if (!IsNSA) {
     if (ExpectedAddrSize > 8)
       ExpectedAddrSize = 16;
-    else if (ExpectedAddrSize > 5)
-      ExpectedAddrSize = 8;
 
-    // Allow oversized 8 VGPR vaddr when only 5 VGPR are required.
+    // Allow oversized 8 VGPR vaddr when only 5/6/7 VGPRs are required.
     // This provides backward compatibility for assembly created
-    // before 160b types were directly supported.
-    if (ExpectedAddrSize == 5 && ActualAddrSize == 8)
+    // before 160b/192b/224b types were directly supported.
+    if (ActualAddrSize == 8 && (ExpectedAddrSize >= 5 && ExpectedAddrSize <= 7))
       return true;
   }
 

@@ -304,13 +304,11 @@ auto ComputeOffsetsHelper::GetSizeAndAlignment(
   // of length type parameters).
   auto &foldingContext{context_.foldingContext()};
   if (IsDescriptor(symbol) || IsProcedurePointer(symbol)) {
-    int lenParams{0};
-    if (const auto *derived{evaluate::GetDerivedTypeSpec(
-            evaluate::DynamicType::From(symbol))}) {
-      lenParams = CountLenParameters(*derived);
-    }
-    std::size_t size{
-        runtime::Descriptor::SizeInBytes(symbol.Rank(), false, lenParams)};
+    const auto *derived{
+        evaluate::GetDerivedTypeSpec(evaluate::DynamicType::From(symbol))};
+    int lenParams{derived ? CountLenParameters(*derived) : 0};
+    std::size_t size{runtime::Descriptor::SizeInBytes(
+        symbol.Rank(), derived != nullptr, lenParams)};
     return {size, foldingContext.maxAlignment()};
   }
   if (IsProcedure(symbol)) {

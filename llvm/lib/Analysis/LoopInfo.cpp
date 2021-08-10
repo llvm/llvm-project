@@ -171,8 +171,8 @@ PHINode *Loop::getCanonicalInductionVariable() const {
 }
 
 /// Get the latch condition instruction.
-static ICmpInst *getLatchCmpInst(const Loop &L) {
-  if (BasicBlock *Latch = L.getLoopLatch())
+ICmpInst *Loop::getLatchCmpInst() const {
+  if (BasicBlock *Latch = getLoopLatch())
     if (BranchInst *BI = dyn_cast_or_null<BranchInst>(Latch->getTerminator()))
       if (BI->isConditional())
         return dyn_cast<ICmpInst>(BI->getCondition());
@@ -183,7 +183,7 @@ static ICmpInst *getLatchCmpInst(const Loop &L) {
 /// Return the final value of the loop induction variable if found.
 static Value *findFinalIVValue(const Loop &L, const PHINode &IndVar,
                                const Instruction &StepInst) {
-  ICmpInst *LatchCmpInst = getLatchCmpInst(L);
+  ICmpInst *LatchCmpInst = L.getLatchCmpInst();
   if (!LatchCmpInst)
     return nullptr;
 
@@ -297,7 +297,7 @@ PHINode *Loop::getInductionVariable(ScalarEvolution &SE) const {
 
   BasicBlock *Header = getHeader();
   assert(Header && "Expected a valid loop header");
-  ICmpInst *CmpInst = getLatchCmpInst(*this);
+  ICmpInst *CmpInst = getLatchCmpInst();
   if (!CmpInst)
     return nullptr;
 

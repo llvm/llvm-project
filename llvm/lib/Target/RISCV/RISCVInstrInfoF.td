@@ -19,11 +19,23 @@ def SDT_RISCVFMV_W_X_RV64
     : SDTypeProfile<1, 1, [SDTCisVT<0, f32>, SDTCisVT<1, i64>]>;
 def SDT_RISCVFMV_X_ANYEXTW_RV64
     : SDTypeProfile<1, 1, [SDTCisVT<0, i64>, SDTCisVT<1, f32>]>;
+def STD_RISCVFCVT_W_RV64
+    : SDTypeProfile<1, 1, [SDTCisVT<0, i64>, SDTCisFP<1>]>;
+def STD_RISCVFCVT_X
+    : SDTypeProfile<1, 1, [SDTCisVT<0, XLenVT>, SDTCisFP<1>]>;
 
 def riscv_fmv_w_x_rv64
     : SDNode<"RISCVISD::FMV_W_X_RV64", SDT_RISCVFMV_W_X_RV64>;
 def riscv_fmv_x_anyextw_rv64
     : SDNode<"RISCVISD::FMV_X_ANYEXTW_RV64", SDT_RISCVFMV_X_ANYEXTW_RV64>;
+def riscv_fcvt_w_rtz_rv64
+    : SDNode<"RISCVISD::FCVT_W_RTZ_RV64", STD_RISCVFCVT_W_RV64>;
+def riscv_fcvt_wu_rtz_rv64
+    : SDNode<"RISCVISD::FCVT_WU_RTZ_RV64", STD_RISCVFCVT_W_RV64>;
+def riscv_fcvt_x_rtz
+    : SDNode<"RISCVISD::FCVT_X_RTZ", STD_RISCVFCVT_X>;
+def riscv_fcvt_xu_rtz
+    : SDNode<"RISCVISD::FCVT_XU_RTZ", STD_RISCVFCVT_X>;
 
 //===----------------------------------------------------------------------===//
 // Operand and SDNode transformation definitions.
@@ -373,6 +385,10 @@ def : Pat<(i32 (bitconvert FPR32:$rs1)), (FMV_X_W FPR32:$rs1)>;
 def : Pat<(i32 (fp_to_sint FPR32:$rs1)), (FCVT_W_S $rs1, 0b001)>;
 def : Pat<(i32 (fp_to_uint FPR32:$rs1)), (FCVT_WU_S $rs1, 0b001)>;
 
+// Saturating float->[u]int32.
+def : Pat<(i32 (riscv_fcvt_x_rtz FPR32:$rs1)), (FCVT_W_S $rs1, 0b001)>;
+def : Pat<(i32 (riscv_fcvt_xu_rtz FPR32:$rs1)), (FCVT_WU_S $rs1, 0b001)>;
+
 // float->int32 with current rounding mode.
 def : Pat<(i32 (lrint FPR32:$rs1)), (FCVT_W_S $rs1, 0b111)>;
 
@@ -391,16 +407,19 @@ def : Pat<(riscv_fmv_x_anyextw_rv64 FPR32:$src), (FMV_X_W FPR32:$src)>;
 def : Pat<(sext_inreg (riscv_fmv_x_anyextw_rv64 FPR32:$src), i32),
           (FMV_X_W FPR32:$src)>;
 
-// FP->[u]int32 is mostly handled by the FP->[u]int64 patterns. This is safe
-// because fpto[u|s]i produces poison if the value can't fit into the target.
-// We match the single case below because fcvt.wu.s sign-extends its result so
-// is cheaper than fcvt.lu.s+sext.w.
-def : Pat<(sext_inreg (assertzexti32 (fp_to_uint FPR32:$rs1)), i32),
-          (FCVT_WU_S $rs1, 0b001)>;
+// Use target specific isd nodes to help us remember the result is sign
+// extended. Matching sext_inreg+fptoui/fptosi may cause the conversion to be
+// duplicated if it has another user that didn't need the sign_extend.
+def : Pat<(riscv_fcvt_w_rtz_rv64 FPR32:$rs1),  (FCVT_W_S $rs1, 0b001)>;
+def : Pat<(riscv_fcvt_wu_rtz_rv64 FPR32:$rs1), (FCVT_WU_S $rs1, 0b001)>;
 
 // float->[u]int64. Round-to-zero must be used.
 def : Pat<(i64 (fp_to_sint FPR32:$rs1)), (FCVT_L_S $rs1, 0b001)>;
 def : Pat<(i64 (fp_to_uint FPR32:$rs1)), (FCVT_LU_S $rs1, 0b001)>;
+
+// Saturating float->[u]int64.
+def : Pat<(i64 (riscv_fcvt_x_rtz FPR32:$rs1)), (FCVT_L_S $rs1, 0b001)>;
+def : Pat<(i64 (riscv_fcvt_xu_rtz FPR32:$rs1)), (FCVT_LU_S $rs1, 0b001)>;
 
 // float->int64 with current rounding mode.
 def : Pat<(i64 (lrint FPR32:$rs1)), (FCVT_L_S $rs1, 0b111)>;

@@ -729,6 +729,8 @@ class SOPK_Real<bits<5> op, SOPK_Pseudo ps> :
   let SchedRW            = ps.SchedRW;
   let mayLoad            = ps.mayLoad;
   let mayStore           = ps.mayStore;
+  let isBranch           = ps.isBranch;
+  let isCall             = ps.isCall;
 
   // encoding
   bits<7>  sdst;

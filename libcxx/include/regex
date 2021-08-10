@@ -2003,14 +2003,14 @@ class __l_anchor_multiline
 {
     typedef __owns_one_state<_CharT> base;
 
-    bool __multiline;
+    bool __multiline_;
 
 public:
     typedef _VSTD::__state<_CharT> __state;
 
     _LIBCPP_INLINE_VISIBILITY
     __l_anchor_multiline(bool __multiline, __node<_CharT>* __s)
-        : base(__s), __multiline(__multiline) {}
+        : base(__s), __multiline_(__multiline) {}
 
     virtual void __exec(__state&) const;
 };
@@ -2025,7 +2025,7 @@ __l_anchor_multiline<_CharT>::__exec(__state& __s) const
         __s.__do_ = __state::__accept_but_not_consume;
         __s.__node_ = this->first();
     }
-    else if (__multiline &&
+    else if (__multiline_ &&
              !__s.__at_first_ &&
              __is_eol(*_VSTD::prev(__s.__current_)))
     {
@@ -4574,7 +4574,7 @@ basic_regex<_CharT, _Traits>::__parse_character_escape(_ForwardIterator __first,
             if (__hd == -1)
                 __throw_regex_error<regex_constants::error_escape>();
             __sum = 16 * __sum + static_cast<unsigned>(__hd);
-            // drop through
+            // fallthrough
         case 'x':
             ++__first;
             if (__first == __last)

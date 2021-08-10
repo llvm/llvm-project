@@ -43,6 +43,7 @@ using namespace llvm::wasm;
 namespace lld {
 namespace wasm {
 static constexpr int stackAlignment = 16;
+static constexpr int heapAlignment = 16;
 
 namespace {
 
@@ -310,9 +311,12 @@ void Writer::layoutMemory() {
     placeStack();
 
   if (WasmSym::heapBase) {
-    // Set `__heap_base` to directly follow the end of the stack or global data.
-    // The fact that this comes last means that a malloc/brk implementation
-    // can grow the heap at runtime.
+    // Set `__heap_base` to follow the end of the stack or global data. The
+    // fact that this comes last means that a malloc/brk implementation can
+    // grow the heap at runtime.
+    // We'll align the heap base here because memory allocators might expect
+    // __heap_base to be aligned already.
+    memoryPtr = alignTo(memoryPtr, heapAlignment);
     log("mem: heap base   = " + Twine(memoryPtr));
     WasmSym::heapBase->setVA(memoryPtr);
   }
@@ -562,14 +566,8 @@ static bool shouldImport(Symbol *sym) {
     return true;
   if (config->allowUndefinedSymbols.count(sym->getName()) != 0)
     return true;
-  if (auto *g = dyn_cast<UndefinedGlobal>(sym))
-    return g->importName.hasValue();
-  if (auto *f = dyn_cast<UndefinedFunction>(sym))
-    return f->importName.hasValue();
-  if (auto *t = dyn_cast<UndefinedTable>(sym))
-    return t->importName.hasValue();
 
-  return false;
+  return sym->importName.hasValue();
 }
 
 void Writer::calculateImports() {
@@ -1057,7 +1055,7 @@ void Writer::createInitMemoryFunction() {
       writeU8(os, WASM_OPCODE_GLOBAL_GET, "GLOBAL_GET");
       writeUleb128(os, WasmSym::memoryBase->getGlobalIndex(), "memory_base");
       writePtrConst(os, flagAddress, is64, "flag address");
-      writeU8(os, WASM_OPCODE_I32_ADD, "add");
+      writeU8(os, is64 ? WASM_OPCODE_I64_ADD : WASM_OPCODE_I32_ADD, "add");
       writeU8(os, WASM_OPCODE_LOCAL_SET, "local.set");
       writeUleb128(os, 0, "local 0");
     } else {
@@ -1104,7 +1102,8 @@ void Writer::createInitMemoryFunction() {
           writeU8(os, WASM_OPCODE_GLOBAL_GET, "GLOBAL_GET");
           writeUleb128(os, WasmSym::memoryBase->getGlobalIndex(),
                        "memory_base");
-          writeU8(os, WASM_OPCODE_I32_ADD, "i32.add");
+          writeU8(os, is64 ? WASM_OPCODE_I64_ADD : WASM_OPCODE_I32_ADD,
+                  "i32.add");
         }
         // source segment offset
         writeI32Const(os, 0, "segment offset");

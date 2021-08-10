@@ -3,7 +3,6 @@
 ; RUN:   -wasm-disable-explicit-locals -wasm-keep-registers \
 ; RUN:   | FileCheck %s
 
-target datalayout = "e-m:e-p:32:32-i64:64-n32:64-S128"
 target triple = "wasm32-unknown-unknown"
 
 ; This tests very minimal fast-isel functionality.

@@ -369,6 +369,28 @@ public:
   ///     number plugins, otherwise the actual schema is returned.
   static llvm::StringRef GetTraceSchema(size_t index);
 
+  // TraceExporter
+
+  /// \param[in] create_thread_trace_export_command
+  ///     This callback is used to create a CommandObject that will be listed
+  ///     under "thread trace export". Can be \b null.
+  static bool RegisterPlugin(
+      ConstString name, const char *description,
+      TraceExporterCreateInstance create_callback,
+      ThreadTraceExportCommandCreator create_thread_trace_export_command);
+
+  static TraceExporterCreateInstance
+  GetTraceExporterCreateCallback(ConstString plugin_name);
+
+  static bool UnregisterPlugin(TraceExporterCreateInstance create_callback);
+
+  static const char *GetTraceExporterPluginNameAtIndex(uint32_t index);
+
+  /// Return the callback used to create the CommandObject that will be listed
+  /// under "thread trace export". Can be \b null.
+  static ThreadTraceExportCommandCreator
+  GetThreadTraceExportCommandCreatorAtIndex(uint32_t index);
+
   // UnwindAssembly
   static bool RegisterPlugin(ConstString name, const char *description,
                              UnwindAssemblyCreateInstance create_callback);

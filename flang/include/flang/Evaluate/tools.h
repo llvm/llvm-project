@@ -460,6 +460,10 @@ template <typename TO> Expr<TO> ConvertToType(BOZLiteralConstant &&x) {
   }
 }
 
+template <typename T> bool IsBOZLiteral(const Expr<T> &expr) {
+  return std::holds_alternative<BOZLiteralConstant>(expr.u);
+}
+
 // Conversions to dynamic types
 std::optional<Expr<SomeType>> ConvertToType(
     const DynamicType &, Expr<SomeType> &&);

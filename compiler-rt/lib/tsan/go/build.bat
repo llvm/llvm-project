@@ -4,14 +4,12 @@ type ^
   ..\rtl\tsan_clock.cpp ^
   ..\rtl\tsan_flags.cpp ^
   ..\rtl\tsan_md5.cpp ^
-  ..\rtl\tsan_mutex.cpp ^
   ..\rtl\tsan_report.cpp ^
   ..\rtl\tsan_rtl.cpp ^
   ..\rtl\tsan_rtl_mutex.cpp ^
   ..\rtl\tsan_rtl_report.cpp ^
   ..\rtl\tsan_rtl_thread.cpp ^
   ..\rtl\tsan_rtl_proc.cpp ^
-  ..\rtl\tsan_stat.cpp ^
   ..\rtl\tsan_suppressions.cpp ^
   ..\rtl\tsan_sync.cpp ^
   ..\rtl\tsan_stack_trace.cpp ^
@@ -33,6 +31,7 @@ type ^
   ..\..\sanitizer_common\sanitizer_termination.cpp ^
   ..\..\sanitizer_common\sanitizer_file.cpp ^
   ..\..\sanitizer_common\sanitizer_symbolizer_report.cpp ^
+  ..\..\sanitizer_common\sanitizer_mutex.cpp ^
   ..\rtl\tsan_external.cpp ^
   > gotsan.cpp
 
@@ -59,4 +58,5 @@ gcc ^
   -DSANITIZER_DEBUG=0 ^
   -O3 ^
   -fomit-frame-pointer ^
+  -msse4.2 ^
   -std=c++14

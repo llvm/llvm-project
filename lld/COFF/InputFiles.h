@@ -395,7 +395,7 @@ private:
   std::vector<Symbol *> symbols;
 };
 
-// .dll file.
+// .dll file. MinGW only.
 class DLLFile : public InputFile {
 public:
   explicit DLLFile(MemoryBufferRef m) : InputFile(DLLKind, m) {}

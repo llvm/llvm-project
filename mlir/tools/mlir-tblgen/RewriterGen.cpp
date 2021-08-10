@@ -255,7 +255,6 @@ void PatternEmitter::emitNativeCodeMatch(DagNode tree, StringRef opName,
 
   raw_indented_ostream::DelimitedScope scope(os);
 
-  os << "if(!" << opName << ") return ::mlir::failure();\n";
   for (int i = 0, e = tree.getNumArgs(); i != e; ++i) {
     std::string argName = formatv("arg{0}_{1}", depth, i);
     if (DagNode argTree = tree.getArgAsNestedDag(i)) {
@@ -277,15 +276,15 @@ void PatternEmitter::emitNativeCodeMatch(DagNode tree, StringRef opName,
   std::tie(hasLocationDirective, locToUse) = getLocation(tree);
 
   auto fmt = tree.getNativeCodeTemplate();
-  if (fmt.count("$_self") != 1) {
+  if (fmt.count("$_self") != 1)
     PrintFatalError(loc, "NativeCodeCall must have $_self as argument for "
                          "passing the defining Operation");
-  }
 
   auto nativeCodeCall = std::string(tgfmt(
       fmt, &fmtCtx.addSubst("_loc", locToUse).withSelf(opName.str()), capture));
 
-  os << "if (failed(" << nativeCodeCall << ")) return ::mlir::failure();\n";
+  emitMatchCheck(opName, formatv("!failed({0})", nativeCodeCall),
+                 formatv("\"{0} return failure\"", nativeCodeCall));
 
   for (int i = 0, e = tree.getNumArgs(); i != e; ++i) {
     auto name = tree.getArgName(i);
@@ -338,20 +337,21 @@ void PatternEmitter::emitOpMatch(DagNode tree, StringRef opName, int depth) {
                           << '\n');
 
   std::string castedName = formatv("castedOp{0}", depth);
-  os << formatv("auto {0} = ::llvm::dyn_cast_or_null<{2}>({1}); "
+  os << formatv("auto {0} = ::llvm::dyn_cast<{2}>({1}); "
                 "(void){0};\n",
                 castedName, opName, op.getQualCppClassName());
+
   // Skip the operand matching at depth 0 as the pattern rewriter already does.
-  if (depth != 0) {
-    // Skip if there is no defining operation (e.g., arguments to function).
-    os << formatv("if (!{0}) return ::mlir::failure();\n", castedName);
-  }
-  if (tree.getNumArgs() != op.getNumArgs()) {
+  if (depth != 0)
+    emitMatchCheck(opName, /*matchStr=*/castedName,
+                   formatv("\"{0} is not {1} type\"", castedName,
+                           op.getQualCppClassName()));
+
+  if (tree.getNumArgs() != op.getNumArgs())
     PrintFatalError(loc, formatv("op '{0}' argument number mismatch: {1} in "
                                  "pattern vs. {2} in definition",
                                  op.getOperationName(), tree.getNumArgs(),
                                  op.getNumArgs()));
-  }
 
   // If the operand's name is set, set to that variable.
   auto name = tree.getSymbol();
@@ -379,7 +379,11 @@ void PatternEmitter::emitOpMatch(DagNode tree, StringRef opName, int depth) {
       os.indent() << formatv(
           "auto *{0} = "
           "(*{1}.getODSOperands({2}).begin()).getDefiningOp();\n",
-          argName, castedName, nextOperand++);
+          argName, castedName, nextOperand);
+      // Null check of operand's definingOp
+      emitMatchCheck(castedName, /*matchStr=*/argName,
+                     formatv("\"Operand {0} of {1} has null definingOp\"",
+                             nextOperand++, castedName));
       emitMatch(argTree, argName, depth + 1);
       os << formatv("tblgen_ops[{0}] = {1};\n", ++opCounter, argName);
       os.unindent() << "}\n";
@@ -450,7 +454,7 @@ void PatternEmitter::emitOperandMatch(DagNode tree, StringRef opName,
         op.arg_begin(), op.arg_begin() + argIndex,
         [](const Argument &arg) { return arg.is<NamedAttribute *>(); });
 
-    auto res = symbolInfoMap.findBoundSymbol(name, op, argIndex);
+    auto res = symbolInfoMap.findBoundSymbol(name, tree, op, argIndex);
     os << formatv("{0} = {1}.getODSOperands({2});\n",
                   res->second.getVarName(name), opName,
                   argIndex - numPrevAttrs);
@@ -750,7 +754,8 @@ void PatternEmitter::emitRewriteLogic() {
     // NativeCodeCall will only be materialized to `os` if it is used. Here
     // we are handling auxiliary patterns so we want the side effect even if
     // NativeCodeCall is not replacing matched root op's results.
-    if (resultTree.isNativeCodeCall())
+    if (resultTree.isNativeCodeCall() &&
+        resultTree.getNumReturnsOfNativeCode() == 0)
       os << val << ";\n";
   }
 
@@ -800,11 +805,8 @@ std::string PatternEmitter::handleResultPattern(DagNode resultTree,
                     "location directive can only be used with op creation");
   }
 
-  if (resultTree.isNativeCodeCall()) {
-    auto symbol = handleReplaceWithNativeCodeCall(resultTree, depth);
-    symbolInfoMap.bindValue(symbol);
-    return symbol;
-  }
+  if (resultTree.isNativeCodeCall())
+    return handleReplaceWithNativeCodeCall(resultTree, depth);
 
   if (resultTree.isReplaceWithValue())
     return handleReplaceWithValue(resultTree).str();
@@ -944,9 +946,39 @@ std::string PatternEmitter::handleReplaceWithNativeCodeCall(DagNode tree,
   }
 
   std::string symbol = tgfmt(fmt, &fmtCtx.addSubst("_loc", locToUse), attrs);
-  if (!tree.getSymbol().empty()) {
-    os << formatv("auto {0} = {1};\n", tree.getSymbol(), symbol);
-    symbol = tree.getSymbol().str();
+
+  // In general, NativeCodeCall without naming binding don't need this. To
+  // ensure void helper function has been correctly labeled, i.e., use
+  // NativeCodeCallVoid, we cache the result to a local variable so that we will
+  // get a compilation error in the auto-generated file.
+  // Example.
+  //   // In the td file
+  //   Pat<(...), (NativeCodeCall<Foo> ...)>
+  //
+  //   ---
+  //
+  //   // In the auto-generated .cpp
+  //   ...
+  //   // Causes compilation error if Foo() returns void.
+  //   auto nativeVar = Foo();
+  //   ...
+  if (tree.getNumReturnsOfNativeCode() != 0) {
+    // Determine the local variable name for return value.
+    std::string varName =
+        SymbolInfoMap::getValuePackName(tree.getSymbol()).str();
+    if (varName.empty()) {
+      varName = formatv("nativeVar_{0}", nextValueId++);
+      // Register the local variable for later uses.
+      symbolInfoMap.bindValues(varName, tree.getNumReturnsOfNativeCode());
+    }
+
+    // Catch the return value of helper function.
+    os << formatv("auto {0} = {1}; (void){0};\n", varName, symbol);
+
+    if (!tree.getSymbol().empty())
+      symbol = tree.getSymbol().str();
+    else
+      symbol = varName;
   }
 
   return symbol;
@@ -963,8 +995,10 @@ int PatternEmitter::getNodeValueCount(DagNode node) {
     // Otherwise this is an unbound op; we will use all its results.
     return pattern.getDialectOp(node).getNumResults();
   }
-  // TODO: This considers all NativeCodeCall as returning one
-  // value. Enhance if multi-value ones are needed.
+
+  if (node.isNativeCodeCall())
+    return node.getNumReturnsOfNativeCode();
+
   return 1;
 }
 
@@ -1187,8 +1221,7 @@ void PatternEmitter::supplyValuesForOpArgs(
       if (!subTree.isNativeCodeCall())
         PrintFatalError(loc, "only NativeCodeCall allowed in nested dag node "
                              "for creating attribute");
-      os << formatv("/*{0}=*/{1}", opArgName,
-                    handleReplaceWithNativeCodeCall(subTree, depth));
+      os << formatv("/*{0}=*/{1}", opArgName, childNodeNames.lookup(argIndex));
     } else {
       auto leaf = node.getArgAsLeaf(argIndex);
       // The argument in the result DAG pattern.
@@ -1229,8 +1262,7 @@ void PatternEmitter::createAggregateLocalVarsForOpArgs(
         if (!subTree.isNativeCodeCall())
           PrintFatalError(loc, "only NativeCodeCall allowed in nested dag node "
                                "for creating attribute");
-        os << formatv(addAttrCmd, opArgName,
-                      handleReplaceWithNativeCodeCall(subTree, depth + 1));
+        os << formatv(addAttrCmd, opArgName, childNodeNames.lookup(argIndex));
       } else {
         auto leaf = node.getArgAsLeaf(argIndex);
         // The argument in the result DAG pattern.

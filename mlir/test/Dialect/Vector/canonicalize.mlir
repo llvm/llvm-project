@@ -1,4 +1,4 @@
-// RUN: mlir-opt %s -pass-pipeline='func(canonicalize)' -split-input-file -allow-unregistered-dialect | FileCheck %s
+// RUN: mlir-opt %s -pass-pipeline='builtin.func(canonicalize)' -split-input-file -allow-unregistered-dialect | FileCheck %s
 
 // -----
 
@@ -607,6 +607,18 @@ func @broadcast_folding1() -> vector<4xi32> {
 func @broadcast_folding2() -> vector<4x16xi32> {
   %0 = constant 42 : i32
   %1 = vector.broadcast %0 : i32 to vector<16xi32>
+  %2 = vector.broadcast %1 : vector<16xi32> to vector<4x16xi32>
+  return %2 : vector<4x16xi32>
+}
+
+// -----
+
+// CHECK-LABEL: @fold_consecutive_broadcasts(
+//  CHECK-SAME:                              %[[ARG0:.*]]: i32
+//       CHECK: %[[RESULT:.*]] = vector.broadcast %[[ARG0]] : i32 to vector<4x16xi32>
+//       CHECK: return %[[RESULT]]
+func @fold_consecutive_broadcasts(%a : i32) -> vector<4x16xi32> {
+  %1 = vector.broadcast %a : i32 to vector<16xi32>
   %2 = vector.broadcast %1 : vector<16xi32> to vector<4x16xi32>
   return %2 : vector<4x16xi32>
 }

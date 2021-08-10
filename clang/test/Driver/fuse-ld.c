@@ -2,7 +2,7 @@
 // RUN: %clang %s -### -target x86_64-unknown-linux -Wfuse-ld-path \
 // RUN:   -fuse-ld=/usr/local/bin/or1k-linux-ld 2>&1 | \
 // RUN:   FileCheck %s --check-prefix=CHECK-ABSOLUTE-LD
-// CHECK-ABSOLUTE-LD: warning: '-fuse-ld=' taking a path is deprecated. Use '--ld-path=' instead
+// CHECK-ABSOLUTE-LD: warning: '-fuse-ld=' taking a path is deprecated; use '--ld-path=' instead
 // CHECK-ABSOLUTE-LD: /usr/local/bin/or1k-linux-ld
 
 // RUN: %clang %s -### -target x86_64-unknown-linux -Wextra \

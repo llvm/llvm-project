@@ -30,13 +30,11 @@ public:
     event_read_packet_available = 0x020,
     event_read_thread_running = 0x040, // Sticky
     event_read_thread_exiting = 0x080,
-    event_darwin_log_data_available = 0x100,
 
     normal_event_bits = event_proc_state_changed | event_proc_thread_exiting |
                         event_proc_stdio_available | event_proc_profile_data |
                         event_read_packet_available |
-                        event_read_thread_exiting |
-                        event_darwin_log_data_available,
+                        event_read_thread_exiting ,
 
     sticky_event_bits = event_proc_thread_running | event_read_thread_running,
 

@@ -18,17 +18,17 @@ namespace {
 TEST(IndirectionUtilsTest, MakeStub) {
   LLVMContext Context;
   ModuleBuilder MB(Context, "x86_64-apple-macosx10.10", "");
+  StructType *ArgTy = getDummyStructTy(Context);
+  Type *ArgPtrTy = PointerType::getUnqual(ArgTy);
   FunctionType *FTy = FunctionType::get(
-      Type::getVoidTy(Context),
-      {getDummyStructTy(Context), getDummyStructTy(Context)}, false);
+      Type::getVoidTy(Context), {ArgPtrTy, ArgPtrTy}, false);
   Function *F = MB.createFunctionDecl(FTy, "");
   AttributeSet FnAttrs = AttributeSet::get(
       Context, AttrBuilder().addAttribute(Attribute::NoUnwind));
   AttributeSet RetAttrs; // None
   AttributeSet ArgAttrs[2] = {
-      AttributeSet::get(Context,
-                        AttrBuilder().addAttribute(Attribute::StructRet)),
-      AttributeSet::get(Context, AttrBuilder().addAttribute(Attribute::ByVal)),
+      AttributeSet::get(Context, AttrBuilder().addStructRetAttr(ArgTy)),
+      AttributeSet::get(Context, AttrBuilder().addByValAttr(ArgTy)),
   };
   F->setAttributes(AttributeList::get(Context, FnAttrs, RetAttrs, ArgAttrs));
 

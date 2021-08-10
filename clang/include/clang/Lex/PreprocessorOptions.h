@@ -146,6 +146,9 @@ public:
   /// When enabled, the preprocessor will construct editor placeholder tokens.
   bool LexEditorPlaceholders = true;
 
+  /// When enabled, the preprocessor will expand special builtin macros.
+  bool LexExpandSpecialBuiltins = true;
+
   /// True if the SourceManager should report the original file name for
   /// contents of files that were remapped to other files. Defaults to true.
   bool RemappedFilesKeepOriginalName = true;
@@ -199,9 +202,6 @@ public:
   /// build it again.
   std::shared_ptr<FailedModulesSet> FailedModules;
 
-  /// A prefix map for __FILE__ and __BASE_FILE__.
-  std::map<std::string, std::string, std::greater<std::string>> MacroPrefixMap;
-
   /// Contains the currently active skipped range mappings for skipping excluded
   /// conditional directives.
   ///
@@ -249,6 +249,7 @@ public:
     ImplicitPCHInclude.clear();
     SingleFileParseMode = false;
     LexEditorPlaceholders = true;
+    LexExpandSpecialBuiltins = true;
     RetainRemappedFileBuffers = true;
     PrecompiledPreambleBytes.first = 0;
     PrecompiledPreambleBytes.second = false;

@@ -154,6 +154,11 @@
 // RUN:   -Xopenmp-target -march=sm_35 --cuda-path=%S/Inputs/CUDA_102/usr/local/cuda \
 // RUN:   -fopenmp-relocatable-target -save-temps -no-canonical-prefixes %s 2>&1 \
 // RUN:   | FileCheck -check-prefix=CHK-BCLIB %s
+/// Check with the new runtime enabled
+// RUN:   env LIBRARY_PATH=%S/Inputs/libomptarget %clang -### -fopenmp=libomp -fopenmp-targets=nvptx64-nvidia-cuda \
+// RUN:   -Xopenmp-target -march=sm_35 --cuda-path=%S/Inputs/CUDA_102/usr/local/cuda \
+// RUN:   -fopenmp-relocatable-target -fopenmp-target-new-runtime -save-temps -no-canonical-prefixes %s 2>&1 \
+// RUN:   | FileCheck -check-prefix=CHK-BCLIB-NEW %s
 /// The user can override default detection using --libomptarget-nvptx-bc-path=.
 // RUN:   %clang -### -fopenmp=libomp -fopenmp-targets=nvptx64-nvidia-cuda \
 // RUN:   --libomptarget-nvptx-bc-path=%S/Inputs/libomptarget/libomptarget-nvptx-test.bc \
@@ -162,6 +167,7 @@
 // RUN:   | FileCheck -check-prefix=CHK-BCLIB-USER %s
 
 // CHK-BCLIB: clang{{.*}}-triple{{.*}}nvptx64-nvidia-cuda{{.*}}-mlink-builtin-bitcode{{.*}}libomptarget-nvptx-sm_35.bc
+// CHK-BCLIB-NEW: clang{{.*}}-triple{{.*}}nvptx64-nvidia-cuda{{.*}}-mlink-builtin-bitcode{{.*}}libomptarget-new-nvptx-sm_35.bc
 // CHK-BCLIB-USER: clang{{.*}}-triple{{.*}}nvptx64-nvidia-cuda{{.*}}-mlink-builtin-bitcode{{.*}}libomptarget-nvptx-test.bc
 // CHK-BCLIB-NOT: {{error:|warning:}}
 
@@ -174,7 +180,7 @@
 // RUN:   -fopenmp-relocatable-target -save-temps -no-canonical-prefixes %s 2>&1 \
 // RUN:   | FileCheck -check-prefix=CHK-BCLIB-WARN %s
 
-// CHK-BCLIB-WARN: No library 'libomptarget-nvptx-sm_35.bc' found in the default clang lib directory or in LIBRARY_PATH. Please use --libomptarget-nvptx-bc-path to specify nvptx bitcode library.
+// CHK-BCLIB-WARN: no library 'libomptarget-nvptx-sm_35.bc' found in the default clang lib directory or in LIBRARY_PATH; use '--libomptarget-nvptx-bc-path' to specify nvptx bitcode library
 
 /// ###########################################################################
 
@@ -185,7 +191,7 @@
 // RUN:   -fopenmp-relocatable-target -save-temps -no-canonical-prefixes %s 2>&1 \
 // RUN:   | FileCheck -check-prefix=CHK-BCLIB-ERROR %s
 
-// CHK-BCLIB-ERROR: Bitcode library 'not-exist.bc' does not exist.
+// CHK-BCLIB-ERROR: bitcode library 'not-exist.bc' does not exist
 
 /// ###########################################################################
 
@@ -195,7 +201,7 @@
 // RUN:   -fopenmp-relocatable-target -save-temps -no-canonical-prefixes %s 2>&1 \
 // RUN:   | FileCheck -check-prefix=CHK-CUDA-VERSION-ERROR %s
 
-// CHK-CUDA-VERSION-ERROR: NVPTX target requires CUDA 9.2 or above. CUDA 9.0 is detected.
+// CHK-CUDA-VERSION-ERROR: NVPTX target requires CUDA 9.2 or above; CUDA 9.0 detected
 
 /// Check that debug info is emitted in dwarf-2
 // RUN:   %clang -### -no-canonical-prefixes -fopenmp=libomp -fopenmp-targets=nvptx64-nvidia-cuda -Xopenmp-target -march=sm_60 %s -g -O1 --no-cuda-noopt-device-debug 2>&1 \
@@ -248,7 +254,7 @@
 
 // HAS_DEBUG-NOT: warning: debug
 // HAS_DEBUG: "-triple" "nvptx64-nvidia-cuda"
-// HAS_DEBUG-SAME: "-debug-info-kind={{limited|line-tables-only}}"
+// HAS_DEBUG-SAME: "-debug-info-kind={{constructor|line-tables-only}}"
 // HAS_DEBUG-SAME: "-dwarf-version=2"
 // HAS_DEBUG-SAME: "-fopenmp-is-device"
 // HAS_DEBUG: ptxas

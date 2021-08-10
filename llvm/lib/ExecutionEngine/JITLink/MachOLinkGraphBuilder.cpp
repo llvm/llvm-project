@@ -85,6 +85,17 @@ bool MachOLinkGraphBuilder::isDebugSection(const NormalizedSection &NSec) {
           strcmp(NSec.SegName, "__DWARF") == 0);
 }
 
+bool MachOLinkGraphBuilder::isZeroFillSection(const NormalizedSection &NSec) {
+  switch (NSec.Flags & MachO::SECTION_TYPE) {
+  case MachO::S_ZEROFILL:
+  case MachO::S_GB_ZEROFILL:
+  case MachO::S_THREAD_LOCAL_ZEROFILL:
+    return true;
+  default:
+    return false;
+  }
+}
+
 unsigned
 MachOLinkGraphBuilder::getPointerSize(const object::MachOObjectFile &Obj) {
   return Obj.is64Bit() ? 8 : 4;
@@ -154,17 +165,12 @@ Error MachOLinkGraphBuilder::createNormalizedSections() {
     });
 
     // Get the section data if any.
-    {
-      unsigned SectionType = NSec.Flags & MachO::SECTION_TYPE;
-      if (SectionType != MachO::S_ZEROFILL &&
-          SectionType != MachO::S_GB_ZEROFILL) {
+    if (!isZeroFillSection(NSec)) {
+      if (DataOffset + NSec.Size > Obj.getData().size())
+        return make_error<JITLinkError>(
+            "Section data extends past end of file");
 
-        if (DataOffset + NSec.Size > Obj.getData().size())
-          return make_error<JITLinkError>(
-              "Section data extends past end of file");
-
-        NSec.Data = Obj.getData().data() + DataOffset;
-      }
+      NSec.Data = Obj.getData().data() + DataOffset;
     }
 
     // Get prot flags.

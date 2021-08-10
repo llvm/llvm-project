@@ -1,5 +1,5 @@
 ; RUN: llc -o - %s -mtriple=aarch64-windows -aarch64-enable-compress-jump-tables=0 | FileCheck %s
-; RUN: llc -o - %s -mtriple=aarch64-windows -aarch64-enable-compress-jump-tables=0 -filetype=obj | llvm-readobj -unwind - | FileCheck %s -check-prefix=UNWIND
+; RUN: llc -o - %s -mtriple=aarch64-windows -aarch64-enable-compress-jump-tables=0 -filetype=obj | llvm-readobj --unwind - | FileCheck %s -check-prefix=UNWIND
 
 define void @f(i32 %x) {
 entry:

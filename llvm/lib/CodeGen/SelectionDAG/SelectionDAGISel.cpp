@@ -1660,7 +1660,7 @@ static bool MIIsInTerminatorSequence(const MachineInstr &MI) {
     // physical registers if there is debug info associated with the terminator
     // of our mbb. We want to include said debug info in our terminator
     // sequence, so we return true in that case.
-    return MI.isDebugValue();
+    return MI.isDebugInstr();
 
   // We have left the terminator sequence if we are not doing one of the
   // following:

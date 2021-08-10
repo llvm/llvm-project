@@ -171,7 +171,7 @@ define <4 x i16> @dont_fold_urem_power_of_two(<4 x i16> %x) {
 ; CHECK-NEXT:    mov v1.h[1], w10
 ; CHECK-NEXT:    mov v1.h[2], w9
 ; CHECK-NEXT:    mov v1.h[3], w8
-; CHECK-NEXT:    mov v0.16b, v1.16b
+; CHECK-NEXT:    fmov d0, d1
 ; CHECK-NEXT:    ret
   %1 = urem <4 x i16> %x, <i16 64, i16 32, i16 8, i16 95>
   ret <4 x i16> %1
@@ -208,7 +208,7 @@ define <4 x i16> @dont_fold_srem_one(<4 x i16> %x) {
 ; CHECK-NEXT:    mov v1.h[2], w8
 ; CHECK-NEXT:    msub w8, w11, w9, w10
 ; CHECK-NEXT:    mov v1.h[3], w8
-; CHECK-NEXT:    mov v0.16b, v1.16b
+; CHECK-NEXT:    fmov d0, d1
 ; CHECK-NEXT:    ret
   %1 = urem <4 x i16> %x, <i16 1, i16 654, i16 23, i16 5423>
   ret <4 x i16> %1

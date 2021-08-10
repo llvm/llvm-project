@@ -197,6 +197,11 @@ public:
                     unsigned numResultDims, unsigned numResultSyms) const;
 
   /// Sparse replace method. Apply AffineExpr::replace(`map`) to each of the
+  /// results and return a new AffineMap with the new results and with inferred
+  /// number of dims and symbols.
+  AffineMap replace(const DenseMap<AffineExpr, AffineExpr> &map) const;
+
+  /// Sparse replace method. Apply AffineExpr::replace(`map`) to each of the
   /// results and return a new AffineMap with the new results and with the
   /// specified number of dims and symbols.
   AffineMap replace(const DenseMap<AffineExpr, AffineExpr> &map,
@@ -497,6 +502,20 @@ AffineMap concatAffineMaps(ArrayRef<AffineMap> maps);
 AffineMap
 getProjectedMap(AffineMap map,
                 const llvm::SmallDenseSet<unsigned> &projectedDimensions);
+
+/// Apply a permutation from `map` to `source` and return the result.
+template <typename T>
+SmallVector<T> applyPermutationMap(AffineMap map, llvm::ArrayRef<T> source) {
+  assert(map.isProjectedPermutation());
+  assert(map.getNumInputs() == source.size());
+  SmallVector<T> result;
+  result.reserve(map.getNumResults());
+  for (unsigned i = 0, e = map.getNumResults(); i < e; ++i) {
+    unsigned dim = map.getDimPosition(i);
+    result.push_back(source[dim]);
+  }
+  return result;
+}
 
 inline raw_ostream &operator<<(raw_ostream &os, AffineMap map) {
   map.print(os);

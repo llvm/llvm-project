@@ -49,12 +49,12 @@ if.end:                                           ; preds = %if.then, %entry
 ; CHECK:         [[LABEL]]:
 ; CHECK:         r0 = [[REG6]]
 
-; CHECK-DISABLE: r0 = [[REG6]]
-; CHECK-DISABLE: r0 += [[REG1:r[0-9]+]]
-; CHECK-DISABLE: [[REG2:r[0-9]+]] = 8
-; CHECK-DISABLE: if [[REG2]] > [[REG1]] goto [[LABEL:.*]]
-; CHECK-DISABLE: r0 = [[REG6]]
+; CHECK-DISABLE: [[REG1:r[0-9]+]] = 8
+; CHECK-DISABLE: if [[REG1]] > r0 goto [[LABEL:.*]]
+; CHECK-DISABLE: r0 = 0
 ; CHECK-DISABLE: [[LABEL]]:
+; CHECK-DISABLE: [[REG6]] += r0
+; CHECK-DISABLE: r0 = [[REG6]]
 
 ; CHECK-COMMON:  exit
 

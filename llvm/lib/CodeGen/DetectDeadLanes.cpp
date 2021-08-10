@@ -516,15 +516,17 @@ bool DetectDeadLanes::runOnce(MachineFunction &MF) {
       transferDefinedLanesStep(MO, Info.DefinedLanes);
   }
 
-  LLVM_DEBUG(dbgs() << "Defined/Used lanes:\n"; for (unsigned RegIdx = 0;
-                                                     RegIdx < NumVirtRegs;
-                                                     ++RegIdx) {
-    unsigned Reg = Register::index2VirtReg(RegIdx);
-    const VRegInfo &Info = VRegInfos[RegIdx];
-    dbgs() << printReg(Reg, nullptr)
-           << " Used: " << PrintLaneMask(Info.UsedLanes)
-           << " Def: " << PrintLaneMask(Info.DefinedLanes) << '\n';
-  } dbgs() << "\n";);
+  LLVM_DEBUG({
+    dbgs() << "Defined/Used lanes:\n";
+    for (unsigned RegIdx = 0; RegIdx < NumVirtRegs; ++RegIdx) {
+      unsigned Reg = Register::index2VirtReg(RegIdx);
+      const VRegInfo &Info = VRegInfos[RegIdx];
+      dbgs() << printReg(Reg, nullptr)
+             << " Used: " << PrintLaneMask(Info.UsedLanes)
+             << " Def: " << PrintLaneMask(Info.DefinedLanes) << '\n';
+    }
+    dbgs() << "\n";
+  });
 
   bool Again = false;
   // Mark operands as dead/unused.

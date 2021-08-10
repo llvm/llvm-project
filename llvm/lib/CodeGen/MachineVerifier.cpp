@@ -1782,6 +1782,19 @@ void MachineVerifier::visitMachineInstrBefore(const MachineInstr *MI) {
 
     // TODO: verify we have properly encoded deopt arguments
   } break;
+  case TargetOpcode::INSERT_SUBREG: {
+    unsigned InsertedSize;
+    if (unsigned SubIdx = MI->getOperand(2).getSubReg())
+      InsertedSize = TRI->getSubRegIdxSize(SubIdx);
+    else
+      InsertedSize = TRI->getRegSizeInBits(MI->getOperand(2).getReg(), *MRI);
+    unsigned SubRegSize = TRI->getSubRegIdxSize(MI->getOperand(3).getImm());
+    if (SubRegSize < InsertedSize) {
+      report("INSERT_SUBREG expected inserted value to have equal or lesser "
+             "size than the subreg it was inserted into", MI);
+      break;
+    }
+  } break;
   }
 }
 

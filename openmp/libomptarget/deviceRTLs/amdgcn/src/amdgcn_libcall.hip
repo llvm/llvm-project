@@ -29,7 +29,7 @@ EXTERN int omp_ext_get_lane_id() {
 
 DEVICE static unsigned getMasterThreadId() {
   unsigned Mask = WARPSIZE - 1;
-  return (GetNumberOfThreadsInBlock() - 1) & (~Mask);
+  return (__kmpc_get_hardware_num_threads_in_block() - 1) & (~Mask);
 }
 
 EXTERN int omp_ext_get_smid() {

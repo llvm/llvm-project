@@ -1,4 +1,4 @@
-//===-- Implementation of the base class for libc unittests ---------------===//
+//===-- Implementation of the base class for libc unittests----------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -143,14 +143,18 @@ void Test::addTest(Test *T) {
   End = T;
 }
 
-int Test::runTests() {
+int Test::runTests(const char *TestFilter) {
   int TestCount = 0;
   int FailCount = 0;
-  for (Test *T = Start; T != nullptr; T = T->Next, ++TestCount) {
+  for (Test *T = Start; T != nullptr; T = T->Next) {
     const char *TestName = T->getName();
+    std::string StrTestName(TestName);
     constexpr auto GREEN = "\033[32m";
     constexpr auto RED = "\033[31m";
     constexpr auto RESET = "\033[0m";
+    if ((TestFilter != nullptr) && (StrTestName != TestFilter)) {
+      continue;
+    }
     std::cout << GREEN << "[ RUN      ] " << RESET << TestName << '\n';
     RunContext Ctx;
     T->SetUp();
@@ -167,13 +171,21 @@ int Test::runTests() {
       std::cout << GREEN << "[       OK ] " << RESET << TestName << '\n';
       break;
     }
+    ++TestCount;
   }
 
-  std::cout << "Ran " << TestCount << " tests. "
-            << " PASS: " << TestCount - FailCount << ' '
-            << " FAIL: " << FailCount << '\n';
+  if (TestCount > 0) {
+    std::cout << "Ran " << TestCount << " tests. "
+              << " PASS: " << TestCount - FailCount << ' '
+              << " FAIL: " << FailCount << '\n';
+  } else {
+    std::cout << "No tests run.\n";
+    if (TestFilter) {
+      std::cout << "No matching test for " << TestFilter << '\n';
+    }
+  }
 
-  return FailCount > 0 ? 1 : 0;
+  return FailCount > 0 || TestCount == 0 ? 1 : 0;
 }
 
 template bool Test::test<char, 0>(TestCondition Cond, char LHS, char RHS,
@@ -349,5 +361,3 @@ bool Test::testProcessExits(testutils::FunctionCaller *Func, int ExitCode,
 #endif // ENABLE_SUBPROCESS_TESTS
 } // namespace testing
 } // namespace __llvm_libc
-
-int main() { return __llvm_libc::testing::Test::runTests(); }

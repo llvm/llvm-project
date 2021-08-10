@@ -1643,25 +1643,12 @@ define <16 x i8> @shuffe_v16i8_shift_00_02_04_06_08_10_12_14_16_18_20_22_24_26_2
 ; AVX1-NEXT:    vpackuswb %xmm1, %xmm0, %xmm0
 ; AVX1-NEXT:    retq
 ;
-; AVX2-LABEL: shuffe_v16i8_shift_00_02_04_06_08_10_12_14_16_18_20_22_24_26_28_30:
-; AVX2:       # %bb.0:
-; AVX2-NEXT:    vpsrlw $8, %xmm0, %xmm0
-; AVX2-NEXT:    vpsrlw $8, %xmm1, %xmm1
-; AVX2-NEXT:    vpackuswb %xmm1, %xmm0, %xmm0
-; AVX2-NEXT:    retq
-;
-; AVX512VLBW-LABEL: shuffe_v16i8_shift_00_02_04_06_08_10_12_14_16_18_20_22_24_26_28_30:
-; AVX512VLBW:       # %bb.0:
-; AVX512VLBW-NEXT:    vpsrlw $8, %xmm0, %xmm0
-; AVX512VLBW-NEXT:    vpsrlw $8, %xmm1, %xmm1
-; AVX512VLBW-NEXT:    vpackuswb %xmm1, %xmm0, %xmm0
-; AVX512VLBW-NEXT:    retq
-;
-; AVX512VLVBMI-LABEL: shuffe_v16i8_shift_00_02_04_06_08_10_12_14_16_18_20_22_24_26_28_30:
-; AVX512VLVBMI:       # %bb.0:
-; AVX512VLVBMI-NEXT:    vmovdqa {{.*#+}} xmm2 = [1,3,5,7,9,11,13,15,17,19,21,23,25,27,29,31]
-; AVX512VLVBMI-NEXT:    vpermt2b %xmm1, %xmm2, %xmm0
-; AVX512VLVBMI-NEXT:    retq
+; AVX2OR512VL-LABEL: shuffe_v16i8_shift_00_02_04_06_08_10_12_14_16_18_20_22_24_26_28_30:
+; AVX2OR512VL:       # %bb.0:
+; AVX2OR512VL-NEXT:    vpsrlw $8, %xmm0, %xmm0
+; AVX2OR512VL-NEXT:    vpsrlw $8, %xmm1, %xmm1
+; AVX2OR512VL-NEXT:    vpackuswb %xmm1, %xmm0, %xmm0
+; AVX2OR512VL-NEXT:    retq
 ;
 ; XOP-LABEL: shuffe_v16i8_shift_00_02_04_06_08_10_12_14_16_18_20_22_24_26_28_30:
 ; XOP:       # %bb.0:

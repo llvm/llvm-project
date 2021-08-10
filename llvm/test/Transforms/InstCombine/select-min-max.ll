@@ -48,7 +48,7 @@ define i5 @umin_umin_common_op_10(i1 %cond, i5 %x, i5 %y, i5 %z, i5* %p) {
 define <3 x i5> @umax_umax_common_op_11(i1 %cond, <3 x i5> %x, <3 x i5> %y, <3 x i5> %z, <3 x i5>* %p) {
 ; CHECK-LABEL: @umax_umax_common_op_11(
 ; CHECK-NEXT:    [[M2:%.*]] = call <3 x i5> @llvm.umax.v3i5(<3 x i5> [[Y:%.*]], <3 x i5> [[Z:%.*]])
-; CHECK-NEXT:    store <3 x i5> [[M2]], <3 x i5>* [[P:%.*]], align 4
+; CHECK-NEXT:    store <3 x i5> [[M2]], <3 x i5>* [[P:%.*]], align 2
 ; CHECK-NEXT:    [[MINMAXOP:%.*]] = select i1 [[COND:%.*]], <3 x i5> [[X:%.*]], <3 x i5> [[Y]]
 ; CHECK-NEXT:    [[SEL:%.*]] = call <3 x i5> @llvm.umax.v3i5(<3 x i5> [[MINMAXOP]], <3 x i5> [[Z]])
 ; CHECK-NEXT:    ret <3 x i5> [[SEL]]

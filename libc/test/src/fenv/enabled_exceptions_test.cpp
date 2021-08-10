@@ -10,7 +10,8 @@
 #include "src/fenv/feraiseexcept.h"
 #include "src/fenv/fetestexcept.h"
 
-#include "utils/FPUtil/FEnv.h"
+#include "src/__support/FPUtil/FEnvUtils.h"
+#include "src/__support/FPUtil/FPExceptMatcher.h"
 #include "utils/UnitTest/Test.h"
 
 #include <fenv.h>
@@ -34,23 +35,31 @@ TEST(LlvmLibcExceptionStatusTest, RaiseAndCrash) {
       FE_DIVBYZERO | FE_INVALID | FE_INEXACT | FE_OVERFLOW | FE_UNDERFLOW;
 
   for (int e : excepts) {
-    ASSERT_DEATH(
-        [=] {
-          __llvm_libc::fputil::disableExcept(FE_ALL_EXCEPT);
-          __llvm_libc::fputil::enableExcept(e);
-          ASSERT_EQ(__llvm_libc::feclearexcept(FE_ALL_EXCEPT), 0);
-          // Raising all exceptions except |e| should not call the
-          // SIGFPE handler. They should set the exception flag though,
-          // so we verify that.
-          int others = allExcepts & ~e;
-          ASSERT_EQ(__llvm_libc::feraiseexcept(others), 0);
-          ASSERT_EQ(__llvm_libc::fetestexcept(others), others);
+    __llvm_libc::fputil::disableExcept(FE_ALL_EXCEPT);
+    __llvm_libc::fputil::enableExcept(e);
+    ASSERT_EQ(__llvm_libc::feclearexcept(FE_ALL_EXCEPT), 0);
+    // Raising all exceptions except |e| should not call the
+    // SIGFPE handler. They should set the exception flag though,
+    // so we verify that. Since other exceptions like FE_DIVBYZERO
+    // can raise FE_INEXACT as well, we don't verify the other
+    // exception flags when FE_INEXACT is enabled.
+    if (e != FE_INEXACT) {
+      int others = allExcepts & ~e;
+      ASSERT_EQ(__llvm_libc::feraiseexcept(others), 0);
+      ASSERT_EQ(__llvm_libc::fetestexcept(others), others);
+    }
 
-          // We don't check the return value when raising |e| as
-          // feraiseexcept will not return when it raises an enabled
-          // exception.
-          __llvm_libc::feraiseexcept(e);
-        },
-        WITH_SIGNAL(SIGFPE));
+    ASSERT_RAISES_FP_EXCEPT([=] {
+      // In test frameworks like Fuchsia's zxtest, this translates to
+      // a death test which runs this closure in a different thread. So,
+      // we enable the exception again inside this closure so that the
+      // exception gets enabled for the thread running this closure.
+      __llvm_libc::fputil::enableExcept(e);
+      __llvm_libc::feraiseexcept(e);
+    });
+
+    // Cleanup.
+    __llvm_libc::fputil::disableExcept(FE_ALL_EXCEPT);
+    ASSERT_EQ(__llvm_libc::feclearexcept(FE_ALL_EXCEPT), 0);
   }
 }

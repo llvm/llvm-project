@@ -40,7 +40,12 @@
 ! CHECK-NEXT:                        Specify where to find the compiled intrinsic modules
 ! CHECK-NEXT: -flarge-sizes          Use INTEGER(KIND=8) for the result type in size-related intrinsics
 ! CHECK-NEXT: -flogical-abbreviations Enable logical abbreviations
-! CHECK-NEXT: -fno-color-diagnostics Disable colors in diagnostics
+! CHECK-NEXT: -fno-backslash
+! CHECK-NEXT: -fno-color-diagnostics  Disable colors in diagnostics
+! CHECK-NEXT: -fno-implicit-none
+! CHECK-NEXT: -fno-logical-abbreviations
+! CHECK-NEXT: {{[[:space:]]$}}
+! CHECK-NEXT: -fno-xor-operator
 ! CHECK-NEXT: -fopenacc              Enable OpenACC
 ! CHECK-NEXT: -fopenmp               Parse OpenMP pragmas and generate parallel code.
 ! CHECK-NEXT: -fxor-operator         Enable .XOR. as a synonym of .NEQV.
@@ -50,6 +55,7 @@
 ! CHECK-NEXT: -nocpp                 Disable predefined and command line preprocessor macros
 ! CHECK-NEXT: -o <file> Write output to <file>
 ! CHECK-NEXT: -pedantic              Warn on language extensions
+! CHECK-NEXT: -P                     Disable linemarker output in -E mode
 ! CHECK-NEXT: -std=<value>           Language standard to compile for
 ! CHECK-NEXT: -U <macro>             Undefine macro <macro>
 ! CHECK-NEXT: --version Print version information

@@ -178,11 +178,16 @@ class Preprocessor {
   IdentifierInfo *Ident__is_target_vendor;         // __is_target_vendor
   IdentifierInfo *Ident__is_target_os;             // __is_target_os
   IdentifierInfo *Ident__is_target_environment;    // __is_target_environment
+  IdentifierInfo *Ident__FLT_EVAL_METHOD__ = nullptr; // __FLT_EVAL_METHOD__
 
   // Weak, only valid (and set) while InMacroArgs is true.
   Token* ArgMacro;
 
   SourceLocation DATELoc, TIMELoc;
+
+  // Corresponding to __FLT_EVAL_METHOD__. Initialized from TargetInfo
+  // or the command line. Implementation-defined values can be negative.
+  int CurrentFPEvalMethod = 0;
 
   // Next __COUNTER__ value, starts at 0.
   unsigned CounterValue = 0;
@@ -264,9 +269,11 @@ class Preprocessor {
   /// avoid tearing the Lexer and etc. down).
   bool IncrementalProcessing = false;
 
+public:
   /// The kind of translation unit we are processing.
-  TranslationUnitKind TUKind;
+  const TranslationUnitKind TUKind;
 
+private:
   /// The code-completion handler.
   CodeCompletionHandler *CodeComplete = nullptr;
 
@@ -781,9 +788,11 @@ private:
   /// deserializing from PCH, we don't need to deserialize identifier & macros
   /// just so that we can report that they are unused, we just warn using
   /// the SourceLocations of this set (that will be filled by the ASTReader).
-  /// We are using SmallPtrSet instead of a vector for faster removal.
-  using WarnUnusedMacroLocsTy = llvm::SmallPtrSet<SourceLocation, 32>;
+  using WarnUnusedMacroLocsTy = llvm::SmallDenseSet<SourceLocation, 32>;
   WarnUnusedMacroLocsTy WarnUnusedMacroLocs;
+
+  /// Deprecation messages for macros provided in #pragma clang deprecated
+  llvm::DenseMap<const IdentifierInfo *, std::string> MacroDeprecationMsgs;
 
   /// A "freelist" of MacroArg objects that can be
   /// reused for quick allocation.
@@ -1952,7 +1961,8 @@ public:
   /// This either returns the EOF token and returns true, or
   /// pops a level off the include stack and returns false, at which point the
   /// client should call lex again.
-  bool HandleEndOfFile(Token &Result, bool isEndOfMacro = false);
+  bool HandleEndOfFile(Token &Result, SourceLocation Loc,
+                       bool isEndOfMacro = false);
 
   /// Callback invoked when the current TokenLexer hits the end of its
   /// token stream.
@@ -1987,6 +1997,8 @@ public:
   }
   unsigned getCounterValue() const { return CounterValue; }
   void setCounterValue(unsigned V) { CounterValue = V; }
+  int getCurrentFPEvalMethod() const { return CurrentFPEvalMethod; }
+  void setCurrentFPEvalMethod(int V) { CurrentFPEvalMethod = V; }
 
   /// Retrieves the module that we're currently building, if any.
   Module *getCurrentModule();
@@ -2362,12 +2374,14 @@ private:
 
   // Pragmas.
   void HandlePragmaDirective(PragmaIntroducer Introducer);
+  void ResolvePragmaIncludeInstead(SourceLocation Location) const;
 
 public:
   void HandlePragmaOnce(Token &OnceTok);
   void HandlePragmaMark(Token &MarkTok);
   void HandlePragmaPoison();
   void HandlePragmaSystemHeader(Token &SysHeaderTok);
+  void HandlePragmaIncludeInstead(Token &Tok);
   void HandlePragmaDependency(Token &DependencyTok);
   void HandlePragmaPushMacro(Token &Tok);
   void HandlePragmaPopMacro(Token &Tok);
@@ -2383,6 +2397,19 @@ public:
   /// A macro is used, update information about macros that need unused
   /// warnings.
   void markMacroAsUsed(MacroInfo *MI);
+
+  void addMacroDeprecationMsg(const IdentifierInfo *II, std::string Msg) {
+    MacroDeprecationMsgs.insert(std::make_pair(II, Msg));
+  }
+
+  llvm::Optional<std::string> getMacroDeprecationMsg(const IdentifierInfo *II) {
+    auto MsgEntry = MacroDeprecationMsgs.find(II);
+    if (MsgEntry == MacroDeprecationMsgs.end())
+      return llvm::None;
+    return MsgEntry->second;
+  }
+
+  void emitMacroExpansionWarnings(const Token &Identifier);
 
 private:
   Optional<unsigned>

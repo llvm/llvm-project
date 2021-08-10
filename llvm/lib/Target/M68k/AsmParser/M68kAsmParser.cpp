@@ -133,6 +133,8 @@ class M68kOperand : public MCParsedAsmOperand {
     M68kMemOp MemOp;
   };
 
+  template <unsigned N> bool isAddrN() const;
+
 public:
   M68kOperand(enum Kind Kind, SMLoc Start, SMLoc End)
       : Base(), Kind(Kind), Start(Start), End(End) {}
@@ -149,6 +151,8 @@ public:
 
   // Reg
   bool isReg() const override;
+  bool isAReg() const;
+  bool isDReg() const;
   unsigned getReg() const override;
   void addRegOperands(MCInst &Inst, unsigned N) const;
 
@@ -170,6 +174,9 @@ public:
 
   // Addr
   bool isAddr() const;
+  bool isAddr8() const { return isAddrN<8>(); }
+  bool isAddr16() const { return isAddrN<16>(); }
+  bool isAddr32() const { return isAddrN<32>(); }
   void addAddrOperands(MCInst &Inst, unsigned N) const;
 
   // ARI
@@ -304,6 +311,17 @@ std::unique_ptr<M68kOperand> M68kOperand::createImm(const MCExpr *Expr,
 bool M68kOperand::isAddr() const {
   return isMemOp() && MemOp.Op == M68kMemOp::Kind::Addr;
 }
+// TODO: Maybe we can also store the size of OuterDisp
+// in Size?
+template <unsigned N> bool M68kOperand::isAddrN() const {
+  if (isAddr()) {
+    int64_t Res;
+    if (MemOp.OuterDisp->evaluateAsAbsolute(Res))
+      return isInt<N>(Res);
+    return true;
+  }
+  return false;
+}
 void M68kOperand::addAddrOperands(MCInst &Inst, unsigned N) const {
   M68kOperand::addExpr(Inst, MemOp.OuterDisp);
 }
@@ -410,6 +428,18 @@ static inline bool checkRegisterClass(unsigned RegNo, bool Data, bool Address,
     llvm_unreachable("unexpected register type");
     return false;
   }
+}
+
+bool M68kOperand::isAReg() const {
+  return isReg() && checkRegisterClass(getReg(),
+                                       /*Data=*/false,
+                                       /*Address=*/true, /*SP=*/true);
+}
+
+bool M68kOperand::isDReg() const {
+  return isReg() && checkRegisterClass(getReg(),
+                                       /*Data=*/true,
+                                       /*Address=*/false, /*SP=*/false);
 }
 
 unsigned M68kAsmParser::validateTargetOperandClass(MCParsedAsmOperand &Op,

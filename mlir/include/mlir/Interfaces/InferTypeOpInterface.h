@@ -23,6 +23,8 @@
 
 namespace mlir {
 
+using ReifiedRankedShapedTypeDims = SmallVector<SmallVector<Value>>;
+
 /// ShapedTypeComponents that represents the components of a ShapedType.
 /// The components consist of
 ///  - A ranked or unranked shape with the dimension specification match those
@@ -74,15 +76,39 @@ private:
   Attribute attr;
 };
 
+/// Range of values and shapes (corresponding effectively to Shapes dialect's
+/// ValueShape type concept).
+class ValueShapeRange : public ValueRange::RangeBaseT {
+public:
+  ValueShapeRange(ValueRange values) : RangeBaseT(values) {}
+  template <typename Arg, typename = typename std::enable_if_t<
+                              std::is_constructible<ValueRange, Arg>::value>>
+  ValueShapeRange(Arg &&arg)
+      : ValueShapeRange(ValueRange(std::forward<Arg>(arg))) {}
+  ValueShapeRange(const std::initializer_list<Value> &values)
+      : ValueShapeRange(ValueRange(values)) {}
+
+  /// Returns the types of the values within this range.
+  /// Note: This returns only the types of Values in the ValueRange and not a
+  /// more refined type.
+  using type_iterator = ValueTypeIterator<iterator>;
+  using type_range = ValueTypeRange<ValueRange>;
+  type_range getTypes() const { return {begin(), end()}; }
+  auto getType() const { return getTypes(); }
+
+  /// Returns the Values in the ValueRange.
+  ValueRange getValues() const { return ValueRange(begin(), end()); };
+};
+
 namespace detail {
-// Helper function to infer return tensor returns types given element and shape
-// inference function.
+// Helper function to infer return tensor returns types given element and
+// shape inference function.
 //
 // TODO: Consider generating typedefs for trait member functions if this usage
 // becomes more common.
 LogicalResult inferReturnTensorTypes(
     function_ref<LogicalResult(
-        MLIRContext *, Optional<Location> location, ValueRange operands,
+        MLIRContext *, Optional<Location> location, ValueShapeRange operands,
         DictionaryAttr attributes, RegionRange regions,
         SmallVectorImpl<ShapedTypeComponents> &retComponents)>
         componentTypeFn,

@@ -1157,7 +1157,7 @@ static StructType *buildFrameType(Function &F, coro::Shape &Shape,
     // instead of the pointer itself.
     if (const Argument *A = dyn_cast<Argument>(S.first))
       if (A->hasByValAttr())
-        FieldType = FieldType->getPointerElementType();
+        FieldType = A->getParamByValType();
     FieldIDType Id =
         B.addField(FieldType, None, false /*header*/, true /*IsSpillOfValue*/);
     FrameData.setFieldIndex(S.first, Id);
@@ -1984,14 +1984,15 @@ static void rewriteMaterializableInstructions(IRBuilder<> &IRB,
       if (CurrentBlock != U->getParent()) {
 
         bool IsInCoroSuspendBlock = isa<AnyCoroSuspendInst>(U);
-        CurrentBlock = IsInCoroSuspendBlock
-                           ? U->getParent()->getSinglePredecessor()
-                           : U->getParent();
+        CurrentBlock = U->getParent();
+        auto *InsertBlock = IsInCoroSuspendBlock
+                                ? CurrentBlock->getSinglePredecessor()
+                                : CurrentBlock;
         CurrentMaterialization = cast<Instruction>(Def)->clone();
         CurrentMaterialization->setName(Def->getName());
         CurrentMaterialization->insertBefore(
-            IsInCoroSuspendBlock ? CurrentBlock->getTerminator()
-                                 : &*CurrentBlock->getFirstInsertionPt());
+            IsInCoroSuspendBlock ? InsertBlock->getTerminator()
+                                 : &*InsertBlock->getFirstInsertionPt());
       }
       if (auto *PN = dyn_cast<PHINode>(U)) {
         assert(PN->getNumIncomingValues() == 1 &&

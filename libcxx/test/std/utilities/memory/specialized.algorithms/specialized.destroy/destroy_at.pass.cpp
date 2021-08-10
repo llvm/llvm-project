@@ -19,6 +19,7 @@
 
 #include <memory>
 #include <cassert>
+#include <type_traits>
 
 #include "test_macros.h"
 
@@ -42,8 +43,50 @@ struct DerivedCounted : VirtualCounted {
     friend void operator&(DerivedCounted) = delete;
 };
 
-TEST_CONSTEXPR_CXX20 bool test()
-{
+#if TEST_STD_VER > 17
+constexpr bool test_arrays() {
+    {
+        using Array = Counted[3];
+        using Alloc = std::allocator<Array>;
+        Alloc alloc;
+        Array* ptr = std::allocator_traits<Alloc>::allocate(alloc, 1);
+        Array& arr = *ptr;
+
+        int counter = 0;
+        for (int i = 0; i != 3; ++i)
+            std::allocator_traits<Alloc>::construct(alloc, std::addressof(arr[i]), &counter);
+        assert(counter == 3);
+
+        std::destroy_at(ptr);
+        ASSERT_SAME_TYPE(decltype(std::destroy_at(ptr)), void);
+        assert(counter == 0);
+
+        std::allocator_traits<Alloc>::deallocate(alloc, ptr, 1);
+    }
+    {
+        using Array = Counted[3][2];
+        using Alloc = std::allocator<Array>;
+        Alloc alloc;
+        Array* ptr = std::allocator_traits<Alloc>::allocate(alloc, 1);
+        Array& arr = *ptr;
+
+        int counter = 0;
+        for (int i = 0; i != 3; ++i)
+            for (int j = 0; j != 2; ++j)
+                std::allocator_traits<Alloc>::construct(alloc, std::addressof(arr[i][j]), &counter);
+        assert(counter == 3 * 2);
+
+        std::destroy_at(ptr);
+        ASSERT_SAME_TYPE(decltype(std::destroy_at(ptr)), void);
+        assert(counter == 0);
+
+        std::allocator_traits<Alloc>::deallocate(alloc, ptr, 1);
+    }
+    return true;
+}
+#endif
+
+TEST_CONSTEXPR_CXX20 bool test() {
     {
         using Alloc = std::allocator<Counted>;
         Alloc alloc;
@@ -56,6 +99,7 @@ TEST_CONSTEXPR_CXX20 bool test()
         assert(counter == 2);
 
         std::destroy_at(ptr1);
+        ASSERT_SAME_TYPE(decltype(std::destroy_at(ptr1)), void);
         assert(counter == 1);
 
         std::destroy_at(ptr2);
@@ -76,6 +120,7 @@ TEST_CONSTEXPR_CXX20 bool test()
         assert(counter == 2);
 
         std::destroy_at(ptr1);
+        ASSERT_SAME_TYPE(decltype(std::destroy_at(ptr1)), void);
         assert(counter == 1);
 
         std::destroy_at(ptr2);
@@ -88,11 +133,14 @@ TEST_CONSTEXPR_CXX20 bool test()
     return true;
 }
 
-int main(int, char**)
-{
+int main(int, char**) {
     test();
 #if TEST_STD_VER > 17
+    test_arrays();
     static_assert(test());
+    // TODO: Until std::construct_at has support for arrays, it's impossible to test this
+    //       in a constexpr context.
+    // static_assert(test_arrays());
 #endif
     return 0;
 }

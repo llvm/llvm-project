@@ -451,7 +451,7 @@ define <8 x i16> @shuffle_vector_halfword_0_4(<8 x i16> %a) {
 ; CHECK-BE:       # %bb.0: # %entry
 ; CHECK-BE-NEXT:    addis 3, 2, .LCPI16_0@toc@ha
 ; CHECK-BE-NEXT:    addi 3, 3, .LCPI16_0@toc@l
-; CHECK-BE-NEXT:    lxvx 35, 0, 3
+; CHECK-BE-NEXT:    lxv 35, 0(3)
 ; CHECK-BE-NEXT:    vperm 2, 2, 2, 3
 ; CHECK-BE-NEXT:    blr
 entry:
@@ -464,7 +464,7 @@ define <8 x i16> @shuffle_vector_halfword_1_3(<8 x i16> %a) {
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    addis 3, 2, .LCPI17_0@toc@ha
 ; CHECK-NEXT:    addi 3, 3, .LCPI17_0@toc@l
-; CHECK-NEXT:    lxvx 35, 0, 3
+; CHECK-NEXT:    lxv 35, 0(3)
 ; CHECK-NEXT:    vperm 2, 2, 2, 3
 ; CHECK-NEXT:    blr
 ;
@@ -482,7 +482,7 @@ define <8 x i16> @shuffle_vector_halfword_2_3(<8 x i16> %a) {
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    addis 3, 2, .LCPI18_0@toc@ha
 ; CHECK-NEXT:    addi 3, 3, .LCPI18_0@toc@l
-; CHECK-NEXT:    lxvx 35, 0, 3
+; CHECK-NEXT:    lxv 35, 0(3)
 ; CHECK-NEXT:    vperm 2, 2, 2, 3
 ; CHECK-NEXT:    blr
 ;
@@ -505,7 +505,7 @@ define <8 x i16> @shuffle_vector_halfword_3_4(<8 x i16> %a) {
 ; CHECK-BE:       # %bb.0: # %entry
 ; CHECK-BE-NEXT:    addis 3, 2, .LCPI19_0@toc@ha
 ; CHECK-BE-NEXT:    addi 3, 3, .LCPI19_0@toc@l
-; CHECK-BE-NEXT:    lxvx 35, 0, 3
+; CHECK-BE-NEXT:    lxv 35, 0(3)
 ; CHECK-BE-NEXT:    vperm 2, 2, 2, 3
 ; CHECK-BE-NEXT:    blr
 entry:
@@ -518,7 +518,7 @@ define <8 x i16> @shuffle_vector_halfword_4_3(<8 x i16> %a) {
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    addis 3, 2, .LCPI20_0@toc@ha
 ; CHECK-NEXT:    addi 3, 3, .LCPI20_0@toc@l
-; CHECK-NEXT:    lxvx 35, 0, 3
+; CHECK-NEXT:    lxv 35, 0(3)
 ; CHECK-NEXT:    vperm 2, 2, 2, 3
 ; CHECK-NEXT:    blr
 ;
@@ -536,7 +536,7 @@ define <8 x i16> @shuffle_vector_halfword_5_3(<8 x i16> %a) {
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    addis 3, 2, .LCPI21_0@toc@ha
 ; CHECK-NEXT:    addi 3, 3, .LCPI21_0@toc@l
-; CHECK-NEXT:    lxvx 35, 0, 3
+; CHECK-NEXT:    lxv 35, 0(3)
 ; CHECK-NEXT:    vperm 2, 2, 2, 3
 ; CHECK-NEXT:    blr
 ;
@@ -559,7 +559,7 @@ define <8 x i16> @shuffle_vector_halfword_6_4(<8 x i16> %a) {
 ; CHECK-BE:       # %bb.0: # %entry
 ; CHECK-BE-NEXT:    addis 3, 2, .LCPI22_0@toc@ha
 ; CHECK-BE-NEXT:    addi 3, 3, .LCPI22_0@toc@l
-; CHECK-BE-NEXT:    lxvx 35, 0, 3
+; CHECK-BE-NEXT:    lxv 35, 0(3)
 ; CHECK-BE-NEXT:    vperm 2, 2, 2, 3
 ; CHECK-BE-NEXT:    blr
 entry:
@@ -577,7 +577,7 @@ define <8 x i16> @shuffle_vector_halfword_7_4(<8 x i16> %a) {
 ; CHECK-BE:       # %bb.0: # %entry
 ; CHECK-BE-NEXT:    addis 3, 2, .LCPI23_0@toc@ha
 ; CHECK-BE-NEXT:    addi 3, 3, .LCPI23_0@toc@l
-; CHECK-BE-NEXT:    lxvx 35, 0, 3
+; CHECK-BE-NEXT:    lxv 35, 0(3)
 ; CHECK-BE-NEXT:    vperm 2, 2, 2, 3
 ; CHECK-BE-NEXT:    blr
 entry:
@@ -1455,7 +1455,7 @@ define <16 x i8> @shuffle_vector_byte_0_7(<16 x i8> %a) {
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    addis 3, 2, .LCPI56_0@toc@ha
 ; CHECK-NEXT:    addi 3, 3, .LCPI56_0@toc@l
-; CHECK-NEXT:    lxvx 35, 0, 3
+; CHECK-NEXT:    lxv 35, 0(3)
 ; CHECK-NEXT:    vperm 2, 2, 2, 3
 ; CHECK-NEXT:    blr
 ;
@@ -1478,7 +1478,7 @@ define <16 x i8> @shuffle_vector_byte_1_8(<16 x i8> %a) {
 ; CHECK-BE:       # %bb.0: # %entry
 ; CHECK-BE-NEXT:    addis 3, 2, .LCPI57_0@toc@ha
 ; CHECK-BE-NEXT:    addi 3, 3, .LCPI57_0@toc@l
-; CHECK-BE-NEXT:    lxvx 35, 0, 3
+; CHECK-BE-NEXT:    lxv 35, 0(3)
 ; CHECK-BE-NEXT:    vperm 2, 2, 2, 3
 ; CHECK-BE-NEXT:    blr
 entry:
@@ -1496,7 +1496,7 @@ define <16 x i8> @shuffle_vector_byte_2_8(<16 x i8> %a) {
 ; CHECK-BE:       # %bb.0: # %entry
 ; CHECK-BE-NEXT:    addis 3, 2, .LCPI58_0@toc@ha
 ; CHECK-BE-NEXT:    addi 3, 3, .LCPI58_0@toc@l
-; CHECK-BE-NEXT:    lxvx 35, 0, 3
+; CHECK-BE-NEXT:    lxv 35, 0(3)
 ; CHECK-BE-NEXT:    vperm 2, 2, 2, 3
 ; CHECK-BE-NEXT:    blr
 entry:
@@ -1509,7 +1509,7 @@ define <16 x i8> @shuffle_vector_byte_3_7(<16 x i8> %a) {
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    addis 3, 2, .LCPI59_0@toc@ha
 ; CHECK-NEXT:    addi 3, 3, .LCPI59_0@toc@l
-; CHECK-NEXT:    lxvx 35, 0, 3
+; CHECK-NEXT:    lxv 35, 0(3)
 ; CHECK-NEXT:    vperm 2, 2, 2, 3
 ; CHECK-NEXT:    blr
 ;
@@ -1527,7 +1527,7 @@ define <16 x i8> @shuffle_vector_byte_4_7(<16 x i8> %a) {
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    addis 3, 2, .LCPI60_0@toc@ha
 ; CHECK-NEXT:    addi 3, 3, .LCPI60_0@toc@l
-; CHECK-NEXT:    lxvx 35, 0, 3
+; CHECK-NEXT:    lxv 35, 0(3)
 ; CHECK-NEXT:    vperm 2, 2, 2, 3
 ; CHECK-NEXT:    blr
 ;
@@ -1550,7 +1550,7 @@ define <16 x i8> @shuffle_vector_byte_5_8(<16 x i8> %a) {
 ; CHECK-BE:       # %bb.0: # %entry
 ; CHECK-BE-NEXT:    addis 3, 2, .LCPI61_0@toc@ha
 ; CHECK-BE-NEXT:    addi 3, 3, .LCPI61_0@toc@l
-; CHECK-BE-NEXT:    lxvx 35, 0, 3
+; CHECK-BE-NEXT:    lxv 35, 0(3)
 ; CHECK-BE-NEXT:    vperm 2, 2, 2, 3
 ; CHECK-BE-NEXT:    blr
 entry:
@@ -1568,7 +1568,7 @@ define <16 x i8> @shuffle_vector_byte_6_8(<16 x i8> %a) {
 ; CHECK-BE:       # %bb.0: # %entry
 ; CHECK-BE-NEXT:    addis 3, 2, .LCPI62_0@toc@ha
 ; CHECK-BE-NEXT:    addi 3, 3, .LCPI62_0@toc@l
-; CHECK-BE-NEXT:    lxvx 35, 0, 3
+; CHECK-BE-NEXT:    lxv 35, 0(3)
 ; CHECK-BE-NEXT:    vperm 2, 2, 2, 3
 ; CHECK-BE-NEXT:    blr
 entry:
@@ -1586,7 +1586,7 @@ define <16 x i8> @shuffle_vector_byte_7_8(<16 x i8> %a) {
 ; CHECK-BE:       # %bb.0: # %entry
 ; CHECK-BE-NEXT:    addis 3, 2, .LCPI63_0@toc@ha
 ; CHECK-BE-NEXT:    addi 3, 3, .LCPI63_0@toc@l
-; CHECK-BE-NEXT:    lxvx 35, 0, 3
+; CHECK-BE-NEXT:    lxv 35, 0(3)
 ; CHECK-BE-NEXT:    vperm 2, 2, 2, 3
 ; CHECK-BE-NEXT:    blr
 entry:
@@ -1599,7 +1599,7 @@ define <16 x i8> @shuffle_vector_byte_8_7(<16 x i8> %a) {
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    addis 3, 2, .LCPI64_0@toc@ha
 ; CHECK-NEXT:    addi 3, 3, .LCPI64_0@toc@l
-; CHECK-NEXT:    lxvx 35, 0, 3
+; CHECK-NEXT:    lxv 35, 0(3)
 ; CHECK-NEXT:    vperm 2, 2, 2, 3
 ; CHECK-NEXT:    blr
 ;
@@ -1617,7 +1617,7 @@ define <16 x i8> @shuffle_vector_byte_9_7(<16 x i8> %a) {
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    addis 3, 2, .LCPI65_0@toc@ha
 ; CHECK-NEXT:    addi 3, 3, .LCPI65_0@toc@l
-; CHECK-NEXT:    lxvx 35, 0, 3
+; CHECK-NEXT:    lxv 35, 0(3)
 ; CHECK-NEXT:    vperm 2, 2, 2, 3
 ; CHECK-NEXT:    blr
 ;
@@ -1635,7 +1635,7 @@ define <16 x i8> @shuffle_vector_byte_10_7(<16 x i8> %a) {
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    addis 3, 2, .LCPI66_0@toc@ha
 ; CHECK-NEXT:    addi 3, 3, .LCPI66_0@toc@l
-; CHECK-NEXT:    lxvx 35, 0, 3
+; CHECK-NEXT:    lxv 35, 0(3)
 ; CHECK-NEXT:    vperm 2, 2, 2, 3
 ; CHECK-NEXT:    blr
 ;
@@ -1658,7 +1658,7 @@ define <16 x i8> @shuffle_vector_byte_11_8(<16 x i8> %a) {
 ; CHECK-BE:       # %bb.0: # %entry
 ; CHECK-BE-NEXT:    addis 3, 2, .LCPI67_0@toc@ha
 ; CHECK-BE-NEXT:    addi 3, 3, .LCPI67_0@toc@l
-; CHECK-BE-NEXT:    lxvx 35, 0, 3
+; CHECK-BE-NEXT:    lxv 35, 0(3)
 ; CHECK-BE-NEXT:    vperm 2, 2, 2, 3
 ; CHECK-BE-NEXT:    blr
 entry:
@@ -1676,7 +1676,7 @@ define <16 x i8> @shuffle_vector_byte_12_8(<16 x i8> %a) {
 ; CHECK-BE:       # %bb.0: # %entry
 ; CHECK-BE-NEXT:    addis 3, 2, .LCPI68_0@toc@ha
 ; CHECK-BE-NEXT:    addi 3, 3, .LCPI68_0@toc@l
-; CHECK-BE-NEXT:    lxvx 35, 0, 3
+; CHECK-BE-NEXT:    lxv 35, 0(3)
 ; CHECK-BE-NEXT:    vperm 2, 2, 2, 3
 ; CHECK-BE-NEXT:    blr
 entry:
@@ -1689,7 +1689,7 @@ define <16 x i8> @shuffle_vector_byte_13_7(<16 x i8> %a) {
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    addis 3, 2, .LCPI69_0@toc@ha
 ; CHECK-NEXT:    addi 3, 3, .LCPI69_0@toc@l
-; CHECK-NEXT:    lxvx 35, 0, 3
+; CHECK-NEXT:    lxv 35, 0(3)
 ; CHECK-NEXT:    vperm 2, 2, 2, 3
 ; CHECK-NEXT:    blr
 ;
@@ -1707,7 +1707,7 @@ define <16 x i8> @shuffle_vector_byte_14_7(<16 x i8> %a) {
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    addis 3, 2, .LCPI70_0@toc@ha
 ; CHECK-NEXT:    addi 3, 3, .LCPI70_0@toc@l
-; CHECK-NEXT:    lxvx 35, 0, 3
+; CHECK-NEXT:    lxv 35, 0(3)
 ; CHECK-NEXT:    vperm 2, 2, 2, 3
 ; CHECK-NEXT:    blr
 ;
@@ -1730,7 +1730,7 @@ define <16 x i8> @shuffle_vector_byte_15_8(<16 x i8> %a) {
 ; CHECK-BE:       # %bb.0: # %entry
 ; CHECK-BE-NEXT:    addis 3, 2, .LCPI71_0@toc@ha
 ; CHECK-BE-NEXT:    addi 3, 3, .LCPI71_0@toc@l
-; CHECK-BE-NEXT:    lxvx 35, 0, 3
+; CHECK-BE-NEXT:    lxv 35, 0(3)
 ; CHECK-BE-NEXT:    vperm 2, 2, 2, 3
 ; CHECK-BE-NEXT:    blr
 entry:

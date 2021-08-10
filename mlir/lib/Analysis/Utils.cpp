@@ -13,6 +13,7 @@
 
 #include "mlir/Analysis/Utils.h"
 #include "mlir/Analysis/AffineAnalysis.h"
+#include "mlir/Analysis/LoopAnalysis.h"
 #include "mlir/Analysis/PresburgerSet.h"
 #include "mlir/Dialect/Affine/IR/AffineOps.h"
 #include "mlir/Dialect/Affine/IR/AffineValueMap.h"
@@ -969,6 +970,73 @@ mlir::computeSliceUnion(ArrayRef<Operation *> opsA, ArrayRef<Operation *> opsB,
   return SliceComputationResult::Success;
 }
 
+// TODO: extend this to handle multiple result maps.
+static Optional<uint64_t> getConstDifference(AffineMap lbMap, AffineMap ubMap) {
+  assert(lbMap.getNumResults() == 1 && "expected single result bound map");
+  assert(ubMap.getNumResults() == 1 && "expected single result bound map");
+  assert(lbMap.getNumDims() == ubMap.getNumDims());
+  assert(lbMap.getNumSymbols() == ubMap.getNumSymbols());
+  AffineExpr lbExpr(lbMap.getResult(0));
+  AffineExpr ubExpr(ubMap.getResult(0));
+  auto loopSpanExpr = simplifyAffineExpr(ubExpr - lbExpr, lbMap.getNumDims(),
+                                         lbMap.getNumSymbols());
+  auto cExpr = loopSpanExpr.dyn_cast<AffineConstantExpr>();
+  if (!cExpr)
+    return None;
+  return cExpr.getValue();
+}
+
+// Builds a map 'tripCountMap' from AffineForOp to constant trip count for loop
+// nest surrounding represented by slice loop bounds in 'slice'. Returns true
+// on success, false otherwise (if a non-constant trip count was encountered).
+// TODO: Make this work with non-unit step loops.
+bool mlir::buildSliceTripCountMap(
+    const ComputationSliceState &slice,
+    llvm::SmallDenseMap<Operation *, uint64_t, 8> *tripCountMap) {
+  unsigned numSrcLoopIVs = slice.ivs.size();
+  // Populate map from AffineForOp -> trip count
+  for (unsigned i = 0; i < numSrcLoopIVs; ++i) {
+    AffineForOp forOp = getForInductionVarOwner(slice.ivs[i]);
+    auto *op = forOp.getOperation();
+    AffineMap lbMap = slice.lbs[i];
+    AffineMap ubMap = slice.ubs[i];
+    // If lower or upper bound maps are null or provide no results, it implies
+    // that source loop was not at all sliced, and the entire loop will be a
+    // part of the slice.
+    if (!lbMap || lbMap.getNumResults() == 0 || !ubMap ||
+        ubMap.getNumResults() == 0) {
+      // The iteration of src loop IV 'i' was not sliced. Use full loop bounds.
+      if (forOp.hasConstantLowerBound() && forOp.hasConstantUpperBound()) {
+        (*tripCountMap)[op] =
+            forOp.getConstantUpperBound() - forOp.getConstantLowerBound();
+        continue;
+      }
+      Optional<uint64_t> maybeConstTripCount = getConstantTripCount(forOp);
+      if (maybeConstTripCount.hasValue()) {
+        (*tripCountMap)[op] = maybeConstTripCount.getValue();
+        continue;
+      }
+      return false;
+    }
+    Optional<uint64_t> tripCount = getConstDifference(lbMap, ubMap);
+    // Slice bounds are created with a constant ub - lb difference.
+    if (!tripCount.hasValue())
+      return false;
+    (*tripCountMap)[op] = tripCount.getValue();
+  }
+  return true;
+}
+
+// Return the number of iterations in the given slice.
+uint64_t mlir::getSliceIterationCount(
+    const llvm::SmallDenseMap<Operation *, uint64_t, 8> &sliceTripCountMap) {
+  uint64_t iterCount = 1;
+  for (const auto &count : sliceTripCountMap) {
+    iterCount *= count.second;
+  }
+  return iterCount;
+}
+
 const char *const kSliceFusionBarrierAttrName = "slice_fusion_barrier";
 // Computes slice bounds by projecting out any loop IVs from
 // 'dependenceConstraints' at depth greater than 'loopDepth', and computes slice
@@ -1039,17 +1107,35 @@ void mlir::getComputationSliceState(
     getSequentialLoops(isBackwardSlice ? srcLoopIVs[0] : dstLoopIVs[0],
                        &sequentialLoops);
   }
-  // Clear all sliced loop bounds beginning at the first sequential loop, or
-  // first loop with a slice fusion barrier attribute..
-  // TODO: Use MemRef read/write regions instead of
-  // using 'kSliceFusionBarrierAttrName'.
   auto getSliceLoop = [&](unsigned i) {
     return isBackwardSlice ? srcLoopIVs[i] : dstLoopIVs[i];
   };
+  auto isInnermostInsertion = [&]() {
+    return (isBackwardSlice ? loopDepth >= srcLoopIVs.size()
+                            : loopDepth >= dstLoopIVs.size());
+  };
+  llvm::SmallDenseMap<Operation *, uint64_t, 8> sliceTripCountMap;
+  auto srcIsUnitSlice = [&]() {
+    return (buildSliceTripCountMap(*sliceState, &sliceTripCountMap) &&
+            (getSliceIterationCount(sliceTripCountMap) == 1));
+  };
+  // Clear all sliced loop bounds beginning at the first sequential loop, or
+  // first loop with a slice fusion barrier attribute..
+
   for (unsigned i = 0; i < numSliceLoopIVs; ++i) {
     Value iv = getSliceLoop(i).getInductionVar();
     if (sequentialLoops.count(iv) == 0 &&
         getSliceLoop(i)->getAttr(kSliceFusionBarrierAttrName) == nullptr)
+      continue;
+    // Skip reset of bounds of reduction loop inserted in the destination loop
+    // that meets the following conditions:
+    //    1. Slice is  single trip count.
+    //    2. Loop bounds of the source and destination match.
+    //    3. Is being inserted at the innermost insertion point.
+    Optional<bool> isMaximal = sliceState->isMaximal();
+    if (isLoopParallelAndContainsReduction(getSliceLoop(i)) &&
+        isInnermostInsertion() && srcIsUnitSlice() && isMaximal.hasValue() &&
+        isMaximal.getValue())
       continue;
     for (unsigned j = i; j < numSliceLoopIVs; ++j) {
       sliceState->lbs[j] = AffineMap();
@@ -1256,6 +1342,14 @@ Optional<int64_t> mlir::getMemoryFootprintBytes(AffineForOp forOp,
   return ::getMemoryFootprintBytes(
       *forInst->getBlock(), Block::iterator(forInst),
       std::next(Block::iterator(forInst)), memorySpace);
+}
+
+/// Returns whether a loop is parallel and contains a reduction loop.
+bool mlir::isLoopParallelAndContainsReduction(AffineForOp forOp) {
+  SmallVector<LoopReduction> reductions;
+  if (!isLoopParallel(forOp, &reductions))
+    return false;
+  return !reductions.empty();
 }
 
 /// Returns in 'sequentialLoops' all sequential loops in loop nest rooted

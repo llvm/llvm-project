@@ -1,6 +1,6 @@
 // RUN: mlir-opt %s \
 // RUN:   --sparsification --sparse-tensor-conversion \
-// RUN:   --convert-linalg-to-loops --convert-vector-to-scf --convert-scf-to-std \
+// RUN:   --convert-vector-to-scf --convert-scf-to-std \
 // RUN:   --func-bufferize --tensor-constant-bufferize --tensor-bufferize \
 // RUN:   --std-bufferize --finalizing-bufferize  \
 // RUN:   --convert-vector-to-llvm --convert-memref-to-llvm --convert-std-to-llvm | \
@@ -72,7 +72,7 @@ module {
     // Read the sparse B input from a file.
     %fileName = call @getTensorFilename(%c0) : (index) -> (!Filename)
     %b = sparse_tensor.new %fileName
-          : !llvm.ptr<i8> to tensor<?x?x?xf64, #SparseMatrix>
+          : !Filename to tensor<?x?x?xf64, #SparseMatrix>
 
     // Initialize dense C and D inputs and dense output A.
     %cdata = memref.alloc(%c3, %c5) : memref<?x?xf64>

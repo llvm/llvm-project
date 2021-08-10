@@ -19,12 +19,12 @@
 
 namespace __sanitizer {
 
-static BlockingMutex tctx_allocator_lock(LINKER_INITIALIZED);
+static Mutex tctx_allocator_lock;
 static LowLevelAllocator tctx_allocator;
 
 template<typename TCTX>
 static ThreadContextBase *GetThreadContext(u32 tid) {
-  BlockingMutexLock l(&tctx_allocator_lock);
+  Lock l(&tctx_allocator_lock);
   return new(tctx_allocator) TCTX(tid);
 }
 
@@ -136,13 +136,13 @@ static void TestRegistry(ThreadRegistry *registry, bool has_quarantine) {
 
 TEST(SanitizerCommon, ThreadRegistryTest) {
   ThreadRegistry quarantine_registry(GetThreadContext<ThreadContextBase>,
-                                     kMaxRegistryThreads,
-                                     kRegistryQuarantine);
+                                     kMaxRegistryThreads, kRegistryQuarantine,
+                                     0);
   TestRegistry(&quarantine_registry, true);
 
   ThreadRegistry no_quarantine_registry(GetThreadContext<ThreadContextBase>,
                                         kMaxRegistryThreads,
-                                        kMaxRegistryThreads);
+                                        kMaxRegistryThreads, 0);
   TestRegistry(&no_quarantine_registry, false);
 }
 
@@ -227,7 +227,7 @@ TEST(SanitizerCommon, ThreadRegistryThreadedTest) {
   memset(&num_joined, 0, sizeof(num_created));
 
   ThreadRegistry registry(GetThreadContext<TestThreadContext>,
-                          kThreadsPerShard * kNumShards + 1, 10);
+                          kThreadsPerShard * kNumShards + 1, 10, 0);
   ThreadedTestRegistry(&registry);
 }
 

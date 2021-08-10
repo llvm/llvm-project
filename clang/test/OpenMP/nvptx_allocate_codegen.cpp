@@ -18,16 +18,6 @@ extern const omp_allocator_handle_t omp_cgroup_mem_alloc;
 extern const omp_allocator_handle_t omp_pteam_mem_alloc;
 extern const omp_allocator_handle_t omp_thread_mem_alloc;
 
-// CHECK-DAG: @{{.+}}St1{{.+}}b{{.+}} = external global i32,
-// CHECK-DAG: @a ={{ hidden | }}global i32 0,
-// CHECK-DAG: @b ={{ hidden | }}addrspace(4) global i32 0,
-// CHECK-DAG: @c ={{ hidden | }}global i32 0,
-// CHECK-DAG: @d ={{ hidden | }}global %struct.St1 zeroinitializer,
-// CHECK-DAG: @{{.+}}ns{{.+}}a{{.+}} ={{ hidden | }}addrspace(3) global i32 0,
-// CHECK-DAG: @{{.+}}main{{.+}}a{{.*}} = internal global i32 0,
-// CHECK-DAG: @{{.+}}ST{{.+}}m{{.+}} = external global i32,
-// CHECK-DAG: @bar_c = internal global i32 0,
-// CHECK-DAG: @bar_b = internal addrspace(3) global double 0.000000e+00,
 struct St{
  int a;
 };
@@ -61,9 +51,7 @@ namespace ns{
 }
 #pragma omp allocate(ns::a) allocator(omp_pteam_mem_alloc)
 
-// CHECK-LABEL: @main
 int main () {
-  // CHECK: alloca double,
   static int a;
 #pragma omp allocate(a) allocator(omp_thread_mem_alloc)
   a=2;
@@ -74,22 +62,16 @@ int main () {
   return (foo<int>());
 }
 
-// CHECK: define {{.*}}i32 @{{.+}}foo{{.+}}()
-// CHECK-NOT: alloca i32,
 
 extern template int ST<int>::m;
 
 void baz(float &);
 
-// CHECK: define{{ hidden | }}void @{{.+}}bar{{.+}}()
 void bar() {
-  // CHECK: alloca float,
   float bar_a;
-  // CHECK: alloca double,
   double bar_b;
   int bar_c;
 #pragma omp allocate(bar_c) allocator(omp_cgroup_mem_alloc)
-  // CHECK: call void [[OUTLINED:@.+]](i32* %{{.+}}, i32* %{{.+}})
 #pragma omp parallel private(bar_a, bar_b) allocate(omp_thread_mem_alloc                  \
                                                     : bar_a) allocate(omp_pteam_mem_alloc \
                                                                       : bar_b)
@@ -97,12 +79,6 @@ void bar() {
     bar_b = bar_a;
     baz(bar_a);
   }
-// CHECK: define internal void [[OUTLINED]](i32* noalias %{{.+}}, i32* noalias %{{.+}})
-// CHECK-NOT: alloca double,
-// CHECK: alloca float,
-// CHECK-NOT: alloca double,
-// CHECK: load float, float* %
-// CHECK: store double {{.+}}, double* addrspacecast (double addrspace(3)* @bar_b to double*),
 }
 
 #pragma omp end declare target
@@ -115,7 +91,7 @@ void bar() {
 // CHECK1-NEXT:    store i32 0, i32* [[RETVAL]], align 4
 // CHECK1-NEXT:    store i32 2, i32* @_ZZ4mainE1a, align 4
 // CHECK1-NEXT:    store double 3.000000e+00, double* [[B]], align 8
-// CHECK1-NEXT:    [[CALL:%.*]] = call i32 @_Z3fooIiET_v() #[[ATTR7:[0-9]+]]
+// CHECK1-NEXT:    [[CALL:%.*]] = call i32 @_Z3fooIiET_v() #[[ATTR6:[0-9]+]]
 // CHECK1-NEXT:    ret i32 [[CALL]]
 //
 //
@@ -133,29 +109,10 @@ void bar() {
 // CHECK1-NEXT:  entry:
 // CHECK1-NEXT:    [[BAR_A:%.*]] = alloca float, align 4
 // CHECK1-NEXT:    [[BAR_B:%.*]] = alloca double, align 8
-// CHECK1-NEXT:    [[DOTZERO_ADDR:%.*]] = alloca i32, align 4
-// CHECK1-NEXT:    [[DOTBOUND_ZERO_ADDR:%.*]] = alloca i32, align 4
-// CHECK1-NEXT:    store i32 0, i32* [[DOTBOUND_ZERO_ADDR]], align 4
+// CHECK1-NEXT:    [[CAPTURED_VARS_ADDRS:%.*]] = alloca [0 x i8*], align 8
 // CHECK1-NEXT:    [[TMP0:%.*]] = call i32 @__kmpc_global_thread_num(%struct.ident_t* @[[GLOB1:[0-9]+]])
-// CHECK1-NEXT:    store i32 0, i32* [[DOTZERO_ADDR]], align 4
-// CHECK1-NEXT:    [[TMP1:%.*]] = call i8 @__kmpc_is_spmd_exec_mode() #[[ATTR5:[0-9]+]]
-// CHECK1-NEXT:    [[TMP2:%.*]] = icmp ne i8 [[TMP1]], 0
-// CHECK1-NEXT:    br i1 [[TMP2]], label [[DOTSEQUENTIAL:%.*]], label [[DOTPARCHECK:%.*]]
-// CHECK1:       .parcheck:
-// CHECK1-NEXT:    [[TMP3:%.*]] = call i16 @__kmpc_parallel_level(%struct.ident_t* @[[GLOB1]], i32 [[TMP0]])
-// CHECK1-NEXT:    [[TMP4:%.*]] = icmp ne i16 [[TMP3]], 0
-// CHECK1-NEXT:    br i1 [[TMP4]], label [[DOTSEQUENTIAL]], label [[DOTMASTER:%.*]]
-// CHECK1:       .sequential:
-// CHECK1-NEXT:    call void @__kmpc_serialized_parallel(%struct.ident_t* @[[GLOB1]], i32 [[TMP0]])
-// CHECK1-NEXT:    call void @__omp_outlined__(i32* [[DOTZERO_ADDR]], i32* [[DOTBOUND_ZERO_ADDR]]) #[[ATTR5]]
-// CHECK1-NEXT:    call void @__kmpc_end_serialized_parallel(%struct.ident_t* @[[GLOB1]], i32 [[TMP0]])
-// CHECK1-NEXT:    br label [[DOTEXIT:%.*]]
-// CHECK1:       .master:
-// CHECK1-NEXT:    call void @__kmpc_kernel_prepare_parallel(i8* bitcast (void (i16, i32)* @__omp_outlined___wrapper to i8*))
-// CHECK1-NEXT:    call void @__kmpc_barrier_simple_spmd(%struct.ident_t* null, i32 0)
-// CHECK1-NEXT:    call void @__kmpc_barrier_simple_spmd(%struct.ident_t* null, i32 0)
-// CHECK1-NEXT:    br label [[DOTEXIT]]
-// CHECK1:       .exit:
+// CHECK1-NEXT:    [[TMP1:%.*]] = bitcast [0 x i8*]* [[CAPTURED_VARS_ADDRS]] to i8**
+// CHECK1-NEXT:    call void @__kmpc_parallel_51(%struct.ident_t* @[[GLOB1]], i32 [[TMP0]], i32 1, i32 -1, i32 -1, i8* bitcast (void (i32*, i32*)* @__omp_outlined__ to i8*), i8* bitcast (void (i16, i32)* @__omp_outlined___wrapper to i8*), i8** [[TMP1]], i64 0)
 // CHECK1-NEXT:    ret void
 //
 //
@@ -170,7 +127,7 @@ void bar() {
 // CHECK1-NEXT:    [[TMP0:%.*]] = load float, float* [[BAR_A]], align 4
 // CHECK1-NEXT:    [[CONV:%.*]] = fpext float [[TMP0]] to double
 // CHECK1-NEXT:    store double [[CONV]], double* addrspacecast (double addrspace(3)* @bar_b to double*), align 8
-// CHECK1-NEXT:    call void @_Z3bazRf(float* nonnull align 4 dereferenceable(4) [[BAR_A]]) #[[ATTR7]]
+// CHECK1-NEXT:    call void @_Z3bazRf(float* nonnull align 4 dereferenceable(4) [[BAR_A]]) #[[ATTR6]]
 // CHECK1-NEXT:    ret void
 //
 //
@@ -185,6 +142,6 @@ void bar() {
 // CHECK1-NEXT:    store i16 [[TMP0]], i16* [[DOTADDR]], align 2
 // CHECK1-NEXT:    store i32 [[TMP1]], i32* [[DOTADDR1]], align 4
 // CHECK1-NEXT:    call void @__kmpc_get_shared_variables(i8*** [[GLOBAL_ARGS]])
-// CHECK1-NEXT:    call void @__omp_outlined__(i32* [[DOTADDR1]], i32* [[DOTZERO_ADDR]]) #[[ATTR5]]
+// CHECK1-NEXT:    call void @__omp_outlined__(i32* [[DOTADDR1]], i32* [[DOTZERO_ADDR]]) #[[ATTR5:[0-9]+]]
 // CHECK1-NEXT:    ret void
 //

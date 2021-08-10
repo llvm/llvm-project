@@ -25,6 +25,10 @@ using namespace clang;
 using namespace ento;
 using namespace std::placeholders;
 
+//===----------------------------------------------------------------------===//
+// Definition of state data structures.
+//===----------------------------------------------------------------------===//
+
 namespace {
 
 struct FnDescription;
@@ -146,6 +150,14 @@ struct StreamState {
   }
 };
 
+} // namespace
+
+//===----------------------------------------------------------------------===//
+// StreamChecker class and utility functions.
+//===----------------------------------------------------------------------===//
+
+namespace {
+
 class StreamChecker;
 using FnCheck = std::function<void(const StreamChecker *, const FnDescription *,
                                    const CallEvent &, CheckerContext &)>;
@@ -218,6 +230,8 @@ public:
 
   /// If true, evaluate special testing stream functions.
   bool TestMode = false;
+
+  const BugType *getBT_StreamEof() const { return &BT_StreamEof; }
 
 private:
   CallDescriptionMap<FnDescription> FnDescriptions = {
@@ -337,7 +351,8 @@ private:
   /// There will be always a state transition into the passed State,
   /// by the new non-fatal error node or (if failed) a normal transition,
   /// to ensure uniform handling.
-  void reportFEofWarning(CheckerContext &C, ProgramStateRef State) const;
+  void reportFEofWarning(SymbolRef StreamSym, CheckerContext &C,
+                         ProgramStateRef State) const;
 
   /// Emit resource leak warnings for the given symbols.
   /// Createn a non-fatal error node for these, and returns it (if any warnings
@@ -363,14 +378,14 @@ private:
 
   /// Generate a message for BugReporterVisitor if the stored symbol is
   /// marked as interesting by the actual bug report.
+  // FIXME: Use lambda instead.
   struct NoteFn {
-    const CheckerNameRef CheckerName;
+    const BugType *BT_ResourceLeak;
     SymbolRef StreamSym;
     std::string Message;
 
     std::string operator()(PathSensitiveBugReport &BR) const {
-      if (BR.isInteresting(StreamSym) &&
-          CheckerName == BR.getBugType().getCheckerName())
+      if (BR.isInteresting(StreamSym) && &BR.getBugType() == BT_ResourceLeak)
         return Message;
 
       return "";
@@ -379,7 +394,20 @@ private:
 
   const NoteTag *constructNoteTag(CheckerContext &C, SymbolRef StreamSym,
                                   const std::string &Message) const {
-    return C.getNoteTag(NoteFn{getCheckerName(), StreamSym, Message});
+    return C.getNoteTag(NoteFn{&BT_ResourceLeak, StreamSym, Message});
+  }
+
+  const NoteTag *constructSetEofNoteTag(CheckerContext &C,
+                                        SymbolRef StreamSym) const {
+    return C.getNoteTag([this, StreamSym](PathSensitiveBugReport &BR) {
+      if (!BR.isInteresting(StreamSym) ||
+          &BR.getBugType() != this->getBT_StreamEof())
+        return "";
+
+      BR.markNotInteresting(StreamSym);
+
+      return "Assuming stream reaches end-of-file here";
+    });
   }
 
   /// Searches for the ExplodedNode where the file descriptor was acquired for
@@ -391,6 +419,9 @@ private:
 
 } // end anonymous namespace
 
+// This map holds the state of a stream.
+// The stream is identified with a SymbolRef that is created when a stream
+// opening function is modeled by the checker.
 REGISTER_MAP_WITH_PROGRAMSTATE(StreamMap, SymbolRef, StreamState)
 
 inline void assertStreamStateOpened(const StreamState *SS) {
@@ -418,6 +449,10 @@ const ExplodedNode *StreamChecker::getAcquisitionSite(const ExplodedNode *N,
 
   return nullptr;
 }
+
+//===----------------------------------------------------------------------===//
+// Methods of StreamChecker.
+//===----------------------------------------------------------------------===//
 
 void StreamChecker::checkPreCall(const CallEvent &Call,
                                  CheckerContext &C) const {
@@ -566,7 +601,7 @@ void StreamChecker::preFread(const FnDescription *Desc, const CallEvent &Call,
   if (Sym && State->get<StreamMap>(Sym)) {
     const StreamState *SS = State->get<StreamMap>(Sym);
     if (SS->ErrorState & ErrorFEof)
-      reportFEofWarning(C, State);
+      reportFEofWarning(Sym, C, State);
   } else {
     C.addTransition(State);
   }
@@ -609,11 +644,11 @@ void StreamChecker::evalFreadFwrite(const FnDescription *Desc,
   if (!NMembVal)
     return;
 
-  const StreamState *SS = State->get<StreamMap>(StreamSym);
-  if (!SS)
+  const StreamState *OldSS = State->get<StreamMap>(StreamSym);
+  if (!OldSS)
     return;
 
-  assertStreamStateOpened(SS);
+  assertStreamStateOpened(OldSS);
 
   // C'99 standard, §7.19.8.1.3, the return value of fread:
   // The fread function returns the number of elements successfully read, which
@@ -632,7 +667,7 @@ void StreamChecker::evalFreadFwrite(const FnDescription *Desc,
 
   // Generate a transition for the success state.
   // If we know the state to be FEOF at fread, do not add a success state.
-  if (!IsFread || (SS->ErrorState != ErrorFEof)) {
+  if (!IsFread || (OldSS->ErrorState != ErrorFEof)) {
     ProgramStateRef StateNotFailed =
         State->BindExpr(CE, C.getLocationContext(), *NMembVal);
     if (StateNotFailed) {
@@ -661,14 +696,18 @@ void StreamChecker::evalFreadFwrite(const FnDescription *Desc,
 
   StreamErrorState NewES;
   if (IsFread)
-    NewES = (SS->ErrorState == ErrorFEof) ? ErrorFEof : ErrorFEof | ErrorFError;
+    NewES =
+        (OldSS->ErrorState == ErrorFEof) ? ErrorFEof : ErrorFEof | ErrorFError;
   else
     NewES = ErrorFError;
   // If a (non-EOF) error occurs, the resulting value of the file position
   // indicator for the stream is indeterminate.
-  StreamState NewState = StreamState::getOpened(Desc, NewES, !NewES.isFEof());
-  StateFailed = StateFailed->set<StreamMap>(StreamSym, NewState);
-  C.addTransition(StateFailed);
+  StreamState NewSS = StreamState::getOpened(Desc, NewES, !NewES.isFEof());
+  StateFailed = StateFailed->set<StreamMap>(StreamSym, NewSS);
+  if (IsFread && OldSS->ErrorState != ErrorFEof)
+    C.addTransition(StateFailed, constructSetEofNoteTag(C, StreamSym));
+  else
+    C.addTransition(StateFailed);
 }
 
 void StreamChecker::preFseek(const FnDescription *Desc, const CallEvent &Call,
@@ -727,7 +766,7 @@ void StreamChecker::evalFseek(const FnDescription *Desc, const CallEvent &Call,
       StreamState::getOpened(Desc, ErrorNone | ErrorFEof | ErrorFError, true));
 
   C.addTransition(StateNotFailed);
-  C.addTransition(StateFailed);
+  C.addTransition(StateFailed, constructSetEofNoteTag(C, StreamSym));
 }
 
 void StreamChecker::evalClearerr(const FnDescription *Desc,
@@ -960,14 +999,16 @@ StreamChecker::ensureFseekWhenceCorrect(SVal WhenceVal, CheckerContext &C,
   return State;
 }
 
-void StreamChecker::reportFEofWarning(CheckerContext &C,
+void StreamChecker::reportFEofWarning(SymbolRef StreamSym, CheckerContext &C,
                                       ProgramStateRef State) const {
   if (ExplodedNode *N = C.generateNonFatalErrorNode(State)) {
-    C.emitReport(std::make_unique<PathSensitiveBugReport>(
+    auto R = std::make_unique<PathSensitiveBugReport>(
         BT_StreamEof,
         "Read function called when stream is in EOF state. "
         "Function has no effect.",
-        N));
+        N);
+    R->markInteresting(StreamSym);
+    C.emitReport(std::move(R));
     return;
   }
   C.addTransition(State);
@@ -1057,6 +1098,10 @@ ProgramStateRef StreamChecker::checkPointerEscape(
   }
   return State;
 }
+
+//===----------------------------------------------------------------------===//
+// Checker registration.
+//===----------------------------------------------------------------------===//
 
 void ento::registerStreamChecker(CheckerManager &Mgr) {
   Mgr.registerChecker<StreamChecker>();

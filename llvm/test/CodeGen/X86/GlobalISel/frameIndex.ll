@@ -3,8 +3,8 @@
 ; RUN: llc -mtriple=x86_64-linux-gnu                 -verify-machineinstrs < %s -o - | FileCheck %s --check-prefix=X64
 ; RUN: llc -mtriple=i386-linux-gnu      -global-isel -verify-machineinstrs < %s -o - | FileCheck %s --check-prefix=X32
 ; RUN: llc -mtriple=i386-linux-gnu                   -verify-machineinstrs < %s -o - | FileCheck %s --check-prefix=X32
-; RUN: llc -mtriple=x86_64-linux-gnux32 -global-isel -verify-machineinstrs < %s -o - | FileCheck %s --check-prefix=X32ABI
-; RUN: llc -mtriple=x86_64-linux-gnux32              -verify-machineinstrs < %s -o - | FileCheck %s --check-prefix=X32ABI
+; RUN: llc -mtriple=x86_64-linux-gnux32 -global-isel -verify-machineinstrs < %s -o - | FileCheck %s --check-prefix=X32ABI-GISEL
+; RUN: llc -mtriple=x86_64-linux-gnux32              -verify-machineinstrs < %s -o - | FileCheck %s --check-prefix=X32ABI-SDAG
 
 define i32* @allocai32() {
 ; X64-LABEL: allocai32:
@@ -21,6 +21,16 @@ define i32* @allocai32() {
 ; X32-NEXT:    .cfi_def_cfa_offset 4
 ; X32-NEXT:    retl
 ;
+; X32ABI-GISEL-LABEL: allocai32:
+; X32ABI-GISEL:       # %bb.0:
+; X32ABI-GISEL-NEXT:    leal -{{[0-9]+}}(%rsp), %eax
+; X32ABI-GISEL-NEXT:    movl %eax, %eax
+; X32ABI-GISEL-NEXT:    retq
+;
+; X32ABI-SDAG-LABEL: allocai32:
+; X32ABI-SDAG:       # %bb.0:
+; X32ABI-SDAG-NEXT:    leal -{{[0-9]+}}(%rsp), %eax
+; X32ABI-SDAG-NEXT:    retq
 ; X32ABI-LABEL: allocai32:
 ; X32ABI:       # %bb.0:
 ; X32ABI-NEXT:    leal -{{[0-9]+}}(%rsp), %eax

@@ -699,6 +699,8 @@ static bool isFrameLoadOpcode(int Opcode, unsigned &MemBytes) {
     return true;
   case X86::MOV16rm:
   case X86::KMOVWkm:
+  case X86::VMOVSHZrm:
+  case X86::VMOVSHZrm_alt:
     MemBytes = 2;
     return true;
   case X86::MOV32rm:
@@ -795,6 +797,7 @@ static bool isFrameStoreOpcode(int Opcode, unsigned &MemBytes) {
     return true;
   case X86::MOV16mr:
   case X86::KMOVWmk:
+  case X86::VMOVSHZmr:
     MemBytes = 2;
     return true;
   case X86::MOV32mr:
@@ -980,6 +983,7 @@ bool X86InstrInfo::isReallyTriviallyReMaterializable(const MachineInstr &MI,
   case X86::AVX512_512_SET0:
   case X86::AVX512_512_SETALLONES:
   case X86::AVX512_FsFLD0SD:
+  case X86::AVX512_FsFLD0SH:
   case X86::AVX512_FsFLD0SS:
   case X86::AVX512_FsFLD0F128:
   case X86::AVX_SET0:
@@ -1047,6 +1051,8 @@ bool X86InstrInfo::isReallyTriviallyReMaterializable(const MachineInstr &MI,
   case X86::VMOVSSZrm_alt:
   case X86::VMOVSDZrm:
   case X86::VMOVSDZrm_alt:
+  case X86::VMOVSHZrm:
+  case X86::VMOVSHZrm_alt:
   case X86::VMOVAPDZ128rm:
   case X86::VMOVAPDZ256rm:
   case X86::VMOVAPDZrm:
@@ -2670,6 +2676,58 @@ bool X86InstrInfo::findCommutedOpIndices(const MachineInstr &MI,
   return false;
 }
 
+static bool isConvertibleLEA(MachineInstr *MI) {
+  unsigned Opcode = MI->getOpcode();
+  if (Opcode != X86::LEA32r && Opcode != X86::LEA64r &&
+      Opcode != X86::LEA64_32r)
+    return false;
+
+  const MachineOperand &Scale = MI->getOperand(1 + X86::AddrScaleAmt);
+  const MachineOperand &Disp = MI->getOperand(1 + X86::AddrDisp);
+  const MachineOperand &Segment = MI->getOperand(1 + X86::AddrSegmentReg);
+
+  if (Segment.getReg() != 0 || !Disp.isImm() || Disp.getImm() != 0 ||
+      Scale.getImm() > 1)
+    return false;
+
+  return true;
+}
+
+bool X86InstrInfo::hasCommutePreference(MachineInstr &MI, bool &Commute) const {
+  // Currently we're interested in following sequence only.
+  //   r3 = lea r1, r2
+  //   r5 = add r3, r4
+  // Both r3 and r4 are killed in add, we hope the add instruction has the
+  // operand order
+  //   r5 = add r4, r3
+  // So later in X86FixupLEAs the lea instruction can be rewritten as add.
+  unsigned Opcode = MI.getOpcode();
+  if (Opcode != X86::ADD32rr && Opcode != X86::ADD64rr)
+    return false;
+
+  const MachineRegisterInfo &MRI = MI.getParent()->getParent()->getRegInfo();
+  Register Reg1 = MI.getOperand(1).getReg();
+  Register Reg2 = MI.getOperand(2).getReg();
+
+  // Check if Reg1 comes from LEA in the same MBB.
+  if (MachineInstr *Inst = MRI.getUniqueVRegDef(Reg1)) {
+    if (isConvertibleLEA(Inst) && Inst->getParent() == MI.getParent()) {
+      Commute = true;
+      return true;
+    }
+  }
+
+  // Check if Reg2 comes from LEA in the same MBB.
+  if (MachineInstr *Inst = MRI.getUniqueVRegDef(Reg2)) {
+    if (isConvertibleLEA(Inst) && Inst->getParent() == MI.getParent()) {
+      Commute = false;
+      return true;
+    }
+  }
+
+  return false;
+}
+
 X86::CondCode X86::getCondFromBranch(const MachineInstr &MI) {
   switch (MI.getOpcode()) {
   default: return X86::COND_INVALID;
@@ -3553,6 +3611,10 @@ static unsigned getLoadStoreRegOpcode(Register Reg,
   case 2:
     if (X86::VK16RegClass.hasSubClassEq(RC))
       return load ? X86::KMOVWkm : X86::KMOVWmk;
+    if (X86::FR16XRegClass.hasSubClassEq(RC)) {
+      assert(STI.hasFP16());
+      return load ? X86::VMOVSHZrm_alt : X86::VMOVSHZmr;
+    }
     assert(X86::GR16RegClass.hasSubClassEq(RC) && "Unknown 2-byte regclass");
     return load ? X86::MOV16rm : X86::MOV16mr;
   case 4:
@@ -4183,7 +4245,7 @@ bool X86InstrInfo::optimizeCompareInstr(MachineInstr &CmpInstr, Register SrcReg,
     CmpInstr.setDesc(get(NewOpcode));
     CmpInstr.RemoveOperand(0);
     // Mutating this instruction invalidates any debug data associated with it.
-    CmpInstr.setDebugInstrNum(0);
+    CmpInstr.dropDebugNumber();
     // Fall through to optimize Cmp if Cmp is CMPrr or CMPri.
     if (NewOpcode == X86::CMP64rm || NewOpcode == X86::CMP32rm ||
         NewOpcode == X86::CMP16rm || NewOpcode == X86::CMP8rm)
@@ -4703,6 +4765,7 @@ bool X86InstrInfo::expandPostRAPseudo(MachineInstr &MI) const {
     return true;
   }
   case X86::AVX512_128_SET0:
+  case X86::AVX512_FsFLD0SH:
   case X86::AVX512_FsFLD0SS:
   case X86::AVX512_FsFLD0SD:
   case X86::AVX512_FsFLD0F128: {
@@ -6049,6 +6112,9 @@ MachineInstr *X86InstrInfo::foldMemoryOperandImpl(
     case X86::AVX512_FsFLD0SS:
       Alignment = Align(4);
       break;
+    case X86::AVX512_FsFLD0SH:
+      Alignment = Align(2);
+      break;
     default:
       return nullptr;
     }
@@ -6084,6 +6150,7 @@ MachineInstr *X86InstrInfo::foldMemoryOperandImpl(
   case X86::AVX512_256_SET0:
   case X86::AVX512_512_SET0:
   case X86::AVX512_512_SETALLONES:
+  case X86::AVX512_FsFLD0SH:
   case X86::FsFLD0SD:
   case X86::AVX512_FsFLD0SD:
   case X86::FsFLD0SS:
@@ -6122,6 +6189,8 @@ MachineInstr *X86InstrInfo::foldMemoryOperandImpl(
       Ty = Type::getDoubleTy(MF.getFunction().getContext());
     else if (Opc == X86::FsFLD0F128 || Opc == X86::AVX512_FsFLD0F128)
       Ty = Type::getFP128Ty(MF.getFunction().getContext());
+    else if (Opc == X86::AVX512_FsFLD0SH)
+      Ty = Type::getHalfTy(MF.getFunction().getContext());
     else if (Opc == X86::AVX512_512_SET0 || Opc == X86::AVX512_512_SETALLONES)
       Ty = FixedVectorType::get(Type::getInt32Ty(MF.getFunction().getContext()),
                                 16);

@@ -178,6 +178,9 @@ class RVInst<dag outs, dag ins, string opcodestr, string argstr,
 
   bit HasVLOp = 0;
   let TSFlags{15} = HasVLOp;
+
+  bit HasVecPolicyOp = 0;
+  let TSFlags{16} = HasVecPolicyOp;
 }
 
 // Pseudo instructions
@@ -199,7 +202,7 @@ class PseudoLoad<string opcodestr, RegisterClass rdty = GPR>
 }
 
 class PseudoFloatLoad<string opcodestr, RegisterClass rdty = GPR>
-    : Pseudo<(outs rdty:$rd, GPR:$tmp), (ins bare_symbol:$addr), [], opcodestr, "$rd, $addr, $tmp"> {
+    : Pseudo<(outs GPR:$tmp, rdty:$rd), (ins bare_symbol:$addr), [], opcodestr, "$rd, $addr, $tmp"> {
   let hasSideEffects = 0;
   let mayLoad = 1;
   let mayStore = 0;
@@ -209,7 +212,7 @@ class PseudoFloatLoad<string opcodestr, RegisterClass rdty = GPR>
 
 // Pseudo store instructions.
 class PseudoStore<string opcodestr, RegisterClass rsty = GPR>
-    : Pseudo<(outs rsty:$rs, GPR:$tmp), (ins bare_symbol:$addr), [], opcodestr, "$rs, $addr, $tmp"> {
+    : Pseudo<(outs GPR:$tmp), (ins rsty:$rs, bare_symbol:$addr), [], opcodestr, "$rs, $addr, $tmp"> {
   let hasSideEffects = 0;
   let mayLoad = 0;
   let mayStore = 1;

@@ -123,7 +123,7 @@ public:
   /// Adds a diagnostic to report errors in the check's configuration.
   DiagnosticBuilder
   configurationDiag(StringRef Description,
-                    DiagnosticIDs::Level Level = DiagnosticIDs::Warning);
+                    DiagnosticIDs::Level Level = DiagnosticIDs::Warning) const;
 
   /// Should store all options supported by this check with their
   /// current values or default values for options that haven't been overridden.

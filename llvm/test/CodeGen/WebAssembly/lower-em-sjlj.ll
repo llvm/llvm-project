@@ -100,42 +100,21 @@ entry:
 ; CHECK-NEXT: ret void
 }
 
-; Test a case when a function call is within try-catch, after a setjmp
-define void @exception_and_longjmp() personality i8* bitcast (i32 (...)* @__gxx_personality_v0 to i8*) {
-; CHECK-LABEL: @exception_and_longjmp
+; Test a case where a function has a setjmp call but no other calls that can
+; longjmp. We don't need to do any transformation in this case.
+define void @setjmp_only(i8* %ptr) {
+; CHECK-LABEL: @setjmp_only
 entry:
   %buf = alloca [1 x %struct.__jmp_buf_tag], align 16
   %arraydecay = getelementptr inbounds [1 x %struct.__jmp_buf_tag], [1 x %struct.__jmp_buf_tag]* %buf, i32 0, i32 0
   %call = call i32 @setjmp(%struct.__jmp_buf_tag* %arraydecay) #0
-  invoke void @foo()
-          to label %try.cont unwind label %lpad
-
-; CHECK: entry.split:
-; CHECK: store [[PTR]] 0, [[PTR]]* @__THREW__
-; CHECK-NEXT: call cc{{.*}} void @__invoke_void(void ()* @foo)
-; CHECK-NEXT: %[[__THREW__VAL:.*]] = load [[PTR]], [[PTR]]* @__THREW__
-; CHECK-NEXT: store [[PTR]] 0, [[PTR]]* @__THREW__
-; CHECK-NEXT: %[[CMP0:.*]] = icmp ne [[PTR]] %[[__THREW__VAL]], 0
-; CHECK-NEXT: %[[THREWVALUE_VAL:.*]] = load i32, i32* @__threwValue
-; CHECK-NEXT: %[[CMP1:.*]] = icmp ne i32 %[[THREWVALUE_VAL]], 0
-; CHECK-NEXT: %[[CMP:.*]] = and i1 %[[CMP0]], %[[CMP1]]
-; CHECK-NEXT: br i1 %[[CMP]], label %if.then1, label %if.else1
-
-; CHECK: entry.split.split:
-; CHECK-NEXT: %[[CMP:.*]] = icmp eq [[PTR]] %[[__THREW__VAL]], 1
-; CHECK-NEXT: br i1 %[[CMP]], label %lpad, label %try.cont
-
-lpad:                                             ; preds = %entry
-  %0 = landingpad { i8*, i32 }
-          catch i8* null
-  %1 = extractvalue { i8*, i32 } %0, 0
-  %2 = extractvalue { i8*, i32 } %0, 1
-  %3 = call i8* @__cxa_begin_catch(i8* %1) #2
-  call void @__cxa_end_catch()
-  br label %try.cont
-
-try.cont:                                         ; preds = %entry, %lpad
+  ; free cannot longjmp
+  call void @free(i8* %ptr)
   ret void
+; CHECK-NOT: @malloc
+; CHECK-NOT: %setjmpTable
+; CHECK-NOT: @saveSetjmp
+; CHECK-NOT: @testSetjmp
 }
 
 ; Test SSA validity
@@ -177,22 +156,12 @@ if.end:                                           ; preds = %if.then, %entry
 }
 
 ; Test a case when a function only calls other functions that are neither setjmp nor longjmp
-define void @only_other_func() {
+define void @other_func_only() {
+; CHECK-LABEL: @other_func_only
 entry:
   call void @foo()
   ret void
 ; CHECK: call void @foo()
-}
-
-; Test a case when a function only calls longjmp and not setjmp
-define void @only_longjmp() {
-entry:
-  %buf = alloca [1 x %struct.__jmp_buf_tag], align 16
-  %arraydecay = getelementptr inbounds [1 x %struct.__jmp_buf_tag], [1 x %struct.__jmp_buf_tag]* %buf, i32 0, i32 0
-  call void @longjmp(%struct.__jmp_buf_tag* %arraydecay, i32 5) #1
-  unreachable
-; CHECK: %[[JMPBUF:.*]] = ptrtoint
-; CHECK-NEXT: call void @emscripten_longjmp([[PTR]] %[[JMPBUF]], i32 5)
 }
 
 ; Test inline asm handling
@@ -223,10 +192,10 @@ entry:
   ret i8 *%alloc
 }
 
-; Tests if program does not crash when there's no setjmp function calls in the
-; module.
+; Test a case when a function only calls longjmp and not setjmp
 @buffer = global [1 x %struct.__jmp_buf_tag] zeroinitializer, align 16
 define void @longjmp_only() {
+; CHECK-LABEL: @longjmp_only
 entry:
   ; CHECK: call void @emscripten_longjmp
   call void @longjmp(%struct.__jmp_buf_tag* getelementptr inbounds ([1 x %struct.__jmp_buf_tag], [1 x %struct.__jmp_buf_tag]* @buffer, i32 0, i32 0), i32 1) #1
@@ -235,6 +204,7 @@ entry:
 
 ; Tests if SSA rewrite works when a use and its def are within the same BB.
 define void @ssa_rewite_in_same_bb() {
+; CHECK-LABEL: @ssa_rewite_in_same_bb
 entry:
   call void @foo()
   br label %for.cond
@@ -283,7 +253,8 @@ entry:
   ret void
 }
 
-declare void @foo()
+; Function Attrs: nounwind
+declare void @foo() #2
 ; Function Attrs: returns_twice
 declare i32 @setjmp(%struct.__jmp_buf_tag*) #0
 ; Function Attrs: noreturn
@@ -311,7 +282,7 @@ attributes #3 = { allocsize(0) }
 ; CHECK-DAG: attributes #{{[0-9]+}} = { "wasm-import-module"="env" "wasm-import-name"="__resumeException" }
 ; CHECK-DAG: attributes #{{[0-9]+}} = { "wasm-import-module"="env" "wasm-import-name"="llvm_eh_typeid_for" }
 ; CHECK-DAG: attributes #{{[0-9]+}} = { "wasm-import-module"="env" "wasm-import-name"="__invoke_void" }
-; CHECK-DAG: attributes #{{[0-9]+}} = { "wasm-import-module"="env" "wasm-import-name"="__cxa_find_matching_catch_3" }
+; CHECK-DAG: attributes #{{[0-9]+}} = { "wasm-import-module"="env" "wasm-import-name"="__cxa_find_matching_catch_2" }
 ; CHECK-DAG: attributes #{{[0-9]+}} = { "wasm-import-module"="env" "wasm-import-name"="saveSetjmp" }
 ; CHECK-DAG: attributes #{{[0-9]+}} = { "wasm-import-module"="env" "wasm-import-name"="testSetjmp" }
 ; CHECK-DAG: attributes #{{[0-9]+}} = { "wasm-import-module"="env" "wasm-import-name"="emscripten_longjmp" }

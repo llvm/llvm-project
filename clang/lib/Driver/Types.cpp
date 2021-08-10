@@ -164,11 +164,48 @@ bool types::isFortran(ID Id) {
   switch (Id) {
   default:
     return false;
-
   case TY_Fortran:
   case TY_PP_Fortran:
   case TY_F_FixedForm:
   case TY_PP_F_FixedForm:
+    return true;
+  }
+}
+
+bool types::isDerivedFromC(ID Id) {
+  switch (Id) {
+  default:
+    return false;
+  case TY_PP_C:
+  case TY_C:
+  case TY_CL:
+  case TY_CLCXX:
+  case TY_PP_CUDA:
+  case TY_CUDA:
+  case TY_CUDA_DEVICE:
+  case TY_PP_HIP:
+  case TY_HIP:
+  case TY_HIP_DEVICE:
+  case TY_PP_ObjC:
+  case TY_PP_ObjC_Alias:
+  case TY_ObjC:
+  case TY_PP_CXX:
+  case TY_CXX:
+  case TY_PP_ObjCXX:
+  case TY_PP_ObjCXX_Alias:
+  case TY_ObjCXX:
+  case TY_RenderScript:
+  case TY_PP_CHeader:
+  case TY_CHeader:
+  case TY_CLHeader:
+  case TY_PP_ObjCHeader:
+  case TY_ObjCHeader:
+  case TY_PP_CXXHeader:
+  case TY_CXXHeader:
+  case TY_PP_ObjCXXHeader:
+  case TY_ObjCXXHeader:
+  case TY_CXXModule:
+  case TY_PP_CXXModule:
     return true;
   }
 }

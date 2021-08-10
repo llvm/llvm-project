@@ -640,8 +640,8 @@ mutex.  For example:
     Mutex mu;
 
   public:
-    // For thread safety analysis only.  Does not actually return mu.
-    Mutex* getMu() RETURN_CAPABILITY(mu) { return 0; }
+    // For thread safety analysis only.  Does not need to be defined.
+    Mutex* getMu() RETURN_CAPABILITY(mu);
 
     void doSomething() REQUIRES(mu);
   };

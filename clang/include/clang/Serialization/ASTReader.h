@@ -1401,6 +1401,9 @@ private:
   llvm::iterator_range<PreprocessingRecord::iterator>
   getModulePreprocessedEntities(ModuleFile &Mod) const;
 
+  bool canRecoverFromOutOfDate(StringRef ModuleFileName,
+                               unsigned ClientLoadCapabilities);
+
 public:
   class ModuleDeclIterator
       : public llvm::iterator_adaptor_base<
@@ -2136,12 +2139,15 @@ public:
 
   /// Read a source location from raw form and return it in its
   /// originating module file's source location space.
-  SourceLocation ReadUntranslatedSourceLocation(uint32_t Raw) const {
-    return SourceLocation::getFromRawEncoding((Raw >> 1) | (Raw << 31));
+  SourceLocation
+  ReadUntranslatedSourceLocation(SourceLocation::UIntTy Raw) const {
+    return SourceLocation::getFromRawEncoding((Raw >> 1) |
+                                              (Raw << (8 * sizeof(Raw) - 1)));
   }
 
   /// Read a source location from raw form.
-  SourceLocation ReadSourceLocation(ModuleFile &ModuleFile, uint32_t Raw) const {
+  SourceLocation ReadSourceLocation(ModuleFile &ModuleFile,
+                                    SourceLocation::UIntTy Raw) const {
     SourceLocation Loc = ReadUntranslatedSourceLocation(Raw);
     return TranslateSourceLocation(ModuleFile, Loc);
   }
@@ -2155,7 +2161,8 @@ public:
     assert(ModuleFile.SLocRemap.find(Loc.getOffset()) !=
                ModuleFile.SLocRemap.end() &&
            "Cannot find offset to remap.");
-    int Remap = ModuleFile.SLocRemap.find(Loc.getOffset())->second;
+    SourceLocation::IntTy Remap =
+        ModuleFile.SLocRemap.find(Loc.getOffset())->second;
     return Loc.getLocWithOffset(Remap);
   }
 

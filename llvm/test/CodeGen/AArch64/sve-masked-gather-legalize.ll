@@ -9,6 +9,7 @@ define <vscale x 2 x i64> @masked_sgather_sext(i8* %base, <vscale x 2 x i64> %of
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    ld1sb { z0.d }, p0/z, [x0, z0.d]
 ; CHECK-NEXT:    ptrue p0.d
+; CHECK-NEXT:    movprfx z2, z0
 ; CHECK-NEXT:    sxtb z2.d, p0/m, z0.d
 ; CHECK-NEXT:    add z0.d, z0.d, z1.d
 ; CHECK-NEXT:    sxtb z0.d, p0/m, z0.d

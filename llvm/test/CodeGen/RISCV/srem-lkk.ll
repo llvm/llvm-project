@@ -330,9 +330,8 @@ define i32 @dont_fold_srem_power_of_two(i32 %x) nounwind {
 ;
 ; RV64I-LABEL: dont_fold_srem_power_of_two:
 ; RV64I:       # %bb.0:
-; RV64I-NEXT:    sext.w a1, a0
-; RV64I-NEXT:    srli a1, a1, 57
-; RV64I-NEXT:    andi a1, a1, 63
+; RV64I-NEXT:    sraiw a1, a0, 31
+; RV64I-NEXT:    srliw a1, a1, 26
 ; RV64I-NEXT:    add a1, a0, a1
 ; RV64I-NEXT:    andi a1, a1, -64
 ; RV64I-NEXT:    subw a0, a0, a1
@@ -340,9 +339,8 @@ define i32 @dont_fold_srem_power_of_two(i32 %x) nounwind {
 ;
 ; RV64IM-LABEL: dont_fold_srem_power_of_two:
 ; RV64IM:       # %bb.0:
-; RV64IM-NEXT:    sext.w a1, a0
-; RV64IM-NEXT:    srli a1, a1, 57
-; RV64IM-NEXT:    andi a1, a1, 63
+; RV64IM-NEXT:    sraiw a1, a0, 31
+; RV64IM-NEXT:    srliw a1, a1, 26
 ; RV64IM-NEXT:    add a1, a0, a1
 ; RV64IM-NEXT:    andi a1, a1, -64
 ; RV64IM-NEXT:    subw a0, a0, a1
@@ -385,24 +383,20 @@ define i32 @dont_fold_srem_i32_smax(i32 %x) nounwind {
 ;
 ; RV64I-LABEL: dont_fold_srem_i32_smax:
 ; RV64I:       # %bb.0:
-; RV64I-NEXT:    sext.w a1, a0
-; RV64I-NEXT:    srli a1, a1, 32
-; RV64I-NEXT:    lui a2, 524288
-; RV64I-NEXT:    addiw a3, a2, -1
-; RV64I-NEXT:    and a1, a1, a3
+; RV64I-NEXT:    sraiw a1, a0, 31
+; RV64I-NEXT:    srliw a1, a1, 1
 ; RV64I-NEXT:    add a1, a0, a1
+; RV64I-NEXT:    lui a2, 524288
 ; RV64I-NEXT:    and a1, a1, a2
 ; RV64I-NEXT:    addw a0, a0, a1
 ; RV64I-NEXT:    ret
 ;
 ; RV64IM-LABEL: dont_fold_srem_i32_smax:
 ; RV64IM:       # %bb.0:
-; RV64IM-NEXT:    sext.w a1, a0
-; RV64IM-NEXT:    srli a1, a1, 32
-; RV64IM-NEXT:    lui a2, 524288
-; RV64IM-NEXT:    addiw a3, a2, -1
-; RV64IM-NEXT:    and a1, a1, a3
+; RV64IM-NEXT:    sraiw a1, a0, 31
+; RV64IM-NEXT:    srliw a1, a1, 1
 ; RV64IM-NEXT:    add a1, a0, a1
+; RV64IM-NEXT:    lui a2, 524288
 ; RV64IM-NEXT:    and a1, a1, a2
 ; RV64IM-NEXT:    addw a0, a0, a1
 ; RV64IM-NEXT:    ret

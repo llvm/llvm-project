@@ -100,6 +100,11 @@ public:
   // Precondition: isNativeCodeCall()
   StringRef getNativeCodeTemplate() const;
 
+  // Returns the number of values will be returned by the native helper
+  // function.
+  // Precondition: isNativeCodeCall()
+  int getNumReturnsOfNativeCode() const;
+
   // Returns the string associated with the leaf.
   // Precondition: isStringAttr()
   std::string getStringAttr() const;
@@ -181,9 +186,17 @@ public:
   // Precondition: isNativeCodeCall()
   StringRef getNativeCodeTemplate() const;
 
+  // Returns the number of values will be returned by the native helper
+  // function.
+  // Precondition: isNativeCodeCall()
+  int getNumReturnsOfNativeCode() const;
+
   void print(raw_ostream &os) const;
 
 private:
+  friend class SymbolInfoMap;
+  const void *getAsOpaquePointer() const { return node; }
+
   const llvm::DagInit *node; // nullptr means null DagNode
 };
 
@@ -237,32 +250,44 @@ public:
     // Allow SymbolInfoMap to access private methods.
     friend class SymbolInfoMap;
 
+    // DagNode and DagLeaf are accessed by value which means it can't be used as
+    // identifier here. Use an opaque pointer type instead.
+    using DagAndConstant = std::pair<const void *, int>;
+
     // What kind of entity this symbol represents:
     // * Attr: op attribute
     // * Operand: op operand
     // * Result: op result
     // * Value: a value not attached to an op (e.g., from NativeCodeCall)
-    enum class Kind : uint8_t { Attr, Operand, Result, Value };
+    // * MultipleValues: a pack of values not attached to an op (e.g., from
+    //   NativeCodeCall). This kind supports indexing.
+    enum class Kind : uint8_t { Attr, Operand, Result, Value, MultipleValues };
 
-    // Creates a SymbolInfo instance. `index` is only used for `Attr` and
-    // `Operand` so should be negative for `Result` and `Value` kind.
-    SymbolInfo(const Operator *op, Kind kind, Optional<int> index);
+    // Creates a SymbolInfo instance. `dagAndConstant` is only used for `Attr`
+    // and `Operand` so should be llvm::None for `Result` and `Value` kind.
+    SymbolInfo(const Operator *op, Kind kind,
+               Optional<DagAndConstant> dagAndConstant);
 
     // Static methods for creating SymbolInfo.
     static SymbolInfo getAttr(const Operator *op, int index) {
-      return SymbolInfo(op, Kind::Attr, index);
+      return SymbolInfo(op, Kind::Attr, DagAndConstant(nullptr, index));
     }
     static SymbolInfo getAttr() {
       return SymbolInfo(nullptr, Kind::Attr, llvm::None);
     }
-    static SymbolInfo getOperand(const Operator *op, int index) {
-      return SymbolInfo(op, Kind::Operand, index);
+    static SymbolInfo getOperand(DagNode node, const Operator *op, int index) {
+      return SymbolInfo(op, Kind::Operand,
+                        DagAndConstant(node.getAsOpaquePointer(), index));
     }
     static SymbolInfo getResult(const Operator *op) {
       return SymbolInfo(op, Kind::Result, llvm::None);
     }
     static SymbolInfo getValue() {
       return SymbolInfo(nullptr, Kind::Value, llvm::None);
+    }
+    static SymbolInfo getMultipleValues(int numValues) {
+      return SymbolInfo(nullptr, Kind::MultipleValues,
+                        DagAndConstant(nullptr, numValues));
     }
 
     // Returns the number of static values this symbol corresponds to.
@@ -289,10 +314,21 @@ public:
     std::string getAllRangeUse(StringRef name, int index, const char *fmt,
                                const char *separator) const;
 
+    // The argument index (for `Attr` and `Operand` only)
+    int getArgIndex() const { return (*dagAndConstant).second; }
+
+    // The number of values in the MultipleValue
+    int getSize() const { return (*dagAndConstant).second; }
+
     const Operator *op; // The op where the bound entity belongs
     Kind kind;          // The kind of the bound entity
-    // The argument index (for `Attr` and `Operand` only)
-    Optional<int> argIndex;
+
+    // The pair of DagNode pointer and constant value (for `Attr`, `Operand` and
+    // the size of MultipleValue symbol). Note that operands may be bound to the
+    // same symbol, use the DagNode and index to distinguish them. For `Attr`
+    // and MultipleValue, the Dag part will be nullptr.
+    Optional<DagAndConstant> dagAndConstant;
+
     // Alternative name for the symbol. It is used in case the name
     // is not unique. Applicable for `Operand` only.
     Optional<std::string> alternativeName;
@@ -312,15 +348,23 @@ public:
 
   // Binds the given `symbol` to the `argIndex`-th argument to the given `op`.
   // Returns false if `symbol` is already bound and symbols are not operands.
-  bool bindOpArgument(StringRef symbol, const Operator &op, int argIndex);
+  bool bindOpArgument(DagNode node, StringRef symbol, const Operator &op,
+                      int argIndex);
 
   // Binds the given `symbol` to the results the given `op`. Returns false if
   // `symbol` is already bound.
   bool bindOpResult(StringRef symbol, const Operator &op);
 
-  // Registers the given `symbol` as bound to a value. Returns false if `symbol`
-  // is already bound.
+  // A helper function for dispatching target value binding functions.
+  bool bindValues(StringRef symbol, int numValues = 1);
+
+  // Registers the given `symbol` as bound to the Value(s). Returns false if
+  // `symbol` is already bound.
   bool bindValue(StringRef symbol);
+
+  // Registers the given `symbol` as bound to a MultipleValue. Return false if
+  // `symbol` is already bound.
+  bool bindMultipleValues(StringRef symbol, int numValues);
 
   // Registers the given `symbol` as bound to an attr. Returns false if `symbol`
   // is already bound.
@@ -334,8 +378,8 @@ public:
 
   // Returns an iterator to the information of the given symbol named as `key`,
   // with index `argIndex` for operator `op`.
-  const_iterator findBoundSymbol(StringRef key, const Operator &op,
-                                 int argIndex) const;
+  const_iterator findBoundSymbol(StringRef key, DagNode node,
+                                 const Operator &op, int argIndex) const;
 
   // Returns the bounds of a range that includes all the elements which
   // bind to the `key`.

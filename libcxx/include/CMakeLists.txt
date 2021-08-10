@@ -97,6 +97,8 @@ set(files
   __bits
   __bsd_locale_defaults.h
   __bsd_locale_fallbacks.h
+  __compare/common_comparison_category.h
+  __compare/ordering.h
   __config
   __debug
   __errc
@@ -133,7 +135,9 @@ set(files
   __iterator/access.h
   __iterator/advance.h
   __iterator/back_insert_iterator.h
+  __iterator/common_iterator.h
   __iterator/concepts.h
+  __iterator/counted_iterator.h
   __iterator/data.h
   __iterator/default_sentinel.h
   __iterator/distance.h
@@ -183,17 +187,24 @@ set(files
   __random/uniform_int_distribution.h
   __ranges/access.h
   __ranges/all.h
+  __ranges/common_view.h
   __ranges/concepts.h
   __ranges/copyable_box.h
+  __ranges/dangling.h
   __ranges/data.h
   __ranges/drop_view.h
   __ranges/empty_view.h
   __ranges/empty.h
   __ranges/enable_borrowed_range.h
   __ranges/enable_view.h
+  __ranges/non_propagating_cache.h
   __ranges/ref_view.h
+  __ranges/reverse_view.h
+  __ranges/take_view.h
+  __ranges/single_view.h
   __ranges/size.h
   __ranges/subrange.h
+  __ranges/take_view.h
   __ranges/transform_view.h
   __ranges/view_interface.h
   __split_buffer

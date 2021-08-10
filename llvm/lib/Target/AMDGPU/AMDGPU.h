@@ -97,6 +97,8 @@ extern char &AMDGPUMachineCFGStructurizerID;
 void initializeAMDGPUAlwaysInlinePass(PassRegistry&);
 
 Pass *createAMDGPUAnnotateKernelFeaturesPass();
+Pass *createAMDGPUAttributorPass();
+void initializeAMDGPUAttributorPass(PassRegistry &);
 void initializeAMDGPUAnnotateKernelFeaturesPass(PassRegistry &);
 extern char &AMDGPUAnnotateKernelFeaturesID;
 
@@ -111,6 +113,10 @@ extern char &AMDGPULowerIntrinsicsID;
 ModulePass *createAMDGPUFixFunctionBitcastsPass();
 void initializeAMDGPUFixFunctionBitcastsPass(PassRegistry &);
 extern char &AMDGPUFixFunctionBitcastsID;
+
+ModulePass *createAMDGPUCtorDtorLoweringPass();
+void initializeAMDGPUCtorDtorLoweringPass(PassRegistry &);
+extern char &AMDGPUCtorDtorLoweringID;
 
 FunctionPass *createAMDGPULowerKernelArgumentsPass();
 void initializeAMDGPULowerKernelArgumentsPass(PassRegistry &);
@@ -286,6 +292,9 @@ extern char &AMDGPULowerKernelCallsID;
 ModulePass *createAMDGPUPrintfRuntimeBinding();
 void initializeAMDGPUPrintfRuntimeBindingPass(PassRegistry&);
 extern char &AMDGPUPrintfRuntimeBindingID;
+
+void initializeAMDGPUResourceUsageAnalysisPass(PassRegistry &);
+extern char &AMDGPUResourceUsageAnalysisID;
 
 struct AMDGPUPrintfRuntimeBindingPass
     : PassInfoMixin<AMDGPUPrintfRuntimeBindingPass> {

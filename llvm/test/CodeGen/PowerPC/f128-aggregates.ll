@@ -541,7 +541,7 @@ define fp128 @sum_float128(i32 signext %count, ...) {
 ; CHECK-NEXT:    std r6, 56(r1)
 ; CHECK-NEXT:    std r7, 64(r1)
 ; CHECK-NEXT:    std r8, 72(r1)
-; CHECK-NEXT:    lxvx v2, 0, r4
+; CHECK-NEXT:    lxv v2, 0(r4)
 ; CHECK-NEXT:    std r9, 80(r1)
 ; CHECK-NEXT:    std r10, 88(r1)
 ; CHECK-NEXT:    bltlr cr0
@@ -565,7 +565,7 @@ define fp128 @sum_float128(i32 signext %count, ...) {
 ; CHECK-BE-NEXT:    std r6, 72(r1)
 ; CHECK-BE-NEXT:    std r7, 80(r1)
 ; CHECK-BE-NEXT:    std r8, 88(r1)
-; CHECK-BE-NEXT:    lxvx v2, 0, r4
+; CHECK-BE-NEXT:    lxv v2, 0(r4)
 ; CHECK-BE-NEXT:    std r9, 96(r1)
 ; CHECK-BE-NEXT:    std r10, 104(r1)
 ; CHECK-BE-NEXT:    bltlr cr0

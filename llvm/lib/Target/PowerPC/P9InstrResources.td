@@ -138,6 +138,7 @@ def : InstRW<[P9_ALU_2C, IP_EXEC_1C, DISP_1C],
     (instregex "SUBF(E|ME|ZE)?(8)?(O)?(_rec)?$"),
     (instregex "NEG(8)?(O)?(_rec)?$"),
     (instregex "POPCNTB$"),
+    (instregex "POPCNTB8$"),
     (instregex "ADD(I|IS)?(8)?$"),
     (instregex "LI(S)?(8)?$"),
     (instregex "(X)?OR(I|IS)?(8)?(_rec)?$"),
@@ -1078,7 +1079,8 @@ def : InstRW<[P9_ALU_3C, P9_ALU_3C, IP_EXEC_1C, IP_EXEC_1C,
               DISP_3SLOTS_1C, DISP_3SLOTS_1C],
       (instrs
     (instregex "MTFSF(b|_rec)?$"),
-    (instregex "MTFSFI(_rec)?$")
+    (instregex "MTFSFI(_rec)?$"),
+    MTFSFIb
 )>;
 
 // Cracked instruction made of two ALU ops.
@@ -1427,5 +1429,6 @@ def : InstRW<[],
   DCBA,
   DCBI,
   DCCCI,
-  ICCCI
+  ICCCI,
+  ADDEX
 )> { let Unsupported = 1; }

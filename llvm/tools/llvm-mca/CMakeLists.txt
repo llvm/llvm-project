@@ -1,9 +1,8 @@
 include_directories(include)
 
-add_subdirectory(lib)
-
 set(LLVM_LINK_COMPONENTS
   AllTargetsAsmParsers
+  AllTargetsMCAs          # CustomBehaviour and InstrPostProcess
   AllTargetsDescs
   AllTargetsDisassemblers
   AllTargetsInfos
@@ -32,9 +31,3 @@ add_llvm_tool(llvm-mca
   )
 
 set(LLVM_MCA_SOURCE_DIR ${CURRENT_SOURCE_DIR})
-
-target_link_libraries(llvm-mca PRIVATE
-  ${LLVM_MCA_CUSTOMBEHAVIOUR_TARGETS}
-  )
-
-add_definitions(${LLVM_MCA_MACROS_TO_DEFINE})

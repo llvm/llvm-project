@@ -1105,26 +1105,6 @@ isEdgeHot(const BasicBlock *Src, const BasicBlock *Dst) const {
   return getEdgeProbability(Src, Dst) > BranchProbability(4, 5);
 }
 
-const BasicBlock *
-BranchProbabilityInfo::getHotSucc(const BasicBlock *BB) const {
-  auto MaxProb = BranchProbability::getZero();
-  const BasicBlock *MaxSucc = nullptr;
-
-  for (const auto *Succ : successors(BB)) {
-    auto Prob = getEdgeProbability(BB, Succ);
-    if (Prob > MaxProb) {
-      MaxProb = Prob;
-      MaxSucc = Succ;
-    }
-  }
-
-  // Hot probability is at least 4/5 = 80%
-  if (MaxProb > BranchProbability(4, 5))
-    return MaxSucc;
-
-  return nullptr;
-}
-
 /// Get the raw edge probability for the edge. If can't find it, return a
 /// default probability 1/N where N is the number of successors. Here an edge is
 /// specified using PredBlock and an

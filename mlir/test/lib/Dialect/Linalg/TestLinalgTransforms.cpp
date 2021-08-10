@@ -551,11 +551,11 @@ static void applyAffineMinSCFCanonicalizationPatterns(FuncOp funcOp) {
   foldPattern.add<AffineMinSCFCanonicalizationPattern>(funcOp.getContext());
   FrozenRewritePatternSet frozenPatterns(std::move(foldPattern));
 
-  // Explicitly walk and apply the pattern locally to avoid more general folding
+  // Explicitly apply the pattern on affected ops to avoid more general folding
   // on the rest of the IR.
-  funcOp.walk([&frozenPatterns](AffineMinOp minOp) {
-    (void)applyOpPatternsAndFold(minOp, frozenPatterns);
-  });
+  SmallVector<Operation *, 4> minOps;
+  funcOp.walk([&](AffineMinOp minOp) { minOps.push_back(minOp); });
+  (void)applyOpPatternsAndFold(minOps, frozenPatterns, /*strict=*/false);
 }
 
 // For now, just assume it is the zero of type.

@@ -21,7 +21,7 @@ entry:
   %0 = bitcast %struct.t* %bar to i8*, !dbg !20
   call void @llvm.lifetime.start.p0i8(i64 4, i8* %0) #5, !dbg !20
   call void @llvm.dbg.declare(metadata %struct.t* %bar, metadata !11, metadata !DIExpression()), !dbg !21
-  %1 = call %struct.t* @llvm.preserve.array.access.index.p0s_struct.ts.p0s_struct.ts(%struct.t* %bar, i32 0, i32 1), !dbg !22, !llvm.preserve.access.index !4
+  %1 = call %struct.t* @llvm.preserve.array.access.index.p0s_struct.ts.p0s_struct.ts(%struct.t* elementtype(%struct.t) %bar, i32 0, i32 1), !dbg !22, !llvm.preserve.access.index !4
   %2 = call i32 @llvm.bpf.preserve.field.info.p0s_struct.ts(%struct.t* %1, i64 2), !dbg !23
   %3 = bitcast %struct.t* %bar to i8*, !dbg !24
   call void @llvm.lifetime.end.p0i8(i64 4, i8* %3) #5, !dbg !24

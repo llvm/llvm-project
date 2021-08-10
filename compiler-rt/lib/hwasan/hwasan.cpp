@@ -50,6 +50,11 @@ bool hwasan_init_is_running;
 
 int hwasan_report_count = 0;
 
+uptr kLowShadowStart;
+uptr kLowShadowEnd;
+uptr kHighShadowStart;
+uptr kHighShadowEnd;
+
 void Flags::SetDefaults() {
 #define HWASAN_FLAG(Type, Name, DefaultValue, Description) Name = DefaultValue;
 #include "hwasan_flags.inc"
@@ -314,7 +319,7 @@ void __hwasan_init_static() {
     InitializeSingleGlobal(global);
 }
 
-void __hwasan_init() {
+__attribute__((constructor(0))) void __hwasan_init() {
   CHECK(!hwasan_init_is_running);
   if (hwasan_inited) return;
   hwasan_init_is_running = 1;

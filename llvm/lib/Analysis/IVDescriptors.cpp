@@ -199,16 +199,14 @@ static bool checkOrderedReduction(RecurKind Kind, Instruction *ExactFPMathInst,
   if (Kind != RecurKind::FAdd)
     return false;
 
-  bool IsOrdered =
-      Exit->getOpcode() == Instruction::FAdd && Exit == ExactFPMathInst;
+  if (Exit->getOpcode() != Instruction::FAdd || Exit != ExactFPMathInst)
+    return false;
 
   // The only pattern accepted is the one in which the reduction PHI
   // is used as one of the operands of the exit instruction
   auto *LHS = Exit->getOperand(0);
   auto *RHS = Exit->getOperand(1);
-  IsOrdered &= ((LHS == Phi) || (RHS == Phi));
-
-  if (!IsOrdered)
+  if (LHS != Phi && RHS != Phi)
     return false;
 
   LLVM_DEBUG(dbgs() << "LV: Found an ordered reduction: Phi: " << *Phi
@@ -274,7 +272,7 @@ bool RecurrenceDescriptor::AddReductionVar(PHINode *Phi, RecurKind Kind,
   } else if (RecurrenceType->isIntegerTy()) {
     if (!isIntegerRecurrenceKind(Kind))
       return false;
-    if (isArithmeticRecurrenceKind(Kind))
+    if (!isMinMaxRecurrenceKind(Kind))
       Start = lookThroughAnd(Phi, RecurrenceType, VisitedInsts, CastInsts);
   } else {
     // Pointer min/max may exist, but it is not supported as a reduction op.

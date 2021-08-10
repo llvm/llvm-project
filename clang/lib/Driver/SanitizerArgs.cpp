@@ -805,6 +805,11 @@ SanitizerArgs::SanitizerArgs(const ToolChain &TC,
         options::OPT_fno_sanitize_address_poison_custom_array_cookie,
         AsanPoisonCustomArrayCookie);
 
+    AsanOutlineInstrumentation =
+        Args.hasFlag(options::OPT_fsanitize_address_outline_instrumentation,
+                     options::OPT_fno_sanitize_address_outline_instrumentation,
+                     AsanOutlineInstrumentation);
+
     // As a workaround for a bug in gold 2.26 and earlier, dead stripping of
     // globals in ASan is disabled by default on ELF targets.
     // See https://sourceware.org/bugzilla/show_bug.cgi?id=19002
@@ -1116,6 +1121,11 @@ void SanitizerArgs::addArgs(const ToolChain &TC, const llvm::opt::ArgList &Args,
   if (AsanInvalidPointerSub) {
     CmdArgs.push_back("-mllvm");
     CmdArgs.push_back("-asan-detect-invalid-pointer-sub");
+  }
+
+  if (AsanOutlineInstrumentation) {
+    CmdArgs.push_back("-mllvm");
+    CmdArgs.push_back("-asan-instrumentation-with-call-threshold=0");
   }
 
   // Only pass the option to the frontend if the user requested,

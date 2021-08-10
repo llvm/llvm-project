@@ -417,6 +417,11 @@ def X86Movss : SDNode<"X86ISD::MOVSS",
                                            SDTCisVT<1, v4f32>,
                                            SDTCisVT<2, v4f32>]>>;
 
+def X86Movsh : SDNode<"X86ISD::MOVSH",
+                      SDTypeProfile<1, 2, [SDTCisVT<0, v8f16>,
+                                           SDTCisVT<1, v8f16>,
+                                           SDTCisVT<2, v8f16>]>>;
+
 def X86Movlhps : SDNode<"X86ISD::MOVLHPS",
                         SDTypeProfile<1, 2, [SDTCisVT<0, v4f32>,
                                              SDTCisVT<1, v4f32>,
@@ -796,6 +801,7 @@ def SDTX86MaskedStore: SDTypeProfile<0, 3, [       // masked store
 //===----------------------------------------------------------------------===//
 
 // 128-bit load pattern fragments
+def loadv8f16    : PatFrag<(ops node:$ptr), (v8f16 (load node:$ptr))>;
 def loadv4f32    : PatFrag<(ops node:$ptr), (v4f32 (load node:$ptr))>;
 def loadv2f64    : PatFrag<(ops node:$ptr), (v2f64 (load node:$ptr))>;
 def loadv2i64    : PatFrag<(ops node:$ptr), (v2i64 (load node:$ptr))>;
@@ -804,6 +810,7 @@ def loadv8i16    : PatFrag<(ops node:$ptr), (v8i16 (load node:$ptr))>;
 def loadv16i8    : PatFrag<(ops node:$ptr), (v16i8 (load node:$ptr))>;
 
 // 256-bit load pattern fragments
+def loadv16f16   : PatFrag<(ops node:$ptr), (v16f16 (load node:$ptr))>;
 def loadv8f32    : PatFrag<(ops node:$ptr), (v8f32  (load node:$ptr))>;
 def loadv4f64    : PatFrag<(ops node:$ptr), (v4f64  (load node:$ptr))>;
 def loadv4i64    : PatFrag<(ops node:$ptr), (v4i64  (load node:$ptr))>;
@@ -812,6 +819,7 @@ def loadv16i16   : PatFrag<(ops node:$ptr), (v16i16 (load node:$ptr))>;
 def loadv32i8    : PatFrag<(ops node:$ptr), (v32i8  (load node:$ptr))>;
 
 // 512-bit load pattern fragments
+def loadv32f16   : PatFrag<(ops node:$ptr), (v32f16 (load node:$ptr))>;
 def loadv16f32   : PatFrag<(ops node:$ptr), (v16f32 (load node:$ptr))>;
 def loadv8f64    : PatFrag<(ops node:$ptr), (v8f64  (load node:$ptr))>;
 def loadv8i64    : PatFrag<(ops node:$ptr), (v8i64  (load node:$ptr))>;
@@ -823,6 +831,10 @@ def loadv64i8    : PatFrag<(ops node:$ptr), (v64i8  (load node:$ptr))>;
 def extloadv2f32 : PatFrag<(ops node:$ptr), (extloadvf32 node:$ptr)>;
 def extloadv4f32 : PatFrag<(ops node:$ptr), (extloadvf32 node:$ptr)>;
 def extloadv8f32 : PatFrag<(ops node:$ptr), (extloadvf32 node:$ptr)>;
+def extloadv2f16 : PatFrag<(ops node:$ptr), (extloadvf16 node:$ptr)>;
+def extloadv4f16 : PatFrag<(ops node:$ptr), (extloadvf16 node:$ptr)>;
+def extloadv8f16 : PatFrag<(ops node:$ptr), (extloadvf16 node:$ptr)>;
+def extloadv16f16 : PatFrag<(ops node:$ptr), (extloadvf16 node:$ptr)>;
 
 // Like 'store', but always requires vector size alignment.
 def alignedstore : PatFrag<(ops node:$val, node:$ptr),
@@ -839,6 +851,8 @@ def alignedload : PatFrag<(ops node:$ptr), (load node:$ptr), [{
 
 // 128-bit aligned load pattern fragments
 // NOTE: all 128-bit integer vector loads are promoted to v2i64
+def alignedloadv8f16 : PatFrag<(ops node:$ptr),
+                               (v8f16 (alignedload node:$ptr))>;
 def alignedloadv4f32 : PatFrag<(ops node:$ptr),
                                (v4f32 (alignedload node:$ptr))>;
 def alignedloadv2f64 : PatFrag<(ops node:$ptr),
@@ -854,6 +868,8 @@ def alignedloadv16i8 : PatFrag<(ops node:$ptr),
 
 // 256-bit aligned load pattern fragments
 // NOTE: all 256-bit integer vector loads are promoted to v4i64
+def alignedloadv16f16 : PatFrag<(ops node:$ptr),
+                                (v16f16 (alignedload node:$ptr))>;
 def alignedloadv8f32  : PatFrag<(ops node:$ptr),
                                 (v8f32  (alignedload node:$ptr))>;
 def alignedloadv4f64  : PatFrag<(ops node:$ptr),
@@ -868,6 +884,8 @@ def alignedloadv32i8  : PatFrag<(ops node:$ptr),
                                 (v32i8  (alignedload node:$ptr))>;
 
 // 512-bit aligned load pattern fragments
+def alignedloadv32f16 : PatFrag<(ops node:$ptr),
+                                (v32f16 (alignedload node:$ptr))>;
 def alignedloadv16f32 : PatFrag<(ops node:$ptr),
                                 (v16f32 (alignedload node:$ptr))>;
 def alignedloadv8f64  : PatFrag<(ops node:$ptr),
@@ -926,6 +944,11 @@ def bc_v8i64 : PatFrag<(ops node:$in), (v8i64 (bitconvert node:$in))>;
 def bc_v8f64 : PatFrag<(ops node:$in), (v8f64 (bitconvert node:$in))>;
 def bc_v16f32 : PatFrag<(ops node:$in), (v16f32 (bitconvert node:$in))>;
 
+def X86vzload16 : PatFrag<(ops node:$src),
+                          (X86vzld node:$src), [{
+  return cast<MemIntrinsicSDNode>(N)->getMemoryVT().getStoreSize() == 2;
+}]>;
+
 def X86vzload32 : PatFrag<(ops node:$src),
                           (X86vzld node:$src), [{
   return cast<MemIntrinsicSDNode>(N)->getMemoryVT().getStoreSize() == 4;
@@ -976,6 +999,10 @@ def X86SubVBroadcastld256 : PatFrag<(ops node:$src),
 // only load a single element.
 // FIXME: We should add more canolicalizing in DAGCombine. Particulary removing
 // the simple_load case.
+def sse_load_f16 : PatFrags<(ops node:$ptr),
+                            [(v8f16 (simple_load node:$ptr)),
+                             (v8f16 (X86vzload16 node:$ptr)),
+                             (v8f16 (scalar_to_vector (loadf16 node:$ptr)))]>;
 def sse_load_f32 : PatFrags<(ops node:$ptr),
                             [(v4f32 (simple_load node:$ptr)),
                              (v4f32 (X86vzload32 node:$ptr)),
@@ -985,9 +1012,13 @@ def sse_load_f64 : PatFrags<(ops node:$ptr),
                              (v2f64 (X86vzload64 node:$ptr)),
                              (v2f64 (scalar_to_vector (loadf64 node:$ptr)))]>;
 
+def shmem : X86MemOperand<"printwordmem", X86Mem16AsmOperand>;
 def ssmem : X86MemOperand<"printdwordmem", X86Mem32AsmOperand>;
 def sdmem : X86MemOperand<"printqwordmem", X86Mem64AsmOperand>;
 
+def fp16imm0 : PatLeaf<(f16 fpimm), [{
+  return N->isExactlyValue(+0.0);
+}]>;
 
 def fp32imm0 : PatLeaf<(f32 fpimm), [{
   return N->isExactlyValue(+0.0);

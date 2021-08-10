@@ -9,6 +9,7 @@
 // UNSUPPORTED: c++03, c++11, c++14, c++17
 // UNSUPPORTED: libcpp-no-concepts
 // UNSUPPORTED: gcc-10
+// UNSUPPORTED: libcpp-has-no-incomplete-ranges
 
 // std::ranges::data
 
@@ -123,7 +124,7 @@ static_assert(!std::is_invocable_v<RangeDataT, BeginMemberRandomAccess const&>);
 struct BeginFriendContiguousIterator {
   int buff[8];
 
-  constexpr friend ContiguousIter begin(const BeginFriendContiguousIterator &iter) {
+  friend constexpr ContiguousIter begin(const BeginFriendContiguousIterator &iter) {
     return ContiguousIter(iter.buff);
   }
 };

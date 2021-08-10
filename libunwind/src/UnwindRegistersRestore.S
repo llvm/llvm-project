@@ -800,11 +800,12 @@ DEFINE_LIBUNWIND_FUNCTION(_ZN9libunwind14Registers_or1k6jumptoEv)
   l.lwz    r30,120(r3)
   l.lwz    r31,124(r3)
 
+  # load new pc into ra
+  l.lwz    r9, 128(r3)
+
   # at last, restore r3
   l.lwz    r3,  12(r3)
 
-  # load new pc into ra
-  l.lwz    r9, 128(r3)
   # jump to pc
   l.jr     r9
    l.nop

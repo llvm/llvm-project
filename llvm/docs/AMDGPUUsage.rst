@@ -1165,6 +1165,8 @@ The AMDGPU backend uses the following ELF header:
      *reserved*                           0x041      Reserved.
      ``EF_AMDGPU_MACH_AMDGCN_GFX1013``    0x042      ``gfx1013``
      *reserved*                           0x043      Reserved.
+     *reserved*                           0x044      Reserved.
+     *reserved*                           0x045      Reserved.
      ==================================== ========== =============================
 
 Sections
@@ -1575,6 +1577,7 @@ The following relocation types are supported:
      ``R_AMDGPU_REL32_HI``      Static  11     ``word32``  (S + A - P) >> 32
      *reserved*                         12
      ``R_AMDGPU_RELATIVE64``    Dynamic 13     ``word64``  B + A
+     ``R_AMDGPU_REL16``         Static  14     ``word16``  ((S + A - P) - 4) / 4
      ========================== ======= =====  ==========  ==============================
 
 ``R_AMDGPU_ABS32_LO`` and ``R_AMDGPU_ABS32_HI`` are only supported by
@@ -3148,6 +3151,37 @@ same *vendor-name*.
                                                                   a register allocator
                                                                   created spill
                                                                   location.
+     ".kind"                             string                   The kind of the kernel
+                                                                  with the following
+                                                                  values:
+
+                                                                  "normal"
+                                                                    Regular kernels.
+
+                                                                  "init"
+                                                                    These kernels must be
+                                                                    invoked after loading
+                                                                    the containing code
+                                                                    object and must
+                                                                    complete before any
+                                                                    normal and fini
+                                                                    kernels in the same
+                                                                    code object are
+                                                                    invoked.
+
+                                                                  "fini"
+                                                                    These kernels must be
+                                                                    invoked before
+                                                                    unloading the
+                                                                    containing code object
+                                                                    and after all init and
+                                                                    normal kernels in the
+                                                                    same code object have
+                                                                    been invoked and
+                                                                    completed.
+
+                                                                  If omitted, "normal" is
+                                                                  assumed.
      =================================== ============== ========= ================================
 
 ..
@@ -12205,6 +12239,7 @@ This kernel is equivalent to the following HIP program:
 
 .. code::
    :number-lines:
+
    __global__ void hello_world(float *p) {
        *p = 3.14159f;
    }

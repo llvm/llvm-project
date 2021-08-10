@@ -23,7 +23,7 @@
 //
 // - After:
 //   catchpad ...
-//   exn = wasm.catch(WebAssembly::CPP_EXCEPTION);
+//   exn = wasm.catch.exn(WebAssembly::CPP_EXCEPTION);
 //   // Only add below in case it's not a single catch (...)
 //   wasm.landingpad.index(index);
 //   __wasm_lpad_context.lpad_index = index;
@@ -77,20 +77,12 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "llvm/ADT/SetVector.h"
-#include "llvm/ADT/Statistic.h"
-#include "llvm/ADT/Triple.h"
-#include "llvm/Analysis/DomTreeUpdater.h"
-#include "llvm/CodeGen/Passes.h"
 #include "llvm/CodeGen/TargetLowering.h"
 #include "llvm/CodeGen/TargetSubtargetInfo.h"
 #include "llvm/CodeGen/WasmEHFuncInfo.h"
-#include "llvm/IR/Dominators.h"
 #include "llvm/IR/IRBuilder.h"
-#include "llvm/IR/Intrinsics.h"
 #include "llvm/IR/IntrinsicsWebAssembly.h"
 #include "llvm/InitializePasses.h"
-#include "llvm/Pass.h"
 #include "llvm/Transforms/Utils/BasicBlockUtils.h"
 
 using namespace llvm;
@@ -111,7 +103,7 @@ class WasmEHPrepare : public FunctionPass {
   Function *LPadIndexF = nullptr;   // wasm.landingpad.index() intrinsic
   Function *LSDAF = nullptr;        // wasm.lsda() intrinsic
   Function *GetExnF = nullptr;      // wasm.get.exception() intrinsic
-  Function *CatchF = nullptr;       // wasm.catch() intrinsic
+  Function *CatchF = nullptr;       // wasm.catch.exn() intrinsic
   Function *GetSelectorF = nullptr; // wasm.get.ehselector() intrinsic
   FunctionCallee CallPersonalityF =
       nullptr; // _Unwind_CallPersonality() wrapper
@@ -124,7 +116,6 @@ public:
   static char ID; // Pass identification, replacement for typeid
 
   WasmEHPrepare() : FunctionPass(ID) {}
-  void getAnalysisUsage(AnalysisUsage &AU) const override;
   bool doInitialization(Module &M) override;
   bool runOnFunction(Function &F) override;
 
@@ -137,15 +128,10 @@ public:
 char WasmEHPrepare::ID = 0;
 INITIALIZE_PASS_BEGIN(WasmEHPrepare, DEBUG_TYPE,
                       "Prepare WebAssembly exceptions", false, false)
-INITIALIZE_PASS_DEPENDENCY(DominatorTreeWrapperPass)
 INITIALIZE_PASS_END(WasmEHPrepare, DEBUG_TYPE, "Prepare WebAssembly exceptions",
                     false, false)
 
 FunctionPass *llvm::createWasmEHPass() { return new WasmEHPrepare(); }
-
-void WasmEHPrepare::getAnalysisUsage(AnalysisUsage &AU) const {
-  AU.addRequired<DominatorTreeWrapperPass>();
-}
 
 bool WasmEHPrepare::doInitialization(Module &M) {
   IRBuilder<> IRB(M.getContext());
@@ -159,14 +145,14 @@ bool WasmEHPrepare::doInitialization(Module &M) {
 // Erase the specified BBs if the BB does not have any remaining predecessors,
 // and also all its dead children.
 template <typename Container>
-static void eraseDeadBBsAndChildren(const Container &BBs, DomTreeUpdater *DTU) {
+static void eraseDeadBBsAndChildren(const Container &BBs) {
   SmallVector<BasicBlock *, 8> WL(BBs.begin(), BBs.end());
   while (!WL.empty()) {
     auto *BB = WL.pop_back_val();
     if (!pred_empty(BB))
       continue;
     WL.append(succ_begin(BB), succ_end(BB));
-    DeleteDeadBlock(BB, DTU);
+    DeleteDeadBlock(BB);
   }
 }
 
@@ -178,9 +164,6 @@ bool WasmEHPrepare::runOnFunction(Function &F) {
 }
 
 bool WasmEHPrepare::prepareThrows(Function &F) {
-  auto &DT = getAnalysis<DominatorTreeWrapperPass>().getDomTree();
-  DomTreeUpdater DTU(&DT, /*PostDominatorTree*/ nullptr,
-                     DomTreeUpdater::UpdateStrategy::Eager);
   Module &M = *F.getParent();
   IRBuilder<> IRB(F.getContext());
   bool Changed = false;
@@ -203,7 +186,7 @@ bool WasmEHPrepare::prepareThrows(Function &F) {
     InstList.erase(std::next(BasicBlock::iterator(ThrowI)), InstList.end());
     IRB.SetInsertPoint(BB);
     IRB.CreateUnreachable();
-    eraseDeadBBsAndChildren(Succs, &DTU);
+    eraseDeadBBsAndChildren(Succs);
   }
 
   return Changed;
@@ -249,9 +232,9 @@ bool WasmEHPrepare::prepareEHPads(Function &F) {
   GetExnF = Intrinsic::getDeclaration(&M, Intrinsic::wasm_get_exception);
   GetSelectorF = Intrinsic::getDeclaration(&M, Intrinsic::wasm_get_ehselector);
 
-  // wasm.catch() will be lowered down to wasm 'catch' instruction in
+  // wasm.catch.exn() will be lowered down to wasm 'catch' instruction in
   // instruction selection.
-  CatchF = Intrinsic::getDeclaration(&M, Intrinsic::wasm_catch);
+  CatchF = Intrinsic::getDeclaration(&M, Intrinsic::wasm_catch_exn);
 
   // _Unwind_CallPersonality() wrapper function, which calls the personality
   CallPersonalityF = M.getOrInsertFunction(
@@ -305,8 +288,8 @@ void WasmEHPrepare::prepareEHPad(BasicBlock *BB, bool NeedPersonality,
     return;
   }
 
-  // Replace wasm.get.exception intrinsic with wasm.catch intrinsic, which will
-  // be lowered to wasm 'catch' instruction. We do this mainly because
+  // Replace wasm.get.exception intrinsic with wasm.catch.exn intrinsic, which
+  // will be lowered to wasm 'catch' instruction. We do this mainly because
   // instruction selection cannot handle wasm.get.exception intrinsic's token
   // argument.
   Instruction *CatchCI =

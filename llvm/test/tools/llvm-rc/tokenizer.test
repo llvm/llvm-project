@@ -27,6 +27,7 @@
 ; CHECK-NEXT:  BlockEnd: End
 ; CHECK-NEXT:  Identifier: He11o
 ; CHECK-NEXT:  Identifier: LLVM
+; CHECK-NEXT:  Identifier: identifier-with-dashes
 ; CHECK-NEXT:  String: "RC string test."
 ; CHECK-NEXT:  Comma: ,
 ; CHECK-NEXT:  String: L"Another RC string test.'&{"

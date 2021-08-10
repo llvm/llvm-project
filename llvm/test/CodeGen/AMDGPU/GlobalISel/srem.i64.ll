@@ -156,8 +156,8 @@ define i64 @v_srem_i64(i64 %num, i64 %den) {
 ; CHECK-NEXT:    v_sub_i32_e32 v4, vcc, v0, v6
 ; CHECK-NEXT:    v_xor_b32_e32 v1, v1, v6
 ; CHECK-NEXT:    v_subb_u32_e32 v5, vcc, v1, v6, vcc
-; CHECK-NEXT:    ; implicit-def: $vgpr0
 ; CHECK-NEXT:    ; implicit-def: $vgpr2
+; CHECK-NEXT:    ; implicit-def: $vgpr0
 ; CHECK-NEXT:  BB0_2: ; %Flow
 ; CHECK-NEXT:    s_or_saveexec_b64 s[4:5], s[6:7]
 ; CHECK-NEXT:    s_xor_b64 exec, exec, s[4:5]
@@ -830,8 +830,8 @@ define <2 x i64> @v_srem_v2i64(<2 x i64> %num, <2 x i64> %den) {
 ; CGP-NEXT:    v_xor_b32_e32 v4, v0, v10
 ; CGP-NEXT:    v_sub_i32_e32 v0, vcc, v1, v10
 ; CGP-NEXT:    v_subb_u32_e32 v1, vcc, v4, v10, vcc
-; CGP-NEXT:    ; implicit-def: $vgpr8
 ; CGP-NEXT:    ; implicit-def: $vgpr4
+; CGP-NEXT:    ; implicit-def: $vgpr8
 ; CGP-NEXT:  BB2_2: ; %Flow2
 ; CGP-NEXT:    s_or_saveexec_b64 s[4:5], s[6:7]
 ; CGP-NEXT:    s_xor_b64 exec, exec, s[4:5]
@@ -1005,8 +1005,8 @@ define <2 x i64> @v_srem_v2i64(<2 x i64> %num, <2 x i64> %den) {
 ; CGP-NEXT:    v_sub_i32_e32 v4, vcc, v2, v8
 ; CGP-NEXT:    v_xor_b32_e32 v3, v3, v8
 ; CGP-NEXT:    v_subb_u32_e32 v5, vcc, v3, v8, vcc
-; CGP-NEXT:    ; implicit-def: $vgpr2
 ; CGP-NEXT:    ; implicit-def: $vgpr6
+; CGP-NEXT:    ; implicit-def: $vgpr2
 ; CGP-NEXT:  BB2_6: ; %Flow
 ; CGP-NEXT:    s_or_saveexec_b64 s[4:5], s[6:7]
 ; CGP-NEXT:    s_xor_b64 exec, exec, s[4:5]
@@ -2623,8 +2623,8 @@ define i64 @v_srem_i64_pow2_shl_denom(i64 %x, i64 %y) {
 ; CHECK-NEXT:    v_sub_i32_e32 v2, vcc, v0, v6
 ; CHECK-NEXT:    v_xor_b32_e32 v1, v1, v6
 ; CHECK-NEXT:    v_subb_u32_e32 v3, vcc, v1, v6, vcc
-; CHECK-NEXT:    ; implicit-def: $vgpr0
 ; CHECK-NEXT:    ; implicit-def: $vgpr4_vgpr5
+; CHECK-NEXT:    ; implicit-def: $vgpr0
 ; CHECK-NEXT:  BB7_2: ; %Flow
 ; CHECK-NEXT:    s_or_saveexec_b64 s[4:5], s[6:7]
 ; CHECK-NEXT:    s_xor_b64 exec, exec, s[4:5]
@@ -3103,8 +3103,8 @@ define <2 x i64> @v_srem_v2i64_pow2_shl_denom(<2 x i64> %x, <2 x i64> %y) {
 ; CGP-NEXT:    v_xor_b32_e32 v4, v0, v10
 ; CGP-NEXT:    v_sub_i32_e32 v0, vcc, v1, v10
 ; CGP-NEXT:    v_subb_u32_e32 v1, vcc, v4, v10, vcc
-; CGP-NEXT:    ; implicit-def: $vgpr5
 ; CGP-NEXT:    ; implicit-def: $vgpr10_vgpr11
+; CGP-NEXT:    ; implicit-def: $vgpr5
 ; CGP-NEXT:  BB8_2: ; %Flow2
 ; CGP-NEXT:    s_or_saveexec_b64 s[4:5], s[6:7]
 ; CGP-NEXT:    s_xor_b64 exec, exec, s[4:5]
@@ -3278,8 +3278,8 @@ define <2 x i64> @v_srem_v2i64_pow2_shl_denom(<2 x i64> %x, <2 x i64> %y) {
 ; CGP-NEXT:    v_sub_i32_e32 v4, vcc, v2, v8
 ; CGP-NEXT:    v_xor_b32_e32 v3, v3, v8
 ; CGP-NEXT:    v_subb_u32_e32 v5, vcc, v3, v8, vcc
-; CGP-NEXT:    ; implicit-def: $vgpr2
 ; CGP-NEXT:    ; implicit-def: $vgpr8_vgpr9
+; CGP-NEXT:    ; implicit-def: $vgpr2
 ; CGP-NEXT:  BB8_6: ; %Flow
 ; CGP-NEXT:    s_or_saveexec_b64 s[4:5], s[6:7]
 ; CGP-NEXT:    s_xor_b64 exec, exec, s[4:5]

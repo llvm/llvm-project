@@ -47,6 +47,7 @@ class Writer {
 public:
   Writer() : buffer(errorHandler().outputBuffer) {}
 
+  void treatSpecialUndefineds();
   void scanRelocations();
   void scanSymbols();
   template <class LP> void createOutputSections();
@@ -76,10 +77,6 @@ public:
 
   LCUuid *uuidCommand = nullptr;
   OutputSegment *linkEditSegment = nullptr;
-
-  // Output sections are added to output segments in iteration order
-  // of ConcatOutputSection, so must have deterministic iteration order.
-  MapVector<NamePair, ConcatOutputSection *> concatOutputSections;
 };
 
 // LC_DYLD_INFO_ONLY stores the offsets of symbol import/export information.
@@ -242,10 +239,7 @@ public:
     c->maxprot = seg->maxProt;
     c->initprot = seg->initProt;
 
-    if (seg->getSections().empty())
-      return;
-
-    c->vmaddr = seg->firstSection()->addr;
+    c->vmaddr = seg->addr;
     c->vmsize = seg->vmSize;
     c->filesize = seg->fileSize;
     c->nsects = seg->numNonHiddenSections();
@@ -467,7 +461,7 @@ public:
     c->ntools = ntools;
     auto *t = reinterpret_cast<build_tool_version *>(&c[1]);
     t->tool = TOOL_LD;
-    t->version = encodeVersion(llvm::VersionTuple(
+    t->version = encodeVersion(VersionTuple(
         LLVM_VERSION_MAJOR, LLVM_VERSION_MINOR, LLVM_VERSION_PATCH));
   }
 
@@ -554,6 +548,27 @@ public:
 
 } // namespace
 
+void Writer::treatSpecialUndefineds() {
+  if (config->entry)
+    if (auto *undefined = dyn_cast<Undefined>(config->entry))
+      treatUndefinedSymbol(*undefined, "the entry point");
+
+  // FIXME: This prints symbols that are undefined both in input files and
+  // via -u flag twice.
+  for (const Symbol *sym : config->explicitUndefineds) {
+    if (const auto *undefined = dyn_cast<Undefined>(sym))
+      treatUndefinedSymbol(*undefined, "-u");
+  }
+  // Literal exported-symbol names must be defined, but glob
+  // patterns need not match.
+  for (const CachedHashStringRef &cachedName :
+       config->exportedSymbols.literals) {
+    if (const Symbol *sym = symtab->find(cachedName))
+      if (const auto *undefined = dyn_cast<Undefined>(sym))
+        treatUndefinedSymbol(*undefined, "-exported_symbol(s_list)");
+  }
+}
+
 // Add stubs and bindings where necessary (e.g. if the symbol is a
 // DylibSymbol.)
 static void prepareBranchTarget(Symbol *sym) {
@@ -593,6 +608,7 @@ static bool needsBinding(const Symbol *sym) {
 
 static void prepareSymbolRelocation(Symbol *sym, const InputSection *isec,
                                     const Reloc &r) {
+  assert(sym->isLive());
   const RelocAttrs &relocAttrs = target->getRelocAttrs(r.type);
 
   if (relocAttrs.hasAttr(RelocAttrBits::BRANCH)) {
@@ -614,7 +630,12 @@ static void prepareSymbolRelocation(Symbol *sym, const InputSection *isec,
 
 void Writer::scanRelocations() {
   TimeTraceScope timeScope("Scan relocations");
-  for (ConcatInputSection *isec : inputSections) {
+
+  // This can't use a for-each loop: It calls treatUndefinedSymbol(), which can
+  // add to inputSections, which invalidates inputSections's iterators.
+  for (size_t i = 0; i < inputSections.size(); ++i) {
+    ConcatInputSection *isec = inputSections[i];
+
     if (isec->shouldOmitFromOutput())
       continue;
 
@@ -666,15 +687,17 @@ void Writer::scanSymbols() {
 
 // TODO: ld64 enforces the old load commands in a few other cases.
 static bool useLCBuildVersion(const PlatformInfo &platformInfo) {
-  static const std::map<PlatformKind, llvm::VersionTuple> minVersion = {
-      {PlatformKind::macOS, llvm::VersionTuple(10, 14)},
-      {PlatformKind::iOS, llvm::VersionTuple(12, 0)},
-      {PlatformKind::iOSSimulator, llvm::VersionTuple(13, 0)},
-      {PlatformKind::tvOS, llvm::VersionTuple(12, 0)},
-      {PlatformKind::tvOSSimulator, llvm::VersionTuple(13, 0)},
-      {PlatformKind::watchOS, llvm::VersionTuple(5, 0)},
-      {PlatformKind::watchOSSimulator, llvm::VersionTuple(6, 0)}};
-  auto it = minVersion.find(platformInfo.target.Platform);
+  static const std::vector<std::pair<PlatformKind, VersionTuple>> minVersion = {
+      {PlatformKind::macOS, VersionTuple(10, 14)},
+      {PlatformKind::iOS, VersionTuple(12, 0)},
+      {PlatformKind::iOSSimulator, VersionTuple(13, 0)},
+      {PlatformKind::tvOS, VersionTuple(12, 0)},
+      {PlatformKind::tvOSSimulator, VersionTuple(13, 0)},
+      {PlatformKind::watchOS, VersionTuple(5, 0)},
+      {PlatformKind::watchOSSimulator, VersionTuple(6, 0)}};
+  auto it = llvm::find_if(minVersion, [&](const auto &p) {
+    return p.first == platformInfo.target.Platform;
+  });
   return it == minVersion.end() ? true : platformInfo.minimum >= it->second;
 }
 
@@ -692,10 +715,6 @@ template <class LP> void Writer::createLoadCommands() {
       make<LCDysymtab>(symtabSection, indirectSymtabSection));
   if (!config->umbrella.empty())
     in.header->addLoadCommand(make<LCSubFramework>(config->umbrella));
-  if (functionStartsSection)
-    in.header->addLoadCommand(make<LCFunctionStarts>(functionStartsSection));
-  if (dataInCodeSection)
-    in.header->addLoadCommand(make<LCDataInCode>(dataInCodeSection));
   if (config->emitEncryptionInfo)
     in.header->addLoadCommand(make<LCEncryptionInfo<LP>>());
   for (StringRef path : config->runtimePaths)
@@ -704,7 +723,6 @@ template <class LP> void Writer::createLoadCommands() {
   switch (config->outputType) {
   case MH_EXECUTE:
     in.header->addLoadCommand(make<LCLoadDylinker>());
-    in.header->addLoadCommand(make<LCMain>());
     break;
   case MH_DYLIB:
     in.header->addLoadCommand(make<LCDylib>(LC_ID_DYLIB, config->installName,
@@ -724,6 +742,10 @@ template <class LP> void Writer::createLoadCommands() {
     in.header->addLoadCommand(make<LCBuildVersion>(config->platformInfo));
   else
     in.header->addLoadCommand(make<LCMinVersion>(config->platformInfo));
+
+  // This is down here to match ld64's load command order.
+  if (config->outputType == MH_EXECUTE)
+    in.header->addLoadCommand(make<LCMain>());
 
   int64_t dylibOrdinal = 1;
   DenseMap<StringRef, int64_t> ordinalForInstallName;
@@ -791,6 +813,10 @@ template <class LP> void Writer::createLoadCommands() {
     }
   }
 
+  if (functionStartsSection)
+    in.header->addLoadCommand(make<LCFunctionStarts>(functionStartsSection));
+  if (dataInCodeSection)
+    in.header->addLoadCommand(make<LCDataInCode>(dataInCodeSection));
   if (codeSignatureSection)
     in.header->addLoadCommand(make<LCCodeSignature>(codeSignatureSection));
 
@@ -823,6 +849,9 @@ static DenseMap<const InputSection *, size_t> buildInputSectionPriorities() {
     return sectionPriorities;
 
   auto addSym = [&](Defined &sym) {
+    if (sym.isAbsolute())
+      return;
+
     auto it = config->priorities.find(sym.getName());
     if (it == config->priorities.end())
       return;
@@ -877,16 +906,6 @@ static void sortSegmentsAndSections() {
   }
 }
 
-NamePair macho::maybeRenameSection(NamePair key) {
-  auto newNames = config->sectionRenameMap.find(key);
-  if (newNames != config->sectionRenameMap.end())
-    return newNames->second;
-  auto newName = config->segmentRenameMap.find(key.first);
-  if (newName != config->segmentRenameMap.end())
-    return std::make_pair(newName->second, key.second);
-  return key;
-}
-
 template <class LP> void Writer::createOutputSections() {
   TimeTraceScope timeScope("Create output sections");
   // First, create hidden sections
@@ -917,10 +936,7 @@ template <class LP> void Writer::createOutputSections() {
   for (ConcatInputSection *isec : inputSections) {
     if (isec->shouldOmitFromOutput())
       continue;
-    NamePair names = maybeRenameSection({isec->getSegName(), isec->getName()});
-    ConcatOutputSection *&osec = concatOutputSections[names];
-    if (!osec)
-      osec = make<ConcatOutputSection>(names.second);
+    ConcatOutputSection *osec = cast<ConcatOutputSection>(isec->parent);
     osec->addInput(isec);
     osec->inputOrder =
         std::min(osec->inputOrder, static_cast<int>(isec->outSecOff));
@@ -932,7 +948,8 @@ template <class LP> void Writer::createOutputSections() {
     StringRef segname = it.first.first;
     ConcatOutputSection *osec = it.second;
     assert(segname != segment_names::ld);
-    getOrCreateOutputSegment(segname)->addOutputSection(osec);
+    if (osec->isNeeded())
+      getOrCreateOutputSegment(segname)->addOutputSection(osec);
   }
 
   for (SyntheticSection *ssec : syntheticSections) {
@@ -965,6 +982,7 @@ void Writer::finalizeAddresses() {
   for (OutputSegment *seg : outputSegments) {
     if (seg == linkEditSegment)
       continue;
+    seg->addr = addr;
     assignAddresses(seg);
     // codesign / libstuff checks for segment ordering by verifying that
     // `fileOff + fileSize == next segment fileOff`. So we call alignTo() before
@@ -972,8 +990,9 @@ void Writer::finalizeAddresses() {
     // contiguous. We handle addr / vmSize similarly for the same reason.
     fileOff = alignTo(fileOff, pageSize);
     addr = alignTo(addr, pageSize);
-    seg->vmSize = addr - seg->firstSection()->addr;
+    seg->vmSize = addr - seg->addr;
     seg->fileSize = fileOff - seg->fileOff;
+    seg->assignAddressesToStartEndSymbols();
   }
 }
 
@@ -998,9 +1017,10 @@ void Writer::finalizeLinkEditSegment() {
 
   // Now that __LINKEDIT is filled out, do a proper calculation of its
   // addresses and offsets.
+  linkEditSegment->addr = addr;
   assignAddresses(linkEditSegment);
   // No need to page-align fileOff / addr here since this is the last segment.
-  linkEditSegment->vmSize = addr - linkEditSegment->firstSection()->addr;
+  linkEditSegment->vmSize = addr - linkEditSegment->addr;
   linkEditSegment->fileSize = fileOff - linkEditSegment->fileOff;
 }
 
@@ -1015,6 +1035,7 @@ void Writer::assignAddresses(OutputSegment *seg) {
     osec->addr = addr;
     osec->fileOff = isZeroFill(osec->flags) ? 0 : fileOff;
     osec->finalize();
+    osec->assignAddressesToStartEndSymbols();
 
     addr += osec->getSize();
     fileOff += osec->getFileSize();
@@ -1077,6 +1098,7 @@ void Writer::writeOutputFile() {
 }
 
 template <class LP> void Writer::run() {
+  treatSpecialUndefineds();
   if (config->entry && !isa<Undefined>(config->entry))
     prepareBranchTarget(config->entry);
   scanRelocations();

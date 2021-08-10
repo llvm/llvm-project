@@ -10,14 +10,12 @@
 // to manipulate and query allocatable variables, dummy arguments, & components.
 #ifndef FORTRAN_RUNTIME_ALLOCATABLE_H_
 #define FORTRAN_RUNTIME_ALLOCATABLE_H_
+
 #include "descriptor.h"
 #include "entry-names.h"
 
-namespace Fortran::runtime::typeInfo {
-class DerivedType;
-}
-
 namespace Fortran::runtime {
+
 extern "C" {
 
 // Initializes the descriptor for an allocatable of intrinsic or derived type.
@@ -55,7 +53,7 @@ void RTNAME(AllocatableApplyMold)(Descriptor &, const Descriptor &mold);
 void RTNAME(AllocatableSetBounds)(
     Descriptor &, int zeroBasedDim, SubscriptValue lower, SubscriptValue upper);
 
-// The upper bound is ignored for the last codimension.
+// The upper cobound is ignored for the last codimension.
 void RTNAME(AllocatableSetCoBounds)(Descriptor &, int zeroBasedCoDim,
     SubscriptValue lower, SubscriptValue upper = 0);
 
@@ -91,15 +89,6 @@ int RTNAME(AllocatableAllocateSource)(Descriptor &, const Descriptor &source,
     bool hasStat = false, const Descriptor *errMsg = nullptr,
     const char *sourceFile = nullptr, int sourceLine = 0);
 
-// Assigns to a whole allocatable, with automatic (re)allocation when the
-// destination is unallocated or nonconforming (Fortran 2003 semantics).
-// The descriptor must be initialized.
-// Recursively assigns components with (re)allocation as necessary.
-// TODO: Consider renaming to a more general name that will work for
-// assignments to pointers, dummy arguments, and anything else with a
-// descriptor.
-void RTNAME(AllocatableAssign)(Descriptor &to, const Descriptor &from);
-
 // Implements the intrinsic subroutine MOVE_ALLOC (16.9.137 in F'2018,
 // but note the order of first two arguments is reversed for consistency
 // with the other APIs for allocatables.)  The destination descriptor
@@ -114,6 +103,10 @@ int RTNAME(MoveAlloc)(Descriptor &to, const Descriptor &from,
 int RTNAME(AllocatableDeallocate)(Descriptor &, bool hasStat = false,
     const Descriptor *errMsg = nullptr, const char *sourceFile = nullptr,
     int sourceLine = 0);
-}
+
+// Variant of above that does not finalize; for intermediate results
+void RTNAME(AllocatableDeallocateNoFinal)(
+    Descriptor &, const char *sourceFile = nullptr, int sourceLine = 0);
+} // extern "C"
 } // namespace Fortran::runtime
 #endif // FORTRAN_RUNTIME_ALLOCATABLE_H_

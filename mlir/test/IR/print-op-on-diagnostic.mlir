@@ -3,5 +3,5 @@
 // This file tests the functionality of 'mlir-print-op-on-diagnostic'.
 
 // CHECK: {{invalid to use 'test.invalid_attr'}}
-// CHECK: {{see current operation: "module"()}}
+// CHECK: {{see current operation: "builtin.module"()}}
 module attributes {test.invalid_attr} {}

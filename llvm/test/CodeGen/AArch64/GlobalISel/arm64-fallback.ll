@@ -1,5 +1,3 @@
-; RUN: not --crash llc -O0 -global-isel -global-isel-abort=1 -verify-machineinstrs %s -o - 2>&1 | FileCheck %s --check-prefix=ERROR
-; RUN: llc -O0 -global-isel -global-isel-abort=0 -verify-machineinstrs %s -o - 2>&1 | FileCheck %s --check-prefix=FALLBACK
 ; RUN: llc -O0 -global-isel -global-isel-abort=2 -pass-remarks-missed='gisel*' -verify-machineinstrs %s -o %t.out 2> %t.err
 ; RUN: FileCheck %s --check-prefix=FALLBACK-WITH-REPORT-OUT < %t.out
 ; RUN: FileCheck %s --check-prefix=FALLBACK-WITH-REPORT-ERR < %t.err
@@ -14,40 +12,13 @@ target datalayout = "e-m:o-i64:64-i128:128-n32:64-S128"
 target triple = "aarch64--"
 
 ; BIG-ENDIAN: unable to translate in big endian mode
-
-; We use __fixunstfti as the common denominator for __fixunstfti on Linux and
-; ___fixunstfti on iOS
-; ERROR: unable to translate instruction: ret
-; FALLBACK: ldr q0,
-; FALLBACK-NEXT: bl __fixunstfti
-;
-; FALLBACK-WITH-REPORT-ERR: unable to translate instruction: ret
-; FALLBACK-WITH-REPORT-ERR: warning: Instruction selection used fallback path for ABIi128
-; FALLBACK-WITH-REPORT-OUT-LABEL: ABIi128:
-; FALLBACK-WITH-REPORT-OUT: ldr q0,
-; FALLBACK-WITH-REPORT-OUT-NEXT: bl __fixunstfti
-define i128 @ABIi128(i128 %arg1) {
-  %farg1 =       bitcast i128 %arg1 to fp128
-  %res = fptoui fp128 %farg1 to i128
-  ret i128 %res
-}
-
-; FALLBACK-WITH-REPORT-ERR: remark: <unknown>:0:0: unable to legalize instruction: G_STORE %3:_(<3 x s32>), %4:_(p0) :: (store (<3 x s32>) into %ir.addr + 16, align 16, basealign 32) (in function: odd_vector)
+; FALLBACK-WITH-REPORT-ERR: remark: <unknown>:0:0: unable to legalize instruction: %{{[0-9]+}}:_(<28 x s32>) = G_CONCAT_VECTORS %{{[0-9]+}}:_(<4 x s32>), %{{[0-9]+}}:_(<4 x s32>), %{{[0-9]+}}:_(<4 x s32>), %{{[0-9]+}}:_(<4 x s32>), %{{[0-9]+}}:_(<4 x s32>), %{{[0-9]+}}:_(<4 x s32>), %{{[0-9]+}}:_(<4 x s32>) (in function: odd_vector)
 ; FALLBACK-WITH-REPORT-ERR: warning: Instruction selection used fallback path for odd_vector
 ; FALLBACK-WITH-REPORT-OUT-LABEL: odd_vector:
 define void @odd_vector(<7 x i32>* %addr) {
   %vec = load <7 x i32>, <7 x i32>* %addr
   store <7 x i32> %vec, <7 x i32>* %addr
   ret void
-}
-
-  ; AArch64 was asserting instead of returning an invalid mapping for unknown
-  ; sizes.
-; FALLBACK-WITH-REPORT-ERR: remark: <unknown>:0:0: unable to translate instruction: ret: '  ret i128 undef' (in function: sequence_sizes)
-; FALLBACK-WITH-REPORT-ERR: warning: Instruction selection used fallback path for sequence_sizes
-; FALLBACK-WITH-REPORT-LABEL: sequence_sizes:
-define i128 @sequence_sizes([8 x i8] %in) {
-  ret i128 undef
 }
 
 ; Make sure we don't mess up metadata arguments.
@@ -78,17 +49,6 @@ block:
 end:
   %vec = load <2 x i16*>, <2 x i16*>* undef
   br label %block
-}
-
-; FALLBACK-WITH-REPORT-ERR: remark: <unknown>:0:0: cannot select: %{{[0-9]+}}:gpr(s32), %{{[0-9]+}}:gpr(s32) = G_UNMERGE_VALUES %{{[0-9]+}}:gpr(s64) (in function: nonpow2_add_narrowing)
-; FALLBACK-WITH-REPORT-ERR: warning: Instruction selection used fallback path for nonpow2_add_narrowing
-; FALLBACK-WITH-REPORT-OUT-LABEL: nonpow2_add_narrowing:
-define void @nonpow2_add_narrowing(i128 %x, i128 %y) {
-  %a = add i128 %x, %y
-  %b = trunc i128 %a to i96
-  %dummy = add i96 %b, %b
-  store i96 %dummy, i96* undef
-  ret void
 }
 
 ; Currently can't handle vector lengths that aren't an exact multiple of
@@ -165,7 +125,32 @@ entry:
   ret void
 }
 
+%struct.foo = type { [8 x i64] }
+
+; FALLBACK-WITH-REPORT-ERR: remark: <unknown>:0:0: unable to translate instruction:{{.*}}ld64b{{.*}}asm_output_ls64
+; FALLBACK-WITH-REPORT-ERR: warning: Instruction selection used fallback path for asm_output_ls64
+; FALLBACK-WITH-REPORT-OUT-LABEL: asm_output_ls64
+define void @asm_output_ls64(%struct.foo* %output, i8* %addr) #2 {
+entry:
+  %val = call i512 asm sideeffect "ld64b $0,[$1]", "=r,r,~{memory}"(i8* %addr)
+  %outcast = bitcast %struct.foo* %output to i512*
+  store i512 %val, i512* %outcast, align 8
+  ret void
+}
+
+; FALLBACK-WITH-REPORT-ERR: remark: <unknown>:0:0: unable to translate instruction:{{.*}}st64b{{.*}}asm_input_ls64
+; FALLBACK-WITH-REPORT-ERR: warning: Instruction selection used fallback path for asm_input_ls64
+; FALLBACK-WITH-REPORT-OUT-LABEL: asm_input_ls64
+define void @asm_input_ls64(%struct.foo* %input, i8* %addr) #2 {
+entry:
+  %incast = bitcast %struct.foo* %input to i512*
+  %val = load i512, i512* %incast, align 8
+  call void asm sideeffect "st64b $0,[$1]", "r,r,~{memory}"(i512 %val, i8* %addr)
+  ret void
+}
+
 attributes #1 = { "target-features"="+sve" }
+attributes #2 = { "target-features"="+ls64" }
 
 declare <vscale x 16 x i1> @llvm.aarch64.sve.ptrue.nxv16i1(i32 %pattern)
 declare <vscale x 16 x i8> @llvm.aarch64.sve.ld1.nxv16i8(<vscale x 16 x i1>, i8*)

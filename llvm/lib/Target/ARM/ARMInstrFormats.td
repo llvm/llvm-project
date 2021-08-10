@@ -1385,8 +1385,8 @@ class ThumbXI<dag oops, dag iops, AddrMode am, int sz,
 }
 
 class T2I<dag oops, dag iops, InstrItinClass itin,
-          string opc, string asm, list<dag> pattern>
-  : Thumb2I<oops, iops, AddrModeNone, 4, itin, opc, asm, "", pattern>;
+          string opc, string asm, list<dag> pattern, AddrMode am = AddrModeNone>
+  : Thumb2I<oops, iops, am, 4, itin, opc, asm, "", pattern>;
 class T2Ii12<dag oops, dag iops, InstrItinClass itin,
              string opc, string asm, list<dag> pattern>
   : Thumb2I<oops, iops, AddrModeT2_i12, 4, itin, opc, asm, "",pattern>;

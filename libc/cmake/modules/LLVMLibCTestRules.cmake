@@ -74,6 +74,7 @@ function(add_libc_unittest target_name)
     "" # No optional arguments
     "SUITE" # Single value arguments
     "SRCS;HDRS;DEPENDS;COMPILE_OPTIONS" # Multi-value arguments
+    "NO_LIBC_UNITTEST_TEST_MAIN"
     ${ARGN}
   )
   if(NOT LIBC_UNITTEST_SRCS)
@@ -148,7 +149,11 @@ function(add_libc_unittest target_name)
     ${fq_deps_list}
   )
 
-  target_link_libraries(${fq_target_name} PRIVATE LibcUnitTest libc_test_utils)
+  if(NO_LIBC_UNITTEST_TEST_MAIN)
+    target_link_libraries(${fq_target_name} PRIVATE LibcUnitTest libc_test_utils)
+  else()
+    target_link_libraries(${fq_target_name} PRIVATE LibcUnitTest LibcUnitTestMain libc_test_utils)
+  endif()
 
   add_custom_command(
     TARGET ${fq_target_name}

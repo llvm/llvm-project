@@ -32,7 +32,7 @@ ftmad z0.d, z0.d, z31.d, #7
 movprfx z0, z7
 // CHECK-INST: movprfx	z0, z7
 // CHECK-ENCODING: [0xe0,0xbc,0x20,0x04]
-// CHECK-ERROR: instruction requires: sve
+// CHECK-ERROR: instruction requires: streaming-sve or sve
 // CHECK-UNKNOWN: e0 bc 20 04 <unknown>
 
 ftmad z0.d, z0.d, z31.d, #7

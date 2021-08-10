@@ -463,48 +463,40 @@ func @vector_ops(%arg0: vector<4xf32>, %arg1: vector<4xi1>, %arg2: vector<4xi64>
 // CHECK-LABEL: @ops
 func @ops(f32, f32, i32, i32, f64) -> (f32, i32) {
 ^bb0(%arg0: f32, %arg1: f32, %arg2: i32, %arg3: i32, %arg4: f64):
-// CHECK-NEXT:  %0 = llvm.fsub %arg0, %arg1 : f32
+// CHECK:  = llvm.fsub %arg0, %arg1 : f32
   %0 = subf %arg0, %arg1: f32
-// CHECK-NEXT:  %1 = llvm.sub %arg2, %arg3 : i32
+// CHECK: = llvm.sub %arg2, %arg3 : i32
   %1 = subi %arg2, %arg3: i32
-// CHECK-NEXT:  %2 = llvm.icmp "slt" %arg2, %1 : i32
+// CHECK: = llvm.icmp "slt" %arg2, %1 : i32
   %2 = cmpi slt, %arg2, %1 : i32
-// CHECK-NEXT:  %3 = llvm.sdiv %arg2, %arg3 : i32
+// CHECK: = llvm.sdiv %arg2, %arg3 : i32
   %3 = divi_signed %arg2, %arg3 : i32
-// CHECK-NEXT:  %4 = llvm.udiv %arg2, %arg3 : i32
+// CHECK: = llvm.udiv %arg2, %arg3 : i32
   %4 = divi_unsigned %arg2, %arg3 : i32
-// CHECK-NEXT:  %5 = llvm.srem %arg2, %arg3 : i32
+// CHECK: = llvm.srem %arg2, %arg3 : i32
   %5 = remi_signed %arg2, %arg3 : i32
-// CHECK-NEXT:  %6 = llvm.urem %arg2, %arg3 : i32
+// CHECK: = llvm.urem %arg2, %arg3 : i32
   %6 = remi_unsigned %arg2, %arg3 : i32
-// CHECK-NEXT:  %7 = llvm.select %2, %arg2, %arg3 : i1, i32
+// CHECK: = llvm.select %2, %arg2, %arg3 : i1, i32
   %7 = select %2, %arg2, %arg3 : i32
-// CHECK-NEXT:  %8 = llvm.fdiv %arg0, %arg1 : f32
+// CHECK: = llvm.fdiv %arg0, %arg1 : f32
   %8 = divf %arg0, %arg1 : f32
-// CHECK-NEXT:  %9 = llvm.frem %arg0, %arg1 : f32
+// CHECK: = llvm.frem %arg0, %arg1 : f32
   %9 = remf %arg0, %arg1 : f32
-// CHECK-NEXT: %10 = llvm.and %arg2, %arg3 : i32
+// CHECK: = llvm.and %arg2, %arg3 : i32
   %10 = and %arg2, %arg3 : i32
-// CHECK-NEXT: %11 = llvm.or %arg2, %arg3 : i32
+// CHECK: = llvm.or %arg2, %arg3 : i32
   %11 = or %arg2, %arg3 : i32
-// CHECK-NEXT: %12 = llvm.xor %arg2, %arg3 : i32
+// CHECK: = llvm.xor %arg2, %arg3 : i32
   %12 = xor %arg2, %arg3 : i32
-// CHECK-NEXT: %13 = "llvm.intr.exp"(%arg0) : (f32) -> f32
-  %13 = math.exp %arg0 : f32
-// CHECK-NEXT: %14 = "llvm.intr.exp2"(%arg0) : (f32) -> f32
-  %14 = math.exp2 %arg0 : f32
-// CHECK-NEXT: %15 = llvm.mlir.constant(7.900000e-01 : f64) : f64
+// CHECK: = llvm.mlir.constant(7.900000e-01 : f64) : f64
   %15 = constant 7.9e-01 : f64
-// CHECK-NEXT: %16 = llvm.shl %arg2, %arg3 : i32
+// CHECK: = llvm.shl %arg2, %arg3 : i32
   %16 = shift_left %arg2, %arg3 : i32
-// CHECK-NEXT: %17 = llvm.ashr %arg2, %arg3 : i32
+// CHECK: = llvm.ashr %arg2, %arg3 : i32
   %17 = shift_right_signed %arg2, %arg3 : i32
-// CHECK-NEXT: %18 = llvm.lshr %arg2, %arg3 : i32
+// CHECK: = llvm.lshr %arg2, %arg3 : i32
   %18 = shift_right_unsigned %arg2, %arg3 : i32
-// CHECK-NEXT: %{{[0-9]+}} = "llvm.intr.sqrt"(%arg0) : (f32) -> f32
-  %19 = math.sqrt %arg0 : f32
-// CHECK-NEXT: %{{[0-9]+}} = "llvm.intr.sqrt"(%arg4) : (f64) -> f64
-  %20 = math.sqrt %arg4 : f64
   return %0, %4 : f32, i32
 }
 
@@ -859,66 +851,6 @@ func @rank_of_ranked(%ranked: memref<?xi32>) {
 // CHECK: llvm.mlir.constant(1 : index) : i64
 // CHECK32: llvm.mlir.constant(1 : index) : i32
 
-
-// -----
-
-// CHECK-LABEL: func @log1p(
-// CHECK-SAME: f32
-func @log1p(%arg0 : f32) {
-  // CHECK: %[[ONE:.*]] = llvm.mlir.constant(1.000000e+00 : f32) : f32
-  // CHECK: %[[ADD:.*]] = llvm.fadd %[[ONE]], %arg0 : f32
-  // CHECK: %[[LOG:.*]] = "llvm.intr.log"(%[[ADD]]) : (f32) -> f32
-  %0 = math.log1p %arg0 : f32
-  std.return
-}
-
-// -----
-
-// CHECK-LABEL: func @log1p_2dvector(
-func @log1p_2dvector(%arg0 : vector<4x3xf32>) {
-  // CHECK: %[[EXTRACT:.*]] = llvm.extractvalue %arg0[0] : !llvm.array<4 x vector<3xf32>>
-  // CHECK: %[[ONE:.*]] = llvm.mlir.constant(dense<1.000000e+00> : vector<3xf32>) : vector<3xf32>
-  // CHECK: %[[ADD:.*]] = llvm.fadd %[[ONE]], %[[EXTRACT]] : vector<3xf32>
-  // CHECK: %[[LOG:.*]] = "llvm.intr.log"(%[[ADD]]) : (vector<3xf32>) -> vector<3xf32>
-  // CHECK: %[[INSERT:.*]] = llvm.insertvalue %[[LOG]], %0[0] : !llvm.array<4 x vector<3xf32>>
-  %0 = math.log1p %arg0 : vector<4x3xf32>
-  std.return
-}
-
-// -----
-
-// CHECK-LABEL: func @expm1(
-// CHECK-SAME: f32
-func @expm1(%arg0 : f32) {
-  // CHECK: %[[ONE:.*]] = llvm.mlir.constant(1.000000e+00 : f32) : f32
-  // CHECK: %[[EXP:.*]] = "llvm.intr.exp"(%arg0) : (f32) -> f32
-  // CHECK: %[[SUB:.*]] = llvm.fsub %[[EXP]], %[[ONE]] : f32
-  %0 = math.expm1 %arg0 : f32
-  std.return
-}
-
-// -----
-
-// CHECK-LABEL: func @rsqrt(
-// CHECK-SAME: f32
-func @rsqrt(%arg0 : f32) {
-  // CHECK: %[[ONE:.*]] = llvm.mlir.constant(1.000000e+00 : f32) : f32
-  // CHECK: %[[SQRT:.*]] = "llvm.intr.sqrt"(%arg0) : (f32) -> f32
-  // CHECK: %[[DIV:.*]] = llvm.fdiv %[[ONE]], %[[SQRT]] : f32
-  %0 = math.rsqrt %arg0 : f32
-  std.return
-}
-
-// -----
-
-// CHECK-LABEL: func @sine(
-// CHECK-SAME: f32
-func @sine(%arg0 : f32) {
-  // CHECK: "llvm.intr.sin"(%arg0) : (f32) -> f32
-  %0 = math.sin %arg0 : f32
-  std.return
-}
-
 // -----
 
 // CHECK-LABEL: func @ceilf(
@@ -936,45 +868,6 @@ func @ceilf(%arg0 : f32) {
 func @floorf(%arg0 : f32) {
   // CHECK: "llvm.intr.floor"(%arg0) : (f32) -> f32
   %0 = floorf %arg0 : f32
-  std.return
-}
-
-// -----
-
-
-// CHECK-LABEL: func @rsqrt_double(
-// CHECK-SAME: f64
-func @rsqrt_double(%arg0 : f64) {
-  // CHECK: %[[ONE:.*]] = llvm.mlir.constant(1.000000e+00 : f64) : f64
-  // CHECK: %[[SQRT:.*]] = "llvm.intr.sqrt"(%arg0) : (f64) -> f64
-  // CHECK: %[[DIV:.*]] = llvm.fdiv %[[ONE]], %[[SQRT]] : f64
-  %0 = math.rsqrt %arg0 : f64
-  std.return
-}
-
-// -----
-
-// CHECK-LABEL: func @rsqrt_vector(
-// CHECK-SAME: vector<4xf32>
-func @rsqrt_vector(%arg0 : vector<4xf32>) {
-  // CHECK: %[[ONE:.*]] = llvm.mlir.constant(dense<1.000000e+00> : vector<4xf32>) : vector<4xf32>
-  // CHECK: %[[SQRT:.*]] = "llvm.intr.sqrt"(%arg0) : (vector<4xf32>) -> vector<4xf32>
-  // CHECK: %[[DIV:.*]] = llvm.fdiv %[[ONE]], %[[SQRT]] : vector<4xf32>
-  %0 = math.rsqrt %arg0 : vector<4xf32>
-  std.return
-}
-
-// -----
-
-// CHECK-LABEL: func @rsqrt_multidim_vector(
-// CHECK-SAME: !llvm.array<4 x vector<3xf32>>
-func @rsqrt_multidim_vector(%arg0 : vector<4x3xf32>) {
-  // CHECK: %[[EXTRACT:.*]] = llvm.extractvalue %arg0[0] : !llvm.array<4 x vector<3xf32>>
-  // CHECK: %[[ONE:.*]] = llvm.mlir.constant(dense<1.000000e+00> : vector<3xf32>) : vector<3xf32>
-  // CHECK: %[[SQRT:.*]] = "llvm.intr.sqrt"(%[[EXTRACT]]) : (vector<3xf32>) -> vector<3xf32>
-  // CHECK: %[[DIV:.*]] = llvm.fdiv %[[ONE]], %[[SQRT]] : vector<3xf32>
-  // CHECK: %[[INSERT:.*]] = llvm.insertvalue %[[DIV]], %0[0] : !llvm.array<4 x vector<3xf32>>
-  %0 = math.rsqrt %arg0 : vector<4x3xf32>
   std.return
 }
 
@@ -1007,16 +900,6 @@ func @call_zero_result_func() {
   return
 }
 func private @zero_result_func()
-
-// -----
-
-// CHECK-LABEL: func @powf(
-// CHECK-SAME: f64
-func @powf(%arg0 : f64) {
-  // CHECK: %[[POWF:.*]] = "llvm.intr.pow"(%arg0, %arg0) : (f64, f64) -> f64
-  %0 = math.powf %arg0, %arg0 : f64
-  std.return
-}
 
 // -----
 

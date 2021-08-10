@@ -635,8 +635,10 @@ static Value *cloneConstantExprWithNewAddressSpace(
     ConstantExpr *CE, unsigned NewAddrSpace,
     const ValueToValueMapTy &ValueWithNewAddrSpace, const DataLayout *DL,
     const TargetTransformInfo *TTI) {
-  Type *TargetType = PointerType::getWithSamePointeeType(
-      cast<PointerType>(CE->getType()), NewAddrSpace);
+  Type *TargetType = CE->getType()->isPointerTy()
+                         ? PointerType::getWithSamePointeeType(
+                               cast<PointerType>(CE->getType()), NewAddrSpace)
+                         : CE->getType();
 
   if (CE->getOpcode() == Instruction::AddrSpaceCast) {
     // Because CE is flat, the source address space must be specific.

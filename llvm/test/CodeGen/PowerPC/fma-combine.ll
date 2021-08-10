@@ -142,11 +142,11 @@ define dso_local float @fma_combine_no_ice() {
 ; CHECK-FAST-LABEL: fma_combine_no_ice:
 ; CHECK-FAST:       # %bb.0:
 ; CHECK-FAST-NEXT:    addis 3, 2, .LCPI4_0@toc@ha
-; CHECK-FAST-NEXT:    addis 4, 2, .LCPI4_1@toc@ha
 ; CHECK-FAST-NEXT:    lfs 0, .LCPI4_0@toc@l(3)
-; CHECK-FAST-NEXT:    lfsx 2, 0, 3
+; CHECK-FAST-NEXT:    addis 3, 2, .LCPI4_1@toc@ha
+; CHECK-FAST-NEXT:    lfs 2, 0(3)
+; CHECK-FAST-NEXT:    lfs 3, .LCPI4_1@toc@l(3)
 ; CHECK-FAST-NEXT:    addis 3, 2, .LCPI4_2@toc@ha
-; CHECK-FAST-NEXT:    lfs 3, .LCPI4_1@toc@l(4)
 ; CHECK-FAST-NEXT:    lfs 1, .LCPI4_2@toc@l(3)
 ; CHECK-FAST-NEXT:    xsmaddasp 3, 2, 0
 ; CHECK-FAST-NEXT:    xsmaddasp 1, 2, 3
@@ -170,11 +170,11 @@ define dso_local float @fma_combine_no_ice() {
 ; CHECK-LABEL: fma_combine_no_ice:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    addis 3, 2, .LCPI4_0@toc@ha
-; CHECK-NEXT:    addis 4, 2, .LCPI4_1@toc@ha
 ; CHECK-NEXT:    lfs 0, .LCPI4_0@toc@l(3)
-; CHECK-NEXT:    lfsx 2, 0, 3
+; CHECK-NEXT:    addis 3, 2, .LCPI4_1@toc@ha
+; CHECK-NEXT:    lfs 2, 0(3)
+; CHECK-NEXT:    lfs 3, .LCPI4_1@toc@l(3)
 ; CHECK-NEXT:    addis 3, 2, .LCPI4_2@toc@ha
-; CHECK-NEXT:    lfs 3, .LCPI4_1@toc@l(4)
 ; CHECK-NEXT:    lfs 1, .LCPI4_2@toc@l(3)
 ; CHECK-NEXT:    fmr 4, 3
 ; CHECK-NEXT:    xsmaddasp 3, 2, 0
@@ -202,9 +202,9 @@ define dso_local double @getNegatedExpression_crash(double %x, double %y) {
 ; CHECK-FAST-LABEL: getNegatedExpression_crash:
 ; CHECK-FAST:       # %bb.0:
 ; CHECK-FAST-NEXT:    addis 3, 2, .LCPI5_1@toc@ha
-; CHECK-FAST-NEXT:    addis 4, 2, .LCPI5_0@toc@ha
 ; CHECK-FAST-NEXT:    lfs 3, .LCPI5_1@toc@l(3)
-; CHECK-FAST-NEXT:    lfs 4, .LCPI5_0@toc@l(4)
+; CHECK-FAST-NEXT:    addis 3, 2, .LCPI5_0@toc@ha
+; CHECK-FAST-NEXT:    lfs 4, .LCPI5_0@toc@l(3)
 ; CHECK-FAST-NEXT:    xssubdp 0, 1, 3
 ; CHECK-FAST-NEXT:    xsmaddadp 3, 1, 4
 ; CHECK-FAST-NEXT:    xsmaddadp 0, 3, 2
@@ -225,9 +225,9 @@ define dso_local double @getNegatedExpression_crash(double %x, double %y) {
 ; CHECK-LABEL: getNegatedExpression_crash:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    addis 3, 2, .LCPI5_1@toc@ha
-; CHECK-NEXT:    addis 4, 2, .LCPI5_0@toc@ha
 ; CHECK-NEXT:    lfs 3, .LCPI5_1@toc@l(3)
-; CHECK-NEXT:    lfs 4, .LCPI5_0@toc@l(4)
+; CHECK-NEXT:    addis 3, 2, .LCPI5_0@toc@ha
+; CHECK-NEXT:    lfs 4, .LCPI5_0@toc@l(3)
 ; CHECK-NEXT:    xssubdp 0, 1, 3
 ; CHECK-NEXT:    xsmaddadp 3, 1, 4
 ; CHECK-NEXT:    xsmaddadp 0, 3, 2

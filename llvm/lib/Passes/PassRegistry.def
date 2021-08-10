@@ -212,6 +212,7 @@ FUNCTION_PASS("coro-elide", CoroElidePass())
 FUNCTION_PASS("coro-cleanup", CoroCleanupPass())
 FUNCTION_PASS("correlated-propagation", CorrelatedValuePropagationPass())
 FUNCTION_PASS("dce", DCEPass())
+FUNCTION_PASS("dfa-jump-threading", DFAJumpThreadingPass())
 FUNCTION_PASS("div-rem-pairs", DivRemPairsPass())
 FUNCTION_PASS("dse", DSEPass())
 FUNCTION_PASS("dot-cfg", CFGPrinterPass())
@@ -415,6 +416,7 @@ LOOP_PASS("canon-freeze", CanonicalizeFreezeInLoopsPass())
 LOOP_PASS("dot-ddg", DDGDotPrinterPass())
 LOOP_PASS("invalidate<all>", InvalidateAllAnalysesPass())
 LOOP_PASS("licm", LICMPass())
+LOOP_PASS("lnicm", LNICMPass())
 LOOP_PASS("loop-flatten", LoopFlattenPass())
 LOOP_PASS("loop-idiom", LoopIdiomRecognizePass())
 LOOP_PASS("loop-instsimplify", LoopInstSimplifyPass())
@@ -445,9 +447,9 @@ LOOP_PASS("loop-versioning-licm", LoopVersioningLICMPass())
 #endif
 LOOP_PASS_WITH_PARAMS("simple-loop-unswitch",
                       "SimpleLoopUnswitchPass",
-                      [](bool NonTrivial) {
-                        return SimpleLoopUnswitchPass(NonTrivial);
+                      [](std::pair<bool, bool> Params) {
+                        return SimpleLoopUnswitchPass(Params.first, Params.second);
                       },
                       parseLoopUnswitchOptions,
-                      "no-nontrivial;nontrivial")
+                      "nontrivial;no-nontrivial;trivial;no-trivial")
 #undef LOOP_PASS_WITH_PARAMS

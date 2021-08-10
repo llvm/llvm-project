@@ -45,6 +45,7 @@ SystemZSubtarget::initializeSubtargetDependencies(StringRef CPU, StringRef FS) {
     HasVectorEnhancements2 = false;
     HasVectorPackedDecimal = false;
     HasVectorPackedDecimalEnhancement = false;
+    HasVectorPackedDecimalEnhancement2 = false;
   }
 
   return *this;
@@ -82,7 +83,10 @@ SystemZSubtarget::SystemZSubtarget(const Triple &TT, const std::string &CPU,
       HasInsertReferenceBitsMultiple(false), HasMiscellaneousExtensions3(false),
       HasMessageSecurityAssist9(false), HasVectorEnhancements2(false),
       HasVectorPackedDecimalEnhancement(false), HasEnhancedSort(false),
-      HasDeflateConversion(false), HasSoftFloat(false), TargetTriple(TT),
+      HasDeflateConversion(false), HasVectorPackedDecimalEnhancement2(false),
+      HasNNPAssist(false), HasBEAREnhancement(false),
+      HasResetDATProtection(false), HasProcessorActivityInstrumentation(false),
+      HasSoftFloat(false), TargetTriple(TT),
       SpecialRegisters(initializeSpecialRegisters()),
       InstrInfo(initializeSubtargetDependencies(CPU, FS)), TLInfo(TM, *this),
       TSInfo(), FrameLowering() {}

@@ -1,4 +1,4 @@
-// RUN: mlir-opt -allow-unregistered-dialect %s -split-input-file -pass-pipeline='func(canonicalize)' | FileCheck %s
+// RUN: mlir-opt -allow-unregistered-dialect %s -split-input-file -pass-pipeline='builtin.func(canonicalize)' | FileCheck %s
 
 // -----
 
@@ -460,15 +460,36 @@ func @constant_fold_bounds(%N : index) {
 
 // -----
 
-// CHECK-LABEL:  func @fold_empty_loop() {
-func @fold_empty_loop() {
-  // CHECK-NOT: affine.for
+// CHECK-LABEL:  func @fold_empty_loops()
+func @fold_empty_loops() -> index {
+  %c0 = constant 0 : index
   affine.for %i = 0 to 10 {
   }
-  return
+  %res = affine.for %i = 0 to 10 iter_args(%arg = %c0) -> index {
+    affine.yield %arg : index
+  }
+  // CHECK-NEXT: %[[zero:.*]] = constant 0
+  // CHECK-NEXT: return %[[zero]]
+  return %res : index
 }
-// CHECK: return
 
+// -----
+
+// CHECK-LABEL:  func @fold_zero_iter_loops
+// CHECK-SAME: %[[ARG:.*]]: index
+func @fold_zero_iter_loops(%in : index) -> index {
+  %c1 = constant 1 : index
+  affine.for %i = 0 to 0 {
+    affine.for %j = 0 to -1 {
+    }
+  }
+  %res = affine.for %i = 0 to 0 iter_args(%loop_arg = %in) -> index {
+    %yield = addi %loop_arg, %c1 : index
+    affine.yield %yield : index
+  }
+  // CHECK-NEXT: return %[[ARG]]
+  return %res : index
+}
 
 // -----
 
@@ -870,7 +891,6 @@ func @dont_merge_affine_max_if_not_single_dim(%i0: index, %i1: index, %i2: index
   return %1: index
 }
 
-
 // -----
 
 // CHECK-LABEL: func @dont_merge_affine_max_if_not_single_sym
@@ -936,3 +956,21 @@ func @no_fold_of_store(%arg : memref<32xi8>, %holder: memref<memref<?xi8>>) {
   return
 }
 
+// -----
+
+// CHECK-DAG: #[[$MAP0:.+]] = affine_map<()[s0] -> (s0 + 16)>
+// CHECK-DAG: #[[$MAP1:.+]] = affine_map<()[s0] -> (s0 * 4)>
+
+// CHECK: func @canonicalize_single_min_max
+// CHECK-SAME: (%[[I0:.+]]: index, %[[I1:.+]]: index)
+func @canonicalize_single_min_max(%i0: index, %i1: index) -> (index, index) {
+  // CHECK-NOT: affine.min
+  // CHECK-NEXT: affine.apply #[[$MAP0]]()[%[[I0]]]
+  %0 = affine.min affine_map<()[s0] -> (s0 + 16)> ()[%i0]
+
+  // CHECK-NOT: affine.max
+  // CHECK-NEXT: affine.apply #[[$MAP1]]()[%[[I1]]]
+  %1 = affine.min affine_map<()[s0] -> (s0 * 4)> ()[%i1]
+
+  return %0, %1: index, index
+}

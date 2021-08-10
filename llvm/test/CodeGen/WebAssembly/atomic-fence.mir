@@ -7,7 +7,6 @@
 # local.get are inserted to save and load memory.atomic.notify's return value.
 
 --- |
-  target datalayout = "e-m:e-p:32:32-i64:64-n32:64-S128"
   target triple = "wasm32-unknown-unknown"
 
   declare void @foo(i32, i32)

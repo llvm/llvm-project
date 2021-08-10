@@ -5,7 +5,7 @@ target datalayout = "e-p:64:64:64-i1:8:8-i8:8:8-i16:16:16-i32:32:32-i64:64:64-f3
 target triple = "x86_64-apple-macosx10.8.0"
 
 
-; CHECK: cost of 4 for VF 8 For instruction:   %conv = fptosi float %tmp to i8
+; CHECK: cost of 1 for VF 1 For instruction:   %conv = fptosi float %tmp to i8
 define void @float_to_sint8_cost(i8* noalias nocapture %a, float* noalias nocapture readonly %b) nounwind {
 entry:
   br label %for.body

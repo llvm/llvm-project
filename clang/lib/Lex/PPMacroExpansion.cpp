@@ -345,6 +345,11 @@ void Preprocessor::RegisterBuiltinMacros() {
   Ident__TIME__ = RegisterBuiltinMacro(*this, "__TIME__");
   Ident__COUNTER__ = RegisterBuiltinMacro(*this, "__COUNTER__");
   Ident_Pragma  = RegisterBuiltinMacro(*this, "_Pragma");
+  if (PPOpts->LexExpandSpecialBuiltins)
+    // Suppress macro expansion if compiler stops before semantic analysis,
+    // the macro identifier will appear in the preprocessed output.
+    Ident__FLT_EVAL_METHOD__ =
+        RegisterBuiltinMacro(*this, "__FLT_EVAL_METHOD__");
 
   // C++ Standing Document Extensions.
   if (getLangOpts().CPlusPlus)
@@ -471,6 +476,8 @@ bool Preprocessor::isNextPPTokenLParen() {
 /// expanded as a macro, handle it and return the next token as 'Identifier'.
 bool Preprocessor::HandleMacroExpandedIdentifier(Token &Identifier,
                                                  const MacroDefinition &M) {
+  emitMacroExpansionWarnings(Identifier);
+
   MacroInfo *MI = M.getMacroInfo();
 
   // If this is a macro expansion in the "#if !defined(x)" line for the file,
@@ -1453,15 +1460,6 @@ static bool isTargetEnvironment(const TargetInfo &TI,
   return TI.getTriple().getEnvironment() == Env.getEnvironment();
 }
 
-static void remapMacroPath(
-    SmallString<256> &Path,
-    const std::map<std::string, std::string, std::greater<std::string>>
-        &MacroPrefixMap) {
-  for (const auto &Entry : MacroPrefixMap)
-    if (llvm::sys::path::replace_path_prefix(Path, Entry.first, Entry.second))
-      break;
-}
-
 /// ExpandBuiltinMacro - If an identifier token is read that is to be expanded
 /// as a builtin macro, handle it and return the next token as 'Tok'.
 void Preprocessor::ExpandBuiltinMacro(Token &Tok) {
@@ -1543,7 +1541,7 @@ void Preprocessor::ExpandBuiltinMacro(Token &Tok) {
       } else {
         FN += PLoc.getFilename();
       }
-      remapMacroPath(FN, PPOpts->MacroPrefixMap);
+      getLangOpts().remapPathPrefix(FN);
       Lexer::Stringify(FN);
       OS << '"' << FN << '"';
     }
@@ -1607,6 +1605,10 @@ void Preprocessor::ExpandBuiltinMacro(Token &Tok) {
     // Surround the string with " and strip the trailing newline.
     OS << '"' << StringRef(Result).drop_back() << '"';
     Tok.setKind(tok::string_literal);
+  } else if (II == Ident__FLT_EVAL_METHOD__) {
+    // __FLT_EVAL_METHOD__ expands to a simple numeric value.
+    OS << getCurrentFPEvalMethod();
+    Tok.setKind(tok::numeric_constant);
   } else if (II == Ident__COUNTER__) {
     // __COUNTER__ expands to a simple numeric value.
     OS << CounterValue++;
@@ -1704,8 +1706,7 @@ void Preprocessor::ExpandBuiltinMacro(Token &Tok) {
 
         return false;
       });
-  } else if (II == Ident__has_cpp_attribute ||
-             II == Ident__has_c_attribute) {
+  } else if (II == Ident__has_cpp_attribute || II == Ident__has_c_attribute) {
     bool IsCXX = II == Ident__has_cpp_attribute;
     EvaluateFeatureLikeBuiltinMacro(
         OS, Tok, II, *this, [&](Token &Tok, bool &HasLexedNextToken) -> int {
@@ -1732,8 +1733,7 @@ void Preprocessor::ExpandBuiltinMacro(Token &Tok) {
                                    getLangOpts())
                     : 0;
         });
-  } else if (II == Ident__has_include ||
-             II == Ident__has_include_next) {
+  } else if (II == Ident__has_include || II == Ident__has_include_next) {
     // The argument to these two builtins should be a parenthesized
     // file name string literal using angle brackets (<>) or
     // double-quotes ("").

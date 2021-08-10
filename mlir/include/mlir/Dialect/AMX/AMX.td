@@ -8,7 +8,7 @@
 //
 // This file defines the basic operations for the AMX dialect.
 //
-// The Intel Advanced Matrix Extensions (AMX) provides a tile matrix
+// The Intel Advanced Matrix Extensions (AMX) provide a tile matrix
 // multiply unit (TMUL), a tile control register (TILECFG), and eight
 // tile registers TMM0 through TMM7 (TILEDATA).
 //
@@ -38,6 +38,23 @@ include "mlir/Interfaces/SideEffectInterfaces.td"
 def AMX_Dialect : Dialect {
   let name = "amx";
   let cppNamespace = "::mlir::amx";
+  let description = [{
+    The Intel Advanced Matrix Extensions (AMX) provide a tile matrix
+    multiply unit (TMUL), a tile control register (TILECFG), and eight
+    tile registers TMM0 through TMM7 (TILEDATA).
+
+    This `AMX` dialect provides a bridge between MLIR concepts such as
+    vectors and memrefs and the lower level LLVM IR support of AMX.
+    The dialect is split into user-facing AMX ops (AMX_Op) and
+    backend-facing intrinsic ops (AMX_IntrOp).
+
+    Note that since configuration changes (implicit at dialect level) are
+    costly, it is highly recommended to use the AMX dialect on same-shaped
+    vectors, at least within a single method.
+
+    For details, see the Intel documentation:
+    https://software.intel.com/content/www/us/en/develop/articles/intel-sdm.html
+  }];
 }
 
 //===----------------------------------------------------------------------===//
@@ -203,7 +220,7 @@ def TileMulIOp : AMX_Op<"tile_muli", [NoSideEffect, AllTypesMatch<["acc", "res"]
     Example:
 
     ```mlir
-      %0 = amx.tile_muli %a zext, %b zext, %c 
+      %0 = amx.tile_muli %a zext, %b zext, %c
         : vector<16x64xi8>, vector<16x64xi8>, vector<16x16xi32>
     ```
   }];

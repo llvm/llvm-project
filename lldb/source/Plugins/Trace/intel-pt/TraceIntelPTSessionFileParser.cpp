@@ -8,11 +8,11 @@
 
 #include "TraceIntelPTSessionFileParser.h"
 
+#include "../common/ThreadPostMortemTrace.h"
 #include "lldb/Core/Debugger.h"
 #include "lldb/Target/Process.h"
 #include "lldb/Target/Target.h"
 #include "lldb/Target/ThreadList.h"
-#include "lldb/Target/ThreadPostMortemTrace.h"
 
 using namespace lldb;
 using namespace lldb_private;

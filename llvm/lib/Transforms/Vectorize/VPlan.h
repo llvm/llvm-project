@@ -776,7 +776,10 @@ class VPInstruction : public VPRecipeBase, public VPValue {
 public:
   /// VPlan opcodes, extending LLVM IR with idiomatics instructions.
   enum {
-    Not = Instruction::OtherOpsEnd + 1,
+    FirstOrderRecurrenceSplice =
+        Instruction::OtherOpsEnd + 1, // Combines the incoming and previous
+                                      // values of a first-order recurrence.
+    Not,
     ICmpULE,
     SLPLoad,
     SLPStore,
@@ -1060,8 +1063,12 @@ class VPWidenPHIRecipe : public VPRecipeBase, public VPValue {
   SmallVector<VPBasicBlock *, 2> IncomingBlocks;
 
 protected:
-  VPWidenPHIRecipe(unsigned char VPVID, unsigned char VPDefID, PHINode *Phi)
-      : VPRecipeBase(VPDefID, {}), VPValue(VPVID, Phi, this) {}
+  VPWidenPHIRecipe(unsigned char VPVID, unsigned char VPDefID, PHINode *Phi,
+                   VPValue *Start = nullptr)
+      : VPRecipeBase(VPDefID, {}), VPValue(VPVID, Phi, this) {
+    if (Start)
+      addOperand(Start);
+  }
 
 public:
   /// Create a VPWidenPHIRecipe for \p Phi
@@ -1078,10 +1085,12 @@ public:
   /// Method to support type inquiry through isa, cast, and dyn_cast.
   static inline bool classof(const VPRecipeBase *B) {
     return B->getVPDefID() == VPRecipeBase::VPWidenPHISC ||
+           B->getVPDefID() == VPRecipeBase::VPFirstOrderRecurrencePHISC ||
            B->getVPDefID() == VPRecipeBase::VPReductionPHISC;
   }
   static inline bool classof(const VPValue *V) {
     return V->getVPValueID() == VPValue::VPVWidenPHISC ||
+           V->getVPValueID() == VPValue::VPVFirstOrderRecurrencePHISC ||
            V->getVPValueID() == VPValue::VPVReductionPHISC;
   }
 
@@ -1106,6 +1115,12 @@ public:
     return getOperand(1);
   }
 
+  /// Returns the backedge value as a recipe. The backedge value is guaranteed
+  /// to be a recipe.
+  VPRecipeBase *getBackedgeRecipe() {
+    return cast<VPRecipeBase>(getBackedgeValue()->getDef());
+  }
+
   /// Adds a pair (\p IncomingV, \p IncomingBlock) to the phi.
   void addIncoming(VPValue *IncomingV, VPBasicBlock *IncomingBlock) {
     addOperand(IncomingV);
@@ -1117,6 +1132,34 @@ public:
 
   /// Returns the \p I th incoming VPBasicBlock.
   VPBasicBlock *getIncomingBlock(unsigned I) { return IncomingBlocks[I]; }
+};
+
+/// A recipe for handling first-order recurrence phis. The start value is the
+/// first operand of the recipe and the incoming value from the backedge is the
+/// second operand.
+struct VPFirstOrderRecurrencePHIRecipe : public VPWidenPHIRecipe {
+  VPFirstOrderRecurrencePHIRecipe(PHINode *Phi, VPValue &Start)
+      : VPWidenPHIRecipe(VPVFirstOrderRecurrencePHISC,
+                         VPFirstOrderRecurrencePHISC, Phi, &Start) {}
+
+  /// Method to support type inquiry through isa, cast, and dyn_cast.
+  static inline bool classof(const VPRecipeBase *R) {
+    return R->getVPDefID() == VPRecipeBase::VPFirstOrderRecurrencePHISC;
+  }
+  static inline bool classof(const VPWidenPHIRecipe *D) {
+    return D->getVPDefID() == VPRecipeBase::VPFirstOrderRecurrencePHISC;
+  }
+  static inline bool classof(const VPValue *V) {
+    return V->getVPValueID() == VPValue::VPVFirstOrderRecurrencePHISC;
+  }
+
+  void execute(VPTransformState &State) override;
+
+#if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
+  /// Print the recipe.
+  void print(raw_ostream &O, const Twine &Indent,
+             VPSlotTracker &SlotTracker) const override;
+#endif
 };
 
 /// A recipe for handling reduction phis. The start value is the first operand
@@ -1138,10 +1181,9 @@ public:
   VPReductionPHIRecipe(PHINode *Phi, RecurrenceDescriptor &RdxDesc,
                        VPValue &Start, bool IsInLoop = false,
                        bool IsOrdered = false)
-      : VPWidenPHIRecipe(VPVReductionPHISC, VPReductionPHISC, Phi),
+      : VPWidenPHIRecipe(VPVReductionPHISC, VPReductionPHISC, Phi, &Start),
         RdxDesc(RdxDesc), IsInLoop(IsInLoop), IsOrdered(IsOrdered) {
     assert((!IsOrdered || IsInLoop) && "IsOrdered requires IsInLoop");
-    addOperand(&Start);
   }
 
   ~VPReductionPHIRecipe() override = default;
@@ -1270,7 +1312,7 @@ public:
     // The first operand is the address, followed by the stored values, followed
     // by an optional mask.
     return ArrayRef<VPValue *>(op_begin(), getNumOperands())
-        .slice(1, getNumOperands() - (HasMask ? 2 : 1));
+        .slice(1, getNumStoreOperands());
   }
 
   /// Generate the wide load or store, and shuffles.
@@ -1283,6 +1325,12 @@ public:
 #endif
 
   const InterleaveGroup<Instruction> *getInterleaveGroup() { return IG; }
+
+  /// Returns the number of stored operands of this interleave group. Returns 0
+  /// for load interleave groups.
+  unsigned getNumStoreOperands() const {
+    return getNumOperands() - (HasMask ? 2 : 1);
+  }
 };
 
 /// A recipe to represent inloop reduction operations, performing a reduction on
@@ -2202,9 +2250,9 @@ class VPlanPrinter {
     return BlockID.count(Block) ? BlockID[Block] : BlockID[Block] = BID++;
   }
 
-  const Twine getOrCreateName(const VPBlockBase *Block);
+  Twine getOrCreateName(const VPBlockBase *Block);
 
-  const Twine getUID(const VPBlockBase *Block);
+  Twine getUID(const VPBlockBase *Block);
 
   /// Print the information related to a CFG edge between two VPBlockBases.
   void drawEdge(const VPBlockBase *From, const VPBlockBase *To, bool Hidden,

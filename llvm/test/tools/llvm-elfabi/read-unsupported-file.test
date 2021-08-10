@@ -1,7 +1,0 @@
-# RUN: not llvm-elfabi %s --emit-tbe=%t 2>&1 | FileCheck %s
-
-This is just some text that cannot be read by llvm-elfabi.
-
-# CHECK: The file was not recognized as a valid object file
-# CHECK: YAML failed reading as TBE
-# CHECK: No file readers succeeded reading `{{.*}}` (unsupported/malformed file?)

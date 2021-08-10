@@ -96,13 +96,13 @@ TEST_F(ScalarEvolutionsTest, SCEVUnknownRAUW) {
   const SCEV *S1 = SE.getSCEV(V1);
   const SCEV *S2 = SE.getSCEV(V2);
 
-  const SCEV *P0 = SE.getAddExpr(S0, S0);
-  const SCEV *P1 = SE.getAddExpr(S1, S1);
-  const SCEV *P2 = SE.getAddExpr(S2, S2);
+  const SCEV *P0 = SE.getAddExpr(S0, SE.getConstant(S0->getType(), 2));
+  const SCEV *P1 = SE.getAddExpr(S1, SE.getConstant(S0->getType(), 2));
+  const SCEV *P2 = SE.getAddExpr(S2, SE.getConstant(S0->getType(), 2));
 
-  const SCEVMulExpr *M0 = cast<SCEVMulExpr>(P0);
-  const SCEVMulExpr *M1 = cast<SCEVMulExpr>(P1);
-  const SCEVMulExpr *M2 = cast<SCEVMulExpr>(P2);
+  auto *M0 = cast<SCEVAddExpr>(P0);
+  auto *M1 = cast<SCEVAddExpr>(P1);
+  auto *M2 = cast<SCEVAddExpr>(P2);
 
   EXPECT_EQ(cast<SCEVConstant>(M0->getOperand(0))->getValue()->getZExtValue(),
             2u);
@@ -707,6 +707,7 @@ TEST_F(ScalarEvolutionsTest, SCEVZeroExtendExpr) {
   ReturnInst::Create(Context, nullptr, EndBB);
   ScalarEvolution SE = buildSE(*F);
   const SCEV *S = SE.getSCEV(Accum);
+  S = SE.getLosslessPtrToIntExpr(S);
   Type *I128Ty = Type::getInt128Ty(Context);
   SE.getZeroExtendExpr(S, I128Ty);
 }
@@ -1503,6 +1504,37 @@ TEST_F(ScalarEvolutionsTest, MatchURem) {
                   ->getZExtValue());
     EXPECT_EQ(LHS->getType(), S->getType());
     EXPECT_EQ(RHS->getType(), S->getType());
+  });
+}
+
+TEST_F(ScalarEvolutionsTest, SCEVUDivFloorCeiling) {
+  LLVMContext C;
+  SMDiagnostic Err;
+  std::unique_ptr<Module> M = parseAssemblyString("define void @foo() { "
+                                                  "  ret void "
+                                                  "} ",
+                                                  Err, C);
+
+  ASSERT_TRUE(M && "Could not parse module?");
+  ASSERT_TRUE(!verifyModule(*M) && "Must have been well formed!");
+
+  runWithSE(*M, "foo", [](Function &F, LoopInfo &LI, ScalarEvolution &SE) {
+    // Check that SCEV's udiv and uceil handling produce the correct results
+    // for all 8 bit options. Div-by-zero is deliberately excluded.
+    for (unsigned N = 0; N < 256; N++)
+      for (unsigned D = 1; D < 256; D++) {
+        APInt NInt(8, N);
+        APInt DInt(8, D);
+        using namespace llvm::APIntOps;
+        APInt FloorInt = RoundingUDiv(NInt, DInt, APInt::Rounding::DOWN);
+        APInt CeilingInt = RoundingUDiv(NInt, DInt, APInt::Rounding::UP);
+        auto *NS = SE.getConstant(NInt);
+        auto *DS = SE.getConstant(DInt);
+        auto *FloorS = cast<SCEVConstant>(SE.getUDivExpr(NS, DS));
+        auto *CeilingS = cast<SCEVConstant>(SE.getUDivCeilSCEV(NS, DS));
+        ASSERT_TRUE(FloorS->getAPInt() == FloorInt);
+        ASSERT_TRUE(CeilingS->getAPInt() == CeilingInt);
+      }
   });
 }
 

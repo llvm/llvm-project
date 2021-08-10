@@ -25,7 +25,6 @@ void LogMessageOnPrintf(const char *str) {}
 #endif
 void WriteToSyslog(const char *buffer) {}
 void Abort() { internal__exit(1); }
-void SleepForSeconds(int seconds) { internal_sleep(seconds); }
 #endif // !SANITIZER_WINDOWS
 
 #if !SANITIZER_WINDOWS && !SANITIZER_MAC

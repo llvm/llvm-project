@@ -596,6 +596,7 @@ targets pending ABI standardization:
 * 64-bit ARM (AArch64)
 * AMDGPU
 * SPIR
+* X86 (Only available under feature AVX512-FP16)
 
 ``_Float16`` will be supported on more targets as they define ABIs for it.
 
@@ -1960,6 +1961,30 @@ between the host and device is known to be compatible.
   #pragma OPENCL EXTENSION __cl_clang_non_portable_kernel_param_types : disable
     global OnlySL *d,
   );
+
+Remove address space builtin function
+-------------------------------------
+
+``__remove_address_space`` allows to derive types in C++ for OpenCL
+that have address space qualifiers removed. This utility only affects
+address space qualifiers, therefore, other type qualifiers such as
+``const`` or ``volatile`` remain unchanged.
+
+**Example of Use**:
+
+.. code-block:: c++
+
+  template<typename T>
+  void foo(T *par){
+    T var1; // error - local function variable with global address space
+    __private T var2; // error - conflicting address space qualifiers
+    __private __remove_address_space<T> var3; // var3 is __private int
+  }
+
+  void bar(){
+    __global int* ptr;
+    foo(ptr);
+  }
 
 Legacy 1.x atomics with generic address space
 ---------------------------------------------
@@ -3410,6 +3435,9 @@ to the same code size limit as with ``unroll(enable)``.
 
 Unrolling of a loop can be prevented by specifying ``unroll(disable)``.
 
+Loop unroll parameters can be controlled by options
+`-mllvm -unroll-count=n` and `-mllvm -pragma-unroll-threshold=n`.
+
 Loop Distribution
 -----------------
 
@@ -3541,15 +3569,17 @@ A ``#pragma clang fp`` pragma may contain any number of options:
 
 The ``#pragma float_control`` pragma allows precise floating-point
 semantics and floating-point exception behavior to be specified
-for a section of the source code. This pragma can only appear at file scope or
-at the start of a compound statement (excluding comments). When using within a
-compound statement, the pragma is active within the scope of the compound
-statement.  This pragma is modeled after a Microsoft pragma with the
-same spelling and syntax.  For pragmas specified at file scope, a stack
-is supported so that the ``pragma float_control`` settings can be pushed or popped.
+for a section of the source code. This pragma can only appear at file or
+namespace scope, within a language linkage specification or at the start of a
+compound statement (excluding comments). When used within a compound statement,
+the pragma is active within the scope of the compound statement.  This pragma
+is modeled after a Microsoft pragma with the same spelling and syntax.  For
+pragmas specified at file or namespace scope, or within a language linkage
+specification, a stack is supported so that the ``pragma float_control``
+settings can be pushed or popped.
 
 When ``pragma float_control(precise, on)`` is enabled, the section of code
-governed by the pragma uses precise floating point semantics, effectively
+governed by the pragma uses precise floating-point semantics, effectively
 ``-ffast-math`` is disabled and ``-ffp-contract=on``
 (fused multiply add) is enabled.
 
@@ -3560,8 +3590,29 @@ when ``pragma float_control(precise, off)`` is enabled, the section of code
 governed by the pragma behaves as though the command-line option
 ``-ffp-exception-behavior=ignore`` is enabled.
 
+When ``pragma float_control(source, on)`` is enabled, the section of code governed
+by the pragma behaves as though the command-line option
+``-ffp-eval-method=source`` is enabled. Note: The default
+floating-point evaluation method is target-specific, typically ``source``.
+
+When ``pragma float_control(double, on)`` is enabled, the section of code governed
+by the pragma behaves as though the command-line option
+``-ffp-eval-method=double`` is enabled.
+
+When ``pragma float_control(extended, on)`` is enabled, the section of code governed
+by the pragma behaves as though the command-line option
+``-ffp-eval-method=extended`` is enabled.
+
+When ``pragma float_control(source, off)`` or
+``pragma float_control(double, off)`` or
+``pragma float_control(extended, off)`` is enabled,
+the section of code governed
+by the pragma behaves as though the command-line option
+``-ffp-eval-method=source`` is enabled, returning floating-point evaluation
+method to the default setting.
+
 The full syntax this pragma supports is
-``float_control(except|precise, on|off [, push])`` and
+``float_control(except|precise|source|double|extended, on|off [, push])`` and
 ``float_control(push|pop)``.
 The ``push`` and ``pop`` forms, including using ``push`` as the optional
 third argument, can only occur at file scope.
@@ -3860,6 +3911,25 @@ Since the size of ``buffer`` can't be known at compile time, Clang will fold
 ``__builtin_object_size(buffer, 0)`` into ``-1``. However, if this was written
 as ``__builtin_dynamic_object_size(buffer, 0)``, Clang will fold it into
 ``size``, providing some extra runtime safety.
+
+Deprecating Macros
+==================
+
+Clang supports the pragma ``#pragma clang deprecated``, which can be used to
+provide deprecation warnings for macro uses. For example:
+
+.. code-block:: c
+
+   #define MIN(x, y) x < y ? x : y
+   #pragma clang deprecated(MIN, "use std::min instead")
+
+   void min(int a, int b) {
+     return MIN(a, b); // warning: MIN is deprecated: use std::min instead
+   }
+
+``#pragma clang deprecated`` should be preferred for this purpose over
+``#pragma GCC warning`` because the warning can be controlled with
+``-Wdeprecated``.
 
 Extended Integer Types
 ======================

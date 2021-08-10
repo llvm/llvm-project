@@ -14,12 +14,11 @@ append_rtti_flag(OFF TSAN_CFLAGS)
 if(COMPILER_RT_TSAN_DEBUG_OUTPUT)
   # Add extra debug information to TSan runtime. This configuration is rarely
   # used, but we need to support it so that debug output will not bitrot.
-  list(APPEND TSAN_CFLAGS -DTSAN_COLLECT_STATS=1
-                          -DTSAN_DEBUG_OUTPUT=2)
+  list(APPEND TSAN_CFLAGS -DTSAN_DEBUG_OUTPUT=2)
 endif()
 
 set(TSAN_RTL_CFLAGS ${TSAN_CFLAGS})
-append_list_if(COMPILER_RT_HAS_MSSE3_FLAG -msse3 TSAN_RTL_CFLAGS)
+append_list_if(COMPILER_RT_HAS_MSSE4_2_FLAG -msse4.2 TSAN_RTL_CFLAGS)
 append_list_if(SANITIZER_LIMIT_FRAME_SIZE -Wframe-larger-than=530
                TSAN_RTL_CFLAGS)
 append_list_if(COMPILER_RT_HAS_WGLOBAL_CONSTRUCTORS_FLAG -Wglobal-constructors
@@ -40,7 +39,6 @@ set(TSAN_SOURCES
   rtl/tsan_malloc_mac.cpp
   rtl/tsan_md5.cpp
   rtl/tsan_mman.cpp
-  rtl/tsan_mutex.cpp
   rtl/tsan_mutexset.cpp
   rtl/tsan_preinit.cpp
   rtl/tsan_report.cpp
@@ -50,10 +48,10 @@ set(TSAN_SOURCES
   rtl/tsan_rtl_report.cpp
   rtl/tsan_rtl_thread.cpp
   rtl/tsan_stack_trace.cpp
-  rtl/tsan_stat.cpp
   rtl/tsan_suppressions.cpp
   rtl/tsan_symbolize.cpp
   rtl/tsan_sync.cpp
+  rtl/tsan_vector_clock.cpp
   )
 
 set(TSAN_CXX_SOURCES
@@ -90,25 +88,25 @@ set(TSAN_HEADERS
   rtl/tsan_flags.h
   rtl/tsan_flags.inc
   rtl/tsan_ignoreset.h
+  rtl/tsan_ilist.h
   rtl/tsan_interceptors.h
   rtl/tsan_interface.h
+  rtl/tsan_interface.inc
   rtl/tsan_interface_ann.h
-  rtl/tsan_interface_inl.h
   rtl/tsan_interface_java.h
   rtl/tsan_mman.h
-  rtl/tsan_mutex.h
   rtl/tsan_mutexset.h
   rtl/tsan_platform.h
   rtl/tsan_ppc_regs.h
   rtl/tsan_report.h
   rtl/tsan_rtl.h
   rtl/tsan_stack_trace.h
-  rtl/tsan_stat.h
   rtl/tsan_suppressions.h
   rtl/tsan_symbolize.h
   rtl/tsan_sync.h
   rtl/tsan_trace.h
-  rtl/tsan_update_shadow_word_inl.h
+  rtl/tsan_update_shadow_word.inc
+  rtl/tsan_vector_clock.h
   )
 
 set(TSAN_RUNTIME_LIBRARIES)
@@ -219,6 +217,20 @@ else()
       add_asm_sources(TSAN_ASM_SOURCES
         rtl/tsan_rtl_mips64.S
         )
+    elseif(arch MATCHES "s390x")
+      add_asm_sources(TSAN_ASM_SOURCES
+        rtl/tsan_rtl_s390x.S
+        )
+      # Sanity check for Go runtime.
+      set(BUILDGO_SCRIPT ${CMAKE_CURRENT_SOURCE_DIR}/go/buildgo.sh)
+      add_custom_target(GotsanRuntimeCheck
+	COMMAND env "CC=${CMAKE_C_COMPILER} ${CMAKE_C_COMPILER_ARG1}"
+		EXTRA_CFLAGS=${EXTRA_CFLAGS}
+		IN_TMPDIR=1 SILENT=1 ${BUILDGO_SCRIPT}
+	DEPENDS clang_rt.tsan-${arch} ${BUILDGO_SCRIPT}
+	WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}/go
+	COMMENT "Checking TSan Go runtime..."
+	VERBATIM)
     else()
       set(TSAN_ASM_SOURCES)
     endif()

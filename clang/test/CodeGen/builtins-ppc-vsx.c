@@ -407,8 +407,8 @@ void test1() {
 // CHECK-LE: call <4 x i32> @llvm.ppc.altivec.vperm(<4 x i32> [[T1]], <4 x i32> [[T2]], <16 x i8>
 
   res_vf = vec_round(vf);
-// CHECK: call <4 x float> @llvm.round.v4f32(<4 x float>
-// CHECK-LE: call <4 x float> @llvm.round.v4f32(<4 x float>
+// CHECK: call <4 x float> @llvm.ppc.altivec.vrfin(<4 x float>
+// CHECK-LE: call <4 x float> @llvm.ppc.altivec.vrfin(<4 x float>
 
   res_vd = vec_round(vd);
 // CHECK: call <2 x double> @llvm.round.v2f64(<2 x double>
@@ -2724,8 +2724,8 @@ void test_p8overloads_backwards_compat() {
   // CHECK-LE: @llvm.ppc.altivec.vcmpgtud.p
 
   res_i = vec_all_ge(vbll, vsll);
-  // CHECK: @llvm.ppc.altivec.vcmpgtud.p
-  // CHECK-LE: @llvm.ppc.altivec.vcmpgtud.p
+  // CHECK: @llvm.ppc.altivec.vcmpgtsd.p
+  // CHECK-LE: @llvm.ppc.altivec.vcmpgtsd.p
 
   res_i = vec_all_ge(vbll, vull);
   // CHECK: @llvm.ppc.altivec.vcmpgtud.p
@@ -2753,8 +2753,8 @@ void test_p8overloads_backwards_compat() {
   // CHECK-LE: @llvm.ppc.altivec.vcmpgtud.p
 
   res_i = vec_all_gt(vbll, vsll);
-  // CHECK: @llvm.ppc.altivec.vcmpgtud.p
-  // CHECK-LE: @llvm.ppc.altivec.vcmpgtud.p
+  // CHECK: @llvm.ppc.altivec.vcmpgtsd.p
+  // CHECK-LE: @llvm.ppc.altivec.vcmpgtsd.p
 
   res_i = vec_all_gt(vbll, vull);
   // CHECK: @llvm.ppc.altivec.vcmpgtud.p
@@ -2782,8 +2782,8 @@ void test_p8overloads_backwards_compat() {
   // CHECK-LE: @llvm.ppc.altivec.vcmpgtud.p
 
   res_i = vec_all_le(vbll, vsll);
-  // CHECK: @llvm.ppc.altivec.vcmpgtud.p
-  // CHECK-LE: @llvm.ppc.altivec.vcmpgtud.p
+  // CHECK: @llvm.ppc.altivec.vcmpgtsd.p
+  // CHECK-LE: @llvm.ppc.altivec.vcmpgtsd.p
 
   res_i = vec_all_le(vbll, vull);
   // CHECK: @llvm.ppc.altivec.vcmpgtud.p
@@ -2811,8 +2811,8 @@ void test_p8overloads_backwards_compat() {
   // CHECK-LE: @llvm.ppc.altivec.vcmpgtud.p
 
   res_i = vec_all_lt(vbll, vsll);
-  // CHECK: @llvm.ppc.altivec.vcmpgtud.p
-  // CHECK-LE: @llvm.ppc.altivec.vcmpgtud.p
+  // CHECK: @llvm.ppc.altivec.vcmpgtsd.p
+  // CHECK-LE: @llvm.ppc.altivec.vcmpgtsd.p
 
   res_i = vec_all_lt(vbll, vull);
   // CHECK: @llvm.ppc.altivec.vcmpgtud.p
@@ -2840,8 +2840,8 @@ void test_p8overloads_backwards_compat() {
   // CHECK-LE: @llvm.ppc.altivec.vcmpgtud.p
 
   res_i = vec_any_ge(vbll, vsll);
-  // CHECK: @llvm.ppc.altivec.vcmpgtud.p
-  // CHECK-LE: @llvm.ppc.altivec.vcmpgtud.p
+  // CHECK: @llvm.ppc.altivec.vcmpgtsd.p
+  // CHECK-LE: @llvm.ppc.altivec.vcmpgtsd.p
 
   res_i = vec_any_ge(vbll, vull);
   // CHECK: @llvm.ppc.altivec.vcmpgtud.p
@@ -2869,8 +2869,8 @@ void test_p8overloads_backwards_compat() {
   // CHECK-LE: @llvm.ppc.altivec.vcmpgtud.p
 
   res_i = vec_any_gt(vbll, vsll);
-  // CHECK: @llvm.ppc.altivec.vcmpgtud.p
-  // CHECK-LE: @llvm.ppc.altivec.vcmpgtud.p
+  // CHECK: @llvm.ppc.altivec.vcmpgtsd.p
+  // CHECK-LE: @llvm.ppc.altivec.vcmpgtsd.p
 
   res_i = vec_any_gt(vbll, vull);
   // CHECK: @llvm.ppc.altivec.vcmpgtud.p
@@ -2898,8 +2898,8 @@ void test_p8overloads_backwards_compat() {
   // CHECK-LE: @llvm.ppc.altivec.vcmpgtud.p
 
   res_i = vec_any_le(vbll, vsll);
-  // CHECK: @llvm.ppc.altivec.vcmpgtud.p
-  // CHECK-LE: @llvm.ppc.altivec.vcmpgtud.p
+  // CHECK: @llvm.ppc.altivec.vcmpgtsd.p
+  // CHECK-LE: @llvm.ppc.altivec.vcmpgtsd.p
 
   res_i = vec_any_le(vbll, vull);
   // CHECK: @llvm.ppc.altivec.vcmpgtud.p
@@ -2927,8 +2927,8 @@ void test_p8overloads_backwards_compat() {
   // CHECK-LE: @llvm.ppc.altivec.vcmpgtud.p
 
   res_i = vec_any_lt(vbll, vsll);
-  // CHECK: @llvm.ppc.altivec.vcmpgtud.p
-  // CHECK-LE: @llvm.ppc.altivec.vcmpgtud.p
+  // CHECK: @llvm.ppc.altivec.vcmpgtsd.p
+  // CHECK-LE: @llvm.ppc.altivec.vcmpgtsd.p
 
   res_i = vec_any_lt(vbll, vull);
   // CHECK: @llvm.ppc.altivec.vcmpgtud.p

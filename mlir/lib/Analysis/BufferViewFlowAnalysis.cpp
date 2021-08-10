@@ -101,13 +101,19 @@ void BufferViewFlowAnalysis::build(Operation *op) {
       regionInterface.getSuccessorRegions(region.getRegionNumber(),
                                           successorRegions);
       for (RegionSuccessor &successorRegion : successorRegions) {
+        // Determine the current region index (if any).
+        Optional<unsigned> regionIndex;
+        Region *regionSuccessor = successorRegion.getSuccessor();
+        if (regionSuccessor)
+          regionIndex = regionSuccessor->getRegionNumber();
         // Iterate over all immediate terminator operations and wire the
-        // successor inputs with the operands of each terminator.
+        // successor inputs with the successor operands of each terminator.
         for (Block &block : region) {
-          for (Operation &operation : block) {
-            if (operation.hasTrait<OpTrait::ReturnLike>())
-              registerDependencies(operation.getOperands(),
-                                   successorRegion.getSuccessorInputs());
+          auto successorOperands = getRegionBranchSuccessorOperands(
+              block.getTerminator(), regionIndex);
+          if (successorOperands) {
+            registerDependencies(*successorOperands,
+                                 successorRegion.getSuccessorInputs());
           }
         }
       }

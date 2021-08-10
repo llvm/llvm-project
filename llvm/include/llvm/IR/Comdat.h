@@ -31,11 +31,11 @@ template <typename ValueTy> class StringMapEntry;
 class Comdat {
 public:
   enum SelectionKind {
-    Any,          ///< The linker may choose any COMDAT.
-    ExactMatch,   ///< The data referenced by the COMDAT must be the same.
-    Largest,      ///< The linker will choose the largest COMDAT.
-    NoDuplicates, ///< No other Module may specify this COMDAT.
-    SameSize,     ///< The data referenced by the COMDAT must be the same size.
+    Any,           ///< The linker may choose any COMDAT.
+    ExactMatch,    ///< The data referenced by the COMDAT must be the same.
+    Largest,       ///< The linker will choose the largest COMDAT.
+    NoDeduplicate, ///< No deduplication is performed.
+    SameSize,      ///< The data referenced by the COMDAT must be the same size.
   };
 
   Comdat(const Comdat &) = delete;

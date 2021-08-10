@@ -673,6 +673,7 @@ protected:
     DefineStd(Builder, "unix", Opts);
     Builder.defineMacro("_IBMR2");
     Builder.defineMacro("_POWER");
+    Builder.defineMacro("__THW_BIG_ENDIAN__");
 
     Builder.defineMacro("_AIX");
     Builder.defineMacro("__TOS_AIX__");
@@ -735,7 +736,7 @@ public:
   }
 
   // AIX sets FLT_EVAL_METHOD to be 1.
-  unsigned getFloatEvalMethod() const override { return 1; }
+  int getFPEvalMethod() const override { return 1; }
   bool hasInt128Type() const override { return false; }
 
   bool defaultsToAIXPowerAlignment() const override { return true; }
@@ -796,8 +797,6 @@ public:
     this->UseZeroLengthBitfieldAlignment = true;
     this->UseLeadingZeroLengthBitfield = false;
     this->ZeroLengthBitfieldBoundary = 32;
-    this->MinGlobalAlign = 0;
-    this->DefaultAlignForAttributeAligned = 128;
   }
 };
 

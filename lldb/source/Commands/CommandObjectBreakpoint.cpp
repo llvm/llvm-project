@@ -110,7 +110,19 @@ public:
     case 't': {
       lldb::tid_t thread_id = LLDB_INVALID_THREAD_ID;
       if (option_arg[0] != '\0') {
-        if (option_arg.getAsInteger(0, thread_id))
+        if (option_arg == "current") {
+          if (!execution_context) {
+            error.SetErrorStringWithFormat("No context to determine current "
+                                           "thread");
+          } else {
+            ThreadSP ctx_thread_sp = execution_context->GetThreadSP();
+            if (!ctx_thread_sp || !ctx_thread_sp->IsValid()) {
+              error.SetErrorStringWithFormat("No currently selected thread");
+            } else {
+              thread_id = ctx_thread_sp->GetID();
+            }
+          }
+        } else if (option_arg.getAsInteger(0, thread_id))
           error.SetErrorStringWithFormat("invalid thread id string '%s'",
                                          option_arg.str().c_str());
       }
@@ -1458,6 +1470,7 @@ protected:
       return false;
     }
 
+    // Handle the delete all breakpoints case:
     if (command.empty() && !m_options.m_delete_disabled) {
       if (!m_options.m_force &&
           !m_interpreter.Confirm(
@@ -1471,67 +1484,73 @@ protected:
             (uint64_t)num_breakpoints, num_breakpoints > 1 ? "s" : "");
       }
       result.SetStatus(eReturnStatusSuccessFinishNoResult);
-    } else {
-      // Particular breakpoint selected; disable that breakpoint.
-      BreakpointIDList valid_bp_ids;
-      
-      if (m_options.m_delete_disabled) {
-        BreakpointIDList excluded_bp_ids;
+      return result.Succeeded();
+    }
+ 
+    // Either we have some kind of breakpoint specification(s),
+    // or we are handling "break disable --deleted".  Gather the list
+    // of breakpoints to delete here, the we'll delete them below.
+    BreakpointIDList valid_bp_ids;
+    
+    if (m_options.m_delete_disabled) {
+      BreakpointIDList excluded_bp_ids;
 
-        if (!command.empty()) {
-          CommandObjectMultiwordBreakpoint::VerifyBreakpointOrLocationIDs(
-              command, &target, result, &excluded_bp_ids,
-              BreakpointName::Permissions::PermissionKinds::deletePerm);
-        }
-        for (auto breakpoint_sp : breakpoints.Breakpoints()) {
-          if (!breakpoint_sp->IsEnabled() && breakpoint_sp->AllowDelete()) {
-            BreakpointID bp_id(breakpoint_sp->GetID());
-            size_t pos = 0;
-            if (!excluded_bp_ids.FindBreakpointID(bp_id, &pos))
-              valid_bp_ids.AddBreakpointID(breakpoint_sp->GetID());
-          }
-        }
-        if (valid_bp_ids.GetSize() == 0) {
-          result.AppendError("No disabled breakpoints.");
-          return false;
-        }
-      } else {
+      if (!command.empty()) {
         CommandObjectMultiwordBreakpoint::VerifyBreakpointOrLocationIDs(
-            command, &target, result, &valid_bp_ids,
+            command, &target, result, &excluded_bp_ids,
             BreakpointName::Permissions::PermissionKinds::deletePerm);
+        if (!result.Succeeded())
+          return false;
       }
-      
-      if (result.Succeeded()) {
-        int delete_count = 0;
-        int disable_count = 0;
-        const size_t count = valid_bp_ids.GetSize();
-        for (size_t i = 0; i < count; ++i) {
-          BreakpointID cur_bp_id = valid_bp_ids.GetBreakpointIDAtIndex(i);
 
-          if (cur_bp_id.GetBreakpointID() != LLDB_INVALID_BREAK_ID) {
-            if (cur_bp_id.GetLocationID() != LLDB_INVALID_BREAK_ID) {
-              Breakpoint *breakpoint =
-                  target.GetBreakpointByID(cur_bp_id.GetBreakpointID()).get();
-              BreakpointLocation *location =
-                  breakpoint->FindLocationByID(cur_bp_id.GetLocationID()).get();
-              // It makes no sense to try to delete individual locations, so we
-              // disable them instead.
-              if (location) {
-                location->SetEnabled(false);
-                ++disable_count;
-              }
-            } else {
-              target.RemoveBreakpointByID(cur_bp_id.GetBreakpointID());
-              ++delete_count;
-            }
-          }
+      for (auto breakpoint_sp : breakpoints.Breakpoints()) {
+        if (!breakpoint_sp->IsEnabled() && breakpoint_sp->AllowDelete()) {
+          BreakpointID bp_id(breakpoint_sp->GetID());
+          size_t pos = 0;
+          if (!excluded_bp_ids.FindBreakpointID(bp_id, &pos))
+            valid_bp_ids.AddBreakpointID(breakpoint_sp->GetID());
         }
-        result.AppendMessageWithFormat(
-            "%d breakpoints deleted; %d breakpoint locations disabled.\n",
-            delete_count, disable_count);
-        result.SetStatus(eReturnStatusSuccessFinishNoResult);
+      }
+      if (valid_bp_ids.GetSize() == 0) {
+        result.AppendError("No disabled breakpoints.");
+        return false;
+      }
+    } else {
+      CommandObjectMultiwordBreakpoint::VerifyBreakpointOrLocationIDs(
+          command, &target, result, &valid_bp_ids,
+          BreakpointName::Permissions::PermissionKinds::deletePerm);
+      if (!result.Succeeded())
+        return false;
+    }
+    
+    int delete_count = 0;
+    int disable_count = 0;
+    const size_t count = valid_bp_ids.GetSize();
+    for (size_t i = 0; i < count; ++i) {
+      BreakpointID cur_bp_id = valid_bp_ids.GetBreakpointIDAtIndex(i);
+
+      if (cur_bp_id.GetBreakpointID() != LLDB_INVALID_BREAK_ID) {
+        if (cur_bp_id.GetLocationID() != LLDB_INVALID_BREAK_ID) {
+          Breakpoint *breakpoint =
+              target.GetBreakpointByID(cur_bp_id.GetBreakpointID()).get();
+          BreakpointLocation *location =
+              breakpoint->FindLocationByID(cur_bp_id.GetLocationID()).get();
+          // It makes no sense to try to delete individual locations, so we
+          // disable them instead.
+          if (location) {
+            location->SetEnabled(false);
+            ++disable_count;
+          }
+        } else {
+          target.RemoveBreakpointByID(cur_bp_id.GetBreakpointID());
+          ++delete_count;
+        }
       }
     }
+    result.AppendMessageWithFormat(
+        "%d breakpoints deleted; %d breakpoint locations disabled.\n",
+        delete_count, disable_count);
+    result.SetStatus(eReturnStatusSuccessFinishNoResult);
     return result.Succeeded();
   }
 

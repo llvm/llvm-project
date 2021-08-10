@@ -325,13 +325,6 @@ if(LIBOMP_OMPT_SUPPORT AND (NOT LIBOMP_HAVE_OMPT_SUPPORT))
   libomp_error_say("OpenMP Tools Interface requested but not available in this implementation")
 endif()
 
-# TSAN-support
-set(LIBOMP_TSAN_SUPPORT FALSE CACHE BOOL
-  "TSAN-support?")
-if(LIBOMP_TSAN_SUPPORT AND (NOT LIBOMP_HAVE_TSAN_SUPPORT))
-  libomp_error_say("TSAN functionality requested but not available")
-endif()
-
 # OMPD-support
 # Enable if OMPT SUPPORT is ON
 set(OMPD_DEFAULT FALSE)
@@ -343,7 +336,8 @@ set(LIBOMP_OMPD_SUPPORT ${OMPD_DEFAULT} CACHE BOOL
   "OMPD-support?")
 
 if(LIBOMP_OMPD_SUPPORT AND ((NOT LIBOMP_OMPT_SUPPORT) OR (NOT "${CMAKE_SYSTEM_NAME}" STREQUAL "Linux")))
-  libomp_error_say("OpenMP Debug Interface(OMPD) requested but not available in this implementation")
+  libomp_warning_say("OpenMP Debug Interface(OMPD) requested but not available in this implementation")
+  set(LIBOMP_OMPD_SUPPORT FALSE)
 endif()
 
 # Error check hwloc support after config-ix has run
@@ -409,7 +403,6 @@ if(${OPENMP_STANDALONE_BUILD})
   libomp_say("Use OMPD-support     -- ${LIBOMP_OMPD_SUPPORT}")
   libomp_say("Use Adaptive locks   -- ${LIBOMP_USE_ADAPTIVE_LOCKS}")
   libomp_say("Use quad precision   -- ${LIBOMP_USE_QUAD_PRECISION}")
-  libomp_say("Use TSAN-support     -- ${LIBOMP_TSAN_SUPPORT}")
   libomp_say("Use Hwloc library    -- ${LIBOMP_USE_HWLOC}")
 endif()
 

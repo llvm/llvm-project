@@ -299,17 +299,37 @@ StringRef sys::detail::getHostCPUNameForARM(StringRef ProcCpuinfoContent) {
 
 namespace {
 StringRef getCPUNameFromS390Model(unsigned int Id, bool HaveVectorSupport) {
-  if (Id >= 8561 && HaveVectorSupport)
-    return "z15";
-  if (Id >= 3906 && HaveVectorSupport)
-    return "z14";
-  if (Id >= 2964 && HaveVectorSupport)
-    return "z13";
-  if (Id >= 2827)
-    return "zEC12";
-  if (Id >= 2817)
-    return "z196";
-  return "generic";
+  switch (Id) {
+    case 2064:  // z900 not supported by LLVM
+    case 2066:
+    case 2084:  // z990 not supported by LLVM
+    case 2086:
+    case 2094:  // z9-109 not supported by LLVM
+    case 2096:
+      return "generic";
+    case 2097:
+    case 2098:
+      return "z10";
+    case 2817:
+    case 2818:
+      return "z196";
+    case 2827:
+    case 2828:
+      return "zEC12";
+    case 2964:
+    case 2965:
+      return HaveVectorSupport? "z13" : "zEC12";
+    case 3906:
+    case 3907:
+      return HaveVectorSupport? "z14" : "zEC12";
+    case 8561:
+    case 8562:
+      return HaveVectorSupport? "z15" : "zEC12";
+    case 3931:
+    case 3932:
+    default:
+      return HaveVectorSupport? "arch14" : "zEC12";
+  }
 }
 } // end anonymous namespace
 
@@ -750,6 +770,22 @@ getIntelProcessorTypeAndSubtype(unsigned Family, unsigned Model,
       CPU = "icelake-client";
       *Type = X86::INTEL_COREI7;
       *Subtype = X86::INTEL_COREI7_ICELAKE_CLIENT;
+      break;
+
+    // Tigerlake:
+    case 0x8c:
+    case 0x8d:
+      CPU = "tigerlake";
+      *Type = X86::INTEL_COREI7;
+      *Subtype = X86::INTEL_COREI7_TIGERLAKE;
+      break;
+
+    // Alderlake:
+    case 0x97:
+    case 0x9a:
+      CPU = "alderlake";
+      *Type = X86::INTEL_COREI7;
+      *Subtype = X86::INTEL_COREI7_ALDERLAKE;
       break;
 
     // Icelake Xeon:
@@ -1404,7 +1440,7 @@ int computeHostNumPhysicalCores() {
 }
 #elif defined(__linux__) && defined(__s390x__)
 int computeHostNumPhysicalCores() { return sysconf(_SC_NPROCESSORS_ONLN); }
-#elif defined(__APPLE__) && defined(__x86_64__)
+#elif defined(__APPLE__)
 #include <sys/param.h>
 #include <sys/sysctl.h>
 
@@ -1597,6 +1633,7 @@ bool sys::getHostCPUFeatures(StringMap<bool> &Features) {
   // For more info, see X86 ISA docs.
   Features["pconfig"] = HasLeaf7 && ((EDX >> 18) & 1);
   Features["amx-bf16"]   = HasLeaf7 && ((EDX >> 22) & 1) && HasAMXSave;
+  Features["avx512fp16"] = HasLeaf7 && ((EDX >> 23) & 1) && HasAVX512Save;
   Features["amx-tile"]   = HasLeaf7 && ((EDX >> 24) & 1) && HasAMXSave;
   Features["amx-int8"]   = HasLeaf7 && ((EDX >> 25) & 1) && HasAMXSave;
   bool HasLeaf7Subleaf1 =

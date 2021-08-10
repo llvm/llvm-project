@@ -7,7 +7,6 @@
 //===----------------------------------------------------------------------===//
 
 #include "clang/Driver/ToolChain.h"
-#include "InputInfo.h"
 #include "ToolChains/Arch/ARM.h"
 #include "ToolChains/Clang.h"
 #include "ToolChains/InterfaceStubs.h"
@@ -19,6 +18,7 @@
 #include "clang/Driver/Action.h"
 #include "clang/Driver/Driver.h"
 #include "clang/Driver/DriverDiagnostic.h"
+#include "clang/Driver/InputInfo.h"
 #include "clang/Driver/Job.h"
 #include "clang/Driver/Options.h"
 #include "clang/Driver/SanitizerArgs.h"
@@ -386,6 +386,9 @@ static StringRef getArchNameForCompilerRTLib(const ToolChain &TC,
   // For historic reasons, Android library is using i686 instead of i386.
   if (TC.getArch() == llvm::Triple::x86 && Triple.isAndroid())
     return "i686";
+
+  if (TC.getArch() == llvm::Triple::x86_64 && Triple.isX32())
+    return "x32";
 
   return llvm::Triple::getArchTypeName(TC.getArch());
 }

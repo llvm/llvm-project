@@ -196,7 +196,7 @@ struct LoopInvariantCodeMotion {
   bool runOnLoop(Loop *L, AAResults *AA, LoopInfo *LI, DominatorTree *DT,
                  BlockFrequencyInfo *BFI, TargetLibraryInfo *TLI,
                  TargetTransformInfo *TTI, ScalarEvolution *SE, MemorySSA *MSSA,
-                 OptimizationRemarkEmitter *ORE);
+                 OptimizationRemarkEmitter *ORE, bool LoopNestMode = false);
 
   LoopInvariantCodeMotion(unsigned LicmMssaOptCap,
                           unsigned LicmMssaNoAccForPromotionCap)
@@ -295,6 +295,33 @@ PreservedAnalyses LICMPass::run(Loop &L, LoopAnalysisManager &AM,
   return PA;
 }
 
+PreservedAnalyses LNICMPass::run(LoopNest &LN, LoopAnalysisManager &AM,
+                                 LoopStandardAnalysisResults &AR,
+                                 LPMUpdater &) {
+  // For the new PM, we also can't use OptimizationRemarkEmitter as an analysis
+  // pass.  Function analyses need to be preserved across loop transformations
+  // but ORE cannot be preserved (see comment before the pass definition).
+  OptimizationRemarkEmitter ORE(LN.getParent());
+
+  LoopInvariantCodeMotion LICM(LicmMssaOptCap, LicmMssaNoAccForPromotionCap);
+
+  Loop &OutermostLoop = LN.getOutermostLoop();
+  bool Changed = LICM.runOnLoop(&OutermostLoop, &AR.AA, &AR.LI, &AR.DT, AR.BFI,
+                                &AR.TLI, &AR.TTI, &AR.SE, AR.MSSA, &ORE, true);
+
+  if (!Changed)
+    return PreservedAnalyses::all();
+
+  auto PA = getLoopPassPreservedAnalyses();
+
+  PA.preserve<DominatorTreeAnalysis>();
+  PA.preserve<LoopAnalysis>();
+  if (AR.MSSA)
+    PA.preserve<MemorySSAAnalysis>();
+
+  return PA;
+}
+
 char LegacyLICMPass::ID = 0;
 INITIALIZE_PASS_BEGIN(LegacyLICMPass, "licm", "Loop Invariant Code Motion",
                       false, false)
@@ -347,7 +374,8 @@ llvm::SinkAndHoistLICMFlags::SinkAndHoistLICMFlags(
 bool LoopInvariantCodeMotion::runOnLoop(
     Loop *L, AAResults *AA, LoopInfo *LI, DominatorTree *DT,
     BlockFrequencyInfo *BFI, TargetLibraryInfo *TLI, TargetTransformInfo *TTI,
-    ScalarEvolution *SE, MemorySSA *MSSA, OptimizationRemarkEmitter *ORE) {
+    ScalarEvolution *SE, MemorySSA *MSSA, OptimizationRemarkEmitter *ORE,
+    bool LoopNestMode) {
   bool Changed = false;
 
   assert(L->isLCSSAForm(*DT) && "Loop is not in LCSSA form.");
@@ -414,7 +442,7 @@ bool LoopInvariantCodeMotion::runOnLoop(
   if (Preheader)
     Changed |= hoistRegion(DT->getNode(L->getHeader()), AA, LI, DT, BFI, TLI, L,
                            CurAST.get(), MSSAU.get(), SE, &SafetyInfo,
-                           *Flags.get(), ORE);
+                           *Flags.get(), ORE, LoopNestMode);
 
   // Now that all loop invariants have been removed from the loop, promote any
   // memory references to scalars that we can.
@@ -859,7 +887,7 @@ bool llvm::hoistRegion(DomTreeNode *N, AAResults *AA, LoopInfo *LI,
                        AliasSetTracker *CurAST, MemorySSAUpdater *MSSAU,
                        ScalarEvolution *SE, ICFLoopSafetyInfo *SafetyInfo,
                        SinkAndHoistLICMFlags &Flags,
-                       OptimizationRemarkEmitter *ORE) {
+                       OptimizationRemarkEmitter *ORE, bool LoopNestMode) {
   // Verify inputs.
   assert(N != nullptr && AA != nullptr && LI != nullptr && DT != nullptr &&
          CurLoop != nullptr && SafetyInfo != nullptr &&
@@ -882,7 +910,7 @@ bool llvm::hoistRegion(DomTreeNode *N, AAResults *AA, LoopInfo *LI,
   for (BasicBlock *BB : Worklist) {
     // Only need to process the contents of this block if it is not part of a
     // subloop (which would already have been processed).
-    if (inSubLoop(BB, CurLoop, LI))
+    if (!LoopNestMode && inSubLoop(BB, CurLoop, LI))
       continue;
 
     for (BasicBlock::iterator II = BB->begin(), E = BB->end(); II != E;) {
@@ -1782,12 +1810,16 @@ static void hoist(Instruction &I, const DominatorTree *DT, const Loop *CurLoop,
   // Conservatively strip all metadata on the instruction unless we were
   // guaranteed to execute I if we entered the loop, in which case the metadata
   // is valid in the loop preheader.
-  if (I.hasMetadataOtherThanDebugLoc() &&
+  // Similarly, If I is a call and it is not guaranteed to execute in the loop,
+  // then moving to the preheader means we should strip attributes on the call
+  // that can cause UB since we may be hoisting above conditions that allowed
+  // inferring those attributes. They may not be valid at the preheader.
+  if ((I.hasMetadataOtherThanDebugLoc() || isa<CallInst>(I)) &&
       // The check on hasMetadataOtherThanDebugLoc is to prevent us from burning
       // time in isGuaranteedToExecute if we don't actually have anything to
       // drop.  It is a compile time optimization, not required for correctness.
       !SafetyInfo->isGuaranteedToExecute(I, DT, CurLoop))
-    I.dropUnknownNonDebugMetadata();
+    I.dropUndefImplyingAttrsAndUnknownMetadata();
 
   if (isa<PHINode>(I))
     // Move the new node to the end of the phi list in the destination block.

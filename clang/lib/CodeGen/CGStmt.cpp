@@ -2097,7 +2097,8 @@ CodeGenFunction::EmitAsmInputLValue(const TargetInfo::ConstraintInfo &Info,
     } else {
       llvm::Type *Ty = ConvertType(InputType);
       uint64_t Size = CGM.getDataLayout().getTypeSizeInBits(Ty);
-      if (Size <= 64 && llvm::isPowerOf2_64(Size)) {
+      if ((Size <= 64 && llvm::isPowerOf2_64(Size)) ||
+          getTargetHooks().isScalarizableAsmOperand(*this, Ty)) {
         Ty = llvm::IntegerType::get(getLLVMContext(), Size);
         Ty = llvm::PointerType::getUnqual(Ty);
 
@@ -2158,7 +2159,7 @@ static llvm::MDNode *getAsmSrcLocInfo(const StringLiteral *Str,
   SmallVector<llvm::Metadata *, 8> Locs;
   // Add the location of the first line to the MDNode.
   Locs.push_back(llvm::ConstantAsMetadata::get(llvm::ConstantInt::get(
-      CGF.Int32Ty, Str->getBeginLoc().getRawEncoding())));
+      CGF.Int64Ty, Str->getBeginLoc().getRawEncoding())));
   StringRef StrVal = Str->getString();
   if (!StrVal.empty()) {
     const SourceManager &SM = CGF.CGM.getContext().getSourceManager();
@@ -2173,7 +2174,7 @@ static llvm::MDNode *getAsmSrcLocInfo(const StringLiteral *Str,
       SourceLocation LineLoc = Str->getLocationOfByte(
           i + 1, SM, LangOpts, CGF.getTarget(), &StartToken, &ByteOffset);
       Locs.push_back(llvm::ConstantAsMetadata::get(
-          llvm::ConstantInt::get(CGF.Int32Ty, LineLoc.getRawEncoding())));
+          llvm::ConstantInt::get(CGF.Int64Ty, LineLoc.getRawEncoding())));
     }
   }
 
@@ -2210,8 +2211,8 @@ static void UpdateAsmCallInst(llvm::CallBase &Result, bool HasSideEffect,
                        getAsmSrcLocInfo(gccAsmStmt->getAsmString(), CGF));
   else {
     // At least put the line number on MS inline asm blobs.
-    llvm::Constant *Loc = llvm::ConstantInt::get(CGF.Int32Ty,
-                                        S.getAsmLoc().getRawEncoding());
+    llvm::Constant *Loc =
+        llvm::ConstantInt::get(CGF.Int64Ty, S.getAsmLoc().getRawEncoding());
     Result.setMetadata("srcloc",
                        llvm::MDNode::get(CGF.getLLVMContext(),
                                          llvm::ConstantAsMetadata::get(Loc)));
@@ -2320,23 +2321,28 @@ void CodeGenFunction::EmitAsmStmt(const AsmStmt &S) {
 
     // If this is a register output, then make the inline asm return it
     // by-value.  If this is a memory result, return the value by-reference.
-    bool isScalarizableAggregate =
-        hasAggregateEvaluationKind(OutExpr->getType());
-    if (!Info.allowsMemory() && (hasScalarEvaluationKind(OutExpr->getType()) ||
-                                 isScalarizableAggregate)) {
+    QualType QTy = OutExpr->getType();
+    const bool IsScalarOrAggregate = hasScalarEvaluationKind(QTy) ||
+                                     hasAggregateEvaluationKind(QTy);
+    if (!Info.allowsMemory() && IsScalarOrAggregate) {
+
       Constraints += "=" + OutputConstraint;
-      ResultRegQualTys.push_back(OutExpr->getType());
+      ResultRegQualTys.push_back(QTy);
       ResultRegDests.push_back(Dest);
-      ResultTruncRegTypes.push_back(ConvertTypeForMem(OutExpr->getType()));
-      if (Info.allowsRegister() && isScalarizableAggregate) {
-        ResultTypeRequiresCast.push_back(true);
-        unsigned Size = getContext().getTypeSize(OutExpr->getType());
-        llvm::Type *ConvTy = llvm::IntegerType::get(getLLVMContext(), Size);
-        ResultRegTypes.push_back(ConvTy);
-      } else {
-        ResultTypeRequiresCast.push_back(false);
-        ResultRegTypes.push_back(ResultTruncRegTypes.back());
+
+      llvm::Type *Ty = ConvertTypeForMem(QTy);
+      const bool RequiresCast = Info.allowsRegister() &&
+          (getTargetHooks().isScalarizableAsmOperand(*this, Ty) ||
+           Ty->isAggregateType());
+
+      ResultTruncRegTypes.push_back(Ty);
+      ResultTypeRequiresCast.push_back(RequiresCast);
+
+      if (RequiresCast) {
+        unsigned Size = getContext().getTypeSize(QTy);
+        Ty = llvm::IntegerType::get(getLLVMContext(), Size);
       }
+      ResultRegTypes.push_back(Ty);
       // If this output is tied to an input, and if the input is larger, then
       // we need to set the actual result type of the inline asm node to be the
       // same as the input type.
@@ -2638,11 +2644,11 @@ void CodeGenFunction::EmitAsmStmt(const AsmStmt &S) {
   assert(ResultTypeRequiresCast.size() <= ResultRegDests.size());
   for (unsigned i = 0, e = RegResults.size(); i != e; ++i) {
     llvm::Value *Tmp = RegResults[i];
+    llvm::Type *TruncTy = ResultTruncRegTypes[i];
 
     // If the result type of the LLVM IR asm doesn't match the result type of
     // the expression, do the conversion.
     if (ResultRegTypes[i] != ResultTruncRegTypes[i]) {
-      llvm::Type *TruncTy = ResultTruncRegTypes[i];
 
       // Truncate the integer result to the right size, note that TruncTy can be
       // a pointer.
@@ -2672,6 +2678,11 @@ void CodeGenFunction::EmitAsmStmt(const AsmStmt &S) {
       unsigned Size = getContext().getTypeSize(ResultRegQualTys[i]);
       Address A = Builder.CreateBitCast(Dest.getAddress(*this),
                                         ResultRegTypes[i]->getPointerTo());
+      if (getTargetHooks().isScalarizableAsmOperand(*this, TruncTy)) {
+        Builder.CreateStore(Tmp, A);
+        continue;
+      }
+
       QualType Ty = getContext().getIntTypeForBitwidth(Size, /*Signed*/ false);
       if (Ty.isNull()) {
         const Expr *OutExpr = S.getOutputExpr(i);

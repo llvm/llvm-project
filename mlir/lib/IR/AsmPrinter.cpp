@@ -356,9 +356,9 @@ private:
 /// in the output, and trims down unnecessary output.
 class DummyAliasOperationPrinter : private OpAsmPrinter {
 public:
-  explicit DummyAliasOperationPrinter(const OpPrintingFlags &flags,
+  explicit DummyAliasOperationPrinter(const OpPrintingFlags &printerFlags,
                                       AliasInitializer &initializer)
-      : printerFlags(flags), initializer(initializer) {}
+      : printerFlags(printerFlags), initializer(initializer) {}
 
   /// Print the given operation.
   void print(Operation *op) {
@@ -652,21 +652,28 @@ void AliasInitializer::visit(Type type) {
 template <typename T>
 LogicalResult AliasInitializer::generateAlias(
     T symbol, llvm::MapVector<StringRef, std::vector<T>> &aliasToSymbol) {
-  SmallString<16> tempBuffer;
+  SmallString<32> nameBuffer;
   for (const auto &interface : interfaces) {
-    if (failed(interface.getAlias(symbol, aliasOS)))
+    OpAsmDialectInterface::AliasResult result =
+        interface.getAlias(symbol, aliasOS);
+    if (result == OpAsmDialectInterface::AliasResult::NoAlias)
       continue;
-    StringRef name = aliasOS.str();
-    assert(!name.empty() && "expected valid alias name");
-    name = sanitizeIdentifier(name, tempBuffer, /*allowedPunctChars=*/"$_-",
-                              /*allowTrailingDigit=*/false);
-    name = name.copy(aliasAllocator);
-
-    aliasToSymbol[name].push_back(symbol);
-    aliasBuffer.clear();
-    return success();
+    nameBuffer = std::move(aliasBuffer);
+    assert(!nameBuffer.empty() && "expected valid alias name");
+    if (result == OpAsmDialectInterface::AliasResult::FinalAlias)
+      break;
   }
-  return failure();
+
+  if (nameBuffer.empty())
+    return failure();
+
+  SmallString<16> tempBuffer;
+  StringRef name =
+      sanitizeIdentifier(nameBuffer, tempBuffer, /*allowedPunctChars=*/"$_-",
+                         /*allowTrailingDigit=*/false);
+  name = name.copy(aliasAllocator);
+  aliasToSymbol[name].push_back(symbol);
+  return success();
 }
 
 //===----------------------------------------------------------------------===//
@@ -767,7 +774,7 @@ public:
   /// A sentinel value used for values with names set.
   enum : unsigned { NameSentinel = ~0U };
 
-  SSANameState(Operation *op,
+  SSANameState(Operation *op, const OpPrintingFlags &printerFlags,
                DialectInterfaceCollection<OpAsmDialectInterface> &interfaces);
 
   /// Print the SSA identifier for the given value to 'stream'. If
@@ -789,15 +796,9 @@ public:
 
 private:
   /// Number the SSA values within the given IR unit.
-  void numberValuesInRegion(
-      Region &region,
-      DialectInterfaceCollection<OpAsmDialectInterface> &interfaces);
-  void numberValuesInBlock(
-      Block &block,
-      DialectInterfaceCollection<OpAsmDialectInterface> &interfaces);
-  void numberValuesInOp(
-      Operation &op,
-      DialectInterfaceCollection<OpAsmDialectInterface> &interfaces);
+  void numberValuesInRegion(Region &region);
+  void numberValuesInBlock(Block &block);
+  void numberValuesInOp(Operation &op);
 
   /// Given a result of an operation 'result', find the result group head
   /// 'lookupValue' and the result of 'result' within that group in
@@ -838,12 +839,19 @@ private:
   unsigned nextArgumentID = 0;
   /// This is the next ID to assign when a name conflict is detected.
   unsigned nextConflictID = 0;
+
+  /// These are the printing flags.  They control, eg., whether to print in
+  /// generic form.
+  OpPrintingFlags printerFlags;
+
+  DialectInterfaceCollection<OpAsmDialectInterface> &interfaces;
 };
 } // end anonymous namespace
 
 SSANameState::SSANameState(
-    Operation *op,
-    DialectInterfaceCollection<OpAsmDialectInterface> &interfaces) {
+    Operation *op, const OpPrintingFlags &printerFlags,
+    DialectInterfaceCollection<OpAsmDialectInterface> &interfaces)
+    : printerFlags(printerFlags), interfaces(interfaces) {
   llvm::SaveAndRestore<unsigned> valueIDSaver(nextValueID);
   llvm::SaveAndRestore<unsigned> argumentIDSaver(nextArgumentID);
   llvm::SaveAndRestore<unsigned> conflictIDSaver(nextConflictID);
@@ -867,7 +875,7 @@ SSANameState::SSANameState(
     nameContext.push_back(std::make_tuple(&region, nextValueID, nextArgumentID,
                                           nextConflictID, topLevelNamesScope));
 
-  numberValuesInOp(*op, interfaces);
+  numberValuesInOp(*op);
 
   while (!nameContext.empty()) {
     Region *region;
@@ -887,7 +895,7 @@ SSANameState::SSANameState(
     auto *curNamesScope = new (allocator.Allocate<UsedNamesScopeTy>())
         UsedNamesScopeTy(usedNames);
 
-    numberValuesInRegion(*region, interfaces);
+    numberValuesInRegion(*region);
 
     for (Operation &op : region->getOps())
       for (Region &region : op.getRegions())
@@ -974,22 +982,18 @@ void SSANameState::shadowRegionArgs(Region &region, ValueRange namesToUse) {
   }
 }
 
-void SSANameState::numberValuesInRegion(
-    Region &region,
-    DialectInterfaceCollection<OpAsmDialectInterface> &interfaces) {
+void SSANameState::numberValuesInRegion(Region &region) {
   // Number the values within this region in a breadth-first order.
   unsigned nextBlockID = 0;
   for (auto &block : region) {
     // Each block gets a unique ID, and all of the operations within it get
     // numbered as well.
     blockIDs[&block] = nextBlockID++;
-    numberValuesInBlock(block, interfaces);
+    numberValuesInBlock(block);
   }
 }
 
-void SSANameState::numberValuesInBlock(
-    Block &block,
-    DialectInterfaceCollection<OpAsmDialectInterface> &interfaces) {
+void SSANameState::numberValuesInBlock(Block &block) {
   auto setArgNameFn = [&](Value arg, StringRef name) {
     assert(!valueIDs.count(arg) && "arg numbered multiple times");
     assert(arg.cast<BlockArgument>().getOwner() == &block &&
@@ -998,7 +1002,7 @@ void SSANameState::numberValuesInBlock(
   };
 
   bool isEntryBlock = block.isEntryBlock();
-  if (isEntryBlock) {
+  if (isEntryBlock && !printerFlags.shouldPrintGenericOpForm()) {
     if (auto *op = block.getParentOp()) {
       if (auto asmInterface = interfaces.getInterfaceFor(op->getDialect()))
         asmInterface->getAsmBlockArgumentNames(&block, setArgNameFn);
@@ -1021,12 +1025,10 @@ void SSANameState::numberValuesInBlock(
 
   // Number the operations in this block.
   for (auto &op : block)
-    numberValuesInOp(op, interfaces);
+    numberValuesInOp(op);
 }
 
-void SSANameState::numberValuesInOp(
-    Operation &op,
-    DialectInterfaceCollection<OpAsmDialectInterface> &interfaces) {
+void SSANameState::numberValuesInOp(Operation &op) {
   unsigned numResults = op.getNumResults();
   if (numResults == 0)
     return;
@@ -1043,10 +1045,12 @@ void SSANameState::numberValuesInOp(
     if (int resultNo = result.cast<OpResult>().getResultNumber())
       resultGroups.push_back(resultNo);
   };
-  if (OpAsmOpInterface asmInterface = dyn_cast<OpAsmOpInterface>(&op))
-    asmInterface.getAsmResultNames(setResultNameFn);
-  else if (auto *asmInterface = interfaces.getInterfaceFor(op.getDialect()))
-    asmInterface->getAsmResultNames(&op, setResultNameFn);
+  if (!printerFlags.shouldPrintGenericOpForm()) {
+    if (OpAsmOpInterface asmInterface = dyn_cast<OpAsmOpInterface>(&op))
+      asmInterface.getAsmResultNames(setResultNameFn);
+    else if (auto *asmInterface = interfaces.getInterfaceFor(op.getDialect()))
+      asmInterface->getAsmResultNames(&op, setResultNameFn);
+  }
 
   // If the first result wasn't numbered, give it a default number.
   if (valueIDs.try_emplace(resultBegin, nextValueID).second)
@@ -1143,12 +1147,13 @@ namespace mlir {
 namespace detail {
 class AsmStateImpl {
 public:
-  explicit AsmStateImpl(Operation *op, AsmState::LocationMap *locationMap)
-      : interfaces(op->getContext()), nameState(op, interfaces),
-        locationMap(locationMap) {}
+  explicit AsmStateImpl(Operation *op, const OpPrintingFlags &printerFlags,
+                        AsmState::LocationMap *locationMap)
+      : interfaces(op->getContext()), nameState(op, printerFlags, interfaces),
+        printerFlags(printerFlags), locationMap(locationMap) {}
 
   /// Initialize the alias state to enable the printing of aliases.
-  void initializeAliases(Operation *op, const OpPrintingFlags &printerFlags) {
+  void initializeAliases(Operation *op) {
     aliasState.initialize(op, printerFlags, interfaces);
   }
 
@@ -1181,14 +1186,18 @@ private:
   /// The state used for SSA value names.
   SSANameState nameState;
 
+  /// Flags that control op output.
+  OpPrintingFlags printerFlags;
+
   /// An optional location map to be populated.
   AsmState::LocationMap *locationMap;
 };
 } // end namespace detail
 } // end namespace mlir
 
-AsmState::AsmState(Operation *op, LocationMap *locationMap)
-    : impl(std::make_unique<AsmStateImpl>(op, locationMap)) {}
+AsmState::AsmState(Operation *op, const OpPrintingFlags &printerFlags,
+                   LocationMap *locationMap)
+    : impl(std::make_unique<AsmStateImpl>(op, printerFlags, locationMap)) {}
 AsmState::~AsmState() {}
 
 //===----------------------------------------------------------------------===//
@@ -2769,18 +2778,18 @@ void Value::printAsOperand(raw_ostream &os, AsmState &state) {
                                                  os);
 }
 
-void Operation::print(raw_ostream &os, OpPrintingFlags flags) {
+void Operation::print(raw_ostream &os, const OpPrintingFlags &printerFlags) {
   // If this is a top level operation, we also print aliases.
-  if (!getParent() && !flags.shouldUseLocalScope()) {
-    AsmState state(this);
-    state.getImpl().initializeAliases(this, flags);
-    print(os, state, flags);
+  if (!getParent() && !printerFlags.shouldUseLocalScope()) {
+    AsmState state(this, printerFlags);
+    state.getImpl().initializeAliases(this);
+    print(os, state, printerFlags);
     return;
   }
 
   // Find the operation to number from based upon the provided flags.
   Operation *op = this;
-  bool shouldUseLocalScope = flags.shouldUseLocalScope();
+  bool shouldUseLocalScope = printerFlags.shouldUseLocalScope();
   do {
     // If we are printing local scope, stop at the first operation that is
     // isolated from above.
@@ -2794,10 +2803,11 @@ void Operation::print(raw_ostream &os, OpPrintingFlags flags) {
     op = parentOp;
   } while (true);
 
-  AsmState state(op);
-  print(os, state, flags);
+  AsmState state(op, printerFlags);
+  print(os, state, printerFlags);
 }
-void Operation::print(raw_ostream &os, AsmState &state, OpPrintingFlags flags) {
+void Operation::print(raw_ostream &os, AsmState &state,
+                      const OpPrintingFlags &flags) {
   OperationPrinter printer(os, flags, state.getImpl());
   if (!getParent() && !flags.shouldUseLocalScope())
     printer.printTopLevelOperation(this);

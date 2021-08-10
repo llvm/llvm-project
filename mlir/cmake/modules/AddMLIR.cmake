@@ -54,7 +54,7 @@ endfunction()
 #   with large dependencies.
 function(add_mlir_library name)
   cmake_parse_arguments(ARG
-    "SHARED;INSTALL_WITH_TOOLCHAIN;EXCLUDE_FROM_LIBMLIR"
+    "SHARED;INSTALL_WITH_TOOLCHAIN;EXCLUDE_FROM_LIBMLIR;DISABLE_INSTALL"
     ""
     "ADDITIONAL_HEADERS;DEPENDS;LINK_COMPONENTS;LINK_LIBS"
     ${ARGN})
@@ -131,7 +131,9 @@ function(add_mlir_library name)
 
   if(TARGET ${name})
     target_link_libraries(${name} INTERFACE ${LLVM_COMMON_LIBS})
-    add_mlir_library_install(${name})
+    if(NOT ARG_DISABLE_INSTALL)
+      add_mlir_library_install(${name})
+    endif()
   else()
     # Add empty "phony" target
     add_custom_target(${name})
@@ -162,10 +164,7 @@ function(add_mlir_library_install name)
   set_property(GLOBAL APPEND PROPERTY MLIR_EXPORTS ${name})
 endfunction()
 
-# Declare an mlir library which is part of the public C-API and will be
-# compiled and exported into libMLIRPublicAPI.so/MLIRPublicAPI.dll.
-# This shared library is built regardless of the overall setting of building
-# libMLIR.so (which exports the C++ implementation).
+# Declare an mlir library which is part of the public C-API.
 function(add_mlir_public_c_api_library name)
   add_mlir_library(${name}
     ${ARGN}
@@ -186,7 +185,6 @@ function(add_mlir_public_c_api_library name)
     PRIVATE
     -DMLIR_CAPI_BUILDING_LIBRARY=1
   )
-  set_property(GLOBAL APPEND PROPERTY MLIR_PUBLIC_C_API_LIBS ${name})
 endfunction()
 
 # Declare the library associated with a dialect.

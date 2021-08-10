@@ -7,8 +7,11 @@
 //===----------------------------------------------------------------------===//
 
 #include "allocatable.h"
+#include "assign.h"
+#include "derived.h"
 #include "stat.h"
 #include "terminator.h"
+#include "type-info.h"
 
 namespace Fortran::runtime {
 extern "C" {
@@ -35,14 +38,10 @@ void RTNAME(AllocatableInitDerived)(Descriptor &descriptor,
       derivedType, nullptr, rank, nullptr, CFI_attribute_allocatable);
 }
 
-void RTNAME(AllocatableAssign)(Descriptor &to, const Descriptor & /*from*/) {
-  INTERNAL_CHECK(false); // AllocatableAssign is not yet implemented
-}
-
 int RTNAME(MoveAlloc)(Descriptor &to, const Descriptor & /*from*/,
     bool /*hasStat*/, const Descriptor * /*errMsg*/,
     const char * /*sourceFile*/, int /*sourceLine*/) {
-  INTERNAL_CHECK(false); // MoveAlloc is not yet implemented
+  INTERNAL_CHECK(false); // TODO: MoveAlloc is not yet implemented
   return StatOk;
 }
 
@@ -51,6 +50,20 @@ void RTNAME(AllocatableSetBounds)(Descriptor &descriptor, int zeroBasedDim,
   INTERNAL_CHECK(zeroBasedDim >= 0 && zeroBasedDim < descriptor.rank());
   descriptor.GetDimension(zeroBasedDim).SetBounds(lower, upper);
   // The byte strides are computed when the object is allocated.
+}
+
+void RTNAME(AllocatableSetDerivedLength)(
+    Descriptor &descriptor, int which, SubscriptValue x) {
+  DescriptorAddendum *addendum{descriptor.Addendum()};
+  INTERNAL_CHECK(addendum != nullptr);
+  addendum->SetLenParameterValue(which, x);
+}
+
+void RTNAME(AllocatableApplyMold)(
+    Descriptor &descriptor, const Descriptor &mold) {
+  descriptor = mold;
+  descriptor.set_base_addr(nullptr);
+  descriptor.raw().attribute = CFI_attribute_allocatable;
 }
 
 int RTNAME(AllocatableAllocate)(Descriptor &descriptor, bool hasStat,
@@ -62,7 +75,17 @@ int RTNAME(AllocatableAllocate)(Descriptor &descriptor, bool hasStat,
   if (descriptor.IsAllocated()) {
     return ReturnError(terminator, StatBaseNotNull, errMsg, hasStat);
   }
-  return ReturnError(terminator, descriptor.Allocate(), errMsg, hasStat);
+  int stat{ReturnError(terminator, descriptor.Allocate(), errMsg, hasStat)};
+  if (stat == StatOk) {
+    if (const DescriptorAddendum * addendum{descriptor.Addendum()}) {
+      if (const auto *derived{addendum->derivedType()}) {
+        if (!derived->noInitializationNeeded()) {
+          stat = Initialize(descriptor, *derived, terminator, hasStat, errMsg);
+        }
+      }
+    }
+  }
+  return stat;
 }
 
 int RTNAME(AllocatableDeallocate)(Descriptor &descriptor, bool hasStat,
@@ -74,7 +97,21 @@ int RTNAME(AllocatableDeallocate)(Descriptor &descriptor, bool hasStat,
   if (!descriptor.IsAllocated()) {
     return ReturnError(terminator, StatBaseNull, errMsg, hasStat);
   }
-  return ReturnError(terminator, descriptor.Deallocate(), errMsg, hasStat);
+  return ReturnError(terminator, descriptor.Destroy(true), errMsg, hasStat);
 }
+
+void RTNAME(AllocatableDeallocateNoFinal)(
+    Descriptor &descriptor, const char *sourceFile, int sourceLine) {
+  Terminator terminator{sourceFile, sourceLine};
+  if (!descriptor.IsAllocatable()) {
+    ReturnError(terminator, StatInvalidDescriptor);
+  } else if (!descriptor.IsAllocated()) {
+    ReturnError(terminator, StatBaseNull);
+  } else {
+    ReturnError(terminator, descriptor.Destroy(false));
+  }
+}
+
+// TODO: AllocatableCheckLengthParameter, AllocatableAllocateSource
 }
 } // namespace Fortran::runtime

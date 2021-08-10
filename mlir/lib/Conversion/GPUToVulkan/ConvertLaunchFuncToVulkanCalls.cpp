@@ -248,7 +248,7 @@ void VulkanLaunchFuncToVulkanCallsPass::createBindMemRefCalls(
     }
     // Create call to `bindMemRef`.
     builder.create<LLVM::CallOp>(
-        loc, TypeRange{getVoidType()},
+        loc, TypeRange(),
         builder.getSymbolRefAttr(
             StringRef(symbolName.data(), symbolName.size())),
         ValueRange{vulkanRuntime, descriptorSet, descriptorBinding,
@@ -396,32 +396,31 @@ void VulkanLaunchFuncToVulkanCallsPass::translateVulkanLaunchCall(
   // Create call to `setBinaryShader` runtime function with the given pointer to
   // SPIR-V binary and binary size.
   builder.create<LLVM::CallOp>(
-      loc, TypeRange{getVoidType()}, builder.getSymbolRefAttr(kSetBinaryShader),
+      loc, TypeRange(), builder.getSymbolRefAttr(kSetBinaryShader),
       ValueRange{vulkanRuntime, ptrToSPIRVBinary, binarySize});
   // Create LLVM global with entry point name.
   Value entryPointName = createEntryPointNameConstant(
       spirvAttributes.second.getValue(), loc, builder);
   // Create call to `setEntryPoint` runtime function with the given pointer to
   // entry point name.
-  builder.create<LLVM::CallOp>(loc, TypeRange{getVoidType()},
+  builder.create<LLVM::CallOp>(loc, TypeRange(),
                                builder.getSymbolRefAttr(kSetEntryPoint),
                                ValueRange{vulkanRuntime, entryPointName});
 
   // Create number of local workgroup for each dimension.
   builder.create<LLVM::CallOp>(
-      loc, TypeRange{getVoidType()},
-      builder.getSymbolRefAttr(kSetNumWorkGroups),
+      loc, TypeRange(), builder.getSymbolRefAttr(kSetNumWorkGroups),
       ValueRange{vulkanRuntime, cInterfaceVulkanLaunchCallOp.getOperand(0),
                  cInterfaceVulkanLaunchCallOp.getOperand(1),
                  cInterfaceVulkanLaunchCallOp.getOperand(2)});
 
   // Create call to `runOnVulkan` runtime function.
-  builder.create<LLVM::CallOp>(loc, TypeRange{getVoidType()},
+  builder.create<LLVM::CallOp>(loc, TypeRange(),
                                builder.getSymbolRefAttr(kRunOnVulkan),
                                ValueRange{vulkanRuntime});
 
   // Create call to 'deinitVulkan' runtime function.
-  builder.create<LLVM::CallOp>(loc, TypeRange{getVoidType()},
+  builder.create<LLVM::CallOp>(loc, TypeRange(),
                                builder.getSymbolRefAttr(kDeinitVulkan),
                                ValueRange{vulkanRuntime});
 

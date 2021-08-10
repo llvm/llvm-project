@@ -9,6 +9,7 @@
 #include "OutputSegment.h"
 #include "ConcatOutputSection.h"
 #include "InputSection.h"
+#include "Symbols.h"
 #include "SyntheticSections.h"
 
 #include "lld/Common/ErrorHandler.h"
@@ -145,17 +146,31 @@ void OutputSegment::sortOutputSections() {
   llvm::stable_sort(sections, compareByOrder<OutputSection *>(sectionOrder));
 }
 
+void OutputSegment::assignAddressesToStartEndSymbols() {
+  for (Defined *d : segmentStartSymbols)
+    d->value = addr;
+  for (Defined *d : segmentEndSymbols)
+    d->value = addr + vmSize;
+}
+
 void macho::sortOutputSegments() {
-  // sort() instead of stable_sort() is fine because segmentOrder() is
-  // name-based and getOrCreateOutputSegment() makes there's only a single
-  // segment for every name.
-  llvm::sort(outputSegments, compareByOrder<OutputSegment *>(segmentOrder));
+  llvm::stable_sort(outputSegments,
+                    compareByOrder<OutputSegment *>(segmentOrder));
 }
 
 static DenseMap<StringRef, OutputSegment *> nameToOutputSegment;
 std::vector<OutputSegment *> macho::outputSegments;
 
+static StringRef maybeRenameSegment(StringRef name) {
+  auto newName = config->segmentRenameMap.find(name);
+  if (newName != config->segmentRenameMap.end())
+    return newName->second;
+  return name;
+}
+
 OutputSegment *macho::getOrCreateOutputSegment(StringRef name) {
+  name = maybeRenameSegment(name);
+
   OutputSegment *&segRef = nameToOutputSegment[name];
   if (segRef)
     return segRef;

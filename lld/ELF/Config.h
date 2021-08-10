@@ -38,6 +38,10 @@ enum ELFKind {
   ELF64BEKind
 };
 
+// For -Bno-symbolic, -Bsymbolic-non-weak-functions, -Bsymbolic-functions,
+// -Bsymbolic.
+enum class BsymbolicKind { None, NonWeakFunctions, Functions, All };
+
 // For --build-id.
 enum class BuildIdKind { None, Fast, Md5, Sha1, Hexstring, Uuid };
 
@@ -82,7 +86,8 @@ struct SymbolVersion {
 struct VersionDefinition {
   llvm::StringRef name;
   uint16_t id;
-  std::vector<SymbolVersion> patterns;
+  std::vector<SymbolVersion> nonLocalPatterns;
+  std::vector<SymbolVersion> localPatterns;
 };
 
 // This struct contains the global configuration for the linker.
@@ -144,8 +149,7 @@ struct Configuration {
   bool armHasMovtMovw = false;
   bool armJ1J2BranchEncoding = false;
   bool asNeeded = false;
-  bool bsymbolic = false;
-  bool bsymbolicFunctions = false;
+  BsymbolicKind bsymbolic = BsymbolicKind::None;
   bool callGraphProfileSort;
   bool checkSections;
   bool checkDynamicRelocs;

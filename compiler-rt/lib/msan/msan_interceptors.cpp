@@ -21,6 +21,7 @@
 #include "msan_report.h"
 #include "msan_thread.h"
 #include "msan_poisoning.h"
+#include "sanitizer_common/sanitizer_errno_codes.h"
 #include "sanitizer_common/sanitizer_platform_limits_posix.h"
 #include "sanitizer_common/sanitizer_platform_limits_netbsd.h"
 #include "sanitizer_common/sanitizer_allocator.h"
@@ -1091,7 +1092,7 @@ struct MSanAtExitRecord {
 };
 
 struct InterceptorContext {
-  BlockingMutex atexit_mu;
+  Mutex atexit_mu;
   Vector<struct MSanAtExitRecord *> AtExitStack;
 
   InterceptorContext()
@@ -1107,7 +1108,7 @@ InterceptorContext *interceptor_ctx() {
 void MSanAtExitWrapper() {
   MSanAtExitRecord *r;
   {
-    BlockingMutexLock l(&interceptor_ctx()->atexit_mu);
+    Lock l(&interceptor_ctx()->atexit_mu);
 
     uptr element = interceptor_ctx()->AtExitStack.Size() - 1;
     r = interceptor_ctx()->AtExitStack[element];
@@ -1158,7 +1159,7 @@ static int setup_at_exit_wrapper(void(*f)(), void *arg, void *dso) {
     // NetBSD does not preserve the 2nd argument if dso is equal to 0
     // Store ctx in a local stack-like structure
 
-    BlockingMutexLock l(&interceptor_ctx()->atexit_mu);
+    Lock l(&interceptor_ctx()->atexit_mu);
 
     res = REAL(__cxa_atexit)((void (*)(void *a))MSanAtExitWrapper, 0, 0);
     if (!res) {
@@ -1277,14 +1278,15 @@ int OnExit() {
   CHECK_UNPOISONED_CTX(ctx, ptr, size)
 #define COMMON_INTERCEPTOR_INITIALIZE_RANGE(ptr, size) \
   __msan_unpoison(ptr, size)
-#define COMMON_INTERCEPTOR_ENTER(ctx, func, ...)                  \
-  if (msan_init_is_running) return REAL(func)(__VA_ARGS__);       \
-  ENSURE_MSAN_INITED();                                           \
-  MSanInterceptorContext msan_ctx = {IsInInterceptorScope()};     \
-  ctx = (void *)&msan_ctx;                                        \
-  (void)ctx;                                                      \
-  InterceptorScope interceptor_scope;                             \
-  __msan_unpoison(__errno_location(), sizeof(int)); /* NOLINT */
+#define COMMON_INTERCEPTOR_ENTER(ctx, func, ...)              \
+  if (msan_init_is_running)                                   \
+    return REAL(func)(__VA_ARGS__);                           \
+  ENSURE_MSAN_INITED();                                       \
+  MSanInterceptorContext msan_ctx = {IsInInterceptorScope()}; \
+  ctx = (void *)&msan_ctx;                                    \
+  (void)ctx;                                                  \
+  InterceptorScope interceptor_scope;                         \
+  __msan_unpoison(__errno_location(), sizeof(int));
 #define COMMON_INTERCEPTOR_DIR_ACQUIRE(ctx, path) \
   do {                                            \
   } while (false)
@@ -1373,11 +1375,14 @@ static int sigaction_impl(int signo, const __sanitizer_sigaction *act,
 static int sigaction_impl(int signo, const __sanitizer_sigaction *act,
                           __sanitizer_sigaction *oldact) {
   ENSURE_MSAN_INITED();
+  if (signo <= 0 || signo >= kMaxSignals) {
+    errno = errno_EINVAL;
+    return -1;
+  }
   if (act) read_sigaction(act);
   int res;
   if (flags()->wrap_signals) {
     SpinMutexLock lock(&sigactions_mu);
-    CHECK_LT(signo, kMaxSignals);
     uptr old_cb = atomic_load(&sigactions[signo], memory_order_relaxed);
     __sanitizer_sigaction new_act;
     __sanitizer_sigaction *pnew_act = act ? &new_act : nullptr;
@@ -1411,8 +1416,11 @@ static int sigaction_impl(int signo, const __sanitizer_sigaction *act,
 
 static uptr signal_impl(int signo, uptr cb) {
   ENSURE_MSAN_INITED();
+  if (signo <= 0 || signo >= kMaxSignals) {
+    errno = errno_EINVAL;
+    return -1;
+  }
   if (flags()->wrap_signals) {
-    CHECK_LT(signo, kMaxSignals);
     SpinMutexLock lock(&sigactions_mu);
     if (cb != __sanitizer::sig_ign && cb != __sanitizer::sig_dfl) {
       atomic_store(&sigactions[signo], cb, memory_order_relaxed);

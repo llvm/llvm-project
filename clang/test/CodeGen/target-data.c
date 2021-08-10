@@ -108,11 +108,11 @@
 
 // RUN: %clang_cc1 -triple wasm32-unknown-unknown -o - -emit-llvm %s | \
 // RUN: FileCheck %s -check-prefix=WEBASSEMBLY32
-// WEBASSEMBLY32: target datalayout = "e-m:e-p:32:32-i64:64-n32:64-S128-ni:1"
+// WEBASSEMBLY32: target datalayout = "e-m:e-p:32:32-i64:64-n32:64-S128-ni:1:10:20"
 
 // RUN: %clang_cc1 -triple wasm64-unknown-unknown -o - -emit-llvm %s | \
 // RUN: FileCheck %s -check-prefix=WEBASSEMBLY64
-// WEBASSEMBLY64: target datalayout = "e-m:e-p:64:64-i64:64-n32:64-S128-ni:1"
+// WEBASSEMBLY64: target datalayout = "e-m:e-p:64:64-i64:64-n32:64-S128-ni:1:10:20"
 
 // RUN: %clang_cc1 -triple lanai-unknown-unknown -o - -emit-llvm %s | \
 // RUN: FileCheck %s -check-prefix=LANAI
@@ -248,6 +248,8 @@
 // RUN: %clang_cc1 -triple s390x-unknown -target-cpu z15 -o - -emit-llvm %s | \
 // RUN: FileCheck %s -check-prefix=SYSTEMZ-VECTOR
 // RUN: %clang_cc1 -triple s390x-unknown -target-cpu arch13 -o - -emit-llvm %s | \
+// RUN: FileCheck %s -check-prefix=SYSTEMZ-VECTOR
+// RUN: %clang_cc1 -triple s390x-unknown -target-cpu arch14 -o - -emit-llvm %s | \
 // RUN: FileCheck %s -check-prefix=SYSTEMZ-VECTOR
 // SYSTEMZ-VECTOR: target datalayout = "E-m:e-i1:8:16-i8:8:16-i64:64-f128:64-v128:64-a:8:16-n32:64"
 

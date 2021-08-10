@@ -25,10 +25,10 @@ target triple = "bpf"
 define dso_local i32 @test(%struct.v3* %arg) local_unnamed_addr #0 !dbg !19 {
 entry:
   call void @llvm.dbg.value(metadata %struct.v3* %arg, metadata !30, metadata !DIExpression()), !dbg !31
-  %0 = tail call [40 x i32]* @llvm.preserve.struct.access.index.p0a40i32.p0s_struct.v3s(%struct.v3* %arg, i32 1, i32 1), !dbg !32, !llvm.preserve.access.index !24
-  %1 = tail call i32* @llvm.preserve.array.access.index.p0i32.p0a40i32([40 x i32]* %0, i32 1, i32 4), !dbg !32, !llvm.preserve.access.index !11
+  %0 = tail call [40 x i32]* @llvm.preserve.struct.access.index.p0a40i32.p0s_struct.v3s(%struct.v3* elementtype(%struct.v3) %arg, i32 1, i32 1), !dbg !32, !llvm.preserve.access.index !24
+  %1 = tail call i32* @llvm.preserve.array.access.index.p0i32.p0a40i32([40 x i32]* elementtype([40 x i32]) %0, i32 1, i32 4), !dbg !32, !llvm.preserve.access.index !11
   %2 = bitcast i32* %1 to %struct.v1*, !dbg !32
-  %3 = tail call i32* @llvm.preserve.struct.access.index.p0i32.p0s_struct.v1s(%struct.v1* %2, i32 1, i32 1), !dbg !32, !llvm.preserve.access.index !6
+  %3 = tail call i32* @llvm.preserve.struct.access.index.p0i32.p0s_struct.v1s(%struct.v1* elementtype(%struct.v1) %2, i32 1, i32 1), !dbg !32, !llvm.preserve.access.index !6
   %call = tail call i32 @get_value(i32* %3) #4, !dbg !33
   ret i32 %call, !dbg !34
 }

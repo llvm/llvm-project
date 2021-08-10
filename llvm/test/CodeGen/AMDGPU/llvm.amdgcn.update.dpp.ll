@@ -67,7 +67,7 @@ define amdgpu_kernel void @update_dpp64_test(i64 addrspace(1)* %arg, i64 %in1, i
 ; GCN-OPT-DAG: v_mov_b32_e32 v[[OLD_LO:[0-9]+]], 0x3afaedd9
 ; GCN-OPT-DAG: v_mov_b32_e32 v[[OLD_HI:[0-9]+]], 0x7047
 ; GFX8-NOOPT-DAG: s_mov_b32 s[[SOLD_LO:[0-9]+]], 0x3afaedd9
-; GFX8-NOOPT-DAG: s_movk_i32 s[[SOLD_HI:[0-9]+]], 0x7047
+; GFX8-NOOPT-DAG: s_mov_b32 s[[SOLD_HI:[0-9]+]], 0x7047
 ; GCN-DAG: load_dwordx2 v{{\[}}[[SRC_LO:[0-9]+]]:[[SRC_HI:[0-9]+]]]
 ; GCN-OPT-DAG: v_mov_b32_dpp v[[OLD_LO]], v[[SRC_LO]] quad_perm:[1,0,0,0] row_mask:0x1 bank_mask:0x1{{$}}
 ; GCN-OPT-DAG: v_mov_b32_dpp v[[OLD_HI]], v[[SRC_HI]] quad_perm:[1,0,0,0] row_mask:0x1 bank_mask:0x1{{$}}
@@ -86,7 +86,7 @@ define amdgpu_kernel void @update_dpp64_imm_old_test(i64 addrspace(1)* %arg, i64
 ; GCN-OPT-DAG: v_mov_b32_e32 v[[OLD_LO:[0-9]+]], 0x3afaedd9
 ; GCN-OPT-DAG: v_mov_b32_e32 v[[OLD_HI:[0-9]+]], 0x7047
 ; GFX8-NOOPT-DAG: s_mov_b32 s[[SOLD_LO:[0-9]+]], 0x3afaedd9
-; GFX8-NOOPT-DAG: s_movk_i32 s[[SOLD_HI:[0-9]+]], 0x7047
+; GFX8-NOOPT-DAG: s_mov_b32 s[[SOLD_HI:[0-9]+]], 0x7047
 ; GCN-OPT-DAG: v_mov_b32_dpp v{{[0-9]+}}, v[[OLD_LO]] quad_perm:[1,0,0,0] row_mask:0x1 bank_mask:0x1{{$}}
 ; GCN-OPT-DAG: v_mov_b32_dpp v{{[0-9]+}}, v[[OLD_HI]] quad_perm:[1,0,0,0] row_mask:0x1 bank_mask:0x1{{$}}
 ; GCN-NOOPT-DAG: v_mov_b32_dpp v{{[0-9]+}}, v[[SRC_LO]] quad_perm:[1,0,0,0] row_mask:0x1 bank_mask:0x1{{$}}

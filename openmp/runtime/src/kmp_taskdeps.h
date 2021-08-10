@@ -23,8 +23,7 @@ static inline void __kmp_node_deref(kmp_info_t *thread, kmp_depnode_t *node) {
     return;
 
   kmp_int32 n = KMP_ATOMIC_DEC(&node->dn.nrefs) - 1;
-  // TODO: temporarily disable assertion until the bug with dependences is fixed
-  //  KMP_DEBUG_ASSERT(n >= 0);
+  KMP_DEBUG_ASSERT(n >= 0);
   if (n == 0) {
     KMP_ASSERT(node->dn.nrefs == 0);
 #if USE_FAST_MEMORY
@@ -85,6 +84,8 @@ static inline void __kmp_dephash_free(kmp_info_t *thread, kmp_dephash_t *h) {
 #endif
 }
 
+extern void __kmpc_give_task(kmp_task_t *ptask, kmp_int32 start);
+
 static inline void __kmp_release_deps(kmp_int32 gtid, kmp_taskdata_t *task) {
   kmp_info_t *thread = __kmp_threads[gtid];
   kmp_depnode_t *node = task->td_depnode;
@@ -143,7 +144,10 @@ static inline void __kmp_release_deps(kmp_int32 gtid, kmp_taskdata_t *task) {
           // encountering thread's queue; otherwise, it can be pushed to its own
           // queue.
           if (!next_taskdata->td_flags.hidden_helper) {
-            __kmp_omp_task(task->encountering_gtid, successor->dn.task, false);
+            kmp_int32 encountering_gtid =
+                next_taskdata->td_alloc_thread->th.th_info.ds.ds_gtid;
+            kmp_int32 encountering_tid = __kmp_tid_from_gtid(encountering_gtid);
+            __kmpc_give_task(successor->dn.task, encountering_tid);
           } else {
             __kmp_omp_task(gtid, successor->dn.task, false);
           }

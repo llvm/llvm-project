@@ -2812,7 +2812,8 @@ void X86_64ABIInfo::classify(QualType Ty, uint64_t OffsetBase,
       Hi = Integer;
     } else if (k >= BuiltinType::Bool && k <= BuiltinType::LongLong) {
       Current = Integer;
-    } else if (k == BuiltinType::Float || k == BuiltinType::Double) {
+    } else if (k == BuiltinType::Float || k == BuiltinType::Double ||
+               k == BuiltinType::Float16) {
       Current = SSE;
     } else if (k == BuiltinType::LongDouble) {
       const llvm::fltSemantics *LDF = &getTarget().getLongDoubleFormat();
@@ -2943,7 +2944,7 @@ void X86_64ABIInfo::classify(QualType Ty, uint64_t OffsetBase,
         Current = Integer;
       else if (Size <= 128)
         Lo = Hi = Integer;
-    } else if (ET == getContext().FloatTy) {
+    } else if (ET->isFloat16Type() || ET == getContext().FloatTy) {
       Current = SSE;
     } else if (ET == getContext().DoubleTy) {
       Lo = Hi = SSE;
@@ -3396,26 +3397,75 @@ static bool ContainsFloatAtOffset(llvm::Type *IRType, unsigned IROffset,
   return false;
 }
 
+/// ContainsHalfAtOffset - Return true if the specified LLVM IR type has a
+/// half member at the specified offset.  For example, {int,{half}} has a
+/// half at offset 4.  It is conservatively correct for this routine to return
+/// false.
+/// FIXME: Merge with ContainsFloatAtOffset
+static bool ContainsHalfAtOffset(llvm::Type *IRType, unsigned IROffset,
+                                 const llvm::DataLayout &TD) {
+  // Base case if we find a float.
+  if (IROffset == 0 && IRType->isHalfTy())
+    return true;
+
+  // If this is a struct, recurse into the field at the specified offset.
+  if (llvm::StructType *STy = dyn_cast<llvm::StructType>(IRType)) {
+    const llvm::StructLayout *SL = TD.getStructLayout(STy);
+    unsigned Elt = SL->getElementContainingOffset(IROffset);
+    IROffset -= SL->getElementOffset(Elt);
+    return ContainsHalfAtOffset(STy->getElementType(Elt), IROffset, TD);
+  }
+
+  // If this is an array, recurse into the field at the specified offset.
+  if (llvm::ArrayType *ATy = dyn_cast<llvm::ArrayType>(IRType)) {
+    llvm::Type *EltTy = ATy->getElementType();
+    unsigned EltSize = TD.getTypeAllocSize(EltTy);
+    IROffset -= IROffset / EltSize * EltSize;
+    return ContainsHalfAtOffset(EltTy, IROffset, TD);
+  }
+
+  return false;
+}
 
 /// GetSSETypeAtOffset - Return a type that will be passed by the backend in the
 /// low 8 bytes of an XMM register, corresponding to the SSE class.
 llvm::Type *X86_64ABIInfo::
 GetSSETypeAtOffset(llvm::Type *IRType, unsigned IROffset,
                    QualType SourceTy, unsigned SourceOffset) const {
-  // The only three choices we have are either double, <2 x float>, or float. We
-  // pass as float if the last 4 bytes is just padding.  This happens for
-  // structs that contain 3 floats.
-  if (BitsContainNoUserData(SourceTy, SourceOffset*8+32,
-                            SourceOffset*8+64, getContext()))
-    return llvm::Type::getFloatTy(getVMContext());
+  // If the high 32 bits are not used, we have three choices. Single half,
+  // single float or two halfs.
+  if (BitsContainNoUserData(SourceTy, SourceOffset * 8 + 32,
+                            SourceOffset * 8 + 64, getContext())) {
+    if (ContainsFloatAtOffset(IRType, IROffset, getDataLayout()))
+      return llvm::Type::getFloatTy(getVMContext());
+    if (ContainsHalfAtOffset(IRType, IROffset + 2, getDataLayout()))
+      return llvm::FixedVectorType::get(llvm::Type::getHalfTy(getVMContext()),
+                                        2);
+
+    return llvm::Type::getHalfTy(getVMContext());
+  }
 
   // We want to pass as <2 x float> if the LLVM IR type contains a float at
-  // offset+0 and offset+4.  Walk the LLVM IR type to find out if this is the
+  // offset+0 and offset+4. Walk the LLVM IR type to find out if this is the
   // case.
   if (ContainsFloatAtOffset(IRType, IROffset, getDataLayout()) &&
-      ContainsFloatAtOffset(IRType, IROffset+4, getDataLayout()))
+      ContainsFloatAtOffset(IRType, IROffset + 4, getDataLayout()))
     return llvm::FixedVectorType::get(llvm::Type::getFloatTy(getVMContext()),
                                       2);
+
+  // We want to pass as <4 x half> if the LLVM IR type contains a half at
+  // offset+0, +2, +4. Walk the LLVM IR type to find out if this is the case.
+  if (ContainsHalfAtOffset(IRType, IROffset, getDataLayout()) &&
+      ContainsHalfAtOffset(IRType, IROffset + 2, getDataLayout()) &&
+      ContainsHalfAtOffset(IRType, IROffset + 4, getDataLayout()))
+    return llvm::FixedVectorType::get(llvm::Type::getHalfTy(getVMContext()), 4);
+
+  // We want to pass as <4 x half> if the LLVM IR type contains a mix of float
+  // and half.
+  // FIXME: Do we have a better representation for the mixed type?
+  if (ContainsFloatAtOffset(IRType, IROffset, getDataLayout()) ||
+      ContainsFloatAtOffset(IRType, IROffset + 4, getDataLayout()))
+    return llvm::FixedVectorType::get(llvm::Type::getHalfTy(getVMContext()), 4);
 
   return llvm::Type::getDoubleTy(getVMContext());
 }
@@ -3521,11 +3571,11 @@ GetX86_64ByValArgumentPair(llvm::Type *Lo, llvm::Type *Hi,
   // struct.
   if (HiStart != 8) {
     // There are usually two sorts of types the ABI generation code can produce
-    // for the low part of a pair that aren't 8 bytes in size: float or
+    // for the low part of a pair that aren't 8 bytes in size: half, float or
     // i8/i16/i32.  This can also include pointers when they are 32-bit (X32 and
     // NaCl).
     // Promote these to a larger type.
-    if (Lo->isFloatTy())
+    if (Lo->isHalfTy() || Lo->isFloatTy())
       Lo = llvm::Type::getDoubleTy(Lo->getContext());
     else {
       assert((Lo->isIntegerTy() || Lo->isPointerTy())
@@ -3966,8 +4016,8 @@ static Address EmitX86_64VAArgFromMemory(CodeGenFunction &CGF,
   uint64_t SizeInBytes = (CGF.getContext().getTypeSize(Ty) + 7) / 8;
   llvm::Value *Offset =
       llvm::ConstantInt::get(CGF.Int32Ty, (SizeInBytes + 7)  & ~7);
-  overflow_arg_area = CGF.Builder.CreateGEP(overflow_arg_area, Offset,
-                                            "overflow_arg_area.next");
+  overflow_arg_area = CGF.Builder.CreateGEP(CGF.Int8Ty, overflow_arg_area,
+                                            Offset, "overflow_arg_area.next");
   CGF.Builder.CreateStore(overflow_arg_area, overflow_arg_area_p);
 
   // AMD64-ABI 3.5.7p5: Step 11. Return the fetched type.
@@ -4061,8 +4111,10 @@ Address X86_64ABIInfo::EmitVAArg(CodeGenFunction &CGF, Address VAListAddr,
            "Unexpected ABI info for mixed regs");
     llvm::Type *PTyLo = llvm::PointerType::getUnqual(TyLo);
     llvm::Type *PTyHi = llvm::PointerType::getUnqual(TyHi);
-    llvm::Value *GPAddr = CGF.Builder.CreateGEP(RegSaveArea, gp_offset);
-    llvm::Value *FPAddr = CGF.Builder.CreateGEP(RegSaveArea, fp_offset);
+    llvm::Value *GPAddr =
+        CGF.Builder.CreateGEP(CGF.Int8Ty, RegSaveArea, gp_offset);
+    llvm::Value *FPAddr =
+        CGF.Builder.CreateGEP(CGF.Int8Ty, RegSaveArea, fp_offset);
     llvm::Value *RegLoAddr = TyLo->isFPOrFPVectorTy() ? FPAddr : GPAddr;
     llvm::Value *RegHiAddr = TyLo->isFPOrFPVectorTy() ? GPAddr : FPAddr;
 
@@ -4081,7 +4133,7 @@ Address X86_64ABIInfo::EmitVAArg(CodeGenFunction &CGF, Address VAListAddr,
 
     RegAddr = CGF.Builder.CreateElementBitCast(Tmp, LTy);
   } else if (neededInt) {
-    RegAddr = Address(CGF.Builder.CreateGEP(RegSaveArea, gp_offset),
+    RegAddr = Address(CGF.Builder.CreateGEP(CGF.Int8Ty, RegSaveArea, gp_offset),
                       CharUnits::fromQuantity(8));
     RegAddr = CGF.Builder.CreateElementBitCast(RegAddr, LTy);
 
@@ -4099,7 +4151,7 @@ Address X86_64ABIInfo::EmitVAArg(CodeGenFunction &CGF, Address VAListAddr,
     }
 
   } else if (neededSSE == 1) {
-    RegAddr = Address(CGF.Builder.CreateGEP(RegSaveArea, fp_offset),
+    RegAddr = Address(CGF.Builder.CreateGEP(CGF.Int8Ty, RegSaveArea, fp_offset),
                       CharUnits::fromQuantity(16));
     RegAddr = CGF.Builder.CreateElementBitCast(RegAddr, LTy);
   } else {
@@ -4110,7 +4162,8 @@ Address X86_64ABIInfo::EmitVAArg(CodeGenFunction &CGF, Address VAListAddr,
     // to assume that the slots are 16-byte aligned, since the stack is
     // naturally 16-byte aligned and the prologue is expected to store
     // all the SSE registers to the RSA.
-    Address RegAddrLo = Address(CGF.Builder.CreateGEP(RegSaveArea, fp_offset),
+    Address RegAddrLo = Address(CGF.Builder.CreateGEP(CGF.Int8Ty, RegSaveArea,
+                                                      fp_offset),
                                 CharUnits::fromQuantity(16));
     Address RegAddrHi =
       CGF.Builder.CreateConstInBoundsByteGEP(RegAddrLo,
@@ -5522,6 +5575,20 @@ public:
 
     Fn->addFnAttr("branch-target-enforcement",
                   BPI.BranchTargetEnforcement ? "true" : "false");
+  }
+
+  bool isScalarizableAsmOperand(CodeGen::CodeGenFunction &CGF,
+                                llvm::Type *Ty) const override {
+    if (CGF.getTarget().hasFeature("ls64")) {
+      auto *ST = dyn_cast<llvm::StructType>(Ty);
+      if (ST && ST->getNumElements() == 1) {
+        auto *AT = dyn_cast<llvm::ArrayType>(ST->getElementType(0));
+        if (AT && AT->getNumElements() == 8 &&
+            AT->getElementType()->isIntegerTy(64))
+          return true;
+      }
+    }
+    return TargetCodeGenInfo::isScalarizableAsmOperand(CGF, Ty);
   }
 };
 
@@ -7460,7 +7527,8 @@ Address SystemZABIInfo::EmitVAArg(CodeGenFunction &CGF, Address VAListAddr,
 
     // Update overflow_arg_area_ptr pointer
     llvm::Value *NewOverflowArgArea =
-      CGF.Builder.CreateGEP(OverflowArgArea.getPointer(), PaddedSizeV,
+      CGF.Builder.CreateGEP(OverflowArgArea.getElementType(),
+                            OverflowArgArea.getPointer(), PaddedSizeV,
                             "overflow_arg_area");
     CGF.Builder.CreateStore(NewOverflowArgArea, OverflowArgAreaPtr);
 
@@ -7510,7 +7578,7 @@ Address SystemZABIInfo::EmitVAArg(CodeGenFunction &CGF, Address VAListAddr,
       CGF.Builder.CreateStructGEP(VAListAddr, 3, "reg_save_area_ptr");
   llvm::Value *RegSaveArea =
     CGF.Builder.CreateLoad(RegSaveAreaPtr, "reg_save_area");
-  Address RawRegAddr(CGF.Builder.CreateGEP(RegSaveArea, RegOffset,
+  Address RawRegAddr(CGF.Builder.CreateGEP(CGF.Int8Ty, RegSaveArea, RegOffset,
                                            "raw_reg_addr"),
                      PaddedSize);
   Address RegAddr =
@@ -7539,7 +7607,8 @@ Address SystemZABIInfo::EmitVAArg(CodeGenFunction &CGF, Address VAListAddr,
 
   // Update overflow_arg_area_ptr pointer
   llvm::Value *NewOverflowArgArea =
-    CGF.Builder.CreateGEP(OverflowArgArea.getPointer(), PaddedSizeV,
+    CGF.Builder.CreateGEP(OverflowArgArea.getElementType(),
+                          OverflowArgArea.getPointer(), PaddedSizeV,
                           "overflow_arg_area");
   CGF.Builder.CreateStore(NewOverflowArgArea, OverflowArgAreaPtr);
   CGF.EmitBranch(ContBlock);
@@ -8470,7 +8539,7 @@ Address HexagonABIInfo::EmitVAArgFromMemory(CodeGenFunction &CGF,
 
     // Add offset to the current pointer to access the argument.
     __overflow_area_pointer =
-        CGF.Builder.CreateGEP(__overflow_area_pointer, Offset);
+        CGF.Builder.CreateGEP(CGF.Int8Ty, __overflow_area_pointer, Offset);
     llvm::Value *AsInt =
         CGF.Builder.CreatePtrToInt(__overflow_area_pointer, CGF.Int32Ty);
 
@@ -8493,7 +8562,8 @@ Address HexagonABIInfo::EmitVAArgFromMemory(CodeGenFunction &CGF,
   uint64_t Offset = llvm::alignTo(CGF.getContext().getTypeSize(Ty) / 8, 4);
 
   __overflow_area_pointer = CGF.Builder.CreateGEP(
-      __overflow_area_pointer, llvm::ConstantInt::get(CGF.Int32Ty, Offset),
+      CGF.Int8Ty, __overflow_area_pointer,
+      llvm::ConstantInt::get(CGF.Int32Ty, Offset),
       "__overflow_area_pointer.next");
   CGF.Builder.CreateStore(__overflow_area_pointer, __overflow_area_pointer_p);
 
@@ -8524,7 +8594,7 @@ Address HexagonABIInfo::EmitVAArgForHexagon(CodeGenFunction &CGF,
 
   uint64_t Offset = llvm::alignTo(CGF.getContext().getTypeSize(Ty) / 8, 4);
   llvm::Value *NextAddr = Builder.CreateGEP(
-      Addr, llvm::ConstantInt::get(CGF.Int32Ty, Offset), "ap.next");
+      CGF.Int8Ty, Addr, llvm::ConstantInt::get(CGF.Int32Ty, Offset), "ap.next");
   Builder.CreateStore(NextAddr, VAListAddrAsBPP);
 
   return AddrTyped;
@@ -8596,7 +8666,7 @@ Address HexagonABIInfo::EmitVAArgForHexagonLinux(CodeGenFunction &CGF,
   }
 
   llvm::Value *__new_saved_reg_area_pointer =
-      CGF.Builder.CreateGEP(__current_saved_reg_area_pointer,
+      CGF.Builder.CreateGEP(CGF.Int8Ty, __current_saved_reg_area_pointer,
                             llvm::ConstantInt::get(CGF.Int32Ty, ArgSize),
                             "__new_saved_reg_area_pointer");
 
@@ -8652,7 +8722,8 @@ Address HexagonABIInfo::EmitVAArgForHexagonLinux(CodeGenFunction &CGF,
   // Get the pointer for next argument in overflow area and store it
   // to overflow area pointer.
   llvm::Value *__new_overflow_area_pointer = CGF.Builder.CreateGEP(
-      __overflow_area_pointer, llvm::ConstantInt::get(CGF.Int32Ty, ArgSize),
+      CGF.Int8Ty, __overflow_area_pointer,
+      llvm::ConstantInt::get(CGF.Int32Ty, ArgSize),
       "__overflow_area_pointer.next");
 
   CGF.Builder.CreateStore(__new_overflow_area_pointer,

@@ -96,6 +96,12 @@ TEST_F(PopulateSwitchTest, Test) {
           R""(enum Enum {A}; switch (A) {case A:break;})"",
       },
       {
+          // Selection of whole switch condition
+          Function,
+          R""(enum Enum {A}; switch ([[A]]) {})"",
+          R""(enum Enum {A}; switch (A) {case A:break;})"",
+      },
+      {
           // Selection in switch body
           Function,
           R""(enum Enum {A}; switch (A) {^})"",

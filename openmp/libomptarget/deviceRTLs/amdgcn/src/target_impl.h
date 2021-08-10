@@ -48,10 +48,6 @@
 
 #define WARPSIZE 64
 
-// Maximum number of preallocated arguments to an outlined parallel/simd
-// function. Anything more requires dynamic memory allocation.
-#define MAX_SHARED_ARGS 40
-
 // Maximum number of omp state objects per SM allocated statically in global
 // memory.
 #define OMP_STATE_COUNT 32
@@ -79,6 +75,6 @@ enum : __kmpc_impl_lanemask_t {
 // A call to a function named printf currently hits some special case handling
 // for opencl, which translates to calls that do not presently exist for openmp
 // Therefore, for now, stub out printf while building this library.
-#define printf(...)
+EXTERN int printf(const char *, ...);
 
 #endif

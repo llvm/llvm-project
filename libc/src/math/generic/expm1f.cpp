@@ -7,10 +7,10 @@
 //===----------------------------------------------------------------------===//
 
 #include "src/math/expm1f.h"
+#include "src/__support/FPUtil/BasicOperations.h"
+#include "src/__support/FPUtil/PolyEval.h"
 #include "src/__support/common.h"
 #include "src/math/expf.h"
-#include "utils/FPUtil/BasicOperations.h"
-#include "utils/FPUtil/PolyEval.h"
 
 namespace __llvm_libc {
 

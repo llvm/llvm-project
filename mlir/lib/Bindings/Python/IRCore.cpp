@@ -643,11 +643,8 @@ void PyThreadContextEntry::popLocation(PyLocation &location) {
 
 MlirDialect PyDialects::getDialectForKey(const std::string &key,
                                          bool attrError) {
-  // If the "std" dialect was asked for, substitute the empty namespace :(
-  static const std::string emptyKey;
-  const std::string *canonKey = key == "std" ? &emptyKey : &key;
-  MlirDialect dialect = mlirContextGetOrLoadDialect(
-      getContext()->get(), {canonKey->data(), canonKey->size()});
+  MlirDialect dialect = mlirContextGetOrLoadDialect(getContext()->get(),
+                                                    {key.data(), key.size()});
   if (mlirDialectIsNull(dialect)) {
     throw SetPyError(attrError ? PyExc_AttributeError : PyExc_IndexError,
                      Twine("Dialect '") + key + "' not found");
@@ -1652,7 +1649,17 @@ public:
   }
 
   PyValue getElement(intptr_t pos) {
-    return PyValue(operation, mlirOperationGetOperand(operation->get(), pos));
+    MlirValue operand = mlirOperationGetOperand(operation->get(), pos);
+    MlirOperation owner;
+    if (mlirValueIsAOpResult(operand))
+      owner = mlirOpResultGetOwner(operand);
+    else if (mlirValueIsABlockArgument(operand))
+      owner = mlirBlockGetParentOperation(mlirBlockArgumentGetOwner(operand));
+    else
+      assert(false && "Value must be an block arg or op result.");
+    PyOperationRef pyOwner =
+        PyOperation::forOperation(operation->getContext(), owner);
+    return PyValue(pyOwner, operand);
   }
 
   PyOpOperandList slice(intptr_t startIndex, intptr_t length, intptr_t step) {
@@ -2429,6 +2436,15 @@ void mlir::python::populateIRCore(py::module &m) {
       .def(
           "dump", [](PyValue &self) { mlirValueDump(self.get()); },
           kDumpDocstring)
+      .def_property_readonly(
+          "owner",
+          [](PyValue &self) {
+            assert(mlirOperationEqual(self.getParentOperation()->get(),
+                                      mlirOpResultGetOwner(self.get())) &&
+                   "expected the owner of the value in Python to match that in "
+                   "the IR");
+            return self.getParentOperation().getObject();
+          })
       .def("__eq__",
            [](PyValue &self, PyValue &other) {
              return self.get().ptr == other.get().ptr;

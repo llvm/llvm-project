@@ -516,7 +516,7 @@ bool VPRecipeBase::mayWriteToMemory() const {
   }
   case VPReplicateSC:
   case VPWidenCallSC:
-    return cast<Instruction>(getVPValue()->getUnderlyingValue())
+    return cast<Instruction>(getVPSingleValue()->getUnderlyingValue())
         ->mayWriteToMemory();
   case VPBranchOnMaskSC:
     return false;
@@ -529,7 +529,7 @@ bool VPRecipeBase::mayWriteToMemory() const {
   case VPReductionSC:
   case VPWidenSelectSC: {
     const Instruction *I =
-        dyn_cast_or_null<Instruction>(getVPValue()->getUnderlyingValue());
+        dyn_cast_or_null<Instruction>(getVPSingleValue()->getUnderlyingValue());
     (void)I;
     assert((!I || !I->mayWriteToMemory()) &&
            "underlying instruction may write to memory");
@@ -547,7 +547,7 @@ bool VPRecipeBase::mayReadFromMemory() const {
   }
   case VPReplicateSC:
   case VPWidenCallSC:
-    return cast<Instruction>(getVPValue()->getUnderlyingValue())
+    return cast<Instruction>(getVPSingleValue()->getUnderlyingValue())
         ->mayReadFromMemory();
   case VPBranchOnMaskSC:
     return false;
@@ -560,7 +560,7 @@ bool VPRecipeBase::mayReadFromMemory() const {
   case VPReductionSC:
   case VPWidenSelectSC: {
     const Instruction *I =
-        dyn_cast_or_null<Instruction>(getVPValue()->getUnderlyingValue());
+        dyn_cast_or_null<Instruction>(getVPSingleValue()->getUnderlyingValue());
     (void)I;
     assert((!I || !I->mayReadFromMemory()) &&
            "underlying instruction may read from memory");
@@ -584,7 +584,7 @@ bool VPRecipeBase::mayHaveSideEffects() const {
   case VPReductionSC:
   case VPWidenSelectSC: {
     const Instruction *I =
-        dyn_cast_or_null<Instruction>(getVPValue()->getUnderlyingValue());
+        dyn_cast_or_null<Instruction>(getVPSingleValue()->getUnderlyingValue());
     (void)I;
     assert((!I || !I->mayHaveSideEffects()) &&
            "underlying instruction has side-effects");
@@ -687,6 +687,30 @@ void VPInstruction::generateInstruction(VPTransformState &State,
     State.set(this, Call, Part);
     break;
   }
+  case VPInstruction::FirstOrderRecurrenceSplice: {
+    // Generate code to combine the previous and current values in vector v3.
+    //
+    //   vector.ph:
+    //     v_init = vector(..., ..., ..., a[-1])
+    //     br vector.body
+    //
+    //   vector.body
+    //     i = phi [0, vector.ph], [i+4, vector.body]
+    //     v1 = phi [v_init, vector.ph], [v2, vector.body]
+    //     v2 = a[i, i+1, i+2, i+3];
+    //     v3 = vector(v1(3), v2(0, 1, 2))
+
+    // For the first part, use the recurrence phi (v1), otherwise v2.
+    auto *V1 = State.get(getOperand(0), 0);
+    Value *PartMinus1 = Part == 0 ? V1 : State.get(getOperand(1), Part - 1);
+    if (!PartMinus1->getType()->isVectorTy()) {
+      State.set(this, PartMinus1, Part);
+    } else {
+      Value *V2 = State.get(getOperand(1), Part);
+      State.set(this, Builder.CreateVectorSplice(PartMinus1, V2, -1), Part);
+    }
+    break;
+  }
   default:
     llvm_unreachable("Unsupported opcode for instruction");
   }
@@ -729,7 +753,9 @@ void VPInstruction::print(raw_ostream &O, const Twine &Indent,
   case VPInstruction::ActiveLaneMask:
     O << "active lane mask";
     break;
-
+  case VPInstruction::FirstOrderRecurrenceSplice:
+    O << "first-order splice";
+    break;
   default:
     O << Instruction::getOpcodeName(getOpcode());
   }
@@ -788,6 +814,28 @@ void VPlan::execute(VPTransformState *State) {
 
   for (VPBlockBase *Block : depth_first(Entry))
     Block->execute(State);
+
+  // Fix the latch value of reduction and first-order recurrences phis in the
+  // vector loop.
+  VPBasicBlock *Header = Entry->getEntryBasicBlock();
+  for (VPRecipeBase &R : Header->phis()) {
+    auto *PhiR = dyn_cast<VPWidenPHIRecipe>(&R);
+    if (!PhiR || !(isa<VPFirstOrderRecurrencePHIRecipe>(&R) ||
+                   isa<VPReductionPHIRecipe>(&R)))
+      continue;
+    // For first-order recurrences and in-order reduction phis, only a single
+    // part is generated, which provides the last part from the previous
+    // iteration. Otherwise all UF parts are generated.
+    bool SinglePartNeeded = isa<VPFirstOrderRecurrencePHIRecipe>(&R) ||
+                            cast<VPReductionPHIRecipe>(&R)->isOrdered();
+    unsigned LastPartForNewPhi = SinglePartNeeded ? 1 : State->UF;
+    for (unsigned Part = 0; Part < LastPartForNewPhi; ++Part) {
+      Value *VecPhi = State->get(PhiR, Part);
+      Value *Val = State->get(PhiR->getBackedgeValue(),
+                              SinglePartNeeded ? State->UF - 1 : Part);
+      cast<PHINode>(VecPhi)->addIncoming(Val, VectorLatchBB);
+    }
+  }
 
   // Setup branch terminator successors for VPBBs in VPBBsToFix based on
   // VPBB's successors.
@@ -894,12 +942,12 @@ void VPlan::updateDominatorTree(DominatorTree *DT, BasicBlock *LoopPreHeaderBB,
 }
 
 #if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
-const Twine VPlanPrinter::getUID(const VPBlockBase *Block) {
+Twine VPlanPrinter::getUID(const VPBlockBase *Block) {
   return (isa<VPRegionBlock>(Block) ? "cluster_N" : "N") +
          Twine(getOrCreateBID(Block));
 }
 
-const Twine VPlanPrinter::getOrCreateName(const VPBlockBase *Block) {
+Twine VPlanPrinter::getOrCreateName(const VPBlockBase *Block) {
   const std::string &Name = Block->getName();
   if (!Name.empty())
     return Name;
@@ -1179,7 +1227,7 @@ void VPWidenMemoryInstructionRecipe::print(raw_ostream &O, const Twine &Indent,
   O << Indent << "WIDEN ";
 
   if (!isStore()) {
-    getVPValue()->printAsOperand(O, SlotTracker);
+    getVPSingleValue()->printAsOperand(O, SlotTracker);
     O << " = ";
   }
   O << Instruction::getOpcodeName(Ingredient.getOpcode()) << " ";
@@ -1217,8 +1265,45 @@ void VPWidenCanonicalIVRecipe::execute(VPTransformState &State) {
 void VPWidenCanonicalIVRecipe::print(raw_ostream &O, const Twine &Indent,
                                      VPSlotTracker &SlotTracker) const {
   O << Indent << "EMIT ";
-  getVPValue()->printAsOperand(O, SlotTracker);
+  getVPSingleValue()->printAsOperand(O, SlotTracker);
   O << " = WIDEN-CANONICAL-INDUCTION";
+}
+#endif
+
+void VPFirstOrderRecurrencePHIRecipe::execute(VPTransformState &State) {
+  auto &Builder = State.Builder;
+  // Create a vector from the initial value.
+  auto *VectorInit = getStartValue()->getLiveInIRValue();
+
+  Type *VecTy = State.VF.isScalar()
+                    ? VectorInit->getType()
+                    : VectorType::get(VectorInit->getType(), State.VF);
+
+  if (State.VF.isVector()) {
+    auto *IdxTy = Builder.getInt32Ty();
+    auto *One = ConstantInt::get(IdxTy, 1);
+    IRBuilder<>::InsertPointGuard Guard(Builder);
+    Builder.SetInsertPoint(State.CFG.VectorPreHeader->getTerminator());
+    auto *RuntimeVF = getRuntimeVF(Builder, IdxTy, State.VF);
+    auto *LastIdx = Builder.CreateSub(RuntimeVF, One);
+    VectorInit = Builder.CreateInsertElement(
+        PoisonValue::get(VecTy), VectorInit, LastIdx, "vector.recur.init");
+  }
+
+  // Create a phi node for the new recurrence.
+  PHINode *EntryPart = PHINode::Create(
+      VecTy, 2, "vector.recur", &*State.CFG.PrevBB->getFirstInsertionPt());
+  EntryPart->addIncoming(VectorInit, State.CFG.VectorPreHeader);
+  State.set(this, EntryPart, 0);
+}
+
+#if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
+void VPFirstOrderRecurrencePHIRecipe::print(raw_ostream &O, const Twine &Indent,
+                                            VPSlotTracker &SlotTracker) const {
+  O << Indent << "FIRST-ORDER-RECURRENCE-PHI ";
+  printAsOperand(O, SlotTracker);
+  O << " = phi ";
+  printOperands(O, SlotTracker);
 }
 #endif
 
@@ -1243,6 +1328,9 @@ void VPReductionPHIRecipe::execute(VPTransformState &State) {
         PHINode::Create(VecTy, 2, "vec.phi", &*HeaderBB->getFirstInsertionPt());
     State.set(this, EntryPart, Part);
   }
+
+  // Reductions do not have to start at zero. They can start with
+  // any loop invariant values.
   VPValue *StartVPV = getStartValue();
   Value *StartV = StartVPV->getLiveInIRValue();
 

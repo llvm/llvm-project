@@ -8,7 +8,7 @@
 
 #include "src/fenv/feupdateenv.h"
 
-#include "utils/FPUtil/FEnv.h"
+#include "src/__support/FPUtil/FEnvUtils.h"
 #include "utils/UnitTest/Test.h"
 
 #include <fenv.h>

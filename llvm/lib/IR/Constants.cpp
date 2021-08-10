@@ -2427,10 +2427,8 @@ Constant *ConstantExpr::getGetElementPtr(Type *Ty, Constant *C,
                                          Optional<unsigned> InRangeIndex,
                                          Type *OnlyIfReducedTy) {
   PointerType *OrigPtrTy = cast<PointerType>(C->getType()->getScalarType());
-  if (!Ty)
-    Ty = OrigPtrTy->getElementType();
-  else
-    assert(OrigPtrTy->isOpaqueOrPointeeTypeMatches(Ty));
+  assert(Ty && "Must specify element type");
+  assert(OrigPtrTy->isOpaqueOrPointeeTypeMatches(Ty));
 
   if (Constant *FC =
           ConstantFoldGetElementPtr(Ty, C, InBounds, InRangeIndex, Idxs))

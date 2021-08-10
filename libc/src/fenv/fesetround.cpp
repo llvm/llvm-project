@@ -7,8 +7,8 @@
 //===----------------------------------------------------------------------===//
 
 #include "src/fenv/fesetround.h"
+#include "src/__support/FPUtil/FEnvUtils.h"
 #include "src/__support/common.h"
-#include "utils/FPUtil/FEnv.h"
 
 namespace __llvm_libc {
 

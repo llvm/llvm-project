@@ -10,8 +10,9 @@ target triple = "x86_64-unknown-linux-gnu"
 ; module ctor/dtor
 
 ; CHECK: @___asan_gen_ = private constant [8 x i8] c"<stdin>\00", align 1
-; CHECK: llvm.global_ctors
-; CHECK: llvm.global_dtors
+; CHECK: @llvm.used = appending global [2 x i8*] [i8* bitcast (void ()* @asan.module_ctor to i8*), i8* bitcast (void ()* @asan.module_dtor to i8*)], section "llvm.metadata"
+; CHECK: @llvm.global_ctors = appending global [1 x { i32, void ()*, i8* }] [{ i32, void ()*, i8* } { i32 1, void ()* @asan.module_ctor, i8* bitcast (void ()* @asan.module_ctor to i8*) }]
+; CHECK: @llvm.global_dtors = appending global [1 x { i32, void ()*, i8* }] [{ i32, void ()*, i8* } { i32 1, void ()* @asan.module_dtor, i8* bitcast (void ()* @asan.module_dtor to i8*) }]
 
 ; Test that we don't instrument global arrays with static initializer
 ; indexed with constants in-bounds. But instrument all other cases.

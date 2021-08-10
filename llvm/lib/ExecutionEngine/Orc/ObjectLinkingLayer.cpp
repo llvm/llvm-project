@@ -7,12 +7,11 @@
 //===----------------------------------------------------------------------===//
 
 #include "llvm/ExecutionEngine/Orc/ObjectLinkingLayer.h"
-
 #include "llvm/ADT/Optional.h"
 #include "llvm/ExecutionEngine/JITLink/EHFrameSupport.h"
 #include "llvm/ExecutionEngine/Orc/DebugObjectManagerPlugin.h"
 #include "llvm/Support/MemoryBuffer.h"
-
+#include <string>
 #include <vector>
 
 #define DEBUG_TYPE "orc"
@@ -607,6 +606,11 @@ ObjectLinkingLayer::Plugin::~Plugin() {}
 char ObjectLinkingLayer::ID;
 
 using BaseT = RTTIExtends<ObjectLinkingLayer, ObjectLayer>;
+
+ObjectLinkingLayer::ObjectLinkingLayer(ExecutionSession &ES)
+    : BaseT(ES), MemMgr(ES.getExecutorProcessControl().getMemMgr()) {
+  ES.registerResourceManager(*this);
+}
 
 ObjectLinkingLayer::ObjectLinkingLayer(ExecutionSession &ES,
                                        JITLinkMemoryManager &MemMgr)

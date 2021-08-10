@@ -230,6 +230,16 @@ MachineInstr *getDefIgnoringCopies(Register Reg,
 /// Also walks through hints such as G_ASSERT_ZEXT.
 Register getSrcRegIgnoringCopies(Register Reg, const MachineRegisterInfo &MRI);
 
+// Templated variant of getOpcodeDef returning a MachineInstr derived T.
+/// See if Reg is defined by an single def instruction of type T
+/// Also try to do trivial folding if it's a COPY with
+/// same types. Returns null otherwise.
+template <class T>
+T *getOpcodeDef(Register Reg, const MachineRegisterInfo &MRI) {
+  MachineInstr *DefMI = getDefIgnoringCopies(Reg, MRI);
+  return dyn_cast_or_null<T>(DefMI);
+}
+
 /// Returns an APFloat from Val converted to the appropriate size.
 APFloat getAPFloatFromSize(double Val, unsigned Size);
 
@@ -246,6 +256,10 @@ Optional<APFloat> ConstantFoldFPBinOp(unsigned Opcode, const Register Op1,
 
 Optional<APInt> ConstantFoldExtOp(unsigned Opcode, const Register Op1,
                                   uint64_t Imm, const MachineRegisterInfo &MRI);
+
+Optional<APFloat> ConstantFoldIntToFloat(unsigned Opcode, LLT DstTy,
+                                         Register Src,
+                                         const MachineRegisterInfo &MRI);
 
 /// Test if the given value is known to have exactly one bit set. This differs
 /// from computeKnownBits in that it doesn't necessarily determine which bit is
@@ -383,10 +397,6 @@ int64_t getICmpTrueVal(const TargetLowering &TLI, bool IsVector, bool IsFP);
 /// Returns true if the given block should be optimized for size.
 bool shouldOptForSize(const MachineBasicBlock &MBB, ProfileSummaryInfo *PSI,
                       BlockFrequencyInfo *BFI);
-
-/// \returns the intrinsic ID for a G_INTRINSIC or G_INTRINSIC_W_SIDE_EFFECTS
-/// instruction \p MI.
-unsigned getIntrinsicID(const MachineInstr &MI);
 
 } // End namespace llvm.
 #endif

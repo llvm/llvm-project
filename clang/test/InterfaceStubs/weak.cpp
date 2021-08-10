@@ -1,6 +1,6 @@
 // REQUIRES: x86-registered-target
 // RUN: %clang_cc1 -triple x86_64-linux-gnu -o - -emit-interface-stubs \
-// RUN: -interface-stub-version=experimental-ifs-v2 %s | \
+// RUN: -interface-stub-version=ifs-v1 %s | \
 // RUN: FileCheck %s
 
 // RUN: %clang -target x86_64-unknown-linux-gnu -o - -c %s | llvm-nm - 2>&1 | \

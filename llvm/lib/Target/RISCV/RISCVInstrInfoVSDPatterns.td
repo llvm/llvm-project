@@ -429,6 +429,21 @@ defm : VPatBinarySDNode_VV_VX_VI<shl, "PseudoVSLL", uimm5>;
 defm : VPatBinarySDNode_VV_VX_VI<srl, "PseudoVSRL", uimm5>;
 defm : VPatBinarySDNode_VV_VX_VI<sra, "PseudoVSRA", uimm5>;
 
+foreach vti = AllIntegerVectors in {
+  // Emit shift by 1 as an add since it might be faster.
+  def : Pat<(shl (vti.Vector vti.RegClass:$rs1),
+                 (vti.Vector (splat_vector (XLenVT 1)))),
+            (!cast<Instruction>("PseudoVADD_VV_"# vti.LMul.MX)
+                 vti.RegClass:$rs1, vti.RegClass:$rs1, vti.AVL, vti.Log2SEW)>;
+}
+foreach vti = [VI64M1, VI64M2, VI64M4, VI64M8] in {
+  def : Pat<(shl (vti.Vector vti.RegClass:$rs1),
+                 (vti.Vector (rv32_splat_i64 (XLenVT 1)))),
+            (!cast<Instruction>("PseudoVADD_VV_"# vti.LMul.MX)
+                 vti.RegClass:$rs1, vti.RegClass:$rs1, vti.AVL, vti.Log2SEW)>;
+
+}
+
 // 12.8. Vector Integer Comparison Instructions
 defm : VPatIntegerSetCCSDNode_VV_VX_VI<SETEQ,  "PseudoVMSEQ">;
 defm : VPatIntegerSetCCSDNode_VV_VX_VI<SETNE,  "PseudoVMSNE">;
@@ -476,17 +491,17 @@ defm : VPatBinarySDNode_VV_VX<srem, "PseudoVREM">;
 foreach vti = AllIntegerVectors in {
   // NOTE: We choose VMADD because it has the most commuting freedom. So it
   // works best with how TwoAddressInstructionPass tries commuting.
-  defvar suffix = vti.LMul.MX # "_COMMUTABLE";
+  defvar suffix = vti.LMul.MX;
   def : Pat<(vti.Vector (add vti.RegClass:$rs2,
                               (mul_oneuse vti.RegClass:$rs1, vti.RegClass:$rd))),
             (!cast<Instruction>("PseudoVMADD_VV_"# suffix)
                  vti.RegClass:$rd, vti.RegClass:$rs1, vti.RegClass:$rs2,
-                 vti.AVL, vti.Log2SEW)>;
+                 vti.AVL, vti.Log2SEW, TAIL_AGNOSTIC)>;
   def : Pat<(vti.Vector (sub vti.RegClass:$rs2,
                               (mul_oneuse vti.RegClass:$rs1, vti.RegClass:$rd))),
             (!cast<Instruction>("PseudoVNMSUB_VV_"# suffix)
                  vti.RegClass:$rd, vti.RegClass:$rs1, vti.RegClass:$rs2,
-                 vti.AVL, vti.Log2SEW)>;
+                 vti.AVL, vti.Log2SEW, TAIL_AGNOSTIC)>;
 
   // The choice of VMADD here is arbitrary, vmadd.vx and vmacc.vx are equally
   // commutable.
@@ -495,13 +510,13 @@ foreach vti = AllIntegerVectors in {
                                           vti.RegClass:$rd))),
             (!cast<Instruction>("PseudoVMADD_VX_" # suffix)
                  vti.RegClass:$rd, vti.ScalarRegClass:$rs1, vti.RegClass:$rs2,
-                 vti.AVL, vti.Log2SEW)>;
+                 vti.AVL, vti.Log2SEW, TAIL_AGNOSTIC)>;
   def : Pat<(vti.Vector (sub vti.RegClass:$rs2,
                               (mul_oneuse (SplatPat XLenVT:$rs1),
                                           vti.RegClass:$rd))),
             (!cast<Instruction>("PseudoVNMSUB_VX_" # suffix)
                  vti.RegClass:$rd, vti.ScalarRegClass:$rs1, vti.RegClass:$rs2,
-                 vti.AVL, vti.Log2SEW)>;
+                 vti.AVL, vti.Log2SEW, TAIL_AGNOSTIC)>;
 }
 
 // 12.15. Vector Integer Merge Instructions
@@ -522,6 +537,12 @@ foreach vti = AllIntegerVectors in {
             (!cast<Instruction>("PseudoVMERGE_VIM_"#vti.LMul.MX)
                  vti.RegClass:$rs2, simm5:$rs1, VMV0:$vm, vti.AVL, vti.Log2SEW)>;
 }
+
+// 12.1. Vector Single-Width Saturating Add and Subtract
+defm : VPatBinarySDNode_VV_VX_VI<saddsat, "PseudoVSADD">;
+defm : VPatBinarySDNode_VV_VX_VI<uaddsat, "PseudoVSADDU">;
+defm : VPatBinarySDNode_VV_VX<ssubsat, "PseudoVSSUB">;
+defm : VPatBinarySDNode_VV_VX<usubsat, "PseudoVSSUBU">;
 
 // 16.1. Vector Mask-Register Logical Instructions
 foreach mti = AllMasks in {
@@ -576,27 +597,27 @@ defm : VPatBinaryFPSDNode_R_VF<fdiv, "PseudoVFRDIV">;
 foreach fvti = AllFloatVectors in {
   // NOTE: We choose VFMADD because it has the most commuting freedom. So it
   // works best with how TwoAddressInstructionPass tries commuting.
-  defvar suffix = fvti.LMul.MX # "_COMMUTABLE";
+  defvar suffix = fvti.LMul.MX;
   def : Pat<(fvti.Vector (fma fvti.RegClass:$rs1, fvti.RegClass:$rd,
                               fvti.RegClass:$rs2)),
             (!cast<Instruction>("PseudoVFMADD_VV_"# suffix)
                  fvti.RegClass:$rd, fvti.RegClass:$rs1, fvti.RegClass:$rs2,
-                 fvti.AVL, fvti.Log2SEW)>;
+                 fvti.AVL, fvti.Log2SEW, TAIL_AGNOSTIC)>;
   def : Pat<(fvti.Vector (fma fvti.RegClass:$rs1, fvti.RegClass:$rd,
                               (fneg fvti.RegClass:$rs2))),
             (!cast<Instruction>("PseudoVFMSUB_VV_"# suffix)
                  fvti.RegClass:$rd, fvti.RegClass:$rs1, fvti.RegClass:$rs2,
-                 fvti.AVL, fvti.Log2SEW)>;
+                 fvti.AVL, fvti.Log2SEW, TAIL_AGNOSTIC)>;
   def : Pat<(fvti.Vector (fma (fneg fvti.RegClass:$rs1), fvti.RegClass:$rd,
                               (fneg fvti.RegClass:$rs2))),
             (!cast<Instruction>("PseudoVFNMADD_VV_"# suffix)
                  fvti.RegClass:$rd, fvti.RegClass:$rs1, fvti.RegClass:$rs2,
-                 fvti.AVL, fvti.Log2SEW)>;
+                 fvti.AVL, fvti.Log2SEW, TAIL_AGNOSTIC)>;
   def : Pat<(fvti.Vector (fma (fneg fvti.RegClass:$rs1), fvti.RegClass:$rd,
                               fvti.RegClass:$rs2)),
             (!cast<Instruction>("PseudoVFNMSUB_VV_"# suffix)
                  fvti.RegClass:$rd, fvti.RegClass:$rs1, fvti.RegClass:$rs2,
-                 fvti.AVL, fvti.Log2SEW)>;
+                 fvti.AVL, fvti.Log2SEW, TAIL_AGNOSTIC)>;
 
   // The choice of VFMADD here is arbitrary, vfmadd.vf and vfmacc.vf are equally
   // commutable.
@@ -604,35 +625,35 @@ foreach fvti = AllFloatVectors in {
                               fvti.RegClass:$rd, fvti.RegClass:$rs2)),
             (!cast<Instruction>("PseudoVFMADD_V" # fvti.ScalarSuffix # "_" # suffix)
                  fvti.RegClass:$rd, fvti.ScalarRegClass:$rs1, fvti.RegClass:$rs2,
-                 fvti.AVL, fvti.Log2SEW)>;
+                 fvti.AVL, fvti.Log2SEW, TAIL_AGNOSTIC)>;
   def : Pat<(fvti.Vector (fma (splat_vector fvti.ScalarRegClass:$rs1),
                               fvti.RegClass:$rd, (fneg fvti.RegClass:$rs2))),
             (!cast<Instruction>("PseudoVFMSUB_V" # fvti.ScalarSuffix # "_" # suffix)
                  fvti.RegClass:$rd, fvti.ScalarRegClass:$rs1, fvti.RegClass:$rs2,
-                 fvti.AVL, fvti.Log2SEW)>;
+                 fvti.AVL, fvti.Log2SEW, TAIL_AGNOSTIC)>;
 
   def : Pat<(fvti.Vector (fma (splat_vector fvti.ScalarRegClass:$rs1),
                               (fneg fvti.RegClass:$rd), (fneg fvti.RegClass:$rs2))),
             (!cast<Instruction>("PseudoVFNMADD_V" # fvti.ScalarSuffix # "_" # suffix)
                  fvti.RegClass:$rd, fvti.ScalarRegClass:$rs1, fvti.RegClass:$rs2,
-                 fvti.AVL, fvti.Log2SEW)>;
+                 fvti.AVL, fvti.Log2SEW, TAIL_AGNOSTIC)>;
   def : Pat<(fvti.Vector (fma (splat_vector fvti.ScalarRegClass:$rs1),
                               (fneg fvti.RegClass:$rd), fvti.RegClass:$rs2)),
             (!cast<Instruction>("PseudoVFNMSUB_V" # fvti.ScalarSuffix # "_" # suffix)
                  fvti.RegClass:$rd, fvti.ScalarRegClass:$rs1, fvti.RegClass:$rs2,
-                 fvti.AVL, fvti.Log2SEW)>;
+                 fvti.AVL, fvti.Log2SEW, TAIL_AGNOSTIC)>;
 
   // The splat might be negated.
   def : Pat<(fvti.Vector (fma (fneg (splat_vector fvti.ScalarRegClass:$rs1)),
                               fvti.RegClass:$rd, (fneg fvti.RegClass:$rs2))),
             (!cast<Instruction>("PseudoVFNMADD_V" # fvti.ScalarSuffix # "_" # suffix)
                  fvti.RegClass:$rd, fvti.ScalarRegClass:$rs1, fvti.RegClass:$rs2,
-                 fvti.AVL, fvti.Log2SEW)>;
+                 fvti.AVL, fvti.Log2SEW, TAIL_AGNOSTIC)>;
   def : Pat<(fvti.Vector (fma (fneg (splat_vector fvti.ScalarRegClass:$rs1)),
                               fvti.RegClass:$rd, fvti.RegClass:$rs2)),
             (!cast<Instruction>("PseudoVFNMSUB_V" # fvti.ScalarSuffix # "_" # suffix)
                  fvti.RegClass:$rd, fvti.ScalarRegClass:$rs1, fvti.RegClass:$rs2,
-                 fvti.AVL, fvti.Log2SEW)>;
+                 fvti.AVL, fvti.Log2SEW, TAIL_AGNOSTIC)>;
 }
 
 foreach vti = AllFloatVectors in {

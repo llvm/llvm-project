@@ -7,6 +7,8 @@
 // -fprofile-use=<dir>        Uses the profile file <dir>/default.profdata
 // -fprofile-use=<dir>/file   Uses the profile file <dir>/file
 
+// On AIX, -flto is required with -fprofile-generate. gcc-flag-compatibility-aix.c is used to do the testing on AIX with -flto
+// XFAIL: aix
 // RUN: %clang %s -c -S -o - -emit-llvm -fprofile-generate -fno-experimental-new-pass-manager | FileCheck -check-prefix=PROFILE-GEN %s
 // RUN: %clang %s -c -S -o - -emit-llvm -fprofile-generate -fexperimental-new-pass-manager | FileCheck -check-prefix=PROFILE-GEN %s
 // PROFILE-GEN: @__profc_main = {{(private|internal)}} global [2 x i64] zeroinitializer, section

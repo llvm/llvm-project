@@ -40,11 +40,11 @@ void MemprofThreadContext::OnFinished() {
 static ALIGNED(16) char thread_registry_placeholder[sizeof(ThreadRegistry)];
 static ThreadRegistry *memprof_thread_registry;
 
-static BlockingMutex mu_for_thread_context(LINKER_INITIALIZED);
+static Mutex mu_for_thread_context;
 static LowLevelAllocator allocator_for_thread_context;
 
 static ThreadContextBase *GetMemprofThreadContext(u32 tid) {
-  BlockingMutexLock lock(&mu_for_thread_context);
+  Lock lock(&mu_for_thread_context);
   return new (allocator_for_thread_context) MemprofThreadContext(tid);
 }
 
@@ -57,8 +57,8 @@ ThreadRegistry &memprofThreadRegistry() {
     // in TSD and can't reliably tell when no more TSD destructors will
     // be called. It would be wrong to reuse MemprofThreadContext for another
     // thread before all TSD destructors will be called for it.
-    memprof_thread_registry = new (thread_registry_placeholder) ThreadRegistry(
-        GetMemprofThreadContext, kMaxNumberOfThreads, kMaxNumberOfThreads);
+    memprof_thread_registry = new (thread_registry_placeholder)
+        ThreadRegistry(GetMemprofThreadContext);
     initialized = true;
   }
   return *memprof_thread_registry;

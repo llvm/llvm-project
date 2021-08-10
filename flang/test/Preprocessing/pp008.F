@@ -1,5 +1,5 @@
 ! RUN: %flang -E %s 2>&1 | FileCheck %s
-! CHECK: res=kwm
+! CHECK: res = K W M
 * KWM with spaces in name at invocation NOT replaced
       integer, parameter :: KWM = 777
 #define KWM 666

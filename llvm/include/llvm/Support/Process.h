@@ -214,12 +214,10 @@ public:
   /// In that case, the control flow will resume after RunSafely(), like for a
   /// crash, rather than exiting the current process.
   /// Use \arg NoCleanup for calling _exit() instead of exit().
-  LLVM_ATTRIBUTE_NORETURN
-  static void Exit(int RetCode, bool NoCleanup = false);
+  [[noreturn]] static void Exit(int RetCode, bool NoCleanup = false);
 
 private:
-  LLVM_ATTRIBUTE_NORETURN
-  static void ExitNoCleanup(int RetCode);
+  [[noreturn]] static void ExitNoCleanup(int RetCode);
 };
 
 }

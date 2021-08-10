@@ -262,6 +262,58 @@ llvm::Function *CodeGenFunction::createAtExitStub(const VarDecl &VD,
   return fn;
 }
 
+/// Create a stub function, suitable for being passed to __pt_atexit_np,
+/// which passes the given address to the given destructor function.
+llvm::Function *CodeGenFunction::createTLSAtExitStub(
+    const VarDecl &D, llvm::FunctionCallee Dtor, llvm::Constant *Addr,
+    llvm::FunctionCallee &AtExit) {
+  SmallString<256> FnName;
+  {
+    llvm::raw_svector_ostream Out(FnName);
+    CGM.getCXXABI().getMangleContext().mangleDynamicAtExitDestructor(&D, Out);
+  }
+
+  const CGFunctionInfo &FI = CGM.getTypes().arrangeLLVMFunctionInfo(
+      getContext().IntTy, /*instanceMethod=*/false, /*chainCall=*/false,
+      {getContext().IntTy}, FunctionType::ExtInfo(), {}, RequiredArgs::All);
+
+  // Get the stub function type, int(*)(int,...).
+  llvm::FunctionType *StubTy =
+      llvm::FunctionType::get(CGM.IntTy, {CGM.IntTy}, true);
+
+  llvm::Function *DtorStub = CGM.CreateGlobalInitOrCleanUpFunction(
+      StubTy, FnName.str(), FI, D.getLocation());
+
+  CodeGenFunction CGF(CGM);
+
+  FunctionArgList Args;
+  ImplicitParamDecl IPD(CGM.getContext(), CGM.getContext().IntTy,
+                        ImplicitParamDecl::Other);
+  Args.push_back(&IPD);
+  QualType ResTy = CGM.getContext().IntTy;
+
+  CGF.StartFunction(GlobalDecl(&D, DynamicInitKind::AtExit), ResTy, DtorStub,
+                    FI, Args, D.getLocation(), D.getInit()->getExprLoc());
+
+  // Emit an artificial location for this function.
+  auto AL = ApplyDebugLocation::CreateArtificial(CGF);
+
+  llvm::CallInst *call = CGF.Builder.CreateCall(Dtor, Addr);
+
+  // Make sure the call and the callee agree on calling convention.
+  if (auto *DtorFn = dyn_cast<llvm::Function>(
+          Dtor.getCallee()->stripPointerCastsAndAliases()))
+    call->setCallingConv(DtorFn->getCallingConv());
+
+  // Return 0 from function
+  CGF.Builder.CreateStore(llvm::Constant::getNullValue(CGM.IntTy),
+                          CGF.ReturnValue);
+
+  CGF.FinishFunction();
+
+  return DtorStub;
+}
+
 /// Register a global destructor using the C atexit runtime function.
 void CodeGenFunction::registerGlobalDtorWithAtExit(const VarDecl &VD,
                                                    llvm::FunctionCallee dtor,
@@ -503,7 +555,8 @@ CodeGenModule::EmitCXXGlobalVarDeclInitFunc(const VarDecl *D,
                                           PrioritizedCXXGlobalInits.size());
     PrioritizedCXXGlobalInits.push_back(std::make_pair(Key, Fn));
   } else if (isTemplateInstantiation(D->getTemplateSpecializationKind()) ||
-             getContext().GetGVALinkageForVariable(D) == GVA_DiscardableODR) {
+             getContext().GetGVALinkageForVariable(D) == GVA_DiscardableODR ||
+             D->hasAttr<SelectAnyAttr>()) {
     // C++ [basic.start.init]p2:
     //   Definitions of explicitly specialized class template static data
     //   members have ordered initialization. Other class template static data
@@ -516,17 +569,18 @@ CodeGenModule::EmitCXXGlobalVarDeclInitFunc(const VarDecl *D,
     // group with the global being initialized.  On most platforms, this is a
     // minor startup time optimization.  In the MS C++ ABI, there are no guard
     // variables, so this COMDAT key is required for correctness.
-    AddGlobalCtor(Fn, 65535, COMDATKey);
-    if (getTarget().getCXXABI().isMicrosoft() && COMDATKey) {
-      // In The MS C++, MS add template static data member in the linker
-      // drective.
-      addUsedGlobal(COMDATKey);
-    }
-  } else if (D->hasAttr<SelectAnyAttr>()) {
+    //
     // SelectAny globals will be comdat-folded. Put the initializer into a
     // COMDAT group associated with the global, so the initializers get folded
     // too.
+
     AddGlobalCtor(Fn, 65535, COMDATKey);
+    if (COMDATKey && (getTriple().isOSBinFormatELF() ||
+                      getTarget().getCXXABI().isMicrosoft())) {
+      // When COMDAT is used on ELF or in the MS C++ ABI, the key must be in
+      // llvm.used to prevent linker GC.
+      addUsedGlobal(COMDATKey);
+    }
   } else {
     I = DelayedCXXInitPosition.find(D); // Re-do lookup in case of re-hash.
     if (I == DelayedCXXInitPosition.end()) {

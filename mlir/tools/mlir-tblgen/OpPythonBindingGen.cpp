@@ -36,6 +36,8 @@ try:
 except ImportError:
   _ods_ext_module = None
 
+import builtins
+
 )Py";
 
 /// Template for dialect class:
@@ -82,7 +84,7 @@ constexpr const char *opClassRegionSpecTemplate = R"Py(
 ///   {1} is either 'operand' or 'result';
 ///   {2} is the position in the element list.
 constexpr const char *opSingleTemplate = R"Py(
-  @property
+  @builtins.property
   def {0}(self):
     return self.operation.{1}s[{2}]
 )Py";
@@ -95,7 +97,7 @@ constexpr const char *opSingleTemplate = R"Py(
 /// This works for both a single variadic group (non-negative length) and an
 /// single optional element (zero length if the element is absent).
 constexpr const char *opSingleAfterVariableTemplate = R"Py(
-  @property
+  @builtins.property
   def {0}(self):
     _ods_variadic_group_length = len(self.operation.{1}s) - {2} + 1
     return self.operation.{1}s[{3} + _ods_variadic_group_length - 1]
@@ -107,7 +109,7 @@ constexpr const char *opSingleAfterVariableTemplate = R"Py(
 ///   {2} is the total number of element groups;
 ///   {3} is the position of the current group in the group list.
 constexpr const char *opOneOptionalTemplate = R"Py(
-  @property
+  @builtins.property
   def {0}(self):
     return self.operation.{1}s[{3}] if len(self.operation.{1}s) > {2} else None
 )Py";
@@ -118,7 +120,7 @@ constexpr const char *opOneOptionalTemplate = R"Py(
 ///   {2} is the total number of element groups;
 ///   {3} is the position of the current group in the group list.
 constexpr const char *opOneVariadicTemplate = R"Py(
-  @property
+  @builtins.property
   def {0}(self):
     _ods_variadic_group_length = len(self.operation.{1}s) - {2} + 1
     return self.operation.{1}s[{3}:{3} + _ods_variadic_group_length]
@@ -131,7 +133,7 @@ constexpr const char *opOneVariadicTemplate = R"Py(
 ///   {3} is the number of non-variadic groups preceding the current group;
 ///   {3} is the number of variadic groups preceding the current group.
 constexpr const char *opVariadicEqualPrefixTemplate = R"Py(
-  @property
+  @builtins.property
   def {0}(self):
     start, pg = _ods_equally_sized_accessor(operation.{1}s, {2}, {3}, {4}))Py";
 
@@ -156,7 +158,7 @@ constexpr const char *opVariadicEqualVariadicTemplate = R"Py(
 ///   {3} is a return suffix (expected [0] for single-element, empty for
 ///       variadic, and opVariadicSegmentOptionalTrailingTemplate for optional).
 constexpr const char *opVariadicSegmentTemplate = R"Py(
-  @property
+  @builtins.property
   def {0}(self):
     {1}_range = _ods_segmented_accessor(
          self.operation.{1}s,
@@ -175,7 +177,7 @@ constexpr const char *opVariadicSegmentOptionalTrailingTemplate =
 ///   {1} is the Python type of the attribute;
 ///   {2} os the original name of the attribute.
 constexpr const char *attributeGetterTemplate = R"Py(
-  @property
+  @builtins.property
   def {0}(self):
     return {1}(self.operation.attributes["{2}"])
 )Py";
@@ -185,7 +187,7 @@ constexpr const char *attributeGetterTemplate = R"Py(
 ///   {1} is the Python type of the attribute;
 ///   {2} is the original name of the attribute.
 constexpr const char *optionalAttributeGetterTemplate = R"Py(
-  @property
+  @builtins.property
   def {0}(self):
     if "{2}" not in self.operation.attributes:
       return None
@@ -198,7 +200,7 @@ constexpr const char *optionalAttributeGetterTemplate = R"Py(
 ///    {0} is the name of the attribute sanitized for Python,
 ///    {1} is the original name of the attribute.
 constexpr const char *unitAttributeGetterTemplate = R"Py(
-  @property
+  @builtins.property
   def {0}(self):
     return "{1}" in self.operation.attributes
 )Py";
@@ -723,9 +725,6 @@ static bool emitAllOps(const llvm::RecordKeeper &records, raw_ostream &os) {
 
   os << llvm::formatv(fileHeader, clDialectName.getValue());
   os << llvm::formatv(dialectClassTemplate, clDialectName.getValue());
-
-  if (clDialectName == "builtin")
-    clDialectName = "";
 
   for (const llvm::Record *rec : records.getAllDerivedDefinitions("Op")) {
     Operator op(rec);

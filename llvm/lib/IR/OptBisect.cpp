@@ -22,13 +22,11 @@
 using namespace llvm;
 
 static cl::opt<int> OptBisectLimit("opt-bisect-limit", cl::Hidden,
-                                   cl::init(std::numeric_limits<int>::max()),
-                                   cl::Optional,
+                                   cl::init(OptBisect::Disabled), cl::Optional,
+                                   cl::cb<void, int>([](int Limit) {
+                                     llvm::OptBisector->setLimit(Limit);
+                                   }),
                                    cl::desc("Maximum optimization to perform"));
-
-OptBisect::OptBisect() : OptPassGate() {
-  BisectEnabled = OptBisectLimit != std::numeric_limits<int>::max();
-}
 
 static void printPassMessage(const StringRef &Name, int PassNum,
                              StringRef TargetDesc, bool Running) {
@@ -38,19 +36,21 @@ static void printPassMessage(const StringRef &Name, int PassNum,
 }
 
 bool OptBisect::shouldRunPass(const Pass *P, StringRef IRDescription) {
-  assert(BisectEnabled);
+  assert(isEnabled());
 
   return checkPass(P->getPassName(), IRDescription);
 }
 
 bool OptBisect::checkPass(const StringRef PassName,
                           const StringRef TargetDesc) {
-  assert(BisectEnabled);
+  assert(isEnabled());
 
   int CurBisectNum = ++LastBisectNum;
-  bool ShouldRun = (OptBisectLimit == -1 || CurBisectNum <= OptBisectLimit);
+  bool ShouldRun = (BisectLimit == -1 || CurBisectNum <= BisectLimit);
   printPassMessage(PassName, CurBisectNum, TargetDesc, ShouldRun);
   return ShouldRun;
 }
+
+const int OptBisect::Disabled;
 
 ManagedStatic<OptBisect> llvm::OptBisector;

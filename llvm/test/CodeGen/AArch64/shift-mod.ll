@@ -78,7 +78,7 @@ entry:
 define i64 @ashr_add_shl_i32(i64 %r) {
 ; CHECK-LABEL: ashr_add_shl_i32:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    add w8, w0, #1 // =1
+; CHECK-NEXT:    add w8, w0, #1
 ; CHECK-NEXT:    sxtw x0, w8
 ; CHECK-NEXT:    ret
   %conv = shl i64 %r, 32
@@ -90,7 +90,7 @@ define i64 @ashr_add_shl_i32(i64 %r) {
 define i64 @ashr_add_shl_i8(i64 %r) {
 ; CHECK-LABEL: ashr_add_shl_i8:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    add w8, w0, #1 // =1
+; CHECK-NEXT:    add w8, w0, #1
 ; CHECK-NEXT:    sxtb x0, w8
 ; CHECK-NEXT:    ret
   %conv = shl i64 %r, 56

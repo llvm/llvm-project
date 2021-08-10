@@ -1,5 +1,6 @@
 # RUN: %PYTHON %s 2>&1 | FileCheck %s
 
+import ctypes
 import sys
 from mlir.ir import *
 from mlir.dialects import builtin
@@ -125,9 +126,10 @@ def transform(module, boilerplate):
   mod = Module.parse(
       str(module.operation.regions[0].blocks[0].operations[0].operation) +
       boilerplate)
-  pm = PassManager.parse("func(convert-linalg-to-loops, lower-affine, " +
-                         "convert-scf-to-std), convert-vector-to-llvm," +
-                         "convert-memref-to-llvm,convert-std-to-llvm")
+  pm = PassManager.parse(
+      "builtin.func(convert-linalg-to-loops, lower-affine, " +
+      "convert-scf-to-std), convert-vector-to-llvm," +
+      "convert-memref-to-llvm,convert-std-to-llvm")
   pm.run(mod)
   return mod
 
@@ -318,7 +320,7 @@ def test_max_pooling_builtin():
           MemRefType.get((1, 4, 16, 1), f64), MemRefType.get((2, 2), f64),
           MemRefType.get((1, 2, 4, 1), i32))
       def pooling_on_buffers(input, shape, output):
-        linalg.pooling_nhwc_max_poly(
+        linalg.pooling_nhwc_max(
             input, shape, outs=[output], strides=[2, 4], dilations=[1, 2])
 
     execution_engine = ExecutionEngine(transform(module, pooling_boiler))
@@ -349,7 +351,7 @@ def test_max_pooling_generic():
           MemRefType.get((1, 4, 16, 1), f64), MemRefType.get((2, 2), f64),
           MemRefType.get((1, 2, 4, 1), i32))
       def pooling_on_buffers(input, shape, output):
-        linalg.pooling_nhwc_max_poly(
+        linalg.pooling_nhwc_max(
             input,
             shape,
             outs=[output],
@@ -385,7 +387,7 @@ def test_min_pooling_builtin():
           MemRefType.get((1, 4, 16, 1), f64), MemRefType.get((2, 2), f64),
           MemRefType.get((1, 2, 4, 1), i32))
       def pooling_on_buffers(input, shape, output):
-        linalg.pooling_nhwc_min_poly(
+        linalg.pooling_nhwc_min(
             input, shape, outs=[output], strides=[2, 4], dilations=[1, 2])
 
     execution_engine = ExecutionEngine(transform(module, pooling_boiler))
@@ -415,7 +417,7 @@ def test_min_pooling_generic():
           MemRefType.get((1, 4, 16, 1), f64), MemRefType.get((2, 2), f64),
           MemRefType.get((1, 2, 4, 1), i32))
       def pooling_on_buffers(input, shape, output):
-        linalg.pooling_nhwc_min_poly(
+        linalg.pooling_nhwc_min(
             input,
             shape,
             outs=[output],

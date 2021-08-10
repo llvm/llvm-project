@@ -66,7 +66,7 @@ bool ABIMacOSX_arm64::PrepareTrivialCall(
 
   if (log) {
     StreamString s;
-    s.Printf("ABISysV_x86_64::PrepareTrivialCall (tid = 0x%" PRIx64
+    s.Printf("ABIMacOSX_arm64::PrepareTrivialCall (tid = 0x%" PRIx64
              ", sp = 0x%" PRIx64 ", func_addr = 0x%" PRIx64
              ", return_addr = 0x%" PRIx64,
              thread.GetID(), (uint64_t)sp, (uint64_t)func_addr,
@@ -86,7 +86,7 @@ bool ABIMacOSX_arm64::PrepareTrivialCall(
       eRegisterKindGeneric, LLDB_REGNUM_GENERIC_RA);
 
   // x0 - x7 contain first 8 simple args
-  if (args.size() > 8) // TODO handle more than 6 arguments
+  if (args.size() > 8) // TODO handle more than 8 arguments
     return false;
 
   for (size_t i = 0; i < args.size(); ++i) {

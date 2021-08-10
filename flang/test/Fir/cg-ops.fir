@@ -1,4 +1,4 @@
-// RUN: fir-opt --pass-pipeline="func(cg-rewrite),fir.global(cg-rewrite),cse" %s | FileCheck %s
+// RUN: fir-opt --pass-pipeline="builtin.func(cg-rewrite),fir.global(cg-rewrite),cse" %s | FileCheck %s
 
 // CHECK-LABEL: func @codegen(
 // CHECK-SAME: %[[arg:.*]]: !fir

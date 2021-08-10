@@ -82,6 +82,17 @@ void ShowStatsAndAbort() {
   Die();
 }
 
+NOINLINE
+static void ReportGenericErrorWrapper(uptr addr, bool is_write, int size,
+                                      int exp_arg, bool fatal) {
+  if (__asan_test_only_reported_buggy_pointer) {
+    *__asan_test_only_reported_buggy_pointer = addr;
+  } else {
+    GET_CALLER_PC_BP_SP;
+    ReportGenericError(pc, bp, sp, addr, is_write, size, exp_arg, fatal);
+  }
+}
+
 // --------------- LowLevelAllocateCallbac ---------- {{{1
 static void OnLowLevelAllocate(uptr ptr, uptr size) {
   PoisonShadow(ptr, size, kAsanInternalHeapMagic);
@@ -145,12 +156,7 @@ ASAN_REPORT_ERROR_N(store, true)
     if (UNLIKELY(size >= SHADOW_GRANULARITY ||                                 \
                  ((s8)((addr & (SHADOW_GRANULARITY - 1)) + size - 1)) >=       \
                      (s8)s)) {                                                 \
-      if (__asan_test_only_reported_buggy_pointer) {                           \
-        *__asan_test_only_reported_buggy_pointer = addr;                       \
-      } else {                                                                 \
-        GET_CALLER_PC_BP_SP;                                                   \
-        ReportGenericError(pc, bp, sp, addr, is_write, size, exp_arg, fatal);  \
-      }                                                                        \
+      ReportGenericErrorWrapper(addr, is_write, size, exp_arg, fatal);         \
     }                                                                          \
   }
 

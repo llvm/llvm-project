@@ -18,13 +18,13 @@ void *Thread1(void *x) {
   return NULL;
 }
 
-void TouchGlobal() __attribute__((noinline)) {
+__attribute__((noinline)) void TouchGlobal() {
   // CHECK: Previous write of size 4
   // CHECK: #0 TouchGlobal{{.*}}ignorelist2.cpp:[[@LINE+1]]
   Global--;
 }
 
-void CallTouchGlobal() __attribute__((noinline)) {
+__attribute__((noinline)) void CallTouchGlobal() {
   // CHECK: #1 CallTouchGlobal{{.*}}ignorelist2.cpp:[[@LINE+1]]
   TouchGlobal();
 }

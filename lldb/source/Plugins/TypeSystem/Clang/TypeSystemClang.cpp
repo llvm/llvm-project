@@ -478,7 +478,7 @@ static void ParseLangArgs(LangOptions &Opts, InputKind IK, const char *triple) {
       LangStd = LangStandard::lang_opencl10;
       break;
     case clang::Language::OpenCLCXX:
-      LangStd = LangStandard::lang_openclcpp;
+      LangStd = LangStandard::lang_openclcpp10;
       break;
     case clang::Language::CUDA:
       LangStd = LangStandard::lang_cuda;
@@ -687,8 +687,8 @@ void TypeSystemClang::SetTargetTriple(llvm::StringRef target_triple) {
 void TypeSystemClang::SetExternalSource(
     llvm::IntrusiveRefCntPtr<ExternalASTSource> &ast_source_up) {
   ASTContext &ast = getASTContext();
-  ast.setExternalSource(ast_source_up);
   ast.getTranslationUnitDecl()->setHasExternalLexicalStorage(true);
+  ast.setExternalSource(ast_source_up);
 }
 
 ASTContext &TypeSystemClang::getASTContext() {
@@ -746,7 +746,7 @@ void TypeSystemClang::CreateASTContext() {
       *m_diagnostics_engine_up, *m_file_manager_up);
   m_ast_up = std::make_unique<ASTContext>(
       *m_language_options_up, *m_source_manager_up, *m_identifier_table_up,
-      *m_selector_table_up, *m_builtins_up);
+      *m_selector_table_up, *m_builtins_up, TU_Complete);
 
   m_diagnostic_consumer_up = std::make_unique<NullDiagnosticConsumer>();
   m_ast_up->getDiagnostics().setClient(m_diagnostic_consumer_up.get(), false);
@@ -2220,11 +2220,10 @@ ParmVarDecl *TypeSystemClang::CreateParameterDeclaration(
   return decl;
 }
 
-void TypeSystemClang::SetFunctionParameters(FunctionDecl *function_decl,
-                                            ParmVarDecl **params,
-                                            unsigned num_params) {
+void TypeSystemClang::SetFunctionParameters(
+    FunctionDecl *function_decl, llvm::ArrayRef<ParmVarDecl *> params) {
   if (function_decl)
-    function_decl->setParams(ArrayRef<ParmVarDecl *>(params, num_params));
+    function_decl->setParams(params);
 }
 
 CompilerType
@@ -2574,42 +2573,6 @@ ClangASTMetadata *TypeSystemClang::GetMetadata(const clang::Type *object) {
   if (It != m_type_metadata.end())
     return &It->second;
   return nullptr;
-}
-
-bool TypeSystemClang::SetTagTypeKind(clang::QualType tag_qual_type,
-                                     int kind) const {
-  const clang::Type *clang_type = tag_qual_type.getTypePtr();
-  if (clang_type) {
-    const clang::TagType *tag_type = llvm::dyn_cast<clang::TagType>(clang_type);
-    if (tag_type) {
-      clang::TagDecl *tag_decl =
-          llvm::dyn_cast<clang::TagDecl>(tag_type->getDecl());
-      if (tag_decl) {
-        tag_decl->setTagKind((clang::TagDecl::TagKind)kind);
-        return true;
-      }
-    }
-  }
-  return false;
-}
-
-bool TypeSystemClang::SetDefaultAccessForRecordFields(
-    clang::RecordDecl *record_decl, int default_accessibility,
-    int *assigned_accessibilities, size_t num_assigned_accessibilities) {
-  if (record_decl) {
-    uint32_t field_idx;
-    clang::RecordDecl::field_iterator field, field_end;
-    for (field = record_decl->field_begin(),
-        field_end = record_decl->field_end(), field_idx = 0;
-         field != field_end; ++field, ++field_idx) {
-      // If no accessibility was assigned, assign the correct one
-      if (field_idx < num_assigned_accessibilities &&
-          assigned_accessibilities[field_idx] == clang::AS_none)
-        field->setAccess((clang::AccessSpecifier)default_accessibility);
-    }
-    return true;
-  }
-  return false;
 }
 
 clang::DeclContext *

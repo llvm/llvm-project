@@ -297,16 +297,15 @@ void objdump::reportWarning(const Twine &Message, StringRef File) {
       << "'" << File << "': " << Message << "\n";
 }
 
-LLVM_ATTRIBUTE_NORETURN void objdump::reportError(StringRef File,
-                                                  const Twine &Message) {
+[[noreturn]] void objdump::reportError(StringRef File, const Twine &Message) {
   outs().flush();
   WithColor::error(errs(), ToolName) << "'" << File << "': " << Message << "\n";
   exit(1);
 }
 
-LLVM_ATTRIBUTE_NORETURN void objdump::reportError(Error E, StringRef FileName,
-                                                  StringRef ArchiveName,
-                                                  StringRef ArchitectureName) {
+[[noreturn]] void objdump::reportError(Error E, StringRef FileName,
+                                       StringRef ArchiveName,
+                                       StringRef ArchitectureName) {
   assert(E);
   outs().flush();
   WithColor::error(errs(), ToolName);
@@ -325,7 +324,7 @@ static void reportCmdLineWarning(const Twine &Message) {
   WithColor::warning(errs(), ToolName) << Message << "\n";
 }
 
-LLVM_ATTRIBUTE_NORETURN static void reportCmdLineError(const Twine &Message) {
+[[noreturn]] static void reportCmdLineError(const Twine &Message) {
   WithColor::error(errs(), ToolName) << Message << "\n";
   exit(1);
 }
@@ -736,6 +735,43 @@ addDynamicElfSymbols(const ObjectFile *Obj,
     llvm_unreachable("Unsupported binary format");
 }
 
+static Optional<SectionRef> getWasmCodeSection(const WasmObjectFile *Obj) {
+  for (auto SecI : Obj->sections()) {
+    const WasmSection &Section = Obj->getWasmSection(SecI);
+    if (Section.Type == wasm::WASM_SEC_CODE)
+      return SecI;
+  }
+  return None;
+}
+
+static void
+addMissingWasmCodeSymbols(const WasmObjectFile *Obj,
+                          std::map<SectionRef, SectionSymbolsTy> &AllSymbols) {
+  Optional<SectionRef> Section = getWasmCodeSection(Obj);
+  if (!Section)
+    return;
+  SectionSymbolsTy &Symbols = AllSymbols[*Section];
+
+  std::set<uint64_t> SymbolAddresses;
+  for (const auto &Sym : Symbols)
+    SymbolAddresses.insert(Sym.Addr);
+
+  for (const wasm::WasmFunction &Function : Obj->functions()) {
+    uint64_t Address = Function.CodeSectionOffset;
+    // Only add fallback symbols for functions not already present in the symbol
+    // table.
+    if (SymbolAddresses.count(Address))
+      continue;
+    // This function has no symbol, so it should have no SymbolName.
+    assert(Function.SymbolName.empty());
+    // We use DebugName for the name, though it may be empty if there is no
+    // "name" custom section, or that section is missing a name for this
+    // function.
+    StringRef Name = Function.DebugName;
+    Symbols.emplace_back(Address, Name, ELF::STT_NOTYPE);
+  }
+}
+
 static void addPltEntries(const ObjectFile *Obj,
                           std::map<SectionRef, SectionSymbolsTy> &AllSymbols,
                           StringSaver &Saver) {
@@ -1126,6 +1162,9 @@ static void disassembleObject(const Target *TheTarget, const ObjectFile *Obj,
   if (AllSymbols.empty() && Obj->isELF())
     addDynamicElfSymbols(Obj, AllSymbols);
 
+  if (Obj->isWasm())
+    addMissingWasmCodeSymbols(cast<WasmObjectFile>(Obj), AllSymbols);
+
   BumpPtrAllocator A;
   StringSaver Saver(A);
   addPltEntries(Obj, AllSymbols, Saver);
@@ -1441,7 +1480,7 @@ static void disassembleObject(const Target *TheTarget, const ObjectFile *Obj,
             if (!PrintTarget)
               if (Optional<uint64_t> MaybeTarget =
                       MIA->evaluateMemoryOperandAddress(
-                          Inst, SectionAddr + Index, Size)) {
+                          Inst, STI, SectionAddr + Index, Size)) {
                 Target = *MaybeTarget;
                 PrintTarget = true;
                 // Do not print real address when symbolizing.

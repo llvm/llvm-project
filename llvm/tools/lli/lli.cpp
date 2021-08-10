@@ -33,7 +33,6 @@
 #include "llvm/ExecutionEngine/Orc/ExecutionUtils.h"
 #include "llvm/ExecutionEngine/Orc/JITTargetMachineBuilder.h"
 #include "llvm/ExecutionEngine/Orc/LLJIT.h"
-#include "llvm/ExecutionEngine/Orc/MachOPlatform.h"
 #include "llvm/ExecutionEngine/Orc/OrcRemoteTargetClient.h"
 #include "llvm/ExecutionEngine/Orc/RTDyldObjectLinkingLayer.h"
 #include "llvm/ExecutionEngine/Orc/SymbolStringPool.h"
@@ -228,7 +227,7 @@ namespace {
       cl::desc("Do not resolve lli process symbols in JIT'd code"),
       cl::init(false));
 
-  enum class LLJITPlatform { Inactive, DetectHost, GenericIR, MachO };
+  enum class LLJITPlatform { Inactive, DetectHost, GenericIR };
 
   cl::opt<LLJITPlatform>
       Platform("lljit-platform", cl::desc("Platform to use with LLJIT"),
@@ -237,8 +236,6 @@ namespace {
                                      "Select based on JIT target triple"),
                           clEnumValN(LLJITPlatform::GenericIR, "GenericIR",
                                      "Use LLJITGenericIRPlatform"),
-                          clEnumValN(LLJITPlatform::MachO, "MachO",
-                                     "Use LLJITMachOPlatform"),
                           clEnumValN(LLJITPlatform::Inactive, "Inactive",
                                      "Disable platform support explicitly")),
                cl::Hidden);
@@ -413,8 +410,7 @@ CodeGenOpt::Level getOptLevel() {
   llvm_unreachable("Unrecognized opt level.");
 }
 
-LLVM_ATTRIBUTE_NORETURN
-static void reportError(SMDiagnostic Err, const char *ProgName) {
+[[noreturn]] static void reportError(SMDiagnostic Err, const char *ProgName) {
   Err.print(ProgName, errs());
   exit(1);
 }
@@ -720,7 +716,8 @@ int main(int argc, char **argv, char * const *envp) {
     }
 
     // Create a remote target client running over the channel.
-    llvm::orc::ExecutionSession ES;
+    llvm::orc::ExecutionSession ES(
+        std::make_unique<orc::UnsupportedExecutorProcessControl>());
     ES.setErrorReporter([&](Error Err) { ExitOnErr(std::move(Err)); });
     typedef orc::remote::OrcRemoteTargetClient MyRemote;
     auto R = ExitOnErr(MyRemote::Create(*C, ES));
@@ -877,7 +874,8 @@ int runOrcJIT(const char *ProgName) {
   // JIT builder to instantiate a default (which would fail with an error for
   // unsupported architectures).
   if (UseJITKind != JITKind::OrcLazy) {
-    auto ES = std::make_unique<orc::ExecutionSession>();
+    auto ES = std::make_unique<orc::ExecutionSession>(
+        ExitOnErr(orc::SelfExecutorProcessControl::Create()));
     Builder.setLazyCallthroughManager(
         std::make_unique<orc::LazyCallThroughManager>(*ES, 0, nullptr));
     Builder.setExecutionSession(std::move(ES));
@@ -913,20 +911,12 @@ int runOrcJIT(const char *ProgName) {
   // Set up LLJIT platform.
   {
     LLJITPlatform P = Platform;
-    if (P == LLJITPlatform::DetectHost) {
-      if (TT->isOSBinFormatMachO())
-        P = LLJITPlatform::MachO;
-      else
-        P = LLJITPlatform::GenericIR;
-    }
+    if (P == LLJITPlatform::DetectHost)
+      P = LLJITPlatform::GenericIR;
 
     switch (P) {
     case LLJITPlatform::GenericIR:
       // Nothing to do: LLJITBuilder will use this by default.
-      break;
-    case LLJITPlatform::MachO:
-      Builder.setPlatformSetUp(orc::setUpMachOPlatform);
-      ExitOnErr(orc::enableObjCRegistration("libobjc.dylib"));
       break;
     case LLJITPlatform::Inactive:
       Builder.setPlatformSetUp(orc::setUpInactivePlatform);
@@ -945,9 +935,9 @@ int runOrcJIT(const char *ProgName) {
                                                 const Triple &) {
       auto L = std::make_unique<orc::ObjectLinkingLayer>(ES, EPC->getMemMgr());
       L->addPlugin(std::make_unique<orc::EHFrameRegistrationPlugin>(
-          ES, ExitOnErr(orc::EPCEHFrameRegistrar::Create(*EPC))));
+          ES, ExitOnErr(orc::EPCEHFrameRegistrar::Create(ES))));
       L->addPlugin(std::make_unique<orc::DebugObjectManagerPlugin>(
-          ES, ExitOnErr(orc::createJITLoaderGDBRegistrar(*EPC))));
+          ES, ExitOnErr(orc::createJITLoaderGDBRegistrar(ES))));
       return L;
     });
   }

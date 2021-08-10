@@ -45,7 +45,7 @@ individual files instead, plus any other options/object.
 void printHelpMessage() { outs() << NVLWHelp; }
 
 // Show the error message and exit.
-LLVM_ATTRIBUTE_NORETURN static void fail(Twine Error) {
+[[noreturn]] static void fail(Twine Error) {
   WithColor::error(errs(), ToolName) << Error << ".\n";
   printHelpMessage();
   exit(1);

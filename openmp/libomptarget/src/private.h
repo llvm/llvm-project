@@ -91,7 +91,6 @@ extern "C" {
 #endif
 // functions that extract info from libomp; keep in sync
 int omp_get_default_device(void) __attribute__((weak));
-int32_t __kmpc_omp_taskwait(void *loc_ref, int32_t gtid) __attribute__((weak));
 int32_t __kmpc_global_thread_num(void *) __attribute__((weak));
 int __kmpc_get_target_offload(void) __attribute__((weak));
 #ifdef __cplusplus

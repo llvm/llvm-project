@@ -27,7 +27,7 @@ already. It does not need to be included separately to get full OpenMP support.
 Variables
 ^^^^^^^^^
 
-The module exposes the components ``NVPTX`` and ``AMDGCN``.  Each of these
+The module exposes the components ``NVPTX`` and ``AMDGPU``.  Each of these
 controls the various offloading targets to search OpenMP target offloasing
 support for.
 
@@ -38,7 +38,7 @@ Depending on the enabled components the following variables will be set:
   targets have been found.
 
 This module will set the following variables per language in your
-project, where ``<device>`` is one of NVPTX or AMDGCN
+project, where ``<device>`` is one of NVPTX or AMDGPU
 
 ``OpenMPTarget_<device>_FOUND``
   Variable indicating if OpenMP support for the ``<device>`` was detected.
@@ -62,7 +62,7 @@ be used to override the standard flag searching for a given compiler.
 
 ``OpenMPTarget_<device>_ARCH``
   Sets the architecture of ``<device>`` to compile for. Such as `sm_70` for NVPTX
-  or `gfx908` for AMDGCN. 
+  or `gfx908` for AMDGPU. 
 
 ``OpenMPTarget_<device>_DEVICE``
   Sets the name of the device to offload to.
@@ -124,7 +124,7 @@ function(_OPENMP_TARGET_DEVICE_CANDIDATES LANG DEVICE)
       if(DEFINED OMPTarget_DEVICE_${CMAKE_${LANG}_COMPILER_ID})
         set(OpenMPTarget_DEVICE_CANDIDATES "${OMPTarget_DEVICE_${CMAKE_${LANG}_COMPILER_ID}}")
       endif()
-    elseif("${DEVICE}" STREQUAL "AMDGCN")
+    elseif("${DEVICE}" STREQUAL "AMDGPU")
       set(OMPTarget_DEVICE_Clang "amdgcn-amd-amdhsa")
       set(OMPTarget_DEVICE_GNU "hsa")
 
@@ -227,7 +227,7 @@ foreach(LANG IN ITEMS C CXX)
   set(OpenMP_${LANG}_VERSION ${OpenMP_${LANG}_VERSION}
     CACHE STRING "OpenMP Version" FORCE)
   mark_as_advanced(OpenMP_${LANG}_VERSION)
-  foreach(DEVICE IN ITEMS NVPTX AMDGCN)
+  foreach(DEVICE IN ITEMS NVPTX AMDGPU)
     if(CMAKE_${LANG}_COMPILER_LOADED)
       if(NOT DEFINED OpenMPTarget_${LANG}_FLAGS OR NOT DEFINED OpenMPTarget_${LANG}_DEVICE)
         _OPENMP_TARGET_DEVICE_GET_FLAGS(${LANG} ${DEVICE}
@@ -242,9 +242,9 @@ foreach(LANG IN ITEMS C CXX)
             CACHE STRING "${DEVICE} target compile flags for OpenMP target offloading" FORCE)
         set(OpenMPTarget_${DEVICE}_ARCH ${_OpenMPTarget_${DEVICE}_ARCHS}
             CACHE STRING "${DEVICE} target architecture flags for OpenMP target offloading" FORCE)
-        set(OpenMPTarget_${DEVICE}_LIBS ${OpenMPTarget_${DEVICE}_LIBS_WORK}
+        set(OpenMPTarget_${DEVICE}_LIBRARIES ${OpenMPTarget_${DEVICE}_LIBS_WORK}
             CACHE STRING "${DEVICE} target libraries for OpenMP target offloading" FORCE)
-        mark_as_advanced(OpenMPTarget_${DEVICE}_FLAGS OpenMPTarget_${DEVICE}_ARCH OpenMPTarget_${DEVICE}_LIBS)
+        mark_as_advanced(OpenMPTarget_${DEVICE}_FLAGS OpenMPTarget_${DEVICE}_ARCH OpenMPTarget_${DEVICE}_LIBRARIES)
       endif()
     endif()
   endforeach()
@@ -301,7 +301,7 @@ foreach(LANG IN ITEMS C CXX)
           INTERFACE_INCLUDE_DIRECTORIES "$<BUILD_INTERFACE:${OpenMP_${LANG}_INCLUDE_DIRS}>")
         set_property(TARGET OpenMPTarget::OpenMPTarget_${DEVICE} PROPERTY
           INTERFACE_LINK_LIBRARIES 
-          "${OpenMPTarget_${DEVICE}_LIBS}"
+          "${OpenMPTarget_${DEVICE}_LIBRARIES}"
           "${OpenMP_${LANG}_LIBRARIES}")
         # The offloading flags must also be passed during the linking phase so
         # the compiler can pass the binary to the correct toolchain.

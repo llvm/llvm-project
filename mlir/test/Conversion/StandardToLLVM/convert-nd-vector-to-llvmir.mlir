@@ -138,3 +138,45 @@ func @trunci_vector(%arg0 : vector<1x2x3xi64>) -> vector<1x2x3xi16> {
   %0 = trunci %arg0: vector<1x2x3xi64> to vector<1x2x3xi16>
   return %0 : vector<1x2x3xi16>
 }
+
+// CHECK-LABEL: @shl
+func @shl_vector(%arg0 : vector<1x2x3xi64>) -> vector<1x2x3xi64> {
+  // CHECK: llvm.mlir.undef : !llvm.array<1 x array<2 x vector<3xi64>>>
+  // CHECK: llvm.extractvalue %{{.*}}[0, 0] : !llvm.array<1 x array<2 x vector<3xi64>>>
+  // CHECK: llvm.shl %{{.*}}, %{{.*}} : vector<3xi64>
+  // CHECK: llvm.insertvalue %{{.*}}, %{{.*}}[0, 0] : !llvm.array<1 x array<2 x vector<3xi64>>>
+  // CHECK: llvm.extractvalue %{{.*}}[0, 1] : !llvm.array<1 x array<2 x vector<3xi64>>>
+  // CHECK: llvm.shl %{{.*}}, %{{.*}} : vector<3xi64>
+  // CHECK: llvm.insertvalue %{{.*}}, %{{.*}}[0, 1] : !llvm.array<1 x array<2 x vector<3xi64>>>
+  %c1 = constant dense<1> : vector<1x2x3xi64>
+  %0 = shift_left %arg0, %c1 : vector<1x2x3xi64>
+  return %0 : vector<1x2x3xi64>
+}
+
+// CHECK-LABEL: @shrs
+func @shrs_vector(%arg0 : vector<1x2x3xi64>) -> vector<1x2x3xi64> {
+  // CHECK: llvm.mlir.undef : !llvm.array<1 x array<2 x vector<3xi64>>>
+  // CHECK: llvm.extractvalue %{{.*}}[0, 0] : !llvm.array<1 x array<2 x vector<3xi64>>>
+  // CHECK: llvm.ashr %{{.*}}, %{{.*}} : vector<3xi64>
+  // CHECK: llvm.insertvalue %{{.*}}, %{{.*}}[0, 0] : !llvm.array<1 x array<2 x vector<3xi64>>>
+  // CHECK: llvm.extractvalue %{{.*}}[0, 1] : !llvm.array<1 x array<2 x vector<3xi64>>>
+  // CHECK: llvm.ashr %{{.*}}, %{{.*}} : vector<3xi64>
+  // CHECK: llvm.insertvalue %{{.*}}, %{{.*}}[0, 1] : !llvm.array<1 x array<2 x vector<3xi64>>>
+  %c1 = constant dense<1> : vector<1x2x3xi64>
+  %0 = shift_right_signed %arg0, %c1 : vector<1x2x3xi64>
+  return %0 : vector<1x2x3xi64>
+}
+
+// CHECK-LABEL: @shru
+func @shru_vector(%arg0 : vector<1x2x3xi64>) -> vector<1x2x3xi64> {
+  // CHECK: llvm.mlir.undef : !llvm.array<1 x array<2 x vector<3xi64>>>
+  // CHECK: llvm.extractvalue %{{.*}}[0, 0] : !llvm.array<1 x array<2 x vector<3xi64>>>
+  // CHECK: llvm.lshr %{{.*}}, %{{.*}} : vector<3xi64>
+  // CHECK: llvm.insertvalue %{{.*}}, %{{.*}}[0, 0] : !llvm.array<1 x array<2 x vector<3xi64>>>
+  // CHECK: llvm.extractvalue %{{.*}}[0, 1] : !llvm.array<1 x array<2 x vector<3xi64>>>
+  // CHECK: llvm.lshr %{{.*}}, %{{.*}} : vector<3xi64>
+  // CHECK: llvm.insertvalue %{{.*}}, %{{.*}}[0, 1] : !llvm.array<1 x array<2 x vector<3xi64>>>
+  %c1 = constant dense<1> : vector<1x2x3xi64>
+  %0 = shift_right_unsigned %arg0, %c1 : vector<1x2x3xi64>
+  return %0 : vector<1x2x3xi64>
+}

@@ -121,6 +121,17 @@ macro(add_target_flags_if condition)
   endif()
 endmacro()
 
+# Add all the flags supported by the compiler to all of
+# 'CMAKE_CXX_FLAGS', 'CMAKE_C_FLAGS', 'LIBCXX_COMPILE_FLAGS'
+# and 'LIBCXX_LINK_FLAGS'.
+macro(add_target_flags_if_supported)
+  foreach(flag ${ARGN})
+    mangle_name("${flag}" flagname)
+    check_cxx_compiler_flag("${flag}" "LIBCXX_SUPPORTS_${flagname}_FLAG")
+    add_target_flags_if(LIBCXX_SUPPORTS_${flagname}_FLAG ${flag})
+  endforeach()
+endmacro()
+
 # Add a specified list of flags to both 'LIBCXX_COMPILE_FLAGS' and
 # 'LIBCXX_LINK_FLAGS'.
 macro(add_flags)

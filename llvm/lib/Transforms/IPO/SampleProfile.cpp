@@ -36,6 +36,7 @@
 #include "llvm/ADT/StringRef.h"
 #include "llvm/ADT/Twine.h"
 #include "llvm/Analysis/AssumptionCache.h"
+#include "llvm/Analysis/BlockFrequencyInfoImpl.h"
 #include "llvm/Analysis/CallGraph.h"
 #include "llvm/Analysis/CallGraphSCCPass.h"
 #include "llvm/Analysis/InlineAdvisor.h"
@@ -196,11 +197,16 @@ cl::opt<int> SampleColdCallSiteThreshold(
     "sample-profile-cold-inline-threshold", cl::Hidden, cl::init(45),
     cl::desc("Threshold for inlining cold callsites"));
 
-static cl::opt<int> ProfileICPThreshold(
-    "sample-profile-icp-threshold", cl::Hidden, cl::init(5),
+static cl::opt<unsigned> ProfileICPRelativeHotness(
+    "sample-profile-icp-relative-hotness", cl::Hidden, cl::init(25),
     cl::desc(
-        "Relative hotness threshold for indirect "
+        "Relative hotness percentage threshold for indirect "
         "call promotion in proirity-based sample profile loader inlining."));
+
+static cl::opt<unsigned> ProfileICPRelativeHotnessSkip(
+    "sample-profile-icp-relative-hotness-skip", cl::Hidden, cl::init(1),
+    cl::desc(
+        "Skip relative hotness check for ICP up to given number of targets."));
 
 static cl::opt<bool> CallsitePrioritizedInline(
     "sample-profile-prioritized-inline", cl::Hidden, cl::ZeroOrMore,
@@ -413,9 +419,6 @@ protected:
 
   /// Name of the profile remapping file to load.
   std::string RemappingFilename;
-
-  /// Flag indicating whether the profile input loaded successfully.
-  bool ProfileIsValid = false;
 
   /// Flag indicating whether input profile is context-sensitive
   bool ProfileIsCS = false;
@@ -1176,6 +1179,10 @@ bool SampleProfileLoader::tryInlineCandidate(
   InlineFunctionInfo IFI(nullptr, GetAC);
   IFI.UpdateProfile = false;
   if (InlineFunction(CB, IFI).isSuccess()) {
+    // Merge the attributes based on the inlining.
+    AttributeFuncs::mergeAttributesForInlining(*BB->getParent(),
+                                               *CalledFunction);
+
     // The call to InlineFunction erases I, so we can't pass it here.
     emitInlinedInto(*ORE, DLoc, BB, *CalledFunction, *BB->getParent(), Cost,
                     true, CSINLINE_DEBUG);
@@ -1346,6 +1353,7 @@ bool SampleProfileLoader::inlineHotFunctionsWithPriority(
       auto CalleeSamples = findIndirectCallFunctionSamples(*I, Sum);
       uint64_t SumOrigin = Sum;
       Sum *= Candidate.CallsiteDistribution;
+      unsigned ICPCount = 0;
       for (const auto *FS : CalleeSamples) {
         // TODO: Consider disable pre-lTO ICP for MonoLTO as well
         if (LTOPhase == ThinOrFullLTOPhase::ThinLTOPreLink) {
@@ -1359,7 +1367,8 @@ bool SampleProfileLoader::inlineHotFunctionsWithPriority(
         // ICP isn't introducing excessive speculative checks even if individual
         // target looks beneficial to promote and inline. That means we should
         // only do ICP when there's a small number dominant targets.
-        if (EntryCountDistributed < SumOrigin / ProfileICPThreshold)
+        if (ICPCount >= ProfileICPRelativeHotnessSkip &&
+            EntryCountDistributed * 100 < SumOrigin * ProfileICPRelativeHotness)
           break;
         // TODO: Fix CallAnalyzer to handle all indirect calls.
         // For indirect call, we don't run CallAnalyzer to get InlineCost
@@ -1381,6 +1390,7 @@ bool SampleProfileLoader::inlineHotFunctionsWithPriority(
             if (getInlineCandidate(&NewCandidate, CB))
               CQueue.emplace(NewCandidate);
           }
+          ICPCount++;
           Changed = true;
         }
       }
@@ -1799,6 +1809,10 @@ bool SampleProfileLoader::doInitialization(Module &M,
       ProfileSizeInline = true;
     if (!CallsitePrioritizedInline.getNumOccurrences())
       CallsitePrioritizedInline = true;
+
+    // Enable iterative-BFI by default for CSSPGO.
+    if (!UseIterativeBFIInference.getNumOccurrences())
+      UseIterativeBFIInference = true;
 
     // Tracker for profiles under different context
     ContextTracker =

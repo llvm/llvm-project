@@ -978,8 +978,89 @@ template <typename T>
 void swap(unique_ptr<T> &x, unique_ptr<T> &y) noexcept {
   x.swap(y);
 }
+
+template <typename T1, typename T2>
+bool operator==(const unique_ptr<T1> &x, const unique_ptr<T2> &y);
+
+template <typename T1, typename T2>
+bool operator!=(const unique_ptr<T1> &x, const unique_ptr<T2> &y);
+
+template <typename T1, typename T2>
+bool operator<(const unique_ptr<T1> &x, const unique_ptr<T2> &y);
+
+template <typename T1, typename T2>
+bool operator>(const unique_ptr<T1> &x, const unique_ptr<T2> &y);
+
+template <typename T1, typename T2>
+bool operator<=(const unique_ptr<T1> &x, const unique_ptr<T2> &y);
+
+template <typename T1, typename T2>
+bool operator>=(const unique_ptr<T1> &x, const unique_ptr<T2> &y);
+
+template <typename T>
+bool operator==(const unique_ptr<T> &x, nullptr_t y);
+
+template <typename T>
+bool operator!=(const unique_ptr<T> &x, nullptr_t y);
+
+template <typename T>
+bool operator<(const unique_ptr<T> &x, nullptr_t y);
+
+template <typename T>
+bool operator>(const unique_ptr<T> &x, nullptr_t y);
+
+template <typename T>
+bool operator<=(const unique_ptr<T> &x, nullptr_t y);
+
+template <typename T>
+bool operator>=(const unique_ptr<T> &x, nullptr_t y);
+
+template <typename T>
+bool operator==(nullptr_t x, const unique_ptr<T> &y);
+
+template <typename T>
+bool operator!=(nullptr_t x, const unique_ptr<T> &y);
+
+template <typename T>
+bool operator>(nullptr_t x, const unique_ptr<T> &y);
+
+template <typename T>
+bool operator<(nullptr_t x, const unique_ptr<T> &y);
+
+template <typename T>
+bool operator>=(nullptr_t x, const unique_ptr<T> &y);
+
+template <typename T>
+bool operator<=(nullptr_t x, const unique_ptr<T> &y);
+
+template <class T, class... Args>
+unique_ptr<T> make_unique(Args &&...args);
+
+#if __cplusplus >= 202002L
+
+template <class T>
+unique_ptr<T> make_unique_for_overwrite();
+
+#endif
+
 } // namespace std
 #endif
+
+namespace std {
+template <class CharT>
+class basic_ostream;
+
+using ostream = basic_ostream<char>;
+
+extern std::ostream cout;
+
+ostream &operator<<(ostream &, const string &);
+
+#if __cplusplus >= 202002L
+template <class T>
+ostream &operator<<(ostream &, const std::unique_ptr<T> &);
+#endif
+} // namespace std
 
 #ifdef TEST_INLINABLE_ALLOCATORS
 namespace std {

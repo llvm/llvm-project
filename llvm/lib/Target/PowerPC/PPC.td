@@ -161,6 +161,9 @@ def FeatureDirectMove :
 def FeaturePartwordAtomic : SubtargetFeature<"partword-atomics",
                                              "HasPartwordAtomics", "true",
                                              "Enable l[bh]arx and st[bh]cx.">;
+def FeatureQuadwordAtomic : SubtargetFeature<"quadword-atomics",
+                                             "HasQuadwordAtomics", "true",
+                                             "Enable lqarx and stqcx.">;
 def FeatureInvariantFunctionDescriptors :
   SubtargetFeature<"invariant-function-descriptors",
                    "HasInvariantFunctionDescriptors", "true",
@@ -210,9 +213,13 @@ def FeatureSlowPOPCNTD : SubtargetFeature<"slow-popcntd","HasPOPCNTD",
 def DeprecatedDST    : SubtargetFeature<"", "DeprecatedDST", "true",
   "Treat vector data stream cache control instructions as deprecated">;
 
+def FeatureISA2_07 : SubtargetFeature<"isa-v207-instructions", "IsISA2_07",
+                                      "true",
+                                      "Enable instructions in ISA 2.07.">;
 def FeatureISA3_0 : SubtargetFeature<"isa-v30-instructions", "IsISA3_0",
                                      "true",
-                                     "Enable instructions in ISA 3.0.">;
+                                     "Enable instructions in ISA 3.0.",
+                                     [FeatureISA2_07]>;
 def FeatureISA3_1 : SubtargetFeature<"isa-v31-instructions", "IsISA3_1",
                                      "true",
                                      "Enable instructions in ISA 3.1.",
@@ -327,7 +334,9 @@ def ProcessorFeatures {
      FeatureDirectMove,
      FeatureICBT,
      FeaturePartwordAtomic,
-     FeaturePredictableSelectIsExpensive
+     FeatureQuadwordAtomic,
+     FeaturePredictableSelectIsExpensive,
+     FeatureISA2_07
     ];
 
   list<SubtargetFeature> P8SpecificFeatures = [FeatureAddiLoadFusion,

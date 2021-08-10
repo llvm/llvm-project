@@ -22,6 +22,7 @@
 #include "llvm/IR/IRBuilder.h"
 #include "llvm/IR/InstVisitor.h"
 #include "llvm/IR/PatternMatch.h"
+#include "llvm/IR/Value.h"
 #include "llvm/Support/Debug.h"
 #include "llvm/Support/KnownBits.h"
 #include "llvm/Transforms/InstCombine/InstCombineWorklist.h"
@@ -168,6 +169,8 @@ public:
   Instruction *visitExtractValueInst(ExtractValueInst &EV);
   Instruction *visitLandingPadInst(LandingPadInst &LI);
   Instruction *visitVAEndInst(VAEndInst &I);
+  Value *pushFreezeToPreventPoisonFromPropagating(FreezeInst &FI);
+  bool freezeDominatedUses(FreezeInst &FI);
   Instruction *visitFreeze(FreezeInst &I);
 
   /// Specify what to return for unhandled instructions.
@@ -339,6 +342,7 @@ private:
   /// \see CastInst::isEliminableCastPair
   Instruction::CastOps isEliminableCastPair(const CastInst *CI1,
                                             const CastInst *CI2);
+  Value *simplifyIntToPtrRoundTripCast(Value *Val);
 
   Value *foldAndOfICmps(ICmpInst *LHS, ICmpInst *RHS, BinaryOperator &And);
   Value *foldOrOfICmps(ICmpInst *LHS, ICmpInst *RHS, BinaryOperator &Or);
@@ -422,16 +426,6 @@ public:
   void replaceUse(Use &U, Value *NewValue) {
     Worklist.addValue(U);
     U = NewValue;
-  }
-
-  /// Creates a result tuple for an overflow intrinsic \p II with a given
-  /// \p Result and a constant \p Overflow value.
-  Instruction *CreateOverflowTuple(IntrinsicInst *II, Value *Result,
-                                   Constant *Overflow) {
-    Constant *V[] = {UndefValue::get(Result->getType()), Overflow};
-    StructType *ST = cast<StructType>(II->getType());
-    Constant *Struct = ConstantStruct::get(ST, V);
-    return InsertValueInst::Create(Struct, Result, 0);
   }
 
   /// Create and insert the idiom we use to indicate a block is unreachable
@@ -630,6 +624,7 @@ public:
   Instruction *foldPHIArgGEPIntoPHI(PHINode &PN);
   Instruction *foldPHIArgLoadIntoPHI(PHINode &PN);
   Instruction *foldPHIArgZextsIntoPHI(PHINode &PN);
+  Instruction *foldPHIArgIntToPtrToPHI(PHINode &PN);
 
   /// If an integer typed PHI has only one use which is an IntToPtr operation,
   /// replace the PHI with an existing pointer typed PHI if it exists. Otherwise
@@ -708,6 +703,7 @@ public:
                                              const APInt &C);
   Instruction *foldICmpEqIntrinsicWithConstant(ICmpInst &ICI, IntrinsicInst *II,
                                                const APInt &C);
+  Instruction *foldICmpBitCast(ICmpInst &Cmp);
 
   // Helpers of visitSelectInst().
   Instruction *foldSelectExtConst(SelectInst &Sel);

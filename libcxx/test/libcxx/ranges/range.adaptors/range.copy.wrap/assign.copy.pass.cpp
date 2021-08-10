@@ -9,12 +9,13 @@
 // UNSUPPORTED: c++03, c++11, c++14, c++17
 // UNSUPPORTED: libcpp-no-concepts
 // UNSUPPORTED: gcc-10
+// UNSUPPORTED: libcpp-has-no-incomplete-ranges
 
 // <copyable-box>& operator=(<copyable-box> const&)
 
 // ADDITIONAL_COMPILE_FLAGS: -Wno-self-assign-overloaded
 
-#include <__ranges/copyable_box.h>
+#include <ranges>
 
 #include <cassert>
 #include <type_traits>

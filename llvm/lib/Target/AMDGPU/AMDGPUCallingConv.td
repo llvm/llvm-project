@@ -107,6 +107,7 @@ def CC_SI_SHADER : CallingConv<[
 ]>;
 
 def RetCC_SI_Shader : CallingConv<[
+  CCIfType<[i1, i16], CCIfExtend<CCPromoteToType<i32>>>,
   CCIfType<[i32, i16] , CCAssignToReg<[
     SGPR0, SGPR1, SGPR2, SGPR3, SGPR4, SGPR5, SGPR6, SGPR7,
     SGPR8, SGPR9, SGPR10, SGPR11, SGPR12, SGPR13, SGPR14, SGPR15,

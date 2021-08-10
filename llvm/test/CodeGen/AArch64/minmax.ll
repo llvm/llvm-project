@@ -160,10 +160,10 @@ define <2 x i64> @t14(<2 x i64> %a, <2 x i64> %b) {
 define <4 x i64> @t15(<4 x i64> %a, <4 x i64> %b) {
 ; CHECK-LABEL: t15:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    cmhs v4.2d, v3.2d, v1.2d
-; CHECK-NEXT:    cmhs v5.2d, v2.2d, v0.2d
-; CHECK-NEXT:    bif v0.16b, v2.16b, v5.16b
-; CHECK-NEXT:    bif v1.16b, v3.16b, v4.16b
+; CHECK-NEXT:    cmhi v4.2d, v2.2d, v0.2d
+; CHECK-NEXT:    cmhi v5.2d, v3.2d, v1.2d
+; CHECK-NEXT:    bif v0.16b, v2.16b, v4.16b
+; CHECK-NEXT:    bif v1.16b, v3.16b, v5.16b
 ; CHECK-NEXT:    ret
   %t1 = icmp ule <4 x i64> %a, %b
   %t2 = select <4 x i1> %t1, <4 x i64> %a, <4 x i64> %b

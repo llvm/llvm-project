@@ -138,10 +138,10 @@ define dso_local void @run_test() local_unnamed_addr #0 {
 ; CHECK-NEXT:    add v28.2d, v28.2d, v14.2d
 ; CHECK-NEXT:    fmov d14, x17
 ; CHECK-NEXT:    mov v14.d[1], x16
-; CHECK-NEXT:    add x8, x8, #8 // =8
+; CHECK-NEXT:    add x8, x8, #8
 ; CHECK-NEXT:    add v27.2d, v27.2d, v14.2d
-; CHECK-NEXT:    cmp x8, #64 // =64
-; CHECK-NEXT:    add x9, x9, #1 // =1
+; CHECK-NEXT:    cmp x8, #64
+; CHECK-NEXT:    add x9, x9, #1
 ; CHECK-NEXT:    b.ne .LBB0_1
 ; CHECK-NEXT:  // %bb.2: // %for.cond.cleanup
 ; CHECK-NEXT:    adrp x8, C

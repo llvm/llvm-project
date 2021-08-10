@@ -32,7 +32,7 @@ define void @fextr(i16* %ptr) {
 ; CHECK-NEXT:    [[TMP5:%.*]] = insertelement <8 x i16> [[TMP4]], i16 [[V5]], i32 5
 ; CHECK-NEXT:    [[TMP6:%.*]] = insertelement <8 x i16> [[TMP5]], i16 [[V6]], i32 6
 ; CHECK-NEXT:    [[TMP7:%.*]] = insertelement <8 x i16> [[TMP6]], i16 [[V7]], i32 7
-; CHECK-NEXT:    [[SHUFFLE:%.*]] = shufflevector <8 x i16> [[TMP0]], <8 x i16> poison, <8 x i32> zeroinitializer
+; CHECK-NEXT:    [[SHUFFLE:%.*]] = shufflevector <8 x i16> [[TMP0]], <8 x i16> poison, <8 x i32> <i32 0, i32 undef, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0>
 ; CHECK-NEXT:    [[TMP8:%.*]] = add <8 x i16> [[TMP7]], [[SHUFFLE]]
 ; CHECK-NEXT:    [[TMP9:%.*]] = bitcast i16* [[P0]] to <8 x i16>*
 ; CHECK-NEXT:    store <8 x i16> [[TMP8]], <8 x i16>* [[TMP9]], align 2

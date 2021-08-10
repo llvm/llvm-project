@@ -799,7 +799,10 @@ void X86MCCodeEmitter::emitVEXOpcodePrefix(int MemOperand, const MCInst &MI,
   //  0b00001: implied 0F leading opcode
   //  0b00010: implied 0F 38 leading opcode bytes
   //  0b00011: implied 0F 3A leading opcode bytes
-  //  0b00100-0b11111: Reserved for future use
+  //  0b00100: Reserved for future use
+  //  0b00101: VEX MAP5
+  //  0b00110: VEX MAP6
+  //  0b00111-0b11111: Reserved for future use
   //  0b01000: XOP map select - 08h instructions with imm byte
   //  0b01001: XOP map select - 09h instructions with no imm byte
   //  0b01010: XOP map select - 0Ah instructions with imm dword
@@ -824,6 +827,12 @@ void X86MCCodeEmitter::emitVEXOpcodePrefix(int MemOperand, const MCInst &MI,
     break;
   case X86II::XOPA:
     VEX_5M = 0xA;
+    break;
+  case X86II::T_MAP5:
+    VEX_5M = 0x5;
+    break;
+  case X86II::T_MAP6:
+    VEX_5M = 0x6;
     break;
   }
 
@@ -1173,10 +1182,10 @@ void X86MCCodeEmitter::emitVEXOpcodePrefix(int MemOperand, const MCInst &MI,
     // EVEX opcode prefix can have 4 bytes
     //
     // +-----+ +--------------+ +-------------------+ +------------------------+
-    // | 62h | | RXBR' | 00mm | | W | vvvv | U | pp | | z | L'L | b | v' | aaa |
+    // | 62h | | RXBR' | 0mmm | | W | vvvv | U | pp | | z | L'L | b | v' | aaa |
     // +-----+ +--------------+ +-------------------+ +------------------------+
-    assert((VEX_5M & 0x3) == VEX_5M &&
-           "More than 2 significant bits in VEX.m-mmmm fields for EVEX!");
+    assert((VEX_5M & 0x7) == VEX_5M &&
+           "More than 3 significant bits in VEX.m-mmmm fields for EVEX!");
 
     emitByte(0x62, OS);
     emitByte((VEX_R << 7) | (VEX_X << 6) | (VEX_B << 5) | (EVEX_R2 << 4) |

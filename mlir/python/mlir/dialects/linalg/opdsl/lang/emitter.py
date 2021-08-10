@@ -4,13 +4,14 @@
 
 from typing import Dict, Sequence
 
-from mlir.ir import *
-from mlir.dialects import linalg
-from mlir.dialects import std
-from mlir.dialects import math
+from .....ir import *
+from .... import linalg
+from .... import std
+from .... import math
 # TODO: resolve name collision for Linalg functionality that is injected inside
 # the _mlir.dialects.linalg directly via pybind.
-from _mlir.dialects.linalg import fill_builtin_region
+from ....._cext_loader import _cext
+fill_builtin_region = _cext.dialects.linalg.fill_builtin_region
 
 from .scalar_expr import *
 from .config import *

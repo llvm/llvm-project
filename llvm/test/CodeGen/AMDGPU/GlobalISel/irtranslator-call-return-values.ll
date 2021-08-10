@@ -2684,7 +2684,7 @@ define amdgpu_kernel void @test_call_external_v32i32_i32_func_void() #0 {
   ; GCN:   $vgpr31 = COPY [[OR1]](s32)
   ; GCN:   $sgpr30_sgpr31 = SI_CALL [[GV]](p0), @external_v32i32_i32_func_void, csr_amdgpu_highregs, implicit $vgpr0, implicit $sgpr0_sgpr1_sgpr2_sgpr3, implicit $sgpr4_sgpr5, implicit $sgpr6_sgpr7, implicit $sgpr8_sgpr9, implicit $sgpr10_sgpr11, implicit $sgpr12, implicit $sgpr13, implicit $sgpr14, implicit $vgpr31
   ; GCN:   ADJCALLSTACKDOWN 0, 0, implicit-def $scc
-  ; GCN:   [[LOAD:%[0-9]+]]:_(<32 x s32>) = G_LOAD [[FRAME_INDEX]](p5) :: (load (s1024) from %stack.0, addrspace 5)
+  ; GCN:   [[LOAD:%[0-9]+]]:_(<32 x s32>) = G_LOAD [[FRAME_INDEX]](p5) :: (load (<32 x s32>) from %stack.0, addrspace 5)
   ; GCN:   [[C3:%[0-9]+]]:_(s32) = G_CONSTANT i32 128
   ; GCN:   [[PTR_ADD1:%[0-9]+]]:_(p5) = G_PTR_ADD [[FRAME_INDEX]], [[C3]](s32)
   ; GCN:   [[LOAD1:%[0-9]+]]:_(s32) = G_LOAD [[PTR_ADD1]](p5) :: (load (s32) from %stack.0, align 128, addrspace 5)
@@ -2752,7 +2752,7 @@ define amdgpu_kernel void @test_call_external_i32_v32i32_func_void() #0 {
   ; GCN:   [[LOAD:%[0-9]+]]:_(s32) = G_LOAD [[FRAME_INDEX]](p5) :: (load (s32) from %stack.0, align 128, addrspace 5)
   ; GCN:   [[C3:%[0-9]+]]:_(s32) = G_CONSTANT i32 128
   ; GCN:   [[PTR_ADD1:%[0-9]+]]:_(p5) = G_PTR_ADD [[FRAME_INDEX]], [[C3]](s32)
-  ; GCN:   [[LOAD1:%[0-9]+]]:_(<32 x s32>) = G_LOAD [[PTR_ADD1]](p5) :: (load (s1024) from %stack.0, addrspace 5)
+  ; GCN:   [[LOAD1:%[0-9]+]]:_(<32 x s32>) = G_LOAD [[PTR_ADD1]](p5) :: (load (<32 x s32>) from %stack.0, addrspace 5)
   ; GCN:   G_STORE [[LOAD]](s32), [[DEF]](p1) :: (volatile store (s32) into `i32 addrspace(1)* undef`, addrspace 1)
   ; GCN:   G_STORE [[LOAD1]](<32 x s32>), [[COPY10]](p1) :: (volatile store (<32 x s32>) into `<32 x i32> addrspace(1)* undef`, align 8, addrspace 1)
   ; GCN:   S_ENDPGM 0
@@ -2813,7 +2813,7 @@ define amdgpu_kernel void @test_call_external_v33i32_func_void() #0 {
   ; GCN:   $vgpr31 = COPY [[OR1]](s32)
   ; GCN:   $sgpr30_sgpr31 = SI_CALL [[GV]](p0), @external_v33i32_func_void, csr_amdgpu_highregs, implicit $vgpr0, implicit $sgpr0_sgpr1_sgpr2_sgpr3, implicit $sgpr4_sgpr5, implicit $sgpr6_sgpr7, implicit $sgpr8_sgpr9, implicit $sgpr10_sgpr11, implicit $sgpr12, implicit $sgpr13, implicit $sgpr14, implicit $vgpr31
   ; GCN:   ADJCALLSTACKDOWN 0, 0, implicit-def $scc
-  ; GCN:   [[LOAD:%[0-9]+]]:_(<33 x s32>) = G_LOAD [[FRAME_INDEX]](p5) :: (load (s1056) from %stack.0, align 256, addrspace 5)
+  ; GCN:   [[LOAD:%[0-9]+]]:_(<33 x s32>) = G_LOAD [[FRAME_INDEX]](p5) :: (load (<33 x s32>) from %stack.0, align 256, addrspace 5)
   ; GCN:   G_STORE [[LOAD]](<33 x s32>), [[DEF]](p1) :: (volatile store (<33 x s32>) into `<33 x i32> addrspace(1)* undef`, align 8, addrspace 1)
   ; GCN:   S_ENDPGM 0
   %val = call <33 x i32> @external_v33i32_func_void()
@@ -2879,7 +2879,7 @@ define amdgpu_kernel void @test_call_external_v33i32_func_v33i32_i32(<33 x i32> 
   ; GCN:   $vgpr31 = COPY [[OR1]](s32)
   ; GCN:   $sgpr30_sgpr31 = SI_CALL [[GV]](p0), @external_v33i32_func_v33i32_i32, csr_amdgpu_highregs, implicit $vgpr0, implicit $vgpr1, implicit $vgpr2, implicit $vgpr3, implicit $sgpr0_sgpr1_sgpr2_sgpr3, implicit $sgpr4_sgpr5, implicit $sgpr6_sgpr7, implicit $sgpr8_sgpr9, implicit $sgpr10_sgpr11, implicit $sgpr12, implicit $sgpr13, implicit $sgpr14, implicit $vgpr31
   ; GCN:   ADJCALLSTACKDOWN 0, 0, implicit-def $scc
-  ; GCN:   [[LOAD2:%[0-9]+]]:_(<33 x s32>) = G_LOAD [[FRAME_INDEX]](p5) :: (load (s1056) from %stack.0, align 256, addrspace 5)
+  ; GCN:   [[LOAD2:%[0-9]+]]:_(<33 x s32>) = G_LOAD [[FRAME_INDEX]](p5) :: (load (<33 x s32>) from %stack.0, align 256, addrspace 5)
   ; GCN:   G_STORE [[LOAD2]](<33 x s32>), [[DEF]](p1) :: (volatile store (<33 x s32>) into `<33 x i32> addrspace(1)* undef`, align 8, addrspace 1)
   ; GCN:   S_ENDPGM 0
   %val = call <33 x i32> @external_v33i32_func_v33i32_i32(<33 x i32> addrspace(1)* %p, i32 %idx)

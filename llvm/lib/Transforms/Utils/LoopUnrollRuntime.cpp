@@ -436,6 +436,7 @@ static bool canSafelyUnrollMultiExitLoop(Loop *L, BasicBlock *LatchExit,
   // loop. Check for these below.
 
   // We rely on LCSSA form being preserved when the exit blocks are transformed.
+  // (Note that only an off-by-default mode of the old PM disables PreserveLCCA.)
   if (!PreserveLCSSA)
     return false;
 
@@ -540,6 +541,38 @@ static void updateLatchBranchWeightsForRemainderLoop(Loop *OrigLoop,
     RemainderLatchBR->setMetadata(LLVMContext::MD_prof, WeightNode);
   }
 }
+
+/// Calculate ModVal = (BECount + 1) % Count on the abstract integer domain
+/// accounting for the possibility of unsigned overflow in the 2s complement
+/// domain. Preconditions:
+/// 1) TripCount = BECount + 1 (allowing overflow)
+/// 2) Log2(Count) <= BitWidth(BECount)
+static Value *CreateTripRemainder(IRBuilder<> &B, Value *BECount,
+                                  Value *TripCount, unsigned Count) {
+  // Note that TripCount is BECount + 1.
+  if (isPowerOf2_32(Count))
+    // If the expression is zero, then either:
+    //  1. There are no iterations to be run in the prolog/epilog loop.
+    // OR
+    //  2. The addition computing TripCount overflowed.
+    //
+    // If (2) is true, we know that TripCount really is (1 << BEWidth) and so
+    // the number of iterations that remain to be run in the original loop is a
+    // multiple Count == (1 << Log2(Count)) because Log2(Count) <= BEWidth (a
+    // precondition of this method).
+    return B.CreateAnd(TripCount, Count - 1, "xtraiter");
+
+  // As (BECount + 1) can potentially unsigned overflow we count
+  // (BECount % Count) + 1 which is overflow safe as BECount % Count < Count.
+  Constant *CountC = ConstantInt::get(BECount->getType(), Count);
+  Value *ModValTmp = B.CreateURem(BECount, CountC);
+  Value *ModValAdd = B.CreateAdd(ModValTmp,
+                                 ConstantInt::get(ModValTmp->getType(), 1));
+  // At that point (BECount % Count) + 1 could be equal to Count.
+  // To handle this case we need to take mod by Count one more time.
+  return B.CreateURem(ModValAdd, CountC, "xtraiter");
+}
+
 
 /// Insert code in the prolog/epilog code when unrolling a loop with a
 /// run-time trip-count.
@@ -659,6 +692,7 @@ bool llvm::UnrollRuntimeLoopRemainder(
   unsigned BEWidth = cast<IntegerType>(BECountSC->getType())->getBitWidth();
 
   // Add 1 since the backedge count doesn't include the first loop iteration.
+  // (Note that overflow can occur, this is handled explicitly below)
   const SCEV *TripCountSC =
       SE->getAddExpr(BECountSC, SE->getConstant(BECountSC->getType(), 1));
   if (isa<SCEVCouldNotCompute>(TripCountSC)) {
@@ -751,35 +785,8 @@ bool llvm::UnrollRuntimeLoopRemainder(
   Value *BECount = Expander.expandCodeFor(BECountSC, BECountSC->getType(),
                                           PreHeaderBR);
   IRBuilder<> B(PreHeaderBR);
-  Value *ModVal;
-  // Calculate ModVal = (BECount + 1) % Count.
-  // Note that TripCount is BECount + 1.
-  if (isPowerOf2_32(Count)) {
-    // When Count is power of 2 we don't BECount for epilog case, however we'll
-    // need it for a branch around unrolling loop for prolog case.
-    ModVal = B.CreateAnd(TripCount, Count - 1, "xtraiter");
-    //  1. There are no iterations to be run in the prolog/epilog loop.
-    // OR
-    //  2. The addition computing TripCount overflowed.
-    //
-    // If (2) is true, we know that TripCount really is (1 << BEWidth) and so
-    // the number of iterations that remain to be run in the original loop is a
-    // multiple Count == (1 << Log2(Count)) because Log2(Count) <= BEWidth (we
-    // explicitly check this above).
-  } else {
-    // As (BECount + 1) can potentially unsigned overflow we count
-    // (BECount % Count) + 1 which is overflow safe as BECount % Count < Count.
-    Value *ModValTmp = B.CreateURem(BECount,
-                                    ConstantInt::get(BECount->getType(),
-                                                     Count));
-    Value *ModValAdd = B.CreateAdd(ModValTmp,
-                                   ConstantInt::get(ModValTmp->getType(), 1));
-    // At that point (BECount % Count) + 1 could be equal to Count.
-    // To handle this case we need to take mod by Count one more time.
-    ModVal = B.CreateURem(ModValAdd,
-                          ConstantInt::get(BECount->getType(), Count),
-                          "xtraiter");
-  }
+  Value * const ModVal = CreateTripRemainder(B, BECount, TripCount, Count);
+
   Value *BranchVal =
       UseEpilogRemainder ? B.CreateICmpULT(BECount,
                                            ConstantInt::get(BECount->getType(),
@@ -840,29 +847,20 @@ bool llvm::UnrollRuntimeLoopRemainder(
   // work is to update the phi nodes in the original loop, and take in the
   // values from the cloned region.
   for (auto *BB : OtherExits) {
-   for (auto &II : *BB) {
-
-     // Given we preserve LCSSA form, we know that the values used outside the
-     // loop will be used through these phi nodes at the exit blocks that are
-     // transformed below.
-     if (!isa<PHINode>(II))
-       break;
-     PHINode *Phi = cast<PHINode>(&II);
-     unsigned oldNumOperands = Phi->getNumIncomingValues();
+    // Given we preserve LCSSA form, we know that the values used outside the
+    // loop will be used through these phi nodes at the exit blocks that are
+    // transformed below.
+    for (PHINode &PN : BB->phis()) {
+     unsigned oldNumOperands = PN.getNumIncomingValues();
      // Add the incoming values from the remainder code to the end of the phi
      // node.
-     for (unsigned i =0; i < oldNumOperands; i++){
-       Value *newVal = VMap.lookup(Phi->getIncomingValue(i));
-       // newVal can be a constant or derived from values outside the loop, and
-       // hence need not have a VMap value. Also, since lookup already generated
-       // a default "null" VMap entry for this value, we need to populate that
-       // VMap entry correctly, with the mapped entry being itself.
-       if (!newVal) {
-         newVal = Phi->getIncomingValue(i);
-         VMap[Phi->getIncomingValue(i)] = Phi->getIncomingValue(i);
-       }
-       Phi->addIncoming(newVal,
-                           cast<BasicBlock>(VMap[Phi->getIncomingBlock(i)]));
+     for (unsigned i = 0; i < oldNumOperands; i++){
+       auto *PredBB =PN.getIncomingBlock(i);
+       auto *V = PN.getIncomingValue(i);
+       if (Instruction *I = dyn_cast<Instruction>(V))
+         if (L->contains(I))
+           V = VMap.lookup(I);
+       PN.addIncoming(V, cast<BasicBlock>(VMap[PredBB]));
      }
    }
 #if defined(EXPENSIVE_CHECKS) && !defined(NDEBUG)

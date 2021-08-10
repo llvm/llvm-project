@@ -127,6 +127,9 @@ void DefinitionsInHeadersCheck::check(const MatchFinder::MatchResult &Result) {
          "in a header file; function definitions in header files can lead to "
          "ODR violations")
         << IsFullSpec << FD;
+    // inline is not allowed for main function.
+    if (FD->isMain())
+      return;
     diag(FD->getLocation(), /*FixDescription=*/"make as 'inline'",
          DiagnosticIDs::Note)
         << FixItHint::CreateInsertion(FD->getInnerLocStart(), "inline ");

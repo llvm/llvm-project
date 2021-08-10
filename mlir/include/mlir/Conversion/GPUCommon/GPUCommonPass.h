@@ -52,6 +52,12 @@ using LoweringCallback = std::function<std::unique_ptr<llvm::Module>(
 /// typed ABI on top of GPU runtimes such as CUDA or ROCm (HIP).
 std::unique_ptr<OperationPass<ModuleOp>> createGpuToLLVMConversionPass();
 
+/// Collect a set of patterns to convert from the GPU dialect to LLVM and
+/// populate converter for gpu types.
+void populateGpuToLLVMConversionPatterns(LLVMTypeConverter &converter,
+                                         OwningRewritePatternList &patterns,
+                                         StringRef gpuBinaryAnnotation = {});
+
 } // namespace mlir
 
 #endif // MLIR_CONVERSION_GPUCOMMON_GPUCOMMONPASS_H_

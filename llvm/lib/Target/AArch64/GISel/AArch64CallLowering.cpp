@@ -146,8 +146,12 @@ struct IncomingArgHandler : public CallLowering::IncomingValueHandler {
     return AddrReg.getReg(0);
   }
 
-  LLT getStackValueStoreType(const DataLayout &,
-                             const CCValAssign &VA) const override {
+  LLT getStackValueStoreType(const DataLayout &DL, const CCValAssign &VA,
+                             ISD::ArgFlagsTy Flags) const override {
+    // For pointers, we just need to fixup the integer types reported in the
+    // CCValAssign.
+    if (Flags.isPointer())
+      return CallLowering::ValueHandler::getStackValueStoreType(DL, VA, Flags);
     return getStackValueStoreTypeHack(VA);
   }
 
@@ -161,26 +165,33 @@ struct IncomingArgHandler : public CallLowering::IncomingValueHandler {
                             MachinePointerInfo &MPO, CCValAssign &VA) override {
     MachineFunction &MF = MIRBuilder.getMF();
 
-    // The reported memory location may be wider than the value.
-    const LLT RealRegTy = MRI.getType(ValVReg);
     LLT ValTy(VA.getValVT());
     LLT LocTy(VA.getLocVT());
 
     // Fixup the types for the DAG compatibility hack.
     if (VA.getValVT() == MVT::i8 || VA.getValVT() == MVT::i16)
       std::swap(ValTy, LocTy);
+    else {
+      // The calling code knows if this is a pointer or not, we're only touching
+      // the LocTy for the i8/i16 hack.
+      assert(LocTy.getSizeInBits() == MemTy.getSizeInBits());
+      LocTy = MemTy;
+    }
 
     auto MMO = MF.getMachineMemOperand(
         MPO, MachineMemOperand::MOLoad | MachineMemOperand::MOInvariant, LocTy,
         inferAlignFromPtrInfo(MF, MPO));
 
-    if (RealRegTy.getSizeInBits() == ValTy.getSizeInBits()) {
-      // No extension information, or no extension necessary. Load into the
-      // incoming parameter type directly.
+    switch (VA.getLocInfo()) {
+    case CCValAssign::LocInfo::ZExt:
+      MIRBuilder.buildLoadInstr(TargetOpcode::G_ZEXTLOAD, ValVReg, Addr, *MMO);
+      return;
+    case CCValAssign::LocInfo::SExt:
+      MIRBuilder.buildLoadInstr(TargetOpcode::G_SEXTLOAD, ValVReg, Addr, *MMO);
+      return;
+    default:
       MIRBuilder.buildLoad(ValVReg, Addr, *MMO);
-    } else {
-      auto Tmp = MIRBuilder.buildLoad(LocTy, Addr, *MMO);
-      MIRBuilder.buildTrunc(ValVReg, Tmp);
+      return;
     }
   }
 
@@ -262,8 +273,10 @@ struct OutgoingArgHandler : public CallLowering::OutgoingValueHandler {
   /// we invert the interpretation of ValVT and LocVT in certain cases. This is
   /// for compatability with the DAG call lowering implementation, which we're
   /// currently building on top of.
-  LLT getStackValueStoreType(const DataLayout &,
-                             const CCValAssign &VA) const override {
+  LLT getStackValueStoreType(const DataLayout &DL, const CCValAssign &VA,
+                             ISD::ArgFlagsTy Flags) const override {
+    if (Flags.isPointer())
+      return CallLowering::ValueHandler::getStackValueStoreType(DL, VA, Flags);
     return getStackValueStoreTypeHack(VA);
   }
 
@@ -302,10 +315,6 @@ struct OutgoingArgHandler : public CallLowering::OutgoingValueHandler {
       }
 
       ValVReg = extendRegister(ValVReg, VA, MaxSize);
-      const LLT RegTy = MRI.getType(ValVReg);
-
-      if (RegTy.getSizeInBits() < LocVT.getSizeInBits())
-        ValVReg = MIRBuilder.buildTrunc(RegTy, ValVReg).getReg(0);
     } else {
       // The store does not cover the full allocated stack slot.
       MemTy = LLT(VA.getValVT());
@@ -364,11 +373,6 @@ bool AArch64CallLowering::lowerReturn(MachineIRBuilder &MIRBuilder,
     CallingConv::ID CC = F.getCallingConv();
 
     for (unsigned i = 0; i < SplitEVTs.size(); ++i) {
-      if (TLI.getNumRegistersForCallingConv(Ctx, CC, SplitEVTs[i]) > 1) {
-        LLVM_DEBUG(dbgs() << "Can't handle extended arg types which need split");
-        return false;
-      }
-
       Register CurVReg = VRegs[i];
       ArgInfo CurArgInfo = ArgInfo{CurVReg, SplitEVTs[i].getTypeForEVT(Ctx), 0};
       setArgFlags(CurArgInfo, AttributeList::ReturnIndex, DL, F);
@@ -377,7 +381,8 @@ bool AArch64CallLowering::lowerReturn(MachineIRBuilder &MIRBuilder,
       // when widened using ANYEXT. We need to do it explicitly here.
       if (MRI.getType(CurVReg).getSizeInBits() == 1) {
         CurVReg = MIRBuilder.buildZExt(LLT::scalar(8), CurVReg).getReg(0);
-      } else {
+      } else if (TLI.getNumRegistersForCallingConv(Ctx, CC, SplitEVTs[i]) ==
+                 1) {
         // Some types will need extending as specified by the CC.
         MVT NewVT = TLI.getRegisterTypeForCallingConv(Ctx, CC, SplitEVTs[i]);
         if (EVT(NewVT) != SplitEVTs[i]) {
