@@ -213,10 +213,8 @@ public:
     Location loc = op.getLoc();
     SmallVector<Value, 2> newOutputBuffers;
 
-    if (op->getParentOfType<TiledLoopOp>()) {
-      newOutputBuffers = adaptor.outputs();
-    } else if (failed(allocateBuffersForResults(loc, op, adaptor.outputs(),
-                                                newOutputBuffers, rewriter))) {
+    if (failed(allocateBuffersForResults(loc, op, adaptor.outputs(),
+                                         newOutputBuffers, rewriter))) {
       return op.emitOpError()
              << "Failed to allocate buffers for tensor results.";
     }
@@ -232,14 +230,6 @@ public:
     return success();
   }
 };
-
-bool IsBlockArgOfTiledLoop(Value tensor) {
-  if (auto tensorLoad = tensor.getDefiningOp<memref::TensorLoadOp>())
-    if (auto blockArgument = tensorLoad.memref().dyn_cast<BlockArgument>())
-      if (isa<TiledLoopOp>(blockArgument.getOwner()->getParentOp()))
-        return true;
-  return false;
-}
 
 /// Convert `extract_slice %t [offsets][sizes][strides] -> %st` to an
 /// alloc + copy pattern.
@@ -262,15 +252,6 @@ public:
     tensor::ExtractSliceOpAdaptor adaptor(operands, op->getAttrDictionary());
     Value sourceMemref = adaptor.source();
     assert(sourceMemref.getType().isa<MemRefType>());
-
-    // Block arguments of the tiled_loop can be bufferized inplace.
-    if (IsBlockArgOfTiledLoop(op.source())) {
-      Value subView = rewriter.create<memref::SubViewOp>(
-          op.getLoc(), sourceMemref, op.getMixedOffsets(), op.getMixedSizes(),
-          op.getMixedStrides());
-      rewriter.replaceOp(op, subView);
-      return success();
-    }
 
     MemRefType subviewMemRefType =
         getTypeConverter()->convertType(op.getType()).cast<MemRefType>();
@@ -315,12 +296,7 @@ public:
     // For now, be conservative and copy the converted input memref.
     // In general, the converted input memref here could be aliased or could
     // point into constant memory, so mutating it would lead to miscompilations.
-    // Block arguments of the tiled_loop can be bufferized inplace.
-    Value destMemRef;
-    if (IsBlockArgOfTiledLoop(op.dest()))
-      destMemRef = adaptor.dest();
-    else
-      destMemRef = cloneMemref(op.getLoc(), adaptor.dest(), rewriter);
+    Value destMemRef = cloneMemref(op.getLoc(), adaptor.dest(), rewriter);
     assert(destMemRef.getType().isa<MemRefType>());
 
     // Take a subview to copy the small memref.
@@ -334,60 +310,115 @@ public:
   }
 };
 
+bool isBlockArgOfTiledLoop(Value tensor) {
+  if (auto blockArgument = tensor.dyn_cast<BlockArgument>())
+    return isa<TiledLoopOp>(blockArgument.getOwner()->getParentOp());
+  return false;
+}
+
+SmallVector<Value, 3> convertOperands(ValueRange operands,
+                                      BlockAndValueMapping &bvm) {
+  SmallVector<Value, 3> newOperands;
+  newOperands.reserve(operands.size());
+  for (auto operand : operands)
+    newOperands.push_back(bvm.lookupOrDefault(operand));
+  return newOperands;
+}
+
 class TiledLoopOpConverter : public OpConversionPattern<TiledLoopOp> {
 public:
   using OpConversionPattern<TiledLoopOp>::OpConversionPattern;
 
   LogicalResult
-  matchAndRewrite(TiledLoopOp tiledLoop, ArrayRef<Value> operands,
+  matchAndRewrite(TiledLoopOp loop, ArrayRef<Value> operands,
                   ConversionPatternRewriter &rewriter) const final {
-    TiledLoopOp::Adaptor adaptor(operands, tiledLoop->getAttrDictionary());
-    Location loc = tiledLoop.getLoc();
-    if (tiledLoop.getNumResults() == 0)
+    TiledLoopOp::Adaptor adaptor(operands, loop->getAttrDictionary());
+    if (loop.getNumResults() == 0)
       return failure();
-    auto newTiledLoop = rewriter.create<TiledLoopOp>(
+
+    Location loc = loop.getLoc();
+    auto newLoop = rewriter.create<TiledLoopOp>(
         loc, adaptor.lowerBound(), adaptor.upperBound(), adaptor.step(),
         adaptor.inputs(), adaptor.outputs(), adaptor.iterator_types(),
         adaptor.distribution_types());
+
     // Clone the region.
     BlockAndValueMapping bvm;
-    bvm.map(tiledLoop.getInductionVars(), newTiledLoop.getInductionVars());
+    bvm.map(loop.getInductionVars(), newLoop.getInductionVars());
+    bvm.map(loop.getRegionInputArgs(), newLoop.getRegionInputArgs());
+    bvm.map(loop.getRegionOutputArgs(), newLoop.getRegionOutputArgs());
 
     OpBuilder innerBuilder =
-        OpBuilder::atBlockEnd(newTiledLoop.getBody(), rewriter.getListener());
+        OpBuilder::atBlockEnd(newLoop.getBody(), rewriter.getListener());
 
-    // Remap input block arguments.
-    SmallVector<Value, 2> inputs;
-    for (auto en : llvm::zip(newTiledLoop.getRegionInputArgs(),
-                             tiledLoop.getRegionInputArgs())) {
-      auto &newInputArg = std::get<0>(en);
-      if (!newInputArg.getType().isa<ShapedType>()) {
-        inputs.push_back(std::get<0>(en));
+    for (auto &op : loop.getBody()->getOperations()) {
+      Location loc = op.getLoc();
+      if (auto extractSlice = dyn_cast<tensor::ExtractSliceOp>(op)) {
+        if (isBlockArgOfTiledLoop(extractSlice.source())) {
+          auto newOperands = convertOperands(extractSlice.getOperands(), bvm);
+          auto srcMemRefType =
+              bvm.lookup(extractSlice.source()).getType().cast<MemRefType>();
+          auto dstMemRefType =
+              memref::SubViewOp::inferResultType(
+                  srcMemRefType,
+                  extractFromI64ArrayAttr(extractSlice.static_offsets()),
+                  extractFromI64ArrayAttr(extractSlice.static_sizes()),
+                  extractFromI64ArrayAttr(extractSlice.static_strides()))
+                  .cast<MemRefType>();
+
+          Value subView = innerBuilder.create<memref::SubViewOp>(
+              loc, TypeRange{dstMemRefType}, newOperands,
+              extractSlice->getAttrs());
+          bvm.map(extractSlice.getResult(), subView);
+          continue;
+        }
+      }
+      if (auto insertSlice = dyn_cast<tensor::InsertSliceOp>(op)) {
+        if (isBlockArgOfTiledLoop(insertSlice.dest())) {
+          continue;
+        }
+      }
+      if (auto yield = dyn_cast<linalg::YieldOp>(op)) {
+        for (OpOperand &operand : yield->getOpOperands()) {
+          if (auto insert =
+                  operand.get().getDefiningOp<tensor::InsertSliceOp>()) {
+
+            auto dstMemRefType = memref::SubViewOp::inferResultType(
+                getTypeConverter()
+                    ->convertType(insert.source().getType())
+                    .cast<MemRefType>(),
+                extractFromI64ArrayAttr(insert.static_offsets()),
+                extractFromI64ArrayAttr(insert.static_sizes()),
+                extractFromI64ArrayAttr(insert.static_strides()));
+
+            Value subView = innerBuilder.create<memref::SubViewOp>(
+                loc, dstMemRefType, bvm.lookup(insert.dest()),
+                convertOperands(insert.offsets(), bvm),
+                convertOperands(insert.sizes(), bvm),
+                convertOperands(insert.strides(), bvm), insert.static_offsets(),
+                insert.static_sizes(), insert.static_strides());
+
+            Value cast = innerBuilder.create<memref::BufferCastOp>(
+                loc,
+                getTypeConverter()
+                    ->convertType(insert.source().getType())
+                    .cast<MemRefType>(),
+                bvm.lookup(insert.source()));
+
+            innerBuilder.create<linalg::CopyOp>(loc, cast, subView);
+            continue;
+          }
+          auto dst = newLoop.getRegionOutputArgs()[operand.getOperandNumber()];
+          Value cast = innerBuilder.create<memref::BufferCastOp>(
+              loc, dst.getType(), bvm.lookup(operand.get()));
+          innerBuilder.create<linalg::CopyOp>(loc, cast, dst);
+        }
         continue;
       }
-      inputs.push_back(
-          innerBuilder.create<memref::TensorLoadOp>(loc, newInputArg));
-    }
-    bvm.map(tiledLoop.getRegionInputArgs(), inputs);
-
-    // Remap output block arguments.
-    SmallVector<Value, 2> outputs;
-    for (auto en : llvm::zip(newTiledLoop.getRegionOutputArgs(),
-                             tiledLoop.getRegionOutputArgs())) {
-      auto &newOutputArg = std::get<0>(en);
-      if (!newOutputArg.getType().isa<ShapedType>()) {
-        outputs.push_back(std::get<0>(en));
-        continue;
-      }
-      outputs.push_back(
-          innerBuilder.create<memref::TensorLoadOp>(loc, newOutputArg));
-    }
-    bvm.map(tiledLoop.getRegionOutputArgs(), outputs);
-
-    for (auto &op : tiledLoop.getBody()->without_terminator())
       innerBuilder.clone(op, bvm);
+    }
     innerBuilder.create<linalg::YieldOp>(loc);
-    rewriter.replaceOp(tiledLoop, newTiledLoop.outputs());
+    rewriter.replaceOp(loop, newLoop.outputs());
     return success();
   }
 };
