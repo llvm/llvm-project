@@ -23,21 +23,6 @@
 
 namespace __tsan {
 
-#if defined(__x86_64__)
-#define HAS_48_BIT_ADDRESS_SPACE 1
-#elif SANITIZER_IOSSIM // arm64 iOS simulators (order of #if matters)
-#define HAS_48_BIT_ADDRESS_SPACE 1
-#elif SANITIZER_IOS // arm64 iOS devices (order of #if matters)
-#define HAS_48_BIT_ADDRESS_SPACE 0
-#elif SANITIZER_MAC // arm64 macOS (order of #if matters)
-#define HAS_48_BIT_ADDRESS_SPACE 1
-#else
-#define HAS_48_BIT_ADDRESS_SPACE 0
-#endif
-
-#if !SANITIZER_GO
-
-#if HAS_48_BIT_ADDRESS_SPACE
 /*
 C/C++ on linux/x86_64 and freebsd/x86_64
 0000 0000 1000 - 0080 0000 0000: main binary and/or MAP_32BIT mappings (512GB)
@@ -65,9 +50,8 @@ C/C++ on netbsd/amd64 can reuse the same mapping:
  * Stack on NetBSD/amd64 has prereserved 128MB.
  * Heap grows downwards (top-down).
  * ASLR must be disabled per-process or globally.
-
 */
-struct Mapping {
+struct Mapping48AddressSpace {
   static const uptr kMetaShadowBeg = 0x300000000000ull;
   static const uptr kMetaShadowEnd = 0x340000000000ull;
   static const uptr kTraceMemBeg   = 0x600000000000ull;
@@ -87,8 +71,6 @@ struct Mapping {
   static const uptr kVdsoBeg       = 0xf000000000000000ull;
 };
 
-#define TSAN_MID_APP_RANGE 1
-#elif defined(__mips64)
 /*
 C/C++ on linux/mips64 (40-bit VMA)
 0000 0000 00 - 0100 0000 00: -                                           (4 GB)
@@ -105,7 +87,7 @@ fe00 0000 00 - ff00 0000 00: heap                                        (4 GB)
 ff00 0000 00 - ff80 0000 00: -                                           (2 GB)
 ff80 0000 00 - ffff ffff ff: modules and main thread stack              (<2 GB)
 */
-struct Mapping40 {
+struct MappingMips64_40 {
   static const uptr kMetaShadowBeg = 0x4000000000ull;
   static const uptr kMetaShadowEnd = 0x5000000000ull;
   static const uptr kTraceMemBeg   = 0xb000000000ull;
@@ -125,9 +107,6 @@ struct Mapping40 {
   static const uptr kVdsoBeg       = 0xfffff00000ull;
 };
 
-#define TSAN_MID_APP_RANGE 1
-#define TSAN_RUNTIME_VMA 1
-#elif defined(__aarch64__) && defined(__APPLE__)
 /*
 C/C++ on Darwin/iOS/ARM64 (36-bit VMA, 64 GB VM)
 0000 0000 00 - 0100 0000 00: -                                    (4 GB)
@@ -141,7 +120,7 @@ C/C++ on Darwin/iOS/ARM64 (36-bit VMA, 64 GB VM)
 0f00 0000 00 - 0fc0 0000 00: traces                               (3 GB)
 0fc0 0000 00 - 1000 0000 00: -
 */
-struct Mapping {
+struct MappingAppleAarch64 {
   static const uptr kLoAppMemBeg   = 0x0100000000ull;
   static const uptr kLoAppMemEnd   = 0x0200000000ull;
   static const uptr kHeapMemBeg    = 0x0200000000ull;
@@ -159,13 +138,6 @@ struct Mapping {
   static const uptr kVdsoBeg       = 0x7000000000000000ull;
 };
 
-#elif defined(__aarch64__) && !defined(__APPLE__)
-// AArch64 supports multiple VMA which leads to multiple address transformation
-// functions.  To support these multiple VMAS transformations and mappings TSAN
-// runtime for AArch64 uses an external memory read (vmaSize) to select which
-// mapping to use.  Although slower, it make a same instrumented binary run on
-// multiple kernels.
-
 /*
 C/C++ on linux/aarch64 (39-bit VMA)
 0000 0010 00 - 0100 0000 00: main binary
@@ -181,7 +153,7 @@ C/C++ on linux/aarch64 (39-bit VMA)
 7c00 0000 00 - 7d00 0000 00: heap
 7d00 0000 00 - 7fff ffff ff: modules and main thread stack
 */
-struct Mapping39 {
+struct MappingAarch64_39 {
   static const uptr kLoAppMemBeg   = 0x0000001000ull;
   static const uptr kLoAppMemEnd   = 0x0100000000ull;
   static const uptr kShadowBeg     = 0x0800000000ull;
@@ -216,7 +188,7 @@ C/C++ on linux/aarch64 (42-bit VMA)
 3e000 0000 00 - 3f000 0000 00: heap
 3f000 0000 00 - 3ffff ffff ff: modules and main thread stack
 */
-struct Mapping42 {
+struct MappingAarch64_42 {
   static const uptr kLoAppMemBeg   = 0x00000001000ull;
   static const uptr kLoAppMemEnd   = 0x01000000000ull;
   static const uptr kShadowBeg     = 0x10000000000ull;
@@ -236,7 +208,7 @@ struct Mapping42 {
   static const uptr kVdsoBeg       = 0x37f00000000ull;
 };
 
-struct Mapping48 {
+struct MappingAarch64_48 {
   static const uptr kLoAppMemBeg   = 0x0000000001000ull;
   static const uptr kLoAppMemEnd   = 0x0000200000000ull;
   static const uptr kShadowBeg     = 0x0002000000000ull;
@@ -256,17 +228,6 @@ struct Mapping48 {
   static const uptr kVdsoBeg       = 0xffff000000000ull;
 };
 
-// Indicates the runtime will define the memory regions at runtime.
-#define TSAN_RUNTIME_VMA 1
-// Indicates that mapping defines a mid range memory segment.
-#define TSAN_MID_APP_RANGE 1
-#elif defined(__powerpc64__)
-// PPC64 supports multiple VMA which leads to multiple address transformation
-// functions.  To support these multiple VMAS transformations and mappings TSAN
-// runtime for PPC64 uses an external memory read (vmaSize) to select which
-// mapping to use.  Although slower, it make a same instrumented binary run on
-// multiple kernels.
-
 /*
 C/C++ on linux/powerpc64 (44-bit VMA)
 0000 0000 0100 - 0001 0000 0000: main binary
@@ -281,7 +242,7 @@ C/C++ on linux/powerpc64 (44-bit VMA)
 0f50 0000 0000 - 0f60 0000 0000: -
 0f60 0000 0000 - 1000 0000 0000: modules and main thread stack
 */
-struct Mapping44 {
+struct MappingPPC64_44 {
   static const uptr kMetaShadowBeg = 0x0b0000000000ull;
   static const uptr kMetaShadowEnd = 0x0d0000000000ull;
   static const uptr kTraceMemBeg   = 0x0d0000000000ull;
@@ -313,7 +274,7 @@ C/C++ on linux/powerpc64 (46-bit VMA)
 3e00 0000 0000 - 3e80 0000 0000: -
 3e80 0000 0000 - 4000 0000 0000: modules and main thread stack
 */
-struct Mapping46 {
+struct MappingPPC64_46 {
   static const uptr kMetaShadowBeg = 0x100000000000ull;
   static const uptr kMetaShadowEnd = 0x200000000000ull;
   static const uptr kTraceMemBeg   = 0x200000000000ull;
@@ -345,7 +306,7 @@ C/C++ on linux/powerpc64 (47-bit VMA)
 7e00 0000 0000 - 7e80 0000 0000: -
 7e80 0000 0000 - 8000 0000 0000: modules and main thread stack
 */
-struct Mapping47 {
+struct MappingPPC64_47 {
   static const uptr kMetaShadowBeg = 0x100000000000ull;
   static const uptr kMetaShadowEnd = 0x200000000000ull;
   static const uptr kTraceMemBeg   = 0x200000000000ull;
@@ -363,9 +324,6 @@ struct Mapping47 {
   static const uptr kVdsoBeg       = 0x7800000000000000ull;
 };
 
-// Indicates the runtime will define the memory regions at runtime.
-#define TSAN_RUNTIME_VMA 1
-#elif defined(__s390x__)
 /*
 C/C++ on linux/s390x
 While the kernel provides a 64-bit address space, we have to restrict ourselves
@@ -380,7 +338,7 @@ a000 0000 0000 - b000 0000 0000: traces - 16TiB (max history * 128k threads)
 b000 0000 0000 - be00 0000 0000: -
 be00 0000 0000 - c000 0000 0000: heap - 2TiB (max supported by the allocator)
 */
-struct Mapping {
+struct MappingS390x {
   static const uptr kMetaShadowBeg = 0x900000000000ull;
   static const uptr kMetaShadowEnd = 0x980000000000ull;
   static const uptr kTraceMemBeg   = 0xa00000000000ull;
@@ -397,9 +355,6 @@ struct Mapping {
   static const uptr kAppMemXor     = 0x100000000000ull;
   static const uptr kVdsoBeg       = 0xfffffffff000ull;
 };
-#endif
-
-#elif SANITIZER_GO && !SANITIZER_WINDOWS && HAS_48_BIT_ADDRESS_SPACE
 
 /* Go on linux, darwin and freebsd on x86_64
 0000 0000 1000 - 0000 1000 0000: executable
@@ -414,7 +369,7 @@ struct Mapping {
 6200 0000 0000 - 8000 0000 0000: -
 */
 
-struct Mapping {
+struct MappingGo48 {
   static const uptr kMetaShadowBeg = 0x300000000000ull;
   static const uptr kMetaShadowEnd = 0x400000000000ull;
   static const uptr kTraceMemBeg   = 0x600000000000ull;
@@ -424,8 +379,6 @@ struct Mapping {
   static const uptr kAppMemBeg     = 0x000000001000ull;
   static const uptr kAppMemEnd     = 0x00e000000000ull;
 };
-
-#elif SANITIZER_GO && SANITIZER_WINDOWS
 
 /* Go on windows
 0000 0000 1000 - 0000 1000 0000: executable
@@ -439,7 +392,7 @@ struct Mapping {
 07d0 0000 0000 - 8000 0000 0000: -
 */
 
-struct Mapping {
+struct MappingGoWindows {
   static const uptr kMetaShadowBeg = 0x076000000000ull;
   static const uptr kMetaShadowEnd = 0x07d000000000ull;
   static const uptr kTraceMemBeg   = 0x056000000000ull;
@@ -449,10 +402,6 @@ struct Mapping {
   static const uptr kAppMemBeg     = 0x000000001000ull;
   static const uptr kAppMemEnd     = 0x00e000000000ull;
 };
-
-#elif SANITIZER_GO && defined(__powerpc64__)
-
-/* Only Mapping46 and Mapping47 are currently supported for powercp64 on Go. */
 
 /* Go on linux/powerpc64 (46-bit VMA)
 0000 0000 1000 - 0000 1000 0000: executable
@@ -467,7 +416,7 @@ struct Mapping {
 3800 0000 0000 - 4000 0000 0000: -
 */
 
-struct Mapping46 {
+struct MappingGoPPC64_46 {
   static const uptr kMetaShadowBeg = 0x240000000000ull;
   static const uptr kMetaShadowEnd = 0x340000000000ull;
   static const uptr kTraceMemBeg   = 0x360000000000ull;
@@ -491,7 +440,7 @@ struct Mapping46 {
 6200 0000 0000 - 8000 0000 0000: -
 */
 
-struct Mapping47 {
+struct MappingGoPPC64_47 {
   static const uptr kMetaShadowBeg = 0x300000000000ull;
   static const uptr kMetaShadowEnd = 0x400000000000ull;
   static const uptr kTraceMemBeg   = 0x600000000000ull;
@@ -501,10 +450,6 @@ struct Mapping47 {
   static const uptr kAppMemBeg     = 0x000000001000ull;
   static const uptr kAppMemEnd     = 0x00e000000000ull;
 };
-
-#define TSAN_RUNTIME_VMA 1
-
-#elif SANITIZER_GO && defined(__aarch64__)
 
 /* Go on linux/aarch64 (48-bit VMA) and darwin/aarch64 (47-bit VMA)
 0000 0000 1000 - 0000 1000 0000: executable
@@ -518,8 +463,7 @@ struct Mapping47 {
 6000 0000 0000 - 6200 0000 0000: traces
 6200 0000 0000 - 8000 0000 0000: -
 */
-
-struct Mapping {
+struct MappingGoAarch64 {
   static const uptr kMetaShadowBeg = 0x300000000000ull;
   static const uptr kMetaShadowEnd = 0x400000000000ull;
   static const uptr kTraceMemBeg   = 0x600000000000ull;
@@ -530,10 +474,6 @@ struct Mapping {
   static const uptr kAppMemEnd     = 0x00e000000000ull;
 };
 
-// Indicates the runtime will define the memory regions at runtime.
-#define TSAN_RUNTIME_VMA 1
-
-#elif SANITIZER_GO && defined(__mips64)
 /*
 Go on linux/mips64 (47-bit VMA)
 0000 0000 1000 - 0000 1000 0000: executable
@@ -547,7 +487,7 @@ Go on linux/mips64 (47-bit VMA)
 6000 0000 0000 - 6200 0000 0000: traces
 6200 0000 0000 - 8000 0000 0000: -
 */
-struct Mapping47 {
+struct MappingGoMips64_47 {
   static const uptr kMetaShadowBeg = 0x300000000000ull;
   static const uptr kMetaShadowEnd = 0x400000000000ull;
   static const uptr kTraceMemBeg = 0x600000000000ull;
@@ -558,9 +498,6 @@ struct Mapping47 {
   static const uptr kAppMemEnd = 0x00e000000000ull;
 };
 
-#define TSAN_RUNTIME_VMA 1
-
-#elif SANITIZER_GO && defined(__s390x__)
 /*
 Go on linux/s390x
 0000 0000 1000 - 1000 0000 0000: executable and heap - 16 TiB
@@ -571,7 +508,7 @@ Go on linux/s390x
 9800 0000 0000 - a000 0000 0000: -
 a000 0000 0000 - b000 0000 0000: traces - 16TiB (max history * 128k threads)
 */
-struct Mapping {
+struct MappingGoS390x {
   static const uptr kMetaShadowBeg = 0x900000000000ull;
   static const uptr kMetaShadowEnd = 0x980000000000ull;
   static const uptr kTraceMemBeg   = 0xa00000000000ull;
@@ -582,10 +519,77 @@ struct Mapping {
   static const uptr kAppMemEnd     = 0x100000000000ull;
 };
 
+#if defined(__x86_64__)
+#  define HAS_48_BIT_ADDRESS_SPACE 1
+#elif SANITIZER_IOSSIM  // arm64 iOS simulators (order of #if matters)
+#  define HAS_48_BIT_ADDRESS_SPACE 1
+#elif SANITIZER_IOS  // arm64 iOS devices (order of #if matters)
+#  define HAS_48_BIT_ADDRESS_SPACE 0
+#elif SANITIZER_MAC  // arm64 macOS (order of #if matters)
+#  define HAS_48_BIT_ADDRESS_SPACE 1
 #else
-# error "Unknown platform"
+#  define HAS_48_BIT_ADDRESS_SPACE 0
 #endif
 
+#if !SANITIZER_GO
+
+#  if HAS_48_BIT_ADDRESS_SPACE
+typedef Mapping48AddressSpace Mapping;
+#    define TSAN_MID_APP_RANGE 1
+#  elif defined(__mips64)
+typedef MappingMips64_40 Mapping40;
+#    define TSAN_MID_APP_RANGE 1
+#    define TSAN_RUNTIME_VMA 1
+#  elif defined(__aarch64__) && defined(__APPLE__)
+typedef MappingAppleAarch64 Mapping;
+#  elif defined(__aarch64__) && !defined(__APPLE__)
+// AArch64 supports multiple VMA which leads to multiple address transformation
+// functions.  To support these multiple VMAS transformations and mappings TSAN
+// runtime for AArch64 uses an external memory read (vmaSize) to select which
+// mapping to use.  Although slower, it make a same instrumented binary run on
+// multiple kernels.
+typedef MappingAarch64_39 Mapping39;
+typedef MappingAarch64_42 Mapping42;
+typedef MappingAarch64_48 Mapping48;
+// Indicates the runtime will define the memory regions at runtime.
+#    define TSAN_RUNTIME_VMA 1
+// Indicates that mapping defines a mid range memory segment.
+#    define TSAN_MID_APP_RANGE 1
+#  elif defined(__powerpc64__)
+// PPC64 supports multiple VMA which leads to multiple address transformation
+// functions.  To support these multiple VMAS transformations and mappings TSAN
+// runtime for PPC64 uses an external memory read (vmaSize) to select which
+// mapping to use.  Although slower, it make a same instrumented binary run on
+// multiple kernels.
+typedef MappingPPC64_44 Mapping44;
+typedef MappingPPC64_46 Mapping46;
+typedef MappingPPC64_47 Mapping47;
+// Indicates the runtime will define the memory regions at runtime.
+#    define TSAN_RUNTIME_VMA 1
+#  elif defined(__s390x__)
+typedef MappingS390x Mapping;
+#  endif
+#elif SANITIZER_GO && !SANITIZER_WINDOWS && HAS_48_BIT_ADDRESS_SPACE
+typedef MappingGo48 Mapping;
+#elif SANITIZER_GO && SANITIZER_WINDOWS
+typedef MappingGoWindows Mapping;
+#elif SANITIZER_GO && defined(__powerpc64__)
+/* Only Mapping46 and Mapping47 are currently supported for powercp64 on Go. */
+typedef MappingGoPPC64_46 Mapping46;
+typedef MappingGoPPC64_47 Mapping47;
+#  define TSAN_RUNTIME_VMA 1
+#elif SANITIZER_GO && defined(__aarch64__)
+typedef MappingGoAarch64 Mapping;
+// Indicates the runtime will define the memory regions at runtime.
+#  define TSAN_RUNTIME_VMA 1
+#elif SANITIZER_GO && defined(__mips64)
+typedef MappingGoMips64_47 Mapping47;
+#  define TSAN_RUNTIME_VMA 1
+#elif SANITIZER_GO && defined(__s390x__)
+typedef MappingGoS390x Mapping;
+#else
+#  error "Unknown platform"
+#endif
 
 #ifdef TSAN_RUNTIME_VMA
 extern uptr vmaSize;
