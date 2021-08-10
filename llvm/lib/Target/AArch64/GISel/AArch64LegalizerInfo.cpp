@@ -936,8 +936,42 @@ bool AArch64LegalizerInfo::legalizeSmallCMGlobalValue(
   return true;
 }
 
+static unsigned findIntrinsicID(MachineInstr &I) {
+  auto IntrinOp = find_if(I.operands(), [&](const MachineOperand &Op) {
+    return Op.isIntrinsicID();
+  });
+  if (IntrinOp == I.operands_end())
+    return 0;
+  return IntrinOp->getIntrinsicID();
+}
+
 bool AArch64LegalizerInfo::legalizeIntrinsic(LegalizerHelper &Helper,
                                              MachineInstr &MI) const {
+  switch (findIntrinsicID(MI)) {
+  case Intrinsic::vacopy: {
+    unsigned PtrSize = ST->isTargetILP32() ? 4 : 8;
+    unsigned VaListSize =
+      (ST->isTargetDarwin() || ST->isTargetWindows())
+          ? PtrSize
+          : ST->isTargetILP32() ? 20 : 32;
+
+    MachineFunction &MF = *MI.getMF();
+    auto Val = MF.getRegInfo().createGenericVirtualRegister(
+        LLT::scalar(VaListSize * 8));
+    MachineIRBuilder MIB(MI);
+    MIB.buildLoad(Val, MI.getOperand(2),
+                  *MF.getMachineMemOperand(MachinePointerInfo(),
+                                           MachineMemOperand::MOLoad,
+                                           VaListSize, Align(PtrSize)));
+    MIB.buildStore(Val, MI.getOperand(1),
+                   *MF.getMachineMemOperand(MachinePointerInfo(),
+                                            MachineMemOperand::MOStore,
+                                            VaListSize, Align(PtrSize)));
+    MI.eraseFromParent();
+    return true;
+  }
+  }
+
   return true;
 }
 

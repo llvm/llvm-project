@@ -587,7 +587,7 @@ unsigned ARMLoadStoreOpt::findFreeReg(const TargetRegisterClass &RegClass) {
   }
 
   for (unsigned Reg : RegClassInfo.getOrder(&RegClass))
-    if (!LiveRegs.contains(Reg))
+    if (LiveRegs.available(MF->getRegInfo(), Reg))
       return Reg;
   return 0;
 }

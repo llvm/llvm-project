@@ -83,6 +83,9 @@ def FuncExtKhrMipmapImage                : FunctionExtension<"cl_khr_mipmap_imag
 def FuncExtKhrMipmapImageWrites          : FunctionExtension<"cl_khr_mipmap_image_writes">;
 def FuncExtKhrGlMsaaSharing              : FunctionExtension<"cl_khr_gl_msaa_sharing">;
 
+def FuncExtOpenCLCPipes                  : FunctionExtension<"__opencl_c_pipes">;
+def FuncExtOpenCLCWGCollectiveFunctions  : FunctionExtension<"__opencl_c_work_group_collective_functions">;
+
 // Not a real extension, but a workaround to add C++ for OpenCL specific builtins.
 def FuncExtOpenCLCxx                     : FunctionExtension<"__cplusplus">;
 
@@ -1292,7 +1295,7 @@ foreach aQual = ["WO", "RW"] in {
 //--------------------------------------------------------------------
 // OpenCL v2.0 s6.13.15 - Work-group Functions
 // --- Table 26 ---
-let MinVersion = CL20 in {
+let Extension = FuncExtOpenCLCWGCollectiveFunctions in {
   foreach name = ["work_group_all", "work_group_any"] in {
     def : Builtin<name, [Int, Int], Attr.Convergent>;
   }
@@ -1317,7 +1320,9 @@ let MinVersion = CL20 in {
 
 // --- Table 28 ---
 // Builtins taking pipe arguments are defined in Builtins.def
-def : Builtin<"is_valid_reserve_id", [Bool, ReserveId]>;
+let Extension = FuncExtOpenCLCPipes in {
+  def : Builtin<"is_valid_reserve_id", [Bool, ReserveId]>;
+}
 
 // --- Table 29 ---
 // Defined in Builtins.def

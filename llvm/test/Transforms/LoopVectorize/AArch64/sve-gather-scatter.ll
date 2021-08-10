@@ -132,7 +132,7 @@ define void @gather_nxv4i32_ind64_stride2(float* noalias nocapture readonly %a, 
 ; CHECK-DAG:  %[[IDXSPLATINS:.*]] = insertelement <vscale x 4 x i64> poison, i64 %[[IDX]], i32 0
 ; CHECK-DAG:  %[[IDXSPLAT:.*]] = shufflevector <vscale x 4 x i64> %[[IDXSPLATINS]], <vscale x 4 x i64> poison, <vscale x 4 x i32> zeroinitializer
 ; CHECK:      %[[ADD:.*]] = add <vscale x 4 x i64> %[[IDXSPLAT]], %[[STEP]]
-; CHECK:      %[[MUL:.*]] = shl <vscale x 4 x i64> %[[ADD]], shufflevector (<vscale x 4 x i64> insertelement (<vscale x 4 x i64> undef, i64 1, i32 0), <vscale x 4 x i64> undef, <vscale x 4 x i32> zeroinitializer)
+; CHECK:      %[[MUL:.*]] = shl <vscale x 4 x i64> %[[ADD]], shufflevector (<vscale x 4 x i64> insertelement (<vscale x 4 x i64> poison, i64 1, i32 0), <vscale x 4 x i64> poison, <vscale x 4 x i32> zeroinitializer)
 ; CHECK:      %[[PTRS:.*]] = getelementptr inbounds float, float* %b, <vscale x 4 x i64> %[[MUL]]
 ; CHECK:      call <vscale x 4 x float> @llvm.masked.gather.nxv4f32.nxv4p0f32(<vscale x 4 x float*> %[[PTRS]]
 entry:

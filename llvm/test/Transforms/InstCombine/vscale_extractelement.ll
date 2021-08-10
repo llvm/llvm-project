@@ -243,6 +243,35 @@ entry:
   ret i8 %1
 }
 
+; Check that we can extract more complex cases where the stepvector is
+; involved in a binary operation prior to the lane being extracted.
+
+define i64 @ext_lane0_from_add_with_stepvec(i64 %i) {
+; CHECK-LABEL: @ext_lane0_from_add_with_stepvec(
+; CHECK-NEXT:    ret i64 [[I:%.*]]
+;
+  %tmp = insertelement <vscale x 2 x i64> poison, i64 %i, i32 0
+  %splatofi = shufflevector <vscale x 2 x i64> %tmp, <vscale x 2 x i64> poison, <vscale x  2 x i32> zeroinitializer
+  %stepvec = call <vscale x 2 x i64> @llvm.experimental.stepvector.nxv2i64()
+  %add = add <vscale x 2 x i64> %splatofi, %stepvec
+  %res = extractelement <vscale x 2 x i64> %add, i32 0
+  ret i64 %res
+}
+
+define i1 @ext_lane1_from_cmp_with_stepvec(i64 %i) {
+; CHECK-LABEL: @ext_lane1_from_cmp_with_stepvec(
+; CHECK-NEXT:    [[RES:%.*]] = icmp eq i64 [[I:%.*]], 1
+; CHECK-NEXT:    ret i1 [[RES]]
+;
+  %tmp = insertelement <vscale x 2 x i64> poison, i64 %i, i32 0
+  %splatofi = shufflevector <vscale x 2 x i64> %tmp, <vscale x 2 x i64> poison, <vscale x  2 x i32> zeroinitializer
+  %stepvec = call <vscale x 2 x i64> @llvm.experimental.stepvector.nxv2i64()
+  %cmp = icmp eq <vscale x 2 x i64> %splatofi, %stepvec
+  %res = extractelement <vscale x 2 x i1> %cmp, i32 1
+  ret i1 %res
+}
+
+declare <vscale x 2 x i64> @llvm.experimental.stepvector.nxv2i64()
 declare <vscale x 4 x i64> @llvm.experimental.stepvector.nxv4i64()
 declare <vscale x 4 x i32> @llvm.experimental.stepvector.nxv4i32()
 declare <vscale x 512 x i8> @llvm.experimental.stepvector.nxv512i8()

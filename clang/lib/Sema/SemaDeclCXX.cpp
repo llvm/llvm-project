@@ -4162,7 +4162,8 @@ Sema::BuildMemInitializer(Decl *ConstructorD,
                           SourceLocation IdLoc,
                           Expr *Init,
                           SourceLocation EllipsisLoc) {
-  ExprResult Res = CorrectDelayedTyposInExpr(Init);
+  ExprResult Res = CorrectDelayedTyposInExpr(Init, /*InitDecl=*/nullptr,
+                                             /*RecoverUncorrectedTypos=*/true);
   if (!Res.isUsable())
     return true;
   Init = Res.get();
@@ -4375,18 +4376,25 @@ Sema::BuildMemberInitializer(ValueDecl *Member, Expr *Init,
     InitializationSequence InitSeq(*this, MemberEntity, Kind, Args);
     ExprResult MemberInit = InitSeq.Perform(*this, MemberEntity, Kind, Args,
                                             nullptr);
-    if (MemberInit.isInvalid())
-      return true;
+    if (!MemberInit.isInvalid()) {
+      // C++11 [class.base.init]p7:
+      //   The initialization of each base and member constitutes a
+      //   full-expression.
+      MemberInit = ActOnFinishFullExpr(MemberInit.get(), InitRange.getBegin(),
+                                       /*DiscardedValue*/ false);
+    }
 
-    // C++11 [class.base.init]p7:
-    //   The initialization of each base and member constitutes a
-    //   full-expression.
-    MemberInit = ActOnFinishFullExpr(MemberInit.get(), InitRange.getBegin(),
-                                     /*DiscardedValue*/ false);
-    if (MemberInit.isInvalid())
-      return true;
-
-    Init = MemberInit.get();
+    if (MemberInit.isInvalid()) {
+      // Args were sensible expressions but we couldn't initialize the member
+      // from them. Preserve them in a RecoveryExpr instead.
+      Init = CreateRecoveryExpr(InitRange.getBegin(), InitRange.getEnd(), Args,
+                                Member->getType())
+                 .get();
+      if (!Init)
+        return true;
+    } else {
+      Init = MemberInit.get();
+    }
   }
 
   if (DirectMember) {
@@ -4428,29 +4436,35 @@ Sema::BuildDelegatingInitializer(TypeSourceInfo *TInfo, Expr *Init,
   InitializationSequence InitSeq(*this, DelegationEntity, Kind, Args);
   ExprResult DelegationInit = InitSeq.Perform(*this, DelegationEntity, Kind,
                                               Args, nullptr);
-  if (DelegationInit.isInvalid())
-    return true;
+  if (!DelegationInit.isInvalid()) {
+    assert(DelegationInit.get()->containsErrors() ||
+           cast<CXXConstructExpr>(DelegationInit.get())->getConstructor() &&
+               "Delegating constructor with no target?");
 
-  assert(cast<CXXConstructExpr>(DelegationInit.get())->getConstructor() &&
-         "Delegating constructor with no target?");
+    // C++11 [class.base.init]p7:
+    //   The initialization of each base and member constitutes a
+    //   full-expression.
+    DelegationInit = ActOnFinishFullExpr(
+        DelegationInit.get(), InitRange.getBegin(), /*DiscardedValue*/ false);
+  }
 
-  // C++11 [class.base.init]p7:
-  //   The initialization of each base and member constitutes a
-  //   full-expression.
-  DelegationInit = ActOnFinishFullExpr(
-      DelegationInit.get(), InitRange.getBegin(), /*DiscardedValue*/ false);
-  if (DelegationInit.isInvalid())
-    return true;
-
-  // If we are in a dependent context, template instantiation will
-  // perform this type-checking again. Just save the arguments that we
-  // received in a ParenListExpr.
-  // FIXME: This isn't quite ideal, since our ASTs don't capture all
-  // of the information that we have about the base
-  // initializer. However, deconstructing the ASTs is a dicey process,
-  // and this approach is far more likely to get the corner cases right.
-  if (CurContext->isDependentContext())
-    DelegationInit = Init;
+  if (DelegationInit.isInvalid()) {
+    DelegationInit =
+        CreateRecoveryExpr(InitRange.getBegin(), InitRange.getEnd(), Args,
+                           QualType(ClassDecl->getTypeForDecl(), 0));
+    if (DelegationInit.isInvalid())
+      return true;
+  } else {
+    // If we are in a dependent context, template instantiation will
+    // perform this type-checking again. Just save the arguments that we
+    // received in a ParenListExpr.
+    // FIXME: This isn't quite ideal, since our ASTs don't capture all
+    // of the information that we have about the base
+    // initializer. However, deconstructing the ASTs is a dicey process,
+    // and this approach is far more likely to get the corner cases right.
+    if (CurContext->isDependentContext())
+      DelegationInit = Init;
+  }
 
   return new (Context) CXXCtorInitializer(Context, TInfo, InitRange.getBegin(),
                                           DelegationInit.getAs<Expr>(),
@@ -4474,7 +4488,12 @@ Sema::BuildBaseInitializer(QualType BaseType, TypeSourceInfo *BaseTInfo,
   //   of that class, the mem-initializer is ill-formed. A
   //   mem-initializer-list can initialize a base class using any
   //   name that denotes that base class type.
-  bool Dependent = BaseType->isDependentType() || Init->isTypeDependent();
+
+  // We can store the initializers in "as-written" form and delay analysis until
+  // instantiation if the constructor is dependent. But not for dependent
+  // (broken) code in a non-template! SetCtorInitializers does not expect this.
+  bool Dependent = CurContext->isDependentContext() &&
+                   (BaseType->isDependentType() || Init->isTypeDependent());
 
   SourceRange InitRange = Init->getSourceRange();
   if (EllipsisLoc.isValid()) {
@@ -4561,26 +4580,30 @@ Sema::BuildBaseInitializer(QualType BaseType, TypeSourceInfo *BaseTInfo,
                                                   InitRange.getEnd());
   InitializationSequence InitSeq(*this, BaseEntity, Kind, Args);
   ExprResult BaseInit = InitSeq.Perform(*this, BaseEntity, Kind, Args, nullptr);
-  if (BaseInit.isInvalid())
-    return true;
+  if (!BaseInit.isInvalid()) {
+    // C++11 [class.base.init]p7:
+    //   The initialization of each base and member constitutes a
+    //   full-expression.
+    BaseInit = ActOnFinishFullExpr(BaseInit.get(), InitRange.getBegin(),
+                                   /*DiscardedValue*/ false);
+  }
 
-  // C++11 [class.base.init]p7:
-  //   The initialization of each base and member constitutes a
-  //   full-expression.
-  BaseInit = ActOnFinishFullExpr(BaseInit.get(), InitRange.getBegin(),
-                                 /*DiscardedValue*/ false);
-  if (BaseInit.isInvalid())
-    return true;
-
-  // If we are in a dependent context, template instantiation will
-  // perform this type-checking again. Just save the arguments that we
-  // received in a ParenListExpr.
-  // FIXME: This isn't quite ideal, since our ASTs don't capture all
-  // of the information that we have about the base
-  // initializer. However, deconstructing the ASTs is a dicey process,
-  // and this approach is far more likely to get the corner cases right.
-  if (CurContext->isDependentContext())
-    BaseInit = Init;
+  if (BaseInit.isInvalid()) {
+    BaseInit = CreateRecoveryExpr(InitRange.getBegin(), InitRange.getEnd(),
+                                  Args, BaseType);
+    if (BaseInit.isInvalid())
+      return true;
+  } else {
+    // If we are in a dependent context, template instantiation will
+    // perform this type-checking again. Just save the arguments that we
+    // received in a ParenListExpr.
+    // FIXME: This isn't quite ideal, since our ASTs don't capture all
+    // of the information that we have about the base
+    // initializer. However, deconstructing the ASTs is a dicey process,
+    // and this approach is far more likely to get the corner cases right.
+    if (CurContext->isDependentContext())
+      BaseInit = Init;
+  }
 
   return new (Context) CXXCtorInitializer(Context, BaseTInfo,
                                           BaseSpec->isVirtual(),

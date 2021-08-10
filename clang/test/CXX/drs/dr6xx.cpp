@@ -606,11 +606,13 @@ namespace dr654 { // dr654: sup 1423
 
 namespace dr655 { // dr655: yes
   struct A { A(int); }; // expected-note 2-3{{not viable}}
+                        // expected-note@-1 {{'dr655::A' declared here}}
   struct B : A {
-    A a;
+    A a; // expected-note {{member is declared here}}
     B();
     B(int) : B() {} // expected-error 0-1 {{C++11}}
     B(int*) : A() {} // expected-error {{no matching constructor}}
+                     // expected-error@-1 {{must explicitly initialize the member 'a'}}
   };
 }
 

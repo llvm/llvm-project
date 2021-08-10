@@ -133,6 +133,16 @@ inline bool isReleaseOrStronger(AtomicOrdering AO) {
   return isAtLeastOrStrongerThan(AO, AtomicOrdering::Release);
 }
 
+/// Return a single atomic ordering that is at least as strong as both the \p AO
+/// and \p Other orderings for an atomic operation.
+inline AtomicOrdering getMergedAtomicOrdering(AtomicOrdering AO,
+                                              AtomicOrdering Other) {
+  if ((AO == AtomicOrdering::Acquire && Other == AtomicOrdering::Release) ||
+      (AO == AtomicOrdering::Release && Other == AtomicOrdering::Acquire))
+    return AtomicOrdering::AcquireRelease;
+  return isStrongerThan(AO, Other) ? AO : Other;
+}
+
 inline AtomicOrderingCABI toCABI(AtomicOrdering AO) {
   static const AtomicOrderingCABI lookup[8] = {
       /* NotAtomic */ AtomicOrderingCABI::relaxed,
