@@ -9,7 +9,38 @@ import lldbgdbserverutils
 from gdbremote_testcase import GdbRemoteTestCaseBase
 
 import binascii
+import os
 import stat
+import struct
+import typing
+
+
+class GDBStat(typing.NamedTuple):
+    st_dev: int
+    st_ino: int
+    st_mode: int
+    st_nlink: int
+    st_uid: int
+    st_gid: int
+    st_rdev: int
+    st_size: int
+    st_blksize: int
+    st_blocks: int
+    st_atime: int
+    st_mtime: int
+    st_ctime: int
+
+
+def uint32_or_zero(x):
+    return x if x < 2**32 else 0
+
+
+def uint32_or_max(x):
+    return x if x < 2**32 else 2**32 - 1
+
+
+def uint32_trunc(x):
+    return x & (2**32 - 1)
 
 
 class TestGdbRemotePlatformFile(GdbRemoteTestCaseBase):
@@ -177,6 +208,70 @@ class TestGdbRemotePlatformFile(GdbRemoteTestCaseBase):
              "send packet: $F,0#00"],
             True)
         self.expect_gdbremote_sequence()
+
+    @skipIfWindows
+    @add_test_categories(["llgs"])
+    def test_platform_file_fstat(self):
+        server = self.connect_to_debug_monitor()
+        self.assertIsNotNone(server)
+
+        with tempfile.NamedTemporaryFile() as temp_file:
+            temp_file.write(b"some test data for stat")
+            temp_file.flush()
+
+            self.do_handshake()
+            self.test_sequence.add_log_lines(
+                ["read packet: $vFile:open:%s,0,0#00" % (
+                    binascii.b2a_hex(temp_file.name.encode()).decode(),),
+                 {"direction": "send",
+                 "regex": r"^\$F([0-9a-fA-F]+)#[0-9a-fA-F]{2}$",
+                 "capture": {1: "fd"}}],
+                True)
+
+            context = self.expect_gdbremote_sequence()
+            self.assertIsNotNone(context)
+            fd = int(context["fd"], 16)
+
+            self.reset_test_sequence()
+            self.test_sequence.add_log_lines(
+                ["read packet: $vFile:fstat:%x#00" % (fd,),
+                 {"direction": "send",
+                 "regex": r"^\$F([0-9a-fA-F]+);(.*)#[0-9a-fA-F]{2}$",
+                 "capture": {1: "size", 2: "data"}}],
+                True)
+            context = self.expect_gdbremote_sequence()
+            self.assertEqual(int(context["size"], 16), 64)
+            # NB: we're using .encode() as a hack because the test suite
+            # is wrongly using (unicode) str instead of bytes
+            gdb_stat = GDBStat(
+                *struct.unpack(">IIIIIIIQQQIII",
+                               self.decode_gdbremote_binary(context["data"])
+                                .encode("iso-8859-1")))
+            sys_stat = os.fstat(temp_file.fileno())
+
+            self.assertEqual(gdb_stat.st_dev, uint32_or_zero(sys_stat.st_dev))
+            self.assertEqual(gdb_stat.st_ino, uint32_or_zero(sys_stat.st_ino))
+            self.assertEqual(gdb_stat.st_mode, uint32_trunc(sys_stat.st_mode))
+            self.assertEqual(gdb_stat.st_nlink, uint32_or_max(sys_stat.st_nlink))
+            self.assertEqual(gdb_stat.st_uid, uint32_or_zero(sys_stat.st_uid))
+            self.assertEqual(gdb_stat.st_gid, uint32_or_zero(sys_stat.st_gid))
+            self.assertEqual(gdb_stat.st_rdev, uint32_or_zero(sys_stat.st_rdev))
+            self.assertEqual(gdb_stat.st_size, sys_stat.st_size)
+            self.assertEqual(gdb_stat.st_blksize, sys_stat.st_blksize)
+            self.assertEqual(gdb_stat.st_blocks, sys_stat.st_blocks)
+            self.assertEqual(gdb_stat.st_atime,
+                             uint32_or_zero(int(sys_stat.st_atime)))
+            self.assertEqual(gdb_stat.st_mtime,
+                             uint32_or_zero(int(sys_stat.st_mtime)))
+            self.assertEqual(gdb_stat.st_ctime,
+                             uint32_or_zero(int(sys_stat.st_ctime)))
+
+            self.reset_test_sequence()
+            self.test_sequence.add_log_lines(
+                ["read packet: $vFile:close:%x#00" % (fd,),
+                 "send packet: $F0#00"],
+                True)
+            self.expect_gdbremote_sequence()
 
     def expect_error(self):
         self.test_sequence.add_log_lines(
