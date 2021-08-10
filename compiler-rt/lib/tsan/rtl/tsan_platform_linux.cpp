@@ -111,12 +111,10 @@ void FillProfileCallback(uptr p, uptr rss, bool file,
     mem[MemMeta] += rss;
   else if (p >= LoAppMemBeg() && p < LoAppMemEnd())
     mem[file ? MemFile : MemMmap] += rss;
-#  if !SANITIZER_GO
   else if (p >= HiAppMemBeg() && p < HiAppMemEnd())
     mem[file ? MemFile : MemMmap] += rss;
   else if (p >= HeapMemBeg() && p < HeapMemEnd())
     mem[MemHeap] += rss;
-#  endif
   else if (p >= TraceMemBeg() && p < TraceMemEnd())
     mem[MemTrace] += rss;
   else
