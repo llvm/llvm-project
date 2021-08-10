@@ -79,11 +79,13 @@ if.end:
 ;YAML-NEXT:  DebugLoc:        { File: test.cpp, Line: 10, Column: 11 }
 ;YAML-NEXT:  Function:        foo
 ;YAML-NEXT:  Args:
+;YAML-NEXT:    - String:          ''''
 ;YAML-NEXT:    - Callee:          zen
 ;YAML-NEXT:      DebugLoc:        { File: test.cpp, Line: 38, Column: 0 }
-;YAML-NEXT:    - String:          ' inlined into '
+;YAML-NEXT:    - String:          ''' inlined into '''
 ;YAML-NEXT:    - Caller:          foo
 ;YAML-NEXT:      DebugLoc:        { File: test.cpp, Line: 9, Column: 0 }
+;YAML-NEXT:    - String:          ''''
 ;YAML-NEXT:    - String:          ' to match profiling context'
 ;YAML-NEXT:    - String:          ' with '
 ;YAML-NEXT:    - String:          '(cost='
