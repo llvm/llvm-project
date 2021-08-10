@@ -381,9 +381,10 @@ enum ConstantsCodes {
   CST_CODE_CE_UNOP = 25,                   // CE_UNOP:      [opcode, opval]
   CST_CODE_POISON = 26,                    // POISON
   CST_CODE_DSO_LOCAL_EQUIVALENT = 27,      // DSO_LOCAL_EQUIVALENT [gvty, gv]
-  CST_CODE_INLINEASM = 28, // INLINEASM:     [sideeffect|alignstack|
-                           //                 asmdialect|unwind,
-                           //                 asmstr,conststr]
+  CST_CODE_INLINEASM = 28,    // INLINEASM:     [sideeffect|alignstack|
+                              //                 asmdialect|unwind,
+                              //                 asmstr,conststr]
+  CST_CODE_NO_CFI_VALUE = 29, // NO_CFI [ fty, f ]
 };
 
 /// CastOpcodes - These are values used in the bitcode files to encode which

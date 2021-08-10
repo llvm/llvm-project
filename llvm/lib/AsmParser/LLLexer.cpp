@@ -733,6 +733,7 @@ lltok::Kind LLLexer::LexIdentifier() {
   KEYWORD(x);
   KEYWORD(blockaddress);
   KEYWORD(dso_local_equivalent);
+  KEYWORD(no_cfi);
 
   // Metadata types.
   KEYWORD(distinct);

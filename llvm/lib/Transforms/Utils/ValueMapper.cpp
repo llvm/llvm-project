@@ -450,6 +450,12 @@ Value *Mapper::mapValue(const Value *V) {
                DSOLocalEquivalent::get(Func), NewTy);
   }
 
+  if (const auto *NC = dyn_cast<NoCFIValue>(C)) {
+    auto *Val = mapValue(NC->getGlobalValue());
+    GlobalValue *GV = cast<GlobalValue>(Val);
+    return getVM()[NC] = NoCFIValue::get(GV);
+  }
+
   auto mapValueOrNull = [this](Value *V) {
     auto Mapped = mapValue(V);
     assert((Mapped || (Flags & RF_NullMapMissingGlobalValues)) &&
