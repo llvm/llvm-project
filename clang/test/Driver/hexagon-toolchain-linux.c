@@ -1,3 +1,5 @@
+// UNSUPPORTED: system-windows
+
 // -----------------------------------------------------------------------------
 // Passing --musl
 // -----------------------------------------------------------------------------
@@ -94,4 +96,26 @@
 // RUN:   -mcpu=hexagonv60 \
 // RUN:   %s 2>&1 \
 // RUN:   | FileCheck -check-prefix=CHECK007 %s
-// CHECK007:          "-internal-isystem" "{{.*}}hexagon{{/|\\\\}}include{{/|\\\\}}c++{{/|\\\\}}v1"
+// CHECK007:   "-internal-isystem" "{{.*}}hexagon{{/|\\\\}}include{{/|\\\\}}c++{{/|\\\\}}v1"
+// -----------------------------------------------------------------------------
+// internal-isystem for linux with and without musl
+// -----------------------------------------------------------------------------
+// RUN: %clang -### -target hexagon-unknown-linux-musl \
+// RUN:   -ccc-install-dir %S/Inputs/hexagon_tree/Tools/bin \
+// RUN:   -resource-dir=%S/Inputs/resource_dir \
+// RUN:   %s 2>&1 \
+// RUN:   | FileCheck -check-prefix=CHECK008 %s
+// CHECK008:   InstalledDir: [[INSTALLED_DIR:.+]]
+// CHECK008:   "-resource-dir" "[[RESOURCE:[^"]+]]"
+// CHECK008-SAME: {{^}} "-internal-isystem" "[[RESOURCE]]/include"
+// CHECK008-SAME: {{^}} "-internal-externc-isystem" "[[INSTALLED_DIR]]/../target/hexagon/include"
+
+// RUN: %clang -### -target hexagon-unknown-linux \
+// RUN:   -ccc-install-dir %S/Inputs/hexagon_tree/Tools/bin \
+// RUN:   -resource-dir=%S/Inputs/resource_dir \
+// RUN:   %s 2>&1 \
+// RUN:   | FileCheck -check-prefix=CHECK009 %s
+// CHECK009:   InstalledDir: [[INSTALLED_DIR:.+]]
+// CHECK009:   "-resource-dir" "[[RESOURCE:[^"]+]]"
+// CHECK009-SAME: {{^}} "-internal-isystem" "[[RESOURCE]]/include"
+// CHECK009-SAME: {{^}} "-internal-externc-isystem" "[[INSTALLED_DIR]]/../target/hexagon/include"
