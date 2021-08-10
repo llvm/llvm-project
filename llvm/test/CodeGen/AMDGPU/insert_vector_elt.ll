@@ -1447,53 +1447,53 @@ define amdgpu_kernel void @dynamic_insertelement_v16i8(<16 x i8> addrspace(1)* %
 define amdgpu_kernel void @insert_split_bb(<2 x i32> addrspace(1)* %out, i32 addrspace(1)* %in, i32 %a, i32 %b) {
 ; SI-LABEL: insert_split_bb:
 ; SI:       ; %bb.0: ; %entry
-; SI-NEXT:    s_load_dword s0, s[4:5], 0x4
-; SI-NEXT:    s_load_dwordx4 s[4:7], s[4:5], 0x0
+; SI-NEXT:    s_load_dword s6, s[4:5], 0x4
+; SI-NEXT:    s_load_dwordx4 s[0:3], s[4:5], 0x0
 ; SI-NEXT:    s_waitcnt lgkmcnt(0)
-; SI-NEXT:    s_cmp_lg_u32 s0, 0
+; SI-NEXT:    s_cmp_lg_u32 s6, 0
 ; SI-NEXT:    s_cbranch_scc0 BB30_2
 ; SI-NEXT:  ; %bb.1: ; %else
-; SI-NEXT:    s_load_dword s1, s[6:7], 0x1
-; SI-NEXT:    s_mov_b64 s[2:3], 0
-; SI-NEXT:    s_andn2_b64 vcc, exec, s[2:3]
+; SI-NEXT:    s_load_dword s7, s[2:3], 0x1
+; SI-NEXT:    s_mov_b64 s[4:5], 0
+; SI-NEXT:    s_andn2_b64 vcc, exec, s[4:5]
 ; SI-NEXT:    s_waitcnt lgkmcnt(0)
 ; SI-NEXT:    s_mov_b64 vcc, vcc
 ; SI-NEXT:    s_cbranch_vccz BB30_3
 ; SI-NEXT:    s_branch BB30_4
 ; SI-NEXT:  BB30_2:
 ; SI-NEXT:  BB30_3: ; %if
-; SI-NEXT:    s_load_dword s1, s[6:7], 0x0
+; SI-NEXT:    s_load_dword s7, s[2:3], 0x0
 ; SI-NEXT:  BB30_4: ; %endif
 ; SI-NEXT:    s_waitcnt lgkmcnt(0)
-; SI-NEXT:    v_mov_b32_e32 v0, s0
-; SI-NEXT:    s_mov_b32 s7, 0x100f000
-; SI-NEXT:    s_mov_b32 s6, -1
-; SI-NEXT:    v_mov_b32_e32 v1, s1
-; SI-NEXT:    buffer_store_dwordx2 v[0:1], off, s[4:7], 0
+; SI-NEXT:    v_mov_b32_e32 v0, s6
+; SI-NEXT:    s_mov_b32 s3, 0x100f000
+; SI-NEXT:    s_mov_b32 s2, -1
+; SI-NEXT:    v_mov_b32_e32 v1, s7
+; SI-NEXT:    buffer_store_dwordx2 v[0:1], off, s[0:3], 0
 ; SI-NEXT:    s_endpgm
 ;
 ; VI-LABEL: insert_split_bb:
 ; VI:       ; %bb.0: ; %entry
-; VI-NEXT:    s_load_dword s0, s[4:5], 0x10
-; VI-NEXT:    s_load_dwordx4 s[4:7], s[4:5], 0x0
+; VI-NEXT:    s_load_dword s6, s[4:5], 0x10
+; VI-NEXT:    s_load_dwordx4 s[0:3], s[4:5], 0x0
 ; VI-NEXT:    s_waitcnt lgkmcnt(0)
-; VI-NEXT:    s_cmp_lg_u32 s0, 0
+; VI-NEXT:    s_cmp_lg_u32 s6, 0
 ; VI-NEXT:    s_cbranch_scc0 BB30_2
 ; VI-NEXT:  ; %bb.1: ; %else
-; VI-NEXT:    s_load_dword s1, s[6:7], 0x4
+; VI-NEXT:    s_load_dword s7, s[2:3], 0x4
 ; VI-NEXT:    s_cbranch_execz BB30_3
 ; VI-NEXT:    s_branch BB30_4
 ; VI-NEXT:  BB30_2:
 ; VI-NEXT:  BB30_3: ; %if
 ; VI-NEXT:    s_waitcnt lgkmcnt(0)
-; VI-NEXT:    s_load_dword s1, s[6:7], 0x0
+; VI-NEXT:    s_load_dword s7, s[2:3], 0x0
 ; VI-NEXT:  BB30_4: ; %endif
 ; VI-NEXT:    s_waitcnt lgkmcnt(0)
-; VI-NEXT:    v_mov_b32_e32 v0, s0
-; VI-NEXT:    s_mov_b32 s7, 0x1100f000
-; VI-NEXT:    s_mov_b32 s6, -1
-; VI-NEXT:    v_mov_b32_e32 v1, s1
-; VI-NEXT:    buffer_store_dwordx2 v[0:1], off, s[4:7], 0
+; VI-NEXT:    v_mov_b32_e32 v0, s6
+; VI-NEXT:    s_mov_b32 s3, 0x1100f000
+; VI-NEXT:    s_mov_b32 s2, -1
+; VI-NEXT:    v_mov_b32_e32 v1, s7
+; VI-NEXT:    buffer_store_dwordx2 v[0:1], off, s[0:3], 0
 ; VI-NEXT:    s_endpgm
 entry:
   %0 = insertelement <2 x i32> undef, i32 %a, i32 0
