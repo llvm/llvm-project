@@ -126,8 +126,7 @@ private:
            (OrderingAddrSpace & SIAtomicAddrSpace::ATOMIC) !=
                SIAtomicAddrSpace::NONE &&
            (InstrAddrSpace & SIAtomicAddrSpace::ATOMIC) !=
-               SIAtomicAddrSpace::NONE &&
-           !isStrongerThan(FailureOrdering, Ordering));
+               SIAtomicAddrSpace::NONE);
 
     // There is also no cross address space ordering if the ordering
     // address space is the same as the instruction address space and
@@ -651,14 +650,11 @@ Optional<SIMemOpInfo> SIMemOpAccess::constructFromMIWithMMO(
       }
 
       SSID = IsSyncScopeInclusion.getValue() ? SSID : MMO->getSyncScopeID();
-      Ordering = isStrongerThan(Ordering, OpOrdering)
-                     ? Ordering
-                     : MMO->getSuccessOrdering();
+      Ordering = getMergedAtomicOrdering(Ordering, OpOrdering);
       assert(MMO->getFailureOrdering() != AtomicOrdering::Release &&
              MMO->getFailureOrdering() != AtomicOrdering::AcquireRelease);
       FailureOrdering =
-          isStrongerThan(FailureOrdering, MMO->getFailureOrdering()) ?
-              FailureOrdering : MMO->getFailureOrdering();
+          getMergedAtomicOrdering(FailureOrdering, MMO->getFailureOrdering());
     }
   }
 

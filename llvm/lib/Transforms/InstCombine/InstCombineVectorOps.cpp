@@ -52,20 +52,29 @@ STATISTIC(NumAggregateReconstructionsSimplified,
           "original aggregate");
 
 /// Return true if the value is cheaper to scalarize than it is to leave as a
-/// vector operation. IsConstantExtractIndex indicates whether we are extracting
-/// one known element from a vector constant.
+/// vector operation. If the extract index \p EI is a constant integer then
+/// some operations may be cheap to scalarize.
 ///
 /// FIXME: It's possible to create more instructions than previously existed.
-static bool cheapToScalarize(Value *V, bool IsConstantExtractIndex) {
+static bool cheapToScalarize(Value *V, Value *EI) {
+  ConstantInt *CEI = dyn_cast<ConstantInt>(EI);
+
   // If we can pick a scalar constant value out of a vector, that is free.
   if (auto *C = dyn_cast<Constant>(V))
-    return IsConstantExtractIndex || C->getSplatValue();
+    return CEI || C->getSplatValue();
+
+  if (CEI && match(V, m_Intrinsic<Intrinsic::experimental_stepvector>())) {
+    ElementCount EC = cast<VectorType>(V->getType())->getElementCount();
+    // Index needs to be lower than the minimum size of the vector, because
+    // for scalable vector, the vector size is known at run time.
+    return CEI->getValue().ult(EC.getKnownMinValue());
+  }
 
   // An insertelement to the same constant index as our extract will simplify
   // to the scalar inserted element. An insertelement to a different constant
   // index is irrelevant to our extract.
   if (match(V, m_InsertElt(m_Value(), m_Value(), m_ConstantInt())))
-    return IsConstantExtractIndex;
+    return CEI;
 
   if (match(V, m_OneUse(m_Load(m_Value()))))
     return true;
@@ -75,14 +84,12 @@ static bool cheapToScalarize(Value *V, bool IsConstantExtractIndex) {
 
   Value *V0, *V1;
   if (match(V, m_OneUse(m_BinOp(m_Value(V0), m_Value(V1)))))
-    if (cheapToScalarize(V0, IsConstantExtractIndex) ||
-        cheapToScalarize(V1, IsConstantExtractIndex))
+    if (cheapToScalarize(V0, EI) || cheapToScalarize(V1, EI))
       return true;
 
   CmpInst::Predicate UnusedPred;
   if (match(V, m_OneUse(m_Cmp(UnusedPred, m_Value(V0), m_Value(V1)))))
-    if (cheapToScalarize(V0, IsConstantExtractIndex) ||
-        cheapToScalarize(V1, IsConstantExtractIndex))
+    if (cheapToScalarize(V0, EI) || cheapToScalarize(V1, EI))
       return true;
 
   return false;
@@ -119,7 +126,8 @@ Instruction *InstCombinerImpl::scalarizePHI(ExtractElementInst &EI,
   // and that it is a binary operation which is cheap to scalarize.
   // otherwise return nullptr.
   if (!PHIUser->hasOneUse() || !(PHIUser->user_back() == PN) ||
-      !(isa<BinaryOperator>(PHIUser)) || !cheapToScalarize(PHIUser, true))
+      !(isa<BinaryOperator>(PHIUser)) ||
+      !cheapToScalarize(PHIUser, EI.getIndexOperand()))
     return nullptr;
 
   // Create a scalar PHI node that will replace the vector PHI node
@@ -415,7 +423,7 @@ Instruction *InstCombinerImpl::visitExtractElementInst(ExtractElementInst &EI) {
   // TODO come up with a n-ary matcher that subsumes both unary and
   // binary matchers.
   UnaryOperator *UO;
-  if (match(SrcVec, m_UnOp(UO)) && cheapToScalarize(SrcVec, IndexC)) {
+  if (match(SrcVec, m_UnOp(UO)) && cheapToScalarize(SrcVec, Index)) {
     // extelt (unop X), Index --> unop (extelt X, Index)
     Value *X = UO->getOperand(0);
     Value *E = Builder.CreateExtractElement(X, Index);
@@ -423,7 +431,7 @@ Instruction *InstCombinerImpl::visitExtractElementInst(ExtractElementInst &EI) {
   }
 
   BinaryOperator *BO;
-  if (match(SrcVec, m_BinOp(BO)) && cheapToScalarize(SrcVec, IndexC)) {
+  if (match(SrcVec, m_BinOp(BO)) && cheapToScalarize(SrcVec, Index)) {
     // extelt (binop X, Y), Index --> binop (extelt X, Index), (extelt Y, Index)
     Value *X = BO->getOperand(0), *Y = BO->getOperand(1);
     Value *E0 = Builder.CreateExtractElement(X, Index);
@@ -434,7 +442,7 @@ Instruction *InstCombinerImpl::visitExtractElementInst(ExtractElementInst &EI) {
   Value *X, *Y;
   CmpInst::Predicate Pred;
   if (match(SrcVec, m_Cmp(Pred, m_Value(X), m_Value(Y))) &&
-      cheapToScalarize(SrcVec, IndexC)) {
+      cheapToScalarize(SrcVec, Index)) {
     // extelt (cmp X, Y), Index --> cmp (extelt X, Index), (extelt Y, Index)
     Value *E0 = Builder.CreateExtractElement(X, Index);
     Value *E1 = Builder.CreateExtractElement(Y, Index);
