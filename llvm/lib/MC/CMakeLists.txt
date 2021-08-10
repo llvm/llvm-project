@@ -70,7 +70,6 @@ add_llvm_component_library(LLVMMC
   Support
   BinaryFormat
   DebugInfoCodeView
-  ProfileData
   )
 
 add_subdirectory(MCParser)
