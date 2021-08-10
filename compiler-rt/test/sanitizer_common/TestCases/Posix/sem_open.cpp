@@ -1,6 +1,6 @@
 // RUN: %clangxx -O0 %s -o %t && %run %t
 
-// Android does not implement this calls.
+// Android does not implement these calls.
 // UNSUPPORTED: android
 
 #include <assert.h>
