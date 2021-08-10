@@ -1244,3 +1244,69 @@ define i64 @mul4104(i64 %a) {
   %c = mul i64 %a, 4104
   ret i64 %c
 }
+
+define signext i32 @mulw192(i32 signext %a) {
+; RV64I-LABEL: mulw192:
+; RV64I:       # %bb.0:
+; RV64I-NEXT:    addi a1, zero, 192
+; RV64I-NEXT:    mulw a0, a0, a1
+; RV64I-NEXT:    ret
+;
+; RV64IB-LABEL: mulw192:
+; RV64IB:       # %bb.0:
+; RV64IB-NEXT:    addi a1, zero, 192
+; RV64IB-NEXT:    mulw a0, a0, a1
+; RV64IB-NEXT:    ret
+;
+; RV64IBA-LABEL: mulw192:
+; RV64IBA:       # %bb.0:
+; RV64IBA-NEXT:    addi a1, zero, 192
+; RV64IBA-NEXT:    mulw a0, a0, a1
+; RV64IBA-NEXT:    ret
+  %c = mul i32 %a, 192
+  ret i32 %c
+}
+
+define signext i32 @mulw320(i32 signext %a) {
+; RV64I-LABEL: mulw320:
+; RV64I:       # %bb.0:
+; RV64I-NEXT:    addi a1, zero, 320
+; RV64I-NEXT:    mulw a0, a0, a1
+; RV64I-NEXT:    ret
+;
+; RV64IB-LABEL: mulw320:
+; RV64IB:       # %bb.0:
+; RV64IB-NEXT:    addi a1, zero, 320
+; RV64IB-NEXT:    mulw a0, a0, a1
+; RV64IB-NEXT:    ret
+;
+; RV64IBA-LABEL: mulw320:
+; RV64IBA:       # %bb.0:
+; RV64IBA-NEXT:    addi a1, zero, 320
+; RV64IBA-NEXT:    mulw a0, a0, a1
+; RV64IBA-NEXT:    ret
+  %c = mul i32 %a, 320
+  ret i32 %c
+}
+
+define signext i32 @mulw576(i32 signext %a) {
+; RV64I-LABEL: mulw576:
+; RV64I:       # %bb.0:
+; RV64I-NEXT:    addi a1, zero, 576
+; RV64I-NEXT:    mulw a0, a0, a1
+; RV64I-NEXT:    ret
+;
+; RV64IB-LABEL: mulw576:
+; RV64IB:       # %bb.0:
+; RV64IB-NEXT:    addi a1, zero, 576
+; RV64IB-NEXT:    mulw a0, a0, a1
+; RV64IB-NEXT:    ret
+;
+; RV64IBA-LABEL: mulw576:
+; RV64IBA:       # %bb.0:
+; RV64IBA-NEXT:    addi a1, zero, 576
+; RV64IBA-NEXT:    mulw a0, a0, a1
+; RV64IBA-NEXT:    ret
+  %c = mul i32 %a, 576
+  ret i32 %c
+}
