@@ -1029,56 +1029,49 @@ public:
     getValuesFromIntArrayAttribute(op.stride().cast<ArrayAttr>(), stride);
     getValuesFromIntArrayAttribute(op.dilation().cast<ArrayAttr>(), dilation);
 
-    // We have not solved for stride / dilation yet. Dilation should be
-    // straight forward but stride is more complicated. Linalg work is likely
-    // required for efficient implementation.
-    if (llvm::any_of(stride, [](int64_t v) { return v != 1; }))
-      return failure();
-    if (llvm::any_of(dilation, [](int64_t v) { return v != 1; }))
-      return failure();
+    // If striding is all 1 we can modify padding and reverse the kernel along
+    // the x/y direction to make it a regular convolution. This is much simpler
+    // then handling striding....
+    if (llvm::all_of(stride, [](int64_t v) { return v == 1; })) {
+      if (!inputTy.hasStaticShape() || !weightTy.hasStaticShape() ||
+          !biasTy.hasStaticShape() || !resultTy.hasStaticShape())
+        return failure();
 
-    if (!inputTy.hasStaticShape() || !weightTy.hasStaticShape() ||
-        !biasTy.hasStaticShape() || !resultTy.hasStaticShape())
-      return failure();
+      int64_t kernelHeight = (weightTy.getDimSize(1) - 1) * dilation[0] + 1;
+      int64_t kernelWidth = (weightTy.getDimSize(2) - 1) * dilation[1] + 1;
+      int64_t requiredInputHeight = resultTy.getDimSize(1) + kernelHeight - 1;
+      int64_t requiredInputWidth = resultTy.getDimSize(2) + kernelWidth - 1;
 
-    int64_t inputHeight = inputTy.getDimSize(1);
-    int64_t inputWidth = inputTy.getDimSize(2);
-    int64_t kernelHeight = weightTy.getDimSize(1);
-    int64_t kernelWidth = weightTy.getDimSize(2);
-    int64_t outputHeight = resultTy.getDimSize(1);
-    int64_t outputWidth = resultTy.getDimSize(2);
+      llvm::SmallVector<int64_t> convPad(4, 0);
+      convPad[0] = kernelHeight - 1 - pad[0];
+      convPad[2] = kernelWidth - 1 - pad[1];
+      convPad[1] = requiredInputHeight - convPad[0] - inputTy.getDimSize(1);
+      convPad[3] = requiredInputWidth - convPad[2] - inputTy.getDimSize(2);
 
-    int64_t requiredInputHeight = outputHeight + kernelHeight - 1;
-    int64_t requiredInputWidth = outputWidth + kernelWidth - 1;
+      auto reverse1 = rewriter.create<tosa::ReverseOp>(
+          loc, weightTy, weight, rewriter.getI64IntegerAttr(1));
+      auto reverse2 = rewriter.create<tosa::ReverseOp>(
+          loc, weightTy, reverse1, rewriter.getI64IntegerAttr(2));
 
-    llvm::SmallVector<int64_t> newPad(4, 0);
-    newPad[0] = kernelHeight - 1 - pad[0];
-    newPad[2] = kernelWidth - 1 - pad[1];
+      Value conv2d;
+      if (op.quantization_info().hasValue()) {
+        conv2d = rewriter.create<tosa::Conv2DOp>(
+            loc, resultTy, input, reverse2, bias,
+            rewriter.getI64ArrayAttr(convPad), rewriter.getI64ArrayAttr(stride),
+            rewriter.getI64ArrayAttr(dilation),
+            op.quantization_info().getValue());
+      } else {
+        conv2d = rewriter.create<tosa::Conv2DOp>(
+            loc, resultTy, input, reverse2, bias,
+            rewriter.getI64ArrayAttr(convPad), rewriter.getI64ArrayAttr(stride),
+            rewriter.getI64ArrayAttr(dilation));
+      }
 
-    newPad[1] = requiredInputHeight - newPad[0] - inputHeight;
-    newPad[3] = requiredInputWidth - newPad[2] - inputWidth;
-
-    auto reverse1 = rewriter.create<tosa::ReverseOp>(
-        loc, weightTy, weight, rewriter.getI64IntegerAttr(1));
-    auto reverse2 = rewriter.create<tosa::ReverseOp>(
-        loc, weightTy, reverse1, rewriter.getI64IntegerAttr(2));
-
-    Value conv2d;
-    if (op.quantization_info().hasValue()) {
-      conv2d = rewriter.create<tosa::Conv2DOp>(
-          loc, resultTy, input, reverse2, bias,
-          rewriter.getI64ArrayAttr(newPad), rewriter.getI64ArrayAttr(stride),
-          rewriter.getI64ArrayAttr(dilation),
-          op.quantization_info().getValue());
-    } else {
-      conv2d = rewriter.create<tosa::Conv2DOp>(
-          loc, resultTy, input, reverse2, bias,
-          rewriter.getI64ArrayAttr(newPad), rewriter.getI64ArrayAttr(stride),
-          rewriter.getI64ArrayAttr(dilation));
+      rewriter.replaceOp(op, conv2d);
+      return success();
     }
 
-    rewriter.replaceOp(op, conv2d);
-    return success();
+    return failure();
   }
 };
 
