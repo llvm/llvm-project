@@ -23,6 +23,19 @@
 
 namespace __tsan {
 
+enum {
+  // App memory is not mapped onto shadow memory range.
+  kBrokenMapping = 1 << 0,
+  // Mapping app memory and back does not produce the same address,
+  // this can lead to wrong addresses in reports and potentially
+  // other bad consequences.
+  kBrokenReverseMapping = 1 << 1,
+  // Mapping is non-linear for linear user range.
+  // This is bad and can lead to unpredictable memory corruptions, etc
+  // because range access functions assume linearity.
+  kBrokenLinearity = 1 << 2,
+};
+
 /*
 C/C++ on linux/x86_64 and freebsd/x86_64
 0000 0000 1000 - 0080 0000 0000: main binary and/or MAP_32BIT mappings (512GB)
@@ -195,6 +208,7 @@ C/C++ on linux/aarch64 (42-bit VMA)
 3f000 0000 00 - 3ffff ffff ff: modules and main thread stack
 */
 struct MappingAarch64_42 {
+  static const uptr kBroken = kBrokenReverseMapping;
   static const uptr kLoAppMemBeg   = 0x00000001000ull;
   static const uptr kLoAppMemEnd   = 0x01000000000ull;
   static const uptr kShadowBeg     = 0x10000000000ull;
@@ -251,6 +265,8 @@ C/C++ on linux/powerpc64 (44-bit VMA)
 0f60 0000 0000 - 1000 0000 0000: modules and main thread stack
 */
 struct MappingPPC64_44 {
+  static const uptr kBroken =
+      kBrokenMapping | kBrokenReverseMapping | kBrokenLinearity;
   static const uptr kMetaShadowBeg = 0x0b0000000000ull;
   static const uptr kMetaShadowEnd = 0x0d0000000000ull;
   static const uptr kTraceMemBeg   = 0x0d0000000000ull;
@@ -724,6 +740,27 @@ ALWAYS_INLINE auto SelectMapping(Arg arg) {
 #endif
 }
 
+template <typename Func>
+void ForEachMapping() {
+  Func::template Apply<Mapping48AddressSpace>();
+  Func::template Apply<MappingMips64_40>();
+  Func::template Apply<MappingAppleAarch64>();
+  Func::template Apply<MappingAarch64_39>();
+  Func::template Apply<MappingAarch64_42>();
+  Func::template Apply<MappingAarch64_48>();
+  Func::template Apply<MappingPPC64_44>();
+  Func::template Apply<MappingPPC64_46>();
+  Func::template Apply<MappingPPC64_47>();
+  Func::template Apply<MappingS390x>();
+  Func::template Apply<MappingGo48>();
+  Func::template Apply<MappingGoWindows>();
+  Func::template Apply<MappingGoPPC64_46>();
+  Func::template Apply<MappingGoPPC64_47>();
+  Func::template Apply<MappingGoAarch64>();
+  Func::template Apply<MappingGoMips64_47>();
+  Func::template Apply<MappingGoS390x>();
+}
+
 enum MappingType {
   MAPPING_LO_APP_BEG,
   MAPPING_LO_APP_END,
@@ -800,33 +837,6 @@ uptr HiAppMemEnd(void) {
 
 ALWAYS_INLINE
 uptr VdsoBeg(void) { return SelectMapping<MappingField>(MAPPING_VDSO_BEG); }
-
-static inline
-bool GetUserRegion(int i, uptr *start, uptr *end) {
-  switch (i) {
-  case 0:
-    *start = LoAppMemBeg();
-    *end = LoAppMemEnd();
-    return true;
-  case 1:
-    *start = HiAppMemBeg();
-    *end = HiAppMemEnd();
-    return true;
-  case 2:
-    *start = HeapMemBeg();
-    *end = HeapMemEnd();
-    return true;
-  case 3:
-    if (MidAppMemBeg()) {
-      *start = MidAppMemBeg();
-      *end = MidAppMemEnd();
-      return true;
-    }
-    FALLTHROUGH;
-  default:
-    return false;
-  }
-}
 
 ALWAYS_INLINE
 uptr ShadowBeg(void) { return SelectMapping<MappingField>(MAPPING_SHADOW_BEG); }
@@ -920,12 +930,13 @@ u32 *MemToMeta(uptr x) { return SelectMapping<MemToMetaImpl>(x); }
 struct ShadowToMemImpl {
   template <typename Mapping>
   static uptr Apply(uptr sp) {
-    DCHECK(IsShadowMemImpl::Apply<Mapping>(sp));
-  // The shadow mapping is non-linear and we've lost some bits, so we don't have
-  // an easy way to restore the original app address. But the mapping is a
-  // bijection, so we try to restore the address as belonging to low/mid/high
-  // range consecutively and see if shadow->app->shadow mapping gives us the
-  // same address.
+    if (!IsShadowMemImpl::Apply<Mapping>(sp))
+      return 0;
+    // The shadow mapping is non-linear and we've lost some bits, so we don't
+    // have an easy way to restore the original app address. But the mapping is
+    // a bijection, so we try to restore the address as belonging to
+    // low/mid/high range consecutively and see if shadow->app->shadow mapping
+    // gives us the same address.
     uptr p = ((sp - Mapping::kShadowAdd) / kShadowCnt) ^ Mapping::kShadowXor;
     if (p >= Mapping::kLoAppMemBeg && p < Mapping::kLoAppMemEnd &&
         MemToShadowImpl::Apply<Mapping>(p) == sp)

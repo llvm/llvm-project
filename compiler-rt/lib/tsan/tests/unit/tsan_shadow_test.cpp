@@ -74,4 +74,68 @@ TEST(Shadow, Celling) {
     CHECK_EQ(s0 + 2 * kShadowCnt, MemToShadow((uptr)&data[i]));
 }
 
+// Detect is the Mapping has kBroken field.
+template <uptr>
+struct Has {
+  typedef bool Result;
+};
+
+template <typename Mapping>
+bool broken(...) {
+  return false;
+}
+
+template <typename Mapping>
+bool broken(uptr what, typename Has<Mapping::kBroken>::Result = false) {
+  return Mapping::kBroken & what;
+}
+
+struct MappingTest {
+  template <typename Mapping>
+  static void Apply() {
+    // Easy (but ugly) way to print the mapping name.
+    Printf("%s\n", __PRETTY_FUNCTION__);
+    TestRegion<Mapping>(Mapping::kLoAppMemBeg, Mapping::kLoAppMemEnd);
+    TestRegion<Mapping>(Mapping::kMidAppMemBeg, Mapping::kMidAppMemEnd);
+    TestRegion<Mapping>(Mapping::kHiAppMemBeg, Mapping::kHiAppMemEnd);
+    TestRegion<Mapping>(Mapping::kHeapMemBeg, Mapping::kHeapMemEnd);
+  }
+
+  template <typename Mapping>
+  static void TestRegion(uptr beg, uptr end) {
+    if (beg == end)
+      return;
+    Printf("checking region [%p-%p)\n", beg, end);
+    uptr prev = 0;
+    for (uptr p0 = beg; p0 <= end; p0 += (end - beg) / 256) {
+      for (int x = -(int)kShadowCell; x <= (int)kShadowCell; x += kShadowCell) {
+        const uptr p = RoundDown(p0 + x, kShadowCell);
+        if (p < beg || p >= end)
+          continue;
+        const uptr s = MemToShadowImpl::Apply<Mapping>(p);
+        u32 *const m = MemToMetaImpl::Apply<Mapping>(p);
+        const uptr r = ShadowToMemImpl::Apply<Mapping>(s);
+        Printf("  addr=%p: shadow=%p meta=%p reverse=%p\n", p, s, m, r);
+        CHECK(IsAppMemImpl::Apply<Mapping>(p));
+        if (!broken<Mapping>(kBrokenMapping))
+          CHECK(IsShadowMemImpl::Apply<Mapping>(s));
+        CHECK(IsMetaMemImpl::Apply<Mapping>(reinterpret_cast<uptr>(m)));
+        if (!broken<Mapping>(kBrokenReverseMapping))
+          CHECK_EQ(p, r);
+        if (prev && !broken<Mapping>(kBrokenLinearity)) {
+          // Ensure that shadow and meta mappings are linear within a single
+          // user range. Lots of code that processes memory ranges assumes it.
+          const uptr prev_s = MemToShadowImpl::Apply<Mapping>(prev);
+          u32 *const prev_m = MemToMetaImpl::Apply<Mapping>(prev);
+          CHECK_EQ(s - prev_s, (p - prev) * kShadowMultiplier);
+          CHECK_EQ(m - prev_m, (p - prev) / kMetaShadowCell);
+        }
+        prev = p;
+      }
+    }
+  }
+};
+
+TEST(Shadow, AllMappings) { ForEachMapping<MappingTest>(); }
+
 }  // namespace __tsan
