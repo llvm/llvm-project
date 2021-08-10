@@ -386,8 +386,8 @@ struct MappingGo48 {
   static const uptr kTraceMemEnd   = 0x620000000000ull;
   static const uptr kShadowBeg     = 0x200000000000ull;
   static const uptr kShadowEnd     = 0x238000000000ull;
-  static const uptr kAppMemBeg     = 0x000000001000ull;
-  static const uptr kAppMemEnd     = 0x00e000000000ull;
+  static const uptr kLoAppMemBeg = 0x000000001000ull;
+  static const uptr kLoAppMemEnd = 0x00e000000000ull;
 };
 
 /* Go on windows
@@ -409,8 +409,8 @@ struct MappingGoWindows {
   static const uptr kTraceMemEnd   = 0x076000000000ull;
   static const uptr kShadowBeg     = 0x010000000000ull;
   static const uptr kShadowEnd     = 0x050000000000ull;
-  static const uptr kAppMemBeg     = 0x000000001000ull;
-  static const uptr kAppMemEnd     = 0x00e000000000ull;
+  static const uptr kLoAppMemBeg = 0x000000001000ull;
+  static const uptr kLoAppMemEnd = 0x00e000000000ull;
 };
 
 /* Go on linux/powerpc64 (46-bit VMA)
@@ -433,8 +433,8 @@ struct MappingGoPPC64_46 {
   static const uptr kTraceMemEnd   = 0x380000000000ull;
   static const uptr kShadowBeg     = 0x200000000000ull;
   static const uptr kShadowEnd     = 0x238000000000ull;
-  static const uptr kAppMemBeg     = 0x000000001000ull;
-  static const uptr kAppMemEnd     = 0x00e000000000ull;
+  static const uptr kLoAppMemBeg = 0x000000001000ull;
+  static const uptr kLoAppMemEnd = 0x00e000000000ull;
 };
 
 /* Go on linux/powerpc64 (47-bit VMA)
@@ -457,8 +457,8 @@ struct MappingGoPPC64_47 {
   static const uptr kTraceMemEnd   = 0x620000000000ull;
   static const uptr kShadowBeg     = 0x200000000000ull;
   static const uptr kShadowEnd     = 0x300000000000ull;
-  static const uptr kAppMemBeg     = 0x000000001000ull;
-  static const uptr kAppMemEnd     = 0x00e000000000ull;
+  static const uptr kLoAppMemBeg = 0x000000001000ull;
+  static const uptr kLoAppMemEnd = 0x00e000000000ull;
 };
 
 /* Go on linux/aarch64 (48-bit VMA) and darwin/aarch64 (47-bit VMA)
@@ -480,8 +480,8 @@ struct MappingGoAarch64 {
   static const uptr kTraceMemEnd   = 0x620000000000ull;
   static const uptr kShadowBeg     = 0x200000000000ull;
   static const uptr kShadowEnd     = 0x300000000000ull;
-  static const uptr kAppMemBeg     = 0x000000001000ull;
-  static const uptr kAppMemEnd     = 0x00e000000000ull;
+  static const uptr kLoAppMemBeg = 0x000000001000ull;
+  static const uptr kLoAppMemEnd = 0x00e000000000ull;
 };
 
 /*
@@ -504,8 +504,8 @@ struct MappingGoMips64_47 {
   static const uptr kTraceMemEnd = 0x620000000000ull;
   static const uptr kShadowBeg = 0x200000000000ull;
   static const uptr kShadowEnd = 0x300000000000ull;
-  static const uptr kAppMemBeg = 0x000000001000ull;
-  static const uptr kAppMemEnd = 0x00e000000000ull;
+  static const uptr kLoAppMemBeg = 0x000000001000ull;
+  static const uptr kLoAppMemEnd = 0x00e000000000ull;
 };
 
 /*
@@ -525,8 +525,8 @@ struct MappingGoS390x {
   static const uptr kTraceMemEnd   = 0xb00000000000ull;
   static const uptr kShadowBeg     = 0x400000000000ull;
   static const uptr kShadowEnd     = 0x800000000000ull;
-  static const uptr kAppMemBeg     = 0x000000001000ull;
-  static const uptr kAppMemEnd     = 0x100000000000ull;
+  static const uptr kLoAppMemBeg = 0x000000001000ull;
+  static const uptr kLoAppMemEnd = 0x100000000000ull;
 };
 
 #if defined(__x86_64__)
@@ -654,8 +654,6 @@ enum MappingType {
   MAPPING_MID_APP_END,
   MAPPING_HEAP_BEG,
   MAPPING_HEAP_END,
-  MAPPING_APP_BEG,
-  MAPPING_APP_END,
   MAPPING_SHADOW_BEG,
   MAPPING_SHADOW_END,
   MAPPING_META_SHADOW_BEG,
@@ -669,9 +667,9 @@ struct MappingField {
   template <typename Mapping>
   static uptr Apply(MappingType type) {
     switch (type) {
-#if !SANITIZER_GO
     case MAPPING_LO_APP_BEG: return Mapping::kLoAppMemBeg;
     case MAPPING_LO_APP_END: return Mapping::kLoAppMemEnd;
+#if !SANITIZER_GO
     case MAPPING_MID_APP_BEG: return Mapping::kMidAppMemBeg;
     case MAPPING_MID_APP_END: return Mapping::kMidAppMemEnd;
     case MAPPING_HI_APP_BEG: return Mapping::kHiAppMemBeg;
@@ -679,9 +677,6 @@ struct MappingField {
     case MAPPING_HEAP_BEG: return Mapping::kHeapMemBeg;
     case MAPPING_HEAP_END: return Mapping::kHeapMemEnd;
     case MAPPING_VDSO_BEG: return Mapping::kVdsoBeg;
-#else
-    case MAPPING_APP_BEG: return Mapping::kAppMemBeg;
-    case MAPPING_APP_END: return Mapping::kAppMemEnd;
 #endif
     case MAPPING_SHADOW_BEG: return Mapping::kShadowBeg;
     case MAPPING_SHADOW_END: return Mapping::kShadowEnd;
@@ -696,7 +691,6 @@ struct MappingField {
   }
 };
 
-#if !SANITIZER_GO
 ALWAYS_INLINE
 uptr LoAppMemBeg(void) {
   return SelectMapping<MappingField>(MAPPING_LO_APP_BEG);
@@ -706,6 +700,7 @@ uptr LoAppMemEnd(void) {
   return SelectMapping<MappingField>(MAPPING_LO_APP_END);
 }
 
+#if !SANITIZER_GO
 ALWAYS_INLINE
 uptr MidAppMemBeg(void) {
   return SelectMapping<MappingField>(MAPPING_MID_APP_BEG);
@@ -732,23 +727,16 @@ uptr HiAppMemEnd(void) {
 ALWAYS_INLINE
 uptr VdsoBeg(void) { return SelectMapping<MappingField>(MAPPING_VDSO_BEG); }
 
-#else
-
-ALWAYS_INLINE
-uptr AppMemBeg(void) { return SelectMapping<MappingField>(MAPPING_APP_BEG); }
-ALWAYS_INLINE
-uptr AppMemEnd(void) { return SelectMapping<MappingField>(MAPPING_APP_END); }
-
 #endif
 
 static inline
 bool GetUserRegion(int i, uptr *start, uptr *end) {
   switch (i) {
-#if !SANITIZER_GO
   case 0:
     *start = LoAppMemBeg();
     *end = LoAppMemEnd();
     return true;
+#if !SANITIZER_GO
   case 1:
     *start = HiAppMemBeg();
     *end = HiAppMemEnd();
@@ -764,11 +752,6 @@ bool GetUserRegion(int i, uptr *start, uptr *end) {
       return true;
     }
     FALLTHROUGH;
-#else
-  case 0:
-    *start = AppMemBeg();
-    *end = AppMemEnd();
-    return true;
 #endif
   default:
     return false;
@@ -807,7 +790,7 @@ struct IsAppMemImpl {
          (mem >= Mapping::kLoAppMemBeg && mem < Mapping::kLoAppMemEnd) ||
          (mem >= Mapping::kHiAppMemBeg && mem < Mapping::kHiAppMemEnd);
 #else
-  return mem >= Mapping::kAppMemBeg && mem < Mapping::kAppMemEnd;
+    return mem >= Mapping::kLoAppMemBeg && mem < Mapping::kLoAppMemEnd;
 #endif
   }
 };
