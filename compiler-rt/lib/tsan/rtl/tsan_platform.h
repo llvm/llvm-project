@@ -893,6 +893,47 @@ uptr ShadowToMem(RawShadow *s) {
   return SelectMapping<ShadowToMemImpl>(reinterpret_cast<uptr>(s));
 }
 
+// Compresses addr to kCompressedAddrBits stored in least significant bits.
+ALWAYS_INLINE uptr CompressAddr(uptr addr) {
+  return addr & ((1ull << kCompressedAddrBits) - 1);
+}
+
+struct RestoreAddrImpl {
+  typedef uptr Result;
+  template <typename Mapping>
+  static Result Apply(uptr addr) {
+    // To restore the address we go over all app memory ranges and check if top
+    // 3 bits of the compressed addr match that of the app range. If yes, we
+    // assume that the compressed address come from that range and restore the
+    // missing top bits to match the app range address.
+    static constexpr uptr ranges[] = {
+        Mapping::kLoAppMemBeg,  Mapping::kLoAppMemEnd, Mapping::kMidAppMemBeg,
+        Mapping::kMidAppMemEnd, Mapping::kHiAppMemBeg, Mapping::kHiAppMemEnd,
+        Mapping::kHeapMemBeg,   Mapping::kHeapMemEnd,
+    };
+    const uptr indicator = 0x0e0000000000ull;
+    const uptr ind_lsb = 1ull << LeastSignificantSetBitIndex(indicator);
+    for (uptr i = 0; i < ARRAY_SIZE(ranges); i += 2) {
+      uptr beg = ranges[i];
+      uptr end = ranges[i + 1];
+      if (beg == end)
+        continue;
+      for (uptr p = beg; p < end; p = RoundDown(p + ind_lsb, ind_lsb)) {
+        if ((addr & indicator) == (p & indicator))
+          return addr | (p & ~(ind_lsb - 1));
+      }
+    }
+    Printf("ThreadSanitizer: failed to restore address %p\n", addr);
+    Die();
+  }
+};
+
+// Restores compressed addr from kCompressedAddrBits to full representation.
+// This is called only during reporting and is not performance-critical.
+inline uptr RestoreAddr(uptr addr) {
+  return SelectMapping<RestoreAddrImpl>(addr);
+}
+
 // The additional page is to catch shadow stack overflow as paging fault.
 // Windows wants 64K alignment for mmaps.
 const uptr kTotalTraceSize = (kTraceSize * sizeof(Event) + sizeof(Trace)
