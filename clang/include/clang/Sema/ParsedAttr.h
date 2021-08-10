@@ -92,11 +92,9 @@ struct ParsedAttrInfo {
                                    const Decl *D) const {
     return true;
   }
-  /// Check if this attribute is allowed by the language we are compiling, and
-  /// issue a diagnostic if not.
-  virtual bool diagLangOpts(Sema &S, const ParsedAttr &Attr) const {
-    return true;
-  }
+  /// Check if this attribute is allowed by the language we are compiling.
+  virtual bool acceptsLangOpts(const LangOptions &LO) const { return true; }
+
   /// Check if this attribute is allowed when compiling for the given target.
   virtual bool existsInTarget(const TargetInfo &Target) const {
     return true;
