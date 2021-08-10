@@ -842,15 +842,19 @@ static unsigned getNumSubRegsForSpillOp(unsigned Op) {
   case AMDGPU::SI_SPILL_A256_RESTORE:
     return 8;
   case AMDGPU::SI_SPILL_S224_SAVE:
+  case AMDGPU::SI_SPILL_S224_CFI_SAVE:
   case AMDGPU::SI_SPILL_S224_RESTORE:
   case AMDGPU::SI_SPILL_V224_SAVE:
+  case AMDGPU::SI_SPILL_V224_CFI_SAVE:
   case AMDGPU::SI_SPILL_V224_RESTORE:
   case AMDGPU::SI_SPILL_A224_SAVE:
   case AMDGPU::SI_SPILL_A224_RESTORE:
     return 7;
   case AMDGPU::SI_SPILL_S192_SAVE:
+  case AMDGPU::SI_SPILL_S192_CFI_SAVE:
   case AMDGPU::SI_SPILL_S192_RESTORE:
   case AMDGPU::SI_SPILL_V192_SAVE:
+  case AMDGPU::SI_SPILL_V192_CFI_SAVE:
   case AMDGPU::SI_SPILL_V192_RESTORE:
   case AMDGPU::SI_SPILL_A192_SAVE:
   case AMDGPU::SI_SPILL_A192_RESTORE:
@@ -1578,6 +1582,8 @@ bool SIRegisterInfo::eliminateSGPRToVGPRSpillFrameIndex(
   case AMDGPU::SI_SPILL_S1024_CFI_SAVE:
   case AMDGPU::SI_SPILL_S512_CFI_SAVE:
   case AMDGPU::SI_SPILL_S256_CFI_SAVE:
+  case AMDGPU::SI_SPILL_S224_CFI_SAVE:
+  case AMDGPU::SI_SPILL_S192_CFI_SAVE:
   case AMDGPU::SI_SPILL_S160_CFI_SAVE:
   case AMDGPU::SI_SPILL_S128_CFI_SAVE:
   case AMDGPU::SI_SPILL_S96_CFI_SAVE:
@@ -1638,6 +1644,8 @@ void SIRegisterInfo::eliminateFrameIndex(MachineBasicBlock::iterator MI,
   case AMDGPU::SI_SPILL_S1024_CFI_SAVE:
   case AMDGPU::SI_SPILL_S512_CFI_SAVE:
   case AMDGPU::SI_SPILL_S256_CFI_SAVE:
+  case AMDGPU::SI_SPILL_S224_CFI_SAVE:
+  case AMDGPU::SI_SPILL_S192_CFI_SAVE:
   case AMDGPU::SI_SPILL_S160_CFI_SAVE:
   case AMDGPU::SI_SPILL_S128_CFI_SAVE:
   case AMDGPU::SI_SPILL_S96_CFI_SAVE:
@@ -1656,7 +1664,7 @@ void SIRegisterInfo::eliminateFrameIndex(MachineBasicBlock::iterator MI,
     case AMDGPU::SI_SPILL_S96_SAVE:
     case AMDGPU::SI_SPILL_S64_SAVE:
     case AMDGPU::SI_SPILL_S32_SAVE: {
-      spillSGPR(MI, Index, RS);
+      spillSGPR(MI, Index, RS, nullptr, false, NeedsCFI);
       break;
     }
 
@@ -1679,6 +1687,8 @@ void SIRegisterInfo::eliminateFrameIndex(MachineBasicBlock::iterator MI,
     case AMDGPU::SI_SPILL_V1024_CFI_SAVE:
     case AMDGPU::SI_SPILL_V512_CFI_SAVE:
     case AMDGPU::SI_SPILL_V256_CFI_SAVE:
+    case AMDGPU::SI_SPILL_V224_CFI_SAVE:
+    case AMDGPU::SI_SPILL_V192_CFI_SAVE:
     case AMDGPU::SI_SPILL_V160_CFI_SAVE:
     case AMDGPU::SI_SPILL_V128_CFI_SAVE:
     case AMDGPU::SI_SPILL_V96_CFI_SAVE:
@@ -1717,7 +1727,7 @@ void SIRegisterInfo::eliminateFrameIndex(MachineBasicBlock::iterator MI,
       buildSpillLoadStore(
           *MBB, MI, Opc, Index, VData->getReg(), VData->isKill(), FrameReg,
           TII->getNamedOperand(*MI, AMDGPU::OpName::offset)->getImm(),
-          *MI->memoperands_begin(), RS);
+          *MI->memoperands_begin(), RS, nullptr, NeedsCFI);
       MFI->addToSpilledVGPRs(getNumSubRegsForSpillOp(MI->getOpcode()));
       MI->eraseFromParent();
       break;
