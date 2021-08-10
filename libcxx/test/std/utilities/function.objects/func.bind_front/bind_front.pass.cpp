@@ -318,13 +318,6 @@ constexpr bool test() {
   {
     {
       MoveOnlyCallable value(true);
-      using RetT = decltype(std::bind_front(std::move(value), 1));
-
-      static_assert( std::is_move_constructible<RetT>::value);
-      static_assert(!std::is_copy_constructible<RetT>::value);
-      static_assert(!std::is_move_assignable<RetT>::value);
-      static_assert(!std::is_copy_assignable<RetT>::value);
-
       auto ret = std::bind_front(std::move(value), 1);
       assert(ret());
       assert(ret(1, 2, 3));
@@ -333,16 +326,15 @@ constexpr bool test() {
       assert(!ret());
       assert(ret1());
       assert(ret1(1, 2, 3));
+
+      using RetT = decltype(ret);
+      static_assert( std::is_move_constructible<RetT>::value);
+      static_assert(!std::is_copy_constructible<RetT>::value);
+      static_assert(!std::is_move_assignable<RetT>::value);
+      static_assert(!std::is_copy_assignable<RetT>::value);
     }
     {
       CopyCallable value(true);
-      using RetT = decltype(std::bind_front(value, 1));
-
-      static_assert( std::is_move_constructible<RetT>::value);
-      static_assert( std::is_copy_constructible<RetT>::value);
-      static_assert(!std::is_move_assignable<RetT>::value);
-      static_assert(!std::is_copy_assignable<RetT>::value);
-
       auto ret = std::bind_front(value, 1);
       assert(ret());
       assert(ret(1, 2, 3));
@@ -355,6 +347,12 @@ constexpr bool test() {
       assert(!ret());
       assert(ret2());
       assert(ret2(1, 2, 3));
+
+      using RetT = decltype(ret);
+      static_assert( std::is_move_constructible<RetT>::value);
+      static_assert( std::is_copy_constructible<RetT>::value);
+      static_assert(!std::is_move_assignable<RetT>::value);
+      static_assert(!std::is_copy_assignable<RetT>::value);
     }
     {
       CopyAssignableWrapper value(true);
