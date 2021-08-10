@@ -121,9 +121,6 @@ private:
   /// Create a static initializer for our data, on platforms that need it,
   /// and for any profile output file that was specified.
   void emitInitialization();
-
-  // Emit the variable used for runtime counter relocation.
-  bool emitBiasVar();
 };
 
 } // end namespace llvm
