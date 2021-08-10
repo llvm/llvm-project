@@ -194,22 +194,23 @@ void doAppendSourceAllocTest(AppendOperatorTestcase const& TC)
   // For "char" no allocations will be performed because no conversion is
   // required.
   // On Windows, the append method is more complex and uses intermediate
-  // path objects, which causes extra allocations.
-  // In DLL builds on Windows, the overridden operator new won't pick up
-  // allocations done within the DLL, so the RequireAllocationGuard below
-  // won't necessarily see allocations in the cases where they're expected.
-#ifdef _WIN32
-  bool DisableAllocations = false;
-#else
-  bool DisableAllocations = std::is_same<CharT, char>::value;
+  // path objects, which causes extra allocations. This is checked by comparing
+  // path::value_type with "char" - on Windows, it's wchar_t.
+#if TEST_SUPPORTS_LIBRARY_INTERNAL_ALLOCATIONS
+  // Only check allocations if we can pick up allocations done within the
+  // library implementation.
+  bool ExpectNoAllocations = std::is_same<CharT, char>::value &&
+                             std::is_same<path::value_type, char>::value;
 #endif
   {
     path LHS(L); PathReserve(LHS, ReserveSize);
     InputIter RHS(R);
     {
-      RequireAllocationGuard  g; // requires 1 or more allocations occur by default
-      if (DisableAllocations) g.requireExactly(0);
-      else TEST_ONLY_WIN32_DLL(g.requireAtLeast(0));
+      RequireAllocationGuard g(0); // require "at least zero" allocations by default
+#if TEST_SUPPORTS_LIBRARY_INTERNAL_ALLOCATIONS
+      if (ExpectNoAllocations)
+        g.requireExactly(0);
+#endif
       LHS /= RHS;
     }
     assert(PathEq(LHS, E));
@@ -219,9 +220,11 @@ void doAppendSourceAllocTest(AppendOperatorTestcase const& TC)
     InputIter RHS(R);
     InputIter REnd(StrEnd(R));
     {
-      RequireAllocationGuard g;
-      if (DisableAllocations) g.requireExactly(0);
-      else TEST_ONLY_WIN32_DLL(g.requireAtLeast(0));
+      RequireAllocationGuard g(0); // require "at least zero" allocations by default
+#if TEST_SUPPORTS_LIBRARY_INTERNAL_ALLOCATIONS
+      if (ExpectNoAllocations)
+        g.requireExactly(0);
+#endif
       LHS.append(RHS, REnd);
     }
     assert(PathEq(LHS, E));

@@ -141,17 +141,20 @@ void doConcatSourceAllocTest(ConcatOperatorTestcase const& TC)
   // For the path native type, no allocations will be performed because no
   // conversion is required.
 
-  // In DLL builds on Windows, the overridden operator new won't pick up
-  // allocations done within the DLL, so the RequireAllocationGuard below
-  // won't necessarily see allocations in the cases where they're expected.
-  bool DisableAllocations = std::is_same<CharT, path::value_type>::value;
+#if TEST_SUPPORTS_LIBRARY_INTERNAL_ALLOCATIONS
+  // Only check allocations if we can pick up allocations done within the
+  // library implementation.
+  bool ExpectNoAllocations = std::is_same<CharT, path::value_type>::value;
+#endif
   {
     path LHS(L); PathReserve(LHS, ReserveSize);
     InputIter RHS(R);
     {
-      RequireAllocationGuard  g; // requires 1 or more allocations occur by default
-      if (DisableAllocations) g.requireExactly(0);
-      else TEST_ONLY_WIN32_DLL(g.requireAtLeast(0));
+      RequireAllocationGuard g(0); // require "at least zero" allocations by default
+#if TEST_SUPPORTS_LIBRARY_INTERNAL_ALLOCATIONS
+      if (ExpectNoAllocations)
+        g.requireExactly(0);
+#endif
       LHS += RHS;
     }
     assert(LHS == E);
@@ -161,9 +164,11 @@ void doConcatSourceAllocTest(ConcatOperatorTestcase const& TC)
     InputIter RHS(R);
     InputIter REnd(StrEnd(R));
     {
-      RequireAllocationGuard g;
-      if (DisableAllocations) g.requireExactly(0);
-      else TEST_ONLY_WIN32_DLL(g.requireAtLeast(0));
+      RequireAllocationGuard g(0); // require "at least zero" allocations by default
+#if TEST_SUPPORTS_LIBRARY_INTERNAL_ALLOCATIONS
+      if (ExpectNoAllocations)
+        g.requireExactly(0);
+#endif
       LHS.concat(RHS, REnd);
     }
     assert(LHS == E);
