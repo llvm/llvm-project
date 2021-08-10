@@ -5,7 +5,7 @@ add_flang_unittest(FlangFrontendTests
 
 target_link_libraries(FlangFrontendTests
   PRIVATE
-  clang-cpp
+  clangBasic
   flangFrontend
   flangFrontendTool
   FortranParser

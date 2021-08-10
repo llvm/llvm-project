@@ -23,7 +23,8 @@ target_link_libraries(flang-new
 
 clang_target_link_libraries(flang-new
   PRIVATE
-  clang-cpp
+  clangDriver
+  clangBasic
 )
 
 install(TARGETS flang-new DESTINATION bin)
