@@ -14,6 +14,6 @@ constexpr strong_ordering strong_ordering::less = {-1};
 } // namespace std
 
 void test() {
-  // No crash 
+  // no crash
   (void)(0 <=> 0);
 }
