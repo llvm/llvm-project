@@ -4387,7 +4387,7 @@ void Parser::ParseCXX11AttributeSpecifierInternal(ParsedAttributes &Attrs,
   llvm::SmallDenseMap<IdentifierInfo*, SourceLocation, 4> SeenAttrs;
 
   bool AttrParsed = false;
-  while (!Tok.isOneOf(tok::r_square, tok::semi)) {
+  while (!Tok.isOneOf(tok::r_square, tok::semi, tok::eof)) {
     if (AttrParsed) {
       // If we parsed an attribute, a comma is required before parsing any
       // additional attributes.
