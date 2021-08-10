@@ -171,16 +171,6 @@ EXTERN bool __kmpc_kernel_parallel(void **WorkFn) {
           (int)newTaskDescr->ThreadId(), (int)nThreads);
 
     isActive = true;
-    // Reconverge the threads at the end of the parallel region to correctly
-    // handle parallel levels.
-    // In Cuda9+ in non-SPMD mode we have either 1 worker thread or the whole
-    // warp. If only 1 thread is active, not need to reconverge the threads.
-    // If we have the whole warp, reconverge all the threads in the warp before
-    // actually trying to change the parallel level. Otherwise, parallel level
-    // can be changed incorrectly because of threads divergence.
-    bool IsActiveParallelRegion = threadsInTeam != 1;
-    IncParallelLevel(IsActiveParallelRegion,
-                     IsActiveParallelRegion ? __kmpc_impl_all_lanes : 1u);
 #ifdef OMPD_SUPPORT
     ompd_init_thread_parallel();
     ompd_bp_thread_begin();
@@ -202,16 +192,6 @@ EXTERN void __kmpc_kernel_end_parallel() {
   omptarget_nvptx_threadPrivateContext->SetTopLevelTaskDescr(
       threadId, currTaskDescr->GetPrevTaskDescr());
 
-  // Reconverge the threads at the end of the parallel region to correctly
-  // handle parallel levels.
-  // In Cuda9+ in non-SPMD mode we have either 1 worker thread or the whole
-  // warp. If only 1 thread is active, not need to reconverge the threads.
-  // If we have the whole warp, reconverge all the threads in the warp before
-  // actually trying to change the parallel level. Otherwise, parallel level can
-  // be changed incorrectly because of threads divergence.
-  bool IsActiveParallelRegion = threadsInTeam != 1;
-  DecParallelLevel(IsActiveParallelRegion,
-                   IsActiveParallelRegion ? __kmpc_impl_all_lanes : 1u);
 #ifdef OMPD_SUPPORT
   ompd_reset_device_thread_state();
   ompd_bp_thread_end();
@@ -245,7 +225,6 @@ EXTERN void __kmpc_serialized_parallel(kmp_Ident *loc, uint32_t global_tid) {
   // get current task
   omptarget_nvptx_TaskDescr *currTaskDescr = getMyTopTaskDescriptor(threadId);
   currTaskDescr->SaveLoopData();
-  int ParLev = currTaskDescr->ParLev();
   // allocate new task descriptor and copy value from current one, set prev to
   // it
 
@@ -258,7 +237,6 @@ EXTERN void __kmpc_serialized_parallel(kmp_Ident *loc, uint32_t global_tid) {
   // - each thread becomes ID 0 in its serialized parallel, and
   // - there is only one thread per team
   newTaskDescr->ThreadId() = 0;
-  newTaskDescr->ParLev() = ParLev + 1;
 
 #ifdef OMPD_SUPPORT
   // Set ompd parallel info for the next parallel region in the previous task

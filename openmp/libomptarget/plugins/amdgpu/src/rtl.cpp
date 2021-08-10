@@ -15,15 +15,7 @@
 #include <cstdio>
 #include <cstdlib>
 #include <cstring>
-#if 0 //<<<<<<< HEAD
-#include <dlfcn.h>
-#include <elf.h>
-#include <ffi.h>
-#include <fstream>
-#include <iostream>
-#else  //=======
 #include <functional>
-#endif //>>>>>>> 8594a24d63d8606fff344d72b6754547fb04c9b6
 #include <libelf.h>
 #include <list>
 #include <memory>
