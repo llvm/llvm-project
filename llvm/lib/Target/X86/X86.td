@@ -170,6 +170,14 @@ def FeatureVP2INTERSECT  : SubtargetFeature<"avx512vp2intersect",
                                             "HasVP2INTERSECT", "true",
                                             "Enable AVX-512 vp2intersect",
                                             [FeatureAVX512]>;
+// FIXME: FP16 scalar intrinsics use the type v8f16, which is supposed to be
+// guarded under condition hasVLX. So we imply it in FeatureFP16 currently.
+// FIXME: FP16 conversion between f16 and i64 customize type v8i64, which is
+// supposed to be guarded under condition hasDQI. So we imply it in FeatureFP16
+// currently.
+def FeatureFP16    : SubtargetFeature<"avx512fp16", "HasFP16", "true",
+                           "Support 16-bit floating point",
+                           [FeatureBWI, FeatureVLX, FeatureDQI]>;
 def FeaturePCLMUL  : SubtargetFeature<"pclmul", "HasPCLMUL", "true",
                          "Enable packed carry-less multiplication instructions",
                                [FeatureSSE2]>;
@@ -821,6 +829,7 @@ def ProcessorFeatures {
                                                   FeatureCLDEMOTE,
                                                   FeatureWAITPKG,
                                                   FeaturePTWRITE,
+                                                  FeatureFP16,
                                                   FeatureAVXVNNI,
                                                   FeatureTSXLDTRK,
                                                   FeatureENQCMD,

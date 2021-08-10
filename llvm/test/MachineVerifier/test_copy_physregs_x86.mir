@@ -28,7 +28,7 @@ body:             |
   bb.0:
     liveins: $xmm0, $xmm1, $xmm2, $xmm3
 
-    ; CHECK: *** Bad machine code: Copy Instruction is illegal with mismatching sizes ***
+    ; FP16 reg is sub_reg of xmm
     %0:_(s16) = COPY $xmm0
 
     ; CHECK: *** Bad machine code: Copy Instruction is illegal with mismatching sizes ***
@@ -40,7 +40,7 @@ body:             |
     ; CHECK: *** Bad machine code: Copy Instruction is illegal with mismatching sizes ***
     %3:_(<8 x s32>) = COPY $xmm3
 
-    ; CHECK: *** Bad machine code: Copy Instruction is illegal with mismatching sizes ***
+    ; FP16 reg is sub_reg of xmm
     $xmm0 = COPY %0
 
     ; CHECK: *** Bad machine code: Copy Instruction is illegal with mismatching sizes ***

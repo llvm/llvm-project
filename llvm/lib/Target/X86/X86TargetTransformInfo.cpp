@@ -1199,6 +1199,29 @@ InstructionCost X86TTIImpl::getShuffleCost(TTI::ShuffleKind Kind,
     LT.first = NumOfDests * NumOfShufflesPerDest;
   }
 
+  static const CostTblEntry AVX512FP16ShuffleTbl[] = {
+      {TTI::SK_Broadcast, MVT::v32f16, 1}, // vpbroadcastw
+      {TTI::SK_Broadcast, MVT::v16f16, 1}, // vpbroadcastw
+      {TTI::SK_Broadcast, MVT::v8f16, 1},  // vpbroadcastw
+
+      {TTI::SK_Reverse, MVT::v32f16, 2}, // vpermw
+      {TTI::SK_Reverse, MVT::v16f16, 2}, // vpermw
+      {TTI::SK_Reverse, MVT::v8f16, 1},  // vpshufb
+
+      {TTI::SK_PermuteSingleSrc, MVT::v32f16, 2}, // vpermw
+      {TTI::SK_PermuteSingleSrc, MVT::v16f16, 2}, // vpermw
+      {TTI::SK_PermuteSingleSrc, MVT::v8f16, 1},  // vpshufb
+
+      {TTI::SK_PermuteTwoSrc, MVT::v32f16, 2}, // vpermt2w
+      {TTI::SK_PermuteTwoSrc, MVT::v16f16, 2}, // vpermt2w
+      {TTI::SK_PermuteTwoSrc, MVT::v8f16, 2}   // vpermt2w
+  };
+
+  if (!ST->useSoftFloat() && ST->hasFP16())
+    if (const auto *Entry =
+            CostTableLookup(AVX512FP16ShuffleTbl, Kind, LT.second))
+      return LT.first * Entry->Cost;
+
   static const CostTblEntry AVX512VBMIShuffleTbl[] = {
       {TTI::SK_Reverse, MVT::v64i8, 1}, // vpermb
       {TTI::SK_Reverse, MVT::v32i8, 1}, // vpermb
@@ -4693,6 +4716,9 @@ bool X86TTIImpl::isLegalMaskedLoad(Type *DataTy, Align Alignment) {
   if (ScalarTy->isFloatTy() || ScalarTy->isDoubleTy())
     return true;
 
+  if (ScalarTy->isHalfTy() && ST->hasBWI() && ST->hasFP16())
+    return true;
+
   if (!ScalarTy->isIntegerTy())
     return false;
 
@@ -5150,12 +5176,13 @@ InstructionCost X86TTIImpl::getInterleavedMemoryOpCost(
     unsigned Opcode, Type *VecTy, unsigned Factor, ArrayRef<unsigned> Indices,
     Align Alignment, unsigned AddressSpace, TTI::TargetCostKind CostKind,
     bool UseMaskForCond, bool UseMaskForGaps) {
-  auto isSupportedOnAVX512 = [](Type *VecTy, bool HasBW) {
+  auto isSupportedOnAVX512 = [&](Type *VecTy, bool HasBW) {
     Type *EltTy = cast<VectorType>(VecTy)->getElementType();
     if (EltTy->isFloatTy() || EltTy->isDoubleTy() || EltTy->isIntegerTy(64) ||
         EltTy->isIntegerTy(32) || EltTy->isPointerTy())
       return true;
-    if (EltTy->isIntegerTy(16) || EltTy->isIntegerTy(8))
+    if (EltTy->isIntegerTy(16) || EltTy->isIntegerTy(8) ||
+        (!ST->useSoftFloat() && ST->hasFP16() && EltTy->isHalfTy()))
       return HasBW;
     return false;
   };

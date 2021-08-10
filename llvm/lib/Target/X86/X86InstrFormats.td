@@ -149,8 +149,8 @@ def PS     : Prefix<4>; // Similar to NoPrfx, but disassembler uses this to know
                         // disable to ANDPS.
 
 // Class specifying the opcode map.
-class Map<bits<3> val> {
-  bits<3> Value = val;
+class Map<bits<4> val> {
+  bits<4> Value = val;
 }
 def OB        : Map<0>;
 def TB        : Map<1>;
@@ -160,6 +160,8 @@ def XOP8      : Map<4>;
 def XOP9      : Map<5>;
 def XOPA      : Map<6>;
 def ThreeDNow : Map<7>;
+def T_MAP5    : Map<8>;
+def T_MAP6    : Map<9>;
 
 // Class specifying the encoding
 class Encoding<bits<2> val> {
@@ -204,6 +206,16 @@ class XOP8   { Map OpMap = XOP8; Prefix OpPrefix = PS; }
 class XOP9   { Map OpMap = XOP9; Prefix OpPrefix = PS; }
 class XOPA   { Map OpMap = XOPA; Prefix OpPrefix = PS; }
 class ThreeDNow { Map OpMap = ThreeDNow; }
+class T_MAP5     { Map OpMap = T_MAP5; }
+class T_MAP5PS : T_MAP5 { Prefix OpPrefix = PS; } // none
+class T_MAP5PD : T_MAP5 { Prefix OpPrefix = PD; } // 0x66
+class T_MAP5XS : T_MAP5 { Prefix OpPrefix = XS; } // 0xF3
+class T_MAP5XD : T_MAP5 { Prefix OpPrefix = XD; } // 0xF2
+class T_MAP6     { Map OpMap = T_MAP6; }
+class T_MAP6PS : T_MAP6 { Prefix OpPrefix = PS; }
+class T_MAP6PD : T_MAP6 { Prefix OpPrefix = PD; }
+class T_MAP6XS : T_MAP6 { Prefix OpPrefix = XS; }
+class T_MAP6XD : T_MAP6 { Prefix OpPrefix = XD; }
 class OBXS   { Prefix OpPrefix = XS; }
 class PS   : TB { Prefix OpPrefix = PS; }
 class PD   : TB { Prefix OpPrefix = PD; }
@@ -301,7 +313,7 @@ class X86Inst<bits<8> opcod, Format f, ImmType i, dag outs, dag ins,
   Prefix OpPrefix = NoPrfx; // Which prefix byte does this inst have?
   bits<3> OpPrefixBits = OpPrefix.Value;
   Map OpMap = OB;           // Which opcode map does this inst have?
-  bits<3> OpMapBits = OpMap.Value;
+  bits<4> OpMapBits = OpMap.Value;
   bit hasREX_WPrefix  = 0;  // Does this inst require the REX.W prefix?
   FPFormat FPForm = NotFP;  // What flavor of FP instruction is this?
   bit hasLockPrefix = 0;    // Does this inst have a 0xF0 prefix?
@@ -360,28 +372,28 @@ class X86Inst<bits<8> opcod, Format f, ImmType i, dag outs, dag ins,
   let TSFlags{10-9}  = AdSizeBits;
   // No need for 3rd bit, we don't need to distinguish NoPrfx from PS.
   let TSFlags{12-11} = OpPrefixBits{1-0};
-  let TSFlags{15-13} = OpMapBits;
-  let TSFlags{16}    = hasREX_WPrefix;
-  let TSFlags{20-17} = ImmT.Value;
-  let TSFlags{23-21} = FPForm.Value;
-  let TSFlags{24}    = hasLockPrefix;
-  let TSFlags{25}    = hasREPPrefix;
-  let TSFlags{27-26} = ExeDomain.Value;
-  let TSFlags{29-28} = OpEncBits;
-  let TSFlags{37-30} = Opcode;
+  let TSFlags{16-13} = OpMapBits;
+  let TSFlags{17}    = hasREX_WPrefix;
+  let TSFlags{21-18} = ImmT.Value;
+  let TSFlags{24-22} = FPForm.Value;
+  let TSFlags{25}    = hasLockPrefix;
+  let TSFlags{26}    = hasREPPrefix;
+  let TSFlags{28-27} = ExeDomain.Value;
+  let TSFlags{30-29} = OpEncBits;
+  let TSFlags{38-31} = Opcode;
   // Currently no need for second bit in TSFlags - W Ignore is equivalent to 0.
-  let TSFlags{38}    = HasVEX_W;
-  let TSFlags{39}    = hasVEX_4V;
-  let TSFlags{40}    = hasVEX_L;
-  let TSFlags{41}    = hasEVEX_K;
-  let TSFlags{42}    = hasEVEX_Z;
-  let TSFlags{43}    = hasEVEX_L2;
-  let TSFlags{44}    = hasEVEX_B;
+  let TSFlags{39}    = HasVEX_W;
+  let TSFlags{40}    = hasVEX_4V;
+  let TSFlags{41}    = hasVEX_L;
+  let TSFlags{42}    = hasEVEX_K;
+  let TSFlags{43}    = hasEVEX_Z;
+  let TSFlags{44}    = hasEVEX_L2;
+  let TSFlags{45}    = hasEVEX_B;
   // If we run out of TSFlags bits, it's possible to encode this in 3 bits.
-  let TSFlags{51-45} = CD8_Scale;
-  let TSFlags{52}    = hasEVEX_RC;
-  let TSFlags{53}    = hasNoTrackPrefix;
-  let TSFlags{54}    = ExplicitVEXPrefix;
+  let TSFlags{52-46} = CD8_Scale;
+  let TSFlags{53}    = hasEVEX_RC;
+  let TSFlags{54}    = hasNoTrackPrefix;
+  let TSFlags{55}    = ExplicitVEXPrefix;
 }
 
 class PseudoI<dag oops, dag iops, list<dag> pattern>

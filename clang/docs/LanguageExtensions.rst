@@ -596,6 +596,7 @@ targets pending ABI standardization:
 * 64-bit ARM (AArch64)
 * AMDGPU
 * SPIR
+* X86 (Only available under feature AVX512-FP16)
 
 ``_Float16`` will be supported on more targets as they define ABIs for it.
 

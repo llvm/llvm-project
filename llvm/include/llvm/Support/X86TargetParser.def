@@ -193,6 +193,7 @@ X86_FEATURE       (XSAVEC,          "xsavec")
 X86_FEATURE       (XSAVEOPT,        "xsaveopt")
 X86_FEATURE       (XSAVES,          "xsaves")
 X86_FEATURE       (HRESET,          "hreset")
+X86_FEATURE       (AVX512FP16,      "avx512fp16")
 X86_FEATURE       (AVXVNNI,         "avxvnni")
 // These features aren't really CPU features, but the frontend can set them.
 X86_FEATURE       (RETPOLINE_EXTERNAL_THUNK,    "retpoline-external-thunk")
