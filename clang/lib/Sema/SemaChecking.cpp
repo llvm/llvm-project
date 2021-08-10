@@ -195,6 +195,29 @@ static bool SemaBuiltinAddressof(Sema &S, CallExpr *TheCall) {
   return false;
 }
 
+/// Check that the argument to __builtin_function_start is a function.
+static bool SemaBuiltinFunctionStart(Sema &S, CallExpr *TheCall) {
+  if (checkArgCount(S, TheCall, 1))
+    return true;
+
+  ExprResult Arg = S.DefaultFunctionArrayLvalueConversion(TheCall->getArg(0));
+  if (Arg.isInvalid())
+    return true;
+
+  TheCall->setArg(0, Arg.get());
+  const FunctionDecl *FD = dyn_cast_or_null<FunctionDecl>(
+      Arg.get()->getAsBuiltinConstantDeclRef(S.getASTContext()));
+
+  if (!FD) {
+    S.Diag(TheCall->getBeginLoc(), diag::err_function_start_invalid_type)
+        << TheCall->getSourceRange();
+    return true;
+  }
+
+  return !S.checkAddressOfFunctionIsAvailable(FD, /*Complain=*/true,
+                                              TheCall->getBeginLoc());
+}
+
 /// Check the number of arguments and set the result type to
 /// the argument type.
 static bool SemaBuiltinPreserveAI(Sema &S, CallExpr *TheCall) {
@@ -1916,6 +1939,10 @@ Sema::CheckBuiltinFunctionCall(FunctionDecl *FDecl, unsigned BuiltinID,
     break;
   case Builtin::BI__builtin_addressof:
     if (SemaBuiltinAddressof(*this, TheCall))
+      return ExprError();
+    break;
+  case Builtin::BI__builtin_function_start:
+    if (SemaBuiltinFunctionStart(*this, TheCall))
       return ExprError();
     break;
   case Builtin::BI__builtin_is_aligned:

@@ -66,7 +66,8 @@ bool BuiltinFunctionChecker::evalCall(const CallEvent &Call,
   case Builtin::BI__builtin_expect:
   case Builtin::BI__builtin_expect_with_probability:
   case Builtin::BI__builtin_assume_aligned:
-  case Builtin::BI__builtin_addressof: {
+  case Builtin::BI__builtin_addressof:
+  case Builtin::BI__builtin_function_start: {
     // For __builtin_unpredictable, __builtin_expect,
     // __builtin_expect_with_probability and __builtin_assume_aligned,
     // just return the value of the subexpression.

@@ -1954,11 +1954,12 @@ static bool EvaluateIgnoredValue(EvalInfo &Info, const Expr *E) {
   return true;
 }
 
-/// Should this call expression be treated as a string literal?
-static bool IsStringLiteralCall(const CallExpr *E) {
+/// Should this call expression be treated as a constant?
+static bool IsConstantCall(const CallExpr *E) {
   unsigned Builtin = E->getBuiltinCallee();
   return (Builtin == Builtin::BI__builtin___CFStringMakeConstantString ||
-          Builtin == Builtin::BI__builtin___NSStringMakeConstantString);
+          Builtin == Builtin::BI__builtin___NSStringMakeConstantString ||
+          Builtin == Builtin::BI__builtin_function_start);
 }
 
 static bool IsGlobalLValue(APValue::LValueBase B) {
@@ -2004,7 +2005,7 @@ static bool IsGlobalLValue(APValue::LValueBase B) {
   case Expr::ObjCBoxedExprClass:
     return cast<ObjCBoxedExpr>(E)->isExpressibleAsConstantInitializer();
   case Expr::CallExprClass:
-    return IsStringLiteralCall(cast<CallExpr>(E));
+    return IsConstantCall(cast<CallExpr>(E));
   // For GCC compatibility, &&label has static storage duration.
   case Expr::AddrLabelExprClass:
     return true;
@@ -8967,7 +8968,7 @@ bool PointerExprEvaluator::visitNonBuiltinCallExpr(const CallExpr *E) {
 }
 
 bool PointerExprEvaluator::VisitCallExpr(const CallExpr *E) {
-  if (IsStringLiteralCall(E))
+  if (IsConstantCall(E))
     return Success(E);
 
   if (unsigned BuiltinOp = E->getBuiltinCallee())

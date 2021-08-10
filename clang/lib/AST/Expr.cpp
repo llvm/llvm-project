@@ -202,6 +202,23 @@ bool Expr::isKnownToHaveBooleanValue(bool Semantic) const {
   return false;
 }
 
+const ValueDecl *
+Expr::getAsBuiltinConstantDeclRef(const ASTContext &Context) const {
+  Expr::EvalResult Eval;
+
+  if (EvaluateAsConstantExpr(Eval, Context)) {
+    APValue &Value = Eval.Val;
+
+    if (Value.isMemberPointer())
+      return Value.getMemberPointerDecl();
+
+    if (Value.isLValue() && Value.getLValueOffset().isZero())
+      return Value.getLValueBase().dyn_cast<const ValueDecl *>();
+  }
+
+  return nullptr;
+}
+
 // Amusing macro metaprogramming hack: check whether a class provides
 // a more specific implementation of getExprLoc().
 //

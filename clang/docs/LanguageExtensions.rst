@@ -2517,6 +2517,48 @@ object that overloads ``operator&``.
     return __builtin_addressof(value);
   }
 
+``__builtin_function_start``
+-----------------------------
+
+``__builtin_function_start`` returns the address of a function body.
+
+**Syntax**:
+
+.. code-block:: c++
+
+  void *__builtin_function_start(function)
+
+**Example of use**:
+
+.. code-block:: c++
+
+  void a() {}
+  void *p = __builtin_function_start(a);
+
+  class A {
+  public:
+    void a(int n);
+    void a();
+  };
+
+  void A::a(int n) {}
+  void A::a() {}
+
+  void *pa1 = __builtin_function_start((void(A::*)(int)) &A::a);
+  void *pa2 = __builtin_function_start((void(A::*)()) &A::a);
+
+**Description**:
+
+The ``__builtin_function_start`` builtin accepts an argument that can be
+constant-evaluated to a function, and returns the address of the function
+body.  This builtin is not supported on all targets.
+
+The returned pointer may differ from the normally taken function address
+and is not safe to call.  For example, with ``-fsanitize=cfi``, taking a
+function address produces a callable pointer to a CFI jump table, while
+``__builtin_function_start`` returns an address that fails
+:doc:`cfi-icall<ControlFlowIntegrity>` checks.
+
 ``__builtin_operator_new`` and ``__builtin_operator_delete``
 ------------------------------------------------------------
 

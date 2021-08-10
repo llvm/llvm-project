@@ -3886,6 +3886,14 @@ llvm::Constant *CodeGenModule::GetAddrOfFunction(GlobalDecl GD,
   return F;
 }
 
+llvm::Constant *CodeGenModule::GetFunctionStart(const ValueDecl *Decl) {
+  llvm::GlobalValue *F =
+      cast<llvm::GlobalValue>(GetAddrOfFunction(Decl)->stripPointerCasts());
+
+  return llvm::ConstantExpr::getBitCast(llvm::NoCFIValue::get(F),
+                                        llvm::Type::getInt8PtrTy(VMContext));
+}
+
 static const FunctionDecl *
 GetRuntimeFunctionDecl(ASTContext &C, StringRef Name) {
   TranslationUnitDecl *TUDecl = C.getTranslationUnitDecl();

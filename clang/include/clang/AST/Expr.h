@@ -572,6 +572,12 @@ public:
   bool isConstantInitializer(ASTContext &Ctx, bool ForRef,
                              const Expr **Culprit = nullptr) const;
 
+  /// If this expression is an unambiguous reference to a single declaration,
+  /// in the style of __builtin_function_start, return that declaration.  Note
+  /// that this may return a non-static member function or field in C++ if this
+  /// expression is a member pointer constant.
+  const ValueDecl *getAsBuiltinConstantDeclRef(const ASTContext &Context) const;
+
   /// EvalStatus is a struct with detailed info about an evaluation in progress.
   struct EvalStatus {
     /// Whether the evaluated expression has side effects.
