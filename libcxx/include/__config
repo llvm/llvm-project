@@ -1363,10 +1363,6 @@ extern "C" _LIBCPP_FUNC_VIS void __sanitizer_annotate_contiguous_container(
 #define _LIBCPP_HAS_NO_DEDUCTION_GUIDES
 #endif
 
-#if !__has_keyword(__is_aggregate) && (_GNUC_VER_NEW < 7001)
-#define _LIBCPP_HAS_NO_IS_AGGREGATE
-#endif
-
 #if !defined(__cpp_coroutines) || __cpp_coroutines < 201703L
 #define _LIBCPP_HAS_NO_COROUTINES
 #endif

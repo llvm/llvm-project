@@ -1681,7 +1681,7 @@ _LIBCPP_INLINE_VAR _LIBCPP_CONSTEXPR bool is_final_v
 #endif
 
 // is_aggregate
-#if _LIBCPP_STD_VER > 14 && !defined(_LIBCPP_HAS_NO_IS_AGGREGATE)
+#if _LIBCPP_STD_VER > 14
 
 template <class _Tp> struct _LIBCPP_TEMPLATE_VIS
 is_aggregate : public integral_constant<bool, __is_aggregate(_Tp)> {};
@@ -1692,7 +1692,7 @@ _LIBCPP_INLINE_VAR constexpr bool is_aggregate_v
     = is_aggregate<_Tp>::value;
 #endif
 
-#endif // _LIBCPP_STD_VER > 14 && !defined(_LIBCPP_HAS_NO_IS_AGGREGATE)
+#endif // _LIBCPP_STD_VER > 14
 
 // is_base_of
 
