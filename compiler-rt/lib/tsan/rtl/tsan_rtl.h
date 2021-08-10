@@ -69,6 +69,11 @@ struct AP32 {
 typedef SizeClassAllocator32<AP32> PrimaryAllocator;
 #else
 struct AP64 {  // Allocator64 parameters. Deliberately using a short name.
+#    if defined(__s390x__)
+  typedef MappingS390x Mapping;
+#    else
+  typedef Mapping48AddressSpace Mapping;
+#    endif
   static const uptr kSpaceBeg = Mapping::kHeapMemBeg;
   static const uptr kSpaceSize = Mapping::kHeapMemEnd - Mapping::kHeapMemBeg;
   static const uptr kMetadataSize = 0;
