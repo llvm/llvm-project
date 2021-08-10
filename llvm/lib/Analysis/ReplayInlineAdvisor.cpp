@@ -36,15 +36,16 @@ ReplayInlineAdvisor::ReplayInlineAdvisor(
   }
 
   // Example for inline remarks to parse:
-  //   main:3:1.1: _Z3subii inlined into main at callsite sum:1 @ main:3:1.1
+  //   main:3:1.1: '_Z3subii' inlined into 'main' at callsite sum:1 @ main:3:1.1
   // We use the callsite string after `at callsite` to replay inlining.
   line_iterator LineIt(*BufferOrErr.get(), /*SkipBlanks=*/true);
   for (; !LineIt.is_at_eof(); ++LineIt) {
     StringRef Line = *LineIt;
     auto Pair = Line.split(" at callsite ");
 
-    auto Callee = Pair.first.split(" inlined into").first.rsplit(": ").second;
-
+    StringRef Callee = Pair.first.split(" inlined into")
+                           .first.rsplit(": '")
+                           .second.drop_back();
     auto CallSite = Pair.second.split(";").first;
 
     if (Callee.empty() || CallSite.empty())

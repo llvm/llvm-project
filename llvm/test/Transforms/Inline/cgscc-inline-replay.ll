@@ -110,10 +110,10 @@ attributes #0 = { "use-sample-profile" }
 !25 = !DILocation(line: 11, scope: !12)
 !26 = !DILocation(line: 12, scope: !12)
 
-; DEFAULT: _Z3subii inlined into _Z3sumii
-; DEFAULT: _Z3sumii inlined into main
-; DEFAULT-NOT: _Z3subii inlined into main
+; DEFAULT: '_Z3subii' inlined into '_Z3sumii'
+; DEFAULT: '_Z3sumii' inlined into 'main'
+; DEFAULT-NOT: '_Z3subii' inlined into 'main'
 
-; REPLAY: _Z3sumii inlined into main
-; REPLAY: _Z3subii inlined into main
-; REPLAY-NOT: _Z3subii inlined into _Z3sumii
+; REPLAY: '_Z3sumii' inlined into 'main'
+; REPLAY: '_Z3subii' inlined into 'main'
+; REPLAY-NOT: '_Z3subii' inlined into '_Z3sumii'
