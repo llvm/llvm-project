@@ -5,12 +5,15 @@
 # RUN: echo '.global bah; bah:' | llvm-mc -filetype=obj -triple=x86_64 - -o %t3.o
 # RUN: echo '.global baz; baz: ret' | llvm-mc -filetype=obj -triple=x86_64 - -o %t4.o
 # RUN: llvm-mc -filetype=obj -triple=x86_64 %p/Inputs/map-file5.s -o %t5.o
+# RUN: echo '.global hey; hey: ret' | llvm-mc -filetype=obj -triple=x86_64 - -o %t6.o
 # RUN: ld.lld -shared %t5.o -o %t5.so -soname dso
 # RUN: rm -f %t4.a
 # RUN: llvm-ar rc %t4.a %t4.o
-# RUN: ld.lld %t1.o %t2.o %t3.o %t4.a %t5.so -o %t -M | FileCheck --match-full-lines --strict-whitespace %s
-# RUN: ld.lld %t1.o %t2.o %t3.o %t4.a %t5.so -o %t --print-map | FileCheck --match-full-lines -strict-whitespace %s
-# RUN: ld.lld %t1.o %t2.o %t3.o %t4.a %t5.so -o %t -Map=%t.map
+# RUN: rm -f %t6.a
+# RUN: llvm-ar rcT %t6.a %t6.o
+# RUN: ld.lld %t1.o %t2.o %t3.o %t4.a %t5.so %t6.a -o %t -M | FileCheck --match-full-lines --strict-whitespace %s
+# RUN: ld.lld %t1.o %t2.o %t3.o %t4.a %t5.so %t6.a -o %t --print-map | FileCheck --match-full-lines -strict-whitespace %s
+# RUN: ld.lld %t1.o %t2.o %t3.o %t4.a %t5.so %t6.a -o %t -Map=%t.map
 # RUN: FileCheck -match-full-lines -strict-whitespace %s < %t.map
 
 .global _start
@@ -25,6 +28,7 @@ _start:
  .long sharedFunc2 - .
  .byte 0xe8
  .long baz - .
+ .long hey - .
 .global _Z1fi
 _Z1fi:
 .cfi_startproc
@@ -58,43 +62,45 @@ labs = 0x1AB5
 # CHECK-NEXT:          200368           200368       2c     1         {{.*}}{{/|\\}}map-file.s.tmp1.o:(.eh_frame+0x0)
 # CHECK-NEXT:          200398           200398       14     1         {{.*}}{{/|\\}}map-file.s.tmp1.o:(.eh_frame+0x2c)
 # CHECK-NEXT:          2003b0           2003b0       18     1         {{.*}}{{/|\\}}map-file.s.tmp2.o:(.eh_frame+0x18)
-# CHECK-NEXT:          2013cc           2013cc       2d     4 .text
-# CHECK-NEXT:          2013cc           2013cc       28     4         {{.*}}{{/|\\}}map-file.s.tmp1.o:(.text)
+# CHECK-NEXT:          2013cc           2013cc       35     4 .text
+# CHECK-NEXT:          2013cc           2013cc       2c     4         {{.*}}{{/|\\}}map-file.s.tmp1.o:(.text)
 # CHECK-NEXT:          2013cc           2013cc        0     1                 _start
-# CHECK-NEXT:          2013eb           2013eb        0     1                 f(int)
-# CHECK-NEXT:          2013f4           2013f4        0     1                 local
-# CHECK-NEXT:          2013f4           2013f4        2     4         {{.*}}{{/|\\}}map-file.s.tmp2.o:(.text)
-# CHECK-NEXT:          2013f4           2013f4        0     1                 foo
-# CHECK-NEXT:          2013f5           2013f5        0     1                 bar
-# CHECK-NEXT:          2013f6           2013f6        0     1         {{.*}}{{/|\\}}map-file.s.tmp2.o:(.text.zed)
-# CHECK-NEXT:          2013f6           2013f6        0     1                 zed
-# CHECK-NEXT:          2013f8           2013f8        0     4         {{.*}}{{/|\\}}map-file.s.tmp3.o:(.text)
-# CHECK-NEXT:          2013f8           2013f8        0     1                 bah
-# CHECK-NEXT:          2013f8           2013f8        1     4         {{.*}}{{/|\\}}map-file.s.tmp4.a(map-file.s.tmp4.o):(.text)
-# CHECK-NEXT:          2013f8           2013f8        0     1                 baz
-# CHECK-NEXT:          201400           201400       30    16 .plt
-# CHECK-NEXT:          201400           201400       30    16         <internal>:(.plt)
-# CHECK-NEXT:          201410           201410        0     1                 sharedFunc1
-# CHECK-NEXT:          201420           201420        0     1                 sharedFunc2
-# CHECK-NEXT:          202430           202430      100     8 .dynamic
-# CHECK-NEXT:          202430           202430      100     8         <internal>:(.dynamic)
-# CHECK-NEXT:          203530           203530       28     8 .got.plt
-# CHECK-NEXT:          203530           203530       28     8         <internal>:(.got.plt)
-# CHECK-NEXT:          203560           203560       10    16 .bss
-# CHECK-NEXT:          203560           203560        4    16         {{.*}}{{/|\\}}map-file.s.tmp1.o:(COMMON)
-# CHECK-NEXT:          203560           203560        4     1                 common
-# CHECK-NEXT:          203564           203564        4     1         <internal>:(.bss)
-# CHECK-NEXT:          203564           203564        4     1                 sharedFoo
-# CHECK-NEXT:          203568           203568        8     1         <internal>:(.bss)
-# CHECK-NEXT:          203568           203568        8     1                 sharedBar
+# CHECK-NEXT:          2013ef           2013ef        0     1                 f(int)
+# CHECK-NEXT:          2013f8           2013f8        0     1                 local
+# CHECK-NEXT:          2013f8           2013f8        2     4         {{.*}}{{/|\\}}map-file.s.tmp2.o:(.text)
+# CHECK-NEXT:          2013f8           2013f8        0     1                 foo
+# CHECK-NEXT:          2013f9           2013f9        0     1                 bar
+# CHECK-NEXT:          2013fa           2013fa        0     1         {{.*}}{{/|\\}}map-file.s.tmp2.o:(.text.zed)
+# CHECK-NEXT:          2013fa           2013fa        0     1                 zed
+# CHECK-NEXT:          2013fc           2013fc        0     4         {{.*}}{{/|\\}}map-file.s.tmp3.o:(.text)
+# CHECK-NEXT:          2013fc           2013fc        0     1                 bah
+# CHECK-NEXT:          2013fc           2013fc        1     4         {{.*}}{{/|\\}}map-file.s.tmp4.a(map-file.s.tmp4.o):(.text)
+# CHECK-NEXT:          2013fc           2013fc        0     1                 baz
+# CHECK-NEXT:          201400           201400        1     4         {{.*}}{{/|\\}}map-file.s.tmp6.a({{.*}}{{/|\\}}map-file.s.tmp6.o):(.text)
+# CHECK-NEXT:          201400           201400        0     1                 hey
+# CHECK-NEXT:          201410           201410       30    16 .plt
+# CHECK-NEXT:          201410           201410       30    16         <internal>:(.plt)
+# CHECK-NEXT:          201420           201420        0     1                 sharedFunc1
+# CHECK-NEXT:          201430           201430        0     1                 sharedFunc2
+# CHECK-NEXT:          202440           202440      100     8 .dynamic
+# CHECK-NEXT:          202440           202440      100     8         <internal>:(.dynamic)
+# CHECK-NEXT:          203540           203540       28     8 .got.plt
+# CHECK-NEXT:          203540           203540       28     8         <internal>:(.got.plt)
+# CHECK-NEXT:          203570           203570       10    16 .bss
+# CHECK-NEXT:          203570           203570        4    16         {{.*}}{{/|\\}}map-file.s.tmp1.o:(COMMON)
+# CHECK-NEXT:          203570           203570        4     1                 common
+# CHECK-NEXT:          203574           203574        4     1         <internal>:(.bss)
+# CHECK-NEXT:          203574           203574        4     1                 sharedFoo
+# CHECK-NEXT:          203578           203578        8     1         <internal>:(.bss)
+# CHECK-NEXT:          203578           203578        8     1                 sharedBar
 # CHECK-NEXT:               0                0        8     1 .comment
 # CHECK-NEXT:               0                0        8     1         <internal>:(.comment)
-# CHECK-NEXT:               0                0      198     8 .symtab
-# CHECK-NEXT:               0                0      198     8         <internal>:(.symtab)
+# CHECK-NEXT:               0                0      1b0     8 .symtab
+# CHECK-NEXT:               0                0      1b0     8         <internal>:(.symtab)
 # CHECK-NEXT:               0                0       84     1 .shstrtab
 # CHECK-NEXT:               0                0       84     1         <internal>:(.shstrtab)
-# CHECK-NEXT:               0                0       6d     1 .strtab
-# CHECK-NEXT:               0                0       6d     1         <internal>:(.strtab)
+# CHECK-NEXT:               0                0       71     1 .strtab
+# CHECK-NEXT:               0                0       71     1         <internal>:(.strtab)
 
 # RUN: not ld.lld %t1.o %t2.o %t3.o %t4.a -o /dev/null -Map=/ 2>&1 \
 # RUN:  | FileCheck --check-prefix=FAIL %s
