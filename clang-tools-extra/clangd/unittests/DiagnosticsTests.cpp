@@ -191,6 +191,26 @@ o]]();
                             "change 'fod' to 'foo'")))));
 }
 
+// Verify that the -Wswitch case-not-covered diagnostic range covers the
+// whole expression. This is important because the "populate-switch" tweak
+// fires for the full expression range (see tweaks/PopulateSwitchTests.cpp).
+// The quickfix flow only works end-to-end if the tweak can be triggered on
+// the diagnostic's range.
+TEST(DiagnosticsTest, WSwitch) {
+  Annotations Test(R"cpp(
+    enum A { X };
+    struct B { A a; };
+    void foo(B b) {
+      switch ([[b.a]]) {}
+    }
+  )cpp");
+  auto TU = TestTU::withCode(Test.code());
+  TU.ExtraArgs = {"-Wswitch"};
+  EXPECT_THAT(*TU.build().getDiagnostics(),
+              ElementsAre(Diag(Test.range(),
+                               "enumeration value 'X' not handled in switch")));
+}
+
 TEST(DiagnosticsTest, FlagsMatter) {
   Annotations Test("[[void]] main() {} // error-ok");
   auto TU = TestTU::withCode(Test.code());
