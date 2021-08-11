@@ -9,6 +9,7 @@
 #ifndef _LIBCPP___RANGES_REVERSE_VIEW_H
 #define _LIBCPP___RANGES_REVERSE_VIEW_H
 
+#include <__concepts/constructible.h>
 #include <__config>
 #include <__iterator/concepts.h>
 #include <__iterator/next.h>
@@ -20,7 +21,7 @@
 #include <__ranges/non_propagating_cache.h>
 #include <__ranges/size.h>
 #include <__ranges/view_interface.h>
-#include <concepts>
+#include <__utility/move.h>
 #include <type_traits>
 
 #if !defined(_LIBCPP_HAS_NO_PRAGMA_SYSTEM_HEADER)
