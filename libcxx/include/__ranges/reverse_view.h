@@ -64,7 +64,7 @@ namespace ranges {
 
       auto __tmp = _VSTD::make_reverse_iterator(ranges::next(ranges::begin(__base_), ranges::end(__base_)));
       if constexpr (_UseCache)
-        __cached_begin_.__set(__tmp);
+        __cached_begin_.__emplace(__tmp);
       return __tmp;
     }
 

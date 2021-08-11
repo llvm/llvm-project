@@ -191,7 +191,7 @@ namespace ranges {
           if constexpr (__ref_is_glvalue)
             return *__outer_;
           else
-            return __parent_->__cache_.__emplace_deref(__outer_);
+            return __parent_->__cache_.__emplace_from([&]() -> decltype(auto) { return *__outer_; });
         }();
         __inner_ = ranges::begin(__inner);
         if (*__inner_ != ranges::end(__inner))

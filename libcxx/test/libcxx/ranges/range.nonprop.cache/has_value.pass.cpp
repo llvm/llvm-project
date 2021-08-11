@@ -28,7 +28,7 @@ constexpr void test() {
 
   // __has_value on a non-empty cache
   {
-    Cache cache; cache.__set(T{});
+    Cache cache; cache.__emplace();
     assert(cache.__has_value());
   }
 }
