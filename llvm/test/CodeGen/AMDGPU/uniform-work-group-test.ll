@@ -83,6 +83,6 @@ attributes #0 = { "uniform-work-group-size"="false" }
 ; AKF_CHECK: attributes #[[ATTR1]] = { "amdgpu-calls" "uniform-work-group-size"="false" }
 ;.
 ; ATTRIBUTOR_CHECK: attributes #[[ATTR0]] = { nounwind writeonly "uniform-work-group-size"="false" }
-; ATTRIBUTOR_CHECK: attributes #[[ATTR1]] = { "amdgpu-calls" "uniform-work-group-size"="false" }
+; ATTRIBUTOR_CHECK: attributes #[[ATTR1]] = { "uniform-work-group-size"="false" }
 ; ATTRIBUTOR_CHECK: attributes #[[ATTR2]] = { nounwind writeonly }
 ;.

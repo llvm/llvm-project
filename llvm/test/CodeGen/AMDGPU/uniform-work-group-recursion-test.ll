@@ -150,7 +150,7 @@ attributes #1 = { "uniform-work-group-size"="true" }
 ;.
 ; ATTRIBUTOR_CHECK: attributes #[[ATTR0]] = { nounwind readnone "uniform-work-group-size"="false" }
 ; ATTRIBUTOR_CHECK: attributes #[[ATTR1]] = { nofree nosync nounwind readnone "uniform-work-group-size"="true" }
-; ATTRIBUTOR_CHECK: attributes #[[ATTR2]] = { "amdgpu-calls" "uniform-work-group-size"="true" }
+; ATTRIBUTOR_CHECK: attributes #[[ATTR2]] = { "uniform-work-group-size"="true" }
 ; ATTRIBUTOR_CHECK: attributes #[[ATTR3]] = { nounwind readnone }
 ; ATTRIBUTOR_CHECK: attributes #[[ATTR4]] = { nofree nounwind readnone }
 ;.

@@ -23,8 +23,11 @@ define amdgpu_kernel void @test_simple_indirect_call() #0 {
 ; AKF_GCN-NEXT:    ret void
 ;
 ; ATTRIBUTOR_GCN-LABEL: define {{[^@]+}}@test_simple_indirect_call
-; ATTRIBUTOR_GCN-SAME: () #[[ATTR1:[0-9]+]] {
-; ATTRIBUTOR_GCN-NEXT:    call void @indirect()
+; ATTRIBUTOR_GCN-SAME: () #[[ATTR0]] {
+; ATTRIBUTOR_GCN-NEXT:    [[FPTR:%.*]] = alloca void ()*, align 8
+; ATTRIBUTOR_GCN-NEXT:    store void ()* @indirect, void ()** [[FPTR]], align 8
+; ATTRIBUTOR_GCN-NEXT:    [[FP:%.*]] = load void ()*, void ()** [[FPTR]], align 8
+; ATTRIBUTOR_GCN-NEXT:    call void [[FP]]()
 ; ATTRIBUTOR_GCN-NEXT:    ret void
 ;
 ; CHECK-LABEL: define {{[^@]+}}@test_simple_indirect_call
@@ -48,5 +51,4 @@ attributes #0 = { "amdgpu-dispatch-id" }
 ; AKF_GCN: attributes #[[ATTR1]] = { "amdgpu-calls" "amdgpu-dispatch-id" "amdgpu-dispatch-ptr" "amdgpu-implicitarg-ptr" "amdgpu-queue-ptr" "amdgpu-stack-objects" "amdgpu-work-group-id-x" "amdgpu-work-group-id-y" "amdgpu-work-group-id-z" "amdgpu-work-item-id-x" "amdgpu-work-item-id-y" "amdgpu-work-item-id-z" }
 ;.
 ; ATTRIBUTOR_GCN: attributes #[[ATTR0]] = { "amdgpu-dispatch-id" "amdgpu-dispatch-ptr" "amdgpu-implicitarg-ptr" "amdgpu-queue-ptr" "amdgpu-work-group-id-x" "amdgpu-work-group-id-y" "amdgpu-work-group-id-z" "amdgpu-work-item-id-x" "amdgpu-work-item-id-y" "amdgpu-work-item-id-z" "uniform-work-group-size"="false" }
-; ATTRIBUTOR_GCN: attributes #[[ATTR1]] = { "amdgpu-calls" "amdgpu-dispatch-id" "amdgpu-dispatch-ptr" "amdgpu-implicitarg-ptr" "amdgpu-queue-ptr" "amdgpu-stack-objects" "amdgpu-work-group-id-x" "amdgpu-work-group-id-y" "amdgpu-work-group-id-z" "amdgpu-work-item-id-x" "amdgpu-work-item-id-y" "amdgpu-work-item-id-z" "uniform-work-group-size"="false" }
 ;.

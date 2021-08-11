@@ -347,7 +347,6 @@ struct AAAMDAttributesFunction : public AAAMDAttributes {
     }
 
     bool NeedsQueuePtr = false;
-    bool HasCall = false;
     for (Function *Callee : AAEdges.getOptimisticEdges()) {
       Intrinsic::ID IID = Callee->getIntrinsicID();
       if (IID != Intrinsic::not_intrinsic) {
@@ -361,7 +360,6 @@ struct AAAMDAttributesFunction : public AAAMDAttributes {
         continue;
       }
 
-      HasCall = true;
       const AAAMDAttributes &AAAMD = A.getAAFor<AAAMDAttributes>(
           *this, IRPosition::function(*Callee), DepClassTy::REQUIRED);
       const DenseSet<StringRef> &CalleeAttributes = AAAMD.getAttributes();
@@ -370,20 +368,6 @@ struct AAAMDAttributesFunction : public AAAMDAttributes {
         if (CalleeAttributes.count(AttrName))
           AddAttribute(AttrName);
     }
-
-    HasCall |= AAEdges.hasUnknownCallee();
-    if (!IsNonEntryFunc && HasCall)
-      AddAttribute("amdgpu-calls");
-
-    // Check the function body.
-    auto CheckAlloca = [&](Instruction &I) {
-      AddAttribute("amdgpu-stack-objects");
-      return false;
-    };
-
-    bool UsedAssumedInformation = false;
-    A.checkForAllInstructions(CheckAlloca, *this, {Instruction::Alloca},
-                              UsedAssumedInformation);
 
     // If we found that we need amdgpu-queue-ptr, nothing else to do.
     if (NeedsQueuePtr || Attributes.count("amdgpu-queue-ptr")) {
@@ -406,10 +390,12 @@ struct AAAMDAttributesFunction : public AAAMDAttributes {
     // instructions, try it first.
 
     // amdgpu-queue-ptr is not needed if aperture regs is present.
-    if (!HasApertureRegs)
+    if (!HasApertureRegs) {
+      bool UsedAssumedInformation = false;
       A.checkForAllInstructions(CheckAddrSpaceCasts, *this,
                                 {Instruction::AddrSpaceCast},
                                 UsedAssumedInformation);
+    }
 
     // If we found  that we need amdgpu-queue-ptr, nothing else to do.
     if (NeedsQueuePtr) {

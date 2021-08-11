@@ -148,7 +148,7 @@ attributes #0 = { "uniform-work-group-size"="true" }
 ;.
 ; ATTRIBUTOR_CHECK: attributes #[[ATTR0]] = { "uniform-work-group-size"="false" }
 ; ATTRIBUTOR_CHECK: attributes #[[ATTR1]] = { nofree nosync nounwind willreturn "uniform-work-group-size"="false" }
-; ATTRIBUTOR_CHECK: attributes #[[ATTR2]] = { "amdgpu-calls" "uniform-work-group-size"="true" }
+; ATTRIBUTOR_CHECK: attributes #[[ATTR2]] = { "uniform-work-group-size"="true" }
 ; ATTRIBUTOR_CHECK: attributes #[[ATTR3]] = { nofree nosync nounwind "uniform-work-group-size"="true" }
 ; ATTRIBUTOR_CHECK: attributes #[[ATTR4]] = { nofree nosync nounwind willreturn writeonly "uniform-work-group-size"="true" }
 ; ATTRIBUTOR_CHECK: attributes #[[ATTR5]] = { nounwind }
