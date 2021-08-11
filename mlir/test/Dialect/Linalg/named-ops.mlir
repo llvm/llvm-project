@@ -1,19 +1,5 @@
 // RUN: mlir-opt -split-input-file -verify-diagnostics %s | FileCheck %s
 
-// CHECK-LABEL: func @conv_2d_input_nhwc_filter_ohwi_poly_q_tensor
-func @conv_2d_input_nhwc_filter_ohwi_poly_q_tensor(%input: tensor<2x4x5x3xi8>, %filter: tensor<2x2x2x3xi8>) -> tensor<2x3x4x2xi32> {
-  %zero = constant 0 : i32
-  %init = linalg.init_tensor [2, 3, 4, 2] : tensor<2x3x4x2xi32>
-  %fill = linalg.fill(%zero, %init) : i32, tensor<2x3x4x2xi32> -> tensor<2x3x4x2xi32>
-  %c128 = constant -128 : i32
-  %c42 = constant 42 : i32
-  %0 = linalg.conv_2d_input_nhwc_filter_ohwi_poly_q
-     { dilations = dense<1> : tensor<2xi64>, strides = dense<1> : tensor<2xi64> }
-     ins(%input, %filter, %c128, %c42 : tensor<2x4x5x3xi8>, tensor<2x2x2x3xi8>, i32, i32)
-    outs(%fill : tensor<2x3x4x2xi32>) -> tensor<2x3x4x2xi32>
-  return %0 : tensor<2x3x4x2xi32>
-}
-
 // CHECK-LABEL: func @depthwise_conv_2d_input_nhwc_filter_hwcf_tensor
 func @depthwise_conv_2d_input_nhwc_filter_hwcf_tensor(%input: tensor<2x4x5x2xf32>, %filter: tensor<2x2x2x3xf32>) -> tensor<2x3x4x2x3xf32> {
   %zero = constant 0.000000e+00 : f32

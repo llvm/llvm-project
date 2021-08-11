@@ -21,8 +21,6 @@ _LIBCPP_PUSH_MACROS
 
 _LIBCPP_BEGIN_NAMESPACE_STD
 
-#ifndef _LIBCPP_HAS_NO_BUILTIN_ADDRESSOF
-
 template <class _Tp>
 inline _LIBCPP_CONSTEXPR_AFTER_CXX14
 _LIBCPP_NO_CFI _LIBCPP_INLINE_VISIBILITY
@@ -31,19 +29,6 @@ addressof(_Tp& __x) _NOEXCEPT
 {
     return __builtin_addressof(__x);
 }
-
-#else
-
-template <class _Tp>
-inline _LIBCPP_NO_CFI _LIBCPP_INLINE_VISIBILITY
-_Tp*
-addressof(_Tp& __x) _NOEXCEPT
-{
-  return reinterpret_cast<_Tp *>(
-      const_cast<char *>(&reinterpret_cast<const volatile char &>(__x)));
-}
-
-#endif // _LIBCPP_HAS_NO_BUILTIN_ADDRESSOF
 
 #if defined(_LIBCPP_HAS_OBJC_ARC) && !defined(_LIBCPP_PREDEFINED_OBJC_ARC_ADDRESSOF)
 // Objective-C++ Automatic Reference Counting uses qualified pointers

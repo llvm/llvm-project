@@ -1572,6 +1572,19 @@ Status GDBRemoteCommunicationClient::GetMemoryRegionInfo(
               }
             }
           }
+        } else if (name.equals("type")) {
+          std::string comma_sep_str = value.str();
+          size_t comma_pos;
+          while ((comma_pos = comma_sep_str.find(',')) != std::string::npos) {
+            comma_sep_str[comma_pos] = '\0';
+            if (comma_sep_str == "stack") {
+              region_info.SetIsStackMemory(MemoryRegionInfo::eYes);
+            }
+          }
+          // handle final (or only) type of "stack"
+          if (comma_sep_str == "stack") {
+            region_info.SetIsStackMemory(MemoryRegionInfo::eYes);
+          }
         } else if (name.equals("error")) {
           StringExtractorGDBRemote error_extractor(value);
           std::string error_string;

@@ -4349,40 +4349,6 @@ inline _LIBCPP_INLINE_VISIBILITY _LIBCPP_CONSTEXPR
 typename __sfinae_underlying_type<_Tp>::__promoted_type
 __convert_to_integral(_Tp __val) { return __val; }
 
-#ifndef _LIBCPP_CXX03_LANG
-
-template <class _Tp>
-struct __has_operator_addressof_member_imp
-{
-    template <class _Up>
-        static auto __test(int)
-            -> typename __select_2nd<decltype(declval<_Up>().operator&()), true_type>::type;
-    template <class>
-        static auto __test(long) -> false_type;
-
-    static const bool value = decltype(__test<_Tp>(0))::value;
-};
-
-template <class _Tp>
-struct __has_operator_addressof_free_imp
-{
-    template <class _Up>
-        static auto __test(int)
-            -> typename __select_2nd<decltype(operator&(declval<_Up>())), true_type>::type;
-    template <class>
-        static auto __test(long) -> false_type;
-
-    static const bool value = decltype(__test<_Tp>(0))::value;
-};
-
-template <class _Tp>
-struct __has_operator_addressof
-    : public integral_constant<bool, __has_operator_addressof_member_imp<_Tp>::value
-                                  || __has_operator_addressof_free_imp<_Tp>::value>
-{};
-
-#endif // _LIBCPP_CXX03_LANG
-
 // is_scoped_enum [meta.unary.prop]
 
 #if _LIBCPP_STD_VER > 20

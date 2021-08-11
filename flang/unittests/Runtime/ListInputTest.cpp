@@ -73,7 +73,7 @@ TEST(InputTest, TestListInputIntegerList) {
   char buffer[numBuffers][maxBufferLength];
   int j{0};
   SetCharacter(buffer[j++], maxBufferLength, "1 2 2*3  ,");
-  SetCharacter(buffer[j++], maxBufferLength, ",6,,8,1*");
+  SetCharacter(buffer[j++], maxBufferLength, ",6,,8,2*");
 
   StaticDescriptor<1> staticDescriptor;
   Descriptor &whole{staticDescriptor.descriptor()};
@@ -83,13 +83,15 @@ TEST(InputTest, TestListInputIntegerList) {
   whole.Check();
   auto *cookie{IONAME(BeginInternalArrayListInput)(whole)};
 
-  constexpr int listInputLength{9};
+  constexpr int listInputLength{10};
 
   // Negative numbers will be overwritten by _expectedOutput_, and positive
   // numbers will not be as their indices are "Null values" of the Fortran 2018
   // standard 13.10.3.2 in the format strings _buffer_
-  std::int64_t actualOutput[listInputLength]{-1, -2, -3, -4, 5, -6, 7, -8, 9};
-  const std::int64_t expectedOutput[listInputLength]{1, 2, 3, 3, 5, 6, 7, 8, 9};
+  std::int64_t actualOutput[listInputLength]{
+      -1, -2, -3, -4, 5, -6, 7, -8, 9, 10};
+  const std::int64_t expectedOutput[listInputLength]{
+      1, 2, 3, 3, 5, 6, 7, 8, 9, 10};
   for (j = 0; j < listInputLength; ++j) {
     IONAME(InputInteger)(cookie, actualOutput[j]);
   }

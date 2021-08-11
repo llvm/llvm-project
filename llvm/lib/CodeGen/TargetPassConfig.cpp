@@ -1113,6 +1113,12 @@ void TargetPassConfig::addMachinePasses() {
   // where it becomes safe again so stop debugifying here.
   DebugifyIsSafe = false;
 
+  // Add a FSDiscriminator pass right before RA, so that we could get
+  // more precise SampleFDO profile for RA.
+  if (EnableFSDiscriminator)
+    addPass(createMIRAddFSDiscriminatorsPass(
+        sampleprof::FSDiscriminatorPass::Pass1));
+
   // Run register allocation and passes that are tightly coupled with it,
   // including phi elimination and scheduling.
   if (getOptimizeRegAlloc())
@@ -1465,6 +1471,9 @@ bool TargetPassConfig::addGCPasses() {
 
 /// Add standard basic block placement passes.
 void TargetPassConfig::addBlockPlacement() {
+  if (EnableFSDiscriminator)
+    addPass(createMIRAddFSDiscriminatorsPass(
+        sampleprof::FSDiscriminatorPass::Pass2));
   if (addPass(&MachineBlockPlacementID)) {
     // Run a separate pass to collect block placement statistics.
     if (EnableBlockPlacementStats)
