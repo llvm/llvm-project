@@ -30,6 +30,7 @@
 #include "llvm/ADT/StringRef.h"
 #include "llvm/CodeGen/DAGCombine.h"
 #include "llvm/CodeGen/ISDOpcodes.h"
+#include "llvm/CodeGen/LowLevelType.h"
 #include "llvm/CodeGen/RuntimeLibcalls.h"
 #include "llvm/CodeGen/SelectionDAG.h"
 #include "llvm/CodeGen/SelectionDAGNodes.h"
@@ -2509,8 +2510,11 @@ public:
     return false;
   }
 
-  virtual bool isTruncateFree(EVT FromVT, EVT ToVT) const {
-    return false;
+  virtual bool isTruncateFree(EVT FromVT, EVT ToVT) const { return false; }
+  virtual bool isTruncateFree(LLT FromTy, LLT ToTy, const DataLayout &DL,
+                              LLVMContext &Ctx) const {
+    return isTruncateFree(getApproximateEVTForLLT(FromTy, DL, Ctx),
+                          getApproximateEVTForLLT(ToTy, DL, Ctx));
   }
 
   virtual bool isProfitableToHoist(Instruction *I) const { return true; }
@@ -2586,8 +2590,11 @@ public:
     return false;
   }
 
-  virtual bool isZExtFree(EVT FromTy, EVT ToTy) const {
-    return false;
+  virtual bool isZExtFree(EVT FromTy, EVT ToTy) const { return false; }
+  virtual bool isZExtFree(LLT FromTy, LLT ToTy, const DataLayout &DL,
+                          LLVMContext &Ctx) const {
+    return isZExtFree(getApproximateEVTForLLT(FromTy, DL, Ctx),
+                      getApproximateEVTForLLT(ToTy, DL, Ctx));
   }
 
   /// Return true if sign-extension from FromTy to ToTy is cheaper than

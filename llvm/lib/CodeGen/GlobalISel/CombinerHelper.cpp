@@ -4344,6 +4344,97 @@ bool CombinerHelper::matchConstantFold(MachineInstr &MI, APInt &MatchInfo) {
   return true;
 }
 
+bool CombinerHelper::matchNarrowBinopFeedingAnd(
+    MachineInstr &MI, std::function<void(MachineIRBuilder &)> &MatchInfo) {
+  // Look for a binop feeding into an AND with a mask:
+  //
+  // %add = G_ADD %lhs, %rhs
+  // %and = G_AND %add, 000...11111111
+  //
+  // Check if it's possible to perform the binop at a narrower width and zext
+  // back to the original width like so:
+  //
+  // %narrow_lhs = G_TRUNC %lhs
+  // %narrow_rhs = G_TRUNC %rhs
+  // %narrow_add = G_ADD %narrow_lhs, %narrow_rhs
+  // %new_add = G_ZEXT %narrow_add
+  // %and = G_AND %new_add, 000...11111111
+  //
+  // This can allow later combines to eliminate the G_AND if it turns out
+  // that the mask is irrelevant.
+  assert(MI.getOpcode() == TargetOpcode::G_AND);
+  Register Dst = MI.getOperand(0).getReg();
+  Register AndLHS = MI.getOperand(1).getReg();
+  Register AndRHS = MI.getOperand(2).getReg();
+  LLT WideTy = MRI.getType(Dst);
+
+  // If the potential binop has more than one use, then it's possible that one
+  // of those uses will need its full width.
+  if (!WideTy.isScalar() || !MRI.hasOneNonDBGUse(AndLHS))
+    return false;
+
+  // Check if the LHS feeding the AND is impacted by the high bits that we're
+  // masking out.
+  //
+  // e.g. for 64-bit x, y:
+  //
+  // add_64(x, y) & 65535 == zext(add_16(trunc(x), trunc(y))) & 65535
+  MachineInstr *LHSInst = getDefIgnoringCopies(AndLHS, MRI);
+  if (!LHSInst)
+    return false;
+  unsigned LHSOpc = LHSInst->getOpcode();
+  switch (LHSOpc) {
+  default:
+    return false;
+  case TargetOpcode::G_ADD:
+  case TargetOpcode::G_SUB:
+  case TargetOpcode::G_MUL:
+  case TargetOpcode::G_AND:
+  case TargetOpcode::G_OR:
+  case TargetOpcode::G_XOR:
+    break;
+  }
+
+  // Find the mask on the RHS.
+  auto Cst = getConstantVRegValWithLookThrough(AndRHS, MRI);
+  if (!Cst)
+    return false;
+  auto Mask = Cst->Value;
+  if (!Mask.isMask())
+    return false;
+
+  // No point in combining if there's nothing to truncate.
+  unsigned NarrowWidth = Mask.countTrailingOnes();
+  if (NarrowWidth == WideTy.getSizeInBits())
+    return false;
+  LLT NarrowTy = LLT::scalar(NarrowWidth);
+
+  // Check if adding the zext + truncates could be harmful.
+  auto &MF = *MI.getMF();
+  const auto &TLI = getTargetLowering();
+  LLVMContext &Ctx = MF.getFunction().getContext();
+  auto &DL = MF.getDataLayout();
+  if (!TLI.isTruncateFree(WideTy, NarrowTy, DL, Ctx) ||
+      !TLI.isZExtFree(NarrowTy, WideTy, DL, Ctx))
+    return false;
+  if (!isLegalOrBeforeLegalizer({TargetOpcode::G_TRUNC, {NarrowTy, WideTy}}) ||
+      !isLegalOrBeforeLegalizer({TargetOpcode::G_ZEXT, {WideTy, NarrowTy}}))
+    return false;
+  Register BinOpLHS = LHSInst->getOperand(1).getReg();
+  Register BinOpRHS = LHSInst->getOperand(2).getReg();
+  MatchInfo = [=, &MI](MachineIRBuilder &B) {
+    auto NarrowLHS = Builder.buildTrunc(NarrowTy, BinOpLHS);
+    auto NarrowRHS = Builder.buildTrunc(NarrowTy, BinOpRHS);
+    auto NarrowBinOp =
+        Builder.buildInstr(LHSOpc, {NarrowTy}, {NarrowLHS, NarrowRHS});
+    auto Ext = Builder.buildZExt(WideTy, NarrowBinOp);
+    Observer.changingInstr(MI);
+    MI.getOperand(1).setReg(Ext.getReg(0));
+    Observer.changedInstr(MI);
+  };
+  return true;
+}
+
 bool CombinerHelper::tryCombine(MachineInstr &MI) {
   if (tryCombineCopy(MI))
     return true;
