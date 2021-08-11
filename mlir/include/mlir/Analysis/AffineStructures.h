@@ -235,6 +235,15 @@ public:
   void addAffineIfOpDomain(AffineIfOp ifOp);
 
   /// Adds a lower or an upper bound for the identifier at the specified
+  /// position with constraints being drawn from the specified bound map. If
+  /// `eq` is true, add a single equality equal to the bound map's first result
+  /// expr.
+  /// Note: The dimensions/symbols of this FlatAffineConstraints must match the
+  /// dimensions/symbols of the affine map.
+  LogicalResult addLowerOrUpperBound(unsigned pos, AffineMap boundMap, bool eq,
+                                     bool lower = true);
+
+  /// Adds a lower or an upper bound for the identifier at the specified
   /// position with constraints being drawn from the specified bound map and
   /// operands. If `eq` is true, add a single equality equal to the bound map's
   /// first result expr.
