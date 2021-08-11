@@ -628,10 +628,10 @@ structured_op: !LinalgStructuredOpConfig
                   scalar_arg: B
 --- !LinalgOpConfig
 metadata: !LinalgOpMetadata
-  name: conv_2d_input_nhwc_filter_ohwi_poly
-  cpp_class_name: Conv2DInputNhwcFilterOhwiPolyOp
+  name: conv_2d_nchw
+  cpp_class_name: Conv2DNchwOp
   doc: |-
-    Performs a 2-D convolution.
+    Performs 2-D convolution.
 
     Numeric casting is performed on the operands to the inner multiply, promoting
     them to the same data type as the accumulator/output.
@@ -648,13 +648,13 @@ structured_op: !LinalgStructuredOpConfig
     usage: InputOperand
     type_var: T2
     shape_map: affine_map<()[s0, s1, s2, s3, s4, s5, s6, s7, s8, s9, s10, s11, s12]
-      -> (s4, s5, s6, s3)>
+      -> (s4, s1, s5, s6)>
   - !LinalgOperandDefConfig
     name: O
     usage: OutputOperand
     type_var: U
     shape_map: affine_map<()[s0, s1, s2, s3, s4, s5, s6, s7, s8, s9, s10, s11, s12]
-      -> (s0, s7, s8, s4)>
+      -> (s0, s4, s7, s8, s1)>
   - !LinalgOperandDefConfig
     name: strides
     usage: IndexAttribute
@@ -670,18 +670,18 @@ structured_op: !LinalgStructuredOpConfig
   indexing_maps: !LinalgIndexingMapsConfig
     static_indexing_maps:
     - affine_map<(d0, d1, d2, d3, d4, d5, d6)[s0, s1, s2, s3, s4, s5, s6, s7, s8,
-      s9, s10, s11, s12] -> (d0, d1 * s9 + d3 * s11, d2 * s10 + d4 * s12, d6)>
+      s9, s10, s11, s12] -> (d0, d4, d2 * s9 + d5 * s11, d3 * s10 + d6 * s12)>
     - affine_map<(d0, d1, d2, d3, d4, d5, d6)[s0, s1, s2, s3, s4, s5, s6, s7, s8,
-      s9, s10, s11, s12] -> (d5, d3, d4, d6)>
+      s9, s10, s11, s12] -> (d1, d4, d5, d6)>
     - affine_map<(d0, d1, d2, d3, d4, d5, d6)[s0, s1, s2, s3, s4, s5, s6, s7, s8,
-      s9, s10, s11, s12] -> (d0, d1, d2, d5)>
+      s9, s10, s11, s12] -> (d0, d1, d2, d3)>
   iterator_types:
   - parallel
   - parallel
   - parallel
-  - reduction
-  - reduction
   - parallel
+  - reduction
+  - reduction
   - reduction
   assignments:
   - !ScalarAssign
@@ -710,14 +710,13 @@ structured_op: !LinalgStructuredOpConfig
                   scalar_arg: K
 --- !LinalgOpConfig
 metadata: !LinalgOpMetadata
-  name: conv_2d_input_nhwc_filter_ohwi_poly_q
-  cpp_class_name: Conv2DInputNhwcFilterOhwiPolyQOp
+  name: conv_2d_nhwc_hwcf
+  cpp_class_name: Conv2DNhwcHwcfOp
   doc: |-
-    Performs a 2-D quantized convolution.
+    Performs 2-D convolution.
 
     Numeric casting is performed on the operands to the inner multiply, promoting
-    them to the same data type as the accumulator/output. Includes zero point
-    adjustment for quantization.
+    them to the same data type as the accumulator/output.
 structured_op: !LinalgStructuredOpConfig
   args:
   - !LinalgOperandDefConfig
@@ -731,21 +730,13 @@ structured_op: !LinalgStructuredOpConfig
     usage: InputOperand
     type_var: T2
     shape_map: affine_map<()[s0, s1, s2, s3, s4, s5, s6, s7, s8, s9, s10, s11, s12]
-      -> (s4, s5, s6, s3)>
-  - !LinalgOperandDefConfig
-    name: IZp
-    usage: InputOperand
-    type_var: I32
-  - !LinalgOperandDefConfig
-    name: KZp
-    usage: InputOperand
-    type_var: I32
+      -> (s4, s5, s3, s6)>
   - !LinalgOperandDefConfig
     name: O
     usage: OutputOperand
     type_var: U
     shape_map: affine_map<()[s0, s1, s2, s3, s4, s5, s6, s7, s8, s9, s10, s11, s12]
-      -> (s0, s7, s8, s4)>
+      -> (s0, s7, s8, s6)>
   - !LinalgOperandDefConfig
     name: strides
     usage: IndexAttribute
@@ -761,22 +752,18 @@ structured_op: !LinalgStructuredOpConfig
   indexing_maps: !LinalgIndexingMapsConfig
     static_indexing_maps:
     - affine_map<(d0, d1, d2, d3, d4, d5, d6)[s0, s1, s2, s3, s4, s5, s6, s7, s8,
-      s9, s10, s11, s12] -> (d0, d1 * s9 + d3 * s11, d2 * s10 + d4 * s12, d6)>
+      s9, s10, s11, s12] -> (d0, d1 * s9 + d4 * s11, d2 * s10 + d5 * s12, d6)>
     - affine_map<(d0, d1, d2, d3, d4, d5, d6)[s0, s1, s2, s3, s4, s5, s6, s7, s8,
-      s9, s10, s11, s12] -> (d5, d3, d4, d6)>
+      s9, s10, s11, s12] -> (d4, d5, d6, d3)>
     - affine_map<(d0, d1, d2, d3, d4, d5, d6)[s0, s1, s2, s3, s4, s5, s6, s7, s8,
-      s9, s10, s11, s12] -> ()>
-    - affine_map<(d0, d1, d2, d3, d4, d5, d6)[s0, s1, s2, s3, s4, s5, s6, s7, s8,
-      s9, s10, s11, s12] -> ()>
-    - affine_map<(d0, d1, d2, d3, d4, d5, d6)[s0, s1, s2, s3, s4, s5, s6, s7, s8,
-      s9, s10, s11, s12] -> (d0, d1, d2, d5)>
+      s9, s10, s11, s12] -> (d0, d1, d2, d3)>
   iterator_types:
   - parallel
   - parallel
   - parallel
-  - reduction
-  - reduction
   - parallel
+  - reduction
+  - reduction
   - reduction
   assignments:
   - !ScalarAssign
@@ -792,37 +779,17 @@ structured_op: !LinalgStructuredOpConfig
             fn_name: mul
             operands:
             - !ScalarExpression
-              scalar_apply:
-                fn_name: sub
+              symbolic_cast:
+                type_var: U
                 operands:
                 - !ScalarExpression
-                  symbolic_cast:
-                    type_var: U
-                    operands:
-                    - !ScalarExpression
-                      scalar_arg: I
-                - !ScalarExpression
-                  symbolic_cast:
-                    type_var: U
-                    operands:
-                    - !ScalarExpression
-                      scalar_arg: IZp
+                  scalar_arg: I
             - !ScalarExpression
-              scalar_apply:
-                fn_name: sub
+              symbolic_cast:
+                type_var: U
                 operands:
                 - !ScalarExpression
-                  symbolic_cast:
-                    type_var: U
-                    operands:
-                    - !ScalarExpression
-                      scalar_arg: K
-                - !ScalarExpression
-                  symbolic_cast:
-                    type_var: U
-                    operands:
-                    - !ScalarExpression
-                      scalar_arg: KZp
+                  scalar_arg: K
 --- !LinalgOpConfig
 metadata: !LinalgOpMetadata
   name: depthwise_conv_2d_input_nhwc_filter_hwc_poly
@@ -906,7 +873,122 @@ structured_op: !LinalgStructuredOpConfig
                   scalar_arg: K
 --- !LinalgOpConfig
 metadata: !LinalgOpMetadata
-  name: depthwise_conv_2D_nchw
+  name: conv_2d_nhwc_hwcf_q
+  cpp_class_name: Conv2DNhwcHwcfQOp
+  doc: |-
+    Performs 2-D convolution with zero point offsets.
+
+    Numeric casting is performed on the operands to the inner multiply, promoting
+    them to the same data type as the accumulator/output. This includes the zero
+    point offsets common to quantized operations.
+structured_op: !LinalgStructuredOpConfig
+  args:
+  - !LinalgOperandDefConfig
+    name: I
+    usage: InputOperand
+    type_var: T1
+    shape_map: affine_map<()[s0, s1, s2, s3, s4, s5, s6, s7, s8, s9, s10, s11, s12]
+      -> (s0, s1, s2, s3)>
+  - !LinalgOperandDefConfig
+    name: K
+    usage: InputOperand
+    type_var: T2
+    shape_map: affine_map<()[s0, s1, s2, s3, s4, s5, s6, s7, s8, s9, s10, s11, s12]
+      -> (s4, s5, s3, s6)>
+  - !LinalgOperandDefConfig
+    name: IZp
+    usage: InputOperand
+    type_var: I32
+  - !LinalgOperandDefConfig
+    name: KZp
+    usage: InputOperand
+    type_var: I32
+  - !LinalgOperandDefConfig
+    name: O
+    usage: OutputOperand
+    type_var: U
+    shape_map: affine_map<()[s0, s1, s2, s3, s4, s5, s6, s7, s8, s9, s10, s11, s12]
+      -> (s0, s7, s8, s6)>
+  - !LinalgOperandDefConfig
+    name: strides
+    usage: IndexAttribute
+    type_var: I64
+    attribute_map: affine_map<()[s0, s1, s2, s3, s4, s5, s6, s7, s8, s9, s10, s11,
+      s12] -> (s9, s10)>
+  - !LinalgOperandDefConfig
+    name: dilations
+    usage: IndexAttribute
+    type_var: I64
+    attribute_map: affine_map<()[s0, s1, s2, s3, s4, s5, s6, s7, s8, s9, s10, s11,
+      s12] -> (s11, s12)>
+  indexing_maps: !LinalgIndexingMapsConfig
+    static_indexing_maps:
+    - affine_map<(d0, d1, d2, d3, d4, d5, d6)[s0, s1, s2, s3, s4, s5, s6, s7, s8,
+      s9, s10, s11, s12] -> (d0, d1 * s9 + d4 * s11, d2 * s10 + d5 * s12, d6)>
+    - affine_map<(d0, d1, d2, d3, d4, d5, d6)[s0, s1, s2, s3, s4, s5, s6, s7, s8,
+      s9, s10, s11, s12] -> (d4, d5, d6, d3)>
+    - affine_map<(d0, d1, d2, d3, d4, d5, d6)[s0, s1, s2, s3, s4, s5, s6, s7, s8,
+      s9, s10, s11, s12] -> ()>
+    - affine_map<(d0, d1, d2, d3, d4, d5, d6)[s0, s1, s2, s3, s4, s5, s6, s7, s8,
+      s9, s10, s11, s12] -> ()>
+    - affine_map<(d0, d1, d2, d3, d4, d5, d6)[s0, s1, s2, s3, s4, s5, s6, s7, s8,
+      s9, s10, s11, s12] -> (d0, d1, d2, d3)>
+  iterator_types:
+  - parallel
+  - parallel
+  - parallel
+  - parallel
+  - reduction
+  - reduction
+  - reduction
+  assignments:
+  - !ScalarAssign
+    arg: O
+    value: !ScalarExpression
+      scalar_apply:
+        fn_name: add
+        operands:
+        - !ScalarExpression
+          scalar_arg: O
+        - !ScalarExpression
+          scalar_apply:
+            fn_name: mul
+            operands:
+            - !ScalarExpression
+              scalar_apply:
+                fn_name: sub
+                operands:
+                - !ScalarExpression
+                  symbolic_cast:
+                    type_var: U
+                    operands:
+                    - !ScalarExpression
+                      scalar_arg: I
+                - !ScalarExpression
+                  symbolic_cast:
+                    type_var: U
+                    operands:
+                    - !ScalarExpression
+                      scalar_arg: IZp
+            - !ScalarExpression
+              scalar_apply:
+                fn_name: sub
+                operands:
+                - !ScalarExpression
+                  symbolic_cast:
+                    type_var: U
+                    operands:
+                    - !ScalarExpression
+                      scalar_arg: K
+                - !ScalarExpression
+                  symbolic_cast:
+                    type_var: U
+                    operands:
+                    - !ScalarExpression
+                      scalar_arg: KZp
+--- !LinalgOpConfig
+metadata: !LinalgOpMetadata
+  name: depthwise_conv2D_nchw
   cpp_class_name: DepthwiseConv2DNchwOp
   doc: |-
     Performs depth-wise 2-D convolution.
@@ -1100,88 +1182,6 @@ structured_op: !LinalgStructuredOpConfig
                     operands:
                     - !ScalarExpression
                       scalar_arg: KZp
---- !LinalgOpConfig
-metadata: !LinalgOpMetadata
-  name: conv_2d_nchw
-  cpp_class_name: Conv2DNchwOp
-  doc: |-
-    Performs 2-D convolution.
-
-    Numeric casting is performed on the operands to the inner multiply, promoting
-    them to the same data type as the accumulator/output.
-structured_op: !LinalgStructuredOpConfig
-  args:
-  - !LinalgOperandDefConfig
-    name: I
-    usage: InputOperand
-    type_var: T1
-    shape_map: affine_map<()[s0, s1, s2, s3, s4, s5, s6, s7, s8, s9, s10, s11, s12]
-      -> (s0, s1, s2, s3)>
-  - !LinalgOperandDefConfig
-    name: K
-    usage: InputOperand
-    type_var: T2
-    shape_map: affine_map<()[s0, s1, s2, s3, s4, s5, s6, s7, s8, s9, s10, s11, s12]
-      -> (s4, s1, s5, s6)>
-  - !LinalgOperandDefConfig
-    name: O
-    usage: OutputOperand
-    type_var: U
-    shape_map: affine_map<()[s0, s1, s2, s3, s4, s5, s6, s7, s8, s9, s10, s11, s12]
-      -> (s0, s4, s7, s8, s1)>
-  - !LinalgOperandDefConfig
-    name: strides
-    usage: IndexAttribute
-    type_var: I64
-    attribute_map: affine_map<()[s0, s1, s2, s3, s4, s5, s6, s7, s8, s9, s10, s11,
-      s12] -> (s9, s10)>
-  - !LinalgOperandDefConfig
-    name: dilations
-    usage: IndexAttribute
-    type_var: I64
-    attribute_map: affine_map<()[s0, s1, s2, s3, s4, s5, s6, s7, s8, s9, s10, s11,
-      s12] -> (s11, s12)>
-  indexing_maps: !LinalgIndexingMapsConfig
-    static_indexing_maps:
-    - affine_map<(d0, d1, d2, d3, d4, d5, d6)[s0, s1, s2, s3, s4, s5, s6, s7, s8,
-      s9, s10, s11, s12] -> (d0, d4, d2 * s9 + d5 * s11, d3 * s10 + d6 * s12)>
-    - affine_map<(d0, d1, d2, d3, d4, d5, d6)[s0, s1, s2, s3, s4, s5, s6, s7, s8,
-      s9, s10, s11, s12] -> (d1, d4, d5, d6)>
-    - affine_map<(d0, d1, d2, d3, d4, d5, d6)[s0, s1, s2, s3, s4, s5, s6, s7, s8,
-      s9, s10, s11, s12] -> (d0, d1, d2, d3)>
-  iterator_types:
-  - parallel
-  - parallel
-  - parallel
-  - parallel
-  - reduction
-  - reduction
-  - reduction
-  assignments:
-  - !ScalarAssign
-    arg: O
-    value: !ScalarExpression
-      scalar_apply:
-        fn_name: add
-        operands:
-        - !ScalarExpression
-          scalar_arg: O
-        - !ScalarExpression
-          scalar_apply:
-            fn_name: mul
-            operands:
-            - !ScalarExpression
-              symbolic_cast:
-                type_var: U
-                operands:
-                - !ScalarExpression
-                  scalar_arg: I
-            - !ScalarExpression
-              symbolic_cast:
-                type_var: U
-                operands:
-                - !ScalarExpression
-                  scalar_arg: K
 --- !LinalgOpConfig
 metadata: !LinalgOpMetadata
   name: pooling_nhwc_sum
@@ -1896,3 +1896,4 @@ structured_op: !LinalgStructuredOpConfig
                     operands:
                     - !ScalarExpression
                       scalar_arg: I
+
