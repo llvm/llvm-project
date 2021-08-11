@@ -3572,7 +3572,9 @@ MipsTargetLowering::LowerCall(TargetLowering::CallLoweringInfo &CLI,
       if (Subtarget.useLongCalls())
         Callee = Subtarget.hasSym32()
                      ? getAddrNonPIC(N, SDLoc(N), Ty, DAG)
-                     : getAddrNonPICSym64(N, SDLoc(N), Ty, DAG);
+                     : Subtarget.hasNanoMips()
+                           ? getNMAddrNonPIC(N, SDLoc(N), Ty, DAG)
+                           : getAddrNonPICSym64(N, SDLoc(N), Ty, DAG);
     } else if (auto *N = dyn_cast<GlobalAddressSDNode>(Callee)) {
       bool UseLongCalls = Subtarget.useLongCalls();
       // If the function has long-call/far/near attribute
@@ -3586,7 +3588,9 @@ MipsTargetLowering::LowerCall(TargetLowering::CallLoweringInfo &CLI,
       if (UseLongCalls)
         Callee = Subtarget.hasSym32()
                      ? getAddrNonPIC(N, SDLoc(N), Ty, DAG)
-                     : getAddrNonPICSym64(N, SDLoc(N), Ty, DAG);
+                     : Subtarget.hasNanoMips()
+                           ? getNMAddrNonPIC(N, SDLoc(N), Ty, DAG)
+                           : getAddrNonPICSym64(N, SDLoc(N), Ty, DAG);
     }
   }
 
