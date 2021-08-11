@@ -310,6 +310,108 @@ define <8 x i8> @vxor_vi_v8i8_unmasked_1(<8 x i8> %va, i32 zeroext %evl) {
   ret <8 x i8> %v
 }
 
+declare <9 x i8> @llvm.vp.xor.v9i8(<9 x i8>, <9 x i8>, <9 x i1>, i32)
+
+define <9 x i8> @vxor_vv_v9i8(<9 x i8> %va, <9 x i8> %b, <9 x i1> %m, i32 zeroext %evl) {
+; CHECK-LABEL: vxor_vv_v9i8:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    vsetvli zero, a0, e8, m1, ta, mu
+; CHECK-NEXT:    vxor.vv v8, v8, v9, v0.t
+; CHECK-NEXT:    ret
+  %v = call <9 x i8> @llvm.vp.xor.v9i8(<9 x i8> %va, <9 x i8> %b, <9 x i1> %m, i32 %evl)
+  ret <9 x i8> %v
+}
+
+define <9 x i8> @vxor_vv_v9i8_unmasked(<9 x i8> %va, <9 x i8> %b, i32 zeroext %evl) {
+; CHECK-LABEL: vxor_vv_v9i8_unmasked:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    vsetvli zero, a0, e8, m1, ta, mu
+; CHECK-NEXT:    vxor.vv v8, v8, v9
+; CHECK-NEXT:    ret
+  %head = insertelement <9 x i1> undef, i1 true, i32 0
+  %m = shufflevector <9 x i1> %head, <9 x i1> undef, <9 x i32> zeroinitializer
+  %v = call <9 x i8> @llvm.vp.xor.v9i8(<9 x i8> %va, <9 x i8> %b, <9 x i1> %m, i32 %evl)
+  ret <9 x i8> %v
+}
+
+define <9 x i8> @vxor_vx_v9i8(<9 x i8> %va, i8 %b, <9 x i1> %m, i32 zeroext %evl) {
+; CHECK-LABEL: vxor_vx_v9i8:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    vsetvli zero, a1, e8, m1, ta, mu
+; CHECK-NEXT:    vxor.vx v8, v8, a0, v0.t
+; CHECK-NEXT:    ret
+  %elt.head = insertelement <9 x i8> undef, i8 %b, i32 0
+  %vb = shufflevector <9 x i8> %elt.head, <9 x i8> undef, <9 x i32> zeroinitializer
+  %v = call <9 x i8> @llvm.vp.xor.v9i8(<9 x i8> %va, <9 x i8> %vb, <9 x i1> %m, i32 %evl)
+  ret <9 x i8> %v
+}
+
+define <9 x i8> @vxor_vx_v9i8_unmasked(<9 x i8> %va, i8 %b, i32 zeroext %evl) {
+; CHECK-LABEL: vxor_vx_v9i8_unmasked:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    vsetvli zero, a1, e8, m1, ta, mu
+; CHECK-NEXT:    vxor.vx v8, v8, a0
+; CHECK-NEXT:    ret
+  %elt.head = insertelement <9 x i8> undef, i8 %b, i32 0
+  %vb = shufflevector <9 x i8> %elt.head, <9 x i8> undef, <9 x i32> zeroinitializer
+  %head = insertelement <9 x i1> undef, i1 true, i32 0
+  %m = shufflevector <9 x i1> %head, <9 x i1> undef, <9 x i32> zeroinitializer
+  %v = call <9 x i8> @llvm.vp.xor.v9i8(<9 x i8> %va, <9 x i8> %vb, <9 x i1> %m, i32 %evl)
+  ret <9 x i8> %v
+}
+
+define <9 x i8> @vxor_vi_v9i8(<9 x i8> %va, <9 x i1> %m, i32 zeroext %evl) {
+; CHECK-LABEL: vxor_vi_v9i8:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    vsetvli zero, a0, e8, m1, ta, mu
+; CHECK-NEXT:    vxor.vi v8, v8, 7, v0.t
+; CHECK-NEXT:    ret
+  %elt.head = insertelement <9 x i8> undef, i8 7, i32 0
+  %vb = shufflevector <9 x i8> %elt.head, <9 x i8> undef, <9 x i32> zeroinitializer
+  %v = call <9 x i8> @llvm.vp.xor.v9i8(<9 x i8> %va, <9 x i8> %vb, <9 x i1> %m, i32 %evl)
+  ret <9 x i8> %v
+}
+
+define <9 x i8> @vxor_vi_v9i8_unmasked(<9 x i8> %va, i32 zeroext %evl) {
+; CHECK-LABEL: vxor_vi_v9i8_unmasked:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    vsetvli zero, a0, e8, m1, ta, mu
+; CHECK-NEXT:    vxor.vi v8, v8, 7
+; CHECK-NEXT:    ret
+  %elt.head = insertelement <9 x i8> undef, i8 7, i32 0
+  %vb = shufflevector <9 x i8> %elt.head, <9 x i8> undef, <9 x i32> zeroinitializer
+  %head = insertelement <9 x i1> undef, i1 true, i32 0
+  %m = shufflevector <9 x i1> %head, <9 x i1> undef, <9 x i32> zeroinitializer
+  %v = call <9 x i8> @llvm.vp.xor.v9i8(<9 x i8> %va, <9 x i8> %vb, <9 x i1> %m, i32 %evl)
+  ret <9 x i8> %v
+}
+
+define <9 x i8> @vxor_vi_v9i8_1(<9 x i8> %va, <9 x i1> %m, i32 zeroext %evl) {
+; CHECK-LABEL: vxor_vi_v9i8_1:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    vsetvli zero, a0, e8, m1, ta, mu
+; CHECK-NEXT:    vnot.v v8, v8, v0.t
+; CHECK-NEXT:    ret
+  %elt.head = insertelement <9 x i8> undef, i8 -1, i32 0
+  %vb = shufflevector <9 x i8> %elt.head, <9 x i8> undef, <9 x i32> zeroinitializer
+  %v = call <9 x i8> @llvm.vp.xor.v9i8(<9 x i8> %va, <9 x i8> %vb, <9 x i1> %m, i32 %evl)
+  ret <9 x i8> %v
+}
+
+define <9 x i8> @vxor_vi_v9i8_unmasked_1(<9 x i8> %va, i32 zeroext %evl) {
+; CHECK-LABEL: vxor_vi_v9i8_unmasked_1:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    vsetvli zero, a0, e8, m1, ta, mu
+; CHECK-NEXT:    vxor.vi v8, v8, -1
+; CHECK-NEXT:    ret
+  %elt.head = insertelement <9 x i8> undef, i8 -1, i32 0
+  %vb = shufflevector <9 x i8> %elt.head, <9 x i8> undef, <9 x i32> zeroinitializer
+  %head = insertelement <9 x i1> undef, i1 true, i32 0
+  %m = shufflevector <9 x i1> %head, <9 x i1> undef, <9 x i32> zeroinitializer
+  %v = call <9 x i8> @llvm.vp.xor.v9i8(<9 x i8> %va, <9 x i8> %vb, <9 x i1> %m, i32 %evl)
+  ret <9 x i8> %v
+}
+
 declare <16 x i8> @llvm.vp.xor.v16i8(<16 x i8>, <16 x i8>, <16 x i1>, i32)
 
 define <16 x i8> @vxor_vv_v16i8(<16 x i8> %va, <16 x i8> %b, <16 x i1> %m, i32 zeroext %evl) {

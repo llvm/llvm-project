@@ -1636,6 +1636,18 @@ define <vscale x 4 x i64> @vsrl_vi_nxv4i64_unmasked(<vscale x 4 x i64> %va, i32 
   ret <vscale x 4 x i64> %v
 }
 
+declare <vscale x 5 x i64> @llvm.vp.lshr.nxv5i64(<vscale x 5 x i64>, <vscale x 5 x i64>, <vscale x 5 x i1>, i32)
+
+define <vscale x 5 x i64> @vsrl_vv_nxv5i64(<vscale x 5 x i64> %va, <vscale x 5 x i64> %b, <vscale x 5 x i1> %m, i32 zeroext %evl) {
+; CHECK-LABEL: vsrl_vv_nxv5i64:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    vsetvli zero, a0, e64, m8, ta, mu
+; CHECK-NEXT:    vsrl.vv v8, v8, v16, v0.t
+; CHECK-NEXT:    ret
+  %v = call <vscale x 5 x i64> @llvm.vp.lshr.nxv5i64(<vscale x 5 x i64> %va, <vscale x 5 x i64> %b, <vscale x 5 x i1> %m, i32 %evl)
+  ret <vscale x 5 x i64> %v
+}
+
 declare <vscale x 8 x i64> @llvm.vp.lshr.nxv8i64(<vscale x 8 x i64>, <vscale x 8 x i64>, <vscale x 8 x i1>, i32)
 
 define <vscale x 8 x i64> @vsrl_vv_nxv8i64(<vscale x 8 x i64> %va, <vscale x 8 x i64> %b, <vscale x 8 x i1> %m, i32 zeroext %evl) {

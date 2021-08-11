@@ -760,6 +760,18 @@ define <vscale x 4 x double> @vfmul_vf_nxv4f64_unmasked(<vscale x 4 x double> %v
   ret <vscale x 4 x double> %v
 }
 
+declare <vscale x 7 x double> @llvm.vp.fmul.nxv7f64(<vscale x 7 x double>, <vscale x 7 x double>, <vscale x 7 x i1>, i32)
+
+define <vscale x 7 x double> @vfmul_vv_nxv7f64(<vscale x 7 x double> %va, <vscale x 7 x double> %b, <vscale x 7 x i1> %m, i32 zeroext %evl) {
+; CHECK-LABEL: vfmul_vv_nxv7f64:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    vsetvli zero, a0, e64, m8, ta, mu
+; CHECK-NEXT:    vfmul.vv v8, v8, v16, v0.t
+; CHECK-NEXT:    ret
+  %v = call <vscale x 7 x double> @llvm.vp.fmul.nxv7f64(<vscale x 7 x double> %va, <vscale x 7 x double> %b, <vscale x 7 x i1> %m, i32 %evl)
+  ret <vscale x 7 x double> %v
+}
+
 declare <vscale x 8 x double> @llvm.vp.fmul.nxv8f64(<vscale x 8 x double>, <vscale x 8 x double>, <vscale x 8 x i1>, i32)
 
 define <vscale x 8 x double> @vfmul_vv_nxv8f64(<vscale x 8 x double> %va, <vscale x 8 x double> %b, <vscale x 8 x i1> %m, i32 zeroext %evl) {
