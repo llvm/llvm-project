@@ -3274,3 +3274,48 @@ void FlatAffineConstraints::removeIndependentConstraints(unsigned pos,
   for (auto nbIndex : llvm::reverse(nbEqIndices))
     removeEquality(nbIndex);
 }
+
+AffineMap mlir::alignAffineMapWithValues(AffineMap map, ValueRange operands,
+                                         ValueRange dims, ValueRange syms,
+                                         SmallVector<Value> *newSyms) {
+  assert(operands.size() == map.getNumInputs() &&
+         "expected same number of operands and map inputs");
+  MLIRContext *ctx = map.getContext();
+  Builder builder(ctx);
+  SmallVector<AffineExpr> dimReplacements(map.getNumDims(), {});
+  unsigned numSymbols = syms.size();
+  SmallVector<AffineExpr> symReplacements(map.getNumSymbols(), {});
+  if (newSyms) {
+    newSyms->clear();
+    newSyms->append(syms.begin(), syms.end());
+  }
+
+  for (auto operand : llvm::enumerate(operands)) {
+    // Compute replacement dim/sym of operand.
+    AffineExpr replacement;
+    auto dimIt = std::find(dims.begin(), dims.end(), operand.value());
+    auto symIt = std::find(syms.begin(), syms.end(), operand.value());
+    if (dimIt != dims.end()) {
+      replacement =
+          builder.getAffineDimExpr(std::distance(dims.begin(), dimIt));
+    } else if (symIt != syms.end()) {
+      replacement =
+          builder.getAffineSymbolExpr(std::distance(syms.begin(), symIt));
+    } else {
+      // This operand is neither a dimension nor a symbol. Add it as a new
+      // symbol.
+      replacement = builder.getAffineSymbolExpr(numSymbols++);
+      if (newSyms)
+        newSyms->push_back(operand.value());
+    }
+    // Add to corresponding replacements vector.
+    if (operand.index() < map.getNumDims()) {
+      dimReplacements[operand.index()] = replacement;
+    } else {
+      symReplacements[operand.index() - map.getNumDims()] = replacement;
+    }
+  }
+
+  return map.replaceDimsAndSymbols(dimReplacements, symReplacements,
+                                   dims.size(), numSymbols);
+}

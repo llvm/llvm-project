@@ -694,6 +694,31 @@ getFlattenedAffineExprs(IntegerSet set,
                         std::vector<SmallVector<int64_t, 8>> *flattenedExprs,
                         FlatAffineConstraints *cst = nullptr);
 
+/// Re-indexes the dimensions and symbols of an affine map with given `operands`
+/// values to align with `dims` and `syms` values.
+///
+/// Each dimension/symbol of the map, bound to an operand `o`, is replaced with
+/// dimension `i`, where `i` is the position of `o` within `dims`. If `o` is not
+/// in `dims`, replace it with symbol `i`, where `i` is the position of `o`
+/// within `syms`. If `o` is not in `syms` either, replace it with a new symbol.
+///
+/// Note: If a value appears multiple times as a dimension/symbol (or both), all
+/// corresponding dim/sym expressions are replaced with the first dimension
+/// bound to that value (or first symbol if no such dimension exists).
+///
+/// The resulting affine map has `dims.size()` many dimensions and at least
+/// `syms.size()` many symbols.
+///
+/// The SSA values of the symbols of the resulting map are optionally returned
+/// via `newSyms`. This is a concatenation of `syms` with the SSA values of the
+/// newly added symbols.
+///
+/// Note: As part of this re-indexing, dimensions may turn into symbols, or vice
+/// versa.
+AffineMap alignAffineMapWithValues(AffineMap map, ValueRange operands,
+                                   ValueRange dims, ValueRange syms,
+                                   SmallVector<Value> *newSyms = nullptr);
+
 } // end namespace mlir.
 
 #endif // MLIR_ANALYSIS_AFFINESTRUCTURES_H
