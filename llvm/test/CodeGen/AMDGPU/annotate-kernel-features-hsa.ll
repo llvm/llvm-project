@@ -515,15 +515,15 @@ attributes #1 = { nounwind }
 ; AKF_HSA: attributes #[[ATTR12]] = { nounwind "amdgpu-stack-objects" }
 ;.
 ; ATTRIBUTOR_HSA: attributes #[[ATTR0:[0-9]+]] = { nounwind readnone speculatable willreturn }
-; ATTRIBUTOR_HSA: attributes #[[ATTR1]] = { nounwind "uniform-work-group-size"="false" }
-; ATTRIBUTOR_HSA: attributes #[[ATTR2]] = { nounwind "amdgpu-work-group-id-y" "uniform-work-group-size"="false" }
-; ATTRIBUTOR_HSA: attributes #[[ATTR3]] = { nounwind "amdgpu-work-group-id-z" "uniform-work-group-size"="false" }
-; ATTRIBUTOR_HSA: attributes #[[ATTR4]] = { nounwind "amdgpu-work-group-id-y" "amdgpu-work-group-id-z" "uniform-work-group-size"="false" }
-; ATTRIBUTOR_HSA: attributes #[[ATTR5]] = { nounwind "amdgpu-work-item-id-y" "uniform-work-group-size"="false" }
-; ATTRIBUTOR_HSA: attributes #[[ATTR6]] = { nounwind "amdgpu-work-item-id-z" "uniform-work-group-size"="false" }
-; ATTRIBUTOR_HSA: attributes #[[ATTR7]] = { nounwind "amdgpu-work-group-id-y" "amdgpu-work-item-id-y" "uniform-work-group-size"="false" }
-; ATTRIBUTOR_HSA: attributes #[[ATTR8]] = { nounwind "amdgpu-work-item-id-y" "amdgpu-work-item-id-z" "uniform-work-group-size"="false" }
-; ATTRIBUTOR_HSA: attributes #[[ATTR9]] = { nounwind "amdgpu-work-group-id-y" "amdgpu-work-group-id-z" "amdgpu-work-item-id-y" "amdgpu-work-item-id-z" "uniform-work-group-size"="false" }
-; ATTRIBUTOR_HSA: attributes #[[ATTR10]] = { nounwind "amdgpu-dispatch-ptr" "uniform-work-group-size"="false" }
-; ATTRIBUTOR_HSA: attributes #[[ATTR11]] = { nounwind "amdgpu-queue-ptr" "uniform-work-group-size"="false" }
+; ATTRIBUTOR_HSA: attributes #[[ATTR1]] = { nounwind "amdgpu-no-dispatch-id" "amdgpu-no-dispatch-ptr" "amdgpu-no-implicitarg-ptr" "amdgpu-no-queue-ptr" "amdgpu-no-workgroup-id-x" "amdgpu-no-workgroup-id-y" "amdgpu-no-workgroup-id-z" "amdgpu-no-workitem-id-x" "amdgpu-no-workitem-id-y" "amdgpu-no-workitem-id-z" "uniform-work-group-size"="false" }
+; ATTRIBUTOR_HSA: attributes #[[ATTR2]] = { nounwind "amdgpu-no-dispatch-id" "amdgpu-no-dispatch-ptr" "amdgpu-no-implicitarg-ptr" "amdgpu-no-queue-ptr" "amdgpu-no-workgroup-id-x" "amdgpu-no-workgroup-id-z" "amdgpu-no-workitem-id-x" "amdgpu-no-workitem-id-y" "amdgpu-no-workitem-id-z" "uniform-work-group-size"="false" }
+; ATTRIBUTOR_HSA: attributes #[[ATTR3]] = { nounwind "amdgpu-no-dispatch-id" "amdgpu-no-dispatch-ptr" "amdgpu-no-implicitarg-ptr" "amdgpu-no-queue-ptr" "amdgpu-no-workgroup-id-x" "amdgpu-no-workgroup-id-y" "amdgpu-no-workitem-id-x" "amdgpu-no-workitem-id-y" "amdgpu-no-workitem-id-z" "uniform-work-group-size"="false" }
+; ATTRIBUTOR_HSA: attributes #[[ATTR4]] = { nounwind "amdgpu-no-dispatch-id" "amdgpu-no-dispatch-ptr" "amdgpu-no-implicitarg-ptr" "amdgpu-no-queue-ptr" "amdgpu-no-workgroup-id-x" "amdgpu-no-workitem-id-x" "amdgpu-no-workitem-id-y" "amdgpu-no-workitem-id-z" "uniform-work-group-size"="false" }
+; ATTRIBUTOR_HSA: attributes #[[ATTR5]] = { nounwind "amdgpu-no-dispatch-id" "amdgpu-no-dispatch-ptr" "amdgpu-no-implicitarg-ptr" "amdgpu-no-queue-ptr" "amdgpu-no-workgroup-id-x" "amdgpu-no-workgroup-id-y" "amdgpu-no-workgroup-id-z" "amdgpu-no-workitem-id-x" "amdgpu-no-workitem-id-z" "uniform-work-group-size"="false" }
+; ATTRIBUTOR_HSA: attributes #[[ATTR6]] = { nounwind "amdgpu-no-dispatch-id" "amdgpu-no-dispatch-ptr" "amdgpu-no-implicitarg-ptr" "amdgpu-no-queue-ptr" "amdgpu-no-workgroup-id-x" "amdgpu-no-workgroup-id-y" "amdgpu-no-workgroup-id-z" "amdgpu-no-workitem-id-x" "amdgpu-no-workitem-id-y" "uniform-work-group-size"="false" }
+; ATTRIBUTOR_HSA: attributes #[[ATTR7]] = { nounwind "amdgpu-no-dispatch-id" "amdgpu-no-dispatch-ptr" "amdgpu-no-implicitarg-ptr" "amdgpu-no-queue-ptr" "amdgpu-no-workgroup-id-x" "amdgpu-no-workgroup-id-z" "amdgpu-no-workitem-id-x" "amdgpu-no-workitem-id-z" "uniform-work-group-size"="false" }
+; ATTRIBUTOR_HSA: attributes #[[ATTR8]] = { nounwind "amdgpu-no-dispatch-id" "amdgpu-no-dispatch-ptr" "amdgpu-no-implicitarg-ptr" "amdgpu-no-queue-ptr" "amdgpu-no-workgroup-id-x" "amdgpu-no-workgroup-id-y" "amdgpu-no-workgroup-id-z" "amdgpu-no-workitem-id-x" "uniform-work-group-size"="false" }
+; ATTRIBUTOR_HSA: attributes #[[ATTR9]] = { nounwind "amdgpu-no-dispatch-id" "amdgpu-no-dispatch-ptr" "amdgpu-no-implicitarg-ptr" "amdgpu-no-queue-ptr" "amdgpu-no-workgroup-id-x" "amdgpu-no-workitem-id-x" "uniform-work-group-size"="false" }
+; ATTRIBUTOR_HSA: attributes #[[ATTR10]] = { nounwind "amdgpu-no-dispatch-id" "amdgpu-no-implicitarg-ptr" "amdgpu-no-queue-ptr" "amdgpu-no-workgroup-id-x" "amdgpu-no-workgroup-id-y" "amdgpu-no-workgroup-id-z" "amdgpu-no-workitem-id-x" "amdgpu-no-workitem-id-y" "amdgpu-no-workitem-id-z" "uniform-work-group-size"="false" }
+; ATTRIBUTOR_HSA: attributes #[[ATTR11]] = { nounwind "amdgpu-no-dispatch-id" "amdgpu-no-dispatch-ptr" "amdgpu-no-implicitarg-ptr" "amdgpu-no-workgroup-id-x" "amdgpu-no-workgroup-id-y" "amdgpu-no-workgroup-id-z" "amdgpu-no-workitem-id-x" "amdgpu-no-workitem-id-y" "amdgpu-no-workitem-id-z" "uniform-work-group-size"="false" }
 ;.

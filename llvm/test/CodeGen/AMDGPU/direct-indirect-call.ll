@@ -11,21 +11,13 @@ define internal void @indirect() {
 }
 
 define internal void @direct() {
-; AKF_GCN-LABEL: define {{[^@]+}}@direct
-; AKF_GCN-SAME: () #[[ATTR1:[0-9]+]] {
-; AKF_GCN-NEXT:    [[FPTR:%.*]] = alloca void ()*, align 8
-; AKF_GCN-NEXT:    store void ()* @indirect, void ()** [[FPTR]], align 8
-; AKF_GCN-NEXT:    [[FP:%.*]] = load void ()*, void ()** [[FPTR]], align 8
-; AKF_GCN-NEXT:    call void [[FP]]()
-; AKF_GCN-NEXT:    ret void
-;
-; ATTRIBUTOR_GCN-LABEL: define {{[^@]+}}@direct
-; ATTRIBUTOR_GCN-SAME: () #[[ATTR0]] {
-; ATTRIBUTOR_GCN-NEXT:    [[FPTR:%.*]] = alloca void ()*, align 8
-; ATTRIBUTOR_GCN-NEXT:    store void ()* @indirect, void ()** [[FPTR]], align 8
-; ATTRIBUTOR_GCN-NEXT:    [[FP:%.*]] = load void ()*, void ()** [[FPTR]], align 8
-; ATTRIBUTOR_GCN-NEXT:    call void [[FP]]()
-; ATTRIBUTOR_GCN-NEXT:    ret void
+; GCN-LABEL: define {{[^@]+}}@direct
+; GCN-SAME: () #[[ATTR1:[0-9]+]] {
+; GCN-NEXT:    [[FPTR:%.*]] = alloca void ()*, align 8
+; GCN-NEXT:    store void ()* @indirect, void ()** [[FPTR]], align 8
+; GCN-NEXT:    [[FP:%.*]] = load void ()*, void ()** [[FPTR]], align 8
+; GCN-NEXT:    call void [[FP]]()
+; GCN-NEXT:    ret void
 ;
   %fptr = alloca void()*
   store void()* @indirect, void()** %fptr
@@ -41,7 +33,7 @@ define amdgpu_kernel void @test_direct_indirect_call() {
 ; AKF_GCN-NEXT:    ret void
 ;
 ; ATTRIBUTOR_GCN-LABEL: define {{[^@]+}}@test_direct_indirect_call
-; ATTRIBUTOR_GCN-SAME: () #[[ATTR0]] {
+; ATTRIBUTOR_GCN-SAME: () #[[ATTR1]] {
 ; ATTRIBUTOR_GCN-NEXT:    call void @direct()
 ; ATTRIBUTOR_GCN-NEXT:    ret void
 ;
@@ -53,5 +45,6 @@ define amdgpu_kernel void @test_direct_indirect_call() {
 ; AKF_GCN: attributes #[[ATTR1]] = { "amdgpu-dispatch-id" "amdgpu-dispatch-ptr" "amdgpu-implicitarg-ptr" "amdgpu-queue-ptr" "amdgpu-stack-objects" "amdgpu-work-group-id-x" "amdgpu-work-group-id-y" "amdgpu-work-group-id-z" "amdgpu-work-item-id-x" "amdgpu-work-item-id-y" "amdgpu-work-item-id-z" "uniform-work-group-size"="false" }
 ; AKF_GCN: attributes #[[ATTR2]] = { "amdgpu-calls" "amdgpu-dispatch-id" "amdgpu-dispatch-ptr" "amdgpu-implicitarg-ptr" "amdgpu-queue-ptr" "amdgpu-work-group-id-x" "amdgpu-work-group-id-y" "amdgpu-work-group-id-z" "amdgpu-work-item-id-x" "amdgpu-work-item-id-y" "amdgpu-work-item-id-z" "uniform-work-group-size"="false" }
 ;.
-; ATTRIBUTOR_GCN: attributes #[[ATTR0]] = { "amdgpu-dispatch-id" "amdgpu-dispatch-ptr" "amdgpu-implicitarg-ptr" "amdgpu-queue-ptr" "amdgpu-work-group-id-x" "amdgpu-work-group-id-y" "amdgpu-work-group-id-z" "amdgpu-work-item-id-x" "amdgpu-work-item-id-y" "amdgpu-work-item-id-z" "uniform-work-group-size"="false" }
+; ATTRIBUTOR_GCN: attributes #[[ATTR0]] = { "amdgpu-no-dispatch-id" "amdgpu-no-dispatch-ptr" "amdgpu-no-implicitarg-ptr" "amdgpu-no-queue-ptr" "amdgpu-no-workgroup-id-x" "amdgpu-no-workgroup-id-y" "amdgpu-no-workgroup-id-z" "amdgpu-no-workitem-id-x" "amdgpu-no-workitem-id-y" "amdgpu-no-workitem-id-z" "uniform-work-group-size"="false" }
+; ATTRIBUTOR_GCN: attributes #[[ATTR1]] = { "uniform-work-group-size"="false" }
 ;.

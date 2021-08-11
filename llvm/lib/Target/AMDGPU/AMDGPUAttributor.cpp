@@ -22,46 +22,71 @@
 
 using namespace llvm;
 
-static constexpr StringLiteral ImplicitAttrNames[] = {
-    // X ids unnecessarily propagated to kernels.
-    "amdgpu-work-item-id-x",  "amdgpu-work-item-id-y",
-    "amdgpu-work-item-id-z",  "amdgpu-work-group-id-x",
-    "amdgpu-work-group-id-y", "amdgpu-work-group-id-z",
-    "amdgpu-dispatch-ptr",    "amdgpu-dispatch-id",
-    "amdgpu-queue-ptr",       "amdgpu-implicitarg-ptr"};
+enum ImplicitArgumentMask {
+  NOT_IMPLICIT_INPUT = 0,
+
+  // SGPRs
+  DISPATCH_PTR = 1 << 0,
+  QUEUE_PTR = 1 << 1,
+  DISPATCH_ID = 1 << 2,
+  IMPLICIT_ARG_PTR = 1 << 3,
+  WORKGROUP_ID_X = 1 << 4,
+  WORKGROUP_ID_Y = 1 << 5,
+  WORKGROUP_ID_Z = 1 << 6,
+
+  // VGPRS:
+  WORKITEM_ID_X = 1 << 7,
+  WORKITEM_ID_Y = 1 << 8,
+  WORKITEM_ID_Z = 1 << 9,
+  ALL_ARGUMENT_MASK = (1 << 10) - 1
+};
+
+static constexpr std::pair<ImplicitArgumentMask,
+                           StringLiteral> ImplicitAttrs[] = {
+  {DISPATCH_PTR, "amdgpu-no-dispatch-ptr"},
+  {QUEUE_PTR, "amdgpu-no-queue-ptr"},
+  {DISPATCH_ID, "amdgpu-no-dispatch-id"},
+  {IMPLICIT_ARG_PTR, "amdgpu-no-implicitarg-ptr"},
+  {WORKGROUP_ID_X, "amdgpu-no-workgroup-id-x"},
+  {WORKGROUP_ID_Y, "amdgpu-no-workgroup-id-y"},
+  {WORKGROUP_ID_Z, "amdgpu-no-workgroup-id-z"},
+  {WORKITEM_ID_X, "amdgpu-no-workitem-id-x"},
+  {WORKITEM_ID_Y, "amdgpu-no-workitem-id-y"},
+  {WORKITEM_ID_Z, "amdgpu-no-workitem-id-z"}
+};
 
 // We do not need to note the x workitem or workgroup id because they are always
 // initialized.
 //
 // TODO: We should not add the attributes if the known compile time workgroup
 // size is 1 for y/z.
-static StringRef intrinsicToAttrName(Intrinsic::ID ID, bool &NonKernelOnly,
-                                     bool &IsQueuePtr) {
+static ImplicitArgumentMask
+intrinsicToAttrMask(Intrinsic::ID ID, bool &NonKernelOnly, bool &IsQueuePtr) {
   switch (ID) {
   case Intrinsic::amdgcn_workitem_id_x:
     NonKernelOnly = true;
-    return "amdgpu-work-item-id-x";
+    return WORKITEM_ID_X;
   case Intrinsic::amdgcn_workgroup_id_x:
     NonKernelOnly = true;
-    return "amdgpu-work-group-id-x";
+    return WORKGROUP_ID_X;
   case Intrinsic::amdgcn_workitem_id_y:
   case Intrinsic::r600_read_tidig_y:
-    return "amdgpu-work-item-id-y";
+    return WORKITEM_ID_Y;
   case Intrinsic::amdgcn_workitem_id_z:
   case Intrinsic::r600_read_tidig_z:
-    return "amdgpu-work-item-id-z";
+    return WORKITEM_ID_Z;
   case Intrinsic::amdgcn_workgroup_id_y:
   case Intrinsic::r600_read_tgid_y:
-    return "amdgpu-work-group-id-y";
+    return WORKGROUP_ID_Y;
   case Intrinsic::amdgcn_workgroup_id_z:
   case Intrinsic::r600_read_tgid_z:
-    return "amdgpu-work-group-id-z";
+    return WORKGROUP_ID_Z;
   case Intrinsic::amdgcn_dispatch_ptr:
-    return "amdgpu-dispatch-ptr";
+    return DISPATCH_PTR;
   case Intrinsic::amdgcn_dispatch_id:
-    return "amdgpu-dispatch-id";
+    return DISPATCH_ID;
   case Intrinsic::amdgcn_implicitarg_ptr:
-    return "amdgpu-implicitarg-ptr";
+    return IMPLICIT_ARG_PTR;
   case Intrinsic::amdgcn_queue_ptr:
   case Intrinsic::amdgcn_is_shared:
   case Intrinsic::amdgcn_is_private:
@@ -69,9 +94,9 @@ static StringRef intrinsicToAttrName(Intrinsic::ID ID, bool &NonKernelOnly,
   case Intrinsic::trap:
   case Intrinsic::debugtrap:
     IsQueuePtr = true;
-    return "amdgpu-queue-ptr";
+    return QUEUE_PTR;
   default:
-    return "";
+    return NOT_IMPLICIT_INPUT;
   }
 }
 
@@ -161,8 +186,11 @@ private:
   DenseMap<const Constant *, uint8_t> ConstantStatus;
 };
 
-struct AAAMDAttributes : public StateWrapper<BooleanState, AbstractAttribute> {
-  using Base = StateWrapper<BooleanState, AbstractAttribute>;
+struct AAAMDAttributes : public StateWrapper<
+  BitIntegerState<uint16_t, ALL_ARGUMENT_MASK, 0>, AbstractAttribute> {
+  using Base = StateWrapper<BitIntegerState<uint16_t, ALL_ARGUMENT_MASK, 0>,
+                            AbstractAttribute>;
+
   AAAMDAttributes(const IRPosition &IRP, Attributor &A) : Base(IRP) {}
 
   /// Create an abstract attribute view for the position \p IRP.
@@ -180,8 +208,6 @@ struct AAAMDAttributes : public StateWrapper<BooleanState, AbstractAttribute> {
   static bool classof(const AbstractAttribute *AA) {
     return (AA->getIdAddr() == &ID);
   }
-
-  virtual const DenseSet<StringRef> &getAttributes() const = 0;
 
   /// Unique ID (due to the unique address)
   static const char ID;
@@ -297,8 +323,13 @@ struct AAAMDAttributesFunction : public AAAMDAttributes {
 
   void initialize(Attributor &A) override {
     Function *F = getAssociatedFunction();
-    CallingConv::ID CC = F->getCallingConv();
-    bool CallingConvSupportsAllImplicits = (CC != CallingConv::AMDGPU_Gfx);
+    for (auto Attr : ImplicitAttrs) {
+      if (F->hasFnAttribute(Attr.second))
+        addKnownBits(Attr.first);
+    }
+
+    if (F->isDeclaration())
+      return;
 
     // Ignore functions with graphics calling conventions, these are currently
     // not allowed to have kernel arguments.
@@ -306,73 +337,47 @@ struct AAAMDAttributesFunction : public AAAMDAttributes {
       indicatePessimisticFixpoint();
       return;
     }
-
-    for (StringRef Attr : ImplicitAttrNames) {
-      if (F->hasFnAttribute(Attr))
-        Attributes.insert(Attr);
-    }
-
-    // TODO: We shouldn't need this in the future.
-    if (CallingConvSupportsAllImplicits &&
-        F->hasAddressTaken(nullptr, true, true, true)) {
-      for (StringRef AttrName : ImplicitAttrNames) {
-        Attributes.insert(AttrName);
-      }
-    }
   }
 
   ChangeStatus updateImpl(Attributor &A) override {
     Function *F = getAssociatedFunction();
-    ChangeStatus Change = ChangeStatus::UNCHANGED;
-    bool IsNonEntryFunc = !AMDGPU::isEntryFunctionCC(F->getCallingConv());
-    CallingConv::ID CC = F->getCallingConv();
-    bool CallingConvSupportsAllImplicits = (CC != CallingConv::AMDGPU_Gfx);
-    auto &InfoCache = static_cast<AMDGPUInformationCache &>(A.getInfoCache());
-
-    auto AddAttribute = [&](StringRef AttrName) {
-      if (Attributes.insert(AttrName).second)
-        Change = ChangeStatus::CHANGED;
-    };
+    // The current assumed state used to determine a change.
+    auto OrigAssumed = getAssumed();
 
     // Check for Intrinsics and propagate attributes.
     const AACallEdges &AAEdges = A.getAAFor<AACallEdges>(
         *this, this->getIRPosition(), DepClassTy::REQUIRED);
+    if (AAEdges.hasNonAsmUnknownCallee())
+      return indicatePessimisticFixpoint();
 
-    // We have to assume that we can reach a function with these attributes.
-    // We do not consider inline assembly as a unknown callee.
-    if (CallingConvSupportsAllImplicits && AAEdges.hasNonAsmUnknownCallee()) {
-      for (StringRef AttrName : ImplicitAttrNames) {
-        AddAttribute(AttrName);
-      }
-    }
+    bool IsNonEntryFunc = !AMDGPU::isEntryFunctionCC(F->getCallingConv());
+    auto &InfoCache = static_cast<AMDGPUInformationCache &>(A.getInfoCache());
 
     bool NeedsQueuePtr = false;
+
     for (Function *Callee : AAEdges.getOptimisticEdges()) {
       Intrinsic::ID IID = Callee->getIntrinsicID();
-      if (IID != Intrinsic::not_intrinsic) {
-        bool NonKernelOnly = false;
-        StringRef AttrName =
-            intrinsicToAttrName(IID, NonKernelOnly, NeedsQueuePtr);
-
-        if (!AttrName.empty() && (IsNonEntryFunc || !NonKernelOnly))
-          AddAttribute(AttrName);
-
+      if (IID == Intrinsic::not_intrinsic) {
+        const AAAMDAttributes &AAAMD = A.getAAFor<AAAMDAttributes>(
+          *this, IRPosition::function(*Callee), DepClassTy::REQUIRED);
+        *this &= AAAMD;
         continue;
       }
 
-      const AAAMDAttributes &AAAMD = A.getAAFor<AAAMDAttributes>(
-          *this, IRPosition::function(*Callee), DepClassTy::REQUIRED);
-      const DenseSet<StringRef> &CalleeAttributes = AAAMD.getAttributes();
-      // Propagate implicit attributes from called function.
-      for (StringRef AttrName : ImplicitAttrNames)
-        if (CalleeAttributes.count(AttrName))
-          AddAttribute(AttrName);
+      bool NonKernelOnly = false;
+      ImplicitArgumentMask AttrMask =
+          intrinsicToAttrMask(IID, NonKernelOnly, NeedsQueuePtr);
+      if (AttrMask != NOT_IMPLICIT_INPUT) {
+        if ((IsNonEntryFunc || !NonKernelOnly))
+          removeAssumedBits(AttrMask);
+      }
     }
 
     // If we found that we need amdgpu-queue-ptr, nothing else to do.
-    if (NeedsQueuePtr || Attributes.count("amdgpu-queue-ptr")) {
-      AddAttribute("amdgpu-queue-ptr");
-      return Change;
+    if (NeedsQueuePtr) {
+      removeAssumedBits(QUEUE_PTR);
+      return getAssumed() != OrigAssumed ? ChangeStatus::CHANGED :
+                                           ChangeStatus::UNCHANGED;
     }
 
     auto CheckAddrSpaceCasts = [&](Instruction &I) {
@@ -399,53 +404,59 @@ struct AAAMDAttributesFunction : public AAAMDAttributes {
 
     // If we found  that we need amdgpu-queue-ptr, nothing else to do.
     if (NeedsQueuePtr) {
-      AddAttribute("amdgpu-queue-ptr");
-      return Change;
+      removeAssumedBits(QUEUE_PTR);
+      return getAssumed() != OrigAssumed ? ChangeStatus::CHANGED :
+                                           ChangeStatus::UNCHANGED;
     }
 
-    if (!IsNonEntryFunc && HasApertureRegs)
-      return Change;
+    if (!IsNonEntryFunc && HasApertureRegs) {
+      return getAssumed() != OrigAssumed ? ChangeStatus::CHANGED :
+                                           ChangeStatus::UNCHANGED;
+    }
 
     for (BasicBlock &BB : *F) {
       for (Instruction &I : BB) {
         for (const Use &U : I.operands()) {
           if (const auto *C = dyn_cast<Constant>(U)) {
             if (InfoCache.needsQueuePtr(C, *F)) {
-              AddAttribute("amdgpu-queue-ptr");
-              return Change;
+              removeAssumedBits(QUEUE_PTR);
+              return getAssumed() != OrigAssumed ? ChangeStatus::CHANGED :
+                                                   ChangeStatus::UNCHANGED;
             }
           }
         }
       }
     }
 
-    return Change;
+    return getAssumed() != OrigAssumed ? ChangeStatus::CHANGED :
+                                         ChangeStatus::UNCHANGED;
   }
 
   ChangeStatus manifest(Attributor &A) override {
     SmallVector<Attribute, 8> AttrList;
     LLVMContext &Ctx = getAssociatedFunction()->getContext();
 
-    for (StringRef AttrName : Attributes)
-      AttrList.push_back(Attribute::get(Ctx, AttrName));
+    for (auto Attr : ImplicitAttrs) {
+      if (isKnown(Attr.first))
+        AttrList.push_back(Attribute::get(Ctx, Attr.second));
+    }
 
     return IRAttributeManifest::manifestAttrs(A, getIRPosition(), AttrList,
                                               /* ForceReplace */ true);
   }
 
   const std::string getAsStr() const override {
-    return "AMDInfo[" + std::to_string(Attributes.size()) + "]";
-  }
-
-  const DenseSet<StringRef> &getAttributes() const override {
-    return Attributes;
+    std::string Str;
+    raw_string_ostream OS(Str);
+    OS << "AMDInfo[";
+    for (auto Attr : ImplicitAttrs)
+      OS << ' ' << Attr.second;
+    OS << " ]";
+    return OS.str();
   }
 
   /// See AbstractAttribute::trackStatistics()
   void trackStatistics() const override {}
-
-private:
-  DenseSet<StringRef> Attributes;
 };
 
 AAAMDAttributes &AAAMDAttributes::createForPosition(const IRPosition &IRP,
