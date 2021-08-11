@@ -39,14 +39,6 @@ struct _Unwind_Exception {
   // alignment for the target"; so do we.
 } __attribute__((__aligned__));
 
-typedef _Unwind_Reason_Code (*_Unwind_Stop_Fn)
-    (int version,
-     _Unwind_Action actions,
-     uint64_t exceptionClass,
-     _Unwind_Exception* exceptionObject,
-     struct _Unwind_Context* context,
-     void* stop_parameter );
-
 typedef _Unwind_Reason_Code (*_Unwind_Personality_Fn)(
     int version, _Unwind_Action actions, uint64_t exceptionClass,
     _Unwind_Exception *exceptionObject, struct _Unwind_Context *context);

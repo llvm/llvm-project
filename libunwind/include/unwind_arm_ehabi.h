@@ -26,7 +26,7 @@ typedef uint32_t _Unwind_EHT_Header;
 
 struct _Unwind_Control_Block;
 typedef struct _Unwind_Control_Block _Unwind_Control_Block;
-typedef struct _Unwind_Control_Block _Unwind_Exception; /* Alias */
+#define _Unwind_Exception _Unwind_Control_Block /* Alias */
 
 struct _Unwind_Control_Block {
   uint64_t exception_class;
@@ -62,11 +62,6 @@ struct _Unwind_Control_Block {
 
   long long int :0; /* Enforce the 8-byte alignment */
 } __attribute__((__aligned__(8)));
-
-typedef _Unwind_Reason_Code (*_Unwind_Stop_Fn)
-      (_Unwind_State state,
-       _Unwind_Exception* exceptionObject,
-       struct _Unwind_Context* context);
 
 typedef _Unwind_Reason_Code (*_Unwind_Personality_Fn)(
     _Unwind_State state, _Unwind_Exception *exceptionObject,
