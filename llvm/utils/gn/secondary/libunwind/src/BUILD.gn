@@ -21,6 +21,8 @@ if (current_os == "mac") {
 }
 
 unwind_sources = [
+  "../include/unwind_arm_ehabi.h",
+  "../include/unwind_itanium.h",
   "AddressSpace.hpp",
   "CompactUnwinder.hpp",
   "DwarfInstructions.hpp",
