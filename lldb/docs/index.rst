@@ -159,7 +159,6 @@ interesting areas to contribute to lldb.
 
    design/overview
    design/reproducers
-   design/structureddataplugins
    design/sbapi
 
 .. toctree::

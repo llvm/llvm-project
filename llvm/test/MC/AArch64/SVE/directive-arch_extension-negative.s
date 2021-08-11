@@ -3,5 +3,5 @@
 .arch_extension nosve
 
 ptrue   p0.b, pow2
-// CHECK: error: instruction requires: sve
+// CHECK: error: instruction requires: streaming-sve or sve
 // CHECK-NEXT: ptrue   p0.b, pow2

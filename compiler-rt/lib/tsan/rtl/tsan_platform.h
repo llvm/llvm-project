@@ -648,8 +648,7 @@ ALWAYS_INLINE auto SelectMapping(Arg arg) {
   return Func::template Apply<MappingGo48>(arg);
 #  endif
 #else  // SANITIZER_GO
-#  if defined(__x86_64__) || defined(SANITIZER_IOSSIM) || \
-      SANITIZER_MAC && !SANITIZER_IOS
+#  if defined(__x86_64__) || SANITIZER_IOSSIM || SANITIZER_MAC && !SANITIZER_IOS
   return Func::template Apply<Mapping48AddressSpace>(arg);
 #  elif defined(__aarch64__) && defined(__APPLE__)
   return Func::template Apply<MappingAppleAarch64>(arg);
@@ -923,7 +922,7 @@ struct RestoreAddrImpl {
           return addr | (p & ~(ind_lsb - 1));
       }
     }
-    Printf("ThreadSanitizer: failed to restore address %p\n", addr);
+    Printf("ThreadSanitizer: failed to restore address 0x%zx\n", addr);
     Die();
   }
 };

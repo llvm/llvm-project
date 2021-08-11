@@ -1109,7 +1109,14 @@ __gxx_personality_v0(_Unwind_State state,
         // Either we didn't do a phase 1 search (due to forced unwinding), or
         //  phase 1 reported no catching-handlers.
         // Search for a (non-catching) cleanup
-        scan_eh_tab(results, _UA_CLEANUP_PHASE, native_exception, unwind_exception, context);
+        if (is_force_unwinding)
+          scan_eh_tab(
+              results,
+              static_cast<_Unwind_Action>(_UA_CLEANUP_PHASE | _UA_FORCE_UNWIND),
+              native_exception, unwind_exception, context);
+        else
+          scan_eh_tab(results, _UA_CLEANUP_PHASE, native_exception,
+                      unwind_exception, context);
         if (results.reason == _URC_HANDLER_FOUND)
         {
             // Found a non-catching handler

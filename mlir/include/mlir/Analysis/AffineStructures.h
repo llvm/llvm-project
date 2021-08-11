@@ -235,6 +235,15 @@ public:
   void addAffineIfOpDomain(AffineIfOp ifOp);
 
   /// Adds a lower or an upper bound for the identifier at the specified
+  /// position with constraints being drawn from the specified bound map. If
+  /// `eq` is true, add a single equality equal to the bound map's first result
+  /// expr.
+  /// Note: The dimensions/symbols of this FlatAffineConstraints must match the
+  /// dimensions/symbols of the affine map.
+  LogicalResult addLowerOrUpperBound(unsigned pos, AffineMap boundMap, bool eq,
+                                     bool lower = true);
+
+  /// Adds a lower or an upper bound for the identifier at the specified
   /// position with constraints being drawn from the specified bound map and
   /// operands. If `eq` is true, add a single equality equal to the bound map's
   /// first result expr.
@@ -341,16 +350,15 @@ public:
   /// and with the dimensions set to the equalities specified by the value map.
   /// Returns failure if the composition fails (when vMap is a semi-affine map).
   /// The vMap's operand Value's are used to look up the right positions in
-  /// the FlatAffineConstraints with which to associate. The dimensional and
-  /// symbolic operands of vMap should match 1:1 (in the same order) with those
-  /// of this constraint system, but the latter could have additional trailing
-  /// operands.
+  /// the FlatAffineConstraints with which to associate. Every operand of vMap
+  /// should have a matching dim/symbol column in this constraint system (with
+  /// the same associated Value).
   LogicalResult composeMap(const AffineValueMap *vMap);
 
-  /// Composes an affine map whose dimensions match one to one to the
-  /// dimensions of this FlatAffineConstraints. The results of the map 'other'
-  /// are added as the leading dimensions of this constraint system. Returns
-  /// failure if 'other' is a semi-affine map.
+  /// Composes an affine map whose dimensions and symbols match one to one with
+  /// the dimensions and symbols of this FlatAffineConstraints. The results of
+  /// the map `other` are added as the leading dimensions of this constraint
+  /// system. Returns failure if `other` is a semi-affine map.
   LogicalResult composeMatchingMap(AffineMap other);
 
   /// Projects out (aka eliminates) 'num' identifiers starting at position
@@ -590,6 +598,23 @@ private:
   template <bool isLower>
   Optional<int64_t> computeConstantLowerOrUpperBound(unsigned pos);
 
+  /// Align `map` with this constraint system based on `operands`. Each operand
+  /// must already have a corresponding dim/symbol in this constraint system.
+  AffineMap computeAlignedMap(AffineMap map, ValueRange operands) const;
+
+  /// Given an affine map that is aligned with this constraint system:
+  /// * Flatten the map.
+  /// * Add newly introduced local columns at the beginning of this constraint
+  ///   system (local column pos 0).
+  /// * Add equalities that define the new local columns to this constraint
+  ///   system.
+  /// * Return the flattened expressions via `flattenedExprs`.
+  ///
+  /// Note: This is a shared helper function of `addLowerOrUpperBound` and
+  ///       `composeMatchingMap`.
+  LogicalResult flattenAlignedMapAndMergeLocals(
+      AffineMap map, std::vector<SmallVector<int64_t, 8>> *flattenedExprs);
+
   // Eliminates a single identifier at 'position' from equality and inequality
   // constraints. Returns 'success' if the identifier was eliminated, and
   // 'failure' otherwise.
@@ -693,6 +718,31 @@ LogicalResult
 getFlattenedAffineExprs(IntegerSet set,
                         std::vector<SmallVector<int64_t, 8>> *flattenedExprs,
                         FlatAffineConstraints *cst = nullptr);
+
+/// Re-indexes the dimensions and symbols of an affine map with given `operands`
+/// values to align with `dims` and `syms` values.
+///
+/// Each dimension/symbol of the map, bound to an operand `o`, is replaced with
+/// dimension `i`, where `i` is the position of `o` within `dims`. If `o` is not
+/// in `dims`, replace it with symbol `i`, where `i` is the position of `o`
+/// within `syms`. If `o` is not in `syms` either, replace it with a new symbol.
+///
+/// Note: If a value appears multiple times as a dimension/symbol (or both), all
+/// corresponding dim/sym expressions are replaced with the first dimension
+/// bound to that value (or first symbol if no such dimension exists).
+///
+/// The resulting affine map has `dims.size()` many dimensions and at least
+/// `syms.size()` many symbols.
+///
+/// The SSA values of the symbols of the resulting map are optionally returned
+/// via `newSyms`. This is a concatenation of `syms` with the SSA values of the
+/// newly added symbols.
+///
+/// Note: As part of this re-indexing, dimensions may turn into symbols, or vice
+/// versa.
+AffineMap alignAffineMapWithValues(AffineMap map, ValueRange operands,
+                                   ValueRange dims, ValueRange syms,
+                                   SmallVector<Value> *newSyms = nullptr);
 
 } // end namespace mlir.
 

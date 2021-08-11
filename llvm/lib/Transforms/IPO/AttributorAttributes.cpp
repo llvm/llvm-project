@@ -1149,19 +1149,19 @@ struct AAPointerInfoFloating : public AAPointerInfoImpl {
     return true;
   };
 
+  /// Helper struct, will support ranges eventually.
+  struct OffsetInfo {
+    int64_t Offset = AA::PointerInfo::OffsetAndSize::Unknown;
+
+    bool operator==(const OffsetInfo &OI) const { return Offset == OI.Offset; }
+  };
+
   /// See AbstractAttribute::updateImpl(...).
   ChangeStatus updateImpl(Attributor &A) override {
     using namespace AA::PointerInfo;
     State S = getState();
     ChangeStatus Changed = ChangeStatus::UNCHANGED;
     Value &AssociatedValue = getAssociatedValue();
-    struct OffsetInfo {
-      int64_t Offset = OffsetAndSize::Unknown;
-
-      bool operator==(const OffsetInfo &OI) const {
-        return Offset == OI.Offset;
-      }
-    };
 
     const DataLayout &DL = A.getDataLayout();
     DenseMap<Value *, OffsetInfo> OffsetInfoMap;
