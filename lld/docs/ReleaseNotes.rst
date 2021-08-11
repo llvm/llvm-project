@@ -66,10 +66,51 @@ MinGW Improvements
   (`D107237 <https://reviews.llvm.org/D107237>`_ and
   `D107253 <https://reviews.llvm.org/D107253>`_)
 
-MachO Improvements
-------------------
+Mach-O Improvements
+-------------------
 
-* Item 1.
+The Mach-O backend is now able to link several large, real-world programs,
+though we are still working out the kinks.
+
+* arm64 is now supported as a target. (`D88629 <https://reviews.llvm.org/D88629>`_)
+* arm64_32 is now supported as a target. (`D99822 <https://reviews.llvm.org/D99822>`_)
+* Branch-range-extension thunks are now supported. (`D100818 <https://reviews.llvm.org/D100818>`_)
+* ``-dead_strip`` is now supported. (`D103324 <https://reviews.llvm.org/D103324>`_)
+* Support for identical code folding (``--icf=all``) has been added.
+  (`D103292 <https://reviews.llvm.org/D103292>`_)
+* Support for special ``$start`` and ``$end`` symbols for segment & sections has been
+  added. (`D106767 <https://reviews.llvm.org/D106767>`_, `D106629 <https://reviews.llvm.org/D106629>`_)
+* ``$ld$previous`` symbols are now supported. (`D103505 <https://reviews.llvm.org/D103505 >`_)
+* ``$ld$install_name`` symbols are now supported. (`D103746 <https://reviews.llvm.org/D103746>`_)
+* ``__mh_*_header`` symbols are now supported. (`D97007 <https://reviews.llvm.org/D97007>`_)
+* LC_CODE_SIGNATURE is now supported. (`D96164 <https://reviews.llvm.org/D96164>`_)
+* LC_FUNCTION_STARTS is now supported. (`D97260 <https://reviews.llvm.org/D97260>`_)
+* LC_DATA_IN_CODE is now supported. (`D103006 <https://reviews.llvm.org/D103006>`_)
+* Bind opcodes are more compactly encoded. (`D106128 <https://reviews.llvm.org/D106128>`_,
+  `D105075 <https://reviews.llvm.org/D105075>`_)
+* LTO cache support has been added. (`D105922 <https://reviews.llvm.org/D105922>`_)
+* ``-application_extension`` is now supported. (`D105818 <https://reviews.llvm.org/D105818>`_)
+* ``-export_dynamic`` is now partially supported. (`D105482 <https://reviews.llvm.org/D105482>`_)
+* ``-arch_multiple`` is now supported. (`D105450 <https://reviews.llvm.org/D105450>`_)
+* ``-final_output`` is now supported. (`D105449 <https://reviews.llvm.org/D105449>`_)
+* ``-umbrella`` is now supported. (`D105448 <https://reviews.llvm.org/D105448>`_)
+* ``--print-dylib-search`` is now supported. (`D103985 <https://reviews.llvm.org/D103985>`_)
+* ``-force_load_swift_libs`` is now supported. (`D103709 <https://reviews.llvm.org/D103709>`_)
+* ``-reexport_framework``, ``-reexport_library``, ``-reexport-l`` are now supported.
+  (`D103497 <https://reviews.llvm.org/D103497>`_)
+* ``.weak_def_can_be_hidden`` is now supported. (`D101080 <https://reviews.llvm.org/D101080>`_)
+* ``-add_ast_path`` is now supported. (`D100076 <https://reviews.llvm.org/D100076>`_)
+* ``-segprot`` is now supported.  (`D99389 <https://reviews.llvm.org/D99389>`_)
+* ``-dependency_info`` is now partially supported. (`D98559 <https://reviews.llvm.org/D98559>`_)
+* ``--time-trace`` is now supported. (`D98419 <https://reviews.llvm.org/D98419>`_)
+* ``-mark_dead_strippable_dylib`` is now supported. (`D98262 <https://reviews.llvm.org/D98262>`_)
+* ``-[un]exported_symbol[s_list]`` is now supported. (`D98223 <https://reviews.llvm.org/D98223>`_)
+* ``-flat_namespace`` is now supported. (`D97641 <https://reviews.llvm.org/D97641>`_)
+* ``-rename_section`` and ``-rename_segment`` are now supported. (`D97600 <https://reviews.llvm.org/D97600>`_)
+* ``-bundle_loader`` is now supported. (`D95913 <https://reviews.llvm.org/D95913>`_)
+* ``-map`` is now partially supported. (`D98323 <https://reviews.llvm.org/D98323>`_)
+
+There were numerous other bug-fixes as well.
 
 WebAssembly Improvements
 ------------------------
