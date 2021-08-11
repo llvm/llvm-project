@@ -2241,7 +2241,7 @@ void CodeGenModule::ConstructAttributeList(StringRef Name,
   // C++ explicitly makes returning undefined values UB. C's rule only applies
   // to used values, so we never mark them noundef for now.
   bool HasStrictReturn = getLangOpts().CPlusPlus;
-  if (TargetDecl) {
+  if (TargetDecl && HasStrictReturn) {
     if (const FunctionDecl *FDecl = dyn_cast<FunctionDecl>(TargetDecl))
       HasStrictReturn &= !FDecl->isExternC();
     else if (const VarDecl *VDecl = dyn_cast<VarDecl>(TargetDecl))

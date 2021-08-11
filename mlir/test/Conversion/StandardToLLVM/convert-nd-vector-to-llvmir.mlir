@@ -180,3 +180,18 @@ func @shru_vector(%arg0 : vector<1x2x3xi64>) -> vector<1x2x3xi64> {
   %0 = shift_right_unsigned %arg0, %c1 : vector<1x2x3xi64>
   return %0 : vector<1x2x3xi64>
 }
+
+// -----
+
+// CHECK-LABEL: @bitcast_2d
+func @bitcast_2d(%arg0: vector<2x4xf32>) {
+  // CHECK: llvm.mlir.undef
+  // CHECK: llvm.extractvalue %{{.*}}[0]
+  // CHECK: llvm.bitcast %{{.*}} : vector<4xf32> to vector<4xi32>
+  // CHECK: llvm.insertvalue %{{.*}}, %{{.*}}[0]
+  // CHECK: llvm.extractvalue %{{.*}}[1]
+  // CHECK: llvm.bitcast %{{.*}} : vector<4xf32> to vector<4xi32>
+  // CHECK: llvm.insertvalue %{{.*}}, %{{.*}}[1]
+  std.bitcast %arg0 : vector<2x4xf32> to vector<2x4xi32>
+  return
+}

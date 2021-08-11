@@ -8,7 +8,6 @@ add_mlir_dialect_library(MLIRMathTransforms
 
   LINK_LIBS PUBLIC
   MLIRIR
-  MLIRLLVMIR
   MLIRMath
   MLIRPass
   MLIRStandard
