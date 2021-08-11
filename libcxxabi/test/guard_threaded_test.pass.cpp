@@ -326,7 +326,7 @@ void test_impl() {
   }
 
 void test_all_impls() {
-  using MutexImpl = SelectImplementation<Implementation::GlobalLock>::type;
+  using MutexImpl = SelectImplementation<Implementation::GlobalMutex>::type;
 
   // Attempt to test the Futex based implementation if it's supported on the
   // target platform.

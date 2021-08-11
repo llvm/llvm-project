@@ -121,7 +121,7 @@ int main(int, char**) {
     static_assert(
         std::is_same<SelectedImplementation, InitByteNoThreads>::value, "");
 #else
-    static_assert(CurrentImplementation == Implementation::GlobalLock, "");
+    static_assert(CurrentImplementation == Implementation::GlobalMutex, "");
     static_assert(
         std::is_same<
             SelectedImplementation,
