@@ -40,9 +40,14 @@ LogicalResult loopUnrollFull(AffineForOp forOp);
 
 /// Unrolls this for operation by the specified unroll factor. Returns failure
 /// if the loop cannot be unrolled either due to restrictions or due to invalid
-/// unroll factors. Requires positive loop bounds and step.
-LogicalResult loopUnrollByFactor(AffineForOp forOp, uint64_t unrollFactor);
-LogicalResult loopUnrollByFactor(scf::ForOp forOp, uint64_t unrollFactor);
+/// unroll factors. Requires positive loop bounds and step. If specified,
+/// annotates the Ops in each unrolled iteration by applying `annotateFn`.
+LogicalResult loopUnrollByFactor(
+    AffineForOp forOp, uint64_t unrollFactor,
+    function_ref<void(unsigned, Operation *, OpBuilder)> annotateFn = nullptr);
+LogicalResult loopUnrollByFactor(
+    scf::ForOp forOp, uint64_t unrollFactor,
+    function_ref<void(unsigned, Operation *, OpBuilder)> annotateFn = nullptr);
 
 /// Unrolls this loop by the specified unroll factor or its trip count,
 /// whichever is lower.

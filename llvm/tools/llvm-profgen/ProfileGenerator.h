@@ -70,6 +70,16 @@ public:
 public:
   void generateProfile() override;
 
+  // Trim the context stack at a given depth.
+  template <typename T>
+  static void trimContext(SmallVectorImpl<T> &S, int Depth = MaxContextDepth) {
+    if (Depth < 0 || static_cast<size_t>(Depth) >= S.size())
+      return;
+    std::copy(S.begin() + S.size() - static_cast<size_t>(Depth), S.end(),
+              S.begin());
+    S.resize(Depth);
+  }
+
   // Remove adjacent repeated context sequences up to a given sequence length,
   // -1 means no size limit. Note that repeated sequences are identified based
   // on the exact call site, this is finer granularity than function recursion.
@@ -212,6 +222,7 @@ public:
   // Deduplicate adjacent repeated context sequences up to a given sequence
   // length. -1 means no size limit.
   static int32_t MaxCompressionSize;
+  static int MaxContextDepth;
 };
 
 using ProbeCounterMap =

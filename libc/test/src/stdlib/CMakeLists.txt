@@ -54,3 +54,15 @@ add_libc_unittest(
   DEPENDS
     libc.src.stdlib.llabs
 )
+
+add_libc_unittest(
+  strtoll_test
+  SUITE
+    libc_stdlib_unittests
+  SRCS
+    strtoll_test.cpp
+  DEPENDS
+    libc.src.stdlib.strtoll
+    libc.include.errno
+    libc.test.errno_setter_matcher
+)

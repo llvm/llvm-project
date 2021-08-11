@@ -62,6 +62,7 @@ def ConstVoidRestrictedPtr : ConstType<VoidRestrictedPtr>;
 def CharPtr : PtrType<CharType>;
 def ConstCharPtr : ConstType<CharPtr>;
 def CharRestrictedPtr : RestrictedPtrType<CharType>;
+def CharRestrictedPtrPtr : RestrictedPtrType<CharPtr>;
 def ConstCharRestrictedPtr : ConstType<CharRestrictedPtr>;
 
 def OnceFlagType : NamedType<"once_flag">;
