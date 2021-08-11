@@ -170,8 +170,6 @@ protected:
     if (!StopProcessIfNecessary(m_exe_ctx.GetProcessPtr(), state, result))
       return false;
 
-    llvm::StringRef target_settings_argv0 = target->GetArg0();
-
     // Determine whether we will disable ASLR or leave it in the default state
     // (i.e. enabled if the platform supports it). First check if the process
     // launch options explicitly turn on/off
@@ -215,6 +213,8 @@ protected:
     Environment target_env = target->GetEnvironment();
     m_options.launch_info.GetEnvironment().insert(target_env.begin(),
                                                   target_env.end());
+
+    llvm::StringRef target_settings_argv0 = target->GetArg0();
 
     if (!target_settings_argv0.empty()) {
       m_options.launch_info.GetArguments().AppendArgument(
