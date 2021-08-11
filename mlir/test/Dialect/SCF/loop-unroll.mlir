@@ -2,6 +2,7 @@
 // RUN: mlir-opt %s -test-loop-unrolling='unroll-factor=3' | FileCheck %s --check-prefix UNROLL-BY-3
 // RUN: mlir-opt %s -test-loop-unrolling='unroll-factor=2 loop-depth=0' | FileCheck %s --check-prefix UNROLL-OUTER-BY-2
 // RUN: mlir-opt %s -test-loop-unrolling='unroll-factor=2 loop-depth=1' | FileCheck %s --check-prefix UNROLL-INNER-BY-2
+// RUN: mlir-opt %s -test-loop-unrolling='unroll-factor=2 annotate=true' | FileCheck %s --check-prefix UNROLL-BY-2-ANNOTATE
 // RUN: mlir-opt %s --affine-loop-unroll='unroll-factor=6 unroll-up-to-factor=true' | FileCheck %s --check-prefix UNROLL-UP-TO
 
 func @dynamic_loop_unroll(%arg0 : index, %arg1 : index, %arg2 : index,
@@ -179,6 +180,10 @@ func @static_loop_unroll_by_2(%arg0 : memref<?xf32>) {
 //  UNROLL-BY-2-NEXT:  }
 //  UNROLL-BY-2-NEXT:  return
 
+// UNROLL-BY-2-ANNOTATE-LABEL: func @static_loop_unroll_by_2
+// UNROLL-BY-2-ANNOTATE:    memref.store %{{.*}}, %[[MEM:.*0]][%{{.*}}] {unrolled_iteration = 0 : ui32} : memref<?xf32>
+// UNROLL-BY-2-ANNOTATE:    memref.store %{{.*}}, %[[MEM]][%{{.*}}] {unrolled_iteration = 1 : ui32} : memref<?xf32>
+
 // Test that epilogue clean up loop is generated (trip count is not
 // a multiple of unroll factor).
 func @static_loop_unroll_by_3(%arg0 : memref<?xf32>) {
@@ -270,3 +275,4 @@ func @static_loop_unroll_up_to_factor(%arg0 : memref<?xf32>) {
 //   UNROLL-UP-TO-NEXT: %[[V1:.*]] = affine.apply {{.*}}
 //   UNROLL-UP-TO-NEXT: affine.store %{{.*}}, %[[MEM]][%[[V1]]] : memref<?xf32>
 //   UNROLL-UP-TO-NEXT: return
+
