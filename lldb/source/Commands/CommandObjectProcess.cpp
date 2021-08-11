@@ -1166,7 +1166,9 @@ protected:
 static constexpr OptionEnumValueElement g_corefile_save_style[] = {
     {eSaveCoreFull, "full", "Create a core file with all memory saved"},
     {eSaveCoreDirtyOnly, "modified-memory",
-     "Create a corefile with only modified memory saved"}};
+     "Create a corefile with only modified memory saved"},
+    {eSaveCoreStackOnly, "stack",
+     "Create a corefile with only stack  memory saved"}};
 
 static constexpr OptionEnumValues SaveCoreStyles() {
   return OptionEnumValues(g_corefile_save_style);
@@ -1237,11 +1239,12 @@ protected:
         Status error =
             PluginManager::SaveCore(process_sp, output_file, corefile_style);
         if (error.Success()) {
-          if (corefile_style == SaveCoreStyle::eSaveCoreDirtyOnly) {
+          if (corefile_style == SaveCoreStyle::eSaveCoreDirtyOnly ||
+              corefile_style == SaveCoreStyle::eSaveCoreStackOnly) {
             result.AppendMessageWithFormat(
-                "\nModified-memory only corefile "
-                "created.  This corefile may not show \n"
-                "library/framework/app binaries "
+                "\nModified-memory or stack-memory only corefile "
+                "created.  This corefile may \n"
+                "not show library/framework/app binaries "
                 "on a different system, or when \n"
                 "those binaries have "
                 "been updated/modified. Copies are not included\n"
