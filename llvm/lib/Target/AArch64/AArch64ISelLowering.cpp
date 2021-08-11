@@ -1516,6 +1516,8 @@ void AArch64TargetLowering::addTypeForFixedLengthSVE(MVT VT) {
     MVT InnerVT = VT.changeVectorElementType(MVT::i8);
     while (InnerVT != VT) {
       setTruncStoreAction(VT, InnerVT, Custom);
+      setLoadExtAction(ISD::ZEXTLOAD, VT, InnerVT, Custom);
+      setLoadExtAction(ISD::SEXTLOAD, VT, InnerVT, Custom);
       InnerVT = InnerVT.changeVectorElementType(
           MVT::getIntegerVT(2 * InnerVT.getScalarSizeInBits()));
     }
@@ -4176,7 +4178,9 @@ bool AArch64TargetLowering::shouldRemoveExtendFromGSIndex(EVT VT) const {
 }
 
 bool AArch64TargetLowering::isVectorLoadExtDesirable(SDValue ExtVal) const {
-  return ExtVal.getValueType().isScalableVector();
+  return ExtVal.getValueType().isScalableVector() ||
+         useSVEForFixedLengthVectorVT(ExtVal.getValueType(),
+                                      /*OverrideNEON=*/true);
 }
 
 unsigned getGatherVecOpcode(bool IsScaled, bool IsSigned, bool NeedsExtend) {
