@@ -1604,13 +1604,12 @@ DIExpr::Builder::Iterator DIExpr::Builder::erase(Iterator From, Iterator To) {
   return Elements.erase(From.Op, To.Op);
 }
 
-DIExpr *DIExpr::Builder::intoExpr(bool IsDistinct) {
+DIExpr *DIExpr::Builder::intoExpr() {
 #ifndef NDEBUG
   assert(!StateIsUnspecified);
   StateIsUnspecified = true;
 #endif
-  return IsDistinct ? DIExpr::getDistinct(C, std::move(Elements))
-                    : DIExpr::get(C, std::move(Elements));
+  return DIExpr::get(C, std::move(Elements));
 }
 
 DIExpr *DIExpr::getImpl(LLVMContext &Context,

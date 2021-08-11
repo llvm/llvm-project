@@ -1993,8 +1993,7 @@ Error MetadataLoader::MetadataLoaderImpl::parseOneMetadata(
     if (IsDistinct)
       return error("Invalid record");
 
-    MetadataList.assignValue(
-        GET_OR_DISTINCT(DIExpression, (Context, Elts)), NextMetadataNo);
+    MetadataList.assignValue(DIExpression::get(Context, Elts), NextMetadataNo);
     NextMetadataNo++;
     break;
   }
@@ -2002,8 +2001,7 @@ Error MetadataLoader::MetadataLoaderImpl::parseOneMetadata(
     if (Record.size() < 1)
       return error("Invalid record");
 
-    IsDistinct = Record[0] & 1;
-    uint64_t Version = Record[0] >> 1;
+    uint64_t Version = Record[0];
     if (Version != 0)
       return error("Invalid record: unknown DIExpr version " + Twine(Version));
 
@@ -2138,7 +2136,7 @@ Error MetadataLoader::MetadataLoaderImpl::parseOneMetadata(
       }
     }
 
-    MetadataList.assignValue(Builder.intoExpr(IsDistinct), NextMetadataNo);
+    MetadataList.assignValue(Builder.intoExpr(), NextMetadataNo);
     NextMetadataNo++;
     break;
   }

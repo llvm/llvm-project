@@ -5046,6 +5046,7 @@ bool LLParser::parseDILabel(MDNode *&Result, bool IsDistinct) {
 /// parseDIExpression:
 ///   ::= !DIExpression(0, 7, -1)
 bool LLParser::parseDIExpression(MDNode *&Result, bool IsDistinct) {
+  assert(!IsDistinct && "DIExpression must not be distinct");
   assert(Lex.getKind() == lltok::MetadataVar && "Expected metadata type name");
   Lex.Lex();
 
@@ -5087,7 +5088,7 @@ bool LLParser::parseDIExpression(MDNode *&Result, bool IsDistinct) {
   if (parseToken(lltok::rparen, "expected ')' here"))
     return true;
 
-  Result = GET_OR_DISTINCT(DIExpression, (Context, Elements));
+  Result = DIExpression::get(Context, Elements);
   return false;
 }
 
@@ -5098,6 +5099,7 @@ bool LLParser::parseDIArgList(MDNode *&Result, bool IsDistinct) {
 ///   ::= !DIArgList(i32 7, i64 %0)
 bool LLParser::parseDIArgList(MDNode *&Result, bool IsDistinct,
                               PerFunctionState *PFS) {
+  assert(!IsDistinct && "DIArgList must not be distinct");
   assert(PFS && "Expected valid function state");
   assert(Lex.getKind() == lltok::MetadataVar && "Expected metadata type name");
   Lex.Lex();
@@ -5117,7 +5119,7 @@ bool LLParser::parseDIArgList(MDNode *&Result, bool IsDistinct,
   if (parseToken(lltok::rparen, "expected ')' here"))
     return true;
 
-  Result = GET_OR_DISTINCT(DIArgList, (Context, Args));
+  Result = DIArgList::get(Context, Args);
   return false;
 }
 
