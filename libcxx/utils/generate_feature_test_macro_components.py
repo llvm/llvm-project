@@ -66,8 +66,6 @@ feature_test_macros = [ add_version_header(x) for x in [
     "name": "__cpp_lib_addressof_constexpr",
     "values": { "c++17": 201603 },
     "headers": ["memory"],
-    "test_suite_guard": "TEST_HAS_BUILTIN(__builtin_addressof) || TEST_GCC_VER >= 700",
-    "libcxx_guard": "!defined(_LIBCPP_HAS_NO_BUILTIN_ADDRESSOF)",
   }, {
     "name": "__cpp_lib_allocator_traits_is_always_equal",
     "values": { "c++17": 201411 },
