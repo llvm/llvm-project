@@ -5755,9 +5755,6 @@ Instruction *InstCombinerImpl::visitICmpInst(ICmpInst &I) {
   if (Instruction *Res = foldICmpWithDominatingICmp(I))
     return Res;
 
-  if (Instruction *Res = foldICmpBinOp(I, Q))
-    return Res;
-
   if (Instruction *Res = foldICmpUsingKnownBits(I))
     return Res;
 
@@ -5802,6 +5799,15 @@ Instruction *InstCombinerImpl::visitICmpInst(ICmpInst &I) {
       return new ICmpInst(ICmpInst::ICMP_SGT, Op0, AllOnes);
     }
   }
+
+  // The folds in here may rely on wrapping flags and special constants, so
+  // they can break up min/max idioms in some cases but not seemingly similar
+  // patterns.
+  // FIXME: It may be possible to enhance select folding to make this
+  //        unnecessary. It may also be moot if we canonicalize to min/max
+  //        intrinsics.
+  if (Instruction *Res = foldICmpBinOp(I, Q))
+    return Res;
 
   if (Instruction *Res = foldICmpInstWithConstant(I))
     return Res;
