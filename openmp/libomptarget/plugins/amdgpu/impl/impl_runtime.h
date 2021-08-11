@@ -26,11 +26,11 @@ hsa_status_t impl_module_register_from_memory_to_place(
 
 hsa_status_t impl_memcpy_h2d(hsa_signal_t signal, void *deviceDest,
                              const void *hostSrc, size_t size,
-                             hsa_agent_t agent);
+                             hsa_agent_t agent, hsa_amd_memory_pool_t MemoryPool);
 
 hsa_status_t impl_memcpy_d2h(hsa_signal_t sig, void *hostDest,
                              const void *deviceSrc, size_t size,
-                             hsa_agent_t agent);
+                             hsa_agent_t agent, hsa_amd_memory_pool_t MemoryPool);
 #ifdef __cplusplus
 }
 #endif

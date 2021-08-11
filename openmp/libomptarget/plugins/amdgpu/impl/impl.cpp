@@ -47,7 +47,8 @@ struct implFreePtrDeletor {
 
 hsa_status_t impl_memcpy_h2d(hsa_signal_t signal, void *deviceDest,
                              const void *hostSrc, size_t size,
-                             hsa_agent_t agent) {
+                             hsa_agent_t agent,
+                             hsa_amd_memory_pool_t MemoryPool) {
   hsa_status_t rc = hsa_memory_copy(deviceDest, hostSrc, size);
 
   // hsa_memory_copy sometimes fails in situations where
@@ -58,7 +59,7 @@ hsa_status_t impl_memcpy_h2d(hsa_signal_t signal, void *deviceDest,
   }
 
   void *tempHostPtr;
-  hsa_status_t ret = core::Runtime::HostMalloc(&tempHostPtr, size);
+  hsa_status_t ret = core::Runtime::HostMalloc(&tempHostPtr, size, MemoryPool);
   if (ret != HSA_STATUS_SUCCESS) {
     DP("HostMalloc: Unable to alloc %zu bytes for temp scratch\n", size);
     return ret;
@@ -75,7 +76,8 @@ hsa_status_t impl_memcpy_h2d(hsa_signal_t signal, void *deviceDest,
 
 hsa_status_t impl_memcpy_d2h(hsa_signal_t signal, void *dest,
                              const void *deviceSrc, size_t size,
-                             hsa_agent_t agent) {
+                             hsa_agent_t agent,
+                             hsa_amd_memory_pool_t MemoryPool) {
   hsa_status_t rc = hsa_memory_copy(dest, deviceSrc, size);
 
   // hsa_memory_copy sometimes fails in situations where
@@ -86,7 +88,7 @@ hsa_status_t impl_memcpy_d2h(hsa_signal_t signal, void *dest,
   }
 
   void *tempHostPtr;
-  hsa_status_t ret = core::Runtime::HostMalloc(&tempHostPtr, size);
+  hsa_status_t ret = core::Runtime::HostMalloc(&tempHostPtr, size, MemoryPool);
   if (ret != HSA_STATUS_SUCCESS) {
     DP("HostMalloc: Unable to alloc %zu bytes for temp scratch\n", size);
     return ret;
