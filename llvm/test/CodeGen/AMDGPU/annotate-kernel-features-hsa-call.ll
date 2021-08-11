@@ -27,6 +27,7 @@ define void @use_workitem_id_x() #1 {
 ;
 ; ATTRIBUTOR_HSA-LABEL: define {{[^@]+}}@use_workitem_id_x
 ; ATTRIBUTOR_HSA-SAME: () #[[ATTR1:[0-9]+]] {
+; ATTRIBUTOR_HSA-NEXT:    store volatile i32 undef, i32 addrspace(1)* undef, align 4
 ; ATTRIBUTOR_HSA-NEXT:    ret void
 ;
   %val = call i32 @llvm.amdgcn.workitem.id.x()
@@ -43,6 +44,7 @@ define void @use_workitem_id_y() #1 {
 ;
 ; ATTRIBUTOR_HSA-LABEL: define {{[^@]+}}@use_workitem_id_y
 ; ATTRIBUTOR_HSA-SAME: () #[[ATTR1]] {
+; ATTRIBUTOR_HSA-NEXT:    store volatile i32 undef, i32 addrspace(1)* undef, align 4
 ; ATTRIBUTOR_HSA-NEXT:    ret void
 ;
   %val = call i32 @llvm.amdgcn.workitem.id.y()
@@ -59,6 +61,7 @@ define void @use_workitem_id_z() #1 {
 ;
 ; ATTRIBUTOR_HSA-LABEL: define {{[^@]+}}@use_workitem_id_z
 ; ATTRIBUTOR_HSA-SAME: () #[[ATTR1]] {
+; ATTRIBUTOR_HSA-NEXT:    store volatile i32 undef, i32 addrspace(1)* undef, align 4
 ; ATTRIBUTOR_HSA-NEXT:    ret void
 ;
   %val = call i32 @llvm.amdgcn.workitem.id.z()
@@ -75,6 +78,7 @@ define void @use_workgroup_id_x() #1 {
 ;
 ; ATTRIBUTOR_HSA-LABEL: define {{[^@]+}}@use_workgroup_id_x
 ; ATTRIBUTOR_HSA-SAME: () #[[ATTR1]] {
+; ATTRIBUTOR_HSA-NEXT:    store volatile i32 undef, i32 addrspace(1)* undef, align 4
 ; ATTRIBUTOR_HSA-NEXT:    ret void
 ;
   %val = call i32 @llvm.amdgcn.workgroup.id.x()
@@ -91,6 +95,7 @@ define void @use_workgroup_id_y() #1 {
 ;
 ; ATTRIBUTOR_HSA-LABEL: define {{[^@]+}}@use_workgroup_id_y
 ; ATTRIBUTOR_HSA-SAME: () #[[ATTR1]] {
+; ATTRIBUTOR_HSA-NEXT:    store volatile i32 undef, i32 addrspace(1)* undef, align 4
 ; ATTRIBUTOR_HSA-NEXT:    ret void
 ;
   %val = call i32 @llvm.amdgcn.workgroup.id.y()
@@ -107,6 +112,7 @@ define void @use_workgroup_id_z() #1 {
 ;
 ; ATTRIBUTOR_HSA-LABEL: define {{[^@]+}}@use_workgroup_id_z
 ; ATTRIBUTOR_HSA-SAME: () #[[ATTR1]] {
+; ATTRIBUTOR_HSA-NEXT:    store volatile i32 undef, i32 addrspace(1)* undef, align 4
 ; ATTRIBUTOR_HSA-NEXT:    ret void
 ;
   %val = call i32 @llvm.amdgcn.workgroup.id.z()
@@ -123,6 +129,7 @@ define void @use_dispatch_ptr() #1 {
 ;
 ; ATTRIBUTOR_HSA-LABEL: define {{[^@]+}}@use_dispatch_ptr
 ; ATTRIBUTOR_HSA-SAME: () #[[ATTR1]] {
+; ATTRIBUTOR_HSA-NEXT:    store volatile i8 addrspace(4)* undef, i8 addrspace(4)* addrspace(1)* undef, align 8
 ; ATTRIBUTOR_HSA-NEXT:    ret void
 ;
   %dispatch.ptr = call i8 addrspace(4)* @llvm.amdgcn.dispatch.ptr()
@@ -139,6 +146,7 @@ define void @use_queue_ptr() #1 {
 ;
 ; ATTRIBUTOR_HSA-LABEL: define {{[^@]+}}@use_queue_ptr
 ; ATTRIBUTOR_HSA-SAME: () #[[ATTR1]] {
+; ATTRIBUTOR_HSA-NEXT:    store volatile i8 addrspace(4)* undef, i8 addrspace(4)* addrspace(1)* undef, align 8
 ; ATTRIBUTOR_HSA-NEXT:    ret void
 ;
   %queue.ptr = call i8 addrspace(4)* @llvm.amdgcn.queue.ptr()
@@ -155,6 +163,7 @@ define void @use_dispatch_id() #1 {
 ;
 ; ATTRIBUTOR_HSA-LABEL: define {{[^@]+}}@use_dispatch_id
 ; ATTRIBUTOR_HSA-SAME: () #[[ATTR1]] {
+; ATTRIBUTOR_HSA-NEXT:    store volatile i64 undef, i64 addrspace(1)* undef, align 4
 ; ATTRIBUTOR_HSA-NEXT:    ret void
 ;
   %val = call i64 @llvm.amdgcn.dispatch.id()
@@ -173,6 +182,8 @@ define void @use_workgroup_id_y_workgroup_id_z() #1 {
 ;
 ; ATTRIBUTOR_HSA-LABEL: define {{[^@]+}}@use_workgroup_id_y_workgroup_id_z
 ; ATTRIBUTOR_HSA-SAME: () #[[ATTR1]] {
+; ATTRIBUTOR_HSA-NEXT:    store volatile i32 undef, i32 addrspace(1)* undef, align 4
+; ATTRIBUTOR_HSA-NEXT:    store volatile i32 undef, i32 addrspace(1)* undef, align 4
 ; ATTRIBUTOR_HSA-NEXT:    ret void
 ;
   %val0 = call i32 @llvm.amdgcn.workgroup.id.y()
@@ -401,6 +412,7 @@ define void @recursive_use_workitem_id_y() #1 {
 ;
 ; ATTRIBUTOR_HSA-LABEL: define {{[^@]+}}@recursive_use_workitem_id_y
 ; ATTRIBUTOR_HSA-SAME: () #[[ATTR3:[0-9]+]] {
+; ATTRIBUTOR_HSA-NEXT:    store volatile i32 undef, i32 addrspace(1)* undef, align 4
 ; ATTRIBUTOR_HSA-NEXT:    call void @recursive_use_workitem_id_y() #[[ATTR11:[0-9]+]]
 ; ATTRIBUTOR_HSA-NEXT:    unreachable
 ;
@@ -537,6 +549,7 @@ define void @use_kernarg_segment_ptr() #1 {
 ;
 ; ATTRIBUTOR_HSA-LABEL: define {{[^@]+}}@use_kernarg_segment_ptr
 ; ATTRIBUTOR_HSA-SAME: () #[[ATTR1]] {
+; ATTRIBUTOR_HSA-NEXT:    store volatile i8 addrspace(4)* undef, i8 addrspace(4)* addrspace(1)* undef, align 8
 ; ATTRIBUTOR_HSA-NEXT:    ret void
 ;
   %kernarg.segment.ptr = call i8 addrspace(4)* @llvm.amdgcn.kernarg.segment.ptr()
@@ -567,6 +580,7 @@ define amdgpu_kernel void @kern_use_implicitarg_ptr() #1 {
 ;
 ; ATTRIBUTOR_HSA-LABEL: define {{[^@]+}}@kern_use_implicitarg_ptr
 ; ATTRIBUTOR_HSA-SAME: () #[[ATTR1]] {
+; ATTRIBUTOR_HSA-NEXT:    store volatile i8 addrspace(4)* undef, i8 addrspace(4)* addrspace(1)* undef, align 8
 ; ATTRIBUTOR_HSA-NEXT:    ret void
 ;
   %implicitarg.ptr = call i8 addrspace(4)* @llvm.amdgcn.implicitarg.ptr()
@@ -583,6 +597,7 @@ define void @use_implicitarg_ptr() #1 {
 ;
 ; ATTRIBUTOR_HSA-LABEL: define {{[^@]+}}@use_implicitarg_ptr
 ; ATTRIBUTOR_HSA-SAME: () #[[ATTR1]] {
+; ATTRIBUTOR_HSA-NEXT:    store volatile i8 addrspace(4)* undef, i8 addrspace(4)* addrspace(1)* undef, align 8
 ; ATTRIBUTOR_HSA-NEXT:    ret void
 ;
   %implicitarg.ptr = call i8 addrspace(4)* @llvm.amdgcn.implicitarg.ptr()
@@ -697,6 +712,7 @@ define i32 @use_dispatch_ptr_ret_type() #1 {
 ;
 ; ATTRIBUTOR_HSA-LABEL: define {{[^@]+}}@use_dispatch_ptr_ret_type
 ; ATTRIBUTOR_HSA-SAME: () #[[ATTR9:[0-9]+]] {
+; ATTRIBUTOR_HSA-NEXT:    store volatile i8 addrspace(4)* undef, i8 addrspace(4)* addrspace(1)* undef, align 8
 ; ATTRIBUTOR_HSA-NEXT:    ret i32 0
 ;
   %dispatch.ptr = call i8 addrspace(4)* @llvm.amdgcn.dispatch.ptr()
