@@ -314,41 +314,6 @@ void MapThreadTrace(uptr addr, uptr size, const char *name) {
   }
 }
 
-static void CheckShadowMapping() {
-  uptr beg, end;
-  for (int i = 0; GetUserRegion(i, &beg, &end); i++) {
-    // Skip cases for empty regions (heap definition for architectures that
-    // do not use 64-bit allocator).
-    if (beg == end)
-      continue;
-    VPrintf(3, "checking shadow region %p-%p\n", beg, end);
-    uptr prev = 0;
-    for (uptr p0 = beg; p0 <= end; p0 += (end - beg) / 4) {
-      for (int x = -(int)kShadowCell; x <= (int)kShadowCell; x += kShadowCell) {
-        const uptr p = RoundDown(p0 + x, kShadowCell);
-        if (p < beg || p >= end)
-          continue;
-        RawShadow *const s = MemToShadow(p);
-        u32 *const m = MemToMeta(p);
-        VPrintf(3, "  checking pointer %p: shadow=%p meta=%p\n", p, s, m);
-        CHECK(IsAppMem(p));
-        CHECK(IsShadowMem(s));
-        CHECK_EQ(p, ShadowToMem(s));
-        CHECK(IsMetaMem(m));
-        if (prev) {
-          // Ensure that shadow and meta mappings are linear within a single
-          // user range. Lots of code that processes memory ranges assumes it.
-          RawShadow *const prev_s = MemToShadow(prev);
-          u32 *const prev_m = MemToMeta(prev);
-          CHECK_EQ((s - prev_s) * kShadowSize, (p - prev) * kShadowMultiplier);
-          CHECK_EQ(m - prev_m, (p - prev) / kMetaShadowCell);
-        }
-        prev = p;
-      }
-    }
-  }
-}
-
 #if !SANITIZER_GO
 static void OnStackUnwind(const SignalContext &sig, const void *,
                           BufferedStackTrace *stack) {
@@ -408,7 +373,6 @@ void Initialize(ThreadState *thr) {
   Processor *proc = ProcCreate();
   ProcWire(proc, thr);
   InitializeInterceptors();
-  CheckShadowMapping();
   InitializePlatform();
   InitializeDynamicAnnotations();
 #if !SANITIZER_GO

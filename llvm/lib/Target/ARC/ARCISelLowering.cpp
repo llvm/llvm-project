@@ -136,9 +136,10 @@ ARCTargetLowering::ARCTargetLowering(const TargetMachine &TM,
   // Sign extend inreg
   setOperationAction(ISD::SIGN_EXTEND_INREG, MVT::i1, Custom);
 
-  // TODO: Predicate with `options.hasBitScan() ? Legal : Expand` when
-  //       the HasBitScan predicate is available.
+  // TODO: Predicate these with `options.hasBitScan() ? Legal : Expand`
+  //       when the HasBitScan predicate is available.
   setOperationAction(ISD::CTLZ, MVT::i32, Legal);
+  setOperationAction(ISD::CTTZ, MVT::i32, Legal);
 }
 
 const char *ARCTargetLowering::getTargetNodeName(unsigned Opcode) const {

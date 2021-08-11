@@ -2834,6 +2834,10 @@ struct AAKernelInfoFunction : AAKernelInfo {
     // to avoid other parts using the current constant value for simpliication.
     auto &OMPInfoCache = static_cast<OMPInformationCache &>(A.getInfoCache());
 
+    // If we have disabled SPMD-ization, stop
+    if (DisableOpenMPOptSPMDization)
+      SPMDCompatibilityTracker.indicatePessimisticFixpoint();
+
     Function *Fn = getAnchorScope();
     if (!OMPInfoCache.Kernels.count(Fn))
       return;
@@ -2890,6 +2894,9 @@ struct AAKernelInfoFunction : AAKernelInfo {
       // custom state machine so the value should be a `i1 false`. If we are
       // in an invalid state, we won't change the value that is in the IR.
       if (!isValidState())
+        return nullptr;
+      // If we have disabled state machine rewrites, don't make a custom one.
+      if (DisableOpenMPOptStateMachineRewrite)
         return nullptr;
       if (AA)
         A.recordDependence(*this, *AA, DepClassTy::OPTIONAL);
@@ -2992,10 +2999,6 @@ struct AAKernelInfoFunction : AAKernelInfo {
   }
 
   bool changeToSPMDMode(Attributor &A) {
-    // If we have disabled SPMD-ization, stop
-    if (DisableOpenMPOptSPMDization)
-      indicatePessimisticFixpoint();
-
     auto &OMPInfoCache = static_cast<OMPInformationCache &>(A.getInfoCache());
 
     if (!SPMDCompatibilityTracker.isAssumed()) {

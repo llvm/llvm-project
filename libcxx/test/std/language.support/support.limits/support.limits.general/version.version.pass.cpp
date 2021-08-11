@@ -2707,17 +2707,11 @@
 #   endif
 # endif
 
-# if TEST_HAS_BUILTIN(__builtin_is_constant_evaluated) || TEST_GCC_VER >= 900
-#   ifndef __cpp_lib_is_constant_evaluated
-#     error "__cpp_lib_is_constant_evaluated should be defined in c++20"
-#   endif
-#   if __cpp_lib_is_constant_evaluated != 201811L
-#     error "__cpp_lib_is_constant_evaluated should have the value 201811L in c++20"
-#   endif
-# else
-#   ifdef __cpp_lib_is_constant_evaluated
-#     error "__cpp_lib_is_constant_evaluated should not be defined when TEST_HAS_BUILTIN(__builtin_is_constant_evaluated) || TEST_GCC_VER >= 900 is not defined!"
-#   endif
+# ifndef __cpp_lib_is_constant_evaluated
+#   error "__cpp_lib_is_constant_evaluated should be defined in c++20"
+# endif
+# if __cpp_lib_is_constant_evaluated != 201811L
+#   error "__cpp_lib_is_constant_evaluated should have the value 201811L in c++20"
 # endif
 
 # ifndef __cpp_lib_is_final
@@ -3888,17 +3882,11 @@
 #   endif
 # endif
 
-# if TEST_HAS_BUILTIN(__builtin_is_constant_evaluated) || TEST_GCC_VER >= 900
-#   ifndef __cpp_lib_is_constant_evaluated
-#     error "__cpp_lib_is_constant_evaluated should be defined in c++2b"
-#   endif
-#   if __cpp_lib_is_constant_evaluated != 201811L
-#     error "__cpp_lib_is_constant_evaluated should have the value 201811L in c++2b"
-#   endif
-# else
-#   ifdef __cpp_lib_is_constant_evaluated
-#     error "__cpp_lib_is_constant_evaluated should not be defined when TEST_HAS_BUILTIN(__builtin_is_constant_evaluated) || TEST_GCC_VER >= 900 is not defined!"
-#   endif
+# ifndef __cpp_lib_is_constant_evaluated
+#   error "__cpp_lib_is_constant_evaluated should be defined in c++2b"
+# endif
+# if __cpp_lib_is_constant_evaluated != 201811L
+#   error "__cpp_lib_is_constant_evaluated should have the value 201811L in c++2b"
 # endif
 
 # ifndef __cpp_lib_is_final

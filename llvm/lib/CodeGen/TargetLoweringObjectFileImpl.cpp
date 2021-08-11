@@ -2456,7 +2456,8 @@ MCSection *TargetLoweringObjectFileXCOFF::getStaticDtorSection(
 const MCExpr *TargetLoweringObjectFileXCOFF::lowerRelativeReference(
     const GlobalValue *LHS, const GlobalValue *RHS,
     const TargetMachine &TM) const {
-  report_fatal_error("XCOFF not yet implemented.");
+  /* Not implemented yet, but don't crash, return nullptr. */
+  return nullptr;
 }
 
 XCOFF::StorageClass

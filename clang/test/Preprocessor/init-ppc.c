@@ -432,6 +432,7 @@
 // PPC-AIX:#define __FLT_MIN_EXP__ (-125)
 // PPC-AIX:#define __FLT_MIN__ 1.17549435e-38F
 // PPC-AIX:#define __FLT_RADIX__ 2
+// PPC-AIX:#define __HOS_AIX__ 1
 // PPC-AIX:#define __INT16_C_SUFFIX__
 // PPC-AIX:#define __INT16_FMTd__ "hd"
 // PPC-AIX:#define __INT16_FMTi__ "hi"

@@ -510,6 +510,11 @@ __OMP_ATTRS_SET(NoCaptureAttrs,
                     ? AttributeSet(EnumAttr(NoCapture))
                     : AttributeSet(EnumAttr(NoCapture)))
 
+__OMP_ATTRS_SET(AlwaysInlineAttrs,
+                OptimisticAttributes
+                    ? AttributeSet(EnumAttr(AlwaysInline))
+                    : AttributeSet(EnumAttr(AlwaysInline)))
+
 #if 0
 __OMP_ATTRS_SET(InaccessibleOnlyAttrs,
                 OptimisticAttributes
@@ -896,6 +901,9 @@ __OMP_RTL_ATTRS(__tgt_push_mapper_component, ForkAttrs, AttributeSet(),
                 ParamAttrs())
 __OMP_RTL_ATTRS(__kmpc_task_allow_completion_event, DefaultAttrs,
                 ReturnPtrAttrs, ParamAttrs(ReadOnlyPtrAttrs))
+
+__OMP_RTL_ATTRS(__kmpc_parallel_51, AlwaysInlineAttrs, AttributeSet(),
+                ParamAttrs())
 
 #undef __OMP_RTL_ATTRS
 #undef OMP_RTL_ATTRS

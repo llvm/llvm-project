@@ -11,6 +11,6 @@
 int foo(int x, int y) __attribute__((always_inline));
 int foo(int x, int y) { return x + y; }
 
-// expected-remark@+2 {{foo inlined into bar}} expected-note@+2 {{could not determine the original source location for /bad/path/to/original.c:1230:25}}
+// expected-remark@+2 {{'foo' inlined into 'bar'}} expected-note@+2 {{could not determine the original source location for /bad/path/to/original.c:1230:25}}
 #line 1230 "/bad/path/to/original.c"
 int bar(int j) { return foo(j, j - 2); }

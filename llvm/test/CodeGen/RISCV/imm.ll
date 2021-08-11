@@ -171,9 +171,6 @@ define i64 @imm64_1() nounwind {
   ret i64 2147483648 ; 0x8000_0000
 }
 
-; TODO: This and similar constants with all 0s in the upper bits and all 1s in
-; the lower bits could be lowered to addi a0, zero, -1 followed by a logical
-; right shift.
 define i64 @imm64_2() nounwind {
 ; RV32I-LABEL: imm64_2:
 ; RV32I:       # %bb.0:

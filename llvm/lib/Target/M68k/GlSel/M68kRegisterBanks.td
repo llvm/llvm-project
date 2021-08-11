@@ -12,4 +12,4 @@
 //===----------------------------------------------------------------------===//
 
 /// General Purpose Registers. Here we define a register bank with name AnyGPR
-def GPRRegBank : RegisterBank<"AnyGPR", [DR8]>;
+def GPRRegBank : RegisterBank<"AnyGPR", [XR32]>;

@@ -677,6 +677,7 @@ protected:
 
     Builder.defineMacro("_AIX");
     Builder.defineMacro("__TOS_AIX__");
+    Builder.defineMacro("__HOS_AIX__");
 
     if (Opts.C11) {
       Builder.defineMacro("__STDC_NO_ATOMICS__");

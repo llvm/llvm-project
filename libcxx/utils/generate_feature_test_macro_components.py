@@ -369,8 +369,6 @@ feature_test_macros = [ add_version_header(x) for x in [
     "name": "__cpp_lib_is_constant_evaluated",
     "values": { "c++20": 201811 },
     "headers": ["type_traits"],
-    "test_suite_guard": "TEST_HAS_BUILTIN(__builtin_is_constant_evaluated) || TEST_GCC_VER >= 900",
-    "libcxx_guard": "!defined(_LIBCPP_HAS_NO_BUILTIN_IS_CONSTANT_EVALUATED)",
   }, {
     "name": "__cpp_lib_is_final",
     "values": { "c++14": 201402 },

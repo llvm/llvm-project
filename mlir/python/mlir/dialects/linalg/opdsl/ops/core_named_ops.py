@@ -223,6 +223,43 @@ def conv_2d_nchw(
            ]) * cast(U, K[D.f, D.c, D.kh, D.kw])
 
 
+def depthwise_conv2D_nchw(  #TODO: Fix name
+    I=TensorDef(T1, S.N, S.IH, S.IW, S.IC),
+    K=TensorDef(T2, S.KH, S.KW, S.IC, S.CM),
+    O=TensorDef(U, S.N, S.OH, S.OW, S.IC, S.CM, output=True),
+    strides=AttributeDef(S.SH, S.SW),
+    dilations=AttributeDef(S.DH, S.DW)):
+  """Performs depth-wise 2-D convolution.
+
+  Numeric casting is performed on the operands to the inner multiply, promoting
+  them to the same data type as the accumulator/output.
+  """
+  domain(D.n, D.oh, D.ow, D.kh, D.kw, D.ic, D.cm)
+  O[D.n, D.oh, D.ow, D.ic, D.cm] += cast(
+      U, I[D.n, D.oh * S.SH + D.kh * S.DH, D.ow * S.SW + D.kw * S.DW,
+           D.ic]) * cast(U, K[D.kh, D.kw, D.ic, D.cm])
+
+
+def depthwise_conv2D_nchw_q(  #TODO: Fix name
+    I=TensorDef(T1, S.N, S.IH, S.IW, S.IC),
+    K=TensorDef(T2, S.KH, S.KW, S.IC, S.CM),
+    IZp=ScalarDef(I32),
+    KZp=ScalarDef(I32),
+    O=TensorDef(U, S.N, S.OH, S.OW, S.IC, S.CM, output=True),
+    strides=AttributeDef(S.SH, S.SW),
+    dilations=AttributeDef(S.DH, S.DW)):
+  """Performs depth-wise 2-D convolution.
+
+  Numeric casting is performed on the operands to the inner multiply, promoting
+  them to the same data type as the accumulator/output.
+  """
+  domain(D.n, D.oh, D.ow, D.kh, D.kw, D.ic, D.cm)
+  O[D.n, D.oh, D.ow, D.ic, D.cm] += (
+      (cast(U, I[D.n, D.oh * S.SH + D.kh * S.DH, D.ow * S.SW + D.kw * S.DW,
+                 D.ic]) - cast(U, IZp)) *
+      (cast(U, K[D.kh, D.kw, D.ic, D.cm]) - cast(U, KZp)))
+
+
 @linalg_structured_op
 def pooling_nhwc_sum(
     I=TensorDef(T1, S.N, S.H, S.W, S.C),

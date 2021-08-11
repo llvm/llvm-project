@@ -115,6 +115,9 @@ const uptr kMetaShadowCell = 8;
 // Size of a single meta shadow value (u32).
 const uptr kMetaShadowSize = 4;
 
+// All addresses and PCs are assumed to be compressable to that many bits.
+const uptr kCompressedAddrBits = 44;
+
 #if TSAN_NO_HISTORY
 const bool kCollectHistory = false;
 #else

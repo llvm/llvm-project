@@ -1156,12 +1156,16 @@ struct AAPointerInfoFloating : public AAPointerInfoImpl {
     ChangeStatus Changed = ChangeStatus::UNCHANGED;
     Value &AssociatedValue = getAssociatedValue();
     struct OffsetInfo {
-      int64_t Offset = 0;
+      int64_t Offset = OffsetAndSize::Unknown;
+
+      bool operator==(const OffsetInfo &OI) const {
+        return Offset == OI.Offset;
+      }
     };
 
     const DataLayout &DL = A.getDataLayout();
     DenseMap<Value *, OffsetInfo> OffsetInfoMap;
-    OffsetInfoMap[&AssociatedValue] = {};
+    OffsetInfoMap[&AssociatedValue] = OffsetInfo{0};
 
     auto HandlePassthroughUser = [&](Value *Usr, OffsetInfo &PtrOI,
                                      bool &Follow) {
@@ -1219,8 +1223,48 @@ struct AAPointerInfoFloating : public AAPointerInfoImpl {
         Follow = true;
         return true;
       }
-      if (isa<CastInst>(Usr) || isa<PHINode>(Usr) || isa<SelectInst>(Usr))
+      if (isa<CastInst>(Usr) || isa<SelectInst>(Usr))
         return HandlePassthroughUser(Usr, PtrOI, Follow);
+
+      // For PHIs we need to take care of the recurrence explicitly as the value
+      // might change while we iterate through a loop. For now, we give up if
+      // the PHI is not invariant.
+      if (isa<PHINode>(Usr)) {
+        // Check if the PHI is invariant (so far).
+        OffsetInfo &UsrOI = OffsetInfoMap[Usr];
+        if (UsrOI == PtrOI)
+          return true;
+
+        // Check if the PHI operand has already an unknown offset as we can't
+        // improve on that anymore.
+        if (PtrOI.Offset == OffsetAndSize::Unknown) {
+          UsrOI = PtrOI;
+          Follow = true;
+          return true;
+        }
+
+        // Check if the PHI operand is not dependent on the PHI itself.
+        APInt Offset(DL.getIndexTypeSizeInBits(AssociatedValue.getType()), 0);
+        if (&AssociatedValue == CurPtr->stripAndAccumulateConstantOffsets(
+                                    DL, Offset, /* AllowNonInbounds */ true)) {
+          if (Offset != PtrOI.Offset) {
+            LLVM_DEBUG(dbgs()
+                       << "[AAPointerInfo] PHI operand pointer offset mismatch "
+                       << *CurPtr << " in " << *Usr << "\n");
+            return false;
+          }
+          return HandlePassthroughUser(Usr, PtrOI, Follow);
+        }
+
+        // TODO: Approximate in case we know the direction of the recurrence.
+        LLVM_DEBUG(dbgs() << "[AAPointerInfo] PHI operand is too complex "
+                          << *CurPtr << " in " << *Usr << "\n");
+        UsrOI = PtrOI;
+        UsrOI.Offset = OffsetAndSize::Unknown;
+        Follow = true;
+        return true;
+      }
+
       if (auto *LoadI = dyn_cast<LoadInst>(Usr))
         return handleAccess(A, *LoadI, *CurPtr, /* Content */ nullptr,
                             AccessKind::AK_READ, PtrOI.Offset, Changed,
