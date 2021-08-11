@@ -5130,7 +5130,7 @@ bool LLParser::parseDIExpr(MDNode *&Result, bool IsDistinct) {
   if (parseToken(lltok::lparen, "expected '(' here"))
     return true;
 
-  DIExpr::Builder Builder(Context);
+  DIExprBuilder Builder(Context);
   if (Lex.getKind() != lltok::rparen)
     do {
       if (Lex.getKind() != lltok::DIOp)

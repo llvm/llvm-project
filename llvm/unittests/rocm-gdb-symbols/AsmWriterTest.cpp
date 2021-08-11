@@ -26,7 +26,7 @@ protected:
   LLVMContext Context;
   Type *Int32Ty = Type::getInt32Ty(Context);
   Type *Int64Ty = Type::getInt64Ty(Context);
-  DIExpr::Builder Builder;
+  DIExprBuilder Builder;
   std::string S;
   raw_string_ostream OS;
 };

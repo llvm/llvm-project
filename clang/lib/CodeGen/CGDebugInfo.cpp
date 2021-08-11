@@ -4442,7 +4442,7 @@ llvm::DILocalVariable *CGDebugInfo::EmitDef(const VarDecl *VD,
 
   auto Align = getDeclAlignIfRequired(VD, CGM.getContext());
 
-  llvm::DIExpr::Builder ExprBuilder(CGM.getLLVMContext());
+  llvm::DIExprBuilder ExprBuilder(CGM.getLLVMContext());
   ExprBuilder.append<llvm::DIOp::Referrer>(Storage->getType());
   ExprBuilder.append<llvm::DIOp::Deref>();
 
@@ -5077,7 +5077,7 @@ void CGDebugInfo::EmitGlobalVariableForHeterogeneousDwarf(
         RD, Unit, LineNo, LinkageName, Var, DContext);
   } else {
     // Create DIExpr.
-    llvm::DIExpr::Builder ExprBuilder(CGM.getLLVMContext());
+    llvm::DIExprBuilder ExprBuilder(CGM.getLLVMContext());
     ExprBuilder.append<llvm::DIOp::Arg>(0, Var->getType());
     ExprBuilder.append<llvm::DIOp::Deref>();
 

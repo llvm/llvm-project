@@ -26,35 +26,35 @@ protected:
 typedef MetadataTest DIExprBuilderTest;
 
 TEST_F(DIExprBuilderTest, EmptyBuilderGet) {
-  DIExpr::Builder BuilderA(Context);
+  DIExprBuilder BuilderA(Context);
   DIExpr *ExprA = BuilderA.intoExpr();
   EXPECT_NE(ExprA, nullptr);
-  DIExpr::Builder BuilderB(Context);
+  DIExprBuilder BuilderB(Context);
   EXPECT_EQ(ExprA, BuilderB.intoExpr());
 }
 
 TEST_F(DIExprBuilderTest, NonUnique) {
-  DIExpr::Builder BuilderA(Context);
+  DIExprBuilder BuilderA(Context);
   BuilderA.append<DIOp::Referrer>(Int32Ty);
-  DIExpr::Builder BuilderB(Context);
+  DIExprBuilder BuilderB(Context);
   BuilderB.append<DIOp::Referrer>(Int32Ty);
   EXPECT_EQ(BuilderA.intoExpr(), BuilderB.intoExpr());
 }
 
 TEST_F(DIExprBuilderTest, Unique) {
-  DIExpr::Builder BuilderA(Context);
+  DIExprBuilder BuilderA(Context);
   BuilderA.append<DIOp::Referrer>(Int32Ty);
-  DIExpr::Builder BuilderB(Context);
+  DIExprBuilder BuilderB(Context);
   BuilderB.append<DIOp::Referrer>(Int64Ty);
   EXPECT_NE(BuilderA.intoExpr(), BuilderB.intoExpr());
 }
 
 TEST_F(DIExprBuilderTest, EquivalentAppends) {
-  DIExpr::Builder BuilderA(Context);
+  DIExprBuilder BuilderA(Context);
   BuilderA.append<DIOp::Referrer>(Int64Ty);
-  DIExpr::Builder BuilderB(Context);
+  DIExprBuilder BuilderB(Context);
   BuilderB.append(DIOp::Referrer(Int64Ty));
-  DIExpr::Builder BuilderC(Context);
+  DIExprBuilder BuilderC(Context);
   BuilderC.append(DIOp::Variant(DIOp::Referrer(Int64Ty)));
   DIExpr *ExprA = BuilderA.intoExpr();
   DIExpr *ExprB = BuilderB.intoExpr();
@@ -64,12 +64,12 @@ TEST_F(DIExprBuilderTest, EquivalentAppends) {
 }
 
 TEST_F(DIExprBuilderTest, Iterator) {
-  DIExpr::Builder Builder(Context);
+  DIExprBuilder Builder(Context);
   DIOp::Variant Op(in_place_type<DIOp::Referrer>, Int32Ty);
   DIExpr *Expr = Builder.append(Op).intoExpr();
-  DIExpr::Builder ViewBuilder = Expr->builder();
-  DIExpr::Builder::Iterator I = ViewBuilder.begin();
-  DIExpr::Builder::Iterator E = ViewBuilder.end();
+  DIExprBuilder ViewBuilder = Expr->builder();
+  DIExprBuilder::Iterator I = ViewBuilder.begin();
+  DIExprBuilder::Iterator E = ViewBuilder.end();
   EXPECT_EQ(*I, Op);
   ++I;
   EXPECT_EQ(I, E);
@@ -86,7 +86,7 @@ TEST_F(DIExprBuilderTest, IteratorRange) {
       DIOp::Variant{in_place_type<DIOp::Arg>, 0, Int64Ty},
       DIOp::Variant{in_place_type<DIOp::Arg>, 1, Int64Ty},
       DIOp::Variant{in_place_type<DIOp::Add>}};
-  DIExpr::Builder Builder(Context);
+  DIExprBuilder Builder(Context);
   for (auto &Op : Ops)
     Builder.append(Op);
   DIExpr *Expr = Builder.intoExpr();
@@ -101,12 +101,12 @@ TEST_F(DIExprBuilderTest, InitializerList) {
       DIOp::Variant{in_place_type<DIOp::Arg>, 0, Int64Ty},
       DIOp::Variant{in_place_type<DIOp::Arg>, 1, Int64Ty},
       DIOp::Variant{in_place_type<DIOp::Add>}};
-  DIExpr::Builder BuilderA(Context, IL);
+  DIExprBuilder BuilderA(Context, IL);
 
-  DIExpr::Builder BuilderB(Context);
+  DIExprBuilder BuilderB(Context);
   BuilderB.insert(BuilderB.begin(), IL);
 
-  DIExpr::Builder BuilderC(Context);
+  DIExprBuilder BuilderC(Context);
   for (auto &Op : IL)
     BuilderC.append(Op);
 
@@ -119,7 +119,7 @@ TEST_F(DIExprBuilderTest, InitializerList) {
 }
 
 TEST_F(DIExprBuilderTest, Erase) {
-  DIExpr::Builder BuilderA(
+  DIExprBuilder BuilderA(
       Context, {DIOp::Variant{in_place_type<DIOp::Referrer>, Int64Ty},
                 DIOp::Variant{in_place_type<DIOp::Arg>, 0, Int64Ty},
                 DIOp::Variant{in_place_type<DIOp::Add>},
@@ -132,15 +132,15 @@ TEST_F(DIExprBuilderTest, Erase) {
 }
 
 TEST_F(DIExprBuilderTest, Contains) {
-  DIExpr::Builder ExprBuilder0(Context);
+  DIExprBuilder ExprBuilder0(Context);
   EXPECT_EQ(ExprBuilder0.contains<DIOp::Add>(), false);
 
-  DIExpr::Builder ExprBuilder1(
+  DIExprBuilder ExprBuilder1(
       Context, {DIOp::Variant{in_place_type<DIOp::Add>}});
   EXPECT_EQ(ExprBuilder1.contains<DIOp::Add>(), true);
   EXPECT_EQ(ExprBuilder1.contains<DIOp::Mul>(), false);
 
-  DIExpr::Builder ExprBuilder2(
+  DIExprBuilder ExprBuilder2(
       Context, {DIOp::Variant{in_place_type<DIOp::Add>},
                 DIOp::Variant{in_place_type<DIOp::Mul>},
                 DIOp::Variant{in_place_type<DIOp::Add>}});

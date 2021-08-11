@@ -51,7 +51,7 @@ protected:
 
 TEST_F(DIExprAsmParserTest, Empty) {
   parseNamedDIExpr(R"(!named = !{!DIExpr()})");
-  DIExpr::Builder Builder = Expr->builder();
+  DIExprBuilder Builder = Expr->builder();
   ASSERT_EQ(std::distance(Builder.begin(), Builder.end()), 0u);
 }
 
@@ -75,7 +75,7 @@ TEST_F(DIExprAsmParserTest, TypeObject) {
 
 TEST_F(DIExprAsmParserTest, Constant) {
   parseNamedDIExpr(R"(!named = !{!DIExpr(DIOpConstant(float 2.0))})");
-  DIExpr::Builder Builder = Expr->builder();
+  DIExprBuilder Builder = Expr->builder();
   ASSERT_EQ(SmallVector<DIOp::Variant>(Builder.range()),
             SmallVector<DIOp::Variant>(
                 {DIOp::Constant(ConstantFP::get(Context, APFloat(2.0f)))}));

@@ -1580,31 +1580,31 @@ unsigned DIOp::getBitcodeID(const Variant &V) {
   return visit(makeVisitor([](auto &&Op) { return Op.getBitcodeID(); }), V);
 }
 
-DIExpr::Builder::Builder(LLVMContext &C) : C(C) {}
-DIExpr::Builder::Builder(LLVMContext &C,
+DIExprBuilder::DIExprBuilder(LLVMContext &C) : C(C) {}
+DIExprBuilder::DIExprBuilder(LLVMContext &C,
                          std::initializer_list<DIOp::Variant> IL)
     : C(C), Elements(IL) {}
-DIExpr::Builder::Builder(const DIExpr &E)
+DIExprBuilder::DIExprBuilder(const DIExpr &E)
     : C(E.getContext()), Elements(E.Elements) {}
 
-DIExpr::Builder &DIExpr::Builder::append(DIOp::Variant O) {
+DIExprBuilder &DIExprBuilder::append(DIOp::Variant O) {
   Elements.push_back(O);
   return *this;
 }
 
-DIExpr::Builder::Iterator DIExpr::Builder::insert(Iterator I, DIOp::Variant O) {
+DIExprBuilder::Iterator DIExprBuilder::insert(Iterator I, DIOp::Variant O) {
   return Elements.insert(I.Op, O);
 }
 
-DIExpr::Builder::Iterator DIExpr::Builder::erase(Iterator I) {
+DIExprBuilder::Iterator DIExprBuilder::erase(Iterator I) {
   return Elements.erase(I.Op);
 }
 
-DIExpr::Builder::Iterator DIExpr::Builder::erase(Iterator From, Iterator To) {
+DIExprBuilder::Iterator DIExprBuilder::erase(Iterator From, Iterator To) {
   return Elements.erase(From.Op, To.Op);
 }
 
-DIExpr *DIExpr::Builder::intoExpr() {
+DIExpr *DIExprBuilder::intoExpr() {
 #ifndef NDEBUG
   assert(!StateIsUnspecified);
   StateIsUnspecified = true;

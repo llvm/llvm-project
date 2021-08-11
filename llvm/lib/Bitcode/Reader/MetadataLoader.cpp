@@ -2005,7 +2005,7 @@ Error MetadataLoader::MetadataLoaderImpl::parseOneMetadata(
     if (Version != 0)
       return error("Invalid record: unknown DIExpr version " + Twine(Version));
 
-    DIExpr::Builder Builder(Context);
+    DIExprBuilder Builder(Context);
 
     for (auto Elems = ArrayRef<uint64_t>(Record).slice(1); Elems.size() > 0;) {
       auto DIOpID = Elems[0];

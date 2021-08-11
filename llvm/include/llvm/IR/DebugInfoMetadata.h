@@ -3121,6 +3121,117 @@ static_assert(sizeof(uintptr_t) != 64 ||
 
 template <class NodeTy> struct MDNodeKeyImpl;
 
+  /// Mutable buffer to manipulate debug info expressions.
+  ///
+  /// Example of creating a new expression from scratch:
+  ///
+  /// LLVMContext Ctx;
+  ///
+  /// DIExpr::Builder Builder(Ctx);
+  /// Builder.append(DIOp::InPlaceAdd).intoExpr();
+  ///
+  /// Example of creating a new expression:
+  ///
+  /// DIExpr *Expr = ...;
+  /// ...
+  /// DIExpr *NewExpr = Expr.builder()
+  ///     .append(DIOp::InPlaceDeref)
+  ///     .intoExpr();
+class DIExprBuilder {
+  LLVMContext &C;
+  SmallVector<DIOp::Variant> Elements;
+#ifndef NDEBUG
+  bool StateIsUnspecified = false;
+#endif
+public:
+  /// Create a builder for a new, initially empty expression.
+  explicit DIExprBuilder(LLVMContext &C);
+  /// Create a builder for a new expression for the sequence of ops in \p IL.
+  explicit DIExprBuilder(LLVMContext &C,
+                         std::initializer_list<DIOp::Variant> IL);
+  /// Create a builder for a new expression, initially a copy of \p E.
+  explicit DIExprBuilder(const DIExpr &E);
+
+  class Iterator
+      : public iterator_facade_base<Iterator, std::random_access_iterator_tag,
+                                    DIOp::Variant> {
+    friend DIExprBuilder;
+    DIOp::Variant *Op = nullptr;
+    Iterator(DIOp::Variant *Op) : Op(Op) {}
+
+  public:
+    Iterator() = delete;
+    Iterator(const Iterator &) = default;
+    bool operator==(const Iterator &R) const { return R.Op == Op; }
+    DIOp::Variant &operator*() { return *Op; }
+    friend iterator_facade_base::difference_type operator-(Iterator LHS,
+                                                           Iterator RHS) {
+      return LHS.Op - RHS.Op;
+    }
+    Iterator &operator+=(iterator_facade_base::difference_type D) {
+      Op += D;
+      return *this;
+    }
+    Iterator &operator-=(iterator_facade_base::difference_type D) {
+      Op -= D;
+      return *this;
+    }
+  };
+
+  Iterator begin() { return Elements.begin(); }
+  Iterator end() { return Elements.end(); }
+  iterator_range<Iterator> range() { return make_range(begin(), end()); }
+
+  Iterator insert(Iterator I, DIOp::Variant O);
+
+  template <typename T, typename... ArgsT>
+  Iterator insert(Iterator I, ArgsT &&...Args) {
+    // FIXME: SmallVector doesn't define an ::emplace(iterator, ...)
+    return Elements.insert(I.Op,
+                           {in_place_type<T>, std::forward<ArgsT>(Args)...});
+  }
+
+  template <typename RangeTy> Iterator insert(Iterator I, RangeTy &&R) {
+    return Elements.insert(I.Op, R.begin(), R.end());
+  }
+
+  template <typename ItTy> Iterator insert(Iterator I, ItTy &&From, ItTy &&To) {
+    return Elements.insert(I.Op, std::forward<ItTy>(From),
+                           std::forward<ItTy>(To));
+  }
+
+  Iterator insert(Iterator I, std::initializer_list<DIOp::Variant> IL) {
+    return Elements.insert(I.Op, IL.begin(), IL.end());
+  }
+
+  /// Appends \p O to the expression being built.
+  DIExprBuilder &append(DIOp::Variant O);
+
+  /// Appends a new DIOp of type T to the expression being built. The new
+  /// DIOp is constructed in-place by forwarding the provided arguments Args.
+  template <typename T, typename... ArgsT>
+  DIExprBuilder &append(ArgsT &&...Args) {
+    Elements.emplace_back(in_place_type<T>, std::forward<ArgsT>(Args)...);
+    return *this;
+  }
+
+  Iterator erase(Iterator I);
+  Iterator erase(Iterator From, Iterator To);
+
+  /// Returns true if the expression being built contains DIOp of type T,
+  /// false otherwise.
+  template <typename T> bool contains() const {
+    return any_of(Elements, std::mem_fn(&DIOp::Variant::holdsAlternative<T>));
+  }
+
+  /// Get the uniqued, immutable expression metadata from the current state
+  /// of the builder.
+  ///
+  /// This leaves the Builder in a valid but unspecified state, as if it were
+  /// moved from.
+  DIExpr *intoExpr();
+};
+
 /// Immutable debug info expression.
 ///
 /// This is an opaque, uniqued metadata node type defined by an immutable
@@ -3130,6 +3241,7 @@ class DIExpr : public MDNode {
   friend class LLVMContextImpl;
   friend class MDNode;
   friend struct MDNodeKeyImpl<DIExpr>;
+  friend class DIExprBuilder;
 
   const SmallVector<DIOp::Variant> Elements;
 
@@ -3151,127 +3263,14 @@ class DIExpr : public MDNode {
       DIExpr, (SmallVector<DIOp::Variant> && Elements), (std::move(Elements)))
 
 public:
-  class Builder;
-
-private:
-public:
   static bool classof(const Metadata *MD) {
     return MD->getMetadataID() == DIExprKind;
   }
   TempDIExpr clone() const { return cloneImpl(); }
 
-  /// Mutable buffer to manipulate debug info expressions.
-  ///
-  /// Example of creating a new expression from scratch:
-  ///
-  /// LLVMContext Ctx;
-  ///
-  /// DIExpr::Builder Builder(Ctx);
-  /// Builder.append(DIOp::InPlaceAdd).intoExpr();
-  ///
-  /// Example of creating a new expression:
-  ///
-  /// DIExpr *Expr = ...;
-  /// ...
-  /// DIExpr *NewExpr = Expr.builder()
-  ///     .append(DIOp::InPlaceDeref)
-  ///     .intoExpr();
-  class Builder {
-    LLVMContext &C;
-    SmallVector<DIOp::Variant> Elements;
-#ifndef NDEBUG
-    bool StateIsUnspecified = false;
-#endif
-  public:
-    /// Create a builder for a new, initially empty expression.
-    explicit Builder(LLVMContext &C);
-    /// Create a builder for a new expression for the sequence of ops in \p IL.
-    explicit Builder(LLVMContext &C, std::initializer_list<DIOp::Variant> IL);
-    /// Create a builder for a new expression, initially a copy of \p E.
-    explicit Builder(const DIExpr &E);
-
-    class Iterator
-        : public iterator_facade_base<Iterator, std::random_access_iterator_tag,
-                                      DIOp::Variant> {
-      friend DIExpr::Builder;
-      DIOp::Variant *Op = nullptr;
-      Iterator(DIOp::Variant *Op) : Op(Op) {}
-
-    public:
-      Iterator() = delete;
-      Iterator(const Iterator &) = default;
-      bool operator==(const Iterator &R) const { return R.Op == Op; }
-      DIOp::Variant &operator*() { return *Op; }
-      friend iterator_facade_base::difference_type operator-(Iterator LHS,
-                                                             Iterator RHS) {
-        return LHS.Op - RHS.Op;
-      }
-      Iterator &operator+=(iterator_facade_base::difference_type D) {
-        Op += D;
-        return *this;
-      }
-      Iterator &operator-=(iterator_facade_base::difference_type D) {
-        Op -= D;
-        return *this;
-      }
-    };
-
-    Iterator begin() { return Elements.begin(); }
-    Iterator end() { return Elements.end(); }
-    iterator_range<Iterator> range() { return make_range(begin(), end()); }
-
-    Iterator insert(Iterator I, DIOp::Variant O);
-
-    template <typename T, typename... ArgsT>
-    Iterator insert(Iterator I, ArgsT &&...Args) {
-      // FIXME: SmallVector doesn't define an ::emplace(iterator, ...)
-      return Elements.insert(I.Op,
-                             {in_place_type<T>, std::forward<ArgsT>(Args)...});
-    }
-
-    template <typename RangeTy> Iterator insert(Iterator I, RangeTy &&R) {
-      return Elements.insert(I.Op, R.begin(), R.end());
-    }
-
-    template <typename ItTy>
-    Iterator insert(Iterator I, ItTy &&From, ItTy &&To) {
-      return Elements.insert(I.Op, std::forward<ItTy>(From),
-                             std::forward<ItTy>(To));
-    }
-
-    Iterator insert(Iterator I, std::initializer_list<DIOp::Variant> IL) {
-      return Elements.insert(I.Op, IL.begin(), IL.end());
-    }
-
-    /// Appends \p O to the expression being built.
-    Builder &append(DIOp::Variant O);
-
-    /// Appends a new DIOp of type T to the expression being built. The new
-    /// DIOp is constructed in-place by forwarding the provided arguments Args.
-    template <typename T, typename... ArgsT> Builder &append(ArgsT &&...Args) {
-      Elements.emplace_back(in_place_type<T>, std::forward<ArgsT>(Args)...);
-      return *this;
-    }
-
-    Iterator erase(Iterator I);
-    Iterator erase(Iterator From, Iterator To);
-
-    /// Returns true if the expression being built contains DIOp of type T,
-    /// false otherwise.
-    template <typename T> bool contains() const {
-      return any_of(Elements, std::mem_fn(&DIOp::Variant::holdsAlternative<T>));
-    }
-
-    /// Get the uniqued, immutable expression metadata from the current state
-    /// of the builder.
-    ///
-    /// This leaves the Builder in a valid but unspecified state, as if it were
-    /// moved from.
-    DIExpr *intoExpr();
-  };
 
   /// Convenience method to get a builder by copying the current expression.
-  Builder builder() const { return Builder(*this); }
+  DIExprBuilder builder() const { return DIExprBuilder(*this); }
 };
 
 /// Global variables.
