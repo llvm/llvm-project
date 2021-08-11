@@ -64,9 +64,20 @@ def _executeScriptInternal(test, commands):
     if not os.path.exists(d):
       os.makedirs(d)
   res = lit.TestRunner.executeScriptInternal(test, litConfig, tmpBase, parsedCommands, execDir)
-  if isinstance(res, lit.Test.Result):
-    res = ('', '', 127, None)
-  return res
+  if isinstance(res, lit.Test.Result): # Handle failure to parse the Lit test
+    res = ('', res.output, 127, None)
+  (out, err, exitCode, timeoutInfo) = res
+
+  # TODO: As a temporary workaround until https://reviews.llvm.org/D81892 lands, manually
+  #       split any stderr output that is included in stdout. It shouldn't be there, but
+  #       the Lit internal shell conflates stderr and stdout.
+  conflatedErrorOutput = re.search("(# command stderr:.+$)", out, flags=re.DOTALL)
+  if conflatedErrorOutput:
+    conflatedErrorOutput = conflatedErrorOutput.group(0)
+    out = out[:-len(conflatedErrorOutput)]
+    err += conflatedErrorOutput
+
+  return (out, err, exitCode, timeoutInfo)
 
 def _makeConfigTest(config, testPrefix=''):
   sourceRoot = os.path.join(config.test_exec_root, '__config_src__')
@@ -122,7 +133,7 @@ def programOutput(config, program, args=None, testPrefix=''):
       if exitCode != 0:
         return None
 
-      actualOut = re.search("command output:\n(.+)\n$", out, flags=re.DOTALL)
+      actualOut = re.search("# command output:\n(.+)\n$", out, flags=re.DOTALL)
       actualOut = actualOut.group(1) if actualOut else ""
       return actualOut
 

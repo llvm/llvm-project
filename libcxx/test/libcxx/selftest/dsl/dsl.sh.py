@@ -196,6 +196,7 @@ class TestProgramOutput(SetupConfigs):
         #include <cstdio>
         int main(int, char**) {
             std::printf("MACRO=%u\\n", MACRO);
+            return 0;
         }
         """
         compileFlagsIndex = findIndex(self.config.substitutions, lambda x: x[0] == '%{compile_flags}')
@@ -208,6 +209,19 @@ class TestProgramOutput(SetupConfigs):
         self.config.substitutions[compileFlagsIndex] = ('%{compile_flags}',  compileFlags + ' -DMACRO=2')
         output2 = dsl.programOutput(self.config, source)
         self.assertEqual(output2, "MACRO=2\n")
+
+    def test_program_stderr_is_not_conflated_with_stdout(self):
+        # Run a program that produces stdout output and stderr output too, making
+        # sure the stderr output does not pollute the stdout output.
+        source = """
+        #include <cstdio>
+        int main(int, char**) {
+            std::fprintf(stdout, "STDOUT-OUTPUT");
+            std::fprintf(stderr, "STDERR-OUTPUT");
+            return 0;
+        }
+        """
+        self.assertEqual(dsl.programOutput(self.config, source), "STDOUT-OUTPUT")
 
 
 class TestHasLocale(SetupConfigs):
