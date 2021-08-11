@@ -57,7 +57,6 @@ class TestGDBRemoteClient(GDBRemoteTestBase):
             def A(self, packet):
                 return "E47"
 
-        self.runCmd("log enable gdb-remote packets")
         self.server.responder = MyResponder()
 
         target = self.createTarget("a.yaml")
@@ -148,3 +147,114 @@ class TestGDBRemoteClient(GDBRemoteTestBase):
         self.assertGreater(numChildren, 0)
         for i in range(numChildren):
             operation(regSet.GetChildAtIndex(i))
+
+    def test_launch_A(self):
+        class MyResponder(MockGDBServerResponder):
+            def __init__(self, *args, **kwargs):
+                self.started = False
+                return super().__init__(*args, **kwargs)
+
+            def qC(self):
+                if self.started:
+                    return "QCp10.10"
+                else:
+                    return "E42"
+
+            def qfThreadInfo(self):
+                if self.started:
+                    return "mp10.10"
+                else:
+                   return "E42"
+
+            def qsThreadInfo(self):
+                return "l"
+
+            def A(self, packet):
+                self.started = True
+                return "OK"
+
+            def qLaunchSuccess(self):
+                if self.started:
+                    return "OK"
+                return "E42"
+
+        self.server.responder = MyResponder()
+
+        target = self.createTarget("a.yaml")
+        exe_path = self.getBuildArtifact("a")
+        exe_hex = binascii.b2a_hex(exe_path.encode()).decode()
+        process = self.connect(target)
+        lldbutil.expect_state_changes(self, self.dbg.GetListener(), process,
+                                      [lldb.eStateConnected])
+
+        target.Launch(lldb.SBListener(),
+                      ["arg1", "arg2", "arg3"],  # argv
+                      [],  # envp
+                      None,  # stdin_path
+                      None,  # stdout_path
+                      None,  # stderr_path
+                      None,  # working_directory
+                      0,  # launch_flags
+                      True,  # stop_at_entry
+                      lldb.SBError())  # error
+        self.assertTrue(process, PROCESS_IS_VALID)
+        self.assertEqual(process.GetProcessID(), 16)
+
+        self.assertPacketLogContains([
+          "A%d,0,%s,8,1,61726731,8,2,61726732,8,3,61726733" % (
+              len(exe_hex), exe_hex),
+        ])
+
+    def test_launch_vRun(self):
+        class MyResponder(MockGDBServerResponder):
+            def __init__(self, *args, **kwargs):
+                self.started = False
+                return super().__init__(*args, **kwargs)
+
+            def qC(self):
+                if self.started:
+                    return "QCp10.10"
+                else:
+                    return "E42"
+
+            def qfThreadInfo(self):
+                if self.started:
+                    return "mp10.10"
+                else:
+                   return "E42"
+
+            def qsThreadInfo(self):
+                return "l"
+
+            def vRun(self, packet):
+                self.started = True
+                return "T13"
+
+            def A(self, packet):
+                return "E28"
+
+        self.server.responder = MyResponder()
+
+        target = self.createTarget("a.yaml")
+        exe_path = self.getBuildArtifact("a")
+        exe_hex = binascii.b2a_hex(exe_path.encode()).decode()
+        process = self.connect(target)
+        lldbutil.expect_state_changes(self, self.dbg.GetListener(), process,
+                                      [lldb.eStateConnected])
+
+        process = target.Launch(lldb.SBListener(),
+                                ["arg1", "arg2", "arg3"],  # argv
+                                [],  # envp
+                                None,  # stdin_path
+                                None,  # stdout_path
+                                None,  # stderr_path
+                                None,  # working_directory
+                                0,  # launch_flags
+                                True,  # stop_at_entry
+                                lldb.SBError())  # error
+        self.assertTrue(process, PROCESS_IS_VALID)
+        self.assertEqual(process.GetProcessID(), 16)
+
+        self.assertPacketLogContains([
+          "vRun;%s;61726731;61726732;61726733" % (exe_hex,)
+        ])

@@ -66,7 +66,7 @@ GDBRemoteCommunicationClient::GDBRemoteCommunicationClient()
       m_qSymbol_requests_done(false), m_supports_qModuleInfo(true),
       m_supports_jThreadsInfo(true), m_supports_jModulesInfo(true),
       m_supports_vFileSize(true), m_supports_vFileMode(true),
-      m_supports_vFileExists(true),
+      m_supports_vFileExists(true), m_supports_vRun(true),
 
       m_host_arch(), m_process_arch(), m_os_build(), m_os_kernel(),
       m_hostname(), m_gdb_server_name(), m_default_packet_timeout(0),
@@ -794,6 +794,11 @@ bool GDBRemoteCommunicationClient::GetLaunchSuccess(std::string &error_str) {
       PacketResult::Success) {
     if (response.IsOKResponse())
       return true;
+    // GDB does not implement qLaunchSuccess -- but if we used vRun,
+    // then we already received a successful launch indication via stop
+    // reason.
+    if (response.IsUnsupportedResponse() && m_supports_vRun)
+      return true;
     if (response.GetChar() == 'E') {
       // A string the describes what failed when launching...
       error_str = std::string(response.GetStringRef().substr(1));
@@ -832,6 +837,36 @@ int GDBRemoteCommunicationClient::SendArgumentsPacket(
     }
   }
   if (!argv.empty()) {
+    // try vRun first
+    if (m_supports_vRun) {
+      StreamString packet;
+      packet.PutCString("vRun");
+      for (const char *arg : argv) {
+        packet.PutChar(';');
+        packet.PutBytesAsRawHex8(arg, strlen(arg));
+      }
+
+      StringExtractorGDBRemote response;
+      if (SendPacketAndWaitForResponse(packet.GetString(), response) !=
+          PacketResult::Success)
+        return -1;
+
+      if (response.IsErrorResponse()) {
+        uint8_t error = response.GetError();
+        if (error)
+          return error;
+        return -1;
+      }
+      // vRun replies with a stop reason packet
+      // FIXME: right now we just discard the packet and LLDB queries
+      // for stop reason again
+      if (!response.IsUnsupportedResponse())
+        return 0;
+
+      m_supports_vRun = false;
+    }
+
+    // fallback to A
     StreamString packet;
     packet.PutChar('A');
     for (size_t i = 0, n = argv.size(); i < n; ++i) {
