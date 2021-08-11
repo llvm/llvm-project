@@ -36,8 +36,6 @@ public:
   /// Extracts a debug info entry, which is a child of a given unit,
   /// starting at a given offset. If DIE can't be extracted, returns false and
   /// doesn't change OffsetPtr.
-  bool extractFast(const DWARFUnit &U, uint64_t *OffsetPtr);
-
   /// High performance extraction should use this call.
   bool extractFast(const DWARFUnit &U, uint64_t *OffsetPtr,
                    const DWARFDataExtractor &DebugInfoData, uint64_t UEndOffset,
