@@ -566,9 +566,9 @@ void Preprocessor::HandlePragmaIncludeInstead(Token &Tok) {
     return;
   }
 
-  HeaderInfo.AddFileAlias(
-      TheLexer->getFileEntry(),
-      {FilenameTok->getLiteralData(), FilenameTok->getLength()});
+  SmallString<128> FilenameBuffer;
+  StringRef Filename = getSpelling(*FilenameTok, FilenameBuffer);
+  HeaderInfo.AddFileAlias(TheLexer->getFileEntry(), Filename);
 }
 
 /// HandlePragmaDependency - Handle \#pragma GCC dependency "foo" blah.
