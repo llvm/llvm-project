@@ -178,6 +178,7 @@ struct Configuration {
   bool ignoreDataAddressEquality;
   bool ignoreFunctionAddressEquality;
   bool ltoCSProfileGenerate;
+  bool ltoPGOWarnMismatch;
   bool ltoDebugPassManager;
   bool ltoEmitAsm;
   bool ltoNewPassManager;
