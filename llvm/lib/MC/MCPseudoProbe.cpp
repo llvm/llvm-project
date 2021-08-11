@@ -12,7 +12,6 @@
 #include "llvm/MC/MCObjectFileInfo.h"
 #include "llvm/MC/MCObjectStreamer.h"
 #include "llvm/MC/MCStreamer.h"
-#include "llvm/ProfileData/SampleProf.h"
 #include "llvm/Support/Endian.h"
 #include "llvm/Support/LEB128.h"
 #include "llvm/Support/raw_ostream.h"
@@ -23,7 +22,6 @@
 
 using namespace llvm;
 using namespace support;
-using namespace sampleprof;
 
 #ifndef NDEBUG
 int MCPseudoProbeTable::DdgPrintIndent = 0;
