@@ -3152,7 +3152,6 @@ bool AArch64DAGToDAGISel::SelectSVEAddSubImm(SDValue N, MVT VT, SDValue &Imm, SD
         Imm = CurDAG->getTargetConstant(ImmVal, DL, MVT::i32);
         return true;
       } else if ((ImmVal & 0xFF) == 0) {
-        assert((ImmVal >= -32768) && (ImmVal <= 32512));
         Shift = CurDAG->getTargetConstant(8, DL, MVT::i32);
         Imm = CurDAG->getTargetConstant((ImmVal >> 8) & 0xFF, DL, MVT::i32);
         return true;
