@@ -76,11 +76,14 @@ class DataFormatterBoolRefPtr(TestBase):
         if not(isArm):
             self.expect('frame variable unset', substrs=['12'])
 
+        # BOOL is bool instead of signed char on ARM.
+        converted_YES = "-1" if not isArm else "YES"
+
         self.expect_expr('myField', result_type="BoolBitFields",
                  result_children=[
                      ValueCheck(name="fieldOne", summary="NO"),
-                     ValueCheck(name="fieldTwo", summary="-1"),
+                     ValueCheck(name="fieldTwo", summary=converted_YES),
                      ValueCheck(name="fieldThree", summary="NO"),
                      ValueCheck(name="fieldFour", summary="NO"),
-                     ValueCheck(name="fieldFive", summary="-1")
+                     ValueCheck(name="fieldFive", summary=converted_YES)
                  ])
