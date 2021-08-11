@@ -221,7 +221,7 @@ struct __optional_destruct_base<_Tp, false>
     bool __engaged_;
 
     _LIBCPP_INLINE_VISIBILITY
-    _LIBCPP_CONSTEXPR_AFTER_CXX17 ~__optional_destruct_base()
+    ~__optional_destruct_base()
     {
         if (__engaged_)
             __val_.~value_type();
