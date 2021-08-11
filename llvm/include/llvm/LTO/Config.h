@@ -70,9 +70,6 @@ struct Config {
   /// Run PGO context sensitive IR instrumentation.
   bool RunCSIRInstr = false;
 
-  /// Turn on/off the warning about a hash mismatch in the PGO profile data.
-  bool PGOWarnMismatch = true;
-
   /// Asserts whether we can assume whole program visibility during the LTO
   /// link.
   bool HasWholeProgramVisibility = false;

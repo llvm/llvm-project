@@ -87,7 +87,6 @@ static lto::Config createConfig() {
   c.DebugPassManager = config->ltoDebugPassManager;
   c.CSIRProfile = std::string(config->ltoCSProfileFile);
   c.RunCSIRInstr = config->ltoCSProfileGenerate;
-  c.PGOWarnMismatch = config->ltoPGOWarnMismatch;
 
   if (config->saveTemps)
     checkError(c.addSaveTemps(std::string(config->outputFile) + ".",
