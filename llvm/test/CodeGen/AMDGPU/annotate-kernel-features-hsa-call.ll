@@ -738,6 +738,82 @@ define float @func_indirect_use_dispatch_ptr_constexpr_cast_func() #1 {
   ret float %fadd
 }
 
+define float @func_indirect_call(float()* %fptr) #3 {
+; AKF_HSA-LABEL: define {{[^@]+}}@func_indirect_call
+; AKF_HSA-SAME: (float ()* [[FPTR:%.*]]) #[[ATTR21:[0-9]+]] {
+; AKF_HSA-NEXT:    [[F:%.*]] = call float [[FPTR]]()
+; AKF_HSA-NEXT:    [[FADD:%.*]] = fadd float [[F]], 1.000000e+00
+; AKF_HSA-NEXT:    ret float [[FADD]]
+;
+; ATTRIBUTOR_HSA-LABEL: define {{[^@]+}}@func_indirect_call
+; ATTRIBUTOR_HSA-SAME: (float ()* [[FPTR:%.*]]) #[[ATTR6]] {
+; ATTRIBUTOR_HSA-NEXT:    [[F:%.*]] = call float [[FPTR]]()
+; ATTRIBUTOR_HSA-NEXT:    [[FADD:%.*]] = fadd float [[F]], 1.000000e+00
+; ATTRIBUTOR_HSA-NEXT:    ret float [[FADD]]
+;
+  %f = call float %fptr()
+  %fadd = fadd float %f, 1.0
+  ret float %fadd
+}
+
+declare float @extern() #3
+define float @func_extern_call() #3 {
+; AKF_HSA-LABEL: define {{[^@]+}}@func_extern_call
+; AKF_HSA-SAME: () #[[ATTR17]] {
+; AKF_HSA-NEXT:    [[F:%.*]] = call float @extern()
+; AKF_HSA-NEXT:    [[FADD:%.*]] = fadd float [[F]], 1.000000e+00
+; AKF_HSA-NEXT:    ret float [[FADD]]
+;
+; ATTRIBUTOR_HSA-LABEL: define {{[^@]+}}@func_extern_call
+; ATTRIBUTOR_HSA-SAME: () #[[ATTR6]] {
+; ATTRIBUTOR_HSA-NEXT:    [[F:%.*]] = call float @extern() #[[ATTR10]]
+; ATTRIBUTOR_HSA-NEXT:    [[FADD:%.*]] = fadd float [[F]], 1.000000e+00
+; ATTRIBUTOR_HSA-NEXT:    ret float [[FADD]]
+;
+  %f = call float @extern()
+  %fadd = fadd float %f, 1.0
+  ret float %fadd
+}
+
+define float @func_null_call(float()* %fptr) #3 {
+; AKF_HSA-LABEL: define {{[^@]+}}@func_null_call
+; AKF_HSA-SAME: (float ()* [[FPTR:%.*]]) #[[ATTR21]] {
+; AKF_HSA-NEXT:    [[F:%.*]] = call float null()
+; AKF_HSA-NEXT:    [[FADD:%.*]] = fadd float [[F]], 1.000000e+00
+; AKF_HSA-NEXT:    ret float [[FADD]]
+;
+; ATTRIBUTOR_HSA-LABEL: define {{[^@]+}}@func_null_call
+; ATTRIBUTOR_HSA-SAME: (float ()* [[FPTR:%.*]]) #[[ATTR6]] {
+; ATTRIBUTOR_HSA-NEXT:    [[F:%.*]] = call float null()
+; ATTRIBUTOR_HSA-NEXT:    [[FADD:%.*]] = fadd float [[F]], 1.000000e+00
+; ATTRIBUTOR_HSA-NEXT:    ret float [[FADD]]
+;
+  %f = call float null()
+  %fadd = fadd float %f, 1.0
+  ret float %fadd
+}
+
+declare float @llvm.amdgcn.rcp.f32(float) #0
+
+; Calls some other recognized intrinsic
+define float @func_other_intrinsic_call(float %arg) #3 {
+; AKF_HSA-LABEL: define {{[^@]+}}@func_other_intrinsic_call
+; AKF_HSA-SAME: (float [[ARG:%.*]]) #[[ATTR18]] {
+; AKF_HSA-NEXT:    [[F:%.*]] = call float @llvm.amdgcn.rcp.f32(float [[ARG]])
+; AKF_HSA-NEXT:    [[FADD:%.*]] = fadd float [[F]], 1.000000e+00
+; AKF_HSA-NEXT:    ret float [[FADD]]
+;
+; ATTRIBUTOR_HSA-LABEL: define {{[^@]+}}@func_other_intrinsic_call
+; ATTRIBUTOR_HSA-SAME: (float [[ARG:%.*]]) #[[ATTR7]] {
+; ATTRIBUTOR_HSA-NEXT:    [[F:%.*]] = call float @llvm.amdgcn.rcp.f32(float [[ARG]])
+; ATTRIBUTOR_HSA-NEXT:    [[FADD:%.*]] = fadd float [[F]], 1.000000e+00
+; ATTRIBUTOR_HSA-NEXT:    ret float [[FADD]]
+;
+  %f = call float @llvm.amdgcn.rcp.f32(float %arg)
+  %fadd = fadd float %f, 1.0
+  ret float %fadd
+}
+
 attributes #0 = { nounwind readnone speculatable }
 attributes #1 = { nounwind "target-cpu"="fiji" }
 attributes #2 = { nounwind "target-cpu"="gfx900" }
@@ -765,6 +841,7 @@ attributes #3 = { nounwind }
 ; AKF_HSA: attributes #[[ATTR18]] = { nounwind }
 ; AKF_HSA: attributes #[[ATTR19]] = { nounwind "amdgpu-calls" "uniform-work-group-size"="false" }
 ; AKF_HSA: attributes #[[ATTR20]] = { nounwind "amdgpu-dispatch-id" "amdgpu-dispatch-ptr" "amdgpu-implicitarg-ptr" "amdgpu-queue-ptr" "amdgpu-work-group-id-x" "amdgpu-work-group-id-y" "amdgpu-work-group-id-z" "amdgpu-work-item-id-x" "amdgpu-work-item-id-y" "amdgpu-work-item-id-z" "target-cpu"="fiji" }
+; AKF_HSA: attributes #[[ATTR21]] = { nounwind "amdgpu-dispatch-id" "amdgpu-dispatch-ptr" "amdgpu-implicitarg-ptr" "amdgpu-queue-ptr" "amdgpu-work-group-id-x" "amdgpu-work-group-id-y" "amdgpu-work-group-id-z" "amdgpu-work-item-id-x" "amdgpu-work-item-id-y" "amdgpu-work-item-id-z" }
 ;.
 ; ATTRIBUTOR_HSA: attributes #[[ATTR0:[0-9]+]] = { nounwind readnone speculatable willreturn "uniform-work-group-size"="false" }
 ; ATTRIBUTOR_HSA: attributes #[[ATTR1]] = { nounwind "target-cpu"="fiji" "uniform-work-group-size"="false" }
