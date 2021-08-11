@@ -61,8 +61,6 @@ struct PreambleData {
   // Users care about headers vs main-file, not preamble vs non-preamble.
   // These should be treated as main-file entities e.g. for code completion.
   MainFileMacros Macros;
-  // Pragma marks defined in the preamble section of the main file.
-  std::vector<PragmaMark> Marks;
   // Cache of FS operations performed when building the preamble.
   // When reusing a preamble, this cache can be consumed to save IO.
   std::unique_ptr<PreambleFileStatusCache> StatCache;

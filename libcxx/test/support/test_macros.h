@@ -381,12 +381,43 @@ inline void DoNotOptimize(Tp const& value) {
 #define TEST_NOT_WIN32(...) __VA_ARGS__
 #endif
 
-#if defined(_WIN32) && !defined(_LIBCPP_DISABLE_VISIBILITY_ANNOTATIONS)
-#define TEST_NOT_WIN32_DLL(...) ((void)0)
-#define TEST_ONLY_WIN32_DLL(...) __VA_ARGS__
+#if (defined(_WIN32) && !defined(_LIBCPP_DISABLE_VISIBILITY_ANNOTATIONS)) ||   \
+    defined(__MVS__)
+// Macros for waiving cases when we can't count allocations done within
+// the library implementation.
+//
+// On Windows, when libc++ is built as a DLL, references to operator new/delete
+// within the DLL are bound at link time to the operator new/delete within
+// the library; replacing them in the user executable doesn't override the
+// calls within the library.
+//
+// The same goes on IBM zOS.
+#define ASSERT_WITH_LIBRARY_INTERNAL_ALLOCATIONS(...) ((void)(__VA_ARGS__))
+#define TEST_SUPPORTS_LIBRARY_INTERNAL_ALLOCATIONS 0
 #else
-#define TEST_NOT_WIN32_DLL(...) __VA_ARGS__
-#define TEST_ONLY_WIN32_DLL(...) ((void)0)
+#define ASSERT_WITH_LIBRARY_INTERNAL_ALLOCATIONS(...) assert(__VA_ARGS__)
+#define TEST_SUPPORTS_LIBRARY_INTERNAL_ALLOCATIONS 1
+#endif
+
+#if (defined(_WIN32) && !defined(_MSC_VER) &&                                  \
+     !defined(_LIBCPP_DISABLE_VISIBILITY_ANNOTATIONS)) ||                      \
+    defined(__MVS__)
+// Normally, a replaced e.g. 'operator new' ends up used if the user code
+// does a call to e.g. 'operator new[]'; it's enough to replace the base
+// versions and have it override all of them.
+//
+// When the fallback operators are located within the libc++ library and we
+// can't override the calls within it (see above), this fallback mechanism
+// doesn't work either.
+//
+// On Windows, when using the MSVC vcruntime, the operator new/delete fallbacks
+// are linked separately from the libc++ library, linked statically into
+// the end user executable, and these fallbacks work even in DLL configurations.
+// In MinGW configurations when built as a DLL, and on zOS, these fallbacks
+// don't work though.
+#define ASSERT_WITH_OPERATOR_NEW_FALLBACKS(...) ((void)(__VA_ARGS__))
+#else
+#define ASSERT_WITH_OPERATOR_NEW_FALLBACKS(...) assert(__VA_ARGS__)
 #endif
 
 #ifdef _WIN32

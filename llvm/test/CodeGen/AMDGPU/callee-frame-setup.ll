@@ -239,8 +239,8 @@ define void @spill_only_csr_sgpr() #0 {
 ; GCN: s_waitcnt
 ; GCN-NEXT:s_mov_b32 [[FP_COPY:s[0-9]+]], s33
 ; GCN-NEXT: s_mov_b32 s33, s32
-; GCN: v_mov_b32_e32 [[ZERO:v[0-9]+]], 0
-; MUBUF-DAG:   buffer_store_dword v41, off, s[0:3], s33 ; 4-byte Folded Spill
+; MUBUF:   buffer_store_dword v41, off, s[0:3], s33 ; 4-byte Folded Spill
+; GCN-DAG: v_mov_b32_e32 [[ZERO:v[0-9]+]], 0
 ; FLATSCR-DAG: scratch_store_dword off, v41, s33 ; 4-byte Folded Spill
 ; MUBUF-DAG:   buffer_store_dword [[ZERO]], off, s[0:3], s33 offset:8
 ; FLATSCR-DAG: scratch_store_dword off, [[ZERO]], s33 offset:8
@@ -251,10 +251,8 @@ define void @spill_only_csr_sgpr() #0 {
 
 ; MUBUF:   buffer_load_dword v41, off, s[0:3], s33 ; 4-byte Folded Reload
 ; FLATSCR: scratch_load_dword v41, off, s33 ; 4-byte Folded Reload
-; MUBUF:        s_addk_i32 s32, 0x300
 ; MUBUF-NEXT:   s_addk_i32 s32, 0xfd00
 ; MUBUF-NEXT:   s_mov_b32 s33, s4
-; FLATSCR:      s_add_i32 s32, s32, 12
 ; FLATSCR-NEXT: s_add_i32 s32, s32, -12
 ; FLATSCR-NEXT: s_mov_b32 s33, s0
 ; GCN-NEXT: s_waitcnt vmcnt(0)

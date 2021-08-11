@@ -151,22 +151,11 @@ body:             |
     ; CHECK: [[BSWAP1:%[0-9]+]]:_(s64) = G_BSWAP [[DEF]]
     ; CHECK: [[C:%[0-9]+]]:_(s64) = G_CONSTANT i64 40
     ; CHECK: [[C1:%[0-9]+]]:_(s64) = G_CONSTANT i64 0
-    ; CHECK: [[C2:%[0-9]+]]:_(s64) = G_CONSTANT i64 64
-    ; CHECK: [[SUB:%[0-9]+]]:_(s64) = G_SUB [[C]], [[C2]]
-    ; CHECK: [[SUB1:%[0-9]+]]:_(s64) = G_SUB [[C2]], [[C]]
-    ; CHECK: [[ICMP:%[0-9]+]]:_(s32) = G_ICMP intpred(ult), [[C]](s64), [[C2]]
-    ; CHECK: [[TRUNC:%[0-9]+]]:_(s1) = G_TRUNC [[ICMP]](s32)
-    ; CHECK: [[ICMP1:%[0-9]+]]:_(s32) = G_ICMP intpred(eq), [[C]](s64), [[C1]]
-    ; CHECK: [[TRUNC1:%[0-9]+]]:_(s1) = G_TRUNC [[ICMP1]](s32)
-    ; CHECK: [[LSHR:%[0-9]+]]:_(s64) = G_LSHR [[BSWAP1]], [[C]](s64)
-    ; CHECK: [[LSHR1:%[0-9]+]]:_(s64) = G_LSHR [[BSWAP]], [[C]](s64)
-    ; CHECK: [[SHL:%[0-9]+]]:_(s64) = G_SHL [[BSWAP1]], [[SUB1]](s64)
-    ; CHECK: [[OR:%[0-9]+]]:_(s64) = G_OR [[LSHR1]], [[SHL]]
-    ; CHECK: [[LSHR2:%[0-9]+]]:_(s64) = G_LSHR [[BSWAP1]], [[SUB]](s64)
-    ; CHECK: [[SELECT:%[0-9]+]]:_(s64) = G_SELECT [[TRUNC]](s1), [[OR]], [[LSHR2]]
-    ; CHECK: [[SELECT1:%[0-9]+]]:_(s64) = G_SELECT [[TRUNC1]](s1), [[BSWAP]], [[SELECT]]
-    ; CHECK: [[SELECT2:%[0-9]+]]:_(s64) = G_SELECT [[TRUNC]](s1), [[LSHR]], [[C1]]
-    ; CHECK: $x0 = COPY [[SELECT1]](s64)
+    ; CHECK: [[LSHR:%[0-9]+]]:_(s64) = G_LSHR [[BSWAP]], [[C]](s64)
+    ; CHECK: [[C2:%[0-9]+]]:_(s64) = G_CONSTANT i64 24
+    ; CHECK: [[SHL:%[0-9]+]]:_(s64) = G_SHL [[BSWAP1]], [[C2]](s64)
+    ; CHECK: [[OR:%[0-9]+]]:_(s64) = G_OR [[LSHR]], [[SHL]]
+    ; CHECK: $x0 = COPY [[OR]](s64)
     ; CHECK: RET_ReallyLR implicit $x0
     %val:_(s88) = G_IMPLICIT_DEF
     %bswap:_(s88) = G_BSWAP %val

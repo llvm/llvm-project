@@ -20,8 +20,12 @@ int main() {
   // CHECK: Going to do a [[TYPE:[A-Z]*]]
   int r = 0;
   if (ISREAD) r = x[5]; else x[5] = 42;  // should be on the same line.
+  // CHECK: ERROR: HWAddressSanitizer: tag-mismatch on address {{.*}} at pc {{[0x]+}}[[PC:.*]]
   // CHECK: [[TYPE]] of size 1 at {{.*}} tags: [[PTR_TAG:[0-9a-f][0-9a-f]]]/[[MEM_TAG:[0-9a-f][0-9a-f]]] (ptr/mem)
-  // CHECK: #{{[0-9]}} {{.*}} in main {{.*}}use-after-free.c:[[@LINE-2]]
+  // CHECK: #{{[0-9]}} {{[0-9]+}}{{.*}}[[PC]]
+  // If we instrument using calls (default on x86), main is not the top frame
+  // of the fault.
+  // CHECK: in main {{.*}}use-after-free.c:[[@LINE-6]]
   // Offset is 5 or 11 depending on left/right alignment.
   // CHECK: is a small unallocated heap chunk; size: 32 offset: {{5|11}}
   // CHECK: Cause: use-after-free
@@ -29,11 +33,11 @@ int main() {
   //
   // CHECK: freed by thread {{.*}} here:
   // CHECK: #0 {{.*}} in {{.*}}free{{.*}} {{.*}}hwasan_allocation_functions.cpp
-  // CHECK: #1 {{.*}} in main {{.*}}use-after-free.c:[[@LINE-15]]
+  // CHECK: #1 {{.*}} in main {{.*}}use-after-free.c:[[@LINE-19]]
 
   // CHECK: previously allocated here:
   // CHECK: #0 {{.*}} in {{.*}}malloc{{.*}} {{.*}}hwasan_allocation_functions.cpp
-  // CHECK: #1 {{.*}} in main {{.*}}use-after-free.c:[[@LINE-20]]
+  // CHECK: #1 {{.*}} in main {{.*}}use-after-free.c:[[@LINE-24]]
   // CHECK: Memory tags around the buggy address (one tag corresponds to 16 bytes):
   // CHECK: =>{{.*}}[[MEM_TAG]]
   // CHECK: SUMMARY: HWAddressSanitizer: tag-mismatch

@@ -2606,8 +2606,10 @@ static bool BlockIsSimpleEnoughToThreadThrough(BasicBlock *BB) {
 /// If we have a conditional branch on a PHI node value that is defined in the
 /// same block as the branch and if any PHI entries are constants, thread edges
 /// corresponding to that entry to be branches to their ultimate destination.
-static bool FoldCondBranchOnPHI(BranchInst *BI, DomTreeUpdater *DTU,
-                                const DataLayout &DL, AssumptionCache *AC) {
+static Optional<bool> FoldCondBranchOnPHIImpl(BranchInst *BI,
+                                              DomTreeUpdater *DTU,
+                                              const DataLayout &DL,
+                                              AssumptionCache *AC) {
   BasicBlock *BB = BI->getParent();
   PHINode *PN = dyn_cast<PHINode>(BI->getCondition());
   // NOTE: we currently cannot transform this case if the PHI node is used
@@ -2721,11 +2723,23 @@ static bool FoldCondBranchOnPHI(BranchInst *BI, DomTreeUpdater *DTU,
       DTU->applyUpdates(Updates);
     }
 
-    // Recurse, simplifying any other constants.
-    return FoldCondBranchOnPHI(BI, DTU, DL, AC) || true;
+    // Signal repeat, simplifying any other constants.
+    return None;
   }
 
   return false;
+}
+
+static bool FoldCondBranchOnPHI(BranchInst *BI, DomTreeUpdater *DTU,
+                                const DataLayout &DL, AssumptionCache *AC) {
+  Optional<bool> Result;
+  bool EverChanged = false;
+  do {
+    // Note that None means "we changed things, but recurse further."
+    Result = FoldCondBranchOnPHIImpl(BI, DTU, DL, AC);
+    EverChanged |= Result == None || *Result;
+  } while (Result == None);
+  return EverChanged;
 }
 
 /// Given a BB that starts with the specified two-entry PHI node,
