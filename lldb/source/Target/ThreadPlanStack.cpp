@@ -452,8 +452,8 @@ void ThreadPlanStackMap::DumpPlans(Stream &strm,
       index_id = thread_sp->GetIndexID();
 
     if (condense_if_trivial) {
-      if (!elem.second.AnyPlans() && !elem.second.AnyCompletedPlans() &&
-          !elem.second.AnyDiscardedPlans()) {
+      if (!elem.second->AnyPlans() && !elem.second->AnyCompletedPlans() &&
+          !elem.second->AnyDiscardedPlans()) {
         strm.Printf("thread #%u: tid = 0x%4.4" PRIx64 "\n", index_id, tid);
         strm.IndentMore();
         strm.Indent();
@@ -466,7 +466,7 @@ void ThreadPlanStackMap::DumpPlans(Stream &strm,
     strm.Indent();
     strm.Printf("thread #%u: tid = 0x%4.4" PRIx64 ":\n", index_id, tid);
 
-    elem.second.DumpThreadPlans(strm, desc_level, internal);
+    elem.second->DumpThreadPlans(strm, desc_level, internal);
   }
 }
 

@@ -1286,25 +1286,23 @@ void Process::UpdateThreadListIfNeeded() {
 }
 
 void Process::SynchronizeThreadPlans() {
-  for (auto &stack : m_thread_plans.CleanUp())
-    m_async_thread_plans.emplace_back(std::move(stack));
+  m_thread_plans.ScanForDetachedPlanStacks();
 }
 
 ThreadPlanSP Process::FindDetachedPlanExplainingStop(Thread &thread,
                                                      Event *event_ptr) {
-  auto end = m_async_thread_plans.end();
-  for (auto it = m_async_thread_plans.begin(); it != end; ++it) {
-    auto plan_sp = it->GetCurrentPlan();
+  std::vector<ThreadPlanStack *> &detached_plans 
+      = m_thread_plans.GetDetachedPlanStacks();
+  size_t num_detached_plans = detached_plans.size();
+  for (size_t idx = 0; idx < num_detached_plans; idx++) {
+    ThreadPlanStack *cur_stack = detached_plans[idx];
+    ThreadPlanSP plan_sp = cur_stack->GetCurrentPlan();
     plan_sp->SetTID(thread.GetID());
     if (!plan_sp->DoPlanExplainsStop(event_ptr)) {
       plan_sp->ClearTID();
       continue;
     }
-
-    auto stack = std::move(*it);
-    m_async_thread_plans.erase(it);
-    stack.SetTID(plan_sp->GetTID());
-    m_thread_plans.Activate(std::move(stack));
+    m_thread_plans.Activate(*cur_stack);
     return plan_sp;
   }
   return {};
