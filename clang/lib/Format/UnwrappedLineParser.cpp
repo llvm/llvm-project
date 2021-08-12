@@ -14,6 +14,7 @@
 
 #include "UnwrappedLineParser.h"
 #include "FormatToken.h"
+#include "clang/Basic/TokenKinds.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/Support/Debug.h"
 #include "llvm/Support/raw_ostream.h"
@@ -1007,7 +1008,7 @@ static bool isC78ParameterDecl(const FormatToken *Tok) {
 
   if (!Tok->isOneOf(tok::kw_int, tok::kw_char, tok::kw_float, tok::kw_double,
                     tok::kw_struct, tok::kw_union, tok::kw_long, tok::kw_short,
-                    tok::kw_unsigned, tok::kw_register, tok::identifier))
+                    tok::kw_unsigned, tok::kw_register))
     return false;
 
   Tok = Tok->Previous;
@@ -1378,7 +1379,8 @@ void UnwrappedLineParser::parseStructuralElement(bool IsTopLevel) {
         break;
       if (Previous->Previous && Previous->Previous->is(tok::at))
         break;
-      if (isC78ParameterDecl(FormatTok)) {
+      if (!Line->Tokens.begin()->Tok->is(tok::kw_typedef) &&
+          isC78ParameterDecl(FormatTok)) {
         addUnwrappedLine();
         return;
       }
