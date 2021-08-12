@@ -573,7 +573,7 @@ func @invalid_static_matmul(%arg0: memref<2x4xf32>, %arg1: memref<3x4xf32>, %arg
 
 func @invalid_static_2d_conv(%input : memref<1x3x4x2xf32>, %filter: memref<3x2x2x1xf32>, %output: memref<1x2x3x1xf32>) {
   // expected-error @+1 {{inferred input/output operand #0 has shape's dimension #1 to be greater than or equal to 4, but found 3}}
-  linalg.conv_2d_input_nhwc_filter_hwcf
+  linalg.conv_2d_nhwc_hwcf
     { dilations = dense<1> : tensor<2xi64>, strides = dense<1> : tensor<2xi64>}
     ins(%input, %filter : memref<1x3x4x2xf32>, memref<3x2x2x1xf32>)
     outs(%output : memref<1x2x3x1xf32>)
