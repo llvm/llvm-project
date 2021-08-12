@@ -425,10 +425,12 @@ static Status HandleFileAction(ProcessLaunchInfo &launch_info,
             open(file_spec.GetPath().c_str(), oflag, S_IRUSR | S_IWUSR);
         if (created_fd >= 0) {
           auto file_options = File::OpenOptions(0);
-          if ((oflag & O_RDWR) || (oflag & O_RDONLY))
-            file_options |= File::eOpenOptionRead;
-          if ((oflag & O_RDWR) || (oflag & O_RDONLY))
-            file_options |= File::eOpenOptionWrite;
+          if (oflag & O_RDWR)
+            file_options |= File::eOpenOptionReadWrite;
+          else if (oflag & O_WRONLY)
+            file_options |= File::eOpenOptionWriteOnly;
+          else if (oflag & O_RDONLY)
+            file_options |= File::eOpenOptionReadOnly;
           file = std::make_shared<NativeFile>(created_fd, file_options, true);
           [options setValue:[NSNumber numberWithInteger:created_fd] forKey:key];
           return error; // Success

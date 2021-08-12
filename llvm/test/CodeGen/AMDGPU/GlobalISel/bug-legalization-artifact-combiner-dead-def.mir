@@ -34,13 +34,10 @@ body: |
     ; GFX10: [[EXTRACT:%[0-9]+]]:_(s32) = G_EXTRACT [[LOAD]](<4 x s32>), 96
     ; GFX10: [[EXTRACT1:%[0-9]+]]:_(s32) = G_EXTRACT [[LOAD]](<4 x s32>), 64
     ; GFX10: [[DEF:%[0-9]+]]:_(s32) = G_IMPLICIT_DEF
-    ; GFX10: [[BUILD_VECTOR:%[0-9]+]]:_(<2 x s32>) = G_BUILD_VECTOR [[EXTRACT1]](s32), [[DEF]](s32)
-    ; GFX10: [[INSERT:%[0-9]+]]:_(<2 x s32>) = G_INSERT [[BUILD_VECTOR]], [[EXTRACT]](s32), 32
-    ; GFX10: [[UV:%[0-9]+]]:_(s32), [[UV1:%[0-9]+]]:_(s32) = G_UNMERGE_VALUES [[INSERT]](<2 x s32>)
     ; GFX10: G_STORE [[EXTRACT1]](s32), [[COPY]](p5) :: (store (s32), align 8, addrspace 5)
     ; GFX10: [[C:%[0-9]+]]:_(s32) = G_CONSTANT i32 4
     ; GFX10: [[PTR_ADD:%[0-9]+]]:_(p5) = G_PTR_ADD [[COPY]], [[C]](s32)
-    ; GFX10: G_STORE [[UV1]](s32), [[PTR_ADD]](p5) :: (store (s32) into unknown-address + 4, addrspace 5)
+    ; GFX10: G_STORE [[EXTRACT]](s32), [[PTR_ADD]](p5) :: (store (s32) into unknown-address + 4, addrspace 5)
     %0:_(p5) = COPY $vgpr0
     %1:_(s32) = COPY $vgpr1
     %2:_(s32) = COPY $vgpr2
@@ -70,13 +67,10 @@ body: |
     ; GFX10: [[EXTRACT:%[0-9]+]]:_(s32) = G_EXTRACT [[LOAD]](<4 x s32>), 96
     ; GFX10: [[EXTRACT1:%[0-9]+]]:_(s32) = G_EXTRACT [[LOAD]](<4 x s32>), 64
     ; GFX10: [[DEF:%[0-9]+]]:_(s32) = G_IMPLICIT_DEF
-    ; GFX10: [[BUILD_VECTOR:%[0-9]+]]:_(<2 x s32>) = G_BUILD_VECTOR [[EXTRACT1]](s32), [[DEF]](s32)
-    ; GFX10: [[INSERT:%[0-9]+]]:_(<2 x s32>) = G_INSERT [[BUILD_VECTOR]], [[EXTRACT]](s32), 32
-    ; GFX10: %deaf_def:_(s32), %11:_(s32) = G_UNMERGE_VALUES [[INSERT]](<2 x s32>)
     ; GFX10: G_STORE [[EXTRACT1]](s32), [[COPY]](p5) :: (store (s32), align 8, addrspace 5)
     ; GFX10: [[C:%[0-9]+]]:_(s32) = G_CONSTANT i32 4
     ; GFX10: [[PTR_ADD:%[0-9]+]]:_(p5) = G_PTR_ADD [[COPY]], [[C]](s32)
-    ; GFX10: G_STORE %11(s32), [[PTR_ADD]](p5) :: (store (s32) into unknown-address + 4, addrspace 5)
+    ; GFX10: G_STORE [[EXTRACT]](s32), [[PTR_ADD]](p5) :: (store (s32) into unknown-address + 4, addrspace 5)
     %0:_(p5) = COPY $vgpr0
     %1:_(s32) = COPY $vgpr1
     %2:_(s32) = COPY $vgpr2
@@ -110,14 +104,11 @@ body: |
     ; GFX10: [[EXTRACT:%[0-9]+]]:_(s32) = G_EXTRACT [[LOAD]](<4 x s32>), 96
     ; GFX10: [[EXTRACT1:%[0-9]+]]:_(s32) = G_EXTRACT [[LOAD]](<4 x s32>), 64
     ; GFX10: [[DEF:%[0-9]+]]:_(s32) = G_IMPLICIT_DEF
-    ; GFX10: [[BUILD_VECTOR:%[0-9]+]]:_(<2 x s32>) = G_BUILD_VECTOR [[EXTRACT1]](s32), [[DEF]](s32)
-    ; GFX10: [[INSERT:%[0-9]+]]:_(<2 x s32>) = G_INSERT [[BUILD_VECTOR]], [[EXTRACT]](s32), 32
-    ; GFX10: %dbg_use:_(s32), %11:_(s32) = G_UNMERGE_VALUES [[INSERT]](<2 x s32>)
-    ; GFX10: DBG_VALUE %dbg_use(s32), $noreg
+    ; GFX10: DBG_VALUE $noreg, $noreg, {{.*}}, !DIExpression(), debug-location !DILocation(line: 1, column: 1
     ; GFX10: G_STORE [[EXTRACT1]](s32), [[COPY]](p5) :: (store (s32), align 8, addrspace 5)
     ; GFX10: [[C:%[0-9]+]]:_(s32) = G_CONSTANT i32 4
     ; GFX10: [[PTR_ADD:%[0-9]+]]:_(p5) = G_PTR_ADD [[COPY]], [[C]](s32)
-    ; GFX10: G_STORE %11(s32), [[PTR_ADD]](p5) :: (store (s32) into unknown-address + 4, addrspace 5)
+    ; GFX10: G_STORE [[EXTRACT]](s32), [[PTR_ADD]](p5) :: (store (s32) into unknown-address + 4, addrspace 5)
     %0:_(p5) = COPY $vgpr0
     %1:_(s32) = COPY $vgpr1
     %2:_(s32) = COPY $vgpr2

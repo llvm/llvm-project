@@ -341,10 +341,6 @@ private:
   // Generate methods for accessing the attribute names of this operation.
   void genAttrNameGetters();
 
-  // Return the index of the given attribute name. This is a relative ordering
-  // for this name, used in attribute getters.
-  unsigned getAttrNameIndex(StringRef attrName) const;
-
   // Generates the OpAsmOpInterface for this operation if possible.
   void genOpAsmInterface();
 
@@ -748,13 +744,6 @@ void OpEmitter::genAttrNameGetters() {
                             .str();
     }
   }
-}
-
-unsigned OpEmitter::getAttrNameIndex(StringRef attrName) const {
-  auto it = attributeNames.find(attrName);
-  assert(it != attributeNames.end() && "expected attribute name to have been "
-                                       "registered in genAttrNameGetters");
-  return it->second;
 }
 
 void OpEmitter::genAttrGetters() {

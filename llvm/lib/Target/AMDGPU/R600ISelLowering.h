@@ -15,6 +15,7 @@
 #define LLVM_LIB_TARGET_AMDGPU_R600ISELLOWERING_H
 
 #include "AMDGPUISelLowering.h"
+#include "llvm/CodeGen/MachineFunction.h"
 
 namespace llvm {
 
@@ -47,7 +48,7 @@ public:
                          EVT VT) const override;
 
   bool canMergeStoresTo(unsigned AS, EVT MemVT,
-                        const SelectionDAG &DAG) const override;
+                        const MachineFunction &MF) const override;
 
   bool allowsMisalignedMemoryAccesses(
       EVT VT, unsigned AS, Align Alignment,

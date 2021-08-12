@@ -13,8 +13,10 @@
 
 #include "clang/Tooling/ArgumentsAdjusters.h"
 #include "llvm/ADT/ArrayRef.h"
+#include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/ScopeExit.h"
 #include "llvm/ADT/StringExtras.h"
+#include "llvm/ADT/StringRef.h"
 #include "llvm/Support/FileSystem.h"
 #include "llvm/Support/Path.h"
 #include "llvm/Support/Process.h"
@@ -43,7 +45,7 @@ TEST(CommandMangler, Everything) {
   Mangler.ClangPath = testPath("fake/clang");
   Mangler.ResourceDir = testPath("fake/resources");
   Mangler.Sysroot = testPath("fake/sysroot");
-  std::vector<std::string> Cmd = {"clang++", "--", "foo.cc"};
+  std::vector<std::string> Cmd = {"clang++", "--", "foo.cc", "bar.cc"};
   Mangler.adjust(Cmd, "foo.cc");
   EXPECT_THAT(Cmd, ElementsAre(testPath("fake/clang++"),
                                "-resource-dir=" + testPath("fake/resources"),
@@ -376,6 +378,23 @@ TEST(CommandMangler, InputsAfterDashDash) {
         llvm::makeArrayRef(Args).drop_back(2),
         testing::AllOf(Not(Contains("foo.cc")), Not(Contains("bar.cc"))));
   }
+}
+
+TEST(CommandMangler, StripsMultipleArch) {
+  const auto Mangler = CommandMangler::forTests();
+  std::vector<std::string> Args = {"clang", "-arch", "foo",
+                                   "-arch", "bar",   "/Users/foo.cc"};
+  Mangler.adjust(Args, "/Users/foo.cc");
+  EXPECT_EQ(
+      llvm::count_if(Args, [](llvm::StringRef Arg) { return Arg == "-arch"; }),
+      0);
+
+  // Single arch option is preserved.
+  Args = {"clang", "-arch", "foo", "/Users/foo.cc"};
+  Mangler.adjust(Args, "/Users/foo.cc");
+  EXPECT_EQ(
+      llvm::count_if(Args, [](llvm::StringRef Arg) { return Arg == "-arch"; }),
+      1);
 }
 } // namespace
 } // namespace clangd

@@ -351,13 +351,14 @@ private:
   /// legal to vectorize the loop. This method creates VPlans using VPRecipes.
   void buildVPlansWithVPRecipes(ElementCount MinVF, ElementCount MaxVF);
 
-  /// Adjust the recipes for any inloop reductions. The chain of instructions
-  /// leading from the loop exit instr to the phi need to be converted to
-  /// reductions, with one operand being vector and the other being the scalar
-  /// reduction chain.
-  void adjustRecipesForInLoopReductions(VPlanPtr &Plan,
-                                        VPRecipeBuilder &RecipeBuilder,
-                                        ElementCount MinVF);
+  // Adjust the recipes for reductions. For in-loop reductions the chain of
+  // instructions leading from the loop exit instr to the phi need to be
+  // converted to reductions, with one operand being vector and the other being
+  // the scalar reduction chain. For other reductions, a select is introduced
+  // between the phi and live-out recipes when folding the tail.
+  void adjustRecipesForReductions(VPBasicBlock *LatchVPBB, VPlanPtr &Plan,
+                                  VPRecipeBuilder &RecipeBuilder,
+                                  ElementCount MinVF);
 };
 
 } // namespace llvm

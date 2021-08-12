@@ -10,9 +10,11 @@
 #define _LIBCPP___RANGES_TRANSFORM_VIEW_H
 
 #include <__config>
+#include <__functional/invoke.h>
 #include <__iterator/concepts.h>
 #include <__iterator/iter_swap.h>
 #include <__iterator/iterator_traits.h>
+#include <__memory/addressof.h>
 #include <__ranges/access.h>
 #include <__ranges/all.h>
 #include <__ranges/concepts.h>
@@ -20,6 +22,8 @@
 #include <__ranges/empty.h>
 #include <__ranges/size.h>
 #include <__ranges/view_interface.h>
+#include <__utility/in_place.h>
+#include <__utility/move.h>
 #include <concepts>
 #include <type_traits>
 

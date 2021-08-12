@@ -369,7 +369,7 @@ protected:
     FileSpec file_spec(m_options.m_filename);
     FileSystem::Instance().Resolve(file_spec);
     std::string path(file_spec.GetPath());
-    auto options = File::eOpenOptionWrite | File::eOpenOptionCanCreate;
+    auto options = File::eOpenOptionWriteOnly | File::eOpenOptionCanCreate;
     if (m_options.m_append)
       options |= File::eOpenOptionAppend;
     else

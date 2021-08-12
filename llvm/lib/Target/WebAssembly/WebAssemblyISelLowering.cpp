@@ -830,7 +830,7 @@ void WebAssemblyTargetLowering::computeKnownBitsForTargetNode(
   default:
     break;
   case ISD::INTRINSIC_WO_CHAIN: {
-    unsigned IntNo = cast<ConstantSDNode>(Op.getOperand(0))->getZExtValue();
+    unsigned IntNo = Op.getConstantOperandVal(0);
     switch (IntNo) {
     default:
       break;
@@ -1492,7 +1492,7 @@ SDValue WebAssemblyTargetLowering::LowerRETURNADDR(SDValue Op,
   if (verifyReturnAddressArgumentIsConstant(Op, DAG))
     return SDValue();
 
-  unsigned Depth = cast<ConstantSDNode>(Op.getOperand(0))->getZExtValue();
+  unsigned Depth = Op.getConstantOperandVal(0);
   MakeLibCallOptions CallOptions;
   return makeLibCall(DAG, RTLIB::RETURN_ADDRESS, Op.getValueType(),
                      {DAG.getConstant(Depth, DL, MVT::i32)}, CallOptions, DL)
@@ -1671,10 +1671,10 @@ SDValue WebAssemblyTargetLowering::LowerIntrinsic(SDValue Op,
   switch (Op.getOpcode()) {
   case ISD::INTRINSIC_VOID:
   case ISD::INTRINSIC_W_CHAIN:
-    IntNo = cast<ConstantSDNode>(Op.getOperand(1))->getZExtValue();
+    IntNo = Op.getConstantOperandVal(1);
     break;
   case ISD::INTRINSIC_WO_CHAIN:
-    IntNo = cast<ConstantSDNode>(Op.getOperand(0))->getZExtValue();
+    IntNo = Op.getConstantOperandVal(0);
     break;
   default:
     llvm_unreachable("Invalid intrinsic");

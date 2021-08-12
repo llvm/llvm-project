@@ -148,9 +148,9 @@ struct ThreadLeak {
   int count;
 };
 
-static void MaybeReportThreadLeak(ThreadContextBase *tctx_base, void *arg) {
-  Vector<ThreadLeak> &leaks = *(Vector<ThreadLeak>*)arg;
-  ThreadContext *tctx = static_cast<ThreadContext*>(tctx_base);
+static void CollectThreadLeaks(ThreadContextBase *tctx_base, void *arg) {
+  auto &leaks = *static_cast<Vector<ThreadLeak> *>(arg);
+  auto *tctx = static_cast<ThreadContext *>(tctx_base);
   if (tctx->detached || tctx->status != ThreadStatusFinished)
     return;
   for (uptr i = 0; i < leaks.Size(); i++) {
@@ -159,8 +159,7 @@ static void MaybeReportThreadLeak(ThreadContextBase *tctx_base, void *arg) {
       return;
     }
   }
-  ThreadLeak leak = {tctx, 1};
-  leaks.PushBack(leak);
+  leaks.PushBack({tctx, 1});
 }
 #endif
 
@@ -201,7 +200,7 @@ void ThreadFinalize(ThreadState *thr) {
     return;
   ThreadRegistryLock l(&ctx->thread_registry);
   Vector<ThreadLeak> leaks;
-  ctx->thread_registry.RunCallbackForEachThreadLocked(MaybeReportThreadLeak,
+  ctx->thread_registry.RunCallbackForEachThreadLocked(CollectThreadLeaks,
                                                       &leaks);
   for (uptr i = 0; i < leaks.Size(); i++) {
     ScopedReport rep(ReportTypeThreadLeak);
@@ -330,7 +329,7 @@ void MemoryAccessRange(ThreadState *thr, uptr pc, uptr addr,
   if (size == 0)
     return;
 
-  u64 *shadow_mem = (u64*)MemToShadow(addr);
+  RawShadow *shadow_mem = MemToShadow(addr);
   DPrintf2("#%d: MemoryAccessRange: @%p %p size=%d is_write=%d\n",
       thr->tid, (void*)pc, (void*)addr,
       (int)size, is_write);
@@ -344,14 +343,14 @@ void MemoryAccessRange(ThreadState *thr, uptr pc, uptr addr,
     Printf("Access to non app mem %zx\n", addr + size - 1);
     DCHECK(IsAppMem(addr + size - 1));
   }
-  if (!IsShadowMem((uptr)shadow_mem)) {
+  if (!IsShadowMem(shadow_mem)) {
     Printf("Bad shadow addr %p (%zx)\n", shadow_mem, addr);
-    DCHECK(IsShadowMem((uptr)shadow_mem));
+    DCHECK(IsShadowMem(shadow_mem));
   }
-  if (!IsShadowMem((uptr)(shadow_mem + size * kShadowCnt / 8 - 1))) {
+  if (!IsShadowMem(shadow_mem + size * kShadowCnt / 8 - 1)) {
     Printf("Bad shadow addr %p (%zx)\n",
                shadow_mem + size * kShadowCnt / 8 - 1, addr + size - 1);
-    DCHECK(IsShadowMem((uptr)(shadow_mem + size * kShadowCnt / 8 - 1)));
+    DCHECK(IsShadowMem(shadow_mem + size * kShadowCnt / 8 - 1));
   }
 #endif
 

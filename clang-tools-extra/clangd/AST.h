@@ -27,6 +27,7 @@
 namespace clang {
 class SourceManager;
 class Decl;
+class DynTypedNode;
 
 namespace clangd {
 
@@ -120,6 +121,9 @@ QualType declaredType(const TypeDecl *D);
 /// It will return the underlying type.
 /// If the type is an undeduced auto, returns the type itself.
 llvm::Optional<QualType> getDeducedType(ASTContext &, SourceLocation Loc);
+
+/// Return attributes attached directly to a node.
+std::vector<const Attr *> getAttributes(const DynTypedNode &);
 
 /// Gets the nested name specifier necessary for spelling \p ND in \p
 /// DestContext, at \p InsertionPoint. It selects the shortest suffix of \p ND

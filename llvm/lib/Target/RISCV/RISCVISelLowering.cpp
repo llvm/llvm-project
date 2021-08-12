@@ -376,6 +376,9 @@ RISCVTargetLowering::RISCVTargetLowering(const TargetMachine &TM,
   }
 
   if (Subtarget.hasStdExtF()) {
+    setOperationAction(ISD::FP_TO_UINT_SAT, XLenVT, Custom);
+    setOperationAction(ISD::FP_TO_SINT_SAT, XLenVT, Custom);
+
     setOperationAction(ISD::FLT_ROUNDS_, XLenVT, Custom);
     setOperationAction(ISD::SET_ROUNDING, MVT::Other, Custom);
   }
@@ -855,6 +858,8 @@ RISCVTargetLowering::RISCVTargetLowering(const TargetMachine &TM,
   // We can use any register for comparisons
   setHasMultipleConditionRegisters();
 
+  setTargetDAGCombine(ISD::ADD);
+  setTargetDAGCombine(ISD::SUB);
   setTargetDAGCombine(ISD::AND);
   setTargetDAGCombine(ISD::OR);
   setTargetDAGCombine(ISD::XOR);
@@ -1065,28 +1070,6 @@ static void translateSetCCForBranch(const SDLoc &DL, SDValue &LHS, SDValue &RHS,
     CC = ISD::getSetCCSwappedOperands(CC);
     std::swap(LHS, RHS);
     break;
-  }
-}
-
-// Return the RISC-V branch opcode that matches the given DAG integer
-// condition code. The CondCode must be one of those supported by the RISC-V
-// ISA (see translateSetCCForBranch).
-static unsigned getBranchOpcodeForIntCondCode(ISD::CondCode CC) {
-  switch (CC) {
-  default:
-    llvm_unreachable("Unsupported CondCode");
-  case ISD::SETEQ:
-    return RISCV::BEQ;
-  case ISD::SETNE:
-    return RISCV::BNE;
-  case ISD::SETLT:
-    return RISCV::BLT;
-  case ISD::SETGE:
-    return RISCV::BGE;
-  case ISD::SETULT:
-    return RISCV::BLTU;
-  case ISD::SETUGE:
-    return RISCV::BGEU;
   }
 }
 
@@ -1377,6 +1360,32 @@ bool RISCVTargetLowering::isShuffleMaskLegal(ArrayRef<int> M, EVT VT) const {
     return true;
 
   return false;
+}
+
+static SDValue lowerFP_TO_INT_SAT(SDValue Op, SelectionDAG &DAG) {
+  // RISCV FP-to-int conversions saturate to the destination register size, but
+  // don't produce 0 for nan. We can use a conversion instruction and fix the
+  // nan case with a compare and a select.
+  SDValue Src = Op.getOperand(0);
+
+  EVT DstVT = Op.getValueType();
+  EVT SatVT = cast<VTSDNode>(Op.getOperand(1))->getVT();
+
+  bool IsSigned = Op.getOpcode() == ISD::FP_TO_SINT_SAT;
+  unsigned Opc;
+  if (SatVT == DstVT)
+    Opc = IsSigned ? RISCVISD::FCVT_X_RTZ : RISCVISD::FCVT_XU_RTZ;
+  else if (DstVT == MVT::i64 && SatVT == MVT::i32)
+    Opc = IsSigned ? RISCVISD::FCVT_W_RTZ_RV64 : RISCVISD::FCVT_WU_RTZ_RV64;
+  else
+    return SDValue();
+  // FIXME: Support other SatVTs by clamping before or after the conversion.
+
+  SDLoc DL(Op);
+  SDValue FpToInt = DAG.getNode(Opc, DL, DstVT, Src);
+
+  SDValue ZeroInt = DAG.getConstant(0, DL, DstVT);
+  return DAG.getSelectCC(DL, Src, Src, ZeroInt, FpToInt, ISD::CondCode::SETUO);
 }
 
 static SDValue lowerSPLAT_VECTOR(SDValue Op, SelectionDAG &DAG,
@@ -1964,6 +1973,10 @@ static SDValue lowerVECTOR_SHUFFLE(SDValue Op, SelectionDAG &DAG,
   bool SwapOps = DAG.isSplatValue(V2) && !DAG.isSplatValue(V1);
   bool InvertMask = IsSelect == SwapOps;
 
+  // Keep a track of which non-undef indices are used by each LHS/RHS shuffle
+  // half.
+  DenseMap<int, unsigned> LHSIndexCounts, RHSIndexCounts;
+
   // Now construct the mask that will be used by the vselect or blended
   // vrgather operation. For vrgathers, construct the appropriate indices into
   // each vector.
@@ -1978,6 +1991,10 @@ static SDValue lowerVECTOR_SHUFFLE(SDValue Op, SelectionDAG &DAG,
       GatherIndicesRHS.push_back(
           IsLHSOrUndefIndex ? DAG.getUNDEF(XLenVT)
                             : DAG.getConstant(MaskIndex - NumElts, DL, XLenVT));
+      if (IsLHSOrUndefIndex && MaskIndex >= 0)
+        ++LHSIndexCounts[MaskIndex];
+      if (!IsLHSOrUndefIndex)
+        ++RHSIndexCounts[MaskIndex - NumElts];
     }
   }
 
@@ -2001,13 +2018,14 @@ static SDValue lowerVECTOR_SHUFFLE(SDValue Op, SelectionDAG &DAG,
     return SDValue();
   }
 
-  unsigned GatherOpc = RISCVISD::VRGATHER_VV_VL;
+  unsigned GatherVXOpc = RISCVISD::VRGATHER_VX_VL;
+  unsigned GatherVVOpc = RISCVISD::VRGATHER_VV_VL;
   MVT IndexVT = VT.changeTypeToInteger();
   // Since we can't introduce illegal index types at this stage, use i16 and
   // vrgatherei16 if the corresponding index type for plain vrgather is greater
   // than XLenVT.
   if (IndexVT.getScalarType().bitsGT(XLenVT)) {
-    GatherOpc = RISCVISD::VRGATHEREI16_VV_VL;
+    GatherVVOpc = RISCVISD::VRGATHEREI16_VV_VL;
     IndexVT = IndexVT.changeVectorElementType(MVT::i16);
   }
 
@@ -2020,28 +2038,48 @@ static SDValue lowerVECTOR_SHUFFLE(SDValue Op, SelectionDAG &DAG,
   if (SDValue SplatValue = DAG.getSplatValue(V1, /*LegalTypes*/ true)) {
     Gather = lowerScalarSplat(SplatValue, VL, ContainerVT, DL, DAG, Subtarget);
   } else {
-    SDValue LHSIndices = DAG.getBuildVector(IndexVT, DL, GatherIndicesLHS);
-    LHSIndices =
-        convertToScalableVector(IndexContainerVT, LHSIndices, DAG, Subtarget);
-
     V1 = convertToScalableVector(ContainerVT, V1, DAG, Subtarget);
-    Gather =
-        DAG.getNode(GatherOpc, DL, ContainerVT, V1, LHSIndices, TrueMask, VL);
+    // If only one index is used, we can use a "splat" vrgather.
+    // TODO: We can splat the most-common index and fix-up any stragglers, if
+    // that's beneficial.
+    if (LHSIndexCounts.size() == 1) {
+      int SplatIndex = LHSIndexCounts.begin()->getFirst();
+      Gather =
+          DAG.getNode(GatherVXOpc, DL, ContainerVT, V1,
+                      DAG.getConstant(SplatIndex, DL, XLenVT), TrueMask, VL);
+    } else {
+      SDValue LHSIndices = DAG.getBuildVector(IndexVT, DL, GatherIndicesLHS);
+      LHSIndices =
+          convertToScalableVector(IndexContainerVT, LHSIndices, DAG, Subtarget);
+
+      Gather = DAG.getNode(GatherVVOpc, DL, ContainerVT, V1, LHSIndices,
+                           TrueMask, VL);
+    }
   }
 
   // If a second vector operand is used by this shuffle, blend it in with an
   // additional vrgather.
   if (!V2.isUndef()) {
+    V2 = convertToScalableVector(ContainerVT, V2, DAG, Subtarget);
+    // If only one index is used, we can use a "splat" vrgather.
+    // TODO: We can splat the most-common index and fix-up any stragglers, if
+    // that's beneficial.
+    if (RHSIndexCounts.size() == 1) {
+      int SplatIndex = RHSIndexCounts.begin()->getFirst();
+      V2 = DAG.getNode(GatherVXOpc, DL, ContainerVT, V2,
+                       DAG.getConstant(SplatIndex, DL, XLenVT), TrueMask, VL);
+    } else {
+      SDValue RHSIndices = DAG.getBuildVector(IndexVT, DL, GatherIndicesRHS);
+      RHSIndices =
+          convertToScalableVector(IndexContainerVT, RHSIndices, DAG, Subtarget);
+      V2 = DAG.getNode(GatherVVOpc, DL, ContainerVT, V2, RHSIndices, TrueMask,
+                       VL);
+    }
+
     MVT MaskContainerVT = ContainerVT.changeVectorElementType(MVT::i1);
     SelectMask =
         convertToScalableVector(MaskContainerVT, SelectMask, DAG, Subtarget);
 
-    SDValue RHSIndices = DAG.getBuildVector(IndexVT, DL, GatherIndicesRHS);
-    RHSIndices =
-        convertToScalableVector(IndexContainerVT, RHSIndices, DAG, Subtarget);
-
-    V2 = convertToScalableVector(ContainerVT, V2, DAG, Subtarget);
-    V2 = DAG.getNode(GatherOpc, DL, ContainerVT, V2, RHSIndices, TrueMask, VL);
     Gather = DAG.getNode(RISCVISD::VSELECT_VL, DL, ContainerVT, SelectMask, V2,
                          Gather, VL);
   }
@@ -2517,6 +2555,9 @@ SDValue RISCVTargetLowering::LowerOperation(SDValue Op,
     Src = DAG.getNode(RVVOpc, DL, ContainerVT, Src, Mask, VL);
     return convertFromScalableVector(VT, Src, DAG, Subtarget);
   }
+  case ISD::FP_TO_SINT_SAT:
+  case ISD::FP_TO_UINT_SAT:
+    return lowerFP_TO_INT_SAT(Op, DAG);
   case ISD::VECREDUCE_ADD:
   case ISD::VECREDUCE_UMAX:
   case ISD::VECREDUCE_SMAX:
@@ -2970,7 +3011,7 @@ SDValue RISCVTargetLowering::lowerSELECT(SDValue Op, SelectionDAG &DAG) const {
 
     translateSetCCForBranch(DL, LHS, RHS, CCVal, DAG);
 
-    SDValue TargetCC = DAG.getTargetConstant(CCVal, DL, XLenVT);
+    SDValue TargetCC = DAG.getCondCode(CCVal);
     SDValue Ops[] = {LHS, RHS, TargetCC, TrueV, FalseV};
     return DAG.getNode(RISCVISD::SELECT_CC, DL, Op.getValueType(), Ops);
   }
@@ -2979,7 +3020,7 @@ SDValue RISCVTargetLowering::lowerSELECT(SDValue Op, SelectionDAG &DAG) const {
   // (select condv, truev, falsev)
   // -> (riscvisd::select_cc condv, zero, setne, truev, falsev)
   SDValue Zero = DAG.getConstant(0, DL, XLenVT);
-  SDValue SetNE = DAG.getTargetConstant(ISD::SETNE, DL, XLenVT);
+  SDValue SetNE = DAG.getCondCode(ISD::SETNE);
 
   SDValue Ops[] = {CondV, Zero, SetNE, TrueV, FalseV};
 
@@ -5730,17 +5771,27 @@ static SDValue combineGREVI_GORCI(SDNode *N, SelectionDAG &DAG) {
 
 // Combine a constant select operand into its use:
 //
-// (and (select_cc lhs, rhs, cc, -1, c), x)
-//   -> (select_cc lhs, rhs, cc, x, (and, x, c))  [AllOnes=1]
-// (or  (select_cc lhs, rhs, cc, 0, c), x)
-//   -> (select_cc lhs, rhs, cc, x, (or, x, c))  [AllOnes=0]
-// (xor (select_cc lhs, rhs, cc, 0, c), x)
-//   -> (select_cc lhs, rhs, cc, x, (xor, x, c))  [AllOnes=0]
-static SDValue combineSelectCCAndUse(SDNode *N, SDValue Slct, SDValue OtherOp,
-                                     SelectionDAG &DAG, bool AllOnes) {
+// (and (select cond, -1, c), x)
+//   -> (select cond, x, (and x, c))  [AllOnes=1]
+// (or  (select cond, 0, c), x)
+//   -> (select cond, x, (or x, c))  [AllOnes=0]
+// (xor (select cond, 0, c), x)
+//   -> (select cond, x, (xor x, c))  [AllOnes=0]
+// (add (select cond, 0, c), x)
+//   -> (select cond, x, (add x, c))  [AllOnes=0]
+// (sub x, (select cond, 0, c))
+//   -> (select cond, x, (sub x, c))  [AllOnes=0]
+static SDValue combineSelectAndUse(SDNode *N, SDValue Slct, SDValue OtherOp,
+                                   SelectionDAG &DAG, bool AllOnes) {
   EVT VT = N->getValueType(0);
 
-  if (Slct.getOpcode() != RISCVISD::SELECT_CC || !Slct.hasOneUse())
+  // Skip vectors.
+  if (VT.isVector())
+    return SDValue();
+
+  if ((Slct.getOpcode() != ISD::SELECT &&
+       Slct.getOpcode() != RISCVISD::SELECT_CC) ||
+      !Slct.hasOneUse())
     return SDValue();
 
   auto isZeroOrAllOnes = [](SDValue N, bool AllOnes) {
@@ -5748,8 +5799,9 @@ static SDValue combineSelectCCAndUse(SDNode *N, SDValue Slct, SDValue OtherOp,
   };
 
   bool SwapSelectOps;
-  SDValue TrueVal = Slct.getOperand(3);
-  SDValue FalseVal = Slct.getOperand(4);
+  unsigned OpOffset = Slct.getOpcode() == RISCVISD::SELECT_CC ? 2 : 0;
+  SDValue TrueVal = Slct.getOperand(1 + OpOffset);
+  SDValue FalseVal = Slct.getOperand(2 + OpOffset);
   SDValue NonConstantVal;
   if (isZeroOrAllOnes(TrueVal, AllOnes)) {
     SwapSelectOps = false;
@@ -5763,40 +5815,53 @@ static SDValue combineSelectCCAndUse(SDNode *N, SDValue Slct, SDValue OtherOp,
   // Slct is now know to be the desired identity constant when CC is true.
   TrueVal = OtherOp;
   FalseVal = DAG.getNode(N->getOpcode(), SDLoc(N), VT, OtherOp, NonConstantVal);
-  // Unless SwapSelectOps says CC should be false.
+  // Unless SwapSelectOps says the condition should be false.
   if (SwapSelectOps)
     std::swap(TrueVal, FalseVal);
 
-  return DAG.getNode(RISCVISD::SELECT_CC, SDLoc(N), VT,
-                     {Slct.getOperand(0), Slct.getOperand(1),
-                      Slct.getOperand(2), TrueVal, FalseVal});
+  if (Slct.getOpcode() == RISCVISD::SELECT_CC)
+    return DAG.getNode(RISCVISD::SELECT_CC, SDLoc(N), VT,
+                       {Slct.getOperand(0), Slct.getOperand(1),
+                        Slct.getOperand(2), TrueVal, FalseVal});
+
+  return DAG.getNode(ISD::SELECT, SDLoc(N), VT,
+                     {Slct.getOperand(0), TrueVal, FalseVal});
 }
 
 // Attempt combineSelectAndUse on each operand of a commutative operator N.
-static SDValue combineSelectCCAndUseCommutative(SDNode *N, SelectionDAG &DAG,
-                                                bool AllOnes) {
+static SDValue combineSelectAndUseCommutative(SDNode *N, SelectionDAG &DAG,
+                                              bool AllOnes) {
   SDValue N0 = N->getOperand(0);
   SDValue N1 = N->getOperand(1);
-  if (SDValue Result = combineSelectCCAndUse(N, N0, N1, DAG, AllOnes))
+  if (SDValue Result = combineSelectAndUse(N, N0, N1, DAG, AllOnes))
     return Result;
-  if (SDValue Result = combineSelectCCAndUse(N, N1, N0, DAG, AllOnes))
+  if (SDValue Result = combineSelectAndUse(N, N1, N0, DAG, AllOnes))
     return Result;
   return SDValue();
 }
 
-static SDValue performANDCombine(SDNode *N,
-                                 TargetLowering::DAGCombinerInfo &DCI,
-                                 const RISCVSubtarget &Subtarget) {
-  SelectionDAG &DAG = DCI.DAG;
-
-  // fold (and (select_cc lhs, rhs, cc, -1, y), x) ->
-  //      (select lhs, rhs, cc, x, (and x, y))
-  return combineSelectCCAndUseCommutative(N, DAG, true);
+static SDValue performADDCombine(SDNode *N, SelectionDAG &DAG) {
+  // fold (add (select lhs, rhs, cc, 0, y), x) ->
+  //      (select lhs, rhs, cc, x, (add x, y))
+  return combineSelectAndUseCommutative(N, DAG, /*AllOnes*/ false);
 }
 
-static SDValue performORCombine(SDNode *N, TargetLowering::DAGCombinerInfo &DCI,
+static SDValue performSUBCombine(SDNode *N, SelectionDAG &DAG) {
+  // fold (sub x, (select lhs, rhs, cc, 0, y)) ->
+  //      (select lhs, rhs, cc, x, (sub x, y))
+  SDValue N0 = N->getOperand(0);
+  SDValue N1 = N->getOperand(1);
+  return combineSelectAndUse(N, N1, N0, DAG, /*AllOnes*/ false);
+}
+
+static SDValue performANDCombine(SDNode *N, SelectionDAG &DAG) {
+  // fold (and (select lhs, rhs, cc, -1, y), x) ->
+  //      (select lhs, rhs, cc, x, (and x, y))
+  return combineSelectAndUseCommutative(N, DAG, /*AllOnes*/ true);
+}
+
+static SDValue performORCombine(SDNode *N, SelectionDAG &DAG,
                                 const RISCVSubtarget &Subtarget) {
-  SelectionDAG &DAG = DCI.DAG;
   if (Subtarget.hasStdExtZbp()) {
     if (auto GREV = combineORToGREV(SDValue(N, 0), DAG, Subtarget))
       return GREV;
@@ -5806,19 +5871,15 @@ static SDValue performORCombine(SDNode *N, TargetLowering::DAGCombinerInfo &DCI,
       return SHFL;
   }
 
-  // fold (or (select_cc lhs, rhs, cc, 0, y), x) ->
-  //      (select lhs, rhs, cc, x, (or x, y))
-  return combineSelectCCAndUseCommutative(N, DAG, false);
+  // fold (or (select cond, 0, y), x) ->
+  //      (select cond, x, (or x, y))
+  return combineSelectAndUseCommutative(N, DAG, /*AllOnes*/ false);
 }
 
-static SDValue performXORCombine(SDNode *N,
-                                 TargetLowering::DAGCombinerInfo &DCI,
-                                 const RISCVSubtarget &Subtarget) {
-  SelectionDAG &DAG = DCI.DAG;
-
-  // fold (xor (select_cc lhs, rhs, cc, 0, y), x) ->
-  //      (select lhs, rhs, cc, x, (xor x, y))
-  return combineSelectCCAndUseCommutative(N, DAG, false);
+static SDValue performXORCombine(SDNode *N, SelectionDAG &DAG) {
+  // fold (xor (select cond, 0, y), x) ->
+  //      (select cond, x, (xor x, y))
+  return combineSelectAndUseCommutative(N, DAG, /*AllOnes*/ false);
 }
 
 // Attempt to turn ANY_EXTEND into SIGN_EXTEND if the input to the ANY_EXTEND
@@ -6093,14 +6154,19 @@ SDValue RISCVTargetLowering::PerformDAGCombine(SDNode *N,
 
     break;
   }
+  case RISCVISD::FMV_X_ANYEXTH:
   case RISCVISD::FMV_X_ANYEXTW_RV64: {
     SDLoc DL(N);
     SDValue Op0 = N->getOperand(0);
+    MVT VT = N->getSimpleValueType(0);
     // If the input to FMV_X_ANYEXTW_RV64 is just FMV_W_X_RV64 then the
-    // conversion is unnecessary and can be replaced with an ANY_EXTEND
-    // of the FMV_W_X_RV64 operand.
-    if (Op0->getOpcode() == RISCVISD::FMV_W_X_RV64) {
-      assert(Op0.getOperand(0).getValueType() == MVT::i64 &&
+    // conversion is unnecessary and can be replaced with the FMV_W_X_RV64
+    // operand. Similar for FMV_X_ANYEXTH and FMV_H_X.
+    if ((N->getOpcode() == RISCVISD::FMV_X_ANYEXTW_RV64 &&
+         Op0->getOpcode() == RISCVISD::FMV_W_X_RV64) ||
+        (N->getOpcode() == RISCVISD::FMV_X_ANYEXTH &&
+         Op0->getOpcode() == RISCVISD::FMV_H_X)) {
+      assert(Op0.getOperand(0).getValueType() == VT &&
              "Unexpected value type!");
       return Op0.getOperand(0);
     }
@@ -6112,23 +6178,27 @@ SDValue RISCVTargetLowering::PerformDAGCombine(SDNode *N,
     if (!(Op0.getOpcode() == ISD::FNEG || Op0.getOpcode() == ISD::FABS) ||
         !Op0.getNode()->hasOneUse())
       break;
-    SDValue NewFMV = DAG.getNode(RISCVISD::FMV_X_ANYEXTW_RV64, DL, MVT::i64,
-                                 Op0.getOperand(0));
-    APInt SignBit = APInt::getSignMask(32).sext(64);
+    SDValue NewFMV = DAG.getNode(N->getOpcode(), DL, VT, Op0.getOperand(0));
+    unsigned FPBits = N->getOpcode() == RISCVISD::FMV_X_ANYEXTW_RV64 ? 32 : 16;
+    APInt SignBit = APInt::getSignMask(FPBits).sextOrSelf(VT.getSizeInBits());
     if (Op0.getOpcode() == ISD::FNEG)
-      return DAG.getNode(ISD::XOR, DL, MVT::i64, NewFMV,
-                         DAG.getConstant(SignBit, DL, MVT::i64));
+      return DAG.getNode(ISD::XOR, DL, VT, NewFMV,
+                         DAG.getConstant(SignBit, DL, VT));
 
     assert(Op0.getOpcode() == ISD::FABS);
-    return DAG.getNode(ISD::AND, DL, MVT::i64, NewFMV,
-                       DAG.getConstant(~SignBit, DL, MVT::i64));
+    return DAG.getNode(ISD::AND, DL, VT, NewFMV,
+                       DAG.getConstant(~SignBit, DL, VT));
   }
+  case ISD::ADD:
+    return performADDCombine(N, DAG);
+  case ISD::SUB:
+    return performSUBCombine(N, DAG);
   case ISD::AND:
-    return performANDCombine(N, DCI, Subtarget);
+    return performANDCombine(N, DAG);
   case ISD::OR:
-    return performORCombine(N, DCI, Subtarget);
+    return performORCombine(N, DAG, Subtarget);
   case ISD::XOR:
-    return performXORCombine(N, DCI, Subtarget);
+    return performXORCombine(N, DAG);
   case ISD::ANY_EXTEND:
     return performANY_EXTENDCombine(N, DCI, Subtarget);
   case ISD::ZERO_EXTEND:
@@ -6145,7 +6215,7 @@ SDValue RISCVTargetLowering::PerformDAGCombine(SDNode *N,
     // Transform
     SDValue LHS = N->getOperand(0);
     SDValue RHS = N->getOperand(1);
-    auto CCVal = static_cast<ISD::CondCode>(N->getConstantOperandVal(2));
+    ISD::CondCode CCVal = cast<CondCodeSDNode>(N->getOperand(2))->get();
     if (!ISD::isIntEqualitySetCC(CCVal))
       break;
 
@@ -6166,8 +6236,7 @@ SDValue RISCVTargetLowering::PerformDAGCombine(SDNode *N,
       LHS = LHS.getOperand(0);
       translateSetCCForBranch(DL, LHS, RHS, CCVal, DAG);
 
-      SDValue TargetCC =
-          DAG.getTargetConstant(CCVal, DL, Subtarget.getXLenVT());
+      SDValue TargetCC = DAG.getCondCode(CCVal);
       return DAG.getNode(
           RISCVISD::SELECT_CC, DL, N->getValueType(0),
           {LHS, RHS, TargetCC, N->getOperand(3), N->getOperand(4)});
@@ -6187,8 +6256,7 @@ SDValue RISCVTargetLowering::PerformDAGCombine(SDNode *N,
     if (isOneConstant(RHS) && DAG.MaskedValueIsZero(LHS, Mask)) {
       SDLoc DL(N);
       CCVal = ISD::getSetCCInverse(CCVal, LHS.getValueType());
-      SDValue TargetCC =
-          DAG.getTargetConstant(CCVal, DL, Subtarget.getXLenVT());
+      SDValue TargetCC = DAG.getCondCode(CCVal);
       RHS = DAG.getConstant(0, DL, LHS.getValueType());
       return DAG.getNode(
           RISCVISD::SELECT_CC, DL, N->getValueType(0),
@@ -6849,7 +6917,8 @@ static bool isSelectPseudo(MachineInstr &MI) {
 }
 
 static MachineBasicBlock *emitSelectPseudo(MachineInstr &MI,
-                                           MachineBasicBlock *BB) {
+                                           MachineBasicBlock *BB,
+                                           const RISCVSubtarget &Subtarget) {
   // To "insert" Select_* instructions, we actually have to insert the triangle
   // control-flow pattern.  The incoming instructions know the destination vreg
   // to set, the condition code register to branch on, the true/false values to
@@ -6876,7 +6945,7 @@ static MachineBasicBlock *emitSelectPseudo(MachineInstr &MI,
   // related approach and more information.
   Register LHS = MI.getOperand(1).getReg();
   Register RHS = MI.getOperand(2).getReg();
-  auto CC = static_cast<ISD::CondCode>(MI.getOperand(3).getImm());
+  auto CC = static_cast<RISCVCC::CondCode>(MI.getOperand(3).getImm());
 
   SmallVector<MachineInstr *, 4> SelectDebugValues;
   SmallSet<Register, 4> SelectDests;
@@ -6909,7 +6978,7 @@ static MachineBasicBlock *emitSelectPseudo(MachineInstr &MI,
     }
   }
 
-  const TargetInstrInfo &TII = *BB->getParent()->getSubtarget().getInstrInfo();
+  const RISCVInstrInfo &TII = *Subtarget.getInstrInfo();
   const BasicBlock *LLVM_BB = BB->getBasicBlock();
   DebugLoc DL = MI.getDebugLoc();
   MachineFunction::iterator I = ++BB->getIterator();
@@ -6938,9 +7007,7 @@ static MachineBasicBlock *emitSelectPseudo(MachineInstr &MI,
   HeadMBB->addSuccessor(TailMBB);
 
   // Insert appropriate branch.
-  unsigned Opcode = getBranchOpcodeForIntCondCode(CC);
-
-  BuildMI(HeadMBB, DL, TII.get(Opcode))
+  BuildMI(HeadMBB, DL, TII.getBrCond(CC))
     .addReg(LHS)
     .addReg(RHS)
     .addMBB(TailMBB);
@@ -6985,7 +7052,7 @@ RISCVTargetLowering::EmitInstrWithCustomInserter(MachineInstr &MI,
   case RISCV::Select_FPR16_Using_CC_GPR:
   case RISCV::Select_FPR32_Using_CC_GPR:
   case RISCV::Select_FPR64_Using_CC_GPR:
-    return emitSelectPseudo(MI, BB);
+    return emitSelectPseudo(MI, BB, Subtarget);
   case RISCV::BuildPairF64Pseudo:
     return emitBuildPairF64Pseudo(MI, BB);
   case RISCV::SplitF64Pseudo:
@@ -8385,6 +8452,8 @@ const char *RISCVTargetLowering::getTargetNodeName(unsigned Opcode) const {
   NODE_NAME_CASE(FMV_X_ANYEXTH)
   NODE_NAME_CASE(FMV_W_X_RV64)
   NODE_NAME_CASE(FMV_X_ANYEXTW_RV64)
+  NODE_NAME_CASE(FCVT_X_RTZ)
+  NODE_NAME_CASE(FCVT_XU_RTZ)
   NODE_NAME_CASE(FCVT_W_RTZ_RV64)
   NODE_NAME_CASE(FCVT_WU_RTZ_RV64)
   NODE_NAME_CASE(READ_CYCLE_WIDE)

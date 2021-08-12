@@ -7,8 +7,8 @@
 //===----------------------------------------------------------------------===//
 
 #include "src/math/ldexp.h"
+#include "src/__support/FPUtil/ManipulationFunctions.h"
 #include "src/__support/common.h"
-#include "utils/FPUtil/ManipulationFunctions.h"
 
 namespace __llvm_libc {
 

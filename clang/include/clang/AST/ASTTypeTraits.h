@@ -25,10 +25,8 @@
 #include "llvm/Support/AlignOf.h"
 
 namespace llvm {
-
 class raw_ostream;
-
-}
+} // namespace llvm
 
 namespace clang {
 
@@ -66,6 +64,7 @@ public:
   static ASTNodeKind getFromNode(const Stmt &S);
   static ASTNodeKind getFromNode(const Type &T);
   static ASTNodeKind getFromNode(const OMPClause &C);
+  static ASTNodeKind getFromNode(const Attr &A);
   /// \}
 
   /// Returns \c true if \c this and \c Other represent the same kind.
@@ -152,6 +151,9 @@ private:
 #define GEN_CLANG_CLAUSE_CLASS
 #define CLAUSE_CLASS(Enum, Str, Class) NKI_##Class,
 #include "llvm/Frontend/OpenMP/OMP.inc"
+    NKI_Attr,
+#define ATTR(A) NKI_##A##Attr,
+#include "clang/Basic/AttrList.inc"
     NKI_NumberOfKinds
   };
 
@@ -201,6 +203,7 @@ KIND_TO_KIND_ID(Decl)
 KIND_TO_KIND_ID(Stmt)
 KIND_TO_KIND_ID(Type)
 KIND_TO_KIND_ID(OMPClause)
+KIND_TO_KIND_ID(Attr)
 KIND_TO_KIND_ID(CXXBaseSpecifier)
 #define DECL(DERIVED, BASE) KIND_TO_KIND_ID(DERIVED##Decl)
 #include "clang/AST/DeclNodes.inc"
@@ -211,6 +214,8 @@ KIND_TO_KIND_ID(CXXBaseSpecifier)
 #define GEN_CLANG_CLAUSE_CLASS
 #define CLAUSE_CLASS(Enum, Str, Class) KIND_TO_KIND_ID(Class)
 #include "llvm/Frontend/OpenMP/OMP.inc"
+#define ATTR(A) KIND_TO_KIND_ID(A##Attr)
+#include "clang/Basic/AttrList.inc"
 #undef KIND_TO_KIND_ID
 
 inline raw_ostream &operator<<(raw_ostream &OS, ASTNodeKind K) {
@@ -485,6 +490,11 @@ template <typename T>
 struct DynTypedNode::BaseConverter<
     T, std::enable_if_t<std::is_base_of<OMPClause, T>::value>>
     : public DynCastPtrConverter<T, OMPClause> {};
+
+template <typename T>
+struct DynTypedNode::BaseConverter<
+    T, std::enable_if_t<std::is_base_of<Attr, T>::value>>
+    : public DynCastPtrConverter<T, Attr> {};
 
 template <>
 struct DynTypedNode::BaseConverter<

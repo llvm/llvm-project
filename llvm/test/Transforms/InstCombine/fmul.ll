@@ -795,7 +795,7 @@ define <2 x float> @fmul_fadd_distribute_vec(<2 x float> %x) {
 define <vscale x 2 x float> @fmul_fadd_distribute_scalablevec(<vscale x 2 x float> %x) {
 ; CHECK-LABEL: @fmul_fadd_distribute_scalablevec(
 ; CHECK-NEXT:    [[TMP1:%.*]] = fmul reassoc <vscale x 2 x float> [[X:%.*]], shufflevector (<vscale x 2 x float> insertelement (<vscale x 2 x float> undef, float 6.000000e+03, i32 0), <vscale x 2 x float> undef, <vscale x 2 x i32> zeroinitializer)
-; CHECK-NEXT:    [[T3:%.*]] = fadd reassoc <vscale x 2 x float> [[TMP1]], shufflevector (<vscale x 2 x float> insertelement (<vscale x 2 x float> undef, float 1.200000e+07, i32 0), <vscale x 2 x float> undef, <vscale x 2 x i32> zeroinitializer)
+; CHECK-NEXT:    [[T3:%.*]] = fadd reassoc <vscale x 2 x float> [[TMP1]], shufflevector (<vscale x 2 x float> insertelement (<vscale x 2 x float> poison, float 1.200000e+07, i32 0), <vscale x 2 x float> poison, <vscale x 2 x i32> zeroinitializer)
 ; CHECK-NEXT:    ret <vscale x 2 x float> [[T3]]
 ;
   %t1 = fadd <vscale x 2 x float> shufflevector (<vscale x 2 x float> insertelement (<vscale x 2 x float> undef, float 2.0e+3, i32 0), <vscale x 2 x float> undef, <vscale x 2 x i32> zeroinitializer), %x

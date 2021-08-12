@@ -7,8 +7,8 @@
 //===----------------------------------------------------------------------===//
 
 #include "src/math/sqrt.h"
+#include "src/__support/FPUtil/Sqrt.h"
 #include "src/__support/common.h"
-#include "utils/FPUtil/Sqrt.h"
 
 namespace __llvm_libc {
 

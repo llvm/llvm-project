@@ -1430,12 +1430,12 @@ Constant *ConstantVector::getSplat(ElementCount EC, Constant *V) {
   Type *I32Ty = Type::getInt32Ty(VTy->getContext());
 
   // Move scalar into vector.
-  Constant *UndefV = UndefValue::get(VTy);
-  V = ConstantExpr::getInsertElement(UndefV, V, ConstantInt::get(I32Ty, 0));
+  Constant *PoisonV = PoisonValue::get(VTy);
+  V = ConstantExpr::getInsertElement(PoisonV, V, ConstantInt::get(I32Ty, 0));
   // Build shuffle mask to perform the splat.
   SmallVector<int, 8> Zeros(EC.getKnownMinValue(), 0);
   // Splat.
-  return ConstantExpr::getShuffleVector(V, UndefV, Zeros);
+  return ConstantExpr::getShuffleVector(V, PoisonV, Zeros);
 }
 
 ConstantTokenNone *ConstantTokenNone::get(LLVMContext &Context) {

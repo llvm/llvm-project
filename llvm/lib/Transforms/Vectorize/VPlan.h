@@ -2250,9 +2250,9 @@ class VPlanPrinter {
     return BlockID.count(Block) ? BlockID[Block] : BlockID[Block] = BID++;
   }
 
-  const Twine getOrCreateName(const VPBlockBase *Block);
+  Twine getOrCreateName(const VPBlockBase *Block);
 
-  const Twine getUID(const VPBlockBase *Block);
+  Twine getUID(const VPBlockBase *Block);
 
   /// Print the information related to a CFG edge between two VPBlockBases.
   void drawEdge(const VPBlockBase *From, const VPBlockBase *To, bool Hidden,

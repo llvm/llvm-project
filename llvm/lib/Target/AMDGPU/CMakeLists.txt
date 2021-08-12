@@ -54,6 +54,7 @@ add_llvm_target(AMDGPUCodeGen
   AMDGPUConditionalDiscard.cpp
   AMDGPUExportClustering.cpp
   AMDGPUFixFunctionBitcasts.cpp
+  AMDGPUCtorDtorLowering.cpp
   AMDGPUFrameLowering.cpp
   AMDGPUHSAMetadataStreamer.cpp
   AMDGPUInstCombineIntrinsic.cpp

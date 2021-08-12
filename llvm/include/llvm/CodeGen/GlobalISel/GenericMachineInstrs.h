@@ -57,9 +57,9 @@ public:
   bool isUnordered() const { return getMMO().isUnordered(); }
 
   /// Returns the size in bytes of the memory access.
-  uint64_t getMemSize() { return getMMO().getSize();
+  uint64_t getMemSize() const { return getMMO().getSize();
   } /// Returns the size in bits of the memory access.
-  uint64_t getMemSizeInBits() { return getMMO().getSizeInBits(); }
+  uint64_t getMemSizeInBits() const { return getMMO().getSizeInBits(); }
 
   static bool classof(const MachineInstr *MI) {
     switch (MI->getOpcode()) {

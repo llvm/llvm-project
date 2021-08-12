@@ -55,6 +55,7 @@ class X86FastISel final : public FastISel {
   /// When SSE2 is available, use it for f64 operations.
   bool X86ScalarSSEf64;
   bool X86ScalarSSEf32;
+  bool X86ScalarSSEf16;
 
 public:
   explicit X86FastISel(FunctionLoweringInfo &funcInfo,
@@ -63,6 +64,7 @@ public:
     Subtarget = &funcInfo.MF->getSubtarget<X86Subtarget>();
     X86ScalarSSEf64 = Subtarget->hasSSE2();
     X86ScalarSSEf32 = Subtarget->hasSSE1();
+    X86ScalarSSEf16 = Subtarget->hasFP16();
   }
 
   bool fastSelectInstruction(const Instruction *I) override;
@@ -157,7 +159,8 @@ private:
   /// computed in an SSE register, not on the X87 floating point stack.
   bool isScalarFPTypeInSSEReg(EVT VT) const {
     return (VT == MVT::f64 && X86ScalarSSEf64) || // f64 is when SSE2
-      (VT == MVT::f32 && X86ScalarSSEf32);   // f32 is when SSE1
+           (VT == MVT::f32 && X86ScalarSSEf32) || // f32 is when SSE1
+           (VT == MVT::f16 && X86ScalarSSEf16);   // f16 is when AVX512FP16
   }
 
   bool isTypeLegal(Type *Ty, MVT &VT, bool AllowI1 = false);
@@ -2283,9 +2286,10 @@ bool X86FastISel::X86FastEmitPseudoSelect(MVT RetVT, const Instruction *I) {
   unsigned Opc;
   switch (RetVT.SimpleTy) {
   default: return false;
-  case MVT::i8:  Opc = X86::CMOV_GR8;  break;
-  case MVT::i16: Opc = X86::CMOV_GR16; break;
-  case MVT::i32: Opc = X86::CMOV_GR32; break;
+  case MVT::i8:  Opc = X86::CMOV_GR8;   break;
+  case MVT::i16: Opc = X86::CMOV_GR16;  break;
+  case MVT::f16: Opc = X86::CMOV_FR16X; break;
+  case MVT::i32: Opc = X86::CMOV_GR32;  break;
   case MVT::f32: Opc = Subtarget->hasAVX512() ? X86::CMOV_FR32X
                                               : X86::CMOV_FR32; break;
   case MVT::f64: Opc = Subtarget->hasAVX512() ? X86::CMOV_FR64X

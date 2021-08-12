@@ -123,10 +123,6 @@ public:
 
   bool isEntry() const { return Index == PseudoProbeFirstId; }
 
-  bool isTailCall() const {
-    return Attributes & static_cast<uint8_t>(PseudoProbeAttributes::Reserved);
-  }
-
   uint64_t getGuid() const { return Guid; }
 
   uint64_t getIndex() const { return Index; }

@@ -66,3 +66,96 @@ abilist for the platform, e.g.:
 
 * C++20 for the Linux platform.
 * MacOS C++20 for the Apple platform.
+
+Working on large features
+=========================
+
+Libc++ makes no guarantees about the implementation status or the ABI stability
+of features that have not been ratified in the C++ Standard yet. After the C++
+Standard is ratified libc++ promises a conforming and ABI-stable
+implementation. When working on a large new feature in the ratified version of
+the C++ Standard that can't be finished before the next release branch is
+created, we can't honor this promise. Another reason for not being able to
+promise ABI stability happens when the C++ Standard committee retroactively
+accepts ABI breaking papers as defect reports against the ratified C++
+Standard.
+
+When working on these features it should be possible for libc++ vendors to
+disable these incomplete features, so they can promise ABI stability to their
+customers. This is done by the CMake option
+``LIBCXX_ENABLE_INCOMPLETE_FEATURES``. When start working on a large feature
+the following steps are required to guard the new library with the CMake
+option.
+
+* ``CMakeLists.txt`` add
+
+  .. code-block:: cmake
+
+    config_define_if_not(LIBCXX_ENABLE_INCOMPLETE_FEATURES _LIBCPP_HAS_NO_INCOMPLETE_FOO)
+
+* ``libcxx/include/__config_site.in`` add
+
+  .. code-block:: c++
+
+    #cmakedefine _LIBCPP_HAS_NO_INCOMPLETE_FOO
+
+* ``include/foo`` the contents of the file should be guarded in an ``ifdef``
+  and always include ``<version>``
+
+  .. code-block:: c++
+
+    #ifndef _LIBCPP_FOO
+    #define _LIBCPP_FOO
+
+    // Make sure all feature tests macros are always available.
+    #include <version>
+    // Only enable the contents of the header when libc++ was build with LIBCXX_ENABLE_INCOMPLETE_FEATURES enabled
+    #if !defined(_LIBCPP_HAS_NO_INCOMPLETE_FOO)
+
+    ...
+
+    #endif // !defined(_LIBCPP_HAS_NO_INCOMPLETE_FO0)
+    #endif // _LIBCPP_FOO
+
+* ``src/CMakeLists.txt`` when the library has a file ``foo.cpp`` it should only
+  be added when ``LIBCXX_ENABLE_INCOMPLETE_FEATURES`` is enabled
+
+  .. code-block:: cmake
+
+    if(LIBCXX_ENABLE_INCOMPLETE_FEATURES)
+      list(APPEND LIBCXX_SOURCES
+        foo.cpp
+      )
+    endif()
+
+* ``utils/generate_feature_test_macro_components.py`` add to ``lit_markup``
+
+  .. code-block:: python
+
+    "foo": ["UNSUPPORTED: libcpp-has-no-incomplete-foo"],
+
+* ``utils/generate_header_inclusion_tests.py`` add to ``lit_markup``
+
+  .. code-block:: python
+
+    "foo": ["UNSUPPORTED: libcpp-has-no-incomplete-foo"],
+
+* ``utils/generate_header_tests.py`` add to ``header_markup``
+
+  .. code-block:: python
+
+    "foo": ["ifndef _LIBCPP_HAS_NO_INCOMPLETE_FOO"],
+
+* ``utils/libcxx/test/features.py`` add to ``macros``
+
+  .. code-block:: python
+
+    '_LIBCPP_HAS_NO_INCOMPLETE_FOO': 'libcpp-has-no-incomplete-foo',
+
+* All tests that include ``<foo>`` should contain
+
+  .. code-block:: c++
+
+    // UNSUPPORTED: libcpp-has-no-incomplete-foo
+
+Once the library is complete these changes and guards should be removed.

@@ -62,9 +62,9 @@ void* operator new[](std::size_t s, std::align_val_t a) TEST_THROW_SPEC(std::bad
 
 void  operator delete[](void* p, std::align_val_t a) TEST_NOEXCEPT
 {
-    assert(p == Buff);
+    ASSERT_WITH_OPERATOR_NEW_FALLBACKS(p == Buff);
     assert(static_cast<std::size_t>(a) == OverAligned);
-    assert(new_called);
+    ASSERT_WITH_OPERATOR_NEW_FALLBACKS(new_called);
     --new_called;
 }
 
@@ -74,18 +74,18 @@ int main(int, char**)
         A* ap = new (std::nothrow) A[2];
         assert(ap);
         assert(A_constructed == 2);
-        assert(new_called);
+        ASSERT_WITH_OPERATOR_NEW_FALLBACKS(new_called);
         delete [] ap;
         assert(A_constructed == 0);
-        assert(!new_called);
+        ASSERT_WITH_OPERATOR_NEW_FALLBACKS(!new_called);
     }
     {
         B* bp = new (std::nothrow) B[2];
         assert(bp);
         assert(B_constructed == 2);
-        assert(!new_called);
+        ASSERT_WITH_OPERATOR_NEW_FALLBACKS(!new_called);
         delete [] bp;
-        assert(!new_called);
+        ASSERT_WITH_OPERATOR_NEW_FALLBACKS(!new_called);
         assert(!B_constructed);
     }
 

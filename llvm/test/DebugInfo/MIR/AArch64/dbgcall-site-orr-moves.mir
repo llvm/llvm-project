@@ -159,7 +159,7 @@ body:             |
 ...
 
 # CHECK: DW_TAG_GNU_call_site
-# CHECK-NEXT: DW_AT_abstract_origin ({{.*}} "call_int")
+# CHECK-NEXT: DW_AT_abstract_origin (0x0000002a "call_int")
 #
 # CHECK: DW_TAG_GNU_call_site_parameter
 # CHECK-NEXT: DW_AT_location      (DW_OP_reg0 W0)
@@ -205,7 +205,7 @@ body:             |
 ...
 
 # CHECK: DW_TAG_GNU_call_site
-# CHECK-NEXT: DW_AT_abstract_origin ({{.*}} "call_long")
+# CHECK-NEXT: DW_AT_abstract_origin (0x0000003e "call_long")
 #
 # CHECK: DW_TAG_GNU_call_site_parameter
 # CHECK-NEXT: DW_AT_location      (DW_OP_reg0 W0)
@@ -265,7 +265,7 @@ body:             |
 ...
 
 # CHECK: DW_TAG_GNU_call_site
-# CHECK-NEXT: DW_AT_abstract_origin ({{.*}} "call_int_int")
+# CHECK-NEXT: DW_AT_abstract_origin (0x00000052 "call_int_int")
 #
 # CHECK: DW_TAG_GNU_call_site_parameter
 # CHECK-NEXT: DW_AT_location      (DW_OP_reg0 W0)

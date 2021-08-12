@@ -104,7 +104,7 @@ namespace lldb {
 // and get the packet history dumped to a file.
 void DumpProcessGDBRemotePacketHistory(void *p, const char *path) {
   auto file = FileSystem::Instance().Open(
-      FileSpec(path), File::eOpenOptionWrite | File::eOpenOptionCanCreate);
+      FileSpec(path), File::eOpenOptionWriteOnly | File::eOpenOptionCanCreate);
   if (!file) {
     llvm::consumeError(file.takeError());
     return;

@@ -49,8 +49,6 @@ public:
     DieRangeInfo(std::vector<DWARFAddressRange> Ranges)
         : Ranges(std::move(Ranges)) {}
 
-    typedef std::vector<DWARFAddressRange>::const_iterator
-        address_range_iterator;
     typedef std::set<DieRangeInfo>::const_iterator die_range_info_iterator;
 
     /// Inserts the address range. If the range overlaps with an existing
@@ -61,16 +59,6 @@ public:
     /// attribute of a DIE. It is also used as a set of address ranges that
     /// children address ranges must all be contained in.
     Optional<DWARFAddressRange> insert(const DWARFAddressRange &R);
-
-    /// Finds an address range in the sorted vector of ranges.
-    address_range_iterator findRange(const DWARFAddressRange &R) const {
-      auto Begin = Ranges.begin();
-      auto End = Ranges.end();
-      auto Iter = std::upper_bound(Begin, End, R);
-      if (Iter != Begin)
-        --Iter;
-      return Iter;
-    }
 
     /// Inserts the address range info. If any of its ranges overlaps with a
     /// range in an existing range info, the range info is *not* added and an

@@ -57,6 +57,15 @@ class TypeList;
 class TypeMap;
 class VariableList;
 
+/// Options used by Module::FindFunctions. This cannot be a nested class
+/// because it must be forward-declared in ModuleList.h.
+struct ModuleFunctionSearchOptions {
+  /// Include the symbol table.
+  bool include_symbols = false;
+  /// Include inlined functions.
+  bool include_inlines = false;
+};
+
 /// \class Module Module.h "lldb/Core/Module.h"
 /// A class that describes an executable image and its associated
 ///        object and symbol files.
@@ -304,8 +313,9 @@ public:
   ///     matches.
   void FindFunctions(ConstString name,
                      const CompilerDeclContext &parent_decl_ctx,
-                     lldb::FunctionNameType name_type_mask, bool symbols_ok,
-                     bool inlines_ok, SymbolContextList &sc_list);
+                     lldb::FunctionNameType name_type_mask,
+                     const ModuleFunctionSearchOptions &options,
+                     SymbolContextList &sc_list);
 
   /// Find functions by name.
   ///
@@ -319,8 +329,9 @@ public:
   /// \param[out] sc_list
   ///     A symbol context list that gets filled in with all of the
   ///     matches.
-  void FindFunctions(const RegularExpression &regex, bool symbols_ok,
-                     bool inlines_ok, SymbolContextList &sc_list);
+  void FindFunctions(const RegularExpression &regex,
+                     const ModuleFunctionSearchOptions &options,
+                     SymbolContextList &sc_list);
 
   /// Find addresses by file/line
   ///

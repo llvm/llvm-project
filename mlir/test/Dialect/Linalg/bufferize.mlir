@@ -299,3 +299,53 @@ func @pad_tensor_dynamic_shape(%arg0: tensor<4x?x2x?xf32>, %arg1: index) -> tens
 // CHECK:           %[[OUT_TENSOR:.*]] = memref.tensor_load %[[OUT]] : memref<4x?x?x?xf32>
 // CHECK:           return %[[OUT_TENSOR]] : tensor<4x?x?x?xf32>
 // CHECK:         }
+
+
+// -----
+
+// CHECK-LABEL:   func @vector_transfer
+func @vector_transfer(%in: tensor<4xf32>, %out: tensor<4xf32>) {
+  %c0 = constant 0 : index
+  %cst = constant 0.000000e+00 : f32
+  %read = vector.transfer_read %in[%c0], %cst {in_bounds = [true]}
+      : tensor<4xf32>, vector<4xf32>
+  %tanh = math.tanh %read : vector<4xf32>
+  %write = vector.transfer_write %tanh, %out[%c0] {in_bounds = [true]}
+      : vector<4xf32>, tensor<4xf32>
+  return
+  // CHECK: vector.transfer_read {{.*}} : memref<4xf32>, vector<4xf32>
+  // CHECK: vector.transfer_write {{.*}} : vector<4xf32>, memref<4xf32>
+}
+
+// -----
+
+//      CHECK:  func @tiled_dot
+func @tiled_dot(%A: tensor<10xf32>, %B: tensor<10xf32>,
+                %C: tensor<f32>) -> tensor<f32> {
+  %c0 = constant 0 : index
+  %c2 = constant 2 : index
+  %c10 = constant 10 : index
+
+  %dot = linalg.tiled_loop (%i) = (%c0) to (%c10) step (%c2)
+       ins (%A_ = %A: tensor<10xf32>, %B_ = %B: tensor<10xf32>)
+       outs (%C_ = %C: tensor<f32>)
+       iterators["reduction"] {
+    %A_sub = tensor.extract_slice %A_[%i] [%c2] [1]
+      : tensor<10xf32> to tensor<?xf32>
+    %B_sub = tensor.extract_slice %B_[%i] [%c2] [1]
+      : tensor<10xf32> to tensor<?xf32>
+    %dot_sub = linalg.dot ins(%A_sub, %B_sub : tensor<?xf32>, tensor<?xf32>)
+                          outs(%C_ : tensor<f32>) -> tensor<f32>
+    linalg.yield %dot_sub : tensor<f32>
+  }
+  // CHECK: linalg.tiled_loop
+  // CHECK-SAME: ins (%[[A:.*]] = %{{.*}}: memref<10xf32>, %[[B:.*]] = %{{.*}}: memref<10xf32>)
+  // CHECK-SAME: outs (%[[C:.*]] = %{{.*}}: memref<f32>)
+  //   CHECK-NOT:   alloc
+  //   CHECK:       %[[SV_A:.*]] = memref.subview %[[A]]
+  //   CHECK:       %[[SV_B:.*]] = memref.subview %[[B]]
+  //   CHECK:       linalg.dot ins(%[[SV_A]], %[[SV_B]]
+  //   CHECK-SAME:             outs(%[[C]] : memref<f32>)
+  //   CHECK:   linalg.yield
+  return %dot : tensor<f32>
+}

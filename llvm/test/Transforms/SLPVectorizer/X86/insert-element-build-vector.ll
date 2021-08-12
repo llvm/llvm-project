@@ -335,7 +335,6 @@ define <4 x float> @simple_select_no_users(<4 x float> %a, <4 x float> %b, <4 x 
 ; CHECK-NEXT:    [[TMP15:%.*]] = insertelement <2 x float> [[TMP14]], float [[B3]], i32 1
 ; CHECK-NEXT:    [[TMP16:%.*]] = select <2 x i1> [[TMP6]], <2 x float> [[TMP13]], <2 x float> [[TMP15]]
 ; CHECK-NEXT:    [[TMP17:%.*]] = shufflevector <2 x float> [[TMP11]], <2 x float> poison, <4 x i32> <i32 0, i32 1, i32 undef, i32 undef>
-; CHECK-NEXT:    [[RB2:%.*]] = shufflevector <4 x float> undef, <4 x float> [[TMP17]], <4 x i32> <i32 4, i32 5, i32 2, i32 3>
 ; CHECK-NEXT:    [[TMP18:%.*]] = shufflevector <2 x float> [[TMP16]], <2 x float> poison, <4 x i32> <i32 0, i32 1, i32 undef, i32 undef>
 ; CHECK-NEXT:    [[RD1:%.*]] = shufflevector <4 x float> undef, <4 x float> [[TMP18]], <4 x i32> <i32 0, i32 1, i32 4, i32 5>
 ; CHECK-NEXT:    ret <4 x float> [[RD1]]

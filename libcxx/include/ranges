@@ -154,6 +154,14 @@ namespace std::ranges {
     requires (!common_range<V> && copyable<iterator_t<V>>)
   class common_view;
 
+ // [range.reverse], reverse view
+  template<view V>
+    requires bidirectional_range<V>
+  class reverse_view;
+
+  template<class T>
+    inline constexpr bool enable_borrowed_range<reverse_view<T>> = enable_borrowed_range<T>;
+
   template<class T>
   inline constexpr bool enable_borrowed_range<common_view<T>> = enable_borrowed_range<T>;
 
@@ -188,6 +196,8 @@ namespace std::ranges {
 #include <__ranges/enable_borrowed_range.h>
 #include <__ranges/enable_view.h>
 #include <__ranges/ref_view.h>
+#include <__ranges/reverse_view.h>
+#include <__ranges/take_view.h>
 #include <__ranges/single_view.h>
 #include <__ranges/size.h>
 #include <__ranges/subrange.h>

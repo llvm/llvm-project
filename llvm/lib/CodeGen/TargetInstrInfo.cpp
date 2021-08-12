@@ -1264,22 +1264,6 @@ int TargetInstrInfo::getOperandLatency(const InstrItineraryData *ItinData,
   return ItinData->getOperandLatency(DefClass, DefIdx, UseClass, UseIdx);
 }
 
-/// If we can determine the operand latency from the def only, without itinerary
-/// lookup, do so. Otherwise return -1.
-int TargetInstrInfo::computeDefOperandLatency(
-    const InstrItineraryData *ItinData, const MachineInstr &DefMI) const {
-
-  // Let the target hook getInstrLatency handle missing itineraries.
-  if (!ItinData)
-    return getInstrLatency(ItinData, DefMI);
-
-  if(ItinData->isEmpty())
-    return defaultDefLatency(ItinData->SchedModel, DefMI);
-
-  // ...operand lookup required
-  return -1;
-}
-
 bool TargetInstrInfo::getRegSequenceInputs(
     const MachineInstr &MI, unsigned DefIdx,
     SmallVectorImpl<RegSubRegPairAndIdx> &InputRegs) const {

@@ -13,6 +13,7 @@
 // concept predicate;
 
 #include <concepts>
+#include <type_traits>
 
 static_assert(std::predicate<bool()>);
 static_assert(std::predicate<bool (*)()>);

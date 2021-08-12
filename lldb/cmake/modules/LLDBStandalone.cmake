@@ -10,6 +10,8 @@ set(LLVM_MAIN_SRC_DIR ${LLVM_BUILD_MAIN_SRC_DIR} CACHE PATH "Path to LLVM source
 set(LLVM_MAIN_INCLUDE_DIR ${LLVM_MAIN_INCLUDE_DIR} CACHE PATH "Path to llvm/include")
 set(LLVM_BINARY_DIR ${LLVM_BINARY_DIR} CACHE PATH "Path to LLVM build tree")
 
+set(LLVM_LIT_ARGS "-sv" CACHE STRING "Default options for lit")
+
 set(lit_file_name "llvm-lit")
 if(CMAKE_HOST_WIN32 AND NOT CYGWIN)
   set(lit_file_name "${lit_file_name}.py")

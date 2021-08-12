@@ -594,8 +594,7 @@ protected:
   /// update their users.
   void fixFirstOrderRecurrence(VPWidenPHIRecipe *PhiR, VPTransformState &State);
 
-  /// Fix a reduction cross-iteration phi. This is the second phase of
-  /// vectorizing this phi node.
+  /// Create code for the loop exit value of the reduction.
   void fixReduction(VPReductionPHIRecipe *Phi, VPTransformState &State);
 
   /// Clear NSW/NUW flags from reduction instructions if necessary.
@@ -2838,12 +2837,25 @@ void InnerLoopVectorizer::vectorizeInterleaveGroup(
   auto *SubVT = VectorType::get(ScalarTy, VF);
 
   // Vectorize the interleaved store group.
+  MaskForGaps = createBitMaskForGaps(Builder, VF.getKnownMinValue(), *Group);
+  assert((!MaskForGaps || useMaskedInterleavedAccesses(*TTI)) &&
+         "masked interleaved groups are not allowed.");
+  assert((!MaskForGaps || !VF.isScalable()) &&
+         "masking gaps for scalable vectors is not yet supported.");
   for (unsigned Part = 0; Part < UF; Part++) {
     // Collect the stored vector from each member.
     SmallVector<Value *, 4> StoredVecs;
     for (unsigned i = 0; i < InterleaveFactor; i++) {
-      // Interleaved store group doesn't allow a gap, so each index has a member
-      assert(Group->getMember(i) && "Fail to get a member from an interleaved store group");
+      assert((Group->getMember(i) || MaskForGaps) &&
+             "Fail to get a member from an interleaved store group");
+      Instruction *Member = Group->getMember(i);
+
+      // Skip the gaps in the group.
+      if (!Member) {
+        Value *Undef = PoisonValue::get(SubVT);
+        StoredVecs.push_back(Undef);
+        continue;
+      }
 
       Value *StoredVec = State.get(StoredValues[i], Part);
 
@@ -2867,16 +2879,21 @@ void InnerLoopVectorizer::vectorizeInterleaveGroup(
         "interleaved.vec");
 
     Instruction *NewStoreInstr;
-    if (BlockInMask) {
-      Value *BlockInMaskPart = State.get(BlockInMask, Part);
-      Value *ShuffledMask = Builder.CreateShuffleVector(
-          BlockInMaskPart,
-          createReplicatedMask(InterleaveFactor, VF.getKnownMinValue()),
-          "interleaved.mask");
-      NewStoreInstr = Builder.CreateMaskedStore(
-          IVec, AddrParts[Part], Group->getAlign(), ShuffledMask);
-    }
-    else
+    if (BlockInMask || MaskForGaps) {
+      Value *GroupMask = MaskForGaps;
+      if (BlockInMask) {
+        Value *BlockInMaskPart = State.get(BlockInMask, Part);
+        Value *ShuffledMask = Builder.CreateShuffleVector(
+            BlockInMaskPart,
+            createReplicatedMask(InterleaveFactor, VF.getKnownMinValue()),
+            "interleaved.mask");
+        GroupMask = MaskForGaps ? Builder.CreateBinOp(Instruction::And,
+                                                      ShuffledMask, MaskForGaps)
+                                : ShuffledMask;
+      }
+      NewStoreInstr = Builder.CreateMaskedStore(IVec, AddrParts[Part],
+                                                Group->getAlign(), GroupMask);
+    } else
       NewStoreInstr =
           Builder.CreateAlignedStore(IVec, AddrParts[Part], Group->getAlign());
 
@@ -4296,28 +4313,12 @@ void InnerLoopVectorizer::fixReduction(VPReductionPHIRecipe *PhiR,
   Instruction *LoopExitInst = RdxDesc.getLoopExitInstr();
   setDebugLocFromInst(ReductionStartValue);
 
-  VPValue *LoopExitInstDef = State.Plan->getVPValue(LoopExitInst);
+  VPValue *LoopExitInstDef = PhiR->getBackedgeValue();
   // This is the vector-clone of the value that leaves the loop.
   Type *VecTy = State.get(LoopExitInstDef, 0)->getType();
 
   // Wrap flags are in general invalid after vectorization, clear them.
   clearReductionWrapFlags(RdxDesc, State);
-
-  // Fix the vector-loop phi.
-
-  // Reductions do not have to start at zero. They can start with
-  // any loop invariant values.
-  BasicBlock *VectorLoopLatch = LI->getLoopFor(LoopVectorBody)->getLoopLatch();
-
-  unsigned LastPartForNewPhi = PhiR->isOrdered() ? 1 : UF;
-  for (unsigned Part = 0; Part < LastPartForNewPhi; ++Part) {
-    Value *VecRdxPhi = State.get(PhiR->getVPSingleValue(), Part);
-    Value *Val = State.get(PhiR->getBackedgeValue(), Part);
-    if (PhiR->isOrdered())
-      Val = State.get(PhiR->getBackedgeValue(), UF - 1);
-
-    cast<PHINode>(VecRdxPhi)->addIncoming(Val, VectorLoopLatch);
-  }
 
   // Before each round, move the insertion point right between
   // the PHIs and the values we are going to write.
@@ -5137,12 +5138,11 @@ void LoopVectorizationCostModel::collectLoopScalars(ElementCount VF) {
     if (Worklist.count(I))
       return;
 
-    // If all users of the pointer will be memory accesses and scalar, place the
-    // pointer in ScalarPtrs. Otherwise, place the pointer in
-    // PossibleNonScalarPtrs.
-    if (llvm::all_of(I->users(), [&](User *U) {
-          return (isa<LoadInst>(U) || isa<StoreInst>(U)) &&
-                 isScalarUse(cast<Instruction>(U), Ptr);
+    // If the use of the pointer will be a scalar use, and all users of the
+    // pointer are memory accesses, place the pointer in ScalarPtrs. Otherwise,
+    // place the pointer in PossibleNonScalarPtrs.
+    if (isScalarUse(MemAccess, Ptr) && llvm::all_of(I->users(), [&](User *U) {
+          return isa<LoadInst>(U) || isa<StoreInst>(U);
         }))
       ScalarPtrs.insert(I);
     else
@@ -5292,12 +5292,19 @@ bool LoopVectorizationCostModel::interleavedAccessCanBeWidened(
 
   // Check if masking is required.
   // A Group may need masking for one of two reasons: it resides in a block that
-  // needs predication, or it was decided to use masking to deal with gaps.
+  // needs predication, or it was decided to use masking to deal with gaps
+  // (either a gap at the end of a load-access that may result in a speculative
+  // load, or any gaps in a store-access).
   bool PredicatedAccessRequiresMasking =
       Legal->blockNeedsPredication(I->getParent()) && Legal->isMaskRequired(I);
-  bool AccessWithGapsRequiresMasking =
-      Group->requiresScalarEpilogue() && !isScalarEpilogueAllowed();
-  if (!PredicatedAccessRequiresMasking && !AccessWithGapsRequiresMasking)
+  bool LoadAccessWithGapsRequiresEpilogMasking =
+      isa<LoadInst>(I) && Group->requiresScalarEpilogue() &&
+      !isScalarEpilogueAllowed();
+  bool StoreAccessWithGapsRequiresMasking =
+      isa<StoreInst>(I) && (Group->getNumMembers() < Group->getFactor());
+  if (!PredicatedAccessRequiresMasking &&
+      !LoadAccessWithGapsRequiresEpilogMasking &&
+      !StoreAccessWithGapsRequiresMasking)
     return true;
 
   // If masked interleaving is required, we expect that the user/target had
@@ -5428,6 +5435,30 @@ void LoopVectorizationCostModel::collectLoopUniforms(ElementCount VF) {
   // lane 0 demanded or b) are uses which demand only lane 0 of their operand.
   for (auto *BB : TheLoop->blocks())
     for (auto &I : *BB) {
+      if (IntrinsicInst *II = dyn_cast<IntrinsicInst>(&I)) {
+        switch (II->getIntrinsicID()) {
+        case Intrinsic::sideeffect:
+        case Intrinsic::experimental_noalias_scope_decl:
+        case Intrinsic::assume:
+        case Intrinsic::lifetime_start:
+        case Intrinsic::lifetime_end:
+          if (TheLoop->hasLoopInvariantOperands(&I))
+            addToWorklistIfAllowed(&I);
+          break;
+        default:
+          break;
+        }
+      }
+
+      // ExtractValue instructions must be uniform, because the operands are
+      // known to be loop-invariant.
+      if (auto *EVI = dyn_cast<ExtractValueInst>(&I)) {
+        assert(isOutOfScope(EVI->getAggregateOperand()) &&
+               "Expected aggregate value to be loop invariant");
+        addToWorklistIfAllowed(EVI);
+        continue;
+      }
+
       // If there's no pointer operand, there's nothing to do.
       auto *Ptr = getLoadStorePointerOperand(&I);
       if (!Ptr)
@@ -7112,18 +7143,16 @@ LoopVectorizationCostModel::getInterleaveGroupCost(Instruction *I,
   unsigned InterleaveFactor = Group->getFactor();
   auto *WideVecTy = VectorType::get(ValTy, VF * InterleaveFactor);
 
-  // Holds the indices of existing members in an interleaved load group.
-  // An interleaved store group doesn't need this as it doesn't allow gaps.
+  // Holds the indices of existing members in the interleaved group.
   SmallVector<unsigned, 4> Indices;
-  if (isa<LoadInst>(I)) {
-    for (unsigned i = 0; i < InterleaveFactor; i++)
-      if (Group->getMember(i))
-        Indices.push_back(i);
-  }
+  for (unsigned IF = 0; IF < InterleaveFactor; IF++)
+    if (Group->getMember(IF))
+      Indices.push_back(IF);
 
   // Calculate the cost of the whole interleaved group.
   bool UseMaskForGaps =
-      Group->requiresScalarEpilogue() && !isScalarEpilogueAllowed();
+      (Group->requiresScalarEpilogue() && !isScalarEpilogueAllowed()) ||
+      (isa<StoreInst>(I) && (Group->getNumMembers() < Group->getFactor()));
   InstructionCost Cost = TTI.getInterleavedMemoryOpCost(
       I->getOpcode(), WideVecTy, Group->getFactor(), Indices, Group->getAlign(),
       AS, TTI::TCK_RecipThroughput, Legal->isMaskRequired(I), UseMaskForGaps);
@@ -8944,6 +8973,37 @@ VPBasicBlock *VPRecipeBuilder::handleReplication(
   bool IsPredicated = LoopVectorizationPlanner::getDecisionAndClampRange(
       [&](ElementCount VF) { return CM.isPredicatedInst(I); }, Range);
 
+  // Even if the instruction is not marked as uniform, there are certain
+  // intrinsic calls that can be effectively treated as such, so we check for
+  // them here. Conservatively, we only do this for scalable vectors, since
+  // for fixed-width VFs we can always fall back on full scalarization.
+  if (!IsUniform && Range.Start.isScalable() && isa<IntrinsicInst>(I)) {
+    switch (cast<IntrinsicInst>(I)->getIntrinsicID()) {
+    case Intrinsic::assume:
+    case Intrinsic::lifetime_start:
+    case Intrinsic::lifetime_end:
+      // For scalable vectors if one of the operands is variant then we still
+      // want to mark as uniform, which will generate one instruction for just
+      // the first lane of the vector. We can't scalarize the call in the same
+      // way as for fixed-width vectors because we don't know how many lanes
+      // there are.
+      //
+      // The reasons for doing it this way for scalable vectors are:
+      //   1. For the assume intrinsic generating the instruction for the first
+      //      lane is still be better than not generating any at all. For
+      //      example, the input may be a splat across all lanes.
+      //   2. For the lifetime start/end intrinsics the pointer operand only
+      //      does anything useful when the input comes from a stack object,
+      //      which suggests it should always be uniform. For non-stack objects
+      //      the effect is to poison the object, which still allows us to
+      //      remove the call.
+      IsUniform = true;
+      break;
+    default:
+      break;
+    }
+  }
+
   auto *Recipe = new VPReplicateRecipe(I, Plan->mapToVPValues(I->operands()),
                                        IsUniform, IsPredicated);
   setRecipe(I, Recipe);
@@ -9401,21 +9461,7 @@ VPlanPtr LoopVectorizationPlanner::buildVPlanWithVPRecipes(
   }
 
   // Adjust the recipes for any inloop reductions.
-  adjustRecipesForInLoopReductions(Plan, RecipeBuilder, Range.Start);
-
-  // Finally, if tail is folded by masking, introduce selects between the phi
-  // and the live-out instruction of each reduction, at the end of the latch.
-  if (CM.foldTailByMasking() && !Legal->getReductionVars().empty()) {
-    Builder.setInsertPoint(VPBB);
-    auto *Cond = RecipeBuilder.createBlockInMask(OrigLoop->getHeader(), Plan);
-    for (auto &Reduction : Legal->getReductionVars()) {
-      if (CM.isInLoopReduction(Reduction.first))
-        continue;
-      VPValue *Phi = Plan->getOrAddVPValue(Reduction.first);
-      VPValue *Red = Plan->getOrAddVPValue(Reduction.second.getLoopExitInstr());
-      Builder.createNaryOp(Instruction::Select, {Cond, Red, Phi});
-    }
-  }
+  adjustRecipesForReductions(VPBB, Plan, RecipeBuilder, Range.Start);
 
   VPlanTransforms::sinkScalarOperands(*Plan);
   VPlanTransforms::mergeReplicateRegions(*Plan);
@@ -9471,12 +9517,14 @@ VPlanPtr LoopVectorizationPlanner::buildVPlan(VFRange &Range) {
   return Plan;
 }
 
-// Adjust the recipes for any inloop reductions. The chain of instructions
-// leading from the loop exit instr to the phi need to be converted to
-// reductions, with one operand being vector and the other being the scalar
-// reduction chain.
-void LoopVectorizationPlanner::adjustRecipesForInLoopReductions(
-    VPlanPtr &Plan, VPRecipeBuilder &RecipeBuilder, ElementCount MinVF) {
+// Adjust the recipes for reductions. For in-loop reductions the chain of
+// instructions leading from the loop exit instr to the phi need to be converted
+// to reductions, with one operand being vector and the other being the scalar
+// reduction chain. For other reductions, a select is introduced between the phi
+// and live-out recipes when folding the tail.
+void LoopVectorizationPlanner::adjustRecipesForReductions(
+    VPBasicBlock *LatchVPBB, VPlanPtr &Plan, VPRecipeBuilder &RecipeBuilder,
+    ElementCount MinVF) {
   for (auto &Reduction : CM.getInLoopReductionChains()) {
     PHINode *Phi = Reduction.first;
     RecurrenceDescriptor &RdxDesc = Legal->getReductionVars()[Phi];
@@ -9531,6 +9579,21 @@ void LoopVectorizationPlanner::adjustRecipesForInLoopReductions(
         CompareRecipe->eraseFromParent();
       }
       Chain = R;
+    }
+  }
+
+  // If tail is folded by masking, introduce selects between the phi
+  // and the live-out instruction of each reduction, at the end of the latch.
+  if (CM.foldTailByMasking()) {
+    for (VPRecipeBase &R : Plan->getEntry()->getEntryBasicBlock()->phis()) {
+      VPReductionPHIRecipe *PhiR = dyn_cast<VPReductionPHIRecipe>(&R);
+      if (!PhiR || PhiR->isInLoop())
+        continue;
+      Builder.setInsertPoint(LatchVPBB);
+      VPValue *Cond =
+          RecipeBuilder.createBlockInMask(OrigLoop->getHeader(), Plan);
+      VPValue *Red = PhiR->getBackedgeValue();
+      Builder.createNaryOp(Instruction::Select, {Cond, Red, PhiR});
     }
   }
 }

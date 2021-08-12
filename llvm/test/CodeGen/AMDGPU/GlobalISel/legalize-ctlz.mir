@@ -9,12 +9,10 @@ body: |
     liveins: $vgpr0
     ; CHECK-LABEL: name: ctlz_s32_s32
     ; CHECK: [[COPY:%[0-9]+]]:_(s32) = COPY $vgpr0
-    ; CHECK: [[CTLZ_ZERO_UNDEF:%[0-9]+]]:_(s32) = G_CTLZ_ZERO_UNDEF [[COPY]](s32)
-    ; CHECK: [[C:%[0-9]+]]:_(s32) = G_CONSTANT i32 0
-    ; CHECK: [[ICMP:%[0-9]+]]:_(s1) = G_ICMP intpred(eq), [[COPY]](s32), [[C]]
-    ; CHECK: [[C1:%[0-9]+]]:_(s32) = G_CONSTANT i32 32
-    ; CHECK: [[SELECT:%[0-9]+]]:_(s32) = G_SELECT [[ICMP]](s1), [[C1]], [[CTLZ_ZERO_UNDEF]]
-    ; CHECK: $vgpr0 = COPY [[SELECT]](s32)
+    ; CHECK: [[AMDGPU_FFBH_U32_:%[0-9]+]]:_(s32) = G_AMDGPU_FFBH_U32 [[COPY]](s32)
+    ; CHECK: [[C:%[0-9]+]]:_(s32) = G_CONSTANT i32 32
+    ; CHECK: [[UMIN:%[0-9]+]]:_(s32) = G_UMIN [[AMDGPU_FFBH_U32_]], [[C]]
+    ; CHECK: $vgpr0 = COPY [[UMIN]](s32)
     %0:_(s32) = COPY $vgpr0
     %1:_(s32) = G_CTLZ %0
     $vgpr0 = COPY %1
@@ -28,12 +26,10 @@ body: |
     liveins: $vgpr0_vgpr1
     ; CHECK-LABEL: name: ctlz_s32_s64
     ; CHECK: [[COPY:%[0-9]+]]:_(s64) = COPY $vgpr0_vgpr1
-    ; CHECK: [[CTLZ_ZERO_UNDEF:%[0-9]+]]:_(s32) = G_CTLZ_ZERO_UNDEF [[COPY]](s64)
-    ; CHECK: [[C:%[0-9]+]]:_(s64) = G_CONSTANT i64 0
-    ; CHECK: [[ICMP:%[0-9]+]]:_(s1) = G_ICMP intpred(eq), [[COPY]](s64), [[C]]
-    ; CHECK: [[C1:%[0-9]+]]:_(s32) = G_CONSTANT i32 64
-    ; CHECK: [[SELECT:%[0-9]+]]:_(s32) = G_SELECT [[ICMP]](s1), [[C1]], [[CTLZ_ZERO_UNDEF]]
-    ; CHECK: $vgpr0 = COPY [[SELECT]](s32)
+    ; CHECK: [[AMDGPU_FFBH_U32_:%[0-9]+]]:_(s32) = G_AMDGPU_FFBH_U32 [[COPY]](s64)
+    ; CHECK: [[C:%[0-9]+]]:_(s32) = G_CONSTANT i32 64
+    ; CHECK: [[UMIN:%[0-9]+]]:_(s32) = G_UMIN [[AMDGPU_FFBH_U32_]], [[C]]
+    ; CHECK: $vgpr0 = COPY [[UMIN]](s32)
     %0:_(s64) = COPY $vgpr0_vgpr1
     %1:_(s32) = G_CTLZ %0
     $vgpr0 = COPY %1
@@ -47,12 +43,10 @@ body: |
     liveins: $vgpr0_vgpr1
     ; CHECK-LABEL: name: ctlz_s64_s64
     ; CHECK: [[COPY:%[0-9]+]]:_(s64) = COPY $vgpr0_vgpr1
-    ; CHECK: [[CTLZ_ZERO_UNDEF:%[0-9]+]]:_(s32) = G_CTLZ_ZERO_UNDEF [[COPY]](s64)
-    ; CHECK: [[C:%[0-9]+]]:_(s64) = G_CONSTANT i64 0
-    ; CHECK: [[ICMP:%[0-9]+]]:_(s1) = G_ICMP intpred(eq), [[COPY]](s64), [[C]]
-    ; CHECK: [[C1:%[0-9]+]]:_(s32) = G_CONSTANT i32 64
-    ; CHECK: [[SELECT:%[0-9]+]]:_(s32) = G_SELECT [[ICMP]](s1), [[C1]], [[CTLZ_ZERO_UNDEF]]
-    ; CHECK: [[ZEXT:%[0-9]+]]:_(s64) = G_ZEXT [[SELECT]](s32)
+    ; CHECK: [[AMDGPU_FFBH_U32_:%[0-9]+]]:_(s32) = G_AMDGPU_FFBH_U32 [[COPY]](s64)
+    ; CHECK: [[C:%[0-9]+]]:_(s32) = G_CONSTANT i32 64
+    ; CHECK: [[UMIN:%[0-9]+]]:_(s32) = G_UMIN [[AMDGPU_FFBH_U32_]], [[C]]
+    ; CHECK: [[ZEXT:%[0-9]+]]:_(s64) = G_ZEXT [[UMIN]](s32)
     ; CHECK: $vgpr0_vgpr1 = COPY [[ZEXT]](s64)
     %0:_(s64) = COPY $vgpr0_vgpr1
     %1:_(s64) = G_CTLZ %0
@@ -67,14 +61,12 @@ body: |
     liveins: $vgpr0
     ; CHECK-LABEL: name: ctlz_s16_s32
     ; CHECK: [[COPY:%[0-9]+]]:_(s32) = COPY $vgpr0
-    ; CHECK: [[CTLZ_ZERO_UNDEF:%[0-9]+]]:_(s32) = G_CTLZ_ZERO_UNDEF [[COPY]](s32)
-    ; CHECK: [[C:%[0-9]+]]:_(s32) = G_CONSTANT i32 0
-    ; CHECK: [[ICMP:%[0-9]+]]:_(s1) = G_ICMP intpred(eq), [[COPY]](s32), [[C]]
-    ; CHECK: [[C1:%[0-9]+]]:_(s32) = G_CONSTANT i32 32
-    ; CHECK: [[SELECT:%[0-9]+]]:_(s32) = G_SELECT [[ICMP]](s1), [[C1]], [[CTLZ_ZERO_UNDEF]]
-    ; CHECK: [[C2:%[0-9]+]]:_(s32) = G_CONSTANT i32 65535
-    ; CHECK: [[COPY1:%[0-9]+]]:_(s32) = COPY [[SELECT]](s32)
-    ; CHECK: [[AND:%[0-9]+]]:_(s32) = G_AND [[COPY1]], [[C2]]
+    ; CHECK: [[AMDGPU_FFBH_U32_:%[0-9]+]]:_(s32) = G_AMDGPU_FFBH_U32 [[COPY]](s32)
+    ; CHECK: [[C:%[0-9]+]]:_(s32) = G_CONSTANT i32 32
+    ; CHECK: [[UMIN:%[0-9]+]]:_(s32) = G_UMIN [[AMDGPU_FFBH_U32_]], [[C]]
+    ; CHECK: [[C1:%[0-9]+]]:_(s32) = G_CONSTANT i32 65535
+    ; CHECK: [[COPY1:%[0-9]+]]:_(s32) = COPY [[UMIN]](s32)
+    ; CHECK: [[AND:%[0-9]+]]:_(s32) = G_AND [[COPY1]], [[C1]]
     ; CHECK: $vgpr0 = COPY [[AND]](s32)
     %0:_(s32) = COPY $vgpr0
     %1:_(s16) = G_CTLZ %0
@@ -93,13 +85,11 @@ body: |
     ; CHECK: [[C:%[0-9]+]]:_(s32) = G_CONSTANT i32 65535
     ; CHECK: [[COPY1:%[0-9]+]]:_(s32) = COPY [[COPY]](s32)
     ; CHECK: [[AND:%[0-9]+]]:_(s32) = G_AND [[COPY1]], [[C]]
-    ; CHECK: [[CTLZ_ZERO_UNDEF:%[0-9]+]]:_(s32) = G_CTLZ_ZERO_UNDEF [[AND]](s32)
-    ; CHECK: [[C1:%[0-9]+]]:_(s32) = G_CONSTANT i32 0
-    ; CHECK: [[ICMP:%[0-9]+]]:_(s1) = G_ICMP intpred(eq), [[AND]](s32), [[C1]]
-    ; CHECK: [[C2:%[0-9]+]]:_(s32) = G_CONSTANT i32 32
-    ; CHECK: [[SELECT:%[0-9]+]]:_(s32) = G_SELECT [[ICMP]](s1), [[C2]], [[CTLZ_ZERO_UNDEF]]
-    ; CHECK: [[C3:%[0-9]+]]:_(s32) = G_CONSTANT i32 16
-    ; CHECK: [[SUB:%[0-9]+]]:_(s32) = G_SUB [[SELECT]], [[C3]]
+    ; CHECK: [[AMDGPU_FFBH_U32_:%[0-9]+]]:_(s32) = G_AMDGPU_FFBH_U32 [[AND]](s32)
+    ; CHECK: [[C1:%[0-9]+]]:_(s32) = G_CONSTANT i32 32
+    ; CHECK: [[UMIN:%[0-9]+]]:_(s32) = G_UMIN [[AMDGPU_FFBH_U32_]], [[C1]]
+    ; CHECK: [[C2:%[0-9]+]]:_(s32) = G_CONSTANT i32 16
+    ; CHECK: [[SUB:%[0-9]+]]:_(s32) = G_SUB [[UMIN]], [[C2]]
     ; CHECK: [[COPY2:%[0-9]+]]:_(s32) = COPY [[SUB]](s32)
     ; CHECK: [[COPY3:%[0-9]+]]:_(s32) = COPY [[COPY2]](s32)
     ; CHECK: [[AND1:%[0-9]+]]:_(s32) = G_AND [[COPY3]], [[C]]
@@ -120,15 +110,12 @@ body: |
     ; CHECK-LABEL: name: ctlz_v2s32_v2s32
     ; CHECK: [[COPY:%[0-9]+]]:_(<2 x s32>) = COPY $vgpr0_vgpr1
     ; CHECK: [[UV:%[0-9]+]]:_(s32), [[UV1:%[0-9]+]]:_(s32) = G_UNMERGE_VALUES [[COPY]](<2 x s32>)
-    ; CHECK: [[CTLZ_ZERO_UNDEF:%[0-9]+]]:_(s32) = G_CTLZ_ZERO_UNDEF [[UV]](s32)
-    ; CHECK: [[C:%[0-9]+]]:_(s32) = G_CONSTANT i32 0
-    ; CHECK: [[ICMP:%[0-9]+]]:_(s1) = G_ICMP intpred(eq), [[UV]](s32), [[C]]
-    ; CHECK: [[C1:%[0-9]+]]:_(s32) = G_CONSTANT i32 32
-    ; CHECK: [[SELECT:%[0-9]+]]:_(s32) = G_SELECT [[ICMP]](s1), [[C1]], [[CTLZ_ZERO_UNDEF]]
-    ; CHECK: [[CTLZ_ZERO_UNDEF1:%[0-9]+]]:_(s32) = G_CTLZ_ZERO_UNDEF [[UV1]](s32)
-    ; CHECK: [[ICMP1:%[0-9]+]]:_(s1) = G_ICMP intpred(eq), [[UV1]](s32), [[C]]
-    ; CHECK: [[SELECT1:%[0-9]+]]:_(s32) = G_SELECT [[ICMP1]](s1), [[C1]], [[CTLZ_ZERO_UNDEF1]]
-    ; CHECK: [[BUILD_VECTOR:%[0-9]+]]:_(<2 x s32>) = G_BUILD_VECTOR [[SELECT]](s32), [[SELECT1]](s32)
+    ; CHECK: [[AMDGPU_FFBH_U32_:%[0-9]+]]:_(s32) = G_AMDGPU_FFBH_U32 [[UV]](s32)
+    ; CHECK: [[C:%[0-9]+]]:_(s32) = G_CONSTANT i32 32
+    ; CHECK: [[UMIN:%[0-9]+]]:_(s32) = G_UMIN [[AMDGPU_FFBH_U32_]], [[C]]
+    ; CHECK: [[AMDGPU_FFBH_U32_1:%[0-9]+]]:_(s32) = G_AMDGPU_FFBH_U32 [[UV1]](s32)
+    ; CHECK: [[UMIN1:%[0-9]+]]:_(s32) = G_UMIN [[AMDGPU_FFBH_U32_1]], [[C]]
+    ; CHECK: [[BUILD_VECTOR:%[0-9]+]]:_(<2 x s32>) = G_BUILD_VECTOR [[UMIN]](s32), [[UMIN1]](s32)
     ; CHECK: $vgpr0_vgpr1 = COPY [[BUILD_VECTOR]](<2 x s32>)
     %0:_(<2 x s32>) = COPY $vgpr0_vgpr1
     %1:_(<2 x s32>) = G_CTLZ %0
@@ -144,15 +131,12 @@ body: |
     ; CHECK-LABEL: name: ctlz_v2s32_v2s64
     ; CHECK: [[COPY:%[0-9]+]]:_(<2 x s64>) = COPY $vgpr0_vgpr1_vgpr2_vgpr3
     ; CHECK: [[UV:%[0-9]+]]:_(s64), [[UV1:%[0-9]+]]:_(s64) = G_UNMERGE_VALUES [[COPY]](<2 x s64>)
-    ; CHECK: [[CTLZ_ZERO_UNDEF:%[0-9]+]]:_(s32) = G_CTLZ_ZERO_UNDEF [[UV]](s64)
-    ; CHECK: [[C:%[0-9]+]]:_(s64) = G_CONSTANT i64 0
-    ; CHECK: [[ICMP:%[0-9]+]]:_(s1) = G_ICMP intpred(eq), [[UV]](s64), [[C]]
-    ; CHECK: [[C1:%[0-9]+]]:_(s32) = G_CONSTANT i32 64
-    ; CHECK: [[SELECT:%[0-9]+]]:_(s32) = G_SELECT [[ICMP]](s1), [[C1]], [[CTLZ_ZERO_UNDEF]]
-    ; CHECK: [[CTLZ_ZERO_UNDEF1:%[0-9]+]]:_(s32) = G_CTLZ_ZERO_UNDEF [[UV1]](s64)
-    ; CHECK: [[ICMP1:%[0-9]+]]:_(s1) = G_ICMP intpred(eq), [[UV1]](s64), [[C]]
-    ; CHECK: [[SELECT1:%[0-9]+]]:_(s32) = G_SELECT [[ICMP1]](s1), [[C1]], [[CTLZ_ZERO_UNDEF1]]
-    ; CHECK: [[BUILD_VECTOR:%[0-9]+]]:_(<2 x s32>) = G_BUILD_VECTOR [[SELECT]](s32), [[SELECT1]](s32)
+    ; CHECK: [[AMDGPU_FFBH_U32_:%[0-9]+]]:_(s32) = G_AMDGPU_FFBH_U32 [[UV]](s64)
+    ; CHECK: [[C:%[0-9]+]]:_(s32) = G_CONSTANT i32 64
+    ; CHECK: [[UMIN:%[0-9]+]]:_(s32) = G_UMIN [[AMDGPU_FFBH_U32_]], [[C]]
+    ; CHECK: [[AMDGPU_FFBH_U32_1:%[0-9]+]]:_(s32) = G_AMDGPU_FFBH_U32 [[UV1]](s64)
+    ; CHECK: [[UMIN1:%[0-9]+]]:_(s32) = G_UMIN [[AMDGPU_FFBH_U32_1]], [[C]]
+    ; CHECK: [[BUILD_VECTOR:%[0-9]+]]:_(<2 x s32>) = G_BUILD_VECTOR [[UMIN]](s32), [[UMIN1]](s32)
     ; CHECK: $vgpr0_vgpr1 = COPY [[BUILD_VECTOR]](<2 x s32>)
     %0:_(<2 x s64>) = COPY $vgpr0_vgpr1_vgpr2_vgpr3
     %1:_(<2 x s32>) = G_CTLZ %0
@@ -173,19 +157,16 @@ body: |
     ; CHECK: [[C1:%[0-9]+]]:_(s32) = G_CONSTANT i32 65535
     ; CHECK: [[COPY1:%[0-9]+]]:_(s32) = COPY [[BITCAST]](s32)
     ; CHECK: [[AND:%[0-9]+]]:_(s32) = G_AND [[COPY1]], [[C1]]
-    ; CHECK: [[CTLZ_ZERO_UNDEF:%[0-9]+]]:_(s32) = G_CTLZ_ZERO_UNDEF [[AND]](s32)
-    ; CHECK: [[C2:%[0-9]+]]:_(s32) = G_CONSTANT i32 0
-    ; CHECK: [[ICMP:%[0-9]+]]:_(s1) = G_ICMP intpred(eq), [[AND]](s32), [[C2]]
-    ; CHECK: [[C3:%[0-9]+]]:_(s32) = G_CONSTANT i32 32
-    ; CHECK: [[SELECT:%[0-9]+]]:_(s32) = G_SELECT [[ICMP]](s1), [[C3]], [[CTLZ_ZERO_UNDEF]]
-    ; CHECK: [[SUB:%[0-9]+]]:_(s32) = G_SUB [[SELECT]], [[C]]
+    ; CHECK: [[AMDGPU_FFBH_U32_:%[0-9]+]]:_(s32) = G_AMDGPU_FFBH_U32 [[AND]](s32)
+    ; CHECK: [[C2:%[0-9]+]]:_(s32) = G_CONSTANT i32 32
+    ; CHECK: [[UMIN:%[0-9]+]]:_(s32) = G_UMIN [[AMDGPU_FFBH_U32_]], [[C2]]
+    ; CHECK: [[SUB:%[0-9]+]]:_(s32) = G_SUB [[UMIN]], [[C]]
     ; CHECK: [[COPY2:%[0-9]+]]:_(s32) = COPY [[SUB]](s32)
     ; CHECK: [[COPY3:%[0-9]+]]:_(s32) = COPY [[LSHR]](s32)
     ; CHECK: [[AND1:%[0-9]+]]:_(s32) = G_AND [[COPY3]], [[C1]]
-    ; CHECK: [[CTLZ_ZERO_UNDEF1:%[0-9]+]]:_(s32) = G_CTLZ_ZERO_UNDEF [[AND1]](s32)
-    ; CHECK: [[ICMP1:%[0-9]+]]:_(s1) = G_ICMP intpred(eq), [[AND1]](s32), [[C2]]
-    ; CHECK: [[SELECT1:%[0-9]+]]:_(s32) = G_SELECT [[ICMP1]](s1), [[C3]], [[CTLZ_ZERO_UNDEF1]]
-    ; CHECK: [[SUB1:%[0-9]+]]:_(s32) = G_SUB [[SELECT1]], [[C]]
+    ; CHECK: [[AMDGPU_FFBH_U32_1:%[0-9]+]]:_(s32) = G_AMDGPU_FFBH_U32 [[AND1]](s32)
+    ; CHECK: [[UMIN1:%[0-9]+]]:_(s32) = G_UMIN [[AMDGPU_FFBH_U32_1]], [[C2]]
+    ; CHECK: [[SUB1:%[0-9]+]]:_(s32) = G_SUB [[UMIN1]], [[C]]
     ; CHECK: [[COPY4:%[0-9]+]]:_(s32) = COPY [[SUB1]](s32)
     ; CHECK: [[COPY5:%[0-9]+]]:_(s32) = COPY [[COPY2]](s32)
     ; CHECK: [[AND2:%[0-9]+]]:_(s32) = G_AND [[COPY5]], [[C1]]
@@ -212,13 +193,11 @@ body: |
     ; CHECK: [[C:%[0-9]+]]:_(s32) = G_CONSTANT i32 127
     ; CHECK: [[COPY1:%[0-9]+]]:_(s32) = COPY [[COPY]](s32)
     ; CHECK: [[AND:%[0-9]+]]:_(s32) = G_AND [[COPY1]], [[C]]
-    ; CHECK: [[CTLZ_ZERO_UNDEF:%[0-9]+]]:_(s32) = G_CTLZ_ZERO_UNDEF [[AND]](s32)
-    ; CHECK: [[C1:%[0-9]+]]:_(s32) = G_CONSTANT i32 0
-    ; CHECK: [[ICMP:%[0-9]+]]:_(s1) = G_ICMP intpred(eq), [[AND]](s32), [[C1]]
-    ; CHECK: [[C2:%[0-9]+]]:_(s32) = G_CONSTANT i32 32
-    ; CHECK: [[SELECT:%[0-9]+]]:_(s32) = G_SELECT [[ICMP]](s1), [[C2]], [[CTLZ_ZERO_UNDEF]]
-    ; CHECK: [[C3:%[0-9]+]]:_(s32) = G_CONSTANT i32 25
-    ; CHECK: [[SUB:%[0-9]+]]:_(s32) = G_SUB [[SELECT]], [[C3]]
+    ; CHECK: [[AMDGPU_FFBH_U32_:%[0-9]+]]:_(s32) = G_AMDGPU_FFBH_U32 [[AND]](s32)
+    ; CHECK: [[C1:%[0-9]+]]:_(s32) = G_CONSTANT i32 32
+    ; CHECK: [[UMIN:%[0-9]+]]:_(s32) = G_UMIN [[AMDGPU_FFBH_U32_]], [[C1]]
+    ; CHECK: [[C2:%[0-9]+]]:_(s32) = G_CONSTANT i32 25
+    ; CHECK: [[SUB:%[0-9]+]]:_(s32) = G_SUB [[UMIN]], [[C2]]
     ; CHECK: [[COPY2:%[0-9]+]]:_(s32) = COPY [[SUB]](s32)
     ; CHECK: [[COPY3:%[0-9]+]]:_(s32) = COPY [[COPY2]](s32)
     ; CHECK: [[AND1:%[0-9]+]]:_(s32) = G_AND [[COPY3]], [[C]]
@@ -242,15 +221,13 @@ body: |
     ; CHECK: [[C:%[0-9]+]]:_(s64) = G_CONSTANT i64 8589934591
     ; CHECK: [[COPY1:%[0-9]+]]:_(s64) = COPY [[COPY]](s64)
     ; CHECK: [[AND:%[0-9]+]]:_(s64) = G_AND [[COPY1]], [[C]]
-    ; CHECK: [[CTLZ_ZERO_UNDEF:%[0-9]+]]:_(s32) = G_CTLZ_ZERO_UNDEF [[AND]](s64)
-    ; CHECK: [[C1:%[0-9]+]]:_(s64) = G_CONSTANT i64 0
-    ; CHECK: [[ICMP:%[0-9]+]]:_(s1) = G_ICMP intpred(eq), [[AND]](s64), [[C1]]
-    ; CHECK: [[C2:%[0-9]+]]:_(s32) = G_CONSTANT i32 64
-    ; CHECK: [[SELECT:%[0-9]+]]:_(s32) = G_SELECT [[ICMP]](s1), [[C2]], [[CTLZ_ZERO_UNDEF]]
-    ; CHECK: [[ZEXT:%[0-9]+]]:_(s64) = G_ZEXT [[SELECT]](s32)
-    ; CHECK: [[C3:%[0-9]+]]:_(s64) = G_CONSTANT i64 31
+    ; CHECK: [[AMDGPU_FFBH_U32_:%[0-9]+]]:_(s32) = G_AMDGPU_FFBH_U32 [[AND]](s64)
+    ; CHECK: [[C1:%[0-9]+]]:_(s32) = G_CONSTANT i32 64
+    ; CHECK: [[UMIN:%[0-9]+]]:_(s32) = G_UMIN [[AMDGPU_FFBH_U32_]], [[C1]]
+    ; CHECK: [[ZEXT:%[0-9]+]]:_(s64) = G_ZEXT [[UMIN]](s32)
+    ; CHECK: [[C2:%[0-9]+]]:_(s64) = G_CONSTANT i64 31
     ; CHECK: [[UV:%[0-9]+]]:_(s32), [[UV1:%[0-9]+]]:_(s32) = G_UNMERGE_VALUES [[ZEXT]](s64)
-    ; CHECK: [[UV2:%[0-9]+]]:_(s32), [[UV3:%[0-9]+]]:_(s32) = G_UNMERGE_VALUES [[C3]](s64)
+    ; CHECK: [[UV2:%[0-9]+]]:_(s32), [[UV3:%[0-9]+]]:_(s32) = G_UNMERGE_VALUES [[C2]](s64)
     ; CHECK: [[USUBO:%[0-9]+]]:_(s32), [[USUBO1:%[0-9]+]]:_(s1) = G_USUBO [[UV]], [[UV2]]
     ; CHECK: [[USUBE:%[0-9]+]]:_(s32), [[USUBE1:%[0-9]+]]:_(s1) = G_USUBE [[UV1]], [[UV3]], [[USUBO1]]
     ; CHECK: [[ZEXT1:%[0-9]+]]:_(s64) = G_ZEXT [[USUBO]](s32)

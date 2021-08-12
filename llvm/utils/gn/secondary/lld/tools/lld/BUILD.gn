@@ -29,7 +29,7 @@ executable("lld") {
   deps = [
     "//lld/COFF",
     "//lld/ELF",
-    "//lld/MachO:MachO2",
+    "//lld/MachO:MachO",
     "//lld/MinGW",
     "//lld/lib/Driver",
     "//lld/wasm",

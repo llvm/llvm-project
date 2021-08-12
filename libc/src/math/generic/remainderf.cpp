@@ -7,8 +7,8 @@
 //===----------------------------------------------------------------------===//
 
 #include "src/math/remainderf.h"
+#include "src/__support/FPUtil/DivisionAndRemainderOperations.h"
 #include "src/__support/common.h"
-#include "utils/FPUtil/DivisionAndRemainderOperations.h"
 
 namespace __llvm_libc {
 

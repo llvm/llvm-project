@@ -102,10 +102,6 @@ public:
     return extractValue(Data, OffsetPtr, FormParams, nullptr, U);
   }
 
-  bool isInlinedCStr() const {
-    return Value.data != nullptr && Value.data == (const uint8_t *)Value.cstr;
-  }
-
   /// getAsFoo functions below return the extracted value as Foo if only
   /// DWARFFormValue has form class is suitable for representing Foo.
   Optional<uint64_t> getAsReference() const;

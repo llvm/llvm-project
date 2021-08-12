@@ -1243,7 +1243,7 @@ bool Debugger::EnableLog(llvm::StringRef channel,
       log_stream_sp = pos->second.lock();
     if (!log_stream_sp) {
       File::OpenOptions flags =
-          File::eOpenOptionWrite | File::eOpenOptionCanCreate;
+          File::eOpenOptionWriteOnly | File::eOpenOptionCanCreate;
       if (log_options & LLDB_LOG_OPTION_APPEND)
         flags |= File::eOpenOptionAppend;
       else

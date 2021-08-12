@@ -183,6 +183,12 @@ getDeclAtPositionWithRelations(ParsedAST &AST, SourceLocation Pos,
     if (const SelectionTree::Node *N = ST.commonAncestor()) {
       if (NodeKind)
         *NodeKind = N->ASTNode.getNodeKind();
+      // Attributes don't target decls, look at the
+      // thing it's attached to.
+      // We still report the original NodeKind!
+      // This makes the `override` hack work.
+      if (N->ASTNode.get<Attr>() && N->Parent)
+        N = N->Parent;
       llvm::copy_if(allTargetDecls(N->ASTNode, AST.getHeuristicResolver()),
                     std::back_inserter(Result),
                     [&](auto &Entry) { return !(Entry.second & ~Relations); });
@@ -343,7 +349,7 @@ std::vector<LocatedSymbol> findImplementors(llvm::DenseSet<SymbolID> IDs,
 std::vector<LocatedSymbol>
 locateASTReferent(SourceLocation CurLoc, const syntax::Token *TouchedIdentifier,
                   ParsedAST &AST, llvm::StringRef MainFilePath,
-                  const SymbolIndex *Index, ASTNodeKind *NodeKind) {
+                  const SymbolIndex *Index, ASTNodeKind &NodeKind) {
   const SourceManager &SM = AST.getSourceManager();
   // Results follow the order of Symbols.Decls.
   std::vector<LocatedSymbol> Result;
@@ -376,7 +382,7 @@ locateASTReferent(SourceLocation CurLoc, const syntax::Token *TouchedIdentifier,
   DeclRelationSet Relations =
       DeclRelation::TemplatePattern | DeclRelation::Alias;
   auto Candidates =
-      getDeclAtPositionWithRelations(AST, CurLoc, Relations, NodeKind);
+      getDeclAtPositionWithRelations(AST, CurLoc, Relations, &NodeKind);
   llvm::DenseSet<SymbolID> VirtualMethods;
   for (const auto &E : Candidates) {
     const NamedDecl *D = E.first;
@@ -392,13 +398,8 @@ locateASTReferent(SourceLocation CurLoc, const syntax::Token *TouchedIdentifier,
         }
       }
       // Special case: void foo() ^override: jump to the overridden method.
-      const InheritableAttr *Attr = D->getAttr<OverrideAttr>();
-      if (!Attr)
-        Attr = D->getAttr<FinalAttr>();
-      if (Attr && TouchedIdentifier &&
-          SM.getSpellingLoc(Attr->getLocation()) ==
-              TouchedIdentifier->location()) {
-        LocateASTReferentMetric.record(1, "method-to-base");
+    if (NodeKind.isSame(ASTNodeKind::getFromNodeKind<OverrideAttr>()) ||
+        NodeKind.isSame(ASTNodeKind::getFromNodeKind<FinalAttr>())) {
         // We may be overridding multiple methods - offer them all.
         for (const NamedDecl *ND : CMD->overridden_methods())
           AddResultDecl(ND);
@@ -800,7 +801,7 @@ std::vector<LocatedSymbol> locateSymbolAt(ParsedAST &AST, Position Pos,
 
   ASTNodeKind NodeKind;
   auto ASTResults = locateASTReferent(*CurLoc, TouchedIdentifier, AST,
-                                      *MainFilePath, Index, &NodeKind);
+                                      *MainFilePath, Index, NodeKind);
   if (!ASTResults.empty())
     return ASTResults;
 
@@ -816,9 +817,8 @@ std::vector<LocatedSymbol> locateSymbolAt(ParsedAST &AST, Position Pos,
             Word->Text);
         return {*std::move(Macro)};
       }
-      ASTResults =
-          locateASTReferent(NearbyIdent->location(), NearbyIdent, AST,
-                            *MainFilePath, Index, /*NodeKind=*/nullptr);
+      ASTResults = locateASTReferent(NearbyIdent->location(), NearbyIdent, AST,
+                                     *MainFilePath, Index, NodeKind);
       if (!ASTResults.empty()) {
         log("Found definition heuristically using nearby identifier {0}",
             NearbyIdent->text(SM));

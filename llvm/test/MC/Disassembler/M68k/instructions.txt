@@ -2,7 +2,7 @@
 
 # CHECK: move.l %a1, %a0
 0x20 0x49
-# CHECK: add.l %a0, %a1
+# CHECK: adda.l %a0, %a1
 0xd3 0xc8
 # CHECK: sub.w %d3, %d1
 0x92 0x43

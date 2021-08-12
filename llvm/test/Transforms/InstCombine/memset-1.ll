@@ -21,17 +21,20 @@ define i8* @test_simplify1(i8* %mem, i32 %val, i32 %size) {
   ret i8* %ret
 }
 
+; Malloc + memset pattern is now handled by DSE in a more general way.
+
 define i8* @pr25892_lite(i32 %size) #0 {
 ; CHECK-LABEL: @pr25892_lite(
-; CHECK-NEXT:    [[CALLOC:%.*]] = call i8* @calloc(i32 1, i32 [[SIZE:%.*]])
-; CHECK-NEXT:    ret i8* [[CALLOC]]
+; CHECK-NEXT:    [[CALL:%.*]] = call i8* @malloc(i32 [[SIZE:%.*]])
+; CHECK-NEXT:    call void @llvm.memset.p0i8.i32(i8* align 1 [[CALL]], i8 0, i32 [[SIZE]], i1 false)
 ;
   %call1 = call i8* @malloc(i32 %size) #1
   %call2 = call i8* @memset(i8* %call1, i32 0, i32 %size) #1
   ret i8* %call2
 }
 
-; FIXME: A memset intrinsic should be handled similarly to a memset() libcall.
+; A memset intrinsic should be handled similarly to a memset() libcall.
+; Notice that malloc + memset pattern is now handled by DSE in a more general way.
 
 define i8* @malloc_and_memset_intrinsic(i32 %n) #0 {
 ; CHECK-LABEL: @malloc_and_memset_intrinsic(
@@ -45,6 +48,7 @@ define i8* @malloc_and_memset_intrinsic(i32 %n) #0 {
 }
 
 ; This should not create a calloc and should not crash the compiler.
+; Notice that malloc + memset pattern is now handled by DSE in a more general way.
 
 define i8* @notmalloc_memset(i32 %size, i8*(i32)* %notmalloc) {
 ; CHECK-LABEL: @notmalloc_memset(
@@ -57,8 +61,8 @@ define i8* @notmalloc_memset(i32 %size, i8*(i32)* %notmalloc) {
   ret i8* %call2
 }
 
-; FIXME: memset(malloc(x), 0, x) -> calloc(1, x)
 ; This doesn't fire currently because the malloc has more than one use.
+; Notice that malloc + memset pattern is now handled by DSE in a more general way.
 
 define float* @pr25892(i32 %size) #0 {
 ; CHECK-LABEL: @pr25892(

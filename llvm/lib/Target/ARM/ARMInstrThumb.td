@@ -168,6 +168,7 @@ def thumb_cb_target : Operand<OtherVT> {
   let EncoderMethod = "getThumbCBTargetOpValue";
   let DecoderMethod = "DecodeThumbCmpBROperand";
 }
+} // OperandType = "OPERAND_PCREL"
 
 // t_addrmode_pc := <label> => pc + imm8 * 4
 //
@@ -176,7 +177,6 @@ def t_addrmode_pc : MemOperand {
   let DecoderMethod = "DecodeThumbAddrModePC";
   let PrintMethod = "printThumbLdrLabelOperand";
   let ParserMatchClass = ThumbMemPC;
-}
 }
 
 // t_addrmode_rr := reg + reg

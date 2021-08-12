@@ -27,7 +27,7 @@
 ; RUN:   | FileCheck %s --check-prefix=VERBOSE --check-prefix=CONV "--implicit-check-not={{DW_TAG|NULL}}"
 
 
-; SPLITCONV: Compile Unit:{{.*}} DWO_id = 0xe91d8d1d7f9782c0
+; SPLITCONV: Compile Unit:{{.*}} DWO_id = 0x62f17241069b1fa3
 ; SPLIT: DW_TAG_skeleton_unit
 
 ; CONV: DW_TAG_compile_unit
@@ -44,7 +44,7 @@
 ; CONV:   DW_TAG_subprogram
 ; CONV:     DW_TAG_formal_parameter
 ; CONV:     DW_TAG_variable
-; CONV:     DW_AT_location {{.*}}DW_OP_constu 0x20, DW_OP_convert (
+; CONV:     DW_AT_location {{.*}}DW_OP_constu 0x20, DW_OP_lit0, DW_OP_plus, DW_OP_convert (
 ; VERBOSE-SAME: [[SIG8]] ->
 ; CONV-SAME: [[SIG8]]) "DW_ATE_signed_8", DW_OP_convert (
 ; VERBOSE-SAME: [[SIG32]] ->
@@ -76,7 +76,11 @@
 define dso_local signext i8 @foo(i8 signext %x) !dbg !7 {
 entry:
   call void @llvm.dbg.value(metadata i8 %x, metadata !11, metadata !DIExpression()), !dbg !12
-  call void @llvm.dbg.value(metadata i8 32, metadata !13, metadata !DIExpression(DW_OP_LLVM_convert, 8, DW_ATE_signed, DW_OP_LLVM_convert, 32, DW_ATE_signed, DW_OP_stack_value)), !dbg !15
+;; This test depends on "convert" surviving all the way to the final object.
+;; So, insert something before DW_OP_LLVM_convert that the expression folder
+;; will not attempt to eliminate.  At the moment, only "convert" ops are folded.
+;; If you have to change the expression, the expected DWO_id also changes.
+  call void @llvm.dbg.value(metadata i8 32, metadata !13, metadata !DIExpression(DW_OP_lit0, DW_OP_plus, DW_OP_LLVM_convert, 8, DW_ATE_signed, DW_OP_LLVM_convert, 32, DW_ATE_signed, DW_OP_stack_value)), !dbg !15
   ret i8 %x, !dbg !16
 }
 

@@ -1156,58 +1156,11 @@ Value *LibCallSimplifier::optimizeMemMove(CallInst *CI, IRBuilderBase &B) {
   return CI->getArgOperand(0);
 }
 
-/// Fold memset[_chk](malloc(n), 0, n) --> calloc(1, n).
-Value *LibCallSimplifier::foldMallocMemset(CallInst *Memset, IRBuilderBase &B) {
-  // This has to be a memset of zeros (bzero).
-  auto *FillValue = dyn_cast<ConstantInt>(Memset->getArgOperand(1));
-  if (!FillValue || FillValue->getZExtValue() != 0)
-    return nullptr;
-
-  // TODO: We should handle the case where the malloc has more than one use.
-  // This is necessary to optimize common patterns such as when the result of
-  // the malloc is checked against null or when a memset intrinsic is used in
-  // place of a memset library call.
-  auto *Malloc = dyn_cast<CallInst>(Memset->getArgOperand(0));
-  if (!Malloc || !Malloc->hasOneUse())
-    return nullptr;
-
-  // Is the inner call really malloc()?
-  Function *InnerCallee = Malloc->getCalledFunction();
-  if (!InnerCallee)
-    return nullptr;
-
-  LibFunc Func;
-  if (!TLI->getLibFunc(*InnerCallee, Func) || !TLI->has(Func) ||
-      Func != LibFunc_malloc)
-    return nullptr;
-
-  // The memset must cover the same number of bytes that are malloc'd.
-  if (Memset->getArgOperand(2) != Malloc->getArgOperand(0))
-    return nullptr;
-
-  // Replace the malloc with a calloc. We need the data layout to know what the
-  // actual size of a 'size_t' parameter is.
-  B.SetInsertPoint(Malloc->getParent(), ++Malloc->getIterator());
-  const DataLayout &DL = Malloc->getModule()->getDataLayout();
-  IntegerType *SizeType = DL.getIntPtrType(B.GetInsertBlock()->getContext());
-  if (Value *Calloc = emitCalloc(ConstantInt::get(SizeType, 1),
-                                 Malloc->getArgOperand(0),
-                                 Malloc->getAttributes(), B, *TLI)) {
-    substituteInParent(Malloc, Calloc);
-    return Calloc;
-  }
-
-  return nullptr;
-}
-
 Value *LibCallSimplifier::optimizeMemSet(CallInst *CI, IRBuilderBase &B) {
   Value *Size = CI->getArgOperand(2);
   annotateNonNullAndDereferenceable(CI, 0, Size, DL);
   if (isa<IntrinsicInst>(CI))
     return nullptr;
-
-  if (auto *Calloc = foldMallocMemset(CI, B))
-    return Calloc;
 
   // memset(p, v, n) -> llvm.memset(align 1 p, v, n)
   Value *Val = B.CreateIntCast(CI->getArgOperand(1), B.getInt8Ty(), false);
@@ -3066,7 +3019,6 @@ Value *LibCallSimplifier::optimizeCall(CallInst *CI, IRBuilderBase &Builder) {
       return optimizeLog(CI, Builder);
     case Intrinsic::sqrt:
       return optimizeSqrt(CI, Builder);
-    // TODO: Use foldMallocMemset() with memset intrinsic.
     case Intrinsic::memset:
       return optimizeMemSet(CI, Builder);
     case Intrinsic::memcpy:
@@ -3289,8 +3241,6 @@ Value *FortifiedLibCallSimplifier::optimizeMemMoveChk(CallInst *CI,
 
 Value *FortifiedLibCallSimplifier::optimizeMemSetChk(CallInst *CI,
                                                      IRBuilderBase &B) {
-  // TODO: Try foldMallocMemset() here.
-
   if (isFortifiedCallFoldable(CI, 3, 2)) {
     Value *Val = B.CreateIntCast(CI->getArgOperand(1), B.getInt8Ty(), false);
     CallInst *NewCI = B.CreateMemSet(CI->getArgOperand(0), Val,

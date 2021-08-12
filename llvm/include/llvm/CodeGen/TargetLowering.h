@@ -591,7 +591,7 @@ public:
 
   /// Returns if it's reasonable to merge stores to MemVT size.
   virtual bool canMergeStoresTo(unsigned AS, EVT MemVT,
-                                const SelectionDAG &DAG) const {
+                                const MachineFunction &MF) const {
     return true;
   }
 
@@ -4423,6 +4423,10 @@ public:
   /// \param N Node to expand
   /// \returns The expansion result
   SDValue expandFP_TO_INT_SAT(SDNode *N, SelectionDAG &DAG) const;
+
+  /// Expand isnan depending on function attributes.
+  SDValue expandISNAN(EVT ResultVT, SDValue Op, SDNodeFlags Flags,
+                      const SDLoc &DL, SelectionDAG &DAG) const;
 
   /// Expand CTPOP nodes. Expands vector/scalar CTPOP nodes,
   /// vector nodes can only succeed if all operations are legal/custom.

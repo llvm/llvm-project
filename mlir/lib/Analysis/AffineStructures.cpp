@@ -560,13 +560,12 @@ void FlatAffineConstraints::convertLoopIVSymbolsToDims() {
   }
 }
 
-void FlatAffineConstraints::addInductionVarOrTerminalSymbol(
-    Value id, bool allowNonTerminal) {
+void FlatAffineConstraints::addInductionVarOrTerminalSymbol(Value id) {
   if (containsId(id))
     return;
 
   // Caller is expected to fully compose map/operands if necessary.
-  assert((allowNonTerminal || isTopLevelValue(id) || isForInductionVar(id)) &&
+  assert((isTopLevelValue(id) || isForInductionVar(id)) &&
          "non-terminal symbol / loop IV expected");
   // Outer loop IVs could be used in forOp's bounds.
   if (auto loop = getForInductionVarOwner(id)) {
@@ -1945,9 +1944,10 @@ void FlatAffineConstraints::getSliceBounds(unsigned offset, unsigned num,
   }
 }
 
-LogicalResult FlatAffineConstraints::addLowerOrUpperBound(
-    unsigned pos, AffineMap boundMap, ValueRange boundOperands, bool eq,
-    bool lower, bool composeMapAndOperands) {
+LogicalResult
+FlatAffineConstraints::addLowerOrUpperBound(unsigned pos, AffineMap boundMap,
+                                            ValueRange boundOperands, bool eq,
+                                            bool lower) {
   assert(pos < getNumDimAndSymbolIds() && "invalid position");
   // Equality follows the logic of lower bound except that we add an equality
   // instead of an inequality.
@@ -1959,13 +1959,11 @@ LogicalResult FlatAffineConstraints::addLowerOrUpperBound(
   // transitively get to terminal symbols or loop IVs.
   auto map = boundMap;
   SmallVector<Value, 4> operands(boundOperands.begin(), boundOperands.end());
-  if (composeMapAndOperands)
-    fullyComposeAffineMapAndOperands(&map, &operands);
+  fullyComposeAffineMapAndOperands(&map, &operands);
   map = simplifyAffineMap(map);
   canonicalizeMapAndOperands(&map, &operands);
   for (auto operand : operands)
-    addInductionVarOrTerminalSymbol(
-        operand, /*allowNonTerminal=*/!composeMapAndOperands);
+    addInductionVarOrTerminalSymbol(operand);
 
   FlatAffineConstraints localVarCst;
   std::vector<SmallVector<int64_t, 8>> flatExprs;

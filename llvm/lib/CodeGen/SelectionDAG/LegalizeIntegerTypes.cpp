@@ -139,6 +139,8 @@ void DAGTypeLegalizer::PromoteIntegerResult(SDNode *N, unsigned ResNo) {
 
   case ISD::FLT_ROUNDS_: Res = PromoteIntRes_FLT_ROUNDS(N); break;
 
+  case ISD::ISNAN:       Res = PromoteIntRes_ISNAN(N); break;
+
   case ISD::AND:
   case ISD::OR:
   case ISD::XOR:
@@ -654,6 +656,14 @@ SDValue DAGTypeLegalizer::PromoteIntRes_FLT_ROUNDS(SDNode *N) {
   // use the new one.
   ReplaceValueWith(SDValue(N, 1), Res.getValue(1));
   return Res;
+}
+
+SDValue DAGTypeLegalizer::PromoteIntRes_ISNAN(SDNode *N) {
+  SDLoc DL(N);
+  EVT ResultVT = N->getValueType(0);
+  EVT NewResultVT = TLI.getTypeToTransformTo(*DAG.getContext(), ResultVT);
+  return DAG.getNode(N->getOpcode(), DL, NewResultVT, N->getOperand(0),
+                     N->getFlags());
 }
 
 SDValue DAGTypeLegalizer::PromoteIntRes_INT_EXTEND(SDNode *N) {
@@ -4035,7 +4045,25 @@ void DAGTypeLegalizer::ExpandIntRes_XMULO(SDNode *N,
     LC = RTLIB::MULO_I64;
   else if (VT == MVT::i128)
     LC = RTLIB::MULO_I128;
-  assert(LC != RTLIB::UNKNOWN_LIBCALL && "Unsupported XMULO!");
+
+  if (LC == RTLIB::UNKNOWN_LIBCALL || !TLI.getLibcallName(LC)) {
+    // FIXME: This is not an optimal expansion, but better than crashing.
+    EVT WideVT =
+        EVT::getIntegerVT(*DAG.getContext(), VT.getScalarSizeInBits() * 2);
+    SDValue LHS = DAG.getNode(ISD::SIGN_EXTEND, dl, WideVT, N->getOperand(0));
+    SDValue RHS = DAG.getNode(ISD::SIGN_EXTEND, dl, WideVT, N->getOperand(1));
+    SDValue Mul = DAG.getNode(ISD::MUL, dl, WideVT, LHS, RHS);
+    SDValue MulLo, MulHi;
+    SplitInteger(Mul, MulLo, MulHi);
+    SDValue SRA =
+        DAG.getNode(ISD::SRA, dl, VT, MulLo,
+                    DAG.getConstant(VT.getScalarSizeInBits() - 1, dl, VT));
+    SDValue Overflow =
+        DAG.getSetCC(dl, N->getValueType(1), MulHi, SRA, ISD::SETNE);
+    SplitInteger(MulLo, Lo, Hi);
+    ReplaceValueWith(SDValue(N, 1), Overflow);
+    return;
+  }
 
   SDValue Temp = DAG.CreateStackTemporary(PtrVT);
   // Temporary for the overflow value, default it to zero.

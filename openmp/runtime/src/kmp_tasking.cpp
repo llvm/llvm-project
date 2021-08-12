@@ -1434,11 +1434,12 @@ kmp_task_t *__kmpc_omp_target_task_alloc(ident_t *loc_ref, kmp_int32 gtid,
                                          size_t sizeof_shareds,
                                          kmp_routine_entry_t task_entry,
                                          kmp_int64 device_id) {
-  if (__kmp_enable_hidden_helper) {
-    auto &input_flags = reinterpret_cast<kmp_tasking_flags_t &>(flags);
+  auto &input_flags = reinterpret_cast<kmp_tasking_flags_t &>(flags);
+  // target task is untied defined in the specification
+  input_flags.tiedness = TASK_UNTIED;
+
+  if (__kmp_enable_hidden_helper)
     input_flags.hidden_helper = TRUE;
-    input_flags.tiedness = TASK_UNTIED;
-  }
 
   return __kmpc_omp_task_alloc(loc_ref, gtid, flags, sizeof_kmp_task_t,
                                sizeof_shareds, task_entry);

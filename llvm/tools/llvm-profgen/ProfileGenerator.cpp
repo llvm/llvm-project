@@ -8,6 +8,7 @@
 
 #include "ProfileGenerator.h"
 #include "llvm/ProfileData/ProfileCommon.h"
+#include <unordered_set>
 
 static cl::opt<std::string> OutputFilename("output", cl::value_desc("output"),
                                            cl::Required,
@@ -520,7 +521,8 @@ void PseudoProbeCSProfileGenerator::populateBodySamplesWithProbes(
   // Extract the top frame probes by looking up each address among the range in
   // the Address2ProbeMap
   extractProbesFromRange(RangeCounter, ProbeCounter, Binary);
-  std::unordered_map<MCDecodedPseudoProbeInlineTree *, FunctionSamples *>
+  std::unordered_map<MCDecodedPseudoProbeInlineTree *,
+                     std::unordered_set<FunctionSamples *>>
       FrameSamples;
   for (auto PI : ProbeCounter) {
     const MCDecodedPseudoProbe *Probe = PI.first;
@@ -530,7 +532,7 @@ void PseudoProbeCSProfileGenerator::populateBodySamplesWithProbes(
     // Record the current frame and FunctionProfile whenever samples are
     // collected for non-danglie probes. This is for reporting all of the
     // zero count probes of the frame later.
-    FrameSamples[Probe->getInlineTreeNode()] = &FunctionProfile;
+    FrameSamples[Probe->getInlineTreeNode()].insert(&FunctionProfile);
     FunctionProfile.addBodySamplesForProbe(Probe->getIndex(), Count);
     FunctionProfile.addTotalSamples(Count);
     if (Probe->isEntry()) {
@@ -559,12 +561,13 @@ void PseudoProbeCSProfileGenerator::populateBodySamplesWithProbes(
             FunctionProfile.getContext().getNameWithoutContext(), Count);
       }
     }
+  }
 
-    // Assign zero count for remaining probes without sample hits to
-    // differentiate from probes optimized away, of which the counts are unknown
-    // and will be inferred by the compiler.
-    for (auto &I : FrameSamples) {
-      auto *FunctionProfile = I.second;
+  // Assign zero count for remaining probes without sample hits to
+  // differentiate from probes optimized away, of which the counts are unknown
+  // and will be inferred by the compiler.
+  for (auto &I : FrameSamples) {
+    for (auto *FunctionProfile : I.second) {
       for (auto *Probe : I.first->getProbes()) {
         FunctionProfile->addBodySamplesForProbe(Probe->getIndex(), 0);
       }

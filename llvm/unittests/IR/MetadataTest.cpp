@@ -2894,6 +2894,55 @@ TEST_F(DIExpressionTest, replaceArg) {
 #undef EXPECT_REPLACE_ARG_EQ
 }
 
+TEST_F(DIExpressionTest, foldConstant) {
+  const ConstantInt *Int;
+  const ConstantInt *NewInt;
+  DIExpression *Expr;
+  DIExpression *NewExpr;
+
+#define EXPECT_FOLD_CONST(StartWidth, StartValue, EndWidth, EndValue, NumElts)  \
+  Int = ConstantInt::get(Context, APInt(StartWidth, StartValue));               \
+  std::tie(NewExpr, NewInt) = Expr->constantFold(Int);                          \
+  ASSERT_EQ(NewInt->getBitWidth(), EndWidth##u);                                \
+  EXPECT_EQ(NewInt->getValue(), APInt(EndWidth, EndValue));                     \
+  EXPECT_EQ(NewExpr->getNumElements(), NumElts##u)
+
+  // Unfoldable expression should return the original unmodified Int/Expr.
+  Expr = DIExpression::get(Context, {dwarf::DW_OP_deref});
+  EXPECT_FOLD_CONST(32, 117, 32, 117, 1);
+  EXPECT_EQ(NewExpr, Expr);
+  EXPECT_EQ(NewInt, Int);
+  EXPECT_TRUE(NewExpr->startsWithDeref());
+
+  // One unsigned bit-width conversion.
+  Expr = DIExpression::get(
+      Context, {dwarf::DW_OP_LLVM_convert, 72, dwarf::DW_ATE_unsigned});
+  EXPECT_FOLD_CONST(8, 12, 72, 12, 0);
+
+  // Two unsigned bit-width conversions (mask truncation).
+  Expr = DIExpression::get(
+      Context, {dwarf::DW_OP_LLVM_convert, 8, dwarf::DW_ATE_unsigned,
+                dwarf::DW_OP_LLVM_convert, 16, dwarf::DW_ATE_unsigned});
+  EXPECT_FOLD_CONST(32, -1, 16, 0xff, 0);
+
+  // Sign extension.
+  Expr = DIExpression::get(
+      Context, {dwarf::DW_OP_LLVM_convert, 32, dwarf::DW_ATE_signed});
+  EXPECT_FOLD_CONST(16, -1, 32, -1, 0);
+
+  // Get non-foldable operations back in the new Expr.
+  uint64_t Elements[] = {dwarf::DW_OP_deref, dwarf::DW_OP_stack_value};
+  ArrayRef<uint64_t> Expected = Elements;
+  Expr = DIExpression::get(
+      Context, {dwarf::DW_OP_LLVM_convert, 32, dwarf::DW_ATE_signed});
+  Expr = DIExpression::append(Expr, Expected);
+  ASSERT_EQ(Expr->getNumElements(), 5u);
+  EXPECT_FOLD_CONST(16, -1, 32, -1, 2);
+  EXPECT_EQ(NewExpr->getElements(), Expected);
+
+#undef EXPECT_FOLD_CONST
+}
+
 typedef MetadataTest DIObjCPropertyTest;
 
 TEST_F(DIObjCPropertyTest, get) {

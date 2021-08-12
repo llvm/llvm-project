@@ -80,3 +80,9 @@ func @constant_complex_f64() -> complex<f64> {
   %result = constant [0.1 : f64, -1.0 : f64] : complex<f64>
   return %result : complex<f64>
 }
+
+// CHECK-LABEL: func @bitcast(
+func @bitcast(%arg : f32) -> i32 {
+  %res = bitcast %arg : f32 to i32
+  return %res : i32
+}

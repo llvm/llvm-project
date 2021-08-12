@@ -25,6 +25,7 @@
 #include "llvm/ADT/Statistic.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/Analysis/AssumptionCache.h"
+#include "llvm/Analysis/CaptureTracking.h"
 #include "llvm/Analysis/ConstantFolding.h"
 #include "llvm/Analysis/EHPersonalities.h"
 #include "llvm/Analysis/GuardUtils.h"
@@ -2250,6 +2251,23 @@ static Value *isSafeToSpeculateStore(Instruction *I, BasicBlock *BrBB,
         return SI->getValueOperand();
       return nullptr; // Unknown store.
     }
+
+    if (auto *LI = dyn_cast<LoadInst>(&CurI)) {
+      if (LI->getPointerOperand() == StorePtr && LI->getType() == StoreTy &&
+          LI->isSimple()) {
+        // Local objects (created by an `alloca` instruction) are always
+        // writable, so once we are past a read from a location it is valid to
+        // also write to that same location.
+        // If the address of the local object never escapes the function, that
+        // means it's never concurrently read or written, hence moving the store
+        // from under the condition will not introduce a data race.
+        auto *AI = dyn_cast<AllocaInst>(getUnderlyingObject(StorePtr));
+        if (AI && !PointerMayBeCaptured(AI, false, true))
+          // Found a previous load, return it.
+          return LI;
+      }
+      // The load didn't work out, but we may still find a store.
+    }
   }
 
   return nullptr;
@@ -2588,8 +2606,10 @@ static bool BlockIsSimpleEnoughToThreadThrough(BasicBlock *BB) {
 /// If we have a conditional branch on a PHI node value that is defined in the
 /// same block as the branch and if any PHI entries are constants, thread edges
 /// corresponding to that entry to be branches to their ultimate destination.
-static bool FoldCondBranchOnPHI(BranchInst *BI, DomTreeUpdater *DTU,
-                                const DataLayout &DL, AssumptionCache *AC) {
+static Optional<bool> FoldCondBranchOnPHIImpl(BranchInst *BI,
+                                              DomTreeUpdater *DTU,
+                                              const DataLayout &DL,
+                                              AssumptionCache *AC) {
   BasicBlock *BB = BI->getParent();
   PHINode *PN = dyn_cast<PHINode>(BI->getCondition());
   // NOTE: we currently cannot transform this case if the PHI node is used
@@ -2703,11 +2723,23 @@ static bool FoldCondBranchOnPHI(BranchInst *BI, DomTreeUpdater *DTU,
       DTU->applyUpdates(Updates);
     }
 
-    // Recurse, simplifying any other constants.
-    return FoldCondBranchOnPHI(BI, DTU, DL, AC) || true;
+    // Signal repeat, simplifying any other constants.
+    return None;
   }
 
   return false;
+}
+
+static bool FoldCondBranchOnPHI(BranchInst *BI, DomTreeUpdater *DTU,
+                                const DataLayout &DL, AssumptionCache *AC) {
+  Optional<bool> Result;
+  bool EverChanged = false;
+  do {
+    // Note that None means "we changed things, but recurse further."
+    Result = FoldCondBranchOnPHIImpl(BI, DTU, DL, AC);
+    EverChanged |= Result == None || *Result;
+  } while (Result == None);
+  return EverChanged;
 }
 
 /// Given a BB that starts with the specified two-entry PHI node,

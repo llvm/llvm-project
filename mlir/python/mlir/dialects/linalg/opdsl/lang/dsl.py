@@ -9,7 +9,7 @@ import functools
 import inspect
 import threading
 
-from mlir import ir
+from ..... import ir
 from .comprehension import *
 from .config import *
 from .emitter import *

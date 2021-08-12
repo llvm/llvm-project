@@ -5,6 +5,7 @@
 # RUN: llvm-readobj --string-table %t1 | FileCheck %s --check-prefix=BASIC
 
 # BASIC:      StringTable {
+# BASIC-NEXT:   Length: 16
 # BASIC-NEXT:   [     4]   name2
 # BASIC-NEXT:   [     a]   name1
 # BASIC-NEXT: }
@@ -21,6 +22,7 @@ Symbols:
 # RUN: llvm-readobj --string-table %t2 | FileCheck %s --check-prefix=SINGLE-BYTE
 
 # SINGLE-BYTE:      StringTable {
+# SINGLE-BYTE-NEXT:   Length: 6
 # SINGLE-BYTE-NEXT:   [     4]   n
 # SINGLE-BYTE-NEXT: }
 
@@ -35,6 +37,7 @@ Symbols:
 # RUN: llvm-readobj --string-table %t3 | FileCheck %s --check-prefix=NO-STRTBL
 
 # NO-STRTBL:      StringTable {
+# NO-STRTBL-NEXT:   Length: 0
 # NO-STRTBL-NEXT: }
 
 --- !XCOFF

@@ -2339,10 +2339,10 @@ void RISCVAsmParser::emitLoadStoreSymbol(MCInst &Inst, unsigned Opcode,
   //
   //   TmpLabel: AUIPC tmp, %pcrel_hi(symbol)
   //             [S|L]X    rd, %pcrel_lo(TmpLabel)(tmp)
-  MCOperand DestReg = Inst.getOperand(0);
+  unsigned DestRegOpIdx = HasTmpReg ? 1 : 0;
+  MCOperand DestReg = Inst.getOperand(DestRegOpIdx);
   unsigned SymbolOpIdx = HasTmpReg ? 2 : 1;
-  unsigned TmpRegOpIdx = HasTmpReg ? 1 : 0;
-  MCOperand TmpReg = Inst.getOperand(TmpRegOpIdx);
+  MCOperand TmpReg = Inst.getOperand(0);
   const MCExpr *Symbol = Inst.getOperand(SymbolOpIdx).getExpr();
   emitAuipcInstPair(DestReg, TmpReg, Symbol, RISCVMCExpr::VK_RISCV_PCREL_HI,
                     Opcode, IDLoc, Out);

@@ -12,7 +12,7 @@
 #include "Diagnostics.h"
 #include "DraftStore.h"
 #include "DumpAST.h"
-#include "Features.h"
+#include "Feature.h"
 #include "GlobalCompilationDatabase.h"
 #include "LSPBinder.h"
 #include "Protocol.h"
