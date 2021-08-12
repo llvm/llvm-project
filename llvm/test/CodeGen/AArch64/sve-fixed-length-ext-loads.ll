@@ -54,11 +54,10 @@ define <16 x i32> @load_zext_v16i16i32(<16 x i16>* %ap) #0 {
   ; VBITS_EQ_256-DAG: mov x9, sp
   ; VBITS_EQ_256-DAG: st1h { [[Z0]].h }, [[PG]], [x9]
   ; VBITS_EQ_256-DAG: ldp q[[R0:[0-9]+]], q[[R1:[0-9]+]], [sp]
-  ; VBITS_EQ_256-DAG: add x9, x8, #32
   ; VBITS_EQ_256-DAG: ptrue [[PG1:p[0-9]+]].s, vl8
   ; VBITS_EQ_256-DAG: uunpklo z[[R0]].s, z[[R0]].h
   ; VBITS_EQ_256-DAG: uunpklo z[[R1]].s, z[[R1]].h
-  ; VBITS_EQ_256-DAG: st1w { z[[R1]].s }, [[PG1]], [x9]
+  ; VBITS_EQ_256-DAG: st1w { z[[R1]].s }, [[PG1]], [x8, x9, lsl #2]
   ; VBITS_EQ_256-DAG: st1w { z[[R0]].s }, [[PG1]], [x8]
   ; VBITS_EQ_256-DAG: ret
   %a = load <16 x i16>, <16 x i16>* %ap
@@ -122,11 +121,10 @@ define <16 x i32> @load_sext_v16i16i32(<16 x i16>* %ap) #0 {
   ; VBITS_EQ_256-DAG: mov x9, sp
   ; VBITS_EQ_256-DAG: st1h { [[Z0]].h }, [[PG]], [x9]
   ; VBITS_EQ_256-DAG: ldp q[[R0:[0-9]+]], q[[R1:[0-9]+]], [sp]
-  ; VBITS_EQ_256-DAG: add x9, x8, #32
   ; VBITS_EQ_256-DAG: ptrue [[PG1:p[0-9]+]].s, vl8
   ; VBITS_EQ_256-DAG: sunpklo z[[R0]].s, z[[R0]].h
   ; VBITS_EQ_256-DAG: sunpklo z[[R1]].s, z[[R1]].h
-  ; VBITS_EQ_256-DAG: st1w { z[[R1]].s }, [[PG1]], [x9]
+  ; VBITS_EQ_256-DAG: st1w { z[[R1]].s }, [[PG1]], [x8, x9, lsl #2]
   ; VBITS_EQ_256-DAG: st1w { z[[R0]].s }, [[PG1]], [x8]
   ; VBITS_EQ_256-DAG: ret
   %a = load <16 x i16>, <16 x i16>* %ap
