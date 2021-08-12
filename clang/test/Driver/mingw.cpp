@@ -4,6 +4,7 @@
 
 
 // RUN: %clang -target i686-windows-gnu -rtlib=platform -stdlib=libc++ -c -### --sysroot=%S/Inputs/mingw_clang_tree/mingw32 %s 2>&1 | FileCheck -check-prefix=CHECK_MINGW_CLANG_TREE_LIBCXX %s
+// CHECK_MINGW_CLANG_TREE_LIBCXX: "[[BASE:[^"]+]]/Inputs/mingw_clang_tree/mingw32{{/|\\\\}}include{{/|\\\\}}i686-unknown-windows-gnu{{/|\\\\}}c++{{/|\\\\}}v1"
 // CHECK_MINGW_CLANG_TREE_LIBCXX: "[[BASE:[^"]+]]/Inputs/mingw_clang_tree/mingw32{{/|\\\\}}i686-w64-mingw32{{/|\\\\}}include{{/|\\\\}}c++{{/|\\\\}}v1"
 
 

@@ -94,7 +94,7 @@ void test_column_major_load_with_stride_template_double(double *Ptr) {
 
   // CHECK-LABEL:  define linkonce_odr <40 x double> @_Z29column_major_load_with_strideIdLj10ELj4ELj15EEu11matrix_typeIXT0_EXT1_ET_EPS0_(double* %Ptr)
   // CHECK:         [[PTR:%.*]] = load double*, double** %Ptr.addr, align 8
-  // CHECK-NEXT:    call <40 x double> @llvm.matrix.column.major.load.v40f64(double* align 8 [[PTR]], i64 15, i1 false, i32 10, i32 4)
+  // CHECK-NEXT:    call <40 x double> @llvm.matrix.column.major.load.v40f64.i64(double* align 8 [[PTR]], i64 15, i1 false, i32 10, i32 4)
 
   matrix_t<double, 10, 4> M1 = column_major_load_with_stride<double, 10, 4, 15>(Ptr);
 }
@@ -106,7 +106,7 @@ void test_column_major_load_with_stride_template_int(int *Ptr) {
 
   // CHECK-LABEL: define linkonce_odr <6 x i32> @_Z29column_major_load_with_strideIiLj3ELj2ELj12EEu11matrix_typeIXT0_EXT1_ET_EPS0_(i32* %Ptr)
   // CHECK:         [[PTR:%.*]] = load i32*, i32** %Ptr.addr, align 8
-  // CHECK-NEXT:    call <6 x i32> @llvm.matrix.column.major.load.v6i32(i32* align 4 [[PTR]], i64 12, i1 false, i32 3, i32 2)
+  // CHECK-NEXT:    call <6 x i32> @llvm.matrix.column.major.load.v6i32.i64(i32* align 4 [[PTR]], i64 12, i1 false, i32 3, i32 2)
 
   matrix_t<int, 3, 2> M1 = column_major_load_with_stride<int, 3, 2, 12>(Ptr);
 }
@@ -124,7 +124,7 @@ void test_column_major_load_stride_wrapper(int *Ptr, UnsignedWrapper &W) {
   // CHECK-NEXT:    [[STRIDE:%.*]] = call i32 @_ZN15UnsignedWrappercvjEv(%struct.UnsignedWrapper* {{[^,]*}} [[W]])
   // CHECK-NEXT:    [[STRIDE_EXT:%.*]] = zext i32 [[STRIDE]] to i64
   // CHECK-NEXT:    [[PTR:%.*]] = load i32*, i32** %Ptr.addr, align 8
-  // CHECK-NEXT:    call <4 x i32> @llvm.matrix.column.major.load.v4i32(i32* align 4 [[PTR]], i64 [[STRIDE_EXT]], i1 false, i32 2, i32 2)
+  // CHECK-NEXT:    call <4 x i32> @llvm.matrix.column.major.load.v4i32.i64(i32* align 4 [[PTR]], i64 [[STRIDE_EXT]], i1 false, i32 2, i32 2)
   matrix_t<int, 2, 2> M1 = __builtin_matrix_column_major_load(Ptr, 2, 2, W);
 }
 
@@ -133,7 +133,7 @@ constexpr int constexpr3() { return 3; }
 void test_column_major_load_constexpr_num_rows(int *Ptr) {
   // CHECK-LABEL: define{{.*}} void @_Z41test_column_major_load_constexpr_num_rowsPi(i32* %Ptr)
   // CHECK:         [[PTR:%.*]] = load i32*, i32** %Ptr.addr, align 8
-  // CHECK-NEXT:    call <6 x i32> @llvm.matrix.column.major.load.v6i32(i32* align 4 [[PTR]], i64 3, i1 false, i32 3, i32 2)
+  // CHECK-NEXT:    call <6 x i32> @llvm.matrix.column.major.load.v6i32.i64(i32* align 4 [[PTR]], i64 3, i1 false, i32 3, i32 2)
 
   matrix_t<int, 3, 2> M1 = __builtin_matrix_column_major_load(Ptr, constexpr3(), 2, 3);
 }
@@ -143,7 +143,7 @@ constexpr int constexpr1() { return 1; }
 void test_column_major_load_constexpr_num_columns(int *Ptr) {
   // CHECK-LABEL: define{{.*}} void @_Z44test_column_major_load_constexpr_num_columnsPi(i32* %Ptr)
   // CHECK:         [[PTR:%.*]] = load i32*, i32** %Ptr.addr, align 8
-  // CHECK-NEXT:    call <2 x i32> @llvm.matrix.column.major.load.v2i32(i32* align 4 [[PTR]], i64 3, i1 false, i32 2, i32 1)
+  // CHECK-NEXT:    call <2 x i32> @llvm.matrix.column.major.load.v2i32.i64(i32* align 4 [[PTR]], i64 3, i1 false, i32 2, i32 1)
   matrix_t<int, 2, 1> M1 = __builtin_matrix_column_major_load(Ptr, 2, constexpr1(), 3);
 }
 
@@ -153,7 +153,7 @@ constexpr int constexpr_plus1() { return N + 1; }
 void test_column_major_load_constexpr_num_columns_temp(int *Ptr) {
   // CHECK-LABEL:  define{{.*}} void @_Z49test_column_major_load_constexpr_num_columns_tempPi(i32* %Ptr)
   // CHECK:         [[PTR:%.*]] = load i32*, i32** %Ptr.addr, align 8
-  // CHECK-NEXT:    call <10 x i32> @llvm.matrix.column.major.load.v10i32(i32* align 4 [[PTR]], i64 3, i1 false, i32 2, i32 5)
+  // CHECK-NEXT:    call <10 x i32> @llvm.matrix.column.major.load.v10i32.i64(i32* align 4 [[PTR]], i64 3, i1 false, i32 2, i32 5)
   matrix_t<int, 2, 5> M1 = __builtin_matrix_column_major_load(Ptr, 2, constexpr_plus1<4>(), 3);
 }
 
@@ -162,7 +162,7 @@ void test_column_major_load_constexpr_stride_constexpr(int *Ptr) {
   // CHECK:         [[STRIDE:%.*]] = call i32 @_Z10constexpr3v()
   // CHECK-NEXT:    [[STRIDE_EXT:%.*]] = sext i32 [[STRIDE]] to i64
   // CHECK-NEXT:    [[PTR:%.*]] = load i32*, i32** %Ptr.addr, align 8
-  // CHECK-NEXT:    call <4 x i32> @llvm.matrix.column.major.load.v4i32(i32* align 4 [[PTR]], i64 [[STRIDE_EXT]], i1 false, i32 2, i32 2)
+  // CHECK-NEXT:    call <4 x i32> @llvm.matrix.column.major.load.v4i32.i64(i32* align 4 [[PTR]], i64 [[STRIDE_EXT]], i1 false, i32 2, i32 2)
 
   matrix_t<int, 2, 2> M1 = __builtin_matrix_column_major_load(Ptr, 2, 2, constexpr3());
 }
@@ -200,7 +200,7 @@ void test_column_major_store_with_stride_template_double(double *Ptr) {
   // CHECK-LABEL:  define linkonce_odr void @_Z30column_major_store_with_strideIdLj10ELj4ELj15EEvRu11matrix_typeIXT0_EXT1_ET_EPS0_([40 x double]* nonnull align 8 dereferenceable(320) %m, double* %Ptr)
   // CHECK:         [[M:%.*]] = load <40 x double>, <40 x double>* {{.*}}, align 8
   // CHECK-NEXT:    [[PTR:%.*]] = load double*, double** %Ptr.addr, align 8
-  // CHECK-NEXT:    call void @llvm.matrix.column.major.store.v40f64(<40 x double> [[M]], double* align 8 [[PTR]], i64 15, i1 false, i32 10, i32 4)
+  // CHECK-NEXT:    call void @llvm.matrix.column.major.store.v40f64.i64(<40 x double> [[M]], double* align 8 [[PTR]], i64 15, i1 false, i32 10, i32 4)
 
   matrix_t<double, 10, 4> M1;
   column_major_store_with_stride<double, 10, 4, 15>(M1, Ptr);
@@ -214,7 +214,7 @@ void test_column_major_store_with_stride_template_int(int *Ptr) {
   // CHECK-LABEL:  define linkonce_odr void @_Z30column_major_store_with_strideIiLj3ELj2ELj3EEvRu11matrix_typeIXT0_EXT1_ET_EPS0_([6 x i32]* nonnull align 4 dereferenceable(24) %m, i32* %Ptr)
   // CHECK:         [[M:%.*]] = load <6 x i32>, <6 x i32>* {{.*}}, align 4
   // CHECK-NEXT:    [[PTR:%.*]] = load i32*, i32** %Ptr.addr, align 8
-  // CHECK-NEXT:    call void @llvm.matrix.column.major.store.v6i32(<6 x i32> [[M]], i32* align 4 [[PTR]], i64 3, i1 false, i32 3, i32 2)
+  // CHECK-NEXT:    call void @llvm.matrix.column.major.store.v6i32.i64(<6 x i32> [[M]], i32* align 4 [[PTR]], i64 3, i1 false, i32 3, i32 2)
 
   matrix_t<int, 3, 2> M1;
   column_major_store_with_stride<int, 3, 2, 3>(M1, Ptr);
@@ -227,7 +227,7 @@ void test_column_major_store_stride_wrapper(int *Ptr, UnsignedWrapper &W) {
   // CHECK-NEXT:    [[W:%.*]] = load %struct.UnsignedWrapper*, %struct.UnsignedWrapper** %W.addr, align 8
   // CHECK-NEXT:    [[IDX:%.*]] = call i32 @_ZN15UnsignedWrappercvjEv(%struct.UnsignedWrapper* {{[^,]*}} [[W]])
   // CHECK-NEXT:    [[IDX_EXT:%.*]] = zext i32 [[IDX]] to i64
-  // CHECK-NEXT:    call void @llvm.matrix.column.major.store.v4i32(<4 x i32> [[M]], i32* align 4 [[PTR]], i64 [[IDX_EXT]], i1 false, i32 2, i32 2)
+  // CHECK-NEXT:    call void @llvm.matrix.column.major.store.v4i32.i64(<4 x i32> [[M]], i32* align 4 [[PTR]], i64 [[IDX_EXT]], i1 false, i32 2, i32 2)
 
   matrix_t<int, 2, 2> M1;
   __builtin_matrix_column_major_store(M1, Ptr, W);
@@ -239,7 +239,7 @@ void test_column_major_store_constexpr_stride_constexpr(int *Ptr) {
   // CHECK-NEXT:    [[PTR:%.*]] = load i32*, i32** %Ptr.addr, align 8
   // CHECK-NEXT:    [[IDX:%.*]] = call i32 @_Z10constexpr3v()
   // CHECK-NEXT:    [[IDX_EXT:%.*]] = sext i32 [[IDX]] to i64
-  // CHECK-NEXT:    call void @llvm.matrix.column.major.store.v4i32(<4 x i32> [[M]], i32* align 4 [[PTR]], i64 [[IDX_EXT]], i1 false, i32 2, i32 2)
+  // CHECK-NEXT:    call void @llvm.matrix.column.major.store.v4i32.i64(<4 x i32> [[M]], i32* align 4 [[PTR]], i64 [[IDX_EXT]], i1 false, i32 2, i32 2)
 
   matrix_t<int, 2, 2> M;
   __builtin_matrix_column_major_store(M, Ptr, constexpr3());

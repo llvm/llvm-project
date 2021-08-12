@@ -318,3 +318,77 @@ ProgramHeaders:
     Flags:    []
     FileSize: 0x01000
     MemSize:  0x01000
+
+## Check that sections are placed correctly in a case when their order in the
+## section header table is different from their layout.
+# RUN: yaml2obj --docnum=6 %s -o %t6
+# RUN: llvm-objcopy --only-keep-debug %t6 %t6.dbg
+# RUN: llvm-readelf -S -l %t6.dbg | FileCheck --check-prefix=CHECK6 %s
+
+# CHECK6:      [Nr] Name        Type     Address          Off    Size   ES Flg Lk Inf Al
+# CHECK6:      [ 1] foo         NOBITS   0000000000000008 001000 000008 00   A  0   0  4
+# CHECK6-NEXT: [ 2] bar         NOBITS   0000000000000000 001000 000008 00   A  0   0  4
+# CHECK6-NEXT: [ 3] baz         NOTE     0000000000000018 001008 000008 00   A  0   0  0
+# CHECK6-NEXT: [ 4] qux         NOTE     0000000000000010 001000 000008 00   A  0   0  0
+
+# CHECK6:      Type Offset   VirtAddr           PhysAddr           FileSiz  MemSiz   Flg Align
+# CHECK6-NEXT: LOAD 0x001000 0x0000000000000000 0x0000000000000000 0x000000 0x000010 R   0x1000
+# CHECK6-NEXT: LOAD 0x001000 0x0000000000000010 0x0000000000000010 0x000010 0x000010 R   0x1
+# CHECK6-EMPTY:
+
+--- !ELF
+FileHeader:
+  Class:           ELFCLASS64
+  Data:            ELFDATA2LSB
+  Type:            ET_DYN
+  Machine:         EM_X86_64
+ProgramHeaders:
+  - Type:     PT_LOAD
+    Flags:    [ PF_R ]
+    Offset:   0x1000
+    VAddr:    0x0
+    Align:    0x1000
+    FileSize: 0x10
+    MemSize:  0x10
+  - Type:     PT_LOAD
+    Flags:    [ PF_R ]
+    Offset:   0x1010
+    VAddr:    0x10
+    FileSize: 0x10
+    MemSize:  0x10
+Sections:
+  - Name:            bar
+    Type:            SHT_PROGBITS
+    Flags:           [ SHF_ALLOC ]
+    Address:         0x0
+    AddressAlign:    0x4
+    Offset:          0x1000
+    Content:         0000000000000000
+  - Name:            foo
+    Type:            SHT_PROGBITS
+    Flags:           [ SHF_ALLOC ]
+    Address:         0x8
+    AddressAlign:    0x4
+    Offset:          0x1008
+    Content:         0000000000000000
+  - Name:            qux
+    Type:            SHT_NOTE
+    Flags:           [ SHF_ALLOC ]
+    Address:         0x10
+    Offset:          0x1010
+    Content:         0000000000000000
+  - Name:            baz
+    Type:            SHT_NOTE
+    Flags:           [ SHF_ALLOC ]
+    Address:         0x18
+    Offset:          0x1018
+    Content:         0000000000000000
+  - Type:            SectionHeaderTable
+    Sections:
+## Note: the order of section headers differs from their layout.
+      - Name:            foo
+      - Name:            bar
+      - Name:            baz
+      - Name:            qux
+      - Name:            .shstrtab
+      - Name:            .strtab
