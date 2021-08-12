@@ -3,10 +3,9 @@
 
 define i16 @shl_1(i8 %x) {
 ; CHECK-LABEL: @shl_1(
-; CHECK-NEXT:    [[ZEXT:%.*]] = zext i8 [[X:%.*]] to i32
-; CHECK-NEXT:    [[SHL:%.*]] = shl i32 [[ZEXT]], 1
-; CHECK-NEXT:    [[TRUNC:%.*]] = trunc i32 [[SHL]] to i16
-; CHECK-NEXT:    ret i16 [[TRUNC]]
+; CHECK-NEXT:    [[ZEXT:%.*]] = zext i8 [[X:%.*]] to i16
+; CHECK-NEXT:    [[SHL:%.*]] = shl i16 [[ZEXT]], 1
+; CHECK-NEXT:    ret i16 [[SHL]]
 ;
   %zext = zext i8 %x to i32
   %shl = shl i32 %zext, 1
@@ -16,10 +15,9 @@ define i16 @shl_1(i8 %x) {
 
 define i16 @shl_15(i8 %x) {
 ; CHECK-LABEL: @shl_15(
-; CHECK-NEXT:    [[ZEXT:%.*]] = zext i8 [[X:%.*]] to i32
-; CHECK-NEXT:    [[SHL:%.*]] = shl i32 [[ZEXT]], 15
-; CHECK-NEXT:    [[TRUNC:%.*]] = trunc i32 [[SHL]] to i16
-; CHECK-NEXT:    ret i16 [[TRUNC]]
+; CHECK-NEXT:    [[ZEXT:%.*]] = zext i8 [[X:%.*]] to i16
+; CHECK-NEXT:    [[SHL:%.*]] = shl i16 [[ZEXT]], 15
+; CHECK-NEXT:    ret i16 [[SHL]]
 ;
   %zext = zext i8 %x to i32
   %shl = shl i32 %zext, 15
@@ -61,12 +59,11 @@ define i16 @shl_var_shift_amount(i8 %x, i8 %y) {
 
 define i16 @shl_var_bounded_shift_amount(i8 %x, i8 %y) {
 ; CHECK-LABEL: @shl_var_bounded_shift_amount(
-; CHECK-NEXT:    [[ZEXT_X:%.*]] = zext i8 [[X:%.*]] to i32
-; CHECK-NEXT:    [[ZEXT_Y:%.*]] = zext i8 [[Y:%.*]] to i32
-; CHECK-NEXT:    [[AND:%.*]] = and i32 [[ZEXT_Y]], 15
-; CHECK-NEXT:    [[SHL:%.*]] = shl i32 [[ZEXT_X]], [[AND]]
-; CHECK-NEXT:    [[TRUNC:%.*]] = trunc i32 [[SHL]] to i16
-; CHECK-NEXT:    ret i16 [[TRUNC]]
+; CHECK-NEXT:    [[ZEXT_X:%.*]] = zext i8 [[X:%.*]] to i16
+; CHECK-NEXT:    [[ZEXT_Y:%.*]] = zext i8 [[Y:%.*]] to i16
+; CHECK-NEXT:    [[AND:%.*]] = and i16 [[ZEXT_Y]], 15
+; CHECK-NEXT:    [[SHL:%.*]] = shl i16 [[ZEXT_X]], [[AND]]
+; CHECK-NEXT:    ret i16 [[SHL]]
 ;
   %zext.x = zext i8 %x to i32
   %zext.y = zext i8 %y to i32
@@ -78,10 +75,9 @@ define i16 @shl_var_bounded_shift_amount(i8 %x, i8 %y) {
 
 define <2 x i16> @shl_vector(<2 x i8> %x) {
 ; CHECK-LABEL: @shl_vector(
-; CHECK-NEXT:    [[Z:%.*]] = zext <2 x i8> [[X:%.*]] to <2 x i32>
-; CHECK-NEXT:    [[S:%.*]] = shl <2 x i32> [[Z]], <i32 4, i32 10>
-; CHECK-NEXT:    [[T:%.*]] = trunc <2 x i32> [[S]] to <2 x i16>
-; CHECK-NEXT:    ret <2 x i16> [[T]]
+; CHECK-NEXT:    [[Z:%.*]] = zext <2 x i8> [[X:%.*]] to <2 x i16>
+; CHECK-NEXT:    [[S:%.*]] = shl <2 x i16> [[Z]], <i16 4, i16 10>
+; CHECK-NEXT:    ret <2 x i16> [[S]]
 ;
   %z = zext <2 x i8> %x to <2 x i32>
   %s = shl <2 x i32> %z, <i32 4, i32 10>
@@ -121,10 +117,9 @@ define <2 x i16> @shl_vector_large_shift_amount(<2 x i8> %x) {
 
 define i16 @shl_nuw(i8 %x) {
 ; CHECK-LABEL: @shl_nuw(
-; CHECK-NEXT:    [[Z:%.*]] = zext i8 [[X:%.*]] to i32
-; CHECK-NEXT:    [[S:%.*]] = shl nuw i32 [[Z]], 15
-; CHECK-NEXT:    [[T:%.*]] = trunc i32 [[S]] to i16
-; CHECK-NEXT:    ret i16 [[T]]
+; CHECK-NEXT:    [[Z:%.*]] = zext i8 [[X:%.*]] to i16
+; CHECK-NEXT:    [[S:%.*]] = shl i16 [[Z]], 15
+; CHECK-NEXT:    ret i16 [[S]]
 ;
   %z = zext i8 %x to i32
   %s = shl nuw i32 %z, 15
@@ -134,10 +129,9 @@ define i16 @shl_nuw(i8 %x) {
 
 define i16 @shl_nsw(i8 %x) {
 ; CHECK-LABEL: @shl_nsw(
-; CHECK-NEXT:    [[Z:%.*]] = zext i8 [[X:%.*]] to i32
-; CHECK-NEXT:    [[S:%.*]] = shl nsw i32 [[Z]], 15
-; CHECK-NEXT:    [[T:%.*]] = trunc i32 [[S]] to i16
-; CHECK-NEXT:    ret i16 [[T]]
+; CHECK-NEXT:    [[Z:%.*]] = zext i8 [[X:%.*]] to i16
+; CHECK-NEXT:    [[S:%.*]] = shl i16 [[Z]], 15
+; CHECK-NEXT:    ret i16 [[S]]
 ;
   %z = zext i8 %x to i32
   %s = shl nsw i32 %z, 15
