@@ -50,7 +50,7 @@ ORC_RT_C_EXTERN_C_BEGIN
 
 typedef union {
   char *ValuePtr;
-  char Value[sizeof(ValuePtr)];
+  char Value[sizeof(char *)];
 } __orc_rt_CWrapperFunctionResultDataUnion;
 
 /**
@@ -133,8 +133,8 @@ __orc_rt_CreateCWrapperFunctionResultFromString(const char *Source) {
  * Create an __orc_rt_CWrapperFunctionResult representing an out-of-band
  * error.
  *
- * This function takes ownership of the string argument which must have been
- * allocated with malloc.
+ * This function copies the input string. The client is responsible for freeing
+ * the ErrMsg arg.
  */
 static inline __orc_rt_CWrapperFunctionResult
 __orc_rt_CreateCWrapperFunctionResultFromOutOfBandError(const char *ErrMsg) {
@@ -163,7 +163,7 @@ __orc_rt_DisposeCWrapperFunctionResult(__orc_rt_CWrapperFunctionResult *R) {
  */
 static inline char *
 __orc_rt_CWrapperFunctionResultData(__orc_rt_CWrapperFunctionResult *R) {
-  assert((R->Size != 0 || R->Data.ValuePtr == nullptr) &&
+  assert((R->Size != 0 || R->Data.ValuePtr == NULL) &&
          "Cannot get data for out-of-band error value");
   return R->Size > sizeof(R->Data.Value) ? R->Data.ValuePtr : R->Data.Value;
 }
@@ -175,7 +175,7 @@ __orc_rt_CWrapperFunctionResultData(__orc_rt_CWrapperFunctionResult *R) {
  */
 static inline size_t
 __orc_rt_CWrapperFunctionResultSize(const __orc_rt_CWrapperFunctionResult *R) {
-  assert((R->Size != 0 || R->Data.ValuePtr == nullptr) &&
+  assert((R->Size != 0 || R->Data.ValuePtr == NULL) &&
          "Cannot get size for out-of-band error value");
   return R->Size;
 }
