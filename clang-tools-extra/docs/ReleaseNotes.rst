@@ -78,12 +78,6 @@ New check aliases
 Changes in existing checks
 ^^^^^^^^^^^^^^^^^^^^^^^^^^
 
-- Improved :doc:`cppcoreguidelines-init-variables<clang-tidy/checks/cppcoreguidelines-init-variables>` check.
-
-  Removed generating fixes for enums because the code generated was broken, trying to initialize the enum from an integer.
-
-  The check now also warns for uninitialized scoped enums.
-
 Removed checks
 ^^^^^^^^^^^^^^
 
