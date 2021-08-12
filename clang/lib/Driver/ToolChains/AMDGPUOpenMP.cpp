@@ -86,14 +86,34 @@ static bool checkSystemForAMDGPU(const ArgList &Args, const AMDGPUToolChain &TC,
 } // namespace
 
 const char *AMDGCN::OpenMPLinker::constructLLVMLinkCommand(
-    Compilation &C, const JobAction &JA, const InputInfoList &Inputs,
-    const ArgList &Args, StringRef SubArchName,
-    StringRef OutputFilePrefix) const {
+    const toolchains::AMDGPUOpenMPToolChain &AMDGPUOpenMPTC, Compilation &C,
+    const JobAction &JA, const InputInfoList &Inputs, const ArgList &Args,
+    StringRef SubArchName, StringRef OutputFilePrefix) const {
   ArgStringList CmdArgs;
 
   for (const auto &II : Inputs)
     if (II.isFilename())
       CmdArgs.push_back(II.getFilename());
+
+  if (Args.hasArg(options::OPT_l)) {
+    auto Lm = Args.getAllArgValues(options::OPT_l);
+    bool HasLibm = false;
+    for (auto &Lib : Lm) {
+      if (Lib == "m") {
+        HasLibm = true;
+        break;
+      }
+    }
+
+    if (HasLibm) {
+      SmallVector<std::string, 12> BCLibs =
+          AMDGPUOpenMPTC.getCommonDeviceLibNames(Args, SubArchName.str());
+      llvm::for_each(BCLibs, [&](StringRef BCFile) {
+        CmdArgs.push_back(Args.MakeArgString(BCFile));
+      });
+    }
+  }
+
   // Add an intermediate output file.
   CmdArgs.push_back("-o");
   const char *OutputFileName =
@@ -182,8 +202,8 @@ void AMDGCN::OpenMPLinker::ConstructJob(Compilation &C, const JobAction &JA,
   assert(Prefix.length() && "no linker inputs are files ");
 
   // Each command outputs different files.
-  const char *LLVMLinkCommand =
-      constructLLVMLinkCommand(C, JA, Inputs, Args, GPUArch, Prefix);
+  const char *LLVMLinkCommand = constructLLVMLinkCommand(
+      AMDGPUOpenMPTC, C, JA, Inputs, Args, GPUArch, Prefix);
 
   // Produce readable assembly if save-temps is enabled.
   if (C.getDriver().isSaveTempsEnabled())
@@ -234,27 +254,6 @@ void AMDGPUOpenMPToolChain::addClangTargetOptions(
 
   addOpenMPDeviceRTL(getDriver(), DriverArgs, CC1Args, BitcodeSuffix,
                      getTriple());
-
-  if (!DriverArgs.hasArg(options::OPT_l))
-    return;
-
-  auto Lm = DriverArgs.getAllArgValues(options::OPT_l);
-  bool HasLibm = false;
-  for (auto &Lib : Lm) {
-    if (Lib == "m") {
-      HasLibm = true;
-      break;
-    }
-  }
-
-  if (HasLibm) {
-    SmallVector<std::string, 12> BCLibs =
-        getCommonDeviceLibNames(DriverArgs, GPUArch);
-    llvm::for_each(BCLibs, [&](StringRef BCFile) {
-      CC1Args.push_back("-mlink-builtin-bitcode");
-      CC1Args.push_back(DriverArgs.MakeArgString(BCFile));
-    });
-  }
 }
 
 llvm::opt::DerivedArgList *AMDGPUOpenMPToolChain::TranslateArgs(
