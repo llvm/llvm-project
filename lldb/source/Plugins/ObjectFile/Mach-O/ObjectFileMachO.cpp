@@ -6616,6 +6616,7 @@ bool ObjectFileMachO::SaveCore(const lldb::ProcessSP &process_sp,
         std::vector<page_object> combined_page_objects;
         page_object last_obj;
         last_obj.addr = LLDB_INVALID_ADDRESS;
+        last_obj.size = 0;
         for (page_object obj : pages_to_copy) {
           if (last_obj.addr == LLDB_INVALID_ADDRESS) {
             last_obj = obj;
@@ -6629,12 +6630,10 @@ bool ObjectFileMachO::SaveCore(const lldb::ProcessSP &process_sp,
           combined_page_objects.push_back(last_obj);
           last_obj = obj;
         }
-
-        // If we only ended up with one contiguous memory segment
-        if (combined_page_objects.size() == 0 &&
-            last_obj.addr != LLDB_INVALID_ADDRESS) {
+        // Add the last entry we were looking to combine
+        // on to the array.
+        if (last_obj.addr != LLDB_INVALID_ADDRESS && last_obj.size != 0)
           combined_page_objects.push_back(last_obj);
-        }
 
         for (page_object obj : combined_page_objects) {
           uint32_t cmd_type = LC_SEGMENT_64;
