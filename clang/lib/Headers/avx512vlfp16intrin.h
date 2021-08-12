@@ -48,7 +48,7 @@ static __inline __m256h __DEFAULT_FN_ATTRS256 _mm256_set1_ph(_Float16 __h) {
 static __inline __m128h __DEFAULT_FN_ATTRS128
 _mm_set_ph(_Float16 __h1, _Float16 __h2, _Float16 __h3, _Float16 __h4,
            _Float16 __h5, _Float16 __h6, _Float16 __h7, _Float16 __h8) {
-  return (__m128h)(__v8hf){__h1, __h2, __h3, __h4, __h5, __h6, __h7, __h8};
+  return (__m128h)(__v8hf){__h8, __h7, __h6, __h5, __h4, __h3, __h2, __h1};
 }
 
 static __inline __m256h __DEFAULT_FN_ATTRS256
@@ -56,19 +56,18 @@ _mm256_set_ph(_Float16 __h1, _Float16 __h2, _Float16 __h3, _Float16 __h4,
               _Float16 __h5, _Float16 __h6, _Float16 __h7, _Float16 __h8,
               _Float16 __h9, _Float16 __h10, _Float16 __h11, _Float16 __h12,
               _Float16 __h13, _Float16 __h14, _Float16 __h15, _Float16 __h16) {
-  return (__m256h)(__v16hf){__h1,  __h2,  __h3,  __h4,  __h5,  __h6,
-                            __h7,  __h8,  __h9,  __h10, __h11, __h12,
-                            __h13, __h14, __h15, __h16};
+  return (__m256h)(__v16hf){__h16, __h15, __h14, __h13, __h12, __h11,
+                            __h10, __h9,  __h8,  __h7,  __h6,  __h5,
+                            __h4,  __h3,  __h2,  __h1};
 }
 
-#define _mm_setr_ph(__h1, __h2, __h3, __h4, __h5, __h6, __h7, __h8)            \
-  _mm_set_ph((__h8), (__h7), (__h6), (__h5), (__h4), (__h3), (__h2), (__h1))
+#define _mm_setr_ph(h1, h2, h3, h4, h5, h6, h7, h8)                            \
+  _mm_set_ph((h8), (h7), (h6), (h5), (h4), (h3), (h2), (h1))
 
-#define _mm256_setr_ph(__h1, __h2, __h3, __h4, __h5, __h6, __h7, __h8, __h9,   \
-                       __h10, __h11, __h12, __h13, __h14, __h15, __h16)        \
-  _mm256_set_ph((__h16), (__h15), (__h14), (__h13), (__h12), (__h11), (__h10), \
-                (__h9), (__h8), (__h7), (__h6), (__h5), (__h4), (__h3),        \
-                (__h2), (__h1))
+#define _mm256_setr_ph(h1, h2, h3, h4, h5, h6, h7, h8, h9, h10, h11, h12, h13, \
+                       h14, h15, h16)                                          \
+  _mm256_set_ph((h16), (h15), (h14), (h13), (h12), (h11), (h10), (h9), (h8),   \
+                (h7), (h6), (h5), (h4), (h3), (h2), (h1))
 
 static __inline__ __m256h __DEFAULT_FN_ATTRS256 _mm256_abs_ph(__m256h __A) {
   return (__m256h)_mm256_and_epi32(_mm256_set1_epi32(0x7FFF7FFF), (__m256i)__A);
