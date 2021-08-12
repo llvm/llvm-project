@@ -770,6 +770,13 @@ bool WebAssemblyTargetLowering::isVectorLoadExtDesirable(SDValue ExtVal) const {
          (ExtT == MVT::v2i64 && MemT == MVT::v2i32);
 }
 
+bool WebAssemblyTargetLowering::isOffsetFoldingLegal(
+    const GlobalAddressSDNode *GA) const {
+  // Wasm doesn't support function addresses with offsets
+  const GlobalValue *GV = GA->getGlobal();
+  return isa<Function>(GV) ? false : TargetLowering::isOffsetFoldingLegal(GA);
+}
+
 EVT WebAssemblyTargetLowering::getSetCCResultType(const DataLayout &DL,
                                                   LLVMContext &C,
                                                   EVT VT) const {

@@ -1,0 +1,68 @@
+## Test that llvm-readobj is able to recognize LLVMOMPOFFLOAD ELF notes.
+
+# RUN: yaml2obj %s -o %t.64le -DBITS=64 -DENCODING=LSB
+# RUN: llvm-readobj --notes %t.64le | FileCheck %s --match-full-lines --check-prefix=NOTES
+# RUN: llvm-readelf --notes %t.64le | FileCheck %s --match-full-lines --check-prefix=NOTES-GNU
+# RUN: yaml2obj %s -o %t.64be -DBITS=64 -DENCODING=MSB
+# RUN: llvm-readobj --notes %t.64be | FileCheck %s --match-full-lines --check-prefix=NOTES
+# RUN: llvm-readelf --notes %t.64be | FileCheck %s --match-full-lines --check-prefix=NOTES-GNU
+# RUN: yaml2obj %s -o %t.32le -DBITS=32 -DENCODING=LSB
+# RUN: llvm-readobj --notes %t.32le | FileCheck %s --match-full-lines --check-prefix=NOTES
+# RUN: llvm-readelf --notes %t.32le | FileCheck %s --match-full-lines --check-prefix=NOTES-GNU
+# RUN: yaml2obj %s -o %t.32be -DBITS=32 -DENCODING=MSB
+# RUN: llvm-readobj --notes %t.32be | FileCheck %s --match-full-lines --check-prefix=NOTES
+# RUN: llvm-readelf --notes %t.32be | FileCheck %s --match-full-lines --check-prefix=NOTES-GNU
+
+# NOTES:      Notes [
+# NOTES-NEXT:   NoteSection {
+# NOTES-NEXT:     Name: .note.openmp
+# NOTES-NEXT:     Offset: {{.*}}
+# NOTES-NEXT:     Size: {{.*}}
+# NOTES-NEXT:     Note {
+# NOTES-NEXT:       Owner: LLVMOMPOFFLOAD
+# NOTES-NEXT:       Data size: 0x3
+# NOTES-NEXT:       Type: NT_LLVM_OPENMP_OFFLOAD_VERSION (image format version)
+# NOTES-NEXT:       Version: 1.0
+# NOTES-NEXT:     }
+# NOTES-NEXT:     Note {
+# NOTES-NEXT:       Owner: LLVMOMPOFFLOAD
+# NOTES-NEXT:       Data size: 0x4
+# NOTES-NEXT:       Type: NT_LLVM_OPENMP_OFFLOAD_PRODUCER (producing toolchain)
+# NOTES-NEXT:       Producer: LLVM
+# NOTES-NEXT:     }
+# NOTES-NEXT:     Note {
+# NOTES-NEXT:       Owner: LLVMOMPOFFLOAD
+# NOTES-NEXT:       Data size: 0x9
+# NOTES-NEXT:       Type: NT_LLVM_OPENMP_OFFLOAD_PRODUCER_VERSION (producing toolchain version)
+# NOTES-NEXT:       Producer version: 13.0.0git
+# NOTES-NEXT:     }
+# NOTES-NEXT:   }
+# NOTES-NEXT: ]
+
+# NOTES-GNU:      Displaying notes found in: .note.openmp
+# NOTES-GNU-NEXT:   Owner                Data size        Description
+# NOTES-GNU-NEXT:   LLVMOMPOFFLOAD       0x00000003       NT_LLVM_OPENMP_OFFLOAD_VERSION (image format version)
+# NOTES-GNU-NEXT:     Version: 1.0
+# NOTES-GNU-NEXT:   LLVMOMPOFFLOAD       0x00000004       NT_LLVM_OPENMP_OFFLOAD_PRODUCER (producing toolchain)
+# NOTES-GNU-NEXT:     Producer: LLVM
+# NOTES-GNU-NEXT:   LLVMOMPOFFLOAD       0x00000009       NT_LLVM_OPENMP_OFFLOAD_PRODUCER_VERSION (producing toolchain version)
+# NOTES-GNU-NEXT:     Producer version: 13.0.0git
+
+--- !ELF
+FileHeader:
+  Class: ELFCLASS[[BITS]]
+  Data:  ELFDATA2[[ENCODING]]
+  Type:  ET_REL
+Sections:
+  - Name: .note.openmp
+    Type: SHT_NOTE
+    Notes:
+      - Name: LLVMOMPOFFLOAD
+        Type: 1 # NT_LLVM_OPENMP_OFFLOAD_VERSION
+        Desc: '312e30'
+      - Name: LLVMOMPOFFLOAD
+        Type: 2 # NT_LLVM_OPENMP_OFFLOAD_PRODUCER
+        Desc: '4c4c564d'
+      - Name: LLVMOMPOFFLOAD
+        Type: 3 # NT_LLVM_OPENMP_OFFLOAD_PRODUCER_VERSION
+        Desc: '31332e302e30676974'
