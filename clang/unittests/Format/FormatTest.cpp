@@ -8247,14 +8247,25 @@ TEST_F(FormatTest, ReturnTypeBreakingStyle) {
                "  return a + b < c;\n"
                "};",
                Style);
-  // The return breaking style doesn't affect object definitions with
-  // attribute-like macros.
+
+  // The return breaking style doesn't affect:
+  // * function and object definitions with attribute-like macros
   verifyFormat("Tttttttttttttttttttttttt ppppppppppppppp\n"
                "    ABSL_GUARDED_BY(mutex) = {};",
                getGoogleStyleWithColumns(40));
   verifyFormat("Tttttttttttttttttttttttt ppppppppppppppp\n"
                "    ABSL_GUARDED_BY(mutex);  // comment",
                getGoogleStyleWithColumns(40));
+  verifyFormat("Tttttttttttttttttttttttt ppppppppppppppp\n"
+               "    ABSL_GUARDED_BY(mutex1)\n"
+               "        ABSL_GUARDED_BY(mutex2);",
+               getGoogleStyleWithColumns(40));
+  verifyFormat("Tttttt f(int a, int b)\n"
+               "    ABSL_GUARDED_BY(mutex1)\n"
+               "        ABSL_GUARDED_BY(mutex2);",
+               getGoogleStyleWithColumns(40));
+  // * typedefs
+  verifyFormat("typedef ATTR(X) char x;", getGoogleStyle());
 
   Style = getGNUStyle();
 
