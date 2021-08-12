@@ -1006,9 +1006,11 @@ TSAN_INTERCEPTOR(int, pthread_create,
           "fork is not supported. Dying (set die_after_fork=0 to override)\n");
       Die();
     } else {
-      VPrintf(1, "ThreadSanitizer: starting new threads after multi-threaded "
-          "fork is not supported (pid %d). Continuing because of "
-          "die_after_fork=0, but you are on your own\n", internal_getpid());
+      VPrintf(1,
+              "ThreadSanitizer: starting new threads after multi-threaded "
+              "fork is not supported (pid %lu). Continuing because of "
+              "die_after_fork=0, but you are on your own\n",
+              internal_getpid());
     }
   }
   __sanitizer_pthread_attr_t myattr;
