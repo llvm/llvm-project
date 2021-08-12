@@ -52,11 +52,41 @@ add_entrypoint_object(
 )
 
 add_entrypoint_object(
+  strtol
+  SRCS
+    strtol.cpp
+  HDRS
+    strtol.h
+  DEPENDS
+    libc.src.__support.str_conv_utils
+)
+
+add_entrypoint_object(
   strtoll
   SRCS
     strtoll.cpp
   HDRS
     strtoll.h
+  DEPENDS
+    libc.src.__support.str_conv_utils
+)
+
+add_entrypoint_object(
+  strtoul
+  SRCS
+    strtoul.cpp
+  HDRS
+    strtoul.h
+  DEPENDS
+    libc.src.__support.str_conv_utils
+)
+
+add_entrypoint_object(
+  strtoull
+  SRCS
+    strtoull.cpp
+  HDRS
+    strtoull.h
   DEPENDS
     libc.src.__support.str_conv_utils
 )

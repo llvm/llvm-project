@@ -10,6 +10,7 @@
 #define LIBC_SRC_STDLIB_STDLIB_UTILS_H
 
 #include "src/__support/ctype_utils.h"
+#include "utils/CPP/Limits.h"
 #include <errno.h>
 #include <limits.h>
 
@@ -50,8 +51,9 @@ static inline int infer_base(const char *__restrict *__restrict src) {
 // Takes a pointer to a string, a pointer to a string pointer, and the base to
 // convert to. This function is used as the backend for all of the string to int
 // functions.
-static inline long long strtoll(const char *__restrict src,
-                                char **__restrict str_end, int base) {
+template <class T>
+static inline T strtointeger(const char *__restrict src,
+                             char **__restrict str_end, int base) {
   unsigned long long result = 0;
 
   if (base < 0 || base == 1 || base > 36) {
@@ -73,36 +75,56 @@ static inline long long strtoll(const char *__restrict src,
     src = src + 2;
   }
 
+  constexpr bool is_unsigned = (__llvm_libc::cpp::NumericLimits<T>::min() == 0);
+  const bool is_positive = (result_sign == '+');
+  unsigned long long constexpr NEGATIVE_MAX =
+      !is_unsigned ? static_cast<unsigned long long>(
+                         __llvm_libc::cpp::NumericLimits<T>::max()) +
+                         1
+                   : __llvm_libc::cpp::NumericLimits<T>::max();
   unsigned long long const ABS_MAX =
-      (result_sign == '+' ? LLONG_MAX
-                          : static_cast<unsigned long long>(LLONG_MAX) + 1);
+      (is_positive ? __llvm_libc::cpp::NumericLimits<T>::max() : NEGATIVE_MAX);
   unsigned long long const ABS_MAX_DIV_BY_BASE = ABS_MAX / base;
   while (isalnum(*src)) {
     int cur_digit = b36_char_to_int(*src);
     if (cur_digit >= base)
       break;
+
+    ++src;
+
+    // If the number has already hit the maximum value for the current type then
+    // the result cannot change, but we still need to advance src to the end of
+    // the number.
+    if (result == ABS_MAX) {
+      errno = ERANGE; // NOLINT
+      continue;
+    }
+
     if (result > ABS_MAX_DIV_BY_BASE) {
       result = ABS_MAX;
       errno = ERANGE; // NOLINT
-      break;
+    } else {
+      result = result * base;
     }
-    result = result * base;
     if (result > ABS_MAX - cur_digit) {
       result = ABS_MAX;
       errno = ERANGE; // NOLINT
-      break;
+    } else {
+      result = result + cur_digit;
     }
-    result = result + cur_digit;
-
-    ++src;
   }
 
   if (str_end != nullptr)
     *str_end = const_cast<char *>(src);
-  if (result_sign == '+')
-    return result;
-  else
-    return -result;
+
+  if (result == ABS_MAX) {
+    if (is_positive || is_unsigned)
+      return __llvm_libc::cpp::NumericLimits<T>::max();
+    else // T is signed and there is a negative overflow
+      return __llvm_libc::cpp::NumericLimits<T>::min();
+  }
+
+  return is_positive ? static_cast<T>(result) : -static_cast<T>(result);
 }
 
 } // namespace internal

@@ -56,6 +56,16 @@ add_libc_unittest(
 )
 
 add_libc_unittest(
+  strtol_test
+  SUITE
+    libc_stdlib_unittests
+  SRCS
+    strtol_test.cpp
+  DEPENDS
+    libc.src.stdlib.strtol
+)
+
+add_libc_unittest(
   strtoll_test
   SUITE
     libc_stdlib_unittests
@@ -63,6 +73,24 @@ add_libc_unittest(
     strtoll_test.cpp
   DEPENDS
     libc.src.stdlib.strtoll
-    libc.include.errno
-    libc.test.errno_setter_matcher
+)
+
+add_libc_unittest(
+  strtoul_test
+  SUITE
+    libc_stdlib_unittests
+  SRCS
+    strtoul_test.cpp
+  DEPENDS
+    libc.src.stdlib.strtoul
+)
+
+add_libc_unittest(
+  strtoull_test
+  SUITE
+    libc_stdlib_unittests
+  SRCS
+    strtoull_test.cpp
+  DEPENDS
+    libc.src.stdlib.strtoull
 )
