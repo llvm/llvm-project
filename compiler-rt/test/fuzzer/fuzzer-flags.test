@@ -1,5 +1,5 @@
-# Linker errors on AArch64 Linux
-XFAIL: aarch64-linux
+# Linker errors on AArch64 Linux in stage 2 build
+UNSUPPORTED: aarch64-linux
 
 RUN: %cpp_compiler %S/FlagsTest.cpp -o %t-FlagsTest
 RUN: %run %t-FlagsTest -runs=10 -foo_bar=1 2>&1 | FileCheck %s --check-prefix=FOO_BAR

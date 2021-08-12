@@ -60,23 +60,14 @@ entry:
   ret i32 %result
 }
 
-; If bitcast isn't considered a safe phi/select use, the alloca
-; remains as an array.
-; FIXME: Why isn't this identical to test2?
 define float @test2_bitcast() {
 ; CHECK-LABEL: @test2_bitcast(
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[A_SROA_0:%.*]] = alloca i32, align 4
-; CHECK-NEXT:    [[A_SROA_3:%.*]] = alloca i32, align 4
-; CHECK-NEXT:    store i32 0, i32* [[A_SROA_0]], align 4
-; CHECK-NEXT:    store i32 1, i32* [[A_SROA_3]], align 4
-; CHECK-NEXT:    [[A_SROA_0_0_A_SROA_0_0_V0:%.*]] = load i32, i32* [[A_SROA_0]], align 4
-; CHECK-NEXT:    [[A_SROA_3_0_A_SROA_3_4_V1:%.*]] = load i32, i32* [[A_SROA_3]], align 4
-; CHECK-NEXT:    [[COND:%.*]] = icmp sle i32 [[A_SROA_0_0_A_SROA_0_0_V0]], [[A_SROA_3_0_A_SROA_3_4_V1]]
-; CHECK-NEXT:    [[SELECT:%.*]] = select i1 [[COND]], i32* [[A_SROA_3]], i32* [[A_SROA_0]]
-; CHECK-NEXT:    [[SELECT_BC:%.*]] = bitcast i32* [[SELECT]] to float*
-; CHECK-NEXT:    [[RESULT:%.*]] = load float, float* [[SELECT_BC]], align 4
-; CHECK-NEXT:    ret float [[RESULT]]
+; CHECK-NEXT:    [[COND:%.*]] = icmp sle i32 0, 1
+; CHECK-NEXT:    [[TMP0:%.*]] = bitcast i32 1 to float
+; CHECK-NEXT:    [[TMP1:%.*]] = bitcast i32 0 to float
+; CHECK-NEXT:    [[RESULT_SROA_SPECULATED:%.*]] = select i1 [[COND]], float [[TMP0]], float [[TMP1]]
+; CHECK-NEXT:    ret float [[RESULT_SROA_SPECULATED]]
 ;
 entry:
   %a = alloca [2 x i32]
