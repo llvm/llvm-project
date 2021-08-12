@@ -147,11 +147,23 @@ protected:
 /// BlockFrequencyInfo, TargetLibraryInfo, Loop, AliasSet information for all
 /// instructions of the loop and loop safety information as
 /// arguments. Diagnostics is emitted via \p ORE. It returns changed status.
+/// \p CurLoop is a loop to do sinking on. \p OutermostLoop is used only when
+/// this function is called by \p sinkRegionForLoopNest.
 bool sinkRegion(DomTreeNode *, AAResults *, LoopInfo *, DominatorTree *,
                 BlockFrequencyInfo *, TargetLibraryInfo *,
-                TargetTransformInfo *, Loop *, AliasSetTracker *,
+                TargetTransformInfo *, Loop *CurLoop, AliasSetTracker *,
                 MemorySSAUpdater *, ICFLoopSafetyInfo *,
-                SinkAndHoistLICMFlags &, OptimizationRemarkEmitter *);
+                SinkAndHoistLICMFlags &, OptimizationRemarkEmitter *,
+                Loop *OutermostLoop = nullptr);
+
+/// Call sinkRegion on loops contained within the specified loop
+/// in order from innermost to outermost.
+bool sinkRegionForLoopNest(DomTreeNode *, AAResults *, LoopInfo *,
+                           DominatorTree *, BlockFrequencyInfo *,
+                           TargetLibraryInfo *, TargetTransformInfo *, Loop *,
+                           AliasSetTracker *, MemorySSAUpdater *,
+                           ICFLoopSafetyInfo *, SinkAndHoistLICMFlags &,
+                           OptimizationRemarkEmitter *);
 
 /// Walk the specified region of the CFG (defined by all blocks
 /// dominated by the specified block, and that are in the current loop) in depth

@@ -2432,6 +2432,10 @@ struct AAUndefinedBehaviorImpl : public AAUndefinedBehavior {
     const size_t NoUBPrevSize = AssumedNoUBInsts.size();
 
     auto InspectMemAccessInstForUB = [&](Instruction &I) {
+      // Lang ref now states volatile store is not UB, let's skip them.
+      if (I.isVolatile() && I.mayWriteToMemory())
+        return true;
+
       // Skip instructions that are already saved.
       if (AssumedNoUBInsts.count(&I) || KnownUBInsts.count(&I))
         return true;
@@ -3398,6 +3402,10 @@ struct AAIsDeadFloating : public AAIsDeadValueImpl {
   }
 
   bool isDeadStore(Attributor &A, StoreInst &SI) {
+    // Lang ref now states volatile store is not UB/dead, let's skip them.
+    if (SI.isVolatile())
+      return false;
+
     bool UsedAssumedInformation = false;
     SmallSetVector<Value *, 4> PotentialCopies;
     if (!AA::getPotentialCopiesOfStoredValue(A, SI, PotentialCopies, *this,

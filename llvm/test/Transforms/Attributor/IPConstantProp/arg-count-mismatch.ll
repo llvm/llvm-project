@@ -36,15 +36,10 @@
 ; FIXME we should recognize this as UB and make it an unreachable.
 
 define dso_local i16 @foo(i16 %a) {
-; NOT_CGSCC_NPM-LABEL: define {{[^@]+}}@foo
-; NOT_CGSCC_NPM-SAME: (i16 [[A:%.*]]) {
-; NOT_CGSCC_NPM-NEXT:    [[CALL:%.*]] = call i16 @bar()
-; NOT_CGSCC_NPM-NEXT:    ret i16 [[CALL]]
-;
-; IS__CGSCC_NPM: Function Attrs: nofree norecurse nosync nounwind readnone willreturn
-; IS__CGSCC_NPM-LABEL: define {{[^@]+}}@foo
-; IS__CGSCC_NPM-SAME: (i16 [[A:%.*]]) #[[ATTR0:[0-9]+]] {
-; IS__CGSCC_NPM-NEXT:    ret i16 0
+; CHECK-LABEL: define {{[^@]+}}@foo
+; CHECK-SAME: (i16 [[A:%.*]]) {
+; CHECK-NEXT:    [[CALL:%.*]] = call i16 bitcast (i16 (i16, i16)* @bar to i16 (i16)*)(i16 [[A]])
+; CHECK-NEXT:    ret i16 [[CALL]]
 ;
   %call = call i16 bitcast (i16 (i16, i16) * @bar to i16 (i16) *)(i16 %a)
   ret i16 %call
@@ -53,18 +48,13 @@ define dso_local i16 @foo(i16 %a) {
 define internal i16 @bar(i16 %p1, i16 %p2) {
 ; IS__TUNIT____: Function Attrs: nofree nosync nounwind readnone willreturn
 ; IS__TUNIT____-LABEL: define {{[^@]+}}@bar
-; IS__TUNIT____-SAME: () #[[ATTR0:[0-9]+]] {
+; IS__TUNIT____-SAME: (i16 [[P1:%.*]], i16 [[P2:%.*]]) #[[ATTR0:[0-9]+]] {
 ; IS__TUNIT____-NEXT:    ret i16 0
 ;
-; IS__CGSCC_OPM: Function Attrs: nofree norecurse nosync nounwind readnone willreturn
-; IS__CGSCC_OPM-LABEL: define {{[^@]+}}@bar
-; IS__CGSCC_OPM-SAME: () #[[ATTR0:[0-9]+]] {
-; IS__CGSCC_OPM-NEXT:    ret i16 0
-;
-; IS__CGSCC_NPM: Function Attrs: nofree norecurse nosync nounwind readnone willreturn
-; IS__CGSCC_NPM-LABEL: define {{[^@]+}}@bar
-; IS__CGSCC_NPM-SAME: () #[[ATTR0]] {
-; IS__CGSCC_NPM-NEXT:    ret i16 undef
+; IS__CGSCC____: Function Attrs: nofree norecurse nosync nounwind readnone willreturn
+; IS__CGSCC____-LABEL: define {{[^@]+}}@bar
+; IS__CGSCC____-SAME: (i16 [[P1:%.*]], i16 [[P2:%.*]]) #[[ATTR0:[0-9]+]] {
+; IS__CGSCC____-NEXT:    ret i16 0
 ;
   ret i16 0
 }
@@ -88,7 +78,7 @@ define internal i16 @bar2(i16 %p1, i16 %p2) {
 ;
 ; IS__CGSCC____: Function Attrs: nofree norecurse nosync nounwind readnone willreturn
 ; IS__CGSCC____-LABEL: define {{[^@]+}}@bar2
-; IS__CGSCC____-SAME: (i16 [[P1:%.*]], i16 [[P2:%.*]]) #[[ATTR0:[0-9]+]] {
+; IS__CGSCC____-SAME: (i16 [[P1:%.*]], i16 [[P2:%.*]]) #[[ATTR0]] {
 ; IS__CGSCC____-NEXT:    [[A:%.*]] = add i16 [[P1]], [[P2]]
 ; IS__CGSCC____-NEXT:    ret i16 [[A]]
 ;

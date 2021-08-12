@@ -8,7 +8,6 @@
 
 // UNSUPPORTED: c++03, c++11, c++14, c++17
 // UNSUPPORTED: libcpp-no-concepts
-// UNSUPPORTED: gcc-10
 
 // constexpr common_iterator() requires default_initializable<I> = default;
 // constexpr common_iterator(I i);

@@ -4210,6 +4210,42 @@ void EmitClangAttrSubjectMatchRulesParserStringSwitches(RecordKeeper &Records,
   getPragmaAttributeSupport(Records).generateParsingHelpers(OS);
 }
 
+void EmitClangAttrDocTable(RecordKeeper &Records, raw_ostream &OS) {
+  emitSourceFileHeader("Clang attribute documentation", OS);
+
+  OS << R"cpp(
+  #include "clang/AST/Attr.h"
+  #include "llvm/ADT/StringRef.h"
+  )cpp";
+  std::vector<Record *> Attrs = Records.getAllDerivedDefinitions("Attr");
+  for (const auto *A : Attrs) {
+    if (!A->getValueAsBit("ASTNode"))
+      continue;
+    std::vector<Record *> Docs = A->getValueAsListOfDefs("Documentation");
+    for (const auto *D : Docs) {
+      OS << "\nstatic const char AttrDoc_" << A->getName() << "[] = "
+         << "R\"reST("
+         << D->getValueAsOptionalString("Content").getValueOr("").trim()
+         << ")reST\";\n";
+      // Only look at the first documentation if there are several.
+      // (Currently there's only one such attr, revisit if this becomes common).
+      break;
+    }
+  }
+  OS << R"cpp(
+  static const llvm::StringRef AttrDoc[] = {
+  #define ATTR(NAME) AttrDoc_##NAME,
+  #include "clang/Basic/AttrList.inc"
+  };
+
+  llvm::StringRef clang::Attr::getDocumentation(clang::attr::Kind K) {
+    if(K < llvm::array_lengthof(AttrDoc))
+      return AttrDoc[K];
+    return "";
+  }
+  )cpp";
+}
+
 enum class SpellingKind {
   GNU,
   CXX11,

@@ -109,6 +109,8 @@ public:
 
   // Pretty print this attribute.
   void printPretty(raw_ostream &OS, const PrintingPolicy &Policy) const;
+
+  static StringRef getDocumentation(attr::Kind);
 };
 
 class TypeAttr : public Attr {
