@@ -26,6 +26,10 @@
 // overload will have a dummy parameter whose type indicates whether or not it
 // should be preferred. Any other parameters required for SFINAE should have
 // default values provided.
+
+// #define invalid_clock_t         (-1)
+#define INVALID_CLOCK_T         (0xFF)
+
 namespace {
 // Types for the dummy parameter indicating the priority of a given overload.
 // We will invoke our helper with an integer literal argument, so the overload
@@ -36,7 +40,7 @@ using preferred_implementation = int;
 // This is the fallback implementation, which should work everywhere.
 template <typename Unused = void> double GetCpuTime(fallback_implementation) {
   std::clock_t timestamp{std::clock()};
-  if (timestamp != std::clock_t{-1}) {
+  if (timestamp != std::clock_t{INVALID_CLOCK_T}) {
     return static_cast<double>(timestamp) / CLOCKS_PER_SEC;
   }
 
