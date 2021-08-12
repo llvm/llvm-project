@@ -8252,6 +8252,9 @@ TEST_F(FormatTest, ReturnTypeBreakingStyle) {
   verifyFormat("Tttttttttttttttttttttttt ppppppppppppppp\n"
                "    ABSL_GUARDED_BY(mutex) = {};",
                getGoogleStyleWithColumns(40));
+  verifyFormat("Tttttttttttttttttttttttt ppppppppppppppp\n"
+               "    ABSL_GUARDED_BY(mutex);  // comment",
+               getGoogleStyleWithColumns(40));
 
   Style = getGNUStyle();
 
