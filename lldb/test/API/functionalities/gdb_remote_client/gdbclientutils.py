@@ -194,6 +194,10 @@ class MockGDBServerResponder:
             return self.vRun(packet)
         if packet.startswith("qLaunchSuccess"):
             return self.qLaunchSuccess()
+        if packet.startswith("QEnvironment:"):
+            return self.QEnvironment(packet)
+        if packet.startswith("QEnvironmentHexEncoded:"):
+            return self.QEnvironmentHexEncoded(packet)
 
         return self.other(packet)
 
@@ -312,6 +316,12 @@ class MockGDBServerResponder:
 
     def qLaunchSuccess(self):
         return ""
+
+    def QEnvironment(self, packet):
+        return "OK"
+
+    def QEnvironmentHexEncoded(self, packet):
+        return "OK"
 
     """
     Raised when we receive a packet for which there is no default action.

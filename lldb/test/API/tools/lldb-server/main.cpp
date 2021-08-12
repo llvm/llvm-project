@@ -326,6 +326,10 @@ int main(int argc, char **argv) {
       g_threads_do_segfault = true;
     } else if (consume_front(arg, "print-pid")) {
       print_pid();
+    } else if (consume_front(arg, "print-env:")) {
+      // Print the value of specified envvar to stdout.
+      const char *value = getenv(arg.c_str());
+      printf("%s\n", value ? value : "__unset__");
     } else {
       // Treat the argument as text for stdout.
       printf("%s\n", argv[i]);

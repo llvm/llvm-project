@@ -1307,3 +1307,56 @@ class LldbGdbServerTestCase(gdbremote_testcase.GdbRemoteTestCaseBase, DwarfOpcod
              "send packet: $W00#00"],
             True)
         self.expect_gdbremote_sequence()
+
+    def test_QEnvironment(self):
+        self.build()
+        exe_path = self.getBuildArtifact("a.out")
+        env = {"FOO": "test", "BAR": "a=z"}
+        args = [exe_path, "print-env:FOO", "print-env:BAR"]
+        hex_args = [binascii.b2a_hex(x.encode()).decode() for x in args]
+
+        server = self.connect_to_debug_monitor()
+        self.assertIsNotNone(server)
+        self.do_handshake()
+
+        for key, value in env.items():
+            self.test_sequence.add_log_lines(
+                ["read packet: $QEnvironment:%s=%s#00" % (key, value),
+                 "send packet: $OK#00"],
+                True)
+        self.test_sequence.add_log_lines(
+            ["read packet: $vRun;%s#00" % (";".join(hex_args),),
+             {"direction": "send",
+              "regex": r"^\$T([0-9a-fA-F]+)"},
+             "read packet: $c#00",
+             "send packet: $W00#00"],
+            True)
+        context = self.expect_gdbremote_sequence()
+        self.assertEqual(context["O_content"], b"test\r\na=z\r\n")
+
+    def test_QEnvironmentHexEncoded(self):
+        self.build()
+        exe_path = self.getBuildArtifact("a.out")
+        env = {"FOO": "test", "BAR": "a=z", "BAZ": "a*}#z"}
+        args = [exe_path, "print-env:FOO", "print-env:BAR", "print-env:BAZ"]
+        hex_args = [binascii.b2a_hex(x.encode()).decode() for x in args]
+
+        server = self.connect_to_debug_monitor()
+        self.assertIsNotNone(server)
+        self.do_handshake()
+
+        for key, value in env.items():
+            hex_enc = binascii.b2a_hex(("%s=%s" % (key, value)).encode()).decode()
+            self.test_sequence.add_log_lines(
+                ["read packet: $QEnvironmentHexEncoded:%s#00" % (hex_enc,),
+                 "send packet: $OK#00"],
+                True)
+        self.test_sequence.add_log_lines(
+            ["read packet: $vRun;%s#00" % (";".join(hex_args),),
+             {"direction": "send",
+              "regex": r"^\$T([0-9a-fA-F]+)"},
+             "read packet: $c#00",
+             "send packet: $W00#00"],
+            True)
+        context = self.expect_gdbremote_sequence()
+        self.assertEqual(context["O_content"], b"test\r\na=z\r\na*}#z\r\n")
