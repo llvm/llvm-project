@@ -19,6 +19,8 @@
 #include <__iterator/iterator_traits.h>
 #include <__iterator/readable_traits.h>
 #include <__memory/pointer_traits.h>
+#include <__utility/move.h>
+#include <compare>
 #include <concepts>
 #include <type_traits>
 

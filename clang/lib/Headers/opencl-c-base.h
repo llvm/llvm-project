@@ -333,7 +333,13 @@ typedef enum memory_scope {
   memory_scope_all_devices = memory_scope_all_svm_devices,
 #endif // __OPENCL_C_VERSION__ >= CL_VERSION_3_0
 #endif // defined(__opencl_c_atomic_scope_all_devices)
-#if defined(cl_intel_subgroups) || defined(cl_khr_subgroups)
+/**
+ * Subgroups have different requirements on forward progress, so just test
+ * all the relevant macros.
+ * CL 3.0 sub-groups "they are not guaranteed to make independent forward progress"
+ * KHR subgroups "Subgroups within a workgroup are independent, make forward progress with respect to each other"
+ */
+#if defined(cl_intel_subgroups) || defined(cl_khr_subgroups) || defined(__opencl_c_subgroups)
   memory_scope_sub_group = __OPENCL_MEMORY_SCOPE_SUB_GROUP
 #endif
 } memory_scope;
@@ -571,6 +577,26 @@ typedef struct {
 #define as_ptrdiff_t(x) __builtin_astype((x), ptrdiff_t)
 #define as_intptr_t(x) __builtin_astype((x), intptr_t)
 #define as_uintptr_t(x) __builtin_astype((x), uintptr_t)
+
+// C++ for OpenCL - __remove_address_space
+#if defined(__OPENCL_CPP_VERSION__)
+template <typename _Tp> struct __remove_address_space { using type = _Tp; };
+template <typename _Tp> struct __remove_address_space<__generic _Tp> {
+  using type = _Tp;
+};
+template <typename _Tp> struct __remove_address_space<__global _Tp> {
+  using type = _Tp;
+};
+template <typename _Tp> struct __remove_address_space<__private _Tp> {
+  using type = _Tp;
+};
+template <typename _Tp> struct __remove_address_space<__local _Tp> {
+  using type = _Tp;
+};
+template <typename _Tp> struct __remove_address_space<__constant _Tp> {
+  using type = _Tp;
+};
+#endif
 
 // OpenCL v1.1 s6.9, v1.2/2.0 s6.10 - Function qualifiers
 

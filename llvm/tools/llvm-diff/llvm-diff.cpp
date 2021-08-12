@@ -10,8 +10,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "DiffLog.h"
-#include "DifferenceEngine.h"
+#include "lib/DiffLog.h"
+#include "lib/DifferenceEngine.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/IR/LLVMContext.h"
 #include "llvm/IR/Module.h"

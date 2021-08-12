@@ -364,7 +364,7 @@ ModuleSP ModuleList::GetModuleAtIndexUnlocked(size_t idx) const {
 
 void ModuleList::FindFunctions(ConstString name,
                                FunctionNameType name_type_mask,
-                               bool include_symbols, bool include_inlines,
+                               const ModuleFunctionSearchOptions &options,
                                SymbolContextList &sc_list) const {
   const size_t old_size = sc_list.GetSize();
 
@@ -375,8 +375,7 @@ void ModuleList::FindFunctions(ConstString name,
     collection::const_iterator pos, end = m_modules.end();
     for (pos = m_modules.begin(); pos != end; ++pos) {
       (*pos)->FindFunctions(lookup_info.GetLookupName(), CompilerDeclContext(),
-                            lookup_info.GetNameTypeMask(), include_symbols,
-                            include_inlines, sc_list);
+                            lookup_info.GetNameTypeMask(), options, sc_list);
     }
 
     const size_t new_size = sc_list.GetSize();
@@ -388,7 +387,7 @@ void ModuleList::FindFunctions(ConstString name,
     collection::const_iterator pos, end = m_modules.end();
     for (pos = m_modules.begin(); pos != end; ++pos) {
       (*pos)->FindFunctions(name, CompilerDeclContext(), name_type_mask,
-                            include_symbols, include_inlines, sc_list);
+                            options, sc_list);
     }
   }
 }
@@ -422,12 +421,12 @@ void ModuleList::FindFunctionSymbols(ConstString name,
 }
 
 void ModuleList::FindFunctions(const RegularExpression &name,
-                               bool include_symbols, bool include_inlines,
+                               const ModuleFunctionSearchOptions &options,
                                SymbolContextList &sc_list) {
   std::lock_guard<std::recursive_mutex> guard(m_modules_mutex);
   collection::const_iterator pos, end = m_modules.end();
   for (pos = m_modules.begin(); pos != end; ++pos) {
-    (*pos)->FindFunctions(name, include_symbols, include_inlines, sc_list);
+    (*pos)->FindFunctions(name, options, sc_list);
   }
 }
 

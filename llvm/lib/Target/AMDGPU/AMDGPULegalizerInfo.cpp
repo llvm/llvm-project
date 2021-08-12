@@ -940,7 +940,7 @@ AMDGPULegalizerInfo::AMDGPULegalizerInfo(const GCNSubtarget &ST_,
     .clampScalar(1, S32, S64)
     .widenScalarToNextPow2(0, 32)
     .widenScalarToNextPow2(1, 32)
-    .lower();
+    .custom();
 
   // The 64-bit versions produce 32-bit results, but only on the SALU.
   getActionDefinitionsBuilder({G_CTLZ_ZERO_UNDEF, G_CTTZ_ZERO_UNDEF})
@@ -1758,6 +1758,9 @@ bool AMDGPULegalizerInfo::legalizeCustom(LegalizerHelper &Helper,
     return legalizeFFloor(MI, MRI, B);
   case TargetOpcode::G_BUILD_VECTOR:
     return legalizeBuildVector(MI, MRI, B);
+  case TargetOpcode::G_CTLZ:
+  case TargetOpcode::G_CTTZ:
+    return legalizeCTLZ_CTTZ(MI, MRI, B);
   default:
     return false;
   }
@@ -2062,7 +2065,6 @@ bool AMDGPULegalizerInfo::legalizeITOFP(
 
   const LLT S64 = LLT::scalar(64);
   const LLT S32 = LLT::scalar(32);
-  const LLT S1 = LLT::scalar(1);
 
   assert(MRI.getType(Src) == S64);
 
@@ -2086,29 +2088,24 @@ bool AMDGPULegalizerInfo::legalizeITOFP(
 
   assert(MRI.getType(Dst) == S32);
 
-  auto Zero = B.buildConstant(S32, 0);
   auto One = B.buildConstant(S32, 1);
-  auto AllOnes = B.buildConstant(S32, -1);
 
   MachineInstrBuilder ShAmt;
   if (Signed) {
-    auto ThirtyThree = B.buildConstant(S32, 33);
+    auto ThirtyOne = B.buildConstant(S32, 31);
     auto X = B.buildXor(S32, Unmerge.getReg(0), Unmerge.getReg(1));
-    auto HasSameSign = B.buildICmp(CmpInst::ICMP_SGE, S1, X, Zero);
-    auto MaxShAmt = B.buildSelect(S32, HasSameSign, ThirtyThree, ThirtyTwo);
+    auto OppositeSign = B.buildAShr(S32, X, ThirtyOne);
+    auto MaxShAmt = B.buildAdd(S32, ThirtyTwo, OppositeSign);
     auto LS = B.buildIntrinsic(Intrinsic::amdgcn_sffbh, {S32},
                                /*HasSideEffects=*/false)
                   .addUse(Unmerge.getReg(1));
-    auto NotAllSameBits = B.buildICmp(CmpInst::ICMP_NE, S1, LS, AllOnes);
-    auto LS2 = B.buildSelect(S32, NotAllSameBits, LS, MaxShAmt);
-    ShAmt = B.buildSub(S32, LS2, One);
+    auto LS2 = B.buildSub(S32, LS, One);
+    ShAmt = B.buildUMin(S32, LS2, MaxShAmt);
   } else
     ShAmt = B.buildCTLZ(S32, Unmerge.getReg(1));
   auto Norm = B.buildShl(S64, Src, ShAmt);
   auto Unmerge2 = B.buildUnmerge({S32, S32}, Norm);
-  auto NotAllZeros =
-      B.buildICmp(CmpInst::ICMP_NE, S1, Unmerge2.getReg(0), Zero);
-  auto Adjust = B.buildSelect(S32, NotAllZeros, One, Zero);
+  auto Adjust = B.buildUMin(S32, One, Unmerge2.getReg(0));
   auto Norm2 = B.buildOr(S32, Unmerge2.getReg(1), Adjust);
   auto FVal = Signed ? B.buildSITOFP(S32, Norm2) : B.buildUITOFP(S32, Norm2);
   auto Scale = B.buildSub(S32, ThirtyTwo, ShAmt);
@@ -2774,6 +2771,27 @@ bool AMDGPULegalizerInfo::legalizeBuildVector(
 
   auto Merge = B.buildMerge(S32, {Src0, Src1});
   B.buildBitcast(Dst, Merge);
+
+  MI.eraseFromParent();
+  return true;
+}
+
+// Legalize ctlz/cttz to ffbh/ffbl instead of the default legalization to
+// ctlz/cttz_zero_undef. This allows us to fix up the result for the zero input
+// case with a single min instruction instead of a compare+select.
+bool AMDGPULegalizerInfo::legalizeCTLZ_CTTZ(MachineInstr &MI,
+                                            MachineRegisterInfo &MRI,
+                                            MachineIRBuilder &B) const {
+  Register Dst = MI.getOperand(0).getReg();
+  Register Src = MI.getOperand(1).getReg();
+  LLT DstTy = MRI.getType(Dst);
+  LLT SrcTy = MRI.getType(Src);
+
+  unsigned NewOpc = MI.getOpcode() == AMDGPU::G_CTLZ
+                        ? AMDGPU::G_AMDGPU_FFBH_U32
+                        : AMDGPU::G_AMDGPU_FFBL_B32;
+  auto Tmp = B.buildInstr(NewOpc, {DstTy}, {Src});
+  B.buildUMin(Dst, Tmp, B.buildConstant(DstTy, SrcTy.getSizeInBits()));
 
   MI.eraseFromParent();
   return true;

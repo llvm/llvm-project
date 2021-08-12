@@ -10,9 +10,9 @@ body:             |
     liveins: $w0
     ; CHECK-LABEL: name: s8
     ; CHECK: liveins: $w0
-    ; CHECK: [[C:%[0-9]+]]:_(s32) = G_CONSTANT i32 0
-    ; CHECK: [[C1:%[0-9]+]]:_(s32) = G_CONSTANT i32 256
-    ; CHECK: [[OR:%[0-9]+]]:_(s32) = G_OR [[C]], [[C1]]
+    ; CHECK: [[DEF:%[0-9]+]]:_(s32) = G_IMPLICIT_DEF
+    ; CHECK: [[C:%[0-9]+]]:_(s32) = G_CONSTANT i32 256
+    ; CHECK: [[OR:%[0-9]+]]:_(s32) = G_OR [[DEF]], [[C]]
     ; CHECK: [[BITREVERSE:%[0-9]+]]:_(s32) = G_BITREVERSE [[OR]]
     ; CHECK: [[CTLZ:%[0-9]+]]:_(s32) = G_CTLZ [[BITREVERSE]](s32)
     ; CHECK: [[COPY:%[0-9]+]]:_(s32) = COPY [[CTLZ]](s32)
@@ -34,9 +34,9 @@ body:             |
     liveins: $w0
     ; CHECK-LABEL: name: s16
     ; CHECK: liveins: $w0
-    ; CHECK: [[C:%[0-9]+]]:_(s32) = G_CONSTANT i32 0
-    ; CHECK: [[C1:%[0-9]+]]:_(s32) = G_CONSTANT i32 65536
-    ; CHECK: [[OR:%[0-9]+]]:_(s32) = G_OR [[C]], [[C1]]
+    ; CHECK: [[DEF:%[0-9]+]]:_(s32) = G_IMPLICIT_DEF
+    ; CHECK: [[C:%[0-9]+]]:_(s32) = G_CONSTANT i32 65536
+    ; CHECK: [[OR:%[0-9]+]]:_(s32) = G_OR [[DEF]], [[C]]
     ; CHECK: [[BITREVERSE:%[0-9]+]]:_(s32) = G_BITREVERSE [[OR]]
     ; CHECK: [[CTLZ:%[0-9]+]]:_(s32) = G_CTLZ [[BITREVERSE]](s32)
     ; CHECK: [[COPY:%[0-9]+]]:_(s32) = COPY [[CTLZ]](s32)

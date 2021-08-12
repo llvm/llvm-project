@@ -131,7 +131,8 @@ inline bool operator==(const ImportKey<T> &lhs, const ImportKey<T> &rhs) {
 
 // `ImportKey<T>` can be used as a key in a `DenseMap` if `T` can be used as a
 // key in a `DenseMap`.
-template <typename T> struct llvm::DenseMapInfo<lld::wasm::ImportKey<T>> {
+namespace llvm {
+template <typename T> struct DenseMapInfo<lld::wasm::ImportKey<T>> {
   static lld::wasm::ImportKey<T> getEmptyKey() {
     typename lld::wasm::ImportKey<T> key(llvm::DenseMapInfo<T>::getEmptyKey());
     key.state = lld::wasm::ImportKey<T>::State::Empty;
@@ -154,6 +155,7 @@ template <typename T> struct llvm::DenseMapInfo<lld::wasm::ImportKey<T>> {
     return lhs == rhs;
   }
 };
+} // end namespace llvm
 
 namespace lld {
 namespace wasm {

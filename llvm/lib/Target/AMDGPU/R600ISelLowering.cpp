@@ -18,6 +18,7 @@
 #include "R600InstrInfo.h"
 #include "R600MachineFunctionInfo.h"
 #include "R600Subtarget.h"
+#include "llvm/CodeGen/MachineFunction.h"
 #include "llvm/IR/IntrinsicsAMDGPU.h"
 #include "llvm/IR/IntrinsicsR600.h"
 
@@ -1564,7 +1565,7 @@ EVT R600TargetLowering::getSetCCResultType(const DataLayout &DL, LLVMContext &,
 }
 
 bool R600TargetLowering::canMergeStoresTo(unsigned AS, EVT MemVT,
-                                          const SelectionDAG &DAG) const {
+                                          const MachineFunction &MF) const {
   // Local and Private addresses do not handle vectors. Limit to i32
   if ((AS == AMDGPUAS::LOCAL_ADDRESS || AS == AMDGPUAS::PRIVATE_ADDRESS)) {
     return (MemVT.getSizeInBits() <= 32);

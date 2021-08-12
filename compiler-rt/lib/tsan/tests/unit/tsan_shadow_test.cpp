@@ -63,15 +63,15 @@ TEST(Shadow, Mapping) {
 TEST(Shadow, Celling) {
   u64 aligned_data[4];
   char *data = (char*)aligned_data;
-  CHECK_EQ((uptr)data % kShadowSize, 0);
-  uptr s0 = MemToShadow((uptr)&data[0]);
-  CHECK_EQ(s0 % kShadowSize, 0);
+  CHECK(IsAligned(reinterpret_cast<uptr>(data), kShadowSize));
+  RawShadow *s0 = MemToShadow((uptr)&data[0]);
+  CHECK(IsAligned(reinterpret_cast<uptr>(s0), kShadowSize));
   for (unsigned i = 1; i < kShadowCell; i++)
     CHECK_EQ(s0, MemToShadow((uptr)&data[i]));
   for (unsigned i = kShadowCell; i < 2*kShadowCell; i++)
-    CHECK_EQ(s0 + kShadowSize*kShadowCnt, MemToShadow((uptr)&data[i]));
+    CHECK_EQ(s0 + kShadowCnt, MemToShadow((uptr)&data[i]));
   for (unsigned i = 2*kShadowCell; i < 3*kShadowCell; i++)
-    CHECK_EQ(s0 + 2*kShadowSize*kShadowCnt, MemToShadow((uptr)&data[i]));
+    CHECK_EQ(s0 + 2 * kShadowCnt, MemToShadow((uptr)&data[i]));
 }
 
 }  // namespace __tsan

@@ -9,11 +9,11 @@
 #ifndef LLDB_SOURCE_PLUGINS_LANGUAGERUNTIME_OBJC_APPLEOBJCRUNTIME_APPLEOBJCTYPEENCODINGPARSER_H
 #define LLDB_SOURCE_PLUGINS_LANGUAGERUNTIME_OBJC_APPLEOBJCRUNTIME_APPLEOBJCTYPEENCODINGPARSER_H
 
-#include "clang/AST/ASTContext.h"
-
+#include "Plugins/Language/ObjC/ObjCConstants.h"
+#include "Plugins/LanguageRuntime/ObjC/ObjCLanguageRuntime.h"
 #include "lldb/lldb-private.h"
 
-#include "Plugins/LanguageRuntime/ObjC/ObjCLanguageRuntime.h"
+#include "clang/AST/ASTContext.h"
 
 namespace lldb_private {
 class StringLexer;

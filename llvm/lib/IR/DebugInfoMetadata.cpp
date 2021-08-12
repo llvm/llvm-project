@@ -1476,6 +1476,45 @@ Optional<DIExpression *> DIExpression::createFragmentExpression(
   return DIExpression::get(Expr->getContext(), Ops);
 }
 
+std::pair<DIExpression *, const ConstantInt *>
+DIExpression::constantFold(const ConstantInt *CI) {
+  // Copy the APInt so we can modify it.
+  APInt NewInt = CI->getValue();
+  SmallVector<uint64_t, 8> Ops;
+
+  // Fold operators only at the beginning of the expression.
+  bool First = true;
+  bool Changed = false;
+  for (auto Op : expr_ops()) {
+    switch (Op.getOp()) {
+    default:
+      // We fold only the leading part of the expression; if we get to a part
+      // that we're going to copy unchanged, and haven't done any folding,
+      // then the entire expression is unchanged and we can return early.
+      if (!Changed)
+        return {this, CI};
+      First = false;
+      break;
+    case dwarf::DW_OP_LLVM_convert:
+      if (!First)
+        break;
+      Changed = true;
+      if (Op.getArg(1) == dwarf::DW_ATE_signed)
+        NewInt = NewInt.sextOrTrunc(Op.getArg(0));
+      else {
+        assert(Op.getArg(1) == dwarf::DW_ATE_unsigned && "Unexpected operand");
+        NewInt = NewInt.zextOrTrunc(Op.getArg(0));
+      }
+      continue;
+    }
+    Op.appendToVector(Ops);
+  }
+  if (!Changed)
+    return {this, CI};
+  return {DIExpression::get(getContext(), Ops),
+          ConstantInt::get(getContext(), NewInt)};
+}
+
 uint64_t DIExpression::getNumLocationOperands() const {
   uint64_t Result = 0;
   for (auto ExprOp : expr_ops())

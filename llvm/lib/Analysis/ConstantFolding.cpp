@@ -1579,9 +1579,10 @@ bool llvm::canConstantFoldCallTo(const CallBase *Call, const Function *F) {
     return !Call->isStrictFP();
 
   // Sign operations are actually bitwise operations, they do not raise
-  // exceptions even for SNANs.
+  // exceptions even for SNANs. The same applies to classification functions.
   case Intrinsic::fabs:
   case Intrinsic::copysign:
+  case Intrinsic::isnan:
   // Non-constrained variants of rounding operations means default FP
   // environment, they can be folded in any case.
   case Intrinsic::ceil:
@@ -2001,6 +2002,9 @@ static Constant *ConstantFoldScalarCall1(StringRef Name,
       U.convertToInteger(Int, APFloat::rmTowardZero, &IsExact);
       return ConstantInt::get(Ty, Int);
     }
+
+    if (IntrinsicID == Intrinsic::isnan)
+      return ConstantInt::get(Ty, U.isNaN());
 
     if (!Ty->isHalfTy() && !Ty->isFloatTy() && !Ty->isDoubleTy())
       return nullptr;

@@ -180,7 +180,7 @@
 // RUN:   -fopenmp-relocatable-target -save-temps -no-canonical-prefixes %s 2>&1 \
 // RUN:   | FileCheck -check-prefix=CHK-BCLIB-WARN %s
 
-// CHK-BCLIB-WARN: No library 'libomptarget-nvptx-sm_35.bc' found in the default clang lib directory or in LIBRARY_PATH. Please use --libomptarget-nvptx-bc-path to specify nvptx bitcode library.
+// CHK-BCLIB-WARN: no library 'libomptarget-nvptx-sm_35.bc' found in the default clang lib directory or in LIBRARY_PATH; use '--libomptarget-nvptx-bc-path' to specify nvptx bitcode library
 
 /// ###########################################################################
 
@@ -191,7 +191,7 @@
 // RUN:   -fopenmp-relocatable-target -save-temps -no-canonical-prefixes %s 2>&1 \
 // RUN:   | FileCheck -check-prefix=CHK-BCLIB-ERROR %s
 
-// CHK-BCLIB-ERROR: Bitcode library 'not-exist.bc' does not exist.
+// CHK-BCLIB-ERROR: bitcode library 'not-exist.bc' does not exist
 
 /// ###########################################################################
 
@@ -201,7 +201,7 @@
 // RUN:   -fopenmp-relocatable-target -save-temps -no-canonical-prefixes %s 2>&1 \
 // RUN:   | FileCheck -check-prefix=CHK-CUDA-VERSION-ERROR %s
 
-// CHK-CUDA-VERSION-ERROR: NVPTX target requires CUDA 9.2 or above. CUDA 9.0 is detected.
+// CHK-CUDA-VERSION-ERROR: NVPTX target requires CUDA 9.2 or above; CUDA 9.0 detected
 
 /// Check that debug info is emitted in dwarf-2
 // RUN:   %clang -### -no-canonical-prefixes -fopenmp=libomp -fopenmp-targets=nvptx64-nvidia-cuda -Xopenmp-target -march=sm_60 %s -g -O1 --no-cuda-noopt-device-debug 2>&1 \

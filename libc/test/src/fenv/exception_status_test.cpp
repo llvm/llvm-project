@@ -10,7 +10,7 @@
 #include "src/fenv/feraiseexcept.h"
 #include "src/fenv/fetestexcept.h"
 
-#include "utils/FPUtil/FEnvUtils.h"
+#include "src/__support/FPUtil/FEnvUtils.h"
 #include "utils/UnitTest/Test.h"
 
 #include <fenv.h>

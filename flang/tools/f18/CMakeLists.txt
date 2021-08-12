@@ -3,19 +3,6 @@ set(LLVM_LINK_COMPONENTS
   FrontendOpenMP
   Support
   )
-add_flang_tool(f18
-  dump.cpp
-  f18.cpp
-  )
-
-target_link_libraries(f18
-  PRIVATE
-  FortranCommon
-  FortranParser
-  FortranEvaluate
-  FortranSemantics
-  FortranLower
-)
 
 set(MODULES
   "__fortran_builtins"
@@ -30,11 +17,6 @@ set(MODULES
   "__fortran_type_info"
 )
 
-target_include_directories(f18
-  PRIVATE
-  ${CMAKE_CURRENT_BINARY_DIR}
-)
-
 # Create module files directly from the top-level module source directory
 foreach(filename ${MODULES})
   set(base ${FLANG_INTRINSIC_MODULES_DIR}/${filename})
@@ -47,9 +29,9 @@ foreach(filename ${MODULES})
   endif()
   add_custom_command(OUTPUT ${base}.mod
     COMMAND ${CMAKE_COMMAND} -E make_directory ${FLANG_INTRINSIC_MODULES_DIR}
-    COMMAND f18 -fsyntax-only -module-dir ${FLANG_INTRINSIC_MODULES_DIR}
+    COMMAND flang-new -fc1 -fsyntax-only -module-dir ${FLANG_INTRINSIC_MODULES_DIR}
       ${FLANG_SOURCE_DIR}/module/${filename}.f90
-    DEPENDS f18 ${FLANG_SOURCE_DIR}/module/${filename}.f90 ${depends}
+    DEPENDS flang-new ${FLANG_SOURCE_DIR}/module/${filename}.f90 ${depends}
   )
   add_custom_command(OUTPUT ${base}.f18.mod
     DEPENDS ${base}.mod
@@ -60,15 +42,10 @@ endforeach()
 
 add_custom_target(module_files ALL DEPENDS ${MODULE_FILES})
 
-install(TARGETS f18 DESTINATION bin)
-
-set(FLANG_DEFAULT_DRIVER "flang-new")
-if (NOT FLANG_BUILD_NEW_DRIVER)
-  set(FLANG_DEFAULT_DRIVER "f18")
-endif()
-
 # This flang shell script will only work in a POSIX shell.
 if (NOT WIN32)
-  configure_file(${CMAKE_CURRENT_SOURCE_DIR}/flang.in ${CMAKE_BINARY_DIR}/bin/flang @ONLY)
+  file(COPY ${CMAKE_CURRENT_SOURCE_DIR}/flang
+    DESTINATION ${CMAKE_BINARY_DIR}/bin
+    FILE_PERMISSIONS OWNER_EXECUTE OWNER_READ OWNER_WRITE)
   install(PROGRAMS ${CMAKE_BINARY_DIR}/bin/flang DESTINATION bin)
 endif()

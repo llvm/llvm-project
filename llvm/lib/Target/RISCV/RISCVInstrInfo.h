@@ -24,12 +24,29 @@ namespace llvm {
 
 class RISCVSubtarget;
 
+namespace RISCVCC {
+
+enum CondCode {
+  COND_EQ,
+  COND_NE,
+  COND_LT,
+  COND_GE,
+  COND_LTU,
+  COND_GEU,
+  COND_INVALID
+};
+
+CondCode getOppositeBranchCondition(CondCode);
+
+} // end of namespace RISCVCC
+
 class RISCVInstrInfo : public RISCVGenInstrInfo {
 
 public:
   explicit RISCVInstrInfo(RISCVSubtarget &STI);
 
   MCInst getNop() const override;
+  const MCInstrDesc &getBrCond(RISCVCC::CondCode CC) const;
 
   unsigned isLoadFromStackSlot(const MachineInstr &MI,
                                int &FrameIndex) const override;

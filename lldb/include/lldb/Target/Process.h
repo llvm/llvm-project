@@ -536,13 +536,13 @@ public:
 
   uint32_t GetAddressByteSize() const;
 
+  /// Returns the pid of the process or LLDB_INVALID_PROCESS_ID if there is
+  /// no known pid.
+  lldb::pid_t GetID() const { return m_pid; }
+
   /// Sets the stored pid.
   ///
   /// This does not change the pid of underlying process.
-  lldb::pid_t GetID() const { return m_pid; }
-
-  /// Returns the pid of the process or LLDB_INVALID_PROCESS_ID if there is
-  /// no known pid.
   void SetID(lldb::pid_t new_pid) { m_pid = new_pid; }
 
   uint32_t GetUniqueID() const { return m_process_unique_id; }

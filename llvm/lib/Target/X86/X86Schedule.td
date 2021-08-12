@@ -87,8 +87,10 @@ class X86SchedWriteWidths<X86FoldableSchedWrite sScl,
 }
 
 // Multiclass that wraps X86SchedWriteWidths for each fp vector type.
-class X86SchedWriteSizes<X86SchedWriteWidths sPS,
+class X86SchedWriteSizes<X86SchedWriteWidths sPH,
+                         X86SchedWriteWidths sPS,
                          X86SchedWriteWidths sPD> {
+  X86SchedWriteWidths PH = sPH;
   X86SchedWriteWidths PS = sPS;
   X86SchedWriteWidths PD = sPD;
 }
@@ -681,20 +683,22 @@ def SchedWriteVarBlend
                        WriteVarBlendY, WriteVarBlendZ>;
 
 // Vector size wrappers.
+// FIXME: Currently PH uses the same schedule method as PS.
+// We may refine them later.
 def SchedWriteFAddSizes
- : X86SchedWriteSizes<SchedWriteFAdd, SchedWriteFAdd64>;
+ : X86SchedWriteSizes<SchedWriteFAdd, SchedWriteFAdd, SchedWriteFAdd64>;
 def SchedWriteFCmpSizes
- : X86SchedWriteSizes<SchedWriteFCmp, SchedWriteFCmp64>;
+ : X86SchedWriteSizes<SchedWriteFCmp, SchedWriteFCmp, SchedWriteFCmp64>;
 def SchedWriteFMulSizes
- : X86SchedWriteSizes<SchedWriteFMul, SchedWriteFMul64>;
+ : X86SchedWriteSizes<SchedWriteFMul, SchedWriteFMul, SchedWriteFMul64>;
 def SchedWriteFDivSizes
- : X86SchedWriteSizes<SchedWriteFDiv, SchedWriteFDiv64>;
+ : X86SchedWriteSizes<SchedWriteFDiv, SchedWriteFDiv, SchedWriteFDiv64>;
 def SchedWriteFSqrtSizes
- : X86SchedWriteSizes<SchedWriteFSqrt, SchedWriteFSqrt64>;
+ : X86SchedWriteSizes<SchedWriteFSqrt, SchedWriteFSqrt, SchedWriteFSqrt64>;
 def SchedWriteFLogicSizes
- : X86SchedWriteSizes<SchedWriteFLogic, SchedWriteFLogic>;
+ : X86SchedWriteSizes<SchedWriteFLogic, SchedWriteFLogic, SchedWriteFLogic>;
 def SchedWriteFShuffleSizes
- : X86SchedWriteSizes<SchedWriteFShuffle, SchedWriteFShuffle>;
+ : X86SchedWriteSizes<SchedWriteFShuffle, SchedWriteFShuffle, SchedWriteFShuffle>;
 
 //===----------------------------------------------------------------------===//
 // Generic Processor Scheduler Models.

@@ -33,30 +33,30 @@ namespace {
 struct BuiltinOpAsmDialectInterface : public OpAsmDialectInterface {
   using OpAsmDialectInterface::OpAsmDialectInterface;
 
-  LogicalResult getAlias(Attribute attr, raw_ostream &os) const override {
+  AliasResult getAlias(Attribute attr, raw_ostream &os) const override {
     if (attr.isa<AffineMapAttr>()) {
       os << "map";
-      return success();
+      return AliasResult::OverridableAlias;
     }
     if (attr.isa<IntegerSetAttr>()) {
       os << "set";
-      return success();
+      return AliasResult::OverridableAlias;
     }
     if (attr.isa<LocationAttr>()) {
       os << "loc";
-      return success();
+      return AliasResult::OverridableAlias;
     }
-    return failure();
+    return AliasResult::NoAlias;
   }
 
-  LogicalResult getAlias(Type type, raw_ostream &os) const final {
+  AliasResult getAlias(Type type, raw_ostream &os) const final {
     if (auto tupleType = type.dyn_cast<TupleType>()) {
       if (tupleType.size() > 16) {
         os << "tuple";
-        return success();
+        return AliasResult::OverridableAlias;
       }
     }
-    return failure();
+    return AliasResult::NoAlias;
   }
 };
 } // end anonymous namespace.

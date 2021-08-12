@@ -1121,7 +1121,10 @@ void X86DAGToDAGISel::PreprocessISelDAG() {
       if (VT.isVector() || VT == MVT::f128)
         break;
 
-      MVT VecVT = VT == MVT::f64 ? MVT::v2f64 : MVT::v4f32;
+      MVT VecVT = VT == MVT::f64   ? MVT::v2f64
+                  : VT == MVT::f32 ? MVT::v4f32
+                                   : MVT::v8f16;
+
       SDLoc dl(N);
       SDValue Op0 = CurDAG->getNode(ISD::SCALAR_TO_VECTOR, dl, VecVT,
                                     N->getOperand(0));

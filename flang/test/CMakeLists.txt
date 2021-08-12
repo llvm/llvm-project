@@ -32,12 +32,8 @@ set(FLANG_TEST_PARAMS
   flang_site_config=${CMAKE_CURRENT_BINARY_DIR}/lit.site.cfg.py)
 
 set(FLANG_TEST_DEPENDS
-  f18 FileCheck count not module_files fir-opt tco
+  flang-new FileCheck count not module_files fir-opt tco
 )
-
-if (FLANG_BUILD_NEW_DRIVER)
-  list(APPEND FLANG_TEST_DEPENDS flang-new)
-endif()
 
 if (FLANG_INCLUDE_TESTS)
   if (FLANG_GTEST_AVAIL)

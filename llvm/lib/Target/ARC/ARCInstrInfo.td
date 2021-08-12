@@ -133,6 +133,14 @@ def STB_FAR : PseudoInstARC<(outs), (ins GPR32:$dst, MEMrlimm:$addr),
                              "STB_FAR $dst, $addr",
                              [(truncstorei8 GPR32:$dst, AddrModeFar:$addr)]>;
 
+// TODO: Add `Requires<[HasBitScan]>` predicate when available.
+def CTLZ : PseudoInstARC<(outs GPR32:$A),
+                         (ins GPR32:$B),
+                         "error.fls $A, $B",
+                         [(set GPR32:$A, (ctlz i32:$B))]> {
+  let Defs = [STATUS32];
+}
+
 //===----------------------------------------------------------------------===//
 // Instruction Generation multiclasses.
 // Generate many variants of a single instruction with a single defining

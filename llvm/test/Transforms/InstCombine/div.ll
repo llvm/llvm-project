@@ -1058,7 +1058,7 @@ define <2 x i8> @sdiv_by_negconst_v2i8(<2 x i8> %x) {
 
 define <vscale x 2 x i8> @sdiv_by_negconst_nxv2i8(<vscale x 2 x i8> %x) {
 ; CHECK-LABEL: @sdiv_by_negconst_nxv2i8(
-; CHECK-NEXT:    [[DIV_NEG:%.*]] = sdiv <vscale x 2 x i8> [[X:%.*]], shufflevector (<vscale x 2 x i8> insertelement (<vscale x 2 x i8> undef, i8 108, i32 0), <vscale x 2 x i8> undef, <vscale x 2 x i32> zeroinitializer)
+; CHECK-NEXT:    [[DIV_NEG:%.*]] = sdiv <vscale x 2 x i8> [[X:%.*]], shufflevector (<vscale x 2 x i8> insertelement (<vscale x 2 x i8> poison, i8 108, i32 0), <vscale x 2 x i8> poison, <vscale x 2 x i32> zeroinitializer)
 ; CHECK-NEXT:    ret <vscale x 2 x i8> [[DIV_NEG]]
 ;
   %div = sdiv <vscale x 2 x i8> %x, shufflevector (<vscale x 2 x i8> insertelement (<vscale x 2 x i8> undef, i8 -108, i32 0), <vscale x 2 x i8> undef, <vscale x 2 x i32> zeroinitializer)

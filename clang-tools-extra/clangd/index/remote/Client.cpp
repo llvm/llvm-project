@@ -9,7 +9,7 @@
 #include <grpc++/grpc++.h>
 
 #include "Client.h"
-#include "Features.h"
+#include "Feature.h"
 #include "Service.grpc.pb.h"
 #include "index/Index.h"
 #include "marshalling/Marshalling.h"

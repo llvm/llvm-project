@@ -6,9 +6,9 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "utils/FPUtil/BasicOperations.h"
-#include "utils/FPUtil/NearestIntegerOperations.h"
-#include "utils/FPUtil/TestHelpers.h"
+#include "src/__support/FPUtil/BasicOperations.h"
+#include "src/__support/FPUtil/NearestIntegerOperations.h"
+#include "src/__support/FPUtil/TestHelpers.h"
 #include "utils/MPFRWrapper/MPFRUtils.h"
 #include "utils/UnitTest/Test.h"
 

@@ -14,6 +14,7 @@
 #include "clang/Basic/Diagnostic.h"
 #include "clang/Basic/MacroBuilder.h"
 #include "clang/Basic/TargetBuiltins.h"
+#include "llvm/Support/Host.h"
 
 using namespace clang;
 using namespace clang::targets;
@@ -256,6 +257,12 @@ void PPCTargetInfo::getTargetDefines(const LangOptions &Opts,
     Builder.defineMacro("__powerpc64__");
     Builder.defineMacro("__ppc64__");
     Builder.defineMacro("__PPC64__");
+  } else if (getTriple().isOSAIX()) {
+    // The XL compilers on AIX define _ARCH_PPC64 for both 32 and 64-bit modes.
+    Builder.defineMacro("_ARCH_PPC64");
+  }
+  if (getTriple().isOSAIX()) {
+    Builder.defineMacro("__THW_PPC__");
   }
 
   // Target properties.
@@ -299,6 +306,11 @@ void PPCTargetInfo::getTargetDefines(const LangOptions &Opts,
   if (getTriple().isOSAIX() && Opts.LongDoubleSize == 64) {
     assert(LongDoubleWidth == 64);
     Builder.defineMacro("__LONGDOUBLE64");
+  }
+
+  if (llvm::Triple(llvm::sys::getProcessTriple()).isOSAIX() &&
+      getTriple().isOSAIX()) {
+    Builder.defineMacro("__HOS_AIX__");
   }
 
   // Define this for elfv2 (64-bit only) or 64-bit darwin.

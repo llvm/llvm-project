@@ -132,9 +132,9 @@ define i32 @insert_extract_element_same_vec_idx_4() {
 
 define <vscale x 2 x i1> @cmp_le_smax_always_true(<vscale x 2 x i64> %x) {
 ; CHECK-LABEL: @cmp_le_smax_always_true(
-; CHECK-NEXT:    ret <vscale x 2 x i1> shufflevector (<vscale x 2 x i1> insertelement (<vscale x 2 x i1> undef, i1 true, i32 0), <vscale x 2 x i1> undef, <vscale x 2 x i32> zeroinitializer)
+; CHECK-NEXT:    ret <vscale x 2 x i1> shufflevector (<vscale x 2 x i1> insertelement (<vscale x 2 x i1> poison, i1 true, i32 0), <vscale x 2 x i1> poison, <vscale x 2 x i32> zeroinitializer)
 ;
-  %cmp = icmp sle <vscale x 2 x i64> %x, shufflevector (<vscale x 2 x i64> insertelement (<vscale x 2 x i64> undef, i64 9223372036854775807, i32 0), <vscale x 2 x i64> undef, <vscale x 2 x i32> zeroinitializer)
+  %cmp = icmp sle <vscale x 2 x i64> %x, shufflevector (<vscale x 2 x i64> insertelement (<vscale x 2 x i64> poison, i64 9223372036854775807, i32 0), <vscale x 2 x i64> poison, <vscale x 2 x i32> zeroinitializer)
   ret <vscale x 2 x i1> %cmp
 }
 

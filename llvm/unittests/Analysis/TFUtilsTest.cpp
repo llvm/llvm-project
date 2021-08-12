@@ -179,7 +179,7 @@ TEST(TFUtilsTest, Logger) {
   L.logFloatReward(-3.0);
   std::string Result;
   raw_string_ostream OS(Result);
-  L.print(OS);
+  L.flush(OS);
 
   tensorflow::SequenceExample Expected;
   EXPECT_TRUE(Expected.ParseFromString(Result));
@@ -215,7 +215,7 @@ TEST(TFUtilsTest, LoggerInt32FeaturesAndReward) {
   L.logInt32Reward(-3);
   std::string Result;
   raw_string_ostream OS(Result);
-  L.print(OS);
+  L.flush(OS);
 
   tensorflow::SequenceExample Expected;
   EXPECT_TRUE(Expected.ParseFromString(Result));
@@ -250,7 +250,7 @@ TEST(TFUtilsTest, LoggerNoReward) {
 
   std::string Result;
   raw_string_ostream OS(Result);
-  L.print(OS);
+  L.flush(OS);
   tensorflow::SequenceExample Expected;
   EXPECT_TRUE(Expected.ParseFromString(Result));
   PROTO_CHECKER("the_float", float_list, 0, F00);
@@ -274,7 +274,7 @@ TEST(TFUtilsTest, LoggerFinalReward) {
   L.logFloatFinalReward(3.14);
   std::string Result;
   raw_string_ostream OS(Result);
-  L.print(OS);
+  L.flush(OS);
   const float Zero[]{0.0};
   const float R[]{3.14};
   tensorflow::SequenceExample Expected;

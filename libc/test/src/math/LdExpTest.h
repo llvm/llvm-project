@@ -9,9 +9,9 @@
 #ifndef LLVM_LIBC_TEST_SRC_MATH_LDEXPTEST_H
 #define LLVM_LIBC_TEST_SRC_MATH_LDEXPTEST_H
 
-#include "utils/FPUtil/FPBits.h"
-#include "utils/FPUtil/NormalFloat.h"
-#include "utils/FPUtil/TestHelpers.h"
+#include "src/__support/FPUtil/FPBits.h"
+#include "src/__support/FPUtil/NormalFloat.h"
+#include "src/__support/FPUtil/TestHelpers.h"
 #include "utils/UnitTest/Test.h"
 
 #include <limits.h>

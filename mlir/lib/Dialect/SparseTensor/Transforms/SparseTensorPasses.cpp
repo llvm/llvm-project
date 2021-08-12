@@ -97,7 +97,8 @@ struct SparseTensorConversionPass
     RewritePatternSet patterns(ctx);
     SparseTensorTypeConverter converter;
     ConversionTarget target(*ctx);
-    target.addIllegalOp<NewOp, ToPointersOp, ToIndicesOp, ToValuesOp>();
+    target.addIllegalOp<NewOp, ConvertOp, ToPointersOp, ToIndicesOp, ToValuesOp,
+                        ToTensorOp>();
     target.addDynamicallyLegalOp<FuncOp>(
         [&](FuncOp op) { return converter.isSignatureLegal(op.getType()); });
     target.addDynamicallyLegalOp<CallOp>([&](CallOp op) {
@@ -105,8 +106,8 @@ struct SparseTensorConversionPass
     });
     target.addDynamicallyLegalOp<ReturnOp>(
         [&](ReturnOp op) { return converter.isLegal(op.getOperandTypes()); });
-    target.addLegalOp<ConstantOp>();
-    target.addLegalOp<tensor::CastOp>();
+    target.addLegalOp<ConstantOp, tensor::CastOp, memref::BufferCastOp,
+                      memref::CastOp>();
     populateFuncOpTypeConversionPattern(patterns, converter);
     populateCallOpTypeConversionPattern(patterns, converter);
     populateSparseTensorConversionPatterns(converter, patterns);

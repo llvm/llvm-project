@@ -78,14 +78,21 @@ bool Sema::isLibstdcxxEagerExceptionSpecHack(const Declarator &D) {
       .Default(false);
 }
 
-ExprResult Sema::ActOnNoexceptSpec(SourceLocation NoexceptLoc,
-                                   Expr *NoexceptExpr,
+ExprResult Sema::ActOnNoexceptSpec(Expr *NoexceptExpr,
                                    ExceptionSpecificationType &EST) {
-  // FIXME: This is bogus, a noexcept expression is not a condition.
-  ExprResult Converted = CheckBooleanCondition(NoexceptLoc, NoexceptExpr);
+
+  if (NoexceptExpr->isTypeDependent() ||
+      NoexceptExpr->containsUnexpandedParameterPack()) {
+    EST = EST_DependentNoexcept;
+    return NoexceptExpr;
+  }
+
+  llvm::APSInt Result;
+  ExprResult Converted = CheckConvertedConstantExpression(
+      NoexceptExpr, Context.BoolTy, Result, CCEK_Noexcept);
+
   if (Converted.isInvalid()) {
     EST = EST_NoexceptFalse;
-
     // Fill in an expression of 'false' as a fixup.
     auto *BoolExpr = new (Context)
         CXXBoolLiteralExpr(false, Context.BoolTy, NoexceptExpr->getBeginLoc());
@@ -99,9 +106,6 @@ ExprResult Sema::ActOnNoexceptSpec(SourceLocation NoexceptLoc,
     return Converted;
   }
 
-  llvm::APSInt Result;
-  Converted = VerifyIntegerConstantExpression(
-      Converted.get(), &Result, diag::err_noexcept_needs_constant_expression);
   if (!Converted.isInvalid())
     EST = !Result ? EST_NoexceptFalse : EST_NoexceptTrue;
   return Converted;

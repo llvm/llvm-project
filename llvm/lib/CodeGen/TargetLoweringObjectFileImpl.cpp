@@ -2414,7 +2414,20 @@ bool TargetLoweringObjectFileXCOFF::shouldPutJumpTableInFunctionSection(
 MCSection *TargetLoweringObjectFileXCOFF::getSectionForConstant(
     const DataLayout &DL, SectionKind Kind, const Constant *C,
     Align &Alignment) const {
-  //TODO: Enable emiting constant pool to unique sections when we support it.
+  // TODO: Enable emiting constant pool to unique sections when we support it.
+  if (Alignment > Align(16))
+    report_fatal_error("Alignments greater than 16 not yet supported.");
+
+  if (Alignment == Align(8)) {
+    assert(ReadOnly8Section && "Section should always be initialized.");
+    return ReadOnly8Section;
+  }
+
+  if (Alignment == Align(16)) {
+    assert(ReadOnly16Section && "Section should always be initialized.");
+    return ReadOnly16Section;
+  }
+
   return ReadOnlySection;
 }
 

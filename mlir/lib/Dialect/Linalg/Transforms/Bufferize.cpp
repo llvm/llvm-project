@@ -213,8 +213,10 @@ public:
     Location loc = op.getLoc();
     SmallVector<Value, 2> newOutputBuffers;
 
-    if (failed(allocateBuffersForResults(loc, op, adaptor.outputs(),
-                                         newOutputBuffers, rewriter))) {
+    if (op->getParentOfType<TiledLoopOp>()) {
+      newOutputBuffers = adaptor.outputs();
+    } else if (failed(allocateBuffersForResults(loc, op, adaptor.outputs(),
+                                                newOutputBuffers, rewriter))) {
       return op.emitOpError()
              << "Failed to allocate buffers for tensor results.";
     }
@@ -230,6 +232,14 @@ public:
     return success();
   }
 };
+
+bool IsBlockArgOfTiledLoop(Value tensor) {
+  if (auto tensorLoad = tensor.getDefiningOp<memref::TensorLoadOp>())
+    if (auto blockArgument = tensorLoad.memref().dyn_cast<BlockArgument>())
+      if (isa<TiledLoopOp>(blockArgument.getOwner()->getParentOp()))
+        return true;
+  return false;
+}
 
 /// Convert `extract_slice %t [offsets][sizes][strides] -> %st` to an
 /// alloc + copy pattern.
@@ -252,6 +262,15 @@ public:
     tensor::ExtractSliceOpAdaptor adaptor(operands, op->getAttrDictionary());
     Value sourceMemref = adaptor.source();
     assert(sourceMemref.getType().isa<MemRefType>());
+
+    // Block arguments of the tiled_loop can be bufferized inplace.
+    if (IsBlockArgOfTiledLoop(op.source())) {
+      Value subView = rewriter.create<memref::SubViewOp>(
+          op.getLoc(), sourceMemref, op.getMixedOffsets(), op.getMixedSizes(),
+          op.getMixedStrides());
+      rewriter.replaceOp(op, subView);
+      return success();
+    }
 
     MemRefType subviewMemRefType =
         getTypeConverter()->convertType(op.getType()).cast<MemRefType>();
@@ -296,7 +315,12 @@ public:
     // For now, be conservative and copy the converted input memref.
     // In general, the converted input memref here could be aliased or could
     // point into constant memory, so mutating it would lead to miscompilations.
-    Value destMemRef = cloneMemref(op.getLoc(), adaptor.dest(), rewriter);
+    // Block arguments of the tiled_loop can be bufferized inplace.
+    Value destMemRef;
+    if (IsBlockArgOfTiledLoop(op.dest()))
+      destMemRef = adaptor.dest();
+    else
+      destMemRef = cloneMemref(op.getLoc(), adaptor.dest(), rewriter);
     assert(destMemRef.getType().isa<MemRefType>());
 
     // Take a subview to copy the small memref.
@@ -309,16 +333,167 @@ public:
     return success();
   }
 };
+
+class TiledLoopOpConverter : public OpConversionPattern<TiledLoopOp> {
+public:
+  using OpConversionPattern<TiledLoopOp>::OpConversionPattern;
+
+  LogicalResult
+  matchAndRewrite(TiledLoopOp tiledLoop, ArrayRef<Value> operands,
+                  ConversionPatternRewriter &rewriter) const final {
+    TiledLoopOp::Adaptor adaptor(operands, tiledLoop->getAttrDictionary());
+    Location loc = tiledLoop.getLoc();
+    if (tiledLoop.getNumResults() == 0)
+      return failure();
+    auto newTiledLoop = rewriter.create<TiledLoopOp>(
+        loc, adaptor.lowerBound(), adaptor.upperBound(), adaptor.step(),
+        adaptor.inputs(), adaptor.outputs(), adaptor.iterator_types(),
+        adaptor.distribution_types());
+    // Clone the region.
+    BlockAndValueMapping bvm;
+    bvm.map(tiledLoop.getInductionVars(), newTiledLoop.getInductionVars());
+
+    OpBuilder innerBuilder =
+        OpBuilder::atBlockEnd(newTiledLoop.getBody(), rewriter.getListener());
+
+    // Remap input block arguments.
+    SmallVector<Value, 2> inputs;
+    for (auto en : llvm::zip(newTiledLoop.getRegionInputArgs(),
+                             tiledLoop.getRegionInputArgs())) {
+      auto &newInputArg = std::get<0>(en);
+      if (!newInputArg.getType().isa<ShapedType>()) {
+        inputs.push_back(std::get<0>(en));
+        continue;
+      }
+      inputs.push_back(
+          innerBuilder.create<memref::TensorLoadOp>(loc, newInputArg));
+    }
+    bvm.map(tiledLoop.getRegionInputArgs(), inputs);
+
+    // Remap output block arguments.
+    SmallVector<Value, 2> outputs;
+    for (auto en : llvm::zip(newTiledLoop.getRegionOutputArgs(),
+                             tiledLoop.getRegionOutputArgs())) {
+      auto &newOutputArg = std::get<0>(en);
+      if (!newOutputArg.getType().isa<ShapedType>()) {
+        outputs.push_back(std::get<0>(en));
+        continue;
+      }
+      outputs.push_back(
+          innerBuilder.create<memref::TensorLoadOp>(loc, newOutputArg));
+    }
+    bvm.map(tiledLoop.getRegionOutputArgs(), outputs);
+
+    for (auto &op : tiledLoop.getBody()->without_terminator())
+      innerBuilder.clone(op, bvm);
+    innerBuilder.create<linalg::YieldOp>(loc);
+    rewriter.replaceOp(tiledLoop, newTiledLoop.outputs());
+    return success();
+  }
+};
+
+class VectorTransferReadOpConverter
+    : public OpConversionPattern<vector::TransferReadOp> {
+public:
+  using OpConversionPattern<vector::TransferReadOp>::OpConversionPattern;
+
+  LogicalResult
+  matchAndRewrite(vector::TransferReadOp readOp, ArrayRef<Value> operands,
+                  ConversionPatternRewriter &rewriter) const final {
+    if (readOp.getShapedType().isa<MemRefType>())
+      return failure();
+    vector::TransferReadOp::Adaptor adaptor(operands,
+                                            readOp->getAttrDictionary());
+    rewriter.replaceOpWithNewOp<vector::TransferReadOp>(
+        readOp, readOp.getType(), adaptor.source(), adaptor.indices(),
+        adaptor.permutation_map(), adaptor.padding(), adaptor.mask(),
+        adaptor.in_bounds());
+    return success();
+  }
+};
+
+class VectorTransferWriteOpConverter
+    : public OpConversionPattern<vector::TransferWriteOp> {
+public:
+  using OpConversionPattern<vector::TransferWriteOp>::OpConversionPattern;
+
+  LogicalResult
+  matchAndRewrite(vector::TransferWriteOp writeOp, ArrayRef<Value> operands,
+                  ConversionPatternRewriter &rewriter) const final {
+    if (writeOp.getShapedType().isa<MemRefType>())
+      return failure();
+    vector::TransferWriteOp::Adaptor adaptor(operands,
+                                             writeOp->getAttrDictionary());
+    rewriter.create<vector::TransferWriteOp>(
+        writeOp.getLoc(), adaptor.vector(), adaptor.source(), adaptor.indices(),
+        adaptor.permutation_map(),
+        adaptor.in_bounds() ? adaptor.in_bounds() : ArrayAttr());
+    rewriter.replaceOp(writeOp, adaptor.source());
+    return success();
+  }
+};
 } // namespace
 
+static Value materializeTensorLoad(OpBuilder &builder, TensorType type,
+                                   ValueRange inputs, Location loc) {
+  assert(inputs.size() == 1);
+  assert(inputs[0].getType().isa<BaseMemRefType>());
+  return builder.create<memref::TensorLoadOp>(loc, type, inputs[0]);
+}
+
 namespace {
+
+/// A helper type converter class that automatically populates the relevant
+/// materializations and type conversions for bufferization.
+//
+// The default BufferizeTypeConverter defined in "Transforms/Bufferize.h" does
+// not properly support memrefs with non-default layout. Whenever a layout of
+// memref changes during bufferization, target materialization call back would
+// assert that the non-matching type is a tensor.
+// There was an attempt to fix this behavior of dialect conversion in a more
+// principal way in https://reviews.llvm.org/D93126 but it had to be reverted
+// due to test failures outside of MLIR Core. It might make sense to revive this
+// PR.
+class CustomBufferizeTypeConverter : public BufferizeTypeConverter {
+public:
+  CustomBufferizeTypeConverter() {
+    // Keep all types unchanged.
+    addConversion([](Type type) { return type; });
+    // Convert RankedTensorType to MemRefType.
+    addConversion([](RankedTensorType type) -> Type {
+      return MemRefType::get(type.getShape(), type.getElementType());
+    });
+    // Convert UnrankedTensorType to UnrankedMemRefType.
+    addConversion([](UnrankedTensorType type) -> Type {
+      return UnrankedMemRefType::get(type.getElementType(), 0);
+    });
+    addArgumentMaterialization(materializeTensorLoad);
+    addSourceMaterialization(materializeTensorLoad);
+    addTargetMaterialization([](OpBuilder &builder, BaseMemRefType type,
+                                ValueRange inputs, Location loc) -> Value {
+      assert(inputs.size() == 1);
+      // Target materialization is invoked if the new operand type does not
+      // match the expected type. A special case is when the new operand type is
+      // a memref with a specified layout, i.e. non-empty affine map.
+      // TODO(pifon) : Change how target materialization is invoked in dialect
+      // conversion.
+      if (auto memrefType = inputs[0].getType().dyn_cast<MemRefType>()) {
+        assert(!memrefType.getAffineMaps().empty());
+        return inputs[0];
+      }
+      assert(inputs[0].getType().isa<TensorType>());
+      return builder.create<memref::BufferCastOp>(loc, type, inputs[0]);
+    });
+  }
+};
+
 /// Converts Linalg operations that work on tensor-type operands or results to
 /// work on buffers.
 struct LinalgBufferizePass : public LinalgBufferizeBase<LinalgBufferizePass> {
   void runOnOperation() override {
     MLIRContext &context = getContext();
     ConversionTarget target(context);
-    BufferizeTypeConverter typeConverter;
+    CustomBufferizeTypeConverter typeConverter;
 
     // Mark all Standard operations legal.
     target.addLegalDialect<AffineDialect, math::MathDialect,
@@ -332,10 +507,10 @@ struct LinalgBufferizePass : public LinalgBufferizeBase<LinalgBufferizePass> {
       return typeConverter.isLegal(op);
     };
     target.addDynamicallyLegalDialect<linalg::LinalgDialect>(isLegalOperation);
-    target.addDynamicallyLegalOp<ConstantOp>(isLegalOperation);
+    target.addDynamicallyLegalOp<ConstantOp, vector::TransferReadOp,
+                                 vector::TransferWriteOp>(isLegalOperation);
 
     RewritePatternSet patterns(&context);
-    patterns.add<GeneralizePadTensorOpPattern>(patterns.getContext());
     populateLinalgBufferizePatterns(typeConverter, patterns);
     if (failed(applyPartialConversion(getOperation(), target,
                                       std::move(patterns))))
@@ -359,7 +534,11 @@ void mlir::linalg::populateLinalgBufferizePatterns(
       BufferizeTensorReshapeOp<TensorExpandShapeOp>,
       BufferizeTensorReshapeOp<TensorCollapseShapeOp>,
       ExtractSliceOpConverter,
-      InsertSliceOpConverter
+      InsertSliceOpConverter,
+      TiledLoopOpConverter,
+      VectorTransferReadOpConverter,
+      VectorTransferWriteOpConverter
     >(typeConverter, patterns.getContext());
   // clang-format on
+  patterns.add<GeneralizePadTensorOpPattern>(patterns.getContext());
 }

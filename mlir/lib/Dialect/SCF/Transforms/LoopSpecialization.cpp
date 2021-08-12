@@ -132,8 +132,7 @@ LogicalResult mlir::scf::peelForLoop(RewriterBase &b, ForOp forOp,
       b.create<CmpIOp>(loc, CmpIPredicate::slt, splitBound, previousUb);
 
   // Create IfOp for last iteration.
-  auto resultTypes = llvm::to_vector<4>(
-      llvm::map_range(forOp.initArgs(), [](Value v) { return v.getType(); }));
+  auto resultTypes = forOp.getResultTypes();
   ifOp = b.create<scf::IfOp>(loc, resultTypes, hasMoreIter,
                              /*withElseRegion=*/!resultTypes.empty());
   forOp.replaceAllUsesWith(ifOp->getResults());
@@ -141,15 +140,15 @@ LogicalResult mlir::scf::peelForLoop(RewriterBase &b, ForOp forOp,
   // Build then case.
   BlockAndValueMapping bvm;
   bvm.map(forOp.region().getArgument(0), splitBound);
-  for (auto it : llvm::zip(forOp.region().getArguments().drop_front(),
-                           forOp->getResults())) {
+  for (auto it : llvm::zip(forOp.getRegionIterArgs(), forOp->getResults())) {
     bvm.map(std::get<0>(it), std::get<1>(it));
   }
   b.cloneRegionBefore(forOp.region(), ifOp.thenRegion(),
                       ifOp.thenRegion().begin(), bvm);
   // Build else case.
   if (!resultTypes.empty())
-    ifOp.getElseBodyBuilder().create<scf::YieldOp>(loc, forOp->getResults());
+    ifOp.getElseBodyBuilder(b.getListener())
+        .create<scf::YieldOp>(loc, forOp->getResults());
 
   return success();
 }

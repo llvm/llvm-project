@@ -8,7 +8,7 @@
 
 #include "src/ctype/isdigit.h"
 #include "src/__support/common.h"
-#include "src/ctype/ctype_utils.h"
+#include "src/__support/ctype_utils.h"
 
 namespace __llvm_libc {
 

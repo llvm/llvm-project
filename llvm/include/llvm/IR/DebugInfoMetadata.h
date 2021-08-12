@@ -2876,6 +2876,12 @@ public:
     return getNumElements() > 0 &&
            getElement(0) == dwarf::DW_OP_LLVM_entry_value;
   }
+
+  /// Try to shorten an expression with an initial constant operand.
+  /// Returns a new expression and constant on success, or the original
+  /// expression and constant on failure.
+  std::pair<DIExpression *, const ConstantInt *>
+  constantFold(const ConstantInt *CI);
 };
 
 inline bool operator==(const DIExpression::FragmentInfo &A,

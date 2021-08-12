@@ -10,6 +10,7 @@
 #define _LIBCPP___RANGES_DROP_VIEW_H
 
 #include <__config>
+#include <__debug>
 #include <__iterator/concepts.h>
 #include <__iterator/iterator_traits.h>
 #include <__iterator/next.h>

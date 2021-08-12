@@ -421,6 +421,7 @@ def i64mem  : X86MemOperand<"printqwordmem",  X86Mem64AsmOperand>;
 def i128mem : X86MemOperand<"printxmmwordmem", X86Mem128AsmOperand>;
 def i256mem : X86MemOperand<"printymmwordmem", X86Mem256AsmOperand>;
 def i512mem : X86MemOperand<"printzmmwordmem", X86Mem512AsmOperand>;
+def f16mem  : X86MemOperand<"printwordmem",   X86Mem16AsmOperand>;
 def f32mem  : X86MemOperand<"printdwordmem",  X86Mem32AsmOperand>;
 def f64mem  : X86MemOperand<"printqwordmem",  X86Mem64AsmOperand>;
 def f80mem  : X86MemOperand<"printtbytemem",  X86Mem80AsmOperand>;
@@ -919,6 +920,7 @@ def PKU        : Predicate<"Subtarget->hasPKU()">;
 def HasVNNI    : Predicate<"Subtarget->hasVNNI()">;
 def HasVP2INTERSECT : Predicate<"Subtarget->hasVP2INTERSECT()">;
 def HasBF16      : Predicate<"Subtarget->hasBF16()">;
+def HasFP16      : Predicate<"Subtarget->hasFP16()">;
 def HasAVXVNNI : Predicate <"Subtarget->hasAVXVNNI()">;
 def NoVLX_Or_NoVNNI : Predicate<"!Subtarget->hasVLX() || !Subtarget->hasVNNI()">;
 
@@ -1193,6 +1195,7 @@ def loadi32 : PatFrag<(ops node:$ptr), (i32 (unindexedload node:$ptr)), [{
 }]>;
 
 def loadi64  : PatFrag<(ops node:$ptr), (i64 (load node:$ptr))>;
+def loadf16  : PatFrag<(ops node:$ptr), (f16 (load node:$ptr))>;
 def loadf32  : PatFrag<(ops node:$ptr), (f32 (load node:$ptr))>;
 def loadf64  : PatFrag<(ops node:$ptr), (f64 (load node:$ptr))>;
 def loadf80  : PatFrag<(ops node:$ptr), (f80 (load node:$ptr))>;

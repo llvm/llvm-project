@@ -1856,10 +1856,9 @@ struct DSEState {
                 memoryIsNotModifiedBetween(Malloc, MemSet, BatchAA, DL, &DT)) {
               IRBuilder<> IRB(Malloc);
               const auto &DL = Malloc->getModule()->getDataLayout();
-              AttributeList EmptyList;
-              if (auto *Calloc = emitCalloc(
-                      ConstantInt::get(IRB.getIntPtrTy(DL), 1),
-                      Malloc->getArgOperand(0), EmptyList, IRB, TLI)) {
+              if (auto *Calloc =
+                      emitCalloc(ConstantInt::get(IRB.getIntPtrTy(DL), 1),
+                                 Malloc->getArgOperand(0), IRB, TLI)) {
                 MemorySSAUpdater Updater(&MSSA);
                 auto *LastDef = cast<MemoryDef>(
                     Updater.getMemorySSA()->getMemoryAccess(Malloc));

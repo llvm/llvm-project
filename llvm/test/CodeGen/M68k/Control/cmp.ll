@@ -94,7 +94,7 @@ define i64 @test3(i64 %x) nounwind {
 define i64 @test4(i64 %x) nounwind {
 ; CHECK-LABEL: test4:
 ; CHECK:       ; %bb.0:
-; CHECK-NEXT:    sub.l #4, %sp
+; CHECK-NEXT:    suba.l #4, %sp
 ; CHECK-NEXT:    movem.l %d2, (0,%sp) ; 8-byte Folded Spill
 ; CHECK-NEXT:    move.l (8,%sp), %d1
 ; CHECK-NEXT:    move.l #0, %d0
@@ -105,7 +105,7 @@ define i64 @test4(i64 %x) nounwind {
 ; CHECK-NEXT:    and.l #255, %d1
 ; CHECK-NEXT:    and.l #1, %d1
 ; CHECK-NEXT:    movem.l (0,%sp), %d2 ; 8-byte Folded Reload
-; CHECK-NEXT:    add.l #4, %sp
+; CHECK-NEXT:    adda.l #4, %sp
 ; CHECK-NEXT:    rts
   %t = icmp slt i64 %x, 1
   %r = zext i1 %t to i64
@@ -115,17 +115,17 @@ define i64 @test4(i64 %x) nounwind {
 define i32 @test6() nounwind align 2 {
 ; CHECK-LABEL: test6:
 ; CHECK:       ; %bb.0:
-; CHECK-NEXT:    sub.l #20, %sp
+; CHECK-NEXT:    suba.l #20, %sp
 ; CHECK-NEXT:    move.l (12,%sp), %d0
 ; CHECK-NEXT:    or.l (8,%sp), %d0
 ; CHECK-NEXT:    beq .LBB5_1
 ; CHECK-NEXT:  ; %bb.2: ; %F
 ; CHECK-NEXT:    move.l #0, %d0
-; CHECK-NEXT:    add.l #20, %sp
+; CHECK-NEXT:    adda.l #20, %sp
 ; CHECK-NEXT:    rts
 ; CHECK-NEXT:  .LBB5_1: ; %T
 ; CHECK-NEXT:    move.l #1, %d0
-; CHECK-NEXT:    add.l #20, %sp
+; CHECK-NEXT:    adda.l #20, %sp
 ; CHECK-NEXT:    rts
   %A = alloca {i64, i64}, align 8
   %B = getelementptr inbounds {i64, i64}, {i64, i64}* %A, i64 0, i32 1
@@ -287,7 +287,7 @@ define void @test20(i32 %bf.load, i8 %x1, i8* %b_addr) {
 ; CHECK-LABEL: test20:
 ; CHECK:         .cfi_startproc
 ; CHECK-NEXT:  ; %bb.0:
-; CHECK-NEXT:    sub.l #4, %sp
+; CHECK-NEXT:    suba.l #4, %sp
 ; CHECK-NEXT:    .cfi_def_cfa_offset -8
 ; CHECK-NEXT:    movem.l %d2, (0,%sp) ; 8-byte Folded Spill
 ; CHECK-NEXT:    move.l #16777215, %d0
@@ -297,13 +297,13 @@ define void @test20(i32 %bf.load, i8 %x1, i8* %b_addr) {
 ; CHECK-NEXT:    move.l (16,%sp), %a0
 ; CHECK-NEXT:    move.b (15,%sp), %d2
 ; CHECK-NEXT:    and.l #255, %d2
-; CHECK-NEXT:    add.l %d1, %d2
+; CHECK-NEXT:    add.l %d2, %d1
 ; CHECK-NEXT:    sne (%a0)
 ; CHECK-NEXT:    cmpi.l #0, %d0
 ; CHECK-NEXT:    lea (d,%pc), %a0
 ; CHECK-NEXT:    sne (%a0)
 ; CHECK-NEXT:    movem.l (0,%sp), %d2 ; 8-byte Folded Reload
-; CHECK-NEXT:    add.l #4, %sp
+; CHECK-NEXT:    adda.l #4, %sp
 ; CHECK-NEXT:    rts
   %bf.shl = shl i32 %bf.load, 8
   %bf.ashr = ashr exact i32 %bf.shl, 8

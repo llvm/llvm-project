@@ -2120,11 +2120,12 @@ void CGOpenMPRuntime::emitParallelCall(CodeGenFunction &CGF, SourceLocation Loc,
     OutlinedFnArgs.append(CapturedVars.begin(), CapturedVars.end());
 
     // Ensure we do not inline the function. This is trivially true for the ones
-    // passed to __kmpc_fork_call but the ones calles in serialized regions
+    // passed to __kmpc_fork_call but the ones called in serialized regions
     // could be inlined. This is not a perfect but it is closer to the invariant
     // we want, namely, every data environment starts with a new function.
     // TODO: We should pass the if condition to the runtime function and do the
     //       handling there. Much cleaner code.
+    OutlinedFn->removeFnAttr(llvm::Attribute::AlwaysInline);
     OutlinedFn->addFnAttr(llvm::Attribute::NoInline);
     RT.emitOutlinedFunctionCall(CGF, Loc, OutlinedFn, OutlinedFnArgs);
 
@@ -4400,14 +4401,14 @@ CGOpenMPRuntime::emitTaskInit(CodeGenFunction &CGF, SourceLocation Loc,
     if (NumOfElements) {
       NumOfElements = CGF.Builder.CreateNUWAdd(
           llvm::ConstantInt::get(CGF.SizeTy, NumAffinities), NumOfElements);
-      OpaqueValueExpr OVE(
+      auto *OVE = new (C) OpaqueValueExpr(
           Loc,
           C.getIntTypeForBitwidth(C.getTypeSize(C.getSizeType()), /*Signed=*/0),
           VK_PRValue);
-      CodeGenFunction::OpaqueValueMapping OpaqueMap(CGF, &OVE,
+      CodeGenFunction::OpaqueValueMapping OpaqueMap(CGF, OVE,
                                                     RValue::get(NumOfElements));
       KmpTaskAffinityInfoArrayTy =
-          C.getVariableArrayType(KmpTaskAffinityInfoTy, &OVE, ArrayType::Normal,
+          C.getVariableArrayType(KmpTaskAffinityInfoTy, OVE, ArrayType::Normal,
                                  /*IndexTypeQuals=*/0, SourceRange(Loc, Loc));
       // Properly emit variable-sized array.
       auto *PD = ImplicitParamDecl::Create(C, KmpTaskAffinityInfoArrayTy,
@@ -4898,13 +4899,13 @@ std::pair<llvm::Value *, Address> CGOpenMPRuntime::emitDependClause(
       NumOfElements =
           CGF.Builder.CreateNUWAdd(NumOfRegularWithIterators, NumOfElements);
     }
-    OpaqueValueExpr OVE(Loc,
-                        C.getIntTypeForBitwidth(/*DestWidth=*/64, /*Signed=*/0),
-                        VK_PRValue);
-    CodeGenFunction::OpaqueValueMapping OpaqueMap(CGF, &OVE,
+    auto *OVE = new (C) OpaqueValueExpr(
+        Loc, C.getIntTypeForBitwidth(/*DestWidth=*/64, /*Signed=*/0),
+        VK_PRValue);
+    CodeGenFunction::OpaqueValueMapping OpaqueMap(CGF, OVE,
                                                   RValue::get(NumOfElements));
     KmpDependInfoArrayTy =
-        C.getVariableArrayType(KmpDependInfoTy, &OVE, ArrayType::Normal,
+        C.getVariableArrayType(KmpDependInfoTy, OVE, ArrayType::Normal,
                                /*IndexTypeQuals=*/0, SourceRange(Loc, Loc));
     // CGF.EmitVariablyModifiedType(KmpDependInfoArrayTy);
     // Properly emit variable-sized array.

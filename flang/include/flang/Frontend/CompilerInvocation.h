@@ -184,8 +184,7 @@ public:
     useAnalyzedObjectsForUnparse_ = flag;
   }
 
-  /// Set the Fortran options to predifined defaults. These defaults are
-  /// consistend with f18/f18.cpp.
+  /// Set the Fortran options to predefined defaults.
   // TODO: We should map frontendOpts_ to parserOpts_ instead. For that, we
   // need to extend frontendOpts_ first. Next, we need to add the corresponding
   // compiler driver options in libclangDriver.

@@ -123,6 +123,7 @@ static void initialize(TargetLibraryInfoImpl &TLI, const Triple &T,
 
   // Set IO unlocked variants as unavailable
   // Set them as available per system below
+  TLI.setUnavailable(LibFunc_getc_unlocked);
   TLI.setUnavailable(LibFunc_getchar_unlocked);
   TLI.setUnavailable(LibFunc_putc_unlocked);
   TLI.setUnavailable(LibFunc_putchar_unlocked);
@@ -587,6 +588,11 @@ static void initialize(TargetLibraryInfoImpl &TLI, const Triple &T,
     TLI.setAvailable(LibFunc_fwrite_unlocked);
     TLI.setAvailable(LibFunc_fputs_unlocked);
     TLI.setAvailable(LibFunc_fgets_unlocked);
+  }
+
+  if (T.isAndroid() && T.isAndroidVersionLT(21)) {
+    TLI.setUnavailable(LibFunc_stpcpy);
+    TLI.setUnavailable(LibFunc_stpncpy);
   }
 
   // As currently implemented in clang, NVPTX code has no standard library to

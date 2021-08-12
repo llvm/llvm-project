@@ -75,16 +75,15 @@ define i64 @sbclr_i64(i64 %a, i64 %b) nounwind {
 ;
 ; RV32IB-LABEL: sbclr_i64:
 ; RV32IB:       # %bb.0:
-; RV32IB-NEXT:    andi a3, a2, 63
-; RV32IB-NEXT:    addi a3, a3, -32
-; RV32IB-NEXT:    bset a4, zero, a3
-; RV32IB-NEXT:    slti a5, a3, 0
-; RV32IB-NEXT:    cmov a4, a5, zero, a4
-; RV32IB-NEXT:    bset a2, zero, a2
-; RV32IB-NEXT:    srai a3, a3, 31
-; RV32IB-NEXT:    and a2, a3, a2
-; RV32IB-NEXT:    andn a1, a1, a4
-; RV32IB-NEXT:    andn a0, a0, a2
+; RV32IB-NEXT:    bset a3, zero, a2
+; RV32IB-NEXT:    andi a2, a2, 63
+; RV32IB-NEXT:    addi a2, a2, -32
+; RV32IB-NEXT:    srai a4, a2, 31
+; RV32IB-NEXT:    and a3, a4, a3
+; RV32IB-NEXT:    slti a4, a2, 0
+; RV32IB-NEXT:    bclr a2, a1, a2
+; RV32IB-NEXT:    cmov a1, a4, a1, a2
+; RV32IB-NEXT:    andn a0, a0, a3
 ; RV32IB-NEXT:    ret
 ;
 ; RV32IBS-LABEL: sbclr_i64:

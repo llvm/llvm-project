@@ -102,7 +102,7 @@ define void @add_unique_ind32(i32* noalias nocapture %a, i64 %n) {
 ; CHECK-LABEL: @add_unique_ind32(
 ; CHECK:    vector.ph:
 ; CHECK:      %[[STEPVEC:.*]] = call <vscale x 4 x i32> @llvm.experimental.stepvector.nxv4i32()
-; CHECK-NEXT: %[[INDINIT:.*]] = shl <vscale x 4 x i32> %[[STEPVEC]], shufflevector (<vscale x 4 x i32> insertelement (<vscale x 4 x i32> undef, i32 1, i32 0), <vscale x 4 x i32> undef, <vscale x 4 x i32> zeroinitializer)
+; CHECK-NEXT: %[[INDINIT:.*]] = shl <vscale x 4 x i32> %[[STEPVEC]], shufflevector (<vscale x 4 x i32> insertelement (<vscale x 4 x i32> poison, i32 1, i32 0), <vscale x 4 x i32> poison, <vscale x 4 x i32> zeroinitializer)
 ; CHECK-NEXT: %[[VSCALE:.*]] = call i32 @llvm.vscale.i32()
 ; CHECK-NEXT: %[[INC:.*]] = shl i32 %[[VSCALE]], 3
 ; CHECK-NEXT: %[[TMP:.*]] = insertelement <vscale x 4 x i32> poison, i32 %[[INC]], i32 0

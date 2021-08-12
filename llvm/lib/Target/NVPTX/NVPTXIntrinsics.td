@@ -7578,6 +7578,7 @@ class WMMA_REGINFO<WMMA_REGS r, string op>
     !eq(ptx_elt_type, "bf16") : Int32Regs,
     !eq(ptx_elt_type, "tf32") : Int32Regs,
     !eq(ptx_elt_type, "s32") : Int32Regs,
+    !eq(ptx_elt_type, "b16") : Int32Regs,
     !eq(ptx_elt_type, "s8") : Int32Regs,
     !eq(ptx_elt_type, "u8") : Int32Regs,
     !eq(ptx_elt_type, "s4") : Int32Regs,
@@ -7661,7 +7662,11 @@ class WMMA_REGINFO<WMMA_REGS r, string op>
              !eq(geom, "m16n8k64"),
              !eq(geom, "m8n8k128"),
              !eq(geom, "m16n8k128"),
-             !eq(geom, "m16n8k256"))) : [hasSM80, hasPTX70]);
+             !eq(geom, "m16n8k256"))) : [hasSM80, hasPTX70],
+
+    !and(!eq(op,"ldmatrix"),
+         !eq(ptx_elt_type,"b16"),
+         !eq(geom, "m8n8")) : [hasSM75, hasPTX65]);
 
   // template DAGs for instruction inputs/output.
   dag Outs = !dag(outs, ptx_regs, reg_names);
@@ -7910,6 +7915,44 @@ defset list<WMMA_INSTR> MMAs  = {
   } // layout_a
 } // defset
 
+//
+// ldmatrix.sync.aligned.m8n8[|.trans][|.shared].b16
+//
+class LDMATRIX<WMMA_REGINFO Frag, bit Transposed, string Space,
+               DAGOperand SrcOp>
+  : WMMA_INSTR<LDMATRIX_NAME<Frag, Transposed>.record, [(ins SrcOp:$src)]>,
+    Requires<Frag.Predicates> {
+  // Build PatFrag that only matches particular address space.
+  PatFrag IntrFrag = PatFrag<(ops node:$src), (Intr node:$src),
+                             !cond(!eq(Space, ".shared"): AS_match.shared,
+                                   true: AS_match.generic)>;
+  // Build AS-constrained pattern.
+  let IntrinsicPattern = BuildPatternPF<IntrFrag, Args>.ret;
+
+  let OutOperandList = Frag.Outs;
+  let InOperandList = !con(Args, (ins MmaCode:$ptx));
+  let AsmString = "ldmatrix.sync.aligned."
+                  # Frag.geom
+                  # "." # Frag.frag
+                  # !if(Transposed, ".trans", "")
+                  # Space
+                  # "." # Frag.ptx_elt_type
+                  # " " # Frag.regstring # ", [$src];";
+}
+
+// Create all ldmatrix variants
+defset list<WMMA_INSTR> LDMATRIXs  = {
+  foreach transposed = [false, true] in {
+    foreach space = [".shared", ""] in {
+      foreach addr = [imem, Int32Regs, Int64Regs, MEMri, MEMri64] in {
+        foreach frag = NVVM_MMA_OPS.all_ldmatrix_ops in
+          if NVVM_LDMATRIX_SUPPORTED<frag>.ret then
+            def : LDMATRIX<WMMA_REGINFO<frag, "ldmatrix">, transposed, space,
+                            addr>;
+      } // addr
+    } // space
+  } // transposed
+} // defset
 
 // Constructing non-flat DAGs is still a pain. I can't !subst a dag node with a
 // dag, so the ptx.version must be appended *after* foreach replaces 'ins' with
@@ -7921,5 +7964,5 @@ class MMA_PAT<WMMA_INSTR wi>
         Requires<wi.Predicates>;
 
 // Build intrinsic->instruction patterns for all MMA instructions.
-foreach mma = !listconcat(MMAs, WMMAs, MMA_LDSTs) in
+foreach mma = !listconcat(MMAs, WMMAs, MMA_LDSTs, LDMATRIXs) in
   def : MMA_PAT<mma>;

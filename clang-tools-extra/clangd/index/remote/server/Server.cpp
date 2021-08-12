@@ -6,7 +6,7 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "Features.h"
+#include "Feature.h"
 #include "Index.pb.h"
 #include "MonitoringService.grpc.pb.h"
 #include "MonitoringService.pb.h"

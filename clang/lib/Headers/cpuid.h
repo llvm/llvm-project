@@ -195,6 +195,7 @@
 #define bit_PCONFIG       0x00040000
 #define bit_IBT           0x00100000
 #define bit_AMXBF16       0x00400000
+#define bit_AVX512FP16    0x00800000
 #define bit_AMXTILE       0x01000000
 #define bit_AMXINT8       0x02000000
 

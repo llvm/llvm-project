@@ -90,7 +90,7 @@ void SBStream::RedirectToFile(const char *path, bool append) {
       local_data = std::string(
           static_cast<StreamString *>(m_opaque_up.get())->GetString());
   }
-  auto open_options = File::eOpenOptionWrite | File::eOpenOptionCanCreate;
+  auto open_options = File::eOpenOptionWriteOnly | File::eOpenOptionCanCreate;
   if (append)
     open_options |= File::eOpenOptionAppend;
   else

@@ -1460,15 +1460,6 @@ static bool isTargetEnvironment(const TargetInfo &TI,
   return TI.getTriple().getEnvironment() == Env.getEnvironment();
 }
 
-static void remapMacroPath(
-    SmallString<256> &Path,
-    const std::map<std::string, std::string, std::greater<std::string>>
-        &MacroPrefixMap) {
-  for (const auto &Entry : MacroPrefixMap)
-    if (llvm::sys::path::replace_path_prefix(Path, Entry.first, Entry.second))
-      break;
-}
-
 /// ExpandBuiltinMacro - If an identifier token is read that is to be expanded
 /// as a builtin macro, handle it and return the next token as 'Tok'.
 void Preprocessor::ExpandBuiltinMacro(Token &Tok) {
@@ -1550,7 +1541,7 @@ void Preprocessor::ExpandBuiltinMacro(Token &Tok) {
       } else {
         FN += PLoc.getFilename();
       }
-      remapMacroPath(FN, PPOpts->MacroPrefixMap);
+      getLangOpts().remapPathPrefix(FN);
       Lexer::Stringify(FN);
       OS << '"' << FN << '"';
     }

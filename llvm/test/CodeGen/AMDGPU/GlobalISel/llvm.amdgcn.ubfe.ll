@@ -399,8 +399,7 @@ define amdgpu_kernel void @bfe_u32_test_4(i32 addrspace(1)* %out, i32 addrspace(
 ; GFX6-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX6-NEXT:    s_load_dword s0, s[0:1], 0x0
 ; GFX6-NEXT:    s_waitcnt lgkmcnt(0)
-; GFX6-NEXT:    s_lshl_b32 s0, s0, 31
-; GFX6-NEXT:    s_lshr_b32 s0, s0, 31
+; GFX6-NEXT:    s_bfe_u32 s0, s0, 0x10000
 ; GFX6-NEXT:    s_bfe_u32 s0, s0, 0x1001f
 ; GFX6-NEXT:    v_mov_b32_e32 v0, s0
 ; GFX6-NEXT:    buffer_store_dword v0, off, s[4:7], 0
@@ -1059,8 +1058,7 @@ define amdgpu_kernel void @shl_lshr(i32 addrspace(1)* %out, i32 %a) #0 {
 ; GFX6-NEXT:    s_mov_b32 s6, -1
 ; GFX6-NEXT:    s_mov_b32 s7, 0xf000
 ; GFX6-NEXT:    s_waitcnt lgkmcnt(0)
-; GFX6-NEXT:    s_lshl_b32 s0, s0, 9
-; GFX6-NEXT:    s_lshr_b32 s0, s0, 11
+; GFX6-NEXT:    s_bfe_u32 s0, s0, 0x150002
 ; GFX6-NEXT:    v_mov_b32_e32 v0, s0
 ; GFX6-NEXT:    buffer_store_dword v0, off, s[4:7], 0
 ; GFX6-NEXT:    s_endpgm

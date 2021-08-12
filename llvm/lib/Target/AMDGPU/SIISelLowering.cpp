@@ -23,6 +23,7 @@
 #include "llvm/CodeGen/Analysis.h"
 #include "llvm/CodeGen/FunctionLoweringInfo.h"
 #include "llvm/CodeGen/GlobalISel/GISelKnownBits.h"
+#include "llvm/CodeGen/MachineFunction.h"
 #include "llvm/CodeGen/MachineLoopInfo.h"
 #include "llvm/IR/DiagnosticInfo.h"
 #include "llvm/IR/IntrinsicInst.h"
@@ -465,11 +466,15 @@ SITargetLowering::SITargetLowering(const TargetMachine &TM,
   if (!Subtarget->hasBCNT(64))
     setOperationAction(ISD::CTPOP, MVT::i64, Expand);
 
-  if (Subtarget->hasFFBH())
+  if (Subtarget->hasFFBH()) {
+    setOperationAction(ISD::CTLZ, MVT::i32, Custom);
     setOperationAction(ISD::CTLZ_ZERO_UNDEF, MVT::i32, Custom);
+  }
 
-  if (Subtarget->hasFFBL())
+  if (Subtarget->hasFFBL()) {
+    setOperationAction(ISD::CTTZ, MVT::i32, Custom);
     setOperationAction(ISD::CTTZ_ZERO_UNDEF, MVT::i32, Custom);
+  }
 
   // We only really have 32-bit BFE instructions (and 16-bit on VI).
   //
@@ -1423,7 +1428,7 @@ bool SITargetLowering::isLegalAddressingMode(const DataLayout &DL,
 }
 
 bool SITargetLowering::canMergeStoresTo(unsigned AS, EVT MemVT,
-                                        const SelectionDAG &DAG) const {
+                                        const MachineFunction &MF) const {
   if (AS == AMDGPUAS::GLOBAL_ADDRESS || AS == AMDGPUAS::FLAT_ADDRESS) {
     return (MemVT.getSizeInBits() <= 4 * 32);
   } else if (AS == AMDGPUAS::PRIVATE_ADDRESS) {

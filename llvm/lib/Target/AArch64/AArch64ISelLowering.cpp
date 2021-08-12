@@ -905,6 +905,7 @@ AArch64TargetLowering::AArch64TargetLowering(const TargetMachine &TM,
   setTargetDAGCombine(ISD::SIGN_EXTEND_INREG);
   setTargetDAGCombine(ISD::TRUNCATE);
   setTargetDAGCombine(ISD::CONCAT_VECTORS);
+  setTargetDAGCombine(ISD::INSERT_SUBVECTOR);
   setTargetDAGCombine(ISD::STORE);
   if (Subtarget->supportsAddressTopByteIgnored())
     setTargetDAGCombine(ISD::LOAD);
@@ -1272,6 +1273,7 @@ AArch64TargetLowering::AArch64TargetLowering(const TargetMachine &TM,
       setOperationAction(ISD::SPLAT_VECTOR, VT, Custom);
       setOperationAction(ISD::SELECT, VT, Custom);
       setOperationAction(ISD::FADD, VT, Custom);
+      setOperationAction(ISD::FCOPYSIGN, VT, Custom);
       setOperationAction(ISD::FDIV, VT, Custom);
       setOperationAction(ISD::FMA, VT, Custom);
       setOperationAction(ISD::FMAXIMUM, VT, Custom);
@@ -4359,8 +4361,13 @@ SDValue AArch64TargetLowering::LowerMGATHER(SDValue Op,
   if (IsFixedLength) {
     assert(Subtarget->useSVEForFixedLengthVectors() &&
            "Cannot lower when not using SVE for fixed vectors");
-    IndexVT = getContainerForFixedLengthVector(DAG, IndexVT);
-    MemVT = IndexVT.changeVectorElementType(MemVT.getVectorElementType());
+    if (MemVT.getScalarSizeInBits() <= IndexVT.getScalarSizeInBits()) {
+      IndexVT = getContainerForFixedLengthVector(DAG, IndexVT);
+      MemVT = IndexVT.changeVectorElementType(MemVT.getVectorElementType());
+    } else {
+      MemVT = getContainerForFixedLengthVector(DAG, MemVT);
+      IndexVT = MemVT.changeTypeToInteger();
+    }
     InputVT = DAG.getValueType(MemVT.changeTypeToInteger());
     Mask = DAG.getNode(
         ISD::ZERO_EXTEND, DL,
@@ -4459,8 +4466,13 @@ SDValue AArch64TargetLowering::LowerMSCATTER(SDValue Op,
   if (IsFixedLength) {
     assert(Subtarget->useSVEForFixedLengthVectors() &&
            "Cannot lower when not using SVE for fixed vectors");
-    IndexVT = getContainerForFixedLengthVector(DAG, IndexVT);
-    MemVT = IndexVT.changeVectorElementType(MemVT.getVectorElementType());
+    if (MemVT.getScalarSizeInBits() <= IndexVT.getScalarSizeInBits()) {
+      IndexVT = getContainerForFixedLengthVector(DAG, IndexVT);
+      MemVT = IndexVT.changeVectorElementType(MemVT.getVectorElementType());
+    } else {
+      MemVT = getContainerForFixedLengthVector(DAG, MemVT);
+      IndexVT = MemVT.changeTypeToInteger();
+    }
     InputVT = DAG.getValueType(MemVT.changeTypeToInteger());
 
     StoreVal =
@@ -6984,6 +6996,30 @@ SDValue AArch64TargetLowering::LowerFCOPYSIGN(SDValue Op,
   SDValue In1 = Op.getOperand(0);
   SDValue In2 = Op.getOperand(1);
   EVT SrcVT = In2.getValueType();
+
+  if (VT.isScalableVector()) {
+    if (VT != SrcVT)
+      return SDValue();
+
+    // copysign(x,y) -> (y & SIGN_MASK) | (x & ~SIGN_MASK)
+    //
+    // A possible alternative sequence involves using FNEG_MERGE_PASSTHRU;
+    // maybe useful for copysign operations with mismatched VTs.
+    //
+    // IntVT here is chosen so it's a legal type with the same element width
+    // as the input.
+    EVT IntVT =
+        getPackedSVEVectorVT(VT.getVectorElementType().changeTypeToInteger());
+    unsigned NumBits = VT.getScalarSizeInBits();
+    SDValue SignMask = DAG.getConstant(APInt::getSignMask(NumBits), DL, IntVT);
+    SDValue InvSignMask = DAG.getNOT(DL, SignMask, IntVT);
+    SDValue Sign = DAG.getNode(ISD::AND, DL, IntVT, SignMask,
+                               getSVESafeBitCast(IntVT, In2, DAG));
+    SDValue Magnitude = DAG.getNode(ISD::AND, DL, IntVT, InvSignMask,
+                                    getSVESafeBitCast(IntVT, In1, DAG));
+    SDValue IntResult = DAG.getNode(ISD::OR, DL, IntVT, Sign, Magnitude);
+    return getSVESafeBitCast(VT, IntResult, DAG);
+  }
 
   if (SrcVT.bitsLT(VT))
     In2 = DAG.getNode(ISD::FP_EXTEND, DL, VT, In2);
@@ -11610,7 +11646,7 @@ bool AArch64TargetLowering::shouldSinkOperands(
     // can sink them too.
     auto Ext1 = cast<Instruction>(I->getOperand(0));
     auto Ext2 = cast<Instruction>(I->getOperand(1));
-    if (areExtractShuffleVectors(Ext1, Ext2)) {
+    if (areExtractShuffleVectors(Ext1->getOperand(0), Ext2->getOperand(0))) {
       Ops.push_back(&Ext1->getOperandUse(0));
       Ops.push_back(&Ext2->getOperandUse(0));
     }
@@ -13615,6 +13651,48 @@ static SDValue performConcatVectorsCombine(SDNode *N,
                      DAG.getNode(ISD::CONCAT_VECTORS, dl, ConcatTy,
                                  DAG.getNode(ISD::BITCAST, dl, RHSTy, N0),
                                  RHS));
+}
+
+static SDValue
+performInsertSubvectorCombine(SDNode *N, TargetLowering::DAGCombinerInfo &DCI,
+                              SelectionDAG &DAG) {
+  SDValue Vec = N->getOperand(0);
+  SDValue SubVec = N->getOperand(1);
+  uint64_t IdxVal = N->getConstantOperandVal(2);
+  EVT VecVT = Vec.getValueType();
+  EVT SubVT = SubVec.getValueType();
+
+  // Only do this for legal fixed vector types.
+  if (!VecVT.isFixedLengthVector() ||
+      !DAG.getTargetLoweringInfo().isTypeLegal(VecVT) ||
+      !DAG.getTargetLoweringInfo().isTypeLegal(SubVT))
+    return SDValue();
+
+  // Ignore widening patterns.
+  if (IdxVal == 0 && Vec.isUndef())
+    return SDValue();
+
+  // Subvector must be half the width and an "aligned" insertion.
+  unsigned NumSubElts = SubVT.getVectorNumElements();
+  if ((SubVT.getSizeInBits() * 2) != VecVT.getSizeInBits() ||
+      (IdxVal != 0 && IdxVal != NumSubElts))
+    return SDValue();
+
+  // Fold insert_subvector -> concat_vectors
+  // insert_subvector(Vec,Sub,lo) -> concat_vectors(Sub,extract(Vec,hi))
+  // insert_subvector(Vec,Sub,hi) -> concat_vectors(extract(Vec,lo),Sub)
+  SDLoc DL(N);
+  SDValue Lo, Hi;
+  if (IdxVal == 0) {
+    Lo = SubVec;
+    Hi = DAG.getNode(ISD::EXTRACT_SUBVECTOR, DL, SubVT, Vec,
+                     DAG.getVectorIdxConstant(NumSubElts, DL));
+  } else {
+    Lo = DAG.getNode(ISD::EXTRACT_SUBVECTOR, DL, SubVT, Vec,
+                     DAG.getVectorIdxConstant(0, DL));
+    Hi = SubVec;
+  }
+  return DAG.getNode(ISD::CONCAT_VECTORS, DL, VecVT, Lo, Hi);
 }
 
 static SDValue tryCombineFixedPointConvert(SDNode *N,
@@ -16673,6 +16751,8 @@ SDValue AArch64TargetLowering::PerformDAGCombine(SDNode *N,
     return performVectorTruncateCombine(N, DCI, DAG);
   case ISD::CONCAT_VECTORS:
     return performConcatVectorsCombine(N, DCI, DAG);
+  case ISD::INSERT_SUBVECTOR:
+    return performInsertSubvectorCombine(N, DCI, DAG);
   case ISD::SELECT:
     return performSelectCombine(N, DCI);
   case ISD::VSELECT:

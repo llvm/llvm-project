@@ -10,7 +10,7 @@ add_fp_unittest(
   DEPENDS
     libc.include.math
     libc.src.math.sqrtf
-    libc.utils.FPUtil.fputil
+    libc.src.__support.FPUtil.fputil
 )
 
 add_fp_unittest(
@@ -23,7 +23,7 @@ add_fp_unittest(
   DEPENDS
     libc.include.math
     libc.src.math.sinf
-    libc.utils.FPUtil.fputil
+    libc.src.__support.FPUtil.fputil
 )
 
 add_fp_unittest(
@@ -36,7 +36,7 @@ add_fp_unittest(
   DEPENDS
     libc.include.math
     libc.src.math.cosf
-    libc.utils.FPUtil.fputil
+    libc.src.__support.FPUtil.fputil
 )
 
 add_fp_unittest(
@@ -49,5 +49,5 @@ add_fp_unittest(
   DEPENDS
     libc.include.math
     libc.src.math.expm1f
-    libc.utils.FPUtil.fputil
+    libc.src.__support.FPUtil.fputil
 )

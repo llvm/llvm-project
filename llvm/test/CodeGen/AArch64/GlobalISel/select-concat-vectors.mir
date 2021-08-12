@@ -67,3 +67,52 @@ body:             |
     RET_ReallyLR implicit $q0
 
 ...
+---
+name:            select_v16s8_v8s8_undef
+legalized:       true
+regBankSelected: true
+tracksRegLiveness: true
+body:             |
+  bb.0:
+    liveins: $q0
+
+    ; CHECK-LABEL: name: select_v16s8_v8s8_undef
+    ; CHECK: liveins: $q0
+    ; CHECK: %a:fpr64 = IMPLICIT_DEF
+    ; CHECK: [[DEF:%[0-9]+]]:fpr128 = IMPLICIT_DEF
+    ; CHECK: %concat:fpr128 = INSERT_SUBREG [[DEF]], %a, %subreg.dsub
+    ; CHECK: $q0 = COPY %concat
+    ; CHECK: RET_ReallyLR implicit $q0
+    %a:fpr(<8 x s8>) = G_IMPLICIT_DEF
+    %b:fpr(<8 x s8>) = G_IMPLICIT_DEF
+    %concat:fpr(<16 x s8>) = G_CONCAT_VECTORS %a(<8 x s8>), %b(<8 x s8>)
+    $q0 = COPY %concat(<16 x s8>)
+    RET_ReallyLR implicit $q0
+
+...
+---
+name:            select_v16s8_v8s8_not_undef
+legalized:       true
+regBankSelected: true
+tracksRegLiveness: true
+body:             |
+  bb.0:
+    liveins: $q0, $d1
+    ; CHECK-LABEL: name: select_v16s8_v8s8_not_undef
+    ; CHECK: liveins: $q0, $d1
+    ; CHECK: %a:fpr64 = COPY $d0
+    ; CHECK: %b:fpr64 = COPY $d1
+    ; CHECK: [[DEF:%[0-9]+]]:fpr128 = IMPLICIT_DEF
+    ; CHECK: [[INSERT_SUBREG:%[0-9]+]]:fpr128 = INSERT_SUBREG [[DEF]], %b, %subreg.dsub
+    ; CHECK: [[DEF1:%[0-9]+]]:fpr128 = IMPLICIT_DEF
+    ; CHECK: [[INSERT_SUBREG1:%[0-9]+]]:fpr128 = INSERT_SUBREG [[DEF1]], %a, %subreg.dsub
+    ; CHECK: %concat:fpr128 = INSvi64lane [[INSERT_SUBREG1]], 1, [[INSERT_SUBREG]], 0
+    ; CHECK: $q0 = COPY %concat
+    ; CHECK: RET_ReallyLR implicit $q0
+    %a:fpr(<8 x s8>) = COPY $d0
+    %b:fpr(<8 x s8>) = COPY $d1
+    %concat:fpr(<16 x s8>) = G_CONCAT_VECTORS %a(<8 x s8>), %b(<8 x s8>)
+    $q0 = COPY %concat(<16 x s8>)
+    RET_ReallyLR implicit $q0
+
+...

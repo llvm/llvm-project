@@ -1314,6 +1314,18 @@ foreach vti = AllIntegerVectors in {
                  vti.RegClass:$merge, vti.RegClass:$rs2, vti.RegClass:$rs1,
                  vti.Mask:$vm, GPR:$vl, vti.Log2SEW)>;
 
+  def : Pat<(vti.Vector (riscv_vselect_vl (vti.Mask VMV0:$vm),
+                                          (riscv_vrgather_vx_vl
+                                            vti.RegClass:$rs2,
+                                            uimm5:$imm,
+                                            (vti.Mask true_mask),
+                                            VLOpFrag),
+                                          vti.RegClass:$merge,
+                                          VLOpFrag)),
+            (!cast<Instruction>("PseudoVRGATHER_VI_"# vti.LMul.MX#"_MASK")
+                 vti.RegClass:$merge, vti.RegClass:$rs2, uimm5:$imm,
+                 vti.Mask:$vm, GPR:$vl, vti.Log2SEW)>;
+
   // emul = lmul * 16 / sew
   defvar vlmul = vti.LMul;
   defvar octuple_lmul = vlmul.octuple;
@@ -1383,6 +1395,18 @@ foreach vti = AllFloatVectors in {
                                           VLOpFrag)),
             (!cast<Instruction>("PseudoVRGATHER_VV_"# vti.LMul.MX#"_MASK")
                  vti.RegClass:$merge, vti.RegClass:$rs2, vti.RegClass:$rs1,
+                 vti.Mask:$vm, GPR:$vl, vti.Log2SEW)>;
+
+  def : Pat<(vti.Vector (riscv_vselect_vl (vti.Mask VMV0:$vm),
+                                          (riscv_vrgather_vx_vl
+                                            vti.RegClass:$rs2,
+                                            uimm5:$imm,
+                                            (vti.Mask true_mask),
+                                            VLOpFrag),
+                                          vti.RegClass:$merge,
+                                          VLOpFrag)),
+            (!cast<Instruction>("PseudoVRGATHER_VI_"# vti.LMul.MX#"_MASK")
+                 vti.RegClass:$merge, vti.RegClass:$rs2, uimm5:$imm,
                  vti.Mask:$vm, GPR:$vl, vti.Log2SEW)>;
 
   defvar vlmul = vti.LMul;

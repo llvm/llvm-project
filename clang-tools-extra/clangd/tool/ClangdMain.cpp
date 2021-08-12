@@ -10,7 +10,7 @@
 #include "CodeComplete.h"
 #include "Config.h"
 #include "ConfigProvider.h"
-#include "Features.h"
+#include "Feature.h"
 #include "PathMapping.h"
 #include "Protocol.h"
 #include "TidyProvider.h"

@@ -587,14 +587,6 @@ void DwarfDebug::constructAbstractSubprogramScopeDIE(DwarfCompileUnit &SrcCU,
   }
 }
 
-DIE &DwarfDebug::constructSubprogramDefinitionDIE(const DISubprogram *SP) {
-  DICompileUnit *Unit = SP->getUnit();
-  assert(SP->isDefinition() && "Subprogram not a definition");
-  assert(Unit && "Subprogram definition without parent unit");
-  auto &CU = getOrCreateDwarfCompileUnit(Unit);
-  return *CU.getOrCreateSubprogramDIE(SP);
-}
-
 /// Represents a parameter whose call site value can be described by applying a
 /// debug expression to a register in the forwarded register worklist.
 struct FwdRegParamInfo {
@@ -945,7 +937,7 @@ void DwarfDebug::constructCallSiteEntryDIEs(const DISubprogram &SP,
         continue;
 
       unsigned CallReg = 0;
-      DIE *CalleeDIE = nullptr;
+      const DISubprogram *CalleeSP = nullptr;
       const Function *CalleeDecl = nullptr;
       if (CalleeOp.isReg()) {
         CallReg = CalleeOp.getReg();
@@ -955,19 +947,7 @@ void DwarfDebug::constructCallSiteEntryDIEs(const DISubprogram &SP,
         CalleeDecl = dyn_cast<Function>(CalleeOp.getGlobal());
         if (!CalleeDecl || !CalleeDecl->getSubprogram())
           continue;
-        const DISubprogram *CalleeSP = CalleeDecl->getSubprogram();
-
-        if (CalleeSP->isDefinition()) {
-          // Ensure that a subprogram DIE for the callee is available in the
-          // appropriate CU.
-          CalleeDIE = &constructSubprogramDefinitionDIE(CalleeSP);
-        } else {
-          // Create the declaration DIE if it is missing. This is required to
-          // support compilation of old bitcode with an incomplete list of
-          // retained metadata.
-          CalleeDIE = CU.getOrCreateSubprogramDIE(CalleeSP);
-        }
-        assert(CalleeDIE && "Must have a DIE for the callee");
+        CalleeSP = CalleeDecl->getSubprogram();
       }
 
       // TODO: Omit call site entries for runtime calls (objc_msgSend, etc).
@@ -1004,7 +984,7 @@ void DwarfDebug::constructCallSiteEntryDIEs(const DISubprogram &SP,
                         << (IsTail ? " [IsTail]" : "") << "\n");
 
       DIE &CallSiteDIE = CU.constructCallSiteEntryDIE(
-          ScopeDIE, CalleeDIE, IsTail, PCAddr, CallAddr, CallReg);
+          ScopeDIE, CalleeSP, IsTail, PCAddr, CallAddr, CallReg);
 
       // Optionally emit call-site-param debug info.
       if (emitDebugEntryValues()) {
@@ -1120,6 +1100,11 @@ DwarfDebug::getOrCreateDwarfCompileUnit(const DICompileUnit *DIUnit) {
     finishUnitAttributes(DIUnit, NewCU);
     NewCU.setSection(Asm->getObjFileLowering().getDwarfInfoSection());
   }
+
+  // Create DIEs for function declarations used for call site debug info.
+  for (auto Scope : DIUnit->getRetainedTypes())
+    if (auto *SP = dyn_cast_or_null<DISubprogram>(Scope))
+      NewCU.getOrCreateSubprogramDIE(SP);
 
   CUMap.insert({DIUnit, &NewCU});
   CUDieMap.insert({&NewCU.getUnitDie(), &NewCU});
