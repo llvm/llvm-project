@@ -973,3 +973,47 @@ define i8 @smax_uses(i8 %x, i8 %y, i8 %z) {
   %m3 = call i8 @llvm.smax.i8(i8 %m1, i8 %m2)
   ret i8 %m3
 }
+
+define i8 @umax_demand_lshr(i8 %x) {
+; CHECK-LABEL: @umax_demand_lshr(
+; CHECK-NEXT:    [[M:%.*]] = call i8 @llvm.umax.i8(i8 [[X:%.*]], i8 15)
+; CHECK-NEXT:    [[R:%.*]] = lshr i8 [[M]], 4
+; CHECK-NEXT:    ret i8 [[R]]
+;
+  %m = call i8 @llvm.umax.i8(i8 %x, i8 15)
+  %r = lshr i8 %m, 4
+  ret i8 %r
+}
+
+define i8 @umax_demand_and(i8 %x) {
+; CHECK-LABEL: @umax_demand_and(
+; CHECK-NEXT:    [[M:%.*]] = call i8 @llvm.umax.i8(i8 [[X:%.*]], i8 1)
+; CHECK-NEXT:    [[R:%.*]] = and i8 [[M]], 10
+; CHECK-NEXT:    ret i8 [[R]]
+;
+  %m = call i8 @llvm.umax.i8(i8 1, i8 %x)
+  %r = and i8 %m, 10
+  ret i8 %r
+}
+
+define i8 @umin_demand_or_31_30(i8 %x) {
+; CHECK-LABEL: @umin_demand_or_31_30(
+; CHECK-NEXT:    [[M:%.*]] = call i8 @llvm.umin.i8(i8 [[X:%.*]], i8 -30)
+; CHECK-NEXT:    [[R:%.*]] = or i8 [[M]], 31
+; CHECK-NEXT:    ret i8 [[R]]
+;
+  %m = call i8 @llvm.umin.i8(i8 -30, i8 %x)
+  %r = or i8 %m, 31
+  ret i8 %r
+}
+
+define i8 @umin_demand_and_7_8(i8 %x) {
+; CHECK-LABEL: @umin_demand_and_7_8(
+; CHECK-NEXT:    [[M:%.*]] = call i8 @llvm.umin.i8(i8 [[X:%.*]], i8 -7)
+; CHECK-NEXT:    [[R:%.*]] = and i8 [[M]], -8
+; CHECK-NEXT:    ret i8 [[R]]
+;
+  %m = call i8 @llvm.umin.i8(i8 %x, i8 -7)
+  %r = and i8 %m, -8
+  ret i8 %r
+}
