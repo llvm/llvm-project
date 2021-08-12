@@ -10,12 +10,15 @@
 #include "flang/Frontend/CompilerInstance.h"
 #include "flang/Frontend/FrontendActions.h"
 #include "flang/Frontend/FrontendOptions.h"
+#include "flang/Frontend/FrontendPluginRegistry.h"
 #include "flang/FrontendTool/Utils.h"
 #include "clang/Basic/DiagnosticFrontend.h"
 #include "llvm/Support/Errc.h"
 #include "llvm/Support/VirtualFileSystem.h"
 
 using namespace Fortran::frontend;
+
+LLVM_INSTANTIATE_REGISTRY(FrontendPluginRegistry)
 
 void FrontendAction::set_currentInput(const FrontendInputFile &currentInput) {
   this->currentInput_ = currentInput;

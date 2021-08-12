@@ -30,6 +30,8 @@ config.suffixes = ['.c', '.cpp', '.f', '.F', '.ff', '.FOR', '.for', '.f77', '.f9
                    '.CUF', '.f18', '.F18', '.fir', '.f03', '.F03', '.f08', '.F08']
 
 config.substitutions.append(('%PATH%', config.environment['PATH']))
+config.substitutions.append(('%llvmshlibdir', config.llvm_shlib_dir))
+config.substitutions.append(('%pluginext', config.llvm_plugin_ext))
 
 llvm_config.use_default_substitutions()
 
@@ -41,6 +43,14 @@ config.excludes = ['Inputs', 'CMakeLists.txt', 'README.txt', 'LICENSE.txt']
 # If the new Flang driver is enabled, add the corresponding feature to
 # config.
 config.available_features.add('new-flang-driver')
+
+# If the flang examples are built, add examples to the config
+if config.flang_examples:
+    config.available_features.add('examples')
+
+# Plugins (loadable modules)
+if config.has_plugins:
+    config.available_features.add('plugins')
 
 # test_source_root: The root path where tests are located.
 config.test_source_root = os.path.dirname(__file__)

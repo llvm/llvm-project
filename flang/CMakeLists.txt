@@ -390,6 +390,8 @@ if (FLANG_BUILD_TOOLS)
   add_subdirectory(tools)
 endif()
 add_subdirectory(runtime)
+
+option(FLANG_BUILD_EXAMPLES "Build Flang example programs by default." OFF)
 add_subdirectory(examples)
 
 if (FLANG_INCLUDE_TESTS)
