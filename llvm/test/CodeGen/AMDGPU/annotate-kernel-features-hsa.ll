@@ -520,7 +520,7 @@ attributes #1 = { nounwind }
 ; AKF_HSA: attributes #[[ATTR12]] = { nounwind "amdgpu-kernarg-segment-ptr" }
 ; AKF_HSA: attributes #[[ATTR13]] = { nounwind "amdgpu-stack-objects" }
 ;.
-; ATTRIBUTOR_HSA: attributes #[[ATTR0:[0-9]+]] = { nounwind readnone speculatable willreturn "uniform-work-group-size"="false" }
+; ATTRIBUTOR_HSA: attributes #[[ATTR0:[0-9]+]] = { nounwind readnone speculatable willreturn }
 ; ATTRIBUTOR_HSA: attributes #[[ATTR1]] = { nounwind "uniform-work-group-size"="false" }
 ; ATTRIBUTOR_HSA: attributes #[[ATTR2]] = { nounwind "amdgpu-work-group-id-y" "uniform-work-group-size"="false" }
 ; ATTRIBUTOR_HSA: attributes #[[ATTR3]] = { nounwind "amdgpu-work-group-id-z" "uniform-work-group-size"="false" }
