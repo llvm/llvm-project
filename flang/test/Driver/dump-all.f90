@@ -1,4 +1,3 @@
-! REQUIRES: new-flang-driver
 
 !----------
 ! RUN lines

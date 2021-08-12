@@ -2,7 +2,7 @@
 ! Also check that when a plugin name isn't found, the error diagnostic is correct
 ! This requires that the examples are built (FLANG_BUILD_EXAMPLES=ON)
 
-! REQUIRES: new-flang-driver, plugins, examples, shell
+! REQUIRES: plugins, examples, shell
 
 ! RUN: %flang_fc1 -load %llvmshlibdir/flangHelloWorldPlugin%pluginext -plugin -hello-world %s 2>&1 | FileCheck %s
 ! CHECK: Hello World from your new Flang plugin

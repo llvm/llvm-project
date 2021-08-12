@@ -40,10 +40,6 @@ llvm_config.use_default_substitutions()
 # directories.
 config.excludes = ['Inputs', 'CMakeLists.txt', 'README.txt', 'LICENSE.txt']
 
-# If the new Flang driver is enabled, add the corresponding feature to
-# config.
-config.available_features.add('new-flang-driver')
-
 # If the flang examples are built, add examples to the config
 if config.flang_examples:
     config.available_features.add('examples')

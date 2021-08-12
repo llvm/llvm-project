@@ -5,8 +5,6 @@
 ! (compile?  preprocess? link?). The frontend driver (flang-new -fc1) simply
 ! assumes that "no explicit input == read from stdin"
 
-! REQUIRES: new-flang-driver
-
 !--------------------------
 ! FLANG DRIVER (flang-new)
 !--------------------------

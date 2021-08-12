@@ -1,8 +1,6 @@
 ! Make sure that frontend driver options that require arguments are
 ! correctly rejected when the argument value is missing.
 
-! REQUIRES: new-flang-driver
-
 !-----------
 ! RUN lines
 !-----------
