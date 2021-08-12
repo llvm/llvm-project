@@ -216,7 +216,7 @@ def conv_2d_nhwc_hwcf_q(
            ]) - cast(U, IZp)) * (cast(U, K[D.kh, D.kw, D.c, D.f]) - cast(U, KZp))
 
 @linalg_structured_op
-def depthwise_conv2D_nchw(
+def depthwise_conv2D_nhwc(
     I=TensorDef(T1, S.N, S.IH, S.IW, S.IC),
     K=TensorDef(T2, S.KH, S.KW, S.IC, S.CM),
     O=TensorDef(U, S.N, S.OH, S.OW, S.IC, S.CM, output=True),
@@ -233,7 +233,7 @@ def depthwise_conv2D_nchw(
            D.ic]) * cast(U, K[D.kh, D.kw, D.ic, D.cm])
 
 @linalg_structured_op
-def depthwise_conv2D_nchw_q(
+def depthwise_conv2D_nhwc_q(
     I=TensorDef(T1, S.N, S.IH, S.IW, S.IC),
     K=TensorDef(T2, S.KH, S.KW, S.IC, S.CM),
     IZp=ScalarDef(I32),

@@ -988,8 +988,8 @@ structured_op: !LinalgStructuredOpConfig
                       scalar_arg: KZp
 --- !LinalgOpConfig
 metadata: !LinalgOpMetadata
-  name: depthwise_conv2D_nchw
-  cpp_class_name: DepthwiseConv2DNchwOp
+  name: depthwise_conv2D_nhwc
+  cpp_class_name: DepthwiseConv2DNhwcOp
   doc: |-
     Performs depth-wise 2-D convolution.
 
@@ -1070,8 +1070,8 @@ structured_op: !LinalgStructuredOpConfig
                   scalar_arg: K
 --- !LinalgOpConfig
 metadata: !LinalgOpMetadata
-  name: depthwise_conv2D_nchw_q
-  cpp_class_name: DepthwiseConv2DNchwQOp
+  name: depthwise_conv2D_nhwc_q
+  cpp_class_name: DepthwiseConv2DNhwcQOp
   doc: |-
     Performs depth-wise 2-D convolution.
 
