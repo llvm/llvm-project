@@ -17,7 +17,7 @@
 
 // Initialized with a 64-bit mask with bits set in positions less than the
 // thread's lane number in the warp
-DEVICE __kmpc_impl_lanemask_t __kmpc_impl_lanemask_lt() {
+EXTERN __kmpc_impl_lanemask_t __kmpc_impl_lanemask_lt() {
   uint32_t lane = GetLaneId();
   int64_t ballot = __kmpc_impl_activemask();
   uint64_t mask = ((uint64_t)1 << lane) - (uint64_t)1;
@@ -26,7 +26,7 @@ DEVICE __kmpc_impl_lanemask_t __kmpc_impl_lanemask_lt() {
 
 // Initialized with a 64-bit mask with bits set in positions greater than the
 // thread's lane number in the warp
-DEVICE __kmpc_impl_lanemask_t __kmpc_impl_lanemask_gt() {
+EXTERN __kmpc_impl_lanemask_t __kmpc_impl_lanemask_gt() {
   uint32_t lane = GetLaneId();
   if (lane == (WARPSIZE - 1))
     return 0;
@@ -35,9 +35,9 @@ DEVICE __kmpc_impl_lanemask_t __kmpc_impl_lanemask_gt() {
   return mask & ballot;
 }
 
-DEVICE double __kmpc_impl_get_wtick() { return ((double)1E-9); }
+EXTERN double __kmpc_impl_get_wtick() { return ((double)1E-9); }
 
-DEVICE double __kmpc_impl_get_wtime() {
+EXTERN double __kmpc_impl_get_wtime() {
 #if __gfx700__ || __gfx701__ || __gfx702__
   uint64_t t = __builtin_amdgcn_s_memtime();
 #else
@@ -47,11 +47,11 @@ DEVICE double __kmpc_impl_get_wtime() {
 }
 
 // Warp vote function
-DEVICE __kmpc_impl_lanemask_t __kmpc_impl_activemask() {
+EXTERN __kmpc_impl_lanemask_t __kmpc_impl_activemask() {
   return __builtin_amdgcn_read_exec();
 }
 
-DEVICE int32_t __kmpc_impl_shfl_down_sync(__kmpc_impl_lanemask_t, int32_t var,
+EXTERN int32_t __kmpc_impl_shfl_down_sync(__kmpc_impl_lanemask_t, int32_t var,
                                           uint32_t laneDelta, int32_t width) {
   int self = GetLaneId();
   int index = self + laneDelta;
@@ -68,9 +68,9 @@ uint32_t __kmpc_L1_Barrier [[clang::loader_uninitialized]];
 // with the kernel. Dropping the static qualifier for now.
 
 // static
-DEVICE  uint32_t SHARED(L1_Barrier);
+EXTERN  uint32_t SHARED(L1_Barrier);
 
-DEVICE void __kmpc_impl_target_init() {
+EXTERN void __kmpc_impl_target_init() {
   // Don't have global ctors, and shared memory is not zero init
   __atomic_store_n(&L1_Barrier, 0u, __ATOMIC_RELEASE);
 }
@@ -88,7 +88,7 @@ DEVICE void __kmpc_impl_target_init() {
    pteam_mem_barrier(num_threads, &__kmpc_L0_Barrier);
 #endif
 
-DEVICE void __kmpc_impl_named_sync(uint32_t num_threads) {
+EXTERN void __kmpc_impl_named_sync(uint32_t num_threads) {
   __atomic_thread_fence(__ATOMIC_ACQUIRE);
 
   uint32_t num_waves = (num_threads + WARPSIZE - 1) / WARPSIZE;
@@ -150,12 +150,12 @@ uint32_t get_workgroup_dim(uint32_t group_id, uint32_t grid_size,
 }
 } // namespace
 
-DEVICE int __kmpc_get_hardware_num_blocks() {
+EXTERN int __kmpc_get_hardware_num_blocks() {
   return get_grid_dim(__builtin_amdgcn_grid_size_x(),
                       __builtin_amdgcn_workgroup_size_x());
 }
 
-DEVICE int __kmpc_get_hardware_num_threads_in_block() {
+EXTERN int __kmpc_get_hardware_num_threads_in_block() {
   return get_workgroup_dim(__builtin_amdgcn_workgroup_id_x(),
                            __builtin_amdgcn_grid_size_x(),
                            __builtin_amdgcn_workgroup_size_x());
@@ -178,8 +178,8 @@ EXTERN char * global_allocate(uint32_t bufsz);
 EXTERN int global_free(void*);
 
 // Memory
-DEVICE void *__kmpc_impl_malloc(size_t t) { return global_allocate(t); }
-DEVICE void __kmpc_impl_free(void * ptr) {global_free(ptr);}
+EXTERN void *__kmpc_impl_malloc(size_t t) { return global_allocate(t); }
+EXTERN void __kmpc_impl_free(void * ptr) {global_free(ptr);}
 
 // Atomics
 uint32_t __kmpc_atomic_add(uint32_t *Address, uint32_t Val) {
@@ -214,30 +214,30 @@ unsigned long long __kmpc_atomic_add(unsigned long long *Address,
   return __atomic_fetch_add(Address, Val, __ATOMIC_SEQ_CST);
 }
 
-DEVICE void __kmpc_impl_unpack(uint64_t val, uint32_t &lo, uint32_t &hi) {
+EXTERN void __kmpc_impl_unpack(uint64_t val, uint32_t &lo, uint32_t &hi) {
   lo = (uint32_t)(val & UINT64_C(0x00000000FFFFFFFF));
   hi = (uint32_t)((val & UINT64_C(0xFFFFFFFF00000000)) >> 32);
 }
 
-DEVICE uint64_t __kmpc_impl_pack(uint32_t lo, uint32_t hi) {
+EXTERN uint64_t __kmpc_impl_pack(uint32_t lo, uint32_t hi) {
   return (((uint64_t)hi) << 32) | (uint64_t)lo;
 }
 
-DEVICE void __kmpc_impl_syncthreads() { __builtin_amdgcn_s_barrier(); }
+EXTERN void __kmpc_impl_syncthreads() { __builtin_amdgcn_s_barrier(); }
 
-DEVICE void __kmpc_impl_syncwarp(__kmpc_impl_lanemask_t) {
+EXTERN void __kmpc_impl_syncwarp(__kmpc_impl_lanemask_t) {
   // AMDGCN doesn't need to sync threads in a warp
 }
 
-DEVICE void __kmpc_impl_threadfence() {
+EXTERN void __kmpc_impl_threadfence() {
   __builtin_amdgcn_fence(__ATOMIC_SEQ_CST, "agent");
 }
 
-DEVICE void __kmpc_impl_threadfence_block() {
+EXTERN void __kmpc_impl_threadfence_block() {
   __builtin_amdgcn_fence(__ATOMIC_SEQ_CST, "workgroup");
 }
 
-DEVICE void __kmpc_impl_threadfence_system() {
+EXTERN void __kmpc_impl_threadfence_system() {
   __builtin_amdgcn_fence(__ATOMIC_SEQ_CST, "");
 }
 
