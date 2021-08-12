@@ -38,14 +38,26 @@ void MessageFormattedText::Format(const MessageFixedText *text, ...) {
   }
   va_list ap;
   va_start(ap, text);
+#ifdef _MSC_VER
+  // Microsoft has a separate function for "positional arguments", which is
+  // used in some messages.
+  int need{_vsprintf_p(nullptr, 0, p, ap)};
+#else
   int need{vsnprintf(nullptr, 0, p, ap)};
+#endif
+
   CHECK(need >= 0);
   char *buffer{
       static_cast<char *>(std::malloc(static_cast<std::size_t>(need) + 1))};
   CHECK(buffer);
   va_end(ap);
   va_start(ap, text);
+#ifdef _MSC_VER
+  // Use positional argument variant of printf.
+  int need2{_vsprintf_p(buffer, need + 1, p, ap)};
+#else
   int need2{vsnprintf(buffer, need + 1, p, ap)};
+#endif
   CHECK(need2 == need);
   va_end(ap);
   string_ = buffer;
