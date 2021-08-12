@@ -151,7 +151,8 @@ cl::opt<unsigned> llvm::SetLicmMssaNoAccForPromotionCap(
 static bool inSubLoop(BasicBlock *BB, Loop *CurLoop, LoopInfo *LI);
 static bool isNotUsedOrFreeInLoop(const Instruction &I, const Loop *CurLoop,
                                   const LoopSafetyInfo *SafetyInfo,
-                                  TargetTransformInfo *TTI, bool &FreeInLoop);
+                                  TargetTransformInfo *TTI, bool &FreeInLoop,
+                                  bool LoopNestMode);
 static void hoist(Instruction &I, const DominatorTree *DT, const Loop *CurLoop,
                   BasicBlock *Dest, ICFLoopSafetyInfo *SafetyInfo,
                   MemorySSAUpdater *MSSAU, ScalarEvolution *SE,
@@ -436,8 +437,13 @@ bool LoopInvariantCodeMotion::runOnLoop(
   // instructions, we perform another pass to hoist them out of the loop.
   if (L->hasDedicatedExits())
     Changed |=
-        sinkRegion(DT->getNode(L->getHeader()), AA, LI, DT, BFI, TLI, TTI, L,
-                   CurAST.get(), MSSAU.get(), &SafetyInfo, *Flags.get(), ORE);
+        LoopNestMode
+            ? sinkRegionForLoopNest(DT->getNode(L->getHeader()), AA, LI, DT,
+                                    BFI, TLI, TTI, L, CurAST.get(), MSSAU.get(),
+                                    &SafetyInfo, *Flags.get(), ORE)
+            : sinkRegion(DT->getNode(L->getHeader()), AA, LI, DT, BFI, TLI, TTI,
+                         L, CurAST.get(), MSSAU.get(), &SafetyInfo,
+                         *Flags.get(), ORE);
   Flags->setIsSink(false);
   if (Preheader)
     Changed |= hoistRegion(DT->getNode(L->getHeader()), AA, LI, DT, BFI, TLI, L,
@@ -555,7 +561,7 @@ bool llvm::sinkRegion(DomTreeNode *N, AAResults *AA, LoopInfo *LI,
                       Loop *CurLoop, AliasSetTracker *CurAST,
                       MemorySSAUpdater *MSSAU, ICFLoopSafetyInfo *SafetyInfo,
                       SinkAndHoistLICMFlags &Flags,
-                      OptimizationRemarkEmitter *ORE) {
+                      OptimizationRemarkEmitter *ORE, Loop *OutermostLoop) {
 
   // Verify inputs.
   assert(N != nullptr && AA != nullptr && LI != nullptr && DT != nullptr &&
@@ -598,8 +604,10 @@ bool llvm::sinkRegion(DomTreeNode *N, AAResults *AA, LoopInfo *LI,
       // operands of the instruction are loop invariant.
       //
       bool FreeInLoop = false;
+      bool LoopNestMode = OutermostLoop != nullptr;
       if (!I.mayHaveSideEffects() &&
-          isNotUsedOrFreeInLoop(I, CurLoop, SafetyInfo, TTI, FreeInLoop) &&
+          isNotUsedOrFreeInLoop(I, LoopNestMode ? OutermostLoop : CurLoop,
+                                SafetyInfo, TTI, FreeInLoop, LoopNestMode) &&
           canSinkOrHoistInst(I, AA, DT, CurLoop, CurAST, MSSAU, true, &Flags,
                              ORE)) {
         if (sink(I, LI, DT, BFI, CurLoop, SafetyInfo, MSSAU, ORE)) {
@@ -615,6 +623,26 @@ bool llvm::sinkRegion(DomTreeNode *N, AAResults *AA, LoopInfo *LI,
   }
   if (MSSAU && VerifyMemorySSA)
     MSSAU->getMemorySSA()->verifyMemorySSA();
+  return Changed;
+}
+
+bool llvm::sinkRegionForLoopNest(
+    DomTreeNode *N, AAResults *AA, LoopInfo *LI, DominatorTree *DT,
+    BlockFrequencyInfo *BFI, TargetLibraryInfo *TLI, TargetTransformInfo *TTI,
+    Loop *CurLoop, AliasSetTracker *CurAST, MemorySSAUpdater *MSSAU,
+    ICFLoopSafetyInfo *SafetyInfo, SinkAndHoistLICMFlags &Flags,
+    OptimizationRemarkEmitter *ORE) {
+
+  bool Changed = false;
+  SmallPriorityWorklist<Loop *, 4> Worklist;
+  Worklist.insert(CurLoop);
+  appendLoopsToWorklist(*CurLoop, Worklist);
+  while (!Worklist.empty()) {
+    Loop *L = Worklist.pop_back_val();
+    Changed |=
+        sinkRegion(DT->getNode(L->getHeader()), AA, LI, DT, BFI, TLI, TTI, L,
+                   CurAST, MSSAU, SafetyInfo, Flags, ORE, CurLoop);
+  }
   return Changed;
 }
 
@@ -1443,7 +1471,8 @@ static bool isFreeInLoop(const Instruction &I, const Loop *CurLoop,
 /// (e.g.,  a GEP can be folded into a load as an addressing mode in the loop).
 static bool isNotUsedOrFreeInLoop(const Instruction &I, const Loop *CurLoop,
                                   const LoopSafetyInfo *SafetyInfo,
-                                  TargetTransformInfo *TTI, bool &FreeInLoop) {
+                                  TargetTransformInfo *TTI, bool &FreeInLoop,
+                                  bool LoopNestMode) {
   const auto &BlockColors = SafetyInfo->getBlockColors();
   bool IsFree = isFreeInLoop(I, CurLoop, TTI);
   for (const User *U : I.users()) {
@@ -1460,6 +1489,15 @@ static bool isNotUsedOrFreeInLoop(const Instruction &I, const Loop *CurLoop,
         if (!BlockColors.empty() &&
             BlockColors.find(const_cast<BasicBlock *>(BB))->second.size() != 1)
           return false;
+
+      if (LoopNestMode) {
+        while (isa<PHINode>(UI) && UI->hasOneUser() &&
+               UI->getNumOperands() == 1) {
+          if (!CurLoop->contains(UI))
+            break;
+          UI = cast<Instruction>(U->user_back());
+        }
+      }
     }
 
     if (CurLoop->contains(UI)) {
