@@ -403,8 +403,9 @@ struct CodeCompletionBuilder {
       if (C.IndexResult) {
         SetDoc(C.IndexResult->Documentation);
       } else if (C.SemaResult) {
-        SetDoc(getDocComment(*ASTCtx, *C.SemaResult,
-                             /*CommentsFromHeader=*/false));
+        const auto DocComment = getDocComment(*ASTCtx, *C.SemaResult,
+                                              /*CommentsFromHeader=*/false);
+        SetDoc(formatDocumentation(*SemaCCS, DocComment));
       }
     }
     if (Completion.Deprecated) {

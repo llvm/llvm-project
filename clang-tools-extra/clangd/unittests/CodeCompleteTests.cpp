@@ -907,7 +907,7 @@ TEST(CompletionTest, Documentation) {
   auto Results = completions(
       R"cpp(
       // Non-doxygen comment.
-      int foo();
+      __attribute__((annotate("custom_annotation"))) int foo();
       /// Doxygen comment.
       /// \param int a
       int bar(int a);
@@ -919,7 +919,8 @@ TEST(CompletionTest, Documentation) {
       int x = ^
      )cpp");
   EXPECT_THAT(Results.Completions,
-              Contains(AllOf(Named("foo"), Doc("Non-doxygen comment."))));
+              Contains(AllOf(Named("foo"),
+              Doc("Annotation: custom_annotation\nNon-doxygen comment."))));
   EXPECT_THAT(
       Results.Completions,
       Contains(AllOf(Named("bar"), Doc("Doxygen comment.\n\\param int a"))));
