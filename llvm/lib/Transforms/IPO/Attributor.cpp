@@ -251,10 +251,12 @@ Value *AA::getWithType(Value &V, Type &Ty) {
       return Constant::getNullValue(&Ty);
     if (C->getType()->isPointerTy() && Ty.isPointerTy())
       return ConstantExpr::getPointerCast(C, &Ty);
-    if (C->getType()->isIntegerTy() && Ty.isIntegerTy())
-      return ConstantExpr::getTrunc(C, &Ty, /* OnlyIfReduced */ true);
-    if (C->getType()->isFloatingPointTy() && Ty.isFloatingPointTy())
-      return ConstantExpr::getFPTrunc(C, &Ty, /* OnlyIfReduced */ true);
+    if (C->getType()->getPrimitiveSizeInBits() >= Ty.getPrimitiveSizeInBits()) {
+      if (C->getType()->isIntegerTy() && Ty.isIntegerTy())
+        return ConstantExpr::getTrunc(C, &Ty, /* OnlyIfReduced */ true);
+      if (C->getType()->isFloatingPointTy() && Ty.isFloatingPointTy())
+        return ConstantExpr::getFPTrunc(C, &Ty, /* OnlyIfReduced */ true);
+    }
   }
   return nullptr;
 }

@@ -26,6 +26,8 @@
 @a1 = internal global i32 zeroinitializer
 @a2 = internal global i32 zeroinitializer
 @a3 = internal global i32 undef
+@bytes1 = internal global i32 undef
+@bytes2 = internal global i32 undef
 
 ;.
 ; CHECK: @[[GLOBALBYTES:[a-zA-Z0-9_$"\\.-]+]] = global [1024 x i8] zeroinitializer, align 16
@@ -48,6 +50,8 @@
 ; CHECK: @[[A1:[a-zA-Z0-9_$"\\.-]+]] = internal global i32 0
 ; CHECK: @[[A2:[a-zA-Z0-9_$"\\.-]+]] = internal global i32 0
 ; CHECK: @[[A3:[a-zA-Z0-9_$"\\.-]+]] = internal global i32 undef
+; CHECK: @[[BYTES1:[a-zA-Z0-9_$"\\.-]+]] = internal global i32 undef
+; CHECK: @[[BYTES2:[a-zA-Z0-9_$"\\.-]+]] = internal global i32 undef
 ;.
 define void @write_arg(i32* %p, i32 %v) {
 ; IS__TUNIT____: Function Attrs: argmemonly nofree nosync nounwind willreturn writeonly
@@ -3228,6 +3232,62 @@ end:
   %l32 = load i8, i8* %s32
   %add = add i8 %l31, %l32
   ret i8 %add
+}
+
+define i8 @cast_and_load_1() {
+; IS__TUNIT_OPM: Function Attrs: nofree nosync nounwind willreturn
+; IS__TUNIT_OPM-LABEL: define {{[^@]+}}@cast_and_load_1
+; IS__TUNIT_OPM-SAME: () #[[ATTR4]] {
+; IS__TUNIT_OPM-NEXT:    store i32 42, i32* @bytes1, align 4
+; IS__TUNIT_OPM-NEXT:    [[L:%.*]] = load i8, i8* bitcast (i32* @bytes1 to i8*), align 4
+; IS__TUNIT_OPM-NEXT:    ret i8 [[L]]
+;
+; IS__TUNIT_NPM: Function Attrs: nofree nosync nounwind willreturn
+; IS__TUNIT_NPM-LABEL: define {{[^@]+}}@cast_and_load_1
+; IS__TUNIT_NPM-SAME: () #[[ATTR2]] {
+; IS__TUNIT_NPM-NEXT:    store i32 42, i32* @bytes1, align 4
+; IS__TUNIT_NPM-NEXT:    [[L:%.*]] = load i8, i8* bitcast (i32* @bytes1 to i8*), align 4
+; IS__TUNIT_NPM-NEXT:    ret i8 [[L]]
+;
+; IS__CGSCC____: Function Attrs: nofree norecurse nosync nounwind willreturn
+; IS__CGSCC____-LABEL: define {{[^@]+}}@cast_and_load_1
+; IS__CGSCC____-SAME: () #[[ATTR5]] {
+; IS__CGSCC____-NEXT:    store i32 42, i32* @bytes1, align 4
+; IS__CGSCC____-NEXT:    [[L:%.*]] = load i8, i8* bitcast (i32* @bytes1 to i8*), align 4
+; IS__CGSCC____-NEXT:    ret i8 [[L]]
+;
+  store i32 42, i32* @bytes1
+  %bc = bitcast i32* @bytes1 to i8*
+  %l = load i8, i8* %bc
+  ret i8 %l
+}
+
+define i64 @cast_and_load_2() {
+; IS__TUNIT_OPM: Function Attrs: nofree nosync nounwind willreturn
+; IS__TUNIT_OPM-LABEL: define {{[^@]+}}@cast_and_load_2
+; IS__TUNIT_OPM-SAME: () #[[ATTR4]] {
+; IS__TUNIT_OPM-NEXT:    store i32 42, i32* @bytes2, align 4
+; IS__TUNIT_OPM-NEXT:    [[L:%.*]] = load i64, i64* bitcast (i32* @bytes2 to i64*), align 4
+; IS__TUNIT_OPM-NEXT:    ret i64 [[L]]
+;
+; IS__TUNIT_NPM: Function Attrs: nofree nosync nounwind willreturn
+; IS__TUNIT_NPM-LABEL: define {{[^@]+}}@cast_and_load_2
+; IS__TUNIT_NPM-SAME: () #[[ATTR2]] {
+; IS__TUNIT_NPM-NEXT:    store i32 42, i32* @bytes2, align 4
+; IS__TUNIT_NPM-NEXT:    [[L:%.*]] = load i64, i64* bitcast (i32* @bytes2 to i64*), align 4
+; IS__TUNIT_NPM-NEXT:    ret i64 [[L]]
+;
+; IS__CGSCC____: Function Attrs: nofree norecurse nosync nounwind willreturn
+; IS__CGSCC____-LABEL: define {{[^@]+}}@cast_and_load_2
+; IS__CGSCC____-SAME: () #[[ATTR5]] {
+; IS__CGSCC____-NEXT:    store i32 42, i32* @bytes2, align 4
+; IS__CGSCC____-NEXT:    [[L:%.*]] = load i64, i64* bitcast (i32* @bytes2 to i64*), align 4
+; IS__CGSCC____-NEXT:    ret i64 [[L]]
+;
+  store i32 42, i32* @bytes2
+  %bc = bitcast i32* @bytes2 to i64*
+  %l = load i64, i64* %bc
+  ret i64 %l
 }
 
 !llvm.module.flags = !{!0, !1}
