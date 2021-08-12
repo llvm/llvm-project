@@ -16,10 +16,6 @@
 #include <string.h>
 #include <limits.h>
 
-#ifdef __x86_64__
-#  include <emmintrin.h>
-#endif
-
 namespace __sanitizer {
 
 TEST(Printf, Basic) {
@@ -157,19 +153,5 @@ TEST(Printf, Precision) {
   EXPECT_EQ(10U, len);  // The required size reported.
   EXPECT_STREQ("12345  ", buf);
 }
-
-#ifdef __x86_64__
-TEST(Printf, M128) {
-  __m128i v = _mm_set_epi32(0x12345678, 0x0a0a0a0a, 0xb0b0b0b0, 0xaabbccdd);
-  char buf[128];
-  internal_snprintf(buf, sizeof(buf), "%V", PRINTF_128(v));
-  EXPECT_STREQ("ddccbbaab0b0b0b00a0a0a0a78563412", buf);
-  v = _mm_cvtsi32_si128(0x12345678);
-  internal_snprintf(buf, sizeof(buf), "%V", PRINTF_128(v));
-  EXPECT_STREQ("78563412000000000000000000000000", buf);
-  internal_snprintf(buf, sizeof(buf), "%d %V", 0, PRINTF_128(v));
-  EXPECT_STREQ("0 78563412000000000000000000000000", buf);
-}
-#endif
 
 }  // namespace __sanitizer
