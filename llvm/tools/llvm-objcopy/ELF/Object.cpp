@@ -1343,10 +1343,10 @@ void IHexELFBuilder::addDataSections() {
         continue;
       RecAddr = R.Addr + SegmentAddr + BaseAddr;
       if (!Section || Section->Addr + Section->Size != RecAddr) {
-        // OriginalOffset field is only used to sort section properly, so
-        // instead of keeping track of real offset in IHEX file, and as
-        // Object::sortSections() uses llvm::stable_sort(), we can just set to a
-        // constant (zero).
+        // OriginalOffset field is only used to sort sections before layout, so
+        // instead of keeping track of real offsets in IHEX file, and as
+        // layoutSections() and layoutSectionsForOnlyKeepDebug() use
+        // llvm::stable_sort(), we can just set it to a constant (zero).
         Section = &Obj->addSection<OwnedDataSection>(
             ".sec" + std::to_string(SecNo), RecAddr,
             ELF::SHF_ALLOC | ELF::SHF_WRITE, 0);
@@ -2165,6 +2165,30 @@ Error Object::removeSections(
   return Error::success();
 }
 
+Error Object::replaceSections(
+    const DenseMap<SectionBase *, SectionBase *> &FromTo) {
+  auto SectionIndexLess = [](const SecPtr &Lhs, const SecPtr &Rhs) {
+    return Lhs->Index < Rhs->Index;
+  };
+  assert(llvm::is_sorted(Sections, SectionIndexLess) &&
+         "Sections are expected to be sorted by Index");
+  // Set indices of new sections so that they can be later sorted into positions
+  // of removed ones.
+  for (auto &I : FromTo)
+    I.second->Index = I.first->Index;
+
+  // Notify all sections about the replacement.
+  for (auto &Sec : Sections)
+    Sec->replaceSectionReferences(FromTo);
+
+  if (Error E = removeSections(
+          /*AllowBrokenLinks=*/false,
+          [=](const SectionBase &Sec) { return FromTo.count(&Sec) > 0; }))
+    return E;
+  llvm::sort(Sections, SectionIndexLess);
+  return Error::success();
+}
+
 Error Object::removeSymbols(function_ref<bool(const Symbol &)> ToRemove) {
   if (SymbolTable)
     for (const SecPtr &Sec : Sections)
@@ -2201,20 +2225,6 @@ Error Object::addNewSymbolTable() {
   SymbolTable = &SymTab;
 
   return Error::success();
-}
-
-void Object::sortSections() {
-  // Use stable_sort to maintain the original ordering as closely as possible.
-  llvm::stable_sort(Sections, [](const SecPtr &A, const SecPtr &B) {
-    // Put SHT_GROUP sections first, since group section headers must come
-    // before the sections they contain. This also matches what GNU objcopy
-    // does.
-    if (A->Type != B->Type &&
-        (A->Type == ELF::SHT_GROUP || B->Type == ELF::SHT_GROUP))
-      return A->Type == ELF::SHT_GROUP;
-    // For all other sections, sort by offset order.
-    return A->OriginalOffset < B->OriginalOffset;
-  });
 }
 
 // Orders segments such that if x = y->ParentSegment then y comes before x.
@@ -2265,6 +2275,9 @@ static uint64_t layoutSections(Range Sections, uint64_t Offset) {
   // the offset from the start of the segment. Using the offset from the start
   // of the segment we can assign a new offset to the section. For sections not
   // covered by segments we can just bump Offset to the next valid location.
+  // While it is not necessary, layout the sections in the order based on their
+  // original offsets to resemble the input file as close as possible.
+  std::vector<SectionBase *> OutOfSegmentSections;
   uint32_t Index = 1;
   for (auto &Sec : Sections) {
     Sec.Index = Index++;
@@ -2272,12 +2285,19 @@ static uint64_t layoutSections(Range Sections, uint64_t Offset) {
       auto Segment = *Sec.ParentSegment;
       Sec.Offset =
           Segment.Offset + (Sec.OriginalOffset - Segment.OriginalOffset);
-    } else {
-      Offset = alignTo(Offset, Sec.Align == 0 ? 1 : Sec.Align);
-      Sec.Offset = Offset;
-      if (Sec.Type != SHT_NOBITS)
-        Offset += Sec.Size;
-    }
+    } else
+      OutOfSegmentSections.push_back(&Sec);
+  }
+
+  llvm::stable_sort(OutOfSegmentSections,
+                    [](const SectionBase *Lhs, const SectionBase *Rhs) {
+                      return Lhs->OriginalOffset < Rhs->OriginalOffset;
+                    });
+  for (auto *Sec : OutOfSegmentSections) {
+    Offset = alignTo(Offset, Sec->Align == 0 ? 1 : Sec->Align);
+    Sec->Offset = Offset;
+    if (Sec->Type != SHT_NOBITS)
+      Offset += Sec->Size;
   }
   return Offset;
 }
@@ -2285,38 +2305,49 @@ static uint64_t layoutSections(Range Sections, uint64_t Offset) {
 // Rewrite sh_offset after some sections are changed to SHT_NOBITS and thus
 // occupy no space in the file.
 static uint64_t layoutSectionsForOnlyKeepDebug(Object &Obj, uint64_t Off) {
+  // The layout algorithm requires the sections to be handled in the order of
+  // their offsets in the input file, at least inside segments.
+  std::vector<SectionBase *> Sections;
+  Sections.reserve(Obj.sections().size());
   uint32_t Index = 1;
   for (auto &Sec : Obj.sections()) {
     Sec.Index = Index++;
+    Sections.push_back(&Sec);
+  }
+  llvm::stable_sort(Sections,
+                    [](const SectionBase *Lhs, const SectionBase *Rhs) {
+                      return Lhs->OriginalOffset < Rhs->OriginalOffset;
+                    });
 
-    auto *FirstSec = Sec.ParentSegment && Sec.ParentSegment->Type == PT_LOAD
-                         ? Sec.ParentSegment->firstSection()
+  for (auto *Sec : Sections) {
+    auto *FirstSec = Sec->ParentSegment && Sec->ParentSegment->Type == PT_LOAD
+                         ? Sec->ParentSegment->firstSection()
                          : nullptr;
 
     // The first section in a PT_LOAD has to have congruent offset and address
     // modulo the alignment, which usually equals the maximum page size.
-    if (FirstSec && FirstSec == &Sec)
-      Off = alignTo(Off, Sec.ParentSegment->Align, Sec.Addr);
+    if (FirstSec && FirstSec == Sec)
+      Off = alignTo(Off, Sec->ParentSegment->Align, Sec->Addr);
 
     // sh_offset is not significant for SHT_NOBITS sections, but the congruence
     // rule must be followed if it is the first section in a PT_LOAD. Do not
     // advance Off.
-    if (Sec.Type == SHT_NOBITS) {
-      Sec.Offset = Off;
+    if (Sec->Type == SHT_NOBITS) {
+      Sec->Offset = Off;
       continue;
     }
 
     if (!FirstSec) {
       // FirstSec being nullptr generally means that Sec does not have the
       // SHF_ALLOC flag.
-      Off = Sec.Align ? alignTo(Off, Sec.Align) : Off;
-    } else if (FirstSec != &Sec) {
+      Off = Sec->Align ? alignTo(Off, Sec->Align) : Off;
+    } else if (FirstSec != Sec) {
       // The offset is relative to the first section in the PT_LOAD segment. Use
       // sh_offset for non-SHF_ALLOC sections.
-      Off = Sec.OriginalOffset - FirstSec->OriginalOffset + FirstSec->Offset;
+      Off = Sec->OriginalOffset - FirstSec->OriginalOffset + FirstSec->Offset;
     }
-    Sec.Offset = Off;
-    Off += Sec.Size;
+    Sec->Offset = Off;
+    Off += Sec->Size;
   }
   return Off;
 }
@@ -2463,7 +2494,6 @@ template <class ELFT> Error ELFWriter<ELFT>::finalize() {
 
   if (Error E = removeUnneededSections(Obj))
     return E;
-  Obj.sortSections();
 
   // We need to assign indexes before we perform layout because we need to know
   // if we need large indexes or not. We can assign indexes first and check as
