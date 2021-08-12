@@ -1188,6 +1188,9 @@ void ScopStmt::realignParams() {
   for (MemoryAccess *MA : *this)
     MA->realignParams();
 
+  simplify(InvalidDomain);
+  simplify(Domain);
+
   isl::set Ctx = Parent.getContext();
   InvalidDomain = InvalidDomain.gist_params(Ctx);
   Domain = Domain.gist_params(Ctx);

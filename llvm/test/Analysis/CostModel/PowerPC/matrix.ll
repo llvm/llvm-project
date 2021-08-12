@@ -8,15 +8,15 @@ target triple = "powerpc64-unknown-linux-gnu"
 
 define void @matrix() {
 ; CHECK-LABEL: 'matrix'
-; CHECK-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %matrix1 = call <1 x i32> @llvm.matrix.column.major.load.v1i32.i64(i32* nonnull align 4 undef, i64 1, i1 false, i32 1, i32 1)
+; CHECK-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %matrix1 = call <1 x i32> @llvm.matrix.column.major.load.v1i32(i32* nonnull align 4 undef, i64 1, i1 false, i32 1, i32 1)
 ; CHECK-NEXT:  Cost Model: Found an estimated cost of 452 for instruction: %0 = call <10 x i32> @llvm.matrix.multiply.v10i32.v10i32.v1i32(<10 x i32> undef, <1 x i32> %matrix1, i32 10, i32 1, i32 1)
 ; CHECK-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: ret void
 ;
 entry:
-  %matrix1 = call <1 x i32> @llvm.matrix.column.major.load.v1i32.i64(i32* nonnull align 4 undef, i64 1, i1 false, i32 1, i32 1)
+  %matrix1 = call <1 x i32> @llvm.matrix.column.major.load.v1i32(i32* nonnull align 4 undef, i64 1, i1 false, i32 1, i32 1)
   %0 = call <10 x i32> @llvm.matrix.multiply.v10i32.v10i32.v1i32(<10 x i32> undef, <1 x i32> %matrix1, i32 10, i32 1, i32 1)
   ret void
 }
 
-declare <1 x i32> @llvm.matrix.column.major.load.v1i32.i64(i32* nocapture, i64, i1 immarg, i32 immarg, i32 immarg) #2
+declare <1 x i32> @llvm.matrix.column.major.load.v1i32(i32* nocapture, i64, i1 immarg, i32 immarg, i32 immarg) #2
 declare <10 x i32> @llvm.matrix.multiply.v10i32.v10i32.v1i32(<10 x i32>, <1 x i32>, i32 immarg, i32 immarg, i32 immarg) #3
