@@ -245,8 +245,7 @@ bool VirtualUnwinder::unwind(const HybridSample *Sample, uint64_t Repeat) {
 }
 
 void PerfReaderBase::validateCommandLine(
-    cl::list<std::string> &BinaryFilenames,
-    cl::list<std::string> &PerfTraceFilenames) {
+    StringRef BinaryPath, cl::list<std::string> &PerfTraceFilenames) {
   // Allow the invalid perfscript if we only use to show binary disassembly
   if (!ShowDisassemblyOnly) {
     for (auto &File : PerfTraceFilenames) {
@@ -256,20 +255,12 @@ void PerfReaderBase::validateCommandLine(
       }
     }
   }
-  if (BinaryFilenames.size() > 1) {
-    // TODO: remove this if everything is ready to support multiple binaries.
-    exitWithError(
-        "Currently only support one input binary, multiple binaries' "
-        "profile will be merged in one profile and make profile "
-        "summary info inaccurate. Please use `llvm-perfdata` to merge "
-        "profiles from multiple binaries.");
+
+  if (!llvm::sys::fs::exists(BinaryPath)) {
+    std::string Msg = "Input binary(" + BinaryPath.str() + ") doesn't exist!";
+    exitWithError(Msg);
   }
-  for (auto &Binary : BinaryFilenames) {
-    if (!llvm::sys::fs::exists(Binary)) {
-      std::string Msg = "Input binary(" + Binary + ") doesn't exist!";
-      exitWithError(Msg);
-    }
-  }
+
   if (CSProfileGenerator::MaxCompressionSize < -1) {
     exitWithError("Value of --compress-recursion should >= -1");
   }
@@ -280,14 +271,14 @@ void PerfReaderBase::validateCommandLine(
 }
 
 std::unique_ptr<PerfReaderBase>
-PerfReaderBase::create(cl::list<std::string> &BinaryFilenames,
+PerfReaderBase::create(StringRef BinaryPath,
                        cl::list<std::string> &PerfTraceFilenames) {
-  validateCommandLine(BinaryFilenames, PerfTraceFilenames);
+  validateCommandLine(BinaryPath, PerfTraceFilenames);
 
   PerfScriptType PerfType = extractPerfType(PerfTraceFilenames);
   std::unique_ptr<PerfReaderBase> PerfReader;
   if (PerfType == PERF_LBR_STACK) {
-    PerfReader.reset(new HybridPerfReader(BinaryFilenames));
+    PerfReader.reset(new HybridPerfReader(BinaryPath));
   } else if (PerfType == PERF_LBR) {
     // TODO:
     exitWithError("Unsupported perfscript!");
@@ -298,77 +289,48 @@ PerfReaderBase::create(cl::list<std::string> &BinaryFilenames,
   return PerfReader;
 }
 
-PerfReaderBase::PerfReaderBase(cl::list<std::string> &BinaryFilenames) {
-  // Load the binaries.
-  for (auto Filename : BinaryFilenames)
-    loadBinary(Filename, /*AllowNameConflict*/ false);
+PerfReaderBase::PerfReaderBase(StringRef BinaryPath) {
+  // Load the binary.
+  loadBinary(BinaryPath);
 }
 
-ProfiledBinary &PerfReaderBase::loadBinary(const StringRef BinaryPath,
-                                           bool AllowNameConflict) {
-  // The binary table is currently indexed by the binary name not the full
-  // binary path. This is because the user-given path may not match the one
-  // that was actually executed.
-  StringRef BinaryName = llvm::sys::path::filename(BinaryPath);
-
+void PerfReaderBase::loadBinary(const StringRef BinaryPath) {
   // Call to load the binary in the ctor of ProfiledBinary.
-  auto Ret = BinaryTable.insert({BinaryName, ProfiledBinary(BinaryPath)});
-
-  if (!Ret.second && !AllowNameConflict) {
-    std::string ErrorMsg = "Binary name conflict: " + BinaryPath.str() +
-                           " and " + Ret.first->second.getPath().str() + " \n";
-    exitWithError(ErrorMsg);
-  }
-
+  Binary = new ProfiledBinary(BinaryPath);
   // Initialize the base address to preferred address.
-  ProfiledBinary &B = Ret.first->second;
-  uint64_t PreferredAddr = B.getPreferredBaseAddress();
-  AddrToBinaryMap[PreferredAddr] = &B;
-  B.setBaseAddress(PreferredAddr);
-
-  return B;
+  Binary->setBaseAddress(Binary->getPreferredBaseAddress());
 }
 
 void PerfReaderBase::updateBinaryAddress(const MMapEvent &Event) {
-  // Load the binary.
-  StringRef BinaryPath = Event.BinaryPath;
-  StringRef BinaryName = llvm::sys::path::filename(BinaryPath);
-
-  auto I = BinaryTable.find(BinaryName);
-  // Drop the event which doesn't belong to user-provided binaries
-  if (I == BinaryTable.end())
+  // Drop the event which doesn't belong to user-provided binary
+  StringRef BinaryName = llvm::sys::path::filename(Event.BinaryPath);
+  if (Binary->getName() != BinaryName)
     return;
 
-  ProfiledBinary &Binary = I->second;
   // Drop the event if its image is loaded at the same address
-  if (Event.Address == Binary.getBaseAddress()) {
-    Binary.setIsLoadedByMMap(true);
+  if (Event.Address == Binary->getBaseAddress()) {
+    Binary->setIsLoadedByMMap(true);
     return;
   }
 
-  if (Event.Offset == Binary.getTextSegmentOffset()) {
+  if (Event.Offset == Binary->getTextSegmentOffset()) {
     // A binary image could be unloaded and then reloaded at different
-    // place, so update the address map here.
+    // place, so update binary load address.
     // Only update for the first executable segment and assume all other
     // segments are loaded at consecutive memory addresses, which is the case on
     // X64.
-    AddrToBinaryMap.erase(Binary.getBaseAddress());
-    AddrToBinaryMap[Event.Address] = &Binary;
-
-    // Update binary load address.
-    Binary.setBaseAddress(Event.Address);
-
-    Binary.setIsLoadedByMMap(true);
+    Binary->setBaseAddress(Event.Address);
+    Binary->setIsLoadedByMMap(true);
   } else {
     // Verify segments are loaded consecutively.
-    const auto &Offsets = Binary.getTextSegmentOffsets();
+    const auto &Offsets = Binary->getTextSegmentOffsets();
     auto It = std::lower_bound(Offsets.begin(), Offsets.end(), Event.Offset);
     if (It != Offsets.end() && *It == Event.Offset) {
       // The event is for loading a separate executable segment.
       auto I = std::distance(Offsets.begin(), It);
-      const auto &PreferredAddrs = Binary.getPreferredTextSegmentAddresses();
-      if (PreferredAddrs[I] - Binary.getPreferredBaseAddress() !=
-          Event.Address - Binary.getBaseAddress())
+      const auto &PreferredAddrs = Binary->getPreferredTextSegmentAddresses();
+      if (PreferredAddrs[I] - Binary->getPreferredBaseAddress() !=
+          Event.Address - Binary->getBaseAddress())
         exitWithError("Executable segments not loaded consecutively");
     } else {
       if (It == Offsets.begin())
@@ -378,21 +340,11 @@ void PerfReaderBase::updateBinaryAddress(const MMapEvent &Event) {
         // via multiple mmap calls with consecutive memory addresses.
         --It;
         assert(*It < Event.Offset);
-        if (Event.Offset - *It != Event.Address - Binary.getBaseAddress())
+        if (Event.Offset - *It != Event.Address - Binary->getBaseAddress())
           exitWithError("Segment not loaded by consecutive mmaps");
       }
     }
   }
-}
-
-ProfiledBinary *PerfReaderBase::getBinary(uint64_t Address) {
-  auto Iter = AddrToBinaryMap.lower_bound(Address);
-  if (Iter == AddrToBinaryMap.end() || Iter->first != Address) {
-    if (Iter == AddrToBinaryMap.begin())
-      return nullptr;
-    Iter--;
-  }
-  return Iter->second;
 }
 
 // Use ordered map to make the output deterministic
@@ -448,20 +400,16 @@ static void printBranchCounter(ContextSampleCounterMap &Counter,
 }
 
 void HybridPerfReader::printUnwinderOutput() {
-  for (auto I : BinarySampleCounters) {
-    const ProfiledBinary *Binary = I.first;
     outs() << "Binary(" << Binary->getName().str() << ")'s Range Counter:\n";
-    printRangeCounter(I.second, Binary);
+    printRangeCounter(SampleCounters, Binary);
     outs() << "\nBinary(" << Binary->getName().str() << ")'s Branch Counter:\n";
-    printBranchCounter(I.second, Binary);
-  }
+    printBranchCounter(SampleCounters, Binary);
 }
 
 void HybridPerfReader::unwindSamples() {
   for (const auto &Item : AggregatedSamples) {
     const HybridSample *Sample = dyn_cast<HybridSample>(Item.first.getPtr());
-    VirtualUnwinder Unwinder(&BinarySampleCounters[Sample->Binary],
-                             Sample->Binary);
+    VirtualUnwinder Unwinder(&SampleCounters, Binary);
     Unwinder.unwind(Sample, Item.second);
   }
 
@@ -470,8 +418,7 @@ void HybridPerfReader::unwindSamples() {
 }
 
 bool PerfReaderBase::extractLBRStack(TraceStream &TraceIt,
-                                     SmallVectorImpl<LBREntry> &LBRStack,
-                                     ProfiledBinary *Binary) {
+                                     SmallVectorImpl<LBREntry> &LBRStack) {
   // The raw format of LBR stack is like:
   // 0x4005c8/0x4005dc/P/-/-/0 0x40062f/0x4005b0/P/-/-/0 ...
   //                           ... 0x4005c8/0x4005dc/P/-/-/0
@@ -572,7 +519,6 @@ bool PerfReaderBase::extractCallstack(TraceStream &TraceIt,
   // It's in bottom-up order with each frame in one line.
 
   // Extract stack frames from sample
-  ProfiledBinary *Binary = nullptr;
   while (!TraceIt.isAtEoF() && !TraceIt.getCurrentLine().startswith(" 0x")) {
     StringRef FrameStr = TraceIt.getCurrentLine().ltrim();
     uint64_t FrameAddr = 0;
@@ -583,16 +529,6 @@ bool PerfReaderBase::extractCallstack(TraceStream &TraceIt,
       return false;
     }
     TraceIt.advance();
-    if (!Binary) {
-      Binary = getBinary(FrameAddr);
-      // we might have addr not match the MMAP, skip it
-      if (!Binary) {
-        if (AddrToBinaryMap.size() == 0)
-          WithColor::warning() << "No MMAP event in the perfscript, create it "
-                                  "with '--show-mmap-events'\n";
-        break;
-      }
-    }
     // Currently intermixed frame from different binaries is not supported.
     // Ignore bottom frames not from binary of interest.
     if (!Binary->addressIsCode(FrameAddr))
@@ -635,7 +571,7 @@ void HybridPerfReader::parseSample(TraceStream &TraceIt, uint64_t Count) {
   // 0x4005c8/0x4005dc/P/-/-/0   0x40062f/0x4005b0/P/-/-/0 ...
   //          ... 0x4005c8/0x4005dc/P/-/-/0    # LBR Entries
   //
-  std::shared_ptr<HybridSample> Sample = std::make_shared<HybridSample>();
+  std::shared_ptr<HybridSample> Sample = std::make_shared<HybridSample>(Binary);
 
   // Parsing call stack and populate into HybridSample.CallStack
   if (!extractCallstack(TraceIt, Sample->CallStack)) {
@@ -644,19 +580,17 @@ void HybridPerfReader::parseSample(TraceStream &TraceIt, uint64_t Count) {
       TraceIt.advance();
     return;
   }
-  // Set the binary current sample belongs to
-  ProfiledBinary *PB = getBinary(Sample->CallStack.front());
-  Sample->Binary = PB;
-  if (!PB->getMissingMMapWarned() && !PB->getIsLoadedByMMap()) {
+
+  if (!Binary->getMissingMMapWarned() && !Binary->getIsLoadedByMMap()) {
     WithColor::warning() << "No relevant mmap event is matched, will use "
                             "preferred address as the base loading address!\n";
     // Avoid redundant warning, only warn at the first unmatched sample.
-    PB->setMissingMMapWarned(true);
+    Binary->setMissingMMapWarned(true);
   }
 
   if (!TraceIt.isAtEoF() && TraceIt.getCurrentLine().startswith(" 0x")) {
     // Parsing LBR stack and populate into HybridSample.LBRStack
-    if (extractLBRStack(TraceIt, Sample->LBRStack, Sample->Binary)) {
+    if (extractLBRStack(TraceIt, Sample->LBRStack)) {
       // Canonicalize stack leaf to avoid 'random' IP from leaf frame skew LBR
       // ranges
       Sample->CallStack.front() = Sample->LBRStack[0].Target;
