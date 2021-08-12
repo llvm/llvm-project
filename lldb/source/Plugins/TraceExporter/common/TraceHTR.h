@@ -35,7 +35,7 @@ public:
   ///     the block.
   HTRBlockMetadata(lldb::addr_t first_instruction_load_address,
                    size_t num_instructions,
-                   llvm::DenseMap<ConstString, size_t> &func_calls)
+                   llvm::DenseMap<ConstString, size_t> &&func_calls)
       : m_first_instruction_load_address(first_instruction_load_address),
         m_num_instructions(num_instructions), m_func_calls(func_calls) {}
 
