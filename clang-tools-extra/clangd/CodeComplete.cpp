@@ -282,6 +282,7 @@ struct CodeCompletionBuilder {
       : ASTCtx(ASTCtx),
         EnableFunctionArgSnippets(Opts.EnableFunctionArgSnippets),
         IsUsingDeclaration(IsUsingDeclaration), NextTokenKind(NextTokenKind) {
+    Completion.Deprecated = true; // cleared by any non-deprecated overload.
     add(C, SemaCCS);
     if (C.SemaResult) {
       assert(ASTCtx);
@@ -310,8 +311,6 @@ struct CodeCompletionBuilder {
         return std::tie(X.range.start.line, X.range.start.character) <
                std::tie(Y.range.start.line, Y.range.start.character);
       });
-      Completion.Deprecated |=
-          (C.SemaResult->Availability == CXAvailability_Deprecated);
     }
     if (C.IndexResult) {
       Completion.Origin |= C.IndexResult->Origin;
@@ -333,7 +332,6 @@ struct CodeCompletionBuilder {
         }
         Completion.RequiredQualifier = std::string(ShortestQualifier);
       }
-      Completion.Deprecated |= (C.IndexResult->Flags & Symbol::Deprecated);
     }
     if (C.IdentifierResult) {
       Completion.Origin |= SymbolOrigin::Identifier;
@@ -408,6 +406,14 @@ struct CodeCompletionBuilder {
         SetDoc(getDocComment(*ASTCtx, *C.SemaResult,
                              /*CommentsFromHeader=*/false));
       }
+    }
+    if (Completion.Deprecated) {
+      if (C.SemaResult)
+        Completion.Deprecated &=
+            C.SemaResult->Availability == CXAvailability_Deprecated;
+      if (C.IndexResult)
+        Completion.Deprecated &=
+            bool(C.IndexResult->Flags & Symbol::Deprecated);
     }
   }
 
