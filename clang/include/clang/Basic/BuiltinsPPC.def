@@ -144,6 +144,7 @@ BUILTIN(__builtin_ppc_mfspr, "ULiIi", "")
 BUILTIN(__builtin_ppc_mtmsr, "vUi", "")
 BUILTIN(__builtin_ppc_mtspr, "vIiULi", "")
 BUILTIN(__builtin_ppc_stfiw, "viC*d", "")
+BUILTIN(__builtin_ppc_addex, "LLiLLiLLiCIi", "")
 
 BUILTIN(__builtin_ppc_get_timebase, "ULLi", "n")
 
