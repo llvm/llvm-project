@@ -1206,6 +1206,9 @@ tuples to return are:
                           // is "mt" for AArch64 memory tagging. lldb will
                           // ignore any other flags in this field.
 
+    type:[<type>][,<type>]; // memory types that apply to this region, e.g.
+                 // "stack" for stack memory.
+
     error:<ascii-byte-error-string>; // where <ascii-byte-error-string> is
                                      // a hex encoded string value that
                                      // contains an error string
