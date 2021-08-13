@@ -195,6 +195,11 @@ void Parser::ParseGNUAttributes(ParsedAttributesWithRange &Attrs,
       // Expect an identifier or declaration specifier (const, int, etc.)
       if (Tok.isAnnotation())
         break;
+      if (Tok.is(tok::code_completion)) {
+        cutOffParsing();
+        Actions.CodeCompleteAttribute(AttributeCommonInfo::Syntax::AS_GNU);
+        break;
+      }
       IdentifierInfo *AttrName = Tok.getIdentifierInfo();
       if (!AttrName)
         break;
@@ -713,6 +718,12 @@ void Parser::ParseMicrosoftDeclSpecs(ParsedAttributes &Attrs,
       // Attribute not present.
       if (TryConsumeToken(tok::comma))
         continue;
+
+      if (Tok.is(tok::code_completion)) {
+        cutOffParsing();
+        Actions.CodeCompleteAttribute(AttributeCommonInfo::AS_Declspec);
+        return;
+      }
 
       // We expect either a well-known identifier or a generic string.  Anything
       // else is a malformed declspec.

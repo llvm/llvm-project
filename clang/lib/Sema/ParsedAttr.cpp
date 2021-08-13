@@ -145,6 +145,10 @@ const ParsedAttrInfo &ParsedAttrInfo::get(const AttributeCommonInfo &A) {
   return DefaultParsedAttrInfo;
 }
 
+ArrayRef<const ParsedAttrInfo *> ParsedAttrInfo::getAllBuiltin() {
+  return AttrInfoMap;
+}
+
 unsigned ParsedAttr::getMinArgs() const { return getInfo().NumArgs; }
 
 unsigned ParsedAttr::getMaxArgs() const {

@@ -4107,7 +4107,10 @@ void Parser::PopParsingClass(Sema::ParsingClassState state) {
 ///   If a keyword or an alternative token that satisfies the syntactic
 ///   requirements of an identifier is contained in an attribute-token,
 ///   it is considered an identifier.
-IdentifierInfo *Parser::TryParseCXX11AttributeIdentifier(SourceLocation &Loc) {
+IdentifierInfo *
+Parser::TryParseCXX11AttributeIdentifier(SourceLocation &Loc,
+                                         Sema::AttributeCompletion Completion,
+                                         const IdentifierInfo *Scope) {
   switch (Tok.getKind()) {
   default:
     // Identifiers and keywords have identifier info attached.
@@ -4117,6 +4120,13 @@ IdentifierInfo *Parser::TryParseCXX11AttributeIdentifier(SourceLocation &Loc) {
         return II;
       }
     }
+    return nullptr;
+
+  case tok::code_completion:
+    cutOffParsing();
+    Actions.CodeCompleteAttribute(getLangOpts().CPlusPlus ? ParsedAttr::AS_CXX11
+                                                          : ParsedAttr::AS_C2x,
+                                  Completion, Scope);
     return nullptr;
 
   case tok::numeric_constant: {
@@ -4394,7 +4404,8 @@ void Parser::ParseCXX11AttributeSpecifierInternal(ParsedAttributes &Attrs,
                                 : diag::ext_using_attribute_ns);
     ConsumeToken();
 
-    CommonScopeName = TryParseCXX11AttributeIdentifier(CommonScopeLoc);
+    CommonScopeName = TryParseCXX11AttributeIdentifier(
+        CommonScopeLoc, Sema::AttributeCompletion::Scope);
     if (!CommonScopeName) {
       Diag(Tok.getLocation(), diag::err_expected) << tok::identifier;
       SkipUntil(tok::r_square, tok::colon, StopBeforeMatch);
@@ -4424,7 +4435,8 @@ void Parser::ParseCXX11AttributeSpecifierInternal(ParsedAttributes &Attrs,
     SourceLocation ScopeLoc, AttrLoc;
     IdentifierInfo *ScopeName = nullptr, *AttrName = nullptr;
 
-    AttrName = TryParseCXX11AttributeIdentifier(AttrLoc);
+    AttrName = TryParseCXX11AttributeIdentifier(
+        AttrLoc, Sema::AttributeCompletion::Attribute, CommonScopeName);
     if (!AttrName)
       // Break out to the "expected ']'" diagnostic.
       break;
@@ -4434,7 +4446,8 @@ void Parser::ParseCXX11AttributeSpecifierInternal(ParsedAttributes &Attrs,
       ScopeName = AttrName;
       ScopeLoc = AttrLoc;
 
-      AttrName = TryParseCXX11AttributeIdentifier(AttrLoc);
+      AttrName = TryParseCXX11AttributeIdentifier(
+          AttrLoc, Sema::AttributeCompletion::Attribute, ScopeName);
       if (!AttrName) {
         Diag(Tok.getLocation(), diag::err_expected) << tok::identifier;
         SkipUntil(tok::r_square, tok::comma, StopAtSemi | StopBeforeMatch);
@@ -4649,7 +4662,15 @@ void Parser::ParseMicrosoftAttributes(ParsedAttributes &attrs,
 
     // Skip most ms attributes except for a specific list.
     while (true) {
-      SkipUntil(tok::r_square, tok::identifier, StopAtSemi | StopBeforeMatch);
+      SkipUntil(tok::r_square, tok::identifier,
+                StopAtSemi | StopBeforeMatch | StopAtCodeCompletion);
+      if (Tok.is(tok::code_completion)) {
+        cutOffParsing();
+        Actions.CodeCompleteAttribute(AttributeCommonInfo::AS_Microsoft,
+                                      Sema::AttributeCompletion::Attribute,
+                                      /*Scope=*/nullptr);
+        break;
+      }
       if (Tok.isNot(tok::identifier)) // ']', but also eof
         break;
       if (Tok.getIdentifierInfo()->getName() == "uuid")
