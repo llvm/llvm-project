@@ -481,7 +481,10 @@ public:
     CallGraphUpdater CGUpdater;
     BumpPtrAllocator Allocator;
     AMDGPUInformationCache InfoCache(M, AG, Allocator, nullptr, *TM);
-    Attributor A(Functions, InfoCache, CGUpdater);
+    DenseSet<const char *> Allowed(
+        {&AAAMDAttributes::ID, &AAAMDWorkGroupSize::ID, &AACallEdges::ID});
+
+    Attributor A(Functions, InfoCache, CGUpdater, &Allowed);
 
     for (Function &F : M) {
       if (!F.isIntrinsic()) {

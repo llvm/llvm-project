@@ -7,15 +7,10 @@
 ; CHECK: @[[G2:[a-zA-Z0-9_$"\\.-]+]] = global i32 0
 ;.
 define weak void @weak() {
-; AKF_CHECK-LABEL: define {{[^@]+}}@weak
-; AKF_CHECK-SAME: () #[[ATTR0:[0-9]+]] {
-; AKF_CHECK-NEXT:    call void @internal1()
-; AKF_CHECK-NEXT:    ret void
-;
-; ATTRIBUTOR_CHECK-LABEL: define {{[^@]+}}@weak
-; ATTRIBUTOR_CHECK-SAME: () #[[ATTR0:[0-9]+]] {
-; ATTRIBUTOR_CHECK-NEXT:    call void @internal1() #[[ATTR5:[0-9]+]]
-; ATTRIBUTOR_CHECK-NEXT:    ret void
+; CHECK-LABEL: define {{[^@]+}}@weak
+; CHECK-SAME: () #[[ATTR0:[0-9]+]] {
+; CHECK-NEXT:    call void @internal1()
+; CHECK-NEXT:    ret void
 ;
   call void @internal1()
   ret void
@@ -24,17 +19,11 @@ define weak void @weak() {
 @G1 = global i32* null
 
 define internal void @internal1() {
-; AKF_CHECK-LABEL: define {{[^@]+}}@internal1
-; AKF_CHECK-SAME: () #[[ATTR0]] {
-; AKF_CHECK-NEXT:    [[TMP1:%.*]] = load i32*, i32** @G1, align 8
-; AKF_CHECK-NEXT:    store i32 0, i32* [[TMP1]], align 4
-; AKF_CHECK-NEXT:    ret void
-;
-; ATTRIBUTOR_CHECK-LABEL: define {{[^@]+}}@internal1
-; ATTRIBUTOR_CHECK-SAME: () #[[ATTR1:[0-9]+]] {
-; ATTRIBUTOR_CHECK-NEXT:    [[TMP1:%.*]] = load i32*, i32** @G1, align 8
-; ATTRIBUTOR_CHECK-NEXT:    store i32 0, i32* [[TMP1]], align 4
-; ATTRIBUTOR_CHECK-NEXT:    ret void
+; CHECK-LABEL: define {{[^@]+}}@internal1
+; CHECK-SAME: () #[[ATTR0]] {
+; CHECK-NEXT:    [[TMP1:%.*]] = load i32*, i32** @G1, align 8
+; CHECK-NEXT:    store i32 0, i32* [[TMP1]], align 4
+; CHECK-NEXT:    ret void
 ;
   %1 = load i32*, i32** @G1
   store i32 0, i32* %1
@@ -42,15 +31,10 @@ define internal void @internal1() {
 }
 
 define amdgpu_kernel void @kernel1() #0 {
-; AKF_CHECK-LABEL: define {{[^@]+}}@kernel1
-; AKF_CHECK-SAME: () #[[ATTR1:[0-9]+]] {
-; AKF_CHECK-NEXT:    call void @weak()
-; AKF_CHECK-NEXT:    ret void
-;
-; ATTRIBUTOR_CHECK-LABEL: define {{[^@]+}}@kernel1
-; ATTRIBUTOR_CHECK-SAME: () #[[ATTR2:[0-9]+]] {
-; ATTRIBUTOR_CHECK-NEXT:    call void @weak()
-; ATTRIBUTOR_CHECK-NEXT:    ret void
+; CHECK-LABEL: define {{[^@]+}}@kernel1
+; CHECK-SAME: () #[[ATTR1:[0-9]+]] {
+; CHECK-NEXT:    call void @weak()
+; CHECK-NEXT:    ret void
 ;
   call void @weak()
   ret void
@@ -72,13 +56,13 @@ define internal void @internal3() {
 ; AKF_CHECK-NEXT:    ret void
 ;
 ; ATTRIBUTOR_CHECK-LABEL: define {{[^@]+}}@internal3
-; ATTRIBUTOR_CHECK-SAME: () #[[ATTR3:[0-9]+]] {
+; ATTRIBUTOR_CHECK-SAME: () #[[ATTR1]] {
 ; ATTRIBUTOR_CHECK-NEXT:    [[TMP1:%.*]] = load i32, i32* @G2, align 4
 ; ATTRIBUTOR_CHECK-NEXT:    [[TMP2:%.*]] = icmp eq i32 [[TMP1]], 0
 ; ATTRIBUTOR_CHECK-NEXT:    br i1 [[TMP2]], label [[TMP3:%.*]], label [[TMP4:%.*]]
 ; ATTRIBUTOR_CHECK:       3:
-; ATTRIBUTOR_CHECK-NEXT:    call void @internal4() #[[ATTR6:[0-9]+]]
-; ATTRIBUTOR_CHECK-NEXT:    call void @internal3() #[[ATTR7:[0-9]+]]
+; ATTRIBUTOR_CHECK-NEXT:    call void @internal4()
+; ATTRIBUTOR_CHECK-NEXT:    call void @internal3()
 ; ATTRIBUTOR_CHECK-NEXT:    br label [[TMP4]]
 ; ATTRIBUTOR_CHECK:       4:
 ; ATTRIBUTOR_CHECK-NEXT:    ret void
@@ -101,7 +85,7 @@ define internal void @internal4() {
 ; AKF_CHECK-NEXT:    ret void
 ;
 ; ATTRIBUTOR_CHECK-LABEL: define {{[^@]+}}@internal4
-; ATTRIBUTOR_CHECK-SAME: () #[[ATTR4:[0-9]+]] {
+; ATTRIBUTOR_CHECK-SAME: () #[[ATTR1]] {
 ; ATTRIBUTOR_CHECK-NEXT:    store i32 1, i32* @G2, align 4
 ; ATTRIBUTOR_CHECK-NEXT:    ret void
 ;
@@ -116,8 +100,8 @@ define internal void @internal2() {
 ; AKF_CHECK-NEXT:    ret void
 ;
 ; ATTRIBUTOR_CHECK-LABEL: define {{[^@]+}}@internal2
-; ATTRIBUTOR_CHECK-SAME: () #[[ATTR3]] {
-; ATTRIBUTOR_CHECK-NEXT:    call void @internal3() #[[ATTR7]]
+; ATTRIBUTOR_CHECK-SAME: () #[[ATTR1]] {
+; ATTRIBUTOR_CHECK-NEXT:    call void @internal3()
 ; ATTRIBUTOR_CHECK-NEXT:    ret void
 ;
   call void @internal3()
@@ -125,15 +109,10 @@ define internal void @internal2() {
 }
 
 define amdgpu_kernel void @kernel2() #0 {
-; AKF_CHECK-LABEL: define {{[^@]+}}@kernel2
-; AKF_CHECK-SAME: () #[[ATTR1]] {
-; AKF_CHECK-NEXT:    call void @internal2()
-; AKF_CHECK-NEXT:    ret void
-;
-; ATTRIBUTOR_CHECK-LABEL: define {{[^@]+}}@kernel2
-; ATTRIBUTOR_CHECK-SAME: () #[[ATTR2]] {
-; ATTRIBUTOR_CHECK-NEXT:    call void @internal2() #[[ATTR5]]
-; ATTRIBUTOR_CHECK-NEXT:    ret void
+; CHECK-LABEL: define {{[^@]+}}@kernel2
+; CHECK-SAME: () #[[ATTR1]] {
+; CHECK-NEXT:    call void @internal2()
+; CHECK-NEXT:    ret void
 ;
   call void @internal2()
   ret void
@@ -147,11 +126,5 @@ attributes #0 = { "uniform-work-group-size"="true" }
 ; AKF_CHECK: attributes #[[ATTR2]] = { "uniform-work-group-size"="true" }
 ;.
 ; ATTRIBUTOR_CHECK: attributes #[[ATTR0]] = { "uniform-work-group-size"="false" }
-; ATTRIBUTOR_CHECK: attributes #[[ATTR1]] = { nofree nosync nounwind willreturn "uniform-work-group-size"="false" }
-; ATTRIBUTOR_CHECK: attributes #[[ATTR2]] = { "uniform-work-group-size"="true" }
-; ATTRIBUTOR_CHECK: attributes #[[ATTR3]] = { nofree nosync nounwind "uniform-work-group-size"="true" }
-; ATTRIBUTOR_CHECK: attributes #[[ATTR4]] = { nofree nosync nounwind willreturn writeonly "uniform-work-group-size"="true" }
-; ATTRIBUTOR_CHECK: attributes #[[ATTR5]] = { nounwind }
-; ATTRIBUTOR_CHECK: attributes #[[ATTR6]] = { nofree nosync nounwind willreturn writeonly }
-; ATTRIBUTOR_CHECK: attributes #[[ATTR7]] = { nofree nosync nounwind }
+; ATTRIBUTOR_CHECK: attributes #[[ATTR1]] = { "uniform-work-group-size"="true" }
 ;.
