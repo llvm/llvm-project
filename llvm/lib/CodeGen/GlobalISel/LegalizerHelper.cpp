@@ -497,8 +497,8 @@ static bool isLibCallInTailPosition(MachineInstr &MI,
     return false;
 
   // It's not safe to eliminate the sign / zero extension of the return value.
-  if (CallerAttrs.hasAttribute(AttributeList::ReturnIndex, Attribute::ZExt) ||
-      CallerAttrs.hasAttribute(AttributeList::ReturnIndex, Attribute::SExt))
+  if (CallerAttrs.hasRetAttr(Attribute::ZExt) ||
+      CallerAttrs.hasRetAttr(Attribute::SExt))
     return false;
 
   // Only tail call if the following instruction is a standard return or if we

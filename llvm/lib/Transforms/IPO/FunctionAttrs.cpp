@@ -1055,8 +1055,7 @@ static bool addNonNullAttrs(const SCCNodeSet &SCCNodes) {
   // pointers.
   for (Function *F : SCCNodes) {
     // Already nonnull.
-    if (F->getAttributes().hasAttribute(AttributeList::ReturnIndex,
-                                        Attribute::NonNull))
+    if (F->getAttributes().hasRetAttr(Attribute::NonNull))
       continue;
 
     // We can infer and propagate function attributes only when we know that the
@@ -1090,8 +1089,7 @@ static bool addNonNullAttrs(const SCCNodeSet &SCCNodes) {
 
   if (SCCReturnsNonNull) {
     for (Function *F : SCCNodes) {
-      if (F->getAttributes().hasAttribute(AttributeList::ReturnIndex,
-                                          Attribute::NonNull) ||
+      if (F->getAttributes().hasRetAttr(Attribute::NonNull) ||
           !F->getReturnType()->isPointerTy())
         continue;
 

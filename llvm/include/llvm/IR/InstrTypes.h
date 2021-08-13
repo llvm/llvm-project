@@ -1760,7 +1760,7 @@ public:
 
   /// Determine if the return value is marked with NoAlias attribute.
   bool returnDoesNotAlias() const {
-    return Attrs.hasAttribute(AttributeList::ReturnIndex, Attribute::NoAlias);
+    return Attrs.hasRetAttr(Attribute::NoAlias);
   }
 
   /// If one of the arguments has the 'returned' attribute, returns its

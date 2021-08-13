@@ -652,6 +652,14 @@ public:
     return hasAttributes(ArgNo + FirstArgIndex);
   }
 
+  /// Return true if the attribute exists for the return value.
+  bool hasRetAttr(Attribute::AttrKind Kind) const {
+    return hasAttribute(ReturnIndex, Kind);
+  }
+
+  /// Return true if attributes exists for the return value.
+  bool hasRetAttrs() const { return hasAttributes(ReturnIndex); }
+
   /// Equivalent to hasAttribute(AttributeList::FunctionIndex, Kind) but
   /// may be faster.
   bool hasFnAttr(Attribute::AttrKind Kind) const;

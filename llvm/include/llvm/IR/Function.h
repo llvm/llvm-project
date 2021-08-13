@@ -699,8 +699,7 @@ public:
   /// Determine if the parameter or return value is marked with NoAlias
   /// attribute.
   bool returnDoesNotAlias() const {
-    return AttributeSets.hasAttribute(AttributeList::ReturnIndex,
-                                      Attribute::NoAlias);
+    return AttributeSets.hasRetAttr(Attribute::NoAlias);
   }
   void setReturnDoesNotAlias() {
     addAttribute(AttributeList::ReturnIndex, Attribute::NoAlias);

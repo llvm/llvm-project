@@ -1953,16 +1953,13 @@ void SelectionDAGBuilder::visitRet(const ReturnInst &I) {
           /*IsVarArg*/ false, DL);
 
       ISD::NodeType ExtendKind = ISD::ANY_EXTEND;
-      if (F->getAttributes().hasAttribute(AttributeList::ReturnIndex,
-                                          Attribute::SExt))
+      if (F->getAttributes().hasRetAttr(Attribute::SExt))
         ExtendKind = ISD::SIGN_EXTEND;
-      else if (F->getAttributes().hasAttribute(AttributeList::ReturnIndex,
-                                               Attribute::ZExt))
+      else if (F->getAttributes().hasRetAttr(Attribute::ZExt))
         ExtendKind = ISD::ZERO_EXTEND;
 
       LLVMContext &Context = F->getContext();
-      bool RetInReg = F->getAttributes().hasAttribute(
-          AttributeList::ReturnIndex, Attribute::InReg);
+      bool RetInReg = F->getAttributes().hasRetAttr(Attribute::InReg);
 
       for (unsigned j = 0; j != NumValues; ++j) {
         EVT VT = ValueVTs[j];

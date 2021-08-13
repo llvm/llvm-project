@@ -27235,11 +27235,11 @@ SDValue X86TargetLowering::LowerINIT_TRAMPOLINE(SDValue Op,
 
       if (!Attrs.isEmpty() && !Func->isVarArg()) {
         unsigned InRegCount = 0;
-        unsigned Idx = 1;
+        unsigned Idx = 0;
 
         for (FunctionType::param_iterator I = FTy->param_begin(),
              E = FTy->param_end(); I != E; ++I, ++Idx)
-          if (Attrs.hasAttribute(Idx, Attribute::InReg)) {
+          if (Attrs.hasParamAttr(Idx, Attribute::InReg)) {
             const DataLayout &DL = DAG.getDataLayout();
             // FIXME: should only count parameters that are lowered to integers.
             InRegCount += (DL.getTypeSizeInBits(*I) + 31) / 32;
