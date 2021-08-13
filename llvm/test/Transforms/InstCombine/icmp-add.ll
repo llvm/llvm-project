@@ -972,7 +972,6 @@ define i1 @slt_offset_nsw(i8 %a, i8 %c) {
   ret i1 %ov
 }
 
-; FIXME:
 ; In the following 4 tests, we could push the inc/dec
 ; through the min/max, but we should not break up the
 ; min/max idiom by using different icmp and select
@@ -980,9 +979,9 @@ define i1 @slt_offset_nsw(i8 %a, i8 %c) {
 
 define i32 @increment_max(i32 %x) {
 ; CHECK-LABEL: @increment_max(
-; CHECK-NEXT:    [[A:%.*]] = add nsw i32 [[X:%.*]], 1
-; CHECK-NEXT:    [[C_INV:%.*]] = icmp slt i32 [[X]], 0
-; CHECK-NEXT:    [[S:%.*]] = select i1 [[C_INV]], i32 0, i32 [[A]]
+; CHECK-NEXT:    [[TMP1:%.*]] = icmp sgt i32 [[X:%.*]], -1
+; CHECK-NEXT:    [[TMP2:%.*]] = select i1 [[TMP1]], i32 [[X]], i32 -1
+; CHECK-NEXT:    [[S:%.*]] = add nsw i32 [[TMP2]], 1
 ; CHECK-NEXT:    ret i32 [[S]]
 ;
   %a = add nsw i32 %x, 1
@@ -1019,9 +1018,9 @@ define i32 @increment_min(i32 %x) {
 
 define i32 @decrement_min(i32 %x) {
 ; CHECK-LABEL: @decrement_min(
-; CHECK-NEXT:    [[A:%.*]] = add nsw i32 [[X:%.*]], -1
-; CHECK-NEXT:    [[C_INV:%.*]] = icmp sgt i32 [[X]], 0
-; CHECK-NEXT:    [[S:%.*]] = select i1 [[C_INV]], i32 0, i32 [[A]]
+; CHECK-NEXT:    [[TMP1:%.*]] = icmp slt i32 [[X:%.*]], 1
+; CHECK-NEXT:    [[TMP2:%.*]] = select i1 [[TMP1]], i32 [[X]], i32 1
+; CHECK-NEXT:    [[S:%.*]] = add nsw i32 [[TMP2]], -1
 ; CHECK-NEXT:    ret i32 [[S]]
 ;
   %a = add nsw i32 %x, -1
