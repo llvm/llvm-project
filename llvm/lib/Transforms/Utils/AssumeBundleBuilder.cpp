@@ -203,21 +203,20 @@ struct AssumeBuilderState {
   }
 
   void addCall(const CallBase *Call) {
-    auto addAttrList = [&](AttributeList AttrList) {
-      for (unsigned Idx = AttributeList::FirstArgIndex;
-           Idx < AttrList.getNumAttrSets(); Idx++)
-        for (Attribute Attr : AttrList.getAttributes(Idx)) {
+    auto addAttrList = [&](AttributeList AttrList, unsigned NumArgs) {
+      for (unsigned Idx = 0; Idx < NumArgs; Idx++)
+        for (Attribute Attr : AttrList.getParamAttrs(Idx)) {
           bool IsPoisonAttr = Attr.hasAttribute(Attribute::NonNull) ||
                               Attr.hasAttribute(Attribute::Alignment);
-          if (!IsPoisonAttr || Call->isPassingUndefUB(Idx - 1))
-            addAttribute(Attr, Call->getArgOperand(Idx - 1));
+          if (!IsPoisonAttr || Call->isPassingUndefUB(Idx))
+            addAttribute(Attr, Call->getArgOperand(Idx));
         }
       for (Attribute Attr : AttrList.getFnAttrs())
         addAttribute(Attr, nullptr);
     };
-    addAttrList(Call->getAttributes());
+    addAttrList(Call->getAttributes(), Call->arg_size());
     if (Function *Fn = Call->getCalledFunction())
-      addAttrList(Fn->getAttributes());
+      addAttrList(Fn->getAttributes(), Fn->arg_size());
   }
 
   AssumeInst *build() {
