@@ -477,3 +477,40 @@ define i64 @imm_2reg_1() nounwind {
 ; RV64I-NEXT:    ret
   ret i64 -1152921504301427080 ; 0xF000_0000_1234_5678
 }
+
+; FIXME: This should use a single ADDI for the immediate.
+define void @imm_store_i16_neg1(i16* %p) nounwind {
+; RV32I-LABEL: imm_store_i16_neg1:
+; RV32I:       # %bb.0:
+; RV32I-NEXT:    lui a1, 16
+; RV32I-NEXT:    addi a1, a1, -1
+; RV32I-NEXT:    sh a1, 0(a0)
+; RV32I-NEXT:    ret
+;
+; RV64I-LABEL: imm_store_i16_neg1:
+; RV64I:       # %bb.0:
+; RV64I-NEXT:    lui a1, 16
+; RV64I-NEXT:    addiw a1, a1, -1
+; RV64I-NEXT:    sh a1, 0(a0)
+; RV64I-NEXT:    ret
+  store i16 -1, i16* %p
+  ret void
+}
+
+; FIXME: This should use a single ADDI for the immediate.
+define void @imm_store_i32_neg1(i32* %p) nounwind {
+; RV32I-LABEL: imm_store_i32_neg1:
+; RV32I:       # %bb.0:
+; RV32I-NEXT:    addi a1, zero, -1
+; RV32I-NEXT:    sw a1, 0(a0)
+; RV32I-NEXT:    ret
+;
+; RV64I-LABEL: imm_store_i32_neg1:
+; RV64I:       # %bb.0:
+; RV64I-NEXT:    addi a1, zero, -1
+; RV64I-NEXT:    srli a1, a1, 32
+; RV64I-NEXT:    sw a1, 0(a0)
+; RV64I-NEXT:    ret
+  store i32 -1, i32* %p
+  ret void
+}
