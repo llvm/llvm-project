@@ -2272,12 +2272,12 @@ private:
   /// Determine whether the return value has the given attribute. Supports
   /// Attribute::AttrKind and StringRef as \p AttrKind types.
   template <typename AttrKind> bool hasRetAttrImpl(AttrKind Kind) const {
-    if (Attrs.hasAttribute(AttributeList::ReturnIndex, Kind))
+    if (Attrs.hasRetAttr(Kind))
       return true;
 
     // Look at the callee, if available.
     if (const Function *F = getCalledFunction())
-      return F->getAttributes().hasAttribute(AttributeList::ReturnIndex, Kind);
+      return F->getAttributes().hasRetAttr(Kind);
     return false;
   }
 };

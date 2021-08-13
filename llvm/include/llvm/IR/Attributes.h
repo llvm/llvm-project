@@ -657,6 +657,11 @@ public:
     return hasAttribute(ReturnIndex, Kind);
   }
 
+  /// Return true if the attribute exists for the return value.
+  bool hasRetAttr(StringRef Kind) const {
+    return hasAttribute(ReturnIndex, Kind);
+  }
+
   /// Return true if attributes exist for the return value.
   bool hasRetAttrs() const { return hasAttributes(ReturnIndex); }
 

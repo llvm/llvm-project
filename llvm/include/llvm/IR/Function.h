@@ -455,6 +455,11 @@ public:
     return getAttributes().getParamAttr(ArgNo, Kind);
   }
 
+  /// check if an attribute is in the list of attributes for the return value.
+  bool hasRetAttribute(Attribute::AttrKind Kind) const {
+    return getAttributes().hasRetAttr(Kind);
+  }
+
   /// gets the attribute from the list of attributes.
   Attribute getAttribute(unsigned i, Attribute::AttrKind Kind) const {
     return AttributeSets.getAttribute(i, Kind);
