@@ -204,8 +204,7 @@ static bool isCompressable(const SectionBase &Sec) {
 }
 
 static Error replaceDebugSections(
-    Object &Obj, SectionPred &RemovePred,
-    function_ref<bool(const SectionBase &)> ShouldReplace,
+    Object &Obj, function_ref<bool(const SectionBase &)> ShouldReplace,
     function_ref<Expected<SectionBase *>(const SectionBase *)> AddSection) {
   // Build a list of the debug sections we are going to replace.
   // We can't call `AddSection` while iterating over sections,
@@ -225,17 +224,7 @@ static Error replaceDebugSections(
     FromTo[S] = *NewSection;
   }
 
-  // Now we want to update the target sections of relocation
-  // sections. Also we will update the relocations themselves
-  // to update the symbol references.
-  for (auto &Sec : Obj.sections())
-    Sec.replaceSectionReferences(FromTo);
-
-  RemovePred = [ShouldReplace, RemovePred](const SectionBase &Sec) {
-    return ShouldReplace(Sec) || RemovePred(Sec);
-  };
-
-  return Error::success();
+  return Obj.replaceSections(FromTo);
 }
 
 static bool isUnneededSymbol(const Symbol &Sym) {
@@ -474,9 +463,12 @@ static Error replaceAndRemoveSections(const CommonConfig &Config, Object &Obj) {
     };
   }
 
+  if (Error E = Obj.removeSections(Config.AllowBrokenLinks, RemovePred))
+    return E;
+
   if (Config.CompressionType != DebugCompressionType::None) {
     if (Error Err = replaceDebugSections(
-            Obj, RemovePred, isCompressable,
+            Obj, isCompressable,
             [&Config, &Obj](const SectionBase *S) -> Expected<SectionBase *> {
               Expected<CompressedSection> NewSection =
                   CompressedSection::create(*S, Config.CompressionType);
@@ -488,7 +480,7 @@ static Error replaceAndRemoveSections(const CommonConfig &Config, Object &Obj) {
       return Err;
   } else if (Config.DecompressDebugSections) {
     if (Error Err = replaceDebugSections(
-            Obj, RemovePred,
+            Obj,
             [](const SectionBase &S) { return isa<CompressedSection>(&S); },
             [&Obj](const SectionBase *S) {
               const CompressedSection *CS = cast<CompressedSection>(S);
@@ -497,7 +489,7 @@ static Error replaceAndRemoveSections(const CommonConfig &Config, Object &Obj) {
       return Err;
   }
 
-  return Obj.removeSections(Config.AllowBrokenLinks, RemovePred);
+  return Error::success();
 }
 
 // Add symbol to the Object symbol table with the specified properties.

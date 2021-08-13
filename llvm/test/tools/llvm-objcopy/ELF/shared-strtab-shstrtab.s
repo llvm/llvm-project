@@ -20,8 +20,8 @@
 # RUN:   | FileCheck %s --check-prefix=BASIC --implicit-check-not=.shstrtab
 
 # BASIC: Sections [
-# BASIC:   Name: .foo (
 # BASIC:   Name: .strtab (
+# BASIC:   Name: .foo (
 # BASIC: Symbols [
 # BASIC:   Name: foo (
 
@@ -31,8 +31,8 @@
 # RUN:   | FileCheck %s --check-prefix=SECTION-RENAME --implicit-check-not=.shstrtab
 
 # SECTION-RENAME: Sections [
-# SECTION-RENAME:   Name: .oof (
 # SECTION-RENAME:   Name: .strtab (
+# SECTION-RENAME:   Name: .oof (
 # SECTION-RENAME: Symbols [
 # SECTION-RENAME:   Name: foo (
 
@@ -42,8 +42,8 @@
 # RUN:   | FileCheck %s --check-prefix=SYMBOL-RENAME --implicit-check-not=.shstrtab
 
 # SYMBOL-RENAME: Sections [
-# SYMBOL-RENAME:   Name: .foo (
 # SYMBOL-RENAME:   Name: .strtab (
+# SYMBOL-RENAME:   Name: .foo (
 # SYMBOL-RENAME: Symbols [
 # SYMBOL-RENAME:   Name: oof (
 
@@ -63,8 +63,8 @@
 # RUN:   | FileCheck %s --check-prefix=SYMBOL-REMOVE --implicit-check-not=.shstrtab --implicit-check-not="Name: foo"
 
 # SYMBOL-REMOVE: Sections [
-# SYMBOL-REMOVE:   Name: .foo (
 # SYMBOL-REMOVE:   Name: .strtab (
+# SYMBOL-REMOVE:   Name: .foo (
 # SYMBOL-REMOVE: Symbols [
 
 ## Case 6: adding a section.
@@ -73,8 +73,8 @@
 # RUN:   | FileCheck %s --check-prefix=SECTION-ADD --implicit-check-not=.shstrtab
 
 # SECTION-ADD: Sections [
-# SECTION-ADD:   Name: .foo (
 # SECTION-ADD:   Name: .strtab (
+# SECTION-ADD:   Name: .foo (
 # SECTION-ADD:   Name: .bar (
 # SECTION-ADD: Symbols [
 # SECTION-ADD:   Name: foo (
@@ -85,8 +85,8 @@
 # RUN:   | FileCheck %s --check-prefix=SYMBOL-ADD --implicit-check-not=.shstrtab
 
 # SYMBOL-ADD: Sections [
-# SYMBOL-ADD:   Name: .foo (
 # SYMBOL-ADD:   Name: .strtab (
+# SYMBOL-ADD:   Name: .foo (
 # SYMBOL-ADD: Symbols [
 # SYMBOL-ADD:   Name: foo (
 # SYMBOL-ADD:   Name: bar (
@@ -97,8 +97,8 @@
 # RUN:   | FileCheck %s --check-prefix=STRIP-ALL --implicit-check-not=.shstrtab
 
 # STRIP-ALL:      Sections [
-# STRIP-ALL:        Name: .foo (
 # STRIP-ALL:        Name: .strtab (
+# STRIP-ALL:        Name: .foo (
 # STRIP-ALL:      Symbols [
 # STRIP-ALL-NEXT: ]
 
