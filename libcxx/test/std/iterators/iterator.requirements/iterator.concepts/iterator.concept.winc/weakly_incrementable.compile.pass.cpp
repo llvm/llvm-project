@@ -30,6 +30,7 @@ static_assert(!std::weakly_incrementable<int&>);
 static_assert(!std::weakly_incrementable<int()>);
 static_assert(!std::weakly_incrementable<int (*)()>);
 static_assert(!std::weakly_incrementable<int (&)()>);
+static_assert(!std::weakly_incrementable<bool>);
 
 struct S {};
 static_assert(!std::weakly_incrementable<int S::*>);
