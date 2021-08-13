@@ -177,7 +177,7 @@ static Type *getMemoryParamAllocType(AttributeSet ParamAttrs, Type *ArgTy) {
 
 uint64_t Argument::getPassPointeeByValueCopySize(const DataLayout &DL) const {
   AttributeSet ParamAttrs =
-      getParent()->getAttributes().getParamAttributes(getArgNo());
+      getParent()->getAttributes().getParamAttrs(getArgNo());
   if (Type *MemTy = getMemoryParamAllocType(ParamAttrs, getType()))
     return DL.getTypeAllocSize(MemTy);
   return 0;
@@ -185,7 +185,7 @@ uint64_t Argument::getPassPointeeByValueCopySize(const DataLayout &DL) const {
 
 Type *Argument::getPointeeInMemoryValueType() const {
   AttributeSet ParamAttrs =
-      getParent()->getAttributes().getParamAttributes(getArgNo());
+      getParent()->getAttributes().getParamAttrs(getArgNo());
   return getMemoryParamAllocType(ParamAttrs, getType());
 }
 

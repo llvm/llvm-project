@@ -212,7 +212,7 @@ struct AssumeBuilderState {
           if (!IsPoisonAttr || Call->isPassingUndefUB(Idx - 1))
             addAttribute(Attr, Call->getArgOperand(Idx - 1));
         }
-      for (Attribute Attr : AttrList.getFnAttributes())
+      for (Attribute Attr : AttrList.getFnAttrs())
         addAttribute(Attr, nullptr);
     };
     addAttrList(Call->getAttributes());

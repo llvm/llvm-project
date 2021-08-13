@@ -1871,7 +1871,7 @@ void Verifier::verifyFunctionAttrs(FunctionType *FT, AttributeList Attrs,
   bool SawSwiftError = false;
 
   // Verify return value attributes.
-  AttributeSet RetAttrs = Attrs.getRetAttributes();
+  AttributeSet RetAttrs = Attrs.getRetAttrs();
   for (Attribute RetAttr : RetAttrs)
     Assert(RetAttr.isStringAttribute() ||
            Attribute::canUseAsRetAttr(RetAttr.getKindAsEnum()),
@@ -1884,7 +1884,7 @@ void Verifier::verifyFunctionAttrs(FunctionType *FT, AttributeList Attrs,
   // Verify parameter attributes.
   for (unsigned i = 0, e = FT->getNumParams(); i != e; ++i) {
     Type *Ty = FT->getParamType(i);
-    AttributeSet ArgAttrs = Attrs.getParamAttributes(i);
+    AttributeSet ArgAttrs = Attrs.getParamAttrs(i);
 
     if (!IsIntrinsic) {
       Assert(!ArgAttrs.hasAttribute(Attribute::ImmArg),
@@ -1941,8 +1941,8 @@ void Verifier::verifyFunctionAttrs(FunctionType *FT, AttributeList Attrs,
   if (!Attrs.hasAttributes(AttributeList::FunctionIndex))
     return;
 
-  verifyAttributeTypes(Attrs.getFnAttributes(), V);
-  for (Attribute FnAttr : Attrs.getFnAttributes())
+  verifyAttributeTypes(Attrs.getFnAttrs(), V);
+  for (Attribute FnAttr : Attrs.getFnAttrs())
     Assert(FnAttr.isStringAttribute() ||
            Attribute::canUseAsFnAttr(FnAttr.getKindAsEnum()),
            "Attribute '" + FnAttr.getAsString() +
@@ -2178,7 +2178,7 @@ void Verifier::verifyStatepoint(const CallBase &Call) {
            Call);
 
     if (TargetFuncType->isVarArg()) {
-      AttributeSet ArgAttrs = Attrs.getParamAttributes(5 + i);
+      AttributeSet ArgAttrs = Attrs.getParamAttrs(5 + i);
       Assert(!ArgAttrs.hasAttribute(Attribute::StructRet),
              "Attribute 'sret' cannot be used for vararg call arguments!",
              Call);
@@ -3169,7 +3169,7 @@ void Verifier::visitCallBase(CallBase &Call) {
     // Check attributes on the varargs part.
     for (unsigned Idx = FTy->getNumParams(); Idx < Call.arg_size(); ++Idx) {
       Type *Ty = Call.getArgOperand(Idx)->getType();
-      AttributeSet ArgAttrs = Attrs.getParamAttributes(Idx);
+      AttributeSet ArgAttrs = Attrs.getParamAttrs(Idx);
       verifyParameterAttrs(ArgAttrs, Ty, &Call);
 
       if (ArgAttrs.hasAttribute(Attribute::Nest)) {
@@ -3343,7 +3343,7 @@ static AttrBuilder getParameterABIAttributes(int I, AttributeList Attrs) {
       Attribute::ByRef};
   AttrBuilder Copy;
   for (auto AK : ABIAttrs) {
-    Attribute Attr = Attrs.getParamAttributes(I).getAttribute(AK);
+    Attribute Attr = Attrs.getParamAttrs(I).getAttribute(AK);
     if (Attr.isValid())
       Copy.addAttribute(Attr);
   }

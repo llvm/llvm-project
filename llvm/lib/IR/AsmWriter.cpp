@@ -988,7 +988,7 @@ void SlotTracker::processModule() {
 
     // Add all the function attributes to the table.
     // FIXME: Add attributes of other objects?
-    AttributeSet FnAttrs = F.getAttributes().getFnAttributes();
+    AttributeSet FnAttrs = F.getAttributes().getFnAttrs();
     if (FnAttrs.hasAttributes())
       CreateAttributeSetSlot(FnAttrs);
   }
@@ -1029,7 +1029,7 @@ void SlotTracker::processFunction() {
       // target may not be linked into the optimizer.
       if (const auto *Call = dyn_cast<CallBase>(&I)) {
         // Add all the call attributes to the table.
-        AttributeSet Attrs = Call->getAttributes().getFnAttributes();
+        AttributeSet Attrs = Call->getAttributes().getFnAttrs();
         if (Attrs.hasAttributes())
           CreateAttributeSetSlot(Attrs);
       }
@@ -3689,7 +3689,7 @@ void AssemblyWriter::printFunction(const Function *F) {
 
   const AttributeList &Attrs = F->getAttributes();
   if (Attrs.hasAttributes(AttributeList::FunctionIndex)) {
-    AttributeSet AS = Attrs.getFnAttributes();
+    AttributeSet AS = Attrs.getFnAttrs();
     std::string AttrStr;
 
     for (const Attribute &Attr : AS) {
@@ -3743,7 +3743,7 @@ void AssemblyWriter::printFunction(const Function *F) {
       // Output type...
       TypePrinter.print(FT->getParamType(I), Out);
 
-      AttributeSet ArgAttrs = Attrs.getParamAttributes(I);
+      AttributeSet ArgAttrs = Attrs.getParamAttrs(I);
       if (ArgAttrs.hasAttributes()) {
         Out << ' ';
         writeAttributeSet(ArgAttrs);
@@ -3755,7 +3755,7 @@ void AssemblyWriter::printFunction(const Function *F) {
       // Insert commas as we go... the first arg doesn't get a comma
       if (Arg.getArgNo() != 0)
         Out << ", ";
-      printArgument(&Arg, Attrs.getParamAttributes(Arg.getArgNo()));
+      printArgument(&Arg, Attrs.getParamAttrs(Arg.getArgNo()));
     }
   }
 
@@ -3776,7 +3776,7 @@ void AssemblyWriter::printFunction(const Function *F) {
       Mod->getDataLayout().getProgramAddressSpace() != 0)
     Out << " addrspace(" << F->getAddressSpace() << ")";
   if (Attrs.hasAttributes(AttributeList::FunctionIndex))
-    Out << " #" << Machine.getAttributeGroupSlot(Attrs.getFnAttributes());
+    Out << " #" << Machine.getAttributeGroupSlot(Attrs.getFnAttrs());
   if (F->hasSection()) {
     Out << " section \"";
     printEscapedString(F->getSection(), Out);
@@ -4150,7 +4150,7 @@ void AssemblyWriter::printInstruction(const Instruction &I) {
     for (unsigned op = 0, Eop = CI->getNumArgOperands(); op < Eop; ++op) {
       if (op > 0)
         Out << ", ";
-      writeParamOperand(CI->getArgOperand(op), PAL.getParamAttributes(op));
+      writeParamOperand(CI->getArgOperand(op), PAL.getParamAttrs(op));
     }
 
     // Emit an ellipsis if this is a musttail call in a vararg function.  This
@@ -4162,7 +4162,7 @@ void AssemblyWriter::printInstruction(const Instruction &I) {
 
     Out << ')';
     if (PAL.hasAttributes(AttributeList::FunctionIndex))
-      Out << " #" << Machine.getAttributeGroupSlot(PAL.getFnAttributes());
+      Out << " #" << Machine.getAttributeGroupSlot(PAL.getFnAttrs());
 
     writeOperandBundles(CI);
   } else if (const InvokeInst *II = dyn_cast<InvokeInst>(&I)) {
@@ -4195,12 +4195,12 @@ void AssemblyWriter::printInstruction(const Instruction &I) {
     for (unsigned op = 0, Eop = II->getNumArgOperands(); op < Eop; ++op) {
       if (op)
         Out << ", ";
-      writeParamOperand(II->getArgOperand(op), PAL.getParamAttributes(op));
+      writeParamOperand(II->getArgOperand(op), PAL.getParamAttrs(op));
     }
 
     Out << ')';
     if (PAL.hasAttributes(AttributeList::FunctionIndex))
-      Out << " #" << Machine.getAttributeGroupSlot(PAL.getFnAttributes());
+      Out << " #" << Machine.getAttributeGroupSlot(PAL.getFnAttrs());
 
     writeOperandBundles(II);
 
@@ -4235,12 +4235,12 @@ void AssemblyWriter::printInstruction(const Instruction &I) {
     for (unsigned op = 0, Eop = CBI->getNumArgOperands(); op < Eop; ++op) {
       if (op)
         Out << ", ";
-      writeParamOperand(CBI->getArgOperand(op), PAL.getParamAttributes(op));
+      writeParamOperand(CBI->getArgOperand(op), PAL.getParamAttrs(op));
     }
 
     Out << ')';
     if (PAL.hasAttributes(AttributeList::FunctionIndex))
-      Out << " #" << Machine.getAttributeGroupSlot(PAL.getFnAttributes());
+      Out << " #" << Machine.getAttributeGroupSlot(PAL.getFnAttrs());
 
     writeOperandBundles(CBI);
 

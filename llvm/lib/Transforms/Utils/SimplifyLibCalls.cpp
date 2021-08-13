@@ -577,9 +577,9 @@ Value *LibCallSimplifier::optimizeStrNCpy(CallInst *CI, IRBuilderBase &B) {
   if (SrcLen == 0) {
     // strncpy(x, "", y) -> memset(x, '\0', y)
     Align MemSetAlign =
-        CI->getAttributes().getParamAttributes(0).getAlignment().valueOrOne();
+        CI->getAttributes().getParamAttrs(0).getAlignment().valueOrOne();
     CallInst *NewCI = B.CreateMemSet(Dst, B.getInt8('\0'), Size, MemSetAlign);
-    AttrBuilder ArgAttrs(CI->getAttributes().getParamAttributes(0));
+    AttrBuilder ArgAttrs(CI->getAttributes().getParamAttrs(0));
     NewCI->setAttributes(NewCI->getAttributes().addParamAttributes(
         CI->getContext(), 0, ArgAttrs));
     return Dst;

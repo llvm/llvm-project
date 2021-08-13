@@ -5241,8 +5241,7 @@ PPCInstrInfo::isSignOrZeroExtended(const MachineInstr &MI, bool SignExt,
               return false;
             const IntegerType *IntTy =
               dyn_cast<IntegerType>(CalleeFn->getReturnType());
-            const AttributeSet &Attrs =
-              CalleeFn->getAttributes().getRetAttributes();
+            const AttributeSet &Attrs = CalleeFn->getAttributes().getRetAttrs();
             if (IntTy && IntTy->getBitWidth() <= 32)
               return Attrs.hasAttribute(SignExt ? Attribute::SExt :
                                                   Attribute::ZExt);

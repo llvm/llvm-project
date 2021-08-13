@@ -1231,8 +1231,7 @@ static void fillOverallFunction(Module &M, OutlinableGroup &CurrentGroup,
                                         *CurrentGroup.OutlinedFunction);
 
   // Transfer the attributes from the function to the new function.
-  for (Attribute A :
-       CurrentOS->ExtractedFunction->getAttributes().getFnAttributes())
+  for (Attribute A : CurrentOS->ExtractedFunction->getAttributes().getFnAttrs())
     CurrentGroup.OutlinedFunction->addFnAttr(A);
 
   // Create an output block for the first extracted function.
