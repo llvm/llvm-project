@@ -6419,7 +6419,7 @@ void SelectionDAGBuilder::visitIntrinsicCall(const CallInst &I,
     SDValue Op = getValue(I.getArgOperand(0));
     SDNodeFlags Flags;
     Flags.setNoFPExcept(
-        !F.getAttributes().hasFnAttribute(llvm::Attribute::StrictFP));
+        !F.getAttributes().hasFnAttr(llvm::Attribute::StrictFP));
 
     // If ISD::ISNAN should be expanded, do it right now, because the expansion
     // can use illegal types. Making expansion early allows to legalize these

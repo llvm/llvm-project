@@ -1824,7 +1824,7 @@ void Verifier::verifyParameterAttrs(AttributeSet Attrs, Type *Ty,
 
 void Verifier::checkUnsignedBaseTenFuncAttr(AttributeList Attrs, StringRef Attr,
                                             const Value *V) {
-  if (Attrs.hasFnAttribute(Attr)) {
+  if (Attrs.hasFnAttr(Attr)) {
     StringRef S = Attrs.getAttribute(AttributeList::FunctionIndex, Attr)
                       .getValueAsString();
     unsigned N;
@@ -1939,50 +1939,50 @@ void Verifier::verifyFunctionAttrs(FunctionType *FT, AttributeList Attrs,
                "' does not apply to functions!",
            V);
 
-  Assert(!(Attrs.hasFnAttribute(Attribute::ReadNone) &&
-           Attrs.hasFnAttribute(Attribute::ReadOnly)),
+  Assert(!(Attrs.hasFnAttr(Attribute::ReadNone) &&
+           Attrs.hasFnAttr(Attribute::ReadOnly)),
          "Attributes 'readnone and readonly' are incompatible!", V);
 
-  Assert(!(Attrs.hasFnAttribute(Attribute::ReadNone) &&
-           Attrs.hasFnAttribute(Attribute::WriteOnly)),
+  Assert(!(Attrs.hasFnAttr(Attribute::ReadNone) &&
+           Attrs.hasFnAttr(Attribute::WriteOnly)),
          "Attributes 'readnone and writeonly' are incompatible!", V);
 
-  Assert(!(Attrs.hasFnAttribute(Attribute::ReadOnly) &&
-           Attrs.hasFnAttribute(Attribute::WriteOnly)),
+  Assert(!(Attrs.hasFnAttr(Attribute::ReadOnly) &&
+           Attrs.hasFnAttr(Attribute::WriteOnly)),
          "Attributes 'readonly and writeonly' are incompatible!", V);
 
-  Assert(!(Attrs.hasFnAttribute(Attribute::ReadNone) &&
-           Attrs.hasFnAttribute(Attribute::InaccessibleMemOrArgMemOnly)),
+  Assert(!(Attrs.hasFnAttr(Attribute::ReadNone) &&
+           Attrs.hasFnAttr(Attribute::InaccessibleMemOrArgMemOnly)),
          "Attributes 'readnone and inaccessiblemem_or_argmemonly' are "
          "incompatible!",
          V);
 
-  Assert(!(Attrs.hasFnAttribute(Attribute::ReadNone) &&
-           Attrs.hasFnAttribute(Attribute::InaccessibleMemOnly)),
+  Assert(!(Attrs.hasFnAttr(Attribute::ReadNone) &&
+           Attrs.hasFnAttr(Attribute::InaccessibleMemOnly)),
          "Attributes 'readnone and inaccessiblememonly' are incompatible!", V);
 
-  Assert(!(Attrs.hasFnAttribute(Attribute::NoInline) &&
-           Attrs.hasFnAttribute(Attribute::AlwaysInline)),
+  Assert(!(Attrs.hasFnAttr(Attribute::NoInline) &&
+           Attrs.hasFnAttr(Attribute::AlwaysInline)),
          "Attributes 'noinline and alwaysinline' are incompatible!", V);
 
-  if (Attrs.hasFnAttribute(Attribute::OptimizeNone)) {
-    Assert(Attrs.hasFnAttribute(Attribute::NoInline),
+  if (Attrs.hasFnAttr(Attribute::OptimizeNone)) {
+    Assert(Attrs.hasFnAttr(Attribute::NoInline),
            "Attribute 'optnone' requires 'noinline'!", V);
 
-    Assert(!Attrs.hasFnAttribute(Attribute::OptimizeForSize),
+    Assert(!Attrs.hasFnAttr(Attribute::OptimizeForSize),
            "Attributes 'optsize and optnone' are incompatible!", V);
 
-    Assert(!Attrs.hasFnAttribute(Attribute::MinSize),
+    Assert(!Attrs.hasFnAttr(Attribute::MinSize),
            "Attributes 'minsize and optnone' are incompatible!", V);
   }
 
-  if (Attrs.hasFnAttribute(Attribute::JumpTable)) {
+  if (Attrs.hasFnAttr(Attribute::JumpTable)) {
     const GlobalValue *GV = cast<GlobalValue>(V);
     Assert(GV->hasGlobalUnnamedAddr(),
            "Attribute 'jumptable' requires 'unnamed_addr'", V);
   }
 
-  if (Attrs.hasFnAttribute(Attribute::AllocSize)) {
+  if (Attrs.hasFnAttr(Attribute::AllocSize)) {
     std::pair<unsigned, Optional<unsigned>> Args =
         Attrs.getAllocSizeArgs(AttributeList::FunctionIndex);
 
@@ -2009,7 +2009,7 @@ void Verifier::verifyFunctionAttrs(FunctionType *FT, AttributeList Attrs,
       return;
   }
 
-  if (Attrs.hasFnAttribute(Attribute::VScaleRange)) {
+  if (Attrs.hasFnAttr(Attribute::VScaleRange)) {
     std::pair<unsigned, unsigned> Args =
         Attrs.getVScaleRangeArgs(AttributeList::FunctionIndex);
 
@@ -2017,7 +2017,7 @@ void Verifier::verifyFunctionAttrs(FunctionType *FT, AttributeList Attrs,
       CheckFailed("'vscale_range' minimum cannot be greater than maximum", V);
   }
 
-  if (Attrs.hasFnAttribute("frame-pointer")) {
+  if (Attrs.hasFnAttr("frame-pointer")) {
     StringRef FP = Attrs.getAttribute(AttributeList::FunctionIndex,
                                       "frame-pointer").getValueAsString();
     if (FP != "all" && FP != "non-leaf" && FP != "none")
@@ -2334,7 +2334,7 @@ void Verifier::visitFunction(const Function &F) {
   // On function declarations/definitions, we do not support the builtin
   // attribute. We do not check this in VerifyFunctionAttrs since that is
   // checking for Attributes that can/can not ever be on functions.
-  Assert(!Attrs.hasFnAttribute(Attribute::Builtin),
+  Assert(!Attrs.hasFnAttr(Attribute::Builtin),
          "Attribute 'builtin' can only be applied to a callsite.", &F);
 
   Assert(!Attrs.hasAttrSomewhere(Attribute::ElementType),
@@ -3071,14 +3071,14 @@ void Verifier::visitCallBase(CallBase &Call) {
     Assert(Callee->getValueType() == FTy,
            "Intrinsic called with incompatible signature", Call);
 
-  if (Attrs.hasFnAttribute(Attribute::Speculatable)) {
+  if (Attrs.hasFnAttr(Attribute::Speculatable)) {
     // Don't allow speculatable on call sites, unless the underlying function
     // declaration is also speculatable.
     Assert(Callee && Callee->isSpeculatable(),
            "speculatable attribute may not apply to call sites", Call);
   }
 
-  if (Attrs.hasFnAttribute(Attribute::Preallocated)) {
+  if (Attrs.hasFnAttr(Attribute::Preallocated)) {
     Assert(Call.getCalledFunction()->getIntrinsicID() ==
                Intrinsic::call_preallocated_arg,
            "preallocated as a call site attribute can only be on "

@@ -5232,7 +5232,7 @@ RValue CodeGenFunction::EmitCall(const CGFunctionInfo &CallInfo,
     CannotThrow = true;
   } else {
     // Otherwise, nounwind call sites will never throw.
-    CannotThrow = Attrs.hasFnAttribute(llvm::Attribute::NoUnwind);
+    CannotThrow = Attrs.hasFnAttr(llvm::Attribute::NoUnwind);
 
     if (auto *FPtr = dyn_cast<llvm::Function>(CalleePtr))
       if (FPtr->hasFnAttribute(llvm::Attribute::NoUnwind))

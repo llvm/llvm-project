@@ -2289,7 +2289,7 @@ ARMTargetLowering::LowerCall(TargetLowering::CallLoweringInfo &CLI,
   bool PreferIndirect = false;
 
   // Determine whether this is a non-secure function call.
-  if (CLI.CB && CLI.CB->getAttributes().hasFnAttribute("cmse_nonsecure_call"))
+  if (CLI.CB && CLI.CB->getAttributes().hasFnAttr("cmse_nonsecure_call"))
     isCmseNSCall = true;
 
   // Disable tail calls if they're not supported.
@@ -18134,7 +18134,7 @@ EVT ARMTargetLowering::getOptimalMemOpType(
     const MemOp &Op, const AttributeList &FuncAttributes) const {
   // See if we can use NEON instructions for this...
   if ((Op.isMemcpy() || Op.isZeroMemset()) && Subtarget->hasNEON() &&
-      !FuncAttributes.hasFnAttribute(Attribute::NoImplicitFloat)) {
+      !FuncAttributes.hasFnAttr(Attribute::NoImplicitFloat)) {
     bool Fast;
     if (Op.size() >= 16 &&
         (Op.isAligned(Align(16)) ||
