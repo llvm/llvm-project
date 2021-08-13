@@ -47,15 +47,7 @@ static bool operator==(const isl::space &LHS, const isl::space &RHS) {
   return bool(LHS.is_equal(RHS));
 }
 
-static bool operator==(const isl::basic_set &LHS, const isl::basic_set &RHS) {
-  return bool(LHS.is_equal(RHS));
-}
-
 static bool operator==(const isl::set &LHS, const isl::set &RHS) {
-  return bool(LHS.is_equal(RHS));
-}
-
-static bool operator==(const isl::basic_map &LHS, const isl::basic_map &RHS) {
   return bool(LHS.is_equal(RHS));
 }
 
@@ -1142,9 +1134,9 @@ TEST(Isl, Quota) {
     EXPECT_TRUE(BoolResult.is_error());
     EXPECT_FALSE(BoolResult.is_false());
     EXPECT_FALSE(BoolResult.is_true());
-    EXPECT_DEATH((bool)BoolResult,
+    EXPECT_DEATH((void)(bool)BoolResult,
                  "IMPLEMENTATION ERROR: Unhandled error state");
-    EXPECT_DEATH((bool)!BoolResult,
+    EXPECT_DEATH((void)(bool)!BoolResult,
                  "IMPLEMENTATION ERROR: Unhandled error state");
     EXPECT_DEATH(
         {
