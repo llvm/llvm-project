@@ -1,10 +1,3 @@
-// RUN: rm -rf %t.mcp
-// RUN: echo %S > %t.result
-// RUN: c-index-test core --scan-deps %S -- %clang -cc1 -I %S/Inputs/module \
-// RUN:     -fmodules -fmodules-cache-path=%t.mcp -fimplicit-module-maps \
-// RUN:     -o FoE.o -x objective-c %s >> %t.result
-// RUN: cat %t.result | sed 's/\\/\//g' | FileCheck %s
-
 // Use driver arguments.
 // RUN: rm -rf %t.mcp
 // RUN: echo %S > %t.result

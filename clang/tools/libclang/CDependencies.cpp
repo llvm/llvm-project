@@ -221,23 +221,7 @@ getFileDependencies(CXDependencyScannerWorker W, int argc,
 
   DependencyScanningWorker *Worker = unwrap(W);
 
-  std::vector<std::string> Compilation;
-  if (StringRef(argv[1]) == "-cc1")
-    for (int i = 2; i < argc; ++i)
-      Compilation.push_back(argv[i]);
-  else {
-    // Run the driver to get -cc1 args.
-    ArrayRef<const char *> CArgs = llvm::makeArrayRef(argv, argv+argc);
-    IntrusiveRefCntPtr<DiagnosticsEngine>
-    Diags(CompilerInstance::createDiagnostics(new DiagnosticOptions));
-    auto CI = createInvocationFromCommandLine(CArgs, Diags, /*VFS=*/nullptr,
-      /*ShouldRecoverOnErrors=*/false, &Compilation);
-    if (!CI) {
-      if (error)
-        *error = cxstring::createRef("failed creating 'cc1' arguments");
-      return nullptr;
-    }
-  }
+  std::vector<std::string> Compilation{argv, argv + argc};
 
   if (Worker->getFormat() == ScanningOutputFormat::Full)
     return getFullDependencies(Worker, Compilation, WorkingDirectory, MDC,

@@ -85,6 +85,11 @@ public:
                                   const CompilationDatabase &CDB,
                                   DependencyConsumer &Consumer);
 
+  /// Run the dependency scanning tool for a given clang driver invocation, and
+  /// report the discovered dependencies to the provided consumer.
+  ///
+  /// \returns A \c StringError with the diagnostic output if clang errors
+  /// occurred, success otherwise.
   llvm::Error
   computeDependenciesForClangInvocation(StringRef WorkingDirectory,
                                         ArrayRef<std::string> Arguments,
