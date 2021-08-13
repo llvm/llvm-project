@@ -30,6 +30,10 @@ struct MeasurementVisitor {
 // Custom Consumer Actions
 //===----------------------------------------------------------------------===//
 
+class PluginParseTreeAction : public FrontendAction {
+  void ExecuteAction() override;
+};
+
 class InputOutputTestAction : public FrontendAction {
   void ExecuteAction() override;
 };

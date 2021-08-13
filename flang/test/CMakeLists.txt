@@ -2,7 +2,9 @@
 # for use by Lit, and delegates to LLVM's lit test handlers.
 
 llvm_canonicalize_cmake_booleans(
+  FLANG_BUILD_EXAMPLES
   FLANG_STANDALONE_BUILD
+  LLVM_ENABLE_PLUGINS
 )
 
 set(FLANG_TOOLS_DIR ${FLANG_BINARY_DIR}/bin)
@@ -12,6 +14,8 @@ configure_lit_site_cfg(
   ${CMAKE_CURRENT_BINARY_DIR}/lit.site.cfg.py
   MAIN_CONFIG
   ${CMAKE_CURRENT_SOURCE_DIR}/lit.cfg.py
+  PATHS
+  "SHLIBDIR"
 )
 
 configure_lit_site_cfg(
@@ -40,6 +44,10 @@ if (FLANG_INCLUDE_TESTS)
     list(APPEND FLANG_TEST_DEPENDS FlangUnitTests)
   endif()
 endif()
+
+if (FLANG_BUILD_EXAMPLES)
+  list(APPEND FLANG_TEST_DEPENDS flangHelloWorldPlugin)
+endif ()
 
 add_custom_target(flang-test-depends DEPENDS ${FLANG_TEST_DEPENDS})
 

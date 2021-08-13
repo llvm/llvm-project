@@ -27,4 +27,11 @@ clang_target_link_libraries(flang-new
   clangBasic
 )
 
+option(FLANG_PLUGIN_SUPPORT "Build Flang with plugin support." ON)
+
+# Enable support for plugins, which need access to symbols from flang-new
+if(FLANG_PLUGIN_SUPPORT)
+  export_executable_symbols_for_plugins(flang-new)
+endif()
+
 install(TARGETS flang-new DESTINATION bin)
