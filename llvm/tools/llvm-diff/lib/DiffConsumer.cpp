@@ -135,7 +135,7 @@ void DiffConsumer::indent() {
 }
 
 void DiffConsumer::reset() {
-  context.clear();
+  contexts.clear();
   Differences = false;
   Indent = 0;
 }
