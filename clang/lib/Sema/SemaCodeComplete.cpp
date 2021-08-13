@@ -4423,33 +4423,59 @@ void Sema::CodeCompleteAttribute(AttributeCommonInfo::Syntax Syntax,
         Scope = "";
       }
 
+      auto Add = [&](llvm::StringRef Scope, llvm::StringRef Name,
+                     bool Underscores) {
+        CodeCompletionBuilder Builder(Results.getAllocator(),
+                                      Results.getCodeCompletionTUInfo());
+        llvm::SmallString<32> Text;
+        if (!Scope.empty()) {
+          Text.append(Scope);
+          Text.append("::");
+        }
+        if (Underscores)
+          Text.append("__");
+        Text.append(Name);
+        if (Underscores)
+          Text.append("__");
+        Builder.AddTypedTextChunk(Results.getAllocator().CopyString(Text));
+
+        if (!A.ArgNames.empty()) {
+          Builder.AddChunk(CodeCompletionString::CK_LeftParen, "(");
+          bool First = true;
+          for (const char *Arg : A.ArgNames) {
+            if (!First)
+              Builder.AddChunk(CodeCompletionString::CK_Comma, ", ");
+            First = false;
+            Builder.AddPlaceholderChunk(Arg);
+          }
+          Builder.AddChunk(CodeCompletionString::CK_RightParen, ")");
+        }
+
+        Results.AddResult(Builder.TakeString());
+      };
+
       // Generate the non-underscore-guarded result.
       // Note this is (a suffix of) the NormalizedFullName, no need to copy.
       // If an underscore-guarded scope was specified, only the
       // underscore-guarded attribute name is relevant.
       if (!InScopeUnderscore)
-        Results.AddResult(Scope.empty() ? Name.data() : S.NormalizedFullName);
+        Add(Scope, Name, /*Underscores=*/false);
 
       // Generate the underscore-guarded version, for syntaxes that support it.
       // We skip this if the scope was already spelled and not guarded, or
       // we must spell it and can't guard it.
       if (!(InScope && !InScopeUnderscore) && SyntaxSupportsGuards) {
         llvm::SmallString<32> Guarded;
-        if (!Scope.empty()) {
+        if (Scope.empty()) {
+          Add(Scope, Name, /*Underscores=*/true);
+        } else {
           const char *GuardedScope = underscoreAttrScope(Scope);
           if (!GuardedScope)
             continue;
-          Guarded.append(GuardedScope);
-          Guarded.append("::");
+          Add(GuardedScope, Name, /*Underscores=*/true);
         }
-        Guarded.append("__");
-        Guarded.append(Name);
-        Guarded.append("__");
-        Results.AddResult(
-            CodeCompletionResult(Results.getAllocator().CopyString(Guarded)));
       }
 
-      // FIXME: include the list of arg names (not currently exposed).
       // It may be nice to include the Kind so we can look up the docs later.
     }
   };
