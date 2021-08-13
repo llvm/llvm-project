@@ -6,10 +6,17 @@ clang_tablegen("Opcodes") {
   td_file = "Interp/Opcodes.td"
 }
 
+clang_tablegen("AttrDocTable") {
+  visibility = [ ":AST" ]
+  args = [ "-gen-clang-attr-doc-table" ]
+  td_file = "//clang/include/clang/Basic/Attr.td"
+}
+
 static_library("AST") {
   output_name = "clangAST"
   configs += [ "//llvm/utils/gn/build:clang_code" ]
   deps = [
+    ":AttrDocTable",
     ":Opcodes",
     "//clang/include/clang/AST:AttrImpl",
     "//clang/include/clang/AST:AttrNodeTraverse",
@@ -51,6 +58,7 @@ static_library("AST") {
     "ASTImporterLookupTable.cpp",
     "ASTStructuralEquivalence.cpp",
     "ASTTypeTraits.cpp",
+    "AttrDocTable.cpp",
     "AttrImpl.cpp",
     "CXXInheritance.cpp",
     "Comment.cpp",

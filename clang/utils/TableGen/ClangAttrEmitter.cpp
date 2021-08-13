@@ -4232,10 +4232,6 @@ void EmitClangAttrSubjectMatchRulesParserStringSwitches(RecordKeeper &Records,
 void EmitClangAttrDocTable(RecordKeeper &Records, raw_ostream &OS) {
   emitSourceFileHeader("Clang attribute documentation", OS);
 
-  OS << R"cpp(
-  #include "clang/AST/Attr.h"
-  #include "llvm/ADT/StringRef.h"
-  )cpp";
   std::vector<Record *> Attrs = Records.getAllDerivedDefinitions("Attr");
   for (const auto *A : Attrs) {
     if (!A->getValueAsBit("ASTNode"))
@@ -4251,18 +4247,6 @@ void EmitClangAttrDocTable(RecordKeeper &Records, raw_ostream &OS) {
       break;
     }
   }
-  OS << R"cpp(
-  static const llvm::StringRef AttrDoc[] = {
-  #define ATTR(NAME) AttrDoc_##NAME,
-  #include "clang/Basic/AttrList.inc"
-  };
-
-  llvm::StringRef clang::Attr::getDocumentation(clang::attr::Kind K) {
-    if(K < llvm::array_lengthof(AttrDoc))
-      return AttrDoc[K];
-    return "";
-  }
-  )cpp";
 }
 
 enum class SpellingKind {
