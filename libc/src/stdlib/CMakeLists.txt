@@ -50,3 +50,13 @@ add_entrypoint_object(
   DEPENDS
     libc.src.__support.integer_operations
 )
+
+add_entrypoint_object(
+  strtoll
+  SRCS
+    strtoll.cpp
+  HDRS
+    strtoll.h
+  DEPENDS
+    libc.src.__support.str_conv_utils
+)

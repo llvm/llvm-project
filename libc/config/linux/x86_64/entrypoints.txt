@@ -158,6 +158,7 @@ if(LLVM_LIBC_FULL_BUILD)
     libc.src.stdlib.abs
     libc.src.stdlib.labs
     libc.src.stdlib.llabs
+    libc.src.stdlib.strtoll
 
     # signal.h entrypoints
     libc.src.signal.raise
