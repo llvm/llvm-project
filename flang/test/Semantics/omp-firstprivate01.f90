@@ -12,6 +12,7 @@ program omp_firstprivate
   a = 10
   b = 20
 
+  !ERROR: TARGET construct with nested TEAMS region contains statements or directives outside of the TEAMS construct
   !$omp target
   !$omp teams private(a, b)
   !ERROR: FIRSTPRIVATE variable 'a' is PRIVATE in outer context

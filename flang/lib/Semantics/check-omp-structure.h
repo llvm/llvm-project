@@ -218,6 +218,7 @@ private:
   void SetLoopInfo(const parser::OpenMPLoopConstruct &x);
   void CheckIsLoopIvPartOfClause(
       llvmOmpClause clause, const parser::OmpObjectList &ompObjectList);
+  bool CheckTargetBlockOnlyTeams(const parser::Block &);
   void CheckWorkshareBlockStmts(const parser::Block &, parser::CharBlock);
 
   void CheckLoopItrVariableIsInt(const parser::OpenMPLoopConstruct &x);
@@ -248,6 +249,12 @@ private:
   void CheckPredefinedAllocatorRestriction(
       const parser::CharBlock &source, const parser::Name &name);
   bool isPredefinedAllocator{false};
+  void EnterDirectiveNest(const int index) { directiveNest_[index]++; }
+  void ExitDirectiveNest(const int index) { directiveNest_[index]--; }
+  int GetDirectiveNest(const int index) { return directiveNest_[index]; }
+
+  enum directiveNestType { SIMDNest, TargetBlockOnlyTeams, LastType };
+  int directiveNest_[LastType + 1] = {0};
 };
 } // namespace Fortran::semantics
 #endif // FORTRAN_SEMANTICS_CHECK_OMP_STRUCTURE_H_

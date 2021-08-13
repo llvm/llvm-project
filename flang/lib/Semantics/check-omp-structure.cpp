@@ -285,7 +285,7 @@ void OmpStructureChecker::Enter(const parser::OpenMPConstruct &x) {
   // called individually for each construct.  Therefore a
   // dirContext_ size `1` means the current construct is nested
   if (dirContext_.size() >= 1) {
-    if (GetSIMDNest() > 0) {
+    if (GetDirectiveNest(SIMDNest) > 0) {
       CheckSIMDNest(x);
     }
   }
@@ -306,7 +306,7 @@ void OmpStructureChecker::Enter(const parser::OpenMPLoopConstruct &x) {
 
   PushContextAndClauseSets(beginDir.source, beginDir.v);
   if (llvm::omp::simdSet.test(GetContext().directive)) {
-    EnterSIMDNest();
+    EnterDirectiveNest(SIMDNest);
   }
 
   if (beginDir.v == llvm::omp::Directive::OMPD_do) {
@@ -585,7 +585,7 @@ void OmpStructureChecker::CheckDistLinear(
 
 void OmpStructureChecker::Leave(const parser::OpenMPLoopConstruct &) {
   if (llvm::omp::simdSet.test(GetContext().directive)) {
-    ExitSIMDNest();
+    ExitDirectiveNest(SIMDNest);
   }
   dirContext_.pop_back();
 }
@@ -625,11 +625,35 @@ void OmpStructureChecker::Enter(const parser::OpenMPBlockConstruct &x) {
     if (GetContext().directive == llvm::omp::Directive::OMPD_master) {
       CheckMasterNesting(x);
     }
+    // A teams region can only be strictly nested within the implicit parallel
+    // region or a target region.
+    if (GetContext().directive == llvm::omp::Directive::OMPD_teams &&
+        GetContextParent().directive != llvm::omp::Directive::OMPD_target) {
+      context_.Say(parser::FindSourceLocation(x),
+          "%s region can only be strictly nested within the implicit parallel "
+          "region or TARGET region"_err_en_US,
+          ContextDirectiveAsFortran());
+    }
+    // If a teams construct is nested within a target construct, that target
+    // construct must contain no statements, declarations or directives outside
+    // of the teams construct.
+    if (GetContext().directive == llvm::omp::Directive::OMPD_teams &&
+        GetContextParent().directive == llvm::omp::Directive::OMPD_target &&
+        !GetDirectiveNest(TargetBlockOnlyTeams)) {
+      context_.Say(GetContextParent().directiveSource,
+          "TARGET construct with nested TEAMS region contains statements or "
+          "directives outside of the TEAMS construct"_err_en_US);
+    }
   }
 
   CheckNoBranching(block, beginDir.v, beginDir.source);
 
   switch (beginDir.v) {
+  case llvm::omp::Directive::OMPD_target:
+    if (CheckTargetBlockOnlyTeams(block)) {
+      EnterDirectiveNest(TargetBlockOnlyTeams);
+    }
+    break;
   case llvm::omp::OMPD_workshare:
   case llvm::omp::OMPD_parallel_workshare:
     CheckWorkshareBlockStmts(block, beginDir.source);
@@ -683,6 +707,9 @@ void OmpStructureChecker::CheckIfDoOrderedClause(
 }
 
 void OmpStructureChecker::Leave(const parser::OpenMPBlockConstruct &) {
+  if (GetDirectiveNest(TargetBlockOnlyTeams)) {
+    ExitDirectiveNest(TargetBlockOnlyTeams);
+  }
   dirContext_.pop_back();
 }
 
@@ -1919,6 +1946,30 @@ void OmpStructureChecker::CheckPrivateSymbolsInOuterCxt(
       }
     }
   }
+}
+
+bool OmpStructureChecker::CheckTargetBlockOnlyTeams(
+    const parser::Block &block) {
+  bool nestedTeams{false};
+  auto it{block.begin()};
+
+  if (const auto *ompConstruct{parser::Unwrap<parser::OpenMPConstruct>(*it)}) {
+    if (const auto *ompBlockConstruct{
+            std::get_if<parser::OpenMPBlockConstruct>(&ompConstruct->u)}) {
+      const auto &beginBlockDir{
+          std::get<parser::OmpBeginBlockDirective>(ompBlockConstruct->t)};
+      const auto &beginDir{
+          std::get<parser::OmpBlockDirective>(beginBlockDir.t)};
+      if (beginDir.v == llvm::omp::Directive::OMPD_teams) {
+        nestedTeams = true;
+      }
+    }
+  }
+
+  if (nestedTeams && ++it == block.end()) {
+    return true;
+  }
+  return false;
 }
 
 void OmpStructureChecker::CheckWorkshareBlockStmts(
