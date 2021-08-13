@@ -309,6 +309,7 @@ public:
   // flush the logged info to a stream and clear the log contents.
   void flush(raw_ostream &OS) {
     size_t NrRecords = getNrRecords();
+    (void)NrRecords;
     tensorflow::SequenceExample SE;
     transferLog(SE);
     assert(isSelfConsistent(SE, NrRecords));
