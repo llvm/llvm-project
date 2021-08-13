@@ -1007,6 +1007,9 @@ Instruction *InstCombinerImpl::visitShl(BinaryOperator &I) {
     return BinaryOperator::CreateAnd(Mask, X);
   }
 
+  if (match(Op0, m_OneUse(m_Neg(m_Value(X)))))
+    return BinaryOperator::CreateNeg(Builder.CreateShl(X, Op1));
+
   Constant *C1;
   if (match(Op1, m_Constant(C1))) {
     Constant *C2;
