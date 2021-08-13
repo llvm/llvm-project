@@ -16,12 +16,12 @@ __device__ __constant__ int FileVarDeviceConstant;
 
 // CHECK: @_ZZ7kernel1iE13FuncVarShared = internal addrspace(3) global i32 undef, align 4, !dbg.def ![[FUNC_VAR_SHARED_FRAGMENT:[0-9]+]]
 
-// CHECK: call void @llvm.dbg.def(metadata ![[ARG_LIFETIME:[0-9]+]], metadata i32* %Arg.addr.ascast)
+// CHECK: call void @llvm.dbg.def(metadata ![[ARG_LIFETIME:[0-9]+]], metadata i32 addrspace(5)* %Arg.addr)
 __device__ void kernel1(int Arg) {
 
   __shared__ int FuncVarShared;
 
-  // CHECK: call void @llvm.dbg.def(metadata ![[FUNC_VAR_LIFETIME:[0-9]+]], metadata i32* %FuncVar.ascast)
+  // CHECK: call void @llvm.dbg.def(metadata ![[FUNC_VAR_LIFETIME:[0-9]+]], metadata i32 addrspace(5)* %FuncVar)
   int FuncVar;
 }
 
@@ -44,10 +44,8 @@ __device__ void kernel1(int Arg) {
 // CHECK: ![[FUNC_VAR_SHARED_LIFETIME]] = distinct !DILifetime(object: ![[FUNC_VAR_SHARED:[0-9]+]], location: !DIExpr(DIOpArg(0, i32 addrspace(3)*), DIOpDeref(i32)), argObjects: {![[FUNC_VAR_SHARED_FRAGMENT]]})
 // CHECK: ![[FUNC_VAR_SHARED]] = distinct !DIGlobalVariable(name: "FuncVarShared",
 
-// FIXME This should be in the private address space.
-// CHECK: ![[ARG_LIFETIME]] = distinct !DILifetime(object: ![[ARG:[0-9]+]], location: !DIExpr(DIOpReferrer(i32*), DIOpDeref(i32)))
+// CHECK: ![[ARG_LIFETIME]] = distinct !DILifetime(object: ![[ARG:[0-9]+]], location: !DIExpr(DIOpReferrer(i32 addrspace(5)*), DIOpDeref(i32)))
 // CHECK: ![[ARG]] = !DILocalVariable(name: "Arg", arg: 1,
 
-// FIXME This should be in the private address space.
-// CHECK: ![[FUNC_VAR_LIFETIME]] = distinct !DILifetime(object: ![[FUNC_VAR:[0-9]+]], location: !DIExpr(DIOpReferrer(i32*), DIOpDeref(i32)))
+// CHECK: ![[FUNC_VAR_LIFETIME]] = distinct !DILifetime(object: ![[FUNC_VAR:[0-9]+]], location: !DIExpr(DIOpReferrer(i32 addrspace(5)*), DIOpDeref(i32)))
 // CHECK: ![[FUNC_VAR]] = !DILocalVariable(name: "FuncVar",
