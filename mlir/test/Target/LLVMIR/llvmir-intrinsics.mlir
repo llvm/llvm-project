@@ -244,11 +244,11 @@ llvm.func @matrix_intrinsics(%A: vector<64 x f32>, %B: vector<48 x f32>,
   // CHECK: call <48 x float> @llvm.matrix.transpose.v48f32(<48 x float> %1, i32 3, i32 16)
   %D = llvm.intr.matrix.transpose %B { rows = 3: i32, columns = 16: i32} :
     vector<48 x f32> into vector<48 x f32>
-  // CHECK: call <48 x float> @llvm.matrix.column.major.load.v48f32(float* align 4 %2, i64 %3, i1 false, i32 3, i32 16)
+  // CHECK: call <48 x float> @llvm.matrix.column.major.load.v48f32.i64(float* align 4 %2, i64 %3, i1 false, i32 3, i32 16)
   %E = llvm.intr.matrix.column.major.load %ptr, <stride=%stride>
     { isVolatile = 0: i1, rows = 3: i32, columns = 16: i32} :
     vector<48 x f32> from !llvm.ptr<f32> stride i64
-  // CHECK: call void @llvm.matrix.column.major.store.v48f32(<48 x float> %7, float* align 4 %2, i64 %3, i1 false, i32 3, i32 16)
+  // CHECK: call void @llvm.matrix.column.major.store.v48f32.i64(<48 x float> %7, float* align 4 %2, i64 %3, i1 false, i32 3, i32 16)
   llvm.intr.matrix.column.major.store %E, %ptr, <stride=%stride>
     { isVolatile = 0: i1, rows = 3: i32, columns = 16: i32} :
     vector<48 x f32> to !llvm.ptr<f32> stride i64
@@ -470,8 +470,8 @@ llvm.func @stack_restore(%arg0: !llvm.ptr<i8>) {
 // CHECK-DAG: declare float @llvm.copysign.f32(float, float)
 // CHECK-DAG: declare <12 x float> @llvm.matrix.multiply.v12f32.v64f32.v48f32(<64 x float>, <48 x float>, i32 immarg, i32 immarg, i32 immarg)
 // CHECK-DAG: declare <48 x float> @llvm.matrix.transpose.v48f32(<48 x float>, i32 immarg, i32 immarg)
-// CHECK-DAG: declare <48 x float> @llvm.matrix.column.major.load.v48f32(float* nocapture, i64, i1 immarg, i32 immarg, i32 immarg)
-// CHECK-DAG: declare void @llvm.matrix.column.major.store.v48f32(<48 x float>, float* nocapture writeonly, i64, i1 immarg, i32 immarg, i32 immarg)
+// CHECK-DAG: declare <48 x float> @llvm.matrix.column.major.load.v48f32.i64(float* nocapture, i64, i1 immarg, i32 immarg, i32 immarg)
+// CHECK-DAG: declare void @llvm.matrix.column.major.store.v48f32.i64(<48 x float>, float* nocapture writeonly, i64, i1 immarg, i32 immarg, i32 immarg)
 // CHECK-DAG: declare <7 x i1> @llvm.get.active.lane.mask.v7i1.i64(i64, i64)
 // CHECK-DAG: declare <7 x float> @llvm.masked.load.v7f32.p0v7f32(<7 x float>*, i32 immarg, <7 x i1>, <7 x float>)
 // CHECK-DAG: declare void @llvm.masked.store.v7f32.p0v7f32(<7 x float>, <7 x float>*, i32 immarg, <7 x i1>)
