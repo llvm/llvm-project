@@ -231,7 +231,7 @@
 ///      11: Truncated
 /// \returns A 128-bit vector of [4 x float] containing the rounded values.
 #define _mm_round_ps(X, M) \
-  (__m128)__builtin_ia32_roundps((__v4sf)(__m128)(X), (M))
+  ((__m128)__builtin_ia32_roundps((__v4sf)(__m128)(X), (M)))
 
 /// Copies three upper elements of the first 128-bit vector operand to
 ///    the corresponding three upper elements of the 128-bit result vector of
@@ -272,8 +272,8 @@
 /// \returns A 128-bit vector of [4 x float] containing the copied and rounded
 ///    values.
 #define _mm_round_ss(X, Y, M) \
-  (__m128)__builtin_ia32_roundss((__v4sf)(__m128)(X), \
-                                 (__v4sf)(__m128)(Y), (M))
+  ((__m128)__builtin_ia32_roundss((__v4sf)(__m128)(X), \
+                                  (__v4sf)(__m128)(Y), (M)))
 
 /// Rounds each element of the 128-bit vector of [2 x double] to an
 ///    integer value according to the rounding control specified by the second
@@ -306,7 +306,7 @@
 ///      11: Truncated
 /// \returns A 128-bit vector of [2 x double] containing the rounded values.
 #define _mm_round_pd(X, M) \
-  (__m128d)__builtin_ia32_roundpd((__v2df)(__m128d)(X), (M))
+  ((__m128d)__builtin_ia32_roundpd((__v2df)(__m128d)(X), (M)))
 
 /// Copies the upper element of the first 128-bit vector operand to the
 ///    corresponding upper element of the 128-bit result vector of [2 x double].
@@ -347,8 +347,8 @@
 /// \returns A 128-bit vector of [2 x double] containing the copied and rounded
 ///    values.
 #define _mm_round_sd(X, Y, M) \
-  (__m128d)__builtin_ia32_roundsd((__v2df)(__m128d)(X), \
-                                  (__v2df)(__m128d)(Y), (M))
+  ((__m128d)__builtin_ia32_roundsd((__v2df)(__m128d)(X), \
+                                   (__v2df)(__m128d)(Y), (M)))
 
 /* SSE4 Packed Blending Intrinsics.  */
 /// Returns a 128-bit vector of [2 x double] where the values are
@@ -376,8 +376,8 @@
 ///    is copied to the same position in the result.
 /// \returns A 128-bit vector of [2 x double] containing the copied values.
 #define _mm_blend_pd(V1, V2, M) \
-  (__m128d) __builtin_ia32_blendpd ((__v2df)(__m128d)(V1), \
-                                    (__v2df)(__m128d)(V2), (int)(M))
+  ((__m128d) __builtin_ia32_blendpd ((__v2df)(__m128d)(V1), \
+                                     (__v2df)(__m128d)(V2), (int)(M)))
 
 /// Returns a 128-bit vector of [4 x float] where the values are selected
 ///    from either the first or second operand as specified by the third
@@ -404,8 +404,8 @@
 ///    is copied to the same position in the result.
 /// \returns A 128-bit vector of [4 x float] containing the copied values.
 #define _mm_blend_ps(V1, V2, M) \
-  (__m128) __builtin_ia32_blendps ((__v4sf)(__m128)(V1), \
-                                   (__v4sf)(__m128)(V2), (int)(M))
+  ((__m128) __builtin_ia32_blendps ((__v4sf)(__m128)(V1), \
+                                    (__v4sf)(__m128)(V2), (int)(M)))
 
 /// Returns a 128-bit vector of [2 x double] where the values are
 ///    selected from either the first or second operand as specified by the
@@ -513,8 +513,8 @@ _mm_blendv_epi8 (__m128i __V1, __m128i __V2, __m128i __M)
 ///    is copied to the same position in the result.
 /// \returns A 128-bit vector of [8 x i16] containing the copied values.
 #define _mm_blend_epi16(V1, V2, M) \
-  (__m128i) __builtin_ia32_pblendw128 ((__v8hi)(__m128i)(V1), \
-                                       (__v8hi)(__m128i)(V2), (int)(M))
+  ((__m128i) __builtin_ia32_pblendw128 ((__v8hi)(__m128i)(V1), \
+                                        (__v8hi)(__m128i)(V2), (int)(M)))
 
 /* SSE4 Dword Multiply Instructions.  */
 /// Multiples corresponding elements of two 128-bit vectors of [4 x i32]
@@ -590,8 +590,8 @@ _mm_mul_epi32 (__m128i __V1, __m128i __V2)
 ///    in the corresponding element; otherwise that element is set to zero.
 /// \returns A 128-bit vector of [4 x float] containing the dot product.
 #define _mm_dp_ps(X, Y, M) \
-  (__m128) __builtin_ia32_dpps((__v4sf)(__m128)(X), \
-                               (__v4sf)(__m128)(Y), (M))
+  ((__m128) __builtin_ia32_dpps((__v4sf)(__m128)(X), \
+                                (__v4sf)(__m128)(Y), (M)))
 
 /// Computes the dot product of the two 128-bit vectors of [2 x double]
 ///    and returns it in the elements of the 128-bit result vector of
@@ -625,8 +625,8 @@ _mm_mul_epi32 (__m128i __V1, __m128i __V2)
 ///    each [2 x double] vector. If a bit is set, the dot product is returned in
 ///    the corresponding element; otherwise that element is set to zero.
 #define _mm_dp_pd(X, Y, M) \
-  (__m128d) __builtin_ia32_dppd((__v2df)(__m128d)(X), \
-                                (__v2df)(__m128d)(Y), (M))
+  ((__m128d) __builtin_ia32_dppd((__v2df)(__m128d)(X), \
+                                 (__v2df)(__m128d)(Y), (M)))
 
 /* SSE4 Streaming Load Hint Instruction.  */
 /// Loads integer values from a 128-bit aligned memory location to a
@@ -925,8 +925,8 @@ _mm_max_epu32 (__m128i __V1, __m128i __V2)
 ///    1111: Bits [127:120] of the result are used for insertion.
 /// \returns A 128-bit integer vector containing the constructed values.
 #define _mm_insert_epi8(X, I, N) \
-  (__m128i)__builtin_ia32_vec_set_v16qi((__v16qi)(__m128i)(X), \
-                                        (int)(I), (int)(N))
+  ((__m128i)__builtin_ia32_vec_set_v16qi((__v16qi)(__m128i)(X), \
+                                         (int)(I), (int)(N)))
 
 /// Constructs a 128-bit vector of [4 x i32] by first making a copy of
 ///    the 128-bit integer vector parameter, and then inserting the 32-bit
@@ -957,8 +957,8 @@ _mm_max_epu32 (__m128i __V1, __m128i __V2)
 ///    11: Bits [127:96] of the result are used for insertion.
 /// \returns A 128-bit integer vector containing the constructed values.
 #define _mm_insert_epi32(X, I, N) \
-  (__m128i)__builtin_ia32_vec_set_v4si((__v4si)(__m128i)(X), \
-                                       (int)(I), (int)(N))
+  ((__m128i)__builtin_ia32_vec_set_v4si((__v4si)(__m128i)(X), \
+                                        (int)(I), (int)(N)))
 
 #ifdef __x86_64__
 /// Constructs a 128-bit vector of [2 x i64] by first making a copy of
@@ -988,8 +988,8 @@ _mm_max_epu32 (__m128i __V1, __m128i __V2)
 ///    1: Bits [127:64] of the result are used for insertion. \n
 /// \returns A 128-bit integer vector containing the constructed values.
 #define _mm_insert_epi64(X, I, N) \
-  (__m128i)__builtin_ia32_vec_set_v2di((__v2di)(__m128i)(X), \
-                                       (long long)(I), (int)(N))
+  ((__m128i)__builtin_ia32_vec_set_v2di((__v2di)(__m128i)(X), \
+                                        (long long)(I), (int)(N)))
 #endif /* __x86_64__ */
 
 /* Extract int from packed integer array at index.  This returns the element
@@ -1031,8 +1031,8 @@ _mm_max_epu32 (__m128i __V1, __m128i __V2)
 ///    128-bit integer vector parameter and the remaining bits are assigned
 ///    zeros.
 #define _mm_extract_epi8(X, N) \
-  (int)(unsigned char)__builtin_ia32_vec_ext_v16qi((__v16qi)(__m128i)(X), \
-                                                   (int)(N))
+  ((int)(unsigned char)__builtin_ia32_vec_ext_v16qi((__v16qi)(__m128i)(X), \
+                                                    (int)(N)))
 
 /// Extracts a 32-bit element from the 128-bit integer vector of
 ///    [4 x i32], using the immediate value parameter \a N as a selector.
@@ -1057,7 +1057,7 @@ _mm_max_epu32 (__m128i __V1, __m128i __V2)
 /// \returns  An integer, whose lower 32 bits are selected from the 128-bit
 ///    integer vector parameter and the remaining bits are assigned zeros.
 #define _mm_extract_epi32(X, N) \
-  (int)__builtin_ia32_vec_ext_v4si((__v4si)(__m128i)(X), (int)(N))
+  ((int)__builtin_ia32_vec_ext_v4si((__v4si)(__m128i)(X), (int)(N)))
 
 #ifdef __x86_64__
 /// Extracts a 64-bit element from the 128-bit integer vector of
@@ -1080,7 +1080,7 @@ _mm_max_epu32 (__m128i __V1, __m128i __V2)
 ///    1: Bits [127:64] are returned. \n
 /// \returns  A 64-bit integer.
 #define _mm_extract_epi64(X, N) \
-  (long long)__builtin_ia32_vec_ext_v2di((__v2di)(__m128i)(X), (int)(N))
+  ((long long)__builtin_ia32_vec_ext_v2di((__v2di)(__m128i)(X), (int)(N)))
 #endif /* __x86_64 */
 
 /* SSE4 128-bit Packed Integer Comparisons.  */
@@ -1514,8 +1514,8 @@ _mm_packus_epi32(__m128i __V1, __m128i __V2)
 /// \returns A 128-bit integer vector containing the sums of the sets of
 ///    absolute differences between both operands.
 #define _mm_mpsadbw_epu8(X, Y, M) \
-  (__m128i) __builtin_ia32_mpsadbw128((__v16qi)(__m128i)(X), \
-                                      (__v16qi)(__m128i)(Y), (M))
+  ((__m128i) __builtin_ia32_mpsadbw128((__v16qi)(__m128i)(X), \
+                                       (__v16qi)(__m128i)(Y), (M)))
 
 /// Finds the minimum unsigned 16-bit element in the input 128-bit
 ///    vector of [8 x u16] and returns it and along with its index.
@@ -1624,8 +1624,8 @@ _mm_minpos_epu16(__m128i __V)
 /// \returns Returns a 128-bit integer vector representing the result mask of
 ///    the comparison.
 #define _mm_cmpistrm(A, B, M) \
-  (__m128i)__builtin_ia32_pcmpistrm128((__v16qi)(__m128i)(A), \
-                                       (__v16qi)(__m128i)(B), (int)(M))
+  ((__m128i)__builtin_ia32_pcmpistrm128((__v16qi)(__m128i)(A), \
+                                        (__v16qi)(__m128i)(B), (int)(M)))
 
 /// Uses the immediate operand \a M to perform a comparison of string
 ///    data with implicitly defined lengths that is contained in source operands
@@ -1678,8 +1678,8 @@ _mm_minpos_epu16(__m128i __V)
 ///      1: The index of the most significant set bit. \n
 /// \returns Returns an integer representing the result index of the comparison.
 #define _mm_cmpistri(A, B, M) \
-  (int)__builtin_ia32_pcmpistri128((__v16qi)(__m128i)(A), \
-                                   (__v16qi)(__m128i)(B), (int)(M))
+  ((int)__builtin_ia32_pcmpistri128((__v16qi)(__m128i)(A), \
+                                   (__v16qi)(__m128i)(B), (int)(M)))
 
 /// Uses the immediate operand \a M to perform a comparison of string
 ///    data with explicitly defined lengths that is contained in source operands
@@ -1738,9 +1738,9 @@ _mm_minpos_epu16(__m128i __V)
 /// \returns Returns a 128-bit integer vector representing the result mask of
 ///    the comparison.
 #define _mm_cmpestrm(A, LA, B, LB, M) \
-  (__m128i)__builtin_ia32_pcmpestrm128((__v16qi)(__m128i)(A), (int)(LA), \
-                                       (__v16qi)(__m128i)(B), (int)(LB), \
-                                       (int)(M))
+  ((__m128i)__builtin_ia32_pcmpestrm128((__v16qi)(__m128i)(A), (int)(LA), \
+                                        (__v16qi)(__m128i)(B), (int)(LB), \
+                                        (int)(M)))
 
 /// Uses the immediate operand \a M to perform a comparison of string
 ///    data with explicitly defined lengths that is contained in source operands
@@ -1797,9 +1797,9 @@ _mm_minpos_epu16(__m128i __V)
 ///      1: The index of the most significant set bit. \n
 /// \returns Returns an integer representing the result index of the comparison.
 #define _mm_cmpestri(A, LA, B, LB, M) \
-  (int)__builtin_ia32_pcmpestri128((__v16qi)(__m128i)(A), (int)(LA), \
-                                   (__v16qi)(__m128i)(B), (int)(LB), \
-                                   (int)(M))
+  ((int)__builtin_ia32_pcmpestri128((__v16qi)(__m128i)(A), (int)(LA), \
+                                    (__v16qi)(__m128i)(B), (int)(LB), \
+                                    (int)(M)))
 
 /* SSE4.2 Packed Comparison Intrinsics and EFlag Reading.  */
 /// Uses the immediate operand \a M to perform a comparison of string
@@ -1849,8 +1849,8 @@ _mm_minpos_epu16(__m128i __V)
 /// \returns Returns 1 if the bit mask is zero and the length of the string in
 ///    \a B is the maximum; otherwise, returns 0.
 #define _mm_cmpistra(A, B, M) \
-  (int)__builtin_ia32_pcmpistria128((__v16qi)(__m128i)(A), \
-                                    (__v16qi)(__m128i)(B), (int)(M))
+  ((int)__builtin_ia32_pcmpistria128((__v16qi)(__m128i)(A), \
+                                     (__v16qi)(__m128i)(B), (int)(M)))
 
 /// Uses the immediate operand \a M to perform a comparison of string
 ///    data with implicitly defined lengths that is contained in source operands
@@ -1898,8 +1898,8 @@ _mm_minpos_epu16(__m128i __V)
 ///          to the size of \a A or \a B.
 /// \returns Returns 1 if the bit mask is non-zero, otherwise, returns 0.
 #define _mm_cmpistrc(A, B, M) \
-  (int)__builtin_ia32_pcmpistric128((__v16qi)(__m128i)(A), \
-                                    (__v16qi)(__m128i)(B), (int)(M))
+  ((int)__builtin_ia32_pcmpistric128((__v16qi)(__m128i)(A), \
+                                     (__v16qi)(__m128i)(B), (int)(M)))
 
 /// Uses the immediate operand \a M to perform a comparison of string
 ///    data with implicitly defined lengths that is contained in source operands
@@ -1946,8 +1946,8 @@ _mm_minpos_epu16(__m128i __V)
 ///          to the size of \a A or \a B. \n
 /// \returns Returns bit 0 of the resulting bit mask.
 #define _mm_cmpistro(A, B, M) \
-  (int)__builtin_ia32_pcmpistrio128((__v16qi)(__m128i)(A), \
-                                    (__v16qi)(__m128i)(B), (int)(M))
+  ((int)__builtin_ia32_pcmpistrio128((__v16qi)(__m128i)(A), \
+                                     (__v16qi)(__m128i)(B), (int)(M)))
 
 /// Uses the immediate operand \a M to perform a comparison of string
 ///    data with implicitly defined lengths that is contained in source operands
@@ -1996,8 +1996,8 @@ _mm_minpos_epu16(__m128i __V)
 /// \returns Returns 1 if the length of the string in \a A is less than the
 ///    maximum, otherwise, returns 0.
 #define _mm_cmpistrs(A, B, M) \
-  (int)__builtin_ia32_pcmpistris128((__v16qi)(__m128i)(A), \
-                                    (__v16qi)(__m128i)(B), (int)(M))
+  ((int)__builtin_ia32_pcmpistris128((__v16qi)(__m128i)(A), \
+                                     (__v16qi)(__m128i)(B), (int)(M)))
 
 /// Uses the immediate operand \a M to perform a comparison of string
 ///    data with implicitly defined lengths that is contained in source operands
@@ -2046,8 +2046,8 @@ _mm_minpos_epu16(__m128i __V)
 /// \returns Returns 1 if the length of the string in \a B is less than the
 ///    maximum, otherwise, returns 0.
 #define _mm_cmpistrz(A, B, M) \
-  (int)__builtin_ia32_pcmpistriz128((__v16qi)(__m128i)(A), \
-                                    (__v16qi)(__m128i)(B), (int)(M))
+  ((int)__builtin_ia32_pcmpistriz128((__v16qi)(__m128i)(A), \
+                                     (__v16qi)(__m128i)(B), (int)(M)))
 
 /// Uses the immediate operand \a M to perform a comparison of string
 ///    data with explicitly defined lengths that is contained in source operands
@@ -2100,9 +2100,9 @@ _mm_minpos_epu16(__m128i __V)
 /// \returns Returns 1 if the bit mask is zero and the length of the string in
 ///    \a B is the maximum, otherwise, returns 0.
 #define _mm_cmpestra(A, LA, B, LB, M) \
-  (int)__builtin_ia32_pcmpestria128((__v16qi)(__m128i)(A), (int)(LA), \
-                                    (__v16qi)(__m128i)(B), (int)(LB), \
-                                    (int)(M))
+  ((int)__builtin_ia32_pcmpestria128((__v16qi)(__m128i)(A), (int)(LA), \
+                                     (__v16qi)(__m128i)(B), (int)(LB), \
+                                     (int)(M)))
 
 /// Uses the immediate operand \a M to perform a comparison of string
 ///    data with explicitly defined lengths that is contained in source operands
@@ -2154,9 +2154,9 @@ _mm_minpos_epu16(__m128i __V)
 ///          to the size of \a A or \a B. \n
 /// \returns Returns 1 if the resulting mask is non-zero, otherwise, returns 0.
 #define _mm_cmpestrc(A, LA, B, LB, M) \
-  (int)__builtin_ia32_pcmpestric128((__v16qi)(__m128i)(A), (int)(LA), \
-                                    (__v16qi)(__m128i)(B), (int)(LB), \
-                                    (int)(M))
+  ((int)__builtin_ia32_pcmpestric128((__v16qi)(__m128i)(A), (int)(LA), \
+                                     (__v16qi)(__m128i)(B), (int)(LB), \
+                                     (int)(M)))
 
 /// Uses the immediate operand \a M to perform a comparison of string
 ///    data with explicitly defined lengths that is contained in source operands
@@ -2207,9 +2207,9 @@ _mm_minpos_epu16(__m128i __V)
 ///          to the size of \a A or \a B.
 /// \returns Returns bit 0 of the resulting bit mask.
 #define _mm_cmpestro(A, LA, B, LB, M) \
-  (int)__builtin_ia32_pcmpestrio128((__v16qi)(__m128i)(A), (int)(LA), \
-                                    (__v16qi)(__m128i)(B), (int)(LB), \
-                                    (int)(M))
+  ((int)__builtin_ia32_pcmpestrio128((__v16qi)(__m128i)(A), (int)(LA), \
+                                     (__v16qi)(__m128i)(B), (int)(LB), \
+                                     (int)(M)))
 
 /// Uses the immediate operand \a M to perform a comparison of string
 ///    data with explicitly defined lengths that is contained in source operands
@@ -2262,9 +2262,9 @@ _mm_minpos_epu16(__m128i __V)
 /// \returns Returns 1 if the length of the string in \a A is less than the
 ///    maximum, otherwise, returns 0.
 #define _mm_cmpestrs(A, LA, B, LB, M) \
-  (int)__builtin_ia32_pcmpestris128((__v16qi)(__m128i)(A), (int)(LA), \
-                                    (__v16qi)(__m128i)(B), (int)(LB), \
-                                    (int)(M))
+  ((int)__builtin_ia32_pcmpestris128((__v16qi)(__m128i)(A), (int)(LA), \
+                                     (__v16qi)(__m128i)(B), (int)(LB), \
+                                     (int)(M)))
 
 /// Uses the immediate operand \a M to perform a comparison of string
 ///    data with explicitly defined lengths that is contained in source operands
@@ -2316,9 +2316,9 @@ _mm_minpos_epu16(__m128i __V)
 /// \returns Returns 1 if the length of the string in \a B is less than the
 ///    maximum, otherwise, returns 0.
 #define _mm_cmpestrz(A, LA, B, LB, M) \
-  (int)__builtin_ia32_pcmpestriz128((__v16qi)(__m128i)(A), (int)(LA), \
-                                    (__v16qi)(__m128i)(B), (int)(LB), \
-                                    (int)(M))
+  ((int)__builtin_ia32_pcmpestriz128((__v16qi)(__m128i)(A), (int)(LA), \
+                                     (__v16qi)(__m128i)(B), (int)(LB), \
+                                     (int)(M)))
 
 /* SSE4.2 Compare Packed Data -- Greater Than.  */
 /// Compares each of the corresponding 64-bit values of the 128-bit
