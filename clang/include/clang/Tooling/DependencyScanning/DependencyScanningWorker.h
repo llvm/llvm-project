@@ -30,6 +30,24 @@ namespace dependencies {
 
 class DependencyScanningWorkerFilesystem;
 
+/// Compilation database that holds and reports a single compile command.
+class SingleCommandCompilationDatabase : public CompilationDatabase {
+  CompileCommand Command;
+
+public:
+  SingleCommandCompilationDatabase(CompileCommand Cmd)
+      : Command(std::move(Cmd)) {}
+
+  std::vector<CompileCommand>
+  getCompileCommands(StringRef FilePath) const override {
+    return {Command};
+  }
+
+  std::vector<CompileCommand> getAllCompileCommands() const override {
+    return {Command};
+  }
+};
+
 class DependencyConsumer {
 public:
   virtual ~DependencyConsumer() {}
