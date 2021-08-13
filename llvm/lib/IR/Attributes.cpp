@@ -1397,11 +1397,11 @@ bool AttributeList::hasAttributes(unsigned Index) const {
   return getAttributes(Index).hasAttributes();
 }
 
-bool AttributeList::hasFnAttribute(Attribute::AttrKind Kind) const {
+bool AttributeList::hasFnAttr(Attribute::AttrKind Kind) const {
   return pImpl && pImpl->hasFnAttribute(Kind);
 }
 
-bool AttributeList::hasFnAttribute(StringRef Kind) const {
+bool AttributeList::hasFnAttr(StringRef Kind) const {
   return hasAttribute(AttributeList::FunctionIndex, Kind);
 }
 

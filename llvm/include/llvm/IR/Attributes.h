@@ -654,11 +654,11 @@ public:
 
   /// Equivalent to hasAttribute(AttributeList::FunctionIndex, Kind) but
   /// may be faster.
-  bool hasFnAttribute(Attribute::AttrKind Kind) const;
+  bool hasFnAttr(Attribute::AttrKind Kind) const;
 
   /// Equivalent to hasAttribute(AttributeList::FunctionIndex, Kind) but
   /// may be faster.
-  bool hasFnAttribute(StringRef Kind) const;
+  bool hasFnAttr(StringRef Kind) const;
 
   /// Return true if the specified attribute is set for at least one
   /// parameter or for the return value. If Index is not nullptr, the index

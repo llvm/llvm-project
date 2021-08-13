@@ -353,12 +353,12 @@ public:
 
   /// Return true if the function has the attribute.
   bool hasFnAttribute(Attribute::AttrKind Kind) const {
-    return AttributeSets.hasFnAttribute(Kind);
+    return AttributeSets.hasFnAttr(Kind);
   }
 
   /// Return true if the function has the attribute.
   bool hasFnAttribute(StringRef Kind) const {
-    return AttributeSets.hasFnAttribute(Kind);
+    return AttributeSets.hasFnAttr(Kind);
   }
 
   /// Return the attribute for the given attribute kind.
