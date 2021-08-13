@@ -724,6 +724,9 @@ AArch64LegalizerInfo::AArch64LegalizerInfo(const AArch64Subtarget &ST)
                   {v4s16, v4s16},
                   {v8s16, v8s16}});
 
+  // TODO: Vector types.
+  getActionDefinitionsBuilder({G_SADDSAT, G_SSUBSAT}).lowerIf(isScalar(0));
+
   getLegacyLegalizerInfo().computeTables();
   verify(*ST.getInstrInfo());
 }
