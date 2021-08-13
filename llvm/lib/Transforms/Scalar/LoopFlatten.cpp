@@ -93,6 +93,17 @@ struct FlattenInfo {
   FlattenInfo(Loop *OL, Loop *IL) : OuterLoop(OL), InnerLoop(IL) {};
 };
 
+static bool
+setLoopComponents(Value *&TC, Value *&TripCount, BinaryOperator *&Increment,
+                  SmallPtrSetImpl<Instruction *> &IterationInstructions) {
+  TripCount = TC;
+  IterationInstructions.insert(Increment);
+  LLVM_DEBUG(dbgs() << "Found Increment: "; Increment->dump());
+  LLVM_DEBUG(dbgs() << "Found trip count: "; TripCount->dump());
+  LLVM_DEBUG(dbgs() << "Successfully found all loop components\n");
+  return true;
+}
+
 // Finds the induction variable, increment and trip count for a simple loop that
 // we can flatten.
 static bool findLoopComponents(
@@ -164,49 +175,63 @@ static bool findLoopComponents(
     return false;
   }
   // The trip count is the RHS of the compare. If this doesn't match the trip
-  // count computed by SCEV then this is either because the trip count variable
-  // has been widened (then leave the trip count as it is), or because it is a
-  // constant and another transformation has changed the compare, e.g.
-  // icmp ult %inc, tripcount -> icmp ult %j, tripcount-1.
-  TripCount = Compare->getOperand(1);
+  // count computed by SCEV then this is because the trip count variable
+  // has been widened so the types don't match, or because it is a constant and
+  // another transformation has changed the compare (e.g. icmp ult %inc,
+  // tripcount -> icmp ult %j, tripcount-1), or both.
+  Value *RHS = Compare->getOperand(1);
   const SCEV *BackedgeTakenCount = SE->getBackedgeTakenCount(L);
   if (isa<SCEVCouldNotCompute>(BackedgeTakenCount)) {
     LLVM_DEBUG(dbgs() << "Backedge-taken count is not predictable\n");
     return false;
   }
   const SCEV *SCEVTripCount = SE->getTripCountFromExitCount(BackedgeTakenCount);
-  if (SE->getSCEV(TripCount) != SCEVTripCount && !IsWidened) {
-    ConstantInt *RHS = dyn_cast<ConstantInt>(TripCount);
-    if (!RHS) {
-      LLVM_DEBUG(dbgs() << "Could not find valid trip count\n");
-      return false;
+  const SCEV *SCEVRHS = SE->getSCEV(RHS);
+  if (SCEVRHS == SCEVTripCount)
+    return setLoopComponents(RHS, TripCount, Increment, IterationInstructions);
+  ConstantInt *ConstantRHS = dyn_cast<ConstantInt>(RHS);
+  if (ConstantRHS) {
+    const SCEV *BackedgeTCExt = nullptr;
+    if (IsWidened) {
+      const SCEV *SCEVTripCountExt;
+      // Find the extended backedge taken count and extended trip count using
+      // SCEV. One of these should now match the RHS of the compare.
+      BackedgeTCExt = SE->getZeroExtendExpr(BackedgeTakenCount, RHS->getType());
+      SCEVTripCountExt = SE->getTripCountFromExitCount(BackedgeTCExt);
+      if (SCEVRHS != BackedgeTCExt && SCEVRHS != SCEVTripCountExt) {
+        LLVM_DEBUG(dbgs() << "Could not find valid trip count\n");
+        return false;
+      }
     }
-    // The L->isCanonical check above ensures we only get here if the loop
-    // increments by 1 on each iteration, so the RHS of the Compare is
-    // tripcount-1 (i.e equivalent to the backedge taken count).
-    assert(SE->getSCEV(RHS) == BackedgeTakenCount &&
-           "Expected RHS of compare to be equal to the backedge taken count");
-    ConstantInt *One = ConstantInt::get(RHS->getType(), 1);
-    TripCount = ConstantInt::get(TripCount->getContext(),
-                                 RHS->getValue() + One->getValue());
-  } else if (SE->getSCEV(TripCount) != SCEVTripCount) {
-    auto *TripCountInst = dyn_cast<Instruction>(TripCount);
-    if (!TripCountInst) {
-      LLVM_DEBUG(dbgs() << "Could not find valid extended trip count\n");
-      return false;
+    // If the RHS of the compare is equal to the backedge taken count we need
+    // to add one to get the trip count.
+    if (SCEVRHS == BackedgeTCExt || SCEVRHS == BackedgeTakenCount) {
+      ConstantInt *One = ConstantInt::get(ConstantRHS->getType(), 1);
+      Value *NewRHS = ConstantInt::get(
+          ConstantRHS->getContext(), ConstantRHS->getValue() + One->getValue());
+      return setLoopComponents(NewRHS, TripCount, Increment,
+                               IterationInstructions);
     }
-    if ((!isa<ZExtInst>(TripCountInst) && !isa<SExtInst>(TripCountInst)) ||
-        SE->getSCEV(TripCountInst->getOperand(0)) != SCEVTripCount) {
-      LLVM_DEBUG(dbgs() << "Could not find valid extended trip count\n");
-      return false;
-    }
+    return setLoopComponents(RHS, TripCount, Increment, IterationInstructions);
   }
-  IterationInstructions.insert(Increment);
-  LLVM_DEBUG(dbgs() << "Found increment: "; Increment->dump());
-  LLVM_DEBUG(dbgs() << "Found trip count: "; TripCount->dump());
-
-  LLVM_DEBUG(dbgs() << "Successfully found all loop components\n");
-  return true;
+  // If the RHS isn't a constant then check that the reason it doesn't match
+  // the SCEV trip count is because the RHS is a ZExt or SExt instruction
+  // (and take the trip count to be the RHS).
+  if (!IsWidened) {
+    LLVM_DEBUG(dbgs() << "Could not find valid trip count\n");
+    return false;
+  }
+  auto *TripCountInst = dyn_cast<Instruction>(RHS);
+  if (!TripCountInst) {
+    LLVM_DEBUG(dbgs() << "Could not find valid trip count\n");
+    return false;
+  }
+  if ((!isa<ZExtInst>(TripCountInst) && !isa<SExtInst>(TripCountInst)) ||
+      SE->getSCEV(TripCountInst->getOperand(0)) != SCEVTripCount) {
+    LLVM_DEBUG(dbgs() << "Could not find valid extended trip count\n");
+    return false;
+  }
+  return setLoopComponents(RHS, TripCount, Increment, IterationInstructions);
 }
 
 static bool checkPHIs(FlattenInfo &FI, const TargetTransformInfo *TTI) {

@@ -465,7 +465,15 @@ TEST(SelectionTest, CommonAncestor) {
         // Digraph syntax for attributes to avoid accidental annotations.
         class <:[gsl::Owner([[in^t]])]:> X{};
       )cpp",
-       "BuiltinTypeLoc"}};
+       "BuiltinTypeLoc"},
+
+      // This case used to crash - AST has a null Attr
+      {R"cpp(
+        @interface I
+        [[@property(retain, nonnull) <:[My^Object2]:> *x]]; // error-ok
+        @end
+      )cpp",
+       "ObjCPropertyDecl"}};
 
   for (const Case &C : Cases) {
     trace::TestTracer Tracer;
