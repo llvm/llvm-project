@@ -2760,6 +2760,15 @@ Passed by const reference as arg_a (converted to int)
 
 // In test::Bar
 int foo = 3)",
+      },
+      {
+          [](HoverInfo &HI) {
+            HI.Name = "stdio.h";
+            HI.Definition = "/usr/include/stdio.h";
+          },
+          R"(stdio.h
+
+/usr/include/stdio.h)",
       }};
 
   for (const auto &C : Cases) {
