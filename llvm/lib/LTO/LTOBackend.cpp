@@ -74,6 +74,10 @@ static cl::opt<bool> ThinLTOAssumeMerged(
     cl::desc("Assume the input has already undergone ThinLTO function "
              "importing and the other pre-optimization pipeline changes."));
 
+// Command line option to turn off/on warnings for pgo profile mismatch.
+// Defined in Transforms/PGOInstrumentation.cpp:  -no-pgo-warn-mismatch
+extern cl::opt<bool> NoPGOWarnMismatch;
+
 [[noreturn]] static void reportOpenError(StringRef Path, Twine Msg) {
   errs() << "failed to open " << Path << ": " << Msg << '\n';
   errs().flush();
@@ -221,6 +225,7 @@ static void runNewPMPasses(const Config &Conf, Module &Mod, TargetMachine *TM,
     PGOOpt = PGOOptions(Conf.CSIRProfile, "", Conf.ProfileRemapping,
                         PGOOptions::IRUse, PGOOptions::CSIRUse,
                         Conf.AddFSDiscriminator);
+    NoPGOWarnMismatch = !Conf.PGOWarnMismatch;
   } else if (Conf.AddFSDiscriminator) {
     PGOOpt = PGOOptions("", "", "", PGOOptions::NoAction,
                         PGOOptions::NoCSAction, true);
