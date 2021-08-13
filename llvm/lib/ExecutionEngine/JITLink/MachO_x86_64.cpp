@@ -582,7 +582,7 @@ public:
 
 private:
   Error applyFixup(LinkGraph &G, Block &B, const Edge &E) const {
-    return x86_64::applyFixup(G, B, E);
+    return x86_64::applyFixup(G, B, E, nullptr);
   }
 };
 

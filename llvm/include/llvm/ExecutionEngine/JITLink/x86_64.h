@@ -85,6 +85,18 @@ enum EdgeKind_x86_64 : Edge::Kind {
   ///     an out-of-range error will be returned.
   NegDelta32,
 
+  /// A 64-bit GOT delta.
+  ///
+  /// Delta from the global offset table to the target
+  ///
+  /// Fixup expression:
+  ///   Fixup <- Target - GOTSymbol + Addend : int64
+  ///
+  /// Errors:
+  ///   - *ASSERTION* Failure to a null pointer GOTSymbol, which the GOT section
+  ///     symbol was not been defined.
+  Delta64FromGOT,
+
   /// A 32-bit PC-relative branch.
   ///
   /// Represents a PC-relative call or branch to a target. This can be used to
@@ -166,6 +178,47 @@ enum EdgeKind_x86_64 : Edge::Kind {
   ///     phase will result in an assert/unreachable during the fixup phase.
   ///
   RequestGOTAndTransformToDelta32,
+
+  /// A GOT entry getter/constructor, transformed to Delta64 pointing at the GOT
+  /// entry for the original target.
+  ///
+  /// Indicates that this edge should be transformed into a Delta64 targeting
+  /// the GOT entry for the edge's current target, maintaining the same addend.
+  /// A GOT entry for the target should be created if one does not already
+  /// exist.
+  ///
+  /// Edges of this kind are usually handled by a GOT builder pass inserted by
+  /// default.
+  ///
+  /// Fixup expression:
+  ///   NONE
+  ///
+  /// Errors:
+  ///   - *ASSERTION* Failure to handle edges of this kind prior to the fixup
+  ///     phase will result in an assert/unreachable during the fixup phase.
+  ///
+  RequestGOTAndTransformToDelta64,
+
+  /// A GOT entry offset within GOT getter/constructor, transformed to
+  /// Delta64FromGOT
+  /// pointing at the GOT entry for the original target
+  ///
+  /// Indicates that this edge should be transformed into a Delta64FromGOT
+  /// targeting
+  /// the GOT entry for the edge's current target, maintaining the same addend.
+  /// A GOT entry for the target should be created if one does not already
+  /// exist.
+  ///
+  /// Edges of this kind are usually handled by a GOT builder pass inserted by
+  /// default
+  ///
+  /// Fixup expression:
+  ///   NONE
+  ///
+  /// Errors:
+  ///   - *ASSERTION* Failure to handle edges of this kind prior to the fixup
+  ///     phase will result in an assert/unreachable during the fixup phase
+  RequestGOTAndTransformToDelta64FromGOT,
 
   /// A PC-relative reference to a GOT entry, relaxable if GOT entry target
   /// is in-range of the fixup.
@@ -258,7 +311,8 @@ inline bool isInRangeForImmS32(int64_t Value) {
 }
 
 /// Apply fixup expression for edge to block content.
-inline Error applyFixup(LinkGraph &G, Block &B, const Edge &E) {
+inline Error applyFixup(LinkGraph &G, Block &B, const Edge &E,
+                        const Symbol *GOTSymbol) {
   using namespace support;
 
   char *BlockWorkingMem = B.getAlreadyMutableContent().data();
@@ -323,6 +377,13 @@ inline Error applyFixup(LinkGraph &G, Block &B, const Edge &E) {
       *(little32_t *)FixupPtr = Value;
     else
       return makeTargetOutOfRangeError(G, B, E);
+    break;
+  }
+  case Delta64FromGOT: {
+    assert(GOTSymbol && "No GOT section symbol");
+    int64_t Value =
+        E.getTarget().getAddress() - GOTSymbol->getAddress() + E.getAddend();
+    *(little64_t *)FixupPtr = Value;
     break;
   }
 

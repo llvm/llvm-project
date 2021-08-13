@@ -44,21 +44,23 @@ public:
       PerGraphGOTAndPLTStubsBuilder_ELF_x86_64>::PerGraphGOTAndPLTStubsBuilder;
 
   bool isGOTEdgeToFix(Edge &E) const {
-    if (E.getKind() == GOTOFF64) {
+    if (E.getKind() == x86_64::Delta64FromGOT) {
       // We need to make sure that the GOT section exists, but don't otherwise
       // need to fix up this edge.
       getGOTSection();
       return false;
     }
-
-    return E.getKind() == PCRel32GOT || E.getKind() == PCRel32GOTLoad ||
-           E.getKind() == PCRel64GOT || E.getKind() == GOT64;
+    return E.getKind() == x86_64::RequestGOTAndTransformToDelta32 ||
+           E.getKind() == x86_64::RequestGOTAndTransformToDelta64 ||
+           E.getKind() ==
+               x86_64::RequestGOTAndTransformToPCRel32GOTLoadRelaxable ||
+           E.getKind() == x86_64::RequestGOTAndTransformToDelta64FromGOT;
   }
 
   Symbol &createGOTEntry(Symbol &Target) {
     auto &GOTEntryBlock = G.createContentBlock(
         getGOTSection(), getGOTEntryBlockContent(), 0, 8, 0);
-    GOTEntryBlock.addEdge(Pointer64, 0, Target, 0);
+    GOTEntryBlock.addEdge(x86_64::Pointer64, 0, Target, 0);
     return G.addAnonymousSymbol(GOTEntryBlock, 0, 8, false, false);
   }
 
@@ -69,15 +71,17 @@ public:
     // optimizeMachO_x86_64_GOTAndStubs pass below.
     // If it's a GOT64 leave it as is.
     switch (E.getKind()) {
-    case PCRel32GOT:
-      E.setKind(PCRel32);
+    case x86_64::RequestGOTAndTransformToPCRel32GOTLoadRelaxable:
+      E.setKind(x86_64::PCRel32GOTLoadRelaxable);
       break;
-    case PCRel64GOT:
-      E.setKind(PCRel64);
+    case x86_64::RequestGOTAndTransformToDelta64:
+      E.setKind(x86_64::Delta64);
       break;
-    case GOT64:
+    case x86_64::RequestGOTAndTransformToDelta64FromGOT:
+      E.setKind(x86_64::Delta64FromGOT);
       break;
-    case PCRel32GOTLoad:
+    case x86_64::RequestGOTAndTransformToDelta32:
+      E.setKind(x86_64::Delta32);
       break;
     default:
       llvm_unreachable("Unexpected GOT edge kind");
@@ -88,7 +92,7 @@ public:
   }
 
   bool isExternalBranchEdge(Edge &E) {
-    return E.getKind() == Branch32 && !E.getTarget().isDefined();
+    return E.getKind() == x86_64::BranchPCRel32 && !E.getTarget().isDefined();
   }
 
   Symbol &createPLTStub(Symbol &Target) {
@@ -96,17 +100,17 @@ public:
         G.createContentBlock(getStubsSection(), getStubBlockContent(), 0, 1, 0);
     // Re-use GOT entries for stub targets.
     auto &GOTEntrySymbol = getGOTEntry(Target);
-    StubContentBlock.addEdge(PCRel32, 2, GOTEntrySymbol, -4);
+    StubContentBlock.addEdge(x86_64::Delta32, 2, GOTEntrySymbol, -4);
     return G.addAnonymousSymbol(StubContentBlock, 0, 6, true, false);
   }
 
   void fixPLTEdge(Edge &E, Symbol &Stub) {
-    assert(E.getKind() == Branch32 && "Not a Branch32 edge?");
+    assert(E.getKind() == x86_64::BranchPCRel32 && "Not a Branch32 edge?");
 
     // Set the edge kind to Branch32ToStub. We will use this to check for stub
     // optimization opportunities in the optimize ELF_x86_64_GOTAndStubs pass
     // below.
-    E.setKind(Branch32ToStub);
+    E.setKind(x86_64::BranchPCRel32ToPtrJumpStubRelaxable);
     E.setTarget(Stub);
   }
 
@@ -151,7 +155,7 @@ static Error optimizeELF_x86_64_GOTAndStubs(LinkGraph &G) {
 
   for (auto *B : G.blocks())
     for (auto &E : B->edges())
-      if (E.getKind() == PCRel32GOTLoad) {
+      if (E.getKind() == x86_64::PCRel32GOTLoadRelaxable) {
         // Replace GOT load with LEA only for MOVQ instructions.
         constexpr uint8_t MOVQRIPRel[] = {0x48, 0x8b};
         if (E.getOffset() < 3 ||
@@ -175,8 +179,9 @@ static Error optimizeELF_x86_64_GOTAndStubs(LinkGraph &G) {
           // Change the edge kind as we don't go through GOT anymore. This is
           // for formal correctness only. Technically, the two relocation kinds
           // are resolved the same way.
-          E.setKind(PCRel32);
+          E.setKind(x86_64::Delta32);
           E.setTarget(GOTTarget);
+          E.setAddend(E.getAddend() - 4);
           auto *BlockData = reinterpret_cast<uint8_t *>(
               const_cast<char *>(B->getContent().data()));
           BlockData[E.getOffset() - 2] = 0x8d;
@@ -186,7 +191,7 @@ static Error optimizeELF_x86_64_GOTAndStubs(LinkGraph &G) {
             dbgs() << "\n";
           });
         }
-      } else if (E.getKind() == Branch32ToStub) {
+      } else if (E.getKind() == x86_64::BranchPCRel32ToPtrJumpStubRelaxable) {
         auto &StubBlock = E.getTarget().getBlock();
         assert(
             StubBlock.getSize() ==
@@ -208,7 +213,7 @@ static Error optimizeELF_x86_64_GOTAndStubs(LinkGraph &G) {
         int64_t Displacement = TargetAddr - EdgeAddr + 4;
         if (Displacement >= std::numeric_limits<int32_t>::min() &&
             Displacement <= std::numeric_limits<int32_t>::max()) {
-          E.setKind(Branch32);
+          E.setKind(x86_64::BranchPCRel32);
           E.setTarget(GOTTarget);
           LLVM_DEBUG({
             dbgs() << "  Replaced stub branch with direct branch:\n    ";
@@ -343,7 +348,7 @@ private:
                   " Size of table: " + std::to_string(GraphSymbols.size()),
               llvm::inconvertibleErrorCode());
         }
-        uint64_t Addend = Rela.r_addend;
+        int64_t Addend = Rela.r_addend;
         JITTargetAddress FixupAddress =
             (*UpdateSection)->sh_addr + Rela.r_offset;
 
@@ -351,18 +356,52 @@ private:
           dbgs() << "Processing relocation at "
                  << format("0x%016" PRIx64, FixupAddress) << "\n";
         });
-        auto Kind = getRelocationKind(Type);
-        if (!Kind)
-          return Kind.takeError();
+        auto ELFRelocKind = getRelocationKind(Type);
+        if (!ELFRelocKind)
+          return ELFRelocKind.takeError();
+
+        Edge::Kind Kind = Edge::Invalid;
+        switch (*ELFRelocKind) {
+        case PCRel32:
+          Kind = x86_64::Delta32;
+          break;
+        case Delta64:
+          Kind = x86_64::Delta64;
+          break;
+        case Pointer64:
+          Kind = x86_64::Pointer64;
+          break;
+        case PCRel32GOTLoad: {
+          Kind = x86_64::RequestGOTAndTransformToPCRel32GOTLoadRelaxable;
+          Addend = 0;
+          break;
+        }
+        case PCRel64GOT: {
+          Kind = x86_64::RequestGOTAndTransformToDelta64;
+          break;
+        }
+        case GOT64: {
+          Kind = x86_64::RequestGOTAndTransformToDelta64FromGOT;
+          break;
+        }
+        case GOTOFF64: {
+          Kind = x86_64::Delta64FromGOT;
+          break;
+        }
+        case Branch32: {
+          Kind = x86_64::BranchPCRel32;
+          Addend = 0;
+          break;
+        }
+        }
 
         LLVM_DEBUG({
-          Edge GE(*Kind, FixupAddress - BlockToFix->getAddress(), *TargetSymbol,
+          Edge GE(Kind, FixupAddress - BlockToFix->getAddress(), *TargetSymbol,
                   Addend);
-          printEdge(dbgs(), *BlockToFix, GE,
-                    getELFX86RelocationKindName(*Kind));
+          printEdge(dbgs(), *BlockToFix, GE, getELFX86RelocationKindName(Kind));
           dbgs() << "\n";
         });
-        BlockToFix->addEdge(*Kind, FixupAddress - BlockToFix->getAddress(),
+        BlockToFix->addEdge(Kind, FixupAddress - BlockToFix->getAddress(),
                             *TargetSymbol, Addend);
       }
     }
@@ -373,7 +412,7 @@ public:
   ELFLinkGraphBuilder_x86_64(StringRef FileName,
                              const object::ELFFile<object::ELF64LE> &Obj)
       : ELFLinkGraphBuilder(Obj, Triple("x86_64-unknown-linux"), FileName,
-                            getELFX86RelocationKindName) {}
+                            x86_64::getEdgeKindName) {}
 };
 
 class ELFJITLinker_x86_64 : public JITLinker<ELFJITLinker_x86_64> {
@@ -439,81 +478,7 @@ private:
   }
 
   Error applyFixup(LinkGraph &G, Block &B, const Edge &E) const {
-    using namespace ELF_x86_64_Edges;
-    using namespace llvm::support;
-
-    char *BlockWorkingMem = B.getAlreadyMutableContent().data();
-    char *FixupPtr = BlockWorkingMem + E.getOffset();
-    JITTargetAddress FixupAddress = B.getAddress() + E.getOffset();
-    switch (E.getKind()) {
-    case ELFX86RelocationKind::Branch32:
-    case ELFX86RelocationKind::Branch32ToStub:
-    case ELFX86RelocationKind::PCRel32:
-    case ELFX86RelocationKind::PCRel32GOTLoad: {
-      int64_t Value = E.getTarget().getAddress() + E.getAddend() - FixupAddress;
-      if (LLVM_LIKELY(x86_64::isInRangeForImmS32(Value)))
-        *(little32_t *)FixupPtr = Value;
-      else
-        return makeTargetOutOfRangeError(G, B, E);
-      break;
-    }
-    case ELFX86RelocationKind::PCRel64: {
-      int64_t Value = E.getTarget().getAddress() + E.getAddend() - FixupAddress;
-      *(little64_t *)FixupPtr = Value;
-      break;
-    }
-    case ELFX86RelocationKind::Pointer64: {
-      int64_t Value = E.getTarget().getAddress() + E.getAddend();
-      *(ulittle64_t *)FixupPtr = Value;
-      break;
-    }
-    case ELFX86RelocationKind::Delta32: {
-      int64_t Value = E.getTarget().getAddress() + E.getAddend() - FixupAddress;
-      if (LLVM_LIKELY(x86_64::isInRangeForImmS32(Value)))
-        *(little32_t *)FixupPtr = Value;
-      else
-        return makeTargetOutOfRangeError(G, B, E);
-      break;
-    }
-    case ELFX86RelocationKind::Delta64: {
-      int64_t Value = E.getTarget().getAddress() + E.getAddend() - FixupAddress;
-      *(little64_t *)FixupPtr = Value;
-      break;
-    }
-    case ELFX86RelocationKind::NegDelta32: {
-      int64_t Value = FixupAddress - E.getTarget().getAddress() + E.getAddend();
-      if (LLVM_LIKELY(x86_64::isInRangeForImmS32(Value)))
-        *(little32_t *)FixupPtr = Value;
-      else
-        return makeTargetOutOfRangeError(G, B, E);
-      break;
-    }
-    case ELFX86RelocationKind::NegDelta64: {
-      int64_t Value = FixupAddress - E.getTarget().getAddress() + E.getAddend();
-      *(little64_t *)FixupPtr = Value;
-      break;
-    }
-    case ELFX86RelocationKind::GOT64:
-    case ELFX86RelocationKind::GOTOFF64: {
-      // GOT64: Offset of GOT entry within GOT.
-      // GOTOFF64: Offset from GOT base to target.
-      // The expressions are the same in both cases, but in the GOT64 case the
-      // edge will have been fixed to point at the GOT entry, and in the
-      // GOTOFF64 case it will still point at the original target.
-      assert(GOTSymbol && "No GOT section symbol");
-      int64_t Value =
-          E.getTarget().getAddress() - GOTSymbol->getAddress() + E.getAddend();
-      *(little64_t *)FixupPtr = Value;
-      break;
-    }
-    default:
-      LLVM_DEBUG({
-        dbgs() << "Bad edge: " << getELFX86RelocationKindName(E.getKind())
-               << "\n";
-      });
-      llvm_unreachable("Unsupported relocation");
-    }
-    return Error::success();
+    return x86_64::applyFixup(G, B, E, GOTSymbol);
   }
 };
 
@@ -559,8 +524,9 @@ void link_ELF_x86_64(std::unique_ptr<LinkGraph> G,
   if (Ctx->shouldAddDefaultTargetPasses(G->getTargetTriple())) {
 
     Config.PrePrunePasses.push_back(EHFrameSplitter(".eh_frame"));
-    Config.PrePrunePasses.push_back(EHFrameEdgeFixer(
-        ".eh_frame", G->getPointerSize(), Delta64, Delta32, NegDelta32));
+    Config.PrePrunePasses.push_back(
+        EHFrameEdgeFixer(".eh_frame", x86_64::PointerSize, x86_64::Delta64,
+                         x86_64::Delta32, x86_64::NegDelta32));
     Config.PrePrunePasses.push_back(EHFrameNullTerminator(".eh_frame"));
 
     // Construct a JITLinker and run the link function.
@@ -592,44 +558,20 @@ const char *getELFX86RelocationKindName(Edge::Kind R) {
   switch (R) {
   case Branch32:
     return "Branch32";
-  case Branch32ToStub:
-    return "Branch32ToStub";
-  case Pointer32:
-    return "Pointer32";
   case Pointer64:
     return "Pointer64";
-  case Pointer64Anon:
-    return "Pointer64Anon";
   case PCRel32:
     return "PCRel32";
-  case PCRel32Minus1:
-    return "PCRel32Minus1";
-  case PCRel32Minus2:
-    return "PCRel32Minus2";
-  case PCRel32Minus4:
-    return "PCRel32Minus4";
-  case PCRel32Anon:
-    return "PCRel32Anon";
-  case PCRel32Minus1Anon:
-    return "PCRel32Minus1Anon";
-  case PCRel32Minus2Anon:
-    return "PCRel32Minus2Anon";
-  case PCRel32Minus4Anon:
-    return "PCRel32Minus4Anon";
   case PCRel32GOTLoad:
     return "PCRel32GOTLoad";
-  case PCRel32GOT:
-    return "PCRel32GOT";
-  case PCRel32TLV:
-    return "PCRel32TLV";
-  case Delta32:
-    return "Delta32";
+  case PCRel64GOT:
+    return "PCRel64GOT";
   case Delta64:
     return "Delta64";
-  case NegDelta32:
-    return "NegDelta32";
-  case NegDelta64:
-    return "NegDelta64";
+  case GOT64:
+    return "GOT64";
+  case GOTOFF64:
+    return "GOTOFF64";
   }
   return getGenericEdgeKindName(static_cast<Edge::Kind>(R));
 }
