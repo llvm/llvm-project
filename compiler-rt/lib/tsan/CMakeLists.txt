@@ -11,9 +11,6 @@ if(NOT CMAKE_SYSTEM MATCHES "FreeBSD")
 endif()
 append_rtti_flag(OFF TSAN_CFLAGS)
 
-# Too many existing bugs, needs cleanup.
-append_list_if(COMPILER_RT_HAS_WNO_FORMAT -Wno-format TSAN_CFLAGS)
-
 if(COMPILER_RT_TSAN_DEBUG_OUTPUT)
   # Add extra debug information to TSan runtime. This configuration is rarely
   # used, but we need to support it so that debug output will not bitrot.

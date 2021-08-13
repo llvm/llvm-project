@@ -98,7 +98,7 @@ void CheckAndProtect() {
       continue;
     if (segment.start >= VdsoBeg())  // vdso
       break;
-    Printf("FATAL: ThreadSanitizer: unexpected memory mapping %p-%p\n",
+    Printf("FATAL: ThreadSanitizer: unexpected memory mapping 0x%zx-0x%zx\n",
            segment.start, segment.end);
     Die();
   }

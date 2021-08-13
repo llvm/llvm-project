@@ -105,7 +105,7 @@ struct MappingTest {
   static void TestRegion(uptr beg, uptr end) {
     if (beg == end)
       return;
-    Printf("checking region [%p-%p)\n", beg, end);
+    Printf("checking region [0x%zx-0x%zx)\n", beg, end);
     uptr prev = 0;
     for (uptr p0 = beg; p0 <= end; p0 += (end - beg) / 256) {
       for (int x = -(int)kShadowCell; x <= (int)kShadowCell; x += kShadowCell) {
@@ -115,7 +115,8 @@ struct MappingTest {
         const uptr s = MemToShadowImpl::Apply<Mapping>(p);
         u32 *const m = MemToMetaImpl::Apply<Mapping>(p);
         const uptr r = ShadowToMemImpl::Apply<Mapping>(s);
-        Printf("  addr=%p: shadow=%p meta=%p reverse=%p\n", p, s, m, r);
+        Printf("  addr=0x%zx: shadow=0x%zx meta=%p reverse=0x%zx\n", p, s, m,
+               r);
         CHECK(IsAppMemImpl::Apply<Mapping>(p));
         if (!broken<Mapping>(kBrokenMapping))
           CHECK(IsShadowMemImpl::Apply<Mapping>(s));
