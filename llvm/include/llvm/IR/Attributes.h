@@ -691,6 +691,16 @@ public:
     return getAttribute(ArgNo + FirstArgIndex, Kind);
   }
 
+  /// Return the attribute object that exists for the function.
+  Attribute getFnAttr(Attribute::AttrKind Kind) const {
+    return getAttribute(FunctionIndex, Kind);
+  }
+
+  /// Return the attribute object that exists for the function.
+  Attribute getFnAttr(StringRef Kind) const {
+    return getAttribute(FunctionIndex, Kind);
+  }
+
   /// Return the alignment of the return value.
   MaybeAlign getRetAlignment() const;
 

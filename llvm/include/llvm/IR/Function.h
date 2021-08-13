@@ -363,12 +363,12 @@ public:
 
   /// Return the attribute for the given attribute kind.
   Attribute getFnAttribute(Attribute::AttrKind Kind) const {
-    return getAttribute(AttributeList::FunctionIndex, Kind);
+    return AttributeSets.getFnAttr(Kind);
   }
 
   /// Return the attribute for the given attribute kind.
   Attribute getFnAttribute(StringRef Kind) const {
-    return getAttribute(AttributeList::FunctionIndex, Kind);
+    return AttributeSets.getFnAttr(Kind);
   }
 
   /// Return the stack alignment for the function.

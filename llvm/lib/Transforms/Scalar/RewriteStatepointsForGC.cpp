@@ -1534,8 +1534,7 @@ static StringRef getDeoptLowering(CallBase *Call) {
     // with values.
     const AttributeList &CSAS = Call->getAttributes();
     if (CSAS.hasFnAttr(DeoptLowering))
-      return CSAS.getAttribute(AttributeList::FunctionIndex, DeoptLowering)
-          .getValueAsString();
+      return CSAS.getFnAttr(DeoptLowering).getValueAsString();
     Function *F = Call->getCalledFunction();
     assert(F && F->hasFnAttribute(DeoptLowering));
     return F->getFnAttribute(DeoptLowering).getValueAsString();
