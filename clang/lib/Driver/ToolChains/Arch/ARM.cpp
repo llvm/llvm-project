@@ -314,6 +314,10 @@ arm::FloatABI arm::getDefaultFloatABI(const llvm::Triple &Triple) {
 
   // FIXME: this is invalid for WindowsCE
   case llvm::Triple::Win32:
+    // It is incorrect to select hard float ABI on MachO platforms if the ABI is
+    // "apcs-gnu".
+    if (Triple.isOSBinFormatMachO() && !useAAPCSForMachO(Triple))
+      return FloatABI::Soft;
     return FloatABI::Hard;
 
   case llvm::Triple::NetBSD:
