@@ -604,7 +604,7 @@ void __msan_set_alloca_origin4(void *a, uptr size, char *descr, uptr pc) {
     id = Origin::CreateStackOrigin(idx).raw_id();
     *id_ptr = id;
     if (print)
-      Printf("First time: idx=%d id=%d %s %p \n", idx, id, descr + 4, pc);
+      Printf("First time: idx=%d id=%d %s 0x%zx \n", idx, id, descr + 4, pc);
   }
   if (print)
     Printf("__msan_set_alloca_origin: descr=%s id=%x\n", descr + 4, id);
