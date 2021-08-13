@@ -840,7 +840,7 @@ struct MemToShadowImpl {
     DCHECK(IsAppMemImpl::Apply<Mapping>(x));
     return (((x) & ~(Mapping::kShadowMsk | (kShadowCell - 1))) ^
             Mapping::kShadowXor) *
-               kShadowCnt +
+               kShadowMultiplier +
            Mapping::kShadowAdd;
   }
 };
@@ -873,7 +873,8 @@ struct ShadowToMemImpl {
     // a bijection, so we try to restore the address as belonging to
     // low/mid/high range consecutively and see if shadow->app->shadow mapping
     // gives us the same address.
-    uptr p = ((sp - Mapping::kShadowAdd) / kShadowCnt) ^ Mapping::kShadowXor;
+    uptr p =
+        ((sp - Mapping::kShadowAdd) / kShadowMultiplier) ^ Mapping::kShadowXor;
     if (p >= Mapping::kLoAppMemBeg && p < Mapping::kLoAppMemEnd &&
         MemToShadowImpl::Apply<Mapping>(p) == sp)
       return p;
