@@ -602,6 +602,19 @@ private:
   /// must already have a corresponding dim/symbol in this constraint system.
   AffineMap computeAlignedMap(AffineMap map, ValueRange operands) const;
 
+  /// Given an affine map that is aligned with this constraint system:
+  /// * Flatten the map.
+  /// * Add newly introduced local columns at the beginning of this constraint
+  ///   system (local column pos 0).
+  /// * Add equalities that define the new local columns to this constraint
+  ///   system.
+  /// * Return the flattened expressions via `flattenedExprs`.
+  ///
+  /// Note: This is a shared helper function of `addLowerOrUpperBound` and
+  ///       `composeMatchingMap`.
+  LogicalResult flattenAlignedMapAndMergeLocals(
+      AffineMap map, std::vector<SmallVector<int64_t, 8>> *flattenedExprs);
+
   // Eliminates a single identifier at 'position' from equality and inequality
   // constraints. Returns 'success' if the identifier was eliminated, and
   // 'failure' otherwise.
