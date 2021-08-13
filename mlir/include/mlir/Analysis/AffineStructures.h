@@ -350,16 +350,15 @@ public:
   /// and with the dimensions set to the equalities specified by the value map.
   /// Returns failure if the composition fails (when vMap is a semi-affine map).
   /// The vMap's operand Value's are used to look up the right positions in
-  /// the FlatAffineConstraints with which to associate. The dimensional and
-  /// symbolic operands of vMap should match 1:1 (in the same order) with those
-  /// of this constraint system, but the latter could have additional trailing
-  /// operands.
+  /// the FlatAffineConstraints with which to associate. Every operand of vMap
+  /// should have a matching dim/symbol column in this constraint system (with
+  /// the same associated Value).
   LogicalResult composeMap(const AffineValueMap *vMap);
 
-  /// Composes an affine map whose dimensions match one to one to the
-  /// dimensions of this FlatAffineConstraints. The results of the map 'other'
-  /// are added as the leading dimensions of this constraint system. Returns
-  /// failure if 'other' is a semi-affine map.
+  /// Composes an affine map whose dimensions and symbols match one to one with
+  /// the dimensions and symbols of this FlatAffineConstraints. The results of
+  /// the map `other` are added as the leading dimensions of this constraint
+  /// system. Returns failure if `other` is a semi-affine map.
   LogicalResult composeMatchingMap(AffineMap other);
 
   /// Projects out (aka eliminates) 'num' identifiers starting at position
@@ -598,6 +597,10 @@ private:
   /// bound if isLower is false.
   template <bool isLower>
   Optional<int64_t> computeConstantLowerOrUpperBound(unsigned pos);
+
+  /// Align `map` with this constraint system based on `operands`. Each operand
+  /// must already have a corresponding dim/symbol in this constraint system.
+  AffineMap computeAlignedMap(AffineMap map, ValueRange operands) const;
 
   // Eliminates a single identifier at 'position' from equality and inequality
   // constraints. Returns 'success' if the identifier was eliminated, and
