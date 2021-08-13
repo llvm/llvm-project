@@ -781,7 +781,7 @@ def LinalgStructuredInterface : OpInterface<"LinalgOp"> {
         only works with permutation affine maps.
         A more advanced Tensor-Comprehension like inference is possible but has
         proven to be ambiguous in unfavorable case.
-        A safer and more robust alternative is to allow each each op to define
+        A safer and more robust alternative is to allow each op to define
         its own AffineMap.
       }],
       /*retTy=*/"AffineMap",
