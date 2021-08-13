@@ -90,18 +90,9 @@ class DebugDumpParseTreeNoSemaAction : public PrescanAndParseAction {
 // PrescanAndSema Actions
 //===----------------------------------------------------------------------===//
 class PrescanAndSemaAction : public FrontendAction {
-  std::unique_ptr<Fortran::semantics::Semantics> semantics_;
 
   void ExecuteAction() override = 0;
   bool BeginSourceFileAction(CompilerInstance &ci) override;
-
-public:
-  Fortran::semantics::Semantics &semantics() { return *semantics_; }
-  const Fortran::semantics::Semantics &semantics() const { return *semantics_; }
-
-  void setSemantics(std::unique_ptr<Fortran::semantics::Semantics> semantics) {
-    semantics_ = std::move(semantics);
-  }
 };
 
 class DebugUnparseWithSymbolsAction : public PrescanAndSemaAction {
