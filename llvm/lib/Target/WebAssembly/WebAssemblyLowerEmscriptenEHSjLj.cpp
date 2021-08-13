@@ -1244,19 +1244,31 @@ bool WebAssemblyLowerEmscriptenEHSjLj::runSjLjOnFunction(Function &F) {
   for (Instruction *I : ToErase)
     I->eraseFromParent();
 
-  // Free setjmpTable buffer before each return instruction
+  // Free setjmpTable buffer before each return instruction + function-exiting
+  // call
+  SmallVector<Instruction *, 16> ExitingInsts;
   for (BasicBlock &BB : F) {
     Instruction *TI = BB.getTerminator();
-    if (isa<ReturnInst>(TI)) {
-      DebugLoc DL = getOrCreateDebugLoc(TI, F.getSubprogram());
-      auto *Free = CallInst::CreateFree(SetjmpTable, TI);
-      Free->setDebugLoc(DL);
-      // CallInst::CreateFree may create a bitcast instruction if its argument
-      // types mismatch. We need to set the debug loc for the bitcast too.
-      if (auto *FreeCallI = dyn_cast<CallInst>(Free)) {
-        if (auto *BitCastI = dyn_cast<BitCastInst>(FreeCallI->getArgOperand(0)))
-          BitCastI->setDebugLoc(DL);
+    if (isa<ReturnInst>(TI))
+      ExitingInsts.push_back(TI);
+    for (auto &I : BB) {
+      if (auto *CB = dyn_cast<CallBase>(&I)) {
+        StringRef CalleeName = CB->getCalledOperand()->getName();
+        if (CalleeName == "__resumeException" ||
+            CalleeName == "emscripten_longjmp" || CalleeName == "__cxa_throw")
+          ExitingInsts.push_back(&I);
       }
+    }
+  }
+  for (auto *I : ExitingInsts) {
+    DebugLoc DL = getOrCreateDebugLoc(I, F.getSubprogram());
+    auto *Free = CallInst::CreateFree(SetjmpTable, I);
+    Free->setDebugLoc(DL);
+    // CallInst::CreateFree may create a bitcast instruction if its argument
+    // types mismatch. We need to set the debug loc for the bitcast too.
+    if (auto *FreeCallI = dyn_cast<CallInst>(Free)) {
+      if (auto *BitCastI = dyn_cast<BitCastInst>(FreeCallI->getArgOperand(0)))
+        BitCastI->setDebugLoc(DL);
     }
   }
 

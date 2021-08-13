@@ -89,7 +89,8 @@ try.cont:                                         ; preds = %entry, %lpad
 
 ; This function contains a setjmp call and no invoke, so we only handle longjmp
 ; here. But @foo can also throw an exception, so we check if an exception is
-; thrown and if so rethrow it by calling @__resumeException.
+; thrown and if so rethrow it by calling @__resumeException. Also we have to
+; free the setjmpTable buffer before calling @__resumeException.
 define void @rethrow_exception() {
 ; CHECK-LABEL: @rethrow_exception
 entry:
@@ -112,11 +113,39 @@ if.end:                                           ; preds = %entry
 
 ; CHECK:    eh.rethrow:
 ; CHECK-NEXT: %exn = call i8* @__cxa_find_matching_catch_2()
+; CHECK-NEXT: %[[BUF:.*]] = bitcast i32* %setjmpTable1 to i8*
+; CHECK-NEXT: call void @free(i8* %[[BUF]])
 ; CHECK-NEXT: call void @__resumeException(i8* %exn)
 ; CHECK-NEXT: unreachable
 
 return:                                           ; preds = %entry, %if.end
   ret void
+}
+
+; The same as 'rethrow_exception' but contains a __cxa_throw call. We have to
+; free the setjmpTable buffer before calling __cxa_throw.
+define void @rethrow_exception2() {
+; CHECK-LABEL: @rethrow_exception2
+entry:
+  %buf = alloca [1 x %struct.__jmp_buf_tag], align 16
+  %arraydecay = getelementptr inbounds [1 x %struct.__jmp_buf_tag], [1 x %struct.__jmp_buf_tag]* %buf, i32 0, i32 0
+  %call = call i32 @setjmp(%struct.__jmp_buf_tag* %arraydecay) #0
+  %cmp = icmp ne i32 %call, 0
+  br i1 %cmp, label %throw, label %if.end
+
+if.end:                                           ; preds = %entry
+  call void @foo()
+  br label %throw
+
+throw:                                            ; preds = %entry, %if.end
+  call void @__cxa_throw(i8* null, i8* null, i8* null) #1
+  unreachable
+
+; CHECK: throw:
+; CHECK:      %[[BUF:.*]] = bitcast i32* %setjmpTable5 to i8*
+; CHECK-NEXT: call void @free(i8* %[[BUF]])
+; CHECK-NEXT: call void @__cxa_throw(i8* null, i8* null, i8* null)
+; CHECK-NEXT: unreachable
 }
 
 declare void @foo()
@@ -127,6 +156,7 @@ declare void @longjmp(%struct.__jmp_buf_tag*, i32)
 declare i32 @__gxx_personality_v0(...)
 declare i8* @__cxa_begin_catch(i8*)
 declare void @__cxa_end_catch()
+declare void @__cxa_throw(i8*, i8*, i8*)
 
 attributes #0 = { returns_twice }
 attributes #1 = { noreturn }
