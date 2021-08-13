@@ -13,7 +13,7 @@ define void @strided_store_3x2(<6 x double> %in, double* %out) {
 ; CHECK-NEXT:    store <3 x double> [[SPLIT1]], <3 x double>* [[VEC_CAST2]], align 8
 ; CHECK-NEXT:    ret void
 ;
-  call void @llvm.matrix.column.major.store.v6f64.i64(<6 x double> %in, double* %out, i64 5, i1 false, i32 3, i32 2)
+  call void @llvm.matrix.column.major.store.v6f64(<6 x double> %in, double* %out, i64 5, i1 false, i32 3, i32 2)
   ret void
 }
 
@@ -31,25 +31,7 @@ define void @strided_store_3x2_nonconst_stride(<6 x double> %in, i64 %stride, do
 ; CHECK-NEXT:    store <3 x double> [[SPLIT1]], <3 x double>* [[VEC_CAST4]], align 8
 ; CHECK-NEXT:    ret void
 ;
-  call void @llvm.matrix.column.major.store.v6f64.i64(<6 x double> %in, double* %out, i64 %stride, i1 false, i32 3, i32 2)
-  ret void
-}
-
-define void @strided_store_3x2_nonconst_i32_stride(<6 x double> %in, i32 %stride, double* %out) {
-; CHECK-LABEL: @strided_store_3x2_nonconst_i32_stride(
-; CHECK-NEXT:    [[SPLIT:%.*]] = shufflevector <6 x double> [[IN:%.*]], <6 x double> poison, <3 x i32> <i32 0, i32 1, i32 2>
-; CHECK-NEXT:    [[SPLIT1:%.*]] = shufflevector <6 x double> [[IN]], <6 x double> poison, <3 x i32> <i32 3, i32 4, i32 5>
-; CHECK-NEXT:    [[VEC_START:%.*]] = mul i32 0, [[STRIDE:%.*]]
-; CHECK-NEXT:    [[VEC_GEP:%.*]] = getelementptr double, double* [[OUT:%.*]], i32 [[VEC_START]]
-; CHECK-NEXT:    [[VEC_CAST:%.*]] = bitcast double* [[VEC_GEP]] to <3 x double>*
-; CHECK-NEXT:    store <3 x double> [[SPLIT]], <3 x double>* [[VEC_CAST]], align 8
-; CHECK-NEXT:    [[VEC_START2:%.*]] = mul i32 1, [[STRIDE]]
-; CHECK-NEXT:    [[VEC_GEP3:%.*]] = getelementptr double, double* [[OUT]], i32 [[VEC_START2]]
-; CHECK-NEXT:    [[VEC_CAST4:%.*]] = bitcast double* [[VEC_GEP3]] to <3 x double>*
-; CHECK-NEXT:    store <3 x double> [[SPLIT1]], <3 x double>* [[VEC_CAST4]], align 8
-; CHECK-NEXT:    ret void
-;
-  call void @llvm.matrix.column.major.store.v6f64.i32(<6 x double> %in, double* %out, i32 %stride, i1 false, i32 3, i32 2)
+  call void @llvm.matrix.column.major.store.v6f64(<6 x double> %in, double* %out, i64 %stride, i1 false, i32 3, i32 2)
   ret void
 }
 
@@ -76,14 +58,13 @@ define void @strided_store_2x3(<10 x double> %in, double* %out) {
 ; CHECK-NEXT:    store <2 x double> [[SPLIT4]], <2 x double>* [[VEC_CAST11]], align 8
 ; CHECK-NEXT:    ret void
 ;
-  call void @llvm.matrix.column.major.store.v10f64.i64(<10 x double> %in, double* %out, i64 4, i1 false, i32 2, i32 5)
+  call void @llvm.matrix.column.major.store.v10f64(<10 x double> %in, double* %out, i64 4, i1 false, i32 2, i32 5)
   ret void
 }
 
-declare void @llvm.matrix.column.major.store.v6f64.i64(<6 x double>, double*, i64, i1, i32, i32)
-declare void @llvm.matrix.column.major.store.v6f64.i32(<6 x double>, double*, i32, i1, i32, i32)
-declare void @llvm.matrix.column.major.store.v10f64.i64(<10 x double>, double*, i64, i1, i32, i32)
+declare void @llvm.matrix.column.major.store.v6f64(<6 x double>, double*, i64, i1, i32, i32)
+declare void @llvm.matrix.column.major.store.v10f64(<10 x double>, double*, i64, i1, i32, i32)
 
-; CHECK: declare void @llvm.matrix.column.major.store.v6f64.i64(<6 x double>, double* nocapture writeonly, i64, i1 immarg, i32 immarg, i32 immarg) #0
-; CHECK: declare void @llvm.matrix.column.major.store.v10f64.i64(<10 x double>, double* nocapture writeonly, i64, i1 immarg, i32 immarg, i32 immarg) #0
+; CHECK: declare void @llvm.matrix.column.major.store.v6f64(<6 x double>, double* nocapture writeonly, i64, i1 immarg, i32 immarg, i32 immarg) #0
+; CHECK: declare void @llvm.matrix.column.major.store.v10f64(<10 x double>, double* nocapture writeonly, i64, i1 immarg, i32 immarg, i32 immarg) #0
 ; CHECK: attributes #0 = { argmemonly nofree nosync nounwind willreturn writeonly }
