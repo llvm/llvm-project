@@ -23,6 +23,7 @@ define i8* @g() nounwind readnone {
 ; CHECK-NEXT:    stw 0, 4(1)
 ; CHECK-NEXT:    stwu 1, -16(1)
 ; CHECK-NEXT:    lwz 3, 0(1)
+; CHECK-NEXT:    lwz 3, 0(3)
 ; CHECK-NEXT:    lwz 3, 4(3)
 ; CHECK-NEXT:    lwz 0, 20(1)
 ; CHECK-NEXT:    addi 1, 1, 16
