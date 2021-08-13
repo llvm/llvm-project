@@ -356,8 +356,7 @@ bool MCPseudoProbeDecoder::buildGUID2FuncDescMap(const uint8_t *Start,
 
     uint64_t GUID = std::move(*ErrorOrGUID);
     uint64_t Hash = std::move(*ErrorOrHash);
-    StringRef Name =
-        FunctionSamples::getCanonicalFnName(std::move(*ErrorOrName));
+    StringRef Name = std::move(*ErrorOrName);
 
     // Initialize PseudoProbeFuncDesc and populate it into GUID2FuncDescMap
     GUID2FuncDescMap.emplace(GUID, MCPseudoProbeFuncDesc(GUID, Hash, Name));
