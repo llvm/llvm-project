@@ -1066,18 +1066,18 @@ public:
     Value conv;
     if (!isQuantized) {
       conv = rewriter
-                 .create<linalg::DepthwiseConv2DNchwOp>(
+                 .create<linalg::DepthwiseConv2DNhwcOp>(
                      loc, linalgConvTy, ValueRange{input, weight},
-                     ValueRange{biasReshape}, dilationAttr, strideAttr)
+                     ValueRange{biasReshape}, strideAttr, dilationAttr)
                  .getResult(0);
     } else {
       auto iZpVal = rewriter.create<ConstantOp>(loc, iZp);
       auto kZpVal = rewriter.create<ConstantOp>(loc, kZp);
       conv =
           rewriter
-              .create<linalg::DepthwiseConv2DNchwQOp>(
+              .create<linalg::DepthwiseConv2DNhwcQOp>(
                   loc, linalgConvTy, ValueRange{input, weight, iZpVal, kZpVal},
-                  ValueRange{biasReshape}, dilationAttr, strideAttr)
+                  ValueRange{biasReshape}, strideAttr, dilationAttr)
               .getResult(0);
     }
 
