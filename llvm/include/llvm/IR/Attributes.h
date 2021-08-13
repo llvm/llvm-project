@@ -657,16 +657,17 @@ public:
     return hasAttribute(ReturnIndex, Kind);
   }
 
-  /// Return true if attributes exists for the return value.
+  /// Return true if attributes exist for the return value.
   bool hasRetAttrs() const { return hasAttributes(ReturnIndex); }
 
-  /// Equivalent to hasAttribute(AttributeList::FunctionIndex, Kind) but
-  /// may be faster.
+  /// Return true if the attribute exists for the function.
   bool hasFnAttr(Attribute::AttrKind Kind) const;
 
-  /// Equivalent to hasAttribute(AttributeList::FunctionIndex, Kind) but
-  /// may be faster.
+  /// Return true if the attribute exists for the function.
   bool hasFnAttr(StringRef Kind) const;
+
+  /// Return true the attributes exist for the function.
+  bool hasFnAttrs() const { return hasAttributes(FunctionIndex); }
 
   /// Return true if the specified attribute is set for at least one
   /// parameter or for the return value. If Index is not nullptr, the index

@@ -3682,7 +3682,7 @@ void AssemblyWriter::printFunction(const Function *F) {
     Out << "; Materializable\n";
 
   const AttributeList &Attrs = F->getAttributes();
-  if (Attrs.hasAttributes(AttributeList::FunctionIndex)) {
+  if (Attrs.hasFnAttrs()) {
     AttributeSet AS = Attrs.getFnAttrs();
     std::string AttrStr;
 
@@ -3720,7 +3720,7 @@ void AssemblyWriter::printFunction(const Function *F) {
   }
 
   FunctionType *FT = F->getFunctionType();
-  if (Attrs.hasAttributes(AttributeList::ReturnIndex))
+  if (Attrs.hasRetAttrs())
     Out << Attrs.getAsString(AttributeList::ReturnIndex) << ' ';
   TypePrinter.print(F->getReturnType(), Out);
   Out << ' ';
@@ -3769,7 +3769,7 @@ void AssemblyWriter::printFunction(const Function *F) {
   if (F->getAddressSpace() != 0 || !Mod ||
       Mod->getDataLayout().getProgramAddressSpace() != 0)
     Out << " addrspace(" << F->getAddressSpace() << ")";
-  if (Attrs.hasAttributes(AttributeList::FunctionIndex))
+  if (Attrs.hasFnAttrs())
     Out << " #" << Machine.getAttributeGroupSlot(Attrs.getFnAttrs());
   if (F->hasSection()) {
     Out << " section \"";
@@ -4126,7 +4126,7 @@ void AssemblyWriter::printInstruction(const Instruction &I) {
     Type *RetTy = FTy->getReturnType();
     const AttributeList &PAL = CI->getAttributes();
 
-    if (PAL.hasAttributes(AttributeList::ReturnIndex))
+    if (PAL.hasRetAttrs())
       Out << ' ' << PAL.getAsString(AttributeList::ReturnIndex);
 
     // Only print addrspace(N) if necessary:
@@ -4155,7 +4155,7 @@ void AssemblyWriter::printInstruction(const Instruction &I) {
       Out << ", ...";
 
     Out << ')';
-    if (PAL.hasAttributes(AttributeList::FunctionIndex))
+    if (PAL.hasFnAttrs())
       Out << " #" << Machine.getAttributeGroupSlot(PAL.getFnAttrs());
 
     writeOperandBundles(CI);
@@ -4171,7 +4171,7 @@ void AssemblyWriter::printInstruction(const Instruction &I) {
       PrintCallingConv(II->getCallingConv(), Out);
     }
 
-    if (PAL.hasAttributes(AttributeList::ReturnIndex))
+    if (PAL.hasRetAttrs())
       Out << ' ' << PAL.getAsString(AttributeList::ReturnIndex);
 
     // Only print addrspace(N) if necessary:
@@ -4193,7 +4193,7 @@ void AssemblyWriter::printInstruction(const Instruction &I) {
     }
 
     Out << ')';
-    if (PAL.hasAttributes(AttributeList::FunctionIndex))
+    if (PAL.hasFnAttrs())
       Out << " #" << Machine.getAttributeGroupSlot(PAL.getFnAttrs());
 
     writeOperandBundles(II);
@@ -4214,7 +4214,7 @@ void AssemblyWriter::printInstruction(const Instruction &I) {
       PrintCallingConv(CBI->getCallingConv(), Out);
     }
 
-    if (PAL.hasAttributes(AttributeList::ReturnIndex))
+    if (PAL.hasRetAttrs())
       Out << ' ' << PAL.getAsString(AttributeList::ReturnIndex);
 
     // If possible, print out the short form of the callbr instruction. We can
@@ -4233,7 +4233,7 @@ void AssemblyWriter::printInstruction(const Instruction &I) {
     }
 
     Out << ')';
-    if (PAL.hasAttributes(AttributeList::FunctionIndex))
+    if (PAL.hasFnAttrs())
       Out << " #" << Machine.getAttributeGroupSlot(PAL.getFnAttrs());
 
     writeOperandBundles(CBI);
