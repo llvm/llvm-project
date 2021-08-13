@@ -981,8 +981,6 @@ void OmpStructureChecker::CheckCancellationNest(
         eligibleCancellation = true;
       }
       break;
-    default:
-      break;
     }
     if (!eligibleCancellation) {
       context_.Say(source,
@@ -1027,8 +1025,6 @@ void OmpStructureChecker::CheckCancellationNest(
           ContextDirectiveAsFortran(),
           parser::ToUpperCaseLetters(
               parser::OmpCancelType::EnumToString(type)));
-      break;
-    default:
       break;
     }
   }
