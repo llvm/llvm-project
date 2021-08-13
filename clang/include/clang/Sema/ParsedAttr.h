@@ -627,7 +627,7 @@ public:
   /// a Spelling enumeration, the value UINT_MAX is returned.
   unsigned getSemanticSpelling() const;
 
-  /// If this is an OpenCL address space attribute returns its representation
+  /// If this is an OpenCL address space attribute, returns its representation
   /// in LangAS, otherwise returns default address space.
   LangAS asOpenCLLangAS() const {
     switch (getParsedKind()) {
@@ -650,7 +650,7 @@ public:
     }
   }
 
-  /// If this is an OpenCL address space attribute returns its SYCL
+  /// If this is an OpenCL address space attribute, returns its SYCL
   /// representation in LangAS, otherwise returns default address space.
   LangAS asSYCLLangAS() const {
     switch (getKind()) {
