@@ -263,6 +263,7 @@ bool IONAME(InputNamelist)(Cookie cookie, const NamelistGroup &group) {
   auto *listInput{io.get_if<ListDirectedStatementState<Direction::Input>>()};
   RUNTIME_CHECK(handler, listInput != nullptr);
   // Check the group header
+  io.BeginReadingRecord();
   std::optional<char32_t> next{io.GetNextNonBlank()};
   if (!next || *next != '&') {
     handler.SignalError(
