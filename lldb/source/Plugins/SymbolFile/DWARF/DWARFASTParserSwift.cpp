@@ -51,7 +51,9 @@ static llvm::StringRef GetTypedefName(const DWARFDIE &die) {
   DWARFDIE type_die = die.GetAttributeValueAsReferenceDIE(DW_AT_type);
   if (!type_die.IsValid())
     return {};
-  return llvm::StringRef::withNullAsEmpty(type_die.GetName());
+  if (!type_die.GetName())
+    return {};
+  return llvm::StringRef(type_die.GetName());
 }
 
 lldb::TypeSP DWARFASTParserSwift::ParseTypeFromDWARF(const SymbolContext &sc,

@@ -982,7 +982,7 @@ void SwiftLanguageRuntime::FindFunctionPointersInCall(
                 CompilerType clang_void_ptr_type =
                     clang_ctx->GetBasicType(eBasicTypeVoid).GetPointerType();
 
-                input_value.SetValueType(Value::eValueTypeScalar);
+                input_value.SetValueType(Value::ValueType::Scalar);
                 input_value.SetCompilerType(clang_void_ptr_type);
                 argument_values.PushValue(input_value);
 
@@ -1692,8 +1692,8 @@ llvm::Optional<Value> SwiftLanguageRuntime::GetErrorReturnLocationAfterReturn(
 
   Value val;
   if (reg_value.GetScalarValue(val.GetScalar())) {
-    val.SetValueType(Value::eValueTypeScalar);
-    val.SetContext(Value::eContextTypeRegisterInfo,
+    val.SetValueType(Value::ValueType::Scalar);
+    val.SetContext(Value::ContextType::RegisterInfo,
                    const_cast<RegisterInfo *>(reg_info));
     error_val = val;
   }

@@ -351,7 +351,7 @@ bool ThreadPlanStepInRange::StepInDeepBreakpointExplainsStop(
       for (size_t i = 0; i < num_owners; i++) {
         BreakpointLocationSP owner_loc_sp(bp_site_sp->GetOwnerAtIndex(i));
         Breakpoint &owner_bp(owner_loc_sp->GetBreakpoint());
-        if (owner_loc_sp->ValidForThisThread(&GetThread()) &&
+        if (owner_loc_sp->ValidForThisThread(GetThread()) &&
             !owner_bp.IsInternal()) {
           explains_stop = false;
           break;

@@ -42,7 +42,7 @@ public:
 
   // LLVM RTTI support
   static char ID;
-  virtual bool isA(const void *ClassID) const {
+  bool isA(const void *ClassID) const override {
     return ClassID == &ID || Section::isA(ClassID);
   }
   static bool classof(const Section *obj) { return obj->isA(&ID); }

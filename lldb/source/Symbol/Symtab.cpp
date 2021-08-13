@@ -341,9 +341,9 @@ void Symtab::InitNameIndexes() {
                                                        is_method)) {
               if (basename && basename != mangled_name) {
                 if (is_method)
-                  m_method_to_index.Append(basename, value);
+                  method_to_index.Append(basename, value);
                 else
-                  m_basename_to_index.Append(basename, value);
+                  basename_to_index.Append(basename, value);
               }
             }
           }

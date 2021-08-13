@@ -123,9 +123,9 @@ bool SwiftLanguage::IsTopLevelFunction(Function &function) {
   return false;
 }
 
-std::vector<ConstString>
+std::vector<Language::MethodNameVariant>
 SwiftLanguage::GetMethodNameVariants(ConstString method_name) const {
-  std::vector<ConstString> variant_names;
+  std::vector<Language::MethodNameVariant> variant_names;
 
   // NOTE:  We need to do this because we don't have a proper parser for Swift
   // function name syntax so we try to ensure that if we autocomplete to
@@ -135,7 +135,7 @@ SwiftLanguage::GetMethodNameVariants(ConstString method_name) const {
   ConstString counterpart;
   if (method_name.GetMangledCounterpart(counterpart))
     if (SwiftLanguageRuntime::IsSwiftMangledName(counterpart.GetStringRef()))
-      variant_names.emplace_back(counterpart);
+      variant_names.emplace_back(counterpart, eFunctionNameTypeFull);
   return variant_names;
 }
 
