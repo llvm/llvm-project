@@ -497,7 +497,7 @@ private:
   /// Check if the function @p F is marked as invalid.
   ///
   /// @note An OpenMP subfunction will be marked as invalid.
-  bool isValidFunction(Function &F);
+  static bool isValidFunction(Function &F);
 
   /// Can ISL compute the trip count of a loop.
   ///
@@ -529,9 +529,10 @@ private:
                       Args &&...Arguments) const;
 
 public:
-  ScopDetection(Function &F, const DominatorTree &DT, ScalarEvolution &SE,
-                LoopInfo &LI, RegionInfo &RI, AAResults &AA,
-                OptimizationRemarkEmitter &ORE);
+  ScopDetection(const DominatorTree &DT, ScalarEvolution &SE, LoopInfo &LI,
+                RegionInfo &RI, AAResults &AA, OptimizationRemarkEmitter &ORE);
+
+  void detect(Function &F);
 
   /// Get the RegionInfo stored in this pass.
   ///
