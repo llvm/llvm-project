@@ -17,6 +17,9 @@ set(SCUDO_UNITTEST_CFLAGS
   # TODO(kostyak): find a way to make -fsized-deallocation work
   -Wno-mismatched-new-delete)
 
+# Too many existing bugs, needs cleanup.
+append_list_if(COMPILER_RT_HAS_WNO_FORMAT -Wno-format SCUDO_UNITTEST_CFLAGS)
+
 if(COMPILER_RT_DEBUG)
   list(APPEND SCUDO_UNITTEST_CFLAGS -DSCUDO_DEBUG=1)
 endif()
