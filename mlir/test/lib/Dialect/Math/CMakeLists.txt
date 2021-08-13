@@ -8,7 +8,6 @@ add_mlir_library(MLIRMathTestPasses
 
   LINK_LIBS PUBLIC
   MLIRMathTransforms
-  MLIRLLVMIR
   MLIRPass
   MLIRTransformUtils
   MLIRVector
