@@ -660,9 +660,6 @@ public:
   /// may be faster.
   bool hasFnAttribute(StringRef Kind) const;
 
-  /// Equivalent to hasAttribute(ArgNo + FirstArgIndex, Kind).
-  bool hasParamAttribute(unsigned ArgNo, Attribute::AttrKind Kind) const;
-
   /// Return true if the specified attribute is set for at least one
   /// parameter or for the return value. If Index is not nullptr, the index
   /// of a parameter with the specified attribute is provided.

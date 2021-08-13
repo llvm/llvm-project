@@ -763,7 +763,7 @@ bool DeadArgumentEliminationPass::RemoveDeadStuffFromFunction(Function *F) {
       Params.push_back(I->getType());
       ArgAlive[ArgI] = true;
       ArgAttrVec.push_back(PAL.getParamAttributes(ArgI));
-      HasLiveReturnedArg |= PAL.hasParamAttribute(ArgI, Attribute::Returned);
+      HasLiveReturnedArg |= PAL.hasParamAttr(ArgI, Attribute::Returned);
     } else {
       ++NumArgumentsEliminated;
       LLVM_DEBUG(dbgs() << "DeadArgumentEliminationPass - Removing argument "

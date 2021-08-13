@@ -447,7 +447,7 @@ public:
 
   /// check if an attributes is in the list of attributes.
   bool hasParamAttribute(unsigned ArgNo, Attribute::AttrKind Kind) const {
-    return getAttributes().hasParamAttribute(ArgNo, Kind);
+    return getAttributes().hasParamAttr(ArgNo, Kind);
   }
 
   /// gets the specified attribute from the list of attributes.
@@ -692,8 +692,8 @@ public:
   /// Determine if the function returns a structure through first
   /// or second pointer argument.
   bool hasStructRetAttr() const {
-    return AttributeSets.hasParamAttribute(0, Attribute::StructRet) ||
-           AttributeSets.hasParamAttribute(1, Attribute::StructRet);
+    return AttributeSets.hasParamAttr(0, Attribute::StructRet) ||
+           AttributeSets.hasParamAttr(1, Attribute::StructRet);
   }
 
   /// Determine if the parameter or return value is marked with NoAlias

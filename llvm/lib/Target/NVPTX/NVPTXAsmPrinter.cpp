@@ -1457,7 +1457,7 @@ void NVPTXAsmPrinter::emitFunctionParamList(const Function *F, raw_ostream &O) {
       }
     }
 
-    if (!PAL.hasParamAttribute(paramIndex, Attribute::ByVal)) {
+    if (!PAL.hasParamAttr(paramIndex, Attribute::ByVal)) {
       if (Ty->isAggregateType() || Ty->isVectorTy() || Ty->isIntegerTy(128)) {
         // Just print .param .align <a> .b8 .param[size];
         // <a> = PAL.getparamalignment

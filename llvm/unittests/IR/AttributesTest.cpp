@@ -158,7 +158,7 @@ TEST(Attributes, AddMatchingAlignAttr) {
   AL = AL.addAttributes(C, AttributeList::FirstArgIndex, B);
   EXPECT_EQ(Align(8), AL.getParamAlignment(0));
   EXPECT_EQ(Align(32), AL.getParamAlignment(1));
-  EXPECT_TRUE(AL.hasParamAttribute(0, Attribute::NonNull));
+  EXPECT_TRUE(AL.hasParamAttr(0, Attribute::NonNull));
 }
 
 TEST(Attributes, EmptyGet) {

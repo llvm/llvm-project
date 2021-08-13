@@ -1262,7 +1262,7 @@ static bool shouldBeMustTail(const CallInst &CI, const Function &F) {
       Attribute::SwiftSelf,    Attribute::SwiftError};
   AttributeList Attrs = CI.getAttributes();
   for (auto AK : ABIAttrs)
-    if (Attrs.hasParamAttribute(0, AK))
+    if (Attrs.hasParamAttr(0, AK))
       return false;
 
   return true;

@@ -343,10 +343,10 @@ Value *CallBase::getReturnedArgOperand() const {
 bool CallBase::paramHasAttr(unsigned ArgNo, Attribute::AttrKind Kind) const {
   assert(ArgNo < getNumArgOperands() && "Param index out of bounds!");
 
-  if (Attrs.hasParamAttribute(ArgNo, Kind))
+  if (Attrs.hasParamAttr(ArgNo, Kind))
     return true;
   if (const Function *F = getCalledFunction())
-    return F->getAttributes().hasParamAttribute(ArgNo, Kind);
+    return F->getAttributes().hasParamAttr(ArgNo, Kind);
   return false;
 }
 
