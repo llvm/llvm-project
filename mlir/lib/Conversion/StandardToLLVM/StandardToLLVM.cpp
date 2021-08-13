@@ -376,6 +376,8 @@ using AbsFOpLowering = VectorConvertToLLVMPattern<AbsFOp, LLVM::FAbsOp>;
 using AddFOpLowering = VectorConvertToLLVMPattern<AddFOp, LLVM::FAddOp>;
 using AddIOpLowering = VectorConvertToLLVMPattern<AddIOp, LLVM::AddOp>;
 using AndOpLowering = VectorConvertToLLVMPattern<AndOp, LLVM::AndOp>;
+using BitcastOpLowering =
+    VectorConvertToLLVMPattern<BitcastOp, LLVM::BitcastOp>;
 using CeilFOpLowering = VectorConvertToLLVMPattern<CeilFOp, LLVM::FCeilOp>;
 using CopySignOpLowering =
     VectorConvertToLLVMPattern<CopySignOp, LLVM::CopySignOp>;
@@ -1128,6 +1130,7 @@ void mlir::populateStdToLLVMConversionPatterns(LLVMTypeConverter &converter,
       AndOpLowering,
       AssertOpLowering,
       AtomicRMWOpLowering,
+      BitcastOpLowering,
       BranchOpLowering,
       CallIndirectOpLowering,
       CallOpLowering,
