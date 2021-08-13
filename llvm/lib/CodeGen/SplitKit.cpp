@@ -529,19 +529,12 @@ SlotIndex SplitEditor::buildSingleSubRegCopy(Register FromReg, Register ToReg,
               | getInternalReadRegState(!FirstCopy), SubIdx)
       .addReg(FromReg, 0, SubIdx);
 
-  BumpPtrAllocator &Allocator = LIS.getVNInfoAllocator();
   SlotIndexes &Indexes = *LIS.getSlotIndexes();
   if (FirstCopy) {
     Def = Indexes.insertMachineInstrInMaps(*CopyMI, Late).getRegSlot();
   } else {
     CopyMI->bundleWithPred();
   }
-  LaneBitmask LaneMask = TRI.getSubRegIndexLaneMask(SubIdx);
-  DestLI.refineSubRanges(Allocator, LaneMask,
-                         [Def, &Allocator](LiveInterval::SubRange &SR) {
-                           SR.createDeadDef(Def, Allocator);
-                         },
-                         Indexes, TRI);
   return Def;
 }
 
@@ -549,11 +542,11 @@ SlotIndex SplitEditor::buildCopy(Register FromReg, Register ToReg,
     LaneBitmask LaneMask, MachineBasicBlock &MBB,
     MachineBasicBlock::iterator InsertBefore, bool Late, unsigned RegIdx) {
   const MCInstrDesc &Desc = TII.get(TargetOpcode::COPY);
+  SlotIndexes &Indexes = *LIS.getSlotIndexes();
   if (LaneMask.all() || LaneMask == MRI.getMaxLaneMaskForVReg(FromReg)) {
     // The full vreg is copied.
     MachineInstr *CopyMI =
         BuildMI(MBB, InsertBefore, DebugLoc(), Desc, ToReg).addReg(FromReg);
-    SlotIndexes &Indexes = *LIS.getSlotIndexes();
     return Indexes.insertMachineInstrInMaps(*CopyMI, Late).getRegSlot();
   }
 
@@ -567,17 +560,25 @@ SlotIndex SplitEditor::buildCopy(Register FromReg, Register ToReg,
   const TargetRegisterClass *RC = MRI.getRegClass(FromReg);
   assert(RC == MRI.getRegClass(ToReg) && "Should have same reg class");
 
-  SmallVector<unsigned, 8> Indexes;
+  SmallVector<unsigned, 8> SubIndexes;
 
   // Abort if we cannot possibly implement the COPY with the given indexes.
-  if (!TRI.getCoveringSubRegIndexes(MRI, RC, LaneMask, Indexes))
+  if (!TRI.getCoveringSubRegIndexes(MRI, RC, LaneMask, SubIndexes))
     report_fatal_error("Impossible to implement partial COPY");
 
   SlotIndex Def;
-  for (unsigned BestIdx : Indexes) {
+  for (unsigned BestIdx : SubIndexes) {
     Def = buildSingleSubRegCopy(FromReg, ToReg, MBB, InsertBefore, BestIdx,
                                 DestLI, Late, Def);
   }
+
+  BumpPtrAllocator &Allocator = LIS.getVNInfoAllocator();
+  DestLI.refineSubRanges(
+      Allocator, LaneMask,
+      [Def, &Allocator](LiveInterval::SubRange &SR) {
+        SR.createDeadDef(Def, Allocator);
+      },
+      Indexes, TRI);
 
   return Def;
 }
