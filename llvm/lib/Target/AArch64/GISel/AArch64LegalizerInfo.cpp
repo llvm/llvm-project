@@ -45,7 +45,6 @@ AArch64LegalizerInfo::AArch64LegalizerInfo(const AArch64Subtarget &ST)
   const LLT s32 = LLT::scalar(32);
   const LLT s64 = LLT::scalar(64);
   const LLT s128 = LLT::scalar(128);
-  const LLT s256 = LLT::scalar(256);
   const LLT v16s8 = LLT::fixed_vector(16, 8);
   const LLT v8s8 = LLT::fixed_vector(8, 8);
   const LLT v4s8 = LLT::fixed_vector(4, 8);
@@ -534,76 +533,30 @@ AArch64LegalizerInfo::AArch64LegalizerInfo(const AArch64Subtarget &ST)
   for (unsigned Op : {G_MERGE_VALUES, G_UNMERGE_VALUES}) {
     unsigned BigTyIdx = Op == G_MERGE_VALUES ? 0 : 1;
     unsigned LitTyIdx = Op == G_MERGE_VALUES ? 1 : 0;
-
-    auto notValidElt = [](const LegalityQuery &Query, unsigned TypeIdx) {
-      const LLT &Ty = Query.Types[TypeIdx];
-      if (Ty.isVector()) {
-        const LLT &EltTy = Ty.getElementType();
-        if (EltTy.getSizeInBits() < 8 || EltTy.getSizeInBits() > 64)
-          return true;
-        if (!isPowerOf2_32(EltTy.getSizeInBits()))
-          return true;
-      }
-      return false;
-    };
-
-    // FIXME: This rule is horrible, but specifies the same as what we had
-    // before with the particularly strange definitions removed (e.g.
-    // s8 = G_MERGE_VALUES s32, s32).
-    // Part of the complexity comes from these ops being extremely flexible. For
-    // example, you can build/decompose vectors with it, concatenate vectors,
-    // etc. and in addition to this you can also bitcast with it at the same
-    // time. We've been considering breaking it up into multiple ops to make it
-    // more manageable throughout the backend.
     getActionDefinitionsBuilder(Op)
-        // Break up vectors with weird elements into scalars
-        .fewerElementsIf(
-            [=](const LegalityQuery &Query) { return notValidElt(Query, 0); },
-            scalarize(0))
-        .fewerElementsIf(
-            [=](const LegalityQuery &Query) { return notValidElt(Query, 1); },
-            scalarize(1))
-        // Clamp the big scalar to s8-s128 and make it a power of 2.
-        .clampScalar(BigTyIdx, s8, s128)
-        .widenScalarIf(
-            [=](const LegalityQuery &Query) {
-              const LLT &Ty = Query.Types[BigTyIdx];
-              return !isPowerOf2_32(Ty.getSizeInBits()) &&
-                     Ty.getSizeInBits() % 64 != 0 && Ty.isScalar();
-            },
-            [=](const LegalityQuery &Query) {
-              // Pick the next power of 2, or a multiple of 64 over 128.
-              // Whichever is smaller.
-              const LLT &Ty = Query.Types[BigTyIdx];
-              unsigned NewSizeInBits = 1
-                                       << Log2_32_Ceil(Ty.getSizeInBits() + 1);
-              if (NewSizeInBits >= 256) {
-                unsigned RoundedTo = alignTo<64>(Ty.getSizeInBits() + 1);
-                if (RoundedTo < NewSizeInBits)
-                  NewSizeInBits = RoundedTo;
-              }
-              return std::make_pair(BigTyIdx, LLT::scalar(NewSizeInBits));
-            })
-        // Clamp the little scalar to s8-s256 and make it a power of 2. It's not
-        // worth considering the multiples of 64 since 2*192 and 2*384 are not
-        // valid.
-        .clampScalar(LitTyIdx, s8, s256)
-        .widenScalarToNextPow2(LitTyIdx, /*Min*/ 8)
-        // So at this point, we have s8, s16, s32, s64, s128, s192, s256, s384,
-        // s512, <X x s8>, <X x s16>, <X x s32>, or <X x s64>.
-        // At this point it's simple enough to accept the legal types.
-        .legalIf([=](const LegalityQuery &Query) {
-          const LLT &BigTy = Query.Types[BigTyIdx];
-          const LLT &LitTy = Query.Types[LitTyIdx];
-          if (BigTy.isVector() && BigTy.getSizeInBits() < 32)
+        .widenScalarToNextPow2(LitTyIdx, 8)
+        .widenScalarToNextPow2(BigTyIdx, 32)
+        .clampScalar(LitTyIdx, s8, s64)
+        .clampScalar(BigTyIdx, s32, s128)
+        .legalIf([=](const LegalityQuery &Q) {
+          switch (Q.Types[BigTyIdx].getSizeInBits()) {
+          case 32:
+          case 64:
+          case 128:
+            break;
+          default:
             return false;
-          if (LitTy.isVector() && LitTy.getSizeInBits() < 32)
+          }
+          switch (Q.Types[LitTyIdx].getSizeInBits()) {
+          case 8:
+          case 16:
+          case 32:
+          case 64:
+            return true;
+          default:
             return false;
-          return BigTy.getSizeInBits() % LitTy.getSizeInBits() == 0;
-        })
-        // Any vectors left are the wrong size. Scalarize them.
-        .scalarize(0)
-        .scalarize(1);
+          }
+        });
   }
 
   getActionDefinitionsBuilder(G_EXTRACT_VECTOR_ELT)
