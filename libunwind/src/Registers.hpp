@@ -339,7 +339,7 @@ inline bool Registers_x86_64::validRegister(int regNum) const {
     return true;
   if (regNum < 0)
     return false;
-  if (regNum > 15)
+  if (regNum > 16)
     return false;
   return true;
 }
@@ -347,6 +347,7 @@ inline bool Registers_x86_64::validRegister(int regNum) const {
 inline uint64_t Registers_x86_64::getRegister(int regNum) const {
   switch (regNum) {
   case UNW_REG_IP:
+  case UNW_X86_64_RIP:
     return _registers.__rip;
   case UNW_REG_SP:
     return _registers.__rsp;
@@ -389,6 +390,7 @@ inline uint64_t Registers_x86_64::getRegister(int regNum) const {
 inline void Registers_x86_64::setRegister(int regNum, uint64_t value) {
   switch (regNum) {
   case UNW_REG_IP:
+  case UNW_X86_64_RIP:
     _registers.__rip = value;
     return;
   case UNW_REG_SP:
@@ -449,6 +451,7 @@ inline void Registers_x86_64::setRegister(int regNum, uint64_t value) {
 inline const char *Registers_x86_64::getRegisterName(int regNum) {
   switch (regNum) {
   case UNW_REG_IP:
+  case UNW_X86_64_RIP:
     return "rip";
   case UNW_REG_SP:
     return "rsp";
