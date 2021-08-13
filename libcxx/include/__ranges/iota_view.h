@@ -366,7 +366,6 @@ namespace ranges {
 
   template<class _Start, class _Bound>
   inline constexpr bool enable_borrowed_range<iota_view<_Start, _Bound>> = true;
-} // namespace ranges
 
 namespace views {
 namespace __iota {
@@ -395,6 +394,7 @@ inline namespace __cpo {
   inline constexpr auto iota = __iota::__fn{};
 }
 } // namespace views
+} // namespace ranges
 
 #endif // !defined(_LIBCPP_HAS_NO_RANGES)
 
