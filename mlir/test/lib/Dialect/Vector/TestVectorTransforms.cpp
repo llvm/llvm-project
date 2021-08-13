@@ -444,6 +444,9 @@ struct TestVectorTransferLoweringPatterns
 struct TestVectorMultiReductionLoweringPatterns
     : public PassWrapper<TestVectorMultiReductionLoweringPatterns,
                          FunctionPass> {
+  TestVectorMultiReductionLoweringPatterns() = default;
+  TestVectorMultiReductionLoweringPatterns(
+      const TestVectorMultiReductionLoweringPatterns &pass) {}
   void getDependentDialects(DialectRegistry &registry) const override {
     registry.insert<memref::MemRefDialect>();
   }
@@ -454,9 +457,13 @@ struct TestVectorMultiReductionLoweringPatterns
     return "Test conversion patterns to lower vector.multi_reduction to other "
            "vector ops";
   }
+  Option<bool> useOuterReductions{
+      *this, "use-outer-reductions",
+      llvm::cl::desc("Move reductions to outer most dimensions"),
+      llvm::cl::init(false)};
   void runOnFunction() override {
     RewritePatternSet patterns(&getContext());
-    populateVectorMultiReductionLoweringPatterns(patterns);
+    populateVectorMultiReductionLoweringPatterns(patterns, !useOuterReductions);
     (void)applyPatternsAndFoldGreedily(getFunction(), std::move(patterns));
   }
 };
