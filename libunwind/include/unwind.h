@@ -61,6 +61,14 @@ typedef struct _Unwind_Context _Unwind_Context;   // opaque
 #include "unwind_itanium.h"
 #endif
 
+typedef _Unwind_Reason_Code (*_Unwind_Stop_Fn)
+    (int version,
+     _Unwind_Action actions,
+     uint64_t exceptionClass,
+     _Unwind_Exception* exceptionObject,
+     struct _Unwind_Context* context,
+     void* stop_parameter);
+
 #ifdef __cplusplus
 extern "C" {
 #endif
