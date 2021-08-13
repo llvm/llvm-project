@@ -34,10 +34,10 @@ public:
 
   bool IsTopLevelFunction(Function &function) override;
 
-  std::vector<ConstString>
+  std::vector<Language::MethodNameVariant>
   GetMethodNameVariants(ConstString method_name) const override;
 
-  virtual lldb::TypeCategoryImplSP GetFormatters() override;
+  lldb::TypeCategoryImplSP GetFormatters() override;
 
   HardcodedFormatters::HardcodedSummaryFinder GetHardcodedSummaries() override;
 

@@ -77,9 +77,7 @@ static ConstString GetDemangledNameWithoutArguments(ConstString mangled,
       if (SwiftLanguageRuntime::MethodName::ExtractFunctionBasenameFromMangled(
               mangled, basename, is_method)) {
         if (basename && basename != mangled) {
-          g_most_recent_mangled_to_name_sans_args.first = mangled;
-          g_most_recent_mangled_to_name_sans_args.second = basename;
-          return (g_most_recent_mangled_to_name_sans_args.second);
+          return basename;
         }
       }
     }

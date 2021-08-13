@@ -1534,11 +1534,11 @@ void SwiftASTContext::ApplyWorkingDir(
 void SwiftASTContext::RemapClangImporterOptions(
     const PathMappingList &path_map) {
   auto &options = GetClangImporterOptions();
-  std::string remapped;
-  if (path_map.RemapPath(options.BridgingHeader, remapped)) {
+  ConstString remapped;
+  if (path_map.RemapPath(ConstString(options.BridgingHeader), remapped)) {
     LOG_PRINTF(LIBLLDB_LOG_TYPES, "remapped %s -> %s",
-               options.BridgingHeader.c_str(), remapped.c_str());
-    options.BridgingHeader = remapped;
+               options.BridgingHeader.c_str(), remapped.GetCString());
+    options.BridgingHeader = remapped.GetCString();
   }
 
   // Previous argument was the dash-option of an option pair.
@@ -1561,10 +1561,10 @@ void SwiftASTContext::RemapClangImporterOptions(
       continue;
     }
 
-    if (path_map.RemapPath(arg, remapped)) {
+    if (path_map.RemapPath(ConstString(arg), remapped)) {
       LOG_PRINTF(LIBLLDB_LOG_TYPES, "remapped %s -> %s%s", arg.str().c_str(),
-                 prefix.str().c_str(), remapped.c_str());
-      arg_string = prefix.str() + remapped;
+                 prefix.str().c_str(), remapped.GetCString());
+      arg_string = prefix.str() + remapped.GetCString();
     }
   }
 }
@@ -3386,7 +3386,7 @@ swift::ASTContext *SwiftASTContext::GetASTContext() {
   llvm::Optional<llvm::VersionTuple> sdk_version =
       m_ast_context_ap->LangOpts.SDKVersion;
   if (!sdk_version) {
-    auto SDKInfoOrErr = clang::driver::parseDarwinSDKInfo(
+    auto SDKInfoOrErr = clang::parseDarwinSDKInfo(
         *llvm::vfs::getRealFileSystem(),
         m_ast_context_ap->SearchPathOpts.SDKPath);
     if (SDKInfoOrErr) {
@@ -7566,7 +7566,9 @@ CompilerType SwiftASTContext::GetUnboundGenericType(opaque_compiler_type_t type,
     auto *nominal_type_decl = unbound_generic_type->getDecl();
     swift::GenericSignature generic_sig =
         nominal_type_decl->getGenericSignature();
-    auto depTy = generic_sig->getGenericParams()[idx];
+    swift::TypeArrayView<swift::GenericTypeParamType> depView 
+        = generic_sig.getGenericParams();
+    swift::Type depTy = depView[idx];
     return ToCompilerType({nominal_type_decl->mapTypeIntoContext(depTy)
                                ->castTo<swift::ArchetypeType>()});
   }
