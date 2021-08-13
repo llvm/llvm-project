@@ -72,6 +72,11 @@ The improvements are...
 New checks
 ^^^^^^^^^^
 
+- New :doc:`readability-identifier-length
+  <clang-tidy/checks/readability-identifier-length>` check.
+
+  Reports identifiers whose names are too short. Currently checks local variables and function parameters only.
+
 New check aliases
 ^^^^^^^^^^^^^^^^^
 
