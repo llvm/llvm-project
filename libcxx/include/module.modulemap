@@ -371,6 +371,31 @@ module std [system] {
   module concepts {
     header "concepts"
     export *
+
+    module __concepts {
+      module arithmetic                 { private header "__concepts/arithmetic.h"                }
+      module assignable                 { private header "__concepts/assignable.h"                }
+      module boolean_testable           { private header "__concepts/boolean_testable.h"          }
+      module class_or_enum              { private header "__concepts/class_or_enum.h"             }
+      module common_reference_with      { private header "__concepts/common_reference_with.h"     }
+      module common_with                { private header "__concepts/common_with.h"               }
+      module constructible              { private header "__concepts/constructible.h"             }
+      module convertible_to             { private header "__concepts/convertible_to.h"            }
+      module copyable                   { private header "__concepts/copyable.h"                  }
+      module derived_from               { private header "__concepts/derived_from.h"              }
+      module destructible               { private header "__concepts/destructible.h"              }
+      module different_from             { private header "__concepts/different_from.h"            }
+      module equality_comparable        { private header "__concepts/equality_comparable.h"       }
+      module invocable                  { private header "__concepts/invocable.h"                 }
+      module movable                    { private header "__concepts/movable.h"                   }
+      module predicate                  { private header "__concepts/predicate.h"                 }
+      module regular                    { private header "__concepts/regular.h"                   }
+      module relation                   { private header "__concepts/relation.h"                  }
+      module same_as                    { private header "__concepts/same_as.h"                   }
+      module semiregular                { private header "__concepts/semiregular.h"               }
+      module swappable                  { private header "__concepts/swappable.h"                 }
+      module totally_ordered            { private header "__concepts/totally_ordered.h"           }
+    }
   }
   module condition_variable {
     header "condition_variable"
