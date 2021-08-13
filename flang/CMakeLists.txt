@@ -392,6 +392,9 @@ endif()
 add_subdirectory(runtime)
 
 option(FLANG_BUILD_EXAMPLES "Build Flang example programs by default." OFF)
+if (FLANG_BUILD_EXAMPLES AND FLANG_STANDALONE_BUILD)
+  message(FATAL_ERROR "Examples are not supported in out-of-tree builds.")
+endif()
 add_subdirectory(examples)
 
 if (FLANG_INCLUDE_TESTS)
