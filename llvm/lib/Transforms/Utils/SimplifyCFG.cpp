@@ -6394,11 +6394,6 @@ static BasicBlock *allPredecessorsComeFromSameSource(BasicBlock *BB) {
 }
 
 bool SimplifyCFGOpt::simplifyCondBranch(BranchInst *BI, IRBuilder<> &Builder) {
-  assert(
-      !isa<ConstantInt>(BI->getCondition()) &&
-      BI->getSuccessor(0) != BI->getSuccessor(1) &&
-      "Tautological conditional branch should have been eliminated already.");
-
   BasicBlock *BB = BI->getParent();
   if (!Options.SimplifyCondBranch)
     return false;
