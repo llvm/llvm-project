@@ -199,9 +199,7 @@ __cpp_lib_void_t                                        201411L <type_traits>
 #endif
 
 #if _LIBCPP_STD_VER > 14
-# if !defined(_LIBCPP_HAS_NO_BUILTIN_ADDRESSOF)
-#   define __cpp_lib_addressof_constexpr                201603L
-# endif
+# define __cpp_lib_addressof_constexpr                  201603L
 # define __cpp_lib_allocator_traits_is_always_equal     201411L
 # define __cpp_lib_any                                  201606L
 # define __cpp_lib_apply                                201603L
