@@ -21,7 +21,7 @@ class MutexSet {
  public:
   // Holds limited number of mutexes.
   // The oldest mutexes are discarded on overflow.
-  static const uptr kMaxSize = 16;
+  static constexpr uptr kMaxSize = 16;
   struct Desc {
     uptr addr;
     StackID stack_id;
@@ -30,6 +30,13 @@ class MutexSet {
     u32 seq;
     u32 count;
     bool write;
+
+    Desc() { internal_memset(this, 0, sizeof(*this)); }
+    Desc(const Desc& other) { *this = other; }
+    Desc& operator=(const MutexSet::Desc& other) {
+      internal_memcpy(this, &other, sizeof(*this));
+      return *this;
+    }
   };
 
   MutexSet();
@@ -41,11 +48,6 @@ class MutexSet {
   void DelAddr(uptr addr, bool destroy = false);
   uptr Size() const;
   Desc Get(uptr i) const;
-
-  MutexSet(const MutexSet& other) { *this = other; }
-  void operator=(const MutexSet &other) {
-    internal_memcpy(this, &other, sizeof(*this));
-  }
 
  private:
 #if !SANITIZER_GO

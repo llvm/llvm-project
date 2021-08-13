@@ -14,10 +14,7 @@
 
 namespace __tsan {
 
-const uptr MutexSet::kMaxSize;
-
 MutexSet::MutexSet() {
-  internal_memset(&descs_, 0, sizeof(descs_));
 }
 
 void MutexSet::Add(u64 id, bool write, u64 epoch) {
