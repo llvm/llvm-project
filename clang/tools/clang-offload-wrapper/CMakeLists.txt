@@ -1,4 +1,4 @@
-set(LLVM_LINK_COMPONENTS BitWriter Core Support TransformUtils)
+set(LLVM_LINK_COMPONENTS BitWriter Core Object Support TransformUtils)
 
 add_clang_tool(clang-offload-wrapper
   ClangOffloadWrapper.cpp
