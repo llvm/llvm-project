@@ -130,8 +130,9 @@ def LLVM_AnyAggregate : Type<
 
 // Type constraint accepting any LLVM non-aggregate type, i.e. not structure or
 // array.
-def LLVM_AnyNonAggregate : Type<Neg<LLVM_AnyAggregate.predicate>,
-                               "LLVM non-aggregate type">;
+def LLVM_AnyNonAggregate : Type<And<[LLVM_Type.predicate,
+                                     Neg<LLVM_AnyAggregate.predicate>]>,
+                               "LLVM-compatible non-aggregate type">;
 
 // Type constraint accepting any LLVM vector type.
 def LLVM_AnyVector : Type<CPred<"::mlir::LLVM::isCompatibleVectorType($_self)">,
