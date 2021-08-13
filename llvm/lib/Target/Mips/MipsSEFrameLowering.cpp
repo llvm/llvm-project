@@ -873,9 +873,11 @@ void MipsSEFrameLowering::determineCalleeSaves(MachineFunction &MF,
   const TargetRegisterInfo *TRI = MF.getSubtarget().getRegisterInfo();
   MipsFunctionInfo *MipsFI = MF.getInfo<MipsFunctionInfo>();
   MipsABIInfo ABI = STI.getABI();
-  unsigned RA = ABI.IsN64() ? Mips::RA_64 : Mips::RA;
+  unsigned RA =
+      ABI.IsN64() ? Mips::RA_64 : ABI.IsP32() ? Mips::RA_NM : Mips::RA;
   unsigned FP = ABI.GetFramePtr();
-  unsigned BP = ABI.IsN64() ? Mips::S7_64 : Mips::S7;
+  unsigned BP =
+      ABI.IsN64() ? Mips::S7_64 : ABI.IsP32() ? Mips::S7_NM : Mips::S7;
 
   // Mark $ra and $fp as used if function has dedicated frame pointer.
   if (hasFP(MF)) {
@@ -910,14 +912,18 @@ void MipsSEFrameLowering::determineCalleeSaves(MachineFunction &MF,
   // Set scavenging frame index if necessary.
   uint64_t MaxSPOffset = estimateStackSize(MF);
 
+  // nanoMIPS has 9-bit signed offset for loads/stores.
   // MSA has a minimum offset of 10 bits signed. If there is a variable
   // sized object on the stack, the estimation cannot account for it.
-  if (isIntN(STI.hasMSA() ? 10 : 16, MaxSPOffset) &&
+  int SupportedSPOffsetSize = STI.hasMSA() ? 10 : ABI.IsP32() ? 9 : 16;
+  if (isIntN(SupportedSPOffsetSize, MaxSPOffset) &&
       !MF.getFrameInfo().hasVarSizedObjects())
     return;
 
   const TargetRegisterClass &RC =
-      ABI.ArePtrs64bit() ? Mips::GPR64RegClass : Mips::GPR32RegClass;
+      ABI.ArePtrs64bit()
+          ? Mips::GPR64RegClass
+          : ABI.IsP32() ? Mips::GPR32NMRegClass : Mips::GPR32RegClass;
   int FI = MF.getFrameInfo().CreateStackObject(TRI->getSpillSize(RC),
                                                TRI->getSpillAlign(RC), false);
   RS->addScavengingFrameIndex(FI);
