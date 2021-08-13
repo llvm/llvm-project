@@ -15,8 +15,7 @@ define void @eggs(i1 %arg, i1 %arg16, %0* %arg17, %0* %arg18, %0* %arg19) {
 ; CHECK:       bb21:
 ; CHECK-NEXT:    [[I:%.*]] = icmp eq %0* [[ARG17:%.*]], null
 ; CHECK-NEXT:    call void @hoge()
-; CHECK-NEXT:    [[I26:%.*]] = select i1 [[ARG16:%.*]], %0* null, %0* [[ARG19:%.*]]
-; CHECK-NEXT:    [[I27:%.*]] = getelementptr inbounds [[TMP0:%.*]], %0* [[I26]], i64 0, i32 0
+; CHECK-NEXT:    [[I27:%.*]] = getelementptr inbounds [[TMP0:%.*]], %0* [[ARG19:%.*]], i64 0, i32 0
 ; CHECK-NEXT:    [[I28:%.*]] = load %1*, %1** [[I27]], align 8
 ; CHECK-NEXT:    call void @pluto.1(%1* [[I28]])
 ; CHECK-NEXT:    call void @pluto()
