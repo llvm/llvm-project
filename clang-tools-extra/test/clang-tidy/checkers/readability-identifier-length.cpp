@@ -1,7 +1,7 @@
 // RUN: %check_clang_tidy %s readability-identifier-length %t \
 // RUN: -config='{CheckOptions: \
 // RUN:  [{key: readability-identifier-length.IgnoredVariableNames, value: "^[xy]$"}]}' \
-// RUN: --
+// RUN: -- -fexceptions
 
 struct myexcept {
   int val;
