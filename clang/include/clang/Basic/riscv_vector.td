@@ -602,7 +602,7 @@ multiclass RVVVLEFFBuiltin<list<string> types> {
         llvm::Value *V = Builder.CreateExtractValue(LoadValue, {0});
         // Store new_vl.
         clang::CharUnits Align =
-            CGM.getNaturalTypeAlignment(getContext().getSizeType());
+            CGM.getNaturalPointeeTypeAlignment(E->getArg(1)->getType());
         Builder.CreateStore(Builder.CreateExtractValue(LoadValue, {1}),
                             Address(NewVL, Align));
         return V;
@@ -621,7 +621,7 @@ multiclass RVVVLEFFBuiltin<list<string> types> {
         llvm::Value *V = Builder.CreateExtractValue(LoadValue, {0});
         // Store new_vl.
         clang::CharUnits Align =
-            CGM.getNaturalTypeAlignment(getContext().getSizeType());
+            CGM.getNaturalPointeeTypeAlignment(E->getArg(3)->getType());
         Builder.CreateStore(Builder.CreateExtractValue(LoadValue, {1}),
                             Address(NewVL, Align));
         return V;
@@ -805,14 +805,14 @@ multiclass RVVUnitStridedSegLoad<string op> {
             ManualCodegen = [{
     {
       // builtin: (val0 address, val1 address, ..., ptr, vl)
-      IntrinsicTypes = {Ops[0]->getType()->getPointerElementType(),
+      IntrinsicTypes = {ConvertType(E->getArg(0)->getType()->getPointeeType()),
                         Ops[NF + 1]->getType()};
       // intrinsic: (ptr, vl)
       llvm::Value *Operands[] = {Ops[NF], Ops[NF + 1]};
       llvm::Function *F = CGM.getIntrinsic(ID, IntrinsicTypes);
       llvm::Value *LoadValue = Builder.CreateCall(F, Operands, "");
-      clang::CharUnits Align = CharUnits::fromQuantity(
-                                 IntrinsicTypes[0]->getScalarSizeInBits() / 8);
+      clang::CharUnits Align =
+          CGM.getNaturalPointeeTypeAlignment(E->getArg(0)->getType());
       llvm::Value *V;
       for (unsigned I = 0; I < NF; ++I) {
         V = Builder.CreateStore(Builder.CreateExtractValue(LoadValue, {I}),
@@ -825,7 +825,7 @@ multiclass RVVUnitStridedSegLoad<string op> {
     {
       // builtin: (val0 address, ..., mask, maskedoff0, ..., ptr, vl)
       // intrinsic: (maskedoff0, ..., ptr, mask, vl)
-      IntrinsicTypes = {Ops[0]->getType()->getPointerElementType(),
+      IntrinsicTypes = {ConvertType(E->getArg(0)->getType()->getPointeeType()),
                         Ops[2 * NF + 2]->getType()};
       SmallVector<llvm::Value*, 12> Operands;
       for (unsigned I = 0; I < NF; ++I)
@@ -836,8 +836,8 @@ multiclass RVVUnitStridedSegLoad<string op> {
       assert(Operands.size() == NF + 3);
       llvm::Function *F = CGM.getIntrinsic(ID, IntrinsicTypes);
       llvm::Value *LoadValue = Builder.CreateCall(F, Operands, "");
-      clang::CharUnits Align = CharUnits::fromQuantity(
-                                 IntrinsicTypes[0]->getScalarSizeInBits() / 8);
+      clang::CharUnits Align =
+          CGM.getNaturalPointeeTypeAlignment(E->getArg(0)->getType());
       llvm::Value *V;
       for (unsigned I = 0; I < NF; ++I) {
         V = Builder.CreateStore(Builder.CreateExtractValue(LoadValue, {I}),
@@ -875,15 +875,15 @@ multiclass RVVUnitStridedSegLoadFF<string op> {
             ManualCodegen = [{
     {
       // builtin: (val0 address, val1 address, ..., ptr, new_vl, vl)
-      IntrinsicTypes = {Ops[0]->getType()->getPointerElementType(),
+      IntrinsicTypes = {ConvertType(E->getArg(0)->getType()->getPointeeType()),
                         Ops[NF + 2]->getType()};
       // intrinsic: (ptr, vl)
       llvm::Value *Operands[] = {Ops[NF], Ops[NF + 2]};
       Value *NewVL = Ops[NF + 1];
       llvm::Function *F = CGM.getIntrinsic(ID, IntrinsicTypes);
       llvm::Value *LoadValue = Builder.CreateCall(F, Operands, "");
-      clang::CharUnits Align = CharUnits::fromQuantity(
-                                 IntrinsicTypes[0]->getScalarSizeInBits() / 8);
+      clang::CharUnits Align =
+          CGM.getNaturalPointeeTypeAlignment(E->getArg(0)->getType());
       for (unsigned I = 0; I < NF; ++I) {
         Builder.CreateStore(Builder.CreateExtractValue(LoadValue, {I}),
                             Address(Ops[I], Align));
@@ -897,7 +897,7 @@ multiclass RVVUnitStridedSegLoadFF<string op> {
     {
       // builtin: (val0 address, ..., mask, maskedoff0, ..., ptr, new_vl, vl)
       // intrinsic: (maskedoff0, ..., ptr, mask, vl)
-      IntrinsicTypes = {Ops[0]->getType()->getPointerElementType(),
+      IntrinsicTypes = {ConvertType(E->getArg(0)->getType()->getPointeeType()),
                         Ops[2 * NF + 3]->getType()};
       SmallVector<llvm::Value*, 12> Operands;
       for (unsigned I = 0; I < NF; ++I)
@@ -909,8 +909,8 @@ multiclass RVVUnitStridedSegLoadFF<string op> {
       assert(Operands.size() == NF + 3);
       llvm::Function *F = CGM.getIntrinsic(ID, IntrinsicTypes);
       llvm::Value *LoadValue = Builder.CreateCall(F, Operands, "");
-      clang::CharUnits Align = CharUnits::fromQuantity(
-                                 IntrinsicTypes[0]->getScalarSizeInBits() / 8);
+      clang::CharUnits Align =
+          CGM.getNaturalPointeeTypeAlignment(E->getArg(0)->getType());
       for (unsigned I = 0; I < NF; ++I) {
         Builder.CreateStore(Builder.CreateExtractValue(LoadValue, {I}),
                             Address(Ops[I], Align));
@@ -949,14 +949,14 @@ multiclass RVVStridedSegLoad<string op> {
             ManualCodegen = [{
     {
       // builtin: (val0 address, val1 address, ..., ptr, stride, vl)
-      IntrinsicTypes = {Ops[0]->getType()->getPointerElementType(),
+      IntrinsicTypes = {ConvertType(E->getArg(0)->getType()->getPointeeType()),
                         Ops[NF + 2]->getType()};
       // intrinsic: (ptr, stride, vl)
       llvm::Value *Operands[] = {Ops[NF], Ops[NF + 1], Ops[NF + 2]};
       llvm::Function *F = CGM.getIntrinsic(ID, IntrinsicTypes);
       llvm::Value *LoadValue = Builder.CreateCall(F, Operands, "");
-      clang::CharUnits Align = CharUnits::fromQuantity(
-                                 IntrinsicTypes[0]->getScalarSizeInBits() / 8);
+      clang::CharUnits Align =
+          CGM.getNaturalPointeeTypeAlignment(E->getArg(0)->getType());
       llvm::Value *V;
       for (unsigned I = 0; I < NF; ++I) {
         V = Builder.CreateStore(Builder.CreateExtractValue(LoadValue, {I}),
@@ -969,7 +969,7 @@ multiclass RVVStridedSegLoad<string op> {
     {
       // builtin: (val0 address, ..., mask, maskedoff0, ..., ptr, stride, vl)
       // intrinsic: (maskedoff0, ..., ptr, stride, mask, vl)
-      IntrinsicTypes = {Ops[0]->getType()->getPointerElementType(),
+      IntrinsicTypes = {ConvertType(E->getArg(0)->getType()->getPointeeType()),
                         Ops[2 * NF + 3]->getType()};
       SmallVector<llvm::Value*, 12> Operands;
       for (unsigned I = 0; I < NF; ++I)
@@ -981,8 +981,8 @@ multiclass RVVStridedSegLoad<string op> {
       assert(Operands.size() == NF + 4);
       llvm::Function *F = CGM.getIntrinsic(ID, IntrinsicTypes);
       llvm::Value *LoadValue = Builder.CreateCall(F, Operands, "");
-      clang::CharUnits Align = CharUnits::fromQuantity(
-                                 IntrinsicTypes[0]->getScalarSizeInBits() / 8);
+      clang::CharUnits Align =
+          CGM.getNaturalPointeeTypeAlignment(E->getArg(0)->getType());
       llvm::Value *V;
       for (unsigned I = 0; I < NF; ++I) {
         V = Builder.CreateStore(Builder.CreateExtractValue(LoadValue, {I}),
@@ -1015,14 +1015,14 @@ multiclass RVVIndexedSegLoad<string op> {
             ManualCodegen = [{
     {
       // builtin: (val0 address, val1 address, ..., ptr, index, vl)
-      IntrinsicTypes = {Ops[0]->getType()->getPointerElementType(),
+      IntrinsicTypes = {ConvertType(E->getArg(0)->getType()->getPointeeType()),
                         Ops[NF + 1]->getType(), Ops[NF + 2]->getType()};
       // intrinsic: (ptr, index, vl)
       llvm::Value *Operands[] = {Ops[NF], Ops[NF + 1], Ops[NF + 2]};
       llvm::Function *F = CGM.getIntrinsic(ID, IntrinsicTypes);
       llvm::Value *LoadValue = Builder.CreateCall(F, Operands, "");
-      clang::CharUnits Align = CharUnits::fromQuantity(
-                                 IntrinsicTypes[0]->getScalarSizeInBits() / 8);
+      clang::CharUnits Align =
+          CGM.getNaturalPointeeTypeAlignment(E->getArg(0)->getType());
       llvm::Value *V;
       for (unsigned I = 0; I < NF; ++I) {
         V = Builder.CreateStore(Builder.CreateExtractValue(LoadValue, {I}),
@@ -1034,7 +1034,7 @@ multiclass RVVIndexedSegLoad<string op> {
             ManualCodegenMask = [{
     {
       // builtin: (val0 address, ..., mask, maskedoff0, ..., ptr, index, vl)
-      IntrinsicTypes = {Ops[0]->getType()->getPointerElementType(),
+      IntrinsicTypes = {ConvertType(E->getArg(0)->getType()->getPointeeType()),
                         Ops[2 * NF + 2]->getType(), Ops[2 * NF + 3]->getType()};
       // intrinsic: (maskedoff0, ..., ptr, index, mask, vl)
       SmallVector<llvm::Value*, 12> Operands;
@@ -1047,8 +1047,8 @@ multiclass RVVIndexedSegLoad<string op> {
       assert(Operands.size() == NF + 4);
       llvm::Function *F = CGM.getIntrinsic(ID, IntrinsicTypes);
       llvm::Value *LoadValue = Builder.CreateCall(F, Operands, "");
-      clang::CharUnits Align = CharUnits::fromQuantity(
-                                 IntrinsicTypes[0]->getScalarSizeInBits() / 8);
+      clang::CharUnits Align =
+          CGM.getNaturalPointeeTypeAlignment(E->getArg(0)->getType());
       llvm::Value *V;
       for (unsigned I = 0; I < NF; ++I) {
         V = Builder.CreateStore(Builder.CreateExtractValue(LoadValue, {I}),
