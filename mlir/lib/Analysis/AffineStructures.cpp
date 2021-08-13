@@ -1944,6 +1944,72 @@ void FlatAffineConstraints::getSliceBounds(unsigned offset, unsigned num,
   }
 }
 
+LogicalResult FlatAffineConstraints::addLowerOrUpperBound(unsigned pos,
+                                                          AffineMap boundMap,
+                                                          bool eq, bool lower) {
+  assert(boundMap.getNumDims() == getNumDimIds() && "dim mismatch");
+  assert(boundMap.getNumSymbols() == getNumSymbolIds() && "symbol mismatch");
+  assert(pos < getNumDimAndSymbolIds() && "invalid position");
+
+  // Equality follows the logic of lower bound except that we add an equality
+  // instead of an inequality.
+  assert((!eq || boundMap.getNumResults() == 1) && "single result expected");
+  if (eq)
+    lower = true;
+
+  std::vector<SmallVector<int64_t, 8>> flatExprs;
+  FlatAffineConstraints localCst;
+  if (failed(getFlattenedAffineExprs(boundMap, &flatExprs, &localCst))) {
+    LLVM_DEBUG(llvm::dbgs()
+               << "composition unimplemented for semi-affine maps\n");
+    return failure();
+  }
+  assert(flatExprs.size() == boundMap.getNumResults());
+
+  // Add localCst information.
+  if (localCst.getNumLocalIds() > 0) {
+    unsigned numLocalIds = getNumLocalIds();
+    // Insert local dims of localCst at the beginning.
+    for (unsigned l = 0, e = localCst.getNumLocalIds(); l < e; ++l)
+      addLocalId(0);
+    // Insert local dims of `this` at the end of localCst.
+    for (unsigned l = 0; l < numLocalIds; ++l)
+      localCst.addLocalId(localCst.getNumLocalIds());
+    // Dimensions of localCst and this constraint set match. Append localCst to
+    // this constraint set.
+    append(localCst);
+  }
+
+  // Add one (in)equality for each result.
+  for (const auto &flatExpr : flatExprs) {
+    SmallVector<int64_t> ineq(getNumCols(), 0);
+    // Dims and symbols.
+    for (unsigned j = 0, e = boundMap.getNumInputs(); j < e; j++) {
+      ineq[j] = lower ? -flatExpr[j] : flatExpr[j];
+    }
+    // Invalid bound: pos appears in `boundMap`.
+    // TODO: This should be an assertion. Fix `addDomainFromSliceMaps` and/or
+    // its callers to prevent invalid bounds from being added.
+    if (ineq[pos] != 0)
+      continue;
+    ineq[pos] = lower ? 1 : -1;
+    // Local vars common to eq and localCst are at the beginning.
+    unsigned j = getNumDimIds() + getNumSymbolIds();
+    unsigned end = flatExpr.size() - 1;
+    for (unsigned i = boundMap.getNumInputs(); i < end; i++, j++) {
+      ineq[j] = lower ? -flatExpr[i] : flatExpr[i];
+    }
+    // Constant term.
+    ineq[getNumCols() - 1] =
+        lower ? -flatExpr[flatExpr.size() - 1]
+              // Upper bound in flattenedExpr is an exclusive one.
+              : flatExpr[flatExpr.size() - 1] - 1;
+    eq ? addEquality(ineq) : addInequality(ineq);
+  }
+
+  return success();
+}
+
 LogicalResult
 FlatAffineConstraints::addLowerOrUpperBound(unsigned pos, AffineMap boundMap,
                                             ValueRange boundOperands, bool eq,
