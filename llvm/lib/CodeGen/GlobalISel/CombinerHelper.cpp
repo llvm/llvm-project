@@ -1710,13 +1710,6 @@ bool CombinerHelper::matchPtrAddImmedChain(MachineInstr &MI,
   if (!MaybeImmVal)
     return false;
 
-  // Don't do this combine if there multiple uses of the first PTR_ADD,
-  // since we may be able to compute the second PTR_ADD as an immediate
-  // offset anyway. Folding the first offset into the second may cause us
-  // to go beyond the bounds of our legal addressing modes.
-  if (!MRI.hasOneNonDBGUse(Add2))
-    return false;
-
   MachineInstr *Add2Def = MRI.getUniqueVRegDef(Add2);
   if (!Add2Def || Add2Def->getOpcode() != TargetOpcode::G_PTR_ADD)
     return false;
@@ -1727,8 +1720,36 @@ bool CombinerHelper::matchPtrAddImmedChain(MachineInstr &MI,
   if (!MaybeImm2Val)
     return false;
 
+  // Check if the new combined immediate forms an illegal addressing mode.
+  // Do not combine if it was legal before but would get illegal.
+  // To do so, we need to find a load/store user of the pointer to get
+  // the access type.
+  Type *AccessTy = nullptr;
+  auto &MF = *MI.getMF();
+  for (auto &UseMI : MRI.use_nodbg_instructions(MI.getOperand(0).getReg())) {
+    if (auto *LdSt = dyn_cast<GLoadStore>(&UseMI)) {
+      AccessTy = getTypeForLLT(MRI.getType(LdSt->getReg(0)),
+                               MF.getFunction().getContext());
+      break;
+    }
+  }
+  TargetLoweringBase::AddrMode AMNew;
+  APInt CombinedImm = MaybeImmVal->Value + MaybeImm2Val->Value;
+  AMNew.BaseOffs = CombinedImm.getSExtValue();
+  if (AccessTy) {
+    AMNew.HasBaseReg = true;
+    TargetLoweringBase::AddrMode AMOld;
+    AMOld.BaseOffs = MaybeImm2Val->Value.getSExtValue();
+    AMOld.HasBaseReg = true;
+    unsigned AS = MRI.getType(Add2).getAddressSpace();
+    const auto &TLI = *MF.getSubtarget().getTargetLowering();
+    if (TLI.isLegalAddressingMode(MF.getDataLayout(), AMOld, AccessTy, AS) &&
+        !TLI.isLegalAddressingMode(MF.getDataLayout(), AMNew, AccessTy, AS))
+      return false;
+  }
+
   // Pass the combined immediate to the apply function.
-  MatchInfo.Imm = (MaybeImmVal->Value + MaybeImm2Val->Value).getSExtValue();
+  MatchInfo.Imm = AMNew.BaseOffs;
   MatchInfo.Base = Base;
   return true;
 }
