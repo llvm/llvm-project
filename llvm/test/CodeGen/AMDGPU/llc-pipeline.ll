@@ -44,6 +44,11 @@
 ; GCN-O0-NEXT:    Lower OpenCL enqueued blocks
 ; GCN-O0-NEXT:    Lower uses of LDS variables from non-kernel functions
 ; GCN-O0-NEXT:    FunctionPass Manager
+; GCN-O0-NEXT:      Dominator Tree Construction
+; GCN-O0-NEXT:      Natural Loop Information
+; GCN-O0-NEXT:      Lazy Branch Probability Analysis
+; GCN-O0-NEXT:      Lazy Block Frequency Analysis
+; GCN-O0-NEXT:      Optimization Remark Emitter
 ; GCN-O0-NEXT:      Expand Atomic instructions
 ; GCN-O0-NEXT:      Lower constant intrinsics
 ; GCN-O0-NEXT:      Remove unreachable blocks from the CFG
@@ -180,6 +185,11 @@
 ; GCN-O1-NEXT:    Lower uses of LDS variables from non-kernel functions
 ; GCN-O1-NEXT:    FunctionPass Manager
 ; GCN-O1-NEXT:      Infer address spaces
+; GCN-O1-NEXT:      Dominator Tree Construction
+; GCN-O1-NEXT:      Natural Loop Information
+; GCN-O1-NEXT:      Lazy Branch Probability Analysis
+; GCN-O1-NEXT:      Lazy Block Frequency Analysis
+; GCN-O1-NEXT:      Optimization Remark Emitter
 ; GCN-O1-NEXT:      Expand Atomic instructions
 ; GCN-O1-NEXT:      AMDGPU Promote Alloca
 ; GCN-O1-NEXT:      Dominator Tree Construction
@@ -431,6 +441,11 @@
 ; GCN-O1-OPTS-NEXT:    Lower uses of LDS variables from non-kernel functions
 ; GCN-O1-OPTS-NEXT:    FunctionPass Manager
 ; GCN-O1-OPTS-NEXT:      Infer address spaces
+; GCN-O1-OPTS-NEXT:      Dominator Tree Construction
+; GCN-O1-OPTS-NEXT:      Natural Loop Information
+; GCN-O1-OPTS-NEXT:      Lazy Branch Probability Analysis
+; GCN-O1-OPTS-NEXT:      Lazy Block Frequency Analysis
+; GCN-O1-OPTS-NEXT:      Optimization Remark Emitter
 ; GCN-O1-OPTS-NEXT:      Expand Atomic instructions
 ; GCN-O1-OPTS-NEXT:      AMDGPU Promote Alloca
 ; GCN-O1-OPTS-NEXT:      Dominator Tree Construction
@@ -715,6 +730,11 @@
 ; GCN-O2-NEXT:    Lower uses of LDS variables from non-kernel functions
 ; GCN-O2-NEXT:    FunctionPass Manager
 ; GCN-O2-NEXT:      Infer address spaces
+; GCN-O2-NEXT:      Dominator Tree Construction
+; GCN-O2-NEXT:      Natural Loop Information
+; GCN-O2-NEXT:      Lazy Branch Probability Analysis
+; GCN-O2-NEXT:      Lazy Block Frequency Analysis
+; GCN-O2-NEXT:      Optimization Remark Emitter
 ; GCN-O2-NEXT:      Expand Atomic instructions
 ; GCN-O2-NEXT:      AMDGPU Promote Alloca
 ; GCN-O2-NEXT:      Dominator Tree Construction
@@ -1001,6 +1021,11 @@
 ; GCN-O3-NEXT:    Lower uses of LDS variables from non-kernel functions
 ; GCN-O3-NEXT:    FunctionPass Manager
 ; GCN-O3-NEXT:      Infer address spaces
+; GCN-O3-NEXT:      Dominator Tree Construction
+; GCN-O3-NEXT:      Natural Loop Information
+; GCN-O3-NEXT:      Lazy Branch Probability Analysis
+; GCN-O3-NEXT:      Lazy Block Frequency Analysis
+; GCN-O3-NEXT:      Optimization Remark Emitter
 ; GCN-O3-NEXT:      Expand Atomic instructions
 ; GCN-O3-NEXT:      AMDGPU Promote Alloca
 ; GCN-O3-NEXT:      Dominator Tree Construction
