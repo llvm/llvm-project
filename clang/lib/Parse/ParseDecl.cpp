@@ -4182,9 +4182,8 @@ void Parser::ParseDeclarationSpecifiers(DeclSpec &DS,
                           << FixItHint::CreateRemoval(
                                  SourceRange(Loc, DS.getEndLoc()));
       else if (DiagID == diag::err_opencl_unknown_type_specifier) {
-        Diag(Loc, DiagID) << getLangOpts().OpenCLCPlusPlus
-                          << getLangOpts().getOpenCLVersionTuple().getAsString()
-                          << PrevSpec << isStorageClass;
+        Diag(Loc, DiagID) << getLangOpts().getOpenCLVersionString() << PrevSpec
+                          << isStorageClass;
       } else
         Diag(Loc, DiagID) << PrevSpec;
     }

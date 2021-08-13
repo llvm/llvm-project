@@ -157,7 +157,7 @@ static void RenderLocation(InternalScopedString *Buffer, Location Loc) {
     return;
   }
   case Location::LK_Memory:
-    Buffer->append("%p", Loc.getMemoryLocation());
+    Buffer->append("%p", reinterpret_cast<void *>(Loc.getMemoryLocation()));
     return;
   case Location::LK_Symbolized: {
     const AddressInfo &Info = Loc.getSymbolizedStack()->info;
@@ -169,7 +169,7 @@ static void RenderLocation(InternalScopedString *Buffer, Location Loc) {
       RenderModuleLocation(Buffer, Info.module, Info.module_offset,
                            Info.module_arch, common_flags()->strip_path_prefix);
     else
-      Buffer->append("%p", Info.address);
+      Buffer->append("%p", reinterpret_cast<void *>(Info.address));
     return;
   }
   case Location::LK_Null:
@@ -286,7 +286,7 @@ static void PrintMemorySnippet(const Decorator &Decor, MemoryLocation Loc,
   Buffer.append("\n");
 
   // Emit highlights.
-  Buffer.append(Decor.Highlight());
+  Buffer.append("%s", Decor.Highlight());
   Range *InRange = upperBound(Min, Ranges, NumRanges);
   for (uptr P = Min; P != Max; ++P) {
     char Pad = ' ', Byte = ' ';
@@ -355,7 +355,7 @@ Diag::~Diag() {
     Buffer.clear();
   }
 
-  Buffer.append(Decor.Bold());
+  Buffer.append("%s", Decor.Bold());
   RenderLocation(&Buffer, Loc);
   Buffer.append(":");
 

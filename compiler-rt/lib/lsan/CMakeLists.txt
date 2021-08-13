@@ -3,6 +3,9 @@ include_directories(..)
 set(LSAN_CFLAGS ${SANITIZER_COMMON_CFLAGS})
 append_rtti_flag(OFF LSAN_CFLAGS)
 
+# Too many existing bugs, needs cleanup.
+append_list_if(COMPILER_RT_HAS_WNO_FORMAT -Wno-format LSAN_CFLAGS)
+
 set(LSAN_COMMON_SOURCES
   lsan_common.cpp
   lsan_common_fuchsia.cpp

@@ -86,8 +86,8 @@ static ThreadContextBase *CreateThreadContext(Tid tid) {
     ReleaseMemoryPagesToOS(hdr_end, hdr + sizeof(Trace));
     uptr unused = hdr + sizeof(Trace) - hdr_end;
     if (hdr_end != (uptr)MmapFixedNoAccess(hdr_end, unused)) {
-      Report("ThreadSanitizer: failed to mprotect(%p, %p)\n",
-          hdr_end, unused);
+      Report("ThreadSanitizer: failed to mprotect [0x%zx-0x%zx) \n", hdr_end,
+             unused);
       CHECK("unable to mprotect" && 0);
     }
   }
@@ -298,8 +298,8 @@ void MapShadow(uptr addr, uptr size) {
       Die();
     mapped_meta_end = meta_end;
   }
-  VPrintf(2, "mapped meta shadow for (%p-%p) at (%p-%p)\n",
-      addr, addr+size, meta_begin, meta_end);
+  VPrintf(2, "mapped meta shadow for (0x%zx-0x%zx) at (0x%zx-0x%zx)\n", addr,
+          addr + size, meta_begin, meta_end);
 }
 
 void MapThreadTrace(uptr addr, uptr size, const char *name) {
@@ -308,8 +308,8 @@ void MapThreadTrace(uptr addr, uptr size, const char *name) {
   CHECK_LE(addr + size, TraceMemEnd());
   CHECK_EQ(addr, addr & ~((64 << 10) - 1));  // windows wants 64K alignment
   if (!MmapFixedSuperNoReserve(addr, size, name)) {
-    Printf("FATAL: ThreadSanitizer can not mmap thread trace (%p/%p)\n",
-        addr, size);
+    Printf("FATAL: ThreadSanitizer can not mmap thread trace (0x%zx/0x%zx)\n",
+           addr, size);
     Die();
   }
 }

@@ -20,10 +20,6 @@
 #include <stdio.h>
 #include <stdarg.h>
 
-#if defined(__x86_64__)
-#  include <emmintrin.h>
-#endif
-
 #if SANITIZER_WINDOWS && defined(_MSC_VER) && _MSC_VER < 1800 &&               \
       !defined(va_copy)
 # define va_copy(dst, src) ((dst) = (src))
@@ -132,7 +128,7 @@ static int AppendPointer(char **buff, const char *buff_end, u64 ptr_value) {
 int VSNPrintf(char *buff, int buff_length,
               const char *format, va_list args) {
   static const char *kPrintfFormatsHelp =
-      "Supported Printf formats: %([0-9]*)?(z|ll)?{d,u,x,X,V}; %p; "
+      "Supported Printf formats: %([0-9]*)?(z|ll)?{d,u,x,X}; %p; "
       "%[-]([0-9]*)?(\\.\\*)?s; %c\n";
   RAW_CHECK(format);
   RAW_CHECK(buff_length > 0);
@@ -188,13 +184,6 @@ int VSNPrintf(char *buff, int buff_length,
         bool uppercase = (*cur == 'X');
         result += AppendUnsigned(&buff, buff_end, uval, (*cur == 'u') ? 10 : 16,
                                  width, pad_with_zero, uppercase);
-        break;
-      }
-      case 'V': {
-        for (uptr i = 0; i < 16; i++) {
-          unsigned x = va_arg(args, unsigned);
-          result += AppendUnsigned(&buff, buff_end, x, 16, 2, true, false);
-        }
         break;
       }
       case 'p': {
@@ -317,7 +306,6 @@ static void NOINLINE SharedPrintfCode(bool append_pid, const char *format,
                            format, args);
 }
 
-FORMAT(1, 2)
 void Printf(const char *format, ...) {
   va_list args;
   va_start(args, format);
@@ -326,7 +314,6 @@ void Printf(const char *format, ...) {
 }
 
 // Like Printf, but prints the current PID before the output string.
-FORMAT(1, 2)
 void Report(const char *format, ...) {
   va_list args;
   va_start(args, format);
@@ -338,7 +325,6 @@ void Report(const char *format, ...) {
 // Returns the number of symbols that should have been written to buffer
 // (not including trailing '\0'). Thus, the string is truncated
 // iff return value is not less than "length".
-FORMAT(3, 4)
 int internal_snprintf(char *buffer, uptr length, const char *format, ...) {
   va_list args;
   va_start(args, format);
@@ -347,7 +333,6 @@ int internal_snprintf(char *buffer, uptr length, const char *format, ...) {
   return needed_length;
 }
 
-FORMAT(2, 3)
 void InternalScopedString::append(const char *format, ...) {
   uptr prev_len = length();
 
