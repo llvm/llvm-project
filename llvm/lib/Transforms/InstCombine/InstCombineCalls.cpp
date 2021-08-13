@@ -796,13 +796,12 @@ static Instruction *foldClampRangeOfTwo(IntrinsicInst *II,
 }
 
 /// Reduce a sequence of min/max intrinsics with a common operand.
-static Instruction *factorizeMinMaxTree(IntrinsicInst *II,
-                                        InstCombiner::BuilderTy &Builder) {
+static Instruction *factorizeMinMaxTree(IntrinsicInst *II) {
   // Match 3 of the same min/max ops. Example: umin(umin(), umin()).
   auto *LHS = dyn_cast<IntrinsicInst>(II->getArgOperand(0));
   auto *RHS = dyn_cast<IntrinsicInst>(II->getArgOperand(1));
   Intrinsic::ID MinMaxID = II->getIntrinsicID();
-  if (!LHS || !RHS || LHS->getIntrinsicID() !=  MinMaxID ||
+  if (!LHS || !RHS || LHS->getIntrinsicID() != MinMaxID ||
       RHS->getIntrinsicID() != MinMaxID ||
       (!LHS->hasOneUse() && !RHS->hasOneUse()))
     return nullptr;
@@ -1111,7 +1110,7 @@ Instruction *InstCombinerImpl::visitCallInst(CallInst &CI) {
         if (Instruction *R = FoldOpIntoSelect(*II, Sel))
           return R;
 
-    if (Instruction *NewMinMax = factorizeMinMaxTree(II, Builder))
+    if (Instruction *NewMinMax = factorizeMinMaxTree(II))
       return NewMinMax;
 
     break;
