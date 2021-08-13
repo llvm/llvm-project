@@ -5286,15 +5286,7 @@ void CGDebugInfo::EmitGlobalVariable(llvm::GlobalVariable *Var,
 
     SmallVector<int64_t, 4> Expr;
     unsigned AddressSpace =
-        CGM.getContext().getTargetAddressSpace(D->getType());
-    if (CGM.getLangOpts().CUDA && CGM.getLangOpts().CUDAIsDevice) {
-      if (D->hasAttr<CUDASharedAttr>())
-        AddressSpace =
-            CGM.getContext().getTargetAddressSpace(LangAS::cuda_shared);
-      else if (D->hasAttr<CUDAConstantAttr>())
-        AddressSpace =
-            CGM.getContext().getTargetAddressSpace(LangAS::cuda_constant);
-    }
+        CGM.getContext().getTargetAddressSpace(CGM.GetGlobalVarAddressSpace(D));
     AppendAddressSpaceXDeref(AddressSpace, Expr);
 
     llvm::DINodeArray Annotations = CollectBTFDeclTagAnnotations(D);

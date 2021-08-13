@@ -3,7 +3,7 @@
 #include "Inputs/cuda.h"
 
 // CHECK-DAG: ![[FILEVAR0:[0-9]+]] = distinct !DIGlobalVariable(name: "FileVar0", scope: !{{[0-9]+}}, file: !{{[0-9]+}}, line: {{[0-9]+}}, type: !{{[0-9]+}}, isLocal: false, isDefinition: true)
-// CHECK-DAG: !DIGlobalVariableExpression(var: ![[FILEVAR0]], expr: !DIExpression())
+// CHECK-DAG: !DIGlobalVariableExpression(var: ![[FILEVAR0]], expr: !DIExpression(DW_OP_constu, 5, DW_OP_swap, DW_OP_xderef))
 __device__ int FileVar0;
 // CHECK-DAG: ![[FILEVAR1:[0-9]+]] = distinct !DIGlobalVariable(name: "FileVar1", scope: !{{[0-9]+}}, file: !{{[0-9]+}}, line: {{[0-9]+}}, type: !{{[0-9]+}}, isLocal: false, isDefinition: true)
 // CHECK-DAG: !DIGlobalVariableExpression(var: ![[FILEVAR1]], expr: !DIExpression(DW_OP_constu, 8, DW_OP_swap, DW_OP_xderef))
