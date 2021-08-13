@@ -1533,7 +1533,7 @@ static StringRef getDeoptLowering(CallBase *Call) {
     // FIXME: Calls have a *really* confusing interface around attributes
     // with values.
     const AttributeList &CSAS = Call->getAttributes();
-    if (CSAS.hasAttribute(AttributeList::FunctionIndex, DeoptLowering))
+    if (CSAS.hasFnAttr(DeoptLowering))
       return CSAS.getAttribute(AttributeList::FunctionIndex, DeoptLowering)
           .getValueAsString();
     Function *F = Call->getCalledFunction();

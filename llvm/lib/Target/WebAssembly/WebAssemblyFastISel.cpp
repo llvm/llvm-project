@@ -1370,9 +1370,9 @@ bool WebAssemblyFastISel::selectRet(const Instruction *I) {
   }
 
   unsigned Reg;
-  if (FuncInfo.Fn->getAttributes().hasAttribute(0, Attribute::SExt))
+  if (FuncInfo.Fn->getAttributes().hasRetAttr(Attribute::SExt))
     Reg = getRegForSignedValue(RV);
-  else if (FuncInfo.Fn->getAttributes().hasAttribute(0, Attribute::ZExt))
+  else if (FuncInfo.Fn->getAttributes().hasRetAttr(Attribute::ZExt))
     Reg = getRegForUnsignedValue(RV);
   else
     Reg = getRegForValue(RV);
