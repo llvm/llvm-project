@@ -11,8 +11,6 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "mlir/Dialect/LLVMIR/LLVMDialect.h"
-#include "mlir/Dialect/LLVMIR/LLVMTypes.h"
 #include "mlir/Dialect/Math/IR/Math.h"
 #include "mlir/Dialect/Math/Transforms/Passes.h"
 #include "mlir/Dialect/Vector/VectorOps.h"
@@ -96,7 +94,7 @@ static Value i32Cst(ImplicitLocOpBuilder &builder, int32_t value) {
 
 static Value f32FromBits(ImplicitLocOpBuilder &builder, uint32_t bits) {
   Value i32Value = i32Cst(builder, static_cast<int32_t>(bits));
-  return builder.create<LLVM::BitcastOp>(builder.getF32Type(), i32Value);
+  return builder.create<BitcastOp>(builder.getF32Type(), i32Value);
 }
 
 //----------------------------------------------------------------------------//
@@ -139,20 +137,19 @@ static std::pair<Value, Value> frexp(ImplicitLocOpBuilder &builder, Value arg,
   Value cstInvMantMask = f32FromBits(builder, ~0x7f800000u);
 
   // Bitcast to i32 for bitwise operations.
-  Value i32Half = builder.create<LLVM::BitcastOp>(i32, cstHalf);
-  Value i32InvMantMask = builder.create<LLVM::BitcastOp>(i32, cstInvMantMask);
-  Value i32Arg = builder.create<LLVM::BitcastOp>(i32Vec, arg);
+  Value i32Half = builder.create<BitcastOp>(i32, cstHalf);
+  Value i32InvMantMask = builder.create<BitcastOp>(i32, cstInvMantMask);
+  Value i32Arg = builder.create<BitcastOp>(i32Vec, arg);
 
   // Compute normalized fraction.
-  Value tmp0 = builder.create<LLVM::AndOp>(i32Arg, bcast(i32InvMantMask));
-  Value tmp1 = builder.create<LLVM::OrOp>(tmp0, bcast(i32Half));
-  Value normalizedFraction = builder.create<LLVM::BitcastOp>(f32Vec, tmp1);
+  Value tmp0 = builder.create<AndOp>(i32Arg, bcast(i32InvMantMask));
+  Value tmp1 = builder.create<OrOp>(tmp0, bcast(i32Half));
+  Value normalizedFraction = builder.create<BitcastOp>(f32Vec, tmp1);
 
   // Compute exponent.
   Value arg0 = is_positive ? arg : builder.create<AbsFOp>(arg);
   Value biasedExponentBits = builder.create<UnsignedShiftRightOp>(
-      builder.create<LLVM::BitcastOp>(i32Vec, arg0),
-      bcast(i32Cst(builder, 23)));
+      builder.create<BitcastOp>(i32Vec, arg0), bcast(i32Cst(builder, 23)));
   Value biasedExponent = builder.create<SIToFPOp>(f32Vec, biasedExponentBits);
   Value exponent = builder.create<SubFOp>(biasedExponent, bcast(cst126f));
 
@@ -178,7 +175,7 @@ static Value exp2I32(ImplicitLocOpBuilder &builder, Value arg) {
   Value biasedArg = builder.create<AddIOp>(arg, bias);
   Value exp2ValueInt =
       builder.create<ShiftLeftOp>(biasedArg, exponetBitLocation);
-  Value exp2ValueF32 = builder.create<LLVM::BitcastOp>(f32Vec, exp2ValueInt);
+  Value exp2ValueF32 = builder.create<BitcastOp>(f32Vec, exp2ValueInt);
 
   return exp2ValueF32;
 }
@@ -454,8 +451,8 @@ Log1pApproximation::matchAndRewrite(math::Log1pOp op,
   Value uInf = builder.create<CmpFOp>(CmpFPredicate::OEQ, u, logU);
   Value logLarge = builder.create<MulFOp>(
       x, builder.create<DivFOp>(logU, builder.create<SubFOp>(u, cstOne)));
-  Value approximation = builder.create<SelectOp>(
-      builder.create<LLVM::OrOp>(uSmall, uInf), x, logLarge);
+  Value approximation =
+      builder.create<SelectOp>(builder.create<OrOp>(uSmall, uInf), x, logLarge);
   rewriter.replaceOp(op, approximation);
   return success();
 }
