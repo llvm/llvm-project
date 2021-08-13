@@ -65,14 +65,6 @@ struct PGOOptions {
     // PseudoProbeForProfiling needs to be true.
     assert(this->Action != NoAction || this->CSAction != NoCSAction ||
            this->DebugInfoForProfiling || this->PseudoProbeForProfiling);
-
-    // Pseudo probe emission does not work with -fdebug-info-for-profiling since
-    // they both use the discriminator field of debug lines but for different
-    // purposes.
-    if (this->DebugInfoForProfiling && this->PseudoProbeForProfiling) {
-      report_fatal_error(
-          "Pseudo probes cannot be used with -debug-info-for-profiling", false);
-    }
   }
   std::string ProfileFile;
   std::string CSProfileGenFile;
