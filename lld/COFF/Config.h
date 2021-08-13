@@ -223,9 +223,6 @@ struct Configuration {
   // Used for /lto-cs-profile-path
   llvm::StringRef ltoCSProfileFile;
 
-  // Used for /lto-pgo-warn-mismatch:
-  bool ltoPGOWarnMismatch = true;
-
   // Used for /call-graph-ordering-file:
   llvm::MapVector<std::pair<const SectionChunk *, const SectionChunk *>,
                   uint64_t>

@@ -244,10 +244,6 @@ def lto_cs_profile_generate: F<"lto-cs-profile-generate">,
     HelpText<"Perform context sensitive PGO instrumentation">;
 def lto_cs_profile_file : P<"lto-cs-profile-file",
     "Context sensitive profile file path">;
-defm lto_pgo_warn_mismatch: B<
-     "lto-pgo-warn-mismatch",
-     "turn on warnings about profile cfg mismatch (default)>",
-     "turn off warnings about profile cfg mismatch">;
 def dash_dash_version : Flag<["--"], "version">,
   HelpText<"Display the version number and exit">;
 def threads
