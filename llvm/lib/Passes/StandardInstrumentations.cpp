@@ -647,13 +647,12 @@ void ChangedIRComparer::compare(Any IR, StringRef Prefix, StringRef PassID,
 
   ChangedIRData::report(
       Before, After, [&](const ChangedFuncData *B, const ChangedFuncData *A) {
+        assert((B || A) && "Both functions cannot be missing.");
         ChangedFuncData Missing;
         if (!B)
           B = &Missing;
         else if (!A)
           A = &Missing;
-        assert(B != &Missing && A != &Missing &&
-               "Both functions cannot be missing.");
         handleFunctionCompare(Name, Prefix, PassID, true, *B, *A);
       });
 }
