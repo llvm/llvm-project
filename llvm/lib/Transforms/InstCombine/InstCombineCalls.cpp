@@ -2836,12 +2836,12 @@ bool InstCombinerImpl::transformConstExprCastCall(CallBase &Call) {
     if (Call.isInAllocaArgument(i))
       return false;   // Cannot transform to and from inalloca.
 
-    if (CallerPAL.hasParamAttribute(i, Attribute::SwiftError))
+    if (CallerPAL.hasParamAttr(i, Attribute::SwiftError))
       return false;
 
     // If the parameter is passed as a byval argument, then we have to have a
     // sized type and the sized type has to have the same size as the old type.
-    if (ParamTy != ActTy && CallerPAL.hasParamAttribute(i, Attribute::ByVal)) {
+    if (ParamTy != ActTy && CallerPAL.hasParamAttr(i, Attribute::ByVal)) {
       PointerType *ParamPTy = dyn_cast<PointerType>(ParamTy);
       if (!ParamPTy || !ParamPTy->getElementType()->isSized())
         return false;
@@ -2911,7 +2911,7 @@ bool InstCombinerImpl::transformConstExprCastCall(CallBase &Call) {
     Args.push_back(NewArg);
 
     // Add any parameter attributes.
-    if (CallerPAL.hasParamAttribute(i, Attribute::ByVal)) {
+    if (CallerPAL.hasParamAttr(i, Attribute::ByVal)) {
       AttrBuilder AB(CallerPAL.getParamAttributes(i));
       AB.addByValAttr(NewArg->getType()->getPointerElementType());
       ArgAttrs.push_back(AttributeSet::get(Ctx, AB));

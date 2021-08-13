@@ -2348,7 +2348,7 @@ void Verifier::visitFunction(const Function &F) {
   case CallingConv::C:
     break;
   case CallingConv::X86_INTR: {
-    Assert(F.arg_empty() || Attrs.hasParamAttribute(0, Attribute::ByVal),
+    Assert(F.arg_empty() || Attrs.hasParamAttr(0, Attribute::ByVal),
            "Calling convention parameter requires byval", &F);
     break;
   }
@@ -2368,14 +2368,14 @@ void Verifier::visitFunction(const Function &F) {
       const unsigned StackAS = DL.getAllocaAddrSpace();
       unsigned i = 0;
       for (const Argument &Arg : F.args()) {
-        Assert(!Attrs.hasParamAttribute(i, Attribute::ByVal),
+        Assert(!Attrs.hasParamAttr(i, Attribute::ByVal),
                "Calling convention disallows byval", &F);
-        Assert(!Attrs.hasParamAttribute(i, Attribute::Preallocated),
+        Assert(!Attrs.hasParamAttr(i, Attribute::Preallocated),
                "Calling convention disallows preallocated", &F);
-        Assert(!Attrs.hasParamAttribute(i, Attribute::InAlloca),
+        Assert(!Attrs.hasParamAttr(i, Attribute::InAlloca),
                "Calling convention disallows inalloca", &F);
 
-        if (Attrs.hasParamAttribute(i, Attribute::ByRef)) {
+        if (Attrs.hasParamAttr(i, Attribute::ByRef)) {
           // FIXME: Should also disallow LDS and GDS, but we don't have the enum
           // value here.
           Assert(Arg.getType()->getPointerAddressSpace() != StackAS,
@@ -2416,7 +2416,7 @@ void Verifier::visitFunction(const Function &F) {
     }
 
     // Check that swifterror argument is only used by loads and stores.
-    if (Attrs.hasParamAttribute(i, Attribute::SwiftError)) {
+    if (Attrs.hasParamAttr(i, Attribute::SwiftError)) {
       verifySwiftErrorValue(&Arg);
     }
     ++i;
@@ -3118,7 +3118,7 @@ void Verifier::visitCallBase(CallBase &Call) {
              Call);
     }
 
-    if (Attrs.hasParamAttribute(i, Attribute::ImmArg)) {
+    if (Attrs.hasParamAttr(i, Attribute::ImmArg)) {
       // Don't allow immarg on call sites, unless the underlying declaration
       // also has the matching immarg.
       Assert(Callee && Callee->hasParamAttribute(i, Attribute::ImmArg),
@@ -3150,9 +3150,9 @@ void Verifier::visitCallBase(CallBase &Call) {
     bool SawReturned = false;
 
     for (unsigned Idx = 0; Idx < FTy->getNumParams(); ++Idx) {
-      if (Attrs.hasParamAttribute(Idx, Attribute::Nest))
+      if (Attrs.hasParamAttr(Idx, Attribute::Nest))
         SawNest = true;
-      if (Attrs.hasParamAttribute(Idx, Attribute::Returned))
+      if (Attrs.hasParamAttr(Idx, Attribute::Returned))
         SawReturned = true;
     }
 
@@ -3329,9 +3329,9 @@ static AttrBuilder getParameterABIAttributes(int I, AttributeList Attrs) {
   }
 
   // `align` is ABI-affecting only in combination with `byval` or `byref`.
-  if (Attrs.hasParamAttribute(I, Attribute::Alignment) &&
-      (Attrs.hasParamAttribute(I, Attribute::ByVal) ||
-       Attrs.hasParamAttribute(I, Attribute::ByRef)))
+  if (Attrs.hasParamAttr(I, Attribute::Alignment) &&
+      (Attrs.hasParamAttr(I, Attribute::ByVal) ||
+       Attrs.hasParamAttr(I, Attribute::ByRef)))
     Copy.addAlignmentAttr(Attrs.getParamAlignment(I));
   return Copy;
 }

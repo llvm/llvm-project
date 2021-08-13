@@ -648,11 +648,11 @@ bool WebAssemblyFastISel::fastLowerArguments() {
   unsigned I = 0;
   for (auto const &Arg : F->args()) {
     const AttributeList &Attrs = F->getAttributes();
-    if (Attrs.hasParamAttribute(I, Attribute::ByVal) ||
-        Attrs.hasParamAttribute(I, Attribute::SwiftSelf) ||
-        Attrs.hasParamAttribute(I, Attribute::SwiftError) ||
-        Attrs.hasParamAttribute(I, Attribute::InAlloca) ||
-        Attrs.hasParamAttribute(I, Attribute::Nest))
+    if (Attrs.hasParamAttr(I, Attribute::ByVal) ||
+        Attrs.hasParamAttr(I, Attribute::SwiftSelf) ||
+        Attrs.hasParamAttr(I, Attribute::SwiftError) ||
+        Attrs.hasParamAttr(I, Attribute::InAlloca) ||
+        Attrs.hasParamAttr(I, Attribute::Nest))
       return false;
 
     Type *ArgTy = Arg.getType();
@@ -832,18 +832,18 @@ bool WebAssemblyFastISel::selectCall(const Instruction *I) {
       return false;
 
     const AttributeList &Attrs = Call->getAttributes();
-    if (Attrs.hasParamAttribute(I, Attribute::ByVal) ||
-        Attrs.hasParamAttribute(I, Attribute::SwiftSelf) ||
-        Attrs.hasParamAttribute(I, Attribute::SwiftError) ||
-        Attrs.hasParamAttribute(I, Attribute::InAlloca) ||
-        Attrs.hasParamAttribute(I, Attribute::Nest))
+    if (Attrs.hasParamAttr(I, Attribute::ByVal) ||
+        Attrs.hasParamAttr(I, Attribute::SwiftSelf) ||
+        Attrs.hasParamAttr(I, Attribute::SwiftError) ||
+        Attrs.hasParamAttr(I, Attribute::InAlloca) ||
+        Attrs.hasParamAttr(I, Attribute::Nest))
       return false;
 
     unsigned Reg;
 
-    if (Attrs.hasParamAttribute(I, Attribute::SExt))
+    if (Attrs.hasParamAttr(I, Attribute::SExt))
       Reg = getRegForSignedValue(V);
-    else if (Attrs.hasParamAttribute(I, Attribute::ZExt))
+    else if (Attrs.hasParamAttr(I, Attribute::ZExt))
       Reg = getRegForUnsignedValue(V);
     else
       Reg = getRegForValue(V);

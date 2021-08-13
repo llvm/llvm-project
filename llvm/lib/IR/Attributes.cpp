@@ -1405,11 +1405,6 @@ bool AttributeList::hasFnAttribute(StringRef Kind) const {
   return hasAttribute(AttributeList::FunctionIndex, Kind);
 }
 
-bool AttributeList::hasParamAttribute(unsigned ArgNo,
-                                      Attribute::AttrKind Kind) const {
-  return hasAttribute(ArgNo + FirstArgIndex, Kind);
-}
-
 bool AttributeList::hasAttrSomewhere(Attribute::AttrKind Attr,
                                      unsigned *Index) const {
   return pImpl && pImpl->hasAttrSomewhere(Attr, Index);
