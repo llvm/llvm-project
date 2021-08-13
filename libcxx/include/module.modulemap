@@ -444,15 +444,17 @@ module std [system] {
       module binary_function            { private header "__functional/binary_function.h" }
       module binary_negate              { private header "__functional/binary_negate.h" }
       module bind                       { private header "__functional/bind.h" }
+      module bind_back                  { private header "__functional/bind_back.h" }
       module bind_front                 { private header "__functional/bind_front.h" }
       module binder1st                  { private header "__functional/binder1st.h" }
       module binder2nd                  { private header "__functional/binder2nd.h" }
+      module compose                    { private header "__functional/compose.h" }
       module default_searcher           { private header "__functional/default_searcher.h" }
       module function                   { private header "__functional/function.h" }
       module hash                       { private header "__functional/hash.h" }
       module identity                   { private header "__functional/identity.h" }
-      module is_transparent             { private header "__functional/is_transparent.h" }
       module invoke                     { private header "__functional/invoke.h" }
+      module is_transparent             { private header "__functional/is_transparent.h" }
       module mem_fn                     { private header "__functional/mem_fn.h"  }
       module mem_fun_ref                { private header "__functional/mem_fun_ref.h"  }
       module not_fn                     { private header "__functional/not_fn.h" }
