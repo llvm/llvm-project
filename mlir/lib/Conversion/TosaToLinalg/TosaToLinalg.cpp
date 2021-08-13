@@ -849,104 +849,213 @@ static LogicalResult reduceMatchAndRewriteHelper(Operation *op, uint64_t axis,
   return success();
 }
 
-static LogicalResult
-convolutionMatchAndRewriterHelper(Operation *op,
-                                  ConversionPatternRewriter &rewriter) {
-  Location loc = op->getLoc();
-  Value input = op->getOperand(0);
-  Value weight = op->getOperand(1);
-  Value bias = op->getOperand(2);
+namespace {
 
-  ShapedType inputTy = input.getType().cast<ShapedType>();
-  ShapedType weightTy = weight.getType().cast<ShapedType>();
-  ShapedType biasTy = bias.getType().cast<ShapedType>();
-  ShapedType resultTy = op->getResult(0).getType().cast<ShapedType>();
+template <typename SrcOp>
+class PointwiseConverter : public OpRewritePattern<SrcOp> {
+public:
+  using OpRewritePattern<SrcOp>::OpRewritePattern;
 
-  Type inputETy = inputTy.getElementType();
-  Type resultETy = resultTy.getElementType();
-
-  auto padAttr = op->getAttr("pad").cast<ArrayAttr>();
-  auto strideTosaAttr = op->getAttr("stride").cast<ArrayAttr>();
-  auto dilationTosaAttr = op->getAttr("dilation").cast<ArrayAttr>();
-
-  bool isQuantized = op->hasAttr("quantization_info");
-  IntegerAttr iZp;
-  IntegerAttr kZp;
-  if (isQuantized) {
-    auto quantizationInfo =
-        op->getAttr("quantization_info").cast<tosa::ConvOpQuantizationAttr>();
-    iZp = rewriter.getI32IntegerAttr(
-        quantizationInfo.input_zp().getValue().getSExtValue());
-    kZp = rewriter.getI32IntegerAttr(
-        quantizationInfo.weight_zp().getValue().getSExtValue());
+  LogicalResult matchAndRewrite(SrcOp op,
+                                PatternRewriter &rewriter) const final {
+    return elementwiseMatchAndRewriteHelper(op, rewriter);
   }
+};
 
-  if (!inputTy.hasStaticShape() || !weightTy.hasStaticShape() ||
-      !biasTy.hasStaticShape() || !resultTy.hasStaticShape())
-    return rewriter.notifyMatchFailure(op,
-                                       "tosa.conv ops require static shapes");
+class ConvConverter : public OpConversionPattern<tosa::Conv2DOp> {
+public:
+  using OpConversionPattern<tosa::Conv2DOp>::OpConversionPattern;
+  LogicalResult
+  matchAndRewrite(tosa::Conv2DOp op, ArrayRef<Value> args,
+                  ConversionPatternRewriter &rewriter) const final {
+    Location loc = op->getLoc();
+    Value input = op->getOperand(0);
+    Value weight = op->getOperand(1);
+    Value bias = op->getOperand(2);
 
-  auto weightShape = weightTy.getShape();
-  auto resultShape = resultTy.getShape();
+    ShapedType inputTy = input.getType().cast<ShapedType>();
+    ShapedType weightTy = weight.getType().cast<ShapedType>();
+    ShapedType biasTy = bias.getType().cast<ShapedType>();
+    ShapedType resultTy = op->getResult(0).getType().cast<ShapedType>();
 
-  // Apply padding as necessary.
-  Attribute zeroAttr = rewriter.getZeroAttr(inputETy);
-  llvm::SmallVector<int64_t> pad;
-  pad.resize(2, 0);
-  getValuesFromIntArrayAttribute(padAttr, pad);
-  pad.resize(pad.size() + 2, 0);
+    Type inputETy = inputTy.getElementType();
+    Type resultETy = resultTy.getElementType();
 
-  input = applyPad(loc, input, pad, zeroAttr, rewriter);
+    auto padAttr = op->getAttr("pad").cast<ArrayAttr>();
+    auto strideTosaAttr = op->getAttr("stride").cast<ArrayAttr>();
+    auto dilationTosaAttr = op->getAttr("dilation").cast<ArrayAttr>();
+    bool isQuantized = op->hasAttr("quantization_info");
 
-  // Broadcast the initial value to the output tensor before convolving.
-  SmallVector<AffineMap, 4> indexingMaps;
-  indexingMaps.push_back(AffineMap::get(
-      /*dimCount=*/resultTy.getRank(), /*symbolCount=*/0,
-      {rewriter.getAffineDimExpr(3)}, rewriter.getContext()));
-  indexingMaps.push_back(rewriter.getMultiDimIdentityMap(resultTy.getRank()));
+    if (!inputTy.hasStaticShape() || !weightTy.hasStaticShape() ||
+        !biasTy.hasStaticShape() || !resultTy.hasStaticShape())
+      return rewriter.notifyMatchFailure(op,
+                                         "tosa.conv ops require static shapes");
 
-  Value initTensor = rewriter.create<linalg::InitTensorOp>(
-      loc, resultTy.getShape(), resultTy.getElementType());
+    auto weightShape = weightTy.getShape();
 
-  Value biasBroadcast =
-      rewriter
-          .create<linalg::GenericOp>(
-              loc, resultTy, bias, initTensor, indexingMaps,
-              getNParallelLoopsAttrs(resultTy.getRank()),
-              [&](OpBuilder &nestedBuilder, Location nestedLoc,
-                  ValueRange args) {
-                nestedBuilder.create<linalg::YieldOp>(nestedLoc, args[0]);
-              })
-          .getResult(0);
+    // Apply padding as necessary.
+    Attribute zeroAttr = rewriter.getZeroAttr(inputETy);
+    llvm::SmallVector<int64_t> pad;
+    pad.resize(2, 0);
+    getValuesFromIntArrayAttribute(padAttr, pad);
+    pad.resize(pad.size() + 2, 0);
+    input = applyPad(loc, input, pad, zeroAttr, rewriter);
 
-  // Extract the attributes for convolution.
-  llvm::SmallVector<int64_t> stride, dilation;
-  getValuesFromIntArrayAttribute(strideTosaAttr, stride);
-  getValuesFromIntArrayAttribute(dilationTosaAttr, dilation);
+    // Transpose the kernel to match dimension ordering of the linalg
+    // convolution operation.
+    // TODO(suderman): See if this can be efficiently folded - check whether
+    // the input is used anywhere else, if not fold the constant.
+    SmallVector<int64_t> weightPerm{1, 2, 3, 0};
+    SmallVector<int64_t> newWeightShape{weightShape[1], weightShape[2],
+                                        weightShape[3], weightShape[0]};
+    auto weightPermAttr = DenseIntElementsAttr::get(
+        RankedTensorType::get({4}, rewriter.getI64Type()), weightPerm);
+    Value weightPermValue = rewriter.create<ConstantOp>(loc, weightPermAttr);
+    Type newWeightTy =
+        RankedTensorType::get(newWeightShape, weightTy.getElementType());
+    weight = rewriter.create<tosa::TransposeOp>(loc, newWeightTy, weight,
+                                                weightPermValue);
 
-  // Create the convolution op.
-  auto strideAttr = DenseIntElementsAttr::get(
-      RankedTensorType::get({2}, rewriter.getI64Type()), stride);
-  auto dilationAttr = DenseIntElementsAttr::get(
-      RankedTensorType::get({2}, rewriter.getI64Type()), dilation);
+    // Broadcast the initial value to the output tensor before convolving.
+    SmallVector<AffineMap, 4> indexingMaps;
+    indexingMaps.push_back(AffineMap::get(
+        /*dimCount=*/resultTy.getRank(), /*symbolCount=*/0,
+        {rewriter.getAffineDimExpr(3)}, rewriter.getContext()));
+    indexingMaps.push_back(rewriter.getMultiDimIdentityMap(resultTy.getRank()));
 
-  if (isa<tosa::Conv2DOp>(op) && !isQuantized) {
-    rewriter.replaceOpWithNewOp<linalg::Conv2DInputNhwcFilterOhwiPolyOp>(
+    Value initTensor = rewriter.create<linalg::InitTensorOp>(
+        loc, resultTy.getShape(), resultETy);
+
+    Value biasBroadcast =
+        rewriter
+            .create<linalg::GenericOp>(
+                loc, resultTy, bias, initTensor, indexingMaps,
+                getNParallelLoopsAttrs(resultTy.getRank()),
+                [&](OpBuilder &nestedBuilder, Location nestedLoc,
+                    ValueRange args) {
+                  nestedBuilder.create<linalg::YieldOp>(nestedLoc, args[0]);
+                })
+            .getResult(0);
+
+    // Extract the attributes for convolution.
+    llvm::SmallVector<int64_t> stride, dilation;
+    getValuesFromIntArrayAttribute(strideTosaAttr, stride);
+    getValuesFromIntArrayAttribute(dilationTosaAttr, dilation);
+
+    // Create the convolution op.
+    auto strideAttr = DenseIntElementsAttr::get(
+        RankedTensorType::get({2}, rewriter.getI64Type()), stride);
+    auto dilationAttr = DenseIntElementsAttr::get(
+        RankedTensorType::get({2}, rewriter.getI64Type()), dilation);
+
+    Value conv;
+    if (isQuantized) {
+      auto quantizationInfo =
+          op->getAttr("quantization_info").cast<tosa::ConvOpQuantizationAttr>();
+      auto iZp = rewriter.getI32IntegerAttr(
+          quantizationInfo.input_zp().getValue().getSExtValue());
+      auto kZp = rewriter.getI32IntegerAttr(
+          quantizationInfo.weight_zp().getValue().getSExtValue());
+
+      auto iZpVal = rewriter.create<ConstantOp>(loc, iZp);
+      auto kZpVal = rewriter.create<ConstantOp>(loc, kZp);
+      rewriter.replaceOpWithNewOp<linalg::Conv2DNhwcHwcfQOp>(
+          op, resultTy, ValueRange{input, weight, iZpVal, kZpVal},
+          ValueRange{biasBroadcast}, strideAttr, dilationAttr);
+      return success();
+    }
+
+    rewriter.replaceOpWithNewOp<linalg::Conv2DNhwcHwcfOp>(
         op, resultTy, ValueRange{input, weight}, ValueRange{biasBroadcast},
         strideAttr, dilationAttr);
     return success();
   }
+};
 
-  if (isa<tosa::Conv2DOp>(op) && isQuantized) {
-    auto iZpVal = rewriter.create<ConstantOp>(loc, iZp);
-    auto kZpVal = rewriter.create<ConstantOp>(loc, kZp);
-    rewriter.replaceOpWithNewOp<linalg::Conv2DInputNhwcFilterOhwiPolyQOp>(
-        op, resultTy, ValueRange{input, weight, iZpVal, kZpVal},
-        ValueRange{biasBroadcast}, strideAttr, dilationAttr);
-    return success();
-  }
+class DepthwiseConvConverter
+    : public OpConversionPattern<tosa::DepthwiseConv2DOp> {
+public:
+  using OpConversionPattern<tosa::DepthwiseConv2DOp>::OpConversionPattern;
+  LogicalResult
+  matchAndRewrite(tosa::DepthwiseConv2DOp op, ArrayRef<Value> args,
+                  ConversionPatternRewriter &rewriter) const final {
+    Location loc = op->getLoc();
+    Value input = op->getOperand(0);
+    Value weight = op->getOperand(1);
+    Value bias = op->getOperand(2);
 
-  if (isa<tosa::DepthwiseConv2DOp>(op)) {
+    ShapedType inputTy = input.getType().cast<ShapedType>();
+    ShapedType weightTy = weight.getType().cast<ShapedType>();
+    ShapedType biasTy = bias.getType().cast<ShapedType>();
+    ShapedType resultTy = op->getResult(0).getType().cast<ShapedType>();
+
+    Type inputETy = inputTy.getElementType();
+    Type resultETy = resultTy.getElementType();
+
+    auto padAttr = op->getAttr("pad").cast<ArrayAttr>();
+    auto strideTosaAttr = op->getAttr("stride").cast<ArrayAttr>();
+    auto dilationTosaAttr = op->getAttr("dilation").cast<ArrayAttr>();
+
+    bool isQuantized = op->hasAttr("quantization_info");
+    IntegerAttr iZp;
+    IntegerAttr kZp;
+    if (isQuantized) {
+      auto quantizationInfo =
+          op->getAttr("quantization_info").cast<tosa::ConvOpQuantizationAttr>();
+      iZp = rewriter.getI32IntegerAttr(
+          quantizationInfo.input_zp().getValue().getSExtValue());
+      kZp = rewriter.getI32IntegerAttr(
+          quantizationInfo.weight_zp().getValue().getSExtValue());
+    }
+
+    if (!inputTy.hasStaticShape() || !weightTy.hasStaticShape() ||
+        !biasTy.hasStaticShape() || !resultTy.hasStaticShape())
+      return rewriter.notifyMatchFailure(op,
+                                         "tosa.conv ops require static shapes");
+
+    auto weightShape = weightTy.getShape();
+    auto resultShape = resultTy.getShape();
+
+    // Apply padding as necessary.
+    Attribute zeroAttr = rewriter.getZeroAttr(inputETy);
+    llvm::SmallVector<int64_t> pad;
+    pad.resize(2, 0);
+    getValuesFromIntArrayAttribute(padAttr, pad);
+    pad.resize(pad.size() + 2, 0);
+
+    input = applyPad(loc, input, pad, zeroAttr, rewriter);
+
+    // Broadcast the initial value to the output tensor before convolving.
+    SmallVector<AffineMap, 4> indexingMaps;
+    indexingMaps.push_back(AffineMap::get(
+        /*dimCount=*/resultTy.getRank(), /*symbolCount=*/0,
+        {rewriter.getAffineDimExpr(3)}, rewriter.getContext()));
+    indexingMaps.push_back(rewriter.getMultiDimIdentityMap(resultTy.getRank()));
+
+    Value initTensor =
+        rewriter.create<linalg::InitTensorOp>(loc, resultShape, resultETy);
+
+    Value biasBroadcast =
+        rewriter
+            .create<linalg::GenericOp>(
+                loc, resultTy, bias, initTensor, indexingMaps,
+                getNParallelLoopsAttrs(resultTy.getRank()),
+                [&](OpBuilder &nestedBuilder, Location nestedLoc,
+                    ValueRange args) {
+                  nestedBuilder.create<linalg::YieldOp>(nestedLoc, args[0]);
+                })
+            .getResult(0);
+
+    // Extract the attributes for convolution.
+    llvm::SmallVector<int64_t> stride, dilation;
+    getValuesFromIntArrayAttribute(strideTosaAttr, stride);
+    getValuesFromIntArrayAttribute(dilationTosaAttr, dilation);
+
+    // Create the convolution op.
+    auto strideAttr = DenseIntElementsAttr::get(
+        RankedTensorType::get({2}, rewriter.getI64Type()), stride);
+    auto dilationAttr = DenseIntElementsAttr::get(
+        RankedTensorType::get({2}, rewriter.getI64Type()), dilation);
     ShapedType linalgConvTy =
         RankedTensorType::get({resultShape[0], resultShape[1], resultShape[2],
                                weightShape[2], weightShape[3]},
@@ -975,32 +1084,6 @@ convolutionMatchAndRewriterHelper(Operation *op,
     Value reshape = rewriter.create<tosa::ReshapeOp>(loc, resultTy, conv);
     rewriter.replaceOp(op, reshape);
     return success();
-  }
-
-  return failure();
-}
-
-namespace {
-
-template <typename SrcOp>
-class PointwiseConverter : public OpRewritePattern<SrcOp> {
-public:
-  using OpRewritePattern<SrcOp>::OpRewritePattern;
-
-  LogicalResult matchAndRewrite(SrcOp op,
-                                PatternRewriter &rewriter) const final {
-    return elementwiseMatchAndRewriteHelper(op, rewriter);
-  }
-};
-
-template <typename T>
-class ConvConverter : public OpConversionPattern<T> {
-public:
-  using OpConversionPattern<T>::OpConversionPattern;
-  LogicalResult
-  matchAndRewrite(T op, ArrayRef<Value> args,
-                  ConversionPatternRewriter &rewriter) const final {
-    return convolutionMatchAndRewriterHelper(op, rewriter);
   }
 };
 
@@ -2528,8 +2611,8 @@ void mlir::tosa::populateTosaToLinalgOnTensorsConversionPatterns(
       ReduceConverter<tosa::ReduceProdOp>,
       ArgMaxConverter,
       ConcatConverter,
-      ConvConverter<tosa::Conv2DOp>,
-      ConvConverter<tosa::DepthwiseConv2DOp>,
+      ConvConverter,
+      DepthwiseConvConverter,
       TransposeConvConverter,
       GatherConverter,
       PadConverter,
