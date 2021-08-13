@@ -677,8 +677,9 @@ calcUniqueIDUpdateFlagsAndSize(const GlobalObject *GO, StringRef SectionName,
   }
 
   if (Retain) {
-    if (Ctx.getAsmInfo()->useIntegratedAssembler() ||
-        Ctx.getAsmInfo()->binutilsIsAtLeast(2, 36))
+    if ((Ctx.getAsmInfo()->useIntegratedAssembler() ||
+         Ctx.getAsmInfo()->binutilsIsAtLeast(2, 36)) &&
+        !TM.getTargetTriple().isOSSolaris())
       Flags |= ELF::SHF_GNU_RETAIN;
     return NextUniqueID++;
   }
@@ -855,8 +856,10 @@ static MCSection *selectELFSectionForGlobal(
     EmitUniqueSection = true;
     Flags |= ELF::SHF_LINK_ORDER;
   }
-  if (Retain && (Ctx.getAsmInfo()->useIntegratedAssembler() ||
-                 Ctx.getAsmInfo()->binutilsIsAtLeast(2, 36))) {
+  if (Retain &&
+      (Ctx.getAsmInfo()->useIntegratedAssembler() ||
+       Ctx.getAsmInfo()->binutilsIsAtLeast(2, 36)) &&
+      !TM.getTargetTriple().isOSSolaris()) {
     EmitUniqueSection = true;
     Flags |= ELF::SHF_GNU_RETAIN;
   }
