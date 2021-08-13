@@ -8,7 +8,6 @@
 
 // <numeric>
 // UNSUPPORTED: clang-8
-// UNSUPPORTED: gcc-9
 
 // Became constexpr in C++20
 // template <InputIterator Iter1, InputIterator Iter2, MoveConstructible T>

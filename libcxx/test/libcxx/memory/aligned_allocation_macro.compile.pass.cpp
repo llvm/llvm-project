@@ -12,9 +12,6 @@
 // target, so this test would fail.
 // UNSUPPORTED: apple-clang-9, apple-clang-10
 
-// GCC 5 doesn't support aligned allocation
-// UNSUPPORTED: gcc-5
-
 // XFAIL: use_system_cxx_lib && target={{.+}}-apple-macosx10.{{9|10|11|12|13}}
 
 #include <new>
