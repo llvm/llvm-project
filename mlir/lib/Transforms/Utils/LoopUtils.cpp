@@ -1072,14 +1072,19 @@ LogicalResult mlir::loopUnrollUpToFactor(AffineForOp forOp,
 
 /// Generates unrolled copies of AffineForOp or scf::ForOp 'loopBodyBlock', with
 /// associated 'forOpIV' by 'unrollFactor', calling 'ivRemapFn' to remap
-/// 'forOpIV' for each unrolled body.
-static void
-generateUnrolledLoop(Block *loopBodyBlock, Value forOpIV, uint64_t unrollFactor,
-                     function_ref<Value(unsigned, Value, OpBuilder)> ivRemapFn,
-                     ValueRange iterArgs, ValueRange yieldedValues) {
+/// 'forOpIV' for each unrolled body. If specified, annotates the Ops in each
+/// unrolled iteration using annotateFn.
+static void generateUnrolledLoop(
+    Block *loopBodyBlock, Value forOpIV, uint64_t unrollFactor,
+    function_ref<Value(unsigned, Value, OpBuilder)> ivRemapFn,
+    function_ref<void(unsigned, Operation *, OpBuilder)> annotateFn,
+    ValueRange iterArgs, ValueRange yieldedValues) {
   // Builder to insert unrolled bodies just before the terminator of the body of
   // 'forOp'.
   auto builder = OpBuilder::atBlockTerminator(loopBodyBlock);
+
+  if (!annotateFn)
+    annotateFn = [](unsigned, Operation *, OpBuilder) {};
 
   // Keep a pointer to the last non-terminator operation in the original block
   // so that we know what to clone (since we are doing this in-place).
@@ -1102,13 +1107,20 @@ generateUnrolledLoop(Block *loopBodyBlock, Value forOpIV, uint64_t unrollFactor,
     }
 
     // Clone the original body of 'forOp'.
-    for (auto it = loopBodyBlock->begin(); it != std::next(srcBlockEnd); it++)
-      builder.clone(*it, operandMap);
+    for (auto it = loopBodyBlock->begin(); it != std::next(srcBlockEnd); it++) {
+      Operation *clonedOp = builder.clone(*it, operandMap);
+      annotateFn(i, clonedOp, builder);
+    }
 
     // Update yielded values.
     for (unsigned i = 0, e = lastYielded.size(); i < e; i++)
       lastYielded[i] = operandMap.lookup(yieldedValues[i]);
   }
+
+  // Make sure we annotate the Ops in the original body. We do this last so that
+  // any annotations are not copied into the cloned Ops above.
+  for (auto it = loopBodyBlock->begin(); it != std::next(srcBlockEnd); it++)
+    annotateFn(0, &*it, builder);
 
   // Update operands of the yield statement.
   loopBodyBlock->getTerminator()->setOperands(lastYielded);
@@ -1116,8 +1128,9 @@ generateUnrolledLoop(Block *loopBodyBlock, Value forOpIV, uint64_t unrollFactor,
 
 /// Unrolls this loop by the specified factor. Returns success if the loop
 /// is successfully unrolled.
-LogicalResult mlir::loopUnrollByFactor(AffineForOp forOp,
-                                       uint64_t unrollFactor) {
+LogicalResult mlir::loopUnrollByFactor(
+    AffineForOp forOp, uint64_t unrollFactor,
+    function_ref<void(unsigned, Operation *, OpBuilder)> annotateFn) {
   assert(unrollFactor > 0 && "unroll factor should be positive");
 
   if (unrollFactor == 1)
@@ -1186,6 +1199,7 @@ LogicalResult mlir::loopUnrollByFactor(AffineForOp forOp,
         auto bumpMap = AffineMap::get(1, 0, d0 + i * step);
         return b.create<AffineApplyOp>(forOp.getLoc(), bumpMap, iv);
       },
+      /*annotateFn=*/annotateFn,
       /*iterArgs=*/iterArgs, /*yieldedValues=*/yieldedValues);
 
   // Promote the loop body up if this has turned into a single iteration loop.
@@ -1194,8 +1208,9 @@ LogicalResult mlir::loopUnrollByFactor(AffineForOp forOp,
 }
 
 /// Unrolls 'forOp' by 'unrollFactor', returns success if the loop is unrolled.
-LogicalResult mlir::loopUnrollByFactor(scf::ForOp forOp,
-                                       uint64_t unrollFactor) {
+LogicalResult mlir::loopUnrollByFactor(
+    scf::ForOp forOp, uint64_t unrollFactor,
+    function_ref<void(unsigned, Operation *, OpBuilder)> annotateFn) {
   assert(unrollFactor > 0 && "expected positive unroll factor");
   if (unrollFactor == 1)
     return promoteIfSingleIteration(forOp);
@@ -1300,7 +1315,7 @@ LogicalResult mlir::loopUnrollByFactor(scf::ForOp forOp,
             b.create<MulIOp>(loc, step, b.create<ConstantIndexOp>(loc, i));
         return b.create<AddIOp>(loc, iv, stride);
       },
-      iterArgs, yieldedValues);
+      annotateFn, iterArgs, yieldedValues);
   // Promote the loop body up if this has turned into a single iteration loop.
   (void)promoteIfSingleIteration(forOp);
   return success();
