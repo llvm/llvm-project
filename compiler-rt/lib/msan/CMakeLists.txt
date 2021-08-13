@@ -40,6 +40,9 @@ endif()
 # Prevent clang from generating libc calls.
 append_list_if(COMPILER_RT_HAS_FFREESTANDING_FLAG -ffreestanding MSAN_RTL_CFLAGS)
 
+# Too many existing bugs, needs cleanup.
+append_list_if(COMPILER_RT_HAS_WNO_FORMAT -Wno-format MSAN_RTL_CFLAGS)
+
 set(MSAN_RUNTIME_LIBRARIES)
 
 # Static runtime library.

@@ -45,6 +45,9 @@ include_directories(..)
 set(MEMPROF_CFLAGS ${SANITIZER_COMMON_CFLAGS})
 set(MEMPROF_COMMON_DEFINITIONS "")
 
+# Too many existing bugs, needs cleanup.
+append_list_if(COMPILER_RT_HAS_WNO_FORMAT -Wno-format MEMPROF_CFLAGS)
+
 append_rtti_flag(OFF MEMPROF_CFLAGS)
 
 set(MEMPROF_DYNAMIC_LINK_FLAGS ${SANITIZER_COMMON_LINK_FLAGS})
