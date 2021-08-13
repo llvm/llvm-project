@@ -132,6 +132,8 @@ private:
     eraseFromParent(I);
   }
 
+  Value *foldMallocMemset(CallInst *Memset, IRBuilderBase &B);
+
 public:
   LibCallSimplifier(
       const DataLayout &DL, const TargetLibraryInfo *TLI,
