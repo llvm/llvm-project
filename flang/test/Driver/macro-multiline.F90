@@ -1,7 +1,5 @@
 ! Ensure the end-of-line character and anything that follows after in a macro definition (-D) is ignored.
 
-! REQUIRES: new-flang-driver
-
 !--------------------------
 ! FLANG DRIVER (flang)
 !--------------------------
