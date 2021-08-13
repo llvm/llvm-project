@@ -180,7 +180,10 @@ void ParsedAttr::getMatchRules(
 }
 
 bool ParsedAttr::diagnoseLangOpts(Sema &S) const {
-  return getInfo().diagLangOpts(S, *this);
+  if (getInfo().acceptsLangOpts(S.getLangOpts()))
+    return true;
+  S.Diag(getLoc(), diag::warn_attribute_ignored) << *this;
+  return false;
 }
 
 bool ParsedAttr::isTargetSpecificAttr() const {
