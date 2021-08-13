@@ -14,7 +14,6 @@
 
 #include "UnwrappedLineParser.h"
 #include "FormatToken.h"
-#include "clang/Basic/TokenKinds.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/Support/Debug.h"
 #include "llvm/Support/raw_ostream.h"
@@ -995,6 +994,13 @@ static bool isJSDeclOrStmt(const AdditionalKeywords &Keywords,
       Keywords.kw_import, tok::kw_export);
 }
 
+// Checks whether a token is a type in K&R C (aka C78).
+static bool isC78Type(const FormatToken &Tok) {
+  return Tok.isOneOf(tok::kw_char, tok::kw_short, tok::kw_int, tok::kw_long,
+                     tok::kw_unsigned, tok::kw_float, tok::kw_double,
+                     tok::identifier);
+}
+
 // This function checks whether a token starts the first parameter declaration
 // in a K&R C (aka C78) function definition, e.g.:
 //   int f(a, b)
@@ -1006,9 +1012,8 @@ static bool isC78ParameterDecl(const FormatToken *Tok) {
   if (!Tok)
     return false;
 
-  if (!Tok->isOneOf(tok::kw_int, tok::kw_char, tok::kw_float, tok::kw_double,
-                    tok::kw_struct, tok::kw_union, tok::kw_long, tok::kw_short,
-                    tok::kw_unsigned, tok::kw_register))
+  if (!isC78Type(*Tok) &&
+      !Tok->isOneOf(tok::kw_register, tok::kw_struct, tok::kw_union))
     return false;
 
   Tok = Tok->Previous;
@@ -1369,7 +1374,7 @@ void UnwrappedLineParser::parseStructuralElement(bool IsTopLevel) {
     case tok::r_brace:
       addUnwrappedLine();
       return;
-    case tok::l_paren:
+    case tok::l_paren: {
       parseParens();
       // Break the unwrapped line if a K&R C function definition has a parameter
       // declaration.
@@ -1377,14 +1382,18 @@ void UnwrappedLineParser::parseStructuralElement(bool IsTopLevel) {
         break;
       if (!Previous || Previous->isNot(tok::identifier))
         break;
-      if (Previous->Previous && Previous->Previous->is(tok::at))
+      const FormatToken *PrevPrev = Previous->Previous;
+      if (!PrevPrev || (!isC78Type(*PrevPrev) && PrevPrev->isNot(tok::star)))
         break;
-      if (!Line->Tokens.begin()->Tok->is(tok::kw_typedef) &&
-          isC78ParameterDecl(FormatTok)) {
+      const FormatToken *Next = AllTokens[Tokens->getPosition() + 1];
+      if (Next && Next->isOneOf(tok::l_paren, tok::semi))
+        break;
+      if (isC78ParameterDecl(FormatTok)) {
         addUnwrappedLine();
         return;
       }
       break;
+    }
     case tok::kw_operator:
       nextToken();
       if (FormatTok->isBinaryOperator())

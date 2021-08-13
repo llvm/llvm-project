@@ -8247,6 +8247,16 @@ TEST_F(FormatTest, ReturnTypeBreakingStyle) {
                "  return a + b < c;\n"
                "};",
                Style);
+  verifyFormat("byte *\n" // Break here.
+               "f(a)\n"   // Break here.
+               "byte a[];\n"
+               "{\n"
+               "  return a;\n"
+               "}",
+               Style);
+  verifyFormat("bool f(int a, int) override;\n"
+               "Bar g(int a, Bar) final; // comment",
+               Style);
 
   // The return breaking style doesn't affect:
   // * function and object definitions with attribute-like macros
