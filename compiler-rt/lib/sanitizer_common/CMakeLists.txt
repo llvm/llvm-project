@@ -201,6 +201,10 @@ set(SANITIZER_COMMON_DEFINITIONS
   HAVE_RPC_XDR_H=${HAVE_RPC_XDR_H})
 
 set(SANITIZER_CFLAGS ${SANITIZER_COMMON_CFLAGS})
+
+# Too many existing bugs, needs cleanup.
+append_list_if(COMPILER_RT_HAS_WNO_FORMAT -Wno-format SANITIZER_CFLAGS)
+
 append_rtti_flag(OFF SANITIZER_CFLAGS)
 
 append_list_if(SANITIZER_LIMIT_FRAME_SIZE -Wframe-larger-than=570
