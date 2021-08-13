@@ -907,9 +907,8 @@ define <3 x i1> @umin_ne_zero2(<3 x i8> %a, <3 x i8> %b) {
 
 define i8 @smax(i8 %x, i8 %y, i8 %z) {
 ; CHECK-LABEL: @smax(
-; CHECK-NEXT:    [[M1:%.*]] = call i8 @llvm.smax.i8(i8 [[X:%.*]], i8 [[Y:%.*]])
-; CHECK-NEXT:    [[M2:%.*]] = call i8 @llvm.smax.i8(i8 [[X]], i8 [[Z:%.*]])
-; CHECK-NEXT:    [[M3:%.*]] = call i8 @llvm.smax.i8(i8 [[M1]], i8 [[M2]])
+; CHECK-NEXT:    [[M2:%.*]] = call i8 @llvm.smax.i8(i8 [[X:%.*]], i8 [[Z:%.*]])
+; CHECK-NEXT:    [[M3:%.*]] = call i8 @llvm.smax.i8(i8 [[M2]], i8 [[Y:%.*]])
 ; CHECK-NEXT:    ret i8 [[M3]]
 ;
   %m1 = call i8 @llvm.smax.i8(i8 %x, i8 %y)
@@ -920,9 +919,8 @@ define i8 @smax(i8 %x, i8 %y, i8 %z) {
 
 define <3 x i8> @smin(<3 x i8> %x, <3 x i8> %y, <3 x i8> %z) {
 ; CHECK-LABEL: @smin(
-; CHECK-NEXT:    [[M1:%.*]] = call <3 x i8> @llvm.smin.v3i8(<3 x i8> [[Y:%.*]], <3 x i8> [[X:%.*]])
-; CHECK-NEXT:    [[M2:%.*]] = call <3 x i8> @llvm.smin.v3i8(<3 x i8> [[X]], <3 x i8> [[Z:%.*]])
-; CHECK-NEXT:    [[M3:%.*]] = call <3 x i8> @llvm.smin.v3i8(<3 x i8> [[M1]], <3 x i8> [[M2]])
+; CHECK-NEXT:    [[M2:%.*]] = call <3 x i8> @llvm.smin.v3i8(<3 x i8> [[X:%.*]], <3 x i8> [[Z:%.*]])
+; CHECK-NEXT:    [[M3:%.*]] = call <3 x i8> @llvm.smin.v3i8(<3 x i8> [[M2]], <3 x i8> [[Y:%.*]])
 ; CHECK-NEXT:    ret <3 x i8> [[M3]]
 ;
   %m1 = call <3 x i8> @llvm.smin.v3i8(<3 x i8> %y, <3 x i8> %x)
@@ -935,8 +933,7 @@ define i8 @umax(i8 %x, i8 %y, i8 %z) {
 ; CHECK-LABEL: @umax(
 ; CHECK-NEXT:    [[M1:%.*]] = call i8 @llvm.umax.i8(i8 [[X:%.*]], i8 [[Y:%.*]])
 ; CHECK-NEXT:    call void @use(i8 [[M1]])
-; CHECK-NEXT:    [[M2:%.*]] = call i8 @llvm.umax.i8(i8 [[Z:%.*]], i8 [[X]])
-; CHECK-NEXT:    [[M3:%.*]] = call i8 @llvm.umax.i8(i8 [[M1]], i8 [[M2]])
+; CHECK-NEXT:    [[M3:%.*]] = call i8 @llvm.umax.i8(i8 [[M1]], i8 [[Z:%.*]])
 ; CHECK-NEXT:    ret i8 [[M3]]
 ;
   %m1 = call i8 @llvm.umax.i8(i8 %x, i8 %y)
@@ -948,10 +945,9 @@ define i8 @umax(i8 %x, i8 %y, i8 %z) {
 
 define i8 @umin(i8 %x, i8 %y, i8 %z) {
 ; CHECK-LABEL: @umin(
-; CHECK-NEXT:    [[M1:%.*]] = call i8 @llvm.umin.i8(i8 [[Y:%.*]], i8 [[X:%.*]])
-; CHECK-NEXT:    [[M2:%.*]] = call i8 @llvm.umin.i8(i8 [[Z:%.*]], i8 [[X]])
+; CHECK-NEXT:    [[M2:%.*]] = call i8 @llvm.umin.i8(i8 [[Z:%.*]], i8 [[X:%.*]])
 ; CHECK-NEXT:    call void @use(i8 [[M2]])
-; CHECK-NEXT:    [[M3:%.*]] = call i8 @llvm.umin.i8(i8 [[M1]], i8 [[M2]])
+; CHECK-NEXT:    [[M3:%.*]] = call i8 @llvm.umin.i8(i8 [[M2]], i8 [[Y:%.*]])
 ; CHECK-NEXT:    ret i8 [[M3]]
 ;
   %m1 = call i8 @llvm.umin.i8(i8 %y, i8 %x)
