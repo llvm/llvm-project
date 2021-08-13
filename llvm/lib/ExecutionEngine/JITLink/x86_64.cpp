@@ -32,6 +32,8 @@ const char *getEdgeKindName(Edge::Kind K) {
     return "NegDelta64";
   case NegDelta32:
     return "NegDelta32";
+  case Delta64FromGOT:
+    return "Delta64FromGOT";
   case BranchPCRel32:
     return "BranchPCRel32";
   case BranchPCRel32ToPtrJumpStub:
@@ -40,6 +42,10 @@ const char *getEdgeKindName(Edge::Kind K) {
     return "BranchPCRel32ToPtrJumpStubRelaxable";
   case RequestGOTAndTransformToDelta32:
     return "RequestGOTAndTransformToDelta32";
+  case RequestGOTAndTransformToDelta64:
+    return "RequestGOTAndTransformToDelta64";
+  case RequestGOTAndTransformToDelta64FromGOT:
+    return "RequestGOTAndTransformToDelta64FromGOT";
   case PCRel32GOTLoadRelaxable:
     return "PCRel32GOTLoadRelaxable";
   case RequestGOTAndTransformToPCRel32GOTLoadRelaxable:
