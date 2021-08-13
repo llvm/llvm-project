@@ -327,25 +327,9 @@ llvm::Error DependencyScanningWorker::computeDependencies(
 llvm::Error DependencyScanningWorker::computeDependenciesForClangInvocation(
     StringRef WorkingDirectory, ArrayRef<std::string> Arguments,
     DependencyConsumer &Consumer) {
-  RealFS->setCurrentWorkingDirectory(WorkingDirectory);
-  return runWithDiags(DiagOpts.get(), [&](DiagnosticConsumer &DC) {
-    IntrusiveRefCntPtr<DiagnosticIDs> DiagID = new DiagnosticIDs();
-    IntrusiveRefCntPtr<DiagnosticOptions> DiagOpts = new DiagnosticOptions();
-    DiagnosticsEngine Diags(DiagID, &*DiagOpts, &DC, /*ShouldOwnClient=*/false);
-
-    llvm::opt::ArgStringList CC1Args;
-    for (const auto &Arg : Arguments)
-      CC1Args.push_back(Arg.c_str());
-    std::unique_ptr<CompilerInvocation> Invocation(
-        newInvocation(&Diags, CC1Args, /*BinaryName=*/nullptr));
-
-    DependencyScanningAction Action(WorkingDirectory, Consumer, DepFS,
-                                    PPSkipMappings.get(), Format);
-
-    llvm::IntrusiveRefCntPtr<FileManager> FM = Files;
-    if (!FM)
-      FM = new FileManager(FileSystemOptions(), RealFS);
-    return Action.runInvocation(std::move(Invocation), FM.get(),
-                                PCHContainerOps, &DC);
-  });
+  std::string Input("dependency-scanner-fake-input-file");
+  StringRef Output("dependency-scanner-fake-output-file");
+  SingleCommandCompilationDatabase CDB(
+      CompileCommand(WorkingDirectory, Input, Arguments, Output));
+  return computeDependencies(Input, WorkingDirectory, CDB, Consumer);
 }
