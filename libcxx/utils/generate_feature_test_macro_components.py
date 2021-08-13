@@ -323,8 +323,6 @@ feature_test_macros = [ add_version_header(x) for x in [
     "name": "__cpp_lib_has_unique_object_representations",
     "values": { "c++17": 201606 },
     "headers": ["type_traits"],
-    "test_suite_guard": "TEST_HAS_BUILTIN_IDENTIFIER(__has_unique_object_representations) || TEST_GCC_VER >= 700",
-    "libcxx_guard": "defined(_LIBCPP_HAS_UNIQUE_OBJECT_REPRESENTATIONS)",
   }, {
     "name": "__cpp_lib_hypot",
     "values": { "c++17": 201603 },
