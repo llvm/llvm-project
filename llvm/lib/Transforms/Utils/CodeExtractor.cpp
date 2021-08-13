@@ -885,7 +885,7 @@ Function *CodeExtractor::constructFunction(const ValueSet &inputs,
   //  "target-features" attribute allowing it to be lowered.
   // FIXME: This should be changed to check to see if a specific
   //           attribute can not be inherited.
-  for (const auto &Attr : oldFunction->getAttributes().getFnAttributes()) {
+  for (const auto &Attr : oldFunction->getAttributes().getFnAttrs()) {
     if (Attr.isStringAttribute()) {
       if (Attr.getKindAsString() == "thunk")
         continue;

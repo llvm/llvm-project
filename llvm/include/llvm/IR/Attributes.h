@@ -620,13 +620,13 @@ public:
 
   /// The attributes for the argument or parameter at the given index are
   /// returned.
-  AttributeSet getParamAttributes(unsigned ArgNo) const;
+  AttributeSet getParamAttrs(unsigned ArgNo) const;
 
   /// The attributes for the ret value are returned.
-  AttributeSet getRetAttributes() const;
+  AttributeSet getRetAttrs() const;
 
   /// The function attributes are returned.
-  AttributeSet getFnAttributes() const;
+  AttributeSet getFnAttrs() const;
 
   /// Return true if the attribute exists at the given index.
   bool hasAttribute(unsigned Index, Attribute::AttrKind Kind) const;

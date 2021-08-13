@@ -1361,10 +1361,10 @@ void DevirtModule::applyICallBranchFunnel(VTableSlotInfo &SlotInfo,
           M.getContext(), ArrayRef<Attribute>{Attribute::get(
                               M.getContext(), Attribute::Nest)}));
       for (unsigned I = 0; I + 2 <  Attrs.getNumAttrSets(); ++I)
-        NewArgAttrs.push_back(Attrs.getParamAttributes(I));
+        NewArgAttrs.push_back(Attrs.getParamAttrs(I));
       NewCS->setAttributes(
-          AttributeList::get(M.getContext(), Attrs.getFnAttributes(),
-                             Attrs.getRetAttributes(), NewArgAttrs));
+          AttributeList::get(M.getContext(), Attrs.getFnAttrs(),
+                             Attrs.getRetAttrs(), NewArgAttrs));
 
       CB.replaceAllUsesWith(NewCS);
       CB.eraseFromParent();

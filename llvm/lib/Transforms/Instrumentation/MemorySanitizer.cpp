@@ -4176,7 +4176,7 @@ struct VarArgAMD64Helper : public VarArgHelper {
                     MemorySanitizerVisitor &MSV)
       : F(F), MS(MS), MSV(MSV) {
     AMD64FpEndOffset = AMD64FpEndOffsetSSE;
-    for (const auto &Attr : F.getAttributes().getFnAttributes()) {
+    for (const auto &Attr : F.getAttributes().getFnAttrs()) {
       if (Attr.isStringAttribute() &&
           (Attr.getKindAsString() == "target-features")) {
         if (Attr.getValueAsString().contains("-sse"))

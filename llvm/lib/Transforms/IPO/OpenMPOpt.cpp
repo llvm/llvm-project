@@ -1063,7 +1063,7 @@ private:
         // Forward parameter attributes from the callback to the callee.
         for (unsigned U = CallbackFirstArgOperand, E = CI->getNumArgOperands();
              U < E; ++U)
-          for (const Attribute &A : CI->getAttributes().getParamAttributes(U))
+          for (const Attribute &A : CI->getAttributes().getParamAttrs(U))
             NewCI->addParamAttr(
                 U - (CallbackFirstArgOperand - CallbackCalleeOperand), A);
 

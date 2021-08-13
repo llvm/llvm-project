@@ -349,18 +349,18 @@ transformFunctionAttributes(const TransformedFunction &TransformedFunction,
   for (unsigned I = 0, IE = TransformedFunction.ArgumentIndexMapping.size();
        I < IE; ++I) {
     unsigned TransformedIndex = TransformedFunction.ArgumentIndexMapping[I];
-    ArgumentAttributes[TransformedIndex] = CallSiteAttrs.getParamAttributes(I);
+    ArgumentAttributes[TransformedIndex] = CallSiteAttrs.getParamAttrs(I);
   }
 
   // Copy annotations on varargs arguments.
   for (unsigned I = TransformedFunction.OriginalType->getNumParams(),
                 IE = CallSiteAttrs.getNumAttrSets();
        I < IE; ++I) {
-    ArgumentAttributes.push_back(CallSiteAttrs.getParamAttributes(I));
+    ArgumentAttributes.push_back(CallSiteAttrs.getParamAttrs(I));
   }
 
-  return AttributeList::get(Ctx, CallSiteAttrs.getFnAttributes(),
-                            CallSiteAttrs.getRetAttributes(),
+  return AttributeList::get(Ctx, CallSiteAttrs.getFnAttrs(),
+                            CallSiteAttrs.getRetAttrs(),
                             llvm::makeArrayRef(ArgumentAttributes));
 }
 

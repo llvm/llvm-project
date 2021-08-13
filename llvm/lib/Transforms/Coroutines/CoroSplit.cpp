@@ -907,7 +907,7 @@ void CoroCloner::create() {
     // Bootstrap attributes by copying function attributes from the
     // original function.  This should include optimization settings and so on.
     NewAttrs = NewAttrs.addAttributes(Context, AttributeList::FunctionIndex,
-                                      OrigAttrs.getFnAttributes());
+                                      OrigAttrs.getFnAttrs());
 
     addFramePointerAttrs(NewAttrs, Context, 0,
                          Shape.FrameSize, Shape.FrameAlign);
@@ -929,7 +929,7 @@ void CoroCloner::create() {
     }
 
     // Transfer the original function's attributes.
-    auto FnAttrs = OrigF.getAttributes().getFnAttributes();
+    auto FnAttrs = OrigF.getAttributes().getFnAttrs();
     NewAttrs =
         NewAttrs.addAttributes(Context, AttributeList::FunctionIndex, FnAttrs);
     break;

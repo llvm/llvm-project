@@ -485,7 +485,7 @@ CallBase &llvm::promoteCall(CallBase &CB, Function *Callee,
       CB.setArgOperand(ArgNo, Cast);
 
       // Remove any incompatible attributes for the argument.
-      AttrBuilder ArgAttrs(CallerPAL.getParamAttributes(ArgNo));
+      AttrBuilder ArgAttrs(CallerPAL.getParamAttrs(ArgNo));
       ArgAttrs.remove(AttributeFuncs::typeIncompatible(FormalTy));
 
       // If byval is used, this must be a pointer type, and the byval type must
@@ -496,7 +496,7 @@ CallBase &llvm::promoteCall(CallBase &CB, Function *Callee,
       NewArgAttrs.push_back(AttributeSet::get(Ctx, ArgAttrs));
       AttributeChanged = true;
     } else
-      NewArgAttrs.push_back(CallerPAL.getParamAttributes(ArgNo));
+      NewArgAttrs.push_back(CallerPAL.getParamAttrs(ArgNo));
   }
 
   // If the return type of the call site doesn't match that of the callee, cast
@@ -511,7 +511,7 @@ CallBase &llvm::promoteCall(CallBase &CB, Function *Callee,
 
   // Set the new callsite attribute.
   if (AttributeChanged)
-    CB.setAttributes(AttributeList::get(Ctx, CallerPAL.getFnAttributes(),
+    CB.setAttributes(AttributeList::get(Ctx, CallerPAL.getFnAttrs(),
                                         AttributeSet::get(Ctx, RAttrs),
                                         NewArgAttrs));
 

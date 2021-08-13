@@ -44,11 +44,11 @@ void OpenMPIRBuilder::addAttributes(omp::RuntimeFunction FnID, Function &Fn) {
 
   // Get the function's current attributes.
   auto Attrs = Fn.getAttributes();
-  auto FnAttrs = Attrs.getFnAttributes();
-  auto RetAttrs = Attrs.getRetAttributes();
+  auto FnAttrs = Attrs.getFnAttrs();
+  auto RetAttrs = Attrs.getRetAttrs();
   SmallVector<AttributeSet, 4> ArgAttrs;
   for (size_t ArgNo = 0; ArgNo < Fn.arg_size(); ++ArgNo)
-    ArgAttrs.emplace_back(Attrs.getParamAttributes(ArgNo));
+    ArgAttrs.emplace_back(Attrs.getParamAttrs(ArgNo));
 
 #define OMP_ATTRS_SET(VarName, AttrSet) AttributeSet VarName = AttrSet;
 #include "llvm/Frontend/OpenMP/OMPKinds.def"
