@@ -13,9 +13,15 @@ clang_tablegen(OpenCLBuiltins.inc -gen-clang-opencl-builtins
   TARGET ClangOpenCLBuiltinsImpl
   )
 
+include_directories( ${LLVM_MAIN_SRC_DIR}/../mlir/include )
+include_directories( ${CMAKE_BINARY_DIR}/tools/mlir/include )
+
+get_property(dialect_libs GLOBAL PROPERTY MLIR_DIALECT_LIBS)
+
 add_clang_library(clangSema
   AnalysisBasedWarnings.cpp
   CodeCompleteConsumer.cpp
+  CIRBasedWarnings.cpp
   DeclSpec.cpp
   DelayedDiagnostic.cpp
   HLSLExternalSemaSource.cpp
@@ -93,6 +99,7 @@ add_clang_library(clangSema
   ClangOpenCLBuiltinsImpl
   omp_gen
   ClangDriverOptions
+  MLIRCIROpsIncGen
 
   LINK_LIBS
   clangAPINotes
@@ -102,4 +109,13 @@ add_clang_library(clangSema
   clangEdit
   clangLex
   clangSupport
+
+  ${dialect_libs}
+  MLIRCIR
+  MLIRAnalysis
+  MLIRIR
+  MLIRParser
+  MLIRSideEffectInterfaces
+  MLIRTransforms
+  MLIRSupport
   )

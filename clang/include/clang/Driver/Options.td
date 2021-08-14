@@ -1908,6 +1908,12 @@ def fapinotes_swift_version : Joined<["-"], "fapinotes-swift-version=">,
   MetaVarName<"<version>">,
   HelpText<"Specify the Swift version to use when filtering API notes">;
 
+defm cir_warnings : BoolFOption<"cir-warnings",
+  LangOpts<"CIRWarnings">, DefaultFalse,
+  PosFlag<SetTrue, [], [ClangOption, CC1Option], "Use">,
+  NegFlag<SetFalse, [], [], "Don't use">,
+  BothFlags<[], [ClangOption, CC1Option], " CIR to emit (analysis based) warnings">>;
+
 defm addrsig : BoolFOption<"addrsig",
   CodeGenOpts<"Addrsig">, DefaultFalse,
   PosFlag<SetTrue, [], [ClangOption, CC1Option], "Emit">,
