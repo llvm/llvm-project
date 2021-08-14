@@ -1,4 +1,4 @@
-; RUN: opt -S -licm -simple-loop-unswitch -enable-mssa-loop-dependency -verify-memoryssa %s | FileCheck %s
+; RUN: opt -S -licm -simple-loop-unswitch -verify-memoryssa %s | FileCheck %s
 ; REQUIRES: asserts
 target datalayout = "E-m:e-i1:8:16-i8:8:16-i64:64-f128:64-v128:64-a:8:16-n32:64"
 target triple = "s390x-ibm-linux"

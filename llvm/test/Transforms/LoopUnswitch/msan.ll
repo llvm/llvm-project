@@ -1,5 +1,4 @@
-; RUN: opt < %s -loop-unswitch -enable-new-pm=0 -verify-loop-info -S < %s 2>&1 | FileCheck %s
-; RUN: opt < %s -loop-unswitch -enable-new-pm=0 -verify-loop-info -enable-mssa-loop-dependency=true -verify-memoryssa -S < %s 2>&1 | FileCheck %s
+; RUN: opt < %s -loop-unswitch -enable-new-pm=0 -verify-loop-info -verify-memoryssa -S < %s 2>&1 | FileCheck %s
 
 @sink = global i32 0, align 4
 @y = global i64 0, align 8
