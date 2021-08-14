@@ -741,8 +741,7 @@ the configuration (without a prefix: ``Auto``).
     enum { A, B } myEnum;
 
     false:
-    enum
-    {
+    enum {
       A,
       B
     } myEnum;
