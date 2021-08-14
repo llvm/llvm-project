@@ -107,10 +107,9 @@ public:
   void fixPLTEdge(Edge &E, Symbol &Stub) {
     assert(E.getKind() == x86_64::BranchPCRel32 && "Not a Branch32 edge?");
 
-    // Set the edge kind to Branch32ToStub. We will use this to check for stub
-    // optimization opportunities in the optimize ELF_x86_64_GOTAndStubs pass
-    // below.
-    E.setKind(x86_64::BranchPCRel32ToPtrJumpStubRelaxable);
+    // Set the edge kind to Branch32ToPtrJumpStubRelaxable to enable it to be
+    // optimized when the target is in-range.
+    E.setKind(x86_64::BranchPCRel32ToPtrJumpStubBypassable);
     E.setTarget(Stub);
   }
 
@@ -191,7 +190,7 @@ static Error optimizeELF_x86_64_GOTAndStubs(LinkGraph &G) {
             dbgs() << "\n";
           });
         }
-      } else if (E.getKind() == x86_64::BranchPCRel32ToPtrJumpStubRelaxable) {
+      } else if (E.getKind() == x86_64::BranchPCRel32ToPtrJumpStubBypassable) {
         auto &StubBlock = E.getTarget().getBlock();
         assert(
             StubBlock.getSize() ==
