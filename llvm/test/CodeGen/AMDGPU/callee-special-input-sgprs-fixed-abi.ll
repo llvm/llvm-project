@@ -253,7 +253,33 @@ define hidden void @use_every_sgpr_input() #1 {
 ; GCN: .amdhsa_system_sgpr_workgroup_id_z 1
 ; GCN: .amdhsa_system_sgpr_workgroup_info 0
 ; GCN: .amdhsa_system_vgpr_workitem_id 2
-define amdgpu_kernel void @kern_indirect_use_every_sgpr_input() #1 {
+define amdgpu_kernel void @kern_indirect_use_every_sgpr_input(i8) #1 {
+  call void @use_every_sgpr_input()
+  ret void
+}
+
+; We have to pass the kernarg segment, but there are no kernel
+; arguments so null is passed.
+; GCN-LABEL: {{^}}kern_indirect_use_every_sgpr_input_no_kernargs:
+; GCN: s_mov_b64 s[10:11], s[8:9]
+; GCN: s_mov_b64 s[8:9], 0{{$}}
+; GCN: s_mov_b32 s32, 0
+; GCN: s_swappc_b64
+
+; GCN: .amdhsa_user_sgpr_private_segment_buffer 1
+; GCN: .amdhsa_user_sgpr_dispatch_ptr 1
+; GCN: .amdhsa_user_sgpr_queue_ptr 1
+; GCN: .amdhsa_user_sgpr_kernarg_segment_ptr 0
+; GCN: .amdhsa_user_sgpr_dispatch_id 1
+; GCN: .amdhsa_user_sgpr_flat_scratch_init 1
+; GCN: .amdhsa_user_sgpr_private_segment_size 0
+; GCN: .amdhsa_system_sgpr_private_segment_wavefront_offset 1
+; GCN: .amdhsa_system_sgpr_workgroup_id_x 1
+; GCN: .amdhsa_system_sgpr_workgroup_id_y 1
+; GCN: .amdhsa_system_sgpr_workgroup_id_z 1
+; GCN: .amdhsa_system_sgpr_workgroup_info 0
+; GCN: .amdhsa_system_vgpr_workitem_id 2
+define amdgpu_kernel void @kern_indirect_use_every_sgpr_input_no_kernargs() #1 {
   call void @use_every_sgpr_input()
   ret void
 }

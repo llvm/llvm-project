@@ -8,12 +8,12 @@
 define amdgpu_kernel void @kernel_background_evaluate(float addrspace(5)* %kg, <4 x i32> addrspace(1)* %input, <4 x float> addrspace(1)* %output, i32 %i) {
 ; MUBUF-LABEL: kernel_background_evaluate:
 ; MUBUF:       ; %bb.0: ; %entry
-; MUBUF-NEXT:    s_load_dword s0, s[0:1], 0x24
+; MUBUF-NEXT:    s_load_dword s0, s[4:5], 0x24
 ; MUBUF-NEXT:    s_mov_b32 s36, SCRATCH_RSRC_DWORD0
 ; MUBUF-NEXT:    s_mov_b32 s37, SCRATCH_RSRC_DWORD1
 ; MUBUF-NEXT:    s_mov_b32 s38, -1
 ; MUBUF-NEXT:    s_mov_b32 s39, 0x31c16000
-; MUBUF-NEXT:    s_add_u32 s36, s36, s3
+; MUBUF-NEXT:    s_add_u32 s36, s36, s11
 ; MUBUF-NEXT:    s_addc_u32 s37, s37, 0
 ; MUBUF-NEXT:    v_mov_b32_e32 v1, 0x2000
 ; MUBUF-NEXT:    v_mov_b32_e32 v2, 0x4000
@@ -46,12 +46,12 @@ define amdgpu_kernel void @kernel_background_evaluate(float addrspace(5)* %kg, <
 ;
 ; FLATSCR-LABEL: kernel_background_evaluate:
 ; FLATSCR:       ; %bb.0: ; %entry
-; FLATSCR-NEXT:    s_add_u32 s2, s2, s5
+; FLATSCR-NEXT:    s_add_u32 s8, s8, s13
 ; FLATSCR-NEXT:    s_movk_i32 s32, 0x6000
-; FLATSCR-NEXT:    s_addc_u32 s3, s3, 0
-; FLATSCR-NEXT:    s_setreg_b32 hwreg(HW_REG_FLAT_SCR_LO), s2
-; FLATSCR-NEXT:    s_setreg_b32 hwreg(HW_REG_FLAT_SCR_HI), s3
-; FLATSCR-NEXT:    s_load_dword s2, s[0:1], 0x24
+; FLATSCR-NEXT:    s_addc_u32 s9, s9, 0
+; FLATSCR-NEXT:    s_setreg_b32 hwreg(HW_REG_FLAT_SCR_LO), s8
+; FLATSCR-NEXT:    s_setreg_b32 hwreg(HW_REG_FLAT_SCR_HI), s9
+; FLATSCR-NEXT:    s_load_dword s2, s[4:5], 0x24
 ; FLATSCR-NEXT:    v_mov_b32_e32 v1, 0x2000
 ; FLATSCR-NEXT:    v_mov_b32_e32 v2, 0x4000
 ; FLATSCR-NEXT:    v_mov_b32_e32 v3, 0

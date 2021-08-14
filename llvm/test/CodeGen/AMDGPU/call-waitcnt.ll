@@ -5,10 +5,10 @@
 define amdgpu_kernel void @call_memory_arg_load(i32 addrspace(3)* %ptr, i32) #0 {
 ; GCN-LABEL: call_memory_arg_load:
 ; GCN:       ; %bb.0:
-; GCN-NEXT:    s_load_dword s4, s[4:5], 0x0
-; GCN-NEXT:    s_add_u32 flat_scratch_lo, s6, s9
-; GCN-NEXT:    s_addc_u32 flat_scratch_hi, s7, 0
-; GCN-NEXT:    s_add_u32 s0, s0, s9
+; GCN-NEXT:    s_load_dword s4, s[8:9], 0x0
+; GCN-NEXT:    s_add_u32 flat_scratch_lo, s12, s17
+; GCN-NEXT:    s_addc_u32 flat_scratch_hi, s13, 0
+; GCN-NEXT:    s_add_u32 s0, s0, s17
 ; GCN-NEXT:    s_addc_u32 s1, s1, 0
 ; GCN-NEXT:    s_waitcnt lgkmcnt(0)
 ; GCN-NEXT:    v_mov_b32_e32 v0, s4
@@ -28,10 +28,10 @@ define amdgpu_kernel void @call_memory_arg_load(i32 addrspace(3)* %ptr, i32) #0 
 define amdgpu_kernel void @call_memory_no_dep(i32 addrspace(1)* %ptr, i32) #0 {
 ; GCN-LABEL: call_memory_no_dep:
 ; GCN:       ; %bb.0:
-; GCN-NEXT:    s_load_dwordx2 s[4:5], s[4:5], 0x0
-; GCN-NEXT:    s_add_u32 flat_scratch_lo, s6, s9
-; GCN-NEXT:    s_addc_u32 flat_scratch_hi, s7, 0
-; GCN-NEXT:    s_add_u32 s0, s0, s9
+; GCN-NEXT:    s_load_dwordx2 s[4:5], s[8:9], 0x0
+; GCN-NEXT:    s_add_u32 flat_scratch_lo, s12, s17
+; GCN-NEXT:    s_addc_u32 flat_scratch_hi, s13, 0
+; GCN-NEXT:    s_add_u32 s0, s0, s17
 ; GCN-NEXT:    v_mov_b32_e32 v0, 0
 ; GCN-NEXT:    s_addc_u32 s1, s1, 0
 ; GCN-NEXT:    s_waitcnt lgkmcnt(0)
@@ -52,10 +52,10 @@ define amdgpu_kernel void @call_memory_no_dep(i32 addrspace(1)* %ptr, i32) #0 {
 define amdgpu_kernel void @call_no_wait_after_call(i32 addrspace(1)* %ptr, i32) #0 {
 ; GCN-LABEL: call_no_wait_after_call:
 ; GCN:       ; %bb.0:
-; GCN-NEXT:    s_add_u32 flat_scratch_lo, s6, s9
-; GCN-NEXT:    s_load_dwordx2 s[34:35], s[4:5], 0x0
-; GCN-NEXT:    s_addc_u32 flat_scratch_hi, s7, 0
-; GCN-NEXT:    s_add_u32 s0, s0, s9
+; GCN-NEXT:    s_add_u32 flat_scratch_lo, s12, s17
+; GCN-NEXT:    s_load_dwordx2 s[34:35], s[8:9], 0x0
+; GCN-NEXT:    s_addc_u32 flat_scratch_hi, s13, 0
+; GCN-NEXT:    s_add_u32 s0, s0, s17
 ; GCN-NEXT:    s_addc_u32 s1, s1, 0
 ; GCN-NEXT:    v_mov_b32_e32 v0, 0
 ; GCN-NEXT:    s_getpc_b64 s[4:5]
@@ -74,10 +74,10 @@ define amdgpu_kernel void @call_no_wait_after_call(i32 addrspace(1)* %ptr, i32) 
 define amdgpu_kernel void @call_no_wait_after_call_return_val(i32 addrspace(1)* %ptr, i32) #0 {
 ; GCN-LABEL: call_no_wait_after_call_return_val:
 ; GCN:       ; %bb.0:
-; GCN-NEXT:    s_add_u32 flat_scratch_lo, s6, s9
-; GCN-NEXT:    s_load_dwordx2 s[34:35], s[4:5], 0x0
-; GCN-NEXT:    s_addc_u32 flat_scratch_hi, s7, 0
-; GCN-NEXT:    s_add_u32 s0, s0, s9
+; GCN-NEXT:    s_add_u32 flat_scratch_lo, s12, s17
+; GCN-NEXT:    s_load_dwordx2 s[34:35], s[8:9], 0x0
+; GCN-NEXT:    s_addc_u32 flat_scratch_hi, s13, 0
+; GCN-NEXT:    s_add_u32 s0, s0, s17
 ; GCN-NEXT:    s_addc_u32 s1, s1, 0
 ; GCN-NEXT:    v_mov_b32_e32 v0, 0
 ; GCN-NEXT:    s_getpc_b64 s[4:5]
@@ -97,9 +97,9 @@ define amdgpu_kernel void @call_no_wait_after_call_return_val(i32 addrspace(1)* 
 define amdgpu_kernel void @call_got_load(i32 addrspace(1)* %ptr, i32) #0 {
 ; GCN-LABEL: call_got_load:
 ; GCN:       ; %bb.0:
-; GCN-NEXT:    s_add_u32 flat_scratch_lo, s6, s9
-; GCN-NEXT:    s_addc_u32 flat_scratch_hi, s7, 0
-; GCN-NEXT:    s_add_u32 s0, s0, s9
+; GCN-NEXT:    s_add_u32 flat_scratch_lo, s12, s17
+; GCN-NEXT:    s_addc_u32 flat_scratch_hi, s13, 0
+; GCN-NEXT:    s_add_u32 s0, s0, s17
 ; GCN-NEXT:    s_addc_u32 s1, s1, 0
 ; GCN-NEXT:    s_getpc_b64 s[4:5]
 ; GCN-NEXT:    s_add_u32 s4, s4, got.func@gotpcrel32@lo+4
