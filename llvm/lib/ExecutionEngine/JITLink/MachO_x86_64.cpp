@@ -300,7 +300,7 @@ private:
           else
             return TargetSymbolOrErr.takeError();
           Addend = *(const little32_t *)FixupContent;
-          Kind = x86_64::RequestGOTAndTransformToPCRel32GOTLoadRelaxable;
+          Kind = x86_64::RequestGOTAndTransformToPCRel32GOTLoadREXRelaxable;
           if (FixupOffset < 3)
             return make_error<JITLinkError>("GOTLD at invalid offset " +
                                             formatv("{0}", FixupOffset));
@@ -319,7 +319,10 @@ private:
           else
             return TargetSymbolOrErr.takeError();
           Addend = *(const little32_t *)FixupContent;
-          Kind = x86_64::RequestTLVPAndTransformToPCRel32TLVPLoadRelaxable;
+          Kind = x86_64::RequestTLVPAndTransformToPCRel32TLVPLoadREXRelaxable;
+          if (FixupOffset < 3)
+            return make_error<JITLinkError>("TLV at invalid offset " +
+                                            formatv("{0}", FixupOffset));
           break;
         case MachOPointer32:
           if (auto TargetSymbolOrErr = findSymbolByIndex(RI.r_symbolnum))
@@ -429,7 +432,7 @@ public:
   bool isGOTEdgeToFix(Edge &E) const {
     return E.getKind() == x86_64::RequestGOTAndTransformToDelta32 ||
            E.getKind() ==
-               x86_64::RequestGOTAndTransformToPCRel32GOTLoadRelaxable;
+               x86_64::RequestGOTAndTransformToPCRel32GOTLoadREXRelaxable;
   }
 
   Symbol &createGOTEntry(Symbol &Target) {
@@ -442,8 +445,8 @@ public:
     case x86_64::RequestGOTAndTransformToDelta32:
       E.setKind(x86_64::Delta32);
       break;
-    case x86_64::RequestGOTAndTransformToPCRel32GOTLoadRelaxable:
-      E.setKind(x86_64::PCRel32GOTLoadRelaxable);
+    case x86_64::RequestGOTAndTransformToPCRel32GOTLoadREXRelaxable:
+      E.setKind(x86_64::PCRel32GOTLoadREXRelaxable);
       break;
     default:
       llvm_unreachable("Not a GOT transform edge");
@@ -500,7 +503,7 @@ static Error optimizeMachO_x86_64_GOTAndStubs(LinkGraph &G) {
 
   for (auto *B : G.blocks())
     for (auto &E : B->edges())
-      if (E.getKind() == x86_64::PCRel32GOTLoadRelaxable) {
+      if (E.getKind() == x86_64::PCRel32GOTLoadREXRelaxable) {
         assert(E.getOffset() >= 3 && "GOT edge occurs too early in block");
 
         // Optimize GOT references.

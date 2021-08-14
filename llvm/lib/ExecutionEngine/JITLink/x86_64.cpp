@@ -46,14 +46,14 @@ const char *getEdgeKindName(Edge::Kind K) {
     return "RequestGOTAndTransformToDelta64";
   case RequestGOTAndTransformToDelta64FromGOT:
     return "RequestGOTAndTransformToDelta64FromGOT";
-  case PCRel32GOTLoadRelaxable:
-    return "PCRel32GOTLoadRelaxable";
-  case RequestGOTAndTransformToPCRel32GOTLoadRelaxable:
-    return "RequestGOTAndTransformToPCRel32GOTLoadRelaxable";
-  case PCRel32TLVPLoadRelaxable:
-    return "PCRel32TLVPLoadRelaxable";
-  case RequestTLVPAndTransformToPCRel32TLVPLoadRelaxable:
-    return "RequestTLVPAndTransformToPCRel32TLVPLoadRelaxable";
+  case PCRel32GOTLoadREXRelaxable:
+    return "PCRel32GOTLoadREXRelaxable";
+  case RequestGOTAndTransformToPCRel32GOTLoadREXRelaxable:
+    return "RequestGOTAndTransformToPCRel32GOTLoadREXRelaxable";
+  case PCRel32TLVPLoadREXRelaxable:
+    return "PCRel32TLVPLoadREXRelaxable";
+  case RequestTLVPAndTransformToPCRel32TLVPLoadREXRelaxable:
+    return "RequestTLVPAndTransformToPCRel32TLVPLoadREXRelaxable";
   default:
     return getGenericEdgeKindName(static_cast<Edge::Kind>(K));
   }

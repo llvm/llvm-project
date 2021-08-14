@@ -53,7 +53,7 @@ public:
     return E.getKind() == x86_64::RequestGOTAndTransformToDelta32 ||
            E.getKind() == x86_64::RequestGOTAndTransformToDelta64 ||
            E.getKind() ==
-               x86_64::RequestGOTAndTransformToPCRel32GOTLoadRelaxable ||
+               x86_64::RequestGOTAndTransformToPCRel32GOTLoadREXRelaxable ||
            E.getKind() == x86_64::RequestGOTAndTransformToDelta64FromGOT;
   }
 
@@ -71,8 +71,8 @@ public:
     // optimizeMachO_x86_64_GOTAndStubs pass below.
     // If it's a GOT64 leave it as is.
     switch (E.getKind()) {
-    case x86_64::RequestGOTAndTransformToPCRel32GOTLoadRelaxable:
-      E.setKind(x86_64::PCRel32GOTLoadRelaxable);
+    case x86_64::RequestGOTAndTransformToPCRel32GOTLoadREXRelaxable:
+      E.setKind(x86_64::PCRel32GOTLoadREXRelaxable);
       break;
     case x86_64::RequestGOTAndTransformToDelta64:
       E.setKind(x86_64::Delta64);
@@ -107,7 +107,7 @@ public:
   void fixPLTEdge(Edge &E, Symbol &Stub) {
     assert(E.getKind() == x86_64::BranchPCRel32 && "Not a Branch32 edge?");
 
-    // Set the edge kind to Branch32ToPtrJumpStubRelaxable to enable it to be
+    // Set the edge kind to Branch32ToPtrJumpStubBypassable to enable it to be
     // optimized when the target is in-range.
     E.setKind(x86_64::BranchPCRel32ToPtrJumpStubBypassable);
     E.setTarget(Stub);
@@ -154,7 +154,7 @@ static Error optimizeELF_x86_64_GOTAndStubs(LinkGraph &G) {
 
   for (auto *B : G.blocks())
     for (auto &E : B->edges())
-      if (E.getKind() == x86_64::PCRel32GOTLoadRelaxable) {
+      if (E.getKind() == x86_64::PCRel32GOTLoadREXRelaxable) {
         // Replace GOT load with LEA only for MOVQ instructions.
         constexpr uint8_t MOVQRIPRel[] = {0x48, 0x8b};
         if (E.getOffset() < 3 ||
@@ -371,7 +371,7 @@ private:
           Kind = x86_64::Pointer64;
           break;
         case PCRel32GOTLoad: {
-          Kind = x86_64::RequestGOTAndTransformToPCRel32GOTLoadRelaxable;
+          Kind = x86_64::RequestGOTAndTransformToPCRel32GOTLoadREXRelaxable;
           Addend = 0;
           break;
         }
