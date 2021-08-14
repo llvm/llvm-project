@@ -1,5 +1,4 @@
-; RUN: opt < %s -loop-rotate -loop-reduce -verify-dom-info -verify-loop-info -disable-output
-; RUN: opt < %s -loop-rotate -loop-reduce -enable-mssa-loop-dependency=true -verify-memoryssa -verify-dom-info -verify-loop-info -disable-output
+; RUN: opt < %s -loop-rotate -loop-reduce -verify-memoryssa -verify-dom-info -verify-loop-info -disable-output
 
 define fastcc void @foo(i32* %A, i64 %i) nounwind {
 BB:

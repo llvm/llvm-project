@@ -1,4 +1,4 @@
-; RUN: opt -disable-output -loop-rotate -enable-mssa-loop-dependency -verify-memoryssa %s
+; RUN: opt -disable-output -loop-rotate -verify-memoryssa %s
 ; REQUIRES: asserts
 
 ; Function Attrs: nounwind
