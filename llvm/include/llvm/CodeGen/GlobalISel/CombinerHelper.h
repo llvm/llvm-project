@@ -554,6 +554,11 @@ public:
   /// Do constant folding when opportunities are exposed after MIR building.
   bool matchConstantFold(MachineInstr &MI, APInt &MatchInfo);
 
+  /// \returns true if it is possible to narrow the width of a scalar binop
+  /// feeding a G_AND instruction \p MI.
+  bool matchNarrowBinopFeedingAnd(
+      MachineInstr &MI, std::function<void(MachineIRBuilder &)> &MatchInfo);
+
   /// Try to transform \p MI by using all of the above
   /// combine functions. Returns true if changed.
   bool tryCombine(MachineInstr &MI);
