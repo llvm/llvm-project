@@ -144,17 +144,21 @@ define hidden void @func_indirect_use_workgroup_id_x() #1 {
   ret void
 }
 
+; Argument is in right place already. We are free to clobber other
+; SGPR arguments
 ; GCN-LABEL: {{^}}func_indirect_use_workgroup_id_y:
-; GCN-NOT: s4
-; GCN: v_readlane_b32 s4, v40, 0
+; GCN-NOT: s12
+; GCN-NOT: s13
+; GCN-NOT: s14
 define hidden void @func_indirect_use_workgroup_id_y() #1 {
   call void @use_workgroup_id_y()
   ret void
 }
 
 ; GCN-LABEL: {{^}}func_indirect_use_workgroup_id_z:
-; GCN-NOT: s4
-; GCN: v_readlane_b32 s4, v40, 0
+; GCN-NOT: s12
+; GCN-NOT: s13
+; GCN-NOT: s14
 define hidden void @func_indirect_use_workgroup_id_z() #1 {
   call void @use_workgroup_id_z()
   ret void
