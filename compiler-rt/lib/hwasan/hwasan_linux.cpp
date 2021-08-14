@@ -38,6 +38,7 @@
 #  include "hwasan_thread_list.h"
 #  include "sanitizer_common/sanitizer_common.h"
 #  include "sanitizer_common/sanitizer_procmaps.h"
+#  include "sanitizer_common/sanitizer_stackdepot.h"
 
 // Configurations of HWASAN_WITH_INTERCEPTORS and SANITIZER_ANDROID.
 //
@@ -426,6 +427,18 @@ uptr TagMemoryAligned(uptr p, uptr size, tag_t tag) {
     internal_memset((void *)shadow_start, tag, shadow_size);
   }
   return AddTagToPointer(p, tag);
+}
+
+void HwasanInstallAtForkHandler() {
+  auto before = []() {
+    HwasanAllocatorLock();
+    StackDepotLockAll();
+  };
+  auto after = []() {
+    StackDepotUnlockAll();
+    HwasanAllocatorUnlock();
+  };
+  pthread_atfork(before, after, after);
 }
 
 }  // namespace __hwasan

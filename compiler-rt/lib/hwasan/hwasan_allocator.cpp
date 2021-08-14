@@ -107,6 +107,10 @@ void HwasanAllocatorInit() {
     tail_magic[i] = GetCurrentThread()->GenerateRandomTag();
 }
 
+void HwasanAllocatorLock() { allocator.ForceLock(); }
+
+void HwasanAllocatorUnlock() { allocator.ForceUnlock(); }
+
 void AllocatorSwallowThreadLocalCache(AllocatorCache *cache) {
   allocator.SwallowCache(cache);
 }

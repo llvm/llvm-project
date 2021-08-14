@@ -125,22 +125,6 @@ INTERCEPTOR(void, longjmp, __hw_jmp_buf env, int val) {
 
 #endif // HWASAN_WITH_INTERCEPTORS && __aarch64__
 
-static void BeforeFork() {
-  StackDepotLockAll();
-}
-
-static void AfterFork() {
-  StackDepotUnlockAll();
-}
-
-INTERCEPTOR(int, fork, void) {
-  ENSURE_HWASAN_INITED();
-  BeforeFork();
-  int pid = REAL(fork)();
-  AfterFork();
-  return pid;
-}
-
 namespace __hwasan {
 
 int OnExit() {
@@ -155,8 +139,6 @@ namespace __hwasan {
 void InitializeInterceptors() {
   static int inited = 0;
   CHECK_EQ(inited, 0);
-
-  INTERCEPT_FUNCTION(fork);
 
 #if HWASAN_WITH_INTERCEPTORS
 #if defined(__linux__)
