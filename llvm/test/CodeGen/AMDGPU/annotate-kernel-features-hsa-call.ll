@@ -542,7 +542,7 @@ define void @indirect_use_group_to_flat_addrspacecast_queue_ptr_gfx9() #1 {
 
 define void @use_kernarg_segment_ptr() #1 {
 ; AKF_HSA-LABEL: define {{[^@]+}}@use_kernarg_segment_ptr
-; AKF_HSA-SAME: () #[[ATTR14:[0-9]+]] {
+; AKF_HSA-SAME: () #[[ATTR11]] {
 ; AKF_HSA-NEXT:    [[KERNARG_SEGMENT_PTR:%.*]] = call i8 addrspace(4)* @llvm.amdgcn.kernarg.segment.ptr()
 ; AKF_HSA-NEXT:    store volatile i8 addrspace(4)* [[KERNARG_SEGMENT_PTR]], i8 addrspace(4)* addrspace(1)* undef, align 8
 ; AKF_HSA-NEXT:    ret void
@@ -573,7 +573,7 @@ define void @func_indirect_use_kernarg_segment_ptr() #1 {
 
 define amdgpu_kernel void @kern_use_implicitarg_ptr() #1 {
 ; AKF_HSA-LABEL: define {{[^@]+}}@kern_use_implicitarg_ptr
-; AKF_HSA-SAME: () #[[ATTR15:[0-9]+]] {
+; AKF_HSA-SAME: () #[[ATTR14:[0-9]+]] {
 ; AKF_HSA-NEXT:    [[IMPLICITARG_PTR:%.*]] = call i8 addrspace(4)* @llvm.amdgcn.implicitarg.ptr()
 ; AKF_HSA-NEXT:    store volatile i8 addrspace(4)* [[IMPLICITARG_PTR]], i8 addrspace(4)* addrspace(1)* undef, align 8
 ; AKF_HSA-NEXT:    ret void
@@ -590,7 +590,7 @@ define amdgpu_kernel void @kern_use_implicitarg_ptr() #1 {
 
 define void @use_implicitarg_ptr() #1 {
 ; AKF_HSA-LABEL: define {{[^@]+}}@use_implicitarg_ptr
-; AKF_HSA-SAME: () #[[ATTR16:[0-9]+]] {
+; AKF_HSA-SAME: () #[[ATTR15:[0-9]+]] {
 ; AKF_HSA-NEXT:    [[IMPLICITARG_PTR:%.*]] = call i8 addrspace(4)* @llvm.amdgcn.implicitarg.ptr()
 ; AKF_HSA-NEXT:    store volatile i8 addrspace(4)* [[IMPLICITARG_PTR]], i8 addrspace(4)* addrspace(1)* undef, align 8
 ; AKF_HSA-NEXT:    ret void
@@ -607,7 +607,7 @@ define void @use_implicitarg_ptr() #1 {
 
 define void @func_indirect_use_implicitarg_ptr() #1 {
 ; AKF_HSA-LABEL: define {{[^@]+}}@func_indirect_use_implicitarg_ptr
-; AKF_HSA-SAME: () #[[ATTR16]] {
+; AKF_HSA-SAME: () #[[ATTR15]] {
 ; AKF_HSA-NEXT:    call void @use_implicitarg_ptr()
 ; AKF_HSA-NEXT:    ret void
 ;
@@ -625,7 +625,7 @@ declare void @external.func() #3
 ; This function gets deleted.
 define internal void @defined.func() #3 {
 ; AKF_HSA-LABEL: define {{[^@]+}}@defined.func
-; AKF_HSA-SAME: () #[[ATTR17:[0-9]+]] {
+; AKF_HSA-SAME: () #[[ATTR16:[0-9]+]] {
 ; AKF_HSA-NEXT:    ret void
 ;
   ret void
@@ -633,7 +633,7 @@ define internal void @defined.func() #3 {
 
 define void @func_call_external() #3 {
 ; AKF_HSA-LABEL: define {{[^@]+}}@func_call_external
-; AKF_HSA-SAME: () #[[ATTR17]] {
+; AKF_HSA-SAME: () #[[ATTR16]] {
 ; AKF_HSA-NEXT:    call void @external.func()
 ; AKF_HSA-NEXT:    ret void
 ;
@@ -648,7 +648,7 @@ define void @func_call_external() #3 {
 
 define void @func_call_defined() #3 {
 ; AKF_HSA-LABEL: define {{[^@]+}}@func_call_defined
-; AKF_HSA-SAME: () #[[ATTR17]] {
+; AKF_HSA-SAME: () #[[ATTR16]] {
 ; AKF_HSA-NEXT:    call void @defined.func()
 ; AKF_HSA-NEXT:    ret void
 ;
@@ -661,8 +661,8 @@ define void @func_call_defined() #3 {
 }
 define void @func_call_asm() #3 {
 ; AKF_HSA-LABEL: define {{[^@]+}}@func_call_asm
-; AKF_HSA-SAME: () #[[ATTR18:[0-9]+]] {
-; AKF_HSA-NEXT:    call void asm sideeffect "", ""() #[[ATTR18]]
+; AKF_HSA-SAME: () #[[ATTR17:[0-9]+]] {
+; AKF_HSA-NEXT:    call void asm sideeffect "", ""() #[[ATTR17]]
 ; AKF_HSA-NEXT:    ret void
 ;
 ; ATTRIBUTOR_HSA-LABEL: define {{[^@]+}}@func_call_asm
@@ -676,7 +676,7 @@ define void @func_call_asm() #3 {
 
 define amdgpu_kernel void @kern_call_external() #3 {
 ; AKF_HSA-LABEL: define {{[^@]+}}@kern_call_external
-; AKF_HSA-SAME: () #[[ATTR19:[0-9]+]] {
+; AKF_HSA-SAME: () #[[ATTR18:[0-9]+]] {
 ; AKF_HSA-NEXT:    call void @external.func()
 ; AKF_HSA-NEXT:    ret void
 ;
@@ -691,7 +691,7 @@ define amdgpu_kernel void @kern_call_external() #3 {
 
 define amdgpu_kernel void @func_kern_defined() #3 {
 ; AKF_HSA-LABEL: define {{[^@]+}}@func_kern_defined
-; AKF_HSA-SAME: () #[[ATTR19]] {
+; AKF_HSA-SAME: () #[[ATTR18]] {
 ; AKF_HSA-NEXT:    call void @defined.func()
 ; AKF_HSA-NEXT:    ret void
 ;
@@ -705,7 +705,7 @@ define amdgpu_kernel void @func_kern_defined() #3 {
 
 define i32 @use_dispatch_ptr_ret_type() #1 {
 ; AKF_HSA-LABEL: define {{[^@]+}}@use_dispatch_ptr_ret_type
-; AKF_HSA-SAME: () #[[ATTR20:[0-9]+]] {
+; AKF_HSA-SAME: () #[[ATTR19:[0-9]+]] {
 ; AKF_HSA-NEXT:    [[DISPATCH_PTR:%.*]] = call i8 addrspace(4)* @llvm.amdgcn.dispatch.ptr()
 ; AKF_HSA-NEXT:    store volatile i8 addrspace(4)* [[DISPATCH_PTR]], i8 addrspace(4)* addrspace(1)* undef, align 8
 ; AKF_HSA-NEXT:    ret i32 0
@@ -722,7 +722,7 @@ define i32 @use_dispatch_ptr_ret_type() #1 {
 
 define float @func_indirect_use_dispatch_ptr_constexpr_cast_func() #1 {
 ; AKF_HSA-LABEL: define {{[^@]+}}@func_indirect_use_dispatch_ptr_constexpr_cast_func
-; AKF_HSA-SAME: () #[[ATTR20]] {
+; AKF_HSA-SAME: () #[[ATTR19]] {
 ; AKF_HSA-NEXT:    [[F:%.*]] = call float bitcast (i32 ()* @use_dispatch_ptr_ret_type to float ()*)()
 ; AKF_HSA-NEXT:    [[FADD:%.*]] = fadd float [[F]], 1.000000e+00
 ; AKF_HSA-NEXT:    ret float [[FADD]]
@@ -740,7 +740,7 @@ define float @func_indirect_use_dispatch_ptr_constexpr_cast_func() #1 {
 
 define float @func_indirect_call(float()* %fptr) #3 {
 ; AKF_HSA-LABEL: define {{[^@]+}}@func_indirect_call
-; AKF_HSA-SAME: (float ()* [[FPTR:%.*]]) #[[ATTR21:[0-9]+]] {
+; AKF_HSA-SAME: (float ()* [[FPTR:%.*]]) #[[ATTR20:[0-9]+]] {
 ; AKF_HSA-NEXT:    [[F:%.*]] = call float [[FPTR]]()
 ; AKF_HSA-NEXT:    [[FADD:%.*]] = fadd float [[F]], 1.000000e+00
 ; AKF_HSA-NEXT:    ret float [[FADD]]
@@ -759,7 +759,7 @@ define float @func_indirect_call(float()* %fptr) #3 {
 declare float @extern() #3
 define float @func_extern_call() #3 {
 ; AKF_HSA-LABEL: define {{[^@]+}}@func_extern_call
-; AKF_HSA-SAME: () #[[ATTR17]] {
+; AKF_HSA-SAME: () #[[ATTR16]] {
 ; AKF_HSA-NEXT:    [[F:%.*]] = call float @extern()
 ; AKF_HSA-NEXT:    [[FADD:%.*]] = fadd float [[F]], 1.000000e+00
 ; AKF_HSA-NEXT:    ret float [[FADD]]
@@ -777,7 +777,7 @@ define float @func_extern_call() #3 {
 
 define float @func_null_call(float()* %fptr) #3 {
 ; AKF_HSA-LABEL: define {{[^@]+}}@func_null_call
-; AKF_HSA-SAME: (float ()* [[FPTR:%.*]]) #[[ATTR21]] {
+; AKF_HSA-SAME: (float ()* [[FPTR:%.*]]) #[[ATTR20]] {
 ; AKF_HSA-NEXT:    [[F:%.*]] = call float null()
 ; AKF_HSA-NEXT:    [[FADD:%.*]] = fadd float [[F]], 1.000000e+00
 ; AKF_HSA-NEXT:    ret float [[FADD]]
@@ -798,7 +798,7 @@ declare float @llvm.amdgcn.rcp.f32(float) #0
 ; Calls some other recognized intrinsic
 define float @func_other_intrinsic_call(float %arg) #3 {
 ; AKF_HSA-LABEL: define {{[^@]+}}@func_other_intrinsic_call
-; AKF_HSA-SAME: (float [[ARG:%.*]]) #[[ATTR18]] {
+; AKF_HSA-SAME: (float [[ARG:%.*]]) #[[ATTR17]] {
 ; AKF_HSA-NEXT:    [[F:%.*]] = call float @llvm.amdgcn.rcp.f32(float [[ARG]])
 ; AKF_HSA-NEXT:    [[FADD:%.*]] = fadd float [[F]], 1.000000e+00
 ; AKF_HSA-NEXT:    ret float [[FADD]]
@@ -834,14 +834,13 @@ attributes #3 = { nounwind }
 ; AKF_HSA: attributes #[[ATTR11]] = { nounwind "target-cpu"="fiji" "uniform-work-group-size"="false" }
 ; AKF_HSA: attributes #[[ATTR12]] = { nounwind "target-cpu"="gfx900" "uniform-work-group-size"="false" }
 ; AKF_HSA: attributes #[[ATTR13]] = { nounwind "amdgpu-queue-ptr" "target-cpu"="gfx900" "uniform-work-group-size"="false" }
-; AKF_HSA: attributes #[[ATTR14]] = { nounwind "amdgpu-kernarg-segment-ptr" "target-cpu"="fiji" "uniform-work-group-size"="false" }
-; AKF_HSA: attributes #[[ATTR15]] = { nounwind "amdgpu-implicitarg-ptr" "target-cpu"="fiji" }
-; AKF_HSA: attributes #[[ATTR16]] = { nounwind "amdgpu-implicitarg-ptr" "target-cpu"="fiji" "uniform-work-group-size"="false" }
-; AKF_HSA: attributes #[[ATTR17]] = { nounwind "uniform-work-group-size"="false" }
-; AKF_HSA: attributes #[[ATTR18]] = { nounwind }
-; AKF_HSA: attributes #[[ATTR19]] = { nounwind "amdgpu-calls" "uniform-work-group-size"="false" }
-; AKF_HSA: attributes #[[ATTR20]] = { nounwind "amdgpu-dispatch-id" "amdgpu-dispatch-ptr" "amdgpu-implicitarg-ptr" "amdgpu-queue-ptr" "amdgpu-work-group-id-x" "amdgpu-work-group-id-y" "amdgpu-work-group-id-z" "amdgpu-work-item-id-x" "amdgpu-work-item-id-y" "amdgpu-work-item-id-z" "target-cpu"="fiji" }
-; AKF_HSA: attributes #[[ATTR21]] = { nounwind "amdgpu-dispatch-id" "amdgpu-dispatch-ptr" "amdgpu-implicitarg-ptr" "amdgpu-queue-ptr" "amdgpu-work-group-id-x" "amdgpu-work-group-id-y" "amdgpu-work-group-id-z" "amdgpu-work-item-id-x" "amdgpu-work-item-id-y" "amdgpu-work-item-id-z" }
+; AKF_HSA: attributes #[[ATTR14]] = { nounwind "amdgpu-implicitarg-ptr" "target-cpu"="fiji" }
+; AKF_HSA: attributes #[[ATTR15]] = { nounwind "amdgpu-implicitarg-ptr" "target-cpu"="fiji" "uniform-work-group-size"="false" }
+; AKF_HSA: attributes #[[ATTR16]] = { nounwind "uniform-work-group-size"="false" }
+; AKF_HSA: attributes #[[ATTR17]] = { nounwind }
+; AKF_HSA: attributes #[[ATTR18]] = { nounwind "amdgpu-calls" "uniform-work-group-size"="false" }
+; AKF_HSA: attributes #[[ATTR19]] = { nounwind "amdgpu-dispatch-id" "amdgpu-dispatch-ptr" "amdgpu-implicitarg-ptr" "amdgpu-queue-ptr" "amdgpu-work-group-id-x" "amdgpu-work-group-id-y" "amdgpu-work-group-id-z" "amdgpu-work-item-id-x" "amdgpu-work-item-id-y" "amdgpu-work-item-id-z" "target-cpu"="fiji" }
+; AKF_HSA: attributes #[[ATTR20]] = { nounwind "amdgpu-dispatch-id" "amdgpu-dispatch-ptr" "amdgpu-implicitarg-ptr" "amdgpu-queue-ptr" "amdgpu-work-group-id-x" "amdgpu-work-group-id-y" "amdgpu-work-group-id-z" "amdgpu-work-item-id-x" "amdgpu-work-item-id-y" "amdgpu-work-item-id-z" }
 ;.
 ; ATTRIBUTOR_HSA: attributes #[[ATTR0:[0-9]+]] = { nounwind readnone speculatable willreturn }
 ; ATTRIBUTOR_HSA: attributes #[[ATTR1]] = { nounwind "target-cpu"="fiji" "uniform-work-group-size"="false" }
