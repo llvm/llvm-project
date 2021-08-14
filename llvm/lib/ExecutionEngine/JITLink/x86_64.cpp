@@ -38,8 +38,8 @@ const char *getEdgeKindName(Edge::Kind K) {
     return "BranchPCRel32";
   case BranchPCRel32ToPtrJumpStub:
     return "BranchPCRel32ToPtrJumpStub";
-  case BranchPCRel32ToPtrJumpStubRelaxable:
-    return "BranchPCRel32ToPtrJumpStubRelaxable";
+  case BranchPCRel32ToPtrJumpStubBypassable:
+    return "BranchPCRel32ToPtrJumpStubBypassable";
   case RequestGOTAndTransformToDelta32:
     return "RequestGOTAndTransformToDelta32";
   case RequestGOTAndTransformToDelta64:

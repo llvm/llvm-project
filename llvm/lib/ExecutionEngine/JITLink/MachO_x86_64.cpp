@@ -466,10 +466,10 @@ public:
     assert(E.getAddend() == 0 &&
            "BranchPCRel32 edge has unexpected addend value");
 
-    // Set the edge kind to BranchPCRel32ToPtrJumpStubRelaxable. We will use
+    // Set the edge kind to BranchPCRel32ToPtrJumpStubBypassable. We will use
     // this to check for stub optimization opportunities in the
     // optimizeMachO_x86_64_GOTAndStubs pass below.
-    E.setKind(x86_64::BranchPCRel32ToPtrJumpStubRelaxable);
+    E.setKind(x86_64::BranchPCRel32ToPtrJumpStubBypassable);
     E.setTarget(Stub);
   }
 
@@ -535,7 +535,7 @@ static Error optimizeMachO_x86_64_GOTAndStubs(LinkGraph &G) {
             dbgs() << "\n";
           });
         }
-      } else if (E.getKind() == x86_64::BranchPCRel32ToPtrJumpStubRelaxable) {
+      } else if (E.getKind() == x86_64::BranchPCRel32ToPtrJumpStubBypassable) {
         auto &StubBlock = E.getTarget().getBlock();
         assert(StubBlock.getSize() == sizeof(x86_64::PointerJumpStubContent) &&
                "Stub block should be stub sized");

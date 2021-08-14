@@ -132,7 +132,7 @@ enum EdgeKind_x86_64 : Edge::Kind {
   /// This edge kind has the same fixup expression as BranchPCRel32, but further
   /// identifies the call/branch as being to a pointer jump stub. For edges of
   /// this kind the jump stub should not be bypassed (use
-  /// BranchPCRel32ToPtrJumpStubRelaxable for that), but the pointer location
+  /// BranchPCRel32ToPtrJumpStubBypassable for that), but the pointer location
   /// target may be recorded to allow manipulation at runtime.
   ///
   /// Fixup expression:
@@ -148,7 +148,8 @@ enum EdgeKind_x86_64 : Edge::Kind {
   ///
   /// The edge kind has the same fixup expression as BranchPCRel32ToPtrJumpStub,
   /// but identifies the call/branch as being to a pointer jump stub that may be
-  /// bypassed if the ultimate target is within range of the fixup location.
+  /// bypassed with a direct jump to the ultimate target if the ultimate target
+  /// is within range of the fixup location.
   ///
   /// Fixup expression:
   ///   Fixup <- Target - Fixup + Addend - 4: int32
@@ -157,7 +158,7 @@ enum EdgeKind_x86_64 : Edge::Kind {
   ///   - The result of the fixup expression must fit into an int32, otherwise
   ///     an out-of-range error will be returned.
   ///
-  BranchPCRel32ToPtrJumpStubRelaxable,
+  BranchPCRel32ToPtrJumpStubBypassable,
 
   /// A GOT entry getter/constructor, transformed to Delta32 pointing at the GOT
   /// entry for the original target.
@@ -338,7 +339,7 @@ inline Error applyFixup(LinkGraph &G, Block &B, const Edge &E,
 
   case BranchPCRel32:
   case BranchPCRel32ToPtrJumpStub:
-  case BranchPCRel32ToPtrJumpStubRelaxable:
+  case BranchPCRel32ToPtrJumpStubBypassable:
   case PCRel32GOTLoadRelaxable:
   case PCRel32TLVPLoadRelaxable: {
     int64_t Value =
