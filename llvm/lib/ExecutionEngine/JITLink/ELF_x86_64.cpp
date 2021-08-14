@@ -54,7 +54,9 @@ public:
            E.getKind() == x86_64::RequestGOTAndTransformToDelta64 ||
            E.getKind() ==
                x86_64::RequestGOTAndTransformToPCRel32GOTLoadREXRelaxable ||
-           E.getKind() == x86_64::RequestGOTAndTransformToDelta64FromGOT;
+           E.getKind() == x86_64::RequestGOTAndTransformToDelta64FromGOT ||
+           E.getKind() ==
+               x86_64::RequestGOTAndTransformToPCRel32GOTLoadRelaxable;
   }
 
   Symbol &createGOTEntry(Symbol &Target) {
@@ -73,6 +75,9 @@ public:
     switch (E.getKind()) {
     case x86_64::RequestGOTAndTransformToPCRel32GOTLoadREXRelaxable:
       E.setKind(x86_64::PCRel32GOTLoadREXRelaxable);
+      break;
+    case x86_64::RequestGOTAndTransformToPCRel32GOTLoadRelaxable:
+      E.setKind(x86_64::PCRel32GOTLoadRelaxable);
       break;
     case x86_64::RequestGOTAndTransformToDelta64:
       E.setKind(x86_64::Delta64);
@@ -149,82 +154,6 @@ const uint8_t PerGraphGOTAndPLTStubsBuilder_ELF_x86_64::NullGOTEntryContent[8] =
 const uint8_t PerGraphGOTAndPLTStubsBuilder_ELF_x86_64::StubContent[6] = {
     0xFF, 0x25, 0x00, 0x00, 0x00, 0x00};
 
-static Error optimizeELF_x86_64_GOTAndStubs(LinkGraph &G) {
-  LLVM_DEBUG(dbgs() << "Optimizing GOT entries and stubs:\n");
-
-  for (auto *B : G.blocks())
-    for (auto &E : B->edges())
-      if (E.getKind() == x86_64::PCRel32GOTLoadREXRelaxable) {
-        // Replace GOT load with LEA only for MOVQ instructions.
-        constexpr uint8_t MOVQRIPRel[] = {0x48, 0x8b};
-        if (E.getOffset() < 3 ||
-            strncmp(B->getContent().data() + E.getOffset() - 3,
-                    reinterpret_cast<const char *>(MOVQRIPRel), 2) != 0)
-          continue;
-
-        auto &GOTBlock = E.getTarget().getBlock();
-        assert(GOTBlock.getSize() == G.getPointerSize() &&
-               "GOT entry block should be pointer sized");
-        assert(GOTBlock.edges_size() == 1 &&
-               "GOT entry should only have one outgoing edge");
-
-        auto &GOTTarget = GOTBlock.edges().begin()->getTarget();
-        JITTargetAddress EdgeAddr = B->getAddress() + E.getOffset();
-        JITTargetAddress TargetAddr = GOTTarget.getAddress();
-
-        int64_t Displacement = TargetAddr - EdgeAddr + 4;
-        if (Displacement >= std::numeric_limits<int32_t>::min() &&
-            Displacement <= std::numeric_limits<int32_t>::max()) {
-          // Change the edge kind as we don't go through GOT anymore. This is
-          // for formal correctness only. Technically, the two relocation kinds
-          // are resolved the same way.
-          E.setKind(x86_64::Delta32);
-          E.setTarget(GOTTarget);
-          E.setAddend(E.getAddend() - 4);
-          auto *BlockData = reinterpret_cast<uint8_t *>(
-              const_cast<char *>(B->getContent().data()));
-          BlockData[E.getOffset() - 2] = 0x8d;
-          LLVM_DEBUG({
-            dbgs() << "  Replaced GOT load wih LEA:\n    ";
-            printEdge(dbgs(), *B, E, getELFX86RelocationKindName(E.getKind()));
-            dbgs() << "\n";
-          });
-        }
-      } else if (E.getKind() == x86_64::BranchPCRel32ToPtrJumpStubBypassable) {
-        auto &StubBlock = E.getTarget().getBlock();
-        assert(
-            StubBlock.getSize() ==
-                sizeof(PerGraphGOTAndPLTStubsBuilder_ELF_x86_64::StubContent) &&
-            "Stub block should be stub sized");
-        assert(StubBlock.edges_size() == 1 &&
-               "Stub block should only have one outgoing edge");
-
-        auto &GOTBlock = StubBlock.edges().begin()->getTarget().getBlock();
-        assert(GOTBlock.getSize() == G.getPointerSize() &&
-               "GOT block should be pointer sized");
-        assert(GOTBlock.edges_size() == 1 &&
-               "GOT block should only have one outgoing edge");
-
-        auto &GOTTarget = GOTBlock.edges().begin()->getTarget();
-        JITTargetAddress EdgeAddr = B->getAddress() + E.getOffset();
-        JITTargetAddress TargetAddr = GOTTarget.getAddress();
-
-        int64_t Displacement = TargetAddr - EdgeAddr + 4;
-        if (Displacement >= std::numeric_limits<int32_t>::min() &&
-            Displacement <= std::numeric_limits<int32_t>::max()) {
-          E.setKind(x86_64::BranchPCRel32);
-          E.setTarget(GOTTarget);
-          LLVM_DEBUG({
-            dbgs() << "  Replaced stub branch with direct branch:\n    ";
-            printEdge(dbgs(), *B, E, getELFX86RelocationKindName(E.getKind()));
-            dbgs() << "\n";
-          });
-        }
-      }
-
-  return Error::success();
-}
-
 static const char *getELFX86_64RelocName(uint32_t Type) {
   switch (Type) {
 #define ELF_RELOC(Name, Number)                                                \
@@ -256,8 +185,9 @@ private:
       return ELF_x86_64_Edges::ELFX86RelocationKind::Pointer64;
     case ELF::R_X86_64_GOTPCREL:
     case ELF::R_X86_64_GOTPCRELX:
-    case ELF::R_X86_64_REX_GOTPCRELX:
       return ELF_x86_64_Edges::ELFX86RelocationKind::PCRel32GOTLoad;
+    case ELF::R_X86_64_REX_GOTPCRELX:
+      return ELF_x86_64_Edges::ELFX86RelocationKind::PCRel32REXGOTLoad;
     case ELF::R_X86_64_GOTPCREL64:
       return ELF_x86_64_Edges::ELFX86RelocationKind::PCRel64GOT;
     case ELF::R_X86_64_GOT64:
@@ -371,6 +301,11 @@ private:
           Kind = x86_64::Pointer64;
           break;
         case PCRel32GOTLoad: {
+          Kind = x86_64::RequestGOTAndTransformToPCRel32GOTLoadRelaxable;
+          Addend = 0;
+          break;
+        }
+        case PCRel32REXGOTLoad: {
           Kind = x86_64::RequestGOTAndTransformToPCRel32GOTLoadREXRelaxable;
           Addend = 0;
           break;
@@ -545,7 +480,7 @@ void link_ELF_x86_64(std::unique_ptr<LinkGraph> G,
             identifyELFSectionStartAndEndSymbols));
 
     // Add GOT/Stubs optimizer pass.
-    Config.PreFixupPasses.push_back(optimizeELF_x86_64_GOTAndStubs);
+    Config.PreFixupPasses.push_back(x86_64::optimize_x86_64_GOTAndStubs);
   }
 
   if (auto Err = Ctx->modifyPassConfig(*G, Config))
@@ -563,6 +498,8 @@ const char *getELFX86RelocationKindName(Edge::Kind R) {
     return "PCRel32";
   case PCRel32GOTLoad:
     return "PCRel32GOTLoad";
+  case PCRel32REXGOTLoad:
+    return "PCRel32REXGOTLoad";
   case PCRel64GOT:
     return "PCRel64GOT";
   case Delta64:
