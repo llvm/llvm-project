@@ -923,7 +923,7 @@ void PassBuilder::addPGOInstrPasses(ModulePassManager &MPM,
   FunctionPassManager FPM;
   // Disable header duplication in loop rotation at -Oz.
   FPM.addPass(createFunctionToLoopPassAdaptor(
-      LoopRotatePass(Level != OptimizationLevel::Oz), EnableMSSALoopDependency,
+      LoopRotatePass(Level != OptimizationLevel::Oz), /*UseMemorySSA=*/false,
       /*UseBlockFrequencyInfo=*/false));
   MPM.addPass(createModuleToFunctionPassAdaptor(std::move(FPM)));
 
@@ -1399,8 +1399,7 @@ PassBuilder::buildModuleOptimizationPipeline(OptimizationLevel Level,
   // Disable header duplication at -Oz.
   OptimizePM.addPass(createFunctionToLoopPassAdaptor(
       LoopRotatePass(Level != OptimizationLevel::Oz, LTOPreLink),
-      EnableMSSALoopDependency,
-      /*UseBlockFrequencyInfo=*/false));
+      /*UseMemorySSA=*/false, /*UseBlockFrequencyInfo=*/false));
 
   // Distribute loops to allow partial vectorization.  I.e. isolate dependences
   // into separate loop that would otherwise inhibit vectorization.  This is

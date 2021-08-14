@@ -134,7 +134,6 @@
 ; CHECK-O: Running pass: LoopSimplifyPass on main
 ; CHECK-O: Running analysis: LoopAnalysis on main
 ; CHECK-O: Running pass: LCSSAPass on main
-; CHECK-O: Running analysis: MemorySSAAnalysis on main
 ; CHECK-O: Running analysis: AAManager on main
 ; CHECK-O: Running analysis: BasicAA on main
 ; CHECK-O: Running analysis: ScalarEvolutionAnalysis on main
@@ -147,6 +146,7 @@
 ; CHECK-O: Running analysis: BranchProbabilityAnalysis on main
 ; CHECK-O: Running analysis: PostDominatorTreeAnalysis on main
 ; CHECK-O: Running analysis: DemandedBitsAnalysis on main
+; CHECK-O: Running analysis: MemorySSAAnalysis on main
 ; CHECK-O: Running pass: LoopLoadEliminationPass on main
 ; CHECK-O: Running pass: InstCombinePass on main
 ; CHECK-O: Running pass: SimplifyCFGPass on main
