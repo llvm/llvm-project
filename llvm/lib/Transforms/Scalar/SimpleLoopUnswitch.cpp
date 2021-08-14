@@ -3126,10 +3126,8 @@ public:
   void getAnalysisUsage(AnalysisUsage &AU) const override {
     AU.addRequired<AssumptionCacheTracker>();
     AU.addRequired<TargetTransformInfoWrapperPass>();
-    if (EnableMSSALoopDependency) {
-      AU.addRequired<MemorySSAWrapperPass>();
-      AU.addPreserved<MemorySSAWrapperPass>();
-    }
+    AU.addRequired<MemorySSAWrapperPass>();
+    AU.addPreserved<MemorySSAWrapperPass>();
     getLoopAnalysisUsage(AU);
   }
 };
@@ -3150,12 +3148,8 @@ bool SimpleLoopUnswitchLegacyPass::runOnLoop(Loop *L, LPPassManager &LPM) {
   auto &AC = getAnalysis<AssumptionCacheTracker>().getAssumptionCache(F);
   auto &AA = getAnalysis<AAResultsWrapperPass>().getAAResults();
   auto &TTI = getAnalysis<TargetTransformInfoWrapperPass>().getTTI(F);
-  MemorySSA *MSSA = nullptr;
-  Optional<MemorySSAUpdater> MSSAU;
-  if (EnableMSSALoopDependency) {
-    MSSA = &getAnalysis<MemorySSAWrapperPass>().getMSSA();
-    MSSAU = MemorySSAUpdater(MSSA);
-  }
+  MemorySSA *MSSA = &getAnalysis<MemorySSAWrapperPass>().getMSSA();
+  MemorySSAUpdater MSSAU(MSSA);
 
   auto *SEWP = getAnalysisIfAvailable<ScalarEvolutionWrapperPass>();
   auto *SE = SEWP ? &SEWP->getSE() : nullptr;
@@ -3179,14 +3173,13 @@ bool SimpleLoopUnswitchLegacyPass::runOnLoop(Loop *L, LPPassManager &LPM) {
       LPM.markLoopAsDeleted(*L);
   };
 
-  if (MSSA && VerifyMemorySSA)
+  if (VerifyMemorySSA)
     MSSA->verifyMemorySSA();
 
-  bool Changed =
-      unswitchLoop(*L, DT, LI, AC, AA, TTI, true, NonTrivial, UnswitchCB, SE,
-                   MSSAU.hasValue() ? MSSAU.getPointer() : nullptr);
+  bool Changed = unswitchLoop(*L, DT, LI, AC, AA, TTI, true, NonTrivial,
+                              UnswitchCB, SE, &MSSAU);
 
-  if (MSSA && VerifyMemorySSA)
+  if (VerifyMemorySSA)
     MSSA->verifyMemorySSA();
 
   // Historically this pass has had issues with the dominator tree so verify it

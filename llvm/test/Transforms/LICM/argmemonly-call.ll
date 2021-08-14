@@ -1,4 +1,3 @@
-; RUN: opt -S -basic-aa -licm -licm-n2-threshold=0 -enable-mssa-loop-dependency=false %s -enable-new-pm=0 | FileCheck %s
 ; RUN: opt -S -basic-aa -licm -licm-n2-threshold=0 -verify-memoryssa %s -enable-new-pm=0 | FileCheck %s --check-prefix=ALIAS-N2
 ; RUN: opt -licm -basic-aa -licm-n2-threshold=200 < %s -S -enable-new-pm=0 | FileCheck %s --check-prefix=ALIAS-N2
 
