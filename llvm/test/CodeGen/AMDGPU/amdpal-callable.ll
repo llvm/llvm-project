@@ -2,9 +2,6 @@
 ; RUN: llc -mtriple=amdgcn--amdpal -mcpu=gfx900 -verify-machineinstrs < %s | FileCheck -check-prefixes=GCN,SDAG,GFX9 -enable-var-scope %s
 ; RUN: llc -global-isel -mtriple=amdgcn--amdpal -mcpu=gfx900 -verify-machineinstrs < %s | FileCheck -check-prefixes=GCN,GISEL,GFX9 -enable-var-scope %s
 
-; Make sure this interacts well with -amdgpu-fixed-function-abi
-; RUN: llc -mtriple=amdgcn--amdpal -mcpu=gfx900 -amdgpu-fixed-function-abi -verify-machineinstrs < %s | FileCheck -check-prefixes=GCN,SDAG,GFX9 -enable-var-scope %s
-
 declare float @extern_func(float) #0
 declare float @extern_func_many_args(<64 x float>) #0
 
