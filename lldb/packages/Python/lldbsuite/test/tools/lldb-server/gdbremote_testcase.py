@@ -858,6 +858,7 @@ class GdbRemoteTestCaseBase(Base):
         "vfork-events",
         "memory-tagging",
         "qSaveCore",
+        "native-signals",
     ]
 
     def parse_qSupported_response(self, context):
