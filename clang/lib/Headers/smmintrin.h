@@ -871,7 +871,7 @@ _mm_max_epu32 (__m128i __V1, __m128i __V2)
 /* Miscellaneous insert and extract macros.  */
 /* Extract a single-precision float from X at index N into D.  */
 #define _MM_EXTRACT_FLOAT(D, X, N) \
-  { (D) = __builtin_ia32_vec_ext_v4sf((__v4sf)(__m128)(X), (int)(N)); }
+  do { (D) = __builtin_ia32_vec_ext_v4sf((__v4sf)(__m128)(X), (int)(N)); } while (0)
 
 /* Or together 2 sets of indexes (X and Y) with the zeroing bits (Z) to create
    an index suitable for _mm_insert_ps.  */
