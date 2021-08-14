@@ -23,81 +23,77 @@
 #include "mlir/IR/Types.h"
 #include "mlir/Interfaces/DataLayoutInterfaces.h"
 
-namespace mlir {
 namespace test {
 
 /// FieldInfo represents a field in the StructType data type. It is used as a
 /// parameter in TestTypeDefs.td.
 struct FieldInfo {
-  StringRef name;
-  Type type;
+  ::llvm::StringRef name;
+  ::mlir::Type type;
 
   // Custom allocation called from generated constructor code
-  FieldInfo allocateInto(TypeStorageAllocator &alloc) const {
+  FieldInfo allocateInto(::mlir::TypeStorageAllocator &alloc) const {
     return FieldInfo{alloc.copyInto(name), type};
   }
 };
 
 } // namespace test
-} // namespace mlir
 
 #include "TestTypeInterfaces.h.inc"
 
 #define GET_TYPEDEF_CLASSES
 #include "TestTypeDefs.h.inc"
 
-namespace mlir {
 namespace test {
 
 /// Storage for simple named recursive types, where the type is identified by
 /// its name and can "contain" another type, including itself.
-struct TestRecursiveTypeStorage : public TypeStorage {
-  using KeyTy = StringRef;
+struct TestRecursiveTypeStorage : public ::mlir::TypeStorage {
+  using KeyTy = ::llvm::StringRef;
 
-  explicit TestRecursiveTypeStorage(StringRef key) : name(key), body(Type()) {}
+  explicit TestRecursiveTypeStorage(::llvm::StringRef key) : name(key), body(::mlir::Type()) {}
 
   bool operator==(const KeyTy &other) const { return name == other; }
 
-  static TestRecursiveTypeStorage *construct(TypeStorageAllocator &allocator,
+  static TestRecursiveTypeStorage *construct(::mlir::TypeStorageAllocator &allocator,
                                              const KeyTy &key) {
     return new (allocator.allocate<TestRecursiveTypeStorage>())
         TestRecursiveTypeStorage(allocator.copyInto(key));
   }
 
-  LogicalResult mutate(TypeStorageAllocator &allocator, Type newBody) {
+  ::mlir::LogicalResult mutate(::mlir::TypeStorageAllocator &allocator, ::mlir::Type newBody) {
     // Cannot set a different body than before.
     if (body && body != newBody)
-      return failure();
+      return ::mlir::failure();
 
     body = newBody;
-    return success();
+    return ::mlir::success();
   }
 
-  StringRef name;
-  Type body;
+  ::llvm::StringRef name;
+  ::mlir::Type body;
 };
 
 /// Simple recursive type identified by its name and pointing to another named
 /// type, potentially itself. This requires the body to be mutated separately
 /// from type creation.
 class TestRecursiveType
-    : public Type::TypeBase<TestRecursiveType, Type, TestRecursiveTypeStorage> {
+    : public ::mlir::Type::TypeBase<TestRecursiveType, ::mlir::Type, TestRecursiveTypeStorage> {
 public:
   using Base::Base;
 
-  static TestRecursiveType get(MLIRContext *ctx, StringRef name) {
+  static TestRecursiveType get(::mlir::MLIRContext *ctx, ::llvm::StringRef name) {
     return Base::get(ctx, name);
   }
 
   /// Body getter and setter.
-  LogicalResult setBody(Type body) { return Base::mutate(body); }
-  Type getBody() { return getImpl()->body; }
+  ::mlir::LogicalResult setBody(Type body) { return Base::mutate(body); }
+  ::mlir::Type getBody() { return getImpl()->body; }
 
   /// Name/key getter.
-  StringRef getName() { return getImpl()->name; }
+  ::llvm::StringRef getName() { return getImpl()->name; }
 };
 
 } // namespace test
-} // namespace mlir
 
 #endif // MLIR_TESTTYPES_H

@@ -13,21 +13,21 @@ include "mlir/IR/OpBase.td"
 
 // DEF: #ifdef GET_ATTRDEF_LIST
 // DEF: #undef GET_ATTRDEF_LIST
-// DEF: ::mlir::test::SimpleAAttr,
-// DEF: ::mlir::test::CompoundAAttr,
-// DEF: ::mlir::test::IndexAttr,
-// DEF: ::mlir::test::SingleParameterAttr
+// DEF: ::test::SimpleAAttr,
+// DEF: ::test::CompoundAAttr,
+// DEF: ::test::IndexAttr,
+// DEF: ::test::SingleParameterAttr
 
 // DEF-LABEL: ::mlir::OptionalParseResult generatedAttributeParser(::mlir::MLIRContext *context,
 // DEF-NEXT: ::mlir::DialectAsmParser &parser,
 // DEF-NEXT: ::llvm::StringRef mnemonic, ::mlir::Type type,
 // DEF-NEXT: ::mlir::Attribute &value) {
-// DEF: if (mnemonic == ::mlir::test::CompoundAAttr::getMnemonic()) {
-// DEF-NEXT: value = ::mlir::test::CompoundAAttr::parse(context, parser, type);
+// DEF: if (mnemonic == ::test::CompoundAAttr::getMnemonic()) {
+// DEF-NEXT: value = ::test::CompoundAAttr::parse(context, parser, type);
 // DEF-NEXT: return ::mlir::success(!!value);
 // DEF-NEXT: }
-// DEF-NEXT: if (mnemonic == ::mlir::test::IndexAttr::getMnemonic()) {
-// DEF-NEXT:   value = ::mlir::test::IndexAttr::parse(context, parser, type);
+// DEF-NEXT: if (mnemonic == ::test::IndexAttr::getMnemonic()) {
+// DEF-NEXT:   value = ::test::IndexAttr::parse(context, parser, type);
 // DEF-NEXT:   return ::mlir::success(!!value);
 // DEF: return {};
 
@@ -35,7 +35,7 @@ def Test_Dialect: Dialect {
 // DECL-NOT: TestDialect
 // DEF-NOT: TestDialect
     let name = "TestDialect";
-    let cppNamespace = "::mlir::test";
+    let cppNamespace = "::test";
 }
 
 class TestAttr<string name> : AttrDef<Test_Dialect, name> { }
@@ -52,7 +52,7 @@ def B_CompoundAttrA : TestAttr<"CompoundA"> {
   let parameters = (
       ins
       "int":$widthOfSomething,
-      "::mlir::test::SimpleTypeA": $exampleTdType,
+      "::test::SimpleTypeA": $exampleTdType,
       APFloatParameter<"">: $apFloat,
       ArrayRefParameter<"int", "Matrix dimensions">:$dims,
       AttributeSelfTypeParameter<"">:$inner
@@ -61,8 +61,8 @@ def B_CompoundAttrA : TestAttr<"CompoundA"> {
   let genVerifyDecl = 1;
 
 // DECL-LABEL: class CompoundAAttr : public ::mlir::Attribute
-// DECL: static CompoundAAttr getChecked(llvm::function_ref<::mlir::InFlightDiagnostic()> emitError, ::mlir::MLIRContext *context, int widthOfSomething, ::mlir::test::SimpleTypeA exampleTdType, ::llvm::APFloat apFloat, ::llvm::ArrayRef<int> dims, ::mlir::Type inner);
-// DECL: static ::mlir::LogicalResult verify(::llvm::function_ref<::mlir::InFlightDiagnostic()> emitError, int widthOfSomething, ::mlir::test::SimpleTypeA exampleTdType, ::llvm::APFloat apFloat, ::llvm::ArrayRef<int> dims, ::mlir::Type inner);
+// DECL: static CompoundAAttr getChecked(llvm::function_ref<::mlir::InFlightDiagnostic()> emitError, ::mlir::MLIRContext *context, int widthOfSomething, ::test::SimpleTypeA exampleTdType, ::llvm::APFloat apFloat, ::llvm::ArrayRef<int> dims, ::mlir::Type inner);
+// DECL: static ::mlir::LogicalResult verify(::llvm::function_ref<::mlir::InFlightDiagnostic()> emitError, int widthOfSomething, ::test::SimpleTypeA exampleTdType, ::llvm::APFloat apFloat, ::llvm::ArrayRef<int> dims, ::mlir::Type inner);
 // DECL: static constexpr ::llvm::StringLiteral getMnemonic() {
 // DECL:   return ::llvm::StringLiteral("cmpnd_a");
 // DECL: }
@@ -70,7 +70,7 @@ def B_CompoundAttrA : TestAttr<"CompoundA"> {
 // DECL-NEXT: ::mlir::DialectAsmParser &parser, ::mlir::Type type);
 // DECL: void print(::mlir::DialectAsmPrinter &printer) const;
 // DECL: int getWidthOfSomething() const;
-// DECL: ::mlir::test::SimpleTypeA getExampleTdType() const;
+// DECL: ::test::SimpleTypeA getExampleTdType() const;
 // DECL: ::llvm::APFloat getApFloat() const;
 
 // Check that AttributeSelfTypeParameter is handled properly.
