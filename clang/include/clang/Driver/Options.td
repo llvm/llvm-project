@@ -1955,6 +1955,12 @@ defm bounds_safety : BoolFOption<
   BothFlags<[], [CC1Option],
           " experimental bounds safety extension for C">>;
 
+defm cir_warnings : BoolFOption<"cir-warnings",
+  LangOpts<"CIRWarnings">, DefaultFalse,
+  PosFlag<SetTrue, [], [ClangOption, CC1Option], "Use">,
+  NegFlag<SetFalse, [], [], "Don't use">,
+  BothFlags<[], [ClangOption, CC1Option], " CIR to emit (analysis based) warnings">>;
+
 defm addrsig : BoolFOption<"addrsig",
   CodeGenOpts<"Addrsig">, DefaultFalse,
   PosFlag<SetTrue, [], [ClangOption, CC1Option], "Emit">,

@@ -8095,6 +8095,10 @@ void Clang::ConstructJob(Compilation &C, const JobAction &JA,
     CmdArgs.push_back("-fmv");
   }
 
+  if (Args.hasFlag(options::OPT_fcir_warnings, options::OPT_fno_cir_warnings,
+                   false))
+    CmdArgs.push_back("-fcir-warnings");
+
   if (Args.hasFlag(options::OPT_faddrsig, options::OPT_fno_addrsig,
                    (TC.getTriple().isOSBinFormatELF() ||
                     TC.getTriple().isOSBinFormatCOFF()) &&

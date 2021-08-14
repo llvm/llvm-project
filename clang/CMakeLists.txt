@@ -166,6 +166,19 @@ if(CLANG_ENABLE_LIBXML2)
   endif()
 endif()
 
+set(CLANG_ENABLE_CIR FALSE)
+
+if(CLANG_ENABLE_CIR)
+  if (CLANG_BUILT_STANDALONE)
+    message(FATAL_ERROR
+      "ClangIR is not yet supported in the standalone build.")
+  endif()
+  if (NOT "${LLVM_ENABLE_PROJECTS}" MATCHES "MLIR|mlir")
+    message(FATAL_ERROR
+      "Cannot build ClangIR without MLIR in LLVM_ENABLE_PROJECTS")
+  endif()
+endif()
+
 include(CheckIncludeFile)
 check_include_file(sys/resource.h CLANG_HAVE_RLIMITS)
 
