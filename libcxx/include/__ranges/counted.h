@@ -36,7 +36,7 @@ _LIBCPP_BEGIN_NAMESPACE_STD
 
 #if !defined(_LIBCPP_HAS_NO_RANGES)
 
-namespace views {
+namespace ranges::views {
 
 namespace __counted {
   template<class _From, class _To>
@@ -88,7 +88,7 @@ inline namespace __cpo {
   inline constexpr auto counted = __counted::__fn{};
 } // namespace __cpo
 
-} // namespace views
+} // namespace ranges::views
 
 #endif // !defined(_LIBCPP_HAS_NO_RANGES)
 

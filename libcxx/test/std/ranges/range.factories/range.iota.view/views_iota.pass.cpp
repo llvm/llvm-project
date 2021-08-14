@@ -71,6 +71,9 @@ constexpr bool test() {
     static_assert( std::is_invocable_v<decltype(std::views::iota), int, int>);
     static_assert(!std::is_invocable_v<decltype(std::views::iota), int, X>);
   }
+  {
+    static_assert(std::same_as<decltype(std::views::iota), decltype(std::ranges::views::iota)>);
+  }
 
   return true;
 }
