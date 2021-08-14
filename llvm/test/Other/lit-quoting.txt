@@ -1,14 +1,14 @@
-RUN: echo "\"" | FileCheck %s --check-prefix=CHECK1
-RUN: echo '"' | FileCheck %s --check-prefix=CHECK1
-RUN: echo 'a[b\c' | FileCheck %s --check-prefix=CHECK2
-RUN: echo "a[b\\c" | FileCheck %s --check-prefix=CHECK2
-RUN: echo 'a\b\\c\\\\d' | FileCheck %s --check-prefix=CHECK3
-RUN: echo "a\\b\\\\c\\\\\\\\d" | FileCheck %s --check-prefix=CHECK3
+RUN: printf "%%s\n" "\"" | FileCheck %s --check-prefix=CHECK1
+RUN: printf "%%s\n" '"' | FileCheck %s --check-prefix=CHECK1
+RUN: printf "%%s\n" 'a[b\c' | FileCheck %s --check-prefix=CHECK2
+RUN: printf "%%s\n" "a[b\\c" | FileCheck %s --check-prefix=CHECK2
+RUN: printf "%%s\n" 'a\b\\c\\\\d' | FileCheck %s --check-prefix=CHECK3
+RUN: printf "%%s\n" "a\\b\\\\c\\\\\\\\d" | FileCheck %s --check-prefix=CHECK3
 CHECK1: {{^"$}}
 CHECK2: {{^a\[b\\c$}}
 CHECK3: {{^a\\b\\\\c\\\\\\\\d$}}
 
 On Windows, with MSYS based tools, the following commands fail though:
-RUNX: echo 'a[b\c\\d' | FileCheck %s --check-prefix=CHECK4
-RUNX: echo "a[b\\c\\\\d" | FileCheck %s --check-prefix=CHECK4
+RUNX: printf "%%s\n" 'a[b\c\\d' | FileCheck %s --check-prefix=CHECK4
+RUNX: printf "%%s\n" "a[b\\c\\\\d" | FileCheck %s --check-prefix=CHECK4
 CHECK4: {{^a\[b\\c\\\\d$}}
