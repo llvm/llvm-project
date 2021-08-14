@@ -1835,8 +1835,7 @@ void Verifier::verifyParameterAttrs(AttributeSet Attrs, Type *Ty,
 void Verifier::checkUnsignedBaseTenFuncAttr(AttributeList Attrs, StringRef Attr,
                                             const Value *V) {
   if (Attrs.hasFnAttr(Attr)) {
-    StringRef S = Attrs.getAttribute(AttributeList::FunctionIndex, Attr)
-                      .getValueAsString();
+    StringRef S = Attrs.getFnAttr(Attr).getValueAsString();
     unsigned N;
     if (S.getAsInteger(10, N))
       CheckFailed("\"" + Attr + "\" takes an unsigned integer: " + S, V);
@@ -2028,8 +2027,7 @@ void Verifier::verifyFunctionAttrs(FunctionType *FT, AttributeList Attrs,
   }
 
   if (Attrs.hasFnAttr("frame-pointer")) {
-    StringRef FP = Attrs.getAttribute(AttributeList::FunctionIndex,
-                                      "frame-pointer").getValueAsString();
+    StringRef FP = Attrs.getFnAttr("frame-pointer").getValueAsString();
     if (FP != "all" && FP != "non-leaf" && FP != "none")
       CheckFailed("invalid value for 'frame-pointer' attribute: " + FP, V);
   }
