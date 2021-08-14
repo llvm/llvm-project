@@ -433,17 +433,25 @@ void ProTypeMemberInitCheck::checkMissingMemberInitializer(
                [&](const FieldDecl *F) { OrderedFields.push_back(F); });
 
   // Collect all the fields we need to initialize, including indirect fields.
+  // It only includes fields that have not been fixed
   SmallPtrSet<const FieldDecl *, 16> AllFieldsToInit;
-  forEachField(ClassDecl, FieldsToInit,
-               [&](const FieldDecl *F) { AllFieldsToInit.insert(F); });
-  if (AllFieldsToInit.empty())
+  forEachField(ClassDecl, FieldsToInit, [&](const FieldDecl *F) {
+    if (!HasRecordClassMemberSet.contains(F)) {
+      AllFieldsToInit.insert(F);
+      HasRecordClassMemberSet.insert(F);
+    }
+  });
+  if (FieldsToInit.empty())
     return;
 
   DiagnosticBuilder Diag =
       diag(Ctor ? Ctor->getBeginLoc() : ClassDecl.getLocation(),
            "%select{|union }0constructor %select{does not|should}0 initialize "
            "%select{|one of }0these fields: %1")
-      << IsUnion << toCommaSeparatedString(OrderedFields, AllFieldsToInit);
+      << IsUnion << toCommaSeparatedString(OrderedFields, FieldsToInit);
+
+  if (AllFieldsToInit.empty())
+    return;
 
   // Do not propose fixes for constructors in macros since we cannot place them
   // correctly.
