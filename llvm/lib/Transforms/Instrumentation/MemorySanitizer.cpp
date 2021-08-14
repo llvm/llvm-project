@@ -3807,7 +3807,7 @@ struct MemorySanitizerVisitor : public InstVisitor<MemorySanitizerVisitor> {
     if (isAMustTailRetVal(RetVal)) return;
     Value *ShadowPtr = getShadowPtrForRetval(RetVal, IRB);
     bool HasNoUndef =
-        F.hasAttribute(AttributeList::ReturnIndex, Attribute::NoUndef);
+        F.hasRetAttribute(Attribute::NoUndef);
     bool StoreShadow = !(ClEagerChecks && HasNoUndef);
     // FIXME: Consider using SpecialCaseList to specify a list of functions that
     // must always return fully initialized values. For now, we hardcode "main".
