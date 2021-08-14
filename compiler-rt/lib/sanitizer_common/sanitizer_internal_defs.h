@@ -139,8 +139,13 @@ namespace __sanitizer {
 typedef unsigned long long uptr;
 typedef signed long long sptr;
 #else
+#  if (SANITIZER_WORDSIZE == 64)
 typedef unsigned long uptr;
 typedef signed long sptr;
+#  else
+typedef unsigned int uptr;
+typedef signed int sptr;
+#  endif
 #endif  // defined(_WIN64)
 #if defined(__x86_64__)
 // Since x32 uses ILP32 data model in 64-bit hardware mode, we must use
@@ -182,15 +187,17 @@ typedef uptr OFF_T;
 #endif
 typedef u64  OFF64_T;
 
-#if (SANITIZER_WORDSIZE == 64) || SANITIZER_MAC
+#if (SANITIZER_WORDSIZE == 64)
 typedef uptr operator_new_size_type;
 #else
-# if defined(__s390__) && !defined(__s390x__)
+#  if defined(__s390__) && !defined(__s390x__)
 // Special case: 31-bit s390 has unsigned long as size_t.
 typedef unsigned long operator_new_size_type;
-# else
+#  elif SANITIZER_MAC
+typedef unsigned long operator_new_size_type;
+#  else
 typedef u32 operator_new_size_type;
-# endif
+#  endif
 #endif
 
 typedef u64 tid_t;
