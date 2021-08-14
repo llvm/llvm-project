@@ -159,7 +159,7 @@ define void @mubuf_clause(<4 x i32> addrspace(5)* noalias nocapture readonly %ar
 ; GCN-LABEL: mubuf_clause:
 ; GCN:       ; %bb.0: ; %bb
 ; GCN-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GCN-NEXT:    v_and_b32_e32 v2, 0x3ff, v2
+; GCN-NEXT:    v_and_b32_e32 v2, 0x3ff, v31
 ; GCN-NEXT:    v_lshlrev_b32_e32 v2, 4, v2
 ; GCN-NEXT:    v_add_u32_e32 v0, v0, v2
 ; GCN-NEXT:    buffer_load_dword v3, v0, s[0:3], 0 offen offset:12
@@ -219,7 +219,7 @@ define void @mubuf_clause(<4 x i32> addrspace(5)* noalias nocapture readonly %ar
 ; GCN-SCRATCH:       ; %bb.0: ; %bb
 ; GCN-SCRATCH-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GCN-SCRATCH-NEXT:    s_waitcnt_vscnt null, 0x0
-; GCN-SCRATCH-NEXT:    v_and_b32_e32 v2, 0x3ff, v2
+; GCN-SCRATCH-NEXT:    v_and_b32_e32 v2, 0x3ff, v31
 ; GCN-SCRATCH-NEXT:    v_lshlrev_b32_e32 v18, 4, v2
 ; GCN-SCRATCH-NEXT:    v_add_nc_u32_e32 v0, v0, v18
 ; GCN-SCRATCH-NEXT:    s_clause 0x3

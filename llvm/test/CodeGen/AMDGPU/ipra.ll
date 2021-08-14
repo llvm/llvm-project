@@ -106,4 +106,4 @@ define void @test_funcx2() #0 {
 }
 
 attributes #0 = { nounwind }
-attributes #1 = { nounwind noinline }
+attributes #1 = { nounwind noinline "amdgpu-no-workitem-id-x" "amdgpu-no-workitem-id-y" "amdgpu-no-workitem-id-z" }

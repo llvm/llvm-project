@@ -499,50 +499,52 @@ define <4 x double> @test_f64_add_mul(<4 x double> %a, <4 x double> %b, <4 x dou
 ; GFX9-CONTRACT-LABEL: test_f64_add_mul:
 ; GFX9-CONTRACT:       ; %bb.0: ; %.entry
 ; GFX9-CONTRACT-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX9-CONTRACT-NEXT:    buffer_load_dword v32, off, s[0:3], s32
-; GFX9-CONTRACT-NEXT:    buffer_load_dword v33, off, s[0:3], s32 offset:4
-; GFX9-CONTRACT-NEXT:    buffer_load_dword v34, off, s[0:3], s32 offset:8
-; GFX9-CONTRACT-NEXT:    buffer_load_dword v35, off, s[0:3], s32 offset:12
-; GFX9-CONTRACT-NEXT:    buffer_load_dword v36, off, s[0:3], s32 offset:16
-; GFX9-CONTRACT-NEXT:    buffer_load_dword v37, off, s[0:3], s32 offset:20
-; GFX9-CONTRACT-NEXT:    buffer_load_dword v38, off, s[0:3], s32 offset:24
-; GFX9-CONTRACT-NEXT:    buffer_load_dword v39, off, s[0:3], s32 offset:28
-; GFX9-CONTRACT-NEXT:    s_waitcnt vmcnt(6)
-; GFX9-CONTRACT-NEXT:    v_fma_f64 v[16:17], v[16:17], v[24:25], v[32:33]
-; GFX9-CONTRACT-NEXT:    s_waitcnt vmcnt(4)
-; GFX9-CONTRACT-NEXT:    v_fma_f64 v[18:19], v[18:19], v[26:27], v[34:35]
-; GFX9-CONTRACT-NEXT:    s_waitcnt vmcnt(2)
-; GFX9-CONTRACT-NEXT:    v_fma_f64 v[20:21], v[20:21], v[28:29], v[36:37]
-; GFX9-CONTRACT-NEXT:    s_waitcnt vmcnt(0)
-; GFX9-CONTRACT-NEXT:    v_fma_f64 v[22:23], v[22:23], v[30:31], v[38:39]
+; GFX9-CONTRACT-NEXT:    buffer_load_dword v31, off, s[0:3], s32 offset:4
+; GFX9-CONTRACT-NEXT:    buffer_load_dword v32, off, s[0:3], s32 offset:8
+; GFX9-CONTRACT-NEXT:    buffer_load_dword v33, off, s[0:3], s32 offset:12
+; GFX9-CONTRACT-NEXT:    buffer_load_dword v34, off, s[0:3], s32 offset:16
+; GFX9-CONTRACT-NEXT:    buffer_load_dword v35, off, s[0:3], s32 offset:20
+; GFX9-CONTRACT-NEXT:    buffer_load_dword v36, off, s[0:3], s32 offset:24
+; GFX9-CONTRACT-NEXT:    buffer_load_dword v37, off, s[0:3], s32 offset:28
+; GFX9-CONTRACT-NEXT:    s_waitcnt vmcnt(5)
+; GFX9-CONTRACT-NEXT:    v_fma_f64 v[16:17], v[16:17], v[24:25], v[31:32]
+; GFX9-CONTRACT-NEXT:    buffer_load_dword v31, off, s[0:3], s32
+; GFX9-CONTRACT-NEXT:    buffer_load_dword v38, off, s[0:3], s32 offset:32
+; GFX9-CONTRACT-NEXT:    s_waitcnt vmcnt(5)
+; GFX9-CONTRACT-NEXT:    v_fma_f64 v[18:19], v[18:19], v[26:27], v[33:34]
+; GFX9-CONTRACT-NEXT:    s_waitcnt vmcnt(3)
+; GFX9-CONTRACT-NEXT:    v_fma_f64 v[20:21], v[20:21], v[28:29], v[35:36]
 ; GFX9-CONTRACT-NEXT:    v_fma_f64 v[0:1], v[0:1], v[8:9], v[16:17]
 ; GFX9-CONTRACT-NEXT:    v_fma_f64 v[2:3], v[2:3], v[10:11], v[18:19]
 ; GFX9-CONTRACT-NEXT:    v_fma_f64 v[4:5], v[4:5], v[12:13], v[20:21]
+; GFX9-CONTRACT-NEXT:    s_waitcnt vmcnt(0)
+; GFX9-CONTRACT-NEXT:    v_fma_f64 v[22:23], v[22:23], v[30:31], v[37:38]
 ; GFX9-CONTRACT-NEXT:    v_fma_f64 v[6:7], v[6:7], v[14:15], v[22:23]
 ; GFX9-CONTRACT-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX9-DENORM-LABEL: test_f64_add_mul:
 ; GFX9-DENORM:       ; %bb.0: ; %.entry
 ; GFX9-DENORM-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX9-DENORM-NEXT:    buffer_load_dword v32, off, s[0:3], s32
-; GFX9-DENORM-NEXT:    buffer_load_dword v33, off, s[0:3], s32 offset:4
-; GFX9-DENORM-NEXT:    buffer_load_dword v34, off, s[0:3], s32 offset:8
-; GFX9-DENORM-NEXT:    buffer_load_dword v35, off, s[0:3], s32 offset:12
-; GFX9-DENORM-NEXT:    buffer_load_dword v36, off, s[0:3], s32 offset:16
-; GFX9-DENORM-NEXT:    buffer_load_dword v37, off, s[0:3], s32 offset:20
-; GFX9-DENORM-NEXT:    buffer_load_dword v38, off, s[0:3], s32 offset:24
-; GFX9-DENORM-NEXT:    buffer_load_dword v39, off, s[0:3], s32 offset:28
-; GFX9-DENORM-NEXT:    s_waitcnt vmcnt(6)
-; GFX9-DENORM-NEXT:    v_fma_f64 v[16:17], v[16:17], v[24:25], v[32:33]
-; GFX9-DENORM-NEXT:    s_waitcnt vmcnt(4)
-; GFX9-DENORM-NEXT:    v_fma_f64 v[18:19], v[18:19], v[26:27], v[34:35]
-; GFX9-DENORM-NEXT:    s_waitcnt vmcnt(2)
-; GFX9-DENORM-NEXT:    v_fma_f64 v[20:21], v[20:21], v[28:29], v[36:37]
-; GFX9-DENORM-NEXT:    s_waitcnt vmcnt(0)
-; GFX9-DENORM-NEXT:    v_fma_f64 v[22:23], v[22:23], v[30:31], v[38:39]
+; GFX9-DENORM-NEXT:    buffer_load_dword v31, off, s[0:3], s32 offset:4
+; GFX9-DENORM-NEXT:    buffer_load_dword v32, off, s[0:3], s32 offset:8
+; GFX9-DENORM-NEXT:    buffer_load_dword v33, off, s[0:3], s32 offset:12
+; GFX9-DENORM-NEXT:    buffer_load_dword v34, off, s[0:3], s32 offset:16
+; GFX9-DENORM-NEXT:    buffer_load_dword v35, off, s[0:3], s32 offset:20
+; GFX9-DENORM-NEXT:    buffer_load_dword v36, off, s[0:3], s32 offset:24
+; GFX9-DENORM-NEXT:    buffer_load_dword v37, off, s[0:3], s32 offset:28
+; GFX9-DENORM-NEXT:    s_waitcnt vmcnt(5)
+; GFX9-DENORM-NEXT:    v_fma_f64 v[16:17], v[16:17], v[24:25], v[31:32]
+; GFX9-DENORM-NEXT:    buffer_load_dword v31, off, s[0:3], s32
+; GFX9-DENORM-NEXT:    buffer_load_dword v38, off, s[0:3], s32 offset:32
+; GFX9-DENORM-NEXT:    s_waitcnt vmcnt(5)
+; GFX9-DENORM-NEXT:    v_fma_f64 v[18:19], v[18:19], v[26:27], v[33:34]
+; GFX9-DENORM-NEXT:    s_waitcnt vmcnt(3)
+; GFX9-DENORM-NEXT:    v_fma_f64 v[20:21], v[20:21], v[28:29], v[35:36]
 ; GFX9-DENORM-NEXT:    v_fma_f64 v[0:1], v[0:1], v[8:9], v[16:17]
 ; GFX9-DENORM-NEXT:    v_fma_f64 v[2:3], v[2:3], v[10:11], v[18:19]
 ; GFX9-DENORM-NEXT:    v_fma_f64 v[4:5], v[4:5], v[12:13], v[20:21]
+; GFX9-DENORM-NEXT:    s_waitcnt vmcnt(0)
+; GFX9-DENORM-NEXT:    v_fma_f64 v[22:23], v[22:23], v[30:31], v[37:38]
 ; GFX9-DENORM-NEXT:    v_fma_f64 v[6:7], v[6:7], v[14:15], v[22:23]
 ; GFX9-DENORM-NEXT:    s_setpc_b64 s[30:31]
 ;
@@ -550,15 +552,16 @@ define <4 x double> @test_f64_add_mul(<4 x double> %a, <4 x double> %b, <4 x dou
 ; GFX10-CONTRACT:       ; %bb.0: ; %.entry
 ; GFX10-CONTRACT-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX10-CONTRACT-NEXT:    s_waitcnt_vscnt null, 0x0
-; GFX10-CONTRACT-NEXT:    s_clause 0x7
-; GFX10-CONTRACT-NEXT:    buffer_load_dword v32, off, s[0:3], s32
-; GFX10-CONTRACT-NEXT:    buffer_load_dword v33, off, s[0:3], s32 offset:4
-; GFX10-CONTRACT-NEXT:    buffer_load_dword v34, off, s[0:3], s32 offset:8
-; GFX10-CONTRACT-NEXT:    buffer_load_dword v35, off, s[0:3], s32 offset:12
-; GFX10-CONTRACT-NEXT:    buffer_load_dword v36, off, s[0:3], s32 offset:16
-; GFX10-CONTRACT-NEXT:    buffer_load_dword v37, off, s[0:3], s32 offset:20
-; GFX10-CONTRACT-NEXT:    buffer_load_dword v38, off, s[0:3], s32 offset:24
-; GFX10-CONTRACT-NEXT:    buffer_load_dword v39, off, s[0:3], s32 offset:28
+; GFX10-CONTRACT-NEXT:    s_clause 0x8
+; GFX10-CONTRACT-NEXT:    buffer_load_dword v31, off, s[0:3], s32
+; GFX10-CONTRACT-NEXT:    buffer_load_dword v32, off, s[0:3], s32 offset:4
+; GFX10-CONTRACT-NEXT:    buffer_load_dword v33, off, s[0:3], s32 offset:8
+; GFX10-CONTRACT-NEXT:    buffer_load_dword v34, off, s[0:3], s32 offset:12
+; GFX10-CONTRACT-NEXT:    buffer_load_dword v35, off, s[0:3], s32 offset:16
+; GFX10-CONTRACT-NEXT:    buffer_load_dword v36, off, s[0:3], s32 offset:20
+; GFX10-CONTRACT-NEXT:    buffer_load_dword v37, off, s[0:3], s32 offset:24
+; GFX10-CONTRACT-NEXT:    buffer_load_dword v38, off, s[0:3], s32 offset:28
+; GFX10-CONTRACT-NEXT:    buffer_load_dword v39, off, s[0:3], s32 offset:32
 ; GFX10-CONTRACT-NEXT:    s_waitcnt vmcnt(6)
 ; GFX10-CONTRACT-NEXT:    v_fma_f64 v[16:17], v[16:17], v[24:25], v[32:33]
 ; GFX10-CONTRACT-NEXT:    s_waitcnt vmcnt(4)
@@ -577,15 +580,16 @@ define <4 x double> @test_f64_add_mul(<4 x double> %a, <4 x double> %b, <4 x dou
 ; GFX10-DENORM:       ; %bb.0: ; %.entry
 ; GFX10-DENORM-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX10-DENORM-NEXT:    s_waitcnt_vscnt null, 0x0
-; GFX10-DENORM-NEXT:    s_clause 0x7
-; GFX10-DENORM-NEXT:    buffer_load_dword v32, off, s[0:3], s32
-; GFX10-DENORM-NEXT:    buffer_load_dword v33, off, s[0:3], s32 offset:4
-; GFX10-DENORM-NEXT:    buffer_load_dword v34, off, s[0:3], s32 offset:8
-; GFX10-DENORM-NEXT:    buffer_load_dword v35, off, s[0:3], s32 offset:12
-; GFX10-DENORM-NEXT:    buffer_load_dword v36, off, s[0:3], s32 offset:16
-; GFX10-DENORM-NEXT:    buffer_load_dword v37, off, s[0:3], s32 offset:20
-; GFX10-DENORM-NEXT:    buffer_load_dword v38, off, s[0:3], s32 offset:24
-; GFX10-DENORM-NEXT:    buffer_load_dword v39, off, s[0:3], s32 offset:28
+; GFX10-DENORM-NEXT:    s_clause 0x8
+; GFX10-DENORM-NEXT:    buffer_load_dword v31, off, s[0:3], s32
+; GFX10-DENORM-NEXT:    buffer_load_dword v32, off, s[0:3], s32 offset:4
+; GFX10-DENORM-NEXT:    buffer_load_dword v33, off, s[0:3], s32 offset:8
+; GFX10-DENORM-NEXT:    buffer_load_dword v34, off, s[0:3], s32 offset:12
+; GFX10-DENORM-NEXT:    buffer_load_dword v35, off, s[0:3], s32 offset:16
+; GFX10-DENORM-NEXT:    buffer_load_dword v36, off, s[0:3], s32 offset:20
+; GFX10-DENORM-NEXT:    buffer_load_dword v37, off, s[0:3], s32 offset:24
+; GFX10-DENORM-NEXT:    buffer_load_dword v38, off, s[0:3], s32 offset:28
+; GFX10-DENORM-NEXT:    buffer_load_dword v39, off, s[0:3], s32 offset:32
 ; GFX10-DENORM-NEXT:    s_waitcnt vmcnt(6)
 ; GFX10-DENORM-NEXT:    v_fma_f64 v[16:17], v[16:17], v[24:25], v[32:33]
 ; GFX10-DENORM-NEXT:    s_waitcnt vmcnt(4)
@@ -610,50 +614,52 @@ define <4 x double> @test_f64_add_mul_rhs(<4 x double> %a, <4 x double> %b, <4 x
 ; GFX9-CONTRACT-LABEL: test_f64_add_mul_rhs:
 ; GFX9-CONTRACT:       ; %bb.0: ; %.entry
 ; GFX9-CONTRACT-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX9-CONTRACT-NEXT:    buffer_load_dword v32, off, s[0:3], s32
-; GFX9-CONTRACT-NEXT:    buffer_load_dword v33, off, s[0:3], s32 offset:4
-; GFX9-CONTRACT-NEXT:    buffer_load_dword v34, off, s[0:3], s32 offset:8
-; GFX9-CONTRACT-NEXT:    buffer_load_dword v35, off, s[0:3], s32 offset:12
-; GFX9-CONTRACT-NEXT:    buffer_load_dword v36, off, s[0:3], s32 offset:16
-; GFX9-CONTRACT-NEXT:    buffer_load_dword v37, off, s[0:3], s32 offset:20
-; GFX9-CONTRACT-NEXT:    buffer_load_dword v38, off, s[0:3], s32 offset:24
-; GFX9-CONTRACT-NEXT:    buffer_load_dword v39, off, s[0:3], s32 offset:28
-; GFX9-CONTRACT-NEXT:    s_waitcnt vmcnt(6)
-; GFX9-CONTRACT-NEXT:    v_fma_f64 v[16:17], v[16:17], v[24:25], v[32:33]
-; GFX9-CONTRACT-NEXT:    s_waitcnt vmcnt(4)
-; GFX9-CONTRACT-NEXT:    v_fma_f64 v[18:19], v[18:19], v[26:27], v[34:35]
-; GFX9-CONTRACT-NEXT:    s_waitcnt vmcnt(2)
-; GFX9-CONTRACT-NEXT:    v_fma_f64 v[20:21], v[20:21], v[28:29], v[36:37]
-; GFX9-CONTRACT-NEXT:    s_waitcnt vmcnt(0)
-; GFX9-CONTRACT-NEXT:    v_fma_f64 v[22:23], v[22:23], v[30:31], v[38:39]
+; GFX9-CONTRACT-NEXT:    buffer_load_dword v31, off, s[0:3], s32 offset:4
+; GFX9-CONTRACT-NEXT:    buffer_load_dword v32, off, s[0:3], s32 offset:8
+; GFX9-CONTRACT-NEXT:    buffer_load_dword v33, off, s[0:3], s32 offset:12
+; GFX9-CONTRACT-NEXT:    buffer_load_dword v34, off, s[0:3], s32 offset:16
+; GFX9-CONTRACT-NEXT:    buffer_load_dword v35, off, s[0:3], s32 offset:20
+; GFX9-CONTRACT-NEXT:    buffer_load_dword v36, off, s[0:3], s32 offset:24
+; GFX9-CONTRACT-NEXT:    buffer_load_dword v37, off, s[0:3], s32 offset:28
+; GFX9-CONTRACT-NEXT:    s_waitcnt vmcnt(5)
+; GFX9-CONTRACT-NEXT:    v_fma_f64 v[16:17], v[16:17], v[24:25], v[31:32]
+; GFX9-CONTRACT-NEXT:    buffer_load_dword v31, off, s[0:3], s32
+; GFX9-CONTRACT-NEXT:    buffer_load_dword v38, off, s[0:3], s32 offset:32
+; GFX9-CONTRACT-NEXT:    s_waitcnt vmcnt(5)
+; GFX9-CONTRACT-NEXT:    v_fma_f64 v[18:19], v[18:19], v[26:27], v[33:34]
+; GFX9-CONTRACT-NEXT:    s_waitcnt vmcnt(3)
+; GFX9-CONTRACT-NEXT:    v_fma_f64 v[20:21], v[20:21], v[28:29], v[35:36]
 ; GFX9-CONTRACT-NEXT:    v_fma_f64 v[0:1], v[0:1], v[8:9], v[16:17]
 ; GFX9-CONTRACT-NEXT:    v_fma_f64 v[2:3], v[2:3], v[10:11], v[18:19]
 ; GFX9-CONTRACT-NEXT:    v_fma_f64 v[4:5], v[4:5], v[12:13], v[20:21]
+; GFX9-CONTRACT-NEXT:    s_waitcnt vmcnt(0)
+; GFX9-CONTRACT-NEXT:    v_fma_f64 v[22:23], v[22:23], v[30:31], v[37:38]
 ; GFX9-CONTRACT-NEXT:    v_fma_f64 v[6:7], v[6:7], v[14:15], v[22:23]
 ; GFX9-CONTRACT-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX9-DENORM-LABEL: test_f64_add_mul_rhs:
 ; GFX9-DENORM:       ; %bb.0: ; %.entry
 ; GFX9-DENORM-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX9-DENORM-NEXT:    buffer_load_dword v32, off, s[0:3], s32
-; GFX9-DENORM-NEXT:    buffer_load_dword v33, off, s[0:3], s32 offset:4
-; GFX9-DENORM-NEXT:    buffer_load_dword v34, off, s[0:3], s32 offset:8
-; GFX9-DENORM-NEXT:    buffer_load_dword v35, off, s[0:3], s32 offset:12
-; GFX9-DENORM-NEXT:    buffer_load_dword v36, off, s[0:3], s32 offset:16
-; GFX9-DENORM-NEXT:    buffer_load_dword v37, off, s[0:3], s32 offset:20
-; GFX9-DENORM-NEXT:    buffer_load_dword v38, off, s[0:3], s32 offset:24
-; GFX9-DENORM-NEXT:    buffer_load_dword v39, off, s[0:3], s32 offset:28
-; GFX9-DENORM-NEXT:    s_waitcnt vmcnt(6)
-; GFX9-DENORM-NEXT:    v_fma_f64 v[16:17], v[16:17], v[24:25], v[32:33]
-; GFX9-DENORM-NEXT:    s_waitcnt vmcnt(4)
-; GFX9-DENORM-NEXT:    v_fma_f64 v[18:19], v[18:19], v[26:27], v[34:35]
-; GFX9-DENORM-NEXT:    s_waitcnt vmcnt(2)
-; GFX9-DENORM-NEXT:    v_fma_f64 v[20:21], v[20:21], v[28:29], v[36:37]
-; GFX9-DENORM-NEXT:    s_waitcnt vmcnt(0)
-; GFX9-DENORM-NEXT:    v_fma_f64 v[22:23], v[22:23], v[30:31], v[38:39]
+; GFX9-DENORM-NEXT:    buffer_load_dword v31, off, s[0:3], s32 offset:4
+; GFX9-DENORM-NEXT:    buffer_load_dword v32, off, s[0:3], s32 offset:8
+; GFX9-DENORM-NEXT:    buffer_load_dword v33, off, s[0:3], s32 offset:12
+; GFX9-DENORM-NEXT:    buffer_load_dword v34, off, s[0:3], s32 offset:16
+; GFX9-DENORM-NEXT:    buffer_load_dword v35, off, s[0:3], s32 offset:20
+; GFX9-DENORM-NEXT:    buffer_load_dword v36, off, s[0:3], s32 offset:24
+; GFX9-DENORM-NEXT:    buffer_load_dword v37, off, s[0:3], s32 offset:28
+; GFX9-DENORM-NEXT:    s_waitcnt vmcnt(5)
+; GFX9-DENORM-NEXT:    v_fma_f64 v[16:17], v[16:17], v[24:25], v[31:32]
+; GFX9-DENORM-NEXT:    buffer_load_dword v31, off, s[0:3], s32
+; GFX9-DENORM-NEXT:    buffer_load_dword v38, off, s[0:3], s32 offset:32
+; GFX9-DENORM-NEXT:    s_waitcnt vmcnt(5)
+; GFX9-DENORM-NEXT:    v_fma_f64 v[18:19], v[18:19], v[26:27], v[33:34]
+; GFX9-DENORM-NEXT:    s_waitcnt vmcnt(3)
+; GFX9-DENORM-NEXT:    v_fma_f64 v[20:21], v[20:21], v[28:29], v[35:36]
 ; GFX9-DENORM-NEXT:    v_fma_f64 v[0:1], v[0:1], v[8:9], v[16:17]
 ; GFX9-DENORM-NEXT:    v_fma_f64 v[2:3], v[2:3], v[10:11], v[18:19]
 ; GFX9-DENORM-NEXT:    v_fma_f64 v[4:5], v[4:5], v[12:13], v[20:21]
+; GFX9-DENORM-NEXT:    s_waitcnt vmcnt(0)
+; GFX9-DENORM-NEXT:    v_fma_f64 v[22:23], v[22:23], v[30:31], v[37:38]
 ; GFX9-DENORM-NEXT:    v_fma_f64 v[6:7], v[6:7], v[14:15], v[22:23]
 ; GFX9-DENORM-NEXT:    s_setpc_b64 s[30:31]
 ;
@@ -661,15 +667,16 @@ define <4 x double> @test_f64_add_mul_rhs(<4 x double> %a, <4 x double> %b, <4 x
 ; GFX10-CONTRACT:       ; %bb.0: ; %.entry
 ; GFX10-CONTRACT-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX10-CONTRACT-NEXT:    s_waitcnt_vscnt null, 0x0
-; GFX10-CONTRACT-NEXT:    s_clause 0x7
-; GFX10-CONTRACT-NEXT:    buffer_load_dword v32, off, s[0:3], s32
-; GFX10-CONTRACT-NEXT:    buffer_load_dword v33, off, s[0:3], s32 offset:4
-; GFX10-CONTRACT-NEXT:    buffer_load_dword v34, off, s[0:3], s32 offset:8
-; GFX10-CONTRACT-NEXT:    buffer_load_dword v35, off, s[0:3], s32 offset:12
-; GFX10-CONTRACT-NEXT:    buffer_load_dword v36, off, s[0:3], s32 offset:16
-; GFX10-CONTRACT-NEXT:    buffer_load_dword v37, off, s[0:3], s32 offset:20
-; GFX10-CONTRACT-NEXT:    buffer_load_dword v38, off, s[0:3], s32 offset:24
-; GFX10-CONTRACT-NEXT:    buffer_load_dword v39, off, s[0:3], s32 offset:28
+; GFX10-CONTRACT-NEXT:    s_clause 0x8
+; GFX10-CONTRACT-NEXT:    buffer_load_dword v31, off, s[0:3], s32
+; GFX10-CONTRACT-NEXT:    buffer_load_dword v32, off, s[0:3], s32 offset:4
+; GFX10-CONTRACT-NEXT:    buffer_load_dword v33, off, s[0:3], s32 offset:8
+; GFX10-CONTRACT-NEXT:    buffer_load_dword v34, off, s[0:3], s32 offset:12
+; GFX10-CONTRACT-NEXT:    buffer_load_dword v35, off, s[0:3], s32 offset:16
+; GFX10-CONTRACT-NEXT:    buffer_load_dword v36, off, s[0:3], s32 offset:20
+; GFX10-CONTRACT-NEXT:    buffer_load_dword v37, off, s[0:3], s32 offset:24
+; GFX10-CONTRACT-NEXT:    buffer_load_dword v38, off, s[0:3], s32 offset:28
+; GFX10-CONTRACT-NEXT:    buffer_load_dword v39, off, s[0:3], s32 offset:32
 ; GFX10-CONTRACT-NEXT:    s_waitcnt vmcnt(6)
 ; GFX10-CONTRACT-NEXT:    v_fma_f64 v[16:17], v[16:17], v[24:25], v[32:33]
 ; GFX10-CONTRACT-NEXT:    s_waitcnt vmcnt(4)
@@ -688,15 +695,16 @@ define <4 x double> @test_f64_add_mul_rhs(<4 x double> %a, <4 x double> %b, <4 x
 ; GFX10-DENORM:       ; %bb.0: ; %.entry
 ; GFX10-DENORM-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX10-DENORM-NEXT:    s_waitcnt_vscnt null, 0x0
-; GFX10-DENORM-NEXT:    s_clause 0x7
-; GFX10-DENORM-NEXT:    buffer_load_dword v32, off, s[0:3], s32
-; GFX10-DENORM-NEXT:    buffer_load_dword v33, off, s[0:3], s32 offset:4
-; GFX10-DENORM-NEXT:    buffer_load_dword v34, off, s[0:3], s32 offset:8
-; GFX10-DENORM-NEXT:    buffer_load_dword v35, off, s[0:3], s32 offset:12
-; GFX10-DENORM-NEXT:    buffer_load_dword v36, off, s[0:3], s32 offset:16
-; GFX10-DENORM-NEXT:    buffer_load_dword v37, off, s[0:3], s32 offset:20
-; GFX10-DENORM-NEXT:    buffer_load_dword v38, off, s[0:3], s32 offset:24
-; GFX10-DENORM-NEXT:    buffer_load_dword v39, off, s[0:3], s32 offset:28
+; GFX10-DENORM-NEXT:    s_clause 0x8
+; GFX10-DENORM-NEXT:    buffer_load_dword v31, off, s[0:3], s32
+; GFX10-DENORM-NEXT:    buffer_load_dword v32, off, s[0:3], s32 offset:4
+; GFX10-DENORM-NEXT:    buffer_load_dword v33, off, s[0:3], s32 offset:8
+; GFX10-DENORM-NEXT:    buffer_load_dword v34, off, s[0:3], s32 offset:12
+; GFX10-DENORM-NEXT:    buffer_load_dword v35, off, s[0:3], s32 offset:16
+; GFX10-DENORM-NEXT:    buffer_load_dword v36, off, s[0:3], s32 offset:20
+; GFX10-DENORM-NEXT:    buffer_load_dword v37, off, s[0:3], s32 offset:24
+; GFX10-DENORM-NEXT:    buffer_load_dword v38, off, s[0:3], s32 offset:28
+; GFX10-DENORM-NEXT:    buffer_load_dword v39, off, s[0:3], s32 offset:32
 ; GFX10-DENORM-NEXT:    s_waitcnt vmcnt(6)
 ; GFX10-DENORM-NEXT:    v_fma_f64 v[16:17], v[16:17], v[24:25], v[32:33]
 ; GFX10-DENORM-NEXT:    s_waitcnt vmcnt(4)

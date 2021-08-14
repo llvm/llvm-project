@@ -1307,8 +1307,9 @@ define <16 x i32> @v_uaddsat_v16i32(<16 x i32> %lhs, <16 x i32> %rhs) {
 ; GFX6-LABEL: v_uaddsat_v16i32:
 ; GFX6:       ; %bb.0:
 ; GFX6-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX6-NEXT:    v_xor_b32_e32 v32, -1, v0
-; GFX6-NEXT:    v_min_u32_e32 v16, v32, v16
+; GFX6-NEXT:    v_xor_b32_e32 v31, -1, v0
+; GFX6-NEXT:    v_min_u32_e32 v16, v31, v16
+; GFX6-NEXT:    buffer_load_dword v31, off, s[0:3], s32
 ; GFX6-NEXT:    v_add_i32_e32 v0, vcc, v0, v16
 ; GFX6-NEXT:    v_xor_b32_e32 v16, -1, v1
 ; GFX6-NEXT:    v_min_u32_e32 v16, v16, v17
@@ -1353,6 +1354,7 @@ define <16 x i32> @v_uaddsat_v16i32(<16 x i32> %lhs, <16 x i32> %rhs) {
 ; GFX6-NEXT:    v_min_u32_e32 v16, v16, v30
 ; GFX6-NEXT:    v_add_i32_e32 v14, vcc, v14, v16
 ; GFX6-NEXT:    v_xor_b32_e32 v16, -1, v15
+; GFX6-NEXT:    s_waitcnt vmcnt(0)
 ; GFX6-NEXT:    v_min_u32_e32 v16, v16, v31
 ; GFX6-NEXT:    v_add_i32_e32 v15, vcc, v15, v16
 ; GFX6-NEXT:    s_setpc_b64 s[30:31]
@@ -1361,6 +1363,7 @@ define <16 x i32> @v_uaddsat_v16i32(<16 x i32> %lhs, <16 x i32> %rhs) {
 ; GFX8:       ; %bb.0:
 ; GFX8-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX8-NEXT:    v_add_u32_e64 v0, s[4:5], v0, v16 clamp
+; GFX8-NEXT:    buffer_load_dword v16, off, s[0:3], s32
 ; GFX8-NEXT:    v_add_u32_e64 v1, s[4:5], v1, v17 clamp
 ; GFX8-NEXT:    v_add_u32_e64 v2, s[4:5], v2, v18 clamp
 ; GFX8-NEXT:    v_add_u32_e64 v3, s[4:5], v3, v19 clamp
@@ -1375,13 +1378,15 @@ define <16 x i32> @v_uaddsat_v16i32(<16 x i32> %lhs, <16 x i32> %rhs) {
 ; GFX8-NEXT:    v_add_u32_e64 v12, s[4:5], v12, v28 clamp
 ; GFX8-NEXT:    v_add_u32_e64 v13, s[4:5], v13, v29 clamp
 ; GFX8-NEXT:    v_add_u32_e64 v14, s[4:5], v14, v30 clamp
-; GFX8-NEXT:    v_add_u32_e64 v15, s[4:5], v15, v31 clamp
+; GFX8-NEXT:    s_waitcnt vmcnt(0)
+; GFX8-NEXT:    v_add_u32_e64 v15, s[4:5], v15, v16 clamp
 ; GFX8-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX9-LABEL: v_uaddsat_v16i32:
 ; GFX9:       ; %bb.0:
 ; GFX9-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX9-NEXT:    v_add_u32_e64 v0, v0, v16 clamp
+; GFX9-NEXT:    buffer_load_dword v16, off, s[0:3], s32
 ; GFX9-NEXT:    v_add_u32_e64 v1, v1, v17 clamp
 ; GFX9-NEXT:    v_add_u32_e64 v2, v2, v18 clamp
 ; GFX9-NEXT:    v_add_u32_e64 v3, v3, v19 clamp
@@ -1396,13 +1401,15 @@ define <16 x i32> @v_uaddsat_v16i32(<16 x i32> %lhs, <16 x i32> %rhs) {
 ; GFX9-NEXT:    v_add_u32_e64 v12, v12, v28 clamp
 ; GFX9-NEXT:    v_add_u32_e64 v13, v13, v29 clamp
 ; GFX9-NEXT:    v_add_u32_e64 v14, v14, v30 clamp
-; GFX9-NEXT:    v_add_u32_e64 v15, v15, v31 clamp
+; GFX9-NEXT:    s_waitcnt vmcnt(0)
+; GFX9-NEXT:    v_add_u32_e64 v15, v15, v16 clamp
 ; GFX9-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX10-LABEL: v_uaddsat_v16i32:
 ; GFX10:       ; %bb.0:
 ; GFX10-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX10-NEXT:    s_waitcnt_vscnt null, 0x0
+; GFX10-NEXT:    buffer_load_dword v31, off, s[0:3], s32
 ; GFX10-NEXT:    v_add_nc_u32_e64 v0, v0, v16 clamp
 ; GFX10-NEXT:    v_add_nc_u32_e64 v1, v1, v17 clamp
 ; GFX10-NEXT:    v_add_nc_u32_e64 v2, v2, v18 clamp
@@ -1418,6 +1425,7 @@ define <16 x i32> @v_uaddsat_v16i32(<16 x i32> %lhs, <16 x i32> %rhs) {
 ; GFX10-NEXT:    v_add_nc_u32_e64 v12, v12, v28 clamp
 ; GFX10-NEXT:    v_add_nc_u32_e64 v13, v13, v29 clamp
 ; GFX10-NEXT:    v_add_nc_u32_e64 v14, v14, v30 clamp
+; GFX10-NEXT:    s_waitcnt vmcnt(0)
 ; GFX10-NEXT:    v_add_nc_u32_e64 v15, v15, v31 clamp
 ; GFX10-NEXT:    s_setpc_b64 s[30:31]
   %result = call <16 x i32> @llvm.uadd.sat.v16i32(<16 x i32> %lhs, <16 x i32> %rhs)
