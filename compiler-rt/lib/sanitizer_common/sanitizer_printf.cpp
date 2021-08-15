@@ -128,7 +128,7 @@ static int AppendPointer(char **buff, const char *buff_end, u64 ptr_value) {
 int VSNPrintf(char *buff, int buff_length,
               const char *format, va_list args) {
   static const char *kPrintfFormatsHelp =
-      "Supported Printf formats: %([0-9]*)?(z|ll)?{d,u,x,X}; %p; "
+      "Supported Printf formats: %([0-9]*)?(z|l|ll)?{d,u,x,X}; %p; "
       "%[-]([0-9]*)?(\\.\\*)?s; %c\n";
   RAW_CHECK(format);
   RAW_CHECK(buff_length > 0);
@@ -160,9 +160,11 @@ int VSNPrintf(char *buff, int buff_length,
     }
     bool have_z = (*cur == 'z');
     cur += have_z;
-    bool have_ll = !have_z && (cur[0] == 'l' && cur[1] == 'l');
+    bool have_l = cur[0] == 'l' && cur[1] != 'l';
+    cur += have_l;
+    bool have_ll = cur[0] == 'l' && cur[1] == 'l';
     cur += have_ll * 2;
-    const bool have_length = have_z || have_ll;
+    const bool have_length = have_z || have_l || have_ll;
     const bool have_flags = have_width || have_length;
     // At the moment only %s supports precision and left-justification.
     CHECK(!((precision >= 0 || left_justified) && *cur != 's'));
@@ -170,6 +172,7 @@ int VSNPrintf(char *buff, int buff_length,
       case 'd': {
         s64 dval = have_ll  ? va_arg(args, s64)
                    : have_z ? va_arg(args, sptr)
+                   : have_l ? va_arg(args, long)
                             : va_arg(args, int);
         result += AppendSignedDecimal(&buff, buff_end, dval, width,
                                       pad_with_zero);
@@ -180,6 +183,7 @@ int VSNPrintf(char *buff, int buff_length,
       case 'X': {
         u64 uval = have_ll  ? va_arg(args, u64)
                    : have_z ? va_arg(args, uptr)
+                   : have_l ? va_arg(args, unsigned long)
                             : va_arg(args, unsigned);
         bool uppercase = (*cur == 'X');
         result += AppendUnsigned(&buff, buff_end, uval, (*cur == 'u') ? 10 : 16,
