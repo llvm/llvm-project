@@ -526,6 +526,10 @@ bool ModuleLinker::run() {
     if (linkIfNeeded(GA))
       return true;
 
+  for (GlobalIFunc &GI : SrcM->ifuncs())
+    if (linkIfNeeded(GI))
+      return true;
+
   for (unsigned I = 0; I < ValuesToLink.size(); ++I) {
     GlobalValue *GV = ValuesToLink[I];
     const Comdat *SC = GV->getComdat();
