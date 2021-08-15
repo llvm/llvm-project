@@ -7424,7 +7424,7 @@ def note_member_first_declared_here : Note<
 def warn_bitwise_negation_bool : Warning<
   "bitwise negation of a boolean expression%select{;| always evaluates to 'true';}0 "
   "did you mean logical negation?">,
-  InGroup<DiagGroup<"bool-operation">>;
+  InGroup<BoolOperation>, DefaultIgnore;
 def err_decrement_bool : Error<"cannot decrement expression of type bool">;
 def warn_increment_bool : Warning<
   "incrementing expression of type bool is deprecated and "
