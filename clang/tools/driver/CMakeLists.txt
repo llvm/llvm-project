@@ -138,7 +138,7 @@ install(FILES ${features_file_dest}
         DESTINATION "share/clang"
         COMPONENT clang)
 if(NOT LLVM_ENABLE_IDE)
-  add_llvm_install_targets("install-features-file"
+  add_llvm_install_targets("install-clang-features-file"
                            DEPENDS clang-features-file
                            COMPONENT clang)
 endif()
