@@ -2241,6 +2241,10 @@ MachineInstr *X86InstrInfo::commuteInstructionImpl(MachineInstr &MI, bool NewMI,
   case X86::VCMPSSZrr:
   case X86::VCMPPDZrri:
   case X86::VCMPPSZrri:
+  case X86::VCMPSHZrr:
+  case X86::VCMPPHZrri:
+  case X86::VCMPPHZ128rri:
+  case X86::VCMPPHZ256rri:
   case X86::VCMPPDZ128rri:
   case X86::VCMPPSZ128rri:
   case X86::VCMPPDZ256rri:
