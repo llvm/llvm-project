@@ -292,14 +292,16 @@ void NORETURN CheckFailed(const char *file, int line, const char *cond,
                           u64 v1, u64 v2);
 
 // Check macro
-#define RAW_CHECK_MSG(expr, msg) do { \
-  if (UNLIKELY(!(expr))) { \
-    RawWrite(msg); \
-    Die(); \
-  } \
-} while (0)
+#define RAW_CHECK_MSG(expr, msg, ...)          \
+  do {                                         \
+    if (UNLIKELY(!(expr))) {                   \
+      const char* msgs[] = {msg, __VA_ARGS__}; \
+      for (const char* m : msgs) RawWrite(m);  \
+      Die();                                   \
+    }                                          \
+  } while (0)
 
-#define RAW_CHECK(expr) RAW_CHECK_MSG(expr, #expr)
+#define RAW_CHECK(expr, ...) RAW_CHECK_MSG(expr, #expr "\n", __VA_ARGS__)
 
 #define CHECK_IMPL(c1, op, c2) \
   do { \
