@@ -19,8 +19,8 @@ define half @fcmp_select_fp_constants_olt(half %x) nounwind readnone {
 define half @fcmp_select_fp_constants_ogt(half %x) nounwind readnone {
 ; X64-AVX512FP16-LABEL: fcmp_select_fp_constants_ogt:
 ; X64-AVX512FP16:       # %bb.0:
-; X64-AVX512FP16-NEXT:    vcmpgtsh {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0, %k1
 ; X64-AVX512FP16-NEXT:    vmovsh {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm1
+; X64-AVX512FP16-NEXT:    vcmpgtsh {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0, %k1
 ; X64-AVX512FP16-NEXT:    vmovsh {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0
 ; X64-AVX512FP16-NEXT:    vmovsh %xmm1, %xmm0, %xmm0 {%k1}
 ; X64-AVX512FP16-NEXT:    retq

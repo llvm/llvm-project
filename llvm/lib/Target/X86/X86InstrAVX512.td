@@ -2652,23 +2652,21 @@ defm VCMPPD : avx512_vcmp<SchedWriteFCmp, avx512vl_f64_info>,
                           AVX512PDIi8Base, EVEX_4V, EVEX_CD8<64, CD8VF>, VEX_W;
 defm VCMPPS : avx512_vcmp<SchedWriteFCmp, avx512vl_f32_info>,
                           AVX512PSIi8Base, EVEX_4V, EVEX_CD8<32, CD8VF>;
+defm VCMPPH : avx512_vcmp<SchedWriteFCmp, avx512vl_f16_info, HasFP16>,
+                          AVX512PSIi8Base, EVEX_4V, EVEX_CD8<16, CD8VF>, TA;
 
 // Patterns to select fp compares with load as first operand.
 let Predicates = [HasAVX512] in {
-  def : Pat<(v1i1 (X86cmpms (loadf64 addr:$src2), FR64X:$src1,
-                            timm:$cc)),
+  def : Pat<(v1i1 (X86cmpms (loadf64 addr:$src2), FR64X:$src1, timm:$cc)),
             (VCMPSDZrm FR64X:$src1, addr:$src2, (X86cmpm_imm_commute timm:$cc))>;
 
-  def : Pat<(v1i1 (X86cmpms (loadf32 addr:$src2), FR32X:$src1,
-                            timm:$cc)),
+  def : Pat<(v1i1 (X86cmpms (loadf32 addr:$src2), FR32X:$src1, timm:$cc)),
             (VCMPSSZrm FR32X:$src1, addr:$src2, (X86cmpm_imm_commute timm:$cc))>;
 }
 
-defm VCMPPH : avx512_vcmp<SchedWriteFCmp, avx512vl_f16_info, HasFP16>,
-                          AVX512PSIi8Base, EVEX_4V, EVEX_CD8<16, CD8VF>, TA;
 let Predicates = [HasFP16] in {
-  def : Pat<(v1i1 (X86cmpms(loadf16 addr:$src2), FR16X:$src1, CommutableCMPCC:$cc)),
-            (VCMPSHZrm FR16X:$src1, addr:$src2, imm:$cc)>;
+  def : Pat<(v1i1 (X86cmpms (loadf16 addr:$src2), FR16X:$src1, timm:$cc)),
+            (VCMPSHZrm FR16X:$src1, addr:$src2, (X86cmpm_imm_commute timm:$cc))>;
 }
 
 // ----------------------------------------------------------------
