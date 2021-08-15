@@ -5,11 +5,6 @@
 ; CHECK:       ModulePass Manager
 ; CHECK-NEXT:    Pre-ISel Intrinsic Lowering
 ; CHECK-NEXT:    FunctionPass Manager
-; CHECK-NEXT:       Dominator Tree Construction
-; CHECK-NEXT:       Natural Loop Information
-; CHECK-NEXT:       Lazy Branch Probability Analysis
-; CHECK-NEXT:       Lazy Block Frequency Analysis
-; CHECK-NEXT:       Optimization Remark Emitter
 ; CHECK-NEXT:      Expand Atomic instructions
 ; CHECK-NEXT:      Simplify the CFG
 ; CHECK-NEXT:      Dominator Tree Construction
