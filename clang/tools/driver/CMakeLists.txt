@@ -136,9 +136,9 @@ add_custom_target(clang-features-file DEPENDS ${features_file_dest})
 add_dependencies(clang clang-features-file)
 install(FILES ${features_file_dest}
         DESTINATION "share/clang"
-        COMPONENT clang)
+        COMPONENT clang-features-file)
 if(NOT LLVM_ENABLE_IDE)
   add_llvm_install_targets("install-clang-features-file"
                            DEPENDS clang-features-file
-                           COMPONENT clang)
+                           COMPONENT clang-features-file)
 endif()
