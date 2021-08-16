@@ -146,7 +146,6 @@
 ; CHECK-O: Running analysis: BranchProbabilityAnalysis on main
 ; CHECK-O: Running analysis: PostDominatorTreeAnalysis on main
 ; CHECK-O: Running analysis: DemandedBitsAnalysis on main
-; CHECK-O: Running analysis: MemorySSAAnalysis on main
 ; CHECK-O: Running pass: LoopLoadEliminationPass on main
 ; CHECK-O: Running pass: InstCombinePass on main
 ; CHECK-O: Running pass: SimplifyCFGPass on main

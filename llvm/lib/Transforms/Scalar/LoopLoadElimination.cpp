@@ -34,7 +34,6 @@
 #include "llvm/Analysis/LoopAccessAnalysis.h"
 #include "llvm/Analysis/LoopAnalysisManager.h"
 #include "llvm/Analysis/LoopInfo.h"
-#include "llvm/Analysis/MemorySSA.h"
 #include "llvm/Analysis/ProfileSummaryInfo.h"
 #include "llvm/Analysis/ScalarEvolution.h"
 #include "llvm/Analysis/ScalarEvolutionExpressions.h"
@@ -718,15 +717,12 @@ PreservedAnalyses LoopLoadEliminationPass::run(Function &F,
   auto *PSI = MAMProxy.getCachedResult<ProfileSummaryAnalysis>(*F.getParent());
   auto *BFI = (PSI && PSI->hasProfileSummary()) ?
       &AM.getResult<BlockFrequencyAnalysis>(F) : nullptr;
-  MemorySSA *MSSA = EnableMSSALoopDependency
-                        ? &AM.getResult<MemorySSAAnalysis>(F).getMSSA()
-                        : nullptr;
 
   auto &LAM = AM.getResult<LoopAnalysisManagerFunctionProxy>(F).getManager();
   bool Changed = eliminateLoadsAcrossLoops(
       F, LI, DT, BFI, PSI, &SE, &AC, [&](Loop &L) -> const LoopAccessInfo & {
         LoopStandardAnalysisResults AR = {AA,  AC,  DT,      LI,  SE,
-                                          TLI, TTI, nullptr, MSSA};
+                                          TLI, TTI, nullptr, nullptr};
         return LAM.getResult<LoopAccessAnalysis>(L, AR);
       });
 
