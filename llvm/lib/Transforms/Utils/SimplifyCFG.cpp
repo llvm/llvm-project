@@ -1095,17 +1095,24 @@ static void CloneInstructionsIntoPredecessorBlockAndUpdateSSAUses(
 
     // Update (liveout) uses of bonus instructions,
     // now that the bonus instruction has been cloned into predecessor.
-    SSAUpdater SSAUpdate;
-    SSAUpdate.Initialize(BonusInst.getType(),
-                         (NewBonusInst->getName() + ".merge").str());
-    SSAUpdate.AddAvailableValue(BB, &BonusInst);
-    SSAUpdate.AddAvailableValue(PredBlock, NewBonusInst);
+    // Note that we expect to be in a block-closed SSA form for this to work!
     for (Use &U : make_early_inc_range(BonusInst.uses())) {
       auto *UI = cast<Instruction>(U.getUser());
-      if (UI->getParent() != PredBlock)
-        SSAUpdate.RewriteUseAfterInsertions(U);
-      else // Use is in the same block as, and comes before, NewBonusInst.
-        SSAUpdate.RewriteUse(U);
+      auto *PN = dyn_cast<PHINode>(UI);
+      if (!PN) {
+        assert(UI->getParent() == BB && BonusInst.comesBefore(UI) &&
+               "If the user is not a PHI node, then it should be in the same "
+               "block as, and come after, the original bonus instruction.");
+        continue; // Keep using the original bonus instruction.
+      }
+      // Is this the block-closed SSA form PHI node?
+      if (PN->getIncomingBlock(U) == BB)
+        continue; // Great, keep using the original bonus instruction.
+      // The only other alternative is an "use" when coming from
+      // the predecessor block - here we should refer to the cloned bonus instr.
+      assert(PN->getIncomingBlock(U) == PredBlock &&
+             "Not in block-closed SSA form?");
+      U.set(NewBonusInst);
     }
   }
 }
@@ -3031,6 +3038,56 @@ static bool performBranchToCommonDestFolding(BranchInst *BI, BranchInst *PBI,
       *shouldFoldCondBranchesToCommonDestination(BI, PBI, TTI);
 
   LLVM_DEBUG(dbgs() << "FOLDING BRANCH TO COMMON DEST:\n" << *PBI << *BB);
+
+  // We want to duplicate all the bonus instructions in this block,
+  // and rewrite their uses, but in some cases with self-loops,
+  // the naive use rewrite approach won't work (will result in miscompilations).
+  // To avoid this problem, let's form block-closed SSA form.
+  for (Instruction &BonusInst :
+       reverse(iterator_range<BasicBlock::iterator>(*BB))) {
+    auto IsBCSSAUse = [BB, &BonusInst](Use &U) {
+      auto *UI = cast<Instruction>(U.getUser());
+      if (auto *PN = dyn_cast<PHINode>(UI))
+        return PN->getIncomingBlock(U) == BB;
+      return UI->getParent() == BB && BonusInst.comesBefore(UI);
+    };
+
+    // Does this instruction require rewriting of uses?
+    if (all_of(BonusInst.uses(), IsBCSSAUse))
+      continue;
+
+    SSAUpdater SSAUpdate;
+    Type *Ty = BonusInst.getType();
+    SmallVector<PHINode *, 8> BCSSAPHIs;
+    SSAUpdate.Initialize(Ty, BonusInst.getName());
+
+    // Into each successor block of BB, insert a PHI node, that receives
+    // the BonusInst when coming from it's basic block, or poison otherwise.
+    for (BasicBlock *Succ : successors(BB)) {
+      // The block may have the same successor multiple times. Do it only once.
+      if (SSAUpdate.HasValueForBlock(Succ))
+        continue;
+      BCSSAPHIs.emplace_back(PHINode::Create(
+          Ty, 0, BonusInst.getName() + ".bcssa", &Succ->front()));
+      PHINode *PN = BCSSAPHIs.back();
+      for (BasicBlock *PredOfSucc : predecessors(Succ))
+        PN->addIncoming(PredOfSucc == BB ? (Value *)&BonusInst
+                                         : PoisonValue::get(Ty),
+                        PredOfSucc);
+      SSAUpdate.AddAvailableValue(Succ, PN);
+    }
+
+    // And rewrite all uses that break block-closed SSA form.
+    for (Use &U : make_early_inc_range(BonusInst.uses()))
+      if (!IsBCSSAUse(U))
+        SSAUpdate.RewriteUseAfterInsertions(U);
+
+    // We might not have ended up needing PHI's in all of the succ blocks,
+    // drop the ones that are certainly unused, but don't bother otherwise.
+    for (PHINode *PN : BCSSAPHIs)
+      if (PN->use_empty())
+        PN->eraseFromParent();
+  }
 
   IRBuilder<> Builder(PBI);
   // The builder is used to create instructions to eliminate the branch in BB.
