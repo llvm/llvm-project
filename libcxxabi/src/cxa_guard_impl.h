@@ -156,8 +156,6 @@ uint32_t PlatformThreadID() {
 constexpr uint32_t (*PlatformThreadID)() = nullptr;
 #endif
 
-constexpr bool PlatformSupportsThreadID() { return +PlatformThreadID != nullptr; }
-
 //===----------------------------------------------------------------------===//
 //                          GuardBase
 //===----------------------------------------------------------------------===//
@@ -289,7 +287,7 @@ struct InitByteGlobalMutex : GuardObject<InitByteGlobalMutex<Mutex, CondVar, glo
   using BaseT::BaseT;
 
   explicit InitByteGlobalMutex(uint32_t* g) : BaseT(g), has_thread_id_support(false) {}
-  explicit InitByteGlobalMutex(uint64_t* g) : BaseT(g), has_thread_id_support(PlatformSupportsThreadID()) {}
+  explicit InitByteGlobalMutex(uint64_t* g) : BaseT(g), has_thread_id_support(GetThreadID != nullptr) {}
 
 public:
   AcquireResult acquire_init_byte() {
@@ -404,12 +402,14 @@ struct InitByteFutex : GuardObject<InitByteFutex<Wait, Wake, GetThreadIDArg>> {
 
   /// ARM Constructor
   explicit InitByteFutex(uint32_t* g)
-      : BaseT(g), init_byte(this->init_byte_address), has_thread_id_support(this->thread_id_address && GetThreadIDArg),
+      : BaseT(g), init_byte(this->init_byte_address),
+        has_thread_id_support(this->thread_id_address && GetThreadIDArg != nullptr),
         thread_id(this->thread_id_address) {}
 
   /// Itanium Constructor
   explicit InitByteFutex(uint64_t* g)
-      : BaseT(g), init_byte(this->init_byte_address), has_thread_id_support(this->thread_id_address && GetThreadIDArg),
+      : BaseT(g), init_byte(this->init_byte_address),
+        has_thread_id_support(this->thread_id_address && GetThreadIDArg != nullptr),
         thread_id(this->thread_id_address) {}
 
 public:
