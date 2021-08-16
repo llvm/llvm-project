@@ -1168,40 +1168,22 @@ void mlir::linalg::populateConvVectorizationPatterns(
   populateVectorizationPatterns<ConvWOp, 1>(tiling, promotion, vectorization,
                                             tileSizes);
 
-  populateVectorizationPatterns<ConvNWCOp, 3>(tiling, promotion, vectorization,
-                                              tileSizes);
   populateVectorizationPatterns<ConvInputNWCFilterWCFOp, 3>(
-      tiling, promotion, vectorization, tileSizes);
-
-  populateVectorizationPatterns<ConvNCWOp, 3>(tiling, promotion, vectorization,
-                                              tileSizes);
-  populateVectorizationPatterns<ConvInputNCWFilterWCFOp, 3>(
       tiling, promotion, vectorization, tileSizes);
 
   populateVectorizationPatterns<ConvHWOp, 2>(tiling, promotion, vectorization,
                                              tileSizes);
 
-  populateVectorizationPatterns<ConvNHWCOp, 4>(tiling, promotion, vectorization,
-                                               tileSizes);
   populateVectorizationPatterns<ConvInputNHWCFilterHWCFOp, 4>(
       tiling, promotion, vectorization, tileSizes);
 
   populateVectorizationPatterns<Conv2DNchwOp, 4>(tiling, promotion,
                                                  vectorization, tileSizes);
-  populateVectorizationPatterns<ConvInputNCHWFilterHWCFOp, 4>(
-      tiling, promotion, vectorization, tileSizes);
 
   populateVectorizationPatterns<ConvDHWOp, 3>(tiling, promotion, vectorization,
                                               tileSizes);
 
-  populateVectorizationPatterns<ConvNDHWCOp, 5>(tiling, promotion,
-                                                vectorization, tileSizes);
   populateVectorizationPatterns<ConvInputNDHWCFilterDHWCFOp, 5>(
-      tiling, promotion, vectorization, tileSizes);
-
-  populateVectorizationPatterns<ConvNCDHWOp, 5>(tiling, promotion,
-                                                vectorization, tileSizes);
-  populateVectorizationPatterns<ConvInputNCDHWFilterDHWCFOp, 5>(
       tiling, promotion, vectorization, tileSizes);
 
   patterns.push_back(std::move(tiling));
