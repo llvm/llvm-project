@@ -8,7 +8,7 @@
 // RUN: %clang_profgen=%t.profraw -o %t.gen.cis -O2 %s
 // RUN: %run %t.gen.cis
 // RUN: llvm-profdata merge -o %t.cis.profdata %t.profraw
-// Check context insensitive profile
+// Check context insenstive profile
 // RUN: %clang_profuse=%t.cis.profdata  -O2 -emit-llvm -S %s -o - | FileCheck %s --check-prefix=CIS
 int g1 = 1;
 int volatile g2 = 2;

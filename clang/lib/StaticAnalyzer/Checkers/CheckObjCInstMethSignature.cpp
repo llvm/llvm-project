@@ -6,7 +6,7 @@
 //
 //===----------------------------------------------------------------------===//
 //
-//  This file defines a CheckObjCInstMethSignature, a flow-insensitive check
+//  This file defines a CheckObjCInstMethSignature, a flow-insenstive check
 //  that determines if an Objective-C class interface incorrectly redefines
 //  the method signature in a subclass.
 //
