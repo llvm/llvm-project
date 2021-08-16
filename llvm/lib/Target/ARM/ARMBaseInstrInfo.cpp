@@ -1241,7 +1241,9 @@ storeRegToStackSlot(MachineBasicBlock &MBB, MachineBasicBlock::iterator I,
         llvm_unreachable("Unknown reg class!");
       break;
     case 32:
-      if (ARM::QQPRRegClass.hasSubClassEq(RC) || ARM::DQuadRegClass.hasSubClassEq(RC)) {
+      if (ARM::QQPRRegClass.hasSubClassEq(RC) ||
+          ARM::MQQPRRegClass.hasSubClassEq(RC) ||
+          ARM::DQuadRegClass.hasSubClassEq(RC)) {
         if (Alignment >= 16 && getRegisterInfo().canRealignStack(MF) &&
             Subtarget.hasNEON()) {
           // FIXME: It's possible to only store part of the QQ register if the
@@ -1267,7 +1269,8 @@ storeRegToStackSlot(MachineBasicBlock &MBB, MachineBasicBlock::iterator I,
         llvm_unreachable("Unknown reg class!");
       break;
     case 64:
-      if (ARM::QQQQPRRegClass.hasSubClassEq(RC)) {
+      if (ARM::QQQQPRRegClass.hasSubClassEq(RC) ||
+          ARM::MQQQQPRRegClass.hasSubClassEq(RC)) {
         MachineInstrBuilder MIB = BuildMI(MBB, I, DebugLoc(), get(ARM::VSTMDIA))
                                       .addFrameIndex(FI)
                                       .add(predOps(ARMCC::AL))
@@ -1473,31 +1476,34 @@ loadRegFromStackSlot(MachineBasicBlock &MBB, MachineBasicBlock::iterator I,
       llvm_unreachable("Unknown reg class!");
     break;
    case 32:
-    if (ARM::QQPRRegClass.hasSubClassEq(RC) || ARM::DQuadRegClass.hasSubClassEq(RC)) {
-      if (Alignment >= 16 && getRegisterInfo().canRealignStack(MF) &&
-          Subtarget.hasNEON()) {
-        BuildMI(MBB, I, DL, get(ARM::VLD1d64QPseudo), DestReg)
-            .addFrameIndex(FI)
-            .addImm(16)
-            .addMemOperand(MMO)
-            .add(predOps(ARMCC::AL));
-      } else {
-        MachineInstrBuilder MIB = BuildMI(MBB, I, DL, get(ARM::VLDMDIA))
-                                      .addFrameIndex(FI)
-                                      .add(predOps(ARMCC::AL))
-                                      .addMemOperand(MMO);
-        MIB = AddDReg(MIB, DestReg, ARM::dsub_0, RegState::DefineNoRead, TRI);
-        MIB = AddDReg(MIB, DestReg, ARM::dsub_1, RegState::DefineNoRead, TRI);
-        MIB = AddDReg(MIB, DestReg, ARM::dsub_2, RegState::DefineNoRead, TRI);
-        MIB = AddDReg(MIB, DestReg, ARM::dsub_3, RegState::DefineNoRead, TRI);
-        if (Register::isPhysicalRegister(DestReg))
-          MIB.addReg(DestReg, RegState::ImplicitDefine);
-      }
-    } else
-      llvm_unreachable("Unknown reg class!");
-    break;
+     if (ARM::QQPRRegClass.hasSubClassEq(RC) ||
+         ARM::MQQPRRegClass.hasSubClassEq(RC) ||
+         ARM::DQuadRegClass.hasSubClassEq(RC)) {
+       if (Alignment >= 16 && getRegisterInfo().canRealignStack(MF) &&
+           Subtarget.hasNEON()) {
+         BuildMI(MBB, I, DL, get(ARM::VLD1d64QPseudo), DestReg)
+             .addFrameIndex(FI)
+             .addImm(16)
+             .addMemOperand(MMO)
+             .add(predOps(ARMCC::AL));
+       } else {
+         MachineInstrBuilder MIB = BuildMI(MBB, I, DL, get(ARM::VLDMDIA))
+                                       .addFrameIndex(FI)
+                                       .add(predOps(ARMCC::AL))
+                                       .addMemOperand(MMO);
+         MIB = AddDReg(MIB, DestReg, ARM::dsub_0, RegState::DefineNoRead, TRI);
+         MIB = AddDReg(MIB, DestReg, ARM::dsub_1, RegState::DefineNoRead, TRI);
+         MIB = AddDReg(MIB, DestReg, ARM::dsub_2, RegState::DefineNoRead, TRI);
+         MIB = AddDReg(MIB, DestReg, ARM::dsub_3, RegState::DefineNoRead, TRI);
+         if (Register::isPhysicalRegister(DestReg))
+           MIB.addReg(DestReg, RegState::ImplicitDefine);
+       }
+     } else
+       llvm_unreachable("Unknown reg class!");
+     break;
   case 64:
-    if (ARM::QQQQPRRegClass.hasSubClassEq(RC)) {
+    if (ARM::QQQQPRRegClass.hasSubClassEq(RC) ||
+        ARM::MQQQQPRRegClass.hasSubClassEq(RC)) {
       MachineInstrBuilder MIB = BuildMI(MBB, I, DL, get(ARM::VLDMDIA))
                                     .addFrameIndex(FI)
                                     .add(predOps(ARMCC::AL))

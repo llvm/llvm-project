@@ -1853,11 +1853,17 @@ ARMTargetLowering::getRegClassFor(MVT VT, bool isDivergent) const {
   // v8i64 to QQQQ registers. v4i64 and v8i64 are only used for REG_SEQUENCE to
   // load / store 4 to 8 consecutive NEON D registers, or 2 to 4 consecutive
   // MVE Q registers.
-  if (Subtarget->hasNEON() || Subtarget->hasMVEIntegerOps()) {
+  if (Subtarget->hasNEON()) {
     if (VT == MVT::v4i64)
       return &ARM::QQPRRegClass;
     if (VT == MVT::v8i64)
       return &ARM::QQQQPRRegClass;
+  }
+  if (Subtarget->hasMVEIntegerOps()) {
+    if (VT == MVT::v4i64)
+      return &ARM::MQQPRRegClass;
+    if (VT == MVT::v8i64)
+      return &ARM::MQQQQPRRegClass;
   }
   return TargetLowering::getRegClassFor(VT);
 }
