@@ -124,53 +124,53 @@
 // CHECK: encoding: [0x62,0xf5,0x56,0x8f,0x58,0x72,0x80]
           vaddsh xmm6 {k7} {z}, xmm5, word ptr [edx - 256]
 
-// CHECK: vcmpph k5, zmm5, zmm4, 123
-// CHECK: encoding: [0x62,0xf3,0x54,0x48,0xc2,0xec,0x7b]
-          vcmpph k5, zmm5, zmm4, 123
+// CHECK: vcmpneq_usph k5, zmm5, zmm4
+// CHECK: encoding: [0x62,0xf3,0x54,0x48,0xc2,0xec,0x14]
+          vcmpneq_usph k5, zmm5, zmm4
 
-// CHECK: vcmpph k5, zmm5, zmm4, {sae}, 123
-// CHECK: encoding: [0x62,0xf3,0x54,0x18,0xc2,0xec,0x7b]
-          vcmpph k5, zmm5, zmm4, {sae}, 123
+// CHECK: vcmpnlt_uqph k5, zmm5, zmm4, {sae}
+// CHECK: encoding: [0x62,0xf3,0x54,0x18,0xc2,0xec,0x15]
+          vcmpnlt_uqph k5, zmm5, zmm4, {sae}
 
-// CHECK: vcmpph k5 {k7}, zmm5, zmmword ptr [esp + 8*esi + 268435456], 123
-// CHECK: encoding: [0x62,0xf3,0x54,0x4f,0xc2,0xac,0xf4,0x00,0x00,0x00,0x10,0x7b]
-          vcmpph k5 {k7}, zmm5, zmmword ptr [esp + 8*esi + 268435456], 123
+// CHECK: vcmpnle_uqph k5 {k7}, zmm5, zmmword ptr [esp + 8*esi + 268435456]
+// CHECK: encoding: [0x62,0xf3,0x54,0x4f,0xc2,0xac,0xf4,0x00,0x00,0x00,0x10,0x16]
+          vcmpnle_uqph k5 {k7}, zmm5, zmmword ptr [esp + 8*esi + 268435456]
 
-// CHECK: vcmpph k5, zmm5, word ptr [ecx]{1to32}, 123
-// CHECK: encoding: [0x62,0xf3,0x54,0x58,0xc2,0x29,0x7b]
-          vcmpph k5, zmm5, word ptr [ecx]{1to32}, 123
+// CHECK: vcmpord_sph k5, zmm5, word ptr [ecx]{1to32}
+// CHECK: encoding: [0x62,0xf3,0x54,0x58,0xc2,0x29,0x17]
+          vcmpord_sph k5, zmm5, word ptr [ecx]{1to32}
 
-// CHECK: vcmpph k5, zmm5, zmmword ptr [ecx + 8128], 123
-// CHECK: encoding: [0x62,0xf3,0x54,0x48,0xc2,0x69,0x7f,0x7b]
-          vcmpph k5, zmm5, zmmword ptr [ecx + 8128], 123
+// CHECK: vcmpeq_usph k5, zmm5, zmmword ptr [ecx + 8128]
+// CHECK: encoding: [0x62,0xf3,0x54,0x48,0xc2,0x69,0x7f,0x18]
+          vcmpeq_usph k5, zmm5, zmmword ptr [ecx + 8128]
 
-// CHECK: vcmpph k5 {k7}, zmm5, word ptr [edx - 256]{1to32}, 123
-// CHECK: encoding: [0x62,0xf3,0x54,0x5f,0xc2,0x6a,0x80,0x7b]
-          vcmpph k5 {k7}, zmm5, word ptr [edx - 256]{1to32}, 123
+// CHECK: vcmpnge_uqph k5 {k7}, zmm5, word ptr [edx - 256]{1to32}
+// CHECK: encoding: [0x62,0xf3,0x54,0x5f,0xc2,0x6a,0x80,0x19]
+          vcmpnge_uqph k5 {k7}, zmm5, word ptr [edx - 256]{1to32}
 
-// CHECK: vcmpsh k5, xmm5, xmm4, 123
-// CHECK: encoding: [0x62,0xf3,0x56,0x08,0xc2,0xec,0x7b]
-          vcmpsh k5, xmm5, xmm4, 123
+// CHECK: vcmpngt_uqsh k5, xmm5, xmm4
+// CHECK: encoding: [0x62,0xf3,0x56,0x08,0xc2,0xec,0x1a]
+          vcmpngt_uqsh k5, xmm5, xmm4
 
-// CHECK: vcmpsh k5, xmm5, xmm4, {sae}, 123
-// CHECK: encoding: [0x62,0xf3,0x56,0x18,0xc2,0xec,0x7b]
-          vcmpsh k5, xmm5, xmm4, {sae}, 123
+// CHECK: vcmpfalse_ossh k5, xmm5, xmm4, {sae}
+// CHECK: encoding: [0x62,0xf3,0x56,0x18,0xc2,0xec,0x1b]
+          vcmpfalse_ossh k5, xmm5, xmm4, {sae}
 
-// CHECK: vcmpsh k5 {k7}, xmm5, word ptr [esp + 8*esi + 268435456], 123
-// CHECK: encoding: [0x62,0xf3,0x56,0x0f,0xc2,0xac,0xf4,0x00,0x00,0x00,0x10,0x7b]
-          vcmpsh k5 {k7}, xmm5, word ptr [esp + 8*esi + 268435456], 123
+// CHECK: vcmpneq_ossh k5 {k7}, xmm5, word ptr [esp + 8*esi + 268435456]
+// CHECK: encoding: [0x62,0xf3,0x56,0x0f,0xc2,0xac,0xf4,0x00,0x00,0x00,0x10,0x1c]
+          vcmpneq_ossh k5 {k7}, xmm5, word ptr [esp + 8*esi + 268435456]
 
-// CHECK: vcmpsh k5, xmm5, word ptr [ecx], 123
-// CHECK: encoding: [0x62,0xf3,0x56,0x08,0xc2,0x29,0x7b]
-          vcmpsh k5, xmm5, word ptr [ecx], 123
+// CHECK: vcmpge_oqsh k5, xmm5, word ptr [ecx]
+// CHECK: encoding: [0x62,0xf3,0x56,0x08,0xc2,0x29,0x1d]
+          vcmpge_oqsh k5, xmm5, word ptr [ecx]
 
-// CHECK: vcmpsh k5, xmm5, word ptr [ecx + 254], 123
-// CHECK: encoding: [0x62,0xf3,0x56,0x08,0xc2,0x69,0x7f,0x7b]
-          vcmpsh k5, xmm5, word ptr [ecx + 254], 123
+// CHECK: vcmpgt_oqsh k5, xmm5, word ptr [ecx + 254]
+// CHECK: encoding: [0x62,0xf3,0x56,0x08,0xc2,0x69,0x7f,0x1e]
+          vcmpgt_oqsh k5, xmm5, word ptr [ecx + 254]
 
-// CHECK: vcmpsh k5 {k7}, xmm5, word ptr [edx - 256], 123
-// CHECK: encoding: [0x62,0xf3,0x56,0x0f,0xc2,0x6a,0x80,0x7b]
-          vcmpsh k5 {k7}, xmm5, word ptr [edx - 256], 123
+// CHECK: vcmptrue_ussh k5 {k7}, xmm5, word ptr [edx - 256]
+// CHECK: encoding: [0x62,0xf3,0x56,0x0f,0xc2,0x6a,0x80,0x1f]
+          vcmptrue_ussh k5 {k7}, xmm5, word ptr [edx - 256]
 
 // CHECK: vcomish xmm6, xmm5
 // CHECK: encoding: [0x62,0xf5,0x7c,0x08,0x2f,0xf5]

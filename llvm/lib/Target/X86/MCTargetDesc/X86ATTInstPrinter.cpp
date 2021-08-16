@@ -176,11 +176,15 @@ bool X86ATTInstPrinter::printVecCompareInstr(const MCInst *MI,
       if ((Desc.TSFlags & X86II::FormMask) == X86II::MRMSrcMem) {
         if (Desc.TSFlags & X86II::EVEX_B) {
           // Broadcast form.
-          // Load size is based on W-bit.
-          if (Desc.TSFlags & X86II::VEX_W)
+          // Load size is word for TA map. Otherwise it is based on W-bit.
+          if ((Desc.TSFlags & X86II::OpMapMask) == X86II::TA) {
+            assert(!(Desc.TSFlags & X86II::VEX_W) && "Unknown W-bit value!");
+            printwordmem(MI, CurOp--, OS);
+          } else if (Desc.TSFlags & X86II::VEX_W) {
             printqwordmem(MI, CurOp--, OS);
-          else
+          } else {
             printdwordmem(MI, CurOp--, OS);
+          }
 
           // Print the number of elements broadcasted.
           unsigned NumElts;
@@ -190,20 +194,28 @@ bool X86ATTInstPrinter::printVecCompareInstr(const MCInst *MI,
             NumElts = (Desc.TSFlags & X86II::VEX_W) ? 4 : 8;
           else
             NumElts = (Desc.TSFlags & X86II::VEX_W) ? 2 : 4;
-          if ((Desc.TSFlags & X86II::OpMapMask) == X86II::TA)
+          if ((Desc.TSFlags & X86II::OpMapMask) == X86II::TA) {
+            assert(!(Desc.TSFlags & X86II::VEX_W) && "Unknown W-bit value!");
             NumElts *= 2;
+          }
           OS << "{1to" << NumElts << "}";
         } else {
-          if ((Desc.TSFlags & X86II::OpPrefixMask) == X86II::XS)
-            printdwordmem(MI, CurOp--, OS);
-          else if ((Desc.TSFlags & X86II::OpPrefixMask) == X86II::XD)
+          if ((Desc.TSFlags & X86II::OpPrefixMask) == X86II::XS) {
+            if ((Desc.TSFlags & X86II::OpMapMask) == X86II::TA)
+              printwordmem(MI, CurOp--, OS);
+            else
+              printdwordmem(MI, CurOp--, OS);
+          } else if ((Desc.TSFlags & X86II::OpPrefixMask) == X86II::XD) {
+            assert((Desc.TSFlags & X86II::OpMapMask) != X86II::TA &&
+                   "Unexpected op map!");
             printqwordmem(MI, CurOp--, OS);
-          else if (Desc.TSFlags & X86II::EVEX_L2)
+          } else if (Desc.TSFlags & X86II::EVEX_L2) {
             printzmmwordmem(MI, CurOp--, OS);
-          else if (Desc.TSFlags & X86II::VEX_L)
+          } else if (Desc.TSFlags & X86II::VEX_L) {
             printymmwordmem(MI, CurOp--, OS);
-          else
+          } else {
             printxmmwordmem(MI, CurOp--, OS);
+          }
         }
       } else {
         if (Desc.TSFlags & X86II::EVEX_B)

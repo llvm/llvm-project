@@ -126,51 +126,51 @@
 0x62,0x65,0x16,0x87,0x58,0x72,0x80
 
 # ATT:   vcmpeqph %zmm28, %zmm29, %k5
-# INTEL: vcmpph k5, zmm29, zmm28, 0
+# INTEL: vcmpeqph k5, zmm29, zmm28
 0x62,0x93,0x14,0x40,0xc2,0xec,0x00
 
 # ATT:   vcmpleph {sae}, %zmm28, %zmm29, %k5
-# INTEL: vcmpph k5, zmm29, zmm28, {sae}, 2
+# INTEL: vcmpleph k5, zmm29, zmm28, {sae}
 0x62,0x93,0x14,0x10,0xc2,0xec,0x02
 
 # ATT:   vcmpneqph 268435456(%rbp,%r14,8), %zmm29, %k5 {%k7}
-# INTEL: vcmpph k5 {k7}, zmm29, zmmword ptr [rbp + 8*r14 + 268435456], 4
+# INTEL: vcmpneqph k5 {k7}, zmm29, zmmword ptr [rbp + 8*r14 + 268435456]
 0x62,0xb3,0x14,0x47,0xc2,0xac,0xf5,0x00,0x00,0x00,0x10,0x04
 
 # ATT:   vcmpnleph (%r9){1to32}, %zmm29, %k5
-# INTEL: vcmpph k5, zmm29, word ptr [r9]{1to32}, 6
+# INTEL: vcmpnleph k5, zmm29, word ptr [r9]{1to32}
 0x62,0xd3,0x14,0x50,0xc2,0x29,0x06
 
 # ATT:   vcmpeq_uqph 8128(%rcx), %zmm29, %k5
-# INTEL: vcmpph k5, zmm29, zmmword ptr [rcx + 8128], 8
+# INTEL: vcmpeq_uqph k5, zmm29, zmmword ptr [rcx + 8128]
 0x62,0xf3,0x14,0x40,0xc2,0x69,0x7f,0x08
 
 # ATT:   vcmpngtph -256(%rdx){1to32}, %zmm29, %k5 {%k7}
-# INTEL: vcmpph k5 {k7}, zmm29, word ptr [rdx - 256]{1to32}, 10
+# INTEL: vcmpngtph k5 {k7}, zmm29, word ptr [rdx - 256]{1to32}
 0x62,0xf3,0x14,0x57,0xc2,0x6a,0x80,0x0a
 
 # ATT:   vcmpneq_oqsh %xmm28, %xmm29, %k5
-# INTEL: vcmpsh k5, xmm29, xmm28, 12
+# INTEL: vcmpneq_oqsh k5, xmm29, xmm28
 0x62,0x93,0x16,0x00,0xc2,0xec,0x0c
 
 # ATT:   vcmpgtsh {sae}, %xmm28, %xmm29, %k5
-# INTEL: vcmpsh k5, xmm29, xmm28, {sae}, 14
+# INTEL: vcmpgtsh k5, xmm29, xmm28, {sae}
 0x62,0x93,0x16,0x10,0xc2,0xec,0x0e
 
 # ATT:   vcmpeq_ossh 268435456(%rbp,%r14,8), %xmm29, %k5 {%k7}
-# INTEL: vcmpsh k5 {k7}, xmm29, word ptr [rbp + 8*r14 + 268435456], 16
+# INTEL: vcmpeq_ossh k5 {k7}, xmm29, word ptr [rbp + 8*r14 + 268435456]
 0x62,0xb3,0x16,0x07,0xc2,0xac,0xf5,0x00,0x00,0x00,0x10,0x10
 
 # ATT:   vcmple_oqsh (%r9), %xmm29, %k5
-# INTEL: vcmpsh k5, xmm29, word ptr [r9], 18
+# INTEL: vcmple_oqsh k5, xmm29, word ptr [r9]
 0x62,0xd3,0x16,0x00,0xc2,0x29,0x12
 
 # ATT:   vcmpneq_ussh 254(%rcx), %xmm29, %k5
-# INTEL: vcmpsh k5, xmm29, word ptr [rcx + 254], 20
+# INTEL: vcmpneq_ussh k5, xmm29, word ptr [rcx + 254]
 0x62,0xf3,0x16,0x00,0xc2,0x69,0x7f,0x14
 
 # ATT:   vcmpnle_uqsh -256(%rdx), %xmm29, %k5 {%k7}
-# INTEL: vcmpsh k5 {k7}, xmm29, word ptr [rdx - 256], 22
+# INTEL: vcmpnle_uqsh k5 {k7}, xmm29, word ptr [rdx - 256]
 0x62,0xf3,0x16,0x07,0xc2,0x6a,0x80,0x16
 
 # ATT:   vcomish %xmm29, %xmm30
