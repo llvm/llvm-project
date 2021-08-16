@@ -149,8 +149,8 @@ public:
     ThreadPlanStack *removed_stack = result->second;
     m_plans_list.erase(result);
     // Now find it in the stack storage:
-    PlansStore::iterator end = m_plans_up_container.end();
-    PlansStore::iterator iter = std::find_if(m_plans_up_container.begin(), end,
+    auto end = m_plans_up_container.end();
+    auto iter = std::find_if(m_plans_up_container.begin(), end,
         [&] (std::unique_ptr<ThreadPlanStack> &stack) {
           return stack->IsTID(tid);
         });
@@ -184,9 +184,8 @@ public:
   // rename to Reactivate?
   void Activate(ThreadPlanStack &stack) {
     // Remove this from the detached plan list:
-    std::vector<ThreadPlanStack *>::iterator end = m_detached_plans.end();    
-    std::vector<ThreadPlanStack *>::iterator iter 
-        = std::find_if(m_detached_plans.begin(), end, 
+    auto end = m_detached_plans.end();    
+    auto iter = std::find_if(m_detached_plans.begin(), end, 
         [&] (ThreadPlanStack *elem) {
           return elem == &stack; });
     if (iter != end)
@@ -212,6 +211,11 @@ public:
     }
   }
 
+  // This gets the vector of pointers to thread plans that aren't
+  // currently running on a thread.  This is generally for thread
+  // plans that represent asynchronous operations waiting to be
+  // scheduled.
+  // The vector will never have null ThreadPlanStacks in it.
   std::vector<ThreadPlanStack *> &GetDetachedPlanStacks() {
     return m_detached_plans;
   }
