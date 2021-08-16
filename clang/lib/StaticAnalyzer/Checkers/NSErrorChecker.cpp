@@ -6,7 +6,7 @@
 //
 //===----------------------------------------------------------------------===//
 //
-//  This file defines a CheckNSError, a flow-insenstive check
+//  This file defines a CheckNSError, a flow-insensitive check
 //  that determines if an Objective-C class interface correctly returns
 //  a non-void return type.
 //
