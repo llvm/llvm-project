@@ -150,6 +150,8 @@ static Distro::DistroType DetectDistro(llvm::vfs::FileSystem &VFS) {
         return Distro::DebianBuster;
       case 11:
         return Distro::DebianBullseye;
+      case 12:
+        return Distro::DebianBookworm;
       default:
         return Distro::UnknownDistro;
       }
@@ -161,6 +163,7 @@ static Distro::DistroType DetectDistro(llvm::vfs::FileSystem &VFS) {
         .Case("stretch/sid", Distro::DebianStretch)
         .Case("buster/sid", Distro::DebianBuster)
         .Case("bullseye/sid", Distro::DebianBullseye)
+        .Case("bookworm/sid", Distro::DebianBookworm)
         .Default(Distro::UnknownDistro);
   }
 
