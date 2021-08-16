@@ -78,7 +78,7 @@ been instrumented. We can see an example accounting with ``llvm-xray account``:
 
 ::
 
-  $ llvm-xray account xray-log.llc.m35qPB -top=10 -sort=sum -sortorder=dsc -instr_map ./bin/llc
+  $ llvm-xray account xray-log.llc.m35qPB --top=10 --sort=sum --sortorder=dsc --instr_map=./bin/llc
   Functions with latencies: 29
      funcid      count [      min,       med,       90p,       99p,       max]       sum  function
         187        360 [ 0.000000,  0.000001,  0.000014,  0.000032,  0.000075]  0.001596  LLLexer.cpp:446:0: llvm::LLLexer::LexIdentifier()
@@ -103,7 +103,7 @@ output for an example trace would look like the following:
 
 ::
 
-  $ llvm-xray convert -f yaml -symbolize -instr_map=./bin/llc xray-log.llc.m35qPB
+  $ llvm-xray convert -f yaml --symbolize --instr_map=./bin/llc xray-log.llc.m35qPB
   ---
   header:          
     version:         1
@@ -151,7 +151,7 @@ function bodies to 1. We can do that with the
   $ XRAY_OPTIONS="patch_premain=true" ./bin/llc input.ll
   ==69819==XRay: Log file in 'xray-log.llc.5rqxkU'
 
-  $ llvm-xray account xray-log.llc.5rqxkU -top=10 -sort=sum -sortorder=dsc -instr_map ./bin/llc
+  $ llvm-xray account xray-log.llc.5rqxkU --top=10 --sort=sum --sortorder=dsc --instr_map=./bin/llc
   Functions with latencies: 36652
    funcid      count [      min,       med,       90p,       99p,       max]       sum  function    
        75          1 [ 0.672368,  0.672368,  0.672368,  0.672368,  0.672368]  0.672368  llc.cpp:271:0: main
@@ -205,7 +205,7 @@ The way to use the command is to output the top stacks by call count and time sp
 
 ::
 
-  $ llvm-xray stack xray-log.llc.5rqxkU -instr_map ./bin/llc
+  $ llvm-xray stack xray-log.llc.5rqxkU --instr_map=./bin/llc
 
   Unique Stacks: 3069
   Top 10 Stacks by leaf sum:
@@ -227,9 +227,9 @@ In the default mode, identical stacks on different threads are independently
 aggregated. In a multithreaded program, you may end up having identical call
 stacks fill your list of top calls.
 
-To address this, you may specify the ``-aggregate-threads`` or
-``-per-thread-stacks`` flags. ``-per-thread-stacks`` treats the thread id as an
-implicit root in each call stack tree, while ``-aggregate-threads`` combines
+To address this, you may specify the ``--aggregate-threads`` or
+``--per-thread-stacks`` flags. ``--per-thread-stacks`` treats the thread id as an
+implicit root in each call stack tree, while ``--aggregate-threads`` combines
 identical stacks from all threads.
 
 Flame Graph Generation
@@ -243,16 +243,16 @@ FlameGraph tool, currently available on `github
 
 To generate output for a flamegraph, a few more options are necessary.
 
-- ``-all-stacks`` - Emits all of the stacks.
-- ``-stack-format`` - Choose the flamegraph output format 'flame'.
-- ``-aggregation-type`` - Choose the metric to graph.
+- ``--all-stacks`` - Emits all of the stacks.
+- ``--stack-format`` - Choose the flamegraph output format 'flame'.
+- ``--aggregation-type`` - Choose the metric to graph.
 
 You may pipe the command output directly to the flamegraph tool to obtain an
 svg file.
 
 ::
 
-  $llvm-xray stack xray-log.llc.5rqxkU -instr_map ./bin/llc -stack-format=flame -aggregation-type=time -all-stacks | \
+  $ llvm-xray stack xray-log.llc.5rqxkU --instr_map=./bin/llc --stack-format=flame --aggregation-type=time --all-stacks | \
   /path/to/FlameGraph/flamegraph.pl > flamegraph.svg
 
 If you open the svg in a browser, mouse events allow exploring the call stacks.
@@ -265,8 +265,8 @@ from the same generated trace:
 
 ::
 
-  $ llvm-xray convert -symbolize -instr_map=./bin/llc \
-    -output-format=trace_event xray-log.llc.5rqxkU \
+  $ llvm-xray convert --symbolize --instr_map=./bin/llc \
+    --output-format=trace_event xray-log.llc.5rqxkU \
       | gzip > llc-trace.txt.gz
 
 From a Chrome browser, navigating to ``chrome:///tracing`` allows us to load
@@ -329,7 +329,7 @@ applications:
 
 ::
 
-  $ llvm-xray graph xray-log.sample.* -m sample -color-edges=sum -edge-label=sum \
+  $ llvm-xray graph xray-log.sample.* -m sample --color-edges=sum --edge-label=sum \
       | unflatten -f -l10 | dot -Tsvg -o sample.svg
 
 
