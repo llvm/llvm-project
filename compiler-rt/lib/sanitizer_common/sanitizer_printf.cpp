@@ -129,7 +129,7 @@ int VSNPrintf(char *buff, int buff_length,
               const char *format, va_list args) {
   static const char *kPrintfFormatsHelp =
       "Supported Printf formats: %([0-9]*)?(z|l|ll)?{d,u,x,X}; %p; "
-      "%[-]([0-9]*)?(\\.\\*)?s; %c\n";
+      "%[-]([0-9]*)?(\\.\\*)?s; %c\nProvided format: ";
   RAW_CHECK(format);
   RAW_CHECK(buff_length > 0);
   const char *buff_end = &buff[buff_length - 1];
@@ -191,12 +191,12 @@ int VSNPrintf(char *buff, int buff_length,
         break;
       }
       case 'p': {
-        RAW_CHECK_MSG(!have_flags, kPrintfFormatsHelp);
+        RAW_CHECK(!have_flags, kPrintfFormatsHelp, format);
         result += AppendPointer(&buff, buff_end, va_arg(args, uptr));
         break;
       }
       case 's': {
-        RAW_CHECK_MSG(!have_length, kPrintfFormatsHelp);
+        RAW_CHECK(!have_length, kPrintfFormatsHelp, format);
         // Only left-justified width is supported.
         CHECK(!have_width || left_justified);
         result += AppendString(&buff, buff_end, left_justified ? -width : width,
@@ -204,17 +204,17 @@ int VSNPrintf(char *buff, int buff_length,
         break;
       }
       case 'c': {
-        RAW_CHECK_MSG(!have_flags, kPrintfFormatsHelp);
+        RAW_CHECK(!have_flags, kPrintfFormatsHelp, format);
         result += AppendChar(&buff, buff_end, va_arg(args, int));
         break;
       }
       case '%' : {
-        RAW_CHECK_MSG(!have_flags, kPrintfFormatsHelp);
+        RAW_CHECK(!have_flags, kPrintfFormatsHelp, format);
         result += AppendChar(&buff, buff_end, '%');
         break;
       }
       default: {
-        RAW_CHECK_MSG(false, kPrintfFormatsHelp);
+        RAW_CHECK(false, kPrintfFormatsHelp, format);
       }
     }
   }
