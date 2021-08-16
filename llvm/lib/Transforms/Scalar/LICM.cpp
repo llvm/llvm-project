@@ -229,9 +229,7 @@ struct LegacyLICMPass : public LoopPass {
                       << L->getHeader()->getNameOrAsOperand() << "\n");
 
     auto *SE = getAnalysisIfAvailable<ScalarEvolutionWrapperPass>();
-    MemorySSA *MSSA = EnableMSSALoopDependency
-                          ? (&getAnalysis<MemorySSAWrapperPass>().getMSSA())
-                          : nullptr;
+    MemorySSA *MSSA = &getAnalysis<MemorySSAWrapperPass>().getMSSA();
     bool hasProfileData = L->getHeader()->getParent()->hasProfileData();
     BlockFrequencyInfo *BFI =
         hasProfileData ? &getAnalysis<LazyBlockFrequencyInfoPass>().getBFI()
@@ -258,10 +256,8 @@ struct LegacyLICMPass : public LoopPass {
     AU.addPreserved<DominatorTreeWrapperPass>();
     AU.addPreserved<LoopInfoWrapperPass>();
     AU.addRequired<TargetLibraryInfoWrapperPass>();
-    if (EnableMSSALoopDependency) {
-      AU.addRequired<MemorySSAWrapperPass>();
-      AU.addPreserved<MemorySSAWrapperPass>();
-    }
+    AU.addRequired<MemorySSAWrapperPass>();
+    AU.addPreserved<MemorySSAWrapperPass>();
     AU.addRequired<TargetTransformInfoWrapperPass>();
     getLoopAnalysisUsage(AU);
     LazyBlockFrequencyInfoPass::getLazyBFIAnalysisUsage(AU);
