@@ -245,6 +245,7 @@
 #include <memory>
 #include <string>
 #include <system_error>
+#include <unordered_set>
 #include <vector>
 
 namespace llvm {
@@ -407,6 +408,13 @@ public:
     std::string FGUID;
     StringRef CanonName = FunctionSamples::getCanonicalFnName(F);
     CanonName = getRepInFormat(CanonName, useMD5(), FGUID);
+    auto It = Profiles.find(CanonName);
+    if (It != Profiles.end())
+      return &It->second;
+    if (!FGUID.empty()) {
+      assert(useMD5() && "New name should only be generated for md5 profile");
+      CanonName = *MD5NameBuffer.insert(FGUID).first;
+    }
     return &Profiles[CanonName];
   }
 
@@ -502,6 +510,10 @@ protected:
 
   /// Memory buffer holding the profile file.
   std::unique_ptr<MemoryBuffer> Buffer;
+
+  /// Extra name buffer holding names created on demand.
+  /// This should only be needed for md5 profiles.
+  std::unordered_set<std::string> MD5NameBuffer;
 
   /// Profile summary information.
   std::unique_ptr<ProfileSummary> Summary;
