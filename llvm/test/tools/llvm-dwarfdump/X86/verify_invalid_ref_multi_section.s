@@ -1,4 +1,4 @@
-# RUN: llvm-mc %s -o %t.o -filetype=obj
+# RUN: llvm-mc -triple x86_64-pc-linux %s -o %t.o -filetype=obj
 # RUN: llvm-dwarfdump -debug-info -verify %t.o | FileCheck %s
 
 # CHECK-NOT: error:
