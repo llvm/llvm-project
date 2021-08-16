@@ -561,6 +561,7 @@ void __kmp_dispatch_init_algorithm(ident_t *loc, int gtid,
         _control87(_PC_64, _MCW_PC); // 0,0x30000
 #endif
         /* value used for comparison in solver for cross-over point */
+        KMP_ASSERT(tc > 0);
         long double target = ((long double)chunk * 2 + 1) * nproc / tc;
 
         /* crossover point--chunk indexes equal to or greater than
@@ -1715,7 +1716,7 @@ int __kmp_dispatch_next_algorithm(int gtid,
         status = 0; // nothing to do, don't try atomic op
         break;
       }
-      KMP_DEBUG_ASSERT(init % chunk == 0);
+      KMP_DEBUG_ASSERT(chunk && init % chunk == 0);
       // compare with K*nproc*(chunk+1), K=2 by default
       if ((T)remaining < pr->u.p.parm2) {
         // use dynamic-style schedule

@@ -1439,6 +1439,8 @@ __kmp_mm_mwait(unsigned extensions, unsigned hints) {
 /* Support datatypes for the orphaned construct nesting checks.             */
 /* ------------------------------------------------------------------------ */
 
+/* When adding to this enum, add its corresponding string in cons_text_c[]
+ * array in kmp_error.cpp */
 enum cons_type {
   ct_none,
   ct_parallel,
