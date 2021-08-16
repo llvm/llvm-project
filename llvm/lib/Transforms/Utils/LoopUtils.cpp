@@ -1346,9 +1346,6 @@ int llvm::rewriteLoopExitValues(Loop *L, LoopInfo *LI, TargetLibraryInfo *TLI,
 
     // FIXME: isValidRewrite() is a hack. it should be an assert, eventually.
     Phi.ValidRewrite = isValidRewrite(SE, Phi.ExpansionPoint, Phi.Expansion);
-    assert(Phi.ValidRewrite &&
-           "Now that the SCEV is strict wrt pointer/integer types, this "
-           "invariant is expected to be uphold by SCEV itself.");
     if (!Phi.ValidRewrite) {
       DeadInsts.push_back(Phi.Expansion);
       continue;
