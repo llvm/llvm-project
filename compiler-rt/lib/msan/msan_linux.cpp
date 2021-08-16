@@ -106,7 +106,7 @@ static void CheckMemoryLayoutSanity() {
 
 bool InitShadow(bool init_origins) {
   // Let user know mapping parameters first.
-  VPrintf(1, "__msan_init %p\n", &__msan_init);
+  VPrintf(1, "__msan_init %p\n", reinterpret_cast<void *>(&__msan_init));
   for (unsigned i = 0; i < kMemoryLayoutSize; ++i)
     VPrintf(1, "%s: %zx - %zx\n", kMemoryLayout[i].name, kMemoryLayout[i].start,
             kMemoryLayout[i].end - 1);
@@ -115,7 +115,7 @@ bool InitShadow(bool init_origins) {
 
   if (!MEM_IS_APP(&__msan_init)) {
     Printf("FATAL: Code %p is out of application range. Non-PIE build?\n",
-           &__msan_init);
+           reinterpret_cast<void *>(&__msan_init));
     return false;
   }
 

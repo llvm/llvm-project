@@ -115,6 +115,9 @@ TEST(Printf, MinMax) {
   TestAgainstLibc<int>("%d-%d", INT_MIN, INT_MAX);
   TestAgainstLibc<unsigned>("%u-%u", 0, UINT_MAX);
   TestAgainstLibc<unsigned>("%x-%x", 0, UINT_MAX);
+  TestAgainstLibc<long>("%ld-%ld", LONG_MIN, LONG_MAX);
+  TestAgainstLibc<unsigned long>("%lu-%lu", 0, LONG_MAX);
+  TestAgainstLibc<unsigned long>("%lx-%lx", 0, LONG_MAX);
 #if !defined(_WIN32)
   // %z* format doesn't seem to be supported by MSVS.
   TestAgainstLibc<long>("%zd-%zd", LONG_MIN, LONG_MAX);

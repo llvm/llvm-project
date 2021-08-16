@@ -353,22 +353,22 @@ public:
 
   /// Return true if the function has the attribute.
   bool hasFnAttribute(Attribute::AttrKind Kind) const {
-    return AttributeSets.hasFnAttribute(Kind);
+    return AttributeSets.hasFnAttr(Kind);
   }
 
   /// Return true if the function has the attribute.
   bool hasFnAttribute(StringRef Kind) const {
-    return AttributeSets.hasFnAttribute(Kind);
+    return AttributeSets.hasFnAttr(Kind);
   }
 
   /// Return the attribute for the given attribute kind.
   Attribute getFnAttribute(Attribute::AttrKind Kind) const {
-    return getAttribute(AttributeList::FunctionIndex, Kind);
+    return AttributeSets.getFnAttr(Kind);
   }
 
   /// Return the attribute for the given attribute kind.
   Attribute getFnAttribute(StringRef Kind) const {
-    return getAttribute(AttributeList::FunctionIndex, Kind);
+    return AttributeSets.getFnAttr(Kind);
   }
 
   /// Return the stack alignment for the function.
@@ -447,12 +447,17 @@ public:
 
   /// check if an attributes is in the list of attributes.
   bool hasParamAttribute(unsigned ArgNo, Attribute::AttrKind Kind) const {
-    return getAttributes().hasParamAttribute(ArgNo, Kind);
+    return getAttributes().hasParamAttr(ArgNo, Kind);
   }
 
   /// gets the specified attribute from the list of attributes.
   Attribute getParamAttribute(unsigned ArgNo, Attribute::AttrKind Kind) const {
     return getAttributes().getParamAttr(ArgNo, Kind);
+  }
+
+  /// check if an attribute is in the list of attributes for the return value.
+  bool hasRetAttribute(Attribute::AttrKind Kind) const {
+    return getAttributes().hasRetAttr(Kind);
   }
 
   /// gets the attribute from the list of attributes.
@@ -692,15 +697,14 @@ public:
   /// Determine if the function returns a structure through first
   /// or second pointer argument.
   bool hasStructRetAttr() const {
-    return AttributeSets.hasParamAttribute(0, Attribute::StructRet) ||
-           AttributeSets.hasParamAttribute(1, Attribute::StructRet);
+    return AttributeSets.hasParamAttr(0, Attribute::StructRet) ||
+           AttributeSets.hasParamAttr(1, Attribute::StructRet);
   }
 
   /// Determine if the parameter or return value is marked with NoAlias
   /// attribute.
   bool returnDoesNotAlias() const {
-    return AttributeSets.hasAttribute(AttributeList::ReturnIndex,
-                                      Attribute::NoAlias);
+    return AttributeSets.hasRetAttr(Attribute::NoAlias);
   }
   void setReturnDoesNotAlias() {
     addAttribute(AttributeList::ReturnIndex, Attribute::NoAlias);

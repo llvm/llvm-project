@@ -54,7 +54,7 @@ TEST(Attributes, Ordering) {
                          AttributeList::get(C, 1, Attribute::SExt)};
 
   AttributeList SetA = AttributeList::get(C, ASs);
-  AttributeList SetB = SetA.removeAttributes(C, 1, ASs[1].getAttributes(1));
+  AttributeList SetB = SetA.removeAttributes(C, 1, ASs[1].getParamAttrs(0));
   EXPECT_NE(SetA, SetB);
 }
 
@@ -64,12 +64,12 @@ TEST(Attributes, AddAttributes) {
   AttrBuilder B;
   B.addAttribute(Attribute::NoReturn);
   AL = AL.addAttributes(C, AttributeList::FunctionIndex, AttributeSet::get(C, B));
-  EXPECT_TRUE(AL.hasFnAttribute(Attribute::NoReturn));
+  EXPECT_TRUE(AL.hasFnAttr(Attribute::NoReturn));
   B.clear();
   B.addAttribute(Attribute::SExt);
   AL = AL.addAttributes(C, AttributeList::ReturnIndex, B);
-  EXPECT_TRUE(AL.hasAttribute(AttributeList::ReturnIndex, Attribute::SExt));
-  EXPECT_TRUE(AL.hasFnAttribute(Attribute::NoReturn));
+  EXPECT_TRUE(AL.hasRetAttr(Attribute::SExt));
+  EXPECT_TRUE(AL.hasFnAttr(Attribute::NoReturn));
 }
 
 TEST(Attributes, RemoveAlign) {
@@ -102,9 +102,9 @@ TEST(Attributes, RemoveAlign) {
   AttributeList AL;
   AL = AL.addParamAttributes(C, 0, B_align_readonly);
   AL = AL.addAttributes(C, 0, B_stackalign_optnone);
-  EXPECT_TRUE(AL.hasAttributes(0));
-  EXPECT_TRUE(AL.hasAttribute(0, Attribute::StackAlignment));
-  EXPECT_TRUE(AL.hasAttribute(0, Attribute::OptimizeNone));
+  EXPECT_TRUE(AL.hasRetAttrs());
+  EXPECT_TRUE(AL.hasRetAttr(Attribute::StackAlignment));
+  EXPECT_TRUE(AL.hasRetAttr(Attribute::OptimizeNone));
   EXPECT_TRUE(AL.getStackAlignment(0) == 32);
   EXPECT_TRUE(AL.hasParamAttrs(0));
   EXPECT_TRUE(AL.hasParamAttr(0, Attribute::Alignment));
@@ -114,15 +114,15 @@ TEST(Attributes, RemoveAlign) {
   AL = AL.removeParamAttribute(C, 0, Attribute::Alignment);
   EXPECT_FALSE(AL.hasParamAttr(0, Attribute::Alignment));
   EXPECT_TRUE(AL.hasParamAttr(0, Attribute::ReadOnly));
-  EXPECT_TRUE(AL.hasAttribute(0, Attribute::StackAlignment));
-  EXPECT_TRUE(AL.hasAttribute(0, Attribute::OptimizeNone));
+  EXPECT_TRUE(AL.hasRetAttr(Attribute::StackAlignment));
+  EXPECT_TRUE(AL.hasRetAttr(Attribute::OptimizeNone));
   EXPECT_TRUE(AL.getStackAlignment(0) == 32);
 
   AL = AL.removeAttribute(C, 0, Attribute::StackAlignment);
   EXPECT_FALSE(AL.hasParamAttr(0, Attribute::Alignment));
   EXPECT_TRUE(AL.hasParamAttr(0, Attribute::ReadOnly));
-  EXPECT_FALSE(AL.hasAttribute(0, Attribute::StackAlignment));
-  EXPECT_TRUE(AL.hasAttribute(0, Attribute::OptimizeNone));
+  EXPECT_FALSE(AL.hasRetAttr(Attribute::StackAlignment));
+  EXPECT_TRUE(AL.hasRetAttr(Attribute::OptimizeNone));
 
   AttributeList AL2;
   AL2 = AL2.addParamAttributes(C, 0, B_align_readonly);
@@ -131,15 +131,15 @@ TEST(Attributes, RemoveAlign) {
   AL2 = AL2.removeParamAttributes(C, 0, B_align);
   EXPECT_FALSE(AL2.hasParamAttr(0, Attribute::Alignment));
   EXPECT_TRUE(AL2.hasParamAttr(0, Attribute::ReadOnly));
-  EXPECT_TRUE(AL2.hasAttribute(0, Attribute::StackAlignment));
-  EXPECT_TRUE(AL2.hasAttribute(0, Attribute::OptimizeNone));
+  EXPECT_TRUE(AL2.hasRetAttr(Attribute::StackAlignment));
+  EXPECT_TRUE(AL2.hasRetAttr(Attribute::OptimizeNone));
   EXPECT_TRUE(AL2.getStackAlignment(0) == 32);
 
   AL2 = AL2.removeAttributes(C, 0, B_stackalign);
   EXPECT_FALSE(AL2.hasParamAttr(0, Attribute::Alignment));
   EXPECT_TRUE(AL2.hasParamAttr(0, Attribute::ReadOnly));
-  EXPECT_FALSE(AL2.hasAttribute(0, Attribute::StackAlignment));
-  EXPECT_TRUE(AL2.hasAttribute(0, Attribute::OptimizeNone));
+  EXPECT_FALSE(AL2.hasRetAttr(Attribute::StackAlignment));
+  EXPECT_TRUE(AL2.hasRetAttr(Attribute::OptimizeNone));
 }
 
 TEST(Attributes, AddMatchingAlignAttr) {
@@ -158,7 +158,7 @@ TEST(Attributes, AddMatchingAlignAttr) {
   AL = AL.addAttributes(C, AttributeList::FirstArgIndex, B);
   EXPECT_EQ(Align(8), AL.getParamAlignment(0));
   EXPECT_EQ(Align(32), AL.getParamAlignment(1));
-  EXPECT_TRUE(AL.hasParamAttribute(0, Attribute::NonNull));
+  EXPECT_TRUE(AL.hasParamAttr(0, Attribute::NonNull));
 }
 
 TEST(Attributes, EmptyGet) {

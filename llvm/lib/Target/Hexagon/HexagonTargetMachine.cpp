@@ -238,9 +238,9 @@ const HexagonSubtarget *
 HexagonTargetMachine::getSubtargetImpl(const Function &F) const {
   AttributeList FnAttrs = F.getAttributes();
   Attribute CPUAttr =
-      FnAttrs.getAttribute(AttributeList::FunctionIndex, "target-cpu");
+      FnAttrs.getFnAttr("target-cpu");
   Attribute FSAttr =
-      FnAttrs.getAttribute(AttributeList::FunctionIndex, "target-features");
+      FnAttrs.getFnAttr("target-features");
 
   std::string CPU =
       CPUAttr.isValid() ? CPUAttr.getValueAsString().str() : TargetCPU;

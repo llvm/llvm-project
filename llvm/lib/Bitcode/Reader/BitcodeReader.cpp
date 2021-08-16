@@ -3270,7 +3270,7 @@ Error BitcodeReader::parseGlobalVarRecord(ArrayRef<uint64_t> Record) {
   }
 
   if (Record.size() > 12) {
-    auto AS = getAttributes(Record[12]).getFnAttributes();
+    auto AS = getAttributes(Record[12]).getFnAttrs();
     NewGV->setAttributes(AS);
   }
 

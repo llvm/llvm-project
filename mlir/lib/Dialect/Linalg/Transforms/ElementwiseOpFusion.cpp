@@ -1294,7 +1294,12 @@ struct LinalgElementwiseOpFusionPass
         patterns,
         LinalgElementwiseFusionOptions().setControlFoldingReshapes(
             allowFoldingUnitDimReshapes ? allowFoldingFn : skipUnitDimReshape));
-    (void)applyPatternsAndFoldGreedily(op->getRegions(), std::move(patterns));
+
+    // Use TopDownTraversal for compile time reasons
+    GreedyRewriteConfig grc;
+    grc.useTopDownTraversal = true;
+    (void)applyPatternsAndFoldGreedily(op->getRegions(), std::move(patterns),
+                                       grc);
   }
 };
 

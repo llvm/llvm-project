@@ -3362,7 +3362,7 @@ bool AArch64AsmParser::parseSysAlias(StringRef Name, SMLoc NameLoc,
     else if (!IC->haveFeatures(getSTI().getFeatureBits())) {
       std::string Str("IC " + std::string(IC->Name) + " requires: ");
       setRequiredFeatureString(IC->getRequiredFeatures(), Str);
-      return TokError(Str.c_str());
+      return TokError(Str);
     }
     createSysAlias(IC->Encoding, Operands, S);
   } else if (Mnemonic == "dc") {
@@ -3372,7 +3372,7 @@ bool AArch64AsmParser::parseSysAlias(StringRef Name, SMLoc NameLoc,
     else if (!DC->haveFeatures(getSTI().getFeatureBits())) {
       std::string Str("DC " + std::string(DC->Name) + " requires: ");
       setRequiredFeatureString(DC->getRequiredFeatures(), Str);
-      return TokError(Str.c_str());
+      return TokError(Str);
     }
     createSysAlias(DC->Encoding, Operands, S);
   } else if (Mnemonic == "at") {
@@ -3382,7 +3382,7 @@ bool AArch64AsmParser::parseSysAlias(StringRef Name, SMLoc NameLoc,
     else if (!AT->haveFeatures(getSTI().getFeatureBits())) {
       std::string Str("AT " + std::string(AT->Name) + " requires: ");
       setRequiredFeatureString(AT->getRequiredFeatures(), Str);
-      return TokError(Str.c_str());
+      return TokError(Str);
     }
     createSysAlias(AT->Encoding, Operands, S);
   } else if (Mnemonic == "tlbi") {
@@ -3392,7 +3392,7 @@ bool AArch64AsmParser::parseSysAlias(StringRef Name, SMLoc NameLoc,
     else if (!TLBI->haveFeatures(getSTI().getFeatureBits())) {
       std::string Str("TLBI " + std::string(TLBI->Name) + " requires: ");
       setRequiredFeatureString(TLBI->getRequiredFeatures(), Str);
-      return TokError(Str.c_str());
+      return TokError(Str);
     }
     createSysAlias(TLBI->Encoding, Operands, S);
   } else if (Mnemonic == "cfp" || Mnemonic == "dvp" || Mnemonic == "cpp") {
@@ -3403,7 +3403,7 @@ bool AArch64AsmParser::parseSysAlias(StringRef Name, SMLoc NameLoc,
       std::string Str(
           Mnemonic.upper() + std::string(PRCTX->Name) + " requires: ");
       setRequiredFeatureString(PRCTX->getRequiredFeatures(), Str);
-      return TokError(Str.c_str());
+      return TokError(Str);
     }
     uint16_t PRCTX_Op2 =
       Mnemonic == "cfp" ? 4 :

@@ -142,6 +142,10 @@ constexpr bool test() {
     assert(std::ranges::end(subrange) == std::ranges::begin(subrange) + 8);
   }
 
+  {
+    static_assert(std::same_as<decltype(std::views::all), decltype(std::ranges::views::all)>);
+  }
+
   return true;
 }
 

@@ -24,7 +24,7 @@ LibIgnore::LibIgnore(LinkerInitialized) {
 void LibIgnore::AddIgnoredLibrary(const char *name_templ) {
   Lock lock(&mutex_);
   if (count_ >= kMaxLibs) {
-    Report("%s: too many ignored libraries (max: %lu)\n", SanitizerToolName,
+    Report("%s: too many ignored libraries (max: %zu)\n", SanitizerToolName,
            kMaxLibs);
     Die();
   }

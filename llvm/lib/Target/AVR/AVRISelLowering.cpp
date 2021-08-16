@@ -1488,8 +1488,7 @@ AVRTargetLowering::LowerReturn(SDValue Chain, CallingConv::ID CallConv,
 
   // Don't emit the ret/reti instruction when the naked attribute is present in
   // the function being compiled.
-  if (MF.getFunction().getAttributes().hasAttribute(
-          AttributeList::FunctionIndex, Attribute::Naked)) {
+  if (MF.getFunction().getAttributes().hasFnAttr(Attribute::Naked)) {
     return Chain;
   }
 

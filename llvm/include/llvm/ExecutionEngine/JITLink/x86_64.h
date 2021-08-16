@@ -132,7 +132,7 @@ enum EdgeKind_x86_64 : Edge::Kind {
   /// This edge kind has the same fixup expression as BranchPCRel32, but further
   /// identifies the call/branch as being to a pointer jump stub. For edges of
   /// this kind the jump stub should not be bypassed (use
-  /// BranchPCRel32ToPtrJumpStubRelaxable for that), but the pointer location
+  /// BranchPCRel32ToPtrJumpStubBypassable for that), but the pointer location
   /// target may be recorded to allow manipulation at runtime.
   ///
   /// Fixup expression:
@@ -148,7 +148,8 @@ enum EdgeKind_x86_64 : Edge::Kind {
   ///
   /// The edge kind has the same fixup expression as BranchPCRel32ToPtrJumpStub,
   /// but identifies the call/branch as being to a pointer jump stub that may be
-  /// bypassed if the ultimate target is within range of the fixup location.
+  /// bypassed with a direct jump to the ultimate target if the ultimate target
+  /// is within range of the fixup location.
   ///
   /// Fixup expression:
   ///   Fixup <- Target - Fixup + Addend - 4: int32
@@ -157,7 +158,7 @@ enum EdgeKind_x86_64 : Edge::Kind {
   ///   - The result of the fixup expression must fit into an int32, otherwise
   ///     an out-of-range error will be returned.
   ///
-  BranchPCRel32ToPtrJumpStubRelaxable,
+  BranchPCRel32ToPtrJumpStubBypassable,
 
   /// A GOT entry getter/constructor, transformed to Delta32 pointing at the GOT
   /// entry for the original target.
@@ -220,7 +221,21 @@ enum EdgeKind_x86_64 : Edge::Kind {
   ///     phase will result in an assert/unreachable during the fixup phase
   RequestGOTAndTransformToDelta64FromGOT,
 
-  /// A PC-relative reference to a GOT entry, relaxable if GOT entry target
+  /// A PC-relative load of a GOT entry, relaxable if GOT entry target is
+  /// in-range of the fixup
+  ///
+  /// TODO: Explain the optimization
+  ///
+  /// Fixup expression
+  ///   Fixup <- Target - (Fixup + 4) + Addend : int32
+  ///
+  /// Errors:
+  ///   - The result of the fixup expression must fit into an int32, otherwise
+  ///     an out-of-range error will be returned.
+  //
+  PCRel32GOTLoadRelaxable,
+
+  /// A PC-relative REX load of a GOT entry, relaxable if GOT entry target
   /// is in-range of the fixup.
   ///
   /// If the GOT entry target is in-range of the fixup then the load from the
@@ -233,17 +248,39 @@ enum EdgeKind_x86_64 : Edge::Kind {
   ///   - The result of the fixup expression must fit into an int32, otherwise
   ///     an out-of-range error will be returned.
   ///
-  PCRel32GOTLoadRelaxable,
+  PCRel32GOTLoadREXRelaxable,
 
-  /// A GOT entry getter/constructor, transformed to PCRel32ToGOTLoadRelaxable
-  /// pointing at the GOT entry for the original target.
+  /// A GOT entry getter/constructor, transformed to
+  /// PCRel32ToGOTLoadREXRelaxable pointing at the GOT entry for the original
+  /// target.
   ///
-  /// Indicates that this edge should be transformed into a
-  /// PC32ToGOTLoadRelaxable targeting the GOT entry for the edge's current
-  /// target, maintaining the same addend. A GOT entry for the target should be
-  /// created if one does not already exist.
+  /// Indicates that this edge should be lowered to a PC32ToGOTLoadREXRelaxable
+  /// targeting the GOT entry for the edge's current target, maintaining the
+  /// same addend. A GOT entry for the target should be created if one does not
+  /// already exist.
   ///
-  /// Edges of this kind are usually handled by a GOT builder pass inserted by
+  /// Edges of this kind are usually lowered by a GOT builder pass inserted by
+  /// default.
+  ///
+  /// Fixup expression:
+  ///   NONE
+  ///
+  /// Errors:
+  ///   - *ASSERTION* Failure to handle edges of this kind prior to the fixup
+  ///     phase will result in an assert/unreachable during the fixup phase.
+  ///
+  RequestGOTAndTransformToPCRel32GOTLoadREXRelaxable,
+
+  /// A GOT entry getter/constructor, transformed to
+  /// PCRel32ToGOTLoadRelaxable pointing at the GOT entry for the original
+  /// target.
+  ///
+  /// Indicates that this edge should be lowered to a PC32ToGOTLoadRelaxable
+  /// targeting the GOT entry for the edge's current target, maintaining the
+  /// same addend. A GOT entry for the target should be created if one does not
+  /// already exist.
+  ///
+  /// Edges of this kind are usually lowered by a GOT builder pass inserted by
   /// default.
   ///
   /// Fixup expression:
@@ -255,10 +292,10 @@ enum EdgeKind_x86_64 : Edge::Kind {
   ///
   RequestGOTAndTransformToPCRel32GOTLoadRelaxable,
 
-  /// A PC-relative reference to a Thread Local Variable Pointer (TLVP) entry,
+  /// A PC-relative REX load of a Thread Local Variable Pointer (TLVP) entry,
   /// relaxable if the TLVP entry target is in-range of the fixup.
   ///
-  /// If the TLVP entry target is in-range of the fixup then the load frmo the
+  /// If the TLVP entry target is in-range of the fixup then the load from the
   /// TLVP may be replaced with a direct memory address calculation.
   ///
   /// The target of this edge must be a thread local variable entry of the form
@@ -275,15 +312,15 @@ enum EdgeKind_x86_64 : Edge::Kind {
   ///   - The target must be either external, or a TLV entry of the required
   ///     form, otherwise a malformed TLV entry error will be returned.
   ///
-  PCRel32TLVPLoadRelaxable,
+  PCRel32TLVPLoadREXRelaxable,
 
   /// A TLVP entry getter/constructor, transformed to
-  /// Delta32ToTLVPLoadRelaxable.
+  /// Delta32ToTLVPLoadREXRelaxable.
   ///
   /// Indicates that this edge should be transformed into a
-  /// Delta32ToTLVPLoadRelaxable targeting the TLVP entry for the edge's current
-  /// target. A TLVP entry for the target should be created if one does not
-  /// already exist.
+  /// Delta32ToTLVPLoadREXRelaxable targeting the TLVP entry for the edge's
+  /// current target. A TLVP entry for the target should be created if one does
+  /// not already exist.
   ///
   /// Fixup expression:
   ///   NONE
@@ -292,12 +329,20 @@ enum EdgeKind_x86_64 : Edge::Kind {
   ///   - *ASSERTION* Failure to handle edges of this kind prior to the fixup
   ///     phase will result in an assert/unreachable during the fixup phase.
   ///
-  RequestTLVPAndTransformToPCRel32TLVPLoadRelaxable
+  RequestTLVPAndTransformToPCRel32TLVPLoadREXRelaxable
 };
 
 /// Returns a string name for the given x86-64 edge. For debugging purposes
 /// only.
 const char *getEdgeKindName(Edge::Kind K);
+
+/// Optimize the GOT and Stub relocations if the edge target address is in range
+/// 1. PCRel32GOTLoadRelaxable. For this edge kind, if the target is in range,
+/// then replace GOT load with lea
+/// 2. BranchPCRel32ToPtrJumpStubRelaxable. For this edge kind, if the target is
+/// in range, replace a indirect jump by plt stub with a direct jump to the
+/// target
+Error optimize_x86_64_GOTAndStubs(LinkGraph &G);
 
 /// Returns true if the given uint64_t value is in range for a uint32_t.
 inline bool isInRangeForImmU32(uint64_t Value) {
@@ -338,9 +383,10 @@ inline Error applyFixup(LinkGraph &G, Block &B, const Edge &E,
 
   case BranchPCRel32:
   case BranchPCRel32ToPtrJumpStub:
-  case BranchPCRel32ToPtrJumpStubRelaxable:
+  case BranchPCRel32ToPtrJumpStubBypassable:
   case PCRel32GOTLoadRelaxable:
-  case PCRel32TLVPLoadRelaxable: {
+  case PCRel32GOTLoadREXRelaxable:
+  case PCRel32TLVPLoadREXRelaxable: {
     int64_t Value =
         E.getTarget().getAddress() - (FixupAddress + 4) + E.getAddend();
     if (LLVM_LIKELY(isInRangeForImmS32(Value)))

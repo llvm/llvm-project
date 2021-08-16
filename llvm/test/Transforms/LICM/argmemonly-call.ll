@@ -1,5 +1,5 @@
 ; RUN: opt -S -basic-aa -licm -licm-n2-threshold=0 -enable-mssa-loop-dependency=false %s -enable-new-pm=0 | FileCheck %s
-; RUN: opt -S -basic-aa -licm -licm-n2-threshold=0 -enable-mssa-loop-dependency=true -verify-memoryssa %s -enable-new-pm=0 | FileCheck %s --check-prefix=ALIAS-N2
+; RUN: opt -S -basic-aa -licm -licm-n2-threshold=0 -verify-memoryssa %s -enable-new-pm=0 | FileCheck %s --check-prefix=ALIAS-N2
 ; RUN: opt -licm -basic-aa -licm-n2-threshold=200 < %s -S -enable-new-pm=0 | FileCheck %s --check-prefix=ALIAS-N2
 
 ; RUN: opt -aa-pipeline=basic-aa -licm-n2-threshold=0 -passes='require<aa>,require<targetir>,require<scalar-evolution>,require<opt-remark-emit>,loop(licm)' < %s -S | FileCheck %s

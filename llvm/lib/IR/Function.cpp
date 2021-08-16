@@ -140,20 +140,20 @@ bool Argument::hasPreallocatedAttr() const {
 bool Argument::hasPassPointeeByValueCopyAttr() const {
   if (!getType()->isPointerTy()) return false;
   AttributeList Attrs = getParent()->getAttributes();
-  return Attrs.hasParamAttribute(getArgNo(), Attribute::ByVal) ||
-         Attrs.hasParamAttribute(getArgNo(), Attribute::InAlloca) ||
-         Attrs.hasParamAttribute(getArgNo(), Attribute::Preallocated);
+  return Attrs.hasParamAttr(getArgNo(), Attribute::ByVal) ||
+         Attrs.hasParamAttr(getArgNo(), Attribute::InAlloca) ||
+         Attrs.hasParamAttr(getArgNo(), Attribute::Preallocated);
 }
 
 bool Argument::hasPointeeInMemoryValueAttr() const {
   if (!getType()->isPointerTy())
     return false;
   AttributeList Attrs = getParent()->getAttributes();
-  return Attrs.hasParamAttribute(getArgNo(), Attribute::ByVal) ||
-         Attrs.hasParamAttribute(getArgNo(), Attribute::StructRet) ||
-         Attrs.hasParamAttribute(getArgNo(), Attribute::InAlloca) ||
-         Attrs.hasParamAttribute(getArgNo(), Attribute::Preallocated) ||
-         Attrs.hasParamAttribute(getArgNo(), Attribute::ByRef);
+  return Attrs.hasParamAttr(getArgNo(), Attribute::ByVal) ||
+         Attrs.hasParamAttr(getArgNo(), Attribute::StructRet) ||
+         Attrs.hasParamAttr(getArgNo(), Attribute::InAlloca) ||
+         Attrs.hasParamAttr(getArgNo(), Attribute::Preallocated) ||
+         Attrs.hasParamAttr(getArgNo(), Attribute::ByRef);
 }
 
 /// For a byval, sret, inalloca, or preallocated parameter, get the in-memory
@@ -177,7 +177,7 @@ static Type *getMemoryParamAllocType(AttributeSet ParamAttrs, Type *ArgTy) {
 
 uint64_t Argument::getPassPointeeByValueCopySize(const DataLayout &DL) const {
   AttributeSet ParamAttrs =
-      getParent()->getAttributes().getParamAttributes(getArgNo());
+      getParent()->getAttributes().getParamAttrs(getArgNo());
   if (Type *MemTy = getMemoryParamAllocType(ParamAttrs, getType()))
     return DL.getTypeAllocSize(MemTy);
   return 0;
@@ -185,7 +185,7 @@ uint64_t Argument::getPassPointeeByValueCopySize(const DataLayout &DL) const {
 
 Type *Argument::getPointeeInMemoryValueType() const {
   AttributeSet ParamAttrs =
-      getParent()->getAttributes().getParamAttributes(getArgNo());
+      getParent()->getAttributes().getParamAttrs(getArgNo());
   return getMemoryParamAllocType(ParamAttrs, getType());
 }
 
@@ -278,8 +278,8 @@ bool Argument::hasSExtAttr() const {
 
 bool Argument::onlyReadsMemory() const {
   AttributeList Attrs = getParent()->getAttributes();
-  return Attrs.hasParamAttribute(getArgNo(), Attribute::ReadOnly) ||
-         Attrs.hasParamAttribute(getArgNo(), Attribute::ReadNone);
+  return Attrs.hasParamAttr(getArgNo(), Attribute::ReadOnly) ||
+         Attrs.hasParamAttr(getArgNo(), Attribute::ReadNone);
 }
 
 void Argument::addAttrs(AttrBuilder &B) {

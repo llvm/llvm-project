@@ -400,7 +400,7 @@ _mm256_rcp_ps(__m256 __a)
 ///      11: Truncated.
 /// \returns A 256-bit vector of [4 x double] containing the rounded values.
 #define _mm256_round_pd(V, M) \
-    (__m256d)__builtin_ia32_roundpd256((__v4df)(__m256d)(V), (M))
+  ((__m256d)__builtin_ia32_roundpd256((__v4df)(__m256d)(V), (M)))
 
 /// Rounds the values stored in a 256-bit vector of [8 x float] as
 ///    specified by the byte operand. The source values are rounded to integer
@@ -432,7 +432,7 @@ _mm256_rcp_ps(__m256 __a)
 ///      11: Truncated.
 /// \returns A 256-bit vector of [8 x float] containing the rounded values.
 #define _mm256_round_ps(V, M) \
-  (__m256)__builtin_ia32_roundps256((__v8sf)(__m256)(V), (M))
+  ((__m256)__builtin_ia32_roundps256((__v8sf)(__m256)(V), (M)))
 
 /// Rounds up the values stored in a 256-bit vector of [4 x double]. The
 ///    source values are rounded up to integer values and returned as 64-bit
@@ -989,7 +989,7 @@ _mm256_permutevar_ps(__m256 __a, __m256i __c)
 ///         returned vector.
 /// \returns A 128-bit vector of [2 x double] containing the copied values.
 #define _mm_permute_pd(A, C) \
-  (__m128d)__builtin_ia32_vpermilpd((__v2df)(__m128d)(A), (int)(C))
+  ((__m128d)__builtin_ia32_vpermilpd((__v2df)(__m128d)(A), (int)(C)))
 
 /// Copies the values in a 256-bit vector of [4 x double] as specified by
 ///    the immediate integer operand.
@@ -1029,7 +1029,7 @@ _mm256_permutevar_ps(__m256 __a, __m256i __c)
 ///         returned vector.
 /// \returns A 256-bit vector of [4 x double] containing the copied values.
 #define _mm256_permute_pd(A, C) \
-  (__m256d)__builtin_ia32_vpermilpd256((__v4df)(__m256d)(A), (int)(C))
+  ((__m256d)__builtin_ia32_vpermilpd256((__v4df)(__m256d)(A), (int)(C)))
 
 /// Copies the values in a 128-bit vector of [4 x float] as specified by
 ///    the immediate integer operand.
@@ -1085,7 +1085,7 @@ _mm256_permutevar_ps(__m256 __a, __m256i __c)
 ///          returned vector.
 /// \returns A 128-bit vector of [4 x float] containing the copied values.
 #define _mm_permute_ps(A, C) \
-  (__m128)__builtin_ia32_vpermilps((__v4sf)(__m128)(A), (int)(C))
+  ((__m128)__builtin_ia32_vpermilps((__v4sf)(__m128)(A), (int)(C)))
 
 /// Copies the values in a 256-bit vector of [8 x float] as specified by
 ///    the immediate integer operand.
@@ -1177,7 +1177,7 @@ _mm256_permutevar_ps(__m256 __a, __m256i __c)
 ///          returned vector.
 /// \returns A 256-bit vector of [8 x float] containing the copied values.
 #define _mm256_permute_ps(A, C) \
-  (__m256)__builtin_ia32_vpermilps256((__v8sf)(__m256)(A), (int)(C))
+  ((__m256)__builtin_ia32_vpermilps256((__v8sf)(__m256)(A), (int)(C)))
 
 /// Permutes 128-bit data values stored in two 256-bit vectors of
 ///    [4 x double], as specified by the immediate integer operand.
@@ -1217,8 +1217,8 @@ _mm256_permutevar_ps(__m256 __a, __m256i __c)
 ///          destination.
 /// \returns A 256-bit vector of [4 x double] containing the copied values.
 #define _mm256_permute2f128_pd(V1, V2, M) \
-  (__m256d)__builtin_ia32_vperm2f128_pd256((__v4df)(__m256d)(V1), \
-                                           (__v4df)(__m256d)(V2), (int)(M))
+  ((__m256d)__builtin_ia32_vperm2f128_pd256((__v4df)(__m256d)(V1), \
+                                            (__v4df)(__m256d)(V2), (int)(M)))
 
 /// Permutes 128-bit data values stored in two 256-bit vectors of
 ///    [8 x float], as specified by the immediate integer operand.
@@ -1258,8 +1258,8 @@ _mm256_permutevar_ps(__m256 __a, __m256i __c)
 ///    destination.
 /// \returns A 256-bit vector of [8 x float] containing the copied values.
 #define _mm256_permute2f128_ps(V1, V2, M) \
-  (__m256)__builtin_ia32_vperm2f128_ps256((__v8sf)(__m256)(V1), \
-                                          (__v8sf)(__m256)(V2), (int)(M))
+  ((__m256)__builtin_ia32_vperm2f128_ps256((__v8sf)(__m256)(V1), \
+                                           (__v8sf)(__m256)(V2), (int)(M)))
 
 /// Permutes 128-bit data values stored in two 256-bit integer vectors,
 ///    as specified by the immediate integer operand.
@@ -1298,8 +1298,8 @@ _mm256_permutevar_ps(__m256 __a, __m256i __c)
 ///    destination.
 /// \returns A 256-bit integer vector containing the copied values.
 #define _mm256_permute2f128_si256(V1, V2, M) \
-  (__m256i)__builtin_ia32_vperm2f128_si256((__v8si)(__m256i)(V1), \
-                                           (__v8si)(__m256i)(V2), (int)(M))
+  ((__m256i)__builtin_ia32_vperm2f128_si256((__v8si)(__m256i)(V1), \
+                                            (__v8si)(__m256i)(V2), (int)(M)))
 
 /* Vector Blend */
 /// Merges 64-bit double-precision data values stored in either of the
@@ -1327,8 +1327,8 @@ _mm256_permutevar_ps(__m256 __a, __m256i __c)
 ///    operand \a V2 is copied to the same position in the destination.
 /// \returns A 256-bit vector of [4 x double] containing the copied values.
 #define _mm256_blend_pd(V1, V2, M) \
-  (__m256d)__builtin_ia32_blendpd256((__v4df)(__m256d)(V1), \
-                                     (__v4df)(__m256d)(V2), (int)(M))
+  ((__m256d)__builtin_ia32_blendpd256((__v4df)(__m256d)(V1), \
+                                      (__v4df)(__m256d)(V2), (int)(M)))
 
 /// Merges 32-bit single-precision data values stored in either of the
 ///    two 256-bit vectors of [8 x float], as specified by the immediate
@@ -1355,8 +1355,8 @@ _mm256_permutevar_ps(__m256 __a, __m256i __c)
 ///    operand \a V2 is copied to the same position in the destination.
 /// \returns A 256-bit vector of [8 x float] containing the copied values.
 #define _mm256_blend_ps(V1, V2, M) \
-  (__m256)__builtin_ia32_blendps256((__v8sf)(__m256)(V1), \
-                                    (__v8sf)(__m256)(V2), (int)(M))
+  ((__m256)__builtin_ia32_blendps256((__v8sf)(__m256)(V1), \
+                                     (__v8sf)(__m256)(V2), (int)(M)))
 
 /// Merges 64-bit double-precision data values stored in either of the
 ///    two 256-bit vectors of [4 x double], as specified by the 256-bit vector
@@ -1453,8 +1453,8 @@ _mm256_blendv_ps(__m256 __a, __m256 __b, __m256 __c)
 ///    two parallel dot product computations.
 /// \returns A 256-bit vector of [8 x float] containing the two dot products.
 #define _mm256_dp_ps(V1, V2, M) \
-  (__m256)__builtin_ia32_dpps256((__v8sf)(__m256)(V1), \
-                                 (__v8sf)(__m256)(V2), (M))
+  ((__m256)__builtin_ia32_dpps256((__v8sf)(__m256)(V1), \
+                                  (__v8sf)(__m256)(V2), (M)))
 
 /* Vector shuffle */
 /// Selects 8 float values from the 256-bit operands of [8 x float], as
@@ -1507,8 +1507,8 @@ _mm256_blendv_ps(__m256 __a, __m256 __b, __m256 __c)
 ///    11: Bits [127:96] and [255:224] are copied from the selected operand.
 /// \returns A 256-bit vector of [8 x float] containing the shuffled values.
 #define _mm256_shuffle_ps(a, b, mask) \
-  (__m256)__builtin_ia32_shufps256((__v8sf)(__m256)(a), \
-                                   (__v8sf)(__m256)(b), (int)(mask))
+  ((__m256)__builtin_ia32_shufps256((__v8sf)(__m256)(a), \
+                                    (__v8sf)(__m256)(b), (int)(mask)))
 
 /// Selects four double-precision values from the 256-bit operands of
 ///    [4 x double], as specified by the immediate value operand.
@@ -1553,8 +1553,8 @@ _mm256_blendv_ps(__m256 __a, __m256 __b, __m256 __c)
 ///    destination.
 /// \returns A 256-bit vector of [4 x double] containing the shuffled values.
 #define _mm256_shuffle_pd(a, b, mask) \
-  (__m256d)__builtin_ia32_shufpd256((__v4df)(__m256d)(a), \
-                                    (__v4df)(__m256d)(b), (int)(mask))
+  ((__m256d)__builtin_ia32_shufpd256((__v4df)(__m256d)(a), \
+                                     (__v4df)(__m256d)(b), (int)(mask)))
 
 /* Compare */
 #define _CMP_EQ_OQ    0x00 /* Equal (ordered, non-signaling)  */
@@ -1647,8 +1647,8 @@ _mm256_blendv_ps(__m256 __a, __m256 __b, __m256 __c)
 ///    0x1F: True (unordered, signaling)
 /// \returns A 128-bit vector of [2 x double] containing the comparison results.
 #define _mm_cmp_pd(a, b, c) \
-  (__m128d)__builtin_ia32_cmppd((__v2df)(__m128d)(a), \
-                                (__v2df)(__m128d)(b), (c))
+  ((__m128d)__builtin_ia32_cmppd((__v2df)(__m128d)(a), \
+                                 (__v2df)(__m128d)(b), (c)))
 
 /// Compares each of the corresponding values of two 128-bit vectors of
 ///    [4 x float], using the operation specified by the immediate integer
@@ -1707,8 +1707,8 @@ _mm256_blendv_ps(__m256 __a, __m256 __b, __m256 __c)
 ///    0x1F: True (unordered, signaling)
 /// \returns A 128-bit vector of [4 x float] containing the comparison results.
 #define _mm_cmp_ps(a, b, c) \
-  (__m128)__builtin_ia32_cmpps((__v4sf)(__m128)(a), \
-                               (__v4sf)(__m128)(b), (c))
+  ((__m128)__builtin_ia32_cmpps((__v4sf)(__m128)(a), \
+                                (__v4sf)(__m128)(b), (c)))
 
 /// Compares each of the corresponding double-precision values of two
 ///    256-bit vectors of [4 x double], using the operation specified by the
@@ -1767,8 +1767,8 @@ _mm256_blendv_ps(__m256 __a, __m256 __b, __m256 __c)
 ///    0x1F: True (unordered, signaling)
 /// \returns A 256-bit vector of [4 x double] containing the comparison results.
 #define _mm256_cmp_pd(a, b, c) \
-  (__m256d)__builtin_ia32_cmppd256((__v4df)(__m256d)(a), \
-                                   (__v4df)(__m256d)(b), (c))
+  ((__m256d)__builtin_ia32_cmppd256((__v4df)(__m256d)(a), \
+                                    (__v4df)(__m256d)(b), (c)))
 
 /// Compares each of the corresponding values of two 256-bit vectors of
 ///    [8 x float], using the operation specified by the immediate integer
@@ -1827,8 +1827,8 @@ _mm256_blendv_ps(__m256 __a, __m256 __b, __m256 __c)
 ///    0x1F: True (unordered, signaling)
 /// \returns A 256-bit vector of [8 x float] containing the comparison results.
 #define _mm256_cmp_ps(a, b, c) \
-  (__m256)__builtin_ia32_cmpps256((__v8sf)(__m256)(a), \
-                                  (__v8sf)(__m256)(b), (c))
+  ((__m256)__builtin_ia32_cmpps256((__v8sf)(__m256)(a), \
+                                   (__v8sf)(__m256)(b), (c)))
 
 /// Compares each of the corresponding scalar double-precision values of
 ///    two 128-bit vectors of [2 x double], using the operation specified by the
@@ -1886,8 +1886,8 @@ _mm256_blendv_ps(__m256 __a, __m256 __b, __m256 __c)
 ///    0x1F: True (unordered, signaling)
 /// \returns A 128-bit vector of [2 x double] containing the comparison results.
 #define _mm_cmp_sd(a, b, c) \
-  (__m128d)__builtin_ia32_cmpsd((__v2df)(__m128d)(a), \
-                                (__v2df)(__m128d)(b), (c))
+  ((__m128d)__builtin_ia32_cmpsd((__v2df)(__m128d)(a), \
+                                 (__v2df)(__m128d)(b), (c)))
 
 /// Compares each of the corresponding scalar values of two 128-bit
 ///    vectors of [4 x float], using the operation specified by the immediate
@@ -1945,8 +1945,8 @@ _mm256_blendv_ps(__m256 __a, __m256 __b, __m256 __c)
 ///    0x1F: True (unordered, signaling)
 /// \returns A 128-bit vector of [4 x float] containing the comparison results.
 #define _mm_cmp_ss(a, b, c) \
-  (__m128)__builtin_ia32_cmpss((__v4sf)(__m128)(a), \
-                               (__v4sf)(__m128)(b), (c))
+  ((__m128)__builtin_ia32_cmpss((__v4sf)(__m128)(a), \
+                                (__v4sf)(__m128)(b), (c)))
 
 /// Takes a [8 x i32] vector and returns the vector element value
 ///    indexed by the immediate constant operand.
@@ -1964,7 +1964,7 @@ _mm256_blendv_ps(__m256 __a, __m256 __b, __m256 __c)
 /// \returns A 32-bit integer containing the extracted 32 bits of extended
 ///    packed data.
 #define _mm256_extract_epi32(X, N) \
-  (int)__builtin_ia32_vec_ext_v8si((__v8si)(__m256i)(X), (int)(N))
+  ((int)__builtin_ia32_vec_ext_v8si((__v8si)(__m256i)(X), (int)(N)))
 
 /// Takes a [16 x i16] vector and returns the vector element value
 ///    indexed by the immediate constant operand.
@@ -1982,8 +1982,8 @@ _mm256_blendv_ps(__m256 __a, __m256 __b, __m256 __c)
 /// \returns A 32-bit integer containing the extracted 16 bits of zero extended
 ///    packed data.
 #define _mm256_extract_epi16(X, N) \
-  (int)(unsigned short)__builtin_ia32_vec_ext_v16hi((__v16hi)(__m256i)(X), \
-                                                    (int)(N))
+  ((int)(unsigned short)__builtin_ia32_vec_ext_v16hi((__v16hi)(__m256i)(X), \
+                                                     (int)(N)))
 
 /// Takes a [32 x i8] vector and returns the vector element value
 ///    indexed by the immediate constant operand.
@@ -2001,8 +2001,8 @@ _mm256_blendv_ps(__m256 __a, __m256 __b, __m256 __c)
 /// \returns A 32-bit integer containing the extracted 8 bits of zero extended
 ///    packed data.
 #define _mm256_extract_epi8(X, N) \
-  (int)(unsigned char)__builtin_ia32_vec_ext_v32qi((__v32qi)(__m256i)(X), \
-                                                   (int)(N))
+  ((int)(unsigned char)__builtin_ia32_vec_ext_v32qi((__v32qi)(__m256i)(X), \
+                                                    (int)(N)))
 
 #ifdef __x86_64__
 /// Takes a [4 x i64] vector and returns the vector element value
@@ -2021,7 +2021,7 @@ _mm256_blendv_ps(__m256 __a, __m256 __b, __m256 __c)
 /// \returns A 64-bit integer containing the extracted 64 bits of extended
 ///    packed data.
 #define _mm256_extract_epi64(X, N) \
-  (long long)__builtin_ia32_vec_ext_v4di((__v4di)(__m256i)(X), (int)(N))
+  ((long long)__builtin_ia32_vec_ext_v4di((__v4di)(__m256i)(X), (int)(N)))
 #endif
 
 /// Takes a [8 x i32] vector and replaces the vector element value
@@ -2043,8 +2043,8 @@ _mm256_blendv_ps(__m256 __a, __m256 __b, __m256 __c)
 /// \returns A copy of vector \a __a, after replacing its element indexed by
 ///    \a __imm with \a __b.
 #define _mm256_insert_epi32(X, I, N) \
-  (__m256i)__builtin_ia32_vec_set_v8si((__v8si)(__m256i)(X), \
-                                       (int)(I), (int)(N))
+  ((__m256i)__builtin_ia32_vec_set_v8si((__v8si)(__m256i)(X), \
+                                        (int)(I), (int)(N)))
 
 
 /// Takes a [16 x i16] vector and replaces the vector element value
@@ -2066,8 +2066,8 @@ _mm256_blendv_ps(__m256 __a, __m256 __b, __m256 __c)
 /// \returns A copy of vector \a __a, after replacing its element indexed by
 ///    \a __imm with \a __b.
 #define _mm256_insert_epi16(X, I, N) \
-  (__m256i)__builtin_ia32_vec_set_v16hi((__v16hi)(__m256i)(X), \
-                                        (int)(I), (int)(N))
+  ((__m256i)__builtin_ia32_vec_set_v16hi((__v16hi)(__m256i)(X), \
+                                         (int)(I), (int)(N)))
 
 /// Takes a [32 x i8] vector and replaces the vector element value
 ///    indexed by the immediate constant operand with a new value. Returns the
@@ -2088,8 +2088,8 @@ _mm256_blendv_ps(__m256 __a, __m256 __b, __m256 __c)
 /// \returns A copy of vector \a __a, after replacing its element indexed by
 ///    \a __imm with \a __b.
 #define _mm256_insert_epi8(X, I, N) \
-  (__m256i)__builtin_ia32_vec_set_v32qi((__v32qi)(__m256i)(X), \
-                                        (int)(I), (int)(N))
+  ((__m256i)__builtin_ia32_vec_set_v32qi((__v32qi)(__m256i)(X), \
+                                         (int)(I), (int)(N)))
 
 #ifdef __x86_64__
 /// Takes a [4 x i64] vector and replaces the vector element value
@@ -2111,8 +2111,8 @@ _mm256_blendv_ps(__m256 __a, __m256 __b, __m256 __c)
 /// \returns A copy of vector \a __a, after replacing its element indexed by
 ///     \a __imm with \a __b.
 #define _mm256_insert_epi64(X, I, N) \
-  (__m256i)__builtin_ia32_vec_set_v4di((__v4di)(__m256i)(X), \
-                                       (long long)(I), (int)(N))
+  ((__m256i)__builtin_ia32_vec_set_v4di((__v4di)(__m256i)(X), \
+                                        (long long)(I), (int)(N)))
 #endif
 
 /* Conversion */
@@ -4592,8 +4592,8 @@ _mm256_zextsi128_si256(__m128i __a)
 ///    result.
 /// \returns A 256-bit vector of [8 x float] containing the interleaved values.
 #define _mm256_insertf128_ps(V1, V2, M) \
-  (__m256)__builtin_ia32_vinsertf128_ps256((__v8sf)(__m256)(V1), \
-                                           (__v4sf)(__m128)(V2), (int)(M))
+  ((__m256)__builtin_ia32_vinsertf128_ps256((__v8sf)(__m256)(V1), \
+                                            (__v4sf)(__m128)(V2), (int)(M)))
 
 /// Constructs a new 256-bit vector of [4 x double] by first duplicating
 ///    a 256-bit vector of [4 x double] given in the first parameter, and then
@@ -4630,8 +4630,8 @@ _mm256_zextsi128_si256(__m128i __a)
 ///    result.
 /// \returns A 256-bit vector of [4 x double] containing the interleaved values.
 #define _mm256_insertf128_pd(V1, V2, M) \
-  (__m256d)__builtin_ia32_vinsertf128_pd256((__v4df)(__m256d)(V1), \
-                                            (__v2df)(__m128d)(V2), (int)(M))
+  ((__m256d)__builtin_ia32_vinsertf128_pd256((__v4df)(__m256d)(V1), \
+                                             (__v2df)(__m128d)(V2), (int)(M)))
 
 /// Constructs a new 256-bit integer vector by first duplicating a
 ///    256-bit integer vector given in the first parameter, and then replacing
@@ -4668,8 +4668,8 @@ _mm256_zextsi128_si256(__m128i __a)
 ///    result.
 /// \returns A 256-bit integer vector containing the interleaved values.
 #define _mm256_insertf128_si256(V1, V2, M) \
-  (__m256i)__builtin_ia32_vinsertf128_si256((__v8si)(__m256i)(V1), \
-                                            (__v4si)(__m128i)(V2), (int)(M))
+  ((__m256i)__builtin_ia32_vinsertf128_si256((__v8si)(__m256i)(V1), \
+                                             (__v4si)(__m128i)(V2), (int)(M)))
 
 /*
    Vector extract.
@@ -4698,7 +4698,7 @@ _mm256_zextsi128_si256(__m128i __a)
 ///    If bit [0] of \a M is 1, bits [255:128] of \a V are copied to the result.
 /// \returns A 128-bit vector of [4 x float] containing the extracted bits.
 #define _mm256_extractf128_ps(V, M) \
-  (__m128)__builtin_ia32_vextractf128_ps256((__v8sf)(__m256)(V), (int)(M))
+  ((__m128)__builtin_ia32_vextractf128_ps256((__v8sf)(__m256)(V), (int)(M)))
 
 /// Extracts either the upper or the lower 128 bits from a 256-bit vector
 ///    of [4 x double], as determined by the immediate integer parameter, and
@@ -4722,7 +4722,7 @@ _mm256_zextsi128_si256(__m128i __a)
 ///    If bit [0] of \a M is 1, bits [255:128] of \a V are copied to the result.
 /// \returns A 128-bit vector of [2 x double] containing the extracted bits.
 #define _mm256_extractf128_pd(V, M) \
-  (__m128d)__builtin_ia32_vextractf128_pd256((__v4df)(__m256d)(V), (int)(M))
+  ((__m128d)__builtin_ia32_vextractf128_pd256((__v4df)(__m256d)(V), (int)(M)))
 
 /// Extracts either the upper or the lower 128 bits from a 256-bit
 ///    integer vector, as determined by the immediate integer parameter, and
@@ -4746,7 +4746,7 @@ _mm256_zextsi128_si256(__m128i __a)
 ///    If bit [0] of \a M is 1, bits [255:128] of \a V are copied to the result.
 /// \returns A 128-bit integer vector containing the extracted bits.
 #define _mm256_extractf128_si256(V, M) \
-  (__m128i)__builtin_ia32_vextractf128_si256((__v8si)(__m256i)(V), (int)(M))
+  ((__m128i)__builtin_ia32_vextractf128_si256((__v8si)(__m256i)(V), (int)(M)))
 
 /* SIMD load ops (unaligned) */
 /// Loads two 128-bit floating-point vectors of [4 x float] from

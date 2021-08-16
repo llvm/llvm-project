@@ -922,9 +922,9 @@ bool TargetLibraryInfoImpl::isValidProtoForLibFunc(const FunctionType &FTy,
   case LibFunc_vec_malloc:
     return (NumParams == 1 && FTy.getReturnType()->isPointerTy());
   case LibFunc_memcmp:
-    return (NumParams == 3 && FTy.getReturnType()->isIntegerTy(32) &&
-            FTy.getParamType(0)->isPointerTy() &&
-            FTy.getParamType(1)->isPointerTy());
+    return NumParams == 3 && FTy.getReturnType()->isIntegerTy(32) &&
+           FTy.getParamType(0)->isPointerTy() &&
+           FTy.getParamType(1)->isPointerTy() && IsSizeTTy(FTy.getParamType(2));
 
   case LibFunc_memchr:
   case LibFunc_memrchr:

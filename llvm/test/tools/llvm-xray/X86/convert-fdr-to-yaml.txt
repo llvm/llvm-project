@@ -1,4 +1,4 @@
-; RUN: llvm-xray convert %S/Inputs/fdr-log-version-1.xray -f=yaml -o - | FileCheck %s
+; RUN: llvm-xray convert %S/Inputs/fdr-log-version-1.xray -f yaml -o - | FileCheck %s
 
 ; CHECK:      ---
 ; CHECK-NEXT: header:

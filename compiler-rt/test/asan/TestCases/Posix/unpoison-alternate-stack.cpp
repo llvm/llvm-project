@@ -6,9 +6,6 @@
 // RUN: %clangxx_asan -std=c++20 -fexceptions -O0 %s -o %t -pthread
 // RUN: %run %t
 
-// longjmp from signal handler is unportable.
-// XFAIL: solaris
-
 #include <algorithm>
 #include <cassert>
 #include <cerrno>

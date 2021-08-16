@@ -195,6 +195,10 @@ constexpr bool test() {
     }
   }
 
+  {
+    static_assert(std::same_as<decltype(std::views::counted), decltype(std::ranges::views::counted)>);
+  }
+
   return true;
 }
 

@@ -620,13 +620,13 @@ public:
 
   /// The attributes for the argument or parameter at the given index are
   /// returned.
-  AttributeSet getParamAttributes(unsigned ArgNo) const;
+  AttributeSet getParamAttrs(unsigned ArgNo) const;
 
   /// The attributes for the ret value are returned.
-  AttributeSet getRetAttributes() const;
+  AttributeSet getRetAttrs() const;
 
   /// The function attributes are returned.
-  AttributeSet getFnAttributes() const;
+  AttributeSet getFnAttrs() const;
 
   /// Return true if the attribute exists at the given index.
   bool hasAttribute(unsigned Index, Attribute::AttrKind Kind) const;
@@ -652,16 +652,27 @@ public:
     return hasAttributes(ArgNo + FirstArgIndex);
   }
 
-  /// Equivalent to hasAttribute(AttributeList::FunctionIndex, Kind) but
-  /// may be faster.
-  bool hasFnAttribute(Attribute::AttrKind Kind) const;
+  /// Return true if the attribute exists for the return value.
+  bool hasRetAttr(Attribute::AttrKind Kind) const {
+    return hasAttribute(ReturnIndex, Kind);
+  }
 
-  /// Equivalent to hasAttribute(AttributeList::FunctionIndex, Kind) but
-  /// may be faster.
-  bool hasFnAttribute(StringRef Kind) const;
+  /// Return true if the attribute exists for the return value.
+  bool hasRetAttr(StringRef Kind) const {
+    return hasAttribute(ReturnIndex, Kind);
+  }
 
-  /// Equivalent to hasAttribute(ArgNo + FirstArgIndex, Kind).
-  bool hasParamAttribute(unsigned ArgNo, Attribute::AttrKind Kind) const;
+  /// Return true if attributes exist for the return value.
+  bool hasRetAttrs() const { return hasAttributes(ReturnIndex); }
+
+  /// Return true if the attribute exists for the function.
+  bool hasFnAttr(Attribute::AttrKind Kind) const;
+
+  /// Return true if the attribute exists for the function.
+  bool hasFnAttr(StringRef Kind) const;
+
+  /// Return true the attributes exist for the function.
+  bool hasFnAttrs() const { return hasAttributes(FunctionIndex); }
 
   /// Return true if the specified attribute is set for at least one
   /// parameter or for the return value. If Index is not nullptr, the index
@@ -683,6 +694,16 @@ public:
   /// Return the attribute object that exists at the given index.
   Attribute getParamAttr(unsigned ArgNo, StringRef Kind) const {
     return getAttribute(ArgNo + FirstArgIndex, Kind);
+  }
+
+  /// Return the attribute object that exists for the function.
+  Attribute getFnAttr(Attribute::AttrKind Kind) const {
+    return getAttribute(FunctionIndex, Kind);
+  }
+
+  /// Return the attribute object that exists for the function.
+  Attribute getFnAttr(StringRef Kind) const {
+    return getAttribute(FunctionIndex, Kind);
   }
 
   /// Return the alignment of the return value.

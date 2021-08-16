@@ -450,6 +450,225 @@ void RestoreStack(Tid tid, const u64 epoch, VarSizeStackTrace *stk,
   ExtractTagFromStack(stk, tag);
 }
 
+namespace v3 {
+
+// Replays the trace up to last_pos position in the last part
+// or up to the provided epoch/sid (whichever is earlier)
+// and calls the provided function f for each event.
+template <typename Func>
+void TraceReplay(Trace *trace, TracePart *last, Event *last_pos, Sid sid,
+                 Epoch epoch, Func f) {
+  TracePart *part = trace->parts.Front();
+  Sid ev_sid = kFreeSid;
+  Epoch ev_epoch = kEpochOver;
+  for (;;) {
+    DCHECK_EQ(part->trace, trace);
+    // Note: an event can't start in the last element.
+    // Since an event can take up to 2 elements,
+    // we ensure we have at least 2 before adding an event.
+    Event *end = &part->events[TracePart::kSize - 1];
+    if (part == last)
+      end = last_pos;
+    for (Event *evp = &part->events[0]; evp < end; evp++) {
+      Event *evp0 = evp;
+      if (!evp->is_access && !evp->is_func) {
+        switch (evp->type) {
+          case EventType::kTime: {
+            auto *ev = reinterpret_cast<EventTime *>(evp);
+            ev_sid = static_cast<Sid>(ev->sid);
+            ev_epoch = static_cast<Epoch>(ev->epoch);
+            if (ev_sid == sid && ev_epoch > epoch)
+              return;
+            break;
+          }
+          case EventType::kAccessExt:
+            FALLTHROUGH;
+          case EventType::kAccessRange:
+            FALLTHROUGH;
+          case EventType::kLock:
+            FALLTHROUGH;
+          case EventType::kRLock:
+            // These take 2 Event elements.
+            evp++;
+            break;
+          case EventType::kUnlock:
+            // This takes 1 Event element.
+            break;
+        }
+      }
+      CHECK_NE(ev_sid, kFreeSid);
+      CHECK_NE(ev_epoch, kEpochOver);
+      f(ev_sid, ev_epoch, evp0);
+    }
+    if (part == last)
+      return;
+    part = trace->parts.Next(part);
+    CHECK(part);
+  }
+  CHECK(0);
+}
+
+static void RestoreStackMatch(VarSizeStackTrace *pstk, MutexSet *pmset,
+                              Vector<uptr> *stack, MutexSet *mset, uptr pc,
+                              bool *found) {
+  DPrintf2("    MATCHED\n");
+  *pmset = *mset;
+  stack->PushBack(pc);
+  pstk->Init(&(*stack)[0], stack->Size());
+  stack->PopBack();
+  *found = true;
+}
+
+// Checks if addr1|size1 is fully contained in addr2|size2.
+// We check for fully contained instread of just overlapping
+// because a memory access is always traced once, but can be
+// split into multiple accesses in the shadow.
+static constexpr bool IsWithinAccess(uptr addr1, uptr size1, uptr addr2,
+                                     uptr size2) {
+  return addr1 >= addr2 && addr1 + size1 <= addr2 + size2;
+}
+
+// Replays the trace of thread tid up to the target event identified
+// by sid/epoch/addr/size/typ and restores and returns stack, mutex set
+// and tag for that event. If there are multiple such events, it returns
+// the last one. Returns false if the event is not present in the trace.
+bool RestoreStack(Tid tid, EventType type, Sid sid, Epoch epoch, uptr addr,
+                  uptr size, AccessType typ, VarSizeStackTrace *pstk,
+                  MutexSet *pmset, uptr *ptag) {
+  // This function restores stack trace and mutex set for the thread/epoch.
+  // It does so by getting stack trace and mutex set at the beginning of
+  // trace part, and then replaying the trace till the given epoch.
+  DPrintf2("RestoreStack: tid=%u sid=%u@%u addr=0x%zx/%zu typ=%x\n", tid, sid,
+           epoch, addr, size, typ);
+  ctx->slot_mtx.CheckLocked();  // needed to prevent trace part recycling
+  ctx->thread_registry.CheckLocked();
+  ThreadContext *tctx =
+      static_cast<ThreadContext *>(ctx->thread_registry.GetThreadLocked(tid));
+  Trace *trace = &tctx->trace;
+  // Snapshot first/last parts and the current position in the last part.
+  TracePart *first_part;
+  TracePart *last_part;
+  Event *last_pos;
+  {
+    Lock lock(&trace->mtx);
+    first_part = trace->parts.Front();
+    if (!first_part)
+      return false;
+    last_part = trace->parts.Back();
+    last_pos = trace->final_pos;
+    if (tctx->thr)
+      last_pos = (Event *)atomic_load_relaxed(&tctx->thr->trace_pos);
+  }
+  // Too large for stack.
+  alignas(MutexSet) static char mset_storage[sizeof(MutexSet)];
+  MutexSet &mset = *new (mset_storage) MutexSet();
+  Vector<uptr> stack;
+  uptr prev_pc = 0;
+  bool found = false;
+  bool is_read = typ & kAccessRead;
+  bool is_atomic = typ & kAccessAtomic;
+  bool is_free = typ & kAccessFree;
+  TraceReplay(
+      trace, last_part, last_pos, sid, epoch,
+      [&](Sid ev_sid, Epoch ev_epoch, Event *evp) {
+        bool match = ev_sid == sid && ev_epoch == epoch;
+        if (evp->is_access) {
+          if (evp->is_func == 0 && evp->type == EventType::kAccessExt &&
+              evp->_ == 0)  // NopEvent
+            return;
+          auto *ev = reinterpret_cast<EventAccess *>(evp);
+          uptr ev_addr = RestoreAddr(ev->addr);
+          uptr ev_size = 1 << ev->size_log;
+          uptr ev_pc =
+              prev_pc + ev->pc_delta - (1 << (EventAccess::kPCBits - 1));
+          prev_pc = ev_pc;
+          DPrintf2("  Access: pc=0x%zx addr=0x%llx/%llu type=%llu/%llu\n",
+                   ev_pc, ev_addr, ev_size, ev->is_read, ev->is_atomic);
+          if (match && type == EventType::kAccessExt &&
+              IsWithinAccess(addr, size, ev_addr, ev_size) &&
+              is_read == ev->is_read && is_atomic == ev->is_atomic && !is_free)
+            RestoreStackMatch(pstk, pmset, &stack, &mset, ev_pc, &found);
+          return;
+        }
+        if (evp->is_func) {
+          auto *ev = reinterpret_cast<EventFunc *>(evp);
+          if (ev->pc) {
+            DPrintf2("  FuncEnter: pc=0x%zx\n", ev->pc);
+            stack.PushBack(ev->pc);
+          } else {
+            DPrintf2("  FuncExit\n");
+            CHECK(stack.Size());
+            stack.PopBack();
+          }
+          return;
+        }
+        switch (evp->type) {
+          case EventType::kAccessExt: {
+            auto *ev = reinterpret_cast<EventAccessExt *>(evp);
+            uptr ev_addr = RestoreAddr(ev->addr);
+            uptr ev_size = 1 << ev->size_log;
+            prev_pc = ev->pc;
+            DPrintf2("  AccessExt: pc=0x%zx addr=0x%llx/%llu type=%llu/%llu\n",
+                     ev->pc, ev_addr, ev_size, ev->is_read, ev->is_atomic);
+            if (match && type == EventType::kAccessExt &&
+                IsWithinAccess(addr, size, ev_addr, ev_size) &&
+                is_read == ev->is_read && is_atomic == ev->is_atomic &&
+                !is_free)
+              RestoreStackMatch(pstk, pmset, &stack, &mset, ev->pc, &found);
+            break;
+          }
+          case EventType::kAccessRange: {
+            auto *ev = reinterpret_cast<EventAccessRange *>(evp);
+            uptr ev_addr = RestoreAddr(ev->addr);
+            uptr ev_size =
+                (ev->size_hi << EventAccessRange::kSizeLoBits) + ev->size_lo;
+            uptr ev_pc = RestoreAddr(ev->pc);
+            prev_pc = ev_pc;
+            DPrintf2("  Range: pc=0x%zx addr=0x%llx/%llu type=%llu/%llu\n",
+                     ev_pc, ev_addr, ev_size, ev->is_read, ev->is_free);
+            if (match && type == EventType::kAccessExt &&
+                IsWithinAccess(addr, size, ev_addr, ev_size) &&
+                is_read == ev->is_read && !is_atomic && is_free == ev->is_free)
+              RestoreStackMatch(pstk, pmset, &stack, &mset, ev_pc, &found);
+            break;
+          }
+          case EventType::kLock:
+            FALLTHROUGH;
+          case EventType::kRLock: {
+            auto *ev = reinterpret_cast<EventLock *>(evp);
+            bool is_write = ev->type == EventType::kLock;
+            uptr ev_addr = RestoreAddr(ev->addr);
+            uptr ev_pc = RestoreAddr(ev->pc);
+            StackID stack_id =
+                (ev->stack_hi << EventLock::kStackIDLoBits) + ev->stack_lo;
+            DPrintf2("  Lock: pc=0x%zx addr=0x%llx stack=%u write=%d\n", ev_pc,
+                     ev_addr, stack_id, is_write);
+            mset.AddAddr(ev_addr, stack_id, is_write);
+            // Events with ev_pc == 0 are written to the beginning of trace
+            // part as initial mutex set (are not real).
+            if (match && type == EventType::kLock && addr == ev_addr && ev_pc)
+              RestoreStackMatch(pstk, pmset, &stack, &mset, ev_pc, &found);
+            break;
+          }
+          case EventType::kUnlock: {
+            auto *ev = reinterpret_cast<EventUnlock *>(evp);
+            uptr ev_addr = RestoreAddr(ev->addr);
+            DPrintf2("  Unlock: addr=0x%llx\n", ev_addr);
+            mset.DelAddr(ev_addr);
+            break;
+          }
+          case EventType::kTime:
+            // TraceReplay already extracted sid/epoch from it,
+            // nothing else to do here.
+            break;
+        }
+      });
+  ExtractTagFromStack(pstk, ptag);
+  return found;
+}
+
+}  // namespace v3
+
 static bool FindRacyStacks(const RacyStacks &hash) {
   for (uptr i = 0; i < ctx->racy_stacks.Size(); i++) {
     if (hash == ctx->racy_stacks[i]) {

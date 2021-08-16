@@ -139,10 +139,10 @@ bool PrescanAndSemaAction::BeginSourceFileAction(CompilerInstance &c1) {
   auto &parseTree{*ci.parsing().parseTree()};
 
   // Prepare semantics
-  setSemantics(std::make_unique<Fortran::semantics::Semantics>(
+  ci.setSemantics(std::make_unique<Fortran::semantics::Semantics>(
       ci.invocation().semanticsContext(), parseTree,
       ci.invocation().debugModuleDir()));
-  auto &semantics = this->semantics();
+  auto &semantics = ci.semantics();
 
   // Run semantic checks
   semantics.Perform();
@@ -224,8 +224,10 @@ void DebugDumpProvenanceAction::ExecuteAction() {
 }
 
 void ParseSyntaxOnlyAction::ExecuteAction() {
-  reportFatalSemanticErrors(semantics(), this->instance().diagnostics(),
-      GetCurrentFileOrBufferName());
+  CompilerInstance &ci = this->instance();
+
+  reportFatalSemanticErrors(
+      ci.semantics(), ci.diagnostics(), GetCurrentFileOrBufferName());
 }
 
 void DebugUnparseNoSemaAction::ExecuteAction() {
@@ -256,24 +258,25 @@ void DebugUnparseAction::ExecuteAction() {
       invoc.useAnalyzedObjectsForUnparse() ? &invoc.asFortran() : nullptr);
 
   // Report fatal semantic errors
-  reportFatalSemanticErrors(semantics(), this->instance().diagnostics(),
+  reportFatalSemanticErrors(ci.semantics(), this->instance().diagnostics(),
       GetCurrentFileOrBufferName());
 }
 
 void DebugUnparseWithSymbolsAction::ExecuteAction() {
+  CompilerInstance &ci = this->instance();
   auto &parseTree{*instance().parsing().parseTree()};
 
   Fortran::semantics::UnparseWithSymbols(
       llvm::outs(), parseTree, /*encoding=*/Fortran::parser::Encoding::UTF_8);
 
   // Report fatal semantic errors
-  reportFatalSemanticErrors(semantics(), this->instance().diagnostics(),
-      GetCurrentFileOrBufferName());
+  reportFatalSemanticErrors(
+      ci.semantics(), ci.diagnostics(), GetCurrentFileOrBufferName());
 }
 
 void DebugDumpSymbolsAction::ExecuteAction() {
   CompilerInstance &ci = this->instance();
-  auto &semantics = this->semantics();
+  auto &semantics = ci.semantics();
 
   auto tables{Fortran::semantics::BuildRuntimeDerivedTypeTables(
       instance().invocation().semanticsContext())};
@@ -306,7 +309,7 @@ void DebugDumpAllAction::ExecuteAction() {
   Fortran::parser::DumpTree(
       llvm::outs(), parseTree, &ci.invocation().asFortran());
 
-  auto &semantics = this->semantics();
+  auto &semantics = ci.semantics();
   auto tables{Fortran::semantics::BuildRuntimeDerivedTypeTables(
       instance().invocation().semanticsContext())};
   // The runtime derived type information table builder may find and report
@@ -339,6 +342,7 @@ void DebugDumpParseTreeNoSemaAction::ExecuteAction() {
 }
 
 void DebugDumpParseTreeAction::ExecuteAction() {
+  CompilerInstance &ci = this->instance();
   auto &parseTree{instance().parsing().parseTree()};
 
   // Dump parse tree
@@ -346,8 +350,8 @@ void DebugDumpParseTreeAction::ExecuteAction() {
       llvm::outs(), parseTree, &this->instance().invocation().asFortran());
 
   // Report fatal semantic errors
-  reportFatalSemanticErrors(semantics(), this->instance().diagnostics(),
-      GetCurrentFileOrBufferName());
+  reportFatalSemanticErrors(
+      ci.semantics(), ci.diagnostics(), GetCurrentFileOrBufferName());
 }
 
 void DebugMeasureParseTreeAction::ExecuteAction() {
@@ -385,7 +389,7 @@ void DebugPreFIRTreeAction::ExecuteAction() {
   CompilerInstance &ci = this->instance();
   // Report and exit if fatal semantic errors are present
   if (reportFatalSemanticErrors(
-          semantics(), ci.diagnostics(), GetCurrentFileOrBufferName())) {
+          ci.semantics(), ci.diagnostics(), GetCurrentFileOrBufferName())) {
     return;
   }
 
@@ -410,12 +414,13 @@ void DebugDumpParsingLogAction::ExecuteAction() {
 }
 
 void GetDefinitionAction::ExecuteAction() {
+  CompilerInstance &ci = this->instance();
+
   // Report and exit if fatal semantic errors are present
-  if (reportFatalSemanticErrors(semantics(), this->instance().diagnostics(),
-          GetCurrentFileOrBufferName()))
+  if (reportFatalSemanticErrors(
+          ci.semantics(), ci.diagnostics(), GetCurrentFileOrBufferName()))
     return;
 
-  CompilerInstance &ci = this->instance();
   parser::AllCookedSources &cs = ci.allCookedSources();
   unsigned diagID = ci.diagnostics().getCustomDiagID(
       clang::DiagnosticsEngine::Error, "Symbol not found");
@@ -457,12 +462,14 @@ void GetDefinitionAction::ExecuteAction() {
 }
 
 void GetSymbolsSourcesAction::ExecuteAction() {
+  CompilerInstance &ci = this->instance();
+
   // Report and exit if fatal semantic errors are present
-  if (reportFatalSemanticErrors(semantics(), this->instance().diagnostics(),
-          GetCurrentFileOrBufferName()))
+  if (reportFatalSemanticErrors(
+          ci.semantics(), ci.diagnostics(), GetCurrentFileOrBufferName()))
     return;
 
-  semantics().DumpSymbolsSources(llvm::outs());
+  ci.semantics().DumpSymbolsSources(llvm::outs());
 }
 
 void EmitObjAction::ExecuteAction() {

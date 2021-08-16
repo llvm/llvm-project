@@ -668,6 +668,8 @@ void __kmp_dispatch_init_algorithm(ident_t *loc, int gtid,
   case kmp_sch_static_chunked:
   case kmp_sch_dynamic_chunked:
   dynamic_init:
+    if (tc == 0)
+      break;
     if (pr->u.p.parm1 <= 0)
       pr->u.p.parm1 = KMP_DEFAULT_CHUNK;
     else if (pr->u.p.parm1 > tc)

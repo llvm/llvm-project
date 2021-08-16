@@ -1,6 +1,5 @@
 ; REQUIRES: asserts
-; RUN: opt < %s -loop-unswitch -enable-new-pm=0 -disable-output -stats 2>&1| FileCheck %s
-; RUN: opt < %s -loop-unswitch -enable-new-pm=0 -enable-mssa-loop-dependency=true -verify-memoryssa -disable-output -stats 2>&1| FileCheck %s
+; RUN: opt < %s -loop-unswitch -enable-new-pm=0 -verify-memoryssa -disable-output -stats 2>&1| FileCheck %s
 
 ; Check the select statement in the loop will be unswitched.
 ; CHECK: 1 loop-unswitch - Number of selects unswitched

@@ -85,6 +85,14 @@ namespace ranges {
     constexpr void __set(_Tp const& __value) { __value_.emplace(__value); }
     _LIBCPP_HIDE_FROM_ABI
     constexpr void __set(_Tp&& __value) { __value_.emplace(_VSTD::move(__value)); }
+
+    template<class _Other>
+    _LIBCPP_HIDE_FROM_ABI
+    constexpr _Tp& __emplace_deref(const _Other& __value) {
+      __value_.reset();
+      __value_.emplace(*__value);
+      return *__value_;
+    }
   };
 
   struct __empty_cache { };
