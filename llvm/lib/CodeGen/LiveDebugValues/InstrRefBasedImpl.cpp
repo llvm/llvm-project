@@ -1684,7 +1684,8 @@ private:
   /// RPOT block ordering.
   void initialSetup(MachineFunction &MF);
 
-  bool ExtendRanges(MachineFunction &MF, TargetPassConfig *TPC) override;
+  bool ExtendRanges(MachineFunction &MF, TargetPassConfig *TPC,
+                    unsigned InputBBLimit, unsigned InputDbgValLimit) override;
 
 public:
   /// Default construct and initialize the pass.
@@ -3523,8 +3524,9 @@ void InstrRefBasedLDV::initialSetup(MachineFunction &MF) {
 
 /// Calculate the liveness information for the given machine function and
 /// extend ranges across basic blocks.
-bool InstrRefBasedLDV::ExtendRanges(MachineFunction &MF,
-                                    TargetPassConfig *TPC) {
+bool InstrRefBasedLDV::ExtendRanges(MachineFunction &MF, TargetPassConfig *TPC,
+                                    unsigned InputBBLimit,
+                                    unsigned InputDbgValLimit) {
   // No subprogram means this function contains no debuginfo.
   if (!MF.getFunction().getSubprogram())
     return false;
@@ -3626,6 +3628,7 @@ bool InstrRefBasedLDV::ExtendRanges(MachineFunction &MF,
 
   // To mirror old LiveDebugValues, enumerate variables in RPOT order. Otherwise
   // the order is unimportant, it just has to be stable.
+  unsigned VarAssignCount = 0;
   for (unsigned int I = 0; I < OrderToBB.size(); ++I) {
     auto *MBB = OrderToBB[I];
     auto *VTracker = &vlocs[MBB->getNumber()];
@@ -3643,7 +3646,19 @@ bool InstrRefBasedLDV::ExtendRanges(MachineFunction &MF,
       ScopeToVars[Scope].insert(Var);
       ScopeToBlocks[Scope].insert(VTracker->MBB);
       ScopeToDILocation[Scope] = ScopeLoc;
+      ++VarAssignCount;
     }
+  }
+
+  // If we have an extremely large number of variable assignments and blocks,
+  // bail out at this point. We've burnt some time doing analysis already,
+  // however we should cut our losses.
+  if (MaxNumBlocks > InputBBLimit && VarAssignCount > InputDbgValLimit) {
+    LLVM_DEBUG(dbgs() << "Disabling InstrRefBasedLDV: " << MF.getName()
+                      << " has " << MaxNumBlocks << " basic blocks and "
+                      << VarAssignCount
+                      << " variable assignments, exceeding limits.\n");
+    return false;
   }
 
   // OK. Iterate over scopes: there might be something to be said for
