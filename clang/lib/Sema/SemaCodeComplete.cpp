@@ -4389,7 +4389,8 @@ void Sema::CodeCompleteAttribute(AttributeCommonInfo::Syntax Syntax,
   auto AddCompletions = [&](const ParsedAttrInfo &A) {
     if (A.IsTargetSpecific && !A.existsInTarget(Context.getTargetInfo()))
       return;
-    // FIXME: filter by langopts (diagLangOpts method requires a ParsedAttr)
+    if (!A.acceptsLangOpts(getLangOpts()))
+      return;
     for (const auto &S : A.Spellings) {
       if (S.Syntax != Syntax)
         continue;
