@@ -36,8 +36,13 @@ std::unique_ptr<Pass> createParallelLoopFusionPass();
 std::unique_ptr<Pass> createParallelLoopSpecializationPass();
 
 /// Creates a pass which tiles innermost parallel loops.
+/// If noMinMaxBounds, the upper bound of the inner loop will
+/// be a same value among different outter loop iterations, and
+/// an additional inbound check will be emitted inside the internal
+/// loops.
 std::unique_ptr<Pass>
-createParallelLoopTilingPass(llvm::ArrayRef<int64_t> tileSize = {});
+createParallelLoopTilingPass(llvm::ArrayRef<int64_t> tileSize = {},
+                             bool noMinMaxBounds = false);
 
 /// Creates a pass which folds arith ops on induction variable into
 /// loop range.
