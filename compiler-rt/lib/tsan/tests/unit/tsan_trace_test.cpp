@@ -152,6 +152,7 @@ TEST(Trace, RestoreMutexLock) {
       uptr tag = kExternalTagNone;
       bool res = RestoreStack(thr->tid, v3::EventType::kLock, thr->sid,
                               thr->epoch, 0x5001, 0, 0, &stk, &mset, &tag);
+      CHECK(res);
       CHECK_EQ(stk.size, 2);
       CHECK_EQ(stk.trace[0], 0x1000);
       CHECK_EQ(stk.trace[1], 0x4002);
@@ -194,6 +195,7 @@ TEST(Trace, MultiPart) {
       bool res =
           RestoreStack(thr->tid, v3::EventType::kAccessExt, thr->sid,
                        thr->epoch, 0x3000, 8, kAccessRead, &stk, &mset, &tag);
+      CHECK(res);
       CHECK_EQ(stk.size, 4);
       CHECK_EQ(stk.trace[0], 0x1000);
       CHECK_EQ(stk.trace[1], 0x2000);
