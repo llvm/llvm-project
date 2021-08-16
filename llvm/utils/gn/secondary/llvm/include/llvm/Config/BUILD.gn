@@ -162,6 +162,7 @@ write_cmake_config("config") {
       "HAVE_MALLOC_ZONE_STATISTICS=1",
       "HAVE_PROC_PID_RUSAGE=1",
       "HAVE_STRUCT_STAT_ST_MTIMESPEC_TV_NSEC=1",
+      "HAVE_UNW_ADD_DYNAMIC_FDE=1",
     ]
   } else {
     values += [
@@ -173,6 +174,7 @@ write_cmake_config("config") {
       "HAVE_MALLOC_ZONE_STATISTICS=",
       "HAVE_PROC_PID_RUSAGE=",
       "HAVE_STRUCT_STAT_ST_MTIMESPEC_TV_NSEC=",
+      "HAVE_UNW_ADD_DYNAMIC_FDE=",
     ]
   }
 
