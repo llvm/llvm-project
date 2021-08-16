@@ -10461,6 +10461,7 @@ SDValue AArch64TargetLowering::LowerCONCAT_VECTORS(SDValue Op,
 
   if (isTypeLegal(Op.getOperand(0).getValueType())) {
     unsigned NumOperands = Op->getNumOperands();
+    (void)NumOperands;
     assert(NumOperands > 1 && isPowerOf2_32(NumOperands) &&
            "Unexpected number of operands in CONCAT_VECTORS");
 
