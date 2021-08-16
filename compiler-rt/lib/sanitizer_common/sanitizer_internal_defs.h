@@ -139,8 +139,13 @@ namespace __sanitizer {
 typedef unsigned long long uptr;
 typedef signed long long sptr;
 #else
+#  if (SANITIZER_WORDSIZE == 64)
 typedef unsigned long uptr;
 typedef signed long sptr;
+#  else
+typedef unsigned int uptr;
+typedef signed int sptr;
+#  endif
 #endif  // defined(_WIN64)
 #if defined(__x86_64__)
 // Since x32 uses ILP32 data model in 64-bit hardware mode, we must use
