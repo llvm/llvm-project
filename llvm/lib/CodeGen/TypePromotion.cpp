@@ -539,8 +539,8 @@ void IRPromoter::PromoteTree() {
         I->setOperand(i, UndefValue::get(ExtTy));
     }
 
-    // Mutate the result type, unless this is an icmp.
-    if (!isa<ICmpInst>(I)) {
+    // Mutate the result type, unless this is an icmp or switch.
+    if (!isa<ICmpInst>(I) && !isa<SwitchInst>(I)) {
       I->mutateType(ExtTy);
       Promoted.insert(I);
     }
