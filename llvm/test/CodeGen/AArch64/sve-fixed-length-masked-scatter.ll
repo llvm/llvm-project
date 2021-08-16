@@ -1057,6 +1057,37 @@ define void @masked_scatter_vec_plus_imm(<32 x float>* %a, <32 x i8*>* %b) #0 {
   ret void
 }
 
+; extract_subvec(...(insert_subvec(a,b,c))) -> extract_subvec(bitcast(b),d) like
+; combines can effectively unlegalise bitcast operations. This test ensures such
+; combines do not happen after operation legalisation. When not prevented the
+; test triggers infinite combine->legalise->combine->...
+;
+; NOTE: For this test to function correctly it's critical for %vals to be in a
+; different block to the scatter store.  If not, the problematic bitcast will be
+; removed before operation legalisation and thus not exercise the combine.
+define void @masked_scatter_bitcast_infinite_loop(<8 x double>* %a, <8 x double*>* %b, i1 %cond) #0 {
+; CHECK-LABEL: masked_scatter_bitcast_infinite_loop
+; VBITS_GE_512: ptrue [[PG0:p[0-9]+]].d, vl8
+; VBITS_GE_512-NEXT: ld1d { [[VALS:z[0-9]+]].d }, [[PG0]]/z, [x0]
+; VBITS_GE_512-NEXT: tbz w2, #0, [[LABEL:.*]]
+; VBITS_GE_512-NEXT: ld1d { [[PTRS:z[0-9]+]].d }, [[PG0]]/z, [x1]
+; VBITS_GE_512-NEXT: fcmeq [[MASK:p[0-9]+]].d, [[PG0]]/z, [[VALS]].d, #0.0
+; VBITS_GE_512-NEXT: st1d { [[VALS]].d }, [[MASK]], {{\[}}[[PTRS]].d]
+; VBITS_GE_512-NEXT: [[LABEL]]:
+; VBITS_GE_512-NEXT: ret
+  %vals = load volatile <8 x double>, <8 x double>* %a
+  br i1 %cond, label %bb.1, label %bb.2
+
+bb.1:
+  %ptrs = load <8 x double*>, <8 x double*>* %b
+  %mask = fcmp oeq <8 x double> %vals, zeroinitializer
+  call void @llvm.masked.scatter.v8f64(<8 x double> %vals, <8 x double*> %ptrs, i32 8, <8 x i1> %mask)
+  br label %bb.2
+
+bb.2:
+  ret void
+}
+
 declare void @llvm.masked.scatter.v2i8(<2 x i8>, <2 x i8*>, i32, <2 x i1>)
 declare void @llvm.masked.scatter.v4i8(<4 x i8>, <4 x i8*>, i32, <4 x i1>)
 declare void @llvm.masked.scatter.v8i8(<8 x i8>, <8 x i8*>, i32, <8 x i1>)

@@ -20583,8 +20583,12 @@ SDValue DAGCombiner::visitEXTRACT_SUBVECTOR(SDNode *N) {
     //    otherwise => (extract_subvec V1, ExtIdx)
     uint64_t InsIdx = V.getConstantOperandVal(2);
     if (InsIdx * SmallVT.getScalarSizeInBits() ==
-        ExtIdx * NVT.getScalarSizeInBits())
+        ExtIdx * NVT.getScalarSizeInBits()) {
+      if (LegalOperations && !TLI.isOperationLegal(ISD::BITCAST, NVT))
+        return SDValue();
+
       return DAG.getBitcast(NVT, V.getOperand(1));
+    }
     return DAG.getNode(
         ISD::EXTRACT_SUBVECTOR, SDLoc(N), NVT,
         DAG.getBitcast(N->getOperand(0).getValueType(), V.getOperand(0)),
