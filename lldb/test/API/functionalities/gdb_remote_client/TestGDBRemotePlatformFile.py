@@ -15,7 +15,7 @@ class TestGDBRemotePlatformFile(GDBPlatformClientTestBase):
                     return "Fa"
                 elif packet.startswith("vFile:close:"):
                     return "F0"
-                return "F-1,16"
+                return "F-1,58"
 
         self.server.responder = Responder()
 
@@ -39,21 +39,23 @@ class TestGDBRemotePlatformFile(GDBPlatformClientTestBase):
 
         class Responder(MockGDBServerResponder):
             def vFile(self, packet):
-                return "F-1,16"
+                # use ENOSYS as this constant differs between GDB Remote
+                # Protocol and Linux, so we can test the translation
+                return "F-1,58"
 
         self.server.responder = Responder()
 
         self.match("platform file open /some/file.txt -v 0755",
-                   [r"error: Invalid argument"],
+                   [r"error: Function not implemented"],
                    error=True)
         self.match("platform file read 16 -o 11 -c 13",
-                   [r"error: Invalid argument"],
+                   [r"error: Function not implemented"],
                    error=True)
         self.match("platform file write 16 -o 11 -d teststring",
-                   [r"error: Invalid argument"],
+                   [r"error: Function not implemented"],
                    error=True)
         self.match("platform file close 16",
-                   [r"error: Invalid argument"],
+                   [r"error: Function not implemented"],
                    error=True)
         self.assertPacketLogContains([
             "vFile:open:2f736f6d652f66696c652e747874,00000202,000001ed",
