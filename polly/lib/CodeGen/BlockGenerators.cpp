@@ -688,13 +688,12 @@ void BlockGenerator::generateBeginStmtTrace(ScopStmt &Stmt, LoopToScevMapT &LTS,
   Values.push_back(RuntimeDebugBuilder::getPrintableString(Builder, "("));
 
   // Add the coordinate of the statement instance.
-  int DomDims = ScheduleMultiPwAff.dim(isl::dim::out);
+  int DomDims = ScheduleMultiPwAff.dim(isl::dim::out).release();
   for (int i = 0; i < DomDims; i += 1) {
     if (i > 0)
       Values.push_back(RuntimeDebugBuilder::getPrintableString(Builder, ","));
 
-    isl::ast_expr IsInSet =
-        RestrictedBuild.expr_from(ScheduleMultiPwAff.get_pw_aff(i));
+    isl::ast_expr IsInSet = RestrictedBuild.expr_from(ScheduleMultiPwAff.at(i));
     Values.push_back(ExprBuilder->create(IsInSet.copy()));
   }
 

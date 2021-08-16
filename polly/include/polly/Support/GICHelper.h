@@ -186,6 +186,51 @@ ISL_OBJECT_TO_STRING(union_pw_aff)
 ISL_OBJECT_TO_STRING(union_pw_multi_aff)
 //@}
 
+/// C++ wrapper for isl_*_dump() functions.
+//@{
+#define ISL_DUMP_OBJECT(name)                                                  \
+  inline void dumpIslObj(const isl::name &Obj) { isl_##name##_dump(Obj.get()); }
+
+ISL_DUMP_OBJECT(aff)
+ISL_DUMP_OBJECT(aff_list)
+ISL_DUMP_OBJECT(ast_expr)
+ISL_DUMP_OBJECT(ast_node)
+ISL_DUMP_OBJECT(ast_node_list)
+ISL_DUMP_OBJECT(basic_map)
+ISL_DUMP_OBJECT(basic_map_list)
+ISL_DUMP_OBJECT(basic_set)
+ISL_DUMP_OBJECT(basic_set_list)
+ISL_DUMP_OBJECT(constraint)
+ISL_DUMP_OBJECT(id)
+ISL_DUMP_OBJECT(id_list)
+ISL_DUMP_OBJECT(id_to_ast_expr)
+ISL_DUMP_OBJECT(local_space)
+ISL_DUMP_OBJECT(map)
+ISL_DUMP_OBJECT(map_list)
+ISL_DUMP_OBJECT(multi_aff)
+ISL_DUMP_OBJECT(multi_pw_aff)
+ISL_DUMP_OBJECT(multi_union_pw_aff)
+ISL_DUMP_OBJECT(multi_val)
+ISL_DUMP_OBJECT(point)
+ISL_DUMP_OBJECT(pw_aff)
+ISL_DUMP_OBJECT(pw_aff_list)
+ISL_DUMP_OBJECT(pw_multi_aff)
+ISL_DUMP_OBJECT(schedule)
+ISL_DUMP_OBJECT(schedule_constraints)
+ISL_DUMP_OBJECT(schedule_node)
+ISL_DUMP_OBJECT(set)
+ISL_DUMP_OBJECT(set_list)
+ISL_DUMP_OBJECT(space)
+ISL_DUMP_OBJECT(union_map)
+ISL_DUMP_OBJECT(union_pw_aff)
+ISL_DUMP_OBJECT(union_pw_aff_list)
+ISL_DUMP_OBJECT(union_pw_multi_aff)
+ISL_DUMP_OBJECT(union_set)
+ISL_DUMP_OBJECT(union_set_list)
+ISL_DUMP_OBJECT(val)
+ISL_DUMP_OBJECT(val_list)
+//@}
+
 inline llvm::raw_ostream &operator<<(llvm::raw_ostream &OS,
                                      __isl_keep isl_union_map *Map) {
   OS << polly::stringFromIslObj(Map, "null");

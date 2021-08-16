@@ -230,8 +230,8 @@ static bool importContext(Scop &S, const json::Object &JScop) {
     return false;
   }
 
-  unsigned OldContextDim = OldContext.dim(isl::dim::param);
-  unsigned NewContextDim = NewContext.dim(isl::dim::param);
+  unsigned OldContextDim = OldContext.dim(isl::dim::param).release();
+  unsigned NewContextDim = NewContext.dim(isl::dim::param).release();
 
   // Check if the imported context has the right number of parameters.
   if (OldContextDim != NewContextDim) {
