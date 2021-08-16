@@ -80,10 +80,15 @@ Changes to the AArch64 Backend
 * Introduced assembly support for Armv9-A's Realm Management Extension (RME)
   and Scalable Matrix Extension (SME).
 
+* Produce proper cross-section relative relocations on COFF
+
+* Fixed the calling convention on Windows for variadic functions involving
+  floats in the fixed arguments
+
 Changes to the ARM Backend
 --------------------------
 
-During this release ...
+* Produce proper cross-section relative relocations on COFF
 
 Changes to the MIPS Target
 --------------------------
@@ -240,6 +245,15 @@ Changes to the LLVM tools
 
 * In lli the default JIT engine switched from MCJIT (``-jit-kind=mcjit``) to ORC (``-jit-kind=orc``).
   (`D98931 <https://reviews.llvm.org/D98931>`_)
+
+* llvm-rc got support for invoking Clang to preprocess its input.
+  (`D100755 <https://reviews.llvm.org/D100755>`_)
+
+* llvm-rc got a GNU windres compatible frontend, llvm-windres.
+  (`D100756 <https://reviews.llvm.org/D100756>`_)
+
+* llvm-ml has improved compatibility with MS ml.exe, managing to assemble
+  more asm files.
 
 Changes to LLDB
 ---------------------------------

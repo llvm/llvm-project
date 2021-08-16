@@ -123,6 +123,9 @@ Attribute Changes in Clang
 Windows Support
 ---------------
 
+- Fixed reading ``long double`` arguments with ``va_arg`` on x86_64 MinGW
+  targets.
+
 C Language Changes in Clang
 ---------------------------
 

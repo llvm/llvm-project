@@ -42,12 +42,29 @@ Breaking changes
 COFF Improvements
 -----------------
 
-* ...
+* Avoid thread exhaustion when running on 32 bit Windows.
+  (`D105506 <https://reviews.llvm.org/D105506>`_)
+
+* Improve terminating the process on Windows while a thread pool might be
+  running. (`D102944 <https://reviews.llvm.org/D102944>`_)
 
 MinGW Improvements
 ------------------
 
-* ...
+* Support for linking directly against a DLL without using an import library
+  has been added. (`D104530 <https://reviews.llvm.org/D104530>`_ and
+  `D104531 <https://reviews.llvm.org/D104531>`_)
+
+* Fix linking with ``--export-all-symbols`` in combination with
+  ``-function-sections``. (`D101522 <https://reviews.llvm.org/D101522>`_ and
+  `D101615 <https://reviews.llvm.org/D101615>`_)
+
+* Fix automatic export of symbols from LTO objects.
+  (`D101569 <https://reviews.llvm.org/D101569>`_)
+
+* Accept more spellings of some options.
+  (`D107237 <https://reviews.llvm.org/D107237>`_ and
+  `D107253 <https://reviews.llvm.org/D107253>`_)
 
 MachO Improvements
 ------------------
