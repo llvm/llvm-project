@@ -601,21 +601,9 @@ void Function::removeParamAttrs(unsigned ArgNo, const AttrBuilder &Attrs) {
   setAttributes(PAL);
 }
 
-void Function::addDereferenceableAttr(unsigned i, uint64_t Bytes) {
-  AttributeList PAL = getAttributes();
-  PAL = PAL.addDereferenceableAttr(getContext(), i, Bytes);
-  setAttributes(PAL);
-}
-
 void Function::addDereferenceableParamAttr(unsigned ArgNo, uint64_t Bytes) {
   AttributeList PAL = getAttributes();
   PAL = PAL.addDereferenceableParamAttr(getContext(), ArgNo, Bytes);
-  setAttributes(PAL);
-}
-
-void Function::addDereferenceableOrNullAttr(unsigned i, uint64_t Bytes) {
-  AttributeList PAL = getAttributes();
-  PAL = PAL.addDereferenceableOrNullAttr(getContext(), i, Bytes);
   setAttributes(PAL);
 }
 
