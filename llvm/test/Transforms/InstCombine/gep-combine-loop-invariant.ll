@@ -186,3 +186,26 @@ loop:
   call void @blackhole(<2 x i8*> %e6)
   br label %loop
 }
+
+; This would crash because we did not expect to be able to constant fold a GEP.
+
+define void @PR51485(<2 x i64> %v) {
+; CHECK-LABEL: @PR51485(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    br label [[LOOP:%.*]]
+; CHECK:       loop:
+; CHECK-NEXT:    [[SL1:%.*]] = shl nuw nsw <2 x i64> [[V:%.*]], <i64 7, i64 7>
+; CHECK-NEXT:    [[E6:%.*]] = getelementptr inbounds i8, i8* getelementptr (i8, i8* bitcast (void (<2 x i64>)* @PR51485 to i8*), i64 80), <2 x i64> [[SL1]]
+; CHECK-NEXT:    call void @blackhole(<2 x i8*> [[E6]])
+; CHECK-NEXT:    br label [[LOOP]]
+;
+entry:
+  br label %loop
+
+loop:
+  %sl1 = shl nuw nsw <2 x i64> %v, <i64 7, i64 7>
+  %e5 = getelementptr inbounds i8, i8* bitcast (void (<2 x i64>)* @PR51485 to i8*), <2 x i64> %sl1
+  %e6 = getelementptr inbounds i8, <2 x i8*> %e5, i64 80
+  call void @blackhole(<2 x i8*> %e6)
+  br label %loop
+}
