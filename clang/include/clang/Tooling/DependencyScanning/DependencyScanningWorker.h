@@ -74,6 +74,16 @@ class DependencyScanningWorker {
 public:
   DependencyScanningWorker(DependencyScanningService &Service);
 
+  /// Run the dependency scanning tool for a given clang driver invocation, and
+  /// report the discovered dependencies to the provided consumer.
+  ///
+  /// \returns A \c StringError with the diagnostic output if clang errors
+  /// occurred, success otherwise.
+  llvm::Error
+  computeDependenciesForClangInvocation(StringRef WorkingDirectory,
+                                        ArrayRef<std::string> Arguments,
+                                        DependencyConsumer &Consumer);
+
   /// Run the dependency scanning tool for a given clang driver invocation (as
   /// specified for the given Input in the CDB), and report the discovered
   /// dependencies to the provided consumer.
@@ -84,16 +94,6 @@ public:
                                   StringRef WorkingDirectory,
                                   const CompilationDatabase &CDB,
                                   DependencyConsumer &Consumer);
-
-  /// Run the dependency scanning tool for a given clang driver invocation, and
-  /// report the discovered dependencies to the provided consumer.
-  ///
-  /// \returns A \c StringError with the diagnostic output if clang errors
-  /// occurred, success otherwise.
-  llvm::Error
-  computeDependenciesForClangInvocation(StringRef WorkingDirectory,
-                                        ArrayRef<std::string> Arguments,
-                                        DependencyConsumer &Consumer);
 
   ScanningOutputFormat getFormat() const { return Format; }
 
