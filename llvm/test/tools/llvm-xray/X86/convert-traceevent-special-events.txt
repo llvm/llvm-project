@@ -1,4 +1,4 @@
-# RUN: llvm-xray convert %s -f=trace_event -o - \
+# RUN: llvm-xray convert %s -f trace_event -o - \
 # RUN:   | %python -c 'import json, sys; json.dump(json.loads(sys.stdin.read()), sys.stdout, sort_keys=True, indent=2)' \
 # RUN:   | FileCheck %s
 ---
