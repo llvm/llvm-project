@@ -34,12 +34,12 @@ using ForwardIter = forward_iterator<int*>;
 struct SizedForwardView : std::ranges::view_base {
   int *ptr_;
   constexpr SizedForwardView(int* ptr) : ptr_(ptr) {}
-  constexpr friend ForwardIter begin(SizedForwardView& view) { return ForwardIter(view.ptr_); }
-  constexpr friend ForwardIter begin(SizedForwardView const& view) { return ForwardIter(view.ptr_); }
-  constexpr friend sentinel_wrapper<ForwardIter> end(SizedForwardView& view) {
+  friend constexpr ForwardIter begin(SizedForwardView& view) { return ForwardIter(view.ptr_); }
+  friend constexpr ForwardIter begin(SizedForwardView const& view) { return ForwardIter(view.ptr_); }
+  friend constexpr sentinel_wrapper<ForwardIter> end(SizedForwardView& view) {
     return sentinel_wrapper<ForwardIter>{ForwardIter(view.ptr_ + 8)};
   }
-  constexpr friend sentinel_wrapper<ForwardIter> end(SizedForwardView const& view) {
+  friend constexpr sentinel_wrapper<ForwardIter> end(SizedForwardView const& view) {
     return sentinel_wrapper<ForwardIter>{ForwardIter(view.ptr_ + 8)};
   }
 };
@@ -55,12 +55,12 @@ using RandomAccessIter = random_access_iterator<int*>;
 struct SizedRandomAccessView : std::ranges::view_base {
   int *ptr_;
   constexpr SizedRandomAccessView(int* ptr) : ptr_(ptr) {}
-  constexpr friend RandomAccessIter begin(SizedRandomAccessView& view) { return RandomAccessIter(view.ptr_); }
-  constexpr friend RandomAccessIter begin(SizedRandomAccessView const& view) { return RandomAccessIter(view.ptr_); }
-  constexpr friend sentinel_wrapper<RandomAccessIter> end(SizedRandomAccessView& view) {
+  friend constexpr RandomAccessIter begin(SizedRandomAccessView& view) { return RandomAccessIter(view.ptr_); }
+  friend constexpr RandomAccessIter begin(SizedRandomAccessView const& view) { return RandomAccessIter(view.ptr_); }
+  friend constexpr sentinel_wrapper<RandomAccessIter> end(SizedRandomAccessView& view) {
     return sentinel_wrapper<RandomAccessIter>{RandomAccessIter(view.ptr_ + 8)};
   }
-  constexpr friend sentinel_wrapper<RandomAccessIter> end(SizedRandomAccessView const& view) {
+  friend constexpr sentinel_wrapper<RandomAccessIter> end(SizedRandomAccessView const& view) {
     return sentinel_wrapper<RandomAccessIter>{RandomAccessIter(view.ptr_ + 8)};
   }
 };
