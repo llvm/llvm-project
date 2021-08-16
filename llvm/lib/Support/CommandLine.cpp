@@ -1321,12 +1321,20 @@ bool cl::ParseCommandLineOptions(int argc, const char *const *argv,
                                                Errs, LongOptionsUseDoubleDash);
 }
 
+/// Reset all options at least once, so that we can parse different options.
 void CommandLineParser::ResetAllOptionOccurrences() {
-  // So that we can parse different command lines multiple times in succession
-  // we reset all option values to look like they have never been seen before.
+  // Reset all option values to look like they have never been seen before.
+  // Options might be reset twice (they can be reference in both OptionsMap
+  // and one of the other members), but that does not harm.
   for (auto *SC : RegisteredSubCommands) {
     for (auto &O : SC->OptionsMap)
       O.second->reset();
+    for (Option *O : SC->PositionalOpts)
+      O->reset();
+    for (Option *O : SC->SinkOpts)
+      O->reset();
+    if (SC->ConsumeAfterOpt)
+      SC->ConsumeAfterOpt->reset();
   }
 }
 
