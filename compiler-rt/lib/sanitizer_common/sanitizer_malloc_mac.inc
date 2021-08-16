@@ -186,7 +186,7 @@ size_t __sanitizer_mz_size(malloc_zone_t* zone, const void* ptr) {
 
 extern "C"
 SANITIZER_INTERFACE_ATTRIBUTE
-void *__sanitizer_mz_malloc(malloc_zone_t *zone, uptr size) {
+void *__sanitizer_mz_malloc(malloc_zone_t *zone, size_t size) {
   COMMON_MALLOC_ENTER();
   COMMON_MALLOC_MALLOC(size);
   return p;
