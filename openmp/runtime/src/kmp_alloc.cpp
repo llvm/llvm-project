@@ -883,7 +883,7 @@ static void bpool(kmp_info_t *th, void *buf, bufsize len) {
   __kmp_bget_dequeue(th); /* Release any queued buffers */
 
 #ifdef SizeQuant
-  len &= ~(SizeQuant - 1);
+  len &= ~((bufsize)(SizeQuant - 1));
 #endif
   if (thr->pool_len == 0) {
     thr->pool_len = len;
