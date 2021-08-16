@@ -562,7 +562,10 @@ bool MipsAsmPrinter::PrintAsmOperand(const MachineInstr *MI, unsigned OpNum,
     case 'z':
       // $0 if zero, regular printing otherwise
       if (MO.getType() == MachineOperand::MO_Immediate && MO.getImm() == 0) {
-        O << "$0";
+        if (Subtarget->hasNanoMips())
+          O << "$zero";
+        else
+          O << "$0";
         return false;
       }
       // If not, call printOperand as normal.
