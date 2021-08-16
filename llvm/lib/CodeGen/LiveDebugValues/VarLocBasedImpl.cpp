@@ -166,6 +166,18 @@ using namespace llvm;
 
 STATISTIC(NumInserted, "Number of DBG_VALUE instructions inserted");
 
+// Options to prevent pathological compile-time behavior. If InputBBLimit and
+// InputDbgValueLimit are both exceeded, range extension is disabled.
+static cl::opt<unsigned> InputBBLimit(
+    "livedebugvalues-input-bb-limit",
+    cl::desc("Maximum input basic blocks before DBG_VALUE limit applies"),
+    cl::init(10000), cl::Hidden);
+static cl::opt<unsigned> InputDbgValueLimit(
+    "livedebugvalues-input-dbg-value-limit",
+    cl::desc(
+        "Maximum input DBG_VALUE insts supported by debug range extension"),
+    cl::init(50000), cl::Hidden);
+
 /// If \p Op is a stack or frame register return true, otherwise return false.
 /// This is used to avoid basing the debug entry values on the registers, since
 /// we do not support it at the moment.
@@ -995,8 +1007,7 @@ private:
   /// had their instruction creation deferred.
   void flushPendingLocs(VarLocInMBB &PendingInLocs, VarLocMap &VarLocIDs);
 
-  bool ExtendRanges(MachineFunction &MF, TargetPassConfig *TPC,
-                    unsigned InputBBLimit, unsigned InputDbgValLimit) override;
+  bool ExtendRanges(MachineFunction &MF, TargetPassConfig *TPC) override;
 
 public:
   /// Default construct and initialize the pass.
@@ -2037,9 +2048,7 @@ void VarLocBasedLDV::recordEntryValue(const MachineInstr &MI,
 
 /// Calculate the liveness information for the given machine function and
 /// extend ranges across basic blocks.
-bool VarLocBasedLDV::ExtendRanges(MachineFunction &MF, TargetPassConfig *TPC,
-                                  unsigned InputBBLimit,
-                                  unsigned InputDbgValLimit) {
+bool VarLocBasedLDV::ExtendRanges(MachineFunction &MF, TargetPassConfig *TPC) {
   LLVM_DEBUG(dbgs() << "\nDebug Range Extension\n");
 
   if (!MF.getFunction().getSubprogram())
@@ -2132,7 +2141,7 @@ bool VarLocBasedLDV::ExtendRanges(MachineFunction &MF, TargetPassConfig *TPC,
       for (auto &MI : MBB)
         if (MI.isDebugValue())
           ++NumInputDbgValues;
-    if (NumInputDbgValues > InputDbgValLimit) {
+    if (NumInputDbgValues > InputDbgValueLimit) {
       LLVM_DEBUG(dbgs() << "Disabling VarLocBasedLDV: " << MF.getName()
                         << " has " << RPONumber << " basic blocks and "
                         << NumInputDbgValues
