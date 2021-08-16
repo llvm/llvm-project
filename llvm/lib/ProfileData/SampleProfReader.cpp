@@ -53,7 +53,7 @@ using namespace sampleprof;
 // For ext-binary format profiles, the flag is set in the summary.
 static cl::opt<bool> ProfileIsFSDisciminator(
     "profile-isfs", cl::Hidden, cl::init(false),
-    cl::desc("Profile uses flow sensitive discriminators"));
+    cl::desc("Profile uses flow senstive discriminators"));
 
 /// Dump the function profile for \p FName.
 ///
