@@ -2668,7 +2668,7 @@ void SelectionDAGBuilder::visitSPDescriptorParent(StackProtectorDescriptor &SPD,
     TargetLowering::ArgListEntry Entry;
     Entry.Node = GuardVal;
     Entry.Ty = FnTy->getParamType(0);
-    if (GuardCheckFn->hasAttribute(1, Attribute::AttrKind::InReg))
+    if (GuardCheckFn->hasParamAttribute(0, Attribute::AttrKind::InReg))
       Entry.IsInReg = true;
     Args.push_back(Entry);
 

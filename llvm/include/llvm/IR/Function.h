@@ -441,11 +441,6 @@ public:
   void removeParamUndefImplyingAttrs(unsigned ArgNo);
 
   /// check if an attributes is in the list of attributes.
-  bool hasAttribute(unsigned i, Attribute::AttrKind Kind) const {
-    return getAttributes().hasAttribute(i, Kind);
-  }
-
-  /// check if an attributes is in the list of attributes.
   bool hasParamAttribute(unsigned ArgNo, Attribute::AttrKind Kind) const {
     return getAttributes().hasParamAttr(ArgNo, Kind);
   }
@@ -470,16 +465,9 @@ public:
     return AttributeSets.getAttribute(i, Kind);
   }
 
-  /// adds the dereferenceable attribute to the list of attributes.
-  void addDereferenceableAttr(unsigned i, uint64_t Bytes);
-
   /// adds the dereferenceable attribute to the list of attributes for
   /// the given arg.
   void addDereferenceableParamAttr(unsigned ArgNo, uint64_t Bytes);
-
-  /// adds the dereferenceable_or_null attribute to the list of
-  /// attributes.
-  void addDereferenceableOrNullAttr(unsigned i, uint64_t Bytes);
 
   /// adds the dereferenceable_or_null attribute to the list of
   /// attributes for the given arg.
