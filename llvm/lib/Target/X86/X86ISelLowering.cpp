@@ -1900,6 +1900,15 @@ X86TargetLowering::X86TargetLowering(const X86TargetMachine &TM,
 
   if (!Subtarget.useSoftFloat() && Subtarget.hasFP16()) {
     auto setGroup = [&] (MVT VT) {
+      setOperationAction(ISD::FADD,               VT, Legal);
+      setOperationAction(ISD::STRICT_FADD,        VT, Legal);
+      setOperationAction(ISD::FSUB,               VT, Legal);
+      setOperationAction(ISD::STRICT_FSUB,        VT, Legal);
+      setOperationAction(ISD::FMUL,               VT, Legal);
+      setOperationAction(ISD::STRICT_FMUL,        VT, Legal);
+      setOperationAction(ISD::FDIV,               VT, Legal);
+      setOperationAction(ISD::STRICT_FDIV,        VT, Legal);
+
       setOperationAction(ISD::LOAD,               VT, Legal);
       setOperationAction(ISD::STORE,              VT, Legal);
 
@@ -1917,6 +1926,14 @@ X86TargetLowering::X86TargetLowering(const X86TargetMachine &TM,
     // AVX512_FP16 scalar operations
     setGroup(MVT::f16);
     addRegisterClass(MVT::f16,    &X86::FR16XRegClass);
+    setOperationAction(ISD::SELECT_CC,            MVT::f16, Expand);
+    setOperationAction(ISD::BR_CC,                MVT::f16, Expand);
+    setOperationAction(ISD::SETCC,                MVT::f16, Custom);
+    setOperationAction(ISD::STRICT_FSETCC,        MVT::f16, Custom);
+    setOperationAction(ISD::STRICT_FSETCCS,       MVT::f16, Custom);
+
+    setCondCodeAction(ISD::SETOEQ, MVT::f16, Expand);
+    setCondCodeAction(ISD::SETUNE, MVT::f16, Expand);
 
     if (Subtarget.useAVX512Regs()) {
       setGroup(MVT::v32f16);
@@ -1930,6 +1947,9 @@ X86TargetLowering::X86TargetLowering(const X86TargetMachine &TM,
 
       setLoadExtAction(ISD::EXTLOAD, MVT::v8f64,  MVT::v8f16,  Legal);
       setLoadExtAction(ISD::EXTLOAD, MVT::v16f32, MVT::v16f16, Legal);
+
+      setOperationAction(ISD::STRICT_FSETCC,      MVT::v32i1, Custom);
+      setOperationAction(ISD::STRICT_FSETCCS,     MVT::v32i1, Custom);
     }
 
     if (Subtarget.hasVLX()) {
@@ -47951,6 +47971,7 @@ static SDValue combineFMinNumFMaxNum(SDNode *N, SelectionDAG &DAG,
   EVT VT = N->getValueType(0);
   if (!((Subtarget.hasSSE1() && VT == MVT::f32) ||
         (Subtarget.hasSSE2() && VT == MVT::f64) ||
+        (Subtarget.hasFP16() && VT == MVT::f16) ||
         (VT.isVector() && TLI.isTypeLegal(VT))))
     return SDValue();
 
@@ -48512,6 +48533,9 @@ static SDValue combineExtSetcc(SDNode *N, SelectionDAG &DAG,
       SVT != MVT::i64 && SVT != MVT::f32 && SVT != MVT::f64)
     return SDValue();
 
+  // We don't have CMPP Instruction for vxf16
+  if (N0.getOperand(0).getValueType().getVectorElementType() == MVT::f16)
+    return SDValue();
   // We can only do this if the vector size in 256 bits or less.
   unsigned Size = VT.getSizeInBits();
   if (Size > 256 && Subtarget.useAVX512Regs())

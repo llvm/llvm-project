@@ -3127,9 +3127,10 @@ bool X86AsmParser::ParseInstruction(ParseInstructionInfo &Info, StringRef Name,
 
   unsigned ComparisonPredicate = ~0U;
 
-  // FIXME: Hack to recognize cmp<comparison code>{ss,sd,ps,pd}.
+  // FIXME: Hack to recognize cmp<comparison code>{sh,ss,sd,ph,ps,pd}.
   if ((PatchedName.startswith("cmp") || PatchedName.startswith("vcmp")) &&
       (PatchedName.endswith("ss") || PatchedName.endswith("sd") ||
+       PatchedName.endswith("sh") || PatchedName.endswith("ph") ||
        PatchedName.endswith("ps") || PatchedName.endswith("pd"))) {
     bool IsVCMP = PatchedName[0] == 'v';
     unsigned CCIdx = IsVCMP ? 4 : 3;
@@ -3192,6 +3193,10 @@ bool X86AsmParser::ParseInstruction(ParseInstructionInfo &Info, StringRef Name,
         PatchedName = IsVCMP ? "vcmpps" : "cmpps";
       else if (PatchedName.endswith("pd"))
         PatchedName = IsVCMP ? "vcmppd" : "cmppd";
+      else if (PatchedName.endswith("sh"))
+        PatchedName = "vcmpsh";
+      else if (PatchedName.endswith("ph"))
+        PatchedName = "vcmpph";
       else
         llvm_unreachable("Unexpected suffix!");
 
