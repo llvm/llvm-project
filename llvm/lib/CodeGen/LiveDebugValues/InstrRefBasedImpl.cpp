@@ -3653,7 +3653,7 @@ bool InstrRefBasedLDV::ExtendRanges(MachineFunction &MF, TargetPassConfig *TPC,
   // If we have an extremely large number of variable assignments and blocks,
   // bail out at this point. We've burnt some time doing analysis already,
   // however we should cut our losses.
-  if (MaxNumBlocks > InputBBLimit && VarAssignCount > InputDbgValLimit) {
+  if (MaxNumBlocks > (int)InputBBLimit && VarAssignCount > InputDbgValLimit) {
     LLVM_DEBUG(dbgs() << "Disabling InstrRefBasedLDV: " << MF.getName()
                       << " has " << MaxNumBlocks << " basic blocks and "
                       << VarAssignCount
