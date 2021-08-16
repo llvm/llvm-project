@@ -1109,6 +1109,9 @@ Instruction *InstCombinerImpl::visitCallInst(CallInst &CI) {
     if (Instruction *Sel = foldClampRangeOfTwo(II, Builder))
       return Sel;
 
+    if (Instruction *SAdd = matchSAddSubSat(*II))
+      return SAdd;
+
     if (match(I1, m_ImmConstant()))
       if (auto *Sel = dyn_cast<SelectInst>(I0))
         if (Instruction *R = FoldOpIntoSelect(*II, Sel))
