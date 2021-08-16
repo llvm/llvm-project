@@ -3184,7 +3184,8 @@ bool X86AsmParser::ParseInstruction(ParseInstructionInfo &Info, StringRef Name,
       .Case("gt_oq",    0x1E)
       .Case("true_us",  0x1F)
       .Default(~0U);
-    if (CC != ~0U && (IsVCMP || CC < 8)) {
+    if (CC != ~0U && (IsVCMP || CC < 8) &&
+        (IsVCMP || PatchedName.back() != 'h')) {
       if (PatchedName.endswith("ss"))
         PatchedName = IsVCMP ? "vcmpss" : "cmpss";
       else if (PatchedName.endswith("sd"))
