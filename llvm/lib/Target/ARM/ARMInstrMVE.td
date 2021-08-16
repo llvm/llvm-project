@@ -97,7 +97,7 @@ def VecList2QAsmOperand : AsmOperandClass {
                          "q-registers in range [q0,q7]";
 }
 
-def VecList2Q : RegisterOperand<QQPR, "printMVEVectorListTwoQ"> {
+def VecList2Q : RegisterOperand<MQQPR, "printMVEVectorListTwoQ"> {
   let ParserMatchClass = VecList2QAsmOperand;
   let PrintMethod = "printMVEVectorList<2>";
 }
@@ -110,7 +110,7 @@ def VecList4QAsmOperand : AsmOperandClass {
                          "q-registers in range [q0,q7]";
 }
 
-def VecList4Q : RegisterOperand<QQQQPR, "printMVEVectorListFourQ"> {
+def VecList4Q : RegisterOperand<MQQQQPR, "printMVEVectorListFourQ"> {
   let ParserMatchClass = VecList4QAsmOperand;
   let PrintMethod = "printMVEVectorList<4>";
 }
@@ -6037,13 +6037,13 @@ multiclass MVE_vst24_patterns<int lanesize, ValueType VT> {
     def : Pat<(int_arm_mve_vst2q i32:$addr,
                 (VT MQPR:$v0), (VT MQPR:$v1), (i32 stage)),
               (!cast<Instruction>("MVE_VST2"#stage#"_"#lanesize)
-                (REG_SEQUENCE QQPR, VT:$v0, qsub_0, VT:$v1, qsub_1),
+                (REG_SEQUENCE MQQPR, VT:$v0, qsub_0, VT:$v1, qsub_1),
                 t2_addr_offset_none:$addr)>;
   foreach stage = [0,1] in
     def : Pat<(i32 (MVEVST2UPD i32:$addr, (i32 32),
                 (VT MQPR:$v0), (VT MQPR:$v1), (i32 stage))),
               (i32 (!cast<Instruction>("MVE_VST2"#stage#"_"#lanesize#_wb)
-                (REG_SEQUENCE QQPR, VT:$v0, qsub_0, VT:$v1, qsub_1),
+                (REG_SEQUENCE MQQPR, VT:$v0, qsub_0, VT:$v1, qsub_1),
                 t2_addr_offset_none:$addr))>;
 
   foreach stage = [0,1,2,3] in
@@ -6051,16 +6051,16 @@ multiclass MVE_vst24_patterns<int lanesize, ValueType VT> {
                 (VT MQPR:$v0), (VT MQPR:$v1),
                 (VT MQPR:$v2), (VT MQPR:$v3), (i32 stage)),
               (!cast<Instruction>("MVE_VST4"#stage#"_"#lanesize)
-                (REG_SEQUENCE QQQQPR, VT:$v0, qsub_0, VT:$v1, qsub_1,
-                                      VT:$v2, qsub_2, VT:$v3, qsub_3),
+                (REG_SEQUENCE MQQQQPR, VT:$v0, qsub_0, VT:$v1, qsub_1,
+                                       VT:$v2, qsub_2, VT:$v3, qsub_3),
                 t2_addr_offset_none:$addr)>;
   foreach stage = [0,1,2,3] in
     def : Pat<(i32 (MVEVST4UPD i32:$addr, (i32 64),
                 (VT MQPR:$v0), (VT MQPR:$v1),
                 (VT MQPR:$v2), (VT MQPR:$v3), (i32 stage))),
               (i32 (!cast<Instruction>("MVE_VST4"#stage#"_"#lanesize#_wb)
-                (REG_SEQUENCE QQQQPR, VT:$v0, qsub_0, VT:$v1, qsub_1,
-                                      VT:$v2, qsub_2, VT:$v3, qsub_3),
+                (REG_SEQUENCE MQQQQPR, VT:$v0, qsub_0, VT:$v1, qsub_1,
+                                       VT:$v2, qsub_2, VT:$v3, qsub_3),
                 t2_addr_offset_none:$addr))>;
 }
 defm : MVE_vst24_patterns<8, v16i8>;

@@ -77,8 +77,9 @@ define void @vld2_v16i32(<32 x i32> *%src, <16 x i32> *%dst) {
 ; CHECK-NEXT:    vld20.32 {q5, q6}, [r0]
 ; CHECK-NEXT:    vadd.i32 q0, q0, q1
 ; CHECK-NEXT:    vld20.32 {q1, q2}, [r3]
-; CHECK-NEXT:    vadd.i32 q3, q3, q4
+; CHECK-NEXT:    @ kill: def $q3 killed $q3 killed $q3_q4
 ; CHECK-NEXT:    vld21.32 {q5, q6}, [r0]
+; CHECK-NEXT:    vadd.i32 q3, q3, q4
 ; CHECK-NEXT:    vld21.32 {q1, q2}, [r3]
 ; CHECK-NEXT:    vstrw.32 q3, [r1, #48]
 ; CHECK-NEXT:    @ kill: def $q1 killed $q1 killed $q1_q2
@@ -479,8 +480,9 @@ define void @vld2_v16f32(<32 x float> *%src, <16 x float> *%dst) {
 ; CHECK-NEXT:    vld20.32 {q5, q6}, [r0]
 ; CHECK-NEXT:    vadd.f32 q0, q0, q1
 ; CHECK-NEXT:    vld20.32 {q1, q2}, [r3]
-; CHECK-NEXT:    vadd.f32 q3, q3, q4
+; CHECK-NEXT:    @ kill: def $q3 killed $q3 killed $q3_q4
 ; CHECK-NEXT:    vld21.32 {q5, q6}, [r0]
+; CHECK-NEXT:    vadd.f32 q3, q3, q4
 ; CHECK-NEXT:    vld21.32 {q1, q2}, [r3]
 ; CHECK-NEXT:    vstrw.32 q3, [r1, #48]
 ; CHECK-NEXT:    @ kill: def $q1 killed $q1 killed $q1_q2
