@@ -949,19 +949,19 @@ structured_op: !LinalgStructuredOpConfig
   indexing_maps: !LinalgIndexingMapsConfig
     static_indexing_maps:
     - affine_map<(d0, d1, d2, d3, d4, d5, d6)[s0, s1, s2, s3, s4, s5, s6, s7, s8,
-      s9, s10, s11, s12] -> (d0, d1 * s9 + d3 * s11, d2 * s10 + d4 * s12, d5)>
+      s9, s10, s11, s12] -> (d0, d1 * s9 + d5 * s11, d2 * s10 + d6 * s12, d3)>
     - affine_map<(d0, d1, d2, d3, d4, d5, d6)[s0, s1, s2, s3, s4, s5, s6, s7, s8,
-      s9, s10, s11, s12] -> (d3, d4, d5, d6)>
+      s9, s10, s11, s12] -> (d5, d6, d3, d4)>
     - affine_map<(d0, d1, d2, d3, d4, d5, d6)[s0, s1, s2, s3, s4, s5, s6, s7, s8,
-      s9, s10, s11, s12] -> (d0, d1, d2, d5, d6)>
+      s9, s10, s11, s12] -> (d0, d1, d2, d3, d4)>
   iterator_types:
   - parallel
   - parallel
   - parallel
-  - reduction
-  - reduction
   - parallel
   - parallel
+  - reduction
+  - reduction
   assignments:
   - !ScalarAssign
     arg: O
@@ -1039,23 +1039,23 @@ structured_op: !LinalgStructuredOpConfig
   indexing_maps: !LinalgIndexingMapsConfig
     static_indexing_maps:
     - affine_map<(d0, d1, d2, d3, d4, d5, d6)[s0, s1, s2, s3, s4, s5, s6, s7, s8,
-      s9, s10, s11, s12] -> (d0, d1 * s9 + d3 * s11, d2 * s10 + d4 * s12, d5)>
+      s9, s10, s11, s12] -> (d0, d1 * s9 + d5 * s11, d2 * s10 + d6 * s12, d3)>
     - affine_map<(d0, d1, d2, d3, d4, d5, d6)[s0, s1, s2, s3, s4, s5, s6, s7, s8,
-      s9, s10, s11, s12] -> (d3, d4, d5, d6)>
-    - affine_map<(d0, d1, d2, d3, d4, d5, d6)[s0, s1, s2, s3, s4, s5, s6, s7, s8,
-      s9, s10, s11, s12] -> ()>
+      s9, s10, s11, s12] -> (d5, d6, d3, d4)>
     - affine_map<(d0, d1, d2, d3, d4, d5, d6)[s0, s1, s2, s3, s4, s5, s6, s7, s8,
       s9, s10, s11, s12] -> ()>
     - affine_map<(d0, d1, d2, d3, d4, d5, d6)[s0, s1, s2, s3, s4, s5, s6, s7, s8,
-      s9, s10, s11, s12] -> (d0, d1, d2, d5, d6)>
+      s9, s10, s11, s12] -> ()>
+    - affine_map<(d0, d1, d2, d3, d4, d5, d6)[s0, s1, s2, s3, s4, s5, s6, s7, s8,
+      s9, s10, s11, s12] -> (d0, d1, d2, d3, d4)>
   iterator_types:
   - parallel
   - parallel
   - parallel
-  - reduction
-  - reduction
   - parallel
   - parallel
+  - reduction
+  - reduction
   assignments:
   - !ScalarAssign
     arg: O

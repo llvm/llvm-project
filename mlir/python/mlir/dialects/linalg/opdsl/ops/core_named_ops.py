@@ -209,7 +209,7 @@ def depthwise_conv2D_nhwc(
   Numeric casting is performed on the operands to the inner multiply, promoting
   them to the same data type as the accumulator/output.
   """
-  domain(D.n, D.oh, D.ow, D.kh, D.kw, D.ic, D.cm)
+  domain(D.n, D.oh, D.ow, D.ic, D.cm, D.kh, D.kw)
   O[D.n, D.oh, D.ow, D.ic, D.cm] += cast(
       U, I[D.n, D.oh * S.SH + D.kh * S.DH, D.ow * S.SW + D.kw * S.DW,
            D.ic]) * cast(U, K[D.kh, D.kw, D.ic, D.cm])
@@ -228,7 +228,7 @@ def depthwise_conv2D_nhwc_q(
   Numeric casting is performed on the operands to the inner multiply, promoting
   them to the same data type as the accumulator/output.
   """
-  domain(D.n, D.oh, D.ow, D.kh, D.kw, D.ic, D.cm)
+  domain(D.n, D.oh, D.ow, D.ic, D.cm, D.kh, D.kw)
   O[D.n, D.oh, D.ow, D.ic, D.cm] += (
       (cast(U, I[D.n, D.oh * S.SH + D.kh * S.DH, D.ow * S.SW + D.kw * S.DW,
                  D.ic]) - cast(U, IZp)) *
