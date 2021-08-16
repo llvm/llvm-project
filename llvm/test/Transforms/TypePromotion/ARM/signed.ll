@@ -4,7 +4,7 @@
 ; Test to check that ARMCodeGenPrepare doesn't optimised away sign extends.
 define i16 @test_signed_load(i16* %ptr) {
 ; CHECK-LABEL: @test_signed_load(
-; CHECK-NEXT:    [[LOAD:%.*]] = load i16, i16* [[PTR:%.*]]
+; CHECK-NEXT:    [[LOAD:%.*]] = load i16, i16* [[PTR:%.*]], align 2
 ; CHECK-NEXT:    [[CONV0:%.*]] = zext i16 [[LOAD]] to i32
 ; CHECK-NEXT:    [[CONV1:%.*]] = sext i16 [[LOAD]] to i32
 ; CHECK-NEXT:    [[CMP:%.*]] = icmp eq i32 [[CONV0]], [[CONV1]]
