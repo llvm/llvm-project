@@ -282,16 +282,24 @@ void ObjFile::parseSections(ArrayRef<Section> sections) {
     } else {
       auto *isec =
           make<ConcatInputSection>(segname, name, this, data, align, flags);
-      if (!(isDebugSection(isec->getFlags()) &&
-            isec->getSegName() == segment_names::dwarf)) {
-        subsections.push_back({{0, isec}});
-      } else {
+      if (isDebugSection(isec->getFlags()) &&
+          isec->getSegName() == segment_names::dwarf) {
         // Instead of emitting DWARF sections, we emit STABS symbols to the
         // object files that contain them. We filter them out early to avoid
         // parsing their relocations unnecessarily. But we must still push an
         // empty map to ensure the indices line up for the remaining sections.
         subsections.push_back({});
         debugSections.push_back(isec);
+      } else if (isec->getSegName() == segment_names::llvm) {
+        // ld64 does not appear to emit contents from sections within the __LLVM
+        // segment. Symbols within those sections point to bitcode metadata
+        // instead of actual symbols. Global symbols within those sections could
+        // have the same name without causing duplicate symbol errors. Push an
+        // empty map to ensure indices line up for the remaining sections.
+        // TODO: Evaluate whether the bitcode metadata is needed.
+        subsections.push_back({});
+      } else {
+        subsections.push_back({{0, isec}});
       }
     }
   }
