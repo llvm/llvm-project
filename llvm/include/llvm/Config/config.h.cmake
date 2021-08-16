@@ -64,6 +64,9 @@
 /* Define to 1 if we can deregister EH frames on this platform. */
 #cmakedefine HAVE_DEREGISTER_FRAME ${HAVE_DEREGISTER_FRAME}
 
+/* Define if __unw_add_dynamic_fde() is available on this platform. */
+#cmakedefine HAVE_UNW_ADD_DYNAMIC_FDE ${HAVE_UNW_ADD_DYNAMIC_FDE}
+
 /* Define to 1 if you have the <errno.h> header file. */
 #cmakedefine HAVE_ERRNO_H ${HAVE_ERRNO_H}
 
