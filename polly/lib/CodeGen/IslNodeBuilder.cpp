@@ -107,10 +107,10 @@ static cl::opt<OpenMPBackend> PollyOmpBackend(
                clEnumValN(OpenMPBackend::LLVM, "LLVM", "LLVM OpenMP")),
     cl::Hidden, cl::init(OpenMPBackend::GNU), cl::cat(PollyCategory));
 
-isl::ast_expr IslNodeBuilder::getUpperBound(isl::ast_node For,
+isl::ast_expr IslNodeBuilder::getUpperBound(isl::ast_node_for For,
                                             ICmpInst::Predicate &Predicate) {
-  isl::ast_expr Cond = For.for_get_cond();
-  isl::ast_expr Iterator = For.for_get_iterator();
+  isl::ast_expr Cond = For.cond();
+  isl::ast_expr Iterator = For.iterator();
   assert(isl_ast_expr_get_type(Cond.get()) == isl_ast_expr_op &&
          "conditional expression is not an atomic upper bound");
 
@@ -163,16 +163,17 @@ static bool checkIslAstExprInt(__isl_take isl_ast_expr *Expr,
   return true;
 }
 
-int IslNodeBuilder::getNumberOfIterations(isl::ast_node For) {
+int IslNodeBuilder::getNumberOfIterations(isl::ast_node_for For) {
   assert(isl_ast_node_get_type(For.get()) == isl_ast_node_for);
-  isl::ast_node Body = For.for_get_body();
+  isl::ast_node Body = For.body();
 
   // First, check if we can actually handle this code.
   switch (isl_ast_node_get_type(Body.get())) {
   case isl_ast_node_user:
     break;
   case isl_ast_node_block: {
-    isl::ast_node_list List = Body.block_get_children();
+    isl::ast_node_block BodyBlock = Body.as<isl::ast_node_block>();
+    isl::ast_node_list List = BodyBlock.children();
     for (isl::ast_node Node : List) {
       isl_ast_node_type NodeType = isl_ast_node_get_type(Node.get());
       if (NodeType != isl_ast_node_user)
@@ -184,10 +185,10 @@ int IslNodeBuilder::getNumberOfIterations(isl::ast_node For) {
     return -1;
   }
 
-  isl::ast_expr Init = For.for_get_init();
+  isl::ast_expr Init = For.init();
   if (!checkIslAstExprInt(Init.release(), isl_val_is_zero))
     return -1;
-  isl::ast_expr Inc = For.for_get_inc();
+  isl::ast_expr Inc = For.inc();
   if (!checkIslAstExprInt(Inc.release(), isl_val_is_one))
     return -1;
   CmpInst::Predicate Predicate;
@@ -413,11 +414,12 @@ void IslNodeBuilder::createMark(__isl_take isl_ast_node *Node) {
   if (strcmp(isl_id_get_name(Id), "SIMD") == 0 &&
       isl_ast_node_get_type(Child) == isl_ast_node_for) {
     bool Vector = PollyVectorizerChoice == VECTORIZER_POLLY;
-    int VectorWidth = getNumberOfIterations(isl::manage_copy(Child));
+    int VectorWidth =
+        getNumberOfIterations(isl::manage_copy(Child).as<isl::ast_node_for>());
     if (Vector && 1 < VectorWidth && VectorWidth <= 16)
       createForVector(Child, VectorWidth);
     else
-      createForSequential(isl::manage(Child), true);
+      createForSequential(isl::manage(Child).as<isl::ast_node_for>(), true);
     isl_id_free(Id);
     return;
   }
@@ -518,18 +520,21 @@ void IslNodeBuilder::createForVector(__isl_take isl_ast_node *For,
 ///
 /// @param Node The band node to be modified.
 /// @return The modified schedule node.
-static bool IsLoopVectorizerDisabled(isl::ast_node Node) {
+static bool IsLoopVectorizerDisabled(isl::ast_node_for Node) {
   assert(isl_ast_node_get_type(Node.get()) == isl_ast_node_for);
-  auto Body = Node.for_get_body();
+  isl::ast_node Body = Node.body();
   if (isl_ast_node_get_type(Body.get()) != isl_ast_node_mark)
     return false;
-  auto Id = Body.mark_get_id();
+
+  isl::ast_node_mark BodyMark = Body.as<isl::ast_node_mark>();
+  auto Id = BodyMark.id();
   if (strcmp(Id.get_name().c_str(), "Loop Vectorizer Disabled") == 0)
     return true;
   return false;
 }
 
-void IslNodeBuilder::createForSequential(isl::ast_node For, bool MarkParallel) {
+void IslNodeBuilder::createForSequential(isl::ast_node_for For,
+                                         bool MarkParallel) {
   Value *ValueLB, *ValueUB, *ValueInc;
   Type *MaxType;
   BasicBlock *ExitBlock;
@@ -538,7 +543,7 @@ void IslNodeBuilder::createForSequential(isl::ast_node For, bool MarkParallel) {
 
   bool LoopVectorizerDisabled = IsLoopVectorizerDisabled(For);
 
-  isl::ast_node Body = For.for_get_body();
+  isl::ast_node Body = For.body();
 
   // isl_ast_node_for_is_degenerate(For)
   //
@@ -546,9 +551,9 @@ void IslNodeBuilder::createForSequential(isl::ast_node For, bool MarkParallel) {
   //       However, for now we just reuse the logic for normal loops, which will
   //       create a loop with a single iteration.
 
-  isl::ast_expr Init = For.for_get_init();
-  isl::ast_expr Inc = For.for_get_inc();
-  isl::ast_expr Iterator = For.for_get_iterator();
+  isl::ast_expr Init = For.init();
+  isl::ast_expr Inc = For.inc();
+  isl::ast_expr Iterator = For.iterator();
   isl::id IteratorID = Iterator.get_id();
   isl::ast_expr UB = getUpperBound(For, Predicate);
 
@@ -654,7 +659,8 @@ void IslNodeBuilder::createForParallel(__isl_take isl_ast_node *For) {
   Inc = isl_ast_node_for_get_inc(For);
   Iterator = isl_ast_node_for_get_iterator(For);
   IteratorID = isl_ast_expr_get_id(Iterator);
-  UB = getUpperBound(isl::manage_copy(For), Predicate).release();
+  UB = getUpperBound(isl::manage_copy(For).as<isl::ast_node_for>(), Predicate)
+           .release();
 
   ValueLB = ExprBuilder.create(Init);
   ValueUB = ExprBuilder.create(UB);
@@ -782,7 +788,8 @@ void IslNodeBuilder::createFor(__isl_take isl_ast_node *For) {
 
   if (Vector && IslAstInfo::isInnermostParallel(isl::manage_copy(For)) &&
       !IslAstInfo::isReductionParallel(isl::manage_copy(For))) {
-    int VectorWidth = getNumberOfIterations(isl::manage_copy(For));
+    int VectorWidth =
+        getNumberOfIterations(isl::manage_copy(For).as<isl::ast_node_for>());
     if (1 < VectorWidth && VectorWidth <= 16 && !hasPartialAccesses(For)) {
       createForVector(For, VectorWidth);
       return;
@@ -795,7 +802,7 @@ void IslNodeBuilder::createFor(__isl_take isl_ast_node *For) {
   }
   bool Parallel = (IslAstInfo::isParallel(isl::manage_copy(For)) &&
                    !IslAstInfo::isReductionParallel(isl::manage_copy(For)));
-  createForSequential(isl::manage(For), Parallel);
+  createForSequential(isl::manage(For).as<isl::ast_node_for>(), Parallel);
 }
 
 void IslNodeBuilder::createIf(__isl_take isl_ast_node *If) {
