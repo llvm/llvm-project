@@ -519,9 +519,10 @@ SDValue M68kTargetLowering::LowerCall(TargetLowering::CallLoweringInfo &CLI,
 
   // Analyze operands of the call, assigning locations to each operand.
   SmallVector<CCValAssign, 16> ArgLocs;
-  // It is empty for LibCall
-  const Function *CalleeFunc = CLI.CB ? CLI.CB->getCalledFunction() : nullptr;
-  M68kCCState CCInfo(*CalleeFunc, CallConv, IsVarArg, MF, ArgLocs,
+  SmallVector<Type *, 4> ArgTypes;
+  for (const auto &Arg : CLI.getArgs())
+    ArgTypes.emplace_back(Arg.Ty);
+  M68kCCState CCInfo(ArgTypes, CallConv, IsVarArg, MF, ArgLocs,
                      *DAG.getContext());
   CCInfo.AnalyzeCallOperands(Outs, CC_M68k);
 
@@ -876,8 +877,10 @@ SDValue M68kTargetLowering::LowerFormalArguments(
 
   // Assign locations to all of the incoming arguments.
   SmallVector<CCValAssign, 16> ArgLocs;
-  M68kCCState CCInfo(MF.getFunction(), CCID, IsVarArg, MF, ArgLocs,
-                     *DAG.getContext());
+  SmallVector<Type *, 4> ArgTypes;
+  for (const Argument &Arg : MF.getFunction().args())
+    ArgTypes.emplace_back(Arg.getType());
+  M68kCCState CCInfo(ArgTypes, CCID, IsVarArg, MF, ArgLocs, *DAG.getContext());
 
   CCInfo.AnalyzeFormalArguments(Ins, CC_M68k);
 
