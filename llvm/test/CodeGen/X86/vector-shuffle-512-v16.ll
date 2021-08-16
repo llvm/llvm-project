@@ -575,9 +575,7 @@ define <16 x float> @insert_sub1_12(<16 x float> %base, <4 x float> %sub1, <4 x 
 define <16 x float> @insert_sub2_4(<16 x float> %base, <4 x float> %sub1, <4 x float> %sub2, <4 x float> %sub3, <4 x float> %sub4) {
 ; ALL-LABEL: insert_sub2_4:
 ; ALL:       # %bb.0:
-; ALL-NEXT:    vinsertf32x4 $2, %xmm3, %zmm0, %zmm1
-; ALL-NEXT:    vmovapd {{.*#+}} zmm2 = [0,1,12,13,4,5,6,7]
-; ALL-NEXT:    vpermt2pd %zmm1, %zmm2, %zmm0
+; ALL-NEXT:    vinsertf32x4 $1, %xmm3, %zmm0, %zmm0
 ; ALL-NEXT:    retq
   %sub12 = shufflevector <4 x float> %sub1, <4 x float> %sub2, <8 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7>
   %sub34 = shufflevector <4 x float> %sub3, <4 x float> %sub4, <8 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7>
