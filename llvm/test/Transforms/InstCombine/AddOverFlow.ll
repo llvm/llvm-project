@@ -264,3 +264,14 @@ define i16 @ripple_no_nsw6(i16 %x, i16 %y) {
   %c = add i16 %b, %a
   ret i16 %c
 }
+
+define i8 @PR38021(i8 %x) {
+; CHECK-LABEL: @PR38021(
+; CHECK-NEXT:    [[CLEAR_TOP_3_BITS:%.*]] = lshr i8 [[X:%.*]], 3
+; CHECK-NEXT:    [[ADD:%.*]] = add nuw nsw i8 [[CLEAR_TOP_3_BITS]], -63
+; CHECK-NEXT:    ret i8 [[ADD]]
+;
+  %clear_top_3_bits = lshr i8 %x, 3
+  %add = add i8 %clear_top_3_bits, 193 ; 0b11000001
+  ret i8 %add
+}
