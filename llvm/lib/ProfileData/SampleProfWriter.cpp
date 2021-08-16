@@ -43,21 +43,8 @@ using namespace sampleprof;
 
 std::error_code SampleProfileWriter::writeFuncProfiles(
     const StringMap<FunctionSamples> &ProfileMap) {
-  // Sort the ProfileMap by total samples.
-  typedef std::pair<StringRef, const FunctionSamples *> NameFunctionSamples;
   std::vector<NameFunctionSamples> V;
-  for (const auto &I : ProfileMap) {
-    assert(I.getKey() == I.second.getNameWithContext() &&
-           "Inconsistent profile map");
-    V.push_back(std::make_pair(I.second.getNameWithContext(), &I.second));
-  }
-  llvm::stable_sort(
-      V, [](const NameFunctionSamples &A, const NameFunctionSamples &B) {
-        if (A.second->getTotalSamples() == B.second->getTotalSamples())
-          return A.first > B.first;
-        return A.second->getTotalSamples() > B.second->getTotalSamples();
-      });
-
+  sortFuncProfiles(ProfileMap, V);
   for (const auto &I : V) {
     if (std::error_code EC = writeSample(*I.second))
       return EC;

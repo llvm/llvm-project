@@ -20,14 +20,14 @@ Samples collected in inlined callsites {
     }
     No inlined callsites in this function
 }
-Function: _Z3fooi: 15422, 1220, 1 sampled lines
-Samples collected in the function's body {
-  1: 1220
-}
-No inlined callsites in this function
 Function: _Z3bari: 40602, 2874, 1 sampled lines
 Samples collected in the function's body {
   1: 2874
+}
+No inlined callsites in this function
+Function: _Z3fooi: 15422, 1220, 1 sampled lines
+Samples collected in the function's body {
+  1: 1220
 }
 No inlined callsites in this function
 ======== Dump profile symbol list ========

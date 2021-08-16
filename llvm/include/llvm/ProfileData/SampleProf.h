@@ -961,6 +961,11 @@ private:
 
 raw_ostream &operator<<(raw_ostream &OS, const FunctionSamples &FS);
 
+using NameFunctionSamples = std::pair<StringRef, const FunctionSamples *>;
+
+void sortFuncProfiles(const StringMap<FunctionSamples> &ProfileMap,
+                      std::vector<NameFunctionSamples> &SortedProfiles);
+
 /// Sort a LocationT->SampleT map by LocationT.
 ///
 /// It produces a sorted list of <LocationT, SampleT> records by ascending
