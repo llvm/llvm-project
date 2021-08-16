@@ -49,9 +49,9 @@ declare i32 @__gxx_personality_v0(...);
 define i16 @add_bounded_values(i16 %a, i16 %b) personality i8* bitcast (i32 (...)* @__gxx_personality_v0 to i8*) {
 ; CHECK-LABEL: @add_bounded_values(
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[C:%.*]] = call i16 @bounded(i16 [[A:%.*]]), !range !0
+; CHECK-NEXT:    [[C:%.*]] = call i16 @bounded(i16 [[A:%.*]]), !range [[RNG0:![0-9]+]]
 ; CHECK-NEXT:    [[D:%.*]] = invoke i16 @bounded(i16 [[B:%.*]])
-; CHECK-NEXT:    to label [[CONT:%.*]] unwind label [[LPAD:%.*]], !range !0
+; CHECK-NEXT:    to label [[CONT:%.*]] unwind label [[LPAD:%.*]], !range [[RNG0]]
 ; CHECK:       cont:
 ; CHECK-NEXT:    [[E:%.*]] = add nuw i16 [[C]], [[D]]
 ; CHECK-NEXT:    ret i16 [[E]]
@@ -76,9 +76,9 @@ lpad:
 define i16 @add_bounded_values_2(i16 %a, i16 %b) personality i8* bitcast (i32 (...)* @__gxx_personality_v0 to i8*) {
 ; CHECK-LABEL: @add_bounded_values_2(
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[C:%.*]] = call i16 @bounded(i16 [[A:%.*]]), !range !1
+; CHECK-NEXT:    [[C:%.*]] = call i16 @bounded(i16 [[A:%.*]]), !range [[RNG1:![0-9]+]]
 ; CHECK-NEXT:    [[D:%.*]] = invoke i16 @bounded(i16 [[B:%.*]])
-; CHECK-NEXT:    to label [[CONT:%.*]] unwind label [[LPAD:%.*]], !range !1
+; CHECK-NEXT:    to label [[CONT:%.*]] unwind label [[LPAD:%.*]], !range [[RNG1]]
 ; CHECK:       cont:
 ; CHECK-NEXT:    [[E:%.*]] = add i16 [[C]], [[D]]
 ; CHECK-NEXT:    ret i16 [[E]]
