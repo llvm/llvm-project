@@ -18,6 +18,21 @@
 
 namespace Fortran::frontend {
 
+/// Helper class for managing a single instance of the Flang compiler.
+///
+/// This class serves two purposes:
+///  (1) It manages the various objects which are necessary to run the compiler
+///  (2) It provides utility routines for constructing and manipulating the
+///      common Flang objects.
+///
+/// The compiler instance generally owns the instance of all the objects that it
+/// manages. However, clients can still share objects by manually setting the
+/// object and retaking ownership prior to destroying the CompilerInstance.
+///
+/// The compiler instance is intended to simplify clients, but not to lock them
+/// in to the compiler instance for everything. When possible, utility functions
+/// come in two forms; a short form that reuses the CompilerInstance objects,
+/// and a long form that takes explicit instances of any required objects.
 class CompilerInstance {
 
   /// The options used in this compiler instance.
@@ -29,6 +44,8 @@ class CompilerInstance {
   std::shared_ptr<Fortran::parser::AllCookedSources> allCookedSources_;
 
   std::shared_ptr<Fortran::parser::Parsing> parsing_;
+
+  std::unique_ptr<Fortran::semantics::Semantics> semantics_;
 
   /// The stream for diagnostics from Semantics
   llvm::raw_ostream *semaOutputStream_ = &llvm::errs();
@@ -109,6 +126,13 @@ public:
 
   /// Get the current stream for verbose output.
   llvm::raw_ostream &semaOutputStream() { return *semaOutputStream_; }
+
+  Fortran::semantics::Semantics &semantics() { return *semantics_; }
+  const Fortran::semantics::Semantics &semantics() const { return *semantics_; }
+
+  void setSemantics(std::unique_ptr<Fortran::semantics::Semantics> semantics) {
+    semantics_ = std::move(semantics);
+  }
 
   /// }
   /// @name High-Level Operations
