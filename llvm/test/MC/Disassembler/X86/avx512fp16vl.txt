@@ -42,43 +42,43 @@
 0x62,0xf5,0x54,0x9f,0x58,0x72,0x80
 
 # ATT:   vcmpltph %ymm4, %ymm5, %k5
-# INTEL: vcmpph k5, ymm5, ymm4, 1
+# INTEL: vcmpltph k5, ymm5, ymm4
 0x62,0xf3,0x54,0x28,0xc2,0xec,0x01
 
 # ATT:   vcmpunordph %xmm4, %xmm5, %k5
-# INTEL: vcmpph k5, xmm5, xmm4, 3
+# INTEL: vcmpunordph k5, xmm5, xmm4
 0x62,0xf3,0x54,0x08,0xc2,0xec,0x03
 
 # ATT:   vcmpnltph 268435456(%esp,%esi,8), %xmm5, %k5 {%k7}
-# INTEL: vcmpph k5 {k7}, xmm5, xmmword ptr [esp + 8*esi + 268435456], 5
+# INTEL: vcmpnltph k5 {k7}, xmm5, xmmword ptr [esp + 8*esi + 268435456]
 0x62,0xf3,0x54,0x0f,0xc2,0xac,0xf4,0x00,0x00,0x00,0x10,0x05
 
 # ATT:   vcmpordph (%ecx){1to8}, %xmm5, %k5
-# INTEL: vcmpph k5, xmm5, word ptr [ecx]{1to8}, 7
+# INTEL: vcmpordph k5, xmm5, word ptr [ecx]{1to8}
 0x62,0xf3,0x54,0x18,0xc2,0x29,0x07
 
 # ATT:   vcmpngeph 2032(%ecx), %xmm5, %k5
-# INTEL: vcmpph k5, xmm5, xmmword ptr [ecx + 2032], 9
+# INTEL: vcmpngeph k5, xmm5, xmmword ptr [ecx + 2032]
 0x62,0xf3,0x54,0x08,0xc2,0x69,0x7f,0x09
 
 # ATT:   vcmpfalseph -256(%edx){1to8}, %xmm5, %k5 {%k7}
-# INTEL: vcmpph k5 {k7}, xmm5, word ptr [edx - 256]{1to8}, 11
+# INTEL: vcmpfalseph k5 {k7}, xmm5, word ptr [edx - 256]{1to8}
 0x62,0xf3,0x54,0x1f,0xc2,0x6a,0x80,0x0b
 
 # ATT:   vcmpgeph 268435456(%esp,%esi,8), %ymm5, %k5 {%k7}
-# INTEL: vcmpph k5 {k7}, ymm5, ymmword ptr [esp + 8*esi + 268435456], 13
+# INTEL: vcmpgeph k5 {k7}, ymm5, ymmword ptr [esp + 8*esi + 268435456]
 0x62,0xf3,0x54,0x2f,0xc2,0xac,0xf4,0x00,0x00,0x00,0x10,0x0d
 
 # ATT:   vcmptrueph (%ecx){1to16}, %ymm5, %k5
-# INTEL: vcmpph k5, ymm5, word ptr [ecx]{1to16}, 15
+# INTEL: vcmptrueph k5, ymm5, word ptr [ecx]{1to16}
 0x62,0xf3,0x54,0x38,0xc2,0x29,0x0f
 
 # ATT:   vcmplt_oqph 4064(%ecx), %ymm5, %k5
-# INTEL: vcmpph k5, ymm5, ymmword ptr [ecx + 4064], 17
+# INTEL: vcmplt_oqph k5, ymm5, ymmword ptr [ecx + 4064]
 0x62,0xf3,0x54,0x28,0xc2,0x69,0x7f,0x11
 
 # ATT:   vcmpunord_sph -256(%edx){1to16}, %ymm5, %k5 {%k7}
-# INTEL: vcmpph k5 {k7}, ymm5, word ptr [edx - 256]{1to16}, 19
+# INTEL: vcmpunord_sph k5 {k7}, ymm5, word ptr [edx - 256]{1to16}
 0x62,0xf3,0x54,0x3f,0xc2,0x6a,0x80,0x13
 
 # ATT:   vdivph %ymm4, %ymm5, %ymm6
