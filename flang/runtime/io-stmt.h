@@ -229,7 +229,6 @@ public:
 
 private:
   int remaining_{0}; // for "r*" repetition
-  std::int64_t repeatRecordNumber_;
   std::int64_t repeatPositionInRecord_;
   bool eatComma_{false}; // consume comma after previously read item
   bool hitSlash_{false}; // once '/' is seen, nullify further items
