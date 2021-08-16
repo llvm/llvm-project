@@ -251,6 +251,11 @@ public:
   /// Set the attribute list for this Function.
   void setAttributes(AttributeList Attrs) { AttributeSets = Attrs; }
 
+  /// Add return value attributes to this function.
+  void addRetAttr(Attribute::AttrKind Kind) {
+    addAttribute(AttributeList::ReturnIndex, Kind);
+  }
+
   /// Add function attributes to this function.
   void addFnAttr(Attribute::AttrKind Kind) {
     addAttribute(AttributeList::FunctionIndex, Kind);

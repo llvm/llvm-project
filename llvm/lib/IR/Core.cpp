@@ -2502,7 +2502,7 @@ void LLVMAddTargetDependentFunctionAttr(LLVMValueRef Fn, const char *A,
                                         const char *V) {
   Function *Func = unwrap<Function>(Fn);
   Attribute Attr = Attribute::get(Func->getContext(), A, V);
-  Func->addAttribute(AttributeList::FunctionIndex, Attr);
+  Func->addFnAttr(Attr);
 }
 
 /*--.. Operations on parameters ............................................--*/
