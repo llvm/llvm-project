@@ -686,7 +686,7 @@ private:
     template <class _Up> friend class _LIBCPP_TEMPLATE_VIS weak_ptr;
 };
 
-#ifndef _LIBCPP_HAS_NO_DEDUCTION_GUIDES
+#if _LIBCPP_STD_VER >= 17
 template<class _Tp>
 shared_ptr(weak_ptr<_Tp>) -> shared_ptr<_Tp>;
 template<class _Tp, class _Dp>
@@ -1406,7 +1406,7 @@ public:
     template <class _Up> friend class _LIBCPP_TEMPLATE_VIS shared_ptr;
 };
 
-#ifndef _LIBCPP_HAS_NO_DEDUCTION_GUIDES
+#if _LIBCPP_STD_VER >= 17
 template<class _Tp>
 weak_ptr(shared_ptr<_Tp>) -> weak_ptr<_Tp>;
 #endif

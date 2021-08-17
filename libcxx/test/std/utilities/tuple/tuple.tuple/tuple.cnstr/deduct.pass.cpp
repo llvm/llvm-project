@@ -7,7 +7,6 @@
 //===----------------------------------------------------------------------===//
 
 // UNSUPPORTED: c++03, c++11, c++14
-// UNSUPPORTED: libcpp-no-deduction-guides
 // UNSUPPORTED: apple-clang-9
 
 // GCC's implementation of class template deduction is still immature and runs

@@ -8,7 +8,6 @@
 
 // <map>
 // UNSUPPORTED: c++03, c++11, c++14
-// UNSUPPORTED: libcpp-no-deduction-guides
 
 // template<class InputIterator,
 //          class Compare = less<iter-value-type<InputIterator>>,

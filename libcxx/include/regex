@@ -3014,7 +3014,7 @@ private:
     template <class, class> friend class __lookahead;
 };
 
-#ifndef _LIBCPP_HAS_NO_DEDUCTION_GUIDES
+#if _LIBCPP_STD_VER >= 17
 template <class _ForwardIterator,
           class = typename enable_if<__is_cpp17_forward_iterator<_ForwardIterator>::value, nullptr_t>::type
 >
