@@ -31,7 +31,9 @@ enum class CudaVersion {
   CUDA_110,
   CUDA_111,
   CUDA_112,
-  LATEST = CUDA_112,
+  CUDA_113,
+  CUDA_114,
+  LATEST = CUDA_114,
   LATEST_SUPPORTED = CUDA_101,
 };
 const char *CudaVersionToString(CudaVersion V);
