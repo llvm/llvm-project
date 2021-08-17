@@ -18,7 +18,7 @@
 #include "../types.h"
 
 constexpr bool test() {
-  std::ranges::transform_view<ContiguousView, Increment> transformView;
+  std::ranges::transform_view<ContiguousView, PlusOne> transformView;
   auto iter = std::move(transformView).begin();
   assert((++iter).base() == globalBuff + 1);
 
@@ -31,7 +31,7 @@ constexpr bool test() {
 
   // Check that decltype(InputIter++) == void.
   ASSERT_SAME_TYPE(decltype(
-    std::declval<std::ranges::iterator_t<std::ranges::transform_view<InputView, Increment>>>()++),
+    std::declval<std::ranges::iterator_t<std::ranges::transform_view<InputView, PlusOne>>>()++),
     void);
 
   assert((iter += 4).base() == globalBuff + 4);

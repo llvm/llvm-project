@@ -27,29 +27,29 @@ constexpr bool test() {
   int buff[8] = {0, 1, 2, 3, 4, 5, 6, 7};
 
   {
-    std::ranges::transform_view transformView(ContiguousView{buff}, Increment{});
+    std::ranges::transform_view transformView(ContiguousView{buff}, PlusOneMutable{});
     assert(transformView.begin().base() == buff);
     assert(*transformView.begin() == 1);
   }
 
   {
-    std::ranges::transform_view transformView(ForwardView{buff}, Increment{});
+    std::ranges::transform_view transformView(ForwardView{buff}, PlusOneMutable{});
     assert(transformView.begin().base().base() == buff);
     assert(*transformView.begin() == 1);
   }
 
   {
-    std::ranges::transform_view transformView(InputView{buff}, Increment{});
+    std::ranges::transform_view transformView(InputView{buff}, PlusOneMutable{});
     assert(transformView.begin().base().base() == buff);
     assert(*transformView.begin() == 1);
   }
 
   {
-    const std::ranges::transform_view transformView(ContiguousView{buff}, IncrementConst{});
+    const std::ranges::transform_view transformView(ContiguousView{buff}, PlusOne{});
     assert(*transformView.begin() == 1);
   }
 
-  static_assert(!BeginInvocable<const std::ranges::transform_view<ContiguousView, Increment>>);
+  static_assert(!BeginInvocable<const std::ranges::transform_view<ContiguousView, PlusOneMutable>>);
 
   return true;
 }

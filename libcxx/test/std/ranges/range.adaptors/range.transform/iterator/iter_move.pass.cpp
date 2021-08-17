@@ -21,7 +21,7 @@ constexpr bool test() {
   int buff[8] = {0, 1, 2, 3, 4, 5, 6, 7};
 
   {
-    std::ranges::transform_view transformView(ContiguousView{buff}, Increment{});
+    std::ranges::transform_view transformView(ContiguousView{buff}, PlusOneMutable{});
     auto iter = transformView.begin();
     static_assert(!noexcept(std::ranges::iter_move(iter)));
 
@@ -34,9 +34,9 @@ constexpr bool test() {
 
   {
     static_assert( noexcept(std::ranges::iter_move(
-      std::declval<std::ranges::iterator_t<std::ranges::transform_view<ContiguousView, IncrementNoexcept>>&>())));
+      std::declval<std::ranges::iterator_t<std::ranges::transform_view<ContiguousView, PlusOneNoexcept>>&>())));
     static_assert(!noexcept(std::ranges::iter_move(
-      std::declval<std::ranges::iterator_t<std::ranges::transform_view<ContiguousView, Increment>>&>())));
+      std::declval<std::ranges::iterator_t<std::ranges::transform_view<ContiguousView, PlusOneMutable>>&>())));
   }
 
   return true;
