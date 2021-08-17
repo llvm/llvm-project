@@ -4801,7 +4801,6 @@ public:
   inline int sgn() const;
   inline isl::val sub(isl::val v2) const;
   inline isl::val sub(long v2) const;
-  inline isl::val sub_ui(unsigned long v2) const;
   inline isl::val_list to_list() const;
   inline isl::val trunc() const;
   static inline isl::val zero(isl::ctx ctx);
@@ -22785,12 +22784,6 @@ isl::val val::sub(isl::val v2) const
 isl::val val::sub(long v2) const
 {
   return this->sub(isl::val(ctx(), v2));
-}
-
-isl::val val::sub_ui(unsigned long v2) const
-{
-  auto res = isl_val_sub_ui(copy(), v2);
-  return manage(res);
 }
 
 isl::val_list val::to_list() const

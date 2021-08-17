@@ -195,7 +195,7 @@ static isl::set addRangeBoundsToSet(isl::set S, const ConstantRange &Range,
     isl::set SLB = S.lower_bound_val(type, dim, V);
 
     V = valFromAPInt(Ctx.get(), Range.getUpper(), true);
-    V = V.sub_ui(1);
+    V = V.sub(1);
     isl::set SUB = S.upper_bound_val(type, dim, V);
     S = SLB.unite(SUB);
   }
