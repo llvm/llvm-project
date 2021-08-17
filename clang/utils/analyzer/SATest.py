@@ -42,6 +42,7 @@ def build(parser, args):
                                           projects,
                                           args.override_compiler,
                                           args.extra_analyzer_config,
+                                          args.extra_checkers,
                                           args.regenerate,
                                           args.strictness)
     tests_passed = tester.test_all()
@@ -250,6 +251,10 @@ def main():
                               dest="extra_analyzer_config", type=str,
                               default="",
                               help="Arguments passed to to -analyzer-config")
+    build_parser.add_argument("--extra-checkers",
+                              dest="extra_checkers", type=str,
+                              default="",
+                              help="Extra checkers to enable")
     build_parser.add_argument("--projects", action="store", default="",
                               help="Comma-separated list of projects to test")
     build_parser.add_argument("--max-size", action="store", default=None,
