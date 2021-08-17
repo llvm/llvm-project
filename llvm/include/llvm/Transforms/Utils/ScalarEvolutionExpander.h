@@ -489,9 +489,6 @@ private:
   Value *expandIVInc(PHINode *PN, Value *StepV, const Loop *L, Type *ExpandTy,
                      Type *IntTy, bool useSubtract);
 
-  void hoistBeforePos(DominatorTree *DT, Instruction *InstToHoist,
-                      Instruction *Pos, PHINode *LoopPhi);
-
   void fixupInsertPoints(Instruction *I);
 
   /// If required, create LCSSA PHIs for \p Users' operand \p OpIdx. If new
