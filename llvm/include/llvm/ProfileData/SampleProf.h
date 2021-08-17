@@ -104,10 +104,10 @@ static inline uint64_t SPMagic(SampleProfileFormat Format = SPF_Binary) {
 /// current Format uses MD5 to represent the string.
 static inline StringRef getRepInFormat(StringRef Name, bool UseMD5,
                                        std::string &GUIDBuf) {
-  if (Name.empty())
+  if (Name.empty() || !UseMD5)
     return Name;
   GUIDBuf = std::to_string(Function::getGUID(Name));
-  return UseMD5 ? StringRef(GUIDBuf) : Name;
+  return GUIDBuf;
 }
 
 static inline uint64_t SPVersion() { return 103; }
