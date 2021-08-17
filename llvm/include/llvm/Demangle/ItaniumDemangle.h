@@ -109,6 +109,126 @@
 
 DEMANGLE_NAMESPACE_BEGIN
 
+template <class T, size_t N> class PODSmallVector {
+  static_assert(std::is_pod<T>::value,
+                "T is required to be a plain old data type");
+
+  T *First = nullptr;
+  T *Last = nullptr;
+  T *Cap = nullptr;
+  T Inline[N] = {0};
+
+  bool isInline() const { return First == Inline; }
+
+  void clearInline() {
+    First = Inline;
+    Last = Inline;
+    Cap = Inline + N;
+  }
+
+  void reserve(size_t NewCap) {
+    size_t S = size();
+    if (isInline()) {
+      auto *Tmp = static_cast<T *>(std::malloc(NewCap * sizeof(T)));
+      if (Tmp == nullptr)
+        std::terminate();
+      std::copy(First, Last, Tmp);
+      First = Tmp;
+    } else {
+      First = static_cast<T *>(std::realloc(First, NewCap * sizeof(T)));
+      if (First == nullptr)
+        std::terminate();
+    }
+    Last = First + S;
+    Cap = First + NewCap;
+  }
+
+public:
+  PODSmallVector() : First(Inline), Last(First), Cap(Inline + N) {}
+
+  PODSmallVector(const PODSmallVector &) = delete;
+  PODSmallVector &operator=(const PODSmallVector &) = delete;
+
+  PODSmallVector(PODSmallVector &&Other) : PODSmallVector() {
+    if (Other.isInline()) {
+      std::copy(Other.begin(), Other.end(), First);
+      Last = First + Other.size();
+      Other.clear();
+      return;
+    }
+
+    First = Other.First;
+    Last = Other.Last;
+    Cap = Other.Cap;
+    Other.clearInline();
+  }
+
+  PODSmallVector &operator=(PODSmallVector &&Other) {
+    if (Other.isInline()) {
+      if (!isInline()) {
+        std::free(First);
+        clearInline();
+      }
+      std::copy(Other.begin(), Other.end(), First);
+      Last = First + Other.size();
+      Other.clear();
+      return *this;
+    }
+
+    if (isInline()) {
+      First = Other.First;
+      Last = Other.Last;
+      Cap = Other.Cap;
+      Other.clearInline();
+      return *this;
+    }
+
+    std::swap(First, Other.First);
+    std::swap(Last, Other.Last);
+    std::swap(Cap, Other.Cap);
+    Other.clear();
+    return *this;
+  }
+
+  // NOLINTNEXTLINE(readability-identifier-naming)
+  void push_back(const T &Elem) {
+    if (Last == Cap)
+      reserve(size() * 2);
+    *Last++ = Elem;
+  }
+
+  // NOLINTNEXTLINE(readability-identifier-naming)
+  void pop_back() {
+    assert(Last != First && "Popping empty vector!");
+    --Last;
+  }
+
+  void dropBack(size_t Index) {
+    assert(Index <= size() && "dropBack() can't expand!");
+    Last = First + Index;
+  }
+
+  T *begin() { return First; }
+  T *end() { return Last; }
+
+  bool empty() const { return First == Last; }
+  size_t size() const { return static_cast<size_t>(Last - First); }
+  T &back() {
+    assert(Last != First && "Calling back() on empty vector!");
+    return *(Last - 1);
+  }
+  T &operator[](size_t Index) {
+    assert(Index < size() && "Invalid access!");
+    return *(begin() + Index);
+  }
+  void clear() { Last = First; }
+
+  ~PODSmallVector() {
+    if (!isInline())
+      std::free(First);
+  }
+};
+
 // Base class of all AST nodes. The AST is built by the parser, then is
 // traversed by the printLeft/Right functions to produce a demangled string.
 class Node {
@@ -2216,125 +2336,6 @@ FOR_EACH_NODE_KIND(SPECIALIZATION)
 #undef SPECIALIZATION
 
 #undef FOR_EACH_NODE_KIND
-
-template <class T, size_t N>
-class PODSmallVector {
-  static_assert(std::is_pod<T>::value,
-                "T is required to be a plain old data type");
-
-  T* First = nullptr;
-  T* Last = nullptr;
-  T* Cap = nullptr;
-  T Inline[N] = {0};
-
-  bool isInline() const { return First == Inline; }
-
-  void clearInline() {
-    First = Inline;
-    Last = Inline;
-    Cap = Inline + N;
-  }
-
-  void reserve(size_t NewCap) {
-    size_t S = size();
-    if (isInline()) {
-      auto* Tmp = static_cast<T*>(std::malloc(NewCap * sizeof(T)));
-      if (Tmp == nullptr)
-        std::terminate();
-      std::copy(First, Last, Tmp);
-      First = Tmp;
-    } else {
-      First = static_cast<T*>(std::realloc(First, NewCap * sizeof(T)));
-      if (First == nullptr)
-        std::terminate();
-    }
-    Last = First + S;
-    Cap = First + NewCap;
-  }
-
-public:
-  PODSmallVector() : First(Inline), Last(First), Cap(Inline + N) {}
-
-  PODSmallVector(const PODSmallVector&) = delete;
-  PODSmallVector& operator=(const PODSmallVector&) = delete;
-
-  PODSmallVector(PODSmallVector&& Other) : PODSmallVector() {
-    if (Other.isInline()) {
-      std::copy(Other.begin(), Other.end(), First);
-      Last = First + Other.size();
-      Other.clear();
-      return;
-    }
-
-    First = Other.First;
-    Last = Other.Last;
-    Cap = Other.Cap;
-    Other.clearInline();
-  }
-
-  PODSmallVector& operator=(PODSmallVector&& Other) {
-    if (Other.isInline()) {
-      if (!isInline()) {
-        std::free(First);
-        clearInline();
-      }
-      std::copy(Other.begin(), Other.end(), First);
-      Last = First + Other.size();
-      Other.clear();
-      return *this;
-    }
-
-    if (isInline()) {
-      First = Other.First;
-      Last = Other.Last;
-      Cap = Other.Cap;
-      Other.clearInline();
-      return *this;
-    }
-
-    std::swap(First, Other.First);
-    std::swap(Last, Other.Last);
-    std::swap(Cap, Other.Cap);
-    Other.clear();
-    return *this;
-  }
-
-  void push_back(const T& Elem) {
-    if (Last == Cap)
-      reserve(size() * 2);
-    *Last++ = Elem;
-  }
-
-  void pop_back() {
-    assert(Last != First && "Popping empty vector!");
-    --Last;
-  }
-
-  void dropBack(size_t Index) {
-    assert(Index <= size() && "dropBack() can't expand!");
-    Last = First + Index;
-  }
-
-  T* begin() { return First; }
-  T* end() { return Last; }
-
-  bool empty() const { return First == Last; }
-  size_t size() const { return static_cast<size_t>(Last - First); }
-  T& back() {
-    assert(Last != First && "Calling back() on empty vector!");
-    return *(Last - 1);
-  }
-  T& operator[](size_t Index) {
-    assert(Index < size() && "Invalid access!");
-    return *(begin() + Index);
-  }
-  void clear() { Last = First; }
-
-  ~PODSmallVector() {
-    if (!isInline())
-      std::free(First);
-  }
-};
 
 template <typename Derived, typename Alloc> struct AbstractManglingParser {
   const char *First;
