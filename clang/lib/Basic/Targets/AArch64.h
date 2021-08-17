@@ -96,6 +96,9 @@ public:
 
   ArrayRef<Builtin::Info> getTargetBuiltins() const override;
 
+  Optional<std::pair<unsigned, unsigned>>
+  getVScaleRange(const LangOptions &LangOpts) const override;
+
   bool hasFeature(StringRef Feature) const override;
   bool handleTargetFeatures(std::vector<std::string> &Features,
                             DiagnosticsEngine &Diags) override;

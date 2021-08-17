@@ -1589,7 +1589,7 @@ InstructionCost AArch64TTIImpl::getGatherScatterOpCost(
   ElementCount LegalVF = LT.second.getVectorElementCount();
   InstructionCost MemOpCost =
       getMemoryOpCost(Opcode, VT->getElementType(), Alignment, 0, CostKind, I);
-  return LT.first * MemOpCost * getMaxNumElements(LegalVF);
+  return LT.first * MemOpCost * getMaxNumElements(LegalVF, I->getFunction());
 }
 
 bool AArch64TTIImpl::useNeonVector(const Type *Ty) const {

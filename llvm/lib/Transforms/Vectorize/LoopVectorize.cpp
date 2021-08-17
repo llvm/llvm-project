@@ -5636,6 +5636,13 @@ LoopVectorizationCostModel::getMaxLegalScalableVF(unsigned MaxSafeElements) {
 
   // Limit MaxScalableVF by the maximum safe dependence distance.
   Optional<unsigned> MaxVScale = TTI.getMaxVScale();
+  if (!MaxVScale && TheFunction->hasFnAttribute(Attribute::VScaleRange)) {
+    unsigned VScaleMax = TheFunction->getFnAttribute(Attribute::VScaleRange)
+                             .getVScaleRangeArgs()
+                             .second;
+    if (VScaleMax > 0)
+      MaxVScale = VScaleMax;
+  }
   MaxScalableVF = ElementCount::getScalable(
       MaxVScale ? (MaxSafeElements / MaxVScale.getValue()) : 0);
   if (!MaxScalableVF)

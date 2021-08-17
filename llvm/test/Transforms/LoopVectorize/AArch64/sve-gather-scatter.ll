@@ -1,6 +1,6 @@
 ; RUN: opt -loop-vectorize -dce -instcombine -mtriple aarch64-linux-gnu -mattr=+sve -S %s -scalable-vectorization=preferred -force-target-instruction-cost=1 -o - | FileCheck %s
 
-define void @gather_nxv4i32_ind64(float* noalias nocapture readonly %a, i64* noalias nocapture readonly %b, float* noalias nocapture %c, i64 %n) {
+define void @gather_nxv4i32_ind64(float* noalias nocapture readonly %a, i64* noalias nocapture readonly %b, float* noalias nocapture %c, i64 %n) #0 {
 ; CHECK-LABEL: @gather_nxv4i32_ind64
 ; CHECK: vector.body:
 ; CHECK:   %[[IND:.*]] = load <vscale x 4 x i64>, <vscale x 4 x i64>*
@@ -29,7 +29,7 @@ for.cond.cleanup:                                 ; preds = %for.cond.cleanup.lo
 ; NOTE: I deliberately chose '%b' as an array of i32 indices, since the
 ; additional 'sext' in the for.body loop exposes additional code paths
 ; during vectorisation.
-define void @scatter_nxv4i32_ind32(float* noalias nocapture %a, i32* noalias nocapture readonly %b, float* noalias nocapture readonly %c, i64 %n) {
+define void @scatter_nxv4i32_ind32(float* noalias nocapture %a, i32* noalias nocapture readonly %b, float* noalias nocapture readonly %c, i64 %n) #0 {
 ; CHECK-LABEL: @scatter_nxv4i32_ind32
 ; CHECK: vector.body:
 ; CHECK:   %[[VALS:.*]] = load <vscale x 4 x float>
@@ -57,7 +57,7 @@ for.cond.cleanup:                                 ; preds = %for.body, %entry
   ret void
 }
 
-define void @scatter_inv_nxv4i32(i32* noalias nocapture %inv, i32* noalias nocapture readonly %b, i64 %n) {
+define void @scatter_inv_nxv4i32(i32* noalias nocapture %inv, i32* noalias nocapture readonly %b, i64 %n) #0 {
 ; CHECK-LABEL: @scatter_inv_nxv4i32
 ; CHECK: vector.ph:
 ; CHECK:   %[[INS:.*]] = insertelement <vscale x 4 x i32*> poison, i32* %inv, i32 0
@@ -89,7 +89,7 @@ for.cond.cleanup:                                 ; preds = %for.cond.cleanup.lo
   ret void
 }
 
-define void @gather_inv_nxv4i32(i32* noalias nocapture %a, i32* noalias nocapture readonly %inv, i64 %n) {
+define void @gather_inv_nxv4i32(i32* noalias nocapture %a, i32* noalias nocapture readonly %inv, i64 %n) #0 {
 ; CHECK-LABEL: @gather_inv_nxv4i32
 ; CHECK: vector.ph:
 ; CHECK:   %[[INS:.*]] = insertelement <vscale x 4 x i32*> poison, i32* %inv, i32 0
@@ -124,7 +124,7 @@ for.cond.cleanup:                                 ; preds = %for.inc, %entry
 
 
 
-define void @gather_nxv4i32_ind64_stride2(float* noalias nocapture readonly %a, float* noalias nocapture readonly %b, i64 %n) {
+define void @gather_nxv4i32_ind64_stride2(float* noalias nocapture readonly %a, float* noalias nocapture readonly %b, i64 %n) #0 {
 ; CHECK-LABEL: @gather_nxv4i32_ind64_stride2
 ; CHECK: vector.body:
 ; CHECK:      %[[IDX:.*]] = phi i64 [ 0, %vector.ph ], [ %{{.*}}, %vector.body ]
@@ -152,6 +152,8 @@ for.body:                                         ; preds = %entry, %for.body
 for.cond.cleanup:                                 ; preds = %for.cond.cleanup.loopexit, %entry
   ret void
 }
+
+attributes #0 = { vscale_range(0, 16) }
 
 !0 = distinct !{!0, !1, !2, !3, !4, !5}
 !1 = !{!"llvm.loop.mustprogress"}

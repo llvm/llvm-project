@@ -45,7 +45,7 @@ target datalayout = "e-m:e-i8:8:32-i16:16:32-i64:64-i128:128-n32:64-S128"
 ; CHECK-DBG: LV: Selecting VF: 4.
 ; CHECK-LABEL: @test1
 ; CHECK: <4 x i32>
-define void @test1(i32* %a, i32* %b) {
+define void @test1(i32* %a, i32* %b) #0 {
 entry:
   br label %loop
 
@@ -90,7 +90,7 @@ exit:
 ; CHECK-DBG: LV: Selecting VF: 4.
 ; CHECK-LABEL: @test2
 ; CHECK: <4 x i32>
-define void @test2(i32* %a, i32* %b) {
+define void @test2(i32* %a, i32* %b) #0 {
 entry:
   br label %loop
 
@@ -138,7 +138,7 @@ exit:
 ; CHECK-DBG: LV: Using user VF vscale x 2.
 ; CHECK-LABEL: @test3
 ; CHECK: <vscale x 2 x i32>
-define void @test3(i32* %a, i32* %b) {
+define void @test3(i32* %a, i32* %b) #0 {
 entry:
   br label %loop
 
@@ -190,7 +190,7 @@ exit:
 ; CHECK-DBG: LV: Selecting VF: 4.
 ; CHECK-LABEL: @test4
 ; CHECK: <4 x i32>
-define void @test4(i32* %a, i32* %b) {
+define void @test4(i32* %a, i32* %b) #0 {
 entry:
   br label %loop
 
@@ -238,7 +238,7 @@ exit:
 ; CHECK-DBG: LV: Using user VF vscale x 4
 ; CHECK-LABEL: @test5
 ; CHECK: <vscale x 4 x i32>
-define void @test5(i32* %a, i32* %b) {
+define void @test5(i32* %a, i32* %b) #0 {
 entry:
   br label %loop
 
@@ -289,7 +289,7 @@ exit:
 ; CHECK-DBG: Selecting VF: vscale x 4.
 ; CHECK-LABEL: @test6
 ; CHECK: <vscale x 4 x i32>
-define void @test6(i32* %a, i32* %b) {
+define void @test6(i32* %a, i32* %b) #0 {
 entry:
   br label %loop
 
@@ -322,7 +322,7 @@ exit:
 ; CHECK-NO-SVE-LABEL: @test_no_sve
 ; CHECK-NO-SVE: <4 x i32>
 ; CHECK-NO-SVE-NOT: <vscale x 4 x i32>
-define void @test_no_sve(i32* %a, i32* %b) {
+define void @test_no_sve(i32* %a, i32* %b) #0 {
 entry:
   br label %loop
 
@@ -356,7 +356,7 @@ exit:
 ; CHECK-DBG: LV: Selecting VF: 4.
 ; CHECK-LABEL: @test_no_max_vscale
 ; CHECK: <4 x i32>
-define void @test_no_max_vscale(i32* %a, i32* %b) {
+define void @test_no_max_vscale(i32* %a, i32* %b) #0 {
 entry:
   br label %loop
 
@@ -378,6 +378,7 @@ exit:
   ret void
 }
 
+attributes #0 = { vscale_range(0, 16) }
 !21 = !{!21, !22, !23}
 !22 = !{!"llvm.loop.vectorize.width", i32 4}
 !23 = !{!"llvm.loop.vectorize.scalable.enable", i1 true}
