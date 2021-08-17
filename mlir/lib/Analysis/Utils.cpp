@@ -62,10 +62,10 @@ void mlir::getEnclosingAffineForAndIfOps(Operation &op,
   std::reverse(ops->begin(), ops->end());
 }
 
-// Populates 'cst' with FlatAffineConstraints which represent original domain of
-// the loop bounds that define 'ivs'.
+// Populates 'cst' with FlatAffineValueConstraints which represent original
+// domain of the loop bounds that define 'ivs'.
 LogicalResult
-ComputationSliceState::getSourceAsConstraints(FlatAffineConstraints &cst) {
+ComputationSliceState::getSourceAsConstraints(FlatAffineValueConstraints &cst) {
   assert(!ivs.empty() && "Cannot have a slice without its IVs");
   cst.reset(/*numDims=*/ivs.size(), /*numSymbols=*/0, /*numLocals=*/0, ivs);
   for (Value iv : ivs) {
@@ -77,9 +77,9 @@ ComputationSliceState::getSourceAsConstraints(FlatAffineConstraints &cst) {
   return success();
 }
 
-// Populates 'cst' with FlatAffineConstraints which represent slice bounds.
+// Populates 'cst' with FlatAffineValueConstraints which represent slice bounds.
 LogicalResult
-ComputationSliceState::getAsConstraints(FlatAffineConstraints *cst) {
+ComputationSliceState::getAsConstraints(FlatAffineValueConstraints *cst) {
   assert(!lbOperands.empty());
   // Adds src 'ivs' as dimension identifiers in 'cst'.
   unsigned numDims = ivs.size();
@@ -232,7 +232,7 @@ Optional<bool> ComputationSliceState::isSliceValid() {
     return true;
 
   // Create constraints for the source loop nest using which slice is computed.
-  FlatAffineConstraints srcConstraints;
+  FlatAffineValueConstraints srcConstraints;
   // TODO: Store the source's domain to avoid computation at each depth.
   if (failed(getSourceAsConstraints(srcConstraints))) {
     LLVM_DEBUG(llvm::dbgs() << "Unable to compute source's domain\n");
@@ -254,7 +254,7 @@ Optional<bool> ComputationSliceState::isSliceValid() {
 
   // Create constraints for the slice loop nest that would be created if the
   // fusion succeeds.
-  FlatAffineConstraints sliceConstraints;
+  FlatAffineValueConstraints sliceConstraints;
   if (failed(getAsConstraints(&sliceConstraints))) {
     LLVM_DEBUG(llvm::dbgs() << "Unable to compute slice's domain\n");
     return llvm::None;
@@ -294,7 +294,7 @@ Optional<bool> ComputationSliceState::isMaximal() const {
     return isMaximalFastCheck;
 
   // Create constraints for the src loop nest being sliced.
-  FlatAffineConstraints srcConstraints;
+  FlatAffineValueConstraints srcConstraints;
   srcConstraints.reset(/*numDims=*/ivs.size(), /*numSymbols=*/0,
                        /*numLocals=*/0, ivs);
   for (Value iv : ivs) {
@@ -316,7 +316,7 @@ Optional<bool> ComputationSliceState::isMaximal() const {
   for (int i = consumerIVs.size(), end = ivs.size(); i < end; ++i)
     consumerIVs.push_back(Value());
 
-  FlatAffineConstraints sliceConstraints;
+  FlatAffineValueConstraints sliceConstraints;
   sliceConstraints.reset(/*numDims=*/consumerIVs.size(), /*numSymbols=*/0,
                          /*numLocals=*/0, consumerIVs);
 
@@ -760,7 +760,7 @@ static Operation *getInstAtPosition(ArrayRef<unsigned> positions,
 
 // Adds loop IV bounds to 'cst' for loop IVs not found in 'ivs'.
 static LogicalResult addMissingLoopIVBounds(SmallPtrSet<Value, 8> &ivs,
-                                            FlatAffineConstraints *cst) {
+                                            FlatAffineValueConstraints *cst) {
   for (unsigned i = 0, e = cst->getNumDimIds(); i < e; ++i) {
     auto value = cst->getIdValue(i);
     if (ivs.count(value) == 0) {
@@ -813,7 +813,7 @@ mlir::computeSliceUnion(ArrayRef<Operation *> opsA, ArrayRef<Operation *> opsB,
                         ComputationSliceState *sliceUnion) {
   // Compute the union of slice bounds between all pairs in 'opsA' and
   // 'opsB' in 'sliceUnionCst'.
-  FlatAffineConstraints sliceUnionCst;
+  FlatAffineValueConstraints sliceUnionCst;
   assert(sliceUnionCst.getNumDimAndSymbolIds() == 0);
   std::vector<std::pair<Operation *, Operation *>> dependentOpPairs;
   for (unsigned i = 0, numOpsA = opsA.size(); i < numOpsA; ++i) {
@@ -831,7 +831,7 @@ mlir::computeSliceUnion(ArrayRef<Operation *> opsA, ArrayRef<Operation *> opsB,
 
       bool readReadAccesses = isa<AffineReadOpInterface>(srcAccess.opInst) &&
                               isa<AffineReadOpInterface>(dstAccess.opInst);
-      FlatAffineConstraints dependenceConstraints;
+      FlatAffineValueConstraints dependenceConstraints;
       // Check dependence between 'srcAccess' and 'dstAccess'.
       DependenceResult result = checkMemrefAccessDependence(
           srcAccess, dstAccess, /*loopDepth=*/numCommonLoops + 1,
@@ -863,7 +863,7 @@ mlir::computeSliceUnion(ArrayRef<Operation *> opsA, ArrayRef<Operation *> opsB,
       }
 
       // Compute constraints for 'tmpSliceState' in 'tmpSliceCst'.
-      FlatAffineConstraints tmpSliceCst;
+      FlatAffineValueConstraints tmpSliceCst;
       if (failed(tmpSliceState.getAsConstraints(&tmpSliceCst))) {
         LLVM_DEBUG(llvm::dbgs()
                    << "Unable to compute slice bound constraints\n");
@@ -1044,7 +1044,7 @@ const char *const kSliceFusionBarrierAttrName = "slice_fusion_barrier";
 // the other loop nest's IVs, symbols and constants (using 'isBackwardsSlice').
 void mlir::getComputationSliceState(
     Operation *depSourceOp, Operation *depSinkOp,
-    FlatAffineConstraints *dependenceConstraints, unsigned loopDepth,
+    FlatAffineValueConstraints *dependenceConstraints, unsigned loopDepth,
     bool isBackwardSlice, ComputationSliceState *sliceState) {
   // Get loop nest surrounding src operation.
   SmallVector<AffineForOp, 4> srcLoopIVs;

@@ -459,7 +459,7 @@ checkTilingLegalityImpl(MutableArrayRef<mlir::AffineForOp> origLoops) {
 
   unsigned numOps = loadAndStoreOps.size();
   unsigned numLoops = origLoops.size();
-  FlatAffineConstraints dependenceConstraints;
+  FlatAffineValueConstraints dependenceConstraints;
   for (unsigned d = 1; d <= numLoops + 1; ++d) {
     for (unsigned i = 0; i < numOps; ++i) {
       Operation *srcOp = loadAndStoreOps[i];
@@ -596,7 +596,7 @@ void constructTiledLoopNest(MutableArrayRef<AffineForOp> origLoops,
 LogicalResult checkIfHyperRectangular(MutableArrayRef<AffineForOp> input,
                                       AffineForOp rootAffineForOp,
                                       unsigned width) {
-  FlatAffineConstraints cst;
+  FlatAffineValueConstraints cst;
   SmallVector<Operation *, 8> ops(input.begin(), input.end());
   (void)getIndexSet(ops, &cst);
   if (!cst.isHyperRectangular(0, width)) {
@@ -2440,7 +2440,7 @@ static LogicalResult generateCopy(
   for (unsigned i = 0; i < rank; ++i)
     region.getLowerAndUpperBound(i, lbMaps[i], ubMaps[i]);
 
-  const FlatAffineConstraints *cst = region.getConstraints();
+  const FlatAffineValueConstraints *cst = region.getConstraints();
   // 'regionSymbols' hold values that this memory region is symbolic/parametric
   // on; these typically include loop IVs surrounding the level at which the
   // copy generation is being done or other valid symbols in MLIR.
@@ -3001,7 +3001,7 @@ static AffineIfOp createSeparationCondition(MutableArrayRef<AffineForOp> loops,
 
   auto *context = loops[0].getContext();
 
-  FlatAffineConstraints cst;
+  FlatAffineValueConstraints cst;
   SmallVector<Operation *, 8> ops;
   ops.reserve(loops.size());
   for (AffineForOp forOp : loops)
@@ -3082,7 +3082,7 @@ createFullTiles(MutableArrayRef<AffineForOp> inputNest,
 
   // For each loop in the original nest identify a lower/upper bound pair such
   // that their difference is a constant.
-  FlatAffineConstraints cst;
+  FlatAffineValueConstraints cst;
   for (auto loop : inputNest) {
     // TODO: straightforward to generalize to a non-unit stride.
     if (loop.getStep() != 1) {
