@@ -53,6 +53,8 @@
 
 #if !defined(__APPLE__)
 #include "llvm/Support/DataTypes.h"
+#else
+#include "TargetConditionals.h"
 #endif
 
 using namespace lldb;
