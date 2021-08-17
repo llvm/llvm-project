@@ -66,8 +66,10 @@ void SampleProfileReader::dumpFunctionProfile(StringRef FName,
 
 /// Dump all the function profiles found on stream \p OS.
 void SampleProfileReader::dump(raw_ostream &OS) {
-  for (const auto &I : Profiles)
-    dumpFunctionProfile(I.getKey(), OS);
+  std::vector<NameFunctionSamples> V;
+  sortFuncProfiles(Profiles, V);
+  for (const auto &I : V)
+    dumpFunctionProfile(I.first, OS);
 }
 
 /// Parse \p Input as function head.
