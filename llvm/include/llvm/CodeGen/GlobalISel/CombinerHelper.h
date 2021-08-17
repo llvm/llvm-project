@@ -36,7 +36,10 @@ class GISelKnownBits;
 class MachineDominatorTree;
 class LegalizerInfo;
 struct LegalityQuery;
+class RegisterBank;
+class RegisterBankInfo;
 class TargetLowering;
+class TargetRegisterInfo;
 
 struct PreferredTuple {
   LLT Ty;                // The result type of the extend.
@@ -54,6 +57,7 @@ struct IndexedLoadStoreMatchInfo {
 struct PtrAddChain {
   int64_t Imm;
   Register Base;
+  const RegisterBank *Bank;
 };
 
 struct RegisterImmPair {
@@ -95,6 +99,8 @@ protected:
   GISelKnownBits *KB;
   MachineDominatorTree *MDT;
   const LegalizerInfo *LI;
+  const RegisterBankInfo *RBI;
+  const TargetRegisterInfo *TRI;
 
 public:
   CombinerHelper(GISelChangeObserver &Observer, MachineIRBuilder &B,
@@ -119,6 +125,18 @@ public:
   /// observer of the changes.
   void replaceRegOpWith(MachineRegisterInfo &MRI, MachineOperand &FromRegOp,
                         Register ToReg) const;
+
+  /// Get the register bank of \p Reg.
+  /// If Reg has not been assigned a register, a register class,
+  /// or a register bank, then this returns nullptr.
+  ///
+  /// \pre Reg.isValid()
+  const RegisterBank *getRegBank(Register Reg) const;
+
+  /// Set the register bank of \p Reg.
+  /// Does nothing if the RegBank is null.
+  /// This is the counterpart to getRegBank.
+  void setRegBank(Register Reg, const RegisterBank *RegBank);
 
   /// If \p MI is COPY, try to combine it.
   /// Returns true if MI changed.

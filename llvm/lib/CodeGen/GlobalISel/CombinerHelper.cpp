@@ -15,6 +15,7 @@
 #include "llvm/CodeGen/GlobalISel/LegalizerInfo.h"
 #include "llvm/CodeGen/GlobalISel/MIPatternMatch.h"
 #include "llvm/CodeGen/GlobalISel/MachineIRBuilder.h"
+#include "llvm/CodeGen/GlobalISel/RegisterBankInfo.h"
 #include "llvm/CodeGen/GlobalISel/Utils.h"
 #include "llvm/CodeGen/LowLevelType.h"
 #include "llvm/CodeGen/MachineBasicBlock.h"
@@ -46,8 +47,9 @@ CombinerHelper::CombinerHelper(GISelChangeObserver &Observer,
                                MachineIRBuilder &B, GISelKnownBits *KB,
                                MachineDominatorTree *MDT,
                                const LegalizerInfo *LI)
-    : Builder(B), MRI(Builder.getMF().getRegInfo()), Observer(Observer),
-      KB(KB), MDT(MDT), LI(LI) {
+    : Builder(B), MRI(Builder.getMF().getRegInfo()), Observer(Observer), KB(KB),
+      MDT(MDT), LI(LI), RBI(Builder.getMF().getSubtarget().getRegBankInfo()),
+      TRI(Builder.getMF().getSubtarget().getRegisterInfo()) {
   (void)this->KB;
 }
 
@@ -141,6 +143,15 @@ void CombinerHelper::replaceRegOpWith(MachineRegisterInfo &MRI,
   FromRegOp.setReg(ToReg);
 
   Observer.changedInstr(*FromRegOp.getParent());
+}
+
+const RegisterBank *CombinerHelper::getRegBank(Register Reg) const {
+  return RBI->getRegBank(Reg, MRI, *TRI);
+}
+
+void CombinerHelper::setRegBank(Register Reg, const RegisterBank *RegBank) {
+  if (RegBank)
+    MRI.setRegBank(Reg, *RegBank);
 }
 
 bool CombinerHelper::tryCombineCopy(MachineInstr &MI) {
@@ -1407,7 +1418,6 @@ bool CombinerHelper::optimizeMemcpy(MachineInstr &MI, Register Dst,
 
     // Don't promote to an alignment that would require dynamic stack
     // realignment.
-    const TargetRegisterInfo *TRI = MF.getSubtarget().getRegisterInfo();
     if (!TRI->hasStackRealignment(MF))
       while (NewAlign > Alignment && DL.exceedsNaturalStackAlignment(NewAlign))
         NewAlign = NewAlign / 2;
@@ -1512,7 +1522,6 @@ bool CombinerHelper::optimizeMemmove(MachineInstr &MI, Register Dst,
 
     // Don't promote to an alignment that would require dynamic stack
     // realignment.
-    const TargetRegisterInfo *TRI = MF.getSubtarget().getRegisterInfo();
     if (!TRI->hasStackRealignment(MF))
       while (NewAlign > Alignment && DL.exceedsNaturalStackAlignment(NewAlign))
         NewAlign = NewAlign / 2;
@@ -1710,7 +1719,7 @@ bool CombinerHelper::matchPtrAddImmedChain(MachineInstr &MI,
   if (!MaybeImmVal)
     return false;
 
-  MachineInstr *Add2Def = MRI.getUniqueVRegDef(Add2);
+  MachineInstr *Add2Def = MRI.getVRegDef(Add2);
   if (!Add2Def || Add2Def->getOpcode() != TargetOpcode::G_PTR_ADD)
     return false;
 
@@ -1751,6 +1760,7 @@ bool CombinerHelper::matchPtrAddImmedChain(MachineInstr &MI,
   // Pass the combined immediate to the apply function.
   MatchInfo.Imm = AMNew.BaseOffs;
   MatchInfo.Base = Base;
+  MatchInfo.Bank = getRegBank(Imm2);
   return true;
 }
 
@@ -1760,6 +1770,7 @@ void CombinerHelper::applyPtrAddImmedChain(MachineInstr &MI,
   MachineIRBuilder MIB(MI);
   LLT OffsetTy = MRI.getType(MI.getOperand(2).getReg());
   auto NewOffset = MIB.buildConstant(OffsetTy, MatchInfo.Imm);
+  setRegBank(NewOffset.getReg(0), MatchInfo.Bank);
   Observer.changingInstr(MI);
   MI.getOperand(1).setReg(MatchInfo.Base);
   MI.getOperand(2).setReg(NewOffset.getReg(0));
