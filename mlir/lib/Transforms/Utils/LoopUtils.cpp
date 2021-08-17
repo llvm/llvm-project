@@ -2206,7 +2206,7 @@ findHighestBlockForPlacement(const MemRefRegion &region, Block &block,
                              Block::iterator *copyOutPlacementStart) {
   const auto *cst = region.getConstraints();
   SmallVector<Value, 4> symbols;
-  cst->getIdValues(cst->getNumDimIds(), cst->getNumDimAndSymbolIds(), &symbols);
+  cst->getValues(cst->getNumDimIds(), cst->getNumDimAndSymbolIds(), &symbols);
 
   SmallVector<AffineForOp, 4> enclosingFors;
   getLoopIVs(*block.begin(), &enclosingFors);
@@ -2445,7 +2445,7 @@ static LogicalResult generateCopy(
   // on; these typically include loop IVs surrounding the level at which the
   // copy generation is being done or other valid symbols in MLIR.
   SmallVector<Value, 8> regionSymbols;
-  cst->getIdValues(rank, cst->getNumIds(), &regionSymbols);
+  cst->getValues(rank, cst->getNumIds(), &regionSymbols);
 
   // Construct the index expressions for the fast memory buffer. The index
   // expression for a particular dimension of the fast buffer is obtained by
@@ -2689,7 +2689,7 @@ static bool getFullMemRefAsRegion(Operation *op, unsigned numParamLoopIVs,
   SmallVector<Value, 4> symbols;
   extractForInductionVars(ivs, &symbols);
   regionCst->reset(rank, numParamLoopIVs, 0);
-  regionCst->setIdValues(rank, rank + numParamLoopIVs, symbols);
+  regionCst->setValues(rank, rank + numParamLoopIVs, symbols);
 
   // Memref dim sizes provide the bounds.
   for (unsigned d = 0; d < rank; d++) {
@@ -3068,7 +3068,7 @@ static AffineIfOp createSeparationCondition(MutableArrayRef<AffineForOp> loops,
     return nullptr;
 
   SmallVector<Value, 4> setOperands;
-  cst.getIdValues(0, cst.getNumDimAndSymbolIds(), &setOperands);
+  cst.getValues(0, cst.getNumDimAndSymbolIds(), &setOperands);
   canonicalizeSetAndOperands(&ifCondSet, &setOperands);
   return b.create<AffineIfOp>(loops[0].getLoc(), ifCondSet, setOperands,
                               /*withElseRegion=*/true);
