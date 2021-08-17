@@ -164,7 +164,7 @@ int __kmp_convert_to_milliseconds(char const *data) {
     return (INT_MAX);
   value = (double)0.0;
   mult = '\0';
-#if KMP_OS_WINDOWS
+#if KMP_OS_WINDOWS && KMP_MSVC_COMPAT
   // On Windows, each %c parameter needs additional size parameter for sscanf_s
   nvalues = KMP_SSCANF(data, "%lf%c%c", &value, &mult, 1, &extra, 1);
 #else
