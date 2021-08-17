@@ -343,6 +343,9 @@ static InstClassEnum getInstClass(unsigned Opc, const SIInstrInfo &TII) {
       if (AMDGPU::getNamedOperandIdx(Opc, AMDGPU::OpName::vaddr) == -1 &&
           AMDGPU::getNamedOperandIdx(Opc, AMDGPU::OpName::vaddr0) == -1)
         return UNKNOWN;
+      // Ignore BVH instructions
+      if (AMDGPU::getMIMGBaseOpcode(Opc)->BVH)
+        return UNKNOWN;
       // TODO: Support IMAGE_GET_RESINFO and IMAGE_GET_LOD.
       if (TII.get(Opc).mayStore() || !TII.get(Opc).mayLoad() ||
           TII.isGather4(Opc))
@@ -380,15 +383,6 @@ static InstClassEnum getInstClass(unsigned Opc, const SIInstrInfo &TII) {
   case AMDGPU::DS_WRITE_B64:
   case AMDGPU::DS_WRITE_B64_gfx9:
     return DS_WRITE;
-  case AMDGPU::IMAGE_BVH_INTERSECT_RAY_sa:
-  case AMDGPU::IMAGE_BVH64_INTERSECT_RAY_sa:
-  case AMDGPU::IMAGE_BVH_INTERSECT_RAY_a16_sa:
-  case AMDGPU::IMAGE_BVH64_INTERSECT_RAY_a16_sa:
-  case AMDGPU::IMAGE_BVH_INTERSECT_RAY_nsa:
-  case AMDGPU::IMAGE_BVH64_INTERSECT_RAY_nsa:
-  case AMDGPU::IMAGE_BVH_INTERSECT_RAY_a16_nsa:
-  case AMDGPU::IMAGE_BVH64_INTERSECT_RAY_a16_nsa:
-    return UNKNOWN;
   }
 }
 
