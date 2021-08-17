@@ -113,6 +113,15 @@ clang_experimental_FileDependencies_dispose(CXFileDependencies *ID);
  * The dependency scanner service is a global instance that owns the
  * global cache and other global state that's shared between the dependency
  * scanner workers. The service APIs are thread safe.
+ *
+ * The service aims to provide a consistent view of file content throughout
+ * its lifetime. A client that wants to see changes to file content should
+ * create a new service at the time. For example, a build system might use
+ * one service for each build.
+ *
+ * TODO: Consider using DirectoryWatcher to get notified about file changes
+ * and adding an API that allows clients to invalidate changed files. This
+ * could allow a build system to reuse a single service between builds.
  */
 typedef struct CXOpaqueDependencyScannerService *CXDependencyScannerService;
 
