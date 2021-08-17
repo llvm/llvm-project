@@ -729,6 +729,15 @@ struct DeduplicateGenericOpInputs : public OpRewritePattern<GenericOp> {
         outputOperands, rewriter.getAffineMapArrayAttr(newIndexingMaps),
         genericOp.iterator_types(), genericOp.docAttr(),
         genericOp.library_callAttr());
+
+    // Copy over unknown attributes. They might be load bearing for some flow.
+    ArrayRef<StringRef> odsAttrs = genericOp.getAttributeNames();
+    for (NamedAttribute kv : genericOp->getAttrs()) {
+      if (!llvm::is_contained(odsAttrs, kv.first.c_str())) {
+        newOp->setAttr(kv.first, kv.second);
+      }
+    }
+
     rewriter.inlineRegionBefore(genericOp.region(), newOp.region(),
                                 newOp.region().begin());
 
