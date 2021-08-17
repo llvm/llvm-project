@@ -169,7 +169,10 @@ AArch64LegalizerInfo::AArch64LegalizerInfo(const AArch64Subtarget &ST)
   getActionDefinitionsBuilder({G_SREM, G_UREM, G_SDIVREM, G_UDIVREM})
       .lowerFor({s1, s8, s16, s32, s64});
 
-  getActionDefinitionsBuilder({G_SMULO, G_UMULO}).lowerFor({{s64, s1}});
+  getActionDefinitionsBuilder({G_SMULO, G_UMULO})
+      .widenScalarToNextPow2(0, /*Min = */ 32)
+      .clampScalar(0, s32, s64)
+      .lowerIf(typeIs(1, s1));
 
   getActionDefinitionsBuilder({G_SMULH, G_UMULH}).legalFor({s32, s64});
 
