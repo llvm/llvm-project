@@ -5948,6 +5948,9 @@ static SDValue constructRetValue(SelectionDAG &DAG,
 
   EVT LegalReqRetVT = ReqRetVT;
   if (!ReqRetVT.isVector()) {
+    if (!Data.getValueType().isInteger())
+      Data = DAG.getNode(ISD::BITCAST, DL,
+                         Data.getValueType().changeTypeToInteger(), Data);
     Data = DAG.getNode(ISD::TRUNCATE, DL, ReqRetVT.changeTypeToInteger(), Data);
   } else {
     // We need to widen the return vector to a legal type
