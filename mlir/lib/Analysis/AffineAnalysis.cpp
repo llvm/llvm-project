@@ -413,12 +413,12 @@ static void buildDimAndSymbolPositionMaps(
   // the collected values into dim and symbol parts.
   SmallVector<Value, 4> srcDimValues, dstDimValues, srcSymbolValues,
       dstSymbolValues;
-  srcDomain.getIdValues(0, srcDomain.getNumDimIds(), &srcDimValues);
-  dstDomain.getIdValues(0, dstDomain.getNumDimIds(), &dstDimValues);
-  srcDomain.getIdValues(srcDomain.getNumDimIds(),
-                        srcDomain.getNumDimAndSymbolIds(), &srcSymbolValues);
-  dstDomain.getIdValues(dstDomain.getNumDimIds(),
-                        dstDomain.getNumDimAndSymbolIds(), &dstSymbolValues);
+  srcDomain.getValues(0, srcDomain.getNumDimIds(), &srcDimValues);
+  dstDomain.getValues(0, dstDomain.getNumDimIds(), &dstDimValues);
+  srcDomain.getValues(srcDomain.getNumDimIds(),
+                      srcDomain.getNumDimAndSymbolIds(), &srcSymbolValues);
+  dstDomain.getValues(dstDomain.getNumDimIds(),
+                      dstDomain.getNumDimAndSymbolIds(), &dstSymbolValues);
 
   // Update value position map with dim values from src iteration domain.
   updateValuePosMap(srcDimValues, /*isSrc=*/true, /*isDim=*/TRUE);
@@ -464,11 +464,11 @@ initDependenceConstraints(const FlatAffineValueConstraints &srcDomain,
 
   // Set values corresponding to dependence constraint identifiers.
   SmallVector<Value, 4> srcLoopIVs, dstLoopIVs;
-  srcDomain.getIdValues(0, srcDomain.getNumDimIds(), &srcLoopIVs);
-  dstDomain.getIdValues(0, dstDomain.getNumDimIds(), &dstLoopIVs);
+  srcDomain.getValues(0, srcDomain.getNumDimIds(), &srcLoopIVs);
+  dstDomain.getValues(0, dstDomain.getNumDimIds(), &dstLoopIVs);
 
-  dependenceConstraints->setIdValues(0, srcLoopIVs.size(), srcLoopIVs);
-  dependenceConstraints->setIdValues(
+  dependenceConstraints->setValues(0, srcLoopIVs.size(), srcLoopIVs);
+  dependenceConstraints->setValues(
       srcLoopIVs.size(), srcLoopIVs.size() + dstLoopIVs.size(), dstLoopIVs);
 
   // Set values for the symbolic identifier dimensions. `isSymbolDetermined`
@@ -481,7 +481,7 @@ initDependenceConstraints(const FlatAffineValueConstraints &srcDomain,
     for (auto value : values) {
       if (isSymbolDetermined || !isForInductionVar(value)) {
         assert(isValidSymbol(value) && "expected symbol");
-        dependenceConstraints->setIdValue(valuePosMap.getSymPos(value), value);
+        dependenceConstraints->setValue(valuePosMap.getSymPos(value), value);
       }
     }
   };
@@ -492,10 +492,10 @@ initDependenceConstraints(const FlatAffineValueConstraints &srcDomain,
   setSymbolIds(dstAccessMap.getOperands(), /*isSymbolDetermined=*/false);
 
   SmallVector<Value, 8> srcSymbolValues, dstSymbolValues;
-  srcDomain.getIdValues(srcDomain.getNumDimIds(),
-                        srcDomain.getNumDimAndSymbolIds(), &srcSymbolValues);
-  dstDomain.getIdValues(dstDomain.getNumDimIds(),
-                        dstDomain.getNumDimAndSymbolIds(), &dstSymbolValues);
+  srcDomain.getValues(srcDomain.getNumDimIds(),
+                      srcDomain.getNumDimAndSymbolIds(), &srcSymbolValues);
+  dstDomain.getValues(dstDomain.getNumDimIds(),
+                      dstDomain.getNumDimAndSymbolIds(), &dstSymbolValues);
   // Since we only take symbol Values out of `srcDomain` and `dstDomain`,
   // `isSymbolDetermined` is kept to its default value: true.
   setSymbolIds(srcSymbolValues);
@@ -503,7 +503,7 @@ initDependenceConstraints(const FlatAffineValueConstraints &srcDomain,
 
   for (unsigned i = 0, e = dependenceConstraints->getNumDimAndSymbolIds();
        i < e; i++)
-    assert(dependenceConstraints->getIds()[i].hasValue());
+    assert(dependenceConstraints->hasValue(i));
 }
 
 // Adds iteration domain constraints from 'srcDomain' and 'dstDomain' into
@@ -527,8 +527,8 @@ static void addDomainConstraints(const FlatAffineValueConstraints &srcDomain,
       return isEq ? domain.atEq(i, j) : domain.atIneq(i, j);
     };
     auto map = [&](unsigned i) -> int64_t {
-      return isSrc ? valuePosMap.getSrcDimOrSymPos(domain.getIdValue(i))
-                   : valuePosMap.getDstDimOrSymPos(domain.getIdValue(i));
+      return isSrc ? valuePosMap.getSrcDimOrSymPos(domain.getValue(i))
+                   : valuePosMap.getDstDimOrSymPos(domain.getValue(i));
     };
 
     for (unsigned i = 0; i < numCsts; ++i) {
@@ -727,12 +727,12 @@ getNumCommonLoops(const FlatAffineValueConstraints &srcDomain,
       std::min(srcDomain.getNumDimIds(), dstDomain.getNumDimIds());
   unsigned numCommonLoops = 0;
   for (unsigned i = 0; i < minNumLoops; ++i) {
-    if (!isForInductionVar(srcDomain.getIdValue(i)) ||
-        !isForInductionVar(dstDomain.getIdValue(i)) ||
-        srcDomain.getIdValue(i) != dstDomain.getIdValue(i))
+    if (!isForInductionVar(srcDomain.getValue(i)) ||
+        !isForInductionVar(dstDomain.getValue(i)) ||
+        srcDomain.getValue(i) != dstDomain.getValue(i))
       break;
     if (commonLoops != nullptr)
-      commonLoops->push_back(getForInductionVarOwner(srcDomain.getIdValue(i)));
+      commonLoops->push_back(getForInductionVarOwner(srcDomain.getValue(i)));
     ++numCommonLoops;
   }
   if (commonLoops != nullptr)
@@ -768,7 +768,7 @@ static Block *getCommonBlock(const MemRefAccess &srcAccess,
     }
     return block;
   }
-  Value commonForIV = srcDomain.getIdValue(numCommonLoops - 1);
+  Value commonForIV = srcDomain.getValue(numCommonLoops - 1);
   AffineForOp forOp = getForInductionVarOwner(commonForIV);
   assert(forOp && "commonForValue was not an induction variable");
 

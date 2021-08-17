@@ -558,7 +558,7 @@ LogicalResult MemRefRegion::compute(Operation *op, unsigned loopDepth,
   assert(loopDepth <= enclosingIVs.size() && "invalid loop depth");
   enclosingIVs.resize(loopDepth);
   SmallVector<Value, 4> ids;
-  cst.getIdValues(cst.getNumDimIds(), cst.getNumDimAndSymbolIds(), &ids);
+  cst.getValues(cst.getNumDimIds(), cst.getNumDimAndSymbolIds(), &ids);
   for (auto id : ids) {
     AffineForOp iv;
     if ((iv = getForInductionVarOwner(id)) &&
@@ -762,7 +762,7 @@ static Operation *getInstAtPosition(ArrayRef<unsigned> positions,
 static LogicalResult addMissingLoopIVBounds(SmallPtrSet<Value, 8> &ivs,
                                             FlatAffineValueConstraints *cst) {
   for (unsigned i = 0, e = cst->getNumDimIds(); i < e; ++i) {
-    auto value = cst->getIdValue(i);
+    auto value = cst->getValue(i);
     if (ivs.count(value) == 0) {
       assert(isForInductionVar(value));
       auto loop = getForInductionVarOwner(value);
@@ -877,10 +877,10 @@ mlir::computeSliceUnion(ArrayRef<Operation *> opsA, ArrayRef<Operation *> opsB,
         // system.
         SmallPtrSet<Value, 8> sliceUnionIVs;
         for (unsigned k = 0, l = sliceUnionCst.getNumDimIds(); k < l; ++k)
-          sliceUnionIVs.insert(sliceUnionCst.getIdValue(k));
+          sliceUnionIVs.insert(sliceUnionCst.getValue(k));
         SmallPtrSet<Value, 8> tmpSliceIVs;
         for (unsigned k = 0, l = tmpSliceCst.getNumDimIds(); k < l; ++k)
-          tmpSliceIVs.insert(tmpSliceCst.getIdValue(k));
+          tmpSliceIVs.insert(tmpSliceCst.getValue(k));
 
         sliceUnionCst.mergeAndAlignIdsWithOther(/*offset=*/0, &tmpSliceCst);
 
@@ -938,13 +938,13 @@ mlir::computeSliceUnion(ArrayRef<Operation *> opsA, ArrayRef<Operation *> opsB,
 
   // Add slice bound operands of union.
   SmallVector<Value, 4> sliceBoundOperands;
-  sliceUnionCst.getIdValues(numSliceLoopIVs,
-                            sliceUnionCst.getNumDimAndSymbolIds(),
-                            &sliceBoundOperands);
+  sliceUnionCst.getValues(numSliceLoopIVs,
+                          sliceUnionCst.getNumDimAndSymbolIds(),
+                          &sliceBoundOperands);
 
   // Copy src loop IVs from 'sliceUnionCst' to 'sliceUnion'.
   sliceUnion->ivs.clear();
-  sliceUnionCst.getIdValues(0, numSliceLoopIVs, &sliceUnion->ivs);
+  sliceUnionCst.getValues(0, numSliceLoopIVs, &sliceUnion->ivs);
 
   // Set loop nest insertion point to block start at 'loopDepth'.
   sliceUnion->insertPoint =
@@ -1068,8 +1068,8 @@ void mlir::getComputationSliceState(
   // Add slice loop IV values to 'sliceState'.
   unsigned offset = isBackwardSlice ? 0 : loopDepth;
   unsigned numSliceLoopIVs = isBackwardSlice ? numSrcLoopIVs : numDstLoopIVs;
-  dependenceConstraints->getIdValues(offset, offset + numSliceLoopIVs,
-                                     &sliceState->ivs);
+  dependenceConstraints->getValues(offset, offset + numSliceLoopIVs,
+                                   &sliceState->ivs);
 
   // Set up lower/upper bound affine maps for the slice.
   sliceState->lbs.resize(numSliceLoopIVs, AffineMap());
@@ -1085,7 +1085,7 @@ void mlir::getComputationSliceState(
   unsigned numDimsAndSymbols = dependenceConstraints->getNumDimAndSymbolIds();
   for (unsigned i = 0; i < numDimsAndSymbols; ++i) {
     if (i < offset || i >= offset + numSliceLoopIVs) {
-      sliceBoundOperands.push_back(dependenceConstraints->getIdValue(i));
+      sliceBoundOperands.push_back(dependenceConstraints->getValue(i));
     }
   }
 
