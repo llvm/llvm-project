@@ -45,6 +45,7 @@
 #include "lldb/Core/ValueObject.h"
 #include "lldb/Core/ValueObjectRegister.h"
 #include "lldb/Symbol/Block.h"
+#include "lldb/Symbol/CompileUnit.h"
 #include "lldb/Symbol/Function.h"
 #include "lldb/Symbol/Symbol.h"
 #include "lldb/Symbol/VariableList.h"
@@ -3764,9 +3765,14 @@ public:
                                            TreeItem *&selected_item) {
     return;
   }
-  virtual bool TreeDelegateItemSelected(
-      TreeItem &item) = 0; // Return true if we need to update views
+  // This is invoked when a tree item is selected. If true is returned, the
+  // views are updated.
+  virtual bool TreeDelegateItemSelected(TreeItem &item) = 0;
   virtual bool TreeDelegateExpandRootByDefault() { return false; }
+  // This is mostly useful for root tree delegates. If false is returned,
+  // drawing will be skipped completely. This is needed, for instance, in
+  // skipping drawing of the threads tree if there is no running process.
+  virtual bool TreeDelegateShouldDraw() { return true; }
 };
 
 typedef std::shared_ptr<TreeDelegate> TreeDelegateSP;
@@ -3956,6 +3962,16 @@ public:
 
   void SetIdentifier(uint64_t identifier) { m_identifier = identifier; }
 
+  const std::string &GetText() const { return m_text; }
+
+  void SetText(const char *text) {
+    if (text == nullptr) {
+      m_text.clear();
+      return;
+    }
+    m_text = text;
+  }
+
   void SetMightHaveChildren(bool b) { m_might_have_children = b; }
 
 protected:
@@ -3963,6 +3979,7 @@ protected:
   TreeDelegate &m_delegate;
   void *m_user_data;
   uint64_t m_identifier;
+  std::string m_text;
   int m_row_idx; // Zero based visible row index, -1 if not visible or for the
                  // root item
   std::vector<TreeItem> m_children;
@@ -3981,21 +3998,6 @@ public:
   int NumVisibleRows() const { return m_max_y - m_min_y; }
 
   bool WindowDelegateDraw(Window &window, bool force) override {
-    ExecutionContext exe_ctx(
-        m_debugger.GetCommandInterpreter().GetExecutionContext());
-    Process *process = exe_ctx.GetProcessPtr();
-
-    bool display_content = false;
-    if (process) {
-      StateType state = process->GetState();
-      if (StateIsStoppedState(state, true)) {
-        // We are stopped, so it is ok to
-        display_content = true;
-      } else if (StateIsRunningState(state)) {
-        return true; // Don't do any updating when we are running
-      }
-    }
-
     m_min_x = 2;
     m_min_y = 1;
     m_max_x = window.GetWidth() - 1;
@@ -4004,34 +4006,35 @@ public:
     window.Erase();
     window.DrawTitleBox(window.GetName());
 
-    if (display_content) {
-      const int num_visible_rows = NumVisibleRows();
-      m_num_rows = 0;
-      m_root.CalculateRowIndexes(m_num_rows);
-      m_delegate_sp->TreeDelegateUpdateSelection(m_root, m_selected_row_idx,
-                                                 m_selected_item);
-
-      // If we unexpanded while having something selected our total number of
-      // rows is less than the num visible rows, then make sure we show all the
-      // rows by setting the first visible row accordingly.
-      if (m_first_visible_row > 0 && m_num_rows < num_visible_rows)
-        m_first_visible_row = 0;
-
-      // Make sure the selected row is always visible
-      if (m_selected_row_idx < m_first_visible_row)
-        m_first_visible_row = m_selected_row_idx;
-      else if (m_first_visible_row + num_visible_rows <= m_selected_row_idx)
-        m_first_visible_row = m_selected_row_idx - num_visible_rows + 1;
-
-      int row_idx = 0;
-      int num_rows_left = num_visible_rows;
-      m_root.Draw(window, m_first_visible_row, m_selected_row_idx, row_idx,
-                  num_rows_left);
-      // Get the selected row
-      m_selected_item = m_root.GetItemForRowIndex(m_selected_row_idx);
-    } else {
+    if (!m_delegate_sp->TreeDelegateShouldDraw()) {
       m_selected_item = nullptr;
+      return true;
     }
+
+    const int num_visible_rows = NumVisibleRows();
+    m_num_rows = 0;
+    m_root.CalculateRowIndexes(m_num_rows);
+    m_delegate_sp->TreeDelegateUpdateSelection(m_root, m_selected_row_idx,
+                                               m_selected_item);
+
+    // If we unexpanded while having something selected our total number of
+    // rows is less than the num visible rows, then make sure we show all the
+    // rows by setting the first visible row accordingly.
+    if (m_first_visible_row > 0 && m_num_rows < num_visible_rows)
+      m_first_visible_row = 0;
+
+    // Make sure the selected row is always visible
+    if (m_selected_row_idx < m_first_visible_row)
+      m_first_visible_row = m_selected_row_idx;
+    else if (m_first_visible_row + num_visible_rows <= m_selected_row_idx)
+      m_first_visible_row = m_selected_row_idx - num_visible_rows + 1;
+
+    int row_idx = 0;
+    int num_rows_left = num_visible_rows;
+    m_root.Draw(window, m_first_visible_row, m_selected_row_idx, row_idx,
+                num_rows_left);
+    // Get the selected row
+    m_selected_item = m_root.GetItemForRowIndex(m_selected_row_idx);
 
     return true; // Drawing handled
   }
@@ -4158,6 +4161,23 @@ protected:
   int m_min_y;
   int m_max_x;
   int m_max_y;
+};
+
+// A tree delegate that just draws the text member of the tree item, it doesn't
+// have any children or actions.
+class TextTreeDelegate : public TreeDelegate {
+public:
+  TextTreeDelegate() : TreeDelegate() {}
+
+  ~TextTreeDelegate() override = default;
+
+  void TreeDelegateDrawTreeItem(TreeItem &item, Window &window) override {
+    window.PutCStringTruncated(1, item.GetText().c_str());
+  }
+
+  void TreeDelegateGenerateChildren(TreeItem &item) override {}
+
+  bool TreeDelegateItemSelected(TreeItem &item) override { return false; }
 };
 
 class FrameTreeDelegate : public TreeDelegate {
@@ -4324,6 +4344,17 @@ public:
         .GetProcessSP();
   }
 
+  bool TreeDelegateShouldDraw() override {
+    ProcessSP process = GetProcess();
+    if (!process)
+      return false;
+
+    if (StateIsRunningState(process->GetState()))
+      return false;
+
+    return true;
+  }
+
   void TreeDelegateDrawTreeItem(TreeItem &item, Window &window) override {
     ProcessSP process_sp = GetProcess();
     if (process_sp && process_sp->IsAlive()) {
@@ -4413,6 +4444,240 @@ protected:
   uint32_t m_stop_id;
   bool m_update_selection;
   FormatEntity::Entry m_format;
+};
+
+class BreakpointLocationTreeDelegate : public TreeDelegate {
+public:
+  BreakpointLocationTreeDelegate(Debugger &debugger)
+      : TreeDelegate(), m_debugger(debugger) {}
+
+  ~BreakpointLocationTreeDelegate() override = default;
+
+  Process *GetProcess() {
+    ExecutionContext exe_ctx(
+        m_debugger.GetCommandInterpreter().GetExecutionContext());
+    return exe_ctx.GetProcessPtr();
+  }
+
+  BreakpointLocationSP GetBreakpointLocation(const TreeItem &item) {
+    Breakpoint *breakpoint = (Breakpoint *)item.GetUserData();
+    return breakpoint->GetLocationAtIndex(item.GetIdentifier());
+  }
+
+  void TreeDelegateDrawTreeItem(TreeItem &item, Window &window) override {
+    BreakpointLocationSP breakpoint_location = GetBreakpointLocation(item);
+    Process *process = GetProcess();
+    StreamString stream;
+    stream.Printf("%i.%i: ", breakpoint_location->GetBreakpoint().GetID(),
+                  breakpoint_location->GetID());
+    Address address = breakpoint_location->GetAddress();
+    address.Dump(&stream, process, Address::DumpStyleResolvedDescription,
+                 Address::DumpStyleInvalid);
+    window.PutCStringTruncated(1, stream.GetString().str().c_str());
+  }
+
+  StringList ComputeDetailsList(BreakpointLocationSP breakpoint_location) {
+    StringList details;
+
+    Address address = breakpoint_location->GetAddress();
+    SymbolContext symbol_context;
+    address.CalculateSymbolContext(&symbol_context);
+
+    if (symbol_context.module_sp) {
+      StreamString module_stream;
+      module_stream.PutCString("module = ");
+      symbol_context.module_sp->GetFileSpec().Dump(
+          module_stream.AsRawOstream());
+      details.AppendString(module_stream.GetString());
+    }
+
+    if (symbol_context.comp_unit != nullptr) {
+      StreamString compile_unit_stream;
+      compile_unit_stream.PutCString("compile unit = ");
+      symbol_context.comp_unit->GetPrimaryFile().GetFilename().Dump(
+          &compile_unit_stream);
+      details.AppendString(compile_unit_stream.GetString());
+
+      if (symbol_context.function != nullptr) {
+        StreamString function_stream;
+        function_stream.PutCString("function = ");
+        function_stream.PutCString(
+            symbol_context.function->GetName().AsCString("<unknown>"));
+        details.AppendString(function_stream.GetString());
+      }
+
+      if (symbol_context.line_entry.line > 0) {
+        StreamString location_stream;
+        location_stream.PutCString("location = ");
+        symbol_context.line_entry.DumpStopContext(&location_stream, true);
+        details.AppendString(location_stream.GetString());
+      }
+
+    } else {
+      if (symbol_context.symbol) {
+        StreamString symbol_stream;
+        if (breakpoint_location->IsReExported())
+          symbol_stream.PutCString("re-exported target = ");
+        else
+          symbol_stream.PutCString("symbol = ");
+        symbol_stream.PutCString(
+            symbol_context.symbol->GetName().AsCString("<unknown>"));
+        details.AppendString(symbol_stream.GetString());
+      }
+    }
+
+    Process *process = GetProcess();
+
+    StreamString address_stream;
+    address.Dump(&address_stream, process, Address::DumpStyleLoadAddress,
+                 Address::DumpStyleModuleWithFileAddress);
+    details.AppendString(address_stream.GetString());
+
+    BreakpointSiteSP breakpoint_site = breakpoint_location->GetBreakpointSite();
+    if (breakpoint_location->IsIndirect() && breakpoint_site) {
+      Address resolved_address;
+      resolved_address.SetLoadAddress(breakpoint_site->GetLoadAddress(),
+                                      &breakpoint_location->GetTarget());
+      Symbol *resolved_symbol = resolved_address.CalculateSymbolContextSymbol();
+      if (resolved_symbol) {
+        StreamString indirect_target_stream;
+        indirect_target_stream.PutCString("indirect target = ");
+        indirect_target_stream.PutCString(
+            resolved_symbol->GetName().GetCString());
+        details.AppendString(indirect_target_stream.GetString());
+      }
+    }
+
+    bool is_resolved = breakpoint_location->IsResolved();
+    StreamString resolved_stream;
+    resolved_stream.Printf("resolved = %s", is_resolved ? "true" : "false");
+    details.AppendString(resolved_stream.GetString());
+
+    bool is_hardware = is_resolved && breakpoint_site->IsHardware();
+    StreamString hardware_stream;
+    hardware_stream.Printf("hardware = %s", is_hardware ? "true" : "false");
+    details.AppendString(hardware_stream.GetString());
+
+    StreamString hit_count_stream;
+    hit_count_stream.Printf("hit count = %-4u",
+                            breakpoint_location->GetHitCount());
+    details.AppendString(hit_count_stream.GetString());
+
+    return details;
+  }
+
+  void TreeDelegateGenerateChildren(TreeItem &item) override {
+    BreakpointLocationSP breakpoint_location = GetBreakpointLocation(item);
+    StringList details = ComputeDetailsList(breakpoint_location);
+
+    if (!m_string_delegate_sp)
+      m_string_delegate_sp = std::make_shared<TextTreeDelegate>();
+    TreeItem details_tree_item(&item, *m_string_delegate_sp, false);
+
+    item.Resize(details.GetSize(), details_tree_item);
+    for (size_t i = 0; i < details.GetSize(); i++) {
+      item[i].SetText(details.GetStringAtIndex(i));
+    }
+  }
+
+  bool TreeDelegateItemSelected(TreeItem &item) override { return false; }
+
+protected:
+  Debugger &m_debugger;
+  std::shared_ptr<TextTreeDelegate> m_string_delegate_sp;
+};
+
+class BreakpointTreeDelegate : public TreeDelegate {
+public:
+  BreakpointTreeDelegate(Debugger &debugger)
+      : TreeDelegate(), m_debugger(debugger),
+        m_breakpoint_location_delegate_sp() {}
+
+  ~BreakpointTreeDelegate() override = default;
+
+  BreakpointSP GetBreakpoint(const TreeItem &item) {
+    TargetSP target = m_debugger.GetSelectedTarget();
+    BreakpointList &breakpoints = target->GetBreakpointList(false);
+    return breakpoints.GetBreakpointAtIndex(item.GetIdentifier());
+  }
+
+  void TreeDelegateDrawTreeItem(TreeItem &item, Window &window) override {
+    BreakpointSP breakpoint = GetBreakpoint(item);
+    StreamString stream;
+    stream.Format("{0}: ", breakpoint->GetID());
+    breakpoint->GetResolverDescription(&stream);
+    breakpoint->GetFilterDescription(&stream);
+    window.PutCStringTruncated(1, stream.GetString().str().c_str());
+  }
+
+  void TreeDelegateGenerateChildren(TreeItem &item) override {
+    BreakpointSP breakpoint = GetBreakpoint(item);
+
+    if (!m_breakpoint_location_delegate_sp)
+      m_breakpoint_location_delegate_sp =
+          std::make_shared<BreakpointLocationTreeDelegate>(m_debugger);
+    TreeItem breakpoint_location_tree_item(
+        &item, *m_breakpoint_location_delegate_sp, true);
+
+    item.Resize(breakpoint->GetNumLocations(), breakpoint_location_tree_item);
+    for (size_t i = 0; i < breakpoint->GetNumLocations(); i++) {
+      item[i].SetIdentifier(i);
+      item[i].SetUserData(breakpoint.get());
+    }
+  }
+
+  bool TreeDelegateItemSelected(TreeItem &item) override { return false; }
+
+protected:
+  Debugger &m_debugger;
+  std::shared_ptr<BreakpointLocationTreeDelegate>
+      m_breakpoint_location_delegate_sp;
+};
+
+class BreakpointsTreeDelegate : public TreeDelegate {
+public:
+  BreakpointsTreeDelegate(Debugger &debugger)
+      : TreeDelegate(), m_debugger(debugger), m_breakpoint_delegate_sp() {}
+
+  ~BreakpointsTreeDelegate() override = default;
+
+  bool TreeDelegateShouldDraw() override {
+    TargetSP target = m_debugger.GetSelectedTarget();
+    if (!target)
+      return false;
+
+    return true;
+  }
+
+  void TreeDelegateDrawTreeItem(TreeItem &item, Window &window) override {
+    window.PutCString("Breakpoints");
+  }
+
+  void TreeDelegateGenerateChildren(TreeItem &item) override {
+    TargetSP target = m_debugger.GetSelectedTarget();
+
+    BreakpointList &breakpoints = target->GetBreakpointList(false);
+    std::unique_lock<std::recursive_mutex> lock;
+    breakpoints.GetListMutex(lock);
+
+    if (!m_breakpoint_delegate_sp)
+      m_breakpoint_delegate_sp =
+          std::make_shared<BreakpointTreeDelegate>(m_debugger);
+    TreeItem breakpoint_tree_item(&item, *m_breakpoint_delegate_sp, true);
+
+    item.Resize(breakpoints.GetSize(), breakpoint_tree_item);
+    for (size_t i = 0; i < breakpoints.GetSize(); i++) {
+      item[i].SetIdentifier(i);
+    }
+  }
+
+  bool TreeDelegateItemSelected(TreeItem &item) override { return false; }
+
+  bool TreeDelegateExpandRootByDefault() override { return true; }
+
+protected:
+  Debugger &m_debugger;
+  std::shared_ptr<BreakpointTreeDelegate> m_breakpoint_delegate_sp;
 };
 
 class ValueObjectListDelegate : public WindowDelegate {
@@ -5216,6 +5481,7 @@ public:
     eMenuID_ViewRegisters,
     eMenuID_ViewSource,
     eMenuID_ViewVariables,
+    eMenuID_ViewBreakpoints,
 
     eMenuID_Help,
     eMenuID_HelpGUIHelp
@@ -5430,8 +5696,8 @@ public:
         // previously added
         submenus.erase(submenus.begin() + 7, submenus.end());
       }
-      // Since we are adding and removing items we need to recalculate the name
-      // lengths
+      // Since we are adding and removing items we need to recalculate the
+      // name lengths
       menu.RecalculateNameLengths();
     }
       return MenuActionResult::Handled;
@@ -5538,6 +5804,39 @@ public:
       touchwin(stdscr);
     }
       return MenuActionResult::Handled;
+
+    case eMenuID_ViewBreakpoints: {
+      WindowSP main_window_sp = m_app.GetMainWindow();
+      WindowSP threads_window_sp = main_window_sp->FindSubWindow("Threads");
+      WindowSP breakpoints_window_sp =
+          main_window_sp->FindSubWindow("Breakpoints");
+      const Rect threads_bounds = threads_window_sp->GetBounds();
+
+      // If a breakpoints window already exists, remove it and give the area
+      // it used to occupy to the threads window. If it doesn't exist, split
+      // the threads window horizontally into two windows where the top window
+      // is the threads window and the bottom window is a newly added
+      // breakpoints window.
+      if (breakpoints_window_sp) {
+        threads_window_sp->Resize(threads_bounds.size.width,
+                                  threads_bounds.size.height +
+                                      breakpoints_window_sp->GetHeight());
+        main_window_sp->RemoveSubWindow(breakpoints_window_sp.get());
+      } else {
+        Rect new_threads_bounds, breakpoints_bounds;
+        threads_bounds.HorizontalSplitPercentage(0.70, new_threads_bounds,
+                                                 breakpoints_bounds);
+        threads_window_sp->SetBounds(new_threads_bounds);
+        breakpoints_window_sp = main_window_sp->CreateSubWindow(
+            "Breakpoints", breakpoints_bounds, false);
+        TreeDelegateSP breakpoints_delegate_sp(
+            new BreakpointsTreeDelegate(m_debugger));
+        breakpoints_window_sp->SetDelegate(WindowDelegateSP(
+            new TreeWindowDelegate(m_debugger, breakpoints_delegate_sp)));
+      }
+      touchwin(stdscr);
+      return MenuActionResult::Handled;
+    }
 
     case eMenuID_HelpGUIHelp:
       m_app.GetMainWindow()->CreateHelpSubwindow();
@@ -5731,8 +6030,8 @@ public:
             m_selected_line = m_pc_line;
 
           if (m_file_sp && m_file_sp->GetFileSpec() == m_sc.line_entry.file) {
-            // Same file, nothing to do, we should either have the lines or not
-            // (source file missing)
+            // Same file, nothing to do, we should either have the lines or
+            // not (source file missing)
             if (m_selected_line >= static_cast<size_t>(m_first_visible_line)) {
               if (m_selected_line >= m_first_visible_line + num_visible_lines)
                 m_first_visible_line = m_selected_line - 10;
@@ -5854,8 +6153,8 @@ public:
           window.MoveCursor(1, line_y);
           const bool is_pc_line = curr_line == m_pc_line;
           const bool line_is_selected = m_selected_line == curr_line;
-          // Highlight the line as the PC line first, then if the selected line
-          // isn't the same as the PC line, highlight it differently
+          // Highlight the line as the PC line first, then if the selected
+          // line isn't the same as the PC line, highlight it differently
           attr_t highlight_attr = 0;
           attr_t bp_attr = 0;
           if (is_pc_line)
@@ -5994,8 +6293,8 @@ public:
           window.MoveCursor(1, line_y);
           const bool is_pc_line = frame_sp && inst_idx == pc_idx;
           const bool line_is_selected = m_selected_line == inst_idx;
-          // Highlight the line as the PC line first, then if the selected line
-          // isn't the same as the PC line, highlight it differently
+          // Highlight the line as the PC line first, then if the selected
+          // line isn't the same as the PC line, highlight it differently
           attr_t highlight_attr = 0;
           attr_t bp_attr = 0;
           if (is_pc_line)
@@ -6459,7 +6758,7 @@ void IOHandlerCursesGUI::Activate() {
     MenuSP view_menu_sp(
         new Menu("View", "F5", KEY_F(5), ApplicationDelegate::eMenuID_View));
     view_menu_sp->AddSubmenu(
-        MenuSP(new Menu("Backtrace", nullptr, 'b',
+        MenuSP(new Menu("Backtrace", nullptr, 't',
                         ApplicationDelegate::eMenuID_ViewBacktrace)));
     view_menu_sp->AddSubmenu(
         MenuSP(new Menu("Registers", nullptr, 'r',
@@ -6469,6 +6768,9 @@ void IOHandlerCursesGUI::Activate() {
     view_menu_sp->AddSubmenu(
         MenuSP(new Menu("Variables", nullptr, 'v',
                         ApplicationDelegate::eMenuID_ViewVariables)));
+    view_menu_sp->AddSubmenu(
+        MenuSP(new Menu("Breakpoints", nullptr, 'b',
+                        ApplicationDelegate::eMenuID_ViewBreakpoints)));
 
     MenuSP help_menu_sp(
         new Menu("Help", "F6", KEY_F(6), ApplicationDelegate::eMenuID_Help));
@@ -6529,7 +6831,8 @@ void IOHandlerCursesGUI::Activate() {
     status_window_sp->SetDelegate(
         WindowDelegateSP(new StatusBarWindowDelegate(m_debugger)));
 
-    // Show the main help window once the first time the curses GUI is launched
+    // Show the main help window once the first time the curses GUI is
+    // launched
     static bool g_showed_help = false;
     if (!g_showed_help) {
       g_showed_help = true;
