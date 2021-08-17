@@ -220,6 +220,8 @@ bool ValueObjectVariable::UpdateValue() {
           (type_info & (lldb::eTypeIsPointer | lldb::eTypeIsReference)) != 0;
 
       switch (value_type) {
+      case Value::ValueType::Invalid:
+        break;
       case Value::ValueType::FileAddress:
         // If this type is a pointer, then its children will be considered load
         // addresses if the pointer or reference is dereferenced, but only if
