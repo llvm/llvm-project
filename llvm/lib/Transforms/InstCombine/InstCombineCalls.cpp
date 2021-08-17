@@ -1067,6 +1067,7 @@ Instruction *InstCombinerImpl::visitCallInst(CallInst &CI) {
     if (IID == Intrinsic::smax || IID == Intrinsic::smin) {
       // smax (neg nsw X), (neg nsw Y) --> neg nsw (smin X, Y)
       // smin (neg nsw X), (neg nsw Y) --> neg nsw (smax X, Y)
+      // TODO: Canonicalize neg after min/max if I1 is constant.
       if (match(I0, m_NSWNeg(m_Value(X))) && match(I1, m_NSWNeg(m_Value(Y))) &&
           (I0->hasOneUse() || I1->hasOneUse())) {
         Intrinsic::ID InvID = getInverseMinMaxIntrinsic(IID);
