@@ -62,7 +62,7 @@ RUN add-apt-repository ppa:ubuntu-toolchain-r/test
 RUN apt-get update && apt install -y gcc-$GCC_LATEST_VERSION g++-$GCC_LATEST_VERSION
 
 # Install a recent CMake
-RUN wget https://github.com/Kitware/CMake/releases/download/v3.18.2/cmake-3.18.2-Linux-x86_64.sh -O /tmp/install-cmake.sh
+RUN wget https://github.com/Kitware/CMake/releases/download/v3.21.1/cmake-3.21.1-linux-x86_64.sh -O /tmp/install-cmake.sh
 RUN bash /tmp/install-cmake.sh --prefix=/usr --exclude-subdir --skip-license
 RUN rm /tmp/install-cmake.sh
 
