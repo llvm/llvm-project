@@ -117,13 +117,6 @@ static cl::opt<uint32_t> MaxNumUsesTraversed(
     cl::desc("Max num uses visited for identifying load "
              "invariance in loop using invariant start (default = 8)"));
 
-// Default value of zero implies we use the regular alias set tracker mechanism
-// instead of the cross product using AA to identify aliasing of the memory
-// location we are interested in.
-static cl::opt<int>
-LICMN2Theshold("licm-n2-threshold", cl::Hidden, cl::init(0),
-               cl::desc("How many instruction to cross product using AA"));
-
 // Experimental option to allow imprecision in LICM in pathological cases, in
 // exchange for faster compile. This is to be removed if MemorySSA starts to
 // address the same issue. This flag applies only when LICM uses MemorySSA
@@ -2413,48 +2406,7 @@ LoopInvariantCodeMotion::collectAliasInfoForLoop(Loop *L, LoopInfo *LI,
 static bool pointerInvalidatedByLoop(MemoryLocation MemLoc,
                                      AliasSetTracker *CurAST, Loop *CurLoop,
                                      AAResults *AA) {
-  // First check to see if any of the basic blocks in CurLoop invalidate *V.
-  bool isInvalidatedAccordingToAST = CurAST->getAliasSetFor(MemLoc).isMod();
-
-  if (!isInvalidatedAccordingToAST || !LICMN2Theshold)
-    return isInvalidatedAccordingToAST;
-
-  // Check with a diagnostic analysis if we can refine the information above.
-  // This is to identify the limitations of using the AST.
-  // The alias set mechanism used by LICM has a major weakness in that it
-  // combines all things which may alias into a single set *before* asking
-  // modref questions. As a result, a single readonly call within a loop will
-  // collapse all loads and stores into a single alias set and report
-  // invalidation if the loop contains any store. For example, readonly calls
-  // with deopt states have this form and create a general alias set with all
-  // loads and stores.  In order to get any LICM in loops containing possible
-  // deopt states we need a more precise invalidation of checking the mod ref
-  // info of each instruction within the loop and LI. This has a complexity of
-  // O(N^2), so currently, it is used only as a diagnostic tool since the
-  // default value of LICMN2Threshold is zero.
-
-  // Don't look at nested loops.
-  if (CurLoop->begin() != CurLoop->end())
-    return true;
-
-  int N = 0;
-  for (BasicBlock *BB : CurLoop->getBlocks())
-    for (Instruction &I : *BB) {
-      if (N >= LICMN2Theshold) {
-        LLVM_DEBUG(dbgs() << "Alasing N2 threshold exhausted for "
-                          << *(MemLoc.Ptr) << "\n");
-        return true;
-      }
-      N++;
-      auto Res = AA->getModRefInfo(&I, MemLoc);
-      if (isModSet(Res)) {
-        LLVM_DEBUG(dbgs() << "Aliasing failed on " << I << " for "
-                          << *(MemLoc.Ptr) << "\n");
-        return true;
-      }
-    }
-  LLVM_DEBUG(dbgs() << "Aliasing okay for " << *(MemLoc.Ptr) << "\n");
-  return false;
+  return CurAST->getAliasSetFor(MemLoc).isMod();
 }
 
 bool pointerInvalidatedByLoopWithMSSA(MemorySSA *MSSA, MemoryUse *MU,
