@@ -529,101 +529,135 @@ void Function::dropAllReferences() {
   clearMetadata();
 }
 
-void Function::addAttribute(unsigned i, Attribute::AttrKind Kind) {
-  AttributeList PAL = getAttributes();
-  PAL = PAL.addAttribute(getContext(), i, Kind);
-  setAttributes(PAL);
-}
-
 void Function::addAttribute(unsigned i, Attribute Attr) {
-  AttributeList PAL = getAttributes();
-  PAL = PAL.addAttribute(getContext(), i, Attr);
-  setAttributes(PAL);
+  AttributeSets = AttributeSets.addAttribute(getContext(), i, Attr);
 }
 
-void Function::addAttributes(unsigned i, const AttrBuilder &Attrs) {
-  AttributeList PAL = getAttributes();
-  PAL = PAL.addAttributes(getContext(), i, Attrs);
-  setAttributes(PAL);
+void Function::addFnAttr(Attribute::AttrKind Kind) {
+  AttributeSets = AttributeSets.addFnAttribute(getContext(), Kind);
+}
+
+void Function::addFnAttr(StringRef Kind, StringRef Val) {
+  AttributeSets = AttributeSets.addFnAttribute(getContext(), Kind, Val);
+}
+
+void Function::addFnAttr(Attribute Attr) {
+  AttributeSets = AttributeSets.addFnAttribute(getContext(), Attr);
+}
+
+void Function::addFnAttrs(const AttrBuilder &Attrs) {
+  AttributeSets = AttributeSets.addFnAttributes(getContext(), Attrs);
+}
+
+void Function::addRetAttr(Attribute::AttrKind Kind) {
+  AttributeSets = AttributeSets.addRetAttribute(getContext(), Kind);
 }
 
 void Function::addParamAttr(unsigned ArgNo, Attribute::AttrKind Kind) {
-  AttributeList PAL = getAttributes();
-  PAL = PAL.addParamAttribute(getContext(), ArgNo, Kind);
-  setAttributes(PAL);
+  AttributeSets = AttributeSets.addParamAttribute(getContext(), ArgNo, Kind);
 }
 
 void Function::addParamAttr(unsigned ArgNo, Attribute Attr) {
-  AttributeList PAL = getAttributes();
-  PAL = PAL.addParamAttribute(getContext(), ArgNo, Attr);
-  setAttributes(PAL);
+  AttributeSets = AttributeSets.addParamAttribute(getContext(), ArgNo, Attr);
 }
 
 void Function::addParamAttrs(unsigned ArgNo, const AttrBuilder &Attrs) {
-  AttributeList PAL = getAttributes();
-  PAL = PAL.addParamAttributes(getContext(), ArgNo, Attrs);
-  setAttributes(PAL);
+  AttributeSets = AttributeSets.addParamAttributes(getContext(), ArgNo, Attrs);
 }
 
 void Function::removeAttribute(unsigned i, Attribute::AttrKind Kind) {
-  AttributeList PAL = getAttributes();
-  PAL = PAL.removeAttribute(getContext(), i, Kind);
-  setAttributes(PAL);
+  AttributeSets = AttributeSets.removeAttribute(getContext(), i, Kind);
 }
 
 void Function::removeAttribute(unsigned i, StringRef Kind) {
-  AttributeList PAL = getAttributes();
-  PAL = PAL.removeAttribute(getContext(), i, Kind);
-  setAttributes(PAL);
+  AttributeSets = AttributeSets.removeAttribute(getContext(), i, Kind);
+}
+
+void Function::removeFnAttr(Attribute::AttrKind Kind) {
+  AttributeSets = AttributeSets.removeFnAttribute(getContext(), Kind);
+}
+
+void Function::removeFnAttr(StringRef Kind) {
+  AttributeSets = AttributeSets.removeFnAttribute(getContext(), Kind);
+}
+
+void Function::removeFnAttrs(const AttrBuilder &Attrs) {
+  AttributeSets = AttributeSets.removeFnAttributes(getContext(), Attrs);
 }
 
 void Function::removeRetAttr(Attribute::AttrKind Kind) {
-  AttributeList PAL = getAttributes();
-  PAL = PAL.removeRetAttribute(getContext(), Kind);
-  setAttributes(PAL);
+  AttributeSets = AttributeSets.removeRetAttribute(getContext(), Kind);
 }
 
 void Function::removeRetAttr(StringRef Kind) {
-  AttributeList PAL = getAttributes();
-  PAL = PAL.removeRetAttribute(getContext(), Kind);
-  setAttributes(PAL);
+  AttributeSets = AttributeSets.removeRetAttribute(getContext(), Kind);
 }
 
 void Function::removeRetAttrs(const AttrBuilder &Attrs) {
-  AttributeList PAL = getAttributes();
-  PAL = PAL.removeRetAttributes(getContext(), Attrs);
-  setAttributes(PAL);
+  AttributeSets = AttributeSets.removeRetAttributes(getContext(), Attrs);
 }
 
 void Function::removeParamAttr(unsigned ArgNo, Attribute::AttrKind Kind) {
-  AttributeList PAL = getAttributes();
-  PAL = PAL.removeParamAttribute(getContext(), ArgNo, Kind);
-  setAttributes(PAL);
+  AttributeSets = AttributeSets.removeParamAttribute(getContext(), ArgNo, Kind);
 }
 
 void Function::removeParamAttr(unsigned ArgNo, StringRef Kind) {
-  AttributeList PAL = getAttributes();
-  PAL = PAL.removeParamAttribute(getContext(), ArgNo, Kind);
-  setAttributes(PAL);
+  AttributeSets = AttributeSets.removeParamAttribute(getContext(), ArgNo, Kind);
 }
 
 void Function::removeParamAttrs(unsigned ArgNo, const AttrBuilder &Attrs) {
-  AttributeList PAL = getAttributes();
-  PAL = PAL.removeParamAttributes(getContext(), ArgNo, Attrs);
-  setAttributes(PAL);
+  AttributeSets =
+      AttributeSets.removeParamAttributes(getContext(), ArgNo, Attrs);
 }
 
 void Function::addDereferenceableParamAttr(unsigned ArgNo, uint64_t Bytes) {
-  AttributeList PAL = getAttributes();
-  PAL = PAL.addDereferenceableParamAttr(getContext(), ArgNo, Bytes);
-  setAttributes(PAL);
+  AttributeSets =
+      AttributeSets.addDereferenceableParamAttr(getContext(), ArgNo, Bytes);
+}
+
+bool Function::hasFnAttribute(Attribute::AttrKind Kind) const {
+  return AttributeSets.hasFnAttr(Kind);
+}
+
+bool Function::hasFnAttribute(StringRef Kind) const {
+  return AttributeSets.hasFnAttr(Kind);
+}
+
+bool Function::hasRetAttribute(Attribute::AttrKind Kind) const {
+  return AttributeSets.hasRetAttr(Kind);
+}
+
+bool Function::hasParamAttribute(unsigned ArgNo,
+                                 Attribute::AttrKind Kind) const {
+  return AttributeSets.hasParamAttr(ArgNo, Kind);
+}
+
+Attribute Function::getAttribute(unsigned i, Attribute::AttrKind Kind) const {
+  return AttributeSets.getAttribute(i, Kind);
+}
+
+Attribute Function::getAttribute(unsigned i, StringRef Kind) const {
+  return AttributeSets.getAttribute(i, Kind);
+}
+
+Attribute Function::getFnAttribute(Attribute::AttrKind Kind) const {
+  return AttributeSets.getFnAttr(Kind);
+}
+
+Attribute Function::getFnAttribute(StringRef Kind) const {
+  return AttributeSets.getFnAttr(Kind);
+}
+
+/// gets the specified attribute from the list of attributes.
+Attribute Function::getParamAttribute(unsigned ArgNo,
+                                      Attribute::AttrKind Kind) const {
+  return AttributeSets.getParamAttr(ArgNo, Kind);
 }
 
 void Function::addDereferenceableOrNullParamAttr(unsigned ArgNo,
                                                  uint64_t Bytes) {
-  AttributeList PAL = getAttributes();
-  PAL = PAL.addDereferenceableOrNullParamAttr(getContext(), ArgNo, Bytes);
-  setAttributes(PAL);
+  AttributeSets = AttributeSets.addDereferenceableOrNullParamAttr(getContext(),
+                                                                  ArgNo, Bytes);
 }
 
 DenormalMode Function::getDenormalMode(const fltSemantics &FPType) const {
