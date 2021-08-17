@@ -23,11 +23,10 @@ class ObjCDataFormatterNSError(ObjCDataFormatterTestCase):
         """Test formatters for NSError."""
         self.appkit_tester_impl(self.nserror_data_formatter_commands, False)
 
-    @expectedFailureAll(bugnumber='rdar://74106816')
     def nserror_data_formatter_commands(self):
         self.expect(
             'frame variable nserror', substrs=['domain: @"Foobar" - code: 12'])
-         
+
         self.expect(
             'frame variable nserrorptr',
             substrs=['domain: @"Foobar" - code: 12'])
