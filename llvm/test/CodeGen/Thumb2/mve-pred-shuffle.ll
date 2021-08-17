@@ -79,9 +79,9 @@ entry:
 define <4 x i32> @shuffle2_v4i32(<4 x i32> %src, <4 x i32> %a, <4 x i32> %b) {
 ; CHECK-LABEL: shuffle2_v4i32:
 ; CHECK:       @ %bb.0: @ %entry
-; CHECK-NEXT:    vmov d1, r2, r3
 ; CHECK-NEXT:    vmov d0, r0, r1
 ; CHECK-NEXT:    add r0, sp, #16
+; CHECK-NEXT:    vmov d1, r2, r3
 ; CHECK-NEXT:    vcmp.i32 eq, q0, zr
 ; CHECK-NEXT:    vldrw.u32 q0, [r0]
 ; CHECK-NEXT:    mov r0, sp
@@ -100,9 +100,9 @@ entry:
 define <8 x i16> @shuffle2_v8i16(<8 x i16> %src, <8 x i16> %a, <8 x i16> %b) {
 ; CHECK-LABEL: shuffle2_v8i16:
 ; CHECK:       @ %bb.0: @ %entry
-; CHECK-NEXT:    vmov d1, r2, r3
 ; CHECK-NEXT:    vmov d0, r0, r1
 ; CHECK-NEXT:    add r0, sp, #16
+; CHECK-NEXT:    vmov d1, r2, r3
 ; CHECK-NEXT:    vcmp.i16 eq, q0, zr
 ; CHECK-NEXT:    vldrw.u32 q0, [r0]
 ; CHECK-NEXT:    mov r0, sp
@@ -121,9 +121,9 @@ entry:
 define <16 x i8> @shuffle2_v16i8(<16 x i8> %src, <16 x i8> %a, <16 x i8> %b) {
 ; CHECK-LABEL: shuffle2_v16i8:
 ; CHECK:       @ %bb.0: @ %entry
-; CHECK-NEXT:    vmov d1, r2, r3
 ; CHECK-NEXT:    vmov d0, r0, r1
 ; CHECK-NEXT:    add r0, sp, #16
+; CHECK-NEXT:    vmov d1, r2, r3
 ; CHECK-NEXT:    vcmp.i8 eq, q0, zr
 ; CHECK-NEXT:    vldrw.u32 q0, [r0]
 ; CHECK-NEXT:    mov r0, sp
@@ -223,9 +223,9 @@ entry:
 define <4 x i32> @shuffle4_v4i32(<4 x i32> %src, <4 x i32> %a, <4 x i32> %b) {
 ; CHECK-LABEL: shuffle4_v4i32:
 ; CHECK:       @ %bb.0: @ %entry
-; CHECK-NEXT:    vmov d1, r2, r3
-; CHECK-NEXT:    vmov.i8 q1, #0xff
 ; CHECK-NEXT:    vmov d0, r0, r1
+; CHECK-NEXT:    vmov.i8 q1, #0xff
+; CHECK-NEXT:    vmov d1, r2, r3
 ; CHECK-NEXT:    add r0, sp, #16
 ; CHECK-NEXT:    vcmp.i32 eq, q0, zr
 ; CHECK-NEXT:    vmov.i8 q0, #0x0

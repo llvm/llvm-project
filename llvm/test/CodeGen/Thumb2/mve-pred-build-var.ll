@@ -159,11 +159,11 @@ define arm_aapcs_vfpcc <2 x i64> @build_var0_v2i1(i32 %s, i32 %t, <2 x i64> %a, 
 ; CHECK-LABEL: build_var0_v2i1:
 ; CHECK:       @ %bb.0: @ %entry
 ; CHECK-NEXT:    cmp r0, r1
+; CHECK-NEXT:    vldr s10, .LCPI9_0
 ; CHECK-NEXT:    csetm r0, lo
 ; CHECK-NEXT:    vmov s8, r0
-; CHECK-NEXT:    vldr s10, .LCPI9_0
-; CHECK-NEXT:    vmov.f32 s9, s8
 ; CHECK-NEXT:    vmov.f32 s11, s10
+; CHECK-NEXT:    vmov.f32 s9, s8
 ; CHECK-NEXT:    vbic q1, q1, q2
 ; CHECK-NEXT:    vand q0, q0, q2
 ; CHECK-NEXT:    vorr q0, q0, q1
@@ -183,9 +183,9 @@ define arm_aapcs_vfpcc <2 x i64> @build_var1_v2i1(i32 %s, i32 %t, <2 x i64> %a, 
 ; CHECK-LABEL: build_var1_v2i1:
 ; CHECK:       @ %bb.0: @ %entry
 ; CHECK-NEXT:    cmp r0, r1
+; CHECK-NEXT:    vldr s8, .LCPI10_0
 ; CHECK-NEXT:    csetm r0, lo
 ; CHECK-NEXT:    vmov s10, r0
-; CHECK-NEXT:    vldr s8, .LCPI10_0
 ; CHECK-NEXT:    vmov.f32 s9, s8
 ; CHECK-NEXT:    vmov.f32 s11, s10
 ; CHECK-NEXT:    vbic q1, q1, q2

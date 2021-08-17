@@ -389,7 +389,13 @@ bool ARMSubtarget::enableMachineScheduler() const {
   return useMachineScheduler();
 }
 
-bool ARMSubtarget::enableSubRegLiveness() const { return EnableSubRegLiveness; }
+bool ARMSubtarget::enableSubRegLiveness() const {
+  if (EnableSubRegLiveness.getNumOccurrences())
+    return EnableSubRegLiveness;
+  // Enable SubRegLiveness for MVE to better optimize s subregs for mqpr regs
+  // and q subregs for qqqqpr regs.
+  return hasMVEIntegerOps();
+}
 
 // This overrides the PostRAScheduler bit in the SchedModel for any CPU.
 bool ARMSubtarget::enablePostRAScheduler() const {

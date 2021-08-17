@@ -291,8 +291,8 @@ entry:
 define arm_aapcs_vfpcc void @trunc_signed_unscaled_i64_i8(i8* %base, <4 x i8>* %offptr, <4 x i64> %input) {
 ; CHECK-LABEL: trunc_signed_unscaled_i64_i8:
 ; CHECK:       @ %bb.0: @ %entry
-; CHECK-NEXT:    vmov.f32 s1, s2
 ; CHECK-NEXT:    vldrb.s32 q2, [r1]
+; CHECK-NEXT:    vmov.f32 s1, s2
 ; CHECK-NEXT:    vmov.f32 s2, s4
 ; CHECK-NEXT:    vmov.f32 s3, s6
 ; CHECK-NEXT:    vstrw.32 q0, [r0, q2]
@@ -310,8 +310,8 @@ entry:
 define arm_aapcs_vfpcc void @trunc_unsigned_unscaled_i64_i8(i8* %base, <4 x i8>* %offptr, <4 x i64> %input) {
 ; CHECK-LABEL: trunc_unsigned_unscaled_i64_i8:
 ; CHECK:       @ %bb.0: @ %entry
-; CHECK-NEXT:    vmov.f32 s1, s2
 ; CHECK-NEXT:    vldrb.u32 q2, [r1]
+; CHECK-NEXT:    vmov.f32 s1, s2
 ; CHECK-NEXT:    vmov.f32 s2, s4
 ; CHECK-NEXT:    vmov.f32 s3, s6
 ; CHECK-NEXT:    vstrw.32 q0, [r0, q2]
