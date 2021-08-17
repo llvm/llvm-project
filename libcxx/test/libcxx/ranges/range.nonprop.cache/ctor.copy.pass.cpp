@@ -39,7 +39,7 @@ constexpr void test() {
   using Cache = std::ranges::__non_propagating_cache<T>;
   static_assert(std::is_nothrow_copy_constructible_v<Cache>);
   Cache a;
-  a.__set(T{3});
+  a.__emplace(3);
 
   // Test with direct initialization
   {
