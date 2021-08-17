@@ -29,6 +29,7 @@
 #include "llvm/ProfileData/SampleProf.h"
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Support/Path.h"
+#include "llvm/Transforms/IPO/SampleContextTracker.h"
 #include <list>
 #include <set>
 #include <sstream>
@@ -36,6 +37,9 @@
 #include <unordered_map>
 #include <unordered_set>
 #include <vector>
+
+extern cl::opt<bool> EnableCSPreInliner;
+extern cl::opt<bool> UseContextCostForPreInliner;
 
 using namespace llvm;
 using namespace sampleprof;
@@ -95,6 +99,36 @@ struct PrologEpilogTracker {
   }
 };
 
+// Track function byte size under different context (outlined version as well as
+// various inlined versions). It also provides query support to get function
+// size with the best matching context, which is used to help pre-inliner use
+// accurate post-optimization size to make decisions.
+// TODO: If an inlinee is completely optimized away, ideally we should have zero
+// for its context size, currently we would misss such context since it doesn't
+// have instructions. To fix this, we need to mark all inlinee with entry probe
+// but without instructions as having zero size.
+class BinarySizeContextTracker {
+public:
+  // Add instruction with given size to a context
+  void addInstructionForContext(const FrameLocationStack &Context,
+                                uint32_t InstrSize);
+
+  // Get function size with a specific context. When there's no exact match
+  // for the given context, try to retrieve the size of that function from
+  // closest matching context.
+  uint32_t getFuncSizeForContext(const SampleContext &Context);
+
+  void dump() { RootContext.dumpTree(); }
+
+private:
+  // Root node for context trie tree, node that this is a reverse context trie
+  // with callee as parent and caller as child. This way we can traverse from
+  // root to find the best/longest matching context if an exact match does not
+  // exist. It gives us the best possible estimate for function's post-inline,
+  // post-optimization byte size.
+  ContextTrieNode RootContext;
+};
+
 class ProfiledBinary {
   // Absolute path of the binary.
   std::string Path;
@@ -130,7 +164,11 @@ class ProfiledBinary {
   // A set of return instruction offsets. Used by virtual unwinding.
   std::unordered_set<uint64_t> RetAddrs;
 
+  // Estimate and track function prolog and epilog ranges.
   PrologEpilogTracker ProEpilogTracker;
+
+  // Track function sizes under different context
+  BinarySizeContextTracker FuncSizeTracker;
 
   // The symbolizer used to get inline context for an instruction.
   std::unique_ptr<symbolize::LLVMSymbolizer> Symbolizer;
@@ -139,6 +177,9 @@ class ProfiledBinary {
   MCPseudoProbeDecoder ProbeDecoder;
 
   bool UsePseudoProbes = false;
+
+  // Whether we need to symbolize all instructions to get function context size.
+  bool TrackFuncContextSize = false;
 
   // Indicate if the base loading address is parsed from the mmap event or uses
   // the preferred address
@@ -165,7 +206,8 @@ class ProfiledBinary {
                           SectionSymbolsTy &Symbols, const SectionRef &Section);
   /// Symbolize a given instruction pointer and return a full call context.
   FrameLocationStack symbolize(const InstructionPointer &IP,
-                               bool UseCanonicalFnName = false);
+                               bool UseCanonicalFnName = false,
+                               bool UseProbeDiscriminator = false);
 
   /// Decode the interesting parts of the binary and build internal data
   /// structures. On high level, the parts of interest are:
@@ -183,7 +225,10 @@ class ProfiledBinary {
   }
 
 public:
-  ProfiledBinary(const StringRef Path) : Path(Path), ProEpilogTracker(this) {
+  ProfiledBinary(const StringRef Path)
+      : Path(Path), ProEpilogTracker(this),
+        TrackFuncContextSize(EnableCSPreInliner &&
+                             UseContextCostForPreInliner) {
     setupSymbolizer();
     load();
   }
@@ -247,6 +292,10 @@ public:
 
   StringRef getFuncFromStartOffset(uint64_t Offset) {
     return FuncStartAddrMap[Offset];
+  }
+
+  uint32_t getFuncSizeForContext(SampleContext &Context) {
+    return FuncSizeTracker.getFuncSizeForContext(Context);
   }
 
   Optional<FrameLocation> getInlineLeafFrameLoc(uint64_t Offset) {
