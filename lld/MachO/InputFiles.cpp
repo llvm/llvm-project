@@ -279,6 +279,14 @@ void ObjFile::parseSections(ArrayRef<Section> sections) {
             {off, make<ConcatInputSection>(segname, name, this,
                                            data.slice(off, literalSize), align,
                                            flags)});
+    } else if (segname == segment_names::llvm) {
+      // ld64 does not appear to emit contents from sections within the __LLVM
+      // segment. Symbols within those sections point to bitcode metadata
+      // instead of actual symbols. Global symbols within those sections could
+      // have the same name without causing duplicate symbol errors. Push an
+      // empty map to ensure indices line up for the remaining sections.
+      // TODO: Evaluate whether the bitcode metadata is needed.
+      subsections.push_back({});
     } else {
       auto *isec =
           make<ConcatInputSection>(segname, name, this, data, align, flags);
@@ -290,14 +298,6 @@ void ObjFile::parseSections(ArrayRef<Section> sections) {
         // empty map to ensure the indices line up for the remaining sections.
         subsections.push_back({});
         debugSections.push_back(isec);
-      } else if (isec->getSegName() == segment_names::llvm) {
-        // ld64 does not appear to emit contents from sections within the __LLVM
-        // segment. Symbols within those sections point to bitcode metadata
-        // instead of actual symbols. Global symbols within those sections could
-        // have the same name without causing duplicate symbol errors. Push an
-        // empty map to ensure indices line up for the remaining sections.
-        // TODO: Evaluate whether the bitcode metadata is needed.
-        subsections.push_back({});
       } else {
         subsections.push_back({{0, isec}});
       }
