@@ -59,7 +59,7 @@ for.end:                                          ; preds = %for.inc, %entry
   ret void
 }
 
-attributes #0 = { "target-features"="+neon,+sve" }
+attributes #0 = { "target-features"="+neon,+sve" vscale_range(0, 16) }
 
 !0 = distinct !{!0, !1, !2, !3, !4, !5}
 !1 = !{!"llvm.loop.mustprogress"}
