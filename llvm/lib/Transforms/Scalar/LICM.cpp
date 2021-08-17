@@ -1491,7 +1491,7 @@ static bool isNotUsedOrFreeInLoop(const Instruction &I, const Loop *CurLoop,
                UI->getNumOperands() == 1) {
           if (!CurLoop->contains(UI))
             break;
-          UI = cast<Instruction>(U->user_back());
+          UI = cast<Instruction>(UI->user_back());
         }
       }
     }
