@@ -496,17 +496,27 @@ static OverflowResult checkOverflow(FlattenInfo &FI, DominatorTree *DT,
   for (Value *V : FI.LinearIVUses) {
     for (Value *U : V->users()) {
       if (auto *GEP = dyn_cast<GetElementPtrInst>(U)) {
-        // The IV is used as the operand of a GEP, and the IV is at least as
-        // wide as the address space of the GEP. In this case, the GEP would
-        // wrap around the address space before the IV increment wraps, which
-        // would be UB.
-        if (GEP->isInBounds() &&
-            V->getType()->getIntegerBitWidth() >=
-                DL.getPointerTypeSizeInBits(GEP->getType())) {
-          LLVM_DEBUG(
-              dbgs() << "use of linear IV would be UB if overflow occurred: ";
-              GEP->dump());
-          return OverflowResult::NeverOverflows;
+        for (Value *GEPUser : U->users()) {
+          Instruction *GEPUserInst = dyn_cast<Instruction>(GEPUser);
+          if (!isa<LoadInst>(GEPUserInst) &&
+              !(isa<StoreInst>(GEPUserInst) &&
+                GEP == GEPUserInst->getOperand(1)))
+            continue;
+          if (!isGuaranteedToExecuteForEveryIteration(GEPUserInst,
+                                                      FI.InnerLoop))
+            continue;
+          // The IV is used as the operand of a GEP which dominates the loop
+          // latch, and the IV is at least as wide as the address space of the
+          // GEP. In this case, the GEP would wrap around the address space
+          // before the IV increment wraps, which would be UB.
+          if (GEP->isInBounds() &&
+              V->getType()->getIntegerBitWidth() >=
+                  DL.getPointerTypeSizeInBits(GEP->getType())) {
+            LLVM_DEBUG(
+                dbgs() << "use of linear IV would be UB if overflow occurred: ";
+                GEP->dump());
+            return OverflowResult::NeverOverflows;
+          }
         }
       }
     }
