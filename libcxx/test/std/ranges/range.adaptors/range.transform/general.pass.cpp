@@ -32,8 +32,8 @@ template<class T, class F>
 concept ValidTransformView = requires { typename std::ranges::transform_view<T, F>; };
 
 struct BadFunction { };
-static_assert( ValidTransformView<ContiguousView, Increment>);
-static_assert(!ValidTransformView<Range, Increment>);
+static_assert( ValidTransformView<ContiguousView, PlusOne>);
+static_assert(!ValidTransformView<Range, PlusOne>);
 static_assert(!ValidTransformView<ContiguousView, BadFunction>);
 
 template<std::ranges::range R>

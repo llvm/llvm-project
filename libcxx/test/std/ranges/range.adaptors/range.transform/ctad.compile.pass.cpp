@@ -18,9 +18,9 @@
 #include "test_macros.h"
 #include "types.h"
 
-static_assert(std::same_as<decltype(std::ranges::transform_view(InputView(), Increment())),
-                           std::ranges::transform_view<InputView, Increment>>);
-static_assert(std::same_as<decltype(std::ranges::transform_view(std::declval<ForwardRange&>(), Increment())),
-                           std::ranges::transform_view<std::ranges::ref_view<ForwardRange>, Increment>>);
-static_assert(std::same_as<decltype(std::ranges::transform_view(BorrowableRange(), Increment())),
-                           std::ranges::transform_view<std::ranges::subrange<int*>, Increment>>);
+static_assert(std::same_as<decltype(std::ranges::transform_view(InputView(), PlusOne())),
+                           std::ranges::transform_view<InputView, PlusOne>>);
+static_assert(std::same_as<decltype(std::ranges::transform_view(std::declval<ForwardRange&>(), PlusOne())),
+                           std::ranges::transform_view<std::ranges::ref_view<ForwardRange>, PlusOne>>);
+static_assert(std::same_as<decltype(std::ranges::transform_view(BorrowableRange(), PlusOne())),
+                           std::ranges::transform_view<std::ranges::subrange<int*>, PlusOne>>);

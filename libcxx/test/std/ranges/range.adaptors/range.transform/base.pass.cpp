@@ -20,14 +20,14 @@
 
 constexpr bool test() {
   {
-    std::ranges::transform_view<ContiguousView, Increment> transformView;
+    std::ranges::transform_view<ContiguousView, PlusOne> transformView;
     ContiguousView base = std::move(transformView).base();
     ASSERT_SAME_TYPE(ContiguousView, decltype(std::move(transformView).base()));
     assert(std::ranges::begin(base) == globalBuff);
   }
 
   {
-    std::ranges::transform_view<CopyableView, Increment> transformView;
+    std::ranges::transform_view<CopyableView, PlusOne> transformView;
     CopyableView base1 = transformView.base();
     ASSERT_SAME_TYPE(CopyableView, decltype(transformView.base()));
     assert(std::ranges::begin(base1) == globalBuff);
@@ -38,7 +38,7 @@ constexpr bool test() {
   }
 
   {
-    const std::ranges::transform_view<CopyableView, Increment> transformView;
+    const std::ranges::transform_view<CopyableView, PlusOne> transformView;
     const CopyableView base1 = transformView.base();
     ASSERT_SAME_TYPE(CopyableView, decltype(transformView.base()));
     assert(std::ranges::begin(base1) == globalBuff);
