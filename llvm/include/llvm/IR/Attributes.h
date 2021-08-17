@@ -524,6 +524,48 @@ public:
   LLVM_NODISCARD AttributeList removeAttributes(LLVMContext &C,
                                                 unsigned Index) const;
 
+  /// Remove the specified attribute at the function index from this
+  /// attribute list. Returns a new list because attribute lists are immutable.
+  LLVM_NODISCARD AttributeList
+  removeFnAttribute(LLVMContext &C, Attribute::AttrKind Kind) const {
+    return removeAttribute(C, FunctionIndex, Kind);
+  }
+
+  /// Remove the specified attribute at the function index from this
+  /// attribute list. Returns a new list because attribute lists are immutable.
+  LLVM_NODISCARD AttributeList removeFnAttribute(LLVMContext &C,
+                                                 StringRef Kind) const {
+    return removeAttribute(C, FunctionIndex, Kind);
+  }
+
+  /// Remove the specified attribute at the function index from this
+  /// attribute list. Returns a new list because attribute lists are immutable.
+  LLVM_NODISCARD AttributeList
+  removeFnAttributes(LLVMContext &C, const AttrBuilder &AttrsToRemove) const {
+    return removeAttributes(C, FunctionIndex, AttrsToRemove);
+  }
+
+  /// Remove the specified attribute at the return value index from this
+  /// attribute list. Returns a new list because attribute lists are immutable.
+  LLVM_NODISCARD AttributeList
+  removeRetAttribute(LLVMContext &C, Attribute::AttrKind Kind) const {
+    return removeAttribute(C, ReturnIndex, Kind);
+  }
+
+  /// Remove the specified attribute at the return value index from this
+  /// attribute list. Returns a new list because attribute lists are immutable.
+  LLVM_NODISCARD AttributeList removeRetAttribute(LLVMContext &C,
+                                                  StringRef Kind) const {
+    return removeAttribute(C, ReturnIndex, Kind);
+  }
+
+  /// Remove the specified attribute at the return value index from this
+  /// attribute list. Returns a new list because attribute lists are immutable.
+  LLVM_NODISCARD AttributeList
+  removeRetAttributes(LLVMContext &C, const AttrBuilder &AttrsToRemove) const {
+    return removeAttributes(C, ReturnIndex, AttrsToRemove);
+  }
+
   /// Remove the specified attribute at the specified arg index from this
   /// attribute list. Returns a new list because attribute lists are immutable.
   LLVM_NODISCARD AttributeList removeParamAttribute(

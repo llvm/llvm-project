@@ -1568,8 +1568,8 @@ static void splitAsyncCoroutine(Function &F, coro::Shape &Shape,
   // Reset various things that the optimizer might have decided it
   // "knows" about the coroutine function due to not seeing a return.
   F.removeFnAttr(Attribute::NoReturn);
-  F.removeAttribute(AttributeList::ReturnIndex, Attribute::NoAlias);
-  F.removeAttribute(AttributeList::ReturnIndex, Attribute::NonNull);
+  F.removeRetAttr(Attribute::NoAlias);
+  F.removeRetAttr(Attribute::NonNull);
 
   auto &Context = F.getContext();
   auto *Int8PtrTy = Type::getInt8PtrTy(Context);
@@ -1667,8 +1667,8 @@ static void splitRetconCoroutine(Function &F, coro::Shape &Shape,
   // Reset various things that the optimizer might have decided it
   // "knows" about the coroutine function due to not seeing a return.
   F.removeFnAttr(Attribute::NoReturn);
-  F.removeAttribute(AttributeList::ReturnIndex, Attribute::NoAlias);
-  F.removeAttribute(AttributeList::ReturnIndex, Attribute::NonNull);
+  F.removeRetAttr(Attribute::NoAlias);
+  F.removeRetAttr(Attribute::NonNull);
 
   // Allocate the frame.
   auto *Id = cast<AnyCoroIdRetconInst>(Shape.CoroBegin->getId());

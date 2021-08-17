@@ -352,12 +352,12 @@ static Function *getEmscriptenFunction(FunctionType *Ty, const Twine &Name,
   if (!F->hasFnAttribute("wasm-import-module")) {
     llvm::AttrBuilder B;
     B.addAttribute("wasm-import-module", "env");
-    F->addAttributes(llvm::AttributeList::FunctionIndex, B);
+    F->addFnAttrs(B);
   }
   if (!F->hasFnAttribute("wasm-import-name")) {
     llvm::AttrBuilder B;
     B.addAttribute("wasm-import-name", F->getName());
-    F->addAttributes(llvm::AttributeList::FunctionIndex, B);
+    F->addFnAttrs(B);
   }
   return F;
 }

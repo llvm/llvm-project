@@ -54,7 +54,8 @@ TEST(Attributes, Ordering) {
                          AttributeList::get(C, 1, Attribute::SExt)};
 
   AttributeList SetA = AttributeList::get(C, ASs);
-  AttributeList SetB = SetA.removeAttributes(C, 1, ASs[1].getParamAttrs(0));
+  AttributeList SetB =
+      SetA.removeParamAttributes(C, 0, ASs[1].getParamAttrs(0));
   EXPECT_NE(SetA, SetB);
 }
 
@@ -118,7 +119,7 @@ TEST(Attributes, RemoveAlign) {
   EXPECT_TRUE(AL.hasRetAttr(Attribute::OptimizeNone));
   EXPECT_TRUE(AL.getStackAlignment(0) == 32);
 
-  AL = AL.removeAttribute(C, 0, Attribute::StackAlignment);
+  AL = AL.removeRetAttribute(C, Attribute::StackAlignment);
   EXPECT_FALSE(AL.hasParamAttr(0, Attribute::Alignment));
   EXPECT_TRUE(AL.hasParamAttr(0, Attribute::ReadOnly));
   EXPECT_FALSE(AL.hasRetAttr(Attribute::StackAlignment));
@@ -135,7 +136,7 @@ TEST(Attributes, RemoveAlign) {
   EXPECT_TRUE(AL2.hasRetAttr(Attribute::OptimizeNone));
   EXPECT_TRUE(AL2.getStackAlignment(0) == 32);
 
-  AL2 = AL2.removeAttributes(C, 0, B_stackalign);
+  AL2 = AL2.removeRetAttributes(C, B_stackalign);
   EXPECT_FALSE(AL2.hasParamAttr(0, Attribute::Alignment));
   EXPECT_TRUE(AL2.hasParamAttr(0, Attribute::ReadOnly));
   EXPECT_FALSE(AL2.hasRetAttr(Attribute::StackAlignment));
