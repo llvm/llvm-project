@@ -34836,6 +34836,7 @@ X86TargetLowering::EmitInstrWithCustomInserter(MachineInstr &MI,
   case X86::PTDPBF16PS: {
     unsigned Opc;
     switch (MI.getOpcode()) {
+    default: llvm_unreachable("illegal opcode!");
     case X86::PTDPBSSD: Opc = X86::TDPBSSD; break;
     case X86::PTDPBSUD: Opc = X86::TDPBSUD; break;
     case X86::PTDPBUSD: Opc = X86::TDPBUSD; break;
@@ -34863,6 +34864,7 @@ X86TargetLowering::EmitInstrWithCustomInserter(MachineInstr &MI,
   case X86::PTILESTORED: {
     unsigned Opc;
     switch (MI.getOpcode()) {
+    default: llvm_unreachable("illegal opcode!");
     case X86::PTILELOADD:   Opc = X86::TILELOADD;   break;
     case X86::PTILELOADDT1: Opc = X86::TILELOADDT1; break;
     case X86::PTILESTORED:  Opc = X86::TILESTORED;  break;
