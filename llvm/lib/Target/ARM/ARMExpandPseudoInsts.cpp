@@ -69,6 +69,7 @@ namespace {
     void ExpandLaneOp(MachineBasicBlock::iterator &MBBI);
     void ExpandVTBL(MachineBasicBlock::iterator &MBBI,
                     unsigned Opc, bool IsExt);
+    void ExpandMQQPRLoadStore(MachineBasicBlock::iterator &MBBI);
     void ExpandMOV32BitImm(MachineBasicBlock &MBB,
                            MachineBasicBlock::iterator &MBBI);
     void CMSEClearGPRegs(MachineBasicBlock &MBB,
@@ -885,6 +886,43 @@ void ARMExpandPseudo::ExpandVTBL(MachineBasicBlock::iterator &MBBI,
   TransferImpOps(MI, MIB, MIB);
   MI.eraseFromParent();
   LLVM_DEBUG(dbgs() << "To:        "; MIB.getInstr()->dump(););
+}
+
+void ARMExpandPseudo::ExpandMQQPRLoadStore(MachineBasicBlock::iterator &MBBI) {
+  MachineInstr &MI = *MBBI;
+  MachineBasicBlock &MBB = *MI.getParent();
+  unsigned NewOpc =
+      MI.getOpcode() == ARM::MQQPRStore || MI.getOpcode() == ARM::MQQQQPRStore
+          ? ARM::VSTMDIA
+          : ARM::VLDMDIA;
+  MachineInstrBuilder MIB =
+      BuildMI(MBB, MBBI, MI.getDebugLoc(), TII->get(NewOpc));
+
+  unsigned Flags = getKillRegState(MI.getOperand(0).isKill()) |
+                   getDefRegState(MI.getOperand(0).isDef());
+  Register SrcReg = MI.getOperand(0).getReg();
+
+  // Copy the destination register.
+  MIB.add(MI.getOperand(1));
+  MIB.add(predOps(ARMCC::AL));
+  MIB.addReg(TRI->getSubReg(SrcReg, ARM::dsub_0), Flags);
+  MIB.addReg(TRI->getSubReg(SrcReg, ARM::dsub_1), Flags);
+  MIB.addReg(TRI->getSubReg(SrcReg, ARM::dsub_2), Flags);
+  MIB.addReg(TRI->getSubReg(SrcReg, ARM::dsub_3), Flags);
+  if (MI.getOpcode() == ARM::MQQQQPRStore ||
+      MI.getOpcode() == ARM::MQQQQPRLoad) {
+    MIB.addReg(TRI->getSubReg(SrcReg, ARM::dsub_4), Flags);
+    MIB.addReg(TRI->getSubReg(SrcReg, ARM::dsub_5), Flags);
+    MIB.addReg(TRI->getSubReg(SrcReg, ARM::dsub_6), Flags);
+    MIB.addReg(TRI->getSubReg(SrcReg, ARM::dsub_7), Flags);
+  }
+
+  if (NewOpc == ARM::VSTMDIA)
+    MIB.addReg(SrcReg, RegState::Implicit);
+
+  TransferImpOps(MI, MIB, MIB);
+  MIB.cloneMemRefs(MI);
+  MI.eraseFromParent();
 }
 
 static bool IsAnAddressOperand(const MachineOperand &MO) {
@@ -2915,6 +2953,13 @@ bool ARMExpandPseudo::ExpandMI(MachineBasicBlock &MBB,
     case ARM::VTBL4Pseudo: ExpandVTBL(MBBI, ARM::VTBL4, false); return true;
     case ARM::VTBX3Pseudo: ExpandVTBL(MBBI, ARM::VTBX3, true); return true;
     case ARM::VTBX4Pseudo: ExpandVTBL(MBBI, ARM::VTBX4, true); return true;
+
+    case ARM::MQQPRLoad:
+    case ARM::MQQPRStore:
+    case ARM::MQQQQPRLoad:
+    case ARM::MQQQQPRStore:
+      ExpandMQQPRLoadStore(MBBI);
+      return true;
 
     case ARM::tCMP_SWAP_8:
       assert(STI->isThumb());

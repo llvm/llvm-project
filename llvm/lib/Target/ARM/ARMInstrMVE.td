@@ -6930,6 +6930,26 @@ def MVE_LCTP : MVE_loltp_end<(outs), (ins pred:$p), "lctp${p}", ""> {
 }
 
 
+// Pseudo instructions for lowering MQQPR and MQQQQPR stack spills and reloads.
+// They are equivalent to VLDMDIA/VSTMDIA with a single reg, as opposed to multiple
+// dreg subregs.
+
+let Predicates = [HasMVEInt], AM = AddrMode4 in {
+let mayStore = 1, hasSideEffects = 0 in {
+  def MQQPRStore : t2PseudoInst<(outs), (ins MQQPR:$val, GPRnopc:$ptr),
+                                4, NoItinerary, []>;
+  def MQQQQPRStore : t2PseudoInst<(outs), (ins MQQQQPR:$val, GPRnopc:$ptr),
+                                  4, NoItinerary, []>;
+}
+let mayLoad = 1, hasSideEffects = 0 in {
+  def MQQPRLoad : t2PseudoInst<(outs MQQPR:$val), (ins GPRnopc:$ptr),
+                               4, NoItinerary, []>;
+  def MQQQQPRLoad : t2PseudoInst<(outs MQQQQPR:$val), (ins GPRnopc:$ptr),
+                                 4, NoItinerary, []>;
+}
+}
+
+
 //===----------------------------------------------------------------------===//
 // Patterns
 //===----------------------------------------------------------------------===//

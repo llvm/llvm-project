@@ -1254,6 +1254,11 @@ storeRegToStackSlot(MachineBasicBlock &MBB, MachineBasicBlock::iterator I,
               .addReg(SrcReg, getKillRegState(isKill))
               .addMemOperand(MMO)
               .add(predOps(ARMCC::AL));
+        } else if (Subtarget.hasMVEIntegerOps()) {
+          BuildMI(MBB, I, DebugLoc(), get(ARM::MQQPRStore))
+              .addReg(SrcReg, getKillRegState(isKill))
+              .addFrameIndex(FI)
+              .addMemOperand(MMO);
         } else {
           MachineInstrBuilder MIB = BuildMI(MBB, I, DebugLoc(),
                                             get(ARM::VSTMDIA))
@@ -1269,8 +1274,13 @@ storeRegToStackSlot(MachineBasicBlock &MBB, MachineBasicBlock::iterator I,
         llvm_unreachable("Unknown reg class!");
       break;
     case 64:
-      if (ARM::QQQQPRRegClass.hasSubClassEq(RC) ||
-          ARM::MQQQQPRRegClass.hasSubClassEq(RC)) {
+      if (ARM::MQQQQPRRegClass.hasSubClassEq(RC) &&
+          Subtarget.hasMVEIntegerOps()) {
+        BuildMI(MBB, I, DebugLoc(), get(ARM::MQQQQPRStore))
+            .addReg(SrcReg, getKillRegState(isKill))
+            .addFrameIndex(FI)
+            .addMemOperand(MMO);
+      } else if (ARM::QQQQPRRegClass.hasSubClassEq(RC)) {
         MachineInstrBuilder MIB = BuildMI(MBB, I, DebugLoc(), get(ARM::VSTMDIA))
                                       .addFrameIndex(FI)
                                       .add(predOps(ARMCC::AL))
@@ -1327,6 +1337,13 @@ unsigned ARMBaseInstrInfo::isStoreToStackSlot(const MachineInstr &MI,
     break;
   case ARM::VSTMQIA:
     if (MI.getOperand(1).isFI() && MI.getOperand(0).getSubReg() == 0) {
+      FrameIndex = MI.getOperand(1).getIndex();
+      return MI.getOperand(0).getReg();
+    }
+    break;
+  case ARM::MQQPRStore:
+  case ARM::MQQQQPRStore:
+    if (MI.getOperand(1).isFI()) {
       FrameIndex = MI.getOperand(1).getIndex();
       return MI.getOperand(0).getReg();
     }
@@ -1486,6 +1503,10 @@ loadRegFromStackSlot(MachineBasicBlock &MBB, MachineBasicBlock::iterator I,
              .addImm(16)
              .addMemOperand(MMO)
              .add(predOps(ARMCC::AL));
+       } else if (Subtarget.hasMVEIntegerOps()) {
+         BuildMI(MBB, I, DL, get(ARM::MQQPRLoad), DestReg)
+             .addFrameIndex(FI)
+             .addMemOperand(MMO);
        } else {
          MachineInstrBuilder MIB = BuildMI(MBB, I, DL, get(ARM::VLDMDIA))
                                        .addFrameIndex(FI)
@@ -1502,8 +1523,12 @@ loadRegFromStackSlot(MachineBasicBlock &MBB, MachineBasicBlock::iterator I,
        llvm_unreachable("Unknown reg class!");
      break;
   case 64:
-    if (ARM::QQQQPRRegClass.hasSubClassEq(RC) ||
-        ARM::MQQQQPRRegClass.hasSubClassEq(RC)) {
+    if (ARM::MQQQQPRRegClass.hasSubClassEq(RC) &&
+        Subtarget.hasMVEIntegerOps()) {
+      BuildMI(MBB, I, DL, get(ARM::MQQQQPRLoad), DestReg)
+          .addFrameIndex(FI)
+          .addMemOperand(MMO);
+    } else if (ARM::QQQQPRRegClass.hasSubClassEq(RC)) {
       MachineInstrBuilder MIB = BuildMI(MBB, I, DL, get(ARM::VLDMDIA))
                                     .addFrameIndex(FI)
                                     .add(predOps(ARMCC::AL))
@@ -1568,6 +1593,13 @@ unsigned ARMBaseInstrInfo::isLoadFromStackSlot(const MachineInstr &MI,
     break;
   case ARM::VLDMQIA:
     if (MI.getOperand(1).isFI() && MI.getOperand(0).getSubReg() == 0) {
+      FrameIndex = MI.getOperand(1).getIndex();
+      return MI.getOperand(0).getReg();
+    }
+    break;
+  case ARM::MQQPRLoad:
+  case ARM::MQQQQPRLoad:
+    if (MI.getOperand(1).isFI()) {
       FrameIndex = MI.getOperand(1).getIndex();
       return MI.getOperand(0).getReg();
     }
