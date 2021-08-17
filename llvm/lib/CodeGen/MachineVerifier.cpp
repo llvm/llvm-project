@@ -947,6 +947,25 @@ void MachineVerifier::verifyPreISelGenericInstruction(const MachineInstr *MI) {
   // Verify properties of various specific instruction types
   unsigned Opc = MI->getOpcode();
   switch (Opc) {
+  case TargetOpcode::G_ISNAN: {
+    LLT DstTy = MRI->getType(MI->getOperand(0).getReg());
+    LLT SrcTy = MRI->getType(MI->getOperand(1).getReg());
+    LLT S1 = DstTy.isVector() ? DstTy.getElementType() : DstTy;
+    if (S1 != LLT::scalar(1)) {
+      report("Destination must be a 1-bit scalar or vector of 1-bit elements",
+             MI);
+      break;
+    }
+
+    // Disallow pointers.
+    LLT SrcOrElt = SrcTy.isVector() ? SrcTy.getElementType() : SrcTy;
+    if (!SrcOrElt.isScalar()) {
+      report("Source must be a scalar or vector of scalars", MI);
+      break;
+    }
+    verifyVectorElementMatch(DstTy, SrcTy, MI);
+    break;
+  }
   case TargetOpcode::G_ASSERT_SEXT:
   case TargetOpcode::G_ASSERT_ZEXT: {
     std::string OpcName =
