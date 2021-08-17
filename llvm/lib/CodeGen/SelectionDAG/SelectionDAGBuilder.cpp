@@ -8708,7 +8708,7 @@ void SelectionDAGBuilder::visitInlineAsm(const CallBase &Call,
           MachineFunction &MF = DAG.getMachineFunction();
           MachineRegisterInfo &MRI = MF.getRegInfo();
           const TargetRegisterInfo &TRI = *MF.getSubtarget().getRegisterInfo();
-          RegisterSDNode *R = dyn_cast<RegisterSDNode>(AsmNodeOperands[CurOp+1]);
+          auto *R = cast<RegisterSDNode>(AsmNodeOperands[CurOp+1]);
           Register TiedReg = R->getReg();
           MVT RegVT = R->getSimpleValueType(0);
           const TargetRegisterClass *RC = TiedReg.isVirtual() ?
