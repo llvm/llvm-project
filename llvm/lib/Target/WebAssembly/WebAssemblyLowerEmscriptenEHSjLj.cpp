@@ -200,6 +200,7 @@
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Transforms/Utils/BasicBlockUtils.h"
 #include "llvm/Transforms/Utils/SSAUpdater.h"
+#include "llvm/Transforms/Utils/SSAUpdaterBulk.h"
 
 using namespace llvm;
 
@@ -641,25 +642,23 @@ void WebAssemblyLowerEmscriptenEHSjLj::wrapTestSetjmp(
 void WebAssemblyLowerEmscriptenEHSjLj::rebuildSSA(Function &F) {
   DominatorTree &DT = getAnalysis<DominatorTreeWrapperPass>(F).getDomTree();
   DT.recalculate(F); // CFG has been changed
-  SSAUpdater SSA;
+  SSAUpdaterBulk SSA;
   for (BasicBlock &BB : F) {
     for (Instruction &I : BB) {
-      SSA.Initialize(I.getType(), I.getName());
-      SSA.AddAvailableValue(&BB, &I);
-      for (auto UI = I.use_begin(), UE = I.use_end(); UI != UE;) {
-        Use &U = *UI;
-        ++UI;
+      unsigned VarID = SSA.AddVariable(I.getName(), I.getType());
+      SSA.AddAvailableValue(VarID, &BB, &I);
+      for (auto &U : I.uses()) {
         auto *User = cast<Instruction>(U.getUser());
         if (auto *UserPN = dyn_cast<PHINode>(User))
           if (UserPN->getIncomingBlock(U) == &BB)
             continue;
-
         if (DT.dominates(&I, User))
           continue;
-        SSA.RewriteUseAfterInsertions(U);
+        SSA.AddUse(VarID, &U);
       }
     }
   }
+  SSA.RewriteAllUses(&DT);
 }
 
 // Replace uses of longjmp with emscripten_longjmp. emscripten_longjmp takes
@@ -1301,24 +1300,14 @@ bool WebAssemblyLowerEmscriptenEHSjLj::runSjLjOnFunction(Function &F) {
   for (Instruction *I : SetjmpTableSizeInsts)
     SetjmpTableSizeSSA.AddAvailableValue(I->getParent(), I);
 
-  for (auto UI = SetjmpTable->use_begin(), UE = SetjmpTable->use_end();
-       UI != UE;) {
-    // Grab the use before incrementing the iterator.
-    Use &U = *UI;
-    // Increment the iterator before removing the use from the list.
-    ++UI;
+  for (auto &U : make_early_inc_range(SetjmpTable->uses()))
     if (auto *I = dyn_cast<Instruction>(U.getUser()))
       if (I->getParent() != Entry)
         SetjmpTableSSA.RewriteUse(U);
-  }
-  for (auto UI = SetjmpTableSize->use_begin(), UE = SetjmpTableSize->use_end();
-       UI != UE;) {
-    Use &U = *UI;
-    ++UI;
+  for (auto &U : make_early_inc_range(SetjmpTableSize->uses()))
     if (auto *I = dyn_cast<Instruction>(U.getUser()))
       if (I->getParent() != Entry)
         SetjmpTableSizeSSA.RewriteUse(U);
-  }
 
   // Finally, our modifications to the cfg can break dominance of SSA variables.
   // For example, in this code,
