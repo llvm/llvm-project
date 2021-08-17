@@ -821,8 +821,10 @@ def ReservedIdentifier : DiagGroup<"reserved-identifier",
 //  under separate flags.
 //
 def UnreachableCodeLoopIncrement : DiagGroup<"unreachable-code-loop-increment">;
+def UnreachableCodeFallthrough : DiagGroup<"unreachable-code-fallthrough">;
 def UnreachableCode : DiagGroup<"unreachable-code",
-                                [UnreachableCodeLoopIncrement]>;
+                                [UnreachableCodeLoopIncrement,
+                                 UnreachableCodeFallthrough]>;
 def UnreachableCodeBreak : DiagGroup<"unreachable-code-break">;
 def UnreachableCodeReturn : DiagGroup<"unreachable-code-return">;
 def UnreachableCodeAggressive : DiagGroup<"unreachable-code-aggressive",
