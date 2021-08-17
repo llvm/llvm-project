@@ -374,19 +374,15 @@ namespace __iota {
     _LIBCPP_HIDE_FROM_ABI
     constexpr auto operator()(_Start&& __start) const
       noexcept(noexcept(ranges::iota_view(_VSTD::forward<_Start>(__start))))
-            -> decltype(ranges::iota_view(_VSTD::forward<_Start>(__start)))
-    {
-                 return ranges::iota_view(_VSTD::forward<_Start>(__start));
-    }
+      -> decltype(      ranges::iota_view(_VSTD::forward<_Start>(__start)))
+      { return          ranges::iota_view(_VSTD::forward<_Start>(__start)); }
 
     template<class _Start, class _Bound>
     _LIBCPP_HIDE_FROM_ABI
     constexpr auto operator()(_Start&& __start, _Bound&& __bound) const
       noexcept(noexcept(ranges::iota_view(_VSTD::forward<_Start>(__start), _VSTD::forward<_Bound>(__bound))))
-            -> decltype(ranges::iota_view(_VSTD::forward<_Start>(__start), _VSTD::forward<_Bound>(__bound)))
-    {
-                 return ranges::iota_view(_VSTD::forward<_Start>(__start), _VSTD::forward<_Bound>(__bound));
-    }
+      -> decltype(      ranges::iota_view(_VSTD::forward<_Start>(__start), _VSTD::forward<_Bound>(__bound)))
+      { return          ranges::iota_view(_VSTD::forward<_Start>(__start), _VSTD::forward<_Bound>(__bound)); }
   };
 } // namespace __iota
 
