@@ -17,4 +17,4 @@ test/YAMLParser/spec-09-02.test binary
 # binary and not autoconvert line endings (for example, when core.autocrlf is
 # on).
 test/MC/AsmParser/preserve-comments-crlf.s binary
-test/tools/llvm-mca/directives-handle-crlf.s binary
+test/tools/llvm-mca/X86/directives-handle-crlf.s binary
