@@ -651,8 +651,15 @@ class ReferenceType : public Node {
   // Dig through any refs to refs, collapsing the ReferenceTypes as we go. The
   // rule here is rvalue ref to rvalue ref collapses to a rvalue ref, and any
   // other combination collapses to a lvalue ref.
+  //
+  // A combination of a TemplateForwardReference and a back-ref Substitution
+  // from an ill-formed string may have created a cycle; use cycle detection to
+  // avoid looping forever.
   std::pair<ReferenceKind, const Node *> collapse(OutputStream &S) const {
     auto SoFar = std::make_pair(RK, Pointee);
+    // Track the chain of nodes for the Floyd's 'tortoise and hare'
+    // cycle-detection algorithm, since getSyntaxNode(S) is impure
+    PODSmallVector<const Node *, 8> Prev;
     for (;;) {
       const Node *SN = SoFar.second->getSyntaxNode(S);
       if (SN->getKind() != KReferenceType)
@@ -660,6 +667,14 @@ class ReferenceType : public Node {
       auto *RT = static_cast<const ReferenceType *>(SN);
       SoFar.second = RT->Pointee;
       SoFar.first = std::min(SoFar.first, RT->RK);
+
+      // The middle of `Prev` is the 'slow' pointer moving at half speed
+      Prev.push_back(SoFar.second);
+      if (Prev.size() > 1 && SoFar.second == Prev[(Prev.size() - 1) / 2]) {
+        // Cycle detected
+        SoFar.second = nullptr;
+        break;
+      }
     }
     return SoFar;
   }
@@ -680,6 +695,8 @@ public:
       return;
     SwapAndRestore<bool> SavePrinting(Printing, true);
     std::pair<ReferenceKind, const Node *> Collapsed = collapse(s);
+    if (!Collapsed.second)
+      return;
     Collapsed.second->printLeft(s);
     if (Collapsed.second->hasArray(s))
       s += " ";
@@ -693,6 +710,8 @@ public:
       return;
     SwapAndRestore<bool> SavePrinting(Printing, true);
     std::pair<ReferenceKind, const Node *> Collapsed = collapse(s);
+    if (!Collapsed.second)
+      return;
     if (Collapsed.second->hasArray(s) || Collapsed.second->hasFunction(s))
       s += ")";
     Collapsed.second->printRight(s);
