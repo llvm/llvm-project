@@ -14,9 +14,9 @@ define <4 x i32> @v4i32(i32 %index, i32 %TC, <4 x i32> %V1, <4 x i32> %V2) {
 ; CHECK-NEXT:    vpnot
 ; CHECK-NEXT:    vpst
 ; CHECK-NEXT:    vcmpt.u32 hi, q1, q0
-; CHECK-NEXT:    vmov d0, r2, r3
 ; CHECK-NEXT:    vldr d1, [sp]
 ; CHECK-NEXT:    vldrw.u32 q1, [r0]
+; CHECK-NEXT:    vmov d0, r2, r3
 ; CHECK-NEXT:    vpsel q0, q0, q1
 ; CHECK-NEXT:    vmov r0, r1, d0
 ; CHECK-NEXT:    vmov r2, r3, d1
@@ -156,8 +156,8 @@ define <8 x i16> @v8i16(i32 %index, i32 %TC, <8 x i16> %V1, <8 x i16> %V2) {
 ; CHECK-NEXT:    vpnot
 ; CHECK-NEXT:    vpst
 ; CHECK-NEXT:    vcmpt.i16 ne, q0, zr
-; CHECK-NEXT:    vmov d0, r2, r3
 ; CHECK-NEXT:    vldr d1, [sp, #48]
+; CHECK-NEXT:    vmov d0, r2, r3
 ; CHECK-NEXT:    vpsel q0, q0, q1
 ; CHECK-NEXT:    vmov r0, r1, d0
 ; CHECK-NEXT:    vmov r2, r3, d1
@@ -339,12 +339,12 @@ define <16 x i8> @v16i8(i32 %index, i32 %TC, <16 x i8> %V1, <16 x i8> %V2) {
 ; CHECK-NEXT:    vmov.8 q3[14], r0
 ; CHECK-NEXT:    vmov.u16 r0, q0[7]
 ; CHECK-NEXT:    vmov.8 q3[15], r0
-; CHECK-NEXT:    vmov d0, r2, r3
 ; CHECK-NEXT:    add r0, sp, #88
 ; CHECK-NEXT:    vcmp.i8 ne, q3, zr
 ; CHECK-NEXT:    vldr d1, [sp, #80]
 ; CHECK-NEXT:    vldrw.u32 q1, [r0]
 ; CHECK-NEXT:    vpnot
+; CHECK-NEXT:    vmov d0, r2, r3
 ; CHECK-NEXT:    vpst
 ; CHECK-NEXT:    vcmpt.i8 ne, q2, zr
 ; CHECK-NEXT:    vpsel q0, q0, q1
