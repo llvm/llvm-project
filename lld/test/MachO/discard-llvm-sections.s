@@ -23,7 +23,7 @@
 # RUN: llvm-mc -filetype=obj -triple=x86_64-apple-darwin --defsym TEXT=0 %t/bar.s -o %t/bar.o
 # RUN: not %lld -dylib %t/foo.o %t/bar.o -o %t/libDuplicate.dylib 2>&1 | FileCheck %s --check-prefix=DUP
 
-# DUP: ld64.lld: error: duplicate symbol: _llvm.foo
+# DUP: error: duplicate symbol: _llvm.foo
 
 #--- foo.s
 .globl _llvm.foo
