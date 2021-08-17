@@ -114,7 +114,6 @@ class TestCase(TestBase):
     # BitFields exhibit crashes in record layout on Windows
     # (http://llvm.org/pr21800)
     @skipIfWindows
-    @expectedFailureAll(bugnumber="rdar://74106759")
     def test_expression_bug(self):
         # Ensure evaluating (emulating) an expression does not break bitfield
         # values for already parsed variables. The expression is run twice
