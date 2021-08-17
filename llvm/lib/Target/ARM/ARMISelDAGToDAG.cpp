@@ -5499,8 +5499,8 @@ static int getARClassRegisterMask(StringRef Reg, StringRef Flags) {
 // using the supplied metadata string to select the instruction node to use
 // and the registers/masks to construct as operands for the node.
 bool ARMDAGToDAGISel::tryReadRegister(SDNode *N){
-  const MDNodeSDNode *MD = dyn_cast<MDNodeSDNode>(N->getOperand(1));
-  const MDString *RegString = dyn_cast<MDString>(MD->getMD()->getOperand(0));
+  const auto *MD = cast<MDNodeSDNode>(N->getOperand(1));
+  const auto *RegString = cast<MDString>(MD->getMD()->getOperand(0));
   bool IsThumb2 = Subtarget->isThumb2();
   SDLoc DL(N);
 
@@ -5614,8 +5614,8 @@ bool ARMDAGToDAGISel::tryReadRegister(SDNode *N){
 // using the supplied metadata string to select the instruction node to use
 // and the registers/masks to use in the nodes
 bool ARMDAGToDAGISel::tryWriteRegister(SDNode *N){
-  const MDNodeSDNode *MD = dyn_cast<MDNodeSDNode>(N->getOperand(1));
-  const MDString *RegString = dyn_cast<MDString>(MD->getMD()->getOperand(0));
+  const auto *MD = cast<MDNodeSDNode>(N->getOperand(1));
+  const auto *RegString = cast<MDString>(MD->getMD()->getOperand(0));
   bool IsThumb2 = Subtarget->isThumb2();
   SDLoc DL(N);
 
