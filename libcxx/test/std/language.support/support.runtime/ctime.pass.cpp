@@ -8,6 +8,10 @@
 
 // test <ctime>
 
+// ::timespec_get is provided by the C library, but it's marked as
+// unavailable until macOS 10.15
+// XFAIL: use_system_cxx_lib && target={{.+}}-apple-macosx10.{{9|10|11|12|13|14}}
+
 #include <ctime>
 #include <type_traits>
 #include "test_macros.h"
@@ -20,7 +24,7 @@
 #error CLOCKS_PER_SEC not defined
 #endif
 
-#if TEST_STD_VER > 14 && defined(TEST_HAS_TIMESPEC_GET)
+#if TEST_STD_VER > 14
 #ifndef TIME_UTC
 #error TIME_UTC not defined
 #endif
@@ -32,7 +36,7 @@ int main(int, char**)
     std::size_t s = 0;
     std::time_t t = 0;
     std::tm tm = {};
-#if TEST_STD_VER > 14 && defined(TEST_HAS_TIMESPEC_GET)
+#if TEST_STD_VER > 14
     std::timespec tmspec = {};
     ((void)tmspec); // Prevent unused warning
 #endif
@@ -44,7 +48,7 @@ int main(int, char**)
     static_assert((std::is_same<decltype(std::difftime(t,t)), double>::value), "");
     static_assert((std::is_same<decltype(std::mktime(&tm)), std::time_t>::value), "");
     static_assert((std::is_same<decltype(std::time(&t)), std::time_t>::value), "");
-#if TEST_STD_VER > 14 && defined(TEST_HAS_TIMESPEC_GET)
+#if TEST_STD_VER > 14
     static_assert((std::is_same<decltype(std::timespec_get(&tmspec, 0)), int>::value), "");
 #endif
 #ifndef _LIBCPP_HAS_NO_THREAD_UNSAFE_C_FUNCTIONS
