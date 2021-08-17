@@ -139,7 +139,7 @@ bool hasNoInterveningEffect(Operation *start, T memOp) {
         // Dependence analysis is only correct if both ops operate on the same
         // memref.
         if (srcAccess.memref == destAccess.memref) {
-          FlatAffineConstraints dependenceConstraints;
+          FlatAffineValueConstraints dependenceConstraints;
 
           // Number of loops containing the start op and the ending operation.
           unsigned minSurroundingLoops =

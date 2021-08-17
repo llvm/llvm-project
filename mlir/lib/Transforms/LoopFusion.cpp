@@ -916,7 +916,7 @@ static Value createPrivateMemRef(AffineForOp forOp, Operation *srcStoreOpInst,
   assert(numElements.hasValue() &&
          "non-constant number of elts in local buffer");
 
-  const FlatAffineConstraints *cst = region.getConstraints();
+  const FlatAffineValueConstraints *cst = region.getConstraints();
   // 'outerIVs' holds the values that this memory region is symbolic/parametric
   // on; this would correspond to loop IVs surrounding the level at which the
   // slice is being materialized.

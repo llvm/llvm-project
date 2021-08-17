@@ -1,4 +1,4 @@
-//===- ConstraintsSet.h - Extensions for FlatAffineConstraints --*- C++ -*-===//
+//===- ConstraintsSet.h - Ext. for FlatAffineValueConstraints ---*- C++ -*-===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -20,9 +20,9 @@ namespace mlir {
 class ValueRange;
 
 /// Linalg-specific constraints set extensions.
-class ConstraintsSet : public FlatAffineConstraints {
+class ConstraintsSet : public FlatAffineValueConstraints {
 public:
-  ConstraintsSet() : FlatAffineConstraints() {}
+  ConstraintsSet() : FlatAffineValueConstraints() {}
 
   /// Assuming `val` is defined by `val = affine.min map (operands)`, introduce
   /// all the constraints `val <= expr_i(operands)`, where expr_i are all the
