@@ -1570,10 +1570,10 @@ def int_load_relative: DefaultAttrsIntrinsic<[llvm_ptr_ty], [llvm_ptr_ty, llvm_a
 
 def int_hwasan_check_memaccess :
   Intrinsic<[], [llvm_ptr_ty, llvm_ptr_ty, llvm_i32_ty],
-            [IntrInaccessibleMemOnly, ImmArg<ArgIndex<2>>]>;
+            [ImmArg<ArgIndex<2>>]>;
 def int_hwasan_check_memaccess_shortgranules :
   Intrinsic<[], [llvm_ptr_ty, llvm_ptr_ty, llvm_i32_ty],
-            [IntrInaccessibleMemOnly, ImmArg<ArgIndex<2>>]>;
+            [ImmArg<ArgIndex<2>>]>;
 
 // Xray intrinsics
 //===----------------------------------------------------------------------===//
