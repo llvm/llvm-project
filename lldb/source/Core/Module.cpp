@@ -51,7 +51,6 @@
 #endif
 
 #include "Plugins/Language/CPlusPlus/CPlusPlusLanguage.h"
-#include "Plugins/Language/ObjC/ObjCLanguage.h"
 
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/Support/Compiler.h"
@@ -635,101 +634,81 @@ void Module::FindCompileUnits(const FileSpec &path,
 
 Module::LookupInfo::LookupInfo(ConstString name,
                                FunctionNameType name_type_mask,
-                               LanguageType language)
-    : m_name(name), m_lookup_name(), m_language(language),
+                               LanguageType language_type)
+    : m_name(name), m_lookup_name(name), m_language_type(language_type),
       m_name_type_mask(eFunctionNameTypeNone),
       m_match_name_after_lookup(false) {
-  const char *name_cstr = name.GetCString();
   llvm::StringRef basename;
   llvm::StringRef context;
 
-  if (name_type_mask & eFunctionNameTypeAuto) {
-    if (CPlusPlusLanguage::IsCPPMangledName(name_cstr))
-      m_name_type_mask = eFunctionNameTypeFull;
-    else if ((language == eLanguageTypeUnknown ||
-              Language::LanguageIsObjC(language)) &&
-             ObjCLanguage::IsPossibleObjCMethodName(name_cstr))
-      m_name_type_mask = eFunctionNameTypeFull;
-    else if (Language::LanguageIsC(language)) {
-      m_name_type_mask = eFunctionNameTypeFull;
-    } else {
-      if ((language == eLanguageTypeUnknown ||
-           Language::LanguageIsObjC(language)) &&
-          ObjCLanguage::IsPossibleObjCSelector(name_cstr))
-        m_name_type_mask |= eFunctionNameTypeSelector;
+  std::vector<Language *> languages;
+  Language::ForEach([&languages](Language *l) {
+    languages.push_back(l);
+    return true;
+  });
 
-      CPlusPlusLanguage::MethodName cpp_method(name);
-      basename = cpp_method.GetBasename();
-      if (basename.empty()) {
-        if (CPlusPlusLanguage::ExtractContextAndIdentifier(name_cstr, context,
-                                                           basename))
-          m_name_type_mask |= (eFunctionNameTypeMethod | eFunctionNameTypeBase);
-        else
-          m_name_type_mask |= eFunctionNameTypeFull;
-      } else {
-        m_name_type_mask |= (eFunctionNameTypeMethod | eFunctionNameTypeBase);
+  if (name_type_mask & eFunctionNameTypeAuto) {
+    if (language_type == eLanguageTypeUnknown) {
+      for (Language *lang : languages) {
+        Language::FunctionNameInfo info = lang->GetFunctionNameInfo(name);
+        if (info.func_name_type != eFunctionNameTypeNone) {
+          m_name_type_mask = info.func_name_type;
+          basename = info.basename;
+          context = info.context;
+          break;
+        }
+      }
+    } else {
+      if (auto *lang = Language::FindPlugin(language_type)) {
+        Language::FunctionNameInfo info = lang->GetFunctionNameInfo(name);
+        m_name_type_mask = info.func_name_type;
+        basename = info.basename;
+        context = info.context;
       }
     }
+
+    // NOTE: There are several ways to get here, but this is a fallback path in
+    // case the above does not succeed at extracting any useful information from
+    // the loaded language plugins.
+    if (m_name_type_mask == eFunctionNameTypeNone)
+      m_name_type_mask = eFunctionNameTypeFull;
+
   } else {
     m_name_type_mask = name_type_mask;
-    if (name_type_mask & eFunctionNameTypeMethod ||
-        name_type_mask & eFunctionNameTypeBase) {
-      // If they've asked for a CPP method or function name and it can't be
-      // that, we don't even need to search for CPP methods or names.
-      CPlusPlusLanguage::MethodName cpp_method(name);
-      if (cpp_method.IsValid()) {
-        basename = cpp_method.GetBasename();
-
-        if (!cpp_method.GetQualifiers().empty()) {
-          // There is a "const" or other qualifier following the end of the
-          // function parens, this can't be a eFunctionNameTypeBase
-          m_name_type_mask &= ~(eFunctionNameTypeBase);
-          if (m_name_type_mask == eFunctionNameTypeNone)
-            return;
+    if (language_type != eLanguageTypeUnknown) {
+      if (auto *lang = Language::FindPlugin(language_type)) {
+        Language::FunctionNameInfo info = lang->GetFunctionNameInfo(name);
+        if (info.func_name_type & m_name_type_mask) {
+          // If the user asked for FunctionNameTypes that aren't possible,
+          // then filter those out. (e.g. asking for Selectors on
+          // C++ symbols, or even if the symbol given can't be a selector in
+          // ObjC)
+          m_name_type_mask &= info.func_name_type;
+          basename = info.basename;
+          context = info.context;
         }
-      } else {
-        // If the CPP method parser didn't manage to chop this up, try to fill
-        // in the base name if we can. If a::b::c is passed in, we need to just
-        // look up "c", and then we'll filter the result later.
-        CPlusPlusLanguage::ExtractContextAndIdentifier(name_cstr, context,
-                                                       basename);
       }
-    }
-
-    if (name_type_mask & eFunctionNameTypeSelector) {
-      if (!ObjCLanguage::IsPossibleObjCSelector(name_cstr)) {
-        m_name_type_mask &= ~(eFunctionNameTypeSelector);
-        if (m_name_type_mask == eFunctionNameTypeNone)
-          return;
-      }
-    }
-
-    // Still try and get a basename in case someone specifies a name type mask
-    // of eFunctionNameTypeFull and a name like "A::func"
-    if (basename.empty()) {
-      if (name_type_mask & eFunctionNameTypeFull &&
-          !CPlusPlusLanguage::IsCPPMangledName(name_cstr)) {
-        CPlusPlusLanguage::MethodName cpp_method(name);
-        basename = cpp_method.GetBasename();
-        if (basename.empty())
-          CPlusPlusLanguage::ExtractContextAndIdentifier(name_cstr, context,
-                                                         basename);
+    } else {
+      for (Language *lang : languages) {
+        Language::FunctionNameInfo info = lang->GetFunctionNameInfo(name);
+        if (info.func_name_type & m_name_type_mask) {
+          m_name_type_mask &= info.func_name_type;
+          basename = info.basename;
+          context = info.context;
+          break;
+        }
       }
     }
   }
 
   if (!basename.empty()) {
-    // The name supplied was a partial C++ path like "a::count". In this case
-    // we want to do a lookup on the basename "count" and then make sure any
-    // matching results contain "a::count" so that it would match "b::a::count"
-    // and "a::count". This is why we set "match_name_after_lookup" to true
+    // The name supplied was incomplete for lookup purposes. For example, in C++
+    // we may have gotten something like "a::count". In this case, we want to do
+    // a lookup on the basename "count" and then make sure any matching results
+    // contain "a::count" so that it would match "b::a::count" and "a::count".
+    // This is why we set match_name_after_lookup to true.
     m_lookup_name.SetString(basename);
     m_match_name_after_lookup = true;
-  } else {
-    // The name is already correct, just use the exact name as supplied, and we
-    // won't need to check if any matches contain "name"
-    m_lookup_name = name;
-    m_match_name_after_lookup = false;
   }
 }
 
