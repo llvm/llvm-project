@@ -210,7 +210,7 @@ static Value reduceIfNeeded(OpBuilder &b, VectorType targetVectorType,
   unsigned idx = 0;
   SmallVector<bool> reductionMask(linalgOp.iterator_types().size(), false);
   for (auto attr : linalgOp.iterator_types()) {
-    if (isReductionIteratorType(attr))
+    if (isReductionIterator(attr))
       reductionMask[idx] = true;
     ++idx;
   }
@@ -615,7 +615,7 @@ static bool allIndexingsAreProjectedPermutation(LinalgOp op) {
 // TODO: probably need some extra checks for reduction followed by consumer
 // ops that may not commute (e.g. linear reduction + non-linear instructions).
 static LogicalResult reductionPreconditions(LinalgOp op) {
-  if (llvm::none_of(op.iterator_types(), isReductionIteratorType))
+  if (llvm::none_of(op.iterator_types(), isReductionIterator))
     return failure();
   for (OpOperand *opOperand : op.getOutputOperands()) {
     Operation *reductionOp = getSingleBinaryOpAssumedReduction(opOperand);

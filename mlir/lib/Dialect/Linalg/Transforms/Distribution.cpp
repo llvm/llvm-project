@@ -53,7 +53,7 @@ struct DistributeTiledLoopPattern
       if (procInfoCallback == options.procInfoMap.end())
         continue;
 
-      if (!isParallelIteratorType(op.iterator_types()[i])) {
+      if (!isParallelIterator(op.iterator_types()[i])) {
         op.emitOpError("only support for parallel loops is implemented");
         return failure();
       }
