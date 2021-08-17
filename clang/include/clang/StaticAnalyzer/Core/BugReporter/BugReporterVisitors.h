@@ -21,6 +21,7 @@
 #include "llvm/ADT/FoldingSet.h"
 #include "llvm/ADT/IntrusiveRefCntPtr.h"
 #include "llvm/ADT/STLExtras.h"
+#include "llvm/ADT/SmallPtrSet.h"
 #include "llvm/ADT/StringRef.h"
 #include <list>
 #include <memory>
@@ -620,6 +621,84 @@ public:
   PathDiagnosticPieceRef VisitNode(const ExplodedNode *N,
                                    BugReporterContext &BRC,
                                    PathSensitiveBugReport &R) override;
+};
+
+class ObjCMethodCall;
+class CXXConstructorCall;
+
+/// Put a diagnostic on return statement (or on } in its absence) of all inlined
+/// functions for which some property remained unchanged.
+/// Resulting diagnostics may read such as "Returning without writing to X".
+///
+/// Descendants can define what a "state change is", like a change of value
+/// to a memory region, liveness, etc. For function calls where the state did
+/// not change as defined, a custom note may be constructed.
+class NoStateChangeFuncVisitor : public BugReporterVisitor {
+private:
+  /// Frames modifying the state as defined in \c wasModifiedBeforeCallExit.
+  /// This visitor generates a note only if a function does *not* change the
+  /// state that way. This information is not immediately available
+  /// by looking at the node associated with the exit from the function
+  /// (usually the return statement). To avoid recomputing the same information
+  /// many times (going up the path for each node and checking whether the
+  /// region was written into) we instead lazily compute the stack frames
+  /// along the path.
+  llvm::SmallPtrSet<const StackFrameContext *, 32> FramesModifying;
+  llvm::SmallPtrSet<const StackFrameContext *, 32> FramesModifyingCalculated;
+
+  /// Check and lazily calculate whether the state is modified in the stack
+  /// frame to which \p CallExitBeginN belongs.
+  /// The calculation is cached in FramesModifying.
+  bool isModifiedInFrame(const ExplodedNode *CallExitBeginN);
+
+  /// Write to \c FramesModifying all stack frames along the path in the current
+  /// stack frame which modifies the state.
+  void findModifyingFrames(const ExplodedNode *const CallExitBeginN);
+
+protected:
+  bugreporter::TrackingKind TKind;
+
+  /// \return Whether the state was modified from the current node, \CurrN, to
+  /// the end of the stack fram, at \p CallExitBeginN.
+  virtual bool
+  wasModifiedBeforeCallExit(const ExplodedNode *CurrN,
+                            const ExplodedNode *CallExitBeginN) = 0;
+
+  /// Consume the information on the non-modifying stack frame in order to
+  /// either emit a note or not. May suppress the report entirely.
+  /// \return Diagnostics piece for the unmodified state in the current
+  /// function, if it decides to emit one. A good description might start with
+  /// "Returning without...".
+  virtual PathDiagnosticPieceRef
+  maybeEmitNoteForObjCSelf(PathSensitiveBugReport &R,
+                           const ObjCMethodCall &Call,
+                           const ExplodedNode *N) = 0;
+
+  /// Consume the information on the non-modifying stack frame in order to
+  /// either emit a note or not. May suppress the report entirely.
+  /// \return Diagnostics piece for the unmodified state in the current
+  /// function, if it decides to emit one. A good description might start with
+  /// "Returning without...".
+  virtual PathDiagnosticPieceRef
+  maybeEmitNoteForCXXThis(PathSensitiveBugReport &R,
+                          const CXXConstructorCall &Call,
+                          const ExplodedNode *N) = 0;
+
+  /// Consume the information on the non-modifying stack frame in order to
+  /// either emit a note or not. May suppress the report entirely.
+  /// \return Diagnostics piece for the unmodified state in the current
+  /// function, if it decides to emit one. A good description might start with
+  /// "Returning without...".
+  virtual PathDiagnosticPieceRef
+  maybeEmitNoteForParameters(PathSensitiveBugReport &R, const CallEvent &Call,
+                             const ExplodedNode *N) = 0;
+
+public:
+  NoStateChangeFuncVisitor(bugreporter::TrackingKind TKind) : TKind(TKind) {}
+
+  PathDiagnosticPieceRef VisitNode(const ExplodedNode *N,
+                                   BugReporterContext &BR,
+                                   PathSensitiveBugReport &R) override final;
 };
 
 } // namespace ento

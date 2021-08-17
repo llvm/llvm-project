@@ -2,7 +2,7 @@
 
 ; RUN: opt -cost-model -analyze -mtriple=aarch64--linux-gnu -mattr=+sve  < %s | FileCheck %s
 
-define void @masked_scatters(<vscale x 4 x i1> %nxv4i1mask, <vscale x 8 x i1> %nxv8i1mask, <4 x i1> %v4i1mask, <1 x i1> %v1i1mask, <vscale x 1 x i1> %nxv1i1mask) {
+define void @masked_scatters(<vscale x 4 x i1> %nxv4i1mask, <vscale x 8 x i1> %nxv8i1mask, <4 x i1> %v4i1mask, <1 x i1> %v1i1mask, <vscale x 1 x i1> %nxv1i1mask) vscale_range(0, 16) {
 ; CHECK-LABEL: 'masked_scatters'
 ; CHECK-NEXT: Cost Model: Found an estimated cost of 64 for instruction: call void @llvm.masked.scatter.nxv4i32.nxv4p0i32
 ; CHECK-NEXT: Cost Model: Found an estimated cost of 128 for instruction: call void @llvm.masked.scatter.nxv8i32.nxv8p0i32

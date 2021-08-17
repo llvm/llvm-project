@@ -1,4 +1,3 @@
-; RUN: opt -tbaa -basic-aa -licm -enable-mssa-loop-dependency=false -enable-new-pm=0 -S < %s | FileCheck %s --check-prefixes=CHECK,AST
 ; RUN: opt -tbaa -basic-aa -licm -enable-new-pm=0 -S < %s | FileCheck %s --check-prefixes=CHECK,MSSA
 ; RUN: opt -aa-pipeline=tbaa,basic-aa -passes='require<aa>,require<targetir>,require<scalar-evolution>,require<opt-remark-emit>,loop(licm)' -S %s | FileCheck %s  --check-prefixes=CHECK,AST
 ; RUN: opt -aa-pipeline=tbaa,basic-aa -passes='require<aa>,require<targetir>,require<scalar-evolution>,require<opt-remark-emit>,loop-mssa(licm)' -S %s | FileCheck %s --check-prefixes=CHECK,MSSA

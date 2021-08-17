@@ -19865,6 +19865,44 @@ static SDValue combineConcatVectorOfScalars(SDNode *N, SelectionDAG &DAG) {
   return DAG.getBitcast(VT, DAG.getBuildVector(VecVT, DL, Ops));
 }
 
+// Attempt to merge nested concat_vectors/undefs.
+// Fold concat_vectors(concat_vectors(x,y,z,w),u,u,concat_vectors(a,b,c,d))
+//  --> concat_vectors(x,y,z,w,u,u,u,u,u,u,u,u,a,b,c,d)
+static SDValue combineConcatVectorOfConcatVectors(SDNode *N,
+                                                  SelectionDAG &DAG) {
+  EVT VT = N->getValueType(0);
+
+  // Ensure we're concatenating UNDEF and CONCAT_VECTORS nodes of similar types.
+  EVT SubVT;
+  SDValue FirstConcat;
+  for (const SDValue &Op : N->ops()) {
+    if (Op.isUndef())
+      continue;
+    if (Op.getOpcode() != ISD::CONCAT_VECTORS)
+      return SDValue();
+    if (!FirstConcat) {
+      SubVT = Op.getOperand(0).getValueType();
+      if (!DAG.getTargetLoweringInfo().isTypeLegal(SubVT))
+        return SDValue();
+      FirstConcat = Op;
+      continue;
+    }
+    if (SubVT != Op.getOperand(0).getValueType())
+      return SDValue();
+  }
+  assert(FirstConcat && "Concat of all-undefs found");
+
+  SmallVector<SDValue> ConcatOps;
+  for (const SDValue &Op : N->ops()) {
+    if (Op.isUndef()) {
+      ConcatOps.append(FirstConcat->getNumOperands(), DAG.getUNDEF(SubVT));
+      continue;
+    }
+    ConcatOps.append(Op->op_begin(), Op->op_end());
+  }
+  return DAG.getNode(ISD::CONCAT_VECTORS, SDLoc(N), VT, ConcatOps);
+}
+
 // Check to see if this is a CONCAT_VECTORS of a bunch of EXTRACT_SUBVECTOR
 // operations. If so, and if the EXTRACT_SUBVECTOR vector inputs come from at
 // most two distinct vectors the same size as the result, attempt to turn this
@@ -20124,13 +20162,19 @@ SDValue DAGCombiner::visitCONCAT_VECTORS(SDNode *N) {
   }
 
   // Fold CONCAT_VECTORS of only bitcast scalars (or undef) to BUILD_VECTOR.
+  // FIXME: Add support for concat_vectors(bitcast(vec0),bitcast(vec1),...).
   if (SDValue V = combineConcatVectorOfScalars(N, DAG))
     return V;
 
-  // Fold CONCAT_VECTORS of EXTRACT_SUBVECTOR (or undef) to VECTOR_SHUFFLE.
-  if (Level < AfterLegalizeVectorOps && TLI.isTypeLegal(VT))
+  if (Level < AfterLegalizeVectorOps && TLI.isTypeLegal(VT)) {
+    // Fold CONCAT_VECTORS of CONCAT_VECTORS (or undef) to VECTOR_SHUFFLE.
+    if (SDValue V = combineConcatVectorOfConcatVectors(N, DAG))
+      return V;
+
+    // Fold CONCAT_VECTORS of EXTRACT_SUBVECTOR (or undef) to VECTOR_SHUFFLE.
     if (SDValue V = combineConcatVectorOfExtracts(N, DAG))
       return V;
+  }
 
   if (SDValue V = combineConcatVectorOfCasts(N, DAG))
     return V;

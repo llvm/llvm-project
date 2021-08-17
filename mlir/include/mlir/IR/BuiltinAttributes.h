@@ -560,6 +560,11 @@ public:
   /// same total number of elements as well as element type.
   DenseElementsAttr reshape(ShapedType newType);
 
+  /// Return a new DenseElementsAttr that has the same data as the current
+  /// attribute, but has bitcast elements to 'newElType'. The new type must have
+  /// the same bitwidth as the current element type.
+  DenseElementsAttr bitcast(Type newElType);
+
   /// Generates a new DenseElementsAttr by mapping each int value to a new
   /// underlying APInt. The new values can represent either an integer or float.
   /// This underlying type must be an DenseIntElementsAttr.

@@ -1030,3 +1030,121 @@ define i8 @umin_demand_and_7_8(i8 %x) {
   %r = and i8 %m, -8
   ret i8 %r
 }
+
+define i8 @neg_neg_nsw_smax(i8 %x, i8 %y) {
+; CHECK-LABEL: @neg_neg_nsw_smax(
+; CHECK-NEXT:    [[TMP1:%.*]] = call i8 @llvm.smin.i8(i8 [[X:%.*]], i8 [[Y:%.*]])
+; CHECK-NEXT:    [[M:%.*]] = sub nsw i8 0, [[TMP1]]
+; CHECK-NEXT:    ret i8 [[M]]
+;
+  %nx = sub nsw i8 0, %x
+  %ny = sub nsw i8 0, %y
+  %m = call i8 @llvm.smax.i8(i8 %nx, i8 %ny)
+  ret i8 %m
+}
+
+define <3 x i8> @neg_neg_nsw_smin(<3 x i8> %x, <3 x i8> %y) {
+; CHECK-LABEL: @neg_neg_nsw_smin(
+; CHECK-NEXT:    [[TMP1:%.*]] = call <3 x i8> @llvm.smax.v3i8(<3 x i8> [[X:%.*]], <3 x i8> [[Y:%.*]])
+; CHECK-NEXT:    [[M:%.*]] = sub nsw <3 x i8> zeroinitializer, [[TMP1]]
+; CHECK-NEXT:    ret <3 x i8> [[M]]
+;
+  %nx = sub nsw <3 x i8> zeroinitializer, %x
+  %ny = sub nsw <3 x i8> zeroinitializer, %y
+  %m = call <3 x i8> @llvm.smin.v3i8(<3 x i8> %nx, <3 x i8> %ny)
+  ret <3 x i8> %m
+}
+
+define i8 @neg_neg_nsw_smax_use0(i8 %x, i8 %y) {
+; CHECK-LABEL: @neg_neg_nsw_smax_use0(
+; CHECK-NEXT:    [[NX:%.*]] = sub nsw i8 0, [[X:%.*]]
+; CHECK-NEXT:    call void @use(i8 [[NX]])
+; CHECK-NEXT:    [[TMP1:%.*]] = call i8 @llvm.smin.i8(i8 [[X]], i8 [[Y:%.*]])
+; CHECK-NEXT:    [[M:%.*]] = sub nsw i8 0, [[TMP1]]
+; CHECK-NEXT:    ret i8 [[M]]
+;
+  %nx = sub nsw i8 0, %x
+  call void @use(i8 %nx)
+  %ny = sub nsw i8 0, %y
+  %m = call i8 @llvm.smax.i8(i8 %nx, i8 %ny)
+  ret i8 %m
+}
+
+define i8 @neg_neg_nsw_smin_use1(i8 %x, i8 %y) {
+; CHECK-LABEL: @neg_neg_nsw_smin_use1(
+; CHECK-NEXT:    [[NY:%.*]] = sub nsw i8 0, [[Y:%.*]]
+; CHECK-NEXT:    call void @use(i8 [[NY]])
+; CHECK-NEXT:    [[TMP1:%.*]] = call i8 @llvm.smax.i8(i8 [[X:%.*]], i8 [[Y]])
+; CHECK-NEXT:    [[M:%.*]] = sub nsw i8 0, [[TMP1]]
+; CHECK-NEXT:    ret i8 [[M]]
+;
+  %nx = sub nsw i8 0, %x
+  %ny = sub nsw i8 0, %y
+  call void @use(i8 %ny)
+  %m = call i8 @llvm.smin.i8(i8 %nx, i8 %ny)
+  ret i8 %m
+}
+
+; negative test - too many uses
+
+define i8 @neg_neg_nsw_smin_use2(i8 %x, i8 %y) {
+; CHECK-LABEL: @neg_neg_nsw_smin_use2(
+; CHECK-NEXT:    [[NX:%.*]] = sub nsw i8 0, [[X:%.*]]
+; CHECK-NEXT:    call void @use(i8 [[NX]])
+; CHECK-NEXT:    [[NY:%.*]] = sub nsw i8 0, [[Y:%.*]]
+; CHECK-NEXT:    call void @use(i8 [[NY]])
+; CHECK-NEXT:    [[M:%.*]] = call i8 @llvm.smin.i8(i8 [[NX]], i8 [[NY]])
+; CHECK-NEXT:    ret i8 [[M]]
+;
+  %nx = sub nsw i8 0, %x
+  call void @use(i8 %nx)
+  %ny = sub nsw i8 0, %y
+  call void @use(i8 %ny)
+  %m = call i8 @llvm.smin.i8(i8 %nx, i8 %ny)
+  ret i8 %m
+}
+
+; negative test - need nsw on both ops
+
+define i8 @neg_neg_smax(i8 %x, i8 %y) {
+; CHECK-LABEL: @neg_neg_smax(
+; CHECK-NEXT:    [[NX:%.*]] = sub i8 0, [[X:%.*]]
+; CHECK-NEXT:    [[NY:%.*]] = sub nsw i8 0, [[Y:%.*]]
+; CHECK-NEXT:    [[M:%.*]] = call i8 @llvm.smax.i8(i8 [[NX]], i8 [[NY]])
+; CHECK-NEXT:    ret i8 [[M]]
+;
+  %nx = sub i8 0, %x
+  %ny = sub nsw i8 0, %y
+  %m = call i8 @llvm.smax.i8(i8 %nx, i8 %ny)
+  ret i8 %m
+}
+
+; negative test - need nsw on both ops
+
+define i8 @neg_neg_smin(i8 %x, i8 %y) {
+; CHECK-LABEL: @neg_neg_smin(
+; CHECK-NEXT:    [[NX:%.*]] = sub i8 0, [[X:%.*]]
+; CHECK-NEXT:    [[NY:%.*]] = sub nsw i8 0, [[Y:%.*]]
+; CHECK-NEXT:    [[M:%.*]] = call i8 @llvm.smin.i8(i8 [[NX]], i8 [[NY]])
+; CHECK-NEXT:    ret i8 [[M]]
+;
+  %nx = sub i8 0, %x
+  %ny = sub nsw i8 0, %y
+  %m = call i8 @llvm.smin.i8(i8 %nx, i8 %ny)
+  ret i8 %m
+}
+
+; negative test - need signed min/max
+
+define i8 @neg_neg_nsw_umin(i8 %x, i8 %y) {
+; CHECK-LABEL: @neg_neg_nsw_umin(
+; CHECK-NEXT:    [[NX:%.*]] = sub nsw i8 0, [[X:%.*]]
+; CHECK-NEXT:    [[NY:%.*]] = sub nsw i8 0, [[Y:%.*]]
+; CHECK-NEXT:    [[M:%.*]] = call i8 @llvm.umin.i8(i8 [[NX]], i8 [[NY]])
+; CHECK-NEXT:    ret i8 [[M]]
+;
+  %nx = sub nsw i8 0, %x
+  %ny = sub nsw i8 0, %y
+  %m = call i8 @llvm.umin.i8(i8 %nx, i8 %ny)
+  ret i8 %m
+}

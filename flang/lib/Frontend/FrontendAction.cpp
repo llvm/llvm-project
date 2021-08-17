@@ -89,7 +89,7 @@ bool FrontendAction::BeginSourceFile(
     invoc.fortranOpts().isFixedForm = currentInput().IsFixedForm();
   }
 
-  if (!BeginSourceFileAction(ci)) {
+  if (!BeginSourceFileAction()) {
     BeginSourceFileCleanUp(*this, ci);
     return false;
   }
@@ -116,4 +116,97 @@ void FrontendAction::EndSourceFile() {
 
   set_instance(nullptr);
   set_currentInput(FrontendInputFile());
+}
+
+bool FrontendAction::RunPrescan() {
+  CompilerInstance &ci = this->instance();
+  std::string currentInputPath{GetCurrentFileOrBufferName()};
+  Fortran::parser::Options parserOptions = ci.invocation().fortranOpts();
+
+  if (ci.invocation().frontendOpts().fortranForm == FortranForm::Unknown) {
+    // Switch between fixed and free form format based on the input file
+    // extension.
+    //
+    // Ideally we should have all Fortran options set before entering this
+    // method (i.e. before processing any specific input files). However, we
+    // can't decide between fixed and free form based on the file extension
+    // earlier than this.
+    parserOptions.isFixedForm = currentInput().IsFixedForm();
+  }
+
+  // Prescan. In case of failure, report and return.
+  ci.parsing().Prescan(currentInputPath, parserOptions);
+
+  return !reportFatalScanningErrors();
+}
+
+bool FrontendAction::RunParse() {
+  CompilerInstance &ci = this->instance();
+
+  // Parse. In case of failure, report and return.
+  ci.parsing().Parse(llvm::outs());
+
+  if (reportFatalParsingErrors()) {
+    return false;
+  }
+
+  // Report the diagnostics from parsing
+  ci.parsing().messages().Emit(llvm::errs(), ci.allCookedSources());
+
+  return true;
+}
+
+bool FrontendAction::RunSemanticChecks() {
+  CompilerInstance &ci = this->instance();
+  std::optional<parser::Program> &parseTree{ci.parsing().parseTree()};
+  assert(parseTree && "Cannot run semantic checks without a parse tree!");
+
+  // Prepare semantics
+  ci.setSemantics(std::make_unique<Fortran::semantics::Semantics>(
+      ci.invocation().semanticsContext(), *parseTree,
+      ci.invocation().debugModuleDir()));
+  auto &semantics = ci.semantics();
+
+  // Run semantic checks
+  semantics.Perform();
+
+  if (reportFatalSemanticErrors()) {
+    return false;
+  }
+
+  // Report the diagnostics from the semantic checks
+  semantics.EmitMessages(ci.semaOutputStream());
+
+  return true;
+}
+
+template <unsigned N>
+bool FrontendAction::reportFatalErrors(const char (&message)[N]) {
+  if (!instance_->parsing().messages().empty() &&
+      (instance_->invocation().warnAsErr() ||
+          instance_->parsing().messages().AnyFatalError())) {
+    const unsigned diagID = instance_->diagnostics().getCustomDiagID(
+        clang::DiagnosticsEngine::Error, message);
+    instance_->diagnostics().Report(diagID) << GetCurrentFileOrBufferName();
+    instance_->parsing().messages().Emit(
+        llvm::errs(), instance_->allCookedSources());
+    return true;
+  }
+  return false;
+}
+
+bool FrontendAction::reportFatalSemanticErrors() {
+  auto &diags = instance_->diagnostics();
+  auto &sema = instance_->semantics();
+
+  if (instance_->semantics().AnyFatalError()) {
+    unsigned DiagID = diags.getCustomDiagID(
+        clang::DiagnosticsEngine::Error, "Semantic errors in %0");
+    diags.Report(DiagID) << GetCurrentFileOrBufferName();
+    sema.EmitMessages(instance_->semaOutputStream());
+
+    return true;
+  }
+
+  return false;
 }

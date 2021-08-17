@@ -1,6 +1,7 @@
 add_lldb_unittest(SymbolTests
   LocateSymbolFileTest.cpp
   PostfixExpressionTest.cpp
+  TestTypeSystem.cpp
   TestTypeSystemClang.cpp
   TestClangASTImporter.cpp
   TestDWARFCallFrameInfo.cpp

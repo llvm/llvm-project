@@ -485,7 +485,7 @@ void *MapAllocator<Config>::allocate(Options Options, uptr Size, uptr Alignment,
                                      FillContentsMode FillContents) {
   if (Options.get(OptionBit::AddLargeAllocationSlack))
     Size += 1UL << SCUDO_MIN_ALIGNMENT_LOG;
-  Alignment = Max(Alignment, 1UL << SCUDO_MIN_ALIGNMENT_LOG);
+  Alignment = Max(Alignment, uptr(1U) << SCUDO_MIN_ALIGNMENT_LOG);
   const uptr PageSize = getPageSizeCached();
   uptr RoundedSize =
       roundUpTo(roundUpTo(Size, Alignment) + LargeBlock::getHeaderSize() +

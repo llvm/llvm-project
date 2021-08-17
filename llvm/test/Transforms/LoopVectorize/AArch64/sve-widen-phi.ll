@@ -12,7 +12,7 @@
 ; that we can use gather instructions with the correct offsets, taking
 ; vscale into account.
 
-define void @widen_ptr_phi_unrolled(i32* noalias nocapture %a, i32* noalias nocapture %b, i32* nocapture readonly %c, i64 %n) {
+define void @widen_ptr_phi_unrolled(i32* noalias nocapture %a, i32* noalias nocapture %b, i32* nocapture readonly %c, i64 %n) #0 {
 ; CHECK-LABEL: @widen_ptr_phi_unrolled(
 ; CHECK:       vector.body:
 ; CHECK-NEXT:    [[POINTER_PHI:%.*]] = phi i32* [ %c, %vector.ph ], [ %[[PTR_IND:.*]], %vector.body ]
@@ -122,7 +122,7 @@ for.cond.cleanup:                                 ; preds = %for.body
 ; because it is stored to memory.
 ;
 
-define i32 @pointer_iv_mixed(i32* noalias %a, i32** noalias %b, i64 %n) {
+define i32 @pointer_iv_mixed(i32* noalias %a, i32** noalias %b, i64 %n) #0 {
 ; CHECK-LABEL: @pointer_iv_mixed(
 ; CHECK:     vector.body
 ; CHECK:       %[[IDX:.*]] = phi i64 [ 0, %vector.ph ], [ %{{.*}}, %vector.body ]
@@ -170,7 +170,7 @@ for.end:
   ret i32 %tmp5
 }
 
-
+attributes #0 = { vscale_range(0, 16) }
 !0 = distinct !{!0, !1, !2, !3, !4, !5}
 !1 = !{!"llvm.loop.mustprogress"}
 !2 = !{!"llvm.loop.vectorize.width", i32 4}

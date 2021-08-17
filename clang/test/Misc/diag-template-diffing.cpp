@@ -1488,6 +1488,43 @@ void run(A_reg<float> reg, A_ptr<float> ptr, A_ref<float> ref) {
 }
 }
 
+namespace SubstTemplateTypeParmType {
+template <typename T>
+class Array {
+};
+
+template <class T>
+class S{};
+
+template <class T, int num>
+Array<T> Make(T (&parameter)[num]);
+
+void Run(int, Array<S<int>>) {}
+
+Array<const S<int>> Make();
+void Call() {
+  const S<int> s1[5];
+  S<int> s2[5];
+
+  Run(0, Make(s1));   // Error
+  Run(0, Make(s2));   // Okay
+}
+
+// CHECK-ELIDE-NOTREE: no matching function for call to 'Run'
+// CHECK-ELIDE-NOTREE: no known conversion from 'Array<const S<...>>' to 'Array<S<...>>' for 2nd argument
+// CHECK-NOELIDE-NOTREE: no matching function for call to 'Run'
+// CHECK-NOELIDE-NOTREE: no known conversion from 'Array<const S<int>>' to 'Array<S<int>>' for 2nd argument
+// CHECK-ELIDE-TREE: no matching function for call to 'Run'
+// CHECK-ELIDE-TREE: no known conversion from argument type to parameter type for 2nd argument
+// CHECK-ELIDE-TREE:   Array<
+// CHECK-ELIDE-TREE:     [const != (no qualifiers)] S<...>>
+// CHECK-NOELIDE-TREE: no matching function for call to 'Run'
+// CHECK-NOELIDE-TREE: no known conversion from argument type to parameter type for 2nd argument
+// CHECK-NOELIDE-TREE:   Array<
+// CHECK-NOELIDE-TREE:     [const != (no qualifiers)] S<
+// CHECK-NOELIDE-TREE:       int>>
+}
+
 // CHECK-ELIDE-NOTREE: {{[0-9]*}} errors generated.
 // CHECK-NOELIDE-NOTREE: {{[0-9]*}} errors generated.
 // CHECK-ELIDE-TREE: {{[0-9]*}} errors generated.

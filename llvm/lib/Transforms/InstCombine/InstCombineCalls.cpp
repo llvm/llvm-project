@@ -796,13 +796,12 @@ static Instruction *foldClampRangeOfTwo(IntrinsicInst *II,
 }
 
 /// Reduce a sequence of min/max intrinsics with a common operand.
-static Instruction *factorizeMinMaxTree(IntrinsicInst *II,
-                                        InstCombiner::BuilderTy &Builder) {
+static Instruction *factorizeMinMaxTree(IntrinsicInst *II) {
   // Match 3 of the same min/max ops. Example: umin(umin(), umin()).
   auto *LHS = dyn_cast<IntrinsicInst>(II->getArgOperand(0));
   auto *RHS = dyn_cast<IntrinsicInst>(II->getArgOperand(1));
   Intrinsic::ID MinMaxID = II->getIntrinsicID();
-  if (!LHS || !RHS || LHS->getIntrinsicID() !=  MinMaxID ||
+  if (!LHS || !RHS || LHS->getIntrinsicID() != MinMaxID ||
       RHS->getIntrinsicID() != MinMaxID ||
       (!LHS->hasOneUse() && !RHS->hasOneUse()))
     return nullptr;
@@ -1065,6 +1064,17 @@ Instruction *InstCombinerImpl::visitCallInst(CallInst &CI) {
       }
     }
 
+    if (IID == Intrinsic::smax || IID == Intrinsic::smin) {
+      // smax (neg nsw X), (neg nsw Y) --> neg nsw (smin X, Y)
+      // smin (neg nsw X), (neg nsw Y) --> neg nsw (smax X, Y)
+      if (match(I0, m_NSWNeg(m_Value(X))) && match(I1, m_NSWNeg(m_Value(Y))) &&
+          (I0->hasOneUse() || I1->hasOneUse())) {
+        Intrinsic::ID InvID = getInverseMinMaxIntrinsic(IID);
+        Value *InvMaxMin = Builder.CreateBinaryIntrinsic(InvID, X, Y);
+        return BinaryOperator::CreateNSWNeg(InvMaxMin);
+      }
+    }
+
     if (match(I0, m_Not(m_Value(X)))) {
       // max (not X), (not Y) --> not (min X, Y)
       Intrinsic::ID InvID = getInverseMinMaxIntrinsic(IID);
@@ -1117,7 +1127,7 @@ Instruction *InstCombinerImpl::visitCallInst(CallInst &CI) {
         if (Instruction *R = FoldOpIntoSelect(*II, Sel))
           return R;
 
-    if (Instruction *NewMinMax = factorizeMinMaxTree(II, Builder))
+    if (Instruction *NewMinMax = factorizeMinMaxTree(II))
        return NewMinMax;
 
     break;

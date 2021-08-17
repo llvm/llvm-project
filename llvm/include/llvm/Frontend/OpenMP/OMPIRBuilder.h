@@ -835,7 +835,7 @@ public:
   /// \param BodyGenCB Callback that will generate the region code.
   /// \param FiniCB Callback to finialize variable copies.
   ///
-  /// \returns The insertion position *after* the master.
+  /// \returns The insertion position *after* the masked.
   InsertPointTy createMasked(const LocationDescription &Loc,
                              BodyGenCallbackTy BodyGenCB,
                              FinalizeCallbackTy FiniCB, Value *Filter);
@@ -848,7 +848,7 @@ public:
   /// \param CriticalName name of the lock used by the critical directive
   /// \param HintInst Hint Instruction for hint clause associated with critical
   ///
-  /// \returns The insertion position *after* the master.
+  /// \returns The insertion position *after* the critical.
   InsertPointTy createCritical(const LocationDescription &Loc,
                                BodyGenCallbackTy BodyGenCB,
                                FinalizeCallbackTy FiniCB,

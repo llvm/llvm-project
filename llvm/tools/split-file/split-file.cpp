@@ -35,8 +35,12 @@ static cl::opt<std::string> input(cl::Positional, cl::desc("filename"),
 static cl::opt<std::string> output(cl::Positional, cl::desc("directory"),
                                    cl::value_desc("directory"), cl::cat(cat));
 
+static cl::opt<bool> leadingLines("leading-lines",
+                                    cl::desc("Preserve line numbers"),
+                                    cl::cat(cat));
+
 static cl::opt<bool> noLeadingLines("no-leading-lines",
-                                    cl::desc("Don't preserve line numbers"),
+                                    cl::desc("Don't preserve line numbers (default)"),
                                     cl::cat(cat));
 
 static StringRef toolName;
@@ -96,9 +100,9 @@ static int handle(MemoryBuffer &inputBuf, StringRef input) {
     Part &cur = res.first->second;
     if (!i.is_at_eof())
       cur.begin = i->data();
-    // If --no-leading-lines is not specified, numEmptyLines is 0. Append
-    // newlines so that the extracted part preserves line numbers.
-    cur.leadingLines = noLeadingLines ? 0 : i.line_number() - 1;
+    // If --leading-lines is specified, numEmptyLines is 0. Append newlines so
+    // that the extracted part preserves line numbers.
+    cur.leadingLines = leadingLines ? i.line_number() - 1 : 0;
 
     lastPart = partName;
   }
