@@ -18,6 +18,7 @@
 #include "mlir-c/IR.h"
 #include "mlir-c/IntegerSet.h"
 #include "llvm/ADT/DenseMap.h"
+#include "llvm/ADT/Optional.h"
 
 namespace mlir {
 namespace python {
@@ -452,7 +453,7 @@ public:
 
   /// Gets the parent operation or raises an exception if the operation has
   /// no parent.
-  PyOperationRef getParentOperation();
+  llvm::Optional<PyOperationRef> getParentOperation();
 
   /// Gets a capsule wrapping the void* within the MlirOperation.
   pybind11::object getCapsule();

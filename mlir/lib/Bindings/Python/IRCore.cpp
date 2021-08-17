@@ -868,22 +868,23 @@ py::object PyOperationBase::getAsm(bool binary,
   return fileObject.attr("getvalue")();
 }
 
-PyOperationRef PyOperation::getParentOperation() {
+llvm::Optional<PyOperationRef> PyOperation::getParentOperation() {
   checkValid();
   if (!isAttached())
     throw SetPyError(PyExc_ValueError, "Detached operations have no parent");
   MlirOperation operation = mlirOperationGetParentOperation(get());
   if (mlirOperationIsNull(operation))
-    throw SetPyError(PyExc_ValueError, "Operation has no parent.");
+    return {};
   return PyOperation::forOperation(getContext(), operation);
 }
 
 PyBlock PyOperation::getBlock() {
   checkValid();
-  PyOperationRef parentOperation = getParentOperation();
+  llvm::Optional<PyOperationRef> parentOperation = getParentOperation();
   MlirBlock block = mlirOperationGetBlock(get());
   assert(!mlirBlockIsNull(block) && "Attached operation has null parent");
-  return PyBlock{std::move(parentOperation), block};
+  assert(parentOperation && "Operation has no parent");
+  return PyBlock{std::move(*parentOperation), block};
 }
 
 py::object PyOperation::getCapsule() {
@@ -2121,8 +2122,11 @@ void mlir::python::populateIRCore(py::module &m) {
                   py::arg("loc") = py::none(), py::arg("ip") = py::none(),
                   kOperationCreateDocstring)
       .def_property_readonly("parent",
-                             [](PyOperation &self) {
-                               return self.getParentOperation().getObject();
+                             [](PyOperation &self) -> py::object {
+                               auto parent = self.getParentOperation();
+                               if (parent)
+                                 return parent->getObject();
+                               return py::none();
                              })
       .def("erase", &PyOperation::erase)
       .def_property_readonly(MLIR_PYTHON_CAPI_PTR_ATTR,
