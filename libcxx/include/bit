@@ -222,7 +222,7 @@ bool __has_single_bit(_Tp __t) _NOEXCEPT
 
 template<class _Tp>
 _LIBCPP_INLINE_VISIBILITY constexpr
-_EnableIf<__libcpp_is_unsigned_integer<_Tp>::value, _Tp>
+enable_if_t<__libcpp_is_unsigned_integer<_Tp>::value, _Tp>
 rotl(_Tp __t, unsigned int __cnt) noexcept
 {
     return __rotl(__t, __cnt);
@@ -230,7 +230,7 @@ rotl(_Tp __t, unsigned int __cnt) noexcept
 
 template<class _Tp>
 _LIBCPP_INLINE_VISIBILITY constexpr
-_EnableIf<__libcpp_is_unsigned_integer<_Tp>::value, _Tp>
+enable_if_t<__libcpp_is_unsigned_integer<_Tp>::value, _Tp>
 rotr(_Tp __t, unsigned int __cnt) noexcept
 {
     return __rotr(__t, __cnt);
@@ -238,7 +238,7 @@ rotr(_Tp __t, unsigned int __cnt) noexcept
 
 template<class _Tp>
 _LIBCPP_INLINE_VISIBILITY constexpr
-_EnableIf<__libcpp_is_unsigned_integer<_Tp>::value, int>
+enable_if_t<__libcpp_is_unsigned_integer<_Tp>::value, int>
 countl_zero(_Tp __t) noexcept
 {
     return __countl_zero(__t);
@@ -246,7 +246,7 @@ countl_zero(_Tp __t) noexcept
 
 template<class _Tp>
 _LIBCPP_INLINE_VISIBILITY constexpr
-_EnableIf<__libcpp_is_unsigned_integer<_Tp>::value, int>
+enable_if_t<__libcpp_is_unsigned_integer<_Tp>::value, int>
 countl_one(_Tp __t) noexcept
 {
     return __countl_one(__t);
@@ -254,7 +254,7 @@ countl_one(_Tp __t) noexcept
 
 template<class _Tp>
 _LIBCPP_INLINE_VISIBILITY constexpr
-_EnableIf<__libcpp_is_unsigned_integer<_Tp>::value, int>
+enable_if_t<__libcpp_is_unsigned_integer<_Tp>::value, int>
 countr_zero(_Tp __t) noexcept
 {
     return __countr_zero(__t);
@@ -262,7 +262,7 @@ countr_zero(_Tp __t) noexcept
 
 template<class _Tp>
 _LIBCPP_INLINE_VISIBILITY constexpr
-_EnableIf<__libcpp_is_unsigned_integer<_Tp>::value, int>
+enable_if_t<__libcpp_is_unsigned_integer<_Tp>::value, int>
 countr_one(_Tp __t) noexcept
 {
     return __countr_one(__t);
@@ -270,7 +270,7 @@ countr_one(_Tp __t) noexcept
 
 template<class _Tp>
 _LIBCPP_INLINE_VISIBILITY constexpr
-_EnableIf<__libcpp_is_unsigned_integer<_Tp>::value, int>
+enable_if_t<__libcpp_is_unsigned_integer<_Tp>::value, int>
 popcount(_Tp __t) noexcept
 {
     return __popcount(__t);
@@ -278,7 +278,7 @@ popcount(_Tp __t) noexcept
 
 template <class _Tp>
 _LIBCPP_INLINE_VISIBILITY constexpr
-_EnableIf<__libcpp_is_unsigned_integer<_Tp>::value, bool>
+enable_if_t<__libcpp_is_unsigned_integer<_Tp>::value, bool>
 has_single_bit(_Tp __t) noexcept
 {
     return __has_single_bit(__t);
@@ -286,7 +286,7 @@ has_single_bit(_Tp __t) noexcept
 
 template <class _Tp>
 _LIBCPP_INLINE_VISIBILITY constexpr
-_EnableIf<__libcpp_is_unsigned_integer<_Tp>::value, _Tp>
+enable_if_t<__libcpp_is_unsigned_integer<_Tp>::value, _Tp>
 bit_floor(_Tp __t) noexcept
 {
     return __t == 0 ? 0 : _Tp{1} << __bit_log2(__t);
@@ -294,7 +294,7 @@ bit_floor(_Tp __t) noexcept
 
 template <class _Tp>
 _LIBCPP_INLINE_VISIBILITY constexpr
-_EnableIf<__libcpp_is_unsigned_integer<_Tp>::value, _Tp>
+enable_if_t<__libcpp_is_unsigned_integer<_Tp>::value, _Tp>
 bit_ceil(_Tp __t) noexcept
 {
     if (__t < 2) return 1;
@@ -313,7 +313,7 @@ bit_ceil(_Tp __t) noexcept
 
 template <class _Tp>
 _LIBCPP_INLINE_VISIBILITY constexpr
-_EnableIf<__libcpp_is_unsigned_integer<_Tp>::value, _Tp>
+enable_if_t<__libcpp_is_unsigned_integer<_Tp>::value, _Tp>
 bit_width(_Tp __t) noexcept
 {
     return __t == 0 ? 0 : __bit_log2(__t) + 1;
