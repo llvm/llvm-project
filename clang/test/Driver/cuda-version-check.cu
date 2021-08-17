@@ -8,15 +8,12 @@
 // RUN:    FileCheck %s --check-prefix=OK
 // RUN: %clang --target=x86_64-linux -v -### --cuda-gpu-arch=sm_60 --cuda-path=%S/Inputs/CUDA_80/usr/local/cuda 2>&1 %s | \
 // RUN:    FileCheck %s --check-prefix=OK
-// Test version guess when no version.txt or cuda.h are found
+// Test version guess when cuda.h has not been found
 // RUN: %clang --target=x86_64-linux -v -### --cuda-gpu-arch=sm_60 --cuda-path=%S/Inputs/CUDA-unknown/usr/local/cuda 2>&1 %s | \
 // RUN:    FileCheck %s --check-prefix=UNKNOWN_VERSION
-// Unknown version with version.txt present
-// RUN: %clang --target=x86_64-linux -v -### --cuda-gpu-arch=sm_60 --cuda-path=%S/Inputs/CUDA_102/usr/local/cuda 2>&1 %s | \
-// RUN:    FileCheck %s --check-prefix=UNKNOWN_VERSION_V
-// Unknown version with no version.txt but with version info present in cuda.h
-// RUN: %clang --target=x86_64-linux -v -### --cuda-gpu-arch=sm_60 --cuda-path=%S/Inputs/CUDA_111/usr/local/cuda 2>&1 %s | \
-// RUN:    FileCheck %s --check-prefix=UNKNOWN_VERSION_H
+// Unknown version info present in cuda.h
+// RUN: %clang --target=x86_64-linux -v -### --cuda-gpu-arch=sm_60 --cuda-path=%S/Inputs/CUDA-new/usr/local/cuda 2>&1 %s | \
+// RUN:    FileCheck %s --check-prefix=UNKNOWN_VERSION
 // Make sure that we don't warn about CUDA version during C++ compilation.
 // RUN: %clang --target=x86_64-linux -v -### -x c++ --cuda-gpu-arch=sm_60 \
 // RUN:    --cuda-path=%S/Inputs/CUDA-unknown/usr/local/cuda 2>&1 %s | \
@@ -66,13 +63,14 @@
 // OK_SM35-NOT: error: GPU arch sm_35
 
 // We should only get one error per architecture.
+// ERR_SM20: error: GPU arch sm_20 {{.*}}
+// ERR_SM20-NOT: error: GPU arch sm_20
+
 // ERR_SM60: error: GPU arch sm_60 {{.*}}
 // ERR_SM60-NOT: error: GPU arch sm_60
 
 // ERR_SM61: error: GPU arch sm_61 {{.*}}
 // ERR_SM61-NOT: error: GPU arch sm_61
 
-// UNKNOWN_VERSION_V: unknown CUDA version: version.txt:{{.*}}; assuming the latest supported version
-// UNKNOWN_VERSION_H: unknown CUDA version: cuda.h: CUDA_VERSION={{.*}}; assuming the latest supported version
-// UNKNOWN_VERSION: unknown CUDA version: no version found in version.txt or cuda.h; assuming the latest supported version
+// UNKNOWN_VERSION: CUDA version is newer than the latest{{.*}} supported version
 // UNKNOWN_VERSION_CXX-NOT: unknown CUDA version

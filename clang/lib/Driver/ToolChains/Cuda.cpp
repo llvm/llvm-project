@@ -17,6 +17,7 @@
 #include "clang/Driver/InputInfo.h"
 #include "clang/Driver/Options.h"
 #include "llvm/ADT/Optional.h"
+#include "llvm/ADT/StringExtras.h"
 #include "llvm/Option/ArgList.h"
 #include "llvm/Support/FileSystem.h"
 #include "llvm/Support/Host.h"
@@ -34,25 +35,6 @@ using namespace clang;
 using namespace llvm::opt;
 
 namespace {
-struct CudaVersionInfo {
-  std::string DetectedVersion;
-  CudaVersion Version;
-};
-// Parses the contents of version.txt in an CUDA installation.  It should
-// contain one line of the from e.g. "CUDA Version 7.5.2".
-CudaVersionInfo parseCudaVersionFile(llvm::StringRef V) {
-  V = V.trim();
-  if (!V.startswith("CUDA Version "))
-    return {V.str(), CudaVersion::UNKNOWN};
-  V = V.substr(strlen("CUDA Version "));
-  SmallVector<StringRef,4> VersionParts;
-  V.split(VersionParts, '.');
-  return {"version.txt: " + V.str() + ".",
-          VersionParts.size() < 2
-              ? CudaVersion::UNKNOWN
-              : CudaStringToVersion(
-                    join_items(".", VersionParts[0], VersionParts[1]))};
-}
 
 CudaVersion getCudaVersion(uint32_t raw_version) {
   if (raw_version < 7050)
@@ -83,10 +65,10 @@ CudaVersion getCudaVersion(uint32_t raw_version) {
     return CudaVersion::CUDA_113;
   if (raw_version < 11050)
     return CudaVersion::CUDA_114;
-  return CudaVersion::LATEST;
+  return CudaVersion::NEW;
 }
 
-CudaVersionInfo parseCudaHFile(llvm::StringRef Input) {
+CudaVersion parseCudaHFile(llvm::StringRef Input) {
   // Helper lambda which skips the words if the line starts with them or returns
   // None otherwise.
   auto StartsWithWords =
@@ -106,21 +88,27 @@ CudaVersionInfo parseCudaHFile(llvm::StringRef Input) {
             StartsWithWords(Input.ltrim(), {"#", "define", "CUDA_VERSION"})) {
       uint32_t RawVersion;
       Line->consumeInteger(10, RawVersion);
-      return {"cuda.h: CUDA_VERSION=" + Twine(RawVersion).str() + ".",
-              getCudaVersion(RawVersion)};
+      return getCudaVersion(RawVersion);
     }
     // Find next non-empty line.
     Input = Input.drop_front(Input.find_first_of("\n\r")).ltrim();
   }
-  return {"cuda.h: CUDA_VERSION not found.", CudaVersion::UNKNOWN};
+  return CudaVersion::UNKNOWN;
 }
 } // namespace
 
 void CudaInstallationDetector::WarnIfUnsupportedVersion() {
-  if (DetectedVersionIsNotSupported)
-    D.Diag(diag::warn_drv_unknown_cuda_version)
-        << DetectedVersion
-        << CudaVersionToString(CudaVersion::LATEST_SUPPORTED);
+  if (Version > CudaVersion::PARTIALLY_SUPPORTED) {
+    std::string VersionString = CudaVersionToString(Version);
+    if (!VersionString.empty())
+      VersionString.insert(0, " ");
+    D.Diag(diag::warn_drv_new_cuda_version)
+        << VersionString
+        << (CudaVersion::PARTIALLY_SUPPORTED != CudaVersion::FULLY_SUPPORTED)
+        << CudaVersionToString(CudaVersion::PARTIALLY_SUPPORTED);
+  } else if (Version > CudaVersion::FULLY_SUPPORTED)
+    D.Diag(diag::warn_drv_partially_supported_cuda_version)
+        << CudaVersionToString(Version);
 }
 
 CudaInstallationDetector::CudaInstallationDetector(
@@ -212,29 +200,16 @@ CudaInstallationDetector::CudaInstallationDetector(
     else
       continue;
 
-    CudaVersionInfo VersionInfo = {"", CudaVersion::UNKNOWN};
-    if (auto VersionFile = FS.getBufferForFile(InstallPath + "/version.txt"))
-      VersionInfo = parseCudaVersionFile((*VersionFile)->getBuffer());
-    // If version file didn't give us the version, try to find it in cuda.h
-    if (VersionInfo.Version == CudaVersion::UNKNOWN)
-      if (auto CudaHFile = FS.getBufferForFile(InstallPath + "/include/cuda.h"))
-        VersionInfo = parseCudaHFile((*CudaHFile)->getBuffer());
-    // As the last resort, make an educated guess between CUDA-7.0, (which had
-    // no version.txt file and had old-style libdevice bitcode ) and an unknown
-    // recent CUDA version (no version.txt, new style bitcode).
-    if (VersionInfo.Version == CudaVersion::UNKNOWN) {
-      VersionInfo.Version = (FS.exists(LibDevicePath + "/libdevice.10.bc"))
-                                ? Version = CudaVersion::LATEST
-                                : Version = CudaVersion::CUDA_70;
-      VersionInfo.DetectedVersion = "no version found in version.txt or cuda.h";
+    Version = CudaVersion::UNKNOWN;
+    if (auto CudaHFile = FS.getBufferForFile(InstallPath + "/include/cuda.h"))
+      Version = parseCudaHFile((*CudaHFile)->getBuffer());
+    // As the last resort, make an educated guess between CUDA-7.0, which had
+    // old-style libdevice bitcode, and an unknown recent CUDA version.
+    if (Version == CudaVersion::UNKNOWN) {
+      Version = FS.exists(LibDevicePath + "/libdevice.10.bc")
+                    ? CudaVersion::NEW
+                    : CudaVersion::CUDA_70;
     }
-
-    Version = VersionInfo.Version;
-    DetectedVersion = VersionInfo.DetectedVersion;
-
-    // TODO(tra): remove the warning once we have all features of 10.2
-    // and 11.0 implemented.
-    DetectedVersionIsNotSupported = Version > CudaVersion::LATEST_SUPPORTED;
 
     if (Version >= CudaVersion::CUDA_90) {
       // CUDA-9+ uses single libdevice file for all GPU variants.
