@@ -1495,7 +1495,7 @@ bool ClangASTSource::layoutRecordType(const RecordDecl *record, uint64_t &size,
 
   LLDB_LOG(log,
            "LayoutRecordType on (ASTContext*){0} '{1}' for (RecordDecl*)"
-           "{3} [name = '{4}']",
+           "{2} [name = '{3}']",
            m_ast_context, m_clang_ast_context->getDisplayName(), record,
            record->getName());
 
