@@ -87,17 +87,13 @@ struct Event {
   // Otherwise type denotes the type.
   u64 is_access : 1;
   u64 is_func : 1;
-  u64 type : 3;
+  EventType type : 3;
   u64 _ : 59;
-
-  EventType GetType() const {
-    return static_cast<EventType>(type);
-  }
 };
 static_assert(sizeof(Event) == 8, "bad Event size");
 
 // Nop event used as padding and does not affect state during replay.
-static constexpr Event NopEvent = {1, 0, static_cast<u64>(EventType::kAccessExt), 0};
+static constexpr Event NopEvent = {1, 0, EventType::kAccessExt, 0};
 
 // Compressed memory access can represent only some events with PCs
 // close enough to each other. Otherwise we fall back to EventAccessExt.

@@ -472,7 +472,7 @@ void TraceReplay(Trace *trace, TracePart *last, Event *last_pos, Sid sid,
     for (Event *evp = &part->events[0]; evp < end; evp++) {
       Event *evp0 = evp;
       if (!evp->is_access && !evp->is_func) {
-        switch (evp->GetType()) {
+        switch (evp->type) {
           case EventType::kTime: {
             auto *ev = reinterpret_cast<EventTime *>(evp);
             ev_sid = static_cast<Sid>(ev->sid);
@@ -573,7 +573,7 @@ bool RestoreStack(Tid tid, EventType type, Sid sid, Epoch epoch, uptr addr,
       [&](Sid ev_sid, Epoch ev_epoch, Event *evp) {
         bool match = ev_sid == sid && ev_epoch == epoch;
         if (evp->is_access) {
-          if (evp->is_func == 0 && evp->GetType() == EventType::kAccessExt &&
+          if (evp->is_func == 0 && evp->type == EventType::kAccessExt &&
               evp->_ == 0)  // NopEvent
             return;
           auto *ev = reinterpret_cast<EventAccess *>(evp);
@@ -602,7 +602,7 @@ bool RestoreStack(Tid tid, EventType type, Sid sid, Epoch epoch, uptr addr,
           }
           return;
         }
-        switch (evp->GetType()) {
+        switch (evp->type) {
           case EventType::kAccessExt: {
             auto *ev = reinterpret_cast<EventAccessExt *>(evp);
             uptr ev_addr = RestoreAddr(ev->addr);
