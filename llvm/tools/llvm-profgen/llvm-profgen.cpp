@@ -27,11 +27,10 @@ static cl::list<std::string> PerfTraceFilenames(
              "`script` command(the raw perf.data should be profiled with -b)"),
     cl::cat(ProfGenCategory));
 
-static cl::list<std::string>
-    BinaryFilenames("binary", cl::value_desc("binary"), cl::OneOrMore,
-                    llvm::cl::MiscFlags::CommaSeparated,
-                    cl::desc("Path of profiled binary files"),
-                    cl::cat(ProfGenCategory));
+static cl::opt<std::string> BinaryPath(
+    "binary", cl::value_desc("binary"), cl::Required,
+    cl::desc("Path of profiled binary, only one binary is supported."),
+    cl::cat(ProfGenCategory));
 
 extern cl::opt<bool> ShowDisassemblyOnly;
 
@@ -50,19 +49,18 @@ int main(int argc, const char *argv[]) {
   cl::ParseCommandLineOptions(argc, argv, "llvm SPGO profile generator\n");
 
   if (ShowDisassemblyOnly) {
-    for (auto BinaryPath : BinaryFilenames) {
-      (void)ProfiledBinary(BinaryPath);
-    }
+    (void)ProfiledBinary(BinaryPath);
     return EXIT_SUCCESS;
   }
 
   // Load binaries and parse perf events and samples
   std::unique_ptr<PerfReaderBase> Reader =
-      PerfReaderBase::create(BinaryFilenames, PerfTraceFilenames);
+      PerfReaderBase::create(BinaryPath, PerfTraceFilenames);
   Reader->parsePerfTraces(PerfTraceFilenames);
 
-  std::unique_ptr<ProfileGenerator> Generator = ProfileGenerator::create(
-      Reader->getBinarySampleCounters(), Reader->getPerfScriptType());
+  std::unique_ptr<ProfileGenerator> Generator =
+      ProfileGenerator::create(Reader->getBinary(), Reader->getSampleCounters(),
+                               Reader->getPerfScriptType());
   Generator->generateProfile();
   Generator->write();
 
