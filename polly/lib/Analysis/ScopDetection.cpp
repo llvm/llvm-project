@@ -226,6 +226,11 @@ static cl::opt<bool, true> XPollyInvariantLoadHoisting(
     cl::location(PollyInvariantLoadHoisting), cl::Hidden, cl::ZeroOrMore,
     cl::init(false), cl::cat(PollyCategory));
 
+static cl::opt<bool> PollyAllowErrorBlocks(
+    "polly-allow-error-blocks",
+    cl::desc("Allow to speculate on the execution of 'error blocks'."),
+    cl::Hidden, cl::init(true), cl::ZeroOrMore, cl::cat(PollyCategory));
+
 /// The minimal trip count under which loops are considered unprofitable.
 static const unsigned MIN_LOOP_TRIP_COUNT = 8;
 
@@ -410,7 +415,7 @@ inline bool ScopDetection::invalid(DetectionContext &Context, bool Assert,
   return false;
 }
 
-bool ScopDetection::isMaxRegionInScop(const Region &R, bool Verify) const {
+bool ScopDetection::isMaxRegionInScop(const Region &R, bool Verify) {
   if (!ValidRegions.count(&R))
     return false;
 
@@ -570,7 +575,7 @@ bool ScopDetection::isValidSwitch(BasicBlock &BB, SwitchInst *SI,
 
 bool ScopDetection::isValidBranch(BasicBlock &BB, BranchInst *BI,
                                   Value *Condition, bool IsLoopBranch,
-                                  DetectionContext &Context) const {
+                                  DetectionContext &Context) {
   // Constant integer conditions are always affine.
   if (isa<ConstantInt>(Condition))
     return true;
@@ -587,7 +592,7 @@ bool ScopDetection::isValidBranch(BasicBlock &BB, BranchInst *BI,
 
   if (auto PHI = dyn_cast<PHINode>(Condition)) {
     auto *Unique = dyn_cast_or_null<ConstantInt>(
-        getUniqueNonErrorValue(PHI, &Context.CurRegion, LI, DT));
+        getUniqueNonErrorValue(PHI, &Context.CurRegion, this));
     if (Unique && (Unique->isZero() || Unique->isOne()))
       return true;
   }
@@ -617,8 +622,8 @@ bool ScopDetection::isValidBranch(BasicBlock &BB, BranchInst *BI,
   const SCEV *LHS = SE.getSCEVAtScope(ICmp->getOperand(0), L);
   const SCEV *RHS = SE.getSCEVAtScope(ICmp->getOperand(1), L);
 
-  LHS = tryForwardThroughPHI(LHS, Context.CurRegion, SE, LI, DT);
-  RHS = tryForwardThroughPHI(RHS, Context.CurRegion, SE, LI, DT);
+  LHS = tryForwardThroughPHI(LHS, Context.CurRegion, SE, this);
+  RHS = tryForwardThroughPHI(RHS, Context.CurRegion, SE, this);
 
   // If unsigned operations are not allowed try to approximate the region.
   if (ICmp->isUnsigned() && !PollyAllowUnsignedOperations)
@@ -650,7 +655,7 @@ bool ScopDetection::isValidBranch(BasicBlock &BB, BranchInst *BI,
 
 bool ScopDetection::isValidCFG(BasicBlock &BB, bool IsLoopBranch,
                                bool AllowUnreachable,
-                               DetectionContext &Context) const {
+                               DetectionContext &Context) {
   Region &CurRegion = Context.CurRegion;
 
   Instruction *TI = BB.getTerminator();
@@ -1210,14 +1215,14 @@ bool ScopDetection::isValidMemoryAccess(MemAccInst Inst,
 }
 
 bool ScopDetection::isValidInstruction(Instruction &Inst,
-                                       DetectionContext &Context) const {
+                                       DetectionContext &Context) {
   for (auto &Op : Inst.operands()) {
     auto *OpInst = dyn_cast<Instruction>(&Op);
 
     if (!OpInst)
       continue;
 
-    if (isErrorBlock(*OpInst->getParent(), Context.CurRegion, LI, DT)) {
+    if (isErrorBlock(*OpInst->getParent(), Context.CurRegion)) {
       auto *PHI = dyn_cast<PHINode>(OpInst);
       if (PHI) {
         for (User *U : PHI->users()) {
@@ -1275,8 +1280,7 @@ static bool hasExitingBlocks(Loop *L) {
   return !ExitingBlocks.empty();
 }
 
-bool ScopDetection::canUseISLTripCount(Loop *L,
-                                       DetectionContext &Context) const {
+bool ScopDetection::canUseISLTripCount(Loop *L, DetectionContext &Context) {
   // Ensure the loop has valid exiting blocks as well as latches, otherwise we
   // need to overapproximate it as a boxed loop.
   SmallVector<BasicBlock *, 4> LoopControlBlocks;
@@ -1291,7 +1295,7 @@ bool ScopDetection::canUseISLTripCount(Loop *L,
   return true;
 }
 
-bool ScopDetection::isValidLoop(Loop *L, DetectionContext &Context) const {
+bool ScopDetection::isValidLoop(Loop *L, DetectionContext &Context) {
   // Loops that contain part but not all of the blocks of a region cannot be
   // handled by the schedule generation. Such loop constructs can happen
   // because a region can contain BBs that have no path to the exit block
@@ -1403,6 +1407,70 @@ ScopDetection::countBeneficialLoops(Region *R, ScalarEvolution &SE,
     }
 
   return {LoopNum, MaxLoopDepth};
+}
+
+static bool isErrorBlockImpl(BasicBlock &BB, const Region &R, LoopInfo &LI,
+                             const DominatorTree &DT) {
+  if (isa<UnreachableInst>(BB.getTerminator()))
+    return true;
+
+  if (LI.isLoopHeader(&BB))
+    return false;
+
+  // Basic blocks that are always executed are not considered error blocks,
+  // as their execution can not be a rare event.
+  bool DominatesAllPredecessors = true;
+  if (R.isTopLevelRegion()) {
+    for (BasicBlock &I : *R.getEntry()->getParent()) {
+      if (isa<ReturnInst>(I.getTerminator()) && !DT.dominates(&BB, &I)) {
+        DominatesAllPredecessors = false;
+        break;
+      }
+    }
+  } else {
+    for (auto Pred : predecessors(R.getExit())) {
+      if (R.contains(Pred) && !DT.dominates(&BB, Pred)) {
+        DominatesAllPredecessors = false;
+        break;
+      }
+    }
+  }
+
+  if (DominatesAllPredecessors)
+    return false;
+
+  for (Instruction &Inst : BB)
+    if (CallInst *CI = dyn_cast<CallInst>(&Inst)) {
+      if (isDebugCall(CI))
+        continue;
+
+      if (isIgnoredIntrinsic(CI))
+        continue;
+
+      // memset, memcpy and memmove are modeled intrinsics.
+      if (isa<MemSetInst>(CI) || isa<MemTransferInst>(CI))
+        continue;
+
+      if (!CI->doesNotAccessMemory())
+        return true;
+      if (CI->doesNotReturn())
+        return true;
+    }
+
+  return false;
+}
+
+bool ScopDetection::isErrorBlock(llvm::BasicBlock &BB, const llvm::Region &R) {
+  if (!PollyAllowErrorBlocks)
+    return false;
+
+  auto It = ErrorBlockCache.insert({{&BB, &R}, false});
+  if (!It.second)
+    return It.first->getSecond();
+
+  bool Result = isErrorBlockImpl(BB, R, LI, DT);
+  It.first->second = Result;
+  return Result;
 }
 
 Region *ScopDetection::expandRegion(Region &R) {
@@ -1542,7 +1610,7 @@ void ScopDetection::findScops(Region &R) {
   }
 }
 
-bool ScopDetection::allBlocksValid(DetectionContext &Context) const {
+bool ScopDetection::allBlocksValid(DetectionContext &Context) {
   Region &CurRegion = Context.CurRegion;
 
   for (const BasicBlock *BB : CurRegion.blocks()) {
@@ -1563,7 +1631,7 @@ bool ScopDetection::allBlocksValid(DetectionContext &Context) const {
   }
 
   for (BasicBlock *BB : CurRegion.blocks()) {
-    bool IsErrorBlock = isErrorBlock(*BB, CurRegion, LI, DT);
+    bool IsErrorBlock = isErrorBlock(*BB, CurRegion);
 
     // Also check exception blocks (and possibly register them as non-affine
     // regions). Even though exception blocks are not modeled, we use them
@@ -1657,7 +1725,7 @@ bool ScopDetection::isProfitableRegion(DetectionContext &Context) const {
   return invalid<ReportUnprofitable>(Context, /*Assert=*/true, &CurRegion);
 }
 
-bool ScopDetection::isValidRegion(DetectionContext &Context) const {
+bool ScopDetection::isValidRegion(DetectionContext &Context) {
   Region &CurRegion = Context.CurRegion;
 
   LLVM_DEBUG(dbgs() << "Checking region: " << CurRegion.getNameStr() << "\n\t");
@@ -1857,14 +1925,14 @@ const RejectLog *ScopDetection::lookupRejectionLog(const Region *R) const {
   return DC ? &DC->Log : nullptr;
 }
 
-void ScopDetection::verifyRegion(const Region &R) const {
+void ScopDetection::verifyRegion(const Region &R) {
   assert(isMaxRegionInScop(R) && "Expect R is a valid region.");
 
   DetectionContext Context(const_cast<Region &>(R), AA, true /*verifying*/);
   isValidRegion(Context);
 }
 
-void ScopDetection::verifyAnalysis() const {
+void ScopDetection::verifyAnalysis() {
   if (!VerifyScops)
     return;
 

@@ -870,7 +870,7 @@ private:
 };
 
 
-#ifndef _LIBCPP_HAS_NO_DEDUCTION_GUIDES
+#if _LIBCPP_STD_VER >= 17
 template<class _InputIterator,
          class _Alloc = allocator<__iter_value_type<_InputIterator>>,
          class = _EnableIf<__is_allocator<_Alloc>::value>

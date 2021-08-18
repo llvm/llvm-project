@@ -4015,12 +4015,11 @@ static bool CheckObjCBridgeNSCast(Sema &S, QualType castType, Expr *castExpr,
         if (Parm->isStr("id"))
           return true;
 
-        NamedDecl *Target = nullptr;
         // Check for an existing type with this name.
         LookupResult R(S, DeclarationName(Parm), SourceLocation(),
                        Sema::LookupOrdinaryName);
         if (S.LookupName(R, S.TUScope)) {
-          Target = R.getFoundDecl();
+          NamedDecl *Target = R.getFoundDecl();
           if (Target && isa<ObjCInterfaceDecl>(Target)) {
             ObjCInterfaceDecl *ExprClass = cast<ObjCInterfaceDecl>(Target);
             if (const ObjCObjectPointerType *InterfacePointerType =
@@ -4056,8 +4055,6 @@ static bool CheckObjCBridgeNSCast(Sema &S, QualType castType, Expr *castExpr,
                  diag::err_objc_cf_bridged_not_interface)
               << castExpr->getType() << Parm;
           S.Diag(TDNDecl->getBeginLoc(), diag::note_declared_at);
-          if (Target)
-            S.Diag(Target->getBeginLoc(), diag::note_declared_at);
         }
         return true;
       }

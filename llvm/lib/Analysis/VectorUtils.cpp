@@ -1352,9 +1352,7 @@ std::string VFABI::mangleTLIVectorName(StringRef VectorName,
 
 void VFABI::getVectorVariantNames(
     const CallInst &CI, SmallVectorImpl<std::string> &VariantMappings) {
-  const StringRef S =
-      CI.getAttribute(AttributeList::FunctionIndex, VFABI::MappingsAttrName)
-          .getValueAsString();
+  const StringRef S = CI.getFnAttr(VFABI::MappingsAttrName).getValueAsString();
   if (S.empty())
     return;
 

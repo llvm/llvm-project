@@ -424,19 +424,7 @@ public:
   void removeParamUndefImplyingAttrs(unsigned ArgNo);
 
   /// Return the stack alignment for the function.
-  unsigned getFnStackAlignment() const {
-    if (!hasFnAttribute(Attribute::StackAlignment))
-      return 0;
-    if (const auto MA =
-            AttributeSets.getStackAlignment(AttributeList::FunctionIndex))
-      return MA->value();
-    return 0;
-  }
-
-  /// Return the stack alignment for the function.
   MaybeAlign getFnStackAlign() const {
-    if (!hasFnAttribute(Attribute::StackAlignment))
-      return None;
     return AttributeSets.getStackAlignment(AttributeList::FunctionIndex);
   }
 

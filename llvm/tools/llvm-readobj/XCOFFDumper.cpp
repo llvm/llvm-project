@@ -134,16 +134,27 @@ void XCOFFDumper::printRelocations(ArrayRef<XCOFFSectionHeader32> Sections) {
     if (Sec.Flags != XCOFF::STYP_TEXT && Sec.Flags != XCOFF::STYP_DATA &&
         Sec.Flags != XCOFF::STYP_TDATA && Sec.Flags != XCOFF::STYP_DWARF)
       continue;
-    auto Relocations = unwrapOrError(Obj.getFileName(), Obj.relocations(Sec));
+    auto ErrOrRelocations = Obj.relocations(Sec);
+    if (Error E = ErrOrRelocations.takeError()) {
+      reportUniqueWarning(std::move(E));
+      continue;
+    }
+
+    auto Relocations = *ErrOrRelocations;
     if (Relocations.empty())
       continue;
 
     W.startLine() << "Section (index: " << Index << ") " << Sec.getName()
                   << " {\n";
     for (auto Reloc : Relocations) {
-      StringRef SymbolName = unwrapOrError(
-          Obj.getFileName(), Obj.getSymbolNameByIndex(Reloc.SymbolIndex));
+      Expected<StringRef> ErrOrSymbolName =
+          Obj.getSymbolNameByIndex(Reloc.SymbolIndex);
+      if (Error E = ErrOrSymbolName.takeError()) {
+        reportUniqueWarning(std::move(E));
+        continue;
+      }
 
+      StringRef SymbolName = *ErrOrSymbolName;
       DictScope RelocScope(W, "Relocation");
       W.printHex("Virtual Address", Reloc.VirtualAddress);
       W.printNumber("Symbol", SymbolName, Reloc.SymbolIndex);

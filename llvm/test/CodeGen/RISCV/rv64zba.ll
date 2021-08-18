@@ -1254,14 +1254,14 @@ define signext i32 @mulw192(i32 signext %a) {
 ;
 ; RV64B-LABEL: mulw192:
 ; RV64B:       # %bb.0:
-; RV64B-NEXT:    addi a1, zero, 192
-; RV64B-NEXT:    mulw a0, a0, a1
+; RV64B-NEXT:    sh1add a0, a0, a0
+; RV64B-NEXT:    slliw a0, a0, 6
 ; RV64B-NEXT:    ret
 ;
 ; RV64ZBA-LABEL: mulw192:
 ; RV64ZBA:       # %bb.0:
-; RV64ZBA-NEXT:    addi a1, zero, 192
-; RV64ZBA-NEXT:    mulw a0, a0, a1
+; RV64ZBA-NEXT:    sh1add a0, a0, a0
+; RV64ZBA-NEXT:    slliw a0, a0, 6
 ; RV64ZBA-NEXT:    ret
   %c = mul i32 %a, 192
   ret i32 %c
@@ -1276,14 +1276,14 @@ define signext i32 @mulw320(i32 signext %a) {
 ;
 ; RV64B-LABEL: mulw320:
 ; RV64B:       # %bb.0:
-; RV64B-NEXT:    addi a1, zero, 320
-; RV64B-NEXT:    mulw a0, a0, a1
+; RV64B-NEXT:    sh2add a0, a0, a0
+; RV64B-NEXT:    slliw a0, a0, 6
 ; RV64B-NEXT:    ret
 ;
 ; RV64ZBA-LABEL: mulw320:
 ; RV64ZBA:       # %bb.0:
-; RV64ZBA-NEXT:    addi a1, zero, 320
-; RV64ZBA-NEXT:    mulw a0, a0, a1
+; RV64ZBA-NEXT:    sh2add a0, a0, a0
+; RV64ZBA-NEXT:    slliw a0, a0, 6
 ; RV64ZBA-NEXT:    ret
   %c = mul i32 %a, 320
   ret i32 %c
@@ -1298,14 +1298,14 @@ define signext i32 @mulw576(i32 signext %a) {
 ;
 ; RV64B-LABEL: mulw576:
 ; RV64B:       # %bb.0:
-; RV64B-NEXT:    addi a1, zero, 576
-; RV64B-NEXT:    mulw a0, a0, a1
+; RV64B-NEXT:    sh3add a0, a0, a0
+; RV64B-NEXT:    slliw a0, a0, 6
 ; RV64B-NEXT:    ret
 ;
 ; RV64ZBA-LABEL: mulw576:
 ; RV64ZBA:       # %bb.0:
-; RV64ZBA-NEXT:    addi a1, zero, 576
-; RV64ZBA-NEXT:    mulw a0, a0, a1
+; RV64ZBA-NEXT:    sh3add a0, a0, a0
+; RV64ZBA-NEXT:    slliw a0, a0, 6
 ; RV64ZBA-NEXT:    ret
   %c = mul i32 %a, 576
   ret i32 %c

@@ -151,18 +151,17 @@ protected:
 /// this function is called by \p sinkRegionForLoopNest.
 bool sinkRegion(DomTreeNode *, AAResults *, LoopInfo *, DominatorTree *,
                 BlockFrequencyInfo *, TargetLibraryInfo *,
-                TargetTransformInfo *, Loop *CurLoop, AliasSetTracker *,
-                MemorySSAUpdater *, ICFLoopSafetyInfo *,
-                SinkAndHoistLICMFlags &, OptimizationRemarkEmitter *,
-                Loop *OutermostLoop = nullptr);
+                TargetTransformInfo *, Loop *CurLoop, MemorySSAUpdater *,
+                ICFLoopSafetyInfo *, SinkAndHoistLICMFlags &,
+                OptimizationRemarkEmitter *, Loop *OutermostLoop = nullptr);
 
 /// Call sinkRegion on loops contained within the specified loop
 /// in order from innermost to outermost.
 bool sinkRegionForLoopNest(DomTreeNode *, AAResults *, LoopInfo *,
                            DominatorTree *, BlockFrequencyInfo *,
                            TargetLibraryInfo *, TargetTransformInfo *, Loop *,
-                           AliasSetTracker *, MemorySSAUpdater *,
-                           ICFLoopSafetyInfo *, SinkAndHoistLICMFlags &,
+                           MemorySSAUpdater *, ICFLoopSafetyInfo *,
+                           SinkAndHoistLICMFlags &,
                            OptimizationRemarkEmitter *);
 
 /// Walk the specified region of the CFG (defined by all blocks
@@ -175,9 +174,8 @@ bool sinkRegionForLoopNest(DomTreeNode *, AAResults *, LoopInfo *,
 /// Diagnostics is emitted via \p ORE. It returns changed status.
 bool hoistRegion(DomTreeNode *, AAResults *, LoopInfo *, DominatorTree *,
                  BlockFrequencyInfo *, TargetLibraryInfo *, Loop *,
-                 AliasSetTracker *, MemorySSAUpdater *, ScalarEvolution *,
-                 ICFLoopSafetyInfo *, SinkAndHoistLICMFlags &,
-                 OptimizationRemarkEmitter *, bool);
+                 MemorySSAUpdater *, ScalarEvolution *, ICFLoopSafetyInfo *,
+                 SinkAndHoistLICMFlags &, OptimizationRemarkEmitter *, bool);
 
 /// This function deletes dead loops. The caller of this function needs to
 /// guarantee that the loop is infact dead.
@@ -211,7 +209,7 @@ bool promoteLoopAccessesToScalars(
     const SmallSetVector<Value *, 8> &, SmallVectorImpl<BasicBlock *> &,
     SmallVectorImpl<Instruction *> &, SmallVectorImpl<MemoryAccess *> &,
     PredIteratorCache &, LoopInfo *, DominatorTree *, const TargetLibraryInfo *,
-    Loop *, AliasSetTracker *, MemorySSAUpdater *, ICFLoopSafetyInfo *,
+    Loop *, MemorySSAUpdater *, ICFLoopSafetyInfo *,
     OptimizationRemarkEmitter *);
 
 /// Does a BFS from a given node to all of its children inside a given loop.

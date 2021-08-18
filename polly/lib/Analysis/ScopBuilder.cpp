@@ -180,12 +180,12 @@ getRegionNodeSuccessor(RegionNode *RN, Instruction *TI, unsigned idx) {
   return TI->getSuccessor(idx);
 }
 
-static bool containsErrorBlock(RegionNode *RN, const Region &R, LoopInfo &LI,
-                               const DominatorTree &DT) {
+static bool containsErrorBlock(RegionNode *RN, const Region &R,
+                               ScopDetection *SD) {
   if (!RN->isSubRegion())
-    return isErrorBlock(*RN->getNodeAs<BasicBlock>(), R, LI, DT);
+    return SD->isErrorBlock(*RN->getNodeAs<BasicBlock>(), R);
   for (BasicBlock *BB : RN->getNodeAs<Region>()->blocks())
-    if (isErrorBlock(*BB, R, LI, DT))
+    if (SD->isErrorBlock(*BB, R))
       return true;
   return false;
 }
@@ -448,7 +448,7 @@ bool ScopBuilder::buildConditionSets(
                              .release();
   } else if (auto *PHI = dyn_cast<PHINode>(Condition)) {
     auto *Unique = dyn_cast<ConstantInt>(
-        getUniqueNonErrorValue(PHI, &scop->getRegion(), LI, DT));
+        getUniqueNonErrorValue(PHI, &scop->getRegion(), &SD));
 
     if (Unique->isZero())
       ConsequenceCondSet = isl_set_empty(isl_set_get_space(Domain));
@@ -497,8 +497,8 @@ bool ScopBuilder::buildConditionSets(
     const SCEV *LeftOperand = SE.getSCEVAtScope(ICond->getOperand(0), L),
                *RightOperand = SE.getSCEVAtScope(ICond->getOperand(1), L);
 
-    LeftOperand = tryForwardThroughPHI(LeftOperand, R, SE, LI, DT);
-    RightOperand = tryForwardThroughPHI(RightOperand, R, SE, LI, DT);
+    LeftOperand = tryForwardThroughPHI(LeftOperand, R, SE, &SD);
+    RightOperand = tryForwardThroughPHI(RightOperand, R, SE, &SD);
 
     switch (ICond->getPredicate()) {
     case ICmpInst::ICMP_ULT:
@@ -844,7 +844,7 @@ bool ScopBuilder::buildDomains(
   scop->setDomain(EntryBB, Domain);
 
   if (IsOnlyNonAffineRegion)
-    return !containsErrorBlock(R->getNode(), *R, LI, DT);
+    return !containsErrorBlock(R->getNode(), *R, &SD);
 
   if (!buildDomainsWithBranchConstraints(R, InvalidDomainMap))
     return false;
@@ -897,7 +897,7 @@ bool ScopBuilder::buildDomainsWithBranchConstraints(
       }
     }
 
-    if (containsErrorBlock(RN, scop->getRegion(), LI, DT))
+    if (containsErrorBlock(RN, scop->getRegion(), &SD))
       scop->notifyErrorBlock();
     ;
 
@@ -1013,7 +1013,7 @@ bool ScopBuilder::propagateInvalidStmtDomains(
       }
     }
 
-    bool ContainsErrorBlock = containsErrorBlock(RN, scop->getRegion(), LI, DT);
+    bool ContainsErrorBlock = containsErrorBlock(RN, scop->getRegion(), &SD);
     BasicBlock *BB = getRegionNodeBasicBlock(RN);
     isl::set &Domain = scop->getOrInitEmptyDomain(BB);
     assert(!Domain.is_null() && "Cannot propagate a nullptr");
@@ -2257,7 +2257,7 @@ void ScopBuilder::buildAccessFunctions(ScopStmt *Stmt, BasicBlock &BB,
 
   // We do not build access functions for error blocks, as they may contain
   // instructions we can not model.
-  if (isErrorBlock(BB, scop->getRegion(), LI, DT))
+  if (SD.isErrorBlock(BB, scop->getRegion()))
     return;
 
   auto BuildAccessesForInst = [this, Stmt,
@@ -3673,7 +3673,7 @@ void ScopBuilder::buildScop(Region &R, AssumptionCache &AC) {
   // created somewhere.
   const InvariantLoadsSetTy &RIL = scop->getRequiredInvariantLoads();
   for (BasicBlock *BB : scop->getRegion().blocks()) {
-    if (isErrorBlock(*BB, scop->getRegion(), LI, DT))
+    if (SD.isErrorBlock(*BB, scop->getRegion()))
       continue;
 
     for (Instruction &Inst : *BB) {

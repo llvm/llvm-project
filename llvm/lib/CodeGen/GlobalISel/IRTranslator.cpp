@@ -2228,6 +2228,14 @@ bool IRTranslator::translateKnownIntrinsic(const CallInst &CI, Intrinsic::ID ID,
 
     return true;
   }
+  case Intrinsic::isnan: {
+    Register Src = getOrCreateVReg(*CI.getArgOperand(0));
+    unsigned Flags = MachineInstr::copyFlagsFromInstruction(CI);
+    if (!CI.getFunction()->getAttributes().hasFnAttr(llvm::Attribute::StrictFP))
+      Flags |= MachineInstr::NoFPExcept;
+    MIRBuilder.buildIsNaN(getOrCreateVReg(CI), Src, Flags);
+    return true;
+  }
 #define INSTRUCTION(NAME, NARG, ROUND_MODE, INTRINSIC)  \
   case Intrinsic::INTRINSIC:
 #include "llvm/IR/ConstrainedOps.def"

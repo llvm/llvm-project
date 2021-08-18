@@ -1097,7 +1097,7 @@ public:
     void swap(tuple&) _NOEXCEPT {}
 };
 
-#ifndef _LIBCPP_HAS_NO_DEDUCTION_GUIDES
+#if _LIBCPP_STD_VER >= 17
 template <class ..._Tp>
 tuple(_Tp...) -> tuple<_Tp...>;
 template <class _Tp1, class _Tp2>

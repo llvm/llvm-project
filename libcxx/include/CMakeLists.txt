@@ -98,6 +98,7 @@ set(files
   __bsd_locale_defaults.h
   __bsd_locale_fallbacks.h
   __compare/common_comparison_category.h
+  __compare/compare_three_way_result.h
   __compare/ordering.h
   __concepts/arithmetic.h
   __concepts/assignable.h

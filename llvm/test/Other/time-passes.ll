@@ -3,12 +3,12 @@
 ; RUN: opt < %s -disable-output -passes='default<O2>' -time-passes 2>&1 | FileCheck %s --check-prefix=TIME
 ;
 ; For new pass manager, check that -time-passes-per-run emit one report for each pass run.
-; RUN: opt < %s -disable-output -passes='instcombine,instcombine,loop(licm)' -time-passes-per-run 2>&1 | FileCheck %s --check-prefix=TIME --check-prefix=TIME-NEW
-; RUN: opt < %s -disable-output -passes='instcombine,loop(licm),instcombine,loop(licm)' -time-passes-per-run 2>&1 | FileCheck %s --check-prefix=TIME --check-prefix=TIME-NEW -check-prefix=TIME-DOUBLE-LICM-NEW
+; RUN: opt < %s -disable-output -passes='instcombine,instcombine,loop-mssa(licm)' -time-passes-per-run 2>&1 | FileCheck %s --check-prefix=TIME --check-prefix=TIME-NEW
+; RUN: opt < %s -disable-output -passes='instcombine,loop-mssa(licm),instcombine,loop-mssa(licm)' -time-passes-per-run 2>&1 | FileCheck %s --check-prefix=TIME --check-prefix=TIME-NEW -check-prefix=TIME-DOUBLE-LICM-NEW
 ;
 ; For new pass manager, check that -time-passes emit one report for each pass.
-; RUN: opt < %s -disable-output -passes='instcombine,instcombine,loop(licm)' -time-passes 2>&1 | FileCheck %s --check-prefixes=TIME,TIME-NEW-PER-PASS
-; RUN: opt < %s -disable-output -passes='instcombine,loop(licm),instcombine,loop(licm)' -time-passes 2>&1 | FileCheck %s --check-prefixes=TIME,TIME-NEW-PER-PASS
+; RUN: opt < %s -disable-output -passes='instcombine,instcombine,loop-mssa(licm)' -time-passes 2>&1 | FileCheck %s --check-prefixes=TIME,TIME-NEW-PER-PASS
+; RUN: opt < %s -disable-output -passes='instcombine,loop-mssa(licm),instcombine,loop-mssa(licm)' -time-passes 2>&1 | FileCheck %s --check-prefixes=TIME,TIME-NEW-PER-PASS
 ;
 ; The following 4 test runs verify -info-output-file interaction (default goes to stderr, '-' goes to stdout).
 ; RUN: opt -enable-new-pm=0 < %s -disable-output -O2 -time-passes -info-output-file='-' 2>/dev/null | FileCheck %s --check-prefix=TIME

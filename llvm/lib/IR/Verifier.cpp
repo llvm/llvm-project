@@ -1983,7 +1983,7 @@ void Verifier::verifyFunctionAttrs(FunctionType *FT, AttributeList Attrs,
 
   if (Attrs.hasFnAttr(Attribute::AllocSize)) {
     std::pair<unsigned, Optional<unsigned>> Args =
-        Attrs.getAllocSizeArgs(AttributeList::FunctionIndex);
+        Attrs.getFnAttrs().getAllocSizeArgs();
 
     auto CheckParam = [&](StringRef Name, unsigned ParamNo) {
       if (ParamNo >= FT->getNumParams()) {
@@ -2010,7 +2010,7 @@ void Verifier::verifyFunctionAttrs(FunctionType *FT, AttributeList Attrs,
 
   if (Attrs.hasFnAttr(Attribute::VScaleRange)) {
     std::pair<unsigned, unsigned> Args =
-        Attrs.getVScaleRangeArgs(AttributeList::FunctionIndex);
+        Attrs.getFnAttrs().getVScaleRangeArgs();
 
     if (Args.first > Args.second && Args.second != 0)
       CheckFailed("'vscale_range' minimum cannot be greater than maximum", V);

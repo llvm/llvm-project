@@ -3,11 +3,10 @@
 
 define void @trunc_one_add(i16* %a, i8 %b) {
 ; CHECK-LABEL: @trunc_one_add(
-; CHECK-NEXT:    [[ZEXT:%.*]] = zext i8 [[B:%.*]] to i32
-; CHECK-NEXT:    [[SHR:%.*]] = lshr i32 [[ZEXT]], 1
-; CHECK-NEXT:    [[ADD:%.*]] = add nsw i32 [[ZEXT]], [[SHR]]
-; CHECK-NEXT:    [[TRUNC:%.*]] = trunc i32 [[ADD]] to i16
-; CHECK-NEXT:    store i16 [[TRUNC]], i16* [[A:%.*]], align 2
+; CHECK-NEXT:    [[ZEXT:%.*]] = zext i8 [[B:%.*]] to i16
+; CHECK-NEXT:    [[SHR:%.*]] = lshr i16 [[ZEXT]], 1
+; CHECK-NEXT:    [[ADD:%.*]] = add i16 [[ZEXT]], [[SHR]]
+; CHECK-NEXT:    store i16 [[ADD]], i16* [[A:%.*]], align 2
 ; CHECK-NEXT:    ret void
 ;
   %zext = zext i8 %b to i32
@@ -20,14 +19,13 @@ define void @trunc_one_add(i16* %a, i8 %b) {
 
 define void @trunc_two_adds(i16* %a, i8 %b, i8 %c) {
 ; CHECK-LABEL: @trunc_two_adds(
-; CHECK-NEXT:    [[ZEXT1:%.*]] = zext i8 [[B:%.*]] to i32
-; CHECK-NEXT:    [[ZEXT2:%.*]] = zext i8 [[C:%.*]] to i32
-; CHECK-NEXT:    [[ADD1:%.*]] = add nuw nsw i32 [[ZEXT1]], [[ZEXT2]]
-; CHECK-NEXT:    [[SHR1:%.*]] = lshr i32 [[ADD1]], 1
-; CHECK-NEXT:    [[ADD2:%.*]] = add nuw nsw i32 [[ADD1]], [[SHR1]]
-; CHECK-NEXT:    [[SHR2:%.*]] = lshr i32 [[ADD2]], 2
-; CHECK-NEXT:    [[TRUNC:%.*]] = trunc i32 [[SHR2]] to i16
-; CHECK-NEXT:    store i16 [[TRUNC]], i16* [[A:%.*]], align 2
+; CHECK-NEXT:    [[ZEXT1:%.*]] = zext i8 [[B:%.*]] to i16
+; CHECK-NEXT:    [[ZEXT2:%.*]] = zext i8 [[C:%.*]] to i16
+; CHECK-NEXT:    [[ADD1:%.*]] = add i16 [[ZEXT1]], [[ZEXT2]]
+; CHECK-NEXT:    [[SHR1:%.*]] = lshr i16 [[ADD1]], 1
+; CHECK-NEXT:    [[ADD2:%.*]] = add i16 [[ADD1]], [[SHR1]]
+; CHECK-NEXT:    [[SHR2:%.*]] = lshr i16 [[ADD2]], 2
+; CHECK-NEXT:    store i16 [[SHR2]], i16* [[A:%.*]], align 2
 ; CHECK-NEXT:    ret void
 ;
   %zext1 = zext i8 %b to i32
