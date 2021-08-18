@@ -721,7 +721,7 @@ template <> struct DenseMapInfo<SmallBitVector> {
   }
   static unsigned getHashValue(const SmallBitVector &V) {
     uintptr_t Store;
-    return DenseMapInfo<std::pair<unsigned, ArrayRef<uintptr_t>>>::getHashValue(
+    return DenseMapInfo<std::pair<size_t, ArrayRef<uintptr_t>>>::getHashValue(
         std::make_pair(V.size(), V.getData(Store)));
   }
   static bool isEqual(const SmallBitVector &LHS, const SmallBitVector &RHS) {

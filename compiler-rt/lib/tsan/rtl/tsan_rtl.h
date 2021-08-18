@@ -69,6 +69,11 @@ struct AP32 {
 typedef SizeClassAllocator32<AP32> PrimaryAllocator;
 #else
 struct AP64 {  // Allocator64 parameters. Deliberately using a short name.
+#    if defined(__s390x__)
+  typedef MappingS390x Mapping;
+#    else
+  typedef Mapping48AddressSpace Mapping;
+#    endif
   static const uptr kSpaceBeg = Mapping::kHeapMemBeg;
   static const uptr kSpaceSize = Mapping::kHeapMemEnd - Mapping::kHeapMemBeg;
   static const uptr kMetadataSize = 0;
@@ -439,6 +444,13 @@ struct ThreadState {
 
   const ReportDesc *current_report;
 
+  // Current position in tctx->trace.Back()->events (Event*).
+  atomic_uintptr_t trace_pos;
+  // PC of the last memory access, used to compute PC deltas in the trace.
+  uptr trace_prev_pc;
+  Sid sid;
+  Epoch epoch;
+
   explicit ThreadState(Context *ctx, Tid tid, int unique_id, u64 epoch,
                        unsigned reuse_count, uptr stk_addr, uptr stk_size,
                        uptr tls_addr, uptr tls_size);
@@ -480,6 +492,8 @@ class ThreadContext final : public ThreadContextBase {
   // the event is from a dead thread that shared tid with this thread.
   u64 epoch0;
   u64 epoch1;
+
+  v3::Trace trace;
 
   // Override superclass callbacks.
   void OnDead() override;
@@ -544,6 +558,8 @@ struct Context {
   ClockAlloc clock_alloc;
 
   Flags flags;
+
+  Mutex slot_mtx;
 };
 
 extern Context *ctx;  // The one and the only global runtime context.
@@ -886,6 +902,88 @@ void LazyInitialize(ThreadState *thr) {
     Initialize(thr);
 #endif
 }
+
+namespace v3 {
+
+void TraceSwitchPart(ThreadState *thr);
+bool RestoreStack(Tid tid, EventType type, Sid sid, Epoch epoch, uptr addr,
+                  uptr size, AccessType typ, VarSizeStackTrace *pstk,
+                  MutexSet *pmset, uptr *ptag);
+
+template <typename EventT>
+ALWAYS_INLINE WARN_UNUSED_RESULT bool TraceAcquire(ThreadState *thr,
+                                                   EventT **ev) {
+  Event *pos = reinterpret_cast<Event *>(atomic_load_relaxed(&thr->trace_pos));
+#if SANITIZER_DEBUG
+  // TraceSwitch acquires these mutexes,
+  // so we lock them here to detect deadlocks more reliably.
+  { Lock lock(&ctx->slot_mtx); }
+  { Lock lock(&thr->tctx->trace.mtx); }
+  TracePart *current = thr->tctx->trace.parts.Back();
+  if (current) {
+    DCHECK_GE(pos, &current->events[0]);
+    DCHECK_LE(pos, &current->events[TracePart::kSize]);
+  } else {
+    DCHECK_EQ(pos, nullptr);
+  }
+#endif
+  // TracePart is allocated with mmap and is at least 4K aligned.
+  // So the following check is a faster way to check for part end.
+  // It may have false positives in the middle of the trace,
+  // they are filtered out in TraceSwitch.
+  if (UNLIKELY(((uptr)(pos + 1) & TracePart::kAlignment) == 0))
+    return false;
+  *ev = reinterpret_cast<EventT *>(pos);
+  return true;
+}
+
+template <typename EventT>
+ALWAYS_INLINE void TraceRelease(ThreadState *thr, EventT *evp) {
+  DCHECK_LE(evp + 1, &thr->tctx->trace.parts.Back()->events[TracePart::kSize]);
+  atomic_store_relaxed(&thr->trace_pos, (uptr)(evp + 1));
+}
+
+template <typename EventT>
+void TraceEvent(ThreadState *thr, EventT ev) {
+  EventT *evp;
+  if (!TraceAcquire(thr, &evp)) {
+    TraceSwitchPart(thr);
+    UNUSED bool res = TraceAcquire(thr, &evp);
+    DCHECK(res);
+  }
+  *evp = ev;
+  TraceRelease(thr, evp);
+}
+
+ALWAYS_INLINE WARN_UNUSED_RESULT bool TryTraceFunc(ThreadState *thr,
+                                                   uptr pc = 0) {
+  if (!kCollectHistory)
+    return true;
+  EventFunc *ev;
+  if (UNLIKELY(!TraceAcquire(thr, &ev)))
+    return false;
+  ev->is_access = 0;
+  ev->is_func = 1;
+  ev->pc = pc;
+  TraceRelease(thr, ev);
+  return true;
+}
+
+WARN_UNUSED_RESULT
+bool TryTraceMemoryAccess(ThreadState *thr, uptr pc, uptr addr, uptr size,
+                          AccessType typ);
+WARN_UNUSED_RESULT
+bool TryTraceMemoryAccessRange(ThreadState *thr, uptr pc, uptr addr, uptr size,
+                               AccessType typ);
+void TraceMemoryAccessRange(ThreadState *thr, uptr pc, uptr addr, uptr size,
+                            AccessType typ);
+void TraceFunc(ThreadState *thr, uptr pc = 0);
+void TraceMutexLock(ThreadState *thr, EventType type, uptr pc, uptr addr,
+                    StackID stk);
+void TraceMutexUnlock(ThreadState *thr, uptr addr);
+void TraceTime(ThreadState *thr);
+
+}  // namespace v3
 
 }  // namespace __tsan
 

@@ -72,17 +72,16 @@ The improvements are...
 New checks
 ^^^^^^^^^^
 
+- New :doc:`readability-identifier-length
+  <clang-tidy/checks/readability-identifier-length>` check.
+
+  Reports identifiers whose names are too short. Currently checks local variables and function parameters only.
+
 New check aliases
 ^^^^^^^^^^^^^^^^^
 
 Changes in existing checks
 ^^^^^^^^^^^^^^^^^^^^^^^^^^
-
-- Improved :doc:`cppcoreguidelines-init-variables<clang-tidy/checks/cppcoreguidelines-init-variables>` check.
-
-  Removed generating fixes for enums because the code generated was broken, trying to initialize the enum from an integer.
-
-  The check now also warns for uninitialized scoped enums.
 
 Removed checks
 ^^^^^^^^^^^^^^

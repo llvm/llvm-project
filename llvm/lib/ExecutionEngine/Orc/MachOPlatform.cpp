@@ -950,9 +950,9 @@ Error MachOPlatform::MachOPlatformPlugin::fixTLVSectionsAndEdges(
   for (auto *B : G.blocks())
     for (auto &E : B->edges())
       if (E.getKind() ==
-          jitlink::x86_64::RequestTLVPAndTransformToPCRel32TLVPLoadRelaxable)
-        E.setKind(
-            jitlink::x86_64::RequestGOTAndTransformToPCRel32GOTLoadRelaxable);
+          jitlink::x86_64::RequestTLVPAndTransformToPCRel32TLVPLoadREXRelaxable)
+        E.setKind(jitlink::x86_64::
+                      RequestGOTAndTransformToPCRel32GOTLoadREXRelaxable);
 
   return Error::success();
 }

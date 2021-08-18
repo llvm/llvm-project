@@ -238,7 +238,7 @@ public:
     else {
       // Disable individual libc/libm calls in TargetLibraryInfo.
       LibFunc LF;
-      AttributeSet FnAttrs = (*F)->getAttributes().getFnAttributes();
+      AttributeSet FnAttrs = (*F)->getAttributes().getFnAttrs();
       for (const Attribute &Attr : FnAttrs) {
         if (!Attr.isStringAttribute())
           continue;

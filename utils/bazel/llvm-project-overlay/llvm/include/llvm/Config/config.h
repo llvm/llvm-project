@@ -80,6 +80,9 @@
 /* Define to 1 if we can deregister EH frames on this platform. */
 #define HAVE_DEREGISTER_FRAME 1
 
+/* Define if __unw_add_dynamic_fde() is available on this platform. */
+/* HAVE_UNW_ADD_DYNAMIC_FDE defined in Bazel */
+
 /* Define to 1 if you have the <errno.h> header file. */
 #define HAVE_ERRNO_H 1
 

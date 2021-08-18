@@ -125,6 +125,7 @@ ProfiledBinary::getExpandedContextStr(const SmallVectorImpl<uint64_t> &Stack,
   std::string LeafFrame = ContextVec.back();
   ContextVec.pop_back();
   CSProfileGenerator::compressRecursionContext<std::string>(ContextVec);
+  CSProfileGenerator::trimContext<std::string>(ContextVec);
 
   std::ostringstream OContextStr;
   for (uint32_t I = 0; I < (uint32_t)ContextVec.size(); I++) {

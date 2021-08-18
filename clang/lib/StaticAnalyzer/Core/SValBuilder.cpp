@@ -725,16 +725,12 @@ SVal SValBuilder::evalCastSubKind(loc::MemRegionVal V, QualType CastTy,
       // This change is needed for architectures with varying
       // pointer widths. See the amdgcn opencl reproducer with
       // this change as an example: solver-sym-simplification-ptr-bool.cl
-      // FIXME: We could encounter a reference here,
-      //        try returning a concrete 'true' since it might
-      //        be easier on the solver.
       // FIXME: Cleanup remainder of `getZeroWithPtrWidth ()`
       //        and `getIntWithPtrWidth()` functions to prevent future
       //        confusion
-      const llvm::APSInt &Zero = Ty->isReferenceType()
-                                     ? BasicVals.getZeroWithPtrWidth()
-                                     : BasicVals.getZeroWithTypeSize(Ty);
-      return makeNonLoc(Sym, BO_NE, Zero, CastTy);
+      if (!Ty->isReferenceType())
+        return makeNonLoc(Sym, BO_NE, BasicVals.getZeroWithTypeSize(Ty),
+                          CastTy);
     }
     // Non-symbolic memory regions are always true.
     return makeTruthVal(true, CastTy);

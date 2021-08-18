@@ -795,6 +795,63 @@ static Instruction *foldClampRangeOfTwo(IntrinsicInst *II,
   return SelectInst::Create(Cmp, ConstantInt::get(II->getType(), *C0), I1);
 }
 
+/// Reduce a sequence of min/max intrinsics with a common operand.
+static Instruction *factorizeMinMaxTree(IntrinsicInst *II) {
+  // Match 3 of the same min/max ops. Example: umin(umin(), umin()).
+  auto *LHS = dyn_cast<IntrinsicInst>(II->getArgOperand(0));
+  auto *RHS = dyn_cast<IntrinsicInst>(II->getArgOperand(1));
+  Intrinsic::ID MinMaxID = II->getIntrinsicID();
+  if (!LHS || !RHS || LHS->getIntrinsicID() != MinMaxID ||
+      RHS->getIntrinsicID() != MinMaxID ||
+      (!LHS->hasOneUse() && !RHS->hasOneUse()))
+    return nullptr;
+
+  Value *A = LHS->getArgOperand(0);
+  Value *B = LHS->getArgOperand(1);
+  Value *C = RHS->getArgOperand(0);
+  Value *D = RHS->getArgOperand(1);
+
+  // Look for a common operand.
+  Value *MinMaxOp = nullptr;
+  Value *ThirdOp = nullptr;
+  if (LHS->hasOneUse()) {
+    // If the LHS is only used in this chain and the RHS is used outside of it,
+    // reuse the RHS min/max because that will eliminate the LHS.
+    if (D == A || C == A) {
+      // min(min(a, b), min(c, a)) --> min(min(c, a), b)
+      // min(min(a, b), min(a, d)) --> min(min(a, d), b)
+      MinMaxOp = RHS;
+      ThirdOp = B;
+    } else if (D == B || C == B) {
+      // min(min(a, b), min(c, b)) --> min(min(c, b), a)
+      // min(min(a, b), min(b, d)) --> min(min(b, d), a)
+      MinMaxOp = RHS;
+      ThirdOp = A;
+    }
+  } else {
+    assert(RHS->hasOneUse() && "Expected one-use operand");
+    // Reuse the LHS. This will eliminate the RHS.
+    if (D == A || D == B) {
+      // min(min(a, b), min(c, a)) --> min(min(a, b), c)
+      // min(min(a, b), min(c, b)) --> min(min(a, b), c)
+      MinMaxOp = LHS;
+      ThirdOp = C;
+    } else if (C == A || C == B) {
+      // min(min(a, b), min(b, d)) --> min(min(a, b), d)
+      // min(min(a, b), min(c, b)) --> min(min(a, b), d)
+      MinMaxOp = LHS;
+      ThirdOp = D;
+    }
+  }
+
+  if (!MinMaxOp || !ThirdOp)
+    return nullptr;
+
+  Module *Mod = II->getModule();
+  Function *MinMax = Intrinsic::getDeclaration(Mod, MinMaxID, II->getType());
+  return CallInst::Create(MinMax, { MinMaxOp, ThirdOp });
+}
+
 /// CallInst simplification. This mostly only handles folding of intrinsic
 /// instructions. For normal calls, it allows visitCallBase to do the heavy
 /// lifting.
@@ -1007,6 +1064,18 @@ Instruction *InstCombinerImpl::visitCallInst(CallInst &CI) {
       }
     }
 
+    if (IID == Intrinsic::smax || IID == Intrinsic::smin) {
+      // smax (neg nsw X), (neg nsw Y) --> neg nsw (smin X, Y)
+      // smin (neg nsw X), (neg nsw Y) --> neg nsw (smax X, Y)
+      // TODO: Canonicalize neg after min/max if I1 is constant.
+      if (match(I0, m_NSWNeg(m_Value(X))) && match(I1, m_NSWNeg(m_Value(Y))) &&
+          (I0->hasOneUse() || I1->hasOneUse())) {
+        Intrinsic::ID InvID = getInverseMinMaxIntrinsic(IID);
+        Value *InvMaxMin = Builder.CreateBinaryIntrinsic(InvID, X, Y);
+        return BinaryOperator::CreateNSWNeg(InvMaxMin);
+      }
+    }
+
     if (match(I0, m_Not(m_Value(X)))) {
       // max (not X), (not Y) --> not (min X, Y)
       Intrinsic::ID InvID = getInverseMinMaxIntrinsic(IID);
@@ -1051,10 +1120,16 @@ Instruction *InstCombinerImpl::visitCallInst(CallInst &CI) {
     if (Instruction *Sel = foldClampRangeOfTwo(II, Builder))
       return Sel;
 
+    if (Instruction *SAdd = matchSAddSubSat(*II))
+      return SAdd;
+
     if (match(I1, m_ImmConstant()))
       if (auto *Sel = dyn_cast<SelectInst>(I0))
         if (Instruction *R = FoldOpIntoSelect(*II, Sel))
           return R;
+
+    if (Instruction *NewMinMax = factorizeMinMaxTree(II))
+       return NewMinMax;
 
     break;
   }
@@ -2768,19 +2843,19 @@ bool InstCombinerImpl::transformConstExprCastCall(CallBase &Call) {
     if (!CastInst::isBitOrNoopPointerCastable(ActTy, ParamTy, DL))
       return false;   // Cannot transform this parameter value.
 
-    if (AttrBuilder(CallerPAL.getParamAttributes(i))
+    if (AttrBuilder(CallerPAL.getParamAttrs(i))
             .overlaps(AttributeFuncs::typeIncompatible(ParamTy)))
       return false;   // Attribute not compatible with transformed value.
 
     if (Call.isInAllocaArgument(i))
       return false;   // Cannot transform to and from inalloca.
 
-    if (CallerPAL.hasParamAttribute(i, Attribute::SwiftError))
+    if (CallerPAL.hasParamAttr(i, Attribute::SwiftError))
       return false;
 
     // If the parameter is passed as a byval argument, then we have to have a
     // sized type and the sized type has to have the same size as the old type.
-    if (ParamTy != ActTy && CallerPAL.hasParamAttribute(i, Attribute::ByVal)) {
+    if (ParamTy != ActTy && CallerPAL.hasParamAttr(i, Attribute::ByVal)) {
       PointerType *ParamPTy = dyn_cast<PointerType>(ParamTy);
       if (!ParamPTy || !ParamPTy->getElementType()->isSized())
         return false;
@@ -2850,12 +2925,12 @@ bool InstCombinerImpl::transformConstExprCastCall(CallBase &Call) {
     Args.push_back(NewArg);
 
     // Add any parameter attributes.
-    if (CallerPAL.hasParamAttribute(i, Attribute::ByVal)) {
-      AttrBuilder AB(CallerPAL.getParamAttributes(i));
+    if (CallerPAL.hasParamAttr(i, Attribute::ByVal)) {
+      AttrBuilder AB(CallerPAL.getParamAttrs(i));
       AB.addByValAttr(NewArg->getType()->getPointerElementType());
       ArgAttrs.push_back(AttributeSet::get(Ctx, AB));
     } else
-      ArgAttrs.push_back(CallerPAL.getParamAttributes(i));
+      ArgAttrs.push_back(CallerPAL.getParamAttrs(i));
   }
 
   // If the function takes more arguments than the call was taking, add them
@@ -2882,12 +2957,12 @@ bool InstCombinerImpl::transformConstExprCastCall(CallBase &Call) {
         Args.push_back(NewArg);
 
         // Add any parameter attributes.
-        ArgAttrs.push_back(CallerPAL.getParamAttributes(i));
+        ArgAttrs.push_back(CallerPAL.getParamAttrs(i));
       }
     }
   }
 
-  AttributeSet FnAttrs = CallerPAL.getFnAttributes();
+  AttributeSet FnAttrs = CallerPAL.getFnAttrs();
 
   if (NewRetTy->isVoidTy())
     Caller->setName("");   // Void type should not have a name.
@@ -2988,7 +3063,7 @@ InstCombinerImpl::transformCallThroughTrampoline(CallBase &Call,
     for (FunctionType::param_iterator I = NestFTy->param_begin(),
                                       E = NestFTy->param_end();
          I != E; ++NestArgNo, ++I) {
-      AttributeSet AS = NestAttrs.getParamAttributes(NestArgNo);
+      AttributeSet AS = NestAttrs.getParamAttrs(NestArgNo);
       if (AS.hasAttribute(Attribute::Nest)) {
         // Record the parameter type and any other attributes.
         NestTy = *I;
@@ -3024,7 +3099,7 @@ InstCombinerImpl::transformCallThroughTrampoline(CallBase &Call,
 
           // Add the original argument and attributes.
           NewArgs.push_back(*I);
-          NewArgAttrs.push_back(Attrs.getParamAttributes(ArgNo));
+          NewArgAttrs.push_back(Attrs.getParamAttrs(ArgNo));
 
           ++ArgNo;
           ++I;
@@ -3070,8 +3145,8 @@ InstCombinerImpl::transformCallThroughTrampoline(CallBase &Call,
         NestF : ConstantExpr::getBitCast(NestF,
                                          PointerType::getUnqual(NewFTy));
       AttributeList NewPAL =
-          AttributeList::get(FTy->getContext(), Attrs.getFnAttributes(),
-                             Attrs.getRetAttributes(), NewArgAttrs);
+          AttributeList::get(FTy->getContext(), Attrs.getFnAttrs(),
+                             Attrs.getRetAttrs(), NewArgAttrs);
 
       SmallVector<OperandBundleDef, 1> OpBundles;
       Call.getOperandBundlesAsDefs(OpBundles);

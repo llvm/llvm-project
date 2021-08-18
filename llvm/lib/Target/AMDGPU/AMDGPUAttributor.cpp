@@ -302,12 +302,6 @@ struct AAAMDAttributesFunction : public AAAMDAttributes {
     CallingConv::ID CC = F->getCallingConv();
     bool CallingConvSupportsAllImplicits = (CC != CallingConv::AMDGPU_Gfx);
 
-    // Don't add attributes to instrinsics
-    if (F->isIntrinsic()) {
-      indicatePessimisticFixpoint();
-      return;
-    }
-
     // Ignore functions with graphics calling conventions, these are currently
     // not allowed to have kernel arguments.
     if (AMDGPU::isGraphics(F->getCallingConv())) {
@@ -500,8 +494,10 @@ public:
   bool runOnModule(Module &M) override {
     SetVector<Function *> Functions;
     AnalysisGetter AG;
-    for (Function &F : M)
-      Functions.insert(&F);
+    for (Function &F : M) {
+      if (!F.isIntrinsic())
+        Functions.insert(&F);
+    }
 
     CallGraphUpdater CGUpdater;
     BumpPtrAllocator Allocator;
@@ -509,8 +505,10 @@ public:
     Attributor A(Functions, InfoCache, CGUpdater);
 
     for (Function &F : M) {
-      A.getOrCreateAAFor<AAAMDAttributes>(IRPosition::function(F));
-      A.getOrCreateAAFor<AAAMDWorkGroupSize>(IRPosition::function(F));
+      if (!F.isIntrinsic()) {
+        A.getOrCreateAAFor<AAAMDAttributes>(IRPosition::function(F));
+        A.getOrCreateAAFor<AAAMDWorkGroupSize>(IRPosition::function(F));
+      }
     }
 
     ChangeStatus Change = A.run();

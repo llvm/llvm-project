@@ -417,7 +417,7 @@ def parse_bug_html(filename):
         'bug_path_length': 1
     }
 
-    with open(filename) as handler:
+    with open(filename, encoding='utf-8') as handler:
         for line in handler.readlines():
             # do not read the file further
             if endsign.match(line):

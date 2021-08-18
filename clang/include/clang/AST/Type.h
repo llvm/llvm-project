@@ -3455,10 +3455,6 @@ class ConstantMatrixType final : public MatrixType {
 protected:
   friend class ASTContext;
 
-  /// The element type of the matrix.
-  // FIXME: Appears to be unused? There is also MatrixType::ElementType...
-  QualType ElementType;
-
   /// Number of rows and columns.
   unsigned NumRows;
   unsigned NumColumns;

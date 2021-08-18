@@ -117,10 +117,11 @@ public:
                                          const MachineFunction &MF) const;
 
   /// Return true if the instruction is trivially rematerializable, meaning it
-  /// has no side effects and requires no operands that aren't always available.
-  /// This means the only allowed uses are constants and unallocatable physical
-  /// registers so that the instructions result is independent of the place
-  /// in the function.
+  /// has no side effects. Uses of constants and unallocatable physical
+  /// registers are always trivial to rematerialize so that the instructions
+  /// result is independent of the place in the function. Uses of virtual
+  /// registers are allowed but it is caller's responsility to ensure these
+  /// operands are valid at the point the instruction is beeing moved.
   bool isTriviallyReMaterializable(const MachineInstr &MI,
                                    AAResults *AA = nullptr) const {
     return MI.getOpcode() == TargetOpcode::IMPLICIT_DEF ||
@@ -140,8 +141,7 @@ protected:
   /// set, this hook lets the target specify whether the instruction is actually
   /// trivially rematerializable, taking into consideration its operands. This
   /// predicate must return false if the instruction has any side effects other
-  /// than producing a value, or if it requres any address registers that are
-  /// not always available.
+  /// than producing a value.
   /// Requirements must be check as stated in isTriviallyReMaterializable() .
   virtual bool isReallyTriviallyReMaterializable(const MachineInstr &MI,
                                                  AAResults *AA) const {

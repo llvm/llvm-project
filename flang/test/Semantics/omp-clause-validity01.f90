@@ -494,9 +494,6 @@ use omp_lib
   !ERROR: RELAXED clause is not allowed on the FLUSH directive
   !$omp flush relaxed
 
-  !$omp cancel DO
-  !$omp cancellation point parallel
-
 ! 2.13.2 critical Construct
 
   ! !$omp critical (first)

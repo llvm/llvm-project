@@ -372,6 +372,12 @@ void PrintAddressDescription(
   int num_descriptions_printed = 0;
   uptr untagged_addr = UntagAddr(tagged_addr);
 
+  if (MemIsShadow(untagged_addr)) {
+    Printf("%s%p is HWAsan shadow memory.\n%s", d.Location(), untagged_addr,
+           d.Default());
+    return;
+  }
+
   // Print some very basic information about the address, if it's a heap.
   HwasanChunkView chunk = FindHeapChunkByAddress(untagged_addr);
   if (uptr beg = chunk.Beg()) {
@@ -559,8 +565,15 @@ void ReportInvalidFree(StackTrace *stack, uptr tagged_addr) {
 
   uptr untagged_addr = UntagAddr(tagged_addr);
   tag_t ptr_tag = GetTagFromPointer(tagged_addr);
-  tag_t *tag_ptr = reinterpret_cast<tag_t*>(MemToShadow(untagged_addr));
-  tag_t mem_tag = *tag_ptr;
+  tag_t *tag_ptr = nullptr;
+  tag_t mem_tag = 0;
+  if (MemIsApp(untagged_addr)) {
+    tag_ptr = reinterpret_cast<tag_t *>(MemToShadow(untagged_addr));
+    if (MemIsShadow(reinterpret_cast<uptr>(tag_ptr)))
+      mem_tag = *tag_ptr;
+    else
+      tag_ptr = nullptr;
+  }
   Decorator d;
   Printf("%s", d.Error());
   uptr pc = GetTopPc(stack);
@@ -574,14 +587,16 @@ void ReportInvalidFree(StackTrace *stack, uptr tagged_addr) {
            SanitizerToolName, bug_type, untagged_addr, pc);
   }
   Printf("%s", d.Access());
-  Printf("tags: %02x/%02x (ptr/mem)\n", ptr_tag, mem_tag);
+  if (tag_ptr)
+    Printf("tags: %02x/%02x (ptr/mem)\n", ptr_tag, mem_tag);
   Printf("%s", d.Default());
 
   stack->Print();
 
   PrintAddressDescription(tagged_addr, 0, nullptr);
 
-  PrintTagsAroundAddr(tag_ptr);
+  if (tag_ptr)
+    PrintTagsAroundAddr(tag_ptr);
 
   ReportErrorSummary(bug_type, stack);
 }

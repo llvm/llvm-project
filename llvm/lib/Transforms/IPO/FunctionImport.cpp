@@ -39,6 +39,7 @@
 #include "llvm/Support/Casting.h"
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Support/Debug.h"
+#include "llvm/Support/Errc.h"
 #include "llvm/Support/Error.h"
 #include "llvm/Support/ErrorHandling.h"
 #include "llvm/Support/FileSystem.h"
@@ -496,7 +497,7 @@ static void computeImportForFunction(
                             VI.name().str() + " due to " +
                             getFailureName(Reason);
           auto Error = make_error<StringError>(
-              Msg, std::make_error_code(std::errc::operation_not_supported));
+              Msg, make_error_code(errc::not_supported));
           logAllUnhandledErrors(std::move(Error), errs(),
                                 "Error importing module: ");
           break;

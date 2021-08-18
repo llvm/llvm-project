@@ -172,12 +172,11 @@ define <4 x double> @vrgather_shuffle_xv_v4f64(<4 x double> %x) {
 ; RV32-NEXT:    vsetivli zero, 1, e8, mf8, ta, mu
 ; RV32-NEXT:    vmv.s.x v0, a0
 ; RV32-NEXT:    vsetivli zero, 4, e16, mf2, ta, mu
-; RV32-NEXT:    vid.v v25
-; RV32-NEXT:    vrsub.vi v25, v25, 4
 ; RV32-NEXT:    lui a0, %hi(.LCPI7_0)
 ; RV32-NEXT:    addi a0, a0, %lo(.LCPI7_0)
-; RV32-NEXT:    vsetvli zero, zero, e64, m2, ta, mu
 ; RV32-NEXT:    vlse64.v v26, (a0), zero
+; RV32-NEXT:    vid.v v25
+; RV32-NEXT:    vrsub.vi v25, v25, 4
 ; RV32-NEXT:    vsetvli zero, zero, e64, m2, tu, mu
 ; RV32-NEXT:    vrgatherei16.vv v26, v8, v25, v0.t
 ; RV32-NEXT:    vmv2r.v v8, v26

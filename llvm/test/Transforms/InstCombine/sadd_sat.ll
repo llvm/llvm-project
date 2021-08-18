@@ -21,6 +21,22 @@ entry:
   ret i32 %conv7
 }
 
+define i32 @sadd_sat32_mm(i32 %a, i32 %b) {
+; CHECK-LABEL: @sadd_sat32_mm(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[TMP0:%.*]] = call i32 @llvm.sadd.sat.i32(i32 [[B:%.*]], i32 [[A:%.*]])
+; CHECK-NEXT:    ret i32 [[TMP0]]
+;
+entry:
+  %conv = sext i32 %a to i64
+  %conv1 = sext i32 %b to i64
+  %add = add i64 %conv1, %conv
+  %spec.store.select = call i64 @llvm.smin.i64(i64 %add, i64 2147483647)
+  %spec.store.select8 = call i64 @llvm.smax.i64(i64 %spec.store.select, i64 -2147483648)
+  %conv7 = trunc i64 %spec.store.select8 to i32
+  ret i32 %conv7
+}
+
 define i32 @ssub_sat32(i32 %a, i32 %b) {
 ; CHECK-LABEL: @ssub_sat32(
 ; CHECK-NEXT:  entry:
@@ -35,6 +51,22 @@ entry:
   %spec.store.select = select i1 %0, i64 %sub, i64 2147483647
   %1 = icmp sgt i64 %spec.store.select, -2147483648
   %spec.store.select8 = select i1 %1, i64 %spec.store.select, i64 -2147483648
+  %conv7 = trunc i64 %spec.store.select8 to i32
+  ret i32 %conv7
+}
+
+define i32 @ssub_sat32_mm(i32 %a, i32 %b) {
+; CHECK-LABEL: @ssub_sat32_mm(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[TMP0:%.*]] = call i32 @llvm.ssub.sat.i32(i32 [[A:%.*]], i32 [[B:%.*]])
+; CHECK-NEXT:    ret i32 [[TMP0]]
+;
+entry:
+  %conv = sext i32 %a to i64
+  %conv1 = sext i32 %b to i64
+  %sub = sub i64 %conv, %conv1
+  %spec.store.select = call i64 @llvm.smin.i64(i64 %sub, i64 2147483647)
+  %spec.store.select8 = call i64 @llvm.smax.i64(i64 %spec.store.select, i64 -2147483648)
   %conv7 = trunc i64 %spec.store.select8 to i32
   ret i32 %conv7
 }
@@ -64,6 +96,27 @@ entry:
   ret i32 %conv7
 }
 
+define i32 @smul_sat32_mm(i32 %a, i32 %b) {
+; CHECK-LABEL: @smul_sat32_mm(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[CONV:%.*]] = sext i32 [[A:%.*]] to i64
+; CHECK-NEXT:    [[CONV1:%.*]] = sext i32 [[B:%.*]] to i64
+; CHECK-NEXT:    [[ADD:%.*]] = mul nsw i64 [[CONV1]], [[CONV]]
+; CHECK-NEXT:    [[SPEC_STORE_SELECT:%.*]] = call i64 @llvm.smin.i64(i64 [[ADD]], i64 2147483647)
+; CHECK-NEXT:    [[SPEC_STORE_SELECT8:%.*]] = call i64 @llvm.smax.i64(i64 [[SPEC_STORE_SELECT]], i64 -2147483648)
+; CHECK-NEXT:    [[CONV7:%.*]] = trunc i64 [[SPEC_STORE_SELECT8]] to i32
+; CHECK-NEXT:    ret i32 [[CONV7]]
+;
+entry:
+  %conv = sext i32 %a to i64
+  %conv1 = sext i32 %b to i64
+  %add = mul i64 %conv1, %conv
+  %spec.store.select = call i64 @llvm.smin.i64(i64 %add, i64 2147483647)
+  %spec.store.select8 = call i64 @llvm.smax.i64(i64 %spec.store.select, i64 -2147483648)
+  %conv7 = trunc i64 %spec.store.select8 to i32
+  ret i32 %conv7
+}
+
 define signext i16 @sadd_sat16(i16 signext %a, i16 signext %b) {
 ; CHECK-LABEL: @sadd_sat16(
 ; CHECK-NEXT:  entry:
@@ -78,6 +131,22 @@ entry:
   %spec.store.select = select i1 %0, i32 %add, i32 32767
   %1 = icmp sgt i32 %spec.store.select, -32768
   %spec.store.select10 = select i1 %1, i32 %spec.store.select, i32 -32768
+  %conv9 = trunc i32 %spec.store.select10 to i16
+  ret i16 %conv9
+}
+
+define signext i16 @sadd_sat16_mm(i16 signext %a, i16 signext %b) {
+; CHECK-LABEL: @sadd_sat16_mm(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[TMP0:%.*]] = call i16 @llvm.sadd.sat.i16(i16 [[B:%.*]], i16 [[A:%.*]])
+; CHECK-NEXT:    ret i16 [[TMP0]]
+;
+entry:
+  %conv = sext i16 %a to i32
+  %conv1 = sext i16 %b to i32
+  %add = add i32 %conv1, %conv
+  %spec.store.select = call i32 @llvm.smin.i32(i32 %add, i32 32767)
+  %spec.store.select10 = call i32 @llvm.smax.i32(i32 %spec.store.select, i32 -32768)
   %conv9 = trunc i32 %spec.store.select10 to i16
   ret i16 %conv9
 }
@@ -100,6 +169,22 @@ entry:
   ret i16 %conv9
 }
 
+define signext i16 @ssub_sat16_mm(i16 signext %a, i16 signext %b) {
+; CHECK-LABEL: @ssub_sat16_mm(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[TMP0:%.*]] = call i16 @llvm.ssub.sat.i16(i16 [[A:%.*]], i16 [[B:%.*]])
+; CHECK-NEXT:    ret i16 [[TMP0]]
+;
+entry:
+  %conv = sext i16 %a to i32
+  %conv1 = sext i16 %b to i32
+  %sub = sub i32 %conv, %conv1
+  %spec.store.select = call i32 @llvm.smin.i32(i32 %sub, i32 32767)
+  %spec.store.select10 = call i32 @llvm.smax.i32(i32 %spec.store.select, i32 -32768)
+  %conv9 = trunc i32 %spec.store.select10 to i16
+  ret i16 %conv9
+}
+
 define signext i8 @sadd_sat8(i8 signext %a, i8 signext %b) {
 ; CHECK-LABEL: @sadd_sat8(
 ; CHECK-NEXT:  entry:
@@ -118,6 +203,22 @@ entry:
   ret i8 %conv9
 }
 
+define signext i8 @sadd_sat8_mm(i8 signext %a, i8 signext %b) {
+; CHECK-LABEL: @sadd_sat8_mm(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[TMP0:%.*]] = call i8 @llvm.sadd.sat.i8(i8 [[B:%.*]], i8 [[A:%.*]])
+; CHECK-NEXT:    ret i8 [[TMP0]]
+;
+entry:
+  %conv = sext i8 %a to i32
+  %conv1 = sext i8 %b to i32
+  %add = add i32 %conv1, %conv
+  %spec.store.select = call i32 @llvm.smin.i32(i32 %add, i32 127)
+  %spec.store.select10 = call i32 @llvm.smax.i32(i32 %spec.store.select, i32 -128)
+  %conv9 = trunc i32 %spec.store.select10 to i8
+  ret i8 %conv9
+}
+
 define signext i8 @ssub_sat8(i8 signext %a, i8 signext %b) {
 ; CHECK-LABEL: @ssub_sat8(
 ; CHECK-NEXT:  entry:
@@ -132,6 +233,22 @@ entry:
   %spec.store.select = select i1 %0, i32 %sub, i32 127
   %1 = icmp sgt i32 %spec.store.select, -128
   %spec.store.select10 = select i1 %1, i32 %spec.store.select, i32 -128
+  %conv9 = trunc i32 %spec.store.select10 to i8
+  ret i8 %conv9
+}
+
+define signext i8 @ssub_sat8_mm(i8 signext %a, i8 signext %b) {
+; CHECK-LABEL: @ssub_sat8_mm(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[TMP0:%.*]] = call i8 @llvm.ssub.sat.i8(i8 [[A:%.*]], i8 [[B:%.*]])
+; CHECK-NEXT:    ret i8 [[TMP0]]
+;
+entry:
+  %conv = sext i8 %a to i32
+  %conv1 = sext i8 %b to i32
+  %sub = sub i32 %conv, %conv1
+  %spec.store.select = call i32 @llvm.smin.i32(i32 %sub, i32 127)
+  %spec.store.select10 = call i32 @llvm.smax.i32(i32 %spec.store.select, i32 -128)
   %conv9 = trunc i32 %spec.store.select10 to i8
   ret i8 %conv9
 }
@@ -240,6 +357,22 @@ entry:
   ret <4 x i32> %conv7
 }
 
+define <4 x i32> @sadd_satv4i32_mm(<4 x i32> %a, <4 x i32> %b) {
+; CHECK-LABEL: @sadd_satv4i32_mm(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[TMP0:%.*]] = call <4 x i32> @llvm.sadd.sat.v4i32(<4 x i32> [[B:%.*]], <4 x i32> [[A:%.*]])
+; CHECK-NEXT:    ret <4 x i32> [[TMP0]]
+;
+entry:
+  %conv = sext <4 x i32> %a to <4 x i64>
+  %conv1 = sext <4 x i32> %b to <4 x i64>
+  %add = add <4 x i64> %conv1, %conv
+  %spec.store.select = call <4 x i64> @llvm.smin.v4i64(<4 x i64> %add, <4 x i64> <i64 2147483647, i64 2147483647, i64 2147483647, i64 2147483647>)
+  %spec.store.select8 = call <4 x i64> @llvm.smax.v4i64(<4 x i64> %spec.store.select, <4 x i64> <i64 -2147483648, i64 -2147483648, i64 -2147483648, i64 -2147483648>)
+  %conv7 = trunc <4 x i64> %spec.store.select8 to <4 x i32>
+  ret <4 x i32> %conv7
+}
+
 define <4 x i32> @ssub_satv4i32(<4 x i32> %a, <4 x i32> %b) {
 ; CHECK-LABEL: @ssub_satv4i32(
 ; CHECK-NEXT:  entry:
@@ -254,6 +387,22 @@ entry:
   %spec.store.select = select <4 x i1> %0, <4 x i64> %add, <4 x i64> <i64 2147483647, i64 2147483647, i64 2147483647, i64 2147483647>
   %1 = icmp sgt <4 x i64> %spec.store.select, <i64 -2147483648, i64 -2147483648, i64 -2147483648, i64 -2147483648>
   %spec.store.select8 = select <4 x i1> %1, <4 x i64> %spec.store.select, <4 x i64> <i64 -2147483648, i64 -2147483648, i64 -2147483648, i64 -2147483648>
+  %conv7 = trunc <4 x i64> %spec.store.select8 to <4 x i32>
+  ret <4 x i32> %conv7
+}
+
+define <4 x i32> @ssub_satv4i32_mm(<4 x i32> %a, <4 x i32> %b) {
+; CHECK-LABEL: @ssub_satv4i32_mm(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[TMP0:%.*]] = call <4 x i32> @llvm.ssub.sat.v4i32(<4 x i32> [[B:%.*]], <4 x i32> [[A:%.*]])
+; CHECK-NEXT:    ret <4 x i32> [[TMP0]]
+;
+entry:
+  %conv = sext <4 x i32> %a to <4 x i64>
+  %conv1 = sext <4 x i32> %b to <4 x i64>
+  %add = sub <4 x i64> %conv1, %conv
+  %spec.store.select = call <4 x i64> @llvm.smin.v4i64(<4 x i64> %add, <4 x i64> <i64 2147483647, i64 2147483647, i64 2147483647, i64 2147483647>)
+  %spec.store.select8 = call <4 x i64> @llvm.smax.v4i64(<4 x i64> %spec.store.select, <4 x i64> <i64 -2147483648, i64 -2147483648, i64 -2147483648, i64 -2147483648>)
   %conv7 = trunc <4 x i64> %spec.store.select8 to <4 x i32>
   ret <4 x i32> %conv7
 }
@@ -345,6 +494,29 @@ entry:
   ret i32 %conv7
 }
 
+define i32 @sadd_sat32_extrause_2_mm(i32 %a, i32 %b) {
+; CHECK-LABEL: @sadd_sat32_extrause_2_mm(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[CONV:%.*]] = sext i32 [[A:%.*]] to i64
+; CHECK-NEXT:    [[CONV1:%.*]] = sext i32 [[B:%.*]] to i64
+; CHECK-NEXT:    [[ADD:%.*]] = add nsw i64 [[CONV1]], [[CONV]]
+; CHECK-NEXT:    [[SPEC_STORE_SELECT:%.*]] = call i64 @llvm.smin.i64(i64 [[ADD]], i64 2147483647)
+; CHECK-NEXT:    [[SPEC_STORE_SELECT8:%.*]] = call i64 @llvm.smax.i64(i64 [[SPEC_STORE_SELECT]], i64 -2147483648)
+; CHECK-NEXT:    [[CONV7:%.*]] = trunc i64 [[SPEC_STORE_SELECT8]] to i32
+; CHECK-NEXT:    call void @use64(i64 [[SPEC_STORE_SELECT]])
+; CHECK-NEXT:    ret i32 [[CONV7]]
+;
+entry:
+  %conv = sext i32 %a to i64
+  %conv1 = sext i32 %b to i64
+  %add = add i64 %conv1, %conv
+  %spec.store.select = call i64 @llvm.smin.i64(i64 %add, i64 2147483647)
+  %spec.store.select8 = call i64 @llvm.smax.i64(i64 %spec.store.select, i64 -2147483648)
+  %conv7 = trunc i64 %spec.store.select8 to i32
+  call void @use64(i64 %spec.store.select)
+  ret i32 %conv7
+}
+
 define i32 @sadd_sat32_extrause_3(i32 %a, i32 %b) {
 ; CHECK-LABEL: @sadd_sat32_extrause_3(
 ; CHECK-NEXT:  entry:
@@ -367,6 +539,29 @@ entry:
   %spec.store.select = select i1 %0, i64 %add, i64 2147483647
   %1 = icmp sgt i64 %spec.store.select, -2147483648
   %spec.store.select8 = select i1 %1, i64 %spec.store.select, i64 -2147483648
+  %conv7 = trunc i64 %spec.store.select8 to i32
+  call void @use64(i64 %add)
+  ret i32 %conv7
+}
+
+define i32 @sadd_sat32_extrause_3_mm(i32 %a, i32 %b) {
+; CHECK-LABEL: @sadd_sat32_extrause_3_mm(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[CONV:%.*]] = sext i32 [[A:%.*]] to i64
+; CHECK-NEXT:    [[CONV1:%.*]] = sext i32 [[B:%.*]] to i64
+; CHECK-NEXT:    [[ADD:%.*]] = add nsw i64 [[CONV1]], [[CONV]]
+; CHECK-NEXT:    [[SPEC_STORE_SELECT:%.*]] = call i64 @llvm.smin.i64(i64 [[ADD]], i64 2147483647)
+; CHECK-NEXT:    [[SPEC_STORE_SELECT8:%.*]] = call i64 @llvm.smax.i64(i64 [[SPEC_STORE_SELECT]], i64 -2147483648)
+; CHECK-NEXT:    [[CONV7:%.*]] = trunc i64 [[SPEC_STORE_SELECT8]] to i32
+; CHECK-NEXT:    call void @use64(i64 [[ADD]])
+; CHECK-NEXT:    ret i32 [[CONV7]]
+;
+entry:
+  %conv = sext i32 %a to i64
+  %conv1 = sext i32 %b to i64
+  %add = add i64 %conv1, %conv
+  %spec.store.select = call i64 @llvm.smin.i64(i64 %add, i64 2147483647)
+  %spec.store.select8 = call i64 @llvm.smax.i64(i64 %spec.store.select, i64 -2147483648)
   %conv7 = trunc i64 %spec.store.select8 to i32
   call void @use64(i64 %add)
   ret i32 %conv7
@@ -501,3 +696,9 @@ entry:
 }
 
 declare void @use64(i64)
+declare i64 @llvm.smin.i64(i64, i64)
+declare i64 @llvm.smax.i64(i64, i64)
+declare i32 @llvm.smin.i32(i32, i32)
+declare i32 @llvm.smax.i32(i32, i32)
+declare <4 x i64> @llvm.smin.v4i64(<4 x i64>, <4 x i64>)
+declare <4 x i64> @llvm.smax.v4i64(<4 x i64>, <4 x i64>)

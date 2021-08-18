@@ -7,7 +7,6 @@
 //===----------------------------------------------------------------------===//
 
 // UNSUPPORTED: c++03, c++11, c++14
-// UNSUPPORTED: gcc-10
 // <optional>
 
 // template <class... Args> T& optional<T>::emplace(Args&&... args);

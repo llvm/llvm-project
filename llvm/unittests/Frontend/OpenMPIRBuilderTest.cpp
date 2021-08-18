@@ -1586,6 +1586,7 @@ TEST_F(OpenMPIRBuilderTest, TileSingleLoopCounts) {
     CanonicalLoopInfo *Loop =
         OMPBuilder.createCanonicalLoop(Loc, LoopBodyGenCB, StartVal, StopVal,
                                        StepVal, IsSigned, InclusiveStop);
+    InsertPointTy AfterIP = Loop->getAfterIP();
 
     // Tile the loop.
     Value *TileSizeVal = ConstantInt::get(LCTy, TileSize);
@@ -1594,7 +1595,7 @@ TEST_F(OpenMPIRBuilderTest, TileSingleLoopCounts) {
 
     // Set the insertion pointer to after loop, where the next loop will be
     // emitted.
-    Builder.restoreIP(Loop->getAfterIP());
+    Builder.restoreIP(AfterIP);
 
     // Extract the trip count.
     CanonicalLoopInfo *FloorLoop = GenLoops[0];
@@ -1663,12 +1664,20 @@ TEST_F(OpenMPIRBuilderTest, StaticWorkShareLoop) {
   CanonicalLoopInfo *CLI = OMPBuilder.createCanonicalLoop(
       Loc, LoopBodyGen, StartVal, StopVal, StepVal,
       /*IsSigned=*/false, /*InclusiveStop=*/false);
+  BasicBlock *Preheader = CLI->getPreheader();
+  BasicBlock *Body = CLI->getBody();
+  Value *IV = CLI->getIndVar();
+  BasicBlock *ExitBlock = CLI->getExit();
 
   Builder.SetInsertPoint(BB, BB->getFirstInsertionPt());
   InsertPointTy AllocaIP = Builder.saveIP();
 
-  CLI = OMPBuilder.createStaticWorkshareLoop(Loc, CLI, AllocaIP,
-                                             /*NeedsBarrier=*/true);
+  OMPBuilder.applyStaticWorkshareLoop(DL, CLI, AllocaIP, /*NeedsBarrier=*/true);
+
+  BasicBlock *Cond = Body->getSinglePredecessor();
+  Instruction *Cmp = &*Cond->begin();
+  Value *TripCount = Cmp->getOperand(1);
+
   auto AllocaIter = BB->begin();
   ASSERT_GE(std::distance(BB->begin(), BB->end()), 4);
   AllocaInst *PLastIter = dyn_cast<AllocaInst>(&*(AllocaIter++));
@@ -1680,10 +1689,8 @@ TEST_F(OpenMPIRBuilderTest, StaticWorkShareLoop) {
   EXPECT_NE(PUpperBound, nullptr);
   EXPECT_NE(PStride, nullptr);
 
-  auto PreheaderIter = CLI->getPreheader()->begin();
-  ASSERT_GE(
-      std::distance(CLI->getPreheader()->begin(), CLI->getPreheader()->end()),
-      7);
+  auto PreheaderIter = Preheader->begin();
+  ASSERT_GE(std::distance(Preheader->begin(), Preheader->end()), 7);
   StoreInst *LowerBoundStore = dyn_cast<StoreInst>(&*(PreheaderIter++));
   StoreInst *UpperBoundStore = dyn_cast<StoreInst>(&*(PreheaderIter++));
   StoreInst *StrideStore = dyn_cast<StoreInst>(&*(PreheaderIter++));
@@ -1705,15 +1712,15 @@ TEST_F(OpenMPIRBuilderTest, StaticWorkShareLoop) {
 
   // Check that the loop IV is updated to account for the lower bound returned
   // by the OpenMP runtime call.
-  BinaryOperator *Add = dyn_cast<BinaryOperator>(&CLI->getBody()->front());
-  EXPECT_EQ(Add->getOperand(0), CLI->getIndVar());
+  BinaryOperator *Add = dyn_cast<BinaryOperator>(&Body->front());
+  EXPECT_EQ(Add->getOperand(0), IV);
   auto *LoadedLowerBound = dyn_cast<LoadInst>(Add->getOperand(1));
   ASSERT_NE(LoadedLowerBound, nullptr);
   EXPECT_EQ(LoadedLowerBound->getPointerOperand(), PLowerBound);
 
   // Check that the trip count is updated to account for the lower and upper
   // bounds return by the OpenMP runtime call.
-  auto *AddOne = dyn_cast<Instruction>(CLI->getTripCount());
+  auto *AddOne = dyn_cast<Instruction>(TripCount);
   ASSERT_NE(AddOne, nullptr);
   ASSERT_TRUE(AddOne->isBinaryOp());
   auto *One = dyn_cast<ConstantInt>(AddOne->getOperand(1));
@@ -1729,12 +1736,10 @@ TEST_F(OpenMPIRBuilderTest, StaticWorkShareLoop) {
 
   // The original loop iterator should only be used in the condition, in the
   // increment and in the statement that adds the lower bound to it.
-  Value *IV = CLI->getIndVar();
   EXPECT_EQ(std::distance(IV->use_begin(), IV->use_end()), 3);
 
   // The exit block should contain the "fini" call and the barrier call,
   // plus the call to obtain the thread ID.
-  BasicBlock *ExitBlock = CLI->getExit();
   size_t NumCallsInExitBlock =
       count_if(*ExitBlock, [](Instruction &I) { return isa<CallInst>(I); });
   EXPECT_EQ(NumCallsInExitBlock, 3u);
@@ -1785,8 +1790,8 @@ TEST_P(OpenMPIRBuilderTestWithParams, DynamicWorkShareLoop) {
   Value *IV = CLI->getIndVar();
 
   InsertPointTy EndIP =
-      OMPBuilder.createDynamicWorkshareLoop(Loc, CLI, AllocaIP, SchedType,
-                                            /*NeedsBarrier=*/true, ChunkVal);
+      OMPBuilder.applyDynamicWorkshareLoop(DL, CLI, AllocaIP, SchedType,
+                                           /*NeedsBarrier=*/true, ChunkVal);
   // The returned value should be the "after" point.
   ASSERT_EQ(EndIP.getBlock(), AfterIP.getBlock());
   ASSERT_EQ(EndIP.getPoint(), AfterIP.getPoint());

@@ -71,6 +71,8 @@ entry:
 ; CHECK-NEXT: ]
 
 ; CHECK: if.then2:
+; CHECK-NEXT: %[[BUF:.*]] = bitcast i32* %[[SETJMP_TABLE1]] to i8*
+; CHECK-NEXT: call void @free(i8* %[[BUF]])
 ; CHECK-NEXT: call void @emscripten_longjmp([[PTR]] %[[__THREW__VAL]], i32 %[[THREWVALUE_VAL]])
 ; CHECK-NEXT: unreachable
 

@@ -1,4 +1,4 @@
-; RUN: llvm-xray fdr-dump -verify %S/Inputs/fdr-log-arg1-version-3.xray \
+; RUN: llvm-xray fdr-dump --verify %S/Inputs/fdr-log-arg1-version-3.xray \
 ; RUN:     | FileCheck %s
 
 ; CHECK:      [New Block]

@@ -80,7 +80,7 @@ struct ScheduleTreeRewriter
     isl::schedule NewChild =
         getDerived().visit(Band.child(0), std::forward<Args>(args)...);
     isl::schedule_node NewNode =
-        NewChild.insert_partial_schedule(PartialSched).get_root().get_child(0);
+        NewChild.insert_partial_schedule(PartialSched).get_root().child(0);
 
     // Reapply permutability and coincidence attributes.
     NewNode = isl::manage(isl_schedule_node_band_set_permutable(
@@ -123,7 +123,8 @@ struct ScheduleTreeRewriter
   }
 
   isl::schedule visitMark(const isl::schedule_node &Mark, Args... args) {
-    isl::id TheMark = Mark.mark_get_id();
+
+    isl::id TheMark = Mark.as<isl::schedule_node_mark>().get_id();
     isl::schedule_node NewChild =
         getDerived()
             .visit(Mark.first_child(), std::forward<Args>(args)...)
@@ -134,7 +135,8 @@ struct ScheduleTreeRewriter
 
   isl::schedule visitExtension(const isl::schedule_node &Extension,
                                Args... args) {
-    isl::union_map TheExtension = Extension.extension_get_extension();
+    isl::union_map TheExtension =
+        Extension.as<isl::schedule_node_extension>().get_extension();
     isl::schedule_node NewChild = getDerived()
                                       .visit(Extension.child(0), args...)
                                       .get_root()
@@ -145,7 +147,8 @@ struct ScheduleTreeRewriter
   }
 
   isl::schedule visitFilter(const isl::schedule_node &Filter, Args... args) {
-    isl::union_set FilterDomain = Filter.filter_get_filter();
+    isl::union_set FilterDomain =
+        Filter.as<isl::schedule_node_filter>().get_filter();
     isl::schedule NewSchedule =
         getDerived().visit(Filter.child(0), std::forward<Args>(args)...);
     return NewSchedule.intersect_domain(FilterDomain);
@@ -236,7 +239,7 @@ struct ExtensionNodeRewriter
     isl::union_map NewPartialSchedMap = isl::union_map::from(PartialSched);
     unsigned BandDims = isl_schedule_node_band_n_member(OldNode.get());
     for (isl::map Ext : NewChildExtensions.get_map_list()) {
-      unsigned ExtDims = Ext.domain_tuple_dim();
+      unsigned ExtDims = Ext.domain_tuple_dim().release();
       assert(ExtDims >= BandDims);
       unsigned OuterDims = ExtDims - BandDims;
 
@@ -256,7 +259,7 @@ struct ExtensionNodeRewriter
     isl::schedule_node NewNode =
         NewChild.insert_partial_schedule(NewPartialSchedAsAsMultiUnionPwAff)
             .get_root()
-            .get_child(0);
+            .child(0);
 
     // Reapply permutability and coincidence attributes.
     NewNode = isl::manage(isl_schedule_node_band_set_permutable(
@@ -274,7 +277,8 @@ struct ExtensionNodeRewriter
   isl::schedule visitFilter(const isl::schedule_node &Filter,
                             const isl::union_set &Domain,
                             isl::union_map &Extensions) {
-    isl::union_set FilterDomain = Filter.filter_get_filter();
+    isl::union_set FilterDomain =
+        Filter.as<isl::schedule_node_filter>().get_filter();
     isl::union_set NewDomain = Domain.intersect(FilterDomain);
 
     // A filter is added implicitly if necessary when joining schedule trees.
@@ -284,7 +288,8 @@ struct ExtensionNodeRewriter
   isl::schedule visitExtension(const isl::schedule_node &Extension,
                                const isl::union_set &Domain,
                                isl::union_map &Extensions) {
-    isl::union_map ExtDomain = Extension.extension_get_extension();
+    isl::union_map ExtDomain =
+        Extension.as<isl::schedule_node_extension>().get_extension();
     isl::union_set NewDomain = Domain.unite(ExtDomain.range());
     isl::union_map ChildExtensions;
     isl::schedule NewChild =
@@ -340,7 +345,8 @@ struct ApplyASTBuildOptions
 
   isl::schedule_node visitBand(const isl::schedule_node &Band) {
     isl::schedule_node Result =
-        Band.band_set_ast_build_options(ASTBuildOptions[Pos]);
+        Band.as<isl::schedule_node_band>().set_ast_build_options(
+            ASTBuildOptions[Pos]);
     Pos += 1;
     return getBase().visitBand(Result);
   }
@@ -412,7 +418,7 @@ static isl::id createGeneratedLoopAttr(isl::ctx Ctx, MDNode *FollowupLoopMD) {
 /// start with either the mark or the band.
 static isl::schedule_node moveToBandMark(isl::schedule_node BandOrMark) {
   if (isBandMark(BandOrMark)) {
-    assert(isBandWithSingleLoop(BandOrMark.get_child(0)));
+    assert(isBandWithSingleLoop(BandOrMark.child(0)));
     return BandOrMark;
   }
   assert(isBandWithSingleLoop(BandOrMark));
@@ -431,7 +437,7 @@ static isl::schedule_node removeMark(isl::schedule_node MarkOrBand,
 
   isl::schedule_node Band;
   if (isMark(MarkOrBand)) {
-    Attr = getLoopAttr(MarkOrBand.mark_get_id());
+    Attr = getLoopAttr(MarkOrBand.as<isl::schedule_node_mark>().get_id());
     Band = isl::manage(isl_schedule_node_delete(MarkOrBand.release()));
   } else {
     Attr = nullptr;
@@ -453,7 +459,7 @@ static isl::schedule_node insertMark(isl::schedule_node Band, isl::id Mark) {
   assert(moveToBandMark(Band).is_equal(Band) &&
          "Don't add a two marks for a band");
 
-  return Band.insert_mark(Mark).get_child(0);
+  return Band.insert_mark(Mark).child(0);
 }
 
 /// Return the (one-dimensional) set of numbers that are divisible by @p Factor
@@ -484,7 +490,7 @@ static isl::basic_set isDivisibleBySet(isl::ctx &Ctx, long Factor,
 /// @param Set         A set, which should be modified.
 /// @param VectorWidth A parameter, which determines the constraint.
 static isl::set addExtentConstraints(isl::set Set, int VectorWidth) {
-  unsigned Dims = Set.tuple_dim();
+  unsigned Dims = Set.tuple_dim().release();
   isl::space Space = Set.get_space();
   isl::local_space LocalSpace = isl::local_space(Space);
   isl::constraint ExtConstr = isl::constraint::alloc_inequality(LocalSpace);
@@ -499,7 +505,8 @@ static isl::set addExtentConstraints(isl::set Set, int VectorWidth) {
 } // namespace
 
 bool polly::isBandMark(const isl::schedule_node &Node) {
-  return isMark(Node) && isLoopAttr(Node.mark_get_id());
+  return isMark(Node) &&
+         isLoopAttr(Node.as<isl::schedule_node_mark>().get_id());
 }
 
 BandAttr *polly::getBandAttr(isl::schedule_node MarkOrBand) {
@@ -507,7 +514,7 @@ BandAttr *polly::getBandAttr(isl::schedule_node MarkOrBand) {
   if (!isMark(MarkOrBand))
     return nullptr;
 
-  return getLoopAttr(MarkOrBand.mark_get_id());
+  return getLoopAttr(MarkOrBand.as<isl::schedule_node_mark>().get_id());
 }
 
 isl::schedule polly::hoistExtensionNodes(isl::schedule Sched) {
@@ -543,13 +550,14 @@ isl::schedule polly::applyFullUnroll(isl::schedule_node BandToUnroll) {
 
   isl::multi_union_pw_aff PartialSched = isl::manage(
       isl_schedule_node_band_get_partial_schedule(BandToUnroll.get()));
-  assert(PartialSched.dim(isl::dim::out) == 1 &&
+  assert(PartialSched.dim(isl::dim::out).release() == 1 &&
          "Can only unroll a single dimension");
-  isl::union_pw_aff PartialSchedUAff = PartialSched.get_union_pw_aff(0);
+  isl::union_pw_aff PartialSchedUAff = PartialSched.at(0);
 
   isl::union_set Domain = BandToUnroll.get_domain();
   PartialSchedUAff = PartialSchedUAff.intersect_domain(Domain);
-  isl::union_map PartialSchedUMap = isl::union_map(PartialSchedUAff);
+  isl::union_map PartialSchedUMap =
+      isl::union_map::from(isl::union_pw_multi_aff(PartialSchedUAff));
 
   // Enumerator only the scatter elements.
   isl::union_set ScatterList = PartialSchedUMap.range();
@@ -570,7 +578,7 @@ isl::schedule polly::applyFullUnroll(isl::schedule_node BandToUnroll) {
   });
 
   // Convert the points to a sequence of filters.
-  isl::union_set_list List = isl::union_set_list::alloc(Ctx, Elts.size());
+  isl::union_set_list List = isl::union_set_list(Ctx, Elts.size());
   for (isl::point P : Elts) {
     // Determine the domains that map this scatter element.
     isl::union_set DomainFilter = PartialSchedUMap.intersect_range(P).domain();
@@ -599,7 +607,7 @@ isl::schedule polly::applyPartialUnroll(isl::schedule_node BandToUnroll,
       isl_schedule_node_band_get_partial_schedule(BandToUnroll.get()));
 
   // { Stmt[] -> [x] }
-  isl::union_pw_aff PartialSchedUAff = PartialSched.get_union_pw_aff(0);
+  isl::union_pw_aff PartialSchedUAff = PartialSched.at(0);
 
   // Here we assume the schedule stride is one and starts with 0, which is not
   // necessarily the case.
@@ -616,10 +624,11 @@ isl::schedule polly::applyPartialUnroll(isl::schedule_node BandToUnroll,
     return isl::stat::ok();
   });
 
-  isl::union_set_list List = isl::union_set_list::alloc(Ctx, Factor);
+  isl::union_set_list List = isl::union_set_list(Ctx, Factor);
   for (auto i : seq<int>(0, Factor)) {
     // { Stmt[] -> [x] }
-    isl::union_map UMap{PartialSchedUAff};
+    isl::union_map UMap =
+        isl::union_map::from(isl::union_pw_multi_aff(PartialSchedUAff));
 
     // { [x] }
     isl::basic_set Divisible = isDivisibleBySet(Ctx, Factor, i);
@@ -650,7 +659,7 @@ isl::schedule polly::applyPartialUnroll(isl::schedule_node BandToUnroll,
 
 isl::set polly::getPartialTilePrefixes(isl::set ScheduleRange,
                                        int VectorWidth) {
-  isl_size Dims = ScheduleRange.tuple_dim();
+  isl_size Dims = ScheduleRange.tuple_dim().release();
   isl::set LoopPrefixes =
       ScheduleRange.drop_constraints_involving_dims(isl::dim::set, Dims - 1, 1);
   auto ExtentPrefixes = addExtentConstraints(LoopPrefixes, VectorWidth);
@@ -662,7 +671,7 @@ isl::set polly::getPartialTilePrefixes(isl::set ScheduleRange,
 
 isl::union_set polly::getIsolateOptions(isl::set IsolateDomain,
                                         isl_size OutDimsNum) {
-  isl_size Dims = IsolateDomain.tuple_dim();
+  isl_size Dims = IsolateDomain.tuple_dim().release();
   assert(OutDimsNum <= Dims &&
          "The isl::set IsolateDomain is used to describe the range of schedule "
          "dimensions values, which should be isolated. Consequently, the "
@@ -693,7 +702,7 @@ isl::schedule_node polly::tileNode(isl::schedule_node Node,
   auto Dims = Space.dim(isl::dim::set);
   auto Sizes = isl::multi_val::zero(Space);
   std::string IdentifierString(Identifier);
-  for (auto i : seq<isl_size>(0, Dims)) {
+  for (auto i : seq<isl_size>(0, Dims.release())) {
     auto tileSize =
         i < (isl_size)TileSizes.size() ? TileSizes[i] : DefaultTileSize;
     Sizes = Sizes.set_val(i, isl::val(Node.ctx(), tileSize));
@@ -717,5 +726,6 @@ isl::schedule_node polly::applyRegisterTiling(isl::schedule_node Node,
                                               int DefaultTileSize) {
   Node = tileNode(Node, "Register tiling", TileSizes, DefaultTileSize);
   auto Ctx = Node.ctx();
-  return Node.band_set_ast_build_options(isl::union_set(Ctx, "{unroll[x]}"));
+  return Node.as<isl::schedule_node_band>().set_ast_build_options(
+      isl::union_set(Ctx, "{unroll[x]}"));
 }

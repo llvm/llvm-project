@@ -45,15 +45,16 @@ bool NameToDIE::Find(const RegularExpression &regex,
 }
 
 void NameToDIE::FindAllEntriesForUnit(
-    const DWARFUnit &unit,
-    llvm::function_ref<bool(DIERef ref)> callback) const {
+    DWARFUnit &s_unit, llvm::function_ref<bool(DIERef ref)> callback) const {
+  lldbassert(!s_unit.GetSymbolFileDWARF().GetDwoNum());
+  const DWARFUnit &ns_unit = s_unit.GetNonSkeletonUnit();
   const uint32_t size = m_map.GetSize();
   for (uint32_t i = 0; i < size; ++i) {
     const DIERef &die_ref = m_map.GetValueAtIndexUnchecked(i);
-    if (unit.GetSymbolFileDWARF().GetDwoNum() == die_ref.dwo_num() &&
-        unit.GetDebugSection() == die_ref.section() &&
-        unit.GetOffset() <= die_ref.die_offset() &&
-        die_ref.die_offset() < unit.GetNextUnitOffset()) {
+    if (ns_unit.GetSymbolFileDWARF().GetDwoNum() == die_ref.dwo_num() &&
+        ns_unit.GetDebugSection() == die_ref.section() &&
+        ns_unit.GetOffset() <= die_ref.die_offset() &&
+        die_ref.die_offset() < ns_unit.GetNextUnitOffset()) {
       if (!callback(die_ref))
         return;
     }

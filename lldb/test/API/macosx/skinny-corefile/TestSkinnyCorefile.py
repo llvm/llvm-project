@@ -12,10 +12,11 @@ from lldbsuite.test.lldbtest import *
 from lldbsuite.test import lldbutil
 
 
-class TestFirmwareCorefiles(TestBase):
+class TestSkinnyCorefile(TestBase):
 
     mydir = TestBase.compute_mydir(__file__)
 
+    @skipIfOutOfTreeDebugserver  # newer debugserver required for these qMemoryRegionInfo types
     @skipIf(debug_info=no_match(["dsym"]), bugnumber="This test is looking explicitly for a dSYM")
     @skipUnlessDarwin
     def test_lc_note(self):
@@ -140,7 +141,7 @@ class TestFirmwareCorefiles(TestBase):
         self.assertEqual(to_be_removed_dirty_data.GetValueAsUnsigned(), 20)
 
         present_heap_buf = f0.FindVariable("present_heap_buf")
-        self.assertTrue("have ints 5 20 20 5" in present_heap_buf.GetSummary())
+        self.assertIn("have ints 5 20 20 5", present_heap_buf.GetSummary())
 
 
         # f1 is to_be_removed() in libto-be-removed.dylib

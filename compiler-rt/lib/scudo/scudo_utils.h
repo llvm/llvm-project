@@ -27,7 +27,7 @@ inline Dest bit_cast(const Source& source) {
   return dest;
 }
 
-void NORETURN dieWithMessage(const char *Format, ...);
+void dieWithMessage(const char *Format, ...) NORETURN FORMAT(1, 2);
 
 bool hasHardwareCRC32();
 

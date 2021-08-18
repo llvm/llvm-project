@@ -125,6 +125,7 @@ nub_bool_t MachVMMemory::GetMemoryRegionInfo(task_t task, nub_addr_t address,
     region_info->permissions = vmRegion.GetDNBPermissions();
     region_info->dirty_pages =
         get_dirty_pages(task, vmRegion.StartAddress(), vmRegion.GetByteSize());
+    region_info->vm_types = vmRegion.GetMemoryTypes();
   } else {
     region_info->addr = address;
     region_info->size = 0;

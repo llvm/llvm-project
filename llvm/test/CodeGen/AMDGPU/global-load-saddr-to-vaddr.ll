@@ -14,22 +14,22 @@ define amdgpu_kernel void @test_move_load_address_to_vgpr(i32 addrspace(1)* noca
 ; GCN-LABEL: test_move_load_address_to_vgpr:
 ; GCN:       ; %bb.0: ; %bb
 ; GCN-NEXT:    s_load_dwordx2 s[0:1], s[0:1], 0x24
-; GCN-NEXT:    v_mov_b32_e32 v2, 0
+; GCN-NEXT:    v_mov_b32_e32 v1, 0
 ; GCN-NEXT:    s_waitcnt lgkmcnt(0)
-; GCN-NEXT:    global_load_dword v1, v2, s[0:1] glc
+; GCN-NEXT:    global_load_dword v0, v1, s[0:1] glc
 ; GCN-NEXT:    s_waitcnt vmcnt(0)
 ; GCN-NEXT:    v_mov_b32_e32 v3, s1
-; GCN-NEXT:    v_add_u32_e32 v0, 0xffffff00, v1
-; GCN-NEXT:    v_lshlrev_b64 v[1:2], 2, v[1:2]
-; GCN-NEXT:    v_add_co_u32_e32 v1, vcc, s0, v1
-; GCN-NEXT:    v_addc_co_u32_e32 v2, vcc, v3, v2, vcc
+; GCN-NEXT:    v_add_u32_e32 v2, 0xffffff00, v0
+; GCN-NEXT:    v_lshlrev_b64 v[0:1], 2, v[0:1]
+; GCN-NEXT:    v_add_co_u32_e32 v0, vcc, s0, v0
+; GCN-NEXT:    v_addc_co_u32_e32 v1, vcc, v3, v1, vcc
 ; GCN-NEXT:  BB0_1: ; %bb3
 ; GCN-NEXT:    ; =>This Inner Loop Header: Depth=1
-; GCN-NEXT:    global_load_dword v3, v[1:2], off glc
+; GCN-NEXT:    global_load_dword v3, v[0:1], off glc
 ; GCN-NEXT:    s_waitcnt vmcnt(0)
-; GCN-NEXT:    v_add_co_u32_e32 v0, vcc, 1, v0
-; GCN-NEXT:    v_add_co_u32_e64 v1, s[0:1], 4, v1
-; GCN-NEXT:    v_addc_co_u32_e64 v2, s[0:1], 0, v2, s[0:1]
+; GCN-NEXT:    v_add_co_u32_e32 v2, vcc, 1, v2
+; GCN-NEXT:    v_add_co_u32_e64 v0, s[0:1], 4, v0
+; GCN-NEXT:    v_addc_co_u32_e64 v1, s[0:1], 0, v1, s[0:1]
 ; GCN-NEXT:    s_and_b64 vcc, exec, vcc
 ; GCN-NEXT:    s_cbranch_vccz BB0_1
 ; GCN-NEXT:  ; %bb.2: ; %bb2

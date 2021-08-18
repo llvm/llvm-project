@@ -198,6 +198,23 @@ raw_ostream &llvm::sampleprof::operator<<(raw_ostream &OS,
   return OS;
 }
 
+void sampleprof::sortFuncProfiles(
+    const StringMap<FunctionSamples> &ProfileMap,
+    std::vector<NameFunctionSamples> &SortedProfiles) {
+  for (const auto &I : ProfileMap) {
+    assert(I.getKey() == I.second.getNameWithContext() &&
+           "Inconsistent profile map");
+    SortedProfiles.push_back(
+        std::make_pair(I.second.getNameWithContext(), &I.second));
+  }
+  llvm::stable_sort(SortedProfiles, [](const NameFunctionSamples &A,
+                                       const NameFunctionSamples &B) {
+    if (A.second->getTotalSamples() == B.second->getTotalSamples())
+      return A.first > B.first;
+    return A.second->getTotalSamples() > B.second->getTotalSamples();
+  });
+}
+
 unsigned FunctionSamples::getOffset(const DILocation *DIL) {
   return (DIL->getLine() - DIL->getScope()->getSubprogram()->getLine()) &
       0xffff;

@@ -8,9 +8,6 @@
 
 // UNSUPPORTED: c++03
 
-// GCC 5 does not evaluate static assertions dependent on a template parameter.
-// UNSUPPORTED: gcc-5
-
 // <vector>
 
 // Test that vector produces a decent diagnostic for user types that explicitly

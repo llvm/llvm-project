@@ -21,16 +21,16 @@
 ; RUN: opt < %s -passes=sample-profile -sample-profile-file=%S/Inputs/profile-context-tracker.prof -sample-profile-inline-size -profile-summary-cutoff-hot=999900 -sample-profile-inline-limit-min=10 -sample-profile-inline-growth-limit=1 -profile-sample-accurate -S -pass-remarks=inline -o /dev/null 2>&1 | FileCheck %s --check-prefix=INLINE-NEW-LIMIT2
 
 
-; INLINE-BASE: remark: merged.cpp:14:10: _Z5funcAi inlined into main to match profiling context with (cost={{[0-9]+}}, threshold={{[0-9]+}}) at callsite main:3:10
-; INLINE-BASE: remark: merged.cpp:27:11: _Z8funcLeafi inlined into main to match profiling context with (cost={{[0-9]+}}, threshold={{[0-9]+}}) at callsite _Z5funcAi:1:11 @ main:3:10
-; INLINE-BASE: remark: merged.cpp:33:11: _Z8funcLeafi inlined into _Z5funcBi to match profiling context with (cost={{[0-9]+}}, threshold={{[0-9]+}}) at callsite _Z5funcBi:1:11
+; INLINE-BASE: remark: merged.cpp:14:10: '_Z5funcAi' inlined into 'main' to match profiling context with (cost={{[0-9]+}}, threshold={{[0-9]+}}) at callsite main:3:10
+; INLINE-BASE: remark: merged.cpp:27:11: '_Z8funcLeafi' inlined into 'main' to match profiling context with (cost={{[0-9]+}}, threshold={{[0-9]+}}) at callsite _Z5funcAi:1:11 @ main:3:10
+; INLINE-BASE: remark: merged.cpp:33:11: '_Z8funcLeafi' inlined into '_Z5funcBi' to match profiling context with (cost={{[0-9]+}}, threshold={{[0-9]+}}) at callsite _Z5funcBi:1:11
 
-; INLINE-NEW: remark: merged.cpp:14:10: _Z5funcAi inlined into main to match profiling context with (cost={{[0-9]+}}, threshold={{[0-9]+}}) at callsite main:3:10
+; INLINE-NEW: remark: merged.cpp:14:10: '_Z5funcAi' inlined into 'main' to match profiling context with (cost={{[0-9]+}}, threshold={{[0-9]+}}) at callsite main:3:10
 ; INLINE-NEW-NOT: remark
 
 ; INLINE-NEW-LIMIT1-NOT: remark
 
-; INLINE-NEW-LIMIT2: remark: merged.cpp:33:11: _Z8funcLeafi inlined into _Z5funcBi to match profiling context with (cost={{[0-9]+}}, threshold={{[0-9]+}}) at callsite _Z5funcBi:1:11
+; INLINE-NEW-LIMIT2: remark: merged.cpp:33:11: '_Z8funcLeafi' inlined into '_Z5funcBi' to match profiling context with (cost={{[0-9]+}}, threshold={{[0-9]+}}) at callsite _Z5funcBi:1:11
 ; INLINE-NEW-LIMIT2-NOT: remark
 
 @factor = dso_local global i32 3, align 4, !dbg !0

@@ -13,7 +13,7 @@ body:             |
     ; CHECK-LABEL: name: test1_noreassoc_legal_already_new_is_illegal
     ; CHECK: liveins: $x0
     ; CHECK: [[COPY:%[0-9]+]]:_(p0) = COPY $x0
-    ; CHECK: [[C:%[0-9]+]]:_(s64) = G_CONSTANT i64 4777
+    ; CHECK: [[C:%[0-9]+]]:_(s64) = G_CONSTANT i64 1600
     ; CHECK: [[C1:%[0-9]+]]:_(s64) = G_CONSTANT i64 6
     ; CHECK: [[C2:%[0-9]+]]:_(s32) = G_CONSTANT i32 0
     ; CHECK: [[PTR_ADD:%[0-9]+]]:_(p0) = G_PTR_ADD [[COPY]], [[C]](s64)
@@ -23,7 +23,7 @@ body:             |
     ; CHECK: $w0 = COPY [[LOAD]](s32)
     ; CHECK: RET_ReallyLR implicit $w0
     %0:_(p0) = COPY $x0
-    %2:_(s64) = G_CONSTANT i64 4777
+    %2:_(s64) = G_CONSTANT i64 1600
     %4:_(s64) = G_CONSTANT i64 6
     %9:_(s32) = G_CONSTANT i32 0
     %10:_(p0) = G_PTR_ADD %0, %2(s64)
@@ -161,7 +161,7 @@ body:             |
     ; CHECK-LABEL: name: walk_through_inttoptr
     ; CHECK: liveins: $x0
     ; CHECK: [[COPY:%[0-9]+]]:_(p0) = COPY $x0
-    ; CHECK: [[C:%[0-9]+]]:_(s64) = G_CONSTANT i64 4777
+    ; CHECK: [[C:%[0-9]+]]:_(s64) = G_CONSTANT i64 1600
     ; CHECK: [[C1:%[0-9]+]]:_(s64) = G_CONSTANT i64 6
     ; CHECK: [[C2:%[0-9]+]]:_(s32) = G_CONSTANT i32 0
     ; CHECK: [[PTR_ADD:%[0-9]+]]:_(p0) = G_PTR_ADD [[COPY]], [[C]](s64)
@@ -173,7 +173,7 @@ body:             |
     ; CHECK: $w0 = COPY [[LOAD]](s32)
     ; CHECK: RET_ReallyLR implicit $w0
     %0:_(p0) = COPY $x0
-    %2:_(s64) = G_CONSTANT i64 4777
+    %2:_(s64) = G_CONSTANT i64 1600
     %4:_(s64) = G_CONSTANT i64 6
     %9:_(s32) = G_CONSTANT i32 0
     %10:_(p0) = G_PTR_ADD %0, %2(s64)

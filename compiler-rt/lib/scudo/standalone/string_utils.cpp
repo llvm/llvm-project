@@ -236,7 +236,6 @@ void ScopedString::append(const char *Format, va_list Args) {
   va_end(ArgsCopy);
 }
 
-FORMAT(2, 3)
 void ScopedString::append(const char *Format, ...) {
   va_list Args;
   va_start(Args, Format);
@@ -244,7 +243,6 @@ void ScopedString::append(const char *Format, ...) {
   va_end(Args);
 }
 
-FORMAT(1, 2)
 void Printf(const char *Format, ...) {
   va_list Args;
   va_start(Args, Format);

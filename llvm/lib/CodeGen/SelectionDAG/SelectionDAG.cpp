@@ -3647,6 +3647,12 @@ bool SelectionDAG::isKnownToBeAPowerOfTwo(SDValue Val) const {
         }))
       return true;
 
+  // Is the operand of a splat vector a constant power of two?
+  if (Val.getOpcode() == ISD::SPLAT_VECTOR)
+    if (ConstantSDNode *C = dyn_cast<ConstantSDNode>(Val->getOperand(0)))
+      if (C->getAPIntValue().zextOrTrunc(BitWidth).isPowerOf2())
+        return true;
+
   // More could be done here, though the above checks are enough
   // to handle some common cases.
 

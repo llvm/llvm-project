@@ -8,7 +8,6 @@
 
 // UNSUPPORTED: c++03, c++11, c++14, c++17
 // UNSUPPORTED: libcpp-no-concepts
-// UNSUPPORTED: gcc-10
 // UNSUPPORTED: libcpp-has-no-incomplete-ranges
 
 // transform_view::<iterator>::base
@@ -25,7 +24,7 @@ concept BaseInvocable = requires(std::ranges::iterator_t<std::ranges::transform_
 
 constexpr bool test() {
   {
-    std::ranges::transform_view<ContiguousView, Increment> transformView;
+    std::ranges::transform_view<ContiguousView, PlusOneMutable> transformView;
     auto iter = std::move(transformView).begin();
     ASSERT_SAME_TYPE(int*, decltype(iter.base()));
     assert(iter.base() == globalBuff);
@@ -34,13 +33,13 @@ constexpr bool test() {
   }
 
   {
-    std::ranges::transform_view<InputView, Increment> transformView;
+    std::ranges::transform_view<InputView, PlusOneMutable> transformView;
     auto iter = transformView.begin();
     assert(std::move(iter).base() == globalBuff);
     ASSERT_SAME_TYPE(cpp20_input_iterator<int *>, decltype(std::move(iter).base()));
   }
 
-  static_assert(!BaseInvocable<InputView, Increment>);
+  static_assert(!BaseInvocable<InputView, PlusOneMutable>);
 
   return true;
 }

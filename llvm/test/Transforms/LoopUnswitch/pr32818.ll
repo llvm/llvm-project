@@ -1,7 +1,6 @@
 ; Check that the call doesn't get removed even if
 ; it has no uses. It could have side-effects.
-; RUN: opt -loop-unswitch -enable-new-pm=0 -S %s | FileCheck %s
-; RUN: opt -loop-unswitch -enable-new-pm=0 -enable-mssa-loop-dependency=true -verify-memoryssa -S %s | FileCheck %s
+; RUN: opt -loop-unswitch -enable-new-pm=0 -verify-memoryssa -S %s | FileCheck %s
 
 ; CHECK-LABEL: @tinky
 define i32 @tinkywinky(i8 %patatino) {

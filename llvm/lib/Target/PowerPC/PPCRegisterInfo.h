@@ -147,8 +147,6 @@ public:
                            unsigned FIOperandNum,
                            RegScavenger *RS = nullptr) const override;
 
-  bool addAllocPriorityToGlobalRanges() const override { return true; }
-
   // Support for virtual base registers.
   bool needsFrameBaseReg(MachineInstr *MI, int64_t Offset) const override;
   Register materializeFrameBaseRegister(MachineBasicBlock *MBB, int FrameIdx,

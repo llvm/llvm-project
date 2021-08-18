@@ -547,7 +547,7 @@ data types. We choose to take advantage of these properties for the
 reasons described above.
 In particular, the `MemRefType` represents dense non-contiguous memory regions.
 This structure should extend beyond simple dense data types and generalize to
-ragged, sparse and mixed dens/sparse tensors as well as to trees, hash tables,
+ragged, sparse and mixed dense/sparse tensors as well as to trees, hash tables,
 tables of records and maybe even graphs.
 
 For such more advanced data types, the control-flow required to traverse the

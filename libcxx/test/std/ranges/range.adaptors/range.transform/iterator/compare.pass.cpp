@@ -8,7 +8,6 @@
 
 // UNSUPPORTED: c++03, c++11, c++14, c++17
 // UNSUPPORTED: libcpp-no-concepts
-// UNSUPPORTED: gcc-10
 // UNSUPPORTED: libcpp-has-no-incomplete-ranges
 
 // transform_view::<iterator>::operator{<,>,<=,>=}
@@ -21,9 +20,9 @@
 
 constexpr bool test() {
   {
-    std::ranges::transform_view<ContiguousView, Increment> transformView1;
+    std::ranges::transform_view<ContiguousView, PlusOne> transformView1;
     auto iter1 = std::move(transformView1).begin();
-    std::ranges::transform_view<ContiguousView, Increment> transformView2;
+    std::ranges::transform_view<ContiguousView, PlusOne> transformView2;
     auto iter2 = std::move(transformView2).begin();
     assert(iter1 == iter2);
     assert(iter1 + 1 != iter2);
@@ -40,9 +39,9 @@ constexpr bool test() {
 // TODO: when three_way_comparable is implemented and std::is_eq is implemented,
 // uncomment this.
 //   {
-//     std::ranges::transform_view<ThreeWayCompView, Increment> transformView1;
+//     std::ranges::transform_view<ThreeWayCompView, PlusOne> transformView1;
 //     auto iter1 = transformView1.begin();
-//     std::ranges::transform_view<ThreeWayCompView, Increment> transformView2;
+//     std::ranges::transform_view<ThreeWayCompView, PlusOne> transformView2;
 //     auto iter2 = transformView2.begin();
 //
 //     assert(std::is_eq(iter1   <=> iter2));
@@ -53,8 +52,8 @@ constexpr bool test() {
 //     assert(std::is_gt(iter2   <=> iter1));
 //     assert(std::is_gteq(iter2 <=> iter1));
 //
-//     static_assert( std::three_way_comparable<std::iterator_t<std::ranges::transform_view<ThreeWayCompView, Increment>>>);
-//     static_assert(!std::three_way_comparable<std::iterator_t<std::ranges::transform_view<ContiguousView, Increment>>>);
+//     static_assert( std::three_way_comparable<std::iterator_t<std::ranges::transform_view<ThreeWayCompView, PlusOne>>>);
+//     static_assert(!std::three_way_comparable<std::iterator_t<std::ranges::transform_view<ContiguousView, PlusOne>>>);
 //   }
 
   return true;

@@ -192,3 +192,64 @@ define <3 x i5> @umax_select_const(<3 x i1> %b, <3 x i5> %x) {
   %c = call <3 x i5> @llvm.umax.v3i5(<3 x i5> <i5 5, i5 8, i5 1>, <3 x i5> %s)
   ret <3 x i5> %c
 }
+
+declare i32 @llvm.smax.i32(i32, i32);
+declare i32 @llvm.smin.i32(i32, i32);
+declare i8 @llvm.umax.i8(i8, i8);
+declare i8 @llvm.umin.i8(i8, i8);
+
+; Each of the following 4 tests would infinite loop because
+; we had conflicting transforms for icmp and select using
+; known bits.
+
+define i32 @smax_smin(i32 %x) {
+; CHECK-LABEL: @smax_smin(
+; CHECK-NEXT:    [[M:%.*]] = call i32 @llvm.smax.i32(i32 [[X:%.*]], i32 0)
+; CHECK-NEXT:    [[TMP1:%.*]] = icmp ult i32 [[M]], 1
+; CHECK-NEXT:    [[S:%.*]] = select i1 [[TMP1]], i32 [[M]], i32 1
+; CHECK-NEXT:    ret i32 [[S]]
+;
+  %m = call i32 @llvm.smax.i32(i32 %x, i32 0)
+  %c = icmp slt i32 %x, 1
+  %s = select i1 %c, i32 %m, i32 1
+  ret i32 %s
+}
+
+define i32 @smin_smax(i32 %x) {
+; CHECK-LABEL: @smin_smax(
+; CHECK-NEXT:    [[M:%.*]] = call i32 @llvm.smin.i32(i32 [[X:%.*]], i32 -1)
+; CHECK-NEXT:    [[TMP1:%.*]] = icmp ugt i32 [[M]], -2
+; CHECK-NEXT:    [[S:%.*]] = select i1 [[TMP1]], i32 [[M]], i32 -2
+; CHECK-NEXT:    ret i32 [[S]]
+;
+  %m = call i32 @llvm.smin.i32(i32 %x, i32 -1)
+  %c = icmp sgt i32 %x, -2
+  %s = select i1 %c, i32 %m, i32 -2
+  ret i32 %s
+}
+
+define i8 @umax_umin(i8 %x) {
+; CHECK-LABEL: @umax_umin(
+; CHECK-NEXT:    [[M:%.*]] = call i8 @llvm.umax.i8(i8 [[X:%.*]], i8 -128)
+; CHECK-NEXT:    [[TMP1:%.*]] = icmp ult i8 [[M]], -127
+; CHECK-NEXT:    [[S:%.*]] = select i1 [[TMP1]], i8 [[M]], i8 -127
+; CHECK-NEXT:    ret i8 [[S]]
+;
+  %m = call i8 @llvm.umax.i8(i8 %x, i8 128)
+  %c = icmp ult i8 %x, 129
+  %s = select i1 %c, i8 %m, i8 129
+  ret i8 %s
+}
+
+define i8 @umin_umax(i8 %x) {
+; CHECK-LABEL: @umin_umax(
+; CHECK-NEXT:    [[M:%.*]] = call i8 @llvm.umin.i8(i8 [[X:%.*]], i8 127)
+; CHECK-NEXT:    [[TMP1:%.*]] = icmp ugt i8 [[M]], 126
+; CHECK-NEXT:    [[S:%.*]] = select i1 [[TMP1]], i8 [[M]], i8 126
+; CHECK-NEXT:    ret i8 [[S]]
+;
+  %m = call i8 @llvm.umin.i8(i8 %x, i8 127)
+  %c = icmp ugt i8 %x, 126
+  %s = select i1 %c, i8 %m, i8 126
+  ret i8 %s
+}

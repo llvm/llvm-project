@@ -89,23 +89,23 @@ define arm_aapcs_vfpcc <8 x half> @scaled_v8f16_sext(i16* %base, <8 x i16>* %off
 ; CHECK:       @ %bb.0: @ %entry
 ; CHECK-NEXT:    vldrh.s32 q0, [r1]
 ; CHECK-NEXT:    vshl.i32 q0, q0, #1
-; CHECK-NEXT:    vadd.i32 q1, q0, r0
-; CHECK-NEXT:    vmov r2, r3, d2
-; CHECK-NEXT:    vldr.16 s8, [r3]
-; CHECK-NEXT:    vldr.16 s0, [r2]
-; CHECK-NEXT:    vmov r2, r3, d3
-; CHECK-NEXT:    vins.f16 s0, s8
+; CHECK-NEXT:    vadd.i32 q0, q0, r0
+; CHECK-NEXT:    vmov r2, r3, d0
 ; CHECK-NEXT:    vldr.16 s4, [r3]
-; CHECK-NEXT:    vldr.16 s1, [r2]
-; CHECK-NEXT:    vins.f16 s1, s4
+; CHECK-NEXT:    vldr.16 s0, [r2]
+; CHECK-NEXT:    vmov r2, r3, d1
+; CHECK-NEXT:    vins.f16 s0, s4
 ; CHECK-NEXT:    vldrh.s32 q1, [r1, #8]
+; CHECK-NEXT:    vldr.16 s2, [r3]
+; CHECK-NEXT:    vldr.16 s1, [r2]
 ; CHECK-NEXT:    vshl.i32 q1, q1, #1
 ; CHECK-NEXT:    vadd.i32 q1, q1, r0
+; CHECK-NEXT:    vins.f16 s1, s2
 ; CHECK-NEXT:    vmov r0, r1, d2
-; CHECK-NEXT:    vldr.16 s8, [r1]
+; CHECK-NEXT:    vldr.16 s4, [r1]
 ; CHECK-NEXT:    vldr.16 s2, [r0]
 ; CHECK-NEXT:    vmov r0, r1, d3
-; CHECK-NEXT:    vins.f16 s2, s8
+; CHECK-NEXT:    vins.f16 s2, s4
 ; CHECK-NEXT:    vldr.16 s4, [r1]
 ; CHECK-NEXT:    vldr.16 s3, [r0]
 ; CHECK-NEXT:    vins.f16 s3, s4

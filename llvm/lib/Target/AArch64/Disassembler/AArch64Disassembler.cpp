@@ -365,23 +365,14 @@ extern "C" LLVM_EXTERNAL_VISIBILITY void LLVMInitializeAArch64Disassembler() {
                                        createAArch64ExternalSymbolizer);
 }
 
-static const unsigned FPR128DecoderTable[] = {
-    AArch64::Q0,  AArch64::Q1,  AArch64::Q2,  AArch64::Q3,  AArch64::Q4,
-    AArch64::Q5,  AArch64::Q6,  AArch64::Q7,  AArch64::Q8,  AArch64::Q9,
-    AArch64::Q10, AArch64::Q11, AArch64::Q12, AArch64::Q13, AArch64::Q14,
-    AArch64::Q15, AArch64::Q16, AArch64::Q17, AArch64::Q18, AArch64::Q19,
-    AArch64::Q20, AArch64::Q21, AArch64::Q22, AArch64::Q23, AArch64::Q24,
-    AArch64::Q25, AArch64::Q26, AArch64::Q27, AArch64::Q28, AArch64::Q29,
-    AArch64::Q30, AArch64::Q31
-};
-
 static DecodeStatus DecodeFPR128RegisterClass(MCInst &Inst, unsigned RegNo,
                                               uint64_t Addr,
                                               const void *Decoder) {
   if (RegNo > 31)
     return Fail;
 
-  unsigned Register = FPR128DecoderTable[RegNo];
+  unsigned Register =
+      AArch64MCRegisterClasses[AArch64::FPR128RegClassID].getRegister(RegNo);
   Inst.addOperand(MCOperand::createReg(Register));
   return Success;
 }
@@ -394,36 +385,17 @@ static DecodeStatus DecodeFPR128_loRegisterClass(MCInst &Inst, unsigned RegNo,
   return DecodeFPR128RegisterClass(Inst, RegNo, Addr, Decoder);
 }
 
-static const unsigned FPR64DecoderTable[] = {
-    AArch64::D0,  AArch64::D1,  AArch64::D2,  AArch64::D3,  AArch64::D4,
-    AArch64::D5,  AArch64::D6,  AArch64::D7,  AArch64::D8,  AArch64::D9,
-    AArch64::D10, AArch64::D11, AArch64::D12, AArch64::D13, AArch64::D14,
-    AArch64::D15, AArch64::D16, AArch64::D17, AArch64::D18, AArch64::D19,
-    AArch64::D20, AArch64::D21, AArch64::D22, AArch64::D23, AArch64::D24,
-    AArch64::D25, AArch64::D26, AArch64::D27, AArch64::D28, AArch64::D29,
-    AArch64::D30, AArch64::D31
-};
-
 static DecodeStatus DecodeFPR64RegisterClass(MCInst &Inst, unsigned RegNo,
                                              uint64_t Addr,
                                              const void *Decoder) {
   if (RegNo > 31)
     return Fail;
 
-  unsigned Register = FPR64DecoderTable[RegNo];
+  unsigned Register =
+      AArch64MCRegisterClasses[AArch64::FPR64RegClassID].getRegister(RegNo);
   Inst.addOperand(MCOperand::createReg(Register));
   return Success;
 }
-
-static const unsigned FPR32DecoderTable[] = {
-    AArch64::S0,  AArch64::S1,  AArch64::S2,  AArch64::S3,  AArch64::S4,
-    AArch64::S5,  AArch64::S6,  AArch64::S7,  AArch64::S8,  AArch64::S9,
-    AArch64::S10, AArch64::S11, AArch64::S12, AArch64::S13, AArch64::S14,
-    AArch64::S15, AArch64::S16, AArch64::S17, AArch64::S18, AArch64::S19,
-    AArch64::S20, AArch64::S21, AArch64::S22, AArch64::S23, AArch64::S24,
-    AArch64::S25, AArch64::S26, AArch64::S27, AArch64::S28, AArch64::S29,
-    AArch64::S30, AArch64::S31
-};
 
 static DecodeStatus DecodeFPR32RegisterClass(MCInst &Inst, unsigned RegNo,
                                              uint64_t Addr,
@@ -431,20 +403,11 @@ static DecodeStatus DecodeFPR32RegisterClass(MCInst &Inst, unsigned RegNo,
   if (RegNo > 31)
     return Fail;
 
-  unsigned Register = FPR32DecoderTable[RegNo];
+  unsigned Register =
+      AArch64MCRegisterClasses[AArch64::FPR32RegClassID].getRegister(RegNo);
   Inst.addOperand(MCOperand::createReg(Register));
   return Success;
 }
-
-static const unsigned FPR16DecoderTable[] = {
-    AArch64::H0,  AArch64::H1,  AArch64::H2,  AArch64::H3,  AArch64::H4,
-    AArch64::H5,  AArch64::H6,  AArch64::H7,  AArch64::H8,  AArch64::H9,
-    AArch64::H10, AArch64::H11, AArch64::H12, AArch64::H13, AArch64::H14,
-    AArch64::H15, AArch64::H16, AArch64::H17, AArch64::H18, AArch64::H19,
-    AArch64::H20, AArch64::H21, AArch64::H22, AArch64::H23, AArch64::H24,
-    AArch64::H25, AArch64::H26, AArch64::H27, AArch64::H28, AArch64::H29,
-    AArch64::H30, AArch64::H31
-};
 
 static DecodeStatus DecodeFPR16RegisterClass(MCInst &Inst, unsigned RegNo,
                                              uint64_t Addr,
@@ -452,20 +415,11 @@ static DecodeStatus DecodeFPR16RegisterClass(MCInst &Inst, unsigned RegNo,
   if (RegNo > 31)
     return Fail;
 
-  unsigned Register = FPR16DecoderTable[RegNo];
+  unsigned Register =
+      AArch64MCRegisterClasses[AArch64::FPR16RegClassID].getRegister(RegNo);
   Inst.addOperand(MCOperand::createReg(Register));
   return Success;
 }
-
-static const unsigned FPR8DecoderTable[] = {
-    AArch64::B0,  AArch64::B1,  AArch64::B2,  AArch64::B3,  AArch64::B4,
-    AArch64::B5,  AArch64::B6,  AArch64::B7,  AArch64::B8,  AArch64::B9,
-    AArch64::B10, AArch64::B11, AArch64::B12, AArch64::B13, AArch64::B14,
-    AArch64::B15, AArch64::B16, AArch64::B17, AArch64::B18, AArch64::B19,
-    AArch64::B20, AArch64::B21, AArch64::B22, AArch64::B23, AArch64::B24,
-    AArch64::B25, AArch64::B26, AArch64::B27, AArch64::B28, AArch64::B29,
-    AArch64::B30, AArch64::B31
-};
 
 static DecodeStatus DecodeFPR8RegisterClass(MCInst &Inst, unsigned RegNo,
                                             uint64_t Addr,
@@ -473,20 +427,11 @@ static DecodeStatus DecodeFPR8RegisterClass(MCInst &Inst, unsigned RegNo,
   if (RegNo > 31)
     return Fail;
 
-  unsigned Register = FPR8DecoderTable[RegNo];
+  unsigned Register =
+      AArch64MCRegisterClasses[AArch64::FPR8RegClassID].getRegister(RegNo);
   Inst.addOperand(MCOperand::createReg(Register));
   return Success;
 }
-
-static const unsigned GPR64DecoderTable[] = {
-    AArch64::X0,  AArch64::X1,  AArch64::X2,  AArch64::X3,  AArch64::X4,
-    AArch64::X5,  AArch64::X6,  AArch64::X7,  AArch64::X8,  AArch64::X9,
-    AArch64::X10, AArch64::X11, AArch64::X12, AArch64::X13, AArch64::X14,
-    AArch64::X15, AArch64::X16, AArch64::X17, AArch64::X18, AArch64::X19,
-    AArch64::X20, AArch64::X21, AArch64::X22, AArch64::X23, AArch64::X24,
-    AArch64::X25, AArch64::X26, AArch64::X27, AArch64::X28, AArch64::FP,
-    AArch64::LR,  AArch64::XZR
-};
 
 static DecodeStatus DecodeGPR64commonRegisterClass(MCInst &Inst, unsigned RegNo,
                                                    uint64_t Addr,
@@ -494,7 +439,9 @@ static DecodeStatus DecodeGPR64commonRegisterClass(MCInst &Inst, unsigned RegNo,
   if (RegNo > 30)
     return Fail;
 
-  unsigned Register = GPR64DecoderTable[RegNo];
+  unsigned Register =
+      AArch64MCRegisterClasses[AArch64::GPR64commonRegClassID].getRegister(
+          RegNo);
   Inst.addOperand(MCOperand::createReg(Register));
   return Success;
 }
@@ -505,25 +452,11 @@ static DecodeStatus DecodeGPR64RegisterClass(MCInst &Inst, unsigned RegNo,
   if (RegNo > 31)
     return Fail;
 
-  unsigned Register = GPR64DecoderTable[RegNo];
+  unsigned Register =
+      AArch64MCRegisterClasses[AArch64::GPR64RegClassID].getRegister(RegNo);
   Inst.addOperand(MCOperand::createReg(Register));
   return Success;
 }
-
-static const unsigned GPR64x8DecoderTable[] = {
-  AArch64::X0_X1_X2_X3_X4_X5_X6_X7,
-  AArch64::X2_X3_X4_X5_X6_X7_X8_X9,
-  AArch64::X4_X5_X6_X7_X8_X9_X10_X11,
-  AArch64::X6_X7_X8_X9_X10_X11_X12_X13,
-  AArch64::X8_X9_X10_X11_X12_X13_X14_X15,
-  AArch64::X10_X11_X12_X13_X14_X15_X16_X17,
-  AArch64::X12_X13_X14_X15_X16_X17_X18_X19,
-  AArch64::X14_X15_X16_X17_X18_X19_X20_X21,
-  AArch64::X16_X17_X18_X19_X20_X21_X22_X23,
-  AArch64::X18_X19_X20_X21_X22_X23_X24_X25,
-  AArch64::X20_X21_X22_X23_X24_X25_X26_X27,
-  AArch64::X22_X23_X24_X25_X26_X27_X28_FP,
-};
 
 static DecodeStatus DecodeGPR64x8ClassRegisterClass(MCInst &Inst,
                                                     unsigned RegNo,
@@ -534,7 +467,9 @@ static DecodeStatus DecodeGPR64x8ClassRegisterClass(MCInst &Inst,
   if (RegNo & 1)
     return Fail;
 
-  unsigned Register = GPR64x8DecoderTable[RegNo >> 1];
+  unsigned Register =
+      AArch64MCRegisterClasses[AArch64::GPR64x8ClassRegClassID].getRegister(
+          RegNo >> 1);
   Inst.addOperand(MCOperand::createReg(Register));
   return Success;
 }
@@ -544,16 +479,11 @@ static DecodeStatus DecodeGPR64spRegisterClass(MCInst &Inst, unsigned RegNo,
                                                const void *Decoder) {
   if (RegNo > 31)
     return Fail;
-  unsigned Register = GPR64DecoderTable[RegNo];
-  if (Register == AArch64::XZR)
-    Register = AArch64::SP;
+  unsigned Register =
+      AArch64MCRegisterClasses[AArch64::GPR64spRegClassID].getRegister(RegNo);
   Inst.addOperand(MCOperand::createReg(Register));
   return Success;
 }
-
-static const unsigned MatrixIndexGPR32_12_15DecoderTable[] = {
-    AArch64::W12, AArch64::W13, AArch64::W14, AArch64::W15
-};
 
 static DecodeStatus DecodeMatrixIndexGPR32_12_15RegisterClass(MCInst &Inst,
                                                               unsigned RegNo,
@@ -562,20 +492,12 @@ static DecodeStatus DecodeMatrixIndexGPR32_12_15RegisterClass(MCInst &Inst,
   if (RegNo > 3)
     return Fail;
 
-  unsigned Register = MatrixIndexGPR32_12_15DecoderTable[RegNo];
+  unsigned Register =
+      AArch64MCRegisterClasses[AArch64::MatrixIndexGPR32_12_15RegClassID]
+          .getRegister(RegNo);
   Inst.addOperand(MCOperand::createReg(Register));
   return Success;
 }
-
-static const unsigned GPR32DecoderTable[] = {
-    AArch64::W0,  AArch64::W1,  AArch64::W2,  AArch64::W3,  AArch64::W4,
-    AArch64::W5,  AArch64::W6,  AArch64::W7,  AArch64::W8,  AArch64::W9,
-    AArch64::W10, AArch64::W11, AArch64::W12, AArch64::W13, AArch64::W14,
-    AArch64::W15, AArch64::W16, AArch64::W17, AArch64::W18, AArch64::W19,
-    AArch64::W20, AArch64::W21, AArch64::W22, AArch64::W23, AArch64::W24,
-    AArch64::W25, AArch64::W26, AArch64::W27, AArch64::W28, AArch64::W29,
-    AArch64::W30, AArch64::WZR
-};
 
 static DecodeStatus DecodeGPR32RegisterClass(MCInst &Inst, unsigned RegNo,
                                              uint64_t Addr,
@@ -583,7 +505,8 @@ static DecodeStatus DecodeGPR32RegisterClass(MCInst &Inst, unsigned RegNo,
   if (RegNo > 31)
     return Fail;
 
-  unsigned Register = GPR32DecoderTable[RegNo];
+  unsigned Register =
+      AArch64MCRegisterClasses[AArch64::GPR32RegClassID].getRegister(RegNo);
   Inst.addOperand(MCOperand::createReg(Register));
   return Success;
 }
@@ -594,22 +517,11 @@ static DecodeStatus DecodeGPR32spRegisterClass(MCInst &Inst, unsigned RegNo,
   if (RegNo > 31)
     return Fail;
 
-  unsigned Register = GPR32DecoderTable[RegNo];
-  if (Register == AArch64::WZR)
-    Register = AArch64::WSP;
+  unsigned Register =
+      AArch64MCRegisterClasses[AArch64::GPR32spRegClassID].getRegister(RegNo);
   Inst.addOperand(MCOperand::createReg(Register));
   return Success;
 }
-static const unsigned ZPRDecoderTable[] = {
-    AArch64::Z0,  AArch64::Z1,  AArch64::Z2,  AArch64::Z3,
-    AArch64::Z4,  AArch64::Z5,  AArch64::Z6,  AArch64::Z7,
-    AArch64::Z8,  AArch64::Z9,  AArch64::Z10, AArch64::Z11,
-    AArch64::Z12, AArch64::Z13, AArch64::Z14, AArch64::Z15,
-    AArch64::Z16, AArch64::Z17, AArch64::Z18, AArch64::Z19,
-    AArch64::Z20, AArch64::Z21, AArch64::Z22, AArch64::Z23,
-    AArch64::Z24, AArch64::Z25, AArch64::Z26, AArch64::Z27,
-    AArch64::Z28, AArch64::Z29, AArch64::Z30, AArch64::Z31
-};
 
 static DecodeStatus DecodeZPRRegisterClass(MCInst &Inst, unsigned RegNo,
                                            uint64_t Address,
@@ -617,7 +529,8 @@ static DecodeStatus DecodeZPRRegisterClass(MCInst &Inst, unsigned RegNo,
   if (RegNo > 31)
     return Fail;
 
-  unsigned Register = ZPRDecoderTable[RegNo];
+  unsigned Register =
+      AArch64MCRegisterClasses[AArch64::ZPRRegClassID].getRegister(RegNo);
   Inst.addOperand(MCOperand::createReg(Register));
   return Success;
 }
@@ -638,71 +551,35 @@ static DecodeStatus DecodeZPR_3bRegisterClass(MCInst &Inst, unsigned RegNo,
   return DecodeZPRRegisterClass(Inst, RegNo, Address, Decoder);
 }
 
-static const unsigned ZZDecoderTable[] = {
-  AArch64::Z0_Z1,   AArch64::Z1_Z2,   AArch64::Z2_Z3,   AArch64::Z3_Z4,
-  AArch64::Z4_Z5,   AArch64::Z5_Z6,   AArch64::Z6_Z7,   AArch64::Z7_Z8,
-  AArch64::Z8_Z9,   AArch64::Z9_Z10,  AArch64::Z10_Z11, AArch64::Z11_Z12,
-  AArch64::Z12_Z13, AArch64::Z13_Z14, AArch64::Z14_Z15, AArch64::Z15_Z16,
-  AArch64::Z16_Z17, AArch64::Z17_Z18, AArch64::Z18_Z19, AArch64::Z19_Z20,
-  AArch64::Z20_Z21, AArch64::Z21_Z22, AArch64::Z22_Z23, AArch64::Z23_Z24,
-  AArch64::Z24_Z25, AArch64::Z25_Z26, AArch64::Z26_Z27, AArch64::Z27_Z28,
-  AArch64::Z28_Z29, AArch64::Z29_Z30, AArch64::Z30_Z31, AArch64::Z31_Z0
-};
-
 static DecodeStatus DecodeZPR2RegisterClass(MCInst &Inst, unsigned RegNo,
                                             uint64_t Address,
                                             const void* Decoder) {
   if (RegNo > 31)
     return Fail;
-  unsigned Register = ZZDecoderTable[RegNo];
+  unsigned Register =
+      AArch64MCRegisterClasses[AArch64::ZPR2RegClassID].getRegister(RegNo);
   Inst.addOperand(MCOperand::createReg(Register));
   return Success;
 }
-
-static const unsigned ZZZDecoderTable[] = {
-  AArch64::Z0_Z1_Z2,    AArch64::Z1_Z2_Z3,    AArch64::Z2_Z3_Z4,
-  AArch64::Z3_Z4_Z5,    AArch64::Z4_Z5_Z6,    AArch64::Z5_Z6_Z7,
-  AArch64::Z6_Z7_Z8,    AArch64::Z7_Z8_Z9,    AArch64::Z8_Z9_Z10,
-  AArch64::Z9_Z10_Z11,  AArch64::Z10_Z11_Z12, AArch64::Z11_Z12_Z13,
-  AArch64::Z12_Z13_Z14, AArch64::Z13_Z14_Z15, AArch64::Z14_Z15_Z16,
-  AArch64::Z15_Z16_Z17, AArch64::Z16_Z17_Z18, AArch64::Z17_Z18_Z19,
-  AArch64::Z18_Z19_Z20, AArch64::Z19_Z20_Z21, AArch64::Z20_Z21_Z22,
-  AArch64::Z21_Z22_Z23, AArch64::Z22_Z23_Z24, AArch64::Z23_Z24_Z25,
-  AArch64::Z24_Z25_Z26, AArch64::Z25_Z26_Z27, AArch64::Z26_Z27_Z28,
-  AArch64::Z27_Z28_Z29, AArch64::Z28_Z29_Z30, AArch64::Z29_Z30_Z31,
-  AArch64::Z30_Z31_Z0,  AArch64::Z31_Z0_Z1
-};
 
 static DecodeStatus DecodeZPR3RegisterClass(MCInst &Inst, unsigned RegNo,
                                             uint64_t Address,
                                             const void* Decoder) {
   if (RegNo > 31)
     return Fail;
-  unsigned Register = ZZZDecoderTable[RegNo];
+  unsigned Register =
+      AArch64MCRegisterClasses[AArch64::ZPR3RegClassID].getRegister(RegNo);
   Inst.addOperand(MCOperand::createReg(Register));
   return Success;
 }
-
-static const unsigned ZZZZDecoderTable[] = {
-  AArch64::Z0_Z1_Z2_Z3,     AArch64::Z1_Z2_Z3_Z4,     AArch64::Z2_Z3_Z4_Z5,
-  AArch64::Z3_Z4_Z5_Z6,     AArch64::Z4_Z5_Z6_Z7,     AArch64::Z5_Z6_Z7_Z8,
-  AArch64::Z6_Z7_Z8_Z9,     AArch64::Z7_Z8_Z9_Z10,    AArch64::Z8_Z9_Z10_Z11,
-  AArch64::Z9_Z10_Z11_Z12,  AArch64::Z10_Z11_Z12_Z13, AArch64::Z11_Z12_Z13_Z14,
-  AArch64::Z12_Z13_Z14_Z15, AArch64::Z13_Z14_Z15_Z16, AArch64::Z14_Z15_Z16_Z17,
-  AArch64::Z15_Z16_Z17_Z18, AArch64::Z16_Z17_Z18_Z19, AArch64::Z17_Z18_Z19_Z20,
-  AArch64::Z18_Z19_Z20_Z21, AArch64::Z19_Z20_Z21_Z22, AArch64::Z20_Z21_Z22_Z23,
-  AArch64::Z21_Z22_Z23_Z24, AArch64::Z22_Z23_Z24_Z25, AArch64::Z23_Z24_Z25_Z26,
-  AArch64::Z24_Z25_Z26_Z27, AArch64::Z25_Z26_Z27_Z28, AArch64::Z26_Z27_Z28_Z29,
-  AArch64::Z27_Z28_Z29_Z30, AArch64::Z28_Z29_Z30_Z31, AArch64::Z29_Z30_Z31_Z0,
-  AArch64::Z30_Z31_Z0_Z1,   AArch64::Z31_Z0_Z1_Z2
-};
 
 static DecodeStatus DecodeZPR4RegisterClass(MCInst &Inst, unsigned RegNo,
                                             uint64_t Address,
                                             const void* Decoder) {
   if (RegNo > 31)
     return Fail;
-  unsigned Register = ZZZZDecoderTable[RegNo];
+  unsigned Register =
+      AArch64MCRegisterClasses[AArch64::ZPR4RegClassID].getRegister(RegNo);
   Inst.addOperand(MCOperand::createReg(Register));
   return Success;
 }
@@ -740,19 +617,13 @@ static DecodeStatus DecodeMatrixTile(MCInst &Inst, unsigned RegNo,
   return Success;
 }
 
-static const unsigned PPRDecoderTable[] = {
-  AArch64::P0,  AArch64::P1,  AArch64::P2,  AArch64::P3,
-  AArch64::P4,  AArch64::P5,  AArch64::P6,  AArch64::P7,
-  AArch64::P8,  AArch64::P9,  AArch64::P10, AArch64::P11,
-  AArch64::P12, AArch64::P13, AArch64::P14, AArch64::P15
-};
-
 static DecodeStatus DecodePPRRegisterClass(MCInst &Inst, unsigned RegNo,
                                            uint64_t Addr, const void *Decoder) {
   if (RegNo > 15)
     return Fail;
 
-  unsigned Register = PPRDecoderTable[RegNo];
+  unsigned Register =
+      AArch64MCRegisterClasses[AArch64::PPRRegClassID].getRegister(RegNo);
   Inst.addOperand(MCOperand::createReg(Register));
   return Success;
 }
@@ -767,136 +638,64 @@ static DecodeStatus DecodePPR_3bRegisterClass(MCInst &Inst, unsigned RegNo,
   return DecodePPRRegisterClass(Inst, RegNo, Addr, Decoder);
 }
 
-static const unsigned QQDecoderTable[] = {
-  AArch64::Q0_Q1,   AArch64::Q1_Q2,   AArch64::Q2_Q3,   AArch64::Q3_Q4,
-  AArch64::Q4_Q5,   AArch64::Q5_Q6,   AArch64::Q6_Q7,   AArch64::Q7_Q8,
-  AArch64::Q8_Q9,   AArch64::Q9_Q10,  AArch64::Q10_Q11, AArch64::Q11_Q12,
-  AArch64::Q12_Q13, AArch64::Q13_Q14, AArch64::Q14_Q15, AArch64::Q15_Q16,
-  AArch64::Q16_Q17, AArch64::Q17_Q18, AArch64::Q18_Q19, AArch64::Q19_Q20,
-  AArch64::Q20_Q21, AArch64::Q21_Q22, AArch64::Q22_Q23, AArch64::Q23_Q24,
-  AArch64::Q24_Q25, AArch64::Q25_Q26, AArch64::Q26_Q27, AArch64::Q27_Q28,
-  AArch64::Q28_Q29, AArch64::Q29_Q30, AArch64::Q30_Q31, AArch64::Q31_Q0
-};
-
 static DecodeStatus DecodeQQRegisterClass(MCInst &Inst, unsigned RegNo,
                                           uint64_t Addr, const void *Decoder) {
   if (RegNo > 31)
     return Fail;
-  unsigned Register = QQDecoderTable[RegNo];
+  unsigned Register =
+      AArch64MCRegisterClasses[AArch64::QQRegClassID].getRegister(RegNo);
   Inst.addOperand(MCOperand::createReg(Register));
   return Success;
 }
-
-static const unsigned QQQDecoderTable[] = {
-  AArch64::Q0_Q1_Q2,    AArch64::Q1_Q2_Q3,    AArch64::Q2_Q3_Q4,
-  AArch64::Q3_Q4_Q5,    AArch64::Q4_Q5_Q6,    AArch64::Q5_Q6_Q7,
-  AArch64::Q6_Q7_Q8,    AArch64::Q7_Q8_Q9,    AArch64::Q8_Q9_Q10,
-  AArch64::Q9_Q10_Q11,  AArch64::Q10_Q11_Q12, AArch64::Q11_Q12_Q13,
-  AArch64::Q12_Q13_Q14, AArch64::Q13_Q14_Q15, AArch64::Q14_Q15_Q16,
-  AArch64::Q15_Q16_Q17, AArch64::Q16_Q17_Q18, AArch64::Q17_Q18_Q19,
-  AArch64::Q18_Q19_Q20, AArch64::Q19_Q20_Q21, AArch64::Q20_Q21_Q22,
-  AArch64::Q21_Q22_Q23, AArch64::Q22_Q23_Q24, AArch64::Q23_Q24_Q25,
-  AArch64::Q24_Q25_Q26, AArch64::Q25_Q26_Q27, AArch64::Q26_Q27_Q28,
-  AArch64::Q27_Q28_Q29, AArch64::Q28_Q29_Q30, AArch64::Q29_Q30_Q31,
-  AArch64::Q30_Q31_Q0,  AArch64::Q31_Q0_Q1
-};
 
 static DecodeStatus DecodeQQQRegisterClass(MCInst &Inst, unsigned RegNo,
                                            uint64_t Addr, const void *Decoder) {
   if (RegNo > 31)
     return Fail;
-  unsigned Register = QQQDecoderTable[RegNo];
+  unsigned Register =
+      AArch64MCRegisterClasses[AArch64::QQQRegClassID].getRegister(RegNo);
   Inst.addOperand(MCOperand::createReg(Register));
   return Success;
 }
-
-static const unsigned QQQQDecoderTable[] = {
-  AArch64::Q0_Q1_Q2_Q3,     AArch64::Q1_Q2_Q3_Q4,     AArch64::Q2_Q3_Q4_Q5,
-  AArch64::Q3_Q4_Q5_Q6,     AArch64::Q4_Q5_Q6_Q7,     AArch64::Q5_Q6_Q7_Q8,
-  AArch64::Q6_Q7_Q8_Q9,     AArch64::Q7_Q8_Q9_Q10,    AArch64::Q8_Q9_Q10_Q11,
-  AArch64::Q9_Q10_Q11_Q12,  AArch64::Q10_Q11_Q12_Q13, AArch64::Q11_Q12_Q13_Q14,
-  AArch64::Q12_Q13_Q14_Q15, AArch64::Q13_Q14_Q15_Q16, AArch64::Q14_Q15_Q16_Q17,
-  AArch64::Q15_Q16_Q17_Q18, AArch64::Q16_Q17_Q18_Q19, AArch64::Q17_Q18_Q19_Q20,
-  AArch64::Q18_Q19_Q20_Q21, AArch64::Q19_Q20_Q21_Q22, AArch64::Q20_Q21_Q22_Q23,
-  AArch64::Q21_Q22_Q23_Q24, AArch64::Q22_Q23_Q24_Q25, AArch64::Q23_Q24_Q25_Q26,
-  AArch64::Q24_Q25_Q26_Q27, AArch64::Q25_Q26_Q27_Q28, AArch64::Q26_Q27_Q28_Q29,
-  AArch64::Q27_Q28_Q29_Q30, AArch64::Q28_Q29_Q30_Q31, AArch64::Q29_Q30_Q31_Q0,
-  AArch64::Q30_Q31_Q0_Q1,   AArch64::Q31_Q0_Q1_Q2
-};
 
 static DecodeStatus DecodeQQQQRegisterClass(MCInst &Inst, unsigned RegNo,
                                             uint64_t Addr,
                                             const void *Decoder) {
   if (RegNo > 31)
     return Fail;
-  unsigned Register = QQQQDecoderTable[RegNo];
+  unsigned Register =
+      AArch64MCRegisterClasses[AArch64::QQQQRegClassID].getRegister(RegNo);
   Inst.addOperand(MCOperand::createReg(Register));
   return Success;
 }
-
-static const unsigned DDDecoderTable[] = {
-  AArch64::D0_D1,   AArch64::D1_D2,   AArch64::D2_D3,   AArch64::D3_D4,
-  AArch64::D4_D5,   AArch64::D5_D6,   AArch64::D6_D7,   AArch64::D7_D8,
-  AArch64::D8_D9,   AArch64::D9_D10,  AArch64::D10_D11, AArch64::D11_D12,
-  AArch64::D12_D13, AArch64::D13_D14, AArch64::D14_D15, AArch64::D15_D16,
-  AArch64::D16_D17, AArch64::D17_D18, AArch64::D18_D19, AArch64::D19_D20,
-  AArch64::D20_D21, AArch64::D21_D22, AArch64::D22_D23, AArch64::D23_D24,
-  AArch64::D24_D25, AArch64::D25_D26, AArch64::D26_D27, AArch64::D27_D28,
-  AArch64::D28_D29, AArch64::D29_D30, AArch64::D30_D31, AArch64::D31_D0
-};
 
 static DecodeStatus DecodeDDRegisterClass(MCInst &Inst, unsigned RegNo,
                                           uint64_t Addr, const void *Decoder) {
   if (RegNo > 31)
     return Fail;
-  unsigned Register = DDDecoderTable[RegNo];
+  unsigned Register =
+      AArch64MCRegisterClasses[AArch64::DDRegClassID].getRegister(RegNo);
   Inst.addOperand(MCOperand::createReg(Register));
   return Success;
 }
-
-static const unsigned DDDDecoderTable[] = {
-  AArch64::D0_D1_D2,    AArch64::D1_D2_D3,    AArch64::D2_D3_D4,
-  AArch64::D3_D4_D5,    AArch64::D4_D5_D6,    AArch64::D5_D6_D7,
-  AArch64::D6_D7_D8,    AArch64::D7_D8_D9,    AArch64::D8_D9_D10,
-  AArch64::D9_D10_D11,  AArch64::D10_D11_D12, AArch64::D11_D12_D13,
-  AArch64::D12_D13_D14, AArch64::D13_D14_D15, AArch64::D14_D15_D16,
-  AArch64::D15_D16_D17, AArch64::D16_D17_D18, AArch64::D17_D18_D19,
-  AArch64::D18_D19_D20, AArch64::D19_D20_D21, AArch64::D20_D21_D22,
-  AArch64::D21_D22_D23, AArch64::D22_D23_D24, AArch64::D23_D24_D25,
-  AArch64::D24_D25_D26, AArch64::D25_D26_D27, AArch64::D26_D27_D28,
-  AArch64::D27_D28_D29, AArch64::D28_D29_D30, AArch64::D29_D30_D31,
-  AArch64::D30_D31_D0,  AArch64::D31_D0_D1
-};
 
 static DecodeStatus DecodeDDDRegisterClass(MCInst &Inst, unsigned RegNo,
                                            uint64_t Addr, const void *Decoder) {
   if (RegNo > 31)
     return Fail;
-  unsigned Register = DDDDecoderTable[RegNo];
+  unsigned Register =
+      AArch64MCRegisterClasses[AArch64::DDDRegClassID].getRegister(RegNo);
   Inst.addOperand(MCOperand::createReg(Register));
   return Success;
 }
-
-static const unsigned DDDDDecoderTable[] = {
-  AArch64::D0_D1_D2_D3,     AArch64::D1_D2_D3_D4,     AArch64::D2_D3_D4_D5,
-  AArch64::D3_D4_D5_D6,     AArch64::D4_D5_D6_D7,     AArch64::D5_D6_D7_D8,
-  AArch64::D6_D7_D8_D9,     AArch64::D7_D8_D9_D10,    AArch64::D8_D9_D10_D11,
-  AArch64::D9_D10_D11_D12,  AArch64::D10_D11_D12_D13, AArch64::D11_D12_D13_D14,
-  AArch64::D12_D13_D14_D15, AArch64::D13_D14_D15_D16, AArch64::D14_D15_D16_D17,
-  AArch64::D15_D16_D17_D18, AArch64::D16_D17_D18_D19, AArch64::D17_D18_D19_D20,
-  AArch64::D18_D19_D20_D21, AArch64::D19_D20_D21_D22, AArch64::D20_D21_D22_D23,
-  AArch64::D21_D22_D23_D24, AArch64::D22_D23_D24_D25, AArch64::D23_D24_D25_D26,
-  AArch64::D24_D25_D26_D27, AArch64::D25_D26_D27_D28, AArch64::D26_D27_D28_D29,
-  AArch64::D27_D28_D29_D30, AArch64::D28_D29_D30_D31, AArch64::D29_D30_D31_D0,
-  AArch64::D30_D31_D0_D1,   AArch64::D31_D0_D1_D2
-};
 
 static DecodeStatus DecodeDDDDRegisterClass(MCInst &Inst, unsigned RegNo,
                                             uint64_t Addr,
                                             const void *Decoder) {
   if (RegNo > 31)
     return Fail;
-  unsigned Register = DDDDDecoderTable[RegNo];
+  unsigned Register =
+      AArch64MCRegisterClasses[AArch64::DDDDRegClassID].getRegister(RegNo);
   Inst.addOperand(MCOperand::createReg(Register));
   return Success;
 }

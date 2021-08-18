@@ -2118,10 +2118,12 @@ Instruction *InstCombinerImpl::visitGetElementPtrInst(GetElementPtrInst &GEP) {
               // -- have to recreate %src & %gep
               // put NewSrc at same location as %src
               Builder.SetInsertPoint(cast<Instruction>(PtrOp));
-              auto *NewSrc = cast<GetElementPtrInst>(
-                  Builder.CreateGEP(GEPEltType, SO0, GO1, Src->getName()));
-              NewSrc->setIsInBounds(Src->isInBounds());
-              auto *NewGEP =
+              Value *NewSrc =
+                  Builder.CreateGEP(GEPEltType, SO0, GO1, Src->getName());
+              // Propagate 'inbounds' if the new source was not constant-folded.
+              if (auto *NewSrcGEPI = dyn_cast<GetElementPtrInst>(NewSrc))
+                NewSrcGEPI->setIsInBounds(Src->isInBounds());
+              GetElementPtrInst *NewGEP =
                   GetElementPtrInst::Create(GEPEltType, NewSrc, {SO1});
               NewGEP->setIsInBounds(GEP.isInBounds());
               return NewGEP;

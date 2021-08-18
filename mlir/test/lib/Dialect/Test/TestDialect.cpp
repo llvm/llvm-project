@@ -22,12 +22,14 @@
 #include "mlir/Transforms/InliningUtils.h"
 #include "llvm/ADT/StringSwitch.h"
 
-using namespace mlir;
-using namespace mlir::test;
-
+// Include this before the using namespace lines below to
+// test that we don't have namespace dependencies.
 #include "TestOpsDialect.cpp.inc"
 
-void mlir::test::registerTestDialect(DialectRegistry &registry) {
+using namespace mlir;
+using namespace test;
+
+void test::registerTestDialect(DialectRegistry &registry) {
   registry.insert<TestDialect>();
 }
 

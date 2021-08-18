@@ -1,5 +1,4 @@
-; RUN: opt < %s -loop-unswitch -enable-new-pm=0 -S | FileCheck %s
-; RUN: opt < %s -loop-unswitch -enable-new-pm=0 -enable-mssa-loop-dependency=true -verify-memoryssa -S | FileCheck %s
+; RUN: opt < %s -loop-unswitch -enable-new-pm=0 -verify-memoryssa -S | FileCheck %s
 
 ; In cases where two address spaces do not have the same size pointer, the
 ; input for the addrspacecast should not be used as a substitute for itself

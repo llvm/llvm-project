@@ -227,10 +227,12 @@ static DecodeStatus DecodeQPRRegisterClass(MCInst &Inst, unsigned RegNo,
                                    uint64_t Address, const void *Decoder);
 static DecodeStatus DecodeMQPRRegisterClass(MCInst &Inst, unsigned RegNo,
                                    uint64_t Address, const void *Decoder);
-static DecodeStatus DecodeQQPRRegisterClass(MCInst &Inst, unsigned RegNo,
-                                   uint64_t Address, const void *Decoder);
-static DecodeStatus DecodeQQQQPRRegisterClass(MCInst &Inst, unsigned RegNo,
-                                   uint64_t Address, const void *Decoder);
+static DecodeStatus DecodeMQQPRRegisterClass(MCInst &Inst, unsigned RegNo,
+                                             uint64_t Address,
+                                             const void *Decoder);
+static DecodeStatus DecodeMQQQQPRRegisterClass(MCInst &Inst, unsigned RegNo,
+                                               uint64_t Address,
+                                               const void *Decoder);
 static DecodeStatus DecodeDPairRegisterClass(MCInst &Inst, unsigned RegNo,
                                    uint64_t Address, const void *Decoder);
 static DecodeStatus DecodeDPairSpacedRegisterClass(MCInst &Inst,
@@ -6154,9 +6156,9 @@ static const uint16_t QQPRDecoderTable[] = {
      ARM::Q4_Q5,  ARM::Q5_Q6,  ARM::Q6_Q7
 };
 
-static DecodeStatus DecodeQQPRRegisterClass(MCInst &Inst, unsigned RegNo,
-                              uint64_t Address,
-                              const void *Decoder) {
+static DecodeStatus DecodeMQQPRRegisterClass(MCInst &Inst, unsigned RegNo,
+                                             uint64_t Address,
+                                             const void *Decoder) {
   if (RegNo > 6)
     return MCDisassembler::Fail;
 
@@ -6170,9 +6172,9 @@ static const uint16_t QQQQPRDecoderTable[] = {
      ARM::Q3_Q4_Q5_Q6,  ARM::Q4_Q5_Q6_Q7
 };
 
-static DecodeStatus DecodeQQQQPRRegisterClass(MCInst &Inst, unsigned RegNo,
-                              uint64_t Address,
-                              const void *Decoder) {
+static DecodeStatus DecodeMQQQQPRRegisterClass(MCInst &Inst, unsigned RegNo,
+                                               uint64_t Address,
+                                               const void *Decoder) {
   if (RegNo > 4)
     return MCDisassembler::Fail;
 

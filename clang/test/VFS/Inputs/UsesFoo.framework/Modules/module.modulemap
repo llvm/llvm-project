@@ -1,4 +1,0 @@
-framework module UsesFoo {
-  umbrella header "UsesFoo.h"
-  export *
-}

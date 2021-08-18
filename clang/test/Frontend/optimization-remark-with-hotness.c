@@ -60,19 +60,19 @@ int foo(int x, int y) { return x + y; }
 int sum = 0;
 
 void bar(int x) {
-  // HOTNESS_OFF: foo inlined into bar
+  // HOTNESS_OFF: 'foo' inlined into 'bar'
   // HOTNESS_OFF-NOT: hotness:
   // THRESHOLD-NOT: inlined
   // THRESHOLD-NOT: hotness
   // NO_PGO: '-fdiagnostics-show-hotness' requires profile-guided optimization information
   // NO_PGO: '-fdiagnostics-hotness-threshold=' requires profile-guided optimization information
-  // expected-remark@+1 {{foo inlined into bar with (cost=always): always inliner at callsite bar:8:10; (hotness:}}
+  // expected-remark@+1 {{'foo' inlined into 'bar' with (cost=always): always inliner at callsite bar:8:10; (hotness:}}
   sum += foo(x, x - 2);
 }
 
 int main(int argc, const char *argv[]) {
   for (int i = 0; i < 30; i++)
-    // expected-remark@+1 {{bar not inlined into main because it should never be inlined (cost=never): no alwaysinline attribute (hotness:}}
+    // expected-remark@+1 {{'bar' not inlined into 'main' because it should never be inlined (cost=never): no alwaysinline attribute (hotness:}}
     bar(argc);
   return sum;
 }

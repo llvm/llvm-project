@@ -1124,11 +1124,11 @@ Value *GPUNodeBuilder::getArraySize(gpu_array_info *Array) {
   if (!gpu_array_is_scalar(Array)) {
     isl::multi_pw_aff ArrayBound = isl::manage_copy(Array->bound);
 
-    isl::pw_aff OffsetDimZero = ArrayBound.get_pw_aff(0);
+    isl::pw_aff OffsetDimZero = ArrayBound.at(0);
     isl::ast_expr Res = Build.expr_from(OffsetDimZero);
 
     for (unsigned int i = 1; i < Array->n_index; i++) {
-      isl::pw_aff Bound_I = ArrayBound.get_pw_aff(i);
+      isl::pw_aff Bound_I = ArrayBound.at(i);
       isl::ast_expr Expr = Build.expr_from(Bound_I);
       Res = Res.mul(Expr);
     }
@@ -1151,7 +1151,7 @@ Value *GPUNodeBuilder::getArrayOffset(gpu_array_info *Array) {
 
   isl::set ZeroSet = isl::set::universe(Min.get_space());
 
-  for (long i = 0, n = Min.tuple_dim(); i < n; i++)
+  for (long i = 0, n = Min.tuple_dim().release(); i < n; i++)
     ZeroSet = ZeroSet.fix_si(isl::dim::set, i, 0);
 
   if (Min.is_subset(ZeroSet)) {
@@ -1160,7 +1160,7 @@ Value *GPUNodeBuilder::getArrayOffset(gpu_array_info *Array) {
 
   isl::ast_expr Result = isl::ast_expr::from_val(isl::val(Min.ctx(), 0));
 
-  for (long i = 0, n = Min.tuple_dim(); i < n; i++) {
+  for (long i = 0, n = Min.tuple_dim().release(); i < n; i++) {
     if (i > 0) {
       isl::pw_aff Bound_I =
           isl::manage(isl_multi_pw_aff_get_pw_aff(Array->bound, i - 1));
@@ -1307,7 +1307,7 @@ void GPUNodeBuilder::createUser(__isl_take isl_ast_node *UserStmt) {
 }
 
 void GPUNodeBuilder::createFor(__isl_take isl_ast_node *Node) {
-  createForSequential(isl::manage(Node), false);
+  createForSequential(isl::manage(Node).as<isl::ast_node_for>(), false);
 }
 
 void GPUNodeBuilder::createKernelCopy(ppcg_kernel_stmt *KernelStmt) {
@@ -1596,7 +1596,7 @@ std::tuple<Value *, Value *> GPUNodeBuilder::getGridSizes(ppcg_kernel *Kernel) {
 
   isl::multi_pw_aff GridSizePwAffs = isl::manage_copy(Kernel->grid_size);
   for (long i = 0; i < Kernel->n_grid; i++) {
-    isl::pw_aff Size = GridSizePwAffs.get_pw_aff(i);
+    isl::pw_aff Size = GridSizePwAffs.at(i);
     isl::ast_expr GridSize = Context.expr_from(Size);
     Value *Res = ExprBuilder.create(GridSize.release());
     Res = Builder.CreateTrunc(Res, Builder.getInt32Ty());
@@ -2885,8 +2885,8 @@ public:
     isl::pw_aff Val = isl::aff::var_on_domain(LS, isl::dim::set, 0);
     isl::pw_aff OuterMin = AccessSet.dim_min(0);
     isl::pw_aff OuterMax = AccessSet.dim_max(0);
-    OuterMin = OuterMin.add_dims(isl::dim::in, Val.dim(isl::dim::in));
-    OuterMax = OuterMax.add_dims(isl::dim::in, Val.dim(isl::dim::in));
+    OuterMin = OuterMin.add_dims(isl::dim::in, Val.dim(isl::dim::in).release());
+    OuterMax = OuterMax.add_dims(isl::dim::in, Val.dim(isl::dim::in).release());
     OuterMin = OuterMin.set_tuple_id(isl::dim::in, Array->getBasePtrId());
     OuterMax = OuterMax.set_tuple_id(isl::dim::in, Array->getBasePtrId());
 
@@ -2910,7 +2910,7 @@ public:
 
       isl::pw_aff Val = isl::aff::var_on_domain(
           isl::local_space(Array->getSpace()), isl::dim::set, i);
-      PwAff = PwAff.add_dims(isl::dim::in, Val.dim(isl::dim::in));
+      PwAff = PwAff.add_dims(isl::dim::in, Val.dim(isl::dim::in).release());
       PwAff = PwAff.set_tuple_id(isl::dim::in, Val.get_tuple_id(isl::dim::in));
       isl::set Set = PwAff.gt_set(Val);
       Extent = Set.intersect(Extent);

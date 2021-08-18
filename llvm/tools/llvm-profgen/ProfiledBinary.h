@@ -183,7 +183,7 @@ class ProfiledBinary {
   }
 
 public:
-  ProfiledBinary(StringRef Path) : Path(Path), ProEpilogTracker(this) {
+  ProfiledBinary(const StringRef Path) : Path(Path), ProEpilogTracker(this) {
     setupSymbolizer();
     load();
   }

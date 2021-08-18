@@ -8,7 +8,6 @@
 
 // UNSUPPORTED: c++03, c++11, c++14, c++17
 // UNSUPPORTED: libcpp-no-concepts
-// UNSUPPORTED: gcc-10
 // UNSUPPORTED: libcpp-has-no-incomplete-ranges
 
 // std::views::all;
@@ -141,6 +140,10 @@ constexpr bool test() {
                      std::ranges::subrange<random_access_iterator<int*>, RandomAccessRange::sentinel>);
     assert(std::ranges::begin(subrange).base() == globalBuff);
     assert(std::ranges::end(subrange) == std::ranges::begin(subrange) + 8);
+  }
+
+  {
+    static_assert(std::same_as<decltype(std::views::all), decltype(std::ranges::views::all)>);
   }
 
   return true;

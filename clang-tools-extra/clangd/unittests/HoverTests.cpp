@@ -12,6 +12,7 @@
 #include "TestIndex.h"
 #include "TestTU.h"
 #include "index/MemIndex.h"
+#include "clang/AST/Attr.h"
 #include "clang/Basic/Specifiers.h"
 #include "clang/Index/IndexSymbol.h"
 #include "llvm/ADT/None.h"
@@ -2384,7 +2385,7 @@ TEST(Hover, All) {
          HI.Name = "nonnull";
          HI.Kind = index::SymbolKind::Unknown; // FIXME: no suitable value
          HI.Definition = "__attribute__((nonnull))";
-         HI.Documentation = ""; // FIXME
+         HI.Documentation = Attr::getDocumentation(attr::NonNull).str();
        }},
   };
 
@@ -2759,6 +2760,15 @@ Passed by const reference as arg_a (converted to int)
 
 // In test::Bar
 int foo = 3)",
+      },
+      {
+          [](HoverInfo &HI) {
+            HI.Name = "stdio.h";
+            HI.Definition = "/usr/include/stdio.h";
+          },
+          R"(stdio.h
+
+/usr/include/stdio.h)",
       }};
 
   for (const auto &C : Cases) {

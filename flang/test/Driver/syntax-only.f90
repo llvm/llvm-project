@@ -3,8 +3,6 @@
 ! don't need to test the frontend driver here - it runs `-fsyntax-only` by
 ! default.
 
-! REQUIRES: new-flang-driver
-
 !-----------
 ! RUN LINES
 !-----------

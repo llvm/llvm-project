@@ -12,7 +12,6 @@
 #include "llvm/MC/MCObjectFileInfo.h"
 #include "llvm/MC/MCObjectStreamer.h"
 #include "llvm/MC/MCStreamer.h"
-#include "llvm/ProfileData/SampleProf.h"
 #include "llvm/Support/Endian.h"
 #include "llvm/Support/LEB128.h"
 #include "llvm/Support/raw_ostream.h"
@@ -23,7 +22,6 @@
 
 using namespace llvm;
 using namespace support;
-using namespace sampleprof;
 
 #ifndef NDEBUG
 int MCPseudoProbeTable::DdgPrintIndent = 0;
@@ -356,8 +354,7 @@ bool MCPseudoProbeDecoder::buildGUID2FuncDescMap(const uint8_t *Start,
 
     uint64_t GUID = std::move(*ErrorOrGUID);
     uint64_t Hash = std::move(*ErrorOrHash);
-    StringRef Name =
-        FunctionSamples::getCanonicalFnName(std::move(*ErrorOrName));
+    StringRef Name = std::move(*ErrorOrName);
 
     // Initialize PseudoProbeFuncDesc and populate it into GUID2FuncDescMap
     GUID2FuncDescMap.emplace(GUID, MCPseudoProbeFuncDesc(GUID, Hash, Name));

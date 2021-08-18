@@ -8,7 +8,6 @@
 
 // UNSUPPORTED: c++03, c++11, c++14, c++17
 // UNSUPPORTED: libcpp-no-concepts
-// UNSUPPORTED: gcc-10
 // UNSUPPORTED: libcpp-has-no-incomplete-ranges
 
 // Some basic examples of how transform_view might be used in the wild. This is a general
@@ -33,8 +32,8 @@ template<class T, class F>
 concept ValidTransformView = requires { typename std::ranges::transform_view<T, F>; };
 
 struct BadFunction { };
-static_assert( ValidTransformView<ContiguousView, Increment>);
-static_assert(!ValidTransformView<Range, Increment>);
+static_assert( ValidTransformView<ContiguousView, PlusOne>);
+static_assert(!ValidTransformView<Range, PlusOne>);
 static_assert(!ValidTransformView<ContiguousView, BadFunction>);
 
 template<std::ranges::range R>

@@ -4310,6 +4310,15 @@ rnb_err_t RNBRemote::HandlePacket_MemoryRegionInfo(const char *p) {
       }
     }
     ostrm << ";";
+    if (!region_info.vm_types.empty()) {
+      ostrm << "type:";
+      for (size_t i = 0; i < region_info.vm_types.size(); i++) {
+        if (i)
+          ostrm << ",";
+        ostrm << region_info.vm_types[i];
+      }
+      ostrm << ";";
+    }
   }
   return SendPacket(ostrm.str());
 }

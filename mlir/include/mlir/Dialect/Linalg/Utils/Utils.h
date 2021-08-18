@@ -57,19 +57,6 @@ SmallVector<Value, 4> getDynOperands(Location loc, Value val, OpBuilder &b);
 IntegerAttr getSmallestBoundingIndex(Value size);
 
 //===----------------------------------------------------------------------===//
-// Iterator type utilities
-//===----------------------------------------------------------------------===//
-
-/// Checks if an iterator_type attribute is parallel.
-bool isParallelIteratorType(Attribute attr);
-
-/// Checks if an iterator_type attribute is parallel.
-bool isReductionIteratorType(Attribute attr);
-
-/// Checks if an iterator_type attribute is parallel.
-bool isWindowIteratorType(Attribute attr);
-
-//===----------------------------------------------------------------------===//
 // Fusion utilities
 //===----------------------------------------------------------------------===//
 

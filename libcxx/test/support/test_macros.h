@@ -87,8 +87,8 @@
 #elif defined(__clang_major__)
 #define TEST_CLANG_VER (__clang_major__ * 100) + __clang_minor__
 #elif defined(__GNUC__)
-#define TEST_GCC_VER (__GNUC__ * 100 + __GNUC_MINOR__)
-#define TEST_GCC_VER_NEW (TEST_GCC_VER * 10 + __GNUC_PATCHLEVEL__)
+// Given GCC XX.YY.ZZ, TEST_GCC_VER is XXYYZZ
+#define TEST_GCC_VER ((__GNUC__ * 10000) + (__GNUC_MINOR__ * 100) + __GNUC_PATCHLEVEL__)
 #endif
 
 /* Make a nice name for the standard version */

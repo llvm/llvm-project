@@ -87,7 +87,8 @@ LogicalResult peelForLoop(RewriterBase &b, ForOp forOp, scf::IfOp &ifOp);
 /// The function returns the resulting ParallelOps, i.e. {outer_loop_op,
 /// inner_loop_op}.
 std::pair<ParallelOp, ParallelOp>
-tileParallelLoop(ParallelOp op, llvm::ArrayRef<int64_t> tileSizes);
+tileParallelLoop(ParallelOp op, llvm::ArrayRef<int64_t> tileSizes,
+                 bool noMinMaxBounds);
 
 /// Populates patterns for SCF structural type conversions and sets up the
 /// provided ConversionTarget with the appropriate legality configuration for

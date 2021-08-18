@@ -172,7 +172,7 @@ attributes #1 = { nounwind }
 ; AKF_HSA: attributes #[[ATTR1]] = { nounwind }
 ; AKF_HSA: attributes #[[ATTR2]] = { nounwind "amdgpu-queue-ptr" }
 ;.
-; ATTRIBUTOR_HSA: attributes #[[ATTR0:[0-9]+]] = { argmemonly nofree nounwind willreturn "uniform-work-group-size"="false" }
+; ATTRIBUTOR_HSA: attributes #[[ATTR0:[0-9]+]] = { argmemonly nofree nounwind willreturn }
 ; ATTRIBUTOR_HSA: attributes #[[ATTR1]] = { nounwind "uniform-work-group-size"="false" }
 ; ATTRIBUTOR_HSA: attributes #[[ATTR2]] = { nounwind "amdgpu-queue-ptr" "uniform-work-group-size"="false" }
 ;.

@@ -743,7 +743,7 @@ static Operation *genFor(Merger &merger, CodeGen &codegen,
   unsigned tensor = merger.tensor(fb);
   assert(idx == merger.index(fb));
   auto iteratorTypes = op.iterator_types().getValue();
-  bool isReduction = linalg::isReductionIteratorType(iteratorTypes[idx]);
+  bool isReduction = isReductionIterator(iteratorTypes[idx]);
   bool isSparse = merger.isDim(fb, Dim::kSparse);
   bool isVector = isVectorFor(codegen, isInner, isSparse) &&
                   denseUnitStrides(merger, op, idx);

@@ -9,6 +9,7 @@
 #include "InlayHints.h"
 #include "Protocol.h"
 #include "TestTU.h"
+#include "TestWorkspace.h"
 #include "XRefs.h"
 #include "gmock/gmock.h"
 #include "gtest/gtest.h"
@@ -396,6 +397,28 @@ TEST(ParameterHints, SetterFunctions) {
   )cpp",
                        ExpectedHint{"timeoutMillis: ", "timeoutMillis"},
                        ExpectedHint{"timeout_millis: ", "timeout_millis"});
+}
+
+TEST(ParameterHints, IncludeAtNonGlobalScope) {
+  Annotations FooInc(R"cpp(
+    void bar() { foo(42); }
+  )cpp");
+  Annotations FooCC(R"cpp(
+    struct S {
+      void foo(int param);
+      #include "foo.inc"
+    };
+  )cpp");
+
+  TestWorkspace Workspace;
+  Workspace.addSource("foo.inc", FooInc.code());
+  Workspace.addMainFile("foo.cc", FooCC.code());
+
+  auto AST = Workspace.openFile("foo.cc");
+  ASSERT_TRUE(bool(AST));
+
+  // Ensure the hint for the call in foo.inc is NOT materialized in foo.cc.
+  EXPECT_EQ(hintsOfKind(*AST, InlayHintKind::ParameterHint).size(), 0u);
 }
 
 TEST(TypeHints, Smoke) {

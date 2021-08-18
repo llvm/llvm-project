@@ -448,3 +448,7 @@ bool DWARFDIE::GetDIENamesAndRanges(
   } else
     return false;
 }
+
+llvm::iterator_range<DWARFDIE::child_iterator> DWARFDIE::children() const {
+  return llvm::make_range(child_iterator(*this), child_iterator());
+}

@@ -53,7 +53,7 @@ using namespace sampleprof;
 // For ext-binary format profiles, the flag is set in the summary.
 static cl::opt<bool> ProfileIsFSDisciminator(
     "profile-isfs", cl::Hidden, cl::init(false),
-    cl::desc("Profile uses flow senstive discriminators"));
+    cl::desc("Profile uses flow sensitive discriminators"));
 
 /// Dump the function profile for \p FName.
 ///
@@ -66,8 +66,10 @@ void SampleProfileReader::dumpFunctionProfile(StringRef FName,
 
 /// Dump all the function profiles found on stream \p OS.
 void SampleProfileReader::dump(raw_ostream &OS) {
-  for (const auto &I : Profiles)
-    dumpFunctionProfile(I.getKey(), OS);
+  std::vector<NameFunctionSamples> V;
+  sortFuncProfiles(Profiles, V);
+  for (const auto &I : V)
+    dumpFunctionProfile(I.first, OS);
 }
 
 /// Parse \p Input as function head.

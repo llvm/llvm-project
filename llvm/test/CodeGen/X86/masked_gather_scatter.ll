@@ -965,16 +965,14 @@ define <4 x double> @test16(double* %base, <4 x i32> %ind, <4 x i1> %mask, <4 x 
 ; KNL_64-NEXT:    retq
 ; KNL_64-NEXT:  .LBB15_5: # %cond.load4
 ; KNL_64-NEXT:    vmovq %xmm0, %rcx
-; KNL_64-NEXT:    vextracti128 $1, %ymm2, %xmm1
-; KNL_64-NEXT:    vmovlps {{.*#+}} xmm1 = mem[0,1],xmm1[2,3]
-; KNL_64-NEXT:    vinserti128 $1, %xmm1, %ymm2, %ymm2
+; KNL_64-NEXT:    vpbroadcastq (%rcx), %ymm1
+; KNL_64-NEXT:    vpblendd {{.*#+}} ymm2 = ymm2[0,1,2,3],ymm1[4,5],ymm2[6,7]
 ; KNL_64-NEXT:    testb $8, %al
 ; KNL_64-NEXT:    je .LBB15_8
 ; KNL_64-NEXT:  .LBB15_7: # %cond.load7
 ; KNL_64-NEXT:    vpextrq $1, %xmm0, %rax
-; KNL_64-NEXT:    vextracti128 $1, %ymm2, %xmm0
-; KNL_64-NEXT:    vmovhps {{.*#+}} xmm0 = xmm0[0,1],mem[0,1]
-; KNL_64-NEXT:    vinserti128 $1, %xmm0, %ymm2, %ymm2
+; KNL_64-NEXT:    vpbroadcastq (%rax), %ymm0
+; KNL_64-NEXT:    vpblendd {{.*#+}} ymm2 = ymm2[0,1,2,3,4,5],ymm0[6,7]
 ; KNL_64-NEXT:    vmovdqa %ymm2, %ymm0
 ; KNL_64-NEXT:    retq
 ;
@@ -1014,16 +1012,14 @@ define <4 x double> @test16(double* %base, <4 x i32> %ind, <4 x i1> %mask, <4 x 
 ; KNL_32-NEXT:    je .LBB15_6
 ; KNL_32-NEXT:  .LBB15_5: # %cond.load4
 ; KNL_32-NEXT:    vpextrd $2, %xmm0, %ecx
-; KNL_32-NEXT:    vextracti128 $1, %ymm2, %xmm1
-; KNL_32-NEXT:    vmovlps {{.*#+}} xmm1 = mem[0,1],xmm1[2,3]
-; KNL_32-NEXT:    vinserti128 $1, %xmm1, %ymm2, %ymm2
+; KNL_32-NEXT:    vpbroadcastq (%ecx), %ymm1
+; KNL_32-NEXT:    vpblendd {{.*#+}} ymm2 = ymm2[0,1,2,3],ymm1[4,5],ymm2[6,7]
 ; KNL_32-NEXT:    testb $8, %al
 ; KNL_32-NEXT:    je .LBB15_8
 ; KNL_32-NEXT:  .LBB15_7: # %cond.load7
 ; KNL_32-NEXT:    vpextrd $3, %xmm0, %eax
-; KNL_32-NEXT:    vextracti128 $1, %ymm2, %xmm0
-; KNL_32-NEXT:    vmovhps {{.*#+}} xmm0 = xmm0[0,1],mem[0,1]
-; KNL_32-NEXT:    vinserti128 $1, %xmm0, %ymm2, %ymm2
+; KNL_32-NEXT:    vpbroadcastq (%eax), %ymm0
+; KNL_32-NEXT:    vpblendd {{.*#+}} ymm2 = ymm2[0,1,2,3,4,5],ymm0[6,7]
 ; KNL_32-NEXT:    vmovdqa %ymm2, %ymm0
 ; KNL_32-NEXT:    retl
 ;
@@ -3220,17 +3216,15 @@ define <4 x i64> @test_pr28312(<4 x i64*> %p1, <4 x i1> %k, <4 x i1> %k2,<4 x i6
 ; KNL_64-NEXT:    je .LBB42_6
 ; KNL_64-NEXT:  # %bb.5: # %cond.load4
 ; KNL_64-NEXT:    vmovq %xmm2, %rcx
-; KNL_64-NEXT:    vextracti128 $1, %ymm1, %xmm3
-; KNL_64-NEXT:    vpinsrq $0, (%rcx), %xmm3, %xmm3
-; KNL_64-NEXT:    vinserti128 $1, %xmm3, %ymm1, %ymm1
+; KNL_64-NEXT:    vpbroadcastq (%rcx), %ymm3
+; KNL_64-NEXT:    vpblendd {{.*#+}} ymm1 = ymm1[0,1,2,3],ymm3[4,5],ymm1[6,7]
 ; KNL_64-NEXT:  .LBB42_6: # %else5
 ; KNL_64-NEXT:    testb $8, %al
 ; KNL_64-NEXT:    je .LBB42_8
 ; KNL_64-NEXT:  # %bb.7: # %cond.load7
 ; KNL_64-NEXT:    vpextrq $1, %xmm2, %rax
-; KNL_64-NEXT:    vextracti128 $1, %ymm1, %xmm3
-; KNL_64-NEXT:    vpinsrq $1, (%rax), %xmm3, %xmm3
-; KNL_64-NEXT:    vinserti128 $1, %xmm3, %ymm1, %ymm1
+; KNL_64-NEXT:    vpbroadcastq (%rax), %ymm3
+; KNL_64-NEXT:    vpblendd {{.*#+}} ymm1 = ymm1[0,1,2,3,4,5],ymm3[6,7]
 ; KNL_64-NEXT:  .LBB42_8: # %else8
 ; KNL_64-NEXT:    kmovw %k0, %eax
 ; KNL_64-NEXT:    testb $1, %al
@@ -3247,9 +3241,8 @@ define <4 x i64> @test_pr28312(<4 x i64*> %p1, <4 x i1> %k, <4 x i1> %k2,<4 x i6
 ; KNL_64-NEXT:    je .LBB42_16
 ; KNL_64-NEXT:  .LBB42_15: # %cond.load29
 ; KNL_64-NEXT:    vpextrq $1, %xmm2, %rax
-; KNL_64-NEXT:    vextracti128 $1, %ymm3, %xmm4
-; KNL_64-NEXT:    vpinsrq $1, (%rax), %xmm4, %xmm4
-; KNL_64-NEXT:    vinserti128 $1, %xmm4, %ymm3, %ymm3
+; KNL_64-NEXT:    vpbroadcastq (%rax), %ymm4
+; KNL_64-NEXT:    vpblendd {{.*#+}} ymm3 = ymm3[0,1,2,3,4,5],ymm4[6,7]
 ; KNL_64-NEXT:  .LBB42_16: # %else33
 ; KNL_64-NEXT:    kmovw %k0, %eax
 ; KNL_64-NEXT:    testb $1, %al
@@ -3266,9 +3259,8 @@ define <4 x i64> @test_pr28312(<4 x i64*> %p1, <4 x i1> %k, <4 x i1> %k2,<4 x i6
 ; KNL_64-NEXT:    je .LBB42_24
 ; KNL_64-NEXT:  .LBB42_23: # %cond.load54
 ; KNL_64-NEXT:    vpextrq $1, %xmm2, %rax
-; KNL_64-NEXT:    vextracti128 $1, %ymm4, %xmm0
-; KNL_64-NEXT:    vpinsrq $1, (%rax), %xmm0, %xmm0
-; KNL_64-NEXT:    vinserti128 $1, %xmm0, %ymm4, %ymm4
+; KNL_64-NEXT:    vpbroadcastq (%rax), %ymm0
+; KNL_64-NEXT:    vpblendd {{.*#+}} ymm4 = ymm4[0,1,2,3,4,5],ymm0[6,7]
 ; KNL_64-NEXT:  .LBB42_24: # %else58
 ; KNL_64-NEXT:    vpaddq %ymm3, %ymm1, %ymm0
 ; KNL_64-NEXT:    vpaddq %ymm4, %ymm0, %ymm0
@@ -3286,9 +3278,8 @@ define <4 x i64> @test_pr28312(<4 x i64*> %p1, <4 x i1> %k, <4 x i1> %k2,<4 x i6
 ; KNL_64-NEXT:    je .LBB42_14
 ; KNL_64-NEXT:  .LBB42_13: # %cond.load23
 ; KNL_64-NEXT:    vmovq %xmm2, %rcx
-; KNL_64-NEXT:    vextracti128 $1, %ymm3, %xmm4
-; KNL_64-NEXT:    vpinsrq $0, (%rcx), %xmm4, %xmm4
-; KNL_64-NEXT:    vinserti128 $1, %xmm4, %ymm3, %ymm3
+; KNL_64-NEXT:    vpbroadcastq (%rcx), %ymm4
+; KNL_64-NEXT:    vpblendd {{.*#+}} ymm3 = ymm3[0,1,2,3],ymm4[4,5],ymm3[6,7]
 ; KNL_64-NEXT:    testb $8, %al
 ; KNL_64-NEXT:    jne .LBB42_15
 ; KNL_64-NEXT:    jmp .LBB42_16
@@ -3305,9 +3296,8 @@ define <4 x i64> @test_pr28312(<4 x i64*> %p1, <4 x i1> %k, <4 x i1> %k2,<4 x i6
 ; KNL_64-NEXT:    je .LBB42_22
 ; KNL_64-NEXT:  .LBB42_21: # %cond.load48
 ; KNL_64-NEXT:    vmovq %xmm2, %rcx
-; KNL_64-NEXT:    vextracti128 $1, %ymm4, %xmm0
-; KNL_64-NEXT:    vpinsrq $0, (%rcx), %xmm0, %xmm0
-; KNL_64-NEXT:    vinserti128 $1, %xmm0, %ymm4, %ymm4
+; KNL_64-NEXT:    vpbroadcastq (%rcx), %ymm0
+; KNL_64-NEXT:    vpblendd {{.*#+}} ymm4 = ymm4[0,1,2,3],ymm0[4,5],ymm4[6,7]
 ; KNL_64-NEXT:    testb $8, %al
 ; KNL_64-NEXT:    jne .LBB42_23
 ; KNL_64-NEXT:    jmp .LBB42_24
@@ -3347,19 +3337,19 @@ define <4 x i64> @test_pr28312(<4 x i64*> %p1, <4 x i1> %k, <4 x i1> %k2,<4 x i6
 ; KNL_32-NEXT:    vpextrd $2, %xmm0, %edx
 ; KNL_32-NEXT:    je .LBB42_6
 ; KNL_32-NEXT:  # %bb.5: # %cond.load4
-; KNL_32-NEXT:    vextracti128 $1, %ymm1, %xmm2
-; KNL_32-NEXT:    vpinsrd $0, (%edx), %xmm2, %xmm2
-; KNL_32-NEXT:    vpinsrd $1, 4(%edx), %xmm2, %xmm2
-; KNL_32-NEXT:    vinserti128 $1, %xmm2, %ymm1, %ymm1
+; KNL_32-NEXT:    vpbroadcastd (%edx), %ymm2
+; KNL_32-NEXT:    vpblendd {{.*#+}} ymm1 = ymm1[0,1,2,3],ymm2[4],ymm1[5,6,7]
+; KNL_32-NEXT:    vpbroadcastd 4(%edx), %ymm2
+; KNL_32-NEXT:    vpblendd {{.*#+}} ymm1 = ymm1[0,1,2,3,4],ymm2[5],ymm1[6,7]
 ; KNL_32-NEXT:  .LBB42_6: # %else5
 ; KNL_32-NEXT:    testb $8, %bl
 ; KNL_32-NEXT:    vpextrd $3, %xmm0, %esi
 ; KNL_32-NEXT:    je .LBB42_8
 ; KNL_32-NEXT:  # %bb.7: # %cond.load7
-; KNL_32-NEXT:    vextracti128 $1, %ymm1, %xmm0
-; KNL_32-NEXT:    vpinsrd $2, (%esi), %xmm0, %xmm0
-; KNL_32-NEXT:    vpinsrd $3, 4(%esi), %xmm0, %xmm0
-; KNL_32-NEXT:    vinserti128 $1, %xmm0, %ymm1, %ymm1
+; KNL_32-NEXT:    vpbroadcastd (%esi), %ymm0
+; KNL_32-NEXT:    vpblendd {{.*#+}} ymm0 = ymm1[0,1,2,3,4,5],ymm0[6],ymm1[7]
+; KNL_32-NEXT:    vpbroadcastd 4(%esi), %ymm1
+; KNL_32-NEXT:    vpblendd {{.*#+}} ymm1 = ymm0[0,1,2,3,4,5,6],ymm1[7]
 ; KNL_32-NEXT:  .LBB42_8: # %else8
 ; KNL_32-NEXT:    kmovw %k0, %ebx
 ; KNL_32-NEXT:    testb $1, %bl
@@ -3375,10 +3365,10 @@ define <4 x i64> @test_pr28312(<4 x i64*> %p1, <4 x i1> %k, <4 x i1> %k2,<4 x i6
 ; KNL_32-NEXT:    testb $8, %bl
 ; KNL_32-NEXT:    je .LBB42_16
 ; KNL_32-NEXT:  .LBB42_15: # %cond.load29
-; KNL_32-NEXT:    vextracti128 $1, %ymm0, %xmm2
-; KNL_32-NEXT:    vpinsrd $2, (%esi), %xmm2, %xmm2
-; KNL_32-NEXT:    vpinsrd $3, 4(%esi), %xmm2, %xmm2
-; KNL_32-NEXT:    vinserti128 $1, %xmm2, %ymm0, %ymm0
+; KNL_32-NEXT:    vpbroadcastd (%esi), %ymm2
+; KNL_32-NEXT:    vpblendd {{.*#+}} ymm0 = ymm0[0,1,2,3,4,5],ymm2[6],ymm0[7]
+; KNL_32-NEXT:    vpbroadcastd 4(%esi), %ymm2
+; KNL_32-NEXT:    vpblendd {{.*#+}} ymm0 = ymm0[0,1,2,3,4,5,6],ymm2[7]
 ; KNL_32-NEXT:  .LBB42_16: # %else33
 ; KNL_32-NEXT:    kmovw %k0, %ebx
 ; KNL_32-NEXT:    testb $1, %bl
@@ -3394,10 +3384,10 @@ define <4 x i64> @test_pr28312(<4 x i64*> %p1, <4 x i1> %k, <4 x i1> %k2,<4 x i6
 ; KNL_32-NEXT:    testb $8, %bl
 ; KNL_32-NEXT:    je .LBB42_24
 ; KNL_32-NEXT:  .LBB42_23: # %cond.load54
-; KNL_32-NEXT:    vextracti128 $1, %ymm2, %xmm3
-; KNL_32-NEXT:    vpinsrd $2, (%esi), %xmm3, %xmm3
-; KNL_32-NEXT:    vpinsrd $3, 4(%esi), %xmm3, %xmm3
-; KNL_32-NEXT:    vinserti128 $1, %xmm3, %ymm2, %ymm2
+; KNL_32-NEXT:    vpbroadcastd (%esi), %ymm3
+; KNL_32-NEXT:    vpblendd {{.*#+}} ymm2 = ymm2[0,1,2,3,4,5],ymm3[6],ymm2[7]
+; KNL_32-NEXT:    vpbroadcastd 4(%esi), %ymm3
+; KNL_32-NEXT:    vpblendd {{.*#+}} ymm2 = ymm2[0,1,2,3,4,5,6],ymm3[7]
 ; KNL_32-NEXT:  .LBB42_24: # %else58
 ; KNL_32-NEXT:    vpaddq %ymm0, %ymm1, %ymm0
 ; KNL_32-NEXT:    vpaddq %ymm2, %ymm0, %ymm0
@@ -3419,10 +3409,10 @@ define <4 x i64> @test_pr28312(<4 x i64*> %p1, <4 x i1> %k, <4 x i1> %k2,<4 x i6
 ; KNL_32-NEXT:    testb $4, %bl
 ; KNL_32-NEXT:    je .LBB42_14
 ; KNL_32-NEXT:  .LBB42_13: # %cond.load23
-; KNL_32-NEXT:    vextracti128 $1, %ymm0, %xmm2
-; KNL_32-NEXT:    vpinsrd $0, (%edx), %xmm2, %xmm2
-; KNL_32-NEXT:    vpinsrd $1, 4(%edx), %xmm2, %xmm2
-; KNL_32-NEXT:    vinserti128 $1, %xmm2, %ymm0, %ymm0
+; KNL_32-NEXT:    vpbroadcastd (%edx), %ymm2
+; KNL_32-NEXT:    vpblendd {{.*#+}} ymm0 = ymm0[0,1,2,3],ymm2[4],ymm0[5,6,7]
+; KNL_32-NEXT:    vpbroadcastd 4(%edx), %ymm2
+; KNL_32-NEXT:    vpblendd {{.*#+}} ymm0 = ymm0[0,1,2,3,4],ymm2[5],ymm0[6,7]
 ; KNL_32-NEXT:    testb $8, %bl
 ; KNL_32-NEXT:    jne .LBB42_15
 ; KNL_32-NEXT:    jmp .LBB42_16
@@ -3437,10 +3427,10 @@ define <4 x i64> @test_pr28312(<4 x i64*> %p1, <4 x i1> %k, <4 x i1> %k2,<4 x i6
 ; KNL_32-NEXT:    testb $4, %bl
 ; KNL_32-NEXT:    je .LBB42_22
 ; KNL_32-NEXT:  .LBB42_21: # %cond.load48
-; KNL_32-NEXT:    vextracti128 $1, %ymm2, %xmm3
-; KNL_32-NEXT:    vpinsrd $0, (%edx), %xmm3, %xmm3
-; KNL_32-NEXT:    vpinsrd $1, 4(%edx), %xmm3, %xmm3
-; KNL_32-NEXT:    vinserti128 $1, %xmm3, %ymm2, %ymm2
+; KNL_32-NEXT:    vpbroadcastd (%edx), %ymm3
+; KNL_32-NEXT:    vpblendd {{.*#+}} ymm2 = ymm2[0,1,2,3],ymm3[4],ymm2[5,6,7]
+; KNL_32-NEXT:    vpbroadcastd 4(%edx), %ymm3
+; KNL_32-NEXT:    vpblendd {{.*#+}} ymm2 = ymm2[0,1,2,3,4],ymm3[5],ymm2[6,7]
 ; KNL_32-NEXT:    testb $8, %bl
 ; KNL_32-NEXT:    jne .LBB42_23
 ; KNL_32-NEXT:    jmp .LBB42_24
