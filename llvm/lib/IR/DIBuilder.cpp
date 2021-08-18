@@ -1114,9 +1114,18 @@ void DIBuilder::replaceArrays(DICompositeType *&T, DINodeArray Elements,
     trackIfUnresolved(TParams.get());
 }
 
-DILifetime *DIBuilder::createLifetime(DIObject *Obj, DIExpr *Loc,
+DILifetime *DIBuilder::createBoundedLifetime(DIObject *Obj, DIExpr *Loc,
                                       ArrayRef<Metadata *> Args) {
   return DILifetime::getDistinct(VMContext, Obj, Loc, Args);
+}
+
+void DIBuilder::createComputedLifetime(DIObject *Obj, DIExpr *Loc,
+                                       ArrayRef<Metadata *> Args) {
+  DILifetime *Lifetime = DILifetime::getDistinct(VMContext, Obj, Loc, Args);
+
+  NamedMDNode *NMD = M.getOrInsertNamedMetadata("llvm.dbg.retainedNodes");
+  NMD->addOperand(Lifetime);
+  trackIfUnresolved(Lifetime);
 }
 
 static Function *getDefIntrin(Module &M) {

@@ -4627,11 +4627,11 @@ llvm::DILocalVariable *CGDebugInfo::EmitDef(const VarDecl *VD,
             Flags | llvm::DINode::FlagArtificial, FieldAlign);
 
         // Insert an llvm.dbg.def into the current block.
-        DBuilder.insertDef(DBuilder.createLifetime(D, ExprBuilder.intoExpr()),
-                           Storage, llvm::DILocation::get(CGM.getLLVMContext(),
-                                                          Line, Column, Scope,
-                                                          CurInlinedAt),
-                           Builder.GetInsertBlock());
+        DBuilder.insertDef(
+            DBuilder.createBoundedLifetime(D, ExprBuilder.intoExpr()), Storage,
+            llvm::DILocation::get(CGM.getLLVMContext(), Line, Column, Scope,
+                                  CurInlinedAt),
+            Builder.GetInsertBlock());
       }
     }
   }
@@ -4690,10 +4690,10 @@ llvm::DILocalVariable *CGDebugInfo::EmitDef(const VarDecl *VD,
                                       CGM.getLangOpts().Optimize, Flags, Align);
   }
   // Insert an llvm.dbg.def into the current block.
-  DBuilder.insertDef(DBuilder.createLifetime(D, ExprBuilder.intoExpr()),
-                     Storage, llvm::DILocation::get(CGM.getLLVMContext(),
-                                                    Line, Column, Scope,
-                                                    CurInlinedAt),
+  DBuilder.insertDef(DBuilder.createBoundedLifetime(D, ExprBuilder.intoExpr()),
+                     Storage,
+                     llvm::DILocation::get(CGM.getLLVMContext(), Line, Column,
+                                           Scope, CurInlinedAt),
                      Builder.GetInsertBlock());
 
   return D;
@@ -5324,12 +5324,12 @@ void CGDebugInfo::EmitGlobalVariableForHeterogeneousDwarf(
     return Name;
   });
 
-  // If we already created a DIGlobalVariable for this declaration, just attach
-  // it to the llvm::GlobalVariable.
-  auto Cached = DeclCache.find(D->getCanonicalDecl());
-  if (Cached != DeclCache.end())
-    return Var->addDebugInfo(
-        cast<llvm::DIGlobalVariable>(Cached->second));
+  // FIXME: Need to handle cases like the NOADDROF lines in
+  // clang/test/CodeGen/debug-info-global-constant-heterogeneous-dwarf.c where
+  // we should conceptually produce both a memory location description *and* an
+  // implicit location description because of optimizations along the lines of
+  // really-early constant folding. Maybe this is an example of why we need to
+  // support multiple computed lifetime segments for global variables?
 
   // Create global variable debug descriptor.
   llvm::DIFile *Unit = nullptr;
@@ -5373,19 +5373,21 @@ void CGDebugInfo::EmitGlobalVariableForHeterogeneousDwarf(
     SmallVector<llvm::Metadata*> LifetimeArgs;
     LifetimeArgs.push_back(Fragment);
 
-    // Create DILifetime.
-    llvm::DILifetime *Lifetime =
-        DBuilder.createLifetime(GV, ExprBuilder.intoExpr(), LifetimeArgs);
+    // Create DILifetime and add to llvm.dbg.retainedNodes named metadata.
+    DBuilder.createComputedLifetime(GV, ExprBuilder.intoExpr(), LifetimeArgs);
 
     // Attach metadata to GlobalVariable.
-    Var->addDebugInfo(GV);
     Var->addDebugInfo(Fragment);
-    Var->addDebugInfo(Lifetime);
   }
   DeclCache[D->getCanonicalDecl()].reset(GV);
 }
 
 void CGDebugInfo::EmitGlobalVariable(const ValueDecl *VD, const APValue &Init) {
+  if (CGM.getCodeGenOpts().HeterogeneousDwarf) {
+    // FIXME: As mentioned above, static const global variables need more
+    // thought. For now we just emit nothing if their address is not taken.
+    return;
+  }
   assert(CGM.getCodeGenOpts().hasReducedDebugInfo());
   if (VD->hasAttr<NoDebugAttr>())
     return;

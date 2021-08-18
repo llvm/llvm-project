@@ -993,22 +993,32 @@ namespace llvm {
       return Replacement;
     }
 
-    /// Create a lifetime segment of a data object. A lifetime segment specifies
-    /// a location description expression, references a data object either
-    /// explicitly or implicitly, and defines when the lifetime segment applies.
-    /// The location description of a data object is defined by the, possibly
-    /// empty, set of lifetime segments that reference it.
+    /// Create a bounded lifetime segment of a data object.
+    ///
+    /// \see docs/AMDGPULLVMExtensionsForHeterogeneousDebugging.rst
+    ///
     /// \param Obj  The data object of the lifetime segment.
-    /// \param Loc  The location description of a DIObject is a function of the
-    ///             current program location’s instruction and the, possibly
-    ///             empty, set of lifetime segments with an object field that
-    ///             references the DIObject.
+    /// \param Loc  The location description of the lifetime segment.
     /// \param Args The optional argument specifies a tuple of zero or more
     ///             input DIObjects or DICodes to the expression specified by
     ///             the location field. Omitting the argObjects field is
     ///             equivalent to specifying it to be the empty tuple.
-    DILifetime *createLifetime(DIObject *Obj, DIExpr *Loc,
-                               ArrayRef<Metadata *> Args = None);
+    DILifetime *createBoundedLifetime(DIObject *Obj, DIExpr *Loc,
+                                      ArrayRef<Metadata *> Args = None);
+
+    /// Create a computed lifetime segment of a data object and add it to the
+    /// llvm.dbg.retainedNodes named metadata node.
+    ///
+    /// \see docs/AMDGPULLVMExtensionsForHeterogeneousDebugging.rst
+    ///
+    /// \param Obj  The data object of the lifetime segment.
+    /// \param Loc  The location description of the lifetime segment.
+    /// \param Args The optional argument specifies a tuple of zero or more
+    ///             input DIObjects or DICodes to the expression specified by
+    ///             the location field. Omitting the argObjects field is
+    ///             equivalent to specifying it to be the empty tuple.
+    void createComputedLifetime(DIObject *Obj, DIExpr *Loc,
+                                ArrayRef<Metadata *> Args = None);
 
     /// Insert a new llvm.dbg.def intrinsic call.
     /// \param Lifetime    The beginning of the bounded lifetime being defined.
