@@ -59,6 +59,7 @@ public:
   bool selectZExti32(SDValue N, SDValue &Val);
 
   bool hasAllNBitUsers(SDNode *Node, unsigned Bits) const;
+  bool hasAllHUsers(SDNode *Node) const { return hasAllNBitUsers(Node, 16); }
   bool hasAllWUsers(SDNode *Node) const { return hasAllNBitUsers(Node, 32); }
 
   bool selectVLOp(SDValue N, SDValue &VL);

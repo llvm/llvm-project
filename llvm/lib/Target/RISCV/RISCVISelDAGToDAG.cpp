@@ -459,8 +459,18 @@ void RISCVDAGToDAGISel::Select(SDNode *Node) {
       ReplaceNode(Node, New.getNode());
       return;
     }
-    ReplaceNode(Node,
-                selectImm(CurDAG, DL, ConstNode->getSExtValue(), *Subtarget));
+    int64_t Imm = ConstNode->getSExtValue();
+    // If the upper XLen-16 bits are not used, try to convert this to a simm12
+    // by sign extending bit 15.
+    if (isUInt<16>(Imm) && isInt<12>(SignExtend64(Imm, 16)) &&
+        hasAllHUsers(Node))
+      Imm = SignExtend64(Imm, 16);
+    // If the upper 32-bits are not used try to convert this into a simm32 by
+    // sign extending bit 32.
+    if (!isInt<32>(Imm) && isUInt<32>(Imm) && hasAllWUsers(Node))
+      Imm = SignExtend64(Imm, 32);
+
+    ReplaceNode(Node, selectImm(CurDAG, DL, Imm, *Subtarget));
     return;
   }
   case ISD::FrameIndex: {
@@ -1509,7 +1519,8 @@ bool RISCVDAGToDAGISel::selectZExti32(SDValue N, SDValue &Val) {
 // opportunities.
 bool RISCVDAGToDAGISel::hasAllNBitUsers(SDNode *Node, unsigned Bits) const {
   assert((Node->getOpcode() == ISD::ADD || Node->getOpcode() == ISD::SUB ||
-          Node->getOpcode() == ISD::MUL || Node->getOpcode() == ISD::SHL) &&
+          Node->getOpcode() == ISD::MUL || Node->getOpcode() == ISD::SHL ||
+          isa<ConstantSDNode>(Node)) &&
          "Unexpected opcode");
 
   for (auto UI = Node->use_begin(), UE = Node->use_end(); UI != UE; ++UI) {
