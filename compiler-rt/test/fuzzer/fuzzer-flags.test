@@ -1,4 +1,5 @@
-# Linker errors on AArch64 Linux in stage 2 build
+# Binutils < 2.32 fails with undefined reference to `__start_<...>`
+# AArch64 bots currently use 2.30.
 UNSUPPORTED: aarch64-linux
 
 RUN: %cpp_compiler %S/FlagsTest.cpp -o %t-FlagsTest
