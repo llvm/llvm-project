@@ -115,7 +115,7 @@ static cl::opt<bool> ClInstrumentStack("hwasan-instrument-stack",
                                        cl::Hidden, cl::init(true));
 
 static cl::opt<bool>
-    ClUseStackSafety("hwasan-use-stack-safety", cl::Hidden, cl::init(true),
+    ClUseStackSafety("hwasan-use-stack-safety", cl::Hidden, cl::init(false),
                      cl::Hidden, cl::desc("Use Stack Safety analysis results"),
                      cl::Optional);
 
