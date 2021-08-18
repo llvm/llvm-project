@@ -1496,6 +1496,88 @@ bool RISCVDAGToDAGISel::selectZExti32(SDValue N, SDValue &Val) {
   return false;
 }
 
+// Return true if all users of this SDNode* only consume the lower \p Bits.
+// This can be used to form W instructions for add/sub/mul/shl even when the
+// root isn't a sext_inreg. This can allow the ADDW/SUBW/MULW/SLLIW to CSE if
+// SimplifyDemandedBits has made it so some users see a sext_inreg and some
+// don't. The sext_inreg+add/sub/mul/shl will get selected, but still leave
+// the add/sub/mul/shl to become non-W instructions. By checking the users we
+// may be able to use a W instruction and CSE with the other instruction if
+// this has happened. We could try to detect that the CSE opportunity exists
+// before doing this, but that would be more complicated.
+// TODO: Does this need to look through AND/OR/XOR to their users to find more
+// opportunities.
+bool RISCVDAGToDAGISel::hasAllNBitUsers(SDNode *Node, unsigned Bits) const {
+  assert((Node->getOpcode() == ISD::ADD || Node->getOpcode() == ISD::SUB ||
+          Node->getOpcode() == ISD::MUL || Node->getOpcode() == ISD::SHL) &&
+         "Unexpected opcode");
+
+  for (auto UI = Node->use_begin(), UE = Node->use_end(); UI != UE; ++UI) {
+    SDNode *User = *UI;
+    // Users of this node should have already been instruction selected
+    if (!User->isMachineOpcode())
+      return false;
+
+    // TODO: Add more opcodes?
+    switch (User->getMachineOpcode()) {
+    default:
+      return false;
+    case RISCV::ADDW:
+    case RISCV::ADDIW:
+    case RISCV::SUBW:
+    case RISCV::MULW:
+    case RISCV::SLLW:
+    case RISCV::SLLIW:
+    case RISCV::SRAW:
+    case RISCV::SRAIW:
+    case RISCV::SRLW:
+    case RISCV::SRLIW:
+    case RISCV::DIVW:
+    case RISCV::DIVUW:
+    case RISCV::REMW:
+    case RISCV::REMUW:
+    case RISCV::ROLW:
+    case RISCV::RORW:
+    case RISCV::RORIW:
+    case RISCV::CLZW:
+    case RISCV::CTZW:
+    case RISCV::CPOPW:
+    case RISCV::SLLIUW:
+      if (Bits < 32)
+        return false;
+      break;
+    case RISCV::SLLI:
+      // SLLI only uses the lower (XLen - ShAmt) bits.
+      if (Bits < Subtarget->getXLen() - User->getConstantOperandVal(1))
+        return false;
+      break;
+    case RISCV::ADDUW:
+    case RISCV::SH1ADDUW:
+    case RISCV::SH2ADDUW:
+    case RISCV::SH3ADDUW:
+      // The first operand to add.uw/shXadd.uw is implicitly zero extended from
+      // 32 bits.
+      if (UI.getOperandNo() != 0 || Bits < 32)
+        return false;
+      break;
+    case RISCV::SB:
+      if (UI.getOperandNo() != 0 || Bits < 8)
+        return false;
+      break;
+    case RISCV::SH:
+      if (UI.getOperandNo() != 0 || Bits < 16)
+        return false;
+      break;
+    case RISCV::SW:
+      if (UI.getOperandNo() != 0 || Bits < 32)
+        return false;
+      break;
+    }
+  }
+
+  return true;
+}
+
 // Select VL as a 5 bit immediate or a value that will become a register. This
 // allows us to choose betwen VSETIVLI or VSETVLI later.
 bool RISCVDAGToDAGISel::selectVLOp(SDValue N, SDValue &VL) {
