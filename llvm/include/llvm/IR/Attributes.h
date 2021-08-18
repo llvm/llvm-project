@@ -510,6 +510,20 @@ public:
     return addAttribute(C, ReturnIndex, Kind);
   }
 
+  /// Add a return value attribute to the list. Returns a new list because
+  /// attribute lists are immutable.
+  LLVM_NODISCARD AttributeList addRetAttribute(LLVMContext &C,
+                                               Attribute Attr) const {
+    return addAttribute(C, ReturnIndex, Attr);
+  }
+
+  /// Add a return value attribute to the list. Returns a new list because
+  /// attribute lists are immutable.
+  LLVM_NODISCARD AttributeList addRetAttributes(LLVMContext &C,
+                                                const AttrBuilder &B) const {
+    return addAttributes(C, ReturnIndex, B);
+  }
+
   /// Add an argument attribute to the list. Returns a new list because
   /// attribute lists are immutable.
   LLVM_NODISCARD AttributeList addParamAttribute(

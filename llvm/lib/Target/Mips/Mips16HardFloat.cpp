@@ -408,12 +408,9 @@ static bool fixupFPReturnAndCall(Function &F, Module *M,
         // during call setup, the proper call lowering to the helper
         // functions will take place.
         //
-        A = A.addAttribute(C, AttributeList::FunctionIndex,
-                           "__Mips16RetHelper");
-        A = A.addAttribute(C, AttributeList::FunctionIndex,
-                           Attribute::ReadNone);
-        A = A.addAttribute(C, AttributeList::FunctionIndex,
-                           Attribute::NoInline);
+        A = A.addFnAttribute(C, "__Mips16RetHelper");
+        A = A.addFnAttribute(C, Attribute::ReadNone);
+        A = A.addFnAttribute(C, Attribute::NoInline);
         FunctionCallee F = (M->getOrInsertFunction(Name, A, MyVoid, T));
         CallInst::Create(F, Params, "", &I);
       } else if (const CallInst *CI = dyn_cast<CallInst>(&I)) {

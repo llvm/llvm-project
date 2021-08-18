@@ -64,11 +64,11 @@ TEST(Attributes, AddAttributes) {
   AttributeList AL;
   AttrBuilder B;
   B.addAttribute(Attribute::NoReturn);
-  AL = AL.addAttributes(C, AttributeList::FunctionIndex, AttributeSet::get(C, B));
+  AL = AL.addFnAttributes(C, AttributeSet::get(C, B));
   EXPECT_TRUE(AL.hasFnAttr(Attribute::NoReturn));
   B.clear();
   B.addAttribute(Attribute::SExt);
-  AL = AL.addAttributes(C, AttributeList::ReturnIndex, B);
+  AL = AL.addRetAttributes(C, B);
   EXPECT_TRUE(AL.hasRetAttr(Attribute::SExt));
   EXPECT_TRUE(AL.hasFnAttr(Attribute::NoReturn));
 }
@@ -102,7 +102,7 @@ TEST(Attributes, RemoveAlign) {
 
   AttributeList AL;
   AL = AL.addParamAttributes(C, 0, B_align_readonly);
-  AL = AL.addAttributes(C, 0, B_stackalign_optnone);
+  AL = AL.addRetAttributes(C, B_stackalign_optnone);
   EXPECT_TRUE(AL.hasRetAttrs());
   EXPECT_TRUE(AL.hasRetAttr(Attribute::StackAlignment));
   EXPECT_TRUE(AL.hasRetAttr(Attribute::OptimizeNone));
@@ -127,7 +127,7 @@ TEST(Attributes, RemoveAlign) {
 
   AttributeList AL2;
   AL2 = AL2.addParamAttributes(C, 0, B_align_readonly);
-  AL2 = AL2.addAttributes(C, 0, B_stackalign_optnone);
+  AL2 = AL2.addRetAttributes(C, B_stackalign_optnone);
 
   AL2 = AL2.removeParamAttributes(C, 0, B_align);
   EXPECT_FALSE(AL2.hasParamAttr(0, Attribute::Alignment));
@@ -146,17 +146,15 @@ TEST(Attributes, RemoveAlign) {
 TEST(Attributes, AddMatchingAlignAttr) {
   LLVMContext C;
   AttributeList AL;
-  AL = AL.addAttribute(C, AttributeList::FirstArgIndex,
-                       Attribute::getWithAlignment(C, Align(8)));
-  AL = AL.addAttribute(C, AttributeList::FirstArgIndex + 1,
-                       Attribute::getWithAlignment(C, Align(32)));
+  AL = AL.addParamAttribute(C, 0, Attribute::getWithAlignment(C, Align(8)));
+  AL = AL.addParamAttribute(C, 1, Attribute::getWithAlignment(C, Align(32)));
   EXPECT_EQ(Align(8), AL.getParamAlignment(0));
   EXPECT_EQ(Align(32), AL.getParamAlignment(1));
 
   AttrBuilder B;
   B.addAttribute(Attribute::NonNull);
   B.addAlignmentAttr(8);
-  AL = AL.addAttributes(C, AttributeList::FirstArgIndex, B);
+  AL = AL.addParamAttributes(C, 0, B);
   EXPECT_EQ(Align(8), AL.getParamAlignment(0));
   EXPECT_EQ(Align(32), AL.getParamAlignment(1));
   EXPECT_TRUE(AL.hasParamAttr(0, Attribute::NonNull));
@@ -229,8 +227,7 @@ TEST(Attributes, AttributeListPrinting) {
     std::string S;
     raw_string_ostream OS(S);
     AttributeList AL;
-    AL.addAttribute(C, AttributeList::FunctionIndex, Attribute::AlwaysInline)
-        .print(OS);
+    AL.addFnAttribute(C, Attribute::AlwaysInline).print(OS);
     EXPECT_EQ(S, "AttributeList[\n"
                  "  { function => alwaysinline }\n"
                  "]\n");
@@ -240,7 +237,7 @@ TEST(Attributes, AttributeListPrinting) {
     std::string S;
     raw_string_ostream OS(S);
     AttributeList AL;
-    AL.addAttribute(C, AttributeList::ReturnIndex, Attribute::SExt).print(OS);
+    AL.addRetAttribute(C, Attribute::SExt).print(OS);
     EXPECT_EQ(S, "AttributeList[\n"
                  "  { return => signext }\n"
                  "]\n");
