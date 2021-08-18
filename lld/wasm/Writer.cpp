@@ -548,18 +548,23 @@ void Writer::populateTargetFeatures() {
 }
 
 static bool shouldImport(Symbol *sym) {
-  if (!sym->isUndefined())
-    return false;
-  if (sym->isWeak() && !config->relocatable && !config->isPic)
+  // We don't generate imports for data symbols. They however can be imported
+  // as GOT entries.
+  if (isa<DataSymbol>(sym))
     return false;
   if (!sym->isLive())
     return false;
   if (!sym->isUsedInRegularObj)
     return false;
 
-  // We don't generate imports for data symbols. They however can be imported
-  // as GOT entries.
-  if (isa<DataSymbol>(sym))
+  // When a symbol is weakly defined in a shared library we need to allow
+  // it to be overridden by another module so need to both import
+  // and export the symbol.
+  if (config->shared && sym->isDefined() && sym->isWeak())
+    return true;
+  if (!sym->isUndefined())
+    return false;
+  if (sym->isWeak() && !config->relocatable && !config->isPic)
     return false;
 
   // In PIC mode we only need to import functions when they are called directly.
@@ -619,7 +624,7 @@ void Writer::calculateExports() {
       if (Optional<StringRef> exportName = f->function->getExportName()) {
         name = *exportName;
       }
-      export_ = {name, WASM_EXTERNAL_FUNCTION, f->getFunctionIndex()};
+      export_ = {name, WASM_EXTERNAL_FUNCTION, f->getExportedFunctionIndex()};
     } else if (auto *g = dyn_cast<DefinedGlobal>(sym)) {
       if (g->getGlobalType()->Mutable && !g->getFile() && !g->forceExport) {
         // Avoid exporting mutable globals are linker synthesized (e.g.

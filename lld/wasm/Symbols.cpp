@@ -215,6 +215,12 @@ void Symbol::setHidden(bool isHidden) {
 }
 
 bool Symbol::isExported() const {
+  // Shared libraries must export all weakly defined symbols
+  // in case they contain the version that will be chosed by
+  // the dynamic linker.
+  if (config->shared && isLive() && isDefined() && isWeak())
+    return true;
+
   if (!isDefined() || isLocal())
     return false;
 
@@ -233,15 +239,13 @@ bool Symbol::isNoStrip() const {
 }
 
 uint32_t FunctionSymbol::getFunctionIndex() const {
-  if (auto *f = dyn_cast<DefinedFunction>(this))
-    return f->function->getFunctionIndex();
-  if (const auto *u = dyn_cast<UndefinedFunction>(this)) {
-    if (u->stubFunction) {
+  if (const auto *u = dyn_cast<UndefinedFunction>(this))
+    if (u->stubFunction)
       return u->stubFunction->getFunctionIndex();
-    }
-  }
-  assert(functionIndex != INVALID_INDEX);
-  return functionIndex;
+  if (functionIndex != INVALID_INDEX)
+    return functionIndex;
+  auto *f = cast<DefinedFunction>(this);
+  return f->function->getFunctionIndex();
 }
 
 void FunctionSymbol::setFunctionIndex(uint32_t index) {
@@ -287,6 +291,10 @@ DefinedFunction::DefinedFunction(StringRef name, uint32_t flags, InputFile *f,
     : FunctionSymbol(name, DefinedFunctionKind, flags, f,
                      function ? &function->signature : nullptr),
       function(function) {}
+
+uint32_t DefinedFunction::getExportedFunctionIndex() const {
+  return function->getFunctionIndex();
+}
 
 uint64_t DefinedData::getVA() const {
   LLVM_DEBUG(dbgs() << "getVA: " << getName() << "\n");
