@@ -1635,6 +1635,16 @@ public:
     return getAttributes().getAttribute(i, Kind);
   }
 
+  /// Get the attribute of a given kind for the function.
+  Attribute getFnAttr(StringRef Kind) const {
+    return getAttributes().getFnAttr(Kind);
+  }
+
+  /// Get the attribute of a given kind for the function.
+  Attribute getFnAttr(Attribute::AttrKind Kind) const {
+    return getAttributes().getFnAttr(Kind);
+  }
+
   /// Get the attribute of a given kind from a given arg
   Attribute getParamAttr(unsigned ArgNo, Attribute::AttrKind Kind) const {
     assert(ArgNo < getNumArgOperands() && "Out of bounds");
