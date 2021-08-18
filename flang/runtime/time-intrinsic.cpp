@@ -13,6 +13,8 @@
 #include <ctime>
 
 // CPU_TIME (Fortran 2018 16.9.57)
+// SYSTEM_CLOCK (Fortran 2018 16.9.168)
+//
 // We can use std::clock() from the <ctime> header as a fallback implementation
 // that should be available everywhere. This may not provide the best resolution
 // and is particularly troublesome on (some?) POSIX systems where CLOCKS_PER_SEC
@@ -68,11 +70,64 @@ double GetCpuTime(preferred_implementation,
   // Return some negative value to represent failure.
   return -1.0;
 }
+
+using count_t =
+    Fortran::runtime::CppTypeFor<Fortran::common::TypeCategory::Integer, 8>;
+
+// This is the fallback implementation, which should work everywhere. Note that
+// in general we can't recover after std::clock has reached its maximum value.
+template <typename Unused = void>
+count_t GetSystemClockCount(fallback_implementation) {
+  std::clock_t timestamp{std::clock()};
+  if (timestamp == static_cast<std::clock_t>(-1)) {
+    // Return -HUGE() to represent failure.
+    return -std::numeric_limits<count_t>::max();
+  }
+
+  // If our return type is large enough to hold any value returned by
+  // std::clock, our work is done. Otherwise, we have to wrap around.
+  static constexpr auto max{std::numeric_limits<count_t>::max()};
+  if constexpr (std::numeric_limits<std::clock_t>::max() <= max) {
+    return static_cast<count_t>(timestamp);
+  } else {
+    // Since std::clock_t could be a floating point type, we can't just use the
+    // % operator, so we have to wrap around manually.
+    return static_cast<count_t>(timestamp - max * std::floor(timestamp / max));
+  }
+}
+
+template <typename Unused = void>
+count_t GetSystemClockCountRate(fallback_implementation) {
+  return CLOCKS_PER_SEC;
+}
+
+template <typename Unused = void>
+count_t GetSystemClockCountMax(fallback_implementation) {
+  static constexpr auto max_clock_t = std::numeric_limits<std::clock_t>::max();
+  static constexpr auto max_count_t = std::numeric_limits<count_t>::max();
+  if constexpr (max_clock_t < max_count_t) {
+    return static_cast<count_t>(max_clock_t);
+  } else {
+    return max_count_t;
+  }
+}
 } // anonymous namespace
 
 namespace Fortran::runtime {
 extern "C" {
 
 double RTNAME(CpuTime)() { return GetCpuTime(0); }
+
+CppTypeFor<TypeCategory::Integer, 8> RTNAME(SystemClockCount)() {
+  return GetSystemClockCount(0);
+}
+
+CppTypeFor<TypeCategory::Integer, 8> RTNAME(SystemClockCountRate)() {
+  return GetSystemClockCountRate(0);
+}
+
+CppTypeFor<TypeCategory::Integer, 8> RTNAME(SystemClockCountMax)() {
+  return GetSystemClockCountMax(0);
+}
 } // extern "C"
 } // namespace Fortran::runtime
