@@ -547,8 +547,8 @@ define i8 @not_smin_of_nots(i8 %x, i8 %y) {
 ; CHECK-NEXT:    call void @use(i8 [[NOTY]])
 ; CHECK-NEXT:    [[M:%.*]] = call i8 @llvm.smin.i8(i8 [[NOTX]], i8 [[NOTY]])
 ; CHECK-NEXT:    call void @use(i8 [[M]])
-; CHECK-NEXT:    [[TMP1:%.*]] = call i8 @llvm.smax.i8(i8 [[X]], i8 [[Y]])
-; CHECK-NEXT:    ret i8 [[TMP1]]
+; CHECK-NEXT:    [[NOTM:%.*]] = xor i8 [[M]], -1
+; CHECK-NEXT:    ret i8 [[NOTM]]
 ;
   %notx = xor i8 %x, -1
   call void @use(i8 %notx)
