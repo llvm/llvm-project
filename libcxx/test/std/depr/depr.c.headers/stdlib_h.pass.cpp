@@ -8,6 +8,13 @@
 
 // test <stdlib.h>
 
+// ::aligned_alloc is provided by the C library, but it's marked as unavailable
+// until macOS 10.15
+// XFAIL: use_system_cxx_lib && target={{.+}}-apple-macosx10.{{9|10|11|12|13|14}}
+
+// ::aligned_alloc is not implemented on Windows
+// XFAIL: target={{.+}}-pc-windows-{{.+}}
+
 #include <stdlib.h>
 #include <type_traits>
 #include <cassert>
@@ -132,9 +139,8 @@ int main(int, char**)
     static_assert((std::is_same<decltype(rand()), int>::value), "");
     static_assert((std::is_same<decltype(srand(0)), void>::value), "");
 
-#if TEST_STD_VER > 14 && defined(TEST_HAS_ALIGNED_ALLOC)
-    static_assert((std::is_same<decltype(aligned_alloc(1, 0)), void*>::value),
-                  "");
+#if TEST_STD_VER > 14
+    static_assert((std::is_same<decltype(aligned_alloc(1, 0)), void*>::value), "");
 #endif
 
     void* pv = 0;
