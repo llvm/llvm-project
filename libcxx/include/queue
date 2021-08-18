@@ -358,7 +358,7 @@ public:
     operator< (const queue<_T1, _C1>& __x,const queue<_T1, _C1>& __y);
 };
 
-#ifndef _LIBCPP_HAS_NO_DEDUCTION_GUIDES
+#if _LIBCPP_STD_VER >= 17
 template<class _Container,
          class = _EnableIf<!__is_allocator<_Container>::value>
 >
@@ -584,7 +584,7 @@ public:
                    __is_nothrow_swappable<value_compare>::value);
 };
 
-#ifndef _LIBCPP_HAS_NO_DEDUCTION_GUIDES
+#if _LIBCPP_STD_VER >= 17
 template <class _Compare,
           class _Container,
           class = _EnableIf<!__is_allocator<_Compare>::value>,
