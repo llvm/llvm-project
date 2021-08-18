@@ -5224,4 +5224,321 @@ let TargetPrefix = "x86" in {
         Intrinsic<[ llvm_i32_ty ],
                   [ llvm_v8f16_ty, llvm_v8f16_ty, llvm_i32_ty, llvm_i32_ty ],
                   [ IntrNoMem, ImmArg<ArgIndex<2>>, ImmArg<ArgIndex<3>> ]>;
+
+  def int_x86_avx512fp16_mask_vcvtph2psx_128
+      : GCCBuiltin<"__builtin_ia32_vcvtph2psx128_mask">,
+        Intrinsic<[ llvm_v4f32_ty ],
+                  [ llvm_v8f16_ty, llvm_v4f32_ty, llvm_i8_ty ], [ IntrNoMem ]>;
+  def int_x86_avx512fp16_mask_vcvtph2psx_256
+      : GCCBuiltin<"__builtin_ia32_vcvtph2psx256_mask">,
+        Intrinsic<[ llvm_v8f32_ty ],
+                  [ llvm_v8f16_ty, llvm_v8f32_ty, llvm_i8_ty ], [ IntrNoMem ]>;
+  def int_x86_avx512fp16_mask_vcvtph2psx_512
+      : GCCBuiltin<"__builtin_ia32_vcvtph2psx512_mask">,
+        Intrinsic<[ llvm_v16f32_ty ],
+                  [ llvm_v16f16_ty, llvm_v16f32_ty, llvm_i16_ty, llvm_i32_ty ],
+                  [ IntrNoMem, ImmArg<ArgIndex<3>> ]>;
+  def int_x86_avx512fp16_mask_vcvtps2phx_128
+      : GCCBuiltin<"__builtin_ia32_vcvtps2phx128_mask">,
+        Intrinsic<[ llvm_v8f16_ty ],
+                  [ llvm_v4f32_ty, llvm_v8f16_ty, llvm_i8_ty ], [ IntrNoMem ]>;
+  def int_x86_avx512fp16_mask_vcvtps2phx_256
+      : GCCBuiltin<"__builtin_ia32_vcvtps2phx256_mask">,
+        Intrinsic<[ llvm_v8f16_ty ],
+                  [ llvm_v8f32_ty, llvm_v8f16_ty, llvm_i8_ty ], [ IntrNoMem ]>;
+  def int_x86_avx512fp16_mask_vcvtps2phx_512
+      : GCCBuiltin<"__builtin_ia32_vcvtps2phx512_mask">,
+        Intrinsic<[ llvm_v16f16_ty ],
+                  [ llvm_v16f32_ty, llvm_v16f16_ty, llvm_i16_ty, llvm_i32_ty ],
+                  [ IntrNoMem, ImmArg<ArgIndex<3>> ]>;
+  def int_x86_avx512fp16_mask_vcvtpd2ph_128
+      : GCCBuiltin<"__builtin_ia32_vcvtpd2ph128_mask">,
+        Intrinsic<[ llvm_v8f16_ty ],
+                  [ llvm_v2f64_ty, llvm_v8f16_ty, llvm_i8_ty ], [ IntrNoMem ]>;
+  def int_x86_avx512fp16_mask_vcvtpd2ph_256
+      : GCCBuiltin<"__builtin_ia32_vcvtpd2ph256_mask">,
+        Intrinsic<[ llvm_v8f16_ty ],
+                  [ llvm_v4f64_ty, llvm_v8f16_ty, llvm_i8_ty ], [ IntrNoMem ]>;
+  def int_x86_avx512fp16_mask_vcvtpd2ph_512
+      : GCCBuiltin<"__builtin_ia32_vcvtpd2ph512_mask">,
+        Intrinsic<[ llvm_v8f16_ty ],
+                  [ llvm_v8f64_ty, llvm_v8f16_ty, llvm_i8_ty, llvm_i32_ty ],
+                  [ IntrNoMem, ImmArg<ArgIndex<3>> ]>;
+  def int_x86_avx512fp16_mask_vcvtph2pd_128
+      : GCCBuiltin<"__builtin_ia32_vcvtph2pd128_mask">,
+        Intrinsic<[ llvm_v2f64_ty ],
+                  [ llvm_v8f16_ty, llvm_v2f64_ty, llvm_i8_ty ], [ IntrNoMem ]>;
+  def int_x86_avx512fp16_mask_vcvtph2pd_256
+      : GCCBuiltin<"__builtin_ia32_vcvtph2pd256_mask">,
+        Intrinsic<[ llvm_v4f64_ty ],
+                  [ llvm_v8f16_ty, llvm_v4f64_ty, llvm_i8_ty ], [ IntrNoMem ]>;
+  def int_x86_avx512fp16_mask_vcvtph2pd_512
+      : GCCBuiltin<"__builtin_ia32_vcvtph2pd512_mask">,
+        Intrinsic<[ llvm_v8f64_ty ],
+                  [ llvm_v8f16_ty, llvm_v8f64_ty, llvm_i8_ty, llvm_i32_ty ],
+                  [ IntrNoMem, ImmArg<ArgIndex<3>> ]>;
+  def int_x86_avx512fp16_mask_vcvtsh2ss_round
+      : GCCBuiltin<"__builtin_ia32_vcvtsh2ss_round_mask">,
+        Intrinsic<[ llvm_v4f32_ty ],
+                  [ llvm_v4f32_ty, llvm_v8f16_ty, llvm_v4f32_ty, llvm_i8_ty,
+                    llvm_i32_ty ],
+                  [ IntrNoMem, ImmArg<ArgIndex<4>> ]>;
+  def int_x86_avx512fp16_mask_vcvtss2sh_round
+      : GCCBuiltin<"__builtin_ia32_vcvtss2sh_round_mask">,
+        Intrinsic<[ llvm_v8f16_ty ],
+                  [ llvm_v8f16_ty, llvm_v4f32_ty, llvm_v8f16_ty, llvm_i8_ty,
+                    llvm_i32_ty ],
+                  [ IntrNoMem, ImmArg<ArgIndex<4>> ]>;
+  def int_x86_avx512fp16_mask_vcvtsd2sh_round
+      : GCCBuiltin<"__builtin_ia32_vcvtsd2sh_round_mask">,
+        Intrinsic<[ llvm_v8f16_ty ],
+                  [ llvm_v8f16_ty, llvm_v2f64_ty, llvm_v8f16_ty, llvm_i8_ty,
+                    llvm_i32_ty ],
+                  [ IntrNoMem, ImmArg<ArgIndex<4>> ]>;
+  def int_x86_avx512fp16_mask_vcvtsh2sd_round
+      : GCCBuiltin<"__builtin_ia32_vcvtsh2sd_round_mask">,
+        Intrinsic<[ llvm_v2f64_ty ],
+                  [ llvm_v2f64_ty, llvm_v8f16_ty, llvm_v2f64_ty, llvm_i8_ty,
+                    llvm_i32_ty ],
+                  [ IntrNoMem, ImmArg<ArgIndex<4>> ]>;
+
+  def int_x86_avx512fp16_mask_vcvtph2w_128
+      : GCCBuiltin<"__builtin_ia32_vcvtph2w128_mask">,
+        Intrinsic<[ llvm_v8i16_ty ],
+                  [ llvm_v8f16_ty, llvm_v8i16_ty, llvm_i8_ty ], [ IntrNoMem ]>;
+  def int_x86_avx512fp16_mask_vcvtph2w_256
+      : GCCBuiltin<"__builtin_ia32_vcvtph2w256_mask">,
+        Intrinsic<[ llvm_v16i16_ty ],
+                  [ llvm_v16f16_ty, llvm_v16i16_ty, llvm_i16_ty ],
+                  [ IntrNoMem ]>;
+  def int_x86_avx512fp16_mask_vcvtph2w_512
+      : GCCBuiltin<"__builtin_ia32_vcvtph2w512_mask">,
+        Intrinsic<[ llvm_v32i16_ty ],
+                  [ llvm_v32f16_ty, llvm_v32i16_ty, llvm_i32_ty, llvm_i32_ty ],
+                  [ IntrNoMem, ImmArg<ArgIndex<3>> ]>;
+  def int_x86_avx512fp16_mask_vcvttph2w_128
+      : GCCBuiltin<"__builtin_ia32_vcvttph2w128_mask">,
+        Intrinsic<[ llvm_v8i16_ty ],
+                  [ llvm_v8f16_ty, llvm_v8i16_ty, llvm_i8_ty ], [ IntrNoMem ]>;
+  def int_x86_avx512fp16_mask_vcvttph2w_256
+      : GCCBuiltin<"__builtin_ia32_vcvttph2w256_mask">,
+        Intrinsic<[ llvm_v16i16_ty ],
+                  [ llvm_v16f16_ty, llvm_v16i16_ty, llvm_i16_ty ],
+                  [ IntrNoMem ]>;
+  def int_x86_avx512fp16_mask_vcvttph2w_512
+      : GCCBuiltin<"__builtin_ia32_vcvttph2w512_mask">,
+        Intrinsic<[ llvm_v32i16_ty ],
+                  [ llvm_v32f16_ty, llvm_v32i16_ty, llvm_i32_ty, llvm_i32_ty ],
+                  [ IntrNoMem, ImmArg<ArgIndex<3>> ]>;
+  def int_x86_avx512fp16_mask_vcvtph2uw_128
+      : GCCBuiltin<"__builtin_ia32_vcvtph2uw128_mask">,
+        Intrinsic<[ llvm_v8i16_ty ],
+                  [ llvm_v8f16_ty, llvm_v8i16_ty, llvm_i8_ty ], [ IntrNoMem ]>;
+  def int_x86_avx512fp16_mask_vcvtph2uw_256
+      : GCCBuiltin<"__builtin_ia32_vcvtph2uw256_mask">,
+        Intrinsic<[ llvm_v16i16_ty ],
+                  [ llvm_v16f16_ty, llvm_v16i16_ty, llvm_i16_ty ],
+                  [ IntrNoMem ]>;
+  def int_x86_avx512fp16_mask_vcvtph2uw_512
+      : GCCBuiltin<"__builtin_ia32_vcvtph2uw512_mask">,
+        Intrinsic<[ llvm_v32i16_ty ],
+                  [ llvm_v32f16_ty, llvm_v32i16_ty, llvm_i32_ty, llvm_i32_ty ],
+                  [ IntrNoMem, ImmArg<ArgIndex<3>> ]>;
+  def int_x86_avx512fp16_mask_vcvttph2uw_128
+      : GCCBuiltin<"__builtin_ia32_vcvttph2uw128_mask">,
+        Intrinsic<[ llvm_v8i16_ty ],
+                  [ llvm_v8f16_ty, llvm_v8i16_ty, llvm_i8_ty ], [ IntrNoMem ]>;
+  def int_x86_avx512fp16_mask_vcvttph2uw_256
+      : GCCBuiltin<"__builtin_ia32_vcvttph2uw256_mask">,
+        Intrinsic<[ llvm_v16i16_ty ],
+                  [ llvm_v16f16_ty, llvm_v16i16_ty, llvm_i16_ty ],
+                  [ IntrNoMem ]>;
+  def int_x86_avx512fp16_mask_vcvttph2uw_512
+      : GCCBuiltin<"__builtin_ia32_vcvttph2uw512_mask">,
+        Intrinsic<[ llvm_v32i16_ty ],
+                  [ llvm_v32f16_ty, llvm_v32i16_ty, llvm_i32_ty, llvm_i32_ty ],
+                  [ IntrNoMem, ImmArg<ArgIndex<3>> ]>;
+
+  def int_x86_avx512fp16_mask_vcvtph2dq_128
+      : GCCBuiltin<"__builtin_ia32_vcvtph2dq128_mask">,
+        Intrinsic<[ llvm_v4i32_ty ],
+                  [ llvm_v8f16_ty, llvm_v4i32_ty, llvm_i8_ty ], [ IntrNoMem ]>;
+  def int_x86_avx512fp16_mask_vcvtph2dq_256
+      : GCCBuiltin<"__builtin_ia32_vcvtph2dq256_mask">,
+        Intrinsic<[ llvm_v8i32_ty ],
+                  [ llvm_v8f16_ty, llvm_v8i32_ty, llvm_i8_ty ], [ IntrNoMem ]>;
+  def int_x86_avx512fp16_mask_vcvtph2dq_512
+      : GCCBuiltin<"__builtin_ia32_vcvtph2dq512_mask">,
+        Intrinsic<[ llvm_v16i32_ty ],
+                  [ llvm_v16f16_ty, llvm_v16i32_ty, llvm_i16_ty, llvm_i32_ty ],
+                  [ IntrNoMem, ImmArg<ArgIndex<3>> ]>;
+  def int_x86_avx512fp16_mask_vcvtph2udq_128
+      : GCCBuiltin<"__builtin_ia32_vcvtph2udq128_mask">,
+        Intrinsic<[ llvm_v4i32_ty ],
+                  [ llvm_v8f16_ty, llvm_v4i32_ty, llvm_i8_ty ], [ IntrNoMem ]>;
+  def int_x86_avx512fp16_mask_vcvtph2udq_256
+      : GCCBuiltin<"__builtin_ia32_vcvtph2udq256_mask">,
+        Intrinsic<[ llvm_v8i32_ty ],
+                  [ llvm_v8f16_ty, llvm_v8i32_ty, llvm_i8_ty ], [ IntrNoMem ]>;
+  def int_x86_avx512fp16_mask_vcvtph2udq_512
+      : GCCBuiltin<"__builtin_ia32_vcvtph2udq512_mask">,
+        Intrinsic<[ llvm_v16i32_ty ],
+                  [ llvm_v16f16_ty, llvm_v16i32_ty, llvm_i16_ty, llvm_i32_ty ],
+                  [ IntrNoMem, ImmArg<ArgIndex<3>> ]>;
+  def int_x86_avx512fp16_mask_vcvtdq2ph_128
+      : GCCBuiltin<"__builtin_ia32_vcvtdq2ph128_mask">,
+        Intrinsic<[ llvm_v8f16_ty ],
+                  [ llvm_v4i32_ty, llvm_v8f16_ty, llvm_i8_ty ], [ IntrNoMem ]>;
+  def int_x86_avx512fp16_mask_vcvtudq2ph_128
+      : GCCBuiltin<"__builtin_ia32_vcvtudq2ph128_mask">,
+        Intrinsic<[ llvm_v8f16_ty ],
+                  [ llvm_v4i32_ty, llvm_v8f16_ty, llvm_i8_ty ], [ IntrNoMem ]>;
+  def int_x86_avx512fp16_mask_vcvttph2dq_128
+      : GCCBuiltin<"__builtin_ia32_vcvttph2dq128_mask">,
+        Intrinsic<[ llvm_v4i32_ty ],
+                  [ llvm_v8f16_ty, llvm_v4i32_ty, llvm_i8_ty ], [ IntrNoMem ]>;
+  def int_x86_avx512fp16_mask_vcvttph2dq_256
+      : GCCBuiltin<"__builtin_ia32_vcvttph2dq256_mask">,
+        Intrinsic<[ llvm_v8i32_ty ],
+                  [ llvm_v8f16_ty, llvm_v8i32_ty, llvm_i8_ty ], [ IntrNoMem ]>;
+  def int_x86_avx512fp16_mask_vcvttph2dq_512
+      : GCCBuiltin<"__builtin_ia32_vcvttph2dq512_mask">,
+        Intrinsic<[ llvm_v16i32_ty ],
+                  [ llvm_v16f16_ty, llvm_v16i32_ty, llvm_i16_ty, llvm_i32_ty ],
+                  [ IntrNoMem, ImmArg<ArgIndex<3>> ]>;
+  def int_x86_avx512fp16_mask_vcvttph2udq_128
+      : GCCBuiltin<"__builtin_ia32_vcvttph2udq128_mask">,
+        Intrinsic<[ llvm_v4i32_ty ],
+                  [ llvm_v8f16_ty, llvm_v4i32_ty, llvm_i8_ty ], [ IntrNoMem ]>;
+  def int_x86_avx512fp16_mask_vcvttph2udq_256
+      : GCCBuiltin<"__builtin_ia32_vcvttph2udq256_mask">,
+        Intrinsic<[ llvm_v8i32_ty ],
+                  [ llvm_v8f16_ty, llvm_v8i32_ty, llvm_i8_ty ], [ IntrNoMem ]>;
+  def int_x86_avx512fp16_mask_vcvttph2udq_512
+      : GCCBuiltin<"__builtin_ia32_vcvttph2udq512_mask">,
+        Intrinsic<[ llvm_v16i32_ty ],
+                  [ llvm_v16f16_ty, llvm_v16i32_ty, llvm_i16_ty, llvm_i32_ty ],
+                  [ IntrNoMem, ImmArg<ArgIndex<3>> ]>;
+
+  def int_x86_avx512fp16_mask_vcvtqq2ph_128
+      : GCCBuiltin<"__builtin_ia32_vcvtqq2ph128_mask">,
+        Intrinsic<[ llvm_v8f16_ty ],
+                  [ llvm_v2i64_ty, llvm_v8f16_ty, llvm_i8_ty ], [ IntrNoMem ]>;
+  def int_x86_avx512fp16_mask_vcvtqq2ph_256
+      : GCCBuiltin<"__builtin_ia32_vcvtqq2ph256_mask">,
+        Intrinsic<[ llvm_v8f16_ty ],
+                  [ llvm_v4i64_ty, llvm_v8f16_ty, llvm_i8_ty ], [ IntrNoMem ]>;
+  def int_x86_avx512fp16_mask_vcvtph2qq_128
+      : GCCBuiltin<"__builtin_ia32_vcvtph2qq128_mask">,
+        Intrinsic<[ llvm_v2i64_ty ],
+                  [ llvm_v8f16_ty, llvm_v2i64_ty, llvm_i8_ty ], [ IntrNoMem ]>;
+  def int_x86_avx512fp16_mask_vcvtph2qq_256
+      : GCCBuiltin<"__builtin_ia32_vcvtph2qq256_mask">,
+        Intrinsic<[ llvm_v4i64_ty ],
+                  [ llvm_v8f16_ty, llvm_v4i64_ty, llvm_i8_ty ], [ IntrNoMem ]>;
+  def int_x86_avx512fp16_mask_vcvtph2qq_512
+      : GCCBuiltin<"__builtin_ia32_vcvtph2qq512_mask">,
+        Intrinsic<[ llvm_v8i64_ty ],
+                  [ llvm_v8f16_ty, llvm_v8i64_ty, llvm_i8_ty, llvm_i32_ty ],
+                  [ IntrNoMem, ImmArg<ArgIndex<3>> ]>;
+  def int_x86_avx512fp16_mask_vcvtuqq2ph_128
+      : GCCBuiltin<"__builtin_ia32_vcvtuqq2ph128_mask">,
+        Intrinsic<[ llvm_v8f16_ty ],
+                  [ llvm_v2i64_ty, llvm_v8f16_ty, llvm_i8_ty ], [ IntrNoMem ]>;
+  def int_x86_avx512fp16_mask_vcvtuqq2ph_256
+      : GCCBuiltin<"__builtin_ia32_vcvtuqq2ph256_mask">,
+        Intrinsic<[ llvm_v8f16_ty ],
+                  [ llvm_v4i64_ty, llvm_v8f16_ty, llvm_i8_ty ], [ IntrNoMem ]>;
+  def int_x86_avx512fp16_mask_vcvtph2uqq_128
+      : GCCBuiltin<"__builtin_ia32_vcvtph2uqq128_mask">,
+        Intrinsic<[ llvm_v2i64_ty ],
+                  [ llvm_v8f16_ty, llvm_v2i64_ty, llvm_i8_ty ], [ IntrNoMem ]>;
+  def int_x86_avx512fp16_mask_vcvtph2uqq_256
+      : GCCBuiltin<"__builtin_ia32_vcvtph2uqq256_mask">,
+        Intrinsic<[ llvm_v4i64_ty ],
+                  [ llvm_v8f16_ty, llvm_v4i64_ty, llvm_i8_ty ], [ IntrNoMem ]>;
+  def int_x86_avx512fp16_mask_vcvtph2uqq_512
+      : GCCBuiltin<"__builtin_ia32_vcvtph2uqq512_mask">,
+        Intrinsic<[ llvm_v8i64_ty ],
+                  [ llvm_v8f16_ty, llvm_v8i64_ty, llvm_i8_ty, llvm_i32_ty ],
+                  [ IntrNoMem, ImmArg<ArgIndex<3>> ]>;
+  def int_x86_avx512fp16_mask_vcvttph2qq_128
+      : GCCBuiltin<"__builtin_ia32_vcvttph2qq128_mask">,
+        Intrinsic<[ llvm_v2i64_ty ],
+                  [ llvm_v8f16_ty, llvm_v2i64_ty, llvm_i8_ty ], [ IntrNoMem ]>;
+  def int_x86_avx512fp16_mask_vcvttph2qq_256
+      : GCCBuiltin<"__builtin_ia32_vcvttph2qq256_mask">,
+        Intrinsic<[ llvm_v4i64_ty ],
+                  [ llvm_v8f16_ty, llvm_v4i64_ty, llvm_i8_ty ], [ IntrNoMem ]>;
+  def int_x86_avx512fp16_mask_vcvttph2qq_512
+      : GCCBuiltin<"__builtin_ia32_vcvttph2qq512_mask">,
+        Intrinsic<[ llvm_v8i64_ty ],
+                  [ llvm_v8f16_ty, llvm_v8i64_ty, llvm_i8_ty, llvm_i32_ty ],
+                  [ IntrNoMem, ImmArg<ArgIndex<3>> ]>;
+  def int_x86_avx512fp16_mask_vcvttph2uqq_128
+      : GCCBuiltin<"__builtin_ia32_vcvttph2uqq128_mask">,
+        Intrinsic<[ llvm_v2i64_ty ],
+                  [ llvm_v8f16_ty, llvm_v2i64_ty, llvm_i8_ty ], [ IntrNoMem ]>;
+  def int_x86_avx512fp16_mask_vcvttph2uqq_256
+      : GCCBuiltin<"__builtin_ia32_vcvttph2uqq256_mask">,
+        Intrinsic<[ llvm_v4i64_ty ],
+                  [ llvm_v8f16_ty, llvm_v4i64_ty, llvm_i8_ty ], [ IntrNoMem ]>;
+  def int_x86_avx512fp16_mask_vcvttph2uqq_512
+      : GCCBuiltin<"__builtin_ia32_vcvttph2uqq512_mask">,
+        Intrinsic<[ llvm_v8i64_ty ],
+                  [ llvm_v8f16_ty, llvm_v8i64_ty, llvm_i8_ty, llvm_i32_ty ],
+                  [ IntrNoMem, ImmArg<ArgIndex<3>> ]>;
+
+  def int_x86_avx512fp16_vcvtsh2si32
+      : GCCBuiltin<"__builtin_ia32_vcvtsh2si32">,
+        Intrinsic<[ llvm_i32_ty ], [ llvm_v8f16_ty, llvm_i32_ty ],
+                  [ IntrNoMem, ImmArg<ArgIndex<1>> ]>;
+  def int_x86_avx512fp16_vcvtsh2usi32
+      : GCCBuiltin<"__builtin_ia32_vcvtsh2usi32">,
+        Intrinsic<[ llvm_i32_ty ], [ llvm_v8f16_ty, llvm_i32_ty ],
+                  [ IntrNoMem, ImmArg<ArgIndex<1>> ]>;
+  def int_x86_avx512fp16_vcvtsh2si64
+      : GCCBuiltin<"__builtin_ia32_vcvtsh2si64">,
+        Intrinsic<[ llvm_i64_ty ], [ llvm_v8f16_ty, llvm_i32_ty ],
+                  [ IntrNoMem, ImmArg<ArgIndex<1>> ]>;
+  def int_x86_avx512fp16_vcvtsh2usi64
+      : GCCBuiltin<"__builtin_ia32_vcvtsh2usi64">,
+        Intrinsic<[ llvm_i64_ty ], [ llvm_v8f16_ty, llvm_i32_ty ],
+                  [ IntrNoMem, ImmArg<ArgIndex<1>> ]>;
+  def int_x86_avx512fp16_vcvtusi2sh
+      : GCCBuiltin<"__builtin_ia32_vcvtusi2sh">,
+        Intrinsic<[ llvm_v8f16_ty ],
+                  [ llvm_v8f16_ty, llvm_i32_ty, llvm_i32_ty ],
+                  [ IntrNoMem, ImmArg<ArgIndex<2>> ]>;
+  def int_x86_avx512fp16_vcvtusi642sh
+      : GCCBuiltin<"__builtin_ia32_vcvtusi642sh">,
+        Intrinsic<[ llvm_v8f16_ty ],
+                  [ llvm_v8f16_ty, llvm_i64_ty, llvm_i32_ty ],
+                  [ IntrNoMem, ImmArg<ArgIndex<2>> ]>;
+  def int_x86_avx512fp16_vcvtsi2sh
+      : GCCBuiltin<"__builtin_ia32_vcvtsi2sh">,
+        Intrinsic<[ llvm_v8f16_ty ],
+                  [ llvm_v8f16_ty, llvm_i32_ty, llvm_i32_ty ],
+                  [ IntrNoMem, ImmArg<ArgIndex<2>> ]>;
+  def int_x86_avx512fp16_vcvtsi642sh
+      : GCCBuiltin<"__builtin_ia32_vcvtsi642sh">,
+        Intrinsic<[ llvm_v8f16_ty ],
+                  [ llvm_v8f16_ty, llvm_i64_ty, llvm_i32_ty ],
+                  [ IntrNoMem, ImmArg<ArgIndex<2>> ]>;
+  def int_x86_avx512fp16_vcvttsh2si32
+      : GCCBuiltin<"__builtin_ia32_vcvttsh2si32">,
+        Intrinsic<[ llvm_i32_ty ], [ llvm_v8f16_ty, llvm_i32_ty ],
+                  [ IntrNoMem, ImmArg<ArgIndex<1>> ]>;
+  def int_x86_avx512fp16_vcvttsh2si64
+      : GCCBuiltin<"__builtin_ia32_vcvttsh2si64">,
+        Intrinsic<[ llvm_i64_ty ], [ llvm_v8f16_ty, llvm_i32_ty ],
+                  [ IntrNoMem, ImmArg<ArgIndex<1>> ]>;
+  def int_x86_avx512fp16_vcvttsh2usi32
+      : GCCBuiltin<"__builtin_ia32_vcvttsh2usi32">,
+        Intrinsic<[ llvm_i32_ty ], [ llvm_v8f16_ty, llvm_i32_ty ],
+                  [ IntrNoMem, ImmArg<ArgIndex<1>> ]>;
+  def int_x86_avx512fp16_vcvttsh2usi64
+      : GCCBuiltin<"__builtin_ia32_vcvttsh2usi64">,
+        Intrinsic<[ llvm_i64_ty ], [ llvm_v8f16_ty, llvm_i32_ty ],
+                  [ IntrNoMem, ImmArg<ArgIndex<1>> ]>;
 }

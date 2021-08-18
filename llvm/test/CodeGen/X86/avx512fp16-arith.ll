@@ -274,6 +274,68 @@ entry:
   ret <32 x i1> %0
 }
 
+define <8 x half>  @regression_test1(<8 x half> %x, <8 x half> %y) #0 {
+; CHECK-LABEL: regression_test1:
+; CHECK:       ## %bb.0: ## %entry
+; CHECK-NEXT:    vsubph %xmm1, %xmm0, %xmm2
+; CHECK-NEXT:    vaddph %xmm1, %xmm0, %xmm0
+; CHECK-NEXT:    vpblendw {{.*#+}} xmm0 = xmm2[0],xmm0[1],xmm2[2],xmm0[3],xmm2[4],xmm0[5],xmm2[6],xmm0[7]
+; CHECK-NEXT:    retq
+entry:
+  %a = fsub <8 x half> %x, %y
+  %b = fadd <8 x half> %x, %y
+  %c = shufflevector <8 x half> %a, <8 x half> %b, <8 x i32> <i32 0, i32 9, i32 2, i32 11, i32 4, i32 13, i32 6, i32 15>
+  ret <8 x half> %c
+}
+
+define <8 x i16>  @regression_test2(<8 x float> %x) #0 {
+; CHECK-LABEL: regression_test2:
+; CHECK:       ## %bb.0: ## %entry
+; CHECK-NEXT:    vcvttps2udq %ymm0, %ymm0
+; CHECK-NEXT:    vpmovdw %ymm0, %xmm0
+; CHECK-NEXT:    vzeroupper
+; CHECK-NEXT:    retq
+entry:
+  %a = fptoui <8 x float> %x to  <8 x i16>
+  ret <8 x i16> %a
+}
+
+define <8 x i16>  @regression_test3(<8 x float> %x) #0 {
+; CHECK-LABEL: regression_test3:
+; CHECK:       ## %bb.0: ## %entry
+; CHECK-NEXT:    vcvttps2dq %ymm0, %ymm0
+; CHECK-NEXT:    vpmovdw %ymm0, %xmm0
+; CHECK-NEXT:    vzeroupper
+; CHECK-NEXT:    retq
+entry:
+  %a = fptosi <8 x float> %x to  <8 x i16>
+  ret <8 x i16> %a
+}
+
+define <8 x i16>  @regression_test4(<8 x double> %x) #0 {
+; CHECK-LABEL: regression_test4:
+; CHECK:       ## %bb.0: ## %entry
+; CHECK-NEXT:    vcvttpd2udq %zmm0, %ymm0
+; CHECK-NEXT:    vpmovdw %ymm0, %xmm0
+; CHECK-NEXT:    vzeroupper
+; CHECK-NEXT:    retq
+entry:
+  %a = fptoui <8 x double> %x to  <8 x i16>
+  ret <8 x i16> %a
+}
+
+define <8 x i16>  @regression_test5(<8 x double> %x) #0 {
+; CHECK-LABEL: regression_test5:
+; CHECK:       ## %bb.0: ## %entry
+; CHECK-NEXT:    vcvttpd2dq %zmm0, %ymm0
+; CHECK-NEXT:    vpmovdw %ymm0, %xmm0
+; CHECK-NEXT:    vzeroupper
+; CHECK-NEXT:    retq
+entry:
+  %a = fptosi <8 x double> %x to  <8 x i16>
+  ret <8 x i16> %a
+}
+
 define <8 x i1> @fcmp_v8f16(<8 x half> %a, <8 x half> %b)
 ; CHECK-LABEL: fcmp_v8f16:
 ; CHECK:       ## %bb.0: ## %entry

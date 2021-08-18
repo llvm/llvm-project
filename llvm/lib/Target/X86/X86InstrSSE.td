@@ -1747,20 +1747,20 @@ let Predicates = [HasAVX, NoVLX], Uses = [MXCSR], mayRaiseFPException = 1 in {
 // XMM only
 def VCVTPD2PSrr : VPDI<0x5A, MRMSrcReg, (outs VR128:$dst), (ins VR128:$src),
                        "cvtpd2ps\t{$src, $dst|$dst, $src}",
-                       [(set VR128:$dst, (X86any_vfpround (v2f64 VR128:$src)))]>,
+                       [(set VR128:$dst, (v4f32 (X86any_vfpround (v2f64 VR128:$src))))]>,
                        VEX, Sched<[WriteCvtPD2PS]>, VEX_WIG;
 def VCVTPD2PSrm : VPDI<0x5A, MRMSrcMem, (outs VR128:$dst), (ins f128mem:$src),
                        "cvtpd2ps{x}\t{$src, $dst|$dst, $src}",
-                       [(set VR128:$dst, (X86any_vfpround (loadv2f64 addr:$src)))]>,
+                       [(set VR128:$dst, (v4f32 (X86any_vfpround (loadv2f64 addr:$src))))]>,
                        VEX, Sched<[WriteCvtPD2PS.Folded]>, VEX_WIG;
 
 def VCVTPD2PSYrr : VPDI<0x5A, MRMSrcReg, (outs VR128:$dst), (ins VR256:$src),
                         "cvtpd2ps\t{$src, $dst|$dst, $src}",
-                        [(set VR128:$dst, (X86any_vfpround VR256:$src))]>,
+                        [(set VR128:$dst, (v4f32 (X86any_vfpround (v4f64 VR256:$src))))]>,
                         VEX, VEX_L, Sched<[WriteCvtPD2PSY]>, VEX_WIG;
 def VCVTPD2PSYrm : VPDI<0x5A, MRMSrcMem, (outs VR128:$dst), (ins f256mem:$src),
                         "cvtpd2ps{y}\t{$src, $dst|$dst, $src}",
-                        [(set VR128:$dst, (X86any_vfpround (loadv4f64 addr:$src)))]>,
+                        [(set VR128:$dst, (v4f32 (X86any_vfpround (loadv4f64 addr:$src))))]>,
                         VEX, VEX_L, Sched<[WriteCvtPD2PSY.Folded]>, VEX_WIG;
 } // Predicates = [HasAVX, NoVLX]
 
@@ -1771,11 +1771,11 @@ def : InstAlias<"vcvtpd2psy\t{$src, $dst|$dst, $src}",
 
 def CVTPD2PSrr : PDI<0x5A, MRMSrcReg, (outs VR128:$dst), (ins VR128:$src),
                      "cvtpd2ps\t{$src, $dst|$dst, $src}",
-                     [(set VR128:$dst, (X86any_vfpround (v2f64 VR128:$src)))]>,
+                     [(set VR128:$dst, (v4f32 (X86any_vfpround (v2f64 VR128:$src))))]>,
                      Sched<[WriteCvtPD2PS]>, SIMD_EXC;
 def CVTPD2PSrm : PDI<0x5A, MRMSrcMem, (outs VR128:$dst), (ins f128mem:$src),
                      "cvtpd2ps\t{$src, $dst|$dst, $src}",
-                     [(set VR128:$dst, (X86any_vfpround (memopv2f64 addr:$src)))]>,
+                     [(set VR128:$dst, (v4f32 (X86any_vfpround (memopv2f64 addr:$src))))]>,
                      Sched<[WriteCvtPD2PS.Folded]>, SIMD_EXC;
 
 //===----------------------------------------------------------------------===//

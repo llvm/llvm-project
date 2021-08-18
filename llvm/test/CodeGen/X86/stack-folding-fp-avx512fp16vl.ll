@@ -144,5 +144,21 @@ define <16 x half> @stack_fold_mulph_ymm(<16 x half> %a0, <16 x half> %a1) {
   ret <16 x half> %2
 }
 
+define <8 x half> @stack_fold_subph(<8 x half> %a0, <8 x half> %a1) {
+  ;CHECK-LABEL: stack_fold_subph
+  ;CHECK:       vsubph {{-?[0-9]*}}(%rsp), {{%xmm[0-9][0-9]*}}, {{%xmm[0-9][0-9]*}} {{.*#+}} 16-byte Folded Reload
+  %1 = tail call <2 x i64> asm sideeffect "nop", "=x,~{xmm2},~{xmm3},~{xmm4},~{xmm5},~{xmm6},~{xmm7},~{xmm8},~{xmm9},~{xmm10},~{xmm11},~{xmm12},~{xmm13},~{xmm14},~{xmm15},~{xmm16},~{xmm17},~{xmm18},~{xmm19},~{xmm20},~{xmm21},~{xmm22},~{xmm23},~{xmm24},~{xmm25},~{xmm26},~{xmm27},~{xmm28},~{xmm29},~{xmm30},~{xmm31},~{flags}"()
+  %2 = fsub <8 x half> %a0, %a1
+  ret <8 x half> %2
+}
+
+define <16 x half> @stack_fold_subph_ymm(<16 x half> %a0, <16 x half> %a1) {
+  ;CHECK-LABEL: stack_fold_subph_ymm
+  ;CHECK:       vsubph {{-?[0-9]*}}(%rsp), {{%ymm[0-9][0-9]*}}, {{%ymm[0-9][0-9]*}} {{.*#+}} 32-byte Folded Reload
+  %1 = tail call <2 x i64> asm sideeffect "nop", "=x,~{xmm2},~{xmm3},~{xmm4},~{xmm5},~{xmm6},~{xmm7},~{xmm8},~{xmm9},~{xmm10},~{xmm11},~{xmm12},~{xmm13},~{xmm14},~{xmm15},~{xmm16},~{xmm17},~{xmm18},~{xmm19},~{xmm20},~{xmm21},~{xmm22},~{xmm23},~{xmm24},~{xmm25},~{xmm26},~{xmm27},~{xmm28},~{xmm29},~{xmm30},~{xmm31},~{flags}"()
+  %2 = fsub <16 x half> %a0, %a1
+  ret <16 x half> %2
+}
+
 attributes #0 = { "unsafe-fp-math"="false" }
 attributes #1 = { "unsafe-fp-math"="true" }
