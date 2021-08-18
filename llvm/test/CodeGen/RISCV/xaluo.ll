@@ -883,12 +883,12 @@ define zeroext i1 @smulo2.i32(i32 %v1, i32* %res) {
 ; RV64ZBA-LABEL: smulo2.i32:
 ; RV64ZBA:       # %bb.0: # %entry
 ; RV64ZBA-NEXT:    sext.w a0, a0
-; RV64ZBA-NEXT:    addi a2, zero, 13
-; RV64ZBA-NEXT:    mul a3, a0, a2
-; RV64ZBA-NEXT:    mulw a0, a0, a2
-; RV64ZBA-NEXT:    xor a0, a0, a3
+; RV64ZBA-NEXT:    sh1add a2, a0, a0
+; RV64ZBA-NEXT:    sh2add a2, a2, a0
+; RV64ZBA-NEXT:    sext.w a0, a2
+; RV64ZBA-NEXT:    xor a0, a0, a2
 ; RV64ZBA-NEXT:    snez a0, a0
-; RV64ZBA-NEXT:    sw a3, 0(a1)
+; RV64ZBA-NEXT:    sw a2, 0(a1)
 ; RV64ZBA-NEXT:    ret
 entry:
   %t = call {i32, i1} @llvm.smul.with.overflow.i32(i32 %v1, i32 13)
