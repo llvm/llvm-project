@@ -375,9 +375,9 @@ EXTERN void __kmpc_end_critical(kmp_Ident *loc, int32_t global_tid,
 EXTERN void __kmpc_flush(kmp_Ident *loc);
 
 // vote
-EXTERN __kmpc_impl_lanemask_t __kmpc_warp_active_thread_mask();
+EXTERN uint64_t __kmpc_warp_active_thread_mask(void);
 // syncwarp
-EXTERN void __kmpc_syncwarp(__kmpc_impl_lanemask_t);
+EXTERN void __kmpc_syncwarp(uint64_t);
 
 // tasks
 EXTERN kmp_TaskDescr *__kmpc_omp_task_alloc(kmp_Ident *loc, uint32_t global_tid,
