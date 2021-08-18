@@ -29,14 +29,26 @@
   dimOrdering = affine_map<(i,j,k) -> (k,i,j)>
 }>
 
-// CHECK-LABEL: func @sparse_dim(
+// CHECK-LABEL: func @sparse_dim1d(
 //  CHECK-SAME: %[[A:.*]]: !llvm.ptr<i8>)
 //       CHECK: %[[C:.*]] = constant 0 : index
 //       CHECK: %[[D:.*]] = call @sparseDimSize(%[[A]], %[[C]])
 //       CHECK: return %[[D]] : index
-func @sparse_dim(%arg0: tensor<?xf64, #SparseVector>) -> index {
+func @sparse_dim1d(%arg0: tensor<?xf64, #SparseVector>) -> index {
   %c = constant 0 : index
   %0 = tensor.dim %arg0, %c : tensor<?xf64, #SparseVector>
+  return %0 : index
+}
+
+// CHECK-LABEL: func @sparse_dim3d(
+//  CHECK-SAME: %[[A:.*]]: !llvm.ptr<i8>)
+//       CHECK: %[[C:.*]] = constant 2 : index
+//       CHECK: %[[D:.*]] = call @sparseDimSize(%[[A]], %[[C]])
+//       CHECK: return %[[D]] : index
+func @sparse_dim3d(%arg0: tensor<?x?x?xf64, #SparseTensor>) -> index {
+  // Needs permuting 1 into 2.
+  %c = constant 1 : index
+  %0 = tensor.dim %arg0, %c : tensor<?x?x?xf64, #SparseTensor>
   return %0 : index
 }
 
