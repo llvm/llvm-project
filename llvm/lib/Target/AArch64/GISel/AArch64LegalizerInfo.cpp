@@ -729,6 +729,12 @@ AArch64LegalizerInfo::AArch64LegalizerInfo(const AArch64Subtarget &ST)
 
   getActionDefinitionsBuilder(G_ISNAN).lower();
 
+  // TODO: Vector types.
+  getActionDefinitionsBuilder({G_FMAXNUM, G_FMINNUM})
+      .legalFor({MinFPScalar, s32, s64})
+      .libcallFor({s128})
+      .minScalar(0, MinFPScalar);
+
   getLegacyLegalizerInfo().computeTables();
   verify(*ST.getInstrInfo());
 }
