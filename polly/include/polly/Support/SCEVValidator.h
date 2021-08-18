@@ -18,6 +18,7 @@ class SCEVConstant;
 } // namespace llvm
 
 namespace polly {
+class ScopDetection;
 
 /// Check if a call is side-effect free and has only constant arguments.
 ///
@@ -94,17 +95,14 @@ extractConstantFactor(const llvm::SCEV *M, llvm::ScalarEvolution &SE);
 /// conditions that seemed non-affine before are now in fact affine.
 const llvm::SCEV *tryForwardThroughPHI(const llvm::SCEV *Expr, llvm::Region &R,
                                        llvm::ScalarEvolution &SE,
-                                       llvm::LoopInfo &LI,
-                                       const llvm::DominatorTree &DT);
+                                       ScopDetection *SD);
 
 /// Return a unique non-error block incoming value for @p PHI if available.
 ///
 /// @param R The region to run our code on.
-/// @param LI The loopinfo tree
-/// @param DT The dominator tree
+/// @param SD The ScopDetection
 llvm::Value *getUniqueNonErrorValue(llvm::PHINode *PHI, llvm::Region *R,
-                                    llvm::LoopInfo &LI,
-                                    const llvm::DominatorTree &DT);
+                                    ScopDetection *SD);
 } // namespace polly
 
 #endif
