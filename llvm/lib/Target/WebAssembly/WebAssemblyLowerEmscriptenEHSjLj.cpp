@@ -420,7 +420,7 @@ Value *WebAssemblyLowerEmscriptenEHSjLj::wrapInvoke(CallBase *CI) {
   if (CI->doesNotReturn()) {
     if (auto *F = CI->getCalledFunction())
       F->removeFnAttr(Attribute::NoReturn);
-    CI->removeAttribute(AttributeList::FunctionIndex, Attribute::NoReturn);
+    CI->removeFnAttr(Attribute::NoReturn);
   }
 
   IRBuilder<> IRB(C);

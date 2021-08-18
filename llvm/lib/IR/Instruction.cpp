@@ -180,7 +180,7 @@ void Instruction::dropUndefImplyingAttrsAndUnknownMetadata(
   AttrBuilder UBImplyingAttributes = AttributeFuncs::getUBImplyingAttributes();
   for (unsigned ArgNo = 0; ArgNo < CB->getNumArgOperands(); ArgNo++)
     CB->removeParamAttrs(ArgNo, UBImplyingAttributes);
-  CB->removeAttributes(AttributeList::ReturnIndex, UBImplyingAttributes);
+  CB->removeRetAttrs(UBImplyingAttributes);
 }
 
 bool Instruction::isExact() const {

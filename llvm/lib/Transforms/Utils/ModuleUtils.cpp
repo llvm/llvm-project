@@ -297,7 +297,6 @@ void VFABI::setVectorVariantNames(
            "vector function declaration is missing.");
   }
 #endif
-  CI->addAttribute(
-      AttributeList::FunctionIndex,
+  CI->addFnAttr(
       Attribute::get(M->getContext(), MappingsAttrName, Buffer.str()));
 }

@@ -3653,7 +3653,7 @@ struct MemorySanitizerVisitor : public InstVisitor<MemorySanitizerVisitor> {
           .addAttribute(Attribute::ArgMemOnly)
           .addAttribute(Attribute::Speculatable);
 
-      Call->removeAttributes(AttributeList::FunctionIndex, B);
+      Call->removeFnAttrs(B);
       if (Function *Func = Call->getCalledFunction()) {
         Func->removeFnAttrs(B);
       }
