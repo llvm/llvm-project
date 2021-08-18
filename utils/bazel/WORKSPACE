@@ -16,15 +16,13 @@ http_archive(
     ],
 )
 
-new_local_repository(
-    name = "llvm-archive",
-    path = "../../",
-    build_file_content = "# empty",
+load(":configure.bzl", "llvm_configure")
+
+llvm_configure(
+    name = "llvm-project",
+    overlay_path = "llvm-project-overlay",
+    src_path = "../..",
 )
-
-load("@llvm-archive//utils/bazel:configure.bzl", "llvm_configure")
-
-llvm_configure(name = "llvm-project")
 
 load(":terminfo.bzl", "llvm_terminfo_from_env")
 
