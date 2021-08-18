@@ -1254,6 +1254,14 @@ def : Pat<(i64 (shl (and GPR:$rs1, 0xffffffff), uimm5:$shamt)),
           (SRLI (SLLI GPR:$rs1, 32), (ImmSubFrom32 uimm5:$shamt))>;
 }
 
+// PatFrag to allow ADDW/SUBW/MULW/SLLW to be selected from i64 add/sub/mul/shl
+// if only the lower 32 bits of their result is used.
+class overflowingbinopw<SDPatternOperator operator>
+    : PatFrag<(ops node:$lhs, node:$rhs),
+              (operator node:$lhs, node:$rhs), [{
+  return hasAllWUsers(Node);
+}]>;
+
 let Predicates = [IsRV64] in {
 
 /// sext and zext
@@ -1282,6 +1290,13 @@ def : Pat<(i64 (sra (shl GPR:$rs1, (i64 32)), uimm6gt32:$shamt)),
 def : PatGprGpr<shiftopw<riscv_sllw>, SLLW>;
 def : PatGprGpr<shiftopw<riscv_srlw>, SRLW>;
 def : PatGprGpr<shiftopw<riscv_sraw>, SRAW>;
+
+// Select W instructions without sext_inreg if only the lower 32 bits of the
+// result are used.
+def : PatGprGpr<overflowingbinopw<add>, ADDW>;
+def : PatGprSimm12<overflowingbinopw<add>, ADDIW>;
+def : PatGprGpr<overflowingbinopw<sub>, SUBW>;
+def : PatGprImm<overflowingbinopw<shl>, SLLIW, uimm5>;
 
 /// Loads
 

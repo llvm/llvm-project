@@ -18,7 +18,7 @@ define signext i32 @add_mul_trans_accept_1(i32 %x) {
 ; RV64IM-LABEL: add_mul_trans_accept_1:
 ; RV64IM:       # %bb.0:
 ; RV64IM-NEXT:    addi a1, zero, 11
-; RV64IM-NEXT:    mul a0, a0, a1
+; RV64IM-NEXT:    mulw a0, a0, a1
 ; RV64IM-NEXT:    addiw a0, a0, 407
 ; RV64IM-NEXT:    ret
   %tmp0 = add i32 %x, 37
@@ -39,7 +39,7 @@ define signext i32 @add_mul_trans_accept_2(i32 %x) {
 ; RV64IM-LABEL: add_mul_trans_accept_2:
 ; RV64IM:       # %bb.0:
 ; RV64IM-NEXT:    addi a1, zero, 13
-; RV64IM-NEXT:    mul a0, a0, a1
+; RV64IM-NEXT:    mulw a0, a0, a1
 ; RV64IM-NEXT:    lui a1, 28
 ; RV64IM-NEXT:    addiw a1, a1, 1701
 ; RV64IM-NEXT:    addw a0, a0, a1
@@ -62,7 +62,7 @@ define signext i32 @add_mul_trans_reject_1(i32 %x) {
 ; RV64IM-LABEL: add_mul_trans_reject_1:
 ; RV64IM:       # %bb.0:
 ; RV64IM-NEXT:    addi a1, zero, 19
-; RV64IM-NEXT:    mul a0, a0, a1
+; RV64IM-NEXT:    mulw a0, a0, a1
 ; RV64IM-NEXT:    lui a1, 9
 ; RV64IM-NEXT:    addiw a1, a1, 585
 ; RV64IM-NEXT:    addw a0, a0, a1
@@ -87,7 +87,7 @@ define signext i32 @add_mul_trans_reject_2(i32 %x) {
 ; RV64IM:       # %bb.0:
 ; RV64IM-NEXT:    lui a1, 792
 ; RV64IM-NEXT:    addiw a1, a1, -1709
-; RV64IM-NEXT:    mul a0, a0, a1
+; RV64IM-NEXT:    mulw a0, a0, a1
 ; RV64IM-NEXT:    lui a1, 1014660
 ; RV64IM-NEXT:    addiw a1, a1, -1891
 ; RV64IM-NEXT:    addw a0, a0, a1
