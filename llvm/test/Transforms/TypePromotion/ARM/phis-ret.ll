@@ -278,7 +278,7 @@ define i16 @promote_arg_return(i16 zeroext %arg1, i16 zeroext %arg2, i8* %res) {
 ; CHECK-NEXT:    [[MUL:%.*]] = mul nuw nsw i32 [[ADD]], 3
 ; CHECK-NEXT:    [[CMP:%.*]] = icmp ult i32 [[MUL]], [[TMP2]]
 ; CHECK-NEXT:    [[CONV:%.*]] = zext i1 [[CMP]] to i8
-; CHECK-NEXT:    store i8 [[CONV]], i8* [[RES:%.*]]
+; CHECK-NEXT:    store i8 [[CONV]], i8* [[RES:%.*]], align 1
 ; CHECK-NEXT:    [[TMP3:%.*]] = trunc i32 [[TMP1]] to i16
 ; CHECK-NEXT:    ret i16 [[TMP3]]
 ;

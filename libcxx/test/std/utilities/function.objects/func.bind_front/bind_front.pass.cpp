@@ -376,12 +376,6 @@ constexpr bool test() {
 
   // Make sure bind_front is SFINAE friendly
   {
-    using T = decltype(std::bind_front(std::declval<int(*)(int, int)>(), 1));
-    static_assert(!std::is_invocable<T>::value);
-    static_assert( std::is_invocable<T, int>::value);
-    static_assert(!std::is_invocable<T, void*>::value);
-    static_assert(!std::is_invocable<T, int, int>::value);
-
     static_assert(!std::is_constructible_v<NotCopyMove, NotCopyMove&>);
     static_assert(!std::is_move_constructible_v<NotCopyMove>);
     static_assert(!is_bind_frontable<NotCopyMove>::value);
@@ -397,6 +391,15 @@ constexpr bool test() {
     static_assert(!std::is_move_constructible_v<NonConstCopyConstructible>);
     static_assert(!is_bind_frontable<decltype(takeAnything), NonConstCopyConstructible&>::value);
     static_assert(!is_bind_frontable<decltype(takeAnything), NonConstCopyConstructible>::value);
+  }
+
+  // Make sure bind_front's unspecified type's operator() is SFINAE-friendly
+  {
+    using T = decltype(std::bind_front(std::declval<int(*)(int, int)>(), 1));
+    static_assert(!std::is_invocable<T>::value);
+    static_assert( std::is_invocable<T, int>::value);
+    static_assert(!std::is_invocable<T, void*>::value);
+    static_assert(!std::is_invocable<T, int, int>::value);
   }
 
   return true;

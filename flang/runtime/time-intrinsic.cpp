@@ -36,7 +36,7 @@ using preferred_implementation = int;
 // This is the fallback implementation, which should work everywhere.
 template <typename Unused = void> double GetCpuTime(fallback_implementation) {
   std::clock_t timestamp{std::clock()};
-  if (timestamp != std::clock_t{-1}) {
+  if (timestamp != static_cast<std::clock_t>(-1)) {
     return static_cast<double>(timestamp) / CLOCKS_PER_SEC;
   }
 

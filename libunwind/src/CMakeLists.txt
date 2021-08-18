@@ -47,6 +47,8 @@ set(LIBUNWIND_HEADERS
     UnwindCursor.hpp
     ../include/libunwind.h
     ../include/unwind.h
+    ../include/unwind_itanium.h
+    ../include/unwind_arm_ehabi.h
     )
 if(APPLE)
   list(APPEND LIBUNWIND_HEADERS

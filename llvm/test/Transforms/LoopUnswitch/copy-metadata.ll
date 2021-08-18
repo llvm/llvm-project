@@ -1,5 +1,4 @@
-; RUN: opt < %s -loop-unswitch -enable-new-pm=0 -S < %s 2>&1 | FileCheck %s
-; RUN: opt < %s -loop-unswitch -enable-new-pm=0 -enable-mssa-loop-dependency=true -verify-memoryssa -S < %s 2>&1 | FileCheck %s
+; RUN: opt < %s -loop-unswitch -enable-new-pm=0 -verify-memoryssa -S < %s 2>&1 | FileCheck %s
 
 ; This test checks if unswitched condition preserve make.implicit metadata.
 

@@ -490,6 +490,10 @@ gentbl(
             "include/clang/AST/Attrs.inc",
         ),
         (
+            "-gen-clang-attr-doc-table",
+            "lib/AST/AttrDocTable.inc",
+        ),
+        (
             "-gen-clang-attr-text-node-dump",
             "include/clang/AST/AttrTextNodeDump.inc",
         ),
@@ -693,6 +697,7 @@ cc_library(
     ]),
     includes = [
         "include",
+        "lib/AST",
         "lib/AST/Interp",
     ],
     textual_hdrs = [
@@ -710,6 +715,7 @@ cc_library(
         "include/clang/AST/DeclNodes.inc",
         "include/clang/AST/StmtDataCollectors.inc",
         "include/clang/AST/StmtNodes.inc",
+        "lib/AST/AttrDocTable.inc",
         "lib/AST/Interp/Opcodes.inc",
     ] + glob([
         "include/clang/AST/*.def",

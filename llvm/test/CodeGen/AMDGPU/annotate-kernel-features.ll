@@ -325,7 +325,7 @@ attributes #1 = { nounwind }
 ; AKF_CHECK: attributes #[[ATTR8]] = { nounwind "amdgpu-work-item-id-y" "amdgpu-work-item-id-z" }
 ; AKF_CHECK: attributes #[[ATTR9]] = { nounwind "amdgpu-work-group-id-y" "amdgpu-work-group-id-z" "amdgpu-work-item-id-y" "amdgpu-work-item-id-z" }
 ;.
-; ATTRIBUTOR_CHECK: attributes #[[ATTR0:[0-9]+]] = { nounwind readnone speculatable willreturn "uniform-work-group-size"="false" }
+; ATTRIBUTOR_CHECK: attributes #[[ATTR0:[0-9]+]] = { nounwind readnone speculatable willreturn }
 ; ATTRIBUTOR_CHECK: attributes #[[ATTR1]] = { nounwind "uniform-work-group-size"="false" }
 ; ATTRIBUTOR_CHECK: attributes #[[ATTR2]] = { nounwind "amdgpu-work-group-id-y" "uniform-work-group-size"="false" }
 ; ATTRIBUTOR_CHECK: attributes #[[ATTR3]] = { nounwind "amdgpu-work-group-id-z" "uniform-work-group-size"="false" }

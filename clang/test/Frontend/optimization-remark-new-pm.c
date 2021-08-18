@@ -14,7 +14,7 @@ float foz(int x, int y) { return x * y; }
 // twice.
 //
 int bar(int j) {
-  // expected-remark@+2 {{foz not inlined into bar because it should never be inlined (cost=never)}}
-  // expected-remark@+1 {{foo inlined into bar}}
+  // expected-remark@+2 {{'foz' not inlined into 'bar' because it should never be inlined (cost=never)}}
+  // expected-remark@+1 {{'foo' inlined into 'bar'}}
   return foo(j, j - 2) * foz(j - 2, j);
 }

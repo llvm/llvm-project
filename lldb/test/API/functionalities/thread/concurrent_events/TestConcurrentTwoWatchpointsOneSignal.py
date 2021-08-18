@@ -14,6 +14,10 @@ class ConcurrentTwoWatchpointsOneSignal(ConcurrentEventsBase):
     # Atomic sequences are not supported yet for MIPS in LLDB.
     @skipIf(triple='^mips')
     @expectedFailureNetBSD
+    @skipIf(
+        oslist=["ios", "watchos", "tvos", "bridgeos", "macosx"],
+        archs=['arm64', 'arm64e', 'arm64_32', 'arm'],
+        bugnumber="rdar://81811539")
     @add_test_categories(["watchpoint"])
     def test(self):
         """Test two threads that trigger a watchpoint and one signal thread. """

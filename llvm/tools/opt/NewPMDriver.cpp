@@ -259,12 +259,9 @@ bool llvm::runPassPipeline(StringRef Arg0, Module &M, TargetMachine *TM,
                    PGOOptions::SampleUse);
     break;
   case NoPGO:
-    if (DebugInfoForProfiling)
+    if (DebugInfoForProfiling || PseudoProbeForProfiling)
       P = PGOOptions("", "", "", PGOOptions::NoAction, PGOOptions::NoCSAction,
-                     true);
-    else if (PseudoProbeForProfiling)
-      P = PGOOptions("", "", "", PGOOptions::NoAction, PGOOptions::NoCSAction,
-                     false, true);
+                     DebugInfoForProfiling, PseudoProbeForProfiling);
     else
       P = None;
   }

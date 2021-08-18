@@ -1610,7 +1610,8 @@ processInternalGlobal(GlobalVariable *GV, const GlobalStatus &GS,
     // initializer to be the stored value, then delete all stores to the
     // global.  This allows us to mark it constant.
     if (Constant *SOVConstant = dyn_cast<Constant>(GS.StoredOnceValue))
-      if (isa<UndefValue>(GV->getInitializer())) {
+      if (SOVConstant->getType() == GV->getValueType() &&
+          isa<UndefValue>(GV->getInitializer())) {
         // Change the initial value here.
         GV->setInitializer(SOVConstant);
 

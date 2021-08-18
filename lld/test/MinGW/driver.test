@@ -146,9 +146,10 @@ PDB-DEFAULT-NOT: -pdb:{{.*}}
 RUN: ld.lld -### -m i386pep foo.o --large-address-aware 2>&1 | FileCheck -check-prefix LARGE-ADDRESS-AWARE %s
 LARGE-ADDRESS-AWARE: -largeaddressaware
 
-RUN: ld.lld -### -m i386pe foo.o --no-dynamicbase 2>&1 | FileCheck -check-prefix DISABLE-DYNAMICBASE %s
+RUN: ld.lld -### -m i386pe foo.o --dynamicbase --no-dynamicbase 2>&1 | FileCheck -check-prefix DISABLE-DYNAMICBASE %s
+RUN: ld.lld -### -m i386pe foo.o --dynamicbase --disable-dynamicbase 2>&1 | FileCheck -check-prefix DISABLE-DYNAMICBASE %s
 DISABLE-DYNAMICBASE: -dynamicbase:no
-RUN: ld.lld -### -m i386pe --dynamicbase foo.o 2>&1 | FileCheck -check-prefix NO-DISABLE-DYNAMICBASE %s
+RUN: ld.lld -### -m i386pe --disable-dynamicbase --dynamicbase foo.o 2>&1 | FileCheck -check-prefix NO-DISABLE-DYNAMICBASE %s
 RUN: ld.lld -### -m i386pep -dynamicbase foo.o 2>&1 | FileCheck -check-prefix NO-DISABLE-DYNAMICBASE %s
 RUN: ld.lld -### -m i386pe foo.o 2>&1 | FileCheck -check-prefix NO-DISABLE-DYNAMICBASE %s
 RUN: ld.lld -### -m i386pep foo.o 2>&1 | FileCheck -check-prefix NO-DISABLE-DYNAMICBASE %s
@@ -158,6 +159,27 @@ RUN: ld.lld -### -m arm64pe foo.o 2>&1 | FileCheck -check-prefix NO-DISABLE-DYNA
 RUN: ld.lld -### -m thumb2pe foo.o --no-dynamicbase 2>&1 | FileCheck -check-prefix NO-DISABLE-DYNAMICBASE %s
 RUN: ld.lld -### -m arm64pe foo.o --no-dynamicbase 2>&1 | FileCheck -check-prefix NO-DISABLE-DYNAMICBASE %s
 NO-DISABLE-DYNAMICBASE-NOT: -dynamicbase:no
+
+RUN: ld.lld -### -m i386pe foo.o -high-entropy-va -disable-high-entropy-va 2>&1 | FileCheck -check-prefix DISABLE-HIGH-ENTROPY-VA %s
+RUN: ld.lld -### -m i386pe foo.o --high-entropy-va --disable-high-entropy-va 2>&1 | FileCheck -check-prefix DISABLE-HIGH-ENTROPY-VA %s
+DISABLE-HIGH-ENTROPY-VA: -highentropyva:no
+RUN: ld.lld -### -m i386pe foo.o -disable-high-entropy-va -high-entropy-va 2>&1 | FileCheck -check-prefix NO-DISABLE-HIGH-ENTROPY-VA %s
+RUN: ld.lld -### -m i386pe foo.o --disable-high-entropy-va --high-entropy-va 2>&1 | FileCheck -check-prefix NO-DISABLE-HIGH-ENTROPY-VA %s
+NO-DISABLE-HIGH-ENTROPY-VA-NOT: -highentropyva:no
+
+RUN: ld.lld -### -m i386pe foo.o -nxcompat -disable-nxcompat 2>&1 | FileCheck -check-prefix DISABLE-NXCOMPAT %s
+RUN: ld.lld -### -m i386pe foo.o --nxcompat --disable-nxcompat 2>&1 | FileCheck -check-prefix DISABLE-NXCOMPAT %s
+DISABLE-NXCOMPAT: -nxcompat:no
+RUN: ld.lld -### -m i386pe foo.o -disable-nxcompat -nxcompat 2>&1 | FileCheck -check-prefix NO-DISABLE-NXCOMPAT %s
+RUN: ld.lld -### -m i386pe foo.o --disable-nxcompat --nxcompat 2>&1 | FileCheck -check-prefix NO-DISABLE-NXCOMPAT %s
+NO-DISABLE-NXCOMPAT-NOT: -nxcompat:no
+
+RUN: ld.lld -### -m i386pe foo.o -tsaware -disable-tsaware 2>&1 | FileCheck -check-prefix DISABLE-TSAWARE %s
+RUN: ld.lld -### -m i386pe foo.o --tsaware --disable-tsaware 2>&1 | FileCheck -check-prefix DISABLE-TSAWARE %s
+DISABLE-TSAWARE: -tsaware:no
+RUN: ld.lld -### -m i386pe foo.o -disable-tsaware -tsaware 2>&1 | FileCheck -check-prefix NO-DISABLE-TSAWARE %s
+RUN: ld.lld -### -m i386pe foo.o --disable-tsaware --tsaware 2>&1 | FileCheck -check-prefix NO-DISABLE-TSAWARE %s
+NO-DISABLE-TSAWARE-NOT: -tsaware:no
 
 RUN: ld.lld -### -m i386pep foo.o --image-base 0x1230000 2>&1 | FileCheck -check-prefix IMAGE-BASE %s
 RUN: ld.lld -### -m i386pep foo.o -image-base 0x1230000 2>&1 | FileCheck -check-prefix IMAGE-BASE %s
@@ -273,9 +295,12 @@ RUN: ld.lld -### -m i386pep foo.o --section-alignment=0x2000 2>&1 | FileCheck -c
 RUN: ld.lld -### -m i386pep foo.o -section-alignment=0x2000 2>&1 | FileCheck -check-prefix ALIGN %s
 ALIGN: -align:0x2000
 
-RUN: ld.lld -### -m i386pe foo.o -no-seh 2>&1 | FileCheck -check-prefix NOSEH %s
-RUN: ld.lld -### -m i386pe foo.o --no-seh 2>&1 | FileCheck -check-prefix NOSEH %s
+RUN: ld.lld -### -m i386pe foo.o -disable-no-seh -no-seh 2>&1 | FileCheck -check-prefix NOSEH %s
+RUN: ld.lld -### -m i386pe foo.o --disable-no-seh --no-seh 2>&1 | FileCheck -check-prefix NOSEH %s
+RUN: ld.lld -### -m i386pe foo.o -no-seh -disable-no-seh 2>&1 | FileCheck -check-prefix DISABLE-NOSEH %s
+RUN: ld.lld -### -m i386pe foo.o --no-seh --disable-no-seh 2>&1 | FileCheck -check-prefix DISABLE-NOSEH %s
 NOSEH: -noseh
+DISABLE-NOSEH-NOT: -noseh
 
 RUN: ld.lld -### -m i386pep foo.o --no-allow-multiple-definition --allow-multiple-definition 2>&1 | FileCheck -check-prefix ALLOW_MULTIPLE_DEFINITION %s
 RUN: ld.lld -### -m i386pep foo.o -no-allow-multiple-definition -allow-multiple-definition 2>&1 | FileCheck -check-prefix ALLOW_MULTIPLE_DEFINITION %s

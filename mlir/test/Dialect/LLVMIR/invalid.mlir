@@ -1119,3 +1119,11 @@ llvm.func @caller() {
 }
 
 llvm.func @callee() -> !llvm.struct<(i32, f32)>
+
+// -----
+
+func @bitcast(%arg0: vector<2x3xf32>) {
+  // expected-error @below {{op operand #0 must be LLVM-compatible non-aggregate type}}
+  llvm.bitcast %arg0 : vector<2x3xf32> to vector<2x3xi32>
+  return
+}

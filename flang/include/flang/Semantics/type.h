@@ -288,6 +288,9 @@ public:
   bool operator==(const DerivedTypeSpec &that) const {
     return RawEquals(that) && parameters_ == that.parameters_;
   }
+  bool operator!=(const DerivedTypeSpec &that) const {
+    return !(*this == that);
+  }
   std::string AsFortran() const;
 
 private:

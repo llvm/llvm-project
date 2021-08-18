@@ -1718,11 +1718,10 @@ inline _LIBCPP_INLINE_VISIBILITY
 
 template <class... _Types>
 inline _LIBCPP_INLINE_VISIBILITY
-auto swap(variant<_Types...>& __lhs,
-          variant<_Types...>& __rhs) noexcept(noexcept(__lhs.swap(__rhs)))
-    -> decltype(__lhs.swap(__rhs)) {
-  __lhs.swap(__rhs);
-}
+auto swap(variant<_Types...>& __lhs, variant<_Types...>& __rhs)
+  noexcept(noexcept(__lhs.swap(__rhs)))
+  -> decltype(      __lhs.swap(__rhs))
+  { return          __lhs.swap(__rhs); }
 
 template <class... _Types>
 struct _LIBCPP_TEMPLATE_VIS hash<

@@ -28,7 +28,6 @@ namespace mlir {
 
 class AffineForOp;
 class Block;
-class FlatAffineConstraints;
 class Location;
 struct MemRefAccess;
 class Operation;
@@ -93,13 +92,13 @@ struct ComputationSliceState {
   // Constraints are added for all loop IV bounds (dim or symbol), and
   // constraints are added for slice bounds in 'lbs'/'ubs'.
   // Returns failure if we cannot add loop bounds because of unsupported cases.
-  LogicalResult getAsConstraints(FlatAffineConstraints *cst);
+  LogicalResult getAsConstraints(FlatAffineValueConstraints *cst);
 
   /// Adds to 'cst' constraints which represent the original loop bounds on
   /// 'ivs' in 'this'. This corresponds to the original domain of the loop nest
   /// from which the slice is being computed. Returns failure if we cannot add
   /// loop bounds because of unsupported cases.
-  LogicalResult getSourceAsConstraints(FlatAffineConstraints &cst);
+  LogicalResult getSourceAsConstraints(FlatAffineValueConstraints &cst);
 
   // Clears all bounds and operands in slice state.
   void clearBounds();
@@ -183,7 +182,7 @@ private:
 //    }
 //
 void getComputationSliceState(Operation *depSourceOp, Operation *depSinkOp,
-                              FlatAffineConstraints *dependenceConstraints,
+                              FlatAffineValueConstraints *dependenceConstraints,
                               unsigned loopDepth, bool isBackwardSlice,
                               ComputationSliceState *sliceState);
 
@@ -243,7 +242,7 @@ AffineForOp insertBackwardComputationSlice(Operation *srcOpInst,
 //    }
 //
 // Region:  {memref = %A, write = false, {%i <= m0 <= %i + 7} }
-// The last field is a 2-d FlatAffineConstraints symbolic in %i.
+// The last field is a 2-d FlatAffineValueConstraints symbolic in %i.
 //
 struct MemRefRegion {
   explicit MemRefRegion(Location loc) : loc(loc) {}
@@ -278,14 +277,14 @@ struct MemRefRegion {
   ///    }
   ///
   ///   {memref = %A, write = false, {%i <= m0 <= %i + 7} }
-  /// The last field is a 2-d FlatAffineConstraints symbolic in %i.
+  /// The last field is a 2-d FlatAffineValueConstraints symbolic in %i.
   ///
   LogicalResult compute(Operation *op, unsigned loopDepth,
                         const ComputationSliceState *sliceState = nullptr,
                         bool addMemRefDimBounds = true);
 
-  FlatAffineConstraints *getConstraints() { return &cst; }
-  const FlatAffineConstraints *getConstraints() const { return &cst; }
+  FlatAffineValueConstraints *getConstraints() { return &cst; }
+  const FlatAffineValueConstraints *getConstraints() const { return &cst; }
   bool isWrite() const { return write; }
   void setWrite(bool flag) { write = flag; }
 
@@ -309,10 +308,10 @@ struct MemRefRegion {
   void getLowerAndUpperBound(unsigned pos, AffineMap &lbMap,
                              AffineMap &ubMap) const;
 
-  /// A wrapper around FlatAffineConstraints::getConstantBoundOnDimSize(). 'pos'
-  /// corresponds to the position of the memref shape's dimension (major to
-  /// minor) which matches 1:1 with the dimensional identifier positions in
-  //'cst'.
+  /// A wrapper around FlatAffineValueConstraints::getConstantBoundOnDimSize().
+  /// 'pos' corresponds to the position of the memref shape's dimension (major
+  /// to minor) which matches 1:1 with the dimensional identifier positions in
+  /// 'cst'.
   Optional<int64_t>
   getConstantBoundOnDimSize(unsigned pos,
                             SmallVectorImpl<int64_t> *lb = nullptr,
@@ -324,7 +323,7 @@ struct MemRefRegion {
   /// Returns the size of this MemRefRegion in bytes.
   Optional<int64_t> getRegionSize();
 
-  // Wrapper around FlatAffineConstraints::unionBoundingBox.
+  // Wrapper around FlatAffineValueConstraints::unionBoundingBox.
   LogicalResult unionBoundingBox(const MemRefRegion &other);
 
   /// Returns the rank of the memref that this region corresponds to.
@@ -348,7 +347,7 @@ struct MemRefRegion {
   /// and thus the region is symbolic in the outer surrounding loops at that
   /// depth.
   // TODO: Replace this to exploit HyperRectangularSet.
-  FlatAffineConstraints cst;
+  FlatAffineValueConstraints cst;
 };
 
 /// Returns the size of memref data in bytes if it's statically shaped, None

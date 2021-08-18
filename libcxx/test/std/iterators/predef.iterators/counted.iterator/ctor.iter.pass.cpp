@@ -8,7 +8,6 @@
 
 // UNSUPPORTED: c++03, c++11, c++14, c++17
 // UNSUPPORTED: libcpp-no-concepts
-// UNSUPPORTED: gcc-10
 
 // constexpr counted_iterator() requires default_initializable<I> = default;
 // constexpr counted_iterator(I x, iter_difference_t<I> n);

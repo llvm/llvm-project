@@ -16,6 +16,7 @@
 
 ; GFX9-FLATSCR: s_mov_b32 [[SOFF1:s[0-9]+]], 4{{$}}
 ; GFX9-FLATSCR: scratch_store_dwordx4 off, v[{{[0-9:]+}}], [[SOFF1]] ; 16-byte Folded Spill
+; GFX9-FLATSCR: ;;#ASMSTART
 ; GFX9-FLATSCR: s_movk_i32 [[SOFF2:s[0-9]+]], 0x1{{[0-9a-f]+}}{{$}}
 ; GFX9-FLATSCR: scratch_load_dwordx4 v[{{[0-9:]+}}], off, [[SOFF2]] ; 16-byte Folded Reload
 

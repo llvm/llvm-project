@@ -34,8 +34,8 @@
 ; YAML-MISS-NEXT: Function:        caller2
 ; YAML-MISS-NEXT: Hotness:         1
 
-; CHECK-RPASS: callee1 inlined into caller1 with (cost=-30, threshold=4500) (hotness: 400)
-; CHECK-RPASS-NOT: callee2 not inlined into caller2 because it should never be inlined (cost=never): noinline function attribute (hotness: 1)
+; CHECK-RPASS: 'callee1' inlined into 'caller1' with (cost=-30, threshold=4500) (hotness: 400)
+; CHECK-RPASS-NOT: 'callee2' not inlined into 'caller2' because it should never be inlined (cost=never): noinline function attribute (hotness: 1)
 
 define void @callee1() !prof !20 {
 ; CHECK: callee1 :hot

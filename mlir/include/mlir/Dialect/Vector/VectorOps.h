@@ -81,7 +81,8 @@ void populateVectorMaskMaterializationPatterns(RewritePatternSet &patterns,
 
 // Collect a set of patterns to convert vector.multi_reduction op into
 // a sequence of vector.reduction ops.
-void populateVectorMultiReductionLoweringPatterns(RewritePatternSet &patterns);
+void populateVectorMultiReductionLoweringPatterns(
+    RewritePatternSet &patterns, bool useInnerDimsForReduction = false);
 
 /// Collect a set of patterns to propagate insert_map/extract_map in the ssa
 /// chain.

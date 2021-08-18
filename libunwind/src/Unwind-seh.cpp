@@ -244,6 +244,7 @@ unwind_phase2_forced(unw_context_t *uc,
       return _URC_FATAL_PHASE2_ERROR;
     }
 
+#ifndef NDEBUG
     // When tracing, print state information.
     if (_LIBUNWIND_TRACING_UNWINDING) {
       char functionBuf[512];
@@ -259,6 +260,7 @@ unwind_phase2_forced(unw_context_t *uc,
           (void *)exception_object, frameInfo.start_ip, functionName,
           frameInfo.lsda, frameInfo.handler);
     }
+#endif
 
     // Call stop function at each frame.
     _Unwind_Action action =

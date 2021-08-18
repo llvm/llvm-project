@@ -1227,6 +1227,8 @@ def Tosa_ReduceAllOp : Tosa_Op<"reduce_all", [
   let results = (outs
     Tosa_Tensor1Dto4D:$output
   );
+
+  let hasFolder = 1;
 }
 
 //===----------------------------------------------------------------------===//
@@ -1250,6 +1252,8 @@ def Tosa_ReduceAnyOp : Tosa_Op<"reduce_any", [
   let results = (outs
     Tosa_Tensor1Dto4D:$output
   );
+
+  let hasFolder = 1;
 }
 
 //===----------------------------------------------------------------------===//
@@ -1273,6 +1277,8 @@ def Tosa_ReduceMaxOp : Tosa_Op<"reduce_max", [
   let results = (outs
     Tosa_Tensor1Dto4D:$output
   );
+
+  let hasFolder = 1;
 }
 
 //===----------------------------------------------------------------------===//
@@ -1296,6 +1302,8 @@ def Tosa_ReduceMinOp : Tosa_Op<"reduce_min", [
   let results = (outs
     Tosa_Tensor1Dto4D:$output
   );
+
+  let hasFolder = 1;
 }
 
 //===----------------------------------------------------------------------===//
@@ -1319,6 +1327,8 @@ def Tosa_ReduceProdOp : Tosa_Op<"reduce_prod", [
   let results = (outs
     Tosa_Tensor1Dto4D:$output
   );
+
+  let hasFolder = 1;
 }
 
 //===----------------------------------------------------------------------===//
@@ -1342,6 +1352,8 @@ def Tosa_ReduceSumOp : Tosa_Op<"reduce_sum", [
   let results = (outs
     Tosa_Tensor1Dto4D:$output
   );
+
+  let hasFolder = 1;
 }
 
 //===----------------------------------------------------------------------===//
@@ -1371,6 +1383,8 @@ def Tosa_ConcatOp : Tosa_Op<"concat", [
   let results = (outs
     Tosa_RankedTensor:$output
   );
+
+  let hasCanonicalizer = 1;
 }
 
 //===----------------------------------------------------------------------===//
@@ -1415,6 +1429,7 @@ def Tosa_ReshapeOp: Tosa_Op<"reshape", [
   }];
 
   let hasCanonicalizer = 1;
+  let hasFolder = 1;
 
   let arguments = (ins
     Tosa_Tensor:$input1,
@@ -1473,6 +1488,8 @@ def Tosa_SliceOp: Tosa_Op<"slice", [
   let results = (outs
     Tosa_Tensor1Dto6D:$output
   );
+
+  let hasFolder = 1;
 }
 
 //===----------------------------------------------------------------------===//
@@ -1495,6 +1512,8 @@ def Tosa_TileOp: Tosa_Op<"tile", [
   let results = (outs
     Tosa_Tensor1Dto4D:$output
   );
+
+  let hasFolder = 1;
 }
 
 //===----------------------------------------------------------------------===//
@@ -1518,6 +1537,8 @@ def Tosa_TransposeOp : Tosa_Op<"transpose", [
   let results = (
     outs Tosa_Tensor1Dto6D:$output
   );
+
+  let hasFolder = 1;
 }
 
 //===----------------------------------------------------------------------===//
@@ -1655,6 +1676,8 @@ def Tosa_CastOp: Tosa_Op<"cast", [NoSideEffect,
   let results = (outs
     Tosa_Tensor:$output
   );
+
+  let hasFolder = 1;
 }
 
 //===----------------------------------------------------------------------===//

@@ -6,9 +6,6 @@
 //
 //===----------------------------------------------------------------------===//
 
-// GCC 5 does not evaluate static assertions dependent on a template parameter.
-// UNSUPPORTED: gcc-5
-
 // <map>
 
 // Check that std::map fails to instantiate if the comparison predicate is

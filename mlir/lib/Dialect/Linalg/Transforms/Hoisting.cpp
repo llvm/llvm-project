@@ -769,7 +769,7 @@ hoistPaddingOnTensorsPrerequisites(linalg::PadTensorOp padTensorOp, int nLevels,
     return failure();
 
   SmallVector<Value> allValues;
-  constraints.getAllIdValues(&allValues);
+  constraints.getAllValues(&allValues);
   SmallVector<Value> allNonLoopValues(allValues.begin() + numLoops,
                                       allValues.end());
 

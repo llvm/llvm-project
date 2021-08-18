@@ -253,3 +253,22 @@ module m12
     ! CHECK: .n.n_3, SAVE, TARGET: ObjectEntity type: CHARACTER(3_8,1) init:"n_3"
   end type
 end module
+
+module m13
+  type :: t1
+    integer :: n
+   contains
+    procedure :: assign1, assign2
+    generic :: assignment(=) => assign1, assign2
+    ! CHECK: .s.t1, SAVE, TARGET: ObjectEntity type: TYPE(specialbinding) shape: 0_8:0_8 init:[specialbinding::specialbinding(which=2_1,isargdescriptorset=3_1,proc=assign1)]
+  end type
+ contains
+  impure elemental subroutine assign1(to, from)
+    class(t1), intent(out) :: to
+    class(t1), intent(in) :: from
+  end subroutine
+  impure elemental subroutine assign2(to, from)
+    class(t1), intent(out) :: to
+    integer, intent(in) :: from
+  end subroutine
+end module

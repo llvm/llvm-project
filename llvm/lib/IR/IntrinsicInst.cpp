@@ -473,9 +473,15 @@ Function *VPIntrinsic::getDeclarationForParams(Module *M, Intrinsic::ID VPID,
   assert(isVPIntrinsic(VPID) && "not a VP intrinsic");
   Function *VPFunc;
   switch (VPID) {
-  default:
-    VPFunc = Intrinsic::getDeclaration(M, VPID, Params[0]->getType());
+  default: {
+    Type *OverloadTy = Params[0]->getType();
+    if (VPReductionIntrinsic::isVPReduction(VPID))
+      OverloadTy =
+          Params[*VPReductionIntrinsic::getVectorParamPos(VPID)]->getType();
+
+    VPFunc = Intrinsic::getDeclaration(M, VPID, OverloadTy);
     break;
+  }
   case Intrinsic::vp_load:
     VPFunc = Intrinsic::getDeclaration(
         M, VPID,
@@ -502,6 +508,48 @@ Function *VPIntrinsic::getDeclarationForParams(Module *M, Intrinsic::ID VPID,
   }
   assert(VPFunc && "Could not declare VP intrinsic");
   return VPFunc;
+}
+
+bool VPReductionIntrinsic::isVPReduction(Intrinsic::ID ID) {
+  switch (ID) {
+  default:
+    return false;
+#define HANDLE_VP_REDUCTION(VPID, STARTPOS, VECTORPOS)                         \
+  case Intrinsic::VPID:                                                        \
+    break;
+#include "llvm/IR/VPIntrinsics.def"
+  }
+  return true;
+}
+
+unsigned VPReductionIntrinsic::getVectorParamPos() const {
+  return *VPReductionIntrinsic::getVectorParamPos(getIntrinsicID());
+}
+
+unsigned VPReductionIntrinsic::getStartParamPos() const {
+  return *VPReductionIntrinsic::getStartParamPos(getIntrinsicID());
+}
+
+Optional<unsigned> VPReductionIntrinsic::getVectorParamPos(Intrinsic::ID ID) {
+  switch (ID) {
+#define HANDLE_VP_REDUCTION(VPID, STARTPOS, VECTORPOS)                         \
+  case Intrinsic::VPID:                                                        \
+    return VECTORPOS;
+#include "llvm/IR/VPIntrinsics.def"
+  default:
+    return None;
+  }
+}
+
+Optional<unsigned> VPReductionIntrinsic::getStartParamPos(Intrinsic::ID ID) {
+  switch (ID) {
+#define HANDLE_VP_REDUCTION(VPID, STARTPOS, VECTORPOS)                         \
+  case Intrinsic::VPID:                                                        \
+    return STARTPOS;
+#include "llvm/IR/VPIntrinsics.def"
+  default:
+    return None;
+  }
 }
 
 Instruction::BinaryOps BinaryOpIntrinsic::getBinaryOp() const {

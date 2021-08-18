@@ -32,8 +32,8 @@ entry:
   %1 = load i32, i32* %j.addr, align 4
   %sub = sub nsw i32 %1, 2
   %call = call i32 @foo(i32 %0, i32 %sub)
-; CHECK: foo inlined into bar
-; REMARKS-NOT: foo inlined into bar
+; CHECK: 'foo' inlined into 'bar'
+; REMARKS-NOT: 'foo' inlined into 'bar'
   ret i32 %call
 }
 

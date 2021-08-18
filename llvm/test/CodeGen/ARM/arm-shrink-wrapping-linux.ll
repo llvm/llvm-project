@@ -29,20 +29,20 @@ define fastcc i8* @wrongUseOfPostDominate(i8* readonly %s, i32 %off, i8* readnon
 ; ENABLE-NEXT:    pophs {r11, pc}
 ; ENABLE-NEXT:  .LBB0_3: @ %while.body.preheader
 ; ENABLE-NEXT:    movw r12, :lower16:skip
-; ENABLE-NEXT:    sub r1, r1, #1
+; ENABLE-NEXT:    sub r3, r1, #1
 ; ENABLE-NEXT:    movt r12, :upper16:skip
 ; ENABLE-NEXT:  .LBB0_4: @ %while.body
 ; ENABLE-NEXT:    @ =>This Inner Loop Header: Depth=1
-; ENABLE-NEXT:    ldrb r3, [r0]
-; ENABLE-NEXT:    ldrb r3, [r12, r3]
-; ENABLE-NEXT:    add r0, r0, r3
-; ENABLE-NEXT:    sub r3, r1, #1
-; ENABLE-NEXT:    cmp r3, r1
+; ENABLE-NEXT:    ldrb r1, [r0]
+; ENABLE-NEXT:    ldrb r1, [r12, r1]
+; ENABLE-NEXT:    add r0, r0, r1
+; ENABLE-NEXT:    sub r1, r3, #1
+; ENABLE-NEXT:    cmp r1, r3
 ; ENABLE-NEXT:    bhs .LBB0_6
 ; ENABLE-NEXT:  @ %bb.5: @ %while.body
 ; ENABLE-NEXT:    @ in Loop: Header=BB0_4 Depth=1
 ; ENABLE-NEXT:    cmp r0, r2
-; ENABLE-NEXT:    mov r1, r3
+; ENABLE-NEXT:    mov r3, r1
 ; ENABLE-NEXT:    blo .LBB0_4
 ; ENABLE-NEXT:  .LBB0_6: @ %if.end29
 ; ENABLE-NEXT:    pop {r11, pc}
@@ -119,20 +119,20 @@ define fastcc i8* @wrongUseOfPostDominate(i8* readonly %s, i32 %off, i8* readnon
 ; DISABLE-NEXT:    pophs {r11, pc}
 ; DISABLE-NEXT:  .LBB0_3: @ %while.body.preheader
 ; DISABLE-NEXT:    movw r12, :lower16:skip
-; DISABLE-NEXT:    sub r1, r1, #1
+; DISABLE-NEXT:    sub r3, r1, #1
 ; DISABLE-NEXT:    movt r12, :upper16:skip
 ; DISABLE-NEXT:  .LBB0_4: @ %while.body
 ; DISABLE-NEXT:    @ =>This Inner Loop Header: Depth=1
-; DISABLE-NEXT:    ldrb r3, [r0]
-; DISABLE-NEXT:    ldrb r3, [r12, r3]
-; DISABLE-NEXT:    add r0, r0, r3
-; DISABLE-NEXT:    sub r3, r1, #1
-; DISABLE-NEXT:    cmp r3, r1
+; DISABLE-NEXT:    ldrb r1, [r0]
+; DISABLE-NEXT:    ldrb r1, [r12, r1]
+; DISABLE-NEXT:    add r0, r0, r1
+; DISABLE-NEXT:    sub r1, r3, #1
+; DISABLE-NEXT:    cmp r1, r3
 ; DISABLE-NEXT:    bhs .LBB0_6
 ; DISABLE-NEXT:  @ %bb.5: @ %while.body
 ; DISABLE-NEXT:    @ in Loop: Header=BB0_4 Depth=1
 ; DISABLE-NEXT:    cmp r0, r2
-; DISABLE-NEXT:    mov r1, r3
+; DISABLE-NEXT:    mov r3, r1
 ; DISABLE-NEXT:    blo .LBB0_4
 ; DISABLE-NEXT:  .LBB0_6: @ %if.end29
 ; DISABLE-NEXT:    pop {r11, pc}

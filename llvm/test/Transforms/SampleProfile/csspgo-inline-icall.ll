@@ -54,10 +54,10 @@ attributes #0 = {"use-sample-profile"}
 !11 = distinct !DISubprogram(name: "zoo", linkageName: "_Z3zoov", scope: !1, file: !1, line: 24, unit: !0)
 
 
-; ICP-ALL: remark: test.cc:5:0: _Z3bazv inlined into test
-; ICP-ALL-NEXT: remark: test.cc:4:0: _Z3foov inlined into test
-; ICP-ALL-NEXT: remark: test.cc:4:0: _Z3barv inlined into test
+; ICP-ALL: remark: test.cc:5:0: '_Z3bazv' inlined into 'test'
+; ICP-ALL-NEXT: remark: test.cc:4:0: '_Z3foov' inlined into 'test'
+; ICP-ALL-NEXT: remark: test.cc:4:0: '_Z3barv' inlined into 'test'
 ; ICP-ALL-NOT: remark
 
-; ICP-HOT: remark: test.cc:4:0: _Z3foov inlined into test
+; ICP-HOT: remark: test.cc:4:0: '_Z3foov' inlined into 'test'
 ; ICP-HOT-NOT: remark

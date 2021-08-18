@@ -424,6 +424,17 @@ ArrayRef<Builtin::Info> AArch64TargetInfo::getTargetBuiltins() const {
                                              Builtin::FirstTSBuiltin);
 }
 
+Optional<std::pair<unsigned, unsigned>>
+AArch64TargetInfo::getVScaleRange(const LangOptions &LangOpts) const {
+  if (LangOpts.ArmSveVectorBits) {
+    unsigned VScale = LangOpts.ArmSveVectorBits / 128;
+    return std::pair<unsigned, unsigned>(VScale, VScale);
+  }
+  if (hasFeature("sve"))
+    return std::pair<unsigned, unsigned>(0, 16);
+  return None;
+}
+
 bool AArch64TargetInfo::hasFeature(StringRef Feature) const {
   return Feature == "aarch64" || Feature == "arm64" || Feature == "arm" ||
          (Feature == "neon" && (FPU & NeonMode)) ||

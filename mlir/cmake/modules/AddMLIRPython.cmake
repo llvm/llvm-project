@@ -494,6 +494,7 @@ function(add_mlir_python_extension libname extname)
     set_target_properties(
       ${libname} PROPERTIES
       RUNTIME_OUTPUT_DIRECTORY ${ARG_OUTPUT_DIRECTORY}
+      ARCHIVE_OUTPUT_DIRECTORY ${ARG_OUTPUT_DIRECTORY}
     )
   endif()
 

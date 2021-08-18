@@ -4,7 +4,7 @@
 ; RUN: opt < %s -loop-vectorize -scalable-vectorization=on -mtriple aarch64-unknown-linux-gnu -mattr=+sve -force-ordered-reductions=true  -hints-allow-reordering=true  -S 2>%t | FileCheck %s --check-prefix=CHECK-UNORDERED
 ; RUN: opt < %s -loop-vectorize -scalable-vectorization=on -mtriple aarch64-unknown-linux-gnu -mattr=+sve -hints-allow-reordering=false -S 2>%t | FileCheck %s --check-prefix=CHECK-NOT-VECTORIZED
 
-define float @fadd_strict(float* noalias nocapture readonly %a, i64 %n) {
+define float @fadd_strict(float* noalias nocapture readonly %a, i64 %n) #0 {
 ; CHECK-ORDERED-LABEL: @fadd_strict
 ; CHECK-ORDERED: vector.body:
 ; CHECK-ORDERED: %[[VEC_PHI:.*]] = phi float [ 0.000000e+00, %vector.ph ], [ %[[RDX:.*]], %vector.body ]
@@ -49,7 +49,7 @@ for.end:
   ret float %add
 }
 
-define float @fadd_strict_unroll(float* noalias nocapture readonly %a, i64 %n) {
+define float @fadd_strict_unroll(float* noalias nocapture readonly %a, i64 %n) #0 {
 ; CHECK-ORDERED-LABEL: @fadd_strict_unroll
 ; CHECK-ORDERED: vector.body:
 ; CHECK-ORDERED: %[[VEC_PHI1:.*]] = phi float [ 0.000000e+00, %vector.ph ], [ %[[RDX4:.*]], %vector.body ]
@@ -113,7 +113,7 @@ for.end:
   ret float %add
 }
 
-define void @fadd_strict_interleave(float* noalias nocapture readonly %a, float* noalias nocapture readonly %b, i64 %n) {
+define void @fadd_strict_interleave(float* noalias nocapture readonly %a, float* noalias nocapture readonly %b, i64 %n) #0 {
 ; CHECK-ORDERED-LABEL: @fadd_strict_interleave
 ; CHECK-ORDERED: entry
 ; CHECK-ORDERED: %[[ARRAYIDX:.*]] = getelementptr inbounds float, float* %a, i64 1
@@ -206,7 +206,7 @@ for.end:
   ret void
 }
 
-define float @fadd_of_sum(float* noalias nocapture readonly %a, float* noalias nocapture readonly %b, i64 %n) {
+define float @fadd_of_sum(float* noalias nocapture readonly %a, float* noalias nocapture readonly %b, i64 %n) #0 {
 ; CHECK-ORDERED-LABEL: @fadd_of_sum
 ; CHECK-ORDERED: vector.body
 ; CHECK-ORDERED: %[[VEC_PHI1:.*]] = phi float [ 0.000000e+00, %vector.ph ], [ %[[RDX:.*]], %vector.body ]
@@ -268,7 +268,7 @@ for.end:                                 ; preds = %for.body, %entry
   ret float %res
 }
 
-define float @fadd_conditional(float* noalias nocapture readonly %a, float* noalias nocapture readonly %b, i64 %n) {
+define float @fadd_conditional(float* noalias nocapture readonly %a, float* noalias nocapture readonly %b, i64 %n) #0 {
 ; CHECK-ORDERED-LABEL: @fadd_conditional
 ; CHECK-ORDERED: vector.body
 ; CHECK-ORDERED: %[[VEC_PHI:.*]] = phi float [ 1.000000e+00, %vector.ph ], [ %[[RDX:.*]], %vector.body ]
@@ -343,7 +343,7 @@ for.end:
 }
 
 ; Negative test - loop contains multiple fadds which we cannot safely reorder
-define float @fadd_multiple(float* noalias nocapture %a, float* noalias nocapture %b, i64 %n) {
+define float @fadd_multiple(float* noalias nocapture %a, float* noalias nocapture %b, i64 %n) #0 {
 ; CHECK-ORDERED-LABEL: @fadd_multiple
 ; CHECK-ORDERED-NOT: vector.body
 
@@ -390,6 +390,7 @@ for.end:                                         ; preds = %for.body
   ret float %rdx
 }
 
+attributes #0 = { vscale_range(0, 16) }
 !0 = distinct !{!0, !3, !6, !8}
 !1 = distinct !{!1, !3, !7, !8}
 !2 = distinct !{!2, !4, !6, !8}

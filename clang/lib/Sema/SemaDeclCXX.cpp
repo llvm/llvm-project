@@ -4437,9 +4437,9 @@ Sema::BuildDelegatingInitializer(TypeSourceInfo *TInfo, Expr *Init,
   ExprResult DelegationInit = InitSeq.Perform(*this, DelegationEntity, Kind,
                                               Args, nullptr);
   if (!DelegationInit.isInvalid()) {
-    assert(DelegationInit.get()->containsErrors() ||
-           cast<CXXConstructExpr>(DelegationInit.get())->getConstructor() &&
-               "Delegating constructor with no target?");
+    assert((DelegationInit.get()->containsErrors() ||
+            cast<CXXConstructExpr>(DelegationInit.get())->getConstructor()) &&
+           "Delegating constructor with no target?");
 
     // C++11 [class.base.init]p7:
     //   The initialization of each base and member constitutes a
@@ -5983,11 +5983,14 @@ static void ReferenceDllExportedMembers(Sema &S, CXXRecordDecl *Class) {
     S.MarkVTableUsed(Class->getLocation(), Class, true);
 
   for (Decl *Member : Class->decls()) {
+    // Skip members that were not marked exported.
+    if (!Member->hasAttr<DLLExportAttr>())
+      continue;
+
     // Defined static variables that are members of an exported base
     // class must be marked export too.
     auto *VD = dyn_cast<VarDecl>(Member);
-    if (VD && Member->getAttr<DLLExportAttr>() &&
-        VD->getStorageClass() == SC_Static &&
+    if (VD && VD->getStorageClass() == SC_Static &&
         TSK == TSK_ImplicitInstantiation)
       S.MarkVariableReferenced(VD->getLocation(), VD);
 
@@ -5995,40 +5998,38 @@ static void ReferenceDllExportedMembers(Sema &S, CXXRecordDecl *Class) {
     if (!MD)
       continue;
 
-    if (Member->getAttr<DLLExportAttr>()) {
-      if (MD->isUserProvided()) {
-        // Instantiate non-default class member functions ...
+    if (MD->isUserProvided()) {
+      // Instantiate non-default class member functions ...
 
-        // .. except for certain kinds of template specializations.
-        if (TSK == TSK_ImplicitInstantiation && !ClassAttr->isInherited())
-          continue;
+      // .. except for certain kinds of template specializations.
+      if (TSK == TSK_ImplicitInstantiation && !ClassAttr->isInherited())
+        continue;
 
-        S.MarkFunctionReferenced(Class->getLocation(), MD);
+      S.MarkFunctionReferenced(Class->getLocation(), MD);
 
-        // The function will be passed to the consumer when its definition is
-        // encountered.
-      } else if (MD->isExplicitlyDefaulted()) {
-        // Synthesize and instantiate explicitly defaulted methods.
-        S.MarkFunctionReferenced(Class->getLocation(), MD);
+      // The function will be passed to the consumer when its definition is
+      // encountered.
+    } else if (MD->isExplicitlyDefaulted()) {
+      // Synthesize and instantiate explicitly defaulted methods.
+      S.MarkFunctionReferenced(Class->getLocation(), MD);
 
-        if (TSK != TSK_ExplicitInstantiationDefinition) {
-          // Except for explicit instantiation defs, we will not see the
-          // definition again later, so pass it to the consumer now.
-          S.Consumer.HandleTopLevelDecl(DeclGroupRef(MD));
-        }
-      } else if (!MD->isTrivial() ||
-                 MD->isCopyAssignmentOperator() ||
-                 MD->isMoveAssignmentOperator()) {
-        // Synthesize and instantiate non-trivial implicit methods, and the copy
-        // and move assignment operators. The latter are exported even if they
-        // are trivial, because the address of an operator can be taken and
-        // should compare equal across libraries.
-        S.MarkFunctionReferenced(Class->getLocation(), MD);
-
-        // There is no later point when we will see the definition of this
-        // function, so pass it to the consumer now.
+      if (TSK != TSK_ExplicitInstantiationDefinition) {
+        // Except for explicit instantiation defs, we will not see the
+        // definition again later, so pass it to the consumer now.
         S.Consumer.HandleTopLevelDecl(DeclGroupRef(MD));
       }
+    } else if (!MD->isTrivial() ||
+               MD->isCopyAssignmentOperator() ||
+               MD->isMoveAssignmentOperator()) {
+      // Synthesize and instantiate non-trivial implicit methods, and the copy
+      // and move assignment operators. The latter are exported even if they
+      // are trivial, because the address of an operator can be taken and
+      // should compare equal across libraries.
+      S.MarkFunctionReferenced(Class->getLocation(), MD);
+
+      // There is no later point when we will see the definition of this
+      // function, so pass it to the consumer now.
+      S.Consumer.HandleTopLevelDecl(DeclGroupRef(MD));
     }
   }
 }

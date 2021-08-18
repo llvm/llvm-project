@@ -9,7 +9,7 @@ class TestCase(TestBase):
 
     def common_setup(self):
         self.build()
-        lldbutil.run_to_source_breakpoint(self,"// break here", lldb.SBFileSpec("main.cpp"))
+        lldbutil.run_to_source_breakpoint(self, "// break here", lldb.SBFileSpec("main.cpp"))
 
     def test_call_on_base(self):
         self.common_setup()

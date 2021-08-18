@@ -1295,6 +1295,14 @@ void PatternEmitter::createAggregateLocalVarsForOpArgs(
             childNodeNames.lookup(argIndex));
       } else {
         DagLeaf leaf = node.getArgAsLeaf(argIndex);
+        if (leaf.isConstantAttr())
+          // TODO: Use better location
+          PrintFatalError(
+              loc,
+              "attribute found where value was expected, if attempting to use "
+              "constant value, construct a constant op with given attribute "
+              "instead");
+
         auto symbol =
             symbolInfoMap.getValueAndRangeUse(node.getArgName(argIndex));
         if (leaf.isNativeCodeCall()) {

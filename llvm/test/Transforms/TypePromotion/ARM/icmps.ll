@@ -168,8 +168,8 @@ define void @store_dsp_res(i8* %in, i8* %out, i8 %compare) {
 ; CHECK-LABEL: @store_dsp_res(
 ; CHECK-NEXT:    [[FIRST:%.*]] = getelementptr inbounds i8, i8* [[IN:%.*]], i32 0
 ; CHECK-NEXT:    [[SECOND:%.*]] = getelementptr inbounds i8, i8* [[IN]], i32 1
-; CHECK-NEXT:    [[LD0:%.*]] = load i8, i8* [[FIRST]]
-; CHECK-NEXT:    [[LD1:%.*]] = load i8, i8* [[SECOND]]
+; CHECK-NEXT:    [[LD0:%.*]] = load i8, i8* [[FIRST]], align 1
+; CHECK-NEXT:    [[LD1:%.*]] = load i8, i8* [[SECOND]], align 1
 ; CHECK-NEXT:    [[XOR:%.*]] = xor i8 [[LD0]], -1
 ; CHECK-NEXT:    [[CMP:%.*]] = icmp ult i8 [[COMPARE:%.*]], [[LD1]]
 ; CHECK-NEXT:    [[SELECT:%.*]] = select i1 [[CMP]], i8 [[COMPARE]], i8 [[XOR]]
@@ -253,7 +253,7 @@ define i32 @icmp_not(i16 zeroext %arg0, i16 zeroext %arg1) {
 define i32 @icmp_i1(i1* %arg0, i1 zeroext %arg1, i32 %a, i32 %b) {
 ; CHECK-LABEL: @icmp_i1(
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[LOAD:%.*]] = load i1, i1* [[ARG0:%.*]]
+; CHECK-NEXT:    [[LOAD:%.*]] = load i1, i1* [[ARG0:%.*]], align 1
 ; CHECK-NEXT:    [[NOT:%.*]] = xor i1 [[LOAD]], true
 ; CHECK-NEXT:    [[CMP:%.*]] = icmp eq i1 [[ARG1:%.*]], [[NOT]]
 ; CHECK-NEXT:    [[RES:%.*]] = select i1 [[CMP]], i32 [[A:%.*]], i32 [[B:%.*]]
@@ -271,7 +271,7 @@ define i32 @icmp_i7(i7* %arg0, i7 zeroext %arg1, i32 %a, i32 %b) {
 ; CHECK-LABEL: @icmp_i7(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[TMP0:%.*]] = zext i7 [[ARG1:%.*]] to i32
-; CHECK-NEXT:    [[LOAD:%.*]] = load i7, i7* [[ARG0:%.*]]
+; CHECK-NEXT:    [[LOAD:%.*]] = load i7, i7* [[ARG0:%.*]], align 1
 ; CHECK-NEXT:    [[TMP1:%.*]] = zext i7 [[LOAD]] to i32
 ; CHECK-NEXT:    [[ADD:%.*]] = add nuw i32 [[TMP1]], 1
 ; CHECK-NEXT:    [[CMP:%.*]] = icmp ult i32 [[TMP0]], [[ADD]]

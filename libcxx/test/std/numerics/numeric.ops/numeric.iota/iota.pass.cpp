@@ -8,7 +8,6 @@
 
 // <numeric>
 // UNSUPPORTED: clang-8
-// UNSUPPORTED: gcc-9
 
 // Became constexpr in C++20
 // template <class ForwardIterator, class T>

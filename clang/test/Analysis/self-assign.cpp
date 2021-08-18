@@ -1,4 +1,9 @@
-// RUN: %clang_analyze_cc1 -std=c++11 -analyzer-checker=core,cplusplus,unix.Malloc,debug.ExprInspection -analyzer-config eagerly-assume=false %s -verify -analyzer-output=text
+// RUN: %clang_analyze_cc1 -std=c++11 %s -verify -analyzer-output=text \
+// RUN:   -analyzer-checker=core \
+// RUN:   -analyzer-checker=cplusplus \
+// RUN:   -analyzer-checker=unix.Malloc \
+// RUN:   -analyzer-checker=debug.ExprInspection \
+// RUN:   -analyzer-config eagerly-assume=false
 
 extern "C" char *strdup(const char* s);
 extern "C" void free(void* ptr);
@@ -28,18 +33,31 @@ StringUsed::~StringUsed() {
   free(str);
 }
 
-StringUsed& StringUsed::operator=(const StringUsed &rhs) { // expected-note{{Assuming rhs == *this}} expected-note{{Assuming rhs == *this}} expected-note{{Assuming rhs != *this}}
-  clang_analyzer_eval(*this == rhs); // expected-warning{{TRUE}} expected-warning{{UNKNOWN}} expected-note{{TRUE}} expected-note{{UNKNOWN}}
+StringUsed &StringUsed::operator=(const StringUsed &rhs) {
+  // expected-note@-1{{Assuming rhs == *this}}
+  // expected-note@-2{{Assuming rhs == *this}}
+  // expected-note@-3{{Assuming rhs != *this}}
+  clang_analyzer_eval(*this == rhs); // expected-warning{{TRUE}}
+                                     // expected-warning@-1{{UNKNOWN}}
+                                     // expected-note@-2{{TRUE}}
+                                     // expected-note@-3{{UNKNOWN}}
   free(str); // expected-note{{Memory is released}}
-  str = strdup(rhs.str); // expected-warning{{Use of memory after it is freed}}  expected-note{{Use of memory after it is freed}}
-// expected-note@-1{{Memory is allocated}}
+  str = strdup(rhs.str); // expected-warning{{Use of memory after it is freed}}
+                         // expected-note@-1{{Use of memory after it is freed}}
+                         // expected-note@-2{{Memory is allocated}}
   return *this;
 }
 
-StringUsed& StringUsed::operator=(StringUsed &&rhs) { // expected-note{{Assuming rhs == *this}} expected-note{{Assuming rhs != *this}}
-  clang_analyzer_eval(*this == rhs); // expected-warning{{TRUE}} expected-warning{{UNKNOWN}} expected-note{{TRUE}} expected-note{{UNKNOWN}}
+StringUsed &StringUsed::operator=(StringUsed &&rhs) {
+  // expected-note@-1{{Assuming rhs == *this}}
+  // expected-note@-2{{Assuming rhs != *this}}
+  clang_analyzer_eval(*this == rhs); // expected-warning{{TRUE}}
+                                     // expected-warning@-1{{UNKNOWN}}
+                                     // expected-note@-2{{TRUE}}
+                                     // expected-note@-3{{UNKNOWN}}
   str = rhs.str;
-  rhs.str = nullptr; // expected-warning{{Potential memory leak}} expected-note{{Potential memory leak}}
+  rhs.str = nullptr; // expected-warning{{Potential memory leak}}
+                     // expected-note@-1{{Potential memory leak}}
   return *this;
 }
 
@@ -63,15 +81,27 @@ StringUnused::~StringUnused() {
   free(str);
 }
 
-StringUnused& StringUnused::operator=(const StringUnused &rhs) { // expected-note{{Assuming rhs == *this}} expected-note{{Assuming rhs == *this}} expected-note{{Assuming rhs != *this}}
-  clang_analyzer_eval(*this == rhs); // expected-warning{{TRUE}} expected-warning{{UNKNOWN}} expected-note{{TRUE}} expected-note{{UNKNOWN}}
+StringUnused &StringUnused::operator=(const StringUnused &rhs) {
+  // expected-note@-1{{Assuming rhs == *this}}
+  // expected-note@-2{{Assuming rhs == *this}}
+  // expected-note@-3{{Assuming rhs != *this}}
+  clang_analyzer_eval(*this == rhs); // expected-warning{{TRUE}}
+                                     // expected-warning@-1{{UNKNOWN}}
+                                     // expected-note@-2{{TRUE}}
+                                     // expected-note@-3{{UNKNOWN}}
   free(str); // expected-note{{Memory is released}}
-  str = strdup(rhs.str); // expected-warning{{Use of memory after it is freed}}  expected-note{{Use of memory after it is freed}}
+  str = strdup(rhs.str); // expected-warning{{Use of memory after it is freed}}
+                         // expected-note@-1{{Use of memory after it is freed}}
   return *this;
 }
 
-StringUnused& StringUnused::operator=(StringUnused &&rhs) { // expected-note{{Assuming rhs == *this}} expected-note{{Assuming rhs != *this}}
-  clang_analyzer_eval(*this == rhs); // expected-warning{{TRUE}} expected-warning{{UNKNOWN}} expected-note{{TRUE}} expected-note{{UNKNOWN}}
+StringUnused &StringUnused::operator=(StringUnused &&rhs) {
+  // expected-note@-1{{Assuming rhs == *this}}
+  // expected-note@-2{{Assuming rhs != *this}}
+  clang_analyzer_eval(*this == rhs); // expected-warning{{TRUE}}
+                                     // expected-warning@-1{{UNKNOWN}}
+                                     // expected-note@-2{{TRUE}}
+                                     // expected-note@-3{{UNKNOWN}}
   str = rhs.str;
   rhs.str = nullptr; // FIXME: An improved leak checker should warn here
   return *this;
@@ -84,7 +114,8 @@ StringUnused::operator const char*() const {
 
 int main() {
   StringUsed s1 ("test"), s2;
-  s2 = s1; // expected-note{{Calling copy assignment operator for 'StringUsed'}} // expected-note{{Returned allocated memory}}
+  s2 = s1;            // expected-note{{Calling copy assignment operator for 'StringUsed'}}
+                      // expected-note@-1{{Returned allocated memory}}
   s2 = std::move(s1); // expected-note{{Calling move assignment operator for 'StringUsed'}}
   return 0;
 }

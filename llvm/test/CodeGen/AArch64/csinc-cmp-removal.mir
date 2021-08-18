@@ -307,3 +307,42 @@ body:             |
     RET_ReallyLR
 
 ...
+---
+name:            subswr_wrong_cmp_value
+tracksRegLiveness: true
+body:             |
+  ; CHECK-LABEL: name: subswr_wrong_cmp_value
+  ; CHECK: bb.0:
+  ; CHECK:   successors: %bb.1(0x40000000), %bb.2(0x40000000)
+  ; CHECK:   liveins: $x1
+  ; CHECK:   [[COPY:%[0-9]+]]:gpr64common = COPY $x1
+  ; CHECK:   [[DEF:%[0-9]+]]:gpr64 = IMPLICIT_DEF
+  ; CHECK:   [[SUBSXrr:%[0-9]+]]:gpr64 = SUBSXrr killed [[DEF]], [[COPY]], implicit-def $nzcv
+  ; CHECK:   [[CSINCWr:%[0-9]+]]:gpr32common = CSINCWr $wzr, $wzr, 1, implicit $nzcv
+  ; CHECK:   [[SUBSWri:%[0-9]+]]:gpr32 = SUBSWri killed [[CSINCWr]], 3, 0, implicit-def $nzcv
+  ; CHECK:   Bcc 1, %bb.2, implicit $nzcv
+  ; CHECK:   B %bb.1
+  ; CHECK: bb.1:
+  ; CHECK:   successors: %bb.2(0x80000000)
+  ; CHECK:   B %bb.2
+  ; CHECK: bb.2:
+  ; CHECK:   RET_ReallyLR
+  bb.0:
+    liveins: $x1
+    successors: %bb.1(0x40000000), %bb.2(0x40000000)
+    %1:gpr64common = COPY $x1
+    %2:gpr64 = IMPLICIT_DEF
+    %3:gpr64 = SUBSXrr killed %2:gpr64, %1:gpr64common, implicit-def $nzcv
+    %4:gpr32common = CSINCWr $wzr, $wzr, 1, implicit $nzcv
+    %5:gpr32 = SUBSWri killed %4:gpr32common, 3, 0, implicit-def $nzcv
+    Bcc 1, %bb.2, implicit $nzcv
+    B %bb.1
+
+  bb.1:
+    successors: %bb.2(0x80000000)
+    B %bb.2
+
+  bb.2:
+    RET_ReallyLR
+
+...

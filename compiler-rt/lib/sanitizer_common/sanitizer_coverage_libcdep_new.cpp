@@ -73,7 +73,7 @@ static void SanitizerDumpCoverage(const uptr* unsorted_pcs, uptr len) {
     if (!pc) continue;
 
     if (!__sanitizer_get_module_and_offset_for_pc(pc, nullptr, 0, &pcs[i])) {
-      Printf("ERROR: unknown pc 0x%x (may happen if dlclose is used)\n", pc);
+      Printf("ERROR: unknown pc 0x%zx (may happen if dlclose is used)\n", pc);
       continue;
     }
     uptr module_base = pc - pcs[i];

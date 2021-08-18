@@ -90,14 +90,9 @@ public:
                             int &decl_line, int &decl_column, int &call_file,
                             int &call_line, int &call_column,
                             lldb_private::DWARFExpression *frame_base) const;
+
   /// The range of all the children of this DIE.
-  ///
-  /// This is a template just because child_iterator is not completely defined
-  /// at this point.
-  template <typename T = child_iterator>
-  llvm::iterator_range<T> children() const {
-    return llvm::make_range(T(*this), T());
-  }
+  llvm::iterator_range<child_iterator> children() const;
 };
 
 class DWARFDIE::child_iterator

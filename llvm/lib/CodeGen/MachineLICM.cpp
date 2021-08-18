@@ -230,6 +230,9 @@ namespace {
 
     bool IsGuaranteedToExecute(MachineBasicBlock *BB);
 
+    bool isTriviallyReMaterializable(const MachineInstr &MI,
+                                     AAResults *AA) const;
+
     void EnterScope(MachineBasicBlock *MBB);
 
     void ExitScope(MachineBasicBlock *MBB);
@@ -656,6 +659,23 @@ bool MachineLICMBase::IsGuaranteedToExecute(MachineBasicBlock *BB) {
   }
 
   SpeculationState = SpeculateFalse;
+  return true;
+}
+
+/// Check if \p MI is trivially remateralizable and if it does not have any
+/// virtual register uses. Even though rematerializable RA might not actually
+/// rematerialize it in this scenario. In that case we do not want to hoist such
+/// instruction out of the loop in a belief RA will sink it back if needed.
+bool MachineLICMBase::isTriviallyReMaterializable(const MachineInstr &MI,
+                                                  AAResults *AA) const {
+  if (!TII->isTriviallyReMaterializable(MI, AA))
+    return false;
+
+  for (const MachineOperand &MO : MI.operands()) {
+    if (MO.isReg() && MO.isUse() && MO.getReg().isVirtual())
+      return false;
+  }
+
   return true;
 }
 
@@ -1156,9 +1176,9 @@ bool MachineLICMBase::IsProfitableToHoist(MachineInstr &MI) {
     return false;
   }
 
-  // Rematerializable instructions should always be hoisted since the register
-  // allocator can just pull them down again when needed.
-  if (TII->isTriviallyReMaterializable(MI, AA))
+  // Rematerializable instructions should always be hoisted providing the
+  // register allocator can just pull them down again when needed.
+  if (isTriviallyReMaterializable(MI, AA))
     return true;
 
   // FIXME: If there are long latency loop-invariant instructions inside the
@@ -1211,7 +1231,7 @@ bool MachineLICMBase::IsProfitableToHoist(MachineInstr &MI) {
 
   // High register pressure situation, only hoist if the instruction is going
   // to be remat'ed.
-  if (!TII->isTriviallyReMaterializable(MI, AA) &&
+  if (!isTriviallyReMaterializable(MI, AA) &&
       !MI.isDereferenceableInvariantLoad(AA)) {
     LLVM_DEBUG(dbgs() << "Can't remat / high reg-pressure: " << MI);
     return false;

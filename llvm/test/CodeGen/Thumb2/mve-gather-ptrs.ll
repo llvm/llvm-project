@@ -172,10 +172,10 @@ define arm_aapcs_vfpcc <8 x float> @ptr_v8f32(<8 x float*>* %offptr) {
 ; CHECK-NEXT:    vldr s3, [r2]
 ; CHECK-NEXT:    vldr s2, [r12]
 ; CHECK-NEXT:    vldr s1, [r1]
+; CHECK-NEXT:    vldr s0, [lr]
 ; CHECK-NEXT:    vldr s7, [r3]
 ; CHECK-NEXT:    vldr s6, [r0]
 ; CHECK-NEXT:    vldr s5, [r5]
-; CHECK-NEXT:    vldr s0, [lr]
 ; CHECK-NEXT:    vldr s4, [r4]
 ; CHECK-NEXT:    pop {r4, r5, r7, pc}
 entry:
@@ -413,23 +413,23 @@ entry:
 define arm_aapcs_vfpcc <8 x half> @ptr_f16(<8 x half*>* %offptr) {
 ; CHECK-LABEL: ptr_f16:
 ; CHECK:       @ %bb.0: @ %entry
-; CHECK-NEXT:    vldrw.u32 q1, [r0]
-; CHECK-NEXT:    vmov r1, r2, d2
-; CHECK-NEXT:    vldr.16 s8, [r2]
-; CHECK-NEXT:    vldr.16 s0, [r1]
-; CHECK-NEXT:    vmov r1, r2, d3
-; CHECK-NEXT:    vins.f16 s0, s8
+; CHECK-NEXT:    vldrw.u32 q0, [r0]
+; CHECK-NEXT:    vmov r1, r2, d0
 ; CHECK-NEXT:    vldr.16 s4, [r2]
-; CHECK-NEXT:    vldr.16 s1, [r1]
-; CHECK-NEXT:    vins.f16 s1, s4
+; CHECK-NEXT:    vldr.16 s0, [r1]
+; CHECK-NEXT:    vmov r1, r2, d1
+; CHECK-NEXT:    vins.f16 s0, s4
 ; CHECK-NEXT:    vldrw.u32 q1, [r0, #16]
+; CHECK-NEXT:    vldr.16 s1, [r1]
+; CHECK-NEXT:    vldr.16 s2, [r2]
 ; CHECK-NEXT:    vmov r0, r1, d2
-; CHECK-NEXT:    vldr.16 s8, [r1]
+; CHECK-NEXT:    vins.f16 s1, s2
+; CHECK-NEXT:    vldr.16 s4, [r1]
 ; CHECK-NEXT:    vldr.16 s2, [r0]
 ; CHECK-NEXT:    vmov r0, r1, d3
-; CHECK-NEXT:    vins.f16 s2, s8
-; CHECK-NEXT:    vldr.16 s4, [r1]
 ; CHECK-NEXT:    vldr.16 s3, [r0]
+; CHECK-NEXT:    vins.f16 s2, s4
+; CHECK-NEXT:    vldr.16 s4, [r1]
 ; CHECK-NEXT:    vins.f16 s3, s4
 ; CHECK-NEXT:    bx lr
 entry:
@@ -441,15 +441,15 @@ entry:
 define arm_aapcs_vfpcc <4 x half> @ptr_v4f16(<4 x half*>* %offptr) {
 ; CHECK-LABEL: ptr_v4f16:
 ; CHECK:       @ %bb.0: @ %entry
-; CHECK-NEXT:    vldrw.u32 q1, [r0]
-; CHECK-NEXT:    vmov r0, r1, d2
-; CHECK-NEXT:    vldr.16 s8, [r1]
-; CHECK-NEXT:    vldr.16 s0, [r0]
-; CHECK-NEXT:    vmov r0, r1, d3
-; CHECK-NEXT:    vins.f16 s0, s8
+; CHECK-NEXT:    vldrw.u32 q0, [r0]
+; CHECK-NEXT:    vmov r0, r1, d0
 ; CHECK-NEXT:    vldr.16 s4, [r1]
+; CHECK-NEXT:    vldr.16 s0, [r0]
+; CHECK-NEXT:    vmov r0, r1, d1
+; CHECK-NEXT:    vldr.16 s2, [r1]
 ; CHECK-NEXT:    vldr.16 s1, [r0]
-; CHECK-NEXT:    vins.f16 s1, s4
+; CHECK-NEXT:    vins.f16 s0, s4
+; CHECK-NEXT:    vins.f16 s1, s2
 ; CHECK-NEXT:    bx lr
 entry:
   %offs = load <4 x half*>, <4 x half*>* %offptr, align 4

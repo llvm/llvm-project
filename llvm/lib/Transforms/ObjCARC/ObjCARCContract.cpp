@@ -226,13 +226,6 @@ static StoreInst *findSafeStoreForStoreStrongContraction(LoadInst *Load,
     // of Inst.
     ARCInstKind Class = GetBasicARCInstKind(Inst);
 
-    // If Inst is an unrelated retain, we don't care about it.
-    //
-    // TODO: This is one area where the optimization could be made more
-    // aggressive.
-    if (IsRetain(Class))
-      continue;
-
     // If we have seen the store, but not the release...
     if (Store) {
       // We need to make sure that it is safe to move the release from its
@@ -248,8 +241,18 @@ static StoreInst *findSafeStoreForStoreStrongContraction(LoadInst *Load,
       return nullptr;
     }
 
-    // Ok, now we know we have not seen a store yet. See if Inst can write to
-    // our load location, if it can not, just ignore the instruction.
+    // Ok, now we know we have not seen a store yet.
+
+    // If Inst is a retain, we don't care about it as it doesn't prevent moving
+    // the load to the store.
+    //
+    // TODO: This is one area where the optimization could be made more
+    // aggressive.
+    if (IsRetain(Class))
+      continue;
+
+    // See if Inst can write to our load location, if it can not, just ignore
+    // the instruction.
     if (!isModSet(AA->getModRefInfo(Inst, Loc)))
       continue;
 

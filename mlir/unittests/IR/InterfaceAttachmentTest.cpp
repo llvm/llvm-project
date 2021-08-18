@@ -22,7 +22,7 @@
 #include "../../test/lib/Dialect/Test/TestTypes.h"
 
 using namespace mlir;
-using namespace mlir::test;
+using namespace test;
 
 namespace {
 

@@ -12,8 +12,6 @@
 
 // UNSUPPORTED: c++03, c++11, c++14
 
-// XFAIL: gcc-5.1, gcc-5.2
-
 #include <type_traits>
 
 #include "test_macros.h"

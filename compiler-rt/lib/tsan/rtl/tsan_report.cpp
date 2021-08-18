@@ -173,23 +173,25 @@ static void PrintLocation(const ReportLocation *loc) {
   if (loc->type == ReportLocationGlobal) {
     const DataInfo &global = loc->global;
     if (global.size != 0)
-      Printf("  Location is global '%s' of size %zu at %p (%s+%p)\n\n",
-             global.name, global.size, global.start,
+      Printf("  Location is global '%s' of size %zu at %p (%s+0x%zx)\n\n",
+             global.name, global.size, reinterpret_cast<void *>(global.start),
              StripModuleName(global.module), global.module_offset);
     else
-      Printf("  Location is global '%s' at %p (%s+%p)\n\n", global.name,
-             global.start, StripModuleName(global.module),
-             global.module_offset);
+      Printf("  Location is global '%s' at %p (%s+0x%zx)\n\n", global.name,
+             reinterpret_cast<void *>(global.start),
+             StripModuleName(global.module), global.module_offset);
   } else if (loc->type == ReportLocationHeap) {
     char thrbuf[kThreadBufSize];
     const char *object_type = GetObjectTypeFromTag(loc->external_tag);
     if (!object_type) {
       Printf("  Location is heap block of size %zu at %p allocated by %s:\n",
-             loc->heap_chunk_size, loc->heap_chunk_start,
+             loc->heap_chunk_size,
+             reinterpret_cast<void *>(loc->heap_chunk_start),
              thread_name(thrbuf, loc->tid));
     } else {
       Printf("  Location is %s of size %zu at %p allocated by %s:\n",
-             object_type, loc->heap_chunk_size, loc->heap_chunk_start,
+             object_type, loc->heap_chunk_size,
+             reinterpret_cast<void *>(loc->heap_chunk_start),
              thread_name(thrbuf, loc->tid));
     }
     print_stack = true;
@@ -209,13 +211,14 @@ static void PrintLocation(const ReportLocation *loc) {
 
 static void PrintMutexShort(const ReportMutex *rm, const char *after) {
   Decorator d;
-  Printf("%sM%zd%s%s", d.Mutex(), rm->id, d.Default(), after);
+  Printf("%sM%lld%s%s", d.Mutex(), rm->id, d.Default(), after);
 }
 
 static void PrintMutexShortWithAddress(const ReportMutex *rm,
                                        const char *after) {
   Decorator d;
-  Printf("%sM%zd (%p)%s%s", d.Mutex(), rm->id, rm->addr, d.Default(), after);
+  Printf("%sM%lld (%p)%s%s", d.Mutex(), rm->id,
+         reinterpret_cast<void *>(rm->addr), d.Default(), after);
 }
 
 static void PrintMutex(const ReportMutex *rm) {
@@ -226,7 +229,8 @@ static void PrintMutex(const ReportMutex *rm) {
     Printf("%s", d.Default());
   } else {
     Printf("%s", d.Mutex());
-    Printf("  Mutex M%llu (%p) created at:\n", rm->id, rm->addr);
+    Printf("  Mutex M%llu (%p) created at:\n", rm->id,
+           reinterpret_cast<void *>(rm->addr));
     Printf("%s", d.Default());
     PrintStack(rm->stack);
   }
@@ -243,12 +247,13 @@ static void PrintThread(const ReportThread *rt) {
   char thrbuf[kThreadBufSize];
   const char *thread_status = rt->running ? "running" : "finished";
   if (rt->thread_type == ThreadType::Worker) {
-    Printf(" (tid=%zu, %s) is a GCD worker thread\n", rt->os_id, thread_status);
+    Printf(" (tid=%llu, %s) is a GCD worker thread\n", rt->os_id,
+           thread_status);
     Printf("\n");
     Printf("%s", d.Default());
     return;
   }
-  Printf(" (tid=%zu, %s) created by %s", rt->os_id, thread_status,
+  Printf(" (tid=%llu, %s) created by %s", rt->os_id, thread_status,
          thread_name(thrbuf, rt->parent_tid));
   if (rt->stack)
     Printf(" at:");
@@ -389,16 +394,17 @@ void PrintStack(const ReportStack *ent) {
   for (int i = 0; frame; frame = frame->next, i++) {
     const AddressInfo &info = frame->info;
     Printf("  %s()\n      %s:%d +0x%zx\n", info.function,
-        StripPathPrefix(info.file, common_flags()->strip_path_prefix),
-        info.line, (void *)info.module_offset);
+           StripPathPrefix(info.file, common_flags()->strip_path_prefix),
+           info.line, info.module_offset);
   }
 }
 
 static void PrintMop(const ReportMop *mop, bool first) {
   Printf("\n");
   Printf("%s at %p by ",
-      (first ? (mop->write ? "Write" : "Read")
-             : (mop->write ? "Previous write" : "Previous read")), mop->addr);
+         (first ? (mop->write ? "Write" : "Read")
+                : (mop->write ? "Previous write" : "Previous read")),
+         reinterpret_cast<void *>(mop->addr));
   if (mop->tid == kMainGoroutineId)
     Printf("main goroutine:\n");
   else
@@ -410,8 +416,8 @@ static void PrintLocation(const ReportLocation *loc) {
   switch (loc->type) {
   case ReportLocationHeap: {
     Printf("\n");
-    Printf("Heap block of size %zu at %p allocated by ",
-        loc->heap_chunk_size, loc->heap_chunk_start);
+    Printf("Heap block of size %zu at %p allocated by ", loc->heap_chunk_size,
+           reinterpret_cast<void *>(loc->heap_chunk_start));
     if (loc->tid == kMainGoroutineId)
       Printf("main goroutine:\n");
     else
@@ -422,8 +428,9 @@ static void PrintLocation(const ReportLocation *loc) {
   case ReportLocationGlobal: {
     Printf("\n");
     Printf("Global var %s of size %zu at %p declared at %s:%zu\n",
-        loc->global.name, loc->global.size, loc->global.start,
-        loc->global.file, loc->global.line);
+           loc->global.name, loc->global.size,
+           reinterpret_cast<void *>(loc->global.start), loc->global.file,
+           loc->global.line);
     break;
   }
   default:
@@ -453,13 +460,13 @@ void PrintReport(const ReportDesc *rep) {
   } else if (rep->typ == ReportTypeDeadlock) {
     Printf("WARNING: DEADLOCK\n");
     for (uptr i = 0; i < rep->mutexes.Size(); i++) {
-      Printf("Goroutine %d lock mutex %d while holding mutex %d:\n",
-          999, rep->mutexes[i]->id,
-          rep->mutexes[(i+1) % rep->mutexes.Size()]->id);
+      Printf("Goroutine %d lock mutex %llu while holding mutex %llu:\n", 999,
+             rep->mutexes[i]->id,
+             rep->mutexes[(i + 1) % rep->mutexes.Size()]->id);
       PrintStack(rep->stacks[2*i]);
       Printf("\n");
-      Printf("Mutex %d was previously locked here:\n",
-          rep->mutexes[(i+1) % rep->mutexes.Size()]->id);
+      Printf("Mutex %llu was previously locked here:\n",
+             rep->mutexes[(i + 1) % rep->mutexes.Size()]->id);
       PrintStack(rep->stacks[2*i + 1]);
       Printf("\n");
     }

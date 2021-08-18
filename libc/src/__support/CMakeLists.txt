@@ -13,6 +13,17 @@ add_header_library(
 )
 
 add_header_library(
+  str_conv_utils
+  HDRS
+    str_conv_utils.h
+  DEPENDS
+    .ctype_utils
+    libc.include.errno
+    libc.src.errno.__errno_location
+    libc.utils.CPP.standalone_cpp
+)
+
+add_header_library(
   integer_operations
   HDRS
     integer_operations.h

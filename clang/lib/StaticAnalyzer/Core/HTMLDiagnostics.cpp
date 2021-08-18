@@ -1289,15 +1289,32 @@ var findNum = function() {
     return out;
 };
 
+var classListAdd = function(el, theClass) {
+  if(!el.className.baseVal)
+    el.className += " " + theClass;
+  else
+    el.className.baseVal += " " + theClass;
+};
+
+var classListRemove = function(el, theClass) {
+  var className = (!el.className.baseVal) ?
+      el.className : el.className.baseVal;
+    className = className.replace(" " + theClass, "");
+  if(!el.className.baseVal)
+    el.className = className;
+  else
+    el.className.baseVal = className;
+};
+
 var scrollTo = function(el) {
     querySelectorAllArray(".selected").forEach(function(s) {
-        s.classList.remove("selected");
+      classListRemove(s, "selected");
     });
-    el.classList.add("selected");
+    classListAdd(el, "selected");
     window.scrollBy(0, el.getBoundingClientRect().top -
         (window.innerHeight / 2));
     highlightArrowsForSelectedEvent();
-}
+};
 
 var move = function(num, up, numItems) {
   if (num == 1 && up || num == numItems - 1 && !up) {
@@ -1332,9 +1349,11 @@ window.addEventListener("keydown", function (event) {
   if (event.defaultPrevented) {
     return;
   }
-  if (event.key == "j") {
+  // key 'j'
+  if (event.keyCode == 74) {
     navigateTo(/*up=*/false);
-  } else if (event.key == "k") {
+  // key 'k'
+  } else if (event.keyCode == 75) {
     navigateTo(/*up=*/true);
   } else {
     return;
@@ -1350,8 +1369,11 @@ StringRef HTMLDiagnostics::generateArrowDrawingJavascript() {
 <script type='text/javascript'>
 // Return range of numbers from a range [lower, upper).
 function range(lower, upper) {
-  const size = upper - lower;
-  return Array.from(new Array(size), (x, i) => i + lower);
+  var array = [];
+  for (var i = lower; i <= upper; ++i) {
+      array.push(i);
+  }
+  return array;
 }
 
 var getRelatedArrowIndices = function(pathId) {
@@ -1371,7 +1393,9 @@ var highlightArrowsForSelectedEvent = function() {
   const arrowIndicesToHighlight = getRelatedArrowIndices(selectedNum);
   arrowIndicesToHighlight.forEach((index) => {
     var arrow = document.querySelector("#arrow" + index);
-    arrow.classList.add("selected");
+    if(arrow) {
+      classListAdd(arrow, "selected")
+    }
   });
 }
 

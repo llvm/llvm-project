@@ -485,7 +485,17 @@ def DynamicMemoryModeling: Checker<"DynamicMemoryModeling">,
                   "allocating and deallocating functions are annotated with "
                   "ownership_holds, ownership_takes and ownership_returns.",
                   "false",
-                  InAlpha>
+                  InAlpha>,
+    CmdLineOption<Boolean,
+                  "AddNoOwnershipChangeNotes",
+                  "Add an additional note to the bug report for leak-like "
+                  "bugs. Dynamically allocated objects passed to functions "
+                  "that neither deallocated it, or have taken responsibility "
+                  "of the ownership are noted, similarly to "
+                  "NoStoreFuncVisitor.",
+                  "false",
+                  InAlpha,
+                  Hide>
   ]>,
   Dependencies<[CStringModeling]>,
   Documentation<NotDocumented>,

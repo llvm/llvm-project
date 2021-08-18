@@ -12723,10 +12723,16 @@ Value *CodeGenFunction::EmitX86BuiltinExpr(unsigned BuiltinID,
   case X86::BI__builtin_ia32_cvtdq2ps512_mask:
   case X86::BI__builtin_ia32_cvtqq2ps512_mask:
   case X86::BI__builtin_ia32_cvtqq2pd512_mask:
+  case X86::BI__builtin_ia32_vcvtw2ph512_mask:
+  case X86::BI__builtin_ia32_vcvtdq2ph512_mask:
+  case X86::BI__builtin_ia32_vcvtqq2ph512_mask:
     return EmitX86ConvertIntToFp(*this, E, Ops, /*IsSigned*/ true);
   case X86::BI__builtin_ia32_cvtudq2ps512_mask:
   case X86::BI__builtin_ia32_cvtuqq2ps512_mask:
   case X86::BI__builtin_ia32_cvtuqq2pd512_mask:
+  case X86::BI__builtin_ia32_vcvtuw2ph512_mask:
+  case X86::BI__builtin_ia32_vcvtudq2ph512_mask:
+  case X86::BI__builtin_ia32_vcvtuqq2ph512_mask:
     return EmitX86ConvertIntToFp(*this, E, Ops, /*IsSigned*/ false);
 
   case X86::BI__builtin_ia32_vfmaddss3:
@@ -14137,28 +14143,40 @@ Value *CodeGenFunction::EmitX86BuiltinExpr(unsigned BuiltinID,
     return Builder.CreateCall(F, {Ops[0]});
   }
   case X86::BI__builtin_ia32_reduce_fadd_pd512:
-  case X86::BI__builtin_ia32_reduce_fadd_ps512: {
+  case X86::BI__builtin_ia32_reduce_fadd_ps512:
+  case X86::BI__builtin_ia32_reduce_fadd_ph512:
+  case X86::BI__builtin_ia32_reduce_fadd_ph256:
+  case X86::BI__builtin_ia32_reduce_fadd_ph128: {
     Function *F =
         CGM.getIntrinsic(Intrinsic::vector_reduce_fadd, Ops[1]->getType());
     Builder.getFastMathFlags().setAllowReassoc();
     return Builder.CreateCall(F, {Ops[0], Ops[1]});
   }
   case X86::BI__builtin_ia32_reduce_fmul_pd512:
-  case X86::BI__builtin_ia32_reduce_fmul_ps512: {
+  case X86::BI__builtin_ia32_reduce_fmul_ps512:
+  case X86::BI__builtin_ia32_reduce_fmul_ph512:
+  case X86::BI__builtin_ia32_reduce_fmul_ph256:
+  case X86::BI__builtin_ia32_reduce_fmul_ph128: {
     Function *F =
         CGM.getIntrinsic(Intrinsic::vector_reduce_fmul, Ops[1]->getType());
     Builder.getFastMathFlags().setAllowReassoc();
     return Builder.CreateCall(F, {Ops[0], Ops[1]});
   }
   case X86::BI__builtin_ia32_reduce_fmax_pd512:
-  case X86::BI__builtin_ia32_reduce_fmax_ps512: {
+  case X86::BI__builtin_ia32_reduce_fmax_ps512:
+  case X86::BI__builtin_ia32_reduce_fmax_ph512:
+  case X86::BI__builtin_ia32_reduce_fmax_ph256:
+  case X86::BI__builtin_ia32_reduce_fmax_ph128: {
     Function *F =
         CGM.getIntrinsic(Intrinsic::vector_reduce_fmax, Ops[0]->getType());
     Builder.getFastMathFlags().setNoNaNs();
     return Builder.CreateCall(F, {Ops[0]});
   }
   case X86::BI__builtin_ia32_reduce_fmin_pd512:
-  case X86::BI__builtin_ia32_reduce_fmin_ps512: {
+  case X86::BI__builtin_ia32_reduce_fmin_ps512:
+  case X86::BI__builtin_ia32_reduce_fmin_ph512:
+  case X86::BI__builtin_ia32_reduce_fmin_ph256:
+  case X86::BI__builtin_ia32_reduce_fmin_ph128: {
     Function *F =
         CGM.getIntrinsic(Intrinsic::vector_reduce_fmin, Ops[0]->getType());
     Builder.getFastMathFlags().setNoNaNs();
@@ -14422,6 +14440,9 @@ Value *CodeGenFunction::EmitX86BuiltinExpr(unsigned BuiltinID,
   case X86::BI__builtin_ia32_cmpordps:
   case X86::BI__builtin_ia32_cmpordpd:
     return getVectorFCmpIR(CmpInst::FCMP_ORD, /*IsSignaling*/false);
+  case X86::BI__builtin_ia32_cmpph128_mask:
+  case X86::BI__builtin_ia32_cmpph256_mask:
+  case X86::BI__builtin_ia32_cmpph512_mask:
   case X86::BI__builtin_ia32_cmpps128_mask:
   case X86::BI__builtin_ia32_cmpps256_mask:
   case X86::BI__builtin_ia32_cmpps512_mask:

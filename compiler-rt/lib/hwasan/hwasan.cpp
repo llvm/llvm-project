@@ -360,6 +360,7 @@ __attribute__((constructor(0))) void __hwasan_init() {
   HwasanTSDThreadInit();
 
   HwasanAllocatorInit();
+  HwasanInstallAtForkHandler();
 
 #if HWASAN_CONTAINS_UBSAN
   __ubsan::InitAsPlugin();

@@ -130,6 +130,23 @@ define void @store_wholly_unreachable() {
   ret void
 }
 
+define void @store_wholly_unreachable_volatile() {
+; IS__TUNIT____: Function Attrs: nofree nounwind readnone willreturn
+; IS__TUNIT____-LABEL: define {{[^@]+}}@store_wholly_unreachable_volatile
+; IS__TUNIT____-SAME: () #[[ATTR2:[0-9]+]] {
+; IS__TUNIT____-NEXT:    store volatile i32 5, i32* null, align 536870912
+; IS__TUNIT____-NEXT:    ret void
+;
+; IS__CGSCC____: Function Attrs: nofree norecurse nounwind readnone willreturn
+; IS__CGSCC____-LABEL: define {{[^@]+}}@store_wholly_unreachable_volatile
+; IS__CGSCC____-SAME: () #[[ATTR2:[0-9]+]] {
+; IS__CGSCC____-NEXT:    store volatile i32 5, i32* null, align 536870912
+; IS__CGSCC____-NEXT:    ret void
+;
+  store volatile i32 5, i32* null
+  ret void
+}
+
 define void @store_single_bb_unreachable(i1 %cond) {
 ; IS__TUNIT____: Function Attrs: nofree nosync nounwind readnone willreturn
 ; IS__TUNIT____-LABEL: define {{[^@]+}}@store_single_bb_unreachable
@@ -160,13 +177,13 @@ e:
 define void @store_null_pointer_is_defined() null_pointer_is_valid {
 ; IS__TUNIT____: Function Attrs: nofree nosync nounwind null_pointer_is_valid willreturn writeonly
 ; IS__TUNIT____-LABEL: define {{[^@]+}}@store_null_pointer_is_defined
-; IS__TUNIT____-SAME: () #[[ATTR2:[0-9]+]] {
+; IS__TUNIT____-SAME: () #[[ATTR3:[0-9]+]] {
 ; IS__TUNIT____-NEXT:    store i32 5, i32* null, align 536870912
 ; IS__TUNIT____-NEXT:    ret void
 ;
 ; IS__CGSCC____: Function Attrs: nofree norecurse nosync nounwind null_pointer_is_valid willreturn writeonly
 ; IS__CGSCC____-LABEL: define {{[^@]+}}@store_null_pointer_is_defined
-; IS__CGSCC____-SAME: () #[[ATTR2:[0-9]+]] {
+; IS__CGSCC____-SAME: () #[[ATTR3:[0-9]+]] {
 ; IS__CGSCC____-NEXT:    store i32 5, i32* null, align 536870912
 ; IS__CGSCC____-NEXT:    ret void
 ;
@@ -198,12 +215,12 @@ define void @store_null_propagated() {
 define void @atomicrmw_wholly_unreachable() {
 ; IS__TUNIT____: Function Attrs: nofree nounwind readnone willreturn
 ; IS__TUNIT____-LABEL: define {{[^@]+}}@atomicrmw_wholly_unreachable
-; IS__TUNIT____-SAME: () #[[ATTR3:[0-9]+]] {
+; IS__TUNIT____-SAME: () #[[ATTR2]] {
 ; IS__TUNIT____-NEXT:    unreachable
 ;
 ; IS__CGSCC____: Function Attrs: nofree norecurse nounwind readnone willreturn
 ; IS__CGSCC____-LABEL: define {{[^@]+}}@atomicrmw_wholly_unreachable
-; IS__CGSCC____-SAME: () #[[ATTR3:[0-9]+]] {
+; IS__CGSCC____-SAME: () #[[ATTR2]] {
 ; IS__CGSCC____-NEXT:    unreachable
 ;
   %a = atomicrmw add i32* null, i32 1 acquire
@@ -213,7 +230,7 @@ define void @atomicrmw_wholly_unreachable() {
 define void @atomicrmw_single_bb_unreachable(i1 %cond) {
 ; IS__TUNIT____: Function Attrs: nofree nounwind readnone willreturn
 ; IS__TUNIT____-LABEL: define {{[^@]+}}@atomicrmw_single_bb_unreachable
-; IS__TUNIT____-SAME: (i1 [[COND:%.*]]) #[[ATTR3]] {
+; IS__TUNIT____-SAME: (i1 [[COND:%.*]]) #[[ATTR2]] {
 ; IS__TUNIT____-NEXT:    br i1 [[COND]], label [[T:%.*]], label [[E:%.*]]
 ; IS__TUNIT____:       t:
 ; IS__TUNIT____-NEXT:    unreachable
@@ -222,7 +239,7 @@ define void @atomicrmw_single_bb_unreachable(i1 %cond) {
 ;
 ; IS__CGSCC____: Function Attrs: nofree norecurse nounwind readnone willreturn
 ; IS__CGSCC____-LABEL: define {{[^@]+}}@atomicrmw_single_bb_unreachable
-; IS__CGSCC____-SAME: (i1 [[COND:%.*]]) #[[ATTR3]] {
+; IS__CGSCC____-SAME: (i1 [[COND:%.*]]) #[[ATTR2]] {
 ; IS__CGSCC____-NEXT:    br i1 [[COND]], label [[T:%.*]], label [[E:%.*]]
 ; IS__CGSCC____:       t:
 ; IS__CGSCC____-NEXT:    unreachable
@@ -260,12 +277,12 @@ define void @atomicrmw_null_propagated() {
 ;
 ; IS__TUNIT____: Function Attrs: nofree nounwind readnone willreturn
 ; IS__TUNIT____-LABEL: define {{[^@]+}}@atomicrmw_null_propagated
-; IS__TUNIT____-SAME: () #[[ATTR3]] {
+; IS__TUNIT____-SAME: () #[[ATTR2]] {
 ; IS__TUNIT____-NEXT:    unreachable
 ;
 ; IS__CGSCC____: Function Attrs: nofree norecurse nounwind readnone willreturn
 ; IS__CGSCC____-LABEL: define {{[^@]+}}@atomicrmw_null_propagated
-; IS__CGSCC____-SAME: () #[[ATTR3]] {
+; IS__CGSCC____-SAME: () #[[ATTR2]] {
 ; IS__CGSCC____-NEXT:    unreachable
 ;
   %ptr = call i32* @ret_null()
@@ -278,12 +295,12 @@ define void @atomicrmw_null_propagated() {
 define void @atomiccmpxchg_wholly_unreachable() {
 ; IS__TUNIT____: Function Attrs: nofree nounwind readnone willreturn
 ; IS__TUNIT____-LABEL: define {{[^@]+}}@atomiccmpxchg_wholly_unreachable
-; IS__TUNIT____-SAME: () #[[ATTR3]] {
+; IS__TUNIT____-SAME: () #[[ATTR2]] {
 ; IS__TUNIT____-NEXT:    unreachable
 ;
 ; IS__CGSCC____: Function Attrs: nofree norecurse nounwind readnone willreturn
 ; IS__CGSCC____-LABEL: define {{[^@]+}}@atomiccmpxchg_wholly_unreachable
-; IS__CGSCC____-SAME: () #[[ATTR3]] {
+; IS__CGSCC____-SAME: () #[[ATTR2]] {
 ; IS__CGSCC____-NEXT:    unreachable
 ;
   %a = cmpxchg i32* null, i32 2, i32 3 acq_rel monotonic
@@ -293,7 +310,7 @@ define void @atomiccmpxchg_wholly_unreachable() {
 define void @atomiccmpxchg_single_bb_unreachable(i1 %cond) {
 ; IS__TUNIT____: Function Attrs: nofree nounwind readnone willreturn
 ; IS__TUNIT____-LABEL: define {{[^@]+}}@atomiccmpxchg_single_bb_unreachable
-; IS__TUNIT____-SAME: (i1 [[COND:%.*]]) #[[ATTR3]] {
+; IS__TUNIT____-SAME: (i1 [[COND:%.*]]) #[[ATTR2]] {
 ; IS__TUNIT____-NEXT:    br i1 [[COND]], label [[T:%.*]], label [[E:%.*]]
 ; IS__TUNIT____:       t:
 ; IS__TUNIT____-NEXT:    unreachable
@@ -302,7 +319,7 @@ define void @atomiccmpxchg_single_bb_unreachable(i1 %cond) {
 ;
 ; IS__CGSCC____: Function Attrs: nofree norecurse nounwind readnone willreturn
 ; IS__CGSCC____-LABEL: define {{[^@]+}}@atomiccmpxchg_single_bb_unreachable
-; IS__CGSCC____-SAME: (i1 [[COND:%.*]]) #[[ATTR3]] {
+; IS__CGSCC____-SAME: (i1 [[COND:%.*]]) #[[ATTR2]] {
 ; IS__CGSCC____-NEXT:    br i1 [[COND]], label [[T:%.*]], label [[E:%.*]]
 ; IS__CGSCC____:       t:
 ; IS__CGSCC____-NEXT:    unreachable
@@ -340,12 +357,12 @@ define void @atomiccmpxchg_null_propagated() {
 ;
 ; IS__TUNIT____: Function Attrs: nofree nounwind readnone willreturn
 ; IS__TUNIT____-LABEL: define {{[^@]+}}@atomiccmpxchg_null_propagated
-; IS__TUNIT____-SAME: () #[[ATTR3]] {
+; IS__TUNIT____-SAME: () #[[ATTR2]] {
 ; IS__TUNIT____-NEXT:    unreachable
 ;
 ; IS__CGSCC____: Function Attrs: nofree norecurse nounwind readnone willreturn
 ; IS__CGSCC____-LABEL: define {{[^@]+}}@atomiccmpxchg_null_propagated
-; IS__CGSCC____-SAME: () #[[ATTR3]] {
+; IS__CGSCC____-SAME: () #[[ATTR2]] {
 ; IS__CGSCC____-NEXT:    unreachable
 ;
   %ptr = call i32* @ret_null()
@@ -1124,8 +1141,8 @@ define i32* @violate_noundef_pointer() {
 ;.
 ; IS__TUNIT____: attributes #[[ATTR0]] = { nofree nosync nounwind readnone willreturn }
 ; IS__TUNIT____: attributes #[[ATTR1]] = { nofree nosync nounwind null_pointer_is_valid readnone willreturn }
-; IS__TUNIT____: attributes #[[ATTR2]] = { nofree nosync nounwind null_pointer_is_valid willreturn writeonly }
-; IS__TUNIT____: attributes #[[ATTR3]] = { nofree nounwind readnone willreturn }
+; IS__TUNIT____: attributes #[[ATTR2]] = { nofree nounwind readnone willreturn }
+; IS__TUNIT____: attributes #[[ATTR3]] = { nofree nosync nounwind null_pointer_is_valid willreturn writeonly }
 ; IS__TUNIT____: attributes #[[ATTR4]] = { nofree nounwind null_pointer_is_valid willreturn }
 ; IS__TUNIT____: attributes #[[ATTR5]] = { nofree noreturn nosync nounwind readnone willreturn }
 ; IS__TUNIT____: attributes #[[ATTR6]] = { argmemonly nofree nosync nounwind willreturn writeonly }
@@ -1133,8 +1150,8 @@ define i32* @violate_noundef_pointer() {
 ;.
 ; IS__CGSCC____: attributes #[[ATTR0]] = { nofree norecurse nosync nounwind readnone willreturn }
 ; IS__CGSCC____: attributes #[[ATTR1]] = { nofree norecurse nosync nounwind null_pointer_is_valid readnone willreturn }
-; IS__CGSCC____: attributes #[[ATTR2]] = { nofree norecurse nosync nounwind null_pointer_is_valid willreturn writeonly }
-; IS__CGSCC____: attributes #[[ATTR3]] = { nofree norecurse nounwind readnone willreturn }
+; IS__CGSCC____: attributes #[[ATTR2]] = { nofree norecurse nounwind readnone willreturn }
+; IS__CGSCC____: attributes #[[ATTR3]] = { nofree norecurse nosync nounwind null_pointer_is_valid willreturn writeonly }
 ; IS__CGSCC____: attributes #[[ATTR4]] = { nofree norecurse nounwind null_pointer_is_valid willreturn }
 ; IS__CGSCC____: attributes #[[ATTR5]] = { nofree norecurse noreturn nosync nounwind readnone willreturn }
 ; IS__CGSCC____: attributes #[[ATTR6]] = { argmemonly nofree norecurse nosync nounwind willreturn writeonly }

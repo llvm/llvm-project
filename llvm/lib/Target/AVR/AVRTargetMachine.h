@@ -42,10 +42,6 @@ public:
 
   TargetPassConfig *createPassConfig(PassManagerBase &PM) override;
 
-  bool isMachineVerifierClean() const override {
-    return false;
-  }
-
 private:
   std::unique_ptr<TargetLoweringObjectFile> TLOF;
   AVRSubtarget SubTarget;

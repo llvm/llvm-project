@@ -34,8 +34,10 @@ sw.bb:                                            ; preds = %entry
   call void @llvm.dbg.declare(metadata i32 %direct, metadata !25, metadata !13), !dbg !14
   call void @llvm.dbg.declare(metadata i32* %x.addr, metadata !12, metadata !13), !dbg !14
   call void @llvm.dbg.declare(metadata i8** %coro_hdl, metadata !15, metadata !13), !dbg !16
-  call void @llvm.dbg.declare(metadata i8* null, metadata !28, metadata !13), !dbg !16
   call void @llvm.dbg.declare(metadata i32* %late_local, metadata !29, metadata !13), !dbg !16
+  ; don't crash when encountering nonsensical debug info, verfifier doesn't yet reject these
+  call void @llvm.dbg.declare(metadata i8* null, metadata !28, metadata !13), !dbg !16
+  call void @llvm.dbg.declare(metadata !{}, metadata !28, metadata !13), !dbg !16
   br label %next, !dbg !18
 
 next:
@@ -154,7 +156,7 @@ attributes #7 = { noduplicate }
 ; CHECK: call void @llvm.dbg.declare(metadata %f.Frame** %[[DBG_PTR]], metadata ![[RESUME_DIRECT:[0-9]+]], metadata !DIExpression(DW_OP_deref, DW_OP_plus_uconst, [[EXPR_TAIL]])
 ; CHECK: store %f.Frame* {{.*}}, %f.Frame** %[[DBG_PTR]]
 ; CHECK-NOT: alloca %struct.test*
-; CHECK: call void @llvm.dbg.declare(metadata i32 0, metadata ![[RESUME_CONST:[0-9]+]], metadata !DIExpression())
+; CHECK: call void @llvm.dbg.declare(metadata i8 0, metadata ![[RESUME_CONST:[0-9]+]], metadata !DIExpression(DW_OP_LLVM_convert, 8, DW_ATE_signed, DW_OP_LLVM_convert, 32, DW_ATE_signed))
 ; Note that keeping the undef value here could be acceptable, too.
 ; CHECK-NOT: call void @llvm.dbg.declare(metadata i32* undef, metadata !{{[0-9]+}}, metadata !DIExpression())
 ; CHECK: call void @coro.devirt.trigger(i8* null)

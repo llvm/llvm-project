@@ -181,9 +181,9 @@ void simplifyExternals(Module &M) {
                          F.getAddressSpace(), "", &M);
     NewF->copyAttributesFrom(&F);
     // Only copy function attribtues.
-    NewF->setAttributes(
-        AttributeList::get(M.getContext(), AttributeList::FunctionIndex,
-                           F.getAttributes().getFnAttributes()));
+    NewF->setAttributes(AttributeList::get(M.getContext(),
+                                           AttributeList::FunctionIndex,
+                                           F.getAttributes().getFnAttrs()));
     NewF->takeName(&F);
     F.replaceAllUsesWith(ConstantExpr::getBitCast(NewF, F.getType()));
     F.eraseFromParent();

@@ -8,7 +8,6 @@
 
 // UNSUPPORTED: c++03, c++11, c++14
 // UNSUPPORTED: clang-8
-// UNSUPPORTED: gcc-9
 
 // <numeric>
 

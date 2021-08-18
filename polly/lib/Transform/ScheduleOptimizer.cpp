@@ -366,8 +366,9 @@ ScheduleTreeOptimizer::isolateFullPartialTiles(isl::schedule_node Node,
   isl::union_set IsolateOption = getIsolateOptions(IsolateDomain, 1);
   Node = Node.parent().parent();
   isl::union_set Options = IsolateOption.unite(AtomicOption);
-  Node = Node.band_set_ast_build_options(Options);
-  return Node;
+  isl::schedule_node_band Result =
+      Node.as<isl::schedule_node_band>().set_ast_build_options(Options);
+  return Result;
 }
 
 isl::schedule_node ScheduleTreeOptimizer::prevectSchedBand(
@@ -375,7 +376,7 @@ isl::schedule_node ScheduleTreeOptimizer::prevectSchedBand(
   assert(isl_schedule_node_get_type(Node.get()) == isl_schedule_node_band);
 
   auto Space = isl::manage(isl_schedule_node_band_get_space(Node.get()));
-  isl_size ScheduleDimensions = Space.dim(isl::dim::set);
+  isl_size ScheduleDimensions = Space.dim(isl::dim::set).release();
   assert((isl_size)DimToVectorize < ScheduleDimensions);
 
   if (DimToVectorize > 0) {
@@ -394,9 +395,10 @@ isl::schedule_node ScheduleTreeOptimizer::prevectSchedBand(
   Node = Node.child(0);
   // Make sure the "trivially vectorizable loop" is not unrolled. Otherwise,
   // we will have troubles to match it in the backend.
-  Node = Node.band_set_ast_build_options(
-      isl::union_set(Node.ctx(), "{ unroll[x]: 1 = 0 }"));
-  Node = isl::manage(isl_schedule_node_band_sink(Node.release()));
+  isl::schedule_node_band NodeBand =
+      Node.as<isl::schedule_node_band>().set_ast_build_options(
+          isl::union_set(Node.ctx(), "{ unroll[x]: 1 = 0 }"));
+  Node = isl::manage(isl_schedule_node_band_sink(NodeBand.release()));
   Node = Node.child(0);
   if (isl_schedule_node_get_type(Node.get()) == isl_schedule_node_leaf)
     Node = Node.parent();
@@ -442,7 +444,7 @@ bool ScheduleTreeOptimizer::isTileableBandNode(isl::schedule_node Node) {
     return false;
 
   auto Space = isl::manage(isl_schedule_node_band_get_space(Node.get()));
-  auto Dims = Space.dim(isl::dim::set);
+  auto Dims = Space.dim(isl::dim::set).release();
 
   if (Dims <= 1)
     return false;
@@ -474,10 +476,10 @@ ScheduleTreeOptimizer::standardBandOpts(isl::schedule_node Node, void *User) {
     return Node;
 
   auto Space = isl::manage(isl_schedule_node_band_get_space(Node.get()));
-  auto Dims = Space.dim(isl::dim::set);
+  auto Dims = Space.dim(isl::dim::set).release();
 
   for (int i = Dims - 1; i >= 0; i--)
-    if (Node.band_member_get_coincident(i)) {
+    if (Node.as<isl::schedule_node_band>().member_get_coincident(i)) {
       Node = prevectSchedBand(Node, i, PrevectorWidth);
       break;
     }
@@ -615,7 +617,7 @@ static void walkScheduleTreeForStatistics(isl::schedule Schedule, int Version) {
           int CountMembers = isl_schedule_node_band_n_member(Node.get());
           NumBandMembers[Version] += CountMembers;
           for (int i = 0; i < CountMembers; i += 1) {
-            if (Node.band_member_get_coincident(i))
+            if (Node.as<isl::schedule_node_band>().member_get_coincident(i))
               NumCoincident[Version]++;
           }
           break;

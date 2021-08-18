@@ -185,7 +185,7 @@ static isl::set addRangeBoundsToSet(isl::set S, const ConstantRange &Range,
   if (Range.isFullSet())
     return S;
 
-  if (S.n_basic_set() > MaxDisjunctsInContext)
+  if (S.n_basic_set().release() > MaxDisjunctsInContext)
     return S;
 
   // In case of signed wrapping, we can refine the set of valid values by
@@ -195,7 +195,7 @@ static isl::set addRangeBoundsToSet(isl::set S, const ConstantRange &Range,
     isl::set SLB = S.lower_bound_val(type, dim, V);
 
     V = valFromAPInt(Ctx.get(), Range.getUpper(), true);
-    V = V.sub_ui(1);
+    V = V.sub(1);
     isl::set SUB = S.upper_bound_val(type, dim, V);
     S = SLB.unite(SUB);
   }
@@ -473,8 +473,8 @@ void MemoryAccess::updateDimensionality() {
   isl::space AccessSpace = AccessRelation.get_space().range();
   isl::ctx Ctx = ArraySpace.ctx();
 
-  auto DimsArray = ArraySpace.dim(isl::dim::set);
-  auto DimsAccess = AccessSpace.dim(isl::dim::set);
+  auto DimsArray = ArraySpace.dim(isl::dim::set).release();
+  auto DimsAccess = AccessSpace.dim(isl::dim::set).release();
   auto DimsMissing = DimsArray - DimsAccess;
 
   auto *BB = getStatement()->getEntryBlock();
@@ -671,14 +671,14 @@ isl::set MemoryAccess::assumeNoOutOfBound() {
   auto *SAI = getScopArrayInfo();
   isl::space Space = getOriginalAccessRelationSpace().range();
   isl::set Outside = isl::set::empty(Space);
-  for (int i = 1, Size = Space.dim(isl::dim::set); i < Size; ++i) {
+  for (int i = 1, Size = Space.dim(isl::dim::set).release(); i < Size; ++i) {
     isl::local_space LS(Space);
     isl::pw_aff Var = isl::pw_aff::var_on_domain(LS, isl::dim::set, i);
     isl::pw_aff Zero = isl::pw_aff(LS);
 
     isl::set DimOutside = Var.lt_set(Zero);
     isl::pw_aff SizeE = SAI->getDimensionSizePw(i);
-    SizeE = SizeE.add_dims(isl::dim::in, Space.dim(isl::dim::set));
+    SizeE = SizeE.add_dims(isl::dim::in, Space.dim(isl::dim::set).release());
     SizeE = SizeE.set_tuple_id(isl::dim::in, Space.get_tuple_id(isl::dim::set));
     DimOutside = DimOutside.unite(SizeE.le_set(Var));
 
@@ -830,8 +830,8 @@ void MemoryAccess::foldAccessRelation() {
   // Access dimension folding might in certain cases increase the number of
   // disjuncts in the memory access, which can possibly complicate the generated
   // run-time checks and can lead to costly compilation.
-  if (!PollyPreciseFoldAccesses &&
-      NewAccessRelation.n_basic_map() > AccessRelation.n_basic_map()) {
+  if (!PollyPreciseFoldAccesses && NewAccessRelation.n_basic_map().release() >
+                                       AccessRelation.n_basic_map().release()) {
   } else {
     AccessRelation = NewAccessRelation;
   }
@@ -1006,7 +1006,7 @@ isl::pw_aff MemoryAccess::getPwAff(const SCEV *E) {
 static isl::map getEqualAndLarger(isl::space SetDomain) {
   isl::space Space = SetDomain.map_from_set();
   isl::map Map = isl::map::universe(Space);
-  unsigned lastDimension = Map.domain_tuple_dim() - 1;
+  unsigned lastDimension = Map.domain_tuple_dim().release() - 1;
 
   // Set all but the last dimension to be equal for the input and output
   //
@@ -1046,9 +1046,10 @@ bool MemoryAccess::isStrideX(isl::map Schedule, int StrideWidth) const {
 
   Stride = getStride(Schedule);
   StrideX = isl::set::universe(Stride.get_space());
-  for (auto i : seq<isl_size>(0, StrideX.tuple_dim() - 1))
+  for (auto i : seq<isl_size>(0, StrideX.tuple_dim().release() - 1))
     StrideX = StrideX.fix_si(isl::dim::set, i, 0);
-  StrideX = StrideX.fix_si(isl::dim::set, StrideX.tuple_dim() - 1, StrideWidth);
+  StrideX = StrideX.fix_si(isl::dim::set, StrideX.tuple_dim().release() - 1,
+                           StrideWidth);
   IsStrideX = Stride.is_subset(StrideX);
 
   return IsStrideX;
@@ -1108,7 +1109,7 @@ void MemoryAccess::setNewAccessRelation(isl::map NewAccess) {
   // Check whether access dimensions correspond to number of dimensions of the
   // accesses array.
   isl_size Dims = SAI->getNumberOfDimensions();
-  assert(NewAccessSpace.dim(isl::dim::set) == Dims &&
+  assert(NewAccessSpace.dim(isl::dim::set).release() == Dims &&
          "Access dims must match array dims");
 #endif
 
@@ -1187,6 +1188,9 @@ void ScopStmt::addAccess(MemoryAccess *Access, bool Prepend) {
 void ScopStmt::realignParams() {
   for (MemoryAccess *MA : *this)
     MA->realignParams();
+
+  simplify(InvalidDomain);
+  simplify(Domain);
 
   isl::set Ctx = Parent.getContext();
   InvalidDomain = InvalidDomain.gist_params(Ctx);
@@ -2140,10 +2144,10 @@ void Scop::intersectDefinedBehavior(isl::set Set, AssumptionSign Sign) {
 
   // Limit the complexity of the context. If complexity is exceeded, simplify
   // the set and check again.
-  if (DefinedBehaviorContext.n_basic_set() >
+  if (DefinedBehaviorContext.n_basic_set().release() >
       MaxDisjunktsInDefinedBehaviourContext) {
     simplify(DefinedBehaviorContext);
-    if (DefinedBehaviorContext.n_basic_set() >
+    if (DefinedBehaviorContext.n_basic_set().release() >
         MaxDisjunktsInDefinedBehaviourContext)
       DefinedBehaviorContext = {};
   }

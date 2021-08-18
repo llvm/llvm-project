@@ -74,7 +74,7 @@ public:
 
     Value *Ops[] = {DataPtr, Stride, B.getInt1(IsVolatile), B.getInt32(Rows),
                     B.getInt32(Columns)};
-    Type *OverloadedTypes[] = {RetType};
+    Type *OverloadedTypes[] = {RetType, Stride->getType()};
 
     Function *TheFn = Intrinsic::getDeclaration(
         getModule(), Intrinsic::matrix_column_major_load, OverloadedTypes);
@@ -97,7 +97,7 @@ public:
     Value *Ops[] = {Matrix,           Ptr,
                     Stride,           B.getInt1(IsVolatile),
                     B.getInt32(Rows), B.getInt32(Columns)};
-    Type *OverloadedTypes[] = {Matrix->getType()};
+    Type *OverloadedTypes[] = {Matrix->getType(), Stride->getType()};
 
     Function *TheFn = Intrinsic::getDeclaration(
         getModule(), Intrinsic::matrix_column_major_store, OverloadedTypes);

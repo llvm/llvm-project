@@ -21,11 +21,6 @@
 #include <tuple>
 #include <__cxxabi_config.h>
 
-#if defined(_LIBCXXABI_ARM_EHABI)
-int main(int, char**) {
-  return 0;
-}
-#else
 template <typename T>
 struct Stop;
 
@@ -64,4 +59,3 @@ int main(int, char**) {
   }
   abort();
 }
-#endif

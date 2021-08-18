@@ -3892,12 +3892,6 @@ static void renderDebugOptions(const ToolChain &TC, const Driver &D,
                                ArgStringList &CmdArgs,
                                codegenoptions::DebugInfoKind &DebugInfoKind,
                                DwarfFissionKind &DwarfFission) {
-  // These two forms of profiling info can't be used together.
-  if (const Arg *A1 = Args.getLastArg(options::OPT_fpseudo_probe_for_profiling))
-    if (const Arg *A2 = Args.getLastArg(options::OPT_fdebug_info_for_profiling))
-      D.Diag(diag::err_drv_argument_not_allowed_with)
-          << A1->getAsString(Args) << A2->getAsString(Args);
-
   if (Args.hasFlag(options::OPT_fdebug_info_for_profiling,
                    options::OPT_fno_debug_info_for_profiling, false) &&
       checkDebugInfoOption(
@@ -7737,8 +7731,11 @@ void OffloadBundler::ConstructJob(Compilation &C, const JobAction &JA,
         assert(CurTC == nullptr && "Expected one dependence!");
         CurTC = TC;
       });
+      UB += C.addTempFile(
+          C.getArgs().MakeArgString(CurTC->getInputFilename(Inputs[I])));
+    } else {
+      UB += CurTC->getInputFilename(Inputs[I]);
     }
-    UB += CurTC->getInputFilename(Inputs[I]);
   }
   CmdArgs.push_back(TCArgs.MakeArgString(UB));
 

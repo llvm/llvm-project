@@ -258,6 +258,8 @@ public:
 
   void setSSI(const StackSafetyGlobalInfo *S) { SSI = S; }
 
+  DenseMap<AllocaInst *, AllocaInst *> padInterestingAllocas(
+      const MapVector<AllocaInst *, AllocaInfo> &AllocasToInstrument);
   bool sanitizeFunction(Function &F,
                         llvm::function_ref<const DominatorTree &()> GetDT,
                         llvm::function_ref<const PostDominatorTree &()> GetPDT);
@@ -1378,6 +1380,39 @@ bool HWAddressSanitizer::isInterestingAlloca(const AllocaInst &AI) {
          !(SSI && SSI->isSafe(AI));
 }
 
+DenseMap<AllocaInst *, AllocaInst *> HWAddressSanitizer::padInterestingAllocas(
+    const MapVector<AllocaInst *, AllocaInfo> &AllocasToInstrument) {
+  DenseMap<AllocaInst *, AllocaInst *> AllocaToPaddedAllocaMap;
+  for (auto &KV : AllocasToInstrument) {
+    AllocaInst *AI = KV.first;
+    uint64_t Size = getAllocaSizeInBytes(*AI);
+    uint64_t AlignedSize = alignTo(Size, Mapping.getObjectAlignment());
+    AI->setAlignment(
+        Align(std::max(AI->getAlignment(), Mapping.getObjectAlignment())));
+    if (Size != AlignedSize) {
+      Type *AllocatedType = AI->getAllocatedType();
+      if (AI->isArrayAllocation()) {
+        uint64_t ArraySize =
+            cast<ConstantInt>(AI->getArraySize())->getZExtValue();
+        AllocatedType = ArrayType::get(AllocatedType, ArraySize);
+      }
+      Type *TypeWithPadding = StructType::get(
+          AllocatedType, ArrayType::get(Int8Ty, AlignedSize - Size));
+      auto *NewAI = new AllocaInst(
+          TypeWithPadding, AI->getType()->getAddressSpace(), nullptr, "", AI);
+      NewAI->takeName(AI);
+      NewAI->setAlignment(AI->getAlign());
+      NewAI->setUsedWithInAlloca(AI->isUsedWithInAlloca());
+      NewAI->setSwiftError(AI->isSwiftError());
+      NewAI->copyMetadata(*AI);
+      auto *Bitcast = new BitCastInst(NewAI, AI->getType(), "", AI);
+      AI->replaceAllUsesWith(Bitcast);
+      AllocaToPaddedAllocaMap[AI] = NewAI;
+    }
+  }
+  return AllocaToPaddedAllocaMap;
+}
+
 bool HWAddressSanitizer::sanitizeFunction(
     Function &F, llvm::function_ref<const DominatorTree &()> GetDT,
     llvm::function_ref<const PostDominatorTree &()> GetPDT) {
@@ -1481,34 +1516,8 @@ bool HWAddressSanitizer::sanitizeFunction(
   // Pad and align each of the allocas that we instrumented to stop small
   // uninteresting allocas from hiding in instrumented alloca's padding and so
   // that we have enough space to store real tags for short granules.
-  DenseMap<AllocaInst *, AllocaInst *> AllocaToPaddedAllocaMap;
-  for (auto &KV : AllocasToInstrument) {
-    AllocaInst *AI = KV.first;
-    uint64_t Size = getAllocaSizeInBytes(*AI);
-    uint64_t AlignedSize = alignTo(Size, Mapping.getObjectAlignment());
-    AI->setAlignment(
-        Align(std::max(AI->getAlignment(), Mapping.getObjectAlignment())));
-    if (Size != AlignedSize) {
-      Type *AllocatedType = AI->getAllocatedType();
-      if (AI->isArrayAllocation()) {
-        uint64_t ArraySize =
-            cast<ConstantInt>(AI->getArraySize())->getZExtValue();
-        AllocatedType = ArrayType::get(AllocatedType, ArraySize);
-      }
-      Type *TypeWithPadding = StructType::get(
-          AllocatedType, ArrayType::get(Int8Ty, AlignedSize - Size));
-      auto *NewAI = new AllocaInst(
-          TypeWithPadding, AI->getType()->getAddressSpace(), nullptr, "", AI);
-      NewAI->takeName(AI);
-      NewAI->setAlignment(AI->getAlign());
-      NewAI->setUsedWithInAlloca(AI->isUsedWithInAlloca());
-      NewAI->setSwiftError(AI->isSwiftError());
-      NewAI->copyMetadata(*AI);
-      auto *Bitcast = new BitCastInst(NewAI, AI->getType(), "", AI);
-      AI->replaceAllUsesWith(Bitcast);
-      AllocaToPaddedAllocaMap[AI] = NewAI;
-    }
-  }
+  DenseMap<AllocaInst *, AllocaInst *> AllocaToPaddedAllocaMap =
+      padInterestingAllocas(AllocasToInstrument);
 
   if (!AllocaToPaddedAllocaMap.empty()) {
     for (auto &BB : F) {

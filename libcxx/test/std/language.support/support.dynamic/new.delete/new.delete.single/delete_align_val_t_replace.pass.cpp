@@ -10,9 +10,6 @@
 
 // UNSUPPORTED: sanitizer-new-delete, c++03, c++11, c++14
 
-// None of the current GCC compilers support this.
-// UNSUPPORTED: gcc-5, gcc-6
-
 // Aligned allocation was not provided before macosx10.14 and as a result we
 // get availability errors when the deployment target is older than macosx10.14.
 // However, support for that was broken prior to Clang 8 and AppleClang 11.

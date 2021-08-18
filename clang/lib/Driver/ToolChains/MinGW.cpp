@@ -588,12 +588,18 @@ void toolchains::MinGW::AddClangCXXStdlibIncludeArgs(
   StringRef Slash = llvm::sys::path::get_separator();
 
   switch (GetCXXStdlibType(DriverArgs)) {
-  case ToolChain::CST_Libcxx:
+  case ToolChain::CST_Libcxx: {
+    std::string TargetDir = (Base + "include" + Slash + getTripleString() +
+                             Slash + "c++" + Slash + "v1")
+                                .str();
+    if (getDriver().getVFS().exists(TargetDir))
+      addSystemInclude(DriverArgs, CC1Args, TargetDir);
     addSystemInclude(DriverArgs, CC1Args, Base + Arch + Slash + "include" +
                                               Slash + "c++" + Slash + "v1");
     addSystemInclude(DriverArgs, CC1Args,
                      Base + "include" + Slash + "c++" + Slash + "v1");
     break;
+  }
 
   case ToolChain::CST_Libstdcxx:
     llvm::SmallVector<llvm::SmallString<1024>, 4> CppIncludeBases;
