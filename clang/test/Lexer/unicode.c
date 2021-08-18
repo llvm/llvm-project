@@ -23,8 +23,29 @@ static const char *copyright = STR(COPYRIGHT); // no-warning
 #if PP_ONLY
 COPYRIGHT
 // CHECK: Copyright © {{2012}}
-CHECK: The preprocessor should not complain about Unicode characters like ©.
+CHECK : The preprocessor should not complain about Unicode characters like ©.
 #endif
+
+        int _;
+
+#ifdef __cplusplus
+
+extern int ༀ;
+extern int 𑩐;
+extern int 𐠈;
+extern int ꙮ;
+
+extern int 🌹; // expected-error {{unexpected character <U+1F339>}} \
+                  expected-warning {{declaration does not declare anything}}
+
+extern int 👷; // expected-error {{unexpected character <U+1F477>}} \
+                  expected-warning {{declaration does not declare anything}}
+
+extern int 👷‍♀; // expected-warning {{declaration does not declare anything}} \
+                  expected-error {{unexpected character <U+1F477>}} \
+                  expected-error {{unexpected character <U+200D>}} \
+                  expected-error {{unexpected character <U+2640>}}
+#else
 
 // A 🌹 by any other name....
 extern int 🌹;
@@ -46,7 +67,9 @@ int ⁠x﻿x‍;
 int foo​bar = 0; // expected-warning {{identifier contains Unicode character <U+200B> that is invisible in some environments}}
 int x = foobar; // expected-error {{undeclared identifier}}
 
-int ∣foo; // expected-error {{non-ASCII character}}
+int ∣foo; // expected-error {{unexpected character <U+2223>}}
 #ifndef PP_ONLY
 #define ∶ x // expected-error {{macro name must be an identifier}}
+#endif
+
 #endif

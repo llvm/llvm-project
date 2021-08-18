@@ -16,7 +16,7 @@ extern char a\uFFFF; // none
 
 // Identifier initial characters
 extern char \u0E50; // C++03, C11, C++11
-extern char \u0300; // disallowed initially in C11/C++11, always in C99/C++03
+extern char \u0300; // disallowed in C99/C++03
 extern char \u0D61; // C99, C11, C++03, C++11
 
 
@@ -38,19 +38,16 @@ extern char \u0D61; // C99, C11, C++03, C++11
 
 
 #if __cplusplus
+// expected-error@9 {{character <U+0384> not allowed in an identifier}}
+// expected-error@11 {{character <U+FFFF> not allowed in an identifier}}
+// expected-error@18 {{expected unqualified-id}}
 # if __cplusplus >= 201103L
 // C++11
-// expected-warning@7 {{using this character in an identifier is incompatible with C++98}}
-// expected-warning@8 {{using this character in an identifier is incompatible with C++98}}
-// expected-error@11 {{expected ';'}}
 // expected-error@19 {{expected unqualified-id}}
 // expected-error@33 {{invalid universal character}}
 
 # else
 // C++03
-// expected-error@7 {{expected ';'}}
-// expected-error@8 {{expected ';'}}
-// expected-error@11 {{expected ';'}}
 // expected-error@19 {{expected unqualified-id}}
 // expected-warning@33 {{universal character name refers to a surrogate character}}
 
@@ -60,16 +57,16 @@ extern char \u0D61; // C99, C11, C++03, C++11
 // C11
 // expected-warning@7 {{using this character in an identifier is incompatible with C99}}
 // expected-warning@9 {{using this character in an identifier is incompatible with C99}}
-// expected-error@11 {{expected ';'}}
+// expected-error@11 {{character <U+FFFF> not allowed in an identifier}}
 // expected-warning@18 {{starting an identifier with this character is incompatible with C99}}
 // expected-error@19 {{expected identifier}}
 // expected-error@33 {{invalid universal character}}
 
 # else
 // C99
-// expected-error@7 {{expected ';'}}
-// expected-error@9 {{expected ';'}}
-// expected-error@11 {{expected ';'}}
+// expected-error@7 {{not allowed in an identifier}}
+// expected-error@9 {{not allowed in an identifier}}
+// expected-error@11 {{not allowed in an identifier}}
 // expected-error@18 {{expected identifier}}
 // expected-error@19 {{expected identifier}}
 // expected-error@33 {{invalid universal character}}
