@@ -2878,8 +2878,11 @@ struct AAKernelInfoFunction : AAKernelInfo {
         },
         Fn);
 
-    assert((KernelInitCB && KernelDeinitCB) &&
-           "Kernel without __kmpc_target_init or __kmpc_target_deinit!");
+    // Ignore kernels without initializers such as global constructors.
+    if (!KernelInitCB || !KernelDeinitCB) {
+      indicateOptimisticFixpoint();
+      return;
+    }
 
     // For kernels we might need to initialize/finalize the IsSPMD state and
     // we need to register a simplification callback so that the Attributor
