@@ -1259,6 +1259,14 @@ public:
 
   const std::string &GetText() { return m_content; }
 
+  void SetText(const char *text) {
+    if (text == nullptr) {
+      m_content.clear();
+      return;
+    }
+    m_content = text;
+  }
+
 protected:
   std::string m_label;
   bool m_required;
@@ -1618,6 +1626,33 @@ public:
   }
 };
 
+class LazyBooleanFieldDelegate : public ChoicesFieldDelegate {
+public:
+  LazyBooleanFieldDelegate(const char *label, const char *calculate_label)
+      : ChoicesFieldDelegate(label, 3, GetPossibleOptions(calculate_label)) {}
+
+  static constexpr const char *kNo = "No";
+  static constexpr const char *kYes = "Yes";
+
+  std::vector<std::string> GetPossibleOptions(const char *calculate_label) {
+    std::vector<std::string> options;
+    options.push_back(calculate_label);
+    options.push_back(kYes);
+    options.push_back(kNo);
+    return options;
+  }
+
+  LazyBool GetLazyBoolean() {
+    std::string choice = GetChoiceContent();
+    if (choice == kNo)
+      return eLazyBoolNo;
+    else if (choice == kYes)
+      return eLazyBoolYes;
+    else
+      return eLazyBoolCalculate;
+  }
+};
+
 template <class T> class ListFieldDelegate : public FieldDelegate {
 public:
   ListFieldDelegate(const char *label, T default_field)
@@ -1908,6 +1943,29 @@ protected:
   SelectionType m_selection_type;
 };
 
+class ArgumentsFieldDelegate : public ListFieldDelegate<TextFieldDelegate> {
+public:
+  ArgumentsFieldDelegate()
+      : ListFieldDelegate("Arguments",
+                          TextFieldDelegate("Argument", "", false)) {}
+
+  Args GetArguments() {
+    Args arguments;
+    for (int i = 0; i < GetNumberOfFields(); i++) {
+      arguments.AppendArgument(GetField(i).GetText());
+    }
+    return arguments;
+  }
+
+  void AddArguments(const Args &arguments) {
+    for (size_t i = 0; i < arguments.GetArgumentCount(); i++) {
+      AddNewField();
+      TextFieldDelegate &field = GetField(GetNumberOfFields() - 1);
+      field.SetText(arguments.GetArgumentAtIndex(i));
+    }
+  }
+};
+
 template <class KeyFieldDelegateType, class ValueFieldDelegateType>
 class MappingFieldDelegate : public FieldDelegate {
 public:
@@ -2068,14 +2126,36 @@ public:
   const std::string &GetName() { return GetKeyField().GetName(); }
 
   const std::string &GetValue() { return GetValueField().GetText(); }
+
+  void SetName(const char *name) { return GetKeyField().SetText(name); }
+
+  void SetValue(const char *value) { return GetValueField().SetText(value); }
 };
 
 class EnvironmentVariableListFieldDelegate
     : public ListFieldDelegate<EnvironmentVariableFieldDelegate> {
 public:
-  EnvironmentVariableListFieldDelegate()
-      : ListFieldDelegate("Environment Variables",
-                          EnvironmentVariableFieldDelegate()) {}
+  EnvironmentVariableListFieldDelegate(const char *label)
+      : ListFieldDelegate(label, EnvironmentVariableFieldDelegate()) {}
+
+  Environment GetEnvironment() {
+    Environment environment;
+    for (int i = 0; i < GetNumberOfFields(); i++) {
+      environment.insert(
+          std::make_pair(GetField(i).GetName(), GetField(i).GetValue()));
+    }
+    return environment;
+  }
+
+  void AddEnvironmentVariables(const Environment &environment) {
+    for (auto &variable : environment) {
+      AddNewField();
+      EnvironmentVariableFieldDelegate &field =
+          GetField(GetNumberOfFields() - 1);
+      field.SetName(variable.getKey().str().c_str());
+      field.SetValue(variable.getValue().c_str());
+    }
+  }
 };
 
 class FormAction {
@@ -2200,6 +2280,14 @@ public:
     return delegate;
   }
 
+  LazyBooleanFieldDelegate *AddLazyBooleanField(const char *label,
+                                                const char *calculate_label) {
+    LazyBooleanFieldDelegate *delegate =
+        new LazyBooleanFieldDelegate(label, calculate_label);
+    m_fields.push_back(FieldDelegateUP(delegate));
+    return delegate;
+  }
+
   ChoicesFieldDelegate *AddChoicesField(const char *label, int height,
                                         std::vector<std::string> choices) {
     ChoicesFieldDelegate *delegate =
@@ -2229,6 +2317,12 @@ public:
     return delegate;
   }
 
+  ArgumentsFieldDelegate *AddArgumentsField() {
+    ArgumentsFieldDelegate *delegate = new ArgumentsFieldDelegate();
+    m_fields.push_back(FieldDelegateUP(delegate));
+    return delegate;
+  }
+
   template <class K, class V>
   MappingFieldDelegate<K, V> *AddMappingField(K key_field, V value_field) {
     MappingFieldDelegate<K, V> *delegate =
@@ -2252,9 +2346,10 @@ public:
     return delegate;
   }
 
-  EnvironmentVariableListFieldDelegate *AddEnvironmentVariableListField() {
+  EnvironmentVariableListFieldDelegate *
+  AddEnvironmentVariableListField(const char *label) {
     EnvironmentVariableListFieldDelegate *delegate =
-        new EnvironmentVariableListFieldDelegate();
+        new EnvironmentVariableListFieldDelegate(label);
     m_fields.push_back(FieldDelegateUP(delegate));
     return delegate;
   }
@@ -3028,6 +3123,396 @@ protected:
   ArchFieldDelegate *m_arch_field;
   PlatformPluginFieldDelegate *m_platform_field;
   ChoicesFieldDelegate *m_load_dependent_files_field;
+};
+
+class ProcessLaunchFormDelegate : public FormDelegate {
+public:
+  ProcessLaunchFormDelegate(Debugger &debugger, WindowSP main_window_sp)
+      : m_debugger(debugger), m_main_window_sp(main_window_sp) {
+
+    m_arguments_field = AddArgumentsField();
+    SetArgumentsFieldDefaultValue();
+    m_target_environment_field =
+        AddEnvironmentVariableListField("Target Environment Variables");
+    SetTargetEnvironmentFieldDefaultValue();
+    m_working_directory_field = AddDirectoryField(
+        "Working Directory", GetDefaultWorkingDirectory().c_str(), true, false);
+
+    m_show_advanced_field = AddBooleanField("Show advanced settings.", false);
+
+    m_stop_at_entry_field = AddBooleanField("Stop at entry point.", false);
+    m_detach_on_error_field =
+        AddBooleanField("Detach on error.", GetDefaultDetachOnError());
+    m_disable_aslr_field =
+        AddBooleanField("Disable ASLR", GetDefaultDisableASLR());
+    m_plugin_field = AddProcessPluginField();
+    m_arch_field = AddArchField("Architecture", "", false);
+    m_shell_field = AddFileField("Shell", "", true, false);
+    m_expand_shell_arguments_field =
+        AddBooleanField("Expand shell arguments.", false);
+
+    m_disable_standard_io_field =
+        AddBooleanField("Disable Standard IO", GetDefaultDisableStandardIO());
+    m_standard_output_field =
+        AddFileField("Standard Output File", "", /*need_to_exist=*/false,
+                     /*required=*/false);
+    m_standard_error_field =
+        AddFileField("Standard Error File", "", /*need_to_exist=*/false,
+                     /*required=*/false);
+    m_standard_input_field =
+        AddFileField("Standard Input File", "", /*need_to_exist=*/false,
+                     /*required=*/false);
+
+    m_show_inherited_environment_field =
+        AddBooleanField("Show inherited environment variables.", false);
+    m_inherited_environment_field =
+        AddEnvironmentVariableListField("Inherited Environment Variables");
+    SetInheritedEnvironmentFieldDefaultValue();
+
+    AddAction("Launch", [this](Window &window) { Launch(window); });
+  }
+
+  std::string GetName() override { return "Launch Process"; }
+
+  void UpdateFieldsVisibility() override {
+    if (m_show_advanced_field->GetBoolean()) {
+      m_stop_at_entry_field->FieldDelegateShow();
+      m_detach_on_error_field->FieldDelegateShow();
+      m_disable_aslr_field->FieldDelegateShow();
+      m_plugin_field->FieldDelegateShow();
+      m_arch_field->FieldDelegateShow();
+      m_shell_field->FieldDelegateShow();
+      m_expand_shell_arguments_field->FieldDelegateShow();
+      m_disable_standard_io_field->FieldDelegateShow();
+      if (m_disable_standard_io_field->GetBoolean()) {
+        m_standard_input_field->FieldDelegateHide();
+        m_standard_output_field->FieldDelegateHide();
+        m_standard_error_field->FieldDelegateHide();
+      } else {
+        m_standard_input_field->FieldDelegateShow();
+        m_standard_output_field->FieldDelegateShow();
+        m_standard_error_field->FieldDelegateShow();
+      }
+      m_show_inherited_environment_field->FieldDelegateShow();
+      if (m_show_inherited_environment_field->GetBoolean())
+        m_inherited_environment_field->FieldDelegateShow();
+      else
+        m_inherited_environment_field->FieldDelegateHide();
+    } else {
+      m_stop_at_entry_field->FieldDelegateHide();
+      m_detach_on_error_field->FieldDelegateHide();
+      m_disable_aslr_field->FieldDelegateHide();
+      m_plugin_field->FieldDelegateHide();
+      m_arch_field->FieldDelegateHide();
+      m_shell_field->FieldDelegateHide();
+      m_expand_shell_arguments_field->FieldDelegateHide();
+      m_disable_standard_io_field->FieldDelegateHide();
+      m_standard_input_field->FieldDelegateHide();
+      m_standard_output_field->FieldDelegateHide();
+      m_standard_error_field->FieldDelegateHide();
+      m_show_inherited_environment_field->FieldDelegateHide();
+      m_inherited_environment_field->FieldDelegateHide();
+    }
+  }
+
+  // Methods for setting the default value of the fields.
+
+  void SetArgumentsFieldDefaultValue() {
+    TargetSP target = m_debugger.GetSelectedTarget();
+    if (target == nullptr)
+      return;
+
+    const Args &target_arguments =
+        target->GetProcessLaunchInfo().GetArguments();
+    m_arguments_field->AddArguments(target_arguments);
+  }
+
+  void SetTargetEnvironmentFieldDefaultValue() {
+    TargetSP target = m_debugger.GetSelectedTarget();
+    if (target == nullptr)
+      return;
+
+    const Environment &target_environment = target->GetTargetEnvironment();
+    m_target_environment_field->AddEnvironmentVariables(target_environment);
+  }
+
+  void SetInheritedEnvironmentFieldDefaultValue() {
+    TargetSP target = m_debugger.GetSelectedTarget();
+    if (target == nullptr)
+      return;
+
+    const Environment &inherited_environment =
+        target->GetInheritedEnvironment();
+    m_inherited_environment_field->AddEnvironmentVariables(
+        inherited_environment);
+  }
+
+  std::string GetDefaultWorkingDirectory() {
+    TargetSP target = m_debugger.GetSelectedTarget();
+    if (target == nullptr)
+      return "";
+
+    PlatformSP platform = target->GetPlatform();
+    return platform->GetWorkingDirectory().GetPath();
+  }
+
+  bool GetDefaultDisableASLR() {
+    TargetSP target = m_debugger.GetSelectedTarget();
+    if (target == nullptr)
+      return false;
+
+    return target->GetDisableASLR();
+  }
+
+  bool GetDefaultDisableStandardIO() {
+    TargetSP target = m_debugger.GetSelectedTarget();
+    if (target == nullptr)
+      return true;
+
+    return target->GetDisableSTDIO();
+  }
+
+  bool GetDefaultDetachOnError() {
+    TargetSP target = m_debugger.GetSelectedTarget();
+    if (target == nullptr)
+      return true;
+
+    return target->GetDetachOnError();
+  }
+
+  // Methods for getting the necessary information and setting them to the
+  // ProcessLaunchInfo.
+
+  void GetExecutableSettings(ProcessLaunchInfo &launch_info) {
+    TargetSP target = m_debugger.GetSelectedTarget();
+    ModuleSP executable_module = target->GetExecutableModule();
+    llvm::StringRef target_settings_argv0 = target->GetArg0();
+
+    if (!target_settings_argv0.empty()) {
+      launch_info.GetArguments().AppendArgument(target_settings_argv0);
+      launch_info.SetExecutableFile(executable_module->GetPlatformFileSpec(),
+                                    false);
+      return;
+    }
+
+    launch_info.SetExecutableFile(executable_module->GetPlatformFileSpec(),
+                                  true);
+  }
+
+  void GetArguments(ProcessLaunchInfo &launch_info) {
+    TargetSP target = m_debugger.GetSelectedTarget();
+    Args arguments = m_arguments_field->GetArguments();
+    launch_info.GetArguments().AppendArguments(arguments);
+  }
+
+  void GetEnvironment(ProcessLaunchInfo &launch_info) {
+    Environment target_environment =
+        m_target_environment_field->GetEnvironment();
+    Environment inherited_environment =
+        m_inherited_environment_field->GetEnvironment();
+    launch_info.GetEnvironment().insert(target_environment.begin(),
+                                        target_environment.end());
+    launch_info.GetEnvironment().insert(inherited_environment.begin(),
+                                        inherited_environment.end());
+  }
+
+  void GetWorkingDirectory(ProcessLaunchInfo &launch_info) {
+    if (m_working_directory_field->IsSpecified())
+      launch_info.SetWorkingDirectory(
+          m_working_directory_field->GetResolvedFileSpec());
+  }
+
+  void GetStopAtEntry(ProcessLaunchInfo &launch_info) {
+    if (m_stop_at_entry_field->GetBoolean())
+      launch_info.GetFlags().Set(eLaunchFlagStopAtEntry);
+    else
+      launch_info.GetFlags().Clear(eLaunchFlagStopAtEntry);
+  }
+
+  void GetDetachOnError(ProcessLaunchInfo &launch_info) {
+    if (m_detach_on_error_field->GetBoolean())
+      launch_info.GetFlags().Set(eLaunchFlagDetachOnError);
+    else
+      launch_info.GetFlags().Clear(eLaunchFlagDetachOnError);
+  }
+
+  void GetDisableASLR(ProcessLaunchInfo &launch_info) {
+    if (m_disable_aslr_field->GetBoolean())
+      launch_info.GetFlags().Set(eLaunchFlagDisableASLR);
+    else
+      launch_info.GetFlags().Clear(eLaunchFlagDisableASLR);
+  }
+
+  void GetPlugin(ProcessLaunchInfo &launch_info) {
+    launch_info.SetProcessPluginName(m_plugin_field->GetPluginName());
+  }
+
+  void GetArch(ProcessLaunchInfo &launch_info) {
+    if (!m_arch_field->IsSpecified())
+      return;
+
+    TargetSP target_sp = m_debugger.GetSelectedTarget();
+    PlatformSP platform_sp =
+        target_sp ? target_sp->GetPlatform() : PlatformSP();
+    launch_info.GetArchitecture() = Platform::GetAugmentedArchSpec(
+        platform_sp.get(), m_arch_field->GetArchString());
+  }
+
+  void GetShell(ProcessLaunchInfo &launch_info) {
+    if (!m_shell_field->IsSpecified())
+      return;
+
+    launch_info.SetShell(m_shell_field->GetResolvedFileSpec());
+    launch_info.SetShellExpandArguments(
+        m_expand_shell_arguments_field->GetBoolean());
+  }
+
+  void GetStandardIO(ProcessLaunchInfo &launch_info) {
+    if (m_disable_standard_io_field->GetBoolean()) {
+      launch_info.GetFlags().Set(eLaunchFlagDisableSTDIO);
+      return;
+    }
+
+    FileAction action;
+    if (m_standard_input_field->IsSpecified()) {
+      action.Open(STDIN_FILENO, m_standard_input_field->GetFileSpec(), true,
+                  false);
+      launch_info.AppendFileAction(action);
+    }
+    if (m_standard_output_field->IsSpecified()) {
+      action.Open(STDOUT_FILENO, m_standard_output_field->GetFileSpec(), false,
+                  true);
+      launch_info.AppendFileAction(action);
+    }
+    if (m_standard_error_field->IsSpecified()) {
+      action.Open(STDERR_FILENO, m_standard_error_field->GetFileSpec(), false,
+                  true);
+      launch_info.AppendFileAction(action);
+    }
+  }
+
+  void GetInheritTCC(ProcessLaunchInfo &launch_info) {
+    if (m_debugger.GetSelectedTarget()->GetInheritTCC())
+      launch_info.GetFlags().Set(eLaunchFlagInheritTCCFromParent);
+  }
+
+  ProcessLaunchInfo GetLaunchInfo() {
+    ProcessLaunchInfo launch_info;
+
+    GetExecutableSettings(launch_info);
+    GetArguments(launch_info);
+    GetEnvironment(launch_info);
+    GetWorkingDirectory(launch_info);
+    GetStopAtEntry(launch_info);
+    GetDetachOnError(launch_info);
+    GetDisableASLR(launch_info);
+    GetPlugin(launch_info);
+    GetArch(launch_info);
+    GetShell(launch_info);
+    GetStandardIO(launch_info);
+    GetInheritTCC(launch_info);
+
+    return launch_info;
+  }
+
+  bool StopRunningProcess() {
+    ExecutionContext exe_ctx =
+        m_debugger.GetCommandInterpreter().GetExecutionContext();
+
+    if (!exe_ctx.HasProcessScope())
+      return false;
+
+    Process *process = exe_ctx.GetProcessPtr();
+    if (!(process && process->IsAlive()))
+      return false;
+
+    FormDelegateSP form_delegate_sp =
+        FormDelegateSP(new DetachOrKillProcessFormDelegate(process));
+    Rect bounds = m_main_window_sp->GetCenteredRect(85, 8);
+    WindowSP form_window_sp = m_main_window_sp->CreateSubWindow(
+        form_delegate_sp->GetName().c_str(), bounds, true);
+    WindowDelegateSP window_delegate_sp =
+        WindowDelegateSP(new FormWindowDelegate(form_delegate_sp));
+    form_window_sp->SetDelegate(window_delegate_sp);
+
+    return true;
+  }
+
+  Target *GetTarget() {
+    Target *target = m_debugger.GetSelectedTarget().get();
+
+    if (target == nullptr) {
+      SetError("No target exists!");
+      return nullptr;
+    }
+
+    ModuleSP exe_module_sp = target->GetExecutableModule();
+
+    if (exe_module_sp == nullptr) {
+      SetError("No executable in target!");
+      return nullptr;
+    }
+
+    return target;
+  }
+
+  void Launch(Window &window) {
+    ClearError();
+
+    bool all_fields_are_valid = CheckFieldsValidity();
+    if (!all_fields_are_valid)
+      return;
+
+    bool process_is_running = StopRunningProcess();
+    if (process_is_running)
+      return;
+
+    Target *target = GetTarget();
+    if (HasError())
+      return;
+
+    StreamString stream;
+    ProcessLaunchInfo launch_info = GetLaunchInfo();
+    Status status = target->Launch(launch_info, &stream);
+
+    if (status.Fail()) {
+      SetError(status.AsCString());
+      return;
+    }
+
+    ProcessSP process_sp(target->GetProcessSP());
+    if (!process_sp) {
+      SetError("Launched successfully but target has no process!");
+      return;
+    }
+
+    window.GetParent()->RemoveSubWindow(&window);
+  }
+
+protected:
+  Debugger &m_debugger;
+  WindowSP m_main_window_sp;
+
+  ArgumentsFieldDelegate *m_arguments_field;
+  EnvironmentVariableListFieldDelegate *m_target_environment_field;
+  DirectoryFieldDelegate *m_working_directory_field;
+
+  BooleanFieldDelegate *m_show_advanced_field;
+
+  BooleanFieldDelegate *m_stop_at_entry_field;
+  BooleanFieldDelegate *m_detach_on_error_field;
+  BooleanFieldDelegate *m_disable_aslr_field;
+  ProcessPluginFieldDelegate *m_plugin_field;
+  ArchFieldDelegate *m_arch_field;
+  FileFieldDelegate *m_shell_field;
+  BooleanFieldDelegate *m_expand_shell_arguments_field;
+  BooleanFieldDelegate *m_disable_standard_io_field;
+  FileFieldDelegate *m_standard_input_field;
+  FileFieldDelegate *m_standard_output_field;
+  FileFieldDelegate *m_standard_error_field;
+
+  BooleanFieldDelegate *m_show_inherited_environment_field;
+  EnvironmentVariableListFieldDelegate *m_inherited_environment_field;
 };
 
 class MenuDelegate {
@@ -5604,6 +6089,18 @@ public:
       WindowSP main_window_sp = m_app.GetMainWindow();
       FormDelegateSP form_delegate_sp = FormDelegateSP(
           new ProcessAttachFormDelegate(m_debugger, main_window_sp));
+      Rect bounds = main_window_sp->GetCenteredRect(80, 22);
+      WindowSP form_window_sp = main_window_sp->CreateSubWindow(
+          form_delegate_sp->GetName().c_str(), bounds, true);
+      WindowDelegateSP window_delegate_sp =
+          WindowDelegateSP(new FormWindowDelegate(form_delegate_sp));
+      form_window_sp->SetDelegate(window_delegate_sp);
+      return MenuActionResult::Handled;
+    }
+    case eMenuID_ProcessLaunch: {
+      WindowSP main_window_sp = m_app.GetMainWindow();
+      FormDelegateSP form_delegate_sp = FormDelegateSP(
+          new ProcessLaunchFormDelegate(m_debugger, main_window_sp));
       Rect bounds = main_window_sp->GetCenteredRect(80, 22);
       WindowSP form_window_sp = main_window_sp->CreateSubWindow(
           form_delegate_sp->GetName().c_str(), bounds, true);
