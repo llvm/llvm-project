@@ -1893,7 +1893,7 @@ void CodeGenModule::addDefaultFunctionDefinitionAttributes(llvm::Function &F) {
   getDefaultFunctionAttributes(F.getName(), F.hasOptNone(),
                                /* AttrOnCallSite = */ false, FuncAttrs);
   // TODO: call GetCPUAndFeaturesAttributes?
-  F.addAttributes(llvm::AttributeList::FunctionIndex, FuncAttrs);
+  F.addFnAttrs(FuncAttrs);
 }
 
 void CodeGenModule::addDefaultFunctionDefinitionAttributes(
@@ -4535,9 +4535,7 @@ maybeRaiseRetAlignmentAttribute(llvm::LLVMContext &Ctx,
   if (CurAlign >= NewAlign)
     return Attrs;
   llvm::Attribute AlignAttr = llvm::Attribute::getWithAlignment(Ctx, NewAlign);
-  return Attrs
-      .removeAttribute(Ctx, llvm::AttributeList::ReturnIndex,
-                       llvm::Attribute::AttrKind::Alignment)
+  return Attrs.removeRetAttribute(Ctx, llvm::Attribute::AttrKind::Alignment)
       .addAttribute(Ctx, llvm::AttributeList::ReturnIndex, AlignAttr);
 }
 

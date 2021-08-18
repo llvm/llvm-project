@@ -485,11 +485,11 @@ static void removeUseSoftFloat(Function &F) {
   AttrBuilder B;
   LLVM_DEBUG(errs() << "removing -use-soft-float\n");
   B.addAttribute("use-soft-float", "false");
-  F.removeAttributes(AttributeList::FunctionIndex, B);
+  F.removeFnAttrs(B);
   if (F.hasFnAttribute("use-soft-float")) {
     LLVM_DEBUG(errs() << "still has -use-soft-float\n");
   }
-  F.addAttributes(AttributeList::FunctionIndex, B);
+  F.addFnAttrs(B);
 }
 
 // This pass only makes sense when the underlying chip has floating point but

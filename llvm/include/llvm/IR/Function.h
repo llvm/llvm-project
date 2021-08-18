@@ -272,15 +272,26 @@ public:
     addAttribute(AttributeList::FunctionIndex, Attr);
   }
 
+  /// Add function attributes to this function.
+  void addFnAttrs(const AttrBuilder &Attrs) {
+    addAttributes(AttributeList::FunctionIndex, Attrs);
+  }
+
+  /// removes the attributes from the list of attributes.
+  void removeAttributes(unsigned i, const AttrBuilder &Attrs);
+
   /// Remove function attributes from this function.
   void removeFnAttr(Attribute::AttrKind Kind) {
-    removeAttribute(AttributeList::FunctionIndex, Kind);
+    setAttributes(getAttributes().removeFnAttribute(getContext(), Kind));
   }
 
   /// Remove function attribute from this function.
   void removeFnAttr(StringRef Kind) {
-    setAttributes(getAttributes().removeAttribute(
-        getContext(), AttributeList::FunctionIndex, Kind));
+    setAttributes(getAttributes().removeFnAttribute(getContext(), Kind));
+  }
+
+  void removeFnAttrs(const AttrBuilder &Attrs) {
+    setAttributes(getAttributes().removeFnAttributes(getContext(), Attrs));
   }
 
   /// A function will have the "coroutine.presplit" attribute if it's
@@ -429,8 +440,13 @@ public:
   /// removes the attribute from the list of attributes.
   void removeAttribute(unsigned i, StringRef Kind);
 
-  /// removes the attributes from the list of attributes.
-  void removeAttributes(unsigned i, const AttrBuilder &Attrs);
+  /// removes the attribute from the return value list of attributes.
+  void removeRetAttr(Attribute::AttrKind Kind);
+
+  /// removes the attribute from the return value list of attributes.
+  void removeRetAttr(StringRef Kind);
+
+  void removeRetAttrs(const AttrBuilder &Attrs);
 
   /// removes the attribute from the list of attributes.
   void removeParamAttr(unsigned ArgNo, Attribute::AttrKind Kind);

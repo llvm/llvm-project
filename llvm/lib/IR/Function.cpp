@@ -354,7 +354,7 @@ Function *Function::createWithDefaultAttr(FunctionType *Ty,
     B.addAttribute("frame-pointer", "all");
     break;
   }
-  F->addAttributes(AttributeList::FunctionIndex, B);
+  F->addFnAttrs(B);
   return F;
 }
 
@@ -577,9 +577,21 @@ void Function::removeAttribute(unsigned i, StringRef Kind) {
   setAttributes(PAL);
 }
 
-void Function::removeAttributes(unsigned i, const AttrBuilder &Attrs) {
+void Function::removeRetAttr(Attribute::AttrKind Kind) {
   AttributeList PAL = getAttributes();
-  PAL = PAL.removeAttributes(getContext(), i, Attrs);
+  PAL = PAL.removeRetAttribute(getContext(), Kind);
+  setAttributes(PAL);
+}
+
+void Function::removeRetAttr(StringRef Kind) {
+  AttributeList PAL = getAttributes();
+  PAL = PAL.removeRetAttribute(getContext(), Kind);
+  setAttributes(PAL);
+}
+
+void Function::removeRetAttrs(const AttrBuilder &Attrs) {
+  AttributeList PAL = getAttributes();
+  PAL = PAL.removeRetAttributes(getContext(), Attrs);
   setAttributes(PAL);
 }
 
