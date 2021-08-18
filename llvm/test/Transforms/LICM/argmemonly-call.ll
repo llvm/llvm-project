@@ -1,9 +1,5 @@
-; RUN: opt -S -basic-aa -licm -licm-n2-threshold=0 -verify-memoryssa %s -enable-new-pm=0 | FileCheck %s --check-prefix=ALIAS-N2
-; RUN: opt -licm -basic-aa -licm-n2-threshold=200 < %s -S -enable-new-pm=0 | FileCheck %s --check-prefix=ALIAS-N2
-
-; RUN: opt -aa-pipeline=basic-aa -licm-n2-threshold=0 -passes='require<aa>,require<targetir>,require<scalar-evolution>,require<opt-remark-emit>,loop(licm)' < %s -S | FileCheck %s
-; RUN: opt -aa-pipeline=basic-aa -licm-n2-threshold=0 -passes='require<aa>,require<targetir>,require<scalar-evolution>,require<opt-remark-emit>,loop-mssa(licm)' < %s -S | FileCheck %s --check-prefix=ALIAS-N2
-; RUN: opt -aa-pipeline=basic-aa -licm-n2-threshold=200 -passes='require<aa>,require<targetir>,require<scalar-evolution>,require<opt-remark-emit>,loop(licm)' < %s -S | FileCheck %s --check-prefix=ALIAS-N2
+; RUN: opt -S -basic-aa -licm -verify-memoryssa %s -enable-new-pm=0 | FileCheck %s
+; RUN: opt -aa-pipeline=basic-aa -passes='require<aa>,require<targetir>,require<scalar-evolution>,require<opt-remark-emit>,loop-mssa(licm)' < %s -S | FileCheck %s
 
 declare i32 @foo() readonly argmemonly nounwind
 declare i32 @foo2() readonly nounwind
@@ -13,9 +9,6 @@ define void @test(i32* %loc) {
 ; CHECK-LABEL: @test
 ; CHECK: @foo
 ; CHECK-LABEL: loop:
-; ALIAS-N2-LABEL: @test
-; ALIAS-N2: @foo
-; ALIAS-N2-LABEL: loop:
   br label %loop
 
 loop:
@@ -29,9 +22,6 @@ define void @test_neg(i32* %loc) {
 ; CHECK-LABEL: @test_neg
 ; CHECK-LABEL: loop:
 ; CHECK: @foo
-; ALIAS-N2-LABEL: @test_neg
-; ALIAS-N2-LABEL: loop:
-; ALIAS-N2: @foo
   br label %loop
 
 loop:
@@ -44,9 +34,6 @@ define void @test2(i32* noalias %loc, i32* noalias %loc2) {
 ; CHECK-LABEL: @test2
 ; CHECK: @bar
 ; CHECK-LABEL: loop:
-; ALIAS-N2-LABEL: @test2
-; ALIAS-N2: @bar
-; ALIAS-N2-LABEL: loop:
   br label %loop
 
 loop:
@@ -60,9 +47,6 @@ define void @test3(i32* %loc) {
 ; CHECK-LABEL: @test3
 ; CHECK-LABEL: loop:
 ; CHECK: @bar
-; ALIAS-N2-LABEL: @test3
-; ALIAS-N2-LABEL: loop:
-; ALIAS-N2: @bar
   br label %loop
 
 loop:
@@ -78,9 +62,6 @@ define void @test4(i32* %loc, i32* %loc2) {
 ; CHECK-LABEL: @test4
 ; CHECK-LABEL: loop:
 ; CHECK: @bar
-; ALIAS-N2-LABEL: @test4
-; ALIAS-N2-LABEL: loop:
-; ALIAS-N2: @bar
   br label %loop
 
 loop:
@@ -90,20 +71,11 @@ loop:
 }
 
 declare i32 @foo_new(i32*) readonly
-; With the default AST mechanism used by LICM for alias analysis,
-; we clump foo_new with bar.
-; With the N2 Alias analysis diagnostic tool, we are able to hoist the
-; argmemonly bar call out of the loop.
-; Using MemorySSA we can also hoist bar.
 
 define void @test5(i32* %loc2, i32* noalias %loc) {
-; ALIAS-N2-LABEL: @test5
-; ALIAS-N2: @bar
-; ALIAS-N2-LABEL: loop:
-
 ; CHECK-LABEL: @test5
+; CHECK: @bar
 ; CHECK-LABEL: loop:
-; CHECK:  @bar
   br label %loop
 
 loop:
@@ -121,10 +93,6 @@ define void @test6(i32* noalias %loc, i32* noalias %loc2) {
 ; CHECK: %val = load i32, i32* %loc2
 ; CHECK-LABEL: loop:
 ; CHECK: @llvm.memcpy
-; ALIAS-N2-LABEL: @test6
-; ALIAS-N2: %val = load i32, i32* %loc2
-; ALIAS-N2-LABEL: loop:
-; ALIAS-N2: @llvm.memcpy
   br label %loop
 
 loop:
@@ -141,10 +109,6 @@ define void @test7(i32* noalias %loc, i32* noalias %loc2) {
 ; CHECK: %val = load i32, i32* %loc2
 ; CHECK-LABEL: loop:
 ; CHECK: @custom_memcpy
-; ALIAS-N2-LABEL: @test7
-; ALIAS-N2: %val = load i32, i32* %loc2
-; ALIAS-N2-LABEL: loop:
-; ALIAS-N2: @custom_memcpy
   br label %loop
 
 loop:
