@@ -41,6 +41,7 @@ The members of the group represent a wide cross-section of the community, and me
 * Kate McInnes (Apple) []
 * Kristof Beyls (ARM) [kristof.beyls]
 * Matthew Riley (Google) [mattdr]
+* Nikhil Gupta (Nvidia) [nikhgupt]
 * Oliver Hunt (Apple) [ojhunt]
 * Paul Robinson (Sony) [probinson]
 * Peter Smith (ARM) [peter.smith]
