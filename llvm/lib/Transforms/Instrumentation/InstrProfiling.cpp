@@ -556,7 +556,7 @@ bool InstrProfiling::run(
   UsedVars.clear();
   TT = Triple(M.getTargetTriple());
 
-  bool MadeChange;
+  bool MadeChange = false;
 
   // Emit the runtime hook even if no counters are present.
   if (needsRuntimeHookUnconditionally(TT))
