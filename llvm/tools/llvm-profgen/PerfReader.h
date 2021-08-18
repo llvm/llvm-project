@@ -295,7 +295,6 @@ struct UnwindState {
            "IP should align with context leaf");
   }
 
-  const ProfiledBinary *getBinary() const { return Binary; }
   bool hasNextLBR() const { return LBRIndex < LBRStack.size(); }
   uint64_t getCurrentLBRSource() const { return LBRStack[LBRIndex].Source; }
   uint64_t getCurrentLBRTarget() const { return LBRStack[LBRIndex].Target; }
@@ -531,13 +530,16 @@ private:
   const ProfiledBinary *Binary;
 };
 
-// Load binaries and read perf trace to parse the events and samples
+// Read perf trace to parse the events and samples.
 class PerfReaderBase {
 public:
-  PerfReaderBase(StringRef BinaryPath);
+  PerfReaderBase(ProfiledBinary *B) : Binary(B) {
+    // Initialize the base address to preferred address.
+    Binary->setBaseAddress(Binary->getPreferredBaseAddress());
+  };
   virtual ~PerfReaderBase() = default;
   static std::unique_ptr<PerfReaderBase>
-  create(StringRef BinaryPath, cl::list<std::string> &PerfTraceFilenames);
+  create(ProfiledBinary *Binary, cl::list<std::string> &PerfTraceFilenames);
 
   // A LBR sample is like:
   // 0x5c6313f/0x5c63170/P/-/-/0  0x5c630e7/0x5c63130/P/-/-/0 ...
@@ -593,10 +595,7 @@ public:
     StringRef BinaryPath;
   };
 
-  /// Load symbols and disassemble the code of a given binary.
-  void loadBinary(const StringRef BinaryPath);
   void updateBinaryAddress(const MMapEvent &Event);
-  ProfiledBinary *getBinary() const { return Binary; }
   PerfScriptType getPerfScriptType() const { return PerfType; }
   // Entry of the reader to parse multiple perf traces
   void parsePerfTraces(cl::list<std::string> &PerfTraceFilenames);
@@ -605,9 +604,6 @@ public:
   }
 
 protected:
-  /// Validate the command line input
-  static void validateCommandLine(StringRef BinaryPath,
-                                  cl::list<std::string> &PerfTraceFilenames);
   static PerfScriptType
   extractPerfType(cl::list<std::string> &PerfTraceFilenames);
   /// Parse a single line of a PERF_RECORD_MMAP2 event looking for a
@@ -654,7 +650,7 @@ protected:
 */
 class HybridPerfReader : public PerfReaderBase {
 public:
-  HybridPerfReader(StringRef BinaryPath) : PerfReaderBase(BinaryPath) {
+  HybridPerfReader(ProfiledBinary *Binary) : PerfReaderBase(Binary) {
     PerfType = PERF_LBR_STACK;
   };
   // Parse the hybrid sample including the call and LBR line

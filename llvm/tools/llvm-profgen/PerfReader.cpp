@@ -7,7 +7,6 @@
 //===----------------------------------------------------------------------===//
 #include "PerfReader.h"
 #include "ProfileGenerator.h"
-#include "llvm/Support/FileSystem.h"
 
 static cl::opt<bool> ShowMmapEvents("show-mmap-events", cl::ReallyHidden,
                                     cl::init(false), cl::ZeroOrMore,
@@ -244,41 +243,13 @@ bool VirtualUnwinder::unwind(const HybridSample *Sample, uint64_t Repeat) {
   return true;
 }
 
-void PerfReaderBase::validateCommandLine(
-    StringRef BinaryPath, cl::list<std::string> &PerfTraceFilenames) {
-  // Allow the invalid perfscript if we only use to show binary disassembly
-  if (!ShowDisassemblyOnly) {
-    for (auto &File : PerfTraceFilenames) {
-      if (!llvm::sys::fs::exists(File)) {
-        std::string Msg = "Input perf script(" + File + ") doesn't exist!";
-        exitWithError(Msg);
-      }
-    }
-  }
-
-  if (!llvm::sys::fs::exists(BinaryPath)) {
-    std::string Msg = "Input binary(" + BinaryPath.str() + ") doesn't exist!";
-    exitWithError(Msg);
-  }
-
-  if (CSProfileGenerator::MaxCompressionSize < -1) {
-    exitWithError("Value of --compress-recursion should >= -1");
-  }
-  if (ShowSourceLocations && !ShowDisassemblyOnly) {
-    exitWithError("--show-source-locations should work together with "
-                  "--show-disassembly-only!");
-  }
-}
-
 std::unique_ptr<PerfReaderBase>
-PerfReaderBase::create(StringRef BinaryPath,
+PerfReaderBase::create(ProfiledBinary *Binary,
                        cl::list<std::string> &PerfTraceFilenames) {
-  validateCommandLine(BinaryPath, PerfTraceFilenames);
-
   PerfScriptType PerfType = extractPerfType(PerfTraceFilenames);
   std::unique_ptr<PerfReaderBase> PerfReader;
   if (PerfType == PERF_LBR_STACK) {
-    PerfReader.reset(new HybridPerfReader(BinaryPath));
+    PerfReader.reset(new HybridPerfReader(Binary));
   } else if (PerfType == PERF_LBR) {
     // TODO:
     exitWithError("Unsupported perfscript!");
@@ -287,18 +258,6 @@ PerfReaderBase::create(StringRef BinaryPath,
   }
 
   return PerfReader;
-}
-
-PerfReaderBase::PerfReaderBase(StringRef BinaryPath) {
-  // Load the binary.
-  loadBinary(BinaryPath);
-}
-
-void PerfReaderBase::loadBinary(const StringRef BinaryPath) {
-  // Call to load the binary in the ctor of ProfiledBinary.
-  Binary = new ProfiledBinary(BinaryPath);
-  // Initialize the base address to preferred address.
-  Binary->setBaseAddress(Binary->getPreferredBaseAddress());
 }
 
 void PerfReaderBase::updateBinaryAddress(const MMapEvent &Event) {
