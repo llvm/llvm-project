@@ -76,6 +76,10 @@ static cl::opt<bool> SaveTemps(
              "This option forces print-out of the temporary files' names."),
     cl::Hidden);
 
+static cl::opt<bool> AddOpenMPOffloadNotes(
+    "add-omp-offload-notes",
+    cl::desc("Add LLVMOMPOFFLOAD ELF notes to ELF device images."), cl::Hidden);
+
 namespace {
 
 class BinaryWrapper {
@@ -630,7 +634,7 @@ int main(int argc, const char **argv) {
       return 1;
     }
     std::unique_ptr<MemoryBuffer> Buffer(std::move(*BufOrErr));
-    if (File != "-") {
+    if (File != "-" && AddOpenMPOffloadNotes) {
       // Adding ELF notes for STDIN is not supported yet.
       Buffer = Wrapper.addELFNotes(std::move(Buffer), File);
     }
