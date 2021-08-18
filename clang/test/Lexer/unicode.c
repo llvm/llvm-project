@@ -1,7 +1,7 @@
 // RUN: %clang_cc1 -fsyntax-only -verify -x c -std=c11 %s
 // RUN: %clang_cc1 -fsyntax-only -verify -x c++ -std=c++11 %s
-// RUN: %clang_cc1 -E -DPP_ONLY=1 %s -o %t
-// RUN: FileCheck --strict-whitespace --input-file=%t %s
+// RUN: %clang_cc1 -triple x86_64-scei-ps4 -E -DPP_ONLY=1 %s | FileCheck %s --strict-whitespace
+// RUN: %clang_cc1 -E -DPP_ONLY=1 %s | FileCheck %s --strict-whitespace
 
 // This file contains Unicode characters; please do not "fix" them!
 
