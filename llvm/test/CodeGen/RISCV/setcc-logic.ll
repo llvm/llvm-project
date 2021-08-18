@@ -84,9 +84,8 @@ define i1 @and_icmps_const_1bit_diff(i32 %x) nounwind {
 ;
 ; RV64I-LABEL: and_icmps_const_1bit_diff:
 ; RV64I:       # %bb.0:
-; RV64I-NEXT:    addi a0, a0, -44
+; RV64I-NEXT:    addiw a0, a0, -44
 ; RV64I-NEXT:    andi a0, a0, -17
-; RV64I-NEXT:    sext.w a0, a0
 ; RV64I-NEXT:    snez a0, a0
 ; RV64I-NEXT:    ret
   %a = icmp ne i32 %x, 44

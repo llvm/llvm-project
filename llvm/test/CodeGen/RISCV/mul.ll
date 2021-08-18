@@ -782,7 +782,7 @@ define i32 @muli32_p384(i32 %a) nounwind {
 ; RV64IM-LABEL: muli32_p384:
 ; RV64IM:       # %bb.0:
 ; RV64IM-NEXT:    addi a1, zero, 384
-; RV64IM-NEXT:    mul a0, a0, a1
+; RV64IM-NEXT:    mulw a0, a0, a1
 ; RV64IM-NEXT:    ret
   %1 = mul i32 %a, 384
   ret i32 %1
@@ -818,7 +818,7 @@ define i32 @muli32_p12288(i32 %a) nounwind {
 ; RV64IM-LABEL: muli32_p12288:
 ; RV64IM:       # %bb.0:
 ; RV64IM-NEXT:    lui a1, 3
-; RV64IM-NEXT:    mul a0, a0, a1
+; RV64IM-NEXT:    mulw a0, a0, a1
 ; RV64IM-NEXT:    ret
   %1 = mul i32 %a, 12288
   ret i32 %1
@@ -954,7 +954,7 @@ define i32 @muli32_m4352(i32 %a) nounwind {
 ; RV64IM:       # %bb.0:
 ; RV64IM-NEXT:    lui a1, 1048575
 ; RV64IM-NEXT:    addiw a1, a1, -256
-; RV64IM-NEXT:    mul a0, a0, a1
+; RV64IM-NEXT:    mulw a0, a0, a1
 ; RV64IM-NEXT:    ret
   %1 = mul i32 %a, -4352
   ret i32 %1
