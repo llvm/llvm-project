@@ -15378,7 +15378,7 @@ static SDValue foldTruncStoreOfExt(SelectionDAG &DAG, SDNode *N) {
         ExtOpCode != ISD::ANY_EXTEND)
       return SDValue();
     SDValue Orig = Ext->getOperand(0);
-    if (Store->getMemoryVT() != Orig->getValueType(0))
+    if (Store->getMemoryVT() != Orig.getValueType())
       return SDValue();
     return DAG.getStore(Store->getChain(), SDLoc(Store), Orig,
                         Store->getBasePtr(), Store->getPointerInfo(),
