@@ -2712,9 +2712,8 @@ struct AAHeapToSharedFunction : public AAHeapToShared {
 
       ConstantInt *AllocSize = dyn_cast<ConstantInt>(CB->getArgOperand(0));
 
-      LLVM_DEBUG(dbgs() << TAG << "Replace globalization call in "
-                        << CB->getCaller()->getName() << " with "
-                        << AllocSize->getZExtValue()
+      LLVM_DEBUG(dbgs() << TAG << "Replace globalization call " << *CB
+                        << " with " << AllocSize->getZExtValue()
                         << " bytes of shared memory\n");
 
       // Create a new shared memory buffer of the same size as the allocation
