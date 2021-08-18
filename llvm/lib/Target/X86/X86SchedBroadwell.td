@@ -123,9 +123,11 @@ defm : X86WriteRes<WriteIMul16Imm,    [BWPort1,BWPort0156], 4, [1,1], 2>;
 defm : X86WriteRes<WriteIMul16ImmLd,  [BWPort1,BWPort0156,BWPort23], 8, [1,1,1], 3>;
 defm : BWWriteResPair<WriteIMul16Reg, [BWPort1],   3>;
 defm : BWWriteResPair<WriteIMul32,    [BWPort1,BWPort06,BWPort0156], 4, [1,1,1], 3>;
+defm : BWWriteResPair<WriteMULX32,    [BWPort1,BWPort06,BWPort0156], 4, [1,1,1], 3>;
 defm : BWWriteResPair<WriteIMul32Imm, [BWPort1],   3>;
 defm : BWWriteResPair<WriteIMul32Reg, [BWPort1],   3>;
 defm : BWWriteResPair<WriteIMul64,    [BWPort1,BWPort5], 4, [1,1], 2>;
+defm : BWWriteResPair<WriteMULX64,    [BWPort1,BWPort5], 4, [1,1], 2>;
 defm : BWWriteResPair<WriteIMul64Imm, [BWPort1],   3>;
 defm : BWWriteResPair<WriteIMul64Reg, [BWPort1],   3>;
 def : WriteRes<WriteIMulH, []> { let Latency = 3; }

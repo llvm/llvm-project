@@ -1502,8 +1502,12 @@ let hasSideEffects = 0 in {
   let mayLoad = 1 in
   def rm : I<0xF6, MRMSrcMem, (outs RC:$dst1, RC:$dst2), (ins x86memop:$src),
              !strconcat(mnemonic, "\t{$src, $dst2, $dst1|$dst1, $dst2, $src}"),
-
-             []>, T8XD, VEX_4V, Sched<[sched.Folded, WriteIMulH]>;
+             []>, T8XD, VEX_4V,
+             Sched<[sched.Folded, WriteIMulH,
+                    // Memory operand.
+                    ReadDefault, ReadDefault, ReadDefault, ReadDefault, ReadDefault,
+                    // Implicit read of EDX/RDX
+                    sched.ReadAfterFold]>;
 
   // Pseudo instructions to be used when the low result isn't used. The
   // instruction is defined to keep the high if both destinations are the same.
@@ -1518,9 +1522,9 @@ let hasSideEffects = 0 in {
 
 let Predicates = [HasBMI2] in {
   let Uses = [EDX] in
-    defm MULX32 : bmi_mulx<"mulx{l}", GR32, i32mem, WriteIMul32>;
+    defm MULX32 : bmi_mulx<"mulx{l}", GR32, i32mem, WriteMULX32>;
   let Uses = [RDX] in
-    defm MULX64 : bmi_mulx<"mulx{q}", GR64, i64mem, WriteIMul64>, VEX_W;
+    defm MULX64 : bmi_mulx<"mulx{q}", GR64, i64mem, WriteMULX64>, VEX_W;
 }
 
 //===----------------------------------------------------------------------===//
@@ -1547,7 +1551,12 @@ let Predicates = [HasADX], Defs = [EFLAGS], Uses = [EFLAGS],
                     "adox{q}\t{$src2, $dst|$dst, $src2}", []>, T8XS;
   } // SchedRW
 
-  let mayLoad = 1, SchedRW = [WriteADC.Folded, WriteADC.ReadAfterFold] in {
+  let mayLoad = 1,
+      SchedRW = [WriteADC.Folded, WriteADC.ReadAfterFold,
+                 // Memory operand.
+                 ReadDefault, ReadDefault, ReadDefault, ReadDefault, ReadDefault,
+                 // Implicit read of EFLAGS
+                 WriteADC.ReadAfterFold] in {
   def ADCX32rm : I<0xF6, MRMSrcMem, (outs GR32:$dst),
                    (ins GR32:$src1, i32mem:$src2),
                    "adcx{l}\t{$src2, $dst|$dst, $src2}", []>, T8PD;

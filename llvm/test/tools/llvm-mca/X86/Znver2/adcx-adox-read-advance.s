@@ -15,12 +15,12 @@ adox (%rdi), %rcx
 
 # CHECK:      Iterations:        2
 # CHECK-NEXT: Instructions:      2
-# CHECK-NEXT: Total Cycles:      13
+# CHECK-NEXT: Total Cycles:      9
 # CHECK-NEXT: Total uOps:        4
 
 # CHECK:      Dispatch Width:    4
-# CHECK-NEXT: uOps Per Cycle:    0.31
-# CHECK-NEXT: IPC:               0.15
+# CHECK-NEXT: uOps Per Cycle:    0.44
+# CHECK-NEXT: IPC:               0.22
 # CHECK-NEXT: Block RThroughput: 0.5
 
 # CHECK:      Instruction Info:
@@ -58,11 +58,10 @@ adox (%rdi), %rcx
 # CHECK-NEXT:  -     0.50   0.50    -      -     0.50   0.50    -      -      -      -      -      -     adcxq	(%rdi), %rcx
 
 # CHECK:      Timeline view:
-# CHECK-NEXT:                     012
-# CHECK-NEXT: Index     0123456789
+# CHECK-NEXT: Index     012345678
 
-# CHECK:      [0,0]     DeeeeeER  . .   adcxq	(%rdi), %rcx
-# CHECK-NEXT: [1,0]     D=====eeeeeER   adcxq	(%rdi), %rcx
+# CHECK:      [0,0]     DeeeeeER.   adcxq	(%rdi), %rcx
+# CHECK-NEXT: [1,0]     D=eeeeeER   adcxq	(%rdi), %rcx
 
 # CHECK:      Average Wait times (based on the timeline view):
 # CHECK-NEXT: [0]: Executions
@@ -71,18 +70,18 @@ adox (%rdi), %rcx
 # CHECK-NEXT: [3]: Average time elapsed from WB until retire stage
 
 # CHECK:            [0]    [1]    [2]    [3]
-# CHECK-NEXT: 0.     2     3.5    0.5    0.0       adcxq	(%rdi), %rcx
+# CHECK-NEXT: 0.     2     1.5    0.5    0.0       adcxq	(%rdi), %rcx
 
 # CHECK:      [1] Code Region
 
 # CHECK:      Iterations:        2
 # CHECK-NEXT: Instructions:      2
-# CHECK-NEXT: Total Cycles:      13
+# CHECK-NEXT: Total Cycles:      9
 # CHECK-NEXT: Total uOps:        4
 
 # CHECK:      Dispatch Width:    4
-# CHECK-NEXT: uOps Per Cycle:    0.31
-# CHECK-NEXT: IPC:               0.15
+# CHECK-NEXT: uOps Per Cycle:    0.44
+# CHECK-NEXT: IPC:               0.22
 # CHECK-NEXT: Block RThroughput: 0.5
 
 # CHECK:      Instruction Info:
@@ -120,11 +119,10 @@ adox (%rdi), %rcx
 # CHECK-NEXT:  -     0.50   0.50    -      -     0.50   0.50    -      -      -      -      -      -     adoxq	(%rdi), %rcx
 
 # CHECK:      Timeline view:
-# CHECK-NEXT:                     012
-# CHECK-NEXT: Index     0123456789
+# CHECK-NEXT: Index     012345678
 
-# CHECK:      [0,0]     DeeeeeER  . .   adoxq	(%rdi), %rcx
-# CHECK-NEXT: [1,0]     D=====eeeeeER   adoxq	(%rdi), %rcx
+# CHECK:      [0,0]     DeeeeeER.   adoxq	(%rdi), %rcx
+# CHECK-NEXT: [1,0]     D=eeeeeER   adoxq	(%rdi), %rcx
 
 # CHECK:      Average Wait times (based on the timeline view):
 # CHECK-NEXT: [0]: Executions
@@ -133,4 +131,4 @@ adox (%rdi), %rcx
 # CHECK-NEXT: [3]: Average time elapsed from WB until retire stage
 
 # CHECK:            [0]    [1]    [2]    [3]
-# CHECK-NEXT: 0.     2     3.5    0.5    0.0       adoxq	(%rdi), %rcx
+# CHECK-NEXT: 0.     2     1.5    0.5    0.0       adoxq	(%rdi), %rcx
