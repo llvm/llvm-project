@@ -1270,14 +1270,6 @@ def : Pat<(sext_inreg GPR:$rs1, i32), (ADDIW GPR:$rs1, 0)>;
 
 /// ALU operations
 
-def : Pat<(sext_inreg (add GPR:$rs1, GPR:$rs2), i32),
-          (ADDW GPR:$rs1, GPR:$rs2)>;
-def : Pat<(sext_inreg (add GPR:$rs1, simm12:$imm12), i32),
-          (ADDIW GPR:$rs1, simm12:$imm12)>;
-def : Pat<(sext_inreg (sub GPR:$rs1, GPR:$rs2), i32),
-          (SUBW GPR:$rs1, GPR:$rs2)>;
-def : Pat<(sext_inreg (shl GPR:$rs1, uimm5:$shamt), i32),
-          (SLLIW GPR:$rs1, uimm5:$shamt)>;
 def : Pat<(i64 (srl (and GPR:$rs1, 0xffffffff), uimm5:$shamt)),
           (SRLIW GPR:$rs1, uimm5:$shamt)>;
 def : Pat<(i64 (srl (shl GPR:$rs1, (i64 32)), uimm6gt32:$shamt)),
@@ -1338,7 +1330,8 @@ def : Pat<(add GPR:$rs1, (AddiPair:$rs2)),
                 (AddiPairImmA GPR:$rs2))>;
 
 let Predicates = [IsRV64] in {
-def : Pat<(sext_inreg (add_oneuse GPR:$rs1, (AddiPair:$rs2)), i32),
+// Select W instructions if only the lower 32-bits of the result are used.
+def : Pat<(overflowingbinopw<add> GPR:$rs1, (AddiPair:$rs2)),
           (ADDIW (ADDIW GPR:$rs1, (AddiPairImmB AddiPair:$rs2)),
                  (AddiPairImmA AddiPair:$rs2))>;
 }

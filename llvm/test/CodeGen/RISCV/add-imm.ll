@@ -178,9 +178,8 @@ define signext i32 @add32_sext_reject_on_rv64(i32 signext %a) nounwind {
 ;
 ; RV64I-LABEL: add32_sext_reject_on_rv64:
 ; RV64I:       # %bb.0:
-; RV64I-NEXT:    lui a1, 1
-; RV64I-NEXT:    addiw a1, a1, -1096
-; RV64I-NEXT:    addw a0, a0, a1
+; RV64I-NEXT:    addiw a0, a0, 1500
+; RV64I-NEXT:    addiw a0, a0, 1500
 ; RV64I-NEXT:    lui a1, %hi(gv0)
 ; RV64I-NEXT:    sw a0, %lo(gv0)(a1)
 ; RV64I-NEXT:    ret
