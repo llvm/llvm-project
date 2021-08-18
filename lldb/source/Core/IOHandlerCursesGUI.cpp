@@ -1208,7 +1208,13 @@ public:
 
   // True if the key represents a char that can be inserted in the field
   // content, false otherwise.
-  virtual bool IsAcceptableChar(int key) { return isprint(key); }
+  virtual bool IsAcceptableChar(int key) {
+    // The behavior of isprint is undefined when the value is not representable
+    // as an unsigned char. So explicitly check for non-ascii key codes.
+    if (key > 127)
+      return false;
+    return isprint(key);
+  }
 
   HandleCharResult FieldDelegateHandleChar(int key) override {
     if (IsAcceptableChar(key)) {
