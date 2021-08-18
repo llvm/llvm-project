@@ -282,9 +282,9 @@ Type *TruncInstCombine::getBestTruncatedType() {
     if (I->getOpcode() == Instruction::Shl) {
       KnownBits KnownRHS = computeKnownBits(I->getOperand(1), DL);
       const unsigned SrcBitWidth = KnownRHS.getBitWidth();
-      unsigned MinBitWidth =
-          KnownRHS.getMaxValue().uadd_sat(APInt(SrcBitWidth, 1)).getZExtValue();
-      MinBitWidth = std::min(MinBitWidth, SrcBitWidth);
+      unsigned MinBitWidth = KnownRHS.getMaxValue()
+                                 .uadd_sat(APInt(SrcBitWidth, 1))
+                                 .getLimitedValue(SrcBitWidth);
       if (MinBitWidth >= OrigBitWidth)
         return nullptr;
       Itr.second.MinBitWidth = MinBitWidth;

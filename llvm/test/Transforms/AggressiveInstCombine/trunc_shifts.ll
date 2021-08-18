@@ -73,6 +73,25 @@ define i16 @shl_var_bounded_shift_amount(i8 %x, i8 %y) {
   ret i16 %trunc
 }
 
+; Negative test (https://reviews.llvm.org/D108091#2950930)
+
+define i32 @shl_check_no_overflow(i32 %call62, i16 %call63) {
+; CHECK-LABEL: @shl_check_no_overflow(
+; CHECK-NEXT:    [[CONV64142:%.*]] = zext i32 [[CALL62:%.*]] to i64
+; CHECK-NEXT:    [[CONV65:%.*]] = sext i16 [[CALL63:%.*]] to i64
+; CHECK-NEXT:    [[SH_PROM66:%.*]] = and i64 [[CONV65]], 4294967295
+; CHECK-NEXT:    [[SHL67:%.*]] = shl i64 [[CONV64142]], [[SH_PROM66]]
+; CHECK-NEXT:    [[CONV68:%.*]] = trunc i64 [[SHL67]] to i32
+; CHECK-NEXT:    ret i32 [[CONV68]]
+;
+  %conv64142 = zext i32 %call62 to i64
+  %conv65 = sext i16 %call63 to i64
+  %sh_prom66 = and i64 %conv65, 4294967295
+  %shl67 = shl i64 %conv64142, %sh_prom66
+  %conv68 = trunc i64 %shl67 to i32
+  ret i32 %conv68
+}
+
 define <2 x i16> @shl_vector(<2 x i8> %x) {
 ; CHECK-LABEL: @shl_vector(
 ; CHECK-NEXT:    [[Z:%.*]] = zext <2 x i8> [[X:%.*]] to <2 x i16>
