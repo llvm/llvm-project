@@ -226,6 +226,7 @@ private:
   void CheckCycleConstraints(const parser::OpenMPLoopConstruct &x);
   void CheckDistLinear(const parser::OpenMPLoopConstruct &x);
   void CheckSIMDNest(const parser::OpenMPConstruct &x);
+  void CheckTargetNest(const parser::OpenMPConstruct &x);
   void CheckCancellationNest(
       const parser::CharBlock &source, const parser::OmpCancelType::Type &type);
   std::int64_t GetOrdCollapseLevel(const parser::OpenMPLoopConstruct &x);
@@ -253,7 +254,12 @@ private:
   void ExitDirectiveNest(const int index) { directiveNest_[index]--; }
   int GetDirectiveNest(const int index) { return directiveNest_[index]; }
 
-  enum directiveNestType { SIMDNest, TargetBlockOnlyTeams, LastType };
+  enum directiveNestType {
+    SIMDNest,
+    TargetBlockOnlyTeams,
+    TargetNest,
+    LastType
+  };
   int directiveNest_[LastType + 1] = {0};
 };
 } // namespace Fortran::semantics

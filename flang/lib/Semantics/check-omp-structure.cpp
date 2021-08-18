@@ -288,6 +288,9 @@ void OmpStructureChecker::Enter(const parser::OpenMPConstruct &x) {
     if (GetDirectiveNest(SIMDNest) > 0) {
       CheckSIMDNest(x);
     }
+    if (GetDirectiveNest(TargetNest) > 0) {
+      CheckTargetNest(x);
+    }
   }
 }
 
@@ -473,6 +476,53 @@ void OmpStructureChecker::CheckSIMDNest(const parser::OpenMPConstruct &c) {
   }
 }
 
+void OmpStructureChecker::CheckTargetNest(const parser::OpenMPConstruct &c) {
+  // 2.12.5 Target Construct Restriction
+  bool eligibleTarget{true};
+  llvm::omp::Directive ineligibleTargetDir;
+  std::visit(
+      common::visitors{
+          [&](const parser::OpenMPBlockConstruct &c) {
+            const auto &beginBlockDir{
+                std::get<parser::OmpBeginBlockDirective>(c.t)};
+            const auto &beginDir{
+                std::get<parser::OmpBlockDirective>(beginBlockDir.t)};
+            if (beginDir.v == llvm::omp::Directive::OMPD_target_data) {
+              eligibleTarget = false;
+              ineligibleTargetDir = beginDir.v;
+            }
+          },
+          [&](const parser::OpenMPStandaloneConstruct &c) {
+            std::visit(
+                common::visitors{
+                    [&](const parser::OpenMPSimpleStandaloneConstruct &c) {
+                      const auto &dir{
+                          std::get<parser::OmpSimpleStandaloneDirective>(c.t)};
+                      if (dir.v == llvm::omp::Directive::OMPD_target_update ||
+                          dir.v ==
+                              llvm::omp::Directive::OMPD_target_enter_data ||
+                          dir.v ==
+                              llvm::omp::Directive::OMPD_target_exit_data) {
+                        eligibleTarget = false;
+                        ineligibleTargetDir = dir.v;
+                      }
+                    },
+                    [&](const auto &c) {},
+                },
+                c.u);
+          },
+          [&](const auto &c) {},
+      },
+      c.u);
+  if (!eligibleTarget) {
+    context_.Say(parser::FindSourceLocation(c),
+        "If %s directive is nested inside TARGET region, the behaviour "
+        "is unspecified"_en_US,
+        parser::ToUpperCaseLetters(
+            getDirectiveName(ineligibleTargetDir).str()));
+  }
+}
+
 std::int64_t OmpStructureChecker::GetOrdCollapseLevel(
     const parser::OpenMPLoopConstruct &x) {
   const auto &beginLoopDir{std::get<parser::OmpBeginLoopDirective>(x.t)};
@@ -616,6 +666,9 @@ void OmpStructureChecker::Enter(const parser::OpenMPBlockConstruct &x) {
   CheckMatching<parser::OmpBlockDirective>(beginDir, endDir);
 
   PushContextAndClauseSets(beginDir.source, beginDir.v);
+  if (GetContext().directive == llvm::omp::Directive::OMPD_target) {
+    EnterDirectiveNest(TargetNest);
+  }
 
   if (CurrentDirectiveIsNested()) {
     CheckIfDoOrderedClause(beginDir);
@@ -709,6 +762,9 @@ void OmpStructureChecker::CheckIfDoOrderedClause(
 void OmpStructureChecker::Leave(const parser::OpenMPBlockConstruct &) {
   if (GetDirectiveNest(TargetBlockOnlyTeams)) {
     ExitDirectiveNest(TargetBlockOnlyTeams);
+  }
+  if (GetContext().directive == llvm::omp::Directive::OMPD_target) {
+    ExitDirectiveNest(TargetNest);
   }
   dirContext_.pop_back();
 }
