@@ -428,13 +428,19 @@ bool polly::isErrorBlock(BasicBlock &BB, const Region &R, LoopInfo &LI,
   // as their execution can not be a rare event.
   bool DominatesAllPredecessors = true;
   if (R.isTopLevelRegion()) {
-    for (BasicBlock &I : *R.getEntry()->getParent())
-      if (isa<ReturnInst>(I.getTerminator()) && !DT.dominates(&BB, &I))
+    for (BasicBlock &I : *R.getEntry()->getParent()) {
+      if (isa<ReturnInst>(I.getTerminator()) && !DT.dominates(&BB, &I)) {
         DominatesAllPredecessors = false;
+        break;
+      }
+    }
   } else {
-    for (auto Pred : predecessors(R.getExit()))
-      if (R.contains(Pred) && !DT.dominates(&BB, Pred))
+    for (auto Pred : predecessors(R.getExit())) {
+      if (R.contains(Pred) && !DT.dominates(&BB, Pred)) {
         DominatesAllPredecessors = false;
+        break;
+      }
+    }
   }
 
   if (DominatesAllPredecessors)
