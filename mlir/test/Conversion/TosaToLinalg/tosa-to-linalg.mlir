@@ -404,6 +404,31 @@ func @test_simple_i32(%arg0: tensor<1xi32>) -> () {
 
 // -----
 
+// CHECK-LABEL: @test_i8
+func @test_i8(%arg0: tensor<1xi8>) -> () {
+  // CHECK: linalg.generic
+  // CHECK-DAG: %[[C127:.+]] = constant -127
+  // CHECK-DAG: %[[C126:.+]] = constant 126
+  // CHECK-DAG: %[[CMP1:.+]] = cmpi slt, %arg1, %[[C127]]
+  // CHECK-DAG: %[[SEL1:.+]] = select %[[CMP1]], %[[C127]]
+  // CHECK-DAG: %[[CMP2:.+]] = cmpi slt, %[[C126]], %arg1
+  // CHECK: %[[SEL2:.+]] = select %[[CMP2]], %[[C126]], %[[SEL1]]
+  %0 = "tosa.clamp"(%arg0) {min_int = -127 : i64, max_int = 126 : i64, min_fp = 0.0 : f32, max_fp = 0.0 : f32} : (tensor<1xi8>) -> tensor<1xi8>
+
+  // CHECK: linalg.generic
+  // CHECK-DAG: %[[C128:.+]] = constant -128
+  // CHECK-DAG: %[[C127:.+]] = constant 127
+  // CHECK-DAG: %[[CMP1:.+]] = cmpi slt, %arg1, %[[C128]]
+  // CHECK-DAG: %[[SEL1:.+]] = select %[[CMP1]], %[[C128]]
+  // CHECK-DAG: %[[CMP2:.+]] = cmpi slt, %[[C127]], %arg1
+  // CHECK: %[[SEL2:.+]] = select %[[CMP2]], %[[C127]], %[[SEL1]]
+  %1 = "tosa.clamp"(%arg0) {min_int = -130 : i64, max_int = 130 : i64, min_fp = 0.0 : f32, max_fp = 0.0 : f32} : (tensor<1xi8>) -> tensor<1xi8>
+
+  return
+}
+
+// -----
+
 // CHECK-LABEL: @test_bool
 func @test_bool(%arg0: tensor<1xi1>, %arg1: tensor<1xi1>) -> () {
   // CHECK: linalg.generic
