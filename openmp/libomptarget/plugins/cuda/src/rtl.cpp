@@ -829,10 +829,9 @@ public:
           return nullptr;
         }
       } else {
-        REPORT("Loading global exec_mode '%s' - symbol missing, using default "
-               "value GENERIC (1)\n",
-               ExecModeName);
-        CUDA_ERR_STRING(Err);
+        DP("Loading global exec_mode '%s' - symbol missing, using default "
+           "value GENERIC (1)\n",
+           ExecModeName);
       }
 
       KernelsList.emplace_back(Func, ExecModeVal);
