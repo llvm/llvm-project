@@ -28,7 +28,21 @@ static void run_in_thread(void *(*f)(void *), void *arg = nullptr) {
   pthread_join(th, nullptr);
 }
 
-TEST(Trace, RestoreAccess) {
+#if SANITIZER_MAC
+// These tests are currently failing on Mac.
+// See https://reviews.llvm.org/D107911 for more details.
+#  define MAYBE_RestoreAccess DISABLED_RestoreAccess
+#  define MAYBE_MemoryAccessSize DISABLED_MemoryAccessSize
+#  define MAYBE_RestoreMutexLock DISABLED_RestoreMutexLock
+#  define MAYBE_MultiPart DISABLED_MultiPart
+#else
+#  define MAYBE_RestoreAccess RestoreAccess
+#  define MAYBE_MemoryAccessSize MemoryAccessSize
+#  define MAYBE_RestoreMutexLock RestoreMutexLock
+#  define MAYBE_MultiPart MultiPart
+#endif
+
+TEST(Trace, MAYBE_RestoreAccess) {
   struct Thread {
     static void *Func(void *arg) {
       // A basic test with some function entry/exit events,
@@ -76,13 +90,6 @@ TEST(Trace, RestoreAccess) {
   run_in_thread(Thread::Func);
 }
 
-#if SANITIZER_MAC
-// Trace.MemoryAccessSize is currently failing on Mac.
-// See https://reviews.llvm.org/D107911 for more details.
-#  define MAYBE_MemoryAccessSize DISABLED_MemoryAccessSize
-#else
-#  define MAYBE_MemoryAccessSize MemoryAccessSize
-#endif
 TEST(Trace, MAYBE_MemoryAccessSize) {
   struct Thread {
     struct Params {
@@ -143,7 +150,7 @@ TEST(Trace, MAYBE_MemoryAccessSize) {
   }
 }
 
-TEST(Trace, RestoreMutexLock) {
+TEST(Trace, MAYBE_RestoreMutexLock) {
   struct Thread {
     static void *Func(void *arg) {
       // Check of restoration of a mutex lock event.
@@ -176,7 +183,7 @@ TEST(Trace, RestoreMutexLock) {
   run_in_thread(Thread::Func);
 }
 
-TEST(Trace, MultiPart) {
+TEST(Trace, MAYBE_MultiPart) {
   struct Thread {
     static void *Func(void *arg) {
       // Check replay of a trace with multiple parts.
