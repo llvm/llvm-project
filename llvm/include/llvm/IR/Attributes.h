@@ -846,13 +846,6 @@ public:
     return getDereferenceableOrNullBytes(ArgNo + FirstArgIndex);
   }
 
-  /// Get the allocsize argument numbers (or pair(0, 0) if unknown).
-  std::pair<unsigned, Optional<unsigned>>
-  getAllocSizeArgs(unsigned Index) const;
-
-  /// Get the vscale_range argument numbers (or pair(0, 0) if unknown).
-  std::pair<unsigned, unsigned> getVScaleRangeArgs(unsigned Index) const;
-
   /// Return the attributes at the index as a string.
   std::string getAsString(unsigned Index, bool InAttrGrp = false) const;
 
