@@ -4,8 +4,8 @@ if(UNIX AND LIBCXX_ENABLE_STATIC AND LIBCXXABI_ENABLE_STATIC)
 
     DEPENDS
     clang
-    cxx_static
-    cxxabi_static
+    cxx
+    cxxabi
     lld
   )
 
@@ -17,6 +17,7 @@ if(UNIX AND LIBCXX_ENABLE_STATIC AND LIBCXXABI_ENABLE_STATIC)
   target_compile_features(amdclang PRIVATE cxx_std_17)
   target_compile_options(amdclang PRIVATE  -nostdinc++)
   target_include_directories(amdclang PRIVATE ${CMAKE_BINARY_DIR}/include/c++/v1)
+  target_include_directories(amdclang PRIVATE ${CMAKE_BINARY_DIR}/include/${LLVM_DEFAULT_TARGET_TRIPLE}/c++/v1)
   target_link_libraries(amdclang PRIVATE c++abi pthread)
   target_link_options(amdclang PRIVATE -stdlib=libc++
                                       -L${CMAKE_BINARY_DIR}/lib
