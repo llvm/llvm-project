@@ -1652,7 +1652,8 @@ bool Lexer::tryConsumeIdentifierUCN(const char *&CurPtr, unsigned Size,
   if (!isAllowedIDChar(CodePoint, LangOpts)) {
     if (isASCII(CodePoint) || isUnicodeWhitespace(CodePoint))
       return false;
-    if (!isLexingRawMode())
+    if (!isLexingRawMode() && !ParsingPreprocessorDirective &&
+        !PP->isPreprocessedOutput())
       diagnoseInvalidUnicodeCodepointInIdentifier(
           PP->getDiagnostics(), LangOpts, CodePoint,
           makeCharRange(*this, CurPtr, UCNPtr),
@@ -1691,7 +1692,8 @@ bool Lexer::tryConsumeIdentifierUTF8Char(const char *&CurPtr) {
     if (isASCII(CodePoint) || isUnicodeWhitespace(CodePoint))
       return false;
 
-    if (!isLexingRawMode())
+    if (!isLexingRawMode() && !ParsingPreprocessorDirective &&
+        !PP->isPreprocessedOutput())
       diagnoseInvalidUnicodeCodepointInIdentifier(
           PP->getDiagnostics(), LangOpts, CodePoint,
           makeCharRange(*this, CurPtr, UnicodePtr), /*IsFirst=*/false);
