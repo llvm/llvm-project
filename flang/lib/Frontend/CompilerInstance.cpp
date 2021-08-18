@@ -51,10 +51,6 @@ void CompilerInstance::set_semaOutputStream(
   semaOutputStream_ = ownedSemaOutputStream_.get();
 }
 
-void CompilerInstance::AddOutputFile(OutputFile &&outFile) {
-  outputFiles_.push_back(std::move(outFile));
-}
-
 // Helper method to generate the path of the output file. The following logic
 // applies:
 // 1. If the user specifies the output file via `-o`, then use that (i.e.
@@ -84,48 +80,51 @@ static std::string GetOutputFilePath(llvm::StringRef outputFilename,
 std::unique_ptr<llvm::raw_pwrite_stream>
 CompilerInstance::CreateDefaultOutputFile(
     bool binary, llvm::StringRef baseName, llvm::StringRef extension) {
-  std::string outputPathName;
-  std::error_code ec;
 
   // Get the path of the output file
   std::string outputFilePath =
       GetOutputFilePath(frontendOpts().outputFile, baseName, extension);
 
   // Create the output file
-  std::unique_ptr<llvm::raw_pwrite_stream> os =
-      CreateOutputFile(outputFilePath, ec, binary);
+  llvm::Expected<std::unique_ptr<llvm::raw_pwrite_stream>> os =
+      CreateOutputFileImpl(outputFilePath, binary);
 
-  // Add the file to the list of tracked output files (provided it was created
-  // successfully)
-  if (os)
-    AddOutputFile(OutputFile(outputPathName));
+  // If successful, add the file to the list of tracked output files and
+  // return.
+  if (os) {
+    outputFiles_.emplace_back(OutputFile(outputFilePath));
+    return std::move(*os);
+  }
 
-  return os;
+  // If unsuccessful, issue an error and return Null
+  unsigned DiagID = diagnostics().getCustomDiagID(
+      clang::DiagnosticsEngine::Error, "unable to open output file '%0': '%1'");
+  diagnostics().Report(DiagID)
+      << outputFilePath << llvm::errorToErrorCode(os.takeError()).message();
+  return nullptr;
 }
 
-std::unique_ptr<llvm::raw_pwrite_stream> CompilerInstance::CreateOutputFile(
-    llvm::StringRef outputFilePath, std::error_code &error, bool binary) {
+llvm::Expected<std::unique_ptr<llvm::raw_pwrite_stream>>
+CompilerInstance::CreateOutputFileImpl(
+    llvm::StringRef outputFilePath, bool binary) {
 
   // Creates the file descriptor for the output file
   std::unique_ptr<llvm::raw_fd_ostream> os;
-  std::string osFile;
-  if (!os) {
-    osFile = outputFilePath;
-    os.reset(new llvm::raw_fd_ostream(osFile, error,
-        (binary ? llvm::sys::fs::OF_None : llvm::sys::fs::OF_TextWithCRLF)));
-    if (error)
-      return nullptr;
-  }
 
-  // Return the stream corresponding to the output file.
-  // For non-seekable streams, wrap it in llvm::buffer_ostream first.
+  std::error_code error;
+  os.reset(new llvm::raw_fd_ostream(outputFilePath, error,
+      (binary ? llvm::sys::fs::OF_None : llvm::sys::fs::OF_TextWithCRLF)));
+  if (error)
+    return llvm::errorCodeToError(error);
+
+  // For seekable streams, just return the stream corresponding to the output
+  // file.
   if (!binary || os->supportsSeeking())
     return std::move(os);
 
-  assert(!nonSeekStream_ && "The non-seek stream has already been set!");
-  auto b = std::make_unique<llvm::buffer_ostream>(*os);
-  nonSeekStream_ = std::move(os);
-  return std::move(b);
+  // For non-seekable streams, we need to wrap the output stream into something
+  // that supports 'pwrite' and takes care of the ownership for us.
+  return std::make_unique<llvm::buffer_unique_ostream>(std::move(os));
 }
 
 void CompilerInstance::ClearOutputFiles(bool eraseFiles) {
@@ -134,7 +133,6 @@ void CompilerInstance::ClearOutputFiles(bool eraseFiles) {
       llvm::sys::fs::remove(of.filename_);
 
   outputFiles_.clear();
-  nonSeekStream_.reset();
 }
 
 bool CompilerInstance::ExecuteAction(FrontendAction &act) {
