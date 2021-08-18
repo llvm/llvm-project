@@ -76,7 +76,14 @@ TEST(Trace, RestoreAccess) {
   run_in_thread(Thread::Func);
 }
 
-TEST(Trace, MemoryAccessSize) {
+#if SANITIZER_MAC
+// Trace.MemoryAccessSize is currently failing on Mac.
+// See https://reviews.llvm.org/D107911 for more details.
+#  define MAYBE_MemoryAccessSize DISABLED_MemoryAccessSize
+#else
+#  define MAYBE_MemoryAccessSize MemoryAccessSize
+#endif
+TEST(Trace, MAYBE_MemoryAccessSize) {
   struct Thread {
     struct Params {
       uptr access_size, offset, size;
