@@ -1453,9 +1453,8 @@ static Value *emitUnaryFloatFnCallHelper(Value *Op, StringRef Name,
   // The incoming attribute set may have come from a speculatable intrinsic, but
   // is being replaced with a library call which is not allowed to be
   // speculatable.
-  CI->setAttributes(Attrs.removeAttribute(B.getContext(),
-                                          AttributeList::FunctionIndex,
-                                          Attribute::Speculatable));
+  CI->setAttributes(
+      Attrs.removeFnAttribute(B.getContext(), Attribute::Speculatable));
   if (const Function *F =
           dyn_cast<Function>(Callee.getCallee()->stripPointerCasts()))
     CI->setCallingConv(F->getCallingConv());
@@ -1498,9 +1497,8 @@ static Value *emitBinaryFloatFnCallHelper(Value *Op1, Value *Op2,
   // The incoming attribute set may have come from a speculatable intrinsic, but
   // is being replaced with a library call which is not allowed to be
   // speculatable.
-  CI->setAttributes(Attrs.removeAttribute(B.getContext(),
-                                          AttributeList::FunctionIndex,
-                                          Attribute::Speculatable));
+  CI->setAttributes(
+      Attrs.removeFnAttribute(B.getContext(), Attribute::Speculatable));
   if (const Function *F =
           dyn_cast<Function>(Callee.getCallee()->stripPointerCasts()))
     CI->setCallingConv(F->getCallingConv());
