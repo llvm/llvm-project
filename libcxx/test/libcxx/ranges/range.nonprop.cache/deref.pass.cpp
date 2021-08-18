@@ -23,14 +23,14 @@ constexpr void test() {
 
   // non-const version
   {
-    Cache cache; cache.__set(T{3});
+    Cache cache; cache.__emplace(3);
     T& result = *cache;
     assert(result == T{3});
   }
 
   // const version
   {
-    Cache cache; cache.__set(T{3});
+    Cache cache; cache.__emplace(3);
     T const& result = *static_cast<Cache const&>(cache);
     assert(result == T{3});
   }

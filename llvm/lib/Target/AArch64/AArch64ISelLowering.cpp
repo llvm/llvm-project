@@ -15378,7 +15378,7 @@ static SDValue foldTruncStoreOfExt(SelectionDAG &DAG, SDNode *N) {
         ExtOpCode != ISD::ANY_EXTEND)
       return SDValue();
     SDValue Orig = Ext->getOperand(0);
-    if (Store->getMemoryVT() != Orig->getValueType(0))
+    if (Store->getMemoryVT() != Orig.getValueType())
       return SDValue();
     return DAG.getStore(Store->getChain(), SDLoc(Store), Orig,
                         Store->getBasePtr(), Store->getPointerInfo(),
@@ -17744,7 +17744,7 @@ void AArch64TargetLowering::insertSSPDeclarations(Module &M) const {
         Type::getInt8PtrTy(M.getContext()));
     if (Function *F = dyn_cast<Function>(SecurityCheckCookie.getCallee())) {
       F->setCallingConv(CallingConv::Win64);
-      F->addAttribute(1, Attribute::AttrKind::InReg);
+      F->addParamAttr(0, Attribute::AttrKind::InReg);
     }
     return;
   }

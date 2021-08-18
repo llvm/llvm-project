@@ -1490,36 +1490,25 @@ void run(A_reg<float> reg, A_ptr<float> ptr, A_ref<float> ref) {
 
 namespace SubstTemplateTypeParmType {
 template <typename T>
-class Array {
-};
+class Array {};
 
 template <class T>
-class S{};
+class S {};
 
-template <class T, int num>
-Array<T> Make(T (&parameter)[num]);
+template <class T>
+Array<T> Make();
 
-void Run(int, Array<S<int>>) {}
-
-Array<const S<int>> Make();
 void Call() {
-  const S<int> s1[5];
-  S<int> s2[5];
-
-  Run(0, Make(s1));   // Error
-  Run(0, Make(s2));   // Okay
+  Array<S<int>> v = Make<const S<int>>();
+}
 }
 
-// CHECK-ELIDE-NOTREE: no matching function for call to 'Run'
-// CHECK-ELIDE-NOTREE: no known conversion from 'Array<const S<...>>' to 'Array<S<...>>' for 2nd argument
-// CHECK-NOELIDE-NOTREE: no matching function for call to 'Run'
-// CHECK-NOELIDE-NOTREE: no known conversion from 'Array<const S<int>>' to 'Array<S<int>>' for 2nd argument
-// CHECK-ELIDE-TREE: no matching function for call to 'Run'
-// CHECK-ELIDE-TREE: no known conversion from argument type to parameter type for 2nd argument
+// CHECK-ELIDE-NOTREE: no viable conversion from 'Array<const S<...>>' to 'Array<S<...>>'
+// CHECK-NOELIDE-NOTREE: no viable conversion from 'Array<const S<int>>' to 'Array<S<int>>'
+// CHECK-ELIDE-TREE: no viable conversion
 // CHECK-ELIDE-TREE:   Array<
 // CHECK-ELIDE-TREE:     [const != (no qualifiers)] S<...>>
-// CHECK-NOELIDE-TREE: no matching function for call to 'Run'
-// CHECK-NOELIDE-TREE: no known conversion from argument type to parameter type for 2nd argument
+// CHECK-NOELIDE-TREE: no viable conversion
 // CHECK-NOELIDE-TREE:   Array<
 // CHECK-NOELIDE-TREE:     [const != (no qualifiers)] S<
 // CHECK-NOELIDE-TREE:       int>>

@@ -66,7 +66,7 @@ public:
           ST->hasStdExtV() ? ST->getMinRVVVectorSizeInBits() : 0);
     case TargetTransformInfo::RGK_ScalableVector:
       return TypeSize::getScalable(
-          ST->hasStdExtV() ? ST->getMinRVVVectorSizeInBits() : 0);
+          ST->hasStdExtV() ? RISCV::RVVBitsPerBlock : 0);
     }
 
     llvm_unreachable("Unsupported register kind");

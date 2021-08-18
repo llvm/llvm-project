@@ -15,7 +15,7 @@ namespace __llvm_libc {
 LLVM_LIBC_FUNCTION(long long, strtoll,
                    (const char *__restrict str, char **__restrict str_end,
                     int base)) {
-  return internal::strtoll(str, str_end, base);
+  return internal::strtointeger<long long>(str, str_end, base);
 }
 
 } // namespace __llvm_libc

@@ -60,13 +60,15 @@ set(TARGET_LIBM_ENTRYPOINTS
     libc.src.fenv.feupdateenv
 
     # math.h entrypoints
+    # TODO: Add double precision sin, cos and tan to this list.
+    # They are currently disabled because of a problem with the
+    # bot hardware.
     libc.src.math.copysign
     libc.src.math.copysignf
     libc.src.math.copysignl
     libc.src.math.ceil
     libc.src.math.ceilf
     libc.src.math.ceill
-    libc.src.math.cos
     libc.src.math.cosf
     libc.src.math.expf
     libc.src.math.exp2f
@@ -129,13 +131,11 @@ set(TARGET_LIBM_ENTRYPOINTS
     libc.src.math.round
     libc.src.math.roundf
     libc.src.math.roundl
-    libc.src.math.sin
     libc.src.math.sincosf
     libc.src.math.sinf
     libc.src.math.sqrt
     libc.src.math.sqrtf
     libc.src.math.sqrtl
-    libc.src.math.tan
     libc.src.math.trunc
     libc.src.math.truncf
     libc.src.math.truncl

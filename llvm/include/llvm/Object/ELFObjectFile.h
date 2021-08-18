@@ -96,6 +96,10 @@ public:
 
   std::vector<std::pair<Optional<DataRefImpl>, uint64_t>>
   getPltAddresses() const;
+
+  /// Returns a vector containing a symbol version for each dynamic symbol.
+  /// Returns an empty vector if version sections do not exist.
+  Expected<std::vector<VersionEntry>> readDynsymVersions() const;
 };
 
 class ELFSectionRef : public SectionRef {

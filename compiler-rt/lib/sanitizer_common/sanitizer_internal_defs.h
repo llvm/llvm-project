@@ -139,7 +139,7 @@ namespace __sanitizer {
 typedef unsigned long long uptr;
 typedef signed long long sptr;
 #else
-#  if (SANITIZER_WORDSIZE == 64) || SANITIZER_MAC
+#  if (SANITIZER_WORDSIZE == 64) || SANITIZER_MAC || SANITIZER_WINDOWS
 typedef unsigned long uptr;
 typedef signed long sptr;
 #  else
@@ -177,10 +177,9 @@ typedef long pid_t;
 typedef int pid_t;
 #endif
 
-#if SANITIZER_FREEBSD || SANITIZER_NETBSD || \
-    SANITIZER_MAC || \
+#if SANITIZER_FREEBSD || SANITIZER_NETBSD || SANITIZER_MAC ||             \
     (SANITIZER_SOLARIS && (defined(_LP64) || _FILE_OFFSET_BITS == 64)) || \
-    (SANITIZER_LINUX && defined(__x86_64__))
+    (SANITIZER_LINUX && (defined(__x86_64__) || defined(__hexagon__)))
 typedef u64 OFF_T;
 #else
 typedef uptr OFF_T;

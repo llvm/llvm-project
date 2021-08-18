@@ -2965,8 +2965,8 @@ static int getIntOperandFromRegisterString(StringRef RegString) {
 // form described in getIntOperandsFromRegsterString) or is a named register
 // known by the MRS SysReg mapper.
 bool AArch64DAGToDAGISel::tryReadRegister(SDNode *N) {
-  const MDNodeSDNode *MD = dyn_cast<MDNodeSDNode>(N->getOperand(1));
-  const MDString *RegString = dyn_cast<MDString>(MD->getMD()->getOperand(0));
+  const auto *MD = cast<MDNodeSDNode>(N->getOperand(1));
+  const auto *RegString = cast<MDString>(MD->getMD()->getOperand(0));
   SDLoc DL(N);
 
   int Reg = getIntOperandFromRegisterString(RegString->getString());
@@ -3011,8 +3011,8 @@ bool AArch64DAGToDAGISel::tryReadRegister(SDNode *N) {
 // form described in getIntOperandsFromRegsterString) or is a named register
 // known by the MSR SysReg mapper.
 bool AArch64DAGToDAGISel::tryWriteRegister(SDNode *N) {
-  const MDNodeSDNode *MD = dyn_cast<MDNodeSDNode>(N->getOperand(1));
-  const MDString *RegString = dyn_cast<MDString>(MD->getMD()->getOperand(0));
+  const auto *MD = cast<MDNodeSDNode>(N->getOperand(1));
+  const auto *RegString = cast<MDString>(MD->getMD()->getOperand(0));
   SDLoc DL(N);
 
   int Reg = getIntOperandFromRegisterString(RegString->getString());

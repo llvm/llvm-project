@@ -1125,22 +1125,6 @@ Value *SCEVExpander::expandIVInc(PHINode *PN, Value *StepV, const Loop *L,
   return IncV;
 }
 
-/// Hoist the addrec instruction chain rooted in the loop phi above the
-/// position. This routine assumes that this is possible (has been checked).
-void SCEVExpander::hoistBeforePos(DominatorTree *DT, Instruction *InstToHoist,
-                                  Instruction *Pos, PHINode *LoopPhi) {
-  do {
-    if (DT->dominates(InstToHoist, Pos))
-      break;
-    // Make sure the increment is where we want it. But don't move it
-    // down past a potential existing post-inc user.
-    fixupInsertPoints(InstToHoist);
-    InstToHoist->moveBefore(Pos);
-    Pos = InstToHoist;
-    InstToHoist = cast<Instruction>(InstToHoist->getOperand(0));
-  } while (InstToHoist != LoopPhi);
-}
-
 /// Check whether we can cheaply express the requested SCEV in terms of
 /// the available PHI SCEV by truncation and/or inversion of the step.
 static bool canBeCheaplyTransformed(ScalarEvolution &SE,
@@ -1264,8 +1248,6 @@ SCEVExpander::getAddRecExprPHILiterally(const SCEVAddRecExpr *Normalized,
       if (LSRMode) {
         if (!isExpandedAddRecExprPHI(&PN, TempIncV, L))
           continue;
-        if (L == IVIncInsertLoop && !hoistIVInc(TempIncV, IVIncInsertPos))
-          continue;
       } else {
         if (!isNormalAddRecExprPHI(&PN, TempIncV, L))
           continue;
@@ -1293,11 +1275,6 @@ SCEVExpander::getAddRecExprPHILiterally(const SCEVAddRecExpr *Normalized,
     }
 
     if (AddRecPhiMatch) {
-      // Potentially, move the increment. We have made sure in
-      // isExpandedAddRecExprPHI or hoistIVInc that this is possible.
-      if (L == IVIncInsertLoop)
-        hoistBeforePos(&SE.DT, IncV, IVIncInsertPos, AddRecPhiMatch);
-
       // Ok, the add recurrence looks usable.
       // Remember this PHI, even in post-inc mode.
       InsertedValues.insert(AddRecPhiMatch);

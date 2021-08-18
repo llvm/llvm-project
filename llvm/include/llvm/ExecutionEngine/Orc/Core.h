@@ -21,7 +21,6 @@
 #include "llvm/ExecutionEngine/JITSymbol.h"
 #include "llvm/ExecutionEngine/Orc/ExecutorProcessControl.h"
 #include "llvm/ExecutionEngine/Orc/Shared/WrapperFunctionUtils.h"
-#include "llvm/ExecutionEngine/OrcV1Deprecation.h"
 #include "llvm/Support/Debug.h"
 #include "llvm/Support/ExtensibleRTTI.h"
 

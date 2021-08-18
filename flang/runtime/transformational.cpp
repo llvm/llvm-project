@@ -284,6 +284,8 @@ void RTNAME(EoshiftVector)(Descriptor &result, const Descriptor &source,
     SubscriptValue sourceAt{lb + j - 1 + shift};
     if (sourceAt >= lb && sourceAt < lb + extent) {
       CopyElement(result, &j, source, &sourceAt, terminator);
+    } else if (boundary) {
+      CopyElement(result, &j, *boundary, 0, terminator);
     }
   }
 }

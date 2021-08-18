@@ -2416,14 +2416,18 @@ static bool isFunctionPassName(StringRef Name, CallbacksT &Callbacks) {
 }
 
 template <typename CallbacksT>
-static bool isLoopPassName(StringRef Name, CallbacksT &Callbacks) {
-  // Explicitly handle pass manager names.
-  if (Name == "loop" || Name == "loop-mssa")
-    return true;
+static bool isLoopPassName(StringRef Name, CallbacksT &Callbacks,
+                           bool &UseMemorySSA) {
+  UseMemorySSA = false;
 
   // Explicitly handle custom-parsed pass names.
   if (parseRepeatPassName(Name))
     return true;
+
+  if (Name == "licm") {
+    UseMemorySSA = true;
+    return true;
+  }
 
 #define LOOP_PASS(NAME, CREATE_PASS)                                           \
   if (Name == NAME)                                                            \
@@ -3013,13 +3017,16 @@ Error PassBuilder::parsePassPipeline(ModulePassManager &MPM,
   StringRef FirstName = Pipeline->front().Name;
 
   if (!isModulePassName(FirstName, ModulePipelineParsingCallbacks)) {
+    bool UseMemorySSA;
     if (isCGSCCPassName(FirstName, CGSCCPipelineParsingCallbacks)) {
       Pipeline = {{"cgscc", std::move(*Pipeline)}};
     } else if (isFunctionPassName(FirstName,
                                   FunctionPipelineParsingCallbacks)) {
       Pipeline = {{"function", std::move(*Pipeline)}};
-    } else if (isLoopPassName(FirstName, LoopPipelineParsingCallbacks)) {
-      Pipeline = {{"function", {{"loop", std::move(*Pipeline)}}}};
+    } else if (isLoopPassName(FirstName, LoopPipelineParsingCallbacks,
+                              UseMemorySSA)) {
+      Pipeline = {{"function", {{UseMemorySSA ? "loop-mssa" : "loop",
+                                 std::move(*Pipeline)}}}};
     } else {
       for (auto &C : TopLevelPipelineParsingCallbacks)
         if (C(MPM, *Pipeline))

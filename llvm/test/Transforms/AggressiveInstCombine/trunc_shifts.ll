@@ -73,6 +73,55 @@ define i16 @shl_var_bounded_shift_amount(i8 %x, i8 %y) {
   ret i16 %trunc
 }
 
+; Negative test (https://reviews.llvm.org/D108091#2950930)
+
+define i32 @shl_check_no_overflow(i32 %call62, i16 %call63) {
+; CHECK-LABEL: @shl_check_no_overflow(
+; CHECK-NEXT:    [[CONV64142:%.*]] = zext i32 [[CALL62:%.*]] to i64
+; CHECK-NEXT:    [[CONV65:%.*]] = sext i16 [[CALL63:%.*]] to i64
+; CHECK-NEXT:    [[SH_PROM66:%.*]] = and i64 [[CONV65]], 4294967295
+; CHECK-NEXT:    [[SHL67:%.*]] = shl i64 [[CONV64142]], [[SH_PROM66]]
+; CHECK-NEXT:    [[CONV68:%.*]] = trunc i64 [[SHL67]] to i32
+; CHECK-NEXT:    ret i32 [[CONV68]]
+;
+  %conv64142 = zext i32 %call62 to i64
+  %conv65 = sext i16 %call63 to i64
+  %sh_prom66 = and i64 %conv65, 4294967295
+  %shl67 = shl i64 %conv64142, %sh_prom66
+  %conv68 = trunc i64 %shl67 to i32
+  ret i32 %conv68
+}
+
+define i16 @shl_smaller_bitwidth(i8 %x) {
+; CHECK-LABEL: @shl_smaller_bitwidth(
+; CHECK-NEXT:    [[ZEXT:%.*]] = zext i8 [[X:%.*]] to i16
+; CHECK-NEXT:    [[SHL:%.*]] = shl i16 [[ZEXT]], 1
+; CHECK-NEXT:    [[AND:%.*]] = and i16 [[SHL]], 42
+; CHECK-NEXT:    ret i16 [[AND]]
+;
+  %zext = zext i8 %x to i16
+  %shl = shl i16 %zext, 1
+  %zext2 = zext i16 %shl to i32
+  %and = and i32 %zext2, 42
+  %trunc = trunc i32 %and to i16
+  ret i16 %trunc
+}
+
+define i16 @shl_larger_bitwidth(i8 %x) {
+; CHECK-LABEL: @shl_larger_bitwidth(
+; CHECK-NEXT:    [[ZEXT:%.*]] = zext i8 [[X:%.*]] to i16
+; CHECK-NEXT:    [[SHL:%.*]] = shl i16 [[ZEXT]], 1
+; CHECK-NEXT:    [[AND:%.*]] = and i16 [[SHL]], 42
+; CHECK-NEXT:    ret i16 [[AND]]
+;
+  %zext = zext i8 %x to i64
+  %shl = shl i64 %zext, 1
+  %zext2 = trunc i64 %shl to i32
+  %and = and i32 %zext2, 42
+  %trunc = trunc i32 %and to i16
+  ret i16 %trunc
+}
+
 define <2 x i16> @shl_vector(<2 x i8> %x) {
 ; CHECK-LABEL: @shl_vector(
 ; CHECK-NEXT:    [[Z:%.*]] = zext <2 x i8> [[X:%.*]] to <2 x i16>

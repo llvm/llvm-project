@@ -706,9 +706,11 @@ isl::set ScopBuilder::getPredecessorDomainConstraints(BasicBlock *BB,
 
     // Check if there is a valid region we can use for propagation, thus look
     // for a region that contains the predecessor and has @p BB as exit block.
+    // FIXME: This was an side-effect-free (and possibly infinite) loop when
+    //        committed and seems not to be needed.
     auto *PredR = RI.getRegionFor(PredBB);
     while (PredR->getExit() != BB && !PredR->contains(BB))
-      PredR->getParent();
+      PredR = PredR->getParent();
 
     // If a valid region for propagation was found use the entry of that region
     // for propagation, otherwise the PredBB directly.

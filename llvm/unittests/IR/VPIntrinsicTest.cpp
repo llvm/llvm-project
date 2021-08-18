@@ -23,6 +23,11 @@ using namespace llvm;
 
 namespace {
 
+static const char *ReductionIntOpcodes[] = {
+    "add", "mul", "and", "or", "xor", "smin", "smax", "umin", "umax"};
+
+static const char *ReductionFPOpcodes[] = {"fadd", "fmul", "fmin", "fmax"};
+
 class VPIntrinsicTest : public testing::Test {
 protected:
   LLVMContext Context;
@@ -54,6 +59,14 @@ protected:
            "i1>, i32) ";
     Str << " declare <8 x i32> @llvm.vp.gather.v8i32.v8p0i32(<8 x i32*>, <8 x "
            "i1>, i32) ";
+
+    for (const char *ReductionOpcode : ReductionIntOpcodes)
+      Str << " declare i32 @llvm.vp.reduce." << ReductionOpcode
+          << ".v8i32(i32, <8 x i32>, <8 x i1>, i32) ";
+
+    for (const char *ReductionOpcode : ReductionFPOpcodes)
+      Str << " declare float @llvm.vp.reduce." << ReductionOpcode
+          << ".v8f32(float, <8 x float>, <8 x i1>, i32) ";
 
     return parseAssemblyString(Str.str(), Err, C);
   }
@@ -287,3 +300,72 @@ TEST_F(VPIntrinsicTest, HandleToConstrainedFP) {
 }
 
 } // end anonymous namespace
+
+/// Check various properties of VPReductionIntrinsics
+TEST_F(VPIntrinsicTest, VPReductions) {
+  LLVMContext C;
+  SMDiagnostic Err;
+
+  std::stringstream Str;
+  Str << "declare <8 x i32> @llvm.vp.mul.v8i32(<8 x i32>, <8 x i32>, <8 x i1>, "
+         "i32)";
+  for (const char *ReductionOpcode : ReductionIntOpcodes)
+    Str << " declare i32 @llvm.vp.reduce." << ReductionOpcode
+        << ".v8i32(i32, <8 x i32>, <8 x i1>, i32) ";
+
+  for (const char *ReductionOpcode : ReductionFPOpcodes)
+    Str << " declare float @llvm.vp.reduce." << ReductionOpcode
+        << ".v8f32(float, <8 x float>, <8 x i1>, i32) ";
+
+  Str << "define void @test_reductions(i32 %start, <8 x i32> %val, float "
+         "%fpstart, <8 x float> %fpval, <8 x i1> %m, i32 %vl) {";
+
+  // Mix in a regular non-reduction intrinsic to check that the
+  // VPReductionIntrinsic subclass works as intended.
+  Str << "  %r0 = call <8 x i32> @llvm.vp.mul.v8i32(<8 x i32> %val, <8 x i32> "
+         "%val, <8 x i1> %m, i32 %vl)";
+
+  unsigned Idx = 1;
+  for (const char *ReductionOpcode : ReductionIntOpcodes)
+    Str << "  %r" << Idx++ << " = call i32 @llvm.vp.reduce." << ReductionOpcode
+        << ".v8i32(i32 %start, <8 x i32> %val, <8 x i1> %m, i32 %vl)";
+  for (const char *ReductionOpcode : ReductionFPOpcodes)
+    Str << "  %r" << Idx++ << " = call float @llvm.vp.reduce."
+        << ReductionOpcode
+        << ".v8f32(float %fpstart, <8 x float> %fpval, <8 x i1> %m, i32 %vl)";
+
+  Str << "  ret void"
+         "}";
+
+  std::unique_ptr<Module> M = parseAssemblyString(Str.str(), Err, C);
+  assert(M);
+
+  auto *F = M->getFunction("test_reductions");
+  assert(F);
+
+  for (const auto &I : F->getEntryBlock()) {
+    const VPIntrinsic *VPI = dyn_cast<VPIntrinsic>(&I);
+    if (!VPI)
+      continue;
+
+    Intrinsic::ID ID = VPI->getIntrinsicID();
+    const auto *VPRedI = dyn_cast<VPReductionIntrinsic>(&I);
+
+    if (!VPReductionIntrinsic::isVPReduction(ID)) {
+      EXPECT_EQ(VPRedI, nullptr);
+      EXPECT_EQ(VPReductionIntrinsic::getStartParamPos(ID).hasValue(), false);
+      EXPECT_EQ(VPReductionIntrinsic::getVectorParamPos(ID).hasValue(), false);
+      continue;
+    }
+
+    EXPECT_EQ(VPReductionIntrinsic::getStartParamPos(ID).hasValue(), true);
+    EXPECT_EQ(VPReductionIntrinsic::getVectorParamPos(ID).hasValue(), true);
+    ASSERT_NE(VPRedI, nullptr);
+    EXPECT_EQ(VPReductionIntrinsic::getStartParamPos(ID),
+              VPRedI->getStartParamPos());
+    EXPECT_EQ(VPReductionIntrinsic::getVectorParamPos(ID),
+              VPRedI->getVectorParamPos());
+    EXPECT_EQ(VPRedI->getStartParamPos(), 0u);
+    EXPECT_EQ(VPRedI->getVectorParamPos(), 1u);
+  }
+}

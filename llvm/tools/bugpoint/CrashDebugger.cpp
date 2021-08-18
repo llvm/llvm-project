@@ -358,8 +358,7 @@ bool ReduceCrashingFunctionAttributes::TestFuncAttrs(
   for (auto A : Attrs)
     AB.addAttribute(A);
   AttributeList NewAttrs;
-  NewAttrs =
-      NewAttrs.addAttributes(BD.getContext(), AttributeList::FunctionIndex, AB);
+  NewAttrs = NewAttrs.addFnAttributes(BD.getContext(), AB);
 
   // Set this new list of attributes on the function.
   F->setAttributes(NewAttrs);

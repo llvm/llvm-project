@@ -20,6 +20,7 @@ add_header_library(
     .ctype_utils
     libc.include.errno
     libc.src.errno.__errno_location
+    libc.utils.CPP.standalone_cpp
 )
 
 add_header_library(

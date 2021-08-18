@@ -82,7 +82,7 @@ public:
     CallInst *Call = B.CreateCall(TheFn->getFunctionType(), TheFn, Ops, Name);
     Attribute AlignAttr =
         Attribute::getWithAlignment(Call->getContext(), Alignment);
-    Call->addAttribute(1, AlignAttr);
+    Call->addParamAttr(0, AlignAttr);
     return Call;
   }
 
@@ -105,7 +105,7 @@ public:
     CallInst *Call = B.CreateCall(TheFn->getFunctionType(), TheFn, Ops, Name);
     Attribute AlignAttr =
         Attribute::getWithAlignment(Call->getContext(), Alignment);
-    Call->addAttribute(2, AlignAttr);
+    Call->addParamAttr(1, AlignAttr);
     return Call;
   }
 

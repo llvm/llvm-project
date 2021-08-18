@@ -6,6 +6,10 @@ declare half @llvm.experimental.constrained.fadd.f16(half, half, metadata, metad
 declare half @llvm.experimental.constrained.fsub.f16(half, half, metadata, metadata)
 declare half @llvm.experimental.constrained.fmul.f16(half, half, metadata, metadata)
 declare half @llvm.experimental.constrained.fdiv.f16(half, half, metadata, metadata)
+declare float @llvm.experimental.constrained.fpext.f32.f16(half, metadata)
+declare double @llvm.experimental.constrained.fpext.f64.f16(half, metadata)
+declare half @llvm.experimental.constrained.fptrunc.f16.f32(float, metadata, metadata)
+declare half @llvm.experimental.constrained.fptrunc.f16.f64(double, metadata, metadata)
 
 define half @fadd_f16(half %a, half %b) nounwind strictfp {
 ; X86-LABEL: fadd_f16:
@@ -73,6 +77,100 @@ define half @fdiv_f16(half %a, half %b) nounwind strictfp {
                                                            metadata !"round.dynamic",
                                                            metadata !"fpexcept.strict") #0
   ret half %ret
+}
+
+define void @fpext_f16_to_f32(half* %val, float* %ret) nounwind strictfp {
+; X86-LABEL: fpext_f16_to_f32:
+; X86:       # %bb.0:
+; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
+; X86-NEXT:    movl {{[0-9]+}}(%esp), %ecx
+; X86-NEXT:    vmovsh (%ecx), %xmm0
+; X86-NEXT:    vcvtsh2ss %xmm0, %xmm0, %xmm0
+; X86-NEXT:    vmovss %xmm0, (%eax)
+; X86-NEXT:    retl
+;
+; X64-LABEL: fpext_f16_to_f32:
+; X64:       # %bb.0:
+; X64-NEXT:    vmovsh (%rdi), %xmm0
+; X64-NEXT:    vcvtsh2ss %xmm0, %xmm0, %xmm0
+; X64-NEXT:    vmovss %xmm0, (%rsi)
+; X64-NEXT:    retq
+  %1 = load half, half* %val, align 4
+  %res = call float @llvm.experimental.constrained.fpext.f32.f16(half %1,
+                                                                 metadata !"fpexcept.strict") #0
+  store float %res, float* %ret, align 8
+  ret void
+}
+
+define void @fpext_f16_to_f64(half* %val, double* %ret) nounwind strictfp {
+; X86-LABEL: fpext_f16_to_f64:
+; X86:       # %bb.0:
+; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
+; X86-NEXT:    movl {{[0-9]+}}(%esp), %ecx
+; X86-NEXT:    vmovsh (%ecx), %xmm0
+; X86-NEXT:    vcvtsh2sd %xmm0, %xmm0, %xmm0
+; X86-NEXT:    vmovsd %xmm0, (%eax)
+; X86-NEXT:    retl
+;
+; X64-LABEL: fpext_f16_to_f64:
+; X64:       # %bb.0:
+; X64-NEXT:    vmovsh (%rdi), %xmm0
+; X64-NEXT:    vcvtsh2sd %xmm0, %xmm0, %xmm0
+; X64-NEXT:    vmovsd %xmm0, (%rsi)
+; X64-NEXT:    retq
+  %1 = load half, half* %val, align 4
+  %res = call double @llvm.experimental.constrained.fpext.f64.f16(half %1,
+                                                                  metadata !"fpexcept.strict") #0
+  store double %res, double* %ret, align 8
+  ret void
+}
+
+define void @fptrunc_float_to_f16(float* %val, half *%ret) nounwind strictfp {
+; X86-LABEL: fptrunc_float_to_f16:
+; X86:       # %bb.0:
+; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
+; X86-NEXT:    movl {{[0-9]+}}(%esp), %ecx
+; X86-NEXT:    vmovss {{.*#+}} xmm0 = mem[0],zero,zero,zero
+; X86-NEXT:    vcvtss2sh %xmm0, %xmm0, %xmm0
+; X86-NEXT:    vmovsh %xmm0, (%eax)
+; X86-NEXT:    retl
+;
+; X64-LABEL: fptrunc_float_to_f16:
+; X64:       # %bb.0:
+; X64-NEXT:    vmovss {{.*#+}} xmm0 = mem[0],zero,zero,zero
+; X64-NEXT:    vcvtss2sh %xmm0, %xmm0, %xmm0
+; X64-NEXT:    vmovsh %xmm0, (%rsi)
+; X64-NEXT:    retq
+  %1 = load float, float* %val, align 8
+  %res = call half @llvm.experimental.constrained.fptrunc.f16.f32(float %1,
+                                                                  metadata !"round.dynamic",
+                                                                  metadata !"fpexcept.strict") #0
+  store half %res, half* %ret, align 4
+  ret void
+}
+
+define void @fptrunc_double_to_f16(double* %val, half *%ret) nounwind strictfp {
+; X86-LABEL: fptrunc_double_to_f16:
+; X86:       # %bb.0:
+; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
+; X86-NEXT:    movl {{[0-9]+}}(%esp), %ecx
+; X86-NEXT:    vmovsd {{.*#+}} xmm0 = mem[0],zero
+; X86-NEXT:    vcvtsd2sh %xmm0, %xmm0, %xmm0
+; X86-NEXT:    vmovsh %xmm0, (%eax)
+; X86-NEXT:    retl
+;
+; X64-LABEL: fptrunc_double_to_f16:
+; X64:       # %bb.0:
+; X64-NEXT:    vmovsd {{.*#+}} xmm0 = mem[0],zero
+; X64-NEXT:    vcvtsd2sh %xmm0, %xmm0, %xmm0
+; X64-NEXT:    vmovsh %xmm0, (%rsi)
+; X64-NEXT:    retq
+  %1 = load double, double* %val, align 8
+  %res = call half @llvm.experimental.constrained.fptrunc.f16.f64(double %1,
+                                                                  metadata !"round.dynamic",
+                                                                  metadata !"fpexcept.strict") #0
+  store half %res, half* %ret, align 4
+  ret void
 }
 
 attributes #0 = { strictfp }

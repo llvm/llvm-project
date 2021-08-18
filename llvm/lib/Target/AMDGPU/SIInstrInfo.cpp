@@ -1637,7 +1637,10 @@ void SIInstrInfo::insertReturn(MachineBasicBlock &MBB) const {
 
 unsigned SIInstrInfo::getNumWaitStates(const MachineInstr &MI) {
   switch (MI.getOpcode()) {
-  default: return 1; // FIXME: Do wait states equal cycles?
+  default:
+    if (MI.isMetaInstruction())
+      return 0;
+    return 1; // FIXME: Do wait states equal cycles?
 
   case AMDGPU::S_NOP:
     return MI.getOperand(0).getImm() + 1;

@@ -760,7 +760,6 @@ void RAGreedy::enqueue(PQueue &CurQueue, LiveInterval *LI) {
     // Giant live ranges fall back to the global assignment heuristic, which
     // prevents excessive spilling in pathological cases.
     bool ReverseLocal = TRI->reverseLocalAssignment();
-    bool AddPriorityToGlobal = TRI->addAllocPriorityToGlobalRanges();
     const TargetRegisterClass &RC = *MRI->getRegClass(Reg);
     bool ForceGlobal = !ReverseLocal &&
       (Size / SlotIndex::InstrDist) > (2 * RC.getNumRegs());
@@ -785,8 +784,7 @@ void RAGreedy::enqueue(PQueue &CurQueue, LiveInterval *LI) {
       // interference.  Mark a bit to prioritize global above local ranges.
       Prio = (1u << 29) + Size;
 
-      if (AddPriorityToGlobal)
-        Prio |= RC.AllocationPriority << 24;
+      Prio |= RC.AllocationPriority << 24;
     }
     // Mark a higher bit to prioritize global and local above RS_Split.
     Prio |= (1u << 31);

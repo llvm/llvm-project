@@ -1148,3 +1148,30 @@ define i8 @neg_neg_nsw_umin(i8 %x, i8 %y) {
   %m = call i8 @llvm.umin.i8(i8 %nx, i8 %ny)
   ret i8 %m
 }
+
+declare void @use4(i8, i8, i8, i8)
+
+define void @cmyk(i8 %r, i8 %g, i8 %b) {
+; CHECK-LABEL: @cmyk(
+; CHECK-NEXT:    [[NOTR:%.*]] = xor i8 [[R:%.*]], -1
+; CHECK-NEXT:    [[NOTG:%.*]] = xor i8 [[G:%.*]], -1
+; CHECK-NEXT:    [[NOTB:%.*]] = xor i8 [[B:%.*]], -1
+; CHECK-NEXT:    [[M:%.*]] = call i8 @llvm.smin.i8(i8 [[NOTR]], i8 [[NOTG]])
+; CHECK-NEXT:    [[K:%.*]] = call i8 @llvm.smin.i8(i8 [[M]], i8 [[NOTB]])
+; CHECK-NEXT:    [[CK:%.*]] = sub i8 [[NOTR]], [[K]]
+; CHECK-NEXT:    [[MK:%.*]] = sub i8 [[NOTG]], [[K]]
+; CHECK-NEXT:    [[YK:%.*]] = sub i8 [[NOTB]], [[K]]
+; CHECK-NEXT:    call void @use4(i8 [[CK]], i8 [[MK]], i8 [[YK]], i8 [[K]])
+; CHECK-NEXT:    ret void
+;
+  %notr = xor i8 %r, -1
+  %notg = xor i8 %g, -1
+  %notb = xor i8 %b, -1
+  %m = call i8 @llvm.smin.i8(i8 %notr, i8 %notg)
+  %k = call i8 @llvm.smin.i8(i8 %m, i8 %notb)
+  %ck = sub i8 %notr, %k
+  %mk = sub i8 %notg, %k
+  %yk = sub i8 %notb, %k
+  call void @use4(i8 %ck, i8 %mk, i8 %yk, i8 %k)
+  ret void
+}

@@ -34,8 +34,10 @@ sw.bb:                                            ; preds = %entry
   call void @llvm.dbg.declare(metadata i32 %direct, metadata !25, metadata !13), !dbg !14
   call void @llvm.dbg.declare(metadata i32* %x.addr, metadata !12, metadata !13), !dbg !14
   call void @llvm.dbg.declare(metadata i8** %coro_hdl, metadata !15, metadata !13), !dbg !16
-  call void @llvm.dbg.declare(metadata i8* null, metadata !28, metadata !13), !dbg !16
   call void @llvm.dbg.declare(metadata i32* %late_local, metadata !29, metadata !13), !dbg !16
+  ; don't crash when encountering nonsensical debug info, verfifier doesn't yet reject these
+  call void @llvm.dbg.declare(metadata i8* null, metadata !28, metadata !13), !dbg !16
+  call void @llvm.dbg.declare(metadata !{}, metadata !28, metadata !13), !dbg !16
   br label %next, !dbg !18
 
 next:

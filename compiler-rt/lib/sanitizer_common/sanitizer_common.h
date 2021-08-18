@@ -697,7 +697,8 @@ enum ModuleArch {
   kModuleArchARMV7S,
   kModuleArchARMV7K,
   kModuleArchARM64,
-  kModuleArchRISCV64
+  kModuleArchRISCV64,
+  kModuleArchHexagon
 };
 
 // Sorts and removes duplicates from the container.
@@ -764,6 +765,8 @@ inline const char *ModuleArchToString(ModuleArch arch) {
       return "arm64";
     case kModuleArchRISCV64:
       return "riscv64";
+    case kModuleArchHexagon:
+      return "hexagon";
   }
   CHECK(0 && "Invalid module arch");
   return "";

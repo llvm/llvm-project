@@ -2514,7 +2514,7 @@ void coro::salvageDebugInfo(
   bool OutermostLoad = true;
   Value *Storage = DVI->getVariableLocationOp(0);
   Value *OriginalStorage = Storage;
-  while (auto *Inst = dyn_cast<Instruction>(Storage)) {
+  while (auto *Inst = dyn_cast_or_null<Instruction>(Storage)) {
     if (auto *LdInst = dyn_cast<LoadInst>(Inst)) {
       Storage = LdInst->getOperand(0);
       // FIXME: This is a heuristic that works around the fact that
@@ -2543,6 +2543,8 @@ void coro::salvageDebugInfo(
       Expr = DIExpression::appendOpsToArg(Expr, Ops, 0, /*StackValue*/ false);
     }
   }
+  if (!Storage)
+    return;
 
   // Store a pointer to the coroutine frame object in an alloca so it
   // is available throughout the function when producing unoptimized

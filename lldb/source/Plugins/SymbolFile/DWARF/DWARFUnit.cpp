@@ -437,15 +437,20 @@ ParseListTableHeader(const llvm::DWARFDataExtractor &data, uint64_t offset,
   // We are expected to be called with Offset 0 or pointing just past the table
   // header. Correct Offset in the latter case so that it points to the start
   // of the header.
-  if (offset > 0) {
-    uint64_t HeaderSize = llvm::DWARFListTableHeader::getHeaderSize(format);
-    if (offset < HeaderSize)
-      return llvm::createStringError(errc::invalid_argument,
-                                     "did not detect a valid"
-                                     " list table with base = 0x%" PRIx64 "\n",
-                                     offset);
-    offset -= HeaderSize;
+  if (offset == 0) {
+    // This means DW_AT_rnglists_base is missing and therefore DW_FORM_rnglistx
+    // cannot be handled. Returning a default-constructed ListTableType allows
+    // DW_FORM_sec_offset to be supported.
+    return ListTableType();
   }
+
+  uint64_t HeaderSize = llvm::DWARFListTableHeader::getHeaderSize(format);
+  if (offset < HeaderSize)
+    return llvm::createStringError(errc::invalid_argument,
+                                   "did not detect a valid"
+                                   " list table with base = 0x%" PRIx64 "\n",
+                                   offset);
+  offset -= HeaderSize;
   ListTableType Table;
   if (llvm::Error E = Table.extractHeaderAndOffsets(data, &offset))
     return std::move(E);
@@ -996,8 +1001,12 @@ DWARFUnit::FindRnglistFromOffset(dw_offset_t offset) {
     return llvm::createStringError(errc::invalid_argument,
                                    "missing or invalid range list table");
 
-  auto range_list_or_error = GetRnglistTable()->findList(
-      m_dwarf.GetDWARFContext().getOrLoadRngListsData().GetAsLLVM(), offset);
+  llvm::DWARFDataExtractor data =
+      m_dwarf.GetDWARFContext().getOrLoadRngListsData().GetAsLLVM();
+
+  // As DW_AT_rnglists_base may be missing we need to call setAddressSize.
+  data.setAddressSize(m_header.GetAddressByteSize());
+  auto range_list_or_error = GetRnglistTable()->findList(data, offset);
   if (!range_list_or_error)
     return range_list_or_error.takeError();
 

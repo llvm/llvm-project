@@ -57,18 +57,49 @@ TEST(LlvmLibcStrToLLTest, CleanBaseTenDecode) {
   ASSERT_EQ(errno, 0);
   EXPECT_EQ(str_end - big_negative_number, 16l);
 
+  const char *long_long_max_number = "9223372036854775807";
+  errno = 0;
+  ASSERT_EQ(__llvm_libc::strtoll(long_long_max_number, &str_end, 10),
+            9223372036854775807ll);
+  ASSERT_EQ(errno, 0);
+  EXPECT_EQ(str_end - long_long_max_number, 19l);
+
+  const char *long_long_min_number = "-9223372036854775808";
+  errno = 0;
+  ASSERT_EQ(__llvm_libc::strtoll(long_long_min_number, &str_end, 10),
+            -9223372036854775807ll - 1ll);
+  ASSERT_EQ(errno, 0);
+  EXPECT_EQ(str_end - long_long_min_number, 20l);
+
   const char *too_big_number = "123456789012345678901";
   errno = 0;
   ASSERT_EQ(__llvm_libc::strtoll(too_big_number, &str_end, 10), LLONG_MAX);
   ASSERT_EQ(errno, ERANGE);
-  EXPECT_EQ(str_end - too_big_number, 19l);
+  EXPECT_EQ(str_end - too_big_number, 21l);
 
   const char *too_big_negative_number = "-123456789012345678901";
   errno = 0;
   ASSERT_EQ(__llvm_libc::strtoll(too_big_negative_number, &str_end, 10),
             LLONG_MIN);
   ASSERT_EQ(errno, ERANGE);
-  EXPECT_EQ(str_end - too_big_negative_number, 20l);
+  EXPECT_EQ(str_end - too_big_negative_number, 22l);
+
+  const char *long_number_range_test =
+      "10000000000000000000000000000000000000000000000000";
+  errno = 0;
+  ASSERT_EQ(__llvm_libc::strtoll(long_number_range_test, &str_end, 10),
+            LLONG_MAX);
+  ASSERT_EQ(errno, ERANGE);
+  EXPECT_EQ(str_end - long_number_range_test, 50l);
+
+  const char *long_long_max_number_with_numbers_after =
+      "9223372036854775807123";
+  errno = 0;
+  ASSERT_EQ(__llvm_libc::strtoll(long_long_max_number_with_numbers_after,
+                                 &str_end, 10),
+            LLONG_MAX);
+  ASSERT_EQ(errno, ERANGE);
+  EXPECT_EQ(str_end - long_long_max_number_with_numbers_after, 22l);
 }
 
 TEST(LlvmLibcStrToLLTest, MessyBaseTenDecode) {
@@ -145,7 +176,7 @@ static char int_to_b36_char(int input) {
 
 TEST(LlvmLibcStrToLLTest, DecodeInOtherBases) {
   char small_string[4] = {'\0', '\0', '\0', '\0'};
-  for (int base = 2; base <= 36; ++base) {
+  for (unsigned int base = 2; base <= 36; ++base) {
     for (long long first_digit = 0; first_digit <= 36; ++first_digit) {
       small_string[0] = int_to_b36_char(first_digit);
       if (first_digit < base) {
@@ -161,7 +192,7 @@ TEST(LlvmLibcStrToLLTest, DecodeInOtherBases) {
     }
   }
 
-  for (int base = 2; base <= 36; ++base) {
+  for (unsigned int base = 2; base <= 36; ++base) {
     for (long long first_digit = 0; first_digit <= 36; ++first_digit) {
       small_string[0] = int_to_b36_char(first_digit);
       for (long long second_digit = 0; second_digit <= 36; ++second_digit) {
@@ -185,7 +216,7 @@ TEST(LlvmLibcStrToLLTest, DecodeInOtherBases) {
     }
   }
 
-  for (int base = 2; base <= 36; ++base) {
+  for (unsigned int base = 2; base <= 36; ++base) {
     for (long long first_digit = 0; first_digit <= 36; ++first_digit) {
       small_string[0] = int_to_b36_char(first_digit);
       for (long long second_digit = 0; second_digit <= 36; ++second_digit) {

@@ -125,10 +125,10 @@ TEST(Trace, MemoryAccessSize) {
     }
   };
   Thread::Params tests[] = {
-      {1, 0, 1, true},  {4, 0, 2, true},
-      {4, 2, 2, true},  {8, 3, 1, true},
-      {2, 1, 1, true},  {1, 1, 1, false},
-      {8, 5, 4, false}, {4, static_cast<uptr>(-1l), 4, false},
+      {1, 0, 1, true, 0},  {4, 0, 2, true, 0},
+      {4, 2, 2, true, 0},  {8, 3, 1, true, 0},
+      {2, 1, 1, true, 0},  {1, 1, 1, false, 0},
+      {8, 5, 4, false, 0}, {4, static_cast<uptr>(-1l), 4, false, 0},
   };
   for (auto params : tests) {
     for (params.type = 0; params.type < 3; params.type++)

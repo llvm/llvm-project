@@ -95,8 +95,7 @@ TEST_F(ModuleWithFunctionTest, CallInst) {
     Idx++;
   }
 
-  Call->addAttribute(llvm::AttributeList::ReturnIndex,
-                     Attribute::get(Call->getContext(), "test-str-attr"));
+  Call->addRetAttr(Attribute::get(Call->getContext(), "test-str-attr"));
   EXPECT_TRUE(Call->hasRetAttr("test-str-attr"));
   EXPECT_FALSE(Call->hasRetAttr("not-on-call"));
 }

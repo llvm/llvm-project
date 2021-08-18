@@ -57,6 +57,11 @@ static cl::opt<bool>
                      cl::init(false), cl::sub(Convert));
 static cl::alias ConvertSymbolize2("y", cl::aliasopt(ConvertSymbolize),
                                    cl::desc("Alias for -symbolize"));
+static cl::opt<bool>
+    NoDemangle("no-demangle",
+               cl::desc("determines whether to demangle function name "
+                        "when symbolizing function ids from the input log"),
+               cl::init(false), cl::sub(Convert));
 
 static cl::opt<std::string>
     ConvertInstrMap("instr_map",
@@ -373,7 +378,10 @@ static CommandRegistration Unused(&Convert, []() -> Error {
   }
 
   const auto &FunctionAddresses = Map.getFunctionAddresses();
-  symbolize::LLVMSymbolizer Symbolizer;
+  symbolize::LLVMSymbolizer::Options SymbolizerOpts;
+  if (NoDemangle)
+    SymbolizerOpts.Demangle = false;
+  symbolize::LLVMSymbolizer Symbolizer(SymbolizerOpts);
   llvm::xray::FuncIdConversionHelper FuncIdHelper(ConvertInstrMap, Symbolizer,
                                                   FunctionAddresses);
   llvm::xray::TraceConverter TC(FuncIdHelper, ConvertSymbolize);

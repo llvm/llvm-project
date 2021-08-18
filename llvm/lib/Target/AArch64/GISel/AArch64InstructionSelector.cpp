@@ -3830,6 +3830,10 @@ static bool getLaneCopyOpcode(unsigned &CopyOpc, unsigned &ExtractSubReg,
   // Choose a lane copy opcode and subregister based off of the size of the
   // vector's elements.
   switch (EltSize) {
+  case 8:
+    CopyOpc = AArch64::CPYi8;
+    ExtractSubReg = AArch64::bsub;
+    break;
   case 16:
     CopyOpc = AArch64::CPYi16;
     ExtractSubReg = AArch64::hsub;
