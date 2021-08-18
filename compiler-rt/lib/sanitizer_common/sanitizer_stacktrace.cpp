@@ -22,7 +22,8 @@ namespace __sanitizer {
 uptr StackTrace::GetNextInstructionPc(uptr pc) {
 #if defined(__sparc__) || defined(__mips__)
   return pc + 8;
-#elif defined(__powerpc__) || defined(__arm__) || defined(__aarch64__)
+#elif defined(__powerpc__) || defined(__arm__) || defined(__aarch64__) || \
+    defined(__hexagon__)
   return pc + 4;
 #elif SANITIZER_RISCV64
   // Current check order is 4 -> 2 -> 6 -> 8
