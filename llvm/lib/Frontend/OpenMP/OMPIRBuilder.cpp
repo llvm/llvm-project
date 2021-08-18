@@ -261,14 +261,6 @@ Value *OpenMPIRBuilder::getOrCreateIdent(Constant *SrcLocStr,
   return Builder.CreatePointerCast(Ident, IdentPtr);
 }
 
-Type *OpenMPIRBuilder::getLanemaskType() {
-  LLVMContext &Ctx = M.getContext();
-  Triple triple(M.getTargetTriple());
-
-  // This test is adequate until deviceRTL has finer grained lane widths
-  return triple.isAMDGCN() ? Type::getInt64Ty(Ctx) : Type::getInt32Ty(Ctx);
-}
-
 Constant *OpenMPIRBuilder::getOrCreateSrcLocStr(StringRef LocStr) {
   Constant *&SrcLocStr = SrcLocStrMap[LocStr];
   if (!SrcLocStr) {
