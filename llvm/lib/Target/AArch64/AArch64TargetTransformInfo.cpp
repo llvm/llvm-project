@@ -1999,8 +1999,13 @@ AArch64TTIImpl::getArithmeticReductionCost(unsigned Opcode, VectorType *ValTy,
                                            Optional<FastMathFlags> FMF,
                                            TTI::TargetCostKind CostKind) {
   if (TTI::requiresOrderedReduction(FMF)) {
-    if (!isa<ScalableVectorType>(ValTy))
-      return BaseT::getArithmeticReductionCost(Opcode, ValTy, FMF, CostKind);
+    if (auto *FixedVTy = dyn_cast<FixedVectorType>(ValTy)) {
+      InstructionCost BaseCost =
+          BaseT::getArithmeticReductionCost(Opcode, ValTy, FMF, CostKind);
+      // Add on extra cost to reflect the extra overhead on some CPUs. We still
+      // end up vectorizing for more computationally intensive loops.
+      return BaseCost + FixedVTy->getNumElements();
+    }
 
     if (Opcode != Instruction::FAdd)
       return InstructionCost::getInvalid();
