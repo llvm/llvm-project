@@ -259,6 +259,12 @@ public:
                        m_Not(PatternMatch::m_Value()))))
       return WillInvertAllUses;
 
+    // Min/max may be in the form of intrinsics, so handle those identically
+    // to select patterns.
+    if (match(V, m_MaxOrMin(m_Not(PatternMatch::m_Value()),
+                            m_Not(PatternMatch::m_Value()))))
+      return WillInvertAllUses;
+
     return false;
   }
 
