@@ -32,6 +32,36 @@ add_entrypoint_object(
 )
 
 add_entrypoint_object(
+  atoi
+  SRCS
+    atoi.cpp
+  HDRS
+    atoi.h
+  DEPENDS
+    libc.src.__support.str_conv_utils
+)
+
+add_entrypoint_object(
+  atol
+  SRCS
+    atol.cpp
+  HDRS
+    atol.h
+  DEPENDS
+    libc.src.__support.str_conv_utils
+)
+
+add_entrypoint_object(
+  atoll
+  SRCS
+    atoll.cpp
+  HDRS
+    atoll.h
+  DEPENDS
+    libc.src.__support.str_conv_utils
+)
+
+add_entrypoint_object(
   labs
   SRCS
     labs.cpp
