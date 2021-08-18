@@ -50,8 +50,66 @@ std::unique_ptr<LoopNest> LoopNest::getLoopNest(Loop &Root,
   return std::make_unique<LoopNest>(Root, SE);
 }
 
+static CmpInst *getOuterLoopLatchCmp(const Loop &OuterLoop) {
+
+  const BasicBlock *Latch = OuterLoop.getLoopLatch();
+  assert(Latch && "Expecting a valid loop latch");
+
+  const BranchInst *BI = dyn_cast<BranchInst>(Latch->getTerminator());
+  assert(BI && BI->isConditional() &&
+         "Expecting loop latch terminator to be a branch instruction");
+
+  CmpInst *OuterLoopLatchCmp = dyn_cast<CmpInst>(BI->getCondition());
+  DEBUG_WITH_TYPE(
+      VerboseDebug, if (OuterLoopLatchCmp) {
+        dbgs() << "Outer loop latch compare instruction: " << *OuterLoopLatchCmp
+               << "\n";
+      });
+  return OuterLoopLatchCmp;
+}
+
+static CmpInst *getInnerLoopGuardCmp(const Loop &InnerLoop) {
+
+  BranchInst *InnerGuard = InnerLoop.getLoopGuardBranch();
+  CmpInst *InnerLoopGuardCmp =
+      (InnerGuard) ? dyn_cast<CmpInst>(InnerGuard->getCondition()) : nullptr;
+
+  DEBUG_WITH_TYPE(
+      VerboseDebug, if (InnerLoopGuardCmp) {
+        dbgs() << "Inner loop guard compare instruction: " << *InnerLoopGuardCmp
+               << "\n";
+      });
+  return InnerLoopGuardCmp;
+}
+
+static bool checkSafeInstruction(const Instruction &I,
+                                 const CmpInst *InnerLoopGuardCmp,
+                                 const CmpInst *OuterLoopLatchCmp,
+                                 Optional<Loop::LoopBounds> OuterLoopLB) {
+
+  bool IsAllowed =
+      isSafeToSpeculativelyExecute(&I) || isa<PHINode>(I) || isa<BranchInst>(I);
+  if (!IsAllowed)
+    return false;
+  // The only binary instruction allowed is the outer loop step instruction,
+  // the only comparison instructions allowed are the inner loop guard
+  // compare instruction and the outer loop latch compare instruction.
+  if ((isa<BinaryOperator>(I) && &I != &OuterLoopLB->getStepInst()) ||
+      (isa<CmpInst>(I) && &I != OuterLoopLatchCmp && &I != InnerLoopGuardCmp)) {
+    return false;
+  }
+  return true;
+}
+
 bool LoopNest::arePerfectlyNested(const Loop &OuterLoop, const Loop &InnerLoop,
                                   ScalarEvolution &SE) {
+  return (analyzeLoopNestForPerfectNest(OuterLoop, InnerLoop, SE) ==
+          PerfectLoopNest);
+}
+
+LoopNest::LoopNestEnum LoopNest::analyzeLoopNestForPerfectNest(
+    const Loop &OuterLoop, const Loop &InnerLoop, ScalarEvolution &SE) {
+
   assert(!OuterLoop.isInnermost() && "Outer loop should have subloops");
   assert(!InnerLoop.isOutermost() && "Inner loop should have a parent");
   LLVM_DEBUG(dbgs() << "Checking whether loop '" << OuterLoop.getName()
@@ -66,7 +124,7 @@ bool LoopNest::arePerfectlyNested(const Loop &OuterLoop, const Loop &InnerLoop,
   //    the outer loop latch.
   if (!checkLoopsStructure(OuterLoop, InnerLoop, SE)) {
     LLVM_DEBUG(dbgs() << "Not perfectly nested: invalid loop structure.\n");
-    return false;
+    return InvalidLoopStructure;
   }
 
   // Bail out if we cannot retrieve the outer loop bounds.
@@ -74,33 +132,11 @@ bool LoopNest::arePerfectlyNested(const Loop &OuterLoop, const Loop &InnerLoop,
   if (OuterLoopLB == None) {
     LLVM_DEBUG(dbgs() << "Cannot compute loop bounds of OuterLoop: "
                       << OuterLoop << "\n";);
-    return false;
+    return OuterLoopLowerBoundUnknown;
   }
 
-  // Identify the outer loop latch comparison instruction.
-  const BasicBlock *Latch = OuterLoop.getLoopLatch();
-  assert(Latch && "Expecting a valid loop latch");
-  const BranchInst *BI = dyn_cast<BranchInst>(Latch->getTerminator());
-  assert(BI && BI->isConditional() &&
-         "Expecting loop latch terminator to be a branch instruction");
-
-  const CmpInst *OuterLoopLatchCmp = dyn_cast<CmpInst>(BI->getCondition());
-  DEBUG_WITH_TYPE(
-      VerboseDebug, if (OuterLoopLatchCmp) {
-        dbgs() << "Outer loop latch compare instruction: " << *OuterLoopLatchCmp
-               << "\n";
-      });
-
-  // Identify the inner loop guard instruction.
-  BranchInst *InnerGuard = InnerLoop.getLoopGuardBranch();
-  const CmpInst *InnerLoopGuardCmp =
-      (InnerGuard) ? dyn_cast<CmpInst>(InnerGuard->getCondition()) : nullptr;
-
-  DEBUG_WITH_TYPE(
-      VerboseDebug, if (InnerLoopGuardCmp) {
-        dbgs() << "Inner loop guard compare instruction: " << *InnerLoopGuardCmp
-               << "\n";
-      });
+  CmpInst *OuterLoopLatchCmp = getOuterLoopLatchCmp(OuterLoop);
+  CmpInst *InnerLoopGuardCmp = getInnerLoopGuardCmp(InnerLoop);
 
   // Determine whether instructions in a basic block are one of:
   //  - the inner loop guard comparison
@@ -109,29 +145,15 @@ bool LoopNest::arePerfectlyNested(const Loop &OuterLoop, const Loop &InnerLoop,
   //  - a phi node, a cast or a branch
   auto containsOnlySafeInstructions = [&](const BasicBlock &BB) {
     return llvm::all_of(BB, [&](const Instruction &I) {
-      bool isAllowed = isSafeToSpeculativelyExecute(&I) || isa<PHINode>(I) ||
-                       isa<BranchInst>(I);
-      if (!isAllowed) {
-        DEBUG_WITH_TYPE(VerboseDebug, {
-          dbgs() << "Instruction: " << I << "\nin basic block: " << BB
-                 << " is considered unsafe.\n";
-        });
-        return false;
-      }
-
-      // The only binary instruction allowed is the outer loop step instruction,
-      // the only comparison instructions allowed are the inner loop guard
-      // compare instruction and the outer loop latch compare instruction.
-      if ((isa<BinaryOperator>(I) && &I != &OuterLoopLB->getStepInst()) ||
-          (isa<CmpInst>(I) && &I != OuterLoopLatchCmp &&
-           &I != InnerLoopGuardCmp)) {
+      bool IsSafeInstr = checkSafeInstruction(I, InnerLoopGuardCmp,
+                                              OuterLoopLatchCmp, OuterLoopLB);
+      if (IsSafeInstr) {
         DEBUG_WITH_TYPE(VerboseDebug, {
           dbgs() << "Instruction: " << I << "\nin basic block:" << BB
                  << "is unsafe.\n";
         });
-        return false;
       }
-      return true;
+      return IsSafeInstr;
     });
   };
 
@@ -148,13 +170,72 @@ bool LoopNest::arePerfectlyNested(const Loop &OuterLoop, const Loop &InnerLoop,
       !containsOnlySafeInstructions(*InnerLoop.getExitBlock())) {
     LLVM_DEBUG(dbgs() << "Not perfectly nested: code surrounding inner loop is "
                          "unsafe\n";);
-    return false;
+    return ImperfectLoopNest;
   }
 
   LLVM_DEBUG(dbgs() << "Loop '" << OuterLoop.getName() << "' and '"
                     << InnerLoop.getName() << "' are perfectly nested.\n");
 
-  return true;
+  return PerfectLoopNest;
+}
+
+LoopNest::InstrVectorTy LoopNest::getInterveningInstructions(
+    const Loop &OuterLoop, const Loop &InnerLoop, ScalarEvolution &SE) {
+  InstrVectorTy Instr;
+  switch (analyzeLoopNestForPerfectNest(OuterLoop, InnerLoop, SE)) {
+  case PerfectLoopNest:
+    LLVM_DEBUG(dbgs() << "The loop Nest is Perfect, returning empty "
+                         "instruction vector. \n";);
+    return Instr;
+
+  case InvalidLoopStructure:
+    LLVM_DEBUG(dbgs() << "Not perfectly nested: invalid loop structure. "
+                         "Instruction vector is empty.\n";);
+    return Instr;
+
+  case OuterLoopLowerBoundUnknown:
+    LLVM_DEBUG(dbgs() << "Cannot compute loop bounds of OuterLoop: "
+                      << OuterLoop << "\nInstruction vector is empty.\n";);
+    return Instr;
+
+  case ImperfectLoopNest:
+    break;
+  }
+
+  // Identify the outer loop latch comparison instruction.
+  auto OuterLoopLB = OuterLoop.getBounds(SE);
+
+  CmpInst *OuterLoopLatchCmp = getOuterLoopLatchCmp(OuterLoop);
+  CmpInst *InnerLoopGuardCmp = getInnerLoopGuardCmp(InnerLoop);
+
+  auto GetUnsafeInstructions = [&](const BasicBlock &BB) {
+    for (const Instruction &I : BB) {
+      if (!checkSafeInstruction(I, InnerLoopGuardCmp, OuterLoopLatchCmp,
+                                OuterLoopLB)) {
+        Instr.push_back(&I);
+        DEBUG_WITH_TYPE(VerboseDebug, {
+          dbgs() << "Instruction: " << I << "\nin basic block:" << BB
+                 << "is unsafe.\n";
+        });
+      }
+    }
+  };
+
+  // Check the code surrounding the inner loop for instructions that are deemed
+  // unsafe.
+  const BasicBlock *OuterLoopHeader = OuterLoop.getHeader();
+  const BasicBlock *OuterLoopLatch = OuterLoop.getLoopLatch();
+  const BasicBlock *InnerLoopPreHeader = InnerLoop.getLoopPreheader();
+  const BasicBlock *InnerLoopExitBlock = InnerLoop.getExitBlock();
+
+  GetUnsafeInstructions(*OuterLoopHeader);
+  GetUnsafeInstructions(*OuterLoopLatch);
+  GetUnsafeInstructions(*InnerLoopExitBlock);
+
+  if (InnerLoopPreHeader != OuterLoopHeader) {
+    GetUnsafeInstructions(*InnerLoopPreHeader);
+  }
+  return Instr;
 }
 
 SmallVector<LoopVectorTy, 4>
