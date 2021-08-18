@@ -181,7 +181,6 @@ module LLVM_ExecutionEngine {
   // translation unit (or none) and aren't part of this module.
   exclude header "ExecutionEngine/MCJIT.h"
   exclude header "ExecutionEngine/Interpreter.h"
-  exclude header "ExecutionEngine/OrcMCJITReplacement.h"
 
   // FIXME: These exclude directives were added as a workaround for
   //        <rdar://problem/29247092> and should be removed once it is fixed.
