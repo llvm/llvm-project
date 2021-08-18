@@ -3,15 +3,15 @@
 # RUN: yaml2obj %s -o %t.o
 # RUN: llvm-readobj -A %t.o 2>&1 | FileCheck %s -DFILE=%t.o
 
-# CHECK: warning: '[[FILE]]': attribute printing not implemented for big-endian RISC-V objects
+# CHECK: warning: '[[FILE]]': attribute printing not implemented for big-endian ARM objects
 
 --- !ELF
 FileHeader:
-  Class:   ELFCLASS64
+  Class:   ELFCLASS32
 ## Test big-endian encoding.
   Data:    ELFDATA2MSB
   Type:    ET_REL
-  Machine: EM_RISCV
+  Machine: EM_ARM
 Sections:
-  - Name: .riscv.attributes
-    Type: SHT_RISCV_ATTRIBUTES
+  - Name: .ARM.attributes
+    Type: SHT_ARM_ATTRIBUTES
