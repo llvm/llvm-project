@@ -294,9 +294,6 @@
 #    define _LIBCPP_HAS_BITSCAN64
 #  endif
 #  define _LIBCPP_HAS_OPEN_WITH_WCHAR
-#  if defined(_LIBCPP_MSVCRT)
-#    define _LIBCPP_HAS_QUICK_EXIT
-#  endif
 
 // Some CRT APIs are unavailable to store apps
 #  if defined(WINAPI_FAMILY)
@@ -391,72 +388,6 @@
 #else
 #  define _LIBCPP_NO_CFI
 #endif
-
-// If the compiler supports using_if_exists, pretend we have those functions and they'll
-// be picked up if the C library provides them.
-//
-// TODO: Once we drop support for Clang 12, we can assume the compiler supports using_if_exists
-//       for platforms that don't have a conforming C11 library, so we can drop this whole thing.
-#if __has_attribute(using_if_exists)
-# define _LIBCPP_HAS_TIMESPEC_GET
-# define _LIBCPP_HAS_QUICK_EXIT
-# define _LIBCPP_HAS_ALIGNED_ALLOC
-#else
-#if (defined(__ISO_C_VISIBLE) && (__ISO_C_VISIBLE >= 2011)) || __cplusplus >= 201103L
-#  if defined(__FreeBSD__)
-#    define _LIBCPP_HAS_ALIGNED_ALLOC
-#    define _LIBCPP_HAS_QUICK_EXIT
-#    if __FreeBSD_version >= 1300064 || \
-       (__FreeBSD_version >= 1201504 && __FreeBSD_version < 1300000)
-#      define _LIBCPP_HAS_TIMESPEC_GET
-#    endif
-#  elif defined(__BIONIC__)
-#    if __ANDROID_API__ >= 21
-#      define _LIBCPP_HAS_QUICK_EXIT
-#    endif
-#    if __ANDROID_API__ >= 28
-#      define _LIBCPP_HAS_ALIGNED_ALLOC
-#    endif
-#    if __ANDROID_API__ >= 29
-#      define _LIBCPP_HAS_TIMESPEC_GET
-#    endif
-#  elif defined(__Fuchsia__) || defined(__wasi__) || defined(__NetBSD__)
-#    define _LIBCPP_HAS_ALIGNED_ALLOC
-#    define _LIBCPP_HAS_QUICK_EXIT
-#    define _LIBCPP_HAS_TIMESPEC_GET
-#  elif defined(__OpenBSD__)
-#    define _LIBCPP_HAS_ALIGNED_ALLOC
-#    define _LIBCPP_HAS_TIMESPEC_GET
-#  elif defined(__linux__)
-#    if !defined(_LIBCPP_HAS_MUSL_LIBC)
-#      if _LIBCPP_GLIBC_PREREQ(2, 15) || defined(__BIONIC__)
-#        define _LIBCPP_HAS_QUICK_EXIT
-#      endif
-#      if _LIBCPP_GLIBC_PREREQ(2, 17)
-#        define _LIBCPP_HAS_ALIGNED_ALLOC
-#        define _LIBCPP_HAS_TIMESPEC_GET
-#      endif
-#    else // defined(_LIBCPP_HAS_MUSL_LIBC)
-#      define _LIBCPP_HAS_ALIGNED_ALLOC
-#      define _LIBCPP_HAS_QUICK_EXIT
-#      define _LIBCPP_HAS_TIMESPEC_GET
-#    endif
-#  elif defined(_LIBCPP_MSVCRT)
-     // Using Microsoft's C Runtime library, not MinGW
-#    define _LIBCPP_HAS_TIMESPEC_GET
-#  elif defined(__APPLE__)
-     // timespec_get and aligned_alloc were introduced in macOS 10.15 and
-     // aligned releases
-#    if ((defined(__ENVIRONMENT_MAC_OS_X_VERSION_MIN_REQUIRED__) && __ENVIRONMENT_MAC_OS_X_VERSION_MIN_REQUIRED__ >= 101500) || \
-         (defined(__ENVIRONMENT_IPHONE_OS_VERSION_MIN_REQUIRED__) && __ENVIRONMENT_IPHONE_OS_VERSION_MIN_REQUIRED__ >= 130000) || \
-         (defined(__ENVIRONMENT_TV_OS_VERSION_MIN_REQUIRED__) && __ENVIRONMENT_TV_OS_VERSION_MIN_REQUIRED__ >= 130000) || \
-         (defined(__ENVIRONMENT_WATCH_OS_VERSION_MIN_REQUIRED__) && __ENVIRONMENT_WATCH_OS_VERSION_MIN_REQUIRED__ >= 60000))
-#      define _LIBCPP_HAS_ALIGNED_ALLOC
-#      define _LIBCPP_HAS_TIMESPEC_GET
-#    endif
-#  endif // __APPLE__
-#endif
-#endif // __has_attribute(using_if_exists)
 
 #ifndef _LIBCPP_CXX03_LANG
 # define _LIBCPP_ALIGNOF(_Tp) alignof(_Tp)
