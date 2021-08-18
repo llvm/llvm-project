@@ -75,10 +75,10 @@ MATH_MANGLE(j1)(float x)
               p[8],  p[7]), p[6]), p[5]), p[4]),
               p[3]), p[2]), p[1]), p[0]);
     } else {
-        float r = MATH_RCP(x);
+        float r = MATH_RCP(ax);
         float r2 = r*r;
         float p = MATH_PRIVATE(bp1)(r2) * r;
-        ret = 0x1.988454p-1f * BUILTIN_RSQRT_F32(x) * MATH_PRIVATE(ba1)(r2) * MATH_PRIVATE(cosb)(x, 1, p);
+        ret = 0x1.988454p-1f * BUILTIN_RSQRT_F32(ax) * MATH_PRIVATE(ba1)(r2) * MATH_PRIVATE(cosb)(ax, 1, p);
         ret = BUILTIN_CLASS_F32(ax, CLASS_PINF) ? 0.0f : ret;
     }
 
