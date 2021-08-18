@@ -1524,6 +1524,14 @@ ABIArgInfo X86_32ABIInfo::classifyReturnType(QualType RetTy,
     if (isEmptyRecord(getContext(), RetTy, true))
       return ABIArgInfo::getIgnore();
 
+    // Return complex of _Float16 as <2 x half> so the backend will use xmm0.
+    if (const ComplexType *CT = RetTy->getAs<ComplexType>()) {
+      QualType ET = getContext().getCanonicalType(CT->getElementType());
+      if (ET->isFloat16Type())
+        return ABIArgInfo::getDirect(llvm::FixedVectorType::get(
+            llvm::Type::getHalfTy(getVMContext()), 2));
+    }
+
     // Small structures which are register sized are generally returned
     // in a register.
     if (shouldReturnTypeInRegister(RetTy, getContext())) {
