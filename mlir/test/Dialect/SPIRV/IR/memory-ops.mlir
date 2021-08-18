@@ -628,3 +628,33 @@ func @copy_memory_print_maa() {
 
   spv.Return
 }
+
+// -----
+
+//===----------------------------------------------------------------------===//
+// spv.PtrAccessChain
+//===----------------------------------------------------------------------===//
+
+// CHECK-LABEL:   func @ptr_access_chain1(
+// CHECK-SAME:    %[[ARG0:.*]]: !spv.ptr<f32, CrossWorkgroup>,
+// CHECK-SAME:    %[[ARG1:.*]]: i64)
+// CHECK: spv.PtrAccessChain %[[ARG0]][%[[ARG1]]] : !spv.ptr<f32, CrossWorkgroup>, i64
+func @ptr_access_chain1(%arg0: !spv.ptr<f32, CrossWorkgroup>, %arg1 : i64) -> () {
+  %0 = spv.PtrAccessChain %arg0[%arg1] : !spv.ptr<f32, CrossWorkgroup>, i64
+  return
+}
+
+// -----
+
+//===----------------------------------------------------------------------===//
+// spv.InBoundsPtrAccessChain
+//===----------------------------------------------------------------------===//
+
+// CHECK-LABEL:   func @inbounds_ptr_access_chain1(
+// CHECK-SAME:    %[[ARG0:.*]]: !spv.ptr<f32, CrossWorkgroup>,
+// CHECK-SAME:    %[[ARG1:.*]]: i64)
+// CHECK: spv.InBoundsPtrAccessChain %[[ARG0]][%[[ARG1]]] : !spv.ptr<f32, CrossWorkgroup>, i64
+func @inbounds_ptr_access_chain1(%arg0: !spv.ptr<f32, CrossWorkgroup>, %arg1 : i64) -> () {
+  %0 = spv.InBoundsPtrAccessChain %arg0[%arg1] : !spv.ptr<f32, CrossWorkgroup>, i64
+  return
+}
