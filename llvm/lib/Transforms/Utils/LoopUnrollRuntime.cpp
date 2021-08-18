@@ -215,7 +215,10 @@ static void ConnectEpilog(Loop *L, Value *ModVal, BasicBlock *NewExit,
     //   PN = PHI [I, Latch]
     // ...
     // Exit:
-    //   EpilogPN = PHI [PN, EpilogPreHeader]
+    //   EpilogPN = PHI [PN, EpilogPreHeader], [X, Exit2], [Y, Exit2.epil]
+    //
+    // Exits from non-latch blocks point to the original exit block and the
+    // epilogue edges have already been added.
     //
     // There is EpilogPreHeader incoming block instead of NewExit as
     // NewExit was spilt 1 more time to get EpilogPreHeader.
@@ -441,9 +444,8 @@ static bool canSafelyUnrollMultiExitLoop(Loop *L, BasicBlock *LatchExit,
     return false;
 
   // TODO: Support multiple exiting blocks jumping to the `LatchExit` when
-  // UnrollRuntimeMultiExit is true. This will need updating the logic in
-  // connectEpilog/connectProlog.
-  if (!LatchExit->getSinglePredecessor()) {
+  // using a prolog loop.
+  if (!UseEpilogRemainder && !LatchExit->getSinglePredecessor()) {
     LLVM_DEBUG(
         dbgs() << "Bailout for multi-exit handling when latch exit has >1 "
                   "predecessor.\n");
@@ -476,6 +478,11 @@ static bool canProfitablyUnrollMultiExitLoop(
   // Priority goes to UnrollRuntimeMultiExit if it's supplied.
   if (UnrollRuntimeMultiExit.getNumOccurrences())
     return UnrollRuntimeMultiExit;
+
+  // TODO: We used to bail out for correctness (now fixed).  Under what
+  // circumstances is this case profitable to allow?
+  if (!LatchExit->getSinglePredecessor())
+    return false;
 
   // The main pain point with multi-exit loop unrolling is that once unrolled,
   // we will not be able to merge all blocks into a straight line code.
@@ -740,8 +747,7 @@ bool llvm::UnrollRuntimeLoopRemainder(
     NewPreHeader = SplitBlock(PreHeader, PreHeader->getTerminator(), DT, LI);
     NewPreHeader->setName(PreHeader->getName() + ".new");
     // Split LatchExit to create phi nodes from branch above.
-    SmallVector<BasicBlock*, 4> Preds(predecessors(LatchExit));
-    NewExit = SplitBlockPredecessors(LatchExit, Preds, ".unr-lcssa", DT, LI,
+    NewExit = SplitBlockPredecessors(LatchExit, {Latch}, ".unr-lcssa", DT, LI,
                                      nullptr, PreserveLCSSA);
     // NewExit gets its DebugLoc from LatchExit, which is not part of the
     // original Loop.
@@ -856,6 +862,14 @@ bool llvm::UnrollRuntimeLoopRemainder(
      // node.
      for (unsigned i = 0; i < oldNumOperands; i++){
        auto *PredBB =PN.getIncomingBlock(i);
+       if (PredBB == Latch)
+         // The latch exit is handled seperately, see connectX
+         continue;
+       if (!L->contains(PredBB))
+         // Even if we had dedicated exits, the code above inserted an
+         // extra branch which can reach the latch exit.
+         continue;
+
        auto *V = PN.getIncomingValue(i);
        if (Instruction *I = dyn_cast<Instruction>(V))
          if (L->contains(I))
