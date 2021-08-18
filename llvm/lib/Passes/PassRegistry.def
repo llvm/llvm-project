@@ -73,7 +73,6 @@ MODULE_PASS("invalidate<all>", InvalidateAllAnalysesPass())
 MODULE_PASS("ipsccp", IPSCCPPass())
 MODULE_PASS("iroutliner", IROutlinerPass())
 MODULE_PASS("print-ir-similarity", IRSimilarityAnalysisPrinterPass(dbgs()))
-MODULE_PASS("loop-extract", LoopExtractorPass())
 MODULE_PASS("lowertypetests", LowerTypeTestsPass())
 MODULE_PASS("metarenamer", MetaRenamerPass())
 MODULE_PASS("mergefunc", MergeFunctionsPass())
@@ -99,7 +98,6 @@ MODULE_PASS("rpo-function-attrs", ReversePostOrderFunctionAttrsPass())
 MODULE_PASS("sample-profile", SampleProfileLoaderPass())
 MODULE_PASS("scc-oz-module-inliner",
   buildInlinerPipeline(OptimizationLevel::Oz, ThinOrFullLTOPhase::None))
-MODULE_PASS("loop-extract-single", LoopExtractorPass(1))
 MODULE_PASS("strip", StripSymbolsPass())
 MODULE_PASS("strip-dead-debug-info", StripDeadDebugInfoPass())
 MODULE_PASS("pseudo-probe", SampleProfileProbePass(TM))
@@ -124,6 +122,15 @@ MODULE_PASS("pseudo-probe-update", PseudoProbeUpdatePass())
 #ifndef MODULE_PASS_WITH_PARAMS
 #define MODULE_PASS_WITH_PARAMS(NAME, CLASS, CREATE_PASS, PARSER, PARAMS)
 #endif
+MODULE_PASS_WITH_PARAMS("loop-extract",
+                        "LoopExtractorPass",
+                        [](bool Single) {
+                          if (Single)
+                            return LoopExtractorPass(1);
+                          return LoopExtractorPass();
+                        },
+                        parseLoopExtractorPassOptions,
+                        "single")
 MODULE_PASS_WITH_PARAMS("hwasan",
                         "HWAddressSanitizerPass",
                         [](HWAddressSanitizerOptions Opts) {
@@ -227,12 +234,8 @@ FUNCTION_PASS("div-rem-pairs", DivRemPairsPass())
 FUNCTION_PASS("dse", DSEPass())
 FUNCTION_PASS("dot-cfg", CFGPrinterPass())
 FUNCTION_PASS("dot-cfg-only", CFGOnlyPrinterPass())
-FUNCTION_PASS("early-cse", EarlyCSEPass(/*UseMemorySSA=*/false))
-FUNCTION_PASS("early-cse-memssa", EarlyCSEPass(/*UseMemorySSA=*/true))
-FUNCTION_PASS("ee-instrument", EntryExitInstrumenterPass(/*PostInlining=*/false))
 FUNCTION_PASS("fix-irreducible", FixIrreduciblePass())
 FUNCTION_PASS("make-guards-explicit", MakeGuardsExplicitPass())
-FUNCTION_PASS("post-inline-ee-instrument", EntryExitInstrumenterPass(/*PostInlining=*/true))
 FUNCTION_PASS("gvn-hoist", GVNHoistPass())
 FUNCTION_PASS("gvn-sink", GVNSinkPass())
 FUNCTION_PASS("helloworld", HelloWorldPass())
@@ -252,8 +255,6 @@ FUNCTION_PASS("loweratomic", LowerAtomicPass())
 FUNCTION_PASS("lower-expect", LowerExpectIntrinsicPass())
 FUNCTION_PASS("lower-guard-intrinsic", LowerGuardIntrinsicPass())
 FUNCTION_PASS("lower-constant-intrinsics", LowerConstantIntrinsicsPass())
-FUNCTION_PASS("lower-matrix-intrinsics", LowerMatrixIntrinsicsPass())
-FUNCTION_PASS("lower-matrix-intrinsics-minimal", LowerMatrixIntrinsicsPass(true))
 FUNCTION_PASS("lower-widenable-condition", LowerWidenableConditionPass())
 FUNCTION_PASS("guard-widening", GuardWideningPass())
 FUNCTION_PASS("load-store-vectorizer", LoadStoreVectorizerPass())
@@ -340,6 +341,27 @@ FUNCTION_PASS("memprof", MemProfilerPass())
 #ifndef FUNCTION_PASS_WITH_PARAMS
 #define FUNCTION_PASS_WITH_PARAMS(NAME, CLASS, CREATE_PASS, PARSER, PARAMS)
 #endif
+FUNCTION_PASS_WITH_PARAMS("early-cse",
+                          "EarlyCSEPass",
+                           [](bool UseMemorySSA) {
+                             return EarlyCSEPass(UseMemorySSA);
+                           },
+                          parseEarlyCSEPassOptions,
+                          "memssa")
+FUNCTION_PASS_WITH_PARAMS("ee-instrument",
+                          "EntryExitInstrumenterPass",
+                           [](bool PostInlining) {
+                             return EntryExitInstrumenterPass(PostInlining);
+                           },
+                          parseEntryExitInstrumenterPassOptions,
+                          "post-inline")
+FUNCTION_PASS_WITH_PARAMS("lower-matrix-intrinsics",
+                          "LowerMatrixIntrinsicsPass",
+                           [](bool Minimal) {
+                             return LowerMatrixIntrinsicsPass(Minimal);
+                           },
+                          parseLowerMatrixIntrinsicsPassOptions,
+                          "minimal")
 FUNCTION_PASS_WITH_PARAMS("loop-unroll",
                           "LoopUnrollPass",
                            [](LoopUnrollOptions Opts) {

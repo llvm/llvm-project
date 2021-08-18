@@ -412,6 +412,7 @@ bool llvm::runPassPipeline(StringRef Arg0, Module &M, TargetMachine *TM,
   if (EnableDebugify)
     MPM.addPass(NewPMDebugifyPass());
 
+  // Add passes according to the -passes options.
   if (!PassPipeline.empty()) {
     assert(Passes.empty() &&
            "PassPipeline and Passes should not both contain passes");
@@ -420,10 +421,26 @@ bool llvm::runPassPipeline(StringRef Arg0, Module &M, TargetMachine *TM,
       return false;
     }
   }
+  // Add passes specified using the legacy PM syntax (i.e. not using
+  // -passes). This should be removed later when such support has been
+  // deprecated, i.e. when all lit tests running opt (and not using
+  // -enable-new-pm=0) have been updated to use -passes.
   for (auto PassName : Passes) {
     std::string ModifiedPassName(PassName.begin(), PassName.end());
     if (PB.isAnalysisPassName(PassName))
       ModifiedPassName = "require<" + ModifiedPassName + ">";
+    // FIXME: These translations are supposed to be removed when lit tests that
+    // use these names have been updated to use the -passes syntax (and when the
+    // support for using the old syntax to specify passes is considered as
+    // deprecated for the new PM).
+    if (ModifiedPassName == "early-cse-memssa")
+      ModifiedPassName = "early-cse<memssa>";
+    else if (ModifiedPassName == "post-inline-ee-instrument")
+      ModifiedPassName = "ee-instrument<post-inline>";
+    else if (ModifiedPassName == "loop-extract-single")
+      ModifiedPassName = "loop-extract<single>";
+    else if (ModifiedPassName == "lower-matrix-intrinsics-minimal")
+      ModifiedPassName = "lower-matrix-intrinsics<minimal>";
     if (auto Err = PB.parsePassPipeline(MPM, ModifiedPassName)) {
       errs() << Arg0 << ": " << toString(std::move(Err)) << "\n";
       return false;
