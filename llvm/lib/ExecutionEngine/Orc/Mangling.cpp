@@ -7,9 +7,11 @@
 //===----------------------------------------------------------------------===//
 
 #include "llvm/ExecutionEngine/Orc/Mangling.h"
+#include "llvm/ExecutionEngine/Orc/ELFNixPlatform.h"
 #include "llvm/ExecutionEngine/Orc/MachOPlatform.h"
 #include "llvm/IR/Constants.h"
 #include "llvm/IR/Mangler.h"
+#include "llvm/Object/ELFObjectFile.h"
 #include "llvm/Object/MachO.h"
 #include "llvm/Object/ObjectFile.h"
 #include "llvm/Support/Debug.h"
@@ -160,6 +162,16 @@ getObjectSymbolInfo(ExecutionSession &ES, MemoryBufferRef ObjBuffer) {
       if (MachOPlatform::isInitializerSection(SegName, SecName)) {
         AddInitSymbol();
         break;
+      }
+    }
+  } else if (const auto *ELFObj =
+                 dyn_cast<object::ELFObjectFileBase>(Obj->get())) {
+    for (auto &Sec : ELFObj->sections()) {
+      if (auto SecName = Sec.getName()) {
+        if (ELFNixPlatform::isInitializerSection(*SecName)) {
+          AddInitSymbol();
+          break;
+        }
       }
     }
   }
