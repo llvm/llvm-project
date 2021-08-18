@@ -92,6 +92,36 @@ define i32 @shl_check_no_overflow(i32 %call62, i16 %call63) {
   ret i32 %conv68
 }
 
+define i16 @shl_smaller_bitwidth(i8 %x) {
+; CHECK-LABEL: @shl_smaller_bitwidth(
+; CHECK-NEXT:    [[ZEXT:%.*]] = zext i8 [[X:%.*]] to i16
+; CHECK-NEXT:    [[SHL:%.*]] = shl i16 [[ZEXT]], 1
+; CHECK-NEXT:    [[AND:%.*]] = and i16 [[SHL]], 42
+; CHECK-NEXT:    ret i16 [[AND]]
+;
+  %zext = zext i8 %x to i16
+  %shl = shl i16 %zext, 1
+  %zext2 = zext i16 %shl to i32
+  %and = and i32 %zext2, 42
+  %trunc = trunc i32 %and to i16
+  ret i16 %trunc
+}
+
+define i16 @shl_larger_bitwidth(i8 %x) {
+; CHECK-LABEL: @shl_larger_bitwidth(
+; CHECK-NEXT:    [[ZEXT:%.*]] = zext i8 [[X:%.*]] to i16
+; CHECK-NEXT:    [[SHL:%.*]] = shl i16 [[ZEXT]], 1
+; CHECK-NEXT:    [[AND:%.*]] = and i16 [[SHL]], 42
+; CHECK-NEXT:    ret i16 [[AND]]
+;
+  %zext = zext i8 %x to i64
+  %shl = shl i64 %zext, 1
+  %zext2 = trunc i64 %shl to i32
+  %and = and i32 %zext2, 42
+  %trunc = trunc i32 %and to i16
+  ret i16 %trunc
+}
+
 define <2 x i16> @shl_vector(<2 x i8> %x) {
 ; CHECK-LABEL: @shl_vector(
 ; CHECK-NEXT:    [[Z:%.*]] = zext <2 x i8> [[X:%.*]] to <2 x i16>
