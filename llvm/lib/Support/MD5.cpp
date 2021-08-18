@@ -262,6 +262,23 @@ void MD5::final(MD5Result &Result) {
   support::endian::write32le(&Result[12], InternalState.d);
 }
 
+StringRef MD5::final() {
+  final(Result);
+  return StringRef(reinterpret_cast<char *>(Result.Bytes.data()),
+                   Result.Bytes.size());
+}
+
+StringRef MD5::result() {
+  auto StateToRestore = InternalState;
+
+  auto Hash = final();
+
+  // Restore the state
+  InternalState = StateToRestore;
+
+  return Hash;
+}
+
 SmallString<32> MD5::MD5Result::digest() const {
   SmallString<32> Str;
   raw_svector_ostream Res(Str);
