@@ -349,14 +349,6 @@ void GCNHazardRecognizer::AdvanceCycle() {
     return;
   }
 
-  // Do not track non-instructions which do not affect the wait states.
-  // If included, these instructions can lead to buffer overflow such that
-  // detectable hazards are missed.
-  if (CurrCycleInstr->isMetaInstruction()) {
-    CurrCycleInstr = nullptr;
-    return;
-  }
-
   if (CurrCycleInstr->isBundle()) {
     processBundle();
     return;
@@ -413,7 +405,7 @@ static int getWaitStatesSince(GCNHazardRecognizer::IsHazardFn IsHazard,
     if (IsHazard(*I))
       return WaitStates;
 
-    if (I->isInlineAsm() || I->isMetaInstruction())
+    if (I->isInlineAsm())
       continue;
 
     WaitStates += SIInstrInfo::getNumWaitStates(*I);
