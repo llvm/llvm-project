@@ -484,11 +484,12 @@
 # DEBUG-NEXT: .. type index coverage check SKIPPED: no rules defined
 # DEBUG-NEXT: .. imm index coverage check SKIPPED: no rules defined
 # DEBUG-NEXT: G_FMINNUM (opcode {{[0-9]+}}): 1 type index
-# DEBUG: .. type index coverage check SKIPPED: no rules defined
-# DEBUG-NEXT: .. imm index coverage check SKIPPED: no rules defined
+# DEBUG-NEXT: .. opcode {{[0-9]+}} is aliased to {{[0-9]+}}
+# DEBUG-NEXT: .. the first uncovered type index: 1, OK
+# DEBUG-NEXT: .. the first uncovered imm index: 0, OK
 # DEBUG-NEXT: G_FMAXNUM (opcode {{[0-9]+}}): 1 type index
-# DEBUG: .. type index coverage check SKIPPED: no rules defined
-# DEBUG-NEXT: .. imm index coverage check SKIPPED: no rules defined
+# DEBUG-NEXT: .. the first uncovered type index: 1, OK
+# DEBUG-NEXT: .. the first uncovered imm index: 0, OK
 # DEBUG-NEXT: G_FMINNUM_IEEE (opcode {{[0-9]+}}): 1 type index
 # DEBUG: .. type index coverage check SKIPPED: no rules defined
 # DEBUG-NEXT: .. imm index coverage check SKIPPED: no rules defined
