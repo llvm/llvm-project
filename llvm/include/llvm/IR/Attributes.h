@@ -475,6 +475,41 @@ public:
   LLVM_NODISCARD AttributeList addAttributes(LLVMContext &C, unsigned Index,
                                              const AttrBuilder &B) const;
 
+  /// Add a function attribute to the list. Returns a new list because
+  /// attribute lists are immutable.
+  LLVM_NODISCARD AttributeList addFnAttribute(LLVMContext &C,
+                                              Attribute::AttrKind Kind) const {
+    return addAttribute(C, FunctionIndex, Kind);
+  }
+
+  /// Add a function attribute to the list. Returns a new list because
+  /// attribute lists are immutable.
+  LLVM_NODISCARD AttributeList addFnAttribute(LLVMContext &C,
+                                              Attribute Attr) const {
+    return addAttribute(C, FunctionIndex, Attr);
+  }
+
+  /// Add a function attribute to the list. Returns a new list because
+  /// attribute lists are immutable.
+  LLVM_NODISCARD AttributeList addFnAttribute(
+      LLVMContext &C, StringRef Kind, StringRef Value = StringRef()) const {
+    return addAttribute(C, FunctionIndex, Kind, Value);
+  }
+
+  /// Add function attribute to the list. Returns a new list because
+  /// attribute lists are immutable.
+  LLVM_NODISCARD AttributeList addFnAttributes(LLVMContext &C,
+                                               const AttrBuilder &B) const {
+    return addAttributes(C, FunctionIndex, B);
+  }
+
+  /// Add a return value attribute to the list. Returns a new list because
+  /// attribute lists are immutable.
+  LLVM_NODISCARD AttributeList addRetAttribute(LLVMContext &C,
+                                               Attribute::AttrKind Kind) const {
+    return addAttribute(C, ReturnIndex, Kind);
+  }
+
   /// Add an argument attribute to the list. Returns a new list because
   /// attribute lists are immutable.
   LLVM_NODISCARD AttributeList addParamAttribute(
