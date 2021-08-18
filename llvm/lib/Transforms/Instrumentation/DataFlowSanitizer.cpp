@@ -2113,7 +2113,7 @@ std::pair<Value *, Value *> DFSanFunction::loadShadowOriginSansLoadTracking(
         IRB.CreateCall(DFS.DFSanLoadLabelAndOriginFn,
                        {IRB.CreatePointerCast(Addr, IRB.getInt8PtrTy()),
                         ConstantInt::get(DFS.IntptrTy, Size)});
-    Call->addAttribute(AttributeList::ReturnIndex, Attribute::ZExt);
+    Call->addRetAttr(Attribute::ZExt);
     return {IRB.CreateTrunc(IRB.CreateLShr(Call, DFS.OriginWidthBits),
                             DFS.PrimitiveShadowTy),
             IRB.CreateTrunc(Call, DFS.OriginTy)};
@@ -2160,7 +2160,7 @@ std::pair<Value *, Value *> DFSanFunction::loadShadowOriginSansLoadTracking(
   IRBuilder<> IRB(Pos);
   CallInst *FallbackCall = IRB.CreateCall(
       DFS.DFSanUnionLoadFn, {ShadowAddr, ConstantInt::get(DFS.IntptrTy, Size)});
-  FallbackCall->addAttribute(AttributeList::ReturnIndex, Attribute::ZExt);
+  FallbackCall->addRetAttr(Attribute::ZExt);
   return {FallbackCall, Origin};
 }
 

@@ -15924,11 +15924,9 @@ Value *EmitAMDGPUDispatchPtr(CodeGenFunction &CGF,
                              const CallExpr *E = nullptr) {
   auto *F = CGF.CGM.getIntrinsic(Intrinsic::amdgcn_dispatch_ptr);
   auto *Call = CGF.Builder.CreateCall(F);
-  Call->addAttribute(
-      AttributeList::ReturnIndex,
+  Call->addRetAttr(
       Attribute::getWithDereferenceableBytes(Call->getContext(), 64));
-  Call->addAttribute(AttributeList::ReturnIndex,
-                     Attribute::getWithAlignment(Call->getContext(), Align(4)));
+  Call->addRetAttr(Attribute::getWithAlignment(Call->getContext(), Align(4)));
   if (!E)
     return Call;
   QualType BuiltinRetType = E->getType();

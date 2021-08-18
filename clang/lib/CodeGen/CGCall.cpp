@@ -5334,8 +5334,7 @@ RValue CodeGenFunction::EmitCall(const CGFunctionInfo &CallInfo,
       // attributes of the called function.
       if (auto *F = CI->getCalledFunction())
         F->removeFnAttr(llvm::Attribute::NoReturn);
-      CI->removeAttribute(llvm::AttributeList::FunctionIndex,
-                          llvm::Attribute::NoReturn);
+      CI->removeFnAttr(llvm::Attribute::NoReturn);
 
       // Avoid incompatibility with ASan which relies on the `noreturn`
       // attribute to insert handler calls.

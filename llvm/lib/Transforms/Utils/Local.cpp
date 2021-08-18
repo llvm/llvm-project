@@ -3247,7 +3247,7 @@ void llvm::maybeMarkSanitizerLibraryCallNoBuiltin(
   if (F && !F->hasLocalLinkage() && F->hasName() &&
       TLI->getLibFunc(F->getName(), Func) && TLI->hasOptimizedCodeGen(Func) &&
       !F->doesNotAccessMemory())
-    CI->addAttribute(AttributeList::FunctionIndex, Attribute::NoBuiltin);
+    CI->addFnAttr(Attribute::NoBuiltin);
 }
 
 bool llvm::canReplaceOperandWithVariable(const Instruction *I, unsigned OpIdx) {

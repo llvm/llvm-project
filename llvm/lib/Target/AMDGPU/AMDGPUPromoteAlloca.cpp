@@ -256,8 +256,8 @@ AMDGPUPromoteAllocaImpl::getLocalSizeYZ(IRBuilder<> &Builder) {
     = Intrinsic::getDeclaration(Mod, Intrinsic::amdgcn_dispatch_ptr);
 
   CallInst *DispatchPtr = Builder.CreateCall(DispatchPtrFn, {});
-  DispatchPtr->addAttribute(AttributeList::ReturnIndex, Attribute::NoAlias);
-  DispatchPtr->addAttribute(AttributeList::ReturnIndex, Attribute::NonNull);
+  DispatchPtr->addRetAttr(Attribute::NoAlias);
+  DispatchPtr->addRetAttr(Attribute::NonNull);
 
   // Size of the dispatch packet struct.
   DispatchPtr->addDereferenceableAttr(AttributeList::ReturnIndex, 64);
