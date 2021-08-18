@@ -32,6 +32,8 @@ posix_defines = [
     "HAVE_PTHREAD_GETNAME_NP=1",
     "HAVE_PTHREAD_SETNAME_NP=1",
     "HAVE_PTHREAD_GETSPECIFIC=1",
+    "HAVE_REGISTER_FRAME=1",
+    "HAVE_DEREGISTER_FRAME=1",
 ]
 
 linux_defines = posix_defines + [
