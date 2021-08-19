@@ -1,5 +1,8 @@
 // RUN: %libomptarget-compilexx-generic && %libomptarget-run-generic | %fcheck-generic
 
+// Fails in DAGToDAG on an address space problem
+// UNSUPPORTED: amdgcn-amd-amdhsa
+
 #include <cmath>
 #include <cstdio>
 
