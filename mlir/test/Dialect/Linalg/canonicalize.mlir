@@ -919,3 +919,30 @@ func @dim_of_pad_tensor(%arg0: tensor<?x?xf32>, %arg1: tensor<?x?xf32>,
   %r = tensor.dim %0, %c0 : tensor<?x?xf32>
   return %r : index
 }
+
+// -----
+
+// CHECK-LABEL: func @dim_of_tiled_loop_input(
+//  CHECK-SAME:     %[[arg0:.*]]: tensor<?x?xf32>, %[[arg1:.*]]: tensor<?x?xf32>, %[[arg2:.*]]: tensor<?x?xf32>
+//       CHECK:   %[[c0:.*]] = constant 0 : index
+//       CHECK:   linalg.tiled_loop
+//       CHECK:     %[[dim:.*]] = tensor.dim %[[arg1]], %[[c0]]
+//       CHECK:     index_cast %[[dim]]
+func @dim_of_tiled_loop_input(%arg0: tensor<?x?xf32>, %arg1: tensor<?x?xf32>, %arg2: tensor<?x?xf32>)
+    -> tensor<?x?xf32> {
+  %c0 = constant 0 : index
+  %c1 = constant 1 : index
+  %d0 = tensor.dim %arg0, %c0 : tensor<?x?xf32>
+  %d1 = tensor.dim %arg0, %c1 : tensor<?x?xf32>
+  %r = linalg.tiled_loop (%iv0, %iv1) = (%c0, %c0)
+      to (%d0, %d1) step (%c1, %c1)
+      ins (%in0 = %arg0 : tensor<?x?xf32>, %in1 = %arg1 : tensor<?x?xf32>)
+      outs (%out1 = %arg2 : tensor<?x?xf32>) {
+    %inner_dim = tensor.dim %in1, %c0 : tensor<?x?xf32>
+    %cast1 = std.index_cast %inner_dim : index to i32
+    %cast2 = std.sitofp %cast1 : i32 to f32
+    %fill = linalg.fill(%cast2, %out1) : f32, tensor<?x?xf32> -> tensor<?x?xf32>
+    linalg.yield %fill : tensor<?x?xf32>
+  }
+  return %r : tensor<?x?xf32>
+}
