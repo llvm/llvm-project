@@ -13333,7 +13333,7 @@ uint __ovld atomic_fetch_or(volatile __local atomic_uint *object, uint operand);
 int __ovld atomic_fetch_xor(volatile __global atomic_int *object, int operand);
 int __ovld atomic_fetch_xor(volatile __local atomic_int *object, int operand);
 uint __ovld atomic_fetch_xor(volatile __global atomic_uint *object, uint operand);
-uint __ovld atomic_fetch_xor(volatile __local atomic_uint *object, uint operand);i
+uint __ovld atomic_fetch_xor(volatile __local atomic_uint *object, uint operand);
 int __ovld atomic_fetch_and(volatile __global atomic_int *object, int operand);
 int __ovld atomic_fetch_and(volatile __local atomic_int *object, int operand);
 uint __ovld atomic_fetch_and(volatile __global atomic_uint *object, uint operand);
