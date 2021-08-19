@@ -1694,43 +1694,49 @@ inlineRetainOrClaimRVCalls(CallBase &CB,
         continue;
 
       if (auto *II = dyn_cast<IntrinsicInst>(&*CurI)) {
-        if (II->getIntrinsicID() == Intrinsic::objc_autoreleaseReturnValue &&
-            II->hasNUses(0) &&
-            objcarc::GetRCIdentityRoot(II->getOperand(0)) == RetOpnd) {
-          // If we've found a matching authoreleaseRV call:
-          // - If claimRV is attached to the call, insert a call to objc_release
-          //   and erase the autoreleaseRV call.
-          // - If retainRV is attached to the call, just erase the autoreleaseRV
-          //   call.
-          if (IsClaimRV) {
-            Builder.SetInsertPoint(II);
-            Function *IFn =
-                Intrinsic::getDeclaration(Mod, Intrinsic::objc_release);
-            Value *BC =
-                Builder.CreateBitCast(RetOpnd, IFn->getArg(0)->getType());
-            Builder.CreateCall(IFn, BC, "");
-          }
-          II->eraseFromParent();
-          InsertRetainCall = false;
+        if (II->getIntrinsicID() != Intrinsic::objc_autoreleaseReturnValue ||
+            !II->hasNUses(0) ||
+            objcarc::GetRCIdentityRoot(II->getOperand(0)) != RetOpnd)
+          break;
+
+        // If we've found a matching authoreleaseRV call:
+        // - If claimRV is attached to the call, insert a call to objc_release
+        //   and erase the autoreleaseRV call.
+        // - If retainRV is attached to the call, just erase the autoreleaseRV
+        //   call.
+        if (IsClaimRV) {
+          Builder.SetInsertPoint(II);
+          Function *IFn =
+              Intrinsic::getDeclaration(Mod, Intrinsic::objc_release);
+          Value *BC = Builder.CreateBitCast(RetOpnd, IFn->getArg(0)->getType());
+          Builder.CreateCall(IFn, BC, "");
         }
-      } else if (auto *CI = dyn_cast<CallInst>(&*CurI)) {
-        if (objcarc::GetRCIdentityRoot(CI) == RetOpnd &&
-            !objcarc::hasAttachedCallOpBundle(CI)) {
-          // If we've found an unannotated call that defines RetOpnd, add a
-          // "clang.arc.attachedcall" operand bundle.
-          Value *BundleArgs[] = {ConstantInt::get(
-              Builder.getInt64Ty(),
-              objcarc::getAttachedCallOperandBundleEnum(IsRetainRV))};
-          OperandBundleDef OB("clang.arc.attachedcall", BundleArgs);
-          auto *NewCall = CallBase::addOperandBundle(
-              CI, LLVMContext::OB_clang_arc_attachedcall, OB, CI);
-          NewCall->copyMetadata(*CI);
-          CI->replaceAllUsesWith(NewCall);
-          CI->eraseFromParent();
-          InsertRetainCall = false;
-        }
+        II->eraseFromParent();
+        InsertRetainCall = false;
+        break;
       }
 
+      auto *CI = dyn_cast<CallInst>(&*CurI);
+
+      if (!CI)
+        break;
+
+      if (objcarc::GetRCIdentityRoot(CI) != RetOpnd ||
+          objcarc::hasAttachedCallOpBundle(CI))
+        break;
+
+      // If we've found an unannotated call that defines RetOpnd, add a
+      // "clang.arc.attachedcall" operand bundle.
+      Value *BundleArgs[] = {ConstantInt::get(
+          Builder.getInt64Ty(),
+          objcarc::getAttachedCallOperandBundleEnum(IsRetainRV))};
+      OperandBundleDef OB("clang.arc.attachedcall", BundleArgs);
+      auto *NewCall = CallBase::addOperandBundle(
+          CI, LLVMContext::OB_clang_arc_attachedcall, OB, CI);
+      NewCall->copyMetadata(*CI);
+      CI->replaceAllUsesWith(NewCall);
+      CI->eraseFromParent();
+      InsertRetainCall = false;
       break;
     }
 
