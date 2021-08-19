@@ -547,6 +547,18 @@ public:
     return WrapperFunction<SPSEmpty(SPSTagTs...)>::call(Caller, BE, Args...);
   }
 
+  template <typename AsyncCallerFn, typename SendDeserializedResultFn,
+            typename... ArgTs>
+  static void callAsync(AsyncCallerFn &&Caller,
+                        SendDeserializedResultFn &&SendDeserializedResult,
+                        const ArgTs &...Args) {
+    WrapperFunction<SPSEmpty(SPSTagTs...)>::callAsync(
+        Caller,
+        [SDR = std::move(SendDeserializedResult)](
+            Error SerializeErr, SPSEmpty E) { SDR(std::move(SerializeErr)); },
+        Args...);
+  }
+
   using WrapperFunction<SPSEmpty(SPSTagTs...)>::handle;
   using WrapperFunction<SPSEmpty(SPSTagTs...)>::handleAsync;
 };
