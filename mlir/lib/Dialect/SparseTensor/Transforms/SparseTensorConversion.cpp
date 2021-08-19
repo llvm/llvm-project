@@ -232,12 +232,33 @@ public:
   LogicalResult
   matchAndRewrite(tensor::DimOp op, ArrayRef<Value> operands,
                   ConversionPatternRewriter &rewriter) const override {
-    if (!operands[0].getType().isa<LLVM::LLVMPointerType>())
-      return failure();
     Type resType = op.getType();
+    auto enc = getSparseTensorEncoding(op.source().getType());
+    if (!enc)
+      return failure();
+    // Permute the dim index.
+    Optional<int64_t> index = op.getConstantIndex();
+    if (!index.hasValue())
+      return failure();
+    int64_t idx = index.getValue();
+    AffineMap p = enc.getDimOrdering();
+    if (p) {
+      assert(p.isPermutation());
+      for (unsigned i = 0, sz = p.getNumResults(); i < sz; i++) {
+        if (p.getDimPosition(i) == idx) {
+          idx = i;
+          break;
+        }
+      }
+    }
+    // Generate the call.
     StringRef name = "sparseDimSize";
+    SmallVector<Value, 2> params;
+    params.push_back(operands[0]);
+    params.push_back(
+        rewriter.create<ConstantOp>(op.getLoc(), rewriter.getIndexAttr(idx)));
     rewriter.replaceOpWithNewOp<CallOp>(
-        op, resType, getFunc(op, name, resType, operands), operands);
+        op, resType, getFunc(op, name, resType, params), params);
     return success();
   }
 };
