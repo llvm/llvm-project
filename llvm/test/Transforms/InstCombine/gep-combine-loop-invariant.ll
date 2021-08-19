@@ -216,6 +216,7 @@ define float @gep_cross_loop(i64* %_arg_, float* %_arg_3, float %_arg_8)
 ; CHECK-LABEL: @gep_cross_loop(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[TMP0:%.*]] = load i64, i64* [[_ARG_:%.*]], align 8
+; CHECK-NEXT:    [[ADD_PTR:%.*]] = getelementptr inbounds float, float* [[_ARG_3:%.*]], i64 [[TMP0]]
 ; CHECK-NEXT:    br label [[FOR_COND_I:%.*]]
 ; CHECK:       for.cond.i:
 ; CHECK-NEXT:    [[IDX:%.*]] = phi i64 [ 0, [[ENTRY:%.*]] ], [ [[ADD11_I:%.*]], [[FOR_BODY_I:%.*]] ]
@@ -225,8 +226,7 @@ define float @gep_cross_loop(i64* %_arg_, float* %_arg_3, float %_arg_8)
 ; CHECK:       for.cond.i.i.i.preheader:
 ; CHECK-NEXT:    ret float [[SUM]]
 ; CHECK:       for.body.i:
-; CHECK-NEXT:    [[ARRAYIDX_I84_I_IDX:%.*]] = add nsw i64 [[IDX]], [[TMP0]]
-; CHECK-NEXT:    [[ARRAYIDX_I84_I:%.*]] = getelementptr inbounds float, float* [[_ARG_3:%.*]], i64 [[ARRAYIDX_I84_I_IDX]]
+; CHECK-NEXT:    [[ARRAYIDX_I84_I:%.*]] = getelementptr inbounds float, float* [[ADD_PTR]], i64 [[IDX]]
 ; CHECK-NEXT:    [[TMP1:%.*]] = load float, float* [[ARRAYIDX_I84_I]], align 4
 ; CHECK-NEXT:    [[ADD_I]] = fadd fast float [[SUM]], [[TMP1]]
 ; CHECK-NEXT:    [[ADD11_I]] = add nuw nsw i64 [[IDX]], 1
