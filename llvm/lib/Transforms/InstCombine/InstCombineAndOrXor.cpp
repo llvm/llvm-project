@@ -3577,9 +3577,13 @@ Instruction *InstCombinerImpl::visitXor(BinaryOperator &I) {
   // ~max(~X, Y) --> min(X, ~Y)
   auto *II = dyn_cast<IntrinsicInst>(Op0);
   if (II && II->hasOneUse() && match(Op1, m_AllOnes())) {
-    if (match(Op0, m_MaxOrMin(m_Not(m_Value(X)), m_Not(m_Value(Y))))) {
+    if (match(Op0, m_MaxOrMin(m_Value(X), m_Value(Y))) &&
+        isFreeToInvert(X, X->hasOneUse()) &&
+        isFreeToInvert(Y, Y->hasOneUse())) {
       Intrinsic::ID InvID = getInverseMinMaxIntrinsic(II->getIntrinsicID());
-      Value *InvMaxMin = Builder.CreateBinaryIntrinsic(InvID, X, Y);
+      Value *NotX = Builder.CreateNot(X);
+      Value *NotY = Builder.CreateNot(Y);
+      Value *InvMaxMin = Builder.CreateBinaryIntrinsic(InvID, NotX, NotY);
       return replaceInstUsesWith(I, InvMaxMin);
     }
     if (match(Op0, m_c_MaxOrMin(m_Not(m_Value(X)), m_Value(Y)))) {

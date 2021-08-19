@@ -1158,7 +1158,7 @@ define i8 @freeToInvert(i8 %x, i8 %y, i8 %z) {
 ; CHECK-NEXT:    call void @use(i8 [[NY]])
 ; CHECK-NEXT:    call void @use(i8 [[NZ]])
 ; CHECK-NEXT:    [[TMP1:%.*]] = call i8 @llvm.umin.i8(i8 [[X]], i8 [[Y]])
-; CHECK-NEXT:    [[TMP2:%.*]] = call i8 @llvm.smax.i8(i8 [[Z]], i8 [[TMP1]])
+; CHECK-NEXT:    [[TMP2:%.*]] = call i8 @llvm.smax.i8(i8 [[TMP1]], i8 [[Z]])
 ; CHECK-NEXT:    ret i8 [[TMP2]]
 ;
   %nx = xor i8 %x, -1
@@ -1266,11 +1266,10 @@ define i8 @freeToInvert_two_minmax_ops(i8 %x, i8 %y, i8 %z, i8 %w) {
 ; CHECK-NEXT:    call void @use(i8 [[NY]])
 ; CHECK-NEXT:    call void @use(i8 [[NZ]])
 ; CHECK-NEXT:    call void @use(i8 [[NW]])
-; CHECK-NEXT:    [[M1:%.*]] = call i8 @llvm.umax.i8(i8 [[NX]], i8 [[NY]])
-; CHECK-NEXT:    [[M2:%.*]] = call i8 @llvm.smax.i8(i8 [[NW]], i8 [[NZ]])
-; CHECK-NEXT:    [[M3:%.*]] = call i8 @llvm.smin.i8(i8 [[M1]], i8 [[M2]])
-; CHECK-NEXT:    [[NOT:%.*]] = xor i8 [[M3]], -1
-; CHECK-NEXT:    ret i8 [[NOT]]
+; CHECK-NEXT:    [[TMP1:%.*]] = call i8 @llvm.umin.i8(i8 [[X]], i8 [[Y]])
+; CHECK-NEXT:    [[TMP2:%.*]] = call i8 @llvm.smin.i8(i8 [[W]], i8 [[Z]])
+; CHECK-NEXT:    [[TMP3:%.*]] = call i8 @llvm.smax.i8(i8 [[TMP1]], i8 [[TMP2]])
+; CHECK-NEXT:    ret i8 [[TMP3]]
 ;
   %nx = xor i8 %x, -1
   %ny = xor i8 %y, -1
