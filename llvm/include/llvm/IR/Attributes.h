@@ -657,16 +657,13 @@ public:
 
   /// \brief Add the dereferenceable attribute to the attribute set at the given
   /// index. Returns a new list because attribute lists are immutable.
-  LLVM_NODISCARD AttributeList addDereferenceableAttr(LLVMContext &C,
-                                                      unsigned Index,
-                                                      uint64_t Bytes) const;
+  LLVM_NODISCARD AttributeList addDereferenceableRetAttr(LLVMContext &C,
+                                                         uint64_t Bytes) const;
 
   /// \brief Add the dereferenceable attribute to the attribute set at the given
   /// arg index. Returns a new list because attribute lists are immutable.
   LLVM_NODISCARD AttributeList addDereferenceableParamAttr(
-      LLVMContext &C, unsigned ArgNo, uint64_t Bytes) const {
-    return addDereferenceableAttr(C, ArgNo + FirstArgIndex, Bytes);
-  }
+      LLVMContext &C, unsigned ArgNo, uint64_t Bytes) const;
 
   /// Add the dereferenceable_or_null attribute to the attribute set at
   /// the given index. Returns a new list because attribute lists are immutable.
@@ -827,24 +824,20 @@ public:
   /// Get the stack alignment.
   MaybeAlign getStackAlignment(unsigned Index) const;
 
-  /// Get the number of dereferenceable bytes (or zero if unknown).
-  uint64_t getDereferenceableBytes(unsigned Index) const;
+  /// Get the number of dereferenceable bytes (or zero if unknown) of the return
+  /// value.
+  uint64_t getRetDereferenceableBytes() const;
 
-  /// Get the number of dereferenceable bytes (or zero if unknown) of an
+  /// Get the number of dereferenceable bytes (or zero if unknown) of an arg.
+  uint64_t getParamDereferenceableBytes(unsigned Index) const;
+
+  /// Get the number of dereferenceable_or_null bytes (or zero if unknown) of
+  /// the return value.
+  uint64_t getRetDereferenceableOrNullBytes() const;
+
+  /// Get the number of dereferenceable_or_null bytes (or zero if unknown) of an
   /// arg.
-  uint64_t getParamDereferenceableBytes(unsigned ArgNo) const {
-    return getDereferenceableBytes(ArgNo + FirstArgIndex);
-  }
-
-  /// Get the number of dereferenceable_or_null bytes (or zero if
-  /// unknown).
-  uint64_t getDereferenceableOrNullBytes(unsigned Index) const;
-
-  /// Get the number of dereferenceable_or_null bytes (or zero if
-  /// unknown) of an arg.
-  uint64_t getParamDereferenceableOrNullBytes(unsigned ArgNo) const {
-    return getDereferenceableOrNullBytes(ArgNo + FirstArgIndex);
-  }
+  uint64_t getParamDereferenceableOrNullBytes(unsigned ArgNo) const;
 
   /// Return the attributes at the index as a string.
   std::string getAsString(unsigned Index, bool InAttrGrp = false) const;
