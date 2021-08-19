@@ -77,11 +77,7 @@ static void temp_file_name(char *buf, size_t bufsize, const char *prefix) {
 #else
   const char *tmpdir = "/tmp";
 #if SANITIZER_ANDROID
-  // I don't know a way to query temp directory location on Android without
-  // going through Java interfaces. The code below is not ideal, but should
-  // work. May require "adb root", but it is needed for almost any use of ASan
-  // on Android already.
-  tmpdir = GetEnv("EXTERNAL_STORAGE");
+  tmpdir = GetEnv("TMPDIR");
 #endif
   internal_snprintf(buf, bufsize, "%s/%sXXXXXX", tmpdir, prefix);
   ASSERT_TRUE(mkstemp(buf));
