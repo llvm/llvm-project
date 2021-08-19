@@ -1,5 +1,4 @@
 add_mlir_dialect_library(MLIRLinalgAnalysis
-  ConstraintsSet.cpp
   DependenceAnalysis.cpp
 
   ADDITIONAL_HEADER_DIRS
