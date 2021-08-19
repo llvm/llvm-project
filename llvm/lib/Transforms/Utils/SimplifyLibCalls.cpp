@@ -142,12 +142,10 @@ static void annotateDereferenceableBytes(CallInst *CI,
     unsigned AS = CI->getArgOperand(ArgNo)->getType()->getPointerAddressSpace();
     if (!llvm::NullPointerIsDefined(F, AS) ||
         CI->paramHasAttr(ArgNo, Attribute::NonNull))
-      DerefBytes = std::max(CI->getDereferenceableOrNullBytes(
-                                ArgNo + AttributeList::FirstArgIndex),
+      DerefBytes = std::max(CI->getParamDereferenceableOrNullBytes(ArgNo),
                             DereferenceableBytes);
-  
-    if (CI->getDereferenceableBytes(ArgNo + AttributeList::FirstArgIndex) <
-        DerefBytes) {
+
+    if (CI->getParamDereferenceableBytes(ArgNo) < DerefBytes) {
       CI->removeParamAttr(ArgNo, Attribute::Dereferenceable);
       if (!llvm::NullPointerIsDefined(F, AS) ||
           CI->paramHasAttr(ArgNo, Attribute::NonNull))

@@ -2655,14 +2655,15 @@ template <typename AttrHolder>
 static void RemoveNonValidAttrAtIndex(LLVMContext &Ctx, AttrHolder &AH,
                                       unsigned Index) {
   AttrBuilder R;
-  if (AH.getDereferenceableBytes(Index))
+  AttributeSet AS = AH.getAttributes().getAttributes(Index);
+  if (AS.getDereferenceableBytes())
     R.addAttribute(Attribute::get(Ctx, Attribute::Dereferenceable,
-                                  AH.getDereferenceableBytes(Index)));
-  if (AH.getDereferenceableOrNullBytes(Index))
+                                  AS.getDereferenceableBytes()));
+  if (AS.getDereferenceableOrNullBytes())
     R.addAttribute(Attribute::get(Ctx, Attribute::DereferenceableOrNull,
-                                  AH.getDereferenceableOrNullBytes(Index)));
+                                  AS.getDereferenceableOrNullBytes()));
   for (auto Attr : ParamAttrsToStrip)
-    if (AH.getAttributes().hasAttribute(Index, Attr))
+    if (AS.hasAttribute(Attr))
       R.addAttribute(Attr);
 
   if (!R.empty())
