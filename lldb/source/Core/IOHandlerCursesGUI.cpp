@@ -85,8 +85,12 @@ using llvm::StringRef;
 // we may want curses to be disabled for some builds for instance, windows
 #if LLDB_ENABLE_CURSES
 
+#define KEY_CTRL_A 1
+#define KEY_CTRL_E 5
+#define KEY_CTRL_K 11
 #define KEY_RETURN 10
 #define KEY_ESCAPE 27
+#define KEY_DELETE 127
 
 #define KEY_SHIFT_TAB (KEY_MAX + 1)
 
@@ -1106,10 +1110,11 @@ public:
   int GetContentLength() { return m_content.length(); }
 
   void DrawContent(Surface &surface, bool is_selected) {
+    UpdateScrolling(surface.GetWidth());
+
     surface.MoveCursor(0, 0);
     const char *text = m_content.c_str() + m_first_visibile_char;
     surface.PutCString(text, surface.GetWidth());
-    m_last_drawn_content_width = surface.GetWidth();
 
     // Highlight the cursor.
     surface.MoveCursor(GetCursorXPosition(), 0);
@@ -1156,6 +1161,22 @@ public:
     DrawError(error_surface);
   }
 
+  // Get the position of the last visible character.
+  int GetLastVisibleCharPosition(int width) {
+    int position = m_first_visibile_char + width - 1;
+    return std::min(position, GetContentLength());
+  }
+
+  void UpdateScrolling(int width) {
+    if (m_cursor_position < m_first_visibile_char) {
+      m_first_visibile_char = m_cursor_position;
+      return;
+    }
+
+    if (m_cursor_position > GetLastVisibleCharPosition(width))
+      m_first_visibile_char = m_cursor_position - (width - 1);
+  }
+
   // The cursor is allowed to move one character past the string.
   // m_cursor_position is in range [0, GetContentLength()].
   void MoveCursorRight() {
@@ -1168,42 +1189,54 @@ public:
       m_cursor_position--;
   }
 
-  // If the cursor moved past the last visible character, scroll right by one
-  // character.
-  void ScrollRightIfNeeded() {
-    if (m_cursor_position - m_first_visibile_char == m_last_drawn_content_width)
-      m_first_visibile_char++;
-  }
+  void MoveCursorToStart() { m_cursor_position = 0; }
+
+  void MoveCursorToEnd() { m_cursor_position = GetContentLength(); }
 
   void ScrollLeft() {
     if (m_first_visibile_char > 0)
       m_first_visibile_char--;
   }
 
-  // If the cursor moved past the first visible character, scroll left by one
-  // character.
-  void ScrollLeftIfNeeded() {
-    if (m_cursor_position < m_first_visibile_char)
-      m_first_visibile_char--;
-  }
-
-  // Insert a character at the current cursor position, advance the cursor
-  // position, and make sure to scroll right if needed.
+  // Insert a character at the current cursor position and advance the cursor
+  // position.
   void InsertChar(char character) {
     m_content.insert(m_cursor_position, 1, character);
     m_cursor_position++;
-    ScrollRightIfNeeded();
+    ClearError();
   }
 
   // Remove the character before the cursor position, retreat the cursor
-  // position, and make sure to scroll left if needed.
-  void RemoveChar() {
+  // position, and scroll left.
+  void RemovePreviousChar() {
     if (m_cursor_position == 0)
       return;
 
     m_content.erase(m_cursor_position - 1, 1);
     m_cursor_position--;
     ScrollLeft();
+    ClearError();
+  }
+
+  // Remove the character after the cursor position.
+  void RemoveNextChar() {
+    if (m_cursor_position == GetContentLength())
+      return;
+
+    m_content.erase(m_cursor_position, 1);
+    ClearError();
+  }
+
+  // Clear characters from the current cursor position to the end.
+  void ClearToEnd() {
+    m_content.erase(m_cursor_position);
+    ClearError();
+  }
+
+  void Clear() {
+    m_content.clear();
+    m_cursor_position = 0;
+    ClearError();
   }
 
   // True if the key represents a char that can be inserted in the field
@@ -1224,17 +1257,36 @@ public:
     }
 
     switch (key) {
+    case KEY_HOME:
+    case KEY_CTRL_A:
+      MoveCursorToStart();
+      return eKeyHandled;
+    case KEY_END:
+    case KEY_CTRL_E:
+      MoveCursorToEnd();
+      return eKeyHandled;
     case KEY_RIGHT:
+    case KEY_SF:
       MoveCursorRight();
-      ScrollRightIfNeeded();
       return eKeyHandled;
     case KEY_LEFT:
+    case KEY_SR:
       MoveCursorLeft();
-      ScrollLeftIfNeeded();
       return eKeyHandled;
     case KEY_BACKSPACE:
-      ClearError();
-      RemoveChar();
+    case KEY_DELETE:
+      RemovePreviousChar();
+      return eKeyHandled;
+    case KEY_DC:
+      RemoveNextChar();
+      return eKeyHandled;
+    case KEY_EOL:
+    case KEY_CTRL_K:
+      ClearToEnd();
+      return eKeyHandled;
+    case KEY_DL:
+    case KEY_CLEAR:
+      Clear();
       return eKeyHandled;
     default:
       break;
@@ -1277,9 +1329,6 @@ protected:
   int m_cursor_position;
   // The index of the first visible character in the content.
   int m_first_visibile_char;
-  // The width of the fields content that was last drawn. Width can change, so
-  // this is used to determine if scrolling is needed dynamically.
-  int m_last_drawn_content_width;
   // Optional error message. If empty, field is considered to have no error.
   std::string m_error;
 };
