@@ -6572,53 +6572,6 @@ ExprResult Sema::BuildCallExpr(Scope *Scope, Expr *Fn, SourceLocation LParenLoc,
       return ExprError();
 
     checkDirectCallValidity(*this, Fn, FD, ArgExprs);
-
-    // If this expression is a call to a builtin function in HIP device
-    // compilation, allow a pointer-type argument to default address space to be
-    // passed as a pointer-type parameter to a non-default address space.
-    // If Arg is declared in the default address space and Param is declared
-    // in a non-default address space, perform an implicit address space cast to
-    // the parameter type.
-    if (getLangOpts().HIP && getLangOpts().CUDAIsDevice && FD &&
-        FD->getBuiltinID()) {
-      for (unsigned Idx = 0; Idx < FD->param_size(); ++Idx) {
-        ParmVarDecl *Param = FD->getParamDecl(Idx);
-        if (!ArgExprs[Idx] || !Param || !Param->getType()->isPointerType() ||
-            !ArgExprs[Idx]->getType()->isPointerType())
-          continue;
-
-        auto ParamAS = Param->getType()->getPointeeType().getAddressSpace();
-        auto ArgTy = ArgExprs[Idx]->getType();
-        auto ArgPtTy = ArgTy->getPointeeType();
-        auto ArgAS = ArgPtTy.getAddressSpace();
-
-        // Only allow implicit casting from a non-default address space pointee
-        // type to a default address space pointee type
-        if (ArgAS != LangAS::Default || ParamAS == LangAS::Default)
-          continue;
-
-        // First, ensure that the Arg is an RValue.
-        if (ArgExprs[Idx]->isGLValue()) {
-          ArgExprs[Idx] = ImplicitCastExpr::Create(
-              Context, ArgExprs[Idx]->getType(), CK_NoOp, ArgExprs[Idx],
-              nullptr, VK_PRValue, FPOptionsOverride());
-        }
-
-        // Construct a new arg type with address space of Param
-        Qualifiers ArgPtQuals = ArgPtTy.getQualifiers();
-        ArgPtQuals.setAddressSpace(ParamAS);
-        auto NewArgPtTy =
-            Context.getQualifiedType(ArgPtTy.getUnqualifiedType(), ArgPtQuals);
-        auto NewArgTy =
-            Context.getQualifiedType(Context.getPointerType(NewArgPtTy),
-                                     ArgTy.getQualifiers());
-
-        // Finally perform an implicit address space cast
-        ArgExprs[Idx] = ImpCastExprToType(ArgExprs[Idx], NewArgTy,
-                                          CK_AddressSpaceConversion)
-                            .get();
-      }
-    }
   }
 
   if (Context.isDependenceAllowed() &&
