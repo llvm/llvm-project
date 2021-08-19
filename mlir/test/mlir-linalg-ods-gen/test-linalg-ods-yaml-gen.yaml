@@ -75,6 +75,7 @@ structured_op: !LinalgStructuredOpConfig
 #  ODS-NEXT:      $_builder.getI32VectorAttr({
 #  ODS-NEXT:        static_cast<int32_t>(inputs.size()),
 #  ODS-NEXT:        static_cast<int32_t>(outputs.size())}));
+#  ODS-NEXT:    $_state.addAttributes(attributes);
 #  ODS-NEXT:    createAndFillStructuredOpRegion<Test1Op>(
 #  ODS-NEXT:      $_builder,
 #  ODS-NEXT:      $_state,
