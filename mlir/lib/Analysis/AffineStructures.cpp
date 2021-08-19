@@ -263,20 +263,50 @@ void FlatAffineConstraints::addLocalId(unsigned pos) {
   addId(IdKind::Local, pos);
 }
 
+unsigned FlatAffineConstraints::addLocalId() {
+  unsigned pos = getNumLocalIds();
+  addId(IdKind::Local, pos);
+  return pos;
+}
+
 void FlatAffineConstraints::addDimId(unsigned pos) {
   addId(IdKind::Dimension, pos);
+}
+
+unsigned FlatAffineConstraints::addDimId() {
+  unsigned pos = getNumDimIds();
+  addId(IdKind::Dimension, pos);
+  return pos;
 }
 
 void FlatAffineValueConstraints::addDimId(unsigned pos, Value val) {
   addId(IdKind::Dimension, pos, val);
 }
 
+unsigned FlatAffineValueConstraints::addDimId(Value val) {
+  unsigned pos = getNumDimIds();
+  addId(IdKind::Dimension, pos, val);
+  return pos;
+}
+
 void FlatAffineConstraints::addSymbolId(unsigned pos) {
   addId(IdKind::Symbol, pos);
 }
 
+unsigned FlatAffineConstraints::addSymbolId() {
+  unsigned pos = getNumSymbolIds();
+  addId(IdKind::Symbol, pos);
+  return pos;
+}
+
 void FlatAffineValueConstraints::addSymbolId(unsigned pos, Value val) {
   addId(IdKind::Symbol, pos, val);
+}
+
+unsigned FlatAffineValueConstraints::addSymbolId(Value val) {
+  unsigned pos = getNumSymbolIds();
+  addId(IdKind::Symbol, pos, val);
+  return pos;
 }
 
 unsigned FlatAffineConstraints::addId(IdKind kind, unsigned pos) {

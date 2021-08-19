@@ -250,6 +250,12 @@ public:
   void addSymbolId(unsigned pos);
   void addLocalId(unsigned pos);
   virtual unsigned addId(IdKind kind, unsigned pos);
+  /// Add identifiers of the specified kind at the end of the table. Return the
+  /// position of the column. The coefficient column corresponding to the
+  /// added identifier is initialized to zero.
+  unsigned addDimId();
+  unsigned addSymbolId();
+  unsigned addLocalId();
 
   /// Composes an affine map whose dimensions and symbols match one to one with
   /// the dimensions and symbols of this FlatAffineConstraints. The results of
@@ -659,6 +665,12 @@ public:
   using FlatAffineConstraints::addSymbolId;
   unsigned addId(IdKind kind, unsigned pos) override;
   unsigned addId(IdKind kind, unsigned pos, Value val);
+  /// Add identifiers of the specified kind at the end of the table. Return the
+  /// position of the column. The coefficient column corresponding to the
+  /// added identifier is initialized to zero. `val` is the Value corresponding
+  /// to the identifier that can optionally be provided.
+  unsigned addDimId(Value val);
+  unsigned addSymbolId(Value val);
 
   /// Add the specified values as a dim or symbol id depending on its nature, if
   /// it already doesn't exist in the system. `val` has to be either a terminal
@@ -764,6 +776,18 @@ public:
 
   inline ArrayRef<Optional<Value>> getMaybeValues() const {
     return {values.data(), values.size()};
+  }
+
+  inline ArrayRef<Optional<Value>> getMaybeDimValues() const {
+    return {values.data(), getNumDimIds()};
+  }
+
+  inline ArrayRef<Optional<Value>> getMaybeSymbolValues() const {
+    return {values.data() + getNumDimIds(), getNumSymbolIds()};
+  }
+
+  inline ArrayRef<Optional<Value>> getMaybeDimAndSymbolValues() const {
+    return {values.data(), getNumDimIds() + getNumSymbolIds()};
   }
 
   /// Sets the Value associated with the pos^th identifier.

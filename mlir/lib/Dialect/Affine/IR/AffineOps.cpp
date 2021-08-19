@@ -357,6 +357,9 @@ static bool isDimOpValidSymbol(OpTy dimOp, Region *region) {
 // *) It is a result of the dim op on a memref whose corresponding size is a
 //    valid symbol.
 bool mlir::isValidSymbol(Value value) {
+  if (!value)
+    return false;
+
   // The value must be an index type.
   if (!value.getType().isIndex())
     return false;

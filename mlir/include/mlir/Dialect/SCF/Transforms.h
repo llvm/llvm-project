@@ -44,9 +44,10 @@ void naivelyFuseParallelOps(Region &region);
 /// by an scf.if for the last (partial) iteration (if any). This transformation
 /// is called "loop peeling".
 ///
-/// Other patterns can simplify/canonicalize operations in the body of the loop
-/// and the scf.if. This is beneficial for a wide range of transformations such
-/// as vectorization or loop tiling.
+/// This transformation is beneficial for a wide range of transformations such
+/// as vectorization or loop tiling: It enables additional canonicalizations
+/// inside the peeled loop body such as rewriting masked loads into unmaked
+/// loads.
 ///
 /// E.g., assuming a lower bound of 0 (for illustration purposes):
 /// ```
@@ -65,11 +66,22 @@ void naivelyFuseParallelOps(Region &region);
 /// }
 /// ```
 ///
-/// This function rewrites the given scf.for loop in-place and creates a new
-/// scf.if operation (returned via `ifOp`) for the last iteration.
+/// After loop peeling, this function tries to simplify/canonicalize affine.min
+/// operations in the body of the loop and the scf.if, taking advantage of the
+/// fact that every iteration of the peeled loop is a "full" iteration. This
+/// canonicalization is expected to enable further canonicalization
+/// opportunities through other patterns.
 ///
-/// TODO: Simplify affine.min ops inside the new loop/if statement.
-LogicalResult peelForLoop(RewriterBase &b, ForOp forOp, scf::IfOp &ifOp);
+/// The return value indicates whether the loop was rewritten or not. Loops are
+/// not rewritten if:
+/// * Loop step size is 1 or
+/// * Loop bounds and step size are static, and step already divides the
+///   iteration space evenly.
+///
+/// Note: This function rewrites the given scf.for loop in-place and creates a
+/// new scf.if operation for the last iteration. It replaces all uses of the
+/// unpeeled loop with the results of the newly generated scf.if.
+LogicalResult peelAndCanonicalizeForLoop(RewriterBase &rewriter, ForOp forOp);
 
 /// Tile a parallel loop of the form
 ///   scf.parallel (%i0, %i1) = (%arg0, %arg1) to (%arg2, %arg3)
