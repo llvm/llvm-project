@@ -127,9 +127,14 @@ void ContextTrieNode::setFunctionSamples(FunctionSamples *FSamples) {
   FuncSamples = FSamples;
 }
 
-uint32_t ContextTrieNode::getFunctionSize() const { return FuncSize; }
+Optional<uint32_t> ContextTrieNode::getFunctionSize() const { return FuncSize; }
 
-void ContextTrieNode::setFunctionSize(uint32_t FSize) { FuncSize = FSize; }
+void ContextTrieNode::addFunctionSize(uint32_t FSize) {
+  if (!FuncSize.hasValue())
+    FuncSize = 0;
+
+  FuncSize = FuncSize.getValue() + FSize;
+}
 
 LineLocation ContextTrieNode::getCallSiteLoc() const { return CallSiteLoc; }
 
@@ -193,8 +198,7 @@ ContextTrieNode *ContextTrieNode::getOrCreateChildContext(
   if (!AllowCreate)
     return nullptr;
 
-  AllChildContext[Hash] =
-      ContextTrieNode(this, CalleeName, nullptr, 0, CallSite);
+  AllChildContext[Hash] = ContextTrieNode(this, CalleeName, nullptr, CallSite);
   return &AllChildContext[Hash];
 }
 
