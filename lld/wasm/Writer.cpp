@@ -562,6 +562,14 @@ static bool shouldImport(Symbol *sym) {
   if (isa<DataSymbol>(sym))
     return false;
 
+  // In PIC mode we only need to import functions when they are called directly.
+  // Indirect usage all goes via GOT imports.
+  if (config->isPic) {
+    if (auto *f = dyn_cast<UndefinedFunction>(sym))
+      if (!f->isCalledDirectly)
+        return false;
+  }
+
   if (config->isPic || config->relocatable || config->importUndefined)
     return true;
   if (config->allowUndefinedSymbols.count(sym->getName()) != 0)
