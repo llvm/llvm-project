@@ -192,11 +192,8 @@ public:
 
 }
 
-static bool GenerateSignBits(Value *V) {
-  if (!isa<Instruction>(V))
-    return false;
-
-  unsigned Opc = cast<Instruction>(V)->getOpcode();
+static bool GenerateSignBits(Instruction *I) {
+  unsigned Opc = I->getOpcode();
   return Opc == Instruction::AShr || Opc == Instruction::SDiv ||
          Opc == Instruction::SRem || Opc == Instruction::SExt;
 }
@@ -403,17 +400,14 @@ bool TypePromotion::shouldPromote(Value *V) {
 
 /// Return whether we can safely mutate V's type to ExtTy without having to be
 /// concerned with zero extending or truncation.
-static bool isPromotedResultSafe(Value *V) {
-  if (GenerateSignBits(V))
+static bool isPromotedResultSafe(Instruction *I) {
+  if (GenerateSignBits(I))
     return false;
 
-  if (!isa<Instruction>(V))
+  if (!isa<OverflowingBinaryOperator>(I))
     return true;
 
-  if (!isa<OverflowingBinaryOperator>(V))
-    return true;
-
-  return cast<Instruction>(V)->hasNoUnsignedWrap();
+  return I->hasNoUnsignedWrap();
 }
 
 void IRPromoter::ReplaceAllUsersOfWith(Value *From, Value *To) {
@@ -798,7 +792,7 @@ bool TypePromotion::isLegalToPromote(Value *V) {
   if (SafeToPromote.count(I))
    return true;
 
-  if (isPromotedResultSafe(V) || isSafeWrap(I)) {
+  if (isPromotedResultSafe(I) || isSafeWrap(I)) {
     SafeToPromote.insert(I);
     return true;
   }

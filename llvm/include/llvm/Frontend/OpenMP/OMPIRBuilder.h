@@ -778,8 +778,8 @@ public:
   /// \param Loc The source location description.
   /// \param MapperFunc Function to be called.
   /// \param SrcLocInfo Source location information global.
-  /// \param MaptypesArgs
-  /// \param MapnamesArg
+  /// \param MaptypesArg The argument types.
+  /// \param MapnamesArg The argument names.
   /// \param MapperAllocas The AllocaInst used for the call.
   /// \param DeviceID Device ID for the call.
   /// \param TotalNbOperand Number of operand in the call.

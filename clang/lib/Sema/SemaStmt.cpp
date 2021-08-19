@@ -3316,7 +3316,7 @@ Sema::ActOnBreakStmt(SourceLocation BreakLoc, Scope *CurScope) {
 /// being thrown, or being co_returned from a coroutine. This expression
 /// might be modified by the implementation.
 ///
-/// \param ForceCXX2b Overrides detection of current language mode
+/// \param Mode Overrides detection of current language mode
 /// and uses the rules for C++2b.
 ///
 /// \returns An aggregate which contains the Candidate and isMoveEligible

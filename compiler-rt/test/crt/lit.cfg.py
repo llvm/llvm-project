@@ -23,8 +23,8 @@ else:
 
 def get_library_path(file):
     cmd = subprocess.Popen([config.clang.strip(),
-                            config.target_cflags.strip(),
-                            '-print-file-name=%s' % file],
+                            '-print-file-name=%s' % file] +
+                           [config.target_cflags],
                            stdout=subprocess.PIPE,
                            env=config.environment,
                            universal_newlines=True)
@@ -39,8 +39,8 @@ def get_library_path(file):
 
 def get_libgcc_file_name():
     cmd = subprocess.Popen([config.clang.strip(),
-                            config.target_cflags.strip(),
-                            '-print-libgcc-file-name'],
+                            '-print-libgcc-file-name'] +
+                           [config.target_cflags],
                            stdout=subprocess.PIPE,
                            env=config.environment,
                            universal_newlines=True)
