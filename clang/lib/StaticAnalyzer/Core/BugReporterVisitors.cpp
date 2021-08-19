@@ -355,43 +355,81 @@ bool NoStateChangeFuncVisitor::isModifiedInFrame(const ExplodedNode *N) {
   return FramesModifying.count(SCtx);
 }
 
+void NoStateChangeFuncVisitor::markFrameAsModifying(
+    const StackFrameContext *SCtx) {
+  while (SCtx) {
+    auto p = FramesModifying.insert(SCtx);
+    if (!p.second)
+      break; // Frame and all its parents already inserted.
+    SCtx = SCtx->getParent()->getStackFrame();
+  }
+}
+
+static const ExplodedNode *getMatchingCallExitEnd(const ExplodedNode *N) {
+  assert(N->getLocationAs<CallEnter>());
+  // The stackframe of the callee is only found in the nodes succeeding
+  // the CallEnter node. CallEnter's stack frame refers to the caller.
+  const StackFrameContext *OrigSCtx = N->getFirstSucc()->getStackFrame();
+
+  // Similarly, the nodes preceding CallExitEnd refer to the callee's stack
+  // frame.
+  auto IsMatchingCallExitEnd = [OrigSCtx](const ExplodedNode *N) {
+    return N->getLocationAs<CallExitEnd>() &&
+           OrigSCtx == N->getFirstPred()->getStackFrame();
+  };
+  while (N && !IsMatchingCallExitEnd(N)) {
+    assert(N->succ_size() <= 1 &&
+           "This function is to be used on the trimmed ExplodedGraph!");
+    N = N->getFirstSucc();
+  }
+  return N;
+}
+
 void NoStateChangeFuncVisitor::findModifyingFrames(
     const ExplodedNode *const CallExitBeginN) {
 
   assert(CallExitBeginN->getLocationAs<CallExitBegin>());
-  const ExplodedNode *LastReturnN = CallExitBeginN;
+
   const StackFrameContext *const OriginalSCtx =
       CallExitBeginN->getLocationContext()->getStackFrame();
 
-  const ExplodedNode *CurrN = CallExitBeginN;
+  const ExplodedNode *CurrCallExitBeginN = CallExitBeginN;
+  const StackFrameContext *CurrentSCtx = OriginalSCtx;
 
-  do {
-    ProgramStateRef State = CurrN->getState();
-    auto CallExitLoc = CurrN->getLocationAs<CallExitBegin>();
-    if (CallExitLoc) {
-      LastReturnN = CurrN;
+  for (const ExplodedNode *CurrN = CallExitBeginN; CurrN;
+       CurrN = CurrN->getFirstPred()) {
+    // Found a new inlined call.
+    if (CurrN->getLocationAs<CallExitBegin>()) {
+      CurrCallExitBeginN = CurrN;
+      CurrentSCtx = CurrN->getStackFrame();
+      FramesModifyingCalculated.insert(CurrentSCtx);
+      // We won't see a change in between two identical exploded nodes: skip.
+      continue;
     }
 
-    FramesModifyingCalculated.insert(
-        CurrN->getLocationContext()->getStackFrame());
+    if (auto CE = CurrN->getLocationAs<CallEnter>()) {
+      if (const ExplodedNode *CallExitEndN = getMatchingCallExitEnd(CurrN))
+        if (wasModifiedInFunction(CurrN, CallExitEndN))
+          markFrameAsModifying(CurrentSCtx);
 
-    if (wasModifiedBeforeCallExit(CurrN, LastReturnN)) {
-      const StackFrameContext *SCtx = CurrN->getStackFrame();
-      while (!SCtx->inTopFrame()) {
-        auto p = FramesModifying.insert(SCtx);
-        if (!p.second)
-          break; // Frame and all its parents already inserted.
-        SCtx = SCtx->getParent()->getStackFrame();
+      // We exited this inlined call, lets actualize the stack frame.
+      CurrentSCtx = CurrN->getStackFrame();
+
+      // Stop calculating at the current function, but always regard it as
+      // modifying, so we can avoid notes like this:
+      //   void f(Foo &F) {
+      //     F.field = 0; // note: 0 assigned to 'F.field'
+      //                  // note: returning without writing to 'F.field'
+      //   }
+      if (CE->getCalleeContext() == OriginalSCtx) {
+        markFrameAsModifying(CurrentSCtx);
+        break;
       }
     }
 
-    // Stop calculation at the call to the current function.
-    if (auto CE = CurrN->getLocationAs<CallEnter>())
-      if (CE->getCalleeContext() == OriginalSCtx)
-        break;
-
-    CurrN = CurrN->getFirstPred();
-  } while (CurrN);
+    if (wasModifiedBeforeCallExit(CurrN, CurrCallExitBeginN))
+      markFrameAsModifying(CurrentSCtx);
+  }
 }
 
 PathDiagnosticPieceRef NoStateChangeFuncVisitor::VisitNode(
