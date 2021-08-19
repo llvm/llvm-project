@@ -95,6 +95,7 @@ static_library("CodeGen") {
     "MIRNamerPass.cpp",
     "MIRPrinter.cpp",
     "MIRPrintingPass.cpp",
+    "MIRSampleProfile.cpp",
     "MIRVRegNamerUtils.cpp",
     "MIRYamlMapping.cpp",
     "MachineBasicBlock.cpp",
