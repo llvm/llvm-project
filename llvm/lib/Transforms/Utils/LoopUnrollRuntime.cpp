@@ -285,8 +285,10 @@ static void ConnectEpilog(Loop *L, Value *ModVal, BasicBlock *NewExit,
   // Add the branch to the exit block (around the unrolling loop)
   B.CreateCondBr(BrLoopExit, EpilogPreHeader, Exit);
   InsertPt->eraseFromParent();
-  if (DT)
-    DT->changeImmediateDominator(Exit, NewExit);
+  if (DT) {
+    auto *NewDom = DT->findNearestCommonDominator(Exit, NewExit);
+    DT->changeImmediateDominator(Exit, NewDom);
+  }
 
   // Split the main loop exit to maintain canonicalization guarantees.
   SmallVector<BasicBlock*, 4> NewExitPreds{Latch};
