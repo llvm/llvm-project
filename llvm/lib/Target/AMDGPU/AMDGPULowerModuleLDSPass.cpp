@@ -42,6 +42,7 @@
 #include "llvm/IR/IRBuilder.h"
 #include "llvm/IR/InlineAsm.h"
 #include "llvm/IR/Instructions.h"
+#include "llvm/IR/MDBuilder.h"
 #include "llvm/InitializePasses.h"
 #include "llvm/Pass.h"
 #include "llvm/Support/CommandLine.h"
@@ -282,6 +283,21 @@ private:
     // so remove the variables from these lists before replaceAllUsesWith
     removeFromUsedLists(M, LocalVars);
 
+    // Create alias.scope and their lists. Each field in the new structure
+    // does not alias with all other fields.
+    SmallVector<MDNode *> AliasScopes;
+    SmallVector<Metadata *> NoAliasList;
+    if (LocalVars.size() > 1) {
+      MDBuilder MDB(Ctx);
+      AliasScopes.reserve(LocalVars.size());
+      MDNode *Domain = MDB.createAnonymousAliasScopeDomain();
+      for (size_t I = 0; I < LocalVars.size(); I++) {
+        MDNode *Scope = MDB.createAnonymousAliasScope(Domain);
+        AliasScopes.push_back(Scope);
+      }
+      NoAliasList.append(&AliasScopes[1], AliasScopes.end());
+    }
+
     // Replace uses of ith variable with a constantexpr to the ith field of the
     // instance that will be allocated by AMDGPUMachineFunction
     Type *I32 = Type::getInt32Ty(Ctx);
@@ -313,7 +329,15 @@ private:
 
       uint64_t Off = DL.getStructLayout(LDSTy)->getElementOffset(I);
       Align A = commonAlignment(StructAlign, Off);
-      refineUsesAlignment(GEP, A, DL);
+
+      if (I)
+        NoAliasList[I - 1] = AliasScopes[I - 1];
+      MDNode *NoAlias =
+          NoAliasList.empty() ? nullptr : MDNode::get(Ctx, NoAliasList);
+      MDNode *AliasScope =
+          AliasScopes.empty() ? nullptr : MDNode::get(Ctx, {AliasScopes[I]});
+
+      refineUsesAlignmentAndAA(GEP, A, DL, AliasScope, NoAlias);
     }
 
     // Mark kernels with asm that reads the address of the allocated structure
@@ -334,12 +358,25 @@ private:
     return true;
   }
 
-  void refineUsesAlignment(Value *Ptr, Align A, const DataLayout &DL,
-                           unsigned MaxDepth = 5) {
-    if (!MaxDepth || A == 1)
+  void refineUsesAlignmentAndAA(Value *Ptr, Align A, const DataLayout &DL,
+                                MDNode *AliasScope, MDNode *NoAlias,
+                                unsigned MaxDepth = 5) {
+    if (!MaxDepth || (A == 1 && !AliasScope))
       return;
 
     for (User *U : Ptr->users()) {
+      if (auto *I = dyn_cast<Instruction>(U)) {
+        if (AliasScope && I->mayReadOrWriteMemory()) {
+          MDNode *AS = I->getMetadata(LLVMContext::MD_alias_scope);
+          AS = MDNode::concatenate(AS, AliasScope);
+          I->setMetadata(LLVMContext::MD_alias_scope, AS);
+
+          MDNode *NA = I->getMetadata(LLVMContext::MD_noalias);
+          NA = MDNode::concatenate(NA, NoAlias);
+          I->setMetadata(LLVMContext::MD_noalias, NA);
+        }
+      }
+
       if (auto *LI = dyn_cast<LoadInst>(U)) {
         LI->setAlignment(std::max(A, LI->getAlign()));
         continue;
@@ -364,17 +401,19 @@ private:
       if (auto *GEP = dyn_cast<GetElementPtrInst>(U)) {
         unsigned BitWidth = DL.getIndexTypeSizeInBits(GEP->getType());
         APInt Off(BitWidth, 0);
-        if (GEP->getPointerOperand() == Ptr &&
-            GEP->accumulateConstantOffset(DL, Off)) {
-          Align GA = commonAlignment(A, Off.getLimitedValue());
-          refineUsesAlignment(GEP, GA, DL, MaxDepth - 1);
+        if (GEP->getPointerOperand() == Ptr) {
+          Align GA;
+          if (GEP->accumulateConstantOffset(DL, Off))
+            GA = commonAlignment(A, Off.getLimitedValue());
+          refineUsesAlignmentAndAA(GEP, GA, DL, AliasScope, NoAlias,
+                                   MaxDepth - 1);
         }
         continue;
       }
       if (auto *I = dyn_cast<Instruction>(U)) {
         if (I->getOpcode() == Instruction::BitCast ||
             I->getOpcode() == Instruction::AddrSpaceCast)
-          refineUsesAlignment(I, A, DL, MaxDepth - 1);
+          refineUsesAlignmentAndAA(I, A, DL, AliasScope, NoAlias, MaxDepth - 1);
       }
     }
   }
