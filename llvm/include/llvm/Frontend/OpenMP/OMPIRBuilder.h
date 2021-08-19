@@ -592,20 +592,7 @@ public:
   ///                           reduction variables.
   /// \param AllocaIP           An insertion point suitable for allocas usable
   ///                           in reductions.
-  /// \param Variables          A list of variables in which the reduction
-  ///                           results will be stored (values of pointer type).
-  /// \param PrivateVariables   A list of variables in which the partial
-  ///                           reduction results are stored (values of pointer
-  ///                           type). Coindexed with Variables. Privatization
-  ///                           must be handled separately from this call.
-  /// \param ReductionGen       A list of generators for non-atomic reduction
-  ///                           bodies. Each takes a pair of partially reduced
-  ///                           values and sets a new one.
-  /// \param AtomicReductionGen A list of generators for atomic reduction
-  ///                           bodies, empty if the reduction cannot be
-  ///                           performed with atomics. Each takes a pair of
-  ///                           _pointers_ to paritally reduced values and
-  ///                           atomically stores the result into the first.
+  /// \param ReductionInfos     A list of info on each reduction variable.
   /// \param IsNoWait           A flag set if the reduction is marked as nowait.
   InsertPointTy createReductions(const LocationDescription &Loc,
                                  InsertPointTy AllocaIP,
@@ -782,7 +769,7 @@ public:
   /// \param MapnamesArg The argument names.
   /// \param MapperAllocas The AllocaInst used for the call.
   /// \param DeviceID Device ID for the call.
-  /// \param TotalNbOperand Number of operand in the call.
+  /// \param NumOperands Number of operands in the call.
   void emitMapperCall(const LocationDescription &Loc, Function *MapperFunc,
                       Value *SrcLocInfo, Value *MaptypesArg, Value *MapnamesArg,
                       struct MapperAllocas &MapperAllocas, int64_t DeviceID,
