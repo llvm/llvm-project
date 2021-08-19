@@ -2268,7 +2268,8 @@ unsigned DILocation::getCopyIdentifier() const {
   return getCopyIdentifierFromDiscriminator(getDiscriminator());
 }
 
-Optional<const DILocation *> DILocation::cloneWithBaseDiscriminator(unsigned D) const {
+Optional<const DILocation *>
+DILocation::cloneWithBaseDiscriminator(unsigned D) const {
   unsigned BD, DF, CI;
 
   if (EnableFSDiscriminator) {
@@ -2286,7 +2287,8 @@ Optional<const DILocation *> DILocation::cloneWithBaseDiscriminator(unsigned D) 
   return None;
 }
 
-Optional<const DILocation *> DILocation::cloneByMultiplyingDuplicationFactor(unsigned DF) const {
+Optional<const DILocation *>
+DILocation::cloneByMultiplyingDuplicationFactor(unsigned DF) const {
   assert(!EnableFSDiscriminator && "FSDiscriminator should not call this.");
 
   DF *= getDuplicationFactor();

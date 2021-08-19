@@ -1274,6 +1274,8 @@ void EmitAssemblyHelper::EmitAssemblyWithNewPassManager(
                           "", PGOOptions::NoAction, PGOOptions::CSIRInstr,
                           CodeGenOpts.DebugInfoForProfiling);
   }
+  if (TM)
+    TM->setPGOOption(PGOOpt);
 
   PipelineTuningOptions PTO;
   PTO.LoopUnrolling = CodeGenOpts.UnrollLoops;
