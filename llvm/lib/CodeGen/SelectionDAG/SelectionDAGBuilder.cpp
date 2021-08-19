@@ -9859,6 +9859,34 @@ SDValue TargetLowering::LowerOperation(SDValue Op, SelectionDAG &DAG) const {
   llvm_unreachable("LowerOperation not implemented for this target!");
 }
 
+static ISD::NodeType getPreferredExtendForValue(const Value *V) {
+  ISD::NodeType ExtendKind = ISD::ANY_EXTEND;
+
+  // TODO: Skip Arguments to match behavior when this was calculated only for
+  // instructions.
+  if (isa<Argument>(V))
+    return ExtendKind;
+
+  // For the users of the source value being used for compare instruction, if
+  // the number of signed predicate is greater than unsigned predicate, we
+  // prefer to use SIGN_EXTEND.
+  //
+  // With this optimization, we would be able to reduce some redundant sign or
+  // zero extension instruction, and eventually more machine CSE opportunities
+  // can be exposed.
+  unsigned NumOfSigned = 0, NumOfUnsigned = 0;
+  for (const User *U : V->users()) {
+    if (const auto *CI = dyn_cast<CmpInst>(U)) {
+      NumOfSigned += CI->isSigned();
+      NumOfUnsigned += CI->isUnsigned();
+    }
+  }
+  if (NumOfSigned > NumOfUnsigned)
+    ExtendKind = ISD::SIGN_EXTEND;
+
+  return ExtendKind;
+}
+
 void
 SelectionDAGBuilder::CopyValueToVirtualRegister(const Value *V, unsigned Reg) {
   SDValue Op = getNonRegisterValue(V);
@@ -9875,10 +9903,12 @@ SelectionDAGBuilder::CopyValueToVirtualRegister(const Value *V, unsigned Reg) {
                    None); // This is not an ABI copy.
   SDValue Chain = DAG.getEntryNode();
 
-  ISD::NodeType ExtendType = ISD::ANY_EXTEND;
-  auto PreferredExtendIt = FuncInfo.PreferredExtendType.find(V);
-  if (PreferredExtendIt != FuncInfo.PreferredExtendType.end())
-    ExtendType = PreferredExtendIt->second;
+  // Look up the preferred extend kind if we've already computed it. Otherwise,
+  // compute it and cache it.
+  ISD::NodeType &ExtendType = FuncInfo.PreferredExtendType[V];
+  if (!ExtendType)
+    ExtendType = getPreferredExtendForValue(V);
+
   RFV.getCopyToRegs(Op, DAG, getCurSDLoc(), Chain, nullptr, V, ExtendType);
   PendingExports.push_back(Chain);
 }
