@@ -502,15 +502,13 @@ void GenericOp::build(
     OpBuilder &builder, OperationState &result, TypeRange resultTensorTypes,
     ValueRange inputs, ValueRange outputs, ArrayRef<AffineMap> indexingMaps,
     ArrayRef<StringRef> iteratorTypes, StringRef doc, StringRef libraryCall,
-    function_ref<void(OpBuilder &, Location, ValueRange)> bodyBuild,
-    ArrayRef<NamedAttribute> attributes) {
+    function_ref<void(OpBuilder &, Location, ValueRange)> bodyBuild) {
   build(builder, result, resultTensorTypes, inputs, outputs,
         builder.getAffineMapArrayAttr(indexingMaps),
         builder.getStrArrayAttr(iteratorTypes),
         doc.empty() ? StringAttr() : builder.getStringAttr(doc),
         libraryCall.empty() ? StringAttr()
                             : builder.getStringAttr(libraryCall));
-  result.addAttributes(attributes);
   if (!bodyBuild)
     return;
 
@@ -529,33 +527,30 @@ void GenericOp::build(
     OpBuilder &builder, OperationState &result, ValueRange inputs,
     ValueRange outputs, ArrayRef<AffineMap> indexingMaps,
     ArrayRef<StringRef> iteratorTypes, StringRef doc, StringRef libraryCall,
-    function_ref<void(OpBuilder &, Location, ValueRange)> bodyBuild,
-    ArrayRef<NamedAttribute> attributes) {
+    function_ref<void(OpBuilder &, Location, ValueRange)> bodyBuild) {
   build(builder, result, TypeRange{}, inputs, outputs, indexingMaps,
-        iteratorTypes, doc, libraryCall, bodyBuild, attributes);
+        iteratorTypes, doc, libraryCall, bodyBuild);
 }
 
 void GenericOp::build(
     OpBuilder &builder, OperationState &result, ValueRange inputs,
     ValueRange outputs, ArrayRef<AffineMap> indexingMaps,
     ArrayRef<StringRef> iteratorTypes,
-    function_ref<void(OpBuilder &, Location, ValueRange)> bodyBuild,
-    ArrayRef<NamedAttribute> attributes) {
+    function_ref<void(OpBuilder &, Location, ValueRange)> bodyBuild) {
   build(builder, result, inputs, outputs, indexingMaps, iteratorTypes,
         /*doc=*/"",
-        /*libraryCall=*/"", bodyBuild, attributes);
+        /*libraryCall=*/"", bodyBuild);
 }
 
 void GenericOp::build(
     OpBuilder &builder, OperationState &result, TypeRange resultTensorTypes,
     ValueRange inputs, ValueRange outputs, ArrayRef<AffineMap> indexingMaps,
     ArrayRef<StringRef> iteratorTypes,
-    function_ref<void(OpBuilder &, Location, ValueRange)> bodyBuild,
-    ArrayRef<NamedAttribute> attributes) {
+    function_ref<void(OpBuilder &, Location, ValueRange)> bodyBuild) {
   build(builder, result, resultTensorTypes, inputs, outputs, indexingMaps,
         iteratorTypes,
         /*doc=*/"",
-        /*libraryCall=*/"", bodyBuild, attributes);
+        /*libraryCall=*/"", bodyBuild);
 }
 
 static void print(OpAsmPrinter &p, GenericOp op) {
