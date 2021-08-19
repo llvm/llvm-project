@@ -73,42 +73,79 @@ Error optimize_x86_64_GOTAndStubs(LinkGraph &G) {
   LLVM_DEBUG(dbgs() << "Optimizing GOT entries and stubs:\n");
 
   for (auto *B : G.blocks())
-    for (auto &E : B->edges())
-      if (E.getKind() == x86_64::PCRel32GOTLoadREXRelaxable) {
-        // Replace GOT load with LEA only for MOVQ instructions.
-        assert(E.getOffset() >= 3 && "GOT edge occurs too early in block");
+    for (auto &E : B->edges()) {
+      if (E.getKind() == x86_64::PCRel32GOTLoadRelaxable ||
+          E.getKind() == x86_64::PCRel32GOTLoadREXRelaxable) {
+        bool REXPrefix = E.getKind() == x86_64::PCRel32GOTLoadREXRelaxable;
+        assert(E.getOffset() >= (REXPrefix ? 3 : 2) &&
+               "GOT edge occurs too early in block");
+        auto *FixupData = reinterpret_cast<uint8_t *>(
+                              const_cast<char *>(B->getContent().data())) +
+                          E.getOffset();
+        const uint8_t Op = FixupData[-2];
+        const uint8_t ModRM = FixupData[-1];
 
-        constexpr uint8_t MOVQRIPRel[] = {0x48, 0x8b};
-        if (strncmp(B->getContent().data() + E.getOffset() - 3,
-                    reinterpret_cast<const char *>(MOVQRIPRel), 2) != 0)
+        auto &GOTEntryBlock = E.getTarget().getBlock();
+        assert(GOTEntryBlock.getSize() == G.getPointerSize() &&
+               "GOT entry block should be pointer sized");
+        assert(GOTEntryBlock.edges_size() == 1 &&
+               "GOT entry should only have one outgoing edge");
+        auto &GOTTarget = GOTEntryBlock.edges().begin()->getTarget();
+        JITTargetAddress TargetAddr = GOTTarget.getAddress();
+        JITTargetAddress EdgeAddr = B->getFixupAddress(E);
+        int64_t Displacement = TargetAddr - EdgeAddr + 4;
+        bool TargetInRangeForImmU32 = isInRangeForImmU32(TargetAddr);
+        bool DisplacementInRangeForImmS32 = isInRangeForImmS32(Displacement);
+
+        // If both of the Target and displacement is out of range, then
+        // there isn't optimization chance.
+        if (!(TargetInRangeForImmU32 || DisplacementInRangeForImmS32))
           continue;
 
-        auto &GOTBlock = E.getTarget().getBlock();
-        assert(GOTBlock.getSize() == G.getPointerSize() &&
-               "GOT entry block should be pointer sized");
-        assert(GOTBlock.edges_size() == 1 &&
-               "GOT entry should only have one outgoing edge");
-
-        auto &GOTTarget = GOTBlock.edges().begin()->getTarget();
-        JITTargetAddress EdgeAddr = B->getAddress() + E.getOffset();
-        JITTargetAddress TargetAddr = GOTTarget.getAddress();
-
-        int64_t Displacement = TargetAddr - EdgeAddr + 4;
-        if (isInRangeForImmS32(Displacement)) {
-          // Change the edge kind as we don't go through GOT anymore. This is
-          // for formal correctness only. Technically, the two relocation kinds
-          // are resolved the same way.
+        // Transform "mov foo@GOTPCREL(%rip),%reg" to "lea foo(%rip),%reg".
+        if (Op == 0x8b && DisplacementInRangeForImmS32) {
+          FixupData[-2] = 0x8d;
           E.setKind(x86_64::Delta32);
           E.setTarget(GOTTarget);
           E.setAddend(E.getAddend() - 4);
-          auto *BlockData = reinterpret_cast<uint8_t *>(
-              const_cast<char *>(B->getContent().data()));
-          BlockData[E.getOffset() - 2] = 0x8d;
           LLVM_DEBUG({
             dbgs() << "  Replaced GOT load wih LEA:\n    ";
             printEdge(dbgs(), *B, E, getEdgeKindName(E.getKind()));
             dbgs() << "\n";
           });
+          continue;
+        }
+
+        // Transform call/jmp instructions
+        if (Op == 0xff && TargetInRangeForImmU32) {
+          if (ModRM == 0x15) {
+            // ABI says we can convert "call *foo@GOTPCREL(%rip)" to "nop; call
+            // foo" But lld convert it to "addr32 call foo, because that makes
+            // result expression to be a single instruction.
+            FixupData[-2] = 0x67;
+            FixupData[-1] = 0xe8;
+            LLVM_DEBUG({
+              dbgs() << "  replaced call instruction's memory operand wih imm "
+                        "operand:\n    ";
+              printEdge(dbgs(), *B, E, getEdgeKindName(E.getKind()));
+              dbgs() << "\n";
+            });
+          } else {
+            // Transform "jmp *foo@GOTPCREL(%rip)" to "jmp foo; nop"
+            assert(ModRM == 0x25 && "Invalid ModRm for call/jmp instructions");
+            FixupData[-2] = 0xe9;
+            FixupData[3] = 0x90;
+            E.setOffset(E.getOffset() - 1);
+            LLVM_DEBUG({
+              dbgs() << "  replaced jmp instruction's memory operand wih imm "
+                        "operand:\n    ";
+              printEdge(dbgs(), *B, E, getEdgeKindName(E.getKind()));
+              dbgs() << "\n";
+            });
+          }
+          E.setKind(x86_64::Pointer32);
+          E.setTarget(GOTTarget);
+          continue;
         }
       } else if (E.getKind() == x86_64::BranchPCRel32ToPtrJumpStubBypassable) {
         auto &StubBlock = E.getTarget().getBlock();
@@ -138,6 +175,7 @@ Error optimize_x86_64_GOTAndStubs(LinkGraph &G) {
           });
         }
       }
+    }
 
   return Error::success();
 }
