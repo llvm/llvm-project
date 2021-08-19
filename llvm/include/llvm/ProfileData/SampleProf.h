@@ -430,6 +430,16 @@ public:
     return ContextStr.split(" @ ");
   }
 
+  // Split the leaf context frame (right-most substr) from context.
+  static std::pair<StringRef, StringRef>
+  rsplitContextString(StringRef ContextStr) {
+    auto ContextSplit = ContextStr.rsplit(" @ ");
+    if (ContextSplit.second.empty()) {
+      std::swap(ContextSplit.first, ContextSplit.second);
+    }
+    return ContextSplit;
+  }
+
   // Reconstruct a new context with the last k frames, return the context-less
   // name if K = 1
   StringRef getContextWithLastKFrames(uint32_t K) {
