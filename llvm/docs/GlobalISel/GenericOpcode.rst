@@ -573,6 +573,19 @@ G_INTRINSIC_ROUND
 
 Returns the operand rounded to the nearest integer.
 
+G_LROUND
+^^^^^^^^
+
+Returns the source operand rounded to the nearest integer with ties away from
+zero.
+
+See the LLVM LangRef entry on '``llvm.lround.*'`` for details on behaviour.
+
+.. code-block:: none
+
+  %rounded_32:_(s32) = G_LROUND %round_me:_(s64)
+  %rounded_64:_(s64) = G_LROUND %round_me:_(s64)
+
 Vector Specific Operations
 --------------------------
 
