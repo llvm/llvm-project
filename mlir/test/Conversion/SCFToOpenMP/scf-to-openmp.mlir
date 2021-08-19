@@ -21,8 +21,8 @@ func @nested_loops(%arg0: index, %arg1: index, %arg2: index,
                    %arg3: index, %arg4: index, %arg5: index) {
   // CHECK: omp.parallel {
   // CHECK: omp.wsloop (%[[LVAR_OUT1:.*]]) : index = (%arg0) to (%arg2) step (%arg4) {
-  // CHECK-NOT: omp.parallel
   scf.parallel (%i) = (%arg0) to (%arg2) step (%arg4) {
+    // CHECK: omp.parallel
     // CHECK: omp.wsloop (%[[LVAR_IN1:.*]]) : index = (%arg1) to (%arg3) step (%arg5) {
     scf.parallel (%j) = (%arg1) to (%arg3) step (%arg5) {
       // CHECK: "test.payload"(%[[LVAR_OUT1]], %[[LVAR_IN1]]) : (index, index) -> ()
