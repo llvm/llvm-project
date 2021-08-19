@@ -171,6 +171,7 @@ add_libc_multi_impl_benchmark(memcpy)
 add_libc_multi_impl_benchmark(memset)
 add_libc_multi_impl_benchmark(bzero)
 add_libc_multi_impl_benchmark(memcmp)
+add_libc_multi_impl_benchmark(bcmp)
 
 #==============================================================================
 # Google Benchmarking tool
@@ -188,6 +189,7 @@ target_link_libraries(libc.benchmarks.memory_functions.opt_host
   PRIVATE
   libc-memory-benchmark
   libc.src.string.memcmp_opt_host
+  libc.src.string.bcmp_opt_host
   libc.src.string.memcpy_opt_host
   libc.src.string.memset_opt_host
   libc.src.string.bzero_opt_host
