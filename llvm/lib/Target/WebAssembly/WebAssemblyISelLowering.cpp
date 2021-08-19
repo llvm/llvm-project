@@ -1836,8 +1836,9 @@ static SDValue LowerConvertLow(SDValue Op, SelectionDAG &DAG) {
   auto Src = LHSSrcVec;
   if (LHSIndex != 0 || RHSIndex != 1 || LHSSrcVec != RHSSrcVec) {
     // Shuffle the source vector so that the converted lanes are the low lanes.
-    Src = DAG.getVectorShuffle(ExpectedSrcVT, DL, LHSSrcVec, RHSSrcVec,
-                               {LHSIndex, RHSIndex + 4, -1, -1});
+    Src = DAG.getVectorShuffle(
+        ExpectedSrcVT, DL, LHSSrcVec, RHSSrcVec,
+        {static_cast<int>(LHSIndex), static_cast<int>(RHSIndex) + 4, -1, -1});
   }
   return DAG.getNode(LHSOpcode, DL, MVT::v2f64, Src);
 }
