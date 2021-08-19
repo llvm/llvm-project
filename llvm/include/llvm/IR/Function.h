@@ -330,12 +330,6 @@ public:
   /// adds the attribute to the list of attributes.
   void addAttribute(unsigned i, Attribute Attr);
 
-  /// adds the attribute to the list of attributes.
-  void addAttribute(unsigned i, Attribute::AttrKind Kind);
-
-  /// adds the attributes to the list of attributes.
-  void addAttributes(unsigned i, const AttrBuilder &Attrs);
-
   /// Add function attributes to this function.
   void addFnAttr(Attribute::AttrKind Kind);
 

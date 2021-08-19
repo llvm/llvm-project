@@ -533,14 +533,6 @@ void Function::addAttribute(unsigned i, Attribute Attr) {
   AttributeSets = AttributeSets.addAttribute(getContext(), i, Attr);
 }
 
-void Function::addAttribute(unsigned i, Attribute::AttrKind Attr) {
-  AttributeSets = AttributeSets.addAttribute(getContext(), i, Attr);
-}
-
-void Function::addAttributes(unsigned i, const AttrBuilder &Attrs) {
-  AttributeSets = AttributeSets.addAttributes(getContext(), i, Attrs);
-}
-
 void Function::addFnAttr(Attribute::AttrKind Kind) {
   AttributeSets = AttributeSets.addFnAttribute(getContext(), Kind);
 }
