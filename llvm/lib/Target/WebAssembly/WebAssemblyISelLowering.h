@@ -114,6 +114,9 @@ private:
                                      const SelectionDAG &DAG,
                                      unsigned Depth) const override;
 
+  TargetLoweringBase::LegalizeTypeAction
+  getPreferredVectorAction(MVT VT) const override;
+
   SDValue LowerCall(CallLoweringInfo &CLI,
                     SmallVectorImpl<SDValue> &InVals) const override;
   bool CanLowerReturn(CallingConv::ID CallConv, MachineFunction &MF,
