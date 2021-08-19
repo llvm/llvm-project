@@ -12,6 +12,7 @@
 #include "llvm/ExecutionEngine/JITLink/x86_64.h"
 #include "llvm/ExecutionEngine/Orc/DebugUtils.h"
 #include "llvm/ExecutionEngine/Orc/ExecutionUtils.h"
+#include "llvm/ExecutionEngine/Orc/LookupAndRecordAddrs.h"
 #include "llvm/Support/BinaryByteStream.h"
 #include "llvm/Support/Debug.h"
 
@@ -496,31 +497,17 @@ void MachOPlatform::rt_lookupSymbol(SendSymbolAddressFn SendResult,
 
 Error MachOPlatform::bootstrapMachORuntime(JITDylib &PlatformJD) {
 
-  std::pair<const char *, ExecutorAddress *> Symbols[] = {
-      {"___orc_rt_macho_platform_bootstrap", &orc_rt_macho_platform_bootstrap},
-      {"___orc_rt_macho_platform_shutdown", &orc_rt_macho_platform_shutdown},
-      {"___orc_rt_macho_register_object_sections",
-       &orc_rt_macho_register_object_sections},
-      {"___orc_rt_macho_create_pthread_key", &orc_rt_macho_create_pthread_key}};
-
-  SymbolLookupSet RuntimeSymbols;
-  std::vector<std::pair<SymbolStringPtr, ExecutorAddress *>> AddrsToRecord;
-  for (const auto &KV : Symbols) {
-    auto Name = ES.intern(KV.first);
-    RuntimeSymbols.add(Name);
-    AddrsToRecord.push_back({std::move(Name), KV.second});
-  }
-
-  auto RuntimeSymbolAddrs = ES.lookup(
-      {{&PlatformJD, JITDylibLookupFlags::MatchAllSymbols}}, RuntimeSymbols);
-  if (!RuntimeSymbolAddrs)
-    return RuntimeSymbolAddrs.takeError();
-
-  for (const auto &KV : AddrsToRecord) {
-    auto &Name = KV.first;
-    assert(RuntimeSymbolAddrs->count(Name) && "Missing runtime symbol?");
-    KV.second->setValue((*RuntimeSymbolAddrs)[Name].getAddress());
-  }
+  if (auto Err = lookupAndRecordAddrs(
+          ES, LookupKind::Static, makeJITDylibSearchOrder(&PlatformJD),
+          {{ES.intern("___orc_rt_macho_platform_bootstrap"),
+            &orc_rt_macho_platform_bootstrap},
+           {ES.intern("___orc_rt_macho_platform_shutdown"),
+            &orc_rt_macho_platform_shutdown},
+           {ES.intern("___orc_rt_macho_register_object_sections"),
+            &orc_rt_macho_register_object_sections},
+           {ES.intern("___orc_rt_macho_create_pthread_key"),
+            &orc_rt_macho_create_pthread_key}}))
+    return Err;
 
   if (auto Err =
           ES.callSPSWrapper<void()>(orc_rt_macho_platform_bootstrap.getValue()))
