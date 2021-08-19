@@ -10,15 +10,6 @@ def LLVMLibcExt : StandardSpec<"llvm_libc_ext"> {
               RetValSpec<VoidType>,
               [ArgSpec<VoidPtr>, ArgSpec<SizeTType>]
           >,
-      ]
-  >;
-
-  HeaderSpec String = HeaderSpec<
-      "string.h",
-      [], // Macros
-      [], // Types
-      [], // Enumerations
-      [
           FunctionSpec<
               "bcmp",
               RetValSpec<IntType>,
