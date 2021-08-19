@@ -21,6 +21,7 @@ set(TARGET_LIBC_ENTRYPOINTS
     libc.src.errno.__errno_location
 
     # string.h entrypoints
+    libc.src.string.bcmp
     libc.src.string.bzero
     libc.src.string.memchr
     libc.src.string.memcmp
@@ -156,6 +157,9 @@ if(LLVM_LIBC_FULL_BUILD)
     libc.src.stdlib._Exit
     libc.src.stdlib.abort
     libc.src.stdlib.abs
+    libc.src.stdlib.atoi
+    libc.src.stdlib.atol
+    libc.src.stdlib.atoll
     libc.src.stdlib.labs
     libc.src.stdlib.llabs
     libc.src.stdlib.strtol

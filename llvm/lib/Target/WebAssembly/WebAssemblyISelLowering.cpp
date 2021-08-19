@@ -303,9 +303,6 @@ WebAssemblyTargetLowering::WebAssemblyTargetLowering(
       setLoadExtAction(Ext, MVT::v4i32, MVT::v4i16, Legal);
       setLoadExtAction(Ext, MVT::v2i64, MVT::v2i32, Legal);
     }
-    // And some truncating stores are legal as well
-    setTruncStoreAction(MVT::v8i16, MVT::v8i8, Legal);
-    setTruncStoreAction(MVT::v4i32, MVT::v4i16, Legal);
   }
 
   // Don't do anything clever with build_pairs
@@ -852,6 +849,21 @@ void WebAssemblyTargetLowering::computeKnownBitsForTargetNode(
     }
   }
   }
+}
+
+TargetLoweringBase::LegalizeTypeAction
+WebAssemblyTargetLowering::getPreferredVectorAction(MVT VT) const {
+  if (VT.isFixedLengthVector()) {
+    MVT EltVT = VT.getVectorElementType();
+    // We have legal vector types with these lane types, so widening the
+    // vector would let us use some of the lanes directly without having to
+    // extend or truncate values.
+    if (EltVT == MVT::i8 || EltVT == MVT::i16 || EltVT == MVT::i32 ||
+        EltVT == MVT::i64 || EltVT == MVT::f32 || EltVT == MVT::f64)
+      return TypeWidenVector;
+  }
+
+  return TargetLoweringBase::getPreferredVectorAction(VT);
 }
 
 //===----------------------------------------------------------------------===//
