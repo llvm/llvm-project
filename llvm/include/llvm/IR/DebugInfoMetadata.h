@@ -1081,14 +1081,13 @@ class DICompositeType : public DIType {
           DITemplateParameterArray TemplateParams, StringRef Identifier,
           DIDerivedType *Discriminator, Metadata *DataLocation,
           Metadata *Associated, Metadata *Allocated, Metadata *Rank,
-          DINodeArray Annotations, StorageType Storage,
-          bool ShouldCreate = true) {
+          StorageType Storage, bool ShouldCreate = true) {
     return getImpl(
         Context, Tag, getCanonicalMDString(Context, Name), File, Line, Scope,
         BaseType, SizeInBits, AlignInBits, OffsetInBits, Flags, Elements.get(),
         RuntimeLang, VTableHolder, TemplateParams.get(),
         getCanonicalMDString(Context, Identifier), Discriminator, DataLocation,
-        Associated, Allocated, Rank, Annotations.get(), Storage, ShouldCreate);
+        Associated, Allocated, Rank, Storage, ShouldCreate);
   }
   static DICompositeType *
   getImpl(LLVMContext &Context, unsigned Tag, MDString *Name, Metadata *File,
@@ -1098,16 +1097,16 @@ class DICompositeType : public DIType {
           Metadata *VTableHolder, Metadata *TemplateParams,
           MDString *Identifier, Metadata *Discriminator, Metadata *DataLocation,
           Metadata *Associated, Metadata *Allocated, Metadata *Rank,
-          Metadata *Annotations, StorageType Storage, bool ShouldCreate = true);
+          StorageType Storage, bool ShouldCreate = true);
 
   TempDICompositeType cloneImpl() const {
-    return getTemporary(
-        getContext(), getTag(), getName(), getFile(), getLine(), getScope(),
-        getBaseType(), getSizeInBits(), getAlignInBits(), getOffsetInBits(),
-        getFlags(), getElements(), getRuntimeLang(), getVTableHolder(),
-        getTemplateParams(), getIdentifier(), getDiscriminator(),
-        getRawDataLocation(), getRawAssociated(), getRawAllocated(),
-        getRawRank(), getAnnotations());
+    return getTemporary(getContext(), getTag(), getName(), getFile(), getLine(),
+                        getScope(), getBaseType(), getSizeInBits(),
+                        getAlignInBits(), getOffsetInBits(), getFlags(),
+                        getElements(), getRuntimeLang(), getVTableHolder(),
+                        getTemplateParams(), getIdentifier(),
+                        getDiscriminator(), getRawDataLocation(),
+                        getRawAssociated(), getRawAllocated(), getRawRank());
   }
 
 public:
@@ -1120,12 +1119,10 @@ public:
        DITemplateParameterArray TemplateParams = nullptr,
        StringRef Identifier = "", DIDerivedType *Discriminator = nullptr,
        Metadata *DataLocation = nullptr, Metadata *Associated = nullptr,
-       Metadata *Allocated = nullptr, Metadata *Rank = nullptr,
-       DINodeArray Annotations = nullptr),
+       Metadata *Allocated = nullptr, Metadata *Rank = nullptr),
       (Tag, Name, File, Line, Scope, BaseType, SizeInBits, AlignInBits,
        OffsetInBits, Flags, Elements, RuntimeLang, VTableHolder, TemplateParams,
-       Identifier, Discriminator, DataLocation, Associated, Allocated, Rank,
-       Annotations))
+       Identifier, Discriminator, DataLocation, Associated, Allocated, Rank))
   DEFINE_MDNODE_GET(
       DICompositeType,
       (unsigned Tag, MDString *Name, Metadata *File, unsigned Line,
@@ -1135,11 +1132,10 @@ public:
        Metadata *TemplateParams = nullptr, MDString *Identifier = nullptr,
        Metadata *Discriminator = nullptr, Metadata *DataLocation = nullptr,
        Metadata *Associated = nullptr, Metadata *Allocated = nullptr,
-       Metadata *Rank = nullptr, Metadata *Annotations = nullptr),
+       Metadata *Rank = nullptr),
       (Tag, Name, File, Line, Scope, BaseType, SizeInBits, AlignInBits,
        OffsetInBits, Flags, Elements, RuntimeLang, VTableHolder, TemplateParams,
-       Identifier, Discriminator, DataLocation, Associated, Allocated, Rank,
-       Annotations))
+       Identifier, Discriminator, DataLocation, Associated, Allocated, Rank))
 
   TempDICompositeType clone() const { return cloneImpl(); }
 
@@ -1158,7 +1154,7 @@ public:
              unsigned RuntimeLang, Metadata *VTableHolder,
              Metadata *TemplateParams, Metadata *Discriminator,
              Metadata *DataLocation, Metadata *Associated, Metadata *Allocated,
-             Metadata *Rank, Metadata *Annotations);
+             Metadata *Rank);
   static DICompositeType *getODRTypeIfExists(LLVMContext &Context,
                                              MDString &Identifier);
 
@@ -1179,7 +1175,7 @@ public:
                unsigned RuntimeLang, Metadata *VTableHolder,
                Metadata *TemplateParams, Metadata *Discriminator,
                Metadata *DataLocation, Metadata *Associated,
-               Metadata *Allocated, Metadata *Rank, Metadata *Annotations);
+               Metadata *Allocated, Metadata *Rank);
 
   DIType *getBaseType() const { return cast_or_null<DIType>(getRawBaseType()); }
   DINodeArray getElements() const {
@@ -1230,11 +1226,6 @@ public:
   }
   DIExpression *getRankExp() const {
     return dyn_cast_or_null<DIExpression>(getRawRank());
-  }
-
-  Metadata *getRawAnnotations() const { return getOperand(13); }
-  DINodeArray getAnnotations() const {
-    return cast_or_null<MDTuple>(getRawAnnotations());
   }
 
   /// Replace operands.

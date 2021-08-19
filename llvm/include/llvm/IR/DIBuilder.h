@@ -586,7 +586,7 @@ namespace llvm {
         unsigned Tag, StringRef Name, DIScope *Scope, DIFile *F, unsigned Line,
         unsigned RuntimeLang = 0, uint64_t SizeInBits = 0,
         uint32_t AlignInBits = 0, DINode::DIFlags Flags = DINode::FlagFwdDecl,
-        StringRef UniqueIdentifier = "", DINodeArray Annotations = nullptr);
+        StringRef UniqueIdentifier = "");
 
     /// Retain DIScope* in a module even if it is not referenced
     /// through debug info anchors.

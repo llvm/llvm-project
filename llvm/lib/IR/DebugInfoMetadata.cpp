@@ -601,21 +601,19 @@ DICompositeType *DICompositeType::getImpl(
     Metadata *Elements, unsigned RuntimeLang, Metadata *VTableHolder,
     Metadata *TemplateParams, MDString *Identifier, Metadata *Discriminator,
     Metadata *DataLocation, Metadata *Associated, Metadata *Allocated,
-    Metadata *Rank, Metadata *Annotations, StorageType Storage,
-    bool ShouldCreate) {
+    Metadata *Rank, StorageType Storage, bool ShouldCreate) {
   assert(isCanonical(Name) && "Expected canonical MDString");
 
   // Keep this in sync with buildODRType.
-  DEFINE_GETIMPL_LOOKUP(DICompositeType,
-                        (Tag, Name, File, Line, Scope, BaseType, SizeInBits,
-                         AlignInBits, OffsetInBits, Flags, Elements,
-                         RuntimeLang, VTableHolder, TemplateParams, Identifier,
-                         Discriminator, DataLocation, Associated, Allocated,
-                         Rank, Annotations));
+  DEFINE_GETIMPL_LOOKUP(
+      DICompositeType,
+      (Tag, Name, File, Line, Scope, BaseType, SizeInBits, AlignInBits,
+       OffsetInBits, Flags, Elements, RuntimeLang, VTableHolder, TemplateParams,
+       Identifier, Discriminator, DataLocation, Associated, Allocated, Rank));
   Metadata *Ops[] = {File,          Scope,        Name,           BaseType,
                      Elements,      VTableHolder, TemplateParams, Identifier,
                      Discriminator, DataLocation, Associated,     Allocated,
-                     Rank,          Annotations};
+                     Rank};
   DEFINE_GETIMPL_STORE(DICompositeType, (Tag, Line, RuntimeLang, SizeInBits,
                                          AlignInBits, OffsetInBits, Flags),
                        Ops);
@@ -628,7 +626,7 @@ DICompositeType *DICompositeType::buildODRType(
     DIFlags Flags, Metadata *Elements, unsigned RuntimeLang,
     Metadata *VTableHolder, Metadata *TemplateParams, Metadata *Discriminator,
     Metadata *DataLocation, Metadata *Associated, Metadata *Allocated,
-    Metadata *Rank, Metadata *Annotations) {
+    Metadata *Rank) {
   assert(!Identifier.getString().empty() && "Expected valid identifier");
   if (!Context.isODRUniquingDebugTypes())
     return nullptr;
@@ -638,7 +636,7 @@ DICompositeType *DICompositeType::buildODRType(
                Context, Tag, Name, File, Line, Scope, BaseType, SizeInBits,
                AlignInBits, OffsetInBits, Flags, Elements, RuntimeLang,
                VTableHolder, TemplateParams, &Identifier, Discriminator,
-               DataLocation, Associated, Allocated, Rank, Annotations);
+               DataLocation, Associated, Allocated, Rank);
 
   // Only mutate CT if it's a forward declaration and the new operands aren't.
   assert(CT->getRawIdentifier() == &Identifier && "Wrong ODR identifier?");
@@ -651,7 +649,7 @@ DICompositeType *DICompositeType::buildODRType(
   Metadata *Ops[] = {File,          Scope,        Name,           BaseType,
                      Elements,      VTableHolder, TemplateParams, &Identifier,
                      Discriminator, DataLocation, Associated,     Allocated,
-                     Rank,          Annotations};
+                     Rank};
   assert((std::end(Ops) - std::begin(Ops)) == (int)CT->getNumOperands() &&
          "Mismatched number of operands");
   for (unsigned I = 0, E = CT->getNumOperands(); I != E; ++I)
@@ -667,7 +665,7 @@ DICompositeType *DICompositeType::getODRType(
     DIFlags Flags, Metadata *Elements, unsigned RuntimeLang,
     Metadata *VTableHolder, Metadata *TemplateParams, Metadata *Discriminator,
     Metadata *DataLocation, Metadata *Associated, Metadata *Allocated,
-    Metadata *Rank, Metadata *Annotations) {
+    Metadata *Rank) {
   assert(!Identifier.getString().empty() && "Expected valid identifier");
   if (!Context.isODRUniquingDebugTypes())
     return nullptr;
@@ -677,7 +675,7 @@ DICompositeType *DICompositeType::getODRType(
         Context, Tag, Name, File, Line, Scope, BaseType, SizeInBits,
         AlignInBits, OffsetInBits, Flags, Elements, RuntimeLang, VTableHolder,
         TemplateParams, &Identifier, Discriminator, DataLocation, Associated,
-        Allocated, Rank, Annotations);
+        Allocated, Rank);
   return CT;
 }
 
