@@ -184,10 +184,11 @@ private:
     case ELF::R_X86_64_64:
       return ELF_x86_64_Edges::ELFX86RelocationKind::Pointer64;
     case ELF::R_X86_64_GOTPCREL:
-    case ELF::R_X86_64_GOTPCRELX:
       return ELF_x86_64_Edges::ELFX86RelocationKind::PCRel32GOTLoad;
+    case ELF::R_X86_64_GOTPCRELX:
+      return ELF_x86_64_Edges::ELFX86RelocationKind::PCRel32GOTLoadRelaxable;
     case ELF::R_X86_64_REX_GOTPCRELX:
-      return ELF_x86_64_Edges::ELFX86RelocationKind::PCRel32REXGOTLoad;
+      return ELF_x86_64_Edges::ELFX86RelocationKind::PCRel32REXGOTLoadRelaxable;
     case ELF::R_X86_64_GOTPCREL64:
       return ELF_x86_64_Edges::ELFX86RelocationKind::PCRel64GOT;
     case ELF::R_X86_64_GOT64:
@@ -301,12 +302,16 @@ private:
           Kind = x86_64::Pointer64;
           break;
         case PCRel32GOTLoad: {
-          Kind = x86_64::RequestGOTAndTransformToPCRel32GOTLoadRelaxable;
+          Kind = x86_64::RequestGOTAndTransformToDelta32;
+          break;
+        }
+        case PCRel32REXGOTLoadRelaxable: {
+          Kind = x86_64::RequestGOTAndTransformToPCRel32GOTLoadREXRelaxable;
           Addend = 0;
           break;
         }
-        case PCRel32REXGOTLoad: {
-          Kind = x86_64::RequestGOTAndTransformToPCRel32GOTLoadREXRelaxable;
+        case PCRel32GOTLoadRelaxable: {
+          Kind = x86_64::RequestGOTAndTransformToPCRel32GOTLoadRelaxable;
           Addend = 0;
           break;
         }
@@ -498,7 +503,9 @@ const char *getELFX86RelocationKindName(Edge::Kind R) {
     return "PCRel32";
   case PCRel32GOTLoad:
     return "PCRel32GOTLoad";
-  case PCRel32REXGOTLoad:
+  case PCRel32GOTLoadRelaxable:
+    return "PCRel32GOTLoadRelaxable";
+  case PCRel32REXGOTLoadRelaxable:
     return "PCRel32REXGOTLoad";
   case PCRel64GOT:
     return "PCRel64GOT";
