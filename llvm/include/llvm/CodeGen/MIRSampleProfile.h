@@ -53,14 +53,7 @@ public:
   /// FS bits will only use the '1' bits in the Mask.
   MIRProfileLoaderPass(std::string FileName = "",
                        std::string RemappingFileName = "",
-                       FSDiscriminatorPass P = FSDiscriminatorPass::Pass1)
-      : MachineFunctionPass(ID), ProfileFileName(FileName), P(P),
-        MIRSampleLoader(
-            std::make_unique<MIRProfileLoader>(FileName, RemappingFileName)) {
-    LowBit = getFSPassBitBegin(P);
-    HighBit = getFSPassBitEnd(P);
-    assert(LowBit < HighBit && "HighBit needs to be greater than Lowbit");
-  }
+                       FSDiscriminatorPass P = FSDiscriminatorPass::Pass1);
 
   /// getMachineFunction - Return the last machine function computed.
   const MachineFunction *getMachineFunction() const { return MF; }

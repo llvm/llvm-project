@@ -286,6 +286,17 @@ bool MIRProfileLoader::runOnFunction(MachineFunction &MF) {
 
 } // namespace llvm
 
+MIRProfileLoaderPass::MIRProfileLoaderPass(std::string FileName,
+                                           std::string RemappingFileName,
+                                           FSDiscriminatorPass P)
+    : MachineFunctionPass(ID), ProfileFileName(FileName), P(P),
+      MIRSampleLoader(
+          std::make_unique<MIRProfileLoader>(FileName, RemappingFileName)) {
+  LowBit = getFSPassBitBegin(P);
+  HighBit = getFSPassBitEnd(P);
+  assert(LowBit < HighBit && "HighBit needs to be greater than Lowbit");
+}
+
 bool MIRProfileLoaderPass::runOnMachineFunction(MachineFunction &MF) {
   if (!MIRSampleLoader->isValid())
     return false;
