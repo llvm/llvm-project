@@ -17,17 +17,8 @@ _LIBCPP_PUSH_MACROS
 
 _LIBCPP_BEGIN_NAMESPACE_STD
 
-template <bool>
-class __split_buffer_common
-{
-protected:
-    _LIBCPP_NORETURN void __throw_length_error() const;
-    _LIBCPP_NORETURN void __throw_out_of_range() const;
-};
-
 template <class _Tp, class _Allocator = allocator<_Tp> >
 struct __split_buffer
-    : private __split_buffer_common<true>
 {
 private:
     __split_buffer(const __split_buffer&);
