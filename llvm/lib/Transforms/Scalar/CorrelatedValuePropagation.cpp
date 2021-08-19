@@ -341,13 +341,7 @@ static bool processSwitch(SwitchInst *I, LazyValueInfo *LVI,
     // ConstantFoldTerminator() as the underlying SwitchInst can be changed.
     SwitchInstProfUpdateWrapper SI(*I);
 
-    APInt Low =
-        APInt::getSignedMaxValue(Cond->getType()->getScalarSizeInBits());
-    APInt High =
-        APInt::getSignedMinValue(Cond->getType()->getScalarSizeInBits());
-
-    SwitchInst::CaseIt CI = SI->case_begin();
-    for (auto CE = SI->case_end(); CI != CE;) {
+    for (auto CI = SI->case_begin(), CE = SI->case_end(); CI != CE;) {
       ConstantInt *Case = CI->getCaseValue();
       LazyValueInfo::Tristate State =
           LVI->getPredicateAt(CmpInst::ICMP_EQ, Cond, Case, I,
@@ -380,27 +374,8 @@ static bool processSwitch(SwitchInst *I, LazyValueInfo *LVI,
         break;
       }
 
-      // Get Lower/Upper bound from switch cases.
-      Low = APIntOps::smin(Case->getValue(), Low);
-      High = APIntOps::smax(Case->getValue(), High);
-
       // Increment the case iterator since we didn't delete it.
       ++CI;
-    }
-
-    // Try to simplify default case as unreachable
-    if (CI == SI->case_end() && SI->getNumCases() != 0 &&
-        !isa<UnreachableInst>(SI->getDefaultDest()->getFirstNonPHIOrDbg())) {
-      const ConstantRange SIRange =
-          LVI->getConstantRange(SI->getCondition(), SI);
-
-      // If the numbered switch cases cover the entire range of the condition,
-      // then the default case is not reachable.
-      if (SIRange.getSignedMin() == Low && SIRange.getSignedMax() == High &&
-          SI->getNumCases() == High - Low + 1) {
-        createUnreachableSwitchDefault(SI, &DTU);
-        Changed = true;
-      }
     }
   }
 
