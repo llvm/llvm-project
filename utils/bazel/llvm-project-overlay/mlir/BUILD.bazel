@@ -1636,6 +1636,7 @@ cc_library(
     hdrs = ["include/mlir/Dialect/SparseTensor/Transforms/Passes.h"],
     includes = ["include"],
     deps = [
+        ":Affine",
         ":IR",
         ":LLVMDialect",
         ":LinalgOps",
