@@ -167,8 +167,11 @@ static void ConnectProlog(Loop *L, Value *BECount, unsigned Count,
   // Add the branch to the exit block (around the unrolled loop)
   B.CreateCondBr(BrLoopExit, OriginalLoopLatchExit, NewPreHeader);
   InsertPt->eraseFromParent();
-  if (DT)
-    DT->changeImmediateDominator(OriginalLoopLatchExit, PrologExit);
+  if (DT) {
+    auto *NewDom = DT->findNearestCommonDominator(OriginalLoopLatchExit,
+                                                  PrologExit);
+    DT->changeImmediateDominator(OriginalLoopLatchExit, NewDom);
+  }
 }
 
 /// Connect the unrolling epilog code to the original loop.
@@ -445,14 +448,6 @@ static bool canSafelyUnrollMultiExitLoop(Loop *L, BasicBlock *LatchExit,
   if (!PreserveLCSSA)
     return false;
 
-  // TODO: Support multiple exiting blocks jumping to the `LatchExit` when
-  // using a prolog loop.
-  if (!UseEpilogRemainder && !LatchExit->getSinglePredecessor()) {
-    LLVM_DEBUG(
-        dbgs() << "Bailout for multi-exit handling when latch exit has >1 "
-                  "predecessor.\n");
-    return false;
-  }
   // FIXME: We bail out of multi-exit unrolling when epilog loop is generated
   // and L is an inner loop. This is because in presence of multiple exits, the
   // outer loop is incorrect: we do not add the EpilogPreheader and exit to the
