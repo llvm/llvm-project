@@ -496,14 +496,18 @@ getRegClassForTypeOnBank(LLT Ty, const RegisterBank &RB,
   }
 
   if (RB.getID() == AArch64::FPRRegBankID) {
-    if (Ty.getSizeInBits() <= 16)
+    switch (Ty.getSizeInBits()) {
+    case 8:
+      return &AArch64::FPR8RegClass;
+    case 16:
       return &AArch64::FPR16RegClass;
-    if (Ty.getSizeInBits() == 32)
+    case 32:
       return &AArch64::FPR32RegClass;
-    if (Ty.getSizeInBits() == 64)
+    case 64:
       return &AArch64::FPR64RegClass;
-    if (Ty.getSizeInBits() == 128)
+    case 128:
       return &AArch64::FPR128RegClass;
+    }
     return nullptr;
   }
 
