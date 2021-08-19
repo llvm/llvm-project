@@ -908,31 +908,8 @@ move_backward(__deque_iterator<_V1, _P1, _R1, _M1, _D1, _B1> __f,
     return __r;
 }
 
-template <bool>
-class __deque_base_common
-{
-protected:
-    _LIBCPP_NORETURN void __throw_length_error() const;
-    _LIBCPP_NORETURN void __throw_out_of_range() const;
-};
-
-template <bool __b>
-void
-__deque_base_common<__b>::__throw_length_error() const
-{
-    _VSTD::__throw_length_error("deque");
-}
-
-template <bool __b>
-void
-__deque_base_common<__b>::__throw_out_of_range() const
-{
-    _VSTD::__throw_out_of_range("deque");
-}
-
 template <class _Tp, class _Allocator>
 class __deque_base
-    : protected __deque_base_common<true>
 {
     __deque_base(const __deque_base& __c);
     __deque_base& operator=(const __deque_base& __c);
@@ -1873,7 +1850,7 @@ typename deque<_Tp, _Allocator>::reference
 deque<_Tp, _Allocator>::at(size_type __i)
 {
     if (__i >= __base::size())
-        __base::__throw_out_of_range();
+        _VSTD::__throw_out_of_range("deque");
     size_type __p = __base::__start_ + __i;
     return *(*(__base::__map_.begin() + __p / __base::__block_size) + __p % __base::__block_size);
 }
@@ -1884,7 +1861,7 @@ typename deque<_Tp, _Allocator>::const_reference
 deque<_Tp, _Allocator>::at(size_type __i) const
 {
     if (__i >= __base::size())
-        __base::__throw_out_of_range();
+        _VSTD::__throw_out_of_range("deque");
     size_type __p = __base::__start_ + __i;
     return *(*(__base::__map_.begin() + __p / __base::__block_size) + __p % __base::__block_size);
 }
