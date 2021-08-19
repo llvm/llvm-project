@@ -294,7 +294,7 @@ define <8 x i8> @load_ext_v8i16_a1(<8 x i8>* %p) {
 ; CHECK:         .functype load_ext_v8i16_a1 (i32) -> (v128)
 ; CHECK-NEXT:  # %bb.0:
 ; CHECK-NEXT:    local.get 0
-; CHECK-NEXT:    i16x8.load8x8_u 0:p2align=0
+; CHECK-NEXT:    v128.load64_zero 0:p2align=0
 ; CHECK-NEXT:    # fallthrough-return
   %v = load <8 x i8>, <8 x i8>* %p, align 1
   ret <8 x i8> %v
@@ -305,7 +305,7 @@ define <8 x i8> @load_ext_v8i16_a2(<8 x i8>* %p) {
 ; CHECK:         .functype load_ext_v8i16_a2 (i32) -> (v128)
 ; CHECK-NEXT:  # %bb.0:
 ; CHECK-NEXT:    local.get 0
-; CHECK-NEXT:    i16x8.load8x8_u 0:p2align=1
+; CHECK-NEXT:    v128.load64_zero 0:p2align=1
 ; CHECK-NEXT:    # fallthrough-return
   %v = load <8 x i8>, <8 x i8>* %p, align 2
   ret <8 x i8> %v
@@ -316,7 +316,7 @@ define <8 x i8> @load_ext_v8i16_a4(<8 x i8>* %p) {
 ; CHECK:         .functype load_ext_v8i16_a4 (i32) -> (v128)
 ; CHECK-NEXT:  # %bb.0:
 ; CHECK-NEXT:    local.get 0
-; CHECK-NEXT:    i16x8.load8x8_u 0:p2align=2
+; CHECK-NEXT:    v128.load64_zero 0:p2align=2
 ; CHECK-NEXT:    # fallthrough-return
   %v = load <8 x i8>, <8 x i8>* %p, align 4
   ret <8 x i8> %v
@@ -328,7 +328,7 @@ define <8 x i8> @load_ext_v8i16_a8(<8 x i8>* %p) {
 ; CHECK:         .functype load_ext_v8i16_a8 (i32) -> (v128)
 ; CHECK-NEXT:  # %bb.0:
 ; CHECK-NEXT:    local.get 0
-; CHECK-NEXT:    i16x8.load8x8_u 0
+; CHECK-NEXT:    v128.load64_zero 0
 ; CHECK-NEXT:    # fallthrough-return
   %v = load <8 x i8>, <8 x i8>* %p, align 8
   ret <8 x i8> %v
@@ -340,7 +340,7 @@ define <8 x i8> @load_ext_v8i16_a16(<8 x i8>* %p) {
 ; CHECK:         .functype load_ext_v8i16_a16 (i32) -> (v128)
 ; CHECK-NEXT:  # %bb.0:
 ; CHECK-NEXT:    local.get 0
-; CHECK-NEXT:    i16x8.load8x8_u 0
+; CHECK-NEXT:    v128.load 0
 ; CHECK-NEXT:    # fallthrough-return
   %v = load <8 x i8>, <8 x i8>* %p, align 16
   ret <8 x i8> %v
@@ -636,7 +636,7 @@ define <4 x i16> @load_ext_v4i32_a1(<4 x i16>* %p) {
 ; CHECK:         .functype load_ext_v4i32_a1 (i32) -> (v128)
 ; CHECK-NEXT:  # %bb.0:
 ; CHECK-NEXT:    local.get 0
-; CHECK-NEXT:    i32x4.load16x4_u 0:p2align=0
+; CHECK-NEXT:    v128.load64_zero 0:p2align=0
 ; CHECK-NEXT:    # fallthrough-return
   %v = load <4 x i16>, <4 x i16>* %p, align 1
   ret <4 x i16> %v
@@ -647,7 +647,7 @@ define <4 x i16> @load_ext_v4i32_a2(<4 x i16>* %p) {
 ; CHECK:         .functype load_ext_v4i32_a2 (i32) -> (v128)
 ; CHECK-NEXT:  # %bb.0:
 ; CHECK-NEXT:    local.get 0
-; CHECK-NEXT:    i32x4.load16x4_u 0:p2align=1
+; CHECK-NEXT:    v128.load64_zero 0:p2align=1
 ; CHECK-NEXT:    # fallthrough-return
   %v = load <4 x i16>, <4 x i16>* %p, align 2
   ret <4 x i16> %v
@@ -658,7 +658,7 @@ define <4 x i16> @load_ext_v4i32_a4(<4 x i16>* %p) {
 ; CHECK:         .functype load_ext_v4i32_a4 (i32) -> (v128)
 ; CHECK-NEXT:  # %bb.0:
 ; CHECK-NEXT:    local.get 0
-; CHECK-NEXT:    i32x4.load16x4_u 0:p2align=2
+; CHECK-NEXT:    v128.load64_zero 0:p2align=2
 ; CHECK-NEXT:    # fallthrough-return
   %v = load <4 x i16>, <4 x i16>* %p, align 4
   ret <4 x i16> %v
@@ -670,7 +670,7 @@ define <4 x i16> @load_ext_v4i32_a8(<4 x i16>* %p) {
 ; CHECK:         .functype load_ext_v4i32_a8 (i32) -> (v128)
 ; CHECK-NEXT:  # %bb.0:
 ; CHECK-NEXT:    local.get 0
-; CHECK-NEXT:    i32x4.load16x4_u 0
+; CHECK-NEXT:    v128.load64_zero 0
 ; CHECK-NEXT:    # fallthrough-return
   %v = load <4 x i16>, <4 x i16>* %p, align 8
   ret <4 x i16> %v
@@ -682,7 +682,7 @@ define <4 x i16> @load_ext_v4i32_a16(<4 x i16>* %p) {
 ; CHECK:         .functype load_ext_v4i32_a16 (i32) -> (v128)
 ; CHECK-NEXT:  # %bb.0:
 ; CHECK-NEXT:    local.get 0
-; CHECK-NEXT:    i32x4.load16x4_u 0
+; CHECK-NEXT:    v128.load 0
 ; CHECK-NEXT:    # fallthrough-return
   %v = load <4 x i16>, <4 x i16>* %p, align 16
   ret <4 x i16> %v

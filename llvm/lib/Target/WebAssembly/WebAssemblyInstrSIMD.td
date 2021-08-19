@@ -267,6 +267,16 @@ multiclass SIMDLoadZero<Vec vec, bits<32> simdop> {
 defm "" : SIMDLoadZero<I32x4, 0x5c>;
 defm "" : SIMDLoadZero<I64x2, 0x5d>;
 
+// Use load_zero to load scalars into vectors as well where possible.
+// TODO: i32, i16, and i8 scalars
+def load_scalar :
+  PatFrag<(ops node:$addr), (scalar_to_vector (i64 (load $addr)))>;
+defm : LoadPatNoOffset<v2i64, load_scalar, "LOAD_ZERO_I64x2">;
+defm : LoadPatImmOff<v2i64, load_scalar, regPlusImm, "LOAD_ZERO_I64x2">;
+defm : LoadPatImmOff<v2i64, load_scalar, or_is_add, "LOAD_ZERO_I64x2">;
+defm : LoadPatOffsetOnly<v2i64, load_scalar, "LOAD_ZERO_I64x2">;
+defm : LoadPatGlobalAddrOffOnly<v2i64, load_scalar, "LOAD_ZERO_I64x2">;
+
 // TODO: f32x4 and f64x2 as well
 foreach vec = [I32x4, I64x2] in {
   defvar inst = "LOAD_ZERO_"#vec;
@@ -1240,87 +1250,6 @@ multiclass SIMDNarrow<Vec vec, bits<32> baseInst> {
 
 defm "" : SIMDNarrow<I16x8, 101>;
 defm "" : SIMDNarrow<I32x4, 133>;
-
-// Use narrowing operations for truncating stores. Since the narrowing
-// operations are saturating instead of truncating, we need to mask
-// the stored values first.
-def store_v8i8_trunc_v8i16 :
-  OutPatFrag<(ops node:$val),
-             (EXTRACT_LANE_I64x2
-               (NARROW_U_I8x16
-                 (AND
-                   (CONST_V128_I16x8
-                     0x00ff, 0x00ff, 0x00ff, 0x00ff,
-                     0x00ff, 0x00ff, 0x00ff, 0x00ff),
-                   node:$val),
-                 $val), // Unused input
-               0)>;
-
-def store_v4i16_trunc_v4i32 :
-  OutPatFrag<(ops node:$val),
-             (EXTRACT_LANE_I64x2
-               (NARROW_U_I16x8
-                 (AND
-                  (CONST_V128_I32x4
-                    0x0000ffff, 0x0000ffff, 0x0000ffff, 0x0000ffff),
-                  node:$val),
-                 $val), // Unused input
-               0)>;
-
-// Store patterns adapted from WebAssemblyInstrMemory.td
-multiclass NarrowingStorePatNoOffset<Vec vec, OutPatFrag out> {
-  defvar node = !cast<PatFrag>("truncstorevi"#vec.split.lane_bits);
-  def : Pat<(node vec.vt:$val, I32:$addr),
-            (STORE_I64_A32 0, 0, $addr, (out $val))>,
-        Requires<[HasAddr32]>;
-  def : Pat<(node vec.vt:$val, I64:$addr),
-            (STORE_I64_A64 0, 0, $addr, (out $val))>,
-        Requires<[HasAddr64]>;
-}
-
-defm : NarrowingStorePatNoOffset<I16x8, store_v8i8_trunc_v8i16>;
-defm : NarrowingStorePatNoOffset<I32x4, store_v4i16_trunc_v4i32>;
-
-multiclass NarrowingStorePatImmOff<Vec vec, PatFrag operand, OutPatFrag out> {
-  defvar node = !cast<PatFrag>("truncstorevi"#vec.split.lane_bits);
-  def : Pat<(node vec.vt:$val, (operand I32:$addr, imm:$off)),
-            (STORE_I64_A32 0, imm:$off, $addr, (out $val))>,
-        Requires<[HasAddr32]>;
-  def : Pat<(node vec.vt:$val, (operand I64:$addr, imm:$off)),
-            (STORE_I64_A64 0, imm:$off, $addr, (out $val))>,
-        Requires<[HasAddr64]>;
-}
-
-defm : NarrowingStorePatImmOff<I16x8, regPlusImm, store_v8i8_trunc_v8i16>;
-defm : NarrowingStorePatImmOff<I32x4, regPlusImm, store_v4i16_trunc_v4i32>;
-defm : NarrowingStorePatImmOff<I16x8, or_is_add, store_v8i8_trunc_v8i16>;
-defm : NarrowingStorePatImmOff<I32x4, or_is_add, store_v4i16_trunc_v4i32>;
-
-multiclass NarrowingStorePatOffsetOnly<Vec vec, OutPatFrag out> {
-  defvar node = !cast<PatFrag>("truncstorevi"#vec.split.lane_bits);
-  def : Pat<(node vec.vt:$val, imm:$off),
-            (STORE_I64_A32 0, imm:$off, (CONST_I32 0), (out $val))>,
-        Requires<[HasAddr32]>;
-  def : Pat<(node vec.vt:$val, imm:$off),
-            (STORE_I64_A64 0, imm:$off, (CONST_I64 0), (out $val))>,
-        Requires<[HasAddr64]>;
-}
-
-defm : NarrowingStorePatOffsetOnly<I16x8, store_v8i8_trunc_v8i16>;
-defm : NarrowingStorePatOffsetOnly<I32x4, store_v4i16_trunc_v4i32>;
-
-multiclass NarrowingStorePatGlobalAddrOffOnly<Vec vec, OutPatFrag out> {
-  defvar node = !cast<PatFrag>("truncstorevi"#vec.split.lane_bits);
-  def : Pat<(node vec.vt:$val, (WebAssemblywrapper tglobaladdr:$off)),
-            (STORE_I64_A32 0, tglobaladdr:$off, (CONST_I32 0), (out $val))>,
-        Requires<[IsNotPIC, HasAddr32]>;
-  def : Pat<(node vec.vt:$val, (WebAssemblywrapper tglobaladdr:$off)),
-            (STORE_I64_A64  0, tglobaladdr:$off, (CONST_I64 0), (out $val))>,
-        Requires<[IsNotPIC, HasAddr64]>;
-}
-
-defm : NarrowingStorePatGlobalAddrOffOnly<I16x8, store_v8i8_trunc_v8i16>;
-defm : NarrowingStorePatGlobalAddrOffOnly<I32x4, store_v4i16_trunc_v4i32>;
 
 // Bitcasts are nops
 // Matching bitcast t1 to t1 causes strange errors, so avoid repeating types
