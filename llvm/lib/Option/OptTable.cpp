@@ -654,7 +654,7 @@ void OptTable::printHelp(raw_ostream &OS, const char *Usage, const char *Title,
         HelpText = getOptionHelpText(Alias.getID());
     }
 
-    if (HelpText) {
+    if (HelpText && (strlen(HelpText) != 0)) {
       const char *HelpGroup = getOptionHelpGroup(*this, Id);
       const std::string &OptName = getOptionHelpName(*this, Id);
       GroupedOptionHelp[HelpGroup].push_back({OptName, HelpText});

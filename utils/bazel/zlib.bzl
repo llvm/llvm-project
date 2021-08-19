@@ -33,7 +33,7 @@ llvm_zlib_external = repository_rule(
     implementation = _llvm_zlib_external_impl,
     attrs = {
         "_external_build_template": attr.label(
-            default = Label("//deps_impl:zlib_external.BUILD"),
+            default = Label("//utils/bazel/deps_impl:zlib_external.BUILD"),
             allow_single_file = True,
         ),
         "external_zlib": attr.string(
@@ -56,7 +56,7 @@ llvm_zlib_system = repository_rule(
     implementation = _llvm_zlib_system_impl,
     attrs = {
         "_system_build_template": attr.label(
-            default = Label("//deps_impl:zlib_system.BUILD"),
+            default = Label("//utils/bazel/deps_impl:zlib_system.BUILD"),
             allow_single_file = True,
         ),
     },
@@ -73,7 +73,7 @@ llvm_zlib_disable = repository_rule(
     implementation = _llvm_zlib_disable_impl,
     attrs = {
         "_disable_build_template": attr.label(
-            default = Label("//deps_impl:zlib_disable.BUILD"),
+            default = Label("//utils/bazel/deps_impl:zlib_disable.BUILD"),
             allow_single_file = True,
         ),
     },
@@ -92,15 +92,15 @@ llvm_zlib_from_env = repository_rule(
     implementation = _llvm_zlib_from_env_impl,
     attrs = {
         "_disable_build_template": attr.label(
-            default = Label("//deps_impl:zlib_disable.BUILD"),
+            default = Label("//utils/bazel/deps_impl:zlib_disable.BUILD"),
             allow_single_file = True,
         ),
         "_external_build_template": attr.label(
-            default = Label("//deps_impl:zlib_external.BUILD"),
+            default = Label("//utils/bazel/deps_impl:zlib_external.BUILD"),
             allow_single_file = True,
         ),
         "_system_build_template": attr.label(
-            default = Label("//deps_impl:zlib_system.BUILD"),
+            default = Label("//utils/bazel/deps_impl:zlib_system.BUILD"),
             allow_single_file = True,
         ),
         "external_zlib": attr.label(

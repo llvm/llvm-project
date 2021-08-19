@@ -81,6 +81,28 @@ void check_ReadWriteBarrier() {
 // CHECK-MSVC: fence syncscope("singlethread")
 // CHECK-LINUX: error: implicit declaration of function '_ReadWriteBarrier'
 
+long long check_mulh(long long a, long long b) {
+  return __mulh(a, b);
+}
+
+// CHECK-MSVC: %[[ARG1:.*]] = sext i64 {{.*}} to i128
+// CHECK-MSVC: %[[ARG2:.*]] = sext i64 {{.*}} to i128
+// CHECK-MSVC: %[[PROD:.*]] = mul nsw i128 %[[ARG1]], %[[ARG2]]
+// CHECK-MSVC: %[[HIGH:.*]] = ashr i128 %[[PROD]], 64
+// CHECK-MSVC: %[[RES:.*]] = trunc i128 %[[HIGH]] to i64
+// CHECK-LINUX: error: implicit declaration of function '__mulh'
+
+unsigned long long check_umulh(unsigned long long a, unsigned long long b) {
+  return __umulh(a, b);
+}
+
+// CHECK-MSVC: %[[ARG1:.*]] = zext i64 {{.*}} to i128
+// CHECK-MSVC: %[[ARG2:.*]] = zext i64 {{.*}} to i128
+// CHECK-MSVC: %[[PROD:.*]] = mul nuw i128 %[[ARG1]], %[[ARG2]]
+// CHECK-MSVC: %[[HIGH:.*]] = lshr i128 %[[PROD]], 64
+// CHECK-MSVC: %[[RES:.*]] = trunc i128 %[[HIGH]] to i64
+// CHECK-LINUX: error: implicit declaration of function '__umulh'
+
 unsigned __int64 check__getReg() {
   unsigned volatile __int64 reg;
   reg = __getReg(18);

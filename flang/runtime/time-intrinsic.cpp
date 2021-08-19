@@ -111,6 +111,58 @@ count_t GetSystemClockCountMax(fallback_implementation) {
     return max_count_t;
   }
 }
+
+constexpr count_t NSECS_PER_SEC{1'000'000'000};
+
+// POSIX implementation using clock_gettime. This is only enabled if
+// clock_gettime is available.
+template <typename T = int, typename U = struct timespec>
+count_t GetSystemClockCount(preferred_implementation,
+    // We need some dummy parameters to pass to decltype(clock_gettime).
+    T ClockId = 0, U *Timespec = nullptr,
+    decltype(clock_gettime(ClockId, Timespec)) *Enabled = nullptr) {
+#if defined CLOCK_THREAD_CPUTIME_ID
+#define CLOCKID CLOCK_THREAD_CPUTIME_ID
+#elif defined CLOCK_PROCESS_CPUTIME_ID
+#define CLOCKID CLOCK_PROCESS_CPUTIME_ID
+#elif defined CLOCK_MONOTONIC
+#define CLOCKID CLOCK_MONOTONIC
+#else
+#define CLOCKID CLOCK_REALTIME
+#endif
+  struct timespec tspec;
+  if (clock_gettime(CLOCKID, &tspec) != 0) {
+    // Return -HUGE() to represent failure.
+    return -std::numeric_limits<count_t>::max();
+  }
+
+  // Wrap around to avoid overflows.
+  constexpr count_t max_secs{
+      std::numeric_limits<count_t>::max() / NSECS_PER_SEC};
+  count_t wrapped_secs{tspec.tv_sec % max_secs};
+
+  // At this point, wrapped_secs < max_secs, and max_secs has already been
+  // truncated by the division. Therefore, we should still have enough room to
+  // add tv_nsec, since it is < NSECS_PER_SEC.
+  return tspec.tv_nsec + wrapped_secs * NSECS_PER_SEC;
+}
+
+template <typename T = int, typename U = struct timespec>
+count_t GetSystemClockCountRate(preferred_implementation,
+    // We need some dummy parameters to pass to decltype(clock_gettime).
+    T ClockId = 0, U *Timespec = nullptr,
+    decltype(clock_gettime(ClockId, Timespec)) *Enabled = nullptr) {
+  return NSECS_PER_SEC;
+}
+
+template <typename T = int, typename U = struct timespec>
+count_t GetSystemClockCountMax(preferred_implementation,
+    // We need some dummy parameters to pass to decltype(clock_gettime).
+    T ClockId = 0, U *Timespec = nullptr,
+    decltype(clock_gettime(ClockId, Timespec)) *Enabled = nullptr) {
+  count_t max_secs{std::numeric_limits<count_t>::max() / NSECS_PER_SEC};
+  return max_secs * NSECS_PER_SEC - 1;
+}
 } // anonymous namespace
 
 namespace Fortran::runtime {
