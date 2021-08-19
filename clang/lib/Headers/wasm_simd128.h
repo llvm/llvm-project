@@ -804,7 +804,7 @@ static __inline__ bool __DEFAULT_FN_ATTRS wasm_i8x16_all_true(v128_t __a) {
   return __builtin_wasm_all_true_i8x16((__i8x16)__a);
 }
 
-static __inline__ int32_t __DEFAULT_FN_ATTRS wasm_i8x16_bitmask(v128_t __a) {
+static __inline__ uint32_t __DEFAULT_FN_ATTRS wasm_i8x16_bitmask(v128_t __a) {
   return __builtin_wasm_bitmask_i8x16((__i8x16)__a);
 }
 
@@ -894,7 +894,7 @@ static __inline__ bool __DEFAULT_FN_ATTRS wasm_i16x8_all_true(v128_t __a) {
   return __builtin_wasm_all_true_i16x8((__i16x8)__a);
 }
 
-static __inline__ int32_t __DEFAULT_FN_ATTRS wasm_i16x8_bitmask(v128_t __a) {
+static __inline__ uint32_t __DEFAULT_FN_ATTRS wasm_i16x8_bitmask(v128_t __a) {
   return __builtin_wasm_bitmask_i16x8((__i16x8)__a);
 }
 
@@ -985,7 +985,7 @@ static __inline__ bool __DEFAULT_FN_ATTRS wasm_i32x4_all_true(v128_t __a) {
   return __builtin_wasm_all_true_i32x4((__i32x4)__a);
 }
 
-static __inline__ int32_t __DEFAULT_FN_ATTRS wasm_i32x4_bitmask(v128_t __a) {
+static __inline__ uint32_t __DEFAULT_FN_ATTRS wasm_i32x4_bitmask(v128_t __a) {
   return __builtin_wasm_bitmask_i32x4((__i32x4)__a);
 }
 
@@ -1056,7 +1056,7 @@ static __inline__ bool __DEFAULT_FN_ATTRS wasm_i64x2_all_true(v128_t __a) {
   return __builtin_wasm_all_true_i64x2((__i64x2)__a);
 }
 
-static __inline__ int32_t __DEFAULT_FN_ATTRS wasm_i64x2_bitmask(v128_t __a) {
+static __inline__ uint32_t __DEFAULT_FN_ATTRS wasm_i64x2_bitmask(v128_t __a) {
   return __builtin_wasm_bitmask_i64x2((__i64x2)__a);
 }
 

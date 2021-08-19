@@ -691,6 +691,27 @@ AArch64LegalizerInfo::AArch64LegalizerInfo(const AArch64Subtarget &ST)
       .clampMaxNumElements(1, s32, 4)
       .lower();
 
+  getActionDefinitionsBuilder(G_VECREDUCE_OR)
+      // Try to break down into smaller vectors as long as they're at least 64
+      // bits. This lets us use vector operations for some parts of the
+      // reduction.
+      .fewerElementsIf(
+          [=](const LegalityQuery &Q) {
+            LLT SrcTy = Q.Types[1];
+            if (SrcTy.isScalar())
+              return false;
+            if (!isPowerOf2_32(SrcTy.getNumElements()))
+              return false;
+            // We can usually perform 64b vector operations.
+            return SrcTy.getSizeInBits() > 64;
+          },
+          [=](const LegalityQuery &Q) {
+            LLT SrcTy = Q.Types[1];
+            return std::make_pair(1, SrcTy.divide(2));
+          })
+      .scalarize(1)
+      .lower();
+
   getActionDefinitionsBuilder({G_UADDSAT, G_USUBSAT})
       .lowerIf([=](const LegalityQuery &Q) { return Q.Types[0].isScalar(); });
 

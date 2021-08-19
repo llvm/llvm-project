@@ -304,3 +304,140 @@ define <2 x double> @promote_low_v2f64_2(<4 x float> %x) {
   %a = shufflevector <4 x double> %v, <4 x double> undef, <2 x i32> <i32 0, i32 1>
   ret <2 x double> %a
 }
+
+;; Also check with illegally wide vectors
+
+define <4 x double> @convert_low_s_v4f64(<8 x i32> %x) {
+; CHECK-LABEL: convert_low_s_v4f64:
+; CHECK:         .functype convert_low_s_v4f64 (i32, v128, v128) -> ()
+; CHECK-NEXT:  # %bb.0:
+; CHECK-NEXT:    local.get 0
+; CHECK-NEXT:    local.get 1
+; CHECK-NEXT:    f64x2.convert_low_i32x4_s
+; CHECK-NEXT:    v128.store 0
+; CHECK-NEXT:    local.get 0
+; CHECK-NEXT:    local.get 1
+; CHECK-NEXT:    local.get 1
+; CHECK-NEXT:    i8x16.shuffle 8, 9, 10, 11, 12, 13, 14, 15, 0, 0, 0, 0, 0, 0, 0, 0
+; CHECK-NEXT:    f64x2.convert_low_i32x4_s
+; CHECK-NEXT:    v128.store 16
+; CHECK-NEXT:    # fallthrough-return
+  %v = shufflevector <8 x i32> %x, <8 x i32> undef, <4 x i32> <i32 0, i32 1, i32 2, i32 3>
+  %a = sitofp <4 x i32> %v to <4 x double>
+  ret <4 x double> %a
+}
+
+define <4 x double> @convert_low_u_v4f64(<8 x i32> %x) {
+; CHECK-LABEL: convert_low_u_v4f64:
+; CHECK:         .functype convert_low_u_v4f64 (i32, v128, v128) -> ()
+; CHECK-NEXT:  # %bb.0:
+; CHECK-NEXT:    local.get 0
+; CHECK-NEXT:    local.get 1
+; CHECK-NEXT:    f64x2.convert_low_i32x4_u
+; CHECK-NEXT:    v128.store 0
+; CHECK-NEXT:    local.get 0
+; CHECK-NEXT:    local.get 1
+; CHECK-NEXT:    local.get 1
+; CHECK-NEXT:    i8x16.shuffle 8, 9, 10, 11, 12, 13, 14, 15, 0, 0, 0, 0, 0, 0, 0, 0
+; CHECK-NEXT:    f64x2.convert_low_i32x4_u
+; CHECK-NEXT:    v128.store 16
+; CHECK-NEXT:    # fallthrough-return
+  %v = shufflevector <8 x i32> %x, <8 x i32> undef, <4 x i32> <i32 0, i32 1, i32 2, i32 3>
+  %a = uitofp <4 x i32> %v to <4 x double>
+  ret <4 x double> %a
+}
+
+
+define <4 x double> @convert_low_s_v4f64_2(<8 x i32> %x) {
+; CHECK-LABEL: convert_low_s_v4f64_2:
+; CHECK:         .functype convert_low_s_v4f64_2 (i32, v128, v128) -> ()
+; CHECK-NEXT:  # %bb.0:
+; CHECK-NEXT:    local.get 0
+; CHECK-NEXT:    local.get 1
+; CHECK-NEXT:    f64x2.convert_low_i32x4_s
+; CHECK-NEXT:    v128.store 0
+; CHECK-NEXT:    local.get 0
+; CHECK-NEXT:    local.get 1
+; CHECK-NEXT:    local.get 1
+; CHECK-NEXT:    i8x16.shuffle 8, 9, 10, 11, 12, 13, 14, 15, 0, 0, 0, 0, 0, 0, 0, 0
+; CHECK-NEXT:    f64x2.convert_low_i32x4_s
+; CHECK-NEXT:    v128.store 16
+; CHECK-NEXT:    # fallthrough-return
+  %v = sitofp <8 x i32> %x to <8 x double>
+  %a = shufflevector <8 x double> %v, <8 x double> undef, <4 x i32> <i32 0, i32 1, i32 2, i32 3>
+  ret <4 x double> %a
+}
+
+define <4 x double> @convert_low_u_v4f64_2(<8 x i32> %x) {
+; CHECK-LABEL: convert_low_u_v4f64_2:
+; CHECK:         .functype convert_low_u_v4f64_2 (i32, v128, v128) -> ()
+; CHECK-NEXT:  # %bb.0:
+; CHECK-NEXT:    local.get 0
+; CHECK-NEXT:    local.get 1
+; CHECK-NEXT:    f64x2.convert_low_i32x4_u
+; CHECK-NEXT:    v128.store 0
+; CHECK-NEXT:    local.get 0
+; CHECK-NEXT:    local.get 1
+; CHECK-NEXT:    local.get 1
+; CHECK-NEXT:    i8x16.shuffle 8, 9, 10, 11, 12, 13, 14, 15, 0, 0, 0, 0, 0, 0, 0, 0
+; CHECK-NEXT:    f64x2.convert_low_i32x4_u
+; CHECK-NEXT:    v128.store 16
+; CHECK-NEXT:    # fallthrough-return
+  %v = uitofp <8 x i32> %x to <8 x double>
+  %a = shufflevector <8 x double> %v, <8 x double> undef, <4 x i32> <i32 0, i32 1, i32 2, i32 3>
+  ret <4 x double> %a
+}
+
+define <4 x double> @promote_low_v4f64(<8 x float> %x) {
+; CHECK-LABEL: promote_low_v4f64:
+; CHECK:         .functype promote_low_v4f64 (i32, v128, v128) -> ()
+; CHECK-NEXT:  # %bb.0:
+; CHECK-NEXT:    local.get 0
+; CHECK-NEXT:    local.get 1
+; CHECK-NEXT:    f64x2.promote_low_f32x4
+; CHECK-NEXT:    v128.store 0
+; CHECK-NEXT:    local.get 0
+; CHECK-NEXT:    local.get 1
+; CHECK-NEXT:    local.get 1
+; CHECK-NEXT:    i8x16.shuffle 8, 9, 10, 11, 12, 13, 14, 15, 0, 0, 0, 0, 0, 0, 0, 0
+; CHECK-NEXT:    f64x2.promote_low_f32x4
+; CHECK-NEXT:    v128.store 16
+; CHECK-NEXT:    # fallthrough-return
+  %v = shufflevector <8 x float> %x, <8 x float> undef, <4 x i32> <i32 0, i32 1, i32 2, i32 3>
+  %a = fpext <4 x float> %v to <4 x double>
+  ret <4 x double> %a
+}
+
+define <4 x double> @promote_low_v4f64_2(<8 x float> %x) {
+; CHECK-LABEL: promote_low_v4f64_2:
+; CHECK:         .functype promote_low_v4f64_2 (i32, v128, v128) -> ()
+; CHECK-NEXT:  # %bb.0:
+; CHECK-NEXT:    local.get 0
+; CHECK-NEXT:    local.get 1
+; CHECK-NEXT:    f64x2.promote_low_f32x4
+; CHECK-NEXT:    v128.store 0
+; CHECK-NEXT:    local.get 0
+; CHECK-NEXT:    local.get 1
+; CHECK-NEXT:    local.get 1
+; CHECK-NEXT:    i8x16.shuffle 8, 9, 10, 11, 12, 13, 14, 15, 0, 0, 0, 0, 0, 0, 0, 0
+; CHECK-NEXT:    f64x2.promote_low_f32x4
+; CHECK-NEXT:    v128.store 16
+; CHECK-NEXT:    # fallthrough-return
+  %v = fpext <8 x float> %x to <8 x double>
+  %a = shufflevector <8 x double> %v, <8 x double> undef, <4 x i32> <i32 0, i32 1, i32 2, i32 3>
+  ret <4 x double> %a
+}
+
+define <2 x double> @promote_mixed_v2f64(<4 x float> %x, <4 x float> %y) {
+; CHECK-LABEL: promote_mixed_v2f64:
+; CHECK:         .functype promote_mixed_v2f64 (v128, v128) -> (v128)
+; CHECK-NEXT:  # %bb.0:
+; CHECK-NEXT:    local.get 0
+; CHECK-NEXT:    local.get 1
+; CHECK-NEXT:    i8x16.shuffle 8, 9, 10, 11, 28, 29, 30, 31, 0, 0, 0, 0, 0, 0, 0, 0
+; CHECK-NEXT:    f64x2.promote_low_f32x4
+; CHECK-NEXT:    # fallthrough-return
+  %v = shufflevector <4 x float> %x, <4 x float> %y, <2 x i32> <i32 2, i32 7>
+  %a = fpext <2 x float> %v to <2 x double>
+  ret <2 x double> %a
+}

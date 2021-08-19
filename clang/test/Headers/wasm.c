@@ -1345,7 +1345,7 @@ bool test_i8x16_all_true(v128_t a) {
 // CHECK-NEXT:    [[TMP1:%.*]] = tail call i32 @llvm.wasm.bitmask.v16i8(<16 x i8> [[TMP0]]) #[[ATTR6]]
 // CHECK-NEXT:    ret i32 [[TMP1]]
 //
-int32_t test_i8x16_bitmask(v128_t a) {
+uint32_t test_i8x16_bitmask(v128_t a) {
   return wasm_i8x16_bitmask(a);
 }
 
@@ -1577,7 +1577,7 @@ bool test_i16x8_all_true(v128_t a) {
 // CHECK-NEXT:    [[TMP1:%.*]] = tail call i32 @llvm.wasm.bitmask.v8i16(<8 x i16> [[TMP0]]) #[[ATTR6]]
 // CHECK-NEXT:    ret i32 [[TMP1]]
 //
-int32_t test_i16x8_bitmask(v128_t a) {
+uint32_t test_i16x8_bitmask(v128_t a) {
   return wasm_i16x8_bitmask(a);
 }
 
@@ -1804,7 +1804,7 @@ bool test_i32x4_all_true(v128_t a) {
 // CHECK-NEXT:    [[TMP0:%.*]] = tail call i32 @llvm.wasm.bitmask.v4i32(<4 x i32> [[A:%.*]]) #[[ATTR6]]
 // CHECK-NEXT:    ret i32 [[TMP0]]
 //
-int32_t test_i32x4_bitmask(v128_t a) {
+uint32_t test_i32x4_bitmask(v128_t a) {
   return wasm_i32x4_bitmask(a);
 }
 
@@ -1958,7 +1958,7 @@ bool test_i64x2_all_true(v128_t a) {
 // CHECK-NEXT:    [[TMP1:%.*]] = tail call i32 @llvm.wasm.bitmask.v2i64(<2 x i64> [[TMP0]]) #[[ATTR6]]
 // CHECK-NEXT:    ret i32 [[TMP1]]
 //
-int32_t test_i64x2_bitmask(v128_t a) {
+uint32_t test_i64x2_bitmask(v128_t a) {
   return wasm_i64x2_bitmask(a);
 }
 
