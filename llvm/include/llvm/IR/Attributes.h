@@ -821,8 +821,11 @@ public:
   /// Return the elementtype type for the specified function parameter.
   Type *getParamElementType(unsigned ArgNo) const;
 
-  /// Get the stack alignment.
-  MaybeAlign getStackAlignment(unsigned Index) const;
+  /// Get the stack alignment of the function.
+  MaybeAlign getFnStackAlignment() const;
+
+  /// Get the stack alignment of the return value.
+  MaybeAlign getRetStackAlignment() const;
 
   /// Get the number of dereferenceable bytes (or zero if unknown) of the return
   /// value.
