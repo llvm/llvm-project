@@ -2063,6 +2063,17 @@ llvm::DINodeArray CGDebugInfo::CollectCXXTemplateParams(
   return CollectTemplateParams(TPList, TAList.asArray(), Unit);
 }
 
+llvm::DINodeArray CGDebugInfo::CollectBTFTagAnnotations(const Decl *D) {
+  SmallVector<llvm::Metadata *, 4> Annotations;
+  for (const auto *I : D->specific_attrs<BTFTagAttr>()) {
+    llvm::Metadata *Ops[2] = {
+        llvm::MDString::get(CGM.getLLVMContext(), StringRef("btf_tag")),
+        llvm::MDString::get(CGM.getLLVMContext(), I->getBTFTag())};
+    Annotations.push_back(llvm::MDNode::get(CGM.getLLVMContext(), Ops));
+  }
+  return DBuilder.getOrCreateArray(Annotations);
+}
+
 llvm::DIType *CGDebugInfo::getOrCreateVTablePtrType(llvm::DIFile *Unit) {
   if (VTablePtrType)
     return VTablePtrType;
@@ -3435,9 +3446,13 @@ llvm::DICompositeType *CGDebugInfo::CreateLimitedType(const RecordType *Ty) {
         Flags |= llvm::DINode::FlagExportSymbols;
   }
 
+  llvm::DINodeArray Annotations = nullptr;
+  if (D->hasAttr<BTFTagAttr>())
+    Annotations = CollectBTFTagAnnotations(D);
+
   llvm::DICompositeType *RealDecl = DBuilder.createReplaceableCompositeType(
       getTagForRecord(RD), RDName, RDContext, DefUnit, Line, 0, Size, Align,
-      Flags, Identifier);
+      Flags, Identifier, Annotations);
 
   // Elements of composite types usually have back to the type, creating
   // uniquing cycles.  Distinct nodes are more efficient.
