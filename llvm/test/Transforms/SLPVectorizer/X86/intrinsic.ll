@@ -195,25 +195,25 @@ define void @vec_ctlz_i32_neg(i32* %a, i32* %b, i32* %c, i1) {
 ; CHECK-NEXT:    [[I0:%.*]] = load i32, i32* [[A:%.*]], align 4
 ; CHECK-NEXT:    [[I1:%.*]] = load i32, i32* [[B:%.*]], align 4
 ; CHECK-NEXT:    [[ADD1:%.*]] = add i32 [[I0]], [[I1]]
-; CHECK-NEXT:    [[CALL1:%.*]] = tail call i32 @llvm.ctlz.i32(i32 [[ADD1]], i1 true) #[[ATTR3:[0-9]+]]
+; CHECK-NEXT:    [[CALL1:%.*]] = tail call i32 @llvm.ctlz.i32(i32 [[ADD1]], i1 true) #[[ATTR4:[0-9]+]]
 ; CHECK-NEXT:    [[ARRAYIDX2:%.*]] = getelementptr inbounds i32, i32* [[A]], i32 1
 ; CHECK-NEXT:    [[I2:%.*]] = load i32, i32* [[ARRAYIDX2]], align 4
 ; CHECK-NEXT:    [[ARRAYIDX3:%.*]] = getelementptr inbounds i32, i32* [[B]], i32 1
 ; CHECK-NEXT:    [[I3:%.*]] = load i32, i32* [[ARRAYIDX3]], align 4
 ; CHECK-NEXT:    [[ADD2:%.*]] = add i32 [[I2]], [[I3]]
-; CHECK-NEXT:    [[CALL2:%.*]] = tail call i32 @llvm.ctlz.i32(i32 [[ADD2]], i1 false) #[[ATTR3]]
+; CHECK-NEXT:    [[CALL2:%.*]] = tail call i32 @llvm.ctlz.i32(i32 [[ADD2]], i1 false) #[[ATTR4]]
 ; CHECK-NEXT:    [[ARRAYIDX4:%.*]] = getelementptr inbounds i32, i32* [[A]], i32 2
 ; CHECK-NEXT:    [[I4:%.*]] = load i32, i32* [[ARRAYIDX4]], align 4
 ; CHECK-NEXT:    [[ARRAYIDX5:%.*]] = getelementptr inbounds i32, i32* [[B]], i32 2
 ; CHECK-NEXT:    [[I5:%.*]] = load i32, i32* [[ARRAYIDX5]], align 4
 ; CHECK-NEXT:    [[ADD3:%.*]] = add i32 [[I4]], [[I5]]
-; CHECK-NEXT:    [[CALL3:%.*]] = tail call i32 @llvm.ctlz.i32(i32 [[ADD3]], i1 true) #[[ATTR3]]
+; CHECK-NEXT:    [[CALL3:%.*]] = tail call i32 @llvm.ctlz.i32(i32 [[ADD3]], i1 true) #[[ATTR4]]
 ; CHECK-NEXT:    [[ARRAYIDX6:%.*]] = getelementptr inbounds i32, i32* [[A]], i32 3
 ; CHECK-NEXT:    [[I6:%.*]] = load i32, i32* [[ARRAYIDX6]], align 4
 ; CHECK-NEXT:    [[ARRAYIDX7:%.*]] = getelementptr inbounds i32, i32* [[B]], i32 3
 ; CHECK-NEXT:    [[I7:%.*]] = load i32, i32* [[ARRAYIDX7]], align 4
 ; CHECK-NEXT:    [[ADD4:%.*]] = add i32 [[I6]], [[I7]]
-; CHECK-NEXT:    [[CALL4:%.*]] = tail call i32 @llvm.ctlz.i32(i32 [[ADD4]], i1 false) #[[ATTR3]]
+; CHECK-NEXT:    [[CALL4:%.*]] = tail call i32 @llvm.ctlz.i32(i32 [[ADD4]], i1 false) #[[ATTR4]]
 ; CHECK-NEXT:    store i32 [[CALL1]], i32* [[C:%.*]], align 4
 ; CHECK-NEXT:    [[ARRAYIDX8:%.*]] = getelementptr inbounds i32, i32* [[C]], i32 1
 ; CHECK-NEXT:    store i32 [[CALL2]], i32* [[ARRAYIDX8]], align 4
@@ -322,25 +322,25 @@ define void @vec_cttz_i32_neg(i32* %a, i32* %b, i32* %c, i1) {
 ; CHECK-NEXT:    [[I0:%.*]] = load i32, i32* [[A:%.*]], align 4
 ; CHECK-NEXT:    [[I1:%.*]] = load i32, i32* [[B:%.*]], align 4
 ; CHECK-NEXT:    [[ADD1:%.*]] = add i32 [[I0]], [[I1]]
-; CHECK-NEXT:    [[CALL1:%.*]] = tail call i32 @llvm.cttz.i32(i32 [[ADD1]], i1 true) #[[ATTR3]]
+; CHECK-NEXT:    [[CALL1:%.*]] = tail call i32 @llvm.cttz.i32(i32 [[ADD1]], i1 true) #[[ATTR4]]
 ; CHECK-NEXT:    [[ARRAYIDX2:%.*]] = getelementptr inbounds i32, i32* [[A]], i32 1
 ; CHECK-NEXT:    [[I2:%.*]] = load i32, i32* [[ARRAYIDX2]], align 4
 ; CHECK-NEXT:    [[ARRAYIDX3:%.*]] = getelementptr inbounds i32, i32* [[B]], i32 1
 ; CHECK-NEXT:    [[I3:%.*]] = load i32, i32* [[ARRAYIDX3]], align 4
 ; CHECK-NEXT:    [[ADD2:%.*]] = add i32 [[I2]], [[I3]]
-; CHECK-NEXT:    [[CALL2:%.*]] = tail call i32 @llvm.cttz.i32(i32 [[ADD2]], i1 false) #[[ATTR3]]
+; CHECK-NEXT:    [[CALL2:%.*]] = tail call i32 @llvm.cttz.i32(i32 [[ADD2]], i1 false) #[[ATTR4]]
 ; CHECK-NEXT:    [[ARRAYIDX4:%.*]] = getelementptr inbounds i32, i32* [[A]], i32 2
 ; CHECK-NEXT:    [[I4:%.*]] = load i32, i32* [[ARRAYIDX4]], align 4
 ; CHECK-NEXT:    [[ARRAYIDX5:%.*]] = getelementptr inbounds i32, i32* [[B]], i32 2
 ; CHECK-NEXT:    [[I5:%.*]] = load i32, i32* [[ARRAYIDX5]], align 4
 ; CHECK-NEXT:    [[ADD3:%.*]] = add i32 [[I4]], [[I5]]
-; CHECK-NEXT:    [[CALL3:%.*]] = tail call i32 @llvm.cttz.i32(i32 [[ADD3]], i1 true) #[[ATTR3]]
+; CHECK-NEXT:    [[CALL3:%.*]] = tail call i32 @llvm.cttz.i32(i32 [[ADD3]], i1 true) #[[ATTR4]]
 ; CHECK-NEXT:    [[ARRAYIDX6:%.*]] = getelementptr inbounds i32, i32* [[A]], i32 3
 ; CHECK-NEXT:    [[I6:%.*]] = load i32, i32* [[ARRAYIDX6]], align 4
 ; CHECK-NEXT:    [[ARRAYIDX7:%.*]] = getelementptr inbounds i32, i32* [[B]], i32 3
 ; CHECK-NEXT:    [[I7:%.*]] = load i32, i32* [[ARRAYIDX7]], align 4
 ; CHECK-NEXT:    [[ADD4:%.*]] = add i32 [[I6]], [[I7]]
-; CHECK-NEXT:    [[CALL4:%.*]] = tail call i32 @llvm.cttz.i32(i32 [[ADD4]], i1 false) #[[ATTR3]]
+; CHECK-NEXT:    [[CALL4:%.*]] = tail call i32 @llvm.cttz.i32(i32 [[ADD4]], i1 false) #[[ATTR4]]
 ; CHECK-NEXT:    store i32 [[CALL1]], i32* [[C:%.*]], align 4
 ; CHECK-NEXT:    [[ARRAYIDX8:%.*]] = getelementptr inbounds i32, i32* [[C]], i32 1
 ; CHECK-NEXT:    store i32 [[CALL2]], i32* [[ARRAYIDX8]], align 4
@@ -448,25 +448,25 @@ define void @vec_powi_f32_neg(float* %a, float* %b, float* %c, i32 %P, i32 %Q) {
 ; CHECK-NEXT:    [[I0:%.*]] = load float, float* [[A:%.*]], align 4
 ; CHECK-NEXT:    [[I1:%.*]] = load float, float* [[B:%.*]], align 4
 ; CHECK-NEXT:    [[ADD1:%.*]] = fadd float [[I0]], [[I1]]
-; CHECK-NEXT:    [[CALL1:%.*]] = tail call float @llvm.powi.f32.i32(float [[ADD1]], i32 [[P:%.*]]) #[[ATTR3]]
+; CHECK-NEXT:    [[CALL1:%.*]] = tail call float @llvm.powi.f32.i32(float [[ADD1]], i32 [[P:%.*]]) #[[ATTR4]]
 ; CHECK-NEXT:    [[ARRAYIDX2:%.*]] = getelementptr inbounds float, float* [[A]], i32 1
 ; CHECK-NEXT:    [[I2:%.*]] = load float, float* [[ARRAYIDX2]], align 4
 ; CHECK-NEXT:    [[ARRAYIDX3:%.*]] = getelementptr inbounds float, float* [[B]], i32 1
 ; CHECK-NEXT:    [[I3:%.*]] = load float, float* [[ARRAYIDX3]], align 4
 ; CHECK-NEXT:    [[ADD2:%.*]] = fadd float [[I2]], [[I3]]
-; CHECK-NEXT:    [[CALL2:%.*]] = tail call float @llvm.powi.f32.i32(float [[ADD2]], i32 [[Q:%.*]]) #[[ATTR3]]
+; CHECK-NEXT:    [[CALL2:%.*]] = tail call float @llvm.powi.f32.i32(float [[ADD2]], i32 [[Q:%.*]]) #[[ATTR4]]
 ; CHECK-NEXT:    [[ARRAYIDX4:%.*]] = getelementptr inbounds float, float* [[A]], i32 2
 ; CHECK-NEXT:    [[I4:%.*]] = load float, float* [[ARRAYIDX4]], align 4
 ; CHECK-NEXT:    [[ARRAYIDX5:%.*]] = getelementptr inbounds float, float* [[B]], i32 2
 ; CHECK-NEXT:    [[I5:%.*]] = load float, float* [[ARRAYIDX5]], align 4
 ; CHECK-NEXT:    [[ADD3:%.*]] = fadd float [[I4]], [[I5]]
-; CHECK-NEXT:    [[CALL3:%.*]] = tail call float @llvm.powi.f32.i32(float [[ADD3]], i32 [[P]]) #[[ATTR3]]
+; CHECK-NEXT:    [[CALL3:%.*]] = tail call float @llvm.powi.f32.i32(float [[ADD3]], i32 [[P]]) #[[ATTR4]]
 ; CHECK-NEXT:    [[ARRAYIDX6:%.*]] = getelementptr inbounds float, float* [[A]], i32 3
 ; CHECK-NEXT:    [[I6:%.*]] = load float, float* [[ARRAYIDX6]], align 4
 ; CHECK-NEXT:    [[ARRAYIDX7:%.*]] = getelementptr inbounds float, float* [[B]], i32 3
 ; CHECK-NEXT:    [[I7:%.*]] = load float, float* [[ARRAYIDX7]], align 4
 ; CHECK-NEXT:    [[ADD4:%.*]] = fadd float [[I6]], [[I7]]
-; CHECK-NEXT:    [[CALL4:%.*]] = tail call float @llvm.powi.f32.i32(float [[ADD4]], i32 [[Q]]) #[[ATTR3]]
+; CHECK-NEXT:    [[CALL4:%.*]] = tail call float @llvm.powi.f32.i32(float [[ADD4]], i32 [[Q]]) #[[ATTR4]]
 ; CHECK-NEXT:    store float [[CALL1]], float* [[C:%.*]], align 4
 ; CHECK-NEXT:    [[ARRAYIDX8:%.*]] = getelementptr inbounds float, float* [[C]], i32 1
 ; CHECK-NEXT:    store float [[CALL2]], float* [[ARRAYIDX8]], align 4
@@ -512,4 +512,46 @@ entry:
   store float %call4, float* %arrayidx10, align 4
   ret void
 
+}
+
+
+declare i1 @llvm.isnan.f64(double)
+
+define void @vec_isnan_f64(double* %a, double* %b, double* %c, double* %d) {
+; CHECK-LABEL: @vec_isnan_f64(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[AIDX1:%.*]] = getelementptr inbounds double, double* [[A:%.*]], i64 1
+; CHECK-NEXT:    [[A0:%.*]] = load double, double* [[A]], align 8
+; CHECK-NEXT:    [[A1:%.*]] = load double, double* [[AIDX1]], align 8
+; CHECK-NEXT:    [[TMP0:%.*]] = bitcast double* [[B:%.*]] to <2 x double>*
+; CHECK-NEXT:    [[TMP1:%.*]] = load <2 x double>, <2 x double>* [[TMP0]], align 8
+; CHECK-NEXT:    [[TMP2:%.*]] = bitcast double* [[C:%.*]] to <2 x double>*
+; CHECK-NEXT:    [[TMP3:%.*]] = load <2 x double>, <2 x double>* [[TMP2]], align 8
+; CHECK-NEXT:    [[ISNAN0:%.*]] = tail call i1 @llvm.isnan.f64(double [[A0]])
+; CHECK-NEXT:    [[ISNAN1:%.*]] = tail call i1 @llvm.isnan.f64(double [[A1]])
+; CHECK-NEXT:    [[TMP4:%.*]] = insertelement <2 x i1> poison, i1 [[ISNAN0]], i32 0
+; CHECK-NEXT:    [[TMP5:%.*]] = insertelement <2 x i1> [[TMP4]], i1 [[ISNAN1]], i32 1
+; CHECK-NEXT:    [[TMP6:%.*]] = select <2 x i1> [[TMP5]], <2 x double> [[TMP1]], <2 x double> [[TMP3]]
+; CHECK-NEXT:    [[TMP7:%.*]] = bitcast double* [[D:%.*]] to <2 x double>*
+; CHECK-NEXT:    store <2 x double> [[TMP6]], <2 x double>* [[TMP7]], align 8
+; CHECK-NEXT:    ret void
+;
+entry:
+  %aidx1 = getelementptr inbounds double, double* %a, i64 1
+  %bidx1 = getelementptr inbounds double, double* %b, i64 1
+  %cidx1 = getelementptr inbounds double, double* %c, i64 1
+  %didx1 = getelementptr inbounds double, double* %d, i64 1
+  %a0 = load double, double* %a, align 8
+  %b0 = load double, double* %b, align 8
+  %c0 = load double, double* %c, align 8
+  %a1 = load double, double* %aidx1, align 8
+  %b1 = load double, double* %bidx1, align 8
+  %c1 = load double, double* %cidx1, align 8
+  %isnan0 = tail call i1 @llvm.isnan.f64(double %a0)
+  %isnan1 = tail call i1 @llvm.isnan.f64(double %a1)
+  %r0 = select i1 %isnan0, double %b0, double %c0
+  %r1 = select i1 %isnan1, double %b1, double %c1
+  store double %r0, double* %d, align 8
+  store double %r1, double* %didx1, align 8
+  ret void
 }
