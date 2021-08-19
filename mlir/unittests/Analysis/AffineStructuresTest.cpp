@@ -551,12 +551,12 @@ TEST(FlatAffineConstraintsTest, removeRedundantConstraintsTest) {
 
 TEST(FlatAffineConstraintsTest, addConstantUpperBound) {
   FlatAffineConstraints fac = makeFACFromConstraints(2, {}, {});
-  fac.addConstantUpperBound(0, 1);
+  fac.addBound(FlatAffineConstraints::UB, 0, 1);
   EXPECT_EQ(fac.atIneq(0, 0), -1);
   EXPECT_EQ(fac.atIneq(0, 1), 0);
   EXPECT_EQ(fac.atIneq(0, 2), 1);
 
-  fac.addConstantUpperBound({1, 2, 3}, 1);
+  fac.addBound(FlatAffineConstraints::UB, {1, 2, 3}, 1);
   EXPECT_EQ(fac.atIneq(1, 0), -1);
   EXPECT_EQ(fac.atIneq(1, 1), -2);
   EXPECT_EQ(fac.atIneq(1, 2), -2);
@@ -564,12 +564,12 @@ TEST(FlatAffineConstraintsTest, addConstantUpperBound) {
 
 TEST(FlatAffineConstraintsTest, addConstantLowerBound) {
   FlatAffineConstraints fac = makeFACFromConstraints(2, {}, {});
-  fac.addConstantLowerBound(0, 1);
+  fac.addBound(FlatAffineConstraints::LB, 0, 1);
   EXPECT_EQ(fac.atIneq(0, 0), 1);
   EXPECT_EQ(fac.atIneq(0, 1), 0);
   EXPECT_EQ(fac.atIneq(0, 2), -1);
 
-  fac.addConstantLowerBound({1, 2, 3}, 1);
+  fac.addBound(FlatAffineConstraints::LB, {1, 2, 3}, 1);
   EXPECT_EQ(fac.atIneq(1, 0), 1);
   EXPECT_EQ(fac.atIneq(1, 1), 2);
   EXPECT_EQ(fac.atIneq(1, 2), 2);
