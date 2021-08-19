@@ -1,3 +1,4 @@
+; REQUIRES: asserts
 ; RUN: llc -enable-fs-discriminator < %s | FileCheck %s
 ; RUN: llvm-profdata merge --sample -profile-isfs -o %t.afdo %S/Inputs/fsloader.afdo
 ; RUN: llc -enable-fs-discriminator -fs-profile-file=%t.afdo -show-fs-branchprob -disable-ra-fsprofile-loader=false -disable-layout-fsprofile-loader=false < %s 2>&1 | FileCheck %s --check-prefix=LOADER
