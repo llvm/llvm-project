@@ -232,6 +232,18 @@ define <vscale x 4 x i8> @vsll_vi_nxv4i8_unmasked(<vscale x 4 x i8> %va, i32 zer
   ret <vscale x 4 x i8> %v
 }
 
+declare <vscale x 5 x i8> @llvm.vp.shl.nxv5i8(<vscale x 5 x i8>, <vscale x 5 x i8>, <vscale x 5 x i1>, i32)
+
+define <vscale x 5 x i8> @vsll_vv_nxv5i8(<vscale x 5 x i8> %va, <vscale x 5 x i8> %b, <vscale x 5 x i1> %m, i32 zeroext %evl) {
+; CHECK-LABEL: vsll_vv_nxv5i8:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    vsetvli zero, a0, e8, m1, ta, mu
+; CHECK-NEXT:    vsll.vv v8, v8, v9, v0.t
+; CHECK-NEXT:    ret
+  %v = call <vscale x 5 x i8> @llvm.vp.shl.nxv5i8(<vscale x 5 x i8> %va, <vscale x 5 x i8> %b, <vscale x 5 x i1> %m, i32 %evl)
+  ret <vscale x 5 x i8> %v
+}
+
 declare <vscale x 8 x i8> @llvm.vp.shl.nxv8i8(<vscale x 8 x i8>, <vscale x 8 x i8>, <vscale x 8 x i1>, i32)
 
 define <vscale x 8 x i8> @vsll_vv_nxv8i8(<vscale x 8 x i8> %va, <vscale x 8 x i8> %b, <vscale x 8 x i1> %m, i32 zeroext %evl) {

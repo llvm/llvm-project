@@ -2,10 +2,12 @@
 ; RUN: opt < %s -mtriple=x86_64-unknown-linux-gnu -cost-model -analyze -mattr=-popcnt,+sse2 | FileCheck %s -check-prefixes=SSE2,NOPOPCNT
 ; RUN: opt < %s -mtriple=x86_64-unknown-linux-gnu -cost-model -analyze -mattr=+popcnt,+sse2 | FileCheck %s -check-prefixes=SSE2,POPCNT
 ; RUN: opt < %s -mtriple=x86_64-unknown-linux-gnu -cost-model -analyze -mattr=+popcnt,+sse4.2 | FileCheck %s -check-prefixes=POPCNT,SSE42
-; RUN: opt < %s -mtriple=x86_64-unknown-linux-gnu -cost-model -analyze -mattr=+popcnt,+avx | FileCheck %s -check-prefixes=POPCNT,AVX1
-; RUN: opt < %s -mtriple=x86_64-unknown-linux-gnu -cost-model -analyze -mattr=+popcnt,+avx2 | FileCheck %s -check-prefixes=POPCNT,AVX2
+; RUN: opt < %s -mtriple=x86_64-unknown-linux-gnu -cost-model -analyze -mattr=+popcnt,+avx | FileCheck %s -check-prefixes=POPCNT,AVX,AVX1
+; RUN: opt < %s -mtriple=x86_64-unknown-linux-gnu -cost-model -analyze -mattr=+popcnt,+avx2 | FileCheck %s -check-prefixes=POPCNT,AVX,AVX2
 ; RUN: opt < %s -mtriple=x86_64-unknown-linux-gnu -cost-model -analyze -mattr=+popcnt,+avx512f | FileCheck %s -check-prefixes=POPCNT,AVX512,AVX512F
 ; RUN: opt < %s -mtriple=x86_64-unknown-linux-gnu -cost-model -analyze -mattr=+popcnt,+avx512vl,+avx512bw,+avx512dq | FileCheck %s -check-prefixes=POPCNT,AVX512,AVX512BW
+; RUN: opt < %s -mtriple=x86_64-unknown-linux-gnu -cost-model -analyze -mattr=+popcnt,+avx512vl,+avx512vpopcntdq | FileCheck %s -check-prefixes=POPCNT,AVX512,AVX512VPOPCNT
+; RUN: opt < %s -mtriple=x86_64-unknown-linux-gnu -cost-model -analyze -mattr=+popcnt,+avx512vl,+avx512bitalg | FileCheck %s -check-prefixes=POPCNT,AVX512,AVX512BITALG
 
 ; Verify the cost of scalar population count instructions.
 
@@ -154,6 +156,14 @@ define <8 x i64> @var_ctpop_v8i64(<8 x i64> %a) {
 ; AVX512BW-NEXT:  Cost Model: Found an estimated cost of 7 for instruction: %ctpop = call <8 x i64> @llvm.ctpop.v8i64(<8 x i64> %a)
 ; AVX512BW-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: ret <8 x i64> %ctpop
 ;
+; AVX512VPOPCNT-LABEL: 'var_ctpop_v8i64'
+; AVX512VPOPCNT-NEXT:  Cost Model: Found an estimated cost of 16 for instruction: %ctpop = call <8 x i64> @llvm.ctpop.v8i64(<8 x i64> %a)
+; AVX512VPOPCNT-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: ret <8 x i64> %ctpop
+;
+; AVX512BITALG-LABEL: 'var_ctpop_v8i64'
+; AVX512BITALG-NEXT:  Cost Model: Found an estimated cost of 7 for instruction: %ctpop = call <8 x i64> @llvm.ctpop.v8i64(<8 x i64> %a)
+; AVX512BITALG-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: ret <8 x i64> %ctpop
+;
   %ctpop = call <8 x i64> @llvm.ctpop.v8i64(<8 x i64> %a)
   ret <8 x i64> %ctpop
 }
@@ -228,6 +238,14 @@ define <16 x i32> @var_ctpop_v16i32(<16 x i32> %a) {
 ; AVX512BW-LABEL: 'var_ctpop_v16i32'
 ; AVX512BW-NEXT:  Cost Model: Found an estimated cost of 11 for instruction: %ctpop = call <16 x i32> @llvm.ctpop.v16i32(<16 x i32> %a)
 ; AVX512BW-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: ret <16 x i32> %ctpop
+;
+; AVX512VPOPCNT-LABEL: 'var_ctpop_v16i32'
+; AVX512VPOPCNT-NEXT:  Cost Model: Found an estimated cost of 24 for instruction: %ctpop = call <16 x i32> @llvm.ctpop.v16i32(<16 x i32> %a)
+; AVX512VPOPCNT-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: ret <16 x i32> %ctpop
+;
+; AVX512BITALG-LABEL: 'var_ctpop_v16i32'
+; AVX512BITALG-NEXT:  Cost Model: Found an estimated cost of 11 for instruction: %ctpop = call <16 x i32> @llvm.ctpop.v16i32(<16 x i32> %a)
+; AVX512BITALG-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: ret <16 x i32> %ctpop
 ;
   %ctpop = call <16 x i32> @llvm.ctpop.v16i32(<16 x i32> %a)
   ret <16 x i32> %ctpop
@@ -304,6 +322,14 @@ define <32 x i16> @var_ctpop_v32i16(<32 x i16> %a) {
 ; AVX512BW-NEXT:  Cost Model: Found an estimated cost of 9 for instruction: %ctpop = call <32 x i16> @llvm.ctpop.v32i16(<32 x i16> %a)
 ; AVX512BW-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: ret <32 x i16> %ctpop
 ;
+; AVX512VPOPCNT-LABEL: 'var_ctpop_v32i16'
+; AVX512VPOPCNT-NEXT:  Cost Model: Found an estimated cost of 18 for instruction: %ctpop = call <32 x i16> @llvm.ctpop.v32i16(<32 x i16> %a)
+; AVX512VPOPCNT-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: ret <32 x i16> %ctpop
+;
+; AVX512BITALG-LABEL: 'var_ctpop_v32i16'
+; AVX512BITALG-NEXT:  Cost Model: Found an estimated cost of 9 for instruction: %ctpop = call <32 x i16> @llvm.ctpop.v32i16(<32 x i16> %a)
+; AVX512BITALG-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: ret <32 x i16> %ctpop
+;
   %ctpop = call <32 x i16> @llvm.ctpop.v32i16(<32 x i16> %a)
   ret <32 x i16> %ctpop
 }
@@ -378,6 +404,14 @@ define <64 x i8> @var_ctpop_v64i8(<64 x i8> %a) {
 ; AVX512BW-LABEL: 'var_ctpop_v64i8'
 ; AVX512BW-NEXT:  Cost Model: Found an estimated cost of 6 for instruction: %ctpop = call <64 x i8> @llvm.ctpop.v64i8(<64 x i8> %a)
 ; AVX512BW-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: ret <64 x i8> %ctpop
+;
+; AVX512VPOPCNT-LABEL: 'var_ctpop_v64i8'
+; AVX512VPOPCNT-NEXT:  Cost Model: Found an estimated cost of 12 for instruction: %ctpop = call <64 x i8> @llvm.ctpop.v64i8(<64 x i8> %a)
+; AVX512VPOPCNT-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: ret <64 x i8> %ctpop
+;
+; AVX512BITALG-LABEL: 'var_ctpop_v64i8'
+; AVX512BITALG-NEXT:  Cost Model: Found an estimated cost of 6 for instruction: %ctpop = call <64 x i8> @llvm.ctpop.v64i8(<64 x i8> %a)
+; AVX512BITALG-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: ret <64 x i8> %ctpop
 ;
   %ctpop = call <64 x i8> @llvm.ctpop.v64i8(<64 x i8> %a)
   ret <64 x i8> %ctpop

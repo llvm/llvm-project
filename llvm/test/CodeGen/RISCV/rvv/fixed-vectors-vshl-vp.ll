@@ -80,6 +80,18 @@ define <2 x i8> @vsll_vi_v2i8_unmasked(<2 x i8> %va, i32 zeroext %evl) {
   ret <2 x i8> %v
 }
 
+declare <3 x i8> @llvm.vp.shl.v3i8(<3 x i8>, <3 x i8>, <3 x i1>, i32)
+
+define <3 x i8> @vsll_vv_v3i8(<3 x i8> %va, <3 x i8> %b, <3 x i1> %m, i32 zeroext %evl) {
+; CHECK-LABEL: vsll_vv_v3i8:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    vsetvli zero, a0, e8, mf4, ta, mu
+; CHECK-NEXT:    vsll.vv v8, v8, v9, v0.t
+; CHECK-NEXT:    ret
+  %v = call <3 x i8> @llvm.vp.shl.v3i8(<3 x i8> %va, <3 x i8> %b, <3 x i1> %m, i32 %evl)
+  ret <3 x i8> %v
+}
+
 declare <4 x i8> @llvm.vp.shl.v4i8(<4 x i8>, <4 x i8>, <4 x i1>, i32)
 
 define <4 x i8> @vsll_vv_v4i8(<4 x i8> %va, <4 x i8> %b, <4 x i1> %m, i32 zeroext %evl) {

@@ -401,7 +401,7 @@ unsigned DWARFVerifier::verifyDieRanges(const DWARFDie &Die,
     return NumErrors;
   }
 
-  DWARFAddressRangesVector Ranges = RangesOrError.get();
+  const DWARFAddressRangesVector &Ranges = RangesOrError.get();
   // Build RI for this DIE and check that ranges within this DIE do not
   // overlap.
   DieRangeInfo RI(Die);

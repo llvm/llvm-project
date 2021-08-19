@@ -412,6 +412,108 @@ define <vscale x 8 x i8> @vxor_vi_nxv8i8_unmasked_1(<vscale x 8 x i8> %va, i32 z
   ret <vscale x 8 x i8> %v
 }
 
+declare <vscale x 15 x i8> @llvm.vp.xor.nxv15i8(<vscale x 15 x i8>, <vscale x 15 x i8>, <vscale x 15 x i1>, i32)
+
+define <vscale x 15 x i8> @vxor_vv_nxv15i8(<vscale x 15 x i8> %va, <vscale x 15 x i8> %b, <vscale x 15 x i1> %m, i32 zeroext %evl) {
+; CHECK-LABEL: vxor_vv_nxv15i8:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    vsetvli zero, a0, e8, m2, ta, mu
+; CHECK-NEXT:    vxor.vv v8, v8, v10, v0.t
+; CHECK-NEXT:    ret
+  %v = call <vscale x 15 x i8> @llvm.vp.xor.nxv15i8(<vscale x 15 x i8> %va, <vscale x 15 x i8> %b, <vscale x 15 x i1> %m, i32 %evl)
+  ret <vscale x 15 x i8> %v
+}
+
+define <vscale x 15 x i8> @vxor_vv_nxv15i8_unmasked(<vscale x 15 x i8> %va, <vscale x 15 x i8> %b, i32 zeroext %evl) {
+; CHECK-LABEL: vxor_vv_nxv15i8_unmasked:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    vsetvli zero, a0, e8, m2, ta, mu
+; CHECK-NEXT:    vxor.vv v8, v8, v10
+; CHECK-NEXT:    ret
+  %head = insertelement <vscale x 15 x i1> undef, i1 true, i32 0
+  %m = shufflevector <vscale x 15 x i1> %head, <vscale x 15 x i1> undef, <vscale x 15 x i32> zeroinitializer
+  %v = call <vscale x 15 x i8> @llvm.vp.xor.nxv15i8(<vscale x 15 x i8> %va, <vscale x 15 x i8> %b, <vscale x 15 x i1> %m, i32 %evl)
+  ret <vscale x 15 x i8> %v
+}
+
+define <vscale x 15 x i8> @vxor_vx_nxv15i8(<vscale x 15 x i8> %va, i8 %b, <vscale x 15 x i1> %m, i32 zeroext %evl) {
+; CHECK-LABEL: vxor_vx_nxv15i8:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    vsetvli zero, a1, e8, m2, ta, mu
+; CHECK-NEXT:    vxor.vx v8, v8, a0, v0.t
+; CHECK-NEXT:    ret
+  %elt.head = insertelement <vscale x 15 x i8> undef, i8 %b, i32 0
+  %vb = shufflevector <vscale x 15 x i8> %elt.head, <vscale x 15 x i8> undef, <vscale x 15 x i32> zeroinitializer
+  %v = call <vscale x 15 x i8> @llvm.vp.xor.nxv15i8(<vscale x 15 x i8> %va, <vscale x 15 x i8> %vb, <vscale x 15 x i1> %m, i32 %evl)
+  ret <vscale x 15 x i8> %v
+}
+
+define <vscale x 15 x i8> @vxor_vx_nxv15i8_unmasked(<vscale x 15 x i8> %va, i8 %b, i32 zeroext %evl) {
+; CHECK-LABEL: vxor_vx_nxv15i8_unmasked:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    vsetvli zero, a1, e8, m2, ta, mu
+; CHECK-NEXT:    vxor.vx v8, v8, a0
+; CHECK-NEXT:    ret
+  %elt.head = insertelement <vscale x 15 x i8> undef, i8 %b, i32 0
+  %vb = shufflevector <vscale x 15 x i8> %elt.head, <vscale x 15 x i8> undef, <vscale x 15 x i32> zeroinitializer
+  %head = insertelement <vscale x 15 x i1> undef, i1 true, i32 0
+  %m = shufflevector <vscale x 15 x i1> %head, <vscale x 15 x i1> undef, <vscale x 15 x i32> zeroinitializer
+  %v = call <vscale x 15 x i8> @llvm.vp.xor.nxv15i8(<vscale x 15 x i8> %va, <vscale x 15 x i8> %vb, <vscale x 15 x i1> %m, i32 %evl)
+  ret <vscale x 15 x i8> %v
+}
+
+define <vscale x 15 x i8> @vxor_vi_nxv15i8(<vscale x 15 x i8> %va, <vscale x 15 x i1> %m, i32 zeroext %evl) {
+; CHECK-LABEL: vxor_vi_nxv15i8:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    vsetvli zero, a0, e8, m2, ta, mu
+; CHECK-NEXT:    vxor.vi v8, v8, 7, v0.t
+; CHECK-NEXT:    ret
+  %elt.head = insertelement <vscale x 15 x i8> undef, i8 7, i32 0
+  %vb = shufflevector <vscale x 15 x i8> %elt.head, <vscale x 15 x i8> undef, <vscale x 15 x i32> zeroinitializer
+  %v = call <vscale x 15 x i8> @llvm.vp.xor.nxv15i8(<vscale x 15 x i8> %va, <vscale x 15 x i8> %vb, <vscale x 15 x i1> %m, i32 %evl)
+  ret <vscale x 15 x i8> %v
+}
+
+define <vscale x 15 x i8> @vxor_vi_nxv15i8_unmasked(<vscale x 15 x i8> %va, i32 zeroext %evl) {
+; CHECK-LABEL: vxor_vi_nxv15i8_unmasked:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    vsetvli zero, a0, e8, m2, ta, mu
+; CHECK-NEXT:    vxor.vi v8, v8, 7
+; CHECK-NEXT:    ret
+  %elt.head = insertelement <vscale x 15 x i8> undef, i8 7, i32 0
+  %vb = shufflevector <vscale x 15 x i8> %elt.head, <vscale x 15 x i8> undef, <vscale x 15 x i32> zeroinitializer
+  %head = insertelement <vscale x 15 x i1> undef, i1 true, i32 0
+  %m = shufflevector <vscale x 15 x i1> %head, <vscale x 15 x i1> undef, <vscale x 15 x i32> zeroinitializer
+  %v = call <vscale x 15 x i8> @llvm.vp.xor.nxv15i8(<vscale x 15 x i8> %va, <vscale x 15 x i8> %vb, <vscale x 15 x i1> %m, i32 %evl)
+  ret <vscale x 15 x i8> %v
+}
+
+define <vscale x 15 x i8> @vxor_vi_nxv15i8_1(<vscale x 15 x i8> %va, <vscale x 15 x i1> %m, i32 zeroext %evl) {
+; CHECK-LABEL: vxor_vi_nxv15i8_1:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    vsetvli zero, a0, e8, m2, ta, mu
+; CHECK-NEXT:    vnot.v v8, v8, v0.t
+; CHECK-NEXT:    ret
+  %elt.head = insertelement <vscale x 15 x i8> undef, i8 -1, i32 0
+  %vb = shufflevector <vscale x 15 x i8> %elt.head, <vscale x 15 x i8> undef, <vscale x 15 x i32> zeroinitializer
+  %v = call <vscale x 15 x i8> @llvm.vp.xor.nxv15i8(<vscale x 15 x i8> %va, <vscale x 15 x i8> %vb, <vscale x 15 x i1> %m, i32 %evl)
+  ret <vscale x 15 x i8> %v
+}
+
+define <vscale x 15 x i8> @vxor_vi_nxv15i8_unmasked_1(<vscale x 15 x i8> %va, i32 zeroext %evl) {
+; CHECK-LABEL: vxor_vi_nxv15i8_unmasked_1:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    vsetvli zero, a0, e8, m2, ta, mu
+; CHECK-NEXT:    vxor.vi v8, v8, -1
+; CHECK-NEXT:    ret
+  %elt.head = insertelement <vscale x 15 x i8> undef, i8 -1, i32 0
+  %vb = shufflevector <vscale x 15 x i8> %elt.head, <vscale x 15 x i8> undef, <vscale x 15 x i32> zeroinitializer
+  %head = insertelement <vscale x 15 x i1> undef, i1 true, i32 0
+  %m = shufflevector <vscale x 15 x i1> %head, <vscale x 15 x i1> undef, <vscale x 15 x i32> zeroinitializer
+  %v = call <vscale x 15 x i8> @llvm.vp.xor.nxv15i8(<vscale x 15 x i8> %va, <vscale x 15 x i8> %vb, <vscale x 15 x i1> %m, i32 %evl)
+  ret <vscale x 15 x i8> %v
+}
+
 declare <vscale x 16 x i8> @llvm.vp.xor.nxv16i8(<vscale x 16 x i8>, <vscale x 16 x i8>, <vscale x 16 x i1>, i32)
 
 define <vscale x 16 x i8> @vxor_vv_nxv16i8(<vscale x 16 x i8> %va, <vscale x 16 x i8> %b, <vscale x 16 x i1> %m, i32 zeroext %evl) {
