@@ -20,11 +20,11 @@
 
 ; MACHO: @__profc_foo = private global [1 x i64] zeroinitializer, section "__DATA,__llvm_prf_cnts", align 8
 ; ELF: @__profc_foo = private global [1 x i64] zeroinitializer, section "__llvm_prf_cnts", comdat, align 8
-; WINDOWS: @__profc_foo = private global [1 x i64] zeroinitializer, section ".lprfc$M", comdat, align 8
+; WINDOWS: @__profc_foo = private global [1 x i64] zeroinitializer, section ".lprfc$M", align 8
 
 ; MACHO: @__profd_foo = private {{.*}}, section "__DATA,__llvm_prf_data,regular,live_support", align 8
 ; ELF: @__profd_foo = private {{.*}}, section "__llvm_prf_data", comdat($__profc_foo), align 8
-; WINDOWS: @__profd_foo = private global {{.*}}, section ".lprfd$M", comdat($__profc_foo), align 8
+; WINDOWS: @__profd_foo = private global {{.*}}, section ".lprfd$M", align 8
 
 ; ELF: @__llvm_prf_nm = private constant [{{.*}} x i8] c"{{.*}}", section "{{.*}}__llvm_prf_names", align 1
 ; WINDOWS: @__llvm_prf_nm = private constant [{{.*}} x i8] c"{{.*}}", section "{{.*}}lprfn$M", align 1
