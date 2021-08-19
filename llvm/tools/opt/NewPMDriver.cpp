@@ -284,6 +284,9 @@ bool llvm::runPassPipeline(StringRef Arg0, Module &M, TargetMachine *TM,
       P->CSAction = PGOOptions::CSIRUse;
     }
   }
+  if (TM)
+    TM->setPGOOption(P);
+
   LoopAnalysisManager LAM;
   FunctionAnalysisManager FAM;
   CGSCCAnalysisManager CGAM;

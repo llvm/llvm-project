@@ -664,8 +664,9 @@ addMemRefAccessConstraints(const AffineValueMap &srcAccessMap,
       assert(isValidSymbol(symbol));
       // Check if the symbol is a constant.
       if (auto cOp = symbol.getDefiningOp<ConstantIndexOp>())
-        dependenceDomain->setIdToConstant(valuePosMap.getSymPos(symbol),
-                                          cOp.getValue());
+        dependenceDomain->addBound(FlatAffineConstraints::EQ,
+                                   valuePosMap.getSymPos(symbol),
+                                   cOp.getValue());
     }
   };
 
@@ -885,10 +886,12 @@ static void computeDirectionVector(
   dependenceComponents->resize(numCommonLoops);
   for (unsigned j = 0; j < numCommonLoops; ++j) {
     (*dependenceComponents)[j].op = commonLoops[j].getOperation();
-    auto lbConst = dependenceDomain->getConstantLowerBound(j);
+    auto lbConst =
+        dependenceDomain->getConstantBound(FlatAffineConstraints::LB, j);
     (*dependenceComponents)[j].lb =
         lbConst.getValueOr(std::numeric_limits<int64_t>::min());
-    auto ubConst = dependenceDomain->getConstantUpperBound(j);
+    auto ubConst =
+        dependenceDomain->getConstantBound(FlatAffineConstraints::UB, j);
     (*dependenceComponents)[j].ub =
         ubConst.getValueOr(std::numeric_limits<int64_t>::max());
   }
