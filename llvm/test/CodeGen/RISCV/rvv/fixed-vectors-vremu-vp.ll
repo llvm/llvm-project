@@ -104,6 +104,18 @@ define <4 x i8> @vremu_vx_v4i8_unmasked(<4 x i8> %va, i8 %b, i32 zeroext %evl) {
   ret <4 x i8> %v
 }
 
+declare <6 x i8> @llvm.vp.urem.v6i8(<6 x i8>, <6 x i8>, <6 x i1>, i32)
+
+define <6 x i8> @vremu_vv_v6i8(<6 x i8> %va, <6 x i8> %b, <6 x i1> %m, i32 zeroext %evl) {
+; CHECK-LABEL: vremu_vv_v6i8:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    vsetvli zero, a0, e8, mf2, ta, mu
+; CHECK-NEXT:    vremu.vv v8, v8, v9, v0.t
+; CHECK-NEXT:    ret
+  %v = call <6 x i8> @llvm.vp.urem.v6i8(<6 x i8> %va, <6 x i8> %b, <6 x i1> %m, i32 %evl)
+  ret <6 x i8> %v
+}
+
 declare <8 x i8> @llvm.vp.urem.v8i8(<8 x i8>, <8 x i8>, <8 x i1>, i32)
 
 define <8 x i8> @vremu_vv_v8i8(<8 x i8> %va, <8 x i8> %b, <8 x i1> %m, i32 zeroext %evl) {

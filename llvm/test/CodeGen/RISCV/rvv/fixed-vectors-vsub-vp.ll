@@ -54,6 +54,56 @@ define <2 x i8> @vsub_vx_v2i8_unmasked(<2 x i8> %va, i8 %b, i32 zeroext %evl) {
   ret <2 x i8> %v
 }
 
+declare <3 x i8> @llvm.vp.sub.v3i8(<3 x i8>, <3 x i8>, <3 x i1>, i32)
+
+define <3 x i8> @vsub_vv_v3i8(<3 x i8> %va, <3 x i8> %b, <3 x i1> %m, i32 zeroext %evl) {
+; CHECK-LABEL: vsub_vv_v3i8:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    vsetvli zero, a0, e8, mf4, ta, mu
+; CHECK-NEXT:    vsub.vv v8, v8, v9, v0.t
+; CHECK-NEXT:    ret
+  %v = call <3 x i8> @llvm.vp.sub.v3i8(<3 x i8> %va, <3 x i8> %b, <3 x i1> %m, i32 %evl)
+  ret <3 x i8> %v
+}
+
+define <3 x i8> @vsub_vv_v3i8_unmasked(<3 x i8> %va, <3 x i8> %b, i32 zeroext %evl) {
+; CHECK-LABEL: vsub_vv_v3i8_unmasked:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    vsetvli zero, a0, e8, mf4, ta, mu
+; CHECK-NEXT:    vsub.vv v8, v8, v9
+; CHECK-NEXT:    ret
+  %head = insertelement <3 x i1> undef, i1 true, i32 0
+  %m = shufflevector <3 x i1> %head, <3 x i1> undef, <3 x i32> zeroinitializer
+  %v = call <3 x i8> @llvm.vp.sub.v3i8(<3 x i8> %va, <3 x i8> %b, <3 x i1> %m, i32 %evl)
+  ret <3 x i8> %v
+}
+
+define <3 x i8> @vsub_vx_v3i8(<3 x i8> %va, i8 %b, <3 x i1> %m, i32 zeroext %evl) {
+; CHECK-LABEL: vsub_vx_v3i8:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    vsetvli zero, a1, e8, mf4, ta, mu
+; CHECK-NEXT:    vsub.vx v8, v8, a0, v0.t
+; CHECK-NEXT:    ret
+  %elt.head = insertelement <3 x i8> undef, i8 %b, i32 0
+  %vb = shufflevector <3 x i8> %elt.head, <3 x i8> undef, <3 x i32> zeroinitializer
+  %v = call <3 x i8> @llvm.vp.sub.v3i8(<3 x i8> %va, <3 x i8> %vb, <3 x i1> %m, i32 %evl)
+  ret <3 x i8> %v
+}
+
+define <3 x i8> @vsub_vx_v3i8_unmasked(<3 x i8> %va, i8 %b, i32 zeroext %evl) {
+; CHECK-LABEL: vsub_vx_v3i8_unmasked:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    vsetvli zero, a1, e8, mf4, ta, mu
+; CHECK-NEXT:    vsub.vx v8, v8, a0
+; CHECK-NEXT:    ret
+  %elt.head = insertelement <3 x i8> undef, i8 %b, i32 0
+  %vb = shufflevector <3 x i8> %elt.head, <3 x i8> undef, <3 x i32> zeroinitializer
+  %head = insertelement <3 x i1> undef, i1 true, i32 0
+  %m = shufflevector <3 x i1> %head, <3 x i1> undef, <3 x i32> zeroinitializer
+  %v = call <3 x i8> @llvm.vp.sub.v3i8(<3 x i8> %va, <3 x i8> %vb, <3 x i1> %m, i32 %evl)
+  ret <3 x i8> %v
+}
+
 declare <4 x i8> @llvm.vp.sub.v4i8(<4 x i8>, <4 x i8>, <4 x i1>, i32)
 
 define <4 x i8> @vsub_vv_v4i8(<4 x i8> %va, <4 x i8> %b, <4 x i1> %m, i32 zeroext %evl) {
