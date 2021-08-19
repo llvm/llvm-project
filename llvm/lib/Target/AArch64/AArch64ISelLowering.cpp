@@ -12091,8 +12091,8 @@ EVT AArch64TargetLowering::getOptimalMemOpType(
   };
 
   if (CanUseNEON && Op.isMemset() && !IsSmallMemset &&
-      AlignmentIsAcceptable(MVT::v2i64, Align(16)))
-    return MVT::v2i64;
+      AlignmentIsAcceptable(MVT::v16i8, Align(16)))
+    return MVT::v16i8;
   if (CanUseFP && !IsSmallMemset && AlignmentIsAcceptable(MVT::f128, Align(16)))
     return MVT::f128;
   if (Op.size() >= 8 && AlignmentIsAcceptable(MVT::i64, Align(8)))
