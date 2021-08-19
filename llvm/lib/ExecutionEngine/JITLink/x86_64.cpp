@@ -76,9 +76,11 @@ Error optimize_x86_64_GOTAndStubs(LinkGraph &G) {
     for (auto &E : B->edges()) {
       if (E.getKind() == x86_64::PCRel32GOTLoadRelaxable ||
           E.getKind() == x86_64::PCRel32GOTLoadREXRelaxable) {
+#ifndef NDEBUG
         bool REXPrefix = E.getKind() == x86_64::PCRel32GOTLoadREXRelaxable;
         assert(E.getOffset() >= (REXPrefix ? 3 : 2) &&
                "GOT edge occurs too early in block");
+#endif
         auto *FixupData = reinterpret_cast<uint8_t *>(
                               const_cast<char *>(B->getContent().data())) +
                           E.getOffset();
