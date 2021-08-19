@@ -425,7 +425,7 @@ public:
 
   /// Return the stack alignment for the function.
   MaybeAlign getFnStackAlign() const {
-    return AttributeSets.getStackAlignment(AttributeList::FunctionIndex);
+    return AttributeSets.getFnStackAlignment();
   }
 
   /// Returns true if the function has ssp, sspstrong, or sspreq fn attrs.
@@ -476,24 +476,10 @@ public:
     return AttributeSets.getParamByRefType(ArgNo);
   }
 
-  /// Extract the number of dereferenceable bytes for a call or
-  /// parameter (0=unknown).
-  /// @param i AttributeList index, referring to a return value or argument.
-  uint64_t getDereferenceableBytes(unsigned i) const {
-    return AttributeSets.getDereferenceableBytes(i);
-  }
-
   /// Extract the number of dereferenceable bytes for a parameter.
   /// @param ArgNo Index of an argument, with 0 being the first function arg.
   uint64_t getParamDereferenceableBytes(unsigned ArgNo) const {
     return AttributeSets.getParamDereferenceableBytes(ArgNo);
-  }
-
-  /// Extract the number of dereferenceable_or_null bytes for a call or
-  /// parameter (0=unknown).
-  /// @param i AttributeList index, referring to a return value or argument.
-  uint64_t getDereferenceableOrNullBytes(unsigned i) const {
-    return AttributeSets.getDereferenceableOrNullBytes(i);
   }
 
   /// Extract the number of dereferenceable_or_null bytes for a

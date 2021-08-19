@@ -1601,9 +1601,16 @@ public:
   }
 
   /// adds the dereferenceable attribute to the list of attributes.
-  void addDereferenceableAttr(unsigned i, uint64_t Bytes) {
+  void addDereferenceableParamAttr(unsigned i, uint64_t Bytes) {
     AttributeList PAL = getAttributes();
-    PAL = PAL.addDereferenceableAttr(getContext(), i, Bytes);
+    PAL = PAL.addDereferenceableParamAttr(getContext(), i, Bytes);
+    setAttributes(PAL);
+  }
+
+  /// adds the dereferenceable attribute to the list of attributes.
+  void addDereferenceableRetAttr(uint64_t Bytes) {
+    AttributeList PAL = getAttributes();
+    PAL = PAL.addDereferenceableRetAttr(getContext(), Bytes);
     setAttributes(PAL);
   }
 
@@ -1795,14 +1802,26 @@ public:
 
   /// Extract the number of dereferenceable bytes for a call or
   /// parameter (0=unknown).
-  uint64_t getDereferenceableBytes(unsigned i) const {
-    return Attrs.getDereferenceableBytes(i);
+  uint64_t getRetDereferenceableBytes() const {
+    return Attrs.getRetDereferenceableBytes();
   }
 
-  /// Extract the number of dereferenceable_or_null bytes for a call or
+  /// Extract the number of dereferenceable bytes for a call or
   /// parameter (0=unknown).
-  uint64_t getDereferenceableOrNullBytes(unsigned i) const {
-    return Attrs.getDereferenceableOrNullBytes(i);
+  uint64_t getParamDereferenceableBytes(unsigned i) const {
+    return Attrs.getParamDereferenceableBytes(i);
+  }
+
+  /// Extract the number of dereferenceable_or_null bytes for a call
+  /// (0=unknown).
+  uint64_t getRetDereferenceableOrNullBytes() const {
+    return Attrs.getRetDereferenceableOrNullBytes();
+  }
+
+  /// Extract the number of dereferenceable_or_null bytes for a
+  /// parameter (0=unknown).
+  uint64_t getParamDereferenceableOrNullBytes(unsigned i) const {
+    return Attrs.getParamDereferenceableOrNullBytes(i);
   }
 
   /// Return true if the return value is known to be not null.

@@ -1335,12 +1335,19 @@ AttributeList AttributeList::removeAttributes(LLVMContext &C,
   return getImpl(C, AttrSets);
 }
 
-AttributeList AttributeList::addDereferenceableAttr(LLVMContext &C,
-                                                    unsigned Index,
-                                                    uint64_t Bytes) const {
+AttributeList AttributeList::addDereferenceableRetAttr(LLVMContext &C,
+                                                       uint64_t Bytes) const {
   AttrBuilder B;
   B.addDereferenceableAttr(Bytes);
-  return addAttributes(C, Index, B);
+  return addRetAttributes(C, B);
+}
+
+AttributeList AttributeList::addDereferenceableParamAttr(LLVMContext &C,
+                                                         unsigned Index,
+                                                         uint64_t Bytes) const {
+  AttrBuilder B;
+  B.addDereferenceableAttr(Bytes);
+  return addParamAttributes(C, Index, B);
 }
 
 AttributeList
@@ -1455,16 +1462,29 @@ Type *AttributeList::getParamElementType(unsigned Index) const {
   return getAttributes(Index + FirstArgIndex).getElementType();
 }
 
-MaybeAlign AttributeList::getStackAlignment(unsigned Index) const {
-  return getAttributes(Index).getStackAlignment();
+MaybeAlign AttributeList::getFnStackAlignment() const {
+  return getFnAttrs().getStackAlignment();
 }
 
-uint64_t AttributeList::getDereferenceableBytes(unsigned Index) const {
-  return getAttributes(Index).getDereferenceableBytes();
+MaybeAlign AttributeList::getRetStackAlignment() const {
+  return getRetAttrs().getStackAlignment();
 }
 
-uint64_t AttributeList::getDereferenceableOrNullBytes(unsigned Index) const {
-  return getAttributes(Index).getDereferenceableOrNullBytes();
+uint64_t AttributeList::getRetDereferenceableBytes() const {
+  return getRetAttrs().getDereferenceableBytes();
+}
+
+uint64_t AttributeList::getParamDereferenceableBytes(unsigned Index) const {
+  return getParamAttrs(Index).getDereferenceableBytes();
+}
+
+uint64_t AttributeList::getRetDereferenceableOrNullBytes() const {
+  return getRetAttrs().getDereferenceableOrNullBytes();
+}
+
+uint64_t
+AttributeList::getParamDereferenceableOrNullBytes(unsigned Index) const {
+  return getParamAttrs(Index).getDereferenceableOrNullBytes();
 }
 
 std::string AttributeList::getAsString(unsigned Index, bool InAttrGrp) const {

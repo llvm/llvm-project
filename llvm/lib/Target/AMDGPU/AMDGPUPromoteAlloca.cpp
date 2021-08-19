@@ -260,7 +260,7 @@ AMDGPUPromoteAllocaImpl::getLocalSizeYZ(IRBuilder<> &Builder) {
   DispatchPtr->addRetAttr(Attribute::NonNull);
 
   // Size of the dispatch packet struct.
-  DispatchPtr->addDereferenceableAttr(AttributeList::ReturnIndex, 64);
+  DispatchPtr->addDereferenceableRetAttr(64);
 
   Type *I32Ty = Type::getInt32Ty(Mod->getContext());
   Value *CastDispatchPtr = Builder.CreateBitCast(
@@ -1065,9 +1065,9 @@ bool AMDGPUPromoteAllocaImpl::handleAlloca(AllocaInst &I, bool SufficientLDS) {
                                     MI->getRawSource(), MI->getSourceAlign(),
                                     MI->getLength(), MI->isVolatile());
 
-    for (unsigned I = 1; I != 3; ++I) {
-      if (uint64_t Bytes = Intr->getDereferenceableBytes(I)) {
-        B->addDereferenceableAttr(I, Bytes);
+    for (unsigned I = 0; I != 2; ++I) {
+      if (uint64_t Bytes = Intr->getParamDereferenceableBytes(I)) {
+        B->addDereferenceableParamAttr(I, Bytes);
       }
     }
 

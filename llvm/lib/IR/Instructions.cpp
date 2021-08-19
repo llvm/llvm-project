@@ -318,9 +318,8 @@ bool CallBase::isReturnNonNull() const {
   if (hasRetAttr(Attribute::NonNull))
     return true;
 
-  if (getDereferenceableBytes(AttributeList::ReturnIndex) > 0 &&
-           !NullPointerIsDefined(getCaller(),
-                                 getType()->getPointerAddressSpace()))
+  if (getRetDereferenceableBytes() > 0 &&
+      !NullPointerIsDefined(getCaller(), getType()->getPointerAddressSpace()))
     return true;
 
   return false;
