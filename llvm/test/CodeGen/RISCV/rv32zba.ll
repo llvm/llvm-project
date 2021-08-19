@@ -739,3 +739,53 @@ define i32 @mul4104(i32 %a) {
   %c = mul i32 %a, 4104
   ret i32 %c
 }
+
+define i32 @add4104(i32 %a) {
+; RV32I-LABEL: add4104:
+; RV32I:       # %bb.0:
+; RV32I-NEXT:    lui a1, 1
+; RV32I-NEXT:    addi a1, a1, 8
+; RV32I-NEXT:    add a0, a0, a1
+; RV32I-NEXT:    ret
+;
+; RV32B-LABEL: add4104:
+; RV32B:       # %bb.0:
+; RV32B-NEXT:    lui a1, 1
+; RV32B-NEXT:    addi a1, a1, 8
+; RV32B-NEXT:    add a0, a0, a1
+; RV32B-NEXT:    ret
+;
+; RV32ZBA-LABEL: add4104:
+; RV32ZBA:       # %bb.0:
+; RV32ZBA-NEXT:    lui a1, 1
+; RV32ZBA-NEXT:    addi a1, a1, 8
+; RV32ZBA-NEXT:    add a0, a0, a1
+; RV32ZBA-NEXT:    ret
+  %c = add i32 %a, 4104
+  ret i32 %c
+}
+
+define i32 @add8208(i32 %a) {
+; RV32I-LABEL: add8208:
+; RV32I:       # %bb.0:
+; RV32I-NEXT:    lui a1, 2
+; RV32I-NEXT:    addi a1, a1, 16
+; RV32I-NEXT:    add a0, a0, a1
+; RV32I-NEXT:    ret
+;
+; RV32B-LABEL: add8208:
+; RV32B:       # %bb.0:
+; RV32B-NEXT:    lui a1, 2
+; RV32B-NEXT:    addi a1, a1, 16
+; RV32B-NEXT:    add a0, a0, a1
+; RV32B-NEXT:    ret
+;
+; RV32ZBA-LABEL: add8208:
+; RV32ZBA:       # %bb.0:
+; RV32ZBA-NEXT:    lui a1, 2
+; RV32ZBA-NEXT:    addi a1, a1, 16
+; RV32ZBA-NEXT:    add a0, a0, a1
+; RV32ZBA-NEXT:    ret
+  %c = add i32 %a, 8208
+  ret i32 %c
+}
