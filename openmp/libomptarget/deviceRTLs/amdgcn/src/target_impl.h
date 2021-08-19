@@ -25,6 +25,8 @@
 #define PRId64 "ld"
 #define PRIu64 "lu"
 
+typedef uint64_t __kmpc_impl_lanemask_t;
+
 #define INLINE inline
 #define NOINLINE __attribute__((noinline))
 #define ALIGN(N) __attribute__((aligned(N)))
