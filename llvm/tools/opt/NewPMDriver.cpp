@@ -339,18 +339,19 @@ bool llvm::runPassPipeline(StringRef Arg0, Module &M, TargetMachine *TM,
   PB.registerPipelineParsingCallback(
       [](StringRef Name, ModulePassManager &MPM,
          ArrayRef<PassBuilder::PipelineElement>) {
+        AddressSanitizerOptions Opts;
         if (Name == "asan-pipeline") {
           MPM.addPass(
               RequireAnalysisPass<ASanGlobalsMetadataAnalysis, Module>());
           MPM.addPass(
-              createModuleToFunctionPassAdaptor(AddressSanitizerPass()));
+              createModuleToFunctionPassAdaptor(AddressSanitizerPass(Opts)));
           MPM.addPass(ModuleAddressSanitizerPass());
           return true;
         } else if (Name == "asan-function-pipeline") {
           MPM.addPass(
               RequireAnalysisPass<ASanGlobalsMetadataAnalysis, Module>());
           MPM.addPass(
-              createModuleToFunctionPassAdaptor(AddressSanitizerPass()));
+              createModuleToFunctionPassAdaptor(AddressSanitizerPass(Opts)));
           return true;
         }
         return false;
