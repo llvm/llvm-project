@@ -457,8 +457,7 @@ def {0} : LinalgStructuredBase_Op<"{1}", !listconcat([
     let skipDefaultBuilders = 1;
     let builders = [
       OpBuilder<
-      (ins "ValueRange":$inputs, "ValueRange":$outputs,
-            CArg<"ArrayRef<NamedAttribute>", "{{}">:$attributes),
+      (ins "ValueRange":$inputs, "ValueRange":$outputs),
       [{{
         $_state.addOperands(inputs);
         $_state.addOperands(outputs);
@@ -472,7 +471,6 @@ def {0} : LinalgStructuredBase_Op<"{1}", !listconcat([
           $_builder.getI32VectorAttr({{
             static_cast<int32_t>(inputs.size()),
             static_cast<int32_t>(outputs.size())}));
-        $_state.addAttributes(attributes);
         createAndFillStructuredOpRegion<{0}>(
           $_builder,
           $_state,
@@ -541,8 +539,7 @@ def {0} : LinalgStructuredBase_Op<"{1}", !listconcat([
 static const char structuredOpBuilderFormat[] = R"FMT(
   , OpBuilder<
   (ins "TypeRange":$resultTensorTypes, "ValueRange":$inputs,
-       "ValueRange":$outputs, {1},
-       CArg<"ArrayRef<NamedAttribute>", "{{}">:$attributes),
+       "ValueRange":$outputs, {1}),
   [{{
     $_state.addOperands(inputs);
     $_state.addOperands(outputs);
@@ -558,7 +555,6 @@ static const char structuredOpBuilderFormat[] = R"FMT(
       TypeRange(inputs),
       TypeRange(outputs));
     {2}
-    $_state.addAttributes(attributes);
   }]>
 )FMT";
 

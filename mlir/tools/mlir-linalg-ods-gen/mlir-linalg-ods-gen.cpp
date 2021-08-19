@@ -1910,8 +1910,7 @@ void TCParser::printODS(llvm::raw_ostream &os, StringRef cppOpName,
       let skipDefaultBuilders = 1;
       let builders = [
         OpBuilder<
-        (ins "ValueRange":$inputs, "ValueRange":$outputs,
-             CArg<"ArrayRef<NamedAttribute>", "{{}">:$attributes),
+        (ins "ValueRange":$inputs, "ValueRange":$outputs),
         [{{
           $_state.addOperands(inputs);
           $_state.addOperands(outputs);
@@ -1920,7 +1919,6 @@ void TCParser::printODS(llvm::raw_ostream &os, StringRef cppOpName,
             $_builder.getI32VectorAttr({{
               static_cast<int32_t>(inputs.size()),
               static_cast<int32_t>(outputs.size())}));
-          $_state.addAttributes(attributes);
           createAndFillStructuredOpRegion<{0}>(
             $_builder,
             $_state,
@@ -1929,8 +1927,7 @@ void TCParser::printODS(llvm::raw_ostream &os, StringRef cppOpName,
         }]>,
         OpBuilder<
         (ins "TypeRange":$resultTensorTypes, "ValueRange":$inputs,
-             "ValueRange":$outputs,
-             CArg<"ArrayRef<NamedAttribute>", "{{}">:$attributes),
+             "ValueRange":$outputs),
         [{{
           $_state.addOperands(inputs);
           $_state.addOperands(outputs);
@@ -1940,7 +1937,6 @@ void TCParser::printODS(llvm::raw_ostream &os, StringRef cppOpName,
             $_builder.getI32VectorAttr({{
               static_cast<int32_t>(inputs.size()),
               static_cast<int32_t>(outputs.size())}));
-          $_state.addAttributes(attributes);
           createAndFillStructuredOpRegion<{0}>(
             $_builder,
             $_state,
@@ -2024,8 +2020,7 @@ void TCParser::printODS(llvm::raw_ostream &os, StringRef cppOpName,
     const char *builderFmt = R"FMT(
       , OpBuilder<
       (ins "TypeRange":$resultTensorTypes, "ValueRange":$inputs,
-           "ValueRange":$outputs, {1},
-           CArg<"ArrayRef<NamedAttribute>", "{{}">:$attributes),
+           "ValueRange":$outputs, {1}),
       [{{
         $_state.addOperands(inputs);
         $_state.addOperands(outputs);
@@ -2035,7 +2030,6 @@ void TCParser::printODS(llvm::raw_ostream &os, StringRef cppOpName,
           $_builder.getI32VectorAttr({{
             static_cast<int32_t>(inputs.size()),
             static_cast<int32_t>(outputs.size())}));
-        $_state.addAttributes(attributes);
         createAndFillStructuredOpRegion<{0}>(
           $_builder,
           $_state,

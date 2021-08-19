@@ -169,8 +169,7 @@ It has one output.
 // ODS-LABEL: def Test7Op
 // ODS:         OpBuilder<
 // ODS:           (ins "TypeRange":$resultTensorTypes, "ValueRange":$inputs,
-// ODS:            "ValueRange":$outputs, "Attribute":$attr_a, "Attribute":$attr_b,
-// ODS:           CArg<"ArrayRef<NamedAttribute>", "{}">:$attributes)
+// ODS:            "ValueRange":$outputs, "Attribute":$attr_a, "Attribute":$attr_b)
 // ODS:           $_state.addAttribute("attr_a", attr_a);
 // ODS:           $_state.addAttribute("attr_b", attr_b);
 //
