@@ -78,6 +78,14 @@ public:
   /// Finishes off the hash and puts the result in result.
   void final(MD5Result &Result);
 
+  /// Finishes off the hash, and returns a reference to the 16-byte hash data.
+  StringRef final();
+
+  /// Finishes off the hash, and returns a reference to the 16-byte hash data.
+  /// This is suitable for getting the MD5 at any time without invalidating the
+  /// internal state, so that more calls can be made into `update`.
+  StringRef result();
+
   /// Translates the bytes in \p Res to a hex string that is
   /// deposited into \p Str. The result will be of length 32.
   static void stringifyResult(MD5Result &Result, SmallString<32> &Str);
@@ -100,6 +108,8 @@ private:
     uint8_t buffer[64];
     MD5_u32plus block[16];
   } InternalState;
+
+  MD5Result Result;
 
   const uint8_t *body(ArrayRef<uint8_t> Data);
 };
