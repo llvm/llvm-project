@@ -425,7 +425,7 @@ public:
 
   /// Return the stack alignment for the function.
   MaybeAlign getFnStackAlign() const {
-    return AttributeSets.getStackAlignment(AttributeList::FunctionIndex);
+    return AttributeSets.getFnStackAlignment();
   }
 
   /// Returns true if the function has ssp, sspstrong, or sspreq fn attrs.

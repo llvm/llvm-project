@@ -1462,8 +1462,12 @@ Type *AttributeList::getParamElementType(unsigned Index) const {
   return getAttributes(Index + FirstArgIndex).getElementType();
 }
 
-MaybeAlign AttributeList::getStackAlignment(unsigned Index) const {
-  return getAttributes(Index).getStackAlignment();
+MaybeAlign AttributeList::getFnStackAlignment() const {
+  return getFnAttrs().getStackAlignment();
+}
+
+MaybeAlign AttributeList::getRetStackAlignment() const {
+  return getRetAttrs().getStackAlignment();
 }
 
 uint64_t AttributeList::getRetDereferenceableBytes() const {
