@@ -207,6 +207,13 @@ X86TargetLowering::X86TargetLowering(const X86TargetMachine &TM,
       setOperationAction(ISD::ABS          , MVT::i64  , Custom);
   }
 
+  // Signed saturation subtraction.
+  setOperationAction(ISD::SSUBSAT          , MVT::i8   , Custom);
+  setOperationAction(ISD::SSUBSAT          , MVT::i16  , Custom);
+  setOperationAction(ISD::SSUBSAT          , MVT::i32  , Custom);
+  if (Subtarget.is64Bit())
+    setOperationAction(ISD::SSUBSAT        , MVT::i64  , Custom);
+
   // Funnel shifts.
   for (auto ShiftOp : {ISD::FSHL, ISD::FSHR}) {
     // For slow shld targets we only lower for code size.
@@ -1142,6 +1149,8 @@ X86TargetLowering::X86TargetLowering(const X86TargetMachine &TM,
     setOperationAction(ISD::UMIN,               MVT::v4i32, Legal);
 
     setOperationAction(ISD::UADDSAT,            MVT::v4i32, Custom);
+    setOperationAction(ISD::SADDSAT,            MVT::v2i64, Custom);
+    setOperationAction(ISD::SSUBSAT,            MVT::v2i64, Custom);
 
     // FIXME: Do we need to handle scalar-to-vector here?
     setOperationAction(ISD::MUL,                MVT::v4i32, Legal);
@@ -27956,6 +27965,25 @@ static SDValue LowerADDSAT_SUBSAT(SDValue Op, SelectionDAG &DAG,
         DAG.ComputeNumSignBits(Cmp) == VT.getScalarSizeInBits())
       return DAG.getNode(ISD::AND, DL, VT, Cmp, Sub);
     return DAG.getSelect(DL, VT, Cmp, Sub, DAG.getConstant(0, DL, VT));
+  }
+
+  if ((Opcode == ISD::SADDSAT || Opcode == ISD::SSUBSAT) &&
+      (!VT.isVector() || VT == MVT::v2i64)) {
+    unsigned BitWidth = VT.getScalarSizeInBits();
+    APInt MinVal = APInt::getSignedMinValue(BitWidth);
+    APInt MaxVal = APInt::getSignedMaxValue(BitWidth);
+    SDValue Zero = DAG.getConstant(0, DL, VT);
+    SDValue Result =
+        DAG.getNode(Opcode == ISD::SADDSAT ? ISD::SADDO : ISD::SSUBO, DL,
+                    DAG.getVTList(VT, SetCCResultType), X, Y);
+    SDValue SumDiff = Result.getValue(0);
+    SDValue Overflow = Result.getValue(1);
+    SDValue SatMin = DAG.getConstant(MinVal, DL, VT);
+    SDValue SatMax = DAG.getConstant(MaxVal, DL, VT);
+    SDValue SumNeg =
+        DAG.getSetCC(DL, SetCCResultType, SumDiff, Zero, ISD::SETLT);
+    Result = DAG.getSelect(DL, VT, SumNeg, SatMax, SatMin);
+    return DAG.getSelect(DL, VT, Overflow, Result, SumDiff);
   }
 
   // Use default expansion.
