@@ -11,11 +11,9 @@ define i32 @func32(i32 %x, i32 %y, i32 %z) nounwind {
 ; CHECK-LABEL: func32:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    mul w8, w1, w2
-; CHECK-NEXT:    subs w10, w0, w8
-; CHECK-NEXT:    mov w9, #2147483647
-; CHECK-NEXT:    cmp w10, #0
-; CHECK-NEXT:    cinv w9, w9, ge
 ; CHECK-NEXT:    subs w8, w0, w8
+; CHECK-NEXT:    asr w9, w8, #31
+; CHECK-NEXT:    eor w9, w9, #0x80000000
 ; CHECK-NEXT:    csel w0, w9, w8, vs
 ; CHECK-NEXT:    ret
   %a = mul i32 %y, %z
@@ -27,11 +25,9 @@ define i64 @func64(i64 %x, i64 %y, i64 %z) nounwind {
 ; CHECK-LABEL: func64:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    subs x8, x0, x2
-; CHECK-NEXT:    mov x9, #9223372036854775807
-; CHECK-NEXT:    cmp x8, #0
-; CHECK-NEXT:    cinv x8, x9, ge
-; CHECK-NEXT:    subs x9, x0, x2
-; CHECK-NEXT:    csel x0, x8, x9, vs
+; CHECK-NEXT:    asr x9, x8, #63
+; CHECK-NEXT:    eor x9, x9, #0x8000000000000000
+; CHECK-NEXT:    csel x0, x9, x8, vs
 ; CHECK-NEXT:    ret
   %a = mul i64 %y, %z
   %tmp = call i64 @llvm.ssub.sat.i64(i64 %x, i64 %z)
