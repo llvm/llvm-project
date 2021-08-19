@@ -1857,6 +1857,31 @@ public:
     return eKeyHandled;
   }
 
+  // If the last element of the field is selected and it didn't handle the key.
+  // Select the next field or new button if the selected field is the last one.
+  HandleCharResult SelectNextInList(int key) {
+    assert(m_selection_type == SelectionType::Field);
+
+    FieldDelegate &field = m_fields[m_selection_index];
+    if (field.FieldDelegateHandleChar(key) == eKeyHandled)
+      return eKeyHandled;
+
+    if (!field.FieldDelegateOnLastOrOnlyElement())
+      return eKeyNotHandled;
+
+    field.FieldDelegateExitCallback();
+
+    if (m_selection_index == GetNumberOfFields() - 1) {
+      m_selection_type = SelectionType::NewButton;
+      return eKeyHandled;
+    }
+
+    m_selection_index++;
+    FieldDelegate &next_field = m_fields[m_selection_index];
+    next_field.FieldDelegateSelectFirstElement();
+    return eKeyHandled;
+  }
+
   HandleCharResult FieldDelegateHandleChar(int key) override {
     switch (key) {
     case '\r':
@@ -1869,16 +1894,14 @@ public:
       case SelectionType::RemoveButton:
         RemoveField();
         return eKeyHandled;
-      default:
-        break;
+      case SelectionType::Field:
+        return SelectNextInList(key);
       }
       break;
     case '\t':
-      SelectNext(key);
-      return eKeyHandled;
+      return SelectNext(key);
     case KEY_SHIFT_TAB:
-      SelectPrevious(key);
-      return eKeyHandled;
+      return SelectPrevious(key);
     default:
       break;
     }
@@ -2048,14 +2071,34 @@ public:
     return eKeyHandled;
   }
 
+  // If the value field is selected, pass the key to it. If the key field is
+  // selected, its last element is selected, and it didn't handle the key, then
+  // select its corresponding value field.
+  HandleCharResult SelectNextField(int key) {
+    if (m_selection_type == SelectionType::Value) {
+      return m_value_field.FieldDelegateHandleChar(key);
+    }
+
+    if (m_key_field.FieldDelegateHandleChar(key) == eKeyHandled)
+      return eKeyHandled;
+
+    if (!m_key_field.FieldDelegateOnLastOrOnlyElement())
+      return eKeyNotHandled;
+
+    m_key_field.FieldDelegateExitCallback();
+    m_selection_type = SelectionType::Value;
+    m_value_field.FieldDelegateSelectFirstElement();
+    return eKeyHandled;
+  }
+
   HandleCharResult FieldDelegateHandleChar(int key) override {
     switch (key) {
+    case KEY_RETURN:
+      return SelectNextField(key);
     case '\t':
-      SelectNext(key);
-      return eKeyHandled;
+      return SelectNext(key);
     case KEY_SHIFT_TAB:
-      SelectPrevious(key);
-      return eKeyHandled;
+      return SelectPrevious(key);
     default:
       break;
     }
