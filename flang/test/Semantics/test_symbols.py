@@ -4,7 +4,7 @@
 we get the right symbols in the output, i.e. the output should be
 the same as the input, except for the copyright comment.
 Expects a source file passed as the first argument;
-Expects the Flang frontdriver with options as second argument."""
+Expects the Flang frontend driver with options as second argument."""
 
 import sys
 import re
@@ -44,9 +44,8 @@ diff3 = diff3.replace(" ", "")
 diff_check = ""
 
 # Compares the input with the output
-for line in unified_diff(diff1, diff3, n=999999,
-                         fromfile="Expected output", tofile="Actual output"):
-    diff_check += line
+diff_check = "\n".join(unified_diff(diff1.split("\n"), diff3.split("\n"), n=999999,
+                       fromfile="Expected_output", tofile="Actual_output"))
 
 if diff_check != "":
     print(diff_check.replace(" ", ""))
