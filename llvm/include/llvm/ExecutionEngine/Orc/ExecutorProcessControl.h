@@ -51,53 +51,58 @@ public:
 
     virtual ~MemoryAccess();
 
-    virtual void writeUInt8s(ArrayRef<tpctypes::UInt8Write> Ws,
-                             WriteResultFn OnWriteComplete) = 0;
+    virtual void writeUInt8sAsync(ArrayRef<tpctypes::UInt8Write> Ws,
+                                  WriteResultFn OnWriteComplete) = 0;
 
-    virtual void writeUInt16s(ArrayRef<tpctypes::UInt16Write> Ws,
-                              WriteResultFn OnWriteComplete) = 0;
+    virtual void writeUInt16sAsync(ArrayRef<tpctypes::UInt16Write> Ws,
+                                   WriteResultFn OnWriteComplete) = 0;
 
-    virtual void writeUInt32s(ArrayRef<tpctypes::UInt32Write> Ws,
-                              WriteResultFn OnWriteComplete) = 0;
+    virtual void writeUInt32sAsync(ArrayRef<tpctypes::UInt32Write> Ws,
+                                   WriteResultFn OnWriteComplete) = 0;
 
-    virtual void writeUInt64s(ArrayRef<tpctypes::UInt64Write> Ws,
-                              WriteResultFn OnWriteComplete) = 0;
+    virtual void writeUInt64sAsync(ArrayRef<tpctypes::UInt64Write> Ws,
+                                   WriteResultFn OnWriteComplete) = 0;
 
-    virtual void writeBuffers(ArrayRef<tpctypes::BufferWrite> Ws,
-                              WriteResultFn OnWriteComplete) = 0;
+    virtual void writeBuffersAsync(ArrayRef<tpctypes::BufferWrite> Ws,
+                                   WriteResultFn OnWriteComplete) = 0;
 
     Error writeUInt8s(ArrayRef<tpctypes::UInt8Write> Ws) {
       std::promise<MSVCPError> ResultP;
       auto ResultF = ResultP.get_future();
-      writeUInt8s(Ws, [&](Error Err) { ResultP.set_value(std::move(Err)); });
+      writeUInt8sAsync(Ws,
+                       [&](Error Err) { ResultP.set_value(std::move(Err)); });
       return ResultF.get();
     }
 
     Error writeUInt16s(ArrayRef<tpctypes::UInt16Write> Ws) {
       std::promise<MSVCPError> ResultP;
       auto ResultF = ResultP.get_future();
-      writeUInt16s(Ws, [&](Error Err) { ResultP.set_value(std::move(Err)); });
+      writeUInt16sAsync(Ws,
+                        [&](Error Err) { ResultP.set_value(std::move(Err)); });
       return ResultF.get();
     }
 
     Error writeUInt32s(ArrayRef<tpctypes::UInt32Write> Ws) {
       std::promise<MSVCPError> ResultP;
       auto ResultF = ResultP.get_future();
-      writeUInt32s(Ws, [&](Error Err) { ResultP.set_value(std::move(Err)); });
+      writeUInt32sAsync(Ws,
+                        [&](Error Err) { ResultP.set_value(std::move(Err)); });
       return ResultF.get();
     }
 
     Error writeUInt64s(ArrayRef<tpctypes::UInt64Write> Ws) {
       std::promise<MSVCPError> ResultP;
       auto ResultF = ResultP.get_future();
-      writeUInt64s(Ws, [&](Error Err) { ResultP.set_value(std::move(Err)); });
+      writeUInt64sAsync(Ws,
+                        [&](Error Err) { ResultP.set_value(std::move(Err)); });
       return ResultF.get();
     }
 
     Error writeBuffers(ArrayRef<tpctypes::BufferWrite> Ws) {
       std::promise<MSVCPError> ResultP;
       auto ResultF = ResultP.get_future();
-      writeBuffers(Ws, [&](Error Err) { ResultP.set_value(std::move(Err)); });
+      writeBuffersAsync(Ws,
+                        [&](Error Err) { ResultP.set_value(std::move(Err)); });
       return ResultF.get();
     }
   };
@@ -273,20 +278,20 @@ public:
   Error disconnect() override;
 
 private:
-  void writeUInt8s(ArrayRef<tpctypes::UInt8Write> Ws,
-                   WriteResultFn OnWriteComplete) override;
+  void writeUInt8sAsync(ArrayRef<tpctypes::UInt8Write> Ws,
+                        WriteResultFn OnWriteComplete) override;
 
-  void writeUInt16s(ArrayRef<tpctypes::UInt16Write> Ws,
-                    WriteResultFn OnWriteComplete) override;
+  void writeUInt16sAsync(ArrayRef<tpctypes::UInt16Write> Ws,
+                         WriteResultFn OnWriteComplete) override;
 
-  void writeUInt32s(ArrayRef<tpctypes::UInt32Write> Ws,
-                    WriteResultFn OnWriteComplete) override;
+  void writeUInt32sAsync(ArrayRef<tpctypes::UInt32Write> Ws,
+                         WriteResultFn OnWriteComplete) override;
 
-  void writeUInt64s(ArrayRef<tpctypes::UInt64Write> Ws,
-                    WriteResultFn OnWriteComplete) override;
+  void writeUInt64sAsync(ArrayRef<tpctypes::UInt64Write> Ws,
+                         WriteResultFn OnWriteComplete) override;
 
-  void writeBuffers(ArrayRef<tpctypes::BufferWrite> Ws,
-                    WriteResultFn OnWriteComplete) override;
+  void writeBuffersAsync(ArrayRef<tpctypes::BufferWrite> Ws,
+                         WriteResultFn OnWriteComplete) override;
 
   static shared::detail::CWrapperFunctionResult
   jitDispatchViaWrapperFunctionManager(void *Ctx, const void *FnTag,

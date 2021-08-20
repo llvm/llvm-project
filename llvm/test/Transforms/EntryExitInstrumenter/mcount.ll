@@ -1,7 +1,7 @@
-; RUN: opt -passes="function(ee-instrument),cgscc(inline),function(post-inline-ee-instrument)" -S < %s | FileCheck %s
+; RUN: opt -passes="function(ee-instrument),cgscc(inline),function(ee-instrument<post-inline>)" -S < %s | FileCheck %s
 
 ; Running the passes twice should not result in more instrumentation.
-; RUN: opt -passes="function(ee-instrument),function(ee-instrument),cgscc(inline),function(post-inline-ee-instrument),function(post-inline-ee-instrument)" -S < %s | FileCheck %s
+; RUN: opt -passes="function(ee-instrument),function(ee-instrument),cgscc(inline),function(ee-instrument<post-inline>),function(ee-instrument<post-inline>)" -S < %s | FileCheck %s
 
 target datalayout = "E-m:e-i64:64-n32:64"
 target triple = "powerpc64le-unknown-linux"

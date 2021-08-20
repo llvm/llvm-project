@@ -610,7 +610,7 @@ bool AtomicExpand::tryExpandAtomicRMW(AtomicRMWInst *AI) {
                           : SSNs[AI->getSyncScopeID()];
       OptimizationRemarkEmitter ORE(AI->getFunction());
       ORE.emit([&]() {
-        return OptimizationRemark(DEBUG_TYPE, "Passed", AI->getFunction())
+        return OptimizationRemark(DEBUG_TYPE, "Passed", AI)
                << "A compare and swap loop was generated for an atomic "
                << AI->getOperationName(AI->getOperation()) << " operation at "
                << MemScope << " memory scope";

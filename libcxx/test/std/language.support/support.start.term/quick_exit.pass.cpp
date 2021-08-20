@@ -11,7 +11,7 @@
 // ::quick_exit and ::at_quick_exit are not implemented on macOS.
 // TODO: We should never be using `darwin` as the triple, but LLVM's config.guess script
 //       guesses the host triple to be darwin instead of macosx when on macOS.
-// XFAIL: target={{.+}}-apple-macosx{{.+}}
+// XFAIL: target={{.+}}-apple-macos{{.*}}
 // XFAIL: target={{.+}}-apple-darwin{{.+}}
 
 // test quick_exit and at_quick_exit

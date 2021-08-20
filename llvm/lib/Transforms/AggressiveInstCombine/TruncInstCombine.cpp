@@ -286,11 +286,10 @@ Type *TruncInstCombine::getBestTruncatedType() {
     if (I->getOpcode() == Instruction::Shl ||
         I->getOpcode() == Instruction::LShr) {
       KnownBits KnownRHS = computeKnownBits(I->getOperand(1), DL);
-      const unsigned SrcBitWidth = KnownRHS.getBitWidth();
       unsigned MinBitWidth = KnownRHS.getMaxValue()
-                                 .uadd_sat(APInt(SrcBitWidth, 1))
-                                 .getLimitedValue(SrcBitWidth);
-      if (MinBitWidth >= OrigBitWidth)
+                                 .uadd_sat(APInt(OrigBitWidth, 1))
+                                 .getLimitedValue(OrigBitWidth);
+      if (MinBitWidth == OrigBitWidth)
         return nullptr;
       if (I->getOpcode() == Instruction::LShr) {
         KnownBits KnownLHS = computeKnownBits(I->getOperand(0), DL);

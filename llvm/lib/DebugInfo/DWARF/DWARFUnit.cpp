@@ -349,29 +349,6 @@ bool DWARFUnitHeader::applyIndexEntry(const DWARFUnitIndex::Entry *Entry) {
   return true;
 }
 
-// Parse the rangelist table header, including the optional array of offsets
-// following it (DWARF v5 and later).
-template<typename ListTableType>
-static Expected<ListTableType>
-parseListTableHeader(DWARFDataExtractor &DA, uint64_t Offset,
-                        DwarfFormat Format) {
-  // We are expected to be called with Offset 0 or pointing just past the table
-  // header. Correct Offset in the latter case so that it points to the start
-  // of the header.
-  if (Offset > 0) {
-    uint64_t HeaderSize = DWARFListTableHeader::getHeaderSize(Format);
-    if (Offset < HeaderSize)
-      return createStringError(errc::invalid_argument, "did not detect a valid"
-                               " list table with base = 0x%" PRIx64 "\n",
-                               Offset);
-    Offset -= HeaderSize;
-  }
-  ListTableType Table;
-  if (Error E = Table.extractHeaderAndOffsets(DA, &Offset))
-    return std::move(E);
-  return Table;
-}
-
 Error DWARFUnit::extractRangeList(uint64_t RangeListOffset,
                                   DWARFDebugRangeList &RangeList) const {
   // Require that compile unit is extracted.

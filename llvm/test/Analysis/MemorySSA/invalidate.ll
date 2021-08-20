@@ -1,7 +1,7 @@
-; RUN: opt -aa-pipeline=basic-aa -passes='require<memoryssa>,invalidate<aa>,early-cse-memssa' \
+; RUN: opt -aa-pipeline=basic-aa -passes='require<memoryssa>,invalidate<aa>,early-cse<memssa>' \
 ; RUN:     -debug-pass-manager -disable-output %s 2>&1 \
 ; RUN:     | FileCheck %s --check-prefix=CHECK-AA-INVALIDATE
-; RUN: opt -aa-pipeline=basic-aa -passes='require<memoryssa>,invalidate<domtree>,early-cse-memssa' \
+; RUN: opt -aa-pipeline=basic-aa -passes='require<memoryssa>,invalidate<domtree>,early-cse<memssa>' \
 ; RUN:     -debug-pass-manager -disable-output %s 2>&1 \
 ; RUN:     | FileCheck %s --check-prefix=CHECK-DT-INVALIDATE
 

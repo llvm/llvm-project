@@ -21,6 +21,7 @@ set(TARGET_LIBC_ENTRYPOINTS
     libc.src.errno.__errno_location
 
     # string.h entrypoints
+    libc.src.string.bcmp
     libc.src.string.bzero
     libc.src.string.memchr
     libc.src.string.memcmp

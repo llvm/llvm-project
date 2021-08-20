@@ -15,6 +15,7 @@ add_llvm_component_library(LLVMOrcJIT
   JITTargetMachineBuilder.cpp
   LazyReexports.cpp
   Layer.cpp
+  LookupAndRecordAddrs.cpp
   LLJIT.cpp
   MachOPlatform.cpp
   Mangling.cpp

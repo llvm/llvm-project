@@ -111,7 +111,7 @@ D: Remote testing, Newlib port, baremetal/single-threaded support.
 
 N: Kent Ross
 E: k@mad.cash
-D: C++20 language feature support
+D: Patches for operator<=> support
 
 N: Jonathan Sauer
 D: Minor patches, mostly related to constexpr

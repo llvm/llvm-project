@@ -44,7 +44,8 @@ private:
   void printCsectAuxEnt(XCOFFCsectAuxRef AuxEntRef);
   void printSectAuxEntForStat(const XCOFFSectAuxEntForStat *AuxEntPtr);
   void printSymbol(const SymbolRef &);
-  void printRelocations(ArrayRef<XCOFFSectionHeader32> Sections);
+  template <typename Shdr, typename RelTy>
+  void printRelocations(ArrayRef<Shdr> Sections);
   const XCOFFObjectFile &Obj;
 };
 } // anonymous namespace
@@ -105,9 +106,9 @@ void XCOFFDumper::printSectionHeaders() {
 
 void XCOFFDumper::printRelocations() {
   if (Obj.is64Bit())
-    llvm_unreachable("64-bit relocation output not implemented!");
+    printRelocations<XCOFFSectionHeader64, XCOFFRelocation64>(Obj.sections64());
   else
-    printRelocations(Obj.sections32());
+    printRelocations<XCOFFSectionHeader32, XCOFFRelocation32>(Obj.sections32());
 }
 
 static const EnumEntry<XCOFF::RelocationType> RelocationTypeNameclass[] = {
@@ -122,31 +123,32 @@ static const EnumEntry<XCOFF::RelocationType> RelocationTypeNameclass[] = {
 #undef ECase
 };
 
-void XCOFFDumper::printRelocations(ArrayRef<XCOFFSectionHeader32> Sections) {
+template <typename Shdr, typename RelTy>
+void XCOFFDumper::printRelocations(ArrayRef<Shdr> Sections) {
   if (!opts::ExpandRelocs)
     report_fatal_error("Unexpanded relocation output not implemented.");
 
   ListScope LS(W, "Relocations");
   uint16_t Index = 0;
-  for (const auto &Sec : Sections) {
+  for (const Shdr &Sec : Sections) {
     ++Index;
     // Only the .text, .data, .tdata, and STYP_DWARF sections have relocation.
     if (Sec.Flags != XCOFF::STYP_TEXT && Sec.Flags != XCOFF::STYP_DATA &&
         Sec.Flags != XCOFF::STYP_TDATA && Sec.Flags != XCOFF::STYP_DWARF)
       continue;
-    auto ErrOrRelocations = Obj.relocations(Sec);
+    Expected<ArrayRef<RelTy>> ErrOrRelocations = Obj.relocations<Shdr, RelTy>(Sec);
     if (Error E = ErrOrRelocations.takeError()) {
       reportUniqueWarning(std::move(E));
       continue;
     }
 
-    auto Relocations = *ErrOrRelocations;
+    const ArrayRef<RelTy> Relocations = *ErrOrRelocations;
     if (Relocations.empty())
       continue;
 
     W.startLine() << "Section (index: " << Index << ") " << Sec.getName()
                   << " {\n";
-    for (auto Reloc : Relocations) {
+    for (const RelTy Reloc : Relocations) {
       Expected<StringRef> ErrOrSymbolName =
           Obj.getSymbolNameByIndex(Reloc.SymbolIndex);
       if (Error E = ErrOrSymbolName.takeError()) {
