@@ -876,17 +876,13 @@ InstrProfiling::getOrCreateRegionCounters(InstrProfIncrementInst *Inc) {
   // nodeduplicate COMDAT which is lowered to a zero-flag section group. This
   // allows -z start-stop-gc to discard the entire group when the function is
   // discarded.
-  bool DataReferencedByCode = profDataReferencedByCode(*M);
+  bool SupportsComdat = Triple(M->getTargetTriple()).supportsCOMDAT();
   bool NeedComdat = needsComdatForCounter(*Fn, *M);
   std::string CntsVarName = getVarName(Inc, getInstrProfCountersVarPrefix());
   std::string DataVarName = getVarName(Inc, getInstrProfDataVarPrefix());
   auto MaybeSetComdat = [&](GlobalVariable *GV) {
-    bool UseComdat = (NeedComdat || TT.isOSBinFormatELF());
-    if (UseComdat) {
-      StringRef GroupName = TT.isOSBinFormatCOFF() && DataReferencedByCode
-                                ? GV->getName()
-                                : CntsVarName;
-      Comdat *C = M->getOrInsertComdat(GroupName);
+    if (SupportsComdat) {
+      Comdat *C = M->getOrInsertComdat(CntsVarName);
       if (!NeedComdat)
         C->setSelectionKind(Comdat::NoDeduplicate);
       GV->setComdat(C);
@@ -951,12 +947,8 @@ InstrProfiling::getOrCreateRegionCounters(InstrProfIncrementInst *Inc) {
   // If the data variable is not referenced by code (if we don't emit
   // @llvm.instrprof.value.profile, NS will be 0), and the counter keeps the
   // data variable live under linker GC, the data variable can be private. This
-  // optimization applies to ELF.
-  //
-  // On COFF, a comdat leader cannot be local so we require DataReferencedByCode
-  // to be false.
-  if (NS == 0 && (TT.isOSBinFormatELF() ||
-                  (!DataReferencedByCode && TT.isOSBinFormatCOFF()))) {
+  // optimization applies to COFF and ELF.
+  if (NS == 0 && (TT.isOSBinFormatCOFF() || TT.isOSBinFormatELF())) {
     Linkage = GlobalValue::PrivateLinkage;
     Visibility = GlobalValue::DefaultVisibility;
   }
@@ -1166,13 +1158,11 @@ void InstrProfiling::emitUses() {
   // GlobalOpt/ConstantMerge) may not discard associated sections as a unit, so
   // we conservatively retain all unconditionally in the compiler.
   //
-  // On ELF, the linker can guarantee the associated sections will be retained
-  // or discarded as a unit, so llvm.compiler.used is sufficient. Similarly on
-  // COFF, if prof data is not referenced by code we use one comdat and ensure
-  // this GC property as well. Otherwise, we have to conservatively make all of
-  // the sections retained by the linker.
-  if (TT.isOSBinFormatELF() ||
-      (TT.isOSBinFormatCOFF() && !profDataReferencedByCode(*M)))
+  // On COFF and ELF, the linker can guarantee the associated sections will be
+  // retained or discarded as a unit, so llvm.compiler.used is sufficient.
+  // Otherwise, we have to conservatively make all of the sections retained by
+  // the linker.
+  if (TT.isOSBinFormatCOFF() || TT.isOSBinFormatELF())
     appendToCompilerUsed(*M, CompilerUsedVars);
   else
     appendToUsed(*M, CompilerUsedVars);
