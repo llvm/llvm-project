@@ -169,7 +169,10 @@ AArch64LegalizerInfo::AArch64LegalizerInfo(const AArch64Subtarget &ST)
   getActionDefinitionsBuilder({G_SREM, G_UREM, G_SDIVREM, G_UDIVREM})
       .lowerFor({s1, s8, s16, s32, s64});
 
-  getActionDefinitionsBuilder({G_SMULO, G_UMULO}).lowerFor({{s64, s1}});
+  getActionDefinitionsBuilder({G_SMULO, G_UMULO})
+      .widenScalarToNextPow2(0, /*Min = */ 32)
+      .clampScalar(0, s32, s64)
+      .lowerIf(typeIs(1, s1));
 
   getActionDefinitionsBuilder({G_SMULH, G_UMULH}).legalFor({s32, s64});
 
@@ -307,6 +310,7 @@ AArch64LegalizerInfo::AArch64LegalizerInfo(const AArch64Subtarget &ST)
       .clampMaxNumElements(0, s16, 8)
       .clampMaxNumElements(0, s32, 4)
       .clampMaxNumElements(0, s64, 2)
+      .clampMaxNumElements(0, p0, 2)
       .customIf(IsPtrVecPred)
       .scalarizeIf(typeIs(0, v2s16), 0);
 
@@ -342,6 +346,7 @@ AArch64LegalizerInfo::AArch64LegalizerInfo(const AArch64Subtarget &ST)
       .clampMaxNumElements(0, s16, 8)
       .clampMaxNumElements(0, s32, 4)
       .clampMaxNumElements(0, s64, 2)
+      .clampMaxNumElements(0, p0, 2)
       .lowerIfMemSizeNotPow2()
       .customIf(IsPtrVecPred)
       .scalarizeIf(typeIs(0, v2s16), 0);
@@ -625,7 +630,10 @@ AArch64LegalizerInfo::AArch64LegalizerInfo(const AArch64Subtarget &ST)
   getActionDefinitionsBuilder(G_CTLZ_ZERO_UNDEF).lower();
 
   // TODO: Custom lowering for v2s32, v4s32, v2s64.
-  getActionDefinitionsBuilder(G_BITREVERSE).legalFor({s32, s64, v8s8, v16s8});
+  getActionDefinitionsBuilder(G_BITREVERSE)
+      .legalFor({s32, s64, v8s8, v16s8})
+      .widenScalarToNextPow2(0, /*Min = */ 32)
+      .clampScalar(0, s32, s64);
 
   getActionDefinitionsBuilder(G_CTTZ_ZERO_UNDEF).lower();
 
@@ -756,6 +764,9 @@ AArch64LegalizerInfo::AArch64LegalizerInfo(const AArch64Subtarget &ST)
       .legalFor({MinFPScalar, s32, s64})
       .libcallFor({s128})
       .minScalar(0, MinFPScalar);
+
+  // TODO: Libcall support for s128.
+  getActionDefinitionsBuilder(G_LROUND).legalFor({{s64, s32}, {s64, s64}});
 
   getLegacyLegalizerInfo().computeTables();
   verify(*ST.getInstrInfo());

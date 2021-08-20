@@ -674,3 +674,47 @@ body:             |
     %ext:_(s64) = G_ZEXT %load
     $x0 = COPY %ext
     RET_ReallyLR implicit $x0
+...
+---
+name:            load_store_6xp0
+alignment:       4
+tracksRegLiveness: true
+machineFunctionInfo: {}
+body:             |
+  bb.1:
+    liveins: $x0
+    ; CHECK-LABEL: name: load_store_6xp0
+    ; CHECK: liveins: $x0
+    ; CHECK: %ptr:_(p0) = COPY $x0
+    ; CHECK: [[LOAD:%[0-9]+]]:_(p0) = G_LOAD %ptr(p0) :: (load (p0), align 64)
+    ; CHECK: [[C:%[0-9]+]]:_(s64) = G_CONSTANT i64 8
+    ; CHECK: [[PTR_ADD:%[0-9]+]]:_(p0) = G_PTR_ADD %ptr, [[C]](s64)
+    ; CHECK: [[LOAD1:%[0-9]+]]:_(p0) = G_LOAD [[PTR_ADD]](p0) :: (load (p0) from unknown-address + 8)
+    ; CHECK: [[C1:%[0-9]+]]:_(s64) = G_CONSTANT i64 16
+    ; CHECK: [[PTR_ADD1:%[0-9]+]]:_(p0) = G_PTR_ADD %ptr, [[C1]](s64)
+    ; CHECK: [[LOAD2:%[0-9]+]]:_(p0) = G_LOAD [[PTR_ADD1]](p0) :: (load (p0) from unknown-address + 16, align 16)
+    ; CHECK: [[C2:%[0-9]+]]:_(s64) = G_CONSTANT i64 24
+    ; CHECK: [[PTR_ADD2:%[0-9]+]]:_(p0) = G_PTR_ADD %ptr, [[C2]](s64)
+    ; CHECK: [[LOAD3:%[0-9]+]]:_(p0) = G_LOAD [[PTR_ADD2]](p0) :: (load (p0) from unknown-address + 24)
+    ; CHECK: [[C3:%[0-9]+]]:_(s64) = G_CONSTANT i64 32
+    ; CHECK: [[PTR_ADD3:%[0-9]+]]:_(p0) = G_PTR_ADD %ptr, [[C3]](s64)
+    ; CHECK: [[LOAD4:%[0-9]+]]:_(p0) = G_LOAD [[PTR_ADD3]](p0) :: (load (p0) from unknown-address + 32, align 32)
+    ; CHECK: [[C4:%[0-9]+]]:_(s64) = G_CONSTANT i64 40
+    ; CHECK: [[PTR_ADD4:%[0-9]+]]:_(p0) = G_PTR_ADD %ptr, [[C4]](s64)
+    ; CHECK: [[LOAD5:%[0-9]+]]:_(p0) = G_LOAD [[PTR_ADD4]](p0) :: (load (p0) from unknown-address + 40)
+    ; CHECK: [[BUILD_VECTOR:%[0-9]+]]:_(<2 x p0>) = G_BUILD_VECTOR [[LOAD]](p0), [[LOAD1]](p0)
+    ; CHECK: [[BUILD_VECTOR1:%[0-9]+]]:_(<2 x p0>) = G_BUILD_VECTOR [[LOAD2]](p0), [[LOAD3]](p0)
+    ; CHECK: [[BUILD_VECTOR2:%[0-9]+]]:_(<2 x p0>) = G_BUILD_VECTOR [[LOAD4]](p0), [[LOAD5]](p0)
+    ; CHECK: [[BITCAST:%[0-9]+]]:_(<2 x s64>) = G_BITCAST [[BUILD_VECTOR]](<2 x p0>)
+    ; CHECK: G_STORE [[BITCAST]](<2 x s64>), %ptr(p0) :: (store (<2 x s64>), align 64)
+    ; CHECK: [[PTR_ADD5:%[0-9]+]]:_(p0) = G_PTR_ADD %ptr, [[C1]](s64)
+    ; CHECK: [[BITCAST1:%[0-9]+]]:_(<2 x s64>) = G_BITCAST [[BUILD_VECTOR1]](<2 x p0>)
+    ; CHECK: G_STORE [[BITCAST1]](<2 x s64>), [[PTR_ADD5]](p0) :: (store (<2 x s64>) into unknown-address + 16)
+    ; CHECK: [[PTR_ADD6:%[0-9]+]]:_(p0) = G_PTR_ADD %ptr, [[C3]](s64)
+    ; CHECK: [[BITCAST2:%[0-9]+]]:_(<2 x s64>) = G_BITCAST [[BUILD_VECTOR2]](<2 x p0>)
+    ; CHECK: G_STORE [[BITCAST2]](<2 x s64>), [[PTR_ADD6]](p0) :: (store (<2 x s64>) into unknown-address + 32, align 32)
+    ; CHECK: RET_ReallyLR
+    %ptr:_(p0) = COPY $x0
+    %val:_(<6 x p0>) = G_LOAD %ptr(p0) :: (load (<6 x p0>))
+    G_STORE %val(<6 x p0>), %ptr(p0) :: (store (<6 x p0>))
+    RET_ReallyLR
