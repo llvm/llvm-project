@@ -1381,7 +1381,6 @@ public:
       assert(ActiveVLocIt != ActiveVLocs.end());
       ActiveVLocIt->second.Loc = Dst;
 
-      assert(Dst != 0);
       MachineInstr *MI =
           MTracker->emitLoc(Dst, Var, ActiveVLocIt->second.Properties);
       PendingDbgValues.push_back(MI);
