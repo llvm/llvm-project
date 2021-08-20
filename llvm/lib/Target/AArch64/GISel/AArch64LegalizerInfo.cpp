@@ -307,6 +307,7 @@ AArch64LegalizerInfo::AArch64LegalizerInfo(const AArch64Subtarget &ST)
       .clampMaxNumElements(0, s16, 8)
       .clampMaxNumElements(0, s32, 4)
       .clampMaxNumElements(0, s64, 2)
+      .clampMaxNumElements(0, p0, 2)
       .customIf(IsPtrVecPred)
       .scalarizeIf(typeIs(0, v2s16), 0);
 
@@ -342,6 +343,7 @@ AArch64LegalizerInfo::AArch64LegalizerInfo(const AArch64Subtarget &ST)
       .clampMaxNumElements(0, s16, 8)
       .clampMaxNumElements(0, s32, 4)
       .clampMaxNumElements(0, s64, 2)
+      .clampMaxNumElements(0, p0, 2)
       .lowerIfMemSizeNotPow2()
       .customIf(IsPtrVecPred)
       .scalarizeIf(typeIs(0, v2s16), 0);
