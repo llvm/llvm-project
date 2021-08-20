@@ -148,7 +148,9 @@ defm WriteIMul32Reg : X86SchedWritePair; // Integer 32-bit multiplication by reg
 defm WriteIMul64    : X86SchedWritePair; // Integer 64-bit multiplication.
 defm WriteIMul64Imm : X86SchedWritePair; // Integer 64-bit multiplication by immediate.
 defm WriteIMul64Reg : X86SchedWritePair; // Integer 64-bit multiplication by register.
-def  WriteIMulH     : SchedWrite;        // Integer multiplication, high part.
+defm WriteMULX32    : X86SchedWritePair; // Integer 32-bit Multiplication without affecting flags.
+defm WriteMULX64    : X86SchedWritePair; // Integer 64-bit Multiplication without affecting flags.
+def  WriteIMulH     : SchedWrite;        // Integer multiplication, high part (only used by MULX).
 
 def  WriteBSWAP32 : SchedWrite; // Byte Order (Endianness) 32-bit Swap.
 def  WriteBSWAP64 : SchedWrite; // Byte Order (Endianness) 64-bit Swap.
