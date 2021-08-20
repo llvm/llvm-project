@@ -63,6 +63,11 @@ class CompilerInstance {
         : filename_(std::move(inputFilename)) {}
   };
 
+  /// Output stream that doesn't support seeking (e.g. terminal, pipe).
+  /// This stream is normally wrapped in buffer_ostream before being passed
+  /// to users (e.g. via CreateOutputFile).
+  std::unique_ptr<llvm::raw_fd_ostream> nonSeekStream_;
+
   /// The list of active output files.
   std::list<OutputFile> outputFiles_;
 
@@ -184,12 +189,17 @@ public:
   /// @name Output Files
   /// {
 
+  /// Add an output file onto the list of tracked output files.
+  ///
+  /// \param outFile - The output file info.
+  void AddOutputFile(OutputFile &&outFile);
+
   /// Clear the output file list.
   void ClearOutputFiles(bool eraseFiles);
 
   /// Create the default output file (based on the invocation's options) and
   /// add it to the list of tracked output files. If the name of the output
-  /// file is not provided, it will be derived from the input file.
+  /// file is not provided, it is derived from the input file.
   ///
   /// \param binary     The mode to open the file in.
   /// \param baseInput  If the invocation contains no output file name (i.e.
@@ -197,21 +207,20 @@ public:
   ///                   name to use for deriving the output path.
   /// \param extension  The extension to use for output names derived from
   ///                   \p baseInput.
-  /// \return           Null on error, ostream for the output file otherwise
+  /// \return           ostream for the output file or nullptr on error.
   std::unique_ptr<llvm::raw_pwrite_stream> CreateDefaultOutputFile(
       bool binary = true, llvm::StringRef baseInput = "",
       llvm::StringRef extension = "");
 
-private:
   /// Create a new output file
   ///
   /// \param outputPath   The path to the output file.
+  /// \param error [out]  On failure, the error.
   /// \param binary       The mode to open the file in.
-  /// \return             Null on error, ostream for the output file otherwise
-  llvm::Expected<std::unique_ptr<llvm::raw_pwrite_stream>> CreateOutputFileImpl(
-      llvm::StringRef outputPath, bool binary);
+  /// \return             ostream for the output file or nullptr on error.
+  std::unique_ptr<llvm::raw_pwrite_stream> CreateOutputFile(
+      llvm::StringRef outputPath, std::error_code &error, bool binary);
 
-public:
   /// }
   /// @name Construction Utility Methods
   /// {
