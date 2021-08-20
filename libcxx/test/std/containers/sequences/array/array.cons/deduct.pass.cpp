@@ -8,9 +8,6 @@
 
 // <array>
 // UNSUPPORTED: c++03, c++11, c++14
-// UNSUPPORTED: clang-5, apple-clang-9
-// Clang 5 will generate bad implicit deduction guides
-//	Specifically, for the copy constructor.
 
 // template <class T, class... U>
 //   array(T, U...) -> array<T, 1 + sizeof...(U)>;

@@ -8,9 +8,6 @@
 
 // <stack>
 // UNSUPPORTED: c++03, c++11, c++14
-// UNSUPPORTED: clang-5, apple-clang-9
-// Clang 5 will generate bad implicit deduction guides
-//	Specifically, for the copy constructor.
 
 // template<class Container>
 //   stack(Container) -> stack<typename Container::value_type, Container>;

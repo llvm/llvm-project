@@ -4557,6 +4557,7 @@ bool LLParser::parseDIDerivedType(MDNode *&Result, bool IsDistinct) {
   OPTIONAL(flags, DIFlagField, );                                              \
   OPTIONAL(extraData, MDField, );                                              \
   OPTIONAL(dwarfAddressSpace, MDUnsignedField, (UINT32_MAX, UINT32_MAX));      \
+  OPTIONAL(annotations, MDField, );                                            \
   OPTIONAL(ptrAuthKey, MDUnsignedField, (0, 7));                               \
   OPTIONAL(ptrAuthIsAddressDiscriminated, MDBoolField, );                      \
   OPTIONAL(ptrAuthExtraDiscriminator, MDUnsignedField, (0, 0xffff));
@@ -4576,7 +4577,7 @@ bool LLParser::parseDIDerivedType(MDNode *&Result, bool IsDistinct) {
                            (Context, tag.Val, name.Val, file.Val, line.Val,
                             scope.Val, baseType.Val, size.Val, align.Val,
                             offset.Val, DWARFAddressSpace, PtrAuthData,
-                            flags.Val, extraData.Val));
+                            flags.Val, extraData.Val, annotations.Val));
   return false;
 }
 

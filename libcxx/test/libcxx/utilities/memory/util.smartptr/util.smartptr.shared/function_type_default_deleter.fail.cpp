@@ -8,9 +8,6 @@
 
 // UNSUPPORTED: c++03
 
-// Clang doesn't support filename wildcards in verify tests until 05eedf1f5b44.
-// UNSUPPORTED: clang-10
-
 #include <memory>
 
 template <int> struct Tag {};
