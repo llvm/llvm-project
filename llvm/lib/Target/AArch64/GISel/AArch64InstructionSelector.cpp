@@ -22,6 +22,7 @@
 #include "MCTargetDesc/AArch64AddressingModes.h"
 #include "MCTargetDesc/AArch64MCTargetDesc.h"
 #include "llvm/ADT/Optional.h"
+#include "llvm/CodeGen/GlobalISel/GenericMachineInstrs.h"
 #include "llvm/CodeGen/GlobalISel/InstructionSelector.h"
 #include "llvm/CodeGen/GlobalISel/InstructionSelectorImpl.h"
 #include "llvm/CodeGen/GlobalISel/MachineIRBuilder.h"
@@ -104,7 +105,7 @@ private:
   bool earlySelectSHL(MachineInstr &I, MachineRegisterInfo &MRI);
 
   /// Eliminate same-sized cross-bank copies into stores before selectImpl().
-  bool contractCrossBankCopyIntoStore(MachineInstr &I,
+  bool contractCrossBankCopyIntoStore(GStore &I,
                                       MachineRegisterInfo &MRI);
 
   bool convertPtrAddToAdd(MachineInstr &I, MachineRegisterInfo &MRI);
@@ -1934,8 +1935,9 @@ bool AArch64InstructionSelector::preISelLower(MachineInstr &I) {
     return true;
   }
   case TargetOpcode::G_STORE: {
-    bool Changed = contractCrossBankCopyIntoStore(I, MRI);
-    MachineOperand &SrcOp = I.getOperand(0);
+    auto &StoreMI = cast<GStore>(I);
+    bool Changed = contractCrossBankCopyIntoStore(StoreMI, MRI);
+    MachineOperand &SrcOp = StoreMI.getOperand(0);
     if (MRI.getType(SrcOp.getReg()).isPointer()) {
       // Allow matching with imported patterns for stores of pointers. Unlike
       // G_LOAD/G_PTR_ADD, we may not have selected all users. So, emit a copy
@@ -1946,6 +1948,28 @@ bool AArch64InstructionSelector::preISelLower(MachineInstr &I) {
       RBI.constrainGenericRegister(NewSrc, AArch64::GPR64RegClass, MRI);
       Changed = true;
     }
+#if 0
+    // Now look for truncating stores to the FPR bank. We don't support these,
+    // but since truncating store formation happens before RBS, we can only
+    // split them up again here. We don't want to assign truncstores to GPR only
+    // since that would have a perf impact due to extra moves.
+    LLT SrcTy = MRI.getType(SrcReg);
+    if (RBI.getRegBank(SrcReg, MRI, TRI)->getID() == AArch64::FPRRegBankID) {
+      if (SrcTy.isScalar() &&
+          SrcTy.getSizeInBits() > StoreMI.getMemSizeInBits()) {
+        // Generate an explicit truncate and make this into a non-truncating
+        // store.
+        auto Trunc =
+            MIB.buildTrunc(LLT::scalar(StoreMI.getMemSizeInBits()), SrcReg);
+        MRI.setRegBank(Trunc.getReg(0), RBI.getRegBank(AArch64::FPRRegBankID));
+        if (!select(*Trunc)) {
+          return false;
+        }
+        SrcOp.setReg(Trunc.getReg(0));
+        return true;
+      }
+    }
+#endif
     return Changed;
   }
   case TargetOpcode::G_PTR_ADD:
@@ -2081,8 +2105,7 @@ bool AArch64InstructionSelector::earlySelectSHL(MachineInstr &I,
 }
 
 bool AArch64InstructionSelector::contractCrossBankCopyIntoStore(
-    MachineInstr &I, MachineRegisterInfo &MRI) {
-  assert(I.getOpcode() == TargetOpcode::G_STORE && "Expected G_STORE");
+    GStore &StoreMI, MachineRegisterInfo &MRI) {
   // If we're storing a scalar, it doesn't matter what register bank that
   // scalar is on. All that matters is the size.
   //
@@ -2097,11 +2120,11 @@ bool AArch64InstructionSelector::contractCrossBankCopyIntoStore(
   // G_STORE %x:gpr(s32)
   //
   // And then continue the selection process normally.
-  Register DefDstReg = getSrcRegIgnoringCopies(I.getOperand(0).getReg(), MRI);
+  Register DefDstReg = getSrcRegIgnoringCopies(StoreMI.getValueReg(), MRI);
   if (!DefDstReg.isValid())
     return false;
   LLT DefDstTy = MRI.getType(DefDstReg);
-  Register StoreSrcReg = I.getOperand(0).getReg();
+  Register StoreSrcReg = StoreMI.getValueReg();
   LLT StoreSrcTy = MRI.getType(StoreSrcReg);
 
   // If we get something strange like a physical register, then we shouldn't
@@ -2113,12 +2136,16 @@ bool AArch64InstructionSelector::contractCrossBankCopyIntoStore(
   if (DefDstTy.getSizeInBits() != StoreSrcTy.getSizeInBits())
     return false;
 
+  // Is this store a truncating one?
+  if (StoreSrcTy.getSizeInBits() != StoreMI.getMemSizeInBits())
+    return false;
+
   if (RBI.getRegBank(StoreSrcReg, MRI, TRI) ==
       RBI.getRegBank(DefDstReg, MRI, TRI))
     return false;
 
   // We have a cross-bank copy, which is entering a store. Let's fold it.
-  I.getOperand(0).setReg(DefDstReg);
+  StoreMI.getOperand(0).setReg(DefDstReg);
   return true;
 }
 
