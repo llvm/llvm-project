@@ -214,6 +214,12 @@ public:
     return s->kind() == DefinedFunctionKind;
   }
 
+  // Get the function index to be used when exporting.  This only applies to
+  // defined functions and can be differ from the regular function index for
+  // weakly defined functions (that are imported and used via one index but
+  // defined and exported via another).
+  uint32_t getExportedFunctionIndex() const;
+
   InputFunction *function;
 };
 
