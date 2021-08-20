@@ -1217,6 +1217,13 @@ bool DeclContext::Encloses(const DeclContext *DC) const {
   return false;
 }
 
+DeclContext *DeclContext::getNonTransparentContext() {
+  DeclContext *DC = this;
+  while (DC && DC->isTransparentContext())
+    DC = DC->getParent();
+  return DC;
+}
+
 DeclContext *DeclContext::getPrimaryContext() {
   switch (getDeclKind()) {
   case Decl::ExternCContext:
