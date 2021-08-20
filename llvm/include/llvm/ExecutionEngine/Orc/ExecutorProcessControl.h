@@ -168,8 +168,7 @@ public:
   /// The result of the lookup is a 2-dimentional array of target addresses
   /// that correspond to the lookup order. If a required symbol is not
   /// found then this method will return an error. If a weakly referenced
-  /// symbol is not found then it be assigned a '0' value in the result.
-  /// that correspond to the lookup order.
+  /// symbol is not found then it be assigned a '0' value.
   virtual Expected<std::vector<tpctypes::LookupResult>>
   lookupSymbols(ArrayRef<LookupRequest> Request) = 0;
 
@@ -189,6 +188,22 @@ public:
   virtual void callWrapperAsync(SendResultFunction OnComplete,
                                 JITTargetAddress WrapperFnAddr,
                                 ArrayRef<char> ArgBuffer) = 0;
+
+  /// Run a wrapper function using SPS to serialize the arguments and
+  /// deserialize the results.
+  template <typename SPSSignature, typename SendResultT, typename... ArgTs>
+  void callSPSWrapperAsync(SendResultT &&SendResult,
+                           JITTargetAddress WrapperFnAddr,
+                           const ArgTs &...Args) {
+    shared::WrapperFunction<SPSSignature>::callAsync(
+        [this,
+         WrapperFnAddr](ExecutorProcessControl::SendResultFunction SendResult,
+                        const char *ArgData, size_t ArgSize) {
+          callWrapperAsync(std::move(SendResult), WrapperFnAddr,
+                           ArrayRef<char>(ArgData, ArgSize));
+        },
+        std::move(SendResult), Args...);
+  }
 
   /// Disconnect from the target process.
   ///
