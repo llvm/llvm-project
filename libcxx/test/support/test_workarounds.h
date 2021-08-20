@@ -25,10 +25,4 @@
 # endif
 #endif
 
-#if defined(TEST_COMPILER_GCC)
-# if __GNUC__ < 9
-#  define TEST_WORKAROUND_CONSTEXPR_IMPLIES_NOEXCEPT // GCC-87603
-# endif
-#endif
-
 #endif // SUPPORT_TEST_WORKAROUNDS_H
