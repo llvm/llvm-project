@@ -47,6 +47,8 @@ bool LangOptions::isNoBuiltinFunc(StringRef FuncName) const {
 
 VersionTuple LangOptions::getOpenCLVersionTuple() const {
   const int Ver = OpenCLCPlusPlus ? OpenCLCPlusPlusVersion : OpenCLVersion;
+  if (OpenCLCPlusPlus && Ver != 100)
+    return VersionTuple(Ver / 100);
   return VersionTuple(Ver / 100, (Ver % 100) / 10);
 }
 
