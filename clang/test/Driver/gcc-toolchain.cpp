@@ -8,7 +8,7 @@
 //
 // Additionally check that the legacy spelling of the flag works.
 // RUN: %clangxx %s -### --target=x86_64-linux-gnu --sysroot= \
-// RUN:   -gcc-toolchain %S/Inputs/ubuntu_14.04_multiarch_tree/usr -stdlib=libstdc++ --rtlib=libgcc 2>&1 | \
+// RUN:   --gcc-toolchain=%S/Inputs/ubuntu_14.04_multiarch_tree/usr -stdlib=libstdc++ --rtlib=libgcc 2>&1 | \
 // RUN:   FileCheck %s
 //
 // Test for header search toolchain detection.
