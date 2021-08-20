@@ -31,6 +31,7 @@ static_library("Orc") {
     "LLJIT.cpp",
     "Layer.cpp",
     "LazyReexports.cpp",
+    "LookupAndRecordAddrs.cpp",
     "MachOPlatform.cpp",
     "Mangling.cpp",
     "ObjectLinkingLayer.cpp",
