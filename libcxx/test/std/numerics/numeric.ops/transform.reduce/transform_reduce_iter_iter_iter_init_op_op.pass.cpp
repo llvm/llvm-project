@@ -6,9 +6,9 @@
 //
 //===----------------------------------------------------------------------===//
 
-// <numeric>
 // UNSUPPORTED: c++03, c++11, c++14
-// UNSUPPORTED: clang-8
+
+// <numeric>
 
 // Became constexpr in C++20
 // template <class InputIterator1, class InputIterator2, class T,
