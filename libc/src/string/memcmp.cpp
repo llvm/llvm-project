@@ -39,7 +39,7 @@ static int memcmp_impl(const char *lhs, const char *rhs, size_t count) {
     return ThreeWayCompare<HeadTail<_32>>(lhs, rhs, count);
   if (count <= 128)
     return ThreeWayCompare<HeadTail<_64>>(lhs, rhs, count);
-  return ThreeWayCompare<Align<_16>::Then<Loop<_32>>>(lhs, rhs, count);
+  return ThreeWayCompare<Align<_32>::Then<Loop<_32>>>(lhs, rhs, count);
 }
 
 LLVM_LIBC_FUNCTION(int, memcmp,
