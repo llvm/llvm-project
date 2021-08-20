@@ -405,14 +405,17 @@ if.end:                                           ; preds = %if.then, %entry
   ret i8* %call
 }
 
+; FIXME: malloc+memset are not currently transformed into calloc unless the
+; memset post-dominates the malloc.
 define float* @pr25892(i64 %size) {
 ; CHECK-LABEL: @pr25892(
 ; CHECK:       entry:
-; CHECK-NEXT:    [[CALL:%.*]] = call i8* @calloc(i64 1, i64 [[SIZE:%.*]])
+; CHECK-NEXT:    [[CALL:%.*]] = call i8* @malloc(i64 [[SIZE:%.*]])
 ; CHECK-NEXT:    [[CMP:%.*]] = icmp eq i8* [[CALL]], null
 ; CHECK-NEXT:    br i1 [[CMP]], label [[CLEANUP:%.*]], label [[IF_END:%.*]]
 ; CHECK:       if.end:
 ; CHECK-NEXT:    [[BC:%.*]] = bitcast i8* [[CALL]] to float*
+; CHECK-NEXT:    call void @llvm.memset.p0i8.i64(i8* %call, i8 0, i64 %size, i1 false)
 ; CHECK-NEXT:    br label [[CLEANUP]]
 ; CHECK:       cleanup:
 ; CHECK-NEXT:    [[RETVAL_0:%.*]] = phi float* [ [[BC]], [[IF_END]] ], [ null, [[ENTRY:%.*]] ]
@@ -434,11 +437,13 @@ cleanup:
 define float* @pr25892_with_extra_store(i64 %size) {
 ; CHECK-LABEL: @pr25892_with_extra_store(
 ; CHECK:       entry:
-; CHECK-NEXT:    [[CALL:%.*]] = call i8* @calloc(i64 1, i64 [[SIZE:%.*]])
+; CHECK-NEXT:    [[CALL:%.*]] = call i8* @malloc(i64 [[SIZE:%.*]])
 ; CHECK-NEXT:    [[CMP:%.*]] = icmp eq i8* [[CALL]], null
 ; CHECK-NEXT:    br i1 [[CMP]], label [[CLEANUP:%.*]], label [[IF_END:%.*]]
 ; CHECK:       if.end:
 ; CHECK-NEXT:    [[BC:%.*]] = bitcast i8* [[CALL]] to float*
+; CHECK-NEXT:    call void @llvm.memset.p0i8.i64(i8* %call, i8 0, i64 %size, i1 false)
+; CHECK-NEXT:    store i8 0, i8* %call, align 1
 ; CHECK-NEXT:    br label [[CLEANUP]]
 ; CHECK:       cleanup:
 ; CHECK-NEXT:    [[RETVAL_0:%.*]] = phi float* [ [[BC]], [[IF_END]] ], [ null, [[ENTRY:%.*]] ]
