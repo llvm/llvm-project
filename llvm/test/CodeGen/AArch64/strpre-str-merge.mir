@@ -451,3 +451,30 @@ body:             |
     RET undef $lr, implicit $x0
 
 ...
+
+---
+name:            17-strwpre-strwui-same-reg-no-merge
+alignment:       4
+tracksRegLiveness: true
+liveins:
+  - { reg: '$x0' }
+  - { reg: '$x1' }
+  - { reg: '$x2' }
+frameInfo:
+  maxAlignment:    1
+  maxCallFrameSize: 0
+machineFunctionInfo:
+  hasRedZone:      false
+body:             |
+  bb.0.entry:
+    liveins: $x0, $x1, $x2
+    ; CHECK-LABEL: name: 17-strwpre-strwui-same-reg-no-merge
+    ; CHECK: liveins: $x0, $x1, $x2
+    ; CHECK: early-clobber renamable $x0 = STRWpre renamable $w1, renamable $x0, 24, implicit $w0, implicit-def $w0 :: (store (s32))
+    ; CHECK: STRWui renamable $w0, renamable $x0, 1 :: (store (s32))
+    ; CHECK: RET undef $lr, implicit $x0
+    early-clobber renamable $x0 = STRWpre killed renamable $w1, killed renamable $x0, 24 :: (store (s32))
+    STRWui renamable $w0, renamable $x0, 1 :: (store (s32))
+    RET undef $lr, implicit $x0
+
+...
