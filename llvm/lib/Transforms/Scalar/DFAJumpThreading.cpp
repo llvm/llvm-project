@@ -531,7 +531,7 @@ private:
       return false;
 
     if (isa<PHINode>(SIUse) &&
-        SIBB->getSingleSuccessor() != dyn_cast<Instruction>(SIUse)->getParent())
+        SIBB->getSingleSuccessor() != cast<Instruction>(SIUse)->getParent())
       return false;
 
     // If select will not be sunk during unfolding, and it is in the same basic
