@@ -1,6 +1,6 @@
-// RUN: %clang_cc1 -emit-llvm -o - %s | FileCheck -check-prefixes CHECK,WITHOUT %s
-// RUN: %clang_cc1 -emit-llvm -o - %s -fsanitize=memory | FileCheck -check-prefixes CHECK,MSAN %s
-// RUN: %clang_cc1 -emit-llvm -o - %s -fsanitize=kernel-memory | FileCheck -check-prefixes CHECK,KMSAN %s
+// RUN: %clang -target x86_64-linux-gnu -S -emit-llvm -o - %s | FileCheck -check-prefixes CHECK,WITHOUT %s
+// RUN: %clang -target x86_64-linux-gnu -S -emit-llvm -o - %s -fsanitize=memory | FileCheck -check-prefixes CHECK,MSAN %s
+// RUN: %clang -target x86_64-linux-gnu -S -emit-llvm -o - %s -fsanitize=kernel-memory | FileCheck -check-prefixes CHECK,KMSAN %s
 
 // Instrumented function.
 // MSan uses memset(addr, -1, size) to poison allocas and stores shadow of the return value in
