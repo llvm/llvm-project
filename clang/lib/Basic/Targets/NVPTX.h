@@ -147,6 +147,10 @@ public:
     Opts["cl_khr_local_int32_extended_atomics"] = true;
   }
 
+  const llvm::omp::GV &getGridValue() const override {
+    return llvm::omp::NVPTXGridValues;
+  }
+
   /// \returns If a target requires an address within a target specific address
   /// space \p AddressSpace to be converted in order to be used, then return the
   /// corresponding target specific DWARF address space.
