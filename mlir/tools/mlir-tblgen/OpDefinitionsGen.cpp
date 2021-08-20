@@ -1058,7 +1058,7 @@ void OpEmitter::genSeparateArgParamBuilder() {
       // TODO: Expand to handle regions.
       body << formatv(R"(
         ::llvm::SmallVector<::mlir::Type, 2> inferredReturnTypes;
-        if (succeeded({0}::inferReturnTypes(odsBuilder.getContext(),
+        if (::mlir::succeeded({0}::inferReturnTypes(odsBuilder.getContext(),
                       {1}.location, {1}.operands,
                       {1}.attributes.getDictionary({1}.getContext()),
                       /*regions=*/{{}, inferredReturnTypes)))
@@ -1195,7 +1195,7 @@ void OpEmitter::genInferredTypeCollectiveParamBuilder() {
   // Result types
   body << formatv(R"(
     ::mlir::SmallVector<::mlir::Type, 2> inferredReturnTypes;
-    if (succeeded({0}::inferReturnTypes(odsBuilder.getContext(),
+    if (::mlir::succeeded({0}::inferReturnTypes(odsBuilder.getContext(),
                   {1}.location, operands,
                   {1}.attributes.getDictionary({1}.getContext()),
                   /*regions=*/{{}, inferredReturnTypes))) {{)",
@@ -1914,7 +1914,7 @@ void OpEmitter::genPrinter() {
 void OpEmitter::genVerifier() {
   auto *method = opClass.addMethodAndPrune("::mlir::LogicalResult", "verify");
   auto &body = method->body();
-  body << "  if (failed(" << op.getAdaptorName()
+  body << "  if (::mlir::failed(" << op.getAdaptorName()
        << "(*this).verify((*this)->getLoc()))) "
        << "return ::mlir::failure();\n";
 
