@@ -17,6 +17,7 @@
 #include "clang/Basic/MacroBuilder.h"
 #include "clang/Basic/TargetBuiltins.h"
 #include "llvm/ADT/StringSwitch.h"
+#include "llvm/Frontend/OpenMP/OMPGridValues.h"
 
 using namespace clang;
 using namespace clang::targets;
@@ -334,6 +335,7 @@ AMDGPUTargetInfo::AMDGPUTargetInfo(const llvm::Triple &Triple,
                   llvm::AMDGPU::getArchAttrR600(GPUKind)) {
   resetDataLayout(isAMDGCN(getTriple()) ? DataLayoutStringAMDGCN
                                         : DataLayoutStringR600);
+  GridValues = &llvm::omp::AMDGPUGridValues;
 
   setAddressSpaceMap(Triple.getOS() == llvm::Triple::Mesa3D ||
                      !isAMDGCN(Triple));
