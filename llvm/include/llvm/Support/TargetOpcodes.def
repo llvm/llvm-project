@@ -652,6 +652,8 @@ HANDLE_TARGET_OPCODE(G_UMAX)
 /// Generic integer absolute value.
 HANDLE_TARGET_OPCODE(G_ABS)
 
+HANDLE_TARGET_OPCODE(G_LROUND)
+
 /// Generic BRANCH instruction. This is an unconditional branch.
 HANDLE_TARGET_OPCODE(G_BR)
 

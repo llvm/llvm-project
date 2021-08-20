@@ -1615,6 +1615,13 @@ void MachineVerifier::verifyPreISelGenericInstruction(const MachineInstr *MI) {
     break;
   }
 
+  case TargetOpcode::G_LROUND: {
+    if (!MRI->getType(MI->getOperand(0).getReg()).isScalar() ||
+        !MRI->getType(MI->getOperand(1).getReg()).isScalar())
+      report("lround only supports scalars", MI);
+    break;
+  }
+
   default:
     break;
   }
