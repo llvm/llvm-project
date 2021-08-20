@@ -237,6 +237,7 @@ static void defineXLCompatMacros(MacroBuilder &Builder) {
   Builder.defineMacro("__fsqrt", "__builtin_ppc_fsqrt");
   Builder.defineMacro("__fsqrts", "__builtin_ppc_fsqrts");
   Builder.defineMacro("__addex", "__builtin_ppc_addex");
+  Builder.defineMacro("__cmplxl", "__builtin_complex");
 }
 
 /// PPCTargetInfo::getTargetDefines - Return a set of the PowerPC-specific
