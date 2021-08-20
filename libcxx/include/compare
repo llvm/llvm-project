@@ -130,7 +130,6 @@ namespace std {
 #include <__compare/compare_three_way_result.h>
 #include <__compare/ordering.h>
 #include <__config>
-#include <type_traits>
 
 #ifndef _LIBCPP_HAS_NO_PRAGMA_SYSTEM_HEADER
 #pragma GCC system_header
