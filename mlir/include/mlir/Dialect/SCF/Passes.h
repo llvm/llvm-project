@@ -52,6 +52,9 @@ createParallelLoopTilingPass(llvm::ArrayRef<int64_t> tileSize = {},
 /// loop range.
 std::unique_ptr<Pass> createForLoopRangeFoldingPass();
 
+// Creates a pass which lowers for loops into while loops.
+std::unique_ptr<Pass> createForToWhileLoopPass();
+
 //===----------------------------------------------------------------------===//
 // Registration
 //===----------------------------------------------------------------------===//
