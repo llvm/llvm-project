@@ -1779,6 +1779,7 @@ WebAssemblyTargetLowering::LowerSIGN_EXTEND_INREG(SDValue Op,
 }
 
 static SDValue LowerConvertLow(SDValue Op, SelectionDAG &DAG) {
+  SDLoc DL(Op);
   if (Op.getValueType() != MVT::v2f64)
     return SDValue();
 
@@ -1816,10 +1817,7 @@ static SDValue LowerConvertLow(SDValue Op, SelectionDAG &DAG) {
       !GetConvertedLane(Op.getOperand(1), RHSOpcode, RHSSrcVec, RHSIndex))
     return SDValue();
 
-  if (LHSOpcode != RHSOpcode || LHSSrcVec != RHSSrcVec)
-    return SDValue();
-
-  if (LHSIndex != 0 || RHSIndex != 1)
+  if (LHSOpcode != RHSOpcode)
     return SDValue();
 
   MVT ExpectedSrcVT;
@@ -1835,7 +1833,13 @@ static SDValue LowerConvertLow(SDValue Op, SelectionDAG &DAG) {
   if (LHSSrcVec.getValueType() != ExpectedSrcVT)
     return SDValue();
 
-  return DAG.getNode(LHSOpcode, SDLoc(Op), MVT::v2f64, LHSSrcVec);
+  auto Src = LHSSrcVec;
+  if (LHSIndex != 0 || RHSIndex != 1 || LHSSrcVec != RHSSrcVec) {
+    // Shuffle the source vector so that the converted lanes are the low lanes.
+    Src = DAG.getVectorShuffle(ExpectedSrcVT, DL, LHSSrcVec, RHSSrcVec,
+                               {LHSIndex, RHSIndex + 4, -1, -1});
+  }
+  return DAG.getNode(LHSOpcode, DL, MVT::v2f64, Src);
 }
 
 SDValue WebAssemblyTargetLowering::LowerBUILD_VECTOR(SDValue Op,
