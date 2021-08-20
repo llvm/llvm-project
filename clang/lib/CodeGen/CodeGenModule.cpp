@@ -6444,5 +6444,5 @@ bool CodeGenModule::stopAutoInit() {
 
 void CodeGenModule::printPostfixForExternalizedStaticVar(
     llvm::raw_ostream &OS) const {
-  OS << ".static." << getContext().getCUIDHash();
+  OS << "__static__" << getContext().getCUIDHash();
 }
