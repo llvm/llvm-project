@@ -62,19 +62,13 @@ struct GV {
   const unsigned GV_Slot_Size;
   /// The default value of maximum number of threads in a worker warp.
   const unsigned GV_Warp_Size;
-  /// Alternate warp size for some AMDGCN architectures. Same as GV_Warp_Size
-  /// for NVPTX.
-  const unsigned GV_Warp_Size_32;
-  /// The number of bits required to represent the max number of threads in warp
-  const unsigned GV_Warp_Size_Log2;
-  /// GV_Warp_Size * GV_Slot_Size,
-  const unsigned GV_Warp_Slot_Size;
+
+  constexpr unsigned warpSlotSize() const {
+    return GV_Warp_Size * GV_Slot_Size;
+  }
+
   /// the maximum number of teams.
   const unsigned GV_Max_Teams;
-  /// Global Memory Alignment
-  const unsigned GV_Mem_Align;
-  /// (~0u >> (GV_Warp_Size - GV_Warp_Size_Log2))
-  const unsigned GV_Warp_Size_Log2_Mask;
   // An alternative to the heavy data sharing infrastructure that uses global
   // memory is one that uses device __shared__ memory.  The amount of such space
   // (in bytes) reserved by the OpenMP runtime is noted here.
@@ -83,47 +77,32 @@ struct GV {
   const unsigned GV_Max_WG_Size;
   // The default maximum team size for a working group
   const unsigned GV_Default_WG_Size;
-  // This is GV_Max_WG_Size / GV_WarpSize. 32 for NVPTX and 16 for AMDGCN.
-  const unsigned GV_Max_Warp_Number;
-  /// The slot size that should be reserved for a working warp.
-  /// (~0u >> (GV_Warp_Size - GV_Warp_Size_Log2))
-  const unsigned GV_Warp_Size_Log2_MaskL;
+
+  constexpr unsigned maxWarpNumber() const {
+    return GV_Max_WG_Size / GV_Warp_Size;
+  }
 };
 
 /// For AMDGPU GPUs
 static constexpr GV AMDGPUGridValues = {
-    448,       // GV_Threads
-    256,       // GV_Slot_Size
-    64,        // GV_Warp_Size
-    32,        // GV_Warp_Size_32
-    6,         // GV_Warp_Size_Log2
-    64 * 256,  // GV_Warp_Slot_Size
-    128,       // GV_Max_Teams
-    256,       // GV_Mem_Align
-    63,        // GV_Warp_Size_Log2_Mask
-    896,       // GV_SimpleBufferSize
-    1024,      // GV_Max_WG_Size,
-    256,       // GV_Defaut_WG_Size
-    1024 / 64, // GV_Max_WG_Size / GV_WarpSize
-    63         // GV_Warp_Size_Log2_MaskL
+    448,  // GV_Threads
+    256,  // GV_Slot_Size
+    64,   // GV_Warp_Size
+    128,  // GV_Max_Teams
+    896,  // GV_SimpleBufferSize
+    1024, // GV_Max_WG_Size,
+    256,  // GV_Default_WG_Size
 };
 
 /// For Nvidia GPUs
 static constexpr GV NVPTXGridValues = {
-    992,               // GV_Threads
-    256,               // GV_Slot_Size
-    32,                // GV_Warp_Size
-    32,                // GV_Warp_Size_32
-    5,                 // GV_Warp_Size_Log2
-    32 * 256,          // GV_Warp_Slot_Size
-    1024,              // GV_Max_Teams
-    256,               // GV_Mem_Align
-    (~0u >> (32 - 5)), // GV_Warp_Size_Log2_Mask
-    896,               // GV_SimpleBufferSize
-    1024,              // GV_Max_WG_Size
-    128,               // GV_Defaut_WG_Size
-    1024 / 32,         // GV_Max_WG_Size / GV_WarpSize
-    31                 // GV_Warp_Size_Log2_MaskL
+    992,  // GV_Threads
+    256,  // GV_Slot_Size
+    32,   // GV_Warp_Size
+    1024, // GV_Max_Teams
+    896,  // GV_SimpleBufferSize
+    1024, // GV_Max_WG_Size
+    128,  // GV_Default_WG_Size
 };
 
 } // namespace omp
