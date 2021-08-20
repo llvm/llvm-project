@@ -1544,12 +1544,12 @@ public:
         [&](OpBuilder &nestedBuilder, Location nestedLoc,
             ValueRange blockArgs) {
           Value value = blockArgs[0];
+          Type valueTy = value.getType();
 
           // For now we do all of our math in 64-bit. This is not optimal but
           // should be correct for now, consider computing correct bit depth
           // later.
-          int32_t inBitwidth =
-              value.getType().getIntOrFloatBitWidth() > 32 ? 48 : 32;
+          int32_t inBitwidth = valueTy.getIntOrFloatBitWidth() > 32 ? 48 : 32;
 
           auto inputZp = createConstFromIntAttribute<int32_t>(
               op, "input_zp", nestedBuilder.getIntegerType(inBitwidth),
@@ -1561,9 +1561,21 @@ public:
                                                 : blockArgs[multiplierArg];
           Value shift = shiftConstant ? shiftConstant : blockArgs[shiftArg];
 
-          if (value.getType().getIntOrFloatBitWidth() < 32) {
-            value = nestedBuilder.create<SignExtendIOp>(
-                nestedLoc, nestedBuilder.getI32Type(), value);
+          if (valueTy.getIntOrFloatBitWidth() < 32) {
+            if (valueTy.isUnsignedInteger()) {
+              value = nestedBuilder
+                          .create<UnrealizedConversionCastOp>(
+                              nestedLoc,
+                              nestedBuilder.getIntegerType(
+                                  valueTy.getIntOrFloatBitWidth()),
+                              value)
+                          .getResult(0);
+              value = nestedBuilder.create<ZeroExtendIOp>(
+                  nestedLoc, nestedBuilder.getI32Type(), value);
+            } else {
+              value = nestedBuilder.create<SignExtendIOp>(
+                  nestedLoc, nestedBuilder.getI32Type(), value);
+            }
           }
 
           value = nestedBuilder.create<SubIOp>(nestedLoc, value, inputZp);
@@ -1579,21 +1591,38 @@ public:
           IntegerType outIntType =
               blockArgs.back().getType().cast<IntegerType>();
           unsigned outBitWidth = outIntType.getWidth();
-          auto intMin = nestedBuilder.create<ConstantOp>(
-              loc, nestedBuilder.getIntegerAttr(
-                       nestedBuilder.getI32Type(),
-                       APInt::getSignedMinValue(outBitWidth).getSExtValue()));
-          auto intMax = nestedBuilder.create<ConstantOp>(
-              loc, nestedBuilder.getIntegerAttr(
-                       nestedBuilder.getI32Type(),
-                       APInt::getSignedMaxValue(outBitWidth).getSExtValue()));
 
-          value = clampHelper<mlir::CmpIOp>(nestedLoc, value, intMin, intMax,
-                                            CmpIPredicate::slt, nestedBuilder);
+          int32_t intMin = APInt::getSignedMinValue(outBitWidth).getSExtValue();
+          int32_t intMax = APInt::getSignedMaxValue(outBitWidth).getSExtValue();
+
+          // Unsigned integers have a difference output value.
+          if (outIntType.isUnsignedInteger()) {
+            intMin = 0;
+            intMax = APInt::getMaxValue(outBitWidth).getZExtValue();
+          }
+
+          auto intMinVal = nestedBuilder.create<ConstantOp>(
+              loc,
+              nestedBuilder.getIntegerAttr(nestedBuilder.getI32Type(), intMin));
+          auto intMaxVal = nestedBuilder.create<ConstantOp>(
+              loc,
+              nestedBuilder.getIntegerAttr(nestedBuilder.getI32Type(), intMax));
+
+          value =
+              clampHelper<mlir::CmpIOp>(nestedLoc, value, intMinVal, intMaxVal,
+                                        CmpIPredicate::slt, nestedBuilder);
 
           if (outIntType.getWidth() < 32) {
-            value =
-                nestedBuilder.create<TruncateIOp>(nestedLoc, outIntType, value);
+            value = nestedBuilder.create<TruncateIOp>(
+                nestedLoc, rewriter.getIntegerType(outIntType.getWidth()),
+                value);
+
+            if (outIntType.isUnsignedInteger()) {
+              value = nestedBuilder
+                          .create<UnrealizedConversionCastOp>(nestedLoc,
+                                                              outIntType, value)
+                          .getResult(0);
+            }
           }
 
           nestedBuilder.create<linalg::YieldOp>(loc, value);
