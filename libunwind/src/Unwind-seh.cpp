@@ -169,8 +169,8 @@ _GCC_specific_handler(PEXCEPTION_RECORD ms_exc, PVOID frame, PCONTEXT ms_ctx,
     __unw_get_reg(&cursor, UNW_ARM_R1, &exc->private_[3]);
 #elif defined(__aarch64__)
     exc->private_[2] = disp->TargetPc;
-    __unw_get_reg(&cursor, UNW_ARM64_X0, &retval);
-    __unw_get_reg(&cursor, UNW_ARM64_X1, &exc->private_[3]);
+    __unw_get_reg(&cursor, UNW_AARCH64_X0, &retval);
+    __unw_get_reg(&cursor, UNW_AARCH64_X1, &exc->private_[3]);
 #endif
     __unw_get_reg(&cursor, UNW_REG_IP, &target);
     ms_exc->ExceptionCode = STATUS_GCC_UNWIND;

@@ -620,12 +620,12 @@ UnwindCursor<A, R>::UnwindCursor(unw_context_t *context, A &as)
     _msContext.D[i - UNW_ARM_D0] = d.w;
   }
 #elif defined(_LIBUNWIND_TARGET_AARCH64)
-  for (int i = UNW_ARM64_X0; i <= UNW_ARM64_X30; ++i)
-    _msContext.X[i - UNW_ARM64_X0] = r.getRegister(i);
+  for (int i = UNW_AARCH64_X0; i <= UNW_ARM64_X30; ++i)
+    _msContext.X[i - UNW_AARCH64_X0] = r.getRegister(i);
   _msContext.Sp = r.getRegister(UNW_REG_SP);
   _msContext.Pc = r.getRegister(UNW_REG_IP);
-  for (int i = UNW_ARM64_D0; i <= UNW_ARM64_D31; ++i)
-    _msContext.V[i - UNW_ARM64_D0].D[0] = r.getFloatRegister(i);
+  for (int i = UNW_AARCH64_V0; i <= UNW_ARM64_D31; ++i)
+    _msContext.V[i - UNW_AARCH64_V0].D[0] = r.getFloatRegister(i);
 #endif
 }
 
@@ -650,7 +650,7 @@ bool UnwindCursor<A, R>::validReg(int regNum) {
 #elif defined(_LIBUNWIND_TARGET_ARM)
   if (regNum >= UNW_ARM_R0 && regNum <= UNW_ARM_R15) return true;
 #elif defined(_LIBUNWIND_TARGET_AARCH64)
-  if (regNum >= UNW_ARM64_X0 && regNum <= UNW_ARM64_X30) return true;
+  if (regNum >= UNW_AARCH64_X0 && regNum <= UNW_ARM64_X30) return true;
 #endif
   return false;
 }
@@ -699,7 +699,7 @@ unw_word_t UnwindCursor<A, R>::getReg(int regNum) {
 #elif defined(_LIBUNWIND_TARGET_AARCH64)
   case UNW_REG_SP: return _msContext.Sp;
   case UNW_REG_IP: return _msContext.Pc;
-  default: return _msContext.X[regNum - UNW_ARM64_X0];
+  default: return _msContext.X[regNum - UNW_AARCH64_X0];
 #endif
   }
   _LIBUNWIND_ABORT("unsupported register");
@@ -749,37 +749,37 @@ void UnwindCursor<A, R>::setReg(int regNum, unw_word_t value) {
 #elif defined(_LIBUNWIND_TARGET_AARCH64)
   case UNW_REG_SP: _msContext.Sp = value; break;
   case UNW_REG_IP: _msContext.Pc = value; break;
-  case UNW_ARM64_X0:
-  case UNW_ARM64_X1:
-  case UNW_ARM64_X2:
-  case UNW_ARM64_X3:
-  case UNW_ARM64_X4:
-  case UNW_ARM64_X5:
-  case UNW_ARM64_X6:
-  case UNW_ARM64_X7:
-  case UNW_ARM64_X8:
-  case UNW_ARM64_X9:
-  case UNW_ARM64_X10:
-  case UNW_ARM64_X11:
-  case UNW_ARM64_X12:
-  case UNW_ARM64_X13:
-  case UNW_ARM64_X14:
-  case UNW_ARM64_X15:
-  case UNW_ARM64_X16:
-  case UNW_ARM64_X17:
-  case UNW_ARM64_X18:
-  case UNW_ARM64_X19:
-  case UNW_ARM64_X20:
-  case UNW_ARM64_X21:
-  case UNW_ARM64_X22:
-  case UNW_ARM64_X23:
-  case UNW_ARM64_X24:
-  case UNW_ARM64_X25:
-  case UNW_ARM64_X26:
-  case UNW_ARM64_X27:
-  case UNW_ARM64_X28:
-  case UNW_ARM64_FP:
-  case UNW_ARM64_LR: _msContext.X[regNum - UNW_ARM64_X0] = value; break;
+  case UNW_AARCH64_X0:
+  case UNW_AARCH64_X1:
+  case UNW_AARCH64_X2:
+  case UNW_AARCH64_X3:
+  case UNW_AARCH64_X4:
+  case UNW_AARCH64_X5:
+  case UNW_AARCH64_X6:
+  case UNW_AARCH64_X7:
+  case UNW_AARCH64_X8:
+  case UNW_AARCH64_X9:
+  case UNW_AARCH64_X10:
+  case UNW_AARCH64_X11:
+  case UNW_AARCH64_X12:
+  case UNW_AARCH64_X13:
+  case UNW_AARCH64_X14:
+  case UNW_AARCH64_X15:
+  case UNW_AARCH64_X16:
+  case UNW_AARCH64_X17:
+  case UNW_AARCH64_X18:
+  case UNW_AARCH64_X19:
+  case UNW_AARCH64_X20:
+  case UNW_AARCH64_X21:
+  case UNW_AARCH64_X22:
+  case UNW_AARCH64_X23:
+  case UNW_AARCH64_X24:
+  case UNW_AARCH64_X25:
+  case UNW_AARCH64_X26:
+  case UNW_AARCH64_X27:
+  case UNW_AARCH64_X28:
+  case UNW_AARCH64_FP:
+  case UNW_AARCH64_LR: _msContext.X[regNum - UNW_ARM64_X0] = value; break;
 #endif
   default:
     _LIBUNWIND_ABORT("unsupported register");
@@ -792,7 +792,7 @@ bool UnwindCursor<A, R>::validFloatReg(int regNum) {
   if (regNum >= UNW_ARM_S0 && regNum <= UNW_ARM_S31) return true;
   if (regNum >= UNW_ARM_D0 && regNum <= UNW_ARM_D31) return true;
 #elif defined(_LIBUNWIND_TARGET_AARCH64)
-  if (regNum >= UNW_ARM64_D0 && regNum <= UNW_ARM64_D31) return true;
+  if (regNum >= UNW_AARCH64_V0 && regNum <= UNW_ARM64_D31) return true;
 #else
   (void)regNum;
 #endif
@@ -820,7 +820,7 @@ unw_fpreg_t UnwindCursor<A, R>::getFloatReg(int regNum) {
   }
   _LIBUNWIND_ABORT("unsupported float register");
 #elif defined(_LIBUNWIND_TARGET_AARCH64)
-  return _msContext.V[regNum - UNW_ARM64_D0].D[0];
+  return _msContext.V[regNum - UNW_AARCH64_V0].D[0];
 #else
   (void)regNum;
   _LIBUNWIND_ABORT("float registers unimplemented");
@@ -848,7 +848,7 @@ void UnwindCursor<A, R>::setFloatReg(int regNum, unw_fpreg_t value) {
   }
   _LIBUNWIND_ABORT("unsupported float register");
 #elif defined(_LIBUNWIND_TARGET_AARCH64)
-  _msContext.V[regNum - UNW_ARM64_D0].D[0] = value;
+  _msContext.V[regNum - UNW_AARCH64_V0].D[0] = value;
 #else
   (void)regNum;
   (void)value;
@@ -2061,7 +2061,7 @@ int UnwindCursor<A, R>::stepThroughSigReturn(Registers_arm64 &) {
   for (int i = 0; i <= 30; ++i) {
     uint64_t value = _addressSpace.get64(sigctx + kOffsetGprs +
                                          static_cast<pint_t>(i * 8));
-    _registers.setRegister(UNW_ARM64_X0 + i, value);
+    _registers.setRegister(UNW_AARCH64_X0 + i, value);
   }
   _registers.setSP(_addressSpace.get64(sigctx + kOffsetSp));
   _registers.setIP(_addressSpace.get64(sigctx + kOffsetPc));
