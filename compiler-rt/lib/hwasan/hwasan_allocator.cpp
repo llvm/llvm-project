@@ -208,7 +208,8 @@ static bool PointerAndMemoryTagsMatch(void *tagged_ptr) {
 static bool CheckInvalidFree(StackTrace *stack, void *untagged_ptr,
                              void *tagged_ptr) {
   // This function can return true if halt_on_error is false.
-  if (!PointerAndMemoryTagsMatch(tagged_ptr)) {
+  if (!allocator.PointerIsMine(untagged_ptr) ||
+      !PointerAndMemoryTagsMatch(tagged_ptr)) {
     ReportInvalidFree(stack, reinterpret_cast<uptr>(tagged_ptr));
     return true;
   }
