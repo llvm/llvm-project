@@ -292,11 +292,11 @@ class LoggerDataImpl {
   void transferLog(tensorflow::SequenceExample &SE) {
     auto *FL = SE.mutable_feature_lists()->mutable_feature_list();
     if (IncludeReward)
-      (*FL)[RewardSpec.name()].Swap(&Reward);
+      (*FL)[RewardSpec.name()] = std::move(Reward);
     assert(FeatureLists.size() == LoggedFeatureSpecs.size());
     for (size_t I = 0; I < FeatureLists.size(); ++I) {
       const auto &LFS = LoggedFeatureSpecs[I];
-      (*FL)[LFS.getLoggingName()].Swap(&FeatureLists[I]);
+      (*FL)[LFS.getLoggingName()] = std::move(FeatureLists[I]);
     }
   }
 
