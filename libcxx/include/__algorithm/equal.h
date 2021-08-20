@@ -12,8 +12,9 @@
 
 #include <__config>
 #include <__algorithm/comp.h>
+#include <__iterator/distance.h>
 #include <__iterator/iterator_traits.h>
-#include <iterator> // FIXME: replace with <__iterator/distance.h> when it lands
+#include <type_traits>
 
 #if !defined(_LIBCPP_HAS_NO_PRAGMA_SYSTEM_HEADER)
 #pragma GCC system_header
