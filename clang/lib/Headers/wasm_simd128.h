@@ -960,17 +960,17 @@ static __inline__ v128_t __DEFAULT_FN_ATTRS wasm_i8x16_popcnt(v128_t __a) {
 }
 
 static __inline__ v128_t __DEFAULT_FN_ATTRS wasm_i8x16_shl(v128_t __a,
-                                                           int32_t __b) {
+                                                           uint32_t __b) {
   return (v128_t)((__i8x16)__a << __b);
 }
 
 static __inline__ v128_t __DEFAULT_FN_ATTRS wasm_i8x16_shr(v128_t __a,
-                                                           int32_t __b) {
+                                                           uint32_t __b) {
   return (v128_t)((__i8x16)__a >> __b);
 }
 
 static __inline__ v128_t __DEFAULT_FN_ATTRS wasm_u8x16_shr(v128_t __a,
-                                                           int32_t __b) {
+                                                           uint32_t __b) {
   return (v128_t)((__u8x16)__a >> __b);
 }
 
@@ -1046,17 +1046,17 @@ static __inline__ uint32_t __DEFAULT_FN_ATTRS wasm_i16x8_bitmask(v128_t __a) {
 }
 
 static __inline__ v128_t __DEFAULT_FN_ATTRS wasm_i16x8_shl(v128_t __a,
-                                                           int32_t __b) {
+                                                           uint32_t __b) {
   return (v128_t)((__i16x8)__a << __b);
 }
 
 static __inline__ v128_t __DEFAULT_FN_ATTRS wasm_i16x8_shr(v128_t __a,
-                                                           int32_t __b) {
+                                                           uint32_t __b) {
   return (v128_t)((__i16x8)__a >> __b);
 }
 
 static __inline__ v128_t __DEFAULT_FN_ATTRS wasm_u16x8_shr(v128_t __a,
-                                                           int32_t __b) {
+                                                           uint32_t __b) {
   return (v128_t)((__u16x8)__a >> __b);
 }
 
@@ -1137,17 +1137,17 @@ static __inline__ uint32_t __DEFAULT_FN_ATTRS wasm_i32x4_bitmask(v128_t __a) {
 }
 
 static __inline__ v128_t __DEFAULT_FN_ATTRS wasm_i32x4_shl(v128_t __a,
-                                                           int32_t __b) {
+                                                           uint32_t __b) {
   return (v128_t)((__i32x4)__a << __b);
 }
 
 static __inline__ v128_t __DEFAULT_FN_ATTRS wasm_i32x4_shr(v128_t __a,
-                                                           int32_t __b) {
+                                                           uint32_t __b) {
   return (v128_t)((__i32x4)__a >> __b);
 }
 
 static __inline__ v128_t __DEFAULT_FN_ATTRS wasm_u32x4_shr(v128_t __a,
-                                                           int32_t __b) {
+                                                           uint32_t __b) {
   return (v128_t)((__u32x4)__a >> __b);
 }
 
@@ -1208,17 +1208,17 @@ static __inline__ uint32_t __DEFAULT_FN_ATTRS wasm_i64x2_bitmask(v128_t __a) {
 }
 
 static __inline__ v128_t __DEFAULT_FN_ATTRS wasm_i64x2_shl(v128_t __a,
-                                                           int32_t __b) {
+                                                           uint32_t __b) {
   return (v128_t)((__i64x2)__a << (int64_t)__b);
 }
 
 static __inline__ v128_t __DEFAULT_FN_ATTRS wasm_i64x2_shr(v128_t __a,
-                                                           int32_t __b) {
+                                                           uint32_t __b) {
   return (v128_t)((__i64x2)__a >> (int64_t)__b);
 }
 
 static __inline__ v128_t __DEFAULT_FN_ATTRS wasm_u64x2_shr(v128_t __a,
-                                                           int32_t __b) {
+                                                           uint32_t __b) {
   return (v128_t)((__u64x2)__a >> (int64_t)__b);
 }
 
@@ -1297,14 +1297,12 @@ static __inline__ v128_t __DEFAULT_FN_ATTRS wasm_f32x4_max(v128_t __a,
 
 static __inline__ v128_t __DEFAULT_FN_ATTRS wasm_f32x4_pmin(v128_t __a,
                                                             v128_t __b) {
-  __i32x4 __mask = (__i32x4)((__f32x4)__b < (__f32x4)__a);
-  return (v128_t)((((__i32x4)__b) & __mask) | (((__i32x4)__a) & ~__mask));
+  return (v128_t)__builtin_wasm_pmin_f32x4((__f32x4)__a, (__f32x4)__b);
 }
 
 static __inline__ v128_t __DEFAULT_FN_ATTRS wasm_f32x4_pmax(v128_t __a,
                                                             v128_t __b) {
-  __i32x4 __mask = (__i32x4)((__f32x4)__a < (__f32x4)__b);
-  return (v128_t)((((__i32x4)__b) & __mask) | (((__i32x4)__a) & ~__mask));
+  return (v128_t)__builtin_wasm_pmax_f32x4((__f32x4)__a, (__f32x4)__b);
 }
 
 static __inline__ v128_t __DEFAULT_FN_ATTRS wasm_f64x2_abs(v128_t __a) {
@@ -1367,14 +1365,12 @@ static __inline__ v128_t __DEFAULT_FN_ATTRS wasm_f64x2_max(v128_t __a,
 
 static __inline__ v128_t __DEFAULT_FN_ATTRS wasm_f64x2_pmin(v128_t __a,
                                                             v128_t __b) {
-  __i64x2 __mask = (__i64x2)((__f64x2)__b < (__f64x2)__a);
-  return (v128_t)((((__i64x2)__b) & __mask) | (((__i64x2)__a) & ~__mask));
+  return (v128_t)__builtin_wasm_pmin_f64x2((__f64x2)__a, (__f64x2)__b);
 }
 
 static __inline__ v128_t __DEFAULT_FN_ATTRS wasm_f64x2_pmax(v128_t __a,
                                                             v128_t __b) {
-  __i64x2 __mask = (__i64x2)((__f64x2)__a < (__f64x2)__b);
-  return (v128_t)((((__i64x2)__b) & __mask) | (((__i64x2)__a) & ~__mask));
+  return (v128_t)__builtin_wasm_pmax_f64x2((__f64x2)__a, (__f64x2)__b);
 }
 
 static __inline__ v128_t __DEFAULT_FN_ATTRS

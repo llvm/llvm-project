@@ -261,6 +261,7 @@ llvm::Error InOrderIssueStage::tryIssue(InstRef &IR) {
   // the execution and retirement now.
   if (IS.isExecuted()) {
     PRF.onInstructionExecuted(&IS);
+    LSU.onInstructionExecuted(IR);
     notifyEvent<HWInstructionEvent>(
         HWInstructionEvent(HWInstructionEvent::Executed, IR));
     LLVM_DEBUG(dbgs() << "[E] Instruction #" << IR << " is executed\n");

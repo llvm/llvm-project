@@ -1175,6 +1175,16 @@ def : Pat<(vec.int_vt (vselect
           (pmax $lhs, $rhs)>;
 }
 
+// And match the pmin/pmax LLVM intrinsics as well
+def : Pat<(v4f32 (int_wasm_pmin (v4f32 V128:$lhs), (v4f32 V128:$rhs))),
+          (PMIN_F32x4 V128:$lhs, V128:$rhs)>;
+def : Pat<(v4f32 (int_wasm_pmax (v4f32 V128:$lhs), (v4f32 V128:$rhs))),
+          (PMAX_F32x4 V128:$lhs, V128:$rhs)>;
+def : Pat<(v2f64 (int_wasm_pmin (v2f64 V128:$lhs), (v2f64 V128:$rhs))),
+          (PMIN_F64x2 V128:$lhs, V128:$rhs)>;
+def : Pat<(v2f64 (int_wasm_pmax (v2f64 V128:$lhs), (v2f64 V128:$rhs))),
+          (PMAX_F64x2 V128:$lhs, V128:$rhs)>;
+
 //===----------------------------------------------------------------------===//
 // Conversions
 //===----------------------------------------------------------------------===//
