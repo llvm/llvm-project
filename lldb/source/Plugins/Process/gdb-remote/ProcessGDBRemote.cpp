@@ -4312,10 +4312,12 @@ bool ParseRegisters(XMLNode feature_node, GdbServerTargetInfo &target_info,
           } else if (gdb_type == "data_ptr" || gdb_type == "code_ptr") {
             reg_info.format = eFormatAddressInfo;
             reg_info.encoding = eEncodingUint;
-          } else if (gdb_type == "i387_ext" || gdb_type == "float") {
+          } else if (gdb_type == "float") {
             reg_info.format = eFormatFloat;
             reg_info.encoding = eEncodingIEEE754;
-          } else if (gdb_type == "aarch64v") {
+          } else if (gdb_type == "aarch64v" ||
+                     llvm::StringRef(gdb_type).startswith("vec") ||
+                     gdb_type == "i387_ext") {
             reg_info.format = eFormatVectorOfUInt8;
             reg_info.encoding = eEncodingVector;
           }
