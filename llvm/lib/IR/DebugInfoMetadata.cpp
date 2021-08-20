@@ -582,18 +582,17 @@ DIDerivedType *DIDerivedType::getImpl(
     unsigned Line, Metadata *Scope, Metadata *BaseType, uint64_t SizeInBits,
     uint32_t AlignInBits, uint64_t OffsetInBits,
     Optional<unsigned> DWARFAddressSpace, Optional<PtrAuthData> PtrAuthData,
-    DIFlags Flags, Metadata *ExtraData, StorageType Storage,
-    bool ShouldCreate) {
+    DIFlags Flags, Metadata *ExtraData, Metadata *Annotations,
+    StorageType Storage, bool ShouldCreate) {
   assert(isCanonical(Name) && "Expected canonical MDString");
   DEFINE_GETIMPL_LOOKUP(DIDerivedType,
                         (Tag, Name, File, Line, Scope, BaseType, SizeInBits,
-                         AlignInBits, OffsetInBits, DWARFAddressSpace,
-                         PtrAuthData, Flags, ExtraData));
-  Metadata *Ops[] = {File, Scope, Name, BaseType, ExtraData};
-  DEFINE_GETIMPL_STORE(DIDerivedType,
-                       (Tag, Line, SizeInBits, AlignInBits, OffsetInBits,
-                        DWARFAddressSpace, PtrAuthData, Flags),
-                       Ops);
+                         AlignInBits, OffsetInBits, DWARFAddressSpace, PtrAuthData,
+                         Flags, ExtraData, Annotations));
+  Metadata *Ops[] = {File, Scope, Name, BaseType, ExtraData, Annotations};
+  DEFINE_GETIMPL_STORE(
+      DIDerivedType, (Tag, Line, SizeInBits, AlignInBits, OffsetInBits,
+                      DWARFAddressSpace, PtrAuthData, Flags), Ops);
 }
 
 DICompositeType *DICompositeType::getImpl(
