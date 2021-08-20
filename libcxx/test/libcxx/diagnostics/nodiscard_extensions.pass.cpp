@@ -13,10 +13,6 @@
 // This test intentionally leaks memory, so it is unsupported under ASAN.
 // UNSUPPORTED: asan
 
-// AppleClang9 and GCC 5 don't support C++17's implicitly synthesized
-// deduction guides from existing ctors, needed by default_searcher() below.
-// UNSUPPORTED: apple-clang-9
-
 // All entities to which libc++ applies [[nodiscard]] as an extension should
 // be tested here and in nodiscard_extensions.fail.cpp. They should also
 // be listed in `UsingLibcxx.rst` in the documentation for the extension.

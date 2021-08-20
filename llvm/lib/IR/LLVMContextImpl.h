@@ -471,23 +471,24 @@ template <> struct MDNodeKeyImpl<DIDerivedType> {
   Optional<unsigned> DWARFAddressSpace;
   unsigned Flags;
   Metadata *ExtraData;
+  Metadata *Annotations;
 
   MDNodeKeyImpl(unsigned Tag, MDString *Name, Metadata *File, unsigned Line,
                 Metadata *Scope, Metadata *BaseType, uint64_t SizeInBits,
                 uint32_t AlignInBits, uint64_t OffsetInBits,
                 Optional<unsigned> DWARFAddressSpace, unsigned Flags,
-                Metadata *ExtraData)
+                Metadata *ExtraData, Metadata *Annotations)
       : Tag(Tag), Name(Name), File(File), Line(Line), Scope(Scope),
         BaseType(BaseType), SizeInBits(SizeInBits), OffsetInBits(OffsetInBits),
         AlignInBits(AlignInBits), DWARFAddressSpace(DWARFAddressSpace),
-        Flags(Flags), ExtraData(ExtraData) {}
+        Flags(Flags), ExtraData(ExtraData), Annotations(Annotations) {}
   MDNodeKeyImpl(const DIDerivedType *N)
       : Tag(N->getTag()), Name(N->getRawName()), File(N->getRawFile()),
         Line(N->getLine()), Scope(N->getRawScope()),
         BaseType(N->getRawBaseType()), SizeInBits(N->getSizeInBits()),
         OffsetInBits(N->getOffsetInBits()), AlignInBits(N->getAlignInBits()),
         DWARFAddressSpace(N->getDWARFAddressSpace()), Flags(N->getFlags()),
-        ExtraData(N->getRawExtraData()) {}
+        ExtraData(N->getRawExtraData()), Annotations(N->getRawAnnotations()) {}
 
   bool isKeyOf(const DIDerivedType *RHS) const {
     return Tag == RHS->getTag() && Name == RHS->getRawName() &&
@@ -497,8 +498,8 @@ template <> struct MDNodeKeyImpl<DIDerivedType> {
            AlignInBits == RHS->getAlignInBits() &&
            OffsetInBits == RHS->getOffsetInBits() &&
            DWARFAddressSpace == RHS->getDWARFAddressSpace() &&
-           Flags == RHS->getFlags() &&
-           ExtraData == RHS->getRawExtraData();
+           Flags == RHS->getFlags() && ExtraData == RHS->getRawExtraData() &&
+           Annotations == RHS->getRawAnnotations();
   }
 
   unsigned getHashValue() const {

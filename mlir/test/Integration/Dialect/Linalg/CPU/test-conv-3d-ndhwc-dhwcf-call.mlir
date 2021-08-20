@@ -29,8 +29,8 @@ func @alloc_5d_filled_f32(%s1 : index, %s2 : index, %s3 : index, %s4 : index, %s
   return %buf : memref<?x?x?x?x?xf32>
 }
 
-func @conv_3d_input_ndhwc_filter_dhwcf(%arg0: memref<?x?x?x?x?xf32>, %arg1: memref<?x?x?x?x?xf32>, %arg2: memref<?x?x?x?x?xf32>) {
-  linalg.conv_3d_input_ndhwc_filter_dhwcf {dilations = dense<1> : tensor<3xi64>,
+func @conv_3d_ndhwc_dhwcf(%arg0: memref<?x?x?x?x?xf32>, %arg1: memref<?x?x?x?x?xf32>, %arg2: memref<?x?x?x?x?xf32>) {
+  linalg.conv_3d_ndhwc_dhwcf {dilations = dense<1> : tensor<3xi64>,
                            strides = dense<1> : tensor<3xi64>}
      ins (%arg0, %arg1: memref<?x?x?x?x?xf32>, memref<?x?x?x?x?xf32>)
     outs (%arg2: memref<?x?x?x?x?xf32>)
@@ -53,7 +53,7 @@ func @main() {
   %out3D_ndhwc = call @alloc_5d_filled_f32(%c1, %c6, %c6, %c6, %c1, %zero) : (index, index, index, index, index, f32) -> (memref<?x?x?x?x?xf32>)
 
   memref.store %f10, %in3D_ndhwc[%c0, %c0, %c0, %c3, %c0] : memref<?x?x?x?x?xf32>
-  call @conv_3d_input_ndhwc_filter_dhwcf(%in3D_ndhwc, %filter3D_ndhwc, %out3D_ndhwc) : (memref<?x?x?x?x?xf32>, memref<?x?x?x?x?xf32>, memref<?x?x?x?x?xf32>) -> ()
+  call @conv_3d_ndhwc_dhwcf(%in3D_ndhwc, %filter3D_ndhwc, %out3D_ndhwc) : (memref<?x?x?x?x?xf32>, memref<?x?x?x?x?xf32>, memref<?x?x?x?x?xf32>) -> ()
   %out3D_ndhwc_ = memref.cast %out3D_ndhwc : memref<?x?x?x?x?xf32> to memref<*xf32>
   call @print_memref_f32(%out3D_ndhwc_): (memref<*xf32>) -> ()
 

@@ -1,4 +1,4 @@
-// RUN: mlir-opt %s --sparse-tensor-conversion --canonicalize | FileCheck %s
+// RUN: mlir-opt %s --sparse-tensor-conversion --canonicalize --cse | FileCheck %s
 
 #DenseVector = #sparse_tensor.encoding<{
   dimLevelType = ["dense"]
@@ -46,9 +46,24 @@ func @sparse_dim1d(%arg0: tensor<?xf64, #SparseVector>) -> index {
 //       CHECK: %[[D:.*]] = call @sparseDimSize(%[[A]], %[[C]])
 //       CHECK: return %[[D]] : index
 func @sparse_dim3d(%arg0: tensor<?x?x?xf64, #SparseTensor>) -> index {
-  // Needs permuting 1 into 2.
+  // Querying for dimension 1 in the tensor type needs to be
+  // permuted into querying for dimension 2 in the stored sparse
+  // tensor scheme, since the latter honors the dimOrdering.
   %c = constant 1 : index
   %0 = tensor.dim %arg0, %c : tensor<?x?x?xf64, #SparseTensor>
+  return %0 : index
+}
+
+// CHECK-LABEL: func @sparse_dim3d_const(
+//  CHECK-SAME: %[[A:.*]]: !llvm.ptr<i8>)
+//       CHECK: %[[C:.*]] = constant 20 : index
+//       CHECK: return %[[C]] : index
+func @sparse_dim3d_const(%arg0: tensor<10x20x30xf64, #SparseTensor>) -> index {
+  // Querying for dimension 1 in the tensor type can be directly
+  // folded into the right value (even though it corresponds
+  // to dimension 2 in the stored sparse tensor scheme).
+  %c = constant 1 : index
+  %0 = tensor.dim %arg0, %c : tensor<10x20x30xf64, #SparseTensor>
   return %0 : index
 }
 

@@ -41,7 +41,7 @@ int main(int, char**)
         assert(!p0.valid());
         assert(p.valid());
         std::future<double> f = p.get_future();
-        p(3, 'a');
+        p(3, 97);
         assert(f.get() == 105.0);
     }
     {

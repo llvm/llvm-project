@@ -82,15 +82,15 @@ __try.cont:                                       ; preds = %__except, %invoke.c
 ; CHECK-NEXT: .Luse_both$parent_frame_offset
 ; CHECK-NEXT: .long (.Llsda_end0-.Llsda_begin0)/16
 ; CHECK-NEXT: .Llsda_begin0:
-; CHECK-NEXT: .long .Ltmp0@IMGREL+1
+; CHECK-NEXT: .long .Ltmp0@IMGREL
 ; CHECK-NEXT: .long .Ltmp1@IMGREL+1
 ; CHECK-NEXT: .long "?dtor$2@?0?use_both@4HA"@IMGREL
 ; CHECK-NEXT: .long 0
-; CHECK-NEXT: .long .Ltmp0@IMGREL+1
+; CHECK-NEXT: .long .Ltmp0@IMGREL
 ; CHECK-NEXT: .long .Ltmp1@IMGREL+1
 ; CHECK-NEXT: .long "?filt$0@0@use_both@@"@IMGREL
 ; CHECK-NEXT: .long .LBB0_{{[0-9]+}}@IMGREL
-; CHECK-NEXT: .long .Ltmp4@IMGREL+1
+; CHECK-NEXT: .long .Ltmp4@IMGREL
 ; CHECK-NEXT: .long .Ltmp5@IMGREL+1
 ; CHECK-NEXT: .long "?filt$0@0@use_both@@"@IMGREL
 ; CHECK-NEXT: .long .LBB0_{{[0-9]+}}@IMGREL
