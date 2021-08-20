@@ -29,8 +29,8 @@ func @alloc_4d_filled_f32(%s1 : index, %s2 : index, %s3 : index, %s4 : index, %f
   return %buf : memref<?x?x?x?xf32>
 }
 
-func @conv_2d_input_nhwc_filter_hwcf(%arg0: memref<?x?x?x?xf32>, %arg1: memref<?x?x?x?xf32>, %arg2: memref<?x?x?x?xf32>) {
-  linalg.conv_2d_input_nhwc_filter_hwcf {dilations = dense<1> : tensor<2xi64>,
+func @conv_2d_nhwc_hwcf(%arg0: memref<?x?x?x?xf32>, %arg1: memref<?x?x?x?xf32>, %arg2: memref<?x?x?x?xf32>) {
+  linalg.conv_2d_nhwc_hwcf {dilations = dense<1> : tensor<2xi64>,
                           strides = dense<1> : tensor<2xi64>}
      ins (%arg0, %arg1: memref<?x?x?x?xf32>, memref<?x?x?x?xf32>)
     outs (%arg2: memref<?x?x?x?xf32>)
@@ -52,7 +52,7 @@ func @main() {
   %out2D_nhwc = call @alloc_4d_filled_f32(%c3, %c6, %c6, %c1, %zero) : (index, index, index, index, f32) -> (memref<?x?x?x?xf32>)
 
   memref.store %f10, %in2D_nhwc[%c0, %c0, %c3, %c0] : memref<?x?x?x?xf32>
-  call @conv_2d_input_nhwc_filter_hwcf(%in2D_nhwc, %filter2D_nhwc, %out2D_nhwc) : (memref<?x?x?x?xf32>, memref<?x?x?x?xf32>, memref<?x?x?x?xf32>) -> ()
+  call @conv_2d_nhwc_hwcf(%in2D_nhwc, %filter2D_nhwc, %out2D_nhwc) : (memref<?x?x?x?xf32>, memref<?x?x?x?xf32>, memref<?x?x?x?xf32>) -> ()
   %out2D_nhwc_ = memref.cast %out2D_nhwc : memref<?x?x?x?xf32> to memref<*xf32>
   call @print_memref_f32(%out2D_nhwc_): (memref<*xf32>) -> ()
 
