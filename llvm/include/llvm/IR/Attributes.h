@@ -666,38 +666,16 @@ public:
       LLVMContext &C, unsigned ArgNo, uint64_t Bytes) const;
 
   /// Add the dereferenceable_or_null attribute to the attribute set at
-  /// the given index. Returns a new list because attribute lists are immutable.
-  LLVM_NODISCARD AttributeList addDereferenceableOrNullAttr(
-      LLVMContext &C, unsigned Index, uint64_t Bytes) const;
-
-  /// Add the dereferenceable_or_null attribute to the attribute set at
   /// the given arg index. Returns a new list because attribute lists are
   /// immutable.
   LLVM_NODISCARD AttributeList addDereferenceableOrNullParamAttr(
-      LLVMContext &C, unsigned ArgNo, uint64_t Bytes) const {
-    return addDereferenceableOrNullAttr(C, ArgNo + FirstArgIndex, Bytes);
-  }
-
-  /// Add the allocsize attribute to the attribute set at the given index.
-  /// Returns a new list because attribute lists are immutable.
-  LLVM_NODISCARD AttributeList
-  addAllocSizeAttr(LLVMContext &C, unsigned Index, unsigned ElemSizeArg,
-                   const Optional<unsigned> &NumElemsArg);
+      LLVMContext &C, unsigned ArgNo, uint64_t Bytes) const;
 
   /// Add the allocsize attribute to the attribute set at the given arg index.
   /// Returns a new list because attribute lists are immutable.
   LLVM_NODISCARD AttributeList
   addAllocSizeParamAttr(LLVMContext &C, unsigned ArgNo, unsigned ElemSizeArg,
-                        const Optional<unsigned> &NumElemsArg) {
-    return addAllocSizeAttr(C, ArgNo + FirstArgIndex, ElemSizeArg, NumElemsArg);
-  }
-
-  /// Add the vscale_range attribute to the attribute set at the given index.
-  /// Returns a new list because attribute lists are immutable.
-  LLVM_NODISCARD AttributeList addVScaleRangeAttr(LLVMContext &C,
-                                                  unsigned Index,
-                                                  unsigned MinValue,
-                                                  unsigned MaxValue);
+                        const Optional<unsigned> &NumElemsArg);
 
   //===--------------------------------------------------------------------===//
   // AttributeList Accessors
