@@ -24,12 +24,13 @@
 @__profn_foo_inline = linkonce_odr hidden constant [10 x i8] c"foo_inline"
 @__profn_foo_extern = linkonce_odr hidden constant [10 x i8] c"foo_extern"
 
-; ELF: @__profc_foo = private global {{.*}} section "__llvm_prf_cnts", comdat,
+; ELF: @__profc_foo = private global {{.*}} section "__llvm_prf_cnts", comdat
 ; ELF: @__profd_foo = private global {{.*}} section "__llvm_prf_data", comdat($__profc_foo)
 ; MACHO: @__profc_foo = private global
 ; MACHO: @__profd_foo = private global
-; COFF: @__profc_foo = private global {{.*}} section ".lprfc$M", comdat,
-; COFF: @__profd_foo = private global {{.*}} section ".lprfd$M", comdat($__profc_foo)
+; COFF: @__profc_foo = private global
+; COFF-NOT: comdat
+; COFF: @__profd_foo = private global
 define void @foo() {
   call void @llvm.instrprof.increment(i8* getelementptr inbounds ([3 x i8], [3 x i8]* @__profn_foo, i32 0, i32 0), i64 0, i32 1, i32 0)
   ret void
@@ -61,8 +62,8 @@ define internal void @foo_internal() {
 ; ELF: @__profd_foo_inline = private global{{.*}}section "__llvm_prf_data", comdat($__profc_foo_inline), align 8
 ; MACHO: @__profc_foo_inline = linkonce_odr hidden global
 ; MACHO: @__profd_foo_inline = linkonce_odr hidden global
-; COFF: @__profc_foo_inline = linkonce_odr hidden global{{.*}} section ".lprfc$M", comdat, align 8
-; COFF: @__profd_foo_inline = private global{{.*}} section ".lprfd$M", comdat($__profc_foo_inline), align 8
+; COFF: @__profc_foo_inline = linkonce_odr hidden global{{.*}} section ".lprfc$M", align 8
+; COFF: @__profd_foo_inline = private global{{.*}} section ".lprfd$M", align 8
 define linkonce_odr void @foo_inline() {
   call void @llvm.instrprof.increment(i8* getelementptr inbounds ([10 x i8], [10 x i8]* @__profn_foo_inline, i32 0, i32 0), i64 0, i32 1, i32 0)
   ret void
