@@ -1219,8 +1219,10 @@ bool DeclContext::Encloses(const DeclContext *DC) const {
 
 DeclContext *DeclContext::getNonTransparentContext() {
   DeclContext *DC = this;
-  while (DC && DC->isTransparentContext())
+  while (DC->isTransparentContext()) {
     DC = DC->getParent();
+    assert(DC && "All transparent contexts should have a parent!");
+  }
   return DC;
 }
 
