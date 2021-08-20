@@ -509,8 +509,6 @@ void IRPromoter::ExtendSources() {
 void IRPromoter::PromoteTree() {
   LLVM_DEBUG(dbgs() << "IR Promotion: Mutating the tree..\n");
 
-  IRBuilder<> Builder{Ctx};
-
   // Mutate the types of the instructions within the tree. Here we handle
   // constant operands.
   for (auto *V : Visited) {
