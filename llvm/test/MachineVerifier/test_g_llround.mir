@@ -2,7 +2,7 @@
 # REQUIRES: aarch64-registered-target
 
 ---
-name:            test_lround
+name:            test_llround
 legalized:       true
 regBankSelected: false
 selected:        false
@@ -15,9 +15,9 @@ body:             |
     %vector:_(<2 x s64>) = COPY $q0
 
     ; CHECK: Bad machine code: All register operands must have scalar types
-    ; CHECK: instruction: %no_ptrs:_(s32) = G_LROUND %ptr:_(p0)
-    %no_ptrs:_(s32) = G_LROUND %ptr:_(p0)
+    ; CHECK: instruction: %no_ptrs:_(s64) = G_LROUND %ptr:_(p0)
+    %no_ptrs:_(s64) = G_LROUND %ptr:_(p0)
 
     ; CHECK: Bad machine code: All register operands must have scalar types
-    ; CHECK: instruction: %no_vectors:_(s32) = G_LROUND %vector:_(<2 x s64>)
-    %no_vectors:_(s32) = G_LROUND %vector:_(<2 x s64>)
+    ; CHECK: instruction: %no_vectors:_(s64) = G_LROUND %vector:_(<2 x s64>)
+    %no_vectors:_(s64) = G_LROUND %vector:_(<2 x s64>)

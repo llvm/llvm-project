@@ -238,6 +238,12 @@ def G_LROUND: GenericInstruction {
   let hasSideEffects = false;
 }
 
+def G_LLROUND: GenericInstruction {
+  let OutOperandList = (outs type0:$dst);
+  let InOperandList = (ins type1:$src);
+  let hasSideEffects = false;
+}
+
 //------------------------------------------------------------------------------
 // Binary ops.
 //------------------------------------------------------------------------------
