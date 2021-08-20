@@ -4235,15 +4235,13 @@ void EmitClangAttrDocTable(RecordKeeper &Records, raw_ostream &OS) {
     if (!A->getValueAsBit("ASTNode"))
       continue;
     std::vector<Record *> Docs = A->getValueAsListOfDefs("Documentation");
-    for (const auto *D : Docs) {
-      OS << "\nstatic const char AttrDoc_" << A->getName() << "[] = "
-         << "R\"reST("
-         << D->getValueAsOptionalString("Content").getValueOr("").trim()
-         << ")reST\";\n";
-      // Only look at the first documentation if there are several.
-      // (Currently there's only one such attr, revisit if this becomes common).
-      break;
-    }
+    assert(!Docs.empty());
+    // Only look at the first documentation if there are several.
+    // (Currently there's only one such attr, revisit if this becomes common).
+    StringRef Text =
+        Docs.front()->getValueAsOptionalString("Content").getValueOr("");
+    OS << "\nstatic const char AttrDoc_" << A->getName() << "[] = "
+       << "R\"reST(" << Text.trim() << ")reST\";\n";
   }
 }
 
