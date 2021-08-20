@@ -324,10 +324,16 @@ static kmp_int32 __kmp_push_task(kmp_int32 gtid, kmp_task_t *task) {
   kmp_info_t *thread = __kmp_threads[gtid];
   kmp_taskdata_t *taskdata = KMP_TASK_TO_TASKDATA(task);
 
-  // We don't need to map to shadow gtid if it is already hidden helper thread
-  if (taskdata->td_flags.hidden_helper && !KMP_HIDDEN_HELPER_THREAD(gtid)) {
-    gtid = KMP_GTID_TO_SHADOW_GTID(gtid);
-    thread = __kmp_threads[gtid];
+  // If we encounter a hidden helper task, and the current thread is not a
+  // hidden helper thread, we have to give the task to any hidden helper thread
+  // starting from its shadow one.
+  if (UNLIKELY(taskdata->td_flags.hidden_helper &&
+               !KMP_HIDDEN_HELPER_THREAD(gtid))) {
+    kmp_int32 shadow_gtid = KMP_GTID_TO_SHADOW_GTID(gtid);
+    __kmpc_give_task(task, __kmp_tid_from_gtid(shadow_gtid));
+    // Signal the hidden helper threads.
+    __kmp_hidden_helper_worker_thread_signal();
+    return TASK_SUCCESSFULLY_PUSHED;
   }
 
   kmp_task_team_t *task_team = thread->th.th_task_team;
@@ -434,15 +440,7 @@ static kmp_int32 __kmp_push_task(kmp_int32 gtid, kmp_task_t *task) {
                 gtid, taskdata, thread_data->td.td_deque_ntasks,
                 thread_data->td.td_deque_head, thread_data->td.td_deque_tail));
 
-  auto hidden_helper = taskdata->td_flags.hidden_helper;
-
   __kmp_release_bootstrap_lock(&thread_data->td.td_deque_lock);
-
-  // Signal one worker thread to execute the task
-  if (UNLIKELY(hidden_helper)) {
-    // Wake hidden helper threads up if they're sleeping
-    __kmp_hidden_helper_worker_thread_signal();
-  }
 
   return TASK_SUCCESSFULLY_PUSHED;
 }
