@@ -1584,12 +1584,6 @@ public:
     Attrs = Attrs.addDereferenceableRetAttr(getContext(), Bytes);
   }
 
-  /// adds the dereferenceable_or_null attribute to the list of
-  /// attributes.
-  void addDereferenceableOrNullAttr(unsigned i, uint64_t Bytes) {
-    Attrs = Attrs.addDereferenceableOrNullAttr(getContext(), i, Bytes);
-  }
-
   /// Determine whether the return value has the given attribute.
   bool hasRetAttr(Attribute::AttrKind Kind) const {
     return hasRetAttrImpl(Kind);
