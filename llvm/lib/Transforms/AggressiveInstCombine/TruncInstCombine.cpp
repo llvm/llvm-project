@@ -396,7 +396,8 @@ void TruncInstCombine::ReduceExpressionDag(Type *SclTy) {
       Res = Builder.CreateBinOp((Instruction::BinaryOps)Opc, LHS, RHS);
       // Preserve `exact` flag since truncation doesn't change exactness
       if (Opc == Instruction::LShr)
-        cast<Instruction>(Res)->setIsExact(I->isExact());
+        if (auto *ResI = dyn_cast<Instruction>(Res))
+          ResI->setIsExact(I->isExact());
       break;
     }
     case Instruction::Select: {

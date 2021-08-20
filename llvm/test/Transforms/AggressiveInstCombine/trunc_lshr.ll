@@ -234,3 +234,17 @@ define i16 @lshr_negative_operand_but_short(i16 %x) {
   %trunc = trunc i32 %lshr2 to i16
   ret i16 %trunc
 }
+
+; We may encounter unoptimized IR as below,
+; so don't crash by assuming that we can
+; apply instruction flags (exact) if there
+; is no instruction.
+
+define i8 @non_canonical_crash() {
+; CHECK-LABEL: @non_canonical_crash(
+; CHECK-NEXT:    ret i8 8
+;
+  %sh = lshr i32 33, 2
+  %tr = trunc i32 %sh to i8
+  ret i8 %tr
+}
