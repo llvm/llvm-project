@@ -526,3 +526,64 @@ define <4 x i32> @vec_const_sub_const_sub_nonsplat(<4 x i32> %arg) {
   %t1 = sub <4 x i32> <i32 2, i32 3, i32 undef, i32 2>, %t0
   ret <4 x i32> %t1
 }
+
+define i7 @addsub_combine_constants(i7 %x, i7 %y) {
+; CHECK-LABEL: @addsub_combine_constants(
+; CHECK-NEXT:    [[TMP1:%.*]] = sub i7 [[X:%.*]], [[Y:%.*]]
+; CHECK-NEXT:    [[A2:%.*]] = add i7 [[TMP1]], 52
+; CHECK-NEXT:    ret i7 [[A2]]
+;
+  %a1 = add i7 %x, 42
+  %s = sub i7 10, %y
+  %a2 = add nsw i7 %a1, %s
+  ret i7 %a2
+}
+
+define <4 x i32> @addsub_combine_constants_use1(<4 x i32> %x, <4 x i32> %y) {
+; CHECK-LABEL: @addsub_combine_constants_use1(
+; CHECK-NEXT:    [[A1:%.*]] = add <4 x i32> [[X:%.*]], <i32 42, i32 -7, i32 0, i32 -1>
+; CHECK-NEXT:    call void @vec_use(<4 x i32> [[A1]])
+; CHECK-NEXT:    [[TMP1:%.*]] = sub <4 x i32> [[X]], [[Y:%.*]]
+; CHECK-NEXT:    [[A2:%.*]] = add <4 x i32> [[TMP1]], <i32 -58, i32 -6, i32 -1, i32 41>
+; CHECK-NEXT:    ret <4 x i32> [[A2]]
+;
+  %a1 = add <4 x i32> %x, <i32 42, i32 -7, i32 0, i32 -1>
+  call void @vec_use(<4 x i32> %a1)
+  %s = sub <4 x i32> <i32 -100, i32 1, i32 -1, i32 42>, %y
+  %a2 = add nuw <4 x i32> %s, %a1
+  ret <4 x i32> %a2
+}
+
+define i32 @addsub_combine_constants_use2(i32 %x, i32 %y) {
+; CHECK-LABEL: @addsub_combine_constants_use2(
+; CHECK-NEXT:    [[S:%.*]] = sub i32 100, [[Y:%.*]]
+; CHECK-NEXT:    call void @use(i32 [[S]])
+; CHECK-NEXT:    [[TMP1:%.*]] = sub i32 [[X:%.*]], [[Y]]
+; CHECK-NEXT:    [[A2:%.*]] = add i32 [[TMP1]], 142
+; CHECK-NEXT:    ret i32 [[A2]]
+;
+  %a1 = add i32 %x, 42
+  %s = sub i32 100, %y
+  call void @use(i32 %s)
+  %a2 = add i32 %a1, %s
+  ret i32 %a2
+}
+
+; negative test - too many uses
+
+define i32 @addsub_combine_constants_use3(i32 %x, i32 %y) {
+; CHECK-LABEL: @addsub_combine_constants_use3(
+; CHECK-NEXT:    [[A1:%.*]] = add i32 [[X:%.*]], 42
+; CHECK-NEXT:    call void @use(i32 [[A1]])
+; CHECK-NEXT:    [[S:%.*]] = sub i32 100, [[Y:%.*]]
+; CHECK-NEXT:    call void @use(i32 [[S]])
+; CHECK-NEXT:    [[A2:%.*]] = add i32 [[A1]], [[S]]
+; CHECK-NEXT:    ret i32 [[A2]]
+;
+  %a1 = add i32 %x, 42
+  call void @use(i32 %a1)
+  %s = sub i32 100, %y
+  call void @use(i32 %s)
+  %a2 = add i32 %a1, %s
+  ret i32 %a2
+}
