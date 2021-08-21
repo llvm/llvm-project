@@ -6186,10 +6186,10 @@ define void @trunc_ssat_v16i32_v16i24(<16 x i32> %x, <16 x i24>* %y) nounwind {
 ; AVX512-NEXT:    shrl $16, %r14d
 ; AVX512-NEXT:    movb %r14b, 26(%rdi)
 ; AVX512-NEXT:    vextracti128 $1, %ymm0, %xmm0
-; AVX512-NEXT:    vpextrd $3, %xmm0, %edx
-; AVX512-NEXT:    movw %dx, 21(%rdi)
-; AVX512-NEXT:    vpextrd $2, %xmm0, %esi
-; AVX512-NEXT:    movw %si, 18(%rdi)
+; AVX512-NEXT:    vpextrd $3, %xmm0, %esi
+; AVX512-NEXT:    movw %si, 21(%rdi)
+; AVX512-NEXT:    vpextrd $2, %xmm0, %edx
+; AVX512-NEXT:    movw %dx, 18(%rdi)
 ; AVX512-NEXT:    vpextrd $1, %xmm0, %ecx
 ; AVX512-NEXT:    movw %cx, 15(%rdi)
 ; AVX512-NEXT:    vmovd %xmm0, %eax
@@ -6202,10 +6202,10 @@ define void @trunc_ssat_v16i32_v16i24(<16 x i32> %x, <16 x i24>* %y) nounwind {
 ; AVX512-NEXT:    movb %r9b, 5(%rdi)
 ; AVX512-NEXT:    shrl $16, %r8d
 ; AVX512-NEXT:    movb %r8b, 2(%rdi)
-; AVX512-NEXT:    shrl $16, %edx
-; AVX512-NEXT:    movb %dl, 23(%rdi)
 ; AVX512-NEXT:    shrl $16, %esi
-; AVX512-NEXT:    movb %sil, 20(%rdi)
+; AVX512-NEXT:    movb %sil, 23(%rdi)
+; AVX512-NEXT:    shrl $16, %edx
+; AVX512-NEXT:    movb %dl, 20(%rdi)
 ; AVX512-NEXT:    shrl $16, %ecx
 ; AVX512-NEXT:    movb %cl, 17(%rdi)
 ; AVX512-NEXT:    shrl $16, %eax
@@ -6268,10 +6268,10 @@ define void @trunc_ssat_v16i32_v16i24(<16 x i32> %x, <16 x i24>* %y) nounwind {
 ; SKX-NEXT:    shrl $16, %r14d
 ; SKX-NEXT:    movb %r14b, 26(%rdi)
 ; SKX-NEXT:    vextracti128 $1, %ymm0, %xmm0
-; SKX-NEXT:    vpextrd $3, %xmm0, %edx
-; SKX-NEXT:    movw %dx, 21(%rdi)
-; SKX-NEXT:    vpextrd $2, %xmm0, %esi
-; SKX-NEXT:    movw %si, 18(%rdi)
+; SKX-NEXT:    vpextrd $3, %xmm0, %esi
+; SKX-NEXT:    movw %si, 21(%rdi)
+; SKX-NEXT:    vpextrd $2, %xmm0, %edx
+; SKX-NEXT:    movw %dx, 18(%rdi)
 ; SKX-NEXT:    vpextrd $1, %xmm0, %ecx
 ; SKX-NEXT:    movw %cx, 15(%rdi)
 ; SKX-NEXT:    vmovd %xmm0, %eax
@@ -6284,10 +6284,10 @@ define void @trunc_ssat_v16i32_v16i24(<16 x i32> %x, <16 x i24>* %y) nounwind {
 ; SKX-NEXT:    movb %r9b, 5(%rdi)
 ; SKX-NEXT:    shrl $16, %r8d
 ; SKX-NEXT:    movb %r8b, 2(%rdi)
-; SKX-NEXT:    shrl $16, %edx
-; SKX-NEXT:    movb %dl, 23(%rdi)
 ; SKX-NEXT:    shrl $16, %esi
-; SKX-NEXT:    movb %sil, 20(%rdi)
+; SKX-NEXT:    movb %sil, 23(%rdi)
+; SKX-NEXT:    shrl $16, %edx
+; SKX-NEXT:    movb %dl, 20(%rdi)
 ; SKX-NEXT:    shrl $16, %ecx
 ; SKX-NEXT:    movb %cl, 17(%rdi)
 ; SKX-NEXT:    shrl $16, %eax

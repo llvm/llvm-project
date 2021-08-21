@@ -85,28 +85,28 @@ define <4 x i32> @vec(<4 x i32> %x, <4 x i32> %y) nounwind {
 ; X86-NEXT:    movb {{[0-9]+}}(%esp), %ch
 ; X86-NEXT:    movb {{[0-9]+}}(%esp), %cl
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %edx
-; X86-NEXT:    movl %edx, %edi
-; X86-NEXT:    shll %cl, %edi
-; X86-NEXT:    movl %edi, %ebp
-; X86-NEXT:    sarl %cl, %ebp
+; X86-NEXT:    movl %edx, %ebp
+; X86-NEXT:    shll %cl, %ebp
+; X86-NEXT:    movl %ebp, %edi
+; X86-NEXT:    sarl %cl, %edi
 ; X86-NEXT:    xorl %ebx, %ebx
 ; X86-NEXT:    testl %edx, %edx
 ; X86-NEXT:    sets %bl
 ; X86-NEXT:    addl $2147483647, %ebx # imm = 0x7FFFFFFF
-; X86-NEXT:    cmpl %ebp, %edx
-; X86-NEXT:    movl {{[0-9]+}}(%esp), %ebp
-; X86-NEXT:    cmovel %edi, %ebx
-; X86-NEXT:    movl %ebp, %edi
+; X86-NEXT:    cmpl %edi, %edx
+; X86-NEXT:    movl {{[0-9]+}}(%esp), %edi
+; X86-NEXT:    cmovel %ebp, %ebx
+; X86-NEXT:    movl %edi, %ebp
 ; X86-NEXT:    movb %ch, %cl
-; X86-NEXT:    shll %cl, %edi
-; X86-NEXT:    movl %edi, %eax
+; X86-NEXT:    shll %cl, %ebp
+; X86-NEXT:    movl %ebp, %eax
 ; X86-NEXT:    sarl %cl, %eax
 ; X86-NEXT:    xorl %edx, %edx
-; X86-NEXT:    testl %ebp, %ebp
+; X86-NEXT:    testl %edi, %edi
 ; X86-NEXT:    sets %dl
 ; X86-NEXT:    addl $2147483647, %edx # imm = 0x7FFFFFFF
-; X86-NEXT:    cmpl %eax, %ebp
-; X86-NEXT:    cmovel %edi, %edx
+; X86-NEXT:    cmpl %eax, %edi
+; X86-NEXT:    cmovel %ebp, %edx
 ; X86-NEXT:    movl %esi, %edi
 ; X86-NEXT:    movb {{[0-9]+}}(%esp), %cl
 ; X86-NEXT:    shll %cl, %edi

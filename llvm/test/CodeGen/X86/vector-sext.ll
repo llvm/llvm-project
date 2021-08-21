@@ -3617,26 +3617,26 @@ define <4 x i32> @sext_4i17_to_4i32(<4 x i17>* %ptr) {
 ;
 ; X86-SSE2-LABEL: sext_4i17_to_4i32:
 ; X86-SSE2:       # %bb.0:
-; X86-SSE2-NEXT:    movl {{[0-9]+}}(%esp), %eax
-; X86-SSE2-NEXT:    movl (%eax), %ecx
-; X86-SSE2-NEXT:    movl 4(%eax), %edx
-; X86-SSE2-NEXT:    movl 8(%eax), %eax
-; X86-SSE2-NEXT:    shldl $13, %edx, %eax
-; X86-SSE2-NEXT:    shll $15, %eax
-; X86-SSE2-NEXT:    sarl $15, %eax
-; X86-SSE2-NEXT:    movd %eax, %xmm0
-; X86-SSE2-NEXT:    movl %edx, %eax
-; X86-SSE2-NEXT:    shll $13, %eax
-; X86-SSE2-NEXT:    sarl $15, %eax
-; X86-SSE2-NEXT:    movd %eax, %xmm1
+; X86-SSE2-NEXT:    movl {{[0-9]+}}(%esp), %edx
+; X86-SSE2-NEXT:    movl (%edx), %ecx
+; X86-SSE2-NEXT:    movl 4(%edx), %eax
+; X86-SSE2-NEXT:    movl 8(%edx), %edx
+; X86-SSE2-NEXT:    shldl $13, %eax, %edx
+; X86-SSE2-NEXT:    shll $15, %edx
+; X86-SSE2-NEXT:    sarl $15, %edx
+; X86-SSE2-NEXT:    movd %edx, %xmm0
+; X86-SSE2-NEXT:    movl %eax, %edx
+; X86-SSE2-NEXT:    shll $13, %edx
+; X86-SSE2-NEXT:    sarl $15, %edx
+; X86-SSE2-NEXT:    movd %edx, %xmm1
 ; X86-SSE2-NEXT:    punpckldq {{.*#+}} xmm1 = xmm1[0],xmm0[0],xmm1[1],xmm0[1]
-; X86-SSE2-NEXT:    shldl $15, %ecx, %edx
+; X86-SSE2-NEXT:    shldl $15, %ecx, %eax
 ; X86-SSE2-NEXT:    shll $15, %ecx
 ; X86-SSE2-NEXT:    sarl $15, %ecx
 ; X86-SSE2-NEXT:    movd %ecx, %xmm0
-; X86-SSE2-NEXT:    shll $15, %edx
-; X86-SSE2-NEXT:    sarl $15, %edx
-; X86-SSE2-NEXT:    movd %edx, %xmm2
+; X86-SSE2-NEXT:    shll $15, %eax
+; X86-SSE2-NEXT:    sarl $15, %eax
+; X86-SSE2-NEXT:    movd %eax, %xmm2
 ; X86-SSE2-NEXT:    punpckldq {{.*#+}} xmm0 = xmm0[0],xmm2[0],xmm0[1],xmm2[1]
 ; X86-SSE2-NEXT:    punpcklqdq {{.*#+}} xmm0 = xmm0[0],xmm1[0]
 ; X86-SSE2-NEXT:    retl
@@ -3646,25 +3646,25 @@ define <4 x i32> @sext_4i17_to_4i32(<4 x i17>* %ptr) {
 ; X86-SSE41-NEXT:    pushl %esi
 ; X86-SSE41-NEXT:    .cfi_def_cfa_offset 8
 ; X86-SSE41-NEXT:    .cfi_offset %esi, -8
-; X86-SSE41-NEXT:    movl {{[0-9]+}}(%esp), %eax
-; X86-SSE41-NEXT:    movl (%eax), %ecx
-; X86-SSE41-NEXT:    movl 4(%eax), %edx
-; X86-SSE41-NEXT:    movl %edx, %esi
-; X86-SSE41-NEXT:    movl 8(%eax), %eax
-; X86-SSE41-NEXT:    shldl $13, %edx, %eax
-; X86-SSE41-NEXT:    shldl $15, %ecx, %edx
-; X86-SSE41-NEXT:    shll $15, %edx
-; X86-SSE41-NEXT:    sarl $15, %edx
+; X86-SSE41-NEXT:    movl {{[0-9]+}}(%esp), %edx
+; X86-SSE41-NEXT:    movl (%edx), %eax
+; X86-SSE41-NEXT:    movl 4(%edx), %ecx
+; X86-SSE41-NEXT:    movl %ecx, %esi
+; X86-SSE41-NEXT:    movl 8(%edx), %edx
+; X86-SSE41-NEXT:    shldl $13, %ecx, %edx
+; X86-SSE41-NEXT:    shldl $15, %eax, %ecx
 ; X86-SSE41-NEXT:    shll $15, %ecx
 ; X86-SSE41-NEXT:    sarl $15, %ecx
-; X86-SSE41-NEXT:    movd %ecx, %xmm0
-; X86-SSE41-NEXT:    pinsrd $1, %edx, %xmm0
+; X86-SSE41-NEXT:    shll $15, %eax
+; X86-SSE41-NEXT:    sarl $15, %eax
+; X86-SSE41-NEXT:    movd %eax, %xmm0
+; X86-SSE41-NEXT:    pinsrd $1, %ecx, %xmm0
 ; X86-SSE41-NEXT:    shll $13, %esi
 ; X86-SSE41-NEXT:    sarl $15, %esi
 ; X86-SSE41-NEXT:    pinsrd $2, %esi, %xmm0
-; X86-SSE41-NEXT:    shll $15, %eax
-; X86-SSE41-NEXT:    sarl $15, %eax
-; X86-SSE41-NEXT:    pinsrd $3, %eax, %xmm0
+; X86-SSE41-NEXT:    shll $15, %edx
+; X86-SSE41-NEXT:    sarl $15, %edx
+; X86-SSE41-NEXT:    pinsrd $3, %edx, %xmm0
 ; X86-SSE41-NEXT:    popl %esi
 ; X86-SSE41-NEXT:    .cfi_def_cfa_offset 4
 ; X86-SSE41-NEXT:    retl

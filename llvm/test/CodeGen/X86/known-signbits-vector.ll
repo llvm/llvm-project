@@ -429,8 +429,8 @@ define <4 x float> @signbits_ashr_sext_select_shuffle_sitofp(<4 x i64> %a0, <4 x
 ; X86-NEXT:    movl %esp, %ebp
 ; X86-NEXT:    andl $-16, %esp
 ; X86-NEXT:    subl $16, %esp
-; X86-NEXT:    vpmovsxdq 8(%ebp), %xmm3
-; X86-NEXT:    vpmovsxdq 16(%ebp), %xmm4
+; X86-NEXT:    vpmovsxdq 8(%ebp), %xmm4
+; X86-NEXT:    vpmovsxdq 16(%ebp), %xmm3
 ; X86-NEXT:    vpsrad $31, %xmm2, %xmm5
 ; X86-NEXT:    vpsrad $1, %xmm2, %xmm6
 ; X86-NEXT:    vpshufd {{.*#+}} xmm6 = xmm6[1,1,3,3]
@@ -441,12 +441,12 @@ define <4 x float> @signbits_ashr_sext_select_shuffle_sitofp(<4 x i64> %a0, <4 x
 ; X86-NEXT:    vpshufd {{.*#+}} xmm2 = xmm2[1,1,3,3]
 ; X86-NEXT:    vpblendw {{.*#+}} xmm2 = xmm2[0,1],xmm6[2,3],xmm2[4,5],xmm6[6,7]
 ; X86-NEXT:    vpcmpeqq %xmm1, %xmm0, %xmm6
-; X86-NEXT:    vblendvpd %xmm6, %xmm5, %xmm3, %xmm3
+; X86-NEXT:    vblendvpd %xmm6, %xmm5, %xmm4, %xmm4
 ; X86-NEXT:    vextractf128 $1, %ymm1, %xmm1
 ; X86-NEXT:    vextractf128 $1, %ymm0, %xmm0
 ; X86-NEXT:    vpcmpeqq %xmm1, %xmm0, %xmm0
-; X86-NEXT:    vblendvpd %xmm0, %xmm2, %xmm4, %xmm0
-; X86-NEXT:    vinsertf128 $1, %xmm0, %ymm3, %ymm0
+; X86-NEXT:    vblendvpd %xmm0, %xmm2, %xmm3, %xmm0
+; X86-NEXT:    vinsertf128 $1, %xmm0, %ymm4, %ymm0
 ; X86-NEXT:    vmovddup {{.*#+}} ymm0 = ymm0[0,0,2,2]
 ; X86-NEXT:    vextractf128 $1, %ymm0, %xmm1
 ; X86-NEXT:    vshufps {{.*#+}} xmm0 = xmm0[0,2],xmm1[0,2]

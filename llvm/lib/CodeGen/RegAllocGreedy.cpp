@@ -762,7 +762,7 @@ void RAGreedy::enqueue(PQueue &CurQueue, LiveInterval *LI) {
     bool ReverseLocal = TRI->reverseLocalAssignment();
     const TargetRegisterClass &RC = *MRI->getRegClass(Reg);
     bool ForceGlobal = !ReverseLocal &&
-      (Size / SlotIndex::InstrDist) > (2 * RC.getNumRegs());
+      (Size / SlotIndex::InstrDist) > (2 * RCI.getNumAllocatableRegs(&RC));
 
     if (ExtraRegInfo[Reg].Stage == RS_Assign && !ForceGlobal && !LI->empty() &&
         LIS->intervalIsInOneMBB(*LI)) {

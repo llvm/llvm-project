@@ -277,14 +277,10 @@ define i528 @large_promotion(i528 %A) nounwind {
 ; CHECK-NEXT:    bswapl %ebp
 ; CHECK-NEXT:    shrdl $16, %ebp, %ebx
 ; CHECK-NEXT:    movl %ebx, {{[-0-9]+}}(%e{{[sb]}}p) # 4-byte Spill
-; CHECK-NEXT:    movl {{[0-9]+}}(%esp), %ecx
-; CHECK-NEXT:    bswapl %ecx
-; CHECK-NEXT:    shrdl $16, %ecx, %ebp
-; CHECK-NEXT:    movl %ebp, {{[-0-9]+}}(%e{{[sb]}}p) # 4-byte Spill
 ; CHECK-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; CHECK-NEXT:    bswapl %eax
-; CHECK-NEXT:    shrdl $16, %eax, %ecx
-; CHECK-NEXT:    movl %ecx, {{[-0-9]+}}(%e{{[sb]}}p) # 4-byte Spill
+; CHECK-NEXT:    shrdl $16, %eax, %ebp
+; CHECK-NEXT:    movl %ebp, {{[-0-9]+}}(%e{{[sb]}}p) # 4-byte Spill
 ; CHECK-NEXT:    movl {{[0-9]+}}(%esp), %ecx
 ; CHECK-NEXT:    bswapl %ecx
 ; CHECK-NEXT:    shrdl $16, %ecx, %eax
@@ -293,10 +289,14 @@ define i528 @large_promotion(i528 %A) nounwind {
 ; CHECK-NEXT:    bswapl %eax
 ; CHECK-NEXT:    shrdl $16, %eax, %ecx
 ; CHECK-NEXT:    movl %ecx, {{[-0-9]+}}(%e{{[sb]}}p) # 4-byte Spill
+; CHECK-NEXT:    movl {{[0-9]+}}(%esp), %ecx
+; CHECK-NEXT:    bswapl %ecx
+; CHECK-NEXT:    shrdl $16, %ecx, %eax
+; CHECK-NEXT:    movl %eax, {{[-0-9]+}}(%e{{[sb]}}p) # 4-byte Spill
 ; CHECK-NEXT:    movl {{[0-9]+}}(%esp), %ebp
 ; CHECK-NEXT:    bswapl %ebp
-; CHECK-NEXT:    shrdl $16, %ebp, %eax
-; CHECK-NEXT:    movl %eax, (%esp) # 4-byte Spill
+; CHECK-NEXT:    shrdl $16, %ebp, %ecx
+; CHECK-NEXT:    movl %ecx, (%esp) # 4-byte Spill
 ; CHECK-NEXT:    movl {{[0-9]+}}(%esp), %ebx
 ; CHECK-NEXT:    bswapl %ebx
 ; CHECK-NEXT:    shrdl $16, %ebx, %ebp

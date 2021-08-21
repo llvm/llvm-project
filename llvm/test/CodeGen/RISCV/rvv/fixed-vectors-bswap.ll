@@ -2131,16 +2131,16 @@ define void @bswap_v4i64(<4 x i64>* %x, <4 x i64>* %y) {
 ; LMULMAX1-RV32-NEXT:    sw a1, 44(sp)
 ; LMULMAX1-RV32-NEXT:    addi a7, zero, 32
 ; LMULMAX1-RV32-NEXT:    vsrl.vx v26, v26, a7
-; LMULMAX1-RV32-NEXT:    vmv.x.s a4, v26
-; LMULMAX1-RV32-NEXT:    srli a5, a4, 8
+; LMULMAX1-RV32-NEXT:    vmv.x.s a1, v26
+; LMULMAX1-RV32-NEXT:    srli a5, a1, 8
 ; LMULMAX1-RV32-NEXT:    and a5, a5, a2
-; LMULMAX1-RV32-NEXT:    srli a1, a4, 24
-; LMULMAX1-RV32-NEXT:    or a1, a5, a1
-; LMULMAX1-RV32-NEXT:    slli a5, a4, 8
+; LMULMAX1-RV32-NEXT:    srli a4, a1, 24
+; LMULMAX1-RV32-NEXT:    or a4, a5, a4
+; LMULMAX1-RV32-NEXT:    slli a5, a1, 8
 ; LMULMAX1-RV32-NEXT:    and a5, a5, a3
-; LMULMAX1-RV32-NEXT:    slli a4, a4, 24
-; LMULMAX1-RV32-NEXT:    or a4, a4, a5
-; LMULMAX1-RV32-NEXT:    or a1, a4, a1
+; LMULMAX1-RV32-NEXT:    slli a1, a1, 24
+; LMULMAX1-RV32-NEXT:    or a1, a1, a5
+; LMULMAX1-RV32-NEXT:    or a1, a1, a4
 ; LMULMAX1-RV32-NEXT:    sw a1, 32(sp)
 ; LMULMAX1-RV32-NEXT:    vsrl.vx v26, v27, a7
 ; LMULMAX1-RV32-NEXT:    vmv.x.s a1, v26

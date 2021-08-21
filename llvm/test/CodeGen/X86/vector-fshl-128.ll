@@ -1749,29 +1749,29 @@ define <16 x i8> @splatvar_funnnel_v16i8(<16 x i8> %x, <16 x i8> %y, <16 x i8> %
 ;
 ; X86-SSE2-LABEL: splatvar_funnnel_v16i8:
 ; X86-SSE2:       # %bb.0:
-; X86-SSE2-NEXT:    movdqa {{.*#+}} xmm3 = [7,7,7,7,7,7,7,7,7,7,7,7,7,7,7,7]
-; X86-SSE2-NEXT:    movdqa %xmm2, %xmm4
-; X86-SSE2-NEXT:    pand %xmm3, %xmm4
-; X86-SSE2-NEXT:    pslldq {{.*#+}} xmm4 = zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,xmm4[0]
-; X86-SSE2-NEXT:    psrldq {{.*#+}} xmm4 = xmm4[15],zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero
-; X86-SSE2-NEXT:    psllw %xmm4, %xmm0
-; X86-SSE2-NEXT:    pcmpeqd %xmm5, %xmm5
+; X86-SSE2-NEXT:    movdqa {{.*#+}} xmm4 = [7,7,7,7,7,7,7,7,7,7,7,7,7,7,7,7]
+; X86-SSE2-NEXT:    movdqa %xmm2, %xmm5
+; X86-SSE2-NEXT:    pand %xmm4, %xmm5
+; X86-SSE2-NEXT:    pslldq {{.*#+}} xmm5 = zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,xmm5[0]
+; X86-SSE2-NEXT:    psrldq {{.*#+}} xmm5 = xmm5[15],zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero
+; X86-SSE2-NEXT:    psllw %xmm5, %xmm0
+; X86-SSE2-NEXT:    pcmpeqd %xmm3, %xmm3
 ; X86-SSE2-NEXT:    pcmpeqd %xmm6, %xmm6
-; X86-SSE2-NEXT:    psllw %xmm4, %xmm6
+; X86-SSE2-NEXT:    psllw %xmm5, %xmm6
 ; X86-SSE2-NEXT:    punpcklbw {{.*#+}} xmm6 = xmm6[0,0,1,1,2,2,3,3,4,4,5,5,6,6,7,7]
-; X86-SSE2-NEXT:    pshuflw {{.*#+}} xmm4 = xmm6[0,0,0,0,4,5,6,7]
-; X86-SSE2-NEXT:    pshufd {{.*#+}} xmm4 = xmm4[0,0,0,0]
-; X86-SSE2-NEXT:    pand %xmm4, %xmm0
-; X86-SSE2-NEXT:    pandn %xmm3, %xmm2
+; X86-SSE2-NEXT:    pshuflw {{.*#+}} xmm5 = xmm6[0,0,0,0,4,5,6,7]
+; X86-SSE2-NEXT:    pshufd {{.*#+}} xmm5 = xmm5[0,0,0,0]
+; X86-SSE2-NEXT:    pand %xmm5, %xmm0
+; X86-SSE2-NEXT:    pandn %xmm4, %xmm2
 ; X86-SSE2-NEXT:    pslldq {{.*#+}} xmm2 = zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,xmm2[0]
 ; X86-SSE2-NEXT:    psrldq {{.*#+}} xmm2 = xmm2[15],zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero
 ; X86-SSE2-NEXT:    psrlw $1, %xmm1
 ; X86-SSE2-NEXT:    pand {{\.?LCPI[0-9]+_[0-9]+}}, %xmm1
 ; X86-SSE2-NEXT:    psrlw %xmm2, %xmm1
-; X86-SSE2-NEXT:    psrlw %xmm2, %xmm5
-; X86-SSE2-NEXT:    psrlw $8, %xmm5
-; X86-SSE2-NEXT:    punpcklbw {{.*#+}} xmm5 = xmm5[0,0,1,1,2,2,3,3,4,4,5,5,6,6,7,7]
-; X86-SSE2-NEXT:    pshuflw {{.*#+}} xmm2 = xmm5[0,0,0,0,4,5,6,7]
+; X86-SSE2-NEXT:    psrlw %xmm2, %xmm3
+; X86-SSE2-NEXT:    psrlw $8, %xmm3
+; X86-SSE2-NEXT:    punpcklbw {{.*#+}} xmm3 = xmm3[0,0,1,1,2,2,3,3,4,4,5,5,6,6,7,7]
+; X86-SSE2-NEXT:    pshuflw {{.*#+}} xmm2 = xmm3[0,0,0,0,4,5,6,7]
 ; X86-SSE2-NEXT:    pshufd {{.*#+}} xmm2 = xmm2[0,0,0,0]
 ; X86-SSE2-NEXT:    pand %xmm1, %xmm2
 ; X86-SSE2-NEXT:    por %xmm2, %xmm0

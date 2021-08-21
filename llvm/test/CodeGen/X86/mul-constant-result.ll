@@ -542,8 +542,8 @@ define i32 @foo() local_unnamed_addr #0 {
 ; X86-NEXT:    calll mult@PLT
 ; X86-NEXT:    addl $8, %esp
 ; X86-NEXT:    .cfi_adjust_cfa_offset -8
-; X86-NEXT:    movl %eax, %edi
-; X86-NEXT:    xorl $2, %edi
+; X86-NEXT:    movl %eax, %ebx
+; X86-NEXT:    xorl $2, %ebx
 ; X86-NEXT:    pushl $1
 ; X86-NEXT:    .cfi_adjust_cfa_offset 4
 ; X86-NEXT:    pushl $3
@@ -551,9 +551,9 @@ define i32 @foo() local_unnamed_addr #0 {
 ; X86-NEXT:    calll mult@PLT
 ; X86-NEXT:    addl $8, %esp
 ; X86-NEXT:    .cfi_adjust_cfa_offset -8
-; X86-NEXT:    movl %eax, %ebx
-; X86-NEXT:    xorl $3, %ebx
-; X86-NEXT:    orl %edi, %ebx
+; X86-NEXT:    movl %eax, %edi
+; X86-NEXT:    xorl $3, %edi
+; X86-NEXT:    orl %ebx, %edi
 ; X86-NEXT:    pushl $2
 ; X86-NEXT:    .cfi_adjust_cfa_offset 4
 ; X86-NEXT:    pushl $4
@@ -561,9 +561,9 @@ define i32 @foo() local_unnamed_addr #0 {
 ; X86-NEXT:    calll mult@PLT
 ; X86-NEXT:    addl $8, %esp
 ; X86-NEXT:    .cfi_adjust_cfa_offset -8
-; X86-NEXT:    movl %eax, %edi
-; X86-NEXT:    xorl $4, %edi
-; X86-NEXT:    orl %ebx, %edi
+; X86-NEXT:    movl %eax, %ebx
+; X86-NEXT:    xorl $4, %ebx
+; X86-NEXT:    orl %edi, %ebx
 ; X86-NEXT:    pushl $2
 ; X86-NEXT:    .cfi_adjust_cfa_offset 4
 ; X86-NEXT:    pushl $5
@@ -571,9 +571,9 @@ define i32 @foo() local_unnamed_addr #0 {
 ; X86-NEXT:    calll mult@PLT
 ; X86-NEXT:    addl $8, %esp
 ; X86-NEXT:    .cfi_adjust_cfa_offset -8
-; X86-NEXT:    movl %eax, %ebx
-; X86-NEXT:    xorl $5, %ebx
-; X86-NEXT:    orl %edi, %ebx
+; X86-NEXT:    movl %eax, %edi
+; X86-NEXT:    xorl $5, %edi
+; X86-NEXT:    orl %ebx, %edi
 ; X86-NEXT:    pushl $3
 ; X86-NEXT:    .cfi_adjust_cfa_offset 4
 ; X86-NEXT:    pushl $6
@@ -581,9 +581,9 @@ define i32 @foo() local_unnamed_addr #0 {
 ; X86-NEXT:    calll mult@PLT
 ; X86-NEXT:    addl $8, %esp
 ; X86-NEXT:    .cfi_adjust_cfa_offset -8
-; X86-NEXT:    movl %eax, %edi
-; X86-NEXT:    xorl $6, %edi
-; X86-NEXT:    orl %ebx, %edi
+; X86-NEXT:    movl %eax, %ebx
+; X86-NEXT:    xorl $6, %ebx
+; X86-NEXT:    orl %edi, %ebx
 ; X86-NEXT:    pushl $3
 ; X86-NEXT:    .cfi_adjust_cfa_offset 4
 ; X86-NEXT:    pushl $7
@@ -591,9 +591,9 @@ define i32 @foo() local_unnamed_addr #0 {
 ; X86-NEXT:    calll mult@PLT
 ; X86-NEXT:    addl $8, %esp
 ; X86-NEXT:    .cfi_adjust_cfa_offset -8
-; X86-NEXT:    movl %eax, %ebx
-; X86-NEXT:    xorl $7, %ebx
-; X86-NEXT:    orl %edi, %ebx
+; X86-NEXT:    movl %eax, %edi
+; X86-NEXT:    xorl $7, %edi
+; X86-NEXT:    orl %ebx, %edi
 ; X86-NEXT:    pushl $4
 ; X86-NEXT:    .cfi_adjust_cfa_offset 4
 ; X86-NEXT:    pushl $8
@@ -601,9 +601,9 @@ define i32 @foo() local_unnamed_addr #0 {
 ; X86-NEXT:    calll mult@PLT
 ; X86-NEXT:    addl $8, %esp
 ; X86-NEXT:    .cfi_adjust_cfa_offset -8
-; X86-NEXT:    movl %eax, %edi
-; X86-NEXT:    xorl $8, %edi
-; X86-NEXT:    orl %ebx, %edi
+; X86-NEXT:    movl %eax, %ebx
+; X86-NEXT:    xorl $8, %ebx
+; X86-NEXT:    orl %edi, %ebx
 ; X86-NEXT:    pushl $4
 ; X86-NEXT:    .cfi_adjust_cfa_offset 4
 ; X86-NEXT:    pushl $9
@@ -611,9 +611,9 @@ define i32 @foo() local_unnamed_addr #0 {
 ; X86-NEXT:    calll mult@PLT
 ; X86-NEXT:    addl $8, %esp
 ; X86-NEXT:    .cfi_adjust_cfa_offset -8
-; X86-NEXT:    movl %eax, %ebx
-; X86-NEXT:    xorl $9, %ebx
-; X86-NEXT:    orl %edi, %ebx
+; X86-NEXT:    movl %eax, %edi
+; X86-NEXT:    xorl $9, %edi
+; X86-NEXT:    orl %ebx, %edi
 ; X86-NEXT:    pushl $5
 ; X86-NEXT:    .cfi_adjust_cfa_offset 4
 ; X86-NEXT:    pushl $10
@@ -621,9 +621,9 @@ define i32 @foo() local_unnamed_addr #0 {
 ; X86-NEXT:    calll mult@PLT
 ; X86-NEXT:    addl $8, %esp
 ; X86-NEXT:    .cfi_adjust_cfa_offset -8
-; X86-NEXT:    movl %eax, %edi
-; X86-NEXT:    xorl $10, %edi
-; X86-NEXT:    orl %ebx, %edi
+; X86-NEXT:    movl %eax, %ebx
+; X86-NEXT:    xorl $10, %ebx
+; X86-NEXT:    orl %edi, %ebx
 ; X86-NEXT:    pushl $5
 ; X86-NEXT:    .cfi_adjust_cfa_offset 4
 ; X86-NEXT:    pushl $11
@@ -631,9 +631,9 @@ define i32 @foo() local_unnamed_addr #0 {
 ; X86-NEXT:    calll mult@PLT
 ; X86-NEXT:    addl $8, %esp
 ; X86-NEXT:    .cfi_adjust_cfa_offset -8
-; X86-NEXT:    movl %eax, %ebx
-; X86-NEXT:    xorl $11, %ebx
-; X86-NEXT:    orl %edi, %ebx
+; X86-NEXT:    movl %eax, %edi
+; X86-NEXT:    xorl $11, %edi
+; X86-NEXT:    orl %ebx, %edi
 ; X86-NEXT:    pushl $6
 ; X86-NEXT:    .cfi_adjust_cfa_offset 4
 ; X86-NEXT:    pushl $12
@@ -641,9 +641,9 @@ define i32 @foo() local_unnamed_addr #0 {
 ; X86-NEXT:    calll mult@PLT
 ; X86-NEXT:    addl $8, %esp
 ; X86-NEXT:    .cfi_adjust_cfa_offset -8
-; X86-NEXT:    movl %eax, %edi
-; X86-NEXT:    xorl $12, %edi
-; X86-NEXT:    orl %ebx, %edi
+; X86-NEXT:    movl %eax, %ebx
+; X86-NEXT:    xorl $12, %ebx
+; X86-NEXT:    orl %edi, %ebx
 ; X86-NEXT:    pushl $6
 ; X86-NEXT:    .cfi_adjust_cfa_offset 4
 ; X86-NEXT:    pushl $13
@@ -651,9 +651,9 @@ define i32 @foo() local_unnamed_addr #0 {
 ; X86-NEXT:    calll mult@PLT
 ; X86-NEXT:    addl $8, %esp
 ; X86-NEXT:    .cfi_adjust_cfa_offset -8
-; X86-NEXT:    movl %eax, %ebx
-; X86-NEXT:    xorl $13, %ebx
-; X86-NEXT:    orl %edi, %ebx
+; X86-NEXT:    movl %eax, %edi
+; X86-NEXT:    xorl $13, %edi
+; X86-NEXT:    orl %ebx, %edi
 ; X86-NEXT:    pushl $7
 ; X86-NEXT:    .cfi_adjust_cfa_offset 4
 ; X86-NEXT:    pushl $14
@@ -661,9 +661,9 @@ define i32 @foo() local_unnamed_addr #0 {
 ; X86-NEXT:    calll mult@PLT
 ; X86-NEXT:    addl $8, %esp
 ; X86-NEXT:    .cfi_adjust_cfa_offset -8
-; X86-NEXT:    movl %eax, %edi
-; X86-NEXT:    xorl $14, %edi
-; X86-NEXT:    orl %ebx, %edi
+; X86-NEXT:    movl %eax, %ebx
+; X86-NEXT:    xorl $14, %ebx
+; X86-NEXT:    orl %edi, %ebx
 ; X86-NEXT:    pushl $7
 ; X86-NEXT:    .cfi_adjust_cfa_offset 4
 ; X86-NEXT:    pushl $15
@@ -671,9 +671,9 @@ define i32 @foo() local_unnamed_addr #0 {
 ; X86-NEXT:    calll mult@PLT
 ; X86-NEXT:    addl $8, %esp
 ; X86-NEXT:    .cfi_adjust_cfa_offset -8
-; X86-NEXT:    movl %eax, %ebx
-; X86-NEXT:    xorl $15, %ebx
-; X86-NEXT:    orl %edi, %ebx
+; X86-NEXT:    movl %eax, %edi
+; X86-NEXT:    xorl $15, %edi
+; X86-NEXT:    orl %ebx, %edi
 ; X86-NEXT:    pushl $8
 ; X86-NEXT:    .cfi_adjust_cfa_offset 4
 ; X86-NEXT:    pushl $16
@@ -681,9 +681,9 @@ define i32 @foo() local_unnamed_addr #0 {
 ; X86-NEXT:    calll mult@PLT
 ; X86-NEXT:    addl $8, %esp
 ; X86-NEXT:    .cfi_adjust_cfa_offset -8
-; X86-NEXT:    movl %eax, %edi
-; X86-NEXT:    xorl $16, %edi
-; X86-NEXT:    orl %ebx, %edi
+; X86-NEXT:    movl %eax, %ebx
+; X86-NEXT:    xorl $16, %ebx
+; X86-NEXT:    orl %edi, %ebx
 ; X86-NEXT:    pushl $8
 ; X86-NEXT:    .cfi_adjust_cfa_offset 4
 ; X86-NEXT:    pushl $17
@@ -691,9 +691,9 @@ define i32 @foo() local_unnamed_addr #0 {
 ; X86-NEXT:    calll mult@PLT
 ; X86-NEXT:    addl $8, %esp
 ; X86-NEXT:    .cfi_adjust_cfa_offset -8
-; X86-NEXT:    movl %eax, %ebx
-; X86-NEXT:    xorl $17, %ebx
-; X86-NEXT:    orl %edi, %ebx
+; X86-NEXT:    movl %eax, %edi
+; X86-NEXT:    xorl $17, %edi
+; X86-NEXT:    orl %ebx, %edi
 ; X86-NEXT:    pushl $9
 ; X86-NEXT:    .cfi_adjust_cfa_offset 4
 ; X86-NEXT:    pushl $18
@@ -701,9 +701,9 @@ define i32 @foo() local_unnamed_addr #0 {
 ; X86-NEXT:    calll mult@PLT
 ; X86-NEXT:    addl $8, %esp
 ; X86-NEXT:    .cfi_adjust_cfa_offset -8
-; X86-NEXT:    movl %eax, %edi
-; X86-NEXT:    xorl $18, %edi
-; X86-NEXT:    orl %ebx, %edi
+; X86-NEXT:    movl %eax, %ebx
+; X86-NEXT:    xorl $18, %ebx
+; X86-NEXT:    orl %edi, %ebx
 ; X86-NEXT:    pushl $9
 ; X86-NEXT:    .cfi_adjust_cfa_offset 4
 ; X86-NEXT:    pushl $19
@@ -711,9 +711,9 @@ define i32 @foo() local_unnamed_addr #0 {
 ; X86-NEXT:    calll mult@PLT
 ; X86-NEXT:    addl $8, %esp
 ; X86-NEXT:    .cfi_adjust_cfa_offset -8
-; X86-NEXT:    movl %eax, %ebx
-; X86-NEXT:    xorl $19, %ebx
-; X86-NEXT:    orl %edi, %ebx
+; X86-NEXT:    movl %eax, %edi
+; X86-NEXT:    xorl $19, %edi
+; X86-NEXT:    orl %ebx, %edi
 ; X86-NEXT:    pushl $10
 ; X86-NEXT:    .cfi_adjust_cfa_offset 4
 ; X86-NEXT:    pushl $20
@@ -721,9 +721,9 @@ define i32 @foo() local_unnamed_addr #0 {
 ; X86-NEXT:    calll mult@PLT
 ; X86-NEXT:    addl $8, %esp
 ; X86-NEXT:    .cfi_adjust_cfa_offset -8
-; X86-NEXT:    movl %eax, %edi
-; X86-NEXT:    xorl $20, %edi
-; X86-NEXT:    orl %ebx, %edi
+; X86-NEXT:    movl %eax, %ebx
+; X86-NEXT:    xorl $20, %ebx
+; X86-NEXT:    orl %edi, %ebx
 ; X86-NEXT:    pushl $10
 ; X86-NEXT:    .cfi_adjust_cfa_offset 4
 ; X86-NEXT:    pushl $21
@@ -731,9 +731,9 @@ define i32 @foo() local_unnamed_addr #0 {
 ; X86-NEXT:    calll mult@PLT
 ; X86-NEXT:    addl $8, %esp
 ; X86-NEXT:    .cfi_adjust_cfa_offset -8
-; X86-NEXT:    movl %eax, %ebx
-; X86-NEXT:    xorl $21, %ebx
-; X86-NEXT:    orl %edi, %ebx
+; X86-NEXT:    movl %eax, %edi
+; X86-NEXT:    xorl $21, %edi
+; X86-NEXT:    orl %ebx, %edi
 ; X86-NEXT:    pushl $11
 ; X86-NEXT:    .cfi_adjust_cfa_offset 4
 ; X86-NEXT:    pushl $22
@@ -741,9 +741,9 @@ define i32 @foo() local_unnamed_addr #0 {
 ; X86-NEXT:    calll mult@PLT
 ; X86-NEXT:    addl $8, %esp
 ; X86-NEXT:    .cfi_adjust_cfa_offset -8
-; X86-NEXT:    movl %eax, %edi
-; X86-NEXT:    xorl $22, %edi
-; X86-NEXT:    orl %ebx, %edi
+; X86-NEXT:    movl %eax, %ebx
+; X86-NEXT:    xorl $22, %ebx
+; X86-NEXT:    orl %edi, %ebx
 ; X86-NEXT:    pushl $11
 ; X86-NEXT:    .cfi_adjust_cfa_offset 4
 ; X86-NEXT:    pushl $23
@@ -751,9 +751,9 @@ define i32 @foo() local_unnamed_addr #0 {
 ; X86-NEXT:    calll mult@PLT
 ; X86-NEXT:    addl $8, %esp
 ; X86-NEXT:    .cfi_adjust_cfa_offset -8
-; X86-NEXT:    movl %eax, %ebx
-; X86-NEXT:    xorl $23, %ebx
-; X86-NEXT:    orl %edi, %ebx
+; X86-NEXT:    movl %eax, %edi
+; X86-NEXT:    xorl $23, %edi
+; X86-NEXT:    orl %ebx, %edi
 ; X86-NEXT:    pushl $12
 ; X86-NEXT:    .cfi_adjust_cfa_offset 4
 ; X86-NEXT:    pushl $24
@@ -761,9 +761,9 @@ define i32 @foo() local_unnamed_addr #0 {
 ; X86-NEXT:    calll mult@PLT
 ; X86-NEXT:    addl $8, %esp
 ; X86-NEXT:    .cfi_adjust_cfa_offset -8
-; X86-NEXT:    movl %eax, %edi
-; X86-NEXT:    xorl $24, %edi
-; X86-NEXT:    orl %ebx, %edi
+; X86-NEXT:    movl %eax, %ebx
+; X86-NEXT:    xorl $24, %ebx
+; X86-NEXT:    orl %edi, %ebx
 ; X86-NEXT:    pushl $12
 ; X86-NEXT:    .cfi_adjust_cfa_offset 4
 ; X86-NEXT:    pushl $25
@@ -771,9 +771,9 @@ define i32 @foo() local_unnamed_addr #0 {
 ; X86-NEXT:    calll mult@PLT
 ; X86-NEXT:    addl $8, %esp
 ; X86-NEXT:    .cfi_adjust_cfa_offset -8
-; X86-NEXT:    movl %eax, %ebx
-; X86-NEXT:    xorl $25, %ebx
-; X86-NEXT:    orl %edi, %ebx
+; X86-NEXT:    movl %eax, %edi
+; X86-NEXT:    xorl $25, %edi
+; X86-NEXT:    orl %ebx, %edi
 ; X86-NEXT:    pushl $13
 ; X86-NEXT:    .cfi_adjust_cfa_offset 4
 ; X86-NEXT:    pushl $26
@@ -781,9 +781,9 @@ define i32 @foo() local_unnamed_addr #0 {
 ; X86-NEXT:    calll mult@PLT
 ; X86-NEXT:    addl $8, %esp
 ; X86-NEXT:    .cfi_adjust_cfa_offset -8
-; X86-NEXT:    movl %eax, %edi
-; X86-NEXT:    xorl $26, %edi
-; X86-NEXT:    orl %ebx, %edi
+; X86-NEXT:    movl %eax, %ebx
+; X86-NEXT:    xorl $26, %ebx
+; X86-NEXT:    orl %edi, %ebx
 ; X86-NEXT:    pushl $13
 ; X86-NEXT:    .cfi_adjust_cfa_offset 4
 ; X86-NEXT:    pushl $27
@@ -791,9 +791,9 @@ define i32 @foo() local_unnamed_addr #0 {
 ; X86-NEXT:    calll mult@PLT
 ; X86-NEXT:    addl $8, %esp
 ; X86-NEXT:    .cfi_adjust_cfa_offset -8
-; X86-NEXT:    movl %eax, %ebx
-; X86-NEXT:    xorl $27, %ebx
-; X86-NEXT:    orl %edi, %ebx
+; X86-NEXT:    movl %eax, %edi
+; X86-NEXT:    xorl $27, %edi
+; X86-NEXT:    orl %ebx, %edi
 ; X86-NEXT:    pushl $14
 ; X86-NEXT:    .cfi_adjust_cfa_offset 4
 ; X86-NEXT:    pushl $28
@@ -801,9 +801,9 @@ define i32 @foo() local_unnamed_addr #0 {
 ; X86-NEXT:    calll mult@PLT
 ; X86-NEXT:    addl $8, %esp
 ; X86-NEXT:    .cfi_adjust_cfa_offset -8
-; X86-NEXT:    movl %eax, %edi
-; X86-NEXT:    xorl $28, %edi
-; X86-NEXT:    orl %ebx, %edi
+; X86-NEXT:    movl %eax, %ebx
+; X86-NEXT:    xorl $28, %ebx
+; X86-NEXT:    orl %edi, %ebx
 ; X86-NEXT:    pushl $14
 ; X86-NEXT:    .cfi_adjust_cfa_offset 4
 ; X86-NEXT:    pushl $29
@@ -811,9 +811,9 @@ define i32 @foo() local_unnamed_addr #0 {
 ; X86-NEXT:    calll mult@PLT
 ; X86-NEXT:    addl $8, %esp
 ; X86-NEXT:    .cfi_adjust_cfa_offset -8
-; X86-NEXT:    movl %eax, %ebx
-; X86-NEXT:    xorl $29, %ebx
-; X86-NEXT:    orl %edi, %ebx
+; X86-NEXT:    movl %eax, %edi
+; X86-NEXT:    xorl $29, %edi
+; X86-NEXT:    orl %ebx, %edi
 ; X86-NEXT:    pushl $15
 ; X86-NEXT:    .cfi_adjust_cfa_offset 4
 ; X86-NEXT:    pushl $30
@@ -821,9 +821,9 @@ define i32 @foo() local_unnamed_addr #0 {
 ; X86-NEXT:    calll mult@PLT
 ; X86-NEXT:    addl $8, %esp
 ; X86-NEXT:    .cfi_adjust_cfa_offset -8
-; X86-NEXT:    movl %eax, %edi
-; X86-NEXT:    xorl $30, %edi
-; X86-NEXT:    orl %ebx, %edi
+; X86-NEXT:    movl %eax, %ebx
+; X86-NEXT:    xorl $30, %ebx
+; X86-NEXT:    orl %edi, %ebx
 ; X86-NEXT:    pushl $15
 ; X86-NEXT:    .cfi_adjust_cfa_offset 4
 ; X86-NEXT:    pushl $31
@@ -831,10 +831,10 @@ define i32 @foo() local_unnamed_addr #0 {
 ; X86-NEXT:    calll mult@PLT
 ; X86-NEXT:    addl $8, %esp
 ; X86-NEXT:    .cfi_adjust_cfa_offset -8
-; X86-NEXT:    movl %eax, %ebx
-; X86-NEXT:    xorl $31, %ebx
-; X86-NEXT:    orl %edi, %ebx
-; X86-NEXT:    orl %esi, %ebx
+; X86-NEXT:    movl %eax, %edi
+; X86-NEXT:    xorl $31, %edi
+; X86-NEXT:    orl %ebx, %edi
+; X86-NEXT:    orl %esi, %edi
 ; X86-NEXT:    pushl $16
 ; X86-NEXT:    .cfi_adjust_cfa_offset 4
 ; X86-NEXT:    pushl $32
@@ -844,7 +844,7 @@ define i32 @foo() local_unnamed_addr #0 {
 ; X86-NEXT:    .cfi_adjust_cfa_offset -8
 ; X86-NEXT:    xorl $32, %eax
 ; X86-NEXT:    xorl %ecx, %ecx
-; X86-NEXT:    orl %ebx, %eax
+; X86-NEXT:    orl %edi, %eax
 ; X86-NEXT:    setne %cl
 ; X86-NEXT:    negl %ecx
 ; X86-NEXT:    movl %ecx, %eax

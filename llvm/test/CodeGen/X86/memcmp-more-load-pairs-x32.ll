@@ -632,20 +632,20 @@ define i1 @length13_eq(i8* %X, i8* %Y) nounwind {
 ; X86-LABEL: length13_eq:
 ; X86:       # %bb.0:
 ; X86-NEXT:    pushl %esi
-; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %ecx
-; X86-NEXT:    movl (%ecx), %edx
-; X86-NEXT:    movl 4(%ecx), %esi
-; X86-NEXT:    xorl (%eax), %edx
-; X86-NEXT:    xorl 4(%eax), %esi
-; X86-NEXT:    orl %edx, %esi
-; X86-NEXT:    movl 8(%ecx), %edx
-; X86-NEXT:    xorl 8(%eax), %edx
-; X86-NEXT:    movb 12(%ecx), %cl
-; X86-NEXT:    xorb 12(%eax), %cl
-; X86-NEXT:    movzbl %cl, %eax
-; X86-NEXT:    orl %edx, %eax
+; X86-NEXT:    movl {{[0-9]+}}(%esp), %edx
+; X86-NEXT:    movl (%edx), %esi
+; X86-NEXT:    movl 4(%edx), %eax
+; X86-NEXT:    xorl (%ecx), %esi
+; X86-NEXT:    xorl 4(%ecx), %eax
 ; X86-NEXT:    orl %esi, %eax
+; X86-NEXT:    movl 8(%edx), %esi
+; X86-NEXT:    xorl 8(%ecx), %esi
+; X86-NEXT:    movb 12(%edx), %dl
+; X86-NEXT:    xorb 12(%ecx), %dl
+; X86-NEXT:    movzbl %dl, %ecx
+; X86-NEXT:    orl %esi, %ecx
+; X86-NEXT:    orl %eax, %ecx
 ; X86-NEXT:    sete %al
 ; X86-NEXT:    popl %esi
 ; X86-NEXT:    retl
@@ -658,20 +658,20 @@ define i1 @length14_eq(i8* %X, i8* %Y) nounwind {
 ; X86-LABEL: length14_eq:
 ; X86:       # %bb.0:
 ; X86-NEXT:    pushl %esi
-; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %ecx
-; X86-NEXT:    movl (%ecx), %edx
-; X86-NEXT:    movl 4(%ecx), %esi
-; X86-NEXT:    xorl (%eax), %edx
-; X86-NEXT:    xorl 4(%eax), %esi
-; X86-NEXT:    orl %edx, %esi
-; X86-NEXT:    movl 8(%ecx), %edx
-; X86-NEXT:    xorl 8(%eax), %edx
-; X86-NEXT:    movzwl 12(%ecx), %ecx
-; X86-NEXT:    xorw 12(%eax), %cx
-; X86-NEXT:    movzwl %cx, %eax
-; X86-NEXT:    orl %edx, %eax
+; X86-NEXT:    movl {{[0-9]+}}(%esp), %edx
+; X86-NEXT:    movl (%edx), %esi
+; X86-NEXT:    movl 4(%edx), %eax
+; X86-NEXT:    xorl (%ecx), %esi
+; X86-NEXT:    xorl 4(%ecx), %eax
 ; X86-NEXT:    orl %esi, %eax
+; X86-NEXT:    movl 8(%edx), %esi
+; X86-NEXT:    xorl 8(%ecx), %esi
+; X86-NEXT:    movzwl 12(%edx), %edx
+; X86-NEXT:    xorw 12(%ecx), %dx
+; X86-NEXT:    movzwl %dx, %ecx
+; X86-NEXT:    orl %esi, %ecx
+; X86-NEXT:    orl %eax, %ecx
 ; X86-NEXT:    sete %al
 ; X86-NEXT:    popl %esi
 ; X86-NEXT:    retl
@@ -684,19 +684,19 @@ define i1 @length15_eq(i8* %X, i8* %Y) nounwind {
 ; X86-LABEL: length15_eq:
 ; X86:       # %bb.0:
 ; X86-NEXT:    pushl %esi
-; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %ecx
-; X86-NEXT:    movl (%ecx), %edx
-; X86-NEXT:    movl 4(%ecx), %esi
-; X86-NEXT:    xorl (%eax), %edx
-; X86-NEXT:    xorl 4(%eax), %esi
-; X86-NEXT:    orl %edx, %esi
-; X86-NEXT:    movl 8(%ecx), %edx
-; X86-NEXT:    xorl 8(%eax), %edx
-; X86-NEXT:    movl 11(%ecx), %ecx
-; X86-NEXT:    xorl 11(%eax), %ecx
-; X86-NEXT:    orl %edx, %ecx
-; X86-NEXT:    orl %esi, %ecx
+; X86-NEXT:    movl {{[0-9]+}}(%esp), %edx
+; X86-NEXT:    movl (%edx), %esi
+; X86-NEXT:    movl 4(%edx), %eax
+; X86-NEXT:    xorl (%ecx), %esi
+; X86-NEXT:    xorl 4(%ecx), %eax
+; X86-NEXT:    orl %esi, %eax
+; X86-NEXT:    movl 8(%edx), %esi
+; X86-NEXT:    xorl 8(%ecx), %esi
+; X86-NEXT:    movl 11(%edx), %edx
+; X86-NEXT:    xorl 11(%ecx), %edx
+; X86-NEXT:    orl %esi, %edx
+; X86-NEXT:    orl %eax, %edx
 ; X86-NEXT:    sete %al
 ; X86-NEXT:    popl %esi
 ; X86-NEXT:    retl
@@ -757,19 +757,19 @@ define i1 @length16_eq(i8* %x, i8* %y) nounwind {
 ; X86-NOSSE-LABEL: length16_eq:
 ; X86-NOSSE:       # %bb.0:
 ; X86-NOSSE-NEXT:    pushl %esi
-; X86-NOSSE-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; X86-NOSSE-NEXT:    movl {{[0-9]+}}(%esp), %ecx
-; X86-NOSSE-NEXT:    movl (%ecx), %edx
-; X86-NOSSE-NEXT:    movl 4(%ecx), %esi
-; X86-NOSSE-NEXT:    xorl (%eax), %edx
-; X86-NOSSE-NEXT:    xorl 4(%eax), %esi
-; X86-NOSSE-NEXT:    orl %edx, %esi
-; X86-NOSSE-NEXT:    movl 8(%ecx), %edx
-; X86-NOSSE-NEXT:    xorl 8(%eax), %edx
-; X86-NOSSE-NEXT:    movl 12(%ecx), %ecx
-; X86-NOSSE-NEXT:    xorl 12(%eax), %ecx
-; X86-NOSSE-NEXT:    orl %edx, %ecx
-; X86-NOSSE-NEXT:    orl %esi, %ecx
+; X86-NOSSE-NEXT:    movl {{[0-9]+}}(%esp), %edx
+; X86-NOSSE-NEXT:    movl (%edx), %esi
+; X86-NOSSE-NEXT:    movl 4(%edx), %eax
+; X86-NOSSE-NEXT:    xorl (%ecx), %esi
+; X86-NOSSE-NEXT:    xorl 4(%ecx), %eax
+; X86-NOSSE-NEXT:    orl %esi, %eax
+; X86-NOSSE-NEXT:    movl 8(%edx), %esi
+; X86-NOSSE-NEXT:    xorl 8(%ecx), %esi
+; X86-NOSSE-NEXT:    movl 12(%edx), %edx
+; X86-NOSSE-NEXT:    xorl 12(%ecx), %edx
+; X86-NOSSE-NEXT:    orl %esi, %edx
+; X86-NOSSE-NEXT:    orl %eax, %edx
 ; X86-NOSSE-NEXT:    setne %al
 ; X86-NOSSE-NEXT:    popl %esi
 ; X86-NOSSE-NEXT:    retl
@@ -777,19 +777,19 @@ define i1 @length16_eq(i8* %x, i8* %y) nounwind {
 ; X86-SSE1-LABEL: length16_eq:
 ; X86-SSE1:       # %bb.0:
 ; X86-SSE1-NEXT:    pushl %esi
-; X86-SSE1-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; X86-SSE1-NEXT:    movl {{[0-9]+}}(%esp), %ecx
-; X86-SSE1-NEXT:    movl (%ecx), %edx
-; X86-SSE1-NEXT:    movl 4(%ecx), %esi
-; X86-SSE1-NEXT:    xorl (%eax), %edx
-; X86-SSE1-NEXT:    xorl 4(%eax), %esi
-; X86-SSE1-NEXT:    orl %edx, %esi
-; X86-SSE1-NEXT:    movl 8(%ecx), %edx
-; X86-SSE1-NEXT:    xorl 8(%eax), %edx
-; X86-SSE1-NEXT:    movl 12(%ecx), %ecx
-; X86-SSE1-NEXT:    xorl 12(%eax), %ecx
-; X86-SSE1-NEXT:    orl %edx, %ecx
-; X86-SSE1-NEXT:    orl %esi, %ecx
+; X86-SSE1-NEXT:    movl {{[0-9]+}}(%esp), %edx
+; X86-SSE1-NEXT:    movl (%edx), %esi
+; X86-SSE1-NEXT:    movl 4(%edx), %eax
+; X86-SSE1-NEXT:    xorl (%ecx), %esi
+; X86-SSE1-NEXT:    xorl 4(%ecx), %eax
+; X86-SSE1-NEXT:    orl %esi, %eax
+; X86-SSE1-NEXT:    movl 8(%edx), %esi
+; X86-SSE1-NEXT:    xorl 8(%ecx), %esi
+; X86-SSE1-NEXT:    movl 12(%edx), %edx
+; X86-SSE1-NEXT:    xorl 12(%ecx), %edx
+; X86-SSE1-NEXT:    orl %esi, %edx
+; X86-SSE1-NEXT:    orl %eax, %edx
 ; X86-SSE1-NEXT:    setne %al
 ; X86-SSE1-NEXT:    popl %esi
 ; X86-SSE1-NEXT:    retl
@@ -1841,21 +1841,21 @@ define i1 @length63_eq(i8* %x, i8* %y) nounwind {
 ; X86-SSE2:       # %bb.0:
 ; X86-SSE2-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; X86-SSE2-NEXT:    movl {{[0-9]+}}(%esp), %ecx
-; X86-SSE2-NEXT:    movdqu (%ecx), %xmm0
-; X86-SSE2-NEXT:    movdqu 16(%ecx), %xmm1
-; X86-SSE2-NEXT:    movdqu (%eax), %xmm2
-; X86-SSE2-NEXT:    pcmpeqb %xmm0, %xmm2
-; X86-SSE2-NEXT:    movdqu 16(%eax), %xmm0
+; X86-SSE2-NEXT:    movdqu (%ecx), %xmm1
+; X86-SSE2-NEXT:    movdqu 16(%ecx), %xmm2
+; X86-SSE2-NEXT:    movdqu (%eax), %xmm0
 ; X86-SSE2-NEXT:    pcmpeqb %xmm1, %xmm0
-; X86-SSE2-NEXT:    movdqu 32(%ecx), %xmm1
+; X86-SSE2-NEXT:    movdqu 16(%eax), %xmm1
+; X86-SSE2-NEXT:    pcmpeqb %xmm2, %xmm1
+; X86-SSE2-NEXT:    movdqu 32(%ecx), %xmm2
 ; X86-SSE2-NEXT:    movdqu 32(%eax), %xmm3
-; X86-SSE2-NEXT:    pcmpeqb %xmm1, %xmm3
-; X86-SSE2-NEXT:    movdqu 47(%ecx), %xmm1
+; X86-SSE2-NEXT:    pcmpeqb %xmm2, %xmm3
+; X86-SSE2-NEXT:    movdqu 47(%ecx), %xmm2
 ; X86-SSE2-NEXT:    movdqu 47(%eax), %xmm4
-; X86-SSE2-NEXT:    pcmpeqb %xmm1, %xmm4
+; X86-SSE2-NEXT:    pcmpeqb %xmm2, %xmm4
 ; X86-SSE2-NEXT:    pand %xmm3, %xmm4
+; X86-SSE2-NEXT:    pand %xmm1, %xmm4
 ; X86-SSE2-NEXT:    pand %xmm0, %xmm4
-; X86-SSE2-NEXT:    pand %xmm2, %xmm4
 ; X86-SSE2-NEXT:    pmovmskb %xmm4, %eax
 ; X86-SSE2-NEXT:    cmpl $65535, %eax # imm = 0xFFFF
 ; X86-SSE2-NEXT:    setne %al
@@ -1865,21 +1865,21 @@ define i1 @length63_eq(i8* %x, i8* %y) nounwind {
 ; X86-SSE41:       # %bb.0:
 ; X86-SSE41-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; X86-SSE41-NEXT:    movl {{[0-9]+}}(%esp), %ecx
-; X86-SSE41-NEXT:    movdqu (%ecx), %xmm0
-; X86-SSE41-NEXT:    movdqu 16(%ecx), %xmm1
-; X86-SSE41-NEXT:    movdqu (%eax), %xmm2
-; X86-SSE41-NEXT:    pxor %xmm0, %xmm2
-; X86-SSE41-NEXT:    movdqu 16(%eax), %xmm0
+; X86-SSE41-NEXT:    movdqu (%ecx), %xmm1
+; X86-SSE41-NEXT:    movdqu 16(%ecx), %xmm2
+; X86-SSE41-NEXT:    movdqu (%eax), %xmm0
 ; X86-SSE41-NEXT:    pxor %xmm1, %xmm0
-; X86-SSE41-NEXT:    movdqu 32(%ecx), %xmm1
+; X86-SSE41-NEXT:    movdqu 16(%eax), %xmm1
+; X86-SSE41-NEXT:    pxor %xmm2, %xmm1
+; X86-SSE41-NEXT:    movdqu 32(%ecx), %xmm2
 ; X86-SSE41-NEXT:    movdqu 32(%eax), %xmm3
-; X86-SSE41-NEXT:    pxor %xmm1, %xmm3
-; X86-SSE41-NEXT:    movdqu 47(%ecx), %xmm1
+; X86-SSE41-NEXT:    pxor %xmm2, %xmm3
+; X86-SSE41-NEXT:    movdqu 47(%ecx), %xmm2
 ; X86-SSE41-NEXT:    movdqu 47(%eax), %xmm4
-; X86-SSE41-NEXT:    pxor %xmm1, %xmm4
+; X86-SSE41-NEXT:    pxor %xmm2, %xmm4
 ; X86-SSE41-NEXT:    por %xmm3, %xmm4
+; X86-SSE41-NEXT:    por %xmm1, %xmm4
 ; X86-SSE41-NEXT:    por %xmm0, %xmm4
-; X86-SSE41-NEXT:    por %xmm2, %xmm4
 ; X86-SSE41-NEXT:    ptest %xmm4, %xmm4
 ; X86-SSE41-NEXT:    setne %al
 ; X86-SSE41-NEXT:    retl
@@ -2024,21 +2024,21 @@ define i1 @length64_eq(i8* %x, i8* %y) nounwind {
 ; X86-SSE2:       # %bb.0:
 ; X86-SSE2-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; X86-SSE2-NEXT:    movl {{[0-9]+}}(%esp), %ecx
-; X86-SSE2-NEXT:    movdqu (%ecx), %xmm0
-; X86-SSE2-NEXT:    movdqu 16(%ecx), %xmm1
-; X86-SSE2-NEXT:    movdqu (%eax), %xmm2
-; X86-SSE2-NEXT:    pcmpeqb %xmm0, %xmm2
-; X86-SSE2-NEXT:    movdqu 16(%eax), %xmm0
+; X86-SSE2-NEXT:    movdqu (%ecx), %xmm1
+; X86-SSE2-NEXT:    movdqu 16(%ecx), %xmm2
+; X86-SSE2-NEXT:    movdqu (%eax), %xmm0
 ; X86-SSE2-NEXT:    pcmpeqb %xmm1, %xmm0
-; X86-SSE2-NEXT:    movdqu 32(%ecx), %xmm1
+; X86-SSE2-NEXT:    movdqu 16(%eax), %xmm1
+; X86-SSE2-NEXT:    pcmpeqb %xmm2, %xmm1
+; X86-SSE2-NEXT:    movdqu 32(%ecx), %xmm2
 ; X86-SSE2-NEXT:    movdqu 32(%eax), %xmm3
-; X86-SSE2-NEXT:    pcmpeqb %xmm1, %xmm3
-; X86-SSE2-NEXT:    movdqu 48(%ecx), %xmm1
+; X86-SSE2-NEXT:    pcmpeqb %xmm2, %xmm3
+; X86-SSE2-NEXT:    movdqu 48(%ecx), %xmm2
 ; X86-SSE2-NEXT:    movdqu 48(%eax), %xmm4
-; X86-SSE2-NEXT:    pcmpeqb %xmm1, %xmm4
+; X86-SSE2-NEXT:    pcmpeqb %xmm2, %xmm4
 ; X86-SSE2-NEXT:    pand %xmm3, %xmm4
+; X86-SSE2-NEXT:    pand %xmm1, %xmm4
 ; X86-SSE2-NEXT:    pand %xmm0, %xmm4
-; X86-SSE2-NEXT:    pand %xmm2, %xmm4
 ; X86-SSE2-NEXT:    pmovmskb %xmm4, %eax
 ; X86-SSE2-NEXT:    cmpl $65535, %eax # imm = 0xFFFF
 ; X86-SSE2-NEXT:    setne %al
@@ -2048,21 +2048,21 @@ define i1 @length64_eq(i8* %x, i8* %y) nounwind {
 ; X86-SSE41:       # %bb.0:
 ; X86-SSE41-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; X86-SSE41-NEXT:    movl {{[0-9]+}}(%esp), %ecx
-; X86-SSE41-NEXT:    movdqu (%ecx), %xmm0
-; X86-SSE41-NEXT:    movdqu 16(%ecx), %xmm1
-; X86-SSE41-NEXT:    movdqu (%eax), %xmm2
-; X86-SSE41-NEXT:    pxor %xmm0, %xmm2
-; X86-SSE41-NEXT:    movdqu 16(%eax), %xmm0
+; X86-SSE41-NEXT:    movdqu (%ecx), %xmm1
+; X86-SSE41-NEXT:    movdqu 16(%ecx), %xmm2
+; X86-SSE41-NEXT:    movdqu (%eax), %xmm0
 ; X86-SSE41-NEXT:    pxor %xmm1, %xmm0
-; X86-SSE41-NEXT:    movdqu 32(%ecx), %xmm1
+; X86-SSE41-NEXT:    movdqu 16(%eax), %xmm1
+; X86-SSE41-NEXT:    pxor %xmm2, %xmm1
+; X86-SSE41-NEXT:    movdqu 32(%ecx), %xmm2
 ; X86-SSE41-NEXT:    movdqu 32(%eax), %xmm3
-; X86-SSE41-NEXT:    pxor %xmm1, %xmm3
-; X86-SSE41-NEXT:    movdqu 48(%ecx), %xmm1
+; X86-SSE41-NEXT:    pxor %xmm2, %xmm3
+; X86-SSE41-NEXT:    movdqu 48(%ecx), %xmm2
 ; X86-SSE41-NEXT:    movdqu 48(%eax), %xmm4
-; X86-SSE41-NEXT:    pxor %xmm1, %xmm4
+; X86-SSE41-NEXT:    pxor %xmm2, %xmm4
 ; X86-SSE41-NEXT:    por %xmm3, %xmm4
+; X86-SSE41-NEXT:    por %xmm1, %xmm4
 ; X86-SSE41-NEXT:    por %xmm0, %xmm4
-; X86-SSE41-NEXT:    por %xmm2, %xmm4
 ; X86-SSE41-NEXT:    ptest %xmm4, %xmm4
 ; X86-SSE41-NEXT:    setne %al
 ; X86-SSE41-NEXT:    retl
