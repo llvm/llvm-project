@@ -291,7 +291,7 @@ endif()
 set(LIBOMP_ENABLE_SHARED TRUE CACHE BOOL
   "Shared library instead of static library?")
 
-if(WIN32 AND NOT LIBOMP_ENABLE_SHARED)
+if(MSVC AND NOT LIBOMP_ENABLE_SHARED)
   libomp_error_say("Static libraries requested but not available on Windows")
 endif()
 
