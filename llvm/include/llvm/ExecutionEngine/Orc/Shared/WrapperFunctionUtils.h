@@ -486,7 +486,7 @@ public:
     }
 
     auto SendSerializedResult = [SDR = std::move(SendDeserializedResult)](
-                                    WrapperFunctionResult R) {
+                                    WrapperFunctionResult R) mutable {
       RetT RetVal = detail::ResultDeserializer<SPSRetTagT, RetT>::makeValue();
       detail::ResultDeserializer<SPSRetTagT, RetT>::makeSafe(RetVal);
 
@@ -554,8 +554,10 @@ public:
                         const ArgTs &...Args) {
     WrapperFunction<SPSEmpty(SPSTagTs...)>::callAsync(
         Caller,
-        [SDR = std::move(SendDeserializedResult)](
-            Error SerializeErr, SPSEmpty E) { SDR(std::move(SerializeErr)); },
+        [SDR = std::move(SendDeserializedResult)](Error SerializeErr,
+                                                  SPSEmpty E) mutable {
+          SDR(std::move(SerializeErr));
+        },
         Args...);
   }
 
