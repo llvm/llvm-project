@@ -1489,14 +1489,8 @@ public:
   void callSPSWrapperAsync(SendResultT &&SendResult,
                            JITTargetAddress WrapperFnAddr,
                            const ArgTs &...Args) {
-    shared::WrapperFunction<SPSSignature>::callAsync(
-        [this,
-         WrapperFnAddr](ExecutorProcessControl::SendResultFunction SendResult,
-                        const char *ArgData, size_t ArgSize) {
-          callWrapperAsync(std::move(SendResult), WrapperFnAddr,
-                           ArrayRef<char>(ArgData, ArgSize));
-        },
-        std::move(SendResult), Args...);
+    EPC->callSPSWrapperAsync<SPSSignature, SendResultT, ArgTs...>(
+        std::forward<SendResultT>(SendResult), WrapperFnAddr, Args...);
   }
 
   /// Run a wrapper function using SPS to serialize the arguments and

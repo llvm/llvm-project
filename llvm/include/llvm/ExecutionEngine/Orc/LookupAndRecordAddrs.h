@@ -61,7 +61,8 @@ Error lookupAndRecordAddrs(
 /// weak.
 Error lookupAndRecordAddrs(
     ExecutorProcessControl &EPC, tpctypes::DylibHandle H,
-    std::vector<std::pair<SymbolStringPtr, ExecutorAddress *>> Pairs);
+    std::vector<std::pair<SymbolStringPtr, ExecutorAddress *>> Pairs,
+    SymbolLookupFlags LookupFlags = SymbolLookupFlags::RequiredSymbol);
 
 } // End namespace orc
 } // End namespace llvm
