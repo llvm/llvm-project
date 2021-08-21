@@ -79,9 +79,8 @@ define i32 @reassoc_x2_mul_nuw(i32 %x, i32 %y) {
 
 define i32 @reassoc_x2_sub_nuw(i32 %x, i32 %y) {
 ; CHECK-LABEL: @reassoc_x2_sub_nuw(
-; CHECK-NEXT:    [[SUB0:%.*]] = add i32 [[X:%.*]], -4
-; CHECK-NEXT:    [[SUB1:%.*]] = add i32 [[Y:%.*]], -8
-; CHECK-NEXT:    [[SUB2:%.*]] = sub nuw i32 [[SUB0]], [[SUB1]]
+; CHECK-NEXT:    [[TMP1:%.*]] = sub i32 [[X:%.*]], [[Y:%.*]]
+; CHECK-NEXT:    [[SUB2:%.*]] = add i32 [[TMP1]], 4
 ; CHECK-NEXT:    ret i32 [[SUB2]]
 ;
   %sub0 = sub nuw i32 %x, 4
