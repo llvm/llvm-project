@@ -21,12 +21,16 @@ namespace __llvm_libc {
 // The implementation currently handles only plain mutexes.
 LLVM_LIBC_FUNCTION(int, mtx_lock, (mtx_t * mutex)) {
   FutexData *futex_data = reinterpret_cast<FutexData *>(mutex->__internal_data);
+  bool was_waiting = false;
   while (true) {
     uint32_t mutex_status = MS_Free;
     uint32_t locked_status = MS_Locked;
 
-    if (atomic_compare_exchange_strong(futex_data, &mutex_status, MS_Locked))
+    if (atomic_compare_exchange_strong(futex_data, &mutex_status, MS_Locked)) {
+      if (was_waiting)
+        atomic_store(futex_data, MS_Waiting);
       return thrd_success;
+    }
 
     switch (mutex_status) {
     case MS_Waiting:
@@ -35,6 +39,7 @@ LLVM_LIBC_FUNCTION(int, mtx_lock, (mtx_t * mutex)) {
       // 4th argument to the syscall function below.)
       __llvm_libc::syscall(SYS_futex, futex_data, FUTEX_WAIT_PRIVATE,
                            MS_Waiting, 0, 0, 0);
+      was_waiting = true;
       // Once woken up/unblocked, try everything all over.
       continue;
     case MS_Locked:
@@ -47,6 +52,7 @@ LLVM_LIBC_FUNCTION(int, mtx_lock, (mtx_t * mutex)) {
         // syscall will block only if the futex data is still `MS_Waiting`.
         __llvm_libc::syscall(SYS_futex, futex_data, FUTEX_WAIT_PRIVATE,
                              MS_Waiting, 0, 0, 0);
+        was_waiting = true;
       }
       continue;
     case MS_Free:
