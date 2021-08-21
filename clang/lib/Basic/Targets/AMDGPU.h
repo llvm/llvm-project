@@ -353,6 +353,8 @@ public:
 
   LangAS getCUDABuiltinAddressSpace(unsigned AS) const override {
     switch (AS) {
+    case 0:
+      return LangAS::Default;
     case 1:
       return LangAS::cuda_device;
     case 3:
