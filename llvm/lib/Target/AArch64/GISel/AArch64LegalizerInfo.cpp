@@ -23,6 +23,7 @@
 #include "llvm/CodeGen/TargetOpcodes.h"
 #include "llvm/CodeGen/ValueTypes.h"
 #include "llvm/IR/DerivedTypes.h"
+#include "llvm/IR/Intrinsics.h"
 #include "llvm/IR/IntrinsicsAArch64.h"
 #include "llvm/IR/Type.h"
 #include "llvm/Support/MathExtras.h"
@@ -964,6 +965,12 @@ bool AArch64LegalizerInfo::legalizeIntrinsic(LegalizerHelper &Helper,
                    *MF.getMachineMemOperand(MachinePointerInfo(),
                                             MachineMemOperand::MOStore,
                                             VaListSize, Align(PtrSize)));
+    MI.eraseFromParent();
+    return true;
+  }
+  case Intrinsic::get_dynamic_area_offset: {
+    MachineIRBuilder &MIB = Helper.MIRBuilder;
+    MIB.buildConstant(MI.getOperand(0).getReg(), 0);
     MI.eraseFromParent();
     return true;
   }

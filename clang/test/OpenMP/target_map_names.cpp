@@ -166,6 +166,10 @@ void baz() {
 }
 
 struct S3 {
+  S3() {
+#pragma omp target data map(alloc : Z[0:64])
+    { }
+  }
   double Z[64];
 };
 
@@ -177,7 +181,10 @@ void qux() {
   { }
 }
 
+
+
 // DEBUG: @{{[0-9]+}} = private unnamed_addr constant [{{[0-9]+}} x i8] c";s.Z[0:64];{{.*}}.cpp;{{[0-9]+}};{{[0-9]+}};;\00"
+// DEBUG: @{{[0-9]+}} = private unnamed_addr constant [{{[0-9]+}} x i8] c";this->Z[0:64];{{.*}}.cpp;{{[0-9]+}};{{[0-9]+}};;\00"
 
 // Clang used to mistakenly generate the map name "x" for both x and y on this
 // directive.  Conditions to reproduce the bug: a single map clause has two
