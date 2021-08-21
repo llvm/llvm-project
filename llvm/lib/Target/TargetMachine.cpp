@@ -140,12 +140,6 @@ bool TargetMachine::shouldAssumeDSOLocal(const Module &M,
   }
 
   if (TT.isOSBinFormatMachO()) {
-    // Make an exception for windows OS in the triple: Some firmware builds use
-    // *-win32-macho triples. This (accidentally?) produced windows relocations
-    // without GOT tables in older clang versions; Keep this behaviour.
-    if (TT.isOSWindows())
-      return true;
-
     if (RM == Reloc::Static)
       return true;
     return GV->isStrongDefinitionForLinker();
