@@ -2,6 +2,7 @@
 #define BENCHMARK_REGISTER_H
 
 #include <vector>
+#include <limits>
 
 #include "check.h"
 
