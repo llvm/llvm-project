@@ -958,6 +958,42 @@ define i9 @fshr_ops_poison6() {
   ret i9 %r
 }
 
+define i8 @fshl_zero(i8 %shamt) {
+; CHECK-LABEL: @fshl_zero(
+; CHECK-NEXT:    [[R:%.*]] = call i8 @llvm.fshl.i8(i8 0, i8 0, i8 [[SHAMT:%.*]])
+; CHECK-NEXT:    ret i8 [[R]]
+;
+  %r = call i8 @llvm.fshl.i8(i8 0, i8 0, i8 %shamt)
+  ret i8 %r
+}
+
+define <2 x i8> @fshr_zero_vec(<2 x i8> %shamt) {
+; CHECK-LABEL: @fshr_zero_vec(
+; CHECK-NEXT:    [[R:%.*]] = call <2 x i8> @llvm.fshr.v2i8(<2 x i8> zeroinitializer, <2 x i8> <i8 0, i8 undef>, <2 x i8> [[SHAMT:%.*]])
+; CHECK-NEXT:    ret <2 x i8> [[R]]
+;
+  %r = call <2 x i8> @llvm.fshr.v2i8(<2 x i8> zeroinitializer, <2 x i8> <i8 0, i8 undef>, <2 x i8> %shamt)
+  ret <2 x i8> %r
+}
+
+define <2 x i7> @fshl_ones_vec(<2 x i7> %shamt) {
+; CHECK-LABEL: @fshl_ones_vec(
+; CHECK-NEXT:    [[R:%.*]] = call <2 x i7> @llvm.fshl.v2i7(<2 x i7> <i7 undef, i7 -1>, <2 x i7> <i7 -1, i7 undef>, <2 x i7> [[SHAMT:%.*]])
+; CHECK-NEXT:    ret <2 x i7> [[R]]
+;
+  %r = call <2 x i7> @llvm.fshl.v2i7(<2 x i7> <i7 undef, i7 -1>, <2 x i7> <i7 -1, i7 undef>, <2 x i7> %shamt)
+  ret <2 x i7> %r
+}
+
+define i9 @fshr_ones(i9 %shamt) {
+; CHECK-LABEL: @fshr_ones(
+; CHECK-NEXT:    [[R:%.*]] = call i9 @llvm.fshr.i9(i9 -1, i9 -1, i9 [[SHAMT:%.*]])
+; CHECK-NEXT:    ret i9 [[R]]
+;
+  %r = call i9 @llvm.fshr.i9(i9 -1, i9 -1, i9 %shamt)
+  ret i9 %r
+}
+
 declare double @llvm.fma.f64(double,double,double)
 declare double @llvm.fmuladd.f64(double,double,double)
 
