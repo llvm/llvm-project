@@ -18690,7 +18690,13 @@ static bool canonicalizeShuffleMaskWithCommute(ArrayRef<int> Mask) {
   return false;
 }
 
-/// Top-level lowering for x86 vector shuffles.
+// Forward declaration.
+static SDValue canonicalizeShuffleMaskWithHorizOp(
+    MutableArrayRef<SDValue> Ops, MutableArrayRef<int> Mask,
+    unsigned RootSizeInBits, const SDLoc &DL, SelectionDAG &DAG,
+    const X86Subtarget &Subtarget);
+
+    /// Top-level lowering for x86 vector shuffles.
 ///
 /// This handles decomposition, canonicalization, and lowering of all x86
 /// vector shuffles. Most of the specific lowering strategies are encapsulated
@@ -18799,8 +18805,21 @@ static SDValue lowerVECTOR_SHUFFLE(SDValue Op, const X86Subtarget &Subtarget,
     }
   }
 
+  SmallVector<SDValue> Ops = {V1, V2};
+  SmallVector<int> Mask(OrigMask.begin(), OrigMask.end());
+
+  // Canonicalize the shuffle with any horizontal ops inputs.
+  // NOTE: This may update Ops and Mask.
+  if (SDValue HOp = canonicalizeShuffleMaskWithHorizOp(
+          Ops, Mask, VT.getSizeInBits(), DL, DAG, Subtarget))
+    return DAG.getBitcast(VT, HOp);
+
+  V1 = DAG.getBitcast(VT, Ops[0]);
+  V2 = DAG.getBitcast(VT, Ops[1]);
+  assert(Mask.size() == NumElements && "canonicalizeShuffleMaskWithHorizOp "
+                                       "shouldn't alter the shuffle mask size");
+
   // Commute the shuffle if it will improve canonicalization.
-  SmallVector<int, 64> Mask(OrigMask.begin(), OrigMask.end());
   if (canonicalizeShuffleMaskWithCommute(Mask)) {
     ShuffleVectorSDNode::commuteMask(Mask);
     std::swap(V1, V2);
