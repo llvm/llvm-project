@@ -128,6 +128,11 @@ TEST(SimplePackedSerializationTest, StringViewCharSequenceSerialization) {
   spsSerializationRoundTrip<SPSString>(StringRef(HW));
 }
 
+TEST(SimplePackedSerializationTest, StdTupleSerialization) {
+  std::tuple<int32_t, std::string, bool> P(42, "foo", true);
+  spsSerializationRoundTrip<SPSTuple<int32_t, SPSString, bool>>(P);
+}
+
 TEST(SimplePackedSerializationTest, StdPairSerialization) {
   std::pair<int32_t, std::string> P(42, "foo");
   spsSerializationRoundTrip<SPSTuple<int32_t, SPSString>>(P);
