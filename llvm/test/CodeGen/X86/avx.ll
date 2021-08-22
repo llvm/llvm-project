@@ -138,18 +138,17 @@ define <4 x float> @insertps_from_broadcast_loadv4f32(<4 x float> %a, <4 x float
   ret <4 x float> %7
 }
 
-;; FIXME: We're emitting an extraneous pshufd/vbroadcast.
 define <4 x float> @insertps_from_broadcast_multiple_use(<4 x float> %a, <4 x float> %b, <4 x float> %c, <4 x float> %d, float* nocapture readonly %fb, i64 %index) {
 ; X86-LABEL: insertps_from_broadcast_multiple_use:
 ; X86:       ## %bb.0:
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %ecx
 ; X86-NEXT:    vbroadcastss (%ecx,%eax,4), %xmm4
-; X86-NEXT:    vinsertps {{.*#+}} xmm0 = xmm0[0,1,2],xmm4[0]
-; X86-NEXT:    vinsertps {{.*#+}} xmm1 = xmm1[0,1,2],xmm4[0]
+; X86-NEXT:    vblendps {{.*#+}} xmm0 = xmm0[0,1,2],xmm4[3]
+; X86-NEXT:    vblendps {{.*#+}} xmm1 = xmm1[0,1,2],xmm4[3]
 ; X86-NEXT:    vaddps %xmm1, %xmm0, %xmm0
-; X86-NEXT:    vinsertps {{.*#+}} xmm1 = xmm2[0,1,2],xmm4[0]
-; X86-NEXT:    vinsertps {{.*#+}} xmm2 = xmm3[0,1,2],xmm4[0]
+; X86-NEXT:    vblendps {{.*#+}} xmm1 = xmm2[0,1,2],xmm4[3]
+; X86-NEXT:    vblendps {{.*#+}} xmm2 = xmm3[0,1,2],xmm4[3]
 ; X86-NEXT:    vaddps %xmm2, %xmm1, %xmm1
 ; X86-NEXT:    vaddps %xmm1, %xmm0, %xmm0
 ; X86-NEXT:    retl
@@ -157,11 +156,11 @@ define <4 x float> @insertps_from_broadcast_multiple_use(<4 x float> %a, <4 x fl
 ; X64-LABEL: insertps_from_broadcast_multiple_use:
 ; X64:       ## %bb.0:
 ; X64-NEXT:    vbroadcastss (%rdi,%rsi,4), %xmm4
-; X64-NEXT:    vinsertps {{.*#+}} xmm0 = xmm0[0,1,2],xmm4[0]
-; X64-NEXT:    vinsertps {{.*#+}} xmm1 = xmm1[0,1,2],xmm4[0]
+; X64-NEXT:    vblendps {{.*#+}} xmm0 = xmm0[0,1,2],xmm4[3]
+; X64-NEXT:    vblendps {{.*#+}} xmm1 = xmm1[0,1,2],xmm4[3]
 ; X64-NEXT:    vaddps %xmm1, %xmm0, %xmm0
-; X64-NEXT:    vinsertps {{.*#+}} xmm1 = xmm2[0,1,2],xmm4[0]
-; X64-NEXT:    vinsertps {{.*#+}} xmm2 = xmm3[0,1,2],xmm4[0]
+; X64-NEXT:    vblendps {{.*#+}} xmm1 = xmm2[0,1,2],xmm4[3]
+; X64-NEXT:    vblendps {{.*#+}} xmm2 = xmm3[0,1,2],xmm4[3]
 ; X64-NEXT:    vaddps %xmm2, %xmm1, %xmm1
 ; X64-NEXT:    vaddps %xmm1, %xmm0, %xmm0
 ; X64-NEXT:    retq
