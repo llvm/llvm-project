@@ -9044,6 +9044,29 @@ bool RISCVTargetLowering::decomposeMulByConstant(LLVMContext &Context, EVT VT,
   return false;
 }
 
+bool RISCVTargetLowering::isMulAddWithConstProfitable(
+    const SDValue &AddNode, const SDValue &ConstNode) const {
+  // Let the DAGCombiner decide for vectors.
+  EVT VT = AddNode.getValueType();
+  if (VT.isVector())
+    return true;
+
+  // Let the DAGCombiner decide for larger types.
+  if (VT.getScalarSizeInBits() > Subtarget.getXLen())
+    return true;
+
+  // It is worse if c1 is simm12 while c1*c2 is not.
+  ConstantSDNode *C1Node = cast<ConstantSDNode>(AddNode.getOperand(1));
+  ConstantSDNode *C2Node = cast<ConstantSDNode>(ConstNode);
+  const APInt &C1 = C1Node->getAPIntValue();
+  const APInt &C2 = C2Node->getAPIntValue();
+  if (C1.isSignedIntN(12) && !(C1 * C2).isSignedIntN(12))
+    return false;
+
+  // Default to true and let the DAGCombiner decide.
+  return true;
+}
+
 bool RISCVTargetLowering::allowsMisalignedMemoryAccesses(
     EVT VT, unsigned AddrSpace, Align Alignment, MachineMemOperand::Flags Flags,
     bool *Fast) const {
