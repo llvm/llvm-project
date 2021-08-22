@@ -3541,7 +3541,7 @@ the configuration (without a prefix: ``Auto``).
     ForEach and If macros. This is useful in projects where ForEach/If
     macros are treated as function calls instead of control statements.
     ``SBPO_ControlStatementsExceptForEachMacros`` remains an alias for
-    backward compatability.
+    backward compatibility.
 
     .. code-block:: c++
 
