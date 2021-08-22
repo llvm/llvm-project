@@ -945,3 +945,377 @@ define <4 x i64> @test_int_x86_avx512_maskz_cvtt_ph2uqq_256(<8 x half> %x0, i8 %
   %res = call <4 x i64> @llvm.x86.avx512fp16.mask.vcvttph2uqq.256(<8 x half> %x0, <4 x i64> zeroinitializer, i8 %x2)
   ret <4 x i64> %res
 }
+
+declare <8 x half> @llvm.sqrt.v8f16(<8 x half>)
+declare <16 x half> @llvm.sqrt.v16f16(<16 x half>)
+
+define <8 x half> @test_sqrt_ph_128(<8 x half> %a0) {
+; CHECK-LABEL: test_sqrt_ph_128:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    vsqrtph %xmm0, %xmm0
+; CHECK-NEXT:    retq
+  %1 = call <8 x half> @llvm.sqrt.v8f16(<8 x half> %a0)
+  ret <8 x half> %1
+}
+
+define <8 x half> @test_mask_sqrt_ph_128(<8 x half> %a0, <8 x half> %passthru, i8 %mask) {
+; CHECK-LABEL: test_mask_sqrt_ph_128:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    kmovd %edi, %k1
+; CHECK-NEXT:    vsqrtph %xmm0, %xmm1 {%k1}
+; CHECK-NEXT:    vmovaps %xmm1, %xmm0
+; CHECK-NEXT:    retq
+  %1 = call <8 x half> @llvm.sqrt.v8f16(<8 x half> %a0)
+  %2 = bitcast i8 %mask to <8 x i1>
+  %3 = select <8 x i1> %2, <8 x half> %1, <8 x half> %passthru
+  ret <8 x half> %3
+}
+
+define <8 x half> @test_maskz_sqrt_ph_128(<8 x half> %a0, i8 %mask) {
+; CHECK-LABEL: test_maskz_sqrt_ph_128:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    kmovd %edi, %k1
+; CHECK-NEXT:    vsqrtph %xmm0, %xmm0 {%k1} {z}
+; CHECK-NEXT:    retq
+  %1 = call <8 x half> @llvm.sqrt.v8f16(<8 x half> %a0)
+  %2 = bitcast i8 %mask to <8 x i1>
+  %3 = select <8 x i1> %2, <8 x half> %1, <8 x half> zeroinitializer
+  ret <8 x half> %3
+}
+
+define <16 x half> @test_sqrt_ph_256(<16 x half> %a0) {
+; CHECK-LABEL: test_sqrt_ph_256:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    vsqrtph %ymm0, %ymm0
+; CHECK-NEXT:    retq
+  %1 = call <16 x half> @llvm.sqrt.v16f16(<16 x half> %a0)
+  ret <16 x half> %1
+}
+
+define <16 x half> @test_mask_sqrt_ph_256(<16 x half> %a0, <16 x half> %passthru, i16 %mask) {
+; CHECK-LABEL: test_mask_sqrt_ph_256:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    kmovd %edi, %k1
+; CHECK-NEXT:    vsqrtph %ymm0, %ymm1 {%k1}
+; CHECK-NEXT:    vmovaps %ymm1, %ymm0
+; CHECK-NEXT:    retq
+  %1 = call <16 x half> @llvm.sqrt.v16f16(<16 x half> %a0)
+  %2 = bitcast i16 %mask to <16 x i1>
+  %3 = select <16 x i1> %2, <16 x half> %1, <16 x half> %passthru
+  ret <16 x half> %3
+}
+
+define <16 x half> @test_maskz_sqrt_ph_256(<16 x half> %a0, i16 %mask) {
+; CHECK-LABEL: test_maskz_sqrt_ph_256:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    kmovd %edi, %k1
+; CHECK-NEXT:    vsqrtph %ymm0, %ymm0 {%k1} {z}
+; CHECK-NEXT:    retq
+  %1 = call <16 x half> @llvm.sqrt.v16f16(<16 x half> %a0)
+  %2 = bitcast i16 %mask to <16 x i1>
+  %3 = select <16 x i1> %2, <16 x half> %1, <16 x half> zeroinitializer
+  ret <16 x half> %3
+}
+
+declare <8 x half> @llvm.x86.avx512fp16.mask.rsqrt.ph.128(<8 x half>, <8 x half>, i8)
+declare <16 x half> @llvm.x86.avx512fp16.mask.rsqrt.ph.256(<16 x half>, <16 x half>, i16)
+
+define <8 x half> @test_rsqrt_ph_128(<8 x half> %a0) {
+; CHECK-LABEL: test_rsqrt_ph_128:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    vrsqrtph %xmm0, %xmm0
+; CHECK-NEXT:    retq
+  %res = call <8 x half> @llvm.x86.avx512fp16.mask.rsqrt.ph.128(<8 x half> %a0, <8 x half> zeroinitializer, i8 -1)
+  ret <8 x half> %res
+}
+
+define <16 x half> @test_rsqrt_ph_256(<16 x half> %a0) {
+; CHECK-LABEL: test_rsqrt_ph_256:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    vrsqrtph %ymm0, %ymm0
+; CHECK-NEXT:    retq
+  %res = call <16 x half> @llvm.x86.avx512fp16.mask.rsqrt.ph.256(<16 x half> %a0, <16 x half> zeroinitializer, i16 -1)
+  ret <16 x half> %res
+}
+
+declare <8 x half> @llvm.x86.avx512fp16.mask.rcp.ph.128(<8 x half>, <8 x half>, i8)
+declare <16 x half> @llvm.x86.avx512fp16.mask.rcp.ph.256(<16 x half>, <16 x half>, i16)
+
+define <8 x half> @test_rcp_ph_128(<8 x half> %a0, <8 x half> %a1, i8 %mask) {
+; CHECK-LABEL: test_rcp_ph_128:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    kmovd %edi, %k1
+; CHECK-NEXT:    vrcpph %xmm0, %xmm1 {%k1}
+; CHECK-NEXT:    vmovaps %xmm1, %xmm0
+; CHECK-NEXT:    retq
+  %res = call <8 x half> @llvm.x86.avx512fp16.mask.rcp.ph.128(<8 x half> %a0, <8 x half> %a1, i8 %mask)
+  ret <8 x half> %res
+}
+
+define <16 x half> @test_rcp_ph_256(<16 x half> %a0, <16 x half> %a1, i16 %mask) {
+; CHECK-LABEL: test_rcp_ph_256:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    kmovd %edi, %k1
+; CHECK-NEXT:    vrcpph %ymm0, %ymm1 {%k1}
+; CHECK-NEXT:    vmovaps %ymm1, %ymm0
+; CHECK-NEXT:    retq
+  %res = call <16 x half> @llvm.x86.avx512fp16.mask.rcp.ph.256(<16 x half> %a0, <16 x half> %a1, i16 %mask)
+  ret <16 x half> %res
+}
+
+declare <8 x half> @llvm.x86.avx512fp16.mask.reduce.ph.128(<8 x half>, i32, <8 x half>, i8)
+declare <16 x half> @llvm.x86.avx512fp16.mask.reduce.ph.256(<16 x half>, i32, <16 x half>, i16)
+
+define <8 x half>@test_int_x86_avx512_mask_reduce_ph_128(<8 x half> %x0, <8 x half> %x2, i8 %x3) {
+; CHECK-LABEL: test_int_x86_avx512_mask_reduce_ph_128:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    kmovd %edi, %k1
+; CHECK-NEXT:    vreduceph $8, %xmm0, %xmm1 {%k1}
+; CHECK-NEXT:    vreduceph $4, %xmm0, %xmm0
+; CHECK-NEXT:    vaddph %xmm0, %xmm1, %xmm0
+; CHECK-NEXT:    retq
+  %res = call <8 x half> @llvm.x86.avx512fp16.mask.reduce.ph.128(<8 x half> %x0, i32 8, <8 x half> %x2, i8 %x3)
+  %res1 = call <8 x half> @llvm.x86.avx512fp16.mask.reduce.ph.128(<8 x half> %x0, i32 4, <8 x half> %x2, i8 -1)
+  %res2 = fadd <8 x half> %res, %res1
+  ret <8 x half> %res2
+}
+
+define <16 x half>@test_int_x86_avx512_mask_reduce_ph_256(<16 x half> %x0, <16 x half> %x2, i16 %x3) {
+; CHECK-LABEL: test_int_x86_avx512_mask_reduce_ph_256:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    kmovd %edi, %k1
+; CHECK-NEXT:    vreduceph $8, %ymm0, %ymm1 {%k1}
+; CHECK-NEXT:    vreduceph $4, %ymm0, %ymm0
+; CHECK-NEXT:    vaddph %ymm0, %ymm1, %ymm0
+; CHECK-NEXT:    retq
+  %res = call <16 x half> @llvm.x86.avx512fp16.mask.reduce.ph.256(<16 x half> %x0, i32 8, <16 x half> %x2, i16 %x3)
+  %res1 = call <16 x half> @llvm.x86.avx512fp16.mask.reduce.ph.256(<16 x half> %x0, i32 4, <16 x half> %x2, i16 -1)
+  %res2 = fadd <16 x half> %res, %res1
+  ret <16 x half> %res2
+}
+
+declare <8 x i1> @llvm.x86.avx512fp16.fpclass.ph.128(<8 x half>, i32)
+declare <16 x i1> @llvm.x86.avx512fp16.fpclass.ph.256(<16 x half>, i32)
+
+define i8 @test_int_x86_avx512_fpclass_ph_128(<8 x half> %x0) {
+; CHECK-LABEL: test_int_x86_avx512_fpclass_ph_128:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    vfpclassph $2, %xmm0, %k1
+; CHECK-NEXT:    vfpclassph $4, %xmm0, %k0 {%k1}
+; CHECK-NEXT:    kmovd %k0, %eax
+; CHECK-NEXT:    # kill: def $al killed $al killed $eax
+; CHECK-NEXT:    retq
+  %res = call <8 x i1> @llvm.x86.avx512fp16.fpclass.ph.128(<8 x half> %x0, i32 4)
+  %res1 = call <8 x i1> @llvm.x86.avx512fp16.fpclass.ph.128(<8 x half> %x0, i32 2)
+  %1 = and <8 x i1> %res1, %res
+  %2 = bitcast <8 x i1> %1 to i8
+  ret i8 %2
+}
+
+define i16 @test_int_x86_avx512_fpclass_ph_256(<16 x half> %x0) {
+; CHECK-LABEL: test_int_x86_avx512_fpclass_ph_256:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    vfpclassph $2, %ymm0, %k1
+; CHECK-NEXT:    vfpclassph $4, %ymm0, %k0 {%k1}
+; CHECK-NEXT:    kmovd %k0, %eax
+; CHECK-NEXT:    # kill: def $ax killed $ax killed $eax
+; CHECK-NEXT:    vzeroupper
+; CHECK-NEXT:    retq
+  %res = call <16 x i1> @llvm.x86.avx512fp16.fpclass.ph.256(<16 x half> %x0, i32 4)
+  %res1 = call <16 x i1> @llvm.x86.avx512fp16.fpclass.ph.256(<16 x half> %x0, i32 2)
+  %1 = and <16 x i1> %res1, %res
+  %2 = bitcast <16 x i1> %1 to i16
+  ret i16 %2
+}
+
+declare <8 x half> @llvm.x86.avx512fp16.mask.getexp.ph.128(<8 x half>, <8 x half>, i8)
+declare <16 x half> @llvm.x86.avx512fp16.mask.getexp.ph.256(<16 x half>, <16 x half>, i16)
+
+define <8 x half>@test_int_x86_avx512_getexp_ph_128(<8 x half> %x0) {
+; CHECK-LABEL: test_int_x86_avx512_getexp_ph_128:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    vgetexpph %xmm0, %xmm0
+; CHECK-NEXT:    retq
+  %res = call <8 x half> @llvm.x86.avx512fp16.mask.getexp.ph.128(<8 x half> %x0, <8 x half> zeroinitializer, i8 -1)
+  ret <8 x half> %res
+}
+
+define <8 x half>@test_int_x86_avx512_mask_getexp_ph_128(<8 x half> %x0, <8 x half> %x1, i8 %x2) {
+; CHECK-LABEL: test_int_x86_avx512_mask_getexp_ph_128:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    kmovd %edi, %k1
+; CHECK-NEXT:    vgetexpph %xmm0, %xmm1 {%k1}
+; CHECK-NEXT:    vmovaps %xmm1, %xmm0
+; CHECK-NEXT:    retq
+  %res = call <8 x half> @llvm.x86.avx512fp16.mask.getexp.ph.128(<8 x half> %x0, <8 x half> %x1, i8 %x2)
+  ret <8 x half> %res
+}
+
+define <8 x half>@test_int_x86_avx512_maskz_getexp_ph_128(<8 x half> %x0, i8 %x2) {
+; CHECK-LABEL: test_int_x86_avx512_maskz_getexp_ph_128:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    kmovd %edi, %k1
+; CHECK-NEXT:    vgetexpph %xmm0, %xmm0 {%k1} {z}
+; CHECK-NEXT:    retq
+  %res = call <8 x half> @llvm.x86.avx512fp16.mask.getexp.ph.128(<8 x half> %x0, <8 x half> zeroinitializer, i8 %x2)
+  ret <8 x half> %res
+}
+
+define <16 x half>@test_int_x86_avx512_getexp_ph_256(<16 x half> %x0) {
+; CHECK-LABEL: test_int_x86_avx512_getexp_ph_256:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    vgetexpph %ymm0, %ymm0
+; CHECK-NEXT:    retq
+  %res = call <16 x half> @llvm.x86.avx512fp16.mask.getexp.ph.256(<16 x half> %x0, <16 x half> zeroinitializer, i16 -1)
+  ret <16 x half> %res
+}
+
+define <16 x half>@test_int_x86_avx512_mask_getexp_ph_256(<16 x half> %x0, <16 x half> %x1, i16 %x2) {
+; CHECK-LABEL: test_int_x86_avx512_mask_getexp_ph_256:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    kmovd %edi, %k1
+; CHECK-NEXT:    vgetexpph %ymm0, %ymm1 {%k1}
+; CHECK-NEXT:    vmovaps %ymm1, %ymm0
+; CHECK-NEXT:    retq
+  %res = call <16 x half> @llvm.x86.avx512fp16.mask.getexp.ph.256(<16 x half> %x0, <16 x half> %x1, i16 %x2)
+  ret <16 x half> %res
+}
+
+define <16 x half>@test_int_x86_avx512_maskz_getexp_ph_256(<16 x half> %x0, i16 %x2) {
+; CHECK-LABEL: test_int_x86_avx512_maskz_getexp_ph_256:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    kmovd %edi, %k1
+; CHECK-NEXT:    vgetexpph %ymm0, %ymm0 {%k1} {z}
+; CHECK-NEXT:    retq
+  %res = call <16 x half> @llvm.x86.avx512fp16.mask.getexp.ph.256(<16 x half> %x0, <16 x half> zeroinitializer, i16 %x2)
+  ret <16 x half> %res
+}
+
+declare <8 x half> @llvm.x86.avx512fp16.mask.getmant.ph.128(<8 x half>, i32, <8 x half>, i8)
+declare <16 x half> @llvm.x86.avx512fp16.mask.getmant.ph.256(<16 x half>, i32, <16 x half>, i16)
+
+define <8 x half>@test_int_x86_avx512_mask_getmant_ph_128(<8 x half> %x0, <8 x half> %x2, i8 %x3) {
+; CHECK-LABEL: test_int_x86_avx512_mask_getmant_ph_128:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    kmovd %edi, %k1
+; CHECK-NEXT:    vgetmantph $8, %xmm0, %xmm1 {%k1}
+; CHECK-NEXT:    vgetmantph $4, %xmm0, %xmm0
+; CHECK-NEXT:    vaddph %xmm0, %xmm1, %xmm0
+; CHECK-NEXT:    retq
+  %res = call <8 x half> @llvm.x86.avx512fp16.mask.getmant.ph.128(<8 x half> %x0, i32 8, <8 x half> %x2, i8 %x3)
+  %res1 = call <8 x half> @llvm.x86.avx512fp16.mask.getmant.ph.128(<8 x half> %x0, i32 4, <8 x half> %x2, i8 -1)
+  %res2 = fadd <8 x half> %res, %res1
+  ret <8 x half> %res2
+}
+
+define <16 x half>@test_int_x86_avx512_mask_getmant_ph_256(<16 x half> %x0, <16 x half> %x2, i16 %x3) {
+; CHECK-LABEL: test_int_x86_avx512_mask_getmant_ph_256:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    kmovd %edi, %k1
+; CHECK-NEXT:    vgetmantph $8, %ymm0, %ymm1 {%k1}
+; CHECK-NEXT:    vgetmantph $4, %ymm0, %ymm0
+; CHECK-NEXT:    vaddph %ymm0, %ymm1, %ymm0
+; CHECK-NEXT:    retq
+  %res = call <16 x half> @llvm.x86.avx512fp16.mask.getmant.ph.256(<16 x half> %x0, i32 8, <16 x half> %x2, i16 %x3)
+  %res1 = call <16 x half> @llvm.x86.avx512fp16.mask.getmant.ph.256(<16 x half> %x0, i32 4, <16 x half> %x2, i16 -1)
+  %res2 = fadd <16 x half> %res, %res1
+  ret <16 x half> %res2
+}
+
+declare <8 x half> @llvm.x86.avx512fp16.mask.rndscale.ph.128(<8 x half>, i32, <8 x half>, i8)
+declare <16 x half> @llvm.x86.avx512fp16.mask.rndscale.ph.256(<16 x half>, i32, <16 x half>, i16)
+
+define <8 x half>@test_int_x86_avx512_mask_rndscale_ph_128(<8 x half> %x0, <8 x half> %x2, i8 %x3) {
+; CHECK-LABEL: test_int_x86_avx512_mask_rndscale_ph_128:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    kmovd %edi, %k1
+; CHECK-NEXT:    vrndscaleph $8, %xmm0, %xmm1 {%k1}
+; CHECK-NEXT:    vrndscaleph $4, %xmm0, %xmm0
+; CHECK-NEXT:    vaddph %xmm0, %xmm1, %xmm0
+; CHECK-NEXT:    retq
+  %res = call <8 x half> @llvm.x86.avx512fp16.mask.rndscale.ph.128(<8 x half> %x0, i32 8, <8 x half> %x2, i8 %x3)
+  %res1 = call <8 x half> @llvm.x86.avx512fp16.mask.rndscale.ph.128(<8 x half> %x0, i32 4, <8 x half> %x2, i8 -1)
+  %res2 = fadd <8 x half> %res, %res1
+  ret <8 x half> %res2
+}
+
+define <16 x half>@test_int_x86_avx512_mask_rndscale_ph_256(<16 x half> %x0, <16 x half> %x2, i16 %x3) {
+; CHECK-LABEL: test_int_x86_avx512_mask_rndscale_ph_256:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    kmovd %edi, %k1
+; CHECK-NEXT:    vrndscaleph $8, %ymm0, %ymm1 {%k1}
+; CHECK-NEXT:    vrndscaleph $4, %ymm0, %ymm0
+; CHECK-NEXT:    vaddph %ymm0, %ymm1, %ymm0
+; CHECK-NEXT:    retq
+  %res = call <16 x half> @llvm.x86.avx512fp16.mask.rndscale.ph.256(<16 x half> %x0, i32 8, <16 x half> %x2, i16 %x3)
+  %res1 = call <16 x half> @llvm.x86.avx512fp16.mask.rndscale.ph.256(<16 x half> %x0, i32 4, <16 x half> %x2, i16 -1)
+  %res2 = fadd <16 x half> %res, %res1
+  ret <16 x half> %res2
+}
+
+declare <8 x half> @llvm.x86.avx512fp16.mask.scalef.ph.128(<8 x half>, <8 x half>, <8 x half>, i8)
+declare <16 x half> @llvm.x86.avx512fp16.mask.scalef.ph.256(<16 x half>, <16 x half>, <16 x half>, i16)
+
+define <8 x half>@test_int_x86_avx512_scalef_ph_128(<8 x half> %x0, <8 x half> %x1) {
+; CHECK-LABEL: test_int_x86_avx512_scalef_ph_128:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    vscalefph %xmm1, %xmm0, %xmm0
+; CHECK-NEXT:    retq
+  %res = call <8 x half> @llvm.x86.avx512fp16.mask.scalef.ph.128(<8 x half> %x0, <8 x half> %x1, <8 x half> zeroinitializer, i8 -1)
+  ret <8 x half> %res
+}
+
+define <8 x half>@test_int_x86_avx512_mask_scalef_ph_128(<8 x half> %x0, <8 x half> %x1, <8 x half> %x2, i8 %x3) {
+; CHECK-LABEL: test_int_x86_avx512_mask_scalef_ph_128:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    kmovd %edi, %k1
+; CHECK-NEXT:    vscalefph %xmm1, %xmm0, %xmm2 {%k1}
+; CHECK-NEXT:    vmovaps %xmm2, %xmm0
+; CHECK-NEXT:    retq
+  %mask = bitcast i8 %x3 to <8 x i1>
+  %res = call <8 x half> @llvm.x86.avx512fp16.mask.scalef.ph.128(<8 x half> %x0, <8 x half> %x1, <8 x half> %x2, i8 %x3)
+  ret <8 x half> %res
+}
+
+define <8 x half>@test_int_x86_avx512_maskz_scalef_ph_128(<8 x half> %x0, <8 x half> %x1, i8 %x3) {
+; CHECK-LABEL: test_int_x86_avx512_maskz_scalef_ph_128:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    kmovd %edi, %k1
+; CHECK-NEXT:    vscalefph %xmm1, %xmm0, %xmm0 {%k1} {z}
+; CHECK-NEXT:    retq
+  %mask = bitcast i8 %x3 to <8 x i1>
+  %res = call <8 x half> @llvm.x86.avx512fp16.mask.scalef.ph.128(<8 x half> %x0, <8 x half> %x1, <8 x half> zeroinitializer, i8 %x3)
+  ret <8 x half> %res
+}
+
+define <16 x half>@test_int_x86_avx512_scalef_ph_256(<16 x half> %x0, <16 x half> %x1) {
+; CHECK-LABEL: test_int_x86_avx512_scalef_ph_256:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    vscalefph %ymm1, %ymm0, %ymm0
+; CHECK-NEXT:    retq
+  %res = call <16 x half> @llvm.x86.avx512fp16.mask.scalef.ph.256(<16 x half> %x0, <16 x half> %x1, <16 x half> zeroinitializer, i16 -1)
+  ret <16 x half> %res
+}
+
+define <16 x half>@test_int_x86_avx512_mask_scalef_ph_256(<16 x half> %x0, <16 x half> %x1, <16 x half> %x2, i16 %x3) {
+; CHECK-LABEL: test_int_x86_avx512_mask_scalef_ph_256:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    kmovd %edi, %k1
+; CHECK-NEXT:    vscalefph %ymm1, %ymm0, %ymm2 {%k1}
+; CHECK-NEXT:    vmovaps %ymm2, %ymm0
+; CHECK-NEXT:    retq
+  %mask = bitcast i16 %x3 to <16 x i1>
+  %res = call <16 x half> @llvm.x86.avx512fp16.mask.scalef.ph.256(<16 x half> %x0, <16 x half> %x1, <16 x half> %x2, i16 %x3)
+  ret <16 x half> %res
+}
+
+define <16 x half>@test_int_x86_avx512_maskz_scalef_ph_256(<16 x half> %x0, <16 x half> %x1, i16 %x3) {
+; CHECK-LABEL: test_int_x86_avx512_maskz_scalef_ph_256:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    kmovd %edi, %k1
+; CHECK-NEXT:    vscalefph %ymm1, %ymm0, %ymm0 {%k1} {z}
+; CHECK-NEXT:    retq
+  %mask = bitcast i16 %x3 to <16 x i1>
+  %res = call <16 x half> @llvm.x86.avx512fp16.mask.scalef.ph.256(<16 x half> %x0, <16 x half> %x1, <16 x half> zeroinitializer, i16 %x3)
+  ret <16 x half> %res
+}

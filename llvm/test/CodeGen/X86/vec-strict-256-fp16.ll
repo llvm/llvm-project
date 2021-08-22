@@ -6,10 +6,16 @@ declare <16 x half> @llvm.experimental.constrained.fadd.v16f16(<16 x half>, <16 
 declare <16 x half> @llvm.experimental.constrained.fsub.v16f16(<16 x half>, <16 x half>, metadata, metadata)
 declare <16 x half> @llvm.experimental.constrained.fmul.v16f16(<16 x half>, <16 x half>, metadata, metadata)
 declare <16 x half> @llvm.experimental.constrained.fdiv.v16f16(<16 x half>, <16 x half>, metadata, metadata)
+declare <16 x half> @llvm.experimental.constrained.sqrt.v16f16(<16 x half>, metadata, metadata)
 declare <4 x double> @llvm.experimental.constrained.fpext.v4f64.v4f16(<4 x half>, metadata)
 declare <8 x float> @llvm.experimental.constrained.fpext.v8f32.v8f16(<8 x half>, metadata)
 declare <4 x half> @llvm.experimental.constrained.fptrunc.v4f16.v4f64(<4 x double>, metadata, metadata)
 declare <8 x half> @llvm.experimental.constrained.fptrunc.v8f16.v8f32(<8 x float>, metadata, metadata)
+declare <16 x half> @llvm.experimental.constrained.ceil.v16f16(<16 x half>, metadata)
+declare <16 x half> @llvm.experimental.constrained.floor.v16f16(<16 x half>, metadata)
+declare <16 x half> @llvm.experimental.constrained.trunc.v16f16(<16 x half>, metadata)
+declare <16 x half> @llvm.experimental.constrained.rint.v16f16(<16 x half>, metadata, metadata)
+declare <16 x half> @llvm.experimental.constrained.nearbyint.v16f16(<16 x half>, metadata, metadata)
 
 define <16 x half> @f2(<16 x half> %a, <16 x half> %b) #0 {
 ; CHECK-LABEL: f2:
@@ -53,6 +59,19 @@ define <16 x half> @f8(<16 x half> %a, <16 x half> %b) #0 {
                                                                      metadata !"round.dynamic",
                                                                      metadata !"fpexcept.strict") #0
   ret <16 x half> %ret
+}
+
+
+define <16 x half> @f10(<16 x half> %a) #0 {
+; CHECK-LABEL: f10:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    vsqrtph %ymm0, %ymm0
+; CHECK-NEXT:    ret{{[l|q]}}
+  %ret = call <16 x half> @llvm.experimental.constrained.sqrt.v16f16(
+                              <16 x half> %a,
+                              metadata !"round.dynamic",
+                              metadata !"fpexcept.strict") #0
+  ret <16 x half > %ret
 }
 
 define <4 x double> @f11(<4 x half> %a) #0 {
@@ -101,6 +120,59 @@ define <8 x half> @f15(<8 x float> %a) #0 {
                                 metadata !"round.dynamic",
                                 metadata !"fpexcept.strict") #0
   ret <8 x half> %ret
+}
+
+define <16 x half> @fceilv16f16(<16 x half> %f) #0 {
+; CHECK-LABEL: fceilv16f16:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    vrndscaleph $10, %ymm0, %ymm0
+; CHECK-NEXT:    ret{{[l|q]}}
+  %res = call <16 x half> @llvm.experimental.constrained.ceil.v16f16(
+                          <16 x half> %f, metadata !"fpexcept.strict") #0
+  ret <16 x half> %res
+}
+
+define <16 x half> @ffloorv16f16(<16 x half> %f) #0 {
+; CHECK-LABEL: ffloorv16f16:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    vrndscaleph $9, %ymm0, %ymm0
+; CHECK-NEXT:    ret{{[l|q]}}
+  %res = call <16 x half> @llvm.experimental.constrained.floor.v16f16(
+                          <16 x half> %f, metadata !"fpexcept.strict") #0
+  ret <16 x half> %res
+}
+
+
+define <16 x half> @ftruncv16f16(<16 x half> %f) #0 {
+; CHECK-LABEL: ftruncv16f16:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    vrndscaleph $11, %ymm0, %ymm0
+; CHECK-NEXT:    ret{{[l|q]}}
+  %res = call <16 x half> @llvm.experimental.constrained.trunc.v16f16(
+                          <16 x half> %f, metadata !"fpexcept.strict") #0
+  ret <16 x half> %res
+}
+
+define <16 x half> @frintv16f16(<16 x half> %f) #0 {
+; CHECK-LABEL: frintv16f16:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    vrndscaleph $4, %ymm0, %ymm0
+; CHECK-NEXT:    ret{{[l|q]}}
+  %res = call <16 x half> @llvm.experimental.constrained.rint.v16f16(
+                          <16 x half> %f,
+                          metadata !"round.dynamic", metadata !"fpexcept.strict") #0
+  ret <16 x half> %res
+}
+
+define <16 x half> @fnearbyintv16f16(<16 x half> %f) #0 {
+; CHECK-LABEL: fnearbyintv16f16:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    vrndscaleph $12, %ymm0, %ymm0
+; CHECK-NEXT:    ret{{[l|q]}}
+  %res = call <16 x half> @llvm.experimental.constrained.nearbyint.v16f16(
+                          <16 x half> %f,
+                          metadata !"round.dynamic", metadata !"fpexcept.strict") #0
+  ret <16 x half> %res
 }
 
 attributes #0 = { strictfp }
