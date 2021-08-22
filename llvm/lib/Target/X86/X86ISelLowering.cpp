@@ -18816,8 +18816,9 @@ static SDValue lowerVECTOR_SHUFFLE(SDValue Op, const X86Subtarget &Subtarget,
 
   V1 = DAG.getBitcast(VT, Ops[0]);
   V2 = DAG.getBitcast(VT, Ops[1]);
-  assert(Mask.size() == NumElements && "canonicalizeShuffleMaskWithHorizOp "
-                                       "shouldn't alter the shuffle mask size");
+  assert(NumElements == (int)Mask.size() &&
+         "canonicalizeShuffleMaskWithHorizOp "
+         "shouldn't alter the shuffle mask size");
 
   // Commute the shuffle if it will improve canonicalization.
   if (canonicalizeShuffleMaskWithCommute(Mask)) {
