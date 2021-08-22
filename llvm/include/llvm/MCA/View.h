@@ -12,8 +12,8 @@
 ///
 //===----------------------------------------------------------------------===//
 
-#ifndef LLVM_TOOLS_LLVM_MCA_VIEW_H
-#define LLVM_TOOLS_LLVM_MCA_VIEW_H
+#ifndef LLVM_MCA_VIEW_H
+#define LLVM_MCA_VIEW_H
 
 #include "llvm/MC/MCInstPrinter.h"
 #include "llvm/MCA/HWEventListener.h"
