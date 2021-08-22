@@ -13,7 +13,6 @@
 #include <__algorithm/comp.h>
 #include <__iterator/iterator_traits.h>
 #include <utility>
-#include <type_traits>
 
 #if !defined(_LIBCPP_HAS_NO_PRAGMA_SYSTEM_HEADER)
 #pragma GCC system_header
@@ -91,8 +90,7 @@ inline _LIBCPP_INLINE_VISIBILITY _LIBCPP_CONSTEXPR_AFTER_CXX17
 _OutputIterator
 unique_copy(_InputIterator __first, _InputIterator __last, _OutputIterator __result, _BinaryPredicate __pred)
 {
-    return _VSTD::__unique_copy<typename add_lvalue_reference<_BinaryPredicate>::type>
-                              (__first, __last, __result, __pred,
+    return _VSTD::__unique_copy<_BinaryPredicate&>(__first, __last, __result, __pred,
                                typename iterator_traits<_InputIterator>::iterator_category(),
                                typename iterator_traits<_OutputIterator>::iterator_category());
 }

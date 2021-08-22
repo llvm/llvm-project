@@ -51,8 +51,7 @@ _LIBCPP_INLINE_VISIBILITY _LIBCPP_CONSTEXPR_AFTER_CXX17
 _ForwardIterator
 upper_bound(_ForwardIterator __first, _ForwardIterator __last, const _Tp& __value_, _Compare __comp)
 {
-    typedef typename add_lvalue_reference<_Compare>::type _Comp_ref;
-    return _VSTD::__upper_bound<_Comp_ref>(__first, __last, __value_, __comp);
+    return _VSTD::__upper_bound<_Compare&>(__first, __last, __value_, __comp);
 }
 
 template <class _ForwardIterator, class _Tp>
