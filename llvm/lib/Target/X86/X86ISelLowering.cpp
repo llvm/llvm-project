@@ -12248,10 +12248,15 @@ static bool matchShuffleAsBlend(SDValue V1, SDValue V2,
     int M = Mask[i];
     if (M == SM_SentinelUndef)
       continue;
-    if (M == i)
+    if (M == i ||
+        (0 <= M && M < Size && IsElementEquivalent(Size, V1, V1, M, i))) {
+      Mask[i] = i;
       continue;
-    if (M == i + Size) {
+    }
+    if (M == (i + Size) ||
+        (Size <= M && IsElementEquivalent(Size, V2, V2, M - Size, i))) {
       BlendMask |= 1ull << i;
+      Mask[i] = i + Size;
       continue;
     }
     if (Zeroable[i]) {
