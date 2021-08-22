@@ -710,21 +710,54 @@ void llvm::breakLoopBackedge(Loop *L, DominatorTree &DT, ScalarEvolution &SE,
 
   SE.forgetLoop(L);
 
-  // Note: By splitting the backedge, and then explicitly making it unreachable
-  // we gracefully handle corner cases such as non-bottom tested loops and the
-  // like.  We also have the benefit of being able to reuse existing well tested
-  // code.  It might be worth special casing the common bottom tested case at
-  // some point to avoid code churn.
-
   std::unique_ptr<MemorySSAUpdater> MSSAU;
   if (MSSA)
     MSSAU = std::make_unique<MemorySSAUpdater>(MSSA);
 
-  auto *BackedgeBB = SplitEdge(Latch, Header, &DT, &LI, MSSAU.get());
+  // Update the CFG and domtree.  We chose to special case a couple of
+  // of common cases for code quality and test readability reasons.
+  [&]() -> void {
+    if (auto *BI = dyn_cast<BranchInst>(Latch->getTerminator())) {
+      if (!BI->isConditional()) {
+        DomTreeUpdater DTU(&DT, DomTreeUpdater::UpdateStrategy::Eager);
+        (void)changeToUnreachable(BI, /*PreserveLCSSA*/ true, &DTU,
+                                  MSSAU.get());
+        return;
+      }
 
-  DomTreeUpdater DTU(&DT, DomTreeUpdater::UpdateStrategy::Eager);
-  (void)changeToUnreachable(BackedgeBB->getTerminator(),
-                            /*PreserveLCSSA*/ true, &DTU, MSSAU.get());
+      // Conditional latch/exit - note that latch can be shared by inner
+      // and outer loop so the other target doesn't need to an exit
+      if (L->isLoopExiting(Latch)) {
+        // TODO: Generalize ConstantFoldTerminator so that it can be used
+        // here without invalidating LCSSA.  (Tricky case: header is an exit
+        // block of a preceeding sibling loop w/o dedicated exits.)
+        const unsigned ExitIdx = L->contains(BI->getSuccessor(0)) ? 1 : 0;
+        BasicBlock *ExitBB = BI->getSuccessor(ExitIdx);
+
+        DomTreeUpdater DTU(&DT, DomTreeUpdater::UpdateStrategy::Eager);
+        Header->removePredecessor(Latch, true);
+
+        IRBuilder<> Builder(BI);
+        auto *NewBI = Builder.CreateBr(ExitBB);
+        // Transfer the metadata to the new branch instruction.
+        NewBI->copyMetadata(*BI, {LLVMContext::MD_loop, LLVMContext::MD_dbg,
+                                  LLVMContext::MD_annotation});
+
+        BI->eraseFromParent();
+        DTU.applyUpdates({{DominatorTree::Delete, Latch, Header}});
+        return;
+      }
+
+      // General case.  By splitting the backedge, and then explicitly making it
+      // unreachable we gracefully handle corner cases such as switch and invoke
+      // termiantors.
+      auto *BackedgeBB = SplitEdge(Latch, Header, &DT, &LI, MSSAU.get());
+
+      DomTreeUpdater DTU(&DT, DomTreeUpdater::UpdateStrategy::Eager);
+      (void)changeToUnreachable(BackedgeBB->getTerminator(),
+                                /*PreserveLCSSA*/ true, &DTU, MSSAU.get());
+    }
+  }();
 
   // Erase (and destroy) this loop instance.  Handles relinking sub-loops
   // and blocks within the loop as needed.
