@@ -1673,8 +1673,11 @@ bool GVN::processNonLocalLoad(LoadInst *Load) {
   if (!isLoadInLoopPREEnabled() && LI && LI->getLoopFor(Load->getParent()))
     return Changed;
 
-  return Changed || PerformLoadPRE(Load, ValuesPerBlock, UnavailableBlocks) ||
-         performLoopLoadPRE(Load, ValuesPerBlock, UnavailableBlocks);
+  if (PerformLoadPRE(Load, ValuesPerBlock, UnavailableBlocks) ||
+      performLoopLoadPRE(Load, ValuesPerBlock, UnavailableBlocks))
+    return true;
+
+  return Changed;
 }
 
 static bool impliesEquivalanceIfTrue(CmpInst* Cmp) {
