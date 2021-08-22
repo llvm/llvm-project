@@ -47,7 +47,7 @@ TEST(SimplePackedSerializationTest, SPSInputBuffer) {
 }
 
 template <typename SPSTagT, typename T>
-static void blobSerializationRoundTrip(const T &Value) {
+static void spsSerializationRoundTrip(const T &Value) {
   using BST = SPSSerializationTraits<SPSTagT, T>;
 
   size_t Size = BST::size(Value);
@@ -66,24 +66,24 @@ static void blobSerializationRoundTrip(const T &Value) {
 }
 
 template <typename T> static void testFixedIntegralTypeSerialization() {
-  blobSerializationRoundTrip<T, T>(0);
-  blobSerializationRoundTrip<T, T>(static_cast<T>(1));
+  spsSerializationRoundTrip<T, T>(0);
+  spsSerializationRoundTrip<T, T>(static_cast<T>(1));
   if (std::is_signed<T>::value) {
-    blobSerializationRoundTrip<T, T>(static_cast<T>(-1));
-    blobSerializationRoundTrip<T, T>(std::numeric_limits<T>::min());
+    spsSerializationRoundTrip<T, T>(static_cast<T>(-1));
+    spsSerializationRoundTrip<T, T>(std::numeric_limits<T>::min());
   }
-  blobSerializationRoundTrip<T, T>(std::numeric_limits<T>::max());
+  spsSerializationRoundTrip<T, T>(std::numeric_limits<T>::max());
 }
 
 TEST(SimplePackedSerializationTest, BoolSerialization) {
-  blobSerializationRoundTrip<bool, bool>(true);
-  blobSerializationRoundTrip<bool, bool>(false);
+  spsSerializationRoundTrip<bool, bool>(true);
+  spsSerializationRoundTrip<bool, bool>(false);
 }
 
 TEST(SimplePackedSerializationTest, CharSerialization) {
-  blobSerializationRoundTrip<char, char>((char)0x00);
-  blobSerializationRoundTrip<char, char>((char)0xAA);
-  blobSerializationRoundTrip<char, char>((char)0xFF);
+  spsSerializationRoundTrip<char, char>((char)0x00);
+  spsSerializationRoundTrip<char, char>((char)0xAA);
+  spsSerializationRoundTrip<char, char>((char)0xFF);
 }
 
 TEST(SimplePackedSerializationTest, Int8Serialization) {
@@ -120,18 +120,17 @@ TEST(SimplePackedSerializationTest, UInt64Serialization) {
 
 TEST(SimplePackedSerializationTest, SequenceSerialization) {
   std::vector<int32_t> V({1, 2, -47, 139});
-  blobSerializationRoundTrip<SPSSequence<int32_t>, std::vector<int32_t>>(V);
+  spsSerializationRoundTrip<SPSSequence<int32_t>>(V);
 }
 
 TEST(SimplePackedSerializationTest, StringViewCharSequenceSerialization) {
   const char *HW = "Hello, world!";
-  blobSerializationRoundTrip<SPSString, StringRef>(StringRef(HW));
+  spsSerializationRoundTrip<SPSString>(StringRef(HW));
 }
 
 TEST(SimplePackedSerializationTest, StdPairSerialization) {
   std::pair<int32_t, std::string> P(42, "foo");
-  blobSerializationRoundTrip<SPSTuple<int32_t, SPSString>,
-                             std::pair<int32_t, std::string>>(P);
+  spsSerializationRoundTrip<SPSTuple<int32_t, SPSString>>(P);
 }
 
 TEST(SimplePackedSerializationTest, ArgListSerialization) {
@@ -162,6 +161,5 @@ TEST(SimplePackedSerializationTest, ArgListSerialization) {
 
 TEST(SimplePackedSerialization, StringMap) {
   StringMap<int32_t> M({{"A", 1}, {"B", 2}});
-  blobSerializationRoundTrip<SPSSequence<SPSTuple<SPSString, int32_t>>,
-                             StringMap<int32_t>>(M);
+  spsSerializationRoundTrip<SPSSequence<SPSTuple<SPSString, int32_t>>>(M);
 }
