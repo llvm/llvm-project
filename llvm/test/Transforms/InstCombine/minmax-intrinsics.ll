@@ -1149,6 +1149,54 @@ define i8 @neg_neg_nsw_umin(i8 %x, i8 %y) {
   ret i8 %m
 }
 
+define i8 @freeToInvertSub(i8 %x, i8 %y, i8 %z) {
+; CHECK-LABEL: @freeToInvertSub(
+; CHECK-NEXT:    [[NX:%.*]] = xor i8 [[X:%.*]], -1
+; CHECK-NEXT:    [[NY:%.*]] = xor i8 [[Y:%.*]], -1
+; CHECK-NEXT:    [[NZ:%.*]] = xor i8 [[Z:%.*]], -1
+; CHECK-NEXT:    call void @use(i8 [[NX]])
+; CHECK-NEXT:    call void @use(i8 [[NY]])
+; CHECK-NEXT:    call void @use(i8 [[NZ]])
+; CHECK-NEXT:    [[M:%.*]] = call i8 @llvm.umax.i8(i8 [[NX]], i8 [[NY]])
+; CHECK-NEXT:    [[SUB:%.*]] = sub i8 [[NZ]], [[M]]
+; CHECK-NEXT:    ret i8 [[SUB]]
+;
+  %nx = xor i8 %x, -1
+  %ny = xor i8 %y, -1
+  %nz = xor i8 %z, -1
+  call void @use(i8 %nx)
+  call void @use(i8 %ny)
+  call void @use(i8 %nz)
+  %m = call i8 @llvm.umax.i8(i8 %nx, i8 %ny)
+  %sub = sub i8 %nz, %m
+  ret i8 %sub
+}
+
+define i8 @freeToInvertSub_uses(i8 %x, i8 %y, i8 %z) {
+; CHECK-LABEL: @freeToInvertSub_uses(
+; CHECK-NEXT:    [[NX:%.*]] = xor i8 [[X:%.*]], -1
+; CHECK-NEXT:    [[NY:%.*]] = xor i8 [[Y:%.*]], -1
+; CHECK-NEXT:    [[NZ:%.*]] = xor i8 [[Z:%.*]], -1
+; CHECK-NEXT:    call void @use(i8 [[NX]])
+; CHECK-NEXT:    call void @use(i8 [[NY]])
+; CHECK-NEXT:    call void @use(i8 [[NZ]])
+; CHECK-NEXT:    [[M:%.*]] = call i8 @llvm.umax.i8(i8 [[NX]], i8 [[NY]])
+; CHECK-NEXT:    call void @use(i8 [[M]])
+; CHECK-NEXT:    [[SUB:%.*]] = sub i8 [[NZ]], [[M]]
+; CHECK-NEXT:    ret i8 [[SUB]]
+;
+  %nx = xor i8 %x, -1
+  %ny = xor i8 %y, -1
+  %nz = xor i8 %z, -1
+  call void @use(i8 %nx)
+  call void @use(i8 %ny)
+  call void @use(i8 %nz)
+  %m = call i8 @llvm.umax.i8(i8 %nx, i8 %ny)
+  call void @use(i8 %m)
+  %sub = sub i8 %nz, %m
+  ret i8 %sub
+}
+
 define i8 @freeToInvert(i8 %x, i8 %y, i8 %z) {
 ; CHECK-LABEL: @freeToInvert(
 ; CHECK-NEXT:    [[NX:%.*]] = xor i8 [[X:%.*]], -1
