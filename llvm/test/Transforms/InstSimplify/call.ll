@@ -960,8 +960,7 @@ define i9 @fshr_ops_poison6() {
 
 define i8 @fshl_zero(i8 %shamt) {
 ; CHECK-LABEL: @fshl_zero(
-; CHECK-NEXT:    [[R:%.*]] = call i8 @llvm.fshl.i8(i8 0, i8 0, i8 [[SHAMT:%.*]])
-; CHECK-NEXT:    ret i8 [[R]]
+; CHECK-NEXT:    ret i8 0
 ;
   %r = call i8 @llvm.fshl.i8(i8 0, i8 0, i8 %shamt)
   ret i8 %r
@@ -969,8 +968,7 @@ define i8 @fshl_zero(i8 %shamt) {
 
 define <2 x i8> @fshr_zero_vec(<2 x i8> %shamt) {
 ; CHECK-LABEL: @fshr_zero_vec(
-; CHECK-NEXT:    [[R:%.*]] = call <2 x i8> @llvm.fshr.v2i8(<2 x i8> zeroinitializer, <2 x i8> <i8 0, i8 undef>, <2 x i8> [[SHAMT:%.*]])
-; CHECK-NEXT:    ret <2 x i8> [[R]]
+; CHECK-NEXT:    ret <2 x i8> zeroinitializer
 ;
   %r = call <2 x i8> @llvm.fshr.v2i8(<2 x i8> zeroinitializer, <2 x i8> <i8 0, i8 undef>, <2 x i8> %shamt)
   ret <2 x i8> %r
