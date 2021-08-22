@@ -44061,8 +44061,6 @@ static SDValue combineMulToPMULDQ(SDNode *N, SelectionDAG &DAG,
   return SDValue();
 }
 
-/// Optimize a single multiply with constant into two operations in order to
-/// implement it with two cheaper instructions, e.g. LEA + SHL, LEA + LEA.
 static SDValue combineMul(SDNode *N, SelectionDAG &DAG,
                           TargetLowering::DAGCombinerInfo &DCI,
                           const X86Subtarget &Subtarget) {
@@ -44077,8 +44075,11 @@ static SDValue combineMul(SDNode *N, SelectionDAG &DAG,
   if (DCI.isBeforeLegalize() && VT.isVector())
     return reduceVMULWidth(N, DAG, Subtarget);
 
+  // Optimize a single multiply with constant into two operations in order to
+  // implement it with two cheaper instructions, e.g. LEA + SHL, LEA + LEA.
   if (!MulConstantOptimization)
     return SDValue();
+
   // An imul is usually smaller than the alternative sequence.
   if (DAG.getMachineFunction().getFunction().hasMinSize())
     return SDValue();
