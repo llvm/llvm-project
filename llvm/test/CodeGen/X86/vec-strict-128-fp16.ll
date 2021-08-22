@@ -6,6 +6,7 @@ declare <8 x half> @llvm.experimental.constrained.fadd.v8f16(<8 x half>, <8 x ha
 declare <8 x half> @llvm.experimental.constrained.fsub.v8f16(<8 x half>, <8 x half>, metadata, metadata)
 declare <8 x half> @llvm.experimental.constrained.fmul.v8f16(<8 x half>, <8 x half>, metadata, metadata)
 declare <8 x half> @llvm.experimental.constrained.fdiv.v8f16(<8 x half>, <8 x half>, metadata, metadata)
+declare <8 x half> @llvm.experimental.constrained.sqrt.v8f16(<8 x half>, metadata, metadata)
 declare half @llvm.experimental.constrained.fptrunc.f16.f32(float, metadata, metadata)
 declare half @llvm.experimental.constrained.fptrunc.f16.f64(double, metadata, metadata)
 declare <2 x half> @llvm.experimental.constrained.fptrunc.v2f16.v2f32(<2 x float>, metadata, metadata)
@@ -59,6 +60,18 @@ define <8 x half> @f8(<8 x half> %a, <8 x half> %b) #0 {
                                                                    metadata !"round.dynamic",
                                                                    metadata !"fpexcept.strict") #0
   ret <8 x half> %ret
+}
+
+define <8 x half> @f10(<8 x half> %a) #0 {
+; CHECK-LABEL: f10:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    vsqrtph %xmm0, %xmm0
+; CHECK-NEXT:    ret{{[l|q]}}
+  %sqrt = call <8 x half> @llvm.experimental.constrained.sqrt.v8f16(
+                              <8 x half> %a,
+                              metadata !"round.dynamic",
+                              metadata !"fpexcept.strict") #0
+  ret <8 x half > %sqrt
 }
 
 define <8 x half> @f11(<2 x double> %a0, <8 x half> %a1) #0 {
