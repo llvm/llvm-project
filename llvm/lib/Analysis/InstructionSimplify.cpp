@@ -5860,6 +5860,10 @@ static Value *simplifyIntrinsic(CallBase *Call, const SimplifyQuery &Q) {
     if (match(Op0, m_Zero()) && match(Op1, m_Zero()))
       return ConstantInt::getNullValue(F->getReturnType());
 
+    // Rotating -1 by anything is -1.
+    if (match(Op0, m_AllOnes()) && match(Op1, m_AllOnes()))
+      return ConstantInt::getAllOnesValue(F->getReturnType());
+
     return nullptr;
   }
   case Intrinsic::experimental_constrained_fma: {

@@ -976,8 +976,7 @@ define <2 x i8> @fshr_zero_vec(<2 x i8> %shamt) {
 
 define <2 x i7> @fshl_ones_vec(<2 x i7> %shamt) {
 ; CHECK-LABEL: @fshl_ones_vec(
-; CHECK-NEXT:    [[R:%.*]] = call <2 x i7> @llvm.fshl.v2i7(<2 x i7> <i7 undef, i7 -1>, <2 x i7> <i7 -1, i7 undef>, <2 x i7> [[SHAMT:%.*]])
-; CHECK-NEXT:    ret <2 x i7> [[R]]
+; CHECK-NEXT:    ret <2 x i7> <i7 -1, i7 -1>
 ;
   %r = call <2 x i7> @llvm.fshl.v2i7(<2 x i7> <i7 undef, i7 -1>, <2 x i7> <i7 -1, i7 undef>, <2 x i7> %shamt)
   ret <2 x i7> %r
@@ -985,8 +984,7 @@ define <2 x i7> @fshl_ones_vec(<2 x i7> %shamt) {
 
 define i9 @fshr_ones(i9 %shamt) {
 ; CHECK-LABEL: @fshr_ones(
-; CHECK-NEXT:    [[R:%.*]] = call i9 @llvm.fshr.i9(i9 -1, i9 -1, i9 [[SHAMT:%.*]])
-; CHECK-NEXT:    ret i9 [[R]]
+; CHECK-NEXT:    ret i9 -1
 ;
   %r = call i9 @llvm.fshr.i9(i9 -1, i9 -1, i9 %shamt)
   ret i9 %r
