@@ -5855,6 +5855,11 @@ static Value *simplifyIntrinsic(CallBase *Call, const SimplifyQuery &Q) {
       if (ShAmtC->urem(BitWidth).isNullValue())
         return Call->getArgOperand(IID == Intrinsic::fshl ? 0 : 1);
     }
+
+    // Rotating zero by anything is zero.
+    if (match(Op0, m_Zero()) && match(Op1, m_Zero()))
+      return ConstantInt::getNullValue(F->getReturnType());
+
     return nullptr;
   }
   case Intrinsic::experimental_constrained_fma: {
