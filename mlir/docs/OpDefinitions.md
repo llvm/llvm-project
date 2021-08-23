@@ -229,6 +229,17 @@ the `SameVariadicOperandSize` or `AttrSizedOperandSegments` trait is needed to
 indicate that all variable length operands have the same number of dynamic
 values.
 
+#### VariadicOfVariadic operands
+
+To declare a variadic operand that has a variadic number of sub-ranges, wrap the
+`TypeConstraint` for the operand with `VariadicOfVariadic<...,
+"<segment-attribute-name>">`.
+
+The second field of the `VariadicOfVariadic` is the name of an `I32ElementsAttr`
+argument that contains the sizes of the variadic sub-ranges. This attribute will
+be used when determining the size of sub-ranges, or when updating the size of
+sub-ranges.
+
 #### Optional operands
 
 To declare an optional operand, wrap the `TypeConstraint` for the operand with
@@ -717,6 +728,8 @@ declarative parameter to `parse` method argument is detailed below:
     -   Single: `OpAsmParser::OperandType &`
     -   Optional: `Optional<OpAsmParser::OperandType> &`
     -   Variadic: `SmallVectorImpl<OpAsmParser::OperandType> &`
+    -   VariadicOfVariadic:
+        `SmallVectorImpl<SmallVector<OpAsmParser::OperandType>> &`
 *   Ref Directives
     -   A reference directive is passed to the parser using the same mapping as
         the input operand. For example, a single region would be passed as a
@@ -731,6 +744,7 @@ declarative parameter to `parse` method argument is detailed below:
     -   Single: `Type &`
     -   Optional: `Type &`
     -   Variadic: `SmallVectorImpl<Type> &`
+    -   VariadicOfVariadic: `SmallVectorImpl<SmallVector<Type>> &`
 *   `attr-dict` Directive: `NamedAttrList &`
 
 When a variable is optional, the value should only be specified if the variable
@@ -749,6 +763,7 @@ declarative parameter to `print` method argument is detailed below:
     -   Single: `Value`
     -   Optional: `Value`
     -   Variadic: `OperandRange`
+    -   VariadicOfVariadic: `OperandRangeRange`
 *   Ref Directives
     -   A reference directive is passed to the printer using the same mapping as
         the input operand. For example, a single region would be passed as a
@@ -763,6 +778,7 @@ declarative parameter to `print` method argument is detailed below:
     -   Single: `Type`
     -   Optional: `Type`
     -   Variadic: `TypeRange`
+    -   VariadicOfVariadic: `TypeRangeRange`
 *   `attr-dict` Directive: `DictionaryAttr`
 
 When a variable is optional, the provided value may be null.
@@ -923,7 +939,7 @@ be defined.
 
 When this boolean field is set to `true`, it indicates that the op implements a
 `canonicalize` method for simple "matchAndRewrite" style canonicalization
-patterns.  If `hasCanonicalizer` is 0, then an implementation of
+patterns. If `hasCanonicalizer` is 0, then an implementation of
 `::getCanonicalizationPatterns()` is implemented to call this function.
 
 ### `hasFolder`

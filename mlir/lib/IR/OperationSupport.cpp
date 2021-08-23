@@ -12,9 +12,11 @@
 //===----------------------------------------------------------------------===//
 
 #include "mlir/IR/OperationSupport.h"
+#include "mlir/IR/BuiltinAttributes.h"
 #include "mlir/IR/BuiltinTypes.h"
 #include "mlir/IR/OpDefinition.h"
 #include "llvm/ADT/BitVector.h"
+#include <numeric>
 
 using namespace mlir;
 
@@ -394,11 +396,36 @@ MutableArrayRef<OpOperand> detail::OperandStorage::resize(Operation *owner,
 OperandRange::OperandRange(Operation *op)
     : OperandRange(op->getOpOperands().data(), op->getNumOperands()) {}
 
-/// Return the operand index of the first element of this range. The range
-/// must not be empty.
 unsigned OperandRange::getBeginOperandIndex() const {
   assert(!empty() && "range must not be empty");
   return base->getOperandNumber();
+}
+
+OperandRangeRange OperandRange::split(ElementsAttr segmentSizes) const {
+  return OperandRangeRange(*this, segmentSizes);
+}
+
+//===----------------------------------------------------------------------===//
+// OperandRangeRange
+
+OperandRangeRange::OperandRangeRange(OperandRange operands,
+                                     Attribute operandSegments)
+    : OperandRangeRange(OwnerT(operands.getBase(), operandSegments), 0,
+                        operandSegments.cast<DenseElementsAttr>().size()) {}
+
+OperandRange OperandRangeRange::join() const {
+  const OwnerT &owner = getBase();
+  auto sizeData = owner.second.cast<DenseElementsAttr>().getValues<uint32_t>();
+  return OperandRange(owner.first,
+                      std::accumulate(sizeData.begin(), sizeData.end(), 0));
+}
+
+OperandRange OperandRangeRange::dereference(const OwnerT &object,
+                                            ptrdiff_t index) {
+  auto sizeData = object.second.cast<DenseElementsAttr>().getValues<uint32_t>();
+  uint32_t startIndex =
+      std::accumulate(sizeData.begin(), sizeData.begin() + index, 0);
+  return OperandRange(object.first + startIndex, *(sizeData.begin() + index));
 }
 
 //===----------------------------------------------------------------------===//
@@ -419,7 +446,7 @@ MutableOperandRange::MutableOperandRange(Operation *owner)
 /// Slice this range into a sub range, with the additional operand segment.
 MutableOperandRange
 MutableOperandRange::slice(unsigned subStart, unsigned subLen,
-                           Optional<OperandSegment> segment) {
+                           Optional<OperandSegment> segment) const {
   assert((subStart + subLen) <= length && "invalid sub-range");
   MutableOperandRange subSlice(owner, start + subStart, subLen,
                                operandSegments);
@@ -475,6 +502,11 @@ MutableOperandRange::operator OperandRange() const {
   return owner->getOperands().slice(start, length);
 }
 
+MutableOperandRangeRange
+MutableOperandRange::split(NamedAttribute segmentSizes) const {
+  return MutableOperandRangeRange(*this, segmentSizes);
+}
+
 /// Update the length of this range to the one provided.
 void MutableOperandRange::updateLength(unsigned newLength) {
   int32_t diff = int32_t(newLength) - int32_t(length);
@@ -488,6 +520,35 @@ void MutableOperandRange::updateLength(unsigned newLength) {
     segment.second.second = DenseIntElementsAttr::get(attr.getType(), segments);
     owner->setAttr(segment.second.first, segment.second.second);
   }
+}
+
+//===----------------------------------------------------------------------===//
+// MutableOperandRangeRange
+
+MutableOperandRangeRange::MutableOperandRangeRange(
+    const MutableOperandRange &operands, NamedAttribute operandSegmentAttr)
+    : MutableOperandRangeRange(
+          OwnerT(operands, operandSegmentAttr), 0,
+          operandSegmentAttr.second.cast<DenseElementsAttr>().size()) {}
+
+MutableOperandRange MutableOperandRangeRange::join() const {
+  return getBase().first;
+}
+
+MutableOperandRangeRange::operator OperandRangeRange() const {
+  return OperandRangeRange(getBase().first,
+                           getBase().second.second.cast<DenseElementsAttr>());
+}
+
+MutableOperandRange MutableOperandRangeRange::dereference(const OwnerT &object,
+                                                          ptrdiff_t index) {
+  auto sizeData =
+      object.second.second.cast<DenseElementsAttr>().getValues<uint32_t>();
+  uint32_t startIndex =
+      std::accumulate(sizeData.begin(), sizeData.begin() + index, 0);
+  return object.first.slice(
+      startIndex, *(sizeData.begin() + index),
+      MutableOperandRange::OperandSegment(index, object.second));
 }
 
 //===----------------------------------------------------------------------===//
