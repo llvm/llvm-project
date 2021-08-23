@@ -40,6 +40,8 @@ const char *CudaVersionToString(CudaVersion V) {
     return "11.3";
   case CudaVersion::CUDA_114:
     return "11.4";
+  case CudaVersion::NEW:
+    return "";
   }
   llvm_unreachable("invalid enum");
 }
@@ -192,7 +194,7 @@ CudaVersion MinVersionForCudaArch(CudaArch A) {
 CudaVersion MaxVersionForCudaArch(CudaArch A) {
   // AMD GPUs do not depend on CUDA versions.
   if (IsAMDGpuArch(A))
-    return CudaVersion::LATEST;
+    return CudaVersion::NEW;
 
   switch (A) {
   case CudaArch::UNKNOWN:
@@ -203,7 +205,7 @@ CudaVersion MaxVersionForCudaArch(CudaArch A) {
   case CudaArch::SM_30:
     return CudaVersion::CUDA_110;
   default:
-    return CudaVersion::LATEST;
+    return CudaVersion::NEW;
   }
 }
 
