@@ -1700,3 +1700,15 @@ define <2 x i8> @or_vec(<2 x i8> %X, <2 x i8> %Y) {
   %r = sub <2 x i8> %a, %b
   ret <2 x i8> %r
 }
+
+define i32 @pr51584(i32 %a, i32 %b) {
+; CHECK-LABEL: @pr51584(
+; CHECK-NEXT:    [[TMP1:%.*]] = add i32 [[B:%.*]], [[A:%.*]]
+; CHECK-NEXT:    [[DOTNEG:%.*]] = sub i32 -11, [[TMP1]]
+; CHECK-NEXT:    ret i32 [[DOTNEG]]
+;
+  %sub = sub i32 0, %a
+  %add = add nsw i32 11, %b
+  %sub1 = sub i32 %sub, %add
+  ret i32 %sub1
+}
