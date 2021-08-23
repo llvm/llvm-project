@@ -14,6 +14,8 @@
 // get_monthname(iter_type s, iter_type end, ios_base& str,
 //               ios_base::iostate& err, tm* t) const;
 
+// XFAIL: libcpp-has-no-wide-characters
+
 #include <locale>
 #include <cassert>
 #include "test_macros.h"

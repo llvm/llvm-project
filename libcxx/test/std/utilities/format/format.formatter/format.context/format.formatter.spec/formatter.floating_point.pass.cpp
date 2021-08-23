@@ -113,7 +113,9 @@ void test_all_float_types() {
 
 int main(int, char**) {
   test_all_float_types<char>();
+#ifndef TEST_HAS_NO_WIDE_CHARACTERS
   test_all_float_types<wchar_t>();
+#endif
 
   return 0;
 }

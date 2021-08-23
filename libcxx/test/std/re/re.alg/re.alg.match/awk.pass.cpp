@@ -663,6 +663,8 @@ int main(int, char**)
         assert(m.position(0) == 0);
         assert(m.str(0) == s);
     }
+
+#ifndef TEST_HAS_NO_WIDE_CHARACTERS
     {
         std::wcmatch m;
         const wchar_t s[] = L"a";
@@ -1303,5 +1305,6 @@ int main(int, char**)
         assert(m.position(0) == 0);
         assert(m.str(0) == s);
     }
+#endif // TEST_HAS_NO_WIDE_CHARACTERS
     return 0;
 }

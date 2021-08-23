@@ -37,15 +37,21 @@ test(const Allocator& a)
 int main(int, char**)
 {
     test<char>   (std::allocator<std::sub_match<const char *> >());
+#ifndef TEST_HAS_NO_WIDE_CHARACTERS
     test<wchar_t>(std::allocator<std::sub_match<const wchar_t *> >());
+#endif
 
-//  test_allocator has POCCA -> false
+    // test_allocator has POCCA -> false
     test<char>   (test_allocator<std::sub_match<const char*> >(3));
+#ifndef TEST_HAS_NO_WIDE_CHARACTERS
     test<wchar_t>(test_allocator<std::sub_match<const wchar_t*> >(3));
+#endif
 
-//  other_allocator has POCCA -> true
+    // other_allocator has POCCA -> true
     test<char>   (other_allocator<std::sub_match<const char*> >(3));
+#ifndef TEST_HAS_NO_WIDE_CHARACTERS
     test<wchar_t>(other_allocator<std::sub_match<const wchar_t*> >(3));
+#endif
 
   return 0;
 }

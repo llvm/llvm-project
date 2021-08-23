@@ -114,6 +114,7 @@ int main(int, char**)
         assert(std::string(out) == "match: cdefghi, m[1]: , m[2]: ");
     }
 
+#ifndef TEST_HAS_NO_WIDE_CHARACTERS
     {
         std::match_results<const wchar_t*> m;
         const wchar_t s[] = L"abcdefghijk";
@@ -152,6 +153,7 @@ int main(int, char**)
         assert(r == out + 34);
         assert(std::wstring(out) == L"match: cdefghi, m[1]: efg, m[2]: e");
     }
+#endif // TEST_HAS_NO_WIDE_CHARACTERS
 
   return 0;
 }

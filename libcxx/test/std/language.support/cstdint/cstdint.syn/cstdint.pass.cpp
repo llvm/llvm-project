@@ -10,15 +10,18 @@
 
 #include <cstdint>
 #include <cstddef>
-#include <cwchar>
 #include <csignal>
-#include <cwctype>
 #include <climits>
 #include <type_traits>
 #include <limits>
 #include <cassert>
 
 #include "test_macros.h"
+
+#ifndef TEST_HAS_NO_WIDE_CHARACTERS
+#   include <cwchar>
+#   include <cwctype>
+#endif
 
 int main(int, char**)
 {
@@ -239,6 +242,7 @@ int main(int, char**)
     // SIZE_MAX
     assert(SIZE_MAX == std::numeric_limits<std::size_t>::max());
 
+#ifndef TEST_HAS_NO_WIDE_CHARACTERS
     // WCHAR_MIN
     assert(WCHAR_MIN == std::numeric_limits<wchar_t>::min());
 
@@ -250,6 +254,7 @@ int main(int, char**)
 
     // WINT_MAX
     assert(WINT_MAX == std::numeric_limits<std::wint_t>::max());
+#endif
 
 #ifndef INT8_C
 #error INT8_C not defined

@@ -869,6 +869,7 @@ module std [system] {
   module __function_like     { private header "__function_like.h"   export * }
   module __hash_table        { header "__hash_table"        export * }
   module __locale            { private header "__locale"            export * }
+  module __mbstate           { private header "__mbstate_t.h"       export * }
   module __mutex_base        { private header "__mutex_base"        export * }
   module __node_handle       { private header "__node_handle"       export * }
   module __nullptr           { header "__nullptr"           export * }

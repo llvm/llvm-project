@@ -105,6 +105,7 @@ struct numpunct<char> : std::numpunct<char> {
   char do_thousands_sep() const override { return '_'; }
 };
 
+#ifndef TEST_HAS_NO_WIDE_CHARACTERS
 template <>
 struct numpunct<wchar_t> : std::numpunct<wchar_t> {
   string_type do_truename() const override { return L"yes"; }
@@ -113,6 +114,7 @@ struct numpunct<wchar_t> : std::numpunct<wchar_t> {
   std::string do_grouping() const override { return "\1\2\3\2\1"; };
   wchar_t do_thousands_sep() const override { return L'_'; }
 };
+#endif
 
 template <class CharT, class... Args>
 void test(std::basic_string<CharT> expected, std::basic_string<CharT> fmt,
@@ -237,12 +239,14 @@ struct numpunct_unicode<char> : std::numpunct<char> {
   string_type do_falsename() const override { return "ungültig"; }
 };
 
+#ifndef TEST_HAS_NO_WIDE_CHARACTERS
 template <>
 struct numpunct_unicode<wchar_t> : std::numpunct<wchar_t> {
   string_type do_truename() const override { return L"gültig"; }
   string_type do_falsename() const override { return L"ungültig"; }
 };
 #endif
+#endif // _LIBCPP_HAS_NO_UNICODE
 
 template <class CharT>
 void test_bool() {
@@ -613,7 +617,9 @@ void test() {
 
 int main(int, char**) {
   test<char>();
+#ifndef TEST_HAS_NO_WIDE_CHARACTERS
   test<wchar_t>();
+#endif
 
   return 0;
 }

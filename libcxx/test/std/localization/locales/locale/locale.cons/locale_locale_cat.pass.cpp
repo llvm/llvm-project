@@ -30,43 +30,42 @@
 #include "test_macros.h"
 #include "platform_support.h" // locale name macros
 
+template<class CharT>
+void check_for(const std::locale& loc)
+{
+    assert(std::has_facet<std::collate<CharT> >(loc));
+
+    assert(std::has_facet<std::ctype<CharT> >(loc));
+
+    assert((std::has_facet<std::codecvt<CharT, char, std::mbstate_t> >(loc)));
+
+    assert(std::has_facet<std::moneypunct<CharT> >(loc));
+    assert(std::has_facet<std::money_get<CharT> >(loc));
+    assert(std::has_facet<std::money_put<CharT> >(loc));
+
+    assert(std::has_facet<std::numpunct<CharT> >(loc));
+    assert(std::has_facet<std::num_get<CharT> >(loc));
+    assert(std::has_facet<std::num_put<CharT> >(loc));
+
+    assert(std::has_facet<std::time_get<CharT> >(loc));
+    assert(std::has_facet<std::time_put<CharT> >(loc));
+
+    assert(std::has_facet<std::messages<CharT> >(loc));
+}
+
 void check(const std::locale& loc)
 {
-    assert(std::has_facet<std::collate<char> >(loc));
-    assert(std::has_facet<std::collate<wchar_t> >(loc));
+    check_for<char>(loc);
+#ifndef TEST_HAS_NO_WIDE_CHARACTERS
+    check_for<wchar_t>(loc);
+#endif
 
-    assert(std::has_facet<std::ctype<char> >(loc));
-    assert(std::has_facet<std::ctype<wchar_t> >(loc));
-    assert((std::has_facet<std::codecvt<char, char, std::mbstate_t> >(loc)));
     assert((std::has_facet<std::codecvt<char16_t, char, std::mbstate_t> >(loc)));
     assert((std::has_facet<std::codecvt<char32_t, char, std::mbstate_t> >(loc)));
 #if TEST_STD_VER > 17
     assert((std::has_facet<std::codecvt<char16_t, char8_t, std::mbstate_t> >(loc)));
     assert((std::has_facet<std::codecvt<char32_t, char8_t, std::mbstate_t> >(loc)));
 #endif
-    assert((std::has_facet<std::codecvt<wchar_t, char, std::mbstate_t> >(loc)));
-
-    assert((std::has_facet<std::moneypunct<char> >(loc)));
-    assert((std::has_facet<std::moneypunct<wchar_t> >(loc)));
-    assert((std::has_facet<std::money_get<char> >(loc)));
-    assert((std::has_facet<std::money_get<wchar_t> >(loc)));
-    assert((std::has_facet<std::money_put<char> >(loc)));
-    assert((std::has_facet<std::money_put<wchar_t> >(loc)));
-
-    assert((std::has_facet<std::numpunct<char> >(loc)));
-    assert((std::has_facet<std::numpunct<wchar_t> >(loc)));
-    assert((std::has_facet<std::num_get<char> >(loc)));
-    assert((std::has_facet<std::num_get<wchar_t> >(loc)));
-    assert((std::has_facet<std::num_put<char> >(loc)));
-    assert((std::has_facet<std::num_put<wchar_t> >(loc)));
-
-    assert((std::has_facet<std::time_get<char> >(loc)));
-    assert((std::has_facet<std::time_get<wchar_t> >(loc)));
-    assert((std::has_facet<std::time_put<char> >(loc)));
-    assert((std::has_facet<std::time_put<wchar_t> >(loc)));
-
-    assert((std::has_facet<std::messages<char> >(loc)));
-    assert((std::has_facet<std::messages<wchar_t> >(loc)));
 }
 
 int main(int, char**)

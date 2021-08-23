@@ -56,6 +56,7 @@ int main(int, char**)
     static_assert((std::is_same<I1::ostream_type, std::ostream>::value), "");
     }
 
+#ifndef TEST_HAS_NO_WIDE_CHARACTERS
     {
     typedef std::ostreambuf_iterator<wchar_t> I2;
 #if TEST_STD_VER <= 14
@@ -76,6 +77,7 @@ int main(int, char**)
     static_assert((std::is_same<I2::streambuf_type, std::wstreambuf>::value), "");
     static_assert((std::is_same<I2::ostream_type, std::wostream>::value), "");
     }
+#endif // TEST_HAS_NO_WIDE_CHARACTERS
 
   return 0;
 }

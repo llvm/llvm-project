@@ -44,6 +44,7 @@ int main(int, char**)
         in >> s;
         assert(in.fail());
     }
+#ifndef TEST_HAS_NO_WIDE_CHARACTERS
     {
         std::wistringstream in(L"a bc defghij");
         std::wstring s(L"initial text");
@@ -66,6 +67,7 @@ int main(int, char**)
         in >> s;
         assert(in.fail());
     }
+#endif
 #ifndef TEST_HAS_NO_EXCEPTIONS
     {
         std::stringbuf sb;
@@ -128,6 +130,7 @@ int main(int, char**)
         in >> s;
         assert(in.fail());
     }
+#ifndef TEST_HAS_NO_WIDE_CHARACTERS
     {
         typedef std::basic_string<wchar_t, std::char_traits<wchar_t>, min_allocator<wchar_t>> S;
         std::wistringstream in(L"a bc defghij");
@@ -151,7 +154,8 @@ int main(int, char**)
         in >> s;
         assert(in.fail());
     }
-#endif
+#endif // TEST_HAS_NO_WIDE_CHARACTERS
+#endif // TEST_STD_VER >= 11
 
   return 0;
 }

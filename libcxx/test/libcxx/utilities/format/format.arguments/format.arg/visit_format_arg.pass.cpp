@@ -350,7 +350,9 @@ void test() {
 
 void test() {
   test<char>();
+#ifndef TEST_HAS_NO_WIDE_CHARACTERS
   test<wchar_t>();
+#endif
 }
 
 int main(int, char**) {

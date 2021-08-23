@@ -211,6 +211,7 @@ set(files
   __iterator/wrap_iter.h
   __libcpp_version
   __locale
+  __mbstate_t.h
   __memory/addressof.h
   __memory/allocation_guard.h
   __memory/allocator_arg_t.h

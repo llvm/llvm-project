@@ -43,9 +43,11 @@ void test() {
   test(std::basic_format_args(
       std::make_format_args<std::basic_format_context<
           std::back_insert_iterator<std::basic_string<char>>, char>>()));
+#ifndef TEST_HAS_NO_WIDE_CHARACTERS
   test(std::basic_format_args(
       std::make_format_args<std::basic_format_context<
           std::back_insert_iterator<std::basic_string<wchar_t>>, wchar_t>>()));
+#endif
 #ifndef _LIBCPP_HAS_NO_CHAR8_T
   test(std::basic_format_args(
       std::make_format_args<std::basic_format_context<

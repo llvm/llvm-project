@@ -68,17 +68,21 @@ int main(int, char**) {
 #endif
     test1<std::u16string_view> ();
     test1<std::u32string_view> ();
+#ifndef TEST_HAS_NO_WIDE_CHARACTERS
     test1<std::wstring_view> ();
+#endif
 
     test2 ( "ABCDEABCDEABCDEABCDEABCDEABCDEABCDEABCDEABCDEABCDEABCDEABCDEABCDEABCDEABCDEABCDEABCDEABCDEABCDEABCDEABCDE", 105 );
     test2 ( "ABCDE", 5 );
     test2 ( "a", 1 );
     test2 ( "", 0 );
 
+#ifndef TEST_HAS_NO_WIDE_CHARACTERS
     test2 ( L"ABCDEABCDEABCDEABCDEABCDEABCDEABCDEABCDEABCDEABCDEABCDEABCDEABCDEABCDEABCDEABCDEABCDEABCDEABCDEABCDEABCDE", 105 );
     test2 ( L"ABCDE", 5 );
     test2 ( L"a", 1 );
     test2 ( L"", 0 );
+#endif
 
 #if defined(__cpp_lib_char8_t) && __cpp_lib_char8_t >= 201811L
     test2 ( u8"ABCDEABCDEABCDEABCDEABCDEABCDEABCDEABCDEABCDEABCDEABCDEABCDEABCDEABCDEABCDEABCDEABCDEABCDEABCDEABCDEABCDE", 105 );

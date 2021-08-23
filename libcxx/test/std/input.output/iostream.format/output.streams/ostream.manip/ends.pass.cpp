@@ -61,6 +61,7 @@ int main(int, char**)
         assert(sb.str().back() == 0);
         assert(os.good());
     }
+#ifndef TEST_HAS_NO_WIDE_CHARACTERS
     {
         testbuf<wchar_t> sb;
         std::wostream os(&sb);
@@ -69,6 +70,7 @@ int main(int, char**)
         assert(sb.str().back() == 0);
         assert(os.good());
     }
+#endif
 
   return 0;
 }

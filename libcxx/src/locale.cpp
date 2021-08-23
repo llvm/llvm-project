@@ -18,12 +18,15 @@
 #include "cstdio"
 #include "cstdlib"
 #include "cstring"
-#include "cwctype"
 #include "locale"
 #include "string"
 #include "type_traits"
 #include "typeinfo"
 #include "vector"
+
+#ifndef _LIBCPP_HAS_NO_WIDE_CHARACTERS
+#   include "cwctype"
+#endif
 
 #if defined(_LIBCPP_MSVCRT)
 #   define _CTYPE_DISABLE_MACROS
@@ -176,11 +179,17 @@ locale::__imp::__imp(size_t refs)
 {
     facets_.clear();
     install(&make<_VSTD::collate<char> >(1u));
+#ifndef _LIBCPP_HAS_NO_WIDE_CHARACTERS
     install(&make<_VSTD::collate<wchar_t> >(1u));
+#endif
     install(&make<_VSTD::ctype<char> >(nullptr, false, 1u));
+#ifndef _LIBCPP_HAS_NO_WIDE_CHARACTERS
     install(&make<_VSTD::ctype<wchar_t> >(1u));
+#endif
     install(&make<codecvt<char, char, mbstate_t> >(1u));
+#ifndef _LIBCPP_HAS_NO_WIDE_CHARACTERS
     install(&make<codecvt<wchar_t, char, mbstate_t> >(1u));
+#endif
 _LIBCPP_SUPPRESS_DEPRECATED_PUSH
     install(&make<codecvt<char16_t, char, mbstate_t> >(1u));
     install(&make<codecvt<char32_t, char, mbstate_t> >(1u));
@@ -190,25 +199,43 @@ _LIBCPP_SUPPRESS_DEPRECATED_POP
     install(&make<codecvt<char32_t, char8_t, mbstate_t> >(1u));
 #endif
     install(&make<numpunct<char> >(1u));
+#ifndef _LIBCPP_HAS_NO_WIDE_CHARACTERS
     install(&make<numpunct<wchar_t> >(1u));
+#endif
     install(&make<num_get<char> >(1u));
+#ifndef _LIBCPP_HAS_NO_WIDE_CHARACTERS
     install(&make<num_get<wchar_t> >(1u));
+#endif
     install(&make<num_put<char> >(1u));
+#ifndef _LIBCPP_HAS_NO_WIDE_CHARACTERS
     install(&make<num_put<wchar_t> >(1u));
+#endif
     install(&make<moneypunct<char, false> >(1u));
     install(&make<moneypunct<char, true> >(1u));
+#ifndef _LIBCPP_HAS_NO_WIDE_CHARACTERS
     install(&make<moneypunct<wchar_t, false> >(1u));
     install(&make<moneypunct<wchar_t, true> >(1u));
+#endif
     install(&make<money_get<char> >(1u));
+#ifndef _LIBCPP_HAS_NO_WIDE_CHARACTERS
     install(&make<money_get<wchar_t> >(1u));
+#endif
     install(&make<money_put<char> >(1u));
+#ifndef _LIBCPP_HAS_NO_WIDE_CHARACTERS
     install(&make<money_put<wchar_t> >(1u));
+#endif
     install(&make<time_get<char> >(1u));
+#ifndef _LIBCPP_HAS_NO_WIDE_CHARACTERS
     install(&make<time_get<wchar_t> >(1u));
+#endif
     install(&make<time_put<char> >(1u));
+#ifndef _LIBCPP_HAS_NO_WIDE_CHARACTERS
     install(&make<time_put<wchar_t> >(1u));
+#endif
     install(&make<_VSTD::messages<char> >(1u));
+#ifndef _LIBCPP_HAS_NO_WIDE_CHARACTERS
     install(&make<_VSTD::messages<wchar_t> >(1u));
+#endif
 }
 
 locale::__imp::__imp(const string& name, size_t refs)
@@ -225,11 +252,17 @@ locale::__imp::__imp(const string& name, size_t refs)
             if (facets_[i])
                 facets_[i]->__add_shared();
         install(new collate_byname<char>(name_));
+#ifndef _LIBCPP_HAS_NO_WIDE_CHARACTERS
         install(new collate_byname<wchar_t>(name_));
+#endif
         install(new ctype_byname<char>(name_));
+#ifndef _LIBCPP_HAS_NO_WIDE_CHARACTERS
         install(new ctype_byname<wchar_t>(name_));
+#endif
         install(new codecvt_byname<char, char, mbstate_t>(name_));
+#ifndef _LIBCPP_HAS_NO_WIDE_CHARACTERS
         install(new codecvt_byname<wchar_t, char, mbstate_t>(name_));
+#endif
 _LIBCPP_SUPPRESS_DEPRECATED_PUSH
         install(new codecvt_byname<char16_t, char, mbstate_t>(name_));
         install(new codecvt_byname<char32_t, char, mbstate_t>(name_));
@@ -239,17 +272,27 @@ _LIBCPP_SUPPRESS_DEPRECATED_POP
         install(new codecvt_byname<char32_t, char8_t, mbstate_t>(name_));
 #endif
         install(new numpunct_byname<char>(name_));
+#ifndef _LIBCPP_HAS_NO_WIDE_CHARACTERS
         install(new numpunct_byname<wchar_t>(name_));
+#endif
         install(new moneypunct_byname<char, false>(name_));
         install(new moneypunct_byname<char, true>(name_));
+#ifndef _LIBCPP_HAS_NO_WIDE_CHARACTERS
         install(new moneypunct_byname<wchar_t, false>(name_));
         install(new moneypunct_byname<wchar_t, true>(name_));
+#endif
         install(new time_get_byname<char>(name_));
+#ifndef _LIBCPP_HAS_NO_WIDE_CHARACTERS
         install(new time_get_byname<wchar_t>(name_));
+#endif
         install(new time_put_byname<char>(name_));
+#ifndef _LIBCPP_HAS_NO_WIDE_CHARACTERS
         install(new time_put_byname<wchar_t>(name_));
+#endif
         install(new messages_byname<char>(name_));
+#ifndef _LIBCPP_HAS_NO_WIDE_CHARACTERS
         install(new messages_byname<wchar_t>(name_));
+#endif
 #ifndef _LIBCPP_NO_EXCEPTIONS
     }
     catch (...)
@@ -287,14 +330,20 @@ locale::__imp::__imp(const __imp& other, const string& name, locale::category c)
         if (c & locale::collate)
         {
             install(new collate_byname<char>(name));
+#ifndef _LIBCPP_HAS_NO_WIDE_CHARACTERS
             install(new collate_byname<wchar_t>(name));
+#endif
         }
         if (c & locale::ctype)
         {
             install(new ctype_byname<char>(name));
+#ifndef _LIBCPP_HAS_NO_WIDE_CHARACTERS
             install(new ctype_byname<wchar_t>(name));
+#endif
             install(new codecvt_byname<char, char, mbstate_t>(name));
+#ifndef _LIBCPP_HAS_NO_WIDE_CHARACTERS
             install(new codecvt_byname<wchar_t, char, mbstate_t>(name));
+#endif
 _LIBCPP_SUPPRESS_DEPRECATED_PUSH
             install(new codecvt_byname<char16_t, char, mbstate_t>(name));
             install(new codecvt_byname<char32_t, char, mbstate_t>(name));
@@ -308,25 +357,35 @@ _LIBCPP_SUPPRESS_DEPRECATED_POP
         {
             install(new moneypunct_byname<char, false>(name));
             install(new moneypunct_byname<char, true>(name));
+#ifndef _LIBCPP_HAS_NO_WIDE_CHARACTERS
             install(new moneypunct_byname<wchar_t, false>(name));
             install(new moneypunct_byname<wchar_t, true>(name));
+#endif
         }
         if (c & locale::numeric)
         {
             install(new numpunct_byname<char>(name));
+#ifndef _LIBCPP_HAS_NO_WIDE_CHARACTERS
             install(new numpunct_byname<wchar_t>(name));
+#endif
         }
         if (c & locale::time)
         {
             install(new time_get_byname<char>(name));
+#ifndef _LIBCPP_HAS_NO_WIDE_CHARACTERS
             install(new time_get_byname<wchar_t>(name));
+#endif
             install(new time_put_byname<char>(name));
+#ifndef _LIBCPP_HAS_NO_WIDE_CHARACTERS
             install(new time_put_byname<wchar_t>(name));
+#endif
         }
         if (c & locale::messages)
         {
             install(new messages_byname<char>(name));
+#ifndef _LIBCPP_HAS_NO_WIDE_CHARACTERS
             install(new messages_byname<wchar_t>(name));
+#endif
         }
 #ifndef _LIBCPP_NO_EXCEPTIONS
     }
@@ -364,12 +423,16 @@ locale::__imp::__imp(const __imp& other, const __imp& one, locale::category c)
         if (c & locale::collate)
         {
             install_from<_VSTD::collate<char> >(one);
+#ifndef _LIBCPP_HAS_NO_WIDE_CHARACTERS
             install_from<_VSTD::collate<wchar_t> >(one);
+#endif
         }
         if (c & locale::ctype)
         {
             install_from<_VSTD::ctype<char> >(one);
+#ifndef _LIBCPP_HAS_NO_WIDE_CHARACTERS
             install_from<_VSTD::ctype<wchar_t> >(one);
+#endif
             install_from<_VSTD::codecvt<char, char, mbstate_t> >(one);
 _LIBCPP_SUPPRESS_DEPRECATED_PUSH
             install_from<_VSTD::codecvt<char16_t, char, mbstate_t> >(one);
@@ -379,39 +442,59 @@ _LIBCPP_SUPPRESS_DEPRECATED_POP
             install_from<_VSTD::codecvt<char16_t, char8_t, mbstate_t> >(one);
             install_from<_VSTD::codecvt<char32_t, char8_t, mbstate_t> >(one);
 #endif
+#ifndef _LIBCPP_HAS_NO_WIDE_CHARACTERS
             install_from<_VSTD::codecvt<wchar_t, char, mbstate_t> >(one);
+#endif
         }
         if (c & locale::monetary)
         {
             install_from<moneypunct<char, false> >(one);
             install_from<moneypunct<char, true> >(one);
+#ifndef _LIBCPP_HAS_NO_WIDE_CHARACTERS
             install_from<moneypunct<wchar_t, false> >(one);
             install_from<moneypunct<wchar_t, true> >(one);
+#endif
             install_from<money_get<char> >(one);
+#ifndef _LIBCPP_HAS_NO_WIDE_CHARACTERS
             install_from<money_get<wchar_t> >(one);
+#endif
             install_from<money_put<char> >(one);
+#ifndef _LIBCPP_HAS_NO_WIDE_CHARACTERS
             install_from<money_put<wchar_t> >(one);
+#endif
         }
         if (c & locale::numeric)
         {
             install_from<numpunct<char> >(one);
+#ifndef _LIBCPP_HAS_NO_WIDE_CHARACTERS
             install_from<numpunct<wchar_t> >(one);
+#endif
             install_from<num_get<char> >(one);
+#ifndef _LIBCPP_HAS_NO_WIDE_CHARACTERS
             install_from<num_get<wchar_t> >(one);
+#endif
             install_from<num_put<char> >(one);
+#ifndef _LIBCPP_HAS_NO_WIDE_CHARACTERS
             install_from<num_put<wchar_t> >(one);
+#endif
         }
         if (c & locale::time)
         {
             install_from<time_get<char> >(one);
+#ifndef _LIBCPP_HAS_NO_WIDE_CHARACTERS
             install_from<time_get<wchar_t> >(one);
+#endif
             install_from<time_put<char> >(one);
+#ifndef _LIBCPP_HAS_NO_WIDE_CHARACTERS
             install_from<time_put<wchar_t> >(one);
+#endif
         }
         if (c & locale::messages)
         {
             install_from<_VSTD::messages<char> >(one);
+#ifndef _LIBCPP_HAS_NO_WIDE_CHARACTERS
             install_from<_VSTD::messages<wchar_t> >(one);
+#endif
         }
 #ifndef _LIBCPP_NO_EXCEPTIONS
     }
@@ -702,6 +785,7 @@ collate_byname<char>::do_transform(const char_type* lo, const char_type* hi) con
 
 // template <> class collate_byname<wchar_t>
 
+#ifndef _LIBCPP_HAS_NO_WIDE_CHARACTERS
 collate_byname<wchar_t>::collate_byname(const char* n, size_t refs)
     : collate<wchar_t>(refs),
       __l(newlocale(LC_ALL_MASK, n, 0))
@@ -747,6 +831,7 @@ collate_byname<wchar_t>::do_transform(const char_type* lo, const char_type* hi) 
     wcsxfrm_l(const_cast<wchar_t*>(out.c_str()), in.c_str(), out.size()+1, __l);
     return out;
 }
+#endif // _LIBCPP_HAS_NO_WIDE_CHARACTERS
 
 const ctype_base::mask ctype_base::space;
 const ctype_base::mask ctype_base::print;
@@ -763,6 +848,7 @@ const ctype_base::mask ctype_base::graph;
 
 // template <> class ctype<wchar_t>;
 
+#ifndef _LIBCPP_HAS_NO_WIDE_CHARACTERS
 locale::id ctype<wchar_t>::id;
 
 ctype<wchar_t>::~ctype()
@@ -892,6 +978,7 @@ ctype<wchar_t>::do_narrow(const char_type* low, const char_type* high, char dfau
             *dest = dfault;
     return low;
 }
+#endif // _LIBCPP_HAS_NO_WIDE_CHARACTERS
 
 // template <> class ctype<char>;
 
@@ -1223,6 +1310,7 @@ ctype_byname<char>::do_tolower(char_type* low, const char_type* high) const
 
 // template <> class ctype_byname<wchar_t>
 
+#ifndef _LIBCPP_HAS_NO_WIDE_CHARACTERS
 ctype_byname<wchar_t>::ctype_byname(const char* name, size_t refs)
     : ctype<wchar_t>(refs),
       __l(newlocale(LC_ALL_MASK, name, 0))
@@ -1422,6 +1510,7 @@ ctype_byname<wchar_t>::do_narrow(const char_type* low, const char_type* high, ch
     }
     return low;
 }
+#endif // _LIBCPP_HAS_NO_WIDE_CHARACTERS
 
 // template <> class codecvt<char, char, mbstate_t>
 
@@ -1486,6 +1575,7 @@ codecvt<char, char, mbstate_t>::do_max_length() const noexcept
 
 // template <> class codecvt<wchar_t, char, mbstate_t>
 
+#ifndef _LIBCPP_HAS_NO_WIDE_CHARACTERS
 locale::id codecvt<wchar_t, char, mbstate_t>::id;
 
 codecvt<wchar_t, char, mbstate_t>::codecvt(size_t refs)
@@ -1698,6 +1788,7 @@ codecvt<wchar_t, char, mbstate_t>::do_max_length() const noexcept
 {
     return __l == 0 ? 1 : static_cast<int>(__libcpp_mb_cur_max_l(__l));
 }
+#endif // _LIBCPP_HAS_NO_WIDE_CHARACTERS
 
 //                                     Valid UTF ranges
 //     UTF-32               UTF-16                          UTF-8               # of code points
@@ -3404,6 +3495,7 @@ codecvt<char32_t, char8_t, mbstate_t>::do_max_length() const noexcept
 
 // __codecvt_utf8<wchar_t>
 
+#ifndef _LIBCPP_HAS_NO_WIDE_CHARACTERS
 __codecvt_utf8<wchar_t>::result
 __codecvt_utf8<wchar_t>::do_out(state_type&,
     const intern_type* frm, const intern_type* frm_end, const intern_type*& frm_nxt,
@@ -3505,6 +3597,7 @@ __codecvt_utf8<wchar_t>::do_max_length() const noexcept
     return 4;
 #endif
 }
+#endif // _LIBCPP_HAS_NO_WIDE_CHARACTERS
 
 // __codecvt_utf8<char16_t>
 
@@ -3658,6 +3751,7 @@ __codecvt_utf8<char32_t>::do_max_length() const noexcept
 
 // __codecvt_utf16<wchar_t, false>
 
+#ifndef _LIBCPP_HAS_NO_WIDE_CHARACTERS
 __codecvt_utf16<wchar_t, false>::result
 __codecvt_utf16<wchar_t, false>::do_out(state_type&,
     const intern_type* frm, const intern_type* frm_end, const intern_type*& frm_nxt,
@@ -3863,6 +3957,7 @@ __codecvt_utf16<wchar_t, true>::do_max_length() const noexcept
     return 4;
 #endif
 }
+#endif // _LIBCPP_HAS_NO_WIDE_CHARACTERS
 
 // __codecvt_utf16<char16_t, false>
 
@@ -4166,6 +4261,7 @@ __codecvt_utf16<char32_t, true>::do_max_length() const noexcept
 
 // __codecvt_utf8_utf16<wchar_t>
 
+#ifndef _LIBCPP_HAS_NO_WIDE_CHARACTERS
 __codecvt_utf8_utf16<wchar_t>::result
 __codecvt_utf8_utf16<wchar_t>::do_out(state_type&,
     const intern_type* frm, const intern_type* frm_end, const intern_type*& frm_nxt,
@@ -4250,6 +4346,7 @@ __codecvt_utf8_utf16<wchar_t>::do_max_length() const noexcept
         return 7;
     return 4;
 }
+#endif // _LIBCPP_HAS_NO_WIDE_CHARACTERS
 
 // __codecvt_utf8_utf16<char16_t>
 
@@ -4425,7 +4522,7 @@ __widen_from_utf8<32>::~__widen_from_utf8()
 {
 }
 
-
+#ifndef _LIBCPP_HAS_NO_WIDE_CHARACTERS
 static bool checked_string_to_wchar_convert(wchar_t& dest,
                                             const char* ptr,
                                             locale_t loc) {
@@ -4440,6 +4537,7 @@ static bool checked_string_to_wchar_convert(wchar_t& dest,
   dest = out;
   return true;
 }
+#endif // _LIBCPP_HAS_NO_WIDE_CHARACTERS
 
 static bool checked_string_to_char_convert(char& dest,
                                            const char* ptr,
@@ -4450,6 +4548,8 @@ static bool checked_string_to_char_convert(char& dest,
     dest = *ptr;
     return true;
   }
+
+#ifndef _LIBCPP_HAS_NO_WIDE_CHARACTERS
   // First convert the MBS into a wide char then attempt to narrow it using
   // wctob_l.
   wchar_t wout;
@@ -4470,6 +4570,9 @@ static bool checked_string_to_char_convert(char& dest,
   default:
     return false;
   }
+#else // _LIBCPP_HAS_NO_WIDE_CHARACTERS
+  return false;
+#endif // _LIBCPP_HAS_NO_WIDE_CHARACTERS
   _LIBCPP_UNREACHABLE();
 }
 
@@ -4477,7 +4580,9 @@ static bool checked_string_to_char_convert(char& dest,
 // numpunct<char> && numpunct<wchar_t>
 
 locale::id numpunct< char  >::id;
+#ifndef _LIBCPP_HAS_NO_WIDE_CHARACTERS
 locale::id numpunct<wchar_t>::id;
+#endif
 
 numpunct<char>::numpunct(size_t refs)
     : locale::facet(refs),
@@ -4486,35 +4591,49 @@ numpunct<char>::numpunct(size_t refs)
 {
 }
 
+#ifndef _LIBCPP_HAS_NO_WIDE_CHARACTERS
 numpunct<wchar_t>::numpunct(size_t refs)
     : locale::facet(refs),
       __decimal_point_(L'.'),
       __thousands_sep_(L',')
 {
 }
+#endif
 
 numpunct<char>::~numpunct()
 {
 }
 
+#ifndef _LIBCPP_HAS_NO_WIDE_CHARACTERS
 numpunct<wchar_t>::~numpunct()
 {
 }
+#endif
 
  char   numpunct< char  >::do_decimal_point() const {return __decimal_point_;}
+#ifndef _LIBCPP_HAS_NO_WIDE_CHARACTERS
 wchar_t numpunct<wchar_t>::do_decimal_point() const {return __decimal_point_;}
+#endif
 
  char   numpunct< char  >::do_thousands_sep() const {return __thousands_sep_;}
+#ifndef _LIBCPP_HAS_NO_WIDE_CHARACTERS
 wchar_t numpunct<wchar_t>::do_thousands_sep() const {return __thousands_sep_;}
+#endif
 
 string numpunct< char  >::do_grouping() const {return __grouping_;}
+#ifndef _LIBCPP_HAS_NO_WIDE_CHARACTERS
 string numpunct<wchar_t>::do_grouping() const {return __grouping_;}
+#endif
 
  string numpunct< char  >::do_truename() const {return "true";}
+#ifndef _LIBCPP_HAS_NO_WIDE_CHARACTERS
 wstring numpunct<wchar_t>::do_truename() const {return L"true";}
+#endif
 
  string numpunct< char  >::do_falsename() const {return "false";}
+#ifndef _LIBCPP_HAS_NO_WIDE_CHARACTERS
 wstring numpunct<wchar_t>::do_falsename() const {return L"false";}
+#endif
 
 // numpunct_byname<char>
 
@@ -4537,6 +4656,7 @@ numpunct_byname<char>::~numpunct_byname()
 void
 numpunct_byname<char>::__init(const char* nm)
 {
+    typedef numpunct<char> base;
     if (strcmp(nm, "C") != 0)
     {
         __libcpp_unique_locale loc(nm);
@@ -4545,10 +4665,12 @@ numpunct_byname<char>::__init(const char* nm)
                                 " failed to construct for " + string(nm));
 
         lconv* lc = __libcpp_localeconv_l(loc.get());
-        checked_string_to_char_convert(__decimal_point_, lc->decimal_point,
-                                       loc.get());
-        checked_string_to_char_convert(__thousands_sep_, lc->thousands_sep,
-                                       loc.get());
+        if (!checked_string_to_char_convert(__decimal_point_, lc->decimal_point,
+                                            loc.get()))
+            __decimal_point_ = base::do_decimal_point();
+        if (!checked_string_to_char_convert(__thousands_sep_, lc->thousands_sep,
+                                            loc.get()))
+            __thousands_sep_ = base::do_thousands_sep();
         __grouping_ = lc->grouping;
         // localization for truename and falsename is not available
     }
@@ -4556,6 +4678,7 @@ numpunct_byname<char>::__init(const char* nm)
 
 // numpunct_byname<wchar_t>
 
+#ifndef _LIBCPP_HAS_NO_WIDE_CHARACTERS
 numpunct_byname<wchar_t>::numpunct_byname(const char* nm, size_t refs)
     : numpunct<wchar_t>(refs)
 {
@@ -4591,6 +4714,7 @@ numpunct_byname<wchar_t>::__init(const char* nm)
         // localization for truename and falsename is not available
     }
 }
+#endif // _LIBCPP_HAS_NO_WIDE_CHARACTERS
 
 // num_get helpers
 
@@ -4766,6 +4890,7 @@ init_weeks()
     return weeks;
 }
 
+#ifndef _LIBCPP_HAS_NO_WIDE_CHARACTERS
 static
 wstring*
 init_wweeks()
@@ -4787,6 +4912,7 @@ init_wweeks()
     weeks[13] = L"Sat";
     return weeks;
 }
+#endif
 
 template <>
 const string*
@@ -4796,6 +4922,7 @@ __time_get_c_storage<char>::__weeks() const
     return weeks;
 }
 
+#ifndef _LIBCPP_HAS_NO_WIDE_CHARACTERS
 template <>
 const wstring*
 __time_get_c_storage<wchar_t>::__weeks() const
@@ -4803,6 +4930,7 @@ __time_get_c_storage<wchar_t>::__weeks() const
     static const wstring* weeks = init_wweeks();
     return weeks;
 }
+#endif
 
 static
 string*
@@ -4836,6 +4964,7 @@ init_months()
     return months;
 }
 
+#ifndef _LIBCPP_HAS_NO_WIDE_CHARACTERS
 static
 wstring*
 init_wmonths()
@@ -4867,6 +4996,7 @@ init_wmonths()
     months[23] = L"Dec";
     return months;
 }
+#endif
 
 template <>
 const string*
@@ -4876,6 +5006,7 @@ __time_get_c_storage<char>::__months() const
     return months;
 }
 
+#ifndef _LIBCPP_HAS_NO_WIDE_CHARACTERS
 template <>
 const wstring*
 __time_get_c_storage<wchar_t>::__months() const
@@ -4883,6 +5014,7 @@ __time_get_c_storage<wchar_t>::__months() const
     static const wstring* months = init_wmonths();
     return months;
 }
+#endif
 
 static
 string*
@@ -4894,6 +5026,7 @@ init_am_pm()
     return am_pm;
 }
 
+#ifndef _LIBCPP_HAS_NO_WIDE_CHARACTERS
 static
 wstring*
 init_wam_pm()
@@ -4903,6 +5036,7 @@ init_wam_pm()
     am_pm[1]  = L"PM";
     return am_pm;
 }
+#endif
 
 template <>
 const string*
@@ -4912,6 +5046,7 @@ __time_get_c_storage<char>::__am_pm() const
     return am_pm;
 }
 
+#ifndef _LIBCPP_HAS_NO_WIDE_CHARACTERS
 template <>
 const wstring*
 __time_get_c_storage<wchar_t>::__am_pm() const
@@ -4919,6 +5054,7 @@ __time_get_c_storage<wchar_t>::__am_pm() const
     static const wstring* am_pm = init_wam_pm();
     return am_pm;
 }
+#endif
 
 template <>
 const string&
@@ -4928,6 +5064,7 @@ __time_get_c_storage<char>::__x() const
     return s;
 }
 
+#ifndef _LIBCPP_HAS_NO_WIDE_CHARACTERS
 template <>
 const wstring&
 __time_get_c_storage<wchar_t>::__x() const
@@ -4935,6 +5072,7 @@ __time_get_c_storage<wchar_t>::__x() const
     static wstring s(L"%m/%d/%y");
     return s;
 }
+#endif
 
 template <>
 const string&
@@ -4944,6 +5082,7 @@ __time_get_c_storage<char>::__X() const
     return s;
 }
 
+#ifndef _LIBCPP_HAS_NO_WIDE_CHARACTERS
 template <>
 const wstring&
 __time_get_c_storage<wchar_t>::__X() const
@@ -4951,6 +5090,7 @@ __time_get_c_storage<wchar_t>::__X() const
     static wstring s(L"%H:%M:%S");
     return s;
 }
+#endif
 
 template <>
 const string&
@@ -4960,6 +5100,7 @@ __time_get_c_storage<char>::__c() const
     return s;
 }
 
+#ifndef _LIBCPP_HAS_NO_WIDE_CHARACTERS
 template <>
 const wstring&
 __time_get_c_storage<wchar_t>::__c() const
@@ -4967,6 +5108,7 @@ __time_get_c_storage<wchar_t>::__c() const
     static wstring s(L"%a %b %d %H:%M:%S %Y");
     return s;
 }
+#endif
 
 template <>
 const string&
@@ -4976,6 +5118,7 @@ __time_get_c_storage<char>::__r() const
     return s;
 }
 
+#ifndef _LIBCPP_HAS_NO_WIDE_CHARACTERS
 template <>
 const wstring&
 __time_get_c_storage<wchar_t>::__r() const
@@ -4983,6 +5126,7 @@ __time_get_c_storage<wchar_t>::__r() const
     static wstring s(L"%I:%M:%S %p");
     return s;
 }
+#endif
 
 // time_get_byname
 
@@ -5161,6 +5305,7 @@ __time_get_storage<char>::__analyze(char fmt, const ctype<char>& ct)
 #pragma clang diagnostic ignored "-Wmissing-braces"
 #endif
 
+#ifndef _LIBCPP_HAS_NO_WIDE_CHARACTERS
 template <>
 wstring
 __time_get_storage<wchar_t>::__analyze(char fmt, const ctype<wchar_t>& ct)
@@ -5310,6 +5455,7 @@ __time_get_storage<wchar_t>::__analyze(char fmt, const ctype<wchar_t>& ct)
     }
     return result;
 }
+#endif // _LIBCPP_HAS_NO_WIDE_CHARACTERS
 
 template <>
 void
@@ -5348,6 +5494,7 @@ __time_get_storage<char>::init(const ctype<char>& ct)
     __X_ = __analyze('X', ct);
 }
 
+#ifndef _LIBCPP_HAS_NO_WIDE_CHARACTERS
 template <>
 void
 __time_get_storage<wchar_t>::init(const ctype<wchar_t>& ct)
@@ -5423,6 +5570,7 @@ __time_get_storage<wchar_t>::init(const ctype<wchar_t>& ct)
     __x_ = __analyze('x', ct);
     __X_ = __analyze('X', ct);
 }
+#endif // _LIBCPP_HAS_NO_WIDE_CHARACTERS
 
 template <class CharT>
 struct _LIBCPP_HIDDEN __time_get_temp
@@ -5450,6 +5598,7 @@ __time_get_storage<char>::__time_get_storage(const string& __nm)
     init(ct);
 }
 
+#ifndef _LIBCPP_HAS_NO_WIDE_CHARACTERS
 template <>
 __time_get_storage<wchar_t>::__time_get_storage(const char* __nm)
     : __time_get(__nm)
@@ -5465,6 +5614,7 @@ __time_get_storage<wchar_t>::__time_get_storage(const string& __nm)
     const __time_get_temp<wchar_t> ct(__nm);
     init(ct);
 }
+#endif // _LIBCPP_HAS_NO_WIDE_CHARACTERS
 
 template <>
 time_base::dateorder
@@ -5553,6 +5703,7 @@ __time_get_storage<char>::__do_date_order() const
     return time_base::no_order;
 }
 
+#ifndef _LIBCPP_HAS_NO_WIDE_CHARACTERS
 template <>
 time_base::dateorder
 __time_get_storage<wchar_t>::__do_date_order() const
@@ -5639,6 +5790,7 @@ __time_get_storage<wchar_t>::__do_date_order() const
     }
     return time_base::no_order;
 }
+#endif // _LIBCPP_HAS_NO_WIDE_CHARACTERS
 
 // time_put
 
@@ -5675,6 +5827,7 @@ __time_put::__do_put(char* __nb, char*& __ne, const tm* __tm,
     __ne = __nb + n;
 }
 
+#ifndef _LIBCPP_HAS_NO_WIDE_CHARACTERS
 void
 __time_put::__do_put(wchar_t* __wb, wchar_t*& __we, const tm* __tm,
                      char __fmt, char __mod) const
@@ -5689,6 +5842,7 @@ __time_put::__do_put(wchar_t* __wb, wchar_t*& __we, const tm* __tm,
         __throw_runtime_error("locale not supported");
     __we = __wb + j;
 }
+#endif // _LIBCPP_HAS_NO_WIDE_CHARACTERS
 
 // moneypunct_byname
 
@@ -6168,6 +6322,7 @@ moneypunct_byname<char, true>::init(const char* nm)
 #endif // !_LIBCPP_MSVCRT
 }
 
+#ifndef _LIBCPP_HAS_NO_WIDE_CHARACTERS
 template<>
 void
 moneypunct_byname<wchar_t, false>::init(const char* nm)
@@ -6315,6 +6470,7 @@ moneypunct_byname<wchar_t, true>::init(const char* nm)
                lc->int_n_sign_posn, L' ');
 #endif // !_LIBCPP_MSVCRT
 }
+#endif // _LIBCPP_HAS_NO_WIDE_CHARACTERS
 
 void __do_nothing(void*) {}
 
@@ -6328,63 +6484,63 @@ void __throw_runtime_error(const char* msg)
 #endif
 }
 
-template class _LIBCPP_CLASS_TEMPLATE_INSTANTIATION_VIS collate<char>;
-template class _LIBCPP_CLASS_TEMPLATE_INSTANTIATION_VIS collate<wchar_t>;
+                           template class _LIBCPP_CLASS_TEMPLATE_INSTANTIATION_VIS collate<char>;
+_LIBCPP_IF_WIDE_CHARACTERS(template class _LIBCPP_CLASS_TEMPLATE_INSTANTIATION_VIS collate<wchar_t>;)
 
-template class _LIBCPP_CLASS_TEMPLATE_INSTANTIATION_VIS num_get<char>;
-template class _LIBCPP_CLASS_TEMPLATE_INSTANTIATION_VIS num_get<wchar_t>;
+                           template class _LIBCPP_CLASS_TEMPLATE_INSTANTIATION_VIS num_get<char>;
+_LIBCPP_IF_WIDE_CHARACTERS(template class _LIBCPP_CLASS_TEMPLATE_INSTANTIATION_VIS num_get<wchar_t>;)
 
-template struct _LIBCPP_CLASS_TEMPLATE_INSTANTIATION_VIS __num_get<char>;
-template struct _LIBCPP_CLASS_TEMPLATE_INSTANTIATION_VIS __num_get<wchar_t>;
+                           template struct _LIBCPP_CLASS_TEMPLATE_INSTANTIATION_VIS __num_get<char>;
+_LIBCPP_IF_WIDE_CHARACTERS(template struct _LIBCPP_CLASS_TEMPLATE_INSTANTIATION_VIS __num_get<wchar_t>;)
 
-template class _LIBCPP_CLASS_TEMPLATE_INSTANTIATION_VIS num_put<char>;
-template class _LIBCPP_CLASS_TEMPLATE_INSTANTIATION_VIS num_put<wchar_t>;
+                           template class _LIBCPP_CLASS_TEMPLATE_INSTANTIATION_VIS num_put<char>;
+_LIBCPP_IF_WIDE_CHARACTERS(template class _LIBCPP_CLASS_TEMPLATE_INSTANTIATION_VIS num_put<wchar_t>;)
 
-template struct _LIBCPP_CLASS_TEMPLATE_INSTANTIATION_VIS __num_put<char>;
-template struct _LIBCPP_CLASS_TEMPLATE_INSTANTIATION_VIS __num_put<wchar_t>;
+                           template struct _LIBCPP_CLASS_TEMPLATE_INSTANTIATION_VIS __num_put<char>;
+_LIBCPP_IF_WIDE_CHARACTERS(template struct _LIBCPP_CLASS_TEMPLATE_INSTANTIATION_VIS __num_put<wchar_t>;)
 
-template class _LIBCPP_CLASS_TEMPLATE_INSTANTIATION_VIS time_get<char>;
-template class _LIBCPP_CLASS_TEMPLATE_INSTANTIATION_VIS time_get<wchar_t>;
+                           template class _LIBCPP_CLASS_TEMPLATE_INSTANTIATION_VIS time_get<char>;
+_LIBCPP_IF_WIDE_CHARACTERS(template class _LIBCPP_CLASS_TEMPLATE_INSTANTIATION_VIS time_get<wchar_t>;)
 
-template class _LIBCPP_CLASS_TEMPLATE_INSTANTIATION_VIS time_get_byname<char>;
-template class _LIBCPP_CLASS_TEMPLATE_INSTANTIATION_VIS time_get_byname<wchar_t>;
+                           template class _LIBCPP_CLASS_TEMPLATE_INSTANTIATION_VIS time_get_byname<char>;
+_LIBCPP_IF_WIDE_CHARACTERS(template class _LIBCPP_CLASS_TEMPLATE_INSTANTIATION_VIS time_get_byname<wchar_t>;)
 
-template class _LIBCPP_CLASS_TEMPLATE_INSTANTIATION_VIS time_put<char>;
-template class _LIBCPP_CLASS_TEMPLATE_INSTANTIATION_VIS time_put<wchar_t>;
+                           template class _LIBCPP_CLASS_TEMPLATE_INSTANTIATION_VIS time_put<char>;
+_LIBCPP_IF_WIDE_CHARACTERS(template class _LIBCPP_CLASS_TEMPLATE_INSTANTIATION_VIS time_put<wchar_t>;)
 
-template class _LIBCPP_CLASS_TEMPLATE_INSTANTIATION_VIS time_put_byname<char>;
-template class _LIBCPP_CLASS_TEMPLATE_INSTANTIATION_VIS time_put_byname<wchar_t>;
+                           template class _LIBCPP_CLASS_TEMPLATE_INSTANTIATION_VIS time_put_byname<char>;
+_LIBCPP_IF_WIDE_CHARACTERS(template class _LIBCPP_CLASS_TEMPLATE_INSTANTIATION_VIS time_put_byname<wchar_t>;)
 
-template class _LIBCPP_CLASS_TEMPLATE_INSTANTIATION_VIS moneypunct<char, false>;
-template class _LIBCPP_CLASS_TEMPLATE_INSTANTIATION_VIS moneypunct<char, true>;
-template class _LIBCPP_CLASS_TEMPLATE_INSTANTIATION_VIS moneypunct<wchar_t, false>;
-template class _LIBCPP_CLASS_TEMPLATE_INSTANTIATION_VIS moneypunct<wchar_t, true>;
+                           template class _LIBCPP_CLASS_TEMPLATE_INSTANTIATION_VIS moneypunct<char, false>;
+                           template class _LIBCPP_CLASS_TEMPLATE_INSTANTIATION_VIS moneypunct<char, true>;
+_LIBCPP_IF_WIDE_CHARACTERS(template class _LIBCPP_CLASS_TEMPLATE_INSTANTIATION_VIS moneypunct<wchar_t, false>;)
+_LIBCPP_IF_WIDE_CHARACTERS(template class _LIBCPP_CLASS_TEMPLATE_INSTANTIATION_VIS moneypunct<wchar_t, true>;)
 
-template class _LIBCPP_CLASS_TEMPLATE_INSTANTIATION_VIS moneypunct_byname<char, false>;
-template class _LIBCPP_CLASS_TEMPLATE_INSTANTIATION_VIS moneypunct_byname<char, true>;
-template class _LIBCPP_CLASS_TEMPLATE_INSTANTIATION_VIS moneypunct_byname<wchar_t, false>;
-template class _LIBCPP_CLASS_TEMPLATE_INSTANTIATION_VIS moneypunct_byname<wchar_t, true>;
+                           template class _LIBCPP_CLASS_TEMPLATE_INSTANTIATION_VIS moneypunct_byname<char, false>;
+                           template class _LIBCPP_CLASS_TEMPLATE_INSTANTIATION_VIS moneypunct_byname<char, true>;
+_LIBCPP_IF_WIDE_CHARACTERS(template class _LIBCPP_CLASS_TEMPLATE_INSTANTIATION_VIS moneypunct_byname<wchar_t, false>;)
+_LIBCPP_IF_WIDE_CHARACTERS(template class _LIBCPP_CLASS_TEMPLATE_INSTANTIATION_VIS moneypunct_byname<wchar_t, true>;)
 
-template class _LIBCPP_CLASS_TEMPLATE_INSTANTIATION_VIS money_get<char>;
-template class _LIBCPP_CLASS_TEMPLATE_INSTANTIATION_VIS money_get<wchar_t>;
+                           template class _LIBCPP_CLASS_TEMPLATE_INSTANTIATION_VIS money_get<char>;
+_LIBCPP_IF_WIDE_CHARACTERS(template class _LIBCPP_CLASS_TEMPLATE_INSTANTIATION_VIS money_get<wchar_t>;)
 
-template class _LIBCPP_CLASS_TEMPLATE_INSTANTIATION_VIS __money_get<char>;
-template class _LIBCPP_CLASS_TEMPLATE_INSTANTIATION_VIS __money_get<wchar_t>;
+                           template class _LIBCPP_CLASS_TEMPLATE_INSTANTIATION_VIS __money_get<char>;
+_LIBCPP_IF_WIDE_CHARACTERS(template class _LIBCPP_CLASS_TEMPLATE_INSTANTIATION_VIS __money_get<wchar_t>;)
 
-template class _LIBCPP_CLASS_TEMPLATE_INSTANTIATION_VIS money_put<char>;
-template class _LIBCPP_CLASS_TEMPLATE_INSTANTIATION_VIS money_put<wchar_t>;
+                           template class _LIBCPP_CLASS_TEMPLATE_INSTANTIATION_VIS money_put<char>;
+_LIBCPP_IF_WIDE_CHARACTERS(template class _LIBCPP_CLASS_TEMPLATE_INSTANTIATION_VIS money_put<wchar_t>;)
 
-template class _LIBCPP_CLASS_TEMPLATE_INSTANTIATION_VIS __money_put<char>;
-template class _LIBCPP_CLASS_TEMPLATE_INSTANTIATION_VIS __money_put<wchar_t>;
+                           template class _LIBCPP_CLASS_TEMPLATE_INSTANTIATION_VIS __money_put<char>;
+_LIBCPP_IF_WIDE_CHARACTERS(template class _LIBCPP_CLASS_TEMPLATE_INSTANTIATION_VIS __money_put<wchar_t>;)
 
-template class _LIBCPP_CLASS_TEMPLATE_INSTANTIATION_VIS messages<char>;
-template class _LIBCPP_CLASS_TEMPLATE_INSTANTIATION_VIS messages<wchar_t>;
+                           template class _LIBCPP_CLASS_TEMPLATE_INSTANTIATION_VIS messages<char>;
+_LIBCPP_IF_WIDE_CHARACTERS(template class _LIBCPP_CLASS_TEMPLATE_INSTANTIATION_VIS messages<wchar_t>;)
 
-template class _LIBCPP_CLASS_TEMPLATE_INSTANTIATION_VIS messages_byname<char>;
-template class _LIBCPP_CLASS_TEMPLATE_INSTANTIATION_VIS messages_byname<wchar_t>;
+                           template class _LIBCPP_CLASS_TEMPLATE_INSTANTIATION_VIS messages_byname<char>;
+_LIBCPP_IF_WIDE_CHARACTERS(template class _LIBCPP_CLASS_TEMPLATE_INSTANTIATION_VIS messages_byname<wchar_t>;)
 
-template class _LIBCPP_CLASS_TEMPLATE_INSTANTIATION_VIS codecvt_byname<char, char, mbstate_t>;
-template class _LIBCPP_CLASS_TEMPLATE_INSTANTIATION_VIS codecvt_byname<wchar_t, char, mbstate_t>;
+                           template class _LIBCPP_CLASS_TEMPLATE_INSTANTIATION_VIS codecvt_byname<char, char, mbstate_t>;
+_LIBCPP_IF_WIDE_CHARACTERS(template class _LIBCPP_CLASS_TEMPLATE_INSTANTIATION_VIS codecvt_byname<wchar_t, char, mbstate_t>;)
 template class _LIBCPP_DEPRECATED_IN_CXX20 _LIBCPP_CLASS_TEMPLATE_INSTANTIATION_VIS codecvt_byname<char16_t, char, mbstate_t>;
 template class _LIBCPP_DEPRECATED_IN_CXX20 _LIBCPP_CLASS_TEMPLATE_INSTANTIATION_VIS codecvt_byname<char32_t, char, mbstate_t>;
 #ifndef _LIBCPP_HAS_NO_CHAR8_T

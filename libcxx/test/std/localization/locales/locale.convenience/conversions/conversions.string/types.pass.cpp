@@ -19,6 +19,8 @@
 //     typedef typename Codecvt::state_type                      state_type;
 //     typedef typename wide_string::traits_type::int_type       int_type;
 
+// XFAIL: libcpp-has-no-wide-characters
+
 #include <locale>
 #include <codecvt>
 

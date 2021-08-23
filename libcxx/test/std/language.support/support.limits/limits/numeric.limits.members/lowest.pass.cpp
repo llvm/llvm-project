@@ -12,11 +12,14 @@
 
 #include <limits>
 #include <climits>
-#include <cwchar>
 #include <cfloat>
 #include <cassert>
 
 #include "test_macros.h"
+
+#ifndef TEST_HAS_NO_WIDE_CHARACTERS
+#   include <cwchar>
+#endif
 
 template <class T>
 void
@@ -38,7 +41,9 @@ int main(int, char**)
     test<char>(CHAR_MIN);
     test<signed char>(SCHAR_MIN);
     test<unsigned char>(0);
+#ifndef TEST_HAS_NO_WIDE_CHARACTERS
     test<wchar_t>(WCHAR_MIN);
+#endif
 #if TEST_STD_VER > 17 && defined(__cpp_char8_t)
     test<char8_t>(0);
 #endif

@@ -42,6 +42,7 @@ int main(int, char**)
     assert(re.mark_count() == 0);
     }
 
+#ifndef TEST_HAS_NO_WIDE_CHARACTERS
     {
     std::wstring s1(L"\\(a\\)");
     std::basic_regex re(s1.begin(), s1.end(), std::regex_constants::basic);
@@ -50,6 +51,7 @@ int main(int, char**)
     assert(re.flags() == std::regex_constants::basic);
     assert(re.mark_count() == 1);
     }
+#endif
 
 //  Test the implicit deduction guides
     {
@@ -60,6 +62,7 @@ int main(int, char**)
     assert(re.mark_count() == 2);
     }
 
+#ifndef TEST_HAS_NO_WIDE_CHARACTERS
     {
 //  basic_regex(string, flag_type);
     std::basic_regex re(L"(a([bc]))"s, std::regex_constants::awk);
@@ -67,6 +70,7 @@ int main(int, char**)
     assert(re.flags() == std::regex_constants::awk);
     assert(re.mark_count() == 2);
     }
+#endif
 
     {
 //  basic_regex(const charT*);
@@ -76,6 +80,7 @@ int main(int, char**)
     assert(re.mark_count() == 0);
     }
 
+#ifndef TEST_HAS_NO_WIDE_CHARACTERS
     {
 //  basic_regex(const charT*, flag_type);
     std::basic_regex re(L"ABCDE", std::regex_constants::grep);
@@ -83,6 +88,7 @@ int main(int, char**)
     assert(re.flags() == std::regex_constants::grep);
     assert(re.mark_count() == 0);
     }
+#endif
 
     {
 //  basic_regex(const charT*, size_t);
@@ -92,6 +98,7 @@ int main(int, char**)
     assert(re.mark_count() == 0);
     }
 
+#ifndef TEST_HAS_NO_WIDE_CHARACTERS
     {
 //  basic_regex(const charT*, size_t, flag_type);
     std::basic_regex re(L"ABCDEDEF", 8, std::regex_constants::awk);
@@ -99,6 +106,7 @@ int main(int, char**)
     assert(re.flags() == std::regex_constants::awk);
     assert(re.mark_count() == 0);
     }
+#endif
 
     {
 //  basic_regex(const basic_regex &);
@@ -123,6 +131,7 @@ int main(int, char**)
     assert(re.mark_count() == 0);
     }
 
+#ifndef TEST_HAS_NO_WIDE_CHARACTERS
     {
 //  basic_regex(initializer_list, flag_type);
     std::basic_regex re({L'A', L'B', L'F', L'E', L'D'}, std::regex_constants::grep);
@@ -130,6 +139,7 @@ int main(int, char**)
     assert(re.flags() == std::regex_constants::grep);
     assert(re.mark_count() == 0);
     }
+#endif
 
   return 0;
 }

@@ -34,6 +34,7 @@ int main(int, char**)
         std::istreambuf_iterator<char> i(inf.rdbuf());
         assert(i != std::istreambuf_iterator<char>());
     }
+#ifndef TEST_HAS_NO_WIDE_CHARACTERS
     {
         std::istreambuf_iterator<wchar_t> i(nullptr);
         assert(i == std::istreambuf_iterator<wchar_t>());
@@ -48,6 +49,7 @@ int main(int, char**)
         std::istreambuf_iterator<wchar_t> i(inf.rdbuf());
         assert(i != std::istreambuf_iterator<wchar_t>());
     }
+#endif // TEST_HAS_NO_WIDE_CHARACTERS
 
   return 0;
 }

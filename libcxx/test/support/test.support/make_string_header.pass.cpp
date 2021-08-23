@@ -23,11 +23,13 @@ int main(int, char**) {
     ==   " !\"#$%&'()*+,-./0123456789:;<=>?@ABCDEFGHIJKLMN"
              "OPQRSTUVWXYZ[\\]^_`abcdefghijklmnopqrstuvwxyz{|}~");
 
+#ifndef TEST_HAS_NO_WIDE_CHARACTERS
   assert(MAKE_STRING(wchar_t,
          " !\"#$%&'()*+,-./0123456789:;<=>?@ABCDEFGHIJKLMN"
              "OPQRSTUVWXYZ[\\]^_`abcdefghijklmnopqrstuvwxyz{|}~")
     ==  L" !\"#$%&'()*+,-./0123456789:;<=>?@ABCDEFGHIJKLMN"
              "OPQRSTUVWXYZ[\\]^_`abcdefghijklmnopqrstuvwxyz{|}~");
+#endif
 #ifndef _LIBCPP_HAS_NO_CHAR8_T
   assert(MAKE_STRING(char8_t,
          " !\"#$%&'()*+,-./0123456789:;<=>?@ABCDEFGHIJKLMN"

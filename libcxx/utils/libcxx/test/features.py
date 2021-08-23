@@ -100,6 +100,7 @@ macros = {
   '_LIBCPP_HAS_NO_FILESYSTEM_LIBRARY': 'libcpp-has-no-filesystem-library',
   '_LIBCPP_HAS_NO_RANDOM_DEVICE': 'libcpp-has-no-random-device',
   '_LIBCPP_HAS_NO_LOCALIZATION': 'libcpp-has-no-localization',
+  '_LIBCPP_HAS_NO_WIDE_CHARACTERS': 'libcpp-has-no-wide-characters',
   '_LIBCPP_HAS_NO_INCOMPLETE_FORMAT': 'libcpp-has-no-incomplete-format',
   '_LIBCPP_HAS_NO_INCOMPLETE_RANGES': 'libcpp-has-no-incomplete-ranges',
   '_LIBCPP_HAS_NO_UNICODE': 'libcpp-has-no-unicode',

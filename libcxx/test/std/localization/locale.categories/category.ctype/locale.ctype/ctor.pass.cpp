@@ -12,6 +12,8 @@
 
 // explicit ctype(size_t refs = 0);
 
+// XFAIL: libcpp-has-no-wide-characters
+
 #include <locale>
 #include <cassert>
 

@@ -59,6 +59,7 @@ int main(int, char**)
         assert( i5.equal(i4));
         assert( i5.equal(i5));
     }
+#ifndef TEST_HAS_NO_WIDE_CHARACTERS
     {
         std::wistringstream inf1(L"abc");
         std::wistringstream inf2(L"def");
@@ -98,6 +99,7 @@ int main(int, char**)
         assert( i5.equal(i4));
         assert( i5.equal(i5));
     }
+#endif // TEST_HAS_NO_WIDE_CHARACTERS
 
   return 0;
 }

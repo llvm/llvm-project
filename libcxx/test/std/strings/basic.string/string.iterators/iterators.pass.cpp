@@ -54,7 +54,9 @@ void test()
 int main(int, char**)
 {
     test<std::string>();
+#ifndef TEST_HAS_NO_WIDE_CHARACTERS
     test<std::wstring>();
+#endif
 
 #if defined(__cpp_lib_char8_t) && __cpp_lib_char8_t >= 201811L
     test<std::u8string>();

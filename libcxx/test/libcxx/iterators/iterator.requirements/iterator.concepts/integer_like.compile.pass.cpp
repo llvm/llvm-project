@@ -25,7 +25,9 @@ static_assert(std::__integer_like<unsigned long>);
 static_assert(std::__integer_like<long long>);
 static_assert(std::__integer_like<unsigned long long>);
 static_assert(std::__integer_like<char>);
+#ifndef TEST_HAS_NO_WIDE_CHARACTERS
 static_assert(std::__integer_like<wchar_t>);
+#endif
 static_assert(std::__integer_like<char8_t>);
 static_assert(std::__integer_like<char16_t>);
 static_assert(std::__integer_like<char32_t>);
@@ -42,7 +44,9 @@ static_assert(!std::__signed_integer_like<unsigned int>);
 static_assert(!std::__signed_integer_like<unsigned long>);
 static_assert(!std::__signed_integer_like<unsigned long long>);
 static_assert(std::__signed_integer_like<char> == std::signed_integral<char>);
+#ifndef TEST_HAS_NO_WIDE_CHARACTERS
 static_assert(std::__signed_integer_like<wchar_t> == std::signed_integral<wchar_t>);
+#endif
 static_assert(std::__signed_integer_like<char8_t> == std::signed_integral<char8_t>);
 static_assert(std::__signed_integer_like<char16_t> == std::signed_integral<char16_t>);
 static_assert(std::__signed_integer_like<char32_t> == std::signed_integral<char32_t>);

@@ -78,6 +78,7 @@ template <>
 struct _LIBCPP_TEMPLATE_VIS _LIBCPP_AVAILABILITY_FORMAT formatter<char, char>
     : public __format_spec::__formatter_char<char> {};
 
+#ifndef _LIBCPP_HAS_NO_WIDE_CHARACTERS
 template <>
 struct _LIBCPP_TEMPLATE_VIS _LIBCPP_AVAILABILITY_FORMAT formatter<char, wchar_t>
     : public __format_spec::__formatter_char<wchar_t> {
@@ -93,7 +94,7 @@ template <>
 struct _LIBCPP_TEMPLATE_VIS _LIBCPP_AVAILABILITY_FORMAT
     formatter<wchar_t, wchar_t>
     : public __format_spec::__formatter_char<wchar_t> {};
-
+#endif // _LIBCPP_HAS_NO_WIDE_CHARACTERS
 #endif // !defined(_LIBCPP_HAS_NO_CONCEPTS)
 
 #endif //_LIBCPP_STD_VER > 17

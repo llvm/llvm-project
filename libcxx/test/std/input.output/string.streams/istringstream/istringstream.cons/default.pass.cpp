@@ -43,6 +43,7 @@ int main(int, char**)
         assert(ss.good());
         assert(ss.str() == "");
     }
+#ifndef TEST_HAS_NO_WIDE_CHARACTERS
     {
         std::wistringstream ss;
         assert(ss.rdbuf() != 0);
@@ -55,10 +56,13 @@ int main(int, char**)
         assert(ss.good());
         assert(ss.str() == L"");
     }
+#endif
 
 #if TEST_STD_VER >= 11
     test<std::istringstream>();
+#   ifndef _LIBCPP_HAS_NO_WIDE_CHARACTERS
     test<std::wistringstream>();
+#   endif
 #endif
 
     return 0;

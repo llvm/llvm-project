@@ -25,11 +25,13 @@ int main(int, char**)
         const std::numpunct<C>& np = std::use_facet<std::numpunct<C> >(l);
         assert(np.thousands_sep() == ',');
     }
+#ifndef TEST_HAS_NO_WIDE_CHARACTERS
     {
         typedef wchar_t C;
         const std::numpunct<C>& np = std::use_facet<std::numpunct<C> >(l);
         assert(np.thousands_sep() == L',');
     }
+#endif
 
   return 0;
 }

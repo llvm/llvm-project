@@ -6,6 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
+// XFAIL: libcpp-has-no-wide-characters
+
 // <cwchar>
 
 #include <cwchar>

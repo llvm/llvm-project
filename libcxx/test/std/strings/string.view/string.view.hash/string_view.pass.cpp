@@ -65,7 +65,9 @@ int main(int, char**)
     test<std::u16string_view>();
     test<std::u32string_view>();
 #endif
+#ifndef TEST_HAS_NO_WIDE_CHARACTERS
     test<std::wstring_view>();
+#endif
 
   return 0;
 }

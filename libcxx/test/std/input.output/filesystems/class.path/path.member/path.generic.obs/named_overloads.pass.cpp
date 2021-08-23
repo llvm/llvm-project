@@ -62,10 +62,12 @@ int main(int, char**)
     assert(s == (const char*)MS);
 #endif
   }
+#ifndef TEST_HAS_NO_WIDE_CHARACTERS
   {
     std::wstring s = p.generic_wstring();
     assert(s == (const wchar_t*)MS);
   }
+#endif
   {
     std::u16string s = p.generic_u16string();
     assert(s == (const char16_t*)MS);

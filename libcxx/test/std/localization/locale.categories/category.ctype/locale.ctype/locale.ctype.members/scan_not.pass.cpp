@@ -12,6 +12,8 @@
 
 // const charT* scan_not(mask m, const charT* low, const charT* high) const;
 
+// XFAIL: libcpp-has-no-wide-characters
+
 #include <locale>
 #include <string>
 #include <vector>

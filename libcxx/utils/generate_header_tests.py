@@ -50,6 +50,11 @@ header_markup = {
     "streambuf": ["ifndef _LIBCPP_HAS_NO_LOCALIZATION"],
     "strstream": ["ifndef _LIBCPP_HAS_NO_LOCALIZATION"],
 
+    "wctype.h": ["ifndef _LIBCPP_HAS_NO_WIDE_CHARACTERS"],
+    "cwctype": ["ifndef _LIBCPP_HAS_NO_WIDE_CHARACTERS"],
+    "cwchar": ["ifndef _LIBCPP_HAS_NO_WIDE_CHARACTERS"],
+    "wchar.h": ["ifndef _LIBCPP_HAS_NO_WIDE_CHARACTERS"],
+
     "experimental/coroutine": ["if defined(__cpp_coroutines)"],
     "experimental/regex": ["ifndef _LIBCPP_HAS_NO_LOCALIZATION"],
 }

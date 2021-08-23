@@ -45,9 +45,11 @@ int main(int, char**)
 {
     {
         test_match_result_typedef<const char*, pmr::cmatch>();
-        test_match_result_typedef<const wchar_t*, pmr::wcmatch>();
         test_match_result_typedef<pmr::string::const_iterator, pmr::smatch>();
+#ifndef TEST_HAS_NO_WIDE_CHARACTERS
+        test_match_result_typedef<const wchar_t*, pmr::wcmatch>();
         test_match_result_typedef<pmr::wstring::const_iterator, pmr::wsmatch>();
+#endif
     }
     {
         // Check that std::match_results has been included and is complete.

@@ -1283,9 +1283,11 @@ public:
     return __s;
   }
 
+#ifndef _LIBCPP_HAS_NO_WIDE_CHARACTERS
   _LIBCPP_INLINE_VISIBILITY _VSTD::wstring wstring() const {
     return string<wchar_t>();
   }
+#endif
   _LIBCPP_INLINE_VISIBILITY _VSTD::u16string u16string() const {
     return string<char16_t>();
   }
@@ -1310,7 +1312,9 @@ public:
     return string<_ECharT, _Traits, _Allocator>(__a);
   }
 
+#ifndef _LIBCPP_HAS_NO_WIDE_CHARACTERS
   _VSTD::wstring generic_wstring() const { return string<wchar_t>(); }
+#endif
   _VSTD::u16string generic_u16string() const { return string<char16_t>(); }
   _VSTD::u32string generic_u32string() const { return string<char32_t>(); }
 #endif /* !_LIBCPP_HAS_NO_LOCALIZATION */

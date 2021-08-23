@@ -351,7 +351,9 @@ constexpr void test() {
 
 constexpr bool test() {
   test<char>();
+#ifndef TEST_HAS_NO_WIDE_CHARACTERS
   test<wchar_t>();
+#endif
 #ifndef _LIBCPP_HAS_NO_CHAR8_T
   test<char8_t>();
 #endif
@@ -368,10 +370,12 @@ int main(int, char**) {
   // Make sure the parsers match the expectations. The layout of the
   // subobjects is chosen to minimize the size required.
   LIBCPP_STATIC_ASSERT(sizeof(Parser<char>) == 3 * sizeof(uint32_t));
+#ifndef TEST_HAS_NO_WIDE_CHARACTERS
   LIBCPP_STATIC_ASSERT(
       sizeof(Parser<wchar_t>) ==
       (sizeof(wchar_t) <= 2 ? 3 * sizeof(uint32_t) : 4 * sizeof(uint32_t)));
 #endif
+#endif // _WIN32
 
   test();
   static_assert(test());

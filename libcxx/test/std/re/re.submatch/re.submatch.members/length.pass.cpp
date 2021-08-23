@@ -29,6 +29,7 @@ int main(int, char**)
         sm.matched = true;
         assert(sm.length() == 3);
     }
+#ifndef TEST_HAS_NO_WIDE_CHARACTERS
     {
         typedef wchar_t CharT;
         typedef std::sub_match<const CharT*> SM;
@@ -40,6 +41,7 @@ int main(int, char**)
         sm.matched = true;
         assert(sm.length() == 3);
     }
+#endif
 
   return 0;
 }

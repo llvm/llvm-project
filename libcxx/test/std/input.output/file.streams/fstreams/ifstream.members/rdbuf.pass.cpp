@@ -27,11 +27,13 @@ int main(int, char**)
         std::filebuf* fb = fs.rdbuf();
         assert(fb->sgetc() == 'r');
     }
+#ifndef TEST_HAS_NO_WIDE_CHARACTERS
     {
         std::wifstream fs("test.dat");
         std::wfilebuf* fb = fs.rdbuf();
         assert(fb->sgetc() == L'r');
     }
+#endif
 
   return 0;
 }

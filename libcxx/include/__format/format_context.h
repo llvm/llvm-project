@@ -146,8 +146,9 @@ private:
 // (such as a span<charT>) and polymorphic reallocation. - end note]
 
 using format_context = basic_format_context<back_insert_iterator<string>, char>;
-using wformat_context =
-    basic_format_context<back_insert_iterator<wstring>, wchar_t>;
+#ifndef _LIBCPP_HAS_NO_WIDE_CHARACTERS
+using wformat_context = basic_format_context<back_insert_iterator<wstring>, wchar_t>;
+#endif
 
 #endif // !defined(_LIBCPP_HAS_NO_CONCEPTS)
 

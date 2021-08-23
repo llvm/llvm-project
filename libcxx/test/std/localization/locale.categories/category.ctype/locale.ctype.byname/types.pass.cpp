@@ -38,11 +38,13 @@ int main(int, char**)
             assert(&std::use_facet<std::ctype<char> >(l)
                 == &std::use_facet<std::ctype_byname<char> >(l));
         }
+#ifndef TEST_HAS_NO_WIDE_CHARACTERS
         {
             assert(std::has_facet<std::ctype_byname<wchar_t> >(l));
             assert(&std::use_facet<std::ctype<wchar_t> >(l)
                 == &std::use_facet<std::ctype_byname<wchar_t> >(l));
         }
+#endif
     }
     {
         std::locale l("C");
@@ -51,11 +53,13 @@ int main(int, char**)
             assert(&std::use_facet<std::ctype<char> >(l)
                 == &std::use_facet<std::ctype_byname<char> >(l));
         }
+#ifndef TEST_HAS_NO_WIDE_CHARACTERS
         {
             assert(std::has_facet<std::ctype_byname<wchar_t> >(l));
             assert(&std::use_facet<std::ctype<wchar_t> >(l)
                 == &std::use_facet<std::ctype_byname<wchar_t> >(l));
         }
+#endif
     }
 
   return 0;

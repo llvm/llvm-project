@@ -49,7 +49,9 @@ New Features
 API Changes
 -----------
 
-- ...
+- Support for building libc++ on top of a C Standard Library that does not support ``wchar_t`` was
+  added. This is useful for building libc++ in an embedded setting, and it adds itself to the various
+  freestanding-friendly options provided by libc++.
 
 Build System Changes
 --------------------

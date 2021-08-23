@@ -1473,7 +1473,9 @@ template<> struct __cxx_is_always_lock_free<char8_t> { enum { __value = 2 == ATO
 #endif
 template<> struct __cxx_is_always_lock_free<char16_t> { enum { __value = 2 == ATOMIC_CHAR16_T_LOCK_FREE }; };
 template<> struct __cxx_is_always_lock_free<char32_t> { enum { __value = 2 == ATOMIC_CHAR32_T_LOCK_FREE }; };
+#ifndef _LIBCPP_HAS_NO_WIDE_CHARACTERS
 template<> struct __cxx_is_always_lock_free<wchar_t> { enum { __value = 2 == ATOMIC_WCHAR_T_LOCK_FREE }; };
+#endif
 template<> struct __cxx_is_always_lock_free<short> { enum { __value = 2 == ATOMIC_SHORT_LOCK_FREE }; };
 template<> struct __cxx_is_always_lock_free<unsigned short> { enum { __value = 2 == ATOMIC_SHORT_LOCK_FREE }; };
 template<> struct __cxx_is_always_lock_free<int> { enum { __value = 2 == ATOMIC_INT_LOCK_FREE }; };
@@ -2672,7 +2674,9 @@ typedef atomic<char8_t>            atomic_char8_t;
 #endif
 typedef atomic<char16_t>           atomic_char16_t;
 typedef atomic<char32_t>           atomic_char32_t;
+#ifndef _LIBCPP_HAS_NO_WIDE_CHARACTERS
 typedef atomic<wchar_t>            atomic_wchar_t;
+#endif
 
 typedef atomic<int_least8_t>   atomic_int_least8_t;
 typedef atomic<uint_least8_t>  atomic_uint_least8_t;

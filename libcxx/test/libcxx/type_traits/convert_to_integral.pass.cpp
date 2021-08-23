@@ -87,7 +87,9 @@ int main(int, char**)
   check_integral_types<char, int>();
   check_integral_types<signed char, int>();
   check_integral_types<unsigned char, int>();
+#ifndef TEST_HAS_NO_WIDE_CHARACTERS
   check_integral_types<wchar_t, decltype(((wchar_t)1) + 1)>();
+#endif
   check_integral_types<char16_t, int>();
   // On some platforms, unsigned int and long are the same size.  These
   // platforms have a choice of making uint32_t an int or a long.  However

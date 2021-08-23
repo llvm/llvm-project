@@ -56,7 +56,9 @@ int main(int, char**)
     static_assert((std::is_same<std::atomic<unsigned long>, std::atomic_ulong>::value), "");
     static_assert((std::is_same<std::atomic<long long>, std::atomic_llong>::value), "");
     static_assert((std::is_same<std::atomic<unsigned long long>, std::atomic_ullong>::value), "");
+#ifndef TEST_HAS_NO_WIDE_CHARACTERS
     static_assert((std::is_same<std::atomic<wchar_t>, std::atomic_wchar_t>::value), "");
+#endif
 #if TEST_STD_VER > 17 && defined(__cpp_char8_t)
     static_assert((std::is_same<std::atomic<char8_t>, std::atomic_char8_t>::value), "");
 #endif

@@ -32,6 +32,8 @@ int main(int, char**)
         (void)it2;
 #endif
     }
+
+#ifndef TEST_HAS_NO_WIDE_CHARACTERS
     {
         typedef std::istreambuf_iterator<wchar_t> T;
         T it;
@@ -41,6 +43,7 @@ int main(int, char**)
         (void)it2;
 #endif
     }
+#endif // TEST_HAS_NO_WIDE_CHARACTERS
 
   return 0;
 }

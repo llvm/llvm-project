@@ -36,8 +36,6 @@
 MultiStringType InStr =  MKSTR("abcdefg/\"hijklmnop\"/qrstuvwxyz/123456789");
 MultiStringType OutStr = MKSTR("\"abcdefg/\\\"hijklmnop\\\"/qrstuvwxyz/123456789\"");
 
-
-
 template <class CharT>
 void doIOTest() {
   using namespace fs;
@@ -83,15 +81,19 @@ template <class Stream, class Tp>
 struct is_istreamable : decltype(impl::is_istreamable_imp<Stream, Tp>(0)) {};
 
 void test_LWG2989() {
+#ifndef TEST_HAS_NO_WIDE_CHARACTERS
   static_assert(!is_ostreamable<decltype(std::cout), std::wstring>::value, "");
   static_assert(!is_ostreamable<decltype(std::wcout), std::string>::value, "");
   static_assert(!is_istreamable<decltype(std::cin), std::wstring>::value, "");
   static_assert(!is_istreamable<decltype(std::wcin), std::string>::value, "");
+#endif
 }
 
 int main(int, char**) {
   doIOTest<char>();
+#ifndef TEST_HAS_NO_WIDE_CHARACTERS
   doIOTest<wchar_t>();
+#endif
   //doIOTest<char16_t>();
   //doIOTest<char32_t>();
   test_LWG2989();

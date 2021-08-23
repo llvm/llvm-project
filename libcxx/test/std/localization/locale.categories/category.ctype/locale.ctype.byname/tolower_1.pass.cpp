@@ -55,6 +55,7 @@ int main(int, char**)
             assert(f.tolower('\xFA') == '\xFA');
         }
     }
+#ifndef TEST_HAS_NO_WIDE_CHARACTERS
     {
         std::locale l;
         {
@@ -89,6 +90,7 @@ int main(int, char**)
             assert(f.tolower(L'\xFA') == L'\xFA');
         }
     }
+#endif // TEST_HAS_NO_WIDE_CHARACTERS
 
   return 0;
 }

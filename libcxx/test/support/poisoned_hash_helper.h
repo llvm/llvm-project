@@ -57,7 +57,9 @@ using LibraryHashTypes = TypeList<
       char,
       signed char,
       unsigned char,
+#ifndef TEST_HAS_NO_WIDE_CHARACTERS
       wchar_t,
+#endif
 #ifndef _LIBCPP_HAS_NO_UNICODE_CHARS
       char16_t,
       char32_t,

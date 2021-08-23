@@ -55,10 +55,12 @@ auto test_exception = []<class CharT, class... Args>(
 };
 
 int main(int, char**) {
-  format_tests_char_to_wchar_t(test);
-
   format_tests<char>(test, test_exception);
+
+#ifndef TEST_HAS_NO_WIDE_CHARACTERS
+  format_tests_char_to_wchar_t(test);
   format_tests<wchar_t>(test, test_exception);
+#endif
 
   return 0;
 }

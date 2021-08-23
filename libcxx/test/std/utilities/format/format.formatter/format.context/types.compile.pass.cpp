@@ -99,7 +99,9 @@ constexpr void test() {
 
 constexpr void test() {
   test<std::back_insert_iterator<std::basic_string<char>>, char>();
+#ifndef TEST_HAS_NO_WIDE_CHARACTERS
   test<std::back_insert_iterator<std::basic_string<wchar_t>>, wchar_t>();
+#endif
   test<std::back_insert_iterator<std::basic_string<char8_t>>, char8_t>();
   test<std::back_insert_iterator<std::basic_string<char16_t>>, char16_t>();
   test<std::back_insert_iterator<std::basic_string<char32_t>>, char32_t>();
@@ -109,11 +111,13 @@ static_assert(std::is_same_v<
               std::format_context,
               std::basic_format_context<
                   std::back_insert_iterator<std::basic_string<char>>, char>>);
+#ifndef TEST_HAS_NO_WIDE_CHARACTERS
 static_assert(
     std::is_same_v<
         std::wformat_context,
         std::basic_format_context<
             std::back_insert_iterator<std::basic_string<wchar_t>>, wchar_t>>);
+#endif
 
 // Required for MSVC internal test runner compatibility.
 int main(int, char**) { return 0; }
