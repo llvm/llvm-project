@@ -767,6 +767,15 @@ unsigned GCCAsmStmt::AnalyzeAsmString(SmallVectorImpl<AsmStringPiece>&Pieces,
       CurPtr = NameEnd+1;
       continue;
     }
+    // FIXME: This is just a hack! '(' and  ')' shouldn't be used!
+    if (EscapedChar == '(') {
+      Pieces.emplace_back("\n.set noreorder\n");
+      continue;
+    }
+    if (EscapedChar == ')') {
+      Pieces.emplace_back("\n.set reorder\n");
+      continue;
+    }
 
     DiagOffs = CurPtr-StrStart-1;
     return diag::err_asm_invalid_escape;
