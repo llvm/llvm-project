@@ -3,7 +3,7 @@
 
 %S = type { i32, i32, i32, i32 }
 
-declare void @foo(...) readonly
+declare void @foo(...) inaccessiblememonly
 
 ; We can split %entry and create a memcmp(16 bytes).
 define zeroext i1 @opeq1(

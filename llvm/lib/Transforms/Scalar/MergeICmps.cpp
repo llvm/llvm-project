@@ -66,15 +66,6 @@ namespace {
 
 #define DEBUG_TYPE "mergeicmps"
 
-// Returns true if the instruction is a simple load or a simple store
-static bool isSimpleLoadOrStore(const Instruction *I) {
-  if (const LoadInst *LI = dyn_cast<LoadInst>(I))
-    return LI->isSimple();
-  if (const StoreInst *SI = dyn_cast<StoreInst>(I))
-    return SI->isSimple();
-  return false;
-}
-
 // A BCE atom "Binary Compare Expression Atom" represents an integer load
 // that is a constant offset from a base value, e.g. `a` or `o.c` in the example
 // at the top.
@@ -244,10 +235,7 @@ bool BCECmpBlock::canSinkBCECmpInst(const Instruction *Inst,
   // If this instruction may clobber the loads and is in middle of the BCE cmp
   // block instructions, then bail for now.
   if (Inst->mayWriteToMemory()) {
-    // Bail if this is not a simple load or store
-    if (!isSimpleLoadOrStore(Inst))
-      return false;
-    // Disallow stores that might alias the BCE operands
+    // Disallow instructions that might modify the BCE operands
     MemoryLocation LLoc = MemoryLocation::get(Cmp.Lhs.LoadI);
     MemoryLocation RLoc = MemoryLocation::get(Cmp.Rhs.LoadI);
     if (isModSet(AA.getModRefInfo(Inst, LLoc)) ||
