@@ -1,8 +1,6 @@
 // RUN: %clang -target x86_64-linux-gnu -S -emit-llvm -o - %s | FileCheck -check-prefixes CHECK,WITHOUT %s
 // RUN: %clang -target x86_64-linux-gnu -S -emit-llvm -o - %s -fsanitize=thread | FileCheck -check-prefixes CHECK,TSAN %s
 
-#include <stdatomic.h>
-
 // Instrumented function.
 // TSan inserts calls to __tsan_func_entry() and __tsan_func_exit() to prologue/epilogue.
 // Non-atomic loads are instrumented with __tsan_readXXX(), atomic loads - with
@@ -19,7 +17,7 @@
 // WITHOUT-NOT: call void @__tsan_func_exit
 // CHECK: ret i32
 int instrumented1(int *a, _Atomic int *b) {
-  return *a + atomic_load(b);
+  return *a + *b;
 }
 
 // Function with no_sanitize("thread").
@@ -37,7 +35,7 @@ int instrumented1(int *a, _Atomic int *b) {
 // WITHOUT-NOT: call void @__tsan_func_exit
 // CHECK: ret i32
 __attribute__((no_sanitize("thread"))) int no_false_positives1(int *a, _Atomic int *b) {
-  return *a + atomic_load(b);
+  return *a + *b;
 }
 
 // Function with disable_sanitizer_instrumentation: no instrumentation at all.
@@ -53,5 +51,5 @@ __attribute__((no_sanitize("thread"))) int no_false_positives1(int *a, _Atomic i
 // WITHOUT-NOT: call void @__tsan_func_exit
 // CHECK: ret i32
 __attribute__((disable_sanitizer_instrumentation)) int no_instrumentation1(int *a, _Atomic int *b) {
-  return *a + atomic_load(b);
+  return *a + *b;
 }
