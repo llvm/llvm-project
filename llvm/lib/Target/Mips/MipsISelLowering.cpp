@@ -4460,6 +4460,21 @@ void MipsTargetLowering::LowerAsmOperandForConstraint(SDValue Op,
       }
     }
     return;
+  case 'M': // immediate that cannot be loaded using lui, addiu or ori
+    if (ConstantSDNode *C = dyn_cast<ConstantSDNode>(Op)) {
+      assert(Subtarget.hasNanoMips());
+      EVT Type = Op.getValueType();
+      int64_t Val = C->getSExtValue();
+      bool IsLui = SignExtend64(Val & 0xfffff000, 32) == Val;
+      bool IsOri = (Val & 0xfff) == Val;
+      bool IsAddiu =
+          ((Val <= 65535) && (Val >= 0)) || ((Val >= -4095) && (Val <= 0));
+      if (!IsLui && !IsOri && !IsAddiu) {
+        Result = DAG.getTargetConstant(Val, DL, Type);
+        break;
+      }
+    }
+    return;
   }
 
   if (Result.getNode()) {
