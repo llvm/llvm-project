@@ -12,11 +12,14 @@
 #ifndef _TARGET_IMPL_H_
 #define _TARGET_IMPL_H_
 
-#include <inttypes.h>
-#include <stdio.h>
-#include <stdlib.h>
-
 #include "nvptx_interface.h"
+
+#include <stddef.h>
+#include <stdint.h>
+
+// subset of inttypes.h
+#define PRId64 "ld"
+#define PRIu64 "lu"
 
 typedef uint32_t __kmpc_impl_lanemask_t;
 
@@ -79,5 +82,7 @@ enum DATA_SHARING_SIZES {
 enum : __kmpc_impl_lanemask_t {
   __kmpc_impl_all_lanes = ~(__kmpc_impl_lanemask_t)0
 };
+
+#define printf(...)
 
 #endif
