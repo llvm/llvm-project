@@ -1,8 +1,6 @@
 ; RUN: opt -function-specialization -func-specialization-avg-iters-cost=3 -func-specialization-size-threshold=10 -S < %s | FileCheck %s
 
-; Check that the loop depth results in a larger specialization bonus.
-; CHECK: @foo.1(
-; CHECK: @foo.2(
+; CHECK-NOT: foo.{{[0-9]+}}
 
 target datalayout = "e-m:e-i8:8:32-i16:16:32-i64:64-i128:128-n32:64-S128"
 
@@ -15,7 +13,7 @@ declare i1 @cond_begin()
 declare i1 @cond_end()
 declare i1 @getCond()
 
-define internal i32 @foo(i32 %x, i32* %b, i32* %c) {
+define internal i32 @foo(i32 %x, i32* %b, i32* %c) alwaysinline {
 entry:
   br label %loop.entry
 
