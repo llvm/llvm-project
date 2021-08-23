@@ -1157,8 +1157,8 @@ define i8 @freeToInvertSub(i8 %x, i8 %y, i8 %z) {
 ; CHECK-NEXT:    call void @use(i8 [[NX]])
 ; CHECK-NEXT:    call void @use(i8 [[NY]])
 ; CHECK-NEXT:    call void @use(i8 [[NZ]])
-; CHECK-NEXT:    [[TMP1:%.*]] = call i8 @llvm.umin.i8(i8 [[X]], i8 [[Y]])
-; CHECK-NEXT:    [[SUB:%.*]] = sub i8 [[TMP1]], [[Z]]
+; CHECK-NEXT:    [[M:%.*]] = call i8 @llvm.umax.i8(i8 [[NX]], i8 [[NY]])
+; CHECK-NEXT:    [[SUB:%.*]] = sub i8 [[NZ]], [[M]]
 ; CHECK-NEXT:    ret i8 [[SUB]]
 ;
   %nx = xor i8 %x, -1
