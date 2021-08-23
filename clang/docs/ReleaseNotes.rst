@@ -118,7 +118,7 @@ C++2b Feature Support
 ...
 
 CUDA Language Changes in Clang
----------------------------
+------------------------------
 
 - Clang now supports CUDA versions up to 11.4.
 - Default GPU architecture has been changed from sm_20 to sm_35.
