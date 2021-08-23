@@ -370,6 +370,10 @@ public:
     return getLangASFromTargetAS(Constant);
   }
 
+  const llvm::omp::GV &getGridValue() const override {
+    return llvm::omp::AMDGPUGridValues;
+  }
+
   /// \returns Target specific vtbl ptr address space.
   unsigned getVtblPtrAddressSpace() const override {
     return static_cast<unsigned>(Constant);
