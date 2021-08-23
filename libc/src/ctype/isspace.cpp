@@ -15,6 +15,8 @@ namespace __llvm_libc {
 
 // TODO: Currently restricted to default locale.
 // These should be extended using locale information.
-LLVM_LIBC_FUNCTION(int, isspace, (int c)) { return internal::isspace(c); }
+LLVM_LIBC_FUNCTION(int, isspace, (int c)) {
+  return static_cast<int>(internal::isspace(static_cast<unsigned>(c)));
+}
 
 } // namespace __llvm_libc
