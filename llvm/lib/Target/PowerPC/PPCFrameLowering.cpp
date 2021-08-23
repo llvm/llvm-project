@@ -279,11 +279,11 @@ static bool MustSaveLR(const MachineFunction &MF, unsigned LR) {
 
 /// determineFrameLayoutAndUpdate - Determine the size of the frame and maximum
 /// call frame size. Update the MachineFunction object with the stack size.
-unsigned
+uint64_t
 PPCFrameLowering::determineFrameLayoutAndUpdate(MachineFunction &MF,
                                                 bool UseEstimate) const {
   unsigned NewMaxCallFrameSize = 0;
-  unsigned FrameSize = determineFrameLayout(MF, UseEstimate,
+  uint64_t FrameSize = determineFrameLayout(MF, UseEstimate,
                                             &NewMaxCallFrameSize);
   MF.getFrameInfo().setStackSize(FrameSize);
   MF.getFrameInfo().setMaxCallFrameSize(NewMaxCallFrameSize);
@@ -292,7 +292,7 @@ PPCFrameLowering::determineFrameLayoutAndUpdate(MachineFunction &MF,
 
 /// determineFrameLayout - Determine the size of the frame and maximum call
 /// frame size.
-unsigned
+uint64_t
 PPCFrameLowering::determineFrameLayout(const MachineFunction &MF,
                                        bool UseEstimate,
                                        unsigned *NewMaxCallFrameSize) const {
@@ -300,7 +300,7 @@ PPCFrameLowering::determineFrameLayout(const MachineFunction &MF,
   const PPCFunctionInfo *FI = MF.getInfo<PPCFunctionInfo>();
 
   // Get the number of bytes to allocate from the FrameInfo
-  unsigned FrameSize =
+  uint64_t FrameSize =
     UseEstimate ? MFI.estimateStackSize(MF) : MFI.getStackSize();
 
   // Get stack alignments. The frame must be aligned to the greatest of these:
@@ -624,9 +624,9 @@ void PPCFrameLowering::emitPrologue(MachineFunction &MF,
   assert((isSVR4ABI || Subtarget.isAIXABI()) && "Unsupported PPC ABI.");
 
   // Work out frame sizes.
-  unsigned FrameSize = determineFrameLayoutAndUpdate(MF);
-  int NegFrameSize = -FrameSize;
-  if (!isInt<32>(NegFrameSize))
+  uint64_t FrameSize = determineFrameLayoutAndUpdate(MF);
+  int64_t NegFrameSize = -FrameSize;
+  if (!isInt<32>(FrameSize) || !isInt<32>(NegFrameSize))
     llvm_unreachable("Unhandled stack size!");
 
   if (MFI.isFrameAddressTaken())
@@ -692,9 +692,9 @@ void PPCFrameLowering::emitPrologue(MachineFunction &MF,
 
   SingleScratchReg = ScratchReg == TempReg;
 
-  int LROffset = getReturnSaveOffset();
+  int64_t LROffset = getReturnSaveOffset();
 
-  int FPOffset = 0;
+  int64_t FPOffset = 0;
   if (HasFP) {
     MachineFrameInfo &MFI = MF.getFrameInfo();
     int FPIndex = FI->getFramePointerSaveIndex();
@@ -702,7 +702,7 @@ void PPCFrameLowering::emitPrologue(MachineFunction &MF,
     FPOffset = MFI.getObjectOffset(FPIndex);
   }
 
-  int BPOffset = 0;
+  int64_t BPOffset = 0;
   if (HasBP) {
     MachineFrameInfo &MFI = MF.getFrameInfo();
     int BPIndex = FI->getBasePointerSaveIndex();
@@ -710,7 +710,7 @@ void PPCFrameLowering::emitPrologue(MachineFunction &MF,
     BPOffset = MFI.getObjectOffset(BPIndex);
   }
 
-  int PBPOffset = 0;
+  int64_t PBPOffset = 0;
   if (FI->usesPICBase()) {
     MachineFrameInfo &MFI = MF.getFrameInfo();
     int PBPIndex = FI->getPICBasePointerSaveIndex();
@@ -854,7 +854,7 @@ void PPCFrameLowering::emitPrologue(MachineFunction &MF,
     // ABI.
     if (HasROPProtect) {
       const int SaveIndex = FI->getROPProtectionHashSaveIndex();
-      const int ImmOffset = MFI.getObjectOffset(SaveIndex);
+      const int64_t ImmOffset = MFI.getObjectOffset(SaveIndex);
       assert((ImmOffset <= -8 && ImmOffset >= -512) &&
              "ROP hash save offset out of range.");
       assert(((ImmOffset & 0x7) == 0) &&
@@ -1212,7 +1212,7 @@ void PPCFrameLowering::emitPrologue(MachineFunction &MF,
         BuildMI(MBB, MBBI, dl, TII.get(TargetOpcode::CFI_INSTRUCTION))
           .addCFIIndex(CFIRegister);
       } else {
-        int Offset = MFI.getObjectOffset(CSI[I].getFrameIdx());
+        int64_t Offset = MFI.getObjectOffset(CSI[I].getFrameIdx());
         // We have changed the object offset above but we do not want to change
         // the actual offsets in the CFI instruction so we have to undo the
         // offset change here.
@@ -1550,7 +1550,7 @@ void PPCFrameLowering::emitEpilogue(MachineFunction &MF,
   const MachineFrameInfo &MFI = MF.getFrameInfo();
 
   // Get the number of bytes allocated from the FrameInfo.
-  int FrameSize = MFI.getStackSize();
+  int64_t FrameSize = MFI.getStackSize();
 
   // Get processor type.
   bool isPPC64 = Subtarget.isPPC64();
@@ -1592,9 +1592,9 @@ void PPCFrameLowering::emitEpilogue(MachineFunction &MF,
                                                      : PPC::MTOCRF);
   const MCInstrDesc &HashChk =
       TII.get(HasPrivileged ? PPC::HASHCHKP : PPC::HASHCHK);
-  int LROffset = getReturnSaveOffset();
+  int64_t LROffset = getReturnSaveOffset();
 
-  int FPOffset = 0;
+  int64_t FPOffset = 0;
 
   // Using the same bool variable as below to suppress compiler warnings.
   bool SingleScratchReg = findScratchRegister(&MBB, true, false, &ScratchReg,
@@ -1610,14 +1610,14 @@ void PPCFrameLowering::emitEpilogue(MachineFunction &MF,
     FPOffset = MFI.getObjectOffset(FPIndex);
   }
 
-  int BPOffset = 0;
+  int64_t BPOffset = 0;
   if (HasBP) {
       int BPIndex = FI->getBasePointerSaveIndex();
       assert(BPIndex && "No Base Pointer Save Slot!");
       BPOffset = MFI.getObjectOffset(BPIndex);
   }
 
-  int PBPOffset = 0;
+  int64_t PBPOffset = 0;
   if (FI->usesPICBase()) {
     int PBPIndex = FI->getPICBasePointerSaveIndex();
     assert(PBPIndex && "No PIC Base Pointer Save Slot!");
@@ -1865,7 +1865,7 @@ void PPCFrameLowering::emitEpilogue(MachineFunction &MF,
     // hash and then compare it to the hash stored in the prologue.
     if (HasROPProtect) {
       const int SaveIndex = FI->getROPProtectionHashSaveIndex();
-      const int ImmOffset = MFI.getObjectOffset(SaveIndex);
+      const int64_t ImmOffset = MFI.getObjectOffset(SaveIndex);
       assert((ImmOffset <= -8 && ImmOffset >= -512) &&
              "ROP hash check location offset out of range.");
       assert(((ImmOffset & 0x7) == 0) &&
@@ -2680,15 +2680,15 @@ bool PPCFrameLowering::restoreCalleeSavedRegisters(
   return true;
 }
 
-unsigned PPCFrameLowering::getTOCSaveOffset() const {
+uint64_t PPCFrameLowering::getTOCSaveOffset() const {
   return TOCSaveOffset;
 }
 
-unsigned PPCFrameLowering::getFramePointerSaveOffset() const {
+uint64_t PPCFrameLowering::getFramePointerSaveOffset() const {
   return FramePointerSaveOffset;
 }
 
-unsigned PPCFrameLowering::getBasePointerSaveOffset() const {
+uint64_t PPCFrameLowering::getBasePointerSaveOffset() const {
   return BasePointerSaveOffset;
 }
 
