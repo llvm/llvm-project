@@ -76,8 +76,8 @@ move.l	(%a1), %d3
 ; CHECK-SAME: encoding: [0x28,0x51]
 move.l	(%a1), %a4
 
-// FIXME: Currently we don't have the 'B' encoding
-// (i.e. abs.W) so we're always using 32-bit absolute address.
+; FIXME: Currently we don't have the 'B' encoding
+; (i.e. abs.W) so we're always using 32-bit absolute address.
 ; CHECK:      move.b  $0, %d0
 ; CHECK-SAME: encoding: [0x10,0x39,0x00,0x00,0x00,0x00]
 move.b	$0, %d0
