@@ -85,7 +85,7 @@ class BitVector {
   unsigned Size; // Size of bitvector in bits.
 
 public:
-  typedef unsigned size_type;
+  using size_type = unsigned;
 
   // Encapsulation of a single bit.
   class reference {
@@ -536,8 +536,8 @@ public:
                [&Arg](auto const &BV) { return Arg.size() == BV; }) &&
            "consistent sizes");
     Out.resize(Arg.size());
-    for (size_t i = 0, e = Arg.Bits.size(); i != e; ++i)
-      Out.Bits[i] = f(Arg.Bits[i], Args.Bits[i]...);
+    for (size_type I = 0, E = Arg.Bits.size(); I != E; ++I)
+      Out.Bits[I] = f(Arg.Bits[I], Args.Bits[I]...);
     Out.clear_unused_bits();
     return Out;
   }
@@ -545,16 +545,16 @@ public:
   BitVector &operator|=(const BitVector &RHS) {
     if (size() < RHS.size())
       resize(RHS.size());
-    for (size_t i = 0, e = RHS.Bits.size(); i != e; ++i)
-      Bits[i] |= RHS.Bits[i];
+    for (size_type I = 0, E = RHS.Bits.size(); I != E; ++I)
+      Bits[I] |= RHS.Bits[I];
     return *this;
   }
 
   BitVector &operator^=(const BitVector &RHS) {
     if (size() < RHS.size())
       resize(RHS.size());
-    for (size_t i = 0, e = RHS.Bits.size(); i != e; ++i)
-      Bits[i] ^= RHS.Bits[i];
+    for (size_type I = 0, E = RHS.Bits.size(); I != E; ++I)
+      Bits[I] ^= RHS.Bits[I];
     return *this;
   }
 
@@ -808,11 +808,11 @@ private:
 
 public:
   /// Return the size (in bytes) of the bit vector.
-  size_t getMemorySize() const { return Bits.size() * sizeof(BitWord); }
-  size_t getBitCapacity() const { return Bits.size() * BITWORD_SIZE; }
+  size_type getMemorySize() const { return Bits.size() * sizeof(BitWord); }
+  size_type getBitCapacity() const { return Bits.size() * BITWORD_SIZE; }
 };
 
-inline size_t capacity_in_bytes(const BitVector &X) {
+inline BitVector::size_type capacity_in_bytes(const BitVector &X) {
   return X.getMemorySize();
 }
 
@@ -824,8 +824,8 @@ template <> struct DenseMapInfo<BitVector> {
     return V;
   }
   static unsigned getHashValue(const BitVector &V) {
-    return DenseMapInfo<std::pair<unsigned, ArrayRef<uintptr_t>>>::getHashValue(
-        std::make_pair(V.size(), V.getData()));
+    return DenseMapInfo<std::pair<BitVector::size_type, ArrayRef<uintptr_t>>>::
+        getHashValue(std::make_pair(V.size(), V.getData()));
   }
   static bool isEqual(const BitVector &LHS, const BitVector &RHS) {
     if (LHS.isInvalid() || RHS.isInvalid())

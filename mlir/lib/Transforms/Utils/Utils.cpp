@@ -722,8 +722,8 @@ MemRefType mlir::normalizeMemRefType(MemRefType memrefType, OpBuilder b,
   for (unsigned d = 0; d < rank; ++d) {
     // Use constraint system only in static dimensions.
     if (shape[d] > 0) {
-      fac.addConstantLowerBound(d, 0);
-      fac.addConstantUpperBound(d, shape[d] - 1);
+      fac.addBound(FlatAffineConstraints::LB, d, 0);
+      fac.addBound(FlatAffineConstraints::UB, d, shape[d] - 1);
     } else {
       memrefTypeDynDims.emplace_back(d);
     }
@@ -746,7 +746,7 @@ MemRefType mlir::normalizeMemRefType(MemRefType memrefType, OpBuilder b,
       newShape[d] = -1;
     } else {
       // The lower bound for the shape is always zero.
-      auto ubConst = fac.getConstantUpperBound(d);
+      auto ubConst = fac.getConstantBound(FlatAffineConstraints::UB, d);
       // For a static memref and an affine map with no symbols, this is
       // always bounded.
       assert(ubConst.hasValue() && "should always have an upper bound");

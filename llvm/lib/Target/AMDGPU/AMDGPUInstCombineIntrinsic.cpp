@@ -587,8 +587,7 @@ GCNTTIImpl::instCombineIntrinsic(InstCombiner &IC, IntrinsicInst &II) const {
         MDNode *MD = MDNode::get(II.getContext(), MDArgs);
         Value *Args[] = {MetadataAsValue::get(II.getContext(), MD)};
         CallInst *NewCall = IC.Builder.CreateCall(NewF, Args);
-        NewCall->addAttribute(AttributeList::FunctionIndex,
-                              Attribute::Convergent);
+        NewCall->addFnAttr(Attribute::Convergent);
         NewCall->takeName(&II);
         return IC.replaceInstUsesWith(II, NewCall);
       }
@@ -713,8 +712,7 @@ GCNTTIImpl::instCombineIntrinsic(InstCombiner &IC, IntrinsicInst &II) const {
         MDNode *MD = MDNode::get(II.getContext(), MDArgs);
         Value *Args[] = {MetadataAsValue::get(II.getContext(), MD)};
         CallInst *NewCall = IC.Builder.CreateCall(NewF, Args);
-        NewCall->addAttribute(AttributeList::FunctionIndex,
-                              Attribute::Convergent);
+        NewCall->addFnAttr(Attribute::Convergent);
         NewCall->takeName(&II);
         return IC.replaceInstUsesWith(II, NewCall);
       }

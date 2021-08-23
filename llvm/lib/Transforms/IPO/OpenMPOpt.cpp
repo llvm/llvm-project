@@ -2712,9 +2712,8 @@ struct AAHeapToSharedFunction : public AAHeapToShared {
 
       ConstantInt *AllocSize = dyn_cast<ConstantInt>(CB->getArgOperand(0));
 
-      LLVM_DEBUG(dbgs() << TAG << "Replace globalization call in "
-                        << CB->getCaller()->getName() << " with "
-                        << AllocSize->getZExtValue()
+      LLVM_DEBUG(dbgs() << TAG << "Replace globalization call " << *CB
+                        << " with " << AllocSize->getZExtValue()
                         << " bytes of shared memory\n");
 
       // Create a new shared memory buffer of the same size as the allocation
@@ -2878,8 +2877,11 @@ struct AAKernelInfoFunction : AAKernelInfo {
         },
         Fn);
 
-    assert((KernelInitCB && KernelDeinitCB) &&
-           "Kernel without __kmpc_target_init or __kmpc_target_deinit!");
+    // Ignore kernels without initializers such as global constructors.
+    if (!KernelInitCB || !KernelDeinitCB) {
+      indicateOptimisticFixpoint();
+      return;
+    }
 
     // For kernels we might need to initialize/finalize the IsSPMD state and
     // we need to register a simplification callback so that the Attributor

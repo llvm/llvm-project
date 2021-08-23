@@ -7,6 +7,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "CSPreInliner.h"
+#include "ProfiledBinary.h"
 #include "llvm/ADT/SCCIterator.h"
 #include <cstdint>
 #include <queue>
@@ -25,15 +26,26 @@ extern cl::opt<int> ProfileInlineGrowthLimit;
 extern cl::opt<int> ProfileInlineLimitMin;
 extern cl::opt<int> ProfileInlineLimitMax;
 
+cl::opt<bool> EnableCSPreInliner(
+    "csspgo-preinliner", cl::Hidden, cl::init(false),
+    cl::desc("Run a global pre-inliner to merge context profile based on "
+             "estimated global top-down inline decisions"));
+
+cl::opt<bool> UseContextCostForPreInliner(
+    "use-context-cost-for-preinliner", cl::Hidden, cl::init(false),
+    cl::desc("Use context-sensitive byte size cost for preinliner decisions"));
+
 static cl::opt<bool> SamplePreInlineReplay(
     "csspgo-replay-preinline", cl::Hidden, cl::init(false),
     cl::desc(
         "Replay previous inlining and adjust context profile accordingly"));
 
 CSPreInliner::CSPreInliner(StringMap<FunctionSamples> &Profiles,
-                           uint64_t HotThreshold, uint64_t ColdThreshold)
-    : ContextTracker(Profiles), ProfileMap(Profiles),
-      HotCountThreshold(HotThreshold), ColdCountThreshold(ColdThreshold) {}
+                           ProfiledBinary &Binary, uint64_t HotThreshold,
+                           uint64_t ColdThreshold)
+    : UseContextCost(UseContextCostForPreInliner), ContextTracker(Profiles),
+      ProfileMap(Profiles), Binary(Binary), HotCountThreshold(HotThreshold),
+      ColdCountThreshold(ColdThreshold) {}
 
 std::vector<StringRef> CSPreInliner::buildTopDownOrder() {
   std::vector<StringRef> Order;
@@ -87,10 +99,20 @@ bool CSPreInliner::getInlineCandidates(ProfiledCandidateQueue &CQueue,
     // TODO: call site and callee entry count should be mostly consistent, add
     // check for that.
     HasNewCandidate = true;
-    CQueue.emplace(CalleeSamples, std::max(CallsiteCount, CalleeEntryCount));
+    uint32_t CalleeSize = getFuncSize(*CalleeSamples);
+    CQueue.emplace(CalleeSamples, std::max(CallsiteCount, CalleeEntryCount),
+                   CalleeSize);
   }
 
   return HasNewCandidate;
+}
+
+uint32_t CSPreInliner::getFuncSize(const FunctionSamples &FSamples) {
+  if (UseContextCost) {
+    return Binary.getFuncSizeForContext(FSamples.getContext());
+  }
+
+  return FSamples.getBodySamples().size();
 }
 
 bool CSPreInliner::shouldInline(ProfiledInlineCandidate &Candidate) {
@@ -115,20 +137,19 @@ bool CSPreInliner::shouldInline(ProfiledInlineCandidate &Candidate) {
 }
 
 void CSPreInliner::processFunction(const StringRef Name) {
-  LLVM_DEBUG(dbgs() << "Process " << Name
-                    << " for context-sensitive pre-inlining\n");
-
   FunctionSamples *FSamples = ContextTracker.getBaseSamplesFor(Name);
   if (!FSamples)
     return;
 
-  // Use the number of lines/probes as proxy for function size for now.
-  // TODO: retrieve accurate size from dwarf or binary instead.
-  unsigned FuncSize = FSamples->getBodySamples().size();
+  unsigned FuncSize = getFuncSize(*FSamples);
   unsigned FuncFinalSize = FuncSize;
   unsigned SizeLimit = FuncSize * ProfileInlineGrowthLimit;
   SizeLimit = std::min(SizeLimit, (unsigned)ProfileInlineLimitMax);
   SizeLimit = std::max(SizeLimit, (unsigned)ProfileInlineLimitMin);
+
+  LLVM_DEBUG(dbgs() << "Process " << Name
+                    << " for context-sensitive pre-inlining (pre-inline size: "
+                    << FuncSize << ", size limit: " << SizeLimit << ")\n");
 
   ProfiledCandidateQueue CQueue;
   getInlineCandidates(CQueue, FSamples);

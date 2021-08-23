@@ -167,8 +167,11 @@ static void ConnectProlog(Loop *L, Value *BECount, unsigned Count,
   // Add the branch to the exit block (around the unrolled loop)
   B.CreateCondBr(BrLoopExit, OriginalLoopLatchExit, NewPreHeader);
   InsertPt->eraseFromParent();
-  if (DT)
-    DT->changeImmediateDominator(OriginalLoopLatchExit, PrologExit);
+  if (DT) {
+    auto *NewDom = DT->findNearestCommonDominator(OriginalLoopLatchExit,
+                                                  PrologExit);
+    DT->changeImmediateDominator(OriginalLoopLatchExit, NewDom);
+  }
 }
 
 /// Connect the unrolling epilog code to the original loop.
@@ -285,8 +288,10 @@ static void ConnectEpilog(Loop *L, Value *ModVal, BasicBlock *NewExit,
   // Add the branch to the exit block (around the unrolling loop)
   B.CreateCondBr(BrLoopExit, EpilogPreHeader, Exit);
   InsertPt->eraseFromParent();
-  if (DT)
-    DT->changeImmediateDominator(Exit, NewExit);
+  if (DT) {
+    auto *NewDom = DT->findNearestCommonDominator(Exit, NewExit);
+    DT->changeImmediateDominator(Exit, NewDom);
+  }
 
   // Split the main loop exit to maintain canonicalization guarantees.
   SmallVector<BasicBlock*, 4> NewExitPreds{Latch};
@@ -401,32 +406,31 @@ CloneLoopBlocks(Loop *L, Value *NewIter, const bool CreateRemainderLoop,
         NewPHI->setIncomingValue(idx, V);
     }
   }
-  if (CreateRemainderLoop) {
-    Loop *NewLoop = NewLoops[L];  
-    assert(NewLoop && "L should have been cloned");
-    MDNode *LoopID = NewLoop->getLoopID();
+  if (!CreateRemainderLoop)
+    return nullptr;
 
-    // Only add loop metadata if the loop is not going to be completely
-    // unrolled.
-    if (UnrollRemainder)
-      return NewLoop;
+  Loop *NewLoop = NewLoops[L];
+  assert(NewLoop && "L should have been cloned");
+  MDNode *LoopID = NewLoop->getLoopID();
 
-    Optional<MDNode *> NewLoopID = makeFollowupLoopID(
-        LoopID, {LLVMLoopUnrollFollowupAll, LLVMLoopUnrollFollowupRemainder});
-    if (NewLoopID.hasValue()) {
-      NewLoop->setLoopID(NewLoopID.getValue());
+  // Only add loop metadata if the loop is not going to be completely
+  // unrolled.
+  if (UnrollRemainder)
+    return NewLoop;
 
-      // Do not setLoopAlreadyUnrolled if loop attributes have been defined
-      // explicitly.
-      return NewLoop;
-    }
+  Optional<MDNode *> NewLoopID = makeFollowupLoopID(
+      LoopID, {LLVMLoopUnrollFollowupAll, LLVMLoopUnrollFollowupRemainder});
+  if (NewLoopID.hasValue()) {
+    NewLoop->setLoopID(NewLoopID.getValue());
 
-    // Add unroll disable metadata to disable future unrolling for this loop.
-    NewLoop->setLoopAlreadyUnrolled();
+    // Do not setLoopAlreadyUnrolled if loop attributes have been defined
+    // explicitly.
     return NewLoop;
   }
-  else
-    return nullptr;
+
+  // Add unroll disable metadata to disable future unrolling for this loop.
+  NewLoop->setLoopAlreadyUnrolled();
+  return NewLoop;
 }
 
 /// Returns true if we can safely unroll a multi-exit/exiting loop. OtherExits
@@ -443,14 +447,6 @@ static bool canSafelyUnrollMultiExitLoop(Loop *L, BasicBlock *LatchExit,
   if (!PreserveLCSSA)
     return false;
 
-  // TODO: Support multiple exiting blocks jumping to the `LatchExit` when
-  // using a prolog loop.
-  if (!UseEpilogRemainder && !LatchExit->getSinglePredecessor()) {
-    LLVM_DEBUG(
-        dbgs() << "Bailout for multi-exit handling when latch exit has >1 "
-                  "predecessor.\n");
-    return false;
-  }
   // FIXME: We bail out of multi-exit unrolling when epilog loop is generated
   // and L is an inner loop. This is because in presence of multiple exits, the
   // outer loop is incorrect: we do not add the EpilogPreheader and exit to the
@@ -531,22 +527,22 @@ static void updateLatchBranchWeightsForRemainderLoop(Loop *OrigLoop,
   uint64_t TrueWeight, FalseWeight;
   BranchInst *LatchBR =
       cast<BranchInst>(OrigLoop->getLoopLatch()->getTerminator());
-  if (LatchBR->extractProfMetadata(TrueWeight, FalseWeight)) {
-    uint64_t ExitWeight = LatchBR->getSuccessor(0) == OrigLoop->getHeader()
-                              ? FalseWeight
-                              : TrueWeight;
-    assert(UnrollFactor > 1);
-    uint64_t BackEdgeWeight = (UnrollFactor - 1) * ExitWeight;
-    BasicBlock *Header = RemainderLoop->getHeader();
-    BasicBlock *Latch = RemainderLoop->getLoopLatch();
-    auto *RemainderLatchBR = cast<BranchInst>(Latch->getTerminator());
-    unsigned HeaderIdx = (RemainderLatchBR->getSuccessor(0) == Header ? 0 : 1);
-    MDBuilder MDB(RemainderLatchBR->getContext());
-    MDNode *WeightNode =
-        HeaderIdx ? MDB.createBranchWeights(ExitWeight, BackEdgeWeight)
-                  : MDB.createBranchWeights(BackEdgeWeight, ExitWeight);
-    RemainderLatchBR->setMetadata(LLVMContext::MD_prof, WeightNode);
-  }
+  if (!LatchBR->extractProfMetadata(TrueWeight, FalseWeight))
+    return;
+  uint64_t ExitWeight = LatchBR->getSuccessor(0) == OrigLoop->getHeader()
+                            ? FalseWeight
+                            : TrueWeight;
+  assert(UnrollFactor > 1);
+  uint64_t BackEdgeWeight = (UnrollFactor - 1) * ExitWeight;
+  BasicBlock *Header = RemainderLoop->getHeader();
+  BasicBlock *Latch = RemainderLoop->getLoopLatch();
+  auto *RemainderLatchBR = cast<BranchInst>(Latch->getTerminator());
+  unsigned HeaderIdx = (RemainderLatchBR->getSuccessor(0) == Header ? 0 : 1);
+  MDBuilder MDB(RemainderLatchBR->getContext());
+  MDNode *WeightNode =
+    HeaderIdx ? MDB.createBranchWeights(ExitWeight, BackEdgeWeight)
+                : MDB.createBranchWeights(BackEdgeWeight, ExitWeight);
+  RemainderLatchBR->setMetadata(LLVMContext::MD_prof, WeightNode);
 }
 
 /// Calculate ModVal = (BECount + 1) % Count on the abstract integer domain

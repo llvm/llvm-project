@@ -180,6 +180,12 @@ On Debian you can install these with:
 
    sudo apt install -y sphinx-doc python-recommonmark-doc
 
+On Ubuntu use pip to get an up-to-date version of recommonmark:
+
+.. code-block:: console
+
+   sudo pip install sphinx recommonmark
+
 Then run cmake to build the documentation inside the ``llvm-project`` checkout:
 
 .. code-block:: console

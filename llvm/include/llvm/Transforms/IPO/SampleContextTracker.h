@@ -37,30 +37,33 @@ class ContextTrieNode {
 public:
   ContextTrieNode(ContextTrieNode *Parent = nullptr,
                   StringRef FName = StringRef(),
-                  FunctionSamples *FSamples = nullptr,
+                  FunctionSamples *FSamples = nullptr, uint32_t FSize = 0,
                   LineLocation CallLoc = {0, 0})
       : ParentContext(Parent), FuncName(FName), FuncSamples(FSamples),
-        CallSiteLoc(CallLoc){};
+        FuncSize(FSize), CallSiteLoc(CallLoc){};
   ContextTrieNode *getChildContext(const LineLocation &CallSite,
-                                   StringRef CalleeName);
+                                   StringRef ChildName);
   ContextTrieNode *getHottestChildContext(const LineLocation &CallSite);
   ContextTrieNode *getOrCreateChildContext(const LineLocation &CallSite,
-                                           StringRef CalleeName,
+                                           StringRef ChildName,
                                            bool AllowCreate = true);
 
   ContextTrieNode &moveToChildContext(const LineLocation &CallSite,
                                       ContextTrieNode &&NodeToMove,
                                       StringRef ContextStrToRemove,
                                       bool DeleteNode = true);
-  void removeChildContext(const LineLocation &CallSite, StringRef CalleeName);
+  void removeChildContext(const LineLocation &CallSite, StringRef ChildName);
   std::map<uint32_t, ContextTrieNode> &getAllChildContext();
   StringRef getFuncName() const;
   FunctionSamples *getFunctionSamples() const;
   void setFunctionSamples(FunctionSamples *FSamples);
+  uint32_t getFunctionSize() const;
+  void setFunctionSize(uint32_t FSize);
   LineLocation getCallSiteLoc() const;
   ContextTrieNode *getParentContext() const;
   void setParentContext(ContextTrieNode *Parent);
-  void dump();
+  void dumpNode();
+  void dumpTree();
 
 private:
   static uint32_t nodeHash(StringRef ChildName, const LineLocation &Callsite);
@@ -76,6 +79,9 @@ private:
 
   // Function Samples for current context
   FunctionSamples *FuncSamples;
+
+  // Function size for current context
+  uint32_t FuncSize;
 
   // Callsite location in parent context
   LineLocation CallSiteLoc;

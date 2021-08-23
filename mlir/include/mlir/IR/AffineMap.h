@@ -207,24 +207,28 @@ public:
   AffineMap replace(const DenseMap<AffineExpr, AffineExpr> &map,
                     unsigned numResultDims, unsigned numResultSyms) const;
 
-  /// Replace dims[0 .. numDims - 1] by dims[shift .. shift + numDims - 1].
-  AffineMap shiftDims(unsigned shift) const {
-    return AffineMap::get(
-        getNumDims() + shift, getNumSymbols(),
-        llvm::to_vector<4>(llvm::map_range(
-            getResults(),
-            [&](AffineExpr e) { return e.shiftDims(getNumDims(), shift); })),
-        getContext());
+  /// Replace dims[offset ... numDims)
+  /// by dims[offset + shift ... shift + numDims).
+  AffineMap shiftDims(unsigned shift, unsigned offset = 0) const {
+    assert(offset <= getNumDims());
+    return AffineMap::get(getNumDims() + shift, getNumSymbols(),
+                          llvm::to_vector<4>(llvm::map_range(
+                              getResults(),
+                              [&](AffineExpr e) {
+                                return e.shiftDims(getNumDims(), shift, offset);
+                              })),
+                          getContext());
   }
 
-  /// Replace symbols[0 .. numSymbols - 1] by
-  ///         symbols[shift .. shift + numSymbols - 1].
-  AffineMap shiftSymbols(unsigned shift) const {
+  /// Replace symbols[offset ... numSymbols)
+  /// by symbols[offset + shift ... shift + numSymbols).
+  AffineMap shiftSymbols(unsigned shift, unsigned offset = 0) const {
     return AffineMap::get(getNumDims(), getNumSymbols() + shift,
                           llvm::to_vector<4>(llvm::map_range(
                               getResults(),
                               [&](AffineExpr e) {
-                                return e.shiftSymbols(getNumSymbols(), shift);
+                                return e.shiftSymbols(getNumSymbols(), shift,
+                                                      offset);
                               })),
                           getContext());
   }

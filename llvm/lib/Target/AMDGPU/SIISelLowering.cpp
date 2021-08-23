@@ -19,6 +19,7 @@
 #include "SIRegisterInfo.h"
 #include "llvm/ADT/Statistic.h"
 #include "llvm/Analysis/LegacyDivergenceAnalysis.h"
+#include "llvm/Analysis/OptimizationRemarkEmitter.h"
 #include "llvm/BinaryFormat/ELF.h"
 #include "llvm/CodeGen/Analysis.h"
 #include "llvm/CodeGen/FunctionLoweringInfo.h"
@@ -12185,6 +12186,25 @@ static bool fpModeMatchesGlobalFPAtomicMode(const AtomicRMWInst *RMW) {
 
 TargetLowering::AtomicExpansionKind
 SITargetLowering::shouldExpandAtomicRMWInIR(AtomicRMWInst *RMW) const {
+
+  auto ReportUnsafeHWInst = [&](TargetLowering::AtomicExpansionKind Kind) {
+    OptimizationRemarkEmitter ORE(RMW->getFunction());
+    LLVMContext &Ctx = RMW->getFunction()->getContext();
+    SmallVector<StringRef> SSNs;
+    Ctx.getSyncScopeNames(SSNs);
+    auto MemScope = SSNs[RMW->getSyncScopeID()].empty()
+                        ? "system"
+                        : SSNs[RMW->getSyncScopeID()];
+    ORE.emit([&]() {
+      return OptimizationRemark(DEBUG_TYPE, "Passed", RMW)
+             << "Hardware instruction generated for atomic "
+             << RMW->getOperationName(RMW->getOperation())
+             << " operation at memory scope " << MemScope
+             << " due to an unsafe request.";
+    });
+    return Kind;
+  };
+
   switch (RMW->getOperation()) {
   case AtomicRMWInst::FAdd: {
     Type *Ty = RMW->getType();
@@ -12219,13 +12239,13 @@ SITargetLowering::shouldExpandAtomicRMWInIR(AtomicRMWInst *RMW) const {
             SSID == RMW->getContext().getOrInsertSyncScopeID("one-as"))
           return AtomicExpansionKind::CmpXChg;
 
-        return AtomicExpansionKind::None;
+        return ReportUnsafeHWInst(AtomicExpansionKind::None);
       }
 
       if (AS == AMDGPUAS::FLAT_ADDRESS)
         return AtomicExpansionKind::CmpXChg;
 
-      return RMW->use_empty() ? AtomicExpansionKind::None
+      return RMW->use_empty() ? ReportUnsafeHWInst(AtomicExpansionKind::None)
                               : AtomicExpansionKind::CmpXChg;
     }
 
@@ -12236,11 +12256,13 @@ SITargetLowering::shouldExpandAtomicRMWInIR(AtomicRMWInst *RMW) const {
       if (!Ty->isDoubleTy())
         return AtomicExpansionKind::None;
 
-      return (fpModeMatchesGlobalFPAtomicMode(RMW) ||
-              RMW->getFunction()
-                      ->getFnAttribute("amdgpu-unsafe-fp-atomics")
-                      .getValueAsString() == "true")
-                 ? AtomicExpansionKind::None
+      if (fpModeMatchesGlobalFPAtomicMode(RMW))
+        return AtomicExpansionKind::None;
+
+      return RMW->getFunction()
+                         ->getFnAttribute("amdgpu-unsafe-fp-atomics")
+                         .getValueAsString() == "true"
+                 ? ReportUnsafeHWInst(AtomicExpansionKind::None)
                  : AtomicExpansionKind::CmpXChg;
     }
 

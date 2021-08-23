@@ -25,6 +25,8 @@
 #define PRId64 "ld"
 #define PRIu64 "lu"
 
+typedef uint64_t __kmpc_impl_lanemask_t;
+
 #define INLINE inline
 #define NOINLINE __attribute__((noinline))
 #define ALIGN(N) __attribute__((aligned(N)))
@@ -49,8 +51,6 @@
 
 // Data sharing related quantities, need to match what is used in the compiler.
 enum DATA_SHARING_SIZES {
-  // The maximum number of workers in a kernel.
-  DS_Max_Worker_Threads = 960,
   // The size reserved for data in a shared memory slot.
   DS_Slot_Size = 256,
   // The slot size that should be reserved for a working warp.

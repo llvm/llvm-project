@@ -8,7 +8,6 @@
 
 // UNSUPPORTED: c++03, c++11, c++14, c++17
 // UNSUPPORTED: libcpp-no-concepts
-// UNSUPPORTED: clang-10
 // UNSUPPORTED: libcpp-has-no-incomplete-ranges
 
 // unspecified begin;
@@ -19,11 +18,9 @@
 
 using end_t = decltype(std::ranges::end);
 
-// clang-format off
 template <class T>
 requires(!std::invocable<end_t&, T>)
 void f() {}
-// clang-format on
 
 void test() {
   struct incomplete;

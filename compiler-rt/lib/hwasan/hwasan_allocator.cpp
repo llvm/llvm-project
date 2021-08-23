@@ -219,9 +219,11 @@ static bool CheckInvalidFree(StackTrace *stack, void *untagged_ptr,
 static void HwasanDeallocate(StackTrace *stack, void *tagged_ptr) {
   CHECK(tagged_ptr);
   HWASAN_FREE_HOOK(tagged_ptr);
-  void *untagged_ptr = InTaggableRegion(reinterpret_cast<uptr>(tagged_ptr))
-                           ? UntagPtr(tagged_ptr)
-                           : tagged_ptr;
+
+  bool in_taggable_region =
+      InTaggableRegion(reinterpret_cast<uptr>(tagged_ptr));
+  void *untagged_ptr = in_taggable_region ? UntagPtr(tagged_ptr) : tagged_ptr;
+
   if (CheckInvalidFree(stack, untagged_ptr, tagged_ptr))
     return;
 
@@ -246,7 +248,11 @@ static void HwasanDeallocate(StackTrace *stack, void *tagged_ptr) {
     CHECK_LT(tail_size, kShadowAlignment);
     void *tail_beg = reinterpret_cast<void *>(
         reinterpret_cast<uptr>(aligned_ptr) + orig_size);
-    if (tail_size && internal_memcmp(tail_beg, tail_magic, tail_size))
+    tag_t short_granule_memtag = *(reinterpret_cast<tag_t *>(
+        reinterpret_cast<uptr>(tail_beg) + tail_size));
+    if (tail_size &&
+        (internal_memcmp(tail_beg, tail_magic, tail_size) ||
+         (in_taggable_region && pointer_tag != short_granule_memtag)))
       ReportTailOverwritten(stack, reinterpret_cast<uptr>(tagged_ptr),
                             orig_size, tail_magic);
   }
@@ -261,8 +267,7 @@ static void HwasanDeallocate(StackTrace *stack, void *tagged_ptr) {
         Min(TaggedSize(orig_size), (uptr)flags()->max_free_fill_size);
     internal_memset(aligned_ptr, flags()->free_fill_byte, fill_size);
   }
-  if (InTaggableRegion(reinterpret_cast<uptr>(tagged_ptr)) &&
-      flags()->tag_in_free && malloc_bisect(stack, 0) &&
+  if (in_taggable_region && flags()->tag_in_free && malloc_bisect(stack, 0) &&
       atomic_load_relaxed(&hwasan_allocator_tagging_enabled)) {
     // Always store full 8-bit tags on free to maximize UAF detection.
     tag_t tag;

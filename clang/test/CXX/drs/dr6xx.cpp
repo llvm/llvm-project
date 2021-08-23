@@ -720,11 +720,8 @@ namespace dr662 { // dr662: yes
   void g(int n) { f<int&>(n); } // expected-note {{instantiation of}}
 }
 
-namespace dr663 { // dr663: yes c++11
+namespace dr663 { // dr663: sup P1949
   int ЍЎ = 123;
-#if __cplusplus < 201103L
-  // expected-error@-2 {{non-ASCII}}
-#endif
 }
 
 #if __cplusplus >= 201103L

@@ -3,7 +3,7 @@
 
 // FIXME: This should not be using -O2 and implicitly testing the entire IR opt pipeline.
 
-// RUN: %clang %s -O2 -emit-llvm -S -o - -target wasm32-unknown-unknown -msimd128 -Wcast-qual -fno-lax-vector-conversions -Werror | FileCheck %s
+// RUN: %clang %s -O2 -emit-llvm -S -o - -target wasm32-unknown-unknown -msimd128 -Wall -Weverything -Wno-missing-prototypes -fno-lax-vector-conversions -Werror | FileCheck %s
 
 #include <wasm_simd128.h>
 
@@ -213,7 +213,7 @@ v128_t test_v128_load64_lane(const uint64_t *ptr, v128_t vec) {
 // CHECK-NEXT:    ret void
 //
 void test_v128_store(void *mem, v128_t a) {
-  return wasm_v128_store(mem, a);
+  wasm_v128_store(mem, a);
 }
 
 // CHECK-LABEL: @test_v128_store8_lane(
@@ -224,7 +224,7 @@ void test_v128_store(void *mem, v128_t a) {
 // CHECK-NEXT:    ret void
 //
 void test_v128_store8_lane(uint8_t *ptr, v128_t vec) {
-  return wasm_v128_store8_lane(ptr, vec, 15);
+  wasm_v128_store8_lane(ptr, vec, 15);
 }
 
 // CHECK-LABEL: @test_v128_store16_lane(
@@ -235,7 +235,7 @@ void test_v128_store8_lane(uint8_t *ptr, v128_t vec) {
 // CHECK-NEXT:    ret void
 //
 void test_v128_store16_lane(uint16_t *ptr, v128_t vec) {
-  return wasm_v128_store16_lane(ptr, vec, 7);
+  wasm_v128_store16_lane(ptr, vec, 7);
 }
 
 // CHECK-LABEL: @test_v128_store32_lane(
@@ -245,7 +245,7 @@ void test_v128_store16_lane(uint16_t *ptr, v128_t vec) {
 // CHECK-NEXT:    ret void
 //
 void test_v128_store32_lane(uint32_t *ptr, v128_t vec) {
-  return wasm_v128_store32_lane(ptr, vec, 3);
+  wasm_v128_store32_lane(ptr, vec, 3);
 }
 
 // CHECK-LABEL: @test_v128_store64_lane(
@@ -256,7 +256,7 @@ void test_v128_store32_lane(uint32_t *ptr, v128_t vec) {
 // CHECK-NEXT:    ret void
 //
 void test_v128_store64_lane(uint64_t *ptr, v128_t vec) {
-  return wasm_v128_store64_lane(ptr, vec, 1);
+  wasm_v128_store64_lane(ptr, vec, 1);
 }
 
 // CHECK-LABEL: @test_i8x16_make(
@@ -284,6 +284,31 @@ v128_t test_i8x16_make(int8_t c0, int8_t c1, int8_t c2, int8_t c3, int8_t c4, in
   return wasm_i8x16_make(c0, c1, c2, c3, c4, c5, c6, c7, c8, c9, c10, c11, c12, c13, c14, c15);
 }
 
+// CHECK-LABEL: @test_u8x16_make(
+// CHECK-NEXT:  entry:
+// CHECK-NEXT:    [[VECINIT_I:%.*]] = insertelement <16 x i8> undef, i8 [[C0:%.*]], i32 0
+// CHECK-NEXT:    [[VECINIT1_I:%.*]] = insertelement <16 x i8> [[VECINIT_I]], i8 [[C1:%.*]], i32 1
+// CHECK-NEXT:    [[VECINIT2_I:%.*]] = insertelement <16 x i8> [[VECINIT1_I]], i8 [[C2:%.*]], i32 2
+// CHECK-NEXT:    [[VECINIT3_I:%.*]] = insertelement <16 x i8> [[VECINIT2_I]], i8 [[C3:%.*]], i32 3
+// CHECK-NEXT:    [[VECINIT4_I:%.*]] = insertelement <16 x i8> [[VECINIT3_I]], i8 [[C4:%.*]], i32 4
+// CHECK-NEXT:    [[VECINIT5_I:%.*]] = insertelement <16 x i8> [[VECINIT4_I]], i8 [[C5:%.*]], i32 5
+// CHECK-NEXT:    [[VECINIT6_I:%.*]] = insertelement <16 x i8> [[VECINIT5_I]], i8 [[C6:%.*]], i32 6
+// CHECK-NEXT:    [[VECINIT7_I:%.*]] = insertelement <16 x i8> [[VECINIT6_I]], i8 [[C7:%.*]], i32 7
+// CHECK-NEXT:    [[VECINIT8_I:%.*]] = insertelement <16 x i8> [[VECINIT7_I]], i8 [[C8:%.*]], i32 8
+// CHECK-NEXT:    [[VECINIT9_I:%.*]] = insertelement <16 x i8> [[VECINIT8_I]], i8 [[C9:%.*]], i32 9
+// CHECK-NEXT:    [[VECINIT10_I:%.*]] = insertelement <16 x i8> [[VECINIT9_I]], i8 [[C10:%.*]], i32 10
+// CHECK-NEXT:    [[VECINIT11_I:%.*]] = insertelement <16 x i8> [[VECINIT10_I]], i8 [[C11:%.*]], i32 11
+// CHECK-NEXT:    [[VECINIT12_I:%.*]] = insertelement <16 x i8> [[VECINIT11_I]], i8 [[C12:%.*]], i32 12
+// CHECK-NEXT:    [[VECINIT13_I:%.*]] = insertelement <16 x i8> [[VECINIT12_I]], i8 [[C13:%.*]], i32 13
+// CHECK-NEXT:    [[VECINIT14_I:%.*]] = insertelement <16 x i8> [[VECINIT13_I]], i8 [[C14:%.*]], i32 14
+// CHECK-NEXT:    [[VECINIT15_I:%.*]] = insertelement <16 x i8> [[VECINIT14_I]], i8 [[C15:%.*]], i32 15
+// CHECK-NEXT:    [[TMP0:%.*]] = bitcast <16 x i8> [[VECINIT15_I]] to <4 x i32>
+// CHECK-NEXT:    ret <4 x i32> [[TMP0]]
+//
+v128_t test_u8x16_make(uint8_t c0, uint8_t c1, uint8_t c2, uint8_t c3, uint8_t c4, uint8_t c5, uint8_t c6, uint8_t c7, uint8_t c8, uint8_t c9, uint8_t c10, uint8_t c11, uint8_t c12, uint8_t c13, uint8_t c14, uint8_t c15) {
+  return wasm_u8x16_make(c0, c1, c2, c3, c4, c5, c6, c7, c8, c9, c10, c11, c12, c13, c14, c15);
+}
+
 // CHECK-LABEL: @test_i16x8_make(
 // CHECK-NEXT:  entry:
 // CHECK-NEXT:    [[VECINIT_I:%.*]] = insertelement <8 x i16> undef, i16 [[C0:%.*]], i32 0
@@ -301,6 +326,23 @@ v128_t test_i16x8_make(int16_t c0, int16_t c1, int16_t c2, int16_t c3, int16_t c
   return wasm_i16x8_make(c0, c1, c2, c3, c4, c5, c6, c7);
 }
 
+// CHECK-LABEL: @test_u16x8_make(
+// CHECK-NEXT:  entry:
+// CHECK-NEXT:    [[VECINIT_I:%.*]] = insertelement <8 x i16> undef, i16 [[C0:%.*]], i32 0
+// CHECK-NEXT:    [[VECINIT1_I:%.*]] = insertelement <8 x i16> [[VECINIT_I]], i16 [[C1:%.*]], i32 1
+// CHECK-NEXT:    [[VECINIT2_I:%.*]] = insertelement <8 x i16> [[VECINIT1_I]], i16 [[C2:%.*]], i32 2
+// CHECK-NEXT:    [[VECINIT3_I:%.*]] = insertelement <8 x i16> [[VECINIT2_I]], i16 [[C3:%.*]], i32 3
+// CHECK-NEXT:    [[VECINIT4_I:%.*]] = insertelement <8 x i16> [[VECINIT3_I]], i16 [[C4:%.*]], i32 4
+// CHECK-NEXT:    [[VECINIT5_I:%.*]] = insertelement <8 x i16> [[VECINIT4_I]], i16 [[C5:%.*]], i32 5
+// CHECK-NEXT:    [[VECINIT6_I:%.*]] = insertelement <8 x i16> [[VECINIT5_I]], i16 [[C6:%.*]], i32 6
+// CHECK-NEXT:    [[VECINIT7_I:%.*]] = insertelement <8 x i16> [[VECINIT6_I]], i16 [[C7:%.*]], i32 7
+// CHECK-NEXT:    [[TMP0:%.*]] = bitcast <8 x i16> [[VECINIT7_I]] to <4 x i32>
+// CHECK-NEXT:    ret <4 x i32> [[TMP0]]
+//
+v128_t test_u16x8_make(uint16_t c0, uint16_t c1, uint16_t c2, uint16_t c3, uint16_t c4, uint16_t c5, uint16_t c6, uint16_t c7) {
+  return wasm_u16x8_make(c0, c1, c2, c3, c4, c5, c6, c7);
+}
+
 // CHECK-LABEL: @test_i32x4_make(
 // CHECK-NEXT:  entry:
 // CHECK-NEXT:    [[VECINIT_I:%.*]] = insertelement <4 x i32> undef, i32 [[C0:%.*]], i32 0
@@ -313,6 +355,18 @@ v128_t test_i32x4_make(int32_t c0, int32_t c1, int32_t c2, int32_t c3) {
   return wasm_i32x4_make(c0, c1, c2, c3);
 }
 
+// CHECK-LABEL: @test_u32x4_make(
+// CHECK-NEXT:  entry:
+// CHECK-NEXT:    [[VECINIT_I:%.*]] = insertelement <4 x i32> undef, i32 [[C0:%.*]], i32 0
+// CHECK-NEXT:    [[VECINIT1_I:%.*]] = insertelement <4 x i32> [[VECINIT_I]], i32 [[C1:%.*]], i32 1
+// CHECK-NEXT:    [[VECINIT2_I:%.*]] = insertelement <4 x i32> [[VECINIT1_I]], i32 [[C2:%.*]], i32 2
+// CHECK-NEXT:    [[VECINIT3_I:%.*]] = insertelement <4 x i32> [[VECINIT2_I]], i32 [[C3:%.*]], i32 3
+// CHECK-NEXT:    ret <4 x i32> [[VECINIT3_I]]
+//
+v128_t test_u32x4_make(uint32_t c0, uint32_t c1, uint32_t c2, uint32_t c3) {
+  return wasm_u32x4_make(c0, c1, c2, c3);
+}
+
 // CHECK-LABEL: @test_i64x2_make(
 // CHECK-NEXT:  entry:
 // CHECK-NEXT:    [[VECINIT_I:%.*]] = insertelement <2 x i64> undef, i64 [[C0:%.*]], i32 0
@@ -322,6 +376,17 @@ v128_t test_i32x4_make(int32_t c0, int32_t c1, int32_t c2, int32_t c3) {
 //
 v128_t test_i64x2_make(int64_t c0, int64_t c1) {
   return wasm_i64x2_make(c0, c1);
+}
+
+// CHECK-LABEL: @test_u64x2_make(
+// CHECK-NEXT:  entry:
+// CHECK-NEXT:    [[VECINIT_I:%.*]] = insertelement <2 x i64> undef, i64 [[C0:%.*]], i32 0
+// CHECK-NEXT:    [[VECINIT1_I:%.*]] = insertelement <2 x i64> [[VECINIT_I]], i64 [[C1:%.*]], i32 1
+// CHECK-NEXT:    [[TMP0:%.*]] = bitcast <2 x i64> [[VECINIT1_I]] to <4 x i32>
+// CHECK-NEXT:    ret <4 x i32> [[TMP0]]
+//
+v128_t test_u64x2_make(uint64_t c0, uint64_t c1) {
+  return wasm_u64x2_make(c0, c1);
 }
 
 // CHECK-LABEL: @test_f32x4_make(
@@ -352,39 +417,71 @@ v128_t test_f64x2_make(double c0, double c1) {
 // CHECK-NEXT:  entry:
 // CHECK-NEXT:    ret <4 x i32> <i32 50462976, i32 117835012, i32 185207048, i32 252579084>
 //
-v128_t test_i8x16_const() {
+v128_t test_i8x16_const(void) {
   return wasm_i8x16_const(0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15);
+}
+
+// CHECK-LABEL: @test_u8x16_const(
+// CHECK-NEXT:  entry:
+// CHECK-NEXT:    ret <4 x i32> <i32 50462976, i32 117835012, i32 185207048, i32 252579084>
+//
+v128_t test_u8x16_const(void) {
+  return wasm_u8x16_const(0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15);
 }
 
 // CHECK-LABEL: @test_i16x8_const(
 // CHECK-NEXT:  entry:
 // CHECK-NEXT:    ret <4 x i32> <i32 65536, i32 196610, i32 327684, i32 458758>
 //
-v128_t test_i16x8_const() {
+v128_t test_i16x8_const(void) {
   return wasm_i16x8_const(0, 1, 2, 3, 4, 5, 6, 7);
+}
+
+// CHECK-LABEL: @test_u16x8_const(
+// CHECK-NEXT:  entry:
+// CHECK-NEXT:    ret <4 x i32> <i32 65536, i32 196610, i32 327684, i32 458758>
+//
+v128_t test_u16x8_const(void) {
+  return wasm_u16x8_const(0, 1, 2, 3, 4, 5, 6, 7);
 }
 
 // CHECK-LABEL: @test_i32x4_const(
 // CHECK-NEXT:  entry:
 // CHECK-NEXT:    ret <4 x i32> <i32 0, i32 1, i32 2, i32 3>
 //
-v128_t test_i32x4_const() {
+v128_t test_i32x4_const(void) {
   return wasm_i32x4_const(0, 1, 2, 3);
+}
+
+// CHECK-LABEL: @test_u32x4_const(
+// CHECK-NEXT:  entry:
+// CHECK-NEXT:    ret <4 x i32> <i32 0, i32 1, i32 2, i32 3>
+//
+v128_t test_u32x4_const(void) {
+  return wasm_u32x4_const(0, 1, 2, 3);
 }
 
 // CHECK-LABEL: @test_i64x2_const(
 // CHECK-NEXT:  entry:
 // CHECK-NEXT:    ret <4 x i32> <i32 0, i32 0, i32 1, i32 0>
 //
-v128_t test_i64x2_const() {
+v128_t test_i64x2_const(void) {
   return wasm_i64x2_const(0, 1);
+}
+
+// CHECK-LABEL: @test_u64x2_const(
+// CHECK-NEXT:  entry:
+// CHECK-NEXT:    ret <4 x i32> <i32 0, i32 0, i32 1, i32 0>
+//
+v128_t test_u64x2_const(void) {
+  return wasm_u64x2_const(0, 1);
 }
 
 // CHECK-LABEL: @test_f32x4_const(
 // CHECK-NEXT:  entry:
 // CHECK-NEXT:    ret <4 x i32> <i32 0, i32 1065353216, i32 1073741824, i32 1077936128>
 //
-v128_t test_f32x4_const() {
+v128_t test_f32x4_const(void) {
   return wasm_f32x4_const(0, 1, 2, 3);
 }
 
@@ -392,7 +489,7 @@ v128_t test_f32x4_const() {
 // CHECK-NEXT:  entry:
 // CHECK-NEXT:    ret <4 x i32> <i32 0, i32 0, i32 0, i32 1072693248>
 //
-v128_t test_f64x2_const() {
+v128_t test_f64x2_const(void) {
   return wasm_f64x2_const(0, 1);
 }
 
@@ -400,39 +497,71 @@ v128_t test_f64x2_const() {
 // CHECK-NEXT:  entry:
 // CHECK-NEXT:    ret <4 x i32> <i32 707406378, i32 707406378, i32 707406378, i32 707406378>
 //
-v128_t test_i8x16_const_splat() {
+v128_t test_i8x16_const_splat(void) {
   return wasm_i8x16_const_splat(42);
+}
+
+// CHECK-LABEL: @test_u8x16_const_splat(
+// CHECK-NEXT:  entry:
+// CHECK-NEXT:    ret <4 x i32> <i32 707406378, i32 707406378, i32 707406378, i32 707406378>
+//
+v128_t test_u8x16_const_splat(void) {
+  return wasm_u8x16_const_splat(42);
 }
 
 // CHECK-LABEL: @test_i16x8_const_splat(
 // CHECK-NEXT:  entry:
 // CHECK-NEXT:    ret <4 x i32> <i32 2752554, i32 2752554, i32 2752554, i32 2752554>
 //
-v128_t test_i16x8_const_splat() {
+v128_t test_i16x8_const_splat(void) {
   return wasm_i16x8_const_splat(42);
+}
+
+// CHECK-LABEL: @test_u16x8_const_splat(
+// CHECK-NEXT:  entry:
+// CHECK-NEXT:    ret <4 x i32> <i32 2752554, i32 2752554, i32 2752554, i32 2752554>
+//
+v128_t test_u16x8_const_splat(void) {
+  return wasm_u16x8_const_splat(42);
 }
 
 // CHECK-LABEL: @test_i32x4_const_splat(
 // CHECK-NEXT:  entry:
 // CHECK-NEXT:    ret <4 x i32> <i32 42, i32 42, i32 42, i32 42>
 //
-v128_t test_i32x4_const_splat() {
+v128_t test_i32x4_const_splat(void) {
   return wasm_i32x4_const_splat(42);
+}
+
+// CHECK-LABEL: @test_u32x4_const_splat(
+// CHECK-NEXT:  entry:
+// CHECK-NEXT:    ret <4 x i32> <i32 42, i32 42, i32 42, i32 42>
+//
+v128_t test_u32x4_const_splat(void) {
+  return wasm_u32x4_const_splat(42);
 }
 
 // CHECK-LABEL: @test_i64x2_const_splat(
 // CHECK-NEXT:  entry:
 // CHECK-NEXT:    ret <4 x i32> <i32 42, i32 0, i32 42, i32 0>
 //
-v128_t test_i64x2_const_splat() {
+v128_t test_i64x2_const_splat(void) {
   return wasm_i64x2_const_splat(42);
+}
+
+// CHECK-LABEL: @test_u64x2_const_splat(
+// CHECK-NEXT:  entry:
+// CHECK-NEXT:    ret <4 x i32> <i32 42, i32 0, i32 42, i32 0>
+//
+v128_t test_u64x2_const_splat(void) {
+  return wasm_u64x2_const_splat(42);
 }
 
 // CHECK-LABEL: @test_f32x4_const_splat(
 // CHECK-NEXT:  entry:
 // CHECK-NEXT:    ret <4 x i32> <i32 1109917696, i32 1109917696, i32 1109917696, i32 1109917696>
 //
-v128_t test_f32x4_const_splat() {
+v128_t test_f32x4_const_splat(void) {
   return wasm_f32x4_const_splat(42);
 }
 
@@ -440,7 +569,7 @@ v128_t test_f32x4_const_splat() {
 // CHECK-NEXT:  entry:
 // CHECK-NEXT:    ret <4 x i32> <i32 0, i32 1078263808, i32 0, i32 1078263808>
 //
-v128_t test_f64x2_const_splat() {
+v128_t test_f64x2_const_splat(void) {
   return wasm_f64x2_const_splat(42);
 }
 
@@ -453,6 +582,17 @@ v128_t test_f64x2_const_splat() {
 //
 v128_t test_i8x16_splat(int8_t a) {
   return wasm_i8x16_splat(a);
+}
+
+// CHECK-LABEL: @test_u8x16_splat(
+// CHECK-NEXT:  entry:
+// CHECK-NEXT:    [[VECINIT_I:%.*]] = insertelement <16 x i8> undef, i8 [[A:%.*]], i32 0
+// CHECK-NEXT:    [[VECINIT15_I:%.*]] = shufflevector <16 x i8> [[VECINIT_I]], <16 x i8> poison, <16 x i32> zeroinitializer
+// CHECK-NEXT:    [[TMP0:%.*]] = bitcast <16 x i8> [[VECINIT15_I]] to <4 x i32>
+// CHECK-NEXT:    ret <4 x i32> [[TMP0]]
+//
+v128_t test_u8x16_splat(uint8_t a) {
+  return wasm_u8x16_splat(a);
 }
 
 // CHECK-LABEL: @test_i8x16_extract_lane(
@@ -486,6 +626,17 @@ v128_t test_i8x16_replace_lane(v128_t a, int8_t b) {
   return wasm_i8x16_replace_lane(a, 15, b);
 }
 
+// CHECK-LABEL: @test_u8x16_replace_lane(
+// CHECK-NEXT:  entry:
+// CHECK-NEXT:    [[TMP0:%.*]] = bitcast <4 x i32> [[A:%.*]] to <16 x i8>
+// CHECK-NEXT:    [[VECINS_I:%.*]] = insertelement <16 x i8> [[TMP0]], i8 [[B:%.*]], i32 15
+// CHECK-NEXT:    [[TMP1:%.*]] = bitcast <16 x i8> [[VECINS_I]] to <4 x i32>
+// CHECK-NEXT:    ret <4 x i32> [[TMP1]]
+//
+v128_t test_u8x16_replace_lane(v128_t a, uint8_t b) {
+  return wasm_u8x16_replace_lane(a, 15, b);
+}
+
 // CHECK-LABEL: @test_i16x8_splat(
 // CHECK-NEXT:  entry:
 // CHECK-NEXT:    [[VECINIT_I:%.*]] = insertelement <8 x i16> undef, i16 [[A:%.*]], i32 0
@@ -495,6 +646,17 @@ v128_t test_i8x16_replace_lane(v128_t a, int8_t b) {
 //
 v128_t test_i16x8_splat(int16_t a) {
   return wasm_i16x8_splat(a);
+}
+
+// CHECK-LABEL: @test_u16x8_splat(
+// CHECK-NEXT:  entry:
+// CHECK-NEXT:    [[VECINIT_I:%.*]] = insertelement <8 x i16> undef, i16 [[A:%.*]], i32 0
+// CHECK-NEXT:    [[VECINIT7_I:%.*]] = shufflevector <8 x i16> [[VECINIT_I]], <8 x i16> poison, <8 x i32> zeroinitializer
+// CHECK-NEXT:    [[TMP0:%.*]] = bitcast <8 x i16> [[VECINIT7_I]] to <4 x i32>
+// CHECK-NEXT:    ret <4 x i32> [[TMP0]]
+//
+v128_t test_u16x8_splat(uint16_t a) {
+  return wasm_u16x8_splat(a);
 }
 
 // CHECK-LABEL: @test_i16x8_extract_lane(
@@ -528,6 +690,17 @@ v128_t test_i16x8_replace_lane(v128_t a, int16_t b) {
   return wasm_i16x8_replace_lane(a, 7, b);
 }
 
+// CHECK-LABEL: @test_u16x8_replace_lane(
+// CHECK-NEXT:  entry:
+// CHECK-NEXT:    [[TMP0:%.*]] = bitcast <4 x i32> [[A:%.*]] to <8 x i16>
+// CHECK-NEXT:    [[VECINS_I:%.*]] = insertelement <8 x i16> [[TMP0]], i16 [[B:%.*]], i32 7
+// CHECK-NEXT:    [[TMP1:%.*]] = bitcast <8 x i16> [[VECINS_I]] to <4 x i32>
+// CHECK-NEXT:    ret <4 x i32> [[TMP1]]
+//
+v128_t test_u16x8_replace_lane(v128_t a, uint16_t b) {
+  return wasm_u16x8_replace_lane(a, 7, b);
+}
+
 // CHECK-LABEL: @test_i32x4_splat(
 // CHECK-NEXT:  entry:
 // CHECK-NEXT:    [[VECINIT_I:%.*]] = insertelement <4 x i32> undef, i32 [[A:%.*]], i32 0
@@ -536,6 +709,16 @@ v128_t test_i16x8_replace_lane(v128_t a, int16_t b) {
 //
 v128_t test_i32x4_splat(int32_t a) {
   return wasm_i32x4_splat(a);
+}
+
+// CHECK-LABEL: @test_u32x4_splat(
+// CHECK-NEXT:  entry:
+// CHECK-NEXT:    [[VECINIT_I:%.*]] = insertelement <4 x i32> undef, i32 [[A:%.*]], i32 0
+// CHECK-NEXT:    [[VECINIT3_I:%.*]] = shufflevector <4 x i32> [[VECINIT_I]], <4 x i32> poison, <4 x i32> zeroinitializer
+// CHECK-NEXT:    ret <4 x i32> [[VECINIT3_I]]
+//
+v128_t test_u32x4_splat(uint32_t a) {
+  return wasm_u32x4_splat(a);
 }
 
 // CHECK-LABEL: @test_i32x4_extract_lane(
@@ -547,6 +730,15 @@ int32_t test_i32x4_extract_lane(v128_t a) {
   return wasm_i32x4_extract_lane(a, 3);
 }
 
+// CHECK-LABEL: @test_u32x4_extract_lane(
+// CHECK-NEXT:  entry:
+// CHECK-NEXT:    [[VECEXT_I:%.*]] = extractelement <4 x i32> [[A:%.*]], i32 3
+// CHECK-NEXT:    ret i32 [[VECEXT_I]]
+//
+uint32_t test_u32x4_extract_lane(v128_t a) {
+  return wasm_u32x4_extract_lane(a, 3);
+}
+
 // CHECK-LABEL: @test_i32x4_replace_lane(
 // CHECK-NEXT:  entry:
 // CHECK-NEXT:    [[VECINS_I:%.*]] = insertelement <4 x i32> [[A:%.*]], i32 [[B:%.*]], i32 3
@@ -554,6 +746,15 @@ int32_t test_i32x4_extract_lane(v128_t a) {
 //
 v128_t test_i32x4_replace_lane(v128_t a, int32_t b) {
   return wasm_i32x4_replace_lane(a, 3, b);
+}
+
+// CHECK-LABEL: @test_u32x4_replace_lane(
+// CHECK-NEXT:  entry:
+// CHECK-NEXT:    [[VECINS_I:%.*]] = insertelement <4 x i32> [[A:%.*]], i32 [[B:%.*]], i32 3
+// CHECK-NEXT:    ret <4 x i32> [[VECINS_I]]
+//
+v128_t test_u32x4_replace_lane(v128_t a, uint32_t b) {
+  return wasm_u32x4_replace_lane(a, 3, b);
 }
 
 // CHECK-LABEL: @test_i64x2_splat(
@@ -567,6 +768,17 @@ v128_t test_i64x2_splat(int64_t a) {
   return wasm_i64x2_splat(a);
 }
 
+// CHECK-LABEL: @test_u64x2_splat(
+// CHECK-NEXT:  entry:
+// CHECK-NEXT:    [[VECINIT_I:%.*]] = insertelement <2 x i64> undef, i64 [[A:%.*]], i32 0
+// CHECK-NEXT:    [[VECINIT1_I:%.*]] = shufflevector <2 x i64> [[VECINIT_I]], <2 x i64> poison, <2 x i32> zeroinitializer
+// CHECK-NEXT:    [[TMP0:%.*]] = bitcast <2 x i64> [[VECINIT1_I]] to <4 x i32>
+// CHECK-NEXT:    ret <4 x i32> [[TMP0]]
+//
+v128_t test_u64x2_splat(uint64_t a) {
+  return wasm_u64x2_splat(a);
+}
+
 // CHECK-LABEL: @test_i64x2_extract_lane(
 // CHECK-NEXT:  entry:
 // CHECK-NEXT:    [[TMP0:%.*]] = bitcast <4 x i32> [[A:%.*]] to <2 x i64>
@@ -575,6 +787,16 @@ v128_t test_i64x2_splat(int64_t a) {
 //
 int64_t test_i64x2_extract_lane(v128_t a) {
   return wasm_i64x2_extract_lane(a, 1);
+}
+
+// CHECK-LABEL: @test_u64x2_extract_lane(
+// CHECK-NEXT:  entry:
+// CHECK-NEXT:    [[TMP0:%.*]] = bitcast <4 x i32> [[A:%.*]] to <2 x i64>
+// CHECK-NEXT:    [[VECEXT_I:%.*]] = extractelement <2 x i64> [[TMP0]], i32 1
+// CHECK-NEXT:    ret i64 [[VECEXT_I]]
+//
+uint64_t test_u64x2_extract_lane(v128_t a) {
+  return wasm_u64x2_extract_lane(a, 1);
 }
 
 // CHECK-LABEL: @test_i64x2_replace_lane(
@@ -586,6 +808,17 @@ int64_t test_i64x2_extract_lane(v128_t a) {
 //
 v128_t test_i64x2_replace_lane(v128_t a, int64_t b) {
   return wasm_i64x2_replace_lane(a, 1, b);
+}
+
+// CHECK-LABEL: @test_u64x2_replace_lane(
+// CHECK-NEXT:  entry:
+// CHECK-NEXT:    [[TMP0:%.*]] = bitcast <4 x i32> [[A:%.*]] to <2 x i64>
+// CHECK-NEXT:    [[VECINS_I:%.*]] = insertelement <2 x i64> [[TMP0]], i64 [[B:%.*]], i32 1
+// CHECK-NEXT:    [[TMP1:%.*]] = bitcast <2 x i64> [[VECINS_I]] to <4 x i32>
+// CHECK-NEXT:    ret <4 x i32> [[TMP1]]
+//
+v128_t test_u64x2_replace_lane(v128_t a, uint64_t b) {
+  return wasm_u64x2_replace_lane(a, 1, b);
 }
 
 // CHECK-LABEL: @test_f32x4_splat(
@@ -1345,7 +1578,7 @@ bool test_i8x16_all_true(v128_t a) {
 // CHECK-NEXT:    [[TMP1:%.*]] = tail call i32 @llvm.wasm.bitmask.v16i8(<16 x i8> [[TMP0]]) #[[ATTR6]]
 // CHECK-NEXT:    ret i32 [[TMP1]]
 //
-int32_t test_i8x16_bitmask(v128_t a) {
+uint32_t test_i8x16_bitmask(v128_t a) {
   return wasm_i8x16_bitmask(a);
 }
 
@@ -1370,7 +1603,7 @@ v128_t test_i8x16_popcnt(v128_t a) {
 // CHECK-NEXT:    [[TMP3:%.*]] = bitcast <16 x i8> [[SHL_I]] to <4 x i32>
 // CHECK-NEXT:    ret <4 x i32> [[TMP3]]
 //
-v128_t test_i8x16_shl(v128_t a, int32_t b) {
+v128_t test_i8x16_shl(v128_t a, uint32_t b) {
   return wasm_i8x16_shl(a, b);
 }
 
@@ -1384,7 +1617,7 @@ v128_t test_i8x16_shl(v128_t a, int32_t b) {
 // CHECK-NEXT:    [[TMP3:%.*]] = bitcast <16 x i8> [[SHR_I]] to <4 x i32>
 // CHECK-NEXT:    ret <4 x i32> [[TMP3]]
 //
-v128_t test_i8x16_shr(v128_t a, int32_t b) {
+v128_t test_i8x16_shr(v128_t a, uint32_t b) {
   return wasm_i8x16_shr(a, b);
 }
 
@@ -1398,7 +1631,7 @@ v128_t test_i8x16_shr(v128_t a, int32_t b) {
 // CHECK-NEXT:    [[TMP3:%.*]] = bitcast <16 x i8> [[SHR_I]] to <4 x i32>
 // CHECK-NEXT:    ret <4 x i32> [[TMP3]]
 //
-v128_t test_u8x16_shr(v128_t a, int32_t b) {
+v128_t test_u8x16_shr(v128_t a, uint32_t b) {
   return wasm_u8x16_shr(a, b);
 }
 
@@ -1577,7 +1810,7 @@ bool test_i16x8_all_true(v128_t a) {
 // CHECK-NEXT:    [[TMP1:%.*]] = tail call i32 @llvm.wasm.bitmask.v8i16(<8 x i16> [[TMP0]]) #[[ATTR6]]
 // CHECK-NEXT:    ret i32 [[TMP1]]
 //
-int32_t test_i16x8_bitmask(v128_t a) {
+uint32_t test_i16x8_bitmask(v128_t a) {
   return wasm_i16x8_bitmask(a);
 }
 
@@ -1591,7 +1824,7 @@ int32_t test_i16x8_bitmask(v128_t a) {
 // CHECK-NEXT:    [[TMP3:%.*]] = bitcast <8 x i16> [[SHL_I]] to <4 x i32>
 // CHECK-NEXT:    ret <4 x i32> [[TMP3]]
 //
-v128_t test_i16x8_shl(v128_t a, int32_t b) {
+v128_t test_i16x8_shl(v128_t a, uint32_t b) {
   return wasm_i16x8_shl(a, b);
 }
 
@@ -1605,7 +1838,7 @@ v128_t test_i16x8_shl(v128_t a, int32_t b) {
 // CHECK-NEXT:    [[TMP3:%.*]] = bitcast <8 x i16> [[SHR_I]] to <4 x i32>
 // CHECK-NEXT:    ret <4 x i32> [[TMP3]]
 //
-v128_t test_i16x8_shr(v128_t a, int32_t b) {
+v128_t test_i16x8_shr(v128_t a, uint32_t b) {
   return wasm_i16x8_shr(a, b);
 }
 
@@ -1619,7 +1852,7 @@ v128_t test_i16x8_shr(v128_t a, int32_t b) {
 // CHECK-NEXT:    [[TMP3:%.*]] = bitcast <8 x i16> [[SHR_I]] to <4 x i32>
 // CHECK-NEXT:    ret <4 x i32> [[TMP3]]
 //
-v128_t test_u16x8_shr(v128_t a, int32_t b) {
+v128_t test_u16x8_shr(v128_t a, uint32_t b) {
   return wasm_u16x8_shr(a, b);
 }
 
@@ -1804,7 +2037,7 @@ bool test_i32x4_all_true(v128_t a) {
 // CHECK-NEXT:    [[TMP0:%.*]] = tail call i32 @llvm.wasm.bitmask.v4i32(<4 x i32> [[A:%.*]]) #[[ATTR6]]
 // CHECK-NEXT:    ret i32 [[TMP0]]
 //
-int32_t test_i32x4_bitmask(v128_t a) {
+uint32_t test_i32x4_bitmask(v128_t a) {
   return wasm_i32x4_bitmask(a);
 }
 
@@ -1815,7 +2048,7 @@ int32_t test_i32x4_bitmask(v128_t a) {
 // CHECK-NEXT:    [[SHL_I:%.*]] = shl <4 x i32> [[A:%.*]], [[SPLAT_SPLAT_I]]
 // CHECK-NEXT:    ret <4 x i32> [[SHL_I]]
 //
-v128_t test_i32x4_shl(v128_t a, int32_t b) {
+v128_t test_i32x4_shl(v128_t a, uint32_t b) {
   return wasm_i32x4_shl(a, b);
 }
 
@@ -1826,7 +2059,7 @@ v128_t test_i32x4_shl(v128_t a, int32_t b) {
 // CHECK-NEXT:    [[SHR_I:%.*]] = ashr <4 x i32> [[A:%.*]], [[SPLAT_SPLAT_I]]
 // CHECK-NEXT:    ret <4 x i32> [[SHR_I]]
 //
-v128_t test_i32x4_shr(v128_t a, int32_t b) {
+v128_t test_i32x4_shr(v128_t a, uint32_t b) {
   return wasm_i32x4_shr(a, b);
 }
 
@@ -1837,7 +2070,7 @@ v128_t test_i32x4_shr(v128_t a, int32_t b) {
 // CHECK-NEXT:    [[SHR_I:%.*]] = lshr <4 x i32> [[A:%.*]], [[SPLAT_SPLAT_I]]
 // CHECK-NEXT:    ret <4 x i32> [[SHR_I]]
 //
-v128_t test_u32x4_shr(v128_t a, int32_t b) {
+v128_t test_u32x4_shr(v128_t a, uint32_t b) {
   return wasm_u32x4_shr(a, b);
 }
 
@@ -1958,49 +2191,49 @@ bool test_i64x2_all_true(v128_t a) {
 // CHECK-NEXT:    [[TMP1:%.*]] = tail call i32 @llvm.wasm.bitmask.v2i64(<2 x i64> [[TMP0]]) #[[ATTR6]]
 // CHECK-NEXT:    ret i32 [[TMP1]]
 //
-int32_t test_i64x2_bitmask(v128_t a) {
+uint32_t test_i64x2_bitmask(v128_t a) {
   return wasm_i64x2_bitmask(a);
 }
 
 // CHECK-LABEL: @test_i64x2_shl(
 // CHECK-NEXT:  entry:
 // CHECK-NEXT:    [[TMP0:%.*]] = bitcast <4 x i32> [[A:%.*]] to <2 x i64>
-// CHECK-NEXT:    [[CONV_I:%.*]] = sext i32 [[B:%.*]] to i64
+// CHECK-NEXT:    [[CONV_I:%.*]] = zext i32 [[B:%.*]] to i64
 // CHECK-NEXT:    [[SPLAT_SPLATINSERT_I:%.*]] = insertelement <2 x i64> poison, i64 [[CONV_I]], i32 0
 // CHECK-NEXT:    [[SPLAT_SPLAT_I:%.*]] = shufflevector <2 x i64> [[SPLAT_SPLATINSERT_I]], <2 x i64> poison, <2 x i32> zeroinitializer
 // CHECK-NEXT:    [[SHL_I:%.*]] = shl <2 x i64> [[TMP0]], [[SPLAT_SPLAT_I]]
 // CHECK-NEXT:    [[TMP1:%.*]] = bitcast <2 x i64> [[SHL_I]] to <4 x i32>
 // CHECK-NEXT:    ret <4 x i32> [[TMP1]]
 //
-v128_t test_i64x2_shl(v128_t a, int32_t b) {
+v128_t test_i64x2_shl(v128_t a, uint32_t b) {
   return wasm_i64x2_shl(a, b);
 }
 
 // CHECK-LABEL: @test_i64x2_shr(
 // CHECK-NEXT:  entry:
 // CHECK-NEXT:    [[TMP0:%.*]] = bitcast <4 x i32> [[A:%.*]] to <2 x i64>
-// CHECK-NEXT:    [[CONV_I:%.*]] = sext i32 [[B:%.*]] to i64
+// CHECK-NEXT:    [[CONV_I:%.*]] = zext i32 [[B:%.*]] to i64
 // CHECK-NEXT:    [[SPLAT_SPLATINSERT_I:%.*]] = insertelement <2 x i64> poison, i64 [[CONV_I]], i32 0
 // CHECK-NEXT:    [[SPLAT_SPLAT_I:%.*]] = shufflevector <2 x i64> [[SPLAT_SPLATINSERT_I]], <2 x i64> poison, <2 x i32> zeroinitializer
 // CHECK-NEXT:    [[SHR_I:%.*]] = ashr <2 x i64> [[TMP0]], [[SPLAT_SPLAT_I]]
 // CHECK-NEXT:    [[TMP1:%.*]] = bitcast <2 x i64> [[SHR_I]] to <4 x i32>
 // CHECK-NEXT:    ret <4 x i32> [[TMP1]]
 //
-v128_t test_i64x2_shr(v128_t a, int32_t b) {
+v128_t test_i64x2_shr(v128_t a, uint32_t b) {
   return wasm_i64x2_shr(a, b);
 }
 
 // CHECK-LABEL: @test_u64x2_shr(
 // CHECK-NEXT:  entry:
 // CHECK-NEXT:    [[TMP0:%.*]] = bitcast <4 x i32> [[A:%.*]] to <2 x i64>
-// CHECK-NEXT:    [[CONV_I:%.*]] = sext i32 [[B:%.*]] to i64
+// CHECK-NEXT:    [[CONV_I:%.*]] = zext i32 [[B:%.*]] to i64
 // CHECK-NEXT:    [[SPLAT_SPLATINSERT_I:%.*]] = insertelement <2 x i64> poison, i64 [[CONV_I]], i32 0
 // CHECK-NEXT:    [[SPLAT_SPLAT_I:%.*]] = shufflevector <2 x i64> [[SPLAT_SPLATINSERT_I]], <2 x i64> poison, <2 x i32> zeroinitializer
 // CHECK-NEXT:    [[SHR_I:%.*]] = lshr <2 x i64> [[TMP0]], [[SPLAT_SPLAT_I]]
 // CHECK-NEXT:    [[TMP1:%.*]] = bitcast <2 x i64> [[SHR_I]] to <4 x i32>
 // CHECK-NEXT:    ret <4 x i32> [[TMP1]]
 //
-v128_t test_u64x2_shr(v128_t a, int32_t b) {
+v128_t test_u64x2_shr(v128_t a, uint32_t b) {
   return wasm_u64x2_shr(a, b);
 }
 
@@ -2191,11 +2424,11 @@ v128_t test_f32x4_max(v128_t a, v128_t b) {
 
 // CHECK-LABEL: @test_f32x4_pmin(
 // CHECK-NEXT:  entry:
-// CHECK-NEXT:    [[TMP0:%.*]] = bitcast <4 x i32> [[B:%.*]] to <4 x float>
-// CHECK-NEXT:    [[TMP1:%.*]] = bitcast <4 x i32> [[A:%.*]] to <4 x float>
-// CHECK-NEXT:    [[CMP_I:%.*]] = fcmp olt <4 x float> [[TMP0]], [[TMP1]]
-// CHECK-NEXT:    [[TMP2:%.*]] = select <4 x i1> [[CMP_I]], <4 x i32> [[B]], <4 x i32> [[A]]
-// CHECK-NEXT:    ret <4 x i32> [[TMP2]]
+// CHECK-NEXT:    [[TMP0:%.*]] = bitcast <4 x i32> [[A:%.*]] to <4 x float>
+// CHECK-NEXT:    [[TMP1:%.*]] = bitcast <4 x i32> [[B:%.*]] to <4 x float>
+// CHECK-NEXT:    [[TMP2:%.*]] = tail call <4 x float> @llvm.wasm.pmin.v4f32(<4 x float> [[TMP0]], <4 x float> [[TMP1]]) #[[ATTR6]]
+// CHECK-NEXT:    [[TMP3:%.*]] = bitcast <4 x float> [[TMP2]] to <4 x i32>
+// CHECK-NEXT:    ret <4 x i32> [[TMP3]]
 //
 v128_t test_f32x4_pmin(v128_t a, v128_t b) {
   return wasm_f32x4_pmin(a, b);
@@ -2205,9 +2438,9 @@ v128_t test_f32x4_pmin(v128_t a, v128_t b) {
 // CHECK-NEXT:  entry:
 // CHECK-NEXT:    [[TMP0:%.*]] = bitcast <4 x i32> [[A:%.*]] to <4 x float>
 // CHECK-NEXT:    [[TMP1:%.*]] = bitcast <4 x i32> [[B:%.*]] to <4 x float>
-// CHECK-NEXT:    [[CMP_I:%.*]] = fcmp olt <4 x float> [[TMP0]], [[TMP1]]
-// CHECK-NEXT:    [[TMP2:%.*]] = select <4 x i1> [[CMP_I]], <4 x i32> [[B]], <4 x i32> [[A]]
-// CHECK-NEXT:    ret <4 x i32> [[TMP2]]
+// CHECK-NEXT:    [[TMP2:%.*]] = tail call <4 x float> @llvm.wasm.pmax.v4f32(<4 x float> [[TMP0]], <4 x float> [[TMP1]]) #[[ATTR6]]
+// CHECK-NEXT:    [[TMP3:%.*]] = bitcast <4 x float> [[TMP2]] to <4 x i32>
+// CHECK-NEXT:    ret <4 x i32> [[TMP3]]
 //
 v128_t test_f32x4_pmax(v128_t a, v128_t b) {
   return wasm_f32x4_pmax(a, b);
@@ -2364,10 +2597,9 @@ v128_t test_f64x2_max(v128_t a, v128_t b) {
 
 // CHECK-LABEL: @test_f64x2_pmin(
 // CHECK-NEXT:  entry:
-// CHECK-NEXT:    [[TMP0:%.*]] = bitcast <4 x i32> [[B:%.*]] to <2 x double>
-// CHECK-NEXT:    [[TMP1:%.*]] = bitcast <4 x i32> [[A:%.*]] to <2 x double>
-// CHECK-NEXT:    [[CMP_I:%.*]] = fcmp olt <2 x double> [[TMP0]], [[TMP1]]
-// CHECK-NEXT:    [[TMP2:%.*]] = select <2 x i1> [[CMP_I]], <2 x double> [[TMP0]], <2 x double> [[TMP1]]
+// CHECK-NEXT:    [[TMP0:%.*]] = bitcast <4 x i32> [[A:%.*]] to <2 x double>
+// CHECK-NEXT:    [[TMP1:%.*]] = bitcast <4 x i32> [[B:%.*]] to <2 x double>
+// CHECK-NEXT:    [[TMP2:%.*]] = tail call <2 x double> @llvm.wasm.pmin.v2f64(<2 x double> [[TMP0]], <2 x double> [[TMP1]]) #[[ATTR6]]
 // CHECK-NEXT:    [[TMP3:%.*]] = bitcast <2 x double> [[TMP2]] to <4 x i32>
 // CHECK-NEXT:    ret <4 x i32> [[TMP3]]
 //
@@ -2379,8 +2611,7 @@ v128_t test_f64x2_pmin(v128_t a, v128_t b) {
 // CHECK-NEXT:  entry:
 // CHECK-NEXT:    [[TMP0:%.*]] = bitcast <4 x i32> [[A:%.*]] to <2 x double>
 // CHECK-NEXT:    [[TMP1:%.*]] = bitcast <4 x i32> [[B:%.*]] to <2 x double>
-// CHECK-NEXT:    [[CMP_I:%.*]] = fcmp olt <2 x double> [[TMP0]], [[TMP1]]
-// CHECK-NEXT:    [[TMP2:%.*]] = select <2 x i1> [[CMP_I]], <2 x double> [[TMP1]], <2 x double> [[TMP0]]
+// CHECK-NEXT:    [[TMP2:%.*]] = tail call <2 x double> @llvm.wasm.pmax.v2f64(<2 x double> [[TMP0]], <2 x double> [[TMP1]]) #[[ATTR6]]
 // CHECK-NEXT:    [[TMP3:%.*]] = bitcast <2 x double> [[TMP2]] to <4 x i32>
 // CHECK-NEXT:    ret <4 x i32> [[TMP3]]
 //

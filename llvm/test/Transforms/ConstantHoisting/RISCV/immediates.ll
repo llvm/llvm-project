@@ -36,3 +36,39 @@ define i128 @test4(i128 %a) nounwind {
   %2 = add i128 %1, 12297829382473034410122878
   ret i128 %2
 }
+
+; Check that we hoist zext.h without Zbb.
+define i32 @test5(i32 %a) nounwind {
+; CHECK-LABEL: test5
+; CHECK: %const = bitcast i32 65535 to i32
+  %1 = and i32 %a, 65535
+  %2 = and i32 %1, 65535
+  ret i32 %2
+}
+
+; Check that we don't hoist zext.h with 65535 with Zbb.
+define i32 @test6(i32 %a) nounwind "target-features"="+experimental-zbb" {
+; CHECK-LABEL: test6
+; CHECK: and i32 %a, 65535
+  %1 = and i32 %a, 65535
+  %2 = and i32 %1, 65535
+  ret i32 %2
+}
+
+; Check that we hoist zext.w without Zba.
+define i64 @test7(i64 %a) nounwind {
+; CHECK-LABEL: test7
+; CHECK: %const = bitcast i64 4294967295 to i64
+  %1 = and i64 %a, 4294967295
+  %2 = and i64 %1, 4294967295
+  ret i64 %2
+}
+
+; Check that we don't hoist zext.w with Zba.
+define i64 @test8(i64 %a) nounwind "target-features"="+experimental-zbb" {
+; CHECK-LABEL: test8
+; CHECK: and i64 %a, 4294967295
+  %1 = and i64 %a, 4294967295
+  %2 = and i64 %1, 4294967295
+  ret i64 %2
+}

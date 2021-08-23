@@ -41,7 +41,7 @@ define double @func(double %d, i32 %n) nounwind {
 ; RV64IFD-NEXT:    fmv.d.x ft0, a0
 ; RV64IFD-NEXT:    beqz a2, .LBB0_2
 ; RV64IFD-NEXT:  # %bb.1: # %if.else
-; RV64IFD-NEXT:    addi a1, a1, -1
+; RV64IFD-NEXT:    addiw a1, a1, -1
 ; RV64IFD-NEXT:    fmv.x.d a0, ft0
 ; RV64IFD-NEXT:    fsd ft0, 0(sp) # 8-byte Folded Spill
 ; RV64IFD-NEXT:    call func@plt

@@ -1381,7 +1381,6 @@ public:
       assert(ActiveVLocIt != ActiveVLocs.end());
       ActiveVLocIt->second.Loc = Dst;
 
-      assert(Dst != 0);
       MachineInstr *MI =
           MTracker->emitLoc(Dst, Var, ActiveVLocIt->second.Properties);
       PendingDbgValues.push_back(MI);
@@ -1759,6 +1758,17 @@ bool InstrRefBasedLDV::transferDebugValue(const MachineInstr &MI) {
   auto *Scope = LS.findLexicalScope(MI.getDebugLoc().get());
   if (Scope == nullptr)
     return true; // handled it; by doing nothing
+
+  // For now, ignore DBG_VALUE_LISTs when extending ranges. Allow it to
+  // contribute to locations in this block, but don't propagate further.
+  // Interpret it like a DBG_VALUE $noreg.
+  if (MI.isDebugValueList()) {
+    if (VTracker)
+      VTracker->defVar(MI, Properties, None);
+    if (TTracker)
+      TTracker->redefVar(MI, Properties, None);
+    return true;
+  }
 
   const MachineOperand &MO = MI.getOperand(0);
 

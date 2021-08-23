@@ -377,6 +377,9 @@ config("llvm_code") {
     "//llvm/include",
     "$root_gen_dir/llvm/include",
   ]
+  if (current_os != "win") {
+    cflags = [ "-fPIC" ]
+  }
 }
 
 config("lld_code") {

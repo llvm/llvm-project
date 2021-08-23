@@ -1582,6 +1582,19 @@ example:
     can prove that the function does not execute any convergent operations.
     Similarly, the optimizer may remove ``convergent`` on calls/invokes when it
     can prove that the call/invoke cannot call a convergent function.
+``disable_sanitizer_instrumentation``
+    When instrumenting code with sanitizers, it can be important to skip certain
+    functions to ensure no instrumentation is applied to them.
+
+    This attribute is not always similar to absent ``sanitize_<name>``
+    attributes: depending on the specific sanitizer, code can be inserted into
+    functions regardless of the ``sanitize_<name>`` attribute to prevent false
+    positive reports.
+
+    ``disable_sanitizer_instrumentation`` disables all kinds of instrumentation,
+    taking precedence over the ``sanitize_<name>`` attributes and other compiler
+    flags.
+
 ``"frame-pointer"``
     This attribute tells the code generator whether the function
     should keep the frame pointer. The code generator may emit the frame pointer

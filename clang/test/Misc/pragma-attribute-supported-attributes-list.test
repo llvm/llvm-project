@@ -57,6 +57,7 @@
 // CHECK-NEXT: DLLExport (SubjectMatchRule_function, SubjectMatchRule_variable, SubjectMatchRule_record, SubjectMatchRule_objc_interface)
 // CHECK-NEXT: DLLImport (SubjectMatchRule_function, SubjectMatchRule_variable, SubjectMatchRule_record, SubjectMatchRule_objc_interface)
 // CHECK-NEXT: Destructor (SubjectMatchRule_function)
+// CHECK-NEXT: DisableSanitizerInstrumentation (SubjectMatchRule_function, SubjectMatchRule_objc_method, SubjectMatchRule_variable_is_global)
 // CHECK-NEXT: DisableTailCalls (SubjectMatchRule_function, SubjectMatchRule_objc_method)
 // CHECK-NEXT: EnableIf (SubjectMatchRule_function)
 // CHECK-NEXT: EnforceTCB (SubjectMatchRule_function)

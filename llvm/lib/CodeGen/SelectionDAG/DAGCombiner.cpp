@@ -16854,8 +16854,10 @@ bool DAGCombiner::isMulAddWithConstProfitable(SDNode *MulNode,
                                               SDValue &ConstNode) {
   APInt Val;
 
-  // If the add only has one use, this would be OK to do.
-  if (AddNode.getNode()->hasOneUse())
+  // If the add only has one use, and the target thinks the folding is
+  // profitable or does not lead to worse code, this would be OK to do.
+  if (AddNode.getNode()->hasOneUse() &&
+      TLI.isMulAddWithConstProfitable(AddNode, ConstNode))
     return true;
 
   // Walk all the users of the constant with which we're multiplying.

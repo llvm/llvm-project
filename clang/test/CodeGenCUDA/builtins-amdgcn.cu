@@ -116,3 +116,20 @@ __global__ void test_ds_fmin_func(float src, float *__restrict shared) {
   volatile float x = __builtin_amdgcn_ds_fminf(shared, src, 0, 0, false);
   func(shared);
 }
+
+// CHECK: @_Z14test_is_sharedPf(float addrspace(1)* %[[X_COERCE:.*]])
+// CHECK: %[[X:.*]] = alloca float*, align 8, addrspace(5)
+// CHECK: %[[X_ASCAST:.*]] = addrspacecast float* addrspace(5)* %[[X]] to float**
+// CHECK: %[[X_ADDR:.*]] = alloca float*, align 8, addrspace(5)
+// CHECK: %[[X_ADDR_ASCAST:.*]] = addrspacecast float* addrspace(5)* %[[X_ADDR]] to float**
+// CHECK: %[[X_FP:.*]] = addrspacecast float addrspace(1)* %[[X_COERCE]] to float*
+// CHECK: store float* %[[X_FP]], float** %[[X_ASCAST]], align 8
+// CHECK: %[[X1:.*]] = load float*, float** %[[X_ASCAST]], align 8
+// CHECK: store float* %[[X1]], float** %[[X_ADDR_ASCAST]], align 8
+// CHECK: %[[X_TMP:.*]] = load float*, float** %[[X_ADDR_ASCAST]], align 8
+// CHECK: %[[X_ARG:.*]] = bitcast float* %[[X_TMP]] to i8*
+// CHECK: call i1 @llvm.amdgcn.is.shared(i8* %[[X_ARG]])
+
+__global__ void test_is_shared(float *x){
+  bool ret = __builtin_amdgcn_is_shared(x);
+}

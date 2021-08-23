@@ -243,8 +243,9 @@ defm : Zn2WriteResPair<WriteIDiv32, [Zn2ALU2, Zn2Divider], 25, [1,25], 2>;
 defm : Zn2WriteResPair<WriteIDiv64, [Zn2ALU2, Zn2Divider], 41, [1,41], 2>;
 
 // IMULH
-def  : WriteRes<WriteIMulH, [Zn2ALU1, Zn2Multiplier]>{
-  let Latency = 4;
+def  : WriteRes<WriteIMulH, [Zn2Multiplier]>{
+  let Latency = 3;
+  let NumMicroOps = 0;
 }
 
 // Floating point operations
@@ -658,31 +659,9 @@ def : SchedAlias<WriteIMul64ImmLd, Zn2WriteMul64Ld>;
 def : SchedAlias<WriteIMul64RegLd, Zn2WriteMul64Ld>;
 
 // MULX.
-// r32,r32,r32.
-def Zn2WriteMulX32 : SchedWriteRes<[Zn2ALU1, Zn2Multiplier]> {
-  let Latency = 3;
-  let ResourceCycles = [1, 2];
-}
-def : InstRW<[Zn2WriteMulX32], (instrs MULX32rr)>;
-
-// r32,r32,m32.
-def Zn2WriteMulX32Ld : SchedWriteRes<[Zn2AGU, Zn2ALU1, Zn2Multiplier]> {
-  let Latency = 7;
-  let ResourceCycles = [1, 2, 2];
-}
-def : InstRW<[Zn2WriteMulX32Ld, ReadAfterLd], (instrs MULX32rm)>;
-
-// r64,r64,r64.
-def Zn2WriteMulX64 : SchedWriteRes<[Zn2ALU1]> {
-  let Latency = 3;
-}
-def : InstRW<[Zn2WriteMulX64], (instrs MULX64rr)>;
-
-// r64,r64,m64.
-def Zn2WriteMulX64Ld : SchedWriteRes<[Zn2AGU, Zn2ALU1, Zn2Multiplier]> {
-  let Latency = 7;
-}
-def : InstRW<[Zn2WriteMulX64Ld, ReadAfterLd], (instrs MULX64rm)>;
+// Numbers are based on the AMD SOG for Family 17h - Instruction Latencies.
+defm : Zn2WriteResPair<WriteMULX32, [Zn2ALU1, Zn2Multiplier], 3, [1, 1], 1, 4, 0>;
+defm : Zn2WriteResPair<WriteMULX64, [Zn2ALU1, Zn2Multiplier], 3, [1, 1], 1, 4, 0>;
 
 //-- Control transfer instructions --//
 

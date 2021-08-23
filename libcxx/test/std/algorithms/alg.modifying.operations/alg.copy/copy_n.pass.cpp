@@ -6,8 +6,6 @@
 //
 //===----------------------------------------------------------------------===//
 
-// UNSUPPORTED: clang-8
-
 // <algorithm>
 
 // template<InputIterator InIter, OutputIterator<auto, InIter::reference> OutIter>

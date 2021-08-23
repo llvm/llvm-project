@@ -915,7 +915,7 @@ private:
   SDValue WidenVecRes_VECTOR_SHUFFLE(ShuffleVectorSDNode *N);
 
   SDValue WidenVecRes_Ternary(SDNode *N);
-  SDValue WidenVecRes_Binary(SDNode *N);
+  SDValue WidenVecRes_Binary(SDNode *N, bool IsVP);
   SDValue WidenVecRes_BinaryCanTrap(SDNode *N);
   SDValue WidenVecRes_BinaryWithExtraScalarOp(SDNode *N);
   SDValue WidenVecRes_StrictFP(SDNode *N);

@@ -402,6 +402,8 @@ public:
   LegalizeResult lowerDIVREM(MachineInstr &MI);
   LegalizeResult lowerAbsToAddXor(MachineInstr &MI);
   LegalizeResult lowerAbsToMaxNeg(MachineInstr &MI);
+  LegalizeResult lowerIsNaN(MachineInstr &MI);
+  LegalizeResult lowerVectorReduction(MachineInstr &MI);
 };
 
 /// Helper function that creates a libcall to the given \p Name using the given

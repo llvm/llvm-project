@@ -18,7 +18,7 @@ define i32 @addi(i32 %a) nounwind {
 ;
 ; RV64I-LABEL: addi:
 ; RV64I:       # %bb.0:
-; RV64I-NEXT:    addi a0, a0, 1
+; RV64I-NEXT:    addiw a0, a0, 1
 ; RV64I-NEXT:    ret
   %1 = add i32 %a, 1
   ret i32 %1

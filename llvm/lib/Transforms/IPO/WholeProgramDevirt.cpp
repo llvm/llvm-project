@@ -1288,7 +1288,7 @@ void DevirtModule::tryICallBranchFunnel(
                           M.getDataLayout().getProgramAddressSpace(),
                           "branch_funnel", &M);
   }
-  JT->addAttribute(1, Attribute::Nest);
+  JT->addParamAttr(0, Attribute::Nest);
 
   std::vector<Value *> JTArgs;
   JTArgs.push_back(JT->arg_begin());

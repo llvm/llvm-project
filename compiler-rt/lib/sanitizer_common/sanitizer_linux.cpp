@@ -158,9 +158,11 @@ namespace __sanitizer {
 #include "sanitizer_syscall_linux_aarch64.inc"
 #elif SANITIZER_LINUX && defined(__arm__)
 #include "sanitizer_syscall_linux_arm.inc"
-#else
-#include "sanitizer_syscall_generic.inc"
-#endif
+#  elif SANITIZER_LINUX && defined(__hexagon__)
+#    include "sanitizer_syscall_linux_hexagon.inc"
+#  else
+#    include "sanitizer_syscall_generic.inc"
+#  endif
 
 // --------------- sanitizer_libc.h
 #if !SANITIZER_SOLARIS && !SANITIZER_NETBSD
@@ -2097,9 +2099,14 @@ static void GetPcSpBp(void *context, uptr *pc, uptr *sp, uptr *bp) {
   *pc = ucontext->uc_mcontext.__gregs[REG_PC];
   *bp = ucontext->uc_mcontext.__gregs[REG_S0];
   *sp = ucontext->uc_mcontext.__gregs[REG_SP];
-#else
-# error "Unsupported arch"
-#endif
+#  elif defined(__hexagon__)
+  ucontext_t *ucontext = (ucontext_t *)context;
+  *pc = ucontext->uc_mcontext.pc;
+  *bp = ucontext->uc_mcontext.r30;
+  *sp = ucontext->uc_mcontext.r29;
+#  else
+#    error "Unsupported arch"
+#  endif
 }
 
 void SignalContext::InitPcSpBp() { GetPcSpBp(context, &pc, &sp, &bp); }

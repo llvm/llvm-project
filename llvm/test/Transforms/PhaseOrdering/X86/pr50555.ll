@@ -4,71 +4,35 @@
 
 define void @trunc_through_one_add(i16* noalias %0, i8* noalias readonly %1) {
 ; SSE-LABEL: @trunc_through_one_add(
-; SSE-NEXT:    [[TMP3:%.*]] = bitcast i8* [[TMP1:%.*]] to <4 x i8>*
-; SSE-NEXT:    [[TMP4:%.*]] = load <4 x i8>, <4 x i8>* [[TMP3]], align 1
-; SSE-NEXT:    [[TMP5:%.*]] = zext <4 x i8> [[TMP4]] to <4 x i32>
-; SSE-NEXT:    [[TMP6:%.*]] = lshr <4 x i32> [[TMP5]], <i32 1, i32 1, i32 1, i32 1>
-; SSE-NEXT:    [[TMP7:%.*]] = add nuw nsw <4 x i32> [[TMP6]], [[TMP5]]
-; SSE-NEXT:    [[TMP8:%.*]] = lshr <4 x i32> [[TMP7]], <i32 2, i32 2, i32 2, i32 2>
-; SSE-NEXT:    [[TMP9:%.*]] = trunc <4 x i32> [[TMP8]] to <4 x i16>
-; SSE-NEXT:    [[TMP10:%.*]] = bitcast i16* [[TMP0:%.*]] to <4 x i16>*
-; SSE-NEXT:    store <4 x i16> [[TMP9]], <4 x i16>* [[TMP10]], align 2
-; SSE-NEXT:    [[TMP11:%.*]] = getelementptr inbounds i8, i8* [[TMP1]], i64 4
-; SSE-NEXT:    [[TMP12:%.*]] = getelementptr inbounds i16, i16* [[TMP0]], i64 4
-; SSE-NEXT:    [[TMP13:%.*]] = bitcast i8* [[TMP11]] to <4 x i8>*
-; SSE-NEXT:    [[TMP14:%.*]] = load <4 x i8>, <4 x i8>* [[TMP13]], align 1
-; SSE-NEXT:    [[TMP15:%.*]] = zext <4 x i8> [[TMP14]] to <4 x i32>
-; SSE-NEXT:    [[TMP16:%.*]] = lshr <4 x i32> [[TMP15]], <i32 1, i32 1, i32 1, i32 1>
-; SSE-NEXT:    [[TMP17:%.*]] = add nuw nsw <4 x i32> [[TMP16]], [[TMP15]]
-; SSE-NEXT:    [[TMP18:%.*]] = lshr <4 x i32> [[TMP17]], <i32 2, i32 2, i32 2, i32 2>
-; SSE-NEXT:    [[TMP19:%.*]] = trunc <4 x i32> [[TMP18]] to <4 x i16>
-; SSE-NEXT:    [[TMP20:%.*]] = bitcast i16* [[TMP12]] to <4 x i16>*
-; SSE-NEXT:    store <4 x i16> [[TMP19]], <4 x i16>* [[TMP20]], align 2
-; SSE-NEXT:    [[TMP21:%.*]] = getelementptr inbounds i8, i8* [[TMP1]], i64 8
-; SSE-NEXT:    [[TMP22:%.*]] = getelementptr inbounds i16, i16* [[TMP0]], i64 8
-; SSE-NEXT:    [[TMP23:%.*]] = bitcast i8* [[TMP21]] to <4 x i8>*
-; SSE-NEXT:    [[TMP24:%.*]] = load <4 x i8>, <4 x i8>* [[TMP23]], align 1
-; SSE-NEXT:    [[TMP25:%.*]] = zext <4 x i8> [[TMP24]] to <4 x i32>
-; SSE-NEXT:    [[TMP26:%.*]] = lshr <4 x i32> [[TMP25]], <i32 1, i32 1, i32 1, i32 1>
-; SSE-NEXT:    [[TMP27:%.*]] = add nuw nsw <4 x i32> [[TMP26]], [[TMP25]]
-; SSE-NEXT:    [[TMP28:%.*]] = lshr <4 x i32> [[TMP27]], <i32 2, i32 2, i32 2, i32 2>
-; SSE-NEXT:    [[TMP29:%.*]] = trunc <4 x i32> [[TMP28]] to <4 x i16>
-; SSE-NEXT:    [[TMP30:%.*]] = bitcast i16* [[TMP22]] to <4 x i16>*
-; SSE-NEXT:    store <4 x i16> [[TMP29]], <4 x i16>* [[TMP30]], align 2
-; SSE-NEXT:    [[TMP31:%.*]] = getelementptr inbounds i8, i8* [[TMP1]], i64 12
-; SSE-NEXT:    [[TMP32:%.*]] = getelementptr inbounds i16, i16* [[TMP0]], i64 12
-; SSE-NEXT:    [[TMP33:%.*]] = bitcast i8* [[TMP31]] to <4 x i8>*
-; SSE-NEXT:    [[TMP34:%.*]] = load <4 x i8>, <4 x i8>* [[TMP33]], align 1
-; SSE-NEXT:    [[TMP35:%.*]] = zext <4 x i8> [[TMP34]] to <4 x i32>
-; SSE-NEXT:    [[TMP36:%.*]] = lshr <4 x i32> [[TMP35]], <i32 1, i32 1, i32 1, i32 1>
-; SSE-NEXT:    [[TMP37:%.*]] = add nuw nsw <4 x i32> [[TMP36]], [[TMP35]]
-; SSE-NEXT:    [[TMP38:%.*]] = lshr <4 x i32> [[TMP37]], <i32 2, i32 2, i32 2, i32 2>
-; SSE-NEXT:    [[TMP39:%.*]] = trunc <4 x i32> [[TMP38]] to <4 x i16>
-; SSE-NEXT:    [[TMP40:%.*]] = bitcast i16* [[TMP32]] to <4 x i16>*
-; SSE-NEXT:    store <4 x i16> [[TMP39]], <4 x i16>* [[TMP40]], align 2
+; SSE-NEXT:    [[TMP3:%.*]] = bitcast i8* [[TMP1:%.*]] to <8 x i8>*
+; SSE-NEXT:    [[TMP4:%.*]] = load <8 x i8>, <8 x i8>* [[TMP3]], align 1
+; SSE-NEXT:    [[TMP5:%.*]] = zext <8 x i8> [[TMP4]] to <8 x i16>
+; SSE-NEXT:    [[TMP6:%.*]] = lshr <8 x i16> [[TMP5]], <i16 1, i16 1, i16 1, i16 1, i16 1, i16 1, i16 1, i16 1>
+; SSE-NEXT:    [[TMP7:%.*]] = add nuw nsw <8 x i16> [[TMP6]], [[TMP5]]
+; SSE-NEXT:    [[TMP8:%.*]] = lshr <8 x i16> [[TMP7]], <i16 2, i16 2, i16 2, i16 2, i16 2, i16 2, i16 2, i16 2>
+; SSE-NEXT:    [[TMP9:%.*]] = bitcast i16* [[TMP0:%.*]] to <8 x i16>*
+; SSE-NEXT:    store <8 x i16> [[TMP8]], <8 x i16>* [[TMP9]], align 2
+; SSE-NEXT:    [[TMP10:%.*]] = getelementptr inbounds i8, i8* [[TMP1]], i64 8
+; SSE-NEXT:    [[TMP11:%.*]] = getelementptr inbounds i16, i16* [[TMP0]], i64 8
+; SSE-NEXT:    [[TMP12:%.*]] = bitcast i8* [[TMP10]] to <8 x i8>*
+; SSE-NEXT:    [[TMP13:%.*]] = load <8 x i8>, <8 x i8>* [[TMP12]], align 1
+; SSE-NEXT:    [[TMP14:%.*]] = zext <8 x i8> [[TMP13]] to <8 x i16>
+; SSE-NEXT:    [[TMP15:%.*]] = lshr <8 x i16> [[TMP14]], <i16 1, i16 1, i16 1, i16 1, i16 1, i16 1, i16 1, i16 1>
+; SSE-NEXT:    [[TMP16:%.*]] = add nuw nsw <8 x i16> [[TMP15]], [[TMP14]]
+; SSE-NEXT:    [[TMP17:%.*]] = lshr <8 x i16> [[TMP16]], <i16 2, i16 2, i16 2, i16 2, i16 2, i16 2, i16 2, i16 2>
+; SSE-NEXT:    [[TMP18:%.*]] = bitcast i16* [[TMP11]] to <8 x i16>*
+; SSE-NEXT:    store <8 x i16> [[TMP17]], <8 x i16>* [[TMP18]], align 2
 ; SSE-NEXT:    ret void
 ;
 ; AVX-LABEL: @trunc_through_one_add(
-; AVX-NEXT:    [[TMP3:%.*]] = bitcast i8* [[TMP1:%.*]] to <8 x i8>*
-; AVX-NEXT:    [[TMP4:%.*]] = load <8 x i8>, <8 x i8>* [[TMP3]], align 1
-; AVX-NEXT:    [[TMP5:%.*]] = zext <8 x i8> [[TMP4]] to <8 x i32>
-; AVX-NEXT:    [[TMP6:%.*]] = lshr <8 x i32> [[TMP5]], <i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1>
-; AVX-NEXT:    [[TMP7:%.*]] = add nuw nsw <8 x i32> [[TMP6]], [[TMP5]]
-; AVX-NEXT:    [[TMP8:%.*]] = lshr <8 x i32> [[TMP7]], <i32 2, i32 2, i32 2, i32 2, i32 2, i32 2, i32 2, i32 2>
-; AVX-NEXT:    [[TMP9:%.*]] = trunc <8 x i32> [[TMP8]] to <8 x i16>
-; AVX-NEXT:    [[TMP10:%.*]] = bitcast i16* [[TMP0:%.*]] to <8 x i16>*
-; AVX-NEXT:    store <8 x i16> [[TMP9]], <8 x i16>* [[TMP10]], align 2
-; AVX-NEXT:    [[TMP11:%.*]] = getelementptr inbounds i8, i8* [[TMP1]], i64 8
-; AVX-NEXT:    [[TMP12:%.*]] = getelementptr inbounds i16, i16* [[TMP0]], i64 8
-; AVX-NEXT:    [[TMP13:%.*]] = bitcast i8* [[TMP11]] to <8 x i8>*
-; AVX-NEXT:    [[TMP14:%.*]] = load <8 x i8>, <8 x i8>* [[TMP13]], align 1
-; AVX-NEXT:    [[TMP15:%.*]] = zext <8 x i8> [[TMP14]] to <8 x i32>
-; AVX-NEXT:    [[TMP16:%.*]] = lshr <8 x i32> [[TMP15]], <i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1>
-; AVX-NEXT:    [[TMP17:%.*]] = add nuw nsw <8 x i32> [[TMP16]], [[TMP15]]
-; AVX-NEXT:    [[TMP18:%.*]] = lshr <8 x i32> [[TMP17]], <i32 2, i32 2, i32 2, i32 2, i32 2, i32 2, i32 2, i32 2>
-; AVX-NEXT:    [[TMP19:%.*]] = trunc <8 x i32> [[TMP18]] to <8 x i16>
-; AVX-NEXT:    [[TMP20:%.*]] = bitcast i16* [[TMP12]] to <8 x i16>*
-; AVX-NEXT:    store <8 x i16> [[TMP19]], <8 x i16>* [[TMP20]], align 2
+; AVX-NEXT:    [[TMP3:%.*]] = bitcast i8* [[TMP1:%.*]] to <16 x i8>*
+; AVX-NEXT:    [[TMP4:%.*]] = load <16 x i8>, <16 x i8>* [[TMP3]], align 1
+; AVX-NEXT:    [[TMP5:%.*]] = zext <16 x i8> [[TMP4]] to <16 x i16>
+; AVX-NEXT:    [[TMP6:%.*]] = lshr <16 x i16> [[TMP5]], <i16 1, i16 1, i16 1, i16 1, i16 1, i16 1, i16 1, i16 1, i16 1, i16 1, i16 1, i16 1, i16 1, i16 1, i16 1, i16 1>
+; AVX-NEXT:    [[TMP7:%.*]] = add nuw nsw <16 x i16> [[TMP6]], [[TMP5]]
+; AVX-NEXT:    [[TMP8:%.*]] = lshr <16 x i16> [[TMP7]], <i16 2, i16 2, i16 2, i16 2, i16 2, i16 2, i16 2, i16 2, i16 2, i16 2, i16 2, i16 2, i16 2, i16 2, i16 2, i16 2>
+; AVX-NEXT:    [[TMP9:%.*]] = bitcast i16* [[TMP0:%.*]] to <16 x i16>*
+; AVX-NEXT:    store <16 x i16> [[TMP8]], <16 x i16>* [[TMP9]], align 2
 ; AVX-NEXT:    ret void
 ;
   %3 = load i8, i8* %1, align 1
@@ -218,99 +182,48 @@ define void @trunc_through_one_add(i16* noalias %0, i8* noalias readonly %1) {
 
 define void @trunc_through_two_adds(i16* noalias %0, i8* noalias readonly %1, i8* noalias readonly %2) {
 ; SSE-LABEL: @trunc_through_two_adds(
-; SSE-NEXT:    [[TMP4:%.*]] = bitcast i8* [[TMP1:%.*]] to <4 x i8>*
-; SSE-NEXT:    [[TMP5:%.*]] = load <4 x i8>, <4 x i8>* [[TMP4]], align 1
-; SSE-NEXT:    [[TMP6:%.*]] = zext <4 x i8> [[TMP5]] to <4 x i32>
-; SSE-NEXT:    [[TMP7:%.*]] = bitcast i8* [[TMP2:%.*]] to <4 x i8>*
-; SSE-NEXT:    [[TMP8:%.*]] = load <4 x i8>, <4 x i8>* [[TMP7]], align 1
-; SSE-NEXT:    [[TMP9:%.*]] = zext <4 x i8> [[TMP8]] to <4 x i32>
-; SSE-NEXT:    [[TMP10:%.*]] = add nuw nsw <4 x i32> [[TMP9]], [[TMP6]]
-; SSE-NEXT:    [[TMP11:%.*]] = lshr <4 x i32> [[TMP10]], <i32 1, i32 1, i32 1, i32 1>
-; SSE-NEXT:    [[TMP12:%.*]] = add nuw nsw <4 x i32> [[TMP11]], [[TMP10]]
-; SSE-NEXT:    [[TMP13:%.*]] = lshr <4 x i32> [[TMP12]], <i32 2, i32 2, i32 2, i32 2>
-; SSE-NEXT:    [[TMP14:%.*]] = trunc <4 x i32> [[TMP13]] to <4 x i16>
-; SSE-NEXT:    [[TMP15:%.*]] = bitcast i16* [[TMP0:%.*]] to <4 x i16>*
-; SSE-NEXT:    store <4 x i16> [[TMP14]], <4 x i16>* [[TMP15]], align 2
-; SSE-NEXT:    [[TMP16:%.*]] = getelementptr inbounds i8, i8* [[TMP1]], i64 4
-; SSE-NEXT:    [[TMP17:%.*]] = getelementptr inbounds i8, i8* [[TMP2]], i64 4
-; SSE-NEXT:    [[TMP18:%.*]] = getelementptr inbounds i16, i16* [[TMP0]], i64 4
-; SSE-NEXT:    [[TMP19:%.*]] = bitcast i8* [[TMP16]] to <4 x i8>*
-; SSE-NEXT:    [[TMP20:%.*]] = load <4 x i8>, <4 x i8>* [[TMP19]], align 1
-; SSE-NEXT:    [[TMP21:%.*]] = zext <4 x i8> [[TMP20]] to <4 x i32>
-; SSE-NEXT:    [[TMP22:%.*]] = bitcast i8* [[TMP17]] to <4 x i8>*
-; SSE-NEXT:    [[TMP23:%.*]] = load <4 x i8>, <4 x i8>* [[TMP22]], align 1
-; SSE-NEXT:    [[TMP24:%.*]] = zext <4 x i8> [[TMP23]] to <4 x i32>
-; SSE-NEXT:    [[TMP25:%.*]] = add nuw nsw <4 x i32> [[TMP24]], [[TMP21]]
-; SSE-NEXT:    [[TMP26:%.*]] = lshr <4 x i32> [[TMP25]], <i32 1, i32 1, i32 1, i32 1>
-; SSE-NEXT:    [[TMP27:%.*]] = add nuw nsw <4 x i32> [[TMP26]], [[TMP25]]
-; SSE-NEXT:    [[TMP28:%.*]] = lshr <4 x i32> [[TMP27]], <i32 2, i32 2, i32 2, i32 2>
-; SSE-NEXT:    [[TMP29:%.*]] = trunc <4 x i32> [[TMP28]] to <4 x i16>
-; SSE-NEXT:    [[TMP30:%.*]] = bitcast i16* [[TMP18]] to <4 x i16>*
-; SSE-NEXT:    store <4 x i16> [[TMP29]], <4 x i16>* [[TMP30]], align 2
-; SSE-NEXT:    [[TMP31:%.*]] = getelementptr inbounds i8, i8* [[TMP1]], i64 8
-; SSE-NEXT:    [[TMP32:%.*]] = getelementptr inbounds i8, i8* [[TMP2]], i64 8
-; SSE-NEXT:    [[TMP33:%.*]] = getelementptr inbounds i16, i16* [[TMP0]], i64 8
-; SSE-NEXT:    [[TMP34:%.*]] = bitcast i8* [[TMP31]] to <4 x i8>*
-; SSE-NEXT:    [[TMP35:%.*]] = load <4 x i8>, <4 x i8>* [[TMP34]], align 1
-; SSE-NEXT:    [[TMP36:%.*]] = zext <4 x i8> [[TMP35]] to <4 x i32>
-; SSE-NEXT:    [[TMP37:%.*]] = bitcast i8* [[TMP32]] to <4 x i8>*
-; SSE-NEXT:    [[TMP38:%.*]] = load <4 x i8>, <4 x i8>* [[TMP37]], align 1
-; SSE-NEXT:    [[TMP39:%.*]] = zext <4 x i8> [[TMP38]] to <4 x i32>
-; SSE-NEXT:    [[TMP40:%.*]] = add nuw nsw <4 x i32> [[TMP39]], [[TMP36]]
-; SSE-NEXT:    [[TMP41:%.*]] = lshr <4 x i32> [[TMP40]], <i32 1, i32 1, i32 1, i32 1>
-; SSE-NEXT:    [[TMP42:%.*]] = add nuw nsw <4 x i32> [[TMP41]], [[TMP40]]
-; SSE-NEXT:    [[TMP43:%.*]] = lshr <4 x i32> [[TMP42]], <i32 2, i32 2, i32 2, i32 2>
-; SSE-NEXT:    [[TMP44:%.*]] = trunc <4 x i32> [[TMP43]] to <4 x i16>
-; SSE-NEXT:    [[TMP45:%.*]] = bitcast i16* [[TMP33]] to <4 x i16>*
-; SSE-NEXT:    store <4 x i16> [[TMP44]], <4 x i16>* [[TMP45]], align 2
-; SSE-NEXT:    [[TMP46:%.*]] = getelementptr inbounds i8, i8* [[TMP1]], i64 12
-; SSE-NEXT:    [[TMP47:%.*]] = getelementptr inbounds i8, i8* [[TMP2]], i64 12
-; SSE-NEXT:    [[TMP48:%.*]] = getelementptr inbounds i16, i16* [[TMP0]], i64 12
-; SSE-NEXT:    [[TMP49:%.*]] = bitcast i8* [[TMP46]] to <4 x i8>*
-; SSE-NEXT:    [[TMP50:%.*]] = load <4 x i8>, <4 x i8>* [[TMP49]], align 1
-; SSE-NEXT:    [[TMP51:%.*]] = zext <4 x i8> [[TMP50]] to <4 x i32>
-; SSE-NEXT:    [[TMP52:%.*]] = bitcast i8* [[TMP47]] to <4 x i8>*
-; SSE-NEXT:    [[TMP53:%.*]] = load <4 x i8>, <4 x i8>* [[TMP52]], align 1
-; SSE-NEXT:    [[TMP54:%.*]] = zext <4 x i8> [[TMP53]] to <4 x i32>
-; SSE-NEXT:    [[TMP55:%.*]] = add nuw nsw <4 x i32> [[TMP54]], [[TMP51]]
-; SSE-NEXT:    [[TMP56:%.*]] = lshr <4 x i32> [[TMP55]], <i32 1, i32 1, i32 1, i32 1>
-; SSE-NEXT:    [[TMP57:%.*]] = add nuw nsw <4 x i32> [[TMP56]], [[TMP55]]
-; SSE-NEXT:    [[TMP58:%.*]] = lshr <4 x i32> [[TMP57]], <i32 2, i32 2, i32 2, i32 2>
-; SSE-NEXT:    [[TMP59:%.*]] = trunc <4 x i32> [[TMP58]] to <4 x i16>
-; SSE-NEXT:    [[TMP60:%.*]] = bitcast i16* [[TMP48]] to <4 x i16>*
-; SSE-NEXT:    store <4 x i16> [[TMP59]], <4 x i16>* [[TMP60]], align 2
+; SSE-NEXT:    [[TMP4:%.*]] = bitcast i8* [[TMP1:%.*]] to <8 x i8>*
+; SSE-NEXT:    [[TMP5:%.*]] = load <8 x i8>, <8 x i8>* [[TMP4]], align 1
+; SSE-NEXT:    [[TMP6:%.*]] = zext <8 x i8> [[TMP5]] to <8 x i16>
+; SSE-NEXT:    [[TMP7:%.*]] = bitcast i8* [[TMP2:%.*]] to <8 x i8>*
+; SSE-NEXT:    [[TMP8:%.*]] = load <8 x i8>, <8 x i8>* [[TMP7]], align 1
+; SSE-NEXT:    [[TMP9:%.*]] = zext <8 x i8> [[TMP8]] to <8 x i16>
+; SSE-NEXT:    [[TMP10:%.*]] = add nuw nsw <8 x i16> [[TMP9]], [[TMP6]]
+; SSE-NEXT:    [[TMP11:%.*]] = lshr <8 x i16> [[TMP10]], <i16 1, i16 1, i16 1, i16 1, i16 1, i16 1, i16 1, i16 1>
+; SSE-NEXT:    [[TMP12:%.*]] = add nuw nsw <8 x i16> [[TMP11]], [[TMP10]]
+; SSE-NEXT:    [[TMP13:%.*]] = lshr <8 x i16> [[TMP12]], <i16 2, i16 2, i16 2, i16 2, i16 2, i16 2, i16 2, i16 2>
+; SSE-NEXT:    [[TMP14:%.*]] = bitcast i16* [[TMP0:%.*]] to <8 x i16>*
+; SSE-NEXT:    store <8 x i16> [[TMP13]], <8 x i16>* [[TMP14]], align 2
+; SSE-NEXT:    [[TMP15:%.*]] = getelementptr inbounds i8, i8* [[TMP1]], i64 8
+; SSE-NEXT:    [[TMP16:%.*]] = getelementptr inbounds i8, i8* [[TMP2]], i64 8
+; SSE-NEXT:    [[TMP17:%.*]] = getelementptr inbounds i16, i16* [[TMP0]], i64 8
+; SSE-NEXT:    [[TMP18:%.*]] = bitcast i8* [[TMP15]] to <8 x i8>*
+; SSE-NEXT:    [[TMP19:%.*]] = load <8 x i8>, <8 x i8>* [[TMP18]], align 1
+; SSE-NEXT:    [[TMP20:%.*]] = zext <8 x i8> [[TMP19]] to <8 x i16>
+; SSE-NEXT:    [[TMP21:%.*]] = bitcast i8* [[TMP16]] to <8 x i8>*
+; SSE-NEXT:    [[TMP22:%.*]] = load <8 x i8>, <8 x i8>* [[TMP21]], align 1
+; SSE-NEXT:    [[TMP23:%.*]] = zext <8 x i8> [[TMP22]] to <8 x i16>
+; SSE-NEXT:    [[TMP24:%.*]] = add nuw nsw <8 x i16> [[TMP23]], [[TMP20]]
+; SSE-NEXT:    [[TMP25:%.*]] = lshr <8 x i16> [[TMP24]], <i16 1, i16 1, i16 1, i16 1, i16 1, i16 1, i16 1, i16 1>
+; SSE-NEXT:    [[TMP26:%.*]] = add nuw nsw <8 x i16> [[TMP25]], [[TMP24]]
+; SSE-NEXT:    [[TMP27:%.*]] = lshr <8 x i16> [[TMP26]], <i16 2, i16 2, i16 2, i16 2, i16 2, i16 2, i16 2, i16 2>
+; SSE-NEXT:    [[TMP28:%.*]] = bitcast i16* [[TMP17]] to <8 x i16>*
+; SSE-NEXT:    store <8 x i16> [[TMP27]], <8 x i16>* [[TMP28]], align 2
 ; SSE-NEXT:    ret void
 ;
 ; AVX-LABEL: @trunc_through_two_adds(
-; AVX-NEXT:    [[TMP4:%.*]] = bitcast i8* [[TMP1:%.*]] to <8 x i8>*
-; AVX-NEXT:    [[TMP5:%.*]] = load <8 x i8>, <8 x i8>* [[TMP4]], align 1
-; AVX-NEXT:    [[TMP6:%.*]] = zext <8 x i8> [[TMP5]] to <8 x i32>
-; AVX-NEXT:    [[TMP7:%.*]] = bitcast i8* [[TMP2:%.*]] to <8 x i8>*
-; AVX-NEXT:    [[TMP8:%.*]] = load <8 x i8>, <8 x i8>* [[TMP7]], align 1
-; AVX-NEXT:    [[TMP9:%.*]] = zext <8 x i8> [[TMP8]] to <8 x i32>
-; AVX-NEXT:    [[TMP10:%.*]] = add nuw nsw <8 x i32> [[TMP9]], [[TMP6]]
-; AVX-NEXT:    [[TMP11:%.*]] = lshr <8 x i32> [[TMP10]], <i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1>
-; AVX-NEXT:    [[TMP12:%.*]] = add nuw nsw <8 x i32> [[TMP11]], [[TMP10]]
-; AVX-NEXT:    [[TMP13:%.*]] = lshr <8 x i32> [[TMP12]], <i32 2, i32 2, i32 2, i32 2, i32 2, i32 2, i32 2, i32 2>
-; AVX-NEXT:    [[TMP14:%.*]] = trunc <8 x i32> [[TMP13]] to <8 x i16>
-; AVX-NEXT:    [[TMP15:%.*]] = bitcast i16* [[TMP0:%.*]] to <8 x i16>*
-; AVX-NEXT:    store <8 x i16> [[TMP14]], <8 x i16>* [[TMP15]], align 2
-; AVX-NEXT:    [[TMP16:%.*]] = getelementptr inbounds i8, i8* [[TMP1]], i64 8
-; AVX-NEXT:    [[TMP17:%.*]] = getelementptr inbounds i8, i8* [[TMP2]], i64 8
-; AVX-NEXT:    [[TMP18:%.*]] = getelementptr inbounds i16, i16* [[TMP0]], i64 8
-; AVX-NEXT:    [[TMP19:%.*]] = bitcast i8* [[TMP16]] to <8 x i8>*
-; AVX-NEXT:    [[TMP20:%.*]] = load <8 x i8>, <8 x i8>* [[TMP19]], align 1
-; AVX-NEXT:    [[TMP21:%.*]] = zext <8 x i8> [[TMP20]] to <8 x i32>
-; AVX-NEXT:    [[TMP22:%.*]] = bitcast i8* [[TMP17]] to <8 x i8>*
-; AVX-NEXT:    [[TMP23:%.*]] = load <8 x i8>, <8 x i8>* [[TMP22]], align 1
-; AVX-NEXT:    [[TMP24:%.*]] = zext <8 x i8> [[TMP23]] to <8 x i32>
-; AVX-NEXT:    [[TMP25:%.*]] = add nuw nsw <8 x i32> [[TMP24]], [[TMP21]]
-; AVX-NEXT:    [[TMP26:%.*]] = lshr <8 x i32> [[TMP25]], <i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1>
-; AVX-NEXT:    [[TMP27:%.*]] = add nuw nsw <8 x i32> [[TMP26]], [[TMP25]]
-; AVX-NEXT:    [[TMP28:%.*]] = lshr <8 x i32> [[TMP27]], <i32 2, i32 2, i32 2, i32 2, i32 2, i32 2, i32 2, i32 2>
-; AVX-NEXT:    [[TMP29:%.*]] = trunc <8 x i32> [[TMP28]] to <8 x i16>
-; AVX-NEXT:    [[TMP30:%.*]] = bitcast i16* [[TMP18]] to <8 x i16>*
-; AVX-NEXT:    store <8 x i16> [[TMP29]], <8 x i16>* [[TMP30]], align 2
+; AVX-NEXT:    [[TMP4:%.*]] = bitcast i8* [[TMP1:%.*]] to <16 x i8>*
+; AVX-NEXT:    [[TMP5:%.*]] = load <16 x i8>, <16 x i8>* [[TMP4]], align 1
+; AVX-NEXT:    [[TMP6:%.*]] = zext <16 x i8> [[TMP5]] to <16 x i16>
+; AVX-NEXT:    [[TMP7:%.*]] = bitcast i8* [[TMP2:%.*]] to <16 x i8>*
+; AVX-NEXT:    [[TMP8:%.*]] = load <16 x i8>, <16 x i8>* [[TMP7]], align 1
+; AVX-NEXT:    [[TMP9:%.*]] = zext <16 x i8> [[TMP8]] to <16 x i16>
+; AVX-NEXT:    [[TMP10:%.*]] = add nuw nsw <16 x i16> [[TMP9]], [[TMP6]]
+; AVX-NEXT:    [[TMP11:%.*]] = lshr <16 x i16> [[TMP10]], <i16 1, i16 1, i16 1, i16 1, i16 1, i16 1, i16 1, i16 1, i16 1, i16 1, i16 1, i16 1, i16 1, i16 1, i16 1, i16 1>
+; AVX-NEXT:    [[TMP12:%.*]] = add nuw nsw <16 x i16> [[TMP11]], [[TMP10]]
+; AVX-NEXT:    [[TMP13:%.*]] = lshr <16 x i16> [[TMP12]], <i16 2, i16 2, i16 2, i16 2, i16 2, i16 2, i16 2, i16 2, i16 2, i16 2, i16 2, i16 2, i16 2, i16 2, i16 2, i16 2>
+; AVX-NEXT:    [[TMP14:%.*]] = bitcast i16* [[TMP0:%.*]] to <16 x i16>*
+; AVX-NEXT:    store <16 x i16> [[TMP13]], <16 x i16>* [[TMP14]], align 2
 ; AVX-NEXT:    ret void
 ;
   %4 = load i8, i8* %1, align 1

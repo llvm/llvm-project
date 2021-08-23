@@ -352,6 +352,31 @@ define i1 @eq_21_extra_use_eq2(i32 %x, i32 %y) {
   ret i1 %c.210
 }
 
+; Logical and instead of bitwise and.
+
+define i1 @eq_21_logical(i32 %x, i32 %y) {
+; CHECK-LABEL: @eq_21_logical(
+; CHECK-NEXT:    [[TMP1:%.*]] = lshr i32 [[X:%.*]], 8
+; CHECK-NEXT:    [[TMP2:%.*]] = trunc i32 [[TMP1]] to i16
+; CHECK-NEXT:    [[TMP3:%.*]] = lshr i32 [[Y:%.*]], 8
+; CHECK-NEXT:    [[TMP4:%.*]] = trunc i32 [[TMP3]] to i16
+; CHECK-NEXT:    [[TMP5:%.*]] = icmp eq i16 [[TMP2]], [[TMP4]]
+; CHECK-NEXT:    ret i1 [[TMP5]]
+;
+  %x.321 = lshr i32 %x, 8
+  %x.1 = trunc i32 %x.321 to i8
+  %x.32 = lshr i32 %x, 16
+  %x.2 = trunc i32 %x.32 to i8
+  %y.321 = lshr i32 %y, 8
+  %y.1 = trunc i32 %y.321 to i8
+  %y.32 = lshr i32 %y, 16
+  %y.2 = trunc i32 %y.32 to i8
+  %c.1 = icmp eq i8 %x.1, %y.1
+  %c.2 = icmp eq i8 %x.2, %y.2
+  %c.210 = select i1 %c.2, i1 %c.1, i1 false
+  ret i1 %c.210
+}
+
 ; Negative tests.
 
 define i1 @eq_21_wrong_op1(i32 %x, i32 %y, i32 %z) {
@@ -989,6 +1014,31 @@ define i1 @ne_21_extra_use_ne2(i32 %x, i32 %y) {
   %c.2 = icmp ne i8 %x.2, %y.2
   call void @use.i1(i1 %c.2)
   %c.210 = or i1 %c.1, %c.2
+  ret i1 %c.210
+}
+
+; Logical or instead of bitwise or.
+
+define i1 @ne_21_logical(i32 %x, i32 %y) {
+; CHECK-LABEL: @ne_21_logical(
+; CHECK-NEXT:    [[TMP1:%.*]] = lshr i32 [[X:%.*]], 8
+; CHECK-NEXT:    [[TMP2:%.*]] = trunc i32 [[TMP1]] to i16
+; CHECK-NEXT:    [[TMP3:%.*]] = lshr i32 [[Y:%.*]], 8
+; CHECK-NEXT:    [[TMP4:%.*]] = trunc i32 [[TMP3]] to i16
+; CHECK-NEXT:    [[TMP5:%.*]] = icmp ne i16 [[TMP2]], [[TMP4]]
+; CHECK-NEXT:    ret i1 [[TMP5]]
+;
+  %x.321 = lshr i32 %x, 8
+  %x.1 = trunc i32 %x.321 to i8
+  %x.32 = lshr i32 %x, 16
+  %x.2 = trunc i32 %x.32 to i8
+  %y.321 = lshr i32 %y, 8
+  %y.1 = trunc i32 %y.321 to i8
+  %y.32 = lshr i32 %y, 16
+  %y.2 = trunc i32 %y.32 to i8
+  %c.1 = icmp ne i8 %x.1, %y.1
+  %c.2 = icmp ne i8 %x.2, %y.2
+  %c.210 = select i1 %c.2, i1 true, i1 %c.1
   ret i1 %c.210
 }
 

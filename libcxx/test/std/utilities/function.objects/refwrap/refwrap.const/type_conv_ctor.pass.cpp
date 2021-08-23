@@ -18,6 +18,8 @@
 #include <functional>
 #include <cassert>
 
+#include "test_macros.h"
+
 struct convertible_to_int_ref {
     int val = 0;
     operator int&() { return val; }
@@ -68,7 +70,7 @@ int main()
     (true) ? purr() : 0;
     }
 
-#ifdef __cpp_deduction_guides
+#if TEST_STD_VER >= 17
     {
     int i = 0;
     std::reference_wrapper ri(i);

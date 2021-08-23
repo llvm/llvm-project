@@ -20,6 +20,7 @@
 #include "llvm/IR/PassManager.h"
 #include "llvm/Passes/OptimizationLevel.h"
 #include "llvm/Support/Error.h"
+#include "llvm/Support/PGOOptions.h"
 #include "llvm/Support/raw_ostream.h"
 #include "llvm/Transforms/IPO/Inliner.h"
 #include "llvm/Transforms/Instrumentation.h"
@@ -31,49 +32,6 @@ class StringRef;
 class AAManager;
 class TargetMachine;
 class ModuleSummaryIndex;
-
-/// A struct capturing PGO tunables.
-struct PGOOptions {
-  enum PGOAction { NoAction, IRInstr, IRUse, SampleUse };
-  enum CSPGOAction { NoCSAction, CSIRInstr, CSIRUse };
-  PGOOptions(std::string ProfileFile = "", std::string CSProfileGenFile = "",
-             std::string ProfileRemappingFile = "", PGOAction Action = NoAction,
-             CSPGOAction CSAction = NoCSAction,
-             bool DebugInfoForProfiling = false,
-             bool PseudoProbeForProfiling = false)
-      : ProfileFile(ProfileFile), CSProfileGenFile(CSProfileGenFile),
-        ProfileRemappingFile(ProfileRemappingFile), Action(Action),
-        CSAction(CSAction), DebugInfoForProfiling(DebugInfoForProfiling ||
-                                                  (Action == SampleUse &&
-                                                   !PseudoProbeForProfiling)),
-        PseudoProbeForProfiling(PseudoProbeForProfiling) {
-    // Note, we do allow ProfileFile.empty() for Action=IRUse LTO can
-    // callback with IRUse action without ProfileFile.
-
-    // If there is a CSAction, PGOAction cannot be IRInstr or SampleUse.
-    assert(this->CSAction == NoCSAction ||
-           (this->Action != IRInstr && this->Action != SampleUse));
-
-    // For CSIRInstr, CSProfileGenFile also needs to be nonempty.
-    assert(this->CSAction != CSIRInstr || !this->CSProfileGenFile.empty());
-
-    // If CSAction is CSIRUse, PGOAction needs to be IRUse as they share
-    // a profile.
-    assert(this->CSAction != CSIRUse || this->Action == IRUse);
-
-    // If neither Action nor CSAction, DebugInfoForProfiling or
-    // PseudoProbeForProfiling needs to be true.
-    assert(this->Action != NoAction || this->CSAction != NoCSAction ||
-           this->DebugInfoForProfiling || this->PseudoProbeForProfiling);
-  }
-  std::string ProfileFile;
-  std::string CSProfileGenFile;
-  std::string ProfileRemappingFile;
-  PGOAction Action;
-  CSPGOAction CSAction;
-  bool DebugInfoForProfiling;
-  bool PseudoProbeForProfiling;
-};
 
 /// Tunable parameters for passes in the default pipelines.
 class PipelineTuningOptions {

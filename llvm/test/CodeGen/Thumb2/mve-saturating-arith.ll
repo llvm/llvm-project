@@ -60,20 +60,14 @@ define arm_aapcs_vfpcc <2 x i64> @sadd_int64_t(<2 x i64> %src1, <2 x i64> %src2)
 ; CHECK-NEXT:    cmp r5, #0
 ; CHECK-NEXT:    it ne
 ; CHECK-NEXT:    asrne r3, r1, #31
-; CHECK-NEXT:    cmp r0, #0
 ; CHECK-NEXT:    vmov q0[2], q0[0], r3, r2
-; CHECK-NEXT:    cset r2, mi
-; CHECK-NEXT:    mvn r3, #-2147483648
-; CHECK-NEXT:    cmp r2, #0
-; CHECK-NEXT:    cinv r2, r3, eq
 ; CHECK-NEXT:    cmp.w r12, #0
-; CHECK-NEXT:    csel r0, r2, r0, ne
-; CHECK-NEXT:    cmp r1, #0
-; CHECK-NEXT:    cset r2, mi
-; CHECK-NEXT:    cmp r2, #0
-; CHECK-NEXT:    cinv r2, r3, eq
+; CHECK-NEXT:    mov.w r2, #-2147483648
+; CHECK-NEXT:    it ne
+; CHECK-NEXT:    eorne.w r0, r2, r0, asr #31
 ; CHECK-NEXT:    cmp r5, #0
-; CHECK-NEXT:    csel r1, r2, r1, ne
+; CHECK-NEXT:    it ne
+; CHECK-NEXT:    eorne.w r1, r2, r1, asr #31
 ; CHECK-NEXT:    vmov q0[3], q0[1], r1, r0
 ; CHECK-NEXT:    pop {r4, r5, r7, pc}
 entry:
@@ -183,40 +177,34 @@ define arm_aapcs_vfpcc <2 x i64> @ssub_int64_t(<2 x i64> %src1, <2 x i64> %src2)
 ; CHECK-NEXT:    push {r4, r5, r7, lr}
 ; CHECK-NEXT:    vmov r0, r1, d3
 ; CHECK-NEXT:    vmov r2, r3, d1
-; CHECK-NEXT:    subs r0, r2, r0
+; CHECK-NEXT:    subs r2, r2, r0
 ; CHECK-NEXT:    eor.w r12, r3, r1
-; CHECK-NEXT:    sbc.w r1, r3, r1
-; CHECK-NEXT:    eor.w r2, r3, r1
+; CHECK-NEXT:    sbc.w r0, r3, r1
+; CHECK-NEXT:    eor.w r1, r3, r0
 ; CHECK-NEXT:    vmov r3, r4, d0
-; CHECK-NEXT:    ands.w r2, r2, r12
-; CHECK-NEXT:    vmov lr, r2, d2
+; CHECK-NEXT:    ands.w r1, r1, r12
+; CHECK-NEXT:    vmov lr, r1, d2
 ; CHECK-NEXT:    cset r12, mi
 ; CHECK-NEXT:    cmp.w r12, #0
 ; CHECK-NEXT:    it ne
-; CHECK-NEXT:    asrne r0, r1, #31
+; CHECK-NEXT:    asrne r2, r0, #31
 ; CHECK-NEXT:    subs.w r3, r3, lr
-; CHECK-NEXT:    eor.w r5, r4, r2
-; CHECK-NEXT:    sbc.w r2, r4, r2
-; CHECK-NEXT:    eors r4, r2
+; CHECK-NEXT:    eor.w r5, r4, r1
+; CHECK-NEXT:    sbc.w r1, r4, r1
+; CHECK-NEXT:    eors r4, r1
 ; CHECK-NEXT:    ands r5, r4
 ; CHECK-NEXT:    cset r5, mi
 ; CHECK-NEXT:    cmp r5, #0
 ; CHECK-NEXT:    it ne
-; CHECK-NEXT:    asrne r3, r2, #31
-; CHECK-NEXT:    cmp r1, #0
-; CHECK-NEXT:    vmov q0[2], q0[0], r3, r0
-; CHECK-NEXT:    cset r0, mi
-; CHECK-NEXT:    mvn r3, #-2147483648
-; CHECK-NEXT:    cmp r0, #0
-; CHECK-NEXT:    cinv r0, r3, eq
+; CHECK-NEXT:    asrne r3, r1, #31
+; CHECK-NEXT:    vmov q0[2], q0[0], r3, r2
 ; CHECK-NEXT:    cmp.w r12, #0
-; CHECK-NEXT:    csel r0, r0, r1, ne
-; CHECK-NEXT:    cmp r2, #0
-; CHECK-NEXT:    cset r1, mi
-; CHECK-NEXT:    cmp r1, #0
-; CHECK-NEXT:    cinv r1, r3, eq
+; CHECK-NEXT:    mov.w r2, #-2147483648
+; CHECK-NEXT:    it ne
+; CHECK-NEXT:    eorne.w r0, r2, r0, asr #31
 ; CHECK-NEXT:    cmp r5, #0
-; CHECK-NEXT:    csel r1, r1, r2, ne
+; CHECK-NEXT:    it ne
+; CHECK-NEXT:    eorne.w r1, r2, r1, asr #31
 ; CHECK-NEXT:    vmov q0[3], q0[1], r1, r0
 ; CHECK-NEXT:    pop {r4, r5, r7, pc}
 entry:

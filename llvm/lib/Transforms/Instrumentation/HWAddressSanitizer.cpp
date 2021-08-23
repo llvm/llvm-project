@@ -471,19 +471,14 @@ llvm::createHWAddressSanitizerLegacyPassPass(bool CompileKernel, bool Recover,
                                           DisableOptimization);
 }
 
-HWAddressSanitizerPass::HWAddressSanitizerPass(bool CompileKernel, bool Recover,
-                                               bool DisableOptimization)
-    : CompileKernel(CompileKernel), Recover(Recover),
-      DisableOptimization(DisableOptimization) {}
-
 PreservedAnalyses HWAddressSanitizerPass::run(Module &M,
                                               ModuleAnalysisManager &MAM) {
   const StackSafetyGlobalInfo *SSI = nullptr;
   auto TargetTriple = llvm::Triple(M.getTargetTriple());
-  if (shouldUseStackSafetyAnalysis(TargetTriple, DisableOptimization))
+  if (shouldUseStackSafetyAnalysis(TargetTriple, Options.DisableOptimization))
     SSI = &MAM.getResult<StackSafetyGlobalAnalysis>(M);
 
-  HWAddressSanitizer HWASan(M, CompileKernel, Recover, SSI);
+  HWAddressSanitizer HWASan(M, Options.CompileKernel, Options.Recover, SSI);
   bool Modified = false;
   auto &FAM = MAM.getResult<FunctionAnalysisManagerModuleProxy>(M).getManager();
   for (Function &F : M) {

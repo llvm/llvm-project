@@ -351,7 +351,7 @@ public:
   }
 
   void setConstrainedFPCallAttr(CallBase *I) {
-    I->addAttribute(AttributeList::FunctionIndex, Attribute::StrictFP);
+    I->addFnAttr(Attribute::StrictFP);
   }
 
   void setDefaultOperandBundles(ArrayRef<OperandBundleDef> OpBundles) {

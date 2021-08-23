@@ -2201,6 +2201,12 @@ void mlir::python::populateIRCore(py::module &m) {
   //----------------------------------------------------------------------------
   py::class_<PyBlock>(m, "Block")
       .def_property_readonly(
+          "owner",
+          [](PyBlock &self) {
+            return self.getParentOperation()->createOpView();
+          },
+          "Returns the owning operation of this block.")
+      .def_property_readonly(
           "arguments",
           [](PyBlock &self) {
             return PyBlockArgumentList(self.getParentOperation(), self.get());

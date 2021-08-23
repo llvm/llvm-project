@@ -98,7 +98,7 @@ enum_targets_gen(
 genrule(
     name = "version_info_gen",
     outs = ["include/llvm/Config/VersionInfo.h"],
-    cmd = "echo \"#define LLVM_VERSION_INFO \\\"git\\\"\" > $@",
+    cmd = "echo '#define LLVM_VERSION_INFO \"git\"' > $@",
 )
 
 template_rule(

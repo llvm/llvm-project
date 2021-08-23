@@ -906,8 +906,7 @@ void CoroCloner::create() {
   case coro::ABI::Switch:
     // Bootstrap attributes by copying function attributes from the
     // original function.  This should include optimization settings and so on.
-    NewAttrs = NewAttrs.addAttributes(Context, AttributeList::FunctionIndex,
-                                      OrigAttrs.getFnAttrs());
+    NewAttrs = NewAttrs.addFnAttributes(Context, OrigAttrs.getFnAttrs());
 
     addFramePointerAttrs(NewAttrs, Context, 0,
                          Shape.FrameSize, Shape.FrameAlign);
@@ -930,8 +929,7 @@ void CoroCloner::create() {
 
     // Transfer the original function's attributes.
     auto FnAttrs = OrigF.getAttributes().getFnAttrs();
-    NewAttrs =
-        NewAttrs.addAttributes(Context, AttributeList::FunctionIndex, FnAttrs);
+    NewAttrs = NewAttrs.addFnAttributes(Context, FnAttrs);
     break;
   }
   case coro::ABI::Retcon:
@@ -1568,8 +1566,8 @@ static void splitAsyncCoroutine(Function &F, coro::Shape &Shape,
   // Reset various things that the optimizer might have decided it
   // "knows" about the coroutine function due to not seeing a return.
   F.removeFnAttr(Attribute::NoReturn);
-  F.removeAttribute(AttributeList::ReturnIndex, Attribute::NoAlias);
-  F.removeAttribute(AttributeList::ReturnIndex, Attribute::NonNull);
+  F.removeRetAttr(Attribute::NoAlias);
+  F.removeRetAttr(Attribute::NonNull);
 
   auto &Context = F.getContext();
   auto *Int8PtrTy = Type::getInt8PtrTy(Context);
@@ -1667,8 +1665,8 @@ static void splitRetconCoroutine(Function &F, coro::Shape &Shape,
   // Reset various things that the optimizer might have decided it
   // "knows" about the coroutine function due to not seeing a return.
   F.removeFnAttr(Attribute::NoReturn);
-  F.removeAttribute(AttributeList::ReturnIndex, Attribute::NoAlias);
-  F.removeAttribute(AttributeList::ReturnIndex, Attribute::NonNull);
+  F.removeRetAttr(Attribute::NoAlias);
+  F.removeRetAttr(Attribute::NonNull);
 
   // Allocate the frame.
   auto *Id = cast<AnyCoroIdRetconInst>(Shape.CoroBegin->getId());

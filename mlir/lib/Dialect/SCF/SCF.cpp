@@ -115,8 +115,7 @@ static ParseResult parseExecuteRegionOp(OpAsmParser &parser,
 
 static void print(OpAsmPrinter &p, ExecuteRegionOp op) {
   p << ExecuteRegionOp::getOperationName();
-  if (op.getNumResults() > 0)
-    p << " -> " << op.getResultTypes();
+  p.printOptionalArrowTypeList(op.getResultTypes());
 
   p.printRegion(op.region(),
                 /*printEntryBlockArgs=*/false,

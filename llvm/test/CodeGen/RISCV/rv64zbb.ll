@@ -265,7 +265,7 @@ define signext i32 @log2_ceil_i32(i32 signext %a) nounwind {
 ;
 ; RV64B-LABEL: log2_ceil_i32:
 ; RV64B:       # %bb.0:
-; RV64B-NEXT:    addi a0, a0, -1
+; RV64B-NEXT:    addiw a0, a0, -1
 ; RV64B-NEXT:    clzw a0, a0
 ; RV64B-NEXT:    addi a1, zero, 32
 ; RV64B-NEXT:    sub a0, a1, a0
@@ -273,7 +273,7 @@ define signext i32 @log2_ceil_i32(i32 signext %a) nounwind {
 ;
 ; RV64ZBB-LABEL: log2_ceil_i32:
 ; RV64ZBB:       # %bb.0:
-; RV64ZBB-NEXT:    addi a0, a0, -1
+; RV64ZBB-NEXT:    addiw a0, a0, -1
 ; RV64ZBB-NEXT:    clzw a0, a0
 ; RV64ZBB-NEXT:    addi a1, zero, 32
 ; RV64ZBB-NEXT:    sub a0, a1, a0

@@ -171,6 +171,9 @@ namespace llvm {
   /// This pass adds flow sensitive discriminators.
   extern char &MIRAddFSDiscriminatorsID;
 
+  /// This pass reads flow sensitive profile.
+  extern char &MIRProfileLoaderPassID;
+
   /// FastRegisterAllocation Pass - This pass register allocates as fast as
   /// possible. It is best suited for debug code where live ranges are short.
   ///
@@ -512,6 +515,11 @@ namespace llvm {
   /// sequence number of this pass (starting from 1).
   FunctionPass *
   createMIRAddFSDiscriminatorsPass(sampleprof::FSDiscriminatorPass P);
+
+  /// Read Flow Sensitive Profile.
+  FunctionPass *createMIRProfileLoaderPass(std::string File,
+                                           std::string RemappingFile,
+                                           sampleprof::FSDiscriminatorPass P);
 
   /// Creates MIR Debugify pass. \see MachineDebugify.cpp
   ModulePass *createDebugifyMachineModulePass();

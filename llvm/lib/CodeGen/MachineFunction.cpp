@@ -129,8 +129,8 @@ void ilist_alloc_traits<MachineBasicBlock>::deleteNode(MachineBasicBlock *MBB) {
 
 static inline unsigned getFnStackAlignment(const TargetSubtargetInfo *STI,
                                            const Function &F) {
-  if (F.hasFnAttribute(Attribute::StackAlignment))
-    return F.getFnStackAlignment();
+  if (auto MA = F.getFnStackAlign())
+    return MA->value();
   return STI->getFrameLowering()->getStackAlign().value();
 }
 

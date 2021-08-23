@@ -14,7 +14,6 @@
 #include <__algorithm/adjacent_find.h>
 #include <__iterator/iterator_traits.h>
 #include <__utility/move.h>
-#include <type_traits>
 
 #if !defined(_LIBCPP_HAS_NO_PRAGMA_SYSTEM_HEADER)
 #pragma GCC system_header
@@ -31,8 +30,7 @@ template <class _ForwardIterator, class _BinaryPredicate>
 _LIBCPP_NODISCARD_EXT _LIBCPP_CONSTEXPR_AFTER_CXX17 _ForwardIterator
 unique(_ForwardIterator __first, _ForwardIterator __last, _BinaryPredicate __pred)
 {
-    __first = _VSTD::adjacent_find<_ForwardIterator, typename add_lvalue_reference<_BinaryPredicate>::type>
-                                 (__first, __last, __pred);
+    __first = _VSTD::adjacent_find<_ForwardIterator, _BinaryPredicate&>(__first, __last, __pred);
     if (__first != __last)
     {
         // ...  a  a  ?  ...

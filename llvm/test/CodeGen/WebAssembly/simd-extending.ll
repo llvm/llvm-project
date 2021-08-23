@@ -169,29 +169,8 @@ define <8 x i16> @extend_lowish_i8x16_s(<16 x i8> %v) {
 ; CHECK:         .functype extend_lowish_i8x16_s (v128) -> (v128)
 ; CHECK-NEXT:  # %bb.0:
 ; CHECK-NEXT:    local.get 0
-; CHECK-NEXT:    i8x16.extract_lane_u 1
-; CHECK-NEXT:    i16x8.splat
 ; CHECK-NEXT:    local.get 0
-; CHECK-NEXT:    i8x16.extract_lane_u 2
-; CHECK-NEXT:    i16x8.replace_lane 1
-; CHECK-NEXT:    local.get 0
-; CHECK-NEXT:    i8x16.extract_lane_u 3
-; CHECK-NEXT:    i16x8.replace_lane 2
-; CHECK-NEXT:    local.get 0
-; CHECK-NEXT:    i8x16.extract_lane_u 4
-; CHECK-NEXT:    i16x8.replace_lane 3
-; CHECK-NEXT:    local.get 0
-; CHECK-NEXT:    i8x16.extract_lane_u 5
-; CHECK-NEXT:    i16x8.replace_lane 4
-; CHECK-NEXT:    local.get 0
-; CHECK-NEXT:    i8x16.extract_lane_u 6
-; CHECK-NEXT:    i16x8.replace_lane 5
-; CHECK-NEXT:    local.get 0
-; CHECK-NEXT:    i8x16.extract_lane_u 7
-; CHECK-NEXT:    i16x8.replace_lane 6
-; CHECK-NEXT:    local.get 0
-; CHECK-NEXT:    i8x16.extract_lane_u 8
-; CHECK-NEXT:    i16x8.replace_lane 7
+; CHECK-NEXT:    i8x16.shuffle 1, 0, 2, 0, 3, 0, 4, 0, 5, 0, 6, 0, 7, 0, 8, 0
 ; CHECK-NEXT:    i32.const 8
 ; CHECK-NEXT:    i16x8.shl
 ; CHECK-NEXT:    i32.const 8
@@ -208,17 +187,8 @@ define <4 x i32> @extend_lowish_i16x8_s(<8 x i16> %v) {
 ; CHECK:         .functype extend_lowish_i16x8_s (v128) -> (v128)
 ; CHECK-NEXT:  # %bb.0:
 ; CHECK-NEXT:    local.get 0
-; CHECK-NEXT:    i16x8.extract_lane_u 1
-; CHECK-NEXT:    i32x4.splat
 ; CHECK-NEXT:    local.get 0
-; CHECK-NEXT:    i16x8.extract_lane_u 2
-; CHECK-NEXT:    i32x4.replace_lane 1
-; CHECK-NEXT:    local.get 0
-; CHECK-NEXT:    i16x8.extract_lane_u 3
-; CHECK-NEXT:    i32x4.replace_lane 2
-; CHECK-NEXT:    local.get 0
-; CHECK-NEXT:    i16x8.extract_lane_u 4
-; CHECK-NEXT:    i32x4.replace_lane 3
+; CHECK-NEXT:    i8x16.shuffle 2, 3, 0, 0, 4, 5, 0, 0, 6, 7, 0, 0, 8, 9, 0, 0
 ; CHECK-NEXT:    i32.const 16
 ; CHECK-NEXT:    i32x4.shl
 ; CHECK-NEXT:    i32.const 16

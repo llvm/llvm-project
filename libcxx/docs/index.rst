@@ -43,8 +43,9 @@ Getting Started with libc++
    Status/Cxx17
    Status/Cxx20
    Status/Cxx2b
-   Status/Ranges
    Status/Format
+   Status/Ranges
+   Status/Spaceship
 
 
 .. toctree::

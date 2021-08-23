@@ -67,6 +67,8 @@ struct ParsedAttrInfo {
     const char *NormalizedFullName;
   };
   ArrayRef<Spelling> Spellings;
+  // The names of the known arguments of this attribute.
+  ArrayRef<const char *> ArgNames;
 
   ParsedAttrInfo(AttributeCommonInfo::Kind AttrKind =
                      AttributeCommonInfo::NoSemaHandlerAttribute)

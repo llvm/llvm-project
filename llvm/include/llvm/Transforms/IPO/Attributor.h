@@ -1150,8 +1150,6 @@ struct Attributor {
   /// \param Allowed If not null, a set limiting the attribute opportunities.
   /// \param DeleteFns Whether to delete functions.
   /// \param RewriteSignatures Whether to rewrite function signatures.
-  /// \param MaxFixedPointIterations Maximum number of iterations to run until
-  ///                                fixpoint.
   Attributor(SetVector<Function *> &Functions, InformationCache &InfoCache,
              CallGraphUpdater &CGUpdater,
              DenseSet<const char *> *Allowed = nullptr, bool DeleteFns = true,
@@ -1169,8 +1167,9 @@ struct Attributor {
   /// \param CGUpdater Helper to update an underlying call graph.
   /// \param Allowed If not null, a set limiting the attribute opportunities.
   /// \param DeleteFns Whether to delete functions
-  /// \param MaxFixedPointIterations Maximum number of iterations to run until
-  ///                                fixpoint.
+  /// \param RewriteSignatures Whether to rewrite function signatures.
+  /// \param MaxFixpointIterations Maximum number of iterations to run until
+  ///                              fixpoint.
   /// \param OREGetter A callback function that returns an ORE object from a
   ///                  Function pointer.
   /// \param PassName  The name of the pass emitting remarks.
