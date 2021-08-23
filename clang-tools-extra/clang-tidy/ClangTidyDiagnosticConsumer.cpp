@@ -361,7 +361,21 @@ static bool LineIsMarkedWithNOLINT(const SourceManager &SM, SourceLocation Loc,
   // Check if there's a NOLINTNEXTLINE on the previous line.
   StringRef PrevLine =
       Buffer->substr(0, Offset).rsplit('\n').first.rsplit('\n').second;
-  return IsNOLINTFound("NOLINTNEXTLINE", PrevLine, DiagID, Context);
+  if (IsNOLINTFound("NOLINTNEXTLINE", PrevLine, DiagID, Context))
+    return true;
+
+  // Check if there's an open NOLINTBEGIN ... NOLINTEND block on the previous
+  // lines.
+  SmallVector<StringRef> PrevLines;
+  Buffer->substr(0, Offset).rsplit('\n').first.split(PrevLines, '\n');
+  for (auto I = PrevLines.rbegin(), E = PrevLines.rend(); I != E; ++I) {
+    if (IsNOLINTFound("NOLINTEND", *I, DiagID, Context))
+      return false;
+    if (IsNOLINTFound("NOLINTBEGIN", *I, DiagID, Context))
+      return true;
+  }
+
+  return false;
 }
 
 static bool LineIsMarkedWithNOLINTinMacro(const SourceManager &SM,
