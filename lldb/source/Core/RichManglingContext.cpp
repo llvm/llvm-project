@@ -83,19 +83,6 @@ bool RichManglingContext::IsCtorOrDtor() const {
   llvm_unreachable("Fully covered switch above!");
 }
 
-bool RichManglingContext::IsFunction() const {
-  assert(m_provider != None && "Initialize a provider first");
-  switch (m_provider) {
-  case ItaniumPartialDemangler:
-    return m_ipd.isFunction();
-  case PluginCxxLanguage:
-    return get<CPlusPlusLanguage::MethodName>(m_cxx_method_parser)->IsValid();
-  case None:
-    return false;
-  }
-  llvm_unreachable("Fully covered switch above!");
-}
-
 void RichManglingContext::processIPDStrResult(char *ipd_res, size_t res_size) {
   // Error case: Clear the buffer.
   if (LLVM_UNLIKELY(ipd_res == nullptr)) {

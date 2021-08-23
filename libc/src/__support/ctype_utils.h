@@ -18,19 +18,21 @@ namespace internal {
 // of a function call by inlining them.
 // ------------------------------------------------------
 
-static constexpr int isalpha(unsigned ch) { return (ch | 32) - 'a' < 26; }
+static constexpr bool isalpha(unsigned ch) { return (ch | 32) - 'a' < 26; }
 
-static constexpr int isdigit(unsigned ch) { return (ch - '0') < 10; }
+static constexpr bool isdigit(unsigned ch) { return (ch - '0') < 10; }
 
-static constexpr int isalnum(unsigned ch) { return isalpha(ch) || isdigit(ch); }
+static constexpr bool isalnum(unsigned ch) {
+  return isalpha(ch) || isdigit(ch);
+}
 
-static constexpr int isgraph(unsigned ch) { return 0x20 < ch && ch < 0x7f; }
+static constexpr bool isgraph(unsigned ch) { return 0x20 < ch && ch < 0x7f; }
 
-static constexpr int islower(unsigned ch) { return (ch - 'a') < 26; }
+static constexpr bool islower(unsigned ch) { return (ch - 'a') < 26; }
 
-static constexpr int isupper(unsigned ch) { return (ch - 'A') < 26; }
+static constexpr bool isupper(unsigned ch) { return (ch - 'A') < 26; }
 
-static constexpr int isspace(unsigned ch) {
+static constexpr bool isspace(unsigned ch) {
   return ch == ' ' || (ch - '\t') < 5;
 }
 
