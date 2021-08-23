@@ -1133,7 +1133,13 @@ struct FoldConsumerReshapeOpByLinearization
 /// by expanding the dimensionality of the loop in the producer op.
 struct FoldReshapeWithGenericOpByExpansion
     : public OpRewritePattern<TensorExpandShapeOp> {
-  using OpRewritePattern<TensorExpandShapeOp>::OpRewritePattern;
+
+  FoldReshapeWithGenericOpByExpansion(
+      MLIRContext *context, ControlElementwiseOpsFusionFn foldReshapes,
+      PatternBenefit benefit = 1)
+      : OpRewritePattern<TensorExpandShapeOp>(context, benefit),
+        controlFoldingReshapes(foldReshapes) {}
+
   LogicalResult matchAndRewrite(TensorExpandShapeOp reshapeOp,
                                 PatternRewriter &rewriter) const override {
     // Fold only if all constraints of fusing with reshape by expansion are met.
@@ -1141,7 +1147,8 @@ struct FoldReshapeWithGenericOpByExpansion
     if (!producer || producer.getNumOutputs() != 1 ||
         !isFusableWithReshapeByDimExpansion(producer,
                                             producer.getOutputOperand(0)) ||
-        isUnitDimExpansionOnly(reshapeOp))
+        !controlFoldingReshapes(producer->getResult(0),
+                                reshapeOp->getOpOperand(0)))
       return failure();
     Optional<SmallVector<Value>> replacementValues = fuseWithReshapeByExpansion(
         producer, reshapeOp, producer.getOutputOperand(0), rewriter);
@@ -1150,6 +1157,9 @@ struct FoldReshapeWithGenericOpByExpansion
     rewriter.replaceOp(reshapeOp, replacementValues.getValue());
     return success();
   }
+
+private:
+  ControlElementwiseOpsFusionFn controlFoldingReshapes;
 };
 
 /// Pattern to fold a generic op with a splat constant.
@@ -1242,12 +1252,15 @@ fuseElementwiseOps(PatternRewriter &rewriter, OpOperand *consumerOpOperand,
 
 bool mlir::linalg::skipUnitDimReshape(const OpResult &producer,
                                       OpOperand &consumer) {
-  auto expandShapeOp = producer.getDefiningOp<linalg::TensorExpandShapeOp>();
-  if (expandShapeOp)
-    return !isUnitDimExpansionOnly(expandShapeOp);
-  auto collapseShapeOp =
-      producer.getDefiningOp<linalg::TensorCollapseShapeOp>();
-  return !isUnitDimExpansionOnly(collapseShapeOp);
+  if (auto producerCollapseOp =
+          dyn_cast<linalg::TensorCollapseShapeOp>(producer.getOwner())) {
+    return !isUnitDimExpansionOnly(producerCollapseOp);
+  }
+  if (auto consumerExpandOp =
+          dyn_cast<linalg::TensorExpandShapeOp>(consumer.getOwner())) {
+    return !isUnitDimExpansionOnly(consumerExpandOp);
+  }
+  return true;
 }
 
 namespace {
@@ -1389,7 +1402,8 @@ void mlir::linalg::populateFoldUnitDimsReshapeOpsByLinearizationPatterns(
 void mlir::linalg::populateFoldReshapeOpsByExpansionPatterns(
     RewritePatternSet &patterns,
     ControlElementwiseOpsFusionFn controlFoldingReshapes) {
-  patterns.add<FoldReshapeWithGenericOpByExpansion>(patterns.getContext());
+  patterns.add<FoldReshapeWithGenericOpByExpansion>(patterns.getContext(),
+                                                    controlFoldingReshapes);
   patterns.add<FoldWithProducerReshapeOpByExpansion>(patterns.getContext(),
                                                      controlFoldingReshapes);
 }
