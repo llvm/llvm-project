@@ -17,13 +17,8 @@ struct amd_kernel_code_t;
 
 namespace llvm {
 
-class DataLayout;
-class Function;
 class MCELFStreamer;
 class MCSymbol;
-class MDNode;
-class Module;
-class Type;
 class formatted_raw_ostream;
 
 namespace AMDGPU {

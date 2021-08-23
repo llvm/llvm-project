@@ -17,7 +17,6 @@
 #include "AMDGPUInstrInfo.h"
 #include "AMDGPUTargetTransformInfo.h"
 #include "GCNSubtarget.h"
-#include "R600Subtarget.h"
 #include "llvm/IR/IntrinsicsAMDGPU.h"
 #include "llvm/Transforms/InstCombine/InstCombiner.h"
 
