@@ -1,6 +1,6 @@
-; RUN: llc -mtriple=arm64-apple-ios %s -o - | FileCheck %s --check-prefixes=CHECK-NOAUTH,CHECK
-; RUN: llc -mtriple=arm64-apple-ios -mcpu=apple-a13 %s -o - | FileCheck %s --check-prefixes=CHECK-NOAUTH,CHECK
-; RUN: llc -mtriple=arm64e-apple-ios %s -o - | FileCheck %s --check-prefixes=CHECK-AUTH,CHECK
+; RUN: llc -mtriple=arm64-apple-ios15 %s -o - | FileCheck %s --check-prefixes=CHECK-NOAUTH,CHECK
+; RUN: llc -mtriple=arm64-apple-ios15 -mcpu=apple-a13 %s -o - | FileCheck %s --check-prefixes=CHECK-NOAUTH,CHECK
+; RUN: llc -mtriple=arm64e-apple-ios15 %s -o - | FileCheck %s --check-prefixes=CHECK-AUTH,CHECK
 
 ; Important details in prologue:
 ;   * x22 is stored just below x29

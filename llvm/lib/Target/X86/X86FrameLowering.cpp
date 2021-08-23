@@ -1363,11 +1363,23 @@ void X86FrameLowering::emitPrologue(MachineFunction &MF,
   unsigned StackProbeSize = STI.getTargetLowering()->getStackProbeSize(MF);
 
   if (HasFP && X86FI->hasSwiftAsyncContext()) {
-    BuildMI(MBB, MBBI, DL, TII.get(X86::BTS64ri8),
-            MachineFramePtr)
-        .addUse(MachineFramePtr)
-        .addImm(60)
-        .setMIFlag(MachineInstr::FrameSetup);
+    if (STI.swiftAsyncContextIsDynamicallySet()) {
+      // The special symbol below is absolute and has a *value* suitable to be
+      // combined with the frame pointer directly.
+      BuildMI(MBB, MBBI, DL, TII.get(X86::OR64rm), MachineFramePtr)
+          .addUse(MachineFramePtr)
+          .addUse(X86::RIP)
+          .addImm(1)
+          .addUse(X86::NoRegister)
+          .addExternalSymbol("swift_async_extendedFramePointerFlags",
+                             X86II::MO_GOTPCREL)
+          .addUse(X86::NoRegister);
+    } else {
+      BuildMI(MBB, MBBI, DL, TII.get(X86::BTS64ri8), MachineFramePtr)
+          .addUse(MachineFramePtr)
+          .addImm(60)
+          .setMIFlag(MachineInstr::FrameSetup);
+    }
   }
 
   // Re-align the stack on 64-bit if the x86-interrupt calling convention is
