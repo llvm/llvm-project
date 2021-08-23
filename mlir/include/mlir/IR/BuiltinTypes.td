@@ -758,7 +758,7 @@ def Builtin_Tuple : Builtin_Type<"Tuple", [
 
     **Rationale:** Though this type is first class in the type system, MLIR
     provides no standard operations for operating on `tuple` types
-    ([rationale](Rationale/Rationale.md/#tuple-types)).
+    ([rationale](Rationale/Rationale/#tuple-types)).
 
     Examples:
 
