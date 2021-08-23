@@ -4895,10 +4895,233 @@ define void @splat_ptr_scatter(i32* %ptr, <4 x i1> %mask, <4 x i32> %val) {
   ret void
 }
 
-%struct.foo = type { i8*, i64, i16, i16, i32 }
+;
+; PR13310
+; FIXME: Failure to fold scaled-index into gather/scatter scale operand.
+;
 
+define <8 x float> @scaleidx_x86gather(float* %base, <8 x i32> %index, <8 x i32> %imask) nounwind {
+; KNL_64-LABEL: scaleidx_x86gather:
+; KNL_64:       # %bb.0:
+; KNL_64-NEXT:    vpslld $2, %ymm0, %ymm2
+; KNL_64-NEXT:    vpxor %xmm0, %xmm0, %xmm0
+; KNL_64-NEXT:    vgatherdps %ymm1, (%rdi,%ymm2), %ymm0
+; KNL_64-NEXT:    retq
+;
+; KNL_32-LABEL: scaleidx_x86gather:
+; KNL_32:       # %bb.0:
+; KNL_32-NEXT:    movl {{[0-9]+}}(%esp), %eax
+; KNL_32-NEXT:    vpslld $2, %ymm0, %ymm2
+; KNL_32-NEXT:    vpxor %xmm0, %xmm0, %xmm0
+; KNL_32-NEXT:    vgatherdps %ymm1, (%eax,%ymm2), %ymm0
+; KNL_32-NEXT:    retl
+;
+; SKX-LABEL: scaleidx_x86gather:
+; SKX:       # %bb.0:
+; SKX-NEXT:    vpslld $2, %ymm0, %ymm2
+; SKX-NEXT:    vpxor %xmm0, %xmm0, %xmm0
+; SKX-NEXT:    vgatherdps %ymm1, (%rdi,%ymm2), %ymm0
+; SKX-NEXT:    retq
+;
+; SKX_32-LABEL: scaleidx_x86gather:
+; SKX_32:       # %bb.0:
+; SKX_32-NEXT:    movl {{[0-9]+}}(%esp), %eax
+; SKX_32-NEXT:    vpslld $2, %ymm0, %ymm2
+; SKX_32-NEXT:    vpxor %xmm0, %xmm0, %xmm0
+; SKX_32-NEXT:    vgatherdps %ymm1, (%eax,%ymm2), %ymm0
+; SKX_32-NEXT:    retl
+  %ptr = bitcast float* %base to i8*
+  %mask = bitcast <8 x i32> %imask to <8 x float>
+  %scaledindex = mul <8 x i32> %index, <i32 4, i32 4, i32 4, i32 4, i32 4, i32 4, i32 4, i32 4>
+  %v = call <8 x float> @llvm.x86.avx2.gather.d.ps.256(<8 x float> undef, i8* %ptr, <8 x i32> %scaledindex, <8 x float> %mask, i8 1) nounwind
+  ret <8 x float> %v
+}
+
+define <8 x float> @scaleidx_x86gather_outofrange(float* %base, <8 x i32> %index, <8 x i32> %imask) nounwind {
+; KNL_64-LABEL: scaleidx_x86gather_outofrange:
+; KNL_64:       # %bb.0:
+; KNL_64-NEXT:    vpslld $2, %ymm0, %ymm2
+; KNL_64-NEXT:    vpxor %xmm0, %xmm0, %xmm0
+; KNL_64-NEXT:    vgatherdps %ymm1, (%rdi,%ymm2,4), %ymm0
+; KNL_64-NEXT:    retq
+;
+; KNL_32-LABEL: scaleidx_x86gather_outofrange:
+; KNL_32:       # %bb.0:
+; KNL_32-NEXT:    movl {{[0-9]+}}(%esp), %eax
+; KNL_32-NEXT:    vpslld $2, %ymm0, %ymm2
+; KNL_32-NEXT:    vpxor %xmm0, %xmm0, %xmm0
+; KNL_32-NEXT:    vgatherdps %ymm1, (%eax,%ymm2,4), %ymm0
+; KNL_32-NEXT:    retl
+;
+; SKX-LABEL: scaleidx_x86gather_outofrange:
+; SKX:       # %bb.0:
+; SKX-NEXT:    vpslld $2, %ymm0, %ymm2
+; SKX-NEXT:    vpxor %xmm0, %xmm0, %xmm0
+; SKX-NEXT:    vgatherdps %ymm1, (%rdi,%ymm2,4), %ymm0
+; SKX-NEXT:    retq
+;
+; SKX_32-LABEL: scaleidx_x86gather_outofrange:
+; SKX_32:       # %bb.0:
+; SKX_32-NEXT:    movl {{[0-9]+}}(%esp), %eax
+; SKX_32-NEXT:    vpslld $2, %ymm0, %ymm2
+; SKX_32-NEXT:    vpxor %xmm0, %xmm0, %xmm0
+; SKX_32-NEXT:    vgatherdps %ymm1, (%eax,%ymm2,4), %ymm0
+; SKX_32-NEXT:    retl
+  %ptr = bitcast float* %base to i8*
+  %mask = bitcast <8 x i32> %imask to <8 x float>
+  %scaledindex = mul <8 x i32> %index, <i32 4, i32 4, i32 4, i32 4, i32 4, i32 4, i32 4, i32 4>
+  %v = call <8 x float> @llvm.x86.avx2.gather.d.ps.256(<8 x float> undef, i8* %ptr, <8 x i32> %scaledindex, <8 x float> %mask, i8 4) nounwind
+  ret <8 x float> %v
+}
+declare <8 x float> @llvm.x86.avx2.gather.d.ps.256(<8 x float>, i8*, <8 x i32>, <8 x float>, i8) nounwind readonly
+
+define void @scaleidx_x86scatter(<16 x float> %value, float* %base, <16 x i32> %index, i16 %imask) nounwind {
+; KNL_64-LABEL: scaleidx_x86scatter:
+; KNL_64:       # %bb.0:
+; KNL_64-NEXT:    kmovw %esi, %k1
+; KNL_64-NEXT:    vpaddd %zmm1, %zmm1, %zmm1
+; KNL_64-NEXT:    vscatterdps %zmm0, (%rdi,%zmm1,2) {%k1}
+; KNL_64-NEXT:    vzeroupper
+; KNL_64-NEXT:    retq
+;
+; KNL_32-LABEL: scaleidx_x86scatter:
+; KNL_32:       # %bb.0:
+; KNL_32-NEXT:    movl {{[0-9]+}}(%esp), %eax
+; KNL_32-NEXT:    kmovw {{[0-9]+}}(%esp), %k1
+; KNL_32-NEXT:    vpaddd %zmm1, %zmm1, %zmm1
+; KNL_32-NEXT:    vscatterdps %zmm0, (%eax,%zmm1,2) {%k1}
+; KNL_32-NEXT:    vzeroupper
+; KNL_32-NEXT:    retl
+;
+; SKX-LABEL: scaleidx_x86scatter:
+; SKX:       # %bb.0:
+; SKX-NEXT:    kmovw %esi, %k1
+; SKX-NEXT:    vpaddd %zmm1, %zmm1, %zmm1
+; SKX-NEXT:    vscatterdps %zmm0, (%rdi,%zmm1,2) {%k1}
+; SKX-NEXT:    vzeroupper
+; SKX-NEXT:    retq
+;
+; SKX_32-LABEL: scaleidx_x86scatter:
+; SKX_32:       # %bb.0:
+; SKX_32-NEXT:    movl {{[0-9]+}}(%esp), %eax
+; SKX_32-NEXT:    kmovw {{[0-9]+}}(%esp), %k1
+; SKX_32-NEXT:    vpaddd %zmm1, %zmm1, %zmm1
+; SKX_32-NEXT:    vscatterdps %zmm0, (%eax,%zmm1,2) {%k1}
+; SKX_32-NEXT:    vzeroupper
+; SKX_32-NEXT:    retl
+  %ptr = bitcast float* %base to i8*
+  %mask = bitcast i16 %imask to <16 x i1>
+  %scaledindex = shl <16 x i32> %index, <i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1>
+  call void @llvm.x86.avx512.mask.scatter.dps.512(i8* %ptr, <16 x i1> %mask, <16 x i32> %scaledindex, <16 x float> %value, i32 2)
+  ret void
+}
+declare void @llvm.x86.avx512.mask.scatter.dps.512(i8*, <16 x i1>, <16 x i32>, <16 x float>, i32)
+
+define void @scaleidx_scatter(<8 x float> %value, float* %base, <8 x i32> %index, i8 %imask) nounwind {
+; KNL_64-LABEL: scaleidx_scatter:
+; KNL_64:       # %bb.0:
+; KNL_64-NEXT:    # kill: def $ymm0 killed $ymm0 def $zmm0
+; KNL_64-NEXT:    vpaddd %ymm1, %ymm1, %ymm1
+; KNL_64-NEXT:    kmovw %esi, %k0
+; KNL_64-NEXT:    kshiftlw $8, %k0, %k0
+; KNL_64-NEXT:    kshiftrw $8, %k0, %k1
+; KNL_64-NEXT:    vscatterdps %zmm0, (%rdi,%zmm1,4) {%k1}
+; KNL_64-NEXT:    vzeroupper
+; KNL_64-NEXT:    retq
+;
+; KNL_32-LABEL: scaleidx_scatter:
+; KNL_32:       # %bb.0:
+; KNL_32-NEXT:    # kill: def $ymm0 killed $ymm0 def $zmm0
+; KNL_32-NEXT:    movl {{[0-9]+}}(%esp), %eax
+; KNL_32-NEXT:    vpaddd %ymm1, %ymm1, %ymm1
+; KNL_32-NEXT:    movzbl {{[0-9]+}}(%esp), %ecx
+; KNL_32-NEXT:    kmovw %ecx, %k0
+; KNL_32-NEXT:    kshiftlw $8, %k0, %k0
+; KNL_32-NEXT:    kshiftrw $8, %k0, %k1
+; KNL_32-NEXT:    vscatterdps %zmm0, (%eax,%zmm1,4) {%k1}
+; KNL_32-NEXT:    vzeroupper
+; KNL_32-NEXT:    retl
+;
+; SKX-LABEL: scaleidx_scatter:
+; SKX:       # %bb.0:
+; SKX-NEXT:    vpaddd %ymm1, %ymm1, %ymm1
+; SKX-NEXT:    kmovw %esi, %k1
+; SKX-NEXT:    vscatterdps %ymm0, (%rdi,%ymm1,4) {%k1}
+; SKX-NEXT:    vzeroupper
+; SKX-NEXT:    retq
+;
+; SKX_32-LABEL: scaleidx_scatter:
+; SKX_32:       # %bb.0:
+; SKX_32-NEXT:    movl {{[0-9]+}}(%esp), %eax
+; SKX_32-NEXT:    vpaddd %ymm1, %ymm1, %ymm1
+; SKX_32-NEXT:    kmovb {{[0-9]+}}(%esp), %k1
+; SKX_32-NEXT:    vscatterdps %ymm0, (%eax,%ymm1,4) {%k1}
+; SKX_32-NEXT:    vzeroupper
+; SKX_32-NEXT:    retl
+  %scaledindex = mul <8 x i32> %index, <i32 2, i32 2, i32 2, i32 2, i32 2, i32 2, i32 2, i32 2>
+  %ptrs = getelementptr float, float* %base, <8 x i32> %scaledindex
+  %mask = bitcast i8 %imask to <8 x i1>
+  call void @llvm.masked.scatter.v8f32.v8p0f32(<8 x float> %value, <8 x float*> %ptrs, i32 1, <8 x i1> %mask)
+  ret void
+}
+
+define void @scaleidx_scatter_outofrange(<8 x float> %value, float* %base, <8 x i32> %index, i8 %imask) nounwind {
+; KNL_64-LABEL: scaleidx_scatter_outofrange:
+; KNL_64:       # %bb.0:
+; KNL_64-NEXT:    # kill: def $ymm0 killed $ymm0 def $zmm0
+; KNL_64-NEXT:    vpslld $2, %ymm1, %ymm1
+; KNL_64-NEXT:    kmovw %esi, %k0
+; KNL_64-NEXT:    kshiftlw $8, %k0, %k0
+; KNL_64-NEXT:    kshiftrw $8, %k0, %k1
+; KNL_64-NEXT:    vscatterdps %zmm0, (%rdi,%zmm1,4) {%k1}
+; KNL_64-NEXT:    vzeroupper
+; KNL_64-NEXT:    retq
+;
+; KNL_32-LABEL: scaleidx_scatter_outofrange:
+; KNL_32:       # %bb.0:
+; KNL_32-NEXT:    # kill: def $ymm0 killed $ymm0 def $zmm0
+; KNL_32-NEXT:    movl {{[0-9]+}}(%esp), %eax
+; KNL_32-NEXT:    vpslld $2, %ymm1, %ymm1
+; KNL_32-NEXT:    movzbl {{[0-9]+}}(%esp), %ecx
+; KNL_32-NEXT:    kmovw %ecx, %k0
+; KNL_32-NEXT:    kshiftlw $8, %k0, %k0
+; KNL_32-NEXT:    kshiftrw $8, %k0, %k1
+; KNL_32-NEXT:    vscatterdps %zmm0, (%eax,%zmm1,4) {%k1}
+; KNL_32-NEXT:    vzeroupper
+; KNL_32-NEXT:    retl
+;
+; SKX-LABEL: scaleidx_scatter_outofrange:
+; SKX:       # %bb.0:
+; SKX-NEXT:    vpslld $2, %ymm1, %ymm1
+; SKX-NEXT:    kmovw %esi, %k1
+; SKX-NEXT:    vscatterdps %ymm0, (%rdi,%ymm1,4) {%k1}
+; SKX-NEXT:    vzeroupper
+; SKX-NEXT:    retq
+;
+; SKX_32-LABEL: scaleidx_scatter_outofrange:
+; SKX_32:       # %bb.0:
+; SKX_32-NEXT:    movl {{[0-9]+}}(%esp), %eax
+; SKX_32-NEXT:    vpslld $2, %ymm1, %ymm1
+; SKX_32-NEXT:    kmovb {{[0-9]+}}(%esp), %k1
+; SKX_32-NEXT:    vscatterdps %ymm0, (%eax,%ymm1,4) {%k1}
+; SKX_32-NEXT:    vzeroupper
+; SKX_32-NEXT:    retl
+  %scaledindex = mul <8 x i32> %index, <i32 4, i32 4, i32 4, i32 4, i32 4, i32 4, i32 4, i32 4>
+  %ptrs = getelementptr float, float* %base, <8 x i32> %scaledindex
+  %mask = bitcast i8 %imask to <8 x i1>
+  call void @llvm.masked.scatter.v8f32.v8p0f32(<8 x float> %value, <8 x float*> %ptrs, i32 2, <8 x i1> %mask)
+  ret void
+}
+declare void @llvm.masked.scatter.v8f32.v8p0f32(<8 x float>, <8 x float*>, i32 immarg, <8 x i1>)
+
+;
+; PR45906
 ; This used to cause fast-isel to generate bad copy instructions that would
 ; cause an error in copyPhysReg.
+;
+
+%struct.foo = type { i8*, i64, i16, i16, i32 }
+
 define <8 x i64> @pr45906(<8 x %struct.foo*> %ptr) {
 ; KNL_64-LABEL: pr45906:
 ; KNL_64:       # %bb.0: # %bb
