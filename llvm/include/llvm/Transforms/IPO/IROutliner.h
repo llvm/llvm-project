@@ -156,6 +156,14 @@ struct OutlinableRegion {
   /// containing the called function.
   void reattachCandidate();
 
+  /// Find a corresponding value for \p V in similar OutlinableRegion \p Other.
+  ///
+  /// \param Other [in] - The OutlinableRegion to find the corresponding Value
+  /// in.
+  /// \param V [in] - The Value to look for in the other region.
+  /// \return The corresponding Value to \p V if it exists, otherwise nullptr.
+  Value *findCorrespondingValueIn(const OutlinableRegion &Other, Value *V);
+
   /// Get the size of the code removed from the region.
   ///
   /// \param [in] TTI - The TargetTransformInfo for the parent function.
