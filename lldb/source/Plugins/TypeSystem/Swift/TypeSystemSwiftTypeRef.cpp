@@ -2844,14 +2844,9 @@ bool TypeSystemSwiftTypeRef::IsImportedType(opaque_compiler_type_t type,
     return true;
   };
   FALLBACK(IsImportedType, (ReconstructType(type), original_type));
-  // Dont compare the results if there is no ClangImporter in the SwiftASTContext.
-  const auto &props = ModuleList::GetGlobalModuleListProperties();
-  if (!props.GetUseSwiftClangImporter())
-    return impl();
-
-  VALIDATE_AND_RETURN(impl, IsImportedType, type,
-                      (ReconstructType(type), nullptr),
-                      (ReconstructType(type), original_type));
+  // We can't validate the result because ReconstructType may call this
+  // function, causing an infinite loop.
+  return impl();
 }
 
 bool TypeSystemSwiftTypeRef::IsExistentialType(
