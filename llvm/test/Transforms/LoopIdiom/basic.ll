@@ -1300,6 +1300,53 @@ for.end:                                          ; preds = %for.body, %entry
   ret void
 }
 
+;; FIXME: Do not form memmove when load has more than one use.
+define i32 @do_not_form_memmove5(i32* %p) {
+; CHECK-LABEL: @do_not_form_memmove5(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[P2:%.*]] = bitcast i32* [[P:%.*]] to i8*
+; CHECK-NEXT:    [[SCEVGEP:%.*]] = getelementptr i32, i32* [[P:%.*]], i64 1
+; CHECK-NEXT:    [[SCEVGEP1:%.*]] = bitcast i32* [[SCEVGEP]] to i8*
+; CHECK-NEXT:    call void @llvm.memmove.p0i8.p0i8.i64(i8* align 4 [[SCEVGEP1]], i8* align 4 [[P2]], i64 60, i1 false)
+; CHECK-NEXT:    br label [[FOR_BODY:%.*]]
+; CHECK:       for.cond.cleanup:
+; CHECK-NEXT:    [[ADD_LCSSA:%.*]] = phi i32 [ [[ADD:%.*]], [[FOR_BODY]] ]
+; CHECK-NEXT:    ret i32 [[ADD_LCSSA]]
+; CHECK:       for.body:
+; CHECK-NEXT:    [[INDEX:%.*]] = phi i32 [ 15, [[ENTRY:%.*]] ], [ [[SUB:%.*]], [[FOR_BODY]] ]
+; CHECK-NEXT:    [[SUM:%.*]] = phi i32 [ 0, [[ENTRY]] ], [ [[ADD]], [[FOR_BODY]] ]
+; CHECK-NEXT:    [[SUB]] = add nsw i32 [[INDEX]], -1
+; CHECK-NEXT:    [[TMP0:%.*]] = zext i32 [[SUB]] to i64
+; CHECK-NEXT:    [[ARRAYIDX:%.*]] = getelementptr inbounds i32, i32* [[P:%.*]], i64 [[TMP0]]
+; CHECK-NEXT:    [[TMP1:%.*]] = load i32, i32* [[ARRAYIDX]], align 4
+; CHECK-NEXT:    [[IDXPROM:%.*]] = zext i32 [[INDEX]] to i64
+; CHECK-NEXT:    [[ARRAYIDX2:%.*]] = getelementptr inbounds i32, i32* [[P:%.*]], i64 [[IDXPROM]]
+; CHECK-NEXT:    [[ADD]] = add nsw i32 [[TMP1]], [[SUM:%.*]]
+; CHECK-NEXT:    [[CMP:%.*]] = icmp sgt i32 [[INDEX]], 1
+; CHECK-NEXT:    br i1 [[CMP]], label [[FOR_BODY]], label [[FOR_COND_CLEANUP]]
+;
+entry:
+  br label %for.body
+
+for.cond.cleanup:                                 ; preds = %for.body
+  %add.lcssa = phi i32 [ %add, %for.body ]
+  ret i32 %add.lcssa
+
+for.body:                                      ; preds = %entry, %for.body
+  %index = phi i32 [ 15, %entry ], [ %sub, %for.body ]
+  %sum = phi i32 [ 0, %entry ], [ %add, %for.body ]
+  %sub = add nsw i32 %index, -1
+  %0 = zext i32 %sub to i64
+  %arrayidx = getelementptr inbounds i32, i32* %p, i64 %0
+  %1 = load i32, i32* %arrayidx, align 4
+  %idxprom = zext i32 %index to i64
+  %arrayidx2 = getelementptr inbounds i32, i32* %p, i64 %idxprom
+  store i32 %1, i32* %arrayidx2, align 4
+  %add = add nsw i32 %1, %sum
+  %cmp = icmp sgt i32 %index, 1
+  br i1 %cmp, label %for.body, label %for.cond.cleanup
+}
+
 ;; Memcpy formation is still preferred over memmove.
 define void @prefer_memcpy_over_memmove(i8* noalias %Src, i8* noalias %Dest, i64 %Size) {
 ; CHECK-LABEL: @prefer_memcpy_over_memmove(
