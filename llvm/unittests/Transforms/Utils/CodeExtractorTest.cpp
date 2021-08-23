@@ -135,6 +135,121 @@ TEST(CodeExtractor, InputOutputMonitoring) {
   EXPECT_FALSE(verifyFunction(*Func));
 }
 
+TEST(CodeExtractor, ExitBlockOrderingPhis) {
+  LLVMContext Ctx;
+  SMDiagnostic Err;
+  std::unique_ptr<Module> M(parseAssemblyString(R"invalid(
+    define void @foo(i32 %a, i32 %b) {
+    entry:
+      %0 = alloca i32, align 4
+      br label %test0
+    test0:
+      %c = load i32, i32* %0, align 4
+      br label %test1
+    test1:
+      %e = load i32, i32* %0, align 4
+      br i1 true, label %first, label %test
+    test:
+      %d = load i32, i32* %0, align 4
+      br i1 true, label %first, label %next
+    first:
+      %1 = phi i32 [ %c, %test ], [ %e, %test1 ]
+      ret void
+    next:
+      %2 = add i32 %d, 1
+      %3 = add i32 %e, 1
+      ret void
+    }
+  )invalid",
+                                                Err, Ctx));
+  Function *Func = M->getFunction("foo");
+  SmallVector<BasicBlock *, 3> Candidates{ getBlockByName(Func, "test0"),
+                                           getBlockByName(Func, "test1"),
+                                           getBlockByName(Func, "test") };
+
+  CodeExtractor CE(Candidates);
+  EXPECT_TRUE(CE.isEligible());
+
+  CodeExtractorAnalysisCache CEAC(*Func);
+  Function *Outlined = CE.extractCodeRegion(CEAC);
+  EXPECT_TRUE(Outlined);
+
+  BasicBlock *FirstExitStub = getBlockByName(Outlined, "first.exitStub");
+  BasicBlock *NextExitStub = getBlockByName(Outlined, "next.exitStub");
+
+  Instruction *FirstTerm = FirstExitStub->getTerminator();
+  ReturnInst *FirstReturn = dyn_cast<ReturnInst>(FirstTerm);
+  EXPECT_TRUE(FirstReturn);
+  ConstantInt *CIFirst = dyn_cast<ConstantInt>(FirstReturn->getReturnValue());
+  EXPECT_TRUE(CIFirst->getLimitedValue() == 1u);
+
+  Instruction *NextTerm = NextExitStub->getTerminator();
+  ReturnInst *NextReturn = dyn_cast<ReturnInst>(NextTerm);
+  EXPECT_TRUE(NextReturn);
+  ConstantInt *CINext = dyn_cast<ConstantInt>(NextReturn->getReturnValue());
+  EXPECT_TRUE(CINext->getLimitedValue() == 0u);
+  
+  EXPECT_FALSE(verifyFunction(*Outlined));
+  EXPECT_FALSE(verifyFunction(*Func));
+}
+
+TEST(CodeExtractor, ExitBlockOrdering) {
+  LLVMContext Ctx;
+  SMDiagnostic Err;
+  std::unique_ptr<Module> M(parseAssemblyString(R"invalid(
+    define void @foo(i32 %a, i32 %b) {
+    entry:
+      %0 = alloca i32, align 4
+      br label %test0
+    test0:
+      %c = load i32, i32* %0, align 4
+      br label %test1
+    test1:
+      %e = load i32, i32* %0, align 4
+      br i1 true, label %first, label %test
+    test:
+      %d = load i32, i32* %0, align 4
+      br i1 true, label %first, label %next
+    first:
+      ret void
+    next:
+      %1 = add i32 %d, 1
+      %2 = add i32 %e, 1
+      ret void
+    }
+  )invalid",
+                                                Err, Ctx));
+  Function *Func = M->getFunction("foo");
+  SmallVector<BasicBlock *, 3> Candidates{ getBlockByName(Func, "test0"),
+                                           getBlockByName(Func, "test1"),
+                                           getBlockByName(Func, "test") };
+
+  CodeExtractor CE(Candidates);
+  EXPECT_TRUE(CE.isEligible());
+
+  CodeExtractorAnalysisCache CEAC(*Func);
+  Function *Outlined = CE.extractCodeRegion(CEAC);
+  EXPECT_TRUE(Outlined);
+
+  BasicBlock *FirstExitStub = getBlockByName(Outlined, "first.exitStub");
+  BasicBlock *NextExitStub = getBlockByName(Outlined, "next.exitStub");
+
+  Instruction *FirstTerm = FirstExitStub->getTerminator();
+  ReturnInst *FirstReturn = dyn_cast<ReturnInst>(FirstTerm);
+  EXPECT_TRUE(FirstReturn);
+  ConstantInt *CIFirst = dyn_cast<ConstantInt>(FirstReturn->getReturnValue());
+  EXPECT_TRUE(CIFirst->getLimitedValue() == 1u);
+
+  Instruction *NextTerm = NextExitStub->getTerminator();
+  ReturnInst *NextReturn = dyn_cast<ReturnInst>(NextTerm);
+  EXPECT_TRUE(NextReturn);
+  ConstantInt *CINext = dyn_cast<ConstantInt>(NextReturn->getReturnValue());
+  EXPECT_TRUE(CINext->getLimitedValue() == 0u);
+  
+  EXPECT_FALSE(verifyFunction(*Outlined));
+  EXPECT_FALSE(verifyFunction(*Func));
+}
+
 TEST(CodeExtractor, ExitPHIOnePredFromRegion) {
   LLVMContext Ctx;
   SMDiagnostic Err;
