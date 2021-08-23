@@ -1,5 +1,5 @@
 ; RUN: llc < %s -mtriple=arm64-linux-gnu | FileCheck %s
-; RUN: llc < %s -global-isel -global-isel-abort=2 -pass-remarks-missed=gisel* -mtriple=arm64-linux-gnu 2>&1 | FileCheck %s --check-prefixes=GISEL,FALLBACK
+; RUN: llc < %s -global-isel -global-isel-abort=1 -pass-remarks-missed=gisel* -mtriple=arm64-linux-gnu 2>&1 | FileCheck %s --check-prefixes=GISEL,FALLBACK
 
 %0 = type { i64, i64 }
 
