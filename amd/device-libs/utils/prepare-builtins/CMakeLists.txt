@@ -5,7 +5,7 @@
 ## License. See LICENSE.TXT for details.
 ##===--------------------------------------------------------------------------
 
-cmake_minimum_required(VERSION 2.6)
+cmake_minimum_required(VERSION 3.13.4)
 
 include(AddLLVM)
 
