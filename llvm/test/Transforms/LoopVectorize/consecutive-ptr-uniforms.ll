@@ -50,8 +50,8 @@ for.end:
 ; CHECK:       %index = phi i64 [ 0, %vector.ph ], [ %index.next, %vector.body ]
 ; CHECK:       %offset.idx = sub i64 %n, %index
 ; CHECK-NOT:   getelementptr
-; CHECK:       %[[G0IDX:.+]] = add nsw i64 %offset.idx, -3
-; CHECK:       getelementptr inbounds i32, i32* %a, i64 %[[G0IDX]]
+; CHECK:       %[[G0:.+]] = getelementptr inbounds i32, i32* %a, i64 -3
+; CHECK:       getelementptr inbounds i32, i32* %[[G0]], i64 %offset.idx
 ; CHECK-NOT:   getelementptr
 ; CHECK:       br i1 {{.*}}, label %middle.block, label %vector.body
 ;
