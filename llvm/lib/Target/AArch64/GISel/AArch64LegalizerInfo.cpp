@@ -767,7 +767,9 @@ AArch64LegalizerInfo::AArch64LegalizerInfo(const AArch64Subtarget &ST)
       .minScalar(0, MinFPScalar);
 
   // TODO: Libcall support for s128.
-  getActionDefinitionsBuilder(G_LROUND).legalFor({{s64, s32}, {s64, s64}});
+  // TODO: s16 should be legal with full FP16 support.
+  getActionDefinitionsBuilder({G_LROUND, G_LLROUND})
+      .legalFor({{s64, s32}, {s64, s64}});
 
   getLegacyLegalizerInfo().computeTables();
   verify(*ST.getInstrInfo());
