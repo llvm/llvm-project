@@ -192,6 +192,7 @@ def THXT8XWriteFSqrtDP : SchedWriteRes<[THXT8XUnitFPMDS]> {
 def : ReadAdvance<ReadExtrHi, 1>;
 def : ReadAdvance<ReadAdrBase, 2>;
 def : ReadAdvance<ReadVLD, 2>;
+def : ReadAdvance<ReadST, 2>;
 
 // FIXME: This needs more targeted benchmarking.
 // ALU - Most operands in the ALU pipes are not needed for two cycles. Shiftable

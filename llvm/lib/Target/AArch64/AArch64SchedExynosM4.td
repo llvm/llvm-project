@@ -581,6 +581,7 @@ def : ReadAdvance<ReadID,      0>;
 def : ReadAdvance<ReadExtrHi,  0>;
 def : ReadAdvance<ReadAdrBase, 0>;
 def : ReadAdvance<ReadVLD,     0>;
+def : ReadAdvance<ReadST,      0>;
 
 //===----------------------------------------------------------------------===//
 // Finer scheduling model.
