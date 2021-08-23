@@ -36,7 +36,7 @@
 // (a) A coordinate scheme for temporarily storing and lexicographically
 //     sorting a sparse tensor by index.
 //
-// (b) A "one-size-fits-all" sparse storage scheme defined by per-rank
+// (b) A "one-size-fits-all" sparse tensor storage scheme defined by per-rank
 //     sparse/dense annnotations to be used by generated MLIR code.
 //
 // The following external formats are supported:
@@ -71,7 +71,7 @@ struct Element {
 template <typename V>
 struct SparseTensor {
 public:
-  SparseTensor(const std::vector<uint64_t> &szs, uint64_t capacity = 0)
+  SparseTensor(const std::vector<uint64_t> &szs, uint64_t capacity)
       : sizes(szs), pos(0) {
     if (capacity)
       elements.reserve(capacity);
@@ -93,6 +93,16 @@ public:
   const std::vector<uint64_t> &getSizes() const { return sizes; }
   /// Getter for elements array.
   const std::vector<Element<V>> &getElements() const { return elements; }
+
+  /// Factory method.
+  static SparseTensor<V> *newSparseTensor(uint64_t size, uint64_t *sizes,
+                                          uint64_t *perm,
+                                          uint64_t capacity = 0) {
+    std::vector<uint64_t> indices(size);
+    for (uint64_t r = 0; r < size; r++)
+      indices[perm[r]] = sizes[r];
+    return new SparseTensor<V>(indices, capacity);
+  }
 
 private:
   /// Returns true if indices of e1 < indices of e2.
@@ -155,8 +165,9 @@ private:
 template <typename P, typename I, typename V>
 class SparseTensorStorage : public SparseTensorStorageBase {
 public:
-  /// Constructs sparse tensor storage scheme following the given
-  /// per-rank dimension dense/sparse annotations.
+  /// Constructs a sparse tensor storage scheme from the given sparse
+  /// tensor in coordinate scheme following the given per-rank dimension
+  /// dense/sparse annotations.
   SparseTensorStorage(SparseTensor<V> *tensor, uint8_t *sparsity)
       : sizes(tensor->getSizes()), pointers(getRank()), indices(getRank()) {
     // Provide hints on capacity.
@@ -192,7 +203,7 @@ public:
   }
   void getValues(std::vector<V> **out) override { *out = &values; }
 
-  // Factory method.
+  /// Factory method.
   static SparseTensorStorage<P, I, V> *newSparseTensor(SparseTensor<V> *t,
                                                        uint8_t *s) {
     t->sort(); // sort lexicographically
@@ -202,10 +213,9 @@ public:
   }
 
 private:
-  /// Initializes sparse tensor storage scheme from a memory-resident
-  /// representation of an external sparse tensor. This method prepares
-  /// the pointers and indices arrays under the given per-rank dimension
-  /// dense/sparse annotations.
+  /// Initializes sparse tensor storage scheme from a memory-resident sparse
+  /// tensor in coordinate scheme. This method prepares the pointers and indices
+  /// arrays under the given per-rank dimension dense/sparse annotations.
   void traverse(SparseTensor<V> *tensor, uint8_t *sparsity, uint64_t lo,
                 uint64_t hi, uint64_t d) {
     const std::vector<Element<V>> &elements = tensor->getElements();
@@ -355,14 +365,13 @@ static SparseTensor<V> *openTensor(char *filename, uint64_t size,
   // and the number of nonzeros as initial capacity.
   assert(size == idata[0] && "rank mismatch");
   uint64_t nnz = idata[1];
+  for (uint64_t r = 0; r < size; r++)
+    assert((sizes[r] == 0 || sizes[r] == idata[2 + r]) &&
+           "dimension size mismatch");
+  SparseTensor<V> *tensor =
+      SparseTensor<V>::newSparseTensor(size, idata + 2, perm, nnz);
+  //  Read all nonzero elements.
   std::vector<uint64_t> indices(size);
-  for (uint64_t r = 0; r < size; r++) {
-    uint64_t sz = idata[2 + r];
-    assert((sizes[r] == 0 || sizes[r] == sz) && "dimension size mismatch");
-    indices[perm[r]] = sz;
-  }
-  SparseTensor<V> *tensor = new SparseTensor<V>(indices, nnz);
-  // Read all nonzero elements.
   for (uint64_t k = 0; k < nnz; k++) {
     uint64_t idx = -1;
     for (uint64_t r = 0; r < size; r++) {
@@ -384,39 +393,6 @@ static SparseTensor<V> *openTensor(char *filename, uint64_t size,
   }
   // Close the file and return tensor.
   fclose(file);
-  return tensor;
-}
-
-/// Helper to copy a linearized dense tensor.
-template <typename V>
-static V *copyTensorTraverse(SparseTensor<V> *tensor,
-                             std::vector<uint64_t> &indices, uint64_t r,
-                             uint64_t rank, uint64_t *sizes, uint64_t *perm,
-                             V *data) {
-  for (uint64_t i = 0, sz = sizes[r]; i < sz; i++) {
-    indices[perm[r]] = i;
-    if (r + 1 == rank) {
-      V d = *data++;
-      if (d)
-        tensor->add(indices, d);
-    } else {
-      data =
-          copyTensorTraverse(tensor, indices, r + 1, rank, sizes, perm, data);
-    }
-  }
-  return data;
-}
-
-/// Copies the nonzeros of a linearized dense tensor into a memory-resident
-/// sparse tensor in coordinate scheme.
-template <typename V>
-static SparseTensor<V> *copyTensor(uint64_t size, uint64_t *sizes,
-                                   uint64_t *perm, V *data) {
-  std::vector<uint64_t> indices(size);
-  for (uint64_t r = 0; r < size; r++)
-    indices[perm[r]] = sizes[r];
-  SparseTensor<V> *tensor = new SparseTensor<V>(indices);
-  copyTensorTraverse<V>(tensor, indices, 0, size, sizes, perm, data);
   return tensor;
 }
 
@@ -445,11 +421,6 @@ char *getTensorFilename(uint64_t id) {
 //
 //===----------------------------------------------------------------------===//
 
-struct UnrankedMemRef {
-  uint64_t rank;
-  void *descriptor;
-};
-
 #define TEMPLATE(NAME, TYPE)                                                   \
   struct NAME {                                                                \
     const TYPE *base;                                                          \
@@ -464,8 +435,10 @@ struct UnrankedMemRef {
     SparseTensor<V> *tensor;                                                   \
     if (action == 0)                                                           \
       tensor = openTensor<V>(static_cast<char *>(ptr), asize, sizes, perm);    \
+    else if (action == 1)                                                      \
+      tensor = static_cast<SparseTensor<V> *>(ptr);                            \
     else                                                                       \
-      tensor = copyTensor<V>(asize, sizes, perm, static_cast<V *>(ptr));       \
+      return SparseTensor<V>::newSparseTensor(asize, sizes, perm);             \
     return SparseTensorStorage<P, I, V>::newSparseTensor(tensor, sparsity);    \
   }
 
@@ -483,8 +456,22 @@ struct UnrankedMemRef {
     return {v->data(), v->data(), 0, {v->size()}, {1}};                        \
   }
 
-#define PTR(NAME)                                                              \
-  const void *NAME(int64_t sz, UnrankedMemRef *m) { return m->descriptor; }
+#define IMPL3(NAME, TYPE)                                                      \
+  void *NAME(void *tensor, TYPE value, uint64_t *ibase, uint64_t *idata,       \
+             uint64_t ioff, uint64_t isize, uint64_t istride, uint64_t *pbase, \
+             uint64_t *pdata, uint64_t poff, uint64_t psize,                   \
+             uint64_t pstride) {                                               \
+    assert(istride == 1 && pstride == 1 && isize == psize);                    \
+    uint64_t *indx = idata + ioff;                                             \
+    if (!value)                                                                \
+      return tensor;                                                           \
+    uint64_t *perm = pdata + poff;                                             \
+    std::vector<uint64_t> indices(isize);                                      \
+    for (uint64_t r = 0; r < isize; r++)                                       \
+      indices[perm[r]] = indx[r];                                              \
+    static_cast<SparseTensor<TYPE> *>(tensor)->add(indices, value);            \
+    return tensor;                                                             \
+  }
 
 TEMPLATE(MemRef1DU64, uint64_t);
 TEMPLATE(MemRef1DU32, uint32_t);
@@ -510,6 +497,10 @@ enum PrimaryTypeEnum : uint64_t {
 
 /// Constructs a new sparse tensor. This is the "swiss army knife"
 /// method for materializing sparse tensors into the computation.
+///  action
+///    0 : ptr contains filename to read into storage
+///    1 : ptr contains coordinate scheme to assign to storage
+///    2 : returns coordinate scheme to fill (call back later with 1)
 void *newSparseTensor(uint8_t *abase, uint8_t *adata, uint64_t aoff,
                       uint64_t asize, uint64_t astride, uint64_t *sbase,
                       uint64_t *sdata, uint64_t soff, uint64_t ssize,
@@ -518,6 +509,7 @@ void *newSparseTensor(uint8_t *abase, uint8_t *adata, uint64_t aoff,
                       uint64_t ptrTp, uint64_t indTp, uint64_t valTp,
                       uint32_t action, void *ptr) {
   assert(astride == 1 && sstride == 1 && pstride == 1);
+  assert(asize == ssize && ssize == psize);
   uint8_t *sparsity = adata + aoff;
   uint64_t *sizes = sdata + soff;
   uint64_t *perm = pdata + poff;
@@ -606,18 +598,19 @@ void delSparseTensor(void *tensor) {
   delete static_cast<SparseTensorStorageBase *>(tensor);
 }
 
-/// Helper to get pointer, one per value type.
-PTR(getPtrF64)
-PTR(getPtrF32)
-PTR(getPtrI64)
-PTR(getPtrI32)
-PTR(getPtrI16)
-PTR(getPtrI8)
+/// Helper to add value to coordinate scheme, one per value type.
+IMPL3(addEltF64, double)
+IMPL3(addEltF32, float)
+IMPL3(addEltI64, int64_t)
+IMPL3(addEltI32, int32_t)
+IMPL3(addEltI16, int16_t)
+IMPL3(addEltI8, int8_t)
 
 #undef TEMPLATE
 #undef CASE
 #undef IMPL1
 #undef IMPL2
+#undef IMPL3
 
 } // extern "C"
 
