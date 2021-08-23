@@ -227,6 +227,8 @@ private:
                    (*CallerSizeEstimateBefore + *CalleeSizeEstimateBefore);
       getAdvisor()->updateNativeSizeEstimate(Reward);
       log(Reward, /*Success=*/true);
+    } else {
+      log(NoReward, /*Success=*/true);
     }
   }
 
