@@ -10,8 +10,8 @@
 #
 ##===----------------------------------------------------------------------===##
 
-# By default we will not build NVPTX deviceRTL on a CUDA free system
-set(LIBOMPTARGET_BUILD_NVPTX_BCLIB FALSE CACHE BOOL
+# By default we will build NVPTX deviceRTL on a CUDA free system
+set(LIBOMPTARGET_BUILD_NVPTX_BCLIB TRUE CACHE BOOL
   "Whether build NVPTX deviceRTL on CUDA free system.")
 
 if (NOT (LIBOMPTARGET_DEP_CUDA_FOUND OR LIBOMPTARGET_BUILD_NVPTX_BCLIB))
@@ -163,6 +163,7 @@ list(TRANSFORM LIBOMPTARGET_LLVM_INCLUDE_DIRS_NVPTX PREPEND "-I")
 # Set flags for LLVM Bitcode compilation.
 set(bc_flags -S -x c++ -O1 -std=c++14
              -mllvm -openmp-opt-disable
+             -ffreestanding
              -target nvptx64
              -Xclang -emit-llvm-bc
              -Xclang -aux-triple -Xclang ${aux_triple}
