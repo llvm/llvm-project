@@ -299,6 +299,8 @@ public:
     return BaseT::isLegalNTStore(DataType, Alignment);
   }
 
+  bool enableOrderedReductions() const { return true; }
+
   InstructionCost getInterleavedMemoryOpCost(
       unsigned Opcode, Type *VecTy, unsigned Factor, ArrayRef<unsigned> Indices,
       Align Alignment, unsigned AddressSpace,

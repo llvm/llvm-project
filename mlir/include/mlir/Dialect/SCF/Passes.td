@@ -21,6 +21,12 @@ def SCFForLoopPeeling
     : FunctionPass<"for-loop-peeling"> {
   let summary = "Peel `for` loops at their upper bounds.";
   let constructor = "mlir::createForLoopPeelingPass()";
+  let options = [
+    Option<"skipPartial", "skip-partial", "bool",
+           /*default=*/"true",
+           "Do not peel loops inside of the last, partial iteration of another "
+           "already peeled loop.">
+  ];
   let dependentDialects = ["AffineDialect"];
 }
 

@@ -1478,8 +1478,8 @@ private:
   void UpdateMultiVersionNames(GlobalDecl GD, const FunctionDecl *FD);
 
   llvm::Constant *
-  GetOrCreateLLVMGlobal(StringRef MangledName, llvm::Type *Ty,
-                        unsigned AddrSpace, const VarDecl *D,
+  GetOrCreateLLVMGlobal(StringRef MangledName, llvm::Type *Ty, LangAS AddrSpace,
+                        const VarDecl *D,
                         ForDefinition_t IsForDefinition = NotForDefinition);
 
   bool GetCPUAndFeaturesAttributes(GlobalDecl GD,
