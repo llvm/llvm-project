@@ -996,16 +996,19 @@ OpTrait::impl::verifyResultsAreSignlessIntegerLike(Operation *op) {
   return success();
 }
 
-static LogicalResult verifyValueSizeAttr(Operation *op, StringRef attrName,
-                                         bool isOperand) {
+LogicalResult OpTrait::impl::verifyValueSizeAttr(Operation *op,
+                                                 StringRef attrName,
+                                                 StringRef valueGroupName,
+                                                 size_t expectedCount) {
   auto sizeAttr = op->getAttrOfType<DenseIntElementsAttr>(attrName);
   if (!sizeAttr)
-    return op->emitOpError("requires 1D vector attribute '") << attrName << "'";
+    return op->emitOpError("requires 1D i32 elements attribute '")
+           << attrName << "'";
 
-  auto sizeAttrType = sizeAttr.getType().dyn_cast<VectorType>();
-  if (!sizeAttrType || sizeAttrType.getRank() != 1 ||
+  auto sizeAttrType = sizeAttr.getType();
+  if (sizeAttrType.getRank() != 1 ||
       !sizeAttrType.getElementType().isInteger(32))
-    return op->emitOpError("requires 1D vector of i32 attribute '")
+    return op->emitOpError("requires 1D i32 elements attribute '")
            << attrName << "'";
 
   if (llvm::any_of(sizeAttr.getIntValues(), [](const APInt &element) {
@@ -1018,25 +1021,22 @@ static LogicalResult verifyValueSizeAttr(Operation *op, StringRef attrName,
       sizeAttr.begin(), sizeAttr.end(), 0,
       [](unsigned all, APInt one) { return all + one.getZExtValue(); });
 
-  if (isOperand && totalCount != op->getNumOperands())
-    return op->emitOpError("operand count (")
-           << op->getNumOperands() << ") does not match with the total size ("
-           << totalCount << ") specified in attribute '" << attrName << "'";
-  else if (!isOperand && totalCount != op->getNumResults())
-    return op->emitOpError("result count (")
-           << op->getNumResults() << ") does not match with the total size ("
-           << totalCount << ") specified in attribute '" << attrName << "'";
+  if (totalCount != expectedCount)
+    return op->emitOpError()
+           << valueGroupName << " count (" << expectedCount
+           << ") does not match with the total size (" << totalCount
+           << ") specified in attribute '" << attrName << "'";
   return success();
 }
 
 LogicalResult OpTrait::impl::verifyOperandSizeAttr(Operation *op,
                                                    StringRef attrName) {
-  return verifyValueSizeAttr(op, attrName, /*isOperand=*/true);
+  return verifyValueSizeAttr(op, attrName, "operand", op->getNumOperands());
 }
 
 LogicalResult OpTrait::impl::verifyResultSizeAttr(Operation *op,
                                                   StringRef attrName) {
-  return verifyValueSizeAttr(op, attrName, /*isOperand=*/false);
+  return verifyValueSizeAttr(op, attrName, "result", op->getNumResults());
 }
 
 LogicalResult OpTrait::impl::verifyNoRegionArguments(Operation *op) {
