@@ -41,8 +41,8 @@ void naivelyFuseParallelOps(Region &region);
 
 /// Rewrite a for loop with bounds/step that potentially do not divide evenly
 /// into a for loop where the step divides the iteration space evenly, followed
-/// by an scf.if for the last (partial) iteration (if any). This transformation
-/// is called "loop peeling".
+/// by an scf.if for the last (partial) iteration (if any; returned via `ifOp`).
+/// This transformation is called "loop peeling".
 ///
 /// This transformation is beneficial for a wide range of transformations such
 /// as vectorization or loop tiling: It enables additional canonicalizations
@@ -81,7 +81,8 @@ void naivelyFuseParallelOps(Region &region);
 /// Note: This function rewrites the given scf.for loop in-place and creates a
 /// new scf.if operation for the last iteration. It replaces all uses of the
 /// unpeeled loop with the results of the newly generated scf.if.
-LogicalResult peelAndCanonicalizeForLoop(RewriterBase &rewriter, ForOp forOp);
+LogicalResult peelAndCanonicalizeForLoop(RewriterBase &rewriter, ForOp forOp,
+                                         scf::IfOp &ifOp);
 
 /// Tile a parallel loop of the form
 ///   scf.parallel (%i0, %i1) = (%arg0, %arg1) to (%arg2, %arg3)
