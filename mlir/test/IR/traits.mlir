@@ -375,28 +375,28 @@ func private @foo()
 // -----
 
 func @failedMissingOperandSizeAttr(%arg: i32) {
-  // expected-error @+1 {{requires 1D vector attribute 'operand_segment_sizes'}}
+  // expected-error @+1 {{requires 1D i32 elements attribute 'operand_segment_sizes'}}
   "test.attr_sized_operands"(%arg, %arg, %arg, %arg) : (i32, i32, i32, i32) -> ()
 }
 
 // -----
 
 func @failedOperandSizeAttrWrongType(%arg: i32) {
-  // expected-error @+1 {{requires 1D vector of i32 attribute 'operand_segment_sizes'}}
-  "test.attr_sized_operands"(%arg, %arg, %arg, %arg) {operand_segment_sizes = dense<[1, 1, 1, 1]>: tensor<4xi32>} : (i32, i32, i32, i32) -> ()
+  // expected-error @+1 {{requires 1D i32 elements attribute 'operand_segment_sizes'}}
+  "test.attr_sized_operands"(%arg, %arg, %arg, %arg) {operand_segment_sizes = 10} : (i32, i32, i32, i32) -> ()
 }
 
 // -----
 
 func @failedOperandSizeAttrWrongRank(%arg: i32) {
-  // expected-error @+1 {{requires 1D vector of i32 attribute 'operand_segment_sizes'}}
+  // expected-error @+1 {{requires 1D i32 elements attribute 'operand_segment_sizes'}}
   "test.attr_sized_operands"(%arg, %arg, %arg, %arg) {operand_segment_sizes = dense<[[1, 1], [1, 1]]>: vector<2x2xi32>} : (i32, i32, i32, i32) -> ()
 }
 
 // -----
 
 func @failedOperandSizeAttrWrongElementType(%arg: i32) {
-  // expected-error @+1 {{requires 1D vector of i32 attribute 'operand_segment_sizes'}}
+  // expected-error @+1 {{requires 1D i32 elements attribute 'operand_segment_sizes'}}
   "test.attr_sized_operands"(%arg, %arg, %arg, %arg) {operand_segment_sizes = dense<[1, 1, 1, 1]>: vector<4xi64>} : (i32, i32, i32, i32) -> ()
 }
 
@@ -432,28 +432,28 @@ func @succeededOperandSizeAttr(%arg: i32) {
 // -----
 
 func @failedMissingResultSizeAttr() {
-  // expected-error @+1 {{requires 1D vector attribute 'result_segment_sizes'}}
+  // expected-error @+1 {{requires 1D i32 elements attribute 'result_segment_sizes'}}
   %0:4 = "test.attr_sized_results"() : () -> (i32, i32, i32, i32)
 }
 
 // -----
 
 func @failedResultSizeAttrWrongType() {
-  // expected-error @+1 {{requires 1D vector of i32 attribute 'result_segment_sizes'}}
-  %0:4 = "test.attr_sized_results"() {result_segment_sizes = dense<[1, 1, 1, 1]>: tensor<4xi32>} : () -> (i32, i32, i32, i32)
+  // expected-error @+1 {{requires 1D i32 elements attribute 'result_segment_sizes'}}
+  %0:4 = "test.attr_sized_results"() {result_segment_sizes = 10} : () -> (i32, i32, i32, i32)
 }
 
 // -----
 
 func @failedResultSizeAttrWrongRank() {
-  // expected-error @+1 {{requires 1D vector of i32 attribute 'result_segment_sizes'}}
+  // expected-error @+1 {{requires 1D i32 elements attribute 'result_segment_sizes'}}
   %0:4 = "test.attr_sized_results"() {result_segment_sizes = dense<[[1, 1], [1, 1]]>: vector<2x2xi32>} : () -> (i32, i32, i32, i32)
 }
 
 // -----
 
 func @failedResultSizeAttrWrongElementType() {
-  // expected-error @+1 {{requires 1D vector of i32 attribute 'result_segment_sizes'}}
+  // expected-error @+1 {{requires 1D i32 elements attribute 'result_segment_sizes'}}
   %0:4 = "test.attr_sized_results"() {result_segment_sizes = dense<[1, 1, 1, 1]>: vector<4xi64>} : () -> (i32, i32, i32, i32)
 }
 

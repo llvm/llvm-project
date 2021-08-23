@@ -94,47 +94,47 @@
 // Verify that --[no-]cuda-gpu-arch arguments are handled correctly.
 // a) --no-cuda-gpu-arch=X negates preceding --cuda-gpu-arch=X
 // RUN: %clang -### -target x86_64-linux-gnu --cuda-device-only \
-// RUN:   --cuda-gpu-arch=sm_35 --cuda-gpu-arch=sm_30 \
-// RUN:   --no-cuda-gpu-arch=sm_35 \
+// RUN:   --cuda-gpu-arch=sm_50 --cuda-gpu-arch=sm_30 \
+// RUN:   --no-cuda-gpu-arch=sm_50 \
 // RUN:   -c %s 2>&1 \
-// RUN: | FileCheck -check-prefixes NOARCH-SM20,ARCH-SM30,NOARCH-SM35 %s
+// RUN: | FileCheck -check-prefixes ARCH-SM30,NOARCH-SM35,NOARCH-SM50 %s
 
 // b) --no-cuda-gpu-arch=X negates more than one preceding --cuda-gpu-arch=X
 // RUN: %clang -### -target x86_64-linux-gnu --cuda-device-only \
-// RUN:   --cuda-gpu-arch=sm_35 --cuda-gpu-arch=sm_35 --cuda-gpu-arch=sm_30 \
-// RUN:   --no-cuda-gpu-arch=sm_35 \
+// RUN:   --cuda-gpu-arch=sm_50 --cuda-gpu-arch=sm_50 --cuda-gpu-arch=sm_30 \
+// RUN:   --no-cuda-gpu-arch=sm_50 \
 // RUN:   -c %s 2>&1 \
-// RUN: | FileCheck -check-prefixes NOARCH-SM20,ARCH-SM30,NOARCH-SM35 %s
+// RUN: | FileCheck -check-prefixes ARCH-SM30,NOARCH-SM35,NOARCH-SM50 %s
 
 // c) if --no-cuda-gpu-arch=X negates all preceding --cuda-gpu-arch=X
-//    we default to sm_20 -- same as if no --cuda-gpu-arch were passed.
+//    we default to sm_35 -- same as if no --cuda-gpu-arch were passed.
 // RUN: %clang -### -target x86_64-linux-gnu --cuda-device-only \
-// RUN:   --cuda-gpu-arch=sm_35 --cuda-gpu-arch=sm_30 \
-// RUN:   --no-cuda-gpu-arch=sm_35 --no-cuda-gpu-arch=sm_30 \
+// RUN:   --cuda-gpu-arch=sm_50 --cuda-gpu-arch=sm_30 \
+// RUN:   --no-cuda-gpu-arch=sm_50 --no-cuda-gpu-arch=sm_30 \
 // RUN:   -c %s 2>&1 \
-// RUN: | FileCheck -check-prefixes ARCH-SM20,NOARCH-SM30,NOARCH-SM35 %s
+// RUN: | FileCheck -check-prefixes NOARCH-SM30,ARCH-SM35,NOARCH-SM50 %s
 
 // d) --no-cuda-gpu-arch=X is a no-op if there's no preceding --cuda-gpu-arch=X
 // RUN: %clang -### -target x86_64-linux-gnu --cuda-device-only \
 // RUN:   --cuda-gpu-arch=sm_35 --cuda-gpu-arch=sm_30\
 // RUN:   --no-cuda-gpu-arch=sm_50 \
 // RUN:   -c %s 2>&1 \
-// RUN: | FileCheck -check-prefixes NOARCH-SM20,ARCH-SM30,ARCH-SM35 %s
+// RUN: | FileCheck -check-prefixes ARCH-SM30,ARCH-SM35,NOARCH-SM50 %s
 
 // e) --no-cuda-gpu-arch=X does not affect following --cuda-gpu-arch=X
 // RUN: %clang -### -target x86_64-linux-gnu --cuda-device-only \
-// RUN:   --no-cuda-gpu-arch=sm_35 --no-cuda-gpu-arch=sm_30 \
-// RUN:   --cuda-gpu-arch=sm_35 --cuda-gpu-arch=sm_30 \
+// RUN:   --no-cuda-gpu-arch=sm_50 --no-cuda-gpu-arch=sm_30 \
+// RUN:   --cuda-gpu-arch=sm_50 --cuda-gpu-arch=sm_30 \
 // RUN:   -c %s 2>&1 \
-// RUN: | FileCheck -check-prefixes NOARCH-SM20,ARCH-SM30,ARCH-SM35 %s
+// RUN: | FileCheck -check-prefixes ARCH-SM30,NOARCH-SM35,ARCH-SM50 %s
 
 // f) --no-cuda-gpu-arch=all negates all preceding --cuda-gpu-arch=X
 // RUN: %clang -### -target x86_64-linux-gnu --cuda-device-only \
-// RUN:   --cuda-gpu-arch=sm_20 --cuda-gpu-arch=sm_30 \
+// RUN:   --cuda-gpu-arch=sm_35 --cuda-gpu-arch=sm_30 \
 // RUN:   --no-cuda-gpu-arch=all \
-// RUN:   --cuda-gpu-arch=sm_35 \
+// RUN:   --cuda-gpu-arch=sm_50 \
 // RUN:   -c %s 2>&1 \
-// RUN: | FileCheck -check-prefixes NOARCH-SM20,NOARCH-SM30,ARCH-SM35 %s
+// RUN: | FileCheck -check-prefixes NOARCH-SM30,NOARCH-SM35,ARCH-SM50 %s
 
 // g) There's no --cuda-gpu-arch=all
 // RUN: %clang -### -target x86_64-linux-gnu --cuda-device-only \
@@ -190,12 +190,12 @@
 // RUN: | FileCheck -check-prefixes DEVICE,DEVICE-NOSAVE,HOST,INCLUDES-DEVICE,NOLINK,THINLTOWPD %s
 // THINLTOWPD-NOT: error: invalid argument '-fwhole-program-vtables' only allowed with '-flto'
 
-// ARCH-SM20: "-cc1"{{.*}}"-target-cpu" "sm_20"
-// NOARCH-SM20-NOT: "-cc1"{{.*}}"-target-cpu" "sm_20"
 // ARCH-SM30: "-cc1"{{.*}}"-target-cpu" "sm_30"
 // NOARCH-SM30-NOT: "-cc1"{{.*}}"-target-cpu" "sm_30"
 // ARCH-SM35: "-cc1"{{.*}}"-target-cpu" "sm_35"
 // NOARCH-SM35-NOT: "-cc1"{{.*}}"-target-cpu" "sm_35"
+// ARCH-SM50: "-cc1"{{.*}}"-target-cpu" "sm_50"
+// NOARCH-SM50-NOT: "-cc1"{{.*}}"-target-cpu" "sm_50"
 // ARCHALLERROR: error: unsupported CUDA gpu architecture: all
 
 // Match device-side preprocessor and compiler phases with -save-temps.

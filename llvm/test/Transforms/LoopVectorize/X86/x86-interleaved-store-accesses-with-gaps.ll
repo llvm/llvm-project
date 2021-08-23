@@ -74,23 +74,25 @@ define dso_local void @test1(i16* noalias nocapture %points, i16* noalias nocapt
 ;
 ; ENABLED_MASKED_STRIDED-LABEL: @test1(
 ; ENABLED_MASKED_STRIDED-NEXT:  entry:
+; ENABLED_MASKED_STRIDED-NEXT:    [[TMP0:%.*]] = getelementptr inbounds i16, i16* [[POINTS:%.*]], i64 -1
 ; ENABLED_MASKED_STRIDED-NEXT:    br label [[VECTOR_BODY:%.*]]
 ; ENABLED_MASKED_STRIDED:       vector.body:
 ; ENABLED_MASKED_STRIDED-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, [[ENTRY:%.*]] ], [ [[INDEX_NEXT:%.*]], [[VECTOR_BODY]] ]
-; ENABLED_MASKED_STRIDED-NEXT:    [[TMP0:%.*]] = getelementptr inbounds i16, i16* [[X:%.*]], i64 [[INDEX]]
-; ENABLED_MASKED_STRIDED-NEXT:    [[TMP1:%.*]] = bitcast i16* [[TMP0]] to <4 x i16>*
-; ENABLED_MASKED_STRIDED-NEXT:    [[WIDE_LOAD:%.*]] = load <4 x i16>, <4 x i16>* [[TMP1]], align 2
-; ENABLED_MASKED_STRIDED-NEXT:    [[TMP2:%.*]] = shl nuw nsw i64 [[INDEX]], 2
-; ENABLED_MASKED_STRIDED-NEXT:    [[TMP3:%.*]] = getelementptr inbounds i16, i16* [[Y:%.*]], i64 [[INDEX]]
-; ENABLED_MASKED_STRIDED-NEXT:    [[TMP4:%.*]] = bitcast i16* [[TMP3]] to <4 x i16>*
-; ENABLED_MASKED_STRIDED-NEXT:    [[WIDE_LOAD1:%.*]] = load <4 x i16>, <4 x i16>* [[TMP4]], align 2
-; ENABLED_MASKED_STRIDED-NEXT:    [[TMP5:%.*]] = getelementptr inbounds i16, i16* [[POINTS:%.*]], i64 [[TMP2]]
-; ENABLED_MASKED_STRIDED-NEXT:    [[TMP6:%.*]] = bitcast i16* [[TMP5]] to <16 x i16>*
+; ENABLED_MASKED_STRIDED-NEXT:    [[TMP1:%.*]] = getelementptr inbounds i16, i16* [[X:%.*]], i64 [[INDEX]]
+; ENABLED_MASKED_STRIDED-NEXT:    [[TMP2:%.*]] = bitcast i16* [[TMP1]] to <4 x i16>*
+; ENABLED_MASKED_STRIDED-NEXT:    [[WIDE_LOAD:%.*]] = load <4 x i16>, <4 x i16>* [[TMP2]], align 2
+; ENABLED_MASKED_STRIDED-NEXT:    [[TMP3:%.*]] = shl nuw nsw i64 [[INDEX]], 2
+; ENABLED_MASKED_STRIDED-NEXT:    [[TMP4:%.*]] = getelementptr inbounds i16, i16* [[Y:%.*]], i64 [[INDEX]]
+; ENABLED_MASKED_STRIDED-NEXT:    [[TMP5:%.*]] = bitcast i16* [[TMP4]] to <4 x i16>*
+; ENABLED_MASKED_STRIDED-NEXT:    [[WIDE_LOAD1:%.*]] = load <4 x i16>, <4 x i16>* [[TMP5]], align 2
+; ENABLED_MASKED_STRIDED-NEXT:    [[TMP6:%.*]] = or i64 [[TMP3]], 1
+; ENABLED_MASKED_STRIDED-NEXT:    [[TMP7:%.*]] = getelementptr inbounds i16, i16* [[TMP0]], i64 [[TMP6]]
+; ENABLED_MASKED_STRIDED-NEXT:    [[TMP8:%.*]] = bitcast i16* [[TMP7]] to <16 x i16>*
 ; ENABLED_MASKED_STRIDED-NEXT:    [[INTERLEAVED_VEC:%.*]] = shufflevector <4 x i16> [[WIDE_LOAD]], <4 x i16> [[WIDE_LOAD1]], <16 x i32> <i32 0, i32 4, i32 undef, i32 undef, i32 1, i32 5, i32 undef, i32 undef, i32 2, i32 6, i32 undef, i32 undef, i32 3, i32 7, i32 undef, i32 undef>
-; ENABLED_MASKED_STRIDED-NEXT:    call void @llvm.masked.store.v16i16.p0v16i16(<16 x i16> [[INTERLEAVED_VEC]], <16 x i16>* [[TMP6]], i32 2, <16 x i1> <i1 true, i1 true, i1 false, i1 false, i1 true, i1 true, i1 false, i1 false, i1 true, i1 true, i1 false, i1 false, i1 true, i1 true, i1 false, i1 false>)
+; ENABLED_MASKED_STRIDED-NEXT:    call void @llvm.masked.store.v16i16.p0v16i16(<16 x i16> [[INTERLEAVED_VEC]], <16 x i16>* [[TMP8]], i32 2, <16 x i1> <i1 true, i1 true, i1 false, i1 false, i1 true, i1 true, i1 false, i1 false, i1 true, i1 true, i1 false, i1 false, i1 true, i1 true, i1 false, i1 false>)
 ; ENABLED_MASKED_STRIDED-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], 4
-; ENABLED_MASKED_STRIDED-NEXT:    [[TMP7:%.*]] = icmp eq i64 [[INDEX_NEXT]], 1024
-; ENABLED_MASKED_STRIDED-NEXT:    br i1 [[TMP7]], label [[FOR_END:%.*]], label [[VECTOR_BODY]], !llvm.loop [[LOOP0:![0-9]+]]
+; ENABLED_MASKED_STRIDED-NEXT:    [[TMP9:%.*]] = icmp eq i64 [[INDEX_NEXT]], 1024
+; ENABLED_MASKED_STRIDED-NEXT:    br i1 [[TMP9]], label [[FOR_END:%.*]], label [[VECTOR_BODY]], !llvm.loop [[LOOP0:![0-9]+]]
 ; ENABLED_MASKED_STRIDED:       for.end:
 ; ENABLED_MASKED_STRIDED-NEXT:    ret void
 ;
@@ -244,29 +246,31 @@ define dso_local void @test2(i16* noalias nocapture %points, i32 %numPoints, i16
 ; ENABLED_MASKED_STRIDED-NEXT:    [[TRIP_COUNT_MINUS_1:%.*]] = add nsw i64 [[WIDE_TRIP_COUNT]], -1
 ; ENABLED_MASKED_STRIDED-NEXT:    [[BROADCAST_SPLATINSERT:%.*]] = insertelement <4 x i64> poison, i64 [[TRIP_COUNT_MINUS_1]], i32 0
 ; ENABLED_MASKED_STRIDED-NEXT:    [[BROADCAST_SPLAT:%.*]] = shufflevector <4 x i64> [[BROADCAST_SPLATINSERT]], <4 x i64> poison, <4 x i32> zeroinitializer
+; ENABLED_MASKED_STRIDED-NEXT:    [[TMP0:%.*]] = getelementptr inbounds i16, i16* [[POINTS:%.*]], i64 -1
 ; ENABLED_MASKED_STRIDED-NEXT:    br label [[VECTOR_BODY:%.*]]
 ; ENABLED_MASKED_STRIDED:       vector.body:
 ; ENABLED_MASKED_STRIDED-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, [[FOR_BODY_PREHEADER]] ], [ [[INDEX_NEXT:%.*]], [[VECTOR_BODY]] ]
 ; ENABLED_MASKED_STRIDED-NEXT:    [[BROADCAST_SPLATINSERT1:%.*]] = insertelement <4 x i64> poison, i64 [[INDEX]], i32 0
 ; ENABLED_MASKED_STRIDED-NEXT:    [[BROADCAST_SPLAT2:%.*]] = shufflevector <4 x i64> [[BROADCAST_SPLATINSERT1]], <4 x i64> poison, <4 x i32> zeroinitializer
 ; ENABLED_MASKED_STRIDED-NEXT:    [[INDUCTION:%.*]] = or <4 x i64> [[BROADCAST_SPLAT2]], <i64 0, i64 1, i64 2, i64 3>
-; ENABLED_MASKED_STRIDED-NEXT:    [[TMP0:%.*]] = icmp ule <4 x i64> [[INDUCTION]], [[BROADCAST_SPLAT]]
-; ENABLED_MASKED_STRIDED-NEXT:    [[TMP1:%.*]] = getelementptr inbounds i16, i16* [[X:%.*]], i64 [[INDEX]]
-; ENABLED_MASKED_STRIDED-NEXT:    [[TMP2:%.*]] = bitcast i16* [[TMP1]] to <4 x i16>*
-; ENABLED_MASKED_STRIDED-NEXT:    [[WIDE_MASKED_LOAD:%.*]] = call <4 x i16> @llvm.masked.load.v4i16.p0v4i16(<4 x i16>* [[TMP2]], i32 2, <4 x i1> [[TMP0]], <4 x i16> poison)
-; ENABLED_MASKED_STRIDED-NEXT:    [[TMP3:%.*]] = shl nsw i64 [[INDEX]], 2
-; ENABLED_MASKED_STRIDED-NEXT:    [[TMP4:%.*]] = getelementptr inbounds i16, i16* [[Y:%.*]], i64 [[INDEX]]
-; ENABLED_MASKED_STRIDED-NEXT:    [[TMP5:%.*]] = bitcast i16* [[TMP4]] to <4 x i16>*
-; ENABLED_MASKED_STRIDED-NEXT:    [[WIDE_MASKED_LOAD3:%.*]] = call <4 x i16> @llvm.masked.load.v4i16.p0v4i16(<4 x i16>* [[TMP5]], i32 2, <4 x i1> [[TMP0]], <4 x i16> poison)
-; ENABLED_MASKED_STRIDED-NEXT:    [[TMP6:%.*]] = getelementptr inbounds i16, i16* [[POINTS:%.*]], i64 [[TMP3]]
-; ENABLED_MASKED_STRIDED-NEXT:    [[TMP7:%.*]] = bitcast i16* [[TMP6]] to <16 x i16>*
+; ENABLED_MASKED_STRIDED-NEXT:    [[TMP1:%.*]] = icmp ule <4 x i64> [[INDUCTION]], [[BROADCAST_SPLAT]]
+; ENABLED_MASKED_STRIDED-NEXT:    [[TMP2:%.*]] = getelementptr inbounds i16, i16* [[X:%.*]], i64 [[INDEX]]
+; ENABLED_MASKED_STRIDED-NEXT:    [[TMP3:%.*]] = bitcast i16* [[TMP2]] to <4 x i16>*
+; ENABLED_MASKED_STRIDED-NEXT:    [[WIDE_MASKED_LOAD:%.*]] = call <4 x i16> @llvm.masked.load.v4i16.p0v4i16(<4 x i16>* [[TMP3]], i32 2, <4 x i1> [[TMP1]], <4 x i16> poison)
+; ENABLED_MASKED_STRIDED-NEXT:    [[TMP4:%.*]] = shl nsw i64 [[INDEX]], 2
+; ENABLED_MASKED_STRIDED-NEXT:    [[TMP5:%.*]] = getelementptr inbounds i16, i16* [[Y:%.*]], i64 [[INDEX]]
+; ENABLED_MASKED_STRIDED-NEXT:    [[TMP6:%.*]] = bitcast i16* [[TMP5]] to <4 x i16>*
+; ENABLED_MASKED_STRIDED-NEXT:    [[WIDE_MASKED_LOAD3:%.*]] = call <4 x i16> @llvm.masked.load.v4i16.p0v4i16(<4 x i16>* [[TMP6]], i32 2, <4 x i1> [[TMP1]], <4 x i16> poison)
+; ENABLED_MASKED_STRIDED-NEXT:    [[TMP7:%.*]] = or i64 [[TMP4]], 1
+; ENABLED_MASKED_STRIDED-NEXT:    [[TMP8:%.*]] = getelementptr inbounds i16, i16* [[TMP0]], i64 [[TMP7]]
+; ENABLED_MASKED_STRIDED-NEXT:    [[TMP9:%.*]] = bitcast i16* [[TMP8]] to <16 x i16>*
 ; ENABLED_MASKED_STRIDED-NEXT:    [[INTERLEAVED_VEC:%.*]] = shufflevector <4 x i16> [[WIDE_MASKED_LOAD]], <4 x i16> [[WIDE_MASKED_LOAD3]], <16 x i32> <i32 0, i32 4, i32 undef, i32 undef, i32 1, i32 5, i32 undef, i32 undef, i32 2, i32 6, i32 undef, i32 undef, i32 3, i32 7, i32 undef, i32 undef>
-; ENABLED_MASKED_STRIDED-NEXT:    [[INTERLEAVED_MASK:%.*]] = shufflevector <4 x i1> [[TMP0]], <4 x i1> poison, <16 x i32> <i32 0, i32 0, i32 0, i32 0, i32 1, i32 1, i32 1, i32 1, i32 2, i32 2, i32 2, i32 2, i32 3, i32 3, i32 3, i32 3>
-; ENABLED_MASKED_STRIDED-NEXT:    [[TMP8:%.*]] = and <16 x i1> [[INTERLEAVED_MASK]], <i1 true, i1 true, i1 false, i1 false, i1 true, i1 true, i1 false, i1 false, i1 true, i1 true, i1 false, i1 false, i1 true, i1 true, i1 false, i1 false>
-; ENABLED_MASKED_STRIDED-NEXT:    call void @llvm.masked.store.v16i16.p0v16i16(<16 x i16> [[INTERLEAVED_VEC]], <16 x i16>* [[TMP7]], i32 2, <16 x i1> [[TMP8]])
+; ENABLED_MASKED_STRIDED-NEXT:    [[INTERLEAVED_MASK:%.*]] = shufflevector <4 x i1> [[TMP1]], <4 x i1> poison, <16 x i32> <i32 0, i32 0, i32 0, i32 0, i32 1, i32 1, i32 1, i32 1, i32 2, i32 2, i32 2, i32 2, i32 3, i32 3, i32 3, i32 3>
+; ENABLED_MASKED_STRIDED-NEXT:    [[TMP10:%.*]] = and <16 x i1> [[INTERLEAVED_MASK]], <i1 true, i1 true, i1 false, i1 false, i1 true, i1 true, i1 false, i1 false, i1 true, i1 true, i1 false, i1 false, i1 true, i1 true, i1 false, i1 false>
+; ENABLED_MASKED_STRIDED-NEXT:    call void @llvm.masked.store.v16i16.p0v16i16(<16 x i16> [[INTERLEAVED_VEC]], <16 x i16>* [[TMP9]], i32 2, <16 x i1> [[TMP10]])
 ; ENABLED_MASKED_STRIDED-NEXT:    [[INDEX_NEXT]] = add i64 [[INDEX]], 4
-; ENABLED_MASKED_STRIDED-NEXT:    [[TMP9:%.*]] = icmp eq i64 [[INDEX_NEXT]], [[N_VEC]]
-; ENABLED_MASKED_STRIDED-NEXT:    br i1 [[TMP9]], label [[FOR_END_LOOPEXIT:%.*]], label [[VECTOR_BODY]], !llvm.loop [[LOOP2:![0-9]+]]
+; ENABLED_MASKED_STRIDED-NEXT:    [[TMP11:%.*]] = icmp eq i64 [[INDEX_NEXT]], [[N_VEC]]
+; ENABLED_MASKED_STRIDED-NEXT:    br i1 [[TMP11]], label [[FOR_END_LOOPEXIT:%.*]], label [[VECTOR_BODY]], !llvm.loop [[LOOP2:![0-9]+]]
 ; ENABLED_MASKED_STRIDED:       for.end.loopexit:
 ; ENABLED_MASKED_STRIDED-NEXT:    br label [[FOR_END]]
 ; ENABLED_MASKED_STRIDED:       for.end:
