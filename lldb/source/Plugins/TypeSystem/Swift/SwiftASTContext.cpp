@@ -4447,7 +4447,10 @@ swift::TypeBase *SwiftASTContext::ReconstructType(ConstString mangled_typename,
                    *ast_ctx, mangled_typename.GetStringRef())
                    .getPointer();
 
-  // Objective-C classes sometimes have private subclasses that are invisible to the Swift compiler because they are declared and defined in a .m file. If we can't reconstruct an ObjC type, walk up the type hierarchy until we find something we can import, or until we run out of types
+  // Objective-C classes sometimes have private subclasses that are invisible to
+  // the Swift compiler because they are declared and defined in a .m file. If
+  // we can't reconstruct an ObjC type, walk up the type hierarchy until we find
+  // something we can import, or until we run out of types
   while (!found_type) {
     CompilerType clang_type = GetAsClangType(mangled_typename);
     if (!clang_type)
