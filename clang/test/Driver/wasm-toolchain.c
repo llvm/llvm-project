@@ -94,11 +94,11 @@
 // RUN:   | FileCheck -check-prefix=EMSCRIPTEN_EH_ALLOWED_WO_ENABLE %s
 // EMSCRIPTEN_EH_ALLOWED_WO_ENABLE: invalid argument '-mllvm -emscripten-cxx-exceptions-allowed' only allowed with '-mllvm -enable-emscripten-cxx-exceptions'
 
-// '-fwasm-exceptions' sets +exception-handling
+// '-fwasm-exceptions' sets +exception-handling and '-mllvm -wasm-enable-eh'
 // RUN: %clang -### -no-canonical-prefixes -target wasm32-unknown-unknown \
 // RUN:    --sysroot=/foo %s -fwasm-exceptions 2>&1 \
 // RUN:  | FileCheck -check-prefix=WASM_EXCEPTIONS %s
-// WASM_EXCEPTIONS: clang{{.*}}" "-cc1" {{.*}} "-target-feature" "+exception-handling"
+// WASM_EXCEPTIONS: clang{{.*}}" "-cc1" {{.*}} "-target-feature" "+exception-handling" "-mllvm" "-wasm-enable-eh"
 
 // '-fwasm-exceptions' not allowed with '-mno-exception-handling'
 // RUN: %clang -### -no-canonical-prefixes -target wasm32-unknown-unknown \
@@ -106,12 +106,41 @@
 // RUN:   | FileCheck -check-prefix=WASM_EXCEPTIONS_NO_EH %s
 // WASM_EXCEPTIONS_NO_EH: invalid argument '-fwasm-exceptions' not allowed with '-mno-exception-handling'
 
-// '-fwasm-exceptions' not allowed with
-// '-mllvm -enable-emscripten-cxx-exceptions'
+// '-fwasm-exceptions' not allowed with '-mllvm -enable-emscripten-cxx-exceptions'
 // RUN: %clang -### -no-canonical-prefixes -target wasm32-unknown-unknown \
-// RUN:     --sysroot=/foo %s -fwasm-exceptions -mllvm -enable-emscripten-cxx-exceptions 2>&1 \
+// RUN:     --sysroot=/foo %s -fwasm-exceptions \
+// RUN:     -mllvm -enable-emscripten-cxx-exceptions 2>&1 \
 // RUN:   | FileCheck -check-prefix=WASM_EXCEPTIONS_EMSCRIPTEN_EH %s
 // WASM_EXCEPTIONS_EMSCRIPTEN_EH: invalid argument '-fwasm-exceptions' not allowed with '-mllvm -enable-emscripten-cxx-exceptions'
+
+// '-mllvm -wasm-enable-sjlj' sets +exception-handling and
+// '-exception-model=wasm'
+// RUN: %clang -### -no-canonical-prefixes -target wasm32-unknown-unknown \
+// RUN:    --sysroot=/foo %s -mllvm -wasm-enable-sjlj 2>&1 \
+// RUN:  | FileCheck -check-prefix=WASM_SJLJ %s
+// WASM_SJLJ: clang{{.*}}" "-cc1" {{.*}} "-target-feature" "+exception-handling" "-exception-model=wasm"
+
+// '-mllvm -wasm-enable-sjlj' not allowed with '-mno-exception-handling'
+// RUN: %clang -### -no-canonical-prefixes -target wasm32-unknown-unknown \
+// RUN:     --sysroot=/foo %s -mllvm -wasm-enable-sjlj -mno-exception-handling \
+// RUN:     2>&1 \
+// RUN:   | FileCheck -check-prefix=WASM_SJLJ_NO_EH %s
+// WASM_SJLJ_NO_EH: invalid argument '-mllvm -wasm-enable-sjlj' not allowed with '-mno-exception-handling'
+
+// '-mllvm -wasm-enable-sjlj' not allowed with
+// '-mllvm -enable-emscripten-cxx-exceptions'
+// RUN: %clang -### -no-canonical-prefixes -target wasm32-unknown-unknown \
+// RUN:     --sysroot=/foo %s -mllvm -wasm-enable-sjlj \
+// RUN:     -mllvm -enable-emscripten-cxx-exceptions 2>&1 \
+// RUN:   | FileCheck -check-prefix=WASM_SJLJ_EMSCRIPTEN_EH %s
+// WASM_SJLJ_EMSCRIPTEN_EH: invalid argument '-mllvm -wasm-enable-sjlj' not allowed with '-mllvm -enable-emscripten-cxx-exceptions'
+
+// '-mllvm -wasm-enable-sjlj' not allowed with '-mllvm -enable-emscripten-sjlj'
+// RUN: %clang -### -no-canonical-prefixes -target wasm32-unknown-unknown \
+// RUN:     --sysroot=/foo %s -mllvm -wasm-enable-sjlj \
+// RUN:     -mllvm -enable-emscripten-sjlj 2>&1 \
+// RUN:   | FileCheck -check-prefix=WASM_SJLJ_EMSCRIPTEN_SJLJ %s
+// WASM_SJLJ_EMSCRIPTEN_SJLJ: invalid argument '-mllvm -wasm-enable-sjlj' not allowed with '-mllvm -enable-emscripten-sjlj'
 
 // RUN: %clang %s -### -fsanitize=address -target wasm32-unknown-emscripten 2>&1 | FileCheck -check-prefix=CHECK-ASAN-EMSCRIPTEN %s
 // CHECK-ASAN-EMSCRIPTEN: "-fsanitize=address"
