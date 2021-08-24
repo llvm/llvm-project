@@ -155,16 +155,6 @@ ModulePass *createModuleAddressSanitizerLegacyPassPass(
     bool UseOdrIndicator = true,
     AsanDtorKind DestructorKind = AsanDtorKind::Global);
 
-struct ASanAccessInfo {
-  const int32_t Packed;
-  const uint8_t AccessSizeIndex;
-  const bool IsWrite;
-  const bool CompileKernel;
-
-  explicit ASanAccessInfo(int32_t Packed);
-  ASanAccessInfo(bool IsWrite, bool CompileKernel, uint8_t AccessSizeIndex);
-};
-
 } // namespace llvm
 
 #endif

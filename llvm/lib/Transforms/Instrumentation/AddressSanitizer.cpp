@@ -178,14 +178,6 @@ static const size_t kNumberOfAccessSizes = 5;
 
 static const unsigned kAllocaRzSize = 32;
 
-// ASanAccessInfo implementation constants.
-constexpr size_t kCompileKernelShift = 0;
-constexpr size_t kCompileKernelMask = 0x1;
-constexpr size_t kAccessSizeIndexShift = 1;
-constexpr size_t kAccessSizeIndexMask = 0xf;
-constexpr size_t kIsWriteShift = 5;
-constexpr size_t kIsWriteMask = 0x1;
-
 // Command-line flags.
 
 static cl::opt<bool> ClEnableKasan(
@@ -576,21 +568,6 @@ void getAddressSanitizerParams(const Triple &TargetTriple, int LongSize,
   *MappingScale = Mapping.Scale;
   *OrShadowOffset = Mapping.OrShadowOffset;
 }
-
-ASanAccessInfo::ASanAccessInfo(int32_t Packed)
-    : Packed(Packed),
-      AccessSizeIndex((Packed >> kAccessSizeIndexShift) & kAccessSizeIndexMask),
-      IsWrite((Packed >> kIsWriteShift) & kIsWriteMask),
-      CompileKernel((Packed >> kCompileKernelShift) & kCompileKernelMask) {}
-
-ASanAccessInfo::ASanAccessInfo(bool IsWrite, bool CompileKernel,
-                               uint8_t AccessSizeIndex)
-    : Packed((IsWrite << kIsWriteShift) +
-             (CompileKernel << kCompileKernelShift) +
-             (AccessSizeIndex << kAccessSizeIndexShift)),
-      AccessSizeIndex(AccessSizeIndex), IsWrite(IsWrite),
-      CompileKernel(CompileKernel) {}
-
 } // namespace llvm
 
 static uint64_t getRedzoneSizeForScale(int MappingScale) {
