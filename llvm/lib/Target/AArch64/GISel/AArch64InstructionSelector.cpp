@@ -172,6 +172,14 @@ private:
   bool selectExtractElt(MachineInstr &I, MachineRegisterInfo &MRI);
   bool selectConcatVectors(MachineInstr &I, MachineRegisterInfo &MRI);
   bool selectSplitVectorUnmerge(MachineInstr &I, MachineRegisterInfo &MRI);
+
+  /// Helper function to select vector load intrinsics like
+  /// @llvm.aarch64.neon.ld2.*, @llvm.aarch64.neon.ld4.*, etc.
+  /// \p Opc is the opcode that the selected instruction should use.
+  /// \p NumVecs is the number of vector destinations for the instruction.
+  /// \p I is the original G_INTRINSIC_W_SIDE_EFFECTS instruction.
+  bool selectVectorLoadIntrinsic(unsigned Opc, unsigned NumVecs,
+                                 MachineInstr &I);
   bool selectIntrinsicWithSideEffects(MachineInstr &I,
                                       MachineRegisterInfo &MRI);
   bool selectIntrinsic(MachineInstr &I, MachineRegisterInfo &MRI);
@@ -5050,6 +5058,35 @@ static unsigned findIntrinsicID(MachineInstr &I) {
   return IntrinOp->getIntrinsicID();
 }
 
+bool AArch64InstructionSelector::selectVectorLoadIntrinsic(unsigned Opc,
+                                                           unsigned NumVecs,
+                                                           MachineInstr &I) {
+  assert(I.getOpcode() == TargetOpcode::G_INTRINSIC_W_SIDE_EFFECTS);
+  assert(Opc && "Expected an opcode?");
+  assert(NumVecs > 1 && NumVecs < 5 && "Only support 2, 3, or 4 vectors");
+  auto &MRI = *MIB.getMRI();
+  LLT Ty = MRI.getType(I.getOperand(0).getReg());
+  unsigned Size = Ty.getSizeInBits();
+  assert((Size == 64 || Size == 128) &&
+         "Destination must be 64 bits or 128 bits?");
+  unsigned SubReg = Size == 64 ? AArch64::dsub0 : AArch64::qsub0;
+  auto Ptr = I.getOperand(I.getNumOperands() - 1).getReg();
+  assert(MRI.getType(Ptr).isPointer() && "Expected a pointer type?");
+  auto Load = MIB.buildInstr(Opc, {Ty}, {Ptr});
+  Load.cloneMemRefs(I);
+  constrainSelectedInstRegOperands(*Load, TII, TRI, RBI);
+  Register SelectedLoadDst = Load->getOperand(0).getReg();
+  for (unsigned Idx = 0; Idx < NumVecs; ++Idx) {
+    auto Vec = MIB.buildInstr(TargetOpcode::COPY, {I.getOperand(Idx)}, {})
+                   .addReg(SelectedLoadDst, 0, SubReg + Idx);
+    // Emit the subreg copies and immediately select them.
+    // FIXME: We should refactor our copy code into an emitCopy helper and
+    // clean up uses of this pattern elsewhere in the selector.
+    selectCopy(*Vec, TII, MRI, TRI, RBI);
+  }
+  return true;
+}
+
 bool AArch64InstructionSelector::selectIntrinsicWithSideEffects(
     MachineInstr &I, MachineRegisterInfo &MRI) {
   // Find the intrinsic ID.
@@ -5087,10 +5124,7 @@ bool AArch64InstructionSelector::selectIntrinsicWithSideEffects(
         .addImm(I.getOperand(1).getImm() | ('U' << 8));
     break;
   case Intrinsic::aarch64_neon_ld2: {
-    Register Dst1 = I.getOperand(0).getReg();
-    Register Dst2 = I.getOperand(1).getReg();
-    Register Ptr = I.getOperand(3).getReg();
-    LLT Ty = MRI.getType(Dst1);
+    LLT Ty = MRI.getType(I.getOperand(0).getReg());
     unsigned Opc = 0;
     if (Ty == LLT::fixed_vector(8, S8))
       Opc = AArch64::LD2Twov8b;
@@ -5110,23 +5144,31 @@ bool AArch64InstructionSelector::selectIntrinsicWithSideEffects(
       Opc = AArch64::LD1Twov1d;
     else
       llvm_unreachable("Unexpected type for ld2!");
-    unsigned SubReg =
-        Ty.getSizeInBits() == 64 ? AArch64::dsub0 : AArch64::qsub0;
-    // This will be selected as a load into a wide register, which is broken
-    // into two vectors subregister copies.
-    auto Load = MIB.buildInstr(Opc, {Ty}, {Ptr});
-    Load.cloneMemRefs(I);
-    constrainSelectedInstRegOperands(*Load, TII, TRI, RBI);
-    Register SelectedLoadDst = Load->getOperand(0).getReg();
-    // Emit the subreg copies and immediately select them.
-    // FIXME: We should refactor our copy code into an emitCopy helper and
-    // clean up uses of this pattern elsewhere in the selector.
-    auto Vec1 = MIB.buildInstr(TargetOpcode::COPY, {Dst1}, {})
-                    .addReg(SelectedLoadDst, 0, SubReg);
-    auto Vec2 = MIB.buildInstr(AArch64::COPY, {Dst2}, {})
-                    .addReg(SelectedLoadDst, 0, SubReg + 1);
-    selectCopy(*Vec1, TII, MRI, TRI, RBI);
-    selectCopy(*Vec2, TII, MRI, TRI, RBI);
+    selectVectorLoadIntrinsic(Opc, 2, I);
+    break;
+  }
+  case Intrinsic::aarch64_neon_ld4: {
+    LLT Ty = MRI.getType(I.getOperand(0).getReg());
+    unsigned Opc = 0;
+    if (Ty == LLT::fixed_vector(8, S8))
+      Opc = AArch64::LD4Fourv8b;
+    else if (Ty == LLT::fixed_vector(16, S8))
+      Opc = AArch64::LD4Fourv16b;
+    else if (Ty == LLT::fixed_vector(4, S16))
+      Opc = AArch64::LD4Fourv4h;
+    else if (Ty == LLT::fixed_vector(8, S16))
+      Opc = AArch64::LD4Fourv8h;
+    else if (Ty == LLT::fixed_vector(2, S32))
+      Opc = AArch64::LD4Fourv2s;
+    else if (Ty == LLT::fixed_vector(4, S32))
+      Opc = AArch64::LD4Fourv4s;
+    else if (Ty == LLT::fixed_vector(2, S64) || Ty == LLT::fixed_vector(2, P0))
+      Opc = AArch64::LD4Fourv2d;
+    else if (Ty == S64 || Ty == P0)
+      Opc = AArch64::LD1Fourv1d;
+    else
+      llvm_unreachable("Unexpected type for ld4!");
+    selectVectorLoadIntrinsic(Opc, 4, I);
     break;
   }
   case Intrinsic::aarch64_neon_st2: {
