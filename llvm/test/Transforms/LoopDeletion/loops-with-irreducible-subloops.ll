@@ -18,7 +18,9 @@ define void @irreducible_subloop_no_mustprogress(i1 %c1, i1 %c2, i1 %c3) {
 ; CHECK:       irr.bb2:
 ; CHECK-NEXT:    br i1 [[C3:%.*]], label [[LOOP1_LATCH]], label [[IRR_BB1]]
 ; CHECK:       loop1.latch:
-; CHECK-NEXT:    br label [[EXIT:%.*]]
+; CHECK-NEXT:    br i1 false, label [[LOOP1_LATCH_LOOP1_CRIT_EDGE:%.*]], label [[EXIT:%.*]]
+; CHECK:       loop1.latch.loop1_crit_edge:
+; CHECK-NEXT:    unreachable
 ; CHECK:       exit:
 ; CHECK-NEXT:    ret void
 ;
