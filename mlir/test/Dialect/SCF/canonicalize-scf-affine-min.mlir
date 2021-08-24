@@ -1,7 +1,5 @@
 // RUN: mlir-opt %s -canonicalize-scf-affine-min -split-input-file | FileCheck %s
 
-// Note: This is mostly a copy of test/Dialect/Linalg/fold-affine-min-scf.mlir
-
 // CHECK-LABEL: func @scf_for_canonicalize_min
 //       CHECK:   %[[C2:.*]] = constant 2 : i64
 //       CHECK:   scf.for
