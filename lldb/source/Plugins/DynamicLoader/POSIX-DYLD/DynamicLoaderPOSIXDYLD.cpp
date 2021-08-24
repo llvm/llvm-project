@@ -333,48 +333,28 @@ bool DynamicLoaderPOSIXDYLD::SetRendezvousBreakpoint() {
     LLDB_LOG(log, "Rendezvous structure is not set up yet. "
                   "Trying to locate rendezvous breakpoint in the interpreter "
                   "by symbol name.");
-    // Function names from different dynamic loaders that are known to be
-    // used as rendezvous between the loader and debuggers.
+    ModuleSP interpreter = LoadInterpreterModule();
+    if (!interpreter) {
+      LLDB_LOG(log, "Can't find interpreter, rendezvous breakpoint isn't set.");
+      return false;
+    }
+
+    // Function names from different dynamic loaders that are known to be used
+    // as rendezvous between the loader and debuggers.
     static std::vector<std::string> DebugStateCandidates{
         "_dl_debug_state", "rtld_db_dlactivity", "__dl_rtld_db_dlactivity",
         "r_debug_state",   "_r_debug_state",     "_rtld_debug_state",
     };
 
-    ModuleSP interpreter = LoadInterpreterModule();
-    if (!interpreter) {
-      if (NameMatches(m_process->GetTarget()
-                          .GetExecutableModulePointer()
-                          ->GetFileSpec()
-                          .GetFilename()
-                          .GetCString(),
-                      NameMatch::StartsWith, "ld-")) {
-        FileSpecList containingModules;
-        containingModules.Append(
-            m_process->GetTarget().GetExecutableModulePointer()->GetFileSpec());
-
-        dyld_break = target.CreateBreakpoint(
-            &containingModules, /*containingSourceFiles=*/nullptr,
-            DebugStateCandidates, eFunctionNameTypeFull, eLanguageTypeC,
-            /*offset=*/0,
-            /*skip_prologue=*/eLazyBoolNo,
-            /*internal=*/true,
-            /*request_hardware=*/false);
-      } else {
-        LLDB_LOG(log,
-                 "Can't find interpreter, rendezvous breakpoint isn't set.");
-        return false;
-      }
-    } else {
-      FileSpecList containingModules;
-      containingModules.Append(interpreter->GetFileSpec());
-      dyld_break = target.CreateBreakpoint(
-          &containingModules, /*containingSourceFiles=*/nullptr,
-          DebugStateCandidates, eFunctionNameTypeFull, eLanguageTypeC,
-          /*offset=*/0,
-          /*skip_prologue=*/eLazyBoolNo,
-          /*internal=*/true,
-          /*request_hardware=*/false);
-    }
+    FileSpecList containingModules;
+    containingModules.Append(interpreter->GetFileSpec());
+    dyld_break = target.CreateBreakpoint(
+        &containingModules, nullptr /* containingSourceFiles */,
+        DebugStateCandidates, eFunctionNameTypeFull, eLanguageTypeC,
+        0,           /* offset */
+        eLazyBoolNo, /* skip_prologue */
+        true,        /* internal */
+        false /* request_hardware */);
   }
 
   if (dyld_break->GetNumResolvedLocations() != 1) {
