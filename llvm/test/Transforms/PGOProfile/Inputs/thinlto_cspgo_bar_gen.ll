@@ -1,13 +1,8 @@
 target datalayout = "e-m:e-p270:32:32-p271:32:32-p272:64:64-i64:64-f80:128-n8:16:32:64-S128"
 target triple = "x86_64-unknown-linux-gnu"
 
-$__llvm_profile_filename = comdat any
-$__llvm_profile_raw_version = comdat any
-
 @odd = common dso_local global i32 0, align 4
 @even = common dso_local global i32 0, align 4
-@__llvm_profile_filename = constant [25 x i8] c"pass2/default_%m.profraw\00", comdat
-@__llvm_profile_raw_version = constant i64 216172782113783812, comdat
 
 define dso_local void @bar(i32 %n) !prof !29 {
 entry:
