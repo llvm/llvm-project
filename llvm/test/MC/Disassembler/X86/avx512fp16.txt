@@ -1764,3 +1764,723 @@
 # ATT:   vsqrtsh  -256(%rdx), %xmm29, %xmm30 {%k7} {z}
 # INTEL: vsqrtsh xmm30 {k7} {z}, xmm29, word ptr [rdx - 256]
 0x62,0x65,0x16,0x87,0x51,0x72,0x80
+
+# ATT:   vfmadd132ph %zmm28, %zmm29, %zmm30
+# INTEL: vfmadd132ph zmm30, zmm29, zmm28
+0x62,0x06,0x15,0x40,0x98,0xf4
+
+# ATT:   vfmadd132ph {rn-sae}, %zmm28, %zmm29, %zmm30
+# INTEL: vfmadd132ph zmm30, zmm29, zmm28, {rn-sae}
+0x62,0x06,0x15,0x10,0x98,0xf4
+
+# ATT:   vfmadd132ph  268435456(%rbp,%r14,8), %zmm29, %zmm30 {%k7}
+# INTEL: vfmadd132ph zmm30 {k7}, zmm29, zmmword ptr [rbp + 8*r14 + 268435456]
+0x62,0x26,0x15,0x47,0x98,0xb4,0xf5,0x00,0x00,0x00,0x10
+
+# ATT:   vfmadd132ph  (%r9){1to32}, %zmm29, %zmm30
+# INTEL: vfmadd132ph zmm30, zmm29, word ptr [r9]{1to32}
+0x62,0x46,0x15,0x50,0x98,0x31
+
+# ATT:   vfmadd132ph  8128(%rcx), %zmm29, %zmm30
+# INTEL: vfmadd132ph zmm30, zmm29, zmmword ptr [rcx + 8128]
+0x62,0x66,0x15,0x40,0x98,0x71,0x7f
+
+# ATT:   vfmadd132ph  -256(%rdx){1to32}, %zmm29, %zmm30 {%k7} {z}
+# INTEL: vfmadd132ph zmm30 {k7} {z}, zmm29, word ptr [rdx - 256]{1to32}
+0x62,0x66,0x15,0xd7,0x98,0x72,0x80
+
+# ATT:   vfmadd132sh %xmm28, %xmm29, %xmm30
+# INTEL: vfmadd132sh xmm30, xmm29, xmm28
+0x62,0x06,0x15,0x00,0x99,0xf4
+
+# ATT:   vfmadd132sh {rn-sae}, %xmm28, %xmm29, %xmm30
+# INTEL: vfmadd132sh xmm30, xmm29, xmm28, {rn-sae}
+0x62,0x06,0x15,0x10,0x99,0xf4
+
+# ATT:   vfmadd132sh  268435456(%rbp,%r14,8), %xmm29, %xmm30 {%k7}
+# INTEL: vfmadd132sh xmm30 {k7}, xmm29, word ptr [rbp + 8*r14 + 268435456]
+0x62,0x26,0x15,0x07,0x99,0xb4,0xf5,0x00,0x00,0x00,0x10
+
+# ATT:   vfmadd132sh  (%r9), %xmm29, %xmm30
+# INTEL: vfmadd132sh xmm30, xmm29, word ptr [r9]
+0x62,0x46,0x15,0x00,0x99,0x31
+
+# ATT:   vfmadd132sh  254(%rcx), %xmm29, %xmm30
+# INTEL: vfmadd132sh xmm30, xmm29, word ptr [rcx + 254]
+0x62,0x66,0x15,0x00,0x99,0x71,0x7f
+
+# ATT:   vfmadd132sh  -256(%rdx), %xmm29, %xmm30 {%k7} {z}
+# INTEL: vfmadd132sh xmm30 {k7} {z}, xmm29, word ptr [rdx - 256]
+0x62,0x66,0x15,0x87,0x99,0x72,0x80
+
+# ATT:   vfmadd213ph %zmm28, %zmm29, %zmm30
+# INTEL: vfmadd213ph zmm30, zmm29, zmm28
+0x62,0x06,0x15,0x40,0xa8,0xf4
+
+# ATT:   vfmadd213ph {rn-sae}, %zmm28, %zmm29, %zmm30
+# INTEL: vfmadd213ph zmm30, zmm29, zmm28, {rn-sae}
+0x62,0x06,0x15,0x10,0xa8,0xf4
+
+# ATT:   vfmadd213ph  268435456(%rbp,%r14,8), %zmm29, %zmm30 {%k7}
+# INTEL: vfmadd213ph zmm30 {k7}, zmm29, zmmword ptr [rbp + 8*r14 + 268435456]
+0x62,0x26,0x15,0x47,0xa8,0xb4,0xf5,0x00,0x00,0x00,0x10
+
+# ATT:   vfmadd213ph  (%r9){1to32}, %zmm29, %zmm30
+# INTEL: vfmadd213ph zmm30, zmm29, word ptr [r9]{1to32}
+0x62,0x46,0x15,0x50,0xa8,0x31
+
+# ATT:   vfmadd213ph  8128(%rcx), %zmm29, %zmm30
+# INTEL: vfmadd213ph zmm30, zmm29, zmmword ptr [rcx + 8128]
+0x62,0x66,0x15,0x40,0xa8,0x71,0x7f
+
+# ATT:   vfmadd213ph  -256(%rdx){1to32}, %zmm29, %zmm30 {%k7} {z}
+# INTEL: vfmadd213ph zmm30 {k7} {z}, zmm29, word ptr [rdx - 256]{1to32}
+0x62,0x66,0x15,0xd7,0xa8,0x72,0x80
+
+# ATT:   vfmadd213sh %xmm28, %xmm29, %xmm30
+# INTEL: vfmadd213sh xmm30, xmm29, xmm28
+0x62,0x06,0x15,0x00,0xa9,0xf4
+
+# ATT:   vfmadd213sh {rn-sae}, %xmm28, %xmm29, %xmm30
+# INTEL: vfmadd213sh xmm30, xmm29, xmm28, {rn-sae}
+0x62,0x06,0x15,0x10,0xa9,0xf4
+
+# ATT:   vfmadd213sh  268435456(%rbp,%r14,8), %xmm29, %xmm30 {%k7}
+# INTEL: vfmadd213sh xmm30 {k7}, xmm29, word ptr [rbp + 8*r14 + 268435456]
+0x62,0x26,0x15,0x07,0xa9,0xb4,0xf5,0x00,0x00,0x00,0x10
+
+# ATT:   vfmadd213sh  (%r9), %xmm29, %xmm30
+# INTEL: vfmadd213sh xmm30, xmm29, word ptr [r9]
+0x62,0x46,0x15,0x00,0xa9,0x31
+
+# ATT:   vfmadd213sh  254(%rcx), %xmm29, %xmm30
+# INTEL: vfmadd213sh xmm30, xmm29, word ptr [rcx + 254]
+0x62,0x66,0x15,0x00,0xa9,0x71,0x7f
+
+# ATT:   vfmadd213sh  -256(%rdx), %xmm29, %xmm30 {%k7} {z}
+# INTEL: vfmadd213sh xmm30 {k7} {z}, xmm29, word ptr [rdx - 256]
+0x62,0x66,0x15,0x87,0xa9,0x72,0x80
+
+# ATT:   vfmadd231ph %zmm28, %zmm29, %zmm30
+# INTEL: vfmadd231ph zmm30, zmm29, zmm28
+0x62,0x06,0x15,0x40,0xb8,0xf4
+
+# ATT:   vfmadd231ph {rn-sae}, %zmm28, %zmm29, %zmm30
+# INTEL: vfmadd231ph zmm30, zmm29, zmm28, {rn-sae}
+0x62,0x06,0x15,0x10,0xb8,0xf4
+
+# ATT:   vfmadd231ph  268435456(%rbp,%r14,8), %zmm29, %zmm30 {%k7}
+# INTEL: vfmadd231ph zmm30 {k7}, zmm29, zmmword ptr [rbp + 8*r14 + 268435456]
+0x62,0x26,0x15,0x47,0xb8,0xb4,0xf5,0x00,0x00,0x00,0x10
+
+# ATT:   vfmadd231ph  (%r9){1to32}, %zmm29, %zmm30
+# INTEL: vfmadd231ph zmm30, zmm29, word ptr [r9]{1to32}
+0x62,0x46,0x15,0x50,0xb8,0x31
+
+# ATT:   vfmadd231ph  8128(%rcx), %zmm29, %zmm30
+# INTEL: vfmadd231ph zmm30, zmm29, zmmword ptr [rcx + 8128]
+0x62,0x66,0x15,0x40,0xb8,0x71,0x7f
+
+# ATT:   vfmadd231ph  -256(%rdx){1to32}, %zmm29, %zmm30 {%k7} {z}
+# INTEL: vfmadd231ph zmm30 {k7} {z}, zmm29, word ptr [rdx - 256]{1to32}
+0x62,0x66,0x15,0xd7,0xb8,0x72,0x80
+
+# ATT:   vfmadd231sh %xmm28, %xmm29, %xmm30
+# INTEL: vfmadd231sh xmm30, xmm29, xmm28
+0x62,0x06,0x15,0x00,0xb9,0xf4
+
+# ATT:   vfmadd231sh {rn-sae}, %xmm28, %xmm29, %xmm30
+# INTEL: vfmadd231sh xmm30, xmm29, xmm28, {rn-sae}
+0x62,0x06,0x15,0x10,0xb9,0xf4
+
+# ATT:   vfmadd231sh  268435456(%rbp,%r14,8), %xmm29, %xmm30 {%k7}
+# INTEL: vfmadd231sh xmm30 {k7}, xmm29, word ptr [rbp + 8*r14 + 268435456]
+0x62,0x26,0x15,0x07,0xb9,0xb4,0xf5,0x00,0x00,0x00,0x10
+
+# ATT:   vfmadd231sh  (%r9), %xmm29, %xmm30
+# INTEL: vfmadd231sh xmm30, xmm29, word ptr [r9]
+0x62,0x46,0x15,0x00,0xb9,0x31
+
+# ATT:   vfmadd231sh  254(%rcx), %xmm29, %xmm30
+# INTEL: vfmadd231sh xmm30, xmm29, word ptr [rcx + 254]
+0x62,0x66,0x15,0x00,0xb9,0x71,0x7f
+
+# ATT:   vfmadd231sh  -256(%rdx), %xmm29, %xmm30 {%k7} {z}
+# INTEL: vfmadd231sh xmm30 {k7} {z}, xmm29, word ptr [rdx - 256]
+0x62,0x66,0x15,0x87,0xb9,0x72,0x80
+
+# ATT:   vfmaddsub132ph %zmm28, %zmm29, %zmm30
+# INTEL: vfmaddsub132ph zmm30, zmm29, zmm28
+0x62,0x06,0x15,0x40,0x96,0xf4
+
+# ATT:   vfmaddsub132ph {rn-sae}, %zmm28, %zmm29, %zmm30
+# INTEL: vfmaddsub132ph zmm30, zmm29, zmm28, {rn-sae}
+0x62,0x06,0x15,0x10,0x96,0xf4
+
+# ATT:   vfmaddsub132ph  268435456(%rbp,%r14,8), %zmm29, %zmm30 {%k7}
+# INTEL: vfmaddsub132ph zmm30 {k7}, zmm29, zmmword ptr [rbp + 8*r14 + 268435456]
+0x62,0x26,0x15,0x47,0x96,0xb4,0xf5,0x00,0x00,0x00,0x10
+
+# ATT:   vfmaddsub132ph  (%r9){1to32}, %zmm29, %zmm30
+# INTEL: vfmaddsub132ph zmm30, zmm29, word ptr [r9]{1to32}
+0x62,0x46,0x15,0x50,0x96,0x31
+
+# ATT:   vfmaddsub132ph  8128(%rcx), %zmm29, %zmm30
+# INTEL: vfmaddsub132ph zmm30, zmm29, zmmword ptr [rcx + 8128]
+0x62,0x66,0x15,0x40,0x96,0x71,0x7f
+
+# ATT:   vfmaddsub132ph  -256(%rdx){1to32}, %zmm29, %zmm30 {%k7} {z}
+# INTEL: vfmaddsub132ph zmm30 {k7} {z}, zmm29, word ptr [rdx - 256]{1to32}
+0x62,0x66,0x15,0xd7,0x96,0x72,0x80
+
+# ATT:   vfmaddsub213ph %zmm28, %zmm29, %zmm30
+# INTEL: vfmaddsub213ph zmm30, zmm29, zmm28
+0x62,0x06,0x15,0x40,0xa6,0xf4
+
+# ATT:   vfmaddsub213ph {rn-sae}, %zmm28, %zmm29, %zmm30
+# INTEL: vfmaddsub213ph zmm30, zmm29, zmm28, {rn-sae}
+0x62,0x06,0x15,0x10,0xa6,0xf4
+
+# ATT:   vfmaddsub213ph  268435456(%rbp,%r14,8), %zmm29, %zmm30 {%k7}
+# INTEL: vfmaddsub213ph zmm30 {k7}, zmm29, zmmword ptr [rbp + 8*r14 + 268435456]
+0x62,0x26,0x15,0x47,0xa6,0xb4,0xf5,0x00,0x00,0x00,0x10
+
+# ATT:   vfmaddsub213ph  (%r9){1to32}, %zmm29, %zmm30
+# INTEL: vfmaddsub213ph zmm30, zmm29, word ptr [r9]{1to32}
+0x62,0x46,0x15,0x50,0xa6,0x31
+
+# ATT:   vfmaddsub213ph  8128(%rcx), %zmm29, %zmm30
+# INTEL: vfmaddsub213ph zmm30, zmm29, zmmword ptr [rcx + 8128]
+0x62,0x66,0x15,0x40,0xa6,0x71,0x7f
+
+# ATT:   vfmaddsub213ph  -256(%rdx){1to32}, %zmm29, %zmm30 {%k7} {z}
+# INTEL: vfmaddsub213ph zmm30 {k7} {z}, zmm29, word ptr [rdx - 256]{1to32}
+0x62,0x66,0x15,0xd7,0xa6,0x72,0x80
+
+# ATT:   vfmaddsub231ph %zmm28, %zmm29, %zmm30
+# INTEL: vfmaddsub231ph zmm30, zmm29, zmm28
+0x62,0x06,0x15,0x40,0xb6,0xf4
+
+# ATT:   vfmaddsub231ph {rn-sae}, %zmm28, %zmm29, %zmm30
+# INTEL: vfmaddsub231ph zmm30, zmm29, zmm28, {rn-sae}
+0x62,0x06,0x15,0x10,0xb6,0xf4
+
+# ATT:   vfmaddsub231ph  268435456(%rbp,%r14,8), %zmm29, %zmm30 {%k7}
+# INTEL: vfmaddsub231ph zmm30 {k7}, zmm29, zmmword ptr [rbp + 8*r14 + 268435456]
+0x62,0x26,0x15,0x47,0xb6,0xb4,0xf5,0x00,0x00,0x00,0x10
+
+# ATT:   vfmaddsub231ph  (%r9){1to32}, %zmm29, %zmm30
+# INTEL: vfmaddsub231ph zmm30, zmm29, word ptr [r9]{1to32}
+0x62,0x46,0x15,0x50,0xb6,0x31
+
+# ATT:   vfmaddsub231ph  8128(%rcx), %zmm29, %zmm30
+# INTEL: vfmaddsub231ph zmm30, zmm29, zmmword ptr [rcx + 8128]
+0x62,0x66,0x15,0x40,0xb6,0x71,0x7f
+
+# ATT:   vfmaddsub231ph  -256(%rdx){1to32}, %zmm29, %zmm30 {%k7} {z}
+# INTEL: vfmaddsub231ph zmm30 {k7} {z}, zmm29, word ptr [rdx - 256]{1to32}
+0x62,0x66,0x15,0xd7,0xb6,0x72,0x80
+
+# ATT:   vfmsub132ph %zmm28, %zmm29, %zmm30
+# INTEL: vfmsub132ph zmm30, zmm29, zmm28
+0x62,0x06,0x15,0x40,0x9a,0xf4
+
+# ATT:   vfmsub132ph {rn-sae}, %zmm28, %zmm29, %zmm30
+# INTEL: vfmsub132ph zmm30, zmm29, zmm28, {rn-sae}
+0x62,0x06,0x15,0x10,0x9a,0xf4
+
+# ATT:   vfmsub132ph  268435456(%rbp,%r14,8), %zmm29, %zmm30 {%k7}
+# INTEL: vfmsub132ph zmm30 {k7}, zmm29, zmmword ptr [rbp + 8*r14 + 268435456]
+0x62,0x26,0x15,0x47,0x9a,0xb4,0xf5,0x00,0x00,0x00,0x10
+
+# ATT:   vfmsub132ph  (%r9){1to32}, %zmm29, %zmm30
+# INTEL: vfmsub132ph zmm30, zmm29, word ptr [r9]{1to32}
+0x62,0x46,0x15,0x50,0x9a,0x31
+
+# ATT:   vfmsub132ph  8128(%rcx), %zmm29, %zmm30
+# INTEL: vfmsub132ph zmm30, zmm29, zmmword ptr [rcx + 8128]
+0x62,0x66,0x15,0x40,0x9a,0x71,0x7f
+
+# ATT:   vfmsub132ph  -256(%rdx){1to32}, %zmm29, %zmm30 {%k7} {z}
+# INTEL: vfmsub132ph zmm30 {k7} {z}, zmm29, word ptr [rdx - 256]{1to32}
+0x62,0x66,0x15,0xd7,0x9a,0x72,0x80
+
+# ATT:   vfmsub132sh %xmm28, %xmm29, %xmm30
+# INTEL: vfmsub132sh xmm30, xmm29, xmm28
+0x62,0x06,0x15,0x00,0x9b,0xf4
+
+# ATT:   vfmsub132sh {rn-sae}, %xmm28, %xmm29, %xmm30
+# INTEL: vfmsub132sh xmm30, xmm29, xmm28, {rn-sae}
+0x62,0x06,0x15,0x10,0x9b,0xf4
+
+# ATT:   vfmsub132sh  268435456(%rbp,%r14,8), %xmm29, %xmm30 {%k7}
+# INTEL: vfmsub132sh xmm30 {k7}, xmm29, word ptr [rbp + 8*r14 + 268435456]
+0x62,0x26,0x15,0x07,0x9b,0xb4,0xf5,0x00,0x00,0x00,0x10
+
+# ATT:   vfmsub132sh  (%r9), %xmm29, %xmm30
+# INTEL: vfmsub132sh xmm30, xmm29, word ptr [r9]
+0x62,0x46,0x15,0x00,0x9b,0x31
+
+# ATT:   vfmsub132sh  254(%rcx), %xmm29, %xmm30
+# INTEL: vfmsub132sh xmm30, xmm29, word ptr [rcx + 254]
+0x62,0x66,0x15,0x00,0x9b,0x71,0x7f
+
+# ATT:   vfmsub132sh  -256(%rdx), %xmm29, %xmm30 {%k7} {z}
+# INTEL: vfmsub132sh xmm30 {k7} {z}, xmm29, word ptr [rdx - 256]
+0x62,0x66,0x15,0x87,0x9b,0x72,0x80
+
+# ATT:   vfmsub213ph %zmm28, %zmm29, %zmm30
+# INTEL: vfmsub213ph zmm30, zmm29, zmm28
+0x62,0x06,0x15,0x40,0xaa,0xf4
+
+# ATT:   vfmsub213ph {rn-sae}, %zmm28, %zmm29, %zmm30
+# INTEL: vfmsub213ph zmm30, zmm29, zmm28, {rn-sae}
+0x62,0x06,0x15,0x10,0xaa,0xf4
+
+# ATT:   vfmsub213ph  268435456(%rbp,%r14,8), %zmm29, %zmm30 {%k7}
+# INTEL: vfmsub213ph zmm30 {k7}, zmm29, zmmword ptr [rbp + 8*r14 + 268435456]
+0x62,0x26,0x15,0x47,0xaa,0xb4,0xf5,0x00,0x00,0x00,0x10
+
+# ATT:   vfmsub213ph  (%r9){1to32}, %zmm29, %zmm30
+# INTEL: vfmsub213ph zmm30, zmm29, word ptr [r9]{1to32}
+0x62,0x46,0x15,0x50,0xaa,0x31
+
+# ATT:   vfmsub213ph  8128(%rcx), %zmm29, %zmm30
+# INTEL: vfmsub213ph zmm30, zmm29, zmmword ptr [rcx + 8128]
+0x62,0x66,0x15,0x40,0xaa,0x71,0x7f
+
+# ATT:   vfmsub213ph  -256(%rdx){1to32}, %zmm29, %zmm30 {%k7} {z}
+# INTEL: vfmsub213ph zmm30 {k7} {z}, zmm29, word ptr [rdx - 256]{1to32}
+0x62,0x66,0x15,0xd7,0xaa,0x72,0x80
+
+# ATT:   vfmsub213sh %xmm28, %xmm29, %xmm30
+# INTEL: vfmsub213sh xmm30, xmm29, xmm28
+0x62,0x06,0x15,0x00,0xab,0xf4
+
+# ATT:   vfmsub213sh {rn-sae}, %xmm28, %xmm29, %xmm30
+# INTEL: vfmsub213sh xmm30, xmm29, xmm28, {rn-sae}
+0x62,0x06,0x15,0x10,0xab,0xf4
+
+# ATT:   vfmsub213sh  268435456(%rbp,%r14,8), %xmm29, %xmm30 {%k7}
+# INTEL: vfmsub213sh xmm30 {k7}, xmm29, word ptr [rbp + 8*r14 + 268435456]
+0x62,0x26,0x15,0x07,0xab,0xb4,0xf5,0x00,0x00,0x00,0x10
+
+# ATT:   vfmsub213sh  (%r9), %xmm29, %xmm30
+# INTEL: vfmsub213sh xmm30, xmm29, word ptr [r9]
+0x62,0x46,0x15,0x00,0xab,0x31
+
+# ATT:   vfmsub213sh  254(%rcx), %xmm29, %xmm30
+# INTEL: vfmsub213sh xmm30, xmm29, word ptr [rcx + 254]
+0x62,0x66,0x15,0x00,0xab,0x71,0x7f
+
+# ATT:   vfmsub213sh  -256(%rdx), %xmm29, %xmm30 {%k7} {z}
+# INTEL: vfmsub213sh xmm30 {k7} {z}, xmm29, word ptr [rdx - 256]
+0x62,0x66,0x15,0x87,0xab,0x72,0x80
+
+# ATT:   vfmsub231ph %zmm28, %zmm29, %zmm30
+# INTEL: vfmsub231ph zmm30, zmm29, zmm28
+0x62,0x06,0x15,0x40,0xba,0xf4
+
+# ATT:   vfmsub231ph {rn-sae}, %zmm28, %zmm29, %zmm30
+# INTEL: vfmsub231ph zmm30, zmm29, zmm28, {rn-sae}
+0x62,0x06,0x15,0x10,0xba,0xf4
+
+# ATT:   vfmsub231ph  268435456(%rbp,%r14,8), %zmm29, %zmm30 {%k7}
+# INTEL: vfmsub231ph zmm30 {k7}, zmm29, zmmword ptr [rbp + 8*r14 + 268435456]
+0x62,0x26,0x15,0x47,0xba,0xb4,0xf5,0x00,0x00,0x00,0x10
+
+# ATT:   vfmsub231ph  (%r9){1to32}, %zmm29, %zmm30
+# INTEL: vfmsub231ph zmm30, zmm29, word ptr [r9]{1to32}
+0x62,0x46,0x15,0x50,0xba,0x31
+
+# ATT:   vfmsub231ph  8128(%rcx), %zmm29, %zmm30
+# INTEL: vfmsub231ph zmm30, zmm29, zmmword ptr [rcx + 8128]
+0x62,0x66,0x15,0x40,0xba,0x71,0x7f
+
+# ATT:   vfmsub231ph  -256(%rdx){1to32}, %zmm29, %zmm30 {%k7} {z}
+# INTEL: vfmsub231ph zmm30 {k7} {z}, zmm29, word ptr [rdx - 256]{1to32}
+0x62,0x66,0x15,0xd7,0xba,0x72,0x80
+
+# ATT:   vfmsub231sh %xmm28, %xmm29, %xmm30
+# INTEL: vfmsub231sh xmm30, xmm29, xmm28
+0x62,0x06,0x15,0x00,0xbb,0xf4
+
+# ATT:   vfmsub231sh {rn-sae}, %xmm28, %xmm29, %xmm30
+# INTEL: vfmsub231sh xmm30, xmm29, xmm28, {rn-sae}
+0x62,0x06,0x15,0x10,0xbb,0xf4
+
+# ATT:   vfmsub231sh  268435456(%rbp,%r14,8), %xmm29, %xmm30 {%k7}
+# INTEL: vfmsub231sh xmm30 {k7}, xmm29, word ptr [rbp + 8*r14 + 268435456]
+0x62,0x26,0x15,0x07,0xbb,0xb4,0xf5,0x00,0x00,0x00,0x10
+
+# ATT:   vfmsub231sh  (%r9), %xmm29, %xmm30
+# INTEL: vfmsub231sh xmm30, xmm29, word ptr [r9]
+0x62,0x46,0x15,0x00,0xbb,0x31
+
+# ATT:   vfmsub231sh  254(%rcx), %xmm29, %xmm30
+# INTEL: vfmsub231sh xmm30, xmm29, word ptr [rcx + 254]
+0x62,0x66,0x15,0x00,0xbb,0x71,0x7f
+
+# ATT:   vfmsub231sh  -256(%rdx), %xmm29, %xmm30 {%k7} {z}
+# INTEL: vfmsub231sh xmm30 {k7} {z}, xmm29, word ptr [rdx - 256]
+0x62,0x66,0x15,0x87,0xbb,0x72,0x80
+
+# ATT:   vfmsubadd132ph %zmm28, %zmm29, %zmm30
+# INTEL: vfmsubadd132ph zmm30, zmm29, zmm28
+0x62,0x06,0x15,0x40,0x97,0xf4
+
+# ATT:   vfmsubadd132ph {rn-sae}, %zmm28, %zmm29, %zmm30
+# INTEL: vfmsubadd132ph zmm30, zmm29, zmm28, {rn-sae}
+0x62,0x06,0x15,0x10,0x97,0xf4
+
+# ATT:   vfmsubadd132ph  268435456(%rbp,%r14,8), %zmm29, %zmm30 {%k7}
+# INTEL: vfmsubadd132ph zmm30 {k7}, zmm29, zmmword ptr [rbp + 8*r14 + 268435456]
+0x62,0x26,0x15,0x47,0x97,0xb4,0xf5,0x00,0x00,0x00,0x10
+
+# ATT:   vfmsubadd132ph  (%r9){1to32}, %zmm29, %zmm30
+# INTEL: vfmsubadd132ph zmm30, zmm29, word ptr [r9]{1to32}
+0x62,0x46,0x15,0x50,0x97,0x31
+
+# ATT:   vfmsubadd132ph  8128(%rcx), %zmm29, %zmm30
+# INTEL: vfmsubadd132ph zmm30, zmm29, zmmword ptr [rcx + 8128]
+0x62,0x66,0x15,0x40,0x97,0x71,0x7f
+
+# ATT:   vfmsubadd132ph  -256(%rdx){1to32}, %zmm29, %zmm30 {%k7} {z}
+# INTEL: vfmsubadd132ph zmm30 {k7} {z}, zmm29, word ptr [rdx - 256]{1to32}
+0x62,0x66,0x15,0xd7,0x97,0x72,0x80
+
+# ATT:   vfmsubadd213ph %zmm28, %zmm29, %zmm30
+# INTEL: vfmsubadd213ph zmm30, zmm29, zmm28
+0x62,0x06,0x15,0x40,0xa7,0xf4
+
+# ATT:   vfmsubadd213ph {rn-sae}, %zmm28, %zmm29, %zmm30
+# INTEL: vfmsubadd213ph zmm30, zmm29, zmm28, {rn-sae}
+0x62,0x06,0x15,0x10,0xa7,0xf4
+
+# ATT:   vfmsubadd213ph  268435456(%rbp,%r14,8), %zmm29, %zmm30 {%k7}
+# INTEL: vfmsubadd213ph zmm30 {k7}, zmm29, zmmword ptr [rbp + 8*r14 + 268435456]
+0x62,0x26,0x15,0x47,0xa7,0xb4,0xf5,0x00,0x00,0x00,0x10
+
+# ATT:   vfmsubadd213ph  (%r9){1to32}, %zmm29, %zmm30
+# INTEL: vfmsubadd213ph zmm30, zmm29, word ptr [r9]{1to32}
+0x62,0x46,0x15,0x50,0xa7,0x31
+
+# ATT:   vfmsubadd213ph  8128(%rcx), %zmm29, %zmm30
+# INTEL: vfmsubadd213ph zmm30, zmm29, zmmword ptr [rcx + 8128]
+0x62,0x66,0x15,0x40,0xa7,0x71,0x7f
+
+# ATT:   vfmsubadd213ph  -256(%rdx){1to32}, %zmm29, %zmm30 {%k7} {z}
+# INTEL: vfmsubadd213ph zmm30 {k7} {z}, zmm29, word ptr [rdx - 256]{1to32}
+0x62,0x66,0x15,0xd7,0xa7,0x72,0x80
+
+# ATT:   vfmsubadd231ph %zmm28, %zmm29, %zmm30
+# INTEL: vfmsubadd231ph zmm30, zmm29, zmm28
+0x62,0x06,0x15,0x40,0xb7,0xf4
+
+# ATT:   vfmsubadd231ph {rn-sae}, %zmm28, %zmm29, %zmm30
+# INTEL: vfmsubadd231ph zmm30, zmm29, zmm28, {rn-sae}
+0x62,0x06,0x15,0x10,0xb7,0xf4
+
+# ATT:   vfmsubadd231ph  268435456(%rbp,%r14,8), %zmm29, %zmm30 {%k7}
+# INTEL: vfmsubadd231ph zmm30 {k7}, zmm29, zmmword ptr [rbp + 8*r14 + 268435456]
+0x62,0x26,0x15,0x47,0xb7,0xb4,0xf5,0x00,0x00,0x00,0x10
+
+# ATT:   vfmsubadd231ph  (%r9){1to32}, %zmm29, %zmm30
+# INTEL: vfmsubadd231ph zmm30, zmm29, word ptr [r9]{1to32}
+0x62,0x46,0x15,0x50,0xb7,0x31
+
+# ATT:   vfmsubadd231ph  8128(%rcx), %zmm29, %zmm30
+# INTEL: vfmsubadd231ph zmm30, zmm29, zmmword ptr [rcx + 8128]
+0x62,0x66,0x15,0x40,0xb7,0x71,0x7f
+
+# ATT:   vfmsubadd231ph  -256(%rdx){1to32}, %zmm29, %zmm30 {%k7} {z}
+# INTEL: vfmsubadd231ph zmm30 {k7} {z}, zmm29, word ptr [rdx - 256]{1to32}
+0x62,0x66,0x15,0xd7,0xb7,0x72,0x80
+
+# ATT:   vfnmadd132ph %zmm28, %zmm29, %zmm30
+# INTEL: vfnmadd132ph zmm30, zmm29, zmm28
+0x62,0x06,0x15,0x40,0x9c,0xf4
+
+# ATT:   vfnmadd132ph {rn-sae}, %zmm28, %zmm29, %zmm30
+# INTEL: vfnmadd132ph zmm30, zmm29, zmm28, {rn-sae}
+0x62,0x06,0x15,0x10,0x9c,0xf4
+
+# ATT:   vfnmadd132ph  268435456(%rbp,%r14,8), %zmm29, %zmm30 {%k7}
+# INTEL: vfnmadd132ph zmm30 {k7}, zmm29, zmmword ptr [rbp + 8*r14 + 268435456]
+0x62,0x26,0x15,0x47,0x9c,0xb4,0xf5,0x00,0x00,0x00,0x10
+
+# ATT:   vfnmadd132ph  (%r9){1to32}, %zmm29, %zmm30
+# INTEL: vfnmadd132ph zmm30, zmm29, word ptr [r9]{1to32}
+0x62,0x46,0x15,0x50,0x9c,0x31
+
+# ATT:   vfnmadd132ph  8128(%rcx), %zmm29, %zmm30
+# INTEL: vfnmadd132ph zmm30, zmm29, zmmword ptr [rcx + 8128]
+0x62,0x66,0x15,0x40,0x9c,0x71,0x7f
+
+# ATT:   vfnmadd132ph  -256(%rdx){1to32}, %zmm29, %zmm30 {%k7} {z}
+# INTEL: vfnmadd132ph zmm30 {k7} {z}, zmm29, word ptr [rdx - 256]{1to32}
+0x62,0x66,0x15,0xd7,0x9c,0x72,0x80
+
+# ATT:   vfnmadd132sh %xmm28, %xmm29, %xmm30
+# INTEL: vfnmadd132sh xmm30, xmm29, xmm28
+0x62,0x06,0x15,0x00,0x9d,0xf4
+
+# ATT:   vfnmadd132sh {rn-sae}, %xmm28, %xmm29, %xmm30
+# INTEL: vfnmadd132sh xmm30, xmm29, xmm28, {rn-sae}
+0x62,0x06,0x15,0x10,0x9d,0xf4
+
+# ATT:   vfnmadd132sh  268435456(%rbp,%r14,8), %xmm29, %xmm30 {%k7}
+# INTEL: vfnmadd132sh xmm30 {k7}, xmm29, word ptr [rbp + 8*r14 + 268435456]
+0x62,0x26,0x15,0x07,0x9d,0xb4,0xf5,0x00,0x00,0x00,0x10
+
+# ATT:   vfnmadd132sh  (%r9), %xmm29, %xmm30
+# INTEL: vfnmadd132sh xmm30, xmm29, word ptr [r9]
+0x62,0x46,0x15,0x00,0x9d,0x31
+
+# ATT:   vfnmadd132sh  254(%rcx), %xmm29, %xmm30
+# INTEL: vfnmadd132sh xmm30, xmm29, word ptr [rcx + 254]
+0x62,0x66,0x15,0x00,0x9d,0x71,0x7f
+
+# ATT:   vfnmadd132sh  -256(%rdx), %xmm29, %xmm30 {%k7} {z}
+# INTEL: vfnmadd132sh xmm30 {k7} {z}, xmm29, word ptr [rdx - 256]
+0x62,0x66,0x15,0x87,0x9d,0x72,0x80
+
+# ATT:   vfnmadd213ph %zmm28, %zmm29, %zmm30
+# INTEL: vfnmadd213ph zmm30, zmm29, zmm28
+0x62,0x06,0x15,0x40,0xac,0xf4
+
+# ATT:   vfnmadd213ph {rn-sae}, %zmm28, %zmm29, %zmm30
+# INTEL: vfnmadd213ph zmm30, zmm29, zmm28, {rn-sae}
+0x62,0x06,0x15,0x10,0xac,0xf4
+
+# ATT:   vfnmadd213ph  268435456(%rbp,%r14,8), %zmm29, %zmm30 {%k7}
+# INTEL: vfnmadd213ph zmm30 {k7}, zmm29, zmmword ptr [rbp + 8*r14 + 268435456]
+0x62,0x26,0x15,0x47,0xac,0xb4,0xf5,0x00,0x00,0x00,0x10
+
+# ATT:   vfnmadd213ph  (%r9){1to32}, %zmm29, %zmm30
+# INTEL: vfnmadd213ph zmm30, zmm29, word ptr [r9]{1to32}
+0x62,0x46,0x15,0x50,0xac,0x31
+
+# ATT:   vfnmadd213ph  8128(%rcx), %zmm29, %zmm30
+# INTEL: vfnmadd213ph zmm30, zmm29, zmmword ptr [rcx + 8128]
+0x62,0x66,0x15,0x40,0xac,0x71,0x7f
+
+# ATT:   vfnmadd213ph  -256(%rdx){1to32}, %zmm29, %zmm30 {%k7} {z}
+# INTEL: vfnmadd213ph zmm30 {k7} {z}, zmm29, word ptr [rdx - 256]{1to32}
+0x62,0x66,0x15,0xd7,0xac,0x72,0x80
+
+# ATT:   vfnmadd213sh %xmm28, %xmm29, %xmm30
+# INTEL: vfnmadd213sh xmm30, xmm29, xmm28
+0x62,0x06,0x15,0x00,0xad,0xf4
+
+# ATT:   vfnmadd213sh {rn-sae}, %xmm28, %xmm29, %xmm30
+# INTEL: vfnmadd213sh xmm30, xmm29, xmm28, {rn-sae}
+0x62,0x06,0x15,0x10,0xad,0xf4
+
+# ATT:   vfnmadd213sh  268435456(%rbp,%r14,8), %xmm29, %xmm30 {%k7}
+# INTEL: vfnmadd213sh xmm30 {k7}, xmm29, word ptr [rbp + 8*r14 + 268435456]
+0x62,0x26,0x15,0x07,0xad,0xb4,0xf5,0x00,0x00,0x00,0x10
+
+# ATT:   vfnmadd213sh  (%r9), %xmm29, %xmm30
+# INTEL: vfnmadd213sh xmm30, xmm29, word ptr [r9]
+0x62,0x46,0x15,0x00,0xad,0x31
+
+# ATT:   vfnmadd213sh  254(%rcx), %xmm29, %xmm30
+# INTEL: vfnmadd213sh xmm30, xmm29, word ptr [rcx + 254]
+0x62,0x66,0x15,0x00,0xad,0x71,0x7f
+
+# ATT:   vfnmadd213sh  -256(%rdx), %xmm29, %xmm30 {%k7} {z}
+# INTEL: vfnmadd213sh xmm30 {k7} {z}, xmm29, word ptr [rdx - 256]
+0x62,0x66,0x15,0x87,0xad,0x72,0x80
+
+# ATT:   vfnmadd231ph %zmm28, %zmm29, %zmm30
+# INTEL: vfnmadd231ph zmm30, zmm29, zmm28
+0x62,0x06,0x15,0x40,0xbc,0xf4
+
+# ATT:   vfnmadd231ph {rn-sae}, %zmm28, %zmm29, %zmm30
+# INTEL: vfnmadd231ph zmm30, zmm29, zmm28, {rn-sae}
+0x62,0x06,0x15,0x10,0xbc,0xf4
+
+# ATT:   vfnmadd231ph  268435456(%rbp,%r14,8), %zmm29, %zmm30 {%k7}
+# INTEL: vfnmadd231ph zmm30 {k7}, zmm29, zmmword ptr [rbp + 8*r14 + 268435456]
+0x62,0x26,0x15,0x47,0xbc,0xb4,0xf5,0x00,0x00,0x00,0x10
+
+# ATT:   vfnmadd231ph  (%r9){1to32}, %zmm29, %zmm30
+# INTEL: vfnmadd231ph zmm30, zmm29, word ptr [r9]{1to32}
+0x62,0x46,0x15,0x50,0xbc,0x31
+
+# ATT:   vfnmadd231ph  8128(%rcx), %zmm29, %zmm30
+# INTEL: vfnmadd231ph zmm30, zmm29, zmmword ptr [rcx + 8128]
+0x62,0x66,0x15,0x40,0xbc,0x71,0x7f
+
+# ATT:   vfnmadd231ph  -256(%rdx){1to32}, %zmm29, %zmm30 {%k7} {z}
+# INTEL: vfnmadd231ph zmm30 {k7} {z}, zmm29, word ptr [rdx - 256]{1to32}
+0x62,0x66,0x15,0xd7,0xbc,0x72,0x80
+
+# ATT:   vfnmadd231sh %xmm28, %xmm29, %xmm30
+# INTEL: vfnmadd231sh xmm30, xmm29, xmm28
+0x62,0x06,0x15,0x00,0xbd,0xf4
+
+# ATT:   vfnmadd231sh {rn-sae}, %xmm28, %xmm29, %xmm30
+# INTEL: vfnmadd231sh xmm30, xmm29, xmm28, {rn-sae}
+0x62,0x06,0x15,0x10,0xbd,0xf4
+
+# ATT:   vfnmadd231sh  268435456(%rbp,%r14,8), %xmm29, %xmm30 {%k7}
+# INTEL: vfnmadd231sh xmm30 {k7}, xmm29, word ptr [rbp + 8*r14 + 268435456]
+0x62,0x26,0x15,0x07,0xbd,0xb4,0xf5,0x00,0x00,0x00,0x10
+
+# ATT:   vfnmadd231sh  (%r9), %xmm29, %xmm30
+# INTEL: vfnmadd231sh xmm30, xmm29, word ptr [r9]
+0x62,0x46,0x15,0x00,0xbd,0x31
+
+# ATT:   vfnmadd231sh  254(%rcx), %xmm29, %xmm30
+# INTEL: vfnmadd231sh xmm30, xmm29, word ptr [rcx + 254]
+0x62,0x66,0x15,0x00,0xbd,0x71,0x7f
+
+# ATT:   vfnmadd231sh  -256(%rdx), %xmm29, %xmm30 {%k7} {z}
+# INTEL: vfnmadd231sh xmm30 {k7} {z}, xmm29, word ptr [rdx - 256]
+0x62,0x66,0x15,0x87,0xbd,0x72,0x80
+
+# ATT:   vfnmsub132ph %zmm28, %zmm29, %zmm30
+# INTEL: vfnmsub132ph zmm30, zmm29, zmm28
+0x62,0x06,0x15,0x40,0x9e,0xf4
+
+# ATT:   vfnmsub132ph {rn-sae}, %zmm28, %zmm29, %zmm30
+# INTEL: vfnmsub132ph zmm30, zmm29, zmm28, {rn-sae}
+0x62,0x06,0x15,0x10,0x9e,0xf4
+
+# ATT:   vfnmsub132ph  268435456(%rbp,%r14,8), %zmm29, %zmm30 {%k7}
+# INTEL: vfnmsub132ph zmm30 {k7}, zmm29, zmmword ptr [rbp + 8*r14 + 268435456]
+0x62,0x26,0x15,0x47,0x9e,0xb4,0xf5,0x00,0x00,0x00,0x10
+
+# ATT:   vfnmsub132ph  (%r9){1to32}, %zmm29, %zmm30
+# INTEL: vfnmsub132ph zmm30, zmm29, word ptr [r9]{1to32}
+0x62,0x46,0x15,0x50,0x9e,0x31
+
+# ATT:   vfnmsub132ph  8128(%rcx), %zmm29, %zmm30
+# INTEL: vfnmsub132ph zmm30, zmm29, zmmword ptr [rcx + 8128]
+0x62,0x66,0x15,0x40,0x9e,0x71,0x7f
+
+# ATT:   vfnmsub132ph  -256(%rdx){1to32}, %zmm29, %zmm30 {%k7} {z}
+# INTEL: vfnmsub132ph zmm30 {k7} {z}, zmm29, word ptr [rdx - 256]{1to32}
+0x62,0x66,0x15,0xd7,0x9e,0x72,0x80
+
+# ATT:   vfnmsub132sh %xmm28, %xmm29, %xmm30
+# INTEL: vfnmsub132sh xmm30, xmm29, xmm28
+0x62,0x06,0x15,0x00,0x9f,0xf4
+
+# ATT:   vfnmsub132sh {rn-sae}, %xmm28, %xmm29, %xmm30
+# INTEL: vfnmsub132sh xmm30, xmm29, xmm28, {rn-sae}
+0x62,0x06,0x15,0x10,0x9f,0xf4
+
+# ATT:   vfnmsub132sh  268435456(%rbp,%r14,8), %xmm29, %xmm30 {%k7}
+# INTEL: vfnmsub132sh xmm30 {k7}, xmm29, word ptr [rbp + 8*r14 + 268435456]
+0x62,0x26,0x15,0x07,0x9f,0xb4,0xf5,0x00,0x00,0x00,0x10
+
+# ATT:   vfnmsub132sh  (%r9), %xmm29, %xmm30
+# INTEL: vfnmsub132sh xmm30, xmm29, word ptr [r9]
+0x62,0x46,0x15,0x00,0x9f,0x31
+
+# ATT:   vfnmsub132sh  254(%rcx), %xmm29, %xmm30
+# INTEL: vfnmsub132sh xmm30, xmm29, word ptr [rcx + 254]
+0x62,0x66,0x15,0x00,0x9f,0x71,0x7f
+
+# ATT:   vfnmsub132sh  -256(%rdx), %xmm29, %xmm30 {%k7} {z}
+# INTEL: vfnmsub132sh xmm30 {k7} {z}, xmm29, word ptr [rdx - 256]
+0x62,0x66,0x15,0x87,0x9f,0x72,0x80
+
+# ATT:   vfnmsub213ph %zmm28, %zmm29, %zmm30
+# INTEL: vfnmsub213ph zmm30, zmm29, zmm28
+0x62,0x06,0x15,0x40,0xae,0xf4
+
+# ATT:   vfnmsub213ph {rn-sae}, %zmm28, %zmm29, %zmm30
+# INTEL: vfnmsub213ph zmm30, zmm29, zmm28, {rn-sae}
+0x62,0x06,0x15,0x10,0xae,0xf4
+
+# ATT:   vfnmsub213ph  268435456(%rbp,%r14,8), %zmm29, %zmm30 {%k7}
+# INTEL: vfnmsub213ph zmm30 {k7}, zmm29, zmmword ptr [rbp + 8*r14 + 268435456]
+0x62,0x26,0x15,0x47,0xae,0xb4,0xf5,0x00,0x00,0x00,0x10
+
+# ATT:   vfnmsub213ph  (%r9){1to32}, %zmm29, %zmm30
+# INTEL: vfnmsub213ph zmm30, zmm29, word ptr [r9]{1to32}
+0x62,0x46,0x15,0x50,0xae,0x31
+
+# ATT:   vfnmsub213ph  8128(%rcx), %zmm29, %zmm30
+# INTEL: vfnmsub213ph zmm30, zmm29, zmmword ptr [rcx + 8128]
+0x62,0x66,0x15,0x40,0xae,0x71,0x7f
+
+# ATT:   vfnmsub213ph  -256(%rdx){1to32}, %zmm29, %zmm30 {%k7} {z}
+# INTEL: vfnmsub213ph zmm30 {k7} {z}, zmm29, word ptr [rdx - 256]{1to32}
+0x62,0x66,0x15,0xd7,0xae,0x72,0x80
+
+# ATT:   vfnmsub213sh %xmm28, %xmm29, %xmm30
+# INTEL: vfnmsub213sh xmm30, xmm29, xmm28
+0x62,0x06,0x15,0x00,0xaf,0xf4
+
+# ATT:   vfnmsub213sh {rn-sae}, %xmm28, %xmm29, %xmm30
+# INTEL: vfnmsub213sh xmm30, xmm29, xmm28, {rn-sae}
+0x62,0x06,0x15,0x10,0xaf,0xf4
+
+# ATT:   vfnmsub213sh  268435456(%rbp,%r14,8), %xmm29, %xmm30 {%k7}
+# INTEL: vfnmsub213sh xmm30 {k7}, xmm29, word ptr [rbp + 8*r14 + 268435456]
+0x62,0x26,0x15,0x07,0xaf,0xb4,0xf5,0x00,0x00,0x00,0x10
+
+# ATT:   vfnmsub213sh  (%r9), %xmm29, %xmm30
+# INTEL: vfnmsub213sh xmm30, xmm29, word ptr [r9]
+0x62,0x46,0x15,0x00,0xaf,0x31
+
+# ATT:   vfnmsub213sh  254(%rcx), %xmm29, %xmm30
+# INTEL: vfnmsub213sh xmm30, xmm29, word ptr [rcx + 254]
+0x62,0x66,0x15,0x00,0xaf,0x71,0x7f
+
+# ATT:   vfnmsub213sh  -256(%rdx), %xmm29, %xmm30 {%k7} {z}
+# INTEL: vfnmsub213sh xmm30 {k7} {z}, xmm29, word ptr [rdx - 256]
+0x62,0x66,0x15,0x87,0xaf,0x72,0x80
+
+# ATT:   vfnmsub231ph %zmm28, %zmm29, %zmm30
+# INTEL: vfnmsub231ph zmm30, zmm29, zmm28
+0x62,0x06,0x15,0x40,0xbe,0xf4
+
+# ATT:   vfnmsub231ph {rn-sae}, %zmm28, %zmm29, %zmm30
+# INTEL: vfnmsub231ph zmm30, zmm29, zmm28, {rn-sae}
+0x62,0x06,0x15,0x10,0xbe,0xf4
+
+# ATT:   vfnmsub231ph  268435456(%rbp,%r14,8), %zmm29, %zmm30 {%k7}
+# INTEL: vfnmsub231ph zmm30 {k7}, zmm29, zmmword ptr [rbp + 8*r14 + 268435456]
+0x62,0x26,0x15,0x47,0xbe,0xb4,0xf5,0x00,0x00,0x00,0x10
+
+# ATT:   vfnmsub231ph  (%r9){1to32}, %zmm29, %zmm30
+# INTEL: vfnmsub231ph zmm30, zmm29, word ptr [r9]{1to32}
+0x62,0x46,0x15,0x50,0xbe,0x31
+
+# ATT:   vfnmsub231ph  8128(%rcx), %zmm29, %zmm30
+# INTEL: vfnmsub231ph zmm30, zmm29, zmmword ptr [rcx + 8128]
+0x62,0x66,0x15,0x40,0xbe,0x71,0x7f
+
+# ATT:   vfnmsub231ph  -256(%rdx){1to32}, %zmm29, %zmm30 {%k7} {z}
+# INTEL: vfnmsub231ph zmm30 {k7} {z}, zmm29, word ptr [rdx - 256]{1to32}
+0x62,0x66,0x15,0xd7,0xbe,0x72,0x80
+
+# ATT:   vfnmsub231sh %xmm28, %xmm29, %xmm30
+# INTEL: vfnmsub231sh xmm30, xmm29, xmm28
+0x62,0x06,0x15,0x00,0xbf,0xf4
+
+# ATT:   vfnmsub231sh {rn-sae}, %xmm28, %xmm29, %xmm30
+# INTEL: vfnmsub231sh xmm30, xmm29, xmm28, {rn-sae}
+0x62,0x06,0x15,0x10,0xbf,0xf4
+
+# ATT:   vfnmsub231sh  268435456(%rbp,%r14,8), %xmm29, %xmm30 {%k7}
+# INTEL: vfnmsub231sh xmm30 {k7}, xmm29, word ptr [rbp + 8*r14 + 268435456]
+0x62,0x26,0x15,0x07,0xbf,0xb4,0xf5,0x00,0x00,0x00,0x10
+
+# ATT:   vfnmsub231sh  (%r9), %xmm29, %xmm30
+# INTEL: vfnmsub231sh xmm30, xmm29, word ptr [r9]
+0x62,0x46,0x15,0x00,0xbf,0x31
+
+# ATT:   vfnmsub231sh  254(%rcx), %xmm29, %xmm30
+# INTEL: vfnmsub231sh xmm30, xmm29, word ptr [rcx + 254]
+0x62,0x66,0x15,0x00,0xbf,0x71,0x7f
+
+# ATT:   vfnmsub231sh  -256(%rdx), %xmm29, %xmm30 {%k7} {z}
+# INTEL: vfnmsub231sh xmm30 {k7} {z}, xmm29, word ptr [rdx - 256]
+0x62,0x66,0x15,0x87,0xbf,0x72,0x80

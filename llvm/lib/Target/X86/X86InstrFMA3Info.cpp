@@ -28,35 +28,43 @@ using namespace llvm;
   FMA3GROUP(Name, Suf##k, Attrs | X86InstrFMA3Group::KMergeMasked) \
   FMA3GROUP(Name, Suf##kz, Attrs | X86InstrFMA3Group::KZeroMasked)
 
-#define FMA3GROUP_PACKED_WIDTHS(Name, Suf, Attrs) \
-  FMA3GROUP(Name, Suf##Ym, Attrs) \
-  FMA3GROUP(Name, Suf##Yr, Attrs) \
+#define FMA3GROUP_PACKED_WIDTHS_Z(Name, Suf, Attrs) \
   FMA3GROUP_MASKED(Name, Suf##Z128m, Attrs) \
   FMA3GROUP_MASKED(Name, Suf##Z128r, Attrs) \
   FMA3GROUP_MASKED(Name, Suf##Z256m, Attrs) \
   FMA3GROUP_MASKED(Name, Suf##Z256r, Attrs) \
   FMA3GROUP_MASKED(Name, Suf##Zm, Attrs) \
   FMA3GROUP_MASKED(Name, Suf##Zr, Attrs) \
+
+#define FMA3GROUP_PACKED_WIDTHS_ALL(Name, Suf, Attrs) \
+  FMA3GROUP(Name, Suf##Ym, Attrs) \
+  FMA3GROUP(Name, Suf##Yr, Attrs) \
+  FMA3GROUP_PACKED_WIDTHS_Z(Name, Suf, Attrs) \
   FMA3GROUP(Name, Suf##m, Attrs) \
   FMA3GROUP(Name, Suf##r, Attrs)
 
 #define FMA3GROUP_PACKED(Name, Attrs) \
-  FMA3GROUP_PACKED_WIDTHS(Name, PD, Attrs) \
-  FMA3GROUP_PACKED_WIDTHS(Name, PS, Attrs)
+  FMA3GROUP_PACKED_WIDTHS_ALL(Name, PD, Attrs) \
+  FMA3GROUP_PACKED_WIDTHS_Z(Name, PH, Attrs) \
+  FMA3GROUP_PACKED_WIDTHS_ALL(Name, PS, Attrs)
 
-#define FMA3GROUP_SCALAR_WIDTHS(Name, Suf, Attrs) \
+#define FMA3GROUP_SCALAR_WIDTHS_Z(Name, Suf, Attrs) \
   FMA3GROUP(Name, Suf##Zm, Attrs) \
   FMA3GROUP_MASKED(Name, Suf##Zm_Int, Attrs | X86InstrFMA3Group::Intrinsic) \
   FMA3GROUP(Name, Suf##Zr, Attrs) \
   FMA3GROUP_MASKED(Name, Suf##Zr_Int, Attrs | X86InstrFMA3Group::Intrinsic) \
+
+#define FMA3GROUP_SCALAR_WIDTHS_ALL(Name, Suf, Attrs) \
+  FMA3GROUP_SCALAR_WIDTHS_Z(Name, Suf, Attrs) \
   FMA3GROUP(Name, Suf##m, Attrs) \
   FMA3GROUP(Name, Suf##m_Int, Attrs | X86InstrFMA3Group::Intrinsic) \
   FMA3GROUP(Name, Suf##r, Attrs) \
   FMA3GROUP(Name, Suf##r_Int, Attrs | X86InstrFMA3Group::Intrinsic)
 
 #define FMA3GROUP_SCALAR(Name, Attrs) \
-  FMA3GROUP_SCALAR_WIDTHS(Name, SD, Attrs) \
-  FMA3GROUP_SCALAR_WIDTHS(Name, SS, Attrs)
+  FMA3GROUP_SCALAR_WIDTHS_ALL(Name, SD, Attrs) \
+  FMA3GROUP_SCALAR_WIDTHS_Z(Name, SH, Attrs) \
+  FMA3GROUP_SCALAR_WIDTHS_ALL(Name, SS, Attrs)
 
 #define FMA3GROUP_FULL(Name, Attrs) \
   FMA3GROUP_PACKED(Name, Attrs) \
@@ -78,15 +86,19 @@ static const X86InstrFMA3Group Groups[] = {
 
 #define FMA3GROUP_PACKED_AVX512(Name, Suf, Attrs) \
   FMA3GROUP_PACKED_AVX512_WIDTHS(Name, PD, Suf, Attrs) \
+  FMA3GROUP_PACKED_AVX512_WIDTHS(Name, PH, Suf, Attrs) \
   FMA3GROUP_PACKED_AVX512_WIDTHS(Name, PS, Suf, Attrs)
 
 #define FMA3GROUP_PACKED_AVX512_ROUND(Name, Suf, Attrs) \
   FMA3GROUP_MASKED(Name, PDZ##Suf, Attrs) \
+  FMA3GROUP_MASKED(Name, PHZ##Suf, Attrs) \
   FMA3GROUP_MASKED(Name, PSZ##Suf, Attrs)
 
 #define FMA3GROUP_SCALAR_AVX512_ROUND(Name, Suf, Attrs) \
   FMA3GROUP(Name, SDZ##Suf, Attrs) \
   FMA3GROUP_MASKED(Name, SDZ##Suf##_Int, Attrs) \
+  FMA3GROUP(Name, SHZ##Suf, Attrs) \
+  FMA3GROUP_MASKED(Name, SHZ##Suf##_Int, Attrs) \
   FMA3GROUP(Name, SSZ##Suf, Attrs) \
   FMA3GROUP_MASKED(Name, SSZ##Suf##_Int, Attrs)
 
@@ -130,14 +142,16 @@ const X86InstrFMA3Group *llvm::getFMA3Group(unsigned Opcode, uint64_t TSFlags) {
 
   // FMA3 instructions have a well defined encoding pattern we can exploit.
   uint8_t BaseOpcode = X86II::getBaseOpcodeFor(TSFlags);
-  bool IsFMA3 = ((TSFlags & X86II::EncodingMask) == X86II::VEX ||
-                 (TSFlags & X86II::EncodingMask) == X86II::EVEX) &&
-                (TSFlags & X86II::OpMapMask) == X86II::T8 &&
-                (TSFlags & X86II::OpPrefixMask) == X86II::PD &&
-                ((BaseOpcode >= 0x96 && BaseOpcode <= 0x9F) ||
-                 (BaseOpcode >= 0xA6 && BaseOpcode <= 0xAF) ||
-                 (BaseOpcode >= 0xB6 && BaseOpcode <= 0xBF));
-  if (!IsFMA3)
+  bool IsFMA3Opcode = ((BaseOpcode >= 0x96 && BaseOpcode <= 0x9F) ||
+                       (BaseOpcode >= 0xA6 && BaseOpcode <= 0xAF) ||
+                       (BaseOpcode >= 0xB6 && BaseOpcode <= 0xBF));
+  bool IsFMA3Encoding = ((TSFlags & X86II::EncodingMask) == X86II::VEX &&
+                         (TSFlags & X86II::OpMapMask) == X86II::T8) ||
+                        ((TSFlags & X86II::EncodingMask) == X86II::EVEX &&
+                         ((TSFlags & X86II::OpMapMask) == X86II::T8 ||
+                          (TSFlags & X86II::OpMapMask) == X86II::T_MAP6));
+  bool IsFMA3Prefix = (TSFlags & X86II::OpPrefixMask) == X86II::PD;
+  if (!IsFMA3Opcode || !IsFMA3Encoding || !IsFMA3Prefix)
     return nullptr;
 
   verifyTables();

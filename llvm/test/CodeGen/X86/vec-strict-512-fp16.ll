@@ -11,6 +11,7 @@ declare <8 x double> @llvm.experimental.constrained.fpext.v8f64.v8f16(<8 x half>
 declare <16 x float> @llvm.experimental.constrained.fpext.v16f32.v16f16(<16 x half>, metadata)
 declare <8 x half> @llvm.experimental.constrained.fptrunc.v8f16.v8f64(<8 x double>, metadata, metadata)
 declare <16 x half> @llvm.experimental.constrained.fptrunc.v16f16.v16f32(<16 x float>, metadata, metadata)
+declare <32 x half> @llvm.experimental.constrained.fma.v32f16(<32 x half>, <32 x half>, <32 x half>, metadata, metadata)
 declare <32 x half> @llvm.experimental.constrained.ceil.v32f16(<32 x half>, metadata)
 declare <32 x half> @llvm.experimental.constrained.floor.v32f16(<32 x half>, metadata)
 declare <32 x half> @llvm.experimental.constrained.trunc.v32f16(<32 x half>, metadata)
@@ -95,6 +96,17 @@ define <8 x half> @f12(<8 x double> %a) #0 {
                                 metadata !"round.dynamic",
                                 metadata !"fpexcept.strict") #0
   ret <8 x half> %ret
+}
+
+define <32 x half> @f13(<32 x half> %a, <32 x half> %b, <32 x half> %c) #0 {
+; CHECK-LABEL: f13:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    vfmadd213ph %zmm2, %zmm1, %zmm0
+; CHECK-NEXT:    ret{{[l|q]}}
+  %res = call <32 x half> @llvm.experimental.constrained.fma.v32f16(<32 x half> %a, <32 x half> %b, <32 x half> %c,
+                                                                    metadata !"round.dynamic",
+                                                                    metadata !"fpexcept.strict") #0
+  ret <32 x half> %res
 }
 
 define <16 x float> @f14(<16 x half> %a) #0 {
