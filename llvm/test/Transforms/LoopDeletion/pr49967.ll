@@ -10,7 +10,7 @@ define void @test() {
 ; CHECK:       vector.ph:
 ; CHECK-NEXT:    br label [[FOR_BODY63:%.*]]
 ; CHECK:       for.cond.cleanup62:
-; CHECK-NEXT:    br label [[FOR_BODY151_PREHEADER:%.*]]
+; CHECK-NEXT:    br i1 true, label [[FOR_BODY151_PREHEADER:%.*]], label [[VECTOR_PH]]
 ; CHECK:       for.body151.preheader:
 ; CHECK-NEXT:    br label [[FOR_COND_CLEANUP150_LOOPEXIT:%.*]]
 ; CHECK:       for.body63:
@@ -18,7 +18,9 @@ define void @test() {
 ; CHECK-NEXT:    store i16 undef, i16* undef, align 1
 ; CHECK-NEXT:    [[INC89:%.*]] = add nuw nsw i16 [[I58_010]], 1
 ; CHECK-NEXT:    [[EXITCOND12_NOT:%.*]] = icmp eq i16 [[INC89]], 33
-; CHECK-NEXT:    br label [[FOR_COND_CLEANUP62:%.*]]
+; CHECK-NEXT:    br i1 [[EXITCOND12_NOT]], label [[FOR_COND_CLEANUP62:%.*]], label [[FOR_BODY63_FOR_BODY63_CRIT_EDGE:%.*]]
+; CHECK:       for.body63.for.body63_crit_edge:
+; CHECK-NEXT:    unreachable
 ; CHECK:       for.cond.cleanup150.loopexit:
 ; CHECK-NEXT:    unreachable
 ;
