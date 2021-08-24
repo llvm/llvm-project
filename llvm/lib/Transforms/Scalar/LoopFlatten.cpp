@@ -27,6 +27,8 @@
 //===----------------------------------------------------------------------===//
 
 #include "llvm/Transforms/Scalar/LoopFlatten.h"
+
+#include "llvm/ADT/Statistic.h"
 #include "llvm/Analysis/AssumptionCache.h"
 #include "llvm/Analysis/LoopInfo.h"
 #include "llvm/Analysis/OptimizationRemarkEmitter.h"
@@ -49,10 +51,12 @@
 #include "llvm/Transforms/Utils/ScalarEvolutionExpander.h"
 #include "llvm/Transforms/Utils/SimplifyIndVar.h"
 
-#define DEBUG_TYPE "loop-flatten"
-
 using namespace llvm;
 using namespace llvm::PatternMatch;
+
+#define DEBUG_TYPE "loop-flatten"
+
+STATISTIC(NumFlattened, "Number of loops flattened");
 
 static cl::opt<unsigned> RepeatedInstructionThreshold(
     "loop-flatten-cost-threshold", cl::Hidden, cl::init(2),
@@ -630,6 +634,10 @@ static bool DoFlattenLoopPair(FlattenInfo &FI, DominatorTree *DT, LoopInfo *LI,
   SE->forgetLoop(FI.OuterLoop);
   SE->forgetLoop(FI.InnerLoop);
   LI->erase(FI.InnerLoop);
+
+  // Increment statistic value.
+  NumFlattened++;
+
   return true;
 }
 
