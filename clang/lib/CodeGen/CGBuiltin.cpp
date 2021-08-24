@@ -12050,6 +12050,22 @@ static Value *EmitX86FMAExpr(CodeGenFunction &CGF, const CallExpr *E,
   Intrinsic::ID IID = Intrinsic::not_intrinsic;
   switch (BuiltinID) {
   default: break;
+  case clang::X86::BI__builtin_ia32_vfmsubph512_mask3:
+    Subtract = true;
+    LLVM_FALLTHROUGH;
+  case clang::X86::BI__builtin_ia32_vfmaddph512_mask:
+  case clang::X86::BI__builtin_ia32_vfmaddph512_maskz:
+  case clang::X86::BI__builtin_ia32_vfmaddph512_mask3:
+    IID = llvm::Intrinsic::x86_avx512fp16_vfmadd_ph_512;
+    break;
+  case clang::X86::BI__builtin_ia32_vfmsubaddph512_mask3:
+    Subtract = true;
+    LLVM_FALLTHROUGH;
+  case clang::X86::BI__builtin_ia32_vfmaddsubph512_mask:
+  case clang::X86::BI__builtin_ia32_vfmaddsubph512_maskz:
+  case clang::X86::BI__builtin_ia32_vfmaddsubph512_mask3:
+    IID = llvm::Intrinsic::x86_avx512fp16_vfmaddsub_ph_512;
+    break;
   case clang::X86::BI__builtin_ia32_vfmsubps512_mask3:
     Subtract = true;
     LLVM_FALLTHROUGH;
@@ -12113,22 +12129,30 @@ static Value *EmitX86FMAExpr(CodeGenFunction &CGF, const CallExpr *E,
   // Handle any required masking.
   Value *MaskFalseVal = nullptr;
   switch (BuiltinID) {
+  case clang::X86::BI__builtin_ia32_vfmaddph512_mask:
   case clang::X86::BI__builtin_ia32_vfmaddps512_mask:
   case clang::X86::BI__builtin_ia32_vfmaddpd512_mask:
+  case clang::X86::BI__builtin_ia32_vfmaddsubph512_mask:
   case clang::X86::BI__builtin_ia32_vfmaddsubps512_mask:
   case clang::X86::BI__builtin_ia32_vfmaddsubpd512_mask:
     MaskFalseVal = Ops[0];
     break;
+  case clang::X86::BI__builtin_ia32_vfmaddph512_maskz:
   case clang::X86::BI__builtin_ia32_vfmaddps512_maskz:
   case clang::X86::BI__builtin_ia32_vfmaddpd512_maskz:
+  case clang::X86::BI__builtin_ia32_vfmaddsubph512_maskz:
   case clang::X86::BI__builtin_ia32_vfmaddsubps512_maskz:
   case clang::X86::BI__builtin_ia32_vfmaddsubpd512_maskz:
     MaskFalseVal = Constant::getNullValue(Ops[0]->getType());
     break;
+  case clang::X86::BI__builtin_ia32_vfmsubph512_mask3:
+  case clang::X86::BI__builtin_ia32_vfmaddph512_mask3:
   case clang::X86::BI__builtin_ia32_vfmsubps512_mask3:
   case clang::X86::BI__builtin_ia32_vfmaddps512_mask3:
   case clang::X86::BI__builtin_ia32_vfmsubpd512_mask3:
   case clang::X86::BI__builtin_ia32_vfmaddpd512_mask3:
+  case clang::X86::BI__builtin_ia32_vfmsubaddph512_mask3:
+  case clang::X86::BI__builtin_ia32_vfmaddsubph512_mask3:
   case clang::X86::BI__builtin_ia32_vfmsubaddps512_mask3:
   case clang::X86::BI__builtin_ia32_vfmaddsubps512_mask3:
   case clang::X86::BI__builtin_ia32_vfmsubaddpd512_mask3:
@@ -12159,9 +12183,21 @@ static Value *EmitScalarFMAExpr(CodeGenFunction &CGF, const CallExpr *E,
   Ops[2] = CGF.Builder.CreateExtractElement(Ops[2], (uint64_t)0);
   Value *Res;
   if (Rnd != 4) {
-    Intrinsic::ID IID = Ops[0]->getType()->getPrimitiveSizeInBits() == 32 ?
-                        Intrinsic::x86_avx512_vfmadd_f32 :
-                        Intrinsic::x86_avx512_vfmadd_f64;
+    Intrinsic::ID IID;
+
+    switch (Ops[0]->getType()->getPrimitiveSizeInBits()) {
+    case 16:
+      IID = Intrinsic::x86_avx512fp16_vfmadd_f16;
+      break;
+    case 32:
+      IID = Intrinsic::x86_avx512_vfmadd_f32;
+      break;
+    case 64:
+      IID = Intrinsic::x86_avx512_vfmadd_f64;
+      break;
+    default:
+      llvm_unreachable("Unexpected size");
+    }
     Res = CGF.Builder.CreateCall(CGF.CGM.getIntrinsic(IID),
                                  {Ops[0], Ops[1], Ops[2], Ops[4]});
   } else if (CGF.Builder.getIsFPConstrained()) {
@@ -12764,6 +12800,7 @@ Value *CodeGenFunction::EmitX86BuiltinExpr(unsigned BuiltinID,
 
   case X86::BI__builtin_ia32_vfmaddss3:
   case X86::BI__builtin_ia32_vfmaddsd3:
+  case X86::BI__builtin_ia32_vfmaddsh3_mask:
   case X86::BI__builtin_ia32_vfmaddss3_mask:
   case X86::BI__builtin_ia32_vfmaddsd3_mask:
     return EmitScalarFMAExpr(*this, E, Ops, Ops[0]);
@@ -12771,20 +12808,28 @@ Value *CodeGenFunction::EmitX86BuiltinExpr(unsigned BuiltinID,
   case X86::BI__builtin_ia32_vfmaddsd:
     return EmitScalarFMAExpr(*this, E, Ops,
                              Constant::getNullValue(Ops[0]->getType()));
+  case X86::BI__builtin_ia32_vfmaddsh3_maskz:
   case X86::BI__builtin_ia32_vfmaddss3_maskz:
   case X86::BI__builtin_ia32_vfmaddsd3_maskz:
     return EmitScalarFMAExpr(*this, E, Ops, Ops[0], /*ZeroMask*/ true);
+  case X86::BI__builtin_ia32_vfmaddsh3_mask3:
   case X86::BI__builtin_ia32_vfmaddss3_mask3:
   case X86::BI__builtin_ia32_vfmaddsd3_mask3:
     return EmitScalarFMAExpr(*this, E, Ops, Ops[2], /*ZeroMask*/ false, 2);
+  case X86::BI__builtin_ia32_vfmsubsh3_mask3:
   case X86::BI__builtin_ia32_vfmsubss3_mask3:
   case X86::BI__builtin_ia32_vfmsubsd3_mask3:
     return EmitScalarFMAExpr(*this, E, Ops, Ops[2], /*ZeroMask*/ false, 2,
                              /*NegAcc*/ true);
+  case X86::BI__builtin_ia32_vfmaddph:
   case X86::BI__builtin_ia32_vfmaddps:
   case X86::BI__builtin_ia32_vfmaddpd:
+  case X86::BI__builtin_ia32_vfmaddph256:
   case X86::BI__builtin_ia32_vfmaddps256:
   case X86::BI__builtin_ia32_vfmaddpd256:
+  case X86::BI__builtin_ia32_vfmaddph512_mask:
+  case X86::BI__builtin_ia32_vfmaddph512_maskz:
+  case X86::BI__builtin_ia32_vfmaddph512_mask3:
   case X86::BI__builtin_ia32_vfmaddps512_mask:
   case X86::BI__builtin_ia32_vfmaddps512_maskz:
   case X86::BI__builtin_ia32_vfmaddps512_mask3:
@@ -12793,7 +12838,12 @@ Value *CodeGenFunction::EmitX86BuiltinExpr(unsigned BuiltinID,
   case X86::BI__builtin_ia32_vfmaddpd512_maskz:
   case X86::BI__builtin_ia32_vfmaddpd512_mask3:
   case X86::BI__builtin_ia32_vfmsubpd512_mask3:
+  case X86::BI__builtin_ia32_vfmsubph512_mask3:
     return EmitX86FMAExpr(*this, E, Ops, BuiltinID, /*IsAddSub*/ false);
+  case X86::BI__builtin_ia32_vfmaddsubph512_mask:
+  case X86::BI__builtin_ia32_vfmaddsubph512_maskz:
+  case X86::BI__builtin_ia32_vfmaddsubph512_mask3:
+  case X86::BI__builtin_ia32_vfmsubaddph512_mask3:
   case X86::BI__builtin_ia32_vfmaddsubps512_mask:
   case X86::BI__builtin_ia32_vfmaddsubps512_maskz:
   case X86::BI__builtin_ia32_vfmaddsubps512_mask3:

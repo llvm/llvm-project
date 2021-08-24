@@ -1934,6 +1934,8 @@ X86TargetLowering::X86TargetLowering(const X86TargetMachine &TM,
       setOperationAction(ISD::LOAD,               VT, Legal);
       setOperationAction(ISD::STORE,              VT, Legal);
 
+      setOperationAction(ISD::FMA,                VT, Legal);
+      setOperationAction(ISD::STRICT_FMA,         VT, Legal);
       setOperationAction(ISD::VSELECT,            VT, Legal);
       setOperationAction(ISD::BUILD_VECTOR,       VT, Custom);
       setOperationAction(ISD::SELECT,             VT, Custom);
@@ -32720,6 +32722,8 @@ bool X86TargetLowering::isFMAFasterThanFMulAndFAdd(const MachineFunction &MF,
     return false;
 
   switch (VT.getSimpleVT().SimpleTy) {
+  case MVT::f16:
+    return Subtarget.hasFP16();
   case MVT::f32:
   case MVT::f64:
     return true;
@@ -49021,7 +49025,9 @@ static SDValue combineFMA(SDNode *N, SelectionDAG &DAG,
   }
 
   EVT ScalarVT = VT.getScalarType();
-  if ((ScalarVT != MVT::f32 && ScalarVT != MVT::f64) || !Subtarget.hasAnyFMA())
+  if (((ScalarVT != MVT::f32 && ScalarVT != MVT::f64) ||
+       !Subtarget.hasAnyFMA()) &&
+      !(ScalarVT == MVT::f16 && Subtarget.hasFP16()))
     return SDValue();
 
   auto invertIfNegative = [&DAG, &TLI, &DCI](SDValue &V) {
