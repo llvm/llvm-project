@@ -3750,6 +3750,14 @@ TEST(MemorySanitizer, getgroups_negative) {
   ASSERT_EQ(-1, n);
 }
 
+TEST(MemorySanitizer, wordexp_empty) {
+  wordexp_t w;
+  int res = wordexp("", &w, 0);
+  ASSERT_EQ(0, res);
+  ASSERT_EQ(0U, w.we_wordc);
+  ASSERT_STREQ(nullptr, w.we_wordv[0]);
+}
+
 TEST(MemorySanitizer, wordexp) {
   wordexp_t w;
   int res = wordexp("a b c", &w, 0);
