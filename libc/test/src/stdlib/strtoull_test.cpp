@@ -12,6 +12,7 @@
 
 #include <errno.h>
 #include <limits.h>
+#include <stddef.h>
 
 TEST(LlvmLibcStrToULLTest, InvalidBase) {
   const char *ten = "10";
@@ -27,7 +28,7 @@ TEST(LlvmLibcStrToULLTest, CleanBaseTenDecode) {
   errno = 0;
   ASSERT_EQ(__llvm_libc::strtoull(ten, &str_end, 10), 10ull);
   ASSERT_EQ(errno, 0);
-  EXPECT_EQ(str_end - ten, 2l);
+  EXPECT_EQ(str_end - ten, ptrdiff_t(2));
   errno = 0;
   ASSERT_EQ(__llvm_libc::strtoull(ten, nullptr, 10), 10ull);
   ASSERT_EQ(errno, 0);
@@ -36,40 +37,40 @@ TEST(LlvmLibcStrToULLTest, CleanBaseTenDecode) {
   errno = 0;
   ASSERT_EQ(__llvm_libc::strtoull(hundred, &str_end, 10), 100ull);
   ASSERT_EQ(errno, 0);
-  EXPECT_EQ(str_end - hundred, 3l);
+  EXPECT_EQ(str_end - hundred, ptrdiff_t(3));
 
   const char *negative = "-100";
   errno = 0;
   ASSERT_EQ(__llvm_libc::strtoull(negative, &str_end, 10), -(100ull));
   ASSERT_EQ(errno, 0);
-  EXPECT_EQ(str_end - negative, 4l);
+  EXPECT_EQ(str_end - negative, ptrdiff_t(4));
 
   const char *big_number = "123456789012345";
   errno = 0;
   ASSERT_EQ(__llvm_libc::strtoull(big_number, &str_end, 10),
             123456789012345ull);
   ASSERT_EQ(errno, 0);
-  EXPECT_EQ(str_end - big_number, 15l);
+  EXPECT_EQ(str_end - big_number, ptrdiff_t(15));
 
   const char *unsigned_long_long_max_number = "18446744073709551615";
   errno = 0;
   ASSERT_EQ(__llvm_libc::strtoull(unsigned_long_long_max_number, &str_end, 10),
             18446744073709551615ull);
   ASSERT_EQ(errno, 0);
-  EXPECT_EQ(str_end - unsigned_long_long_max_number, 20l);
+  EXPECT_EQ(str_end - unsigned_long_long_max_number, ptrdiff_t(20));
 
   const char *too_big_number = "123456789012345678901";
   errno = 0;
   ASSERT_EQ(__llvm_libc::strtoull(too_big_number, &str_end, 10), ULLONG_MAX);
   ASSERT_EQ(errno, ERANGE);
-  EXPECT_EQ(str_end - too_big_number, 21l);
+  EXPECT_EQ(str_end - too_big_number, ptrdiff_t(21));
 
   const char *too_big_negative_number = "-123456789012345678901";
   errno = 0;
   ASSERT_EQ(__llvm_libc::strtoull(too_big_negative_number, &str_end, 10),
             ULLONG_MAX);
   ASSERT_EQ(errno, ERANGE);
-  EXPECT_EQ(str_end - too_big_negative_number, 22l);
+  EXPECT_EQ(str_end - too_big_negative_number, ptrdiff_t(22));
 
   const char *long_number_range_test =
       "10000000000000000000000000000000000000000000000000";
@@ -77,7 +78,7 @@ TEST(LlvmLibcStrToULLTest, CleanBaseTenDecode) {
   ASSERT_EQ(__llvm_libc::strtoull(long_number_range_test, &str_end, 10),
             ULLONG_MAX);
   ASSERT_EQ(errno, ERANGE);
-  EXPECT_EQ(str_end - long_number_range_test, 50l);
+  EXPECT_EQ(str_end - long_number_range_test, ptrdiff_t(50));
 }
 
 TEST(LlvmLibcStrToULLTest, MessyBaseTenDecode) {
@@ -87,61 +88,61 @@ TEST(LlvmLibcStrToULLTest, MessyBaseTenDecode) {
   errno = 0;
   ASSERT_EQ(__llvm_libc::strtoull(spaces_before, &str_end, 10), 10ull);
   ASSERT_EQ(errno, 0);
-  EXPECT_EQ(str_end - spaces_before, 7l);
+  EXPECT_EQ(str_end - spaces_before, ptrdiff_t(7));
 
   const char *spaces_after = "10      ";
   errno = 0;
   ASSERT_EQ(__llvm_libc::strtoull(spaces_after, &str_end, 10), 10ull);
   ASSERT_EQ(errno, 0);
-  EXPECT_EQ(str_end - spaces_after, 2l);
+  EXPECT_EQ(str_end - spaces_after, ptrdiff_t(2));
 
   const char *word_before = "word10";
   errno = 0;
   ASSERT_EQ(__llvm_libc::strtoull(word_before, &str_end, 10), 0ull);
   ASSERT_EQ(errno, 0);
-  EXPECT_EQ(str_end - word_before, 0l);
+  EXPECT_EQ(str_end - word_before, ptrdiff_t(0));
 
   const char *word_after = "10word";
   errno = 0;
   ASSERT_EQ(__llvm_libc::strtoull(word_after, &str_end, 10), 10ull);
   ASSERT_EQ(errno, 0);
-  EXPECT_EQ(str_end - word_after, 2l);
+  EXPECT_EQ(str_end - word_after, ptrdiff_t(2));
 
   const char *two_numbers = "10 999";
   errno = 0;
   ASSERT_EQ(__llvm_libc::strtoull(two_numbers, &str_end, 10), 10ull);
   ASSERT_EQ(errno, 0);
-  EXPECT_EQ(str_end - two_numbers, 2l);
+  EXPECT_EQ(str_end - two_numbers, ptrdiff_t(2));
 
   const char *two_signs = "--10 999";
   errno = 0;
   ASSERT_EQ(__llvm_libc::strtoull(two_signs, &str_end, 10), 0ull);
   ASSERT_EQ(errno, 0);
-  EXPECT_EQ(str_end - two_signs, 1l);
+  EXPECT_EQ(str_end - two_signs, ptrdiff_t(1));
 
   const char *sign_before = "+2=4";
   errno = 0;
   ASSERT_EQ(__llvm_libc::strtoull(sign_before, &str_end, 10), 2ull);
   ASSERT_EQ(errno, 0);
-  EXPECT_EQ(str_end - sign_before, 2l);
+  EXPECT_EQ(str_end - sign_before, ptrdiff_t(2));
 
   const char *sign_after = "2+2=4";
   errno = 0;
   ASSERT_EQ(__llvm_libc::strtoull(sign_after, &str_end, 10), 2ull);
   ASSERT_EQ(errno, 0);
-  EXPECT_EQ(str_end - sign_after, 1l);
+  EXPECT_EQ(str_end - sign_after, ptrdiff_t(1));
 
   const char *tab_before = "\t10";
   errno = 0;
   ASSERT_EQ(__llvm_libc::strtoull(tab_before, &str_end, 10), 10ull);
   ASSERT_EQ(errno, 0);
-  EXPECT_EQ(str_end - tab_before, 3l);
+  EXPECT_EQ(str_end - tab_before, ptrdiff_t(3));
 
   const char *all_together = "\t  -12345and+67890";
   errno = 0;
   ASSERT_EQ(__llvm_libc::strtoull(all_together, &str_end, 10), -(12345ull));
   ASSERT_EQ(errno, 0);
-  EXPECT_EQ(str_end - all_together, 9l);
+  EXPECT_EQ(str_end - all_together, ptrdiff_t(9));
 }
 
 static char int_to_b36_char(int input) {
@@ -255,13 +256,13 @@ TEST(LlvmLibcStrToULLTest, CleanBaseSixteenDecode) {
   errno = 0;
   ASSERT_EQ(__llvm_libc::strtoull(no_prefix, &str_end, 16), 0x123abcull);
   ASSERT_EQ(errno, 0);
-  EXPECT_EQ(str_end - no_prefix, 6l);
+  EXPECT_EQ(str_end - no_prefix, ptrdiff_t(6));
 
   const char *yes_prefix = "0x456def";
   errno = 0;
   ASSERT_EQ(__llvm_libc::strtoull(yes_prefix, &str_end, 16), 0x456defull);
   ASSERT_EQ(errno, 0);
-  EXPECT_EQ(str_end - yes_prefix, 8l);
+  EXPECT_EQ(str_end - yes_prefix, ptrdiff_t(8));
 }
 
 TEST(LlvmLibcStrToULLTest, AutomaticBaseSelection) {
@@ -271,25 +272,25 @@ TEST(LlvmLibcStrToULLTest, AutomaticBaseSelection) {
   errno = 0;
   ASSERT_EQ(__llvm_libc::strtoull(base_ten, &str_end, 0), 12345ull);
   ASSERT_EQ(errno, 0);
-  EXPECT_EQ(str_end - base_ten, 5l);
+  EXPECT_EQ(str_end - base_ten, ptrdiff_t(5));
 
   const char *base_sixteen_no_prefix = "123abc";
   errno = 0;
   ASSERT_EQ(__llvm_libc::strtoull(base_sixteen_no_prefix, &str_end, 0), 123ull);
   ASSERT_EQ(errno, 0);
-  EXPECT_EQ(str_end - base_sixteen_no_prefix, 3l);
+  EXPECT_EQ(str_end - base_sixteen_no_prefix, ptrdiff_t(3));
 
   const char *base_sixteen_with_prefix = "0x456def";
   errno = 0;
   ASSERT_EQ(__llvm_libc::strtoull(base_sixteen_with_prefix, &str_end, 0),
             0x456defull);
   ASSERT_EQ(errno, 0);
-  EXPECT_EQ(str_end - base_sixteen_with_prefix, 8l);
+  EXPECT_EQ(str_end - base_sixteen_with_prefix, ptrdiff_t(8));
 
   const char *base_eight_with_prefix = "012345";
   errno = 0;
   ASSERT_EQ(__llvm_libc::strtoull(base_eight_with_prefix, &str_end, 0),
             012345ull);
   ASSERT_EQ(errno, 0);
-  EXPECT_EQ(str_end - base_eight_with_prefix, 6l);
+  EXPECT_EQ(str_end - base_eight_with_prefix, ptrdiff_t(6));
 }
