@@ -5881,19 +5881,21 @@ def AcquireHandleDocs : Documentation {
 If this annotation is on a function or a function type it is assumed to return
 a new handle. In case this annotation is on an output parameter,
 the function is assumed to fill the corresponding argument with a new
-handle.
+handle. The attribute requires a string literal argument which used to
+identify the handle with later uses of ``use_handle`` or
+``release_handle``.
 
 .. code-block:: c++
 
   // Output arguments from Zircon.
   zx_status_t zx_socket_create(uint32_t options,
-                               zx_handle_t __attribute__((acquire_handle)) * out0,
-                               zx_handle_t* out1 [[clang::acquire_handle]]);
+                               zx_handle_t __attribute__((acquire_handle("zircon"))) * out0,
+                               zx_handle_t* out1 [[clang::acquire_handle("zircon")]]);
 
 
   // Returned handle.
-  [[clang::acquire_handle]] int open(const char *path, int oflag, ... );
-  int open(const char *path, int oflag, ... ) __attribute__((acquire_handle));
+  [[clang::acquire_handle("tag")]] int open(const char *path, int oflag, ... );
+  int open(const char *path, int oflag, ... ) __attribute__((acquire_handle("tag")));
   }];
 }
 
@@ -5901,12 +5903,13 @@ def UseHandleDocs : Documentation {
   let Category = HandleDocs;
   let Content = [{
 A function taking a handle by value might close the handle. If a function
-parameter is annotated with ``use_handle`` it is assumed to not to change
+parameter is annotated with ``use_handle(tag)`` it is assumed to not to change
 the state of the handle. It is also assumed to require an open handle to work with.
+The attribute requires a string literal argument to identify the handle being used.
 
 .. code-block:: c++
 
-  zx_status_t zx_port_wait(zx_handle_t handle [[clang::use_handle]],
+  zx_status_t zx_port_wait(zx_handle_t handle [[clang::use_handle("zircon")]],
                            zx_time_t deadline,
                            zx_port_packet_t* packet);
   }];
@@ -5915,12 +5918,13 @@ the state of the handle. It is also assumed to require an open handle to work wi
 def ReleaseHandleDocs : Documentation {
   let Category = HandleDocs;
   let Content = [{
-If a function parameter is annotated with ``release_handle`` it is assumed to
-close the handle. It is also assumed to require an open handle to work with.
+If a function parameter is annotated with ``release_handle(tag)`` it is assumed to
+close the handle. It is also assumed to require an open handle to work with. The
+attribute requires a string literal argument to identify the handle being released.
 
 .. code-block:: c++
 
-  zx_status_t zx_handle_close(zx_handle_t handle [[clang::release_handle]]);
+  zx_status_t zx_handle_close(zx_handle_t handle [[clang::release_handle("tag")]]);
   }];
 }
 

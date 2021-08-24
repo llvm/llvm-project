@@ -12566,18 +12566,15 @@ SDValue DAGCombiner::CombineConsecutiveLoads(SDNode *N, EVT VT) {
       LD1->getAddressSpace() != LD2->getAddressSpace())
     return SDValue();
 
+  bool LD1Fast = false;
   EVT LD1VT = LD1->getValueType(0);
   unsigned LD1Bytes = LD1VT.getStoreSize();
-  if (DAG.areNonVolatileConsecutiveLoads(LD2, LD1, LD1Bytes, 1)) {
-    Align Alignment = LD1->getAlign();
-    Align NewAlign = DAG.getDataLayout().getABITypeAlign(
-        VT.getTypeForEVT(*DAG.getContext()));
-
-    if (NewAlign <= Alignment &&
-        (!LegalOperations || TLI.isOperationLegal(ISD::LOAD, VT)))
-      return DAG.getLoad(VT, SDLoc(N), LD1->getChain(), LD1->getBasePtr(),
-                         LD1->getPointerInfo(), Alignment);
-  }
+  if ((!LegalOperations || TLI.isOperationLegal(ISD::LOAD, VT)) &&
+      DAG.areNonVolatileConsecutiveLoads(LD2, LD1, LD1Bytes, 1) &&
+      TLI.allowsMemoryAccess(*DAG.getContext(), DAG.getDataLayout(), VT,
+                             *LD1->getMemOperand(), &LD1Fast) && LD1Fast)
+    return DAG.getLoad(VT, SDLoc(N), LD1->getChain(), LD1->getBasePtr(),
+                       LD1->getPointerInfo(), LD1->getAlign());
 
   return SDValue();
 }
