@@ -125,7 +125,7 @@ Expr<Type<TypeCategory::Logical, KIND>> FoldIntrinsicFunction(
       name == "__builtin_ieee_support_underflow_control") {
     return Expr<T>{true};
   }
-  // TODO: btest, dot_product, eoshift, is_iostat_end,
+  // TODO: btest, dot_product, is_iostat_end,
   // is_iostat_eor, lge, lgt, lle, llt, logical, matmul, out_of_range,
   // parity, transfer
   return Expr<T>{std::move(funcRef)};
