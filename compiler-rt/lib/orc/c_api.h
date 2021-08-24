@@ -91,15 +91,13 @@ __orc_rt_CWrapperFunctionResultInit(__orc_rt_CWrapperFunctionResult *R) {
  * Create an __orc_rt_CWrapperFunctionResult with an uninitialized buffer of
  * size Size. The buffer is returned via the DataPtr argument.
  */
-static inline char *
-__orc_rt_CWrapperFunctionResultAllocate(__orc_rt_CWrapperFunctionResult *R,
-                                        size_t Size) {
-  R->Size = Size;
-  if (Size <= sizeof(R->Data.Value))
-    return R->Data.Value;
-
-  R->Data.ValuePtr = (char *)malloc(Size);
-  return R->Data.ValuePtr;
+static inline __orc_rt_CWrapperFunctionResult
+__orc_rt_CWrapperFunctionResultAllocate(size_t Size) {
+  __orc_rt_CWrapperFunctionResult R;
+  R.Size = Size;
+  if (Size > sizeof(R.Data.Value))
+    R.Data.ValuePtr = (char *)malloc(Size);
+  return R;
 }
 
 /**
@@ -163,8 +161,8 @@ __orc_rt_DisposeCWrapperFunctionResult(__orc_rt_CWrapperFunctionResult *R) {
  * Get a pointer to the data contained in the given
  * __orc_rt_CWrapperFunctionResult.
  */
-static inline const char *
-__orc_rt_CWrapperFunctionResultData(const __orc_rt_CWrapperFunctionResult *R) {
+static inline char *
+__orc_rt_CWrapperFunctionResultData(__orc_rt_CWrapperFunctionResult *R) {
   assert((R->Size != 0 || R->Data.ValuePtr == nullptr) &&
          "Cannot get data for out-of-band error value");
   return R->Size > sizeof(R->Data.Value) ? R->Data.ValuePtr : R->Data.Value;
