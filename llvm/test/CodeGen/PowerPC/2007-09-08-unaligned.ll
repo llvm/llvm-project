@@ -19,16 +19,16 @@ define i32 @foo() {
 ; CHECK-NEXT:    .cfi_def_cfa_offset 16
 ; CHECK-NEXT:    lis 3, s@ha
 ; CHECK-NEXT:    la 3, s@l(3)
-; CHECK-NEXT:    lfs 0, 1(3)
-; CHECK-NEXT:    lis 3, u@ha
-; CHECK-NEXT:    la 3, u@l(3)
-; CHECK-NEXT:    lfd 1, 1(3)
-; CHECK-NEXT:    lis 3, t@ha
-; CHECK-NEXT:    la 3, t@l(3)
-; CHECK-NEXT:    stfs 0, 1(3)
+; CHECK-NEXT:    lis 4, u@ha
+; CHECK-NEXT:    lwz 3, 1(3)
+; CHECK-NEXT:    la 4, u@l(4)
+; CHECK-NEXT:    lfd 0, 1(4)
+; CHECK-NEXT:    lis 4, t@ha
+; CHECK-NEXT:    la 4, t@l(4)
+; CHECK-NEXT:    stw 3, 1(4)
 ; CHECK-NEXT:    lis 3, v@ha
 ; CHECK-NEXT:    la 3, v@l(3)
-; CHECK-NEXT:    stfd 1, 1(3)
+; CHECK-NEXT:    stfd 0, 1(3)
 ; CHECK-NEXT:    lwz 3, 12(1)
 ; CHECK-NEXT:    addi 1, 1, 16
 ; CHECK-NEXT:    blr
