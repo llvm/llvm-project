@@ -194,7 +194,8 @@ AArch64LegalizerInfo::AArch64LegalizerInfo(const AArch64Subtarget &ST)
       .widenScalarToNextPow2(0);
 
   getActionDefinitionsBuilder({G_FADD, G_FSUB, G_FMUL, G_FDIV, G_FNEG})
-      .legalFor({s32, s64, v2s64, v4s32, v2s32})
+      .legalFor({MinFPScalar, s32, s64, v2s64, v4s32, v2s32})
+      .clampScalar(0, MinFPScalar, s64)
       .clampNumElements(0, v2s32, v4s32)
       .clampNumElements(0, v2s64, v2s64);
 
