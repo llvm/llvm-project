@@ -46,18 +46,18 @@ TEST(LlvmLibcStrToLTest, CleanBaseTenDecode) {
   ASSERT_EQ(errno, 0);
   EXPECT_EQ(str_end - negative, ptrdiff_t(4));
 
-  const char *big_number = "123456789012345";
+  const char *big_number = "1234567890";
   errno = 0;
-  ASSERT_EQ(__llvm_libc::strtol(big_number, &str_end, 10), 123456789012345l);
+  ASSERT_EQ(__llvm_libc::strtol(big_number, &str_end, 10), 1234567890l);
   ASSERT_EQ(errno, 0);
-  EXPECT_EQ(str_end - big_number, ptrdiff_t(15));
+  EXPECT_EQ(str_end - big_number, ptrdiff_t(10));
 
-  const char *big_negative_number = "-123456789012345";
+  const char *big_negative_number = "-1234567890";
   errno = 0;
   ASSERT_EQ(__llvm_libc::strtol(big_negative_number, &str_end, 10),
-            -123456789012345l);
+            -1234567890l);
   ASSERT_EQ(errno, 0);
-  EXPECT_EQ(str_end - big_negative_number, ptrdiff_t(16));
+  EXPECT_EQ(str_end - big_negative_number, ptrdiff_t(11));
 
   const char *too_big_number = "123456789012345678901";
   errno = 0;
@@ -155,7 +155,7 @@ static char int_to_b36_char(int input) {
 
 TEST(LlvmLibcStrToLTest, DecodeInOtherBases) {
   char small_string[4] = {'\0', '\0', '\0', '\0'};
-  for (unsigned int base = 2; base <= 36; ++base) {
+  for (long base = 2; base <= 36; ++base) {
     for (long first_digit = 0; first_digit <= 36; ++first_digit) {
       small_string[0] = int_to_b36_char(first_digit);
       if (first_digit < base) {
@@ -171,7 +171,7 @@ TEST(LlvmLibcStrToLTest, DecodeInOtherBases) {
     }
   }
 
-  for (unsigned int base = 2; base <= 36; ++base) {
+  for (long base = 2; base <= 36; ++base) {
     for (long first_digit = 0; first_digit <= 36; ++first_digit) {
       small_string[0] = int_to_b36_char(first_digit);
       for (long second_digit = 0; second_digit <= 36; ++second_digit) {
@@ -195,7 +195,7 @@ TEST(LlvmLibcStrToLTest, DecodeInOtherBases) {
     }
   }
 
-  for (unsigned int base = 2; base <= 36; ++base) {
+  for (long base = 2; base <= 36; ++base) {
     for (long first_digit = 0; first_digit <= 36; ++first_digit) {
       small_string[0] = int_to_b36_char(first_digit);
       for (long second_digit = 0; second_digit <= 36; ++second_digit) {

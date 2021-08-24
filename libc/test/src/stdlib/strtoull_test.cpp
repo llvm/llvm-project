@@ -155,7 +155,7 @@ static char int_to_b36_char(int input) {
 
 TEST(LlvmLibcStrToULLTest, DecodeInOtherBases) {
   char small_string[4] = {'\0', '\0', '\0', '\0'};
-  for (unsigned int base = 2; base <= 36; ++base) {
+  for (unsigned long long base = 2; base <= 36; ++base) {
     for (unsigned long long first_digit = 0; first_digit <= 36; ++first_digit) {
       small_string[0] = int_to_b36_char(first_digit);
       if (first_digit < base) {
@@ -171,7 +171,7 @@ TEST(LlvmLibcStrToULLTest, DecodeInOtherBases) {
     }
   }
 
-  for (unsigned int base = 2; base <= 36; ++base) {
+  for (unsigned long long base = 2; base <= 36; ++base) {
     for (unsigned long long first_digit = 0; first_digit <= 36; ++first_digit) {
       small_string[0] = int_to_b36_char(first_digit);
       for (unsigned long long second_digit = 0; second_digit <= 36;
@@ -196,7 +196,7 @@ TEST(LlvmLibcStrToULLTest, DecodeInOtherBases) {
     }
   }
 
-  for (unsigned int base = 2; base <= 36; ++base) {
+  for (unsigned long long base = 2; base <= 36; ++base) {
     for (unsigned long long first_digit = 0; first_digit <= 36; ++first_digit) {
       small_string[0] = int_to_b36_char(first_digit);
       for (unsigned long long second_digit = 0; second_digit <= 36;
