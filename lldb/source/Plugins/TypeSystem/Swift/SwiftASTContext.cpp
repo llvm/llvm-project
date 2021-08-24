@@ -3429,7 +3429,8 @@ swift::ASTContext *SwiftASTContext::GetASTContext() {
   // 1. Create and install the memory buffer serialized module loader.
   std::unique_ptr<swift::ModuleLoader> memory_buffer_loader_ap(
       swift::MemoryBufferSerializedModuleLoader::create(
-          *m_ast_context_ap, m_dependency_tracker.get(), loading_mode));
+          *m_ast_context_ap, m_dependency_tracker.get(), loading_mode,
+          /*IgnoreSwiftSourceInfo*/ false, /*BypassResilience*/ true));
   if (memory_buffer_loader_ap) {
     m_memory_buffer_module_loader =
         static_cast<swift::MemoryBufferSerializedModuleLoader *>(
