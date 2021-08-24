@@ -17,6 +17,9 @@
 #include "llvm/ADT/DenseMap.h"
 #include <memory>
 
+namespace cir {
+class CIRContext;
+} // namespace cir
 namespace clang {
 
 class BlockExpr;
@@ -25,16 +28,16 @@ class FunctionDecl;
 class ObjCMethodDecl;
 class QualType;
 class Sema;
-namespace sema {
-  class FunctionScopeInfo;
-}
 
 namespace sema {
+
+class FunctionScopeInfo;
 
 class CIRBasedWarnings {
 private:
   Sema &S;
   AnalysisBasedWarnings::Policy DefaultPolicy;
+  std::unique_ptr<cir::CIRContext> CIRCtx;
 
   //class InterProceduralData;
   //std::unique_ptr<InterProceduralData> IPData;

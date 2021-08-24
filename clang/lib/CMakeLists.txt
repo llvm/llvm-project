@@ -32,6 +32,6 @@ endif()
 add_subdirectory(Interpreter)
 add_subdirectory(Support)
 
-if(CLANG_ENABLE_CIR)
+#if(CLANG_ENABLE_CIR)
   add_subdirectory(CIR)
-endif()
+#endif()
