@@ -2801,6 +2801,8 @@ public:
     }
   }
 
+  // Always return eKeyHandled to absorb all events since forms are always
+  // added as pop-ups that should take full control until canceled or submitted.
   HandleCharResult WindowDelegateHandleChar(Window &window, int key) override {
     switch (key) {
     case '\r':
@@ -2815,9 +2817,11 @@ public:
       ExecuteAction(window, 0);
       return eKeyHandled;
     case '\t':
-      return SelectNext(key);
+      SelectNext(key);
+      return eKeyHandled;
     case KEY_SHIFT_TAB:
-      return SelectPrevious(key);
+      SelectPrevious(key);
+      return eKeyHandled;
     case KEY_ESCAPE:
       window.GetParent()->RemoveSubWindow(&window);
       return eKeyHandled;
@@ -2829,10 +2833,24 @@ public:
     // to that field.
     if (m_selection_type == SelectionType::Field) {
       FieldDelegate *field = m_delegate_sp->GetField(m_selection_index);
-      return field->FieldDelegateHandleChar(key);
+      if (field->FieldDelegateHandleChar(key) == eKeyHandled)
+        return eKeyHandled;
     }
 
-    return eKeyNotHandled;
+    // If the key wasn't handled by the possibly selected field, handle some
+    // extra keys for navigation.
+    switch (key) {
+    case KEY_DOWN:
+      SelectNext(key);
+      return eKeyHandled;
+    case KEY_UP:
+      SelectPrevious(key);
+      return eKeyHandled;
+    default:
+      break;
+    }
+
+    return eKeyHandled;
   }
 
 protected:
