@@ -174,13 +174,11 @@ body: |
     ; GFX8-LABEL: name: test_sextload_global_i31_i8
     ; GFX8: [[COPY:%[0-9]+]]:_(p1) = COPY $vgpr0_vgpr1
     ; GFX8: [[SEXTLOAD:%[0-9]+]]:_(s32) = G_SEXTLOAD [[COPY]](p1) :: (load (s8), addrspace 1)
-    ; GFX8: [[COPY1:%[0-9]+]]:_(s32) = COPY [[SEXTLOAD]](s32)
-    ; GFX8: $vgpr0 = COPY [[COPY1]](s32)
+    ; GFX8: $vgpr0 = COPY [[SEXTLOAD]](s32)
     ; GFX6-LABEL: name: test_sextload_global_i31_i8
     ; GFX6: [[COPY:%[0-9]+]]:_(p1) = COPY $vgpr0_vgpr1
     ; GFX6: [[SEXTLOAD:%[0-9]+]]:_(s32) = G_SEXTLOAD [[COPY]](p1) :: (load (s8), addrspace 1)
-    ; GFX6: [[COPY1:%[0-9]+]]:_(s32) = COPY [[SEXTLOAD]](s32)
-    ; GFX6: $vgpr0 = COPY [[COPY1]](s32)
+    ; GFX6: $vgpr0 = COPY [[SEXTLOAD]](s32)
     %0:_(p1) = COPY $vgpr0_vgpr1
     %1:_(s31) = G_SEXTLOAD %0 :: (load (s8), addrspace 1)
     %2:_(s32) = G_ANYEXT %1

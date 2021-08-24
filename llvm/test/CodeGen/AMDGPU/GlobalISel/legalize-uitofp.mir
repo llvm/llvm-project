@@ -144,8 +144,7 @@ body: |
     ; GFX6-LABEL: name: test_uitofp_s16_to_s16
     ; GFX6: [[COPY:%[0-9]+]]:_(s32) = COPY $vgpr0
     ; GFX6: [[C:%[0-9]+]]:_(s32) = G_CONSTANT i32 65535
-    ; GFX6: [[COPY1:%[0-9]+]]:_(s32) = COPY [[COPY]](s32)
-    ; GFX6: [[AND:%[0-9]+]]:_(s32) = G_AND [[COPY1]], [[C]]
+    ; GFX6: [[AND:%[0-9]+]]:_(s32) = G_AND [[COPY]], [[C]]
     ; GFX6: [[UITOFP:%[0-9]+]]:_(s16) = G_UITOFP [[AND]](s32)
     ; GFX6: [[ANYEXT:%[0-9]+]]:_(s32) = G_ANYEXT [[UITOFP]](s16)
     ; GFX6: $vgpr0 = COPY [[ANYEXT]](s32)
@@ -171,15 +170,13 @@ body: |
     ; GFX6-LABEL: name: test_uitofp_s16_to_s32
     ; GFX6: [[COPY:%[0-9]+]]:_(s32) = COPY $vgpr0
     ; GFX6: [[C:%[0-9]+]]:_(s32) = G_CONSTANT i32 65535
-    ; GFX6: [[COPY1:%[0-9]+]]:_(s32) = COPY [[COPY]](s32)
-    ; GFX6: [[AND:%[0-9]+]]:_(s32) = G_AND [[COPY1]], [[C]]
+    ; GFX6: [[AND:%[0-9]+]]:_(s32) = G_AND [[COPY]], [[C]]
     ; GFX6: [[UITOFP:%[0-9]+]]:_(s32) = G_UITOFP [[AND]](s32)
     ; GFX6: $vgpr0 = COPY [[UITOFP]](s32)
     ; GFX8-LABEL: name: test_uitofp_s16_to_s32
     ; GFX8: [[COPY:%[0-9]+]]:_(s32) = COPY $vgpr0
     ; GFX8: [[C:%[0-9]+]]:_(s32) = G_CONSTANT i32 65535
-    ; GFX8: [[COPY1:%[0-9]+]]:_(s32) = COPY [[COPY]](s32)
-    ; GFX8: [[AND:%[0-9]+]]:_(s32) = G_AND [[COPY1]], [[C]]
+    ; GFX8: [[AND:%[0-9]+]]:_(s32) = G_AND [[COPY]], [[C]]
     ; GFX8: [[UITOFP:%[0-9]+]]:_(s32) = G_UITOFP [[AND]](s32)
     ; GFX8: $vgpr0 = COPY [[UITOFP]](s32)
     %0:_(s32) = COPY $vgpr0
@@ -197,15 +194,13 @@ body: |
     ; GFX6-LABEL: name: test_uitofp_s16_to_s64
     ; GFX6: [[COPY:%[0-9]+]]:_(s32) = COPY $vgpr0
     ; GFX6: [[C:%[0-9]+]]:_(s32) = G_CONSTANT i32 65535
-    ; GFX6: [[COPY1:%[0-9]+]]:_(s32) = COPY [[COPY]](s32)
-    ; GFX6: [[AND:%[0-9]+]]:_(s32) = G_AND [[COPY1]], [[C]]
+    ; GFX6: [[AND:%[0-9]+]]:_(s32) = G_AND [[COPY]], [[C]]
     ; GFX6: [[UITOFP:%[0-9]+]]:_(s64) = G_UITOFP [[AND]](s32)
     ; GFX6: $vgpr0_vgpr1 = COPY [[UITOFP]](s64)
     ; GFX8-LABEL: name: test_uitofp_s16_to_s64
     ; GFX8: [[COPY:%[0-9]+]]:_(s32) = COPY $vgpr0
     ; GFX8: [[C:%[0-9]+]]:_(s32) = G_CONSTANT i32 65535
-    ; GFX8: [[COPY1:%[0-9]+]]:_(s32) = COPY [[COPY]](s32)
-    ; GFX8: [[AND:%[0-9]+]]:_(s32) = G_AND [[COPY1]], [[C]]
+    ; GFX8: [[AND:%[0-9]+]]:_(s32) = G_AND [[COPY]], [[C]]
     ; GFX8: [[UITOFP:%[0-9]+]]:_(s64) = G_UITOFP [[AND]](s32)
     ; GFX8: $vgpr0_vgpr1 = COPY [[UITOFP]](s64)
     %0:_(s32) = COPY $vgpr0
@@ -223,16 +218,14 @@ body: |
     ; GFX6-LABEL: name: test_uitofp_s8_to_s16
     ; GFX6: [[COPY:%[0-9]+]]:_(s32) = COPY $vgpr0
     ; GFX6: [[C:%[0-9]+]]:_(s32) = G_CONSTANT i32 255
-    ; GFX6: [[COPY1:%[0-9]+]]:_(s32) = COPY [[COPY]](s32)
-    ; GFX6: [[AND:%[0-9]+]]:_(s32) = G_AND [[COPY1]], [[C]]
+    ; GFX6: [[AND:%[0-9]+]]:_(s32) = G_AND [[COPY]], [[C]]
     ; GFX6: [[UITOFP:%[0-9]+]]:_(s16) = G_UITOFP [[AND]](s32)
     ; GFX6: [[ANYEXT:%[0-9]+]]:_(s32) = G_ANYEXT [[UITOFP]](s16)
     ; GFX6: $vgpr0 = COPY [[ANYEXT]](s32)
     ; GFX8-LABEL: name: test_uitofp_s8_to_s16
     ; GFX8: [[COPY:%[0-9]+]]:_(s32) = COPY $vgpr0
     ; GFX8: [[C:%[0-9]+]]:_(s32) = G_CONSTANT i32 255
-    ; GFX8: [[COPY1:%[0-9]+]]:_(s32) = COPY [[COPY]](s32)
-    ; GFX8: [[AND:%[0-9]+]]:_(s32) = G_AND [[COPY1]], [[C]]
+    ; GFX8: [[AND:%[0-9]+]]:_(s32) = G_AND [[COPY]], [[C]]
     ; GFX8: [[UITOFP:%[0-9]+]]:_(s16) = G_UITOFP [[AND]](s32)
     ; GFX8: [[ANYEXT:%[0-9]+]]:_(s32) = G_ANYEXT [[UITOFP]](s16)
     ; GFX8: $vgpr0 = COPY [[ANYEXT]](s32)
@@ -252,15 +245,13 @@ body: |
     ; GFX6-LABEL: name: test_uitofp_s8_to_s32
     ; GFX6: [[COPY:%[0-9]+]]:_(s32) = COPY $vgpr0
     ; GFX6: [[C:%[0-9]+]]:_(s32) = G_CONSTANT i32 255
-    ; GFX6: [[COPY1:%[0-9]+]]:_(s32) = COPY [[COPY]](s32)
-    ; GFX6: [[AND:%[0-9]+]]:_(s32) = G_AND [[COPY1]], [[C]]
+    ; GFX6: [[AND:%[0-9]+]]:_(s32) = G_AND [[COPY]], [[C]]
     ; GFX6: [[UITOFP:%[0-9]+]]:_(s32) = G_UITOFP [[AND]](s32)
     ; GFX6: $vgpr0 = COPY [[UITOFP]](s32)
     ; GFX8-LABEL: name: test_uitofp_s8_to_s32
     ; GFX8: [[COPY:%[0-9]+]]:_(s32) = COPY $vgpr0
     ; GFX8: [[C:%[0-9]+]]:_(s32) = G_CONSTANT i32 255
-    ; GFX8: [[COPY1:%[0-9]+]]:_(s32) = COPY [[COPY]](s32)
-    ; GFX8: [[AND:%[0-9]+]]:_(s32) = G_AND [[COPY1]], [[C]]
+    ; GFX8: [[AND:%[0-9]+]]:_(s32) = G_AND [[COPY]], [[C]]
     ; GFX8: [[UITOFP:%[0-9]+]]:_(s32) = G_UITOFP [[AND]](s32)
     ; GFX8: $vgpr0 = COPY [[UITOFP]](s32)
     %0:_(s32) = COPY $vgpr0
@@ -278,15 +269,13 @@ body: |
     ; GFX6-LABEL: name: test_uitofp_s8_to_s64
     ; GFX6: [[COPY:%[0-9]+]]:_(s32) = COPY $vgpr0
     ; GFX6: [[C:%[0-9]+]]:_(s32) = G_CONSTANT i32 255
-    ; GFX6: [[COPY1:%[0-9]+]]:_(s32) = COPY [[COPY]](s32)
-    ; GFX6: [[AND:%[0-9]+]]:_(s32) = G_AND [[COPY1]], [[C]]
+    ; GFX6: [[AND:%[0-9]+]]:_(s32) = G_AND [[COPY]], [[C]]
     ; GFX6: [[UITOFP:%[0-9]+]]:_(s64) = G_UITOFP [[AND]](s32)
     ; GFX6: $vgpr0_vgpr1 = COPY [[UITOFP]](s64)
     ; GFX8-LABEL: name: test_uitofp_s8_to_s64
     ; GFX8: [[COPY:%[0-9]+]]:_(s32) = COPY $vgpr0
     ; GFX8: [[C:%[0-9]+]]:_(s32) = G_CONSTANT i32 255
-    ; GFX8: [[COPY1:%[0-9]+]]:_(s32) = COPY [[COPY]](s32)
-    ; GFX8: [[AND:%[0-9]+]]:_(s32) = G_AND [[COPY1]], [[C]]
+    ; GFX8: [[AND:%[0-9]+]]:_(s32) = G_AND [[COPY]], [[C]]
     ; GFX8: [[UITOFP:%[0-9]+]]:_(s64) = G_UITOFP [[AND]](s32)
     ; GFX8: $vgpr0_vgpr1 = COPY [[UITOFP]](s64)
     %0:_(s32) = COPY $vgpr0
@@ -385,8 +374,7 @@ body: |
     ; GFX6-LABEL: name: test_uitofp_s33_to_s32
     ; GFX6: [[COPY:%[0-9]+]]:_(s64) = COPY $vgpr0_vgpr1
     ; GFX6: [[C:%[0-9]+]]:_(s64) = G_CONSTANT i64 8589934591
-    ; GFX6: [[COPY1:%[0-9]+]]:_(s64) = COPY [[COPY]](s64)
-    ; GFX6: [[AND:%[0-9]+]]:_(s64) = G_AND [[COPY1]], [[C]]
+    ; GFX6: [[AND:%[0-9]+]]:_(s64) = G_AND [[COPY]], [[C]]
     ; GFX6: [[UV:%[0-9]+]]:_(s32), [[UV1:%[0-9]+]]:_(s32) = G_UNMERGE_VALUES [[AND]](s64)
     ; GFX6: [[C1:%[0-9]+]]:_(s32) = G_CONSTANT i32 32
     ; GFX6: [[C2:%[0-9]+]]:_(s32) = G_CONSTANT i32 1
@@ -403,8 +391,7 @@ body: |
     ; GFX8-LABEL: name: test_uitofp_s33_to_s32
     ; GFX8: [[COPY:%[0-9]+]]:_(s64) = COPY $vgpr0_vgpr1
     ; GFX8: [[C:%[0-9]+]]:_(s64) = G_CONSTANT i64 8589934591
-    ; GFX8: [[COPY1:%[0-9]+]]:_(s64) = COPY [[COPY]](s64)
-    ; GFX8: [[AND:%[0-9]+]]:_(s64) = G_AND [[COPY1]], [[C]]
+    ; GFX8: [[AND:%[0-9]+]]:_(s64) = G_AND [[COPY]], [[C]]
     ; GFX8: [[UV:%[0-9]+]]:_(s32), [[UV1:%[0-9]+]]:_(s32) = G_UNMERGE_VALUES [[AND]](s64)
     ; GFX8: [[C1:%[0-9]+]]:_(s32) = G_CONSTANT i32 32
     ; GFX8: [[C2:%[0-9]+]]:_(s32) = G_CONSTANT i32 1

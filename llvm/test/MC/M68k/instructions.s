@@ -46,3 +46,7 @@ ror.l #8, %d1
 nop
 ; CHECK: rts
 rts
+; CHECK: movem.l %d0-%d6/%a0, (%sp)
+movem.l %d0-%d6/%a0, (%sp)
+; CHECK: movem.l (10,%sp), %d0-%d6/%a0
+movem.l (10,%sp), %d0-%d6/%a0

@@ -27,10 +27,8 @@ body: |
 
     ; CHECK-LABEL: name: test_freeze_s7
     ; CHECK: [[COPY:%[0-9]+]]:_(s32) = COPY $vgpr0
-    ; CHECK: [[COPY1:%[0-9]+]]:_(s32) = COPY [[COPY]](s32)
-    ; CHECK: [[FREEZE:%[0-9]+]]:_(s32) = G_FREEZE [[COPY1]]
-    ; CHECK: [[COPY2:%[0-9]+]]:_(s32) = COPY [[FREEZE]](s32)
-    ; CHECK: $vgpr0 = COPY [[COPY2]](s32)
+    ; CHECK: [[FREEZE:%[0-9]+]]:_(s32) = G_FREEZE [[COPY]]
+    ; CHECK: $vgpr0 = COPY [[FREEZE]](s32)
     %0:_(s32) = COPY $vgpr0
     %1:_(s7) = G_TRUNC %0
     %2:_(s7) = G_FREEZE %1
@@ -45,10 +43,8 @@ body: |
 
     ; CHECK-LABEL: name: test_freeze_s8
     ; CHECK: [[COPY:%[0-9]+]]:_(s32) = COPY $vgpr0
-    ; CHECK: [[COPY1:%[0-9]+]]:_(s32) = COPY [[COPY]](s32)
-    ; CHECK: [[FREEZE:%[0-9]+]]:_(s32) = G_FREEZE [[COPY1]]
-    ; CHECK: [[COPY2:%[0-9]+]]:_(s32) = COPY [[FREEZE]](s32)
-    ; CHECK: $vgpr0 = COPY [[COPY2]](s32)
+    ; CHECK: [[FREEZE:%[0-9]+]]:_(s32) = G_FREEZE [[COPY]]
+    ; CHECK: $vgpr0 = COPY [[FREEZE]](s32)
     %0:_(s32) = COPY $vgpr0
     %1:_(s8) = G_TRUNC %0
     %2:_(s8) = G_FREEZE %1
@@ -95,10 +91,8 @@ body: |
 
     ; CHECK-LABEL: name: test_freeze_s48
     ; CHECK: [[COPY:%[0-9]+]]:_(s64) = COPY $vgpr0_vgpr1
-    ; CHECK: [[COPY1:%[0-9]+]]:_(s64) = COPY [[COPY]](s64)
-    ; CHECK: [[FREEZE:%[0-9]+]]:_(s64) = G_FREEZE [[COPY1]]
-    ; CHECK: [[COPY2:%[0-9]+]]:_(s64) = COPY [[FREEZE]](s64)
-    ; CHECK: $vgpr0_vgpr1 = COPY [[COPY2]](s64)
+    ; CHECK: [[FREEZE:%[0-9]+]]:_(s64) = G_FREEZE [[COPY]]
+    ; CHECK: $vgpr0_vgpr1 = COPY [[FREEZE]](s64)
     %0:_(s64) = COPY $vgpr0_vgpr1
     %1:_(s48) = G_TRUNC %0
     %2:_(s48) = G_FREEZE %1
@@ -474,12 +468,9 @@ body: |
     ; CHECK: [[ICMP1:%[0-9]+]]:_(s1) = G_ICMP intpred(ne), [[UV1]](s32), [[UV3]]
     ; CHECK: [[ANYEXT:%[0-9]+]]:_(s32) = G_ANYEXT [[ICMP]](s1)
     ; CHECK: [[ANYEXT1:%[0-9]+]]:_(s32) = G_ANYEXT [[ICMP1]](s1)
-    ; CHECK: [[COPY2:%[0-9]+]]:_(s32) = COPY [[ANYEXT]](s32)
-    ; CHECK: [[COPY3:%[0-9]+]]:_(s32) = COPY [[ANYEXT1]](s32)
-    ; CHECK: [[BUILD_VECTOR:%[0-9]+]]:_(<2 x s32>) = G_BUILD_VECTOR [[COPY2]](s32), [[COPY3]](s32)
+    ; CHECK: [[BUILD_VECTOR:%[0-9]+]]:_(<2 x s32>) = G_BUILD_VECTOR [[ANYEXT]](s32), [[ANYEXT1]](s32)
     ; CHECK: [[FREEZE:%[0-9]+]]:_(<2 x s32>) = G_FREEZE [[BUILD_VECTOR]]
-    ; CHECK: [[COPY4:%[0-9]+]]:_(<2 x s32>) = COPY [[FREEZE]](<2 x s32>)
-    ; CHECK: $vgpr0_vgpr1 = COPY [[COPY4]](<2 x s32>)
+    ; CHECK: $vgpr0_vgpr1 = COPY [[FREEZE]](<2 x s32>)
     %0:_(<2 x s32>) = COPY $vgpr0_vgpr1
     %1:_(<2 x s32>) = COPY $vgpr2_vgpr3
     %2:_(<2 x s1>) = G_ICMP intpred(ne), %0, %1
@@ -505,13 +496,9 @@ body: |
     ; CHECK: [[ANYEXT:%[0-9]+]]:_(s32) = G_ANYEXT [[ICMP]](s1)
     ; CHECK: [[ANYEXT1:%[0-9]+]]:_(s32) = G_ANYEXT [[ICMP1]](s1)
     ; CHECK: [[ANYEXT2:%[0-9]+]]:_(s32) = G_ANYEXT [[ICMP2]](s1)
-    ; CHECK: [[COPY2:%[0-9]+]]:_(s32) = COPY [[ANYEXT]](s32)
-    ; CHECK: [[COPY3:%[0-9]+]]:_(s32) = COPY [[ANYEXT1]](s32)
-    ; CHECK: [[COPY4:%[0-9]+]]:_(s32) = COPY [[ANYEXT2]](s32)
-    ; CHECK: [[BUILD_VECTOR:%[0-9]+]]:_(<3 x s32>) = G_BUILD_VECTOR [[COPY2]](s32), [[COPY3]](s32), [[COPY4]](s32)
+    ; CHECK: [[BUILD_VECTOR:%[0-9]+]]:_(<3 x s32>) = G_BUILD_VECTOR [[ANYEXT]](s32), [[ANYEXT1]](s32), [[ANYEXT2]](s32)
     ; CHECK: [[FREEZE:%[0-9]+]]:_(<3 x s32>) = G_FREEZE [[BUILD_VECTOR]]
-    ; CHECK: [[COPY5:%[0-9]+]]:_(<3 x s32>) = COPY [[FREEZE]](<3 x s32>)
-    ; CHECK: $vgpr0_vgpr1_vgpr2 = COPY [[COPY5]](<3 x s32>)
+    ; CHECK: $vgpr0_vgpr1_vgpr2 = COPY [[FREEZE]](<3 x s32>)
     %0:_(<3 x s32>) = COPY $vgpr0_vgpr1_vgpr2
     %1:_(<3 x s32>) = COPY $vgpr3_vgpr4_vgpr5
     %2:_(<3 x s1>) = G_ICMP intpred(ne), %0, %1
@@ -527,10 +514,8 @@ body: |
 
     ; CHECK-LABEL: name: test_freeze_v2s8
     ; CHECK: [[COPY:%[0-9]+]]:_(<2 x s32>) = COPY $vgpr0_vgpr1
-    ; CHECK: [[COPY1:%[0-9]+]]:_(<2 x s32>) = COPY [[COPY]](<2 x s32>)
-    ; CHECK: [[FREEZE:%[0-9]+]]:_(<2 x s32>) = G_FREEZE [[COPY1]]
-    ; CHECK: [[COPY2:%[0-9]+]]:_(<2 x s32>) = COPY [[FREEZE]](<2 x s32>)
-    ; CHECK: $vgpr0_vgpr1 = COPY [[COPY2]](<2 x s32>)
+    ; CHECK: [[FREEZE:%[0-9]+]]:_(<2 x s32>) = G_FREEZE [[COPY]]
+    ; CHECK: $vgpr0_vgpr1 = COPY [[FREEZE]](<2 x s32>)
     %0:_(<2 x s32>) = COPY $vgpr0_vgpr1
     %1:_(<2 x s8>) = G_TRUNC %0
     %2:_(<2 x s8>) = G_FREEZE %1
@@ -601,10 +586,7 @@ body: |
     ; CHECK: [[LSHR:%[0-9]+]]:_(s32) = G_LSHR [[BITCAST]], [[C]](s32)
     ; CHECK: [[BITCAST1:%[0-9]+]]:_(s32) = G_BITCAST [[UV6]](<2 x s16>)
     ; CHECK: [[LSHR1:%[0-9]+]]:_(s32) = G_LSHR [[BITCAST1]], [[C]](s32)
-    ; CHECK: [[COPY1:%[0-9]+]]:_(s32) = COPY [[BITCAST]](s32)
-    ; CHECK: [[COPY2:%[0-9]+]]:_(s32) = COPY [[LSHR]](s32)
-    ; CHECK: [[COPY3:%[0-9]+]]:_(s32) = COPY [[BITCAST1]](s32)
-    ; CHECK: [[BUILD_VECTOR2:%[0-9]+]]:_(<3 x s32>) = G_BUILD_VECTOR [[COPY1]](s32), [[COPY2]](s32), [[COPY3]](s32)
+    ; CHECK: [[BUILD_VECTOR2:%[0-9]+]]:_(<3 x s32>) = G_BUILD_VECTOR [[BITCAST]](s32), [[LSHR]](s32), [[BITCAST1]](s32)
     ; CHECK: $vgpr0_vgpr1_vgpr2 = COPY [[BUILD_VECTOR2]](<3 x s32>)
     %0:_(<3 x s32>) = COPY $vgpr0_vgpr1_vgpr2
     %1:_(<3 x s16>) = G_TRUNC %0
@@ -656,12 +638,7 @@ body: |
     ; CHECK: [[LSHR1:%[0-9]+]]:_(s32) = G_LSHR [[BITCAST1]], [[C]](s32)
     ; CHECK: [[BITCAST2:%[0-9]+]]:_(s32) = G_BITCAST [[UV9]](<2 x s16>)
     ; CHECK: [[LSHR2:%[0-9]+]]:_(s32) = G_LSHR [[BITCAST2]], [[C]](s32)
-    ; CHECK: [[COPY1:%[0-9]+]]:_(s32) = COPY [[BITCAST]](s32)
-    ; CHECK: [[COPY2:%[0-9]+]]:_(s32) = COPY [[LSHR]](s32)
-    ; CHECK: [[COPY3:%[0-9]+]]:_(s32) = COPY [[BITCAST1]](s32)
-    ; CHECK: [[COPY4:%[0-9]+]]:_(s32) = COPY [[LSHR1]](s32)
-    ; CHECK: [[COPY5:%[0-9]+]]:_(s32) = COPY [[BITCAST2]](s32)
-    ; CHECK: [[BUILD_VECTOR3:%[0-9]+]]:_(<5 x s32>) = G_BUILD_VECTOR [[COPY1]](s32), [[COPY2]](s32), [[COPY3]](s32), [[COPY4]](s32), [[COPY5]](s32)
+    ; CHECK: [[BUILD_VECTOR3:%[0-9]+]]:_(<5 x s32>) = G_BUILD_VECTOR [[BITCAST]](s32), [[LSHR]](s32), [[BITCAST1]](s32), [[LSHR1]](s32), [[BITCAST2]](s32)
     ; CHECK: $vgpr0_vgpr1_vgpr2_vgpr3_vgpr4 = COPY [[BUILD_VECTOR3]](<5 x s32>)
     %0:_(<5 x s32>) = COPY $vgpr0_vgpr1_vgpr2_vgpr3_vgpr4
     %1:_(<5 x s16>) = G_TRUNC %0
@@ -723,22 +700,10 @@ body: |
     ; CHECK: [[COPY1:%[0-9]+]]:_(s32) = COPY $vgpr1
     ; CHECK: [[COPY2:%[0-9]+]]:_(s32) = COPY $vgpr2
     ; CHECK: [[COPY3:%[0-9]+]]:_(s32) = COPY $vgpr3
-    ; CHECK: [[COPY4:%[0-9]+]]:_(s32) = COPY [[COPY]](s32)
-    ; CHECK: [[COPY5:%[0-9]+]]:_(s32) = COPY [[COPY1]](s32)
-    ; CHECK: [[COPY6:%[0-9]+]]:_(s32) = COPY [[COPY2]](s32)
-    ; CHECK: [[COPY7:%[0-9]+]]:_(s32) = COPY [[COPY3]](s32)
-    ; CHECK: [[COPY8:%[0-9]+]]:_(s32) = COPY [[COPY4]](s32)
-    ; CHECK: [[COPY9:%[0-9]+]]:_(s32) = COPY [[COPY5]](s32)
-    ; CHECK: [[COPY10:%[0-9]+]]:_(s32) = COPY [[COPY6]](s32)
-    ; CHECK: [[COPY11:%[0-9]+]]:_(s32) = COPY [[COPY7]](s32)
-    ; CHECK: [[BUILD_VECTOR:%[0-9]+]]:_(<4 x s32>) = G_BUILD_VECTOR [[COPY8]](s32), [[COPY9]](s32), [[COPY10]](s32), [[COPY11]](s32)
+    ; CHECK: [[BUILD_VECTOR:%[0-9]+]]:_(<4 x s32>) = G_BUILD_VECTOR [[COPY]](s32), [[COPY1]](s32), [[COPY2]](s32), [[COPY3]](s32)
     ; CHECK: [[FREEZE:%[0-9]+]]:_(<4 x s32>) = G_FREEZE [[BUILD_VECTOR]]
     ; CHECK: [[UV:%[0-9]+]]:_(s32), [[UV1:%[0-9]+]]:_(s32), [[UV2:%[0-9]+]]:_(s32), [[UV3:%[0-9]+]]:_(s32) = G_UNMERGE_VALUES [[FREEZE]](<4 x s32>)
-    ; CHECK: [[COPY12:%[0-9]+]]:_(s32) = COPY [[UV]](s32)
-    ; CHECK: [[COPY13:%[0-9]+]]:_(s32) = COPY [[UV1]](s32)
-    ; CHECK: [[COPY14:%[0-9]+]]:_(s32) = COPY [[UV2]](s32)
-    ; CHECK: [[COPY15:%[0-9]+]]:_(s32) = COPY [[UV3]](s32)
-    ; CHECK: S_ENDPGM 0, implicit [[COPY12]](s32), implicit [[COPY13]](s32), implicit [[COPY14]](s32), implicit [[COPY15]](s32)
+    ; CHECK: S_ENDPGM 0, implicit [[UV]](s32), implicit [[UV1]](s32), implicit [[UV2]](s32), implicit [[UV3]](s32)
     %0:_(s32) = COPY $vgpr0
     %1:_(s32) = COPY $vgpr1
     %2:_(s32) = COPY $vgpr2
