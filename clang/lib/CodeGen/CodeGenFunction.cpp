@@ -1049,7 +1049,8 @@ void CodeGenFunction::StartFunction(GlobalDecl GD, QualType RetTy,
     Fn->addFnAttr("packed-stack");
   }
 
-  if (CGM.getCodeGenOpts().WarnStackSize != UINT_MAX)
+  if (CGM.getCodeGenOpts().WarnStackSize != UINT_MAX &&
+      !CGM.getDiags().isIgnored(diag::warn_fe_backend_frame_larger_than, Loc))
     Fn->addFnAttr("warn-stack-size",
                   std::to_string(CGM.getCodeGenOpts().WarnStackSize));
 
