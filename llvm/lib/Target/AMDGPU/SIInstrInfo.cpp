@@ -1398,28 +1398,35 @@ static unsigned getVGPRSpillSaveOpcode(unsigned Size, bool NeedsCFI) {
   }
 }
 
-static unsigned getAGPRSpillSaveOpcode(unsigned Size) {
+static unsigned getAGPRSpillSaveOpcode(unsigned Size, bool NeedsCFI) {
   switch (Size) {
   case 4:
-    return AMDGPU::SI_SPILL_A32_SAVE;
+    return NeedsCFI ? AMDGPU::SI_SPILL_A32_CFI_SAVE : AMDGPU::SI_SPILL_A32_SAVE;
   case 8:
-    return AMDGPU::SI_SPILL_A64_SAVE;
+    return NeedsCFI ? AMDGPU::SI_SPILL_A64_CFI_SAVE : AMDGPU::SI_SPILL_A64_SAVE;
   case 12:
-    return AMDGPU::SI_SPILL_A96_SAVE;
+    return NeedsCFI ? AMDGPU::SI_SPILL_A96_CFI_SAVE : AMDGPU::SI_SPILL_A96_SAVE;
   case 16:
-    return AMDGPU::SI_SPILL_A128_SAVE;
+    return NeedsCFI ? AMDGPU::SI_SPILL_A128_CFI_SAVE
+                    : AMDGPU::SI_SPILL_A128_SAVE;
   case 20:
-    return AMDGPU::SI_SPILL_A160_SAVE;
+    return NeedsCFI ? AMDGPU::SI_SPILL_A160_CFI_SAVE
+                    : AMDGPU::SI_SPILL_A160_SAVE;
   case 24:
-    return AMDGPU::SI_SPILL_A192_SAVE;
+    return NeedsCFI ? AMDGPU::SI_SPILL_A192_CFI_SAVE
+                    : AMDGPU::SI_SPILL_A192_SAVE;
   case 28:
-    return AMDGPU::SI_SPILL_A224_SAVE;
+    return NeedsCFI ? AMDGPU::SI_SPILL_A224_CFI_SAVE
+                    : AMDGPU::SI_SPILL_A224_SAVE;
   case 32:
-    return AMDGPU::SI_SPILL_A256_SAVE;
+    return NeedsCFI ? AMDGPU::SI_SPILL_A256_CFI_SAVE
+                    : AMDGPU::SI_SPILL_A256_SAVE;
   case 64:
-    return AMDGPU::SI_SPILL_A512_SAVE;
+    return NeedsCFI ? AMDGPU::SI_SPILL_A512_CFI_SAVE
+                    : AMDGPU::SI_SPILL_A512_SAVE;
   case 128:
-    return AMDGPU::SI_SPILL_A1024_SAVE;
+    return NeedsCFI ? AMDGPU::SI_SPILL_A1024_CFI_SAVE
+                    : AMDGPU::SI_SPILL_A1024_SAVE;
   default:
     llvm_unreachable("unknown register size");
   }
@@ -1471,7 +1478,7 @@ void SIInstrInfo::storeRegToStackSlotImpl(
   }
 
   unsigned Opcode = RI.hasAGPRs(RC)
-                        ? getAGPRSpillSaveOpcode(SpillSize)
+                        ? getAGPRSpillSaveOpcode(SpillSize, NeedsCFI)
                         : getVGPRSpillSaveOpcode(SpillSize, NeedsCFI);
   MFI->setHasSpilledVGPRs();
 

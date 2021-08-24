@@ -1837,6 +1837,17 @@ MachineInstr *SIFrameLowering::buildCFI(MachineBasicBlock &MBB,
       .setMIFlag(MachineInstr::FrameSetup);
 }
 
+MachineInstr *SIFrameLowering::buildCFIForRegToRegSpill(
+    MachineBasicBlock &MBB, MachineBasicBlock::iterator MBBI,
+    const DebugLoc &DL, const Register Reg, const Register RegCopy) const {
+  MachineFunction &MF = *MBB.getParent();
+  const MCRegisterInfo &MCRI = *MF.getMMI().getContext().getRegisterInfo();
+  return buildCFI(
+      MBB, MBBI, DL,
+      MCCFIInstruction::createRegister(nullptr, MCRI.getDwarfRegNum(Reg, false),
+                                       MCRI.getDwarfRegNum(RegCopy, false)));
+}
+
 static void encodeDwarfRegisterLocation(int DwarfReg, raw_ostream &OS) {
   if (DwarfReg < 32) {
     OS << uint8_t(dwarf::DW_OP_reg0 + DwarfReg);

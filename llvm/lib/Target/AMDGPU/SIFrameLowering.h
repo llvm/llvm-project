@@ -93,6 +93,12 @@ public:
   /// Create a CFI index for CFIInst and build a MachineInstr around it.
   MachineInstr *buildCFI(MachineBasicBlock &MBB, MachineBasicBlock::iterator MBBI,
                 const DebugLoc &DL, const MCCFIInstruction &CFIInst) const;
+  /// Create a CFI index describing a spill of the register \p Reg to another
+  /// register \p RegCopy and build a MachineInstr around it.
+  MachineInstr *buildCFIForRegToRegSpill(MachineBasicBlock &MBB,
+                                         MachineBasicBlock::iterator MBBI,
+                                         const DebugLoc &DL, const Register Reg,
+                                         const Register RegCopy) const;
   /// Create a CFI index describing a spill of an SGPR to a single lane of
   /// a VGPR and build a MachineInstr around it.
   MachineInstr *buildCFIForSGPRToVGPRSpill(MachineBasicBlock &MBB,
