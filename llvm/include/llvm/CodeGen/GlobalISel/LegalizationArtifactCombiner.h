@@ -54,7 +54,8 @@ public:
 
   bool tryCombineAnyExt(MachineInstr &MI,
                         SmallVectorImpl<MachineInstr *> &DeadInsts,
-                        SmallVectorImpl<Register> &UpdatedDefs) {
+                        SmallVectorImpl<Register> &UpdatedDefs,
+                        GISelObserverWrapper &Observer) {
     assert(MI.getOpcode() == TargetOpcode::G_ANYEXT);
 
     Builder.setInstrAndDebugLoc(MI);
@@ -65,7 +66,11 @@ public:
     Register TruncSrc;
     if (mi_match(SrcReg, MRI, m_GTrunc(m_Reg(TruncSrc)))) {
       LLVM_DEBUG(dbgs() << ".. Combine MI: " << MI;);
-      Builder.buildAnyExtOrTrunc(DstReg, TruncSrc);
+      if (MRI.getType(DstReg) == MRI.getType(TruncSrc))
+        replaceRegOrBuildCopy(DstReg, TruncSrc, MRI, Builder, UpdatedDefs,
+                              Observer);
+      else
+        Builder.buildAnyExtOrTrunc(DstReg, TruncSrc);
       UpdatedDefs.push_back(DstReg);
       markInstAndDefDead(MI, *MRI.getVRegDef(SrcReg), DeadInsts);
       return true;
@@ -125,9 +130,11 @@ public:
       APInt MaskVal = APInt::getAllOnesValue(SrcTy.getScalarSizeInBits());
       auto Mask = Builder.buildConstant(
         DstTy, MaskVal.zext(DstTy.getScalarSizeInBits()));
-      auto Extended = SextSrc ? Builder.buildSExtOrTrunc(DstTy, SextSrc) :
-                                Builder.buildAnyExtOrTrunc(DstTy, TruncSrc);
-      Builder.buildAnd(DstReg, Extended, Mask);
+      if (SextSrc && (DstTy != MRI.getType(SextSrc)))
+        SextSrc = Builder.buildSExtOrTrunc(DstTy, SextSrc).getReg(0);
+      if (TruncSrc && (DstTy != MRI.getType(TruncSrc)))
+        TruncSrc = Builder.buildAnyExtOrTrunc(DstTy, TruncSrc).getReg(0);
+      Builder.buildAnd(DstReg, SextSrc ? SextSrc : TruncSrc, Mask);
       markInstAndDefDead(MI, *MRI.getVRegDef(SrcReg), DeadInsts);
       return true;
     }
@@ -178,9 +185,9 @@ public:
       LLVM_DEBUG(dbgs() << ".. Combine MI: " << MI;);
       LLT SrcTy = MRI.getType(SrcReg);
       uint64_t SizeInBits = SrcTy.getScalarSizeInBits();
-      Builder.buildInstr(
-          TargetOpcode::G_SEXT_INREG, {DstReg},
-          {Builder.buildAnyExtOrTrunc(DstTy, TruncSrc), SizeInBits});
+      if (DstTy != MRI.getType(TruncSrc))
+        TruncSrc = Builder.buildAnyExtOrTrunc(DstTy, TruncSrc).getReg(0);
+      Builder.buildSExtInReg(DstReg, TruncSrc, SizeInBits);
       markInstAndDefDead(MI, *MRI.getVRegDef(SrcReg), DeadInsts);
       return true;
     }
@@ -1078,7 +1085,7 @@ public:
     default:
       return false;
     case TargetOpcode::G_ANYEXT:
-      Changed = tryCombineAnyExt(MI, DeadInsts, UpdatedDefs);
+      Changed = tryCombineAnyExt(MI, DeadInsts, UpdatedDefs, WrapperObserver);
       break;
     case TargetOpcode::G_ZEXT:
       Changed = tryCombineZExt(MI, DeadInsts, UpdatedDefs, WrapperObserver);

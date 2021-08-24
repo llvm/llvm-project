@@ -105,9 +105,7 @@ define amdgpu_ps void @image_store_v2f16(<8 x i32> inreg %rsrc, i32 %s, i32 %t, 
   ; UNPACKED:   [[BITCAST:%[0-9]+]]:_(s32) = G_BITCAST [[COPY10]](<2 x s16>)
   ; UNPACKED:   [[C:%[0-9]+]]:_(s32) = G_CONSTANT i32 16
   ; UNPACKED:   [[LSHR:%[0-9]+]]:_(s32) = G_LSHR [[BITCAST]], [[C]](s32)
-  ; UNPACKED:   [[COPY11:%[0-9]+]]:_(s32) = COPY [[BITCAST]](s32)
-  ; UNPACKED:   [[COPY12:%[0-9]+]]:_(s32) = COPY [[LSHR]](s32)
-  ; UNPACKED:   [[BUILD_VECTOR2:%[0-9]+]]:_(<2 x s32>) = G_BUILD_VECTOR [[COPY11]](s32), [[COPY12]](s32)
+  ; UNPACKED:   [[BUILD_VECTOR2:%[0-9]+]]:_(<2 x s32>) = G_BUILD_VECTOR [[BITCAST]](s32), [[LSHR]](s32)
   ; UNPACKED:   G_AMDGPU_INTRIN_IMAGE_STORE intrinsic(@llvm.amdgcn.image.store.2d), [[BUILD_VECTOR2]](<2 x s32>), 3, [[BUILD_VECTOR1]](<2 x s32>), $noreg, [[BUILD_VECTOR]](<8 x s32>), 0, 0, 0 :: (dereferenceable store (<2 x s16>) into custom "ImageResource")
   ; UNPACKED:   S_ENDPGM 0
   ; GFX81-LABEL: name: image_store_v2f16
@@ -196,10 +194,7 @@ define amdgpu_ps void @image_store_v3f16(<8 x i32> inreg %rsrc, i32 %s, i32 %t, 
   ; UNPACKED:   [[LSHR:%[0-9]+]]:_(s32) = G_LSHR [[UV]], [[C]](s32)
   ; UNPACKED:   [[LSHR1:%[0-9]+]]:_(s32) = G_LSHR [[UV1]], [[C]](s32)
   ; UNPACKED:   [[BUILD_VECTOR1:%[0-9]+]]:_(<2 x s32>) = G_BUILD_VECTOR [[COPY8]](s32), [[COPY9]](s32)
-  ; UNPACKED:   [[COPY12:%[0-9]+]]:_(s32) = COPY [[UV]](s32)
-  ; UNPACKED:   [[COPY13:%[0-9]+]]:_(s32) = COPY [[LSHR]](s32)
-  ; UNPACKED:   [[COPY14:%[0-9]+]]:_(s32) = COPY [[UV1]](s32)
-  ; UNPACKED:   [[BUILD_VECTOR2:%[0-9]+]]:_(<3 x s32>) = G_BUILD_VECTOR [[COPY12]](s32), [[COPY13]](s32), [[COPY14]](s32)
+  ; UNPACKED:   [[BUILD_VECTOR2:%[0-9]+]]:_(<3 x s32>) = G_BUILD_VECTOR [[UV]](s32), [[LSHR]](s32), [[UV1]](s32)
   ; UNPACKED:   G_AMDGPU_INTRIN_IMAGE_STORE intrinsic(@llvm.amdgcn.image.store.2d), [[BUILD_VECTOR2]](<3 x s32>), 7, [[BUILD_VECTOR1]](<2 x s32>), $noreg, [[BUILD_VECTOR]](<8 x s32>), 0, 0, 0 :: (dereferenceable store (<3 x s16>) into custom "ImageResource", align 8)
   ; UNPACKED:   S_ENDPGM 0
   ; GFX81-LABEL: name: image_store_v3f16
@@ -227,15 +222,12 @@ define amdgpu_ps void @image_store_v3f16(<8 x i32> inreg %rsrc, i32 %s, i32 %t, 
   ; GFX81:   [[LSHR1:%[0-9]+]]:_(s32) = G_LSHR [[UV1]], [[C]](s32)
   ; GFX81:   [[BUILD_VECTOR1:%[0-9]+]]:_(<2 x s32>) = G_BUILD_VECTOR [[COPY8]](s32), [[COPY9]](s32)
   ; GFX81:   [[C1:%[0-9]+]]:_(s32) = G_CONSTANT i32 65535
-  ; GFX81:   [[COPY12:%[0-9]+]]:_(s32) = COPY [[UV]](s32)
-  ; GFX81:   [[AND:%[0-9]+]]:_(s32) = G_AND [[COPY12]], [[C1]]
-  ; GFX81:   [[COPY13:%[0-9]+]]:_(s32) = COPY [[LSHR]](s32)
-  ; GFX81:   [[AND1:%[0-9]+]]:_(s32) = G_AND [[COPY13]], [[C1]]
+  ; GFX81:   [[AND:%[0-9]+]]:_(s32) = G_AND [[UV]], [[C1]]
+  ; GFX81:   [[AND1:%[0-9]+]]:_(s32) = G_AND [[LSHR]], [[C1]]
   ; GFX81:   [[SHL:%[0-9]+]]:_(s32) = G_SHL [[AND1]], [[C]](s32)
   ; GFX81:   [[OR:%[0-9]+]]:_(s32) = G_OR [[AND]], [[SHL]]
   ; GFX81:   [[BITCAST1:%[0-9]+]]:_(<2 x s16>) = G_BITCAST [[OR]](s32)
-  ; GFX81:   [[COPY14:%[0-9]+]]:_(s32) = COPY [[UV1]](s32)
-  ; GFX81:   [[AND2:%[0-9]+]]:_(s32) = G_AND [[COPY14]], [[C1]]
+  ; GFX81:   [[AND2:%[0-9]+]]:_(s32) = G_AND [[UV1]], [[C1]]
   ; GFX81:   [[C2:%[0-9]+]]:_(s32) = G_CONSTANT i32 0
   ; GFX81:   [[SHL1:%[0-9]+]]:_(s32) = G_SHL [[C2]], [[C]](s32)
   ; GFX81:   [[OR1:%[0-9]+]]:_(s32) = G_OR [[AND2]], [[SHL1]]
@@ -269,12 +261,9 @@ define amdgpu_ps void @image_store_v3f16(<8 x i32> inreg %rsrc, i32 %s, i32 %t, 
   ; GFX9:   [[C:%[0-9]+]]:_(s32) = G_CONSTANT i32 16
   ; GFX9:   [[LSHR:%[0-9]+]]:_(s32) = G_LSHR [[UV]], [[C]](s32)
   ; GFX9:   [[LSHR1:%[0-9]+]]:_(s32) = G_LSHR [[UV1]], [[C]](s32)
-  ; GFX9:   [[COPY12:%[0-9]+]]:_(s32) = COPY [[UV]](s32)
-  ; GFX9:   [[COPY13:%[0-9]+]]:_(s32) = COPY [[LSHR]](s32)
-  ; GFX9:   [[BUILD_VECTOR_TRUNC:%[0-9]+]]:_(<2 x s16>) = G_BUILD_VECTOR_TRUNC [[COPY12]](s32), [[COPY13]](s32)
-  ; GFX9:   [[COPY14:%[0-9]+]]:_(s32) = COPY [[UV1]](s32)
+  ; GFX9:   [[BUILD_VECTOR_TRUNC:%[0-9]+]]:_(<2 x s16>) = G_BUILD_VECTOR_TRUNC [[UV]](s32), [[LSHR]](s32)
   ; GFX9:   [[DEF1:%[0-9]+]]:_(s32) = G_IMPLICIT_DEF
-  ; GFX9:   [[BUILD_VECTOR_TRUNC1:%[0-9]+]]:_(<2 x s16>) = G_BUILD_VECTOR_TRUNC [[COPY14]](s32), [[DEF1]](s32)
+  ; GFX9:   [[BUILD_VECTOR_TRUNC1:%[0-9]+]]:_(<2 x s16>) = G_BUILD_VECTOR_TRUNC [[UV1]](s32), [[DEF1]](s32)
   ; GFX9:   [[CONCAT_VECTORS1:%[0-9]+]]:_(<6 x s16>) = G_CONCAT_VECTORS [[BUILD_VECTOR_TRUNC]](<2 x s16>), [[BUILD_VECTOR_TRUNC1]](<2 x s16>), [[DEF]](<2 x s16>)
   ; GFX9:   [[UV3:%[0-9]+]]:_(<3 x s16>), [[UV4:%[0-9]+]]:_(<3 x s16>) = G_UNMERGE_VALUES [[CONCAT_VECTORS1]](<6 x s16>)
   ; GFX9:   [[BUILD_VECTOR1:%[0-9]+]]:_(<2 x s32>) = G_BUILD_VECTOR [[COPY8]](s32), [[COPY9]](s32)
@@ -303,12 +292,9 @@ define amdgpu_ps void @image_store_v3f16(<8 x i32> inreg %rsrc, i32 %s, i32 %t, 
   ; GFX10:   [[C:%[0-9]+]]:_(s32) = G_CONSTANT i32 16
   ; GFX10:   [[LSHR:%[0-9]+]]:_(s32) = G_LSHR [[UV]], [[C]](s32)
   ; GFX10:   [[LSHR1:%[0-9]+]]:_(s32) = G_LSHR [[UV1]], [[C]](s32)
-  ; GFX10:   [[COPY12:%[0-9]+]]:_(s32) = COPY [[UV]](s32)
-  ; GFX10:   [[COPY13:%[0-9]+]]:_(s32) = COPY [[LSHR]](s32)
-  ; GFX10:   [[BUILD_VECTOR_TRUNC:%[0-9]+]]:_(<2 x s16>) = G_BUILD_VECTOR_TRUNC [[COPY12]](s32), [[COPY13]](s32)
-  ; GFX10:   [[COPY14:%[0-9]+]]:_(s32) = COPY [[UV1]](s32)
+  ; GFX10:   [[BUILD_VECTOR_TRUNC:%[0-9]+]]:_(<2 x s16>) = G_BUILD_VECTOR_TRUNC [[UV]](s32), [[LSHR]](s32)
   ; GFX10:   [[DEF1:%[0-9]+]]:_(s32) = G_IMPLICIT_DEF
-  ; GFX10:   [[BUILD_VECTOR_TRUNC1:%[0-9]+]]:_(<2 x s16>) = G_BUILD_VECTOR_TRUNC [[COPY14]](s32), [[DEF1]](s32)
+  ; GFX10:   [[BUILD_VECTOR_TRUNC1:%[0-9]+]]:_(<2 x s16>) = G_BUILD_VECTOR_TRUNC [[UV1]](s32), [[DEF1]](s32)
   ; GFX10:   [[CONCAT_VECTORS1:%[0-9]+]]:_(<6 x s16>) = G_CONCAT_VECTORS [[BUILD_VECTOR_TRUNC]](<2 x s16>), [[BUILD_VECTOR_TRUNC1]](<2 x s16>), [[DEF]](<2 x s16>)
   ; GFX10:   [[UV3:%[0-9]+]]:_(<3 x s16>), [[UV4:%[0-9]+]]:_(<3 x s16>) = G_UNMERGE_VALUES [[CONCAT_VECTORS1]](<6 x s16>)
   ; GFX10:   [[BUILD_VECTOR1:%[0-9]+]]:_(<2 x s32>) = G_BUILD_VECTOR [[COPY8]](s32), [[COPY9]](s32)
@@ -341,11 +327,7 @@ define amdgpu_ps void @image_store_v4f16(<8 x i32> inreg %rsrc, i32 %s, i32 %t, 
   ; UNPACKED:   [[LSHR:%[0-9]+]]:_(s32) = G_LSHR [[BITCAST]], [[C]](s32)
   ; UNPACKED:   [[BITCAST1:%[0-9]+]]:_(s32) = G_BITCAST [[COPY11]](<2 x s16>)
   ; UNPACKED:   [[LSHR1:%[0-9]+]]:_(s32) = G_LSHR [[BITCAST1]], [[C]](s32)
-  ; UNPACKED:   [[COPY12:%[0-9]+]]:_(s32) = COPY [[BITCAST]](s32)
-  ; UNPACKED:   [[COPY13:%[0-9]+]]:_(s32) = COPY [[LSHR]](s32)
-  ; UNPACKED:   [[COPY14:%[0-9]+]]:_(s32) = COPY [[BITCAST1]](s32)
-  ; UNPACKED:   [[COPY15:%[0-9]+]]:_(s32) = COPY [[LSHR1]](s32)
-  ; UNPACKED:   [[BUILD_VECTOR2:%[0-9]+]]:_(<4 x s32>) = G_BUILD_VECTOR [[COPY12]](s32), [[COPY13]](s32), [[COPY14]](s32), [[COPY15]](s32)
+  ; UNPACKED:   [[BUILD_VECTOR2:%[0-9]+]]:_(<4 x s32>) = G_BUILD_VECTOR [[BITCAST]](s32), [[LSHR]](s32), [[BITCAST1]](s32), [[LSHR1]](s32)
   ; UNPACKED:   G_AMDGPU_INTRIN_IMAGE_STORE intrinsic(@llvm.amdgcn.image.store.2d), [[BUILD_VECTOR2]](<4 x s32>), 15, [[BUILD_VECTOR1]](<2 x s32>), $noreg, [[BUILD_VECTOR]](<8 x s32>), 0, 0, 0 :: (dereferenceable store (<4 x s16>) into custom "ImageResource")
   ; UNPACKED:   S_ENDPGM 0
   ; GFX81-LABEL: name: image_store_v4f16
