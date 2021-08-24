@@ -45,11 +45,11 @@ TEST(LlvmLibcStrToULTest, CleanBaseTenDecode) {
   ASSERT_EQ(errno, 0);
   EXPECT_EQ(str_end - negative, ptrdiff_t(4));
 
-  const char *big_number = "123456789012345";
+  const char *big_number = "1234567890";
   errno = 0;
-  ASSERT_EQ(__llvm_libc::strtoul(big_number, &str_end, 10), 123456789012345ul);
+  ASSERT_EQ(__llvm_libc::strtoul(big_number, &str_end, 10), 1234567890ul);
   ASSERT_EQ(errno, 0);
-  EXPECT_EQ(str_end - big_number, ptrdiff_t(15));
+  EXPECT_EQ(str_end - big_number, ptrdiff_t(10));
 
   const char *too_big_number = "123456789012345678901";
   errno = 0;
