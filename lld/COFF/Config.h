@@ -10,6 +10,7 @@
 #define LLD_COFF_CONFIG_H
 
 #include "llvm/ADT/MapVector.h"
+#include "llvm/ADT/SetVector.h"
 #include "llvm/ADT/StringMap.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/Object/COFF.h"
@@ -91,7 +92,7 @@ enum class ICFLevel {
 
 // Global configuration.
 struct Configuration {
-  enum ManifestKind { SideBySide, Embed, No };
+  enum ManifestKind { Default, SideBySide, Embed, No };
   bool is64() { return machine == AMD64 || machine == ARM64; }
 
   llvm::COFF::MachineTypes machine = IMAGE_FILE_MACHINE_UNKNOWN;
@@ -178,9 +179,9 @@ struct Configuration {
   std::map<StringRef, uint32_t> section;
 
   // Options for manifest files.
-  ManifestKind manifest = No;
+  ManifestKind manifest = Default;
   int manifestID = 1;
-  StringRef manifestDependency;
+  llvm::SetVector<StringRef> manifestDependencies;
   bool manifestUAC = true;
   std::vector<std::string> manifestInput;
   StringRef manifestLevel = "'asInvoker'";
