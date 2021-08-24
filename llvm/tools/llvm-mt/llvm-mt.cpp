@@ -135,8 +135,7 @@ int main(int Argc, const char **Argv) {
         MemoryBuffer::getFile(File);
     if (!ManifestOrErr)
       reportError(File, ManifestOrErr.getError());
-    MemoryBuffer &Manifest = *ManifestOrErr.get();
-    error(Merger.merge(Manifest));
+    error(Merger.merge(*ManifestOrErr.get()));
   }
 
   std::unique_ptr<MemoryBuffer> OutputBuffer = Merger.getMergedManifest();

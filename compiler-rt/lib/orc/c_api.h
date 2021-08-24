@@ -95,6 +95,8 @@ static inline __orc_rt_CWrapperFunctionResult
 __orc_rt_CWrapperFunctionResultAllocate(size_t Size) {
   __orc_rt_CWrapperFunctionResult R;
   R.Size = Size;
+  // If Size is 0 ValuePtr must be 0 or it is considered an out-of-band error.
+  R.Data.ValuePtr = 0;
   if (Size > sizeof(R.Data.Value))
     R.Data.ValuePtr = (char *)malloc(Size);
   return R;

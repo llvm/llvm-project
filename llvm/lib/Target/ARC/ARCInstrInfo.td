@@ -270,6 +270,19 @@ multiclass MultiPat<SDPatternOperator InFrag,
   def _rrlimm : Pat<(InFrag i32:$B, imm32:$LImm), (RRLImm i32:$B, imm32:$LImm)>;
 }
 
+// NOTE: This could be specialized later with a custom `PrintMethod` for
+//       displaying the aux register name. E.g. `[%count0]` instead of [33].
+def AuxReg : Operand<i32>;
+
+def LR_rs12 : F32_SOP_RS12<0b00100, 0b101010, 0,
+                           (outs GPR32:$B), (ins AuxReg:$C),
+                           "lr\t$B, [$C]", []>;
+def LR_ru6 : F32_SOP_RU6<0b00100, 0b101010, 0,
+                         (outs GPR32:$B), (ins AuxReg:$C),
+                         "lr\t$B, [$C]", []>;
+
+def: Pat<(i32 readcyclecounter), (LR_rs12 0x21) >;  // read timer
+
 // ---------------------------------------------------------------------------
 // Instruction definitions and patterns for 3 operand binary instructions.
 // ---------------------------------------------------------------------------

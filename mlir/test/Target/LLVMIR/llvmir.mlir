@@ -1594,3 +1594,39 @@ module {
 // CHECK: ![[PIPELINE_DISABLE_NODE]] = !{!"llvm.loop.pipeline.disable", i1 true}
 // CHECK: ![[II_NODE]] = !{!"llvm.loop.pipeline.initiationinterval", i32 2}
 // CHECK: ![[ACCESS_GROUPS_NODE]] = !{![[GROUP_NODE1]], ![[GROUP_NODE2]]}
+
+// -----
+
+module {
+  llvm.func @aliasScope(%arg1 : !llvm.ptr<i32>, %arg2 : !llvm.ptr<i32>, %arg3 : !llvm.ptr<i32>) {
+      %0 = llvm.mlir.constant(0 : i32) : i32
+      llvm.store %0, %arg1 { alias_scopes = [@metadata::@scope1], noalias_scopes = [@metadata::@scope2, @metadata::@scope3] } : !llvm.ptr<i32>
+      llvm.store %0, %arg2 { alias_scopes = [@metadata::@scope2], noalias_scopes = [@metadata::@scope1, @metadata::@scope3] } : !llvm.ptr<i32>
+      %1 = llvm.load %arg3 { alias_scopes = [@metadata::@scope3], noalias_scopes = [@metadata::@scope1, @metadata::@scope2] } : !llvm.ptr<i32>
+      llvm.return
+  }
+
+  llvm.metadata @metadata {
+    llvm.alias_scope_domain @domain { description = "The domain"}
+    llvm.alias_scope @scope1 { domain = @domain, description = "The first scope" }
+    llvm.alias_scope @scope2 { domain = @domain }
+    llvm.alias_scope @scope3 { domain = @domain }
+    llvm.return
+  }
+}
+
+// Function
+// CHECK-LABEL: aliasScope
+// CHECK:  store {{.*}}, !alias.scope ![[SCOPE1:[0-9]+]], !noalias ![[SCOPES23:[0-9]+]]
+// CHECK:  store {{.*}}, !alias.scope ![[SCOPE2:[0-9]+]], !noalias ![[SCOPES13:[0-9]+]]
+// CHECK:  load {{.*}},  !alias.scope ![[SCOPE3:[0-9]+]], !noalias ![[SCOPES12:[0-9]+]]
+
+// Metadata
+// CHECK-DAG: ![[DOMAIN:[0-9]+]] = distinct !{![[DOMAIN]], !"The domain"}
+// CHECK-DAG: ![[SCOPE1]] = distinct !{![[SCOPE1]], ![[DOMAIN]], !"The first scope"}
+// CHECK-DAG: ![[SCOPE2]] = distinct !{![[SCOPE2]], ![[DOMAIN]]}
+// CHECK-DAG: ![[SCOPE3]] = distinct !{![[SCOPE3]], ![[DOMAIN]]}
+// CHECK-DAG: ![[SCOPES12]] = !{![[SCOPE1]], ![[SCOPE2]]}
+// CHECK-DAG: ![[SCOPES13]] = !{![[SCOPE1]], ![[SCOPE3]]}
+// CHECK-DAG: ![[SCOPES23]] = !{![[SCOPE2]], ![[SCOPE3]]}
+

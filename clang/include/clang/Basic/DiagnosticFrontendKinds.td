@@ -22,8 +22,9 @@ def note_fe_inline_asm_here : Note<"instantiated into assembly here">;
 def err_fe_source_mgr : Error<"%0">, CatSourceMgr;
 def warn_fe_source_mgr : Warning<"%0">, CatSourceMgr, InGroup<BackendSourceMgr>;
 def note_fe_source_mgr : Note<"%0">, CatSourceMgr;
-def err_fe_cannot_link_module : Error<"cannot link module '%0': %1">,
-  DefaultFatal;
+def err_fe_linking_module : Error<"cannot link module '%0': %1">, DefaultFatal;
+def warn_fe_linking_module : Warning<"linking module '%0': %1">, InGroup<LinkerWarnings>;
+def note_fe_linking_module : Note<"linking module '%0': %1">;
 
 def warn_fe_frame_larger_than : Warning<"stack frame size (%0) exceeds limit (%1) in %q2">,
     BackendInfo, InGroup<BackendFrameLargerThan>;
