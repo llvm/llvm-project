@@ -31,8 +31,8 @@ define %union.rec* @Manifest(%union.rec* %x, %union.rec* %env, %struct.STYLE* %s
 ; CHECK-NEXT:    ldrd r8, lr, [r7, #20]
 ; CHECK-NEXT:    movs r5, #0
 ; CHECK-NEXT:    cmp r5, #0
-; CHECK-NEXT:    ldm.w r10, {r4, r9, r10}
-; CHECK-NEXT:    ldr.w r12, [r7, #28]
+; CHECK-NEXT:    ldm.w r10, {r4, r6, r10}
+; CHECK-NEXT:    ldrd r12, r9, [r7, #28]
 ; CHECK-NEXT:    ittt ne
 ; CHECK-NEXT:    addne sp, #292
 ; CHECK-NEXT:    popne.w {r8, r10, r11}
@@ -46,29 +46,25 @@ define %union.rec* @Manifest(%union.rec* %x, %union.rec* %env, %struct.STYLE* %s
 ; CHECK-NEXT:  @ %bb.3: @ %bb420
 ; CHECK-NEXT:    movw r5, :lower16:(L_zz_hold$non_lazy_ptr-(LPC0_0+4))
 ; CHECK-NEXT:    movt r5, :upper16:(L_zz_hold$non_lazy_ptr-(LPC0_0+4))
-; CHECK-NEXT:    movw r11, :lower16:(L_zz_res$non_lazy_ptr-(LPC0_1+4))
 ; CHECK-NEXT:  LPC0_0:
 ; CHECK-NEXT:    add r5, pc
-; CHECK-NEXT:    movt r11, :upper16:(L_zz_res$non_lazy_ptr-(LPC0_1+4))
+; CHECK-NEXT:    ldr.w r11, [r5]
+; CHECK-NEXT:    str.w r11, [sp, #28] @ 4-byte Spill
+; CHECK-NEXT:    movw r5, :lower16:(L_zz_res$non_lazy_ptr-(LPC0_1+4))
+; CHECK-NEXT:    movt r5, :upper16:(L_zz_res$non_lazy_ptr-(LPC0_1+4))
 ; CHECK-NEXT:  LPC0_1:
-; CHECK-NEXT:    add r11, pc
+; CHECK-NEXT:    add r5, pc
 ; CHECK-NEXT:    ldr r5, [r5]
 ; CHECK-NEXT:    str r5, [sp, #32] @ 4-byte Spill
-; CHECK-NEXT:    ldr.w r5, [r11]
-; CHECK-NEXT:    mov.w r11, #0
-; CHECK-NEXT:    str r5, [sp, #28] @ 4-byte Spill
-; CHECK-NEXT:    ldr r5, [sp, #32] @ 4-byte Reload
-; CHECK-NEXT:    str.w r11, [r5]
 ; CHECK-NEXT:    movs r5, #0
-; CHECK-NEXT:    ldr r6, [sp, #28] @ 4-byte Reload
-; CHECK-NEXT:    str r5, [r6]
-; CHECK-NEXT:    ldr r5, [sp, #32] @ 4-byte Reload
+; CHECK-NEXT:    str.w r5, [r11]
+; CHECK-NEXT:    ldr.w r11, [sp, #32] @ 4-byte Reload
+; CHECK-NEXT:    str.w r5, [r11]
+; CHECK-NEXT:    ldr r5, [sp, #28] @ 4-byte Reload
 ; CHECK-NEXT:    str r0, [r5]
-; CHECK-NEXT:    ldr r0, [r7, #32]
-; CHECK-NEXT:    stm.w sp, {r4, r9, r10}
+; CHECK-NEXT:    stm.w sp, {r4, r6, r10}
 ; CHECK-NEXT:    strd r8, lr, [sp, #12]
-; CHECK-NEXT:    str.w r12, [sp, #20]
-; CHECK-NEXT:    str r0, [sp, #24]
+; CHECK-NEXT:    strd r12, r9, [sp, #20]
 ; CHECK-NEXT:    bl _Manifest
 ; CHECK-NEXT:    trap
 ; CHECK-NEXT:  LBB0_4: @ %bb20

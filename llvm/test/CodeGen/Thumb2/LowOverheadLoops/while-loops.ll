@@ -160,31 +160,27 @@ define dso_local i32 @b(i32* %c, i32 %d, i32 %e, i32* %n) "frame-pointer"="all" 
 ; CHECK-NEXT:    add r7, sp, #12
 ; CHECK-NEXT:    .save {r8, r9, r10, r11}
 ; CHECK-NEXT:    push.w {r8, r9, r10, r11}
-; CHECK-NEXT:    .pad #12
-; CHECK-NEXT:    sub sp, #12
+; CHECK-NEXT:    .pad #8
+; CHECK-NEXT:    sub sp, #8
 ; CHECK-NEXT:    wls lr, r1, .LBB2_3
 ; CHECK-NEXT:  @ %bb.1: @ %while.body.preheader
-; CHECK-NEXT:    mov r4, r2
-; CHECK-NEXT:    adds r2, r3, #4
+; CHECK-NEXT:    adds r4, r3, #4
 ; CHECK-NEXT:    add.w r9, r0, #4
 ; CHECK-NEXT:    mvn r11, #1
 ; CHECK-NEXT:    @ implicit-def: $r6
 ; CHECK-NEXT:    @ implicit-def: $r12
-; CHECK-NEXT:    str r4, [sp] @ 4-byte Spill
+; CHECK-NEXT:    str r2, [sp] @ 4-byte Spill
 ; CHECK-NEXT:  .LBB2_2: @ %while.body
 ; CHECK-NEXT:    @ =>This Inner Loop Header: Depth=1
 ; CHECK-NEXT:    ldr r1, [r9, #-4]
-; CHECK-NEXT:    ldr.w r10, [r2]
+; CHECK-NEXT:    ldr.w r10, [r4]
 ; CHECK-NEXT:    str r0, [sp, #4] @ 4-byte Spill
 ; CHECK-NEXT:    muls r1, r3, r1
 ; CHECK-NEXT:    adds.w r8, r1, #-2147483648
 ; CHECK-NEXT:    asr.w r5, r1, #31
 ; CHECK-NEXT:    adc r1, r5, #0
 ; CHECK-NEXT:    mul r5, r10, r0
-; CHECK-NEXT:    mov r0, r2
-; CHECK-NEXT:    ldr.w r2, [r11, #4]
-; CHECK-NEXT:    str r2, [sp, #8] @ 4-byte Spill
-; CHECK-NEXT:    ldr r2, [sp, #8] @ 4-byte Reload
+; CHECK-NEXT:    mov r0, r4
 ; CHECK-NEXT:    add.w r5, r5, #-2147483648
 ; CHECK-NEXT:    asrl r8, r1, r5
 ; CHECK-NEXT:    smull r4, r5, r10, r8
@@ -193,47 +189,48 @@ define dso_local i32 @b(i32* %c, i32 %d, i32 %e, i32* %n) "frame-pointer"="all" 
 ; CHECK-NEXT:    mov r4, r5
 ; CHECK-NEXT:    lsll r4, r1, r10
 ; CHECK-NEXT:    lsll r4, r1, #30
-; CHECK-NEXT:    ldr.w r4, [r11]
+; CHECK-NEXT:    ldrd r4, r8, [r11]
 ; CHECK-NEXT:    asrs r5, r1, #31
-; CHECK-NEXT:    mov r8, r1
 ; CHECK-NEXT:    muls r4, r6, r4
-; CHECK-NEXT:    adds r4, #2
-; CHECK-NEXT:    lsll r8, r5, r4
+; CHECK-NEXT:    adds r2, r4, #2
+; CHECK-NEXT:    mov r4, r1
+; CHECK-NEXT:    lsll r4, r5, r2
+; CHECK-NEXT:    add.w r1, r4, #-2147483648
 ; CHECK-NEXT:    ldr r4, [r9], #4
 ; CHECK-NEXT:    asr.w r5, r12, #31
-; CHECK-NEXT:    add.w r8, r8, #-2147483648
 ; CHECK-NEXT:    muls r4, r3, r4
 ; CHECK-NEXT:    adds r3, #4
-; CHECK-NEXT:    adds.w r1, r12, r4
+; CHECK-NEXT:    adds.w r2, r12, r4
 ; CHECK-NEXT:    adc.w r5, r5, r4, asr #31
-; CHECK-NEXT:    smull r6, r4, r2, r6
-; CHECK-NEXT:    adds.w r1, r1, #-2147483648
-; CHECK-NEXT:    adc r1, r5, #0
-; CHECK-NEXT:    mov r2, r0
-; CHECK-NEXT:    asrs r5, r1, #31
-; CHECK-NEXT:    subs r6, r1, r6
+; CHECK-NEXT:    smull r6, r4, r8, r6
+; CHECK-NEXT:    adds.w r2, r2, #-2147483648
+; CHECK-NEXT:    adc r2, r5, #0
+; CHECK-NEXT:    asrs r5, r2, #31
+; CHECK-NEXT:    subs r6, r2, r6
 ; CHECK-NEXT:    sbcs r5, r4
 ; CHECK-NEXT:    adds.w r6, r6, #-2147483648
 ; CHECK-NEXT:    adc r5, r5, #0
-; CHECK-NEXT:    asrl r6, r5, r8
+; CHECK-NEXT:    mov r4, r0
+; CHECK-NEXT:    asrl r6, r5, r1
+; CHECK-NEXT:    movs r1, #2
 ; CHECK-NEXT:    lsrl r6, r5, #2
-; CHECK-NEXT:    movs r5, #2
-; CHECK-NEXT:    str r6, [r5]
-; CHECK-NEXT:    ldr r5, [r11], #-4
-; CHECK-NEXT:    mls r1, r5, r10, r1
+; CHECK-NEXT:    ldr r0, [sp, #4] @ 4-byte Reload
+; CHECK-NEXT:    str r6, [r1]
+; CHECK-NEXT:    ldr r1, [r11], #-4
+; CHECK-NEXT:    adds r0, #4
+; CHECK-NEXT:    mls r1, r1, r10, r2
 ; CHECK-NEXT:    adds.w r12, r1, #-2147483648
-; CHECK-NEXT:    asr.w r4, r1, #31
-; CHECK-NEXT:    adc r1, r4, #0
-; CHECK-NEXT:    ldrd r4, r0, [sp] @ 8-byte Folded Reload
+; CHECK-NEXT:    asr.w r2, r1, #31
+; CHECK-NEXT:    adc r1, r2, #0
+; CHECK-NEXT:    ldr r2, [sp] @ 4-byte Reload
 ; CHECK-NEXT:    lsrl r12, r1, #2
 ; CHECK-NEXT:    rsb.w r1, r12, #0
-; CHECK-NEXT:    adds r0, #4
-; CHECK-NEXT:    str r1, [r4]
-; CHECK-NEXT:    str r1, [r2, #-4]
-; CHECK-NEXT:    adds r2, #4
+; CHECK-NEXT:    str r1, [r2]
+; CHECK-NEXT:    str r1, [r4, #-4]
+; CHECK-NEXT:    adds r4, #4
 ; CHECK-NEXT:    le lr, .LBB2_2
 ; CHECK-NEXT:  .LBB2_3: @ %while.end
-; CHECK-NEXT:    add sp, #12
+; CHECK-NEXT:    add sp, #8
 ; CHECK-NEXT:    pop.w {r8, r9, r10, r11}
 ; CHECK-NEXT:    pop {r4, r5, r6, r7, pc}
 entry:
