@@ -115,6 +115,11 @@ public:
   llvm::MDNode *getAccessGroup(Operation &opInst,
                                SymbolRefAttr accessGroupRef) const;
 
+  /// Returns the LLVM metadata corresponding to a reference to an mlir LLVM
+  /// dialect alias scope operation
+  llvm::MDNode *getAliasScope(Operation &opInst,
+                              SymbolRefAttr aliasScopeRef) const;
+
   /// Returns the LLVM metadata corresponding to a llvm loop's codegen
   /// options attribute.
   llvm::MDNode *lookupLoopOptionsMetadata(Attribute options) const {
@@ -130,6 +135,9 @@ public:
 
   // Sets LLVM metadata for memory operations that are in a parallel loop.
   void setAccessGroupsMetadata(Operation *op, llvm::Instruction *inst);
+
+  // Sets LLVM metadata for memory operations that have alias scope information.
+  void setAliasScopeMetadata(Operation *op, llvm::Instruction *inst);
 
   /// Converts the type from MLIR LLVM dialect to LLVM.
   llvm::Type *convertType(Type type);
@@ -268,6 +276,10 @@ private:
   /// metadata nodes.
   LogicalResult createAccessGroupMetadata();
 
+  /// Process alias.scope LLVM Metadata operations and create LLVM
+  /// metadata nodes for them and their domains.
+  LogicalResult createAliasScopeMetadata();
+
   /// Translates dialect attributes attached to the given operation.
   LogicalResult convertDialectAttributes(Operation *op);
 
@@ -300,7 +312,7 @@ private:
   /// values after all operations are converted.
   DenseMap<Operation *, llvm::Instruction *> branchMapping;
 
-  /// Mapping from an access group metadata optation to its LLVM metadata.
+  /// Mapping from an access group metadata operation to its LLVM metadata.
   /// This map is populated on module entry and is used to annotate loops (as
   /// identified via their branches) and contained memory accesses.
   DenseMap<Operation *, llvm::MDNode *> accessGroupMetadataMapping;
@@ -309,6 +321,10 @@ private:
   /// metadata. The metadata is attached to Latch block branches with this
   /// attribute.
   DenseMap<Attribute, llvm::MDNode *> loopOptionsMetadataMapping;
+
+  /// Mapping from an access scope metadata operation to its LLVM metadata.
+  /// This map is populated on module entry.
+  DenseMap<Operation *, llvm::MDNode *> aliasScopeMetadataMapping;
 
   /// Stack of user-specified state elements, useful when translating operations
   /// with regions.
