@@ -896,7 +896,7 @@ public:
     LookupInfo() : m_name(), m_lookup_name() {}
 
     LookupInfo(ConstString name, lldb::FunctionNameType name_type_mask,
-               lldb::LanguageType language_type);
+               lldb::LanguageType language);
 
     ConstString GetName() const { return m_name; }
 
@@ -922,7 +922,7 @@ public:
     ConstString m_lookup_name;
 
     /// Limit matches to only be for this language
-    lldb::LanguageType m_language_type = lldb::eLanguageTypeUnknown;
+    lldb::LanguageType m_language = lldb::eLanguageTypeUnknown;
 
     /// One or more bits from lldb::FunctionNameType that indicate what kind of
     /// names we are looking for
