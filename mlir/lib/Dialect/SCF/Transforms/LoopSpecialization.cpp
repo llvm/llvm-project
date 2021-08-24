@@ -121,10 +121,10 @@ static LogicalResult peelForLoop(RewriterBase &b, ForOp forOp, scf::IfOp &ifOp,
     return failure();
 
   auto loc = forOp.getLoc();
-  AffineExpr dim0, dim1, dim2;
-  bindDims(b.getContext(), dim0, dim1, dim2);
+  AffineExpr sym0, sym1, sym2;
+  bindSymbols(b.getContext(), sym0, sym1, sym2);
   // New upper bound: %ub - (%ub - %lb) mod %step
-  auto modMap = AffineMap::get(3, 0, {dim1 - ((dim1 - dim0) % dim2)});
+  auto modMap = AffineMap::get(0, 3, {sym1 - ((sym1 - sym0) % sym2)});
   b.setInsertionPoint(forOp);
   splitBound = b.createOrFold<AffineApplyOp>(
       loc, modMap,
