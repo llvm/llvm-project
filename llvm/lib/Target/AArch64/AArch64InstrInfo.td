@@ -873,7 +873,7 @@ defm UDOTlane : SIMDThreeSameVectorDotIndex<1, 0, 0b10, "udot", AArch64udot>;
 }
 
 // ARMv8.6-A BFloat
-let Predicates = [HasBF16] in {
+let Predicates = [HasNEON, HasBF16] in {
 defm BFDOT       : SIMDThreeSameVectorBFDot<1, "bfdot">;
 defm BF16DOTlane : SIMDThreeSameVectorBF16DotI<0, "bfdot">;
 def BFMMLA       : SIMDThreeSameVectorBF16MatrixMul<"bfmmla">;
@@ -883,7 +883,6 @@ def BFMLALBIdx   : SIMDBF16MLALIndex<0, "bfmlalb", int_aarch64_neon_bfmlalb>;
 def BFMLALTIdx   : SIMDBF16MLALIndex<1, "bfmlalt", int_aarch64_neon_bfmlalt>;
 def BFCVTN       : SIMD_BFCVTN;
 def BFCVTN2      : SIMD_BFCVTN2;
-def BFCVT        : BF16ToSinglePrecision<"bfcvt">;
 
 // Vector-scalar BFDOT:
 // The second source operand of the 64-bit variant of BF16DOTlane is a 128-bit
@@ -901,6 +900,10 @@ def : Pat<(v2f32 (int_aarch64_neon_bfdot
           (BF16DOTlanev4bf16 (v2f32 V64:$Rd), (v4bf16 V64:$Rn),
                              (SUBREG_TO_REG (i32 0), V64:$Rm, dsub),
                              VectorIndexS:$idx)>;
+}
+
+let Predicates = [HasNEONorStreamingSVE, HasBF16] in {
+def BFCVT : BF16ToSinglePrecision<"bfcvt">;
 }
 
 // ARMv8.6A AArch64 matrix multiplication
