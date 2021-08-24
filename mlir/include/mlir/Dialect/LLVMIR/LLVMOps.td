@@ -286,6 +286,10 @@ class MemoryOpWithAlignmentAndAttributes : MemoryOpWithAlignmentBase {
   code setAccessGroupsMetadataCode = [{
     moduleTranslation.setAccessGroupsMetadata(op, inst);
   }];
+
+  code setAliasScopeMetadataCode = [{
+    moduleTranslation.setAliasScopeMetadata(op, inst);
+  }];
 }
 
 // Memory-related operations.
@@ -329,13 +333,19 @@ def LLVM_GEPOp
 def LLVM_LoadOp : LLVM_Op<"load">, MemoryOpWithAlignmentAndAttributes {
   let arguments = (ins LLVM_PointerTo<LLVM_LoadableType>:$addr,
                    OptionalAttr<SymbolRefArrayAttr>:$access_groups,
+                   OptionalAttr<SymbolRefArrayAttr>:$alias_scopes,
+                   OptionalAttr<SymbolRefArrayAttr>:$noalias_scopes,
                    OptionalAttr<I64Attr>:$alignment, UnitAttr:$volatile_,
                    UnitAttr:$nontemporal);
   let results = (outs LLVM_LoadableType:$res);
   string llvmBuilder = [{
     auto *inst = builder.CreateLoad(
       $addr->getType()->getPointerElementType(), $addr, $volatile_);
-  }] # setAlignmentCode # setNonTemporalMetadataCode # setAccessGroupsMetadataCode # [{
+  }] # setAlignmentCode
+     # setNonTemporalMetadataCode
+     # setAccessGroupsMetadataCode
+     # setAliasScopeMetadataCode
+     # [{
     $res = inst;
   }];
   let builders = [
@@ -357,11 +367,16 @@ def LLVM_StoreOp : LLVM_Op<"store">, MemoryOpWithAlignmentAndAttributes {
   let arguments = (ins LLVM_LoadableType:$value,
                    LLVM_PointerTo<LLVM_LoadableType>:$addr,
                    OptionalAttr<SymbolRefArrayAttr>:$access_groups,
+                   OptionalAttr<SymbolRefArrayAttr>:$alias_scopes,
+                   OptionalAttr<SymbolRefArrayAttr>:$noalias_scopes,
                    OptionalAttr<I64Attr>:$alignment, UnitAttr:$volatile_,
                    UnitAttr:$nontemporal);
   string llvmBuilder = [{
     auto *inst = builder.CreateStore($value, $addr, $volatile_);
-  }] # setAlignmentCode # setNonTemporalMetadataCode # setAccessGroupsMetadataCode;
+  }] # setAlignmentCode
+     # setNonTemporalMetadataCode
+     # setAccessGroupsMetadataCode
+     # setAliasScopeMetadataCode;
   let builders = [
     OpBuilder<(ins "Value":$value, "Value":$addr,
       CArg<"unsigned", "0">:$alignment, CArg<"bool", "false">:$isVolatile,
@@ -876,8 +891,7 @@ def LLVM_MetadataOp : LLVM_Op<"metadata", [
   );
   let summary = "LLVM dialect metadata.";
   let description = [{
-    llvm.metadata op defines one or more metadata nodes. Currently the
-    llvm.access_group metadata op is supported.
+    llvm.metadata op defines one or more metadata nodes.
 
     Example:
       llvm.metadata @metadata {
@@ -888,6 +902,66 @@ def LLVM_MetadataOp : LLVM_Op<"metadata", [
   }];
   let regions = (region SizedRegion<1>:$body);
   let assemblyFormat = "$sym_name attr-dict-with-keyword $body";
+}
+
+def LLVM_AliasScopeDomainMetadataOp : LLVM_Op<"alias_scope_domain", [
+  HasParent<"MetadataOp">, Symbol
+]> {
+  let arguments = (ins
+    SymbolNameAttr:$sym_name,
+    OptionalAttr<StrAttr>:$description
+  );
+  let summary = "LLVM dialect alias.scope domain metadata.";
+  let description = [{
+    Defines a domain that may be associated with an alias scope.
+
+    See the following link for more details:
+    https://llvm.org/docs/LangRef.html#noalias-and-alias-scope-metadata
+  }];
+  let assemblyFormat = "$sym_name attr-dict";
+}
+
+def LLVM_AliasScopeMetadataOp : LLVM_Op<"alias_scope", [
+  HasParent<"MetadataOp">, Symbol
+]> {
+  let arguments = (ins
+    SymbolNameAttr:$sym_name,
+    FlatSymbolRefAttr:$domain,
+    OptionalAttr<StrAttr>:$description
+  );
+  let summary = "LLVM dialect alias.scope metadata.";
+  let description = [{
+    Defines an alias scope that can be attached to a memory-accessing operation.
+    Such scopes can be used in combination with `noalias` metadata to indicate
+    that sets of memory-affecting operations in one scope do not alias with
+    memory-affecting operations in another scope.
+
+    Example:
+      module {
+        llvm.func @foo(%ptr1 : !llvm.ptr<i32>) {
+            %c0 = llvm.mlir.constant(0 : i32) : i32
+            %c4 = llvm.mlir.constant(4 : i32) : i32
+            %1 = llvm.ptrtoint %ptr1 : !llvm.ptr<i32> to i32
+            %2 = llvm.add %1, %c1 : i32
+            %ptr2 = llvm.inttoptr %2 : i32 to !llvm.ptr<i32>
+            llvm.store %c0, %ptr1 { alias_scopes = [@metadata::@scope1], llvm.noalias = [@metadata::@scope2] } : !llvm.ptr<i32>
+            llvm.store %c4, %ptr2 { alias_scopes = [@metadata::@scope2], llvm.noalias = [@metadata::@scope1] } : !llvm.ptr<i32>
+            llvm.return
+        }
+
+        llvm.metadata @metadata {
+          llvm.alias_scope_domain @unused_domain
+          llvm.alias_scope_domain @domain { description = "Optional domain description"}
+          llvm.alias_scope @scope1 { domain = @domain }
+          llvm.alias_scope @scope2 { domain = @domain, description = "Optional scope description" }
+          llvm.return
+        }
+      }
+
+    See the following link for more details:
+    https://llvm.org/docs/LangRef.html#noalias-and-alias-scope-metadata
+  }];
+  let assemblyFormat = "$sym_name attr-dict";
 }
 
 def LLVM_AccessGroupMetadataOp : LLVM_Op<"access_group", [
