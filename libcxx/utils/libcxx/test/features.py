@@ -89,11 +89,7 @@ DEFAULT_FEATURES = [
 # `libcpp-xxx-yyy-zzz`. When a macro is defined to a specific value
 # (e.g. `_LIBCPP_ABI_VERSION=2`), the feature is `libcpp-xxx-yyy-zzz=<value>`.
 macros = {
-  '_LIBCPP_HAS_NO_GLOBAL_FILESYSTEM_NAMESPACE': 'libcpp-has-no-global-filesystem-namespace',
   '_LIBCPP_HAS_NO_MONOTONIC_CLOCK': 'libcpp-has-no-monotonic-clock',
-  '_LIBCPP_HAS_NO_STDIN': 'libcpp-has-no-stdin',
-  '_LIBCPP_HAS_NO_STDOUT': 'libcpp-has-no-stdout',
-  '_LIBCPP_HAS_NO_THREAD_UNSAFE_C_FUNCTIONS': 'libcpp-has-no-thread-unsafe-c-functions',
   '_LIBCPP_HAS_NO_THREADS': 'libcpp-has-no-threads',
   '_LIBCPP_HAS_THREAD_API_EXTERNAL': 'libcpp-has-thread-api-external',
   '_LIBCPP_HAS_THREAD_API_PTHREAD': 'libcpp-has-thread-api-pthread',

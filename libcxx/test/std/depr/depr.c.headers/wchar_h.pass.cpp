@@ -115,18 +115,12 @@ int main(int, char**)
     ASSERT_SAME_TYPE(size_t,             decltype(wcrtomb(ns, L' ', &mb)));
     ASSERT_SAME_TYPE(size_t,             decltype(mbsrtowcs(ws, (const char**)0, s, &mb)));
     ASSERT_SAME_TYPE(size_t,             decltype(wcsrtombs(ns, (const wchar_t**)0, s, &mb)));
-
-#ifndef _LIBCPP_HAS_NO_STDIN
     ASSERT_SAME_TYPE(wint_t,             decltype(getwchar()));
     ASSERT_SAME_TYPE(int,                decltype(vwscanf(L"", va)));
     ASSERT_SAME_TYPE(int,                decltype(wscanf(L"")));
-#endif
-
-#ifndef _LIBCPP_HAS_NO_STDOUT
     ASSERT_SAME_TYPE(wint_t,             decltype(putwchar(L' ')));
     ASSERT_SAME_TYPE(int,                decltype(vwprintf(L"", va)));
     ASSERT_SAME_TYPE(int,                decltype(wprintf(L"")));
-#endif
 
     return 0;
 }
