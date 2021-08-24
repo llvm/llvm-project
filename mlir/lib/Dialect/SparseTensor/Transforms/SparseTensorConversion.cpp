@@ -244,16 +244,8 @@ public:
     if (!index.hasValue())
       return failure();
     int64_t idx = index.getValue();
-    AffineMap p = enc.getDimOrdering();
-    if (p) {
-      assert(p.isPermutation());
-      for (unsigned i = 0, sz = p.getNumResults(); i < sz; i++) {
-        if (p.getDimPosition(i) == idx) {
-          idx = i;
-          break;
-        }
-      }
-    }
+    if (AffineMap p = enc.getDimOrdering())
+      idx = p.getPermutedPosition(idx);
     // Generate the call.
     StringRef name = "sparseDimSize";
     SmallVector<Value, 2> params;
