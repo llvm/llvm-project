@@ -1,4 +1,4 @@
-//===- ReduceModuleInlineAsm.h --------------------------------------------===//
+//===- ReduceModuleData.h --------------------------------------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -6,13 +6,13 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef LLVM_TOOLS_LLVM_REDUCE_DELTAS_REDUCE_MODULEINLINEASM_H
-#define LLVM_TOOLS_LLVM_REDUCE_DELTAS_REDUCE_MODULEINLINEASM_H
+#ifndef LLVM_TOOLS_LLVM_REDUCE_DELTAS_REDUCEMODULEDATA_H
+#define LLVM_TOOLS_LLVM_REDUCE_DELTAS_REDUCEMODULEDATA_H
 
 #include "Delta.h"
 
 namespace llvm {
-void reduceModuleInlineAsmDeltaPass(TestRunner &Test);
+void reduceModuleDataDeltaPass(TestRunner &Test);
 } // namespace llvm
 
 #endif
