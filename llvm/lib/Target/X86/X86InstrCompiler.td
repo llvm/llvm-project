@@ -261,17 +261,6 @@ let isPseudo = 1, SchedRW = [WriteSystem] in {
 }
 
 //===----------------------------------------------------------------------===//
-// Pseudo instructions used by address sanitizer.
-//===----------------------------------------------------------------------===//
-let
-  Defs = [R8, EFLAGS] in {
-def ASAN_CHECK_MEMACCESS : PseudoI<
-  (outs), (ins GR64NoR8:$addr, i32imm:$accessinfo),
-  [(int_asan_check_memaccess GR64NoR8:$addr, (i32 timm:$accessinfo))]>,
-  Sched<[]>;
-}
-
-//===----------------------------------------------------------------------===//
 // Pseudo instructions used by segmented stacks.
 //
 
@@ -971,7 +960,7 @@ multiclass ATOMIC_RMW_BINOP<bits<8> opc8, bits<8> opc, string mnemonic,
                     !strconcat(mnemonic, "{l}\t{$val, $ptr|$ptr, $val}"),
                     [(set
                        GR32:$dst,
-                       (!cast<PatFrag>(frag # "_32") addr:$ptr, GR32:$val))]>,
+                       (!cast<PatFrag>(frag # "_32") addr:$ptr, GR32:$val))]>, 
                     OpSize32;
     def NAME#64 : RI<opc, MRMSrcMem, (outs GR64:$dst),
                      (ins GR64:$val, i64mem:$ptr),

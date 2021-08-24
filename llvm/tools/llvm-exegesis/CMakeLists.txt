@@ -1,5 +1,4 @@
 set(LLVM_LINK_COMPONENTS
-  Instrumentation
   MC
   MCParser
   Support
