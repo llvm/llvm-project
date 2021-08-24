@@ -93,6 +93,7 @@ using llvm::StringRef;
 #define KEY_DELETE 127
 
 #define KEY_SHIFT_TAB (KEY_MAX + 1)
+#define KEY_ALT_ENTER (KEY_MAX + 2)
 
 namespace curses {
 class Menu;
@@ -2315,6 +2316,7 @@ public:
   // action that requires valid fields.
   bool CheckFieldsValidity() {
     for (int i = 0; i < GetNumberOfFields(); i++) {
+      GetField(i)->FieldDelegateExitCallback();
       if (GetField(i)->FieldDelegateHasError()) {
         SetError("Some fields are invalid!");
         return false;
@@ -2649,13 +2651,24 @@ public:
                       Size(width, copy_height));
   }
 
+  void DrawSubmitHint(Surface &surface, bool is_active) {
+    surface.MoveCursor(2, surface.GetHeight() - 1);
+    if (is_active)
+      surface.AttributeOn(A_BOLD | COLOR_PAIR(BlackOnWhite));
+    surface.Printf("[Press Alt+Enter to %s]",
+                   m_delegate_sp->GetAction(0).GetLabel().c_str());
+    if (is_active)
+      surface.AttributeOff(A_BOLD | COLOR_PAIR(BlackOnWhite));
+  }
+
   bool WindowDelegateDraw(Window &window, bool force) override {
     m_delegate_sp->UpdateFieldsVisibility();
 
     window.Erase();
 
     window.DrawTitleBox(m_delegate_sp->GetName().c_str(),
-                        "Press Esc to cancel");
+                        "Press Esc to Cancel");
+    DrawSubmitHint(window, window.IsActive());
 
     Rect content_bounds = window.GetFrame();
     content_bounds.Inset(2, 2);
@@ -2778,8 +2791,8 @@ public:
     return eKeyHandled;
   }
 
-  void ExecuteAction(Window &window) {
-    FormAction &action = m_delegate_sp->GetAction(m_selection_index);
+  void ExecuteAction(Window &window, int index) {
+    FormAction &action = m_delegate_sp->GetAction(index);
     action.Execute(window);
     if (m_delegate_sp->HasError()) {
       m_first_visible_line = 0;
@@ -2794,10 +2807,13 @@ public:
     case '\n':
     case KEY_ENTER:
       if (m_selection_type == SelectionType::Action) {
-        ExecuteAction(window);
+        ExecuteAction(window, m_selection_index);
         return eKeyHandled;
       }
       break;
+    case KEY_ALT_ENTER:
+      ExecuteAction(window, 0);
+      return eKeyHandled;
     case '\t':
       return SelectNext(key);
     case KEY_SHIFT_TAB:
@@ -7458,6 +7474,7 @@ void IOHandlerCursesGUI::Activate() {
     static_assert(LastColorPairIndex == 18, "Color indexes do not match.");
 
     define_key("\033[Z", KEY_SHIFT_TAB);
+    define_key("\033\015", KEY_ALT_ENTER);
   }
 }
 
