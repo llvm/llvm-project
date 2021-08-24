@@ -478,14 +478,14 @@ Status NativeRegisterContextLinux_arm64::WriteAllRegisterValues(
 
   if (!data_sp) {
     error.SetErrorStringWithFormat(
-        "NativeRegisterContextLinux_x86_64::%s invalid data_sp provided",
+        "NativeRegisterContextLinux_arm64::%s invalid data_sp provided",
         __FUNCTION__);
     return error;
   }
 
   if (data_sp->GetByteSize() != REG_CONTEXT_SIZE) {
     error.SetErrorStringWithFormat(
-        "NativeRegisterContextLinux_x86_64::%s data_sp contained mismatched "
+        "NativeRegisterContextLinux_arm64::%s data_sp contained mismatched "
         "data size, expected %" PRIu64 ", actual %" PRIu64,
         __FUNCTION__, REG_CONTEXT_SIZE, data_sp->GetByteSize());
     return error;
@@ -493,7 +493,7 @@ Status NativeRegisterContextLinux_arm64::WriteAllRegisterValues(
 
   uint8_t *src = data_sp->GetBytes();
   if (src == nullptr) {
-    error.SetErrorStringWithFormat("NativeRegisterContextLinux_x86_64::%s "
+    error.SetErrorStringWithFormat("NativeRegisterContextLinux_arm64::%s "
                                    "DataBuffer::GetBytes() returned a null "
                                    "pointer",
                                    __FUNCTION__);
