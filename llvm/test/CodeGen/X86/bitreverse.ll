@@ -69,11 +69,11 @@ define <2 x i16> @test_bitreverse_v2i16(<2 x i16> %a) nounwind {
 ; X64-NEXT:    pand {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0
 ; X64-NEXT:    psrlw $2, %xmm0
 ; X64-NEXT:    por %xmm1, %xmm0
-; X64-NEXT:    movdqa {{.*#+}} xmm1 = [85,85,85,85,85,85,85,85,85,85,85,85,85,85,85,85]
+; X64-NEXT:    movdqa {{.*#+}} xmm1 = [170,170,170,170,170,170,170,170,170,170,170,170,170,170,170,170]
 ; X64-NEXT:    pand %xmm0, %xmm1
-; X64-NEXT:    paddb %xmm1, %xmm1
+; X64-NEXT:    psrlw $1, %xmm1
 ; X64-NEXT:    pand {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0
-; X64-NEXT:    psrlw $1, %xmm0
+; X64-NEXT:    paddb %xmm0, %xmm0
 ; X64-NEXT:    por %xmm1, %xmm0
 ; X64-NEXT:    retq
 ;
