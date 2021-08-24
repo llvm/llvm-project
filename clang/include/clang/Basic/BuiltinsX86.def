@@ -1995,6 +1995,25 @@ TARGET_BUILTIN(__builtin_ia32_vcvtps2phx128_mask, "V8xV4fV8xUc", "ncV:128:", "av
 TARGET_BUILTIN(__builtin_ia32_vcvtps2phx256_mask, "V8xV8fV8xUc", "ncV:256:", "avx512fp16,avx512vl")
 TARGET_BUILTIN(__builtin_ia32_vcvtps2phx512_mask, "V16xV16fV16xUsIi", "ncV:512:", "avx512fp16")
 
+TARGET_BUILTIN(__builtin_ia32_vfmaddph, "V8xV8xV8xV8x", "ncV:128:", "avx512fp16,avx512vl")
+TARGET_BUILTIN(__builtin_ia32_vfmaddph256, "V16xV16xV16xV16x", "ncV:256:", "avx512fp16,avx512vl")
+TARGET_BUILTIN(__builtin_ia32_vfmaddph512_mask,  "V32xV32xV32xV32xUiIi", "ncV:512:", "avx512fp16")
+TARGET_BUILTIN(__builtin_ia32_vfmaddph512_mask3, "V32xV32xV32xV32xUiIi", "ncV:512:", "avx512fp16")
+TARGET_BUILTIN(__builtin_ia32_vfmaddph512_maskz, "V32xV32xV32xV32xUiIi", "ncV:512:", "avx512fp16")
+TARGET_BUILTIN(__builtin_ia32_vfmaddsubph, "V8xV8xV8xV8x", "ncV:128:", "avx512fp16,avx512vl")
+TARGET_BUILTIN(__builtin_ia32_vfmaddsubph256, "V16xV16xV16xV16x", "ncV:256:", "avx512fp16,avx512vl")
+TARGET_BUILTIN(__builtin_ia32_vfmaddsubph512_mask, "V32xV32xV32xV32xUiIi", "ncV:512:", "avx512fp16")
+TARGET_BUILTIN(__builtin_ia32_vfmaddsubph512_maskz, "V32xV32xV32xV32xUiIi", "ncV:512:", "avx512fp16")
+TARGET_BUILTIN(__builtin_ia32_vfmaddsubph512_mask3, "V32xV32xV32xV32xUiIi", "ncV:512:", "avx512fp16")
+
+TARGET_BUILTIN(__builtin_ia32_vfmsubaddph512_mask3, "V32xV32xV32xV32xUiIi", "ncV:512:", "avx512fp16")
+TARGET_BUILTIN(__builtin_ia32_vfmsubph512_mask3, "V32xV32xV32xV32xUiIi", "ncV:512:", "avx512fp16")
+
+TARGET_BUILTIN(__builtin_ia32_vfmaddsh3_mask, "V8xV8xV8xV8xUcIi", "ncV:128:", "avx512fp16")
+TARGET_BUILTIN(__builtin_ia32_vfmaddsh3_maskz, "V8xV8xV8xV8xUcIi", "ncV:128:", "avx512fp16")
+TARGET_BUILTIN(__builtin_ia32_vfmaddsh3_mask3, "V8xV8xV8xV8xUcIi", "ncV:128:", "avx512fp16")
+TARGET_BUILTIN(__builtin_ia32_vfmsubsh3_mask3, "V8xV8xV8xV8xUcIi", "ncV:128:", "avx512fp16")
+
 // generic select intrinsics
 TARGET_BUILTIN(__builtin_ia32_selectb_128, "V16cUsV16cV16c", "ncV:128:", "avx512bw,avx512vl")
 TARGET_BUILTIN(__builtin_ia32_selectb_256, "V32cUiV32cV32c", "ncV:256:", "avx512bw,avx512vl")

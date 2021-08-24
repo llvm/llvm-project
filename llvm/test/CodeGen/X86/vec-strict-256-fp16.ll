@@ -7,6 +7,7 @@ declare <16 x half> @llvm.experimental.constrained.fsub.v16f16(<16 x half>, <16 
 declare <16 x half> @llvm.experimental.constrained.fmul.v16f16(<16 x half>, <16 x half>, metadata, metadata)
 declare <16 x half> @llvm.experimental.constrained.fdiv.v16f16(<16 x half>, <16 x half>, metadata, metadata)
 declare <16 x half> @llvm.experimental.constrained.sqrt.v16f16(<16 x half>, metadata, metadata)
+declare <16 x half> @llvm.experimental.constrained.fma.v16f16(<16 x half>, <16 x half>, <16 x half>, metadata, metadata)
 declare <4 x double> @llvm.experimental.constrained.fpext.v4f64.v4f16(<4 x half>, metadata)
 declare <8 x float> @llvm.experimental.constrained.fpext.v8f32.v8f16(<8 x half>, metadata)
 declare <4 x half> @llvm.experimental.constrained.fptrunc.v4f16.v4f64(<4 x double>, metadata, metadata)
@@ -96,6 +97,17 @@ define <4 x half> @f12(<4 x double> %a) #0 {
                                 metadata !"round.dynamic",
                                 metadata !"fpexcept.strict") #0
   ret <4 x half> %ret
+}
+
+define <16 x half> @f13(<16 x half> %a, <16 x half> %b, <16 x half> %c) #0 {
+; CHECK-LABEL: f13:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    vfmadd213ph %ymm2, %ymm1, %ymm0
+; CHECK-NEXT:    ret{{[l|q]}}
+  %res = call <16 x half> @llvm.experimental.constrained.fma.v16f16(<16 x half> %a, <16 x half> %b, <16 x half> %c,
+                                                                    metadata !"round.dynamic",
+                                                                    metadata !"fpexcept.strict") #0
+  ret <16 x half> %res
 }
 
 define <8 x float> @f14(<8 x half> %a) #0 {
