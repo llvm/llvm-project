@@ -444,6 +444,9 @@ public:
   /// Return the OpenCL C or C++ version as a VersionTuple.
   VersionTuple getOpenCLVersionTuple() const;
 
+  /// Return the OpenCL version that kernel language is compatible with
+  unsigned getOpenCLCompatibleVersion() const;
+
   /// Return the OpenCL C or C++ for OpenCL language name and version
   /// as a string.
   std::string getOpenCLVersionString() const;
