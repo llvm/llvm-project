@@ -448,11 +448,7 @@ define i32 @and_or_not_or8(i32 %A, i32 %B) {
 
 define i32 @shifted_all_ones(i32 %shamt) {
 ; CHECK-LABEL: @shifted_all_ones(
-; CHECK-NEXT:    [[R:%.*]] = lshr i32 -1, [[SHAMT:%.*]]
-; CHECK-NEXT:    [[S:%.*]] = sub i32 32, [[SHAMT]]
-; CHECK-NEXT:    [[L:%.*]] = shl i32 -1, [[S]]
-; CHECK-NEXT:    [[O:%.*]] = or i32 [[R]], [[L]]
-; CHECK-NEXT:    ret i32 [[O]]
+; CHECK-NEXT:    ret i32 -1
 ;
   %r = lshr i32 -1, %shamt
   %s = sub i32 32, %shamt
@@ -461,13 +457,11 @@ define i32 @shifted_all_ones(i32 %shamt) {
   ret i32 %o
 }
 
+; Sub from less than bitwidth is ok (overlapping ones).
+
 define i32 @shifted_all_ones_commute(i32 %shamt) {
 ; CHECK-LABEL: @shifted_all_ones_commute(
-; CHECK-NEXT:    [[R:%.*]] = lshr i32 -1, [[SHAMT:%.*]]
-; CHECK-NEXT:    [[S:%.*]] = sub i32 31, [[SHAMT]]
-; CHECK-NEXT:    [[L:%.*]] = shl i32 -1, [[S]]
-; CHECK-NEXT:    [[O:%.*]] = or i32 [[L]], [[R]]
-; CHECK-NEXT:    ret i32 [[O]]
+; CHECK-NEXT:    ret i32 -1
 ;
   %r = lshr i32 -1, %shamt
   %s = sub i32 31, %shamt
@@ -478,11 +472,7 @@ define i32 @shifted_all_ones_commute(i32 %shamt) {
 
 define <2 x i9> @shifted_all_ones_sub_on_lshr(<2 x i9> %shamt) {
 ; CHECK-LABEL: @shifted_all_ones_sub_on_lshr(
-; CHECK-NEXT:    [[L:%.*]] = shl <2 x i9> <i9 -1, i9 -1>, [[SHAMT:%.*]]
-; CHECK-NEXT:    [[S:%.*]] = sub <2 x i9> <i9 5, i9 5>, [[SHAMT]]
-; CHECK-NEXT:    [[R:%.*]] = lshr <2 x i9> <i9 -1, i9 -1>, [[S]]
-; CHECK-NEXT:    [[O:%.*]] = or <2 x i9> [[L]], [[R]]
-; CHECK-NEXT:    ret <2 x i9> [[O]]
+; CHECK-NEXT:    ret <2 x i9> <i9 -1, i9 -1>
 ;
   %l = shl <2 x i9> <i9 -1, i9 -1>, %shamt
   %s = sub <2 x i9> <i9 5, i9 5>, %shamt
@@ -493,11 +483,7 @@ define <2 x i9> @shifted_all_ones_sub_on_lshr(<2 x i9> %shamt) {
 
 define i8 @shifted_all_ones_sub_on_lshr_commute(i8 %shamt) {
 ; CHECK-LABEL: @shifted_all_ones_sub_on_lshr_commute(
-; CHECK-NEXT:    [[L:%.*]] = shl i8 -1, [[SHAMT:%.*]]
-; CHECK-NEXT:    [[S:%.*]] = sub i8 8, [[SHAMT]]
-; CHECK-NEXT:    [[R:%.*]] = lshr i8 -1, [[S]]
-; CHECK-NEXT:    [[O:%.*]] = or i8 [[R]], [[L]]
-; CHECK-NEXT:    ret i8 [[O]]
+; CHECK-NEXT:    ret i8 -1
 ;
   %l = shl i8 -1, %shamt
   %s = sub i8 8, %shamt
@@ -505,6 +491,8 @@ define i8 @shifted_all_ones_sub_on_lshr_commute(i8 %shamt) {
   %o = or i8 %r, %l
   ret i8 %o
 }
+
+; negative test - need -1 in general case
 
 define i32 @shifted_not_all_ones(i32 %shamt) {
 ; CHECK-LABEL: @shifted_not_all_ones(
@@ -521,6 +509,8 @@ define i32 @shifted_not_all_ones(i32 %shamt) {
   ret i32 %o
 }
 
+; negative test - opposite shift amount may be too big
+
 define i32 @shifted_all_ones_greater_than_bitwidth(i32 %shamt) {
 ; CHECK-LABEL: @shifted_all_ones_greater_than_bitwidth(
 ; CHECK-NEXT:    [[R:%.*]] = lshr i32 -1, [[SHAMT:%.*]]
@@ -531,6 +521,23 @@ define i32 @shifted_all_ones_greater_than_bitwidth(i32 %shamt) {
 ;
   %r = lshr i32 -1, %shamt
   %s = sub i32 33, %shamt
+  %l = shl i32 -1, %s
+  %o = or i32 %r, %l
+  ret i32 %o
+}
+
+; negative test - shift amount must be derived from same base
+
+define i32 @shifted_all_ones_not_same_amt(i32 %shamt, i32 %other) {
+; CHECK-LABEL: @shifted_all_ones_not_same_amt(
+; CHECK-NEXT:    [[R:%.*]] = lshr i32 -1, [[SHAMT:%.*]]
+; CHECK-NEXT:    [[S:%.*]] = sub i32 32, [[OTHER:%.*]]
+; CHECK-NEXT:    [[L:%.*]] = shl i32 -1, [[S]]
+; CHECK-NEXT:    [[O:%.*]] = or i32 [[R]], [[L]]
+; CHECK-NEXT:    ret i32 [[O]]
+;
+  %r = lshr i32 -1, %shamt
+  %s = sub i32 32, %other
   %l = shl i32 -1, %s
   %o = or i32 %r, %l
   ret i32 %o
