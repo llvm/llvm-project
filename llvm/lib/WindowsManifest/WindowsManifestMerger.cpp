@@ -35,7 +35,7 @@ void WindowsManifestError::log(raw_ostream &OS) const { OS << Msg; }
 class WindowsManifestMerger::WindowsManifestMergerImpl {
 public:
   ~WindowsManifestMergerImpl();
-  Error merge(const MemoryBuffer &Manifest);
+  Error merge(MemoryBufferRef Manifest);
   std::unique_ptr<MemoryBuffer> getMergedManifest();
 
 private:
@@ -620,7 +620,7 @@ WindowsManifestMerger::WindowsManifestMergerImpl::~WindowsManifestMergerImpl() {
 }
 
 Error WindowsManifestMerger::WindowsManifestMergerImpl::merge(
-    const MemoryBuffer &Manifest) {
+    MemoryBufferRef Manifest) {
   if (Merged)
     return make_error<WindowsManifestError>(
         "merge after getMergedManifest is not supported");
@@ -690,7 +690,7 @@ WindowsManifestMerger::WindowsManifestMergerImpl::~WindowsManifestMergerImpl() {
 }
 
 Error WindowsManifestMerger::WindowsManifestMergerImpl::merge(
-    const MemoryBuffer &Manifest) {
+    MemoryBufferRef Manifest) {
   return make_error<WindowsManifestError>("no libxml2");
 }
 
@@ -708,7 +708,7 @@ WindowsManifestMerger::WindowsManifestMerger()
 
 WindowsManifestMerger::~WindowsManifestMerger() {}
 
-Error WindowsManifestMerger::merge(const MemoryBuffer &Manifest) {
+Error WindowsManifestMerger::merge(MemoryBufferRef Manifest) {
   return Impl->merge(Manifest);
 }
 
