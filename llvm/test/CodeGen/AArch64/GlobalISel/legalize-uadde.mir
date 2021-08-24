@@ -86,8 +86,7 @@ body:             |
     ; CHECK: [[AND1:%[0-9]+]]:_(s32) = G_AND [[TRUNC1]], [[C]]
     ; CHECK: [[UADDE:%[0-9]+]]:_(s32), [[UADDE1:%[0-9]+]]:_(s1) = G_UADDE [[AND]], [[AND1]], %carry_in
     ; CHECK: [[TRUNC2:%[0-9]+]]:_(s8) = G_TRUNC [[UADDE]](s32)
-    ; CHECK: [[COPY3:%[0-9]+]]:_(s32) = COPY [[UADDE]](s32)
-    ; CHECK: [[AND2:%[0-9]+]]:_(s32) = G_AND [[COPY3]], [[C]]
+    ; CHECK: [[AND2:%[0-9]+]]:_(s32) = G_AND [[UADDE]], [[C]]
     ; CHECK: [[ICMP:%[0-9]+]]:_(s32) = G_ICMP intpred(ne), [[UADDE]](s32), [[AND2]]
     ; CHECK: %add:_(s8) = COPY [[TRUNC2]](s8)
     ; CHECK: %add_ext:_(s64) = G_ANYEXT [[UADDE]](s32)
