@@ -1038,9 +1038,10 @@ void FPS::handleCall(MachineBasicBlock::iterator &I) {
   for (unsigned I = 0; I < N; ++I)
     pushReg(N - I - 1);
 
-  // Drop all variable values defined by this call -- we can't track them
-  // once they've been stackified.
-  I->dropDebugNumber();
+  // If this call has been modified, drop all variable values defined by it.
+  // We can't track them once they've been stackified.
+  if (STReturns)
+    I->dropDebugNumber();
 }
 
 /// If RET has an FP register use operand, pass the first one in ST(0) and
