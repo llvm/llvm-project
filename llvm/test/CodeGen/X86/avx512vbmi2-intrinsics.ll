@@ -287,8 +287,8 @@ define <32 x i16> @test_compress_w_512(<32 x i16> %data) {
 define void @test_mask_compress_store_b_512(i8* %addr, <64 x i8> %data, i64 %mask) {
 ; X86-LABEL: test_mask_compress_store_b_512:
 ; X86:       # %bb.0:
-; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax # encoding: [0x8b,0x44,0x24,0x04]
 ; X86-NEXT:    kmovq {{[0-9]+}}(%esp), %k1 # encoding: [0xc4,0xe1,0xf8,0x90,0x4c,0x24,0x08]
+; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax # encoding: [0x8b,0x44,0x24,0x04]
 ; X86-NEXT:    vpcompressb %zmm0, (%eax) {%k1} # encoding: [0x62,0xf2,0x7d,0x49,0x63,0x00]
 ; X86-NEXT:    vzeroupper # encoding: [0xc5,0xf8,0x77]
 ; X86-NEXT:    retl # encoding: [0xc3]
