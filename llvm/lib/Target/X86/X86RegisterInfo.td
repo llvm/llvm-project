@@ -436,6 +436,12 @@ def GR64 : RegisterClass<"X86", [i64], 64,
                          (add RAX, RCX, RDX, RSI, RDI, R8, R9, R10, R11,
                               RBX, R14, R15, R12, R13, RBP, RSP, RIP)>;
 
+// GR64 - 64-bit GPRs without R8 and RIP. Could be used when emitting code for
+// intrinsics, which use implict input registers.
+def GR64NoR8 : RegisterClass<"X86", [i64], 64,
+                              (add RAX, RCX, RDX, RSI, RDI, R9, R10, R11,
+                                   RBX, R14, R15, R12, R13, RBP, RSP)>;
+
 // Segment registers for use by MOV instructions (and others) that have a
 //   segment register as one operand.  Always contain a 16-bit segment
 //   descriptor.
