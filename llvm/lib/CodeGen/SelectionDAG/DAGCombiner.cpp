@@ -16257,11 +16257,12 @@ struct LoadedSlice {
       return false;
 
     // Check if it will be merged with the load.
-    // 1. Check the alignment constraint.
-    Align RequiredAlignment = DAG->getDataLayout().getABITypeAlign(
-        ResVT.getTypeForEVT(*DAG->getContext()));
-
-    if (RequiredAlignment > getAlign())
+    // 1. Check the alignment / fast memory access constraint.
+    bool IsFast = false;
+    if (!TLI.allowsMemoryAccess(*DAG->getContext(), DAG->getDataLayout(), ResVT,
+                                Origin->getAddressSpace(), getAlign(),
+                                Origin->getMemOperand()->getFlags(), &IsFast) ||
+        !IsFast)
       return false;
 
     // 2. Check that the load is a legal operation for that type.
