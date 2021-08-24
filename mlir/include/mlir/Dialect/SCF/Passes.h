@@ -28,6 +28,10 @@ std::unique_ptr<Pass> createForLoopSpecializationPass();
 /// better vectorization.
 std::unique_ptr<Pass> createForLoopPeelingPass();
 
+/// Creates a pass that canonicalizes affine.min ops in scf.for loops with
+/// known lower and upper bounds.
+std::unique_ptr<Pass> createAffineMinSCFCanonicalizationPass();
+
 /// Creates a loop fusion pass which fuses parallel loops.
 std::unique_ptr<Pass> createParallelLoopFusionPass();
 

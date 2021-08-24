@@ -382,6 +382,77 @@ LogicalResult mlir::scf::peelAndCanonicalizeForLoop(RewriterBase &rewriter,
   return success();
 }
 
+/// Canonicalize AffineMinOp operations in the context of for loops with a known
+/// range. Call `canonicalizeAffineMinOp` and add the following constraints to
+/// the constraint system (along with the missing dimensions):
+///
+/// * iv >= lb
+/// * iv < lb + step * ((ub - lb - 1) floorDiv step) + 1
+///
+/// Note: Due to limitations of FlatAffineConstraints, only constant step sizes
+/// are currently supported.
+LogicalResult mlir::scf::canonicalizeAffineMinOpInLoop(
+    AffineMinOp minOp, RewriterBase &rewriter,
+    function_ref<LogicalResult(Value, Value &, Value &, Value &)> loopMatcher) {
+  FlatAffineValueConstraints constraints;
+  DenseSet<Value> allIvs;
+
+  // Find all iteration variables among `minOp`'s operands add constrain them.
+  for (Value operand : minOp.operands()) {
+    // Skip duplicate ivs.
+    if (llvm::find(allIvs, operand) != allIvs.end())
+      continue;
+
+    // If `operand` is an iteration variable: Find corresponding loop
+    // bounds and step.
+    Value iv = operand;
+    Value lb, ub, step;
+    if (failed(loopMatcher(operand, lb, ub, step)))
+      continue;
+    allIvs.insert(iv);
+
+    // FlatAffineConstraints does not support semi-affine expressions.
+    // Therefore, only constant step values are supported.
+    auto stepInt = getConstantIntValue(step);
+    if (!stepInt)
+      continue;
+
+    unsigned dimIv = constraints.addDimId(iv);
+    unsigned dimLb = constraints.addDimId(lb);
+    unsigned dimUb = constraints.addDimId(ub);
+
+    // If loop lower/upper bounds are constant: Add EQ constraint.
+    Optional<int64_t> lbInt = getConstantIntValue(lb);
+    Optional<int64_t> ubInt = getConstantIntValue(ub);
+    if (lbInt)
+      constraints.addBound(FlatAffineConstraints::EQ, dimLb, *lbInt);
+    if (ubInt)
+      constraints.addBound(FlatAffineConstraints::EQ, dimUb, *ubInt);
+
+    // iv >= lb (equiv.: iv - lb >= 0)
+    SmallVector<int64_t> ineqLb(constraints.getNumCols(), 0);
+    ineqLb[dimIv] = 1;
+    ineqLb[dimLb] = -1;
+    constraints.addInequality(ineqLb);
+
+    // iv < lb + step * ((ub - lb - 1) floorDiv step) + 1
+    AffineExpr exprLb = lbInt ? rewriter.getAffineConstantExpr(*lbInt)
+                              : rewriter.getAffineDimExpr(dimLb);
+    AffineExpr exprUb = ubInt ? rewriter.getAffineConstantExpr(*ubInt)
+                              : rewriter.getAffineDimExpr(dimUb);
+    AffineExpr ivUb =
+        exprLb + 1 + (*stepInt * ((exprUb - exprLb - 1).floorDiv(*stepInt)));
+    auto map = AffineMap::get(
+        /*dimCount=*/constraints.getNumDimIds(),
+        /*symbolCount=*/constraints.getNumSymbolIds(), /*result=*/ivUb);
+
+    if (failed(constraints.addBound(FlatAffineConstraints::UB, dimIv, map)))
+      return failure();
+  }
+
+  return canonicalizeAffineMinOp(rewriter, minOp, constraints);
+}
+
 static constexpr char kPeeledLoopLabel[] = "__peeled_loop__";
 static constexpr char kPartialIterationLabel[] = "__partial_iteration__";
 
@@ -423,6 +494,39 @@ struct ForLoopPeelingPattern : public OpRewritePattern<ForOp> {
   /// the direct parent.
   bool skipPartial;
 };
+
+/// Canonicalize AffineMinOp operations in the context of scf.for and
+/// scf.parallel loops with a known range.
+struct AffineMinSCFCanonicalizationPattern
+    : public OpRewritePattern<AffineMinOp> {
+  using OpRewritePattern<AffineMinOp>::OpRewritePattern;
+
+  LogicalResult matchAndRewrite(AffineMinOp minOp,
+                                PatternRewriter &rewriter) const override {
+    auto loopMatcher = [](Value iv, Value &lb, Value &ub, Value &step) {
+      if (scf::ForOp forOp = scf::getForInductionVarOwner(iv)) {
+        lb = forOp.lowerBound();
+        ub = forOp.upperBound();
+        step = forOp.step();
+        return success();
+      }
+      if (scf::ParallelOp parOp = scf::getParallelForInductionVarOwner(iv)) {
+        for (unsigned idx = 0; idx < parOp.getNumLoops(); ++idx) {
+          if (parOp.getInductionVars()[idx] == iv) {
+            lb = parOp.lowerBound()[idx];
+            ub = parOp.upperBound()[idx];
+            step = parOp.step()[idx];
+            return success();
+          }
+        }
+        return failure();
+      }
+      return failure();
+    };
+
+    return scf::canonicalizeAffineMinOpInLoop(minOp, rewriter, loopMatcher);
+  }
+};
 } // namespace
 
 namespace {
@@ -456,7 +560,23 @@ struct ForLoopPeeling : public SCFForLoopPeelingBase<ForLoopPeeling> {
     });
   }
 };
+
+struct AffineMinSCFCanonicalization
+    : public AffineMinSCFCanonicalizationBase<AffineMinSCFCanonicalization> {
+  void runOnFunction() override {
+    FuncOp funcOp = getFunction();
+    MLIRContext *ctx = funcOp.getContext();
+    RewritePatternSet patterns(ctx);
+    patterns.add<AffineMinSCFCanonicalizationPattern>(ctx);
+    if (failed(applyPatternsAndFoldGreedily(funcOp, std::move(patterns))))
+      signalPassFailure();
+  }
+};
 } // namespace
+
+std::unique_ptr<Pass> mlir::createAffineMinSCFCanonicalizationPass() {
+  return std::make_unique<AffineMinSCFCanonicalization>();
+}
 
 std::unique_ptr<Pass> mlir::createParallelLoopSpecializationPass() {
   return std::make_unique<ParallelLoopSpecialization>();
@@ -468,4 +588,9 @@ std::unique_ptr<Pass> mlir::createForLoopSpecializationPass() {
 
 std::unique_ptr<Pass> mlir::createForLoopPeelingPass() {
   return std::make_unique<ForLoopPeeling>();
+}
+
+void mlir::scf::populateSCFLoopBodyCanonicalizationPatterns(
+    RewritePatternSet &patterns) {
+  patterns.insert<AffineMinSCFCanonicalizationPattern>(patterns.getContext());
 }
