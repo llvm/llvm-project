@@ -1197,23 +1197,23 @@ define zeroext i1 @umulobri64(i64 %v1, i64 %v2) {
 ; WIN32-NEXT:    testl %esi, %esi
 ; WIN32-NEXT:    setne %dl
 ; WIN32-NEXT:    testl %eax, %eax
-; WIN32-NEXT:    setne %bl
-; WIN32-NEXT:    andb %dl, %bl
+; WIN32-NEXT:    setne %cl
+; WIN32-NEXT:    andb %dl, %cl
 ; WIN32-NEXT:    mull {{[0-9]+}}(%esp)
 ; WIN32-NEXT:    movl %eax, %edi
-; WIN32-NEXT:    seto %bh
+; WIN32-NEXT:    seto %bl
 ; WIN32-NEXT:    movl %esi, %eax
 ; WIN32-NEXT:    mull %ebp
 ; WIN32-NEXT:    movl %eax, %esi
-; WIN32-NEXT:    seto %cl
-; WIN32-NEXT:    orb %bh, %cl
+; WIN32-NEXT:    seto %ch
+; WIN32-NEXT:    orb %bl, %ch
 ; WIN32-NEXT:    addl %edi, %esi
 ; WIN32-NEXT:    movl %ebp, %eax
 ; WIN32-NEXT:    mull {{[0-9]+}}(%esp)
 ; WIN32-NEXT:    addl %esi, %edx
 ; WIN32-NEXT:    setb %al
+; WIN32-NEXT:    orb %ch, %al
 ; WIN32-NEXT:    orb %cl, %al
-; WIN32-NEXT:    orb %bl, %al
 ; WIN32-NEXT:    subb $1, %al
 ; WIN32-NEXT:    je LBB22_1
 ; WIN32-NEXT:  # %bb.3: # %continue
