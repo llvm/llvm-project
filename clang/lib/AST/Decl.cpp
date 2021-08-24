@@ -2216,18 +2216,14 @@ VarDecl *VarDecl::getActingDefinition() {
     return nullptr;
 
   VarDecl *LastTentative = nullptr;
-
-  // Loop through the declaration chain, starting with the most recent.
-  for (VarDecl *Decl = getMostRecentDecl(); Decl;
-       Decl = Decl->getPreviousDecl()) {
-    Kind = Decl->isThisDeclarationADefinition();
+  VarDecl *First = getFirstDecl();
+  for (auto I : First->redecls()) {
+    Kind = I->isThisDeclarationADefinition();
     if (Kind == Definition)
       return nullptr;
-    // Record the first (most recent) TentativeDefinition that is encountered.
-    if (Kind == TentativeDefinition && !LastTentative)
-      LastTentative = Decl;
+    if (Kind == TentativeDefinition)
+      LastTentative = I;
   }
-
   return LastTentative;
 }
 
