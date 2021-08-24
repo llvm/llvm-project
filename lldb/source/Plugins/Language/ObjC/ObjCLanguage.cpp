@@ -275,22 +275,6 @@ ObjCLanguage::GetMethodNameVariants(ConstString method_name) const {
   return variant_names;
 }
 
-Language::FunctionNameInfo
-ObjCLanguage::GetFunctionNameInfo(ConstString name) const {
-  Language::FunctionNameInfo info;
-  info.func_name_type = lldb::eFunctionNameTypeNone;
-
-  if (ObjCLanguage::IsPossibleObjCMethodName(name.GetCString())) {
-    info.func_name_type = lldb::eFunctionNameTypeFull;
-  }
-
-  if (ObjCLanguage::IsPossibleObjCSelector(name.GetCString())) {
-    info.func_name_type |= lldb::eFunctionNameTypeSelector;
-  }
-
-  return info;
-}
-
 bool ObjCLanguage::SymbolNameFitsToLanguage(Mangled mangled) const {
   ConstString demangled_name = mangled.GetDemangledName();
   if (!demangled_name)

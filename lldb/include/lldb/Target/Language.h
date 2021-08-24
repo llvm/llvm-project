@@ -202,20 +202,6 @@ public:
     return std::vector<Language::MethodNameVariant>();
   };
 
-  class FunctionNameInfo {
-  public:
-    llvm::StringRef basename;
-    llvm::StringRef context;
-    lldb::FunctionNameType func_name_type;
-  };
-
-  virtual Language::FunctionNameInfo
-  GetFunctionNameInfo(ConstString name) const {
-    FunctionNameInfo ret;
-    ret.func_name_type = lldb::eFunctionNameTypeNone;
-    return ret;
-  };
-
   /// Returns true iff the given symbol name is compatible with the mangling
   /// scheme of this language.
   ///

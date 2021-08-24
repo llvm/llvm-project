@@ -3758,6 +3758,7 @@ TEST(MemorySanitizer, wordexp) {
   ASSERT_STREQ("a", w.we_wordv[0]);
   ASSERT_STREQ("b", w.we_wordv[1]);
   ASSERT_STREQ("c", w.we_wordv[2]);
+  EXPECT_POISONED(w.we_wordv[3]);
 }
 
 TEST(MemorySanitizer, wordexp_initial_offset) {
@@ -3770,6 +3771,7 @@ TEST(MemorySanitizer, wordexp_initial_offset) {
   ASSERT_STREQ("a", w.we_wordv[1]);
   ASSERT_STREQ("b", w.we_wordv[2]);
   ASSERT_STREQ("c", w.we_wordv[3]);
+  EXPECT_POISONED(w.we_wordv[4]);
 }
 
 template<class T>

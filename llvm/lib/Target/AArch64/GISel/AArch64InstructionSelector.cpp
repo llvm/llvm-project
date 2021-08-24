@@ -105,7 +105,7 @@ private:
   bool earlySelectSHL(MachineInstr &I, MachineRegisterInfo &MRI);
 
   /// Eliminate same-sized cross-bank copies into stores before selectImpl().
-  bool contractCrossBankCopyIntoStore(GStore &I,
+  bool contractCrossBankCopyIntoStore(MachineInstr &I,
                                       MachineRegisterInfo &MRI);
 
   bool convertPtrAddToAdd(MachineInstr &I, MachineRegisterInfo &MRI);
@@ -1943,9 +1943,8 @@ bool AArch64InstructionSelector::preISelLower(MachineInstr &I) {
     return true;
   }
   case TargetOpcode::G_STORE: {
-    auto &StoreMI = cast<GStore>(I);
-    bool Changed = contractCrossBankCopyIntoStore(StoreMI, MRI);
-    MachineOperand &SrcOp = StoreMI.getOperand(0);
+    bool Changed = contractCrossBankCopyIntoStore(I, MRI);
+    MachineOperand &SrcOp = I.getOperand(0);
     if (MRI.getType(SrcOp.getReg()).isPointer()) {
       // Allow matching with imported patterns for stores of pointers. Unlike
       // G_LOAD/G_PTR_ADD, we may not have selected all users. So, emit a copy
@@ -1956,28 +1955,6 @@ bool AArch64InstructionSelector::preISelLower(MachineInstr &I) {
       RBI.constrainGenericRegister(NewSrc, AArch64::GPR64RegClass, MRI);
       Changed = true;
     }
-#if 0
-    // Now look for truncating stores to the FPR bank. We don't support these,
-    // but since truncating store formation happens before RBS, we can only
-    // split them up again here. We don't want to assign truncstores to GPR only
-    // since that would have a perf impact due to extra moves.
-    LLT SrcTy = MRI.getType(SrcReg);
-    if (RBI.getRegBank(SrcReg, MRI, TRI)->getID() == AArch64::FPRRegBankID) {
-      if (SrcTy.isScalar() &&
-          SrcTy.getSizeInBits() > StoreMI.getMemSizeInBits()) {
-        // Generate an explicit truncate and make this into a non-truncating
-        // store.
-        auto Trunc =
-            MIB.buildTrunc(LLT::scalar(StoreMI.getMemSizeInBits()), SrcReg);
-        MRI.setRegBank(Trunc.getReg(0), RBI.getRegBank(AArch64::FPRRegBankID));
-        if (!select(*Trunc)) {
-          return false;
-        }
-        SrcOp.setReg(Trunc.getReg(0));
-        return true;
-      }
-    }
-#endif
     return Changed;
   }
   case TargetOpcode::G_PTR_ADD:
@@ -2113,7 +2090,8 @@ bool AArch64InstructionSelector::earlySelectSHL(MachineInstr &I,
 }
 
 bool AArch64InstructionSelector::contractCrossBankCopyIntoStore(
-    GStore &StoreMI, MachineRegisterInfo &MRI) {
+    MachineInstr &I, MachineRegisterInfo &MRI) {
+  assert(I.getOpcode() == TargetOpcode::G_STORE && "Expected G_STORE");
   // If we're storing a scalar, it doesn't matter what register bank that
   // scalar is on. All that matters is the size.
   //
@@ -2128,11 +2106,11 @@ bool AArch64InstructionSelector::contractCrossBankCopyIntoStore(
   // G_STORE %x:gpr(s32)
   //
   // And then continue the selection process normally.
-  Register DefDstReg = getSrcRegIgnoringCopies(StoreMI.getValueReg(), MRI);
+  Register DefDstReg = getSrcRegIgnoringCopies(I.getOperand(0).getReg(), MRI);
   if (!DefDstReg.isValid())
     return false;
   LLT DefDstTy = MRI.getType(DefDstReg);
-  Register StoreSrcReg = StoreMI.getValueReg();
+  Register StoreSrcReg = I.getOperand(0).getReg();
   LLT StoreSrcTy = MRI.getType(StoreSrcReg);
 
   // If we get something strange like a physical register, then we shouldn't
@@ -2144,16 +2122,12 @@ bool AArch64InstructionSelector::contractCrossBankCopyIntoStore(
   if (DefDstTy.getSizeInBits() != StoreSrcTy.getSizeInBits())
     return false;
 
-  // Is this store a truncating one?
-  if (StoreSrcTy.getSizeInBits() != StoreMI.getMemSizeInBits())
-    return false;
-
   if (RBI.getRegBank(StoreSrcReg, MRI, TRI) ==
       RBI.getRegBank(DefDstReg, MRI, TRI))
     return false;
 
   // We have a cross-bank copy, which is entering a store. Let's fold it.
-  StoreMI.getOperand(0).setReg(DefDstReg);
+  I.getOperand(0).setReg(DefDstReg);
   return true;
 }
 
@@ -2723,8 +2697,9 @@ bool AArch64InstructionSelector::select(MachineInstr &I) {
   case TargetOpcode::G_ZEXTLOAD:
   case TargetOpcode::G_LOAD:
   case TargetOpcode::G_STORE: {
+    GLoadStore &LdSt = cast<GLoadStore>(I);
     bool IsZExtLoad = I.getOpcode() == TargetOpcode::G_ZEXTLOAD;
-    LLT PtrTy = MRI.getType(I.getOperand(1).getReg());
+    LLT PtrTy = MRI.getType(LdSt.getPointerReg());
 
     if (PtrTy != LLT::pointer(0, 64)) {
       LLVM_DEBUG(dbgs() << "Load/Store pointer has type: " << PtrTy
@@ -2732,20 +2707,19 @@ bool AArch64InstructionSelector::select(MachineInstr &I) {
       return false;
     }
 
-    auto &MemOp = **I.memoperands_begin();
-    uint64_t MemSizeInBytes = MemOp.getSize();
-    unsigned MemSizeInBits = MemSizeInBytes * 8;
-    AtomicOrdering Order = MemOp.getSuccessOrdering();
+    uint64_t MemSizeInBytes = LdSt.getMemSize();
+    unsigned MemSizeInBits = LdSt.getMemSizeInBits();
+    AtomicOrdering Order = LdSt.getMMO().getSuccessOrdering();
 
     // Need special instructions for atomics that affect ordering.
     if (Order != AtomicOrdering::NotAtomic &&
         Order != AtomicOrdering::Unordered &&
         Order != AtomicOrdering::Monotonic) {
-      assert(I.getOpcode() != TargetOpcode::G_ZEXTLOAD);
+      assert(!isa<GZExtLoad>(LdSt));
       if (MemSizeInBytes > 64)
         return false;
 
-      if (I.getOpcode() == TargetOpcode::G_LOAD) {
+      if (isa<GLoad>(LdSt)) {
         static unsigned Opcodes[] = {AArch64::LDARB, AArch64::LDARH,
                                      AArch64::LDARW, AArch64::LDARX};
         I.setDesc(TII.get(Opcodes[Log2_32(MemSizeInBytes)]));
@@ -2759,7 +2733,7 @@ bool AArch64InstructionSelector::select(MachineInstr &I) {
     }
 
 #ifndef NDEBUG
-    const Register PtrReg = I.getOperand(1).getReg();
+    const Register PtrReg = LdSt.getPointerReg();
     const RegisterBank &PtrRB = *RBI.getRegBank(PtrReg, MRI, TRI);
     // Sanity-check the pointer register.
     assert(PtrRB.getID() == AArch64::GPRRegBankID &&
@@ -2768,13 +2742,31 @@ bool AArch64InstructionSelector::select(MachineInstr &I) {
            "Load/Store pointer operand isn't a pointer");
 #endif
 
-    const Register ValReg = I.getOperand(0).getReg();
+    const Register ValReg = LdSt.getReg(0);
+    const LLT ValTy = MRI.getType(ValReg);
     const RegisterBank &RB = *RBI.getRegBank(ValReg, MRI, TRI);
+
+    // The code below doesn't support truncating stores, so we need to split it
+    // again.
+    if (isa<GStore>(LdSt) && ValTy.getSizeInBits() > MemSizeInBits) {
+      unsigned SubReg;
+      LLT MemTy = LdSt.getMMO().getMemoryType();
+      auto *RC = getRegClassForTypeOnBank(MemTy, RB, RBI);
+      if (!getSubRegForClass(RC, TRI, SubReg))
+        return false;
+
+      // Generate a subreg copy.
+      auto Copy = MIB.buildInstr(TargetOpcode::COPY, {MemTy}, {})
+                      .addReg(ValReg, 0, SubReg)
+                      .getReg(0);
+      RBI.constrainGenericRegister(Copy, *RC, MRI);
+      LdSt.getOperand(0).setReg(Copy);
+    }
 
     // Helper lambda for partially selecting I. Either returns the original
     // instruction with an updated opcode, or a new instruction.
     auto SelectLoadStoreAddressingMode = [&]() -> MachineInstr * {
-      bool IsStore = I.getOpcode() == TargetOpcode::G_STORE;
+      bool IsStore = isa<GStore>(I);
       const unsigned NewOpc =
           selectLoadStoreUIOp(I.getOpcode(), RB.getID(), MemSizeInBits);
       if (NewOpc == I.getOpcode())
@@ -2791,7 +2783,8 @@ bool AArch64InstructionSelector::select(MachineInstr &I) {
 
       // Folded something. Create a new instruction and return it.
       auto NewInst = MIB.buildInstr(NewOpc, {}, {}, I.getFlags());
-      IsStore ? NewInst.addUse(ValReg) : NewInst.addDef(ValReg);
+      Register CurValReg = I.getOperand(0).getReg();
+      IsStore ? NewInst.addUse(CurValReg) : NewInst.addDef(CurValReg);
       NewInst.cloneMemRefs(I);
       for (auto &Fn : *AddrModeFns)
         Fn(NewInst);

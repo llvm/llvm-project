@@ -3997,7 +3997,7 @@ INTERCEPTOR(int, wordexp, char *s, __sanitizer_wordexp_t *p, int flags) {
   if (!res && p) {
     COMMON_INTERCEPTOR_WRITE_RANGE(ctx, p, sizeof(*p));
     uptr we_wordc =
-        ((flags & wordexp_wrde_dooffs) ? p->we_wordc : 0) + p->we_wordc;
+        ((flags & wordexp_wrde_dooffs) ? p->we_offs : 0) + p->we_wordc;
     if (we_wordc)
       COMMON_INTERCEPTOR_WRITE_RANGE(ctx, p->we_wordv,
                                      sizeof(*p->we_wordv) * we_wordc);

@@ -56,19 +56,6 @@ static addr_t ResolveRendezvousAddress(Process *process) {
                   "%s resolved via direct object file approach to 0x%" PRIx64,
                   __FUNCTION__, info_location);
       } else {
-        const Symbol *_r_debug =
-            target->GetExecutableModule()->FindFirstSymbolWithNameAndType(
-                ConstString("_r_debug"));
-        if (_r_debug) {
-          info_addr = _r_debug->GetAddress().GetLoadAddress(target);
-          if (info_addr != LLDB_INVALID_ADDRESS) {
-            LLDB_LOGF(log,
-                      "%s resolved by finding symbol '_r_debug' whose value is "
-                      "0x%" PRIx64,
-                      __FUNCTION__, info_addr);
-            return info_addr;
-          }
-        }
         LLDB_LOGF(log,
                   "%s FAILED - direct object file approach did not yield a "
                   "valid address",
@@ -289,14 +276,6 @@ bool DYLDRendezvous::FillSOEntryFromModuleInfo(
   entry.base_addr = base_addr;
   entry.dyn_addr = dyn_addr;
 
-  // ld.so saves empty file name for the executable file in the link map.
-  // When executable is run using ld.so, we need to be update executable path.
-  if (name.empty()) {
-    MemoryRegionInfo region;
-    Status region_status =
-        m_process->GetMemoryRegionInfo(entry.dyn_addr, region);
-    name = region.GetName().AsCString();
-  }
   entry.file_spec.SetFile(name, FileSpec::Style::native);
 
   UpdateBaseAddrIfNecessary(entry, name);
@@ -568,15 +547,6 @@ bool DYLDRendezvous::ReadSOEntryFromMemory(lldb::addr_t addr, SOEntry &entry) {
     return false;
 
   std::string file_path = ReadStringFromMemory(entry.path_addr);
-
-  // ld.so saves empty file name for the executable file in the link map.
-  // When executable is run using ld.so, we need to be update executable path.
-  if (file_path.empty()) {
-    MemoryRegionInfo region;
-    Status region_status =
-        m_process->GetMemoryRegionInfo(entry.dyn_addr, region);
-    file_path = region.GetName().AsCString();
-  }
   entry.file_spec.SetFile(file_path, FileSpec::Style::native);
 
   UpdateBaseAddrIfNecessary(entry, file_path);
