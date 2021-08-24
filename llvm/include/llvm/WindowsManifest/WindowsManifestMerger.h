@@ -30,6 +30,7 @@
 namespace llvm {
 
 class MemoryBuffer;
+class MemoryBufferRef;
 
 namespace windows_manifest {
 
@@ -49,7 +50,7 @@ class WindowsManifestMerger {
 public:
   WindowsManifestMerger();
   ~WindowsManifestMerger();
-  Error merge(const MemoryBuffer &Manifest);
+  Error merge(MemoryBufferRef Manifest);
 
   // Returns vector containing merged xml manifest, or uninitialized vector for
   // empty manifest.
