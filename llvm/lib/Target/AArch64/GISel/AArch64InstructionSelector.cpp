@@ -3021,7 +3021,7 @@ bool AArch64InstructionSelector::select(MachineInstr &I) {
       if (Opcode == TargetOpcode::G_PTRTOINT) {
         assert(DstTy.isVector() && "Expected an FPR ptrtoint to be a vector");
         I.setDesc(TII.get(TargetOpcode::COPY));
-        return true;
+        return selectCopy(I, TII, MRI, TRI, RBI);
       }
     }
 
