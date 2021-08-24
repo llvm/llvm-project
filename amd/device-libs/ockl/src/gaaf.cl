@@ -35,7 +35,7 @@ generic_atomic_fadd(float *p, float v)
 void
 __ockl_atomic_add_noret_f32(float *p, float v)
 {
-    if (__oclc_ISA_version == 9008 && !__ockl_is_local_addr(p) && !__ockl_is_private_addr(p)) {
+    if ((__oclc_ISA_version == 9008 || __oclc_ISA_version == 9010) && !__ockl_is_local_addr(p) && !__ockl_is_private_addr(p)) {
         global_atomic_fadd((__global float *)p, v);
     } else {
         generic_atomic_fadd(p, v);
