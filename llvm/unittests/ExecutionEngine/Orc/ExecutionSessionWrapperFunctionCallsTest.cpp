@@ -97,10 +97,8 @@ TEST(ExecutionSessionWrapperFunctionCalls, RegisterAsyncHandlerAndRun) {
 
   using ArgSerialization = SPSArgList<int32_t, int32_t>;
   size_t ArgBufferSize = ArgSerialization::size(1, 2);
-  WrapperFunctionResult ArgBuffer;
-  char *ArgBufferData =
-      WrapperFunctionResult::allocate(ArgBuffer, ArgBufferSize);
-  SPSOutputBuffer OB(ArgBufferData, ArgBufferSize);
+  auto ArgBuffer = WrapperFunctionResult::allocate(ArgBufferSize);
+  SPSOutputBuffer OB(ArgBuffer.data(), ArgBuffer.size());
   EXPECT_TRUE(ArgSerialization::serialize(OB, 1, 2));
 
   ES.runJITDispatchHandler(
