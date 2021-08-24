@@ -2390,19 +2390,6 @@ StrengthenNoWrapFlags(ScalarEvolution *SE, SCEVTypes Type,
     }
   }
 
-  // <0,+,nonnegative><nw> is also nuw
-  // <INT_MIN,+,nonnegative><nw> is also nsw
-  if (Type == scAddRecExpr && ScalarEvolution::hasFlags(Flags, SCEV::FlagNW) &&
-      Ops.size() == 2) {
-    if (!ScalarEvolution::hasFlags(Flags, SCEV::FlagNUW) && Ops[0]->isZero() &&
-        IsKnownNonNegative(Ops[1]))
-      Flags = ScalarEvolution::setFlags(Flags, SCEV::FlagNUW);
-    if (!ScalarEvolution::hasFlags(Flags, SCEV::FlagNSW) &&
-        isa<SCEVConstant>(Ops[0]) &&
-        cast<SCEVConstant>(Ops[0])->getAPInt().isMinSignedValue())
-      Flags = ScalarEvolution::setFlags(Flags, SCEV::FlagNSW);
-  }
-
   return Flags;
 }
 
