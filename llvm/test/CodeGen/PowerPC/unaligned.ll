@@ -66,14 +66,14 @@ entry:
 define void @foo4(float* %p, float* %r) nounwind {
 ; CHECK-LABEL: foo4:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    lfs 0, 0(3)
-; CHECK-NEXT:    stfs 0, 0(4)
+; CHECK-NEXT:    lwz 3, 0(3)
+; CHECK-NEXT:    stw 3, 0(4)
 ; CHECK-NEXT:    blr
 ;
 ; CHECK-VSX-LABEL: foo4:
 ; CHECK-VSX:       # %bb.0: # %entry
-; CHECK-VSX-NEXT:    lfs 0, 0(3)
-; CHECK-VSX-NEXT:    stfs 0, 0(4)
+; CHECK-VSX-NEXT:    lwz 3, 0(3)
+; CHECK-VSX-NEXT:    stw 3, 0(4)
 ; CHECK-VSX-NEXT:    blr
 entry:
   %v = load float, float* %p, align 1
@@ -86,14 +86,14 @@ entry:
 define void @foo5(double* %p, double* %r) nounwind {
 ; CHECK-LABEL: foo5:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    lfd 0, 0(3)
-; CHECK-NEXT:    stfd 0, 0(4)
+; CHECK-NEXT:    ld 3, 0(3)
+; CHECK-NEXT:    std 3, 0(4)
 ; CHECK-NEXT:    blr
 ;
 ; CHECK-VSX-LABEL: foo5:
 ; CHECK-VSX:       # %bb.0: # %entry
-; CHECK-VSX-NEXT:    lfd 0, 0(3)
-; CHECK-VSX-NEXT:    stfd 0, 0(4)
+; CHECK-VSX-NEXT:    ld 3, 0(3)
+; CHECK-VSX-NEXT:    std 3, 0(4)
 ; CHECK-VSX-NEXT:    blr
 entry:
   %v = load double, double* %p, align 1

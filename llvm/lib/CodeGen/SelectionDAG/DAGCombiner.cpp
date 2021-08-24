@@ -16800,27 +16800,26 @@ SDValue DAGCombiner::TransformFPLoadStorePair(SDNode *N) {
     if (VTSize.isScalable())
       return SDValue();
 
+    bool FastLD = false, FastST = false;
     EVT IntVT = EVT::getIntegerVT(*DAG.getContext(), VTSize.getFixedSize());
     if (!TLI.isOperationLegal(ISD::LOAD, IntVT) ||
         !TLI.isOperationLegal(ISD::STORE, IntVT) ||
         !TLI.isDesirableToTransformToIntegerOp(ISD::LOAD, VT) ||
-        !TLI.isDesirableToTransformToIntegerOp(ISD::STORE, VT))
-      return SDValue();
-
-    Align LDAlign = LD->getAlign();
-    Align STAlign = ST->getAlign();
-    Type *IntVTTy = IntVT.getTypeForEVT(*DAG.getContext());
-    Align ABIAlign = DAG.getDataLayout().getABITypeAlign(IntVTTy);
-    if (LDAlign < ABIAlign || STAlign < ABIAlign)
+        !TLI.isDesirableToTransformToIntegerOp(ISD::STORE, VT) ||
+        !TLI.allowsMemoryAccess(*DAG.getContext(), DAG.getDataLayout(), IntVT,
+                                *LD->getMemOperand(), &FastLD) ||
+        !TLI.allowsMemoryAccess(*DAG.getContext(), DAG.getDataLayout(), IntVT,
+                                *ST->getMemOperand(), &FastST) ||
+        !FastLD || !FastST)
       return SDValue();
 
     SDValue NewLD =
         DAG.getLoad(IntVT, SDLoc(Value), LD->getChain(), LD->getBasePtr(),
-                    LD->getPointerInfo(), LDAlign);
+                    LD->getPointerInfo(), LD->getAlign());
 
     SDValue NewST =
         DAG.getStore(ST->getChain(), SDLoc(N), NewLD, ST->getBasePtr(),
-                     ST->getPointerInfo(), STAlign);
+                     ST->getPointerInfo(), ST->getAlign());
 
     AddToWorklist(NewLD.getNode());
     AddToWorklist(NewST.getNode());
