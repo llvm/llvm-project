@@ -89,6 +89,13 @@ public:
   }
 
   /// Get a pointer to the data contained in this instance.
+  char *data() {
+    assert((R.Size != 0 || R.Data.ValuePtr == nullptr) &&
+           "Cannot get data for out-of-band error value");
+    return R.Size > sizeof(R.Data.Value) ? R.Data.ValuePtr : R.Data.Value;
+  }
+
+  /// Get a const pointer to the data contained in this instance.
   const char *data() const {
     assert((R.Size != 0 || R.Data.ValuePtr == nullptr) &&
            "Cannot get data for out-of-band error value");
@@ -108,24 +115,19 @@ public:
 
   /// Create a WrapperFunctionResult with the given size and return a pointer
   /// to the underlying memory.
-  static char *allocate(WrapperFunctionResult &WFR, size_t Size) {
+  static WrapperFunctionResult allocate(size_t Size) {
     // Reset.
-    WFR = WrapperFunctionResult();
+    WrapperFunctionResult WFR;
     WFR.R.Size = Size;
-    char *DataPtr;
-    if (WFR.R.Size > sizeof(WFR.R.Data.Value)) {
-      DataPtr = (char *)malloc(WFR.R.Size);
-      WFR.R.Data.ValuePtr = DataPtr;
-    } else
-      DataPtr = WFR.R.Data.Value;
-    return DataPtr;
+    if (WFR.R.Size > sizeof(WFR.R.Data.Value))
+      WFR.R.Data.ValuePtr = (char *)malloc(WFR.R.Size);
+    return WFR;
   }
 
   /// Copy from the given char range.
   static WrapperFunctionResult copyFrom(const char *Source, size_t Size) {
-    WrapperFunctionResult WFR;
-    char *DataPtr = allocate(WFR, Size);
-    memcpy(DataPtr, Source, Size);
+    auto WFR = allocate(Size);
+    memcpy(WFR.data(), Source, Size);
     return WFR;
   }
 
@@ -174,10 +176,8 @@ namespace detail {
 template <typename SPSArgListT, typename... ArgTs>
 WrapperFunctionResult
 serializeViaSPSToWrapperFunctionResult(const ArgTs &...Args) {
-  WrapperFunctionResult Result;
-  char *DataPtr =
-      WrapperFunctionResult::allocate(Result, SPSArgListT::size(Args...));
-  SPSOutputBuffer OB(DataPtr, Result.size());
+  auto Result = WrapperFunctionResult::allocate(SPSArgListT::size(Args...));
+  SPSOutputBuffer OB(Result.data(), Result.size());
   if (!SPSArgListT::serialize(OB, Args...))
     return WrapperFunctionResult::createOutOfBandError(
         "Error serializing arguments to blob in call");

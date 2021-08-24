@@ -1,4 +1,5 @@
 // RUN: mlir-opt %s -for-loop-peeling -canonicalize -split-input-file | FileCheck %s
+// RUN: mlir-opt %s -for-loop-peeling=skip-partial=false -canonicalize -split-input-file | FileCheck %s -check-prefix=CHECK-NO-SKIP
 
 //  CHECK-DAG: #[[MAP0:.*]] = affine_map<()[s0, s1, s2] -> (s1 - (s1 - s0) mod s2)>
 //  CHECK-DAG: #[[MAP1:.*]] = affine_map<()[s0, s1, s2] -> (-(s0 - (s0 - s1) mod s2) + s0)>
@@ -222,4 +223,49 @@ func @test_affine_min_rewrite(%lb : index, %ub: index,
     memref.store %m4, %d[%c4] : memref<?xindex>
   }
   return
+}
+
+// -----
+
+//     CHECK: func @nested_loops
+//     CHECK:   scf.for {{.*}} {
+//     CHECK:     scf.for {{.*}} {
+//     CHECK:     }
+//     CHECK:     scf.if {{.*}} {
+//     CHECK:     }
+//     CHECK:   }
+//     CHECK:   scf.if {{.*}} {
+//     CHECK:     scf.for {{.*}} {
+//     CHECK:     }
+// CHECK-NOT:     scf.if
+//     CHECK:   }
+
+//     CHECK-NO-SKIP: func @nested_loops
+//     CHECK-NO-SKIP:   scf.for {{.*}} {
+//     CHECK-NO-SKIP:     scf.for {{.*}} {
+//     CHECK-NO-SKIP:     }
+//     CHECK-NO-SKIP:     scf.if {{.*}} {
+//     CHECK-NO-SKIP:     }
+//     CHECK-NO-SKIP:   }
+//     CHECK-NO-SKIP:   scf.if {{.*}} {
+//     CHECK-NO-SKIP:     scf.for {{.*}} {
+//     CHECK-NO-SKIP:     }
+//     CHECK-NO-SKIP:     scf.if {{.*}} {
+//     CHECK-NO-SKIP:     }
+//     CHECK-NO-SKIP:   }
+#map = affine_map<(d0, d1)[s0] -> (s0, d0 - d1)>
+func @nested_loops(%lb0: index, %lb1 : index, %ub0: index, %ub1: index,
+                   %step: index) -> i32 {
+  %c0 = constant 0 : i32
+  %r0 = scf.for %iv0 = %lb0 to %ub0 step %step iter_args(%arg0 = %c0) -> i32 {
+    %r1 = scf.for %iv1 = %lb1 to %ub1 step %step iter_args(%arg1 = %arg0) -> i32 {
+      %s = affine.min #map(%ub1, %iv1)[%step]
+      %casted = index_cast %s : index to i32
+      %0 = addi %arg1, %casted : i32
+      scf.yield %0 : i32
+    }
+    %1 = addi %arg0, %r1 : i32
+    scf.yield %1 : i32
+  }
+  return %r0 : i32
 }

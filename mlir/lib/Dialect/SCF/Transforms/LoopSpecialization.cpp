@@ -362,9 +362,9 @@ static LogicalResult rewritePeeledAffineOp(RewriterBase &rewriter,
 }
 
 LogicalResult mlir::scf::peelAndCanonicalizeForLoop(RewriterBase &rewriter,
-                                                    ForOp forOp) {
+                                                    ForOp forOp,
+                                                    scf::IfOp &ifOp) {
   Value ub = forOp.upperBound();
-  scf::IfOp ifOp;
   Value splitBound;
   if (failed(peelForLoop(rewriter, forOp, ifOp, splitBound)))
     return failure();
@@ -383,23 +383,45 @@ LogicalResult mlir::scf::peelAndCanonicalizeForLoop(RewriterBase &rewriter,
 }
 
 static constexpr char kPeeledLoopLabel[] = "__peeled_loop__";
+static constexpr char kPartialIterationLabel[] = "__partial_iteration__";
 
 namespace {
 struct ForLoopPeelingPattern : public OpRewritePattern<ForOp> {
-  using OpRewritePattern<ForOp>::OpRewritePattern;
+  ForLoopPeelingPattern(MLIRContext *ctx, bool skipPartial)
+      : OpRewritePattern<ForOp>(ctx), skipPartial(skipPartial) {}
 
   LogicalResult matchAndRewrite(ForOp forOp,
                                 PatternRewriter &rewriter) const override {
+    // Do not peel already peeled loops.
     if (forOp->hasAttr(kPeeledLoopLabel))
       return failure();
-    if (failed(peelAndCanonicalizeForLoop(rewriter, forOp)))
+    if (skipPartial) {
+      // No peeling of loops inside the partial iteration (scf.if) of another
+      // peeled loop.
+      Operation *op = forOp.getOperation();
+      while ((op = op->getParentOfType<scf::IfOp>())) {
+        if (op->hasAttr(kPartialIterationLabel))
+          return failure();
+      }
+    }
+    // Apply loop peeling.
+    scf::IfOp ifOp;
+    if (failed(peelAndCanonicalizeForLoop(rewriter, forOp, ifOp)))
       return failure();
     // Apply label, so that the same loop is not rewritten a second time.
     rewriter.updateRootInPlace(forOp, [&]() {
       forOp->setAttr(kPeeledLoopLabel, rewriter.getUnitAttr());
     });
+    ifOp->setAttr(kPartialIterationLabel, rewriter.getUnitAttr());
     return success();
   }
+
+  /// If set to true, loops inside partial iterations of another peeled loop
+  /// are not peeled. This reduces the size of the generated code. Partial
+  /// iterations are not usually performance critical.
+  /// Note: Takes into account the entire chain of parent operations, not just
+  /// the direct parent.
+  bool skipPartial;
 };
 } // namespace
 
@@ -424,11 +446,14 @@ struct ForLoopPeeling : public SCFForLoopPeelingBase<ForLoopPeeling> {
     FuncOp funcOp = getFunction();
     MLIRContext *ctx = funcOp.getContext();
     RewritePatternSet patterns(ctx);
-    patterns.add<ForLoopPeelingPattern>(ctx);
+    patterns.add<ForLoopPeelingPattern>(ctx, skipPartial);
     (void)applyPatternsAndFoldGreedily(funcOp, std::move(patterns));
 
-    // Drop the marker.
-    funcOp.walk([](ForOp op) { op->removeAttr(kPeeledLoopLabel); });
+    // Drop the markers.
+    funcOp.walk([](Operation *op) {
+      op->removeAttr(kPeeledLoopLabel);
+      op->removeAttr(kPartialIterationLabel);
+    });
   }
 };
 } // namespace

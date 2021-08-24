@@ -701,6 +701,27 @@ TEST_F(FormatTestJS, FormatsFreestandingFunctions) {
                    getGoogleJSStyleWithColumns(20)));
 }
 
+TEST_F(FormatTestJS, FormatsDecoratedFunctions) {
+  // Regression test: ensure that there is a break before `get`.
+  EXPECT_EQ("class A {\n"
+            "  private p = () => {}\n"
+            "\n"
+            "  @decorated('a')\n"
+            "  get f() {\n"
+            "    return result;\n"
+            "  }\n"
+            "}",
+            format("class A {\n"
+                   "  private p = () => {}\n"
+                   "\n"
+                   "  @decorated('a')\n"
+                   "  get f() {\n"
+                   "    return result;\n"
+                   "  }\n"
+                   "}",
+                   getGoogleJSStyleWithColumns(50)));
+}
+
 TEST_F(FormatTestJS, GeneratorFunctions) {
   verifyFormat("function* f() {\n"
                "  let x = 1;\n"

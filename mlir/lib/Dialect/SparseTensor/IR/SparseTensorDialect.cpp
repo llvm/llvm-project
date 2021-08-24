@@ -223,8 +223,6 @@ static LogicalResult verify(ConvertOp op) {
         if (shape1[d] != shape2[d])
           return op.emitError()
                  << "unexpected conversion mismatch in dimension " << d;
-        if (shape1[d] == MemRefType::kDynamicSize)
-          return op.emitError("unexpected dynamic size");
       }
       return success();
     }

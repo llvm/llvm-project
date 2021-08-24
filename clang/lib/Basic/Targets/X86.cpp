@@ -18,6 +18,7 @@
 #include "llvm/ADT/StringRef.h"
 #include "llvm/ADT/StringSwitch.h"
 #include "llvm/Support/X86TargetParser.h"
+#include <numeric>
 
 namespace clang {
 namespace targets {
@@ -1041,14 +1042,16 @@ bool X86TargetInfo::hasFeature(StringRef Feature) const {
 // X86TargetInfo::hasFeature for a somewhat comprehensive list).
 bool X86TargetInfo::validateCpuSupports(StringRef FeatureStr) const {
   return llvm::StringSwitch<bool>(FeatureStr)
-#define X86_FEATURE_COMPAT(ENUM, STR) .Case(STR, true)
+#define X86_FEATURE_COMPAT(ENUM, STR, PRIORITY) .Case(STR, true)
 #include "llvm/Support/X86TargetParser.def"
       .Default(false);
 }
 
 static llvm::X86::ProcessorFeatures getFeature(StringRef Name) {
   return llvm::StringSwitch<llvm::X86::ProcessorFeatures>(Name)
-#define X86_FEATURE_COMPAT(ENUM, STR) .Case(STR, llvm::X86::FEATURE_##ENUM)
+#define X86_FEATURE_COMPAT(ENUM, STR, PRIORITY)                                \
+  .Case(STR, llvm::X86::FEATURE_##ENUM)
+
 #include "llvm/Support/X86TargetParser.def"
       ;
   // Note, this function should only be used after ensuring the value is
@@ -1056,15 +1059,28 @@ static llvm::X86::ProcessorFeatures getFeature(StringRef Name) {
 }
 
 static unsigned getFeaturePriority(llvm::X86::ProcessorFeatures Feat) {
-  enum class FeatPriority {
-#define FEATURE(FEAT) FEAT,
-#include "clang/Basic/X86Target.def"
+#ifndef NDEBUG
+  // Check that priorities are set properly in the .def file. We expect that
+  // "compat" features are assigned non-duplicate consecutive priorities
+  // starting from zero (0, 1, ..., num_features - 1).
+#define X86_FEATURE_COMPAT(ENUM, STR, PRIORITY) PRIORITY,
+  unsigned Priorities[] = {
+#include "llvm/Support/X86TargetParser.def"
+      std::numeric_limits<unsigned>::max() // Need to consume last comma.
   };
+  std::array<unsigned, llvm::array_lengthof(Priorities) - 1> HelperList;
+  std::iota(HelperList.begin(), HelperList.end(), 0);
+  assert(std::is_permutation(HelperList.begin(), HelperList.end(),
+                             std::begin(Priorities),
+                             std::prev(std::end(Priorities))) &&
+         "Priorities don't form consecutive range!");
+#endif
+
   switch (Feat) {
-#define FEATURE(FEAT)                                                          \
-  case llvm::X86::FEAT:                                                        \
-    return static_cast<unsigned>(FeatPriority::FEAT);
-#include "clang/Basic/X86Target.def"
+#define X86_FEATURE_COMPAT(ENUM, STR, PRIORITY)                                \
+  case llvm::X86::FEATURE_##ENUM:                                              \
+    return PRIORITY;
+#include "llvm/Support/X86TargetParser.def"
   default:
     llvm_unreachable("No Feature Priority for non-CPUSupports Features");
   }

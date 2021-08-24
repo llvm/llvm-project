@@ -36,6 +36,7 @@
 #include "polly/ScopDetection.h"
 #include "polly/ScopInfo.h"
 #include "polly/Simplify.h"
+#include "polly/Support/DumpFunctionPass.h"
 #include "polly/Support/DumpModulePass.h"
 #include "llvm/Analysis/CFGPrinter.h"
 #include "llvm/IR/LegacyPassManager.h"
@@ -610,19 +611,19 @@ static void buildLatePollyPipeline(FunctionPassManager &PM,
     return;
 
   if (DumpBefore)
-    report_fatal_error("Option -polly-dump-before not supported with NPM",
-                       false);
+    PM.addPass(DumpFunctionPass("-before"));
   if (!DumpBeforeFile.empty())
-    report_fatal_error("Option -polly-dump-before-file not supported with NPM",
+    report_fatal_error("Option -polly-dump-before-file at -polly-position=late "
+                       "not supported with NPM",
                        false);
 
   buildCommonPollyPipeline(PM, Level, EnableForOpt);
 
   if (DumpAfter)
-    report_fatal_error("Option -polly-dump-after not supported with NPM",
-                       false);
+    PM.addPass(DumpFunctionPass("-after"));
   if (!DumpAfterFile.empty())
-    report_fatal_error("Option -polly-dump-after-file not supported with NPM",
+    report_fatal_error("Option -polly-dump-after-file at -polly-position=late "
+                       "not supported with NPM",
                        false);
 }
 

@@ -107,7 +107,7 @@ bool LiveRangeEdit::allUsesAvailableAt(const MachineInstr *OrigMI,
                                        SlotIndex OrigIdx,
                                        SlotIndex UseIdx) const {
   OrigIdx = OrigIdx.getRegSlot(true);
-  UseIdx = UseIdx.getRegSlot(true);
+  UseIdx = std::max(UseIdx, UseIdx.getRegSlot(true));
   for (unsigned i = 0, e = OrigMI->getNumOperands(); i != e; ++i) {
     const MachineOperand &MO = OrigMI->getOperand(i);
     if (!MO.isReg() || !MO.getReg() || !MO.readsReg())

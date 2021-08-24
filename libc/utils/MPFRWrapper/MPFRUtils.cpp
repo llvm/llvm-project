@@ -62,7 +62,7 @@ class MPFRNumber {
   mpfr_t value;
 
 public:
-  MPFRNumber() : mpfrPrecision(128) { mpfr_init2(value, mpfrPrecision); }
+  MPFRNumber() : mpfrPrecision(256) { mpfr_init2(value, mpfrPrecision); }
 
   // We use explicit EnableIf specializations to disallow implicit
   // conversions. Implicit conversions can potentially lead to loss of
@@ -202,6 +202,33 @@ public:
     return result;
   }
 
+  MPFRNumber mod_2pi() const {
+    MPFRNumber result(0.0, 1280);
+    MPFRNumber _2pi(0.0, 1280);
+    mpfr_const_pi(_2pi.value, MPFR_RNDN);
+    mpfr_mul_si(_2pi.value, _2pi.value, 2, MPFR_RNDN);
+    mpfr_fmod(result.value, value, _2pi.value, MPFR_RNDN);
+    return result;
+  }
+
+  MPFRNumber mod_pi_over_2() const {
+    MPFRNumber result(0.0, 1280);
+    MPFRNumber pi_over_2(0.0, 1280);
+    mpfr_const_pi(pi_over_2.value, MPFR_RNDN);
+    mpfr_mul_d(pi_over_2.value, pi_over_2.value, 0.5, MPFR_RNDN);
+    mpfr_fmod(result.value, value, pi_over_2.value, MPFR_RNDN);
+    return result;
+  }
+
+  MPFRNumber mod_pi_over_4() const {
+    MPFRNumber result(0.0, 1280);
+    MPFRNumber pi_over_4(0.0, 1280);
+    mpfr_const_pi(pi_over_4.value, MPFR_RNDN);
+    mpfr_mul_d(pi_over_4.value, pi_over_4.value, 0.25, MPFR_RNDN);
+    mpfr_fmod(result.value, value, pi_over_4.value, MPFR_RNDN);
+    return result;
+  }
+
   MPFRNumber sin() const {
     MPFRNumber result;
     mpfr_sin(result.value, value, MPFR_RNDN);
@@ -281,6 +308,9 @@ public:
   template <typename T>
   cpp::EnableIfType<cpp::IsFloatingPointType<T>::Value, double> ulp(T input) {
     T thisAsT = as<T>();
+    if (thisAsT == input)
+      return T(0.0);
+
     int thisExponent = fputil::FPBits<T>(thisAsT).getExponent();
     int inputExponent = fputil::FPBits<T>(input).getExponent();
     if (thisAsT * input < 0 || thisExponent == inputExponent) {
@@ -339,6 +369,12 @@ unaryOperation(Operation op, InputType input) {
     return mpfrInput.expm1();
   case Operation::Floor:
     return mpfrInput.floor();
+  case Operation::Mod2PI:
+    return mpfrInput.mod_2pi();
+  case Operation::ModPIOver2:
+    return mpfrInput.mod_pi_over_2();
+  case Operation::ModPIOver4:
+    return mpfrInput.mod_pi_over_4();
   case Operation::Round:
     return mpfrInput.round();
   case Operation::Sin:

@@ -1413,16 +1413,25 @@ bool Preprocessor::HandleComment(Token &result, SourceRange Comment) {
   return true;
 }
 
-void Preprocessor::emitMacroExpansionWarnings(const Token &Identifier) {
-  if (Identifier.getIdentifierInfo()->isDeprecatedMacro()) {
-    auto DepMsg = getMacroDeprecationMsg(Identifier.getIdentifierInfo());
-    if (!DepMsg)
-      Diag(Identifier, diag::warn_pragma_deprecated_macro_use)
-          << Identifier.getIdentifierInfo() << 0;
-    else
-      Diag(Identifier, diag::warn_pragma_deprecated_macro_use)
-          << Identifier.getIdentifierInfo() << 1 << *DepMsg;
-  }
+void Preprocessor::emitMacroDeprecationWarning(const Token &Identifier) {
+  auto DepMsg = getMacroDeprecationMsg(Identifier.getIdentifierInfo());
+  if (!DepMsg)
+    Diag(Identifier, diag::warn_pragma_deprecated_macro_use)
+        << Identifier.getIdentifierInfo() << 0;
+  else
+    Diag(Identifier, diag::warn_pragma_deprecated_macro_use)
+        << Identifier.getIdentifierInfo() << 1 << *DepMsg;
+}
+
+void Preprocessor::emitMacroUnsafeHeaderWarning(const Token &Identifier) {
+  auto DepMsg = getRestrictExpansionMsg(Identifier.getIdentifierInfo());
+  if (DepMsg.first.empty())
+    Diag(Identifier, diag::warn_pragma_restrict_expansion_macro_use)
+        << Identifier.getIdentifierInfo() << 0;
+  else
+    Diag(Identifier, diag::warn_pragma_restrict_expansion_macro_use)
+        << Identifier.getIdentifierInfo() << 1 << DepMsg.first;
+  Diag(DepMsg.second, diag::note_pp_macro_annotation) << 1;
 }
 
 ModuleLoader::~ModuleLoader() = default;

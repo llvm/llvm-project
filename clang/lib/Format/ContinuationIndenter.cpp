@@ -14,6 +14,7 @@
 #include "ContinuationIndenter.h"
 #include "BreakableToken.h"
 #include "FormatInternal.h"
+#include "FormatToken.h"
 #include "WhitespaceManager.h"
 #include "clang/Basic/OperatorPrecedence.h"
 #include "clang/Basic/SourceManager.h"
@@ -489,6 +490,12 @@ bool ContinuationIndenter::mustBreak(const LineState &State) {
     if (Previous.is(TT_LeadingJavaAnnotation) && Current.isNot(tok::l_paren) &&
         Current.isNot(TT_LeadingJavaAnnotation))
       return true;
+  }
+
+  // Break after the closing parenthesis of TypeScript decorators.
+  if (Style.Language == FormatStyle::LK_JavaScript &&
+      Previous.is(tok::r_paren) && Previous.is(TT_JavaAnnotation)) {
+    return true;
   }
 
   // If the return type spans multiple lines, wrap before the function name.

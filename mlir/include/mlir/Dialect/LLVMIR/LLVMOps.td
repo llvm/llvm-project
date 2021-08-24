@@ -701,23 +701,25 @@ def LLVM_UnreachableOp : LLVM_TerminatorOp<"unreachable", []> {
 def LLVM_SwitchOp : LLVM_TerminatorOp<"switch",
     [AttrSizedOperandSegments, DeclareOpInterfaceMethods<BranchOpInterface>,
      NoSideEffect]> {
-  let arguments = (ins I32:$value,
-                   Variadic<AnyType>:$defaultOperands,
-                   Variadic<AnyType>:$caseOperands,
-                   OptionalAttr<ElementsAttr>:$case_values,
-                   OptionalAttr<ElementsAttr>:$case_operand_offsets,
-                   OptionalAttr<ElementsAttr>:$branch_weights);
+  let arguments = (ins
+    I32:$value,
+    Variadic<AnyType>:$defaultOperands,
+    VariadicOfVariadic<AnyType, "case_operand_segments">:$caseOperands,
+    OptionalAttr<ElementsAttr>:$case_values,
+    ElementsAttr:$case_operand_segments,
+    OptionalAttr<ElementsAttr>:$branch_weights
+  );
   let successors = (successor
-                    AnySuccessor:$defaultDestination,
-                    VariadicSuccessor<AnySuccessor>:$caseDestinations);
+    AnySuccessor:$defaultDestination,
+    VariadicSuccessor<AnySuccessor>:$caseDestinations
+  );
 
   let verifier = [{ return ::verify(*this); }];
   let assemblyFormat = [{
     $value `,`
     $defaultDestination (`(` $defaultOperands^ `:` type($defaultOperands) `)`)?
     `[` `\n` custom<SwitchOpCases>($case_values, $caseDestinations,
-                                   $caseOperands, type($caseOperands),
-                                   $case_operand_offsets) `]`
+                                   $caseOperands, type($caseOperands)) `]`
     attr-dict
   }];
 
@@ -734,11 +736,15 @@ def LLVM_SwitchOp : LLVM_TerminatorOp<"switch",
 
   let extraClassDeclaration = [{
     /// Return the operands for the case destination block at the given index.
-    OperandRange getCaseOperands(unsigned index);
+    OperandRange getCaseOperands(unsigned index) {
+      return caseOperands()[index];
+    }
 
     /// Return a mutable range of operands for the case destination block at the
     /// given index.
-    MutableOperandRange getCaseOperandsMutable(unsigned index);
+    MutableOperandRange getCaseOperandsMutable(unsigned index) {
+      return caseOperandsMutable()[index];
+    }
   }];
 }
 

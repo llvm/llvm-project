@@ -233,6 +233,14 @@ LogicalResult OperationFolder::tryToFold(
     if (auto *constOp =
             tryGetOrCreateConstant(uniquedConstants, dialect, builder, attrRepl,
                                    res.getType(), op->getLoc())) {
+      // Ensure that this constant dominates the operation we are replacing it
+      // with. This may not automatically happen if the operation being folded
+      // was inserted before the constant within the insertion block.
+      if (constOp->getBlock() == op->getBlock() &&
+          !constOp->isBeforeInBlock(op)) {
+        constOp->moveBefore(op);
+      }
+
       results.push_back(constOp->getResult(0));
       continue;
     }

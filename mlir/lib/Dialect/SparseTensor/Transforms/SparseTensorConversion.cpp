@@ -14,8 +14,10 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "mlir/Dialect/LLVMIR/LLVMTypes.h"
+#include "mlir/Dialect/LLVMIR/LLVMDialect.h"
+#include "mlir/Dialect/Linalg/Utils/Utils.h"
 #include "mlir/Dialect/MemRef/IR/MemRef.h"
+#include "mlir/Dialect/SCF/SCF.h"
 #include "mlir/Dialect/SparseTensor/IR/SparseTensor.h"
 #include "mlir/Dialect/SparseTensor/Transforms/Passes.h"
 #include "mlir/Dialect/StandardOps/IR/Ops.h"
@@ -110,10 +112,11 @@ static FlatSymbolRefAttr getFunc(Operation *op, StringRef name, Type result,
 }
 
 /// Generates a call into the "swiss army knife" method of the sparse runtime
-/// support library for materializing sparse tensors into the computation.
-static void genNewCall(ConversionPatternRewriter &rewriter, Operation *op,
-                       SparseTensorEncodingAttr &enc, uint32_t action,
-                       Value ptr) {
+/// support library for materializing sparse tensors into the computation. The
+/// method returns the call value and assigns the permutation to 'perm'.
+static Value genNewCall(ConversionPatternRewriter &rewriter, Operation *op,
+                        SparseTensorEncodingAttr &enc, uint32_t action,
+                        Value &perm, Value ptr = Value()) {
   Location loc = op->getLoc();
   ShapedType resType = op->getResult(0).getType().cast<ShapedType>();
   SmallVector<Value, 8> params;
@@ -136,17 +139,16 @@ static void genNewCall(ConversionPatternRewriter &rewriter, Operation *op,
   // Dimension order permutation array. This is the "identity" permutation by
   // default, or otherwise the "reverse" permutation of a given ordering, so
   // that indices can be mapped quickly to the right position.
-  SmallVector<APInt, 4> perm(sz);
-  AffineMap p = enc.getDimOrdering();
-  if (p) {
-    assert(p.isPermutation() && p.getNumResults() == sz);
+  SmallVector<APInt, 4> rev(sz);
+  if (AffineMap p = enc.getDimOrdering()) {
     for (unsigned i = 0; i < sz; i++)
-      perm[p.getDimPosition(i)] = APInt(64, i);
+      rev[p.getDimPosition(i)] = APInt(64, i);
   } else {
     for (unsigned i = 0; i < sz; i++)
-      perm[i] = APInt(64, i);
+      rev[i] = APInt(64, i);
   }
-  params.push_back(getTensor(rewriter, 64, loc, perm));
+  perm = getTensor(rewriter, 64, loc, rev);
+  params.push_back(perm);
   // Secondary and primary types encoding.
   unsigned secPtr = getOverheadTypeEncoding(enc.getPointerBitWidth());
   unsigned secInd = getOverheadTypeEncoding(enc.getIndexBitWidth());
@@ -159,53 +161,54 @@ static void genNewCall(ConversionPatternRewriter &rewriter, Operation *op,
   params.push_back(
       rewriter.create<ConstantOp>(loc, rewriter.getI64IntegerAttr(primary)));
   // User action and pointer.
+  Type pTp = LLVM::LLVMPointerType::get(IntegerType::get(op->getContext(), 8));
+  if (!ptr)
+    ptr = rewriter.create<LLVM::NullOp>(loc, pTp);
   params.push_back(
       rewriter.create<ConstantOp>(loc, rewriter.getI32IntegerAttr(action)));
   params.push_back(ptr);
   // Generate the call to create new tensor.
-  Type ptrType =
-      LLVM::LLVMPointerType::get(IntegerType::get(op->getContext(), 8));
   StringRef name = "newSparseTensor";
-  rewriter.replaceOpWithNewOp<CallOp>(
-      op, ptrType, getFunc(op, name, ptrType, params), params);
+  auto call =
+      rewriter.create<CallOp>(loc, pTp, getFunc(op, name, pTp, params), params);
+  return call.getResult(0);
 }
 
-/// Generates a call that exposes the data pointer as a void pointer.
-// TODO: probing the data pointer directly is a bit raw; we should replace
-//       this with proper memref util calls once they become available.
-static bool genPtrCall(ConversionPatternRewriter &rewriter, Operation *op,
-                       Value val, Value &ptr) {
+/// Generates a call that adds one element to a coordinate scheme.
+static void genAddEltCall(ConversionPatternRewriter &rewriter, Operation *op,
+                          Value ptr, Value tensor, Value ind, Value perm,
+                          ValueRange ivs) {
   Location loc = op->getLoc();
-  ShapedType sType = op->getResult(0).getType().cast<ShapedType>();
-  Type eltType = sType.getElementType();
-  // Specialize name for the data type. Even though the final buffferized
-  // version only operates on pointers, different names are required to
-  // ensure type correctness for all intermediate states.
   StringRef name;
+  Type eltType = tensor.getType().cast<ShapedType>().getElementType();
   if (eltType.isF64())
-    name = "getPtrF64";
+    name = "addEltF64";
   else if (eltType.isF32())
-    name = "getPtrF32";
+    name = "addEltF32";
   else if (eltType.isInteger(64))
-    name = "getPtrI64";
+    name = "addEltI64";
   else if (eltType.isInteger(32))
-    name = "getPtrI32";
+    name = "addEltI32";
   else if (eltType.isInteger(16))
-    name = "getPtrI16";
+    name = "addEltI16";
   else if (eltType.isInteger(8))
-    name = "getPtrI8";
+    name = "addEltI8";
   else
-    return false;
-  auto memRefTp = MemRefType::get(sType.getShape(), eltType);
-  auto unrankedTp = UnrankedMemRefType::get(eltType, 0);
-  Value c = rewriter.create<memref::BufferCastOp>(loc, memRefTp, val);
-  Value d = rewriter.create<memref::CastOp>(loc, unrankedTp, c);
-  Type ptrType =
-      LLVM::LLVMPointerType::get(IntegerType::get(op->getContext(), 8));
-  auto call =
-      rewriter.create<CallOp>(loc, ptrType, getFunc(op, name, ptrType, d), d);
-  ptr = call.getResult(0);
-  return true;
+    llvm_unreachable("Unknown element type");
+  Value val = rewriter.create<tensor::ExtractOp>(loc, tensor, ivs);
+  // TODO: add if here?
+  unsigned i = 0;
+  for (auto iv : ivs) {
+    Value idx = rewriter.create<ConstantOp>(loc, rewriter.getIndexAttr(i++));
+    rewriter.create<memref::StoreOp>(loc, iv, ind, idx);
+  }
+  SmallVector<Value, 8> params;
+  params.push_back(ptr);
+  params.push_back(val);
+  params.push_back(ind);
+  params.push_back(perm);
+  Type pTp = LLVM::LLVMPointerType::get(IntegerType::get(op->getContext(), 8));
+  rewriter.create<CallOp>(loc, pTp, getFunc(op, name, pTp, params), params);
 }
 
 //===----------------------------------------------------------------------===//
@@ -273,7 +276,8 @@ class SparseTensorNewConverter : public OpConversionPattern<NewOp> {
     auto enc = getSparseTensorEncoding(resType);
     if (!enc)
       return failure();
-    genNewCall(rewriter, op, enc, 0, operands[0]);
+    Value perm;
+    rewriter.replaceOp(op, genNewCall(rewriter, op, enc, 0, perm, operands[0]));
     return success();
   }
 };
@@ -291,11 +295,46 @@ class SparseTensorConvertConverter : public OpConversionPattern<ConvertOp> {
     //             and sparse => dense
     if (!encDst || encSrc)
       return failure();
-    // This is a dense => sparse conversion.
-    Value ptr;
-    if (!genPtrCall(rewriter, op, operands[0], ptr))
-      return failure();
-    genNewCall(rewriter, op, encDst, 1, ptr);
+    // This is a dense => sparse conversion, that is handled as follows:
+    //   t = newSparseCOO()
+    //   for i1 in dim1
+    //    ..
+    //     for ik in dimk
+    //       val = a[i1,..,ik]
+    //       if val != 0
+    //         t->add(val, [i1,..,ik], [p1,..,pk])
+    //   s = newSparseTensor(t)
+    // Note that the dense tensor traversal code is actually implemented
+    // using MLIR IR to avoid having to expose too much low-level
+    // memref traversal details to the runtime support library.
+    Location loc = op->getLoc();
+    ShapedType shape = resType.cast<ShapedType>();
+    auto memTp =
+        MemRefType::get({ShapedType::kDynamicSize}, rewriter.getIndexType());
+    Value perm;
+    Value ptr = genNewCall(rewriter, op, encDst, 2, perm);
+    Value tensor = operands[0];
+    Value arg = rewriter.create<ConstantOp>(
+        loc, rewriter.getIndexAttr(shape.getRank()));
+    Value ind = rewriter.create<memref::AllocaOp>(loc, memTp, ValueRange{arg});
+    SmallVector<Value> lo;
+    SmallVector<Value> hi;
+    SmallVector<Value> st;
+    Value zero = rewriter.create<ConstantOp>(loc, rewriter.getIndexAttr(0));
+    Value one = rewriter.create<ConstantOp>(loc, rewriter.getIndexAttr(1));
+    for (unsigned i = 0, rank = shape.getRank(); i < rank; i++) {
+      lo.push_back(zero);
+      hi.push_back(linalg::createOrFoldDimOp(rewriter, loc, tensor, i));
+      st.push_back(one);
+    }
+    scf::buildLoopNest(rewriter, op.getLoc(), lo, hi, st, {},
+                       [&](OpBuilder &builder, Location loc, ValueRange ivs,
+                           ValueRange args) -> scf::ValueVector {
+                         genAddEltCall(rewriter, op, ptr, tensor, ind, perm,
+                                       ivs);
+                         return {};
+                       });
+    rewriter.replaceOp(op, genNewCall(rewriter, op, encDst, 1, perm, ptr));
     return success();
   }
 };

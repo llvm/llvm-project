@@ -36,6 +36,15 @@ bool TypeConstraint::isVariadic() const {
   return def->isSubClassOf("Variadic");
 }
 
+bool TypeConstraint::isVariadicOfVariadic() const {
+  return def->isSubClassOf("VariadicOfVariadic");
+}
+
+StringRef TypeConstraint::getVariadicOfVariadicSegmentSizeAttr() const {
+  assert(isVariadicOfVariadic());
+  return def->getValueAsString("segmentAttrName");
+}
+
 // Returns the builder call for this constraint if this is a buildable type,
 // returns None otherwise.
 Optional<StringRef> TypeConstraint::getBuilderCall() const {

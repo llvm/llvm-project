@@ -36,8 +36,7 @@ Functions:
 #include <__config>
 
 #if defined(_LIBCPP_HAS_NO_LOCALIZATION)
-#error                                                                                                                 \
-    "The Localization library is not supported since libc++ has been configured with LIBCXX_ENABLE_LOCALIZATION disabled"
+#   error "The Localization library is not supported since libc++ has been configured with LIBCXX_ENABLE_LOCALIZATION disabled"
 #endif
 
 #if !defined(_LIBCPP_HAS_NO_PRAGMA_SYSTEM_HEADER)

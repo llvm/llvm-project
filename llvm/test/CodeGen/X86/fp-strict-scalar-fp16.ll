@@ -11,6 +11,7 @@ declare double @llvm.experimental.constrained.fpext.f64.f16(half, metadata)
 declare half @llvm.experimental.constrained.fptrunc.f16.f32(float, metadata, metadata)
 declare half @llvm.experimental.constrained.fptrunc.f16.f64(double, metadata, metadata)
 declare half @llvm.experimental.constrained.sqrt.f16(half, metadata, metadata)
+declare half @llvm.experimental.constrained.fma.f16(half, half, half, metadata, metadata)
 
 define half @fadd_f16(half %a, half %b) nounwind strictfp {
 ; X86-LABEL: fadd_f16:
@@ -195,6 +196,24 @@ define void @fsqrt_f16(half* %a) nounwind strictfp {
                                                            metadata !"fpexcept.strict") #0
   store half %res, half* %a, align 4
   ret void
+}
+
+define half @fma_f16(half %a, half %b, half %c) nounwind strictfp {
+; X86-LABEL: fma_f16:
+; X86:       # %bb.0:
+; X86-NEXT:    vmovsh {{[0-9]+}}(%esp), %xmm1
+; X86-NEXT:    vmovsh {{[0-9]+}}(%esp), %xmm0
+; X86-NEXT:    vfmadd213sh {{[0-9]+}}(%esp), %xmm1, %xmm0
+; X86-NEXT:    retl
+;
+; X64-LABEL: fma_f16:
+; X64:       # %bb.0:
+; X64-NEXT:    vfmadd213sh %xmm2, %xmm1, %xmm0
+; X64-NEXT:    retq
+  %res = call half @llvm.experimental.constrained.fma.f16(half %a, half %b, half %c,
+                                                          metadata !"round.dynamic",
+                                                          metadata !"fpexcept.strict") #0
+  ret half %res
 }
 
 attributes #0 = { strictfp }
