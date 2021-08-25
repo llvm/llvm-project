@@ -1,4 +1,4 @@
-// RUN: mlir-opt %s -canonicalize-scf-affine-min -split-input-file | FileCheck %s
+// RUN: mlir-opt %s -canonicalize-scf-affine-op -split-input-file | FileCheck %s
 
 // CHECK-LABEL: func @scf_for_canonicalize_min
 //       CHECK:   %[[C2:.*]] = constant 2 : i64
@@ -11,6 +11,45 @@ func @scf_for_canonicalize_min(%A : memref<i64>) {
 
   scf.for %i = %c0 to %c4 step %c2 {
     %1 = affine.min affine_map<(d0, d1)[] -> (2, d1 - d0)> (%i, %c4)
+    %2 = index_cast %1: index to i64
+    memref.store %2, %A[]: memref<i64>
+  }
+  return
+}
+
+// -----
+
+// CHECK-LABEL: func @scf_for_canonicalize_max
+//       CHECK:   %[[Cneg2:.*]] = constant -2 : i64
+//       CHECK:   scf.for
+//       CHECK:     memref.store %[[Cneg2]], %{{.*}}[] : memref<i64>
+func @scf_for_canonicalize_max(%A : memref<i64>) {
+  %c0 = constant 0 : index
+  %c2 = constant 2 : index
+  %c4 = constant 4 : index
+
+  scf.for %i = %c0 to %c4 step %c2 {
+    %1 = affine.max affine_map<(d0, d1)[] -> (-2, -(d1 - d0))> (%i, %c4)
+    %2 = index_cast %1: index to i64
+    memref.store %2, %A[]: memref<i64>
+  }
+  return
+}
+
+// -----
+
+// CHECK-LABEL: func @scf_for_max_not_canonicalizable
+//       CHECK:   scf.for
+//       CHECK:     affine.max
+//       CHECK:     index_cast
+func @scf_for_max_not_canonicalizable(%A : memref<i64>) {
+  %c0 = constant 0 : index
+  %c2 = constant 2 : index
+  %c3 = constant 3 : index
+  %c4 = constant 4 : index
+
+  scf.for %i = %c0 to %c4 step %c2 {
+    %1 = affine.max affine_map<(d0, d1)[] -> (-2, -(d1 - d0))> (%i, %c3)
     %2 = index_cast %1: index to i64
     memref.store %2, %A[]: memref<i64>
   }
