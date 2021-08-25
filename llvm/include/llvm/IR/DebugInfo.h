@@ -79,6 +79,10 @@ void updateLoopMetadataDebugLocations(
 /// Return Debug Info Metadata Version by checking module flags.
 unsigned getDebugMetadataVersionFromModule(const Module &M);
 
+/// Return true if Debug Info Metadata Version for the module is
+/// DEBUG_METADATA_VERSION_HETEROGENEOUS_DWARF.
+bool isHeterogeneousDebug(const Module &M);
+
 /// Utility to find all debug info in a module.
 ///
 /// DebugInfoFinder tries to list all debug info MDNodes used in a module. To
