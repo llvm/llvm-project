@@ -159,6 +159,34 @@ define i16 addrspace(42)* @skipWithDifferentTypesDifferentAddrspace(i8* %a) {
   ret i16 addrspace(42)* %a3
 }
 
+define i1 @icmp1(i8* %a) {
+; CHECK-LABEL: @icmp1(
+; CHECK-NEXT:    [[A2:%.*]] = call i8* @llvm.launder.invariant.group.p0i8(i8* [[A:%.*]])
+; CHECK-NEXT:    [[TMP1:%.*]] = call i8* @llvm.strip.invariant.group.p0i8(i8* [[A]])
+; CHECK-NEXT:    [[R:%.*]] = icmp eq i8* [[A2]], [[TMP1]]
+; CHECK-NEXT:    ret i1 [[R]]
+;
+  %a2 = call i8* @llvm.launder.invariant.group.p0i8(i8* %a)
+  %a3 = call i8* @llvm.strip.invariant.group.p0i8(i8* %a2)
+  %r = icmp eq i8* %a2, %a3
+  ret i1 %r
+}
+
+define i1 @icmp2(i8* %a, i8* %b) {
+; CHECK-LABEL: @icmp2(
+; CHECK-NEXT:    [[TMP1:%.*]] = call i8* @llvm.strip.invariant.group.p0i8(i8* [[A:%.*]])
+; CHECK-NEXT:    [[TMP2:%.*]] = call i8* @llvm.launder.invariant.group.p0i8(i8* [[B:%.*]])
+; CHECK-NEXT:    [[R:%.*]] = icmp eq i8* [[TMP1]], [[TMP2]]
+; CHECK-NEXT:    ret i1 [[R]]
+;
+  %a2 = call i8* @llvm.launder.invariant.group.p0i8(i8* %a)
+  %a3 = call i8* @llvm.strip.invariant.group.p0i8(i8* %a2)
+  %b2 = call i8* @llvm.strip.invariant.group.p0i8(i8* %b)
+  %b3 = call i8* @llvm.launder.invariant.group.p0i8(i8* %b2)
+  %r = icmp eq i8* %a3, %b3
+  ret i1 %r
+}
+
 declare i8* @llvm.launder.invariant.group.p0i8(i8*)
 declare i8 addrspace(42)* @llvm.launder.invariant.group.p42i8(i8 addrspace(42)*)
 declare i8* @llvm.strip.invariant.group.p0i8(i8*)
