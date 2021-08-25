@@ -6,13 +6,18 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include "CndVar.h"
+#include "Mutex.h"
+
 #include "src/threads/cnd_wait.h"
 #include "src/__support/common.h"
 
 namespace __llvm_libc {
 
-LLVM_LIBC_FUNCTION(int, cnd_wait, (cnd_t * cond, mtx_t *mutex)) {
-  return thrd_success;
+LLVM_LIBC_FUNCTION(int, cnd_wait, (cnd_t * cond, mtx_t *mtx)) {
+  CndVar *cndvar = reinterpret_cast<CndVar *>(cond);
+  Mutex *mutex = reinterpret_cast<Mutex *>(mtx);
+  return cndvar->wait(mutex);
 }
 
 } // namespace __llvm_libc
