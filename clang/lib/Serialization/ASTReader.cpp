@@ -2380,17 +2380,24 @@ InputFile ASTReader::getInputFile(ModuleFile &F, unsigned ID, bool Complain) {
     }
   }
 
-  enum ModificationType {
-    Size,
-    ModTime,
-    Content,
-    None,
+  struct Change {
+    enum ModificationKind {
+      Size,
+      ModTime,
+      Content,
+      None,
+    } Kind;
+    llvm::Optional<int64_t> Old = llvm::None;
+    llvm::Optional<int64_t> New = llvm::None;
   };
   auto HasInputFileChanged = [&]() {
     if (StoredSize != File->getSize())
-      return ModificationType::Size;
+      return Change{Change::Size, StoredSize, File->getSize()};
     if (!shouldDisableValidationForFile(F) && StoredTime &&
         StoredTime != File->getModificationTime()) {
+      Change MTimeChange = {Change::ModTime, StoredTime,
+                            File->getModificationTime()};
+
       // In case the modification time changes but not the content,
       // accept the cached file as legit.
       if (ValidateASTInputFilesContent &&
@@ -2398,28 +2405,30 @@ InputFile ASTReader::getInputFile(ModuleFile &F, unsigned ID, bool Complain) {
         auto MemBuffOrError = FileMgr.getBufferForFile(File);
         if (!MemBuffOrError) {
           if (!Complain)
-            return ModificationType::ModTime;
+            return MTimeChange;
           std::string ErrorStr = "could not get buffer for file '";
           ErrorStr += File->getName();
           ErrorStr += "'";
           Error(ErrorStr);
-          return ModificationType::ModTime;
+          return MTimeChange;
         }
 
+        // FIXME: hash_value is not guaranteed to be stable!
         auto ContentHash = hash_value(MemBuffOrError.get()->getBuffer());
         if (StoredContentHash == static_cast<uint64_t>(ContentHash))
-          return ModificationType::None;
-        return ModificationType::Content;
+          return Change{Change::None};
+
+        return Change{Change::Content};
       }
-      return ModificationType::ModTime;
+      return MTimeChange;
     }
-    return ModificationType::None;
+    return Change{Change::None};
   };
 
   bool IsOutOfDate = false;
   auto FileChange = HasInputFileChanged();
   // For an overridden file, there is nothing to validate.
-  if (!Overridden && FileChange != ModificationType::None) {
+  if (!Overridden && FileChange.Kind != Change::None) {
     if (Complain && !Diags.isDiagnosticInFlight()) {
       // Build a list of the PCH imports that got us here (in reverse).
       SmallVector<ModuleFile *, 4> ImportStack(1, &F);
@@ -2430,7 +2439,10 @@ InputFile ASTReader::getInputFile(ModuleFile &F, unsigned ID, bool Complain) {
       StringRef TopLevelPCHName(ImportStack.back()->FileName);
       Diag(diag::err_fe_ast_file_modified)
           << Filename << moduleKindForDiagnostic(ImportStack.back()->Kind)
-          << TopLevelPCHName << FileChange;
+          << TopLevelPCHName << FileChange.Kind
+          << (FileChange.Old && FileChange.New)
+          << llvm::itostr(FileChange.Old.getValueOr(0))
+          << llvm::itostr(FileChange.New.getValueOr(0));
 
       // Print the import stack.
       if (ImportStack.size() > 1) {

@@ -1,6 +1,6 @@
-; RUN: llc -filetype=obj -exception-model=wasm -mattr=+exception-handling %p/Inputs/tag-section1.ll -o %t1.o
-; RUN: llc -filetype=obj -exception-model=wasm -mattr=+exception-handling %p/Inputs/tag-section2.ll -o %t2.o
-; RUN: llc -filetype=obj -exception-model=wasm -mattr=+exception-handling %s -o %t.o
+; RUN: llc -filetype=obj -wasm-enable-eh -exception-model=wasm -mattr=+exception-handling %p/Inputs/tag-section1.ll -o %t1.o
+; RUN: llc -filetype=obj -wasm-enable-eh -exception-model=wasm -mattr=+exception-handling %p/Inputs/tag-section2.ll -o %t2.o
+; RUN: llc -filetype=obj -wasm-enable-eh -exception-model=wasm -mattr=+exception-handling %s -o %t.o
 ; RUN: wasm-ld -o %t.wasm %t.o %t1.o %t2.o
 ; RUN: wasm-ld --export-all -o %t-export-all.wasm %t.o %t1.o %t2.o
 ; RUN: obj2yaml %t.wasm | FileCheck %s

@@ -19,11 +19,11 @@ def SCFBufferize : FunctionPass<"scf-bufferize"> {
 
 // Note: Making this a canonicalization pattern would require a dependency
 // of the SCF dialect on the Affine dialect or vice versa.
-def AffineMinSCFCanonicalization
-    : FunctionPass<"canonicalize-scf-affine-min"> {
-  let summary = "Canonicalize affine.min ops in the context of SCF loops with "
-                "known bounds";
-  let constructor = "mlir::createAffineMinSCFCanonicalizationPass()";
+def SCFAffineOpCanonicalization
+    : FunctionPass<"canonicalize-scf-affine-op"> {
+  let summary = "Canonicalize affine.min and affine.max ops in the context of "
+                "SCF loops with known bounds";
+  let constructor = "mlir::createSCFAffineOpCanonicalizationPass()";
   let dependentDialects = ["AffineDialect"];
 }
 

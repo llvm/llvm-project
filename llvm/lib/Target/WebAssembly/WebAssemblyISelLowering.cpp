@@ -2046,7 +2046,23 @@ SDValue WebAssemblyTargetLowering::LowerBUILD_VECTOR(SDValue Op,
     SmallVector<SDValue, 16> ConstLanes;
     for (const SDValue &Lane : Op->op_values()) {
       if (IsConstant(Lane)) {
-        ConstLanes.push_back(Lane);
+        // Values may need to be fixed so that they will sign extend to be
+        // within the expected range during ISel. Check whether the value is in
+        // bounds based on the lane bit width and if it is out of bounds, lop
+        // off the extra bits and subtract 2^n to reflect giving the high bit
+        // value -2^(n-1) rather than +2^(n-1). Skip the i64 case because it
+        // cannot possibly be out of range.
+        auto *Const = dyn_cast<ConstantSDNode>(Lane.getNode());
+        int64_t Val = Const ? Const->getSExtValue() : 0;
+        uint64_t LaneBits = 128 / Lanes;
+        assert((LaneT == MVT::i64 || Val >= -(1 << (LaneBits - 1))) &&
+               "Unexpected out of bounds negative value");
+        if (Const && LaneT != MVT::i64 && Val > (1 << (LaneBits - 1)) - 1) {
+          auto NewVal = ((uint64_t)Val % (1u << LaneBits)) - (1u << LaneBits);
+          ConstLanes.push_back(DAG.getConstant(NewVal, SDLoc(Lane), LaneT));
+        } else {
+          ConstLanes.push_back(Lane);
+        }
       } else if (LaneT.isFloatingPoint()) {
         ConstLanes.push_back(DAG.getConstantFP(0, DL, LaneT));
       } else {
