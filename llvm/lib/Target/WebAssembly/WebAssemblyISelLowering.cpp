@@ -2055,10 +2055,10 @@ SDValue WebAssemblyTargetLowering::LowerBUILD_VECTOR(SDValue Op,
         auto *Const = dyn_cast<ConstantSDNode>(Lane.getNode());
         int64_t Val = Const ? Const->getSExtValue() : 0;
         uint64_t LaneBits = 128 / Lanes;
-        assert((LaneT == MVT::i64 || Val >= -(1 << (LaneBits - 1))) &&
+        assert((LaneBits == 64 || Val >= -(1ll << (LaneBits - 1))) &&
                "Unexpected out of bounds negative value");
-        if (Const && LaneT != MVT::i64 && Val > (1 << (LaneBits - 1)) - 1) {
-          auto NewVal = ((uint64_t)Val % (1u << LaneBits)) - (1u << LaneBits);
+        if (Const && LaneBits != 64 && Val > (1ll << (LaneBits - 1)) - 1) {
+          auto NewVal = ((uint64_t)Val % (1ll << LaneBits)) - (1ll << LaneBits);
           ConstLanes.push_back(DAG.getConstant(NewVal, SDLoc(Lane), LaneT));
         } else {
           ConstLanes.push_back(Lane);
