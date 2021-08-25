@@ -30,8 +30,8 @@ TEST(CAPITest, CWrapperFunctionResultInit) {
 TEST(CAPITest, CWrapperFunctionResultAllocSmall) {
   constexpr size_t SmallAllocSize = sizeof(const char *);
 
-  __orc_rt_CWrapperFunctionResult R;
-  char *DataPtr = __orc_rt_CWrapperFunctionResultAllocate(&R, SmallAllocSize);
+  auto R = __orc_rt_CWrapperFunctionResultAllocate(SmallAllocSize);
+  char *DataPtr = __orc_rt_CWrapperFunctionResultData(&R);
 
   for (size_t I = 0; I != SmallAllocSize; ++I)
     DataPtr[I] = 0x55 + I;
@@ -60,8 +60,8 @@ TEST(CAPITest, CWrapperFunctionResultAllocSmall) {
 TEST(CAPITest, CWrapperFunctionResultAllocLarge) {
   constexpr size_t LargeAllocSize = sizeof(const char *) + 1;
 
-  __orc_rt_CWrapperFunctionResult R;
-  char *DataPtr = __orc_rt_CWrapperFunctionResultAllocate(&R, LargeAllocSize);
+  auto R = __orc_rt_CWrapperFunctionResultAllocate(LargeAllocSize);
+  char *DataPtr = __orc_rt_CWrapperFunctionResultData(&R);
 
   for (size_t I = 0; I != LargeAllocSize; ++I)
     DataPtr[I] = 0x55 + I;
