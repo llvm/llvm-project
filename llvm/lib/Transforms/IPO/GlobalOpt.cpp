@@ -703,8 +703,9 @@ static bool AllUsesOfValueWillTrapIfNull(const Value *V,
                !ICmpInst::isSigned(cast<ICmpInst>(U)->getPredicate()) &&
                isa<LoadInst>(U->getOperand(0)) &&
                isa<ConstantPointerNull>(U->getOperand(1))) {
-      assert(isa<GlobalValue>(
-                 cast<LoadInst>(U->getOperand(0))->getPointerOperand()) &&
+      assert(isa<GlobalValue>(cast<LoadInst>(U->getOperand(0))
+                                  ->getPointerOperand()
+                                  ->stripPointerCasts()) &&
              "Should be GlobalVariable");
       // This and only this kind of non-signed ICmpInst is to be replaced with
       // the comparing of the value of the created global init bool later in
