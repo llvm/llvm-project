@@ -18026,9 +18026,16 @@ static SDValue getPredicateForFixedLengthVector(SelectionDAG &DAG, SDLoc &DL,
       getSVEPredPatternFromNumElements(VT.getVectorNumElements());
   assert(PgPattern && "Unexpected element count for SVE predicate");
 
-  // TODO: For vectors that are exactly getMaxSVEVectorSizeInBits big, we can
-  // use AArch64SVEPredPattern::all, which can enable the use of unpredicated
+  // For vectors that are exactly getMaxSVEVectorSizeInBits big, we can use
+  // AArch64SVEPredPattern::all, which can enable the use of unpredicated
   // variants of instructions when available.
+  const auto &Subtarget =
+      static_cast<const AArch64Subtarget &>(DAG.getSubtarget());
+  unsigned MinSVESize = Subtarget.getMinSVEVectorSizeInBits();
+  unsigned MaxSVESize = Subtarget.getMaxSVEVectorSizeInBits();
+  if (MaxSVESize && MinSVESize == MaxSVESize &&
+      MaxSVESize == VT.getSizeInBits())
+    PgPattern = AArch64SVEPredPattern::all;
 
   MVT MaskVT;
   switch (VT.getVectorElementType().getSimpleVT().SimpleTy) {
