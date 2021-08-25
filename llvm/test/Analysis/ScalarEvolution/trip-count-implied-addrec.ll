@@ -27,6 +27,24 @@ for.end:                                          ; preds = %for.body, %entry
   ret void
 }
 
+; CHECK-LABEL: Determining loop execution counts for: @neg_nw_nuw
+; CHECK: Loop %for.body: Unpredictable backedge-taken count
+; CHECK: Loop %for.body: Unpredictable max backedge-taken count
+define void @neg_nw_nuw(i16 %n) mustprogress {
+entry:
+  br label %for.body
+
+for.body:                                         ; preds = %entry, %for.body
+  %iv = phi i8 [ %iv.next, %for.body ], [ 0, %entry ]
+  %iv.next = add i8 %iv, -1
+  %zext = zext i8 %iv to i16
+  %cmp = icmp ult i16 %zext, %n
+  br i1 %cmp, label %for.body, label %for.end
+
+for.end:                                          ; preds = %for.body, %entry
+  ret void
+}
+
 ; CHECK-LABEL: Determining loop execution counts for: @nw_implies_nsw
 ; CHECK: Loop %for.body: Unpredictable backedge-taken count
 ; CHECK: Loop %for.body: Unpredictable max backedge-taken count
@@ -37,6 +55,24 @@ entry:
 for.body:                                         ; preds = %entry, %for.body
   %iv = phi i8 [ %iv.next, %for.body ], [ -128, %entry ]
   %iv.next = add i8 %iv, 1
+  %zext = sext i8 %iv to i16
+  %cmp = icmp slt i16 %zext, %n
+  br i1 %cmp, label %for.body, label %for.end
+
+for.end:                                          ; preds = %for.body, %entry
+  ret void
+}
+
+; CHECK-LABEL: Determining loop execution counts for: @neg_nw_nsw
+; CHECK: Loop %for.body: Unpredictable backedge-taken count
+; CHECK: Loop %for.body: Unpredictable max backedge-taken count
+define void @neg_nw_nsw(i16 %n) mustprogress {
+entry:
+  br label %for.body
+
+for.body:                                         ; preds = %entry, %for.body
+  %iv = phi i8 [ %iv.next, %for.body ], [ -128, %entry ]
+  %iv.next = add i8 %iv, -1
   %zext = sext i8 %iv to i16
   %cmp = icmp slt i16 %zext, %n
   br i1 %cmp, label %for.body, label %for.end
