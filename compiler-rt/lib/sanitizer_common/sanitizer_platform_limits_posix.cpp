@@ -313,6 +313,10 @@ unsigned struct_ElfW_Phdr_sz = sizeof(Elf_Phdr);
   int glob_altdirfunc = GLOB_ALTDIRFUNC;
 #endif
 
+#  if !SANITIZER_ANDROID
+  const int wordexp_wrde_dooffs = WRDE_DOOFFS;
+#  endif  // !SANITIZER_ANDROID
+
 #if SANITIZER_LINUX && !SANITIZER_ANDROID &&                               \
     (defined(__i386) || defined(__x86_64) || defined(__mips64) ||          \
      defined(__powerpc64__) || defined(__aarch64__) || defined(__arm__) || \

@@ -3760,6 +3760,18 @@ TEST(MemorySanitizer, wordexp) {
   ASSERT_STREQ("c", w.we_wordv[2]);
 }
 
+TEST(MemorySanitizer, wordexp_initial_offset) {
+  wordexp_t w;
+  w.we_offs = 1;
+  int res = wordexp("a b c", &w, WRDE_DOOFFS);
+  ASSERT_EQ(0, res);
+  ASSERT_EQ(3U, w.we_wordc);
+  ASSERT_EQ(nullptr, w.we_wordv[0]);
+  ASSERT_STREQ("a", w.we_wordv[1]);
+  ASSERT_STREQ("b", w.we_wordv[2]);
+  ASSERT_STREQ("c", w.we_wordv[3]);
+}
+
 template<class T>
 static bool applySlt(T value, T shadow) {
   __msan_partial_poison(&value, &shadow, sizeof(T));
