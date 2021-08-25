@@ -45,6 +45,10 @@ set(TARGET_LIBC_ENTRYPOINTS
     libc.src.string.strtok
     libc.src.string.strtok_r
 
+    # inttypes.h entrypoints
+    libc.src.inttypes.strtoimax
+    libc.src.inttypes.strtoumax
+
     # stdlib.h entrypoints
     libc.src.stdlib.atoi
     libc.src.stdlib.atol
