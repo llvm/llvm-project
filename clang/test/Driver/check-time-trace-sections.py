@@ -20,10 +20,8 @@ backends = [event for event in events if event["name"] == "Backend"]
 beginning_of_time = log_contents["beginningOfTime"] / 1000000
 seconds_since_epoch = time.time()
 
-# Make sure that the 'beginningOfTime' is not earlier than 10 seconds ago
-# and not later than now.
-if beginning_of_time > seconds_since_epoch or \
-        seconds_since_epoch - beginning_of_time > 10:
+# Make sure that the 'beginningOfTime' is not later than now.
+if beginning_of_time > seconds_since_epoch:
     sys.exit("'beginningOfTime' should represent the absolute time when the "
              "process has started")
 
