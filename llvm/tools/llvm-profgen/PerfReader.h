@@ -344,7 +344,8 @@ struct ContextKey {
 
 // String based context id
 struct StringBasedCtxKey : public ContextKey {
-  std::string Context;
+  SampleContextFrameVector Context;
+
   bool WasLeafInlined;
   StringBasedCtxKey() : ContextKey(CK_StringBased), WasLeafInlined(false){};
   static bool classof(const ContextKey *K) {
@@ -356,7 +357,7 @@ struct StringBasedCtxKey : public ContextKey {
     return Context == Other->Context;
   }
 
-  void genHashCode() { HashCode = hash_value(Context); }
+  void genHashCode() { HashCode = hash_value(SampleContextFrames(Context)); }
 };
 
 // Probe based context key as the intermediate key of context

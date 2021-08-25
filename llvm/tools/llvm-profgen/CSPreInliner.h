@@ -67,7 +67,7 @@ using ProfiledCandidateQueue =
 // size by only keep context that is estimated to be inlined.
 class CSPreInliner {
 public:
-  CSPreInliner(StringMap<FunctionSamples> &Profiles, ProfiledBinary &Binary,
+  CSPreInliner(SampleProfileMap &Profiles, ProfiledBinary &Binary,
                uint64_t HotThreshold, uint64_t ColdThreshold);
   void run();
 
@@ -80,7 +80,7 @@ private:
   uint32_t getFuncSize(const FunctionSamples &FSamples);
   bool UseContextCost;
   SampleContextTracker ContextTracker;
-  StringMap<FunctionSamples> &ProfileMap;
+  SampleProfileMap &ProfileMap;
   ProfiledBinary &Binary;
 
   // Count thresholds to answer isHotCount and isColdCount queries.

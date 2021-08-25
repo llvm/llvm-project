@@ -1,6 +1,7 @@
 ; Make sure Import GUID list for ThinLTO properly set for CSSPGO
 ; RUN: opt < %s -passes='thinlto-pre-link<O2>' -pgo-kind=pgo-sample-use-pipeline -sample-profile-file=%S/Inputs/csspgo-import-list.prof -S | FileCheck %s
-; RUN: opt < %s -passes='thinlto-pre-link<O2>' -pgo-kind=pgo-sample-use-pipeline -sample-profile-file=%S/Inputs/csspgo-import-list.prof.extbin -S | FileCheck %s
+; RUN: llvm-profdata merge --sample --extbinary %S/Inputs/csspgo-import-list.prof -o %t.prof
+; RUN: opt < %s -passes='thinlto-pre-link<O2>' -pgo-kind=pgo-sample-use-pipeline -sample-profile-file=%t.prof -S | FileCheck %s
 
 declare i32 @_Z5funcBi(i32 %x)
 declare i32 @_Z5funcAi(i32 %x)

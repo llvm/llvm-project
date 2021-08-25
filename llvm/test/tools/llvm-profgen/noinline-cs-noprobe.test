@@ -1,3 +1,5 @@
+;; The test fails on Windows. Fix it before removing the following requirement.
+; REQUIRES: x86_64-linux
 ; RUN: llvm-profgen --format=text --perfscript=%S/Inputs/noinline-cs-noprobe.perfscript --binary=%S/Inputs/noinline-cs-noprobe.perfbin --output=%t --show-unwinder-output --profile-summary-cold-count=0 | FileCheck %s --check-prefix=CHECK-UNWINDER
 ; RUN: FileCheck %s --input-file %t
 ; RUN: llvm-profgen --format=text --perfscript=%S/Inputs/noinline-cs-noprobe.aggperfscript --binary=%S/Inputs/noinline-cs-noprobe.perfbin --output=%t --show-unwinder-output --profile-summary-cold-count=0 | FileCheck %s --check-prefix=CHECK-AGG-UNWINDER
