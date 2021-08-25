@@ -81,7 +81,7 @@ public:
     assert(getRank() == ind.size());
     for (uint64_t r = 0, rank = getRank(); r < rank; r++)
       assert(ind[r] < sizes[r]); // within bounds
-    elements.emplace_back(Element<V>(ind, val));
+    elements.emplace_back(ind, val);
   }
   /// Sorts elements lexicographically by index.
   void sort() { std::sort(elements.begin(), elements.end(), lexOrder); }
