@@ -4142,21 +4142,36 @@ void SwiftASTContext::RegisterSectionModules(
   if (!section_list)
     return;
 
-  SectionSP section_sp(
-      section_list->FindSectionByType(eSectionTypeSwiftModules, true));
-  if (section_sp) {
+  auto parse_ast_section = [&](llvm::StringRef section_data_ref, size_t n,
+                               size_t total) {
+    llvm::SmallVector<std::string, 4> swift_modules;
+    if (!swift::parseASTSection(*loader, section_data_ref, swift_modules)) {
+      LOG_PRINTF(LIBLLDB_LOG_TYPES,
+                 "failed to parse AST section %zu/%zu in image \"%s\".", n,
+                 total, module.GetFileSpec().GetFilename().GetCString());
+      return;
+    }
+
+    // Collect the Swift module names referenced by the AST.
+    for (auto module_name : swift_modules) {
+      module_names.push_back(module_name);
+      LOG_PRINTF(LIBLLDB_LOG_TYPES,
+                 "parsed module \"%s\" from Swift AST section %zu/%zu in "
+                 "image \"%s\".",
+                 module_name.c_str(), n, total,
+                 module.GetFileSpec().GetFilename().GetCString());
+    }
+  };
+
+  if (auto section_sp =
+          section_list->FindSectionByType(eSectionTypeSwiftModules, true)) {
     DataExtractor section_data;
 
     if (section_sp->GetSectionData(section_data)) {
       llvm::StringRef section_data_ref(
           (const char *)section_data.GetDataStart(),
           section_data.GetByteSize());
-      llvm::SmallVector<std::string, 4> llvm_modules;
-      if (swift::parseASTSection(*loader, section_data_ref, llvm_modules)) {
-        for (auto module_name : llvm_modules)
-          module_names.push_back(module_name);
-        return;
-      }
+      parse_ast_section(section_data_ref, 1, 1);
     }
   } else {
     if (m_ast_file_data_map.find(&module) != m_ast_file_data_map.end())
@@ -4176,37 +4191,15 @@ void SwiftASTContext::RegisterSectionModules(
 
     // Retrieve the module names from the AST blobs retrieved
     // from the symbol vendor.
-    size_t parse_fail_count = 0;
-    size_t ast_number = 0;
+    size_t i = 0;
     for (auto ast_file_data_sp : ast_file_datas) {
       // Parse the AST section info from the AST blob.
-      ++ast_number;
       llvm::StringRef section_data_ref(
           (const char *)ast_file_data_sp->GetBytes(),
           ast_file_data_sp->GetByteSize());
-      llvm::SmallVector<std::string, 4> swift_modules;
-      if (swift::parseASTSection(*loader, section_data_ref, swift_modules)) {
-        // Collect the Swift module names referenced by the AST.
-        for (auto module_name : swift_modules) {
-          module_names.push_back(module_name);
-          LOG_PRINTF(LIBLLDB_LOG_TYPES,
-                     "parsed module \"%s\" from Swift AST section %zu of %zu.",
-                     module_name.c_str(), ast_number, ast_file_datas.size());
-        }
-      } else {
-        // Keep track of the fact that we failed to parse the AST section
-        // info.
-        LOG_PRINTF(LIBLLDB_LOG_TYPES, "failed to parse AST section %zu of %zu.",
-                   ast_number, ast_file_datas.size());
-        ++parse_fail_count;
-      }
-    }
-    if (!ast_file_datas.empty() && (parse_fail_count == 0)) {
-      // We found AST data entries and we successfully parsed all of them.
-      return;
+      parse_ast_section(section_data_ref, ++i, ast_file_datas.size());
     }
   }
-  return;
 }
 
 void SwiftASTContext::ValidateSectionModules(
