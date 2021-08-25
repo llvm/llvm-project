@@ -911,10 +911,33 @@ public:
       return rewriter.notifyMatchFailure(op,
                                          "tosa.conv ops require static shapes");
 
+    if (inputETy.isUnsignedInteger())
+      return rewriter.notifyMatchFailure(
+          op, "tosa.conv ops does not support unsigned integer input");
+
     auto weightShape = weightTy.getShape();
 
     // Apply padding as necessary.
     Attribute zeroAttr = rewriter.getZeroAttr(inputETy);
+    if (isQuantized) {
+      auto quantizationInfo =
+          op->getAttr("quantization_info").cast<tosa::ConvOpQuantizationAttr>();
+      auto iZp = quantizationInfo.input_zp().getValue().getSExtValue();
+
+      int64_t intMin =
+          APInt::getSignedMinValue(inputETy.getIntOrFloatBitWidth())
+              .getSExtValue();
+      int64_t intMax =
+          APInt::getSignedMaxValue(inputETy.getIntOrFloatBitWidth())
+              .getSExtValue();
+
+      if (iZp < intMin || iZp > intMax)
+        return rewriter.notifyMatchFailure(
+            op, "tosa.conv op quantization has zp outside of input range");
+
+      zeroAttr = rewriter.getIntegerAttr(inputETy, iZp);
+    }
+
     llvm::SmallVector<int64_t> pad;
     pad.resize(2, 0);
     getValuesFromIntArrayAttribute(padAttr, pad);
@@ -1038,6 +1061,26 @@ public:
 
     // Apply padding as necessary.
     Attribute zeroAttr = rewriter.getZeroAttr(inputETy);
+    if (isQuantized) {
+      auto quantizationInfo =
+          op->getAttr("quantization_info").cast<tosa::ConvOpQuantizationAttr>();
+      auto iZp = quantizationInfo.input_zp().getValue().getSExtValue();
+
+      int64_t intMin =
+          APInt::getSignedMinValue(inputETy.getIntOrFloatBitWidth())
+              .getSExtValue();
+      int64_t intMax =
+          APInt::getSignedMaxValue(inputETy.getIntOrFloatBitWidth())
+              .getSExtValue();
+
+      if (iZp < intMin || iZp > intMax)
+        return rewriter.notifyMatchFailure(
+            op, "tosa.depthwise_conv op quantization has zp outside of input "
+                "range");
+
+      zeroAttr = rewriter.getIntegerAttr(inputETy, iZp);
+    }
+
     llvm::SmallVector<int64_t> pad;
     pad.resize(2, 0);
     getValuesFromIntArrayAttribute(padAttr, pad);
