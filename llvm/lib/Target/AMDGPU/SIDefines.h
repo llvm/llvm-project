@@ -7,10 +7,10 @@
 /// \file
 //===----------------------------------------------------------------------===//
 
-#include "llvm/MC/MCInstrDesc.h"
-
 #ifndef LLVM_LIB_TARGET_AMDGPU_SIDEFINES_H
 #define LLVM_LIB_TARGET_AMDGPU_SIDEFINES_H
+
+#include "llvm/MC/MCInstrDesc.h"
 
 namespace llvm {
 

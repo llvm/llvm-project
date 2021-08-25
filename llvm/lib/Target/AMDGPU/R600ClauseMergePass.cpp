@@ -12,8 +12,8 @@
 /// It needs to be called after IfCvt for best results.
 //===----------------------------------------------------------------------===//
 
-#include "AMDGPU.h"
-#include "MCTargetDesc/AMDGPUMCTargetDesc.h"
+#include "MCTargetDesc/R600MCTargetDesc.h"
+#include "R600.h"
 #include "R600Subtarget.h"
 
 using namespace llvm;

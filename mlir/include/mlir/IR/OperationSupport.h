@@ -903,11 +903,47 @@ class ResultRange final
 public:
   using RangeBaseT::RangeBaseT;
 
+  //===--------------------------------------------------------------------===//
+  // Types
+  //===--------------------------------------------------------------------===//
+
   /// Returns the types of the values within this range.
   using type_iterator = ValueTypeIterator<iterator>;
   using type_range = ValueTypeRange<ResultRange>;
   type_range getTypes() const { return {begin(), end()}; }
   auto getType() const { return getTypes(); }
+
+  //===--------------------------------------------------------------------===//
+  // Uses
+  //===--------------------------------------------------------------------===//
+
+  class UseIterator;
+  using use_iterator = UseIterator;
+  using use_range = iterator_range<use_iterator>;
+
+  /// Returns a range of all uses of results within this range, which is useful
+  /// for iterating over all uses.
+  use_range getUses() const;
+  use_iterator use_begin() const;
+  use_iterator use_end() const;
+
+  /// Returns true if no results in this range have uses.
+  bool use_empty() const {
+    return llvm::all_of(*this,
+                        [](OpResult result) { return result.use_empty(); });
+  }
+
+  //===--------------------------------------------------------------------===//
+  // Users
+  //===--------------------------------------------------------------------===//
+
+  using user_iterator = ValueUserIterator<use_iterator, OpOperand>;
+  using user_range = iterator_range<user_iterator>;
+
+  /// Returns a range of all users.
+  user_range getUsers();
+  user_iterator user_begin();
+  user_iterator user_end();
 
 private:
   /// See `llvm::detail::indexed_accessor_range_base` for details.
@@ -923,6 +959,34 @@ private:
 
   /// Allow access to `offset_base` and `dereference_iterator`.
   friend RangeBaseT;
+};
+
+/// This class implements a use iterator for a range of operation results.
+/// This iterates over all uses of all results within the given result range.
+class ResultRange::UseIterator final
+    : public llvm::iterator_facade_base<UseIterator, std::forward_iterator_tag,
+                                        OpOperand> {
+public:
+  /// Initialize the UseIterator. Specify `end` to return iterator to last
+  /// use, otherwise this is an iterator to the first use.
+  explicit UseIterator(ResultRange results, bool end = false);
+
+  using llvm::iterator_facade_base<UseIterator, std::forward_iterator_tag,
+                                   OpOperand>::operator++;
+  UseIterator &operator++();
+  OpOperand *operator->() const { return use.getOperand(); }
+  OpOperand &operator*() const { return *use.getOperand(); }
+
+  bool operator==(const UseIterator &rhs) const { return use == rhs.use; }
+  bool operator!=(const UseIterator &rhs) const { return !(*this == rhs); }
+
+private:
+  void skipOverResultsWithNoUsers();
+
+  /// The range of results being iterated over.
+  ResultRange::iterator it, endIt;
+  /// The use of the result.
+  Value::use_iterator use;
 };
 
 //===----------------------------------------------------------------------===//

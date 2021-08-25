@@ -24,7 +24,6 @@ class LiveIntervals;
 class LivePhysRegs;
 class RegisterBank;
 struct SGPRSpillBuilder;
-class SIMachineFunctionInfo;
 
 class SIRegisterInfo final : public AMDGPUGenRegisterInfo {
 private:

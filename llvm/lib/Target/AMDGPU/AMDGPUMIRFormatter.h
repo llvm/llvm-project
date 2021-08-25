@@ -16,18 +16,12 @@
 #ifndef LLVM_LIB_TARGET_AMDGPUMIRFORMATTER_H
 #define LLVM_LIB_TARGET_AMDGPUMIRFORMATTER_H
 
-#include "llvm/ADT/Optional.h"
 #include "llvm/CodeGen/MIRFormatter.h"
-#include "llvm/CodeGen/PseudoSourceValue.h"
-#include "llvm/Support/raw_ostream.h"
-#include <cstdint>
 
 namespace llvm {
 
 class MachineFunction;
-class MachineInstr;
 struct PerFunctionMIParsingState;
-struct SlotMapping;
 
 class AMDGPUMIRFormatter final : public MIRFormatter {
 public:

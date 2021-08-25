@@ -2836,20 +2836,24 @@ class TypeDef<Dialect dialect, string name, list<Trait> traits = [],
 
 // 'Parameters' should be subclasses of this or simple strings (which is a
 // shorthand for AttrOrTypeParameter<"C++Type">).
-class AttrOrTypeParameter<string type, string desc> {
+class AttrOrTypeParameter<string type, string desc, string accessorType = ""> {
   // Custom memory allocation code for storage constructor.
   code allocator = ?;
   // Custom comparator used to compare two instances for equality.
   code comparator = ?;
   // The C++ type of this parameter.
   string cppType = type;
+  // The C++ type of the accessor for this parameter.
+  string cppAccessorType = !if(!empty(accessorType), type, accessorType);
   // One-line human-readable description of the argument.
   string summary = desc;
   // The format string for the asm syntax (documentation only).
   string syntax = ?;
 }
-class AttrParameter<string type, string desc> : AttrOrTypeParameter<type, desc>;
-class TypeParameter<string type, string desc> : AttrOrTypeParameter<type, desc>;
+class AttrParameter<string type, string desc, string accessorType = "">
+ : AttrOrTypeParameter<type, desc, accessorType>;
+class TypeParameter<string type, string desc, string accessorType = "">
+ : AttrOrTypeParameter<type, desc, accessorType>;
 
 // For StringRefs, which require allocation.
 class StringRefParameter<string desc = ""> :
