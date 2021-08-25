@@ -691,13 +691,11 @@ def LinalgStructuredInterface : OpInterface<"LinalgOp"> {
       /*methodBody=*/"",
       /*defaultImplementation=*/[{
         return this->getOperation()->getNumResults() == 0 &&
-          llvm::all_of(getInputOperands(), [&](OpOperand *opOperand) {
-            return isScalar(opOperand) ||
-              opOperand->get().getType().template isa<MemRefType>();
-          }) &&
-          llvm::all_of(getOutputOperands(), [](OpOperand *opOperand) {
-            return opOperand->get().getType().template isa<MemRefType>();
-          });
+          llvm::all_of(this->getOperation()->getOpOperands(),
+            [&](OpOperand &opOperand) {
+              return isScalar(&opOperand) ||
+                     opOperand.get().getType().template isa<MemRefType>();
+            });
       }]
     >,
     InterfaceMethod<
@@ -709,13 +707,10 @@ def LinalgStructuredInterface : OpInterface<"LinalgOp"> {
       /*args=*/(ins),
       /*methodBody=*/"",
       /*defaultImplementation=*/[{
-        return
-          llvm::all_of(getInputOperands(), [&](OpOperand *opOperand) {
-            return isScalar(opOperand) ||
-              opOperand->get().getType().template isa<RankedTensorType>();
-          }) &&
-          llvm::all_of(getOutputOperands(), [](OpOperand *opOperand) {
-            return opOperand->get().getType().template isa<RankedTensorType>();
+        return llvm::all_of(this->getOperation()->getOpOperands(),
+          [&](OpOperand &opOperand) {
+            return isScalar(&opOperand) ||
+                   opOperand.get().getType().template isa<RankedTensorType>();
           });
       }]
     >,
