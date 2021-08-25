@@ -843,6 +843,11 @@ const DILabel *MachineInstr::getDebugLabel() const {
   return cast<DILabel>(getOperand(0).getMetadata());
 }
 
+DILifetime *MachineInstr::getDebugLifetime() {
+  assert(isDebugDefKill() && "not a DBG_DEF or DBG_KILL");
+  return cast<DILifetime>(const_cast<MDNode *>(getOperand(0).getMetadata()));
+}
+
 const DILifetime *MachineInstr::getDebugLifetime() const {
   assert(isDebugDefKill() && "not a DBG_DEF or DBG_KILL");
   return cast<DILifetime>(getOperand(0).getMetadata());

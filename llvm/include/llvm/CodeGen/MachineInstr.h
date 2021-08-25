@@ -453,6 +453,8 @@ public:
 
   /// Return the lifetime referenced by this DBG_DEF or DBG_KILL instruction.
   const DILifetime *getDebugLifetime() const;
+  /// Return the lifetime referenced by this DBG_DEF or DBG_KILL instruction.
+  DILifetime *getDebugLifetime();
 
   /// Return the referrer for this DBG_DEF instruction.
   const MachineOperand &getDebugReferrer() const;
@@ -644,6 +646,8 @@ public:
   /// Returns a range over all operands that are used to determine the variable
   /// location for this DBG_VALUE instruction.
   iterator_range<mop_iterator> debug_operands() {
+    if (isDebugDef())
+      return make_range(operands_begin() + 1, operands_end());
     assert(isDebugValue() && "Must be a debug value instruction.");
     return isDebugValueList()
                ? make_range(operands_begin() + 2, operands_end())
@@ -651,6 +655,8 @@ public:
   }
   /// \copydoc debug_operands()
   iterator_range<const_mop_iterator> debug_operands() const {
+    if (isDebugDef())
+      return make_range(operands_begin() + 1, operands_end());
     assert(isDebugValue() && "Must be a debug value instruction.");
     return isDebugValueList()
                ? make_range(operands_begin() + 2, operands_end())
@@ -1229,7 +1235,8 @@ public:
   bool isDebugKill() const { return getOpcode() == TargetOpcode::DBG_KILL; }
   bool isDebugDefKill() const { return isDebugDef() || isDebugKill(); }
   bool isDebugInstr() const {
-    return isDebugValue() || isDebugLabel() || isDebugRef() || isDebugPHI();
+    return isDebugValue() || isDebugLabel() || isDebugRef() || isDebugPHI() ||
+           isDebugDefKill();
   }
   bool isDebugOrPseudoInstr() const {
     return isDebugInstr() || isPseudoProbe();
