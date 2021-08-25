@@ -536,6 +536,10 @@ public:
   /// (or DBG_PHI).
   void finalizeDebugInstrRefs();
 
+  /// Returns true if the function's variable locations should be tracked with
+  /// instruction referencing.
+  bool useDebugInstrRef() const;
+
   MachineFunction(Function &F, const LLVMTargetMachine &Target,
                   const TargetSubtargetInfo &STI, unsigned FunctionNum,
                   MachineModuleInfo &MMI);
