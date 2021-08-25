@@ -103,6 +103,8 @@ C Language Changes in Clang
 - Wide multi-characters literals such as ``L'ab'`` that would previously be interpreted as ``L'b'``
   are now ill-formed in all language modes. The motivation for this change is outlined in
   `P2362 <wg21.link/P2362>`_.
+- Support for ``__attribute__((error("")))`` and
+  ``__attribute__((warning("")))`` function attributes have been added.
 
 C++ Language Changes in Clang
 -----------------------------
