@@ -22565,7 +22565,11 @@ SDValue DAGCombiner::foldSelectOfBinops(SDNode *N) {
   if (!TLI.isBinOp(BinOpc) || (N2.getOpcode() != BinOpc))
     return SDValue();
 
-  if (!N->isOnlyUserOf(N0.getNode()) || !N->isOnlyUserOf(N1.getNode()))
+  // The use checks are intentionally on SDNode because we may be dealing
+  // with opcodes that produce more than one SDValue.
+  // TODO: Do we really need to check N0 (the condition operand of the select)?
+  //       But removing that clause could cause an infinite loop...
+  if (!N0->hasOneUse() || !N1->hasOneUse() || !N2->hasOneUse())
     return SDValue();
 
   // Fold select(cond, binop(x, y), binop(z, y))
