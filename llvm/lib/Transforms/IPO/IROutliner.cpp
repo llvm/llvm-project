@@ -434,7 +434,6 @@ Function *IROutliner::createFunction(Module &M, OutlinableGroup &Group,
 static BasicBlock *moveFunctionData(Function &Old, Function &New) {
   Function::iterator CurrBB, NextBB, FinalBB;
   BasicBlock *NewEnd = nullptr;
-  std::vector<Instruction *> DebugInsts;
   for (CurrBB = Old.begin(), FinalBB = Old.end(); CurrBB != FinalBB;
        CurrBB = NextBB) {
     NextBB = std::next(CurrBB);
@@ -443,6 +442,8 @@ static BasicBlock *moveFunctionData(Function &Old, Function &New) {
     Instruction *I = CurrBB->getTerminator();
     if (isa<ReturnInst>(I))
       NewEnd = &(*CurrBB);
+
+    std::vector<Instruction *> DebugInsts;
 
     for (Instruction &Val : *CurrBB) {
       // We must handle the scoping of called functions differently than

@@ -130,7 +130,10 @@ defm : SKXWriteResPair<WriteIMul64,    [SKXPort1,SKXPort5], 4, [1,1], 2>;
 defm : SKXWriteResPair<WriteMULX64,    [SKXPort1,SKXPort5], 4, [1,1], 2>;
 defm : SKXWriteResPair<WriteIMul64Imm, [SKXPort1],   3>;
 defm : SKXWriteResPair<WriteIMul64Reg, [SKXPort1],   3>;
-def : WriteRes<WriteIMulH, []> { let Latency = 3; }
+def SKXWriteIMulH : WriteRes<WriteIMulH, []> { let Latency = 3; }
+def  : WriteRes<WriteIMulHLd, []> {
+  let Latency = !add(SKXWriteIMulH.Latency, SkylakeServerModel.LoadLatency);
+}
 
 defm : X86WriteRes<WriteBSWAP32, [SKXPort15], 1, [1], 1>;
 defm : X86WriteRes<WriteBSWAP64, [SKXPort06, SKXPort15], 2, [1,1], 2>;

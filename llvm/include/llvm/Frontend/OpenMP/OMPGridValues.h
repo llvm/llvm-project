@@ -55,9 +55,6 @@ namespace omp {
 ///
 
 struct GV {
-  /// The maximum number of workers in a kernel.
-  /// (THREAD_ABSOLUTE_LIMIT) - (GV_Warp_Size), might be issue for blockDim.z
-  const unsigned GV_Threads;
   /// The size reserved for data in a shared memory slot.
   const unsigned GV_Slot_Size;
   /// The default value of maximum number of threads in a worker warp.
@@ -85,7 +82,6 @@ struct GV {
 
 /// For AMDGPU GPUs
 static constexpr GV AMDGPUGridValues = {
-    448,  // GV_Threads
     256,  // GV_Slot_Size
     64,   // GV_Warp_Size
     128,  // GV_Max_Teams
@@ -96,7 +92,6 @@ static constexpr GV AMDGPUGridValues = {
 
 /// For Nvidia GPUs
 static constexpr GV NVPTXGridValues = {
-    992,  // GV_Threads
     256,  // GV_Slot_Size
     32,   // GV_Warp_Size
     1024, // GV_Max_Teams
