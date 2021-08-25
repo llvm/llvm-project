@@ -257,9 +257,9 @@ void ModuleDepCollectorPP::addModulePrebuiltDeps(
     llvm::DenseSet<const Module *> &SeenSubmodules) {
   for (const Module *Import : M->Imports)
     if (Import->getTopLevelModule() != M->getTopLevelModule())
-      if (MDC.isPrebuiltModule(Import))
-        if (SeenSubmodules.insert(Import).second)
-          MD.PrebuiltModuleDeps.emplace_back(Import);
+      if (MDC.isPrebuiltModule(Import->getTopLevelModule()))
+        if (SeenSubmodules.insert(Import->getTopLevelModule()).second)
+          MD.PrebuiltModuleDeps.emplace_back(Import->getTopLevelModule());
 }
 
 void ModuleDepCollectorPP::addAllSubmoduleDeps(
