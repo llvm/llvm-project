@@ -1300,14 +1300,10 @@ for.end:                                          ; preds = %for.body, %entry
   ret void
 }
 
-;; FIXME: Do not form memmove when load has more than one use.
+;; Do not form memmove when load has more than one use.
 define i32 @do_not_form_memmove5(i32* %p) {
 ; CHECK-LABEL: @do_not_form_memmove5(
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[P2:%.*]] = bitcast i32* [[P:%.*]] to i8*
-; CHECK-NEXT:    [[SCEVGEP:%.*]] = getelementptr i32, i32* [[P:%.*]], i64 1
-; CHECK-NEXT:    [[SCEVGEP1:%.*]] = bitcast i32* [[SCEVGEP]] to i8*
-; CHECK-NEXT:    call void @llvm.memmove.p0i8.p0i8.i64(i8* align 4 [[SCEVGEP1]], i8* align 4 [[P2]], i64 60, i1 false)
 ; CHECK-NEXT:    br label [[FOR_BODY:%.*]]
 ; CHECK:       for.cond.cleanup:
 ; CHECK-NEXT:    [[ADD_LCSSA:%.*]] = phi i32 [ [[ADD:%.*]], [[FOR_BODY]] ]
@@ -1321,6 +1317,7 @@ define i32 @do_not_form_memmove5(i32* %p) {
 ; CHECK-NEXT:    [[TMP1:%.*]] = load i32, i32* [[ARRAYIDX]], align 4
 ; CHECK-NEXT:    [[IDXPROM:%.*]] = zext i32 [[INDEX]] to i64
 ; CHECK-NEXT:    [[ARRAYIDX2:%.*]] = getelementptr inbounds i32, i32* [[P:%.*]], i64 [[IDXPROM]]
+; CHECK-NEXT:    store i32 [[TMP1]], i32* [[ARRAYIDX2]], align 4
 ; CHECK-NEXT:    [[ADD]] = add nsw i32 [[TMP1]], [[SUM:%.*]]
 ; CHECK-NEXT:    [[CMP:%.*]] = icmp sgt i32 [[INDEX]], 1
 ; CHECK-NEXT:    br i1 [[CMP]], label [[FOR_BODY]], label [[FOR_COND_CLEANUP]]
