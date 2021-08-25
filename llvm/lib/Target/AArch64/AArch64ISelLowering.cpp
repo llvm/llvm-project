@@ -18022,38 +18022,9 @@ static SDValue getPredicateForFixedLengthVector(SelectionDAG &DAG, SDLoc &DL,
          DAG.getTargetLoweringInfo().isTypeLegal(VT) &&
          "Expected legal fixed length vector!");
 
-  int PgPattern;
-  switch (VT.getVectorNumElements()) {
-  default:
-    llvm_unreachable("unexpected element count for SVE predicate");
-  case 1:
-    PgPattern = AArch64SVEPredPattern::vl1;
-    break;
-  case 2:
-    PgPattern = AArch64SVEPredPattern::vl2;
-    break;
-  case 4:
-    PgPattern = AArch64SVEPredPattern::vl4;
-    break;
-  case 8:
-    PgPattern = AArch64SVEPredPattern::vl8;
-    break;
-  case 16:
-    PgPattern = AArch64SVEPredPattern::vl16;
-    break;
-  case 32:
-    PgPattern = AArch64SVEPredPattern::vl32;
-    break;
-  case 64:
-    PgPattern = AArch64SVEPredPattern::vl64;
-    break;
-  case 128:
-    PgPattern = AArch64SVEPredPattern::vl128;
-    break;
-  case 256:
-    PgPattern = AArch64SVEPredPattern::vl256;
-    break;
-  }
+  unsigned PgPattern =
+      getSVEPredPatternFromNumElements(VT.getVectorNumElements());
+  assert(PgPattern && "Unexpected element count for SVE predicate");
 
   // TODO: For vectors that are exactly getMaxSVEVectorSizeInBits big, we can
   // use AArch64SVEPredPattern::all, which can enable the use of unpredicated
