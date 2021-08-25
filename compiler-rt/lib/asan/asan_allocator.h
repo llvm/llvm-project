@@ -199,9 +199,6 @@ using AllocatorCache = AsanAllocator::AllocatorCache;
 struct AsanThreadLocalMallocStorage {
   uptr quarantine_cache[16];
   AllocatorCache allocator_cache;
-#if SANITIZER_AMDGPU
-  uptr quarantine_cache_dev[16];
-#endif
   void CommitBack();
  private:
   // These objects are allocated via mmap() and are zero-initialized.
