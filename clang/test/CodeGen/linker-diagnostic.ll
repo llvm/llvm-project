@@ -1,3 +1,4 @@
+; REQUIRES: arm-registered-target
 ; RUN: mkdir -p %t
 ; RUN: opt -module-summary -o %t/foo.o %s
 ; RUN: opt -module-summary -o %t/bar.o %S/Inputs/linker-diagnostic1.ll
