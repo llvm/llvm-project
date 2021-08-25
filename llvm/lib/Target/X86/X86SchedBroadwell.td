@@ -149,7 +149,10 @@ defm : BWWriteResPair<WriteIMul64,    [BWPort1,BWPort5], 4, [1,1], 2>;
 defm : BWWriteResPair<WriteMULX64,    [BWPort1,BWPort5], 4, [1,1], 2>;
 defm : BWWriteResPair<WriteIMul64Imm, [BWPort1],   3>;
 defm : BWWriteResPair<WriteIMul64Reg, [BWPort1],   3>;
-def  : WriteRes<WriteIMulH, []> { let Latency = 3; }
+def BWWriteIMulH : WriteRes<WriteIMulH, []> { let Latency = 3; }
+def  : WriteRes<WriteIMulHLd, []> {
+  let Latency = !add(BWWriteIMulH.Latency, BroadwellModel.LoadLatency);
+}
 
 defm : X86WriteRes<WriteBSWAP32,   [BWPort15], 1, [1], 1>;
 defm : X86WriteRes<WriteBSWAP64,   [BWPort06, BWPort15], 2, [1, 1], 2>;

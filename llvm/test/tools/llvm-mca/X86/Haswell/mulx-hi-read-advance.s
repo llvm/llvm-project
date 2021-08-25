@@ -63,7 +63,7 @@ add %rax, %rax
 # CHECK-NEXT: Index     0123456789
 
 # CHECK:      [0,0]     DeeeeeeeeeER   mulxl	(%rdi), %eax, %ecx
-# CHECK-NEXT: [0,1]     .D==eE-----R   addl	%eax, %eax
+# CHECK-NEXT: [0,1]     .D=======eER   addl	%eax, %eax
 
 # CHECK:      Average Wait times (based on the timeline view):
 # CHECK-NEXT: [0]: Executions
@@ -73,8 +73,8 @@ add %rax, %rax
 
 # CHECK:            [0]    [1]    [2]    [3]
 # CHECK-NEXT: 0.     1     1.0    1.0    0.0       mulxl	(%rdi), %eax, %ecx
-# CHECK-NEXT: 1.     1     3.0    0.0    5.0       addl	%eax, %eax
-# CHECK-NEXT:        1     2.0    0.5    2.5       <total>
+# CHECK-NEXT: 1.     1     8.0    0.0    0.0       addl	%eax, %eax
+# CHECK-NEXT:        1     4.5    0.5    0.0       <total>
 
 # CHECK:      [1] Code Region
 
@@ -126,7 +126,7 @@ add %rax, %rax
 # CHECK-NEXT: Index     0123456789
 
 # CHECK:      [0,0]     DeeeeeeeeeER   mulxq	(%rdi), %rax, %rcx
-# CHECK-NEXT: [0,1]     .D==eE-----R   addq	%rax, %rax
+# CHECK-NEXT: [0,1]     .D=======eER   addq	%rax, %rax
 
 # CHECK:      Average Wait times (based on the timeline view):
 # CHECK-NEXT: [0]: Executions
@@ -136,5 +136,5 @@ add %rax, %rax
 
 # CHECK:            [0]    [1]    [2]    [3]
 # CHECK-NEXT: 0.     1     1.0    1.0    0.0       mulxq	(%rdi), %rax, %rcx
-# CHECK-NEXT: 1.     1     3.0    0.0    5.0       addq	%rax, %rax
-# CHECK-NEXT:        1     2.0    0.5    2.5       <total>
+# CHECK-NEXT: 1.     1     8.0    0.0    0.0       addq	%rax, %rax
+# CHECK-NEXT:        1     4.5    0.5    0.0       <total>

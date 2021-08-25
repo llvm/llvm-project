@@ -1503,7 +1503,7 @@ let hasSideEffects = 0 in {
   def rm : I<0xF6, MRMSrcMem, (outs RC:$dst1, RC:$dst2), (ins x86memop:$src),
              !strconcat(mnemonic, "\t{$src, $dst2, $dst1|$dst1, $dst2, $src}"),
              []>, T8XD, VEX_4V,
-             Sched<[sched.Folded, WriteIMulH,
+             Sched<[sched.Folded, WriteIMulHLd,
                     // Memory operand.
                     ReadDefault, ReadDefault, ReadDefault, ReadDefault, ReadDefault,
                     // Implicit read of EDX/RDX
