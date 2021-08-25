@@ -492,10 +492,6 @@ typedef __char32_t char32_t;
 #  define _LIBCPP_HAS_BLOCKS_RUNTIME
 #endif
 
-#if !(__has_feature(cxx_relaxed_constexpr))
-#define _LIBCPP_HAS_NO_CXX14_CONSTEXPR
-#endif
-
 #if !(__has_feature(cxx_variable_templates))
 #define _LIBCPP_HAS_NO_VARIABLE_TEMPLATES
 #endif
@@ -542,11 +538,6 @@ typedef __char32_t char32_t;
 #  define _LIBCPP_NO_EXCEPTIONS
 #endif
 
-// Determine if GCC supports relaxed constexpr
-#if !defined(__cpp_constexpr) || __cpp_constexpr < 201304L
-#define _LIBCPP_HAS_NO_CXX14_CONSTEXPR
-#endif
-
 // GCC 5 supports variable templates
 #if !defined(__cpp_variable_templates) || __cpp_variable_templates < 201304L
 #define _LIBCPP_HAS_NO_VARIABLE_TEMPLATES
@@ -575,7 +566,6 @@ typedef __char32_t char32_t;
 #error "MSVC versions prior to Visual Studio 2015 are not supported"
 #endif
 
-#define _LIBCPP_HAS_NO_CXX14_CONSTEXPR
 #define _LIBCPP_HAS_NO_VARIABLE_TEMPLATES
 #define __alignof__ __alignof
 #define _LIBCPP_NORETURN __declspec(noreturn)
@@ -1044,19 +1034,19 @@ typedef unsigned int   char32_t;
 #  define _LIBCPP_EXPLICIT_AFTER_CXX11 explicit
 #endif
 
-#if _LIBCPP_STD_VER > 11 && !defined(_LIBCPP_HAS_NO_CXX14_CONSTEXPR)
+#if _LIBCPP_STD_VER > 11
 #  define _LIBCPP_CONSTEXPR_AFTER_CXX11 constexpr
 #else
 #  define _LIBCPP_CONSTEXPR_AFTER_CXX11
 #endif
 
-#if _LIBCPP_STD_VER > 14 && !defined(_LIBCPP_HAS_NO_CXX14_CONSTEXPR)
+#if _LIBCPP_STD_VER > 14
 #  define _LIBCPP_CONSTEXPR_AFTER_CXX14 constexpr
 #else
 #  define _LIBCPP_CONSTEXPR_AFTER_CXX14
 #endif
 
-#if _LIBCPP_STD_VER > 17 && !defined(_LIBCPP_HAS_NO_CXX14_CONSTEXPR)
+#if _LIBCPP_STD_VER > 17
 #  define _LIBCPP_CONSTEXPR_AFTER_CXX17 constexpr
 #else
 #  define _LIBCPP_CONSTEXPR_AFTER_CXX17
@@ -1096,10 +1086,10 @@ typedef unsigned int   char32_t;
 #  define _LIBCPP_INLINE_VAR
 #endif
 
-#if defined(_LIBCPP_DEBUG) || defined(_LIBCPP_HAS_NO_CXX14_CONSTEXPR)
-#   define _LIBCPP_CONSTEXPR_IF_NODEBUG
-#else
+#if !defined(_LIBCPP_DEBUG) && _LIBCPP_STD_VER > 11
 #   define _LIBCPP_CONSTEXPR_IF_NODEBUG constexpr
+#else
+#   define _LIBCPP_CONSTEXPR_IF_NODEBUG
 #endif
 
 #if __has_attribute(no_destroy)

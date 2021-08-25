@@ -3957,8 +3957,9 @@ bool TokenAnnotator::canBreakBefore(const AnnotatedLine &Line,
             tok::kw_return, Keywords.kw_yield, tok::kw_continue, tok::kw_break,
             tok::kw_throw, Keywords.kw_interface, Keywords.kw_type,
             tok::kw_static, tok::kw_public, tok::kw_private, tok::kw_protected,
-            Keywords.kw_readonly, Keywords.kw_abstract, Keywords.kw_get,
-            Keywords.kw_set, Keywords.kw_async, Keywords.kw_await))
+            Keywords.kw_readonly, Keywords.kw_override, Keywords.kw_abstract,
+            Keywords.kw_get, Keywords.kw_set, Keywords.kw_async,
+            Keywords.kw_await))
       return false; // Otherwise automatic semicolon insertion would trigger.
     if (Right.NestingLevel == 0 &&
         (Left.Tok.getIdentifierInfo() ||

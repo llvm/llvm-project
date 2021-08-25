@@ -854,6 +854,26 @@ TEST_F(FormatTestJS, AsyncFunctions) {
                "}\n");
 }
 
+TEST_F(FormatTestJS, OverriddenMembers) {
+  verifyFormat(
+      "class C extends P {\n"
+      "  protected override "
+      "anOverlyLongPropertyNameSoLongItHasToGoInASeparateLineWhenOverriden:\n"
+      "      undefined;\n"
+      "}\n");
+  verifyFormat(
+      "class C extends P {\n"
+      "  protected override "
+      "anOverlyLongMethodNameSoLongItHasToGoInASeparateLineWhenOverriden() {\n"
+      "  }\n"
+      "}\n");
+  verifyFormat("class C extends P {\n"
+               "  protected override aMethodName<ATypeParam extends {},\n"
+               "                                                    BTypeParam "
+               "extends {}>() {}\n"
+               "}\n");
+}
+
 TEST_F(FormatTestJS, FunctionParametersTrailingComma) {
   verifyFormat("function trailingComma(\n"
                "    p1,\n"
