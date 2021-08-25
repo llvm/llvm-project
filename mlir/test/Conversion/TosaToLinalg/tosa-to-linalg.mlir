@@ -1203,11 +1203,12 @@ func @avg_pool(%arg0: tensor<1x6x34x62xf32>) -> (tensor<1x5x33x62xf32>) {
   // CHECK: [[CONST:%.+]] = constant 0
   // CHECK: [[PAD:%.+]] = linalg.pad_tensor %arg0 low[0, 1, 1, 0] high[0, 1, 1, 0]
   // CHECK: [[CONST:%.+]] = constant 0
-  // CHECK: [[INIT:%.+]] = linalg.init_tensor [1, 5, 33, 62]
-  // CHECK: [[FILL:%.+]] = linalg.fill([[CONST]], [[INIT]])
+  // CHECK: [[POOLINIT:%.+]] = linalg.init_tensor [1, 5, 33, 62]
+  // CHECK: [[FILL:%.+]] = linalg.fill([[CONST]], [[POOLINIT]])
   // CHECK: [[KERNEL:%.+]] = linalg.init_tensor [4, 4]
   // CHECK: [[POOL:%.+]] = linalg.pooling_nhwc_sum {dilations = dense<1> : vector<2xi64>, strides = dense<1> : vector<2xi64>} ins([[PAD]], [[KERNEL]] : tensor<1x8x36x62xf32>, tensor<4x4xf32>) outs([[FILL]] : tensor<1x5x33x62xf32>)
-  // CHECK: [[GENERIC:%.+]] = linalg.generic {indexing_maps = [#map], iterator_types = ["parallel", "parallel", "parallel", "parallel"]} outs([[POOL]] : tensor<1x5x33x62xf32>)
+  // CHECK: [[INIT:%.+]] = linalg.init_tensor [1, 5, 33, 62]
+  // CHECK: [[GENERIC:%.+]] = linalg.generic {indexing_maps = [#map, #map], iterator_types = ["parallel", "parallel", "parallel", "parallel"]} ins([[POOL]] : tensor<1x5x33x62xf32>) outs([[INIT]] : tensor<1x5x33x62xf32>)
   // CHECK:   [[ZERO:%.0]] = constant 0
   // CHECK:   [[ONE:%.+]] = constant 1
   // CHECK:   [[HEIGHT:%.+]] = constant 4
@@ -1257,17 +1258,46 @@ func @avg_pool(%arg0: tensor<1x6x34x62xf32>) -> (tensor<1x5x33x62xf32>) {
 
 // -----
 
-// CHECK: #[[MAP0:.+]] = affine_map<(d0, d1, d2, d3) -> (d3, d0, d1, d2)>
-// CHECK: #[[MAP1:.+]] = affine_map<(d0, d1, d2, d3) -> (d0, d1, d2, d3)>
-// CHECK: #[[MAP2:.+]] = affine_map<(d0, d1, d2, d3) -> (d3)>
+// CHECK-LABEL: @avg_pool_i8
+func @avg_pool_i8(%arg0 : tensor<1x128x128x2xi8>) -> () {
 
-// CHECK-LABEL @conv2d_f32
+  // CHECK: linalg.pooling_nhwc_sum
+  // CHECK: linalg.generic
+
+  // CHECK: %[[INZP:.+]] = constant -128
+  // CHECK: %[[INZP_OFF:.+]] = muli %{{.+}}, %[[INZP]]
+  // CHECK: %[[OFFSETED:.+]] = subi %arg1, %[[INZP_OFF]]
+  // CHECK: %[[NUMERATOR:.+]] = constant 1073741825
+  // CHECK: %[[MULTIPLIER:.+]] = divi_unsigned %[[NUMERATOR]], %{{.+}}
+  // CHECK: %[[SHIFT:.+]] = constant 30
+  // CHECK: %[[SCALE:.+]] = "tosa.apply_scale"(%{{.+}}, %[[MULTIPLIER]], %[[SHIFT]]) {double_round = false}
+  // CHECK: %[[OUTZP:.+]] = constant -128
+  // CHECK: %[[OUT:.+]] = addi %[[SCALE]], %[[OUTZP]]
+  // CHECK: %[[MIN:.+]] = constant -128
+  // CHECK: %[[MAX:.+]] = constant 127
+  // CHECK: %[[CMP_MIN:.+]] = cmpi slt, %[[OUT]], %[[MIN]]
+  // CHECK: %[[CLMP_MIN:.+]] = select %[[CMP_MIN]], %[[MIN]], %[[OUT]]
+  // CHECK: %[[CMP_MAX:.+]] = cmpi slt, %[[MAX]], %[[OUT]]
+  // CHECK: %[[CLMP_MAX:.+]] = select %[[CMP_MAX]], %[[MAX]], %[[CLMP_MIN]]
+  // CHECK: %[[TRUNC:.+]] = trunci %[[CLMP_MAX]]
+  // CHECK: linalg.yield %[[TRUNC]]
+  %0 = "tosa.avg_pool2d"(%arg0) {kernel = [4, 4], pad = [0, 0, 0, 0], quantization_info = {input_zp = -128 : i32, output_zp = -128 : i32}, stride = [4, 4]} : (tensor<1x128x128x2xi8>) -> tensor<1x32x32x2xi8>
+  return
+}
+
+// -----
+
+// CHECK: #[[$MAP0:.+]] = affine_map<(d0, d1, d2, d3) -> (d3, d0, d1, d2)>
+// CHECK: #[[$MAP1:.+]] = affine_map<(d0, d1, d2, d3) -> (d0, d1, d2, d3)>
+// CHECK: #[[$MAP2:.+]] = affine_map<(d0, d1, d2, d3) -> (d3)>
+
+// CHECK-LABEL: @conv2d_f32
 func @conv2d_f32(%input: tensor<1x49x42x27xf32>, %weights: tensor<28x3x3x27xf32>, %bias: tensor<28xf32>) -> () {
   // CHECK: %[[W_IN:.+]] = linalg.init_tensor [3, 3, 27, 28]
-  // CHECK: %[[W:.+]] = linalg.generic {indexing_maps = [#[[MAP0]], #[[MAP1]]], iterator_types = ["parallel", "parallel", "parallel", "parallel"]} ins(%arg1 : tensor<28x3x3x27xf32>) outs(%[[W_IN]] : tensor<3x3x27x28xf32>)
+  // CHECK: %[[W:.+]] = linalg.generic {indexing_maps = [#[[$MAP0]], #[[$MAP1]]], iterator_types = ["parallel", "parallel", "parallel", "parallel"]} ins(%arg1 : tensor<28x3x3x27xf32>) outs(%[[W_IN]] : tensor<3x3x27x28xf32>)
   // CHECK:   linalg.yield %arg3 : f32
   // CHECK: %[[B_IN:.+]] = linalg.init_tensor [1, 45, 40, 28]
-  // CHECK: %[[B:.+]] = linalg.generic {indexing_maps = [#[[MAP2]], #[[MAP1]]], iterator_types = ["parallel", "parallel", "parallel", "parallel"]} ins(%arg2 : tensor<28xf32>) outs(%[[B_IN]] : tensor<1x45x40x28xf32>)
+  // CHECK: %[[B:.+]] = linalg.generic {indexing_maps = [#[[$MAP2]], #[[$MAP1]]], iterator_types = ["parallel", "parallel", "parallel", "parallel"]} ins(%arg2 : tensor<28xf32>) outs(%[[B_IN]] : tensor<1x45x40x28xf32>)
   // CHECK:   linalg.yield %arg3 : f32
   // CHECK: %[[CONV:.+]] = linalg.conv_2d_nhwc_hwcf {dilations = dense<[2, 1]> : tensor<2xi64>, strides = dense<1> : tensor<2xi64>} ins(%arg0, %1 : tensor<1x49x42x27xf32>, tensor<3x3x27x28xf32>) outs(%[[B]] : tensor<1x45x40x28xf32>)
   %0 = "tosa.conv2d"(%input, %weights, %bias) {pad = [0, 0, 0, 0], stride = [1, 1], dilation = [2, 1]} : (tensor<1x49x42x27xf32>, tensor<28x3x3x27xf32>, tensor<28xf32>)  -> (tensor<1x45x40x28xf32>)

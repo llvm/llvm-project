@@ -966,7 +966,7 @@ InstrProfiling::getOrCreateRegionCounters(InstrProfIncrementInst *Inc) {
   // If profd is in a deduplicate comdat, NS==0 with a hash suffix guarantees
   // that other copies must have the same CFG and cannot have value profiling.
   // If no hash suffix, other profd copies may be referenced by code.
-  if (NS == 0 && !(NeedComdat && !Renamed) &&
+  if (NS == 0 && !(DataReferencedByCode && NeedComdat && !Renamed) &&
       (TT.isOSBinFormatELF() ||
        (!DataReferencedByCode && TT.isOSBinFormatCOFF()))) {
     Linkage = GlobalValue::PrivateLinkage;

@@ -179,8 +179,7 @@ int f() {
 
 // LINUX_AIX: define internal void @[[VF_M_INIT]]()
 // DARWIN: define internal cxx_fast_tlscc void @[[VF_M_INIT]]()
-// LINUX-SAME: comdat($_ZN1VIfE1mE)
-// DARWIN-NOT: comdat
+// CHECK-NOT: comdat
 // CHECK: load i8, i8* bitcast (i64* @_ZGVN1VIfE1mE to i8*)
 // CHECK: %[[VF_M_INITIALIZED:.*]] = icmp eq i8 %{{.*}}, 0
 // CHECK: br i1 %[[VF_M_INITIALIZED]],
@@ -192,8 +191,7 @@ int f() {
 
 // LINUX_AIX: define internal void @[[XF_M_INIT]]()
 // DARWIN: define internal cxx_fast_tlscc void @[[XF_M_INIT]]()
-// LINUX-SAME: comdat($_ZN1XIfE1mE)
-// DARWIN-NOT: comdat
+// CHECK-NOT: comdat
 // CHECK: load i8, i8* bitcast (i64* @_ZGVN1XIfE1mE to i8*)
 // CHECK: %[[XF_M_INITIALIZED:.*]] = icmp eq i8 %{{.*}}, 0
 // CHECK: br i1 %[[XF_M_INITIALIZED]],
@@ -313,8 +311,7 @@ void set_anon_i() {
 
 // LINUX_AIX: define internal void @[[V_M_INIT]]()
 // DARWIN: define internal cxx_fast_tlscc void @[[V_M_INIT]]()
-// LINUX-SAME: comdat($_ZN1VIiE1mE)
-// DARWIN-NOT: comdat
+// CHECK-NOT: comdat
 // CHECK: load i8, i8* bitcast (i64* @_ZGVN1VIiE1mE to i8*)
 // CHECK: %[[V_M_INITIALIZED:.*]] = icmp eq i8 %{{.*}}, 0
 // CHECK: br i1 %[[V_M_INITIALIZED]],
@@ -326,8 +323,7 @@ void set_anon_i() {
 
 // LINUX_AIX: define internal void @[[X_M_INIT]]()
 // DARWIN: define internal cxx_fast_tlscc void @[[X_M_INIT]]()
-// LINUX-SAME: comdat($_ZN1XIiE1mE)
-// DARWIN-NOT: comdat
+// CHECK-NOT: comdat
 // CHECK: load i8, i8* bitcast (i64* @_ZGVN1XIiE1mE to i8*)
 // CHECK: %[[X_M_INITIALIZED:.*]] = icmp eq i8 %{{.*}}, 0
 // CHECK: br i1 %[[X_M_INITIALIZED]],
