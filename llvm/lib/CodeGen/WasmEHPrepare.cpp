@@ -29,7 +29,7 @@
 //   __wasm_lpad_context.lpad_index = index;
 //   __wasm_lpad_context.lsda = wasm.lsda();
 //   _Unwind_CallPersonality(exn);
-//   selector = __wasm.landingpad_context.selector;
+//   selector = __wasm_lpad_context.selector;
 //   ...
 //
 //
@@ -329,7 +329,7 @@ void WasmEHPrepare::prepareEHPad(BasicBlock *BB, bool NeedPersonality,
                                     OperandBundleDef("funclet", CPI));
   PersCI->setDoesNotThrow();
 
-  // Pseudocode: int selector = __wasm.landingpad_context.selector;
+  // Pseudocode: int selector = __wasm_lpad_context.selector;
   Instruction *Selector =
       IRB.CreateLoad(IRB.getInt32Ty(), SelectorField, "selector");
 
