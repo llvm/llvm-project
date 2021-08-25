@@ -3,14 +3,16 @@
 
 ; CHECK: error: Linking COMDATs named 'foo': nodeduplicate has been violated!
 
-; RUN: not llvm-link -S %t/2.ll %t/2-aux.ll 2>&1 | FileCheck %s --check-prefix=CHECK2
-; RUN: not llvm-link -S %t/2-aux.ll %t/2.ll 2>&1 | FileCheck %s --check-prefix=CHECK2
+; RUN: llvm-link -S %t/2.ll %t/2-aux.ll | FileCheck %s --check-prefix=CHECK2
+; RUN: llvm-link -S %t/2-aux.ll %t/2.ll | FileCheck %s --check-prefix=CHECK2
 
-; CHECK2: error: Linking COMDATs named 'foo'
+; CHECK2-DAG: @foo = global i64 2, section "data", comdat, align 8
+; CHECK2-DAG: @bar = weak global i64 0, section "cnts", comdat($foo)
+; CHECK2-DAG: @qux = weak_odr global i64 4, comdat($foo)
 
 ; RUN: not llvm-link -S %t/non-var.ll %t/non-var.ll 2>&1 | FileCheck %s --check-prefix=NONVAR
 
-; NONVAR: error: Linking COMDATs named 'foo': nodeduplicate has been violated!
+; NONVAR: error: Linking COMDATs named 'foo': GlobalVariable required for data dependent selection!
 
 ;--- 1.ll
 $foo = comdat nodeduplicate
