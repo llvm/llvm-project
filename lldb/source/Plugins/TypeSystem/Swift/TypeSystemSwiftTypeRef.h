@@ -278,6 +278,9 @@ public:
                            swift::Demangle::Demangler &dem,
                            llvm::StringRef mangled_name);
 
+  /// Return the base name of the topmost nominal type.
+  static llvm::StringRef GetBaseName(swift::Demangle::NodePointer node);
+
   /// Use API notes to determine the swiftified name of \p clang_decl.
   std::string GetSwiftName(const clang::Decl *clang_decl,
                            TypeSystemClang &clang_typesystem) override;
