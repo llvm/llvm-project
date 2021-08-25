@@ -19692,8 +19692,10 @@ SDValue DAGCombiner::convertBuildVecZextToZext(SDNode *N) {
 
   // Make sure the first element matches
   // (zext (extract_vector_elt X, C))
+  // Offset must be a constant multiple of the
+  // known-minimum vector length of the result type.
   int64_t Offset = checkElem(Op0);
-  if (Offset < 0)
+  if (Offset < 0 || (Offset % VT.getVectorNumElements()) != 0)
     return SDValue();
 
   unsigned NumElems = N->getNumOperands();
