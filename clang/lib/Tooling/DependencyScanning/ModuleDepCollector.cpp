@@ -231,7 +231,8 @@ ModuleID ModuleDepCollectorPP::handleTopLevelModule(const Module *M) {
   // Add direct prebuilt module dependencies now, so that we can use them when
   // creating a CompilerInvocation and computing context hash for this
   // ModuleDeps instance.
-  addDirectPrebuiltModuleDeps(M, MD);
+  llvm::DenseSet<const Module *> SeenModules;
+  addAllSubmodulePrebuiltDeps(M, MD, SeenModules);
 
   MD.Invocation = MDC.makeInvocationForModuleBuildWithoutPaths(MD);
   MD.ID.ContextHash = MD.Invocation.getModuleHash();
@@ -242,12 +243,23 @@ ModuleID ModuleDepCollectorPP::handleTopLevelModule(const Module *M) {
   return MD.ID;
 }
 
-void ModuleDepCollectorPP::addDirectPrebuiltModuleDeps(const Module *M,
-                                                       ModuleDeps &MD) {
+void ModuleDepCollectorPP::addAllSubmodulePrebuiltDeps(
+    const Module *M, ModuleDeps &MD,
+    llvm::DenseSet<const Module *> &SeenSubmodules) {
+  addModulePrebuiltDeps(M, MD, SeenSubmodules);
+
+  for (const Module *SubM : M->submodules())
+    addAllSubmodulePrebuiltDeps(SubM, MD, SeenSubmodules);
+}
+
+void ModuleDepCollectorPP::addModulePrebuiltDeps(
+    const Module *M, ModuleDeps &MD,
+    llvm::DenseSet<const Module *> &SeenSubmodules) {
   for (const Module *Import : M->Imports)
     if (Import->getTopLevelModule() != M->getTopLevelModule())
       if (MDC.isPrebuiltModule(Import))
-        MD.PrebuiltModuleDeps.emplace_back(Import);
+        if (SeenSubmodules.insert(Import).second)
+          MD.PrebuiltModuleDeps.emplace_back(Import);
 }
 
 void ModuleDepCollectorPP::addAllSubmoduleDeps(
