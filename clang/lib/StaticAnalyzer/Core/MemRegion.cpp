@@ -768,27 +768,14 @@ DefinedOrUnknownSVal MemRegionManager::getStaticSize(const MemRegion *MR,
       return UnknownVal();
 
     QualType Ty = cast<TypedValueRegion>(SR)->getDesugaredValueType(Ctx);
-    const DefinedOrUnknownSVal Size = getElementExtent(Ty, SVB);
+    DefinedOrUnknownSVal Size = getElementExtent(Ty, SVB);
 
     // A zero-length array at the end of a struct often stands for dynamically
     // allocated extra memory.
-    const auto isFlexibleArrayMemberCandidate = [this](QualType Ty) -> bool {
-      const ArrayType *AT = Ctx.getAsArrayType(Ty);
-      if (!AT)
-        return false;
-      if (isa<IncompleteArrayType>(AT))
-        return true;
-
-      if (const auto *CAT = dyn_cast<ConstantArrayType>(AT)) {
-        const llvm::APInt &Size = CAT->getSize();
-        if (Size.isNullValue())
-          return true;
-      }
-      return false;
-    };
-
-    if (isFlexibleArrayMemberCandidate(Ty))
-      return UnknownVal();
+    if (Size.isZeroConstant()) {
+      if (isa<ConstantArrayType>(Ty))
+        return UnknownVal();
+    }
 
     return Size;
   }
