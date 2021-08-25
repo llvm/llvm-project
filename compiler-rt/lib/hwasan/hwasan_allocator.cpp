@@ -162,8 +162,11 @@ static void *HwasanAllocate(StackTrace *stack, uptr orig_size, uptr alignment,
     internal_memset(allocated, flags()->malloc_fill_byte, fill_size);
   }
   if (size != orig_size) {
-    internal_memcpy(reinterpret_cast<u8 *>(allocated) + orig_size, tail_magic,
-                    size - orig_size - 1);
+    u8 *tail = reinterpret_cast<u8 *>(allocated) + orig_size;
+    uptr tail_length = size - orig_size;
+    internal_memcpy(tail, tail_magic, tail_length - 1);
+    // Short granule is excluded from magic tail, so we explicitly untag.
+    tail[tail_length - 1] = 0;
   }
 
   void *user_ptr = allocated;
