@@ -6,7 +6,6 @@ from gdbclientutils import *
 
 
 class TestGDBServerTargetXML(GDBRemoteTestBase):
-
     @skipIfXmlSupportMissing
     @skipIfRemote
     @skipIfLLVMTargetMissing("X86")
@@ -163,6 +162,52 @@ class TestGDBServerTargetXML(GDBRemoteTestBase):
                    ["xmm1 = {0x91 0x92 0x93 0x94 0x95 0x96 0x97 0x98 "
                     "0x99 0x9a 0x9b 0x9c 0x9d 0x9e 0x9f 0xa0}"])
 
+        # test pseudo-registers
+        self.filecheck("register read --all",
+                       os.path.join(os.path.dirname(__file__),
+                                    "amd64-partial-regs.FileCheck"))
+
+        # test writing into pseudo-registers
+        self.runCmd("register write ecx 0xfffefdfc")
+        reg_data[0] = "fcfdfeff05060708"
+        self.assertPacketLogContains(["G" + "".join(reg_data)])
+        self.match("register read rcx",
+                   ["rcx = 0x08070605fffefdfc"])
+
+        self.runCmd("register write cx 0xfbfa")
+        reg_data[0] = "fafbfeff05060708"
+        self.assertPacketLogContains(["G" + "".join(reg_data)])
+        self.match("register read ecx",
+                   ["ecx = 0xfffefbfa"])
+        self.match("register read rcx",
+                   ["rcx = 0x08070605fffefbfa"])
+
+        self.runCmd("register write ch 0xf9")
+        reg_data[0] = "faf9feff05060708"
+        self.assertPacketLogContains(["G" + "".join(reg_data)])
+        self.match("register read cx",
+                   ["cx = 0xf9fa"])
+        self.match("register read ecx",
+                   ["ecx = 0xfffef9fa"])
+        self.match("register read rcx",
+                   ["rcx = 0x08070605fffef9fa"])
+
+        self.runCmd("register write cl 0xf8")
+        reg_data[0] = "f8f9feff05060708"
+        self.assertPacketLogContains(["G" + "".join(reg_data)])
+        self.match("register read cx",
+                   ["cx = 0xf9f8"])
+        self.match("register read ecx",
+                   ["ecx = 0xfffef9f8"])
+        self.match("register read rcx",
+                   ["rcx = 0x08070605fffef9f8"])
+
+        self.runCmd("register write mm0 0xfffefdfcfbfaf9f8")
+        reg_data[10] = "f8f9fafbfcfdfeff090a"
+        self.assertPacketLogContains(["G" + "".join(reg_data)])
+        self.match("register read st0",
+                   ["st0 = {0xf8 0xf9 0xfa 0xfb 0xfc 0xfd 0xfe 0xff 0x09 0x0a}"])
+
     @skipIfXmlSupportMissing
     @skipIfRemote
     @skipIfLLVMTargetMissing("X86")
@@ -272,10 +317,24 @@ class TestGDBServerTargetXML(GDBRemoteTestBase):
         # test generic aliases
         self.match("register read fp",
                    ["ebp = 0x54535251"])
+        self.match("register read sp",
+                   ["esp = 0x44434241"])
         self.match("register read pc",
                    ["eip = 0x84838281"])
         self.match("register read flags",
                    ["eflags = 0x94939291"])
+
+        # test pseudo-registers
+        self.match("register read cx",
+                   ["cx = 0x1211"])
+        self.match("register read ch",
+                   ["ch = 0x12"])
+        self.match("register read cl",
+                   ["cl = 0x11"])
+        self.match("register read mm0",
+                   ["mm0 = 0x0807060504030201"])
+        self.match("register read mm1",
+                   ["mm1 = 0x1817161514131211"])
 
         # both stX and xmmX should be displayed as vectors
         self.match("register read st0",
@@ -288,6 +347,35 @@ class TestGDBServerTargetXML(GDBRemoteTestBase):
         self.match("register read xmm1",
                    ["xmm1 = {0x91 0x92 0x93 0x94 0x95 0x96 0x97 0x98 "
                     "0x99 0x9a 0x9b 0x9c 0x9d 0x9e 0x9f 0xa0}"])
+
+        # test writing into pseudo-registers
+        self.runCmd("register write cx 0xfbfa")
+        reg_data[1] = "fafb1314"
+        self.assertPacketLogContains(["G" + "".join(reg_data)])
+        self.match("register read ecx",
+                   ["ecx = 0x1413fbfa"])
+
+        self.runCmd("register write ch 0xf9")
+        reg_data[1] = "faf91314"
+        self.assertPacketLogContains(["G" + "".join(reg_data)])
+        self.match("register read cx",
+                   ["cx = 0xf9fa"])
+        self.match("register read ecx",
+                   ["ecx = 0x1413f9fa"])
+
+        self.runCmd("register write cl 0xf8")
+        reg_data[1] = "f8f91314"
+        self.assertPacketLogContains(["G" + "".join(reg_data)])
+        self.match("register read cx",
+                   ["cx = 0xf9f8"])
+        self.match("register read ecx",
+                   ["ecx = 0x1413f9f8"])
+
+        self.runCmd("register write mm0 0xfffefdfcfbfaf9f8")
+        reg_data[10] = "f8f9fafbfcfdfeff090a"
+        self.assertPacketLogContains(["G" + "".join(reg_data)])
+        self.match("register read st0",
+                   ["st0 = {0xf8 0xf9 0xfa 0xfb 0xfc 0xfd 0xfe 0xff 0x09 0x0a}"])
 
     @skipIfXmlSupportMissing
     @skipIfRemote
