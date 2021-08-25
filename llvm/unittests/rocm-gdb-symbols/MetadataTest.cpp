@@ -118,6 +118,94 @@ TEST_F(DIExprBuilderTest, InitializerList) {
   EXPECT_EQ(ExprB, ExprC);
 }
 
+TEST_F(DIExprBuilderTest, InsertByValue) {
+  DIOp::Variant V(in_place_type<DIOp::Sub>);
+
+  {
+    DIExprBuilder BuilderA(Context);
+    BuilderA.insert(BuilderA.begin(), V);
+    DIExprBuilder ExpectedA(Context, {DIOp::Variant{in_place_type<DIOp::Sub>}});
+    EXPECT_EQ(BuilderA.intoExpr(), ExpectedA.intoExpr());
+  }
+
+  {
+    DIExprBuilder BuilderB(Context, {DIOp::Variant{in_place_type<DIOp::Mul>},
+                                     DIOp::Variant{in_place_type<DIOp::Div>}});
+    BuilderB.insert(BuilderB.begin() + 1, V);
+    DIExprBuilder ExpectedB(Context, {DIOp::Variant{in_place_type<DIOp::Mul>},
+                                      DIOp::Variant{in_place_type<DIOp::Sub>},
+                                      DIOp::Variant{in_place_type<DIOp::Div>}});
+    EXPECT_EQ(BuilderB.intoExpr(), ExpectedB.intoExpr());
+  }
+}
+
+TEST_F(DIExprBuilderTest, InsertEmplace) {
+  {
+    DIExprBuilder BuilderA(Context);
+    BuilderA.insert<DIOp::Sub>(BuilderA.begin());
+    DIExprBuilder ExpectedA(Context, {DIOp::Variant{in_place_type<DIOp::Sub>}});
+    EXPECT_EQ(BuilderA.intoExpr(), ExpectedA.intoExpr());
+  }
+
+  {
+    DIExprBuilder BuilderB(Context, {DIOp::Variant{in_place_type<DIOp::Mul>},
+                                     DIOp::Variant{in_place_type<DIOp::Div>}});
+    BuilderB.insert<DIOp::Sub>(BuilderB.begin() + 1);
+    DIExprBuilder ExpectedB(Context, {DIOp::Variant{in_place_type<DIOp::Mul>},
+                                      DIOp::Variant{in_place_type<DIOp::Sub>},
+                                      DIOp::Variant{in_place_type<DIOp::Div>}});
+    EXPECT_EQ(BuilderB.intoExpr(), ExpectedB.intoExpr());
+  }
+}
+
+TEST_F(DIExprBuilderTest, InsertRange) {
+  SmallVector<DIOp::Variant> Vs{DIOp::Variant{in_place_type<DIOp::Sub>},
+                                DIOp::Variant{in_place_type<DIOp::Add>}};
+
+  {
+    DIExprBuilder BuilderA(Context);
+    BuilderA.insert(BuilderA.begin(), Vs);
+    DIExprBuilder ExpectedA(Context, {DIOp::Variant{in_place_type<DIOp::Sub>},
+                                      DIOp::Variant{in_place_type<DIOp::Add>}});
+    EXPECT_EQ(BuilderA.intoExpr(), ExpectedA.intoExpr());
+  }
+
+  {
+    DIExprBuilder BuilderB(Context, {DIOp::Variant{in_place_type<DIOp::Mul>},
+                                     DIOp::Variant{in_place_type<DIOp::Div>}});
+    BuilderB.insert(BuilderB.begin() + 1, Vs);
+    DIExprBuilder ExpectedB(Context, {DIOp::Variant{in_place_type<DIOp::Mul>},
+                                      DIOp::Variant{in_place_type<DIOp::Sub>},
+                                      DIOp::Variant{in_place_type<DIOp::Add>},
+                                      DIOp::Variant{in_place_type<DIOp::Div>}});
+    EXPECT_EQ(BuilderB.intoExpr(), ExpectedB.intoExpr());
+  }
+}
+
+TEST_F(DIExprBuilderTest, InsertFromTo) {
+  SmallVector<DIOp::Variant> Vs{DIOp::Variant{in_place_type<DIOp::Sub>},
+                                DIOp::Variant{in_place_type<DIOp::Add>}};
+
+  {
+    DIExprBuilder BuilderA(Context);
+    BuilderA.insert(BuilderA.begin(), Vs.begin(), Vs.end());
+    DIExprBuilder ExpectedA(Context, {DIOp::Variant{in_place_type<DIOp::Sub>},
+                                      DIOp::Variant{in_place_type<DIOp::Add>}});
+    EXPECT_EQ(BuilderA.intoExpr(), ExpectedA.intoExpr());
+  }
+
+  {
+    DIExprBuilder BuilderB(Context, {DIOp::Variant{in_place_type<DIOp::Mul>},
+                                     DIOp::Variant{in_place_type<DIOp::Div>}});
+    BuilderB.insert(BuilderB.begin() + 1, Vs.begin(), Vs.end());
+    DIExprBuilder ExpectedB(Context, {DIOp::Variant{in_place_type<DIOp::Mul>},
+                                      DIOp::Variant{in_place_type<DIOp::Sub>},
+                                      DIOp::Variant{in_place_type<DIOp::Add>},
+                                      DIOp::Variant{in_place_type<DIOp::Div>}});
+    EXPECT_EQ(BuilderB.intoExpr(), ExpectedB.intoExpr());
+  }
+}
+
 TEST_F(DIExprBuilderTest, Erase) {
   DIExprBuilder BuilderA(
       Context, {DIOp::Variant{in_place_type<DIOp::Referrer>, Int64Ty},
@@ -276,6 +364,20 @@ TEST_F(DIExprOpsTest, PushLane) {
   DIOp::Variant V{in_place_type<DIOp::PushLane>, Int64Ty};
   ASSERT_TRUE(V.holdsAlternative<DIOp::PushLane>());
   ASSERT_EQ(V.get<DIOp::PushLane>().getResultType(), Int64Ty);
+}
+
+typedef MetadataTest DIExprTest;
+
+TEST_F(DIExprTest, setLocation) {
+  DIExpr *Original = DIExprBuilder(Context, {}).intoExpr();
+  DIExpr *Replacement =
+      DIExprBuilder(Context, {DIOp::Variant{in_place_type<DIOp::Sub>}})
+          .intoExpr();
+  DIFragment *Fragment = DIFragment::getDistinct(Context);
+  DILifetime *Lifetime = DILifetime::getDistinct(Context, Fragment, Original);
+  EXPECT_EQ(Lifetime->getLocation(), Original);
+  Lifetime->setLocation(Replacement);
+  EXPECT_EQ(Lifetime->getLocation(), Replacement);
 }
 
 } // end namespace

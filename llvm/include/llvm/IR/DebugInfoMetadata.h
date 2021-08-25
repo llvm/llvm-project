@@ -3218,8 +3218,8 @@ public:
   template <typename T, typename... ArgsT>
   Iterator insert(Iterator I, ArgsT &&...Args) {
     // FIXME: SmallVector doesn't define an ::emplace(iterator, ...)
-    return Elements.insert(I.Op,
-                           {in_place_type<T>, std::forward<ArgsT>(Args)...});
+    return Elements.insert(
+        I.Op, DIOp::Variant{in_place_type<T>, std::forward<ArgsT>(Args)...});
   }
 
   template <typename RangeTy> Iterator insert(Iterator I, RangeTy &&R) {
@@ -3298,7 +3298,6 @@ public:
     return MD->getMetadataID() == DIExprKind;
   }
   TempDIExpr clone() const { return cloneImpl(); }
-
 
   /// Convenience method to get a builder by copying the current expression.
   DIExprBuilder builder() const { return DIExprBuilder(*this); }
@@ -4061,6 +4060,7 @@ public:
 
   DIObject *getObject() const { return cast<DIObject>(getRawObject()); }
   DIExpr *getLocation() const { return cast<DIExpr>(getRawLocation()); }
+  void setLocation(DIExpr *E) { setOperand(1, E); }
   class ArgObjectIterator
       : public llvm::iterator_facade_base<ArgObjectIterator,
                                           std::input_iterator_tag, DIObject> {
