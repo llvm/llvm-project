@@ -3996,10 +3996,12 @@ INTERCEPTOR(int, wordexp, char *s, __sanitizer_wordexp_t *p, int flags) {
   int res = REAL(wordexp)(s, p, flags);
   if (!res && p) {
     COMMON_INTERCEPTOR_WRITE_RANGE(ctx, p, sizeof(*p));
-    if (p->we_wordc)
+    uptr we_wordc =
+        ((flags & wordexp_wrde_dooffs) ? p->we_wordc : 0) + p->we_wordc;
+    if (we_wordc)
       COMMON_INTERCEPTOR_WRITE_RANGE(ctx, p->we_wordv,
-                                     sizeof(*p->we_wordv) * p->we_wordc);
-    for (uptr i = 0; i < p->we_wordc; ++i) {
+                                     sizeof(*p->we_wordv) * we_wordc);
+    for (uptr i = 0; i < we_wordc; ++i) {
       char *w = p->we_wordv[i];
       if (w) COMMON_INTERCEPTOR_WRITE_RANGE(ctx, w, internal_strlen(w) + 1);
     }
