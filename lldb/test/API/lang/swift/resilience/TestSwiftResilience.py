@@ -1,14 +1,3 @@
-# TestResilience.py
-#
-# This source file is part of the Swift.org open source project
-#
-# Copyright (c) 2014 - 2016 Apple Inc. and the Swift project authors
-# Licensed under Apache License v2.0 with Runtime Library Exception
-#
-# See https://swift.org/LICENSE.txt for license information
-# See https://swift.org/CONTRIBUTORS.txt for the list of Swift project authors
-#
-# ------------------------------------------------------------------------------
 """
 Test that resilient APIs work regardless of the combination of library and executable
 """
@@ -19,7 +8,6 @@ from lldbsuite.test.decorators import *
 import lldbsuite.test.lldbutil as lldbutil
 import os
 import os.path
-import time
 import unittest2
 
 import sys
@@ -34,7 +22,7 @@ def execute_command(command):
     return exit_status
 
 
-class TestResilience(TestBase):
+class TestSwiftResilience(TestBase):
 
     mydir = TestBase.compute_mydir(__file__)
 
