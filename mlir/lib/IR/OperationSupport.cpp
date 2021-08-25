@@ -553,6 +553,59 @@ MutableOperandRange MutableOperandRangeRange::dereference(const OwnerT &object,
 }
 
 //===----------------------------------------------------------------------===//
+// ResultRange
+
+ResultRange::use_range ResultRange::getUses() const {
+  return {use_begin(), use_end()};
+}
+ResultRange::use_iterator ResultRange::use_begin() const {
+  return use_iterator(*this);
+}
+ResultRange::use_iterator ResultRange::use_end() const {
+  return use_iterator(*this, /*end=*/true);
+}
+ResultRange::user_range ResultRange::getUsers() {
+  return {user_begin(), user_end()};
+}
+ResultRange::user_iterator ResultRange::user_begin() {
+  return user_iterator(use_begin());
+}
+ResultRange::user_iterator ResultRange::user_end() {
+  return user_iterator(use_end());
+}
+
+ResultRange::UseIterator::UseIterator(ResultRange results, bool end)
+    : it(end ? results.end() : results.begin()), endIt(results.end()) {
+  // Only initialize current use if there are results/can be uses.
+  if (it != endIt)
+    skipOverResultsWithNoUsers();
+}
+
+ResultRange::UseIterator &ResultRange::UseIterator::operator++() {
+  // We increment over uses, if we reach the last use then move to next
+  // result.
+  if (use != (*it).use_end())
+    ++use;
+  if (use == (*it).use_end()) {
+    ++it;
+    skipOverResultsWithNoUsers();
+  }
+  return *this;
+}
+
+void ResultRange::UseIterator::skipOverResultsWithNoUsers() {
+  while (it != endIt && (*it).use_empty())
+    ++it;
+
+  // If we are at the last result, then set use to first use of
+  // first result (sentinel value used for end).
+  if (it == endIt)
+    use = {};
+  else
+    use = (*it).use_begin();
+}
+
+//===----------------------------------------------------------------------===//
 // ValueRange
 
 ValueRange::ValueRange(ArrayRef<Value> values)
