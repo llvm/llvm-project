@@ -1039,9 +1039,11 @@ bool WebAssemblyLowerEmscriptenEHSjLj::runSjLjOnFunction(Function &F) {
   // SSAUpdater.AddAvailableValue(...) later.
   BasicBlock *Entry = &F.getEntryBlock();
   DebugLoc FirstDL = getOrCreateDebugLoc(&*Entry->begin(), F.getSubprogram());
+  SplitBlock(Entry, &*Entry->getFirstInsertionPt());
+
   BinaryOperator *SetjmpTableSize =
       BinaryOperator::Create(Instruction::Add, IRB.getInt32(4), IRB.getInt32(0),
-                             "setjmpTableSize", &*Entry->getFirstInsertionPt());
+                             "setjmpTableSize", Entry->getTerminator());
   SetjmpTableSize->setDebugLoc(FirstDL);
   // setjmpTable = (int *) malloc(40);
   Instruction *SetjmpTable = CallInst::CreateMalloc(
