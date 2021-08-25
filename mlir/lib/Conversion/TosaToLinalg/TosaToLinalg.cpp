@@ -2504,39 +2504,34 @@ public:
   }
 };
 
-template <typename SrcOp>
-class Pool2dConverter : public OpRewritePattern<SrcOp> {
+class MaxPool2dConverter : public OpRewritePattern<tosa::MaxPool2dOp> {
 public:
-  using OpRewritePattern<SrcOp>::OpRewritePattern;
+  using OpRewritePattern<tosa::MaxPool2dOp>::OpRewritePattern;
 
-  LogicalResult matchAndRewrite(SrcOp op,
+  LogicalResult matchAndRewrite(tosa::MaxPool2dOp op,
                                 PatternRewriter &rewriter) const final {
     Location loc = op.getLoc();
     Value input = op.input();
     ShapedType inputTy = input.getType().cast<ShapedType>();
-    Type inElementTy = inputTy.getElementType();
 
     ShapedType resultTy = op.getType().template cast<ShapedType>();
-    Type outElementTy = inputTy.getElementType();
+    Type resultETy = inputTy.getElementType();
 
     if (!inputTy.hasStaticShape())
       return failure();
 
     // Determine what the initial value needs to be for the max pool op.
     Attribute initialAttr;
-    if (isa<tosa::MaxPool2dOp>(op) && outElementTy.isF32())
+    if (resultETy.isF32())
       initialAttr = rewriter.getFloatAttr(
-          outElementTy,
-          APFloat::getLargest(
-              outElementTy.cast<FloatType>().getFloatSemantics(), true));
+          resultETy,
+          APFloat::getLargest(resultETy.cast<FloatType>().getFloatSemantics(),
+                              true));
 
-    if (isa<tosa::MaxPool2dOp>(op) && outElementTy.isa<IntegerType>())
+    if (resultETy.isa<IntegerType>())
       initialAttr = rewriter.getIntegerAttr(
-          outElementTy,
-          APInt::getSignedMinValue(outElementTy.getIntOrFloatBitWidth()));
-
-    if (isa<tosa::AvgPool2dOp>(op) && outElementTy.isa<FloatType>())
-      initialAttr = rewriter.getZeroAttr(outElementTy);
+          resultETy,
+          APInt::getSignedMinValue(resultETy.getIntOrFloatBitWidth()));
 
     if (!initialAttr)
       return rewriter.notifyMatchFailure(
@@ -2566,93 +2561,216 @@ public:
         rewriter.create<linalg::FillOp>(loc, initialValue, initTensor).result();
 
     Value fakeWindowDims =
-        rewriter.create<linalg::InitTensorOp>(loc, kernel, outElementTy);
+        rewriter.create<linalg::InitTensorOp>(loc, kernel, resultETy);
 
-    if (isa<tosa::MaxPool2dOp>(op)) {
-      rewriter.replaceOpWithNewOp<linalg::PoolingNhwcMaxOp>(
-          op, ArrayRef<Type>{resultTy}, ValueRange{paddedInput, fakeWindowDims},
-          filledInitTensor, strideAttr, dilationAttr);
-      return success();
-    }
+    rewriter.replaceOpWithNewOp<linalg::PoolingNhwcMaxOp>(
+        op, ArrayRef<Type>{resultTy}, ValueRange{paddedInput, fakeWindowDims},
+        filledInitTensor, strideAttr, dilationAttr);
+    return success();
+  }
+};
 
-    if (isa<tosa::AvgPool2dOp>(op) && inElementTy.isF32()) {
-      Value poolingOp = rewriter
-                            .create<linalg::PoolingNhwcSumOp>(
-                                loc, ArrayRef<Type>{resultTy},
-                                ValueRange{paddedInput, fakeWindowDims},
-                                filledInitTensor, strideAttr, dilationAttr)
-                            .getResult(0);
-      auto poolingOpTy = poolingOp.getType().cast<ShapedType>();
-      auto affineMap = rewriter.getMultiDimIdentityMap(resultTy.getRank());
-      auto genericOp = rewriter.create<linalg::GenericOp>(
-          loc, ArrayRef<Type>({resultTy}), ValueRange{}, ValueRange{poolingOp},
-          ArrayRef<AffineMap>({affineMap}),
-          getNParallelLoopsAttrs(resultTy.getRank()),
-          [&](OpBuilder &b, Location loc, ValueRange args) {
-            auto zero = rewriter.create<ConstantIndexOp>(loc, 0);
-            auto one = rewriter.create<ConstantIndexOp>(loc, 1);
-            auto iH = rewriter.create<ConstantIndexOp>(
-                loc, poolingOpTy.getDimSize(1) - 1);
-            auto iW = rewriter.create<ConstantIndexOp>(
-                loc, poolingOpTy.getDimSize(2) - 1);
+class AvgPool2dConverter : public OpRewritePattern<tosa::AvgPool2dOp> {
+public:
+  using OpRewritePattern<tosa::AvgPool2dOp>::OpRewritePattern;
 
-            // Compute the indices from either end.
-            auto y0 = rewriter.create<linalg::IndexOp>(loc, 1);
-            auto x0 = rewriter.create<linalg::IndexOp>(loc, 2);
-            auto y1 = rewriter.create<SubIOp>(loc, iH, y0);
-            auto x1 = rewriter.create<SubIOp>(loc, iW, x0);
+  LogicalResult matchAndRewrite(tosa::AvgPool2dOp op,
+                                PatternRewriter &rewriter) const final {
+    Location loc = op.getLoc();
+    Value input = op.input();
+    ShapedType inputTy = input.getType().cast<ShapedType>();
+    Type inElementTy = inputTy.getElementType();
 
-            // Determines what the portion of valid input is covered by the
-            // kernel.
-            auto padFn = [&](Value v, Value x, int64_t pad) -> Value {
-              if (pad == 0)
-                return v;
+    ShapedType resultTy = op.getType().template cast<ShapedType>();
+    Type resultETy = inputTy.getElementType();
 
-              auto padVal = rewriter.create<ConstantIndexOp>(loc, pad);
-              Value dx = rewriter.create<SubIOp>(loc, x, padVal);
+    Type accETy =
+        inElementTy.isa<IntegerType>() ? rewriter.getI32Type() : inElementTy;
+    ShapedType accTy = resultTy.clone(accETy);
 
-              Value cmp = rewriter.create<mlir::CmpIOp>(loc, CmpIPredicate::slt,
-                                                        dx, zero);
-              Value offset =
-                  rewriter.create<mlir::SelectOp>(loc, cmp, dx, zero);
-              return rewriter.create<mlir::AddIOp>(loc, v, offset)
-                  ->getResult(0);
-            };
+    if (!inputTy.hasStaticShape())
+      return failure();
 
-            // Compute the vertical component of coverage.
-            auto kH0 = rewriter.create<ConstantIndexOp>(loc, kernel[0]);
-            auto kH1 = padFn(kH0, y0, pad[2]);
-            auto kH2 = padFn(kH1, y1, pad[3]);
-            auto kHCmp =
-                rewriter.create<CmpIOp>(loc, CmpIPredicate::slt, kH2, one);
-            auto kH3 = rewriter.create<SelectOp>(loc, kHCmp, one, kH2);
+    // Apply padding as necessary.
+    llvm::SmallVector<int64_t> pad;
+    pad.resize(2, 0);
+    getValuesFromIntArrayAttribute(op.pad(), pad);
+    pad.resize(pad.size() + 2, 0);
+    Attribute initialAttr = rewriter.getZeroAttr(accETy);
+    Value paddedInput = applyPad(loc, input, pad, initialAttr, rewriter);
 
-            // compute teh horizontal component of coverage.
-            auto kW0 = rewriter.create<ConstantIndexOp>(loc, kernel[1]);
-            auto kW1 = padFn(kW0, x0, pad[4]);
-            auto kW2 = padFn(kW1, x1, pad[5]);
-            auto kWCmp =
-                rewriter.create<CmpIOp>(loc, CmpIPredicate::slt, kW2, one);
-            auto kW3 = rewriter.create<SelectOp>(loc, kWCmp, one, kW2);
+    Value initialValue = rewriter.create<ConstantOp>(loc, initialAttr);
 
-            // Compute the total number of elements and normalize.
-            Value count = rewriter.create<MulIOp>(loc, kH3, kW3);
-            auto countI = rewriter.create<mlir::IndexCastOp>(
-                loc, rewriter.getI32Type(), count);
+    SmallVector<int64_t> kernel, stride;
+    getValuesFromIntArrayAttribute(op.kernel(), kernel);
+    getValuesFromIntArrayAttribute(op.stride(), stride);
+
+    Attribute strideAttr = rewriter.getI64VectorAttr(stride);
+    Attribute dilationAttr = rewriter.getI64VectorAttr({1, 1});
+
+    // Create the linalg op that performs pooling.
+    Value poolInitTensor =
+        rewriter.create<linalg::InitTensorOp>(loc, accTy.getShape(), accETy);
+
+    Value filledInitTensor =
+        rewriter.create<linalg::FillOp>(loc, initialValue, poolInitTensor)
+            .result();
+
+    Value fakeWindowDims =
+        rewriter.create<linalg::InitTensorOp>(loc, kernel, accETy);
+
+    // Sum across the pooled region.
+    Value poolingOp = rewriter
+                          .create<linalg::PoolingNhwcSumOp>(
+                              loc, ArrayRef<Type>{accTy},
+                              ValueRange{paddedInput, fakeWindowDims},
+                              filledInitTensor, strideAttr, dilationAttr)
+                          .getResult(0);
+
+    // Normalize the summed value by the number of elements grouped in each
+    // pool.
+    auto poolingOpTy = poolingOp.getType().cast<ShapedType>();
+    auto affineMap = rewriter.getMultiDimIdentityMap(resultTy.getRank());
+
+    Value genericInitTensor = rewriter.create<linalg::InitTensorOp>(
+        loc, resultTy.getShape(), resultETy);
+
+    auto genericOp = rewriter.create<linalg::GenericOp>(
+        loc, ArrayRef<Type>({resultTy}), ValueRange{poolingOp},
+        ValueRange{genericInitTensor},
+        ArrayRef<AffineMap>({affineMap, affineMap}),
+        getNParallelLoopsAttrs(resultTy.getRank()),
+        [&](OpBuilder &b, Location loc, ValueRange args) {
+          auto zero = rewriter.create<ConstantIndexOp>(loc, 0);
+          auto one = rewriter.create<ConstantIndexOp>(loc, 1);
+          auto iH = rewriter.create<ConstantIndexOp>(
+              loc, poolingOpTy.getDimSize(1) - 1);
+          auto iW = rewriter.create<ConstantIndexOp>(
+              loc, poolingOpTy.getDimSize(2) - 1);
+
+          // Compute the indices from either end.
+          auto y0 = rewriter.create<linalg::IndexOp>(loc, 1);
+          auto x0 = rewriter.create<linalg::IndexOp>(loc, 2);
+          auto y1 = rewriter.create<SubIOp>(loc, iH, y0);
+          auto x1 = rewriter.create<SubIOp>(loc, iW, x0);
+
+          // Determines what the portion of valid input is covered by the
+          // kernel.
+          auto padFn = [&](Value v, Value x, int64_t pad) -> Value {
+            if (pad == 0)
+              return v;
+
+            auto padVal = rewriter.create<ConstantIndexOp>(loc, pad);
+            Value dx = rewriter.create<SubIOp>(loc, x, padVal);
+
+            Value cmp = rewriter.create<mlir::CmpIOp>(loc, CmpIPredicate::slt,
+                                                      dx, zero);
+            Value offset = rewriter.create<mlir::SelectOp>(loc, cmp, dx, zero);
+            return rewriter.create<mlir::AddIOp>(loc, v, offset)->getResult(0);
+          };
+
+          // Compute the vertical component of coverage.
+          auto kH0 = rewriter.create<ConstantIndexOp>(loc, kernel[0]);
+          auto kH1 = padFn(kH0, y0, pad[2]);
+          auto kH2 = padFn(kH1, y1, pad[3]);
+          auto kHCmp =
+              rewriter.create<CmpIOp>(loc, CmpIPredicate::slt, kH2, one);
+          auto kH3 = rewriter.create<SelectOp>(loc, kHCmp, one, kH2);
+
+          // compute the horizontal component of coverage.
+          auto kW0 = rewriter.create<ConstantIndexOp>(loc, kernel[1]);
+          auto kW1 = padFn(kW0, x0, pad[4]);
+          auto kW2 = padFn(kW1, x1, pad[5]);
+          auto kWCmp =
+              rewriter.create<CmpIOp>(loc, CmpIPredicate::slt, kW2, one);
+          auto kW3 = rewriter.create<SelectOp>(loc, kWCmp, one, kW2);
+
+          // Compute the total number of elements and normalize.
+          Value count = rewriter.create<MulIOp>(loc, kH3, kW3);
+          auto countI = rewriter.create<mlir::IndexCastOp>(
+              loc, rewriter.getI32Type(), count);
+
+          // Divide by the number of summed values. For floats this is just
+          // a div however for quantized values input normalization had
+          // to be applied.
+          Value poolVal = args[0];
+          if (accETy.isa<FloatType>()) {
             auto countF =
                 rewriter.create<mlir::SIToFPOp>(loc, inElementTy, countI);
+            poolVal =
+                rewriter.create<DivFOp>(loc, poolVal, countF)->getResult(0);
+          } else {
 
-            auto div =
-                rewriter.create<DivFOp>(loc, args[0], countF)->getResult(0);
+            // If we have quantization information we need to apply an offset
+            // for the input zp value.
+            if (op.quantization_info()) {
+              auto quantizationInfo = op.quantization_info().getValue();
+              auto inputZp = rewriter.create<mlir::ConstantOp>(
+                  loc, quantizationInfo.input_zp());
+              Value offset =
+                  rewriter.create<mlir::MulIOp>(loc, accETy, countI, inputZp);
+              poolVal = rewriter.create<SubIOp>(loc, accETy, poolVal, offset);
+            }
 
-            rewriter.create<linalg::YieldOp>(loc, div);
-          });
+            // Compute the multiplier and shift values for the quantization
+            // normalization. Preferably we would want to compute more bits
+            // however 32-bits should be enough for compute. Honestly we
+            // should probably straight divide.
+            int64_t numerator = ((1 << 30) + 1);
+            int64_t shift = 30;
 
-      rewriter.replaceOp(op, genericOp.getResult(0));
-      return success();
-    }
+            Value numeratorVal = rewriter.create<ConstantOp>(
+                loc, rewriter.getI32IntegerAttr(numerator));
+            Value multiplierVal =
+                rewriter
+                    .create<UnsignedDivIOp>(loc, rewriter.getI32Type(),
+                                            numeratorVal, countI)
+                    .getResult();
+            Value shiftVal = rewriter.create<ConstantOp>(
+                loc, rewriter.getI8IntegerAttr(shift));
 
-    return failure();
+            auto scaled =
+                rewriter
+                    .create<tosa::ApplyScaleOp>(
+                        loc, rewriter.getI32Type(), poolVal, multiplierVal,
+                        shiftVal, rewriter.getBoolAttr(false))
+                    .getResult();
+
+            // If we have quantization information we need to apply output
+            // zeropoint.
+            if (op.quantization_info()) {
+              auto quantizationInfo = op.quantization_info().getValue();
+              auto outputZp = rewriter.create<mlir::ConstantOp>(
+                  loc, quantizationInfo.output_zp());
+              scaled =
+                  rewriter.create<AddIOp>(loc, scaled, outputZp).getResult();
+            }
+
+            // Apply Clip.
+            int64_t outBitwidth = resultETy.getIntOrFloatBitWidth();
+
+            auto min = rewriter.create<ConstantOp>(
+                loc, rewriter.getIntegerAttr(
+                         accETy,
+                         APInt::getSignedMinValue(outBitwidth).getSExtValue()));
+            auto max = rewriter.create<ConstantOp>(
+                loc, rewriter.getIntegerAttr(
+                         accETy,
+                         APInt::getSignedMaxValue(outBitwidth).getSExtValue()));
+            auto clamp = clampHelper<mlir::CmpIOp>(
+                loc, scaled, min, max, CmpIPredicate::slt, rewriter);
+
+            // Convert type.
+            poolVal = rewriter.create<TruncateIOp>(loc, resultETy, clamp);
+          }
+
+          // Cast to output type.
+
+          rewriter.create<linalg::YieldOp>(loc, poolVal);
+        });
+
+    rewriter.replaceOp(op, genericOp.getResult(0));
+    return success();
   }
 };
 
@@ -2719,8 +2837,8 @@ void mlir::tosa::populateTosaToLinalgOnTensorsConversionPatterns(
       TileConverter,
       TransposeConverter,
       MatMulConverter,
-      Pool2dConverter<tosa::AvgPool2dOp>,
-      Pool2dConverter<tosa::MaxPool2dOp>,
+      MaxPool2dConverter,
+      AvgPool2dConverter,
       FullyConnectedConverter>(patterns->getContext());
   // clang-format on
 }
