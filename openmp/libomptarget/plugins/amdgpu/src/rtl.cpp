@@ -273,9 +273,13 @@ template <typename Callback> static hsa_status_t FindAgents(Callback CB) {
         // get_info fails iff HSA runtime not yet initialized
         hsa_status_t err =
             hsa_agent_get_info(agent, HSA_AGENT_INFO_DEVICE, &device_type);
-        if (print_kernel_trace > 0 && err != HSA_STATUS_SUCCESS)
-          printf("rtl.cpp: err %d\n", err);
-        assert(err == HSA_STATUS_SUCCESS);
+
+        if (err != HSA_STATUS_SUCCESS) {
+          if (print_kernel_trace > 0)
+            DP("rtl.cpp: err %s\n", get_error_string(err));
+
+          return err;
+        }
 
         CB(device_type, agent);
         return HSA_STATUS_SUCCESS;
@@ -283,7 +287,7 @@ template <typename Callback> static hsa_status_t FindAgents(Callback CB) {
 
   // iterate_agents fails iff HSA runtime not yet initialized
   if (print_kernel_trace > 0 && err != HSA_STATUS_SUCCESS) {
-    printf("rtl.cpp: err %d\n", err);
+    DP("rtl.cpp: err %s\n", get_error_string(err));
   }
 
   return err;
@@ -296,8 +300,8 @@ static void callbackQueue(hsa_status_t status, hsa_queue_t *source,
     if (hsa_status_string(status, &status_string) != HSA_STATUS_SUCCESS) {
       status_string = "unavailable";
     }
-    fprintf(stderr, "[%s:%d] GPU error in queue %p %d (%s)\n", __FILE__,
-            __LINE__, source, status, status_string);
+    DP("[%s:%d] GPU error in queue %p %d (%s)\n", __FILE__, __LINE__, source,
+       status, status_string);
     abort();
   }
 }
@@ -323,8 +327,8 @@ hsa_status_t addKernArgPool(hsa_amd_memory_pool_t MemoryPool, void *Data) {
       MemoryPool, HSA_AMD_MEMORY_POOL_INFO_RUNTIME_ALLOC_ALLOWED,
       &AllocAllowed);
   if (err != HSA_STATUS_SUCCESS) {
-    fprintf(stderr, "Alloc allowed in memory pool check failed: %s\n",
-            get_error_string(err));
+    DP("Alloc allowed in memory pool check failed: %s\n",
+       get_error_string(err));
     return err;
   }
 
@@ -337,7 +341,7 @@ hsa_status_t addKernArgPool(hsa_amd_memory_pool_t MemoryPool, void *Data) {
   err = hsa_amd_memory_pool_get_info(
       MemoryPool, HSA_AMD_MEMORY_POOL_INFO_GLOBAL_FLAGS, &GlobalFlags);
   if (err != HSA_STATUS_SUCCESS) {
-    fprintf(stderr, "Get memory pool info failed: %s\n", get_error_string(err));
+    DP("Get memory pool info failed: %s\n", get_error_string(err));
     return err;
   }
 
@@ -345,7 +349,7 @@ hsa_status_t addKernArgPool(hsa_amd_memory_pool_t MemoryPool, void *Data) {
   err = hsa_amd_memory_pool_get_info(MemoryPool, HSA_AMD_MEMORY_POOL_INFO_SIZE,
                                      &size);
   if (err != HSA_STATUS_SUCCESS) {
-    fprintf(stderr, "Get memory pool size failed: %s\n", get_error_string(err));
+    DP("Get memory pool size failed: %s\n", get_error_string(err));
     return err;
   }
 
@@ -365,8 +369,8 @@ isValidMemoryPool(hsa_amd_memory_pool_t MemoryPool) {
       MemoryPool, HSA_AMD_MEMORY_POOL_INFO_RUNTIME_ALLOC_ALLOWED,
       &AllocAllowed);
   if (Err != HSA_STATUS_SUCCESS) {
-    fprintf(stderr, "Alloc allowed in memory pool check failed: %s\n",
-            get_error_string(Err));
+    DP("Alloc allowed in memory pool check failed: %s\n",
+       get_error_string(Err));
     return {Err, false};
   }
 
@@ -391,8 +395,8 @@ hsa_status_t collectMemoryPools(const std::vector<hsa_agent_t> &Agents,
         });
 
     if (Err != HSA_STATUS_SUCCESS) {
-      printf("[%s:%d] %s failed: %s\n", __FILE__, __LINE__,
-             "Iterate all memory pools", get_error_string(Err));
+      DP("[%s:%d] %s failed: %s\n", __FILE__, __LINE__,
+         "Iterate all memory pools", get_error_string(Err));
       return Err;
     }
   }
@@ -408,14 +412,14 @@ FindKernargPool(const std::vector<hsa_agent_t> &HSAAgents) {
     err = hsa_amd_agent_iterate_memory_pools(
         Agent, addKernArgPool, static_cast<void *>(&KernArgPools));
     if (err != HSA_STATUS_SUCCESS) {
-      printf("[%s:%d] %s failed: %s\n", __FILE__, __LINE__,
-             "Iterate all memory pools", get_error_string(err));
+      DP("[%s:%d] %s failed: %s\n", __FILE__, __LINE__,
+         "Iterate all memory pools", get_error_string(err));
       return {err, hsa_amd_memory_pool_t{}};
     }
   }
 
   if (KernArgPools.empty()) {
-    fprintf(stderr, "Unable to find any valid kernarg pool\n");
+    DP("Unable to find any valid kernarg pool\n");
     return {HSA_STATUS_ERROR, hsa_amd_memory_pool_t{}};
   }
 
@@ -638,16 +642,15 @@ public:
     Err = core::collectMemoryPools(
         CPUAgents, std::bind(&RTLDeviceInfoTy::addHostMemoryPool, this, _1, _2));
     if (Err != HSA_STATUS_SUCCESS) {
-      fprintf(stderr, "HSA error in collecting memory pools for CPU: %s\n",
-              get_error_string(Err));
+      DP("HSA error in collecting memory pools for CPU: %s\n",
+         get_error_string(Err));
       return Err;
     }
     Err = core::collectMemoryPools(
         HSAAgents, std::bind(&RTLDeviceInfoTy::addDeviceMemoryPool, this, _1, _2));
     if (Err != HSA_STATUS_SUCCESS) {
-      fprintf(stderr,
-              "HSA error in collecting memory pools for offload devices: %s\n",
-              get_error_string(Err));
+      DP("HSA error in collecting memory pools for offload devices: %s\n",
+         get_error_string(Err));
       return Err;
     }
     return HSA_STATUS_SUCCESS;
@@ -813,8 +816,8 @@ public:
 
     Err = hsa_shut_down();
     if (Err != HSA_STATUS_SUCCESS) {
-      printf("[%s:%d] %s failed: %s\n", __FILE__, __LINE__, "Shutting down HSA",
-             get_error_string(Err));
+      DP("[%s:%d] %s failed: %s\n", __FILE__, __LINE__, "Shutting down HSA",
+         get_error_string(Err));
     }
   }
 };
@@ -999,9 +1002,9 @@ int32_t __tgt_rtl_init_device(int device_id) {
   }
 
   if (print_kernel_trace & STARTUP_DETAILS)
-    fprintf(stderr, "Device#%-2d CU's: %2d %s\n", device_id,
-            DeviceInfo.ComputeUnits[device_id],
-            DeviceInfo.GPUName[device_id].c_str());
+    DP("Device#%-2d CU's: %2d %s\n", device_id,
+       DeviceInfo.ComputeUnits[device_id],
+       DeviceInfo.GPUName[device_id].c_str());
 
   // Query attributes to determine number of threads/block and blocks/grid.
   uint16_t workgroup_max_dim[3];
@@ -1421,7 +1424,7 @@ static hsa_status_t atmi_calloc(void **ret_ptr, size_t size, int DeviceId) {
 
   hsa_status_t rc = hsa_amd_memory_fill(ptr, 0, rounded / 4);
   if (rc != HSA_STATUS_SUCCESS) {
-    fprintf(stderr, "zero fill device_state failed with %u\n", rc);
+    DP("zero fill device_state failed with %u\n", rc);
     core::Runtime::Memfree(ptr);
     return HSA_STATUS_ERROR;
   }
@@ -1490,11 +1493,17 @@ __tgt_target_table *__tgt_rtl_load_binary_locked(int32_t device_id,
 
     check("Module registering", err);
     if (err != HSA_STATUS_SUCCESS) {
-      fprintf(stderr,
-              "Possible gpu arch mismatch: device:%s, image:%s please check"
-              " compiler flag: -march=<gpu>\n",
-              DeviceInfo.GPUName[device_id].c_str(),
-              get_elf_mach_gfx_name(elf_e_flags(image)));
+      const char *DeviceName = DeviceInfo.GPUName[device_id].c_str();
+      const char *ElfName = get_elf_mach_gfx_name(elf_e_flags(image));
+
+      if (strcmp(DeviceName, ElfName) != 0) {
+        DP("Possible gpu arch mismatch: device:%s, image:%s please check"
+           " compiler flag: -march=<gpu>\n",
+           DeviceName, ElfName);
+      } else {
+        DP("Error loading image onto GPU: %s\n", get_error_string(err));
+      }
+
       return NULL;
     }
 
@@ -1586,8 +1595,8 @@ __tgt_target_table *__tgt_rtl_load_binary_locked(int32_t device_id,
     if (!e->addr) {
       // The host should have always something in the address to
       // uniquely identify the target region.
-      fprintf(stderr, "Analyzing host entry '<null>' (size = %lld)...\n",
-              (unsigned long long)e->size);
+      DP("Analyzing host entry '<null>' (size = %lld)...\n",
+         (unsigned long long)e->size);
       return NULL;
     }
 
@@ -1888,18 +1897,15 @@ launchVals getLaunchVals(EnvironmentVariables Env, int ConstWGSize,
     Max_Teams = RTLDeviceInfoTy::HardTeamLimit;
 
   if (print_kernel_trace & STARTUP_DETAILS) {
-    fprintf(stderr, "RTLDeviceInfoTy::Max_Teams: %d\n",
-            RTLDeviceInfoTy::Max_Teams);
-    fprintf(stderr, "Max_Teams: %d\n", Max_Teams);
-    fprintf(stderr, "RTLDeviceInfoTy::Warp_Size: %d\n",
-            RTLDeviceInfoTy::Warp_Size);
-    fprintf(stderr, "RTLDeviceInfoTy::Max_WG_Size: %d\n",
-            RTLDeviceInfoTy::Max_WG_Size);
-    fprintf(stderr, "RTLDeviceInfoTy::Default_WG_Size: %d\n",
-            RTLDeviceInfoTy::Default_WG_Size);
-    fprintf(stderr, "thread_limit: %d\n", thread_limit);
-    fprintf(stderr, "threadsPerGroup: %d\n", threadsPerGroup);
-    fprintf(stderr, "ConstWGSize: %d\n", ConstWGSize);
+    DP("RTLDeviceInfoTy::Max_Teams: %d\n", RTLDeviceInfoTy::Max_Teams);
+    DP("Max_Teams: %d\n", Max_Teams);
+    DP("RTLDeviceInfoTy::Warp_Size: %d\n", RTLDeviceInfoTy::Warp_Size);
+    DP("RTLDeviceInfoTy::Max_WG_Size: %d\n", RTLDeviceInfoTy::Max_WG_Size);
+    DP("RTLDeviceInfoTy::Default_WG_Size: %d\n",
+       RTLDeviceInfoTy::Default_WG_Size);
+    DP("thread_limit: %d\n", thread_limit);
+    DP("threadsPerGroup: %d\n", threadsPerGroup);
+    DP("ConstWGSize: %d\n", ConstWGSize);
   }
   // check for thread_limit() clause
   if (thread_limit > 0) {
@@ -1921,7 +1927,7 @@ launchVals getLaunchVals(EnvironmentVariables Env, int ConstWGSize,
        threadsPerGroup);
   }
   if (print_kernel_trace & STARTUP_DETAILS)
-    fprintf(stderr, "threadsPerGroup: %d\n", threadsPerGroup);
+    DP("threadsPerGroup: %d\n", threadsPerGroup);
   DP("Preparing %d threads\n", threadsPerGroup);
 
   // Set default num_groups (teams)
@@ -1932,8 +1938,8 @@ launchVals getLaunchVals(EnvironmentVariables Env, int ConstWGSize,
   DP("Set default num of groups %d\n", num_groups);
 
   if (print_kernel_trace & STARTUP_DETAILS) {
-    fprintf(stderr, "num_groups: %d\n", num_groups);
-    fprintf(stderr, "num_teams: %d\n", num_teams);
+    DP("num_groups: %d\n", num_groups);
+    DP("num_teams: %d\n", num_teams);
   }
 
   // Reduce num_groups if threadsPerGroup exceeds RTLDeviceInfoTy::Max_WG_Size
@@ -1952,9 +1958,9 @@ launchVals getLaunchVals(EnvironmentVariables Env, int ConstWGSize,
     num_groups = (num_teams < num_groups) ? num_teams : num_groups;
   }
   if (print_kernel_trace & STARTUP_DETAILS) {
-    fprintf(stderr, "num_groups: %d\n", num_groups);
-    fprintf(stderr, "Env.NumTeams %d\n", Env.NumTeams);
-    fprintf(stderr, "Env.TeamLimit %d\n", Env.TeamLimit);
+    DP("num_groups: %d\n", num_groups);
+    DP("Env.NumTeams %d\n", Env.NumTeams);
+    DP("Env.TeamLimit %d\n", Env.TeamLimit);
   }
 
   if (Env.NumTeams > 0) {
@@ -1986,14 +1992,13 @@ launchVals getLaunchVals(EnvironmentVariables Env, int ConstWGSize,
     if (num_groups > Max_Teams) {
       num_groups = Max_Teams;
       if (print_kernel_trace & STARTUP_DETAILS)
-        fprintf(stderr, "Limiting num_groups %d to Max_Teams %d \n", num_groups,
-                Max_Teams);
+        DP("Limiting num_groups %d to Max_Teams %d \n", num_groups, Max_Teams);
     }
     if (num_groups > num_teams && num_teams > 0) {
       num_groups = num_teams;
       if (print_kernel_trace & STARTUP_DETAILS)
-        fprintf(stderr, "Limiting num_groups %d to clause num_teams %d \n",
-                num_groups, num_teams);
+        DP("Limiting num_groups %d to clause num_teams %d \n", num_groups,
+           num_teams);
     }
   }
 
@@ -2005,9 +2010,9 @@ launchVals getLaunchVals(EnvironmentVariables Env, int ConstWGSize,
       num_groups = Env.MaxTeamsDefault;
   }
   if (print_kernel_trace & STARTUP_DETAILS) {
-    fprintf(stderr, "threadsPerGroup: %d\n", threadsPerGroup);
-    fprintf(stderr, "num_groups: %d\n", num_groups);
-    fprintf(stderr, "loop_tripcount: %ld\n", loop_tripcount);
+    DP("threadsPerGroup: %d\n", threadsPerGroup);
+    DP("num_groups: %d\n", num_groups);
+    DP("loop_tripcount: %ld\n", loop_tripcount);
   }
   DP("Final %d num_groups and %d threadsPerGroup\n", num_groups,
      threadsPerGroup);
