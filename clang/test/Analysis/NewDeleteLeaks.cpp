@@ -20,15 +20,16 @@
 
 bool coin();
 
+// TODO: AST analysis of sink would reveal that it doesn't intent to free the
+// allocated memory, but in this instance, its also the only function with
+// the ability to do so, we should see a note here.
 namespace memory_allocated_in_fn_call {
 
 void sink(int *P) {
-} // ownership-note {{Returning without deallocating memory or storing the pointer for later deallocation}}
+}
 
 void foo() {
   sink(new int(5)); // expected-note {{Memory is allocated}}
-                    // ownership-note@-1 {{Calling 'sink'}}
-                    // ownership-note@-2 {{Returning from 'sink'}}
 } // expected-warning {{Potential memory leak [cplusplus.NewDeleteLeaks]}}
 // expected-note@-1 {{Potential memory leak}}
 
@@ -109,17 +110,14 @@ void foo() {
 
 } // namespace memory_shared_with_ptr_of_same_lifetime
 
-// TODO: We don't want a note here. sink() doesn't seem like a function that
-// even attempts to take care of any memory ownership problems.
 namespace memory_passed_into_fn_that_doesnt_intend_to_free {
 
 void sink(int *P) {
-} // ownership-note {{Returning without deallocating memory or storing the pointer for later deallocation}}
+}
 
 void foo() {
   int *ptr = new int(5); // expected-note {{Memory is allocated}}
-  sink(ptr);             // ownership-note {{Calling 'sink'}}
-                         // ownership-note@-1 {{Returning from 'sink'}}
+  sink(ptr);
 } // expected-warning {{Potential leak of memory pointed to by 'ptr' [cplusplus.NewDeleteLeaks]}}
 // expected-note@-1 {{Potential leak}}
 
