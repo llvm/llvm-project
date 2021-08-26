@@ -3934,6 +3934,9 @@ void LSRInstance::GenerateICmpZeroScales(LSRUse &LU, unsigned LUIdx,
 
   // Check each interesting stride.
   for (int64_t Factor : Factors) {
+    // Check that Factor can be represented by IntTy
+    if (!ConstantInt::isValueValidForType(IntTy, Factor))
+      continue;
     // Check that the multiplication doesn't overflow.
     if (Base.BaseOffset == std::numeric_limits<int64_t>::min() && Factor == -1)
       continue;
