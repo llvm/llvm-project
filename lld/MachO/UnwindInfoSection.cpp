@@ -572,7 +572,7 @@ void UnwindInfoSectionImpl<Ptr>::writeTo(uint8_t *buf) const {
     *i32p++ = encoding.first;
 
   // Personalities
-  for (const uint32_t &personality : personalities)
+  for (Ptr personality : personalities)
     *i32p++ =
         in.got->addr + (personality - 1) * target->wordSize - in.header->addr;
 
