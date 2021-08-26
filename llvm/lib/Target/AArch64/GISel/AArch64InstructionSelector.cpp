@@ -164,6 +164,9 @@ private:
   bool selectInsertElt(MachineInstr &I, MachineRegisterInfo &MRI);
   bool tryOptConstantBuildVec(MachineInstr &MI, LLT DstTy,
                               MachineRegisterInfo &MRI);
+  /// \returns true if a G_BUILD_VECTOR instruction \p MI can be selected as a
+  /// SUBREG_TO_REG.
+  bool tryOptBuildVecToSubregToReg(MachineInstr &MI, MachineRegisterInfo &MRI);
   bool selectBuildVector(MachineInstr &I, MachineRegisterInfo &MRI);
   bool selectMergeValues(MachineInstr &I, MachineRegisterInfo &MRI);
   bool selectUnmergeValues(MachineInstr &I, MachineRegisterInfo &MRI);
@@ -4963,6 +4966,47 @@ bool AArch64InstructionSelector::tryOptConstantBuildVec(
   return true;
 }
 
+bool AArch64InstructionSelector::tryOptBuildVecToSubregToReg(
+    MachineInstr &I, MachineRegisterInfo &MRI) {
+  // Given:
+  //  %vec = G_BUILD_VECTOR %elt, %undef, %undef, ... %undef
+  //
+  // Select the G_BUILD_VECTOR as a SUBREG_TO_REG from %elt.
+  Register Dst = I.getOperand(0).getReg();
+  Register EltReg = I.getOperand(1).getReg();
+  LLT EltTy = MRI.getType(EltReg);
+  // If the index isn't on the same bank as its elements, then this can't be a
+  // SUBREG_TO_REG.
+  const RegisterBank &EltRB = *RBI.getRegBank(EltReg, MRI, TRI);
+  const RegisterBank &DstRB = *RBI.getRegBank(Dst, MRI, TRI);
+  if (EltRB != DstRB)
+    return false;
+  if (any_of(make_range(I.operands_begin() + 2, I.operands_end()),
+             [&MRI](const MachineOperand &Op) {
+               return !getOpcodeDef(TargetOpcode::G_IMPLICIT_DEF, Op.getReg(),
+                                    MRI);
+             }))
+    return false;
+  unsigned SubReg;
+  const TargetRegisterClass *EltRC =
+      getMinClassForRegBank(EltRB, EltTy.getSizeInBits());
+  if (!EltRC)
+    return false;
+  const TargetRegisterClass *DstRC =
+      getMinClassForRegBank(DstRB, MRI.getType(Dst).getSizeInBits());
+  if (!DstRC)
+    return false;
+  if (!getSubRegForClass(EltRC, TRI, SubReg))
+    return false;
+  auto SubregToReg = MIB.buildInstr(AArch64::SUBREG_TO_REG, {Dst}, {})
+                         .addImm(0)
+                         .addUse(EltReg)
+                         .addImm(SubReg);
+  I.eraseFromParent();
+  constrainSelectedInstRegOperands(*SubregToReg, TII, TRI, RBI);
+  return RBI.constrainGenericRegister(Dst, *DstRC, MRI);
+}
+
 bool AArch64InstructionSelector::selectBuildVector(MachineInstr &I,
                                                    MachineRegisterInfo &MRI) {
   assert(I.getOpcode() == TargetOpcode::G_BUILD_VECTOR);
@@ -4974,6 +5018,9 @@ bool AArch64InstructionSelector::selectBuildVector(MachineInstr &I,
 
   if (tryOptConstantBuildVec(I, DstTy, MRI))
     return true;
+  if (tryOptBuildVecToSubregToReg(I, MRI))
+    return true;
+
   if (EltSize < 16 || EltSize > 64)
     return false; // Don't support all element types yet.
   const RegisterBank &RB = *RBI.getRegBank(I.getOperand(1).getReg(), MRI, TRI);
