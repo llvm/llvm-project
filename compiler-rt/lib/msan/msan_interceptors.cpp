@@ -1258,13 +1258,13 @@ int OnExit() {
   do {                                                                     \
     if (!INTERCEPT_FUNCTION_VER(name, ver))                                \
       VReport(1, "MemorySanitizer: failed to intercept '%s@@%s'\n", #name, \
-              #ver);                                                       \
+              ver);                                                        \
   } while (0)
 #define MSAN_INTERCEPT_FUNC_VER_UNVERSIONED_FALLBACK(name, ver)             \
   do {                                                                      \
     if (!INTERCEPT_FUNCTION_VER(name, ver) && !INTERCEPT_FUNCTION(name))    \
       VReport(1, "MemorySanitizer: failed to intercept '%s@@%s' or '%s'\n", \
-              #name, #ver, #name);                                          \
+              #name, ver, #name);                                           \
   } while (0)
 
 #define COMMON_INTERCEPT_FUNCTION(name) MSAN_INTERCEPT_FUNC(name)
