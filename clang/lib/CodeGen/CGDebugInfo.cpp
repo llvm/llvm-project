@@ -1226,7 +1226,8 @@ llvm::DIType *CGDebugInfo::CreateType(const TemplateSpecializationType *Ty,
 
   SmallString<128> NS;
   llvm::raw_svector_ostream OS(NS);
-  Ty->getTemplateName().print(OS, getPrintingPolicy(), /*qualified*/ false);
+  Ty->getTemplateName().print(OS, getPrintingPolicy(),
+                              TemplateName::Qualified::None);
   printTemplateArgumentList(OS, Ty->template_arguments(), getPrintingPolicy());
 
   SourceLocation Loc = AliasDecl->getLocation();

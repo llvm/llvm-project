@@ -34,8 +34,8 @@ namespace default_args {
     f(Q<>()).g(); // expected-error {{no member named 'g' in 'default_args::Q<>'}}
     f(Q<allocator>()).g(); // expected-error {{no member named 'g' in 'default_args::Q<>'}}
     f(Q<allocator, allocator>()).g(); // expected-error {{no member named 'g' in 'default_args::Q<>'}}
-    f(Q<char_traits>()).g(); // expected-error {{no member named 'g' in 'default_args::Q<char_traits>'}}
-    f(Q<char_traits, char_traits>()).g(); // expected-error {{no member named 'g' in 'default_args::Q<char_traits>'}}
-    f(Q<char_traits, allocator>()).g(); // expected-error {{no member named 'g' in 'default_args::Q<char_traits, allocator>'}}
+    f(Q<char_traits>()).g(); // expected-error {{no member named 'g' in 'default_args::Q<default_args::char_traits>'}}
+    f(Q<char_traits, char_traits>()).g(); // expected-error {{no member named 'g' in 'default_args::Q<default_args::char_traits>'}}
+    f(Q<char_traits, allocator>()).g(); // expected-error {{no member named 'g' in 'default_args::Q<default_args::char_traits, default_args::allocator>'}}
   }
 }
