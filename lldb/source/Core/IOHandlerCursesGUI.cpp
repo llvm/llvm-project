@@ -3641,6 +3641,232 @@ protected:
   EnvironmentVariableListFieldDelegate *m_inherited_environment_field;
 };
 
+////////////
+// Searchers
+////////////
+
+class SearcherDelegate {
+public:
+  SearcherDelegate() {}
+
+  virtual ~SearcherDelegate() = default;
+
+  virtual int GetNumberOfMatches() = 0;
+
+  // Get the string that will be displayed for the match at the input index.
+  virtual const std::string &GetMatchTextAtIndex(int index) = 0;
+
+  // Update the matches of the search. This is executed every time the text
+  // field handles an event.
+  virtual void UpdateMatches(const std::string &text) = 0;
+
+  // Execute the user callback given the index of some match. This is executed
+  // once the user selects a match.
+  virtual void ExecuteCallback(int match_index) = 0;
+};
+
+typedef std::shared_ptr<SearcherDelegate> SearcherDelegateSP;
+
+class SearcherWindowDelegate : public WindowDelegate {
+public:
+  SearcherWindowDelegate(SearcherDelegateSP &delegate_sp)
+      : m_delegate_sp(delegate_sp), m_text_field("Search", "", false),
+        m_selected_match(0), m_first_visible_match(0) {
+    ;
+  }
+
+  // A completion window is padded by one character from all sides. A text field
+  // is first drawn for inputting the searcher request, then a list of matches
+  // are displayed in a scrollable list.
+  //
+  // ___<Searcher Window Name>____________________________
+  // |                                                   |
+  // | __[Search]_______________________________________ |
+  // | |                                               | |
+  // | |_______________________________________________| |
+  // | - Match 1.                                        |
+  // | - Match 2.                                        |
+  // | - ...                                             |
+  // |                                                   |
+  // |____________________________[Press Esc to Cancel]__|
+  //
+
+  // Get the index of the last visible match. Assuming at least one match
+  // exists.
+  int GetLastVisibleMatch(int height) {
+    int index = m_first_visible_match + height;
+    return std::min(index, m_delegate_sp->GetNumberOfMatches()) - 1;
+  }
+
+  int GetNumberOfVisibleMatches(int height) {
+    return GetLastVisibleMatch(height) - m_first_visible_match + 1;
+  }
+
+  void UpdateScrolling(Surface &surface) {
+    if (m_selected_match < m_first_visible_match) {
+      m_first_visible_match = m_selected_match;
+      return;
+    }
+
+    int height = surface.GetHeight();
+    int last_visible_match = GetLastVisibleMatch(height);
+    if (m_selected_match > last_visible_match) {
+      m_first_visible_match = m_selected_match - height + 1;
+    }
+  }
+
+  void DrawMatches(Surface &surface) {
+    if (m_delegate_sp->GetNumberOfMatches() == 0)
+      return;
+
+    UpdateScrolling(surface);
+
+    int count = GetNumberOfVisibleMatches(surface.GetHeight());
+    for (int i = 0; i < count; i++) {
+      surface.MoveCursor(1, i);
+      int current_match = m_first_visible_match + i;
+      if (current_match == m_selected_match)
+        surface.AttributeOn(A_REVERSE);
+      surface.PutCString(
+          m_delegate_sp->GetMatchTextAtIndex(current_match).c_str());
+      if (current_match == m_selected_match)
+        surface.AttributeOff(A_REVERSE);
+    }
+  }
+
+  void DrawContent(Surface &surface) {
+    Rect content_bounds = surface.GetFrame();
+    Rect text_field_bounds, matchs_bounds;
+    content_bounds.HorizontalSplit(m_text_field.FieldDelegateGetHeight(),
+                                   text_field_bounds, matchs_bounds);
+    Surface text_field_surface = surface.SubSurface(text_field_bounds);
+    Surface matches_surface = surface.SubSurface(matchs_bounds);
+
+    m_text_field.FieldDelegateDraw(text_field_surface, true);
+    DrawMatches(matches_surface);
+  }
+
+  bool WindowDelegateDraw(Window &window, bool force) override {
+    window.Erase();
+
+    window.DrawTitleBox(window.GetName(), "Press Esc to Cancel");
+
+    Rect content_bounds = window.GetFrame();
+    content_bounds.Inset(2, 2);
+    Surface content_surface = window.SubSurface(content_bounds);
+
+    DrawContent(content_surface);
+    return true;
+  }
+
+  void SelectNext() {
+    if (m_selected_match != m_delegate_sp->GetNumberOfMatches() - 1)
+      m_selected_match++;
+    return;
+  }
+
+  void SelectPrevious() {
+    if (m_selected_match != 0)
+      m_selected_match--;
+    return;
+  }
+
+  void ExecuteCallback(Window &window) {
+    m_delegate_sp->ExecuteCallback(m_selected_match);
+    window.GetParent()->RemoveSubWindow(&window);
+  }
+
+  void UpdateMatches() {
+    m_delegate_sp->UpdateMatches(m_text_field.GetText());
+    m_selected_match = 0;
+  }
+
+  HandleCharResult WindowDelegateHandleChar(Window &window, int key) override {
+    switch (key) {
+    case '\r':
+    case '\n':
+    case KEY_ENTER:
+      ExecuteCallback(window);
+      return eKeyHandled;
+    case '\t':
+    case KEY_DOWN:
+      SelectNext();
+      return eKeyHandled;
+    case KEY_SHIFT_TAB:
+    case KEY_UP:
+      SelectPrevious();
+      return eKeyHandled;
+    case KEY_ESCAPE:
+      window.GetParent()->RemoveSubWindow(&window);
+      return eKeyHandled;
+    default:
+      break;
+    }
+
+    if (m_text_field.FieldDelegateHandleChar(key) == eKeyHandled)
+      UpdateMatches();
+
+    return eKeyHandled;
+  }
+
+protected:
+  SearcherDelegateSP m_delegate_sp;
+  TextFieldDelegate m_text_field;
+  // The index of the currently selected match.
+  int m_selected_match;
+  // The index of the first visible match.
+  int m_first_visible_match;
+};
+
+//////////////////////////////
+// Searcher Delegate Instances
+//////////////////////////////
+
+// This is a searcher delegate wrapper around CommandCompletions common
+// callbacks. The callbacks are only given the match string. The completion_mask
+// can be a combination of CommonCompletionTypes.
+class CommonCompletionSearcherDelegate : public SearcherDelegate {
+public:
+  typedef std::function<void(const std::string &)> CallbackType;
+
+  CommonCompletionSearcherDelegate(Debugger &debugger, uint32_t completion_mask,
+                                   CallbackType callback)
+      : m_debugger(debugger), m_completion_mask(completion_mask),
+        m_callback(callback) {}
+
+  int GetNumberOfMatches() override { return m_matches.GetSize(); }
+
+  const std::string &GetMatchTextAtIndex(int index) override {
+    return m_matches[index];
+  }
+
+  void UpdateMatches(const std::string &text) override {
+    CompletionResult result;
+    CompletionRequest request(text.c_str(), text.size(), result);
+    CommandCompletions::InvokeCommonCompletionCallbacks(
+        m_debugger.GetCommandInterpreter(), m_completion_mask, request,
+        nullptr);
+    result.GetMatches(m_matches);
+  }
+
+  void ExecuteCallback(int match_index) override {
+    m_callback(m_matches[match_index]);
+  }
+
+protected:
+  Debugger &m_debugger;
+  // A compound mask from CommonCompletionTypes.
+  uint32_t m_completion_mask;
+  // A callback to execute once the user selects a match. The match is passed to
+  // the callback as a string.
+  CallbackType m_callback;
+  StringList m_matches;
+};
+
+////////
+// Menus
+////////
+
 class MenuDelegate {
 public:
   virtual ~MenuDelegate() = default;
