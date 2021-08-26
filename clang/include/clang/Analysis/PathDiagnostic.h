@@ -75,14 +75,8 @@ struct PathDiagnosticConsumerOptions {
   bool ShouldSerializeStats = false;
 
   /// If the consumer intends to produce multiple output files, should it
-  /// use randomly generated file names for these files (with the tiny risk of
-  /// having random collisions) or deterministic human-readable file names
-  /// (with a larger risk of deterministic collisions or invalid characters
-  /// in the file name). We should not really give this choice to the users
-  /// because deterministic mode is always superior when done right, but
-  /// for some consumers this mode is experimental and needs to be
-  /// off by default.
-  bool ShouldWriteStableReportFilename = false;
+  /// use a pseudo-random file name name or a human-readable file name.
+  bool ShouldWriteVerboseReportFilename = false;
 
   /// Whether the consumer should treat consumed diagnostics as hard errors.
   /// Useful for breaking your build when issues are found.
