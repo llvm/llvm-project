@@ -269,8 +269,7 @@ static InputFile *addFile(StringRef path, bool forceLoadArchive,
     } else if (config->forceLoadObjC) {
       for (const object::Archive::Symbol &sym : file->getArchive().symbols())
         if (sym.getName().startswith(objc::klass))
-          symtab->addUndefined(sym.getName(), /*file=*/nullptr,
-                               /*isWeakRef=*/false);
+          file->fetch(sym);
 
       // TODO: no need to look for ObjC sections for a given archive member if
       // we already found that it contains an ObjC symbol.
