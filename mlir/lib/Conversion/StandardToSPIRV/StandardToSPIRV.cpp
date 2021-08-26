@@ -373,8 +373,11 @@ public:
       return failure();
     }
 
+    auto &typeConverter = *getTypeConverter<SPIRVTypeConverter>();
+    auto indexType = typeConverter.getIndexType();
+
     Value index = spirv::linearizeIndex(adaptor.indices(), strides,
-                                        /*offset=*/0, loc, rewriter);
+                                        /*offset=*/0, indexType, loc, rewriter);
     auto acOp = rewriter.create<spirv::AccessChainOp>(loc, varOp, index);
 
     rewriter.replaceOpWithNewOp<spirv::LoadOp>(extractOp, acOp);
