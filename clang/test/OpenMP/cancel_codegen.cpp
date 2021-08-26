@@ -1560,8 +1560,6 @@ for (int i = 0; i < argc; ++i) {
 // CHECK3-NEXT:    store i32 [[TMP0]], i32* [[TID_ADDR_LOCAL]], align 4
 // CHECK3-NEXT:    [[TID:%.*]] = load i32, i32* [[TID_ADDR_LOCAL]], align 4
 // CHECK3-NEXT:    br label [[OMP_PAR_REGION:%.*]]
-// CHECK3:       omp.par.outlined.exit.exitStub:
-// CHECK3-NEXT:    ret void
 // CHECK3:       omp.par.region:
 // CHECK3-NEXT:    [[TMP1:%.*]] = load float, float* @flag, align 4
 // CHECK3-NEXT:    [[TOBOOL:%.*]] = fcmp une float [[TMP1]], 0.000000e+00
@@ -1607,6 +1605,8 @@ for (int i = 0; i < argc; ++i) {
 // CHECK3-NEXT:    br label [[OMP_PAR_OUTLINED_EXIT_EXITSTUB]]
 // CHECK3:       .split:
 // CHECK3-NEXT:    br label [[TMP3]]
+// CHECK3:       omp.par.outlined.exit.exitStub:
+// CHECK3-NEXT:    ret void
 //
 //
 // CHECK3-LABEL: define {{[^@]+}}@.omp_task_entry.
@@ -2187,8 +2187,6 @@ for (int i = 0; i < argc; ++i) {
 // CHECK4-NEXT:    store i32 [[TMP0]], i32* [[TID_ADDR_LOCAL]], align 4
 // CHECK4-NEXT:    [[TID:%.*]] = load i32, i32* [[TID_ADDR_LOCAL]], align 4
 // CHECK4-NEXT:    br label [[OMP_PAR_REGION:%.*]]
-// CHECK4:       omp.par.outlined.exit.exitStub:
-// CHECK4-NEXT:    ret void
 // CHECK4:       omp.par.region:
 // CHECK4-NEXT:    [[TMP1:%.*]] = load float, float* @flag, align 4
 // CHECK4-NEXT:    [[TOBOOL:%.*]] = fcmp une float [[TMP1]], 0.000000e+00
@@ -2234,6 +2232,8 @@ for (int i = 0; i < argc; ++i) {
 // CHECK4-NEXT:    br label [[OMP_PAR_OUTLINED_EXIT_EXITSTUB]]
 // CHECK4:       .split:
 // CHECK4-NEXT:    br label [[TMP3]]
+// CHECK4:       omp.par.outlined.exit.exitStub:
+// CHECK4-NEXT:    ret void
 //
 //
 // CHECK4-LABEL: define {{[^@]+}}@.omp_task_entry.
@@ -4054,8 +4054,6 @@ for (int i = 0; i < argc; ++i) {
 // CHECK9-NEXT:    store i32 [[TMP0]], i32* [[TID_ADDR_LOCAL]], align 4
 // CHECK9-NEXT:    [[TID:%.*]] = load i32, i32* [[TID_ADDR_LOCAL]], align 4
 // CHECK9-NEXT:    br label [[OMP_PAR_REGION:%.*]]
-// CHECK9:       omp.par.outlined.exit.exitStub:
-// CHECK9-NEXT:    ret void
 // CHECK9:       omp.par.region:
 // CHECK9-NEXT:    [[TMP1:%.*]] = load float, float* @flag, align 4
 // CHECK9-NEXT:    [[TOBOOL:%.*]] = fcmp une float [[TMP1]], 0.000000e+00
@@ -4101,6 +4099,8 @@ for (int i = 0; i < argc; ++i) {
 // CHECK9-NEXT:    br label [[OMP_PAR_OUTLINED_EXIT_EXITSTUB]]
 // CHECK9:       .split:
 // CHECK9-NEXT:    br label [[TMP3]]
+// CHECK9:       omp.par.outlined.exit.exitStub:
+// CHECK9-NEXT:    ret void
 //
 //
 // CHECK9-LABEL: define {{[^@]+}}@.omp_task_entry.
@@ -4681,8 +4681,6 @@ for (int i = 0; i < argc; ++i) {
 // CHECK10-NEXT:    store i32 [[TMP0]], i32* [[TID_ADDR_LOCAL]], align 4
 // CHECK10-NEXT:    [[TID:%.*]] = load i32, i32* [[TID_ADDR_LOCAL]], align 4
 // CHECK10-NEXT:    br label [[OMP_PAR_REGION:%.*]]
-// CHECK10:       omp.par.outlined.exit.exitStub:
-// CHECK10-NEXT:    ret void
 // CHECK10:       omp.par.region:
 // CHECK10-NEXT:    [[TMP1:%.*]] = load float, float* @flag, align 4
 // CHECK10-NEXT:    [[TOBOOL:%.*]] = fcmp une float [[TMP1]], 0.000000e+00
@@ -4728,6 +4726,8 @@ for (int i = 0; i < argc; ++i) {
 // CHECK10-NEXT:    br label [[OMP_PAR_OUTLINED_EXIT_EXITSTUB]]
 // CHECK10:       .split:
 // CHECK10-NEXT:    br label [[TMP3]]
+// CHECK10:       omp.par.outlined.exit.exitStub:
+// CHECK10-NEXT:    ret void
 //
 //
 // CHECK10-LABEL: define {{[^@]+}}@.omp_task_entry.
