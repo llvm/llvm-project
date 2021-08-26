@@ -144,14 +144,14 @@ defm : X86WriteRes<WriteIMul16Imm,    [HWPort1,HWPort0156], 4, [1,1], 2>;
 defm : X86WriteRes<WriteIMul16ImmLd,  [HWPort1,HWPort0156,HWPort23], 8, [1,1,1], 3>;
 defm : HWWriteResPair<WriteIMul16Reg, [HWPort1],   3>;
 defm : HWWriteResPair<WriteIMul32,    [HWPort1,HWPort06,HWPort0156], 4, [1,1,1], 3>;
-defm : HWWriteResPair<WriteMULX32,    [HWPort1,HWPort06,HWPort0156], 4, [1,1,1], 3>;
+defm : HWWriteResPair<WriteMULX32,    [HWPort1,HWPort06,HWPort0156], 3, [1,1,1], 3>;
 defm : HWWriteResPair<WriteIMul32Imm, [HWPort1],   3>;
 defm : HWWriteResPair<WriteIMul32Reg, [HWPort1],   3>;
 defm : HWWriteResPair<WriteIMul64,    [HWPort1,HWPort6], 4, [1,1], 2>;
-defm : HWWriteResPair<WriteMULX64,    [HWPort1,HWPort6], 4, [1,1], 2>;
+defm : HWWriteResPair<WriteMULX64,    [HWPort1,HWPort6], 3, [1,1], 2>;
 defm : HWWriteResPair<WriteIMul64Imm, [HWPort1],   3>;
 defm : HWWriteResPair<WriteIMul64Reg, [HWPort1],   3>;
-def HWWriteIMulH : WriteRes<WriteIMulH, []> { let Latency = 3; }
+def HWWriteIMulH : WriteRes<WriteIMulH, []> { let Latency = 4; }
 def  : WriteRes<WriteIMulHLd, []> {
   let Latency = !add(HWWriteIMulH.Latency, HaswellModel.LoadLatency);
 }
