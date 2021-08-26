@@ -781,8 +781,8 @@ public:
   ///
   /// This is the greatest alignment value supported by load, store, and alloca
   /// instructions, and global values.
-  static const unsigned MaxAlignmentExponent = 29;
-  static const unsigned MaximumAlignment = 1u << MaxAlignmentExponent;
+  static constexpr unsigned MaxAlignmentExponent = 29;
+  static constexpr unsigned MaximumAlignment = 1u << MaxAlignmentExponent;
 
   /// Mutate the type of this Value to be of the specified type.
   ///
