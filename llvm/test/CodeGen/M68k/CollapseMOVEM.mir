@@ -10,7 +10,7 @@
 --- # CollapseMOVEM_RM
 #
 # CHECK-LABEL: CollapseMOVEM_RM
-# CHECK:       movem.l (0,%sp), %d0-%d2,%d7,%a1-%a3,%a5
+# CHECK:       movem.l (0,%sp), %d0-%d2/%d7/%a1-%a3/%a5
 name: CollapseMOVEM_RM
 body: |
   bb.0:
@@ -26,7 +26,7 @@ body: |
 ...
 #
 # CHECK-LABEL: CollapseMOVEM_RM_Reversed
-# CHECK:       movem.l (0,%sp), %d0-%d2,%d7,%a1-%a3,%a5
+# CHECK:       movem.l (0,%sp), %d0-%d2/%d7/%a1-%a3/%a5
 name: CollapseMOVEM_RM_Reversed
 body: |
   bb.0:
@@ -66,7 +66,7 @@ body: |
 --- # CollapseMOVEM_MR
 #
 # CHECK-LABEL: CollapseMOVEM_MR
-# CHECK:       movem.l %d0-%d2,%d7,%a1-%a3,%a5, (0,%sp)
+# CHECK:       movem.l %d0-%d2/%d7/%a1-%a3/%a5, (0,%sp)
 name: CollapseMOVEM_MR
 body: |
   bb.0:
@@ -84,7 +84,7 @@ body: |
 #
 # CHECK-LABEL: CollapseMOVEM_Mixed
 # CHECK:       movem.l %d0-%d1, (0,%sp)
-# CHECK:       movem.l (8,%sp), %d2,%d7
+# CHECK:       movem.l (8,%sp), %d2/%d7
 # CHECK:       movem.l %a1-%a2, (16,%sp)
 # CHECK:       movem.l (24,%sp), %a3
 # CHECK:       movem.l %a5, (28,%sp)

@@ -149,18 +149,20 @@ func @no_loop_results(%ub : index, %d : memref<i32>) {
 
 // -----
 
-// Test rewriting of affine.min ops. Make sure that more general cases than
+// Test rewriting of affine.min/max ops. Make sure that more general cases than
 // the ones above are successfully rewritten. Also make sure that the pattern
-// does not rewrite affine.min ops that should not be rewritten.
+// does not rewrite ops that should not be rewritten.
 
 //  CHECK-DAG: #[[MAP1:.*]] = affine_map<()[s0] -> (s0 + 1)>
 //  CHECK-DAG: #[[MAP2:.*]] = affine_map<(d0)[s0, s1] -> (s0, -d0 + s1 - 1)>
 //  CHECK-DAG: #[[MAP3:.*]] = affine_map<(d0)[s0, s1, s2] -> (s0, -d0 + s1, s2)>
-//  CHECK-DAG: #[[MAP4:.*]] = affine_map<()[s0, s1, s2] -> (-(s0 - (s0 - s1) mod s2) + s0)>
-//  CHECK-DAG: #[[MAP5:.*]] = affine_map<()[s0, s1, s2] -> (-(s0 - (s0 - s1) mod s2) + s0 + 1)>
-//  CHECK-DAG: #[[MAP6:.*]] = affine_map<()[s0, s1, s2] -> (-(s0 - (s0 - s1) mod s2) + s0 - 1)>
-//  CHECK-DAG: #[[MAP7:.*]] = affine_map<()[s0, s1, s2, s3] -> (s0, s2 - (s2 - (s2 - s1) mod s0), s3)>
-//      CHECK: func @test_affine_min_rewrite(
+//  CHECK-DAG: #[[MAP4:.*]] = affine_map<()[s0] -> (-s0)>
+//  CHECK-DAG: #[[MAP5:.*]] = affine_map<()[s0, s1, s2] -> (-(s0 - (s0 - s1) mod s2) + s0)>
+//  CHECK-DAG: #[[MAP6:.*]] = affine_map<()[s0, s1, s2] -> (-(s0 - (s0 - s1) mod s2) + s0 + 1)>
+//  CHECK-DAG: #[[MAP7:.*]] = affine_map<()[s0, s1, s2] -> (-(s0 - (s0 - s1) mod s2) + s0 - 1)>
+//  CHECK-DAG: #[[MAP8:.*]] = affine_map<()[s0, s1, s2, s3] -> (s0, s2 - (s2 - (s2 - s1) mod s0), s3)>
+//  CHECK-DAG: #[[MAP9:.*]] = affine_map<()[s0, s1, s2] -> (s0 - (s0 - s1) mod s2 - s0)>
+//      CHECK: func @test_affine_op_rewrite(
 // CHECK-SAME:     %[[LB:.*]]: index, %[[UB:.*]]: index, %[[STEP:.*]]: index,
 // CHECK-SAME:     %[[MEMREF:.*]]: memref<?xindex>, %[[SOME_VAL:.*]]: index
 //      CHECK:   scf.for %[[IV:.*]] = %[[LB]] to %{{.*}} step %[[STEP]] {
@@ -174,31 +176,37 @@ func @no_loop_results(%ub : index, %d : memref<i32>) {
 //      CHECK:     memref.store %[[RES3]]
 //      CHECK:     %[[RES4:.*]] = affine.min #[[MAP3]](%[[IV]])[%[[STEP]], %[[UB]], %[[SOME_VAL]]]
 //      CHECK:     memref.store %[[RES4]]
+//      CHECK:     %[[RES5:.*]] = affine.apply #[[MAP4]]()[%[[STEP]]]
+//      CHECK:     memref.store %[[RES5]]
 //      CHECK:   }
 //      CHECK:   scf.if {{.*}} {
-//      CHECK:     %[[RES_IF_0:.*]] = affine.apply #[[MAP4]]()[%[[UB]], %[[LB]], %[[STEP]]]
+//      CHECK:     %[[RES_IF_0:.*]] = affine.apply #[[MAP5]]()[%[[UB]], %[[LB]], %[[STEP]]]
 //      CHECK:     memref.store %[[RES_IF_0]]
-//      CHECK:     %[[RES_IF_1:.*]] = affine.apply #[[MAP5]]()[%[[UB]], %[[LB]], %[[STEP]]]
+//      CHECK:     %[[RES_IF_1:.*]] = affine.apply #[[MAP6]]()[%[[UB]], %[[LB]], %[[STEP]]]
 //      CHECK:     memref.store %[[RES_IF_1]]
-//      CHECK:     %[[RES_IF_2:.*]] = affine.apply #[[MAP5]]()[%[[UB]], %[[LB]], %[[STEP]]]
+//      CHECK:     %[[RES_IF_2:.*]] = affine.apply #[[MAP6]]()[%[[UB]], %[[LB]], %[[STEP]]]
 //      CHECK:     memref.store %[[RES_IF_2]]
-//      CHECK:     %[[RES_IF_3:.*]] = affine.apply #[[MAP6]]()[%[[UB]], %[[LB]], %[[STEP]]]
+//      CHECK:     %[[RES_IF_3:.*]] = affine.apply #[[MAP7]]()[%[[UB]], %[[LB]], %[[STEP]]]
 //      CHECK:     memref.store %[[RES_IF_3]]
-//      CHECK:     %[[RES_IF_4:.*]] = affine.min #[[MAP7]]()[%[[STEP]], %[[LB]], %[[UB]], %[[SOME_VAL]]]
+//      CHECK:     %[[RES_IF_4:.*]] = affine.min #[[MAP8]]()[%[[STEP]], %[[LB]], %[[UB]], %[[SOME_VAL]]]
 //      CHECK:     memref.store %[[RES_IF_4]]
+//      CHECK:     %[[RES_IF_5:.*]] = affine.apply #[[MAP9]]()[%[[UB]], %[[LB]], %[[STEP]]]
+//      CHECK:     memref.store %[[RES_IF_5]]
 #map0 = affine_map<(d0, d1)[s0] -> (s0, d0 - d1)>
 #map1 = affine_map<(d0, d1)[s0] -> (d0 - d1 + 1, s0)>
 #map2 = affine_map<(d0, d1)[s0] -> (s0 + 1, d0 - d1 + 1)>
 #map3 = affine_map<(d0, d1)[s0] -> (s0, d0 - d1 - 1)>
 #map4 = affine_map<(d0, d1, d2)[s0] -> (s0, d0 - d1, d2)>
-func @test_affine_min_rewrite(%lb : index, %ub: index,
-                              %step: index, %d : memref<?xindex>,
-                              %some_val: index) {
+#map5 = affine_map<(d0, d1)[s0] -> (-s0, -d0 + d1)>
+func @test_affine_op_rewrite(%lb : index, %ub: index,
+                             %step: index, %d : memref<?xindex>,
+                             %some_val: index) {
   %c0 = constant 0 : index
   %c1 = constant 1 : index
   %c2 = constant 2 : index
   %c3 = constant 3 : index
   %c4 = constant 4 : index
+  %c5 = constant 5 : index
   scf.for %iv = %lb to %ub step %step {
     // Most common case: Rewrite min(%ub - %iv, %step) to %step.
     %m0 = affine.min #map0(%ub, %iv)[%step]
@@ -221,6 +229,10 @@ func @test_affine_min_rewrite(%lb : index, %ub: index,
     // of %some_val is unknown.
     %m4 = affine.min #map4(%ub, %iv, %some_val)[%step]
     memref.store %m4, %d[%c4] : memref<?xindex>
+
+    // Rewrite max(-%ub + %iv, -%step) to -%ub + %iv (and -%step in the scf.if).
+    %m5 = affine.max #map5(%ub, %iv)[%step]
+    memref.store %m5, %d[%c5] : memref<?xindex>
   }
   return
 }

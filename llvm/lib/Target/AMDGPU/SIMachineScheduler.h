@@ -25,6 +25,8 @@ namespace llvm {
 
 class SIInstrInfo;
 class SIRegisterInfo;
+class SIScheduleDAGMI;
+class SIScheduleBlockCreator;
 
 enum SIScheduleCandReason {
   NoCand,
@@ -47,9 +49,6 @@ struct SISchedulerCandidate {
   bool isRepeat(SIScheduleCandReason R) { return RepeatReasonSet & (1 << R); }
   void setRepeat(SIScheduleCandReason R) { RepeatReasonSet |= (1 << R); }
 };
-
-class SIScheduleDAGMI;
-class SIScheduleBlockCreator;
 
 enum SIScheduleBlockLinkKind {
   NoData,

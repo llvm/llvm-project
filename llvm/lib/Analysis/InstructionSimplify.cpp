@@ -2276,6 +2276,23 @@ static Value *SimplifyOrInst(Value *Op0, Value *Op1, const SimplifyQuery &Q,
       match(Op0, m_Not(m_c_Or(m_Specific(A), m_Specific(B)))))
     return NotA;
 
+  // Rotated -1 is still -1:
+  // (-1 << X) | (-1 >> (C - X)) --> -1
+  // (-1 >> X) | (-1 << (C - X)) --> -1
+  // ...with C <= bitwidth (and commuted variants).
+  Value *X, *Y;
+  if ((match(Op0, m_Shl(m_AllOnes(), m_Value(X))) &&
+       match(Op1, m_LShr(m_AllOnes(), m_Value(Y)))) ||
+      (match(Op1, m_Shl(m_AllOnes(), m_Value(X))) &&
+       match(Op0, m_LShr(m_AllOnes(), m_Value(Y))))) {
+    const APInt *C;
+    if ((match(X, m_Sub(m_APInt(C), m_Specific(Y))) ||
+         match(Y, m_Sub(m_APInt(C), m_Specific(X)))) &&
+        C->ule(X->getType()->getScalarSizeInBits())) {
+      return ConstantInt::getAllOnesValue(X->getType());
+    }
+  }
+
   if (Value *V = simplifyAndOrOfCmps(Q, Op0, Op1, false))
     return V;
 

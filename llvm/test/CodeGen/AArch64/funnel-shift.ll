@@ -5,6 +5,7 @@ declare i8 @llvm.fshl.i8(i8, i8, i8)
 declare i16 @llvm.fshl.i16(i16, i16, i16)
 declare i32 @llvm.fshl.i32(i32, i32, i32)
 declare i64 @llvm.fshl.i64(i64, i64, i64)
+declare i128 @llvm.fshl.i128(i128, i128, i128)
 declare <4 x i32> @llvm.fshl.v4i32(<4 x i32>, <4 x i32>, <4 x i32>)
 
 declare i8 @llvm.fshr.i8(i8, i8, i8)
@@ -40,6 +41,37 @@ define i64 @fshl_i64(i64 %x, i64 %y, i64 %z) {
 ; CHECK-NEXT:    ret
   %f = call i64 @llvm.fshl.i64(i64 %x, i64 %y, i64 %z)
   ret i64 %f
+}
+
+define i128 @fshl_i128(i128 %x, i128 %y, i128 %z) nounwind {
+; CHECK-LABEL: fshl_i128:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    mvn w9, w4
+; CHECK-NEXT:    and x12, x9, #0x7f
+; CHECK-NEXT:    extr x8, x3, x2, #1
+; CHECK-NEXT:    lsr x10, x3, #1
+; CHECK-NEXT:    tst x12, #0x40
+; CHECK-NEXT:    lsr x12, x0, #1
+; CHECK-NEXT:    lsr x8, x8, x9
+; CHECK-NEXT:    lsr x12, x12, x9
+; CHECK-NEXT:    lsr x9, x10, x9
+; CHECK-NEXT:    lsl x10, x10, #1
+; CHECK-NEXT:    lsl x10, x10, x4
+; CHECK-NEXT:    lsl x11, x1, x4
+; CHECK-NEXT:    and x14, x4, #0x7f
+; CHECK-NEXT:    orr x8, x10, x8
+; CHECK-NEXT:    lsl x13, x0, x4
+; CHECK-NEXT:    orr x11, x11, x12
+; CHECK-NEXT:    csel x10, xzr, x9, ne
+; CHECK-NEXT:    csel x8, x9, x8, ne
+; CHECK-NEXT:    tst x14, #0x40
+; CHECK-NEXT:    csel x9, x13, x11, ne
+; CHECK-NEXT:    csel x11, xzr, x13, ne
+; CHECK-NEXT:    orr x1, x9, x10
+; CHECK-NEXT:    orr x0, x11, x8
+; CHECK-NEXT:    ret
+  %f = call i128 @llvm.fshl.i128(i128 %x, i128 %y, i128 %z)
+  ret i128 %f
 }
 
 ; Verify that weird types are minimally supported.

@@ -1,6 +1,6 @@
-; RUN: opt < %s -wasm-lower-em-ehsjlj -S | FileCheck %s --check-prefixes=CHECK,NO-TLS -DPTR=i32
-; RUN: opt < %s -wasm-lower-em-ehsjlj -S --mattr=+atomics,+bulk-memory | FileCheck %s --check-prefixes=CHECK,TLS -DPTR=i32
-; RUN: opt < %s -wasm-lower-em-ehsjlj --mtriple=wasm64-unknown-unknown -data-layout="e-m:e-p:64:64-i64:64-n32:64-S128" -S | FileCheck %s --check-prefixes=CHECK -DPTR=i64
+; RUN: opt < %s -wasm-lower-em-ehsjlj -enable-emscripten-sjlj -S | FileCheck %s --check-prefixes=CHECK,NO-TLS -DPTR=i32
+; RUN: opt < %s -wasm-lower-em-ehsjlj -enable-emscripten-sjlj -S --mattr=+atomics,+bulk-memory | FileCheck %s --check-prefixes=CHECK,TLS -DPTR=i32
+; RUN: opt < %s -wasm-lower-em-ehsjlj -enable-emscripten-sjlj --mtriple=wasm64-unknown-unknown -data-layout="e-m:e-p:64:64-i64:64-n32:64-S128" -S | FileCheck %s --check-prefixes=CHECK -DPTR=i64
 
 target datalayout = "e-m:e-p:32:32-i64:64-n32:64-S128"
 target triple = "wasm32-unknown-unknown"
@@ -142,7 +142,7 @@ if.then:                                          ; preds = %entry
 ; CHECK-NEXT: %[[SETJMP_TABLE_SIZE1:.*]] = call i32 @getTempRet0()
 
 ; CHECK: if.then.split:
-; CHECK: %[[VAR1:.*]] = phi i32 [ %[[VAR0]], %if.then ], [ %[[VAR2:.*]], %if.end3 ]
+; CHECK: %[[VAR1:.*]] = phi i32 [ %[[VAR2:.*]], %if.end3 ], [ %[[VAR0]], %if.then ]
 ; CHECK: %[[SETJMP_TABLE_SIZE2:.*]] = phi i32 [ %[[SETJMP_TABLE_SIZE1]], %if.then ], [ %[[SETJMP_TABLE_SIZE3:.*]], %if.end3 ]
 ; CHECK: %[[SETJMP_TABLE2:.*]] = phi i32* [ %[[SETJMP_TABLE1]], %if.then ], [ %[[SETJMP_TABLE3:.*]], %if.end3 ]
 ; CHECK: store i32 %[[VAR1]], i32* @global_var, align 4
@@ -222,7 +222,7 @@ for.inc:                                          ; preds = %for.cond
   br label %for.cond
 
 ; CHECK: for.inc.split:
-  ; CHECK: %var[[VARNO]] = phi i32 [ %var, %for.inc ]
+  ; CHECK: %var[[VARNO]] = phi i32 [ undef, %if.end ], [ %var, %for.inc ]
 }
 
 ; Tests cases where longjmp function pointer is used in other ways than direct
@@ -281,10 +281,7 @@ attributes #2 = { nounwind }
 attributes #3 = { allocsize(0) }
 ; CHECK-DAG: attributes #{{[0-9]+}} = { nounwind "wasm-import-module"="env" "wasm-import-name"="getTempRet0" }
 ; CHECK-DAG: attributes #{{[0-9]+}} = { nounwind "wasm-import-module"="env" "wasm-import-name"="setTempRet0" }
-; CHECK-DAG: attributes #{{[0-9]+}} = { "wasm-import-module"="env" "wasm-import-name"="__resumeException" }
-; CHECK-DAG: attributes #{{[0-9]+}} = { "wasm-import-module"="env" "wasm-import-name"="llvm_eh_typeid_for" }
 ; CHECK-DAG: attributes #{{[0-9]+}} = { "wasm-import-module"="env" "wasm-import-name"="__invoke_void" }
-; CHECK-DAG: attributes #{{[0-9]+}} = { "wasm-import-module"="env" "wasm-import-name"="__cxa_find_matching_catch_2" }
 ; CHECK-DAG: attributes #{{[0-9]+}} = { "wasm-import-module"="env" "wasm-import-name"="saveSetjmp" }
 ; CHECK-DAG: attributes #{{[0-9]+}} = { "wasm-import-module"="env" "wasm-import-name"="testSetjmp" }
 ; CHECK-DAG: attributes #{{[0-9]+}} = { "wasm-import-module"="env" "wasm-import-name"="emscripten_longjmp" }

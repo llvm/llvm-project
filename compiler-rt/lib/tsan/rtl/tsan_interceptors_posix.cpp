@@ -2459,9 +2459,11 @@ int sigaction_impl(int sig, const __sanitizer_sigaction *act,
 #endif
     internal_memcpy(&newact, act, sizeof(newact));
     internal_sigfillset(&newact.sa_mask);
-    newact.sa_flags |= SA_SIGINFO;
-    if ((uptr)act->handler != sig_ign && (uptr)act->handler != sig_dfl)
+    if ((act->sa_flags & SA_SIGINFO) ||
+        ((uptr)act->handler != sig_ign && (uptr)act->handler != sig_dfl)) {
+      newact.sa_flags |= SA_SIGINFO;
       newact.sigaction = sighandler;
+    }
     ReleaseStore(thr, pc, (uptr)&sigactions[sig]);
     act = &newact;
   }

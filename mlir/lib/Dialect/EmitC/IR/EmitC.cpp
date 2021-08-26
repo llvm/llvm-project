@@ -169,7 +169,7 @@ Attribute emitc::OpaqueAttr::parse(MLIRContext *context,
                                    DialectAsmParser &parser, Type type) {
   if (parser.parseLess())
     return Attribute();
-  StringRef value;
+  std::string value;
   llvm::SMLoc loc = parser.getCurrentLocation();
   if (parser.parseOptionalString(&value)) {
     parser.emitError(loc) << "expected string";
@@ -214,7 +214,7 @@ void emitc::OpaqueAttr::print(DialectAsmPrinter &printer) const {
 Type emitc::OpaqueType::parse(MLIRContext *context, DialectAsmParser &parser) {
   if (parser.parseLess())
     return Type();
-  StringRef value;
+  std::string value;
   llvm::SMLoc loc = parser.getCurrentLocation();
   if (parser.parseOptionalString(&value) || value.empty()) {
     parser.emitError(loc) << "expected non empty string";

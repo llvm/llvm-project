@@ -361,14 +361,6 @@ public:
     return ConstantVector::get(Out);
   }
 
-  /// Create and insert the idiom we use to indicate a block is unreachable
-  /// without having to rewrite the CFG from within InstCombine.
-  static void CreateNonTerminatorUnreachable(Instruction *InsertAt) {
-    auto &Ctx = InsertAt->getContext();
-    new StoreInst(ConstantInt::getTrue(Ctx),
-                  UndefValue::get(Type::getInt1PtrTy(Ctx)), InsertAt);
-  }
-
   void addToWorklist(Instruction *I) { Worklist.push(I); }
 
   AssumptionCache &getAssumptionCache() const { return AC; }

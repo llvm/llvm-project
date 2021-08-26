@@ -103,9 +103,6 @@ def AMDGPUconstdata_ptr : SDNode<
 // This argument to this node is a dword address.
 def AMDGPUdwordaddr : SDNode<"AMDGPUISD::DWORDADDR", SDTIntUnaryOp>;
 
-// Force dependencies for vector trunc stores
-def R600dummy_chain : SDNode<"AMDGPUISD::DUMMY_CHAIN", SDTNone, [SDNPHasChain]>;
-
 def AMDGPUcos_impl : SDNode<"AMDGPUISD::COS_HW", SDTFPUnaryOp>;
 def AMDGPUsin_impl : SDNode<"AMDGPUISD::SIN_HW", SDTFPUnaryOp>;
 // out = a - floor(a)
@@ -328,11 +325,6 @@ def AMDGPUExportOp : SDTypeProfile<0, 8, [
 
 ]>;
 
-
-def R600ExportOp : SDTypeProfile<0, 7, [SDTCisFP<0>, SDTCisInt<1>]>;
-
-def R600_EXPORT: SDNode<"AMDGPUISD::R600_EXPORT", R600ExportOp,
-  [SDNPHasChain, SDNPSideEffect]>;
 
 //===----------------------------------------------------------------------===//
 // Flow Control Profile Types

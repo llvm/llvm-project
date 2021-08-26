@@ -65,8 +65,7 @@ body: |
     ; CHECK: [[COPY:%[0-9]+]]:_(p0) = COPY $x0
     ; CHECK: [[COPY1:%[0-9]+]]:_(s32) = COPY $w1
     ; CHECK: [[C:%[0-9]+]]:_(s32) = G_CONSTANT i32 1
-    ; CHECK: [[COPY2:%[0-9]+]]:_(s32) = COPY [[COPY1]](s32)
-    ; CHECK: [[AND:%[0-9]+]]:_(s32) = G_AND [[COPY2]], [[C]]
+    ; CHECK: [[AND:%[0-9]+]]:_(s32) = G_AND [[COPY1]], [[C]]
     ; CHECK: [[AND1:%[0-9]+]]:_(s32) = G_AND [[AND]], [[C]]
     ; CHECK: [[TRUNC:%[0-9]+]]:_(s8) = G_TRUNC [[AND1]](s32)
     ; CHECK: G_STORE [[TRUNC]](s8), [[COPY]](p0) :: (store (s8))
@@ -622,10 +621,9 @@ body:             |
     ; CHECK: [[TRUNC:%[0-9]+]]:_(s32) = G_TRUNC [[OR3]](s64)
     ; CHECK: G_STORE [[COPY]](s64), %ptr(p0) :: (store (s64), align 16)
     ; CHECK: [[PTR_ADD2:%[0-9]+]]:_(p0) = G_PTR_ADD %ptr, [[C1]](s64)
-    ; CHECK: [[COPY1:%[0-9]+]]:_(s32) = COPY [[TRUNC]](s32)
-    ; CHECK: [[LSHR1:%[0-9]+]]:_(s32) = G_LSHR [[COPY1]], [[C3]](s64)
+    ; CHECK: [[LSHR1:%[0-9]+]]:_(s32) = G_LSHR [[TRUNC]], [[C3]](s64)
     ; CHECK: [[PTR_ADD3:%[0-9]+]]:_(p0) = G_PTR_ADD [[PTR_ADD2]], [[C2]](s64)
-    ; CHECK: G_STORE [[COPY1]](s32), [[PTR_ADD2]](p0) :: (store (s16) into unknown-address + 8, align 8)
+    ; CHECK: G_STORE [[TRUNC]](s32), [[PTR_ADD2]](p0) :: (store (s16) into unknown-address + 8, align 8)
     ; CHECK: G_STORE [[LSHR1]](s32), [[PTR_ADD3]](p0) :: (store (s8) into unknown-address + 10, align 2)
     ; CHECK: RET_ReallyLR
     %ptr:_(p0) = COPY $x0

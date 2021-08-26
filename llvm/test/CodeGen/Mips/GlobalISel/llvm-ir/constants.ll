@@ -25,9 +25,7 @@ entry:
 define signext i16 @signed_i16() {
 ; MIPS32-LABEL: signed_i16:
 ; MIPS32:       # %bb.0: # %entry
-; MIPS32-NEXT:    addiu $1, $zero, 32768
-; MIPS32-NEXT:    sll $1, $1, 16
-; MIPS32-NEXT:    sra $2, $1, 16
+; MIPS32-NEXT:    addiu $2, $zero, 32768
 ; MIPS32-NEXT:    jr $ra
 ; MIPS32-NEXT:    nop
 entry:
@@ -37,9 +35,7 @@ entry:
 define signext i8 @signed_i8() {
 ; MIPS32-LABEL: signed_i8:
 ; MIPS32:       # %bb.0: # %entry
-; MIPS32-NEXT:    addiu $1, $zero, 65408
-; MIPS32-NEXT:    sll $1, $1, 24
-; MIPS32-NEXT:    sra $2, $1, 24
+; MIPS32-NEXT:    addiu $2, $zero, 65408
 ; MIPS32-NEXT:    jr $ra
 ; MIPS32-NEXT:    nop
 entry:
@@ -49,8 +45,7 @@ entry:
 define zeroext i16 @unsigned_i16() {
 ; MIPS32-LABEL: unsigned_i16:
 ; MIPS32:       # %bb.0: # %entry
-; MIPS32-NEXT:    addiu $1, $zero, 32768
-; MIPS32-NEXT:    andi $2, $1, 65535
+; MIPS32-NEXT:    ori $2, $zero, 32768
 ; MIPS32-NEXT:    jr $ra
 ; MIPS32-NEXT:    nop
 entry:
@@ -60,8 +55,7 @@ entry:
 define zeroext i8 @unsigned_i8() {
 ; MIPS32-LABEL: unsigned_i8:
 ; MIPS32:       # %bb.0: # %entry
-; MIPS32-NEXT:    addiu $1, $zero, 65408
-; MIPS32-NEXT:    andi $2, $1, 255
+; MIPS32-NEXT:    ori $2, $zero, 128
 ; MIPS32-NEXT:    jr $ra
 ; MIPS32-NEXT:    nop
 entry:
@@ -71,8 +65,7 @@ entry:
 define zeroext i1 @i1_true() {
 ; MIPS32-LABEL: i1_true:
 ; MIPS32:       # %bb.0: # %entry
-; MIPS32-NEXT:    ori $1, $zero, 1
-; MIPS32-NEXT:    andi $2, $1, 1
+; MIPS32-NEXT:    ori $2, $zero, 1
 ; MIPS32-NEXT:    jr $ra
 ; MIPS32-NEXT:    nop
 entry:
@@ -82,8 +75,7 @@ entry:
 define zeroext i1 @i1_false() {
 ; MIPS32-LABEL: i1_false:
 ; MIPS32:       # %bb.0: # %entry
-; MIPS32-NEXT:    ori $1, $zero, 0
-; MIPS32-NEXT:    andi $2, $1, 1
+; MIPS32-NEXT:    ori $2, $zero, 0
 ; MIPS32-NEXT:    jr $ra
 ; MIPS32-NEXT:    nop
 entry:

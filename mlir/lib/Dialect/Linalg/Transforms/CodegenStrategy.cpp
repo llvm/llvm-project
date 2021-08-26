@@ -14,6 +14,7 @@
 #include "mlir/Dialect/Linalg/Transforms/CodegenStrategy.h"
 
 #include "mlir/Dialect/Linalg/Transforms/Hoisting.h"
+#include "mlir/Dialect/SCF/Transforms.h"
 #include "mlir/Dialect/Vector/VectorOps.h"
 #include "mlir/Dialect/Vector/VectorTransforms.h"
 #include "mlir/Pass/PassManager.h"
@@ -47,7 +48,7 @@ void mlir::linalg::CodegenStrategy::transform(FuncOp func) const {
 
   RewritePatternSet stage2Patterns =
       linalg::getLinalgTilingCanonicalizationPatterns(context);
-  stage2Patterns.add<AffineMinSCFCanonicalizationPattern>(context);
+  scf::populateSCFLoopBodyCanonicalizationPatterns(stage2Patterns);
 
   auto stage3Transforms = [&](Operation *op) {
     // Some of these may be too aggressive as a stage 3 that is applied on each

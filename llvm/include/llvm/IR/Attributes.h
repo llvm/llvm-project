@@ -594,6 +594,12 @@ public:
     return removeAttributes(C, FunctionIndex, AttrsToRemove);
   }
 
+  /// Remove the attributes at the function index from this
+  /// attribute list. Returns a new list because attribute lists are immutable.
+  LLVM_NODISCARD AttributeList removeFnAttributes(LLVMContext &C) const {
+    return removeAttributes(C, FunctionIndex);
+  }
+
   /// Remove the specified attribute at the return value index from this
   /// attribute list. Returns a new list because attribute lists are immutable.
   LLVM_NODISCARD AttributeList

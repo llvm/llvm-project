@@ -50,7 +50,7 @@ LLVMErrorRef LLVMRunPasses(LLVMModuleRef M, const char *Passes,
  * responsible for it. The client should call LLVMDisposePassBuilderOptions
  * to free the pass builder options.
  */
-LLVMPassBuilderOptionsRef LLVMCreatePassBuilderOptions();
+LLVMPassBuilderOptionsRef LLVMCreatePassBuilderOptions(void);
 
 /**
  * Toggle adding the VerifierPass for the PassBuilder, ensuring all functions

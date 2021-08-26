@@ -61,11 +61,11 @@ define <4 x i32> @test_demandedbits_bitreverse(<4 x i32> %a0) nounwind {
 ; X86-NEXT:    pand {{\.?LCPI[0-9]+_[0-9]+}}, %xmm0
 ; X86-NEXT:    psrlw $2, %xmm0
 ; X86-NEXT:    por %xmm1, %xmm0
-; X86-NEXT:    movdqa {{.*#+}} xmm1 = [85,85,85,85,85,85,85,85,85,85,85,85,85,85,85,85]
+; X86-NEXT:    movdqa {{.*#+}} xmm1 = [170,170,170,170,170,170,170,170,170,170,170,170,170,170,170,170]
 ; X86-NEXT:    pand %xmm0, %xmm1
-; X86-NEXT:    paddb %xmm1, %xmm1
+; X86-NEXT:    psrlw $1, %xmm1
 ; X86-NEXT:    pand {{\.?LCPI[0-9]+_[0-9]+}}, %xmm0
-; X86-NEXT:    psrlw $1, %xmm0
+; X86-NEXT:    paddb %xmm0, %xmm0
 ; X86-NEXT:    por %xmm1, %xmm0
 ; X86-NEXT:    pand {{\.?LCPI[0-9]+_[0-9]+}}, %xmm0
 ; X86-NEXT:    retl

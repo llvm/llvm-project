@@ -280,24 +280,16 @@ define <4 x float> @load_float4_float3_trunc_0123_unaligned(<4 x float>* nocaptu
 ;
 ; SSE41-LABEL: load_float4_float3_trunc_0123_unaligned:
 ; SSE41:       # %bb.0:
-; SSE41-NEXT:    movq 8(%rdi), %rax
-; SSE41-NEXT:    movd %eax, %xmm1
-; SSE41-NEXT:    shrq $32, %rax
-; SSE41-NEXT:    movd %eax, %xmm2
 ; SSE41-NEXT:    movups (%rdi), %xmm0
-; SSE41-NEXT:    insertps {{.*#+}} xmm0 = xmm0[0,1],xmm1[0],xmm0[3]
-; SSE41-NEXT:    insertps {{.*#+}} xmm0 = xmm0[0,1,2],xmm2[0]
+; SSE41-NEXT:    insertps {{.*#+}} xmm0 = xmm0[0,1],mem[0],xmm0[3]
+; SSE41-NEXT:    insertps {{.*#+}} xmm0 = xmm0[0,1,2],mem[0]
 ; SSE41-NEXT:    retq
 ;
 ; AVX-LABEL: load_float4_float3_trunc_0123_unaligned:
 ; AVX:       # %bb.0:
-; AVX-NEXT:    movq 8(%rdi), %rax
-; AVX-NEXT:    vmovd %eax, %xmm0
-; AVX-NEXT:    shrq $32, %rax
-; AVX-NEXT:    vmovd %eax, %xmm1
-; AVX-NEXT:    vmovups (%rdi), %xmm2
-; AVX-NEXT:    vinsertps {{.*#+}} xmm0 = xmm2[0,1],xmm0[0],xmm2[3]
-; AVX-NEXT:    vinsertps {{.*#+}} xmm0 = xmm0[0,1,2],xmm1[0]
+; AVX-NEXT:    vmovups (%rdi), %xmm0
+; AVX-NEXT:    vinsertps {{.*#+}} xmm0 = xmm0[0,1],mem[0],xmm0[3]
+; AVX-NEXT:    vinsertps {{.*#+}} xmm0 = xmm0[0,1,2],mem[0]
 ; AVX-NEXT:    retq
   %2 = bitcast <4 x float>* %0 to i64*
   %3 = load i64, i64* %2, align 1

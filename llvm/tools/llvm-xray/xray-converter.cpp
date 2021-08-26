@@ -63,6 +63,10 @@ static cl::opt<bool>
                         "when symbolizing function ids from the input log"),
                cl::init(false), cl::sub(Convert));
 
+static cl::opt<bool> Demangle("demangle",
+                              cl::desc("demangle symbols (default)"),
+                              cl::sub(Convert));
+
 static cl::opt<std::string>
     ConvertInstrMap("instr_map",
                     cl::desc("binary with the instrumentation map, or "
@@ -379,7 +383,7 @@ static CommandRegistration Unused(&Convert, []() -> Error {
 
   const auto &FunctionAddresses = Map.getFunctionAddresses();
   symbolize::LLVMSymbolizer::Options SymbolizerOpts;
-  if (NoDemangle)
+  if (Demangle.getPosition() < NoDemangle.getPosition())
     SymbolizerOpts.Demangle = false;
   symbolize::LLVMSymbolizer Symbolizer(SymbolizerOpts);
   llvm::xray::FuncIdConversionHelper FuncIdHelper(ConvertInstrMap, Symbolizer,

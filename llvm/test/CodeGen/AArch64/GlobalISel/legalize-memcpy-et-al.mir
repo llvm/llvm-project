@@ -97,8 +97,7 @@ body:             |
     ; CHECK: [[ZEXT:%[0-9]+]]:_(s64) = G_ZEXT [[COPY2]](s32)
     ; CHECK: ADJCALLSTACKDOWN 0, 0, implicit-def $sp, implicit $sp
     ; CHECK: $x0 = COPY [[COPY]](p0)
-    ; CHECK: [[COPY3:%[0-9]+]]:_(s32) = COPY [[COPY1]](s32)
-    ; CHECK: $w1 = COPY [[COPY3]](s32)
+    ; CHECK: $w1 = COPY [[COPY1]](s32)
     ; CHECK: $x2 = COPY [[ZEXT]](s64)
     ; CHECK: BL &memset, csr_aarch64_aapcs_thisreturn, implicit-def $lr, implicit $sp, implicit $x0, implicit $w1, implicit $x2
     ; CHECK: ADJCALLSTACKUP 0, 0, implicit-def $sp, implicit $sp

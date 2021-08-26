@@ -16,6 +16,9 @@
 #include "entry-names.h"
 
 namespace Fortran::runtime {
+
+class Descriptor;
+
 extern "C" {
 
 // Lowering may need to cast this result to match the precision of the default
@@ -28,6 +31,13 @@ double RTNAME(CpuTime)();
 CppTypeFor<TypeCategory::Integer, 8> RTNAME(SystemClockCount)();
 CppTypeFor<TypeCategory::Integer, 8> RTNAME(SystemClockCountRate)();
 CppTypeFor<TypeCategory::Integer, 8> RTNAME(SystemClockCountMax)();
+
+// Interface for DATE_AND_TIME intrinsic.
+void RTNAME(DateAndTime)(char *date, std::size_t dateChars, char *time,
+    std::size_t timeChars, char *zone, std::size_t zoneChars,
+    const char *source = nullptr, int line = 0,
+    const Descriptor *values = nullptr);
+
 } // extern "C"
 } // namespace Fortran::runtime
 #endif // FORTRAN_RUNTIME_TIME_INTRINSIC_H_

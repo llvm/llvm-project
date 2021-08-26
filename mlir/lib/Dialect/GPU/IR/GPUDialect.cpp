@@ -139,7 +139,7 @@ Type GPUDialect::parseType(DialectAsmParser &parser) const {
       return nullptr;
 
     // Parse operand.
-    StringRef operand;
+    std::string operand;
     if (failed(parser.parseOptionalString(&operand)))
       return nullptr;
 

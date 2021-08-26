@@ -9,11 +9,9 @@ body:             |
     ; CHECK: [[COPY1:%[0-9]+]]:_(s32) = COPY $w1
     ; CHECK: [[FCMP:%[0-9]+]]:_(s32) = G_FCMP floatpred(ogt), [[COPY]](s32), [[COPY1]]
     ; CHECK: [[C:%[0-9]+]]:_(s32) = G_CONSTANT i32 1
-    ; CHECK: [[COPY2:%[0-9]+]]:_(s32) = COPY [[FCMP]](s32)
-    ; CHECK: [[AND:%[0-9]+]]:_(s32) = G_AND [[COPY2]], [[C]]
+    ; CHECK: [[AND:%[0-9]+]]:_(s32) = G_AND [[FCMP]], [[C]]
     ; CHECK: [[AND1:%[0-9]+]]:_(s32) = G_AND [[AND]], [[C]]
-    ; CHECK: [[COPY3:%[0-9]+]]:_(s32) = COPY [[AND1]](s32)
-    ; CHECK: $w0 = COPY [[COPY3]](s32)
+    ; CHECK: $w0 = COPY [[AND1]](s32)
     %0:_(s32) = COPY $w0
     %1:_(s32) = COPY $w1
     %2:_(s1) = G_FCMP floatpred(ogt), %0(s32), %1
