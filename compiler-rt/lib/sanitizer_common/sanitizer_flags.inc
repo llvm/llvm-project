@@ -160,6 +160,10 @@ COMMON_FLAG(
 COMMON_FLAG(const char *, coverage_dir, ".",
             "Target directory for coverage dumps. Defaults to the current "
             "directory.")
+COMMON_FLAG(const char *, cov_8bit_counters_out, "",
+    "If non-empty, write 8bit counters to this file. ")
+COMMON_FLAG(const char *, cov_pcs_out, "",
+    "If non-empty, write the coverage pc table to this file. ")
 COMMON_FLAG(bool, full_address_space, false,
             "Sanitize complete address space; "
             "by default kernel area on 32-bit platforms will not be sanitized")

@@ -2489,7 +2489,8 @@ pid_t __dfso_fork(dfsan_label *ret_label, dfsan_origin *ret_origin) {
 SANITIZER_INTERFACE_WEAK_DEF(void, __sanitizer_cov_trace_pc_guard, u32 *) {}
 SANITIZER_INTERFACE_WEAK_DEF(void, __sanitizer_cov_trace_pc_guard_init, u32 *,
                              u32 *) {}
-SANITIZER_INTERFACE_WEAK_DEF(void, __sanitizer_cov_pcs_init, void) {}
+SANITIZER_INTERFACE_WEAK_DEF(void, __sanitizer_cov_pcs_init, const uptr *beg,
+                             const uptr *end) {}
 SANITIZER_INTERFACE_WEAK_DEF(void, __sanitizer_cov_trace_pc_indir, void) {}
 
 SANITIZER_INTERFACE_WEAK_DEF(void, __dfsw___sanitizer_cov_trace_cmp, void) {}
