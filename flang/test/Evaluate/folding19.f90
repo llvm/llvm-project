@@ -43,5 +43,11 @@ module m
     !CHECK: error: Invalid 'vector=' argument in PACK: the 'mask=' argument has 3 true elements, but the vector has only 2 elements
     x = pack(array, mask, [0,0])
   end subroutine
+  subroutine s5
+    logical, parameter :: mask(2,3) = reshape([.false., .true., .true., .false., .false., .true.], shape(mask))
+    integer, parameter :: field(3,2) = reshape([(-j,j=1,6)], shape(field))
+    integer :: x(2,3)
+    !CHECK: error: Invalid 'vector=' argument in UNPACK: the 'mask=' argument has 3 true elements, but the vector has only 2 elements
+    x = unpack([1,2], mask, 0)
+  end subroutine
 end module
-

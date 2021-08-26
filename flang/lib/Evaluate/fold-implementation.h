@@ -65,6 +65,8 @@ public:
   Expr<T> EOSHIFT(FunctionRef<T> &&);
   Expr<T> PACK(FunctionRef<T> &&);
   Expr<T> RESHAPE(FunctionRef<T> &&);
+  Expr<T> TRANSPOSE(FunctionRef<T> &&);
+  Expr<T> UNPACK(FunctionRef<T> &&);
 
 private:
   FoldingContext &context_;
@@ -853,6 +855,78 @@ template <typename T> Expr<T> Folder<T>::RESHAPE(FunctionRef<T> &&funcRef) {
   return MakeInvalidIntrinsic(std::move(funcRef));
 }
 
+template <typename T> Expr<T> Folder<T>::TRANSPOSE(FunctionRef<T> &&funcRef) {
+  auto args{funcRef.arguments()};
+  CHECK(args.size() == 1);
+  const auto *matrix{UnwrapConstantValue<T>(args[0])};
+  if (!matrix) {
+    return Expr<T>{std::move(funcRef)};
+  }
+  // Argument is constant.  Traverse its elements in transposed order.
+  std::vector<Scalar<T>> resultElements;
+  ConstantSubscripts at(2);
+  for (ConstantSubscript j{0}; j < matrix->shape()[0]; ++j) {
+    at[0] = matrix->lbounds()[0] + j;
+    for (ConstantSubscript k{0}; k < matrix->shape()[1]; ++k) {
+      at[1] = matrix->lbounds()[1] + k;
+      resultElements.push_back(matrix->At(at));
+    }
+  }
+  at = matrix->shape();
+  std::swap(at[0], at[1]);
+  return Expr<T>{PackageConstant<T>(std::move(resultElements), *matrix, at)};
+}
+
+template <typename T> Expr<T> Folder<T>::UNPACK(FunctionRef<T> &&funcRef) {
+  auto args{funcRef.arguments()};
+  CHECK(args.size() == 3);
+  const auto *vector{UnwrapConstantValue<T>(args[0])};
+  auto convertedMask{Fold(context_,
+      ConvertToType<LogicalResult>(
+          Expr<SomeLogical>{DEREF(UnwrapExpr<Expr<SomeLogical>>(args[1]))}))};
+  const auto *mask{UnwrapConstantValue<LogicalResult>(convertedMask)};
+  const auto *field{UnwrapConstantValue<T>(args[2])};
+  if (!vector || !mask || !field) {
+    return Expr<T>{std::move(funcRef)};
+  }
+  // Arguments are constant.
+  if (field->Rank() > 0 && field->shape() != mask->shape()) {
+    // Error already emitted from intrinsic processing
+    return MakeInvalidIntrinsic(std::move(funcRef));
+  }
+  ConstantSubscript maskElements{GetSize(mask->shape())};
+  ConstantSubscript truths{0};
+  ConstantSubscripts maskAt{mask->lbounds()};
+  for (ConstantSubscript j{0}; j < maskElements;
+       ++j, mask->IncrementSubscripts(maskAt)) {
+    if (mask->At(maskAt).IsTrue()) {
+      ++truths;
+    }
+  }
+  if (truths > GetSize(vector->shape())) {
+    context_.messages().Say(
+        "Invalid 'vector=' argument in UNPACK: the 'mask=' argument has %jd true elements, but the vector has only %jd elements"_err_en_US,
+        static_cast<std::intmax_t>(truths),
+        static_cast<std::intmax_t>(GetSize(vector->shape())));
+    return MakeInvalidIntrinsic(std::move(funcRef));
+  }
+  std::vector<Scalar<T>> resultElements;
+  ConstantSubscripts vectorAt{vector->lbounds()};
+  ConstantSubscripts fieldAt{field->lbounds()};
+  for (ConstantSubscript j{0}; j < maskElements; ++j) {
+    if (mask->At(maskAt).IsTrue()) {
+      resultElements.push_back(vector->At(vectorAt));
+      vector->IncrementSubscripts(vectorAt);
+    } else {
+      resultElements.push_back(field->At(fieldAt));
+    }
+    mask->IncrementSubscripts(maskAt);
+    field->IncrementSubscripts(fieldAt);
+  }
+  return Expr<T>{
+      PackageConstant<T>(std::move(resultElements), *vector, mask->shape())};
+}
+
 template <typename T>
 Expr<T> FoldMINorMAX(
     FoldingContext &context, FunctionRef<T> &&funcRef, Ordering order) {
@@ -943,8 +1017,12 @@ Expr<T> FoldOperation(FoldingContext &context, FunctionRef<T> &&funcRef) {
       return Folder<T>{context}.PACK(std::move(funcRef));
     } else if (name == "reshape") {
       return Folder<T>{context}.RESHAPE(std::move(funcRef));
+    } else if (name == "transpose") {
+      return Folder<T>{context}.TRANSPOSE(std::move(funcRef));
+    } else if (name == "unpack") {
+      return Folder<T>{context}.UNPACK(std::move(funcRef));
     }
-    // TODO: spread, unpack, transpose
+    // TODO: spread
     // TODO: extends_type_of, same_type_as
     if constexpr (!std::is_same_v<T, SomeDerived>) {
       return FoldIntrinsicFunction(context, std::move(funcRef));
