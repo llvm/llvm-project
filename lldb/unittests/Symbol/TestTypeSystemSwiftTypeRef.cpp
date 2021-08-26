@@ -705,3 +705,31 @@ TEST_F(TestTypeSystemSwiftTypeRef, IsTypedefType) {
   };
 }
 
+TEST_F(TestTypeSystemSwiftTypeRef, GetBaseName) {
+  using namespace swift::Demangle;
+  Demangler dem;
+  NodeBuilder b(dem);
+  {
+    NodePointer n = 
+            b.Node(Node::Kind::Class,
+              b.Node(Node::Kind::Function,
+                b.Node(Node::Kind::Module, "a"),
+                b.Node(Node::Kind::Identifier, "main"),
+                b.Node(Node::Kind::Type,
+                  b.Node(Node::Kind::FunctionType,
+                    b.Node(Node::Kind::ArgumentTuple,
+                      b.Node(Node::Kind::Type,
+                        b.Node(Node::Kind::Tuple)))),
+                  b.Node(Node::Kind::ReturnType,
+                    b.Node(Node::Kind::Type,
+                      b.Node(Node::Kind::Structure,
+                        b.Node(Node::Kind::Module, "Swift"),
+                        b.Node(Node::Kind::Identifier, "Int")))))),
+          b.Node(Node::Kind::LocalDeclName,
+            b.NodeWithIndex(Node::Kind::Number, 0),
+            b.Node(Node::Kind::Identifier, "Base")));
+    auto name = TypeSystemSwiftTypeRef::GetBaseName(n);
+    ASSERT_EQ(name, "Base");
+  }
+}
+
