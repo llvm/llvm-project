@@ -59,7 +59,7 @@ protected:
   // Template alias so that all Instruction storing alignment use the same
   // definiton.
   // Valid alignments are powers of two from 2^0 to 2^MaxAlignmentExponent =
-  // 2^29. We store them as Log2(Alignment), so we need 5 bits to encode the 30
+  // 2^30. We store them as Log2(Alignment), so we need 5 bits to encode the 31
   // possible values.
   template <unsigned Offset>
   using AlignmentBitfieldElementT =
