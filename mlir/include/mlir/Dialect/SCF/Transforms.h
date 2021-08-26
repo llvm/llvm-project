@@ -13,10 +13,12 @@
 #ifndef MLIR_DIALECT_SCF_TRANSFORMS_H_
 #define MLIR_DIALECT_SCF_TRANSFORMS_H_
 
+#include "mlir/Support/LLVM.h"
 #include "llvm/ADT/ArrayRef.h"
 
 namespace mlir {
 
+class AffineMinOp;
 class ConversionTarget;
 struct LogicalResult;
 class MLIRContext;
@@ -26,6 +28,7 @@ class TypeConverter;
 class RewritePatternSet;
 using OwningRewritePatternList = RewritePatternSet;
 class Operation;
+class Value;
 
 namespace scf {
 
@@ -33,6 +36,21 @@ class IfOp;
 class ForOp;
 class ParallelOp;
 class ForOp;
+
+/// Try to canonicalize an affine.min operation in the context of `for` loops
+/// with a known range.
+///
+/// `loopMatcher` is used to retrieve loop bounds and step size for a given
+/// iteration variable: If the first parameter is an iteration variable, return
+/// lower/upper bounds via the second/third parameter and the step size via the
+/// last parameter. The function should return `success` in that case. If the
+/// first parameter is not an iteration variable, return `failure`.
+///
+/// Note: `loopMatcher` allows this function to be used with any "for loop"-like
+/// operation (scf.for, scf.parallel and even ops defined in other dialects).
+LogicalResult canonicalizeAffineMinOpInLoop(
+    AffineMinOp minOp, RewriterBase &rewriter,
+    function_ref<LogicalResult(Value, Value &, Value &, Value &)> loopMatcher);
 
 /// Fuses all adjacent scf.parallel operations with identical bounds and step
 /// into one scf.parallel operations. Uses a naive aliasing and dependency
@@ -148,6 +166,11 @@ struct PipeliningOption {
 /// S2(N)                        // Epilogue
 void populateSCFLoopPipeliningPatterns(RewritePatternSet &patterns,
                                        const PipeliningOption &options);
+
+/// Populate patterns for canonicalizing operations inside SCF loop bodies.
+/// At the moment, only affine.min computations with iteration variables,
+/// loop bounds and loop steps are canonicalized.
+void populateSCFLoopBodyCanonicalizationPatterns(RewritePatternSet &patterns);
 
 } // namespace scf
 } // namespace mlir
