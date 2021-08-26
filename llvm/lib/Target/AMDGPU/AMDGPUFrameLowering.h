@@ -32,6 +32,11 @@ public:
   /// \returns The number of 32-bit sub-registers that are used when storing
   /// values to the stack.
   unsigned getStackWidth(const MachineFunction &MF) const;
+
+  DIExprBuilder::Iterator insertFrameLocation(const MachineFunction &MF,
+                                              DIExprBuilder &Builder,
+                                              DIExprBuilder::Iterator BI,
+                                              Type *ResultType) const override;
 };
 
 } // end namespace llvm

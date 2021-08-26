@@ -11,6 +11,11 @@
 //===----------------------------------------------------------------------===//
 
 #include "AMDGPUFrameLowering.h"
+#include "GCNSubtarget.h"
+#include "llvm/CodeGen/MachineFunction.h"
+#include "llvm/CodeGen/MachineModuleInfo.h"
+#include "llvm/IR/DebugInfoMetadata.h"
+#include "llvm/Target/TargetMachine.h"
 
 using namespace llvm;
 AMDGPUFrameLowering::AMDGPUFrameLowering(StackDirection D, Align StackAl,
@@ -62,4 +67,21 @@ unsigned AMDGPUFrameLowering::getStackWidth(const MachineFunction &MF) const {
   // T1.Z = stack[1].z
   // T1.W = stack[1].w
   return 1;
+}
+
+DIExprBuilder::Iterator AMDGPUFrameLowering::insertFrameLocation(
+    const MachineFunction &MF, DIExprBuilder &Builder,
+    DIExprBuilder::Iterator BI, Type *ResultType) const {
+  LLVMContext &Context = MF.getMMI().getModule()->getContext();
+  const auto &ST = MF.getSubtarget<GCNSubtarget>();
+  unsigned AllocaAddrSpace = MF.getDataLayout().getAllocaAddrSpace();
+  Type *IntPtrTy = IntegerType::getIntNTy(
+      Context, MF.getTarget().getPointerSizeInBits(AllocaAddrSpace));
+  ConstantData *WavefrontSizeLog2 = static_cast<ConstantData *>(
+      ConstantInt::get(IntPtrTy, ST.getWavefrontSizeLog2(), false));
+  std::initializer_list<DIOp::Variant> IL = {
+      DIOp::Referrer(IntPtrTy), DIOp::Constant(WavefrontSizeLog2), DIOp::Shr(),
+      DIOp::Reinterpret(PointerType::get(ResultType, AllocaAddrSpace)),
+      DIOp::Deref(ResultType)};
+  return Builder.insert(BI, IL) + IL.size();
 }
