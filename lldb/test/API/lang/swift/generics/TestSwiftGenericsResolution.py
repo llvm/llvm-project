@@ -41,7 +41,7 @@ class SwiftDynamicTypeGenericsTest(TestBase):
             substrs=[
                 "(Int) x = 123",
                 "(a.OtherClass<Int>) self = 0x",
-                "a.AClass = {}",
+                "a.AClass<Swift.Int> = {}",
                 "v = 1234567"])
         self.runCmd("continue")
         self.expect(
@@ -76,7 +76,7 @@ class SwiftDynamicTypeGenericsTest(TestBase):
                 "(Int) x = 5",
                 '(String) y = "hello world"',
                 "(a.OtherClass<Int>) self = 0x",
-                "a.AClass = {}",
+                "a.AClass<Swift.Int> = {}",
                 "v = 1234567"])
         self.runCmd("continue")
         self.expect(
