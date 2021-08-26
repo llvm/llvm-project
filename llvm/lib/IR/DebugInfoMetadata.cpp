@@ -1012,6 +1012,7 @@ DILocalVariable *DILocalVariable::getImpl(LLVMContext &Context, Metadata *Scope,
                                           unsigned Line, Metadata *Type,
                                           unsigned Arg, DIFlags Flags,
                                           uint32_t AlignInBits,
+                                          Metadata *Annotations,
                                           StorageType Storage,
                                           bool ShouldCreate) {
   // 64K ought to be enough for any frontend.
@@ -1021,8 +1022,8 @@ DILocalVariable *DILocalVariable::getImpl(LLVMContext &Context, Metadata *Scope,
   assert(isCanonical(Name) && "Expected canonical MDString");
   DEFINE_GETIMPL_LOOKUP(DILocalVariable,
                         (Scope, Name, File, Line, Type, Arg, Flags,
-                         AlignInBits));
-  Metadata *Ops[] = {Scope, Name, File, Type};
+                         AlignInBits, Annotations));
+  Metadata *Ops[] = {Scope, Name, File, Type, Annotations};
   DEFINE_GETIMPL_STORE(DILocalVariable, (Line, Arg, Flags, AlignInBits), Ops);
 }
 
