@@ -1215,8 +1215,8 @@ zip2	v0.8h, v0.8h, v0.8h
 # CHECK-NEXT:  1      4     0.50                        fcvtmu	v0.8h, v0.8h
 # CHECK-NEXT:  1      4     0.50                        fcvtn	v0.2s, v0.2d
 # CHECK-NEXT:  1      4     0.50                        fcvtn	v0.4h, v0.4s
-# CHECK-NEXT:  1      4     0.50                  U     fcvtn2	v0.4s, v0.2d
-# CHECK-NEXT:  1      4     0.50                  U     fcvtn2	v0.8h, v0.4s
+# CHECK-NEXT:  1      4     0.50                        fcvtn2	v0.4s, v0.2d
+# CHECK-NEXT:  1      4     0.50                        fcvtn2	v0.8h, v0.4s
 # CHECK-NEXT:  1      4     0.50                        fcvtns	d21, d14
 # CHECK-NEXT:  1      4     0.50                        fcvtns	s22, s13
 # CHECK-NEXT:  1      4     0.50                        fcvtns	v0.2d, v0.2d
@@ -1247,7 +1247,7 @@ zip2	v0.8h, v0.8h, v0.8h
 # CHECK-NEXT:  1      4     0.50                        fcvtpu	v0.8h, v0.8h
 # CHECK-NEXT:  1      4     0.50                        fcvtxn	s22, d13
 # CHECK-NEXT:  1      4     0.50                        fcvtxn	v0.2s, v0.2d
-# CHECK-NEXT:  1      4     0.50                  U     fcvtxn2	v0.4s, v0.2d
+# CHECK-NEXT:  1      4     0.50                        fcvtxn2	v0.4s, v0.2d
 # CHECK-NEXT:  1      4     0.50                        fcvtzs	d21, d12, #1
 # CHECK-NEXT:  1      4     0.50                        fcvtzs	d21, d14
 # CHECK-NEXT:  1      4     0.50                        fcvtzs	s12, s13
@@ -1742,18 +1742,18 @@ zip2	v0.8h, v0.8h, v0.8h
 # CHECK-NEXT:  1      4     0.50                        sqxtn	v0.2s, v0.2d
 # CHECK-NEXT:  1      4     0.50                        sqxtn	v0.4h, v0.4s
 # CHECK-NEXT:  1      4     0.50                        sqxtn	v0.8b, v0.8h
-# CHECK-NEXT:  1      4     0.50                  U     sqxtn2	v0.16b, v0.8h
-# CHECK-NEXT:  1      4     0.50                  U     sqxtn2	v0.4s, v0.2d
-# CHECK-NEXT:  1      4     0.50                  U     sqxtn2	v0.8h, v0.4s
+# CHECK-NEXT:  1      4     0.50                        sqxtn2	v0.16b, v0.8h
+# CHECK-NEXT:  1      4     0.50                        sqxtn2	v0.4s, v0.2d
+# CHECK-NEXT:  1      4     0.50                        sqxtn2	v0.8h, v0.4s
 # CHECK-NEXT:  1      4     0.50                        sqxtun	b19, h14
 # CHECK-NEXT:  1      4     0.50                        sqxtun	h21, s15
 # CHECK-NEXT:  1      4     0.50                        sqxtun	s20, d12
 # CHECK-NEXT:  1      4     0.50                        sqxtun	v0.2s, v0.2d
 # CHECK-NEXT:  1      4     0.50                        sqxtun	v0.4h, v0.4s
 # CHECK-NEXT:  1      4     0.50                        sqxtun	v0.8b, v0.8h
-# CHECK-NEXT:  1      4     0.50                  U     sqxtun2	v0.16b, v0.8h
-# CHECK-NEXT:  1      4     0.50                  U     sqxtun2	v0.4s, v0.2d
-# CHECK-NEXT:  1      4     0.50                  U     sqxtun2	v0.8h, v0.4s
+# CHECK-NEXT:  1      4     0.50                        sqxtun2	v0.16b, v0.8h
+# CHECK-NEXT:  1      4     0.50                        sqxtun2	v0.4s, v0.2d
+# CHECK-NEXT:  1      4     0.50                        sqxtun2	v0.8h, v0.4s
 # CHECK-NEXT:  1      4     0.50                        srhadd	v0.2s, v0.2s, v0.2s
 # CHECK-NEXT:  1      4     0.50                        srhadd	v0.4h, v0.4h, v0.4h
 # CHECK-NEXT:  1      4     0.50                        srhadd	v0.8b, v0.8b, v0.8b
@@ -2019,9 +2019,9 @@ zip2	v0.8h, v0.8h, v0.8h
 # CHECK-NEXT:  1      4     0.50                        uqxtn	v0.2s, v0.2d
 # CHECK-NEXT:  1      4     0.50                        uqxtn	v0.4h, v0.4s
 # CHECK-NEXT:  1      4     0.50                        uqxtn	v0.8b, v0.8h
-# CHECK-NEXT:  1      4     0.50                  U     uqxtn2	v0.16b, v0.8h
-# CHECK-NEXT:  1      4     0.50                  U     uqxtn2	v0.4s, v0.2d
-# CHECK-NEXT:  1      4     0.50                  U     uqxtn2	v0.8h, v0.4s
+# CHECK-NEXT:  1      4     0.50                        uqxtn2	v0.16b, v0.8h
+# CHECK-NEXT:  1      4     0.50                        uqxtn2	v0.4s, v0.2d
+# CHECK-NEXT:  1      4     0.50                        uqxtn2	v0.8h, v0.4s
 # CHECK-NEXT:  1      4     0.50                        urecpe	v0.2s, v0.2s
 # CHECK-NEXT:  1      4     0.50                        urecpe	v0.4s, v0.4s
 # CHECK-NEXT:  1      4     0.50                        urhadd	v0.16b, v0.16b, v0.16b
@@ -2112,9 +2112,9 @@ zip2	v0.8h, v0.8h, v0.8h
 # CHECK-NEXT:  1      4     0.50                        xtn	v0.2s, v0.2d
 # CHECK-NEXT:  1      4     0.50                        xtn	v0.4h, v0.4s
 # CHECK-NEXT:  1      4     0.50                        xtn	v0.8b, v0.8h
-# CHECK-NEXT:  1      4     0.50                  U     xtn2	v0.16b, v0.8h
-# CHECK-NEXT:  1      4     0.50                  U     xtn2	v0.4s, v0.2d
-# CHECK-NEXT:  1      4     0.50                  U     xtn2	v0.8h, v0.4s
+# CHECK-NEXT:  1      4     0.50                        xtn2	v0.16b, v0.8h
+# CHECK-NEXT:  1      4     0.50                        xtn2	v0.4s, v0.2d
+# CHECK-NEXT:  1      4     0.50                        xtn2	v0.8h, v0.4s
 # CHECK-NEXT:  1      4     0.50                        zip1	v0.16b, v0.16b, v0.16b
 # CHECK-NEXT:  1      4     0.50                        zip1	v0.2d, v0.2d, v0.2d
 # CHECK-NEXT:  1      4     0.50                        zip1	v0.2s, v0.2s, v0.2s
