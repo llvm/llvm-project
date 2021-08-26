@@ -11,8 +11,6 @@
 #define LIBUNWIND_CET_UNWIND_H
 
 #include "libunwind.h"
-#include <cet.h>
-#include <immintrin.h>
 
 // Currently, CET is implemented on Linux x86 platforms.
 #if defined(_LIBUNWIND_TARGET_LINUX) && defined(__CET__) && defined(__SHSTK__)
@@ -20,6 +18,9 @@
 #endif
 
 #if defined(_LIBUNWIND_USE_CET)
+#include <cet.h>
+#include <immintrin.h>
+
 #define _LIBUNWIND_POP_CET_SSP(x)                                              \
   do {                                                                         \
     unsigned long ssp = _get_ssp();                                            \
