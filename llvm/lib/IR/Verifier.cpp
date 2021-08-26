@@ -343,6 +343,10 @@ class Verifier : public InstVisitor<Verifier>, VerifierSupport {
   // Keeps track of duplicate function argument debug info.
   SmallVector<const DILocalVariable *, 16> DebugFnArgs;
 
+  // Track which bounded DILifetimes we have seen defs for, so we can diagnose
+  // repeated defs.
+  SmallPtrSet<const DILifetime *, 32> DefinedDebugLifetimes;
+
   TBAAVerifier TBAAVerifyHelper;
 
   SmallVector<IntrinsicInst *, 4> NoAliasScopeDecls;
@@ -5706,9 +5710,13 @@ void Verifier::visitDbgDefKillIntrinsic(StringRef Kind,
   AssertDI(isa<DILifetime>(DDI.getRawLifetime()),
            "invalid llvm.dbg." + Kind + " intrinsic lifetime", &DDI,
            DDI.getRawLifetime());
-  if (DbgDefInst *D = dyn_cast<DbgDefInst>(&DDI))
+  if (DbgDefInst *D = dyn_cast<DbgDefInst>(&DDI)) {
     AssertDI(isa<ValueAsMetadata>(D->getRawReferrer()),
              "invalid llvm.dbg.def intrinsic referrer", D, D->getRawReferrer());
+    AssertDI(DefinedDebugLifetimes.insert(D->getLifetime()).second,
+             "invalid llvm.dbg.def refers to an already-defined lifetime",
+             D->getLifetime());
+  }
 }
 
 void Verifier::verifyFnArgs(const DbgVariableIntrinsic &I) {

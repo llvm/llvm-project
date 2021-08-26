@@ -1979,15 +1979,19 @@ bool IRTranslator::translateKnownIntrinsic(const CallInst &CI, Intrinsic::ID ID,
         MIB.addCImm(CI);
       } else if (auto *CFP = dyn_cast<ConstantFP>(Referrer)) {
         MIB.addFPImm(CFP);
+      } else if (auto *AI = dyn_cast<AllocaInst>(Referrer)) {
+        MIB.addFrameIndex(getOrCreateFrameIndex(*AI));
+        DILifetime *Lifetime = cast<DbgDefInst>(DDKI).getLifetime();
+        // The translation from an alloca (semantically a pointer) to a frame
+        // index (semantically the stack slot itself) removes one level of
+        // indirection, which needs to be reflected in the expression.
+        Lifetime->setLocation(
+            Lifetime->getLocation()
+                ->builder()
+                .removeReferrerIndirection(AI->getAllocatedType())
+                .intoExpr());
       } else {
-        Register Reg = getOrCreateVReg(*Referrer);
-        auto RegDef = MRI->def_instr_begin(Reg);
-        if (RegDef != MRI->def_instr_end() &&
-            RegDef->getOpcode() == TargetOpcode::G_FRAME_INDEX) {
-          MIB.addFrameIndex(RegDef->getOperand(1).getIndex());
-        } else {
-          MIB.addReg(Reg);
-        }
+        MIB.addReg(getOrCreateVReg(*Referrer));
       }
     }
     MIRBuilder.insertInstr(MIB);

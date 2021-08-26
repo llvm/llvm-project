@@ -1370,10 +1370,19 @@ bool FastISel::selectIntrinsicCall(const IntrinsicInst *II) {
     } else if (const auto *AI = dyn_cast<AllocaInst>(Referrer)) {
       auto SI = FuncInfo.StaticAllocaMap.find(AI);
       if (SI != FuncInfo.StaticAllocaMap.end()) {
+        DILifetime *Lifetime = DDI.getLifetime();
         BuildMI(*FuncInfo.MBB, FuncInfo.InsertPt, DbgLoc,
                 TII.get(TargetOpcode::DBG_DEF))
-            .addMetadata(DDI.getLifetime())
+            .addMetadata(Lifetime)
             .addFrameIndex(SI->second);
+        // The translation from an alloca (semantically a pointer) to a frame
+        // index (semantically the stack slot itself) removes one level of
+        // indirection, which needs to be reflected in the expression.
+        Lifetime->setLocation(
+            Lifetime->getLocation()
+                ->builder()
+                .removeReferrerIndirection(AI->getAllocatedType())
+                .intoExpr());
       } else {
         LLVM_DEBUG(dbgs() << "Dropping debug info for alloca " << DDI << "\n");
       }

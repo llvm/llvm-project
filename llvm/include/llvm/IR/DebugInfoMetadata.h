@@ -3255,6 +3255,17 @@ public:
     return any_of(Elements, std::mem_fn(&DIOp::Variant::holdsAlternative<T>));
   }
 
+  /// Update the expression to reflect the removal of one level of indirection
+  /// from the value acting as the referrer.
+  ///
+  /// The referrer must be of pointer type, as the expression is logically
+  /// updated by replacing the @c DIOpReferrer result type with its pointee
+  /// type, provided as @c PointeeType, and inserting @p
+  /// DIOpAddrOf(<pointer-address-space>) after it.
+  ///
+  /// Returns @c *this to permit chaining with other methods.
+  DIExprBuilder &removeReferrerIndirection(Type *PointeeType);
+
   /// Get the uniqued, immutable expression metadata from the current state
   /// of the builder.
   ///

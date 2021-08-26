@@ -10,6 +10,17 @@ define void @f() {
   ret void
 }
 
+define void @g() {
+  call void @llvm.dbg.def(metadata !8, metadata i1 undef), !dbg !5
+  ret void
+}
+
+define void @h() {
+  ; CHECK: invalid llvm.dbg.def refers to an already-defined lifetime
+  call void @llvm.dbg.def(metadata !8, metadata i1 undef), !dbg !5
+  ret void
+}
+
 ; CHECK: warning: ignoring invalid debug info in <stdin>
 
 ; Function Attrs: nofree nosync nounwind readnone speculatable willreturn
@@ -31,3 +42,4 @@ attributes #0 = { nofree nosync nounwind readnone speculatable willreturn }
 !5 = !DILocation(line: 4, column: 1, scope: !6)
 !6 = distinct !DISubprogram(scope: null, spFlags: DISPFlagDefinition, unit: !0)
 !7 = !DILocation(line: 8, column: 1, scope: !6)
+!8 = distinct !DILifetime(object: !4, location: !DIExpr())

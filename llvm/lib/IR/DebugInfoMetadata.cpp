@@ -1623,6 +1623,23 @@ DIExpr *DIExprBuilder::intoExpr() {
   return DIExpr::get(C, std::move(Elements));
 }
 
+DIExprBuilder &DIExprBuilder::removeReferrerIndirection(Type *PointeeType) {
+  for (auto &&I = begin(); I != end(); ++I) {
+    if (auto *ReferrerOp = I->getIf<DIOp::Referrer>()) {
+      auto *ResultType = ReferrerOp->getResultType();
+      assert(ResultType->isPointerTy() &&
+             "Expected pointer type for translated alloca");
+      ReferrerOp->setResultType(PointeeType);
+      ++I;
+      if (I != end() && I->holdsAlternative<DIOp::Deref>())
+        I = erase(I) - 1;
+      else
+        I = insert<DIOp::AddrOf>(I, ResultType->getPointerAddressSpace());
+    }
+  }
+  return *this;
+}
+
 DIExpr *DIExpr::getImpl(LLVMContext &Context,
                         SmallVector<DIOp::Variant> &&Elements,
                         StorageType Storage, bool ShouldCreate) {
