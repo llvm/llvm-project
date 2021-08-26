@@ -719,6 +719,7 @@ namespace llvm {
     /// \param SPFlags       Additional flags specific to subprograms.
     /// \param TParams       Function template parameters.
     /// \param ThrownTypes   Exception types this function may throw.
+    /// \param Annotations   Attribute Annotations.
     DISubprogram *
     createFunction(DIScope *Scope, StringRef Name, StringRef LinkageName,
                    DIFile *File, unsigned LineNo, DISubroutineType *Ty,
@@ -726,7 +727,8 @@ namespace llvm {
                    DISubprogram::DISPFlags SPFlags = DISubprogram::SPFlagZero,
                    DITemplateParameterArray TParams = nullptr,
                    DISubprogram *Decl = nullptr,
-                   DITypeArray ThrownTypes = nullptr);
+                   DITypeArray ThrownTypes = nullptr,
+                   DINodeArray Annotations = nullptr);
 
     /// Identical to createFunction,
     /// except that the resulting DbgNode is meant to be RAUWed.
