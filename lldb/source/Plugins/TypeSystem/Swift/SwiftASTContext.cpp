@@ -1769,9 +1769,11 @@ lldb::TypeSystemSP SwiftASTContext::CreateInstance(lldb::LanguageType language,
       // Force parsing of the CUs to extract the SDK info.
       XcodeSDK sdk;
       if (SymbolFile *sym_file = module.GetSymbolFile())
-        for (unsigned i = 0; i < sym_file->GetNumCompileUnits(); ++i)
-          sdk.Merge(
-              sym_file->ParseXcodeSDK(*sym_file->GetCompileUnitAtIndex(i)));
+        for (unsigned i = 0; i < sym_file->GetNumCompileUnits(); ++i) {
+          auto &cu = *sym_file->GetCompileUnitAtIndex(i);
+          if (cu.GetLanguage() == lldb::eLanguageTypeSwift)
+            sdk.Merge(sym_file->ParseXcodeSDK(cu));
+        }
 
       std::string sdk_path = HostInfo::GetXcodeSDKPath(sdk).str();
       LOG_PRINTF(LIBLLDB_LOG_TYPES, "Host SDK path for sdk %s is %s.",
