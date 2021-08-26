@@ -79,9 +79,8 @@ define amdgpu_gs void @main(<4 x i32> %arg, i32 %arg1) {
 ; GFX8-NEXT:  ; %bb.2:
 ; GFX8-NEXT:    s_mov_b64 exec, s[2:3]
 ; GFX8-NEXT:    s_waitcnt vmcnt(0)
-; GFX8-NEXT:    v_alignbit_b32 v0, v6, v5, 16
-; GFX8-NEXT:    v_lshrrev_b32_e32 v1, 16, v0
-; GFX8-NEXT:    v_and_b32_e32 v0, 0xffff, v0
+; GFX8-NEXT:    v_lshrrev_b32_e32 v0, 16, v5
+; GFX8-NEXT:    v_and_b32_e32 v1, 0xffff, v6
 ; GFX8-NEXT:    v_mov_b32_e32 v2, 0
 ; GFX8-NEXT:    s_mov_b32 m0, -1
 ; GFX8-NEXT:    ds_write2_b32 v2, v0, v1 offset0:7 offset1:8
