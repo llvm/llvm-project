@@ -73,6 +73,12 @@ def note_fe_backend_invalid_loc : Note<"could "
 def err_fe_backend_unsupported : Error<"%0">, BackendInfo;
 def warn_fe_backend_unsupported : Warning<"%0">, BackendInfo;
 
+def err_fe_backend_error_attr :
+  Error<"call to %0 declared with 'error' attribute: %1">, BackendInfo;
+def warn_fe_backend_warning_attr :
+  Warning<"call to %0 declared with 'warning' attribute: %1">, BackendInfo,
+  InGroup<BackendWarningAttributes>;
+
 def err_fe_invalid_code_complete_file : Error<
     "cannot locate code-completion file %0">, DefaultFatal;
 def err_fe_dependency_file_requires_MT : Error<
