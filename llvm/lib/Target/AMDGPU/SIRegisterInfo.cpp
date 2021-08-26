@@ -1185,9 +1185,19 @@ void SIRegisterInfo::buildSpillLoadStore(
     bool NeedSuperRegDef = e > 1 && IsStore && i == 0;
     bool NeedSuperRegImpOperand = e > 1;
 
-    unsigned Lane = RegOffset / 4;
-    unsigned LaneE = (RegOffset + EltSize) / 4;
-    for ( ; Lane != LaneE; ++Lane) {
+    // Remaining element size to spill into memory after some parts of it
+    // spilled into either AGPRs or VGPRs.
+    unsigned RemEltSize = EltSize;
+
+    // AGPRs to spill VGPRs and vice versa are allocated in a reverse order,
+    // starting from the last lane. In case if a register cannot be completely
+    // spilled into another register that will ensure its alignment does not
+    // change. For targets with VGPR alignment requirement this is important
+    // in case of flat scratch usage as we might get a scratch_load or
+    // scratch_store of an unaligned register otherwise.
+    for (int LaneS = (RegOffset + EltSize) / 4 - 1, Lane = LaneS,
+             LaneE = RegOffset / 4;
+         Lane >= LaneE; --Lane) {
       bool IsSubReg = e > 1 || EltSize > 4;
       Register Sub = IsSubReg
              ? Register(getSubReg(ValueReg, getSubRegFromChannel(Lane)))
@@ -1195,33 +1205,29 @@ void SIRegisterInfo::buildSpillLoadStore(
       auto MIB = spillVGPRtoAGPR(ST, MBB, MI, Index, Lane, Sub, IsKill);
       if (!MIB.getInstr())
         break;
-      if (NeedSuperRegDef || (IsSubReg && IsStore && Lane == 0)) {
+      if (NeedSuperRegDef || (IsSubReg && IsStore && Lane == LaneS && !i)) {
         MIB.addReg(ValueReg, RegState::ImplicitDefine);
         NeedSuperRegDef = false;
       }
       if (IsSubReg || NeedSuperRegImpOperand) {
         NeedSuperRegImpOperand = true;
         unsigned State = SrcDstRegState;
-        if (Lane + 1 != LaneE)
+        if (Lane != LaneE)
           State &= ~RegState::Kill;
         MIB.addReg(ValueReg, RegState::Implicit | State);
       }
+      RemEltSize -= 4;
     }
 
-    if (Lane == LaneE) // Fully spilled into AGPRs.
+    if (!RemEltSize) // Fully spilled into AGPRs.
       continue;
 
-    // Offset in bytes from the beginning of the ValueReg to its portion we
-    // still need to spill. It may differ from RegOffset if a portion of
-    // current SubReg has been already spilled into AGPRs by the loop above.
-    unsigned RemRegOffset = Lane * 4;
-    unsigned RemEltSize = EltSize - (RemRegOffset - RegOffset);
     if (RemEltSize != EltSize) { // Partially spilled to AGPRs
       assert(IsFlat && EltSize > 4);
 
       unsigned NumRegs = RemEltSize / 4;
       SubReg = Register(getSubReg(ValueReg,
-                        getSubRegFromChannel(RemRegOffset / 4, NumRegs)));
+                        getSubRegFromChannel(RegOffset / 4, NumRegs)));
       unsigned Opc = getFlatScratchSpillOpcode(TII, LoadStoreOp, RemEltSize);
       Desc = &TII->get(Opc);
     }
@@ -1248,10 +1254,10 @@ void SIRegisterInfo::buildSpillLoadStore(
       SubReg = TmpReg;
     }
 
-    MachinePointerInfo PInfo = BasePtrInfo.getWithOffset(RemRegOffset);
+    MachinePointerInfo PInfo = BasePtrInfo.getWithOffset(RegOffset);
     MachineMemOperand *NewMMO =
         MF->getMachineMemOperand(PInfo, MMO->getFlags(), RemEltSize,
-                                 commonAlignment(Alignment, RemRegOffset));
+                                 commonAlignment(Alignment, RegOffset));
 
     auto MIB =
         BuildMI(MBB, MI, DL, *Desc)
@@ -1265,7 +1271,7 @@ void SIRegisterInfo::buildSpillLoadStore(
     } else {
       MIB.addReg(SOffset, SOffsetRegState);
     }
-    MIB.addImm(Offset + RemRegOffset)
+    MIB.addImm(Offset + RegOffset)
        .addImm(0); // cpol
     if (!IsFlat)
       MIB.addImm(0)  // tfe
