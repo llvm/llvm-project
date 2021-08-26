@@ -126,7 +126,7 @@ static std::pair<Value *, Value *> getShape(IntrinsicInst *II, unsigned OpNo) {
     case 5:
       if (isa<ConstantInt>(II->getArgOperand(2)))
         Row = Builder.getInt16(
-            (dyn_cast<ConstantInt>(II->getOperand(2))->getSExtValue()) / 4);
+            (cast<ConstantInt>(II->getOperand(2))->getSExtValue()) / 4);
       else if (isa<Instruction>(II->getArgOperand(2))) {
         // When it is not a const value and it is not a function argument, we
         // create Row after the definition of II->getOperand(2) instead of

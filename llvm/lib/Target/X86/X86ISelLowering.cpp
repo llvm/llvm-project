@@ -5036,6 +5036,17 @@ static bool MayFoldLoad(SDValue Op) {
   return Op.hasOneUse() && ISD::isNormalLoad(Op.getNode());
 }
 
+static bool MayFoldLoadIntoBroadcastFromMem(SDValue Op, MVT EltVT) {
+  if (!MayFoldLoad(Op))
+    return false;
+
+  // We can not replace a wide volatile load with a broadcast-from-memory,
+  // because that would narrow the load, which isn't legal for volatiles.
+  const LoadSDNode *Ld = dyn_cast<LoadSDNode>(Op.getNode());
+  return !Ld->isVolatile() ||
+         Ld->getValueSizeInBits(0) == EltVT.getScalarSizeInBits();
+}
+
 static bool MayFoldIntoStore(SDValue Op) {
   return Op.hasOneUse() && ISD::isNormalStore(*Op.getNode()->use_begin());
 }
@@ -50876,7 +50887,8 @@ static SDValue combineConcatVectorOps(const SDLoc &DL, MVT VT,
 
     // concat_vectors(movddup(x),movddup(x)) -> broadcast(x)
     if (Op0.getOpcode() == X86ISD::MOVDDUP && VT == MVT::v4f64 &&
-        (Subtarget.hasAVX2() || MayFoldLoad(Op0.getOperand(0))))
+        (Subtarget.hasAVX2() || MayFoldLoadIntoBroadcastFromMem(
+                                    Op0.getOperand(0), VT.getScalarType())))
       return DAG.getNode(X86ISD::VBROADCAST, DL, VT,
                          DAG.getNode(ISD::EXTRACT_VECTOR_ELT, DL, MVT::f64,
                                      Op0.getOperand(0),

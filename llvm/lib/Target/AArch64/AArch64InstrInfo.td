@@ -4148,6 +4148,22 @@ defm FCVTXN : SIMDFPInexactCvtTwoVector<1, 0, 0b10110, "fcvtxn",
 defm FCVTZS : SIMDTwoVectorFPToInt<0, 1, 0b11011, "fcvtzs", fp_to_sint>;
 defm FCVTZU : SIMDTwoVectorFPToInt<1, 1, 0b11011, "fcvtzu", fp_to_uint>;
 
+// AArch64's FCVT instructions saturate when out of range.
+multiclass SIMDTwoVectorFPToIntSatPats<SDNode to_int_sat, string INST> {
+  def : Pat<(v4i16 (to_int_sat v4f16:$Rn, i16)),
+            (!cast<Instruction>(INST # v4f16) v4f16:$Rn)>;
+  def : Pat<(v8i16 (to_int_sat v8f16:$Rn, i16)),
+            (!cast<Instruction>(INST # v8f16) v8f16:$Rn)>;
+  def : Pat<(v2i32 (to_int_sat v2f32:$Rn, i32)),
+            (!cast<Instruction>(INST # v2f32) v2f32:$Rn)>;
+  def : Pat<(v4i32 (to_int_sat v4f32:$Rn, i32)),
+            (!cast<Instruction>(INST # v4f32) v4f32:$Rn)>;
+  def : Pat<(v2i64 (to_int_sat v2f64:$Rn, i64)),
+            (!cast<Instruction>(INST # v2f64) v2f64:$Rn)>;
+}
+defm : SIMDTwoVectorFPToIntSatPats<fp_to_sint_sat, "FCVTZS">;
+defm : SIMDTwoVectorFPToIntSatPats<fp_to_uint_sat, "FCVTZU">;
+
 def : Pat<(v4i16 (int_aarch64_neon_fcvtzs v4f16:$Rn)), (FCVTZSv4f16 $Rn)>;
 def : Pat<(v8i16 (int_aarch64_neon_fcvtzs v8f16:$Rn)), (FCVTZSv8f16 $Rn)>;
 def : Pat<(v2i32 (int_aarch64_neon_fcvtzs v2f32:$Rn)), (FCVTZSv2f32 $Rn)>;

@@ -1341,7 +1341,7 @@ void X86AsmPrinter::LowerASAN_CHECK_MEMACCESS(const MachineInstr &MI) {
   if (!Sym) {
     std::string Name = AccessInfo.IsWrite ? "store" : "load";
     std::string SymName = "__asan_check_" + Name +
-                          utostr(1 << AccessInfo.AccessSizeIndex) + "_rn" +
+                          utostr(1ULL << AccessInfo.AccessSizeIndex) + "_rn" +
                           utostr(Reg);
     Sym = OutContext.getOrCreateSymbol(SymName);
   }
@@ -1519,7 +1519,7 @@ void X86AsmPrinter::emitAsanReportError(Module &M, unsigned Reg,
                                         MCSubtargetInfo &STI) {
   std::string Name = AccessInfo.IsWrite ? "store" : "load";
   MCSymbol *ReportError = OutContext.getOrCreateSymbol(
-      "__asan_report_" + Name + utostr(1 << AccessInfo.AccessSizeIndex));
+      "__asan_report_" + Name + utostr(1ULL << AccessInfo.AccessSizeIndex));
   OutStreamer->emitInstruction(MCInstBuilder(X86::MOV64rr)
                                    .addReg(X86::RDI)
                                    .addReg(X86::NoRegister + Reg),

@@ -998,6 +998,9 @@ AArch64TargetLowering::AArch64TargetLowering(const TargetMachine &TM,
     setOperationAction(ISD::UINT_TO_FP, MVT::v1i64, Expand);
     setOperationAction(ISD::FP_ROUND, MVT::v1f64, Expand);
 
+    setOperationAction(ISD::FP_TO_SINT_SAT, MVT::v1i64, Expand);
+    setOperationAction(ISD::FP_TO_UINT_SAT, MVT::v1i64, Expand);
+
     setOperationAction(ISD::MUL, MVT::v1i64, Expand);
 
     // AArch64 doesn't have a direct vector ->f32 conversion instructions for
@@ -1461,6 +1464,8 @@ void AArch64TargetLowering::addTypeForNEON(MVT VT) {
 
   setOperationAction(ISD::FP_TO_SINT, VT, Custom);
   setOperationAction(ISD::FP_TO_UINT, VT, Custom);
+  setOperationAction(ISD::FP_TO_SINT_SAT, VT, Custom);
+  setOperationAction(ISD::FP_TO_UINT_SAT, VT, Custom);
 
   if (!VT.isFloatingPoint())
     setOperationAction(ISD::ABS, VT, Legal);
@@ -3382,31 +3387,77 @@ SDValue AArch64TargetLowering::LowerFP_TO_INT(SDValue Op,
   return SDValue();
 }
 
+SDValue
+AArch64TargetLowering::LowerVectorFP_TO_INT_SAT(SDValue Op,
+                                                SelectionDAG &DAG) const {
+  // AArch64 FP-to-int conversions saturate to the destination element size, so
+  // we can lower common saturating conversions to simple instructions.
+  SDValue SrcVal = Op.getOperand(0);
+  EVT SrcVT = SrcVal.getValueType();
+  EVT DstVT = Op.getValueType();
+  EVT SatVT = cast<VTSDNode>(Op.getOperand(1))->getVT();
+
+  uint64_t SrcElementWidth = SrcVT.getScalarSizeInBits();
+  uint64_t DstElementWidth = DstVT.getScalarSizeInBits();
+  uint64_t SatWidth = SatVT.getScalarSizeInBits();
+  assert(SatWidth <= DstElementWidth &&
+         "Saturation width cannot exceed result width");
+
+  // TODO: Consider lowering to SVE operations, as in LowerVectorFP_TO_INT.
+  // Currently, the `llvm.fpto[su]i.sat.*` instrinsics don't accept scalable
+  // types, so this is hard to reach.
+  if (DstVT.isScalableVector())
+    return SDValue();
+
+  // TODO: Saturate to SatWidth explicitly.
+  if (SatWidth != DstElementWidth)
+    return SDValue();
+
+  EVT SrcElementVT = SrcVT.getVectorElementType();
+
+  // In the absence of FP16 support, promote f16 to f32, like
+  // LowerVectorFP_TO_INT().
+  if (SrcElementVT == MVT::f16 && !Subtarget->hasFullFP16()) {
+    MVT F32VT = MVT::getVectorVT(MVT::f32, SrcVT.getVectorNumElements());
+    return DAG.getNode(Op.getOpcode(), SDLoc(Op), DstVT,
+                       DAG.getNode(ISD::FP_EXTEND, SDLoc(Op), F32VT, SrcVal),
+                       Op.getOperand(1));
+  }
+
+  // Cases that we can emit directly.
+  if ((SrcElementWidth == DstElementWidth) &&
+      (SrcElementVT == MVT::f64 || SrcElementVT == MVT::f32 ||
+       (SrcElementVT == MVT::f16 && Subtarget->hasFullFP16()))) {
+    return Op;
+  }
+
+  // For all other cases, fall back on the expanded form.
+  return SDValue();
+}
+
 SDValue AArch64TargetLowering::LowerFP_TO_INT_SAT(SDValue Op,
                                                   SelectionDAG &DAG) const {
   // AArch64 FP-to-int conversions saturate to the destination register size, so
   // we can lower common saturating conversions to simple instructions.
   SDValue SrcVal = Op.getOperand(0);
-
   EVT SrcVT = SrcVal.getValueType();
-  EVT DstVT = Op.getValueType();
 
+  if (SrcVT.isVector())
+    return LowerVectorFP_TO_INT_SAT(Op, DAG);
+
+  EVT DstVT = Op.getValueType();
   EVT SatVT = cast<VTSDNode>(Op.getOperand(1))->getVT();
   uint64_t SatWidth = SatVT.getScalarSizeInBits();
   uint64_t DstWidth = DstVT.getScalarSizeInBits();
   assert(SatWidth <= DstWidth && "Saturation width cannot exceed result width");
 
-  // TODO: Support lowering of NEON and SVE conversions.
-  if (SrcVT.isVector())
-    return SDValue();
-
   // TODO: Saturate to SatWidth explicitly.
   if (SatWidth != DstWidth)
     return SDValue();
 
-  // In the absence of FP16 support, promote f32 to f16, like LowerFP_TO_INT().
+  // In the absence of FP16 support, promote f16 to f32, like LowerFP_TO_INT().
   if (SrcVT == MVT::f16 && !Subtarget->hasFullFP16())
-    return DAG.getNode(Op.getOpcode(), SDLoc(Op), Op.getValueType(),
+    return DAG.getNode(Op.getOpcode(), SDLoc(Op), DstVT,
                        DAG.getNode(ISD::FP_EXTEND, SDLoc(Op), MVT::f32, SrcVal),
                        Op.getOperand(1));
 

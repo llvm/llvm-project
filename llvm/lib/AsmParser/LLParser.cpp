@@ -4724,7 +4724,8 @@ bool LLParser::parseDICompileUnit(MDNode *&Result, bool IsDistinct) {
 ///                     virtuality: DW_VIRTUALTIY_pure_virtual,
 ///                     virtualIndex: 10, thisAdjustment: 4, flags: 11,
 ///                     spFlags: 10, isOptimized: false, templateParams: !4,
-///                     declaration: !5, retainedNodes: !6, thrownTypes: !7)
+///                     declaration: !5, retainedNodes: !6, thrownTypes: !7,
+///                     annotations: !8)
 bool LLParser::parseDISubprogram(MDNode *&Result, bool IsDistinct) {
   auto Loc = Lex.getLoc();
 #define VISIT_MD_FIELDS(OPTIONAL, REQUIRED)                                    \
@@ -4748,7 +4749,8 @@ bool LLParser::parseDISubprogram(MDNode *&Result, bool IsDistinct) {
   OPTIONAL(templateParams, MDField, );                                         \
   OPTIONAL(declaration, MDField, );                                            \
   OPTIONAL(retainedNodes, MDField, );                                          \
-  OPTIONAL(thrownTypes, MDField, );
+  OPTIONAL(thrownTypes, MDField, );                                            \
+  OPTIONAL(annotations, MDField, );
   PARSE_MD_FIELDS();
 #undef VISIT_MD_FIELDS
 
@@ -4767,7 +4769,7 @@ bool LLParser::parseDISubprogram(MDNode *&Result, bool IsDistinct) {
       (Context, scope.Val, name.Val, linkageName.Val, file.Val, line.Val,
        type.Val, scopeLine.Val, containingType.Val, virtualIndex.Val,
        thisAdjustment.Val, flags.Val, SPFlags, unit.Val, templateParams.Val,
-       declaration.Val, retainedNodes.Val, thrownTypes.Val));
+       declaration.Val, retainedNodes.Val, thrownTypes.Val, annotations.Val));
   return false;
 }
 

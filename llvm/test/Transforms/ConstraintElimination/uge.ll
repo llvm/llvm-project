@@ -3,253 +3,251 @@
 
 declare void @use(i1)
 
-define void @test_1_variable_constraint(i32 %x, i32 %y, i32 %z) {
+define void @test_1_variable_constraint(i8 %x, i8 %y, i8 %z) {
 ; CHECK-LABEL: @test_1_variable_constraint(
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[C_1:%.*]] = icmp uge i32 [[X:%.*]], [[Y:%.*]]
+; CHECK-NEXT:    [[C_1:%.*]] = icmp uge i8 [[X:%.*]], [[Y:%.*]]
 ; CHECK-NEXT:    br i1 [[C_1]], label [[BB1:%.*]], label [[BB2:%.*]]
 ; CHECK:       bb1:
-; CHECK-NEXT:    [[T_1:%.*]] = icmp uge i32 [[X]], [[Y]]
+; CHECK-NEXT:    [[T_1:%.*]] = icmp uge i8 [[X]], [[Y]]
 ; CHECK-NEXT:    call void @use(i1 true)
-; CHECK-NEXT:    [[C_2:%.*]] = icmp uge i32 [[X]], 10
+; CHECK-NEXT:    [[C_2:%.*]] = icmp uge i8 [[X]], 10
 ; CHECK-NEXT:    call void @use(i1 [[C_2]])
-; CHECK-NEXT:    [[C_3:%.*]] = icmp uge i32 [[Y]], [[X]]
+; CHECK-NEXT:    [[C_3:%.*]] = icmp uge i8 [[Y]], [[X]]
 ; CHECK-NEXT:    call void @use(i1 [[C_3]])
-; CHECK-NEXT:    [[C_4:%.*]] = icmp uge i32 10, [[X]]
+; CHECK-NEXT:    [[C_4:%.*]] = icmp uge i8 10, [[X]]
 ; CHECK-NEXT:    call void @use(i1 [[C_4]])
 ; CHECK-NEXT:    ret void
 ; CHECK:       bb2:
-; CHECK-NEXT:    [[T_2:%.*]] = icmp uge i32 [[Y]], [[X]]
+; CHECK-NEXT:    [[T_2:%.*]] = icmp uge i8 [[Y]], [[X]]
 ; CHECK-NEXT:    call void @use(i1 true)
-; CHECK-NEXT:    [[F_1:%.*]] = icmp uge i32 [[X]], [[Y]]
+; CHECK-NEXT:    [[F_1:%.*]] = icmp uge i8 [[X]], [[Y]]
 ; CHECK-NEXT:    call void @use(i1 false)
-; CHECK-NEXT:    [[C_5:%.*]] = icmp uge i32 [[X]], 10
+; CHECK-NEXT:    [[C_5:%.*]] = icmp uge i8 [[X]], 10
 ; CHECK-NEXT:    call void @use(i1 [[C_5]])
-; CHECK-NEXT:    [[C_6:%.*]] = icmp uge i32 10, [[X]]
+; CHECK-NEXT:    [[C_6:%.*]] = icmp uge i8 10, [[X]]
 ; CHECK-NEXT:    call void @use(i1 [[C_6]])
 ; CHECK-NEXT:    ret void
 ;
 entry:
-  %c.1 = icmp uge i32 %x, %y
+  %c.1 = icmp uge i8 %x, %y
   br i1 %c.1, label %bb1, label %bb2
 
 bb1:
-  %t.1 = icmp uge i32 %x, %y
+  %t.1 = icmp uge i8 %x, %y
   call void @use(i1 %t.1)
-  %c.2 = icmp uge i32 %x, 10
+  %c.2 = icmp uge i8 %x, 10
   call void @use(i1 %c.2)
-  %c.3 = icmp uge i32 %y, %x
+  %c.3 = icmp uge i8 %y, %x
   call void @use(i1 %c.3)
-  %c.4 = icmp uge i32 10, %x
+  %c.4 = icmp uge i8 10, %x
   call void @use(i1 %c.4)
   ret void
 
 bb2:
-  %t.2 = icmp uge i32 %y, %x
+  %t.2 = icmp uge i8 %y, %x
   call void @use(i1 %t.2)
-  %f.1 = icmp uge i32 %x, %y
+  %f.1 = icmp uge i8 %x, %y
   call void @use(i1 %f.1)
-  %c.5 = icmp uge i32 %x, 10
+  %c.5 = icmp uge i8 %x, 10
   call void @use(i1 %c.5)
-  %c.6 = icmp uge i32 10, %x
+  %c.6 = icmp uge i8 10, %x
   call void @use(i1 %c.6)
   ret void
 }
 
-define void @test_1_constant_constraint(i32 %x) {
+define void @test_1_constant_constraint(i8 %x) {
 ; CHECK-LABEL: @test_1_constant_constraint(
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[C_1:%.*]] = icmp uge i32 [[X:%.*]], 10
+; CHECK-NEXT:    [[C_1:%.*]] = icmp uge i8 [[X:%.*]], 10
 ; CHECK-NEXT:    br i1 [[C_1]], label [[BB1:%.*]], label [[BB2:%.*]]
 ; CHECK:       bb1:
-; CHECK-NEXT:    [[T_1:%.*]] = icmp uge i32 [[X]], 10
+; CHECK-NEXT:    [[T_1:%.*]] = icmp uge i8 [[X]], 10
 ; CHECK-NEXT:    call void @use(i1 true)
-; CHECK-NEXT:    [[T_2:%.*]] = icmp uge i32 [[X]], 9
+; CHECK-NEXT:    [[T_2:%.*]] = icmp uge i8 [[X]], 9
 ; CHECK-NEXT:    call void @use(i1 true)
-; CHECK-NEXT:    [[C_2:%.*]] = icmp uge i32 [[X]], 11
+; CHECK-NEXT:    [[C_2:%.*]] = icmp uge i8 [[X]], 11
 ; CHECK-NEXT:    call void @use(i1 [[C_2]])
-; CHECK-NEXT:    [[C_4:%.*]] = icmp uge i32 10, [[X]]
+; CHECK-NEXT:    [[C_4:%.*]] = icmp uge i8 10, [[X]]
 ; CHECK-NEXT:    call void @use(i1 [[C_4]])
 ; CHECK-NEXT:    ret void
 ; CHECK:       bb2:
-; CHECK-NEXT:    [[T_3:%.*]] = icmp uge i32 11, [[X]]
+; CHECK-NEXT:    [[T_3:%.*]] = icmp uge i8 11, [[X]]
 ; CHECK-NEXT:    call void @use(i1 true)
-; CHECK-NEXT:    [[F_1:%.*]] = icmp uge i32 [[X]], 10
+; CHECK-NEXT:    [[F_1:%.*]] = icmp uge i8 [[X]], 10
 ; CHECK-NEXT:    call void @use(i1 false)
-; CHECK-NEXT:    [[F_1_1:%.*]] = icmp uge i32 [[X]], 10
+; CHECK-NEXT:    [[F_1_1:%.*]] = icmp uge i8 [[X]], 10
 ; CHECK-NEXT:    call void @use(i1 false)
-; CHECK-NEXT:    [[C_5:%.*]] = icmp uge i32 [[X]], 9
+; CHECK-NEXT:    [[C_5:%.*]] = icmp uge i8 [[X]], 9
 ; CHECK-NEXT:    call void @use(i1 [[C_5]])
-; CHECK-NEXT:    [[C_6:%.*]] = icmp uge i32 1, [[X]]
+; CHECK-NEXT:    [[C_6:%.*]] = icmp uge i8 1, [[X]]
 ; CHECK-NEXT:    call void @use(i1 [[C_6]])
 ; CHECK-NEXT:    ret void
 ;
 entry:
-  %c.1 = icmp uge i32 %x, 10
+  %c.1 = icmp uge i8 %x, 10
   br i1 %c.1, label %bb1, label %bb2
 
 bb1:
-  %t.1 = icmp uge i32 %x, 10
+  %t.1 = icmp uge i8 %x, 10
   call void @use(i1 %t.1)
-  %t.2 = icmp uge i32 %x, 9
+  %t.2 = icmp uge i8 %x, 9
   call void @use(i1 %t.2)
-  %c.2 = icmp uge i32 %x, 11
+  %c.2 = icmp uge i8 %x, 11
   call void @use(i1 %c.2)
-  %c.4 = icmp uge i32 10, %x
+  %c.4 = icmp uge i8 10, %x
   call void @use(i1 %c.4)
   ret void
 
 bb2:
-  %t.3 = icmp uge i32 11, %x
+  %t.3 = icmp uge i8 11, %x
   call void @use(i1 %t.3)
-  %f.1 = icmp uge i32 %x, 10
+  %f.1 = icmp uge i8 %x, 10
   call void @use(i1 %f.1)
 
 
-  %f.1.1 = icmp uge i32 %x, 10
+  %f.1.1 = icmp uge i8 %x, 10
   call void @use(i1 %f.1.1)
-  %c.5 = icmp uge i32 %x, 9
+  %c.5 = icmp uge i8 %x, 9
   call void @use(i1 %c.5)
-  %c.6 = icmp uge i32 1, %x
+  %c.6 = icmp uge i8 1, %x
   call void @use(i1 %c.6)
   ret void
 }
 
-define i32 @test1(i32 %x, i32 %y, i32 %z) {
+define i8 @test1(i8 %x, i8 %y, i8 %z) {
 ; CHECK-LABEL: @test1(
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[C_1:%.*]] = icmp uge i32 [[X:%.*]], [[Y:%.*]]
+; CHECK-NEXT:    [[C_1:%.*]] = icmp uge i8 [[X:%.*]], [[Y:%.*]]
 ; CHECK-NEXT:    br i1 [[C_1]], label [[BB1:%.*]], label [[EXIT:%.*]]
 ; CHECK:       bb1:
-; CHECK-NEXT:    [[C_2:%.*]] = icmp uge i32 [[Y]], [[Z:%.*]]
+; CHECK-NEXT:    [[C_2:%.*]] = icmp uge i8 [[Y]], [[Z:%.*]]
 ; CHECK-NEXT:    br i1 [[C_2]], label [[BB2:%.*]], label [[EXIT]]
 ; CHECK:       bb2:
-; CHECK-NEXT:    [[C_3:%.*]] = icmp uge i32 [[X]], [[Z]]
+; CHECK-NEXT:    [[C_3:%.*]] = icmp uge i8 [[X]], [[Z]]
 ; CHECK-NEXT:    br i1 true, label [[BB3:%.*]], label [[EXIT]]
 ; CHECK:       bb3:
-; CHECK-NEXT:    ret i32 10
+; CHECK-NEXT:    ret i8 10
 ; CHECK:       exit:
-; CHECK-NEXT:    ret i32 20
+; CHECK-NEXT:    ret i8 20
 ;
 entry:
-  %c.1 = icmp uge i32 %x, %y
+  %c.1 = icmp uge i8 %x, %y
   br i1 %c.1, label %bb1, label %exit
 
 bb1:
-  %c.2 = icmp uge i32 %y, %z
+  %c.2 = icmp uge i8 %y, %z
   br i1 %c.2, label %bb2, label %exit
 
 bb2:
-  %c.3 = icmp uge i32 %x, %z
+  %c.3 = icmp uge i8 %x, %z
   br i1 %c.3, label %bb3, label %exit
 
 bb3:
-  ret i32 10
+  ret i8 10
 
 exit:
-  ret i32 20
+  ret i8 20
 }
 
 
-define i32 @test2(i32 %x, i32 %y, i32 %z, i32 %a) {
+define i8 @test2(i8 %x, i8 %y, i8 %z, i8 %a) {
 ; CHECK-LABEL: @test2(
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[C_1:%.*]] = icmp uge i32 [[X:%.*]], [[Y:%.*]]
+; CHECK-NEXT:    [[C_1:%.*]] = icmp uge i8 [[X:%.*]], [[Y:%.*]]
 ; CHECK-NEXT:    br i1 [[C_1]], label [[BB1:%.*]], label [[EXIT:%.*]]
 ; CHECK:       bb1:
-; CHECK-NEXT:    [[C_2:%.*]] = icmp uge i32 [[Y]], [[Z:%.*]]
+; CHECK-NEXT:    [[C_2:%.*]] = icmp uge i8 [[Y]], [[Z:%.*]]
 ; CHECK-NEXT:    br i1 [[C_2]], label [[BB2:%.*]], label [[EXIT]]
 ; CHECK:       bb2:
-; CHECK-NEXT:    [[C_3:%.*]] = icmp uge i32 [[X]], [[A:%.*]]
+; CHECK-NEXT:    [[C_3:%.*]] = icmp uge i8 [[X]], [[A:%.*]]
 ; CHECK-NEXT:    br i1 [[C_3]], label [[BB3:%.*]], label [[EXIT]]
 ; CHECK:       bb3:
-; CHECK-NEXT:    ret i32 10
+; CHECK-NEXT:    ret i8 10
 ; CHECK:       exit:
-; CHECK-NEXT:    ret i32 20
+; CHECK-NEXT:    ret i8 20
 ;
 entry:
-  %c.1 = icmp uge i32 %x, %y
+  %c.1 = icmp uge i8 %x, %y
   br i1 %c.1, label %bb1, label %exit
 
 bb1:
-  %c.2 = icmp uge i32 %y, %z
+  %c.2 = icmp uge i8 %y, %z
   br i1 %c.2, label %bb2, label %exit
 
 bb2:
-  %c.3 = icmp uge i32 %x, %a
+  %c.3 = icmp uge i8 %x, %a
   br i1 %c.3, label %bb3, label %exit
 
 bb3:
-  ret i32 10
+  ret i8 10
 
 exit:
-  ret i32 20
+  ret i8 20
 }
 
 
-define i32 @test3(i32 %x, i32 %y) {
+define i8 @test3(i8 %x, i8 %y) {
 ; CHECK-LABEL: @test3(
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[C_1:%.*]] = icmp uge i32 [[X:%.*]], 10
+; CHECK-NEXT:    [[C_1:%.*]] = icmp uge i8 [[X:%.*]], 10
 ; CHECK-NEXT:    br i1 [[C_1]], label [[BB1:%.*]], label [[EXIT:%.*]]
 ; CHECK:       bb1:
-; CHECK-NEXT:    [[C_2:%.*]] = icmp uge i32 [[Y:%.*]], 20
+; CHECK-NEXT:    [[C_2:%.*]] = icmp uge i8 [[Y:%.*]], 20
 ; CHECK-NEXT:    br i1 [[C_2]], label [[BB2:%.*]], label [[EXIT]]
 ; CHECK:       bb2:
-; CHECK-NEXT:    ret i32 10
+; CHECK-NEXT:    ret i8 10
 ; CHECK:       exit:
-; CHECK-NEXT:    ret i32 20
+; CHECK-NEXT:    ret i8 20
 ;
 entry:
-  %c.1 = icmp uge i32 %x, 10
+  %c.1 = icmp uge i8 %x, 10
   br i1 %c.1, label %bb1, label %exit
 
 bb1:
-  %c.2 = icmp uge i32 %y, 20
+  %c.2 = icmp uge i8 %y, 20
   br i1 %c.2, label %bb2, label %exit
 
 bb2:
-  ret i32 10
+  ret i8 10
 
 exit:
-  ret i32 20
+  ret i8 20
 }
 
-define i32 @test4(i32 %x, i32 %y, i32 %z) {
+define i8 @test4(i8 %x, i8 %y, i8 %z) {
 ; CHECK-LABEL: @test4(
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[C_1:%.*]] = icmp uge i32 [[X:%.*]], [[Y:%.*]]
+; CHECK-NEXT:    [[C_1:%.*]] = icmp uge i8 [[X:%.*]], [[Y:%.*]]
 ; CHECK-NEXT:    br i1 [[C_1]], label [[BB1:%.*]], label [[EXIT:%.*]]
 ; CHECK:       bb1:
-; CHECK-NEXT:    [[C_2:%.*]] = icmp uge i32 [[Y]], [[Z:%.*]]
+; CHECK-NEXT:    [[C_2:%.*]] = icmp uge i8 [[Y]], [[Z:%.*]]
 ; CHECK-NEXT:    br i1 [[C_2]], label [[BB2:%.*]], label [[EXIT]]
 ; CHECK:       bb2:
-; CHECK-NEXT:    [[T_1:%.*]] = icmp uge i32 [[X]], [[Z]]
+; CHECK-NEXT:    [[T_1:%.*]] = icmp uge i8 [[X]], [[Z]]
 ; CHECK-NEXT:    call void @use(i1 true)
-; CHECK-NEXT:    [[U_1:%.*]] = icmp eq i32 [[X]], [[Z]]
+; CHECK-NEXT:    [[U_1:%.*]] = icmp eq i8 [[X]], [[Z]]
 ; CHECK-NEXT:    call void @use(i1 [[U_1]])
-; CHECK-NEXT:    ret i32 10
+; CHECK-NEXT:    ret i8 10
 ; CHECK:       exit:
-; CHECK-NEXT:    ret i32 20
+; CHECK-NEXT:    ret i8 20
 ;
 entry:
-  %c.1 = icmp uge i32 %x, %y
+  %c.1 = icmp uge i8 %x, %y
   br i1 %c.1, label %bb1, label %exit
 
 bb1:
-  %c.2 = icmp uge i32 %y, %z
+  %c.2 = icmp uge i8 %y, %z
   br i1 %c.2, label %bb2, label %exit
 
 bb2:
-  %t.1 = icmp uge i32 %x, %z
+  %t.1 = icmp uge i8 %x, %z
   call void @use(i1 %t.1)
-  %u.1 = icmp eq i32 %x, %z
+  %u.1 = icmp eq i8 %x, %z
   call void @use(i1 %u.1)
-  ret i32 10
+  ret i8 10
 
 
 exit:
-  ret i32 20
+  ret i8 20
 }
-
-
