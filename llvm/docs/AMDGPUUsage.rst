@@ -12140,7 +12140,9 @@ terminated by an ``.end_amdhsa_kernel`` directive.
                                                               Feature                          :ref:`amdgpu-amdhsa-kernel-descriptor-v3-table`.
                                                               Specific
                                                               (wavefrontsize64)
-     ``.amdhsa_system_sgpr_private_segment_wavefront_offset`` 0                   GFX6-GFX11   Controls ENABLE_PRIVATE_SEGMENT in
+     ``.amdhsa_system_sgpr_private_segment_wavefront_offset`` 0                   GFX6-GFX10   Controls ENABLE_PRIVATE_SEGMENT in
+                                                                                               :ref:`amdgpu-amdhsa-compute_pgm_rsrc2-gfx6-gfx11-table`.
+     ``.amdhsa_enable_private_segment``                       0                   GFX11        Controls ENABLE_PRIVATE_SEGMENT in
                                                                                                :ref:`amdgpu-amdhsa-compute_pgm_rsrc2-gfx6-gfx11-table`.
      ``.amdhsa_system_sgpr_workgroup_id_x``                   1                   GFX6-GFX11   Controls ENABLE_SGPR_WORKGROUP_ID_X in
                                                                                                :ref:`amdgpu-amdhsa-compute_pgm_rsrc2-gfx6-gfx11-table`.
@@ -12200,7 +12202,7 @@ terminated by an ``.end_amdhsa_kernel`` directive.
                                                               Feature                          :ref:`amdgpu-amdhsa-compute_pgm_rsrc3-gfx90a-table`.
                                                               Specific
                                                               (tgsplit)
-     ``.amdhsa_workgroup_processor_mode``                     Target              GFX10-FX11   Controls ENABLE_WGP_MODE in
+     ``.amdhsa_workgroup_processor_mode``                     Target              GFX10-GFX11  Controls ENABLE_WGP_MODE in
                                                               Feature                          :ref:`amdgpu-amdhsa-kernel-descriptor-v3-table`.
                                                               Specific
                                                               (cumode)
