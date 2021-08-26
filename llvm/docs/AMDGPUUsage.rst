@@ -1719,7 +1719,7 @@ mapping.
    512            VCC_32            32       Vector Condition Code Register
                                              when executing in wavefront 32
                                              mode.
-   513-1023       *Reserved*                 *Reserved for future Vector
+   513-767        *Reserved*                 *Reserved for future Vector
                                              Architectural Registers when
                                              executing in wavefront 32 mode.*
    768            VCC_64            64       Vector Condition Code Register

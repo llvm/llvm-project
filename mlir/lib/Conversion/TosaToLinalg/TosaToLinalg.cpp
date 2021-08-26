@@ -615,16 +615,27 @@ elementwiseMatchAndRewriteHelper(Operation *operation,
 
   SmallVector<Type> opResultTypes;
   SmallVector<Value> initTensors;
+
+  SmallVector<Value> dynDims;
+  dynDims.resize(results.front().getType().cast<ShapedType>().getRank());
+
+  for (auto arg : operation->getOperands()) {
+    auto operandTy = arg.getType().cast<ShapedType>();
+    for (int i = 0; i < operandTy.getRank(); i++) {
+      if (operandTy.isDynamicDim(i) && !dynDims[i])
+        dynDims[i] = rewriter.create<tensor::DimOp>(loc, arg, i);
+    }
+  }
+
+  SmallVector<Value> filteredDims;
+  for (auto dim : dynDims)
+    if (dim)
+      filteredDims.push_back(dim);
+
   for (auto result : results) {
     auto resultTy = result.getType().template cast<ShapedType>();
-    if (!resultTy.hasStaticShape())
-      return rewriter.notifyMatchFailure(
-          operation,
-          "tosa to linalg conversion expects statically shaped tensors");
-
     initTensors.push_back(rewriter.create<linalg::InitTensorOp>(
-        loc, ArrayRef<Value>({}), resultTy.getShape(),
-        resultTy.getElementType()));
+        loc, filteredDims, resultTy.getShape(), resultTy.getElementType()));
     opResultTypes.push_back(result.getType());
   }
 

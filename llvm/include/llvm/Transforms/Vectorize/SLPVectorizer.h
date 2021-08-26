@@ -95,8 +95,7 @@ private:
 
   /// Try to vectorize a list of operands.
   /// \returns true if a value was vectorized.
-  bool tryToVectorizeList(ArrayRef<Value *> VL, slpvectorizer::BoUpSLP &R,
-                          bool AllowReorder = false);
+  bool tryToVectorizeList(ArrayRef<Value *> VL, slpvectorizer::BoUpSLP &R);
 
   /// Try to vectorize a chain that may start at the operands of \p I.
   bool tryToVectorize(Instruction *I, slpvectorizer::BoUpSLP &R);

@@ -55,6 +55,34 @@ func @test_abs(%arg0: tensor<2x3xf32>) -> tensor<2x3xf32> {
 
 // -----
 
+// CHECK-LABEL: @test_abs
+func @test_abs(%arg0: tensor<?xf32>) -> tensor<?xf32> {
+  // CHECK: %[[C0:.+]] = constant 0
+  // CHECK: %[[DIM:.+]] = tensor.dim %arg0, %[[C0]]
+  // CHECK: %[[INIT:.+]] = linalg.init_tensor [%[[DIM]]]
+  // CHECK: linalg.generic
+  // CHECK: absf
+  %0 = "tosa.abs"(%arg0) : (tensor<?xf32>) -> tensor<?xf32>
+  return %0 : tensor<?xf32>
+}
+
+// -----
+
+// CHECK: #[[$MAP0:.*]] = affine_map<(d0, d1) -> (d0, d1)>
+
+// CHECK-LABEL: @test_abs_dyn
+func @test_abs_dyn(%arg0: tensor<2x?xf32>) -> tensor<2x?xf32> {
+  // CHECK: %[[C1:.+]] = constant 1
+  // CHECK: %[[DIM:.+]] = tensor.dim %arg0, %[[C1]]
+  // CHECK: %[[INIT:.+]] = linalg.init_tensor [2, %[[DIM]]]
+  // CHECK: linalg.generic
+  // CHECK: absf
+  %0 = "tosa.abs"(%arg0) : (tensor<2x?xf32>) -> tensor<2x?xf32>
+  return %0 : tensor<2x?xf32>
+}
+// -----
+
+
 // CHECK: #[[$MAP0:.*]] = affine_map<(d0) -> ()>
 // CHECK: #[[$MAP1:.*]] = affine_map<(d0) -> (d0)>
 
@@ -107,14 +135,6 @@ func @test_multibroadcast(%arg0: tensor<1x3xf32>, %arg1: tensor<2x1xf32>) -> ten
   // CHECK: } -> tensor<2x3xf32>
   %0 = "tosa.add"(%arg0, %arg1) : (tensor<1x3xf32>, tensor<2x1xf32>) -> tensor<2x3xf32>
   return %0 : tensor<2x3xf32>
-}
-
-// -----
-
-func @test_abs(%arg0: tensor<?xf32>) -> tensor<?xf32> {
-  // expected-error @+1 {{failed to legalize operation 'tosa.abs'}}
-  %0 = "tosa.abs"(%arg0) : (tensor<?xf32>) -> tensor<?xf32>
-  return %0 : tensor<?xf32>
 }
 
 // -----
