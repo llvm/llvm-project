@@ -133,6 +133,7 @@ get_local_func_address:
 # CHECK-NEXT:     TableSize:       2
 # CHECK-NEXT:     TableAlignment:  0
 # CHECK-NEXT:     Needed:          []
+# CHECK-NEXT:     ExportInfo:      []
 # CHECK-NEXT:   - Type:            TYPE
 
 # check for import of __table_base and __memory_base globals

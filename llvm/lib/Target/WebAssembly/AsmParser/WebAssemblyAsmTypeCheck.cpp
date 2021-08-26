@@ -155,8 +155,12 @@ bool WebAssemblyAsmTypeCheck::getGlobal(SMLoc ErrorLoc, const MCInst &Inst,
     break;
   case wasm::WASM_SYMBOL_TYPE_FUNCTION:
   case wasm::WASM_SYMBOL_TYPE_DATA:
-    if (SymRef->getKind() == MCSymbolRefExpr::VK_GOT) {
+    switch (SymRef->getKind()) {
+    case MCSymbolRefExpr::VK_GOT:
+    case MCSymbolRefExpr::VK_WASM_GOT_TLS:
       Type = is64 ? wasm::ValType::I64 : wasm::ValType::I32;
+      return false;
+    default:
       break;
     }
     LLVM_FALLTHROUGH;

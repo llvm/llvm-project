@@ -20,7 +20,7 @@ tls_store:
 
 tls_get_undefined:
   .functype tls_get_undefined (i32) -> (i32)
-  i32.const tls_undefined@TLSREL
+  global.get tls_undefined@GOT@TLS
   end_function
 
 .section .tls.foo,"T",@
@@ -43,6 +43,9 @@ tls2:
 # CHECK-OBJ-NEXT:      - Type:            R_WASM_MEMORY_ADDR_TLS_SLEB
 # CHECK-OBJ-NEXT:        Index:           2
 # CHECK-OBJ-NEXT:        Offset:          0xA
+# CHECK-OBJ-NEXT:      - Type:            R_WASM_GLOBAL_INDEX_LEB
+# CHECK-OBJ-NEXT:        Index:           4
+# CHECK-OBJ-NEXT:        Offset:          0x19
 
 #      CHECK-OBJ:  - Type:            CUSTOM
 # CHECK-OBJ-NEXT:    Name:            linking

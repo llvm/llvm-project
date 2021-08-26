@@ -398,6 +398,11 @@ def : Pat<(i32 (WebAssemblyWrapperREL tglobaltlsaddr:$addr)),
 def : Pat<(i64 (WebAssemblyWrapperREL tglobaltlsaddr:$addr)),
           (CONST_I64 tglobaltlsaddr:$addr)>, Requires<[HasAddr64]>;
 
+def : Pat<(i32 (WebAssemblyWrapper tglobaltlsaddr:$addr)),
+          (GLOBAL_GET_I32 tglobaltlsaddr:$addr)>, Requires<[HasAddr32]>;
+def : Pat<(i64 (WebAssemblyWrapper tglobaltlsaddr:$addr)),
+          (GLOBAL_GET_I64 tglobaltlsaddr:$addr)>, Requires<[HasAddr64]>;
+
 def : Pat<(i32 (WebAssemblyWrapper texternalsym:$addr)),
           (GLOBAL_GET_I32 texternalsym:$addr)>, Requires<[IsPIC, HasAddr32]>;
 def : Pat<(i64 (WebAssemblyWrapper texternalsym:$addr)),
