@@ -54,15 +54,15 @@ define i32 @callee_many_scalars(i8 %a, i16 %b, i32 %c, i128 %d, i32 %e, i32 %f, 
 ; RV64I-NEXT:    lui a0, 16
 ; RV64I-NEXT:    addiw a0, a0, -1
 ; RV64I-NEXT:    and a0, a1, a0
-; RV64I-NEXT:    add a0, t2, a0
-; RV64I-NEXT:    add a0, a0, a2
+; RV64I-NEXT:    addw a0, t2, a0
+; RV64I-NEXT:    addw a0, a0, a2
 ; RV64I-NEXT:    xor a1, a4, t1
 ; RV64I-NEXT:    xor a2, a3, a7
 ; RV64I-NEXT:    or a1, a2, a1
 ; RV64I-NEXT:    seqz a1, a1
-; RV64I-NEXT:    add a0, a1, a0
-; RV64I-NEXT:    add a0, a0, a5
-; RV64I-NEXT:    add a0, a0, a6
+; RV64I-NEXT:    addw a0, a1, a0
+; RV64I-NEXT:    addw a0, a0, a5
+; RV64I-NEXT:    addw a0, a0, a6
 ; RV64I-NEXT:    addw a0, a0, t0
 ; RV64I-NEXT:    ret
   %a_ext = zext i8 %a to i32

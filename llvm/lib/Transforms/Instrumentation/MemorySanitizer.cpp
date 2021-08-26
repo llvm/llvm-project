@@ -3653,9 +3653,9 @@ struct MemorySanitizerVisitor : public InstVisitor<MemorySanitizerVisitor> {
           .addAttribute(Attribute::ArgMemOnly)
           .addAttribute(Attribute::Speculatable);
 
-      Call->removeAttributes(AttributeList::FunctionIndex, B);
+      Call->removeFnAttrs(B);
       if (Function *Func = Call->getCalledFunction()) {
-        Func->removeAttributes(AttributeList::FunctionIndex, B);
+        Func->removeFnAttrs(B);
       }
 
       maybeMarkSanitizerLibraryCallNoBuiltin(Call, TLI);
@@ -3807,7 +3807,7 @@ struct MemorySanitizerVisitor : public InstVisitor<MemorySanitizerVisitor> {
     if (isAMustTailRetVal(RetVal)) return;
     Value *ShadowPtr = getShadowPtrForRetval(RetVal, IRB);
     bool HasNoUndef =
-        F.hasAttribute(AttributeList::ReturnIndex, Attribute::NoUndef);
+        F.hasRetAttribute(Attribute::NoUndef);
     bool StoreShadow = !(ClEagerChecks && HasNoUndef);
     // FIXME: Consider using SpecialCaseList to specify a list of functions that
     // must always return fully initialized values. For now, we hardcode "main".
@@ -4176,7 +4176,7 @@ struct VarArgAMD64Helper : public VarArgHelper {
                     MemorySanitizerVisitor &MSV)
       : F(F), MS(MS), MSV(MSV) {
     AMD64FpEndOffset = AMD64FpEndOffsetSSE;
-    for (const auto &Attr : F.getAttributes().getFnAttributes()) {
+    for (const auto &Attr : F.getAttributes().getFnAttrs()) {
       if (Attr.isStringAttribute() &&
           (Attr.getKindAsString() == "target-features")) {
         if (Attr.getValueAsString().contains("-sse"))
@@ -5330,6 +5330,9 @@ bool MemorySanitizer::sanitizeFunction(Function &F, TargetLibraryInfo &TLI) {
   if (!CompileKernel && F.getName() == kMsanModuleCtorName)
     return false;
 
+  if (F.hasFnAttribute(Attribute::DisableSanitizerInstrumentation))
+    return false;
+
   MemorySanitizerVisitor Visitor(F, *this, TLI);
 
   // Clear out readonly/readnone attributes.
@@ -5339,7 +5342,7 @@ bool MemorySanitizer::sanitizeFunction(Function &F, TargetLibraryInfo &TLI) {
       .addAttribute(Attribute::WriteOnly)
       .addAttribute(Attribute::ArgMemOnly)
       .addAttribute(Attribute::Speculatable);
-  F.removeAttributes(AttributeList::FunctionIndex, B);
+  F.removeFnAttrs(B);
 
   return Visitor.runOnFunction();
 }

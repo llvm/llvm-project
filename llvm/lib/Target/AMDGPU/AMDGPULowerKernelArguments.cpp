@@ -82,9 +82,9 @@ bool AMDGPULowerKernelArguments::runOnFunction(Function &F) {
       Builder.CreateIntrinsic(Intrinsic::amdgcn_kernarg_segment_ptr, {}, {},
                               nullptr, F.getName() + ".kernarg.segment");
 
-  KernArgSegment->addAttribute(AttributeList::ReturnIndex, Attribute::NonNull);
-  KernArgSegment->addAttribute(AttributeList::ReturnIndex,
-    Attribute::getWithDereferenceableBytes(Ctx, TotalKernArgSize));
+  KernArgSegment->addRetAttr(Attribute::NonNull);
+  KernArgSegment->addRetAttr(
+      Attribute::getWithDereferenceableBytes(Ctx, TotalKernArgSize));
 
   unsigned AS = KernArgSegment->getType()->getPointerAddressSpace();
   uint64_t ExplicitArgOffset = 0;
@@ -232,8 +232,7 @@ bool AMDGPULowerKernelArguments::runOnFunction(Function &F) {
     }
   }
 
-  KernArgSegment->addAttribute(
-      AttributeList::ReturnIndex,
+  KernArgSegment->addRetAttr(
       Attribute::getWithAlignment(Ctx, std::max(KernArgBaseAlign, MaxAlign)));
 
   return true;

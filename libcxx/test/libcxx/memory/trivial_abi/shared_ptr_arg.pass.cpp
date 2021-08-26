@@ -12,8 +12,7 @@
 
 // ADDITIONAL_COMPILE_FLAGS: -D_LIBCPP_ABI_ENABLE_SHARED_PTR_TRIVIAL_ABI
 
-// There were assertion failures in both parse and codegen, which are fixed in clang 11.
-// UNSUPPORTED: gcc, clang-4, clang-5, clang-6, clang-7, clang-8, clang-9, clang-10
+// XFAIL: gcc
 // UNSUPPORTED: c++03
 
 #include <memory>

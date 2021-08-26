@@ -105,6 +105,23 @@ block:
   ret void
 }
 
+define i16 @foo3() {
+; CHECK-LABEL: define {{[^@]+}}@foo3() {
+; CHECK-NEXT:    [[CALL:%.*]] = call i16 bitcast (i16 (i16*, i16)* @bar3 to i16 ()*)()
+; CHECK-NEXT:    ret i16 [[CALL]]
+;
+  %call = call i16 bitcast (i16 (i16*, i16) * @bar3 to i16 () *)()
+  ret i16 %call
+}
+define internal i16 @bar3(i16* %p1, i16 %p2) {
+; CHECK: Function Attrs: nofree nosync nounwind readnone willreturn
+; CHECK-LABEL: define {{[^@]+}}@bar3
+; CHECK-SAME: (i16* nocapture nofree readnone [[P1:%.*]], i16 returned [[P2:%.*]]) #[[ATTR0]] {
+; CHECK-NEXT:    ret i16 [[P2]]
+;
+  ret i16 %p2
+}
+
 ; CHECK-LABEL: declare {{[^@]+}}@func6
 ; CHECK-SAME: (i8*)
 declare void @func6(i8*)

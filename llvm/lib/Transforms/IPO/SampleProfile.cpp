@@ -358,10 +358,10 @@ public:
       std::function<AssumptionCache &(Function &)> GetAssumptionCache,
       std::function<TargetTransformInfo &(Function &)> GetTargetTransformInfo,
       std::function<const TargetLibraryInfo &(Function &)> GetTLI)
-      : SampleProfileLoaderBaseImpl(std::string(Name)),
+      : SampleProfileLoaderBaseImpl(std::string(Name), std::string(RemapName)),
         GetAC(std::move(GetAssumptionCache)),
         GetTTI(std::move(GetTargetTransformInfo)), GetTLI(std::move(GetTLI)),
-        RemappingFilename(std::string(RemapName)), LTOPhase(LTOPhase) {}
+        LTOPhase(LTOPhase) {}
 
   bool doInitialization(Module &M, FunctionAnalysisManager *FAM = nullptr);
   bool runOnModule(Module &M, ModuleAnalysisManager *AM,
@@ -416,9 +416,6 @@ protected:
 
   /// Profile tracker for different context.
   std::unique_ptr<SampleContextTracker> ContextTracker;
-
-  /// Name of the profile remapping file to load.
-  std::string RemappingFilename;
 
   /// Flag indicating whether input profile is context-sensitive
   bool ProfileIsCS = false;

@@ -32,7 +32,7 @@ _LIBCPP_BEGIN_NAMESPACE_STD
 
 #if !defined(_LIBCPP_HAS_NO_RANGES)
 
-namespace views {
+namespace ranges::views {
 
 namespace __all {
   struct __fn {
@@ -75,7 +75,7 @@ inline namespace __cpo {
 template<ranges::viewable_range _Range>
 using all_t = decltype(views::all(declval<_Range>()));
 
-} // namespace views
+} // namespace ranges::views
 
 #endif // !defined(_LIBCPP_HAS_NO_RANGES)
 

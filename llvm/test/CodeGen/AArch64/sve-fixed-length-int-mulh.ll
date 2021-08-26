@@ -1,11 +1,11 @@
 ; RUN: llc -aarch64-sve-vector-bits-min=128  < %s | FileCheck %s -D#VBYTES=16  -check-prefix=NO_SVE
-; RUN: llc -aarch64-sve-vector-bits-min=256  < %s | FileCheck %s -D#VBYTES=32  -check-prefixes=CHECK,VBITS_GE_256
+; RUN: llc -aarch64-sve-vector-bits-min=256  < %s | FileCheck %s -D#VBYTES=32  -check-prefixes=CHECK,VBITS_GE_256,VBITS_EQ_256
 ; RUN: llc -aarch64-sve-vector-bits-min=384  < %s | FileCheck %s -D#VBYTES=32  -check-prefixes=CHECK,VBITS_GE_256
-; RUN: llc -aarch64-sve-vector-bits-min=512  < %s | FileCheck %s -D#VBYTES=64  -check-prefixes=CHECK,VBITS_GE_512,VBITS_GE_256
+; RUN: llc -aarch64-sve-vector-bits-min=512  < %s | FileCheck %s -D#VBYTES=64  -check-prefixes=CHECK,VBITS_GE_512,VBITS_GE_256,VBITS_EQ_512
 ; RUN: llc -aarch64-sve-vector-bits-min=640  < %s | FileCheck %s -D#VBYTES=64  -check-prefixes=CHECK,VBITS_GE_512,VBITS_GE_256
 ; RUN: llc -aarch64-sve-vector-bits-min=768  < %s | FileCheck %s -D#VBYTES=64  -check-prefixes=CHECK,VBITS_GE_512,VBITS_GE_256
 ; RUN: llc -aarch64-sve-vector-bits-min=896  < %s | FileCheck %s -D#VBYTES=64  -check-prefixes=CHECK,VBITS_GE_512,VBITS_GE_256
-; RUN: llc -aarch64-sve-vector-bits-min=1024 < %s | FileCheck %s -D#VBYTES=128 -check-prefixes=CHECK,VBITS_GE_1024,VBITS_GE_512,VBITS_GE_256
+; RUN: llc -aarch64-sve-vector-bits-min=1024 < %s | FileCheck %s -D#VBYTES=128 -check-prefixes=CHECK,VBITS_GE_1024,VBITS_GE_512,VBITS_GE_256,VBITS_EQ_1024
 ; RUN: llc -aarch64-sve-vector-bits-min=1152 < %s | FileCheck %s -D#VBYTES=128 -check-prefixes=CHECK,VBITS_GE_1024,VBITS_GE_512,VBITS_GE_256
 ; RUN: llc -aarch64-sve-vector-bits-min=1280 < %s | FileCheck %s -D#VBYTES=128 -check-prefixes=CHECK,VBITS_GE_1024,VBITS_GE_512,VBITS_GE_256
 ; RUN: llc -aarch64-sve-vector-bits-min=1408 < %s | FileCheck %s -D#VBYTES=128 -check-prefixes=CHECK,VBITS_GE_1024,VBITS_GE_512,VBITS_GE_256
@@ -75,12 +75,19 @@ define <16 x i8> @smulh_v16i8(<16 x i8> %op1, <16 x i8> %op2) #0 {
 
 define void @smulh_v32i8(<32 x i8>* %a, <32 x i8>* %b) #0 {
 ; CHECK-LABEL: smulh_v32i8:
-; VBITS_GE_256: ptrue [[PG:p[0-9]+]].b, vl[[#min(VBYTES,32)]]
-; VBITS_GE_256-DAG: ld1b { [[OP1:z[0-9]+]].b }, [[PG]]/z, [x0]
-; VBITS_GE_256-DAG: ld1b { [[OP2:z[0-9]+]].b }, [[PG]]/z, [x1]
-; VBITS_GE_256: smulh [[RES:z[0-9]+]].b, [[PG]]/m, [[OP1]].b, [[OP2]].b
-; VBITS_GE_256: st1b { [[RES]].b }, [[PG]], [x0]
-; VBITS_GE_256: ret
+; VBITS_EQ_256: ptrue [[PG:p[0-9]+]].b, vl[[#min(VBYTES,32)]]
+; VBITS_EQ_256-DAG: ld1b { [[OP1:z[0-9]+]].b }, [[PG]]/z, [x0]
+; VBITS_EQ_256-DAG: ld1b { [[OP2:z[0-9]+]].b }, [[PG]]/z, [x1]
+; VBITS_EQ_256: smulh [[RES:z[0-9]+]].b, [[PG]]/m, [[OP1]].b, [[OP2]].b
+; VBITS_EQ_256: ret
+
+; VBITS_GE_512: ptrue [[PG:p[0-9]+]].h, vl[[#min(VBYTES,32)]]
+; VBITS_GE_512-DAG: ld1sb { [[OP1:z[0-9]+]].h }, [[PG]]/z, [x0]
+; VBITS_GE_512-DAG: ld1sb { [[OP2:z[0-9]+]].h }, [[PG]]/z, [x1]
+; VBITS_GE_512: mul [[RES:z[0-9]+]].h, [[PG]]/m, [[OP1]].h, [[OP2]].h
+; VBITS_GE_512: lsr [[RES]].h, [[PG]]/m, [[RES]].h, #8
+; VBITS_GE_512: st1b { [[RES]].h }, [[PG]], [x0]
+; VBITS_GE_512: ret
   %op1 = load <32 x i8>, <32 x i8>* %a
   %op2 = load <32 x i8>, <32 x i8>* %b
   %insert = insertelement <32 x i16> undef, i16 8, i64 0
@@ -96,12 +103,19 @@ define void @smulh_v32i8(<32 x i8>* %a, <32 x i8>* %b) #0 {
 
 define void @smulh_v64i8(<64 x i8>* %a, <64 x i8>* %b) #0 {
 ; CHECK-LABEL: smulh_v64i8:
-; VBITS_GE_512: ptrue [[PG:p[0-9]+]].b, vl[[#min(VBYTES,64)]]
-; VBITS_GE_512-DAG: ld1b { [[OP1:z[0-9]+]].b }, [[PG]]/z, [x0]
-; VBITS_GE_512-DAG: ld1b { [[OP2:z[0-9]+]].b }, [[PG]]/z, [x1]
-; VBITS_GE_512: smulh [[RES:z[0-9]+]].b, [[PG]]/m, [[OP1]].b, [[OP2]].b
-; VBITS_GE_512: st1b { [[RES]].b }, [[PG]], [x0]
-; VBITS_GE_512: ret
+; VBITS_EQ_512-DAG: ld1b { [[OP1:z[0-9]+]].b }, [[PG]]/z, [x0]
+; VBITS_EQ_512-DAG: ld1b { [[OP2:z[0-9]+]].b }, [[PG]]/z, [x1]
+; VBITS_EQ_512: smulh [[RES:z[0-9]+]].b, [[PG]]/m, [[OP1]].b, [[OP2]].b
+; VBITS_EQ_512: st1b { [[RES]].b }, [[PG]], [x0]
+; VBITS_EQ_512: ret
+
+; VBITS_GE_1024: ptrue [[PG:p[0-9]+]].h, vl[[#min(VBYTES,64)]]
+; VBITS_GE_1024-DAG: ld1sb { [[OP1:z[0-9]+]].h }, [[PG]]/z, [x0]
+; VBITS_GE_1024-DAG: ld1sb { [[OP2:z[0-9]+]].h }, [[PG]]/z, [x1]
+; VBITS_GE_1024: mul [[RES:z[0-9]+]].h, [[PG]]/m, [[OP1]].h, [[OP2]].h
+; VBITS_GE_1024: lsr [[RES]].h, [[PG]]/m, [[RES]].h, #8
+; VBITS_GE_1024: st1b { [[RES]].h }, [[PG]], [x0]
+; VBITS_GE_1024: ret
   %op1 = load <64 x i8>, <64 x i8>* %a
   %op2 = load <64 x i8>, <64 x i8>* %b
   %insert = insertelement <64 x i16> undef, i16 8, i64 0
@@ -117,12 +131,19 @@ define void @smulh_v64i8(<64 x i8>* %a, <64 x i8>* %b) #0 {
 
 define void @smulh_v128i8(<128 x i8>* %a, <128 x i8>* %b) #0 {
 ; CHECK-LABEL: smulh_v128i8:
-; VBITS_GE_1024: ptrue [[PG:p[0-9]+]].b, vl[[#min(VBYTES,128)]]
-; VBITS_GE_1024-DAG: ld1b { [[OP1:z[0-9]+]].b }, [[PG]]/z, [x0]
-; VBITS_GE_1024-DAG: ld1b { [[OP2:z[0-9]+]].b }, [[PG]]/z, [x1]
-; VBITS_GE_1024: smulh [[RES:z[0-9]+]].b, [[PG]]/m, [[OP1]].b, [[OP2]].b
-; VBITS_GE_1024: st1b { [[RES]].b }, [[PG]], [x0]
-; VBITS_GE_1024: ret
+; VBITS_EQ_1024-DAG: ld1b { [[OP1:z[0-9]+]].b }, [[PG]]/z, [x0]
+; VBITS_EQ_1024-DAG: ld1b { [[OP2:z[0-9]+]].b }, [[PG]]/z, [x1]
+; VBITS_EQ_1024: smulh [[RES:z[0-9]+]].b, [[PG]]/m, [[OP1]].b, [[OP2]].b
+; VBITS_EQ_1024: st1b { [[RES]].b }, [[PG]], [x0]
+; VBITS_EQ_1024: ret
+
+; VBITS_GE_2048: ptrue [[PG:p[0-9]+]].h, vl[[#min(VBYTES,128)]]
+; VBITS_GE_2048-DAG: ld1sb { [[OP1:z[0-9]+]].h }, [[PG]]/z, [x0]
+; VBITS_GE_2048-DAG: ld1sb { [[OP2:z[0-9]+]].h }, [[PG]]/z, [x1]
+; VBITS_GE_2048: mul [[RES:z[0-9]+]].h, [[PG]]/m, [[OP1]].h, [[OP2]].h
+; VBITS_GE_2048: lsr [[RES]].h, [[PG]]/m, [[RES]].h, #8
+; VBITS_GE_2048: st1b { [[RES]].h }, [[PG]], [x0]
+; VBITS_GE_2048: ret
   %op1 = load <128 x i8>, <128 x i8>* %a
   %op2 = load <128 x i8>, <128 x i8>* %b
   %insert = insertelement <128 x i16> undef, i16 8, i64 0
@@ -198,12 +219,20 @@ define <8 x i16> @smulh_v8i16(<8 x i16> %op1, <8 x i16> %op2) #0 {
 
 define void @smulh_v16i16(<16 x i16>* %a, <16 x i16>* %b) #0 {
 ; CHECK-LABEL: smulh_v16i16:
-; VBITS_GE_256: ptrue [[PG:p[0-9]+]].h, vl[[#min(VBYTES,16)]]
-; VBITS_GE_256-DAG: ld1h { [[OP1:z[0-9]+]].h }, [[PG]]/z, [x0]
-; VBITS_GE_256-DAG: ld1h { [[OP2:z[0-9]+]].h }, [[PG]]/z, [x1]
-; VBITS_GE_256: smulh [[RES:z[0-9]+]].h, [[PG]]/m, [[OP1]].h, [[OP2]].h
-; VBITS_GE_256: st1h { [[RES]].h }, [[PG]], [x0]
-; VBITS_GE_256: ret
+; VBITS_EQ_256: ptrue [[PG:p[0-9]+]].h, vl[[#min(VBYTES,16)]]
+; VBITS_EQ_256-DAG: ld1h { [[OP1:z[0-9]+]].h }, [[PG]]/z, [x0]
+; VBITS_EQ_256-DAG: ld1h { [[OP2:z[0-9]+]].h }, [[PG]]/z, [x1]
+; VBITS_EQ_256: smulh [[RES:z[0-9]+]].h, [[PG]]/m, [[OP1]].h, [[OP2]].h
+; VBITS_EQ_256: st1h { [[RES]].h }, [[PG]], [x0]
+; VBITS_EQ_256: ret
+
+; VBITS_GE_512: ptrue [[PG:p[0-9]+]].s, vl[[#min(VBYTES,16)]]
+; VBITS_GE_512-DAG: ld1sh { [[OP1:z[0-9]+]].s }, [[PG]]/z, [x0]
+; VBITS_GE_512-DAG: ld1sh { [[OP2:z[0-9]+]].s }, [[PG]]/z, [x1]
+; VBITS_GE_512: mul [[RES:z[0-9]+]].s, [[PG]]/m, [[OP1]].s, [[OP2]].s
+; VBITS_GE_512: lsr [[RES]].s, [[PG]]/m, [[RES]].s, #16
+; VBITS_GE_512: st1h { [[RES]].s }, [[PG]], [x0]
+; VBITS_GE_512: ret
   %op1 = load <16 x i16>, <16 x i16>* %a
   %op2 = load <16 x i16>, <16 x i16>* %b
   %insert = insertelement <16 x i32> undef, i32 16, i64 0
@@ -219,12 +248,20 @@ define void @smulh_v16i16(<16 x i16>* %a, <16 x i16>* %b) #0 {
 
 define void @smulh_v32i16(<32 x i16>* %a, <32 x i16>* %b) #0 {
 ; CHECK-LABEL: smulh_v32i16:
-; VBITS_GE_512: ptrue [[PG:p[0-9]+]].h, vl[[#min(VBYTES,32)]]
-; VBITS_GE_512-DAG: ld1h { [[OP1:z[0-9]+]].h }, [[PG]]/z, [x0]
-; VBITS_GE_512-DAG: ld1h { [[OP2:z[0-9]+]].h }, [[PG]]/z, [x1]
-; VBITS_GE_512: smulh [[RES:z[0-9]+]].h, [[PG]]/m, [[OP1]].h, [[OP2]].h
-; VBITS_GE_512: st1h { [[RES]].h }, [[PG]], [x0]
-; VBITS_GE_512: ret
+; VBITS_EQ_512: ptrue [[PG:p[0-9]+]].h, vl[[#min(VBYTES,32)]]
+; VBITS_EQ_512-DAG: ld1h { [[OP1:z[0-9]+]].h }, [[PG]]/z, [x0]
+; VBITS_EQ_512-DAG: ld1h { [[OP2:z[0-9]+]].h }, [[PG]]/z, [x1]
+; VBITS_EQ_512: smulh [[RES:z[0-9]+]].h, [[PG]]/m, [[OP1]].h, [[OP2]].h
+; VBITS_EQ_512: st1h { [[RES]].h }, [[PG]], [x0]
+; VBITS_EQ_512: ret
+
+; VBITS_GE_1024: ptrue [[PG:p[0-9]+]].s, vl[[#min(VBYTES,32)]]
+; VBITS_GE_1024-DAG: ld1sh { [[OP1:z[0-9]+]].s }, [[PG]]/z, [x0]
+; VBITS_GE_1024-DAG: ld1sh { [[OP2:z[0-9]+]].s }, [[PG]]/z, [x1]
+; VBITS_GE_1024: mul [[RES:z[0-9]+]].s, [[PG]]/m, [[OP1]].s, [[OP2]].s
+; VBITS_GE_1024: lsr [[RES]].s, [[PG]]/m, [[RES]].s, #16
+; VBITS_GE_1024: st1h { [[RES]].s }, [[PG]], [x0]
+; VBITS_GE_1024: ret
   %op1 = load <32 x i16>, <32 x i16>* %a
   %op2 = load <32 x i16>, <32 x i16>* %b
   %insert = insertelement <32 x i32> undef, i32 16, i64 0
@@ -240,12 +277,20 @@ define void @smulh_v32i16(<32 x i16>* %a, <32 x i16>* %b) #0 {
 
 define void @smulh_v64i16(<64 x i16>* %a, <64 x i16>* %b) #0 {
 ; CHECK-LABEL: smulh_v64i16:
-; VBITS_GE_1024: ptrue [[PG:p[0-9]+]].h, vl[[#min(VBYTES,64)]]
-; VBITS_GE_1024-DAG: ld1h { [[OP1:z[0-9]+]].h }, [[PG]]/z, [x0]
-; VBITS_GE_1024-DAG: ld1h { [[OP2:z[0-9]+]].h }, [[PG]]/z, [x1]
-; VBITS_GE_1024: smulh [[RES:z[0-9]+]].h, [[PG]]/m, [[OP1]].h, [[OP2]].h
-; VBITS_GE_1024: st1h { [[RES]].h }, [[PG]], [x0]
-; VBITS_GE_1024: ret
+; VBITS_EQ_1024: ptrue [[PG:p[0-9]+]].h, vl[[#min(VBYTES,64)]]
+; VBITS_EQ_1024-DAG: ld1h { [[OP1:z[0-9]+]].h }, [[PG]]/z, [x0]
+; VBITS_EQ_1024-DAG: ld1h { [[OP2:z[0-9]+]].h }, [[PG]]/z, [x1]
+; VBITS_EQ_1024: smulh [[RES:z[0-9]+]].h, [[PG]]/m, [[OP1]].h, [[OP2]].h
+; VBITS_EQ_1024: st1h { [[RES]].h }, [[PG]], [x0]
+; VBITS_EQ_1024: ret
+
+; VBITS_GE_2048: ptrue [[PG:p[0-9]+]].s, vl[[#min(VBYTES,64)]]
+; VBITS_GE_2048-DAG: ld1sh { [[OP1:z[0-9]+]].s }, [[PG]]/z, [x0]
+; VBITS_GE_2048-DAG: ld1sh { [[OP2:z[0-9]+]].s }, [[PG]]/z, [x1]
+; VBITS_GE_2048: mul [[RES:z[0-9]+]].s, [[PG]]/m, [[OP1]].s, [[OP2]].s
+; VBITS_GE_2048: lsr [[RES]].s, [[PG]]/m, [[RES]].s, #16
+; VBITS_GE_2048: st1h { [[RES]].s }, [[PG]], [x0]
+; VBITS_GE_2048: ret
   %op1 = load <64 x i16>, <64 x i16>* %a
   %op2 = load <64 x i16>, <64 x i16>* %b
   %insert = insertelement <64 x i32> undef, i32 16, i64 0
@@ -318,12 +363,20 @@ define <4 x i32> @smulh_v4i32(<4 x i32> %op1, <4 x i32> %op2) #0 {
 
 define void @smulh_v8i32(<8 x i32>* %a, <8 x i32>* %b) #0 {
 ; CHECK-LABEL: smulh_v8i32:
-; VBITS_GE_256: ptrue [[PG:p[0-9]+]].s, vl[[#min(VBYTES,8)]]
-; VBITS_GE_256-DAG: ld1w { [[OP1:z[0-9]+]].s }, [[PG]]/z, [x0]
-; VBITS_GE_256-DAG: ld1w { [[OP2:z[0-9]+]].s }, [[PG]]/z, [x1]
-; VBITS_GE_256: smulh [[RES:z[0-9]+]].s, [[PG]]/m, [[OP1]].s, [[OP2]].s
-; VBITS_GE_256: st1w { [[RES]].s }, [[PG]], [x0]
-; VBITS_GE_256: ret
+; VBITS_EQ_256: ptrue [[PG:p[0-9]+]].s, vl[[#min(VBYTES,8)]]
+; VBITS_EQ_256-DAG: ld1w { [[OP1:z[0-9]+]].s }, [[PG]]/z, [x0]
+; VBITS_EQ_256-DAG: ld1w { [[OP2:z[0-9]+]].s }, [[PG]]/z, [x1]
+; VBITS_EQ_256: smulh [[RES:z[0-9]+]].s, [[PG]]/m, [[OP1]].s, [[OP2]].s
+; VBITS_EQ_256: st1w { [[RES]].s }, [[PG]], [x0]
+; VBITS_EQ_256: ret
+
+; VBITS_GE_512: ptrue [[PG:p[0-9]+]].d, vl[[#min(VBYTES,8)]]
+; VBITS_GE_512-DAG: ld1sw { [[OP1:z[0-9]+]].d }, [[PG]]/z, [x0]
+; VBITS_GE_512-DAG: ld1sw { [[OP2:z[0-9]+]].d }, [[PG]]/z, [x1]
+; VBITS_GE_512: mul [[RES:z[0-9]+]].d, [[PG]]/m, [[OP1]].d, [[OP2]].d
+; VBITS_GE_512: lsr [[RES]].d, [[PG]]/m, [[RES]].d, #32
+; VBITS_GE_512: st1w { [[RES]].d }, [[PG]], [x0]
+; VBITS_GE_512: ret
   %op1 = load <8 x i32>, <8 x i32>* %a
   %op2 = load <8 x i32>, <8 x i32>* %b
   %insert = insertelement <8 x i64> undef, i64 32, i64 0
@@ -339,12 +392,19 @@ define void @smulh_v8i32(<8 x i32>* %a, <8 x i32>* %b) #0 {
 
 define void @smulh_v16i32(<16 x i32>* %a, <16 x i32>* %b) #0 {
 ; CHECK-LABEL: smulh_v16i32:
-; VBITS_GE_512: ptrue [[PG:p[0-9]+]].s, vl[[#min(VBYTES,16)]]
-; VBITS_GE_512-DAG: ld1w { [[OP1:z[0-9]+]].s }, [[PG]]/z, [x0]
-; VBITS_GE_512-DAG: ld1w { [[OP2:z[0-9]+]].s }, [[PG]]/z, [x1]
-; VBITS_GE_512: smulh [[RES:z[0-9]+]].s, [[PG]]/m, [[OP1]].s, [[OP2]].s
-; VBITS_GE_512: st1w { [[RES]].s }, [[PG]], [x0]
-; VBITS_GE_512: ret
+; VBITS_EQ_512: ptrue [[PG:p[0-9]+]].s, vl[[#min(VBYTES,16)]]
+; VBITS_EQ_512-DAG: ld1w { [[OP1:z[0-9]+]].s }, [[PG]]/z, [x0]
+; VBITS_EQ_512-DAG: ld1w { [[OP2:z[0-9]+]].s }, [[PG]]/z, [x1]
+; VBITS_EQ_512: smulh [[RES:z[0-9]+]].s, [[PG]]/m, [[OP1]].s, [[OP2]].s
+; VBITS_EQ_512: st1w { [[RES]].s }, [[PG]], [x0]
+; VBITS_EQ_512: ret
+
+; VBITS_GE_1024: ptrue [[PG:p[0-9]+]].d, vl[[#min(VBYTES,16)]]
+; VBITS_GE_1024-DAG: ld1sw { [[OP1:z[0-9]+]].d }, [[PG]]/z, [x0]
+; VBITS_GE_1024-DAG: ld1sw { [[OP2:z[0-9]+]].d }, [[PG]]/z, [x1]
+; VBITS_GE_1024: mul [[RES:z[0-9]+]].d, [[PG]]/m, [[OP1]].d, [[OP2]].d
+; VBITS_GE_1024: st1w { [[RES]].d }, [[PG]], [x0]
+; VBITS_GE_1024: ret
   %op1 = load <16 x i32>, <16 x i32>* %a
   %op2 = load <16 x i32>, <16 x i32>* %b
   %insert = insertelement <16 x i64> undef, i64 32, i64 0
@@ -360,12 +420,20 @@ define void @smulh_v16i32(<16 x i32>* %a, <16 x i32>* %b) #0 {
 
 define void @smulh_v32i32(<32 x i32>* %a, <32 x i32>* %b) #0 {
 ; CHECK-LABEL: smulh_v32i32:
-; VBITS_GE_1024: ptrue [[PG:p[0-9]+]].s, vl[[#min(VBYTES,32)]]
-; VBITS_GE_1024-DAG: ld1w { [[OP1:z[0-9]+]].s }, [[PG]]/z, [x0]
-; VBITS_GE_1024-DAG: ld1w { [[OP2:z[0-9]+]].s }, [[PG]]/z, [x1]
-; VBITS_GE_1024: smulh [[RES:z[0-9]+]].s, [[PG]]/m, [[OP1]].s, [[OP2]].s
-; VBITS_GE_1024: st1w { [[RES]].s }, [[PG]], [x0]
-; VBITS_GE_1024: ret
+; VBITS_EQ_1024: ptrue [[PG:p[0-9]+]].s, vl[[#min(VBYTES,32)]]
+; VBITS_EQ_1024-DAG: ld1w { [[OP1:z[0-9]+]].s }, [[PG]]/z, [x0]
+; VBITS_EQ_1024-DAG: ld1w { [[OP2:z[0-9]+]].s }, [[PG]]/z, [x1]
+; VBITS_EQ_1024: smulh [[RES:z[0-9]+]].s, [[PG]]/m, [[OP1]].s, [[OP2]].s
+; VBITS_EQ_1024: st1w { [[RES]].s }, [[PG]], [x0]
+; VBITS_EQ_1024: ret
+
+; VBITS_GE_2048: ptrue [[PG:p[0-9]+]].d, vl[[#min(VBYTES,32)]]
+; VBITS_GE_2048-DAG: ld1sw { [[OP1:z[0-9]+]].d }, [[PG]]/z, [x0]
+; VBITS_GE_2048-DAG: ld1sw { [[OP2:z[0-9]+]].d }, [[PG]]/z, [x1]
+; VBITS_GE_2048: mul [[RES:z[0-9]+]].d, [[PG]]/m, [[OP1]].d, [[OP2]].d
+; VBITS_GE_2048: lsr [[RES]].d, [[PG]]/m, [[RES]].d, #32
+; VBITS_GE_2048: st1w { [[RES]].d }, [[PG]], [x0]
+; VBITS_GE_2048: ret
   %op1 = load <32 x i32>, <32 x i32>* %a
   %op2 = load <32 x i32>, <32 x i32>* %b
   %insert = insertelement <32 x i64> undef, i64 32, i64 0
@@ -563,12 +631,20 @@ define <16 x i8> @umulh_v16i8(<16 x i8> %op1, <16 x i8> %op2) #0 {
 
 define void @umulh_v32i8(<32 x i8>* %a, <32 x i8>* %b) #0 {
 ; CHECK-LABEL: umulh_v32i8:
-; VBITS_GE_256: ptrue [[PG:p[0-9]+]].b, vl[[#min(VBYTES,32)]]
-; VBITS_GE_256-DAG: ld1b { [[OP1:z[0-9]+]].b }, [[PG]]/z, [x0]
-; VBITS_GE_256-DAG: ld1b { [[OP2:z[0-9]+]].b }, [[PG]]/z, [x1]
-; VBITS_GE_256: umulh [[RES:z[0-9]+]].b, [[PG]]/m, [[OP1]].b, [[OP2]].b
-; VBITS_GE_256: st1b { [[RES]].b }, [[PG]], [x0]
-; VBITS_GE_256: ret
+; VBITS_EQ_256: ptrue [[PG:p[0-9]+]].b, vl[[#min(VBYTES,32)]]
+; VBITS_EQ_256-DAG: ld1b { [[OP1:z[0-9]+]].b }, [[PG]]/z, [x0]
+; VBITS_EQ_256-DAG: ld1b { [[OP2:z[0-9]+]].b }, [[PG]]/z, [x1]
+; VBITS_EQ_256: umulh [[RES:z[0-9]+]].b, [[PG]]/m, [[OP1]].b, [[OP2]].b
+; VBITS_EQ_256: st1b { [[RES]].b }, [[PG]], [x0]
+; VBITS_EQ_256: ret
+
+; VBITS_GE_512: ptrue [[PG:p[0-9]+]].h, vl[[#min(VBYTES,32)]]
+; VBITS_GE_512-DAG: ld1b { [[OP1:z[0-9]+]].h }, [[PG]]/z, [x0]
+; VBITS_GE_512-DAG: ld1b { [[OP2:z[0-9]+]].h }, [[PG]]/z, [x1]
+; VBITS_GE_512: mul [[RES:z[0-9]+]].h, [[PG]]/m, [[OP1]].h, [[OP2]].h
+; VBIGS_GE_512: lsr [[RES]].h, [[PG]]/m, [[RES]].h, #8
+; VBITS_GE_512: st1b { [[RES]].h }, [[PG]], [x0]
+; VBITS_GE_512: ret
   %op1 = load <32 x i8>, <32 x i8>* %a
   %op2 = load <32 x i8>, <32 x i8>* %b
   %insert = insertelement <32 x i16> undef, i16 8, i64 0
@@ -584,12 +660,18 @@ define void @umulh_v32i8(<32 x i8>* %a, <32 x i8>* %b) #0 {
 
 define void @umulh_v64i8(<64 x i8>* %a, <64 x i8>* %b) #0 {
 ; CHECK-LABEL: umulh_v64i8:
-; VBITS_GE_512: ptrue [[PG:p[0-9]+]].b, vl[[#min(VBYTES,64)]]
-; VBITS_GE_512-DAG: ld1b { [[OP1:z[0-9]+]].b }, [[PG]]/z, [x0]
-; VBITS_GE_512-DAG: ld1b { [[OP2:z[0-9]+]].b }, [[PG]]/z, [x1]
-; VBITS_GE_512: umulh [[RES:z[0-9]+]].b, [[PG]]/m, [[OP1]].b, [[OP2]].b
-; VBITS_GE_512: st1b { [[RES]].b }, [[PG]], [x0]
-; VBITS_GE_512: ret
+; VBITS_EQ_512: ptrue [[PG:p[0-9]+]].b, vl[[#min(VBYTES,64)]]
+; VBITS_EQ_512-DAG: ld1b { [[OP1:z[0-9]+]].b }, [[PG]]/z, [x0]
+; VBITS_EQ_512-DAG: ld1b { [[OP2:z[0-9]+]].b }, [[PG]]/z, [x1]
+; VBITS_EQ_512: umulh [[RES:z[0-9]+]].b, [[PG]]/m, [[OP1]].b, [[OP2]].b
+; VBITS_EQ_512: ret
+
+; VBITS_GE_1024-DAG: ld1b { [[OP1:z[0-9]+]].h }, [[PG]]/z, [x0]
+; VBITS_GE_1024-DAG: ld1b { [[OP2:z[0-9]+]].h }, [[PG]]/z, [x1]
+; VBITS_GE_1024: mul [[RES:z[0-9]+]].h, [[PG]]/m, [[OP1]].h, [[OP2]].h
+; VBIGS_GE_1024: lsr [[RES]].h, [[PG]]/m, [[RES]].h, #8
+; VBITS_GE_1024: st1b { [[RES]].h }, [[PG]], [x0]
+; VBITS_GE_1024: ret
   %op1 = load <64 x i8>, <64 x i8>* %a
   %op2 = load <64 x i8>, <64 x i8>* %b
   %insert = insertelement <64 x i16> undef, i16 8, i64 0
@@ -605,12 +687,20 @@ define void @umulh_v64i8(<64 x i8>* %a, <64 x i8>* %b) #0 {
 
 define void @umulh_v128i8(<128 x i8>* %a, <128 x i8>* %b) #0 {
 ; CHECK-LABEL: umulh_v128i8:
-; VBITS_GE_1024: ptrue [[PG:p[0-9]+]].b, vl[[#min(VBYTES,128)]]
-; VBITS_GE_1024-DAG: ld1b { [[OP1:z[0-9]+]].b }, [[PG]]/z, [x0]
-; VBITS_GE_1024-DAG: ld1b { [[OP2:z[0-9]+]].b }, [[PG]]/z, [x1]
-; VBITS_GE_1024: umulh [[RES:z[0-9]+]].b, [[PG]]/m, [[OP1]].b, [[OP2]].b
-; VBITS_GE_1024: st1b { [[RES]].b }, [[PG]], [x0]
-; VBITS_GE_1024: ret
+; VBITS_EQ_1024: ptrue [[PG:p[0-9]+]].b, vl[[#min(VBYTES,128)]]
+; VBITS_EQ_1024-DAG: ld1b { [[OP1:z[0-9]+]].b }, [[PG]]/z, [x0]
+; VBITS_EQ_1024-DAG: ld1b { [[OP2:z[0-9]+]].b }, [[PG]]/z, [x1]
+; VBITS_EQ_1024: umulh [[RES:z[0-9]+]].b, [[PG]]/m, [[OP1]].b, [[OP2]].b
+; VBITS_EQ_1024: st1b { [[RES]].b }, [[PG]], [x0]
+; VBITS_EQ_1024: ret
+
+; VBITS_GE_2048: ptrue [[PG:p[0-9]+]].h, vl[[#min(VBYTES,128)]]
+; VBITS_GE_2048-DAG: ld1b { [[OP1:z[0-9]+]].h }, [[PG]]/z, [x0]
+; VBITS_GE_2048-DAG: ld1b { [[OP2:z[0-9]+]].h }, [[PG]]/z, [x1]
+; VBITS_GE_2048: mul [[RES:z[0-9]+]].h, [[PG]]/m, [[OP1]].h, [[OP2]].h
+; VBIGS_GE_2048: lsr [[RES]].h, [[PG]]/m, [[RES]].h, #8
+; VBITS_GE_2048: st1b { [[RES]].h }, [[PG]], [x0]
+; VBITS_GE_2048: ret
   %op1 = load <128 x i8>, <128 x i8>* %a
   %op2 = load <128 x i8>, <128 x i8>* %b
   %insert = insertelement <128 x i16> undef, i16 8, i64 0
@@ -686,12 +776,20 @@ define <8 x i16> @umulh_v8i16(<8 x i16> %op1, <8 x i16> %op2) #0 {
 
 define void @umulh_v16i16(<16 x i16>* %a, <16 x i16>* %b) #0 {
 ; CHECK-LABEL: umulh_v16i16:
-; VBITS_GE_256: ptrue [[PG:p[0-9]+]].h, vl[[#min(VBYTES,16)]]
-; VBITS_GE_256-DAG: ld1h { [[OP1:z[0-9]+]].h }, [[PG]]/z, [x0]
-; VBITS_GE_256-DAG: ld1h { [[OP2:z[0-9]+]].h }, [[PG]]/z, [x1]
-; VBITS_GE_256: umulh [[RES:z[0-9]+]].h, [[PG]]/m, [[OP1]].h, [[OP2]].h
-; VBITS_GE_256: st1h { [[RES]].h }, [[PG]], [x0]
-; VBITS_GE_256: ret
+; VBITS_EQ_256: ptrue [[PG:p[0-9]+]].h, vl[[#min(VBYTES,16)]]
+; VBITS_EQ_256-DAG: ld1h { [[OP1:z[0-9]+]].h }, [[PG]]/z, [x0]
+; VBITS_EQ_256-DAG: ld1h { [[OP2:z[0-9]+]].h }, [[PG]]/z, [x1]
+; VBITS_EQ_256: umulh [[RES:z[0-9]+]].h, [[PG]]/m, [[OP1]].h, [[OP2]].h
+; VBITS_EQ_256: st1h { [[RES]].h }, [[PG]], [x0]
+; VBITS_EQ_256: ret
+
+; VBITS_GE_512: ptrue [[PG:p[0-9]+]].s, vl[[#min(VBYTES,16)]]
+; VBITS_GE_512-DAG: ld1h { [[OP1:z[0-9]+]].s }, [[PG]]/z, [x0]
+; VBITS_GE_512-DAG: ld1h { [[OP2:z[0-9]+]].s }, [[PG]]/z, [x1]
+; VBITS_GE_512: mul [[RES:z[0-9]+]].s, [[PG]]/m, [[OP1]].s, [[OP2]].s
+; VBITS_GE_512: lsr [[RES]].s, [[PG]]/m, [[RES]].s, #16
+; VBITS_GE_512: st1h { [[RES]].s }, [[PG]], [x0]
+; VBITS_GE_512: ret
   %op1 = load <16 x i16>, <16 x i16>* %a
   %op2 = load <16 x i16>, <16 x i16>* %b
   %insert = insertelement <16 x i32> undef, i32 16, i64 0
@@ -707,12 +805,20 @@ define void @umulh_v16i16(<16 x i16>* %a, <16 x i16>* %b) #0 {
 
 define void @umulh_v32i16(<32 x i16>* %a, <32 x i16>* %b) #0 {
 ; CHECK-LABEL: umulh_v32i16:
-; VBITS_GE_512: ptrue [[PG:p[0-9]+]].h, vl[[#min(VBYTES,32)]]
-; VBITS_GE_512-DAG: ld1h { [[OP1:z[0-9]+]].h }, [[PG]]/z, [x0]
-; VBITS_GE_512-DAG: ld1h { [[OP2:z[0-9]+]].h }, [[PG]]/z, [x1]
-; VBITS_GE_512: umulh [[RES:z[0-9]+]].h, [[PG]]/m, [[OP1]].h, [[OP2]].h
-; VBITS_GE_512: st1h { [[RES]].h }, [[PG]], [x0]
-; VBITS_GE_512: ret
+; VBITS_EQ_512: ptrue [[PG:p[0-9]+]].h, vl[[#min(VBYTES,32)]]
+; VBITS_EQ_512-DAG: ld1h { [[OP1:z[0-9]+]].h }, [[PG]]/z, [x0]
+; VBITS_EQ_512-DAG: ld1h { [[OP2:z[0-9]+]].h }, [[PG]]/z, [x1]
+; VBITS_EQ_512: umulh [[RES:z[0-9]+]].h, [[PG]]/m, [[OP1]].h, [[OP2]].h
+; VBITS_EQ_512: st1h { [[RES]].h }, [[PG]], [x0]
+; VBITS_EQ_512: ret
+
+; VBITS_GE_1024: ptrue [[PG:p[0-9]+]].s, vl[[#min(VBYTES,32)]]
+; VBITS_GE_1024-DAG: ld1h { [[OP1:z[0-9]+]].s }, [[PG]]/z, [x0]
+; VBITS_GE_1024-DAG: ld1h { [[OP2:z[0-9]+]].s }, [[PG]]/z, [x1]
+; VBITS_GE_1024: mul [[RES:z[0-9]+]].s, [[PG]]/m, [[OP1]].s, [[OP2]].s
+; VBITS_GE_1024: lsr [[RES]].s, [[PG]]/m, [[RES]].s, #16
+; VBITS_GE_1024: st1h { [[RES]].s }, [[PG]], [x0]
+; VBITS_GE_1024: ret
   %op1 = load <32 x i16>, <32 x i16>* %a
   %op2 = load <32 x i16>, <32 x i16>* %b
   %insert = insertelement <32 x i32> undef, i32 16, i64 0
@@ -728,12 +834,19 @@ define void @umulh_v32i16(<32 x i16>* %a, <32 x i16>* %b) #0 {
 
 define void @umulh_v64i16(<64 x i16>* %a, <64 x i16>* %b) #0 {
 ; CHECK-LABEL: umulh_v64i16:
-; VBITS_GE_1024: ptrue [[PG:p[0-9]+]].h, vl[[#min(VBYTES,64)]]
-; VBITS_GE_1024-DAG: ld1h { [[OP1:z[0-9]+]].h }, [[PG]]/z, [x0]
-; VBITS_GE_1024-DAG: ld1h { [[OP2:z[0-9]+]].h }, [[PG]]/z, [x1]
-; VBITS_GE_1024: umulh [[RES:z[0-9]+]].h, [[PG]]/m, [[OP1]].h, [[OP2]].h
-; VBITS_GE_1024: st1h { [[RES]].h }, [[PG]], [x0]
-; VBITS_GE_1024: ret
+; VBITS_EQ_1024: ptrue [[PG:p[0-9]+]].h, vl[[#min(VBYTES,64)]]
+; VBITS_EQ_1024-DAG: ld1h { [[OP1:z[0-9]+]].h }, [[PG]]/z, [x0]
+; VBITS_EQ_1024-DAG: ld1h { [[OP2:z[0-9]+]].h }, [[PG]]/z, [x1]
+; VBITS_EQ_1024: umulh [[RES:z[0-9]+]].h, [[PG]]/m, [[OP1]].h, [[OP2]].h
+; VBITS_EQ_1024: ret
+
+; VBITS_GE_2048: ptrue [[PG:p[0-9]+]].s, vl[[#min(VBYTES,64)]]
+; VBITS_GE_2048-DAG: ld1h { [[OP1:z[0-9]+]].s }, [[PG]]/z, [x0]
+; VBITS_GE_2048-DAG: ld1h { [[OP2:z[0-9]+]].s }, [[PG]]/z, [x1]
+; VBITS_GE_2048: mul [[RES:z[0-9]+]].s, [[PG]]/m, [[OP1]].s, [[OP2]].s
+; VBITS_GE_2048: lsr [[RES]].s, [[PG]]/m, [[RES]].s, #16
+; VBITS_GE_2048: st1h { [[RES]].s }, [[PG]], [x0]
+; VBITS_GE_2048: ret
   %op1 = load <64 x i16>, <64 x i16>* %a
   %op2 = load <64 x i16>, <64 x i16>* %b
   %insert = insertelement <64 x i32> undef, i32 16, i64 0
@@ -806,12 +919,20 @@ define <4 x i32> @umulh_v4i32(<4 x i32> %op1, <4 x i32> %op2) #0 {
 
 define void @umulh_v8i32(<8 x i32>* %a, <8 x i32>* %b) #0 {
 ; CHECK-LABEL: umulh_v8i32:
-; VBITS_GE_256: ptrue [[PG:p[0-9]+]].s, vl[[#min(VBYTES,8)]]
-; VBITS_GE_256-DAG: ld1w { [[OP1:z[0-9]+]].s }, [[PG]]/z, [x0]
-; VBITS_GE_256-DAG: ld1w { [[OP2:z[0-9]+]].s }, [[PG]]/z, [x1]
-; VBITS_GE_256: umulh [[RES:z[0-9]+]].s, [[PG]]/m, [[OP1]].s, [[OP2]].s
-; VBITS_GE_256: st1w { [[RES]].s }, [[PG]], [x0]
-; VBITS_GE_256: ret
+; VBITS_EQ_256: ptrue [[PG:p[0-9]+]].s, vl[[#min(VBYTES,8)]]
+; VBITS_EQ_256-DAG: ld1w { [[OP1:z[0-9]+]].s }, [[PG]]/z, [x0]
+; VBITS_EQ_256-DAG: ld1w { [[OP2:z[0-9]+]].s }, [[PG]]/z, [x1]
+; VBITS_EQ_256: umulh [[RES:z[0-9]+]].s, [[PG]]/m, [[OP1]].s, [[OP2]].s
+; VBITS_EQ_256: st1w { [[RES]].s }, [[PG]], [x0]
+; VBITS_EQ_256: ret
+
+; VBITS_GE_512: ptrue [[PG:p[0-9]+]].d, vl[[#min(VBYTES,8)]]
+; VBITS_GE_512-DAG: ld1w { [[OP1:z[0-9]+]].d }, [[PG]]/z, [x0]
+; VBITS_GE_512-DAG: ld1w { [[OP2:z[0-9]+]].d }, [[PG]]/z, [x1]
+; VBITS_GE_512: mul [[RES:z[0-9]+]].d, [[PG]]/m, [[OP1]].d, [[OP2]].d
+; VBITS_GE_512: lsr [[RES]].d, [[PG]]/m, [[RES]].d, #32
+; VBITS_GE_512: st1w { [[RES]].d }, [[PG]], [x0]
+; VBITS_GE_512: ret
   %op1 = load <8 x i32>, <8 x i32>* %a
   %op2 = load <8 x i32>, <8 x i32>* %b
   %insert = insertelement <8 x i64> undef, i64 32, i64 0
@@ -827,12 +948,19 @@ define void @umulh_v8i32(<8 x i32>* %a, <8 x i32>* %b) #0 {
 
 define void @umulh_v16i32(<16 x i32>* %a, <16 x i32>* %b) #0 {
 ; CHECK-LABEL: umulh_v16i32:
-; VBITS_GE_512: ptrue [[PG:p[0-9]+]].s, vl[[#min(VBYTES,16)]]
-; VBITS_GE_512-DAG: ld1w { [[OP1:z[0-9]+]].s }, [[PG]]/z, [x0]
-; VBITS_GE_512-DAG: ld1w { [[OP2:z[0-9]+]].s }, [[PG]]/z, [x1]
-; VBITS_GE_512: umulh [[RES:z[0-9]+]].s, [[PG]]/m, [[OP1]].s, [[OP2]].s
-; VBITS_GE_512: st1w { [[RES]].s }, [[PG]], [x0]
-; VBITS_GE_512: ret
+; VBITS_EQ_512: ptrue [[PG:p[0-9]+]].s, vl[[#min(VBYTES,16)]]
+; VBITS_EQ_512-DAG: ld1w { [[OP1:z[0-9]+]].s }, [[PG]]/z, [x0]
+; VBITS_EQ_512-DAG: ld1w { [[OP2:z[0-9]+]].s }, [[PG]]/z, [x1]
+; VBITS_EQ_512: umulh [[RES:z[0-9]+]].s, [[PG]]/m, [[OP1]].s, [[OP2]].s
+; VBITS_EQ_512: st1w { [[RES]].s }, [[PG]], [x0]
+
+; VBITS_GE_1024: ptrue [[PG:p[0-9]+]].d, vl[[#min(VBYTES,16)]]
+; VBITS_GE_1024-DAG: ld1w { [[OP1:z[0-9]+]].d }, [[PG]]/z, [x0]
+; VBITS_GE_1024-DAG: ld1w { [[OP2:z[0-9]+]].d }, [[PG]]/z, [x1]
+; VBITS_GE_1024: mul [[RES:z[0-9]+]].d, [[PG]]/m, [[OP1]].d, [[OP2]].d
+; VBITS_GE_1024: lsr [[RES]].d, [[PG]]/m, [[RES]].d, #32
+; VBITS_GE_1024: st1w { [[RES]].d }, [[PG]], [x0]
+; VBITS_GE_1024: ret
   %op1 = load <16 x i32>, <16 x i32>* %a
   %op2 = load <16 x i32>, <16 x i32>* %b
   %insert = insertelement <16 x i64> undef, i64 32, i64 0
@@ -848,12 +976,20 @@ define void @umulh_v16i32(<16 x i32>* %a, <16 x i32>* %b) #0 {
 
 define void @umulh_v32i32(<32 x i32>* %a, <32 x i32>* %b) #0 {
 ; CHECK-LABEL: umulh_v32i32:
-; VBITS_GE_1024: ptrue [[PG:p[0-9]+]].s, vl[[#min(VBYTES,32)]]
-; VBITS_GE_1024-DAG: ld1w { [[OP1:z[0-9]+]].s }, [[PG]]/z, [x0]
-; VBITS_GE_1024-DAG: ld1w { [[OP2:z[0-9]+]].s }, [[PG]]/z, [x1]
-; VBITS_GE_1024: umulh [[RES:z[0-9]+]].s, [[PG]]/m, [[OP1]].s, [[OP2]].s
-; VBITS_GE_1024: st1w { [[RES]].s }, [[PG]], [x0]
-; VBITS_GE_1024: ret
+; VBITS_EQ_1024: ptrue [[PG:p[0-9]+]].s, vl[[#min(VBYTES,32)]]
+; VBITS_EQ_1024-DAG: ld1w { [[OP1:z[0-9]+]].s }, [[PG]]/z, [x0]
+; VBITS_EQ_1024-DAG: ld1w { [[OP2:z[0-9]+]].s }, [[PG]]/z, [x1]
+; VBITS_EQ_1024: umulh [[RES:z[0-9]+]].s, [[PG]]/m, [[OP1]].s, [[OP2]].s
+; VBITS_EQ_1024: st1w { [[RES]].s }, [[PG]], [x0]
+; VBITS_EQ_1024: ret
+
+; VBITS_GE_2048: ptrue [[PG:p[0-9]+]].d, vl[[#min(VBYTES,32)]]
+; VBITS_GE_2048-DAG: ld1w { [[OP1:z[0-9]+]].d }, [[PG]]/z, [x0]
+; VBITS_GE_2048-DAG: ld1w { [[OP2:z[0-9]+]].d }, [[PG]]/z, [x1]
+; VBITS_GE_2048: mul [[RES:z[0-9]+]].d, [[PG]]/m, [[OP1]].d, [[OP2]].d
+; VBITS_GE_2048: lsr [[RES]].d, [[PG]]/m, [[RES]].d, #32
+; VBITS_GE_2048: st1w { [[RES]].d }, [[PG]], [x0]
+; VBITS_GE_2048: ret
   %op1 = load <32 x i32>, <32 x i32>* %a
   %op2 = load <32 x i32>, <32 x i32>* %b
   %insert = insertelement <32 x i64> undef, i64 32, i64 0

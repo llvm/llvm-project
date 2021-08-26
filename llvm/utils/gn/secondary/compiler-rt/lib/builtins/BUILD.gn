@@ -421,7 +421,6 @@ static_library("builtins") {
         "arm/aeabi_uidivmod.S",
         "arm/aeabi_uldivmod.S",
         "arm/chkstk.S",
-        "mingw_fixfloat.c",
       ]
     }
   }

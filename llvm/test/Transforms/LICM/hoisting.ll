@@ -1,6 +1,5 @@
-; RUN: opt < %s -licm -S | FileCheck %s
-; RUN: opt < %s -aa-pipeline=basic-aa -passes='require<opt-remark-emit>,loop(licm)' -S | FileCheck %s
-; RUN: opt < %s -licm -enable-mssa-loop-dependency=true -verify-memoryssa -S | FileCheck %s
+; RUN: opt < %s -aa-pipeline=basic-aa -passes='require<opt-remark-emit>,loop-mssa(licm)' -S | FileCheck %s
+; RUN: opt < %s -licm -verify-memoryssa -S | FileCheck %s
 
 @X = global i32 0		; <i32*> [#uses=1]
 

@@ -111,6 +111,19 @@ Here's the short story for getting up and running quickly with LLVM:
      you have the Visual Studio C++ Tools installed, not just Visual Studio
      itself (trying to create a C++ project in Visual Studio will generally
      download the C++ tools if they haven't already been).
+   * Run cmake from a "x86/x64 Native Tools Command Prompt" so Visual C++ will
+     be on the PATH and its environment variables are set. Do **not** use
+     ``CMAKE_C_COMPILER`` and ``CMAKE_CXX_COMPILER`` for this purpose:
+
+     .. code-block:: bat
+
+        **********************************************************************
+        ** Visual Studio 2019 Developer Command Prompt v16.11.1
+        ** Copyright (c) 2021 Microsoft Corporation
+        **********************************************************************
+        [vcvarsall.bat] Environment initialized for: 'x64'
+        c:\build> cmake ..\llvm\llvm -DLLVM_ENABLE_PROJECTS=clang -DLLVM_TARGETS_TO_BUILD=X86 -Thost=x64
+
    * See the :doc:`LLVM CMake guide <CMake>` for detailed information about
      how to configure the LLVM build.
    * CMake generates project files for all build types. To select a specific
@@ -144,7 +157,7 @@ Here's the short story for getting up and running quickly with LLVM:
 
    * If ``%PATH%`` does not contain GnuWin32, you may specify
      ``LLVM_LIT_TOOLS_DIR`` on CMake for the path to GnuWin32.
-   * You can run LLVM tests by merely building the project "check". The test
+   * You can run LLVM tests by merely building the project "check-all". The test
      results will be shown in the VS output window.
 
 9. Test LLVM on the command line:
@@ -154,10 +167,10 @@ Here's the short story for getting up and running quickly with LLVM:
 
      .. code-block:: bat
 
-        C:\..\llvm> python ..\build\bin\llvm-lit --param build_config=Win32 --param build_mode=Debug --param llvm_site_config=../build/test/lit.site.cfg test
+        c:\llvm> python ..\build\Release\bin\llvm-lit.py llvm\test
 
      This example assumes that Python is in your PATH variable, you
-     have built a Win32 Debug version of llvm with a standard out of
+     have built a Release version of llvm with a standard out of
      line build. You should not see any unexpected failures, but will
      see many unsupported tests and expected failures.
 
@@ -165,7 +178,7 @@ Here's the short story for getting up and running quickly with LLVM:
 
      .. code-block:: bat
 
-        C:\..\llvm> python ..\build\bin\llvm-lit --param build_config=Win32 --param build_mode=Debug --param llvm_site_config=../build/test/lit.site.cfg test/path/to/test
+        c:\llvm> python ..\build\Release\bin\llvm-lit.py llvm\test\Transforms\Util
 
 
 An Example Using the LLVM Tool Chain

@@ -17,7 +17,7 @@
 #include "mlir/Transforms/GreedyPatternRewriteDriver.h"
 
 using namespace mlir;
-using namespace mlir::test;
+using namespace test;
 
 // Native function for testing NativeCodeCall
 static Value chooseOperand(Value input1, Value input2, BoolAttr choice) {
@@ -67,7 +67,7 @@ namespace {
 // Test Reduce Pattern Interface
 //===----------------------------------------------------------------------===//
 
-void mlir::test::populateTestReductionPatterns(RewritePatternSet &patterns) {
+void test::populateTestReductionPatterns(RewritePatternSet &patterns) {
   populateWithGenerated(patterns);
 }
 

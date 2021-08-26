@@ -13,6 +13,7 @@
 #include "clang/AST/ExprCXX.h"
 #include "clang/AST/RecursiveASTVisitor.h"
 #include "clang/Basic/SourceManager.h"
+#include "llvm/Support/raw_ostream.h"
 
 namespace clang {
 namespace clangd {
@@ -313,6 +314,10 @@ private:
     auto FileRange =
         toHalfOpenFileRange(AST.getSourceManager(), AST.getLangOpts(), R);
     if (!FileRange)
+      return;
+    // The hint may be in a file other than the main file (for example, a header
+    // file that was included after the preamble), do not show in that case.
+    if (!AST.getSourceManager().isWrittenInMainFile(FileRange->getBegin()))
       return;
     Results.push_back(InlayHint{
         Range{

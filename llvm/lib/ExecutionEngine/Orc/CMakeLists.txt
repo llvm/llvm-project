@@ -7,6 +7,7 @@ add_llvm_component_library(LLVMOrcJIT
   EPCDynamicLibrarySearchGenerator.cpp
   EPCDebugObjectRegistrar.cpp
   EPCEHFrameRegistrar.cpp
+  EPCGenericMemoryAccess.cpp
   EPCIndirectionUtils.cpp
   ExecutionUtils.cpp
   IndirectionUtils.cpp
@@ -15,6 +16,7 @@ add_llvm_component_library(LLVMOrcJIT
   JITTargetMachineBuilder.cpp
   LazyReexports.cpp
   Layer.cpp
+  LookupAndRecordAddrs.cpp
   LLJIT.cpp
   MachOPlatform.cpp
   Mangling.cpp

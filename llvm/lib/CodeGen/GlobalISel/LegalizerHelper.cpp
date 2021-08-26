@@ -19,6 +19,7 @@
 #include "llvm/CodeGen/GlobalISel/LostDebugLocObserver.h"
 #include "llvm/CodeGen/GlobalISel/MIPatternMatch.h"
 #include "llvm/CodeGen/GlobalISel/Utils.h"
+#include "llvm/CodeGen/LowLevelType.h"
 #include "llvm/CodeGen/MachineRegisterInfo.h"
 #include "llvm/CodeGen/TargetFrameLowering.h"
 #include "llvm/CodeGen/TargetInstrInfo.h"
@@ -497,8 +498,8 @@ static bool isLibCallInTailPosition(MachineInstr &MI,
     return false;
 
   // It's not safe to eliminate the sign / zero extension of the return value.
-  if (CallerAttrs.hasAttribute(AttributeList::ReturnIndex, Attribute::ZExt) ||
-      CallerAttrs.hasAttribute(AttributeList::ReturnIndex, Attribute::SExt))
+  if (CallerAttrs.hasRetAttr(Attribute::ZExt) ||
+      CallerAttrs.hasRetAttr(Attribute::SExt))
     return false;
 
   // Only tail call if the following instruction is a standard return or if we
@@ -3486,6 +3487,10 @@ LegalizerHelper::lower(MachineInstr &MI, unsigned TypeIdx, LLT LowerHintTy) {
   case G_ROTL:
   case G_ROTR:
     return lowerRotate(MI);
+  case G_ISNAN:
+    return lowerIsNaN(MI);
+  GISEL_VECREDUCE_CASES_NONSEQ
+    return lowerVectorReduction(MI);
   }
 }
 
@@ -4634,35 +4639,7 @@ LegalizerHelper::LegalizeResult LegalizerHelper::fewerElementsVectorShuffle(
   return Legalized;
 }
 
-LegalizerHelper::LegalizeResult LegalizerHelper::fewerElementsVectorReductions(
-    MachineInstr &MI, unsigned int TypeIdx, LLT NarrowTy) {
-  unsigned Opc = MI.getOpcode();
-  assert(Opc != TargetOpcode::G_VECREDUCE_SEQ_FADD &&
-         Opc != TargetOpcode::G_VECREDUCE_SEQ_FMUL &&
-         "Sequential reductions not expected");
-
-  if (TypeIdx != 1)
-    return UnableToLegalize;
-
-  // The semantics of the normal non-sequential reductions allow us to freely
-  // re-associate the operation.
-  Register SrcReg = MI.getOperand(1).getReg();
-  LLT SrcTy = MRI.getType(SrcReg);
-  Register DstReg = MI.getOperand(0).getReg();
-  LLT DstTy = MRI.getType(DstReg);
-
-  if (SrcTy.getNumElements() % NarrowTy.getNumElements() != 0)
-    return UnableToLegalize;
-
-  SmallVector<Register> SplitSrcs;
-  const unsigned NumParts = SrcTy.getNumElements() / NarrowTy.getNumElements();
-  extractParts(SrcReg, NarrowTy, NumParts, SplitSrcs);
-  SmallVector<Register> PartialReductions;
-  for (unsigned Part = 0; Part < NumParts; ++Part) {
-    PartialReductions.push_back(
-        MIRBuilder.buildInstr(Opc, {DstTy}, {SplitSrcs[Part]}).getReg(0));
-  }
-
+static unsigned getScalarOpcForReduction(unsigned Opc) {
   unsigned ScalarOpc;
   switch (Opc) {
   case TargetOpcode::G_VECREDUCE_FADD:
@@ -4705,9 +4682,80 @@ LegalizerHelper::LegalizeResult LegalizerHelper::fewerElementsVectorReductions(
     ScalarOpc = TargetOpcode::G_UMIN;
     break;
   default:
-    LLVM_DEBUG(dbgs() << "Can't legalize: unknown reduction kind.\n");
-    return UnableToLegalize;
+    llvm_unreachable("Unhandled reduction");
   }
+  return ScalarOpc;
+}
+
+LegalizerHelper::LegalizeResult LegalizerHelper::fewerElementsVectorReductions(
+    MachineInstr &MI, unsigned int TypeIdx, LLT NarrowTy) {
+  unsigned Opc = MI.getOpcode();
+  assert(Opc != TargetOpcode::G_VECREDUCE_SEQ_FADD &&
+         Opc != TargetOpcode::G_VECREDUCE_SEQ_FMUL &&
+         "Sequential reductions not expected");
+
+  if (TypeIdx != 1)
+    return UnableToLegalize;
+
+  // The semantics of the normal non-sequential reductions allow us to freely
+  // re-associate the operation.
+  Register SrcReg = MI.getOperand(1).getReg();
+  LLT SrcTy = MRI.getType(SrcReg);
+  Register DstReg = MI.getOperand(0).getReg();
+  LLT DstTy = MRI.getType(DstReg);
+
+  if (NarrowTy.isVector() &&
+      (SrcTy.getNumElements() % NarrowTy.getNumElements() != 0))
+    return UnableToLegalize;
+
+  unsigned ScalarOpc = getScalarOpcForReduction(Opc);
+  SmallVector<Register> SplitSrcs;
+  // If NarrowTy is a scalar then we're being asked to scalarize.
+  const unsigned NumParts =
+      NarrowTy.isVector() ? SrcTy.getNumElements() / NarrowTy.getNumElements()
+                          : SrcTy.getNumElements();
+
+  extractParts(SrcReg, NarrowTy, NumParts, SplitSrcs);
+  if (NarrowTy.isScalar()) {
+    if (DstTy != NarrowTy)
+      return UnableToLegalize; // FIXME: handle implicit extensions.
+
+    if (isPowerOf2_32(NumParts)) {
+      // Generate a tree of scalar operations to reduce the critical path.
+      SmallVector<Register> PartialResults;
+      unsigned NumPartsLeft = NumParts;
+      while (NumPartsLeft > 1) {
+        for (unsigned Idx = 0; Idx < NumPartsLeft - 1; Idx += 2) {
+          PartialResults.emplace_back(
+              MIRBuilder
+                  .buildInstr(ScalarOpc, {NarrowTy},
+                              {SplitSrcs[Idx], SplitSrcs[Idx + 1]})
+                  .getReg(0));
+        }
+        SplitSrcs = PartialResults;
+        PartialResults.clear();
+        NumPartsLeft = SplitSrcs.size();
+      }
+      assert(SplitSrcs.size() == 1);
+      MIRBuilder.buildCopy(DstReg, SplitSrcs[0]);
+      MI.eraseFromParent();
+      return Legalized;
+    }
+    // If we can't generate a tree, then just do sequential operations.
+    Register Acc = SplitSrcs[0];
+    for (unsigned Idx = 1; Idx < NumParts; ++Idx)
+      Acc = MIRBuilder.buildInstr(ScalarOpc, {NarrowTy}, {Acc, SplitSrcs[Idx]})
+                .getReg(0);
+    MIRBuilder.buildCopy(DstReg, Acc);
+    MI.eraseFromParent();
+    return Legalized;
+  }
+  SmallVector<Register> PartialReductions;
+  for (unsigned Part = 0; Part < NumParts; ++Part) {
+    PartialReductions.push_back(
+        MIRBuilder.buildInstr(Opc, {DstTy}, {SplitSrcs[Part]}).getReg(0));
+  }
+
 
   // If the types involved are powers of 2, we can generate intermediate vector
   // ops, before generating a final reduction operation.
@@ -7354,4 +7402,54 @@ LegalizerHelper::lowerAbsToMaxNeg(MachineInstr &MI) {
   MIRBuilder.buildSMax(MI.getOperand(0), SrcReg, Sub);
   MI.eraseFromParent();
   return Legalized;
+}
+
+LegalizerHelper::LegalizeResult LegalizerHelper::lowerIsNaN(MachineInstr &MI) {
+  Register Dst = MI.getOperand(0).getReg();
+  Register Src = MI.getOperand(1).getReg();
+  LLT SrcTy = MRI.getType(Src);
+  if (MI.getFlags() & MachineInstr::NoFPExcept) {
+    // Lower to an unordered comparison.
+    auto Zero = MIRBuilder.buildFConstant(SrcTy, 0.0);
+    MIRBuilder.buildFCmp(CmpInst::Predicate::FCMP_UNO, Dst, Src, Zero);
+    MI.eraseFromParent();
+    return Legalized;
+  }
+
+  // Use integer operations to avoid traps if the argument is SNaN.
+
+  // NaN has all exp bits set and a non zero significand. Therefore:
+  // isnan(V) == exp mask < abs(V)
+  auto FPToSI = MIRBuilder.buildFPTOSI(SrcTy, Src);
+  auto Mask = APInt::getSignedMaxValue(SrcTy.getScalarSizeInBits());
+  auto MaskCst = MIRBuilder.buildConstant(SrcTy, Mask);
+  auto AbsV = MIRBuilder.buildAnd(SrcTy, FPToSI, MaskCst);
+  auto *FloatTy = getFloatTypeForLLT(MI.getMF()->getFunction().getContext(),
+                                     SrcTy.getScalarType());
+  if (!FloatTy)
+    return UnableToLegalize;
+  auto ExpMask = APFloat::getInf(FloatTy->getFltSemantics()).bitcastToAPInt();
+  auto ExpMaskCst = MIRBuilder.buildConstant(SrcTy, ExpMask);
+  MIRBuilder.buildICmp(CmpInst::Predicate::ICMP_SLT, Dst, ExpMaskCst, AbsV);
+  MI.eraseFromParent();
+  return Legalized;
+}
+
+LegalizerHelper::LegalizeResult
+LegalizerHelper::lowerVectorReduction(MachineInstr &MI) {
+  Register SrcReg = MI.getOperand(1).getReg();
+  LLT SrcTy = MRI.getType(SrcReg);
+  LLT DstTy = MRI.getType(SrcReg);
+
+  // The source could be a scalar if the IR type was <1 x sN>.
+  if (SrcTy.isScalar()) {
+    if (DstTy.getSizeInBits() > SrcTy.getSizeInBits())
+      return UnableToLegalize; // FIXME: handle extension.
+    // This can be just a plain copy.
+    Observer.changingInstr(MI);
+    MI.setDesc(MIRBuilder.getTII().get(TargetOpcode::COPY));
+    Observer.changedInstr(MI);
+    return Legalized;
+  }
+  return UnableToLegalize;;
 }

@@ -140,7 +140,7 @@ bool LLParser::validateEndOfModule(bool UpgradeDebugInfo) {
 
     if (Function *Fn = dyn_cast<Function>(V)) {
       AttributeList AS = Fn->getAttributes();
-      AttrBuilder FnAttrs(AS.getFnAttributes());
+      AttrBuilder FnAttrs(AS.getFnAttrs());
       AS = AS.removeAttributes(Context, AttributeList::FunctionIndex);
 
       FnAttrs.merge(B);
@@ -152,32 +152,28 @@ bool LLParser::validateEndOfModule(bool UpgradeDebugInfo) {
         FnAttrs.removeAttribute(Attribute::Alignment);
       }
 
-      AS = AS.addAttributes(Context, AttributeList::FunctionIndex,
-                            AttributeSet::get(Context, FnAttrs));
+      AS = AS.addFnAttributes(Context, AttributeSet::get(Context, FnAttrs));
       Fn->setAttributes(AS);
     } else if (CallInst *CI = dyn_cast<CallInst>(V)) {
       AttributeList AS = CI->getAttributes();
-      AttrBuilder FnAttrs(AS.getFnAttributes());
+      AttrBuilder FnAttrs(AS.getFnAttrs());
       AS = AS.removeAttributes(Context, AttributeList::FunctionIndex);
       FnAttrs.merge(B);
-      AS = AS.addAttributes(Context, AttributeList::FunctionIndex,
-                            AttributeSet::get(Context, FnAttrs));
+      AS = AS.addFnAttributes(Context, AttributeSet::get(Context, FnAttrs));
       CI->setAttributes(AS);
     } else if (InvokeInst *II = dyn_cast<InvokeInst>(V)) {
       AttributeList AS = II->getAttributes();
-      AttrBuilder FnAttrs(AS.getFnAttributes());
+      AttrBuilder FnAttrs(AS.getFnAttrs());
       AS = AS.removeAttributes(Context, AttributeList::FunctionIndex);
       FnAttrs.merge(B);
-      AS = AS.addAttributes(Context, AttributeList::FunctionIndex,
-                            AttributeSet::get(Context, FnAttrs));
+      AS = AS.addFnAttributes(Context, AttributeSet::get(Context, FnAttrs));
       II->setAttributes(AS);
     } else if (CallBrInst *CBI = dyn_cast<CallBrInst>(V)) {
       AttributeList AS = CBI->getAttributes();
-      AttrBuilder FnAttrs(AS.getFnAttributes());
+      AttrBuilder FnAttrs(AS.getFnAttrs());
       AS = AS.removeAttributes(Context, AttributeList::FunctionIndex);
       FnAttrs.merge(B);
-      AS = AS.addAttributes(Context, AttributeList::FunctionIndex,
-                            AttributeSet::get(Context, FnAttrs));
+      AS = AS.addFnAttributes(Context, AttributeSet::get(Context, FnAttrs));
       CBI->setAttributes(AS);
     } else if (auto *GV = dyn_cast<GlobalVariable>(V)) {
       AttrBuilder Attrs(GV->getAttributes());
@@ -3876,10 +3872,6 @@ struct MDField : public MDFieldImpl<Metadata *> {
   MDField(bool AllowNull = true) : ImplTy(nullptr), AllowNull(AllowNull) {}
 };
 
-struct MDConstant : public MDFieldImpl<ConstantAsMetadata *> {
-  MDConstant() : ImplTy(nullptr) {}
-};
-
 struct MDStringField : public MDFieldImpl<MDString *> {
   bool AllowEmpty;
   MDStringField(bool AllowEmpty = true)
@@ -3910,22 +3902,6 @@ struct MDSignedOrMDField : MDEitherFieldImpl<MDSignedField, MDField> {
   }
   Metadata *getMDFieldValue() const {
     assert(isMDField() && "Wrong field type");
-    return B.Val;
-  }
-};
-
-struct MDSignedOrUnsignedField
-    : MDEitherFieldImpl<MDSignedField, MDUnsignedField> {
-  MDSignedOrUnsignedField() : ImplTy(MDSignedField(0), MDUnsignedField(0)) {}
-
-  bool isMDSignedField() const { return WhatIs == IsTypeA; }
-  bool isMDUnsignedField() const { return WhatIs == IsTypeB; }
-  int64_t getMDSignedValue() const {
-    assert(isMDSignedField() && "Wrong field type");
-    return A.Val;
-  }
-  uint64_t getMDUnsignedValue() const {
-    assert(isMDUnsignedField() && "Wrong field type");
     return B.Val;
   }
 };
@@ -4578,7 +4554,8 @@ bool LLParser::parseDIDerivedType(MDNode *&Result, bool IsDistinct) {
   OPTIONAL(offset, MDUnsignedField, (0, UINT64_MAX));                          \
   OPTIONAL(flags, DIFlagField, );                                              \
   OPTIONAL(extraData, MDField, );                                              \
-  OPTIONAL(dwarfAddressSpace, MDUnsignedField, (UINT32_MAX, UINT32_MAX));
+  OPTIONAL(dwarfAddressSpace, MDUnsignedField, (UINT32_MAX, UINT32_MAX));      \
+  OPTIONAL(annotations, MDField, );
   PARSE_MD_FIELDS();
 #undef VISIT_MD_FIELDS
 
@@ -4590,7 +4567,7 @@ bool LLParser::parseDIDerivedType(MDNode *&Result, bool IsDistinct) {
                            (Context, tag.Val, name.Val, file.Val, line.Val,
                             scope.Val, baseType.Val, size.Val, align.Val,
                             offset.Val, DWARFAddressSpace, flags.Val,
-                            extraData.Val));
+                            extraData.Val, annotations.Val));
   return false;
 }
 
@@ -4615,7 +4592,8 @@ bool LLParser::parseDICompositeType(MDNode *&Result, bool IsDistinct) {
   OPTIONAL(dataLocation, MDField, );                                           \
   OPTIONAL(associated, MDField, );                                             \
   OPTIONAL(allocated, MDField, );                                              \
-  OPTIONAL(rank, MDSignedOrMDField, );
+  OPTIONAL(rank, MDSignedOrMDField, );                                         \
+  OPTIONAL(annotations, MDField, );
   PARSE_MD_FIELDS();
 #undef VISIT_MD_FIELDS
 
@@ -4633,7 +4611,7 @@ bool LLParser::parseDICompositeType(MDNode *&Result, bool IsDistinct) {
             scope.Val, baseType.Val, size.Val, align.Val, offset.Val, flags.Val,
             elements.Val, runtimeLang.Val, vtableHolder.Val, templateParams.Val,
             discriminator.Val, dataLocation.Val, associated.Val, allocated.Val,
-            Rank)) {
+            Rank, annotations.Val)) {
       Result = CT;
       return false;
     }
@@ -4645,8 +4623,8 @@ bool LLParser::parseDICompositeType(MDNode *&Result, bool IsDistinct) {
       (Context, tag.Val, name.Val, file.Val, line.Val, scope.Val, baseType.Val,
        size.Val, align.Val, offset.Val, flags.Val, elements.Val,
        runtimeLang.Val, vtableHolder.Val, templateParams.Val, identifier.Val,
-       discriminator.Val, dataLocation.Val, associated.Val, allocated.Val,
-       Rank));
+       discriminator.Val, dataLocation.Val, associated.Val, allocated.Val, Rank,
+       annotations.Val));
   return false;
 }
 
@@ -5571,7 +5549,7 @@ bool LLParser::parseFunctionHeader(Function *&Fn, bool IsDefine) {
       AttributeList::get(Context, AttributeSet::get(Context, FuncAttrs),
                          AttributeSet::get(Context, RetAttrs), Attrs);
 
-  if (PAL.hasAttribute(1, Attribute::StructRet) && !RetType->isVoidTy())
+  if (PAL.hasParamAttr(0, Attribute::StructRet) && !RetType->isVoidTy())
     return error(RetTypeLoc, "functions with 'sret' argument must return void");
 
   FunctionType *FT = FunctionType::get(RetType, ParamTypeList, IsVarArg);

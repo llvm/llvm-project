@@ -142,10 +142,10 @@ TEST(Numeric, Scale) {
 TEST(Numeric, SetExponent) {
   EXPECT_EQ(RTNAME(SetExponent4)(Real<4>{0}, 0), 0);
   EXPECT_EQ(RTNAME(SetExponent8)(Real<8>{0}, 666), 0);
-  EXPECT_EQ(RTNAME(SetExponent8)(Real<8>{3.0}, 0), 1.5);
-  EXPECT_EQ(RTNAME(SetExponent4)(Real<4>{1.0}, 0), 1.0);
-  EXPECT_EQ(RTNAME(SetExponent4)(Real<4>{1.0}, 1), 2.0);
-  EXPECT_EQ(RTNAME(SetExponent4)(Real<4>{1.0}, -1), 0.5);
+  EXPECT_EQ(RTNAME(SetExponent8)(Real<8>{3.0}, 0), 0.75);
+  EXPECT_EQ(RTNAME(SetExponent4)(Real<4>{1.0}, 0), 0.5);
+  EXPECT_EQ(RTNAME(SetExponent4)(Real<4>{1.0}, 1), 1.0);
+  EXPECT_EQ(RTNAME(SetExponent4)(Real<4>{1.0}, -1), 0.25);
   EXPECT_TRUE(std::isnan(
       RTNAME(SetExponent4)(std::numeric_limits<Real<4>>::infinity(), 1)));
   EXPECT_TRUE(std::isnan(

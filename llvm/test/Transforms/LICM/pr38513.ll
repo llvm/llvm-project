@@ -1,4 +1,4 @@
-; RUN: opt -enable-mssa-loop-dependency=false -disable-basic-aa -alias-set-saturation-threshold=2 -licm -S < %s | FileCheck %s
+; RUN: opt -disable-basic-aa -alias-set-saturation-threshold=2 -passes='loop-mssa(licm)' -S < %s | FileCheck %s
 ; REQUIRES: asserts
 
 ; CHECK-LABEL: @f1()

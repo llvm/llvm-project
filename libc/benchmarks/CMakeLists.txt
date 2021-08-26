@@ -10,7 +10,7 @@ set(LLVM_LINK_COMPONENTS Support)
 set(GOOGLE_BENCHMARK_TARGET_FLAGS ${BENCHMARK_DIALECT_FLAG})
 if (LIBCXX_BENCHMARK_GCC_TOOLCHAIN)
   set(GOOGLE_BENCHMARK_TARGET_FLAGS
-      -gcc-toolchain ${LIBCXX_BENCHMARK_GCC_TOOLCHAIN})
+      --gcc-toolchain=${LIBCXX_BENCHMARK_GCC_TOOLCHAIN})
 endif()
 string(REPLACE ";" " " GOOGLE_BENCHMARK_TARGET_FLAGS "${GOOGLE_BENCHMARK_TARGET_FLAGS}")
 
@@ -171,6 +171,7 @@ add_libc_multi_impl_benchmark(memcpy)
 add_libc_multi_impl_benchmark(memset)
 add_libc_multi_impl_benchmark(bzero)
 add_libc_multi_impl_benchmark(memcmp)
+add_libc_multi_impl_benchmark(bcmp)
 
 #==============================================================================
 # Google Benchmarking tool
@@ -188,6 +189,7 @@ target_link_libraries(libc.benchmarks.memory_functions.opt_host
   PRIVATE
   libc-memory-benchmark
   libc.src.string.memcmp_opt_host
+  libc.src.string.bcmp_opt_host
   libc.src.string.memcpy_opt_host
   libc.src.string.memset_opt_host
   libc.src.string.bzero_opt_host

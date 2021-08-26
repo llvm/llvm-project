@@ -201,24 +201,6 @@ llvm::cl::opt<bool> Verbose("v", llvm::cl::Optional,
 
 } // end anonymous namespace
 
-class SingleCommandCompilationDatabase : public tooling::CompilationDatabase {
-public:
-  SingleCommandCompilationDatabase(tooling::CompileCommand Cmd)
-      : Command(std::move(Cmd)) {}
-
-  std::vector<tooling::CompileCommand>
-  getCompileCommands(StringRef FilePath) const override {
-    return {Command};
-  }
-
-  std::vector<tooling::CompileCommand> getAllCompileCommands() const override {
-    return {Command};
-  }
-
-private:
-  tooling::CompileCommand Command;
-};
-
 /// Takes the result of a dependency scan and prints error / dependency files
 /// based on the result.
 ///

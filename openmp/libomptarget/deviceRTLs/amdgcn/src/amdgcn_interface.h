@@ -13,7 +13,6 @@
 #include <stdint.h>
 
 #define EXTERN extern "C"
-typedef uint64_t __kmpc_impl_lanemask_t;
 typedef uint32_t omp_lock_t; /* arbitrary type of the right length */
 
 ////////////////////////////////////////////////////////////////////////////////

@@ -57,6 +57,12 @@ struct ConnectionState : public ConnectionAttributes {
   // or an end-of-file READ condition on a sequential access file
   std::optional<std::int64_t> endfileRecordNumber;
 
+  // Set when processing repeated items during list-directed & NAMELIST input
+  // in order to keep a span of records in frame on a non-positionable file,
+  // so that backspacing to the beginning of the repeated item doesn't require
+  // repositioning the external storage medium when that's impossible.
+  std::optional<std::int64_t> resumptionRecordNumber;
+
   // Mutable modes set at OPEN() that can be overridden in READ/WRITE & FORMAT
   MutableModes modes; // BLANK=, DECIMAL=, SIGN=, ROUND=, PAD=, DELIM=, kP
 };

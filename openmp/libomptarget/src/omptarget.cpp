@@ -518,7 +518,7 @@ int targetDataBegin(ident_t *loc, DeviceTy &Device, int32_t arg_num,
     const bool HasFlagAlways = arg_types[i] & OMP_TGT_MAPTYPE_ALWAYS;
     if (HasFlagTo && (!UseUSM || HasCloseModifier))
       MoveData = HasFlagAlways ? MoveDataStateTy::REQUIRED
-                               : MoveData = MoveDataStateTy::UNKNOWN;
+                               : MoveDataStateTy::UNKNOWN;
 
     auto TPR = Device.getTargetPointer(
         HstPtrBegin, HstPtrBase, data_size, HstPtrName, MoveData, IsImplicit,
@@ -738,9 +738,8 @@ int targetDataEnd(ident_t *loc, DeviceTy &Device, int32_t ArgNum,
         bool CopyMember = false;
         if (!(PM->RTLs.RequiresFlags & OMP_REQ_UNIFIED_SHARED_MEMORY) ||
             HasCloseModifier) {
-          if ((ArgTypes[I] & OMP_TGT_MAPTYPE_MEMBER_OF) &&
-              !(ArgTypes[I] & OMP_TGT_MAPTYPE_PTR_AND_OBJ))
-            CopyMember = IsLast;
+          if (IsLast)
+            CopyMember = true;
         }
 
         if ((DelEntry || Always || CopyMember) &&

@@ -2011,6 +2011,16 @@ preserving struct or union member access debuginfo indices of this
 struct or union, similar to clang ``__builtin_preserve_access_index()``.
   }];
 }
+def BTFTagDocs : Documentation {
+  let Category = DocCatFunction;
+  let Content = [{
+Clang supports the ``__attribute__((btf_tag("ARGUMENT")))`` attribute for all
+targets. This attribute may be attached to a struct/union, struct/union field,
+function, function parameter or variable declaration. If -g is specified,
+the ``ARGUMENT`` info will be preserved in IR and be emitted to dwarf.
+For BPF targets, the ``ARGUMENT`` info will be emitted to .BTF ELF section too.
+  }];
+}
 
 def MipsInterruptDocs : Documentation {
   let Category = DocCatFunction;
@@ -2589,6 +2599,18 @@ SanitizerCoverage should not be applied to the function.
 
 See :ref:`Controlling Code Generation <controlling-code-generation>` for a
 full list of supported sanitizer flags.
+  }];
+}
+
+def DisableSanitizerInstrumentationDocs : Documentation {
+  let Category = DocCatFunction;
+  let Content = [{
+Use the ``disable_sanitizer_instrumentation`` attribute on a function,
+Objective-C method, or global variable, to specify that no sanitizer
+instrumentation should be applied.
+
+This is not the same as ``__attribute__((no_sanitize(...)))``, which depending
+on the tool may still insert instrumentation to prevent false positive reports.
   }];
 }
 

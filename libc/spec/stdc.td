@@ -476,8 +476,15 @@ def StdC : StandardSpec<"stdc"> {
       [
           FunctionSpec<"abort", RetValSpec<NoReturn>, [ArgSpec<VoidType>]>,
           FunctionSpec<"abs", RetValSpec<IntType>, [ArgSpec<IntType>]>,
+          FunctionSpec<"atoi", RetValSpec<IntType>, [ArgSpec<ConstCharPtr>]>,
+          FunctionSpec<"atol", RetValSpec<LongType>, [ArgSpec<ConstCharPtr>]>,
+          FunctionSpec<"atoll", RetValSpec<LongLongType>, [ArgSpec<ConstCharPtr>]>,
           FunctionSpec<"labs", RetValSpec<LongType>, [ArgSpec<LongType>]>,
           FunctionSpec<"llabs", RetValSpec<LongLongType>, [ArgSpec<LongLongType>]>,
+          FunctionSpec<"strtol", RetValSpec<LongType>, [ArgSpec<ConstCharRestrictedPtr>, ArgSpec<CharRestrictedPtrPtr>, ArgSpec<IntType>]>,
+          FunctionSpec<"strtoll", RetValSpec<LongLongType>, [ArgSpec<ConstCharRestrictedPtr>, ArgSpec<CharRestrictedPtrPtr>, ArgSpec<IntType>]>,
+          FunctionSpec<"strtoul", RetValSpec<UnsignedLongType>, [ArgSpec<ConstCharRestrictedPtr>, ArgSpec<CharRestrictedPtrPtr>, ArgSpec<IntType>]>,
+          FunctionSpec<"strtoull", RetValSpec<UnsignedLongLongType>, [ArgSpec<ConstCharRestrictedPtr>, ArgSpec<CharRestrictedPtrPtr>, ArgSpec<IntType>]>,
           FunctionSpec<"_Exit", RetValSpec<NoReturn>, [ArgSpec<IntType>]>,
       ]
   >;

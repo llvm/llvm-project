@@ -1853,11 +1853,17 @@ ARMTargetLowering::getRegClassFor(MVT VT, bool isDivergent) const {
   // v8i64 to QQQQ registers. v4i64 and v8i64 are only used for REG_SEQUENCE to
   // load / store 4 to 8 consecutive NEON D registers, or 2 to 4 consecutive
   // MVE Q registers.
-  if (Subtarget->hasNEON() || Subtarget->hasMVEIntegerOps()) {
+  if (Subtarget->hasNEON()) {
     if (VT == MVT::v4i64)
       return &ARM::QQPRRegClass;
     if (VT == MVT::v8i64)
       return &ARM::QQQQPRRegClass;
+  }
+  if (Subtarget->hasMVEIntegerOps()) {
+    if (VT == MVT::v4i64)
+      return &ARM::MQQPRRegClass;
+    if (VT == MVT::v8i64)
+      return &ARM::MQQQQPRRegClass;
   }
   return TargetLowering::getRegClassFor(VT);
 }
@@ -2289,7 +2295,7 @@ ARMTargetLowering::LowerCall(TargetLowering::CallLoweringInfo &CLI,
   bool PreferIndirect = false;
 
   // Determine whether this is a non-secure function call.
-  if (CLI.CB && CLI.CB->getAttributes().hasFnAttribute("cmse_nonsecure_call"))
+  if (CLI.CB && CLI.CB->getAttributes().hasFnAttr("cmse_nonsecure_call"))
     isCmseNSCall = true;
 
   // Disable tail calls if they're not supported.
@@ -8824,54 +8830,68 @@ static SDValue LowerEXTRACT_VECTOR_ELT(SDValue Op, SelectionDAG &DAG,
 
 static SDValue LowerCONCAT_VECTORS_i1(SDValue Op, SelectionDAG &DAG,
                                       const ARMSubtarget *ST) {
-  SDValue V1 = Op.getOperand(0);
-  SDValue V2 = Op.getOperand(1);
   SDLoc dl(Op);
-  EVT VT = Op.getValueType();
-  EVT Op1VT = V1.getValueType();
-  EVT Op2VT = V2.getValueType();
-  unsigned NumElts = VT.getVectorNumElements();
-
-  assert(Op1VT == Op2VT && "Operand types don't match!");
-  assert(VT.getScalarSizeInBits() == 1 &&
+  assert(Op.getValueType().getScalarSizeInBits() == 1 &&
+         "Unexpected custom CONCAT_VECTORS lowering");
+  assert(isPowerOf2_32(Op.getNumOperands()) &&
          "Unexpected custom CONCAT_VECTORS lowering");
   assert(ST->hasMVEIntegerOps() &&
          "CONCAT_VECTORS lowering only supported for MVE");
 
-  SDValue NewV1 = PromoteMVEPredVector(dl, V1, Op1VT, DAG);
-  SDValue NewV2 = PromoteMVEPredVector(dl, V2, Op2VT, DAG);
+  auto ConcatPair = [&](SDValue V1, SDValue V2) {
+    EVT Op1VT = V1.getValueType();
+    EVT Op2VT = V2.getValueType();
+    assert(Op1VT == Op2VT && "Operand types don't match!");
+    EVT VT = Op1VT.getDoubleNumVectorElementsVT(*DAG.getContext());
 
-  // We now have Op1 + Op2 promoted to vectors of integers, where v8i1 gets
-  // promoted to v8i16, etc.
+    SDValue NewV1 = PromoteMVEPredVector(dl, V1, Op1VT, DAG);
+    SDValue NewV2 = PromoteMVEPredVector(dl, V2, Op2VT, DAG);
 
-  MVT ElType = getVectorTyFromPredicateVector(VT).getScalarType().getSimpleVT();
+    // We now have Op1 + Op2 promoted to vectors of integers, where v8i1 gets
+    // promoted to v8i16, etc.
+    MVT ElType =
+        getVectorTyFromPredicateVector(VT).getScalarType().getSimpleVT();
+    unsigned NumElts = 2 * Op1VT.getVectorNumElements();
 
-  // Extract the vector elements from Op1 and Op2 one by one and truncate them
-  // to be the right size for the destination. For example, if Op1 is v4i1 then
-  // the promoted vector is v4i32. The result of concatentation gives a v8i1,
-  // which when promoted is v8i16. That means each i32 element from Op1 needs
-  // truncating to i16 and inserting in the result.
-  EVT ConcatVT = MVT::getVectorVT(ElType, NumElts);
-  SDValue ConVec = DAG.getNode(ISD::UNDEF, dl, ConcatVT);
-  auto ExractInto = [&DAG, &dl](SDValue NewV, SDValue ConVec, unsigned &j) {
-    EVT NewVT = NewV.getValueType();
-    EVT ConcatVT = ConVec.getValueType();
-    for (unsigned i = 0, e = NewVT.getVectorNumElements(); i < e; i++, j++) {
-      SDValue Elt = DAG.getNode(ISD::EXTRACT_VECTOR_ELT, dl, MVT::i32, NewV,
-                                DAG.getIntPtrConstant(i, dl));
-      ConVec = DAG.getNode(ISD::INSERT_VECTOR_ELT, dl, ConcatVT, ConVec, Elt,
-                           DAG.getConstant(j, dl, MVT::i32));
-    }
-    return ConVec;
+    // Extract the vector elements from Op1 and Op2 one by one and truncate them
+    // to be the right size for the destination. For example, if Op1 is v4i1
+    // then the promoted vector is v4i32. The result of concatentation gives a
+    // v8i1, which when promoted is v8i16. That means each i32 element from Op1
+    // needs truncating to i16 and inserting in the result.
+    EVT ConcatVT = MVT::getVectorVT(ElType, NumElts);
+    SDValue ConVec = DAG.getNode(ISD::UNDEF, dl, ConcatVT);
+    auto ExtractInto = [&DAG, &dl](SDValue NewV, SDValue ConVec, unsigned &j) {
+      EVT NewVT = NewV.getValueType();
+      EVT ConcatVT = ConVec.getValueType();
+      for (unsigned i = 0, e = NewVT.getVectorNumElements(); i < e; i++, j++) {
+        SDValue Elt = DAG.getNode(ISD::EXTRACT_VECTOR_ELT, dl, MVT::i32, NewV,
+                                  DAG.getIntPtrConstant(i, dl));
+        ConVec = DAG.getNode(ISD::INSERT_VECTOR_ELT, dl, ConcatVT, ConVec, Elt,
+                             DAG.getConstant(j, dl, MVT::i32));
+      }
+      return ConVec;
+    };
+    unsigned j = 0;
+    ConVec = ExtractInto(NewV1, ConVec, j);
+    ConVec = ExtractInto(NewV2, ConVec, j);
+
+    // Now return the result of comparing the subvector with zero,
+    // which will generate a real predicate, i.e. v4i1, v8i1 or v16i1.
+    return DAG.getNode(ARMISD::VCMPZ, dl, VT, ConVec,
+                       DAG.getConstant(ARMCC::NE, dl, MVT::i32));
   };
-  unsigned j = 0;
-  ConVec = ExractInto(NewV1, ConVec, j);
-  ConVec = ExractInto(NewV2, ConVec, j);
 
-  // Now return the result of comparing the subvector with zero,
-  // which will generate a real predicate, i.e. v4i1, v8i1 or v16i1.
-  return DAG.getNode(ARMISD::VCMPZ, dl, VT, ConVec,
-                     DAG.getConstant(ARMCC::NE, dl, MVT::i32));
+  // Concat each pair of subvectors and pack into the lower half of the array.
+  SmallVector<SDValue> ConcatOps(Op->op_begin(), Op->op_end());
+  while (ConcatOps.size() > 1) {
+    for (unsigned I = 0, E = ConcatOps.size(); I != E; I += 2) {
+      SDValue V1 = ConcatOps[I];
+      SDValue V2 = ConcatOps[I + 1];
+      ConcatOps[I / 2] = ConcatPair(V1, V2);
+    }
+    ConcatOps.resize(ConcatOps.size() / 2);
+  }
+  return ConcatOps[0];
 }
 
 static SDValue LowerCONCAT_VECTORS(SDValue Op, SelectionDAG &DAG,
@@ -13089,7 +13109,8 @@ static SDValue TryDistrubutionADDVecReduce(SDNode *N, SelectionDAG &DAG) {
     //   add(add(X, vecreduce(Y)), vecreduce(Z))
     // to make better use of vaddva style instructions.
     if (VT == MVT::i32 && N1.getOpcode() == ISD::ADD && !IsVecReduce(N0) &&
-        IsVecReduce(N1.getOperand(0)) && IsVecReduce(N1.getOperand(1))) {
+        IsVecReduce(N1.getOperand(0)) && IsVecReduce(N1.getOperand(1)) &&
+        !isa<ConstantSDNode>(N0)) {
       SDValue Add0 = DAG.getNode(ISD::ADD, dl, VT, N0, N1.getOperand(0));
       return DAG.getNode(ISD::ADD, dl, VT, Add0, N1.getOperand(1));
     }
@@ -18133,7 +18154,7 @@ EVT ARMTargetLowering::getOptimalMemOpType(
     const MemOp &Op, const AttributeList &FuncAttributes) const {
   // See if we can use NEON instructions for this...
   if ((Op.isMemcpy() || Op.isZeroMemset()) && Subtarget->hasNEON() &&
-      !FuncAttributes.hasFnAttribute(Attribute::NoImplicitFloat)) {
+      !FuncAttributes.hasFnAttr(Attribute::NoImplicitFloat)) {
     bool Fast;
     if (Op.size() >= 16 &&
         (Op.isAligned(Align(16)) ||
@@ -20350,7 +20371,7 @@ void ARMTargetLowering::insertSSPDeclarations(Module &M) const {
       "__security_check_cookie", Type::getVoidTy(M.getContext()),
       Type::getInt8PtrTy(M.getContext()));
   if (Function *F = dyn_cast<Function>(SecurityCheckCookie.getCallee()))
-    F->addAttribute(1, Attribute::AttrKind::InReg);
+    F->addParamAttr(0, Attribute::AttrKind::InReg);
 }
 
 Value *ARMTargetLowering::getSDagStackGuard(const Module &M) const {

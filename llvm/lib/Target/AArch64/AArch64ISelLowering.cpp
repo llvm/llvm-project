@@ -1516,6 +1516,8 @@ void AArch64TargetLowering::addTypeForFixedLengthSVE(MVT VT) {
     MVT InnerVT = VT.changeVectorElementType(MVT::i8);
     while (InnerVT != VT) {
       setTruncStoreAction(VT, InnerVT, Custom);
+      setLoadExtAction(ISD::ZEXTLOAD, VT, InnerVT, Custom);
+      setLoadExtAction(ISD::SEXTLOAD, VT, InnerVT, Custom);
       InnerVT = InnerVT.changeVectorElementType(
           MVT::getIntegerVT(2 * InnerVT.getScalarSizeInBits()));
     }
@@ -4176,7 +4178,9 @@ bool AArch64TargetLowering::shouldRemoveExtendFromGSIndex(EVT VT) const {
 }
 
 bool AArch64TargetLowering::isVectorLoadExtDesirable(SDValue ExtVal) const {
-  return ExtVal.getValueType().isScalableVector();
+  return ExtVal.getValueType().isScalableVector() ||
+         useSVEForFixedLengthVectorVT(ExtVal.getValueType(),
+                                      /*OverrideNEON=*/true);
 }
 
 unsigned getGatherVecOpcode(bool IsScaled, bool IsSigned, bool NeedsExtend) {
@@ -10455,8 +10459,29 @@ SDValue AArch64TargetLowering::LowerCONCAT_VECTORS(SDValue Op,
          isTypeLegal(Op.getValueType()) &&
          "Expected legal scalable vector type!");
 
-  if (isTypeLegal(Op.getOperand(0).getValueType()) && Op.getNumOperands() == 2)
-    return Op;
+  if (isTypeLegal(Op.getOperand(0).getValueType())) {
+    unsigned NumOperands = Op->getNumOperands();
+    assert(NumOperands > 1 && isPowerOf2_32(NumOperands) &&
+           "Unexpected number of operands in CONCAT_VECTORS");
+
+    if (NumOperands == 2)
+      return Op;
+
+    // Concat each pair of subvectors and pack into the lower half of the array.
+    SmallVector<SDValue> ConcatOps(Op->op_begin(), Op->op_end());
+    while (ConcatOps.size() > 1) {
+      for (unsigned I = 0, E = ConcatOps.size(); I != E; I += 2) {
+        SDValue V1 = ConcatOps[I];
+        SDValue V2 = ConcatOps[I + 1];
+        EVT SubVT = V1.getValueType();
+        EVT PairVT = SubVT.getDoubleNumVectorElementsVT(*DAG.getContext());
+        ConcatOps[I / 2] =
+            DAG.getNode(ISD::CONCAT_VECTORS, SDLoc(Op), PairVT, V1, V2);
+      }
+      ConcatOps.resize(ConcatOps.size() / 2);
+    }
+    return ConcatOps[0];
+  }
 
   return SDValue();
 }
@@ -12049,8 +12074,7 @@ SDValue AArch64TargetLowering::LowerSVEStructLoad(unsigned Intrinsic,
 
 EVT AArch64TargetLowering::getOptimalMemOpType(
     const MemOp &Op, const AttributeList &FuncAttributes) const {
-  bool CanImplicitFloat =
-      !FuncAttributes.hasFnAttribute(Attribute::NoImplicitFloat);
+  bool CanImplicitFloat = !FuncAttributes.hasFnAttr(Attribute::NoImplicitFloat);
   bool CanUseNEON = Subtarget->hasNEON() && CanImplicitFloat;
   bool CanUseFP = Subtarget->hasFPARMv8() && CanImplicitFloat;
   // Only use AdvSIMD to implement memset of 32-byte and above. It would have
@@ -12067,8 +12091,8 @@ EVT AArch64TargetLowering::getOptimalMemOpType(
   };
 
   if (CanUseNEON && Op.isMemset() && !IsSmallMemset &&
-      AlignmentIsAcceptable(MVT::v2i64, Align(16)))
-    return MVT::v2i64;
+      AlignmentIsAcceptable(MVT::v16i8, Align(16)))
+    return MVT::v16i8;
   if (CanUseFP && !IsSmallMemset && AlignmentIsAcceptable(MVT::f128, Align(16)))
     return MVT::f128;
   if (Op.size() >= 8 && AlignmentIsAcceptable(MVT::i64, Align(8)))
@@ -12080,8 +12104,7 @@ EVT AArch64TargetLowering::getOptimalMemOpType(
 
 LLT AArch64TargetLowering::getOptimalMemOpLLT(
     const MemOp &Op, const AttributeList &FuncAttributes) const {
-  bool CanImplicitFloat =
-      !FuncAttributes.hasFnAttribute(Attribute::NoImplicitFloat);
+  bool CanImplicitFloat = !FuncAttributes.hasFnAttr(Attribute::NoImplicitFloat);
   bool CanUseNEON = Subtarget->hasNEON() && CanImplicitFloat;
   bool CanUseFP = Subtarget->hasFPARMv8() && CanImplicitFloat;
   // Only use AdvSIMD to implement memset of 32-byte and above. It would have
@@ -13619,7 +13642,7 @@ static SDValue performConcatVectorsCombine(SDNode *N,
   // If we see a (concat_vectors (v1x64 A), (v1x64 A)) it's really a vector
   // splat. The indexed instructions are going to be expecting a DUPLANE64, so
   // canonicalise to that.
-  if (N0 == N1 && VT.getVectorNumElements() == 2) {
+  if (N->getNumOperands() == 2 && N0 == N1 && VT.getVectorNumElements() == 2) {
     assert(VT.getScalarSizeInBits() == 64);
     return DAG.getNode(AArch64ISD::DUPLANE64, dl, VT, WidenVector(N0, DAG),
                        DAG.getConstant(0, dl, MVT::i64));
@@ -13634,7 +13657,7 @@ static SDValue performConcatVectorsCombine(SDNode *N,
   // becomes
   //    (bitconvert (concat_vectors (v4i16 (bitconvert LHS)), RHS))
 
-  if (N1Opc != ISD::BITCAST)
+  if (N->getNumOperands() != 2 || N1Opc != ISD::BITCAST)
     return SDValue();
   SDValue RHS = N1->getOperand(0);
   MVT RHSTy = RHS.getValueType().getSimpleVT();
@@ -15355,11 +15378,10 @@ static SDValue foldTruncStoreOfExt(SelectionDAG &DAG, SDNode *N) {
         ExtOpCode != ISD::ANY_EXTEND)
       return SDValue();
     SDValue Orig = Ext->getOperand(0);
-    if (Store->getMemoryVT() != Orig->getValueType(0))
+    if (Store->getMemoryVT() != Orig.getValueType())
       return SDValue();
     return DAG.getStore(Store->getChain(), SDLoc(Store), Orig,
-                        Store->getBasePtr(), Store->getPointerInfo(),
-                        Store->getAlign());
+                        Store->getBasePtr(), Store->getMemOperand());
   }
 
   return SDValue();
@@ -17721,7 +17743,7 @@ void AArch64TargetLowering::insertSSPDeclarations(Module &M) const {
         Type::getInt8PtrTy(M.getContext()));
     if (Function *F = dyn_cast<Function>(SecurityCheckCookie.getCallee())) {
       F->setCallingConv(CallingConv::Win64);
-      F->addAttribute(1, Attribute::AttrKind::InReg);
+      F->addParamAttr(0, Attribute::AttrKind::InReg);
     }
     return;
   }
@@ -17847,7 +17869,7 @@ bool AArch64TargetLowering::isIntDivCheap(EVT VT, AttributeList Attr) const {
   // integer division, leaving the division as-is is a loss even in terms of
   // size, because it will have to be scalarized, while the alternative code
   // sequence can be performed in vector form.
-  bool OptSize = Attr.hasFnAttribute(Attribute::MinSize);
+  bool OptSize = Attr.hasFnAttr(Attribute::MinSize);
   return OptSize && !VT.isVector();
 }
 

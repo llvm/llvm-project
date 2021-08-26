@@ -855,9 +855,15 @@ constexpr u32 kGuardDone = 1;
 constexpr u32 kGuardRunning = 1 << 16;
 constexpr u32 kGuardWaiter = 1 << 17;
 
-static int guard_acquire(ThreadState *thr, uptr pc, atomic_uint32_t *g) {
-  OnPotentiallyBlockingRegionBegin();
-  auto on_exit = at_scope_exit(&OnPotentiallyBlockingRegionEnd);
+static int guard_acquire(ThreadState *thr, uptr pc, atomic_uint32_t *g,
+                         bool blocking_hooks = true) {
+  if (blocking_hooks)
+    OnPotentiallyBlockingRegionBegin();
+  auto on_exit = at_scope_exit([blocking_hooks] {
+    if (blocking_hooks)
+      OnPotentiallyBlockingRegionEnd();
+  });
+
   for (;;) {
     u32 cmp = atomic_load(g, memory_order_acquire);
     if (cmp == kGuardInit) {
@@ -1006,9 +1012,11 @@ TSAN_INTERCEPTOR(int, pthread_create,
           "fork is not supported. Dying (set die_after_fork=0 to override)\n");
       Die();
     } else {
-      VPrintf(1, "ThreadSanitizer: starting new threads after multi-threaded "
-          "fork is not supported (pid %d). Continuing because of "
-          "die_after_fork=0, but you are on your own\n", internal_getpid());
+      VPrintf(1,
+              "ThreadSanitizer: starting new threads after multi-threaded "
+              "fork is not supported (pid %lu). Continuing because of "
+              "die_after_fork=0, but you are on your own\n",
+              internal_getpid());
     }
   }
   __sanitizer_pthread_attr_t myattr;
@@ -1507,7 +1515,9 @@ TSAN_INTERCEPTOR(int, pthread_once, void *o, void (*f)()) {
   else
     a = static_cast<atomic_uint32_t*>(o);
 
-  if (guard_acquire(thr, pc, a)) {
+  // Mac OS X appears to use pthread_once() where calling BlockingRegion hooks
+  // result in crashes due to too little stack space.
+  if (guard_acquire(thr, pc, a, !SANITIZER_MAC)) {
     (*f)();
     guard_release(thr, pc, a);
   }

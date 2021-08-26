@@ -15,6 +15,10 @@ class ConcurrentNWatchNBreak(ConcurrentEventsBase):
     @skipIf(triple='^mips')
     @expectedFailureAll(archs=["aarch64"], oslist=["freebsd"],
                         bugnumber="llvm.org/pr49433")
+    @skipIf(
+        oslist=["ios", "watchos", "tvos", "bridgeos", "macosx"],
+        archs=['arm64', 'arm64e', 'arm64_32', 'arm'],
+        bugnumber="rdar://81811539")
     @add_test_categories(["watchpoint"])
     def test(self):
         """Test with 5 watchpoint and breakpoint threads."""

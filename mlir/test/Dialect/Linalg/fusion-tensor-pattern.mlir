@@ -121,8 +121,8 @@ module {
 // TLOOP:    %[[AB_SUB:.*]] = linalg.matmul
 // TLOOP-SAME:  ins(%[[A_SUB]], %[[B_]] : {{.*}}) outs(%[[AB_INIT_SUB]]
 
-// TLOOP:    %[[DIM_B_1:.*]] = tensor.dim %[[B_]], %[[C1]] : [[TY]]
-// TLOOP:    %[[DIM_C_1:.*]] = tensor.dim %[[C_]], %[[C1]] : [[TY]]
+// TLOOP:    %[[DIM_B_1:.*]] = tensor.dim %[[B]], %[[C1]] : [[TY]]
+// TLOOP:    %[[DIM_C_1:.*]] = tensor.dim %[[C]], %[[C1]] : [[TY]]
 
 // TLOOP:    %[[ABC_SUB_:.*]] = linalg.tiled_loop (%[[IV1:.*]], %[[IV2:.*]]) = 
 // TLOOP-SAME: (%[[C0]], %[[C0]]) to (%[[DIM_C_1]], %[[DIM_B_1]])
@@ -300,7 +300,7 @@ module {
 // TLOOP-SAME:      %[[C0_F32_:.*]] = %[[C0_F32]]
 // TLOOP-SAME: outs (%[[OUT_:.*]] = %[[OUT]]: [[TY]]) {
 
-// TLOOP:    %[[DIM_A__1:.*]] = tensor.dim %[[A_]], %[[C1]] : [[TY]]
+// TLOOP:    %[[DIM_A__1:.*]] = tensor.dim %[[A]], %[[C1]] : [[TY]]
 // TLOOP:    %[[A_SUB:.*]] = tensor.extract_slice %[[A_]][%[[I]], 0]
 // TLOOP:    %[[B_SUB:.*]] = tensor.extract_slice %[[B_]][0, %[[J]]]
 // TLOOP:    %[[OUT_SUB:.*]] = tensor.extract_slice %[[OUT_]][%[[I]], %[[J]]]
@@ -371,7 +371,7 @@ module {
 // TLOOP-SAME:      %[[C0_F32_:.*]] = %[[C0_F32]]
 // TLOOP-SAME: outs (%[[OUT_:.*]] = %[[OUT]]: [[TY]]) {
 
-// TLOOP:    %[[DIM_A__1:.*]] = tensor.dim %[[A_]], %[[C1]] : [[TY]]
+// TLOOP:    %[[DIM_A__1:.*]] = tensor.dim %[[A]], %[[C1]] : [[TY]]
 // TLOOP:    %[[A_SUB:.*]] = tensor.extract_slice %[[A_]][%[[I]], 0]
 // TLOOP:    %[[B_SUB:.*]] = tensor.extract_slice %[[B_]][0, %[[J]]]
 // TLOOP:    %[[OUT_SUB:.*]] = tensor.extract_slice %[[OUT_]][%[[I]], %[[J]]]

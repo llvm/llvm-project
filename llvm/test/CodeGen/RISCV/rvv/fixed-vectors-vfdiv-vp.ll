@@ -56,6 +56,18 @@ define <2 x half> @vfdiv_vf_v2f16_unmasked(<2 x half> %va, half %b, i32 zeroext 
   ret <2 x half> %v
 }
 
+declare <3 x half> @llvm.vp.fdiv.v3f16(<3 x half>, <3 x half>, <3 x i1>, i32)
+
+define <3 x half> @vfdiv_vv_v3f16(<3 x half> %va, <3 x half> %b, <3 x i1> %m, i32 zeroext %evl) {
+; CHECK-LABEL: vfdiv_vv_v3f16:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    vsetvli zero, a0, e16, mf2, ta, mu
+; CHECK-NEXT:    vfdiv.vv v8, v8, v9, v0.t
+; CHECK-NEXT:    ret
+  %v = call <3 x half> @llvm.vp.fdiv.v3f16(<3 x half> %va, <3 x half> %b, <3 x i1> %m, i32 %evl)
+  ret <3 x half> %v
+}
+
 declare <4 x half> @llvm.vp.fdiv.v4f16(<4 x half>, <4 x half>, <4 x i1>, i32)
 
 define <4 x half> @vfdiv_vv_v4f16(<4 x half> %va, <4 x half> %b, <4 x i1> %m, i32 zeroext %evl) {

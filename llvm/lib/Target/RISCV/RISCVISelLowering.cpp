@@ -858,6 +858,8 @@ RISCVTargetLowering::RISCVTargetLowering(const TargetMachine &TM,
   // We can use any register for comparisons
   setHasMultipleConditionRegisters();
 
+  setTargetDAGCombine(ISD::ADD);
+  setTargetDAGCombine(ISD::SUB);
   setTargetDAGCombine(ISD::AND);
   setTargetDAGCombine(ISD::OR);
   setTargetDAGCombine(ISD::XOR);
@@ -5051,8 +5053,6 @@ void RISCVTargetLowering::ReplaceNodeResults(SDNode *N,
   case ISD::SUB:
     assert(N->getValueType(0) == MVT::i32 && Subtarget.is64Bit() &&
            "Unexpected custom legalisation");
-    if (N->getOperand(1).getOpcode() == ISD::Constant)
-      return;
     Results.push_back(customLegalizeToWOpWithSExt(N, DAG));
     break;
   case ISD::SHL:
@@ -5769,17 +5769,27 @@ static SDValue combineGREVI_GORCI(SDNode *N, SelectionDAG &DAG) {
 
 // Combine a constant select operand into its use:
 //
-// (and (select_cc lhs, rhs, cc, -1, c), x)
-//   -> (select_cc lhs, rhs, cc, x, (and, x, c))  [AllOnes=1]
-// (or  (select_cc lhs, rhs, cc, 0, c), x)
-//   -> (select_cc lhs, rhs, cc, x, (or, x, c))  [AllOnes=0]
-// (xor (select_cc lhs, rhs, cc, 0, c), x)
-//   -> (select_cc lhs, rhs, cc, x, (xor, x, c))  [AllOnes=0]
-static SDValue combineSelectCCAndUse(SDNode *N, SDValue Slct, SDValue OtherOp,
-                                     SelectionDAG &DAG, bool AllOnes) {
+// (and (select cond, -1, c), x)
+//   -> (select cond, x, (and x, c))  [AllOnes=1]
+// (or  (select cond, 0, c), x)
+//   -> (select cond, x, (or x, c))  [AllOnes=0]
+// (xor (select cond, 0, c), x)
+//   -> (select cond, x, (xor x, c))  [AllOnes=0]
+// (add (select cond, 0, c), x)
+//   -> (select cond, x, (add x, c))  [AllOnes=0]
+// (sub x, (select cond, 0, c))
+//   -> (select cond, x, (sub x, c))  [AllOnes=0]
+static SDValue combineSelectAndUse(SDNode *N, SDValue Slct, SDValue OtherOp,
+                                   SelectionDAG &DAG, bool AllOnes) {
   EVT VT = N->getValueType(0);
 
-  if (Slct.getOpcode() != RISCVISD::SELECT_CC || !Slct.hasOneUse())
+  // Skip vectors.
+  if (VT.isVector())
+    return SDValue();
+
+  if ((Slct.getOpcode() != ISD::SELECT &&
+       Slct.getOpcode() != RISCVISD::SELECT_CC) ||
+      !Slct.hasOneUse())
     return SDValue();
 
   auto isZeroOrAllOnes = [](SDValue N, bool AllOnes) {
@@ -5787,8 +5797,9 @@ static SDValue combineSelectCCAndUse(SDNode *N, SDValue Slct, SDValue OtherOp,
   };
 
   bool SwapSelectOps;
-  SDValue TrueVal = Slct.getOperand(3);
-  SDValue FalseVal = Slct.getOperand(4);
+  unsigned OpOffset = Slct.getOpcode() == RISCVISD::SELECT_CC ? 2 : 0;
+  SDValue TrueVal = Slct.getOperand(1 + OpOffset);
+  SDValue FalseVal = Slct.getOperand(2 + OpOffset);
   SDValue NonConstantVal;
   if (isZeroOrAllOnes(TrueVal, AllOnes)) {
     SwapSelectOps = false;
@@ -5802,40 +5813,53 @@ static SDValue combineSelectCCAndUse(SDNode *N, SDValue Slct, SDValue OtherOp,
   // Slct is now know to be the desired identity constant when CC is true.
   TrueVal = OtherOp;
   FalseVal = DAG.getNode(N->getOpcode(), SDLoc(N), VT, OtherOp, NonConstantVal);
-  // Unless SwapSelectOps says CC should be false.
+  // Unless SwapSelectOps says the condition should be false.
   if (SwapSelectOps)
     std::swap(TrueVal, FalseVal);
 
-  return DAG.getNode(RISCVISD::SELECT_CC, SDLoc(N), VT,
-                     {Slct.getOperand(0), Slct.getOperand(1),
-                      Slct.getOperand(2), TrueVal, FalseVal});
+  if (Slct.getOpcode() == RISCVISD::SELECT_CC)
+    return DAG.getNode(RISCVISD::SELECT_CC, SDLoc(N), VT,
+                       {Slct.getOperand(0), Slct.getOperand(1),
+                        Slct.getOperand(2), TrueVal, FalseVal});
+
+  return DAG.getNode(ISD::SELECT, SDLoc(N), VT,
+                     {Slct.getOperand(0), TrueVal, FalseVal});
 }
 
 // Attempt combineSelectAndUse on each operand of a commutative operator N.
-static SDValue combineSelectCCAndUseCommutative(SDNode *N, SelectionDAG &DAG,
-                                                bool AllOnes) {
+static SDValue combineSelectAndUseCommutative(SDNode *N, SelectionDAG &DAG,
+                                              bool AllOnes) {
   SDValue N0 = N->getOperand(0);
   SDValue N1 = N->getOperand(1);
-  if (SDValue Result = combineSelectCCAndUse(N, N0, N1, DAG, AllOnes))
+  if (SDValue Result = combineSelectAndUse(N, N0, N1, DAG, AllOnes))
     return Result;
-  if (SDValue Result = combineSelectCCAndUse(N, N1, N0, DAG, AllOnes))
+  if (SDValue Result = combineSelectAndUse(N, N1, N0, DAG, AllOnes))
     return Result;
   return SDValue();
 }
 
-static SDValue performANDCombine(SDNode *N,
-                                 TargetLowering::DAGCombinerInfo &DCI,
-                                 const RISCVSubtarget &Subtarget) {
-  SelectionDAG &DAG = DCI.DAG;
-
-  // fold (and (select_cc lhs, rhs, cc, -1, y), x) ->
-  //      (select lhs, rhs, cc, x, (and x, y))
-  return combineSelectCCAndUseCommutative(N, DAG, true);
+static SDValue performADDCombine(SDNode *N, SelectionDAG &DAG) {
+  // fold (add (select lhs, rhs, cc, 0, y), x) ->
+  //      (select lhs, rhs, cc, x, (add x, y))
+  return combineSelectAndUseCommutative(N, DAG, /*AllOnes*/ false);
 }
 
-static SDValue performORCombine(SDNode *N, TargetLowering::DAGCombinerInfo &DCI,
+static SDValue performSUBCombine(SDNode *N, SelectionDAG &DAG) {
+  // fold (sub x, (select lhs, rhs, cc, 0, y)) ->
+  //      (select lhs, rhs, cc, x, (sub x, y))
+  SDValue N0 = N->getOperand(0);
+  SDValue N1 = N->getOperand(1);
+  return combineSelectAndUse(N, N1, N0, DAG, /*AllOnes*/ false);
+}
+
+static SDValue performANDCombine(SDNode *N, SelectionDAG &DAG) {
+  // fold (and (select lhs, rhs, cc, -1, y), x) ->
+  //      (select lhs, rhs, cc, x, (and x, y))
+  return combineSelectAndUseCommutative(N, DAG, /*AllOnes*/ true);
+}
+
+static SDValue performORCombine(SDNode *N, SelectionDAG &DAG,
                                 const RISCVSubtarget &Subtarget) {
-  SelectionDAG &DAG = DCI.DAG;
   if (Subtarget.hasStdExtZbp()) {
     if (auto GREV = combineORToGREV(SDValue(N, 0), DAG, Subtarget))
       return GREV;
@@ -5845,19 +5869,15 @@ static SDValue performORCombine(SDNode *N, TargetLowering::DAGCombinerInfo &DCI,
       return SHFL;
   }
 
-  // fold (or (select_cc lhs, rhs, cc, 0, y), x) ->
-  //      (select lhs, rhs, cc, x, (or x, y))
-  return combineSelectCCAndUseCommutative(N, DAG, false);
+  // fold (or (select cond, 0, y), x) ->
+  //      (select cond, x, (or x, y))
+  return combineSelectAndUseCommutative(N, DAG, /*AllOnes*/ false);
 }
 
-static SDValue performXORCombine(SDNode *N,
-                                 TargetLowering::DAGCombinerInfo &DCI,
-                                 const RISCVSubtarget &Subtarget) {
-  SelectionDAG &DAG = DCI.DAG;
-
-  // fold (xor (select_cc lhs, rhs, cc, 0, y), x) ->
-  //      (select lhs, rhs, cc, x, (xor x, y))
-  return combineSelectCCAndUseCommutative(N, DAG, false);
+static SDValue performXORCombine(SDNode *N, SelectionDAG &DAG) {
+  // fold (xor (select cond, 0, y), x) ->
+  //      (select cond, x, (xor x, y))
+  return combineSelectAndUseCommutative(N, DAG, /*AllOnes*/ false);
 }
 
 // Attempt to turn ANY_EXTEND into SIGN_EXTEND if the input to the ANY_EXTEND
@@ -5948,6 +5968,20 @@ SDValue RISCVTargetLowering::PerformDAGCombine(SDNode *N,
                                                DAGCombinerInfo &DCI) const {
   SelectionDAG &DAG = DCI.DAG;
 
+  // Helper to call SimplifyDemandedBits on an operand of N where only some low
+  // bits are demanded. N will be added to the Worklist if it was not deleted.
+  // Caller should return SDValue(N, 0) if this returns true.
+  auto SimplifyDemandedLowBitsHelper = [&](unsigned OpNo, unsigned LowBits) {
+    SDValue Op = N->getOperand(OpNo);
+    APInt Mask = APInt::getLowBitsSet(Op.getValueSizeInBits(), LowBits);
+    if (!SimplifyDemandedBits(Op, Mask, DCI))
+      return false;
+
+    if (N->getOpcode() != ISD::DELETED_NODE)
+      DCI.AddToWorklist(N);
+    return true;
+  };
+
   switch (N->getOpcode()) {
   default:
     break;
@@ -5999,136 +6033,85 @@ SDValue RISCVTargetLowering::PerformDAGCombine(SDNode *N,
   case RISCVISD::ROLW:
   case RISCVISD::RORW: {
     // Only the lower 32 bits of LHS and lower 5 bits of RHS are read.
-    SDValue LHS = N->getOperand(0);
-    SDValue RHS = N->getOperand(1);
-    APInt LHSMask = APInt::getLowBitsSet(LHS.getValueSizeInBits(), 32);
-    APInt RHSMask = APInt::getLowBitsSet(RHS.getValueSizeInBits(), 5);
-    if (SimplifyDemandedBits(N->getOperand(0), LHSMask, DCI) ||
-        SimplifyDemandedBits(N->getOperand(1), RHSMask, DCI)) {
-      if (N->getOpcode() != ISD::DELETED_NODE)
-        DCI.AddToWorklist(N);
+    if (SimplifyDemandedLowBitsHelper(0, 32) ||
+        SimplifyDemandedLowBitsHelper(1, 5))
       return SDValue(N, 0);
-    }
     break;
   }
   case RISCVISD::CLZW:
   case RISCVISD::CTZW: {
     // Only the lower 32 bits of the first operand are read
-    SDValue Op0 = N->getOperand(0);
-    APInt Mask = APInt::getLowBitsSet(Op0.getValueSizeInBits(), 32);
-    if (SimplifyDemandedBits(Op0, Mask, DCI)) {
-      if (N->getOpcode() != ISD::DELETED_NODE)
-        DCI.AddToWorklist(N);
+    if (SimplifyDemandedLowBitsHelper(0, 32))
       return SDValue(N, 0);
-    }
     break;
   }
   case RISCVISD::FSL:
   case RISCVISD::FSR: {
     // Only the lower log2(Bitwidth)+1 bits of the the shift amount are read.
-    SDValue ShAmt = N->getOperand(2);
-    unsigned BitWidth = ShAmt.getValueSizeInBits();
+    unsigned BitWidth = N->getOperand(2).getValueSizeInBits();
     assert(isPowerOf2_32(BitWidth) && "Unexpected bit width");
-    APInt ShAmtMask(BitWidth, (BitWidth * 2) - 1);
-    if (SimplifyDemandedBits(ShAmt, ShAmtMask, DCI)) {
-      if (N->getOpcode() != ISD::DELETED_NODE)
-        DCI.AddToWorklist(N);
+    if (SimplifyDemandedLowBitsHelper(2, Log2_32(BitWidth) + 1))
       return SDValue(N, 0);
-    }
     break;
   }
   case RISCVISD::FSLW:
   case RISCVISD::FSRW: {
     // Only the lower 32 bits of Values and lower 6 bits of shift amount are
     // read.
-    SDValue Op0 = N->getOperand(0);
-    SDValue Op1 = N->getOperand(1);
-    SDValue ShAmt = N->getOperand(2);
-    APInt OpMask = APInt::getLowBitsSet(Op0.getValueSizeInBits(), 32);
-    APInt ShAmtMask = APInt::getLowBitsSet(ShAmt.getValueSizeInBits(), 6);
-    if (SimplifyDemandedBits(Op0, OpMask, DCI) ||
-        SimplifyDemandedBits(Op1, OpMask, DCI) ||
-        SimplifyDemandedBits(ShAmt, ShAmtMask, DCI)) {
-      if (N->getOpcode() != ISD::DELETED_NODE)
-        DCI.AddToWorklist(N);
+    if (SimplifyDemandedLowBitsHelper(0, 32) ||
+        SimplifyDemandedLowBitsHelper(1, 32) ||
+        SimplifyDemandedLowBitsHelper(2, 6))
       return SDValue(N, 0);
-    }
     break;
   }
   case RISCVISD::GREV:
   case RISCVISD::GORC: {
     // Only the lower log2(Bitwidth) bits of the the shift amount are read.
-    SDValue ShAmt = N->getOperand(1);
-    unsigned BitWidth = ShAmt.getValueSizeInBits();
+    unsigned BitWidth = N->getOperand(1).getValueSizeInBits();
     assert(isPowerOf2_32(BitWidth) && "Unexpected bit width");
-    APInt ShAmtMask(BitWidth, BitWidth - 1);
-    if (SimplifyDemandedBits(ShAmt, ShAmtMask, DCI)) {
-      if (N->getOpcode() != ISD::DELETED_NODE)
-        DCI.AddToWorklist(N);
+    if (SimplifyDemandedLowBitsHelper(1, Log2_32(BitWidth)))
       return SDValue(N, 0);
-    }
 
     return combineGREVI_GORCI(N, DCI.DAG);
   }
   case RISCVISD::GREVW:
   case RISCVISD::GORCW: {
     // Only the lower 32 bits of LHS and lower 5 bits of RHS are read.
-    SDValue LHS = N->getOperand(0);
-    SDValue RHS = N->getOperand(1);
-    APInt LHSMask = APInt::getLowBitsSet(LHS.getValueSizeInBits(), 32);
-    APInt RHSMask = APInt::getLowBitsSet(RHS.getValueSizeInBits(), 5);
-    if (SimplifyDemandedBits(LHS, LHSMask, DCI) ||
-        SimplifyDemandedBits(RHS, RHSMask, DCI)) {
-      if (N->getOpcode() != ISD::DELETED_NODE)
-        DCI.AddToWorklist(N);
+    if (SimplifyDemandedLowBitsHelper(0, 32) ||
+        SimplifyDemandedLowBitsHelper(1, 5))
       return SDValue(N, 0);
-    }
 
     return combineGREVI_GORCI(N, DCI.DAG);
   }
   case RISCVISD::SHFL:
   case RISCVISD::UNSHFL: {
-    // Only the lower log2(Bitwidth) bits of the the shift amount are read.
-    SDValue ShAmt = N->getOperand(1);
-    unsigned BitWidth = ShAmt.getValueSizeInBits();
+    // Only the lower log2(Bitwidth)-1 bits of the the shift amount are read.
+    unsigned BitWidth = N->getOperand(1).getValueSizeInBits();
     assert(isPowerOf2_32(BitWidth) && "Unexpected bit width");
-    APInt ShAmtMask(BitWidth, (BitWidth / 2) - 1);
-    if (SimplifyDemandedBits(ShAmt, ShAmtMask, DCI)) {
-      if (N->getOpcode() != ISD::DELETED_NODE)
-        DCI.AddToWorklist(N);
+    if (SimplifyDemandedLowBitsHelper(1, Log2_32(BitWidth) - 1))
       return SDValue(N, 0);
-    }
 
     break;
   }
   case RISCVISD::SHFLW:
   case RISCVISD::UNSHFLW: {
-    // Only the lower 32 bits of LHS and lower 5 bits of RHS are read.
+    // Only the lower 32 bits of LHS and lower 4 bits of RHS are read.
     SDValue LHS = N->getOperand(0);
     SDValue RHS = N->getOperand(1);
     APInt LHSMask = APInt::getLowBitsSet(LHS.getValueSizeInBits(), 32);
     APInt RHSMask = APInt::getLowBitsSet(RHS.getValueSizeInBits(), 4);
-    if (SimplifyDemandedBits(LHS, LHSMask, DCI) ||
-        SimplifyDemandedBits(RHS, RHSMask, DCI)) {
-      if (N->getOpcode() != ISD::DELETED_NODE)
-        DCI.AddToWorklist(N);
+    if (SimplifyDemandedLowBitsHelper(0, 32) ||
+        SimplifyDemandedLowBitsHelper(1, 4))
       return SDValue(N, 0);
-    }
 
     break;
   }
   case RISCVISD::BCOMPRESSW:
   case RISCVISD::BDECOMPRESSW: {
     // Only the lower 32 bits of LHS and RHS are read.
-    SDValue LHS = N->getOperand(0);
-    SDValue RHS = N->getOperand(1);
-    APInt Mask = APInt::getLowBitsSet(LHS.getValueSizeInBits(), 32);
-    if (SimplifyDemandedBits(LHS, Mask, DCI) ||
-        SimplifyDemandedBits(RHS, Mask, DCI)) {
-      if (N->getOpcode() != ISD::DELETED_NODE)
-        DCI.AddToWorklist(N);
+    if (SimplifyDemandedLowBitsHelper(0, 32) ||
+        SimplifyDemandedLowBitsHelper(1, 32))
       return SDValue(N, 0);
-    }
 
     break;
   }
@@ -6167,12 +6150,16 @@ SDValue RISCVTargetLowering::PerformDAGCombine(SDNode *N,
     return DAG.getNode(ISD::AND, DL, VT, NewFMV,
                        DAG.getConstant(~SignBit, DL, VT));
   }
+  case ISD::ADD:
+    return performADDCombine(N, DAG);
+  case ISD::SUB:
+    return performSUBCombine(N, DAG);
   case ISD::AND:
-    return performANDCombine(N, DCI, Subtarget);
+    return performANDCombine(N, DAG);
   case ISD::OR:
-    return performORCombine(N, DCI, Subtarget);
+    return performORCombine(N, DAG, Subtarget);
   case ISD::XOR:
-    return performXORCombine(N, DCI, Subtarget);
+    return performXORCombine(N, DAG);
   case ISD::ANY_EXTEND:
     return performANY_EXTENDCombine(N, DCI, Subtarget);
   case ISD::ZERO_EXTEND:
@@ -6697,6 +6684,12 @@ unsigned RISCVTargetLowering::ComputeNumSignBitsForTargetNode(
   switch (Op.getOpcode()) {
   default:
     break;
+  case RISCVISD::SELECT_CC: {
+    unsigned Tmp = DAG.ComputeNumSignBits(Op.getOperand(3), DemandedElts, Depth + 1);
+    if (Tmp == 1) return 1;  // Early out.
+    unsigned Tmp2 = DAG.ComputeNumSignBits(Op.getOperand(4), DemandedElts, Depth + 1);
+    return std::min(Tmp, Tmp2);
+  }
   case RISCVISD::SLLW:
   case RISCVISD::SRAW:
   case RISCVISD::SRLW:

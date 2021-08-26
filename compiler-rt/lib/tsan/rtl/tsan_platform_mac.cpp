@@ -156,7 +156,7 @@ void WriteMemoryProfile(char *buf, uptr buf_size, uptr nthread, uptr nlive) {
   RegionMemUsage(HeapMemBeg(), HeapMemEnd(), &heap_res, &heap_dirty);
 #else  // !SANITIZER_GO
   uptr app_res, app_dirty;
-  RegionMemUsage(AppMemBeg(), AppMemEnd(), &app_res, &app_dirty);
+  RegionMemUsage(LoAppMemBeg(), LoAppMemEnd(), &app_res, &app_dirty);
 #endif
 
   StackDepotStats *stacks = StackDepotGetStats();
@@ -169,7 +169,7 @@ void WriteMemoryProfile(char *buf, uptr buf_size, uptr nthread, uptr nlive) {
     "high app (0x%016zx-0x%016zx): resident %zd kB, dirty %zd kB\n"
     "heap     (0x%016zx-0x%016zx): resident %zd kB, dirty %zd kB\n"
 #else  // !SANITIZER_GO
-    "app      (0x%016zx-0x%016zx): resident %zd kB, dirty %zd kB\n"
+      "app      (0x%016zx-0x%016zx): resident %zd kB, dirty %zd kB\n"
 #endif
     "stacks: %zd unique IDs, %zd kB allocated\n"
     "threads: %zd total, %zd live\n"
@@ -182,7 +182,7 @@ void WriteMemoryProfile(char *buf, uptr buf_size, uptr nthread, uptr nlive) {
     HiAppMemBeg(), HiAppMemEnd(), high_res / 1024, high_dirty / 1024,
     HeapMemBeg(), HeapMemEnd(), heap_res / 1024, heap_dirty / 1024,
 #else  // !SANITIZER_GO
-    AppMemBeg(), AppMemEnd(), app_res / 1024, app_dirty / 1024,
+      LoAppMemBeg(), LoAppMemEnd(), app_res / 1024, app_dirty / 1024,
 #endif
     stacks->n_uniq_ids, stacks->allocated / 1024,
     nthread, nlive);
@@ -234,11 +234,11 @@ static void my_pthread_introspection_hook(unsigned int event, pthread_t thread,
 #endif
 
 void InitializePlatformEarly() {
-#if !SANITIZER_GO && !HAS_48_BIT_ADDRESS_SPACE
+#  if !SANITIZER_GO && SANITIZER_IOS
   uptr max_vm = GetMaxUserVirtualAddress() + 1;
-  if (max_vm != Mapping::kHiAppMemEnd) {
+  if (max_vm != HiAppMemEnd()) {
     Printf("ThreadSanitizer: unsupported vm address limit %p, expected %p.\n",
-           max_vm, Mapping::kHiAppMemEnd);
+           max_vm, HiAppMemEnd());
     Die();
   }
 #endif

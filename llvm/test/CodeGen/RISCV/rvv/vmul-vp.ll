@@ -804,6 +804,56 @@ define <vscale x 4 x i32> @vmul_vx_nxv4i32_unmasked(<vscale x 4 x i32> %va, i32 
   ret <vscale x 4 x i32> %v
 }
 
+declare <vscale x 7 x i32> @llvm.vp.mul.nxv7i32(<vscale x 7 x i32>, <vscale x 7 x i32>, <vscale x 7 x i1>, i32)
+
+define <vscale x 7 x i32> @vmul_vv_nxv7i32(<vscale x 7 x i32> %va, <vscale x 7 x i32> %b, <vscale x 7 x i1> %m, i32 zeroext %evl) {
+; CHECK-LABEL: vmul_vv_nxv7i32:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    vsetvli zero, a0, e32, m4, ta, mu
+; CHECK-NEXT:    vmul.vv v8, v8, v12, v0.t
+; CHECK-NEXT:    ret
+  %v = call <vscale x 7 x i32> @llvm.vp.mul.nxv7i32(<vscale x 7 x i32> %va, <vscale x 7 x i32> %b, <vscale x 7 x i1> %m, i32 %evl)
+  ret <vscale x 7 x i32> %v
+}
+
+define <vscale x 7 x i32> @vmul_vv_nxv7i32_unmasked(<vscale x 7 x i32> %va, <vscale x 7 x i32> %b, i32 zeroext %evl) {
+; CHECK-LABEL: vmul_vv_nxv7i32_unmasked:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    vsetvli zero, a0, e32, m4, ta, mu
+; CHECK-NEXT:    vmul.vv v8, v8, v12
+; CHECK-NEXT:    ret
+  %head = insertelement <vscale x 7 x i1> undef, i1 true, i32 0
+  %m = shufflevector <vscale x 7 x i1> %head, <vscale x 7 x i1> undef, <vscale x 7 x i32> zeroinitializer
+  %v = call <vscale x 7 x i32> @llvm.vp.mul.nxv7i32(<vscale x 7 x i32> %va, <vscale x 7 x i32> %b, <vscale x 7 x i1> %m, i32 %evl)
+  ret <vscale x 7 x i32> %v
+}
+
+define <vscale x 7 x i32> @vmul_vx_nxv7i32(<vscale x 7 x i32> %va, i32 %b, <vscale x 7 x i1> %m, i32 zeroext %evl) {
+; CHECK-LABEL: vmul_vx_nxv7i32:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    vsetvli zero, a1, e32, m4, ta, mu
+; CHECK-NEXT:    vmul.vx v8, v8, a0, v0.t
+; CHECK-NEXT:    ret
+  %elt.head = insertelement <vscale x 7 x i32> undef, i32 %b, i32 0
+  %vb = shufflevector <vscale x 7 x i32> %elt.head, <vscale x 7 x i32> undef, <vscale x 7 x i32> zeroinitializer
+  %v = call <vscale x 7 x i32> @llvm.vp.mul.nxv7i32(<vscale x 7 x i32> %va, <vscale x 7 x i32> %vb, <vscale x 7 x i1> %m, i32 %evl)
+  ret <vscale x 7 x i32> %v
+}
+
+define <vscale x 7 x i32> @vmul_vx_nxv7i32_unmasked(<vscale x 7 x i32> %va, i32 %b, i32 zeroext %evl) {
+; CHECK-LABEL: vmul_vx_nxv7i32_unmasked:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    vsetvli zero, a1, e32, m4, ta, mu
+; CHECK-NEXT:    vmul.vx v8, v8, a0
+; CHECK-NEXT:    ret
+  %elt.head = insertelement <vscale x 7 x i32> undef, i32 %b, i32 0
+  %vb = shufflevector <vscale x 7 x i32> %elt.head, <vscale x 7 x i32> undef, <vscale x 7 x i32> zeroinitializer
+  %head = insertelement <vscale x 7 x i1> undef, i1 true, i32 0
+  %m = shufflevector <vscale x 7 x i1> %head, <vscale x 7 x i1> undef, <vscale x 7 x i32> zeroinitializer
+  %v = call <vscale x 7 x i32> @llvm.vp.mul.nxv7i32(<vscale x 7 x i32> %va, <vscale x 7 x i32> %vb, <vscale x 7 x i1> %m, i32 %evl)
+  ret <vscale x 7 x i32> %v
+}
+
 declare <vscale x 8 x i32> @llvm.vp.mul.nxv8i32(<vscale x 8 x i32>, <vscale x 8 x i32>, <vscale x 8 x i1>, i32)
 
 define <vscale x 8 x i32> @vmul_vv_nxv8i32(<vscale x 8 x i32> %va, <vscale x 8 x i32> %b, <vscale x 8 x i1> %m, i32 zeroext %evl) {

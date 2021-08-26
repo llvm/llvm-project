@@ -8,7 +8,6 @@
 
 // UNSUPPORTED: c++03, c++11, c++14, c++17
 // UNSUPPORTED: libcpp-no-concepts
-// UNSUPPORTED: gcc-10
 
 // friend constexpr iter_difference_t<I> operator-(
 //   const counted_iterator& x, default_sentinel_t);

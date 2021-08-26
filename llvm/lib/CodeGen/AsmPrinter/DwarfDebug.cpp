@@ -2153,18 +2153,24 @@ void DwarfDebug::beginFunctionImpl(const MachineFunction *MF) {
 
   DwarfCompileUnit &CU = getOrCreateDwarfCompileUnit(SP->getUnit());
 
+  Asm->OutStreamer->getContext().setDwarfCompileUnitID(
+      getDwarfCompileUnitIDForLineTable(CU));
+
+  // Record beginning of function.
+  PrologEndLoc = emitInitialLocDirective(
+      *MF, Asm->OutStreamer->getContext().getDwarfCompileUnitID());
+}
+
+unsigned
+DwarfDebug::getDwarfCompileUnitIDForLineTable(const DwarfCompileUnit &CU) {
   // Set DwarfDwarfCompileUnitID in MCContext to the Compile Unit this function
   // belongs to so that we add to the correct per-cu line table in the
   // non-asm case.
   if (Asm->OutStreamer->hasRawTextSupport())
     // Use a single line table if we are generating assembly.
-    Asm->OutStreamer->getContext().setDwarfCompileUnitID(0);
+    return 0;
   else
-    Asm->OutStreamer->getContext().setDwarfCompileUnitID(CU.getUniqueID());
-
-  // Record beginning of function.
-  PrologEndLoc = emitInitialLocDirective(
-      *MF, Asm->OutStreamer->getContext().getDwarfCompileUnitID());
+    return CU.getUniqueID();
 }
 
 void DwarfDebug::skippedNonDebugFunction() {

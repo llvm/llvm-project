@@ -1549,7 +1549,7 @@ InstructionCost
 AArch64TTIImpl::getMaskedMemoryOpCost(unsigned Opcode, Type *Src,
                                       Align Alignment, unsigned AddressSpace,
                                       TTI::TargetCostKind CostKind) {
-  if (!isa<ScalableVectorType>(Src))
+  if (useNeonVector(Src))
     return BaseT::getMaskedMemoryOpCost(Opcode, Src, Alignment, AddressSpace,
                                         CostKind);
   auto LT = TLI->getTypeLegalizationCost(DL, Src);
@@ -1589,7 +1589,7 @@ InstructionCost AArch64TTIImpl::getGatherScatterOpCost(
   ElementCount LegalVF = LT.second.getVectorElementCount();
   InstructionCost MemOpCost =
       getMemoryOpCost(Opcode, VT->getElementType(), Alignment, 0, CostKind, I);
-  return LT.first * MemOpCost * getMaxNumElements(LegalVF);
+  return LT.first * MemOpCost * getMaxNumElements(LegalVF, I->getFunction());
 }
 
 bool AArch64TTIImpl::useNeonVector(const Type *Ty) const {
@@ -1754,6 +1754,8 @@ void AArch64TTIImpl::getUnrollingPreferences(Loop *L, ScalarEvolution &SE,
   // Enable partial unrolling and runtime unrolling.
   BaseT::getUnrollingPreferences(L, SE, UP, ORE);
 
+  UP.UpperBound = true;
+
   // For inner loop, it is more likely to be a hot one, and the runtime check
   // can be promoted out from LICM pass, so the overhead is less, let's try
   // a larger threshold to unroll more loops.
@@ -1794,7 +1796,6 @@ void AArch64TTIImpl::getUnrollingPreferences(Loop *L, ScalarEvolution &SE,
       !ST->getSchedModel().isOutOfOrder()) {
     UP.Runtime = true;
     UP.Partial = true;
-    UP.UpperBound = true;
     UP.UnrollRemainder = true;
     UP.DefaultUnrollRuntimeCount = 4;
 
@@ -1999,8 +2000,13 @@ AArch64TTIImpl::getArithmeticReductionCost(unsigned Opcode, VectorType *ValTy,
                                            Optional<FastMathFlags> FMF,
                                            TTI::TargetCostKind CostKind) {
   if (TTI::requiresOrderedReduction(FMF)) {
-    if (!isa<ScalableVectorType>(ValTy))
-      return BaseT::getArithmeticReductionCost(Opcode, ValTy, FMF, CostKind);
+    if (auto *FixedVTy = dyn_cast<FixedVectorType>(ValTy)) {
+      InstructionCost BaseCost =
+          BaseT::getArithmeticReductionCost(Opcode, ValTy, FMF, CostKind);
+      // Add on extra cost to reflect the extra overhead on some CPUs. We still
+      // end up vectorizing for more computationally intensive loops.
+      return BaseCost + FixedVTy->getNumElements();
+    }
 
     if (Opcode != Instruction::FAdd)
       return InstructionCost::getInvalid();

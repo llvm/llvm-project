@@ -1,7 +1,5 @@
-; RUN: opt -tbaa -basic-aa -licm -enable-mssa-loop-dependency=false -enable-new-pm=0 -S < %s | FileCheck %s --check-prefixes=CHECK,AST
-; RUN: opt -tbaa -basic-aa -licm -enable-mssa-loop-dependency=true -enable-new-pm=0 -S < %s | FileCheck %s --check-prefixes=CHECK,MSSA
-; RUN: opt -aa-pipeline=tbaa,basic-aa -passes='require<aa>,require<targetir>,require<scalar-evolution>,require<opt-remark-emit>,loop(licm)' -S %s | FileCheck %s  --check-prefixes=CHECK,AST
-; RUN: opt -aa-pipeline=tbaa,basic-aa -passes='require<aa>,require<targetir>,require<scalar-evolution>,require<opt-remark-emit>,loop-mssa(licm)' -S %s | FileCheck %s --check-prefixes=CHECK,MSSA
+; RUN: opt -tbaa -basic-aa -licm -enable-new-pm=0 -S < %s | FileCheck %s
+; RUN: opt -aa-pipeline=tbaa,basic-aa -passes='require<aa>,require<targetir>,require<scalar-evolution>,require<opt-remark-emit>,loop-mssa(licm)' -S %s | FileCheck %s
 
 ; LICM should keep the stores in their original order when it sinks/promotes them.
 ; rdar://12045203
@@ -14,9 +12,8 @@ target triple = "x86_64-apple-macosx10.8.0"
 define i32* @_Z4doiti(i32 %n, float* %tmp1, i32* %tmp3) nounwind {
 ; CHECK-LABEL: for.body.lr.ph:
 ; CHECK: store float 1.000000e+00, float* %tmp1
-; AST-LABEL: for.cond.for.end_crit_edge:
 ; CHECK: store i32 1, i32* %tmp3
-; MSSA-LABEL: for.cond.for.end_crit_edge:
+; CHECK-LABEL: for.cond.for.end_crit_edge:
 
 entry:
   %cmp1 = icmp slt i32 0, %n

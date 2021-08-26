@@ -1,5 +1,4 @@
-; RUN: opt < %s -loop-unswitch -enable-new-pm=0 -loop-unswitch-threshold=0 -S 2>&1 | FileCheck %s
-; RUN: opt < %s -loop-unswitch -enable-new-pm=0 -loop-unswitch-threshold=0 -enable-mssa-loop-dependency=true -verify-memoryssa -S 2>&1 | FileCheck %s
+; RUN: opt < %s -loop-unswitch -enable-new-pm=0 -loop-unswitch-threshold=0 -verify-memoryssa -S 2>&1 | FileCheck %s
 
 ; This is to test trivial loop unswitch only happens when trivial condition
 ; itself is an LIV loop condition (not partial LIV which could occur in and/or).

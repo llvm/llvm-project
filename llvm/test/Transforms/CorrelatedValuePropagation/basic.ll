@@ -377,6 +377,101 @@ unreachable:
   ret void
 }
 
+define i32 @switch_range(i32 %cond) {
+; CHECK-LABEL: @switch_range(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[S:%.*]] = urem i32 [[COND:%.*]], 3
+; CHECK-NEXT:    [[S1:%.*]] = add nuw nsw i32 [[S]], 1
+; CHECK-NEXT:    switch i32 [[S1]], label [[UNREACHABLE:%.*]] [
+; CHECK-NEXT:    i32 1, label [[EXIT1:%.*]]
+; CHECK-NEXT:    i32 2, label [[EXIT2:%.*]]
+; CHECK-NEXT:    i32 3, label [[EXIT1]]
+; CHECK-NEXT:    ]
+; CHECK:       exit1:
+; CHECK-NEXT:    ret i32 1
+; CHECK:       exit2:
+; CHECK-NEXT:    ret i32 2
+; CHECK:       unreachable:
+; CHECK-NEXT:    ret i32 0
+;
+entry:
+  %s = urem i32 %cond, 3
+  %s1 = add i32 %s, 1
+  switch i32 %s1, label %unreachable [
+  i32 1, label %exit1
+  i32 2, label %exit2
+  i32 3, label %exit1
+  ]
+
+exit1:
+  ret i32 1
+exit2:
+  ret i32 2
+unreachable:
+  ret i32 0
+}
+
+; If the cases do not cover the entire range of the
+; switch condition, we should not change the default.
+
+define i32 @switch_range_not_full(i32 %cond) {
+; CHECK-LABEL: @switch_range_not_full(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[S:%.*]] = urem i32 [[COND:%.*]], 3
+; CHECK-NEXT:    [[S1:%.*]] = add nuw nsw i32 [[S]], 1
+; CHECK-NEXT:    switch i32 [[S1]], label [[UNREACHABLE:%.*]] [
+; CHECK-NEXT:    i32 1, label [[EXIT1:%.*]]
+; CHECK-NEXT:    i32 3, label [[EXIT2:%.*]]
+; CHECK-NEXT:    ]
+; CHECK:       exit1:
+; CHECK-NEXT:    ret i32 1
+; CHECK:       exit2:
+; CHECK-NEXT:    ret i32 2
+; CHECK:       unreachable:
+; CHECK-NEXT:    ret i32 0
+;
+entry:
+  %s = urem i32 %cond, 3
+  %s1 = add i32 %s, 1
+  switch i32 %s1, label %unreachable [
+  i32 1, label %exit1
+  i32 3, label %exit2
+  ]
+
+exit1:
+  ret i32 1
+exit2:
+  ret i32 2
+unreachable:
+  ret i32 0
+}
+
+; PR51531
+
+define i8 @switch_defaultdest_multipleuse(i8 %t0) {
+; CHECK-LABEL: @switch_defaultdest_multipleuse(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[O:%.*]] = or i8 [[T0:%.*]], 1
+; CHECK-NEXT:    [[R:%.*]] = srem i8 1, [[O]]
+; CHECK-NEXT:    switch i8 [[R]], label [[EXIT:%.*]] [
+; CHECK-NEXT:    i8 0, label [[EXIT]]
+; CHECK-NEXT:    i8 1, label [[EXIT]]
+; CHECK-NEXT:    ]
+; CHECK:       exit:
+; CHECK-NEXT:    ret i8 0
+;
+entry:
+  %o = or i8 %t0, 1
+  %r = srem i8 1, %o
+  switch i8 %r, label %exit [
+  i8 0, label %exit
+  i8 1, label %exit
+  ]
+
+exit:
+  ret i8 0
+}
+
 define i1 @arg_attribute(i8* nonnull %a) {
 ; CHECK-LABEL: @arg_attribute(
 ; CHECK-NEXT:    ret i1 false

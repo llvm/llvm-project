@@ -101,7 +101,7 @@ static isl::union_map underapproximatedAddMap(isl::union_map UMap,
 
   isl::map Result = isl::map::empty(PrevMap.get_space());
   for (isl::basic_map BMap : PrevMap.get_basic_map_list()) {
-    if (Result.n_basic_map() > SimplifyMaxDisjuncts)
+    if (Result.n_basic_map().release() > SimplifyMaxDisjuncts)
       break;
     Result = Result.unite(BMap);
   }

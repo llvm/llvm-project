@@ -4361,8 +4361,8 @@ struct StrictFPUpgradeVisitor : public InstVisitor<StrictFPUpgradeVisitor> {
       return;
     // If we get here, the caller doesn't have the strictfp attribute
     // but this callsite does. Replace the strictfp attribute with nobuiltin.
-    Call.removeAttribute(AttributeList::FunctionIndex, Attribute::StrictFP);
-    Call.addAttribute(AttributeList::FunctionIndex, Attribute::NoBuiltin);
+    Call.removeFnAttr(Attribute::StrictFP);
+    Call.addFnAttr(Attribute::NoBuiltin);
   }
 };
 } // namespace
@@ -4383,8 +4383,7 @@ void llvm::UpgradeFunctionAttributes(Function &F) {
   }
 
   // Remove all incompatibile attributes from function.
-  F.removeAttributes(AttributeList::ReturnIndex,
-                     AttributeFuncs::typeIncompatible(F.getReturnType()));
+  F.removeRetAttrs(AttributeFuncs::typeIncompatible(F.getReturnType()));
   for (auto &Arg : F.args())
     Arg.removeAttrs(AttributeFuncs::typeIncompatible(Arg.getType()));
 }

@@ -43,6 +43,7 @@ class MIMGBaseOpcode : PredicateControl {
   bit HasD16 = 0;
   bit IsAtomicRet = 0;
   bit MSAA = 0;
+  bit BVH = 0;
 }
 
 def MIMGBaseOpcode : GenericEnum {
@@ -54,7 +55,7 @@ def MIMGBaseOpcodesTable : GenericTable {
   let CppTypeName = "MIMGBaseOpcodeInfo";
   let Fields = ["BaseOpcode", "Store", "Atomic", "AtomicX2", "Sampler",
                 "Gather4", "NumExtraArgs", "Gradients", "G16", "Coordinates",
-                "LodOrClampOrMip", "HasD16", "MSAA"];
+                "LodOrClampOrMip", "HasD16", "MSAA", "BVH"];
   string TypeOf_BaseOpcode = "MIMGBaseOpcode";
 
   let PrimaryKey = ["BaseOpcode"];
@@ -872,6 +873,14 @@ multiclass MIMG_Gather <mimgopc op, AMDGPUSampleVariant sample, bit wqm = 0,
 multiclass MIMG_Gather_WQM <mimgopc op, AMDGPUSampleVariant sample>
     : MIMG_Gather<op, sample, 1>;
 
+class MIMG_IntersectRay_Helper<bit Is64, bit A16> {
+  int num_addrs = !if(Is64, !if(A16, 9, 12), !if(A16, 8, 11));
+  // TODO: MIMGAddrSize will choose VReg_512 which is a 16 register tuple,
+  // when we only need 9, 11 or 12 depending on A16 field and ptr size.
+  RegisterClass RegClass = MIMGAddrSize<num_addrs, 0>.RegClass;
+  int VAddrDwords = !srl(RegClass.Size, 5);
+}
+
 class MIMG_IntersectRay_gfx10<mimgopc op, string opcode, RegisterClass AddrRC, bit A16>
     : MIMG_gfx10<op.BASE, (outs VReg_128:$vdata), "AMDGPU"> {
 
@@ -890,8 +899,11 @@ class MIMG_IntersectRay_nsa_gfx10<mimgopc op, string opcode, int num_addrs, bit 
   let AsmString = opcode#" $vdata, "#nsah.AddrAsm#", $srsrc"#!if(A16, "$a16", "");
 }
 
-multiclass MIMG_IntersectRay<mimgopc op, string opcode, int num_addrs, bit A16> {
-  def "" : MIMGBaseOpcode;
+multiclass MIMG_IntersectRay<mimgopc op, string opcode, bit Is64, bit A16> {
+  defvar info = MIMG_IntersectRay_Helper<Is64, A16>;
+  def "" : MIMGBaseOpcode {
+    let BVH = 1;
+  }
   let SubtargetPredicate = HasGFX10_AEncoding,
       AssemblerPredicate = HasGFX10_AEncoding,
       AsmMatchConverter = !if(A16, "cvtIntersectRay", ""),
@@ -908,13 +920,11 @@ multiclass MIMG_IntersectRay<mimgopc op, string opcode, int num_addrs, bit A16> 
       d16 = 0,
       BaseOpcode = !cast<MIMGBaseOpcode>(NAME),
       VDataDwords = 4 in {
-    // TODO: MIMGAddrSize will choose VReg_512 which is a 16 register tuple,
-    // when we only need 9, 11 or 12 depending on A16 field and ptr size.
-    def "_sa" : MIMG_IntersectRay_gfx10<op, opcode, MIMGAddrSize<num_addrs, 0>.RegClass, A16> {
-      let VAddrDwords = !srl(MIMGAddrSize<num_addrs, 0>.RegClass.Size, 5);
+    def _sa_gfx10 : MIMG_IntersectRay_gfx10<op, opcode, info.RegClass, A16> {
+      let VAddrDwords = info.VAddrDwords;
     }
-    def _nsa : MIMG_IntersectRay_nsa_gfx10<op, opcode, num_addrs, A16> {
-      let VAddrDwords = num_addrs;
+    def _nsa_gfx10 : MIMG_IntersectRay_nsa_gfx10<op, opcode, info.num_addrs, A16> {
+      let VAddrDwords = info.num_addrs;
     }
   }
 }
@@ -1045,10 +1055,10 @@ defm IMAGE_SAMPLE_C_CD_CL_O_G16 : MIMG_Sampler <mimgopc<0xef>, AMDGPUSample_c_cd
 let SubtargetPredicate = HasGFX10_AEncoding in
 defm IMAGE_MSAA_LOAD_X : MIMG_NoSampler <mimgopc<0x80>, "image_msaa_load", 1, 0, 0, 1>;
 
-defm IMAGE_BVH_INTERSECT_RAY       : MIMG_IntersectRay<mimgopc<0xe6>, "image_bvh_intersect_ray", 11, 0>;
-defm IMAGE_BVH_INTERSECT_RAY_a16   : MIMG_IntersectRay<mimgopc<0xe6>, "image_bvh_intersect_ray", 8, 1>;
-defm IMAGE_BVH64_INTERSECT_RAY     : MIMG_IntersectRay<mimgopc<0xe7>, "image_bvh64_intersect_ray", 12, 0>;
-defm IMAGE_BVH64_INTERSECT_RAY_a16 : MIMG_IntersectRay<mimgopc<0xe7>, "image_bvh64_intersect_ray", 9, 1>;
+defm IMAGE_BVH_INTERSECT_RAY       : MIMG_IntersectRay<mimgopc<0xe6>, "image_bvh_intersect_ray", 0, 0>;
+defm IMAGE_BVH_INTERSECT_RAY_a16   : MIMG_IntersectRay<mimgopc<0xe6>, "image_bvh_intersect_ray", 0, 1>;
+defm IMAGE_BVH64_INTERSECT_RAY     : MIMG_IntersectRay<mimgopc<0xe7>, "image_bvh64_intersect_ray", 1, 0>;
+defm IMAGE_BVH64_INTERSECT_RAY_a16 : MIMG_IntersectRay<mimgopc<0xe7>, "image_bvh64_intersect_ray", 1, 1>;
 
 /********** ========================================= **********/
 /********** Table of dimension-aware image intrinsics **********/

@@ -381,6 +381,9 @@ void CodeGenFunction::FinishFunction(SourceLocation EndLoc) {
                        "__cyg_profile_func_exit");
   }
 
+  if (ShouldSkipSanitizerInstrumentation())
+    CurFn->addFnAttr(llvm::Attribute::DisableSanitizerInstrumentation);
+
   // Emit debug descriptor for function end.
   if (CGDebugInfo *DI = getDebugInfo())
     DI->EmitFunctionEnd(Builder, CurFn);
@@ -484,11 +487,13 @@ void CodeGenFunction::FinishFunction(SourceLocation EndLoc) {
   //    function.
   CurFn->addFnAttr("min-legal-vector-width", llvm::utostr(LargestVectorWidth));
 
-  // Add vscale attribute if appropriate.
-  if (getLangOpts().ArmSveVectorBits) {
-    unsigned VScale = getLangOpts().ArmSveVectorBits / 128;
-    CurFn->addFnAttr(llvm::Attribute::getWithVScaleRangeArgs(getLLVMContext(),
-                                                             VScale, VScale));
+  // Add vscale_range attribute if appropriate.
+  Optional<std::pair<unsigned, unsigned>> VScaleRange =
+      getContext().getTargetInfo().getVScaleRange(getLangOpts());
+  if (VScaleRange) {
+    CurFn->addFnAttr(llvm::Attribute::getWithVScaleRangeArgs(
+        getLLVMContext(), VScaleRange.getValue().first,
+        VScaleRange.getValue().second));
   }
 
   // If we generated an unreachable return block, delete it now.
@@ -515,6 +520,12 @@ bool CodeGenFunction::ShouldInstrumentFunction() {
   if (!CurFuncDecl || CurFuncDecl->hasAttr<NoInstrumentFunctionAttr>())
     return false;
   return true;
+}
+
+bool CodeGenFunction::ShouldSkipSanitizerInstrumentation() {
+  if (!CurFuncDecl)
+    return false;
+  return CurFuncDecl->hasAttr<DisableSanitizerInstrumentationAttr>();
 }
 
 /// ShouldXRayInstrument - Return true if the current function should be

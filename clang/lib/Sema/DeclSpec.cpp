@@ -1300,8 +1300,8 @@ void DeclSpec::Finish(Sema &S, const PrintingPolicy &Policy) {
       if (!S.getLangOpts().CPlusPlus)
         S.Diag(TSTLoc, diag::ext_integer_complex);
     } else if (TypeSpecType != TST_float && TypeSpecType != TST_double &&
-               TypeSpecType != TST_float128) {
-      // FIXME: _Float16, __fp16?
+               TypeSpecType != TST_float128 && TypeSpecType != TST_float16) {
+      // FIXME: __fp16?
       S.Diag(TSCLoc, diag::err_invalid_complex_spec)
         << getSpecifierName((TST)TypeSpecType, Policy);
       TypeSpecComplex = TSC_unspecified;

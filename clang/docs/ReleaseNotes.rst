@@ -86,7 +86,13 @@ New Pragmas in Clang
 Attribute Changes in Clang
 --------------------------
 
-- ...
+- Attributes loaded as clang plugins which are sensitive to LangOpts must
+  now override ``acceptsLangOpts`` instead of ``diagLangOpts``.
+  Returning false will produce a generic "attribute ignored" diagnostic, as
+  with clang's built-in attributes.
+  If plugins want to provide richer diagnostics, they can do so when the
+  attribute is handled instead, e.g. in ``handleDeclAttribute``.
+  (This was changed in order to better support attributes in code completion).
 
 Windows Support
 ---------------
@@ -94,7 +100,9 @@ Windows Support
 C Language Changes in Clang
 ---------------------------
 
-- ...
+- Wide multi-characters literals such as ``L'ab'`` that would previously be interpreted as ``L'b'``
+  are now ill-formed in all language modes. The motivation for this change is outlined in
+  `P2362 <wg21.link/P2362>`_.
 
 C++ Language Changes in Clang
 -----------------------------

@@ -516,7 +516,11 @@ void LinkingSection::writeBody() {
       writeUleb128(sub.os, flags, "sym flags");
 
       if (auto *f = dyn_cast<FunctionSymbol>(sym)) {
-        writeUleb128(sub.os, f->getFunctionIndex(), "index");
+        if (auto *d = dyn_cast<DefinedFunction>(sym)) {
+          writeUleb128(sub.os, d->getExportedFunctionIndex(), "index");
+        } else {
+          writeUleb128(sub.os, f->getFunctionIndex(), "index");
+        }
         if (sym->isDefined() || (flags & WASM_SYMBOL_EXPLICIT_NAME) != 0)
           writeStr(sub.os, sym->getName(), "sym name");
       } else if (auto *g = dyn_cast<GlobalSymbol>(sym)) {

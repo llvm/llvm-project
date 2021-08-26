@@ -182,7 +182,7 @@ public:
   /// implicitly when at the beginning of the file.
   ///
   /// @param Tok                 Token where to move to.
-  /// @param RequiresStartOfLine Whether the next line depends on being in the
+  /// @param RequireStartOfLine  Whether the next line depends on being in the
   ///                            first column, such as a directive.
   ///
   /// @return Whether column adjustments are necessary.

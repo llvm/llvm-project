@@ -288,6 +288,7 @@ Clang-Tidy Checks
    `readability-else-after-return <readability-else-after-return.html>`_, "Yes"
    `readability-function-cognitive-complexity <readability-function-cognitive-complexity.html>`_,
    `readability-function-size <readability-function-size.html>`_,
+   `readability-identifier-length <readability-identifier-length.html>`_,
    `readability-identifier-naming <readability-identifier-naming.html>`_, "Yes"
    `readability-implicit-bool-conversion <readability-implicit-bool-conversion.html>`_, "Yes"
    `readability-inconsistent-declaration-parameter-name <readability-inconsistent-declaration-parameter-name.html>`_, "Yes"

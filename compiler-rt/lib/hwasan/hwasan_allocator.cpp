@@ -107,6 +107,10 @@ void HwasanAllocatorInit() {
     tail_magic[i] = GetCurrentThread()->GenerateRandomTag();
 }
 
+void HwasanAllocatorLock() { allocator.ForceLock(); }
+
+void HwasanAllocatorUnlock() { allocator.ForceUnlock(); }
+
 void AllocatorSwallowThreadLocalCache(AllocatorCache *cache) {
   allocator.SwallowCache(cache);
 }
@@ -201,21 +205,37 @@ static bool PointerAndMemoryTagsMatch(void *tagged_ptr) {
   return PossiblyShortTagMatches(mem_tag, tagged_uptr, 1);
 }
 
+static bool CheckInvalidFree(StackTrace *stack, void *untagged_ptr,
+                             void *tagged_ptr) {
+  // This function can return true if halt_on_error is false.
+  if (!allocator.PointerIsMine(untagged_ptr) ||
+      !PointerAndMemoryTagsMatch(tagged_ptr)) {
+    ReportInvalidFree(stack, reinterpret_cast<uptr>(tagged_ptr));
+    return true;
+  }
+  return false;
+}
+
 static void HwasanDeallocate(StackTrace *stack, void *tagged_ptr) {
   CHECK(tagged_ptr);
   HWASAN_FREE_HOOK(tagged_ptr);
 
-  if (!PointerAndMemoryTagsMatch(tagged_ptr))
-    ReportInvalidFree(stack, reinterpret_cast<uptr>(tagged_ptr));
+  bool in_taggable_region =
+      InTaggableRegion(reinterpret_cast<uptr>(tagged_ptr));
+  void *untagged_ptr = in_taggable_region ? UntagPtr(tagged_ptr) : tagged_ptr;
 
-  void *untagged_ptr = InTaggableRegion(reinterpret_cast<uptr>(tagged_ptr))
-                           ? UntagPtr(tagged_ptr)
-                           : tagged_ptr;
+  if (CheckInvalidFree(stack, untagged_ptr, tagged_ptr))
+    return;
+
   void *aligned_ptr = reinterpret_cast<void *>(
       RoundDownTo(reinterpret_cast<uptr>(untagged_ptr), kShadowAlignment));
   tag_t pointer_tag = GetTagFromPointer(reinterpret_cast<uptr>(tagged_ptr));
   Metadata *meta =
       reinterpret_cast<Metadata *>(allocator.GetMetaData(aligned_ptr));
+  if (!meta) {
+    ReportInvalidFree(stack, reinterpret_cast<uptr>(tagged_ptr));
+    return;
+  }
   uptr orig_size = meta->get_requested_size();
   u32 free_context_id = StackDepotPut(*stack);
   u32 alloc_context_id = meta->alloc_context_id;
@@ -228,7 +248,11 @@ static void HwasanDeallocate(StackTrace *stack, void *tagged_ptr) {
     CHECK_LT(tail_size, kShadowAlignment);
     void *tail_beg = reinterpret_cast<void *>(
         reinterpret_cast<uptr>(aligned_ptr) + orig_size);
-    if (tail_size && internal_memcmp(tail_beg, tail_magic, tail_size))
+    tag_t short_granule_memtag = *(reinterpret_cast<tag_t *>(
+        reinterpret_cast<uptr>(tail_beg) + tail_size));
+    if (tail_size &&
+        (internal_memcmp(tail_beg, tail_magic, tail_size) ||
+         (in_taggable_region && pointer_tag != short_granule_memtag)))
       ReportTailOverwritten(stack, reinterpret_cast<uptr>(tagged_ptr),
                             orig_size, tail_magic);
   }
@@ -243,8 +267,7 @@ static void HwasanDeallocate(StackTrace *stack, void *tagged_ptr) {
         Min(TaggedSize(orig_size), (uptr)flags()->max_free_fill_size);
     internal_memset(aligned_ptr, flags()->free_fill_byte, fill_size);
   }
-  if (InTaggableRegion(reinterpret_cast<uptr>(tagged_ptr)) &&
-      flags()->tag_in_free && malloc_bisect(stack, 0) &&
+  if (in_taggable_region && flags()->tag_in_free && malloc_bisect(stack, 0) &&
       atomic_load_relaxed(&hwasan_allocator_tagging_enabled)) {
     // Always store full 8-bit tags on free to maximize UAF detection.
     tag_t tag;
@@ -278,13 +301,15 @@ static void HwasanDeallocate(StackTrace *stack, void *tagged_ptr) {
 
 static void *HwasanReallocate(StackTrace *stack, void *tagged_ptr_old,
                               uptr new_size, uptr alignment) {
-  if (!PointerAndMemoryTagsMatch(tagged_ptr_old))
-    ReportInvalidFree(stack, reinterpret_cast<uptr>(tagged_ptr_old));
-
+  void *untagged_ptr_old =
+      InTaggableRegion(reinterpret_cast<uptr>(tagged_ptr_old))
+          ? UntagPtr(tagged_ptr_old)
+          : tagged_ptr_old;
+  if (CheckInvalidFree(stack, untagged_ptr_old, tagged_ptr_old))
+    return nullptr;
   void *tagged_ptr_new =
       HwasanAllocate(stack, new_size, alignment, false /*zeroise*/);
   if (tagged_ptr_old && tagged_ptr_new) {
-    void *untagged_ptr_old =  UntagPtr(tagged_ptr_old);
     Metadata *meta =
         reinterpret_cast<Metadata *>(allocator.GetMetaData(untagged_ptr_old));
     internal_memcpy(
@@ -305,6 +330,8 @@ static void *HwasanCalloc(StackTrace *stack, uptr nmemb, uptr size) {
 }
 
 HwasanChunkView FindHeapChunkByAddress(uptr address) {
+  if (!allocator.PointerIsMine(reinterpret_cast<void *>(address)))
+    return HwasanChunkView();
   void *block = allocator.GetBlockBegin(reinterpret_cast<void*>(address));
   if (!block)
     return HwasanChunkView();

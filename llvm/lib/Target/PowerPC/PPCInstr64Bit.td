@@ -1670,6 +1670,13 @@ def HASHCHKP : XForm_XD6_RA5_RB5<31, 690, (outs),
                                  "hashchkp $RB, $D_RA_XD", IIC_IntGeneral, []>;
 }
 
+let Interpretation64Bit = 1, isCodeGenOnly = 1, hasSideEffects = 1 in
+def ADDEX8 : Z23Form_RTAB5_CY2<31, 170, (outs g8rc:$rT),
+                              (ins g8rc:$rA, g8rc:$rB, u2imm:$CY),
+                              "addex $rT, $rA, $rB, $CY", IIC_IntGeneral,
+                              [(set i64:$rT, (int_ppc_addex i64:$rA, i64:$rB,
+                                                            timm:$CY))]>;
+
 //===----------------------------------------------------------------------===//
 // Instruction Patterns
 //

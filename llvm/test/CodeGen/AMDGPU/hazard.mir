@@ -125,3 +125,49 @@ body: |
     S_SENDMSG 3, implicit $exec, implicit $m0
     S_ENDPGM 0
 ...
+# GCN-LABEL: name: hazard-lookahead-wave-barrier
+# GCN: S_WAITCNT 0
+# GCN-NEXT: S_NOP 0
+# GCN-NEXT: V_ADD_F16_dpp
+---
+name: hazard-lookahead-wave-barrier
+body: |
+  bb.0:
+    liveins: $vgpr0, $vgpr1, $vgpr3
+
+    renamable $vgpr1 = contract nofpexcept V_ADD_F16_e32 killed $vgpr1, $vgpr0, implicit $mode, implicit $exec
+    WAVE_BARRIER
+    S_WAITCNT 0
+    renamable $vgpr2 = contract nofpexcept V_ADD_F16_dpp undef $vgpr2, 0, $vgpr1, 0, $vgpr3, 273, 15, 15, 1, implicit $mode, implicit $exec
+...
+# GCN-LABEL: name: hazard-lookahead-masked-unreachable
+# GCN: SI_MASKED_UNREACHABLE
+# GCN-NEXT: S_NOP 0
+# GCN-NEXT: S_SENDMSG
+---
+name: hazard-lookahead-masked-unreachable
+body: |
+  bb.0:
+    $m0 = S_MOV_B32 -1
+    SI_MASKED_UNREACHABLE
+    S_SENDMSG 3, implicit $exec, implicit $m0
+
+  bb.1:
+    S_ENDPGM 0
+...
+# GCN-LABEL: name: fallthrough-hazard-lookahead-masked-unreachable
+# GCN: SI_MASKED_UNREACHABLE
+# GCN-LABEL: bb.1:
+# GCN-NEXT: S_NOP 0
+# GCN-NEXT: S_SENDMSG
+---
+name: fallthrough-hazard-lookahead-masked-unreachable
+body: |
+  bb.0:
+    $m0 = S_MOV_B32 -1
+    SI_MASKED_UNREACHABLE
+
+  bb.1:
+    S_SENDMSG 3, implicit $exec, implicit $m0
+    S_ENDPGM 0
+...

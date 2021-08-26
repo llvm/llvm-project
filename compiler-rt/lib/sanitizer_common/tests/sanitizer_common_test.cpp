@@ -378,7 +378,7 @@ TEST(SanitizerCommon, InternalScopedStringLarge) {
   for (int i = 0; i < 1000; ++i) {
     std::string append(i, 'a' + i % 26);
     expected += append;
-    str.append(append.c_str());
+    str.append("%s", append.c_str());
     EXPECT_EQ(expected, str.data());
   }
 }

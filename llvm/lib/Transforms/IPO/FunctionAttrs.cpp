@@ -303,7 +303,7 @@ static bool addReadAttrs(const SCCNodeSet &SCCNodes, AARGetterT &&AARGetter) {
       AttrsToRemove.addAttribute(Attribute::InaccessibleMemOnly);
       AttrsToRemove.addAttribute(Attribute::InaccessibleMemOrArgMemOnly);
     }
-    F->removeAttributes(AttributeList::FunctionIndex, AttrsToRemove);
+    F->removeFnAttrs(AttrsToRemove);
 
     // Add in the new attribute.
     if (WritesMemory && !ReadsMemory)
@@ -1055,8 +1055,7 @@ static bool addNonNullAttrs(const SCCNodeSet &SCCNodes) {
   // pointers.
   for (Function *F : SCCNodes) {
     // Already nonnull.
-    if (F->getAttributes().hasAttribute(AttributeList::ReturnIndex,
-                                        Attribute::NonNull))
+    if (F->getAttributes().hasRetAttr(Attribute::NonNull))
       continue;
 
     // We can infer and propagate function attributes only when we know that the
@@ -1077,7 +1076,7 @@ static bool addNonNullAttrs(const SCCNodeSet &SCCNodes) {
         // which prevents us from speculating about the entire SCC
         LLVM_DEBUG(dbgs() << "Eagerly marking " << F->getName()
                           << " as nonnull\n");
-        F->addAttribute(AttributeList::ReturnIndex, Attribute::NonNull);
+        F->addRetAttr(Attribute::NonNull);
         ++NumNonNullReturn;
         MadeChange = true;
       }
@@ -1090,13 +1089,12 @@ static bool addNonNullAttrs(const SCCNodeSet &SCCNodes) {
 
   if (SCCReturnsNonNull) {
     for (Function *F : SCCNodes) {
-      if (F->getAttributes().hasAttribute(AttributeList::ReturnIndex,
-                                          Attribute::NonNull) ||
+      if (F->getAttributes().hasRetAttr(Attribute::NonNull) ||
           !F->getReturnType()->isPointerTy())
         continue;
 
       LLVM_DEBUG(dbgs() << "SCC marking " << F->getName() << " as nonnull\n");
-      F->addAttribute(AttributeList::ReturnIndex, Attribute::NonNull);
+      F->addRetAttr(Attribute::NonNull);
       ++NumNonNullReturn;
       MadeChange = true;
     }

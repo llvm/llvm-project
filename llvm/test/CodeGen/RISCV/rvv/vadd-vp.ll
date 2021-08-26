@@ -156,6 +156,82 @@ define <vscale x 2 x i8> @vadd_vi_nxv2i8_unmasked(<vscale x 2 x i8> %va, i32 zer
   ret <vscale x 2 x i8> %v
 }
 
+declare <vscale x 3 x i8> @llvm.vp.add.nxv3i8(<vscale x 3 x i8>, <vscale x 3 x i8>, <vscale x 3 x i1>, i32)
+
+define <vscale x 3 x i8> @vadd_vv_nxv3i8(<vscale x 3 x i8> %va, <vscale x 3 x i8> %b, <vscale x 3 x i1> %m, i32 zeroext %evl) {
+; CHECK-LABEL: vadd_vv_nxv3i8:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    vsetvli zero, a0, e8, mf2, ta, mu
+; CHECK-NEXT:    vadd.vv v8, v8, v9, v0.t
+; CHECK-NEXT:    ret
+  %v = call <vscale x 3 x i8> @llvm.vp.add.nxv3i8(<vscale x 3 x i8> %va, <vscale x 3 x i8> %b, <vscale x 3 x i1> %m, i32 %evl)
+  ret <vscale x 3 x i8> %v
+}
+
+define <vscale x 3 x i8> @vadd_vv_nxv3i8_unmasked(<vscale x 3 x i8> %va, <vscale x 3 x i8> %b, i32 zeroext %evl) {
+; CHECK-LABEL: vadd_vv_nxv3i8_unmasked:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    vsetvli zero, a0, e8, mf2, ta, mu
+; CHECK-NEXT:    vadd.vv v8, v8, v9
+; CHECK-NEXT:    ret
+  %head = insertelement <vscale x 3 x i1> undef, i1 true, i32 0
+  %m = shufflevector <vscale x 3 x i1> %head, <vscale x 3 x i1> undef, <vscale x 3 x i32> zeroinitializer
+  %v = call <vscale x 3 x i8> @llvm.vp.add.nxv3i8(<vscale x 3 x i8> %va, <vscale x 3 x i8> %b, <vscale x 3 x i1> %m, i32 %evl)
+  ret <vscale x 3 x i8> %v
+}
+
+define <vscale x 3 x i8> @vadd_vx_nxv3i8(<vscale x 3 x i8> %va, i8 %b, <vscale x 3 x i1> %m, i32 zeroext %evl) {
+; CHECK-LABEL: vadd_vx_nxv3i8:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    vsetvli zero, a1, e8, mf2, ta, mu
+; CHECK-NEXT:    vadd.vx v8, v8, a0, v0.t
+; CHECK-NEXT:    ret
+  %elt.head = insertelement <vscale x 3 x i8> undef, i8 %b, i32 0
+  %vb = shufflevector <vscale x 3 x i8> %elt.head, <vscale x 3 x i8> undef, <vscale x 3 x i32> zeroinitializer
+  %v = call <vscale x 3 x i8> @llvm.vp.add.nxv3i8(<vscale x 3 x i8> %va, <vscale x 3 x i8> %vb, <vscale x 3 x i1> %m, i32 %evl)
+  ret <vscale x 3 x i8> %v
+}
+
+define <vscale x 3 x i8> @vadd_vx_nxv3i8_unmasked(<vscale x 3 x i8> %va, i8 %b, i32 zeroext %evl) {
+; CHECK-LABEL: vadd_vx_nxv3i8_unmasked:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    vsetvli zero, a1, e8, mf2, ta, mu
+; CHECK-NEXT:    vadd.vx v8, v8, a0
+; CHECK-NEXT:    ret
+  %elt.head = insertelement <vscale x 3 x i8> undef, i8 %b, i32 0
+  %vb = shufflevector <vscale x 3 x i8> %elt.head, <vscale x 3 x i8> undef, <vscale x 3 x i32> zeroinitializer
+  %head = insertelement <vscale x 3 x i1> undef, i1 true, i32 0
+  %m = shufflevector <vscale x 3 x i1> %head, <vscale x 3 x i1> undef, <vscale x 3 x i32> zeroinitializer
+  %v = call <vscale x 3 x i8> @llvm.vp.add.nxv3i8(<vscale x 3 x i8> %va, <vscale x 3 x i8> %vb, <vscale x 3 x i1> %m, i32 %evl)
+  ret <vscale x 3 x i8> %v
+}
+
+define <vscale x 3 x i8> @vadd_vi_nxv3i8(<vscale x 3 x i8> %va, <vscale x 3 x i1> %m, i32 zeroext %evl) {
+; CHECK-LABEL: vadd_vi_nxv3i8:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    vsetvli zero, a0, e8, mf2, ta, mu
+; CHECK-NEXT:    vadd.vi v8, v8, -1, v0.t
+; CHECK-NEXT:    ret
+  %elt.head = insertelement <vscale x 3 x i8> undef, i8 -1, i32 0
+  %vb = shufflevector <vscale x 3 x i8> %elt.head, <vscale x 3 x i8> undef, <vscale x 3 x i32> zeroinitializer
+  %v = call <vscale x 3 x i8> @llvm.vp.add.nxv3i8(<vscale x 3 x i8> %va, <vscale x 3 x i8> %vb, <vscale x 3 x i1> %m, i32 %evl)
+  ret <vscale x 3 x i8> %v
+}
+
+define <vscale x 3 x i8> @vadd_vi_nxv3i8_unmasked(<vscale x 3 x i8> %va, i32 zeroext %evl) {
+; CHECK-LABEL: vadd_vi_nxv3i8_unmasked:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    vsetvli zero, a0, e8, mf2, ta, mu
+; CHECK-NEXT:    vadd.vi v8, v8, -1
+; CHECK-NEXT:    ret
+  %elt.head = insertelement <vscale x 3 x i8> undef, i8 -1, i32 0
+  %vb = shufflevector <vscale x 3 x i8> %elt.head, <vscale x 3 x i8> undef, <vscale x 3 x i32> zeroinitializer
+  %head = insertelement <vscale x 3 x i1> undef, i1 true, i32 0
+  %m = shufflevector <vscale x 3 x i1> %head, <vscale x 3 x i1> undef, <vscale x 3 x i32> zeroinitializer
+  %v = call <vscale x 3 x i8> @llvm.vp.add.nxv3i8(<vscale x 3 x i8> %va, <vscale x 3 x i8> %vb, <vscale x 3 x i1> %m, i32 %evl)
+  ret <vscale x 3 x i8> %v
+}
+
 declare <vscale x 4 x i8> @llvm.vp.add.nxv4i8(<vscale x 4 x i8>, <vscale x 4 x i8>, <vscale x 4 x i1>, i32)
 
 define <vscale x 4 x i8> @vadd_vv_nxv4i8(<vscale x 4 x i8> %va, <vscale x 4 x i8> %b, <vscale x 4 x i1> %m, i32 zeroext %evl) {

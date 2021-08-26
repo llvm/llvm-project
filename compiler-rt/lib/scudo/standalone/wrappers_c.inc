@@ -226,7 +226,7 @@ INTERFACE WEAK int SCUDO_PREFIX(malloc_info)(UNUSED int options, FILE *stream) {
   fputs("<malloc version=\"scudo-1\">\n", stream);
   for (scudo::uptr i = 0; i != max_size; ++i)
     if (sizes[i])
-      fprintf(stream, "<alloc size=\"%lu\" count=\"%lu\"/>\n", i, sizes[i]);
+      fprintf(stream, "<alloc size=\"%zu\" count=\"%zu\"/>\n", i, sizes[i]);
   fputs("</malloc>\n", stream);
   SCUDO_PREFIX(free)(sizes);
   return 0;

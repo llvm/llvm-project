@@ -1217,6 +1217,19 @@ define <8 x half> @movrrkz8f16(<8 x half> %a, i8 %msk) {
   ret <8 x half> %res
 }
 
+define <8 x half> @movsh(<8 x half> %a, <8 x half> %b) {
+; CHECK-LABEL: movsh:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    vpshufb {{.*#+}} xmm2 = xmm0[0,1,14,15,0,1,2,3,4,5,6,7,14,15,10,11]
+; CHECK-NEXT:    vmovsh %xmm0, %xmm1, %xmm0
+; CHECK-NEXT:    vaddph %xmm0, %xmm2, %xmm0
+; CHECK-NEXT:    ret{{[l|q]}}
+  %res1 = shufflevector <8 x half> %a, <8 x half> %b, <8 x i32> <i32 0, i32 7, i32 0, i32 1, i32 2, i32 3, i32 7, i32 5>
+  %res2 = shufflevector <8 x half> %a, <8 x half> %b, <8 x i32> <i32 0, i32 9, i32 10, i32 11, i32 12, i32 13, i32 14, i32 15>
+  %res = fadd <8 x half> %res1, %res2
+  ret <8 x half> %res
+}
+
 define i16 @test_movw(half %x) {
 ; X64-LABEL: test_movw:
 ; X64:       # %bb.0:
@@ -1884,4 +1897,32 @@ define <4 x float> @regression2(i8 addrspace(1)* %0, <4 x i32> %1, <4 x i32> %2,
   %17 = shufflevector <4 x float> %16, <4 x float> <float poison, float poison, float 0.000000e+00, float 2.550000e+02>, <4 x i32> <i32 0, i32 1, i32 6, i32 7>
   %18 = fmul contract <4 x float> %17, <float 0x3F70101020000000, float 0x3F70101020000000, float 0x3F70101020000000, float 0x3F70101020000000>
   ret <4 x float> %18
+}
+
+; Make sure load/stores of v4f16 are handled well on 32-bit targets where
+; default widening legalization can't use i64.
+define void @load_store_v4f16(<4 x half>* %x, <4 x half>* %y, <4 x half>* %z) {
+; X64-LABEL: load_store_v4f16:
+; X64:       # %bb.0:
+; X64-NEXT:    vmovsd {{.*#+}} xmm0 = mem[0],zero
+; X64-NEXT:    vmovsd {{.*#+}} xmm1 = mem[0],zero
+; X64-NEXT:    vaddph %xmm1, %xmm0, %xmm0
+; X64-NEXT:    vmovlps %xmm0, (%rdx)
+; X64-NEXT:    retq
+;
+; X86-LABEL: load_store_v4f16:
+; X86:       # %bb.0:
+; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
+; X86-NEXT:    movl {{[0-9]+}}(%esp), %ecx
+; X86-NEXT:    movl {{[0-9]+}}(%esp), %edx
+; X86-NEXT:    vmovsd {{.*#+}} xmm0 = mem[0],zero
+; X86-NEXT:    vmovsd {{.*#+}} xmm1 = mem[0],zero
+; X86-NEXT:    vaddph %xmm1, %xmm0, %xmm0
+; X86-NEXT:    vmovlps %xmm0, (%eax)
+; X86-NEXT:    retl
+  %a = load <4 x half>, <4 x half>* %x
+  %b = load <4 x half>, <4 x half>* %y
+  %c = fadd <4 x half> %a, %b
+  store <4 x half> %c, <4 x half>* %z
+  ret void
 }

@@ -1781,7 +1781,7 @@ void CodeGenModule::SetLLVMFunctionAttributesForDefinition(const Decl *D,
         CodeGenOpts.getInlining() == CodeGenOptions::OnlyAlwaysInlining)
       B.addAttribute(llvm::Attribute::NoInline);
 
-    F->addAttributes(llvm::AttributeList::FunctionIndex, B);
+    F->addFnAttrs(B);
     return;
   }
 
@@ -1868,7 +1868,7 @@ void CodeGenModule::SetLLVMFunctionAttributesForDefinition(const Decl *D,
       B.addAttribute(llvm::Attribute::MinSize);
   }
 
-  F->addAttributes(llvm::AttributeList::FunctionIndex, B);
+  F->addFnAttrs(B);
 
   unsigned alignment = D->getMaxAlignment() / Context.getCharWidth();
   if (alignment)
@@ -1918,7 +1918,7 @@ void CodeGenModule::setLLVMFunctionFEnvAttributes(const FunctionDecl *D,
   if (D->hasAttr<StrictFPAttr>()) {
     llvm::AttrBuilder FuncAttrs;
     FuncAttrs.addAttribute("strictfp");
-    F->addAttributes(llvm::AttributeList::FunctionIndex, FuncAttrs);
+    F->addFnAttrs(FuncAttrs);
   }
 }
 
@@ -2034,8 +2034,8 @@ void CodeGenModule::setNonAliasAttributes(GlobalDecl GD,
         RemoveAttrs.addAttribute("target-cpu");
         RemoveAttrs.addAttribute("target-features");
         RemoveAttrs.addAttribute("tune-cpu");
-        F->removeAttributes(llvm::AttributeList::FunctionIndex, RemoveAttrs);
-        F->addAttributes(llvm::AttributeList::FunctionIndex, Attrs);
+        F->removeFnAttrs(RemoveAttrs);
+        F->addFnAttrs(Attrs);
       }
     }
 
@@ -2118,7 +2118,7 @@ void CodeGenModule::SetFunctionAttributes(GlobalDecl GD, llvm::Function *F,
            F->arg_begin()->getType()
              ->canLosslesslyBitCastTo(F->getReturnType()) &&
            "unexpected this return");
-    F->addAttribute(1, llvm::Attribute::Returned);
+    F->addParamAttr(0, llvm::Attribute::Returned);
   }
 
   // Only a few attributes are set on declarations; these may later be
@@ -2144,15 +2144,13 @@ void CodeGenModule::SetFunctionAttributes(GlobalDecl GD, llvm::Function *F,
     assert(HasBody && "Inline builtin declarations should always have an "
                       "available body!");
     if (shouldEmitFunction(FDBody))
-      F->addAttribute(llvm::AttributeList::FunctionIndex,
-                      llvm::Attribute::NoBuiltin);
+      F->addFnAttr(llvm::Attribute::NoBuiltin);
   }
 
   if (FD->isReplaceableGlobalAllocationFunction()) {
     // A replaceable global allocation function does not act like a builtin by
     // default, only if it is invoked by a new-expression or delete-expression.
-    F->addAttribute(llvm::AttributeList::FunctionIndex,
-                    llvm::Attribute::NoBuiltin);
+    F->addFnAttr(llvm::Attribute::NoBuiltin);
   }
 
   if (isa<CXXConstructorDecl>(FD) || isa<CXXDestructorDecl>(FD))
@@ -3613,9 +3611,9 @@ llvm::Constant *CodeGenModule::GetOrCreateLLVMFunction(
   assert(F->getName() == MangledName && "name was uniqued!");
   if (D)
     SetFunctionAttributes(GD, F, IsIncompleteFunction, IsThunk);
-  if (ExtraAttrs.hasAttributes(llvm::AttributeList::FunctionIndex)) {
+  if (ExtraAttrs.hasFnAttrs()) {
     llvm::AttrBuilder B(ExtraAttrs, llvm::AttributeList::FunctionIndex);
-    F->addAttributes(llvm::AttributeList::FunctionIndex, B);
+    F->addFnAttrs(B);
   }
 
   if (!DontDefer) {
@@ -3761,8 +3759,7 @@ CodeGenModule::CreateRuntimeFunction(llvm::FunctionType *FTy, StringRef Name,
                                      bool AssumeConvergent) {
   if (AssumeConvergent) {
     ExtraAttrs =
-        ExtraAttrs.addAttribute(VMContext, llvm::AttributeList::FunctionIndex,
-                                llvm::Attribute::Convergent);
+        ExtraAttrs.addFnAttribute(VMContext, llvm::Attribute::Convergent);
   }
 
   llvm::Constant *C =
@@ -4749,7 +4746,7 @@ static void replaceUsesOfNonProtoConstant(llvm::Constant *old,
       }
 
       // Add any parameter attributes.
-      newArgAttrs.push_back(oldAttrs.getParamAttributes(argNo));
+      newArgAttrs.push_back(oldAttrs.getParamAttrs(argNo));
       argNo++;
     }
     if (dontTransform)
@@ -4777,9 +4774,9 @@ static void replaceUsesOfNonProtoConstant(llvm::Constant *old,
 
     if (!newCall->getType()->isVoidTy())
       newCall->takeName(callSite);
-    newCall->setAttributes(llvm::AttributeList::get(
-        newFn->getContext(), oldAttrs.getFnAttributes(),
-        oldAttrs.getRetAttributes(), newArgAttrs));
+    newCall->setAttributes(
+        llvm::AttributeList::get(newFn->getContext(), oldAttrs.getFnAttrs(),
+                                 oldAttrs.getRetAttrs(), newArgAttrs));
     newCall->setCallingConv(callSite->getCallingConv());
 
     // Finally, remove the old call, replacing any uses with the new one.

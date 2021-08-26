@@ -11,7 +11,7 @@
 #include "mlir/Transforms/GreedyPatternRewriteDriver.h"
 
 using namespace mlir;
-using namespace mlir::test;
+using namespace test;
 
 //===----------------------------------------------------------------------===//
 // Trait Folder.

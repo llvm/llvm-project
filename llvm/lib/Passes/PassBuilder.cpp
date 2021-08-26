@@ -566,6 +566,8 @@ PassBuilder::PassBuilder(TargetMachine *TM, PipelineTuningOptions PTO,
   if (PIC && shouldPopulateClassToPassNames()) {
 #define MODULE_PASS(NAME, CREATE_PASS)                                         \
   PIC->addClassToPassName(decltype(CREATE_PASS)::name(), NAME);
+#define MODULE_PASS_WITH_PARAMS(NAME, CLASS, CREATE_PASS, PARSER, PARAMS)      \
+  PIC->addClassToPassName(CLASS, NAME);
 #define MODULE_ANALYSIS(NAME, CREATE_PASS)                                     \
   PIC->addClassToPassName(decltype(CREATE_PASS)::name(), NAME);
 #define FUNCTION_PASS(NAME, CREATE_PASS)                                       \
@@ -730,7 +732,7 @@ PassBuilder::buildO1FunctionSimplificationPipeline(OptimizationLevel Level,
   FPM.addPass(
       RequireAnalysisPass<OptimizationRemarkEmitterAnalysis, Function>());
   FPM.addPass(createFunctionToLoopPassAdaptor(std::move(LPM1),
-                                              EnableMSSALoopDependency,
+                                              /*UseMemorySSA=*/true,
                                               /*UseBlockFrequencyInfo=*/true));
   FPM.addPass(SimplifyCFGPass());
   FPM.addPass(InstCombinePass());
@@ -904,7 +906,7 @@ PassBuilder::buildFunctionSimplificationPipeline(OptimizationLevel Level,
   FPM.addPass(
       RequireAnalysisPass<OptimizationRemarkEmitterAnalysis, Function>());
   FPM.addPass(createFunctionToLoopPassAdaptor(std::move(LPM1),
-                                              EnableMSSALoopDependency,
+                                              /*UseMemorySSA=*/true,
                                               /*UseBlockFrequencyInfo=*/true));
   FPM.addPass(SimplifyCFGPass());
   FPM.addPass(InstCombinePass());
@@ -961,7 +963,7 @@ PassBuilder::buildFunctionSimplificationPipeline(OptimizationLevel Level,
   FPM.addPass(DSEPass());
   FPM.addPass(createFunctionToLoopPassAdaptor(
       LICMPass(PTO.LicmMssaOptCap, PTO.LicmMssaNoAccForPromotionCap),
-      EnableMSSALoopDependency, /*UseBlockFrequencyInfo=*/true));
+      /*UseMemorySSA=*/true, /*UseBlockFrequencyInfo=*/true));
 
   FPM.addPass(CoroElidePass());
 
@@ -1036,7 +1038,7 @@ void PassBuilder::addPGOInstrPasses(ModulePassManager &MPM,
   FunctionPassManager FPM;
   // Disable header duplication in loop rotation at -Oz.
   FPM.addPass(createFunctionToLoopPassAdaptor(
-      LoopRotatePass(Level != OptimizationLevel::Oz), EnableMSSALoopDependency,
+      LoopRotatePass(Level != OptimizationLevel::Oz), /*UseMemorySSA=*/false,
       /*UseBlockFrequencyInfo=*/false));
   MPM.addPass(createModuleToFunctionPassAdaptor(std::move(FPM)));
 
@@ -1359,9 +1361,9 @@ void PassBuilder::addVectorPasses(OptimizationLevel Level,
                                        OptimizationLevel::O3));
     FPM.addPass(
         RequireAnalysisPass<OptimizationRemarkEmitterAnalysis, Function>());
-    FPM.addPass(createFunctionToLoopPassAdaptor(
-        std::move(LPM), EnableMSSALoopDependency,
-        /*UseBlockFrequencyInfo=*/true));
+    FPM.addPass(
+        createFunctionToLoopPassAdaptor(std::move(LPM), /*UseMemorySSA=*/true,
+                                        /*UseBlockFrequencyInfo=*/true));
     FPM.addPass(SimplifyCFGPass());
     FPM.addPass(InstCombinePass());
   }
@@ -1420,7 +1422,7 @@ void PassBuilder::addVectorPasses(OptimizationLevel Level,
         RequireAnalysisPass<OptimizationRemarkEmitterAnalysis, Function>());
     FPM.addPass(createFunctionToLoopPassAdaptor(
         LICMPass(PTO.LicmMssaOptCap, PTO.LicmMssaNoAccForPromotionCap),
-        EnableMSSALoopDependency, /*UseBlockFrequencyInfo=*/true));
+        /*UseMemorySSA=*/true, /*UseBlockFrequencyInfo=*/true));
   }
 
   // Now that we've vectorized and unrolled loops, we may have more refined
@@ -1512,8 +1514,7 @@ PassBuilder::buildModuleOptimizationPipeline(OptimizationLevel Level,
   // Disable header duplication at -Oz.
   OptimizePM.addPass(createFunctionToLoopPassAdaptor(
       LoopRotatePass(Level != OptimizationLevel::Oz, LTOPreLink),
-      EnableMSSALoopDependency,
-      /*UseBlockFrequencyInfo=*/false));
+      /*UseMemorySSA=*/false, /*UseBlockFrequencyInfo=*/false));
 
   // Distribute loops to allow partial vectorization.  I.e. isolate dependences
   // into separate loop that would otherwise inhibit vectorization.  This is
@@ -1942,7 +1943,7 @@ PassBuilder::buildLTODefaultPipeline(OptimizationLevel Level,
   FunctionPassManager MainFPM;
   MainFPM.addPass(createFunctionToLoopPassAdaptor(
       LICMPass(PTO.LicmMssaOptCap, PTO.LicmMssaNoAccForPromotionCap),
-      EnableMSSALoopDependency, /*UseBlockFrequencyInfo=*/true));
+      /*USeMemorySSA=*/true, /*UseBlockFrequencyInfo=*/true));
 
   if (RunNewGVN)
     MainFPM.addPass(NewGVNPass());
@@ -2251,6 +2252,79 @@ Expected<LoopUnrollOptions> parseLoopUnrollOptions(StringRef Params) {
   return UnrollOpts;
 }
 
+Expected<bool> parseSinglePassOption(StringRef Params, StringRef OptionName,
+                                     StringRef PassName) {
+  bool Result = false;
+  while (!Params.empty()) {
+    StringRef ParamName;
+    std::tie(ParamName, Params) = Params.split(';');
+
+    if (ParamName == OptionName) {
+      Result = true;
+    } else {
+      return make_error<StringError>(
+          formatv("invalid {1} pass parameter '{0}' ", ParamName, PassName)
+              .str(),
+          inconvertibleErrorCode());
+    }
+  }
+  return Result;
+}
+
+Expected<bool> parseEarlyCSEPassOptions(StringRef Params) {
+  return parseSinglePassOption(Params, "memssa", "EarlyCSE");
+}
+
+Expected<bool> parseEntryExitInstrumenterPassOptions(StringRef Params) {
+  return parseSinglePassOption(Params, "post-inline", "EntryExitInstrumenter");
+}
+
+Expected<bool> parseLoopExtractorPassOptions(StringRef Params) {
+  return parseSinglePassOption(Params, "single", "LoopExtractor");
+}
+
+Expected<bool> parseLowerMatrixIntrinsicsPassOptions(StringRef Params) {
+  return parseSinglePassOption(Params, "minimal", "LowerMatrixIntrinsics");
+}
+
+Expected<AddressSanitizerOptions> parseASanPassOptions(StringRef Params) {
+  AddressSanitizerOptions Result;
+  while (!Params.empty()) {
+    StringRef ParamName;
+    std::tie(ParamName, Params) = Params.split(';');
+
+    if (ParamName == "kernel") {
+      Result.CompileKernel = true;
+    } else {
+      return make_error<StringError>(
+          formatv("invalid AddressSanitizer pass parameter '{0}' ", ParamName)
+              .str(),
+          inconvertibleErrorCode());
+    }
+  }
+  return Result;
+}
+
+Expected<HWAddressSanitizerOptions> parseHWASanPassOptions(StringRef Params) {
+  HWAddressSanitizerOptions Result;
+  while (!Params.empty()) {
+    StringRef ParamName;
+    std::tie(ParamName, Params) = Params.split(';');
+
+    if (ParamName == "recover") {
+      Result.Recover = true;
+    } else if (ParamName == "kernel") {
+      Result.CompileKernel = true;
+    } else {
+      return make_error<StringError>(
+          formatv("invalid HWAddressSanitizer pass parameter '{0}' ", ParamName)
+              .str(),
+          inconvertibleErrorCode());
+    }
+  }
+  return Result;
+}
+
 Expected<MemorySanitizerOptions> parseMSanPassOptions(StringRef Params) {
   MemorySanitizerOptions Result;
   while (!Params.empty()) {
@@ -2470,6 +2544,9 @@ static bool isModulePassName(StringRef Name, CallbacksT &Callbacks) {
 #define MODULE_PASS(NAME, CREATE_PASS)                                         \
   if (Name == NAME)                                                            \
     return true;
+#define MODULE_PASS_WITH_PARAMS(NAME, CLASS, CREATE_PASS, PARSER, PARAMS)      \
+  if (checkParametrizedPassName(Name, NAME))                                   \
+    return true;
 #define MODULE_ANALYSIS(NAME, CREATE_PASS)                                     \
   if (Name == "require<" NAME ">" || Name == "invalidate<" NAME ">")           \
     return true;
@@ -2530,14 +2607,18 @@ static bool isFunctionPassName(StringRef Name, CallbacksT &Callbacks) {
 }
 
 template <typename CallbacksT>
-static bool isLoopPassName(StringRef Name, CallbacksT &Callbacks) {
-  // Explicitly handle pass manager names.
-  if (Name == "loop" || Name == "loop-mssa")
-    return true;
+static bool isLoopPassName(StringRef Name, CallbacksT &Callbacks,
+                           bool &UseMemorySSA) {
+  UseMemorySSA = false;
 
   // Explicitly handle custom-parsed pass names.
   if (parseRepeatPassName(Name))
     return true;
+
+  if (Name == "licm") {
+    UseMemorySSA = true;
+    return true;
+  }
 
 #define LOOP_PASS(NAME, CREATE_PASS)                                           \
   if (Name == NAME)                                                            \
@@ -2708,6 +2789,14 @@ Error PassBuilder::parseModulePass(ModulePassManager &MPM,
 #define MODULE_PASS(NAME, CREATE_PASS)                                         \
   if (Name == NAME) {                                                          \
     MPM.addPass(CREATE_PASS);                                                  \
+    return Error::success();                                                   \
+  }
+#define MODULE_PASS_WITH_PARAMS(NAME, CLASS, CREATE_PASS, PARSER, PARAMS)      \
+  if (checkParametrizedPassName(Name, NAME)) {                                 \
+    auto Params = parsePassParameters(PARSER, Name, NAME);                     \
+    if (!Params)                                                               \
+      return Params.takeError();                                               \
+    MPM.addPass(CREATE_PASS(Params.get()));                                    \
     return Error::success();                                                   \
   }
 #define MODULE_ANALYSIS(NAME, CREATE_PASS)                                     \
@@ -3127,13 +3216,16 @@ Error PassBuilder::parsePassPipeline(ModulePassManager &MPM,
   StringRef FirstName = Pipeline->front().Name;
 
   if (!isModulePassName(FirstName, ModulePipelineParsingCallbacks)) {
+    bool UseMemorySSA;
     if (isCGSCCPassName(FirstName, CGSCCPipelineParsingCallbacks)) {
       Pipeline = {{"cgscc", std::move(*Pipeline)}};
     } else if (isFunctionPassName(FirstName,
                                   FunctionPipelineParsingCallbacks)) {
       Pipeline = {{"function", std::move(*Pipeline)}};
-    } else if (isLoopPassName(FirstName, LoopPipelineParsingCallbacks)) {
-      Pipeline = {{"function", {{"loop", std::move(*Pipeline)}}}};
+    } else if (isLoopPassName(FirstName, LoopPipelineParsingCallbacks,
+                              UseMemorySSA)) {
+      Pipeline = {{"function", {{UseMemorySSA ? "loop-mssa" : "loop",
+                                 std::move(*Pipeline)}}}};
     } else {
       for (auto &C : TopLevelPipelineParsingCallbacks)
         if (C(MPM, *Pipeline))
@@ -3281,6 +3373,11 @@ void PassBuilder::printPassNames(raw_ostream &OS) {
 
   OS << "Module passes:\n";
 #define MODULE_PASS(NAME, CREATE_PASS) printPassName(NAME, OS);
+#include "PassRegistry.def"
+
+  OS << "Module passes with params:\n";
+#define MODULE_PASS_WITH_PARAMS(NAME, CLASS, CREATE_PASS, PARSER, PARAMS)      \
+  printPassName(NAME, PARAMS, OS);
 #include "PassRegistry.def"
 
   OS << "Module analyses:\n";

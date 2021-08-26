@@ -188,8 +188,8 @@ static isl::union_set getUnrollIsolatedSetOptions(isl::ctx Ctx) {
 /// @return        The modified map.
 static isl::map permuteDimensions(isl::map Map, isl::dim DimType,
                                   unsigned DstPos, unsigned SrcPos) {
-  assert((isl_size)DstPos < Map.dim(DimType) &&
-         (isl_size)SrcPos < Map.dim(DimType));
+  assert((isl_size)DstPos < Map.dim(DimType).release() &&
+         (isl_size)SrcPos < Map.dim(DimType).release());
   if (DstPos == SrcPos)
     return Map;
   isl::id DimId;
@@ -229,7 +229,7 @@ static bool isMatMulOperandAcc(isl::set Domain, isl::map AccMap, int &FirstPos,
   isl::space Space = AccMap.get_space();
   isl::map Universe = isl::map::universe(Space);
 
-  if (Space.dim(isl::dim::out) != 2)
+  if (Space.dim(isl::dim::out).release() != 2)
     return false;
 
   // MatMul has the form:
@@ -317,7 +317,7 @@ static bool containsOnlyMatrMultAcc(isl::map PartialSchedule,
                                     MatMulInfoTy &MMI) {
   auto InputDimId = PartialSchedule.get_tuple_id(isl::dim::in);
   auto *Stmt = static_cast<ScopStmt *>(InputDimId.get_user());
-  isl_size OutDimNum = PartialSchedule.range_tuple_dim();
+  isl_size OutDimNum = PartialSchedule.range_tuple_dim().release();
   assert(OutDimNum > 2 && "In case of the matrix multiplication the loop nest "
                           "and, consequently, the corresponding scheduling "
                           "functions have at least three dimensions.");
@@ -363,7 +363,7 @@ static bool containsOnlyMatMulDep(isl::map Schedule, const Dependences *D,
   auto DomainSpace = Schedule.get_space().domain();
   auto Space = DomainSpace.map_from_domain_and_range(DomainSpace);
   auto Deltas = Dep.extract_map(Space).deltas();
-  isl_size DeltasDimNum = Deltas.dim(isl::dim::set);
+  isl_size DeltasDimNum = Deltas.dim(isl::dim::set).release();
   for (int i = 0; i < DeltasDimNum; i++) {
     auto Val = Deltas.plain_get_val_if_fixed(isl::dim::set, i);
     Pos = Pos < 0 && Val.is_one() ? i : Pos;
@@ -445,8 +445,8 @@ static isl::schedule_node permuteBandNodeDimensions(isl::schedule_node Node,
              std::max(FirstDim, SecondDim));
   auto PartialSchedule =
       isl::manage(isl_schedule_node_band_get_partial_schedule(Node.get()));
-  auto PartialScheduleFirstDim = PartialSchedule.get_union_pw_aff(FirstDim);
-  auto PartialScheduleSecondDim = PartialSchedule.get_union_pw_aff(SecondDim);
+  auto PartialScheduleFirstDim = PartialSchedule.at(FirstDim);
+  auto PartialScheduleSecondDim = PartialSchedule.at(SecondDim);
   PartialSchedule =
       PartialSchedule.set_union_pw_aff(SecondDim, PartialScheduleFirstDim);
   PartialSchedule =
@@ -492,7 +492,7 @@ createMacroKernel(isl::schedule_node Node,
   Node = permuteBandNodeDimensions(Node, DimOutNum - 3, DimOutNum - 1);
 
   // Mark the outermost loop as parallelizable.
-  Node = Node.band_member_set_coincident(0, true);
+  Node = Node.as<isl::schedule_node_band>().member_set_coincident(0, true);
 
   return Node.child(0).child(0);
 }
@@ -729,7 +729,7 @@ static isl::schedule_node optimizePackedB(isl::schedule_node Node,
 
   // Insert into the schedule tree.
   isl::map ExtMap = MapOldIndVar.project_out(
-      isl::dim::out, 2, MapOldIndVar.range_tuple_dim() - 2);
+      isl::dim::out, 2, MapOldIndVar.range_tuple_dim().release() - 2);
   ExtMap = ExtMap.reverse();
   ExtMap = ExtMap.fix_si(isl::dim::out, MMI.i, 0);
   ExtMap = ExtMap.intersect_range(Domain);
@@ -870,9 +870,9 @@ getInductionVariablesSubstitution(isl::schedule_node Node,
   auto Child = Node.child(0);
   auto UnMapOldIndVar = Child.get_prefix_schedule_union_map();
   auto MapOldIndVar = isl::map::from_union_map(UnMapOldIndVar);
-  if (MapOldIndVar.range_tuple_dim() > 9)
-    return MapOldIndVar.project_out(isl::dim::out, 0,
-                                    MapOldIndVar.range_tuple_dim() - 9);
+  if (MapOldIndVar.range_tuple_dim().release() > 9)
+    return MapOldIndVar.project_out(
+        isl::dim::out, 0, MapOldIndVar.range_tuple_dim().release() - 9);
   return MapOldIndVar;
 }
 
@@ -893,10 +893,10 @@ getInductionVariablesSubstitution(isl::schedule_node Node,
 static isl::schedule_node
 isolateAndUnrollMatMulInnerLoops(isl::schedule_node Node,
                                  struct MicroKernelParamsTy MicroKernelParams) {
-  isl::schedule_node Child = Node.get_child(0);
+  isl::schedule_node Child = Node.child(0);
   isl::union_map UnMapOldIndVar = Child.get_prefix_schedule_relation();
   isl::set Prefix = isl::map::from_union_map(UnMapOldIndVar).range();
-  isl_size Dims = Prefix.tuple_dim();
+  isl_size Dims = Prefix.tuple_dim().release();
   Prefix = Prefix.project_out(isl::dim::set, Dims - 1, 1);
   Prefix = getPartialTilePrefixes(Prefix, MicroKernelParams.Nr);
   Prefix = getPartialTilePrefixes(Prefix, MicroKernelParams.Mr);
@@ -906,11 +906,11 @@ isolateAndUnrollMatMulInnerLoops(isl::schedule_node Node,
   isl::ctx Ctx = Node.ctx();
   auto Options = IsolateOption.unite(getDimOptions(Ctx, "unroll"));
   Options = Options.unite(getUnrollIsolatedSetOptions(Ctx));
-  Node = Node.band_set_ast_build_options(Options);
+  Node = Node.as<isl::schedule_node_band>().set_ast_build_options(Options);
   Node = Node.parent().parent().parent();
   IsolateOption = getIsolateOptions(Prefix, 3);
   Options = IsolateOption.unite(getDimOptions(Ctx, "separate"));
-  Node = Node.band_set_ast_build_options(Options);
+  Node = Node.as<isl::schedule_node_band>().set_ast_build_options(Options);
   Node = Node.child(0).child(0).child(0);
   return Node;
 }
@@ -953,8 +953,8 @@ getBandNodeWithOriginDimOrder(isl::schedule_node Node) {
     return Node;
   auto Domain = Node.get_universe_domain();
   assert(isl_union_set_n_set(Domain.get()) == 1);
-  if (Node.get_schedule_depth() != 0 ||
-      (isl::set(Domain).tuple_dim() !=
+  if (Node.get_schedule_depth().release() != 0 ||
+      (isl::set(Domain).tuple_dim().release() !=
        isl_schedule_node_band_n_member(Node.get())))
     return Node;
   Node = isl::manage(isl_schedule_node_delete(Node.copy()));
@@ -1029,7 +1029,7 @@ static bool isMatrMultPattern(isl::schedule_node Node, const Dependences *D,
   Node = Node.parent();
   if (LeafType != isl_schedule_node_leaf ||
       isl_schedule_node_band_n_member(Node.get()) < 3 ||
-      Node.get_schedule_depth() != 0 ||
+      Node.get_schedule_depth().release() != 0 ||
       isl_union_map_n_map(PartialSchedule.get()) != 1)
     return false;
   auto NewPartialSchedule = isl::map::from_union_map(PartialSchedule);

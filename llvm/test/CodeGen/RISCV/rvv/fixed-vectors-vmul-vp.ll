@@ -354,6 +354,56 @@ define <8 x i16> @vmul_vx_v8i16_unmasked(<8 x i16> %va, i16 %b, i32 zeroext %evl
   ret <8 x i16> %v
 }
 
+declare <12 x i16> @llvm.vp.mul.v12i16(<12 x i16>, <12 x i16>, <12 x i1>, i32)
+
+define <12 x i16> @vmul_vv_v12i16(<12 x i16> %va, <12 x i16> %b, <12 x i1> %m, i32 zeroext %evl) {
+; CHECK-LABEL: vmul_vv_v12i16:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    vsetvli zero, a0, e16, m2, ta, mu
+; CHECK-NEXT:    vmul.vv v8, v8, v10, v0.t
+; CHECK-NEXT:    ret
+  %v = call <12 x i16> @llvm.vp.mul.v12i16(<12 x i16> %va, <12 x i16> %b, <12 x i1> %m, i32 %evl)
+  ret <12 x i16> %v
+}
+
+define <12 x i16> @vmul_vv_v12i16_unmasked(<12 x i16> %va, <12 x i16> %b, i32 zeroext %evl) {
+; CHECK-LABEL: vmul_vv_v12i16_unmasked:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    vsetvli zero, a0, e16, m2, ta, mu
+; CHECK-NEXT:    vmul.vv v8, v8, v10
+; CHECK-NEXT:    ret
+  %head = insertelement <12 x i1> undef, i1 true, i32 0
+  %m = shufflevector <12 x i1> %head, <12 x i1> undef, <12 x i32> zeroinitializer
+  %v = call <12 x i16> @llvm.vp.mul.v12i16(<12 x i16> %va, <12 x i16> %b, <12 x i1> %m, i32 %evl)
+  ret <12 x i16> %v
+}
+
+define <12 x i16> @vmul_vx_v12i16(<12 x i16> %va, i16 %b, <12 x i1> %m, i32 zeroext %evl) {
+; CHECK-LABEL: vmul_vx_v12i16:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    vsetvli zero, a1, e16, m2, ta, mu
+; CHECK-NEXT:    vmul.vx v8, v8, a0, v0.t
+; CHECK-NEXT:    ret
+  %elt.head = insertelement <12 x i16> undef, i16 %b, i32 0
+  %vb = shufflevector <12 x i16> %elt.head, <12 x i16> undef, <12 x i32> zeroinitializer
+  %v = call <12 x i16> @llvm.vp.mul.v12i16(<12 x i16> %va, <12 x i16> %vb, <12 x i1> %m, i32 %evl)
+  ret <12 x i16> %v
+}
+
+define <12 x i16> @vmul_vx_v12i16_unmasked(<12 x i16> %va, i16 %b, i32 zeroext %evl) {
+; CHECK-LABEL: vmul_vx_v12i16_unmasked:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    vsetvli zero, a1, e16, m2, ta, mu
+; CHECK-NEXT:    vmul.vx v8, v8, a0
+; CHECK-NEXT:    ret
+  %elt.head = insertelement <12 x i16> undef, i16 %b, i32 0
+  %vb = shufflevector <12 x i16> %elt.head, <12 x i16> undef, <12 x i32> zeroinitializer
+  %head = insertelement <12 x i1> undef, i1 true, i32 0
+  %m = shufflevector <12 x i1> %head, <12 x i1> undef, <12 x i32> zeroinitializer
+  %v = call <12 x i16> @llvm.vp.mul.v12i16(<12 x i16> %va, <12 x i16> %vb, <12 x i1> %m, i32 %evl)
+  ret <12 x i16> %v
+}
+
 declare <16 x i16> @llvm.vp.mul.v16i16(<16 x i16>, <16 x i16>, <16 x i1>, i32)
 
 define <16 x i16> @vmul_vv_v16i16(<16 x i16> %va, <16 x i16> %b, <16 x i1> %m, i32 zeroext %evl) {

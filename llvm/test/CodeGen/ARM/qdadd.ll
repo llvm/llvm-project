@@ -7,32 +7,14 @@
 define i32 @qdadd(i32 %x, i32 %y) nounwind {
 ; CHECK-T2NODSP-LABEL: qdadd:
 ; CHECK-T2NODSP:       @ %bb.0:
-; CHECK-T2NODSP-NEXT:    .save {r7, lr}
-; CHECK-T2NODSP-NEXT:    push {r7, lr}
-; CHECK-T2NODSP-NEXT:    movs r3, #0
-; CHECK-T2NODSP-NEXT:    adds.w r12, r0, r0
-; CHECK-T2NODSP-NEXT:    it mi
-; CHECK-T2NODSP-NEXT:    movmi r3, #1
-; CHECK-T2NODSP-NEXT:    cmp r3, #0
-; CHECK-T2NODSP-NEXT:    mov.w r3, #-2147483648
-; CHECK-T2NODSP-NEXT:    mov.w lr, #0
-; CHECK-T2NODSP-NEXT:    it ne
-; CHECK-T2NODSP-NEXT:    mvnne r3, #-2147483648
-; CHECK-T2NODSP-NEXT:    cmp r12, r0
-; CHECK-T2NODSP-NEXT:    it vc
-; CHECK-T2NODSP-NEXT:    movvc r3, r12
-; CHECK-T2NODSP-NEXT:    adds r0, r3, r1
+; CHECK-T2NODSP-NEXT:    adds r0, r0, r0
 ; CHECK-T2NODSP-NEXT:    mov.w r2, #-2147483648
-; CHECK-T2NODSP-NEXT:    it mi
-; CHECK-T2NODSP-NEXT:    movmi.w lr, #1
-; CHECK-T2NODSP-NEXT:    cmp.w lr, #0
-; CHECK-T2NODSP-NEXT:    it ne
-; CHECK-T2NODSP-NEXT:    mvnne r2, #-2147483648
-; CHECK-T2NODSP-NEXT:    cmp r0, r3
-; CHECK-T2NODSP-NEXT:    it vc
-; CHECK-T2NODSP-NEXT:    movvc r2, r0
-; CHECK-T2NODSP-NEXT:    mov r0, r2
-; CHECK-T2NODSP-NEXT:    pop {r7, pc}
+; CHECK-T2NODSP-NEXT:    it vs
+; CHECK-T2NODSP-NEXT:    eorvs.w r0, r2, r0, asr #31
+; CHECK-T2NODSP-NEXT:    adds r0, r0, r1
+; CHECK-T2NODSP-NEXT:    it vs
+; CHECK-T2NODSP-NEXT:    eorvs.w r0, r2, r0, asr #31
+; CHECK-T2NODSP-NEXT:    bx lr
 ;
 ; CHECK-T2DSP-LABEL: qdadd:
 ; CHECK-T2DSP:       @ %bb.0:
@@ -51,32 +33,14 @@ define i32 @qdadd(i32 %x, i32 %y) nounwind {
 define i32 @qdadd_c(i32 %x, i32 %y) nounwind {
 ; CHECK-T2NODSP-LABEL: qdadd_c:
 ; CHECK-T2NODSP:       @ %bb.0:
-; CHECK-T2NODSP-NEXT:    .save {r7, lr}
-; CHECK-T2NODSP-NEXT:    push {r7, lr}
-; CHECK-T2NODSP-NEXT:    movs r3, #0
-; CHECK-T2NODSP-NEXT:    adds.w r12, r0, r0
-; CHECK-T2NODSP-NEXT:    it mi
-; CHECK-T2NODSP-NEXT:    movmi r3, #1
-; CHECK-T2NODSP-NEXT:    cmp r3, #0
-; CHECK-T2NODSP-NEXT:    mov.w r3, #-2147483648
-; CHECK-T2NODSP-NEXT:    mov.w lr, #0
-; CHECK-T2NODSP-NEXT:    it ne
-; CHECK-T2NODSP-NEXT:    mvnne r3, #-2147483648
-; CHECK-T2NODSP-NEXT:    cmp r12, r0
-; CHECK-T2NODSP-NEXT:    it vc
-; CHECK-T2NODSP-NEXT:    movvc r3, r12
-; CHECK-T2NODSP-NEXT:    adds r0, r1, r3
+; CHECK-T2NODSP-NEXT:    adds r0, r0, r0
 ; CHECK-T2NODSP-NEXT:    mov.w r2, #-2147483648
-; CHECK-T2NODSP-NEXT:    it mi
-; CHECK-T2NODSP-NEXT:    movmi.w lr, #1
-; CHECK-T2NODSP-NEXT:    cmp.w lr, #0
-; CHECK-T2NODSP-NEXT:    it ne
-; CHECK-T2NODSP-NEXT:    mvnne r2, #-2147483648
-; CHECK-T2NODSP-NEXT:    cmp r0, r1
-; CHECK-T2NODSP-NEXT:    it vc
-; CHECK-T2NODSP-NEXT:    movvc r2, r0
-; CHECK-T2NODSP-NEXT:    mov r0, r2
-; CHECK-T2NODSP-NEXT:    pop {r7, pc}
+; CHECK-T2NODSP-NEXT:    it vs
+; CHECK-T2NODSP-NEXT:    eorvs.w r0, r2, r0, asr #31
+; CHECK-T2NODSP-NEXT:    adds r0, r0, r1
+; CHECK-T2NODSP-NEXT:    it vs
+; CHECK-T2NODSP-NEXT:    eorvs.w r0, r2, r0, asr #31
+; CHECK-T2NODSP-NEXT:    bx lr
 ;
 ; CHECK-T2DSP-LABEL: qdadd_c:
 ; CHECK-T2DSP:       @ %bb.0:
@@ -95,32 +59,14 @@ define i32 @qdadd_c(i32 %x, i32 %y) nounwind {
 define i32 @qdsub(i32 %x, i32 %y) nounwind {
 ; CHECK-T2NODSP-LABEL: qdsub:
 ; CHECK-T2NODSP:       @ %bb.0:
-; CHECK-T2NODSP-NEXT:    .save {r7, lr}
-; CHECK-T2NODSP-NEXT:    push {r7, lr}
-; CHECK-T2NODSP-NEXT:    movs r3, #0
-; CHECK-T2NODSP-NEXT:    adds.w r12, r0, r0
-; CHECK-T2NODSP-NEXT:    it mi
-; CHECK-T2NODSP-NEXT:    movmi r3, #1
-; CHECK-T2NODSP-NEXT:    cmp r3, #0
-; CHECK-T2NODSP-NEXT:    mov.w r3, #-2147483648
-; CHECK-T2NODSP-NEXT:    mov.w lr, #0
-; CHECK-T2NODSP-NEXT:    it ne
-; CHECK-T2NODSP-NEXT:    mvnne r3, #-2147483648
-; CHECK-T2NODSP-NEXT:    cmp r12, r0
-; CHECK-T2NODSP-NEXT:    it vc
-; CHECK-T2NODSP-NEXT:    movvc r3, r12
-; CHECK-T2NODSP-NEXT:    subs r0, r1, r3
+; CHECK-T2NODSP-NEXT:    adds r0, r0, r0
 ; CHECK-T2NODSP-NEXT:    mov.w r2, #-2147483648
-; CHECK-T2NODSP-NEXT:    it mi
-; CHECK-T2NODSP-NEXT:    movmi.w lr, #1
-; CHECK-T2NODSP-NEXT:    cmp.w lr, #0
-; CHECK-T2NODSP-NEXT:    it ne
-; CHECK-T2NODSP-NEXT:    mvnne r2, #-2147483648
-; CHECK-T2NODSP-NEXT:    cmp r1, r3
-; CHECK-T2NODSP-NEXT:    it vc
-; CHECK-T2NODSP-NEXT:    movvc r2, r0
-; CHECK-T2NODSP-NEXT:    mov r0, r2
-; CHECK-T2NODSP-NEXT:    pop {r7, pc}
+; CHECK-T2NODSP-NEXT:    it vs
+; CHECK-T2NODSP-NEXT:    eorvs.w r0, r2, r0, asr #31
+; CHECK-T2NODSP-NEXT:    subs r0, r1, r0
+; CHECK-T2NODSP-NEXT:    it vs
+; CHECK-T2NODSP-NEXT:    eorvs.w r0, r2, r0, asr #31
+; CHECK-T2NODSP-NEXT:    bx lr
 ;
 ; CHECK-T2DSP-LABEL: qdsub:
 ; CHECK-T2DSP:       @ %bb.0:
@@ -139,32 +85,14 @@ define i32 @qdsub(i32 %x, i32 %y) nounwind {
 define i32 @qdsub_c(i32 %x, i32 %y) nounwind {
 ; CHECK-T2NODSP-LABEL: qdsub_c:
 ; CHECK-T2NODSP:       @ %bb.0:
-; CHECK-T2NODSP-NEXT:    .save {r7, lr}
-; CHECK-T2NODSP-NEXT:    push {r7, lr}
-; CHECK-T2NODSP-NEXT:    movs r3, #0
-; CHECK-T2NODSP-NEXT:    adds.w r12, r0, r0
-; CHECK-T2NODSP-NEXT:    it mi
-; CHECK-T2NODSP-NEXT:    movmi r3, #1
-; CHECK-T2NODSP-NEXT:    cmp r3, #0
-; CHECK-T2NODSP-NEXT:    mov.w r3, #-2147483648
-; CHECK-T2NODSP-NEXT:    mov.w lr, #0
-; CHECK-T2NODSP-NEXT:    it ne
-; CHECK-T2NODSP-NEXT:    mvnne r3, #-2147483648
-; CHECK-T2NODSP-NEXT:    cmp r12, r0
-; CHECK-T2NODSP-NEXT:    it vc
-; CHECK-T2NODSP-NEXT:    movvc r3, r12
-; CHECK-T2NODSP-NEXT:    subs r0, r3, r1
+; CHECK-T2NODSP-NEXT:    adds r0, r0, r0
 ; CHECK-T2NODSP-NEXT:    mov.w r2, #-2147483648
-; CHECK-T2NODSP-NEXT:    it mi
-; CHECK-T2NODSP-NEXT:    movmi.w lr, #1
-; CHECK-T2NODSP-NEXT:    cmp.w lr, #0
-; CHECK-T2NODSP-NEXT:    it ne
-; CHECK-T2NODSP-NEXT:    mvnne r2, #-2147483648
-; CHECK-T2NODSP-NEXT:    cmp r3, r1
-; CHECK-T2NODSP-NEXT:    it vc
-; CHECK-T2NODSP-NEXT:    movvc r2, r0
-; CHECK-T2NODSP-NEXT:    mov r0, r2
-; CHECK-T2NODSP-NEXT:    pop {r7, pc}
+; CHECK-T2NODSP-NEXT:    it vs
+; CHECK-T2NODSP-NEXT:    eorvs.w r0, r2, r0, asr #31
+; CHECK-T2NODSP-NEXT:    subs r0, r0, r1
+; CHECK-T2NODSP-NEXT:    it vs
+; CHECK-T2NODSP-NEXT:    eorvs.w r0, r2, r0, asr #31
+; CHECK-T2NODSP-NEXT:    bx lr
 ;
 ; CHECK-T2DSP-LABEL: qdsub_c:
 ; CHECK-T2DSP:       @ %bb.0:

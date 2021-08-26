@@ -961,6 +961,20 @@ Instruction *InstCombinerImpl::visitTrunc(TruncInst &Trunc) {
       return BinaryOperator::CreateAdd(NarrowCtlz, WidthDiff);
     }
   }
+
+  if (match(Src, m_VScale(DL))) {
+    if (Trunc.getFunction()->hasFnAttribute(Attribute::VScaleRange)) {
+      unsigned MaxVScale = Trunc.getFunction()
+                               ->getFnAttribute(Attribute::VScaleRange)
+                               .getVScaleRangeArgs()
+                               .second;
+      if (MaxVScale > 0 && Log2_32(MaxVScale) < DestWidth) {
+        Value *VScale = Builder.CreateVScale(ConstantInt::get(DestTy, 1));
+        return replaceInstUsesWith(Trunc, VScale);
+      }
+    }
+  }
+
   return nullptr;
 }
 

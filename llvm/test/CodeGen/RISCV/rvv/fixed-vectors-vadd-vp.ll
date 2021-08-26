@@ -156,6 +156,82 @@ define <4 x i8> @vadd_vi_v4i8_unmasked(<4 x i8> %va, i32 zeroext %evl) {
   ret <4 x i8> %v
 }
 
+declare <5 x i8> @llvm.vp.add.v5i8(<5 x i8>, <5 x i8>, <5 x i1>, i32)
+
+define <5 x i8> @vadd_vv_v5i8(<5 x i8> %va, <5 x i8> %b, <5 x i1> %m, i32 zeroext %evl) {
+; CHECK-LABEL: vadd_vv_v5i8:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    vsetvli zero, a0, e8, mf2, ta, mu
+; CHECK-NEXT:    vadd.vv v8, v8, v9, v0.t
+; CHECK-NEXT:    ret
+  %v = call <5 x i8> @llvm.vp.add.v5i8(<5 x i8> %va, <5 x i8> %b, <5 x i1> %m, i32 %evl)
+  ret <5 x i8> %v
+}
+
+define <5 x i8> @vadd_vv_v5i8_unmasked(<5 x i8> %va, <5 x i8> %b, i32 zeroext %evl) {
+; CHECK-LABEL: vadd_vv_v5i8_unmasked:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    vsetvli zero, a0, e8, mf2, ta, mu
+; CHECK-NEXT:    vadd.vv v8, v8, v9
+; CHECK-NEXT:    ret
+  %head = insertelement <5 x i1> undef, i1 true, i32 0
+  %m = shufflevector <5 x i1> %head, <5 x i1> undef, <5 x i32> zeroinitializer
+  %v = call <5 x i8> @llvm.vp.add.v5i8(<5 x i8> %va, <5 x i8> %b, <5 x i1> %m, i32 %evl)
+  ret <5 x i8> %v
+}
+
+define <5 x i8> @vadd_vx_v5i8(<5 x i8> %va, i8 %b, <5 x i1> %m, i32 zeroext %evl) {
+; CHECK-LABEL: vadd_vx_v5i8:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    vsetvli zero, a1, e8, mf2, ta, mu
+; CHECK-NEXT:    vadd.vx v8, v8, a0, v0.t
+; CHECK-NEXT:    ret
+  %elt.head = insertelement <5 x i8> undef, i8 %b, i32 0
+  %vb = shufflevector <5 x i8> %elt.head, <5 x i8> undef, <5 x i32> zeroinitializer
+  %v = call <5 x i8> @llvm.vp.add.v5i8(<5 x i8> %va, <5 x i8> %vb, <5 x i1> %m, i32 %evl)
+  ret <5 x i8> %v
+}
+
+define <5 x i8> @vadd_vx_v5i8_unmasked(<5 x i8> %va, i8 %b, i32 zeroext %evl) {
+; CHECK-LABEL: vadd_vx_v5i8_unmasked:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    vsetvli zero, a1, e8, mf2, ta, mu
+; CHECK-NEXT:    vadd.vx v8, v8, a0
+; CHECK-NEXT:    ret
+  %elt.head = insertelement <5 x i8> undef, i8 %b, i32 0
+  %vb = shufflevector <5 x i8> %elt.head, <5 x i8> undef, <5 x i32> zeroinitializer
+  %head = insertelement <5 x i1> undef, i1 true, i32 0
+  %m = shufflevector <5 x i1> %head, <5 x i1> undef, <5 x i32> zeroinitializer
+  %v = call <5 x i8> @llvm.vp.add.v5i8(<5 x i8> %va, <5 x i8> %vb, <5 x i1> %m, i32 %evl)
+  ret <5 x i8> %v
+}
+
+define <5 x i8> @vadd_vi_v5i8(<5 x i8> %va, <5 x i1> %m, i32 zeroext %evl) {
+; CHECK-LABEL: vadd_vi_v5i8:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    vsetvli zero, a0, e8, mf2, ta, mu
+; CHECK-NEXT:    vadd.vi v8, v8, -1, v0.t
+; CHECK-NEXT:    ret
+  %elt.head = insertelement <5 x i8> undef, i8 -1, i32 0
+  %vb = shufflevector <5 x i8> %elt.head, <5 x i8> undef, <5 x i32> zeroinitializer
+  %v = call <5 x i8> @llvm.vp.add.v5i8(<5 x i8> %va, <5 x i8> %vb, <5 x i1> %m, i32 %evl)
+  ret <5 x i8> %v
+}
+
+define <5 x i8> @vadd_vi_v5i8_unmasked(<5 x i8> %va, i32 zeroext %evl) {
+; CHECK-LABEL: vadd_vi_v5i8_unmasked:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    vsetvli zero, a0, e8, mf2, ta, mu
+; CHECK-NEXT:    vadd.vi v8, v8, -1
+; CHECK-NEXT:    ret
+  %elt.head = insertelement <5 x i8> undef, i8 -1, i32 0
+  %vb = shufflevector <5 x i8> %elt.head, <5 x i8> undef, <5 x i32> zeroinitializer
+  %head = insertelement <5 x i1> undef, i1 true, i32 0
+  %m = shufflevector <5 x i1> %head, <5 x i1> undef, <5 x i32> zeroinitializer
+  %v = call <5 x i8> @llvm.vp.add.v5i8(<5 x i8> %va, <5 x i8> %vb, <5 x i1> %m, i32 %evl)
+  ret <5 x i8> %v
+}
+
 declare <8 x i8> @llvm.vp.add.v8i8(<8 x i8>, <8 x i8>, <8 x i1>, i32)
 
 define <8 x i8> @vadd_vv_v8i8(<8 x i8> %va, <8 x i8> %b, <8 x i1> %m, i32 zeroext %evl) {

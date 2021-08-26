@@ -292,14 +292,30 @@ void salvageDebugInfo(Instruction &I);
 void salvageDebugInfoForDbgValues(Instruction &I,
                                   ArrayRef<DbgVariableIntrinsic *> Insns);
 
-/// Given an instruction \p I and DIExpression \p DIExpr operating on it, write
-/// the effects of \p I into the returned DIExpression, or return nullptr if
-/// it cannot be salvaged. \p StackVal: whether DW_OP_stack_value should be
-/// appended to the expression. \p LocNo: the index of the location operand to
-/// which \p I applies, should be 0 for debug info without a DIArgList.
-DIExpression *salvageDebugInfoImpl(Instruction &I, DIExpression *DIExpr,
-                                   bool StackVal, unsigned LocNo,
-                                   SmallVectorImpl<Value *> &AdditionalValues);
+/// Given an instruction \p I and DIExpression \p DIExpr operating on
+/// it, append the effects of \p I to the DIExpression operand list
+/// \p Ops, or return \p nullptr if it cannot be salvaged.
+/// \p CurrentLocOps is the number of SSA values referenced by the
+/// incoming \p Ops.  \return the first non-constant operand
+/// implicitly referred to by Ops. If \p I references more than one
+/// non-constant operand, any additional operands are added to
+/// \p AdditionalValues.
+///
+/// \example
+////
+///   I = add %a, i32 1
+///
+///   Return = %a
+///   Ops = llvm::dwarf::DW_OP_lit1 llvm::dwarf::DW_OP_add
+///
+///   I = add %a, %b
+///
+///   Return = %a
+///   Ops = llvm::dwarf::DW_OP_LLVM_arg0 llvm::dwarf::DW_OP_add
+///   AdditionalValues = %b
+Value *salvageDebugInfoImpl(Instruction &I, uint64_t CurrentLocOps,
+                            SmallVectorImpl<uint64_t> &Ops,
+                            SmallVectorImpl<Value *> &AdditionalValues);
 
 /// Point debug users of \p From to \p To or salvage them. Use this function
 /// only when replacing all uses of \p From with \p To, with a guarantee that

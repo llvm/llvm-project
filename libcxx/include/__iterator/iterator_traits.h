@@ -477,7 +477,7 @@ struct __is_exactly_cpp17_input_iterator
          __has_iterator_category_convertible_to<_Tp, input_iterator_tag>::value &&
         !__has_iterator_category_convertible_to<_Tp, forward_iterator_tag>::value> {};
 
-#ifndef _LIBCPP_HAS_NO_DEDUCTION_GUIDES
+#if _LIBCPP_STD_VER >= 17
 template<class _InputIterator>
 using __iter_value_type = typename iterator_traits<_InputIterator>::value_type;
 
@@ -491,7 +491,7 @@ template<class _InputIterator>
 using __iter_to_alloc_type = pair<
     add_const_t<typename iterator_traits<_InputIterator>::value_type::first_type>,
     typename iterator_traits<_InputIterator>::value_type::second_type>;
-#endif // _LIBCPP_HAS_NO_DEDUCTION_GUIDES
+#endif // _LIBCPP_STD_VER >= 17
 
 _LIBCPP_END_NAMESPACE_STD
 

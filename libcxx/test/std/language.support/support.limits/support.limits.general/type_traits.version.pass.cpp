@@ -233,17 +233,11 @@
 #   error "__cpp_lib_bounded_array_traits should not be defined before c++20"
 # endif
 
-# if TEST_HAS_BUILTIN_IDENTIFIER(__has_unique_object_representations) || TEST_GCC_VER >= 700
-#   ifndef __cpp_lib_has_unique_object_representations
-#     error "__cpp_lib_has_unique_object_representations should be defined in c++17"
-#   endif
-#   if __cpp_lib_has_unique_object_representations != 201606L
-#     error "__cpp_lib_has_unique_object_representations should have the value 201606L in c++17"
-#   endif
-# else
-#   ifdef __cpp_lib_has_unique_object_representations
-#     error "__cpp_lib_has_unique_object_representations should not be defined when TEST_HAS_BUILTIN_IDENTIFIER(__has_unique_object_representations) || TEST_GCC_VER >= 700 is not defined!"
-#   endif
+# ifndef __cpp_lib_has_unique_object_representations
+#   error "__cpp_lib_has_unique_object_representations should be defined in c++17"
+# endif
+# if __cpp_lib_has_unique_object_representations != 201606L
+#   error "__cpp_lib_has_unique_object_representations should have the value 201606L in c++17"
 # endif
 
 # ifndef __cpp_lib_integral_constant_callable
@@ -253,17 +247,11 @@
 #   error "__cpp_lib_integral_constant_callable should have the value 201304L in c++17"
 # endif
 
-# if TEST_HAS_BUILTIN_IDENTIFIER(__is_aggregate) || TEST_GCC_VER_NEW >= 7001
-#   ifndef __cpp_lib_is_aggregate
-#     error "__cpp_lib_is_aggregate should be defined in c++17"
-#   endif
-#   if __cpp_lib_is_aggregate != 201703L
-#     error "__cpp_lib_is_aggregate should have the value 201703L in c++17"
-#   endif
-# else
-#   ifdef __cpp_lib_is_aggregate
-#     error "__cpp_lib_is_aggregate should not be defined when TEST_HAS_BUILTIN_IDENTIFIER(__is_aggregate) || TEST_GCC_VER_NEW >= 7001 is not defined!"
-#   endif
+# ifndef __cpp_lib_is_aggregate
+#   error "__cpp_lib_is_aggregate should be defined in c++17"
+# endif
+# if __cpp_lib_is_aggregate != 201703L
+#   error "__cpp_lib_is_aggregate should have the value 201703L in c++17"
 # endif
 
 # ifdef __cpp_lib_is_constant_evaluated
@@ -369,17 +357,11 @@
 #   error "__cpp_lib_bounded_array_traits should have the value 201902L in c++20"
 # endif
 
-# if TEST_HAS_BUILTIN_IDENTIFIER(__has_unique_object_representations) || TEST_GCC_VER >= 700
-#   ifndef __cpp_lib_has_unique_object_representations
-#     error "__cpp_lib_has_unique_object_representations should be defined in c++20"
-#   endif
-#   if __cpp_lib_has_unique_object_representations != 201606L
-#     error "__cpp_lib_has_unique_object_representations should have the value 201606L in c++20"
-#   endif
-# else
-#   ifdef __cpp_lib_has_unique_object_representations
-#     error "__cpp_lib_has_unique_object_representations should not be defined when TEST_HAS_BUILTIN_IDENTIFIER(__has_unique_object_representations) || TEST_GCC_VER >= 700 is not defined!"
-#   endif
+# ifndef __cpp_lib_has_unique_object_representations
+#   error "__cpp_lib_has_unique_object_representations should be defined in c++20"
+# endif
+# if __cpp_lib_has_unique_object_representations != 201606L
+#   error "__cpp_lib_has_unique_object_representations should have the value 201606L in c++20"
 # endif
 
 # ifndef __cpp_lib_integral_constant_callable
@@ -389,30 +371,18 @@
 #   error "__cpp_lib_integral_constant_callable should have the value 201304L in c++20"
 # endif
 
-# if TEST_HAS_BUILTIN_IDENTIFIER(__is_aggregate) || TEST_GCC_VER_NEW >= 7001
-#   ifndef __cpp_lib_is_aggregate
-#     error "__cpp_lib_is_aggregate should be defined in c++20"
-#   endif
-#   if __cpp_lib_is_aggregate != 201703L
-#     error "__cpp_lib_is_aggregate should have the value 201703L in c++20"
-#   endif
-# else
-#   ifdef __cpp_lib_is_aggregate
-#     error "__cpp_lib_is_aggregate should not be defined when TEST_HAS_BUILTIN_IDENTIFIER(__is_aggregate) || TEST_GCC_VER_NEW >= 7001 is not defined!"
-#   endif
+# ifndef __cpp_lib_is_aggregate
+#   error "__cpp_lib_is_aggregate should be defined in c++20"
+# endif
+# if __cpp_lib_is_aggregate != 201703L
+#   error "__cpp_lib_is_aggregate should have the value 201703L in c++20"
 # endif
 
-# if TEST_HAS_BUILTIN(__builtin_is_constant_evaluated) || TEST_GCC_VER >= 900
-#   ifndef __cpp_lib_is_constant_evaluated
-#     error "__cpp_lib_is_constant_evaluated should be defined in c++20"
-#   endif
-#   if __cpp_lib_is_constant_evaluated != 201811L
-#     error "__cpp_lib_is_constant_evaluated should have the value 201811L in c++20"
-#   endif
-# else
-#   ifdef __cpp_lib_is_constant_evaluated
-#     error "__cpp_lib_is_constant_evaluated should not be defined when TEST_HAS_BUILTIN(__builtin_is_constant_evaluated) || TEST_GCC_VER >= 900 is not defined!"
-#   endif
+# ifndef __cpp_lib_is_constant_evaluated
+#   error "__cpp_lib_is_constant_evaluated should be defined in c++20"
+# endif
+# if __cpp_lib_is_constant_evaluated != 201811L
+#   error "__cpp_lib_is_constant_evaluated should have the value 201811L in c++20"
 # endif
 
 # ifndef __cpp_lib_is_final
@@ -538,17 +508,11 @@
 #   error "__cpp_lib_bounded_array_traits should have the value 201902L in c++2b"
 # endif
 
-# if TEST_HAS_BUILTIN_IDENTIFIER(__has_unique_object_representations) || TEST_GCC_VER >= 700
-#   ifndef __cpp_lib_has_unique_object_representations
-#     error "__cpp_lib_has_unique_object_representations should be defined in c++2b"
-#   endif
-#   if __cpp_lib_has_unique_object_representations != 201606L
-#     error "__cpp_lib_has_unique_object_representations should have the value 201606L in c++2b"
-#   endif
-# else
-#   ifdef __cpp_lib_has_unique_object_representations
-#     error "__cpp_lib_has_unique_object_representations should not be defined when TEST_HAS_BUILTIN_IDENTIFIER(__has_unique_object_representations) || TEST_GCC_VER >= 700 is not defined!"
-#   endif
+# ifndef __cpp_lib_has_unique_object_representations
+#   error "__cpp_lib_has_unique_object_representations should be defined in c++2b"
+# endif
+# if __cpp_lib_has_unique_object_representations != 201606L
+#   error "__cpp_lib_has_unique_object_representations should have the value 201606L in c++2b"
 # endif
 
 # ifndef __cpp_lib_integral_constant_callable
@@ -558,30 +522,18 @@
 #   error "__cpp_lib_integral_constant_callable should have the value 201304L in c++2b"
 # endif
 
-# if TEST_HAS_BUILTIN_IDENTIFIER(__is_aggregate) || TEST_GCC_VER_NEW >= 7001
-#   ifndef __cpp_lib_is_aggregate
-#     error "__cpp_lib_is_aggregate should be defined in c++2b"
-#   endif
-#   if __cpp_lib_is_aggregate != 201703L
-#     error "__cpp_lib_is_aggregate should have the value 201703L in c++2b"
-#   endif
-# else
-#   ifdef __cpp_lib_is_aggregate
-#     error "__cpp_lib_is_aggregate should not be defined when TEST_HAS_BUILTIN_IDENTIFIER(__is_aggregate) || TEST_GCC_VER_NEW >= 7001 is not defined!"
-#   endif
+# ifndef __cpp_lib_is_aggregate
+#   error "__cpp_lib_is_aggregate should be defined in c++2b"
+# endif
+# if __cpp_lib_is_aggregate != 201703L
+#   error "__cpp_lib_is_aggregate should have the value 201703L in c++2b"
 # endif
 
-# if TEST_HAS_BUILTIN(__builtin_is_constant_evaluated) || TEST_GCC_VER >= 900
-#   ifndef __cpp_lib_is_constant_evaluated
-#     error "__cpp_lib_is_constant_evaluated should be defined in c++2b"
-#   endif
-#   if __cpp_lib_is_constant_evaluated != 201811L
-#     error "__cpp_lib_is_constant_evaluated should have the value 201811L in c++2b"
-#   endif
-# else
-#   ifdef __cpp_lib_is_constant_evaluated
-#     error "__cpp_lib_is_constant_evaluated should not be defined when TEST_HAS_BUILTIN(__builtin_is_constant_evaluated) || TEST_GCC_VER >= 900 is not defined!"
-#   endif
+# ifndef __cpp_lib_is_constant_evaluated
+#   error "__cpp_lib_is_constant_evaluated should be defined in c++2b"
+# endif
+# if __cpp_lib_is_constant_evaluated != 201811L
+#   error "__cpp_lib_is_constant_evaluated should have the value 201811L in c++2b"
 # endif
 
 # ifndef __cpp_lib_is_final

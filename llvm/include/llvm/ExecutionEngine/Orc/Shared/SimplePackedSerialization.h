@@ -289,6 +289,13 @@ public:
   }
 };
 
+/// Trivial ArrayRef<T> -> SPSSequence<SPSElementTagT> serialization.
+template <typename SPSElementTagT, typename T>
+class TrivialSPSSequenceSerialization<SPSElementTagT, ArrayRef<T>> {
+public:
+  static constexpr bool available = true;
+};
+
 /// 'Trivial' sequence serialization: Sequence is serialized as a uint64_t size
 /// followed by a for-earch loop over the elements of the sequence to serialize
 /// each of them.

@@ -54,3 +54,43 @@ add_libc_unittest(
   DEPENDS
     libc.src.stdlib.llabs
 )
+
+add_libc_unittest(
+  strtol_test
+  SUITE
+    libc_stdlib_unittests
+  SRCS
+    strtol_test.cpp
+  DEPENDS
+    libc.src.stdlib.strtol
+)
+
+add_libc_unittest(
+  strtoll_test
+  SUITE
+    libc_stdlib_unittests
+  SRCS
+    strtoll_test.cpp
+  DEPENDS
+    libc.src.stdlib.strtoll
+)
+
+add_libc_unittest(
+  strtoul_test
+  SUITE
+    libc_stdlib_unittests
+  SRCS
+    strtoul_test.cpp
+  DEPENDS
+    libc.src.stdlib.strtoul
+)
+
+add_libc_unittest(
+  strtoull_test
+  SUITE
+    libc_stdlib_unittests
+  SRCS
+    strtoull_test.cpp
+  DEPENDS
+    libc.src.stdlib.strtoull
+)

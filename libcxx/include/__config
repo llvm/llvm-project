@@ -354,6 +354,16 @@
 #  define _LIBCPP_NO_CFI
 #endif
 
+// If the compiler supports using_if_exists, pretend we have those functions and they'll
+// be picked up if the C library provides them.
+//
+// TODO: Once we drop support for Clang 12, we can assume the compiler supports using_if_exists
+//       for platforms that don't have a conforming C11 library, so we can drop this whole thing.
+#if __has_attribute(using_if_exists)
+# define _LIBCPP_HAS_TIMESPEC_GET
+# define _LIBCPP_HAS_QUICK_EXIT
+# define _LIBCPP_HAS_ALIGNED_ALLOC
+#else
 #if (defined(__ISO_C_VISIBLE) && (__ISO_C_VISIBLE >= 2011)) || __cplusplus >= 201103L
 #  if defined(__FreeBSD__)
 #    define _LIBCPP_HAS_ALIGNED_ALLOC
@@ -408,6 +418,7 @@
 #    endif
 #  endif // __APPLE__
 #endif
+#endif // __has_attribute(using_if_exists)
 
 #ifndef _LIBCPP_CXX03_LANG
 # define _LIBCPP_ALIGNOF(_Tp) alignof(_Tp)
@@ -510,10 +521,6 @@ typedef __char32_t char32_t;
 #define _LIBCPP_COMPILER_HAS_BUILTIN_CONSTANT_P
 #endif
 
-#if !__is_identifier(__has_unique_object_representations)
-#define _LIBCPP_HAS_UNIQUE_OBJECT_REPRESENTATIONS
-#endif
-
 #define _LIBCPP_ALWAYS_INLINE __attribute__ ((__always_inline__))
 
 // Literal operators ""d and ""y are supported starting with LLVM Clang 8 and AppleClang 10.0.1
@@ -552,7 +559,6 @@ typedef __char32_t char32_t;
 #if _GNUC_VER >= 700
 #define _LIBCPP_COMPILER_HAS_BUILTIN_LAUNDER
 #define _LIBCPP_COMPILER_HAS_BUILTIN_CONSTANT_P
-#define _LIBCPP_HAS_UNIQUE_OBJECT_REPRESENTATIONS
 #endif
 
 #define _LIBCPP_ALWAYS_INLINE __attribute__ ((__always_inline__))
@@ -1288,14 +1294,6 @@ extern "C" _LIBCPP_FUNC_VIS void __sanitizer_annotate_contiguous_container(
 #  define _LIBCPP_SAFE_STATIC
 #endif
 
-#if !__has_builtin(__builtin_addressof) && _GNUC_VER < 700
-#define _LIBCPP_HAS_NO_BUILTIN_ADDRESSOF
-#endif
-
-#if !__has_builtin(__builtin_is_constant_evaluated) && _GNUC_VER < 900
-#define _LIBCPP_HAS_NO_BUILTIN_IS_CONSTANT_EVALUATED
-#endif
-
 #if __has_attribute(diagnose_if) && !defined(_LIBCPP_DISABLE_ADDITIONAL_DIAGNOSTICS)
 #  define _LIBCPP_DIAGNOSE_WARNING(...) \
      __attribute__((diagnose_if(__VA_ARGS__, "warning")))
@@ -1362,14 +1360,6 @@ extern "C" _LIBCPP_FUNC_VIS void __sanitizer_annotate_contiguous_container(
 #define _LIBCPP_ENABLE_CXX20_REMOVED_RAW_STORAGE_ITERATOR
 #define _LIBCPP_ENABLE_CXX20_REMOVED_TYPE_TRAITS
 #endif // _LIBCPP_ENABLE_CXX20_REMOVED_FEATURES
-
-#if !defined(__cpp_deduction_guides) || __cpp_deduction_guides < 201611
-#define _LIBCPP_HAS_NO_DEDUCTION_GUIDES
-#endif
-
-#if !__has_keyword(__is_aggregate) && (_GNUC_VER_NEW < 7001)
-#define _LIBCPP_HAS_NO_IS_AGGREGATE
-#endif
 
 #if !defined(__cpp_coroutines) || __cpp_coroutines < 201703L
 #define _LIBCPP_HAS_NO_COROUTINES

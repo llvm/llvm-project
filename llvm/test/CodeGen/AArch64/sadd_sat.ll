@@ -12,11 +12,9 @@ define i32 @func(i32 %x, i32 %y) nounwind {
 ; CHECK-LABEL: func:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    adds w8, w0, w1
-; CHECK-NEXT:    mov w9, #2147483647
-; CHECK-NEXT:    cmp w8, #0
-; CHECK-NEXT:    cinv w8, w9, ge
-; CHECK-NEXT:    adds w9, w0, w1
-; CHECK-NEXT:    csel w0, w8, w9, vs
+; CHECK-NEXT:    asr w9, w8, #31
+; CHECK-NEXT:    eor w9, w9, #0x80000000
+; CHECK-NEXT:    csel w0, w9, w8, vs
 ; CHECK-NEXT:    ret
   %tmp = call i32 @llvm.sadd.sat.i32(i32 %x, i32 %y);
   ret i32 %tmp;
@@ -26,11 +24,9 @@ define i64 @func2(i64 %x, i64 %y) nounwind {
 ; CHECK-LABEL: func2:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    adds x8, x0, x1
-; CHECK-NEXT:    mov x9, #9223372036854775807
-; CHECK-NEXT:    cmp x8, #0
-; CHECK-NEXT:    cinv x8, x9, ge
-; CHECK-NEXT:    adds x9, x0, x1
-; CHECK-NEXT:    csel x0, x8, x9, vs
+; CHECK-NEXT:    asr x9, x8, #63
+; CHECK-NEXT:    eor x9, x9, #0x8000000000000000
+; CHECK-NEXT:    csel x0, x9, x8, vs
 ; CHECK-NEXT:    ret
   %tmp = call i64 @llvm.sadd.sat.i64(i64 %x, i64 %y);
   ret i64 %tmp;

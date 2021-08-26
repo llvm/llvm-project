@@ -1,5 +1,5 @@
 ; REQUIRES: asserts
-; RUN: opt -S -mtriple=systemz-unknown -mcpu=z13  -O3 -enable-mssa-loop-dependency -enable-simple-loop-unswitch -verify-memoryssa  < %s | FileCheck %s
+; RUN: opt -S -mtriple=systemz-unknown -mcpu=z13  -O3 -enable-simple-loop-unswitch -verify-memoryssa  < %s | FileCheck %s
 
 target datalayout = "E-m:e-i1:8:16-i8:8:16-i64:64-f128:64-v128:64-a:8:16-n32:64"
 target triple = "s390x-ibm-linux"

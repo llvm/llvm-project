@@ -26,6 +26,11 @@ multiclass B<string name, string help1, string help2> {
   def no_ # NAME: Flag<["--", "-"], "no-" # name>, HelpText<help2>;
 }
 
+multiclass B_disable<string name, string help1, string help2> {
+  def NAME: Flag<["--", "-"], name>, HelpText<help1>;
+  def disable_ # NAME: Flag<["--", "-"], "disable-" # name>, HelpText<help2>;
+}
+
 def L: JoinedOrSeparate<["-"], "L">, MetaVarName<"<dir>">,
   HelpText<"Add a directory to the library search path">;
 defm allow_multiple_definition: B<"allow-multiple-definition",
@@ -42,7 +47,7 @@ def disable_runtime_pseudo_reloc: F<"disable-runtime-pseudo-reloc">,
     HelpText<"Don't do automatic imports that require runtime fixups">;
 def disable_stdcall_fixup: F<"disable-stdcall-fixup">,
     HelpText<"Don't resolve stdcall/fastcall/vectorcall to undecorated symbols">;
-defm dynamicbase: B<"dynamicbase", "Enable ASLR", "Disable ASLR">;
+defm dynamicbase: B_disable<"dynamicbase", "Enable ASLR", "Disable ASLR">;
 def enable_auto_import: F<"enable-auto-import">,
     HelpText<"Automatically import data symbols from other DLLs where needed">;
 def enable_runtime_pseudo_reloc: F<"enable-runtime-pseudo-reloc">,
@@ -62,6 +67,8 @@ defm gc_sections: B<"gc-sections",
     "Remove unused sections",
     "Don't remove unused sections">;
 def help: F<"help">, HelpText<"Print option help">;
+defm high_entropy_va: B_disable<"high-entropy-va",
+    "Set the 'high entropy VA' flag", "Don't set the 'high entropy VA' flag">;
 defm icf: Eq<"icf", "Identical code folding">;
 defm image_base: Eq<"image-base", "Base address of the program">;
 defm insert_timestamp: B<"insert-timestamp",
@@ -80,7 +87,10 @@ defm minor_os_version: EqLong<"minor-os-version",
      "Set the OS and subsystem minor version">;
 defm minor_subsystem_version: EqLong<"minor-subsystem-version",
      "Set the OS and subsystem minor version">;
-def no_seh: F<"no-seh">, HelpText<"Set the 'no SEH' flag in the executable">;
+defm no_seh: B_disable<"no-seh",
+     "Set the 'no SEH' flag in the executable", "Don't set the 'no SEH' flag">;
+defm nxcompat: B_disable<"nxcompat",
+    "Set the 'nxcompat' flag in the executable", "Don't set the 'nxcompat' flag">;
 def large_address_aware: Flag<["--"], "large-address-aware">,
     HelpText<"Enable large addresses">;
 def o: JoinedOrSeparate<["-"], "o">, MetaVarName<"<path>">,
@@ -99,6 +109,8 @@ defm reproduce: Eq<"reproduce",
      "Write a tar file containing input files and command line options to reproduce link">;
 defm require_defined: Eq<"require-defined",
      "Force symbol to be added to symbol table as an undefined one">;
+defm tsaware: B_disable<"tsaware",
+    "Set the 'Terminal Server aware' flag", "Don't set the 'Terminal Server aware' flag">;
 defm undefined: Eq<"undefined", "Include symbol in the link, if available">;
 defm whole_archive: B<"whole-archive",
     "Include all object files for following archives",
@@ -127,6 +139,7 @@ def alias_Bstatic_dn: Flag<["-"], "dn">, Alias<Bstatic>;
 def alias_Bstatic_non_shared: Flag<["-"], "non_shared">, Alias<Bstatic>;
 def alias_Bstatic_static: Flag<["-"], "static">, Alias<Bstatic>;
 def alias_entry_e: JoinedOrSeparate<["-"], "e">, Alias<entry>;
+def alias_no_dynamicbase: F<"no-dynamicbase">, Alias<disable_dynamicbase>;
 def alias_strip_s: Flag<["-"], "s">, Alias<strip_all>;
 def alias_strip_S: Flag<["-"], "S">, Alias<strip_debug>;
 def alias_undefined_u: JoinedOrSeparate<["-"], "u">, Alias<undefined>;
@@ -138,14 +151,11 @@ def: F<"disable-auto-image-base">;
 def: F<"enable-auto-image-base">;
 def: F<"end-group">;
 def: Flag<["--"], "full-shutdown">;
-def: F<"high-entropy-va">;
 defm: EqNoHelp<"major-image-version">;
 defm: EqNoHelp<"minor-image-version">;
 def: F<"no-undefined">;
-def: F<"nxcompat">;
 def: F<"pic-executable">;
 defm: EqNoHelp<"plugin">;
 defm: EqNoHelp<"plugin-opt">;
 defm: EqNoHelp<"sysroot">;
 def: F<"start-group">;
-def: F<"tsaware">;

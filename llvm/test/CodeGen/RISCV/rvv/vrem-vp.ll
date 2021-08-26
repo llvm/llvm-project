@@ -104,6 +104,18 @@ define <vscale x 2 x i8> @vrem_vx_nxv2i8_unmasked(<vscale x 2 x i8> %va, i8 %b, 
   ret <vscale x 2 x i8> %v
 }
 
+declare <vscale x 3 x i8> @llvm.vp.srem.nxv3i8(<vscale x 3 x i8>, <vscale x 3 x i8>, <vscale x 3 x i1>, i32)
+
+define <vscale x 3 x i8> @vrem_vv_nxv3i8(<vscale x 3 x i8> %va, <vscale x 3 x i8> %b, <vscale x 3 x i1> %m, i32 zeroext %evl) {
+; CHECK-LABEL: vrem_vv_nxv3i8:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    vsetvli zero, a0, e8, mf2, ta, mu
+; CHECK-NEXT:    vrem.vv v8, v8, v9, v0.t
+; CHECK-NEXT:    ret
+  %v = call <vscale x 3 x i8> @llvm.vp.srem.nxv3i8(<vscale x 3 x i8> %va, <vscale x 3 x i8> %b, <vscale x 3 x i1> %m, i32 %evl)
+  ret <vscale x 3 x i8> %v
+}
+
 declare <vscale x 4 x i8> @llvm.vp.srem.nxv4i8(<vscale x 4 x i8>, <vscale x 4 x i8>, <vscale x 4 x i1>, i32)
 
 define <vscale x 4 x i8> @vrem_vv_nxv4i8(<vscale x 4 x i8> %va, <vscale x 4 x i8> %b, <vscale x 4 x i1> %m, i32 zeroext %evl) {

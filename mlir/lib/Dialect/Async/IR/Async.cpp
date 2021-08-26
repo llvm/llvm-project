@@ -48,6 +48,12 @@ static LogicalResult verify(YieldOp op) {
   return success();
 }
 
+MutableOperandRange
+YieldOp::getMutableSuccessorOperands(Optional<unsigned> index) {
+  assert(!index.hasValue());
+  return operandsMutable();
+}
+
 //===----------------------------------------------------------------------===//
 /// ExecuteOp
 //===----------------------------------------------------------------------===//
@@ -55,24 +61,28 @@ static LogicalResult verify(YieldOp op) {
 constexpr char kOperandSegmentSizesAttr[] = "operand_segment_sizes";
 
 void ExecuteOp::getNumRegionInvocations(
-    ArrayRef<Attribute> operands, SmallVectorImpl<int64_t> &countPerRegion) {
-  (void)operands;
+    ArrayRef<Attribute>, SmallVectorImpl<int64_t> &countPerRegion) {
   assert(countPerRegion.empty());
   countPerRegion.push_back(1);
 }
 
+OperandRange ExecuteOp::getSuccessorEntryOperands(unsigned index) {
+  assert(index == 0 && "invalid region index");
+  return operands();
+}
+
 void ExecuteOp::getSuccessorRegions(Optional<unsigned> index,
-                                    ArrayRef<Attribute> operands,
+                                    ArrayRef<Attribute>,
                                     SmallVectorImpl<RegionSuccessor> &regions) {
   // The `body` region branch back to the parent operation.
   if (index.hasValue()) {
-    assert(*index == 0);
-    regions.push_back(RegionSuccessor(getResults()));
+    assert(*index == 0 && "invalid region index");
+    regions.push_back(RegionSuccessor(results()));
     return;
   }
 
   // Otherwise the successor is the body region.
-  regions.push_back(RegionSuccessor(&body()));
+  regions.push_back(RegionSuccessor(&body(), body().getArguments()));
 }
 
 void ExecuteOp::build(OpBuilder &builder, OperationState &result,

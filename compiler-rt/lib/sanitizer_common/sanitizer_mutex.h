@@ -162,7 +162,6 @@ class MUTEX Mutex : CheckedMutex {
     CheckedMutex::Lock();
     u64 reset_mask = ~0ull;
     u64 state = atomic_load_relaxed(&state_);
-    const uptr kMaxSpinIters = 1500;
     for (uptr spin_iters = 0;; spin_iters++) {
       u64 new_state;
       bool locked = (state & (kWriterLock | kReaderLockMask)) != 0;
@@ -191,8 +190,6 @@ class MUTEX Mutex : CheckedMutex {
         // We've incremented waiting writers, so now block.
         writers_.Wait();
         spin_iters = 0;
-        state = atomic_load(&state_, memory_order_relaxed);
-        DCHECK_NE(state & kWriterSpinWait, 0);
       } else {
         // We've set kWriterSpinWait, but we are still in active spinning.
       }
@@ -201,6 +198,8 @@ class MUTEX Mutex : CheckedMutex {
       // Either way we need to reset kWriterSpinWait
       // next time we take the lock or block again.
       reset_mask = ~kWriterSpinWait;
+      state = atomic_load(&state_, memory_order_relaxed);
+      DCHECK_NE(state & kWriterSpinWait, 0);
     }
   }
 
@@ -214,17 +213,16 @@ class MUTEX Mutex : CheckedMutex {
       DCHECK_NE(state & kWriterLock, 0);
       DCHECK_EQ(state & kReaderLockMask, 0);
       new_state = state & ~kWriterLock;
-      wake_writer =
-          (state & kWriterSpinWait) == 0 && (state & kWaitingWriterMask) != 0;
+      wake_writer = (state & (kWriterSpinWait | kReaderSpinWait)) == 0 &&
+                    (state & kWaitingWriterMask) != 0;
       if (wake_writer)
         new_state = (new_state - kWaitingWriterInc) | kWriterSpinWait;
       wake_readers =
-          (state & (kWriterSpinWait | kWaitingWriterMask)) != 0
+          wake_writer || (state & kWriterSpinWait) != 0
               ? 0
               : ((state & kWaitingReaderMask) >> kWaitingReaderShift);
       if (wake_readers)
-        new_state = (new_state & ~kWaitingReaderMask) +
-                    (wake_readers << kReaderLockShift);
+        new_state = (new_state & ~kWaitingReaderMask) | kReaderSpinWait;
     } while (UNLIKELY(!atomic_compare_exchange_weak(&state_, &state, new_state,
                                                     memory_order_release)));
     if (UNLIKELY(wake_writer))
@@ -235,23 +233,39 @@ class MUTEX Mutex : CheckedMutex {
 
   void ReadLock() ACQUIRE_SHARED() {
     CheckedMutex::Lock();
-    bool locked;
-    u64 new_state;
+    u64 reset_mask = ~0ull;
     u64 state = atomic_load_relaxed(&state_);
-    do {
-      locked =
-          (state & kReaderLockMask) == 0 &&
-          (state & (kWriterLock | kWriterSpinWait | kWaitingWriterMask)) != 0;
+    for (uptr spin_iters = 0;; spin_iters++) {
+      bool locked = (state & kWriterLock) != 0;
+      u64 new_state;
+      if (LIKELY(!locked)) {
+        new_state = (state + kReaderLockInc) & reset_mask;
+      } else if (spin_iters > kMaxSpinIters) {
+        new_state = (state + kWaitingReaderInc) & reset_mask;
+      } else if ((state & kReaderSpinWait) == 0) {
+        // Active spinning, but denote our presence so that unlocking
+        // thread does not wake up other threads.
+        new_state = state | kReaderSpinWait;
+      } else {
+        // Active spinning.
+        state = atomic_load(&state_, memory_order_relaxed);
+        continue;
+      }
+      if (UNLIKELY(!atomic_compare_exchange_weak(&state_, &state, new_state,
+                                                 memory_order_acquire)))
+        continue;
       if (LIKELY(!locked))
-        new_state = state + kReaderLockInc;
-      else
-        new_state = state + kWaitingReaderInc;
-    } while (UNLIKELY(!atomic_compare_exchange_weak(&state_, &state, new_state,
-                                                    memory_order_acquire)));
-    if (UNLIKELY(locked))
-      readers_.Wait();
-    DCHECK_EQ(atomic_load_relaxed(&state_) & kWriterLock, 0);
-    DCHECK_NE(atomic_load_relaxed(&state_) & kReaderLockMask, 0);
+        return;  // We've locked the mutex.
+      if (spin_iters > kMaxSpinIters) {
+        // We've incremented waiting readers, so now block.
+        readers_.Wait();
+        spin_iters = 0;
+      } else {
+        // We've set kReaderSpinWait, but we are still in active spinning.
+      }
+      reset_mask = ~kReaderSpinWait;
+      state = atomic_load(&state_, memory_order_relaxed);
+    }
   }
 
   void ReadUnlock() RELEASE_SHARED() {
@@ -261,9 +275,10 @@ class MUTEX Mutex : CheckedMutex {
     u64 state = atomic_load_relaxed(&state_);
     do {
       DCHECK_NE(state & kReaderLockMask, 0);
-      DCHECK_EQ(state & (kWaitingReaderMask | kWriterLock), 0);
+      DCHECK_EQ(state & kWriterLock, 0);
       new_state = state - kReaderLockInc;
-      wake = (new_state & (kReaderLockMask | kWriterSpinWait)) == 0 &&
+      wake = (new_state &
+              (kReaderLockMask | kWriterSpinWait | kReaderSpinWait)) == 0 &&
              (new_state & kWaitingWriterMask) != 0;
       if (wake)
         new_state = (new_state - kWaitingWriterInc) | kWriterSpinWait;
@@ -307,16 +322,14 @@ class MUTEX Mutex : CheckedMutex {
   //  - a writer is awake and spin-waiting
   //    the flag is used to prevent thundering herd problem
   //    (new writers are not woken if this flag is set)
+  //  - a reader is awake and spin-waiting
   //
-  // Writer support active spinning, readers does not.
+  // Both writers and readers use active spinning before blocking.
   // But readers are more aggressive and always take the mutex
   // if there are any other readers.
-  // Writers hand off the mutex to readers: after wake up readers
-  // already assume ownership of the mutex (don't need to do any
-  // state updates). But the mutex is not handed off to writers,
-  // after wake up writers compete to lock the mutex again.
-  // This is needed to allow repeated write locks even in presence
-  // of other blocked writers.
+  // After wake up both writers and readers compete to lock the
+  // mutex again. This is needed to allow repeated locks even in presence
+  // of other blocked threads.
   static constexpr u64 kCounterWidth = 20;
   static constexpr u64 kReaderLockShift = 0;
   static constexpr u64 kReaderLockInc = 1ull << kReaderLockShift;
@@ -332,6 +345,9 @@ class MUTEX Mutex : CheckedMutex {
                                             << kWaitingWriterShift;
   static constexpr u64 kWriterLock = 1ull << (3 * kCounterWidth);
   static constexpr u64 kWriterSpinWait = 1ull << (3 * kCounterWidth + 1);
+  static constexpr u64 kReaderSpinWait = 1ull << (3 * kCounterWidth + 2);
+
+  static constexpr uptr kMaxSpinIters = 1500;
 
   Mutex(LinkerInitialized) = delete;
   Mutex(const Mutex &) = delete;

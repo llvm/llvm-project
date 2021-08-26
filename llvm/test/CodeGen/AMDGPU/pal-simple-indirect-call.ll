@@ -71,5 +71,5 @@ attributes #0 = { nounwind readnone speculatable willreturn }
 ; AKF_GCN: attributes #[[ATTR0:[0-9]+]] = { nounwind readnone speculatable willreturn }
 ;.
 ; ATTRIBUTOR_GCN: attributes #[[ATTR0]] = { "uniform-work-group-size"="false" }
-; ATTRIBUTOR_GCN: attributes #[[ATTR1:[0-9]+]] = { nounwind readnone speculatable willreturn "uniform-work-group-size"="false" }
+; ATTRIBUTOR_GCN: attributes #[[ATTR1:[0-9]+]] = { nounwind readnone speculatable willreturn }
 ;.

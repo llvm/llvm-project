@@ -1502,7 +1502,7 @@ private:
 #endif
 };
 
-#ifndef _LIBCPP_HAS_NO_DEDUCTION_GUIDES
+#if _LIBCPP_STD_VER >= 17
 template<class _InputIterator, class _Compare = less<__iter_key_type<_InputIterator>>,
          class _Allocator = allocator<__iter_to_alloc_type<_InputIterator>>,
          class = _EnableIf<!__is_allocator<_Compare>::value, void>,
@@ -2175,7 +2175,7 @@ private:
     typedef unique_ptr<__node, _Dp> __node_holder;
 };
 
-#ifndef _LIBCPP_HAS_NO_DEDUCTION_GUIDES
+#if _LIBCPP_STD_VER >= 17
 template<class _InputIterator, class _Compare = less<__iter_key_type<_InputIterator>>,
          class _Allocator = allocator<__iter_to_alloc_type<_InputIterator>>,
          class = _EnableIf<!__is_allocator<_Compare>::value, void>,

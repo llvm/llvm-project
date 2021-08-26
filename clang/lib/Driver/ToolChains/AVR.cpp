@@ -453,11 +453,21 @@ void AVR::Linker::ConstructJob(Compilation &C, const JobAction &JA,
 }
 
 llvm::Optional<std::string> AVRToolChain::findAVRLibcInstallation() const {
+  // Search avr-libc installation according to avr-gcc installation.
+  std::string GCCParent(GCCInstallation.getParentLibPath());
+  std::string Path(GCCParent + "/avr");
+  if (llvm::sys::fs::is_directory(Path))
+    return Path;
+  Path = GCCParent + "/../avr";
+  if (llvm::sys::fs::is_directory(Path))
+    return Path;
+
+  // Search avr-libc installation from possible locations, and return the first
+  // one that exists, if there is no avr-gcc installed.
   for (StringRef PossiblePath : PossibleAVRLibcLocations) {
     std::string Path = getDriver().SysRoot + PossiblePath.str();
-    // Return the first avr-libc installation that exists.
     if (llvm::sys::fs::is_directory(Path))
-      return Optional<std::string>(Path);
+      return Path;
   }
 
   return llvm::None;

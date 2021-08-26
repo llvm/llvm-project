@@ -82,7 +82,7 @@ static bool optimizeSQRT(CallInst *Call, Function *CalledFunc,
 
   // Add attribute "readnone" so that backend can use a native sqrt instruction
   // for this call.
-  Call->addAttribute(AttributeList::FunctionIndex, Attribute::ReadNone);
+  Call->addFnAttr(Attribute::ReadNone);
 
   // Insert a FP compare instruction and use it as the CurrBB branch condition.
   Builder.SetInsertPoint(CurrBBTerm);

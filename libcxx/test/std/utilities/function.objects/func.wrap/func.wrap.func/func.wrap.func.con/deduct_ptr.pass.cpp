@@ -13,13 +13,11 @@
 // function(R(*)(Args...)) -> function<R(Args...)>;
 
 // UNSUPPORTED: c++03, c++11, c++14
-// UNSUPPORTED: libcpp-no-deduction-guides
 
 #include <functional>
 #include <type_traits>
 
 #include "test_macros.h"
-
 
 struct R { };
 struct A1 { };

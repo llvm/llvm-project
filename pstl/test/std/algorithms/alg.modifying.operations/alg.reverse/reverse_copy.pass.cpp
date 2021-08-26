@@ -120,8 +120,6 @@ test()
 int
 main()
 {
-    // clang-3.8 fails to correctly auto vectorize the loop in some cases of different types of container's elements,
-    // for example: int32_t and int8_t. This issue isn't detected for clang-3.9 and newer versions.
     test<int16_t, int8_t>();
     test<uint16_t, float32_t>();
     test<float64_t, int64_t>();

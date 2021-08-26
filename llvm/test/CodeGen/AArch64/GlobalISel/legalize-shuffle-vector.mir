@@ -262,9 +262,9 @@ body:             |
     ; CHECK: [[C4:%[0-9]+]]:_(s32) = G_CONSTANT i32 1
     ; CHECK: [[EVEC2:%[0-9]+]]:_(s64) = G_EXTRACT_VECTOR_ELT [[BUILD_VECTOR4]](<2 x s64>), [[C1]](s64)
     ; CHECK: [[EVEC3:%[0-9]+]]:_(s64) = G_EXTRACT_VECTOR_ELT [[BUILD_VECTOR2]](<2 x s64>), [[C3]](s64)
+    ; CHECK: [[SHUF:%[0-9]+]]:_(<2 x s64>) = G_SHUFFLE_VECTOR [[BUILD_VECTOR3]](<2 x s64>), [[BUILD_VECTOR5]], shufflemask(1, 3)
     ; CHECK: [[BUILD_VECTOR6:%[0-9]+]]:_(<2 x s64>) = G_BUILD_VECTOR [[EVEC]](s64), [[EVEC1]](s64)
     ; CHECK: [[BUILD_VECTOR7:%[0-9]+]]:_(<2 x s64>) = G_BUILD_VECTOR [[EVEC2]](s64), [[EVEC3]](s64)
-    ; CHECK: [[SHUF:%[0-9]+]]:_(<2 x s64>) = G_SHUFFLE_VECTOR [[BUILD_VECTOR3]](<2 x s64>), [[BUILD_VECTOR5]], shufflemask(1, 3)
     ; CHECK: G_STORE [[BUILD_VECTOR6]](<2 x s64>), [[COPY8]](p0) :: (store (<2 x s64>), align 64)
     ; CHECK: [[C5:%[0-9]+]]:_(s64) = G_CONSTANT i64 16
     ; CHECK: [[PTR_ADD:%[0-9]+]]:_(p0) = G_PTR_ADD [[COPY8]], [[C5]](s64)

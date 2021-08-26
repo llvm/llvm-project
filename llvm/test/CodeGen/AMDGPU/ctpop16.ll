@@ -1520,11 +1520,11 @@ define amdgpu_kernel void @ctpop_i16_in_br(i16 addrspace(1)* %out, i16 addrspace
 ; VI-LABEL: ctpop_i16_in_br:
 ; VI:       ; %bb.0: ; %entry
 ; VI-NEXT:    s_load_dwordx4 s[4:7], s[0:1], 0x24
-; VI-NEXT:    s_load_dword s0, s[0:1], 0x34
+; VI-NEXT:    s_load_dword s2, s[0:1], 0x34
 ; VI-NEXT:    s_waitcnt lgkmcnt(0)
-; VI-NEXT:    s_lshr_b32 s1, s0, 16
-; VI-NEXT:    v_cmp_ne_u16_e64 s[2:3], s1, 0
-; VI-NEXT:    s_and_b64 vcc, exec, s[2:3]
+; VI-NEXT:    s_lshr_b32 s0, s2, 16
+; VI-NEXT:    v_cmp_ne_u16_e64 s[0:1], s0, 0
+; VI-NEXT:    s_and_b64 vcc, exec, s[0:1]
 ; VI-NEXT:    s_cbranch_vccz BB14_2
 ; VI-NEXT:  ; %bb.1: ; %else
 ; VI-NEXT:    s_mov_b32 s11, 0xf000
@@ -1537,7 +1537,7 @@ define amdgpu_kernel void @ctpop_i16_in_br(i16 addrspace(1)* %out, i16 addrspace
 ; VI-NEXT:  BB14_2:
 ; VI-NEXT:    ; implicit-def: $vgpr0
 ; VI-NEXT:  BB14_3: ; %if
-; VI-NEXT:    s_and_b32 s0, s0, 0xffff
+; VI-NEXT:    s_and_b32 s0, s2, 0xffff
 ; VI-NEXT:    s_bcnt1_i32_b32 s0, s0
 ; VI-NEXT:    s_waitcnt vmcnt(0)
 ; VI-NEXT:    v_mov_b32_e32 v0, s0

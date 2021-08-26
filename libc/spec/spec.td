@@ -40,7 +40,9 @@ def VarArgType : Type {}
 def VoidType : NamedType<"void">;
 def IntType : NamedType<"int">;
 def LongType : NamedType<"long">;
+def UnsignedLongType : NamedType<"unsigned long">;
 def LongLongType : NamedType<"long long">;
+def UnsignedLongLongType : NamedType<"unsigned long long">;
 def FloatType : NamedType<"float">;
 def DoubleType : NamedType<"double">;
 def LongDoubleType : NamedType<"long double">;
@@ -62,6 +64,7 @@ def ConstVoidRestrictedPtr : ConstType<VoidRestrictedPtr>;
 def CharPtr : PtrType<CharType>;
 def ConstCharPtr : ConstType<CharPtr>;
 def CharRestrictedPtr : RestrictedPtrType<CharType>;
+def CharRestrictedPtrPtr : RestrictedPtrType<CharPtr>;
 def ConstCharRestrictedPtr : ConstType<CharRestrictedPtr>;
 
 def OnceFlagType : NamedType<"once_flag">;

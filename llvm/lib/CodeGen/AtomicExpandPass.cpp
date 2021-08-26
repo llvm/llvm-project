@@ -17,6 +17,7 @@
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/SmallVector.h"
+#include "llvm/Analysis/OptimizationRemarkEmitter.h"
 #include "llvm/CodeGen/AtomicExpandUtils.h"
 #include "llvm/CodeGen/RuntimeLibcalls.h"
 #include "llvm/CodeGen/TargetLowering.h"
@@ -570,7 +571,9 @@ static Value *performAtomicOp(AtomicRMWInst::BinOp Op, IRBuilder<> &Builder,
 }
 
 bool AtomicExpand::tryExpandAtomicRMW(AtomicRMWInst *AI) {
-  switch (TLI->shouldExpandAtomicRMWInIR(AI)) {
+  LLVMContext &Ctx = AI->getModule()->getContext();
+  TargetLowering::AtomicExpansionKind Kind = TLI->shouldExpandAtomicRMWInIR(AI);
+  switch (Kind) {
   case TargetLoweringBase::AtomicExpansionKind::None:
     return false;
   case TargetLoweringBase::AtomicExpansionKind::LLSC: {
@@ -600,6 +603,18 @@ bool AtomicExpand::tryExpandAtomicRMW(AtomicRMWInst *AI) {
       expandPartwordAtomicRMW(AI,
                               TargetLoweringBase::AtomicExpansionKind::CmpXChg);
     } else {
+      SmallVector<StringRef> SSNs;
+      Ctx.getSyncScopeNames(SSNs);
+      auto MemScope = SSNs[AI->getSyncScopeID()].empty()
+                          ? "system"
+                          : SSNs[AI->getSyncScopeID()];
+      OptimizationRemarkEmitter ORE(AI->getFunction());
+      ORE.emit([&]() {
+        return OptimizationRemark(DEBUG_TYPE, "Passed", AI)
+               << "A compare and swap loop was generated for an atomic "
+               << AI->getOperationName(AI->getOperation()) << " operation at "
+               << MemScope << " memory scope";
+      });
       expandAtomicRMWToCmpXchg(AI, createCmpXchgInstFun);
     }
     return true;
@@ -1850,7 +1865,7 @@ bool AtomicExpand::expandAtomicOpToLibcall(
   // Now, the return type.
   if (CASExpected) {
     ResultTy = Type::getInt1Ty(Ctx);
-    Attr = Attr.addAttribute(Ctx, AttributeList::ReturnIndex, Attribute::ZExt);
+    Attr = Attr.addRetAttribute(Ctx, Attribute::ZExt);
   } else if (HasResult && UseSizedLibcall)
     ResultTy = SizedIntTy;
   else

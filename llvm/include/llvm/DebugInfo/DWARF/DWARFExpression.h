@@ -159,6 +159,8 @@ public:
 
   bool operator==(const DWARFExpression &RHS) const;
 
+  StringRef getData() const { return Data.getData(); }
+
 private:
   DataExtractor Data;
   uint8_t AddressSize;

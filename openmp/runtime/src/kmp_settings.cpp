@@ -164,7 +164,12 @@ int __kmp_convert_to_milliseconds(char const *data) {
     return (INT_MAX);
   value = (double)0.0;
   mult = '\0';
+#if KMP_OS_WINDOWS && KMP_MSVC_COMPAT
+  // On Windows, each %c parameter needs additional size parameter for sscanf_s
+  nvalues = KMP_SSCANF(data, "%lf%c%c", &value, &mult, 1, &extra, 1);
+#else
   nvalues = KMP_SSCANF(data, "%lf%c%c", &value, &mult, &extra);
+#endif
   if (nvalues < 1)
     return (-1);
   if (nvalues == 1)
@@ -426,6 +431,7 @@ static void __kmp_stg_parse_par_range(char const *name, char const *value,
                                       int *out_range, char *out_routine,
                                       char *out_file, int *out_lb,
                                       int *out_ub) {
+  const char *par_range_value;
   size_t len = KMP_STRLEN(value) + 1;
   par_range_to_print = (char *)KMP_INTERNAL_MALLOC(len + 1);
   KMP_STRNCPY_S(par_range_to_print, len + 1, value, len + 1);
@@ -434,11 +440,14 @@ static void __kmp_stg_parse_par_range(char const *name, char const *value,
   __kmp_par_range_ub = INT_MAX;
   for (;;) {
     unsigned int len;
-    if (*value == '\0') {
+    if (!value || *value == '\0') {
       break;
     }
     if (!__kmp_strcasecmp_with_sentinel("routine", value, '=')) {
-      value = strchr(value, '=') + 1;
+      par_range_value = strchr(value, '=') + 1;
+      if (!par_range_value)
+        goto par_range_error;
+      value = par_range_value;
       len = __kmp_readstr_with_sentinel(out_routine, value,
                                         KMP_PAR_RANGE_ROUTINE_LEN - 1, ',');
       if (len == 0) {
@@ -451,7 +460,10 @@ static void __kmp_stg_parse_par_range(char const *name, char const *value,
       continue;
     }
     if (!__kmp_strcasecmp_with_sentinel("filename", value, '=')) {
-      value = strchr(value, '=') + 1;
+      par_range_value = strchr(value, '=') + 1;
+      if (!par_range_value)
+        goto par_range_error;
+      value = par_range_value;
       len = __kmp_readstr_with_sentinel(out_file, value,
                                         KMP_PAR_RANGE_FILENAME_LEN - 1, ',');
       if (len == 0) {
@@ -465,7 +477,10 @@ static void __kmp_stg_parse_par_range(char const *name, char const *value,
     }
     if ((!__kmp_strcasecmp_with_sentinel("range", value, '=')) ||
         (!__kmp_strcasecmp_with_sentinel("incl_range", value, '='))) {
-      value = strchr(value, '=') + 1;
+      par_range_value = strchr(value, '=') + 1;
+      if (!par_range_value)
+        goto par_range_error;
+      value = par_range_value;
       if (KMP_SSCANF(value, "%d:%d", out_lb, out_ub) != 2) {
         goto par_range_error;
       }
@@ -477,7 +492,10 @@ static void __kmp_stg_parse_par_range(char const *name, char const *value,
       continue;
     }
     if (!__kmp_strcasecmp_with_sentinel("excl_range", value, '=')) {
-      value = strchr(value, '=') + 1;
+      par_range_value = strchr(value, '=') + 1;
+      if (!par_range_value)
+        goto par_range_error;
+      value = par_range_value;
       if (KMP_SSCANF(value, "%d:%d", out_lb, out_ub) != 2) {
         goto par_range_error;
       }

@@ -8,8 +8,6 @@
 
 // UNSUPPORTED: c++03, c++11, c++14, c++17
 // UNSUPPORTED: libcpp-no-concepts
-// UNSUPPORTED: gcc-10
-// UNSUPPORTED: clang-10
 // UNSUPPORTED: libcpp-has-no-incomplete-ranges
 
 // unspecified begin;
@@ -20,11 +18,9 @@
 
 using cend_t = decltype(std::ranges::cend);
 
-// clang-format off
 template <class T>
 requires(!std::invocable<cend_t&, T>)
 void f() {}
-// clang-format on
 
 void test() {
   struct incomplete;

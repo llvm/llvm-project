@@ -1,5 +1,5 @@
-# RUN: llvm-xray account -d %s -o - -m %S/Inputs/simple-instrmap.yaml | FileCheck --check-prefixes=ALL %s
-# RUN: llvm-xray account -d -recursive-calls-only %s -o - -m %S/Inputs/simple-instrmap.yaml | FileCheck --check-prefixes=RECURSIVE %s
+# RUN: llvm-xray account -d %s -m %S/Inputs/simple-instrmap.yaml | FileCheck --check-prefixes=ALL %s
+# RUN: llvm-xray account -d --recursive-calls-only %s -m %S/Inputs/simple-instrmap.yaml | FileCheck --check-prefixes=RECURSIVE %s
 
 ---
 header:

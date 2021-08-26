@@ -2674,6 +2674,8 @@ static bool mergeDeclAttribute(Sema &S, NamedDecl *D,
     NewAttr = S.mergeEnforceTCBAttr(D, *TCBA);
   else if (const auto *TCBLA = dyn_cast<EnforceTCBLeafAttr>(Attr))
     NewAttr = S.mergeEnforceTCBLeafAttr(D, *TCBLA);
+  else if (const auto *BTFA = dyn_cast<BTFTagAttr>(Attr))
+    NewAttr = S.mergeBTFTagAttr(D, *BTFA);
   else if (Attr->shouldInheritEvenIfAlreadyPresent() || !DeclHasAttr(D, Attr))
     NewAttr = cast<InheritableAttr>(Attr->clone(S.Context));
 
@@ -7328,10 +7330,9 @@ NamedDecl *Sema::ActOnVariableDeclarator(
 
     DeclSpec::TSCS TSC = D.getDeclSpec().getThreadStorageClassSpec();
     if (TSC != TSCS_unspecified) {
-      bool IsCXX = getLangOpts().OpenCLCPlusPlus;
       Diag(D.getDeclSpec().getThreadStorageClassSpecLoc(),
            diag::err_opencl_unknown_type_specifier)
-          << IsCXX << getLangOpts().getOpenCLVersionTuple().getAsString()
+          << getLangOpts().getOpenCLVersionString()
           << DeclSpec::getSpecifierName(TSC) << 1;
       NewVD->setInvalidDecl();
     }

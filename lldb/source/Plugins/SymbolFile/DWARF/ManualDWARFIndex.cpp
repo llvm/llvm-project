@@ -359,9 +359,9 @@ void ManualDWARFIndex::GetGlobalVariables(
 
 void ManualDWARFIndex::GetGlobalVariables(
     DWARFUnit &unit, llvm::function_ref<bool(DWARFDIE die)> callback) {
+  lldbassert(!unit.GetSymbolFileDWARF().GetDwoNum());
   Index();
-  m_set.globals.FindAllEntriesForUnit(unit.GetNonSkeletonUnit(),
-                                      DIERefCallback(callback));
+  m_set.globals.FindAllEntriesForUnit(unit, DIERefCallback(callback));
 }
 
 void ManualDWARFIndex::GetObjCMethods(

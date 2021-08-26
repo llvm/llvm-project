@@ -461,6 +461,11 @@ def {0} : LinalgStructuredBase_Op<"{1}", !listconcat([
       [{{
         $_state.addOperands(inputs);
         $_state.addOperands(outputs);
+        SmallVector<Type> resultTensorTypes;
+        copy_if(outputs.getTypes(),
+                std::back_inserter(resultTensorTypes),
+                [](Type type) {{ return type.isa<RankedTensorType>(); });
+        $_state.addTypes(resultTensorTypes);
         $_state.addAttribute(
           "operand_segment_sizes",
           $_builder.getI32VectorAttr({{
@@ -474,11 +479,13 @@ def {0} : LinalgStructuredBase_Op<"{1}", !listconcat([
       }]>,
       OpBuilder<
       (ins "TypeRange":$resultTensorTypes, "ValueRange":$inputs,
-            "ValueRange":$outputs),
+            "ValueRange":$outputs,
+            CArg<"ArrayRef<NamedAttribute>", "{{}">:$attributes),
       [{{
         $_state.addOperands(inputs);
         $_state.addOperands(outputs);
         $_state.addTypes(resultTensorTypes);
+        $_state.addAttributes(attributes);
         $_state.addAttribute(
           "operand_segment_sizes",
           $_builder.getI32VectorAttr({{

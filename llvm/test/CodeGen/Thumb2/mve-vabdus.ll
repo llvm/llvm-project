@@ -186,8 +186,8 @@ define void @vabd_loop_s32(i32* nocapture readonly %x, i32* nocapture readonly %
 ; CHECK-NEXT:    push.w {r4, r5, r6, r7, r8, r9, r10, r11, lr}
 ; CHECK-NEXT:    .pad #4
 ; CHECK-NEXT:    sub sp, #4
-; CHECK-NEXT:    .vsave {d8, d9}
-; CHECK-NEXT:    vpush {d8, d9}
+; CHECK-NEXT:    .vsave {d9}
+; CHECK-NEXT:    vpush {d9}
 ; CHECK-NEXT:    mov.w lr, #256
 ; CHECK-NEXT:    mov.w r12, #1
 ; CHECK-NEXT:    vmov.i32 q0, #0x0
@@ -195,12 +195,13 @@ define void @vabd_loop_s32(i32* nocapture readonly %x, i32* nocapture readonly %
 ; CHECK-NEXT:    @ =>This Inner Loop Header: Depth=1
 ; CHECK-NEXT:    vldrw.u32 q1, [r0], #16
 ; CHECK-NEXT:    vldrw.u32 q2, [r1], #16
-; CHECK-NEXT:    vmov.f32 s12, s4
-; CHECK-NEXT:    vmov.f32 s16, s8
+; CHECK-NEXT:    vmov r3, s4
+; CHECK-NEXT:    vmov r5, s8
 ; CHECK-NEXT:    vmov.f32 s14, s5
-; CHECK-NEXT:    vmov r3, s12
 ; CHECK-NEXT:    vmov.f32 s18, s9
-; CHECK-NEXT:    vmov r5, s16
+; CHECK-NEXT:    vmov.f32 s4, s6
+; CHECK-NEXT:    vmov.f32 s6, s7
+; CHECK-NEXT:    vmov.f32 s8, s10
 ; CHECK-NEXT:    vmov r7, s18
 ; CHECK-NEXT:    asrs r4, r3, #31
 ; CHECK-NEXT:    subs.w r8, r3, r5
@@ -209,24 +210,21 @@ define void @vabd_loop_s32(i32* nocapture readonly %x, i32* nocapture readonly %
 ; CHECK-NEXT:    movs r4, #0
 ; CHECK-NEXT:    bfi r4, r5, #0, #4
 ; CHECK-NEXT:    vmov r5, s14
-; CHECK-NEXT:    vmov.f32 s12, s6
-; CHECK-NEXT:    vmov.f32 s14, s7
-; CHECK-NEXT:    vmov.f32 s4, s10
-; CHECK-NEXT:    vmov.f32 s6, s11
-; CHECK-NEXT:    vmov r3, s6
 ; CHECK-NEXT:    subs.w r9, r5, r7
 ; CHECK-NEXT:    asr.w r6, r5, #31
-; CHECK-NEXT:    vmov r5, s12
+; CHECK-NEXT:    vmov r5, s4
 ; CHECK-NEXT:    sbc.w r6, r6, r7, asr #31
 ; CHECK-NEXT:    and.w r6, r12, r6, asr #31
 ; CHECK-NEXT:    rsbs r6, r6, #0
 ; CHECK-NEXT:    bfi r4, r6, #4, #4
-; CHECK-NEXT:    vmov r6, s14
+; CHECK-NEXT:    vmov r6, s6
+; CHECK-NEXT:    vmov.f32 s6, s11
+; CHECK-NEXT:    vmov r3, s6
+; CHECK-NEXT:    asrs r7, r6, #31
 ; CHECK-NEXT:    subs.w r10, r6, r3
-; CHECK-NEXT:    asr.w r7, r6, #31
+; CHECK-NEXT:    asr.w r6, r5, #31
 ; CHECK-NEXT:    sbc.w r3, r7, r3, asr #31
-; CHECK-NEXT:    vmov r7, s4
-; CHECK-NEXT:    asrs r6, r5, #31
+; CHECK-NEXT:    vmov r7, s8
 ; CHECK-NEXT:    asr.w r11, r3, #31
 ; CHECK-NEXT:    and.w r3, r12, r3, asr #31
 ; CHECK-NEXT:    rsbs r3, r3, #0
@@ -247,7 +245,7 @@ define void @vabd_loop_s32(i32* nocapture readonly %x, i32* nocapture readonly %
 ; CHECK-NEXT:    vstrb.8 q1, [r2], #16
 ; CHECK-NEXT:    le lr, .LBB8_1
 ; CHECK-NEXT:  @ %bb.2: @ %for.cond.cleanup
-; CHECK-NEXT:    vpop {d8, d9}
+; CHECK-NEXT:    vpop {d9}
 ; CHECK-NEXT:    add sp, #4
 ; CHECK-NEXT:    pop.w {r4, r5, r6, r7, r8, r9, r10, r11, pc}
 entry:
@@ -390,7 +388,13 @@ define void @vabd_loop_u32(i32* nocapture readonly %x, i32* nocapture readonly %
 ; CHECK-NEXT:    vmov.f32 s20, s12
 ; CHECK-NEXT:    vmov.f32 s22, s13
 ; CHECK-NEXT:    vand q5, q5, q0
+; CHECK-NEXT:    vmov.f32 s8, s10
 ; CHECK-NEXT:    vmov r5, r6, d10
+; CHECK-NEXT:    vmov.f32 s10, s11
+; CHECK-NEXT:    vmov.f32 s12, s14
+; CHECK-NEXT:    vand q2, q2, q0
+; CHECK-NEXT:    vmov.f32 s14, s15
+; CHECK-NEXT:    vand q3, q3, q0
 ; CHECK-NEXT:    subs.w r8, r5, r3
 ; CHECK-NEXT:    vmov r7, r3, d11
 ; CHECK-NEXT:    sbc.w r4, r6, r4
@@ -398,12 +402,6 @@ define void @vabd_loop_u32(i32* nocapture readonly %x, i32* nocapture readonly %
 ; CHECK-NEXT:    movs r4, #0
 ; CHECK-NEXT:    bfi r4, r5, #0, #4
 ; CHECK-NEXT:    vmov r5, r6, d9
-; CHECK-NEXT:    vmov.f32 s16, s10
-; CHECK-NEXT:    vmov.f32 s18, s11
-; CHECK-NEXT:    vand q2, q4, q0
-; CHECK-NEXT:    vmov.f32 s16, s14
-; CHECK-NEXT:    vmov.f32 s18, s15
-; CHECK-NEXT:    vand q3, q4, q0
 ; CHECK-NEXT:    subs.w r9, r7, r5
 ; CHECK-NEXT:    mov.w r7, #1
 ; CHECK-NEXT:    sbcs r3, r6

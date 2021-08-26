@@ -1050,7 +1050,6 @@ public:
   SymbolTableSection *SymbolTable = nullptr;
   SectionIndexSection *SectionIndexTable = nullptr;
 
-  void sortSections();
   SectionTableRef sections() const { return SectionTableRef(Sections); }
   iterator_range<
       filter_iterator<pointee_iterator<std::vector<SecPtr>::const_iterator>,
@@ -1070,6 +1069,7 @@ public:
 
   Error removeSections(bool AllowBrokenLinks,
                        std::function<bool(const SectionBase &)> ToRemove);
+  Error replaceSections(const DenseMap<SectionBase *, SectionBase *> &FromTo);
   Error removeSymbols(function_ref<bool(const Symbol &)> ToRemove);
   template <class T, class... Ts> T &addSection(Ts &&... Args) {
     auto Sec = std::make_unique<T>(std::forward<Ts>(Args)...);

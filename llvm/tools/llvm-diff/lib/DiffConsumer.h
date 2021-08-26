@@ -78,6 +78,7 @@ class StringRef;
     DiffConsumer()
       : out(errs()), Differences(false), Indent(0) {}
 
+    void reset();
     bool hadDifferences() const;
     void enterContext(const Value *L, const Value *R) override;
     void exitContext() override;

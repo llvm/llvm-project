@@ -199,6 +199,18 @@ static bool ParseFrontendArgs(FrontendOptions &opts, llvm::opt::ArgList &args,
     }
   }
 
+  // Parsing -load <dsopath> option and storing shared object path
+  if (llvm::opt::Arg *a = args.getLastArg(clang::driver::options::OPT_load)) {
+    opts.plugins.push_back(a->getValue());
+  }
+
+  // Parsing -plugin <name> option and storing plugin name and setting action
+  if (const llvm::opt::Arg *a =
+          args.getLastArg(clang::driver::options::OPT_plugin)) {
+    opts.programAction = PluginAction;
+    opts.ActionName = a->getValue();
+  }
+
   opts.outputFile = args.getLastArgValue(clang::driver::options::OPT_o);
   opts.showHelp = args.hasArg(clang::driver::options::OPT_help);
   opts.showVersion = args.hasArg(clang::driver::options::OPT_version);

@@ -104,10 +104,10 @@ static inline uint64_t SPMagic(SampleProfileFormat Format = SPF_Binary) {
 /// current Format uses MD5 to represent the string.
 static inline StringRef getRepInFormat(StringRef Name, bool UseMD5,
                                        std::string &GUIDBuf) {
-  if (Name.empty())
+  if (Name.empty() || !UseMD5)
     return Name;
   GUIDBuf = std::to_string(Function::getGUID(Name));
-  return UseMD5 ? StringRef(GUIDBuf) : Name;
+  return GUIDBuf;
 }
 
 static inline uint64_t SPVersion() { return 103; }
@@ -428,6 +428,16 @@ public:
   static std::pair<StringRef, StringRef>
   splitContextString(StringRef ContextStr) {
     return ContextStr.split(" @ ");
+  }
+
+  // Split the leaf context frame (right-most substr) from context.
+  static std::pair<StringRef, StringRef>
+  rsplitContextString(StringRef ContextStr) {
+    auto ContextSplit = ContextStr.rsplit(" @ ");
+    if (ContextSplit.second.empty()) {
+      std::swap(ContextSplit.first, ContextSplit.second);
+    }
+    return ContextSplit;
   }
 
   // Reconstruct a new context with the last k frames, return the context-less
@@ -960,6 +970,11 @@ private:
 };
 
 raw_ostream &operator<<(raw_ostream &OS, const FunctionSamples &FS);
+
+using NameFunctionSamples = std::pair<StringRef, const FunctionSamples *>;
+
+void sortFuncProfiles(const StringMap<FunctionSamples> &ProfileMap,
+                      std::vector<NameFunctionSamples> &SortedProfiles);
 
 /// Sort a LocationT->SampleT map by LocationT.
 ///

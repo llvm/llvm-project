@@ -15,7 +15,7 @@ clang_hwasan_common_cflags = clang_cflags + ["-fsanitize=hwaddress", "-fuse-ld=l
 
 if config.target_arch == 'x86_64' and config.enable_aliases == '1':
   clang_hwasan_common_cflags += ["-fsanitize-hwaddress-experimental-aliasing"]
-if config.enable_aliases != '1':
+else:
   config.available_features.add('pointer-tagging')
 if config.target_arch == 'x86_64':
   # This does basically the same thing as tagged-globals on aarch64. Because

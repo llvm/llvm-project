@@ -53,7 +53,7 @@ makeRewriteRule(const std::vector<std::string> &StringLikeClassNames,
       to(varDecl(hasName("npos"), hasDeclContext(StringLikeClass))));
   auto StringFind = cxxMemberCallExpr(
       callee(cxxMethodDecl(
-          hasName("find"),
+          hasName("find"), parameterCountIs(2),
           hasParameter(
               0, parmVarDecl(anyOf(hasType(StringType), hasType(CharStarType),
                                    hasType(CharType)))))),

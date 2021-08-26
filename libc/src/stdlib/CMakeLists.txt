@@ -32,6 +32,36 @@ add_entrypoint_object(
 )
 
 add_entrypoint_object(
+  atoi
+  SRCS
+    atoi.cpp
+  HDRS
+    atoi.h
+  DEPENDS
+    libc.src.__support.str_conv_utils
+)
+
+add_entrypoint_object(
+  atol
+  SRCS
+    atol.cpp
+  HDRS
+    atol.h
+  DEPENDS
+    libc.src.__support.str_conv_utils
+)
+
+add_entrypoint_object(
+  atoll
+  SRCS
+    atoll.cpp
+  HDRS
+    atoll.h
+  DEPENDS
+    libc.src.__support.str_conv_utils
+)
+
+add_entrypoint_object(
   labs
   SRCS
     labs.cpp
@@ -49,4 +79,44 @@ add_entrypoint_object(
     llabs.h
   DEPENDS
     libc.src.__support.integer_operations
+)
+
+add_entrypoint_object(
+  strtol
+  SRCS
+    strtol.cpp
+  HDRS
+    strtol.h
+  DEPENDS
+    libc.src.__support.str_conv_utils
+)
+
+add_entrypoint_object(
+  strtoll
+  SRCS
+    strtoll.cpp
+  HDRS
+    strtoll.h
+  DEPENDS
+    libc.src.__support.str_conv_utils
+)
+
+add_entrypoint_object(
+  strtoul
+  SRCS
+    strtoul.cpp
+  HDRS
+    strtoul.h
+  DEPENDS
+    libc.src.__support.str_conv_utils
+)
+
+add_entrypoint_object(
+  strtoull
+  SRCS
+    strtoull.cpp
+  HDRS
+    strtoull.h
+  DEPENDS
+    libc.src.__support.str_conv_utils
 )

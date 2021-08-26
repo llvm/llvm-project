@@ -29,8 +29,7 @@ _LIBCPP_BEGIN_NAMESPACE_STD
 // If the compiler has no concepts support, the format header will be disabled.
 // Without concepts support enable_if needs to be used and that too much effort
 // to support compilers with partial C++20 support.
-#if !defined(_LIBCPP_HAS_NO_CONCEPTS) &&                                       \
-    !defined(_LIBCPP_HAS_NO_BUILTIN_IS_CONSTANT_EVALUATED)
+#if !defined(_LIBCPP_HAS_NO_CONCEPTS)
 
 template <class _CharT>
 class _LIBCPP_TEMPLATE_VIS _LIBCPP_AVAILABILITY_FORMAT basic_format_parse_context {
@@ -102,7 +101,7 @@ private:
 using format_parse_context = basic_format_parse_context<char>;
 using wformat_parse_context = basic_format_parse_context<wchar_t>;
 
-#endif // !defined(_LIBCPP_HAS_NO_CONCEPTS) && !defined(_LIBCPP_HAS_NO_BUILTIN_IS_CONSTANT_EVALUATED)
+#endif // !defined(_LIBCPP_HAS_NO_CONCEPTS)
 
 #endif //_LIBCPP_STD_VER > 17
 

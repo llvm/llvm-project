@@ -1843,9 +1843,9 @@ INTERCEPTOR(int, ioctl, int d, unsigned long request, ...) {
   const ioctl_desc *desc = ioctl_lookup(request);
   ioctl_desc decoded_desc;
   if (!desc) {
-    VPrintf(2, "Decoding unknown ioctl 0x%x\n", request);
+    VPrintf(2, "Decoding unknown ioctl 0x%lx\n", request);
     if (!ioctl_decode(request, &decoded_desc))
-      Printf("WARNING: failed decoding unknown ioctl 0x%x\n", request);
+      Printf("WARNING: failed decoding unknown ioctl 0x%lx\n", request);
     else
       desc = &decoded_desc;
   }

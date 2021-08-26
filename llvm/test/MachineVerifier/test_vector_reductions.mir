@@ -30,6 +30,4 @@ body:             |
     %dst:_(s64) = G_VECREDUCE_SEQ_FADD %scalar_s64, %scalar_s64
     ; CHECK: Bad machine code: Sequential FADD/FMUL vector reduction must have a vector 2nd operand
 
-    %dst2:_(s64) = G_VECREDUCE_MUL %scalar_s64
-    ; CHECK: Bad machine code: Vector reduction requires vector source
 ...

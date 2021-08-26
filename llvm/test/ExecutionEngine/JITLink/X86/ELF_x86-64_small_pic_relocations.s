@@ -3,7 +3,6 @@
 # RUN:         -o %t/elf_sm_pic_reloc.o %s
 # RUN: llvm-jitlink -noexec -slab-allocate 100Kb -slab-address 0xfff00000 \
 # RUN:              -define-abs external_data=0x1 \
-# RUN:              -define-abs extern_in_range32=0xffe00000 \
 # RUN:              -define-abs extern_out_of_range32=0x7fff00000000 \
 # RUN:              -check %s %t/elf_sm_pic_reloc.o
 #
@@ -51,21 +50,6 @@ test_call_local:
 
         .size   test_call_local, .-test_call_local
 
-# Check R_X86_64_PLT32 handling with a call to an external. This produces a
-# Branch32ToStub edge, because externals are not defined locally. During
-# resolution, the target turns out to be in-range from the callsite and so the
-# edge is relaxed in post-allocation optimization.
-#
-# jitlink-check: decode_operand(test_call_extern, 0) = \
-# jitlink-check:     extern_in_range32 - next_pc(test_call_extern)
-        .globl  test_call_extern
-        .p2align       4, 0x90
-        .type   test_call_extern,@function
-test_call_extern:
-        callq   extern_in_range32@plt
-
-        .size   test_call_extern, .-test_call_extern
-
 # Check R_X86_64_PLT32 handling with a call to an external via PLT. This
 # produces a Branch32ToStub edge, because externals are not defined locally.
 # As the target is out-of-range from the callsite, the edge keeps using its PLT
@@ -85,7 +69,9 @@ test_call_extern_plt:
         .size   test_call_extern_plt, .-test_call_extern_plt
 
 # Test GOTPCREL handling. We want to check both the offset to the GOT entry and its
-# contents.
+# contents. "movl" will be optimized to "leal" and a non-got access if the pc relative
+# offset to named_data is in range of 32 bits signed immediate. So use "leal" here to
+# suppress optimization
 # jitlink-check: decode_operand(test_gotpcrel, 4) = \
 # jitlink-check:     got_addr(elf_sm_pic_reloc.o, named_data) - next_pc(test_gotpcrel)
 # jitlink-check: *{8}(got_addr(elf_sm_pic_reloc.o, named_data)) = named_data
@@ -94,7 +80,7 @@ test_call_extern_plt:
         .p2align      4, 0x90
         .type   test_gotpcrel,@function
 test_gotpcrel:
-	movl    named_data@GOTPCREL(%rip), %eax
+	leal    named_data@GOTPCREL(%rip), %eax
 
         .size   test_gotpcrel, .-test_gotpcrel
 

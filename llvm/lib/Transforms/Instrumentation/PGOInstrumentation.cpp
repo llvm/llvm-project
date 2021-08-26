@@ -198,12 +198,14 @@ static cl::opt<bool>
                             "warnings about missing profile data for "
                             "functions."));
 
+namespace llvm {
 // Command line option to enable/disable the warning about a hash mismatch in
 // the profile data.
-static cl::opt<bool>
+cl::opt<bool>
     NoPGOWarnMismatch("no-pgo-warn-mismatch", cl::init(false), cl::Hidden,
                       cl::desc("Use this option to turn off/on "
                                "warnings about profile cfg mismatch."));
+} // namespace llvm
 
 // Command line option to enable/disable the warning about a hash mismatch in
 // the profile data for Comdat functions, which often turns out to be false

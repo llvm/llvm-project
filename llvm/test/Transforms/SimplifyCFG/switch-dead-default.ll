@@ -33,7 +33,7 @@ default:
 
 define void @test2(i2 %a) {
 ; CHECK-LABEL: @test2(
-; CHECK-NEXT:    switch i2 [[A:%.*]], label [[DEFAULT1:%.*]] [
+; CHECK-NEXT:    switch i2 [[A:%.*]], label [[DOTUNREACHABLEDEFAULT:%.*]] [
 ; CHECK-NEXT:    i2 0, label [[CASE0:%.*]]
 ; CHECK-NEXT:    i2 1, label [[CASE1:%.*]]
 ; CHECK-NEXT:    i2 -2, label [[CASE2:%.*]]
@@ -53,7 +53,7 @@ define void @test2(i2 %a) {
 ; CHECK:       case3:
 ; CHECK-NEXT:    call void @foo(i32 3)
 ; CHECK-NEXT:    br label [[COMMON_RET]]
-; CHECK:       default1:
+; CHECK:       .unreachabledefault:
 ; CHECK-NEXT:    unreachable
 ;
   switch i2 %a, label %default [i2 0, label %case0

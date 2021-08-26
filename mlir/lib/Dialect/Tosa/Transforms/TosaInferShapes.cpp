@@ -25,6 +25,7 @@
 #include "mlir/Pass/Pass.h"
 #include "mlir/Transforms/DialectConversion.h"
 #include "mlir/Transforms/GreedyPatternRewriteDriver.h"
+#include "llvm/Support/FormatVariadic.h"
 
 using namespace mlir;
 using namespace mlir::tosa;
@@ -62,6 +63,21 @@ void propagateShapesToTosaIf(Operation &op) {
 }
 
 void propagateShapesInRegion(Region &region) {
+  DenseMap<Value, ShapedTypeComponents> shapesStorage;
+  auto setShapes = [&](Value val, Type t) {
+    if (auto st = t.dyn_cast<ShapedType>())
+      shapesStorage[val] = st;
+    else
+      shapesStorage[val] = t;
+  };
+  auto operandShape = [&](Value val) -> ShapeAdaptor {
+    // Query the WIP mapping rather than the type if set.
+    auto it = shapesStorage.find(val);
+    if (it == shapesStorage.end())
+      return nullptr;
+    return it->second;
+  };
+
   for (auto &block : region) {
     for (Operation &op : block) {
       if (op.getDialect()->getNamespace() !=
@@ -76,10 +92,12 @@ void propagateShapesInRegion(Region &region) {
         continue;
 
       SmallVector<ShapedTypeComponents> returnedShapes;
+
+      ValueShapeRange range(op.getOperands(), operandShape);
       if (shapeInterface
-              .inferReturnTypeComponents(
-                  op.getContext(), op.getLoc(), op.getOperands(),
-                  op.getAttrDictionary(), op.getRegions(), returnedShapes)
+              .inferReturnTypeComponents(op.getContext(), op.getLoc(), range,
+                                         op.getAttrDictionary(),
+                                         op.getRegions(), returnedShapes)
               .succeeded()) {
         for (auto it : llvm::zip(op.getResults(), returnedShapes)) {
           Value result = std::get<0>(it);
@@ -99,6 +117,7 @@ void propagateShapesInRegion(Region &region) {
           }
 
           // Determine the knowledge based on the output type.
+          // TODO: should also query WIP type probably
           Type resultTy = result.getType();
           auto currentKnowledge =
               ValueKnowledge::getKnowledgeFromType(resultTy);
@@ -122,9 +141,18 @@ void propagateShapesInRegion(Region &region) {
               ValueKnowledge::join(currentKnowledge, inferredKnowledge);
           if (!newKnowledge)
             continue;
-          result.setType(newKnowledge.getType());
+          setShapes(result, newKnowledge.getType());
         }
       }
+    }
+  }
+
+  // Actually update types with updated shape knowledge.
+  for (auto it : shapesStorage) {
+    auto result = it.second;
+    if (result.hasRank()) {
+      Type t = it.first.getType().cast<ShapedType>().clone(result.getDims());
+      it.first.setType(t);
     }
   }
 }

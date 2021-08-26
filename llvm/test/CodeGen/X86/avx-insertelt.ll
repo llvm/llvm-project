@@ -91,23 +91,35 @@ define <4 x i64> @insert_i64_firstelt_of_low_subvector(<4 x i64> %x, i64 %s) {
 ; 0'th element of high subvector insertion into an AVX register.
 
 define <8 x float> @insert_f32_firstelt_of_high_subvector(<8 x float> %x, float %s) {
-; ALL-LABEL: insert_f32_firstelt_of_high_subvector:
-; ALL:       # %bb.0:
-; ALL-NEXT:    vextractf128 $1, %ymm0, %xmm2
-; ALL-NEXT:    vblendps {{.*#+}} xmm1 = xmm1[0],xmm2[1,2,3]
-; ALL-NEXT:    vinsertf128 $1, %xmm1, %ymm0, %ymm0
-; ALL-NEXT:    retq
+; AVX-LABEL: insert_f32_firstelt_of_high_subvector:
+; AVX:       # %bb.0:
+; AVX-NEXT:    vextractf128 $1, %ymm0, %xmm2
+; AVX-NEXT:    vblendps {{.*#+}} xmm1 = xmm1[0],xmm2[1,2,3]
+; AVX-NEXT:    vinsertf128 $1, %xmm1, %ymm0, %ymm0
+; AVX-NEXT:    retq
+;
+; AVX2-LABEL: insert_f32_firstelt_of_high_subvector:
+; AVX2:       # %bb.0:
+; AVX2-NEXT:    vbroadcastss %xmm1, %ymm1
+; AVX2-NEXT:    vblendps {{.*#+}} ymm0 = ymm0[0,1,2,3],ymm1[4],ymm0[5,6,7]
+; AVX2-NEXT:    retq
   %i0 = insertelement <8 x float> %x, float %s, i32 4
   ret <8 x float> %i0
 }
 
 define <4 x double> @insert_f64_firstelt_of_high_subvector(<4 x double> %x, double %s) {
-; ALL-LABEL: insert_f64_firstelt_of_high_subvector:
-; ALL:       # %bb.0:
-; ALL-NEXT:    vextractf128 $1, %ymm0, %xmm2
-; ALL-NEXT:    vblendps {{.*#+}} xmm1 = xmm1[0,1],xmm2[2,3]
-; ALL-NEXT:    vinsertf128 $1, %xmm1, %ymm0, %ymm0
-; ALL-NEXT:    retq
+; AVX-LABEL: insert_f64_firstelt_of_high_subvector:
+; AVX:       # %bb.0:
+; AVX-NEXT:    vextractf128 $1, %ymm0, %xmm2
+; AVX-NEXT:    vblendps {{.*#+}} xmm1 = xmm1[0,1],xmm2[2,3]
+; AVX-NEXT:    vinsertf128 $1, %xmm1, %ymm0, %ymm0
+; AVX-NEXT:    retq
+;
+; AVX2-LABEL: insert_f64_firstelt_of_high_subvector:
+; AVX2:       # %bb.0:
+; AVX2-NEXT:    vbroadcastsd %xmm1, %ymm1
+; AVX2-NEXT:    vblendps {{.*#+}} ymm0 = ymm0[0,1,2,3],ymm1[4,5],ymm0[6,7]
+; AVX2-NEXT:    retq
   %i0 = insertelement <4 x double> %x, double %s, i32 2
   ret <4 x double> %i0
 }
@@ -140,9 +152,10 @@ define <16 x i16> @insert_i16_firstelt_of_high_subvector(<16 x i16> %x, i16 %s) 
 ;
 ; AVX2-LABEL: insert_i16_firstelt_of_high_subvector:
 ; AVX2:       # %bb.0:
-; AVX2-NEXT:    vextracti128 $1, %ymm0, %xmm1
-; AVX2-NEXT:    vpinsrw $0, %edi, %xmm1, %xmm1
-; AVX2-NEXT:    vinserti128 $1, %xmm1, %ymm0, %ymm0
+; AVX2-NEXT:    vmovd %edi, %xmm1
+; AVX2-NEXT:    vpbroadcastw %xmm1, %ymm1
+; AVX2-NEXT:    vpblendw {{.*#+}} ymm1 = ymm1[0],ymm0[1,2,3,4,5,6,7],ymm1[8],ymm0[9,10,11,12,13,14,15]
+; AVX2-NEXT:    vpblendd {{.*#+}} ymm0 = ymm0[0,1,2,3],ymm1[4,5,6,7]
 ; AVX2-NEXT:    retq
   %i0 = insertelement <16 x i16> %x, i16 %s, i32 8
   ret <16 x i16> %i0
@@ -158,9 +171,9 @@ define <8 x i32> @insert_i32_firstelt_of_high_subvector(<8 x i32> %x, i32 %s) {
 ;
 ; AVX2-LABEL: insert_i32_firstelt_of_high_subvector:
 ; AVX2:       # %bb.0:
-; AVX2-NEXT:    vextracti128 $1, %ymm0, %xmm1
-; AVX2-NEXT:    vpinsrd $0, %edi, %xmm1, %xmm1
-; AVX2-NEXT:    vinserti128 $1, %xmm1, %ymm0, %ymm0
+; AVX2-NEXT:    vmovd %edi, %xmm1
+; AVX2-NEXT:    vpbroadcastd %xmm1, %ymm1
+; AVX2-NEXT:    vpblendd {{.*#+}} ymm0 = ymm0[0,1,2,3],ymm1[4],ymm0[5,6,7]
 ; AVX2-NEXT:    retq
   %i0 = insertelement <8 x i32> %x, i32 %s, i32 4
   ret <8 x i32> %i0
@@ -176,9 +189,9 @@ define <4 x i64> @insert_i64_firstelt_of_high_subvector(<4 x i64> %x, i64 %s) {
 ;
 ; AVX2-LABEL: insert_i64_firstelt_of_high_subvector:
 ; AVX2:       # %bb.0:
-; AVX2-NEXT:    vextracti128 $1, %ymm0, %xmm1
-; AVX2-NEXT:    vpinsrq $0, %rdi, %xmm1, %xmm1
-; AVX2-NEXT:    vinserti128 $1, %xmm1, %ymm0, %ymm0
+; AVX2-NEXT:    vmovq %rdi, %xmm1
+; AVX2-NEXT:    vpbroadcastq %xmm1, %ymm1
+; AVX2-NEXT:    vpblendd {{.*#+}} ymm0 = ymm0[0,1,2,3],ymm1[4,5],ymm0[6,7]
 ; AVX2-NEXT:    retq
   %i0 = insertelement <4 x i64> %x, i64 %s, i32 2
   ret <4 x i64> %i0
@@ -187,26 +200,38 @@ define <4 x i64> @insert_i64_firstelt_of_high_subvector(<4 x i64> %x, i64 %s) {
 ; element insertion into 0'th element of both subvectors
 
 define <8 x float> @insert_f32_firstelts(<8 x float> %x, float %s) {
-; ALL-LABEL: insert_f32_firstelts:
-; ALL:       # %bb.0:
-; ALL-NEXT:    vblendps {{.*#+}} xmm2 = xmm1[0],xmm0[1,2,3]
-; ALL-NEXT:    vextractf128 $1, %ymm0, %xmm0
-; ALL-NEXT:    vblendps {{.*#+}} xmm0 = xmm1[0],xmm0[1,2,3]
-; ALL-NEXT:    vinsertf128 $1, %xmm0, %ymm2, %ymm0
-; ALL-NEXT:    retq
+; AVX-LABEL: insert_f32_firstelts:
+; AVX:       # %bb.0:
+; AVX-NEXT:    vblendps {{.*#+}} xmm2 = xmm1[0],xmm0[1,2,3]
+; AVX-NEXT:    vextractf128 $1, %ymm0, %xmm0
+; AVX-NEXT:    vblendps {{.*#+}} xmm0 = xmm1[0],xmm0[1,2,3]
+; AVX-NEXT:    vinsertf128 $1, %xmm0, %ymm2, %ymm0
+; AVX-NEXT:    retq
+;
+; AVX2-LABEL: insert_f32_firstelts:
+; AVX2:       # %bb.0:
+; AVX2-NEXT:    vbroadcastss %xmm1, %ymm1
+; AVX2-NEXT:    vblendps {{.*#+}} ymm0 = ymm1[0],ymm0[1,2,3],ymm1[4],ymm0[5,6,7]
+; AVX2-NEXT:    retq
   %i0 = insertelement <8 x float> %x, float %s, i32 0
   %i1 = insertelement <8 x float> %i0, float %s, i32 4
   ret <8 x float> %i1
 }
 
 define <4 x double> @insert_f64_firstelts(<4 x double> %x, double %s) {
-; ALL-LABEL: insert_f64_firstelts:
-; ALL:       # %bb.0:
-; ALL-NEXT:    vblendps {{.*#+}} xmm2 = xmm1[0,1],xmm0[2,3]
-; ALL-NEXT:    vextractf128 $1, %ymm0, %xmm0
-; ALL-NEXT:    vblendps {{.*#+}} xmm0 = xmm1[0,1],xmm0[2,3]
-; ALL-NEXT:    vinsertf128 $1, %xmm0, %ymm2, %ymm0
-; ALL-NEXT:    retq
+; AVX-LABEL: insert_f64_firstelts:
+; AVX:       # %bb.0:
+; AVX-NEXT:    vblendps {{.*#+}} xmm2 = xmm1[0,1],xmm0[2,3]
+; AVX-NEXT:    vextractf128 $1, %ymm0, %xmm0
+; AVX-NEXT:    vblendps {{.*#+}} xmm0 = xmm1[0,1],xmm0[2,3]
+; AVX-NEXT:    vinsertf128 $1, %xmm0, %ymm2, %ymm0
+; AVX-NEXT:    retq
+;
+; AVX2-LABEL: insert_f64_firstelts:
+; AVX2:       # %bb.0:
+; AVX2-NEXT:    vbroadcastsd %xmm1, %ymm1
+; AVX2-NEXT:    vunpckhpd {{.*#+}} ymm0 = ymm1[1],ymm0[1],ymm1[3],ymm0[3]
+; AVX2-NEXT:    retq
   %i0 = insertelement <4 x double> %x, double %s, i32 0
   %i1 = insertelement <4 x double> %i0, double %s, i32 2
   ret <4 x double> %i1
@@ -245,9 +270,11 @@ define <16 x i16> @insert_i16_firstelts(<16 x i16> %x, i16 %s) {
 ; AVX2-LABEL: insert_i16_firstelts:
 ; AVX2:       # %bb.0:
 ; AVX2-NEXT:    vpinsrw $0, %edi, %xmm0, %xmm1
-; AVX2-NEXT:    vextracti128 $1, %ymm0, %xmm0
-; AVX2-NEXT:    vpinsrw $0, %edi, %xmm0, %xmm0
-; AVX2-NEXT:    vinserti128 $1, %xmm0, %ymm1, %ymm0
+; AVX2-NEXT:    vpblendd {{.*#+}} ymm0 = ymm1[0,1,2,3],ymm0[4,5,6,7]
+; AVX2-NEXT:    vmovd %edi, %xmm1
+; AVX2-NEXT:    vpbroadcastw %xmm1, %ymm1
+; AVX2-NEXT:    vpblendw {{.*#+}} ymm1 = ymm1[0],ymm0[1,2,3,4,5,6,7],ymm1[8],ymm0[9,10,11,12,13,14,15]
+; AVX2-NEXT:    vpblendd {{.*#+}} ymm0 = ymm0[0,1,2,3],ymm1[4,5,6,7]
 ; AVX2-NEXT:    retq
   %i0 = insertelement <16 x i16> %x, i16 %s, i32 0
   %i1 = insertelement <16 x i16> %i0, i16 %s, i32 8
@@ -266,10 +293,8 @@ define <8 x i32> @insert_i32_firstelts(<8 x i32> %x, i32 %s) {
 ; AVX2-LABEL: insert_i32_firstelts:
 ; AVX2:       # %bb.0:
 ; AVX2-NEXT:    vmovd %edi, %xmm1
-; AVX2-NEXT:    vpblendd {{.*#+}} xmm1 = xmm1[0],xmm0[1,2,3]
-; AVX2-NEXT:    vextracti128 $1, %ymm0, %xmm0
-; AVX2-NEXT:    vpinsrd $0, %edi, %xmm0, %xmm0
-; AVX2-NEXT:    vinserti128 $1, %xmm0, %ymm1, %ymm0
+; AVX2-NEXT:    vpbroadcastd %xmm1, %ymm1
+; AVX2-NEXT:    vpblendd {{.*#+}} ymm0 = ymm1[0],ymm0[1,2,3],ymm1[4],ymm0[5,6,7]
 ; AVX2-NEXT:    retq
   %i0 = insertelement <8 x i32> %x, i32 %s, i32 0
   %i1 = insertelement <8 x i32> %i0, i32 %s, i32 4
@@ -288,9 +313,10 @@ define <4 x i64> @insert_i64_firstelts(<4 x i64> %x, i64 %s) {
 ; AVX2-LABEL: insert_i64_firstelts:
 ; AVX2:       # %bb.0:
 ; AVX2-NEXT:    vpinsrq $0, %rdi, %xmm0, %xmm1
-; AVX2-NEXT:    vextracti128 $1, %ymm0, %xmm0
-; AVX2-NEXT:    vpinsrq $0, %rdi, %xmm0, %xmm0
-; AVX2-NEXT:    vinserti128 $1, %xmm0, %ymm1, %ymm0
+; AVX2-NEXT:    vpblendd {{.*#+}} ymm0 = ymm1[0,1,2,3],ymm0[4,5,6,7]
+; AVX2-NEXT:    vmovq %rdi, %xmm1
+; AVX2-NEXT:    vpbroadcastq %xmm1, %ymm1
+; AVX2-NEXT:    vpblendd {{.*#+}} ymm0 = ymm0[0,1,2,3],ymm1[4,5],ymm0[6,7]
 ; AVX2-NEXT:    retq
   %i0 = insertelement <4 x i64> %x, i64 %s, i32 0
   %i1 = insertelement <4 x i64> %i0, i64 %s, i32 2
@@ -300,23 +326,35 @@ define <4 x i64> @insert_i64_firstelts(<4 x i64> %x, i64 %s) {
 ; element insertion into two elements of high subvector
 
 define <8 x float> @insert_f32_two_elts_of_high_subvector(<8 x float> %x, float %s) {
-; ALL-LABEL: insert_f32_two_elts_of_high_subvector:
-; ALL:       # %bb.0:
-; ALL-NEXT:    vextractf128 $1, %ymm0, %xmm2
-; ALL-NEXT:    vshufps {{.*#+}} xmm1 = xmm1[0,0],xmm2[2,3]
-; ALL-NEXT:    vinsertf128 $1, %xmm1, %ymm0, %ymm0
-; ALL-NEXT:    retq
+; AVX-LABEL: insert_f32_two_elts_of_high_subvector:
+; AVX:       # %bb.0:
+; AVX-NEXT:    vextractf128 $1, %ymm0, %xmm2
+; AVX-NEXT:    vshufps {{.*#+}} xmm1 = xmm1[0,0],xmm2[2,3]
+; AVX-NEXT:    vinsertf128 $1, %xmm1, %ymm0, %ymm0
+; AVX-NEXT:    retq
+;
+; AVX2-LABEL: insert_f32_two_elts_of_high_subvector:
+; AVX2:       # %bb.0:
+; AVX2-NEXT:    vbroadcastss %xmm1, %ymm1
+; AVX2-NEXT:    vblendps {{.*#+}} ymm0 = ymm0[0,1,2,3],ymm1[4,5],ymm0[6,7]
+; AVX2-NEXT:    retq
   %i0 = insertelement <8 x float> %x, float %s, i32 4
   %i1 = insertelement <8 x float> %i0, float %s, i32 5
   ret <8 x float> %i1
 }
 
 define <4 x double> @insert_f64_two_elts_of_high_subvector(<4 x double> %x, double %s) {
-; ALL-LABEL: insert_f64_two_elts_of_high_subvector:
-; ALL:       # %bb.0:
-; ALL-NEXT:    vmovddup {{.*#+}} xmm1 = xmm1[0,0]
-; ALL-NEXT:    vinsertf128 $1, %xmm1, %ymm0, %ymm0
-; ALL-NEXT:    retq
+; AVX-LABEL: insert_f64_two_elts_of_high_subvector:
+; AVX:       # %bb.0:
+; AVX-NEXT:    vmovddup {{.*#+}} xmm1 = xmm1[0,0]
+; AVX-NEXT:    vinsertf128 $1, %xmm1, %ymm0, %ymm0
+; AVX-NEXT:    retq
+;
+; AVX2-LABEL: insert_f64_two_elts_of_high_subvector:
+; AVX2:       # %bb.0:
+; AVX2-NEXT:    vbroadcastsd %xmm1, %ymm1
+; AVX2-NEXT:    vblendps {{.*#+}} ymm0 = ymm0[0,1,2,3],ymm1[4,5,6,7]
+; AVX2-NEXT:    retq
   %i0 = insertelement <4 x double> %x, double %s, i32 2
   %i1 = insertelement <4 x double> %i0, double %s, i32 3
   ret <4 x double> %i1
@@ -354,10 +392,9 @@ define <16 x i16> @insert_i16_two_elts_of_high_subvector(<16 x i16> %x, i16 %s) 
 ;
 ; AVX2-LABEL: insert_i16_two_elts_of_high_subvector:
 ; AVX2:       # %bb.0:
-; AVX2-NEXT:    vextracti128 $1, %ymm0, %xmm1
-; AVX2-NEXT:    vpinsrw $0, %edi, %xmm1, %xmm1
-; AVX2-NEXT:    vpinsrw $1, %edi, %xmm1, %xmm1
-; AVX2-NEXT:    vinserti128 $1, %xmm1, %ymm0, %ymm0
+; AVX2-NEXT:    vmovd %edi, %xmm1
+; AVX2-NEXT:    vpbroadcastw %xmm1, %ymm1
+; AVX2-NEXT:    vpblendd {{.*#+}} ymm0 = ymm0[0,1,2,3],ymm1[4],ymm0[5,6,7]
 ; AVX2-NEXT:    retq
   %i0 = insertelement <16 x i16> %x, i16 %s, i32 8
   %i1 = insertelement <16 x i16> %i0, i16 %s, i32 9
@@ -375,10 +412,9 @@ define <8 x i32> @insert_i32_two_elts_of_high_subvector(<8 x i32> %x, i32 %s) {
 ;
 ; AVX2-LABEL: insert_i32_two_elts_of_high_subvector:
 ; AVX2:       # %bb.0:
-; AVX2-NEXT:    vextracti128 $1, %ymm0, %xmm1
-; AVX2-NEXT:    vpinsrd $0, %edi, %xmm1, %xmm1
-; AVX2-NEXT:    vpinsrd $1, %edi, %xmm1, %xmm1
-; AVX2-NEXT:    vinserti128 $1, %xmm1, %ymm0, %ymm0
+; AVX2-NEXT:    vmovd %edi, %xmm1
+; AVX2-NEXT:    vpbroadcastd %xmm1, %ymm1
+; AVX2-NEXT:    vpblendd {{.*#+}} ymm0 = ymm0[0,1,2,3],ymm1[4,5],ymm0[6,7]
 ; AVX2-NEXT:    retq
   %i0 = insertelement <8 x i32> %x, i32 %s, i32 4
   %i1 = insertelement <8 x i32> %i0, i32 %s, i32 5
@@ -395,9 +431,9 @@ define <4 x i64> @insert_i64_two_elts_of_high_subvector(<4 x i64> %x, i64 %s) {
 ;
 ; AVX2-LABEL: insert_i64_two_elts_of_high_subvector:
 ; AVX2:       # %bb.0:
-; AVX2-NEXT:    vpinsrq $0, %rdi, %xmm0, %xmm1
-; AVX2-NEXT:    vpinsrq $1, %rdi, %xmm1, %xmm1
-; AVX2-NEXT:    vinserti128 $1, %xmm1, %ymm0, %ymm0
+; AVX2-NEXT:    vmovq %rdi, %xmm1
+; AVX2-NEXT:    vpbroadcastq %xmm1, %ymm1
+; AVX2-NEXT:    vpblendd {{.*#+}} ymm0 = ymm0[0,1,2,3],ymm1[4,5,6,7]
 ; AVX2-NEXT:    retq
   %i0 = insertelement <4 x i64> %x, i64 %s, i32 2
   %i1 = insertelement <4 x i64> %i0, i64 %s, i32 3

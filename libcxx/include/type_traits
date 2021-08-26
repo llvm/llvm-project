@@ -1681,7 +1681,7 @@ _LIBCPP_INLINE_VAR _LIBCPP_CONSTEXPR bool is_final_v
 #endif
 
 // is_aggregate
-#if _LIBCPP_STD_VER > 14 && !defined(_LIBCPP_HAS_NO_IS_AGGREGATE)
+#if _LIBCPP_STD_VER > 14
 
 template <class _Tp> struct _LIBCPP_TEMPLATE_VIS
 is_aggregate : public integral_constant<bool, __is_aggregate(_Tp)> {};
@@ -1692,7 +1692,7 @@ _LIBCPP_INLINE_VAR constexpr bool is_aggregate_v
     = is_aggregate<_Tp>::value;
 #endif
 
-#endif // _LIBCPP_STD_VER > 14 && !defined(_LIBCPP_HAS_NO_IS_AGGREGATE)
+#endif // _LIBCPP_STD_VER > 14
 
 // is_base_of
 
@@ -1914,7 +1914,7 @@ _LIBCPP_INLINE_VAR _LIBCPP_CONSTEXPR bool has_virtual_destructor_v
 
 // has_unique_object_representations
 
-#if _LIBCPP_STD_VER > 14 && defined(_LIBCPP_HAS_UNIQUE_OBJECT_REPRESENTATIONS)
+#if _LIBCPP_STD_VER > 14
 
 template <class _Tp> struct _LIBCPP_TEMPLATE_VIS has_unique_object_representations
     : public integral_constant<bool,
@@ -3811,10 +3811,6 @@ using __enable_if_bullet6 = typename enable_if
 
 // fall back - none of the bullets
 
-#define _LIBCPP_INVOKE_RETURN(...) \
-    noexcept(noexcept(__VA_ARGS__)) -> decltype(__VA_ARGS__) \
-    { return __VA_ARGS__; }
-
 template <class ..._Args>
 auto __invoke(__any, _Args&& ...__args) -> __nat;
 
@@ -3828,42 +3824,54 @@ template <class _Fp, class _A0, class ..._Args,
 inline _LIBCPP_INLINE_VISIBILITY
 _LIBCPP_CONSTEXPR_AFTER_CXX17 auto
 __invoke(_Fp&& __f, _A0&& __a0, _Args&& ...__args)
-_LIBCPP_INVOKE_RETURN((static_cast<_A0&&>(__a0).*__f)(static_cast<_Args&&>(__args)...))
+    noexcept(noexcept((static_cast<_A0&&>(__a0).*__f)(static_cast<_Args&&>(__args)...)))
+    -> decltype(      (static_cast<_A0&&>(__a0).*__f)(static_cast<_Args&&>(__args)...))
+    { return          (static_cast<_A0&&>(__a0).*__f)(static_cast<_Args&&>(__args)...); }
 
 template <class _Fp, class _A0, class ..._Args,
           class = __enable_if_bullet1<_Fp, _A0>>
 inline _LIBCPP_INLINE_VISIBILITY
 _LIBCPP_CONSTEXPR auto
 __invoke_constexpr(_Fp&& __f, _A0&& __a0, _Args&& ...__args)
-_LIBCPP_INVOKE_RETURN((static_cast<_A0&&>(__a0).*__f)(static_cast<_Args&&>(__args)...))
+    noexcept(noexcept((static_cast<_A0&&>(__a0).*__f)(static_cast<_Args&&>(__args)...)))
+    -> decltype(      (static_cast<_A0&&>(__a0).*__f)(static_cast<_Args&&>(__args)...))
+    { return          (static_cast<_A0&&>(__a0).*__f)(static_cast<_Args&&>(__args)...); }
 
 template <class _Fp, class _A0, class ..._Args,
           class = __enable_if_bullet2<_Fp, _A0>>
 inline _LIBCPP_INLINE_VISIBILITY
 _LIBCPP_CONSTEXPR_AFTER_CXX17 auto
 __invoke(_Fp&& __f, _A0&& __a0, _Args&& ...__args)
-_LIBCPP_INVOKE_RETURN((__a0.get().*__f)(static_cast<_Args&&>(__args)...))
+    noexcept(noexcept((__a0.get().*__f)(static_cast<_Args&&>(__args)...)))
+    -> decltype(      (__a0.get().*__f)(static_cast<_Args&&>(__args)...))
+    { return          (__a0.get().*__f)(static_cast<_Args&&>(__args)...); }
 
 template <class _Fp, class _A0, class ..._Args,
           class = __enable_if_bullet2<_Fp, _A0>>
 inline _LIBCPP_INLINE_VISIBILITY
 _LIBCPP_CONSTEXPR auto
 __invoke_constexpr(_Fp&& __f, _A0&& __a0, _Args&& ...__args)
-_LIBCPP_INVOKE_RETURN((__a0.get().*__f)(static_cast<_Args&&>(__args)...))
+    noexcept(noexcept((__a0.get().*__f)(static_cast<_Args&&>(__args)...)))
+    -> decltype(      (__a0.get().*__f)(static_cast<_Args&&>(__args)...))
+    { return          (__a0.get().*__f)(static_cast<_Args&&>(__args)...); }
 
 template <class _Fp, class _A0, class ..._Args,
           class = __enable_if_bullet3<_Fp, _A0>>
 inline _LIBCPP_INLINE_VISIBILITY
 _LIBCPP_CONSTEXPR_AFTER_CXX17 auto
 __invoke(_Fp&& __f, _A0&& __a0, _Args&& ...__args)
-_LIBCPP_INVOKE_RETURN(((*static_cast<_A0&&>(__a0)).*__f)(static_cast<_Args&&>(__args)...))
+    noexcept(noexcept(((*static_cast<_A0&&>(__a0)).*__f)(static_cast<_Args&&>(__args)...)))
+    -> decltype(      ((*static_cast<_A0&&>(__a0)).*__f)(static_cast<_Args&&>(__args)...))
+    { return          ((*static_cast<_A0&&>(__a0)).*__f)(static_cast<_Args&&>(__args)...); }
 
 template <class _Fp, class _A0, class ..._Args,
           class = __enable_if_bullet3<_Fp, _A0>>
 inline _LIBCPP_INLINE_VISIBILITY
 _LIBCPP_CONSTEXPR auto
 __invoke_constexpr(_Fp&& __f, _A0&& __a0, _Args&& ...__args)
-_LIBCPP_INVOKE_RETURN(((*static_cast<_A0&&>(__a0)).*__f)(static_cast<_Args&&>(__args)...))
+    noexcept(noexcept(((*static_cast<_A0&&>(__a0)).*__f)(static_cast<_Args&&>(__args)...)))
+    -> decltype(      ((*static_cast<_A0&&>(__a0)).*__f)(static_cast<_Args&&>(__args)...))
+    { return          ((*static_cast<_A0&&>(__a0)).*__f)(static_cast<_Args&&>(__args)...); }
 
 // bullets 4, 5 and 6
 
@@ -3872,42 +3880,54 @@ template <class _Fp, class _A0,
 inline _LIBCPP_INLINE_VISIBILITY
 _LIBCPP_CONSTEXPR_AFTER_CXX17 auto
 __invoke(_Fp&& __f, _A0&& __a0)
-_LIBCPP_INVOKE_RETURN(static_cast<_A0&&>(__a0).*__f)
+    noexcept(noexcept(static_cast<_A0&&>(__a0).*__f))
+    -> decltype(      static_cast<_A0&&>(__a0).*__f)
+    { return          static_cast<_A0&&>(__a0).*__f; }
 
 template <class _Fp, class _A0,
           class = __enable_if_bullet4<_Fp, _A0>>
 inline _LIBCPP_INLINE_VISIBILITY
 _LIBCPP_CONSTEXPR auto
 __invoke_constexpr(_Fp&& __f, _A0&& __a0)
-_LIBCPP_INVOKE_RETURN(static_cast<_A0&&>(__a0).*__f)
+    noexcept(noexcept(static_cast<_A0&&>(__a0).*__f))
+    -> decltype(      static_cast<_A0&&>(__a0).*__f)
+    { return          static_cast<_A0&&>(__a0).*__f; }
 
 template <class _Fp, class _A0,
           class = __enable_if_bullet5<_Fp, _A0>>
 inline _LIBCPP_INLINE_VISIBILITY
 _LIBCPP_CONSTEXPR_AFTER_CXX17 auto
 __invoke(_Fp&& __f, _A0&& __a0)
-_LIBCPP_INVOKE_RETURN(__a0.get().*__f)
+    noexcept(noexcept(__a0.get().*__f))
+    -> decltype(      __a0.get().*__f)
+    { return          __a0.get().*__f; }
 
 template <class _Fp, class _A0,
           class = __enable_if_bullet5<_Fp, _A0>>
 inline _LIBCPP_INLINE_VISIBILITY
 _LIBCPP_CONSTEXPR auto
 __invoke_constexpr(_Fp&& __f, _A0&& __a0)
-_LIBCPP_INVOKE_RETURN(__a0.get().*__f)
+    noexcept(noexcept(__a0.get().*__f))
+    -> decltype(      __a0.get().*__f)
+    { return          __a0.get().*__f; }
 
 template <class _Fp, class _A0,
           class = __enable_if_bullet6<_Fp, _A0>>
 inline _LIBCPP_INLINE_VISIBILITY
 _LIBCPP_CONSTEXPR_AFTER_CXX17 auto
 __invoke(_Fp&& __f, _A0&& __a0)
-_LIBCPP_INVOKE_RETURN((*static_cast<_A0&&>(__a0)).*__f)
+    noexcept(noexcept((*static_cast<_A0&&>(__a0)).*__f))
+    -> decltype(      (*static_cast<_A0&&>(__a0)).*__f)
+    { return          (*static_cast<_A0&&>(__a0)).*__f; }
 
 template <class _Fp, class _A0,
           class = __enable_if_bullet6<_Fp, _A0>>
 inline _LIBCPP_INLINE_VISIBILITY
 _LIBCPP_CONSTEXPR auto
 __invoke_constexpr(_Fp&& __f, _A0&& __a0)
-_LIBCPP_INVOKE_RETURN((*static_cast<_A0&&>(__a0)).*__f)
+    noexcept(noexcept((*static_cast<_A0&&>(__a0)).*__f))
+    -> decltype(      (*static_cast<_A0&&>(__a0)).*__f)
+    { return          (*static_cast<_A0&&>(__a0)).*__f; }
 
 // bullet 7
 
@@ -3915,15 +3935,17 @@ template <class _Fp, class ..._Args>
 inline _LIBCPP_INLINE_VISIBILITY
 _LIBCPP_CONSTEXPR_AFTER_CXX17 auto
 __invoke(_Fp&& __f, _Args&& ...__args)
-_LIBCPP_INVOKE_RETURN(static_cast<_Fp&&>(__f)(static_cast<_Args&&>(__args)...))
+    noexcept(noexcept(static_cast<_Fp&&>(__f)(static_cast<_Args&&>(__args)...)))
+    -> decltype(      static_cast<_Fp&&>(__f)(static_cast<_Args&&>(__args)...))
+    { return          static_cast<_Fp&&>(__f)(static_cast<_Args&&>(__args)...); }
 
 template <class _Fp, class ..._Args>
 inline _LIBCPP_INLINE_VISIBILITY
 _LIBCPP_CONSTEXPR auto
 __invoke_constexpr(_Fp&& __f, _Args&& ...__args)
-_LIBCPP_INVOKE_RETURN(static_cast<_Fp&&>(__f)(static_cast<_Args&&>(__args)...))
-
-#undef _LIBCPP_INVOKE_RETURN
+    noexcept(noexcept(static_cast<_Fp&&>(__f)(static_cast<_Args&&>(__args)...)))
+    -> decltype(      static_cast<_Fp&&>(__f)(static_cast<_Args&&>(__args)...))
+    { return          static_cast<_Fp&&>(__f)(static_cast<_Args&&>(__args)...); }
 
 // __invokable
 template <class _Ret, class _Fp, class ..._Args>
@@ -4349,40 +4371,6 @@ inline _LIBCPP_INLINE_VISIBILITY _LIBCPP_CONSTEXPR
 typename __sfinae_underlying_type<_Tp>::__promoted_type
 __convert_to_integral(_Tp __val) { return __val; }
 
-#ifndef _LIBCPP_CXX03_LANG
-
-template <class _Tp>
-struct __has_operator_addressof_member_imp
-{
-    template <class _Up>
-        static auto __test(int)
-            -> typename __select_2nd<decltype(declval<_Up>().operator&()), true_type>::type;
-    template <class>
-        static auto __test(long) -> false_type;
-
-    static const bool value = decltype(__test<_Tp>(0))::value;
-};
-
-template <class _Tp>
-struct __has_operator_addressof_free_imp
-{
-    template <class _Up>
-        static auto __test(int)
-            -> typename __select_2nd<decltype(operator&(declval<_Up>())), true_type>::type;
-    template <class>
-        static auto __test(long) -> false_type;
-
-    static const bool value = decltype(__test<_Tp>(0))::value;
-};
-
-template <class _Tp>
-struct __has_operator_addressof
-    : public integral_constant<bool, __has_operator_addressof_member_imp<_Tp>::value
-                                  || __has_operator_addressof_free_imp<_Tp>::value>
-{};
-
-#endif // _LIBCPP_CXX03_LANG
-
 // is_scoped_enum [meta.unary.prop]
 
 #if _LIBCPP_STD_VER > 20
@@ -4453,7 +4441,6 @@ template <class _ValTy, class _Key, class _RawValTy>
 struct __can_extract_map_key<_ValTy, _Key, _Key, _RawValTy>
     : false_type {};
 
-#ifndef _LIBCPP_HAS_NO_BUILTIN_IS_CONSTANT_EVALUATED
 #if _LIBCPP_STD_VER > 17
 _LIBCPP_INLINE_VISIBILITY
 inline constexpr bool is_constant_evaluated() noexcept {
@@ -4463,10 +4450,6 @@ inline constexpr bool is_constant_evaluated() noexcept {
 
 inline _LIBCPP_CONSTEXPR
 bool __libcpp_is_constant_evaluated() _NOEXCEPT { return __builtin_is_constant_evaluated(); }
-#else
-inline _LIBCPP_CONSTEXPR
-bool __libcpp_is_constant_evaluated() _NOEXCEPT { return false; }
-#endif
 
 template <class _CharT>
 using _IsCharLikeType = _And<is_standard_layout<_CharT>, is_trivial<_CharT> >;

@@ -2539,7 +2539,7 @@ void AMDGPURegisterBankInfo::applyMappingImpl(
     SmallVector<Register, 2> SrcRegs(OpdMapper.getVRegs(1));
     unsigned NewOpc = Opc == AMDGPU::G_CTLZ_ZERO_UNDEF
                           ? AMDGPU::G_AMDGPU_FFBH_U32
-                          : Opc == AMDGPU::G_CTLZ_ZERO_UNDEF
+                          : Opc == AMDGPU::G_CTTZ_ZERO_UNDEF
                                 ? AMDGPU::G_AMDGPU_FFBL_B32
                                 : Opc;
     unsigned Idx = NewOpc == AMDGPU::G_AMDGPU_FFBH_U32;

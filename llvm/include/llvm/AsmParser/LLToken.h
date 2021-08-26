@@ -190,6 +190,7 @@ enum Kind {
   kw_convergent,
   kw_dereferenceable,
   kw_dereferenceable_or_null,
+  kw_disable_sanitizer_instrumentation,
   kw_elementtype,
   kw_inaccessiblememonly,
   kw_inaccessiblemem_or_argmemonly,

@@ -116,13 +116,13 @@ void llvm::CloneFunctionInto(Function *NewFunc, const Function *OldFunc,
   for (const Argument &OldArg : OldFunc->args()) {
     if (Argument *NewArg = dyn_cast<Argument>(VMap[&OldArg])) {
       NewArgAttrs[NewArg->getArgNo()] =
-          OldAttrs.getParamAttributes(OldArg.getArgNo());
+          OldAttrs.getParamAttrs(OldArg.getArgNo());
     }
   }
 
   NewFunc->setAttributes(
-      AttributeList::get(NewFunc->getContext(), OldAttrs.getFnAttributes(),
-                         OldAttrs.getRetAttributes(), NewArgAttrs));
+      AttributeList::get(NewFunc->getContext(), OldAttrs.getFnAttrs(),
+                         OldAttrs.getRetAttrs(), NewArgAttrs));
 
   // Everything else beyond this point deals with function instructions,
   // so if we are dealing with a function declaration, we're done.

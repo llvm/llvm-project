@@ -14,7 +14,6 @@
 // UNSUPPORTED: sanitizer-new-delete
 // XFAIL: use_system_cxx_lib && target={{.+}}-apple-macosx10.{{9|10|11}}
 
-// NOTE: Only clang-3.7 and GCC 5.1 and greater support -fsized-deallocation.
 // REQUIRES: -fsized-deallocation
 // ADDITIONAL_COMPILE_FLAGS: -fsized-deallocation, -O3
 

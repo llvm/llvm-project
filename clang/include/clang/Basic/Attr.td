@@ -1835,6 +1835,14 @@ def BPFPreserveAccessIndex : InheritableAttr,
   let LangOpts = [COnly];
 }
 
+def BTFTag : InheritableAttr {
+  let Spellings = [Clang<"btf_tag">];
+  let Args = [StringArgument<"BTFTag">];
+  let Subjects = SubjectList<[Var, Function, Record, Field], ErrorDiag>;
+  let Documentation = [BTFTagDocs];
+  let LangOpts = [COnly];
+}
+
 def WebAssemblyExportName : InheritableAttr,
                             TargetSpecificAttr<TargetWebAssembly> {
   let Spellings = [Clang<"export_name">];
@@ -2938,6 +2946,13 @@ def NoSanitizeSpecific : InheritableAttr {
   let Documentation = [NoSanitizeAddressDocs, NoSanitizeThreadDocs,
                        NoSanitizeMemoryDocs];
   let ASTNode = 0;
+}
+
+def DisableSanitizerInstrumentation : InheritableAttr {
+  let Spellings = [Clang<"disable_sanitizer_instrumentation">];
+  let Subjects = SubjectList<[Function, ObjCMethod, GlobalVar]>;
+  let Documentation = [DisableSanitizerInstrumentationDocs];
+  let SimpleHandler = 1;
 }
 
 def CFICanonicalJumpTable : InheritableAttr {

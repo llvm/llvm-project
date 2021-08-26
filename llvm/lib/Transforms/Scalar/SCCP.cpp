@@ -490,15 +490,14 @@ bool llvm::runIPSCCP(
         AttrBuilder AttributesToRemove;
         AttributesToRemove.addAttribute(Attribute::ArgMemOnly);
         AttributesToRemove.addAttribute(Attribute::InaccessibleMemOrArgMemOnly);
-        F.removeAttributes(AttributeList::FunctionIndex, AttributesToRemove);
+        F.removeFnAttrs(AttributesToRemove);
 
         for (User *U : F.users()) {
           auto *CB = dyn_cast<CallBase>(U);
           if (!CB || CB->getCalledFunction() != &F)
             continue;
 
-          CB->removeAttributes(AttributeList::FunctionIndex,
-                               AttributesToRemove);
+          CB->removeFnAttrs(AttributesToRemove);
         }
       }
     }

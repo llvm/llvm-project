@@ -134,7 +134,7 @@ struct RecursiveScheduleTreeVisitor
 
   /// By default, recursively visit the child nodes.
   RetTy visitNode(const isl::schedule_node &Node, Args... args) {
-    isl_size NumChildren = Node.n_children();
+    isl_size NumChildren = Node.n_children().release();
     for (isl_size i = 0; i < NumChildren; i += 1)
       getDerived().visit(Node.child(i), std::forward<Args>(args)...);
     return RetTy();

@@ -343,12 +343,13 @@ exports_files(
 genrule(
     name = "basic_version_gen",
     outs = ["include/clang/Basic/Version.inc"],
-    cmd = ("printf " +
-           "\"#define CLANG_VERSION 12.0\n\"" +
-           "\"#define CLANG_VERSION_MAJOR 12\n\"" +
-           "\"#define CLANG_VERSION_MINOR 0\n\"" +
-           "\"#define CLANG_VERSION_PATCHLEVEL 0\n\"" +
-           "\"#define CLANG_VERSION_STRING \\\"git\\\"\n\" > $@"),
+    cmd = (
+        "echo '#define CLANG_VERSION 14.0.0' >> $@\n" +
+        "echo '#define CLANG_VERSION_MAJOR 14' >> $@\n" +
+        "echo '#define CLANG_VERSION_MINOR 0' >> $@\n" +
+        "echo '#define CLANG_VERSION_PATCHLEVEL 0' >> $@\n" +
+        "echo '#define CLANG_VERSION_STRING \"14.0.0\"' >> $@\n"
+    ),
 )
 
 cc_library(
@@ -372,7 +373,7 @@ genrule(
     # are passed through bazel, it's easier to drop generated files next to
     # the other includes.
     outs = ["include/VCSVersion.inc"],
-    cmd = "echo \"#define CLANG_REVISION \\\"git\\\"\" > $@",
+    cmd = "echo '#define CLANG_REVISION \"git\"' > $@",
 )
 
 # A hacky library to expose some internal headers of the `basic` library to its
@@ -488,6 +489,10 @@ gentbl(
         (
             "-gen-clang-attr-classes",
             "include/clang/AST/Attrs.inc",
+        ),
+        (
+            "-gen-clang-attr-doc-table",
+            "lib/AST/AttrDocTable.inc",
         ),
         (
             "-gen-clang-attr-text-node-dump",
@@ -693,6 +698,7 @@ cc_library(
     ]),
     includes = [
         "include",
+        "lib/AST",
         "lib/AST/Interp",
     ],
     textual_hdrs = [
@@ -710,6 +716,7 @@ cc_library(
         "include/clang/AST/DeclNodes.inc",
         "include/clang/AST/StmtDataCollectors.inc",
         "include/clang/AST/StmtNodes.inc",
+        "lib/AST/AttrDocTable.inc",
         "lib/AST/Interp/Opcodes.inc",
     ] + glob([
         "include/clang/AST/*.def",

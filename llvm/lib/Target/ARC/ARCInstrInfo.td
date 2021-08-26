@@ -133,12 +133,17 @@ def STB_FAR : PseudoInstARC<(outs), (ins GPR32:$dst, MEMrlimm:$addr),
                              "STB_FAR $dst, $addr",
                              [(truncstorei8 GPR32:$dst, AddrModeFar:$addr)]>;
 
-// TODO: Add `Requires<[HasBitScan]>` predicate when available.
-def CTLZ : PseudoInstARC<(outs GPR32:$A),
-                         (ins GPR32:$B),
-                         "error.fls $A, $B",
-                         [(set GPR32:$A, (ctlz i32:$B))]> {
-  let Defs = [STATUS32];
+// TODO: Add `Requires<[HasBitScan]>` predicate to these when available.
+let Defs = [STATUS32] in {
+  def CTLZ : PseudoInstARC<(outs GPR32:$A),
+                           (ins GPR32:$B),
+                           "error.fls $A, $B",
+                           [(set GPR32:$A, (ctlz i32:$B))]>;
+
+  def CTTZ : PseudoInstARC<(outs GPR32:$A),
+                           (ins GPR32:$B),
+                           "error.ffs $A, $B",
+                           [(set GPR32:$A, (cttz i32:$B))]>;
 }
 
 //===----------------------------------------------------------------------===//
@@ -314,6 +319,7 @@ defm SEXB : ArcUnaryGEN4Inst<0b000101, "sexb">;
 defm SEXH : ArcUnaryGEN4Inst<0b000110, "sexh">;
 
 // Extension unary instruction definitions.
+defm FFS : ArcUnaryEXT5Inst<0b010010, "ffs">;
 defm FLS : ArcUnaryEXT5Inst<0b010011, "fls">;
 
 let Predicates=[HasNorm] in {

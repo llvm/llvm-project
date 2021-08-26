@@ -310,10 +310,10 @@ private:
 #endif
 };
 
-#ifndef _LIBCPP_HAS_NO_DEDUCTION_GUIDES
+#if _LIBCPP_STD_VER >= 17
 template<class _T1, class _T2>
 pair(_T1, _T2) -> pair<_T1, _T2>;
-#endif // _LIBCPP_HAS_NO_DEDUCTION_GUIDES
+#endif
 
 template <class _T1, class _T2>
 inline _LIBCPP_INLINE_VISIBILITY _LIBCPP_CONSTEXPR_AFTER_CXX11

@@ -282,6 +282,7 @@ struct CodeCompletionBuilder {
       : ASTCtx(ASTCtx),
         EnableFunctionArgSnippets(Opts.EnableFunctionArgSnippets),
         IsUsingDeclaration(IsUsingDeclaration), NextTokenKind(NextTokenKind) {
+    Completion.Deprecated = true; // cleared by any non-deprecated overload.
     add(C, SemaCCS);
     if (C.SemaResult) {
       assert(ASTCtx);
@@ -310,8 +311,6 @@ struct CodeCompletionBuilder {
         return std::tie(X.range.start.line, X.range.start.character) <
                std::tie(Y.range.start.line, Y.range.start.character);
       });
-      Completion.Deprecated |=
-          (C.SemaResult->Availability == CXAvailability_Deprecated);
     }
     if (C.IndexResult) {
       Completion.Origin |= C.IndexResult->Origin;
@@ -333,7 +332,6 @@ struct CodeCompletionBuilder {
         }
         Completion.RequiredQualifier = std::string(ShortestQualifier);
       }
-      Completion.Deprecated |= (C.IndexResult->Flags & Symbol::Deprecated);
     }
     if (C.IdentifierResult) {
       Completion.Origin |= SymbolOrigin::Identifier;
@@ -405,9 +403,18 @@ struct CodeCompletionBuilder {
       if (C.IndexResult) {
         SetDoc(C.IndexResult->Documentation);
       } else if (C.SemaResult) {
-        SetDoc(getDocComment(*ASTCtx, *C.SemaResult,
-                             /*CommentsFromHeader=*/false));
+        const auto DocComment = getDocComment(*ASTCtx, *C.SemaResult,
+                                              /*CommentsFromHeader=*/false);
+        SetDoc(formatDocumentation(*SemaCCS, DocComment));
       }
+    }
+    if (Completion.Deprecated) {
+      if (C.SemaResult)
+        Completion.Deprecated &=
+            C.SemaResult->Availability == CXAvailability_Deprecated;
+      if (C.IndexResult)
+        Completion.Deprecated &=
+            bool(C.IndexResult->Flags & Symbol::Deprecated);
     }
   }
 
@@ -709,6 +716,7 @@ bool contextAllowsIndex(enum CodeCompletionContext::Kind K) {
   case CodeCompletionContext::CCC_ObjCInstanceMessage:
   case CodeCompletionContext::CCC_ObjCClassMessage:
   case CodeCompletionContext::CCC_IncludedFile:
+  case CodeCompletionContext::CCC_Attribute:
   // FIXME: Provide identifier based completions for the following contexts:
   case CodeCompletionContext::CCC_Other: // Be conservative.
   case CodeCompletionContext::CCC_NaturalLanguage:

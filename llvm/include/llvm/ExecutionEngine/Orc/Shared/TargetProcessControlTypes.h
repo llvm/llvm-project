@@ -62,6 +62,62 @@ using DylibHandle = JITTargetAddress;
 using LookupResult = std::vector<JITTargetAddress>;
 
 } // end namespace tpctypes
+
+namespace shared {
+
+template <typename T>
+using SPSMemoryAccessUIntWrite = SPSTuple<SPSExecutorAddress, T>;
+
+using SPSMemoryAccessUInt8Write = SPSMemoryAccessUIntWrite<uint8_t>;
+using SPSMemoryAccessUInt16Write = SPSMemoryAccessUIntWrite<uint16_t>;
+using SPSMemoryAccessUInt32Write = SPSMemoryAccessUIntWrite<uint32_t>;
+using SPSMemoryAccessUInt64Write = SPSMemoryAccessUIntWrite<uint64_t>;
+
+using SPSMemoryAccessBufferWrite =
+    SPSTuple<SPSExecutorAddress, SPSSequence<char>>;
+
+template <typename T>
+class SPSSerializationTraits<SPSMemoryAccessUIntWrite<T>,
+                             tpctypes::UIntWrite<T>> {
+public:
+  static size_t size(const tpctypes::UIntWrite<T> &W) {
+    return SPSTuple<SPSExecutorAddress, T>::AsArgList::size(W.Address, W.Value);
+  }
+
+  static bool serialize(SPSOutputBuffer &OB, const tpctypes::UIntWrite<T> &W) {
+    return SPSTuple<SPSExecutorAddress, T>::AsArgList::serialize(OB, W.Address,
+                                                                 W.Value);
+  }
+
+  static bool deserialize(SPSInputBuffer &IB, tpctypes::UIntWrite<T> &W) {
+    return SPSTuple<SPSExecutorAddress, T>::AsArgList::deserialize(
+        IB, W.Address, W.Value);
+  }
+};
+
+template <>
+class SPSSerializationTraits<SPSMemoryAccessBufferWrite,
+                             tpctypes::BufferWrite> {
+public:
+  static size_t size(const tpctypes::BufferWrite &W) {
+    return SPSTuple<SPSExecutorAddress, SPSSequence<char>>::AsArgList::size(
+        W.Address, W.Buffer);
+  }
+
+  static bool serialize(SPSOutputBuffer &OB, const tpctypes::BufferWrite &W) {
+    return SPSTuple<SPSExecutorAddress,
+                    SPSSequence<char>>::AsArgList ::serialize(OB, W.Address,
+                                                              W.Buffer);
+  }
+
+  static bool deserialize(SPSInputBuffer &IB, tpctypes::BufferWrite &W) {
+    return SPSTuple<SPSExecutorAddress,
+                    SPSSequence<char>>::AsArgList ::deserialize(IB, W.Address,
+                                                                W.Buffer);
+  }
+};
+
+} // end namespace shared
 } // end namespace orc
 } // end namespace llvm
 

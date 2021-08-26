@@ -19,6 +19,9 @@
 #endif
 #include <limits.h>
 #include <stdint.h>
+#ifdef __OPENMP_AMDGCN__
+#include <omp.h>
+#endif
 #endif // !defined(__HIPCC_RTC__)
 
 // __DEVICE__ is a helper macro with common set of attributes for the wrappers
@@ -284,6 +287,9 @@ float frexpf(float __x, int *__nptr) {
   float __r = __ocml_frexp_f32(__x, &__tmp);
 #else
   int __tmp;
+#ifdef __OPENMP_AMDGCN__
+#pragma omp allocate(__tmp) allocator(omp_thread_mem_alloc)
+#endif
   float __r =
       __ocml_frexp_f32(__x, (__attribute__((address_space(5))) int *)&__tmp);
 #endif
@@ -377,6 +383,9 @@ float modff(float __x, float *__iptr) {
   float __r = __ocml_modf_f32(__x, &__tmp);
 #else
   float __tmp;
+#ifdef __OPENMP_AMDGCN__
+#pragma omp allocate(__tmp) allocator(omp_thread_mem_alloc)
+#endif
   float __r =
       __ocml_modf_f32(__x, (__attribute__((address_space(5))) float *)&__tmp);
 #endif
@@ -481,6 +490,9 @@ float remquof(float __x, float __y, int *__quo) {
   float __r = __ocml_remquo_f32( __x, __y, &__tmp);
 #else
   int __tmp;
+#ifdef __OPENMP_AMDGCN__
+#pragma omp allocate(__tmp) allocator(omp_thread_mem_alloc)
+#endif
   float __r = __ocml_remquo_f32(
       __x, __y, (__attribute__((address_space(5))) int *)&__tmp);
 #endif
@@ -542,6 +554,9 @@ void sincosf(float __x, float *__sinptr, float *__cosptr) {
   *__sinptr = __ocml_sincos_f32(__x, &__tmp);
 #else
   float __tmp;
+#ifdef __OPENMP_AMDGCN__
+#pragma omp allocate(__tmp) allocator(omp_thread_mem_alloc)
+#endif
   *__sinptr =
       __ocml_sincos_f32(__x, (__attribute__((address_space(5))) float *)&__tmp);
 #endif
@@ -555,6 +570,9 @@ void sincospif(float __x, float *__sinptr, float *__cosptr) {
   *__sinptr = __ocml_sincospi_f32(__x, &__tmp);
 #else
   float __tmp;
+#ifdef __OPENMP_AMDGCN__
+#pragma omp allocate(__tmp) allocator(omp_thread_mem_alloc)
+#endif
   *__sinptr = __ocml_sincospi_f32(
       __x, (__attribute__((address_space(5))) float *)&__tmp);
 #endif
@@ -872,6 +890,9 @@ double frexp(double __x, int *__nptr) {
   double __r = __ocml_frexp_f64(__x, &__tmp);
 #else
   int __tmp;
+#ifdef __OPENMP_AMDGCN__
+#pragma omp allocate(__tmp) allocator(omp_thread_mem_alloc)
+#endif
   double __r =
       __ocml_frexp_f64(__x, (__attribute__((address_space(5))) int *)&__tmp);
 #endif
@@ -961,6 +982,9 @@ double modf(double __x, double *__iptr) {
   double __r = __ocml_modf_f64(__x, &__tmp);
 #else
   double __tmp;
+#ifdef __OPENMP_AMDGCN__
+#pragma omp allocate(__tmp) allocator(omp_thread_mem_alloc)
+#endif
   double __r =
       __ocml_modf_f64(__x, (__attribute__((address_space(5))) double *)&__tmp);
 #endif
@@ -1057,6 +1081,9 @@ double remquo(double __x, double __y, int *__quo) {
   double __r = __ocml_remquo_f64(__x, __y, &__tmp);
 #else
   int __tmp;
+#ifdef __OPENMP_AMDGCN__
+#pragma omp allocate(__tmp) allocator(omp_thread_mem_alloc)
+#endif
   double __r = __ocml_remquo_f64(
       __x, __y, (__attribute__((address_space(5))) int *)&__tmp);
 #endif
@@ -1120,6 +1147,9 @@ void sincos(double __x, double *__sinptr, double *__cosptr) {
   *__sinptr = __ocml_sincos_f64(__x, &__tmp);
 #else
   double __tmp;
+#ifdef __OPENMP_AMDGCN__
+#pragma omp allocate(__tmp) allocator(omp_thread_mem_alloc)
+#endif
   *__sinptr = __ocml_sincos_f64(
       __x, (__attribute__((address_space(5))) double *)&__tmp);
 #endif
@@ -1133,6 +1163,9 @@ void sincospi(double __x, double *__sinptr, double *__cosptr) {
   *__sinptr = __ocml_sincospi_f64(__x, &__tmp);
 #else
   double __tmp;
+#ifdef __OPENMP_AMDGCN__
+#pragma omp allocate(__tmp) allocator(omp_thread_mem_alloc)
+#endif
   *__sinptr = __ocml_sincospi_f64(
       __x, (__attribute__((address_space(5))) double *)&__tmp);
 #endif

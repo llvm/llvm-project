@@ -1335,52 +1335,51 @@ AttributeList AttributeList::removeAttributes(LLVMContext &C,
   return getImpl(C, AttrSets);
 }
 
-AttributeList AttributeList::addDereferenceableAttr(LLVMContext &C,
-                                                    unsigned Index,
-                                                    uint64_t Bytes) const {
+AttributeList AttributeList::addDereferenceableRetAttr(LLVMContext &C,
+                                                       uint64_t Bytes) const {
   AttrBuilder B;
   B.addDereferenceableAttr(Bytes);
-  return addAttributes(C, Index, B);
+  return addRetAttributes(C, B);
+}
+
+AttributeList AttributeList::addDereferenceableParamAttr(LLVMContext &C,
+                                                         unsigned Index,
+                                                         uint64_t Bytes) const {
+  AttrBuilder B;
+  B.addDereferenceableAttr(Bytes);
+  return addParamAttributes(C, Index, B);
 }
 
 AttributeList
-AttributeList::addDereferenceableOrNullAttr(LLVMContext &C, unsigned Index,
-                                            uint64_t Bytes) const {
+AttributeList::addDereferenceableOrNullParamAttr(LLVMContext &C, unsigned Index,
+                                                 uint64_t Bytes) const {
   AttrBuilder B;
   B.addDereferenceableOrNullAttr(Bytes);
-  return addAttributes(C, Index, B);
+  return addParamAttributes(C, Index, B);
 }
 
 AttributeList
-AttributeList::addAllocSizeAttr(LLVMContext &C, unsigned Index,
-                                unsigned ElemSizeArg,
-                                const Optional<unsigned> &NumElemsArg) {
+AttributeList::addAllocSizeParamAttr(LLVMContext &C, unsigned Index,
+                                     unsigned ElemSizeArg,
+                                     const Optional<unsigned> &NumElemsArg) {
   AttrBuilder B;
   B.addAllocSizeAttr(ElemSizeArg, NumElemsArg);
-  return addAttributes(C, Index, B);
-}
-
-AttributeList AttributeList::addVScaleRangeAttr(LLVMContext &C, unsigned Index,
-                                                unsigned MinValue,
-                                                unsigned MaxValue) {
-  AttrBuilder B;
-  B.addVScaleRangeAttr(MinValue, MaxValue);
-  return addAttributes(C, Index, B);
+  return addParamAttributes(C, Index, B);
 }
 
 //===----------------------------------------------------------------------===//
 // AttributeList Accessor Methods
 //===----------------------------------------------------------------------===//
 
-AttributeSet AttributeList::getParamAttributes(unsigned ArgNo) const {
+AttributeSet AttributeList::getParamAttrs(unsigned ArgNo) const {
   return getAttributes(ArgNo + FirstArgIndex);
 }
 
-AttributeSet AttributeList::getRetAttributes() const {
+AttributeSet AttributeList::getRetAttrs() const {
   return getAttributes(ReturnIndex);
 }
 
-AttributeSet AttributeList::getFnAttributes() const {
+AttributeSet AttributeList::getFnAttrs() const {
   return getAttributes(FunctionIndex);
 }
 
@@ -1397,17 +1396,12 @@ bool AttributeList::hasAttributes(unsigned Index) const {
   return getAttributes(Index).hasAttributes();
 }
 
-bool AttributeList::hasFnAttribute(Attribute::AttrKind Kind) const {
+bool AttributeList::hasFnAttr(Attribute::AttrKind Kind) const {
   return pImpl && pImpl->hasFnAttribute(Kind);
 }
 
-bool AttributeList::hasFnAttribute(StringRef Kind) const {
+bool AttributeList::hasFnAttr(StringRef Kind) const {
   return hasAttribute(AttributeList::FunctionIndex, Kind);
-}
-
-bool AttributeList::hasParamAttribute(unsigned ArgNo,
-                                      Attribute::AttrKind Kind) const {
-  return hasAttribute(ArgNo + FirstArgIndex, Kind);
 }
 
 bool AttributeList::hasAttrSomewhere(Attribute::AttrKind Attr,
@@ -1460,26 +1454,29 @@ Type *AttributeList::getParamElementType(unsigned Index) const {
   return getAttributes(Index + FirstArgIndex).getElementType();
 }
 
-MaybeAlign AttributeList::getStackAlignment(unsigned Index) const {
-  return getAttributes(Index).getStackAlignment();
+MaybeAlign AttributeList::getFnStackAlignment() const {
+  return getFnAttrs().getStackAlignment();
 }
 
-uint64_t AttributeList::getDereferenceableBytes(unsigned Index) const {
-  return getAttributes(Index).getDereferenceableBytes();
+MaybeAlign AttributeList::getRetStackAlignment() const {
+  return getRetAttrs().getStackAlignment();
 }
 
-uint64_t AttributeList::getDereferenceableOrNullBytes(unsigned Index) const {
-  return getAttributes(Index).getDereferenceableOrNullBytes();
+uint64_t AttributeList::getRetDereferenceableBytes() const {
+  return getRetAttrs().getDereferenceableBytes();
 }
 
-std::pair<unsigned, Optional<unsigned>>
-AttributeList::getAllocSizeArgs(unsigned Index) const {
-  return getAttributes(Index).getAllocSizeArgs();
+uint64_t AttributeList::getParamDereferenceableBytes(unsigned Index) const {
+  return getParamAttrs(Index).getDereferenceableBytes();
 }
 
-std::pair<unsigned, unsigned>
-AttributeList::getVScaleRangeArgs(unsigned Index) const {
-  return getAttributes(Index).getVScaleRangeArgs();
+uint64_t AttributeList::getRetDereferenceableOrNullBytes() const {
+  return getRetAttrs().getDereferenceableOrNullBytes();
+}
+
+uint64_t
+AttributeList::getParamDereferenceableOrNullBytes(unsigned Index) const {
+  return getParamAttrs(Index).getDereferenceableOrNullBytes();
 }
 
 std::string AttributeList::getAsString(unsigned Index, bool InAttrGrp) const {
@@ -1966,11 +1963,11 @@ static void adjustCallerSSPLevel(Function &Caller, const Function &Callee) {
       .addAttribute(Attribute::StackProtectReq);
 
   if (Callee.hasFnAttribute(Attribute::StackProtectReq)) {
-    Caller.removeAttributes(AttributeList::FunctionIndex, OldSSPAttr);
+    Caller.removeFnAttrs(OldSSPAttr);
     Caller.addFnAttr(Attribute::StackProtectReq);
   } else if (Callee.hasFnAttribute(Attribute::StackProtectStrong) &&
              !Caller.hasFnAttribute(Attribute::StackProtectReq)) {
-    Caller.removeAttributes(AttributeList::FunctionIndex, OldSSPAttr);
+    Caller.removeFnAttrs(OldSSPAttr);
     Caller.addFnAttr(Attribute::StackProtectStrong);
   } else if (Callee.hasFnAttribute(Attribute::StackProtect) &&
              !Caller.hasFnAttribute(Attribute::StackProtectReq) &&

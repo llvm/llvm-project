@@ -442,7 +442,7 @@ struct ShadowMapping {
 
 } // end anonymous namespace
 
-static ShadowMapping getShadowMapping(Triple &TargetTriple, int LongSize,
+static ShadowMapping getShadowMapping(const Triple &TargetTriple, int LongSize,
                                       bool IsKasan) {
   bool IsAndroid = TargetTriple.isAndroid();
   bool IsIOS = TargetTriple.isiOS() || TargetTriple.isWatchOS();
@@ -558,6 +558,17 @@ static ShadowMapping getShadowMapping(Triple &TargetTriple, int LongSize,
 
   return Mapping;
 }
+
+namespace llvm {
+void getAddressSanitizerParams(const Triple &TargetTriple, int LongSize,
+                               bool IsKasan, uint64_t *ShadowBase,
+                               int *MappingScale, bool *OrShadowOffset) {
+  auto Mapping = getShadowMapping(TargetTriple, LongSize, IsKasan);
+  *ShadowBase = Mapping.Offset;
+  *MappingScale = Mapping.Scale;
+  *OrShadowOffset = Mapping.OrShadowOffset;
+}
+} // namespace llvm
 
 static uint64_t getRedzoneSizeForScale(int MappingScale) {
   // Redzone used for stack and globals is at least 32 bytes.
@@ -1212,20 +1223,14 @@ GlobalsMetadata ASanGlobalsMetadataAnalysis::run(Module &M,
   return GlobalsMetadata(M);
 }
 
-AddressSanitizerPass::AddressSanitizerPass(
-    bool CompileKernel, bool Recover, bool UseAfterScope,
-    AsanDetectStackUseAfterReturnMode UseAfterReturn)
-    : CompileKernel(CompileKernel), Recover(Recover),
-      UseAfterScope(UseAfterScope), UseAfterReturn(UseAfterReturn) {}
-
 PreservedAnalyses AddressSanitizerPass::run(Function &F,
                                             AnalysisManager<Function> &AM) {
   auto &MAMProxy = AM.getResult<ModuleAnalysisManagerFunctionProxy>(F);
   Module &M = *F.getParent();
   if (auto *R = MAMProxy.getCachedResult<ASanGlobalsMetadataAnalysis>(M)) {
     const TargetLibraryInfo *TLI = &AM.getResult<TargetLibraryAnalysis>(F);
-    AddressSanitizer Sanitizer(M, R, CompileKernel, Recover, UseAfterScope,
-                               UseAfterReturn);
+    AddressSanitizer Sanitizer(M, R, Options.CompileKernel, Options.Recover,
+                               Options.UseAfterScope, Options.UseAfterReturn);
     if (Sanitizer.instrumentFunction(F, TLI))
       return PreservedAnalyses::none();
     return PreservedAnalyses::all();
@@ -2133,8 +2138,7 @@ Instruction *ModuleAddressSanitizer::CreateAsanModuleDtor(Module &M) {
   AsanDtorFunction = Function::createWithDefaultAttr(
       FunctionType::get(Type::getVoidTy(*C), false),
       GlobalValue::InternalLinkage, 0, kAsanModuleDtorName, &M);
-  AsanDtorFunction->addAttribute(AttributeList::FunctionIndex,
-                                 Attribute::NoUnwind);
+  AsanDtorFunction->addFnAttr(Attribute::NoUnwind);
   // Ensure Dtor cannot be discarded, even if in a comdat.
   appendToUsed(M, {AsanDtorFunction});
   BasicBlock *AsanDtorBB = BasicBlock::Create(*C, "", AsanDtorFunction);

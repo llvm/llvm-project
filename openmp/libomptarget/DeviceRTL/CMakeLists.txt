@@ -151,6 +151,7 @@ endif()
 
 # Create target to build all Bitcode libraries.
 add_custom_target(omptarget-new-nvptx-bc)
+add_dependencies(omptarget-new-nvptx-bc opt llvm-link)
 
 # Generate a Bitcode library for all the compute capabilities the user requested
 foreach(sm ${nvptx_sm_list})
@@ -197,6 +198,7 @@ foreach(sm ${nvptx_sm_list})
 
   add_custom_target(${bclib_target_name} ALL DEPENDS ${CMAKE_CURRENT_BINARY_DIR}/${bclib_name}_opt)
   add_dependencies(omptarget-new-nvptx-bc ${bclib_target_name})
+  add_dependencies(${bclib_target_name} opt llvm-link)
 
   # Copy library to destination.
   add_custom_command(TARGET ${bclib_target_name} POST_BUILD

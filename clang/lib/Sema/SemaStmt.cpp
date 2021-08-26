@@ -1563,7 +1563,7 @@ Sema::ActOnFinishSwitchStmt(SourceLocation SwitchLoc, Stmt *Switch,
         auto DB = Diag(CondExpr->getExprLoc(), TheDefaultStmt
                                                    ? diag::warn_def_missing_case
                                                    : diag::warn_missing_case)
-                  << (int)UnhandledNames.size();
+                  << CondExpr->getSourceRange() << (int)UnhandledNames.size();
 
         for (size_t I = 0, E = std::min(UnhandledNames.size(), (size_t)3);
              I != E; ++I)
@@ -3316,7 +3316,7 @@ Sema::ActOnBreakStmt(SourceLocation BreakLoc, Scope *CurScope) {
 /// being thrown, or being co_returned from a coroutine. This expression
 /// might be modified by the implementation.
 ///
-/// \param ForceCXX2b Overrides detection of current language mode
+/// \param Mode Overrides detection of current language mode
 /// and uses the rules for C++2b.
 ///
 /// \returns An aggregate which contains the Candidate and isMoveEligible

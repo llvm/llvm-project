@@ -109,7 +109,7 @@ template <typename T> inline T SetExponent(T x, std::int64_t p) {
   } else if (x == 0) {
     return 0; // 0 -> 0
   } else {
-    int expo{std::ilogb(x)};
+    int expo{std::ilogb(x) + 1};
     auto ip{static_cast<int>(p - expo)};
     if (ip != p - expo) {
       ip = p < 0 ? std::numeric_limits<int>::min()

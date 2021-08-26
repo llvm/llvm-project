@@ -503,9 +503,10 @@ static bool FixupInvocation(CompilerInvocation &Invocation,
   // -cl-strict-aliasing needs to emit diagnostic in the case where CL > 1.0.
   // This option should be deprecated for CL > 1.0 because
   // this option was added for compatibility with OpenCL 1.0.
-  if (Args.getLastArg(OPT_cl_strict_aliasing) && LangOpts.OpenCLVersion > 100)
+  if (Args.getLastArg(OPT_cl_strict_aliasing) &&
+      (LangOpts.OpenCLCPlusPlus || LangOpts.OpenCLVersion > 100))
     Diags.Report(diag::warn_option_invalid_ocl_version)
-        << LangOpts.getOpenCLVersionTuple().getAsString()
+        << LangOpts.getOpenCLVersionString()
         << Args.getLastArg(OPT_cl_strict_aliasing)->getAsString(Args);
 
   if (Arg *A = Args.getLastArg(OPT_fdefault_calling_conv_EQ)) {
@@ -3164,6 +3165,8 @@ void CompilerInvocation::setLangDefaults(LangOptions &Opts, InputKind IK,
     Opts.OpenCLVersion = 300;
   else if (LangStd == LangStandard::lang_openclcpp10)
     Opts.OpenCLCPlusPlusVersion = 100;
+  else if (LangStd == LangStandard::lang_openclcpp2021)
+    Opts.OpenCLCPlusPlusVersion = 202100;
 
   // OpenCL has some additional defaults.
   if (Opts.OpenCL) {
@@ -3313,6 +3316,7 @@ void CompilerInvocation::GenerateLangArgs(const LangOptions &Opts,
   case LangStandard::lang_opencl20:
   case LangStandard::lang_opencl30:
   case LangStandard::lang_openclcpp10:
+  case LangStandard::lang_openclcpp2021:
     StdOpt = OPT_cl_std_EQ;
     break;
   default:
@@ -3611,6 +3615,7 @@ bool CompilerInvocation::ParseLangArgs(LangOptions &Opts, ArgList &Args,
         .Cases("cl3.0", "CL3.0", LangStandard::lang_opencl30)
         .Cases("clc++", "CLC++", LangStandard::lang_openclcpp10)
         .Cases("clc++1.0", "CLC++1.0", LangStandard::lang_openclcpp10)
+        .Cases("clc++2021", "CLC++2021", LangStandard::lang_openclcpp2021)
         .Default(LangStandard::lang_unspecified);
 
     if (OpenCLLangStd == LangStandard::lang_unspecified) {

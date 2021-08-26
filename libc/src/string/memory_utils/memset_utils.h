@@ -63,8 +63,6 @@ inline static void GeneralPurposeMemset(char *dst, unsigned char value,
     return SplatSet<_2>(dst, value);
   if (count == 3)
     return SplatSet<_3>(dst, value);
-  if (count == 4)
-    return SplatSet<_4>(dst, value);
   if (count <= 8)
     return SplatSet<HeadTail<_4>>(dst, value, count);
   if (count <= 16)

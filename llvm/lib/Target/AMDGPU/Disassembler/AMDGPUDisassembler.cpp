@@ -693,22 +693,21 @@ DecodeStatus AMDGPUDisassembler::convertMIMGInst(MCInst &MI) const {
   int D16Idx   = AMDGPU::getNamedOperandIdx(MI.getOpcode(),
                                             AMDGPU::OpName::d16);
 
+  const AMDGPU::MIMGInfo *Info = AMDGPU::getMIMGInfo(MI.getOpcode());
+  const AMDGPU::MIMGBaseOpcodeInfo *BaseOpcode =
+      AMDGPU::getMIMGBaseOpcodeInfo(Info->BaseOpcode);
+
   assert(VDataIdx != -1);
-  if (DMaskIdx == -1 || TFEIdx == -1) {// intersect_ray
+  if (BaseOpcode->BVH) {
+    // Add A16 operand for intersect_ray instructions
     if (AMDGPU::getNamedOperandIdx(MI.getOpcode(), AMDGPU::OpName::a16) > -1) {
-      assert(MI.getOpcode() == AMDGPU::IMAGE_BVH_INTERSECT_RAY_a16_sa ||
-             MI.getOpcode() == AMDGPU::IMAGE_BVH_INTERSECT_RAY_a16_nsa ||
-             MI.getOpcode() == AMDGPU::IMAGE_BVH64_INTERSECT_RAY_a16_sa ||
-             MI.getOpcode() == AMDGPU::IMAGE_BVH64_INTERSECT_RAY_a16_nsa);
       addOperand(MI, MCOperand::createImm(1));
     }
     return MCDisassembler::Success;
   }
 
-  const AMDGPU::MIMGInfo *Info = AMDGPU::getMIMGInfo(MI.getOpcode());
   bool IsAtomic = (VDstIdx != -1);
   bool IsGather4 = MCII->get(MI.getOpcode()).TSFlags & SIInstrFlags::Gather4;
-
   bool IsNSA = false;
   unsigned AddrSize = Info->VAddrDwords;
 
@@ -717,8 +716,6 @@ DecodeStatus AMDGPUDisassembler::convertMIMGInst(MCInst &MI) const {
         AMDGPU::getNamedOperandIdx(MI.getOpcode(), AMDGPU::OpName::dim);
     int A16Idx =
         AMDGPU::getNamedOperandIdx(MI.getOpcode(), AMDGPU::OpName::a16);
-    const AMDGPU::MIMGBaseOpcodeInfo *BaseOpcode =
-        AMDGPU::getMIMGBaseOpcodeInfo(Info->BaseOpcode);
     const AMDGPU::MIMGDimInfo *Dim =
         AMDGPU::getMIMGDimInfoByEncoding(MI.getOperand(DimIdx).getImm());
     const bool IsA16 = (A16Idx != -1 && MI.getOperand(A16Idx).getImm());
