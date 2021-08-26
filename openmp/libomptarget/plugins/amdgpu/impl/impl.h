@@ -1,12 +1,12 @@
-//===--- amdgpu/impl/atmi.h --------------------------------------- C++ -*-===//
+//===--- amdgpu/impl/impl.h --------------------------------------- C++ -*-===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
 // SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
-#ifndef INCLUDE_ATMI_H_
-#define INCLUDE_ATMI_H_
+#ifndef INCLUDE_IMPL_H_
+#define INCLUDE_IMPL_H_
 
 #define ROCM_VERSION_MAJOR 3
 #define ROCM_VERSION_MINOR 2
@@ -36,4 +36,4 @@ typedef enum atmi_memtype_s {
 } atmi_memtype_t;
 
 /** @} */
-#endif // INCLUDE_ATMI_H_
+#endif // INCLUDE_IMPL_H_

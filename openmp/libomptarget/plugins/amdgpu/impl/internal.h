@@ -23,8 +23,8 @@
 
 #include "hsa_api.h"
 
-#include "atmi.h"
-#include "atmi_runtime.h"
+#include "impl.h"
+#include "impl_runtime.h"
 #include "rt.h"
 
 #define MAX_NUM_KERNELS (1024 * 16)
