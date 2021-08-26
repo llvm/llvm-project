@@ -12,12 +12,7 @@ target triple = "wasm32-unknown-emscripten"
 ; CHECK-LABEL: @malloc_test
 define void @malloc_test() {
 entry:
-; CHECK-LABEL: entry
-  ; All setjmp table preparations have to happen within the entry block. These
-  ; check lines list only some of the instructions for that.
   ; CHECK: call i8* @malloc
-  ; CHECK: call i32* @saveSetjmp
-  ; CHECK: call i32 @getTempRet0
   %retval = alloca i32, align 4
   %jmp = alloca [1 x %struct.__jmp_buf_tag], align 16
   store i32 0, i32* %retval, align 4
@@ -25,8 +20,6 @@ entry:
   %call = call i32 @setjmp(%struct.__jmp_buf_tag* %arraydecay) #0
   call void @foo()
   ret void
-
-; CHECK-LABEL: entry.split
 }
 
 ; This is a dummy dlmalloc implemenation only to make compiler pass, because an

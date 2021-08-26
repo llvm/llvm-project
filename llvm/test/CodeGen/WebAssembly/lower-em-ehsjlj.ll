@@ -21,7 +21,7 @@ entry:
   invoke void @foo()
           to label %try.cont unwind label %lpad
 
-; CHECK:    entry.split:
+; CHECK:    entry.split.split:
 ; CHECK:      %[[CMP0:.*]] = icmp ne i32 %__THREW__.val, 0
 ; CHECK-NEXT: %__threwValue.val = load i32, i32* @__threwValue
 ; CHECK-NEXT: %[[CMP1:.*]] = icmp ne i32 %__threwValue.val, 0
@@ -29,7 +29,7 @@ entry:
 ; CHECK-NEXT: br i1 %[[CMP]], label %if.then1, label %if.else1
 
 ; This is exception checking part. %if.else1 leads here
-; CHECK:    entry.split.split:
+; CHECK:    entry.split.split.split:
 ; CHECK-NEXT: %[[CMP:.*]] = icmp eq i32 %__THREW__.val, 1
 ; CHECK-NEXT: br i1 %[[CMP]], label %lpad, label %try.cont
 
