@@ -17,18 +17,15 @@ body:             |
   ; CHECK:   [[TRUNC2:%[0-9]+]]:_(s32) = G_TRUNC [[COPY]](s64)
   ; CHECK:   [[TRUNC3:%[0-9]+]]:_(s32) = G_TRUNC [[COPY]](s64)
   ; CHECK:   [[SELECT:%[0-9]+]]:_(s32) = G_SELECT [[TRUNC]](s1), [[TRUNC2]], [[TRUNC3]]
-  ; CHECK:   [[COPY1:%[0-9]+]]:_(s32) = COPY [[SELECT]](s32)
-  ; CHECK:   $w0 = COPY [[COPY1]](s32)
+  ; CHECK:   $w0 = COPY [[SELECT]](s32)
   ; CHECK:   [[TRUNC4:%[0-9]+]]:_(s32) = G_TRUNC [[COPY]](s64)
   ; CHECK:   [[TRUNC5:%[0-9]+]]:_(s32) = G_TRUNC [[COPY]](s64)
   ; CHECK:   [[SELECT1:%[0-9]+]]:_(s32) = G_SELECT [[TRUNC]](s1), [[TRUNC4]], [[TRUNC5]]
-  ; CHECK:   [[COPY2:%[0-9]+]]:_(s32) = COPY [[SELECT1]](s32)
-  ; CHECK:   $w0 = COPY [[COPY2]](s32)
+  ; CHECK:   $w0 = COPY [[SELECT1]](s32)
   ; CHECK:   [[TRUNC6:%[0-9]+]]:_(s32) = G_TRUNC [[COPY]](s64)
   ; CHECK:   [[TRUNC7:%[0-9]+]]:_(s32) = G_TRUNC [[COPY]](s64)
   ; CHECK:   [[SELECT2:%[0-9]+]]:_(s32) = G_SELECT [[TRUNC]](s1), [[TRUNC6]], [[TRUNC7]]
-  ; CHECK:   [[COPY3:%[0-9]+]]:_(s32) = COPY [[SELECT2]](s32)
-  ; CHECK:   $w0 = COPY [[COPY3]](s32)
+  ; CHECK:   $w0 = COPY [[SELECT2]](s32)
   ; CHECK:   [[SELECT3:%[0-9]+]]:_(s32) = G_SELECT [[TRUNC]](s1), [[TRUNC1]], [[TRUNC1]]
   ; CHECK:   [[SELECT4:%[0-9]+]]:_(s64) = G_SELECT [[TRUNC]](s1), [[COPY]], [[COPY]]
   ; CHECK:   $x0 = COPY [[SELECT4]](s64)
@@ -111,8 +108,7 @@ body:             |
 
     ; CHECK-LABEL: name: testExtOfCopyOfTrunc
     ; CHECK: [[COPY:%[0-9]+]]:_(s64) = COPY $x0
-    ; CHECK: [[COPY1:%[0-9]+]]:_(s64) = COPY [[COPY]](s64)
-    ; CHECK: $x0 = COPY [[COPY1]](s64)
+    ; CHECK: $x0 = COPY [[COPY]](s64)
     ; CHECK: RET_ReallyLR implicit $x0
     %0:_(s64) = COPY $x0
     %1:_(s1) = G_TRUNC %0(s64)
@@ -130,8 +126,7 @@ body:             |
 
     ; CHECK-LABEL: name: testExtOf2CopyOfTrunc
     ; CHECK: [[COPY:%[0-9]+]]:_(s64) = COPY $x0
-    ; CHECK: [[COPY1:%[0-9]+]]:_(s64) = COPY [[COPY]](s64)
-    ; CHECK: $x0 = COPY [[COPY1]](s64)
+    ; CHECK: $x0 = COPY [[COPY]](s64)
     ; CHECK: RET_ReallyLR implicit $x0
     %0:_(s64) = COPY $x0
     %1:_(s1) = G_TRUNC %0(s64)

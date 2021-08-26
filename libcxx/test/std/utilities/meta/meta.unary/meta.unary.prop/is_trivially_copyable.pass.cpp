@@ -10,9 +10,9 @@
 
 // is_trivially_copyable
 
-// These compilers have not implemented Core 2094 which makes volatile
+// GCC has not implemented Core 2094 which makes volatile
 // qualified types trivially copyable.
-// XFAIL: clang-4, apple-clang-9.0, gcc
+// XFAIL: gcc
 
 #include <type_traits>
 #include <cassert>

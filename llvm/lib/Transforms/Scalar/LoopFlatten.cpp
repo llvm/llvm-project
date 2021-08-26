@@ -27,6 +27,8 @@
 //===----------------------------------------------------------------------===//
 
 #include "llvm/Transforms/Scalar/LoopFlatten.h"
+
+#include "llvm/ADT/Statistic.h"
 #include "llvm/Analysis/AssumptionCache.h"
 #include "llvm/Analysis/LoopInfo.h"
 #include "llvm/Analysis/OptimizationRemarkEmitter.h"
@@ -49,10 +51,12 @@
 #include "llvm/Transforms/Utils/ScalarEvolutionExpander.h"
 #include "llvm/Transforms/Utils/SimplifyIndVar.h"
 
-#define DEBUG_TYPE "loop-flatten"
-
 using namespace llvm;
 using namespace llvm::PatternMatch;
+
+#define DEBUG_TYPE "loop-flatten"
+
+STATISTIC(NumFlattened, "Number of loops flattened");
 
 static cl::opt<unsigned> RepeatedInstructionThreshold(
     "loop-flatten-cost-threshold", cl::Hidden, cl::init(2),
@@ -496,17 +500,27 @@ static OverflowResult checkOverflow(FlattenInfo &FI, DominatorTree *DT,
   for (Value *V : FI.LinearIVUses) {
     for (Value *U : V->users()) {
       if (auto *GEP = dyn_cast<GetElementPtrInst>(U)) {
-        // The IV is used as the operand of a GEP, and the IV is at least as
-        // wide as the address space of the GEP. In this case, the GEP would
-        // wrap around the address space before the IV increment wraps, which
-        // would be UB.
-        if (GEP->isInBounds() &&
-            V->getType()->getIntegerBitWidth() >=
-                DL.getPointerTypeSizeInBits(GEP->getType())) {
-          LLVM_DEBUG(
-              dbgs() << "use of linear IV would be UB if overflow occurred: ";
-              GEP->dump());
-          return OverflowResult::NeverOverflows;
+        for (Value *GEPUser : U->users()) {
+          Instruction *GEPUserInst = dyn_cast<Instruction>(GEPUser);
+          if (!isa<LoadInst>(GEPUserInst) &&
+              !(isa<StoreInst>(GEPUserInst) &&
+                GEP == GEPUserInst->getOperand(1)))
+            continue;
+          if (!isGuaranteedToExecuteForEveryIteration(GEPUserInst,
+                                                      FI.InnerLoop))
+            continue;
+          // The IV is used as the operand of a GEP which dominates the loop
+          // latch, and the IV is at least as wide as the address space of the
+          // GEP. In this case, the GEP would wrap around the address space
+          // before the IV increment wraps, which would be UB.
+          if (GEP->isInBounds() &&
+              V->getType()->getIntegerBitWidth() >=
+                  DL.getPointerTypeSizeInBits(GEP->getType())) {
+            LLVM_DEBUG(
+                dbgs() << "use of linear IV would be UB if overflow occurred: ";
+                GEP->dump());
+            return OverflowResult::NeverOverflows;
+          }
         }
       }
     }
@@ -620,6 +634,10 @@ static bool DoFlattenLoopPair(FlattenInfo &FI, DominatorTree *DT, LoopInfo *LI,
   SE->forgetLoop(FI.OuterLoop);
   SE->forgetLoop(FI.InnerLoop);
   LI->erase(FI.InnerLoop);
+
+  // Increment statistic value.
+  NumFlattened++;
+
   return true;
 }
 

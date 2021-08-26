@@ -265,6 +265,54 @@ define <4 x float> @load_float4_float3_trunc_0123(<4 x float>* nocapture readonl
   ret <4 x float> %20
 }
 
+define <4 x float> @load_float4_float3_trunc_0123_unaligned(<4 x float>* nocapture readonly dereferenceable(16)) nofree nosync {
+; SSE2-LABEL: load_float4_float3_trunc_0123_unaligned:
+; SSE2:       # %bb.0:
+; SSE2-NEXT:    movups (%rdi), %xmm0
+; SSE2-NEXT:    movhps {{.*#+}} xmm0 = xmm0[0,1],mem[0,1]
+; SSE2-NEXT:    retq
+;
+; SSSE3-LABEL: load_float4_float3_trunc_0123_unaligned:
+; SSSE3:       # %bb.0:
+; SSSE3-NEXT:    movups (%rdi), %xmm0
+; SSSE3-NEXT:    movhps {{.*#+}} xmm0 = xmm0[0,1],mem[0,1]
+; SSSE3-NEXT:    retq
+;
+; SSE41-LABEL: load_float4_float3_trunc_0123_unaligned:
+; SSE41:       # %bb.0:
+; SSE41-NEXT:    movups (%rdi), %xmm0
+; SSE41-NEXT:    insertps {{.*#+}} xmm0 = xmm0[0,1],mem[0],xmm0[3]
+; SSE41-NEXT:    insertps {{.*#+}} xmm0 = xmm0[0,1,2],mem[0]
+; SSE41-NEXT:    retq
+;
+; AVX-LABEL: load_float4_float3_trunc_0123_unaligned:
+; AVX:       # %bb.0:
+; AVX-NEXT:    vmovups (%rdi), %xmm0
+; AVX-NEXT:    vinsertps {{.*#+}} xmm0 = xmm0[0,1],mem[0],xmm0[3]
+; AVX-NEXT:    vinsertps {{.*#+}} xmm0 = xmm0[0,1,2],mem[0]
+; AVX-NEXT:    retq
+  %2 = bitcast <4 x float>* %0 to i64*
+  %3 = load i64, i64* %2, align 1
+  %4 = getelementptr inbounds <4 x float>, <4 x float>* %0, i64 0, i64 2
+  %5 = bitcast float* %4 to i64*
+  %6 = load i64, i64* %5, align 1
+  %7 = trunc i64 %3 to i32
+  %8 = bitcast i32 %7 to float
+  %9 = insertelement <4 x float> undef, float %8, i32 0
+  %10 = lshr i64 %3, 32
+  %11 = trunc i64 %10 to i32
+  %12 = bitcast i32 %11 to float
+  %13 = insertelement <4 x float> %9, float %12, i32 1
+  %14 = trunc i64 %6 to i32
+  %15 = bitcast i32 %14 to float
+  %16 = insertelement <4 x float> %13, float %15, i32 2
+  %17 = lshr i64 %6, 32
+  %18 = trunc i64 %17 to i32
+  %19 = bitcast i32 %18 to float
+  %20 = insertelement <4 x float> %16, float %19, i32 3
+  ret <4 x float> %20
+}
+
 ; PR21780
 define <4 x double> @load_double4_0u2u(double* nocapture readonly dereferenceable(32)) nofree nosync {
 ; SSE2-LABEL: load_double4_0u2u:

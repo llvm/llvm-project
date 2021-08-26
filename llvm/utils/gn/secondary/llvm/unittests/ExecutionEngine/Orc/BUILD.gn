@@ -14,10 +14,12 @@ unittest("OrcJITTests") {
   ]
   sources = [
     "CoreAPIsTest.cpp",
+    "EPCGenericMemoryAccessTest.cpp",
     "ExecutionSessionWrapperFunctionCallsTest.cpp",
     "IndirectionUtilsTest.cpp",
     "JITTargetMachineBuilderTest.cpp",
     "LazyCallThroughAndReexportsTest.cpp",
+    "LookupAndRecordAddrsTest.cpp",
     "ObjectLinkingLayerTest.cpp",
     "OrcCAPITest.cpp",
     "OrcTestCommon.cpp",

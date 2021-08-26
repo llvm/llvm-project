@@ -840,6 +840,82 @@ define <vscale x 8 x i16> @vand_vi_nxv8i16_unmasked(<vscale x 8 x i16> %va, i32 
   ret <vscale x 8 x i16> %v
 }
 
+declare <vscale x 14 x i16> @llvm.vp.and.nxv14i16(<vscale x 14 x i16>, <vscale x 14 x i16>, <vscale x 14 x i1>, i32)
+
+define <vscale x 14 x i16> @vand_vv_nxv14i16(<vscale x 14 x i16> %va, <vscale x 14 x i16> %b, <vscale x 14 x i1> %m, i32 zeroext %evl) {
+; CHECK-LABEL: vand_vv_nxv14i16:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    vsetvli zero, a0, e16, m4, ta, mu
+; CHECK-NEXT:    vand.vv v8, v8, v12, v0.t
+; CHECK-NEXT:    ret
+  %v = call <vscale x 14 x i16> @llvm.vp.and.nxv14i16(<vscale x 14 x i16> %va, <vscale x 14 x i16> %b, <vscale x 14 x i1> %m, i32 %evl)
+  ret <vscale x 14 x i16> %v
+}
+
+define <vscale x 14 x i16> @vand_vv_nxv14i16_unmasked(<vscale x 14 x i16> %va, <vscale x 14 x i16> %b, i32 zeroext %evl) {
+; CHECK-LABEL: vand_vv_nxv14i16_unmasked:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    vsetvli zero, a0, e16, m4, ta, mu
+; CHECK-NEXT:    vand.vv v8, v8, v12
+; CHECK-NEXT:    ret
+  %head = insertelement <vscale x 14 x i1> undef, i1 true, i32 0
+  %m = shufflevector <vscale x 14 x i1> %head, <vscale x 14 x i1> undef, <vscale x 14 x i32> zeroinitializer
+  %v = call <vscale x 14 x i16> @llvm.vp.and.nxv14i16(<vscale x 14 x i16> %va, <vscale x 14 x i16> %b, <vscale x 14 x i1> %m, i32 %evl)
+  ret <vscale x 14 x i16> %v
+}
+
+define <vscale x 14 x i16> @vand_vx_nxv14i16(<vscale x 14 x i16> %va, i16 %b, <vscale x 14 x i1> %m, i32 zeroext %evl) {
+; CHECK-LABEL: vand_vx_nxv14i16:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    vsetvli zero, a1, e16, m4, ta, mu
+; CHECK-NEXT:    vand.vx v8, v8, a0, v0.t
+; CHECK-NEXT:    ret
+  %elt.head = insertelement <vscale x 14 x i16> undef, i16 %b, i32 0
+  %vb = shufflevector <vscale x 14 x i16> %elt.head, <vscale x 14 x i16> undef, <vscale x 14 x i32> zeroinitializer
+  %v = call <vscale x 14 x i16> @llvm.vp.and.nxv14i16(<vscale x 14 x i16> %va, <vscale x 14 x i16> %vb, <vscale x 14 x i1> %m, i32 %evl)
+  ret <vscale x 14 x i16> %v
+}
+
+define <vscale x 14 x i16> @vand_vx_nxv14i16_unmasked(<vscale x 14 x i16> %va, i16 %b, i32 zeroext %evl) {
+; CHECK-LABEL: vand_vx_nxv14i16_unmasked:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    vsetvli zero, a1, e16, m4, ta, mu
+; CHECK-NEXT:    vand.vx v8, v8, a0
+; CHECK-NEXT:    ret
+  %elt.head = insertelement <vscale x 14 x i16> undef, i16 %b, i32 0
+  %vb = shufflevector <vscale x 14 x i16> %elt.head, <vscale x 14 x i16> undef, <vscale x 14 x i32> zeroinitializer
+  %head = insertelement <vscale x 14 x i1> undef, i1 true, i32 0
+  %m = shufflevector <vscale x 14 x i1> %head, <vscale x 14 x i1> undef, <vscale x 14 x i32> zeroinitializer
+  %v = call <vscale x 14 x i16> @llvm.vp.and.nxv14i16(<vscale x 14 x i16> %va, <vscale x 14 x i16> %vb, <vscale x 14 x i1> %m, i32 %evl)
+  ret <vscale x 14 x i16> %v
+}
+
+define <vscale x 14 x i16> @vand_vi_nxv14i16(<vscale x 14 x i16> %va, <vscale x 14 x i1> %m, i32 zeroext %evl) {
+; CHECK-LABEL: vand_vi_nxv14i16:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    vsetvli zero, a0, e16, m4, ta, mu
+; CHECK-NEXT:    vand.vi v8, v8, 4, v0.t
+; CHECK-NEXT:    ret
+  %elt.head = insertelement <vscale x 14 x i16> undef, i16 4, i32 0
+  %vb = shufflevector <vscale x 14 x i16> %elt.head, <vscale x 14 x i16> undef, <vscale x 14 x i32> zeroinitializer
+  %v = call <vscale x 14 x i16> @llvm.vp.and.nxv14i16(<vscale x 14 x i16> %va, <vscale x 14 x i16> %vb, <vscale x 14 x i1> %m, i32 %evl)
+  ret <vscale x 14 x i16> %v
+}
+
+define <vscale x 14 x i16> @vand_vi_nxv14i16_unmasked(<vscale x 14 x i16> %va, i32 zeroext %evl) {
+; CHECK-LABEL: vand_vi_nxv14i16_unmasked:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    vsetvli zero, a0, e16, m4, ta, mu
+; CHECK-NEXT:    vand.vi v8, v8, 4
+; CHECK-NEXT:    ret
+  %elt.head = insertelement <vscale x 14 x i16> undef, i16 4, i32 0
+  %vb = shufflevector <vscale x 14 x i16> %elt.head, <vscale x 14 x i16> undef, <vscale x 14 x i32> zeroinitializer
+  %head = insertelement <vscale x 14 x i1> undef, i1 true, i32 0
+  %m = shufflevector <vscale x 14 x i1> %head, <vscale x 14 x i1> undef, <vscale x 14 x i32> zeroinitializer
+  %v = call <vscale x 14 x i16> @llvm.vp.and.nxv14i16(<vscale x 14 x i16> %va, <vscale x 14 x i16> %vb, <vscale x 14 x i1> %m, i32 %evl)
+  ret <vscale x 14 x i16> %v
+}
+
 declare <vscale x 16 x i16> @llvm.vp.and.nxv16i16(<vscale x 16 x i16>, <vscale x 16 x i16>, <vscale x 16 x i1>, i32)
 
 define <vscale x 16 x i16> @vand_vv_nxv16i16(<vscale x 16 x i16> %va, <vscale x 16 x i16> %b, <vscale x 16 x i1> %m, i32 zeroext %evl) {

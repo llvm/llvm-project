@@ -13,6 +13,7 @@
 #include "ObjDumper.h"
 #include "llvm-readobj.h"
 #include "llvm/Object/XCOFFObjectFile.h"
+#include "llvm/Support/FormattedStream.h"
 #include "llvm/Support/ScopedPrinter.h"
 
 using namespace llvm;
@@ -44,7 +45,8 @@ private:
   void printCsectAuxEnt(XCOFFCsectAuxRef AuxEntRef);
   void printSectAuxEntForStat(const XCOFFSectAuxEntForStat *AuxEntPtr);
   void printSymbol(const SymbolRef &);
-  void printRelocations(ArrayRef<XCOFFSectionHeader32> Sections);
+  template <typename Shdr, typename RelTy>
+  void printRelocations(ArrayRef<Shdr> Sections);
   const XCOFFObjectFile &Obj;
 };
 } // anonymous namespace
@@ -105,9 +107,9 @@ void XCOFFDumper::printSectionHeaders() {
 
 void XCOFFDumper::printRelocations() {
   if (Obj.is64Bit())
-    llvm_unreachable("64-bit relocation output not implemented!");
+    printRelocations<XCOFFSectionHeader64, XCOFFRelocation64>(Obj.sections64());
   else
-    printRelocations(Obj.sections32());
+    printRelocations<XCOFFSectionHeader32, XCOFFRelocation32>(Obj.sections32());
 }
 
 static const EnumEntry<XCOFF::RelocationType> RelocationTypeNameclass[] = {
@@ -122,28 +124,40 @@ static const EnumEntry<XCOFF::RelocationType> RelocationTypeNameclass[] = {
 #undef ECase
 };
 
-void XCOFFDumper::printRelocations(ArrayRef<XCOFFSectionHeader32> Sections) {
+template <typename Shdr, typename RelTy>
+void XCOFFDumper::printRelocations(ArrayRef<Shdr> Sections) {
   if (!opts::ExpandRelocs)
     report_fatal_error("Unexpanded relocation output not implemented.");
 
   ListScope LS(W, "Relocations");
   uint16_t Index = 0;
-  for (const auto &Sec : Sections) {
+  for (const Shdr &Sec : Sections) {
     ++Index;
     // Only the .text, .data, .tdata, and STYP_DWARF sections have relocation.
     if (Sec.Flags != XCOFF::STYP_TEXT && Sec.Flags != XCOFF::STYP_DATA &&
         Sec.Flags != XCOFF::STYP_TDATA && Sec.Flags != XCOFF::STYP_DWARF)
       continue;
-    auto Relocations = unwrapOrError(Obj.getFileName(), Obj.relocations(Sec));
+    Expected<ArrayRef<RelTy>> ErrOrRelocations = Obj.relocations<Shdr, RelTy>(Sec);
+    if (Error E = ErrOrRelocations.takeError()) {
+      reportUniqueWarning(std::move(E));
+      continue;
+    }
+
+    const ArrayRef<RelTy> Relocations = *ErrOrRelocations;
     if (Relocations.empty())
       continue;
 
     W.startLine() << "Section (index: " << Index << ") " << Sec.getName()
                   << " {\n";
-    for (auto Reloc : Relocations) {
-      StringRef SymbolName = unwrapOrError(
-          Obj.getFileName(), Obj.getSymbolNameByIndex(Reloc.SymbolIndex));
+    for (const RelTy Reloc : Relocations) {
+      Expected<StringRef> ErrOrSymbolName =
+          Obj.getSymbolNameByIndex(Reloc.SymbolIndex);
+      if (Error E = ErrOrSymbolName.takeError()) {
+        reportUniqueWarning(std::move(E));
+        continue;
+      }
 
+      StringRef SymbolName = *ErrOrSymbolName;
       DictScope RelocScope(W, "Relocation");
       W.printHex("Virtual Address", Reloc.VirtualAddress);
       W.printNumber("Symbol", SymbolName, Reloc.SymbolIndex);
@@ -481,7 +495,43 @@ void XCOFFDumper::printStackMap() const {
 }
 
 void XCOFFDumper::printNeededLibraries() {
-  llvm_unreachable("Unimplemented functionality for XCOFFDumper");
+  ListScope D(W, "NeededLibraries");
+  auto ImportFilesOrError = Obj.getImportFileTable();
+  if (!ImportFilesOrError) {
+    reportUniqueWarning(ImportFilesOrError.takeError());
+    return;
+  }
+
+  StringRef ImportFileTable = ImportFilesOrError.get();
+  const char *CurrentStr = ImportFileTable.data();
+  const char *TableEnd = ImportFileTable.end();
+  // Default column width for names is 13 even if no names are that long.
+  size_t BaseWidth = 13;
+
+  // Get the max width of BASE columns.
+  for (size_t StrIndex = 0; CurrentStr < TableEnd; ++StrIndex) {
+    size_t CurrentLen = strlen(CurrentStr);
+    CurrentStr += strlen(CurrentStr) + 1;
+    if (StrIndex % 3 == 1)
+      BaseWidth = std::max(BaseWidth, CurrentLen);
+  }
+
+  auto &OS = static_cast<formatted_raw_ostream &>(W.startLine());
+  // Each entry consists of 3 strings: the path_name, base_name and
+  // archive_member_name. The first entry is a default LIBPATH value and other
+  // entries have no path_name. We just dump the base_name and
+  // archive_member_name here.
+  OS << left_justify("BASE", BaseWidth)  << " MEMBER\n";
+  CurrentStr = ImportFileTable.data();
+  for (size_t StrIndex = 0; CurrentStr < TableEnd;
+       ++StrIndex, CurrentStr += strlen(CurrentStr) + 1) {
+    if (StrIndex >= 3 && StrIndex % 3 != 0) {
+      if (StrIndex % 3 == 1)
+        OS << "  " << left_justify(CurrentStr, BaseWidth) << " ";
+      else
+        OS << CurrentStr << "\n";
+    }
+  }
 }
 
 static const EnumEntry<XCOFF::SectionTypeFlags> SectionTypeFlagsNames[] = {

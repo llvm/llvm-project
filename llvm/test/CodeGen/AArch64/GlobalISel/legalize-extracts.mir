@@ -239,8 +239,7 @@ body: |
     ; CHECK: liveins: $w0
     ; CHECK: %val:_(s32) = COPY $w0
     ; CHECK: [[C:%[0-9]+]]:_(s32) = G_CONSTANT i32 1
-    ; CHECK: [[COPY:%[0-9]+]]:_(s32) = COPY %val(s32)
-    ; CHECK: %ext:_(s32) = G_AND [[COPY]], [[C]]
+    ; CHECK: %ext:_(s32) = G_AND %val, [[C]]
     ; CHECK: $w0 = COPY %ext(s32)
     ; CHECK: RET_ReallyLR implicit $w0
     %val:_(s32) = COPY $w0
@@ -259,8 +258,7 @@ body: |
     ; CHECK: liveins: $w0
     ; CHECK: %val:_(s32) = COPY $w0
     ; CHECK: [[C:%[0-9]+]]:_(s32) = G_CONSTANT i32 7
-    ; CHECK: [[COPY:%[0-9]+]]:_(s32) = COPY %val(s32)
-    ; CHECK: %ext:_(s32) = G_AND [[COPY]], [[C]]
+    ; CHECK: %ext:_(s32) = G_AND %val, [[C]]
     ; CHECK: $w0 = COPY %ext(s32)
     ; CHECK: RET_ReallyLR implicit $w0
     %val:_(s32) = COPY $w0
@@ -278,9 +276,8 @@ body: |
     ; CHECK-LABEL: name: s3_from_s35
     ; CHECK: liveins: $w0
     ; CHECK: [[DEF:%[0-9]+]]:_(s64) = G_IMPLICIT_DEF
-    ; CHECK: [[COPY:%[0-9]+]]:_(s64) = COPY [[DEF]](s64)
     ; CHECK: [[C:%[0-9]+]]:_(s32) = G_CONSTANT i32 7
-    ; CHECK: [[TRUNC:%[0-9]+]]:_(s32) = G_TRUNC [[COPY]](s64)
+    ; CHECK: [[TRUNC:%[0-9]+]]:_(s32) = G_TRUNC [[DEF]](s64)
     ; CHECK: %ext:_(s32) = G_AND [[TRUNC]], [[C]]
     ; CHECK: $w0 = COPY %ext(s32)
     ; CHECK: RET_ReallyLR implicit $w0
@@ -300,8 +297,7 @@ body: |
     ; CHECK: liveins: $w0
     ; CHECK: %val:_(s32) = COPY $w0
     ; CHECK: [[C:%[0-9]+]]:_(s32) = G_CONSTANT i32 15
-    ; CHECK: [[COPY:%[0-9]+]]:_(s32) = COPY %val(s32)
-    ; CHECK: %ext:_(s32) = G_AND [[COPY]], [[C]]
+    ; CHECK: %ext:_(s32) = G_AND %val, [[C]]
     ; CHECK: $w0 = COPY %ext(s32)
     ; CHECK: RET_ReallyLR implicit $w0
     %val:_(s32) = COPY $w0

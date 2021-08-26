@@ -13,7 +13,6 @@
 #include <__iterator/iterator_traits.h>
 #include <__utility/swap.h>
 #include <utility> // pair
-#include <type_traits>
 
 #if !defined(_LIBCPP_HAS_NO_PRAGMA_SYSTEM_HEADER)
 #pragma GCC system_header
@@ -77,8 +76,8 @@ inline _LIBCPP_INLINE_VISIBILITY _LIBCPP_CONSTEXPR_AFTER_CXX17
 _ForwardIterator
 partition(_ForwardIterator __first, _ForwardIterator __last, _Predicate __pred)
 {
-    return _VSTD::__partition<typename add_lvalue_reference<_Predicate>::type>
-                            (__first, __last, __pred, typename iterator_traits<_ForwardIterator>::iterator_category());
+    return _VSTD::__partition<_Predicate&>(
+        __first, __last, __pred, typename iterator_traits<_ForwardIterator>::iterator_category());
 }
 
 _LIBCPP_END_NAMESPACE_STD

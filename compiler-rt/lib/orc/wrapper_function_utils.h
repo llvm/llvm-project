@@ -61,7 +61,7 @@ public:
   }
 
   /// Get a pointer to the data contained in this instance.
-  const char *data() const { return __orc_rt_CWrapperFunctionResultData(&R); }
+  char *data() { return __orc_rt_CWrapperFunctionResultData(&R); }
 
   /// Returns the size of the data contained in this instance.
   size_t size() const { return __orc_rt_CWrapperFunctionResultSize(&R); }
@@ -72,10 +72,10 @@ public:
 
   /// Create a WrapperFunctionResult with the given size and return a pointer
   /// to the underlying memory.
-  static char *allocate(WrapperFunctionResult &R, size_t Size) {
-    __orc_rt_DisposeCWrapperFunctionResult(&R.R);
-    __orc_rt_CWrapperFunctionResultInit(&R.R);
-    return __orc_rt_CWrapperFunctionResultAllocate(&R.R, Size);
+  static WrapperFunctionResult allocate(size_t Size) {
+    WrapperFunctionResult R;
+    R.R = __orc_rt_CWrapperFunctionResultAllocate(Size);
+    return R;
   }
 
   /// Copy from the given char range.
@@ -118,10 +118,8 @@ namespace detail {
 template <typename SPSArgListT, typename... ArgTs>
 Expected<WrapperFunctionResult>
 serializeViaSPSToWrapperFunctionResult(const ArgTs &...Args) {
-  WrapperFunctionResult Result;
-  char *DataPtr =
-      WrapperFunctionResult::allocate(Result, SPSArgListT::size(Args...));
-  SPSOutputBuffer OB(DataPtr, Result.size());
+  auto Result = WrapperFunctionResult::allocate(SPSArgListT::size(Args...));
+  SPSOutputBuffer OB(Result.data(), Result.size());
   if (!SPSArgListT::serialize(OB, Args...))
     return make_error<StringError>(
         "Error serializing arguments to blob in call");

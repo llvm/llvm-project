@@ -1,7 +1,7 @@
 ; RUN: opt < %s -S -early-cse -earlycse-debug-hash | FileCheck %s --check-prefix=CHECK-NOMEMSSA
 ; RUN: opt < %s -S -basic-aa -early-cse-memssa | FileCheck %s
 ; RUN: opt < %s -S -passes='early-cse' | FileCheck %s --check-prefix=CHECK-NOMEMSSA
-; RUN: opt < %s -S -aa-pipeline=basic-aa -passes='early-cse-memssa' | FileCheck %s
+; RUN: opt < %s -S -aa-pipeline=basic-aa -passes='early-cse<memssa>' | FileCheck %s
 
 @G1 = global i32 zeroinitializer
 @G2 = global i32 zeroinitializer

@@ -241,7 +241,8 @@ bool MemIsApp(uptr p) {
   CHECK(GetTagFromPointer(p) == 0);
 #  endif
 
-  return p >= kHighMemStart || (p >= kLowMemStart && p <= kLowMemEnd);
+  return (p >= kHighMemStart && p <= kHighMemEnd) ||
+         (p >= kLowMemStart && p <= kLowMemEnd);
 }
 
 void InstallAtExitHandler() { atexit(HwasanAtExit); }

@@ -19,6 +19,7 @@
 #include "SIRegisterInfo.h"
 #include "llvm/ADT/Statistic.h"
 #include "llvm/Analysis/LegacyDivergenceAnalysis.h"
+#include "llvm/Analysis/OptimizationRemarkEmitter.h"
 #include "llvm/BinaryFormat/ELF.h"
 #include "llvm/CodeGen/Analysis.h"
 #include "llvm/CodeGen/FunctionLoweringInfo.h"
@@ -5962,7 +5963,8 @@ static SDValue constructRetValue(SelectionDAG &DAG,
   EVT LegalReqRetVT = ReqRetVT;
   if (!ReqRetVT.isVector()) {
     if (!Data.getValueType().isInteger())
-      Data = DAG.getNode(ISD::BITCAST, DL, Data.getValueType().changeTypeToInteger(), Data);
+      Data = DAG.getNode(ISD::BITCAST, DL,
+                         Data.getValueType().changeTypeToInteger(), Data);
     Data = DAG.getNode(ISD::TRUNCATE, DL, ReqRetVT.changeTypeToInteger(), Data);
   } else {
     // We need to widen the return vector to a legal type
@@ -7400,12 +7402,14 @@ SDValue SITargetLowering::LowerINTRINSIC_W_CHAIN(SDValue Op,
       return SDValue();
     }
 
+    const bool IsGFX11Plus = AMDGPU::isGFX11Plus(*Subtarget);
     const bool IsA16 = RayDir.getValueType().getVectorElementType() == MVT::f16;
     const bool Is64 = NodePtr.getValueType() == MVT::i64;
     const unsigned NumVDataDwords = 4;
     const unsigned NumVAddrDwords = IsA16 ? (Is64 ? 9 : 8) : (Is64 ? 12 : 11);
+    const unsigned NumVAddrs = IsGFX11Plus ? (IsA16 ? 4 : 5) : NumVAddrDwords;
     const bool UseNSA = Subtarget->hasNSAEncoding() &&
-                        NumVAddrDwords <= Subtarget->getNSAMaxSize();
+                        NumVAddrs <= Subtarget->getNSAMaxSize();
     const unsigned BaseOpcodes[2][2] = {
         {AMDGPU::IMAGE_BVH_INTERSECT_RAY, AMDGPU::IMAGE_BVH_INTERSECT_RAY_a16},
         {AMDGPU::IMAGE_BVH64_INTERSECT_RAY,
@@ -7413,12 +7417,15 @@ SDValue SITargetLowering::LowerINTRINSIC_W_CHAIN(SDValue Op,
     int Opcode;
     if (UseNSA) {
       Opcode = AMDGPU::getMIMGOpcode(BaseOpcodes[Is64][IsA16],
-                                     AMDGPU::MIMGEncGfx10NSA, NumVDataDwords,
-                                     NumVAddrDwords);
+                                     IsGFX11Plus ? AMDGPU::MIMGEncGfx11NSA
+                                                 : AMDGPU::MIMGEncGfx10NSA,
+                                     NumVDataDwords, NumVAddrDwords);
     } else {
-      Opcode = AMDGPU::getMIMGOpcode(
-          BaseOpcodes[Is64][IsA16], AMDGPU::MIMGEncGfx10Default, NumVDataDwords,
-          PowerOf2Ceil(NumVAddrDwords));
+      Opcode = AMDGPU::getMIMGOpcode(BaseOpcodes[Is64][IsA16],
+                                     IsGFX11Plus ? AMDGPU::MIMGEncGfx11Default
+                                                 : AMDGPU::MIMGEncGfx10Default,
+                                     NumVDataDwords,
+                                     PowerOf2Ceil(NumVAddrDwords));
     }
     assert(Opcode != -1);
 
@@ -7451,15 +7458,35 @@ SDValue SITargetLowering::LowerINTRINSIC_W_CHAIN(SDValue Op,
       }
     };
 
-    if (Is64)
-      DAG.ExtractVectorElements(DAG.getBitcast(MVT::v2i32, NodePtr), Ops, 0, 2);
-    else
+    if (UseNSA && IsGFX11Plus) {
       Ops.push_back(NodePtr);
+      Ops.push_back(DAG.getBitcast(MVT::i32, RayExtent));
+      Ops.push_back(RayOrigin);
+      if (IsA16) {
+        SmallVector<SDValue, 3> DirLanes, InvDirLanes, MergedLanes;
+        DAG.ExtractVectorElements(RayDir, DirLanes, 0, 3);
+        DAG.ExtractVectorElements(RayInvDir, InvDirLanes, 0, 3);
+        for (unsigned I = 0; I < 3; ++I) {
+          MergedLanes.push_back(DAG.getBitcast(MVT::i32,
+            DAG.getBuildVector(MVT::v2f16, DL,
+                               { DirLanes[I], InvDirLanes[I] })));
+        }
+        Ops.push_back(DAG.getBuildVector(MVT::v3i32, DL, MergedLanes));
+      } else {
+        Ops.push_back(RayDir);
+        Ops.push_back(RayInvDir);
+      }
+    } else {
+      if (Is64)
+        DAG.ExtractVectorElements(DAG.getBitcast(MVT::v2i32, NodePtr), Ops, 0, 2);
+      else
+        Ops.push_back(NodePtr);
 
-    Ops.push_back(DAG.getBitcast(MVT::i32, RayExtent));
-    packLanes(RayOrigin, true);
-    packLanes(RayDir, true);
-    packLanes(RayInvDir, false);
+      Ops.push_back(DAG.getBitcast(MVT::i32, RayExtent));
+      packLanes(RayOrigin, true);
+      packLanes(RayDir, true);
+      packLanes(RayInvDir, false);
+    }
 
     if (!UseNSA) {
       // Build a single vector containing all the operands so far prepared.
@@ -12181,6 +12208,25 @@ static bool fpModeMatchesGlobalFPAtomicMode(const AtomicRMWInst *RMW) {
 
 TargetLowering::AtomicExpansionKind
 SITargetLowering::shouldExpandAtomicRMWInIR(AtomicRMWInst *RMW) const {
+
+  auto ReportUnsafeHWInst = [&](TargetLowering::AtomicExpansionKind Kind) {
+    OptimizationRemarkEmitter ORE(RMW->getFunction());
+    LLVMContext &Ctx = RMW->getFunction()->getContext();
+    SmallVector<StringRef> SSNs;
+    Ctx.getSyncScopeNames(SSNs);
+    auto MemScope = SSNs[RMW->getSyncScopeID()].empty()
+                        ? "system"
+                        : SSNs[RMW->getSyncScopeID()];
+    ORE.emit([&]() {
+      return OptimizationRemark(DEBUG_TYPE, "Passed", RMW)
+             << "Hardware instruction generated for atomic "
+             << RMW->getOperationName(RMW->getOperation())
+             << " operation at memory scope " << MemScope
+             << " due to an unsafe request.";
+    });
+    return Kind;
+  };
+
   switch (RMW->getOperation()) {
   case AtomicRMWInst::FAdd: {
     Type *Ty = RMW->getType();
@@ -12215,13 +12261,13 @@ SITargetLowering::shouldExpandAtomicRMWInIR(AtomicRMWInst *RMW) const {
             SSID == RMW->getContext().getOrInsertSyncScopeID("one-as"))
           return AtomicExpansionKind::CmpXChg;
 
-        return AtomicExpansionKind::None;
+        return ReportUnsafeHWInst(AtomicExpansionKind::None);
       }
 
       if (AS == AMDGPUAS::FLAT_ADDRESS)
         return AtomicExpansionKind::CmpXChg;
 
-      return RMW->use_empty() ? AtomicExpansionKind::None
+      return RMW->use_empty() ? ReportUnsafeHWInst(AtomicExpansionKind::None)
                               : AtomicExpansionKind::CmpXChg;
     }
 
@@ -12232,11 +12278,13 @@ SITargetLowering::shouldExpandAtomicRMWInIR(AtomicRMWInst *RMW) const {
       if (!Ty->isDoubleTy())
         return AtomicExpansionKind::None;
 
-      return (fpModeMatchesGlobalFPAtomicMode(RMW) ||
-              RMW->getFunction()
-                      ->getFnAttribute("amdgpu-unsafe-fp-atomics")
-                      .getValueAsString() == "true")
-                 ? AtomicExpansionKind::None
+      if (fpModeMatchesGlobalFPAtomicMode(RMW))
+        return AtomicExpansionKind::None;
+
+      return RMW->getFunction()
+                         ->getFnAttribute("amdgpu-unsafe-fp-atomics")
+                         .getValueAsString() == "true"
+                 ? ReportUnsafeHWInst(AtomicExpansionKind::None)
                  : AtomicExpansionKind::CmpXChg;
     }
 

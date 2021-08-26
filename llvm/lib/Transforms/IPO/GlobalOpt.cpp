@@ -703,8 +703,9 @@ static bool AllUsesOfValueWillTrapIfNull(const Value *V,
                !ICmpInst::isSigned(cast<ICmpInst>(U)->getPredicate()) &&
                isa<LoadInst>(U->getOperand(0)) &&
                isa<ConstantPointerNull>(U->getOperand(1))) {
-      assert(isa<GlobalValue>(
-                 cast<LoadInst>(U->getOperand(0))->getPointerOperand()) &&
+      assert(isa<GlobalValue>(cast<LoadInst>(U->getOperand(0))
+                                  ->getPointerOperand()
+                                  ->stripPointerCasts()) &&
              "Should be GlobalVariable");
       // This and only this kind of non-signed ICmpInst is to be replaced with
       // the comparing of the value of the created global init bool later in
@@ -1915,10 +1916,8 @@ static void RemovePreallocated(Function *F) {
       Value *AllocaReplacement = ArgAllocas[AllocArgIndex];
       if (!AllocaReplacement) {
         auto AddressSpace = UseCall->getType()->getPointerAddressSpace();
-        auto *ArgType = UseCall
-                            ->getAttribute(AttributeList::FunctionIndex,
-                                           Attribute::Preallocated)
-                            .getValueAsType();
+        auto *ArgType =
+            UseCall->getFnAttr(Attribute::Preallocated).getValueAsType();
         auto *InsertBefore = PreallocatedSetup->getNextNonDebugInstruction();
         Builder.SetInsertPoint(InsertBefore);
         auto *Alloca =

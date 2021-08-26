@@ -249,8 +249,7 @@ void ThreadSanitizer::initialize(Module &M) {
 
   IRBuilder<> IRB(M.getContext());
   AttributeList Attr;
-  Attr = Attr.addAttribute(M.getContext(), AttributeList::FunctionIndex,
-                           Attribute::NoUnwind);
+  Attr = Attr.addFnAttribute(M.getContext(), Attribute::NoUnwind);
   // Initialize the callbacks.
   TsanFuncEntry = M.getOrInsertFunction("__tsan_func_entry", Attr,
                                         IRB.getVoidTy(), IRB.getInt8PtrTy());
@@ -563,6 +562,12 @@ bool ThreadSanitizer::sanitizeFunction(Function &F,
   // all.
   if (F.hasFnAttribute(Attribute::Naked))
     return false;
+
+  // __attribute__(disable_sanitizer_instrumentation) prevents all kinds of
+  // instrumentation.
+  if (F.hasFnAttribute(Attribute::DisableSanitizerInstrumentation))
+    return false;
+
   initialize(*F.getParent());
   SmallVector<InstructionInfo, 8> AllLoadsAndStores;
   SmallVector<Instruction*, 8> LocalLoadsAndStores;

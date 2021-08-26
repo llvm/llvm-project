@@ -1922,7 +1922,7 @@ void Attributor::createShallowWrapper(Function &F) {
 
   CallInst *CI = CallInst::Create(&F, Args, "", EntryBB);
   CI->setTailCall(true);
-  CI->addAttribute(AttributeList::FunctionIndex, Attribute::NoInline);
+  CI->addFnAttr(Attribute::NoInline);
   ReturnInst::Create(Ctx, CI->getType()->isVoidTy() ? nullptr : CI, EntryBB);
 
   NumFnShallowWrappersCreated++;

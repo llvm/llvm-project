@@ -231,28 +231,28 @@ class OrcRPCEPCMemoryAccess : public ExecutorProcessControl::MemoryAccess {
 public:
   OrcRPCEPCMemoryAccess(OrcRPCEPCImplT &Parent) : Parent(Parent) {}
 
-  void writeUInt8s(ArrayRef<tpctypes::UInt8Write> Ws,
-                   WriteResultFn OnWriteComplete) override {
+  void writeUInt8sAsync(ArrayRef<tpctypes::UInt8Write> Ws,
+                        WriteResultFn OnWriteComplete) override {
     writeViaRPC<orcrpctpc::WriteUInt8s>(Ws, std::move(OnWriteComplete));
   }
 
-  void writeUInt16s(ArrayRef<tpctypes::UInt16Write> Ws,
-                    WriteResultFn OnWriteComplete) override {
+  void writeUInt16sAsync(ArrayRef<tpctypes::UInt16Write> Ws,
+                         WriteResultFn OnWriteComplete) override {
     writeViaRPC<orcrpctpc::WriteUInt16s>(Ws, std::move(OnWriteComplete));
   }
 
-  void writeUInt32s(ArrayRef<tpctypes::UInt32Write> Ws,
-                    WriteResultFn OnWriteComplete) override {
+  void writeUInt32sAsync(ArrayRef<tpctypes::UInt32Write> Ws,
+                         WriteResultFn OnWriteComplete) override {
     writeViaRPC<orcrpctpc::WriteUInt32s>(Ws, std::move(OnWriteComplete));
   }
 
-  void writeUInt64s(ArrayRef<tpctypes::UInt64Write> Ws,
-                    WriteResultFn OnWriteComplete) override {
+  void writeUInt64sAsync(ArrayRef<tpctypes::UInt64Write> Ws,
+                         WriteResultFn OnWriteComplete) override {
     writeViaRPC<orcrpctpc::WriteUInt64s>(Ws, std::move(OnWriteComplete));
   }
 
-  void writeBuffers(ArrayRef<tpctypes::BufferWrite> Ws,
-                    WriteResultFn OnWriteComplete) override {
+  void writeBuffersAsync(ArrayRef<tpctypes::BufferWrite> Ws,
+                         WriteResultFn OnWriteComplete) override {
     writeViaRPC<orcrpctpc::WriteBuffers>(Ws, std::move(OnWriteComplete));
   }
 

@@ -83,6 +83,7 @@ add_clang_library(clangDaemon
   HeaderSourceSwitch.cpp
   HeuristicResolver.cpp
   Hover.cpp
+  IncludeCleaner.cpp
   IncludeFixer.cpp
   InlayHints.cpp
   JSONTransport.cpp

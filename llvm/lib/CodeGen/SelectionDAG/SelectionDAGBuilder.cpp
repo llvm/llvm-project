@@ -69,6 +69,7 @@
 #include "llvm/IR/DataLayout.h"
 #include "llvm/IR/DebugInfoMetadata.h"
 #include "llvm/IR/DerivedTypes.h"
+#include "llvm/IR/DiagnosticInfo.h"
 #include "llvm/IR/Function.h"
 #include "llvm/IR/GetElementPtrTypeIterator.h"
 #include "llvm/IR/InlineAsm.h"
@@ -2000,7 +2001,8 @@ void SelectionDAGBuilder::visitRet(const ReturnInst &I) {
           Flags.setZExt();
 
         for (unsigned i = 0; i < NumParts; ++i) {
-          Outs.push_back(ISD::OutputArg(Flags, Parts[i].getValueType(),
+          Outs.push_back(ISD::OutputArg(Flags,
+                                        Parts[i].getValueType().getSimpleVT(),
                                         VT, /*isfixed=*/true, 0, 0));
           OutVals.push_back(Parts[i]);
         }
@@ -2017,10 +2019,9 @@ void SelectionDAGBuilder::visitRet(const ReturnInst &I) {
     assert(SwiftError.getFunctionArg() && "Need a swift error argument");
     ISD::ArgFlagsTy Flags = ISD::ArgFlagsTy();
     Flags.setSwiftError();
-    Outs.push_back(ISD::OutputArg(Flags, EVT(TLI.getPointerTy(DL)) /*vt*/,
-                                  EVT(TLI.getPointerTy(DL)) /*argvt*/,
-                                  true /*isfixed*/, 1 /*origidx*/,
-                                  0 /*partOffs*/));
+    Outs.push_back(ISD::OutputArg(
+        Flags, /*vt=*/TLI.getPointerTy(DL), /*argvt=*/EVT(TLI.getPointerTy(DL)),
+        /*isfixed=*/true, /*origidx=*/1, /*partOffs=*/0));
     // Create SDNode for the swifterror virtual register.
     OutVals.push_back(
         DAG.getRegister(SwiftError.getOrCreateVRegUseAt(
@@ -5515,7 +5516,7 @@ bool SelectionDAGBuilder::EmitFuncArgumentDbgValue(
   // we've been asked to pursue.
   auto MakeVRegDbgValue = [&](Register Reg, DIExpression *FragExpr,
                               bool Indirect) {
-    if (Reg.isVirtual() && TM.Options.ValueTrackingVariableLocations) {
+    if (Reg.isVirtual() && MF.useDebugInstrRef()) {
       // For VRegs, in instruction referencing mode, create a DBG_INSTR_REF
       // pointing at the VReg, which will be patched up later.
       auto &Inst = TII->get(TargetOpcode::DBG_INSTR_REF);
@@ -7952,6 +7953,15 @@ void SelectionDAGBuilder::visitCall(const CallInst &I) {
   }
 
   if (Function *F = I.getCalledFunction()) {
+    if (F->hasFnAttribute("dontcall")) {
+      unsigned LocCookie = 0;
+      if (MDNode *MD = I.getMetadata("srcloc"))
+        LocCookie =
+            mdconst::extract<ConstantInt>(MD->getOperand(0))->getZExtValue();
+      DiagnosticInfoDontCall D(F->getName(), LocCookie);
+      DAG.getContext()->diagnose(D);
+    }
+
     if (F->isDeclaration()) {
       // Is this an LLVM intrinsic or a target-specific intrinsic?
       unsigned IID = F->getIntrinsicID();
@@ -9705,9 +9715,10 @@ TargetLowering::LowerCallTo(TargetLowering::CallLoweringInfo &CLI) const {
         // if it isn't first piece, alignment must be 1
         // For scalable vectors the scalable part is currently handled
         // by individual targets, so we just use the known minimum size here.
-        ISD::OutputArg MyFlags(Flags, Parts[j].getValueType(), VT,
-                    i < CLI.NumFixedArgs, i,
-                    j*Parts[j].getValueType().getStoreSize().getKnownMinSize());
+        ISD::OutputArg MyFlags(
+            Flags, Parts[j].getValueType().getSimpleVT(), VT,
+            i < CLI.NumFixedArgs, i,
+            j * Parts[j].getValueType().getStoreSize().getKnownMinSize());
         if (NumParts > 1 && j == 0)
           MyFlags.Flags.setSplit();
         else if (j != 0) {

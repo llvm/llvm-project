@@ -1,5 +1,5 @@
 ; REQUIRES: asserts
-; RUN: opt -stats -function-specialization -S < %s 2>&1 | FileCheck %s
+; RUN: opt -stats -function-specialization -S -force-function-specialization < %s 2>&1 | FileCheck %s
 
 ; CHECK: 2 function-specialization - Number of functions specialized
 

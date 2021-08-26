@@ -30,31 +30,30 @@ public:
 
     long operator()(long i, long j) const
     {
-        if (j == 'z')
-            TEST_THROW(A(6));
-        return data_ + i + j;
+      if (j == 122)
+        TEST_THROW(A(6));
+      return data_ + i + j;
     }
 };
 
 void func0(std::packaged_task<double(int, char)> p)
 {
     std::this_thread::sleep_for(std::chrono::milliseconds(500));
-    p.make_ready_at_thread_exit(3, 'a');
+    p.make_ready_at_thread_exit(3, 97);
 }
 
 void func1(std::packaged_task<double(int, char)> p)
 {
     std::this_thread::sleep_for(std::chrono::milliseconds(500));
-    p.make_ready_at_thread_exit(3, 'z');
+    p.make_ready_at_thread_exit(3, 122);
 }
 
 void func2(std::packaged_task<double(int, char)> p)
 {
 #ifndef TEST_HAS_NO_EXCEPTIONS
-    p.make_ready_at_thread_exit(3, 'a');
-    try
-    {
-        p.make_ready_at_thread_exit(3, 'c');
+  p.make_ready_at_thread_exit(3, 97);
+  try {
+    p.make_ready_at_thread_exit(3, 99);
     }
     catch (const std::future_error& e)
     {
@@ -70,7 +69,7 @@ void func3(std::packaged_task<double(int, char)> p)
 #ifndef TEST_HAS_NO_EXCEPTIONS
     try
     {
-        p.make_ready_at_thread_exit(3, 'a');
+      p.make_ready_at_thread_exit(3, 97);
     }
     catch (const std::future_error& e)
     {
@@ -101,7 +100,7 @@ int main(int, char**)
         }
         catch (const A& e)
         {
-            assert(e(3, 'a') == 106);
+          assert(e(3, 97) == 106.0);
         }
     }
     {

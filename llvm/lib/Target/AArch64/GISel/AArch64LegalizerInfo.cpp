@@ -23,6 +23,7 @@
 #include "llvm/CodeGen/TargetOpcodes.h"
 #include "llvm/CodeGen/ValueTypes.h"
 #include "llvm/IR/DerivedTypes.h"
+#include "llvm/IR/Intrinsics.h"
 #include "llvm/IR/IntrinsicsAArch64.h"
 #include "llvm/IR/Type.h"
 #include "llvm/Support/MathExtras.h"
@@ -169,7 +170,10 @@ AArch64LegalizerInfo::AArch64LegalizerInfo(const AArch64Subtarget &ST)
   getActionDefinitionsBuilder({G_SREM, G_UREM, G_SDIVREM, G_UDIVREM})
       .lowerFor({s1, s8, s16, s32, s64});
 
-  getActionDefinitionsBuilder({G_SMULO, G_UMULO}).lowerFor({{s64, s1}});
+  getActionDefinitionsBuilder({G_SMULO, G_UMULO})
+      .widenScalarToNextPow2(0, /*Min = */ 32)
+      .clampScalar(0, s32, s64)
+      .lowerIf(typeIs(1, s1));
 
   getActionDefinitionsBuilder({G_SMULH, G_UMULH}).legalFor({s32, s64});
 
@@ -190,7 +194,8 @@ AArch64LegalizerInfo::AArch64LegalizerInfo(const AArch64Subtarget &ST)
       .widenScalarToNextPow2(0);
 
   getActionDefinitionsBuilder({G_FADD, G_FSUB, G_FMUL, G_FDIV, G_FNEG})
-      .legalFor({s32, s64, v2s64, v4s32, v2s32})
+      .legalFor({MinFPScalar, s32, s64, v2s64, v4s32, v2s32})
+      .clampScalar(0, MinFPScalar, s64)
       .clampNumElements(0, v2s32, v4s32)
       .clampNumElements(0, v2s64, v2s64);
 
@@ -307,6 +312,7 @@ AArch64LegalizerInfo::AArch64LegalizerInfo(const AArch64Subtarget &ST)
       .clampMaxNumElements(0, s16, 8)
       .clampMaxNumElements(0, s32, 4)
       .clampMaxNumElements(0, s64, 2)
+      .clampMaxNumElements(0, p0, 2)
       .customIf(IsPtrVecPred)
       .scalarizeIf(typeIs(0, v2s16), 0);
 
@@ -342,6 +348,7 @@ AArch64LegalizerInfo::AArch64LegalizerInfo(const AArch64Subtarget &ST)
       .clampMaxNumElements(0, s16, 8)
       .clampMaxNumElements(0, s32, 4)
       .clampMaxNumElements(0, s64, 2)
+      .clampMaxNumElements(0, p0, 2)
       .lowerIfMemSizeNotPow2()
       .customIf(IsPtrVecPred)
       .scalarizeIf(typeIs(0, v2s16), 0);
@@ -481,6 +488,7 @@ AArch64LegalizerInfo::AArch64LegalizerInfo(const AArch64Subtarget &ST)
 
   getActionDefinitionsBuilder(G_PTRTOINT)
       .legalForCartesianProduct({s1, s8, s16, s32, s64}, {p0})
+      .legalFor({{v2s64, v2p0}})
       .maxScalar(0, s64)
       .widenScalarToNextPow2(0, /*Min*/ 8);
 
@@ -625,7 +633,10 @@ AArch64LegalizerInfo::AArch64LegalizerInfo(const AArch64Subtarget &ST)
   getActionDefinitionsBuilder(G_CTLZ_ZERO_UNDEF).lower();
 
   // TODO: Custom lowering for v2s32, v4s32, v2s64.
-  getActionDefinitionsBuilder(G_BITREVERSE).legalFor({s32, s64, v8s8, v16s8});
+  getActionDefinitionsBuilder(G_BITREVERSE)
+      .legalFor({s32, s64, v8s8, v16s8})
+      .widenScalarToNextPow2(0, /*Min = */ 32)
+      .clampScalar(0, s32, s64);
 
   getActionDefinitionsBuilder(G_CTTZ_ZERO_UNDEF).lower();
 
@@ -691,6 +702,27 @@ AArch64LegalizerInfo::AArch64LegalizerInfo(const AArch64Subtarget &ST)
       .clampMaxNumElements(1, s32, 4)
       .lower();
 
+  getActionDefinitionsBuilder(G_VECREDUCE_OR)
+      // Try to break down into smaller vectors as long as they're at least 64
+      // bits. This lets us use vector operations for some parts of the
+      // reduction.
+      .fewerElementsIf(
+          [=](const LegalityQuery &Q) {
+            LLT SrcTy = Q.Types[1];
+            if (SrcTy.isScalar())
+              return false;
+            if (!isPowerOf2_32(SrcTy.getNumElements()))
+              return false;
+            // We can usually perform 64b vector operations.
+            return SrcTy.getSizeInBits() > 64;
+          },
+          [=](const LegalityQuery &Q) {
+            LLT SrcTy = Q.Types[1];
+            return std::make_pair(1, SrcTy.divide(2));
+          })
+      .scalarize(1)
+      .lower();
+
   getActionDefinitionsBuilder({G_UADDSAT, G_USUBSAT})
       .lowerIf([=](const LegalityQuery &Q) { return Q.Types[0].isScalar(); });
 
@@ -726,6 +758,20 @@ AArch64LegalizerInfo::AArch64LegalizerInfo(const AArch64Subtarget &ST)
 
   // TODO: Vector types.
   getActionDefinitionsBuilder({G_SADDSAT, G_SSUBSAT}).lowerIf(isScalar(0));
+
+  getActionDefinitionsBuilder(G_ISNAN).lowerIf(
+      any(isVector(1), typeInSet(1, {s16, s32, s64})));
+
+  // TODO: Vector types.
+  getActionDefinitionsBuilder({G_FMAXNUM, G_FMINNUM})
+      .legalFor({MinFPScalar, s32, s64})
+      .libcallFor({s128})
+      .minScalar(0, MinFPScalar);
+
+  // TODO: Libcall support for s128.
+  // TODO: s16 should be legal with full FP16 support.
+  getActionDefinitionsBuilder({G_LROUND, G_LLROUND})
+      .legalFor({{s64, s32}, {s64, s64}});
 
   getLegacyLegalizerInfo().computeTables();
   verify(*ST.getInstrInfo());
@@ -923,6 +969,12 @@ bool AArch64LegalizerInfo::legalizeIntrinsic(LegalizerHelper &Helper,
                    *MF.getMachineMemOperand(MachinePointerInfo(),
                                             MachineMemOperand::MOStore,
                                             VaListSize, Align(PtrSize)));
+    MI.eraseFromParent();
+    return true;
+  }
+  case Intrinsic::get_dynamic_area_offset: {
+    MachineIRBuilder &MIB = Helper.MIRBuilder;
+    MIB.buildConstant(MI.getOperand(0).getReg(), 0);
     MI.eraseFromParent();
     return true;
   }

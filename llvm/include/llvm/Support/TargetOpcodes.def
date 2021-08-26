@@ -652,6 +652,9 @@ HANDLE_TARGET_OPCODE(G_UMAX)
 /// Generic integer absolute value.
 HANDLE_TARGET_OPCODE(G_ABS)
 
+HANDLE_TARGET_OPCODE(G_LROUND)
+HANDLE_TARGET_OPCODE(G_LLROUND)
+
 /// Generic BRANCH instruction. This is an unconditional branch.
 HANDLE_TARGET_OPCODE(G_BR)
 
@@ -769,10 +772,12 @@ HANDLE_TARGET_OPCODE(G_VECREDUCE_UMIN)
 HANDLE_TARGET_OPCODE(G_SBFX)
 HANDLE_TARGET_OPCODE(G_UBFX)
 
+HANDLE_TARGET_OPCODE(G_ISNAN)
+
 /// Marker for the end of the generic opcode.
 /// This is used to check if an opcode is in the range of the
 /// generic opcodes.
-HANDLE_TARGET_OPCODE_MARKER(PRE_ISEL_GENERIC_OPCODE_END, G_UBFX)
+HANDLE_TARGET_OPCODE_MARKER(PRE_ISEL_GENERIC_OPCODE_END, G_ISNAN)
 
 /// BUILTIN_OP_END - This must be the last enum value in this list.
 /// The target-specific post-isel opcode values start here.

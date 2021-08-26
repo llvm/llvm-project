@@ -21,10 +21,12 @@ namespace jitlink {
 namespace ELF_x86_64_Edges {
 enum ELFX86RelocationKind : Edge::Kind {
   Branch32 = Edge::FirstRelocation,
+  Pointer32Signed,
   Pointer64,
   PCRel32,
   PCRel32GOTLoad,
-  PCRel32REXGOTLoad,
+  PCRel32GOTLoadRelaxable,
+  PCRel32REXGOTLoadRelaxable,
   PCRel64GOT,
   GOTOFF64,
   GOT64,

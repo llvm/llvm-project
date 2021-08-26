@@ -10,10 +10,12 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include "mlir/Dialect/Affine/IR/AffineOps.h"
 #include "mlir/Dialect/Linalg/IR/LinalgOps.h"
 #include "mlir/Dialect/Linalg/Utils/Utils.h"
 #include "mlir/Dialect/MemRef/IR/MemRef.h"
 #include "mlir/Dialect/SCF/SCF.h"
+#include "mlir/Dialect/SCF/Transforms.h"
 #include "mlir/Dialect/SparseTensor/IR/SparseTensor.h"
 #include "mlir/Dialect/SparseTensor/Transforms/Passes.h"
 #include "mlir/Dialect/SparseTensor/Utils/Merger.h"
@@ -282,17 +284,11 @@ static bool genBuffers(Merger &merger, CodeGen &codegen,
         codegen.indices[tensor][idx] =
             rewriter.create<ToIndicesOp>(loc, indTp, t->get(), dim);
       }
-      // Find lower and upper bound in current dimension. Note that a
-      // permuted encoding queries static type dimensions accordingly,
-      // but queries dynamic type dimensions in the generated order.
-      Value up;
+      // Find upper bound in current dimension.
       unsigned p = perm(enc, d);
-      if (shape[p] == MemRefType::kDynamicSize) {
-        up = rewriter.create<tensor::DimOp>(loc, t->get(), d);
+      Value up = linalg::createOrFoldDimOp(rewriter, loc, t->get(), p);
+      if (shape[p] == MemRefType::kDynamicSize)
         args.push_back(up);
-      } else {
-        up = rewriter.create<ConstantIndexOp>(loc, shape[p]);
-      }
       assert(codegen.highs[tensor][idx] == nullptr);
       codegen.sizes[idx] = codegen.highs[tensor][idx] = up;
     }
@@ -354,7 +350,13 @@ static Value genVectorMask(CodeGen &codegen, PatternRewriter &rewriter,
   // during vector execution. Here we rely on subsequent loop optimizations to
   // avoid executing the mask in all iterations, for example, by splitting the
   // loop into an unconditional vector loop and a scalar cleanup loop.
-  Value end = rewriter.create<SubIOp>(loc, hi, iv);
+  auto minMap = AffineMap::get(
+      /*dimCount=*/2, /*symbolCount=*/1,
+      {rewriter.getAffineSymbolExpr(0),
+       rewriter.getAffineDimExpr(0) - rewriter.getAffineDimExpr(1)},
+      rewriter.getContext());
+  Value end =
+      rewriter.createOrFold<AffineMinOp>(loc, minMap, ValueRange{hi, iv, step});
   return rewriter.create<vector::CreateMaskOp>(loc, mtp, end);
 }
 

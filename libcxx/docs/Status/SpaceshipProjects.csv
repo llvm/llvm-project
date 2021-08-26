@@ -1,0 +1,77 @@
+Section,Description,Dependencies,Assignee,Complete
+[cmp.concept],"| `three_way_comparable <https://reviews.llvm.org/D103478>`_
+| `three_way_comparable_with <https://reviews.llvm.org/D103478>`_",None,Ruslan Arutyunyan,In progress
+[cmp.result],| `compare_three_way_result <https://reviews.llvm.org/D103581>`_,None,Arthur O'Dwyer,In progress
+[expos.only.func],"| `synth-three-way <https://reviews.llvm.org/D107721>`_
+| `synth-three-way-result <https://reviews.llvm.org/D107721>`_",[cmp.concept],Kent Ross,In progress
+[comparisons.three.way],| `compare_three_way <https://reviews.llvm.org/D80899>`_,[cmp.concept],Christopher Di Bella,In progress
+[cmp.alg],"| `strong_order <https://reviews.llvm.org/D107036>`_
+| `weak_order <https://reviews.llvm.org/D107036>`_
+| `partial_order <https://reviews.llvm.org/D107036>`_",None,Arthur O'Dwyer,In progress
+[alg.three.way],| `lexicographical_compare_three_way <https://reviews.llvm.org/D80902>`_,[comparisons.three.way],Christopher Di Bella,In progress
+[coroutine.handle.compare],| coroutine_handle,[comparisons.three.way],Unassigned,Not started
+[pairs.spec],| `pair <https://reviews.llvm.org/D107721>`_,[expos.only.func],Kent Ross,In progress
+[syserr.errcat.nonvirtuals],| error_category,[comparisons.three.way],Unassigned,Not started
+[syserr.compare],"| error_code
+| error_condition",None,Unassigned,Not started
+[tuple.rel],| `tuple <https://reviews.llvm.org/D108250>`_,[expos.only.func],Kent Ross,In progress
+"[optional.relops]
+[optional.nullops]
+[optional.comp.with.t]","| optional
+| nullopt",None,Kent Ross,In progress
+"[variant.relops]
+[variant.monostate.relops]","| monostate
+| variant",None,Kent Ross,In progress
+[unique.ptr.special],| unique_ptr,[comparisons.three.way],Unassigned,Not started
+[util.smartptr.shared.cmp],| shared_ptr,[comparisons.three.way],Unassigned,Not started
+[type.index.members],| type_index,None,Unassigned,Not started
+[stacktrace.entry.cmp],| stacktrace_entry,None,Unassigned,Not started
+[stacktrace.basic.cmp],| basic_stacktrace,[alg.three.way],Unassigned,Not started
+[string.cmp],| `basic_string <https://reviews.llvm.org/D80895>`_,None,Christopher Di Bella,In progress
+[string.view.comparison],| `basic_string_view <https://reviews.llvm.org/D80891>`_,None,Christopher Di Bella,In progress
+[array.syn],| array,[expos.only.func],Unassigned,Not started
+[deque.syn],| deque,[expos.only.func],Unassigned,Not started
+[forward.list.syn],| forward_list,[expos.only.func],Unassigned,Not started
+[list.syn],| list,[expos.only.func],Unassigned,Not started
+[vector.syn],| vector,[expos.only.func],Unassigned,Not started
+[associative.map.syn],"| map
+| multimap",[expos.only.func],Unassigned,Not started
+[associative.set.syn],"| multiset
+| set",[expos.only.func],Unassigned,Not started
+[queue.ops],| queue,None,Unassigned,Not started
+[stack.ops],| stack,None,Unassigned,Not started
+[reverse.iter.cmp],| reverse_iterator,None,Unassigned,Not started
+[move.iter.cmp],| move_iterator,None,Unassigned,Not started
+[counted.iter.cmp],| counted_iterator,None,Unassigned,Not started
+[range.iota.iterator],| ranges::iota_view::iterator,[concepts.cmp],Unassigned,Not started
+[range.transform.iterator],| ranges::transform_view::iterator,[concepts.cmp],Unassigned,Not started
+[range.elements.iterator],| ranges::elements_view::iterator,[concepts.cmp],Unassigned,Not started
+"[time.duration.comparisons]
+[time.point.comparisons]
+[time.cal.day.nonmembers]
+[time.cal.month.nonmembers]
+[time.cal.year.nonmembers]
+[time.cal.md.nonmembers]
+[time.cal.mdlast]
+[time.cal.ym.nonmembers]
+[time.cal.ymd.nonmembers]
+[time.cal.ymdlast.nonmembers]
+[time.zone.nonmembers]
+[time.zone.leap.nonmembers]
+[time.zone.link.nonmembers]","| chrono::duration
+| chrono::time_point
+| chrono::day
+| chrono::month
+| chrono::year
+| chrono::month_day
+| chrono::month_day_last
+| chrono::year_month
+| chrono::year_month_day
+| chrono::year_month_day_last
+| chrono::time_zone
+| chrono::leap_second
+| chrono::time_zone_link",None,Unassigned,Not started
+[fs.path.nonmember],| filesystem::path,None,Unassigned,Not started
+[fs.dir.entry.obs],| filesystem::directory_entry,None,Unassigned,Not started
+[re.submatch.op],| sub_match,None,Unassigned,Not started
+[thread.thread.id],| thread::id,None,Unassigned,Not started

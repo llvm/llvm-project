@@ -102,7 +102,10 @@ const unsigned struct_kernel_stat64_sz = 104;
 #elif SANITIZER_RISCV64
 const unsigned struct_kernel_stat_sz = 128;
 const unsigned struct_kernel_stat64_sz = 0;  // RISCV64 does not use stat64
-#endif
+#    elif defined(__hexagon__)
+const unsigned struct_kernel_stat_sz = 128;
+const unsigned struct_kernel_stat64_sz = 0;
+#    endif
 struct __sanitizer_perf_event_attr {
   unsigned type;
   unsigned size;
@@ -367,7 +370,7 @@ struct __sanitizer_group {
   char **gr_mem;
 };
 
-#if defined(__x86_64__) && !defined(_LP64)
+#  if (defined(__x86_64__) && !defined(_LP64)) || defined(__hexagon__)
 typedef long long __sanitizer_time_t;
 #else
 typedef long __sanitizer_time_t;
@@ -475,23 +478,23 @@ struct __sanitizer_dirent {
   unsigned short d_reclen;
   // more fields that we don't care about
 };
-#elif SANITIZER_ANDROID || defined(__x86_64__)
+#  elif SANITIZER_ANDROID || defined(__x86_64__) || defined(__hexagon__)
 struct __sanitizer_dirent {
   unsigned long long d_ino;
   unsigned long long d_off;
   unsigned short d_reclen;
   // more fields that we don't care about
 };
-#else
+#  else
 struct __sanitizer_dirent {
   uptr d_ino;
   uptr d_off;
   unsigned short d_reclen;
   // more fields that we don't care about
 };
-#endif
+#  endif
 
-#if SANITIZER_LINUX && !SANITIZER_ANDROID
+#  if SANITIZER_LINUX && !SANITIZER_ANDROID
 struct __sanitizer_dirent64 {
   unsigned long long d_ino;
   unsigned long long d_off;
@@ -511,8 +514,8 @@ typedef int __sanitizer_clockid_t;
 #endif
 
 #if SANITIZER_LINUX
-#if defined(_LP64) || defined(__x86_64__) || defined(__powerpc__) || \
-    defined(__mips__)
+#    if defined(_LP64) || defined(__x86_64__) || defined(__powerpc__) || \
+        defined(__mips__) || defined(__hexagon__)
 typedef unsigned __sanitizer___kernel_uid_t;
 typedef unsigned __sanitizer___kernel_gid_t;
 #else
@@ -772,6 +775,10 @@ extern int glob_altdirfunc;
 #endif  // !SANITIZER_ANDROID
 
 extern unsigned path_max;
+
+#  if !SANITIZER_ANDROID
+extern const int wordexp_wrde_dooffs;
+#  endif  // !SANITIZER_ANDROID
 
 struct __sanitizer_wordexp_t {
   uptr we_wordc;

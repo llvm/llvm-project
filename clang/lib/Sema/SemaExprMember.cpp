@@ -564,10 +564,7 @@ bool Sema::CheckQualifiedMemberReference(Expr *BaseExpr,
       return false;
 
     // Note that we use the DC of the decl, not the underlying decl.
-    DeclContext *DC = (*I)->getDeclContext();
-    while (DC->isTransparentContext())
-      DC = DC->getParent();
-
+    DeclContext *DC = (*I)->getDeclContext()->getNonTransparentContext();
     if (!DC->isRecord())
       continue;
 

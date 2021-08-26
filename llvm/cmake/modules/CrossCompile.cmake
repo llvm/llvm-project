@@ -103,6 +103,7 @@ function(build_native_tool target output_path_var)
   else()
     set(output_path "${${PROJECT_NAME}_NATIVE_BUILD}/bin/${target}")
   endif()
+  set(output_path ${output_path}${LLVM_HOST_EXECUTABLE_SUFFIX})
 
   llvm_ExternalProject_BuildCmd(build_cmd ${target} ${${PROJECT_NAME}_NATIVE_BUILD}
                                 CONFIGURATION Release)

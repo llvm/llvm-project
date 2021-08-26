@@ -353,6 +353,8 @@ public:
 
   LangAS getCUDABuiltinAddressSpace(unsigned AS) const override {
     switch (AS) {
+    case 0:
+      return LangAS::Default;
     case 1:
       return LangAS::cuda_device;
     case 3:
@@ -366,6 +368,10 @@ public:
 
   llvm::Optional<LangAS> getConstantAddressSpace() const override {
     return getLangASFromTargetAS(Constant);
+  }
+
+  const llvm::omp::GV &getGridValue() const override {
+    return llvm::omp::AMDGPUGridValues;
   }
 
   /// \returns Target specific vtbl ptr address space.

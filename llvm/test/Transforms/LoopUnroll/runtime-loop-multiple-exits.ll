@@ -1495,61 +1495,202 @@ define i32 @hdr_latch_same_exit(i32* nocapture %a, i64 %n, i1 %cond) {
 ;
 ; PROLOG-LABEL: @hdr_latch_same_exit(
 ; PROLOG-NEXT:  entry:
+; PROLOG-NEXT:    %0 = add i64 %n, -1
+; PROLOG-NEXT:    %xtraiter = and i64 %n, 7
+; PROLOG-NEXT:    %lcmp.mod = icmp ne i64 %xtraiter, 0
+; PROLOG-NEXT:    br i1 %lcmp.mod, label %header.prol.preheader, label %header.prol.loopexit
+; PROLOG:       header.prol.preheader:
+; PROLOG-NEXT:    br label %header.prol
+; PROLOG:       header.prol:
+; PROLOG-NEXT:    %indvars.iv.prol = phi i64 [ %indvars.iv.next.prol, %latch.prol ], [ 0, %header.prol.preheader ]
+; PROLOG-NEXT:    %sum.02.prol = phi i32 [ %add.prol, %latch.prol ], [ 0, %header.prol.preheader ]
+; PROLOG-NEXT:    %prol.iter = phi i64 [ %xtraiter, %header.prol.preheader ], [ %prol.iter.sub, %latch.prol ]
+; PROLOG-NEXT:    br i1 %cond, label %latchExit.unr-lcssa.loopexit1, label %for.exiting_block.prol
+; PROLOG:       for.exiting_block.prol:
+; PROLOG-NEXT:    %cmp.prol = icmp eq i64 %n, 42
+; PROLOG-NEXT:    br i1 %cmp.prol, label %for.exit2.loopexit3, label %latch.prol
+; PROLOG:       latch.prol:
+; PROLOG-NEXT:    %arrayidx.prol = getelementptr inbounds i32, i32* %a, i64 %indvars.iv.prol
+; PROLOG-NEXT:    %1 = load i32, i32* %arrayidx.prol, align 4
+; PROLOG-NEXT:    %add.prol = add nsw i32 %1, %sum.02.prol
+; PROLOG-NEXT:    %indvars.iv.next.prol = add i64 %indvars.iv.prol, 1
+; PROLOG-NEXT:    %exitcond.prol = icmp eq i64 %indvars.iv.next.prol, %n
+; PROLOG-NEXT:    %prol.iter.sub = sub i64 %prol.iter, 1
+; PROLOG-NEXT:    %prol.iter.cmp = icmp ne i64 %prol.iter.sub, 0
+; PROLOG-NEXT:    br i1 %prol.iter.cmp, label %header.prol, label %header.prol.loopexit.unr-lcssa, !llvm.loop !4
+; PROLOG:       header.prol.loopexit.unr-lcssa:
+; PROLOG-NEXT:    %result.unr.ph = phi i32 [ %add.prol, %latch.prol ]
+; PROLOG-NEXT:    %indvars.iv.unr.ph = phi i64 [ %indvars.iv.next.prol, %latch.prol ]
+; PROLOG-NEXT:    %sum.02.unr.ph = phi i32 [ %add.prol, %latch.prol ]
+; PROLOG-NEXT:    br label %header.prol.loopexit
+; PROLOG:       header.prol.loopexit:
+; PROLOG-NEXT:    %result.unr = phi i32 [ undef, %entry ], [ %result.unr.ph, %header.prol.loopexit.unr-lcssa ]
+; PROLOG-NEXT:    %indvars.iv.unr = phi i64 [ 0, %entry ], [ %indvars.iv.unr.ph, %header.prol.loopexit.unr-lcssa ]
+; PROLOG-NEXT:    %sum.02.unr = phi i32 [ 0, %entry ], [ %sum.02.unr.ph, %header.prol.loopexit.unr-lcssa ]
+; PROLOG-NEXT:    %2 = icmp ult i64 %0, 7
+; PROLOG-NEXT:    br i1 %2, label %latchExit, label %entry.new
+; PROLOG:       entry.new:
 ; PROLOG-NEXT:    br label %header
 ; PROLOG:       header:
-; PROLOG-NEXT:    %indvars.iv = phi i64 [ %indvars.iv.next, %latch ], [ 0, %entry ]
-; PROLOG-NEXT:    %sum.02 = phi i32 [ %add, %latch ], [ 0, %entry ]
-; PROLOG-NEXT:    br i1 %cond, label %latchExit, label %for.exiting_block
+; PROLOG-NEXT:    %indvars.iv = phi i64 [ %indvars.iv.unr, %entry.new ], [ %indvars.iv.next.7, %latch.7 ]
+; PROLOG-NEXT:    %sum.02 = phi i32 [ %sum.02.unr, %entry.new ], [ %add.7, %latch.7 ]
+; PROLOG-NEXT:    br i1 %cond, label %latchExit.unr-lcssa.loopexit, label %for.exiting_block
 ; PROLOG:       for.exiting_block:
 ; PROLOG-NEXT:    %cmp = icmp eq i64 %n, 42
-; PROLOG-NEXT:    br i1 %cmp, label %for.exit2, label %latch
+; PROLOG-NEXT:    br i1 %cmp, label %for.exit2.loopexit, label %latch
 ; PROLOG:       latch:
 ; PROLOG-NEXT:    %arrayidx = getelementptr inbounds i32, i32* %a, i64 %indvars.iv
-; PROLOG-NEXT:    %0 = load i32, i32* %arrayidx, align 4
-; PROLOG-NEXT:    %add = add nsw i32 %0, %sum.02
+; PROLOG-NEXT:    %3 = load i32, i32* %arrayidx, align 4
+; PROLOG-NEXT:    %add = add nsw i32 %3, %sum.02
 ; PROLOG-NEXT:    %indvars.iv.next = add i64 %indvars.iv, 1
-; PROLOG-NEXT:    %exitcond = icmp eq i64 %indvars.iv.next, %n
-; PROLOG-NEXT:    br i1 %exitcond, label %latchExit, label %header
+; PROLOG-NEXT:    br i1 %cond, label %latchExit.unr-lcssa.loopexit, label %for.exiting_block.1
+; PROLOG:       latchExit.unr-lcssa.loopexit:
+; PROLOG-NEXT:    %result.ph.ph = phi i32 [ 0, %header ], [ 0, %latch ], [ 0, %latch.1 ], [ 0, %latch.2 ], [ 0, %latch.3 ], [ 0, %latch.4 ], [ 0, %latch.5 ], [ 0, %latch.6 ], [ %add.7, %latch.7 ]
+; PROLOG-NEXT:    br label %latchExit.unr-lcssa
+; PROLOG:       latchExit.unr-lcssa.loopexit1:
+; PROLOG-NEXT:    %result.ph.ph2 = phi i32 [ 0, %header.prol ]
+; PROLOG-NEXT:    br label %latchExit.unr-lcssa
+; PROLOG:       latchExit.unr-lcssa:
+; PROLOG-NEXT:    %result.ph = phi i32 [ %result.ph.ph, %latchExit.unr-lcssa.loopexit ], [ %result.ph.ph2, %latchExit.unr-lcssa.loopexit1 ]
+; PROLOG-NEXT:    br label %latchExit
 ; PROLOG:       latchExit:
-; PROLOG-NEXT:    %result = phi i32 [ 0, %header ], [ %add, %latch ]
+; PROLOG-NEXT:    %result = phi i32 [ %result.unr, %header.prol.loopexit ], [ %result.ph, %latchExit.unr-lcssa ]
 ; PROLOG-NEXT:    ret i32 %result
+; PROLOG:       for.exit2.loopexit:
+; PROLOG-NEXT:    br label %for.exit2
+; PROLOG:       for.exit2.loopexit3:
+; PROLOG-NEXT:    br label %for.exit2
 ; PROLOG:       for.exit2:
 ; PROLOG-NEXT:    ret i32 42
+; PROLOG:       for.exiting_block.1:
+; PROLOG-NEXT:    %cmp.1 = icmp eq i64 %n, 42
+; PROLOG-NEXT:    br i1 %cmp.1, label %for.exit2.loopexit, label %latch.1
+; PROLOG:       latch.1:
+; PROLOG-NEXT:    %arrayidx.1 = getelementptr inbounds i32, i32* %a, i64 %indvars.iv.next
+; PROLOG-NEXT:    %4 = load i32, i32* %arrayidx.1, align 4
+; PROLOG-NEXT:    %add.1 = add nsw i32 %4, %add
+; PROLOG-NEXT:    %indvars.iv.next.1 = add i64 %indvars.iv.next, 1
+; PROLOG-NEXT:    br i1 %cond, label %latchExit.unr-lcssa.loopexit, label %for.exiting_block.2
+; PROLOG:       for.exiting_block.2:
+; PROLOG-NEXT:    %cmp.2 = icmp eq i64 %n, 42
+; PROLOG-NEXT:    br i1 %cmp.2, label %for.exit2.loopexit, label %latch.2
+; PROLOG:       latch.2:
+; PROLOG-NEXT:    %arrayidx.2 = getelementptr inbounds i32, i32* %a, i64 %indvars.iv.next.1
+; PROLOG-NEXT:    %5 = load i32, i32* %arrayidx.2, align 4
+; PROLOG-NEXT:    %add.2 = add nsw i32 %5, %add.1
+; PROLOG-NEXT:    %indvars.iv.next.2 = add i64 %indvars.iv.next.1, 1
+; PROLOG-NEXT:    br i1 %cond, label %latchExit.unr-lcssa.loopexit, label %for.exiting_block.3
+; PROLOG:       for.exiting_block.3:
+; PROLOG-NEXT:    %cmp.3 = icmp eq i64 %n, 42
+; PROLOG-NEXT:    br i1 %cmp.3, label %for.exit2.loopexit, label %latch.3
+; PROLOG:       latch.3:
+; PROLOG-NEXT:    %arrayidx.3 = getelementptr inbounds i32, i32* %a, i64 %indvars.iv.next.2
+; PROLOG-NEXT:    %6 = load i32, i32* %arrayidx.3, align 4
+; PROLOG-NEXT:    %add.3 = add nsw i32 %6, %add.2
+; PROLOG-NEXT:    %indvars.iv.next.3 = add i64 %indvars.iv.next.2, 1
+; PROLOG-NEXT:    br i1 %cond, label %latchExit.unr-lcssa.loopexit, label %for.exiting_block.4
+; PROLOG:       for.exiting_block.4:
+; PROLOG-NEXT:    %cmp.4 = icmp eq i64 %n, 42
+; PROLOG-NEXT:    br i1 %cmp.4, label %for.exit2.loopexit, label %latch.4
+; PROLOG:       latch.4:
+; PROLOG-NEXT:    %arrayidx.4 = getelementptr inbounds i32, i32* %a, i64 %indvars.iv.next.3
+; PROLOG-NEXT:    %7 = load i32, i32* %arrayidx.4, align 4
+; PROLOG-NEXT:    %add.4 = add nsw i32 %7, %add.3
+; PROLOG-NEXT:    %indvars.iv.next.4 = add i64 %indvars.iv.next.3, 1
+; PROLOG-NEXT:    br i1 %cond, label %latchExit.unr-lcssa.loopexit, label %for.exiting_block.5
+; PROLOG:       for.exiting_block.5:
+; PROLOG-NEXT:    %cmp.5 = icmp eq i64 %n, 42
+; PROLOG-NEXT:    br i1 %cmp.5, label %for.exit2.loopexit, label %latch.5
+; PROLOG:       latch.5:
+; PROLOG-NEXT:    %arrayidx.5 = getelementptr inbounds i32, i32* %a, i64 %indvars.iv.next.4
+; PROLOG-NEXT:    %8 = load i32, i32* %arrayidx.5, align 4
+; PROLOG-NEXT:    %add.5 = add nsw i32 %8, %add.4
+; PROLOG-NEXT:    %indvars.iv.next.5 = add i64 %indvars.iv.next.4, 1
+; PROLOG-NEXT:    br i1 %cond, label %latchExit.unr-lcssa.loopexit, label %for.exiting_block.6
+; PROLOG:       for.exiting_block.6:
+; PROLOG-NEXT:    %cmp.6 = icmp eq i64 %n, 42
+; PROLOG-NEXT:    br i1 %cmp.6, label %for.exit2.loopexit, label %latch.6
+; PROLOG:       latch.6:
+; PROLOG-NEXT:    %arrayidx.6 = getelementptr inbounds i32, i32* %a, i64 %indvars.iv.next.5
+; PROLOG-NEXT:    %9 = load i32, i32* %arrayidx.6, align 4
+; PROLOG-NEXT:    %add.6 = add nsw i32 %9, %add.5
+; PROLOG-NEXT:    %indvars.iv.next.6 = add i64 %indvars.iv.next.5, 1
+; PROLOG-NEXT:    br i1 %cond, label %latchExit.unr-lcssa.loopexit, label %for.exiting_block.7
+; PROLOG:       for.exiting_block.7:
+; PROLOG-NEXT:    %cmp.7 = icmp eq i64 %n, 42
+; PROLOG-NEXT:    br i1 %cmp.7, label %for.exit2.loopexit, label %latch.7
+; PROLOG:       latch.7:
+; PROLOG-NEXT:    %arrayidx.7 = getelementptr inbounds i32, i32* %a, i64 %indvars.iv.next.6
+; PROLOG-NEXT:    %10 = load i32, i32* %arrayidx.7, align 4
+; PROLOG-NEXT:    %add.7 = add nsw i32 %10, %add.6
+; PROLOG-NEXT:    %indvars.iv.next.7 = add i64 %indvars.iv.next.6, 1
+; PROLOG-NEXT:    %exitcond.7 = icmp eq i64 %indvars.iv.next.7, %n
+; PROLOG-NEXT:    br i1 %exitcond.7, label %latchExit.unr-lcssa.loopexit, label %header
 ;
 ; PROLOG-BLOCK-LABEL: @hdr_latch_same_exit(
 ; PROLOG-BLOCK-NEXT:  entry:
+; PROLOG-BLOCK-NEXT:    %0 = add i64 %n, -1
+; PROLOG-BLOCK-NEXT:    %xtraiter = and i64 %n, 1
+; PROLOG-BLOCK-NEXT:    %lcmp.mod = icmp ne i64 %xtraiter, 0
+; PROLOG-BLOCK-NEXT:    br i1 %lcmp.mod, label %header.prol.preheader, label %header.prol.loopexit
+; PROLOG-BLOCK:       header.prol.preheader:
+; PROLOG-BLOCK-NEXT:    br label %header.prol
+; PROLOG-BLOCK:       header.prol:
+; PROLOG-BLOCK-NEXT:    br i1 %cond, label %latchExit.unr-lcssa, label %for.exiting_block.prol
+; PROLOG-BLOCK:       for.exiting_block.prol:
+; PROLOG-BLOCK-NEXT:    %cmp.prol = icmp eq i64 %n, 42
+; PROLOG-BLOCK-NEXT:    br i1 %cmp.prol, label %for.exit2, label %latch.prol
+; PROLOG-BLOCK:       latch.prol:
+; PROLOG-BLOCK-NEXT:    %arrayidx.prol = getelementptr inbounds i32, i32* %a, i64 0
+; PROLOG-BLOCK-NEXT:    %1 = load i32, i32* %arrayidx.prol, align 4
+; PROLOG-BLOCK-NEXT:    %add.prol = add nsw i32 %1, 0
+; PROLOG-BLOCK-NEXT:    %indvars.iv.next.prol = add i64 0, 1
+; PROLOG-BLOCK-NEXT:    %exitcond.prol = icmp eq i64 %indvars.iv.next.prol, %n
+; PROLOG-BLOCK-NEXT:    br label %header.prol.loopexit
+; PROLOG-BLOCK:       header.prol.loopexit:
+; PROLOG-BLOCK-NEXT:    %result.unr = phi i32 [ undef, %entry ], [ %add.prol, %latch.prol ]
+; PROLOG-BLOCK-NEXT:    %indvars.iv.unr = phi i64 [ 0, %entry ], [ %indvars.iv.next.prol, %latch.prol ]
+; PROLOG-BLOCK-NEXT:    %sum.02.unr = phi i32 [ 0, %entry ], [ %add.prol, %latch.prol ]
+; PROLOG-BLOCK-NEXT:    %2 = icmp ult i64 %0, 1
+; PROLOG-BLOCK-NEXT:    br i1 %2, label %latchExit, label %entry.new
+; PROLOG-BLOCK:       entry.new:
 ; PROLOG-BLOCK-NEXT:    br label %header
 ; PROLOG-BLOCK:       header:
-; PROLOG-BLOCK-NEXT:    %indvars.iv = phi i64 [ 0, %entry ], [ %indvars.iv.next.1, %latch.1 ]
-; PROLOG-BLOCK-NEXT:    %sum.02 = phi i32 [ 0, %entry ], [ %add.1, %latch.1 ]
-; PROLOG-BLOCK-NEXT:    br i1 %cond, label %latchExit, label %for.exiting_block
+; PROLOG-BLOCK-NEXT:    %indvars.iv = phi i64 [ %indvars.iv.unr, %entry.new ], [ %indvars.iv.next.1, %latch.1 ]
+; PROLOG-BLOCK-NEXT:    %sum.02 = phi i32 [ %sum.02.unr, %entry.new ], [ %add.1, %latch.1 ]
+; PROLOG-BLOCK-NEXT:    br i1 %cond, label %latchExit.unr-lcssa.loopexit, label %for.exiting_block
 ; PROLOG-BLOCK:       for.exiting_block:
 ; PROLOG-BLOCK-NEXT:    %cmp = icmp eq i64 %n, 42
-; PROLOG-BLOCK-NEXT:    br i1 %cmp, label %for.exit2, label %latch
+; PROLOG-BLOCK-NEXT:    br i1 %cmp, label %for.exit2.loopexit, label %latch
 ; PROLOG-BLOCK:       latch:
 ; PROLOG-BLOCK-NEXT:    %arrayidx = getelementptr inbounds i32, i32* %a, i64 %indvars.iv
-; PROLOG-BLOCK-NEXT:    %0 = load i32, i32* %arrayidx, align 4
-; PROLOG-BLOCK-NEXT:    %add = add nsw i32 %0, %sum.02
-; PROLOG-BLOCK-NEXT:    %indvars.iv.next = add nuw nsw i64 %indvars.iv, 1
-; PROLOG-BLOCK-NEXT:    %exitcond = icmp eq i64 %indvars.iv.next, %n
-; PROLOG-BLOCK-NEXT:    br i1 %exitcond, label %latchExit, label %header.1
+; PROLOG-BLOCK-NEXT:    %3 = load i32, i32* %arrayidx, align 4
+; PROLOG-BLOCK-NEXT:    %add = add nsw i32 %3, %sum.02
+; PROLOG-BLOCK-NEXT:    %indvars.iv.next = add i64 %indvars.iv, 1
+; PROLOG-BLOCK-NEXT:    br i1 %cond, label %latchExit.unr-lcssa.loopexit, label %for.exiting_block.1
+; PROLOG-BLOCK:       latchExit.unr-lcssa.loopexit:
+; PROLOG-BLOCK-NEXT:    %result.ph.ph = phi i32 [ 0, %header ], [ 0, %latch ], [ %add.1, %latch.1 ]
+; PROLOG-BLOCK-NEXT:    br label %latchExit.unr-lcssa
+; PROLOG-BLOCK:       latchExit.unr-lcssa:
+; PROLOG-BLOCK-NEXT:    %result.ph = phi i32 [ 0, %header.prol ], [ %result.ph.ph, %latchExit.unr-lcssa.loopexit ]
+; PROLOG-BLOCK-NEXT:    br label %latchExit
 ; PROLOG-BLOCK:       latchExit:
-; PROLOG-BLOCK-NEXT:    %result = phi i32 [ 0, %header ], [ %add, %latch ], [ 0, %header.1 ], [ %add.1, %latch.1 ]
+; PROLOG-BLOCK-NEXT:    %result = phi i32 [ %result.unr, %header.prol.loopexit ], [ %result.ph, %latchExit.unr-lcssa ]
 ; PROLOG-BLOCK-NEXT:    ret i32 %result
+; PROLOG-BLOCK:       for.exit2.loopexit:
+; PROLOG-BLOCK-NEXT:    br label %for.exit2
 ; PROLOG-BLOCK:       for.exit2:
 ; PROLOG-BLOCK-NEXT:    ret i32 42
-; PROLOG-BLOCK:       header.1:
-; PROLOG-BLOCK-NEXT:    br i1 %cond, label %latchExit, label %for.exiting_block.1
 ; PROLOG-BLOCK:       for.exiting_block.1:
 ; PROLOG-BLOCK-NEXT:    %cmp.1 = icmp eq i64 %n, 42
-; PROLOG-BLOCK-NEXT:    br i1 %cmp.1, label %for.exit2, label %latch.1
+; PROLOG-BLOCK-NEXT:    br i1 %cmp.1, label %for.exit2.loopexit, label %latch.1
 ; PROLOG-BLOCK:       latch.1:
 ; PROLOG-BLOCK-NEXT:    %arrayidx.1 = getelementptr inbounds i32, i32* %a, i64 %indvars.iv.next
-; PROLOG-BLOCK-NEXT:    %1 = load i32, i32* %arrayidx.1, align 4
-; PROLOG-BLOCK-NEXT:    %add.1 = add nsw i32 %1, %add
+; PROLOG-BLOCK-NEXT:    %4 = load i32, i32* %arrayidx.1, align 4
+; PROLOG-BLOCK-NEXT:    %add.1 = add nsw i32 %4, %add
 ; PROLOG-BLOCK-NEXT:    %indvars.iv.next.1 = add i64 %indvars.iv.next, 1
 ; PROLOG-BLOCK-NEXT:    %exitcond.1 = icmp eq i64 %indvars.iv.next.1, %n
-; PROLOG-BLOCK-NEXT:    br i1 %exitcond.1, label %latchExit, label %header, !llvm.loop !4
+; PROLOG-BLOCK-NEXT:    br i1 %exitcond.1, label %latchExit.unr-lcssa.loopexit, label %header, !llvm.loop !4
 ;
 
 entry:
@@ -1806,61 +1947,202 @@ define i32 @otherblock_latch_same_exit(i32* nocapture %a, i64 %n, i1 %cond) {
 ;
 ; PROLOG-LABEL: @otherblock_latch_same_exit(
 ; PROLOG-NEXT:  entry:
+; PROLOG-NEXT:    %0 = add i64 %n, -1
+; PROLOG-NEXT:    %xtraiter = and i64 %n, 7
+; PROLOG-NEXT:    %lcmp.mod = icmp ne i64 %xtraiter, 0
+; PROLOG-NEXT:    br i1 %lcmp.mod, label %header.prol.preheader, label %header.prol.loopexit
+; PROLOG:       header.prol.preheader:
+; PROLOG-NEXT:    br label %header.prol
+; PROLOG:       header.prol:
+; PROLOG-NEXT:    %indvars.iv.prol = phi i64 [ %indvars.iv.next.prol, %latch.prol ], [ 0, %header.prol.preheader ]
+; PROLOG-NEXT:    %sum.02.prol = phi i32 [ %add.prol, %latch.prol ], [ 0, %header.prol.preheader ]
+; PROLOG-NEXT:    %prol.iter = phi i64 [ %xtraiter, %header.prol.preheader ], [ %prol.iter.sub, %latch.prol ]
+; PROLOG-NEXT:    br i1 %cond, label %for.exit2.loopexit1, label %for.exiting_block.prol
+; PROLOG:       for.exiting_block.prol:
+; PROLOG-NEXT:    %cmp.prol = icmp eq i64 %n, 42
+; PROLOG-NEXT:    br i1 %cmp.prol, label %latchExit.unr-lcssa.loopexit2, label %latch.prol
+; PROLOG:       latch.prol:
+; PROLOG-NEXT:    %arrayidx.prol = getelementptr inbounds i32, i32* %a, i64 %indvars.iv.prol
+; PROLOG-NEXT:    %1 = load i32, i32* %arrayidx.prol, align 4
+; PROLOG-NEXT:    %add.prol = add nsw i32 %1, %sum.02.prol
+; PROLOG-NEXT:    %indvars.iv.next.prol = add i64 %indvars.iv.prol, 1
+; PROLOG-NEXT:    %exitcond.prol = icmp eq i64 %indvars.iv.next.prol, %n
+; PROLOG-NEXT:    %prol.iter.sub = sub i64 %prol.iter, 1
+; PROLOG-NEXT:    %prol.iter.cmp = icmp ne i64 %prol.iter.sub, 0
+; PROLOG-NEXT:    br i1 %prol.iter.cmp, label %header.prol, label %header.prol.loopexit.unr-lcssa, !llvm.loop !5
+; PROLOG:       header.prol.loopexit.unr-lcssa:
+; PROLOG-NEXT:    %result.unr.ph = phi i32 [ %add.prol, %latch.prol ]
+; PROLOG-NEXT:    %indvars.iv.unr.ph = phi i64 [ %indvars.iv.next.prol, %latch.prol ]
+; PROLOG-NEXT:    %sum.02.unr.ph = phi i32 [ %add.prol, %latch.prol ]
+; PROLOG-NEXT:    br label %header.prol.loopexit
+; PROLOG:       header.prol.loopexit:
+; PROLOG-NEXT:    %result.unr = phi i32 [ undef, %entry ], [ %result.unr.ph, %header.prol.loopexit.unr-lcssa ]
+; PROLOG-NEXT:    %indvars.iv.unr = phi i64 [ 0, %entry ], [ %indvars.iv.unr.ph, %header.prol.loopexit.unr-lcssa ]
+; PROLOG-NEXT:    %sum.02.unr = phi i32 [ 0, %entry ], [ %sum.02.unr.ph, %header.prol.loopexit.unr-lcssa ]
+; PROLOG-NEXT:    %2 = icmp ult i64 %0, 7
+; PROLOG-NEXT:    br i1 %2, label %latchExit, label %entry.new
+; PROLOG:       entry.new:
 ; PROLOG-NEXT:    br label %header
 ; PROLOG:       header:
-; PROLOG-NEXT:    %indvars.iv = phi i64 [ %indvars.iv.next, %latch ], [ 0, %entry ]
-; PROLOG-NEXT:    %sum.02 = phi i32 [ %add, %latch ], [ 0, %entry ]
-; PROLOG-NEXT:    br i1 %cond, label %for.exit2, label %for.exiting_block
+; PROLOG-NEXT:    %indvars.iv = phi i64 [ %indvars.iv.unr, %entry.new ], [ %indvars.iv.next.7, %latch.7 ]
+; PROLOG-NEXT:    %sum.02 = phi i32 [ %sum.02.unr, %entry.new ], [ %add.7, %latch.7 ]
+; PROLOG-NEXT:    br i1 %cond, label %for.exit2.loopexit, label %for.exiting_block
 ; PROLOG:       for.exiting_block:
 ; PROLOG-NEXT:    %cmp = icmp eq i64 %n, 42
-; PROLOG-NEXT:    br i1 %cmp, label %latchExit, label %latch
+; PROLOG-NEXT:    br i1 %cmp, label %latchExit.unr-lcssa.loopexit, label %latch
 ; PROLOG:       latch:
 ; PROLOG-NEXT:    %arrayidx = getelementptr inbounds i32, i32* %a, i64 %indvars.iv
-; PROLOG-NEXT:    %0 = load i32, i32* %arrayidx, align 4
-; PROLOG-NEXT:    %add = add nsw i32 %0, %sum.02
+; PROLOG-NEXT:    %3 = load i32, i32* %arrayidx, align 4
+; PROLOG-NEXT:    %add = add nsw i32 %3, %sum.02
 ; PROLOG-NEXT:    %indvars.iv.next = add i64 %indvars.iv, 1
-; PROLOG-NEXT:    %exitcond = icmp eq i64 %indvars.iv.next, %n
-; PROLOG-NEXT:    br i1 %exitcond, label %latchExit, label %header
+; PROLOG-NEXT:    br i1 %cond, label %for.exit2.loopexit, label %for.exiting_block.1
+; PROLOG:       latchExit.unr-lcssa.loopexit:
+; PROLOG-NEXT:    %result.ph.ph = phi i32 [ 2, %for.exiting_block ], [ 2, %for.exiting_block.1 ], [ 2, %for.exiting_block.2 ], [ 2, %for.exiting_block.3 ], [ 2, %for.exiting_block.4 ], [ 2, %for.exiting_block.5 ], [ 2, %for.exiting_block.6 ], [ 2, %for.exiting_block.7 ], [ %add.7, %latch.7 ]
+; PROLOG-NEXT:    br label %latchExit.unr-lcssa
+; PROLOG:       latchExit.unr-lcssa.loopexit2:
+; PROLOG-NEXT:    %result.ph.ph3 = phi i32 [ 2, %for.exiting_block.prol ]
+; PROLOG-NEXT:    br label %latchExit.unr-lcssa
+; PROLOG:       latchExit.unr-lcssa:
+; PROLOG-NEXT:    %result.ph = phi i32 [ %result.ph.ph, %latchExit.unr-lcssa.loopexit ], [ %result.ph.ph3, %latchExit.unr-lcssa.loopexit2 ]
+; PROLOG-NEXT:    br label %latchExit
 ; PROLOG:       latchExit:
-; PROLOG-NEXT:    %result = phi i32 [ 2, %for.exiting_block ], [ %add, %latch ]
+; PROLOG-NEXT:    %result = phi i32 [ %result.unr, %header.prol.loopexit ], [ %result.ph, %latchExit.unr-lcssa ]
 ; PROLOG-NEXT:    ret i32 %result
+; PROLOG:       for.exit2.loopexit:
+; PROLOG-NEXT:    br label %for.exit2
+; PROLOG:       for.exit2.loopexit1:
+; PROLOG-NEXT:    br label %for.exit2
 ; PROLOG:       for.exit2:
 ; PROLOG-NEXT:    ret i32 42
+; PROLOG:       for.exiting_block.1:
+; PROLOG-NEXT:    %cmp.1 = icmp eq i64 %n, 42
+; PROLOG-NEXT:    br i1 %cmp.1, label %latchExit.unr-lcssa.loopexit, label %latch.1
+; PROLOG:       latch.1:
+; PROLOG-NEXT:    %arrayidx.1 = getelementptr inbounds i32, i32* %a, i64 %indvars.iv.next
+; PROLOG-NEXT:    %4 = load i32, i32* %arrayidx.1, align 4
+; PROLOG-NEXT:    %add.1 = add nsw i32 %4, %add
+; PROLOG-NEXT:    %indvars.iv.next.1 = add i64 %indvars.iv.next, 1
+; PROLOG-NEXT:    br i1 %cond, label %for.exit2.loopexit, label %for.exiting_block.2
+; PROLOG:       for.exiting_block.2:
+; PROLOG-NEXT:    %cmp.2 = icmp eq i64 %n, 42
+; PROLOG-NEXT:    br i1 %cmp.2, label %latchExit.unr-lcssa.loopexit, label %latch.2
+; PROLOG:       latch.2:
+; PROLOG-NEXT:    %arrayidx.2 = getelementptr inbounds i32, i32* %a, i64 %indvars.iv.next.1
+; PROLOG-NEXT:    %5 = load i32, i32* %arrayidx.2, align 4
+; PROLOG-NEXT:    %add.2 = add nsw i32 %5, %add.1
+; PROLOG-NEXT:    %indvars.iv.next.2 = add i64 %indvars.iv.next.1, 1
+; PROLOG-NEXT:    br i1 %cond, label %for.exit2.loopexit, label %for.exiting_block.3
+; PROLOG:       for.exiting_block.3:
+; PROLOG-NEXT:    %cmp.3 = icmp eq i64 %n, 42
+; PROLOG-NEXT:    br i1 %cmp.3, label %latchExit.unr-lcssa.loopexit, label %latch.3
+; PROLOG:       latch.3:
+; PROLOG-NEXT:    %arrayidx.3 = getelementptr inbounds i32, i32* %a, i64 %indvars.iv.next.2
+; PROLOG-NEXT:    %6 = load i32, i32* %arrayidx.3, align 4
+; PROLOG-NEXT:    %add.3 = add nsw i32 %6, %add.2
+; PROLOG-NEXT:    %indvars.iv.next.3 = add i64 %indvars.iv.next.2, 1
+; PROLOG-NEXT:    br i1 %cond, label %for.exit2.loopexit, label %for.exiting_block.4
+; PROLOG:       for.exiting_block.4:
+; PROLOG-NEXT:    %cmp.4 = icmp eq i64 %n, 42
+; PROLOG-NEXT:    br i1 %cmp.4, label %latchExit.unr-lcssa.loopexit, label %latch.4
+; PROLOG:       latch.4:
+; PROLOG-NEXT:    %arrayidx.4 = getelementptr inbounds i32, i32* %a, i64 %indvars.iv.next.3
+; PROLOG-NEXT:    %7 = load i32, i32* %arrayidx.4, align 4
+; PROLOG-NEXT:    %add.4 = add nsw i32 %7, %add.3
+; PROLOG-NEXT:    %indvars.iv.next.4 = add i64 %indvars.iv.next.3, 1
+; PROLOG-NEXT:    br i1 %cond, label %for.exit2.loopexit, label %for.exiting_block.5
+; PROLOG:       for.exiting_block.5:
+; PROLOG-NEXT:    %cmp.5 = icmp eq i64 %n, 42
+; PROLOG-NEXT:    br i1 %cmp.5, label %latchExit.unr-lcssa.loopexit, label %latch.5
+; PROLOG:       latch.5:
+; PROLOG-NEXT:    %arrayidx.5 = getelementptr inbounds i32, i32* %a, i64 %indvars.iv.next.4
+; PROLOG-NEXT:    %8 = load i32, i32* %arrayidx.5, align 4
+; PROLOG-NEXT:    %add.5 = add nsw i32 %8, %add.4
+; PROLOG-NEXT:    %indvars.iv.next.5 = add i64 %indvars.iv.next.4, 1
+; PROLOG-NEXT:    br i1 %cond, label %for.exit2.loopexit, label %for.exiting_block.6
+; PROLOG:       for.exiting_block.6:
+; PROLOG-NEXT:    %cmp.6 = icmp eq i64 %n, 42
+; PROLOG-NEXT:    br i1 %cmp.6, label %latchExit.unr-lcssa.loopexit, label %latch.6
+; PROLOG:       latch.6:
+; PROLOG-NEXT:    %arrayidx.6 = getelementptr inbounds i32, i32* %a, i64 %indvars.iv.next.5
+; PROLOG-NEXT:    %9 = load i32, i32* %arrayidx.6, align 4
+; PROLOG-NEXT:    %add.6 = add nsw i32 %9, %add.5
+; PROLOG-NEXT:    %indvars.iv.next.6 = add i64 %indvars.iv.next.5, 1
+; PROLOG-NEXT:    br i1 %cond, label %for.exit2.loopexit, label %for.exiting_block.7
+; PROLOG:       for.exiting_block.7:
+; PROLOG-NEXT:    %cmp.7 = icmp eq i64 %n, 42
+; PROLOG-NEXT:    br i1 %cmp.7, label %latchExit.unr-lcssa.loopexit, label %latch.7
+; PROLOG:       latch.7:
+; PROLOG-NEXT:    %arrayidx.7 = getelementptr inbounds i32, i32* %a, i64 %indvars.iv.next.6
+; PROLOG-NEXT:    %10 = load i32, i32* %arrayidx.7, align 4
+; PROLOG-NEXT:    %add.7 = add nsw i32 %10, %add.6
+; PROLOG-NEXT:    %indvars.iv.next.7 = add i64 %indvars.iv.next.6, 1
+; PROLOG-NEXT:    %exitcond.7 = icmp eq i64 %indvars.iv.next.7, %n
+; PROLOG-NEXT:    br i1 %exitcond.7, label %latchExit.unr-lcssa.loopexit, label %header
 ;
 ; PROLOG-BLOCK-LABEL: @otherblock_latch_same_exit(
 ; PROLOG-BLOCK-NEXT:  entry:
+; PROLOG-BLOCK-NEXT:    %0 = add i64 %n, -1
+; PROLOG-BLOCK-NEXT:    %xtraiter = and i64 %n, 1
+; PROLOG-BLOCK-NEXT:    %lcmp.mod = icmp ne i64 %xtraiter, 0
+; PROLOG-BLOCK-NEXT:    br i1 %lcmp.mod, label %header.prol.preheader, label %header.prol.loopexit
+; PROLOG-BLOCK:       header.prol.preheader:
+; PROLOG-BLOCK-NEXT:    br label %header.prol
+; PROLOG-BLOCK:       header.prol:
+; PROLOG-BLOCK-NEXT:    br i1 %cond, label %for.exit2, label %for.exiting_block.prol
+; PROLOG-BLOCK:       for.exiting_block.prol:
+; PROLOG-BLOCK-NEXT:    %cmp.prol = icmp eq i64 %n, 42
+; PROLOG-BLOCK-NEXT:    br i1 %cmp.prol, label %latchExit.unr-lcssa, label %latch.prol
+; PROLOG-BLOCK:       latch.prol:
+; PROLOG-BLOCK-NEXT:    %arrayidx.prol = getelementptr inbounds i32, i32* %a, i64 0
+; PROLOG-BLOCK-NEXT:    %1 = load i32, i32* %arrayidx.prol, align 4
+; PROLOG-BLOCK-NEXT:    %add.prol = add nsw i32 %1, 0
+; PROLOG-BLOCK-NEXT:    %indvars.iv.next.prol = add i64 0, 1
+; PROLOG-BLOCK-NEXT:    %exitcond.prol = icmp eq i64 %indvars.iv.next.prol, %n
+; PROLOG-BLOCK-NEXT:    br label %header.prol.loopexit
+; PROLOG-BLOCK:       header.prol.loopexit:
+; PROLOG-BLOCK-NEXT:    %result.unr = phi i32 [ undef, %entry ], [ %add.prol, %latch.prol ]
+; PROLOG-BLOCK-NEXT:    %indvars.iv.unr = phi i64 [ 0, %entry ], [ %indvars.iv.next.prol, %latch.prol ]
+; PROLOG-BLOCK-NEXT:    %sum.02.unr = phi i32 [ 0, %entry ], [ %add.prol, %latch.prol ]
+; PROLOG-BLOCK-NEXT:    %2 = icmp ult i64 %0, 1
+; PROLOG-BLOCK-NEXT:    br i1 %2, label %latchExit, label %entry.new
+; PROLOG-BLOCK:       entry.new:
 ; PROLOG-BLOCK-NEXT:    br label %header
 ; PROLOG-BLOCK:       header:
-; PROLOG-BLOCK-NEXT:    %indvars.iv = phi i64 [ 0, %entry ], [ %indvars.iv.next.1, %latch.1 ]
-; PROLOG-BLOCK-NEXT:    %sum.02 = phi i32 [ 0, %entry ], [ %add.1, %latch.1 ]
-; PROLOG-BLOCK-NEXT:    br i1 %cond, label %for.exit2, label %for.exiting_block
+; PROLOG-BLOCK-NEXT:    %indvars.iv = phi i64 [ %indvars.iv.unr, %entry.new ], [ %indvars.iv.next.1, %latch.1 ]
+; PROLOG-BLOCK-NEXT:    %sum.02 = phi i32 [ %sum.02.unr, %entry.new ], [ %add.1, %latch.1 ]
+; PROLOG-BLOCK-NEXT:    br i1 %cond, label %for.exit2.loopexit, label %for.exiting_block
 ; PROLOG-BLOCK:       for.exiting_block:
 ; PROLOG-BLOCK-NEXT:    %cmp = icmp eq i64 %n, 42
-; PROLOG-BLOCK-NEXT:    br i1 %cmp, label %latchExit, label %latch
+; PROLOG-BLOCK-NEXT:    br i1 %cmp, label %latchExit.unr-lcssa.loopexit, label %latch
 ; PROLOG-BLOCK:       latch:
 ; PROLOG-BLOCK-NEXT:    %arrayidx = getelementptr inbounds i32, i32* %a, i64 %indvars.iv
-; PROLOG-BLOCK-NEXT:    %0 = load i32, i32* %arrayidx, align 4
-; PROLOG-BLOCK-NEXT:    %add = add nsw i32 %0, %sum.02
-; PROLOG-BLOCK-NEXT:    %indvars.iv.next = add nuw nsw i64 %indvars.iv, 1
-; PROLOG-BLOCK-NEXT:    %exitcond = icmp eq i64 %indvars.iv.next, %n
-; PROLOG-BLOCK-NEXT:    br i1 %exitcond, label %latchExit, label %header.1
+; PROLOG-BLOCK-NEXT:    %3 = load i32, i32* %arrayidx, align 4
+; PROLOG-BLOCK-NEXT:    %add = add nsw i32 %3, %sum.02
+; PROLOG-BLOCK-NEXT:    %indvars.iv.next = add i64 %indvars.iv, 1
+; PROLOG-BLOCK-NEXT:    br i1 %cond, label %for.exit2.loopexit, label %for.exiting_block.1
+; PROLOG-BLOCK:       latchExit.unr-lcssa.loopexit:
+; PROLOG-BLOCK-NEXT:    %result.ph.ph = phi i32 [ 2, %for.exiting_block ], [ 2, %for.exiting_block.1 ], [ %add.1, %latch.1 ]
+; PROLOG-BLOCK-NEXT:    br label %latchExit.unr-lcssa
+; PROLOG-BLOCK:       latchExit.unr-lcssa:
+; PROLOG-BLOCK-NEXT:    %result.ph = phi i32 [ 2, %for.exiting_block.prol ], [ %result.ph.ph, %latchExit.unr-lcssa.loopexit ]
+; PROLOG-BLOCK-NEXT:    br label %latchExit
 ; PROLOG-BLOCK:       latchExit:
-; PROLOG-BLOCK-NEXT:    %result = phi i32 [ 2, %for.exiting_block ], [ %add, %latch ], [ 2, %for.exiting_block.1 ], [ %add.1, %latch.1 ]
+; PROLOG-BLOCK-NEXT:    %result = phi i32 [ %result.unr, %header.prol.loopexit ], [ %result.ph, %latchExit.unr-lcssa ]
 ; PROLOG-BLOCK-NEXT:    ret i32 %result
+; PROLOG-BLOCK:       for.exit2.loopexit:
+; PROLOG-BLOCK-NEXT:    br label %for.exit2
 ; PROLOG-BLOCK:       for.exit2:
 ; PROLOG-BLOCK-NEXT:    ret i32 42
-; PROLOG-BLOCK:       header.1:
-; PROLOG-BLOCK-NEXT:    br i1 %cond, label %for.exit2, label %for.exiting_block.1
 ; PROLOG-BLOCK:       for.exiting_block.1:
 ; PROLOG-BLOCK-NEXT:    %cmp.1 = icmp eq i64 %n, 42
-; PROLOG-BLOCK-NEXT:    br i1 %cmp.1, label %latchExit, label %latch.1
+; PROLOG-BLOCK-NEXT:    br i1 %cmp.1, label %latchExit.unr-lcssa.loopexit, label %latch.1
 ; PROLOG-BLOCK:       latch.1:
 ; PROLOG-BLOCK-NEXT:    %arrayidx.1 = getelementptr inbounds i32, i32* %a, i64 %indvars.iv.next
-; PROLOG-BLOCK-NEXT:    %1 = load i32, i32* %arrayidx.1, align 4
-; PROLOG-BLOCK-NEXT:    %add.1 = add nsw i32 %1, %add
+; PROLOG-BLOCK-NEXT:    %4 = load i32, i32* %arrayidx.1, align 4
+; PROLOG-BLOCK-NEXT:    %add.1 = add nsw i32 %4, %add
 ; PROLOG-BLOCK-NEXT:    %indvars.iv.next.1 = add i64 %indvars.iv.next, 1
 ; PROLOG-BLOCK-NEXT:    %exitcond.1 = icmp eq i64 %indvars.iv.next.1, %n
-; PROLOG-BLOCK-NEXT:    br i1 %exitcond.1, label %latchExit, label %header, !llvm.loop !5
+; PROLOG-BLOCK-NEXT:    br i1 %exitcond.1, label %latchExit.unr-lcssa.loopexit, label %header, !llvm.loop !5
 ;
 
 entry:
@@ -2118,61 +2400,202 @@ define i32 @otherblock_latch_same_exit2(i32* nocapture %a, i64 %n, i1 %cond) {
 ;
 ; PROLOG-LABEL: @otherblock_latch_same_exit2(
 ; PROLOG-NEXT:  entry:
+; PROLOG-NEXT:    %0 = add i64 %n, -1
+; PROLOG-NEXT:    %xtraiter = and i64 %n, 7
+; PROLOG-NEXT:    %lcmp.mod = icmp ne i64 %xtraiter, 0
+; PROLOG-NEXT:    br i1 %lcmp.mod, label %header.prol.preheader, label %header.prol.loopexit
+; PROLOG:       header.prol.preheader:
+; PROLOG-NEXT:    br label %header.prol
+; PROLOG:       header.prol:
+; PROLOG-NEXT:    %indvars.iv.prol = phi i64 [ %indvars.iv.next.prol, %latch.prol ], [ 0, %header.prol.preheader ]
+; PROLOG-NEXT:    %sum.02.prol = phi i32 [ %add.prol, %latch.prol ], [ 0, %header.prol.preheader ]
+; PROLOG-NEXT:    %prol.iter = phi i64 [ %xtraiter, %header.prol.preheader ], [ %prol.iter.sub, %latch.prol ]
+; PROLOG-NEXT:    br i1 %cond, label %for.exit2.loopexit1, label %for.exiting_block.prol
+; PROLOG:       for.exiting_block.prol:
+; PROLOG-NEXT:    %cmp.prol = icmp eq i64 %n, 42
+; PROLOG-NEXT:    br i1 %cmp.prol, label %latchExit.unr-lcssa.loopexit2, label %latch.prol
+; PROLOG:       latch.prol:
+; PROLOG-NEXT:    %arrayidx.prol = getelementptr inbounds i32, i32* %a, i64 %indvars.iv.prol
+; PROLOG-NEXT:    %1 = load i32, i32* %arrayidx.prol, align 4
+; PROLOG-NEXT:    %add.prol = add nsw i32 %1, %sum.02.prol
+; PROLOG-NEXT:    %indvars.iv.next.prol = add i64 %indvars.iv.prol, 1
+; PROLOG-NEXT:    %exitcond.prol = icmp eq i64 %indvars.iv.next.prol, %n
+; PROLOG-NEXT:    %prol.iter.sub = sub i64 %prol.iter, 1
+; PROLOG-NEXT:    %prol.iter.cmp = icmp ne i64 %prol.iter.sub, 0
+; PROLOG-NEXT:    br i1 %prol.iter.cmp, label %header.prol, label %header.prol.loopexit.unr-lcssa, !llvm.loop !6
+; PROLOG:       header.prol.loopexit.unr-lcssa:
+; PROLOG-NEXT:    %result.unr.ph = phi i32 [ %add.prol, %latch.prol ]
+; PROLOG-NEXT:    %indvars.iv.unr.ph = phi i64 [ %indvars.iv.next.prol, %latch.prol ]
+; PROLOG-NEXT:    %sum.02.unr.ph = phi i32 [ %add.prol, %latch.prol ]
+; PROLOG-NEXT:    br label %header.prol.loopexit
+; PROLOG:       header.prol.loopexit:
+; PROLOG-NEXT:    %result.unr = phi i32 [ undef, %entry ], [ %result.unr.ph, %header.prol.loopexit.unr-lcssa ]
+; PROLOG-NEXT:    %indvars.iv.unr = phi i64 [ 0, %entry ], [ %indvars.iv.unr.ph, %header.prol.loopexit.unr-lcssa ]
+; PROLOG-NEXT:    %sum.02.unr = phi i32 [ 0, %entry ], [ %sum.02.unr.ph, %header.prol.loopexit.unr-lcssa ]
+; PROLOG-NEXT:    %2 = icmp ult i64 %0, 7
+; PROLOG-NEXT:    br i1 %2, label %latchExit, label %entry.new
+; PROLOG:       entry.new:
 ; PROLOG-NEXT:    br label %header
 ; PROLOG:       header:
-; PROLOG-NEXT:    %indvars.iv = phi i64 [ %indvars.iv.next, %latch ], [ 0, %entry ]
-; PROLOG-NEXT:    %sum.02 = phi i32 [ %add, %latch ], [ 0, %entry ]
-; PROLOG-NEXT:    br i1 %cond, label %for.exit2, label %for.exiting_block
+; PROLOG-NEXT:    %indvars.iv = phi i64 [ %indvars.iv.unr, %entry.new ], [ %indvars.iv.next.7, %latch.7 ]
+; PROLOG-NEXT:    %sum.02 = phi i32 [ %sum.02.unr, %entry.new ], [ %add.7, %latch.7 ]
+; PROLOG-NEXT:    br i1 %cond, label %for.exit2.loopexit, label %for.exiting_block
 ; PROLOG:       for.exiting_block:
 ; PROLOG-NEXT:    %cmp = icmp eq i64 %n, 42
-; PROLOG-NEXT:    br i1 %cmp, label %latchExit, label %latch
+; PROLOG-NEXT:    br i1 %cmp, label %latchExit.unr-lcssa.loopexit, label %latch
 ; PROLOG:       latch:
 ; PROLOG-NEXT:    %arrayidx = getelementptr inbounds i32, i32* %a, i64 %indvars.iv
-; PROLOG-NEXT:    %0 = load i32, i32* %arrayidx, align 4
-; PROLOG-NEXT:    %add = add nsw i32 %0, %sum.02
+; PROLOG-NEXT:    %3 = load i32, i32* %arrayidx, align 4
+; PROLOG-NEXT:    %add = add nsw i32 %3, %sum.02
 ; PROLOG-NEXT:    %indvars.iv.next = add i64 %indvars.iv, 1
-; PROLOG-NEXT:    %exitcond = icmp eq i64 %indvars.iv.next, %n
-; PROLOG-NEXT:    br i1 %exitcond, label %latchExit, label %header
+; PROLOG-NEXT:    br i1 %cond, label %for.exit2.loopexit, label %for.exiting_block.1
+; PROLOG:       latchExit.unr-lcssa.loopexit:
+; PROLOG-NEXT:    %result.ph.ph = phi i32 [ %sum.02, %for.exiting_block ], [ %add, %for.exiting_block.1 ], [ %add.1, %for.exiting_block.2 ], [ %add.2, %for.exiting_block.3 ], [ %add.3, %for.exiting_block.4 ], [ %add.4, %for.exiting_block.5 ], [ %add.5, %for.exiting_block.6 ], [ %add.6, %for.exiting_block.7 ], [ %add.7, %latch.7 ]
+; PROLOG-NEXT:    br label %latchExit.unr-lcssa
+; PROLOG:       latchExit.unr-lcssa.loopexit2:
+; PROLOG-NEXT:    %result.ph.ph3 = phi i32 [ %sum.02.prol, %for.exiting_block.prol ]
+; PROLOG-NEXT:    br label %latchExit.unr-lcssa
+; PROLOG:       latchExit.unr-lcssa:
+; PROLOG-NEXT:    %result.ph = phi i32 [ %result.ph.ph, %latchExit.unr-lcssa.loopexit ], [ %result.ph.ph3, %latchExit.unr-lcssa.loopexit2 ]
+; PROLOG-NEXT:    br label %latchExit
 ; PROLOG:       latchExit:
-; PROLOG-NEXT:    %result = phi i32 [ %sum.02, %for.exiting_block ], [ %add, %latch ]
+; PROLOG-NEXT:    %result = phi i32 [ %result.unr, %header.prol.loopexit ], [ %result.ph, %latchExit.unr-lcssa ]
 ; PROLOG-NEXT:    ret i32 %result
+; PROLOG:       for.exit2.loopexit:
+; PROLOG-NEXT:    br label %for.exit2
+; PROLOG:       for.exit2.loopexit1:
+; PROLOG-NEXT:    br label %for.exit2
 ; PROLOG:       for.exit2:
 ; PROLOG-NEXT:    ret i32 42
+; PROLOG:       for.exiting_block.1:
+; PROLOG-NEXT:    %cmp.1 = icmp eq i64 %n, 42
+; PROLOG-NEXT:    br i1 %cmp.1, label %latchExit.unr-lcssa.loopexit, label %latch.1
+; PROLOG:       latch.1:
+; PROLOG-NEXT:    %arrayidx.1 = getelementptr inbounds i32, i32* %a, i64 %indvars.iv.next
+; PROLOG-NEXT:    %4 = load i32, i32* %arrayidx.1, align 4
+; PROLOG-NEXT:    %add.1 = add nsw i32 %4, %add
+; PROLOG-NEXT:    %indvars.iv.next.1 = add i64 %indvars.iv.next, 1
+; PROLOG-NEXT:    br i1 %cond, label %for.exit2.loopexit, label %for.exiting_block.2
+; PROLOG:       for.exiting_block.2:
+; PROLOG-NEXT:    %cmp.2 = icmp eq i64 %n, 42
+; PROLOG-NEXT:    br i1 %cmp.2, label %latchExit.unr-lcssa.loopexit, label %latch.2
+; PROLOG:       latch.2:
+; PROLOG-NEXT:    %arrayidx.2 = getelementptr inbounds i32, i32* %a, i64 %indvars.iv.next.1
+; PROLOG-NEXT:    %5 = load i32, i32* %arrayidx.2, align 4
+; PROLOG-NEXT:    %add.2 = add nsw i32 %5, %add.1
+; PROLOG-NEXT:    %indvars.iv.next.2 = add i64 %indvars.iv.next.1, 1
+; PROLOG-NEXT:    br i1 %cond, label %for.exit2.loopexit, label %for.exiting_block.3
+; PROLOG:       for.exiting_block.3:
+; PROLOG-NEXT:    %cmp.3 = icmp eq i64 %n, 42
+; PROLOG-NEXT:    br i1 %cmp.3, label %latchExit.unr-lcssa.loopexit, label %latch.3
+; PROLOG:       latch.3:
+; PROLOG-NEXT:    %arrayidx.3 = getelementptr inbounds i32, i32* %a, i64 %indvars.iv.next.2
+; PROLOG-NEXT:    %6 = load i32, i32* %arrayidx.3, align 4
+; PROLOG-NEXT:    %add.3 = add nsw i32 %6, %add.2
+; PROLOG-NEXT:    %indvars.iv.next.3 = add i64 %indvars.iv.next.2, 1
+; PROLOG-NEXT:    br i1 %cond, label %for.exit2.loopexit, label %for.exiting_block.4
+; PROLOG:       for.exiting_block.4:
+; PROLOG-NEXT:    %cmp.4 = icmp eq i64 %n, 42
+; PROLOG-NEXT:    br i1 %cmp.4, label %latchExit.unr-lcssa.loopexit, label %latch.4
+; PROLOG:       latch.4:
+; PROLOG-NEXT:    %arrayidx.4 = getelementptr inbounds i32, i32* %a, i64 %indvars.iv.next.3
+; PROLOG-NEXT:    %7 = load i32, i32* %arrayidx.4, align 4
+; PROLOG-NEXT:    %add.4 = add nsw i32 %7, %add.3
+; PROLOG-NEXT:    %indvars.iv.next.4 = add i64 %indvars.iv.next.3, 1
+; PROLOG-NEXT:    br i1 %cond, label %for.exit2.loopexit, label %for.exiting_block.5
+; PROLOG:       for.exiting_block.5:
+; PROLOG-NEXT:    %cmp.5 = icmp eq i64 %n, 42
+; PROLOG-NEXT:    br i1 %cmp.5, label %latchExit.unr-lcssa.loopexit, label %latch.5
+; PROLOG:       latch.5:
+; PROLOG-NEXT:    %arrayidx.5 = getelementptr inbounds i32, i32* %a, i64 %indvars.iv.next.4
+; PROLOG-NEXT:    %8 = load i32, i32* %arrayidx.5, align 4
+; PROLOG-NEXT:    %add.5 = add nsw i32 %8, %add.4
+; PROLOG-NEXT:    %indvars.iv.next.5 = add i64 %indvars.iv.next.4, 1
+; PROLOG-NEXT:    br i1 %cond, label %for.exit2.loopexit, label %for.exiting_block.6
+; PROLOG:       for.exiting_block.6:
+; PROLOG-NEXT:    %cmp.6 = icmp eq i64 %n, 42
+; PROLOG-NEXT:    br i1 %cmp.6, label %latchExit.unr-lcssa.loopexit, label %latch.6
+; PROLOG:       latch.6:
+; PROLOG-NEXT:    %arrayidx.6 = getelementptr inbounds i32, i32* %a, i64 %indvars.iv.next.5
+; PROLOG-NEXT:    %9 = load i32, i32* %arrayidx.6, align 4
+; PROLOG-NEXT:    %add.6 = add nsw i32 %9, %add.5
+; PROLOG-NEXT:    %indvars.iv.next.6 = add i64 %indvars.iv.next.5, 1
+; PROLOG-NEXT:    br i1 %cond, label %for.exit2.loopexit, label %for.exiting_block.7
+; PROLOG:       for.exiting_block.7:
+; PROLOG-NEXT:    %cmp.7 = icmp eq i64 %n, 42
+; PROLOG-NEXT:    br i1 %cmp.7, label %latchExit.unr-lcssa.loopexit, label %latch.7
+; PROLOG:       latch.7:
+; PROLOG-NEXT:    %arrayidx.7 = getelementptr inbounds i32, i32* %a, i64 %indvars.iv.next.6
+; PROLOG-NEXT:    %10 = load i32, i32* %arrayidx.7, align 4
+; PROLOG-NEXT:    %add.7 = add nsw i32 %10, %add.6
+; PROLOG-NEXT:    %indvars.iv.next.7 = add i64 %indvars.iv.next.6, 1
+; PROLOG-NEXT:    %exitcond.7 = icmp eq i64 %indvars.iv.next.7, %n
+; PROLOG-NEXT:    br i1 %exitcond.7, label %latchExit.unr-lcssa.loopexit, label %header
 ;
 ; PROLOG-BLOCK-LABEL: @otherblock_latch_same_exit2(
 ; PROLOG-BLOCK-NEXT:  entry:
+; PROLOG-BLOCK-NEXT:    %0 = add i64 %n, -1
+; PROLOG-BLOCK-NEXT:    %xtraiter = and i64 %n, 1
+; PROLOG-BLOCK-NEXT:    %lcmp.mod = icmp ne i64 %xtraiter, 0
+; PROLOG-BLOCK-NEXT:    br i1 %lcmp.mod, label %header.prol.preheader, label %header.prol.loopexit
+; PROLOG-BLOCK:       header.prol.preheader:
+; PROLOG-BLOCK-NEXT:    br label %header.prol
+; PROLOG-BLOCK:       header.prol:
+; PROLOG-BLOCK-NEXT:    br i1 %cond, label %for.exit2, label %for.exiting_block.prol
+; PROLOG-BLOCK:       for.exiting_block.prol:
+; PROLOG-BLOCK-NEXT:    %cmp.prol = icmp eq i64 %n, 42
+; PROLOG-BLOCK-NEXT:    br i1 %cmp.prol, label %latchExit.unr-lcssa, label %latch.prol
+; PROLOG-BLOCK:       latch.prol:
+; PROLOG-BLOCK-NEXT:    %arrayidx.prol = getelementptr inbounds i32, i32* %a, i64 0
+; PROLOG-BLOCK-NEXT:    %1 = load i32, i32* %arrayidx.prol, align 4
+; PROLOG-BLOCK-NEXT:    %add.prol = add nsw i32 %1, 0
+; PROLOG-BLOCK-NEXT:    %indvars.iv.next.prol = add i64 0, 1
+; PROLOG-BLOCK-NEXT:    %exitcond.prol = icmp eq i64 %indvars.iv.next.prol, %n
+; PROLOG-BLOCK-NEXT:    br label %header.prol.loopexit
+; PROLOG-BLOCK:       header.prol.loopexit:
+; PROLOG-BLOCK-NEXT:    %result.unr = phi i32 [ undef, %entry ], [ %add.prol, %latch.prol ]
+; PROLOG-BLOCK-NEXT:    %indvars.iv.unr = phi i64 [ 0, %entry ], [ %indvars.iv.next.prol, %latch.prol ]
+; PROLOG-BLOCK-NEXT:    %sum.02.unr = phi i32 [ 0, %entry ], [ %add.prol, %latch.prol ]
+; PROLOG-BLOCK-NEXT:    %2 = icmp ult i64 %0, 1
+; PROLOG-BLOCK-NEXT:    br i1 %2, label %latchExit, label %entry.new
+; PROLOG-BLOCK:       entry.new:
 ; PROLOG-BLOCK-NEXT:    br label %header
 ; PROLOG-BLOCK:       header:
-; PROLOG-BLOCK-NEXT:    %indvars.iv = phi i64 [ 0, %entry ], [ %indvars.iv.next.1, %latch.1 ]
-; PROLOG-BLOCK-NEXT:    %sum.02 = phi i32 [ 0, %entry ], [ %add.1, %latch.1 ]
-; PROLOG-BLOCK-NEXT:    br i1 %cond, label %for.exit2, label %for.exiting_block
+; PROLOG-BLOCK-NEXT:    %indvars.iv = phi i64 [ %indvars.iv.unr, %entry.new ], [ %indvars.iv.next.1, %latch.1 ]
+; PROLOG-BLOCK-NEXT:    %sum.02 = phi i32 [ %sum.02.unr, %entry.new ], [ %add.1, %latch.1 ]
+; PROLOG-BLOCK-NEXT:    br i1 %cond, label %for.exit2.loopexit, label %for.exiting_block
 ; PROLOG-BLOCK:       for.exiting_block:
 ; PROLOG-BLOCK-NEXT:    %cmp = icmp eq i64 %n, 42
-; PROLOG-BLOCK-NEXT:    br i1 %cmp, label %latchExit, label %latch
+; PROLOG-BLOCK-NEXT:    br i1 %cmp, label %latchExit.unr-lcssa.loopexit, label %latch
 ; PROLOG-BLOCK:       latch:
 ; PROLOG-BLOCK-NEXT:    %arrayidx = getelementptr inbounds i32, i32* %a, i64 %indvars.iv
-; PROLOG-BLOCK-NEXT:    %0 = load i32, i32* %arrayidx, align 4
-; PROLOG-BLOCK-NEXT:    %add = add nsw i32 %0, %sum.02
-; PROLOG-BLOCK-NEXT:    %indvars.iv.next = add nuw nsw i64 %indvars.iv, 1
-; PROLOG-BLOCK-NEXT:    %exitcond = icmp eq i64 %indvars.iv.next, %n
-; PROLOG-BLOCK-NEXT:    br i1 %exitcond, label %latchExit, label %header.1
+; PROLOG-BLOCK-NEXT:    %3 = load i32, i32* %arrayidx, align 4
+; PROLOG-BLOCK-NEXT:    %add = add nsw i32 %3, %sum.02
+; PROLOG-BLOCK-NEXT:    %indvars.iv.next = add i64 %indvars.iv, 1
+; PROLOG-BLOCK-NEXT:    br i1 %cond, label %for.exit2.loopexit, label %for.exiting_block.1
+; PROLOG-BLOCK:       latchExit.unr-lcssa.loopexit:
+; PROLOG-BLOCK-NEXT:    %result.ph.ph = phi i32 [ %sum.02, %for.exiting_block ], [ %add, %for.exiting_block.1 ], [ %add.1, %latch.1 ]
+; PROLOG-BLOCK-NEXT:    br label %latchExit.unr-lcssa
+; PROLOG-BLOCK:       latchExit.unr-lcssa:
+; PROLOG-BLOCK-NEXT:    %result.ph = phi i32 [ 0, %for.exiting_block.prol ], [ %result.ph.ph, %latchExit.unr-lcssa.loopexit ]
+; PROLOG-BLOCK-NEXT:    br label %latchExit
 ; PROLOG-BLOCK:       latchExit:
-; PROLOG-BLOCK-NEXT:    %result = phi i32 [ %sum.02, %for.exiting_block ], [ %add, %latch ], [ %add, %for.exiting_block.1 ], [ %add.1, %latch.1 ]
+; PROLOG-BLOCK-NEXT:    %result = phi i32 [ %result.unr, %header.prol.loopexit ], [ %result.ph, %latchExit.unr-lcssa ]
 ; PROLOG-BLOCK-NEXT:    ret i32 %result
+; PROLOG-BLOCK:       for.exit2.loopexit:
+; PROLOG-BLOCK-NEXT:    br label %for.exit2
 ; PROLOG-BLOCK:       for.exit2:
 ; PROLOG-BLOCK-NEXT:    ret i32 42
-; PROLOG-BLOCK:       header.1:
-; PROLOG-BLOCK-NEXT:    br i1 %cond, label %for.exit2, label %for.exiting_block.1
 ; PROLOG-BLOCK:       for.exiting_block.1:
 ; PROLOG-BLOCK-NEXT:    %cmp.1 = icmp eq i64 %n, 42
-; PROLOG-BLOCK-NEXT:    br i1 %cmp.1, label %latchExit, label %latch.1
+; PROLOG-BLOCK-NEXT:    br i1 %cmp.1, label %latchExit.unr-lcssa.loopexit, label %latch.1
 ; PROLOG-BLOCK:       latch.1:
 ; PROLOG-BLOCK-NEXT:    %arrayidx.1 = getelementptr inbounds i32, i32* %a, i64 %indvars.iv.next
-; PROLOG-BLOCK-NEXT:    %1 = load i32, i32* %arrayidx.1, align 4
-; PROLOG-BLOCK-NEXT:    %add.1 = add nsw i32 %1, %add
+; PROLOG-BLOCK-NEXT:    %4 = load i32, i32* %arrayidx.1, align 4
+; PROLOG-BLOCK-NEXT:    %add.1 = add nsw i32 %4, %add
 ; PROLOG-BLOCK-NEXT:    %indvars.iv.next.1 = add i64 %indvars.iv.next, 1
 ; PROLOG-BLOCK-NEXT:    %exitcond.1 = icmp eq i64 %indvars.iv.next.1, %n
-; PROLOG-BLOCK-NEXT:    br i1 %exitcond.1, label %latchExit, label %header, !llvm.loop !6
+; PROLOG-BLOCK-NEXT:    br i1 %exitcond.1, label %latchExit.unr-lcssa.loopexit, label %header, !llvm.loop !6
 ;
 
 entry:
@@ -2431,61 +2854,202 @@ define i32 @otherblock_latch_same_exit3(i32* nocapture %a, i64 %n, i1 %cond) {
 ;
 ; PROLOG-LABEL: @otherblock_latch_same_exit3(
 ; PROLOG-NEXT:  entry:
+; PROLOG-NEXT:    %0 = add i64 %n, -1
+; PROLOG-NEXT:    %xtraiter = and i64 %n, 7
+; PROLOG-NEXT:    %lcmp.mod = icmp ne i64 %xtraiter, 0
+; PROLOG-NEXT:    br i1 %lcmp.mod, label %header.prol.preheader, label %header.prol.loopexit
+; PROLOG:       header.prol.preheader:
+; PROLOG-NEXT:    br label %header.prol
+; PROLOG:       header.prol:
+; PROLOG-NEXT:    %indvars.iv.prol = phi i64 [ %indvars.iv.next.prol, %latch.prol ], [ 0, %header.prol.preheader ]
+; PROLOG-NEXT:    %sum.02.prol = phi i32 [ %add.prol, %latch.prol ], [ 0, %header.prol.preheader ]
+; PROLOG-NEXT:    %prol.iter = phi i64 [ %xtraiter, %header.prol.preheader ], [ %prol.iter.sub, %latch.prol ]
+; PROLOG-NEXT:    br i1 %cond, label %for.exit2.loopexit1, label %for.exiting_block.prol
+; PROLOG:       for.exiting_block.prol:
+; PROLOG-NEXT:    %arrayidx.prol = getelementptr inbounds i32, i32* %a, i64 %indvars.iv.prol
+; PROLOG-NEXT:    %1 = load i32, i32* %arrayidx.prol, align 4
+; PROLOG-NEXT:    %add.prol = add nsw i32 %1, %sum.02.prol
+; PROLOG-NEXT:    %cmp.prol = icmp eq i64 %n, 42
+; PROLOG-NEXT:    br i1 %cmp.prol, label %latchExit.unr-lcssa.loopexit2, label %latch.prol
+; PROLOG:       latch.prol:
+; PROLOG-NEXT:    %indvars.iv.next.prol = add i64 %indvars.iv.prol, 1
+; PROLOG-NEXT:    %exitcond.prol = icmp eq i64 %indvars.iv.next.prol, %n
+; PROLOG-NEXT:    %prol.iter.sub = sub i64 %prol.iter, 1
+; PROLOG-NEXT:    %prol.iter.cmp = icmp ne i64 %prol.iter.sub, 0
+; PROLOG-NEXT:    br i1 %prol.iter.cmp, label %header.prol, label %header.prol.loopexit.unr-lcssa, !llvm.loop !7
+; PROLOG:       header.prol.loopexit.unr-lcssa:
+; PROLOG-NEXT:    %result.unr.ph = phi i32 [ %add.prol, %latch.prol ]
+; PROLOG-NEXT:    %indvars.iv.unr.ph = phi i64 [ %indvars.iv.next.prol, %latch.prol ]
+; PROLOG-NEXT:    %sum.02.unr.ph = phi i32 [ %add.prol, %latch.prol ]
+; PROLOG-NEXT:    br label %header.prol.loopexit
+; PROLOG:       header.prol.loopexit:
+; PROLOG-NEXT:    %result.unr = phi i32 [ undef, %entry ], [ %result.unr.ph, %header.prol.loopexit.unr-lcssa ]
+; PROLOG-NEXT:    %indvars.iv.unr = phi i64 [ 0, %entry ], [ %indvars.iv.unr.ph, %header.prol.loopexit.unr-lcssa ]
+; PROLOG-NEXT:    %sum.02.unr = phi i32 [ 0, %entry ], [ %sum.02.unr.ph, %header.prol.loopexit.unr-lcssa ]
+; PROLOG-NEXT:    %2 = icmp ult i64 %0, 7
+; PROLOG-NEXT:    br i1 %2, label %latchExit, label %entry.new
+; PROLOG:       entry.new:
 ; PROLOG-NEXT:    br label %header
 ; PROLOG:       header:
-; PROLOG-NEXT:    %indvars.iv = phi i64 [ %indvars.iv.next, %latch ], [ 0, %entry ]
-; PROLOG-NEXT:    %sum.02 = phi i32 [ %add, %latch ], [ 0, %entry ]
-; PROLOG-NEXT:    br i1 %cond, label %for.exit2, label %for.exiting_block
+; PROLOG-NEXT:    %indvars.iv = phi i64 [ %indvars.iv.unr, %entry.new ], [ %indvars.iv.next.7, %latch.7 ]
+; PROLOG-NEXT:    %sum.02 = phi i32 [ %sum.02.unr, %entry.new ], [ %add.7, %latch.7 ]
+; PROLOG-NEXT:    br i1 %cond, label %for.exit2.loopexit, label %for.exiting_block
 ; PROLOG:       for.exiting_block:
 ; PROLOG-NEXT:    %arrayidx = getelementptr inbounds i32, i32* %a, i64 %indvars.iv
-; PROLOG-NEXT:    %0 = load i32, i32* %arrayidx, align 4
-; PROLOG-NEXT:    %add = add nsw i32 %0, %sum.02
+; PROLOG-NEXT:    %3 = load i32, i32* %arrayidx, align 4
+; PROLOG-NEXT:    %add = add nsw i32 %3, %sum.02
 ; PROLOG-NEXT:    %cmp = icmp eq i64 %n, 42
-; PROLOG-NEXT:    br i1 %cmp, label %latchExit, label %latch
+; PROLOG-NEXT:    br i1 %cmp, label %latchExit.unr-lcssa.loopexit, label %latch
 ; PROLOG:       latch:
 ; PROLOG-NEXT:    %indvars.iv.next = add i64 %indvars.iv, 1
-; PROLOG-NEXT:    %exitcond = icmp eq i64 %indvars.iv.next, %n
-; PROLOG-NEXT:    br i1 %exitcond, label %latchExit, label %header
+; PROLOG-NEXT:    br i1 %cond, label %for.exit2.loopexit, label %for.exiting_block.1
+; PROLOG:       latchExit.unr-lcssa.loopexit:
+; PROLOG-NEXT:    %result.ph.ph = phi i32 [ %sum.02, %for.exiting_block ], [ %add, %for.exiting_block.1 ], [ %add.1, %for.exiting_block.2 ], [ %add.2, %for.exiting_block.3 ], [ %add.3, %for.exiting_block.4 ], [ %add.4, %for.exiting_block.5 ], [ %add.5, %for.exiting_block.6 ], [ %add.6, %for.exiting_block.7 ], [ %add.7, %latch.7 ]
+; PROLOG-NEXT:    br label %latchExit.unr-lcssa
+; PROLOG:       latchExit.unr-lcssa.loopexit2:
+; PROLOG-NEXT:    %result.ph.ph3 = phi i32 [ %sum.02.prol, %for.exiting_block.prol ]
+; PROLOG-NEXT:    br label %latchExit.unr-lcssa
+; PROLOG:       latchExit.unr-lcssa:
+; PROLOG-NEXT:    %result.ph = phi i32 [ %result.ph.ph, %latchExit.unr-lcssa.loopexit ], [ %result.ph.ph3, %latchExit.unr-lcssa.loopexit2 ]
+; PROLOG-NEXT:    br label %latchExit
 ; PROLOG:       latchExit:
-; PROLOG-NEXT:    %result = phi i32 [ %sum.02, %for.exiting_block ], [ %add, %latch ]
+; PROLOG-NEXT:    %result = phi i32 [ %result.unr, %header.prol.loopexit ], [ %result.ph, %latchExit.unr-lcssa ]
 ; PROLOG-NEXT:    ret i32 %result
+; PROLOG:       for.exit2.loopexit:
+; PROLOG-NEXT:    br label %for.exit2
+; PROLOG:       for.exit2.loopexit1:
+; PROLOG-NEXT:    br label %for.exit2
 ; PROLOG:       for.exit2:
 ; PROLOG-NEXT:    ret i32 42
+; PROLOG:       for.exiting_block.1:
+; PROLOG-NEXT:    %arrayidx.1 = getelementptr inbounds i32, i32* %a, i64 %indvars.iv.next
+; PROLOG-NEXT:    %4 = load i32, i32* %arrayidx.1, align 4
+; PROLOG-NEXT:    %add.1 = add nsw i32 %4, %add
+; PROLOG-NEXT:    %cmp.1 = icmp eq i64 %n, 42
+; PROLOG-NEXT:    br i1 %cmp.1, label %latchExit.unr-lcssa.loopexit, label %latch.1
+; PROLOG:       latch.1:
+; PROLOG-NEXT:    %indvars.iv.next.1 = add i64 %indvars.iv.next, 1
+; PROLOG-NEXT:    br i1 %cond, label %for.exit2.loopexit, label %for.exiting_block.2
+; PROLOG:       for.exiting_block.2:
+; PROLOG-NEXT:    %arrayidx.2 = getelementptr inbounds i32, i32* %a, i64 %indvars.iv.next.1
+; PROLOG-NEXT:    %5 = load i32, i32* %arrayidx.2, align 4
+; PROLOG-NEXT:    %add.2 = add nsw i32 %5, %add.1
+; PROLOG-NEXT:    %cmp.2 = icmp eq i64 %n, 42
+; PROLOG-NEXT:    br i1 %cmp.2, label %latchExit.unr-lcssa.loopexit, label %latch.2
+; PROLOG:       latch.2:
+; PROLOG-NEXT:    %indvars.iv.next.2 = add i64 %indvars.iv.next.1, 1
+; PROLOG-NEXT:    br i1 %cond, label %for.exit2.loopexit, label %for.exiting_block.3
+; PROLOG:       for.exiting_block.3:
+; PROLOG-NEXT:    %arrayidx.3 = getelementptr inbounds i32, i32* %a, i64 %indvars.iv.next.2
+; PROLOG-NEXT:    %6 = load i32, i32* %arrayidx.3, align 4
+; PROLOG-NEXT:    %add.3 = add nsw i32 %6, %add.2
+; PROLOG-NEXT:    %cmp.3 = icmp eq i64 %n, 42
+; PROLOG-NEXT:    br i1 %cmp.3, label %latchExit.unr-lcssa.loopexit, label %latch.3
+; PROLOG:       latch.3:
+; PROLOG-NEXT:    %indvars.iv.next.3 = add i64 %indvars.iv.next.2, 1
+; PROLOG-NEXT:    br i1 %cond, label %for.exit2.loopexit, label %for.exiting_block.4
+; PROLOG:       for.exiting_block.4:
+; PROLOG-NEXT:    %arrayidx.4 = getelementptr inbounds i32, i32* %a, i64 %indvars.iv.next.3
+; PROLOG-NEXT:    %7 = load i32, i32* %arrayidx.4, align 4
+; PROLOG-NEXT:    %add.4 = add nsw i32 %7, %add.3
+; PROLOG-NEXT:    %cmp.4 = icmp eq i64 %n, 42
+; PROLOG-NEXT:    br i1 %cmp.4, label %latchExit.unr-lcssa.loopexit, label %latch.4
+; PROLOG:       latch.4:
+; PROLOG-NEXT:    %indvars.iv.next.4 = add i64 %indvars.iv.next.3, 1
+; PROLOG-NEXT:    br i1 %cond, label %for.exit2.loopexit, label %for.exiting_block.5
+; PROLOG:       for.exiting_block.5:
+; PROLOG-NEXT:    %arrayidx.5 = getelementptr inbounds i32, i32* %a, i64 %indvars.iv.next.4
+; PROLOG-NEXT:    %8 = load i32, i32* %arrayidx.5, align 4
+; PROLOG-NEXT:    %add.5 = add nsw i32 %8, %add.4
+; PROLOG-NEXT:    %cmp.5 = icmp eq i64 %n, 42
+; PROLOG-NEXT:    br i1 %cmp.5, label %latchExit.unr-lcssa.loopexit, label %latch.5
+; PROLOG:       latch.5:
+; PROLOG-NEXT:    %indvars.iv.next.5 = add i64 %indvars.iv.next.4, 1
+; PROLOG-NEXT:    br i1 %cond, label %for.exit2.loopexit, label %for.exiting_block.6
+; PROLOG:       for.exiting_block.6:
+; PROLOG-NEXT:    %arrayidx.6 = getelementptr inbounds i32, i32* %a, i64 %indvars.iv.next.5
+; PROLOG-NEXT:    %9 = load i32, i32* %arrayidx.6, align 4
+; PROLOG-NEXT:    %add.6 = add nsw i32 %9, %add.5
+; PROLOG-NEXT:    %cmp.6 = icmp eq i64 %n, 42
+; PROLOG-NEXT:    br i1 %cmp.6, label %latchExit.unr-lcssa.loopexit, label %latch.6
+; PROLOG:       latch.6:
+; PROLOG-NEXT:    %indvars.iv.next.6 = add i64 %indvars.iv.next.5, 1
+; PROLOG-NEXT:    br i1 %cond, label %for.exit2.loopexit, label %for.exiting_block.7
+; PROLOG:       for.exiting_block.7:
+; PROLOG-NEXT:    %arrayidx.7 = getelementptr inbounds i32, i32* %a, i64 %indvars.iv.next.6
+; PROLOG-NEXT:    %10 = load i32, i32* %arrayidx.7, align 4
+; PROLOG-NEXT:    %add.7 = add nsw i32 %10, %add.6
+; PROLOG-NEXT:    %cmp.7 = icmp eq i64 %n, 42
+; PROLOG-NEXT:    br i1 %cmp.7, label %latchExit.unr-lcssa.loopexit, label %latch.7
+; PROLOG:       latch.7:
+; PROLOG-NEXT:    %indvars.iv.next.7 = add i64 %indvars.iv.next.6, 1
+; PROLOG-NEXT:    %exitcond.7 = icmp eq i64 %indvars.iv.next.7, %n
+; PROLOG-NEXT:    br i1 %exitcond.7, label %latchExit.unr-lcssa.loopexit, label %header
 ;
 ; PROLOG-BLOCK-LABEL: @otherblock_latch_same_exit3(
 ; PROLOG-BLOCK-NEXT:  entry:
+; PROLOG-BLOCK-NEXT:    %0 = add i64 %n, -1
+; PROLOG-BLOCK-NEXT:    %xtraiter = and i64 %n, 1
+; PROLOG-BLOCK-NEXT:    %lcmp.mod = icmp ne i64 %xtraiter, 0
+; PROLOG-BLOCK-NEXT:    br i1 %lcmp.mod, label %header.prol.preheader, label %header.prol.loopexit
+; PROLOG-BLOCK:       header.prol.preheader:
+; PROLOG-BLOCK-NEXT:    br label %header.prol
+; PROLOG-BLOCK:       header.prol:
+; PROLOG-BLOCK-NEXT:    br i1 %cond, label %for.exit2, label %for.exiting_block.prol
+; PROLOG-BLOCK:       for.exiting_block.prol:
+; PROLOG-BLOCK-NEXT:    %arrayidx.prol = getelementptr inbounds i32, i32* %a, i64 0
+; PROLOG-BLOCK-NEXT:    %1 = load i32, i32* %arrayidx.prol, align 4
+; PROLOG-BLOCK-NEXT:    %add.prol = add nsw i32 %1, 0
+; PROLOG-BLOCK-NEXT:    %cmp.prol = icmp eq i64 %n, 42
+; PROLOG-BLOCK-NEXT:    br i1 %cmp.prol, label %latchExit.unr-lcssa, label %latch.prol
+; PROLOG-BLOCK:       latch.prol:
+; PROLOG-BLOCK-NEXT:    %indvars.iv.next.prol = add i64 0, 1
+; PROLOG-BLOCK-NEXT:    %exitcond.prol = icmp eq i64 %indvars.iv.next.prol, %n
+; PROLOG-BLOCK-NEXT:    br label %header.prol.loopexit
+; PROLOG-BLOCK:       header.prol.loopexit:
+; PROLOG-BLOCK-NEXT:    %result.unr = phi i32 [ undef, %entry ], [ %add.prol, %latch.prol ]
+; PROLOG-BLOCK-NEXT:    %indvars.iv.unr = phi i64 [ 0, %entry ], [ %indvars.iv.next.prol, %latch.prol ]
+; PROLOG-BLOCK-NEXT:    %sum.02.unr = phi i32 [ 0, %entry ], [ %add.prol, %latch.prol ]
+; PROLOG-BLOCK-NEXT:    %2 = icmp ult i64 %0, 1
+; PROLOG-BLOCK-NEXT:    br i1 %2, label %latchExit, label %entry.new
+; PROLOG-BLOCK:       entry.new:
 ; PROLOG-BLOCK-NEXT:    br label %header
 ; PROLOG-BLOCK:       header:
-; PROLOG-BLOCK-NEXT:    %indvars.iv = phi i64 [ 0, %entry ], [ %indvars.iv.next.1, %latch.1 ]
-; PROLOG-BLOCK-NEXT:    %sum.02 = phi i32 [ 0, %entry ], [ %add.1, %latch.1 ]
-; PROLOG-BLOCK-NEXT:    br i1 %cond, label %for.exit2, label %for.exiting_block
+; PROLOG-BLOCK-NEXT:    %indvars.iv = phi i64 [ %indvars.iv.unr, %entry.new ], [ %indvars.iv.next.1, %latch.1 ]
+; PROLOG-BLOCK-NEXT:    %sum.02 = phi i32 [ %sum.02.unr, %entry.new ], [ %add.1, %latch.1 ]
+; PROLOG-BLOCK-NEXT:    br i1 %cond, label %for.exit2.loopexit, label %for.exiting_block
 ; PROLOG-BLOCK:       for.exiting_block:
 ; PROLOG-BLOCK-NEXT:    %arrayidx = getelementptr inbounds i32, i32* %a, i64 %indvars.iv
-; PROLOG-BLOCK-NEXT:    %0 = load i32, i32* %arrayidx, align 4
-; PROLOG-BLOCK-NEXT:    %add = add nsw i32 %0, %sum.02
+; PROLOG-BLOCK-NEXT:    %3 = load i32, i32* %arrayidx, align 4
+; PROLOG-BLOCK-NEXT:    %add = add nsw i32 %3, %sum.02
 ; PROLOG-BLOCK-NEXT:    %cmp = icmp eq i64 %n, 42
-; PROLOG-BLOCK-NEXT:    br i1 %cmp, label %latchExit, label %latch
+; PROLOG-BLOCK-NEXT:    br i1 %cmp, label %latchExit.unr-lcssa.loopexit, label %latch
 ; PROLOG-BLOCK:       latch:
-; PROLOG-BLOCK-NEXT:    %indvars.iv.next = add nuw nsw i64 %indvars.iv, 1
-; PROLOG-BLOCK-NEXT:    %exitcond = icmp eq i64 %indvars.iv.next, %n
-; PROLOG-BLOCK-NEXT:    br i1 %exitcond, label %latchExit, label %header.1
+; PROLOG-BLOCK-NEXT:    %indvars.iv.next = add i64 %indvars.iv, 1
+; PROLOG-BLOCK-NEXT:    br i1 %cond, label %for.exit2.loopexit, label %for.exiting_block.1
+; PROLOG-BLOCK:       latchExit.unr-lcssa.loopexit:
+; PROLOG-BLOCK-NEXT:    %result.ph.ph = phi i32 [ %sum.02, %for.exiting_block ], [ %add, %for.exiting_block.1 ], [ %add.1, %latch.1 ]
+; PROLOG-BLOCK-NEXT:    br label %latchExit.unr-lcssa
+; PROLOG-BLOCK:       latchExit.unr-lcssa:
+; PROLOG-BLOCK-NEXT:    %result.ph = phi i32 [ 0, %for.exiting_block.prol ], [ %result.ph.ph, %latchExit.unr-lcssa.loopexit ]
+; PROLOG-BLOCK-NEXT:    br label %latchExit
 ; PROLOG-BLOCK:       latchExit:
-; PROLOG-BLOCK-NEXT:    %result = phi i32 [ %sum.02, %for.exiting_block ], [ %add, %latch ], [ %add, %for.exiting_block.1 ], [ %add.1, %latch.1 ]
+; PROLOG-BLOCK-NEXT:    %result = phi i32 [ %result.unr, %header.prol.loopexit ], [ %result.ph, %latchExit.unr-lcssa ]
 ; PROLOG-BLOCK-NEXT:    ret i32 %result
+; PROLOG-BLOCK:       for.exit2.loopexit:
+; PROLOG-BLOCK-NEXT:    br label %for.exit2
 ; PROLOG-BLOCK:       for.exit2:
 ; PROLOG-BLOCK-NEXT:    ret i32 42
-; PROLOG-BLOCK:       header.1:
-; PROLOG-BLOCK-NEXT:    br i1 %cond, label %for.exit2, label %for.exiting_block.1
 ; PROLOG-BLOCK:       for.exiting_block.1:
 ; PROLOG-BLOCK-NEXT:    %arrayidx.1 = getelementptr inbounds i32, i32* %a, i64 %indvars.iv.next
-; PROLOG-BLOCK-NEXT:    %1 = load i32, i32* %arrayidx.1, align 4
-; PROLOG-BLOCK-NEXT:    %add.1 = add nsw i32 %1, %add
+; PROLOG-BLOCK-NEXT:    %4 = load i32, i32* %arrayidx.1, align 4
+; PROLOG-BLOCK-NEXT:    %add.1 = add nsw i32 %4, %add
 ; PROLOG-BLOCK-NEXT:    %cmp.1 = icmp eq i64 %n, 42
-; PROLOG-BLOCK-NEXT:    br i1 %cmp.1, label %latchExit, label %latch.1
+; PROLOG-BLOCK-NEXT:    br i1 %cmp.1, label %latchExit.unr-lcssa.loopexit, label %latch.1
 ; PROLOG-BLOCK:       latch.1:
 ; PROLOG-BLOCK-NEXT:    %indvars.iv.next.1 = add i64 %indvars.iv.next, 1
 ; PROLOG-BLOCK-NEXT:    %exitcond.1 = icmp eq i64 %indvars.iv.next.1, %n
-; PROLOG-BLOCK-NEXT:    br i1 %exitcond.1, label %latchExit, label %header, !llvm.loop !7
+; PROLOG-BLOCK-NEXT:    br i1 %exitcond.1, label %latchExit.unr-lcssa.loopexit, label %header, !llvm.loop !7
 ;
 
 entry:
@@ -2817,7 +3381,7 @@ define i64 @test5(i64 %trip, i64 %add, i1 %cond) {
 ; PROLOG-NEXT:    %cmp.prol = icmp ne i64 %iv_next.prol, %trip
 ; PROLOG-NEXT:    %prol.iter.sub = sub i64 %prol.iter, 1
 ; PROLOG-NEXT:    %prol.iter.cmp = icmp ne i64 %prol.iter.sub, 0
-; PROLOG-NEXT:    br i1 %prol.iter.cmp, label %loop_header.prol, label %loop_header.prol.loopexit.unr-lcssa, !llvm.loop !4
+; PROLOG-NEXT:    br i1 %prol.iter.cmp, label %loop_header.prol, label %loop_header.prol.loopexit.unr-lcssa, !llvm.loop !8
 ; PROLOG:       loop_header.prol.loopexit.unr-lcssa:
 ; PROLOG-NEXT:    %iv.unr.ph = phi i64 [ %iv_next.prol, %loop_latch.prol ]
 ; PROLOG-NEXT:    %sum.unr.ph = phi i64 [ %sum.next.prol, %loop_latch.prol ]
@@ -3280,7 +3844,7 @@ define i32 @test6(i32* nocapture %a, i64 %n, i1 %cond, i32 %x) {
 ; PROLOG-NEXT:    %exitcond.prol = icmp eq i64 %indvars.iv.next.prol, %n
 ; PROLOG-NEXT:    %prol.iter.sub = sub i64 %prol.iter, 1
 ; PROLOG-NEXT:    %prol.iter.cmp = icmp ne i64 %prol.iter.sub, 0
-; PROLOG-NEXT:    br i1 %prol.iter.cmp, label %header.prol, label %header.prol.loopexit.unr-lcssa, !llvm.loop !5
+; PROLOG-NEXT:    br i1 %prol.iter.cmp, label %header.prol, label %header.prol.loopexit.unr-lcssa, !llvm.loop !9
 ; PROLOG:       header.prol.loopexit.unr-lcssa:
 ; PROLOG-NEXT:    %sum.0.lcssa.unr.ph = phi i32 [ %add.prol, %latch.prol ]
 ; PROLOG-NEXT:    %indvars.iv.unr.ph = phi i64 [ %indvars.iv.next.prol, %latch.prol ]
@@ -3667,7 +4231,7 @@ define i32 @test7(i32 %arg, i32 %arg1, i32 %arg2) {
 ; PROLOG-NEXT:    %i9.prol = icmp slt i64 %add.prol, %sext
 ; PROLOG-NEXT:    %prol.iter.sub = sub i64 %prol.iter, 1
 ; PROLOG-NEXT:    %prol.iter.cmp = icmp ne i64 %prol.iter.sub, 0
-; PROLOG-NEXT:    br i1 %prol.iter.cmp, label %header.prol, label %header.prol.loopexit.unr-lcssa, !llvm.loop !6
+; PROLOG-NEXT:    br i1 %prol.iter.cmp, label %header.prol, label %header.prol.loopexit.unr-lcssa, !llvm.loop !10
 ; PROLOG:       header.prol.loopexit.unr-lcssa:
 ; PROLOG-NEXT:    %i6.unr.ph = phi i64 [ %add.prol, %latch.prol ]
 ; PROLOG-NEXT:    br label %header.prol.loopexit
@@ -3897,7 +4461,7 @@ define void @test8() {
 ; PROLOG-NEXT:    %i6.prol = icmp ult i64 %i4.prol, 100
 ; PROLOG-NEXT:    %prol.iter.sub = sub i64 %prol.iter, 1
 ; PROLOG-NEXT:    %prol.iter.cmp = icmp ne i64 %prol.iter.sub, 0
-; PROLOG-NEXT:    br i1 %prol.iter.cmp, label %innerH.prol, label %innerH.prol.loopexit.unr-lcssa, !llvm.loop !7
+; PROLOG-NEXT:    br i1 %prol.iter.cmp, label %innerH.prol, label %innerH.prol.loopexit.unr-lcssa, !llvm.loop !11
 ; PROLOG:       innerH.prol.loopexit.unr-lcssa:
 ; PROLOG-NEXT:    %i3.unr.ph = phi i64 [ %i4.prol, %latch.prol ]
 ; PROLOG-NEXT:    br label %innerH.prol.loopexit
@@ -4166,7 +4730,7 @@ define i8 addrspace(1)* @test9(i8* nocapture readonly %arg, i32 %n) {
 ; PROLOG-NEXT:    %iv.next.prol = add nuw nsw i64 %phi.prol, 1
 ; PROLOG-NEXT:    %prol.iter.sub = sub i32 %prol.iter, 1
 ; PROLOG-NEXT:    %prol.iter.cmp = icmp ne i32 %prol.iter.sub, 0
-; PROLOG-NEXT:    br i1 %prol.iter.cmp, label %header.prol, label %header.prol.loopexit.unr-lcssa, !llvm.loop !8
+; PROLOG-NEXT:    br i1 %prol.iter.cmp, label %header.prol, label %header.prol.loopexit.unr-lcssa, !llvm.loop !12
 ; PROLOG:       header.prol.loopexit.unr-lcssa:
 ; PROLOG-NEXT:    %phi.unr.ph = phi i64 [ %iv.next.prol, %latch.prol ]
 ; PROLOG-NEXT:    br label %header.prol.loopexit

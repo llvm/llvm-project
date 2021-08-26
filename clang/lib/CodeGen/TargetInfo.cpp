@@ -827,19 +827,19 @@ public:
         llvm::Function *Fn = cast<llvm::Function>(GV);
         llvm::AttrBuilder B;
         B.addAttribute("wasm-import-module", Attr->getImportModule());
-        Fn->addAttributes(llvm::AttributeList::FunctionIndex, B);
+        Fn->addFnAttrs(B);
       }
       if (const auto *Attr = FD->getAttr<WebAssemblyImportNameAttr>()) {
         llvm::Function *Fn = cast<llvm::Function>(GV);
         llvm::AttrBuilder B;
         B.addAttribute("wasm-import-name", Attr->getImportName());
-        Fn->addAttributes(llvm::AttributeList::FunctionIndex, B);
+        Fn->addFnAttrs(B);
       }
       if (const auto *Attr = FD->getAttr<WebAssemblyExportNameAttr>()) {
         llvm::Function *Fn = cast<llvm::Function>(GV);
         llvm::AttrBuilder B;
         B.addAttribute("wasm-export-name", Attr->getExportName());
-        Fn->addAttributes(llvm::AttributeList::FunctionIndex, B);
+        Fn->addFnAttrs(B);
       }
     }
 
@@ -1523,6 +1523,14 @@ ABIArgInfo X86_32ABIInfo::classifyReturnType(QualType RetTy,
     // Ignore empty structs/unions.
     if (isEmptyRecord(getContext(), RetTy, true))
       return ABIArgInfo::getIgnore();
+
+    // Return complex of _Float16 as <2 x half> so the backend will use xmm0.
+    if (const ComplexType *CT = RetTy->getAs<ComplexType>()) {
+      QualType ET = getContext().getCanonicalType(CT->getElementType());
+      if (ET->isFloat16Type())
+        return ABIArgInfo::getDirect(llvm::FixedVectorType::get(
+            llvm::Type::getHalfTy(getVMContext()), 2));
+    }
 
     // Small structures which are register sized are generally returned
     // in a register.
@@ -6393,7 +6401,7 @@ public:
     // the backend to perform a realignment as part of the function prologue.
     llvm::AttrBuilder B;
     B.addStackAlignmentAttr(8);
-    Fn->addAttributes(llvm::AttributeList::FunctionIndex, B);
+    Fn->addFnAttrs(B);
   }
 };
 

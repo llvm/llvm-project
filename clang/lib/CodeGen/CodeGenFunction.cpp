@@ -381,6 +381,9 @@ void CodeGenFunction::FinishFunction(SourceLocation EndLoc) {
                        "__cyg_profile_func_exit");
   }
 
+  if (ShouldSkipSanitizerInstrumentation())
+    CurFn->addFnAttr(llvm::Attribute::DisableSanitizerInstrumentation);
+
   // Emit debug descriptor for function end.
   if (CGDebugInfo *DI = getDebugInfo())
     DI->EmitFunctionEnd(Builder, CurFn);
@@ -517,6 +520,12 @@ bool CodeGenFunction::ShouldInstrumentFunction() {
   if (!CurFuncDecl || CurFuncDecl->hasAttr<NoInstrumentFunctionAttr>())
     return false;
   return true;
+}
+
+bool CodeGenFunction::ShouldSkipSanitizerInstrumentation() {
+  if (!CurFuncDecl)
+    return false;
+  return CurFuncDecl->hasAttr<DisableSanitizerInstrumentationAttr>();
 }
 
 /// ShouldXRayInstrument - Return true if the current function should be
@@ -1040,7 +1049,8 @@ void CodeGenFunction::StartFunction(GlobalDecl GD, QualType RetTy,
     Fn->addFnAttr("packed-stack");
   }
 
-  if (CGM.getCodeGenOpts().WarnStackSize != UINT_MAX)
+  if (CGM.getCodeGenOpts().WarnStackSize != UINT_MAX &&
+      !CGM.getDiags().isIgnored(diag::warn_fe_backend_frame_larger_than, Loc))
     Fn->addFnAttr("warn-stack-size",
                   std::to_string(CGM.getCodeGenOpts().WarnStackSize));
 

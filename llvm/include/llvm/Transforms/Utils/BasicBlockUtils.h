@@ -214,29 +214,6 @@ BasicBlock *SplitKnownCriticalEdge(Instruction *TI, unsigned SuccNum,
                                        CriticalEdgeSplittingOptions(),
                                    const Twine &BBName = "");
 
-inline BasicBlock *
-SplitCriticalEdge(BasicBlock *BB, succ_iterator SI,
-                  const CriticalEdgeSplittingOptions &Options =
-                      CriticalEdgeSplittingOptions()) {
-  return SplitCriticalEdge(BB->getTerminator(), SI.getSuccessorIndex(),
-                           Options);
-}
-
-/// If the edge from *PI to BB is not critical, return false. Otherwise, split
-/// all edges between the two blocks and return true. This updates all of the
-/// same analyses as the other SplitCriticalEdge function. If P is specified, it
-/// updates the analyses described above.
-inline bool SplitCriticalEdge(BasicBlock *Succ, pred_iterator PI,
-                              const CriticalEdgeSplittingOptions &Options =
-                                  CriticalEdgeSplittingOptions()) {
-  bool MadeChange = false;
-  Instruction *TI = (*PI)->getTerminator();
-  for (unsigned i = 0, e = TI->getNumSuccessors(); i != e; ++i)
-    if (TI->getSuccessor(i) == Succ)
-      MadeChange |= !!SplitCriticalEdge(TI, i, Options);
-  return MadeChange;
-}
-
 /// If an edge from Src to Dst is critical, split the edge and return true,
 /// otherwise return false. This method requires that there be an edge between
 /// the two blocks. It updates the analyses passed in the options struct

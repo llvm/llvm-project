@@ -39,8 +39,7 @@ body:             |
     ; MIPS32: [[ADD:%[0-9]+]]:_(s32) = G_ADD [[CTLZ]], [[C1]]
     ; MIPS32: [[CTLZ1:%[0-9]+]]:_(s32) = G_CTLZ [[COPY1]](s32)
     ; MIPS32: [[C2:%[0-9]+]]:_(s32) = G_CONSTANT i32 1
-    ; MIPS32: [[COPY2:%[0-9]+]]:_(s32) = COPY [[ICMP]](s32)
-    ; MIPS32: [[AND:%[0-9]+]]:_(s32) = G_AND [[COPY2]], [[C2]]
+    ; MIPS32: [[AND:%[0-9]+]]:_(s32) = G_AND [[ICMP]], [[C2]]
     ; MIPS32: [[SELECT:%[0-9]+]]:_(s32) = G_SELECT [[AND]](s32), [[ADD]], [[CTLZ1]]
     ; MIPS32: $v0 = COPY [[SELECT]](s32)
     ; MIPS32: $v1 = COPY [[C]](s32)

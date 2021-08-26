@@ -303,7 +303,7 @@ static bool addReadAttrs(const SCCNodeSet &SCCNodes, AARGetterT &&AARGetter) {
       AttrsToRemove.addAttribute(Attribute::InaccessibleMemOnly);
       AttrsToRemove.addAttribute(Attribute::InaccessibleMemOrArgMemOnly);
     }
-    F->removeAttributes(AttributeList::FunctionIndex, AttrsToRemove);
+    F->removeFnAttrs(AttrsToRemove);
 
     // Add in the new attribute.
     if (WritesMemory && !ReadsMemory)
@@ -1076,7 +1076,7 @@ static bool addNonNullAttrs(const SCCNodeSet &SCCNodes) {
         // which prevents us from speculating about the entire SCC
         LLVM_DEBUG(dbgs() << "Eagerly marking " << F->getName()
                           << " as nonnull\n");
-        F->addAttribute(AttributeList::ReturnIndex, Attribute::NonNull);
+        F->addRetAttr(Attribute::NonNull);
         ++NumNonNullReturn;
         MadeChange = true;
       }
@@ -1094,7 +1094,7 @@ static bool addNonNullAttrs(const SCCNodeSet &SCCNodes) {
         continue;
 
       LLVM_DEBUG(dbgs() << "SCC marking " << F->getName() << " as nonnull\n");
-      F->addAttribute(AttributeList::ReturnIndex, Attribute::NonNull);
+      F->addRetAttr(Attribute::NonNull);
       ++NumNonNullReturn;
       MadeChange = true;
     }

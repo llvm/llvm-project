@@ -34,7 +34,9 @@ def InferTypeOpInterface : OpInterface<"InferTypeOpInterface"> {
       The method takes an optional location which, if set, will be used to
       report errors on. The operands and attributes correspond to those with
       which an Operation would be created (e.g., as used in Operation::create)
-      and the regions of the op.
+      and the regions of the op. Be aware that this method is supposed to be
+      called with valid arguments, e.g., operands are verified, or it may result
+      in an undefined behavior.
       }],
       /*retTy=*/"::mlir::LogicalResult",
       /*methodName=*/"inferReturnTypes",

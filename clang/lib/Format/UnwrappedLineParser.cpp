@@ -962,8 +962,8 @@ static bool mustBeJSIdent(const AdditionalKeywords &Keywords,
               Keywords.kw_function, Keywords.kw_import, Keywords.kw_is,
               Keywords.kw_let, Keywords.kw_var, tok::kw_const,
               Keywords.kw_abstract, Keywords.kw_extends, Keywords.kw_implements,
-              Keywords.kw_instanceof, Keywords.kw_interface, Keywords.kw_throws,
-              Keywords.kw_from));
+              Keywords.kw_instanceof, Keywords.kw_interface,
+              Keywords.kw_override, Keywords.kw_throws, Keywords.kw_from));
 }
 
 static bool mustBeJSIdentOrValue(const AdditionalKeywords &Keywords,
@@ -1008,12 +1008,24 @@ static bool isC78Type(const FormatToken &Tok) {
 //   {
 //      return a + b;
 //   }
-static bool isC78ParameterDecl(const FormatToken *Tok) {
-  if (!Tok)
+static bool isC78ParameterDecl(const FormatToken *Tok, const FormatToken *Next,
+                               const FormatToken *FuncName) {
+  assert(Tok);
+  assert(Next);
+  assert(FuncName);
+
+  if (FuncName->isNot(tok::identifier))
+    return false;
+
+  const FormatToken *Prev = FuncName->Previous;
+  if (!Prev || (Prev->isNot(tok::star) && !isC78Type(*Prev)))
     return false;
 
   if (!isC78Type(*Tok) &&
       !Tok->isOneOf(tok::kw_register, tok::kw_struct, tok::kw_union))
+    return false;
+
+  if (Next->isNot(tok::star) && !Next->Tok.getIdentifierInfo())
     return false;
 
   Tok = Tok->Previous;
@@ -1378,21 +1390,11 @@ void UnwrappedLineParser::parseStructuralElement(bool IsTopLevel) {
       parseParens();
       // Break the unwrapped line if a K&R C function definition has a parameter
       // declaration.
-      if (!IsTopLevel || !Style.isCpp())
-        break;
-      if (!Previous || Previous->isNot(tok::identifier))
-        break;
-      const FormatToken *PrevPrev = Previous->Previous;
-      if (!PrevPrev || (!isC78Type(*PrevPrev) && PrevPrev->isNot(tok::star)))
+      if (!IsTopLevel || !Style.isCpp() || !Previous || FormatTok->is(tok::eof))
         break;
       const unsigned Position = Tokens->getPosition() + 1;
-      if (Position == AllTokens.size())
-        break;
       assert(Position < AllTokens.size());
-      const FormatToken *Next = AllTokens[Position];
-      if (Next && Next->isOneOf(tok::l_paren, tok::semi))
-        break;
-      if (isC78ParameterDecl(FormatTok)) {
+      if (isC78ParameterDecl(FormatTok, AllTokens[Position], Previous)) {
         addUnwrappedLine();
         return;
       }

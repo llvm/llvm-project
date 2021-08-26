@@ -7,7 +7,6 @@
 //===----------------------------------------------------------------------===//
 
 // <numeric>
-// UNSUPPORTED: clang-8
 
 // Became constexpr in C++20
 // template <InputIterator Iter1, InputIterator Iter2, MoveConstructible T,

@@ -122,7 +122,7 @@ llvm::AllocaInst *CodeGenFunction::CreateTempAlloca(llvm::Type *Ty,
 Address CodeGenFunction::CreateDefaultAlignTempAlloca(llvm::Type *Ty,
                                                       const Twine &Name) {
   CharUnits Align =
-    CharUnits::fromQuantity(CGM.getDataLayout().getABITypeAlignment(Ty));
+      CharUnits::fromQuantity(CGM.getDataLayout().getPrefTypeAlignment(Ty));
   return CreateTempAlloca(Ty, Align, Name);
 }
 
@@ -3498,7 +3498,7 @@ void CodeGenFunction::EmitTrapCheck(llvm::Value *Checked,
     if (!CGM.getCodeGenOpts().TrapFuncName.empty()) {
       auto A = llvm::Attribute::get(getLLVMContext(), "trap-func-name",
                                     CGM.getCodeGenOpts().TrapFuncName);
-      TrapCall->addAttribute(llvm::AttributeList::FunctionIndex, A);
+      TrapCall->addFnAttr(A);
     }
     TrapCall->setDoesNotReturn();
     TrapCall->setDoesNotThrow();
@@ -3522,7 +3522,7 @@ llvm::CallInst *CodeGenFunction::EmitTrapCall(llvm::Intrinsic::ID IntrID) {
   if (!CGM.getCodeGenOpts().TrapFuncName.empty()) {
     auto A = llvm::Attribute::get(getLLVMContext(), "trap-func-name",
                                   CGM.getCodeGenOpts().TrapFuncName);
-    TrapCall->addAttribute(llvm::AttributeList::FunctionIndex, A);
+    TrapCall->addFnAttr(A);
   }
 
   return TrapCall;

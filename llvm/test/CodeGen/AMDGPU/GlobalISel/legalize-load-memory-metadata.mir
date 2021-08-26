@@ -43,8 +43,7 @@ body: |
     ; SI: [[COPY:%[0-9]+]]:_(p1) = COPY $vgpr0_vgpr1
     ; SI: [[LOAD:%[0-9]+]]:_(s32) = G_LOAD [[COPY]](p1) :: (load (s32), !tbaa !1, addrspace 1)
     ; SI: [[C:%[0-9]+]]:_(s32) = G_CONSTANT i32 16777215
-    ; SI: [[COPY1:%[0-9]+]]:_(s32) = COPY [[LOAD]](s32)
-    ; SI: [[AND:%[0-9]+]]:_(s32) = G_AND [[COPY1]], [[C]]
+    ; SI: [[AND:%[0-9]+]]:_(s32) = G_AND [[LOAD]], [[C]]
     ; SI: $vgpr0 = COPY [[AND]](s32)
     %0:_(p1) = COPY $vgpr0_vgpr1
     %1:_(s24) = G_LOAD %0 :: (load (s24), align 4, addrspace 1, !range !0, !tbaa !1)
@@ -77,8 +76,7 @@ body: |
     ; SI: [[COPY:%[0-9]+]]:_(p1) = COPY $vgpr0_vgpr1
     ; SI: [[LOAD:%[0-9]+]]:_(s32) = G_LOAD [[COPY]](p1) :: (load (s32), !tbaa !1, addrspace 1)
     ; SI: [[C:%[0-9]+]]:_(s32) = G_CONSTANT i32 16777215
-    ; SI: [[COPY1:%[0-9]+]]:_(s32) = COPY [[LOAD]](s32)
-    ; SI: [[AND:%[0-9]+]]:_(s32) = G_AND [[COPY1]], [[C]]
+    ; SI: [[AND:%[0-9]+]]:_(s32) = G_AND [[LOAD]], [[C]]
     ; SI: $vgpr0 = COPY [[AND]](s32)
     %0:_(p1) = COPY $vgpr0_vgpr1
     %1:_(s24) = G_LOAD %0 :: (load (s24), align 4, addrspace 1, !tbaa !1)

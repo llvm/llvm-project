@@ -75,6 +75,7 @@
 #include "llvm/IR/DebugInfo.h"
 #include "llvm/IR/DebugLoc.h"
 #include "llvm/IR/DerivedTypes.h"
+#include "llvm/IR/DiagnosticInfo.h"
 #include "llvm/IR/Function.h"
 #include "llvm/IR/GetElementPtrTypeIterator.h"
 #include "llvm/IR/GlobalValue.h"
@@ -1151,6 +1152,16 @@ bool FastISel::lowerCall(const CallInst *CI) {
   CLI.setCallee(RetTy, FuncTy, CI->getCalledOperand(), std::move(Args), *CI)
       .setTailCall(IsTailCall);
 
+  if (const Function *F = CI->getCalledFunction())
+    if (F->hasFnAttribute("dontcall")) {
+      unsigned LocCookie = 0;
+      if (MDNode *MD = CI->getMetadata("srcloc"))
+        LocCookie =
+            mdconst::extract<ConstantInt>(MD->getOperand(0))->getZExtValue();
+      DiagnosticInfoDontCall D(F->getName(), LocCookie);
+      F->getContext().diagnose(D);
+    }
+
   return lowerCallTo(CLI);
 }
 
@@ -1264,7 +1275,7 @@ bool FastISel::selectIntrinsicCall(const IntrinsicInst *II) {
       // If using instruction referencing, mutate this into a DBG_INSTR_REF,
       // to be later patched up by finalizeDebugInstrRefs. Tack a deref onto
       // the expression, we don't have an "indirect" flag in DBG_INSTR_REF.
-      if (TM.Options.ValueTrackingVariableLocations && Op->isReg()) {
+      if (FuncInfo.MF->useDebugInstrRef() && Op->isReg()) {
         Builder->setDesc(TII.get(TargetOpcode::DBG_INSTR_REF));
         Builder->getOperand(1).ChangeToImmediate(0);
         auto *NewExpr =
@@ -1323,7 +1334,7 @@ bool FastISel::selectIntrinsicCall(const IntrinsicInst *II) {
 
       // If using instruction referencing, mutate this into a DBG_INSTR_REF,
       // to be later patched up by finalizeDebugInstrRefs.
-      if (TM.Options.ValueTrackingVariableLocations) {
+      if (FuncInfo.MF->useDebugInstrRef()) {
         Builder->setDesc(TII.get(TargetOpcode::DBG_INSTR_REF));
         Builder->getOperand(1).ChangeToImmediate(0);
       }

@@ -385,10 +385,10 @@ static std::string createDefaultXml() {
        << "    </security>\n"
        << "  </trustInfo>\n";
   }
-  if (!config->manifestDependency.empty()) {
+  for (auto manifestDependency : config->manifestDependencies) {
     os << "  <dependency>\n"
        << "    <dependentAssembly>\n"
-       << "      <assemblyIdentity " << config->manifestDependency << " />\n"
+       << "      <assemblyIdentity " << manifestDependency << " />\n"
        << "    </dependentAssembly>\n"
        << "  </dependency>\n";
   }
@@ -408,7 +408,8 @@ static std::string createManifestXmlWithInternalMt(StringRef defaultXml) {
   for (StringRef filename : config->manifestInput) {
     std::unique_ptr<MemoryBuffer> manifest =
         check(MemoryBuffer::getFile(filename));
-    if (auto e = merger.merge(*manifest.get()))
+    // Call takeBuffer to include in /reproduce: output if applicable.
+    if (auto e = merger.merge(driver->takeBuffer(std::move(manifest))))
       fatal("internal manifest tool failed on file " + filename + ": " +
             toString(std::move(e)));
   }
@@ -436,6 +437,11 @@ static std::string createManifestXmlWithExternalMt(StringRef defaultXml) {
   for (StringRef filename : config->manifestInput) {
     e.add("/manifest");
     e.add(filename);
+
+    // Manually add the file to the /reproduce: tar if needed.
+    if (driver->tar)
+      if (auto mbOrErr = MemoryBuffer::getFile(filename))
+        driver->takeBuffer(std::move(*mbOrErr));
   }
   e.add("/nologo");
   e.add("/out:" + StringRef(user.path));

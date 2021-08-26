@@ -2131,18 +2131,6 @@ Instruction *InstCombinerImpl::visitGetElementPtrInst(GetElementPtrInst &GEP) {
           }
         }
       }
-
-      // Fold (gep(gep(Ptr,Idx0),Idx1) -> gep(Ptr,add(Idx0,Idx1))
-      if (GO1->getType() == SO1->getType()) {
-        bool NewInBounds = GEP.isInBounds() && Src->isInBounds();
-        auto *NewIdx =
-            Builder.CreateAdd(GO1, SO1, GEP.getName() + ".idx",
-                              /*HasNUW*/ false, /*HasNSW*/ NewInBounds);
-        auto *NewGEP = GetElementPtrInst::Create(
-            GEPEltType, Src->getPointerOperand(), {NewIdx});
-        NewGEP->setIsInBounds(NewInBounds);
-        return NewGEP;
-      }
     }
 
     // Note that if our source is a gep chain itself then we wait for that

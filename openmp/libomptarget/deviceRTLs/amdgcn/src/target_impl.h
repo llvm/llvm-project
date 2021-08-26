@@ -25,9 +25,17 @@
 #define PRId64 "ld"
 #define PRIu64 "lu"
 
+typedef uint64_t __kmpc_impl_lanemask_t;
+
 #define INLINE inline
 #define NOINLINE __attribute__((noinline))
 #define ALIGN(N) __attribute__((aligned(N)))
+
+#include "llvm/Frontend/OpenMP/OMPGridValues.h"
+
+INLINE constexpr const llvm::omp::GV &getGridValue() {
+  return llvm::omp::AMDGPUGridValues;
+}
 
 ////////////////////////////////////////////////////////////////////////////////
 // Kernel options
@@ -36,9 +44,8 @@
 ////////////////////////////////////////////////////////////////////////////////
 // The following def must match the absolute limit hardwired in the host RTL
 // max number of threads per team
-#define MAX_THREADS_PER_TEAM 1024
-
-#define WARPSIZE 64
+enum { MAX_THREADS_PER_TEAM = getGridValue().GV_Max_WG_Size };
+enum { WARPSIZE = getGridValue().GV_Warp_Size };
 
 // Maximum number of omp state objects per SM allocated statically in global
 // memory.
@@ -49,14 +56,12 @@
 
 // Data sharing related quantities, need to match what is used in the compiler.
 enum DATA_SHARING_SIZES {
-  // The maximum number of workers in a kernel.
-  DS_Max_Worker_Threads = 960,
   // The size reserved for data in a shared memory slot.
-  DS_Slot_Size = 256,
+  DS_Slot_Size = getGridValue().GV_Slot_Size,
   // The slot size that should be reserved for a working warp.
-  DS_Worker_Warp_Slot_Size = WARPSIZE * DS_Slot_Size,
+  DS_Worker_Warp_Slot_Size = getGridValue().warpSlotSize(),
   // The maximum number of warps in use
-  DS_Max_Warp_Number = 16,
+  DS_Max_Warp_Number = getGridValue().maxWarpNumber(),
 };
 
 enum : __kmpc_impl_lanemask_t {

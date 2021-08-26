@@ -303,8 +303,13 @@ Linux::Linux(const Driver &D, const llvm::Triple &Triple, const ArgList &Args)
   // searched.
   // FIXME: It's not clear whether we should use the driver's installed
   // directory ('Dir' below) or the ResourceDir.
-  if (StringRef(D.Dir).startswith(SysRoot))
+  if (StringRef(D.Dir).startswith(SysRoot)) {
+    // Even if OSLibDir != "lib", this is needed for Clang in the build
+    // directory (not installed) to find libc++.
     addPathIfExists(D, D.Dir + "/../lib", Paths);
+    if (OSLibDir != "lib")
+      addPathIfExists(D, D.Dir + "/../" + OSLibDir, Paths);
+  }
 
   addPathIfExists(D, SysRoot + "/lib", Paths);
   addPathIfExists(D, SysRoot + "/usr/lib", Paths);
@@ -694,6 +699,7 @@ SanitizerMask Linux::getSupportedSanitizers() const {
                          getTriple().getArch() == llvm::Triple::thumbeb;
   const bool IsRISCV64 = getTriple().getArch() == llvm::Triple::riscv64;
   const bool IsSystemZ = getTriple().getArch() == llvm::Triple::systemz;
+  const bool IsHexagon = getTriple().getArch() == llvm::Triple::hexagon;
   SanitizerMask Res = ToolChain::getSupportedSanitizers();
   Res |= SanitizerKind::Address;
   Res |= SanitizerKind::PointerCompare;
@@ -707,7 +713,7 @@ SanitizerMask Linux::getSupportedSanitizers() const {
   if (IsX86_64 || IsMIPS64 || IsAArch64)
     Res |= SanitizerKind::DataFlow;
   if (IsX86_64 || IsMIPS64 || IsAArch64 || IsX86 || IsArmArch || IsPowerPC64 ||
-      IsRISCV64 || IsSystemZ)
+      IsRISCV64 || IsSystemZ || IsHexagon)
     Res |= SanitizerKind::Leak;
   if (IsX86_64 || IsMIPS64 || IsAArch64 || IsPowerPC64 || IsSystemZ)
     Res |= SanitizerKind::Thread;
@@ -716,7 +722,7 @@ SanitizerMask Linux::getSupportedSanitizers() const {
   if (IsX86 || IsX86_64)
     Res |= SanitizerKind::Function;
   if (IsX86_64 || IsMIPS64 || IsAArch64 || IsX86 || IsMIPS || IsArmArch ||
-      IsPowerPC64)
+      IsPowerPC64 || IsHexagon)
     Res |= SanitizerKind::Scudo;
   if (IsX86_64 || IsAArch64) {
     Res |= SanitizerKind::HWAddress;

@@ -58,6 +58,11 @@ write(buffer,*,delim="QUOTE") quotes
 print "('>',a10,'<')", buffer
 end
 ```
+* The name of the control variable in an implied DO loop in an array
+  constructor or DATA statement has a scope over the value-list only,
+  not the bounds of the implied DO loop.  It is not advisable to use
+  an object of the same name as the index variable in a bounds
+  expression, but it will work, instead of being needlessly undefined.
 
 ## Extensions, deletions, and legacy features supported by default
 

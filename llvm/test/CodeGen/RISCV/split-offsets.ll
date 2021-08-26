@@ -87,7 +87,7 @@ define void @test2([65536 x i32]** %sp, [65536 x i32]* %t, i32 %n) {
 ; RV64I-NEXT:    bge a4, a2, .LBB1_2
 ; RV64I-NEXT:  .LBB1_1: # %while_body
 ; RV64I-NEXT:    # =>This Inner Loop Header: Depth=1
-; RV64I-NEXT:    addi a4, a3, 1
+; RV64I-NEXT:    addiw a4, a3, 1
 ; RV64I-NEXT:    sw a4, 0(a1)
 ; RV64I-NEXT:    sw a3, 4(a1)
 ; RV64I-NEXT:    sw a4, 0(a0)

@@ -1,5 +1,5 @@
-; RUN: opt -passes='loop(licm)' -S %s | FileCheck %s --check-prefixes CHECK,LICM
-; RUN: opt -passes='loop(lnicm)' -S %s | FileCheck %s --check-prefixes CHECK,LNICM
+; RUN: opt -passes='loop-mssa(licm)' -S %s | FileCheck %s --check-prefixes CHECK,LICM
+; RUN: opt -passes='loop-mssa(lnicm)' -S %s | FileCheck %s --check-prefixes CHECK,LNICM
 
 ; This test represents the following function:
 ;

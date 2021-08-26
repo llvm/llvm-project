@@ -76,6 +76,7 @@ unittest("ClangdTests") {
     "HeaderSourceSwitchTests.cpp",
     "HeadersTests.cpp",
     "HoverTests.cpp",
+    "IncludeCleanerTests.cpp",
     "IndexActionTests.cpp",
     "IndexTests.cpp",
     "InlayHintTests.cpp",

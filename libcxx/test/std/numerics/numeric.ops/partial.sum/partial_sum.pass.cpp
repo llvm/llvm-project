@@ -7,7 +7,6 @@
 //===----------------------------------------------------------------------===//
 
 // <numeric>
-// UNSUPPORTED: clang-8
 
 // Became constexpr in C++20
 // template <InputIterator InIter, OutputIterator<auto, const InIter::value_type&> OutIter>

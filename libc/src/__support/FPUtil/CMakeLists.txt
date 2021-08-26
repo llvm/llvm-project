@@ -26,6 +26,8 @@ add_header_library(
     NormalFloat.h
     PlatformDefs.h
     PolyEval.h
+    UInt.h
+    XFloat.h
   DEPENDS
     libc.include.math
     libc.include.errno

@@ -8103,14 +8103,12 @@ SDValue TargetLowering::expandAddSubSat(SDNode *Node, SelectionDAG &DAG) const {
     return DAG.getSelect(dl, VT, Overflow, Zero, SumDiff);
   }
 
-  // SatMax -> Overflow && SumDiff < 0
-  // SatMin -> Overflow && SumDiff >= 0
+  // Overflow ? (SumDiff >> BW) ^ MinVal : SumDiff
   APInt MinVal = APInt::getSignedMinValue(BitWidth);
-  APInt MaxVal = APInt::getSignedMaxValue(BitWidth);
   SDValue SatMin = DAG.getConstant(MinVal, dl, VT);
-  SDValue SatMax = DAG.getConstant(MaxVal, dl, VT);
-  SDValue SumNeg = DAG.getSetCC(dl, BoolVT, SumDiff, Zero, ISD::SETLT);
-  Result = DAG.getSelect(dl, VT, SumNeg, SatMax, SatMin);
+  SDValue Shift = DAG.getNode(ISD::SRA, dl, VT, SumDiff,
+                              DAG.getConstant(BitWidth - 1, dl, VT));
+  Result = DAG.getNode(ISD::XOR, dl, VT, Shift, SatMin);
   return DAG.getSelect(dl, VT, Overflow, Result, SumDiff);
 }
 
@@ -8421,7 +8419,7 @@ void TargetLowering::expandSADDSUBO(
 
   // If SADDSAT/SSUBSAT is legal, compare results to detect overflow.
   unsigned OpcSat = IsAdd ? ISD::SADDSAT : ISD::SSUBSAT;
-  if (isOperationLegalOrCustom(OpcSat, LHS.getValueType())) {
+  if (isOperationLegal(OpcSat, LHS.getValueType())) {
     SDValue Sat = DAG.getNode(OpcSat, dl, LHS.getValueType(), LHS, RHS);
     SDValue SetCC = DAG.getSetCC(dl, OType, Result, Sat, ISD::SETNE);
     Overflow = DAG.getBoolExtOrTrunc(SetCC, dl, ResultType, ResultType);

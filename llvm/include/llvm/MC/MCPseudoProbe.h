@@ -246,9 +246,8 @@ public:
 // A Tri-tree based data structure to group probes by inline stack.
 // A tree is allocated for a standalone .text section. A fake
 // instance is created as the root of a tree.
-// A real instance of this class is created for each function, either an
-// unlined function that has code in .text section or an inlined function.
-
+// A real instance of this class is created for each function, either a
+// not inlined function that has code in .text section or an inlined function.
 class MCPseudoProbeInlineTree
     : public MCPseudoProbeInlineTreeBase<MCPseudoProbe,
                                          MCPseudoProbeInlineTree> {

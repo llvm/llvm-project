@@ -34,8 +34,7 @@ body:             |
     ; CHECK: [[ASHR:%[0-9]+]]:_(s64) = G_ASHR [[MUL]], [[C]](s64)
     ; CHECK: [[ICMP:%[0-9]+]]:_(s32) = G_ICMP intpred(ne), [[SMULH]](s64), [[ASHR]]
     ; CHECK: $x0 = COPY [[MUL]](s64)
-    ; CHECK: [[COPY2:%[0-9]+]]:_(s32) = COPY [[ICMP]](s32)
-    ; CHECK: $w0 = COPY [[COPY2]](s32)
+    ; CHECK: $w0 = COPY [[ICMP]](s32)
     %0:_(s64) = COPY $x0
     %1:_(s64) = COPY $x1
     %2:_(s64), %3:_(s1) = G_SMULO %0, %1
@@ -56,14 +55,92 @@ body:             |
     ; CHECK: [[MUL:%[0-9]+]]:_(s64) = G_MUL [[COPY]], [[COPY1]]
     ; CHECK: [[ICMP:%[0-9]+]]:_(s32) = G_ICMP intpred(ne), [[UMULH]](s64), [[C]]
     ; CHECK: $x0 = COPY [[MUL]](s64)
-    ; CHECK: [[COPY2:%[0-9]+]]:_(s32) = COPY [[ICMP]](s32)
-    ; CHECK: $w0 = COPY [[COPY2]](s32)
+    ; CHECK: $w0 = COPY [[ICMP]](s32)
     %0:_(s64) = COPY $x0
     %1:_(s64) = COPY $x1
     %2:_(s64), %3:_(s1) = G_UMULO %0, %1
     $x0 = COPY %2(s64)
     %4:_(s32) = G_ANYEXT %3(s1)
     $w0 = COPY %4(s32)
+
+...
+---
+name:            test_smul_overflow_s32
+body:             |
+  bb.0:
+    ; CHECK-LABEL: name: test_smul_overflow_s32
+    ; CHECK: %lhs:_(s32) = COPY $w0
+    ; CHECK: %rhs:_(s32) = COPY $w1
+    ; CHECK: [[SMULH:%[0-9]+]]:_(s32) = G_SMULH %lhs, %rhs
+    ; CHECK: %mul:_(s32) = G_MUL %lhs, %rhs
+    ; CHECK: [[C:%[0-9]+]]:_(s64) = G_CONSTANT i64 31
+    ; CHECK: [[ASHR:%[0-9]+]]:_(s32) = G_ASHR %mul, [[C]](s64)
+    ; CHECK: [[ICMP:%[0-9]+]]:_(s32) = G_ICMP intpred(ne), [[SMULH]](s32), [[ASHR]]
+    ; CHECK: $w0 = COPY %mul(s32)
+    ; CHECK: $w0 = COPY [[ICMP]](s32)
+    ; CHECK: RET_ReallyLR implicit $w0
+    %lhs:_(s32) = COPY $w0
+    %rhs:_(s32) = COPY $w1
+    %mul:_(s32), %overflow:_(s1) = G_SMULO %lhs, %rhs
+    $w0 = COPY %mul(s32)
+    %ext_overflow:_(s32) = G_ANYEXT %overflow(s1)
+    $w0 = COPY %ext_overflow(s32)
+    RET_ReallyLR implicit $w0
+
+...
+---
+name:            test_umul_overflow_s32
+body:             |
+  bb.0:
+    ; CHECK-LABEL: name: test_umul_overflow_s32
+    ; CHECK: %lhs:_(s32) = COPY $w0
+    ; CHECK: %rhs:_(s32) = COPY $w1
+    ; CHECK: [[UMULH:%[0-9]+]]:_(s32) = G_UMULH %lhs, %rhs
+    ; CHECK: [[C:%[0-9]+]]:_(s32) = G_CONSTANT i32 0
+    ; CHECK: %mul:_(s32) = G_MUL %lhs, %rhs
+    ; CHECK: [[ICMP:%[0-9]+]]:_(s32) = G_ICMP intpred(ne), [[UMULH]](s32), [[C]]
+    ; CHECK: $w0 = COPY %mul(s32)
+    ; CHECK: $w0 = COPY [[ICMP]](s32)
+    ; CHECK: RET_ReallyLR implicit $w0
+    %lhs:_(s32) = COPY $w0
+    %rhs:_(s32) = COPY $w1
+    %mul:_(s32), %overflow:_(s1) = G_UMULO %lhs, %rhs
+    $w0 = COPY %mul(s32)
+    %ext_overflow:_(s32) = G_ANYEXT %overflow(s1)
+    $w0 = COPY %ext_overflow(s32)
+    RET_ReallyLR implicit $w0
+
+...
+---
+name:            test_umul_overflow_s24
+body:             |
+  bb.0:
+    ; CHECK-LABEL: name: test_umul_overflow_s24
+    ; CHECK: %lhs_wide:_(s32) = COPY $w0
+    ; CHECK: %rhs_wide:_(s32) = COPY $w1
+    ; CHECK: [[C:%[0-9]+]]:_(s32) = G_CONSTANT i32 16777215
+    ; CHECK: [[AND:%[0-9]+]]:_(s32) = G_AND %lhs_wide, [[C]]
+    ; CHECK: [[AND1:%[0-9]+]]:_(s32) = G_AND %rhs_wide, [[C]]
+    ; CHECK: [[UMULH:%[0-9]+]]:_(s32) = G_UMULH [[AND]], [[AND1]]
+    ; CHECK: [[C1:%[0-9]+]]:_(s32) = G_CONSTANT i32 0
+    ; CHECK: [[MUL:%[0-9]+]]:_(s32) = G_MUL [[AND]], [[AND1]]
+    ; CHECK: [[ICMP:%[0-9]+]]:_(s32) = G_ICMP intpred(ne), [[UMULH]](s32), [[C1]]
+    ; CHECK: [[AND2:%[0-9]+]]:_(s32) = G_AND [[MUL]], [[C]]
+    ; CHECK: [[ICMP1:%[0-9]+]]:_(s32) = G_ICMP intpred(ne), [[MUL]](s32), [[AND2]]
+    ; CHECK: [[OR:%[0-9]+]]:_(s32) = G_OR [[ICMP]], [[ICMP1]]
+    ; CHECK: $w0 = COPY [[MUL]](s32)
+    ; CHECK: $w0 = COPY [[OR]](s32)
+    ; CHECK: RET_ReallyLR implicit $w0
+    %lhs_wide:_(s32) = COPY $w0
+    %rhs_wide:_(s32) = COPY $w1
+    %lhs:_(s24) = G_TRUNC %lhs_wide
+    %rhs:_(s24) = G_TRUNC %rhs_wide
+    %mul:_(s24), %overflow:_(s1) = G_UMULO %lhs, %rhs
+    %ext_mul:_(s32) = G_ANYEXT %mul
+    $w0 = COPY %ext_mul(s32)
+    %ext_overflow:_(s32) = G_ANYEXT %overflow(s1)
+    $w0 = COPY %ext_overflow(s32)
+    RET_ReallyLR implicit $w0
 
 ...
 ---

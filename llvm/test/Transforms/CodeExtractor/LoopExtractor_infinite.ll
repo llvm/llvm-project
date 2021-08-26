@@ -35,13 +35,13 @@ exit.1:                                           ; preds = %loopentry
 ; CHECK-LABEL: define internal i1 @test.loopentry()
 ; CHECK-NEXT:  newFuncRoot:
 ; CHECK-NEXT:    br label %loopentry
-; CHECK:       exit.1.exitStub:
-; CHECK-NEXT:    ret i1 true
-; CHECK:       exit.0.exitStub:
-; CHECK-NEXT:    ret i1 false
 ; CHECK:       loopentry:
 ; CHECK-NEXT:    br i1 true, label %exit.1.exitStub, label %loopexit
 ; CHECK:       loopexit:
 ; CHECK-NEXT:    br i1 false, label %loopexit.loopentry_crit_edge, label %exit.0.exitStub
 ; CHECK:       loopexit.loopentry_crit_edge:
 ; CHECK-NEXT:    br label %loopentry
+; CHECK:       exit.1.exitStub:
+; CHECK-NEXT:    ret i1 true
+; CHECK:       exit.0.exitStub:
+; CHECK-NEXT:    ret i1 false

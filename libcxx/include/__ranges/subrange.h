@@ -9,6 +9,11 @@
 #ifndef _LIBCPP___RANGES_SUBRANGE_H
 #define _LIBCPP___RANGES_SUBRANGE_H
 
+#include <__concepts/constructible.h>
+#include <__concepts/convertible_to.h>
+#include <__concepts/copyable.h>
+#include <__concepts/derived_from.h>
+#include <__concepts/different_from.h>
 #include <__config>
 #include <__iterator/concepts.h>
 #include <__iterator/incrementable_traits.h>
@@ -22,21 +27,16 @@
 #include <__ranges/view_interface.h>
 #include <__tuple>
 #include <__utility/move.h>
-#include <concepts>
 #include <type_traits>
 
 #if !defined(_LIBCPP_HAS_NO_PRAGMA_SYSTEM_HEADER)
 #pragma GCC system_header
 #endif
 
-_LIBCPP_PUSH_MACROS
-#include <__undef_macros>
-
 _LIBCPP_BEGIN_NAMESPACE_STD
 
 #if !defined(_LIBCPP_HAS_NO_RANGES)
 
-// clang-format off
 namespace ranges {
   template<class _From, class _To>
   concept __convertible_to_non_slicing =
@@ -253,17 +253,40 @@ namespace ranges {
   inline constexpr bool enable_borrowed_range<subrange<_Ip, _Sp, _Kp>> = true;
 
   template<range _Rp>
-  using borrowed_subrange_t = _If<borrowed_range<_Rp>, subrange<iterator_t<_Rp> >, dangling>;
+  using borrowed_subrange_t = _If<borrowed_range<_Rp>, subrange<iterator_t<_Rp>>, dangling>;
 } // namespace ranges
+
+// [range.subrange.general]
 
 using ranges::get;
 
-// clang-format off
+// [ranges.syn]
+
+template<class _Ip, class _Sp, ranges::subrange_kind _Kp>
+struct tuple_size<ranges::subrange<_Ip, _Sp, _Kp>> : integral_constant<size_t, 2> {};
+
+template<class _Ip, class _Sp, ranges::subrange_kind _Kp>
+struct tuple_element<0, ranges::subrange<_Ip, _Sp, _Kp>> {
+  using type = _Ip;
+};
+
+template<class _Ip, class _Sp, ranges::subrange_kind _Kp>
+struct tuple_element<1, ranges::subrange<_Ip, _Sp, _Kp>> {
+  using type = _Sp;
+};
+
+template<class _Ip, class _Sp, ranges::subrange_kind _Kp>
+struct tuple_element<0, const ranges::subrange<_Ip, _Sp, _Kp>> {
+  using type = _Ip;
+};
+
+template<class _Ip, class _Sp, ranges::subrange_kind _Kp>
+struct tuple_element<1, const ranges::subrange<_Ip, _Sp, _Kp>> {
+  using type = _Sp;
+};
 
 #endif // !defined(_LIBCPP_HAS_NO_RANGES)
 
 _LIBCPP_END_NAMESPACE_STD
-
-_LIBCPP_POP_MACROS
 
 #endif // _LIBCPP___RANGES_SUBRANGE_H

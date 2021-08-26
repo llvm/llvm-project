@@ -127,6 +127,15 @@ void ContextTrieNode::setFunctionSamples(FunctionSamples *FSamples) {
   FuncSamples = FSamples;
 }
 
+Optional<uint32_t> ContextTrieNode::getFunctionSize() const { return FuncSize; }
+
+void ContextTrieNode::addFunctionSize(uint32_t FSize) {
+  if (!FuncSize.hasValue())
+    FuncSize = 0;
+
+  FuncSize = FuncSize.getValue() + FSize;
+}
+
 LineLocation ContextTrieNode::getCallSiteLoc() const { return CallSiteLoc; }
 
 ContextTrieNode *ContextTrieNode::getParentContext() const {
@@ -137,13 +146,31 @@ void ContextTrieNode::setParentContext(ContextTrieNode *Parent) {
   ParentContext = Parent;
 }
 
-void ContextTrieNode::dump() {
+void ContextTrieNode::dumpNode() {
   dbgs() << "Node: " << FuncName << "\n"
          << "  Callsite: " << CallSiteLoc << "\n"
+         << "  Size: " << FuncSize << "\n"
          << "  Children:\n";
 
   for (auto &It : AllChildContext) {
     dbgs() << "    Node: " << It.second.getFuncName() << "\n";
+  }
+}
+
+void ContextTrieNode::dumpTree() {
+  dbgs() << "Context Profile Tree:\n";
+  std::queue<ContextTrieNode *> NodeQueue;
+  NodeQueue.push(this);
+
+  while (!NodeQueue.empty()) {
+    ContextTrieNode *Node = NodeQueue.front();
+    NodeQueue.pop();
+    Node->dumpNode();
+
+    for (auto &It : Node->getAllChildContext()) {
+      ContextTrieNode *ChildNode = &It.second;
+      NodeQueue.push(ChildNode);
+    }
   }
 }
 
@@ -385,22 +412,7 @@ ContextTrieNode &SampleContextTracker::promoteMergeContextSamplesTree(
                                         ContextStrToRemove);
 }
 
-void SampleContextTracker::dump() {
-  dbgs() << "Context Profile Tree:\n";
-  std::queue<ContextTrieNode *> NodeQueue;
-  NodeQueue.push(&RootContext);
-
-  while (!NodeQueue.empty()) {
-    ContextTrieNode *Node = NodeQueue.front();
-    NodeQueue.pop();
-    Node->dump();
-
-    for (auto &It : Node->getAllChildContext()) {
-      ContextTrieNode *ChildNode = &It.second;
-      NodeQueue.push(ChildNode);
-    }
-  }
-}
+void SampleContextTracker::dump() { RootContext.dumpTree(); }
 
 ContextTrieNode *
 SampleContextTracker::getContextFor(const SampleContext &Context) {

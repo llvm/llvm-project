@@ -14,10 +14,12 @@
 #include "ContinuationIndenter.h"
 #include "BreakableToken.h"
 #include "FormatInternal.h"
+#include "FormatToken.h"
 #include "WhitespaceManager.h"
 #include "clang/Basic/OperatorPrecedence.h"
 #include "clang/Basic/SourceManager.h"
 #include "clang/Format/Format.h"
+#include "llvm/ADT/StringSet.h"
 #include "llvm/Support/Debug.h"
 
 #define DEBUG_TYPE "format-indenter"
@@ -489,6 +491,16 @@ bool ContinuationIndenter::mustBreak(const LineState &State) {
     if (Previous.is(TT_LeadingJavaAnnotation) && Current.isNot(tok::l_paren) &&
         Current.isNot(TT_LeadingJavaAnnotation))
       return true;
+  }
+
+  // Break after the closing parenthesis of TypeScript decorators before
+  // functions, getters and setters.
+  static const llvm::StringSet<> BreakBeforeDecoratedTokens = {"get", "set",
+                                                               "function"};
+  if (Style.Language == FormatStyle::LK_JavaScript &&
+      BreakBeforeDecoratedTokens.contains(Current.TokenText) &&
+      Previous.is(tok::r_paren) && Previous.is(TT_JavaAnnotation)) {
+    return true;
   }
 
   // If the return type spans multiple lines, wrap before the function name.

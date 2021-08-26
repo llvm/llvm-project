@@ -12,12 +12,10 @@ body:             |
     ; CHECK-LABEL: name: bswap_s16
     ; CHECK: liveins: $w0
     ; CHECK: [[COPY:%[0-9]+]]:_(s32) = COPY $w0
-    ; CHECK: [[COPY1:%[0-9]+]]:_(s32) = COPY [[COPY]](s32)
-    ; CHECK: [[BSWAP:%[0-9]+]]:_(s32) = G_BSWAP [[COPY1]]
+    ; CHECK: [[BSWAP:%[0-9]+]]:_(s32) = G_BSWAP [[COPY]]
     ; CHECK: [[C:%[0-9]+]]:_(s64) = G_CONSTANT i64 16
     ; CHECK: [[LSHR:%[0-9]+]]:_(s32) = G_LSHR [[BSWAP]], [[C]](s64)
-    ; CHECK: [[COPY2:%[0-9]+]]:_(s32) = COPY [[LSHR]](s32)
-    ; CHECK: $w0 = COPY [[COPY2]](s32)
+    ; CHECK: $w0 = COPY [[LSHR]](s32)
     ; CHECK: RET_ReallyLR implicit $w0
     %1:_(s32) = COPY $w0
     %0:_(s16) = G_TRUNC %1(s32)

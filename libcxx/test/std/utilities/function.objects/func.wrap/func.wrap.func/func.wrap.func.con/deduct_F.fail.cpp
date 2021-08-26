@@ -13,7 +13,6 @@
 // function(F) -> function<see-below>;
 
 // UNSUPPORTED: c++03, c++11, c++14
-// UNSUPPORTED: libcpp-no-deduction-guides
 
 // The deduction guides for std::function do not handle rvalue-ref qualified
 // call operators and C-style variadics. It also doesn't deduce from nullptr_t.
@@ -21,7 +20,6 @@
 
 #include <functional>
 #include <type_traits>
-
 
 struct R { };
 struct f0 { R operator()() && { return {}; } };

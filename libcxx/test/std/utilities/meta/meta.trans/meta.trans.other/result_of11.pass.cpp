@@ -23,7 +23,7 @@
 
 // Ignore warnings about volatile in parameters being deprecated.
 // We know it is, but we still have to test it.
-#if defined(__GNUC__) && (__GNUC__ >= 10) && !defined(__clang__)
+#if defined(TEST_COMPILER_GCC)
 #   pragma GCC diagnostic ignored "-Wvolatile"
 #endif
 

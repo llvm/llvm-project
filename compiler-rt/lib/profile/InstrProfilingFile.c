@@ -591,7 +591,7 @@ static void initializeProfileForContinuousMode(void) {
         return;
       }
       const uint64_t CountersOffsetInBiasMode =
-          sizeof(__llvm_profile_header) +
+          sizeof(__llvm_profile_header) + __llvm_write_binary_ids(NULL) +
           (DataSize * sizeof(__llvm_profile_data));
       /* Update the profile fields based on the current mapping. */
       INSTR_PROF_PROFILE_COUNTER_BIAS_VAR = (intptr_t)Profile -

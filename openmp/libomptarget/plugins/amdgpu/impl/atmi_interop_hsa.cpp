@@ -7,11 +7,6 @@
 //===----------------------------------------------------------------------===//
 #include "atmi_interop_hsa.h"
 #include "internal.h"
-#include "machine.h"
-
-// TODO: need to get rid of this as well
-
-extern ATLMachine g_atl_machine;
 
 hsa_status_t atmi_interop_hsa_get_symbol_info(
     const std::map<std::string, atl_symbol_info_t> &SymbolInfoTable,

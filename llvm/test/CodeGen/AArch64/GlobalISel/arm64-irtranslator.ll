@@ -2457,3 +2457,29 @@ define {i8, i32} @test_freeze_struct({ i8, i32 }* %addr) {
 }
 
 !0 = !{ i64 0, i64 2 }
+
+declare i64 @llvm.lround.i64.f32(float) nounwind readnone
+define i64 @lround(float %x) {
+  ; CHECK-LABEL: name: lround
+  ; CHECK: bb.1 (%ir-block.0):
+  ; CHECK:   liveins: $s0
+  ; CHECK:   [[COPY:%[0-9]+]]:_(s32) = COPY $s0
+  ; CHECK:   [[LROUND:%[0-9]+]]:_(s64) = G_LROUND [[COPY]](s32)
+  ; CHECK:   $x0 = COPY [[LROUND]](s64)
+  ; CHECK:   RET_ReallyLR implicit $x0
+  %lround = tail call i64 @llvm.lround.i64.f32(float %x)
+  ret i64 %lround
+}
+
+declare i64 @llvm.llround.i64.f32(float) nounwind readnone
+define i64 @llround(float %x) {
+  ; CHECK-LABEL: name: llround
+  ; CHECK: bb.1 (%ir-block.0):
+  ; CHECK:   liveins: $s0
+  ; CHECK:   [[COPY:%[0-9]+]]:_(s32) = COPY $s0
+  ; CHECK:   [[LLROUND:%[0-9]+]]:_(s64) = G_LLROUND [[COPY]](s32)
+  ; CHECK:   $x0 = COPY [[LLROUND]](s64)
+  ; CHECK:   RET_ReallyLR implicit $x0
+  %lround = tail call i64 @llvm.llround.i64.f32(float %x)
+  ret i64 %lround
+}

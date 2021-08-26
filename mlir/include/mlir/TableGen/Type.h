@@ -40,6 +40,13 @@ public:
   // Returns true if this is a variadic type constraint.
   bool isVariadic() const;
 
+  // Returns true if this is a nested variadic type constraint.
+  bool isVariadicOfVariadic() const;
+
+  // Return the segment size attribute used if this is a variadic of variadic
+  // constraint. Asserts isVariadicOfVariadic() is true.
+  StringRef getVariadicOfVariadicSegmentSizeAttr() const;
+
   // Returns true if this is a variable length type constraint. This is either
   // variadic or optional.
   bool isVariableLength() const { return isOptional() || isVariadic(); }

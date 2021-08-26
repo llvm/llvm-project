@@ -1978,7 +1978,7 @@ address space qualifiers, therefore, other type qualifiers such as
   void foo(T *par){
     T var1; // error - local function variable with global address space
     __private T var2; // error - conflicting address space qualifiers
-    __private __remove_address_space<T> var3; // var3 is __private int
+    __private __remove_address_space<T>::type var3; // var3 is __private int
   }
 
   void bar(){
@@ -3930,6 +3930,40 @@ provide deprecation warnings for macro uses. For example:
 ``#pragma clang deprecated`` should be preferred for this purpose over
 ``#pragma GCC warning`` because the warning can be controlled with
 ``-Wdeprecated``.
+
+Restricted Expansion Macros
+===========================
+
+Clang supports the pragma ``#pragma clang restrict_expansion``, which can be
+used restrict macro expansion in headers. This can be valuable when providing
+headers with ABI stability requirements. Any expansion of the annotated macro
+processed by the preprocessor after the ``#pragma`` annotation will log a
+warning. Redefining the macro or undefining the macro will not be diagnosed, nor
+will expansion of the macro within the main source file. For example:
+
+.. code-block:: c
+
+   #define TARGET_ARM 1
+   #pragma clang restrict_expansion(TARGET_ARM, "<reason>")
+
+   /// Foo.h
+   struct Foo {
+   #if TARGET_ARM // warning: TARGET_ARM is marked unsafe in headers: <reason>
+     uint32_t X;
+   #else
+     uint64_t X;
+   #endif
+   };
+
+   /// main.c
+   #include "foo.h"
+   #if TARGET_ARM // No warning in main source file
+   X_TYPE uint32_t
+   #else
+   X_TYPE uint64_t
+   #endif
+
+This warning is controlled by ``-Wpedantic-macros``.
 
 Extended Integer Types
 ======================

@@ -113,8 +113,10 @@ def warn_four_char_character_literal : Warning<
 // Unicode and UCNs
 def err_invalid_utf8 : Error<
   "source file is not valid UTF-8">;
-def err_non_ascii : Error<
-  "non-ASCII characters are not allowed outside of literals and identifiers">;
+def err_character_not_allowed : Error<
+  "unexpected character <U+%0>">;
+def err_character_not_allowed_identifier : Error<
+  "character <U+%0> not allowed %select{in|at the start of}1 an identifier">;
 def ext_unicode_whitespace : ExtWarn<
   "treating Unicode character as whitespace">,
   InGroup<DiagGroup<"unicode-whitespace">>;
@@ -150,9 +152,6 @@ def warn_c99_compat_unicode_id : Warning<
   "%select{using this character in an identifier|starting an identifier with "
   "this character}0 is incompatible with C99">,
   InGroup<C99Compat>, DefaultIgnore;
-def warn_cxx98_compat_unicode_id : Warning<
-  "using this character in an identifier is incompatible with C++98">,
-  InGroup<CXX98Compat>, DefaultIgnore;
 
 def warn_cxx98_compat_literal_ucn_escape_basic_scs : Warning<
   "specifying character '%0' with a universal character name "
@@ -184,12 +183,10 @@ def warn_c2x_compat_digit_separator : Warning<
   InGroup<CPre2xCompat>, DefaultIgnore;
 def err_digit_separator_not_between_digits : Error<
   "digit separator cannot appear at %select{start|end}0 of digit sequence">;
-def warn_extraneous_char_constant : Warning<
-  "extraneous characters in character constant ignored">;
 def warn_char_constant_too_large : Warning<
   "character constant too long for its type">;
-def err_multichar_utf_character_literal : Error<
-  "Unicode character literals may not contain multiple characters">;
+def err_multichar_character_literal : Error<
+  "%select{wide|Unicode}0 character literals may not contain multiple characters">;
 def err_exponent_has_no_digits : Error<"exponent has no digits">;
 def err_hex_constant_requires : Error<
   "hexadecimal floating %select{constant|literal}0 requires "
@@ -530,6 +527,16 @@ def warn_pragma_warning_expected_number :
 def warn_pragma_deprecated_macro_use :
   ExtWarn<"macro %0 has been marked as deprecated%select{|: %2}1">,
   InGroup<DeprecatedPragma>;
+
+// - #pragma clang restrict_expansion(...)
+def warn_pragma_restrict_expansion_macro_use :
+  ExtWarn<"macro %0 has been marked as unsafe for use in headers"
+          "%select{|: %2}1">,
+  InGroup<RestrictExpansionMacro>;
+
+// - Note for macro annotations.
+def note_pp_macro_annotation :
+  Note<"macro marked '%select{deprecated|restrict_expansion}0' here">;
 
 // - #pragma execution_character_set(...)
 def warn_pragma_exec_charset_expected :

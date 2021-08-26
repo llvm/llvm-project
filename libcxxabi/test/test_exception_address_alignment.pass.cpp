@@ -14,9 +14,6 @@
 // tests to fail when compiling against such a SDK, or when running against a
 // system libc++abi that was compiled with an incorrect definition of _Unwind_Exception.
 // XFAIL: apple-clang-12.0.0 && !target={{arm.*}}
-// XFAIL: apple-clang-11 && !target={{arm.*}}
-// XFAIL: apple-clang-10 && !target={{arm.*}}
-// XFAIL: apple-clang-9 && !target={{arm.*}}
 // XFAIL: use_system_cxx_lib && target={{.+}}-apple-macosx10.{{9|10|11|12}}
 
 // Test that the address of the exception object is properly aligned as required

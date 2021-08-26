@@ -9,8 +9,7 @@ body: |
 
     ; CHECK-LABEL: name: test_anyext_trunc_v2s32_to_v2s16_to_v2s32
     ; CHECK: [[COPY:%[0-9]+]]:_(<2 x s32>) = COPY $vgpr0_vgpr1
-    ; CHECK: [[COPY1:%[0-9]+]]:_(<2 x s32>) = COPY [[COPY]](<2 x s32>)
-    ; CHECK: $vgpr0_vgpr1 = COPY [[COPY1]](<2 x s32>)
+    ; CHECK: $vgpr0_vgpr1 = COPY [[COPY]](<2 x s32>)
     %0:_(<2 x s32>) = COPY $vgpr0_vgpr1
     %1:_(<2 x s16>) = G_TRUNC %0
     %2:_(<2 x s32>) = G_ANYEXT %1
@@ -60,8 +59,7 @@ body: |
 
     ; CHECK-LABEL: name: test_anyext_trunc_v3s32_to_v3s16_to_v3s32
     ; CHECK: [[COPY:%[0-9]+]]:_(<3 x s32>) = COPY $vgpr0_vgpr1_vgpr2
-    ; CHECK: [[COPY1:%[0-9]+]]:_(<3 x s32>) = COPY [[COPY]](<3 x s32>)
-    ; CHECK: $vgpr0_vgpr1_vgpr2 = COPY [[COPY1]](<3 x s32>)
+    ; CHECK: $vgpr0_vgpr1_vgpr2 = COPY [[COPY]](<3 x s32>)
     %0:_(<3 x s32>) = COPY $vgpr0_vgpr1_vgpr2
     %1:_(<3 x s16>) = G_TRUNC %0
     %2:_(<3 x s32>) = G_ANYEXT %1

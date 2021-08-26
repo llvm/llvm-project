@@ -522,6 +522,7 @@ basic_string<char32_t> operator "" s( const char32_t *str, size_t len ); // C++1
 #include <algorithm>
 #include <compare>
 #include <cstdio>  // EOF
+#include <cstdlib>
 #include <cstring>
 #include <cwchar>
 #include <initializer_list>
@@ -1714,6 +1715,24 @@ private:
         return data() <= __p && __p <= data() + size();
     }
 
+    _LIBCPP_NORETURN _LIBCPP_HIDE_FROM_ABI
+    void __throw_length_error() const {
+#ifndef _LIBCPP_NO_EXCEPTIONS
+        __basic_string_common<true>::__throw_length_error();
+#else
+        _VSTD::abort();
+#endif
+    }
+
+    _LIBCPP_NORETURN _LIBCPP_HIDE_FROM_ABI
+    void __throw_out_of_range() const {
+#ifndef _LIBCPP_NO_EXCEPTIONS
+        __basic_string_common<true>::__throw_out_of_range();
+#else
+        _VSTD::abort();
+#endif
+    }
+
     friend basic_string operator+<>(const basic_string&, const basic_string&);
     friend basic_string operator+<>(const value_type*, const basic_string&);
     friend basic_string operator+<>(value_type, const basic_string&);
@@ -1732,7 +1751,7 @@ _LIBCPP_STRING_V1_EXTERN_TEMPLATE_LIST(_LIBCPP_EXTERN_TEMPLATE, wchar_t)
 #endif
 
 
-#ifndef _LIBCPP_HAS_NO_DEDUCTION_GUIDES
+#if _LIBCPP_STD_VER >= 17
 template<class _InputIterator,
          class _CharT = __iter_value_type<_InputIterator>,
          class _Allocator = allocator<_CharT>,

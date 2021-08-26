@@ -801,6 +801,14 @@ const TargetRegisterClass *SIRegisterInfo::getPointerRegClass(
   return &AMDGPU::VGPR_32RegClass;
 }
 
+const TargetRegisterClass *
+SIRegisterInfo::getCrossCopyRegClass(const TargetRegisterClass *RC) const {
+  if (isAGPRClass(RC) && !ST.hasGFX90AInsts())
+    return getEquivalentVGPRClass(RC);
+
+  return RC;
+}
+
 static unsigned getNumSubRegsForSpillOp(unsigned Op) {
 
   switch (Op) {

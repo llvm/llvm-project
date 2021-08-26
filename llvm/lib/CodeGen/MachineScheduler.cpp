@@ -583,7 +583,7 @@ void MachineSchedulerBase::scheduleRegions(ScheduleDAGInstrs &Scheduler,
                         << " " << MBB->getName() << "\n  From: " << *I
                         << "    To: ";
                  if (RegionEnd != MBB->end()) dbgs() << *RegionEnd;
-                 else dbgs() << "End";
+                 else dbgs() << "End\n";
                  dbgs() << " RegionInstrs: " << NumRegionInstrs << '\n');
       if (DumpCriticalPathLength) {
         errs() << MF->getName();

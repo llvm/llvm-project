@@ -89,7 +89,7 @@ static bool runOnFunction(Function &F, bool PostInlining) {
 
     insertCall(F, EntryFunc, &*F.begin()->getFirstInsertionPt(), DL);
     Changed = true;
-    F.removeAttribute(AttributeList::FunctionIndex, EntryAttr);
+    F.removeFnAttr(EntryAttr);
   }
 
   if (!ExitFunc.empty()) {
@@ -111,7 +111,7 @@ static bool runOnFunction(Function &F, bool PostInlining) {
       insertCall(F, ExitFunc, T, DL);
       Changed = true;
     }
-    F.removeAttribute(AttributeList::FunctionIndex, ExitAttr);
+    F.removeFnAttr(ExitAttr);
   }
 
   return Changed;

@@ -573,6 +573,19 @@ G_INTRINSIC_ROUND
 
 Returns the operand rounded to the nearest integer.
 
+G_LROUND, G_LLROUND
+^^^^^^^^^^^^^^^^^^^
+
+Returns the source operand rounded to the nearest integer with ties away from
+zero.
+
+See the LLVM LangRef entry on '``llvm.lround.*'`` for details on behaviour.
+
+.. code-block:: none
+
+  %rounded_32:_(s32) = G_LROUND %round_me:_(s64)
+  %rounded_64:_(s64) = G_LLROUND %round_me:_(s64)
+
 Vector Specific Operations
 --------------------------
 
@@ -629,6 +642,17 @@ G_VECREDUCE_FMAX, G_VECREDUCE_FMIN
 
 FMIN/FMAX nodes can have flags, for NaN/NoNaN variants.
 
+G_ISNAN
+^^^^^^^
+
+GlobalISel-equivalent of the '``llvm.isnan``' intrinsic.
+
+Returns a 1-bit scalar or vector of 1-bit scalar values. The result's contents
+represent whether or not the source value is NaN.
+
+.. code-block:: none
+
+  %is_nan:_(s1) = G_ISNAN %check_me_for_nan
 
 Integer/bitwise reductions
 ^^^^^^^^^^^^^^^^^^^^^^^^^^

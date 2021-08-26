@@ -1016,7 +1016,7 @@ static Value createMask(AffineForOp vecForOp, VectorizationState &state) {
   state.builder.setInsertionPointToStart(vecForOp.getBody());
 
   // We generate the mask using the `vector.create_mask` operation which accepts
-  // the number of meaningful elements (i.e. the legth of the prefix of 1s).
+  // the number of meaningful elements (i.e. the length of the prefix of 1s).
   // To compute the number of meaningful elements we subtract the current value
   // of the iteration variable from the upper bound of the loop. Example:
   //

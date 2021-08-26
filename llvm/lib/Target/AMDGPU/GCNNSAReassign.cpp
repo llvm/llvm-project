@@ -175,7 +175,7 @@ GCNNSAReassign::CheckNSA(const MachineInstr &MI, bool Fast) const {
 
   unsigned VgprBase = 0;
   bool NSA = false;
-  for (unsigned I = 0; I < Info->VAddrDwords; ++I) {
+  for (unsigned I = 0; I < Info->VAddrOperands; ++I) {
     const MachineOperand &Op = MI.getOperand(VAddr0Idx + I);
     Register Reg = Op.getReg();
     if (Reg.isPhysical() || !VRM->isAssignedReg(Reg))
@@ -187,6 +187,7 @@ GCNNSAReassign::CheckNSA(const MachineInstr &MI, bool Fast) const {
       if (!PhysReg)
         return NSA_Status::FIXED;
 
+      // TODO: address the below limitation to handle GFX11 BVH instructions
       // Bail if address is not a VGPR32. That should be possible to extend the
       // optimization to work with subregs of a wider register tuples, but the
       // logic to find free registers will be much more complicated with much
@@ -286,7 +287,7 @@ bool GCNNSAReassign::runOnMachineFunction(MachineFunction &MF) {
     SmallVector<LiveInterval *, 16> Intervals;
     SmallVector<MCRegister, 16> OrigRegs;
     SlotIndex MinInd, MaxInd;
-    for (unsigned I = 0; I < Info->VAddrDwords; ++I) {
+    for (unsigned I = 0; I < Info->VAddrOperands; ++I) {
       const MachineOperand &Op = MI->getOperand(VAddr0Idx + I);
       Register Reg = Op.getReg();
       LiveInterval *LI = &LIS->getInterval(Reg);
@@ -339,11 +340,11 @@ bool GCNNSAReassign::runOnMachineFunction(MachineFunction &MF) {
     }
 
     if (!Success) {
-      for (unsigned I = 0; I < Info->VAddrDwords; ++I)
+      for (unsigned I = 0; I < Info->VAddrOperands; ++I)
         if (VRM->hasPhys(Intervals[I]->reg()))
           LRM->unassign(*Intervals[I]);
 
-      for (unsigned I = 0; I < Info->VAddrDwords; ++I)
+      for (unsigned I = 0; I < Info->VAddrOperands; ++I)
         LRM->assign(*Intervals[I], OrigRegs[I]);
 
       continue;

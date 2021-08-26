@@ -279,12 +279,13 @@ namespace llvm {
     /// \param OffsetInBits Member offset.
     /// \param Flags        Flags to encode member attribute, e.g. private
     /// \param Ty           Parent type.
+    /// \param Annotations  Member annotations.
     DIDerivedType *createMemberType(DIScope *Scope, StringRef Name,
                                     DIFile *File, unsigned LineNo,
-                                    uint64_t SizeInBits,
-                                    uint32_t AlignInBits,
+                                    uint64_t SizeInBits, uint32_t AlignInBits,
                                     uint64_t OffsetInBits,
-                                    DINode::DIFlags Flags, DIType *Ty);
+                                    DINode::DIFlags Flags, DIType *Ty,
+                                    DINodeArray Annotations = nullptr);
 
     /// Create debugging information entry for a variant.  A variant
     /// normally should be a member of a variant part.
@@ -317,10 +318,14 @@ namespace llvm {
     /// \param StorageOffsetInBits Member storage offset.
     /// \param Flags               Flags to encode member attribute.
     /// \param Ty                  Parent type.
-    DIDerivedType *createBitFieldMemberType(
-        DIScope *Scope, StringRef Name, DIFile *File, unsigned LineNo,
-        uint64_t SizeInBits, uint64_t OffsetInBits,
-        uint64_t StorageOffsetInBits, DINode::DIFlags Flags, DIType *Ty);
+    /// \param Annotations         Member annotations.
+    DIDerivedType *createBitFieldMemberType(DIScope *Scope, StringRef Name,
+                                            DIFile *File, unsigned LineNo,
+                                            uint64_t SizeInBits,
+                                            uint64_t OffsetInBits,
+                                            uint64_t StorageOffsetInBits,
+                                            DINode::DIFlags Flags, DIType *Ty,
+                                            DINodeArray Annotations = nullptr);
 
     /// Create debugging information entry for a
     /// C++ static data member.
@@ -586,7 +591,7 @@ namespace llvm {
         unsigned Tag, StringRef Name, DIScope *Scope, DIFile *F, unsigned Line,
         unsigned RuntimeLang = 0, uint64_t SizeInBits = 0,
         uint32_t AlignInBits = 0, DINode::DIFlags Flags = DINode::FlagFwdDecl,
-        StringRef UniqueIdentifier = "");
+        StringRef UniqueIdentifier = "", DINodeArray Annotations = nullptr);
 
     /// Retain DIScope* in a module even if it is not referenced
     /// through debug info anchors.

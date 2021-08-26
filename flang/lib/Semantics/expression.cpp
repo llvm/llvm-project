@@ -1409,15 +1409,6 @@ void ArrayConstructorContext::Add(const parser::AcImpliedDo &impliedDo) {
   if (const auto dynamicType{DynamicType::From(symbol)}) {
     kind = dynamicType->kind();
   }
-  if (!exprAnalyzer_.AddImpliedDo(name, kind)) {
-    if (!(messageDisplayedSet_ & 0x20)) {
-      exprAnalyzer_.SayAt(name,
-          "Implied DO index is active in surrounding implied DO loop "
-          "and may not have the same name"_err_en_US); // C7115
-      messageDisplayedSet_ |= 0x20;
-    }
-    return;
-  }
   std::optional<Expr<ImpliedDoIntType>> lower{
       GetSpecificIntExpr<ImpliedDoIntType::kind>(bounds.lower)};
   std::optional<Expr<ImpliedDoIntType>> upper{
@@ -1428,49 +1419,57 @@ void ArrayConstructorContext::Add(const parser::AcImpliedDo &impliedDo) {
     if (!stride) {
       stride = Expr<ImpliedDoIntType>{1};
     }
-    // Check for constant bounds; the loop may require complete unrolling
-    // of the parse tree if all bounds are constant in order to allow the
-    // implied DO loop index to qualify as a constant expression.
-    auto cLower{ToInt64(lower)};
-    auto cUpper{ToInt64(upper)};
-    auto cStride{ToInt64(stride)};
-    if (!(messageDisplayedSet_ & 0x10) && cStride && *cStride == 0) {
-      exprAnalyzer_.SayAt(bounds.step.value().thing.thing.value().source,
-          "The stride of an implied DO loop must not be zero"_err_en_US);
-      messageDisplayedSet_ |= 0x10;
-    }
-    bool isConstant{cLower && cUpper && cStride && *cStride != 0};
-    bool isNonemptyConstant{isConstant &&
-        ((*cStride > 0 && *cLower <= *cUpper) ||
-            (*cStride < 0 && *cLower >= *cUpper))};
-    bool unrollConstantLoop{false};
-    parser::Messages buffer;
-    auto saveMessagesDisplayed{messageDisplayedSet_};
-    {
-      auto messageRestorer{
-          exprAnalyzer_.GetContextualMessages().SetMessages(buffer)};
-      auto v{std::move(values_)};
-      for (const auto &value :
-          std::get<std::list<parser::AcValue>>(impliedDo.t)) {
-        Add(value);
+    if (exprAnalyzer_.AddImpliedDo(name, kind)) {
+      // Check for constant bounds; the loop may require complete unrolling
+      // of the parse tree if all bounds are constant in order to allow the
+      // implied DO loop index to qualify as a constant expression.
+      auto cLower{ToInt64(lower)};
+      auto cUpper{ToInt64(upper)};
+      auto cStride{ToInt64(stride)};
+      if (!(messageDisplayedSet_ & 0x10) && cStride && *cStride == 0) {
+        exprAnalyzer_.SayAt(bounds.step.value().thing.thing.value().source,
+            "The stride of an implied DO loop must not be zero"_err_en_US);
+        messageDisplayedSet_ |= 0x10;
       }
-      std::swap(v, values_);
-      if (isNonemptyConstant && buffer.AnyFatalError()) {
-        unrollConstantLoop = true;
-      } else {
-        values_.Push(ImpliedDo<SomeType>{name, std::move(*lower),
-            std::move(*upper), std::move(*stride), std::move(v)});
+      bool isConstant{cLower && cUpper && cStride && *cStride != 0};
+      bool isNonemptyConstant{isConstant &&
+          ((*cStride > 0 && *cLower <= *cUpper) ||
+              (*cStride < 0 && *cLower >= *cUpper))};
+      bool unrollConstantLoop{false};
+      parser::Messages buffer;
+      auto saveMessagesDisplayed{messageDisplayedSet_};
+      {
+        auto messageRestorer{
+            exprAnalyzer_.GetContextualMessages().SetMessages(buffer)};
+        auto v{std::move(values_)};
+        for (const auto &value :
+            std::get<std::list<parser::AcValue>>(impliedDo.t)) {
+          Add(value);
+        }
+        std::swap(v, values_);
+        if (isNonemptyConstant && buffer.AnyFatalError()) {
+          unrollConstantLoop = true;
+        } else {
+          values_.Push(ImpliedDo<SomeType>{name, std::move(*lower),
+              std::move(*upper), std::move(*stride), std::move(v)});
+        }
       }
-    }
-    if (unrollConstantLoop) {
-      messageDisplayedSet_ = saveMessagesDisplayed;
-      UnrollConstantImpliedDo(impliedDo, name, *cLower, *cUpper, *cStride);
-    } else if (auto *messages{
-                   exprAnalyzer_.GetContextualMessages().messages()}) {
-      messages->Annex(std::move(buffer));
+      if (unrollConstantLoop) {
+        messageDisplayedSet_ = saveMessagesDisplayed;
+        UnrollConstantImpliedDo(impliedDo, name, *cLower, *cUpper, *cStride);
+      } else if (auto *messages{
+                     exprAnalyzer_.GetContextualMessages().messages()}) {
+        messages->Annex(std::move(buffer));
+      }
+      exprAnalyzer_.RemoveImpliedDo(name);
+    } else if (!(messageDisplayedSet_ & 0x20)) {
+      exprAnalyzer_.SayAt(name,
+          "Implied DO index '%s' is active in a surrounding implied DO loop "
+          "and may not have the same name"_err_en_US,
+          name); // C7115
+      messageDisplayedSet_ |= 0x20;
     }
   }
-  exprAnalyzer_.RemoveImpliedDo(name);
 }
 
 // Fortran considers an implied DO index of an array constructor to be

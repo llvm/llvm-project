@@ -51,6 +51,8 @@ char *internal_strstr(const char *haystack, const char *needle);
 s64 internal_simple_strtoll(const char *nptr, const char **endptr, int base);
 int internal_snprintf(char *buffer, uptr length, const char *format, ...)
     FORMAT(3, 4);
+uptr internal_wcslen(const wchar_t *s);
+uptr internal_wcsnlen(const wchar_t *s, uptr maxlen);
 
 // Return true if all bytes in [mem, mem+size) are zero.
 // Optimized for the case when the result is true.

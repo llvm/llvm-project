@@ -631,8 +631,10 @@ DecodeStatus AMDGPUDisassembler::getInstruction(MCInst &MI, uint64_t &Size,
         Res = MCDisassembler::Fail;
       } else {
         for (unsigned i = 0; i < NSAArgs; ++i) {
-          MI.insert(MI.begin() + VAddr0Idx + 1 + i,
-                    decodeOperand_VGPR_32(Bytes[i]));
+          const unsigned VAddrIdx = VAddr0Idx + 1 + i;
+          auto VAddrRCID = MCII->get(MI.getOpcode()).OpInfo[VAddrIdx].RegClass;
+          MI.insert(MI.begin() + VAddrIdx,
+                    createRegOperand(VAddrRCID, Bytes[i]));
         }
         Bytes = Bytes.slice(4 * NSAWords);
       }
