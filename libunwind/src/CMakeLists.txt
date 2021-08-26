@@ -34,6 +34,7 @@ set(LIBUNWIND_HEADERS
     AddressSpace.hpp
     assembly.h
     CompactUnwinder.hpp
+    cet_unwind.h
     config.h
     dwarf2.h
     DwarfInstructions.hpp
