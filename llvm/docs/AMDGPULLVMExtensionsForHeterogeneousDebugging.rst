@@ -510,6 +510,14 @@ implicitly, and defines when the lifetime segment applies. The location
 description of a data object is defined by the, possibly empty, set of lifetime
 segments that reference it.
 
+.. TODO::
+
+   Write up the fact that after LiveDebugValues this rule is amended, such that
+   for a bounded lifetime segment a call to ``llvm.dbg.def``/``llvm.dbg.kill``
+   is local to the basic block. That is, rather than respecting control flow
+   `llvm.dbg.def`` extends either to exactly one ``llvm.dbg.def`` in the same
+   basic block, or to the end of the basic block.
+
 There are two kinds of lifetime segment:
 
 -  A *bounded lifetime segment* is one referenced by the first argument of a
