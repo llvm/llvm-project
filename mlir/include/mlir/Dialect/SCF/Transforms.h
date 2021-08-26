@@ -18,7 +18,7 @@
 
 namespace mlir {
 
-class AffineMinOp;
+class AffineMap;
 class ConversionTarget;
 struct LogicalResult;
 class MLIRContext;
@@ -29,6 +29,7 @@ class RewritePatternSet;
 using OwningRewritePatternList = RewritePatternSet;
 class Operation;
 class Value;
+class ValueRange;
 
 namespace scf {
 
@@ -37,20 +38,28 @@ class ForOp;
 class ParallelOp;
 class ForOp;
 
-/// Try to canonicalize an affine.min operation in the context of `for` loops
-/// with a known range.
+/// Match "for loop"-like operations: If the first parameter is an iteration
+/// variable, return lower/upper bounds via the second/third parameter and the
+/// step size via the last parameter. The function should return `success` in
+/// that case. If the first parameter is not an iteration variable, return
+/// `failure`.
+using LoopMatcherFn =
+    function_ref<LogicalResult(Value, Value &, Value &, Value &)>;
+
+/// Try to canonicalize an min/max operations in the context of for `loops` with
+/// a known range.
 ///
-/// `loopMatcher` is used to retrieve loop bounds and step size for a given
-/// iteration variable: If the first parameter is an iteration variable, return
-/// lower/upper bounds via the second/third parameter and the step size via the
-/// last parameter. The function should return `success` in that case. If the
-/// first parameter is not an iteration variable, return `failure`.
+/// `map` is the body of the min/max operation and `operands` are the SSA values
+/// that the dimensions and symbols are bound to; dimensions are listed first.
+/// If `isMin`, the operation is a min operation; otherwise, a max operation.
+/// `loopMatcher` is used to retrieve loop bounds and the step size for a given
+/// iteration variable.
 ///
 /// Note: `loopMatcher` allows this function to be used with any "for loop"-like
 /// operation (scf.for, scf.parallel and even ops defined in other dialects).
-LogicalResult canonicalizeAffineMinOpInLoop(
-    AffineMinOp minOp, RewriterBase &rewriter,
-    function_ref<LogicalResult(Value, Value &, Value &, Value &)> loopMatcher);
+LogicalResult canonicalizeMinMaxOpInLoop(RewriterBase &rewriter, Operation *op,
+                                         AffineMap map, ValueRange operands,
+                                         bool isMin, LoopMatcherFn loopMatcher);
 
 /// Fuses all adjacent scf.parallel operations with identical bounds and step
 /// into one scf.parallel operations. Uses a naive aliasing and dependency
@@ -85,10 +94,10 @@ void naivelyFuseParallelOps(Region &region);
 /// ```
 ///
 /// After loop peeling, this function tries to simplify/canonicalize affine.min
-/// operations in the body of the loop and the scf.if, taking advantage of the
-/// fact that every iteration of the peeled loop is a "full" iteration. This
-/// canonicalization is expected to enable further canonicalization
-/// opportunities through other patterns.
+/// and affine.max ops in the body of the loop and the scf.if, taking advantage
+/// of the fact that the peeled loop has only "full" iterations and the scf.if
+/// is always a partial iteration (if any). This canonicalization is expected to
+/// enable further canonicalization opportunities through other patterns.
 ///
 /// The return value indicates whether the loop was rewritten or not. Loops are
 /// not rewritten if:
@@ -168,7 +177,7 @@ void populateSCFLoopPipeliningPatterns(RewritePatternSet &patterns,
                                        const PipeliningOption &options);
 
 /// Populate patterns for canonicalizing operations inside SCF loop bodies.
-/// At the moment, only affine.min computations with iteration variables,
+/// At the moment, only affine.min/max computations with iteration variables,
 /// loop bounds and loop steps are canonicalized.
 void populateSCFLoopBodyCanonicalizationPatterns(RewritePatternSet &patterns);
 
