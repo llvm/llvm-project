@@ -1544,3 +1544,48 @@ entry:
  %1 = select i1 %cmp10, i32 %A, i32 %0
  ret i32 %1
 }
+
+define i64 @PR51612(i64 %x, i64 %y) {
+; CHECK-LABEL: PR51612:
+; CHECK:       ## %bb.0:
+; CHECK-NEXT:    movq %rdi, %rax
+; CHECK-NEXT:    incl %esi
+; CHECK-NEXT:    incq %rax
+; CHECK-NEXT:    cmovel %esi, %eax
+; CHECK-NEXT:    andl 10, %eax
+; CHECK-NEXT:    retq
+;
+; ATHLON-LABEL: PR51612:
+; ATHLON:       ## %bb.0:
+; ATHLON-NEXT:    movl {{[0-9]+}}(%esp), %eax
+; ATHLON-NEXT:    movl {{[0-9]+}}(%esp), %ecx
+; ATHLON-NEXT:    movl {{[0-9]+}}(%esp), %edx
+; ATHLON-NEXT:    incl %edx
+; ATHLON-NEXT:    addl $1, %eax
+; ATHLON-NEXT:    adcl $0, %ecx
+; ATHLON-NEXT:    cmovbl %edx, %eax
+; ATHLON-NEXT:    andl 10, %eax
+; ATHLON-NEXT:    xorl %edx, %edx
+; ATHLON-NEXT:    retl
+;
+; MCU-LABEL: PR51612:
+; MCU:       # %bb.0:
+; MCU-NEXT:    addl $1, %eax
+; MCU-NEXT:    adcl $0, %edx
+; MCU-NEXT:    jae .LBB31_2
+; MCU-NEXT:  # %bb.1:
+; MCU-NEXT:    movl {{[0-9]+}}(%esp), %eax
+; MCU-NEXT:    incl %eax
+; MCU-NEXT:  .LBB31_2:
+; MCU-NEXT:    andl 10, %eax
+; MCU-NEXT:    xorl %edx, %edx
+; MCU-NEXT:    retl
+  %add = add i64 %x, 1
+  %inc = add i64 %y, 1
+  %tobool = icmp eq i64 %add, 0
+  %sel = select i1 %tobool, i64 %inc, i64 %add
+  %i = load i32, i32* inttoptr (i32 10 to i32*), align 4
+  %conv = zext i32 %i to i64
+  %and = and i64 %sel, %conv
+  ret i64 %and
+}
