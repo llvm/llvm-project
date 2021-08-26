@@ -27,6 +27,8 @@
 #   +                       +
 #
 DEFINE_LIBUNWIND_FUNCTION(__unw_getcontext)
+
+  _LIBUNWIND_CET_ENDBR
   push  %eax
   movl  8(%esp), %eax
   movl  %ebx,  4(%eax)
@@ -70,6 +72,7 @@ DEFINE_LIBUNWIND_FUNCTION(__unw_getcontext)
 #define TMP %rsi
 #endif
 
+  _LIBUNWIND_CET_ENDBR
   movq  %rax,   (PTR)
   movq  %rbx,  8(PTR)
   movq  %rcx, 16(PTR)

@@ -47,6 +47,7 @@
 #include "llvm/IR/DataLayout.h"
 #include "llvm/IR/DebugInfo.h"
 #include "llvm/IR/DerivedTypes.h"
+#include "llvm/IR/DiagnosticInfo.h"
 #include "llvm/IR/Function.h"
 #include "llvm/IR/GetElementPtrTypeIterator.h"
 #include "llvm/IR/InlineAsm.h"
@@ -2332,6 +2333,15 @@ bool IRTranslator::translateCall(const User &U, MachineIRBuilder &MIRBuilder) {
 
   if (CI.isInlineAsm())
     return translateInlineAsm(CI, MIRBuilder);
+
+  if (F && F->hasFnAttribute("dontcall")) {
+    unsigned LocCookie = 0;
+    if (MDNode *MD = CI.getMetadata("srcloc"))
+      LocCookie =
+          mdconst::extract<ConstantInt>(MD->getOperand(0))->getZExtValue();
+    DiagnosticInfoDontCall D(F->getName(), LocCookie);
+    F->getContext().diagnose(D);
+  }
 
   Intrinsic::ID ID = Intrinsic::not_intrinsic;
   if (F && F->isIntrinsic()) {

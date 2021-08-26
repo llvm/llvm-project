@@ -251,6 +251,7 @@ std::error_code SampleProfileReaderText::readImpl() {
   bool SeenMetadata = false;
 
   ProfileIsFS = ProfileIsFSDisciminator;
+  FunctionSamples::ProfileIsFS = ProfileIsFS;
   for (; !LineIt.is_at_eof(); ++LineIt) {
     if ((*LineIt)[(*LineIt).find_first_not_of(' ')] == '#')
       continue;
@@ -599,6 +600,7 @@ SampleProfileReaderBinary::readFuncProfile(const uint8_t *Start) {
 
 std::error_code SampleProfileReaderBinary::readImpl() {
   ProfileIsFS = ProfileIsFSDisciminator;
+  FunctionSamples::ProfileIsFS = ProfileIsFS;
   while (!at_eof()) {
     if (std::error_code EC = readFuncProfile(Data))
       return EC;
@@ -791,7 +793,7 @@ std::error_code SampleProfileReaderExtBinaryBase::readFuncProfiles() {
   }
   assert((CSProfileCount == 0 || CSProfileCount == Profiles.size()) &&
          "Cannot have both context-sensitive and regular profile");
-  assert(ProfileIsCS == (CSProfileCount > 0) &&
+  assert((!CSProfileCount || ProfileIsCS) &&
          "Section flag should be consistent with actual profile");
   return sampleprof_error::success;
 }
@@ -887,6 +889,7 @@ std::error_code SampleProfileReaderCompactBinary::readImpl() {
   // given a module.
   bool LoadFuncsToBeUsed = collectFuncsFromModule();
   ProfileIsFS = ProfileIsFSDisciminator;
+  FunctionSamples::ProfileIsFS = ProfileIsFS;
   std::vector<uint64_t> OffsetsToUse;
   if (!LoadFuncsToBeUsed) {
     // load all the function profiles.

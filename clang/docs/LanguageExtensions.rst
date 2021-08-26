@@ -1978,7 +1978,7 @@ address space qualifiers, therefore, other type qualifiers such as
   void foo(T *par){
     T var1; // error - local function variable with global address space
     __private T var2; // error - conflicting address space qualifiers
-    __private __remove_address_space<T> var3; // var3 is __private int
+    __private __remove_address_space<T>::type var3; // var3 is __private int
   }
 
   void bar(){

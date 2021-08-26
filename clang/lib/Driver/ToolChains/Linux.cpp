@@ -303,8 +303,13 @@ Linux::Linux(const Driver &D, const llvm::Triple &Triple, const ArgList &Args)
   // searched.
   // FIXME: It's not clear whether we should use the driver's installed
   // directory ('Dir' below) or the ResourceDir.
-  if (StringRef(D.Dir).startswith(SysRoot))
+  if (StringRef(D.Dir).startswith(SysRoot)) {
+    // Even if OSLibDir != "lib", this is needed for Clang in the build
+    // directory (not installed) to find libc++.
     addPathIfExists(D, D.Dir + "/../lib", Paths);
+    if (OSLibDir != "lib")
+      addPathIfExists(D, D.Dir + "/../" + OSLibDir, Paths);
+  }
 
   addPathIfExists(D, SysRoot + "/lib", Paths);
   addPathIfExists(D, SysRoot + "/usr/lib", Paths);

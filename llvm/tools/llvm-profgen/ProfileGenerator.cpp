@@ -407,11 +407,15 @@ void CSProfileGenerator::postProcessProfiles() {
         .run();
   }
 
-  // Trim and merge cold context profile using cold threshold above;
-  SampleContextTrimmer(ProfileMap)
-      .trimAndMergeColdContextProfiles(
-          ColdCountThreshold, CSProfTrimColdContext, CSProfMergeColdContext,
-          CSProfMaxColdContextDepth);
+  // Trim and merge cold context profile using cold threshold above. By default,
+  // we skip such merging and trimming when preinliner is on.
+  if (!EnableCSPreInliner || CSProfTrimColdContext.getNumOccurrences() ||
+      CSProfMergeColdContext.getNumOccurrences()) {
+    SampleContextTrimmer(ProfileMap)
+        .trimAndMergeColdContextProfiles(
+            ColdCountThreshold, CSProfTrimColdContext, CSProfMergeColdContext,
+            CSProfMaxColdContextDepth);
+  }
 }
 
 void CSProfileGenerator::computeSummaryAndThreshold() {

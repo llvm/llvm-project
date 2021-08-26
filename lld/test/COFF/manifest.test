@@ -78,3 +78,92 @@ NOUACNODEP: <?xml version="1.0" standalone="yes"?>
 NOUACNODEP: <assembly xmlns="urn:schemas-microsoft-com:asm.v1"
 NOUACNODEP:           manifestVersion="1.0">
 NOUACNODEP: </assembly>
+
+# Several /manifestdependency: flags are naively dedup'd.
+# RUN: lld-link /out:%t.exe /entry:main \
+# RUN:   /manifestdependency:"foo='bar'" \
+# RUN:   /manifestdependency:"foo='bar'" \
+# RUN:   /manifestdependency:"baz='quux'" \
+# RUN:   %t.obj
+# RUN: FileCheck -check-prefix=SEVERALDEPS %s < %t.exe.manifest
+
+SEVERALDEPS: <?xml version="1.0" standalone="yes"?>
+SEVERALDEPS: <assembly xmlns="urn:schemas-microsoft-com:asm.v1"
+SEVERALDEPS:           manifestVersion="1.0">
+SEVERALDEPS:   <trustInfo>
+SEVERALDEPS:     <security>
+SEVERALDEPS:       <requestedPrivileges>
+SEVERALDEPS:          <requestedExecutionLevel level='asInvoker' uiAccess='false'/>
+SEVERALDEPS:       </requestedPrivileges>
+SEVERALDEPS:     </security>
+SEVERALDEPS:   </trustInfo>
+SEVERALDEPS:   <dependency>
+SEVERALDEPS:     <dependentAssembly>
+SEVERALDEPS:       <assemblyIdentity foo='bar' />
+SEVERALDEPS:     </dependentAssembly>
+SEVERALDEPS:   <dependency>
+SEVERALDEPS:     <dependentAssembly>
+SEVERALDEPS:       <assemblyIdentity baz='quux' />
+SEVERALDEPS:     </dependentAssembly>
+SEVERALDEPS:   </dependency>
+SEVERALDEPS: </assembly>
+
+# /manifestdependency: flags can be in .drectve sections.
+# RUN: yaml2obj %p/Inputs/manifestdependency-drectve.yaml -o %t.dir.obj
+# RUN: rm %t.exe.manifest
+# RUN: lld-link /out:%t.exe /entry:main \
+# RUN:   %t.obj %t.dir.obj
+# RUN: FileCheck -check-prefix=SEVERALDEPS %s < %t.exe.manifest
+
+# /manifestdependency: flags in .drectve sections are ignored with an
+# explicit /manifest:no.
+# RUN: rm %t.exe.manifest
+# RUN: lld-link /out:%t.exe /entry:main /manifest:no \
+# RUN:   %t.obj %t.dir.obj
+# RUN: test ! -e %t.exe.manifest
+
+# Test that /manifestdependency: flags in .drectve sections work
+# with /manifest:embed too.
+# RUN: lld-link /out:%t.exe /entry:main /manifest:embed \
+# RUN:   %t.obj %t.dir.obj
+# RUN: test ! -e %t.exe.manifest
+# RUN: llvm-readobj --coff-resources %t.exe \
+# RUN:     | FileCheck --check-prefix EMBED %s
+
+EMBED: Data (
+EMBED:   0000: 3C3F786D 6C207665 7273696F 6E3D2231  |<?xml version="1|
+EMBED:   0010: 2E302220 7374616E 64616C6F 6E653D22  |.0" standalone="|
+EMBED:   0020: 79657322 3F3E0A3C 61737365 6D626C79  |yes"?>.<assembly|
+EMBED:   0030: 20786D6C 6E733D22 75726E3A 73636865  | xmlns="urn:sche|
+EMBED:   0040: 6D61732D 6D696372 6F736F66 742D636F  |mas-microsoft-co|
+EMBED:   0050: 6D3A6173 6D2E7631 220A2020 20202020  |m:asm.v1".      |
+EMBED:   0060: 20202020 6D616E69 66657374 56657273  |    manifestVers|
+EMBED:   0070: 696F6E3D 22312E30 223E0A20 203C7472  |ion="1.0">.  <tr|
+EMBED:   0080: 75737449 6E666F3E 0A202020 203C7365  |ustInfo>.    <se|
+EMBED:   0090: 63757269 74793E0A 20202020 20203C72  |curity>.      <r|
+EMBED:   00A0: 65717565 73746564 50726976 696C6567  |equestedPrivileg|
+EMBED:   00B0: 65733E0A 20202020 20202020 203C7265  |es>.         <re|
+EMBED:   00C0: 71756573 74656445 78656375 74696F6E  |questedExecution|
+EMBED:   00D0: 4C657665 6C206C65 76656C3D 27617349  |Level level='asI|
+EMBED:   00E0: 6E766F6B 65722720 75694163 63657373  |nvoker' uiAccess|
+EMBED:   00F0: 3D276661 6C736527 2F3E0A20 20202020  |='false'/>.     |
+EMBED:   0100: 203C2F72 65717565 73746564 50726976  | </requestedPriv|
+EMBED:   0110: 696C6567 65733E0A 20202020 3C2F7365  |ileges>.    </se|
+EMBED:   0120: 63757269 74793E0A 20203C2F 74727573  |curity>.  </trus|
+EMBED:   0130: 74496E66 6F3E0A20 203C6465 70656E64  |tInfo>.  <depend|
+EMBED:   0140: 656E6379 3E0A2020 20203C64 6570656E  |ency>.    <depen|
+EMBED:   0150: 64656E74 41737365 6D626C79 3E0A2020  |dentAssembly>.  |
+EMBED:   0160: 20202020 3C617373 656D626C 79496465  |    <assemblyIde|
+EMBED:   0170: 6E746974 7920666F 6F3D2762 61722720  |ntity foo='bar' |
+EMBED:   0180: 2F3E0A20 2020203C 2F646570 656E6465  |/>.    </depende|
+EMBED:   0190: 6E744173 73656D62 6C793E0A 20203C2F  |ntAssembly>.  </|
+EMBED:   01A0: 64657065 6E64656E 63793E0A 20203C64  |dependency>.  <d|
+EMBED:   01B0: 6570656E 64656E63 793E0A20 2020203C  |ependency>.    <|
+EMBED:   01C0: 64657065 6E64656E 74417373 656D626C  |dependentAssembl|
+EMBED:   01D0: 793E0A20 20202020 203C6173 73656D62  |y>.      <assemb|
+EMBED:   01E0: 6C794964 656E7469 74792062 617A3D27  |lyIdentity baz='|
+EMBED:   01F0: 71757578 27202F3E 0A202020 203C2F64  |quux' />.    </d|
+EMBED:   0200: 6570656E 64656E74 41737365 6D626C79  |ependentAssembly|
+EMBED:   0210: 3E0A2020 3C2F6465 70656E64 656E6379  |>.  </dependency|
+EMBED:   0220: 3E0A3C2F 61737365 6D626C79 3E0A      |>.</assembly>.|
+EMBED: )

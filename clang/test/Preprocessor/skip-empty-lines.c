@@ -20,7 +20,7 @@ more than 8 empty lines
 
 // Check behavior after varying number of lines without emitted tokens.
 
-// LINEMARKERS:       {{^}}# 1 "{{.*}}skip-empty-lines.c" 2
+// LINEMARKERS:      {{^}}# 1 "{{.*}}skip-empty-lines.c" 2
 // LINEMARKERS-NEXT: {{^}}  int a ;
 // LINEMARKERS-NEXT: {{^}}  int b ;
 // LINEMARKERS-EMPTY:

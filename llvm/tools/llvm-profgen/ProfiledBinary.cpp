@@ -63,7 +63,7 @@ void BinarySizeContextTracker::addInstructionForContext(
     IsLeaf = false;
   }
 
-  CurNode->setFunctionSize(CurNode->getFunctionSize() + InstrSize);
+  CurNode->addFunctionSize(InstrSize);
 }
 
 uint32_t
@@ -73,7 +73,7 @@ BinarySizeContextTracker::getFuncSizeForContext(const SampleContext &Context) {
   StringRef ContextRemain = Context;
   StringRef ChildContext;
   StringRef CallerName;
-  uint32_t Size = 0;
+  Optional<uint32_t> Size;
 
   // Start from top-level context-less function, travese down the reverse
   // context trie to find the best/longest match for given context, then
@@ -87,23 +87,64 @@ BinarySizeContextTracker::getFuncSizeForContext(const SampleContext &Context) {
     SampleContext::decodeContextString(ChildContext, CallerName, CallSiteLoc);
     PrevNode = CurrNode;
     CurrNode = CurrNode->getChildContext(CallSiteLoc, CallerName);
-    if (CurrNode && CurrNode->getFunctionSize())
-      Size = CurrNode->getFunctionSize();
+    if (CurrNode && CurrNode->getFunctionSize().hasValue())
+      Size = CurrNode->getFunctionSize().getValue();
   }
 
   // If we traversed all nodes along the path of the context and haven't
   // found a size yet, pivot to look for size from sibling nodes, i.e size
   // of inlinee under different context.
-  if (!Size) {
+  if (!Size.hasValue()) {
     if (!CurrNode)
       CurrNode = PrevNode;
-    while (!Size && CurrNode) {
+    while (!Size.hasValue() && CurrNode &&
+           !CurrNode->getAllChildContext().empty()) {
       CurrNode = &CurrNode->getAllChildContext().begin()->second;
-      Size = CurrNode->getFunctionSize();
+      if (CurrNode->getFunctionSize().hasValue())
+        Size = CurrNode->getFunctionSize().getValue();
     }
   }
 
-  return Size;
+  assert(Size.hasValue() && "We should at least find one context size.");
+  return Size.getValue();
+}
+
+void BinarySizeContextTracker::trackInlineesOptimizedAway(
+    MCPseudoProbeDecoder &ProbeDecoder) {
+  ProbeFrameStack ProbeContext;
+  for (const auto &Child : ProbeDecoder.getDummyInlineRoot().getChildren())
+    trackInlineesOptimizedAway(ProbeDecoder, *Child.second.get(), ProbeContext);
+}
+
+void BinarySizeContextTracker::trackInlineesOptimizedAway(
+    MCPseudoProbeDecoder &ProbeDecoder,
+    MCDecodedPseudoProbeInlineTree &ProbeNode, ProbeFrameStack &ProbeContext) {
+  StringRef FuncName =
+      ProbeDecoder.getFuncDescForGUID(ProbeNode.Guid)->FuncName;
+  ProbeContext.emplace_back(FuncName, 0);
+
+  // This ProbeContext has a probe, so it has code before inlining and
+  // optimization. Make sure we mark its size as known.
+  if (!ProbeNode.getProbes().empty()) {
+    ContextTrieNode *SizeContext = &RootContext;
+    for (auto &ProbeFrame : reverse(ProbeContext)) {
+      StringRef CallerName = ProbeFrame.first;
+      LineLocation CallsiteLoc(ProbeFrame.second, 0);
+      SizeContext =
+          SizeContext->getOrCreateChildContext(CallsiteLoc, CallerName);
+    }
+    // Add 0 size to make known.
+    SizeContext->addFunctionSize(0);
+  }
+
+  // DFS down the probe inline tree
+  for (const auto &ChildNode : ProbeNode.getChildren()) {
+    InlineSite Location = ChildNode.first;
+    ProbeContext.back().second = std::get<1>(Location);
+    trackInlineesOptimizedAway(ProbeDecoder, *ChildNode.second.get(), ProbeContext);
+  }
+
+  ProbeContext.pop_back();
 }
 
 void ProfiledBinary::load() {
@@ -129,6 +170,10 @@ void ProfiledBinary::load() {
 
   // Disassemble the text sections.
   disassemble(Obj);
+
+  // Track size for optimized inlinees when probe is available
+  if (UsePseudoProbes && TrackFuncContextSize)
+    FuncSizeTracker.trackInlineesOptimizedAway(ProbeDecoder);
 
   // Use function start and return address to infer prolog and epilog
   ProEpilogTracker.inferPrologOffsets(FuncStartAddrMap);

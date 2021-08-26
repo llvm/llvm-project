@@ -75,6 +75,7 @@
 #include "llvm/IR/DebugInfo.h"
 #include "llvm/IR/DebugLoc.h"
 #include "llvm/IR/DerivedTypes.h"
+#include "llvm/IR/DiagnosticInfo.h"
 #include "llvm/IR/Function.h"
 #include "llvm/IR/GetElementPtrTypeIterator.h"
 #include "llvm/IR/GlobalValue.h"
@@ -1150,6 +1151,16 @@ bool FastISel::lowerCall(const CallInst *CI) {
   CallLoweringInfo CLI;
   CLI.setCallee(RetTy, FuncTy, CI->getCalledOperand(), std::move(Args), *CI)
       .setTailCall(IsTailCall);
+
+  if (const Function *F = CI->getCalledFunction())
+    if (F->hasFnAttribute("dontcall")) {
+      unsigned LocCookie = 0;
+      if (MDNode *MD = CI->getMetadata("srcloc"))
+        LocCookie =
+            mdconst::extract<ConstantInt>(MD->getOperand(0))->getZExtValue();
+      DiagnosticInfoDontCall D(F->getName(), LocCookie);
+      F->getContext().diagnose(D);
+    }
 
   return lowerCallTo(CLI);
 }

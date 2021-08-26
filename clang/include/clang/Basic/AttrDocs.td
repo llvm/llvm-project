@@ -6071,3 +6071,29 @@ def EnforceTCBLeafDocs : Documentation {
   - ``enforce_tcb_leaf(Name)`` indicates that this function is a part of the TCB named ``Name``
   }];
 }
+
+def ErrorAttrDocs : Documentation {
+  let Category = DocCatFunction;
+  let Heading = "error, warning";
+  let Content = [{
+The ``error`` and ``warning`` function attributes can be used to specify a
+custom diagnostic to be emitted when a call to such a function is not
+eliminated via optimizations. This can be used to create compile time
+assertions that depend on optimizations, while providing diagnostics
+pointing to precise locations of the call site in the source.
+
+.. code-block:: c++
+
+  __attribute__((warning("oh no"))) void dontcall();
+  void foo() {
+    if (someCompileTimeAssertionThatsTrue)
+      dontcall(); // Warning
+
+    dontcall(); // Warning
+
+    if (someCompileTimeAssertionThatsFalse)
+      dontcall(); // No Warning
+    sizeof(dontcall()); // No Warning
+  }
+  }];
+}

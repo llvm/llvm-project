@@ -35,6 +35,15 @@
   dimOrdering = affine_map<(i,j) -> (j,i)>
 }>
 
+#BlockRow = #sparse_tensor.encoding<{
+  dimLevelType = [ "compressed", "dense" ]
+}>
+
+#BlockCol = #sparse_tensor.encoding<{
+  dimLevelType = [ "compressed", "dense" ],
+  dimOrdering = affine_map<(i,j) -> (j,i)>
+}>
+
 //
 // Integration test that looks "under the hood" of sparse storage schemes.
 //
@@ -74,6 +83,8 @@ module {
     %2 = sparse_tensor.convert %t : tensor<10x8xf64> to tensor<10x8xf64, #DCSR>
     %3 = sparse_tensor.convert %t : tensor<10x8xf64> to tensor<10x8xf64, #CSC>
     %4 = sparse_tensor.convert %t : tensor<10x8xf64> to tensor<10x8xf64, #DCSC>
+    %x = sparse_tensor.convert %t : tensor<10x8xf64> to tensor<10x8xf64, #BlockRow>
+    %y = sparse_tensor.convert %t : tensor<10x8xf64> to tensor<10x8xf64, #BlockCol>
 
     //
     // Inspect storage scheme of Dense.
@@ -191,6 +202,53 @@ module {
     %37 = sparse_tensor.values %4 : tensor<10x8xf64, #DCSC> to memref<?xf64>
     %38 = vector.transfer_read %37[%c0], %d0: memref<?xf64>, vector<17xf64>
     vector.print %38 : vector<17xf64>
+
+    //
+    // Inspect storage scheme of BlockRow.
+    //
+    // pointers(0)
+    // indices(0)
+    // values
+    //
+    // CHECK: ( 0, 8 )
+    // CHECK: ( 0, 2, 3, 4, 5, 6, 7, 9 )
+    // CHECK: ( 1, 0, 2, 0, 0, 0, 0, 3, 0, 0, 4, 0, 0, 0, 0, 0,
+    // CHECK-SAME: 0, 0, 0, 5, 0, 0, 0, 0, 0, 0, 0, 0, 6, 0, 0, 0,
+    // CHECK-SAME: 0, 7, 8, 0, 0, 0, 0, 9, 0, 0, 10, 0, 0, 0, 11, 12,
+    // CHECK-SAME: 0, 13, 14, 0, 0, 0, 15, 16, 0, 0, 0, 0, 0, 0, 17, 0 )
+    //
+    %39 = sparse_tensor.pointers %x, %c0 : tensor<10x8xf64, #BlockRow> to memref<?xindex>
+    %40 = vector.transfer_read %39[%c0], %c0: memref<?xindex>, vector<2xindex>
+    vector.print %40 : vector<2xindex>
+    %41 = sparse_tensor.indices %x, %c0 : tensor<10x8xf64, #BlockRow> to memref<?xindex>
+    %42 = vector.transfer_read %41[%c0], %c0: memref<?xindex>, vector<8xindex>
+    vector.print %42 : vector<8xindex>
+    %43 = sparse_tensor.values %x : tensor<10x8xf64, #BlockRow> to memref<?xf64>
+    %44 = vector.transfer_read %43[%c0], %d0: memref<?xf64>, vector<64xf64>
+    vector.print %44 : vector<64xf64>
+
+    //
+    // Inspect storage scheme of BlockCol.
+    //
+    // pointers(0)
+    // indices(0)
+    // values
+    //
+    // CHECK: ( 0, 7 )
+    // CHECK: ( 0, 1, 2, 3, 4, 6, 7 )
+    // CHECK: ( 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 7, 0, 13, 0, 0, 2, 0, 4, 0,
+    // CHECK-SAME: 0, 8, 10, 14, 0, 0, 0, 0, 0, 5, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 6, 0, 0,
+    // CHECK-SAME: 0, 0, 0, 0, 0, 0, 0, 0, 0, 11, 15, 0, 17, 3, 0, 0, 0, 0, 9, 12, 16, 0, 0 )
+    //
+    %45 = sparse_tensor.pointers %y, %c0 : tensor<10x8xf64, #BlockCol> to memref<?xindex>
+    %46 = vector.transfer_read %45[%c0], %c0: memref<?xindex>, vector<2xindex>
+    vector.print %46 : vector<2xindex>
+    %47 = sparse_tensor.indices %y, %c0 : tensor<10x8xf64, #BlockCol> to memref<?xindex>
+    %48 = vector.transfer_read %47[%c0], %c0: memref<?xindex>, vector<7xindex>
+    vector.print %48 : vector<7xindex>
+    %49 = sparse_tensor.values %y : tensor<10x8xf64, #BlockCol> to memref<?xf64>
+    %50 = vector.transfer_read %49[%c0], %d0: memref<?xf64>, vector<70xf64>
+    vector.print %50 : vector<70xf64>
 
     return
   }
