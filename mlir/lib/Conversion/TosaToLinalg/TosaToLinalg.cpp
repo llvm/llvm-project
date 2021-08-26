@@ -2436,6 +2436,9 @@ public:
           resultElementTy.isInteger(8)) {
         Value index = rewriter.create<IndexCastOp>(loc, rewriter.getIndexType(),
                                                    inputValue);
+        Value offset = rewriter.create<ConstantIndexOp>(loc, 128);
+        index = rewriter.create<AddIOp>(loc, rewriter.getIndexType(), index,
+                                        offset);
         Value extract =
             rewriter.create<tensor::ExtractOp>(loc, table, ValueRange{index});
         rewriter.create<linalg::YieldOp>(loc, extract);

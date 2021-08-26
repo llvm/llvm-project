@@ -1101,16 +1101,20 @@ func @gather_int(%arg0: tensor<2x3x2xi32>, %arg1: tensor<2x3xi32>) -> () {
 // -----
 
 // CHECK-LABEL: @table8
-func @table8(%arg0: tensor<6xi8>, %arg1: tensor<513xi8>) -> () {
+func @table8(%arg0: tensor<6xi8>, %arg1: tensor<512xi8>) -> () {
   // CHECK: %[[INIT:.+]] = linalg.init_tensor [6]
   // CHECK: %[[GENERIC:.+]] = linalg.generic {indexing_maps = [#map, #map], iterator_types = ["parallel"]} ins(%arg0 : tensor<6xi8>) outs(%[[INIT]] : tensor<6xi8>)
   // CHECK: ^bb0(%[[ARG_IN:.+]]: i8, %[[ARG_INIT:.+]]: i8)
   // CHECK:   %[[CAST:.+]] = index_cast %[[ARG_IN]]
-  // CHECK:   %[[EXTRACT:.+]] = tensor.extract %arg1[%[[CAST]]]
+  // CHECK:   %[[OFFSET:.+]] = constant 128
+  // CHECK:   %[[ADD:.+]] = addi %[[CAST]], %[[OFFSET]]
+  // CHECK:   %[[EXTRACT:.+]] = tensor.extract %arg1[%[[ADD]]]
   // CHECK:   linalg.yield %[[EXTRACT]]
-  %0 = "tosa.table"(%arg0, %arg1)  : (tensor<6xi8>, tensor<513xi8>)  -> (tensor<6xi8>)
+  %0 = "tosa.table"(%arg0, %arg1)  : (tensor<6xi8>, tensor<512xi8>)  -> (tensor<6xi8>)
   return
 }
+
+// -----
 
 // CHECK-LABEL: @table16
 func @table16(%arg0: tensor<6xi16>, %arg1: tensor<513xi16>) -> () {
