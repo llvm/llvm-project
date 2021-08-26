@@ -16,9 +16,12 @@ define linkonce_odr void @linkonceodr() comdat {
   ret void
 }
 
-;; weakodr in a comdat is not renamed.
+;; weakodr in a comdat is not renamed. There is no guarantee that definitions in
+;; other modules don't have value profiling. profd should be conservatively
+;; non-private to prevent a caller from referencing a non-prevailing profd,
+;; causing a linker error.
 ; ELF:   @__profc_weakodr = weak_odr hidden global {{.*}} comdat, align 8
-; ELF:   @__profd_weakodr = private global {{.*}} comdat($__profc_weakodr), align 8
+; ELF:   @__profd_weakodr = weak_odr hidden global {{.*}} comdat($__profc_weakodr), align 8
 ; COFF:  @__profc_weakodr = weak_odr hidden global {{.*}} comdat, align 8
 ; COFF:  @__profd_weakodr = weak_odr hidden global {{.*}} comdat, align 8
 define weak_odr void @weakodr() comdat {
