@@ -46,7 +46,7 @@ class MCAOperand {
     kSFPImmediate, ///< Single-floating-point immediate operand.
     kDFPImmediate, ///< Double-Floating-point immediate operand.
   };
-  MCAOperandType Kind;
+  MCAOperandType Kind = kInvalid;
 
   union {
     unsigned RegVal;
@@ -62,8 +62,7 @@ class MCAOperand {
   unsigned Index;
 
 public:
-
-  MCAOperand() : Kind(kInvalid), FPImmVal(), Index() {}
+  MCAOperand() : FPImmVal(0) {}
 
   bool isValid() const { return Kind != kInvalid; }
   bool isReg() const { return Kind == kRegister; }

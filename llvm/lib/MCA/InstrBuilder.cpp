@@ -604,7 +604,7 @@ InstrBuilder::createInstrDescImpl(const MCInst &MCI) {
   computeMaxLatency(*ID, MCDesc, SCDesc, STI);
 
   if (Error Err = verifyOperands(MCDesc, MCI))
-    return Err;
+    return std::move(Err);
 
   populateWrites(*ID, MCI, SchedClassID);
   populateReads(*ID, MCI, SchedClassID);
@@ -614,7 +614,7 @@ InstrBuilder::createInstrDescImpl(const MCInst &MCI) {
 
   // Sanity check on the instruction descriptor.
   if (Error Err = verifyInstrDesc(*ID, MCI))
-    return Err;
+    return std::move(Err);
 
   // Now add the new descriptor.
   bool IsVariadic = MCDesc.isVariadic();
@@ -707,7 +707,7 @@ InstrBuilder::createInstruction(const MCInst &MCI) {
 
   // Early exit if there are no writes.
   if (D.Writes.empty())
-    return NewIS;
+    return std::move(NewIS);
 
   // Track register writes that implicitly clear the upper portion of the
   // underlying super-registers using an APInt.
@@ -736,7 +736,7 @@ InstrBuilder::createInstruction(const MCInst &MCI) {
     ++WriteIndex;
   }
 
-  return NewIS;
+  return std::move(NewIS);
 }
 } // namespace mca
 } // namespace llvm
