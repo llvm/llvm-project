@@ -988,17 +988,19 @@ template <> struct MDNodeKeyImpl<DIGlobalVariable> {
   Metadata *StaticDataMemberDeclaration;
   Metadata *TemplateParams;
   uint32_t AlignInBits;
+  Metadata *Annotations;
 
   MDNodeKeyImpl(Metadata *Scope, MDString *Name, MDString *LinkageName,
                 Metadata *File, unsigned Line, Metadata *Type,
                 bool IsLocalToUnit, bool IsDefinition,
                 Metadata *StaticDataMemberDeclaration, Metadata *TemplateParams,
-                uint32_t AlignInBits)
+                uint32_t AlignInBits, Metadata *Annotations)
       : Scope(Scope), Name(Name), LinkageName(LinkageName), File(File),
         Line(Line), Type(Type), IsLocalToUnit(IsLocalToUnit),
         IsDefinition(IsDefinition),
         StaticDataMemberDeclaration(StaticDataMemberDeclaration),
-        TemplateParams(TemplateParams), AlignInBits(AlignInBits) {}
+        TemplateParams(TemplateParams), AlignInBits(AlignInBits),
+        Annotations(Annotations) {}
   MDNodeKeyImpl(const DIGlobalVariable *N)
       : Scope(N->getRawScope()), Name(N->getRawName()),
         LinkageName(N->getRawLinkageName()), File(N->getRawFile()),
@@ -1006,7 +1008,7 @@ template <> struct MDNodeKeyImpl<DIGlobalVariable> {
         IsLocalToUnit(N->isLocalToUnit()), IsDefinition(N->isDefinition()),
         StaticDataMemberDeclaration(N->getRawStaticDataMemberDeclaration()),
         TemplateParams(N->getRawTemplateParams()),
-        AlignInBits(N->getAlignInBits()) {}
+        AlignInBits(N->getAlignInBits()), Annotations(N->getRawAnnotations()) {}
 
   bool isKeyOf(const DIGlobalVariable *RHS) const {
     return Scope == RHS->getRawScope() && Name == RHS->getRawName() &&
@@ -1017,7 +1019,8 @@ template <> struct MDNodeKeyImpl<DIGlobalVariable> {
            StaticDataMemberDeclaration ==
                RHS->getRawStaticDataMemberDeclaration() &&
            TemplateParams == RHS->getRawTemplateParams() &&
-           AlignInBits == RHS->getAlignInBits();
+           AlignInBits == RHS->getAlignInBits() &&
+           Annotations == RHS->getRawAnnotations();
   }
 
   unsigned getHashValue() const {
@@ -1030,7 +1033,7 @@ template <> struct MDNodeKeyImpl<DIGlobalVariable> {
     // TODO: make hashing work fine with such situations
     return hash_combine(Scope, Name, LinkageName, File, Line, Type,
                         IsLocalToUnit, IsDefinition, /* AlignInBits, */
-                        StaticDataMemberDeclaration);
+                        StaticDataMemberDeclaration, Annotations);
   }
 };
 
