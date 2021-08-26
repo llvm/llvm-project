@@ -139,7 +139,7 @@ public:
   std::queue<int> free_kernarg_segments;
 
   uint32_t kernarg_size_including_implicit() {
-    return kernarg_segment_size + sizeof(atmi_implicit_args_t);
+    return kernarg_segment_size + sizeof(impl_implicit_args_t);
   }
 
   ~KernelArgPool() {
@@ -160,7 +160,7 @@ public:
                 hsa_amd_memory_pool_t &memory_pool)
       : kernarg_segment_size(kernarg_segment_size) {
 
-    // atmi uses one pool per kernel for all gpus, with a fixed upper size
+    // impl uses one pool per kernel for all gpus, with a fixed upper size
     // preserving that exact scheme here, including the queue<int>
 
     hsa_status_t err = hsa_amd_memory_pool_allocate(
@@ -494,14 +494,14 @@ public:
   std::vector<hsa_amd_memory_pool_t> DeviceFineGrainedMemoryPools;
   std::vector<hsa_amd_memory_pool_t> DeviceCoarseGrainedMemoryPools;
 
-  struct atmiFreePtrDeletor {
+  struct implFreePtrDeletor {
     void operator()(void *p) {
       core::Runtime::Memfree(p); // ignore failure to free
     }
   };
 
   // device_State shared across loaded binaries, error if inconsistent size
-  std::vector<std::pair<std::unique_ptr<void, atmiFreePtrDeletor>, uint64_t>>
+  std::vector<std::pair<std::unique_ptr<void, implFreePtrDeletor>, uint64_t>>
       deviceStateStore;
 
   static const unsigned HardTeamLimit =
@@ -529,12 +529,12 @@ public:
 
   hsa_status_t freesignalpool_memcpy_d2h(void *dest, const void *src,
                                          size_t size, int32_t deviceId) {
-    return freesignalpool_memcpy(dest, src, size, atmi_memcpy_d2h, deviceId);
+    return freesignalpool_memcpy(dest, src, size, impl_memcpy_d2h, deviceId);
   }
 
   hsa_status_t freesignalpool_memcpy_h2d(void *dest, const void *src,
                                          size_t size, int32_t deviceId) {
-    return freesignalpool_memcpy(dest, src, size, atmi_memcpy_h2d, deviceId);
+    return freesignalpool_memcpy(dest, src, size, impl_memcpy_h2d, deviceId);
   }
 
   // Record entry point associated with device
@@ -801,7 +801,7 @@ public:
       return;
     }
     // Run destructors on types that use HSA before
-    // atmi_finalize removes access to it
+    // impl_finalize removes access to it
     deviceStateStore.clear();
     KernelArgPoolMap.clear();
     // Terminate hostrpc before finalizing ATMI
@@ -1393,7 +1393,7 @@ struct device_environment {
         auto &SymbolInfo = DeviceInfo.SymbolInfoTable[device_id];
         void *state_ptr;
         uint32_t state_ptr_size;
-        hsa_status_t err = atmi_interop_hsa_get_symbol_info(
+        hsa_status_t err = interop_hsa_get_symbol_info(
             SymbolInfo, device_id, sym(), &state_ptr, &state_ptr_size);
         if (err != HSA_STATUS_SUCCESS) {
           DP("failed to find %s in loaded image\n", sym());
@@ -1414,7 +1414,7 @@ struct device_environment {
   }
 };
 
-static hsa_status_t atmi_calloc(void **ret_ptr, size_t size, int DeviceId) {
+static hsa_status_t impl_calloc(void **ret_ptr, size_t size, int DeviceId) {
   uint64_t rounded = 4 * ((size + 3) / 4);
   void *ptr;
   hsa_amd_memory_pool_t MemoryPool = DeviceInfo.getDeviceMemoryPool(DeviceId);
@@ -1524,7 +1524,7 @@ __tgt_target_table *__tgt_rtl_load_binary_locked(int32_t device_id,
     void *state_ptr;
     uint32_t state_ptr_size;
     auto &SymbolInfoMap = DeviceInfo.SymbolInfoTable[device_id];
-    hsa_status_t err = atmi_interop_hsa_get_symbol_info(
+    hsa_status_t err = interop_hsa_get_symbol_info(
         SymbolInfoMap, device_id, "omptarget_nvptx_device_State", &state_ptr,
         &state_ptr_size);
 
@@ -1552,13 +1552,13 @@ __tgt_target_table *__tgt_rtl_load_binary_locked(int32_t device_id,
         if (dss.first.get() == nullptr) {
           assert(dss.second == 0);
           void *ptr = NULL;
-          hsa_status_t err = atmi_calloc(&ptr, device_State_bytes, device_id);
+          hsa_status_t err = impl_calloc(&ptr, device_State_bytes, device_id);
           if (err != HSA_STATUS_SUCCESS) {
             DP("Failed to allocate device_state array\n");
             return NULL;
           }
           dss = {
-              std::unique_ptr<void, RTLDeviceInfoTy::atmiFreePtrDeletor>{ptr},
+              std::unique_ptr<void, RTLDeviceInfoTy::implFreePtrDeletor>{ptr},
               device_State_bytes,
           };
         }
@@ -1608,7 +1608,7 @@ __tgt_target_table *__tgt_rtl_load_binary_locked(int32_t device_id,
       uint32_t varsize;
 
       auto &SymbolInfoMap = DeviceInfo.SymbolInfoTable[device_id];
-      hsa_status_t err = atmi_interop_hsa_get_symbol_info(
+      hsa_status_t err = interop_hsa_get_symbol_info(
           SymbolInfoMap, device_id, e->name, &varptr, &varsize);
 
       if (err != HSA_STATUS_SUCCESS) {
@@ -1650,7 +1650,7 @@ __tgt_target_table *__tgt_rtl_load_binary_locked(int32_t device_id,
 
     uint32_t kernarg_segment_size;
     auto &KernelInfoMap = DeviceInfo.KernelInfoTable[device_id];
-    hsa_status_t err = atmi_interop_hsa_get_kernel_info(
+    hsa_status_t err = interop_hsa_get_kernel_info(
         KernelInfoMap, device_id, e->name,
         HSA_EXECUTABLE_SYMBOL_INFO_KERNEL_KERNARG_SEGMENT_SIZE,
         &kernarg_segment_size);
@@ -2149,7 +2149,7 @@ int32_t __tgt_rtl_run_target_team_region_locked(
     packet->group_segment_size = KernelInfoEntry.group_segment_size;
     packet->kernel_object = KernelInfoEntry.kernel_object;
     packet->kernarg_address = 0;     // use the block allocator
-    packet->reserved2 = 0;           // atmi writes id_ here
+    packet->reserved2 = 0;           // impl writes id_ here
     packet->completion_signal = {0}; // may want a pool of signals
 
     KernelArgPool *ArgPool = nullptr;
@@ -2181,11 +2181,11 @@ int32_t __tgt_rtl_run_target_team_region_locked(
 
       // Initialize implicit arguments. ATMI seems to leave most fields
       // uninitialized
-      atmi_implicit_args_t *impl_args =
-          reinterpret_cast<atmi_implicit_args_t *>(
+      impl_implicit_args_t *impl_args =
+          reinterpret_cast<impl_implicit_args_t *>(
               static_cast<char *>(kernarg) + ArgPool->kernarg_segment_size);
       memset(impl_args, 0,
-             sizeof(atmi_implicit_args_t)); // may not be necessary
+             sizeof(impl_implicit_args_t)); // may not be necessary
       impl_args->offset_x = 0;
       impl_args->offset_y = 0;
       impl_args->offset_z = 0;
