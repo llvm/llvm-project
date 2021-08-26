@@ -22,6 +22,9 @@ CompilerInvocation ModuleDepCollector::makeInvocationForModuleBuildWithoutPaths(
   // Make a deep copy of the original Clang invocation.
   CompilerInvocation CI(OriginalInvocation);
 
+  CI.getLangOpts()->resetNonModularOptions();
+  CI.getPreprocessorOpts().resetNonModularOptions();
+
   // Remove options incompatible with explicit module build.
   CI.getFrontendOpts().Inputs.clear();
   CI.getFrontendOpts().OutputFile.clear();
@@ -37,8 +40,6 @@ CompilerInvocation ModuleDepCollector::makeInvocationForModuleBuildWithoutPaths(
     CI.getFrontendOpts().ModuleFiles.push_back(PrebuiltModule.PCMFile);
     CI.getFrontendOpts().ModuleMapFiles.push_back(PrebuiltModule.ModuleMapFile);
   }
-
-  CI.getPreprocessorOpts().ImplicitPCHInclude.clear();
 
   return CI;
 }
