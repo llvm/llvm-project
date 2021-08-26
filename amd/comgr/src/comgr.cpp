@@ -43,6 +43,7 @@
 #include "comgr-signal.h"
 #include "comgr-symbol.h"
 
+#include "llvm/Demangle/Demangle.h"
 #include "llvm/Object/ELFObjectFile.h"
 #include "llvm/Object/ObjectFile.h"
 #include "llvm/Support/TargetSelect.h"
@@ -1658,4 +1659,25 @@ amd_comgr_status_t AMD_COMGR_API
   }
 
   return DI->disassembleInstruction(Address, UserData, *Size);
+}
+
+amd_comgr_status_t AMD_COMGR_API
+// NOLINTNEXTLINE(readability-identifier-naming)
+amd_comgr_demangle_symbol_name(amd_comgr_data_t MangledSymbolName,
+                               amd_comgr_data_t *DemangledSymbolName) {
+  DataObject *DataP = DataObject::convert(MangledSymbolName);
+  if (!DataP || !DataP->Data || DataP->DataKind != AMD_COMGR_DATA_KIND_BYTES ||
+      !DemangledSymbolName) {
+    return AMD_COMGR_STATUS_ERROR_INVALID_ARGUMENT;
+  }
+
+  DataObject *DemangledDataP = DataObject::allocate(AMD_COMGR_DATA_KIND_BYTES);
+  if (!DemangledDataP) {
+    return AMD_COMGR_STATUS_ERROR_OUT_OF_RESOURCES;
+  }
+
+  DemangledDataP->setData(
+      llvm::demangle(std::string(DataP->Data, DataP->Size)));
+  *DemangledSymbolName = DataObject::convert(DemangledDataP);
+  return AMD_COMGR_STATUS_SUCCESS;
 }
