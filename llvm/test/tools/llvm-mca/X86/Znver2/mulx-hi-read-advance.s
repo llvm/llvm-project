@@ -17,12 +17,12 @@ add %rax, %rax
 
 # CHECK:      Iterations:        1
 # CHECK-NEXT: Instructions:      2
-# CHECK-NEXT: Total Cycles:      10
+# CHECK-NEXT: Total Cycles:      11
 # CHECK-NEXT: Total uOps:        2
 
 # CHECK:      Dispatch Width:    4
-# CHECK-NEXT: uOps Per Cycle:    0.20
-# CHECK-NEXT: IPC:               0.20
+# CHECK-NEXT: uOps Per Cycle:    0.18
+# CHECK-NEXT: IPC:               0.18
 # CHECK-NEXT: Block RThroughput: 2.0
 
 # CHECK:      Instruction Info:
@@ -62,10 +62,11 @@ add %rax, %rax
 # CHECK-NEXT:  -      -      -      -      -      -     1.00    -      -      -      -      -      -     addl	%eax, %eax
 
 # CHECK:      Timeline view:
+# CHECK-NEXT:                     0
 # CHECK-NEXT: Index     0123456789
 
-# CHECK:      [0,0]     DeeeeeeeER   mulxl	(%rdi), %eax, %ecx
-# CHECK-NEXT: [0,1]     D===eE---R   addl	%eax, %eax
+# CHECK:      [0,0]     DeeeeeeeER.   mulxl	(%rdi), %eax, %ecx
+# CHECK-NEXT: [0,1]     D=======eER   addl	%eax, %eax
 
 # CHECK:      Average Wait times (based on the timeline view):
 # CHECK-NEXT: [0]: Executions
@@ -75,19 +76,19 @@ add %rax, %rax
 
 # CHECK:            [0]    [1]    [2]    [3]
 # CHECK-NEXT: 0.     1     1.0    1.0    0.0       mulxl	(%rdi), %eax, %ecx
-# CHECK-NEXT: 1.     1     4.0    0.0    3.0       addl	%eax, %eax
-# CHECK-NEXT:        1     2.5    0.5    1.5       <total>
+# CHECK-NEXT: 1.     1     8.0    0.0    0.0       addl	%eax, %eax
+# CHECK-NEXT:        1     4.5    0.5    0.0       <total>
 
 # CHECK:      [1] Code Region
 
 # CHECK:      Iterations:        1
 # CHECK-NEXT: Instructions:      2
-# CHECK-NEXT: Total Cycles:      10
+# CHECK-NEXT: Total Cycles:      11
 # CHECK-NEXT: Total uOps:        2
 
 # CHECK:      Dispatch Width:    4
-# CHECK-NEXT: uOps Per Cycle:    0.20
-# CHECK-NEXT: IPC:               0.20
+# CHECK-NEXT: uOps Per Cycle:    0.18
+# CHECK-NEXT: IPC:               0.18
 # CHECK-NEXT: Block RThroughput: 2.0
 
 # CHECK:      Instruction Info:
@@ -127,10 +128,11 @@ add %rax, %rax
 # CHECK-NEXT:  -      -      -      -      -      -     1.00    -      -      -      -      -      -     addq	%rax, %rax
 
 # CHECK:      Timeline view:
+# CHECK-NEXT:                     0
 # CHECK-NEXT: Index     0123456789
 
-# CHECK:      [0,0]     DeeeeeeeER   mulxq	(%rdi), %rax, %rcx
-# CHECK-NEXT: [0,1]     D===eE---R   addq	%rax, %rax
+# CHECK:      [0,0]     DeeeeeeeER.   mulxq	(%rdi), %rax, %rcx
+# CHECK-NEXT: [0,1]     D=======eER   addq	%rax, %rax
 
 # CHECK:      Average Wait times (based on the timeline view):
 # CHECK-NEXT: [0]: Executions
@@ -140,5 +142,5 @@ add %rax, %rax
 
 # CHECK:            [0]    [1]    [2]    [3]
 # CHECK-NEXT: 0.     1     1.0    1.0    0.0       mulxq	(%rdi), %rax, %rcx
-# CHECK-NEXT: 1.     1     4.0    0.0    3.0       addq	%rax, %rax
-# CHECK-NEXT:        1     2.5    0.5    1.5       <total>
+# CHECK-NEXT: 1.     1     8.0    0.0    0.0       addq	%rax, %rax
+# CHECK-NEXT:        1     4.5    0.5    0.0       <total>
