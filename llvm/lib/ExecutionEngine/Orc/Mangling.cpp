@@ -7,6 +7,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "llvm/ExecutionEngine/Orc/Mangling.h"
+#include "llvm/ExecutionEngine/Orc/ELFNixPlatform.h"
 #include "llvm/ExecutionEngine/Orc/MachOPlatform.h"
 #include "llvm/IR/Constants.h"
 #include "llvm/IR/Mangler.h"
@@ -84,6 +85,23 @@ void IRSymbolMapper::add(ExecutionSession &ES, const ManglingOptions &MO,
   }
 }
 
+static SymbolStringPtr addInitSymbol(SymbolFlagsMap &SymbolFlags,
+                                     ExecutionSession &ES,
+                                     StringRef ObjFileName) {
+  SymbolStringPtr InitSymbol;
+  size_t Counter = 0;
+
+  do {
+    std::string InitSymString;
+    raw_string_ostream(InitSymString)
+      << "$." << ObjFileName << ".__inits." << Counter++;
+    InitSymbol = ES.intern(InitSymString);
+  } while (SymbolFlags.count(InitSymbol));
+
+  SymbolFlags[InitSymbol] = JITSymbolFlags::MaterializationSideEffectsOnly;
+  return InitSymbol;
+}
+
 static Expected<std::pair<SymbolFlagsMap, SymbolStringPtr>>
 getMachOObjectFileSymbolInfo(ExecutionSession &ES,
                              const object::MachOObjectFile &Obj) {
@@ -126,30 +144,16 @@ getMachOObjectFileSymbolInfo(ExecutionSession &ES,
   }
 
   SymbolStringPtr InitSymbol;
-  size_t Counter = 0;
-  auto AddInitSymbol = [&]() {
-    while (true) {
-      std::string InitSymString;
-      raw_string_ostream(InitSymString)
-          << "$." << Obj.getFileName() << ".__inits." << Counter++;
-      InitSymbol = ES.intern(InitSymString);
-      if (SymbolFlags.count(InitSymbol))
-        continue;
-      SymbolFlags[InitSymbol] = JITSymbolFlags::MaterializationSideEffectsOnly;
-      return;
-    }
-  };
-
   for (auto &Sec : Obj.sections()) {
     auto SecType = Obj.getSectionType(Sec);
     if ((SecType & MachO::SECTION_TYPE) == MachO::S_MOD_INIT_FUNC_POINTERS) {
-      AddInitSymbol();
+      InitSymbol = addInitSymbol(SymbolFlags, ES, Obj.getFileName());
       break;
     }
     auto SegName = Obj.getSectionFinalSegmentName(Sec.getRawDataRefImpl());
     auto SecName = cantFail(Obj.getSectionName(Sec.getRawDataRefImpl()));
     if (MachOPlatform::isInitializerSection(SegName, SecName)) {
-      AddInitSymbol();
+      InitSymbol = addInitSymbol(SymbolFlags, ES, Obj.getFileName());
       break;
     }
   }
@@ -197,7 +201,17 @@ getELFObjectFileSymbolInfo(ExecutionSession &ES,
     SymbolFlags[InternedName] = std::move(*SymFlags);
   }
 
-  return std::make_pair(std::move(SymbolFlags), nullptr);
+  SymbolStringPtr InitSymbol;
+  for (auto &Sec : Obj.sections()) {
+    if (auto SecName = Sec.getName()) {
+      if (ELFNixPlatform::isInitializerSection(*SecName)) {
+        InitSymbol = addInitSymbol(SymbolFlags, ES, Obj.getFileName());
+        break;
+      }
+    }
+  }
+
+  return std::make_pair(std::move(SymbolFlags), InitSymbol);
 }
 
 Expected<std::pair<SymbolFlagsMap, SymbolStringPtr>>
