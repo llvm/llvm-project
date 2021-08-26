@@ -18,9 +18,6 @@
 #pragma GCC system_header
 #endif
 
-_LIBCPP_PUSH_MACROS
-#include <__undef_macros>
-
 _LIBCPP_BEGIN_NAMESPACE_STD
 
 template <class _Tp>
@@ -33,7 +30,5 @@ inline _LIBCPP_INLINE_VISIBILITY typename decay<_Tp>::type __decay_copy(_Tp&& __
 }
 
 _LIBCPP_END_NAMESPACE_STD
-
-_LIBCPP_POP_MACROS
 
 #endif // _LIBCPP___TYPE_TRAITS_DECAY_COPY_H

@@ -18,9 +18,6 @@
 #pragma GCC system_header
 #endif
 
-_LIBCPP_PUSH_MACROS
-#include <__undef_macros>
-
 _LIBCPP_BEGIN_NAMESPACE_STD
 
 template <class _RandomAccessIterator, class _Compare>
@@ -42,7 +39,5 @@ is_heap(_RandomAccessIterator __first, _RandomAccessIterator __last)
 }
 
 _LIBCPP_END_NAMESPACE_STD
-
-_LIBCPP_POP_MACROS
 
 #endif // _LIBCPP___ALGORITHM_IS_HEAP_H
