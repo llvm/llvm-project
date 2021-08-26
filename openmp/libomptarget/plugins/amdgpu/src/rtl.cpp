@@ -24,9 +24,8 @@
 #include <unordered_map>
 #include <vector>
 
-// Header from ATMI interface
-#include "atmi_interop_hsa.h"
-#include "atmi_runtime.h"
+#include "interop_hsa.h"
+#include "impl_runtime.h"
 
 #include "internal.h"
 

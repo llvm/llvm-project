@@ -62,8 +62,8 @@ else()
 endif()
 
 add_library(omptarget.rtl.amdgpu SHARED
-      impl/atmi.cpp
-      impl/atmi_interop_hsa.cpp
+      impl/impl.cpp
+      impl/interop_hsa.cpp
       impl/data.cpp
       impl/get_elf_mach_gfx_name.cpp
       impl/system.cpp
