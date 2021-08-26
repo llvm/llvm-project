@@ -396,6 +396,7 @@ cc_library(
         "//mlir:LinalgOps",
         "//mlir:LinalgTransforms",
         "//mlir:Pass",
+        "//mlir:SCFTransforms",
         "//mlir:StandardOps",
         "//mlir:TransformUtils",
         "//mlir:VectorOps",
