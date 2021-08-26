@@ -135,10 +135,14 @@ LogicalResult LaunchConfigConversion<SourceOp, builtin>::matchAndRewrite(
   if (!index)
     return failure();
 
+  auto *typeConverter = this->template getTypeConverter<SPIRVTypeConverter>();
+  auto indexType = typeConverter->getIndexType();
+
   // SPIR-V invocation builtin variables are a vector of type <3xi32>
-  auto spirvBuiltin = spirv::getBuiltinVariableValue(op, builtin, rewriter);
+  auto spirvBuiltin =
+      spirv::getBuiltinVariableValue(op, builtin, indexType, rewriter);
   rewriter.replaceOpWithNewOp<spirv::CompositeExtractOp>(
-      op, rewriter.getIntegerType(32), spirvBuiltin,
+      op, indexType, spirvBuiltin,
       rewriter.getI32ArrayAttr({index.getValue()}));
   return success();
 }
@@ -148,7 +152,11 @@ LogicalResult
 SingleDimLaunchConfigConversion<SourceOp, builtin>::matchAndRewrite(
     SourceOp op, ArrayRef<Value> operands,
     ConversionPatternRewriter &rewriter) const {
-  auto spirvBuiltin = spirv::getBuiltinVariableValue(op, builtin, rewriter);
+  auto *typeConverter = this->template getTypeConverter<SPIRVTypeConverter>();
+  auto indexType = typeConverter->getIndexType();
+
+  auto spirvBuiltin =
+      spirv::getBuiltinVariableValue(op, builtin, indexType, rewriter);
   rewriter.replaceOp(op, spirvBuiltin);
   return success();
 }

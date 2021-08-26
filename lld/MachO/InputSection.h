@@ -79,10 +79,6 @@ protected:
           sectionKind(kind) {}
   };
 
-  InputSection(Kind kind, StringRef segname, StringRef name)
-      : callSiteCount(0), isFinal(false),
-        shared(make<Shared>(nullptr, name, segname, 0, kind)) {}
-
   InputSection(Kind kind, StringRef segname, StringRef name, InputFile *file,
                ArrayRef<uint8_t> data, uint32_t align, uint32_t flags)
       : align(align), callSiteCount(0), isFinal(false), data(data),
@@ -96,13 +92,15 @@ protected:
 // contents merged before output.
 class ConcatInputSection final : public InputSection {
 public:
-  ConcatInputSection(StringRef segname, StringRef name)
-      : InputSection(ConcatKind, segname, name) {}
-
   ConcatInputSection(StringRef segname, StringRef name, InputFile *file,
                      ArrayRef<uint8_t> data, uint32_t align = 1,
                      uint32_t flags = 0)
       : InputSection(ConcatKind, segname, name, file, data, align, flags) {}
+
+  ConcatInputSection(StringRef segname, StringRef name)
+      : ConcatInputSection(segname, name, /*file=*/nullptr,
+                           /*data=*/{},
+                           /*align=*/1, /*flags=*/0) {}
 
   uint64_t getOffset(uint64_t off) const override { return outSecOff + off; }
   uint64_t getVA() const { return InputSection::getVA(0); }
