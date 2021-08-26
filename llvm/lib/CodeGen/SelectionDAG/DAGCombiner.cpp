@@ -22572,12 +22572,16 @@ SDValue DAGCombiner::foldSelectOfBinops(SDNode *N) {
   if (!N0->hasOneUse() || !N1->hasOneUse() || !N2->hasOneUse())
     return SDValue();
 
+  // Binops may include opcodes that return multiple values, so all values
+  // must be created/propagated from the newly created binops below.
+  SDVTList OpVTs = N1->getVTList();
+
   // Fold select(cond, binop(x, y), binop(z, y))
   //  --> binop(select(cond, x, z), y)
   if (N1.getOperand(1) == N2.getOperand(1)) {
     SDValue NewSel =
         DAG.getSelect(DL, VT, N0, N1.getOperand(0), N2.getOperand(0));
-    SDValue NewBinOp = DAG.getNode(BinOpc, DL, VT, NewSel, N1.getOperand(1));
+    SDValue NewBinOp = DAG.getNode(BinOpc, DL, OpVTs, NewSel, N1.getOperand(1));
     NewBinOp->setFlags(N1->getFlags());
     NewBinOp->intersectFlagsWith(N2->getFlags());
     return NewBinOp;
@@ -22591,7 +22595,7 @@ SDValue DAGCombiner::foldSelectOfBinops(SDNode *N) {
       VT == N2.getOperand(1).getValueType()) {
     SDValue NewSel =
         DAG.getSelect(DL, VT, N0, N1.getOperand(1), N2.getOperand(1));
-    SDValue NewBinOp = DAG.getNode(BinOpc, DL, VT, N1.getOperand(0), NewSel);
+    SDValue NewBinOp = DAG.getNode(BinOpc, DL, OpVTs, N1.getOperand(0), NewSel);
     NewBinOp->setFlags(N1->getFlags());
     NewBinOp->intersectFlagsWith(N2->getFlags());
     return NewBinOp;

@@ -1589,3 +1589,107 @@ define i64 @PR51612(i64 %x, i64 %y) {
   %and = and i64 %sel, %conv
   ret i64 %and
 }
+
+; The next 2 tests are for additional bugs based on PR51612.
+
+declare { i8, i1 } @llvm.uadd.with.overflow.i8(i8, i8) nounwind readnone
+declare { i32, i1 } @llvm.sadd.with.overflow.i32(i32, i32) nounwind readnone
+
+define i8 @select_uaddo_common_op0(i8 %a, i8 %b, i8 %c, i1 %cond) {
+; GENERIC-LABEL: select_uaddo_common_op0:
+; GENERIC:       ## %bb.0:
+; GENERIC-NEXT:    ## kill: def $esi killed $esi def $rsi
+; GENERIC-NEXT:    ## kill: def $edi killed $edi def $rdi
+; GENERIC-NEXT:    testb $1, %cl
+; GENERIC-NEXT:    cmovel %edx, %esi
+; GENERIC-NEXT:    leal (%rsi,%rdi), %eax
+; GENERIC-NEXT:    ## kill: def $al killed $al killed $eax
+; GENERIC-NEXT:    retq
+;
+; ATOM-LABEL: select_uaddo_common_op0:
+; ATOM:       ## %bb.0:
+; ATOM-NEXT:    ## kill: def $esi killed $esi def $rsi
+; ATOM-NEXT:    testb $1, %cl
+; ATOM-NEXT:    ## kill: def $edi killed $edi def $rdi
+; ATOM-NEXT:    cmovel %edx, %esi
+; ATOM-NEXT:    leal (%rsi,%rdi), %eax
+; ATOM-NEXT:    ## kill: def $al killed $al killed $eax
+; ATOM-NEXT:    nop
+; ATOM-NEXT:    nop
+; ATOM-NEXT:    retq
+;
+; ATHLON-LABEL: select_uaddo_common_op0:
+; ATHLON:       ## %bb.0:
+; ATHLON-NEXT:    movb {{[0-9]+}}(%esp), %al
+; ATHLON-NEXT:    testb $1, {{[0-9]+}}(%esp)
+; ATHLON-NEXT:    leal {{[0-9]+}}(%esp), %ecx
+; ATHLON-NEXT:    leal {{[0-9]+}}(%esp), %edx
+; ATHLON-NEXT:    cmovnel %ecx, %edx
+; ATHLON-NEXT:    addb (%edx), %al
+; ATHLON-NEXT:    retl
+;
+; MCU-LABEL: select_uaddo_common_op0:
+; MCU:       # %bb.0:
+; MCU-NEXT:    testb $1, {{[0-9]+}}(%esp)
+; MCU-NEXT:    jne .LBB32_2
+; MCU-NEXT:  # %bb.1:
+; MCU-NEXT:    movl %ecx, %edx
+; MCU-NEXT:  .LBB32_2:
+; MCU-NEXT:    addb %dl, %al
+; MCU-NEXT:    # kill: def $al killed $al killed $eax
+; MCU-NEXT:    retl
+  %ab = call { i8, i1 } @llvm.uadd.with.overflow.i8(i8 %a, i8 %b)
+  %ac = call { i8, i1 } @llvm.uadd.with.overflow.i8(i8 %a, i8 %c)
+  %ab0 = extractvalue { i8, i1 } %ab, 0
+  %ac0 = extractvalue { i8, i1 } %ac, 0
+  %sel = select i1 %cond, i8 %ab0, i8 %ac0
+  ret i8 %sel
+}
+
+define i32 @select_uaddo_common_op1(i32 %a, i32 %b, i32 %c, i1 %cond) {
+; GENERIC-LABEL: select_uaddo_common_op1:
+; GENERIC:       ## %bb.0:
+; GENERIC-NEXT:    ## kill: def $esi killed $esi def $rsi
+; GENERIC-NEXT:    ## kill: def $edi killed $edi def $rdi
+; GENERIC-NEXT:    testb $1, %cl
+; GENERIC-NEXT:    cmovel %edx, %edi
+; GENERIC-NEXT:    leal (%rdi,%rsi), %eax
+; GENERIC-NEXT:    retq
+;
+; ATOM-LABEL: select_uaddo_common_op1:
+; ATOM:       ## %bb.0:
+; ATOM-NEXT:    ## kill: def $edi killed $edi def $rdi
+; ATOM-NEXT:    testb $1, %cl
+; ATOM-NEXT:    ## kill: def $esi killed $esi def $rsi
+; ATOM-NEXT:    cmovel %edx, %edi
+; ATOM-NEXT:    leal (%rdi,%rsi), %eax
+; ATOM-NEXT:    nop
+; ATOM-NEXT:    nop
+; ATOM-NEXT:    retq
+;
+; ATHLON-LABEL: select_uaddo_common_op1:
+; ATHLON:       ## %bb.0:
+; ATHLON-NEXT:    testb $1, {{[0-9]+}}(%esp)
+; ATHLON-NEXT:    leal {{[0-9]+}}(%esp), %eax
+; ATHLON-NEXT:    leal {{[0-9]+}}(%esp), %ecx
+; ATHLON-NEXT:    cmovnel %eax, %ecx
+; ATHLON-NEXT:    movl (%ecx), %eax
+; ATHLON-NEXT:    addl {{[0-9]+}}(%esp), %eax
+; ATHLON-NEXT:    retl
+;
+; MCU-LABEL: select_uaddo_common_op1:
+; MCU:       # %bb.0:
+; MCU-NEXT:    testb $1, {{[0-9]+}}(%esp)
+; MCU-NEXT:    jne .LBB33_2
+; MCU-NEXT:  # %bb.1:
+; MCU-NEXT:    movl %ecx, %eax
+; MCU-NEXT:  .LBB33_2:
+; MCU-NEXT:    addl %edx, %eax
+; MCU-NEXT:    retl
+  %ab = call { i32, i1 } @llvm.sadd.with.overflow.i32(i32 %a, i32 %b)
+  %cb = call { i32, i1 } @llvm.sadd.with.overflow.i32(i32 %c, i32 %b)
+  %ab0 = extractvalue { i32, i1 } %ab, 0
+  %cb0 = extractvalue { i32, i1 } %cb, 0
+  %sel = select i1 %cond, i32 %ab0, i32 %cb0
+  ret i32 %sel
+}
