@@ -183,11 +183,11 @@ define void @vecload_vs_broadcast4(double * noalias %from, double * noalias %to,
 ; CHECK-NEXT:    [[P:%.*]] = phi double [ 1.000000e+00, [[LP]] ], [ 0.000000e+00, [[ENTRY:%.*]] ]
 ; CHECK-NEXT:    [[TMP0:%.*]] = bitcast double* [[FROM:%.*]] to <2 x double>*
 ; CHECK-NEXT:    [[TMP1:%.*]] = load <2 x double>, <2 x double>* [[TMP0]], align 4
+; CHECK-NEXT:    [[SHUFFLE:%.*]] = shufflevector <2 x double> [[TMP1]], <2 x double> poison, <2 x i32> <i32 1, i32 0>
 ; CHECK-NEXT:    [[TMP2:%.*]] = insertelement <2 x double> [[TMP1]], double [[P]], i32 1
-; CHECK-NEXT:    [[TMP3:%.*]] = shufflevector <2 x double> [[TMP1]], <2 x double> poison, <2 x i32> <i32 1, i32 0>
-; CHECK-NEXT:    [[TMP4:%.*]] = fadd <2 x double> [[TMP2]], [[TMP3]]
-; CHECK-NEXT:    [[TMP5:%.*]] = bitcast double* [[TO:%.*]] to <2 x double>*
-; CHECK-NEXT:    store <2 x double> [[TMP4]], <2 x double>* [[TMP5]], align 4
+; CHECK-NEXT:    [[TMP3:%.*]] = fadd <2 x double> [[TMP2]], [[SHUFFLE]]
+; CHECK-NEXT:    [[TMP4:%.*]] = bitcast double* [[TO:%.*]] to <2 x double>*
+; CHECK-NEXT:    store <2 x double> [[TMP3]], <2 x double>* [[TMP4]], align 4
 ; CHECK-NEXT:    br i1 undef, label [[LP]], label [[EXT:%.*]]
 ; CHECK:       ext:
 ; CHECK-NEXT:    ret void
