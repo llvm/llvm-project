@@ -18,6 +18,7 @@
 #include "llvm/ADT/Statistic.h"
 #include "llvm/Analysis/ConstraintSystem.h"
 #include "llvm/Analysis/GlobalsModRef.h"
+#include "llvm/Analysis/ValueTracking.h"
 #include "llvm/IR/DataLayout.h"
 #include "llvm/IR/Dominators.h"
 #include "llvm/IR/Function.h"
@@ -268,6 +269,31 @@ static bool eliminateConstraints(Function &F, DominatorTree &DT) {
       continue;
     WorkList.emplace_back(DT.getNode(&BB));
 
+    // True as long as long as the current instruction is guaranteed to execute.
+    bool GuaranteedToExecute = true;
+    // Scan BB for assume calls.
+    // TODO: also use this scan to queue conditions to simplify, so we can
+    // interleave facts from assumes and conditions to simplify in a single
+    // basic block. And to skip another traversal of each basic block when
+    // simplifying.
+    for (Instruction &I : BB) {
+      Value *Cond;
+      // For now, just handle assumes with a single compare as condition.
+      if (match(&I, m_Intrinsic<Intrinsic::assume>(m_Value(Cond))) &&
+          isa<CmpInst>(Cond)) {
+        if (GuaranteedToExecute) {
+          // The assume is guaranteed to execute when BB is entered, hence Cond
+          // holds on entry to BB.
+          WorkList.emplace_back(DT.getNode(&BB), cast<CmpInst>(Cond), false);
+        } else {
+          // Otherwise the condition only holds in the successors.
+          for (BasicBlock *Succ : successors(&BB))
+            WorkList.emplace_back(DT.getNode(Succ), cast<CmpInst>(Cond), false);
+        }
+      }
+      GuaranteedToExecute &= isGuaranteedToTransferExecutionToSuccessor(&I);
+    }
+
     auto *Br = dyn_cast<BranchInst>(BB.getTerminator());
     if (!Br || !Br->isConditional())
       continue;
@@ -395,8 +421,13 @@ static bool eliminateConstraints(Function &F, DominatorTree &DT) {
             for (auto &E : reverse(DFSInStack))
               dbgs() << "   C " << *E.Condition << " " << E.IsNot << "\n";
           });
-          Cmp->replaceAllUsesWith(
-              ConstantInt::getTrue(F.getParent()->getContext()));
+          Cmp->replaceUsesWithIf(
+              ConstantInt::getTrue(F.getParent()->getContext()), [](Use &U) {
+                // Conditions in an assume trivially simplify to true. Skip uses
+                // in assume calls to not destroy the available information.
+                auto *II = dyn_cast<IntrinsicInst>(U.getUser());
+                return !II || II->getIntrinsicID() != Intrinsic::assume;
+              });
           NumCondsRemoved++;
           Changed = true;
         }
