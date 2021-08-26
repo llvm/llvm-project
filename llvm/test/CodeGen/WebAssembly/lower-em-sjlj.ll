@@ -142,7 +142,7 @@ if.then:                                          ; preds = %entry
 ; CHECK-NEXT: %[[SETJMP_TABLE_SIZE1:.*]] = call i32 @getTempRet0()
 
 ; CHECK: if.then.split:
-; CHECK: %[[VAR1:.*]] = phi i32 [ %[[VAR0]], %if.then ], [ %[[VAR2:.*]], %if.end3 ]
+; CHECK: %[[VAR1:.*]] = phi i32 [ %[[VAR2:.*]], %if.end3 ], [ %[[VAR0]], %if.then ]
 ; CHECK: %[[SETJMP_TABLE_SIZE2:.*]] = phi i32 [ %[[SETJMP_TABLE_SIZE1]], %if.then ], [ %[[SETJMP_TABLE_SIZE3:.*]], %if.end3 ]
 ; CHECK: %[[SETJMP_TABLE2:.*]] = phi i32* [ %[[SETJMP_TABLE1]], %if.then ], [ %[[SETJMP_TABLE3:.*]], %if.end3 ]
 ; CHECK: store i32 %[[VAR1]], i32* @global_var, align 4
@@ -222,7 +222,7 @@ for.inc:                                          ; preds = %for.cond
   br label %for.cond
 
 ; CHECK: for.inc.split:
-  ; CHECK: %var[[VARNO]] = phi i32 [ %var, %for.inc ]
+  ; CHECK: %var[[VARNO]] = phi i32 [ undef, %if.end ], [ %var, %for.inc ]
 }
 
 ; Tests cases where longjmp function pointer is used in other ways than direct
