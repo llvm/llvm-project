@@ -9,8 +9,8 @@
 #include "BareMetal.h"
 
 #include "CommonArgs.h"
-#include "InputInfo.h"
 #include "Gnu.h"
+#include "clang/Driver/InputInfo.h"
 
 #include "Arch/RISCV.h"
 #include "clang/Driver/Compilation.h"
