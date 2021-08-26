@@ -124,14 +124,14 @@ defm : X86WriteRes<WriteIMul16Imm,    [SBPort1,SBPort015], 4, [1,1], 2>;
 defm : X86WriteRes<WriteIMul16ImmLd,  [SBPort1,SBPort015,SBPort23], 8, [1,1,1], 3>;
 defm : SBWriteResPair<WriteIMul16Reg, [SBPort1],   3>;
 defm : SBWriteResPair<WriteIMul32,    [SBPort1,SBPort05,SBPort015], 4, [1,1,1], 3>;
-defm : SBWriteResPair<WriteMULX32,    [SBPort1,SBPort05,SBPort015], 4, [1,1,1], 3>;
+defm : SBWriteResPair<WriteMULX32,    [SBPort1,SBPort05,SBPort015], 3, [1,1,1], 3>;
 defm : SBWriteResPair<WriteIMul32Imm, [SBPort1],   3>;
 defm : SBWriteResPair<WriteIMul32Reg, [SBPort1],   3>;
 defm : SBWriteResPair<WriteIMul64,    [SBPort1,SBPort0], 4, [1,1], 2>;
-defm : SBWriteResPair<WriteMULX64,    [SBPort1,SBPort0], 4, [1,1], 2>;
+defm : SBWriteResPair<WriteMULX64,    [SBPort1,SBPort0], 3, [1,1], 2>;
 defm : SBWriteResPair<WriteIMul64Imm, [SBPort1],   3>;
 defm : SBWriteResPair<WriteIMul64Reg, [SBPort1],   3>;
-def SBWriteIMulH : WriteRes<WriteIMulH, []> { let Latency = 3; }
+def SBWriteIMulH : WriteRes<WriteIMulH, []> { let Latency = 4; }
 def  : WriteRes<WriteIMulHLd, []> {
   let Latency = !add(SBWriteIMulH.Latency, SandyBridgeModel.LoadLatency);
 }
