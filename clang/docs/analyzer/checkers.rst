@@ -2154,7 +2154,15 @@ Warn about buffer overflows (newer checker).
 
 alpha.security.MallocOverflow (C)
 """""""""""""""""""""""""""""""""
-Check for overflows in the arguments to malloc().
+Check for overflows in the arguments to ``malloc()``.
+It tries to catch ``malloc(n * c)`` patterns, where:
+
+ - ``n``: a variable or member access of an object
+ - ``c``: a constant foldable integral
+
+This checker was designed for code audits, so expect false-positive reports.
+One is supposed to silence this checker by ensuring proper bounds checking on
+the variable in question using e.g. an ``assert()`` or a branch.
 
 .. code-block:: c
 
@@ -2167,6 +2175,27 @@ Check for overflows in the arguments to malloc().
      return;
    void *p = malloc(n * sizeof(int)); // no warning
  }
+
+ void test3(int n) {
+   assert(n <= 100 && "Contract violated.");
+   void *p = malloc(n * sizeof(int)); // no warning
+ }
+
+Limitations:
+
+ - The checker won't warn for variables involved in explicit casts,
+   since that might limit the variable's domain.
+   E.g.: ``(unsigned char)int x`` would limit the domain to ``[0,255]``.
+   The checker will miss the true-positive cases when the explicit cast would
+   not tighten the domain to prevent the overflow in the subsequent
+   multiplication operation.
+
+ - If the variable ``n`` participates in a comparison anywhere in the enclosing
+   function's scope, even after the ``malloc()``, the report will be still
+   suppressed.
+
+ - It is an AST-based checker, thus it does not make use of the
+   path-sensitive taint-analysis.
 
 .. _alpha-security-MmapWriteExec:
 
