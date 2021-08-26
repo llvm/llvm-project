@@ -1171,7 +1171,7 @@ TEST_F(DISubrangeTest, getVariableCount) {
   DIType *Type = getDerivedType();
   DINode::DIFlags Flags = static_cast<DINode::DIFlags>(7);
   auto *VlaExpr = DILocalVariable::get(Context, Scope, "vla_expr", File, 8,
-                                       Type, 2, Flags, 8);
+                                       Type, 2, Flags, 8, nullptr);
 
   auto *N = DISubrange::get(Context, VlaExpr, 0);
   auto Count = N->getCount();
@@ -1199,7 +1199,7 @@ TEST_F(DISubrangeTest, fortranAllocatableInt) {
   auto *UIother = ConstantAsMetadata::get(
       ConstantInt::getSigned(Type::getInt64Ty(Context), 20));
   auto *UVother = DILocalVariable::get(Context, Scope, "ubother", File, 8, Type,
-                                       2, Flags, 8);
+                                       2, Flags, 8, nullptr);
   auto *UEother = DIExpression::get(Context, {5, 6});
   auto *LIZero = ConstantAsMetadata::get(
       ConstantInt::getSigned(Type::getInt64Ty(Context), 0));
@@ -1242,13 +1242,16 @@ TEST_F(DISubrangeTest, fortranAllocatableVar) {
   DIType *Type = getDerivedType();
   DINode::DIFlags Flags = static_cast<DINode::DIFlags>(7);
   auto *LV =
-      DILocalVariable::get(Context, Scope, "lb", File, 8, Type, 2, Flags, 8);
+      DILocalVariable::get(Context, Scope, "lb", File, 8, Type, 2, Flags, 8,
+                           nullptr);
   auto *UV =
-      DILocalVariable::get(Context, Scope, "ub", File, 8, Type, 2, Flags, 8);
+      DILocalVariable::get(Context, Scope, "ub", File, 8, Type, 2, Flags, 8,
+                           nullptr);
   auto *SV =
-      DILocalVariable::get(Context, Scope, "st", File, 8, Type, 2, Flags, 8);
+      DILocalVariable::get(Context, Scope, "st", File, 8, Type, 2, Flags, 8,
+                           nullptr);
   auto *SVother = DILocalVariable::get(Context, Scope, "stother", File, 8, Type,
-                                       2, Flags, 8);
+                                       2, Flags, 8, nullptr);
   auto *SIother = ConstantAsMetadata::get(
       ConstantInt::getSigned(Type::getInt64Ty(Context), 20));
   auto *SEother = DIExpression::get(Context, {5, 6});
@@ -1289,7 +1292,7 @@ TEST_F(DISubrangeTest, fortranAllocatableExpr) {
   auto *LIother = ConstantAsMetadata::get(
       ConstantInt::getSigned(Type::getInt64Ty(Context), 20));
   auto *LVother = DILocalVariable::get(Context, Scope, "lbother", File, 8, Type,
-                                       2, Flags, 8);
+                                       2, Flags, 8, nullptr);
 
   auto *N = DISubrange::get(Context, nullptr, LE, UE, SE);
 
@@ -1328,7 +1331,7 @@ TEST_F(DIGenericSubrangeTest, fortranAssumedRankInt) {
   auto *SI = DIExpression::get(Context, {dwarf::DW_OP_consts, 4});
   auto *UIother = DIExpression::get(Context, {dwarf::DW_OP_consts, 20});
   auto *UVother = DILocalVariable::get(Context, Scope, "ubother", File, 8, Type,
-                                       2, Flags, 8);
+                                       2, Flags, 8, nullptr);
   auto *UEother = DIExpression::get(Context, {5, 6});
   auto *LIZero = DIExpression::get(Context, {dwarf::DW_OP_consts, 0});
   auto *UIZero = DIExpression::get(Context, {dwarf::DW_OP_consts, 0});
@@ -1371,13 +1374,16 @@ TEST_F(DIGenericSubrangeTest, fortranAssumedRankVar) {
   DIType *Type = getDerivedType();
   DINode::DIFlags Flags = static_cast<DINode::DIFlags>(7);
   auto *LV =
-      DILocalVariable::get(Context, Scope, "lb", File, 8, Type, 2, Flags, 8);
+      DILocalVariable::get(Context, Scope, "lb", File, 8, Type, 2, Flags, 8,
+                           nullptr);
   auto *UV =
-      DILocalVariable::get(Context, Scope, "ub", File, 8, Type, 2, Flags, 8);
+      DILocalVariable::get(Context, Scope, "ub", File, 8, Type, 2, Flags, 8,
+                           nullptr);
   auto *SV =
-      DILocalVariable::get(Context, Scope, "st", File, 8, Type, 2, Flags, 8);
+      DILocalVariable::get(Context, Scope, "st", File, 8, Type, 2, Flags, 8,
+                           nullptr);
   auto *SVother = DILocalVariable::get(Context, Scope, "stother", File, 8, Type,
-                                       2, Flags, 8);
+                                       2, Flags, 8, nullptr);
   auto *SIother = DIExpression::get(
       Context, {dwarf::DW_OP_consts, static_cast<uint64_t>(-1)});
   auto *SEother = DIExpression::get(Context, {5, 6});
@@ -1412,12 +1418,12 @@ TEST_F(DIGenericSubrangeTest, useDIBuilder) {
   DIType *Type = getDerivedType();
   DINode::DIFlags Flags = static_cast<DINode::DIFlags>(7);
   auto *LV =
-      DILocalVariable::get(Context, Scope, "lb", File, 8, Type, 2, Flags, 8);
+      DILocalVariable::get(Context, Scope, "lb", File, 8, Type, 2, Flags, 8, nullptr);
   auto *UE = DIExpression::get(Context, {2, 3});
   auto *SE = DIExpression::get(Context, {3, 4});
 
   auto *LVother = DILocalVariable::get(Context, Scope, "lbother", File, 8, Type,
-                                       2, Flags, 8);
+                                       2, Flags, 8, nullptr);
   auto *LIother = DIExpression::get(
       Context, {dwarf::DW_OP_consts, static_cast<uint64_t>(-1)});
 
@@ -1917,9 +1923,9 @@ TEST_F(DICompositeTypeTest, dynamicArray) {
   StringRef Identifier = "some id";
   DIType *Type = getDerivedType();
   Metadata *DlVar1 = DILocalVariable::get(Context, Scope, "dl_var1", File, 8,
-                                       Type, 2, Flags, 8);
+                                       Type, 2, Flags, 8, nullptr);
   Metadata *DlVar2 = DILocalVariable::get(Context, Scope, "dl_var2", File, 8,
-                                       Type, 2, Flags, 8);
+                                       Type, 2, Flags, 8, nullptr);
   uint64_t Elements1[] = {dwarf::DW_OP_push_object_address, dwarf::DW_OP_deref};
   Metadata *DataLocation1 = DIExpression::get(Context, Elements1);
 
@@ -2697,7 +2703,7 @@ TEST_F(DILocalVariableTest, get) {
 
   auto *N =
       DILocalVariable::get(Context, Scope, Name, File, Line, Type, Arg, Flags,
-                           AlignInBits);
+                           AlignInBits, nullptr);
   EXPECT_TRUE(N->isParameter());
   EXPECT_EQ(Scope, N->getScope());
   EXPECT_EQ(Name, N->getName());
@@ -2708,25 +2714,26 @@ TEST_F(DILocalVariableTest, get) {
   EXPECT_EQ(Flags, N->getFlags());
   EXPECT_EQ(AlignInBits, N->getAlignInBits());
   EXPECT_EQ(N, DILocalVariable::get(Context, Scope, Name, File, Line, Type, Arg,
-                                    Flags, AlignInBits));
+                                    Flags, AlignInBits, nullptr));
 
   EXPECT_FALSE(
       DILocalVariable::get(Context, Scope, Name, File, Line, Type, 0, Flags,
-                           AlignInBits)->isParameter());
+                           AlignInBits, nullptr)->isParameter());
   EXPECT_NE(N, DILocalVariable::get(Context, getSubprogram(), Name, File, Line,
-                                    Type, Arg, Flags, AlignInBits));
+                                    Type, Arg, Flags, AlignInBits, nullptr));
   EXPECT_NE(N, DILocalVariable::get(Context, Scope, "other", File, Line, Type,
-                                    Arg, Flags, AlignInBits));
+                                    Arg, Flags, AlignInBits, nullptr));
   EXPECT_NE(N, DILocalVariable::get(Context, Scope, Name, getFile(), Line, Type,
-                                    Arg, Flags, AlignInBits));
+                                    Arg, Flags, AlignInBits, nullptr));
   EXPECT_NE(N, DILocalVariable::get(Context, Scope, Name, File, Line + 1, Type,
-                                    Arg, Flags, AlignInBits));
+                                    Arg, Flags, AlignInBits, nullptr));
   EXPECT_NE(N, DILocalVariable::get(Context, Scope, Name, File, Line,
-                                    getDerivedType(), Arg, Flags, AlignInBits));
+                                    getDerivedType(), Arg, Flags, AlignInBits,
+                                    nullptr));
   EXPECT_NE(N, DILocalVariable::get(Context, Scope, Name, File, Line, Type,
-                                    Arg + 1, Flags, AlignInBits));
+                                    Arg + 1, Flags, AlignInBits, nullptr));
   EXPECT_NE(N, DILocalVariable::get(Context, Scope, Name, File, Line, Type,
-                                    Arg, Flags, (AlignInBits << 1)));
+                                    Arg, Flags, (AlignInBits << 1), nullptr));
 
   TempDILocalVariable Temp = N->clone();
   EXPECT_EQ(N, MDNode::replaceWithUniqued(std::move(Temp)));
@@ -2734,17 +2741,21 @@ TEST_F(DILocalVariableTest, get) {
 
 TEST_F(DILocalVariableTest, getArg256) {
   EXPECT_EQ(255u, DILocalVariable::get(Context, getSubprogram(), "", getFile(),
-                                       0, nullptr, 255, DINode::FlagZero, 0)
+                                       0, nullptr, 255, DINode::FlagZero, 0,
+                                       nullptr)
                       ->getArg());
   EXPECT_EQ(256u, DILocalVariable::get(Context, getSubprogram(), "", getFile(),
-                                       0, nullptr, 256, DINode::FlagZero, 0)
+                                       0, nullptr, 256, DINode::FlagZero, 0,
+                                       nullptr)
                       ->getArg());
   EXPECT_EQ(257u, DILocalVariable::get(Context, getSubprogram(), "", getFile(),
-                                       0, nullptr, 257, DINode::FlagZero, 0)
+                                       0, nullptr, 257, DINode::FlagZero, 0,
+                                       nullptr)
                       ->getArg());
   unsigned Max = UINT16_MAX;
   EXPECT_EQ(Max, DILocalVariable::get(Context, getSubprogram(), "", getFile(),
-                                      0, nullptr, Max, DINode::FlagZero, 0)
+                                      0, nullptr, Max, DINode::FlagZero, 0,
+                                      nullptr)
                      ->getArg());
 }
 
@@ -3456,9 +3467,9 @@ TEST_F(DebugVariableTest, DenseMap) {
   DILocation *InlinedLoc = DILocation::get(Context, 2, 7, Scope);
 
   DILocalVariable *VarA =
-      DILocalVariable::get(Context, Scope, "A", File, 5, Type, 2, Flags, 8);
+      DILocalVariable::get(Context, Scope, "A", File, 5, Type, 2, Flags, 8, nullptr);
   DILocalVariable *VarB =
-      DILocalVariable::get(Context, Scope, "B", File, 7, Type, 3, Flags, 8);
+      DILocalVariable::get(Context, Scope, "B", File, 7, Type, 3, Flags, 8, nullptr);
 
   DebugVariable DebugVariableA(VarA, NoneType(), nullptr);
   DebugVariable DebugVariableInlineA(VarA, NoneType(), InlinedLoc);
