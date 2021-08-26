@@ -436,6 +436,10 @@ struct EnvironmentVariables {
   int MaxTeamsDefault;
 };
 
+static constexpr const llvm::omp::GV &getGridValue() {
+  return llvm::omp::AMDGPUGridValues;
+}
+
 /// Class containing all the device information
 class RTLDeviceInfoTy {
   std::vector<std::list<FuncOrGblEntryTy>> FuncGblEntries;
@@ -504,11 +508,10 @@ public:
   static const unsigned HardTeamLimit =
       (1 << 16) - 1; // 64K needed to fit in uint16
   static const int DefaultNumTeams = 128;
-  static const int Max_Teams = llvm::omp::AMDGPUGridValues.GV_Max_Teams;
-  static const int Warp_Size = llvm::omp::AMDGPUGridValues.GV_Warp_Size;
-  static const int Max_WG_Size = llvm::omp::AMDGPUGridValues.GV_Max_WG_Size;
-  static const int Default_WG_Size =
-      llvm::omp::AMDGPUGridValues.GV_Default_WG_Size;
+  static const int Max_Teams = getGridValue().GV_Max_Teams;
+  static const int Warp_Size = getGridValue().GV_Warp_Size;
+  static const int Max_WG_Size = getGridValue().GV_Max_WG_Size;
+  static const int Default_WG_Size = getGridValue().GV_Default_WG_Size;
 
   using MemcpyFunc = hsa_status_t (*)(hsa_signal_t, void *, const void *,
                                       size_t size, hsa_agent_t,
@@ -1057,9 +1060,8 @@ int32_t __tgt_rtl_init_device(int device_id) {
     DP("Queried wavefront size: %d\n", wavefront_size);
     DeviceInfo.WarpSize[device_id] = wavefront_size;
   } else {
-    DP("Default wavefront size: %d\n",
-       llvm::omp::AMDGPUGridValues.GV_Warp_Size);
-    DeviceInfo.WarpSize[device_id] = llvm::omp::AMDGPUGridValues.GV_Warp_Size;
+    DP("Default wavefront size: %d\n", getGridValue().GV_Warp_Size);
+    DeviceInfo.WarpSize[device_id] = getGridValue().GV_Warp_Size;
   }
 
   // Adjust teams to the env variables
