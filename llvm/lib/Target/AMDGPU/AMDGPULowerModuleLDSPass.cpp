@@ -163,6 +163,9 @@ public:
     bool Changed = processUsedLDS(M);
 
     for (Function &F : M.functions()) {
+      if (F.isDeclaration())
+        continue;
+
       // Only lower compute kernels' LDS.
       if (!AMDGPU::isKernel(F.getCallingConv()))
         continue;
@@ -347,11 +350,13 @@ private:
     if (!F) {
       IRBuilder<> Builder(Ctx);
       SmallPtrSet<Function *, 32> Kernels;
-      for (auto &I : M.functions()) {
-        Function *Func = &I;
-        if (AMDGPU::isKernelCC(Func) && !Kernels.contains(Func)) {
-          markUsedByKernel(Builder, Func, SGV);
-          Kernels.insert(Func);
+      for (Function &Func : M.functions()) {
+        if (Func.isDeclaration())
+          continue;
+
+        if (AMDGPU::isKernelCC(&Func) && !Kernels.contains(&Func)) {
+          markUsedByKernel(Builder, &Func, SGV);
+          Kernels.insert(&Func);
         }
       }
     }
