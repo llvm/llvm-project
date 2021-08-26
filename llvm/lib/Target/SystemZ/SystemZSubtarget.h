@@ -77,7 +77,7 @@ protected:
 
 private:
   Triple TargetTriple;
-  SystemZCallingConventionRegisters *SpecialRegisters;
+  std::unique_ptr<SystemZCallingConventionRegisters> SpecialRegisters;
   SystemZInstrInfo InstrInfo;
   SystemZTargetLowering TLInfo;
   SystemZSelectionDAGInfo TSInfo;
@@ -91,11 +91,9 @@ public:
   SystemZSubtarget(const Triple &TT, const std::string &CPU,
                    const std::string &FS, const TargetMachine &TM);
 
-  ~SystemZSubtarget();
-
   SystemZCallingConventionRegisters *getSpecialRegisters() const {
     assert(SpecialRegisters && "Unsupported SystemZ calling convention");
-    return SpecialRegisters;
+    return SpecialRegisters.get();
   }
 
   const TargetFrameLowering *getFrameLowering() const override {
