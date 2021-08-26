@@ -10473,13 +10473,17 @@ bool ArrayExprEvaluator::VisitInitListExpr(const InitListExpr *E,
   // C++11 [dcl.init.string]p1: A char array [...] can be initialized by [...]
   // an appropriately-typed string literal enclosed in braces.
   if (E->isStringLiteralInit()) {
-    auto *SL = dyn_cast<StringLiteral>(E->getInit(0)->IgnoreParens());
+    auto *SL = dyn_cast<StringLiteral>(E->getInit(0)->IgnoreParenImpCasts());
     // FIXME: Support ObjCEncodeExpr here once we support it in
     // ArrayExprEvaluator generally.
     if (!SL)
       return Error(E);
     return VisitStringLiteral(SL, AllocType);
   }
+  // Any other transparent list init will need proper handling of the
+  // AllocType; we can't just recurse to the inner initializer.
+  assert(!E->isTransparent() &&
+         "transparent array list initialization is not string literal init?");
 
   bool Success = true;
 

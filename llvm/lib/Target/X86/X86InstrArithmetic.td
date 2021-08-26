@@ -1497,13 +1497,13 @@ multiclass bmi_mulx<string mnemonic, RegisterClass RC, X86MemOperand x86memop,
 let hasSideEffects = 0 in {
   def rr : I<0xF6, MRMSrcReg, (outs RC:$dst1, RC:$dst2), (ins RC:$src),
              !strconcat(mnemonic, "\t{$src, $dst2, $dst1|$dst1, $dst2, $src}"),
-             []>, T8XD, VEX_4V, Sched<[sched, WriteIMulH]>;
+             []>, T8XD, VEX_4V, Sched<[WriteIMulH, sched]>;
 
   let mayLoad = 1 in
   def rm : I<0xF6, MRMSrcMem, (outs RC:$dst1, RC:$dst2), (ins x86memop:$src),
              !strconcat(mnemonic, "\t{$src, $dst2, $dst1|$dst1, $dst2, $src}"),
              []>, T8XD, VEX_4V,
-             Sched<[sched.Folded, WriteIMulH,
+             Sched<[WriteIMulHLd, sched.Folded,
                     // Memory operand.
                     ReadDefault, ReadDefault, ReadDefault, ReadDefault, ReadDefault,
                     // Implicit read of EDX/RDX

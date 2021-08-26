@@ -2633,16 +2633,66 @@ static bool unionHasUniqueObjectRepresentations(const ASTContext &Context,
   return !RD->field_empty();
 }
 
-static bool isStructEmpty(QualType Ty) {
-  const RecordDecl *RD = Ty->castAs<RecordType>()->getDecl();
+static int64_t getSubobjectOffset(const FieldDecl *Field,
+                                  const ASTContext &Context,
+                                  const clang::ASTRecordLayout & /*Layout*/) {
+  return Context.getFieldOffset(Field);
+}
 
-  if (!RD->field_empty())
-    return false;
+static int64_t getSubobjectOffset(const CXXRecordDecl *RD,
+                                  const ASTContext &Context,
+                                  const clang::ASTRecordLayout &Layout) {
+  return Context.toBits(Layout.getBaseClassOffset(RD));
+}
 
-  if (const auto *ClassDecl = dyn_cast<CXXRecordDecl>(RD))
-    return ClassDecl->isEmpty();
+static llvm::Optional<int64_t>
+structHasUniqueObjectRepresentations(const ASTContext &Context,
+                                     const RecordDecl *RD);
 
-  return true;
+static llvm::Optional<int64_t>
+getSubobjectSizeInBits(const FieldDecl *Field, const ASTContext &Context) {
+  if (Field->getType()->isRecordType()) {
+    const RecordDecl *RD = Field->getType()->getAsRecordDecl();
+    if (!RD->isUnion())
+      return structHasUniqueObjectRepresentations(Context, RD);
+  }
+  if (!Field->getType()->isReferenceType() &&
+      !Context.hasUniqueObjectRepresentations(Field->getType()))
+    return llvm::None;
+
+  int64_t FieldSizeInBits =
+      Context.toBits(Context.getTypeSizeInChars(Field->getType()));
+  if (Field->isBitField()) {
+    int64_t BitfieldSize = Field->getBitWidthValue(Context);
+    if (BitfieldSize > FieldSizeInBits)
+      return llvm::None;
+    FieldSizeInBits = BitfieldSize;
+  }
+  return FieldSizeInBits;
+}
+
+static llvm::Optional<int64_t>
+getSubobjectSizeInBits(const CXXRecordDecl *RD, const ASTContext &Context) {
+  return structHasUniqueObjectRepresentations(Context, RD);
+}
+
+template <typename RangeT>
+static llvm::Optional<int64_t> structSubobjectsHaveUniqueObjectRepresentations(
+    const RangeT &Subobjects, int64_t CurOffsetInBits,
+    const ASTContext &Context, const clang::ASTRecordLayout &Layout) {
+  for (const auto *Subobject : Subobjects) {
+    llvm::Optional<int64_t> SizeInBits =
+        getSubobjectSizeInBits(Subobject, Context);
+    if (!SizeInBits)
+      return llvm::None;
+    if (*SizeInBits != 0) {
+      int64_t Offset = getSubobjectOffset(Subobject, Context, Layout);
+      if (Offset != CurOffsetInBits)
+        return llvm::None;
+      CurOffsetInBits += *SizeInBits;
+    }
+  }
+  return CurOffsetInBits;
 }
 
 static llvm::Optional<int64_t>
@@ -2656,57 +2706,31 @@ structHasUniqueObjectRepresentations(const ASTContext &Context,
     if (ClassDecl->isDynamicClass())
       return llvm::None;
 
-    SmallVector<std::pair<QualType, int64_t>, 4> Bases;
+    SmallVector<CXXRecordDecl *, 4> Bases;
     for (const auto &Base : ClassDecl->bases()) {
       // Empty types can be inherited from, and non-empty types can potentially
       // have tail padding, so just make sure there isn't an error.
-      if (!isStructEmpty(Base.getType())) {
-        llvm::Optional<int64_t> Size = structHasUniqueObjectRepresentations(
-            Context, Base.getType()->castAs<RecordType>()->getDecl());
-        if (!Size)
-          return llvm::None;
-        Bases.emplace_back(Base.getType(), Size.getValue());
-      }
+      Bases.emplace_back(Base.getType()->getAsCXXRecordDecl());
     }
 
-    llvm::sort(Bases, [&](const std::pair<QualType, int64_t> &L,
-                          const std::pair<QualType, int64_t> &R) {
-      return Layout.getBaseClassOffset(L.first->getAsCXXRecordDecl()) <
-             Layout.getBaseClassOffset(R.first->getAsCXXRecordDecl());
+    llvm::sort(Bases, [&](const CXXRecordDecl *L, const CXXRecordDecl *R) {
+      return Layout.getBaseClassOffset(L) < Layout.getBaseClassOffset(R);
     });
 
-    for (const auto &Base : Bases) {
-      int64_t BaseOffset = Context.toBits(
-          Layout.getBaseClassOffset(Base.first->getAsCXXRecordDecl()));
-      int64_t BaseSize = Base.second;
-      if (BaseOffset != CurOffsetInBits)
-        return llvm::None;
-      CurOffsetInBits = BaseOffset + BaseSize;
-    }
+    llvm::Optional<int64_t> OffsetAfterBases =
+        structSubobjectsHaveUniqueObjectRepresentations(Bases, CurOffsetInBits,
+                                                        Context, Layout);
+    if (!OffsetAfterBases)
+      return llvm::None;
+    CurOffsetInBits = *OffsetAfterBases;
   }
 
-  for (const auto *Field : RD->fields()) {
-    if (!Field->getType()->isReferenceType() &&
-        !Context.hasUniqueObjectRepresentations(Field->getType()))
-      return llvm::None;
-
-    int64_t FieldSizeInBits =
-        Context.toBits(Context.getTypeSizeInChars(Field->getType()));
-    if (Field->isBitField()) {
-      int64_t BitfieldSize = Field->getBitWidthValue(Context);
-
-      if (BitfieldSize > FieldSizeInBits)
-        return llvm::None;
-      FieldSizeInBits = BitfieldSize;
-    }
-
-    int64_t FieldOffsetInBits = Context.getFieldOffset(Field);
-
-    if (FieldOffsetInBits != CurOffsetInBits)
-      return llvm::None;
-
-    CurOffsetInBits = FieldSizeInBits + FieldOffsetInBits;
-  }
+  llvm::Optional<int64_t> OffsetAfterFields =
+      structSubobjectsHaveUniqueObjectRepresentations(
+          RD->fields(), CurOffsetInBits, Context, Layout);
+  if (!OffsetAfterFields)
+    return llvm::None;
+  CurOffsetInBits = *OffsetAfterFields;
 
   return CurOffsetInBits;
 }

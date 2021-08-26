@@ -3838,3 +3838,12 @@ def EnforceTCBLeaf : InheritableAttr {
   let Documentation = [EnforceTCBLeafDocs];
   bit InheritEvenIfAlreadyPresent = 1;
 }
+
+def Error : InheritableAttr {
+  let Spellings = [GCC<"error">, GCC<"warning">];
+  let Accessors = [Accessor<"isError", [GCC<"error">]>,
+                   Accessor<"isWarning", [GCC<"warning">]>];
+  let Args = [StringArgument<"UserDiagnostic">];
+  let Subjects = SubjectList<[Function], ErrorDiag>;
+  let Documentation = [ErrorAttrDocs];
+}

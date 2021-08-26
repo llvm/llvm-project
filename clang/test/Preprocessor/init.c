@@ -1847,8 +1847,10 @@
 // WEBASSEMBLY-NEXT:#define __clang_version__ "{{.*}}"
 // WEBASSEMBLY-NEXT:#define __clang_wide_literal_encoding__ {{.*}}
 // WEBASSEMBLY-NEXT:#define __llvm__ 1
-// WEBASSEMBLY-NOT:#define __unix
-// WEBASSEMBLY-NOT:#define __unix__
+// WEBASSEMBLY-WASI-NOT:#define __unix
+// WEBASSEMBLY-WASI-NOT:#define __unix__
+// EMSCRIPTEN-NEXT:#define __unix 1
+// EMSCRIPTEN-NEXT:#define __unix__ 1
 // WEBASSEMBLY-WASI-NEXT:#define __wasi__ 1
 // WEBASSEMBLY-NOT:#define __wasm_simd128__
 // WEBASSEMBLY-NOT:#define __wasm_simd256__
@@ -1863,6 +1865,8 @@
 // WEBASSEMBLY64-NEXT:#define __wasm64 1
 // WEBASSEMBLY64-NEXT:#define __wasm64__ 1
 // WEBASSEMBLY-NEXT:#define __wasm__ 1
+// EMSCRIPTEN:#define unix 1
+// WEBASSEMBLY-WASI-NOT:#define unix 1
 // WEBASSEMBLY-CXX-NOT:_REENTRANT
 // WEBASSEMBLY-CXX-NOT:__STDCPP_THREADS__
 // WEBASSEMBLY-CXX-ATOMICS:#define _REENTRANT 1

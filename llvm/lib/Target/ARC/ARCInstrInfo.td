@@ -307,6 +307,10 @@ defm MPY  : ArcBinaryGEN4Inst<0b011010, "mpy",1>;
 defm MPYM : ArcBinaryGEN4Inst<0b011011, "mpym",1>;
 defm MPYMU : ArcBinaryGEN4Inst<0b011100, "mpymu",1>;
 defm SETEQ : ArcBinaryGEN4Inst<0b111000, "seteq",1>;
+let Uses=[STATUS32], isAsCheapAsAMove=0, isReMaterializable=0 in {
+  defm ADC : ArcBinaryGEN4Inst<0b000001, "adc",1>;
+  defm SBC : ArcBinaryGEN4Inst<0b000011, "sbc">;
+}
 
 // Patterns for 3 operand binary instructions.
 defm : MultiPat<add, ADD_rrr, ADD_rru6, ADD_rrlimm>;

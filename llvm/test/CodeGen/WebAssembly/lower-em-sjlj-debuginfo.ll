@@ -18,15 +18,17 @@ entry:
 ; CHECK: entry:
   ; CHECK-NEXT: call i8* @malloc(i32 40), !dbg ![[DL0:.*]]
   ; CHECK-NEXT: bitcast {{.*}}, !dbg ![[DL0]]
+
+; CHECK: entry.split:
   ; CHECK: alloca {{.*}}, !dbg ![[DL0]]
   ; CHECK: call i32* @saveSetjmp{{.*}}, !dbg ![[DL1:.*]]
   ; CHECK-NEXT: call i32 @getTempRet0{{.*}}, !dbg ![[DL1]]
   ; CHECK-NEXT: br {{.*}}, !dbg ![[DL2:.*]]
 
-; CHECK: entry.split:
+; CHECK: entry.split.split:
   ; CHECK: call {{.*}} void @__invoke_void{{.*}}, !dbg ![[DL2]]
 
-; CHECK: entry.split.split:
+; CHECK: entry.split.split.split:
   ; CHECK-NEXT: bitcast {{.*}}, !dbg ![[DL3:.*]]
   ; CHECK-NEXT: call void @free{{.*}}, !dbg ![[DL3]]
 

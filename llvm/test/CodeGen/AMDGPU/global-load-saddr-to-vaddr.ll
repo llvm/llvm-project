@@ -57,6 +57,7 @@ define amdgpu_kernel void @test_move_load_address_to_vgpr_d16_hi(i16 addrspace(1
 ; GCN:       ; %bb.0: ; %bb
 ; GCN-NEXT:    s_load_dwordx2 s[0:1], s[0:1], 0x24
 ; GCN-NEXT:    v_mov_b32_e32 v1, 0
+; GCN-NEXT:    s_movk_i32 s2, 0x100
 ; GCN-NEXT:    s_waitcnt lgkmcnt(0)
 ; GCN-NEXT:    global_load_ushort v0, v1, s[0:1] glc
 ; GCN-NEXT:    s_waitcnt vmcnt(0)
@@ -69,7 +70,7 @@ define amdgpu_kernel void @test_move_load_address_to_vgpr_d16_hi(i16 addrspace(1
 ; GCN-NEXT:    v_addc_co_u32_e32 v3, vcc, v0, v3, vcc
 ; GCN-NEXT:    global_load_short_d16_hi v0, v[2:3], off glc
 ; GCN-NEXT:    s_waitcnt vmcnt(0)
-; GCN-NEXT:    v_cmp_eq_u32_e32 vcc, 0x100, v0
+; GCN-NEXT:    v_cmp_eq_u32_e32 vcc, s2, v0
 ; GCN-NEXT:    s_and_b64 vcc, exec, vcc
 ; GCN-NEXT:    s_cbranch_vccz BB1_1
 ; GCN-NEXT:  ; %bb.2: ; %bb2

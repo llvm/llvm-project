@@ -15,6 +15,13 @@
 #ifndef UNWIND_ASSEMBLY_H
 #define UNWIND_ASSEMBLY_H
 
+#if (defined(__i386__) || defined(__x86_64__)) && defined(__linux__)
+#include <cet.h>
+#define _LIBUNWIND_CET_ENDBR _CET_ENDBR
+#else
+#define _LIBUNWIND_CET_ENDBR
+#endif
+
 #if defined(__powerpc64__)
 #define SEPARATOR ;
 #define PPC64_OFFS_SRR0   0

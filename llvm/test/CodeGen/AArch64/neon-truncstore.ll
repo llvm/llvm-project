@@ -134,10 +134,10 @@ define void @v8i32_v8i8(<8 x i32> %a, <8 x i8>* %result) {
 define void @v16i32_v16i8(<16 x i32> %a, <16 x i8>* %result) {
 ; CHECK-LABEL: v16i32_v16i8:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    xtn v2.4h, v2.4s
 ; CHECK-NEXT:    xtn v0.4h, v0.4s
-; CHECK-NEXT:    xtn2 v2.8h, v3.4s
+; CHECK-NEXT:    xtn v2.4h, v2.4s
 ; CHECK-NEXT:    xtn2 v0.8h, v1.4s
+; CHECK-NEXT:    xtn2 v2.8h, v3.4s
 ; CHECK-NEXT:    xtn v0.8b, v0.8h
 ; CHECK-NEXT:    xtn2 v0.16b, v2.8h
 ; CHECK-NEXT:    str q0, [x0]
@@ -150,17 +150,17 @@ define void @v16i32_v16i8(<16 x i32> %a, <16 x i8>* %result) {
 define void @v32i32_v32i8(<32 x i32> %a, <32 x i8>* %result) {
 ; CHECK-LABEL: v32i32_v32i8:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    xtn v2.4h, v2.4s
 ; CHECK-NEXT:    xtn v0.4h, v0.4s
-; CHECK-NEXT:    xtn2 v2.8h, v3.4s
-; CHECK-NEXT:    xtn2 v0.8h, v1.4s
-; CHECK-NEXT:    xtn v6.4h, v6.4s
 ; CHECK-NEXT:    xtn v4.4h, v4.4s
-; CHECK-NEXT:    xtn v0.8b, v0.8h
-; CHECK-NEXT:    xtn2 v0.16b, v2.8h
-; CHECK-NEXT:    xtn2 v6.8h, v7.4s
+; CHECK-NEXT:    xtn v2.4h, v2.4s
+; CHECK-NEXT:    xtn v6.4h, v6.4s
+; CHECK-NEXT:    xtn2 v0.8h, v1.4s
 ; CHECK-NEXT:    xtn2 v4.8h, v5.4s
+; CHECK-NEXT:    xtn2 v2.8h, v3.4s
+; CHECK-NEXT:    xtn2 v6.8h, v7.4s
+; CHECK-NEXT:    xtn v0.8b, v0.8h
 ; CHECK-NEXT:    xtn v1.8b, v4.8h
+; CHECK-NEXT:    xtn2 v0.16b, v2.8h
 ; CHECK-NEXT:    xtn2 v1.16b, v6.8h
 ; CHECK-NEXT:    stp q0, q1, [x0]
 ; CHECK-NEXT:    ret
