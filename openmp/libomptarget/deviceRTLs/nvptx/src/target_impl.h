@@ -26,6 +26,7 @@ typedef uint32_t __kmpc_impl_lanemask_t;
 #define INLINE inline __attribute__((always_inline))
 #define NOINLINE __attribute__((noinline))
 #define ALIGN(N) __attribute__((aligned(N)))
+#define PLUGIN_ACCESSIBLE /* no annotation needed for cuda plugin */
 
 #include "llvm/Frontend/OpenMP/OMPGridValues.h"
 
