@@ -1569,8 +1569,7 @@ AArch64TTIImpl::getMaskedMemoryOpCost(unsigned Opcode, Type *Src,
 InstructionCost AArch64TTIImpl::getGatherScatterOpCost(
     unsigned Opcode, Type *DataTy, const Value *Ptr, bool VariableMask,
     Align Alignment, TTI::TargetCostKind CostKind, const Instruction *I) {
-
-  if (!isa<ScalableVectorType>(DataTy))
+  if (useNeonVector(DataTy))
     return BaseT::getGatherScatterOpCost(Opcode, DataTy, Ptr, VariableMask,
                                          Alignment, CostKind, I);
   auto *VT = cast<VectorType>(DataTy);
