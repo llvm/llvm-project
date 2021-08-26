@@ -83,6 +83,7 @@ add_lldb_library(lldbCore
     lldbTarget
     lldbUtility
     lldbPluginCPlusPlusLanguage
+    lldbPluginObjCLanguage
     ${LLDB_CURSES_LIBS}
 
   CLANG_LIBS

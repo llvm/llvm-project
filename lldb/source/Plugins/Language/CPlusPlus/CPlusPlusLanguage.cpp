@@ -59,39 +59,6 @@ lldb_private::ConstString CPlusPlusLanguage::GetPluginNameStatic() {
   return g_name;
 }
 
-Language::FunctionNameInfo
-CPlusPlusLanguage::GetFunctionNameInfo(ConstString name) const {
-  FunctionNameInfo info;
-  info.func_name_type = lldb::eFunctionNameTypeNone;
-
-  if (IsCPPMangledName(name.GetCString())) {
-    info.func_name_type = lldb::eFunctionNameTypeFull;
-  }
-
-  CPlusPlusLanguage::MethodName method(name);
-  llvm::StringRef basename = method.GetBasename();
-  if (basename.empty()) {
-    if (CPlusPlusLanguage::ExtractContextAndIdentifier(
-            name.GetCString(), info.context, info.basename)) {
-      info.func_name_type |=
-          (lldb::eFunctionNameTypeMethod | eFunctionNameTypeBase);
-    } else {
-      info.func_name_type |= lldb::eFunctionNameTypeFull;
-    }
-  } else {
-    info.func_name_type |=
-        (lldb::eFunctionNameTypeMethod | eFunctionNameTypeBase);
-  }
-
-  if (!method.GetQualifiers().empty()) {
-    // There is a 'const' or other qualifier following the end of the function
-    // parens, this can't be a eFunctionNameTypeBase.
-    info.func_name_type &= ~(lldb::eFunctionNameTypeBase);
-  }
-
-  return info;
-}
-
 bool CPlusPlusLanguage::SymbolNameFitsToLanguage(Mangled mangled) const {
   const char *mangled_name = mangled.GetMangledName().GetCString();
   return mangled_name && CPlusPlusLanguage::IsCPPMangledName(mangled_name);
