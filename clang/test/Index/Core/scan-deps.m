@@ -20,7 +20,7 @@
 // CHECK-NEXT:       [[PREFIX]]/Inputs/module/SubModA.h
 // CHECK-NEXT:       [[PREFIX]]/Inputs/module/SubSubModA.h
 // CHECK-NEXT:       [[PREFIX]]/Inputs/module/module.modulemap
-// CHECK-NEXT:     build-args: {{.*}} -emit-module {{.*}} -fmodule-name=ModA -fno-implicit-modules {{.*}}
+// CHECK-NEXT:     build-args: {{.*}} -emit-module {{.*}} -fmodule-name=ModA {{.*}} -fno-implicit-modules {{.*}}
 // CHECK-NEXT: dependencies:
 // CHECK-NEXT:   context-hash: [[HASH_TU:[A-Z0-9]+]]
 // CHECK-NEXT:   module-deps:
