@@ -2043,40 +2043,48 @@ public:
     Value input = op.input();
     auto inputTy = input.getType().template cast<ShapedType>();
     auto resultTy = op.getType().template cast<ShapedType>();
-    auto rank = resultTy.getRank();
     auto axis = op.axis();
 
-    if (!inputTy.hasStaticShape())
-      return rewriter.notifyMatchFailure(
-          op, "No initial value found for reduction operation");
+    SmallVector<Value> dynDims;
+    for (int i = 0; i < inputTy.getRank(); i++) {
+      if (inputTy.isDynamicDim(i)) {
+        dynDims.push_back(rewriter.create<tensor::DimOp>(loc, input, i));
+      }
+    }
+
+    Value axisDimSize = rewriter.create<tensor::DimOp>(loc, input, axis);
 
     // First fill the output buffer with the init value.
     auto initTensor = rewriter
                           .create<linalg::InitTensorOp>(
-                              loc, ArrayRef<Value>({}), inputTy.getShape(),
-                              inputTy.getElementType())
+                              loc, ArrayRef<Value>({dynDims}),
+                              inputTy.getShape(), inputTy.getElementType())
                           .result();
-
-    SmallVector<AffineExpr, 2> inputExprs;
-    inputExprs.resize(resultTy.getRank());
-
-    for (int i = 0; i < rank; i++)
-      inputExprs[i] = rewriter.getAffineDimExpr(i);
-
-    inputExprs[axis] =
-        rewriter.getAffineConstantExpr(inputTy.getDimSize(axis) - 1) -
-        inputExprs[axis];
-
     SmallVector<AffineMap, 2> affineMaps = {
-        AffineMap::get(resultTy.getRank(), /*symbolCount=*/0, inputExprs,
-                       rewriter.getContext()),
         rewriter.getMultiDimIdentityMap(resultTy.getRank())};
 
     rewriter.replaceOpWithNewOp<linalg::GenericOp>(
-        op, resultTy, op.input(), ValueRange{initTensor}, affineMaps,
+        op, resultTy, ArrayRef<Value>({}), ValueRange{initTensor}, affineMaps,
         getNParallelLoopsAttrs(resultTy.getRank()),
         [&](OpBuilder &nestedBuilder, Location nestedLoc, ValueRange args) {
-          nestedBuilder.create<linalg::YieldOp>(op.getLoc(), *args.begin());
+          llvm::SmallVector<Value> indices;
+          for (unsigned int i = 0; i < inputTy.getRank(); i++) {
+            auto index =
+                rewriter.create<linalg::IndexOp>(nestedLoc, i).getResult();
+            if (i == axis) {
+              auto one = rewriter.create<ConstantIndexOp>(nestedLoc, 1);
+              auto sizeMinusOne =
+                  rewriter.create<SubIOp>(nestedLoc, axisDimSize, one);
+              index = rewriter.create<SubIOp>(nestedLoc, sizeMinusOne, index);
+            }
+
+            indices.push_back(index);
+          }
+
+          auto extract = nestedBuilder.create<tensor::ExtractOp>(
+              nestedLoc, input, indices);
+          nestedBuilder.create<linalg::YieldOp>(op.getLoc(),
+                                                extract.getResult());
         });
     return success();
   }
