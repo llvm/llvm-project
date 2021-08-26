@@ -98,12 +98,4 @@ void setProbeDistributionFactor(Instruction &Inst, float Factor) {
   }
 }
 
-void addPseudoProbeAttribute(PseudoProbeInst &Inst,
-                             PseudoProbeAttributes Attr) {
-  IRBuilder<> Builder(&Inst);
-  uint32_t OldAttr = Inst.getAttributes()->getZExtValue();
-  uint32_t NewAttr = OldAttr | (uint32_t)Attr;
-  if (OldAttr != NewAttr)
-    Inst.replaceUsesOfWith(Inst.getAttributes(), Builder.getInt32(NewAttr));
-}
 } // namespace llvm

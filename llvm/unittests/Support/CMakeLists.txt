@@ -39,6 +39,7 @@ add_llvm_unittest(SupportTests
   FormatVariadicTest.cpp
   FSUniqueIDTest.cpp
   GlobPatternTest.cpp
+  HashBuilderTest.cpp
   Host.cpp
   IndexedAccessorTest.cpp
   InstructionCostTest.cpp

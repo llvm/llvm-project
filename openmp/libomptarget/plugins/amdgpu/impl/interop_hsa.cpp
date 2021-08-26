@@ -1,11 +1,11 @@
-//===--- amdgpu/impl/atmi_interop_hsa.cpp ------------------------- C++ -*-===//
+//===--- amdgpu/impl/interop_hsa.cpp ------------------------------ C++ -*-===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
 // SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
-#include "atmi_interop_hsa.h"
+#include "interop_hsa.h"
 #include "internal.h"
 
 hsa_status_t atmi_interop_hsa_get_symbol_info(

@@ -1,14 +1,14 @@
-//===--- amdgpu/impl/atmi_runtime.h ------------------------------- C++ -*-===//
+//===--- amdgpu/impl/impl_runtime.h ------------------------------- C++ -*-===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
 // SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
-#ifndef INCLUDE_ATMI_RUNTIME_H_
-#define INCLUDE_ATMI_RUNTIME_H_
+#ifndef INCLUDE_IMPL_RUNTIME_H_
+#define INCLUDE_IMPL_RUNTIME_H_
 
-#include "atmi.h"
+#include "impl.h"
 #include "hsa_api.h"
 
 extern "C" {
@@ -67,4 +67,4 @@ hsa_status_t atmi_memcpy_d2h(hsa_signal_t sig, void *hostDest,
 
 }
 
-#endif // INCLUDE_ATMI_RUNTIME_H_
+#endif // INCLUDE_IMPL_RUNTIME_H_
