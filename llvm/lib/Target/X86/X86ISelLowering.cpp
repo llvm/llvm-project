@@ -4146,10 +4146,9 @@ X86TargetLowering::LowerCall(TargetLowering::CallLoweringInfo &CLI,
 
   if (isTailCall && !IsMustTail) {
     // Check if it's really possible to do a tail call.
-    isTailCall = IsEligibleForTailCallOptimization(Callee, CallConv,
-                    isVarArg, SR != NotStructReturn,
-                    MF.getFunction().hasStructRetAttr(), CLI.RetTy,
-                    Outs, OutVals, Ins, DAG);
+    isTailCall = IsEligibleForTailCallOptimization(
+        Callee, CallConv, SR == StackStructReturn, isVarArg, CLI.RetTy, Outs,
+        OutVals, Ins, DAG);
 
     // Sibcalls are automatically detected tailcalls which do not require
     // ABI changes.
@@ -4824,9 +4823,8 @@ bool MatchingStackOffset(SDValue Arg, unsigned Offset, ISD::ArgFlagsTy Flags,
 /// Check whether the call is eligible for tail call optimization. Targets
 /// that want to do tail call optimization should implement this function.
 bool X86TargetLowering::IsEligibleForTailCallOptimization(
-    SDValue Callee, CallingConv::ID CalleeCC, bool isVarArg,
-    bool isCalleeStructRet, bool isCallerStructRet, Type *RetTy,
-    const SmallVectorImpl<ISD::OutputArg> &Outs,
+    SDValue Callee, CallingConv::ID CalleeCC, bool IsCalleeStackStructRet,
+    bool isVarArg, Type *RetTy, const SmallVectorImpl<ISD::OutputArg> &Outs,
     const SmallVectorImpl<SDValue> &OutVals,
     const SmallVectorImpl<ISD::InputArg> &Ins, SelectionDAG &DAG) const {
   if (!mayTailCallThisCC(CalleeCC))
@@ -4870,9 +4868,17 @@ bool X86TargetLowering::IsEligibleForTailCallOptimization(
   if (RegInfo->hasStackRealignment(MF))
     return false;
 
-  // Also avoid sibcall optimization if either caller or callee uses struct
-  // return semantics.
-  if (isCalleeStructRet || isCallerStructRet)
+  // Also avoid sibcall optimization if we're an sret return fn and the callee
+  // is incompatible. See comment in LowerReturn about why hasStructRetAttr is
+  // insufficient.
+  if (MF.getInfo<X86MachineFunctionInfo>()->getSRetReturnReg()) {
+    // For a compatible tail call the callee must return our sret pointer. So it
+    // needs to be (a) an sret function itself and (b) we pass our sret as its
+    // sret. Condition #b is harder to determine.
+    return false;
+  } else if (Subtarget.is32Bit() && IsCalleeStackStructRet)
+    // In the i686 ABI, the sret pointer is callee-pop, so we cannot tail-call,
+    // as our caller doesn't expect that.
     return false;
 
   // Do not sibcall optimize vararg calls unless all arguments are passed via
