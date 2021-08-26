@@ -130,8 +130,8 @@ define dso_local void @test_unordered_splits(%struct.S* nocapture %p) local_unna
 ; CHECK-NEXT:    [[ARRAYIDX16:%.*]] = getelementptr inbounds [[STRUCT_S]], %struct.S* [[P]], i64 0, i32 0, i64 2
 ; CHECK-NEXT:    [[TMP0:%.*]] = bitcast i32* [[G10]] to <4 x i32>*
 ; CHECK-NEXT:    [[TMP1:%.*]] = load <4 x i32>, <4 x i32>* [[TMP0]], align 4
-; CHECK-NEXT:    [[ARRAYIDX23:%.*]] = getelementptr inbounds [[STRUCT_S]], %struct.S* [[P]], i64 0, i32 0, i64 3
 ; CHECK-NEXT:    [[SHUFFLE:%.*]] = shufflevector <4 x i32> [[TMP1]], <4 x i32> poison, <4 x i32> <i32 1, i32 0, i32 2, i32 3>
+; CHECK-NEXT:    [[ARRAYIDX23:%.*]] = getelementptr inbounds [[STRUCT_S]], %struct.S* [[P]], i64 0, i32 0, i64 3
 ; CHECK-NEXT:    [[TMP2:%.*]] = bitcast i32* [[ARRAYIDX2]] to <4 x i32>*
 ; CHECK-NEXT:    store <4 x i32> [[SHUFFLE]], <4 x i32>* [[TMP2]], align 4
 ; CHECK-NEXT:    [[ARRAYIDX30:%.*]] = getelementptr inbounds [[STRUCT_S]], %struct.S* [[P]], i64 0, i32 0, i64 4
@@ -139,8 +139,8 @@ define dso_local void @test_unordered_splits(%struct.S* nocapture %p) local_unna
 ; CHECK-NEXT:    [[ARRAYIDX44:%.*]] = getelementptr inbounds [[STRUCT_S]], %struct.S* [[P]], i64 0, i32 0, i64 6
 ; CHECK-NEXT:    [[TMP3:%.*]] = bitcast i32* [[G20]] to <4 x i32>*
 ; CHECK-NEXT:    [[TMP4:%.*]] = load <4 x i32>, <4 x i32>* [[TMP3]], align 4
-; CHECK-NEXT:    [[ARRAYIDX51:%.*]] = getelementptr inbounds [[STRUCT_S]], %struct.S* [[P]], i64 0, i32 0, i64 7
 ; CHECK-NEXT:    [[SHUFFLE1:%.*]] = shufflevector <4 x i32> [[TMP4]], <4 x i32> poison, <4 x i32> <i32 3, i32 1, i32 2, i32 0>
+; CHECK-NEXT:    [[ARRAYIDX51:%.*]] = getelementptr inbounds [[STRUCT_S]], %struct.S* [[P]], i64 0, i32 0, i64 7
 ; CHECK-NEXT:    [[TMP5:%.*]] = bitcast i32* [[ARRAYIDX30]] to <4 x i32>*
 ; CHECK-NEXT:    store <4 x i32> [[SHUFFLE1]], <4 x i32>* [[TMP5]], align 4
 ; CHECK-NEXT:    ret void
