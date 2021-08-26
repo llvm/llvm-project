@@ -161,6 +161,24 @@ ABI Changes in Clang
 OpenMP Support in Clang
 -----------------------
 
+- Support for loop transformation directives from OpenMP 5.1 have been added.
+  ``#pragma omp unroll`` is a standardized alternative to ``#pragma unroll``
+  (or ``#pragma clang loop unroll(enable)``) but also allows composition with
+  other OpenMP loop associated constructs as in
+
+  .. code-block:: c
+    #pragma omp parallel for
+    #pragma omp unroll partial(4)
+    for (int i = 0; i < n; ++i)
+
+  ``#pragma omp tile`` applies tiling to a perfect loop nest using a
+  user-defined tile size.
+
+  .. code-block:: c
+    #pragma omp tile sizes(8,8)
+    for (int i = 0; i < m; ++i)
+      for (int j = 0; j < n; ++j)
+
 - ...
 
 CUDA Support in Clang
