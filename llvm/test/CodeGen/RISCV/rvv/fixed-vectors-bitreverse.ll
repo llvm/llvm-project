@@ -12,33 +12,27 @@ define void @bitreverse_v8i16(<8 x i16>* %x, <8 x i16>* %y) {
 ; LMULMAX2-RV32-NEXT:    vsrl.vi v26, v25, 8
 ; LMULMAX2-RV32-NEXT:    vsll.vi v25, v25, 8
 ; LMULMAX2-RV32-NEXT:    vor.vv v25, v25, v26
+; LMULMAX2-RV32-NEXT:    vsrl.vi v26, v25, 4
 ; LMULMAX2-RV32-NEXT:    lui a1, 1
 ; LMULMAX2-RV32-NEXT:    addi a1, a1, -241
-; LMULMAX2-RV32-NEXT:    vand.vx v26, v25, a1
-; LMULMAX2-RV32-NEXT:    vsll.vi v26, v26, 4
-; LMULMAX2-RV32-NEXT:    lui a1, 15
-; LMULMAX2-RV32-NEXT:    addi a1, a1, 240
+; LMULMAX2-RV32-NEXT:    vand.vx v26, v26, a1
 ; LMULMAX2-RV32-NEXT:    vand.vx v25, v25, a1
-; LMULMAX2-RV32-NEXT:    vsrl.vi v25, v25, 4
-; LMULMAX2-RV32-NEXT:    vor.vv v25, v25, v26
+; LMULMAX2-RV32-NEXT:    vsll.vi v25, v25, 4
+; LMULMAX2-RV32-NEXT:    vor.vv v25, v26, v25
+; LMULMAX2-RV32-NEXT:    vsrl.vi v26, v25, 2
 ; LMULMAX2-RV32-NEXT:    lui a1, 3
 ; LMULMAX2-RV32-NEXT:    addi a1, a1, 819
-; LMULMAX2-RV32-NEXT:    vand.vx v26, v25, a1
-; LMULMAX2-RV32-NEXT:    vsll.vi v26, v26, 2
-; LMULMAX2-RV32-NEXT:    lui a1, 13
-; LMULMAX2-RV32-NEXT:    addi a1, a1, -820
+; LMULMAX2-RV32-NEXT:    vand.vx v26, v26, a1
 ; LMULMAX2-RV32-NEXT:    vand.vx v25, v25, a1
-; LMULMAX2-RV32-NEXT:    vsrl.vi v25, v25, 2
-; LMULMAX2-RV32-NEXT:    vor.vv v25, v25, v26
+; LMULMAX2-RV32-NEXT:    vsll.vi v25, v25, 2
+; LMULMAX2-RV32-NEXT:    vor.vv v25, v26, v25
+; LMULMAX2-RV32-NEXT:    vsrl.vi v26, v25, 1
 ; LMULMAX2-RV32-NEXT:    lui a1, 5
 ; LMULMAX2-RV32-NEXT:    addi a1, a1, 1365
-; LMULMAX2-RV32-NEXT:    vand.vx v26, v25, a1
-; LMULMAX2-RV32-NEXT:    vadd.vv v26, v26, v26
-; LMULMAX2-RV32-NEXT:    lui a1, 11
-; LMULMAX2-RV32-NEXT:    addi a1, a1, -1366
+; LMULMAX2-RV32-NEXT:    vand.vx v26, v26, a1
 ; LMULMAX2-RV32-NEXT:    vand.vx v25, v25, a1
-; LMULMAX2-RV32-NEXT:    vsrl.vi v25, v25, 1
-; LMULMAX2-RV32-NEXT:    vor.vv v25, v25, v26
+; LMULMAX2-RV32-NEXT:    vadd.vv v25, v25, v25
+; LMULMAX2-RV32-NEXT:    vor.vv v25, v26, v25
 ; LMULMAX2-RV32-NEXT:    vse16.v v25, (a0)
 ; LMULMAX2-RV32-NEXT:    ret
 ;
@@ -49,33 +43,27 @@ define void @bitreverse_v8i16(<8 x i16>* %x, <8 x i16>* %y) {
 ; LMULMAX2-RV64-NEXT:    vsrl.vi v26, v25, 8
 ; LMULMAX2-RV64-NEXT:    vsll.vi v25, v25, 8
 ; LMULMAX2-RV64-NEXT:    vor.vv v25, v25, v26
+; LMULMAX2-RV64-NEXT:    vsrl.vi v26, v25, 4
 ; LMULMAX2-RV64-NEXT:    lui a1, 1
 ; LMULMAX2-RV64-NEXT:    addiw a1, a1, -241
-; LMULMAX2-RV64-NEXT:    vand.vx v26, v25, a1
-; LMULMAX2-RV64-NEXT:    vsll.vi v26, v26, 4
-; LMULMAX2-RV64-NEXT:    lui a1, 15
-; LMULMAX2-RV64-NEXT:    addiw a1, a1, 240
+; LMULMAX2-RV64-NEXT:    vand.vx v26, v26, a1
 ; LMULMAX2-RV64-NEXT:    vand.vx v25, v25, a1
-; LMULMAX2-RV64-NEXT:    vsrl.vi v25, v25, 4
-; LMULMAX2-RV64-NEXT:    vor.vv v25, v25, v26
+; LMULMAX2-RV64-NEXT:    vsll.vi v25, v25, 4
+; LMULMAX2-RV64-NEXT:    vor.vv v25, v26, v25
+; LMULMAX2-RV64-NEXT:    vsrl.vi v26, v25, 2
 ; LMULMAX2-RV64-NEXT:    lui a1, 3
 ; LMULMAX2-RV64-NEXT:    addiw a1, a1, 819
-; LMULMAX2-RV64-NEXT:    vand.vx v26, v25, a1
-; LMULMAX2-RV64-NEXT:    vsll.vi v26, v26, 2
-; LMULMAX2-RV64-NEXT:    lui a1, 13
-; LMULMAX2-RV64-NEXT:    addiw a1, a1, -820
+; LMULMAX2-RV64-NEXT:    vand.vx v26, v26, a1
 ; LMULMAX2-RV64-NEXT:    vand.vx v25, v25, a1
-; LMULMAX2-RV64-NEXT:    vsrl.vi v25, v25, 2
-; LMULMAX2-RV64-NEXT:    vor.vv v25, v25, v26
+; LMULMAX2-RV64-NEXT:    vsll.vi v25, v25, 2
+; LMULMAX2-RV64-NEXT:    vor.vv v25, v26, v25
+; LMULMAX2-RV64-NEXT:    vsrl.vi v26, v25, 1
 ; LMULMAX2-RV64-NEXT:    lui a1, 5
 ; LMULMAX2-RV64-NEXT:    addiw a1, a1, 1365
-; LMULMAX2-RV64-NEXT:    vand.vx v26, v25, a1
-; LMULMAX2-RV64-NEXT:    vadd.vv v26, v26, v26
-; LMULMAX2-RV64-NEXT:    lui a1, 11
-; LMULMAX2-RV64-NEXT:    addiw a1, a1, -1366
+; LMULMAX2-RV64-NEXT:    vand.vx v26, v26, a1
 ; LMULMAX2-RV64-NEXT:    vand.vx v25, v25, a1
-; LMULMAX2-RV64-NEXT:    vsrl.vi v25, v25, 1
-; LMULMAX2-RV64-NEXT:    vor.vv v25, v25, v26
+; LMULMAX2-RV64-NEXT:    vadd.vv v25, v25, v25
+; LMULMAX2-RV64-NEXT:    vor.vv v25, v26, v25
 ; LMULMAX2-RV64-NEXT:    vse16.v v25, (a0)
 ; LMULMAX2-RV64-NEXT:    ret
 ;
@@ -86,33 +74,27 @@ define void @bitreverse_v8i16(<8 x i16>* %x, <8 x i16>* %y) {
 ; LMULMAX1-RV32-NEXT:    vsrl.vi v26, v25, 8
 ; LMULMAX1-RV32-NEXT:    vsll.vi v25, v25, 8
 ; LMULMAX1-RV32-NEXT:    vor.vv v25, v25, v26
+; LMULMAX1-RV32-NEXT:    vsrl.vi v26, v25, 4
 ; LMULMAX1-RV32-NEXT:    lui a1, 1
 ; LMULMAX1-RV32-NEXT:    addi a1, a1, -241
-; LMULMAX1-RV32-NEXT:    vand.vx v26, v25, a1
-; LMULMAX1-RV32-NEXT:    vsll.vi v26, v26, 4
-; LMULMAX1-RV32-NEXT:    lui a1, 15
-; LMULMAX1-RV32-NEXT:    addi a1, a1, 240
+; LMULMAX1-RV32-NEXT:    vand.vx v26, v26, a1
 ; LMULMAX1-RV32-NEXT:    vand.vx v25, v25, a1
-; LMULMAX1-RV32-NEXT:    vsrl.vi v25, v25, 4
-; LMULMAX1-RV32-NEXT:    vor.vv v25, v25, v26
+; LMULMAX1-RV32-NEXT:    vsll.vi v25, v25, 4
+; LMULMAX1-RV32-NEXT:    vor.vv v25, v26, v25
+; LMULMAX1-RV32-NEXT:    vsrl.vi v26, v25, 2
 ; LMULMAX1-RV32-NEXT:    lui a1, 3
 ; LMULMAX1-RV32-NEXT:    addi a1, a1, 819
-; LMULMAX1-RV32-NEXT:    vand.vx v26, v25, a1
-; LMULMAX1-RV32-NEXT:    vsll.vi v26, v26, 2
-; LMULMAX1-RV32-NEXT:    lui a1, 13
-; LMULMAX1-RV32-NEXT:    addi a1, a1, -820
+; LMULMAX1-RV32-NEXT:    vand.vx v26, v26, a1
 ; LMULMAX1-RV32-NEXT:    vand.vx v25, v25, a1
-; LMULMAX1-RV32-NEXT:    vsrl.vi v25, v25, 2
-; LMULMAX1-RV32-NEXT:    vor.vv v25, v25, v26
+; LMULMAX1-RV32-NEXT:    vsll.vi v25, v25, 2
+; LMULMAX1-RV32-NEXT:    vor.vv v25, v26, v25
+; LMULMAX1-RV32-NEXT:    vsrl.vi v26, v25, 1
 ; LMULMAX1-RV32-NEXT:    lui a1, 5
 ; LMULMAX1-RV32-NEXT:    addi a1, a1, 1365
-; LMULMAX1-RV32-NEXT:    vand.vx v26, v25, a1
-; LMULMAX1-RV32-NEXT:    vadd.vv v26, v26, v26
-; LMULMAX1-RV32-NEXT:    lui a1, 11
-; LMULMAX1-RV32-NEXT:    addi a1, a1, -1366
+; LMULMAX1-RV32-NEXT:    vand.vx v26, v26, a1
 ; LMULMAX1-RV32-NEXT:    vand.vx v25, v25, a1
-; LMULMAX1-RV32-NEXT:    vsrl.vi v25, v25, 1
-; LMULMAX1-RV32-NEXT:    vor.vv v25, v25, v26
+; LMULMAX1-RV32-NEXT:    vadd.vv v25, v25, v25
+; LMULMAX1-RV32-NEXT:    vor.vv v25, v26, v25
 ; LMULMAX1-RV32-NEXT:    vse16.v v25, (a0)
 ; LMULMAX1-RV32-NEXT:    ret
 ;
@@ -123,33 +105,27 @@ define void @bitreverse_v8i16(<8 x i16>* %x, <8 x i16>* %y) {
 ; LMULMAX1-RV64-NEXT:    vsrl.vi v26, v25, 8
 ; LMULMAX1-RV64-NEXT:    vsll.vi v25, v25, 8
 ; LMULMAX1-RV64-NEXT:    vor.vv v25, v25, v26
+; LMULMAX1-RV64-NEXT:    vsrl.vi v26, v25, 4
 ; LMULMAX1-RV64-NEXT:    lui a1, 1
 ; LMULMAX1-RV64-NEXT:    addiw a1, a1, -241
-; LMULMAX1-RV64-NEXT:    vand.vx v26, v25, a1
-; LMULMAX1-RV64-NEXT:    vsll.vi v26, v26, 4
-; LMULMAX1-RV64-NEXT:    lui a1, 15
-; LMULMAX1-RV64-NEXT:    addiw a1, a1, 240
+; LMULMAX1-RV64-NEXT:    vand.vx v26, v26, a1
 ; LMULMAX1-RV64-NEXT:    vand.vx v25, v25, a1
-; LMULMAX1-RV64-NEXT:    vsrl.vi v25, v25, 4
-; LMULMAX1-RV64-NEXT:    vor.vv v25, v25, v26
+; LMULMAX1-RV64-NEXT:    vsll.vi v25, v25, 4
+; LMULMAX1-RV64-NEXT:    vor.vv v25, v26, v25
+; LMULMAX1-RV64-NEXT:    vsrl.vi v26, v25, 2
 ; LMULMAX1-RV64-NEXT:    lui a1, 3
 ; LMULMAX1-RV64-NEXT:    addiw a1, a1, 819
-; LMULMAX1-RV64-NEXT:    vand.vx v26, v25, a1
-; LMULMAX1-RV64-NEXT:    vsll.vi v26, v26, 2
-; LMULMAX1-RV64-NEXT:    lui a1, 13
-; LMULMAX1-RV64-NEXT:    addiw a1, a1, -820
+; LMULMAX1-RV64-NEXT:    vand.vx v26, v26, a1
 ; LMULMAX1-RV64-NEXT:    vand.vx v25, v25, a1
-; LMULMAX1-RV64-NEXT:    vsrl.vi v25, v25, 2
-; LMULMAX1-RV64-NEXT:    vor.vv v25, v25, v26
+; LMULMAX1-RV64-NEXT:    vsll.vi v25, v25, 2
+; LMULMAX1-RV64-NEXT:    vor.vv v25, v26, v25
+; LMULMAX1-RV64-NEXT:    vsrl.vi v26, v25, 1
 ; LMULMAX1-RV64-NEXT:    lui a1, 5
 ; LMULMAX1-RV64-NEXT:    addiw a1, a1, 1365
-; LMULMAX1-RV64-NEXT:    vand.vx v26, v25, a1
-; LMULMAX1-RV64-NEXT:    vadd.vv v26, v26, v26
-; LMULMAX1-RV64-NEXT:    lui a1, 11
-; LMULMAX1-RV64-NEXT:    addiw a1, a1, -1366
+; LMULMAX1-RV64-NEXT:    vand.vx v26, v26, a1
 ; LMULMAX1-RV64-NEXT:    vand.vx v25, v25, a1
-; LMULMAX1-RV64-NEXT:    vsrl.vi v25, v25, 1
-; LMULMAX1-RV64-NEXT:    vor.vv v25, v25, v26
+; LMULMAX1-RV64-NEXT:    vadd.vv v25, v25, v25
+; LMULMAX1-RV64-NEXT:    vor.vv v25, v26, v25
 ; LMULMAX1-RV64-NEXT:    vse16.v v25, (a0)
 ; LMULMAX1-RV64-NEXT:    ret
   %a = load <8 x i16>, <8 x i16>* %x
@@ -177,33 +153,27 @@ define void @bitreverse_v4i32(<4 x i32>* %x, <4 x i32>* %y) {
 ; LMULMAX2-RV32-NEXT:    vsll.vi v25, v25, 24
 ; LMULMAX2-RV32-NEXT:    vor.vv v25, v25, v27
 ; LMULMAX2-RV32-NEXT:    vor.vv v25, v25, v26
+; LMULMAX2-RV32-NEXT:    vsrl.vi v26, v25, 4
 ; LMULMAX2-RV32-NEXT:    lui a1, 61681
 ; LMULMAX2-RV32-NEXT:    addi a1, a1, -241
-; LMULMAX2-RV32-NEXT:    vand.vx v26, v25, a1
-; LMULMAX2-RV32-NEXT:    vsll.vi v26, v26, 4
-; LMULMAX2-RV32-NEXT:    lui a1, 986895
-; LMULMAX2-RV32-NEXT:    addi a1, a1, 240
+; LMULMAX2-RV32-NEXT:    vand.vx v26, v26, a1
 ; LMULMAX2-RV32-NEXT:    vand.vx v25, v25, a1
-; LMULMAX2-RV32-NEXT:    vsrl.vi v25, v25, 4
-; LMULMAX2-RV32-NEXT:    vor.vv v25, v25, v26
+; LMULMAX2-RV32-NEXT:    vsll.vi v25, v25, 4
+; LMULMAX2-RV32-NEXT:    vor.vv v25, v26, v25
+; LMULMAX2-RV32-NEXT:    vsrl.vi v26, v25, 2
 ; LMULMAX2-RV32-NEXT:    lui a1, 209715
 ; LMULMAX2-RV32-NEXT:    addi a1, a1, 819
-; LMULMAX2-RV32-NEXT:    vand.vx v26, v25, a1
-; LMULMAX2-RV32-NEXT:    vsll.vi v26, v26, 2
-; LMULMAX2-RV32-NEXT:    lui a1, 838861
-; LMULMAX2-RV32-NEXT:    addi a1, a1, -820
+; LMULMAX2-RV32-NEXT:    vand.vx v26, v26, a1
 ; LMULMAX2-RV32-NEXT:    vand.vx v25, v25, a1
-; LMULMAX2-RV32-NEXT:    vsrl.vi v25, v25, 2
-; LMULMAX2-RV32-NEXT:    vor.vv v25, v25, v26
+; LMULMAX2-RV32-NEXT:    vsll.vi v25, v25, 2
+; LMULMAX2-RV32-NEXT:    vor.vv v25, v26, v25
+; LMULMAX2-RV32-NEXT:    vsrl.vi v26, v25, 1
 ; LMULMAX2-RV32-NEXT:    lui a1, 349525
 ; LMULMAX2-RV32-NEXT:    addi a1, a1, 1365
-; LMULMAX2-RV32-NEXT:    vand.vx v26, v25, a1
-; LMULMAX2-RV32-NEXT:    vadd.vv v26, v26, v26
-; LMULMAX2-RV32-NEXT:    lui a1, 699051
-; LMULMAX2-RV32-NEXT:    addi a1, a1, -1366
+; LMULMAX2-RV32-NEXT:    vand.vx v26, v26, a1
 ; LMULMAX2-RV32-NEXT:    vand.vx v25, v25, a1
-; LMULMAX2-RV32-NEXT:    vsrl.vi v25, v25, 1
-; LMULMAX2-RV32-NEXT:    vor.vv v25, v25, v26
+; LMULMAX2-RV32-NEXT:    vadd.vv v25, v25, v25
+; LMULMAX2-RV32-NEXT:    vor.vv v25, v26, v25
 ; LMULMAX2-RV32-NEXT:    vse32.v v25, (a0)
 ; LMULMAX2-RV32-NEXT:    ret
 ;
@@ -223,39 +193,27 @@ define void @bitreverse_v4i32(<4 x i32>* %x, <4 x i32>* %y) {
 ; LMULMAX2-RV64-NEXT:    vsll.vi v25, v25, 24
 ; LMULMAX2-RV64-NEXT:    vor.vv v25, v25, v27
 ; LMULMAX2-RV64-NEXT:    vor.vv v25, v25, v26
+; LMULMAX2-RV64-NEXT:    vsrl.vi v26, v25, 4
 ; LMULMAX2-RV64-NEXT:    lui a1, 61681
 ; LMULMAX2-RV64-NEXT:    addiw a1, a1, -241
-; LMULMAX2-RV64-NEXT:    vand.vx v26, v25, a1
-; LMULMAX2-RV64-NEXT:    vsll.vi v26, v26, 4
-; LMULMAX2-RV64-NEXT:    lui a1, 241
-; LMULMAX2-RV64-NEXT:    addiw a1, a1, -241
-; LMULMAX2-RV64-NEXT:    slli a1, a1, 12
-; LMULMAX2-RV64-NEXT:    addi a1, a1, 240
+; LMULMAX2-RV64-NEXT:    vand.vx v26, v26, a1
 ; LMULMAX2-RV64-NEXT:    vand.vx v25, v25, a1
-; LMULMAX2-RV64-NEXT:    vsrl.vi v25, v25, 4
-; LMULMAX2-RV64-NEXT:    vor.vv v25, v25, v26
+; LMULMAX2-RV64-NEXT:    vsll.vi v25, v25, 4
+; LMULMAX2-RV64-NEXT:    vor.vv v25, v26, v25
+; LMULMAX2-RV64-NEXT:    vsrl.vi v26, v25, 2
 ; LMULMAX2-RV64-NEXT:    lui a1, 209715
 ; LMULMAX2-RV64-NEXT:    addiw a1, a1, 819
-; LMULMAX2-RV64-NEXT:    vand.vx v26, v25, a1
-; LMULMAX2-RV64-NEXT:    vsll.vi v26, v26, 2
-; LMULMAX2-RV64-NEXT:    lui a1, 205
-; LMULMAX2-RV64-NEXT:    addiw a1, a1, -819
-; LMULMAX2-RV64-NEXT:    slli a1, a1, 12
-; LMULMAX2-RV64-NEXT:    addi a1, a1, -820
+; LMULMAX2-RV64-NEXT:    vand.vx v26, v26, a1
 ; LMULMAX2-RV64-NEXT:    vand.vx v25, v25, a1
-; LMULMAX2-RV64-NEXT:    vsrl.vi v25, v25, 2
-; LMULMAX2-RV64-NEXT:    vor.vv v25, v25, v26
+; LMULMAX2-RV64-NEXT:    vsll.vi v25, v25, 2
+; LMULMAX2-RV64-NEXT:    vor.vv v25, v26, v25
+; LMULMAX2-RV64-NEXT:    vsrl.vi v26, v25, 1
 ; LMULMAX2-RV64-NEXT:    lui a1, 349525
 ; LMULMAX2-RV64-NEXT:    addiw a1, a1, 1365
-; LMULMAX2-RV64-NEXT:    vand.vx v26, v25, a1
-; LMULMAX2-RV64-NEXT:    vadd.vv v26, v26, v26
-; LMULMAX2-RV64-NEXT:    lui a1, 171
-; LMULMAX2-RV64-NEXT:    addiw a1, a1, -1365
-; LMULMAX2-RV64-NEXT:    slli a1, a1, 12
-; LMULMAX2-RV64-NEXT:    addi a1, a1, -1366
+; LMULMAX2-RV64-NEXT:    vand.vx v26, v26, a1
 ; LMULMAX2-RV64-NEXT:    vand.vx v25, v25, a1
-; LMULMAX2-RV64-NEXT:    vsrl.vi v25, v25, 1
-; LMULMAX2-RV64-NEXT:    vor.vv v25, v25, v26
+; LMULMAX2-RV64-NEXT:    vadd.vv v25, v25, v25
+; LMULMAX2-RV64-NEXT:    vor.vv v25, v26, v25
 ; LMULMAX2-RV64-NEXT:    vse32.v v25, (a0)
 ; LMULMAX2-RV64-NEXT:    ret
 ;
@@ -275,33 +233,27 @@ define void @bitreverse_v4i32(<4 x i32>* %x, <4 x i32>* %y) {
 ; LMULMAX1-RV32-NEXT:    vsll.vi v25, v25, 24
 ; LMULMAX1-RV32-NEXT:    vor.vv v25, v25, v27
 ; LMULMAX1-RV32-NEXT:    vor.vv v25, v25, v26
+; LMULMAX1-RV32-NEXT:    vsrl.vi v26, v25, 4
 ; LMULMAX1-RV32-NEXT:    lui a1, 61681
 ; LMULMAX1-RV32-NEXT:    addi a1, a1, -241
-; LMULMAX1-RV32-NEXT:    vand.vx v26, v25, a1
-; LMULMAX1-RV32-NEXT:    vsll.vi v26, v26, 4
-; LMULMAX1-RV32-NEXT:    lui a1, 986895
-; LMULMAX1-RV32-NEXT:    addi a1, a1, 240
+; LMULMAX1-RV32-NEXT:    vand.vx v26, v26, a1
 ; LMULMAX1-RV32-NEXT:    vand.vx v25, v25, a1
-; LMULMAX1-RV32-NEXT:    vsrl.vi v25, v25, 4
-; LMULMAX1-RV32-NEXT:    vor.vv v25, v25, v26
+; LMULMAX1-RV32-NEXT:    vsll.vi v25, v25, 4
+; LMULMAX1-RV32-NEXT:    vor.vv v25, v26, v25
+; LMULMAX1-RV32-NEXT:    vsrl.vi v26, v25, 2
 ; LMULMAX1-RV32-NEXT:    lui a1, 209715
 ; LMULMAX1-RV32-NEXT:    addi a1, a1, 819
-; LMULMAX1-RV32-NEXT:    vand.vx v26, v25, a1
-; LMULMAX1-RV32-NEXT:    vsll.vi v26, v26, 2
-; LMULMAX1-RV32-NEXT:    lui a1, 838861
-; LMULMAX1-RV32-NEXT:    addi a1, a1, -820
+; LMULMAX1-RV32-NEXT:    vand.vx v26, v26, a1
 ; LMULMAX1-RV32-NEXT:    vand.vx v25, v25, a1
-; LMULMAX1-RV32-NEXT:    vsrl.vi v25, v25, 2
-; LMULMAX1-RV32-NEXT:    vor.vv v25, v25, v26
+; LMULMAX1-RV32-NEXT:    vsll.vi v25, v25, 2
+; LMULMAX1-RV32-NEXT:    vor.vv v25, v26, v25
+; LMULMAX1-RV32-NEXT:    vsrl.vi v26, v25, 1
 ; LMULMAX1-RV32-NEXT:    lui a1, 349525
 ; LMULMAX1-RV32-NEXT:    addi a1, a1, 1365
-; LMULMAX1-RV32-NEXT:    vand.vx v26, v25, a1
-; LMULMAX1-RV32-NEXT:    vadd.vv v26, v26, v26
-; LMULMAX1-RV32-NEXT:    lui a1, 699051
-; LMULMAX1-RV32-NEXT:    addi a1, a1, -1366
+; LMULMAX1-RV32-NEXT:    vand.vx v26, v26, a1
 ; LMULMAX1-RV32-NEXT:    vand.vx v25, v25, a1
-; LMULMAX1-RV32-NEXT:    vsrl.vi v25, v25, 1
-; LMULMAX1-RV32-NEXT:    vor.vv v25, v25, v26
+; LMULMAX1-RV32-NEXT:    vadd.vv v25, v25, v25
+; LMULMAX1-RV32-NEXT:    vor.vv v25, v26, v25
 ; LMULMAX1-RV32-NEXT:    vse32.v v25, (a0)
 ; LMULMAX1-RV32-NEXT:    ret
 ;
@@ -321,39 +273,27 @@ define void @bitreverse_v4i32(<4 x i32>* %x, <4 x i32>* %y) {
 ; LMULMAX1-RV64-NEXT:    vsll.vi v25, v25, 24
 ; LMULMAX1-RV64-NEXT:    vor.vv v25, v25, v27
 ; LMULMAX1-RV64-NEXT:    vor.vv v25, v25, v26
+; LMULMAX1-RV64-NEXT:    vsrl.vi v26, v25, 4
 ; LMULMAX1-RV64-NEXT:    lui a1, 61681
 ; LMULMAX1-RV64-NEXT:    addiw a1, a1, -241
-; LMULMAX1-RV64-NEXT:    vand.vx v26, v25, a1
-; LMULMAX1-RV64-NEXT:    vsll.vi v26, v26, 4
-; LMULMAX1-RV64-NEXT:    lui a1, 241
-; LMULMAX1-RV64-NEXT:    addiw a1, a1, -241
-; LMULMAX1-RV64-NEXT:    slli a1, a1, 12
-; LMULMAX1-RV64-NEXT:    addi a1, a1, 240
+; LMULMAX1-RV64-NEXT:    vand.vx v26, v26, a1
 ; LMULMAX1-RV64-NEXT:    vand.vx v25, v25, a1
-; LMULMAX1-RV64-NEXT:    vsrl.vi v25, v25, 4
-; LMULMAX1-RV64-NEXT:    vor.vv v25, v25, v26
+; LMULMAX1-RV64-NEXT:    vsll.vi v25, v25, 4
+; LMULMAX1-RV64-NEXT:    vor.vv v25, v26, v25
+; LMULMAX1-RV64-NEXT:    vsrl.vi v26, v25, 2
 ; LMULMAX1-RV64-NEXT:    lui a1, 209715
 ; LMULMAX1-RV64-NEXT:    addiw a1, a1, 819
-; LMULMAX1-RV64-NEXT:    vand.vx v26, v25, a1
-; LMULMAX1-RV64-NEXT:    vsll.vi v26, v26, 2
-; LMULMAX1-RV64-NEXT:    lui a1, 205
-; LMULMAX1-RV64-NEXT:    addiw a1, a1, -819
-; LMULMAX1-RV64-NEXT:    slli a1, a1, 12
-; LMULMAX1-RV64-NEXT:    addi a1, a1, -820
+; LMULMAX1-RV64-NEXT:    vand.vx v26, v26, a1
 ; LMULMAX1-RV64-NEXT:    vand.vx v25, v25, a1
-; LMULMAX1-RV64-NEXT:    vsrl.vi v25, v25, 2
-; LMULMAX1-RV64-NEXT:    vor.vv v25, v25, v26
+; LMULMAX1-RV64-NEXT:    vsll.vi v25, v25, 2
+; LMULMAX1-RV64-NEXT:    vor.vv v25, v26, v25
+; LMULMAX1-RV64-NEXT:    vsrl.vi v26, v25, 1
 ; LMULMAX1-RV64-NEXT:    lui a1, 349525
 ; LMULMAX1-RV64-NEXT:    addiw a1, a1, 1365
-; LMULMAX1-RV64-NEXT:    vand.vx v26, v25, a1
-; LMULMAX1-RV64-NEXT:    vadd.vv v26, v26, v26
-; LMULMAX1-RV64-NEXT:    lui a1, 171
-; LMULMAX1-RV64-NEXT:    addiw a1, a1, -1365
-; LMULMAX1-RV64-NEXT:    slli a1, a1, 12
-; LMULMAX1-RV64-NEXT:    addi a1, a1, -1366
+; LMULMAX1-RV64-NEXT:    vand.vx v26, v26, a1
 ; LMULMAX1-RV64-NEXT:    vand.vx v25, v25, a1
-; LMULMAX1-RV64-NEXT:    vsrl.vi v25, v25, 1
-; LMULMAX1-RV64-NEXT:    vor.vv v25, v25, v26
+; LMULMAX1-RV64-NEXT:    vadd.vv v25, v25, v25
+; LMULMAX1-RV64-NEXT:    vor.vv v25, v26, v25
 ; LMULMAX1-RV64-NEXT:    vse32.v v25, (a0)
 ; LMULMAX1-RV64-NEXT:    ret
   %a = load <4 x i32>, <4 x i32>* %x
@@ -416,51 +356,36 @@ define void @bitreverse_v2i64(<2 x i64>* %x, <2 x i64>* %y) {
 ; LMULMAX2-RV32-NEXT:    vor.vv v25, v25, v28
 ; LMULMAX2-RV32-NEXT:    vor.vv v25, v25, v27
 ; LMULMAX2-RV32-NEXT:    vor.vv v25, v25, v26
+; LMULMAX2-RV32-NEXT:    vsrl.vi v26, v25, 4
 ; LMULMAX2-RV32-NEXT:    lui a1, 61681
 ; LMULMAX2-RV32-NEXT:    addi a1, a1, -241
 ; LMULMAX2-RV32-NEXT:    vsetivli zero, 4, e32, m1, ta, mu
-; LMULMAX2-RV32-NEXT:    vmv.v.x v26, a1
-; LMULMAX2-RV32-NEXT:    vsetivli zero, 2, e64, m1, ta, mu
-; LMULMAX2-RV32-NEXT:    vand.vv v26, v25, v26
-; LMULMAX2-RV32-NEXT:    vsll.vi v26, v26, 4
-; LMULMAX2-RV32-NEXT:    lui a1, 986895
-; LMULMAX2-RV32-NEXT:    addi a1, a1, 240
-; LMULMAX2-RV32-NEXT:    vsetivli zero, 4, e32, m1, ta, mu
 ; LMULMAX2-RV32-NEXT:    vmv.v.x v27, a1
 ; LMULMAX2-RV32-NEXT:    vsetivli zero, 2, e64, m1, ta, mu
+; LMULMAX2-RV32-NEXT:    vand.vv v26, v26, v27
 ; LMULMAX2-RV32-NEXT:    vand.vv v25, v25, v27
-; LMULMAX2-RV32-NEXT:    vsrl.vi v25, v25, 4
-; LMULMAX2-RV32-NEXT:    vor.vv v25, v25, v26
+; LMULMAX2-RV32-NEXT:    vsll.vi v25, v25, 4
+; LMULMAX2-RV32-NEXT:    vor.vv v25, v26, v25
+; LMULMAX2-RV32-NEXT:    vsrl.vi v26, v25, 2
 ; LMULMAX2-RV32-NEXT:    lui a1, 209715
 ; LMULMAX2-RV32-NEXT:    addi a1, a1, 819
 ; LMULMAX2-RV32-NEXT:    vsetivli zero, 4, e32, m1, ta, mu
-; LMULMAX2-RV32-NEXT:    vmv.v.x v26, a1
-; LMULMAX2-RV32-NEXT:    vsetivli zero, 2, e64, m1, ta, mu
-; LMULMAX2-RV32-NEXT:    vand.vv v26, v25, v26
-; LMULMAX2-RV32-NEXT:    vsll.vi v26, v26, 2
-; LMULMAX2-RV32-NEXT:    lui a1, 838861
-; LMULMAX2-RV32-NEXT:    addi a1, a1, -820
-; LMULMAX2-RV32-NEXT:    vsetivli zero, 4, e32, m1, ta, mu
 ; LMULMAX2-RV32-NEXT:    vmv.v.x v27, a1
 ; LMULMAX2-RV32-NEXT:    vsetivli zero, 2, e64, m1, ta, mu
+; LMULMAX2-RV32-NEXT:    vand.vv v26, v26, v27
 ; LMULMAX2-RV32-NEXT:    vand.vv v25, v25, v27
-; LMULMAX2-RV32-NEXT:    vsrl.vi v25, v25, 2
-; LMULMAX2-RV32-NEXT:    vor.vv v25, v25, v26
+; LMULMAX2-RV32-NEXT:    vsll.vi v25, v25, 2
+; LMULMAX2-RV32-NEXT:    vor.vv v25, v26, v25
+; LMULMAX2-RV32-NEXT:    vsrl.vi v26, v25, 1
 ; LMULMAX2-RV32-NEXT:    lui a1, 349525
 ; LMULMAX2-RV32-NEXT:    addi a1, a1, 1365
 ; LMULMAX2-RV32-NEXT:    vsetivli zero, 4, e32, m1, ta, mu
-; LMULMAX2-RV32-NEXT:    vmv.v.x v26, a1
-; LMULMAX2-RV32-NEXT:    vsetivli zero, 2, e64, m1, ta, mu
-; LMULMAX2-RV32-NEXT:    vand.vv v26, v25, v26
-; LMULMAX2-RV32-NEXT:    vadd.vv v26, v26, v26
-; LMULMAX2-RV32-NEXT:    lui a1, 699051
-; LMULMAX2-RV32-NEXT:    addi a1, a1, -1366
-; LMULMAX2-RV32-NEXT:    vsetivli zero, 4, e32, m1, ta, mu
 ; LMULMAX2-RV32-NEXT:    vmv.v.x v27, a1
 ; LMULMAX2-RV32-NEXT:    vsetivli zero, 2, e64, m1, ta, mu
+; LMULMAX2-RV32-NEXT:    vand.vv v26, v26, v27
 ; LMULMAX2-RV32-NEXT:    vand.vv v25, v25, v27
-; LMULMAX2-RV32-NEXT:    vsrl.vi v25, v25, 1
-; LMULMAX2-RV32-NEXT:    vor.vv v25, v25, v26
+; LMULMAX2-RV32-NEXT:    vadd.vv v25, v25, v25
+; LMULMAX2-RV32-NEXT:    vor.vv v25, v26, v25
 ; LMULMAX2-RV32-NEXT:    vse64.v v25, (a0)
 ; LMULMAX2-RV32-NEXT:    ret
 ;
@@ -499,6 +424,7 @@ define void @bitreverse_v2i64(<2 x i64>* %x, <2 x i64>* %y) {
 ; LMULMAX2-RV64-NEXT:    vor.vv v25, v28, v25
 ; LMULMAX2-RV64-NEXT:    vor.vv v25, v25, v27
 ; LMULMAX2-RV64-NEXT:    vor.vv v25, v25, v26
+; LMULMAX2-RV64-NEXT:    vsrl.vi v26, v25, 4
 ; LMULMAX2-RV64-NEXT:    lui a1, 3855
 ; LMULMAX2-RV64-NEXT:    addiw a1, a1, 241
 ; LMULMAX2-RV64-NEXT:    slli a1, a1, 12
@@ -507,19 +433,11 @@ define void @bitreverse_v2i64(<2 x i64>* %x, <2 x i64>* %y) {
 ; LMULMAX2-RV64-NEXT:    addi a1, a1, 241
 ; LMULMAX2-RV64-NEXT:    slli a1, a1, 12
 ; LMULMAX2-RV64-NEXT:    addi a1, a1, -241
-; LMULMAX2-RV64-NEXT:    vand.vx v26, v25, a1
-; LMULMAX2-RV64-NEXT:    vsll.vi v26, v26, 4
-; LMULMAX2-RV64-NEXT:    lui a1, 1044721
-; LMULMAX2-RV64-NEXT:    addiw a1, a1, -241
-; LMULMAX2-RV64-NEXT:    slli a1, a1, 12
-; LMULMAX2-RV64-NEXT:    addi a1, a1, 241
-; LMULMAX2-RV64-NEXT:    slli a1, a1, 12
-; LMULMAX2-RV64-NEXT:    addi a1, a1, -241
-; LMULMAX2-RV64-NEXT:    slli a1, a1, 12
-; LMULMAX2-RV64-NEXT:    addi a1, a1, 240
+; LMULMAX2-RV64-NEXT:    vand.vx v26, v26, a1
 ; LMULMAX2-RV64-NEXT:    vand.vx v25, v25, a1
-; LMULMAX2-RV64-NEXT:    vsrl.vi v25, v25, 4
-; LMULMAX2-RV64-NEXT:    vor.vv v25, v25, v26
+; LMULMAX2-RV64-NEXT:    vsll.vi v25, v25, 4
+; LMULMAX2-RV64-NEXT:    vor.vv v25, v26, v25
+; LMULMAX2-RV64-NEXT:    vsrl.vi v26, v25, 2
 ; LMULMAX2-RV64-NEXT:    lui a1, 13107
 ; LMULMAX2-RV64-NEXT:    addiw a1, a1, 819
 ; LMULMAX2-RV64-NEXT:    slli a1, a1, 12
@@ -528,19 +446,11 @@ define void @bitreverse_v2i64(<2 x i64>* %x, <2 x i64>* %y) {
 ; LMULMAX2-RV64-NEXT:    addi a1, a1, 819
 ; LMULMAX2-RV64-NEXT:    slli a1, a1, 12
 ; LMULMAX2-RV64-NEXT:    addi a1, a1, 819
-; LMULMAX2-RV64-NEXT:    vand.vx v26, v25, a1
-; LMULMAX2-RV64-NEXT:    vsll.vi v26, v26, 2
-; LMULMAX2-RV64-NEXT:    lui a1, 1035469
-; LMULMAX2-RV64-NEXT:    addiw a1, a1, -819
-; LMULMAX2-RV64-NEXT:    slli a1, a1, 12
-; LMULMAX2-RV64-NEXT:    addi a1, a1, -819
-; LMULMAX2-RV64-NEXT:    slli a1, a1, 12
-; LMULMAX2-RV64-NEXT:    addi a1, a1, -819
-; LMULMAX2-RV64-NEXT:    slli a1, a1, 12
-; LMULMAX2-RV64-NEXT:    addi a1, a1, -820
+; LMULMAX2-RV64-NEXT:    vand.vx v26, v26, a1
 ; LMULMAX2-RV64-NEXT:    vand.vx v25, v25, a1
-; LMULMAX2-RV64-NEXT:    vsrl.vi v25, v25, 2
-; LMULMAX2-RV64-NEXT:    vor.vv v25, v25, v26
+; LMULMAX2-RV64-NEXT:    vsll.vi v25, v25, 2
+; LMULMAX2-RV64-NEXT:    vor.vv v25, v26, v25
+; LMULMAX2-RV64-NEXT:    vsrl.vi v26, v25, 1
 ; LMULMAX2-RV64-NEXT:    lui a1, 21845
 ; LMULMAX2-RV64-NEXT:    addiw a1, a1, 1365
 ; LMULMAX2-RV64-NEXT:    slli a1, a1, 12
@@ -549,19 +459,10 @@ define void @bitreverse_v2i64(<2 x i64>* %x, <2 x i64>* %y) {
 ; LMULMAX2-RV64-NEXT:    addi a1, a1, 1365
 ; LMULMAX2-RV64-NEXT:    slli a1, a1, 12
 ; LMULMAX2-RV64-NEXT:    addi a1, a1, 1365
-; LMULMAX2-RV64-NEXT:    vand.vx v26, v25, a1
-; LMULMAX2-RV64-NEXT:    vadd.vv v26, v26, v26
-; LMULMAX2-RV64-NEXT:    lui a1, 1026731
-; LMULMAX2-RV64-NEXT:    addiw a1, a1, -1365
-; LMULMAX2-RV64-NEXT:    slli a1, a1, 12
-; LMULMAX2-RV64-NEXT:    addi a1, a1, -1365
-; LMULMAX2-RV64-NEXT:    slli a1, a1, 12
-; LMULMAX2-RV64-NEXT:    addi a1, a1, -1365
-; LMULMAX2-RV64-NEXT:    slli a1, a1, 12
-; LMULMAX2-RV64-NEXT:    addi a1, a1, -1366
+; LMULMAX2-RV64-NEXT:    vand.vx v26, v26, a1
 ; LMULMAX2-RV64-NEXT:    vand.vx v25, v25, a1
-; LMULMAX2-RV64-NEXT:    vsrl.vi v25, v25, 1
-; LMULMAX2-RV64-NEXT:    vor.vv v25, v25, v26
+; LMULMAX2-RV64-NEXT:    vadd.vv v25, v25, v25
+; LMULMAX2-RV64-NEXT:    vor.vv v25, v26, v25
 ; LMULMAX2-RV64-NEXT:    vse64.v v25, (a0)
 ; LMULMAX2-RV64-NEXT:    ret
 ;
@@ -616,51 +517,36 @@ define void @bitreverse_v2i64(<2 x i64>* %x, <2 x i64>* %y) {
 ; LMULMAX1-RV32-NEXT:    vor.vv v25, v25, v28
 ; LMULMAX1-RV32-NEXT:    vor.vv v25, v25, v27
 ; LMULMAX1-RV32-NEXT:    vor.vv v25, v25, v26
+; LMULMAX1-RV32-NEXT:    vsrl.vi v26, v25, 4
 ; LMULMAX1-RV32-NEXT:    lui a1, 61681
 ; LMULMAX1-RV32-NEXT:    addi a1, a1, -241
 ; LMULMAX1-RV32-NEXT:    vsetivli zero, 4, e32, m1, ta, mu
-; LMULMAX1-RV32-NEXT:    vmv.v.x v26, a1
-; LMULMAX1-RV32-NEXT:    vsetivli zero, 2, e64, m1, ta, mu
-; LMULMAX1-RV32-NEXT:    vand.vv v26, v25, v26
-; LMULMAX1-RV32-NEXT:    vsll.vi v26, v26, 4
-; LMULMAX1-RV32-NEXT:    lui a1, 986895
-; LMULMAX1-RV32-NEXT:    addi a1, a1, 240
-; LMULMAX1-RV32-NEXT:    vsetivli zero, 4, e32, m1, ta, mu
 ; LMULMAX1-RV32-NEXT:    vmv.v.x v27, a1
 ; LMULMAX1-RV32-NEXT:    vsetivli zero, 2, e64, m1, ta, mu
+; LMULMAX1-RV32-NEXT:    vand.vv v26, v26, v27
 ; LMULMAX1-RV32-NEXT:    vand.vv v25, v25, v27
-; LMULMAX1-RV32-NEXT:    vsrl.vi v25, v25, 4
-; LMULMAX1-RV32-NEXT:    vor.vv v25, v25, v26
+; LMULMAX1-RV32-NEXT:    vsll.vi v25, v25, 4
+; LMULMAX1-RV32-NEXT:    vor.vv v25, v26, v25
+; LMULMAX1-RV32-NEXT:    vsrl.vi v26, v25, 2
 ; LMULMAX1-RV32-NEXT:    lui a1, 209715
 ; LMULMAX1-RV32-NEXT:    addi a1, a1, 819
 ; LMULMAX1-RV32-NEXT:    vsetivli zero, 4, e32, m1, ta, mu
-; LMULMAX1-RV32-NEXT:    vmv.v.x v26, a1
-; LMULMAX1-RV32-NEXT:    vsetivli zero, 2, e64, m1, ta, mu
-; LMULMAX1-RV32-NEXT:    vand.vv v26, v25, v26
-; LMULMAX1-RV32-NEXT:    vsll.vi v26, v26, 2
-; LMULMAX1-RV32-NEXT:    lui a1, 838861
-; LMULMAX1-RV32-NEXT:    addi a1, a1, -820
-; LMULMAX1-RV32-NEXT:    vsetivli zero, 4, e32, m1, ta, mu
 ; LMULMAX1-RV32-NEXT:    vmv.v.x v27, a1
 ; LMULMAX1-RV32-NEXT:    vsetivli zero, 2, e64, m1, ta, mu
+; LMULMAX1-RV32-NEXT:    vand.vv v26, v26, v27
 ; LMULMAX1-RV32-NEXT:    vand.vv v25, v25, v27
-; LMULMAX1-RV32-NEXT:    vsrl.vi v25, v25, 2
-; LMULMAX1-RV32-NEXT:    vor.vv v25, v25, v26
+; LMULMAX1-RV32-NEXT:    vsll.vi v25, v25, 2
+; LMULMAX1-RV32-NEXT:    vor.vv v25, v26, v25
+; LMULMAX1-RV32-NEXT:    vsrl.vi v26, v25, 1
 ; LMULMAX1-RV32-NEXT:    lui a1, 349525
 ; LMULMAX1-RV32-NEXT:    addi a1, a1, 1365
 ; LMULMAX1-RV32-NEXT:    vsetivli zero, 4, e32, m1, ta, mu
-; LMULMAX1-RV32-NEXT:    vmv.v.x v26, a1
-; LMULMAX1-RV32-NEXT:    vsetivli zero, 2, e64, m1, ta, mu
-; LMULMAX1-RV32-NEXT:    vand.vv v26, v25, v26
-; LMULMAX1-RV32-NEXT:    vadd.vv v26, v26, v26
-; LMULMAX1-RV32-NEXT:    lui a1, 699051
-; LMULMAX1-RV32-NEXT:    addi a1, a1, -1366
-; LMULMAX1-RV32-NEXT:    vsetivli zero, 4, e32, m1, ta, mu
 ; LMULMAX1-RV32-NEXT:    vmv.v.x v27, a1
 ; LMULMAX1-RV32-NEXT:    vsetivli zero, 2, e64, m1, ta, mu
+; LMULMAX1-RV32-NEXT:    vand.vv v26, v26, v27
 ; LMULMAX1-RV32-NEXT:    vand.vv v25, v25, v27
-; LMULMAX1-RV32-NEXT:    vsrl.vi v25, v25, 1
-; LMULMAX1-RV32-NEXT:    vor.vv v25, v25, v26
+; LMULMAX1-RV32-NEXT:    vadd.vv v25, v25, v25
+; LMULMAX1-RV32-NEXT:    vor.vv v25, v26, v25
 ; LMULMAX1-RV32-NEXT:    vse64.v v25, (a0)
 ; LMULMAX1-RV32-NEXT:    ret
 ;
@@ -699,6 +585,7 @@ define void @bitreverse_v2i64(<2 x i64>* %x, <2 x i64>* %y) {
 ; LMULMAX1-RV64-NEXT:    vor.vv v25, v28, v25
 ; LMULMAX1-RV64-NEXT:    vor.vv v25, v25, v27
 ; LMULMAX1-RV64-NEXT:    vor.vv v25, v25, v26
+; LMULMAX1-RV64-NEXT:    vsrl.vi v26, v25, 4
 ; LMULMAX1-RV64-NEXT:    lui a1, 3855
 ; LMULMAX1-RV64-NEXT:    addiw a1, a1, 241
 ; LMULMAX1-RV64-NEXT:    slli a1, a1, 12
@@ -707,19 +594,11 @@ define void @bitreverse_v2i64(<2 x i64>* %x, <2 x i64>* %y) {
 ; LMULMAX1-RV64-NEXT:    addi a1, a1, 241
 ; LMULMAX1-RV64-NEXT:    slli a1, a1, 12
 ; LMULMAX1-RV64-NEXT:    addi a1, a1, -241
-; LMULMAX1-RV64-NEXT:    vand.vx v26, v25, a1
-; LMULMAX1-RV64-NEXT:    vsll.vi v26, v26, 4
-; LMULMAX1-RV64-NEXT:    lui a1, 1044721
-; LMULMAX1-RV64-NEXT:    addiw a1, a1, -241
-; LMULMAX1-RV64-NEXT:    slli a1, a1, 12
-; LMULMAX1-RV64-NEXT:    addi a1, a1, 241
-; LMULMAX1-RV64-NEXT:    slli a1, a1, 12
-; LMULMAX1-RV64-NEXT:    addi a1, a1, -241
-; LMULMAX1-RV64-NEXT:    slli a1, a1, 12
-; LMULMAX1-RV64-NEXT:    addi a1, a1, 240
+; LMULMAX1-RV64-NEXT:    vand.vx v26, v26, a1
 ; LMULMAX1-RV64-NEXT:    vand.vx v25, v25, a1
-; LMULMAX1-RV64-NEXT:    vsrl.vi v25, v25, 4
-; LMULMAX1-RV64-NEXT:    vor.vv v25, v25, v26
+; LMULMAX1-RV64-NEXT:    vsll.vi v25, v25, 4
+; LMULMAX1-RV64-NEXT:    vor.vv v25, v26, v25
+; LMULMAX1-RV64-NEXT:    vsrl.vi v26, v25, 2
 ; LMULMAX1-RV64-NEXT:    lui a1, 13107
 ; LMULMAX1-RV64-NEXT:    addiw a1, a1, 819
 ; LMULMAX1-RV64-NEXT:    slli a1, a1, 12
@@ -728,19 +607,11 @@ define void @bitreverse_v2i64(<2 x i64>* %x, <2 x i64>* %y) {
 ; LMULMAX1-RV64-NEXT:    addi a1, a1, 819
 ; LMULMAX1-RV64-NEXT:    slli a1, a1, 12
 ; LMULMAX1-RV64-NEXT:    addi a1, a1, 819
-; LMULMAX1-RV64-NEXT:    vand.vx v26, v25, a1
-; LMULMAX1-RV64-NEXT:    vsll.vi v26, v26, 2
-; LMULMAX1-RV64-NEXT:    lui a1, 1035469
-; LMULMAX1-RV64-NEXT:    addiw a1, a1, -819
-; LMULMAX1-RV64-NEXT:    slli a1, a1, 12
-; LMULMAX1-RV64-NEXT:    addi a1, a1, -819
-; LMULMAX1-RV64-NEXT:    slli a1, a1, 12
-; LMULMAX1-RV64-NEXT:    addi a1, a1, -819
-; LMULMAX1-RV64-NEXT:    slli a1, a1, 12
-; LMULMAX1-RV64-NEXT:    addi a1, a1, -820
+; LMULMAX1-RV64-NEXT:    vand.vx v26, v26, a1
 ; LMULMAX1-RV64-NEXT:    vand.vx v25, v25, a1
-; LMULMAX1-RV64-NEXT:    vsrl.vi v25, v25, 2
-; LMULMAX1-RV64-NEXT:    vor.vv v25, v25, v26
+; LMULMAX1-RV64-NEXT:    vsll.vi v25, v25, 2
+; LMULMAX1-RV64-NEXT:    vor.vv v25, v26, v25
+; LMULMAX1-RV64-NEXT:    vsrl.vi v26, v25, 1
 ; LMULMAX1-RV64-NEXT:    lui a1, 21845
 ; LMULMAX1-RV64-NEXT:    addiw a1, a1, 1365
 ; LMULMAX1-RV64-NEXT:    slli a1, a1, 12
@@ -749,19 +620,10 @@ define void @bitreverse_v2i64(<2 x i64>* %x, <2 x i64>* %y) {
 ; LMULMAX1-RV64-NEXT:    addi a1, a1, 1365
 ; LMULMAX1-RV64-NEXT:    slli a1, a1, 12
 ; LMULMAX1-RV64-NEXT:    addi a1, a1, 1365
-; LMULMAX1-RV64-NEXT:    vand.vx v26, v25, a1
-; LMULMAX1-RV64-NEXT:    vadd.vv v26, v26, v26
-; LMULMAX1-RV64-NEXT:    lui a1, 1026731
-; LMULMAX1-RV64-NEXT:    addiw a1, a1, -1365
-; LMULMAX1-RV64-NEXT:    slli a1, a1, 12
-; LMULMAX1-RV64-NEXT:    addi a1, a1, -1365
-; LMULMAX1-RV64-NEXT:    slli a1, a1, 12
-; LMULMAX1-RV64-NEXT:    addi a1, a1, -1365
-; LMULMAX1-RV64-NEXT:    slli a1, a1, 12
-; LMULMAX1-RV64-NEXT:    addi a1, a1, -1366
+; LMULMAX1-RV64-NEXT:    vand.vx v26, v26, a1
 ; LMULMAX1-RV64-NEXT:    vand.vx v25, v25, a1
-; LMULMAX1-RV64-NEXT:    vsrl.vi v25, v25, 1
-; LMULMAX1-RV64-NEXT:    vor.vv v25, v25, v26
+; LMULMAX1-RV64-NEXT:    vadd.vv v25, v25, v25
+; LMULMAX1-RV64-NEXT:    vor.vv v25, v26, v25
 ; LMULMAX1-RV64-NEXT:    vse64.v v25, (a0)
 ; LMULMAX1-RV64-NEXT:    ret
   %a = load <2 x i64>, <2 x i64>* %x
@@ -780,33 +642,27 @@ define void @bitreverse_v16i16(<16 x i16>* %x, <16 x i16>* %y) {
 ; LMULMAX2-RV32-NEXT:    vsrl.vi v28, v26, 8
 ; LMULMAX2-RV32-NEXT:    vsll.vi v26, v26, 8
 ; LMULMAX2-RV32-NEXT:    vor.vv v26, v26, v28
+; LMULMAX2-RV32-NEXT:    vsrl.vi v28, v26, 4
 ; LMULMAX2-RV32-NEXT:    lui a1, 1
 ; LMULMAX2-RV32-NEXT:    addi a1, a1, -241
-; LMULMAX2-RV32-NEXT:    vand.vx v28, v26, a1
-; LMULMAX2-RV32-NEXT:    vsll.vi v28, v28, 4
-; LMULMAX2-RV32-NEXT:    lui a1, 15
-; LMULMAX2-RV32-NEXT:    addi a1, a1, 240
+; LMULMAX2-RV32-NEXT:    vand.vx v28, v28, a1
 ; LMULMAX2-RV32-NEXT:    vand.vx v26, v26, a1
-; LMULMAX2-RV32-NEXT:    vsrl.vi v26, v26, 4
-; LMULMAX2-RV32-NEXT:    vor.vv v26, v26, v28
+; LMULMAX2-RV32-NEXT:    vsll.vi v26, v26, 4
+; LMULMAX2-RV32-NEXT:    vor.vv v26, v28, v26
+; LMULMAX2-RV32-NEXT:    vsrl.vi v28, v26, 2
 ; LMULMAX2-RV32-NEXT:    lui a1, 3
 ; LMULMAX2-RV32-NEXT:    addi a1, a1, 819
-; LMULMAX2-RV32-NEXT:    vand.vx v28, v26, a1
-; LMULMAX2-RV32-NEXT:    vsll.vi v28, v28, 2
-; LMULMAX2-RV32-NEXT:    lui a1, 13
-; LMULMAX2-RV32-NEXT:    addi a1, a1, -820
+; LMULMAX2-RV32-NEXT:    vand.vx v28, v28, a1
 ; LMULMAX2-RV32-NEXT:    vand.vx v26, v26, a1
-; LMULMAX2-RV32-NEXT:    vsrl.vi v26, v26, 2
-; LMULMAX2-RV32-NEXT:    vor.vv v26, v26, v28
+; LMULMAX2-RV32-NEXT:    vsll.vi v26, v26, 2
+; LMULMAX2-RV32-NEXT:    vor.vv v26, v28, v26
+; LMULMAX2-RV32-NEXT:    vsrl.vi v28, v26, 1
 ; LMULMAX2-RV32-NEXT:    lui a1, 5
 ; LMULMAX2-RV32-NEXT:    addi a1, a1, 1365
-; LMULMAX2-RV32-NEXT:    vand.vx v28, v26, a1
-; LMULMAX2-RV32-NEXT:    vadd.vv v28, v28, v28
-; LMULMAX2-RV32-NEXT:    lui a1, 11
-; LMULMAX2-RV32-NEXT:    addi a1, a1, -1366
+; LMULMAX2-RV32-NEXT:    vand.vx v28, v28, a1
 ; LMULMAX2-RV32-NEXT:    vand.vx v26, v26, a1
-; LMULMAX2-RV32-NEXT:    vsrl.vi v26, v26, 1
-; LMULMAX2-RV32-NEXT:    vor.vv v26, v26, v28
+; LMULMAX2-RV32-NEXT:    vadd.vv v26, v26, v26
+; LMULMAX2-RV32-NEXT:    vor.vv v26, v28, v26
 ; LMULMAX2-RV32-NEXT:    vse16.v v26, (a0)
 ; LMULMAX2-RV32-NEXT:    ret
 ;
@@ -817,150 +673,132 @@ define void @bitreverse_v16i16(<16 x i16>* %x, <16 x i16>* %y) {
 ; LMULMAX2-RV64-NEXT:    vsrl.vi v28, v26, 8
 ; LMULMAX2-RV64-NEXT:    vsll.vi v26, v26, 8
 ; LMULMAX2-RV64-NEXT:    vor.vv v26, v26, v28
+; LMULMAX2-RV64-NEXT:    vsrl.vi v28, v26, 4
 ; LMULMAX2-RV64-NEXT:    lui a1, 1
 ; LMULMAX2-RV64-NEXT:    addiw a1, a1, -241
-; LMULMAX2-RV64-NEXT:    vand.vx v28, v26, a1
-; LMULMAX2-RV64-NEXT:    vsll.vi v28, v28, 4
-; LMULMAX2-RV64-NEXT:    lui a1, 15
-; LMULMAX2-RV64-NEXT:    addiw a1, a1, 240
+; LMULMAX2-RV64-NEXT:    vand.vx v28, v28, a1
 ; LMULMAX2-RV64-NEXT:    vand.vx v26, v26, a1
-; LMULMAX2-RV64-NEXT:    vsrl.vi v26, v26, 4
-; LMULMAX2-RV64-NEXT:    vor.vv v26, v26, v28
+; LMULMAX2-RV64-NEXT:    vsll.vi v26, v26, 4
+; LMULMAX2-RV64-NEXT:    vor.vv v26, v28, v26
+; LMULMAX2-RV64-NEXT:    vsrl.vi v28, v26, 2
 ; LMULMAX2-RV64-NEXT:    lui a1, 3
 ; LMULMAX2-RV64-NEXT:    addiw a1, a1, 819
-; LMULMAX2-RV64-NEXT:    vand.vx v28, v26, a1
-; LMULMAX2-RV64-NEXT:    vsll.vi v28, v28, 2
-; LMULMAX2-RV64-NEXT:    lui a1, 13
-; LMULMAX2-RV64-NEXT:    addiw a1, a1, -820
+; LMULMAX2-RV64-NEXT:    vand.vx v28, v28, a1
 ; LMULMAX2-RV64-NEXT:    vand.vx v26, v26, a1
-; LMULMAX2-RV64-NEXT:    vsrl.vi v26, v26, 2
-; LMULMAX2-RV64-NEXT:    vor.vv v26, v26, v28
+; LMULMAX2-RV64-NEXT:    vsll.vi v26, v26, 2
+; LMULMAX2-RV64-NEXT:    vor.vv v26, v28, v26
+; LMULMAX2-RV64-NEXT:    vsrl.vi v28, v26, 1
 ; LMULMAX2-RV64-NEXT:    lui a1, 5
 ; LMULMAX2-RV64-NEXT:    addiw a1, a1, 1365
-; LMULMAX2-RV64-NEXT:    vand.vx v28, v26, a1
-; LMULMAX2-RV64-NEXT:    vadd.vv v28, v28, v28
-; LMULMAX2-RV64-NEXT:    lui a1, 11
-; LMULMAX2-RV64-NEXT:    addiw a1, a1, -1366
+; LMULMAX2-RV64-NEXT:    vand.vx v28, v28, a1
 ; LMULMAX2-RV64-NEXT:    vand.vx v26, v26, a1
-; LMULMAX2-RV64-NEXT:    vsrl.vi v26, v26, 1
-; LMULMAX2-RV64-NEXT:    vor.vv v26, v26, v28
+; LMULMAX2-RV64-NEXT:    vadd.vv v26, v26, v26
+; LMULMAX2-RV64-NEXT:    vor.vv v26, v28, v26
 ; LMULMAX2-RV64-NEXT:    vse16.v v26, (a0)
 ; LMULMAX2-RV64-NEXT:    ret
 ;
 ; LMULMAX1-RV32-LABEL: bitreverse_v16i16:
 ; LMULMAX1-RV32:       # %bb.0:
 ; LMULMAX1-RV32-NEXT:    vsetivli zero, 8, e16, m1, ta, mu
-; LMULMAX1-RV32-NEXT:    addi a6, a0, 16
-; LMULMAX1-RV32-NEXT:    vle16.v v25, (a6)
+; LMULMAX1-RV32-NEXT:    addi a1, a0, 16
+; LMULMAX1-RV32-NEXT:    vle16.v v25, (a1)
 ; LMULMAX1-RV32-NEXT:    vle16.v v26, (a0)
 ; LMULMAX1-RV32-NEXT:    vsrl.vi v27, v25, 8
 ; LMULMAX1-RV32-NEXT:    vsll.vi v25, v25, 8
 ; LMULMAX1-RV32-NEXT:    vor.vv v25, v25, v27
+; LMULMAX1-RV32-NEXT:    vsrl.vi v27, v25, 4
 ; LMULMAX1-RV32-NEXT:    lui a2, 1
-; LMULMAX1-RV32-NEXT:    addi a7, a2, -241
-; LMULMAX1-RV32-NEXT:    vand.vx v27, v25, a7
-; LMULMAX1-RV32-NEXT:    vsll.vi v27, v27, 4
-; LMULMAX1-RV32-NEXT:    lui a3, 15
-; LMULMAX1-RV32-NEXT:    addi a3, a3, 240
-; LMULMAX1-RV32-NEXT:    vand.vx v25, v25, a3
-; LMULMAX1-RV32-NEXT:    vsrl.vi v25, v25, 4
-; LMULMAX1-RV32-NEXT:    vor.vv v25, v25, v27
-; LMULMAX1-RV32-NEXT:    lui a4, 3
-; LMULMAX1-RV32-NEXT:    addi a4, a4, 819
-; LMULMAX1-RV32-NEXT:    vand.vx v27, v25, a4
-; LMULMAX1-RV32-NEXT:    vsll.vi v27, v27, 2
-; LMULMAX1-RV32-NEXT:    lui a5, 13
-; LMULMAX1-RV32-NEXT:    addi a5, a5, -820
-; LMULMAX1-RV32-NEXT:    vand.vx v25, v25, a5
-; LMULMAX1-RV32-NEXT:    vsrl.vi v25, v25, 2
-; LMULMAX1-RV32-NEXT:    vor.vv v25, v25, v27
-; LMULMAX1-RV32-NEXT:    lui a1, 5
-; LMULMAX1-RV32-NEXT:    addi a1, a1, 1365
-; LMULMAX1-RV32-NEXT:    vand.vx v27, v25, a1
-; LMULMAX1-RV32-NEXT:    vadd.vv v27, v27, v27
-; LMULMAX1-RV32-NEXT:    lui a2, 11
-; LMULMAX1-RV32-NEXT:    addi a2, a2, -1366
+; LMULMAX1-RV32-NEXT:    addi a2, a2, -241
+; LMULMAX1-RV32-NEXT:    vand.vx v27, v27, a2
 ; LMULMAX1-RV32-NEXT:    vand.vx v25, v25, a2
-; LMULMAX1-RV32-NEXT:    vsrl.vi v25, v25, 1
-; LMULMAX1-RV32-NEXT:    vor.vv v25, v25, v27
+; LMULMAX1-RV32-NEXT:    vsll.vi v25, v25, 4
+; LMULMAX1-RV32-NEXT:    vor.vv v25, v27, v25
+; LMULMAX1-RV32-NEXT:    vsrl.vi v27, v25, 2
+; LMULMAX1-RV32-NEXT:    lui a3, 3
+; LMULMAX1-RV32-NEXT:    addi a3, a3, 819
+; LMULMAX1-RV32-NEXT:    vand.vx v27, v27, a3
+; LMULMAX1-RV32-NEXT:    vand.vx v25, v25, a3
+; LMULMAX1-RV32-NEXT:    vsll.vi v25, v25, 2
+; LMULMAX1-RV32-NEXT:    vor.vv v25, v27, v25
+; LMULMAX1-RV32-NEXT:    vsrl.vi v27, v25, 1
+; LMULMAX1-RV32-NEXT:    lui a4, 5
+; LMULMAX1-RV32-NEXT:    addi a4, a4, 1365
+; LMULMAX1-RV32-NEXT:    vand.vx v27, v27, a4
+; LMULMAX1-RV32-NEXT:    vand.vx v25, v25, a4
+; LMULMAX1-RV32-NEXT:    vadd.vv v25, v25, v25
+; LMULMAX1-RV32-NEXT:    vor.vv v25, v27, v25
 ; LMULMAX1-RV32-NEXT:    vsrl.vi v27, v26, 8
 ; LMULMAX1-RV32-NEXT:    vsll.vi v26, v26, 8
 ; LMULMAX1-RV32-NEXT:    vor.vv v26, v26, v27
-; LMULMAX1-RV32-NEXT:    vand.vx v27, v26, a7
-; LMULMAX1-RV32-NEXT:    vsll.vi v27, v27, 4
-; LMULMAX1-RV32-NEXT:    vand.vx v26, v26, a3
-; LMULMAX1-RV32-NEXT:    vsrl.vi v26, v26, 4
-; LMULMAX1-RV32-NEXT:    vor.vv v26, v26, v27
-; LMULMAX1-RV32-NEXT:    vand.vx v27, v26, a4
-; LMULMAX1-RV32-NEXT:    vsll.vi v27, v27, 2
-; LMULMAX1-RV32-NEXT:    vand.vx v26, v26, a5
-; LMULMAX1-RV32-NEXT:    vsrl.vi v26, v26, 2
-; LMULMAX1-RV32-NEXT:    vor.vv v26, v26, v27
-; LMULMAX1-RV32-NEXT:    vand.vx v27, v26, a1
-; LMULMAX1-RV32-NEXT:    vadd.vv v27, v27, v27
+; LMULMAX1-RV32-NEXT:    vsrl.vi v27, v26, 4
+; LMULMAX1-RV32-NEXT:    vand.vx v27, v27, a2
 ; LMULMAX1-RV32-NEXT:    vand.vx v26, v26, a2
-; LMULMAX1-RV32-NEXT:    vsrl.vi v26, v26, 1
-; LMULMAX1-RV32-NEXT:    vor.vv v26, v26, v27
+; LMULMAX1-RV32-NEXT:    vsll.vi v26, v26, 4
+; LMULMAX1-RV32-NEXT:    vor.vv v26, v27, v26
+; LMULMAX1-RV32-NEXT:    vsrl.vi v27, v26, 2
+; LMULMAX1-RV32-NEXT:    vand.vx v27, v27, a3
+; LMULMAX1-RV32-NEXT:    vand.vx v26, v26, a3
+; LMULMAX1-RV32-NEXT:    vsll.vi v26, v26, 2
+; LMULMAX1-RV32-NEXT:    vor.vv v26, v27, v26
+; LMULMAX1-RV32-NEXT:    vsrl.vi v27, v26, 1
+; LMULMAX1-RV32-NEXT:    vand.vx v27, v27, a4
+; LMULMAX1-RV32-NEXT:    vand.vx v26, v26, a4
+; LMULMAX1-RV32-NEXT:    vadd.vv v26, v26, v26
+; LMULMAX1-RV32-NEXT:    vor.vv v26, v27, v26
 ; LMULMAX1-RV32-NEXT:    vse16.v v26, (a0)
-; LMULMAX1-RV32-NEXT:    vse16.v v25, (a6)
+; LMULMAX1-RV32-NEXT:    vse16.v v25, (a1)
 ; LMULMAX1-RV32-NEXT:    ret
 ;
 ; LMULMAX1-RV64-LABEL: bitreverse_v16i16:
 ; LMULMAX1-RV64:       # %bb.0:
 ; LMULMAX1-RV64-NEXT:    vsetivli zero, 8, e16, m1, ta, mu
-; LMULMAX1-RV64-NEXT:    addi a6, a0, 16
-; LMULMAX1-RV64-NEXT:    vle16.v v25, (a6)
+; LMULMAX1-RV64-NEXT:    addi a1, a0, 16
+; LMULMAX1-RV64-NEXT:    vle16.v v25, (a1)
 ; LMULMAX1-RV64-NEXT:    vle16.v v26, (a0)
 ; LMULMAX1-RV64-NEXT:    vsrl.vi v27, v25, 8
 ; LMULMAX1-RV64-NEXT:    vsll.vi v25, v25, 8
 ; LMULMAX1-RV64-NEXT:    vor.vv v25, v25, v27
+; LMULMAX1-RV64-NEXT:    vsrl.vi v27, v25, 4
 ; LMULMAX1-RV64-NEXT:    lui a2, 1
-; LMULMAX1-RV64-NEXT:    addiw a7, a2, -241
-; LMULMAX1-RV64-NEXT:    vand.vx v27, v25, a7
-; LMULMAX1-RV64-NEXT:    vsll.vi v27, v27, 4
-; LMULMAX1-RV64-NEXT:    lui a3, 15
-; LMULMAX1-RV64-NEXT:    addiw a3, a3, 240
-; LMULMAX1-RV64-NEXT:    vand.vx v25, v25, a3
-; LMULMAX1-RV64-NEXT:    vsrl.vi v25, v25, 4
-; LMULMAX1-RV64-NEXT:    vor.vv v25, v25, v27
-; LMULMAX1-RV64-NEXT:    lui a4, 3
-; LMULMAX1-RV64-NEXT:    addiw a4, a4, 819
-; LMULMAX1-RV64-NEXT:    vand.vx v27, v25, a4
-; LMULMAX1-RV64-NEXT:    vsll.vi v27, v27, 2
-; LMULMAX1-RV64-NEXT:    lui a5, 13
-; LMULMAX1-RV64-NEXT:    addiw a5, a5, -820
-; LMULMAX1-RV64-NEXT:    vand.vx v25, v25, a5
-; LMULMAX1-RV64-NEXT:    vsrl.vi v25, v25, 2
-; LMULMAX1-RV64-NEXT:    vor.vv v25, v25, v27
-; LMULMAX1-RV64-NEXT:    lui a1, 5
-; LMULMAX1-RV64-NEXT:    addiw a1, a1, 1365
-; LMULMAX1-RV64-NEXT:    vand.vx v27, v25, a1
-; LMULMAX1-RV64-NEXT:    vadd.vv v27, v27, v27
-; LMULMAX1-RV64-NEXT:    lui a2, 11
-; LMULMAX1-RV64-NEXT:    addiw a2, a2, -1366
+; LMULMAX1-RV64-NEXT:    addiw a2, a2, -241
+; LMULMAX1-RV64-NEXT:    vand.vx v27, v27, a2
 ; LMULMAX1-RV64-NEXT:    vand.vx v25, v25, a2
-; LMULMAX1-RV64-NEXT:    vsrl.vi v25, v25, 1
-; LMULMAX1-RV64-NEXT:    vor.vv v25, v25, v27
+; LMULMAX1-RV64-NEXT:    vsll.vi v25, v25, 4
+; LMULMAX1-RV64-NEXT:    vor.vv v25, v27, v25
+; LMULMAX1-RV64-NEXT:    vsrl.vi v27, v25, 2
+; LMULMAX1-RV64-NEXT:    lui a3, 3
+; LMULMAX1-RV64-NEXT:    addiw a3, a3, 819
+; LMULMAX1-RV64-NEXT:    vand.vx v27, v27, a3
+; LMULMAX1-RV64-NEXT:    vand.vx v25, v25, a3
+; LMULMAX1-RV64-NEXT:    vsll.vi v25, v25, 2
+; LMULMAX1-RV64-NEXT:    vor.vv v25, v27, v25
+; LMULMAX1-RV64-NEXT:    vsrl.vi v27, v25, 1
+; LMULMAX1-RV64-NEXT:    lui a4, 5
+; LMULMAX1-RV64-NEXT:    addiw a4, a4, 1365
+; LMULMAX1-RV64-NEXT:    vand.vx v27, v27, a4
+; LMULMAX1-RV64-NEXT:    vand.vx v25, v25, a4
+; LMULMAX1-RV64-NEXT:    vadd.vv v25, v25, v25
+; LMULMAX1-RV64-NEXT:    vor.vv v25, v27, v25
 ; LMULMAX1-RV64-NEXT:    vsrl.vi v27, v26, 8
 ; LMULMAX1-RV64-NEXT:    vsll.vi v26, v26, 8
 ; LMULMAX1-RV64-NEXT:    vor.vv v26, v26, v27
-; LMULMAX1-RV64-NEXT:    vand.vx v27, v26, a7
-; LMULMAX1-RV64-NEXT:    vsll.vi v27, v27, 4
-; LMULMAX1-RV64-NEXT:    vand.vx v26, v26, a3
-; LMULMAX1-RV64-NEXT:    vsrl.vi v26, v26, 4
-; LMULMAX1-RV64-NEXT:    vor.vv v26, v26, v27
-; LMULMAX1-RV64-NEXT:    vand.vx v27, v26, a4
-; LMULMAX1-RV64-NEXT:    vsll.vi v27, v27, 2
-; LMULMAX1-RV64-NEXT:    vand.vx v26, v26, a5
-; LMULMAX1-RV64-NEXT:    vsrl.vi v26, v26, 2
-; LMULMAX1-RV64-NEXT:    vor.vv v26, v26, v27
-; LMULMAX1-RV64-NEXT:    vand.vx v27, v26, a1
-; LMULMAX1-RV64-NEXT:    vadd.vv v27, v27, v27
+; LMULMAX1-RV64-NEXT:    vsrl.vi v27, v26, 4
+; LMULMAX1-RV64-NEXT:    vand.vx v27, v27, a2
 ; LMULMAX1-RV64-NEXT:    vand.vx v26, v26, a2
-; LMULMAX1-RV64-NEXT:    vsrl.vi v26, v26, 1
-; LMULMAX1-RV64-NEXT:    vor.vv v26, v26, v27
+; LMULMAX1-RV64-NEXT:    vsll.vi v26, v26, 4
+; LMULMAX1-RV64-NEXT:    vor.vv v26, v27, v26
+; LMULMAX1-RV64-NEXT:    vsrl.vi v27, v26, 2
+; LMULMAX1-RV64-NEXT:    vand.vx v27, v27, a3
+; LMULMAX1-RV64-NEXT:    vand.vx v26, v26, a3
+; LMULMAX1-RV64-NEXT:    vsll.vi v26, v26, 2
+; LMULMAX1-RV64-NEXT:    vor.vv v26, v27, v26
+; LMULMAX1-RV64-NEXT:    vsrl.vi v27, v26, 1
+; LMULMAX1-RV64-NEXT:    vand.vx v27, v27, a4
+; LMULMAX1-RV64-NEXT:    vand.vx v26, v26, a4
+; LMULMAX1-RV64-NEXT:    vadd.vv v26, v26, v26
+; LMULMAX1-RV64-NEXT:    vor.vv v26, v27, v26
 ; LMULMAX1-RV64-NEXT:    vse16.v v26, (a0)
-; LMULMAX1-RV64-NEXT:    vse16.v v25, (a6)
+; LMULMAX1-RV64-NEXT:    vse16.v v25, (a1)
 ; LMULMAX1-RV64-NEXT:    ret
   %a = load <16 x i16>, <16 x i16>* %x
   %b = load <16 x i16>, <16 x i16>* %y
@@ -987,33 +825,27 @@ define void @bitreverse_v8i32(<8 x i32>* %x, <8 x i32>* %y) {
 ; LMULMAX2-RV32-NEXT:    vsll.vi v26, v26, 24
 ; LMULMAX2-RV32-NEXT:    vor.vv v26, v26, v30
 ; LMULMAX2-RV32-NEXT:    vor.vv v26, v26, v28
+; LMULMAX2-RV32-NEXT:    vsrl.vi v28, v26, 4
 ; LMULMAX2-RV32-NEXT:    lui a1, 61681
 ; LMULMAX2-RV32-NEXT:    addi a1, a1, -241
-; LMULMAX2-RV32-NEXT:    vand.vx v28, v26, a1
-; LMULMAX2-RV32-NEXT:    vsll.vi v28, v28, 4
-; LMULMAX2-RV32-NEXT:    lui a1, 986895
-; LMULMAX2-RV32-NEXT:    addi a1, a1, 240
+; LMULMAX2-RV32-NEXT:    vand.vx v28, v28, a1
 ; LMULMAX2-RV32-NEXT:    vand.vx v26, v26, a1
-; LMULMAX2-RV32-NEXT:    vsrl.vi v26, v26, 4
-; LMULMAX2-RV32-NEXT:    vor.vv v26, v26, v28
+; LMULMAX2-RV32-NEXT:    vsll.vi v26, v26, 4
+; LMULMAX2-RV32-NEXT:    vor.vv v26, v28, v26
+; LMULMAX2-RV32-NEXT:    vsrl.vi v28, v26, 2
 ; LMULMAX2-RV32-NEXT:    lui a1, 209715
 ; LMULMAX2-RV32-NEXT:    addi a1, a1, 819
-; LMULMAX2-RV32-NEXT:    vand.vx v28, v26, a1
-; LMULMAX2-RV32-NEXT:    vsll.vi v28, v28, 2
-; LMULMAX2-RV32-NEXT:    lui a1, 838861
-; LMULMAX2-RV32-NEXT:    addi a1, a1, -820
+; LMULMAX2-RV32-NEXT:    vand.vx v28, v28, a1
 ; LMULMAX2-RV32-NEXT:    vand.vx v26, v26, a1
-; LMULMAX2-RV32-NEXT:    vsrl.vi v26, v26, 2
-; LMULMAX2-RV32-NEXT:    vor.vv v26, v26, v28
+; LMULMAX2-RV32-NEXT:    vsll.vi v26, v26, 2
+; LMULMAX2-RV32-NEXT:    vor.vv v26, v28, v26
+; LMULMAX2-RV32-NEXT:    vsrl.vi v28, v26, 1
 ; LMULMAX2-RV32-NEXT:    lui a1, 349525
 ; LMULMAX2-RV32-NEXT:    addi a1, a1, 1365
-; LMULMAX2-RV32-NEXT:    vand.vx v28, v26, a1
-; LMULMAX2-RV32-NEXT:    vadd.vv v28, v28, v28
-; LMULMAX2-RV32-NEXT:    lui a1, 699051
-; LMULMAX2-RV32-NEXT:    addi a1, a1, -1366
+; LMULMAX2-RV32-NEXT:    vand.vx v28, v28, a1
 ; LMULMAX2-RV32-NEXT:    vand.vx v26, v26, a1
-; LMULMAX2-RV32-NEXT:    vsrl.vi v26, v26, 1
-; LMULMAX2-RV32-NEXT:    vor.vv v26, v26, v28
+; LMULMAX2-RV32-NEXT:    vadd.vv v26, v26, v26
+; LMULMAX2-RV32-NEXT:    vor.vv v26, v28, v26
 ; LMULMAX2-RV32-NEXT:    vse32.v v26, (a0)
 ; LMULMAX2-RV32-NEXT:    ret
 ;
@@ -1033,39 +865,27 @@ define void @bitreverse_v8i32(<8 x i32>* %x, <8 x i32>* %y) {
 ; LMULMAX2-RV64-NEXT:    vsll.vi v26, v26, 24
 ; LMULMAX2-RV64-NEXT:    vor.vv v26, v26, v30
 ; LMULMAX2-RV64-NEXT:    vor.vv v26, v26, v28
+; LMULMAX2-RV64-NEXT:    vsrl.vi v28, v26, 4
 ; LMULMAX2-RV64-NEXT:    lui a1, 61681
 ; LMULMAX2-RV64-NEXT:    addiw a1, a1, -241
-; LMULMAX2-RV64-NEXT:    vand.vx v28, v26, a1
-; LMULMAX2-RV64-NEXT:    vsll.vi v28, v28, 4
-; LMULMAX2-RV64-NEXT:    lui a1, 241
-; LMULMAX2-RV64-NEXT:    addiw a1, a1, -241
-; LMULMAX2-RV64-NEXT:    slli a1, a1, 12
-; LMULMAX2-RV64-NEXT:    addi a1, a1, 240
+; LMULMAX2-RV64-NEXT:    vand.vx v28, v28, a1
 ; LMULMAX2-RV64-NEXT:    vand.vx v26, v26, a1
-; LMULMAX2-RV64-NEXT:    vsrl.vi v26, v26, 4
-; LMULMAX2-RV64-NEXT:    vor.vv v26, v26, v28
+; LMULMAX2-RV64-NEXT:    vsll.vi v26, v26, 4
+; LMULMAX2-RV64-NEXT:    vor.vv v26, v28, v26
+; LMULMAX2-RV64-NEXT:    vsrl.vi v28, v26, 2
 ; LMULMAX2-RV64-NEXT:    lui a1, 209715
 ; LMULMAX2-RV64-NEXT:    addiw a1, a1, 819
-; LMULMAX2-RV64-NEXT:    vand.vx v28, v26, a1
-; LMULMAX2-RV64-NEXT:    vsll.vi v28, v28, 2
-; LMULMAX2-RV64-NEXT:    lui a1, 205
-; LMULMAX2-RV64-NEXT:    addiw a1, a1, -819
-; LMULMAX2-RV64-NEXT:    slli a1, a1, 12
-; LMULMAX2-RV64-NEXT:    addi a1, a1, -820
+; LMULMAX2-RV64-NEXT:    vand.vx v28, v28, a1
 ; LMULMAX2-RV64-NEXT:    vand.vx v26, v26, a1
-; LMULMAX2-RV64-NEXT:    vsrl.vi v26, v26, 2
-; LMULMAX2-RV64-NEXT:    vor.vv v26, v26, v28
+; LMULMAX2-RV64-NEXT:    vsll.vi v26, v26, 2
+; LMULMAX2-RV64-NEXT:    vor.vv v26, v28, v26
+; LMULMAX2-RV64-NEXT:    vsrl.vi v28, v26, 1
 ; LMULMAX2-RV64-NEXT:    lui a1, 349525
 ; LMULMAX2-RV64-NEXT:    addiw a1, a1, 1365
-; LMULMAX2-RV64-NEXT:    vand.vx v28, v26, a1
-; LMULMAX2-RV64-NEXT:    vadd.vv v28, v28, v28
-; LMULMAX2-RV64-NEXT:    lui a1, 171
-; LMULMAX2-RV64-NEXT:    addiw a1, a1, -1365
-; LMULMAX2-RV64-NEXT:    slli a1, a1, 12
-; LMULMAX2-RV64-NEXT:    addi a1, a1, -1366
+; LMULMAX2-RV64-NEXT:    vand.vx v28, v28, a1
 ; LMULMAX2-RV64-NEXT:    vand.vx v26, v26, a1
-; LMULMAX2-RV64-NEXT:    vsrl.vi v26, v26, 1
-; LMULMAX2-RV64-NEXT:    vor.vv v26, v26, v28
+; LMULMAX2-RV64-NEXT:    vadd.vv v26, v26, v26
+; LMULMAX2-RV64-NEXT:    vor.vv v26, v28, v26
 ; LMULMAX2-RV64-NEXT:    vse32.v v26, (a0)
 ; LMULMAX2-RV64-NEXT:    ret
 ;
@@ -1077,67 +897,61 @@ define void @bitreverse_v8i32(<8 x i32>* %x, <8 x i32>* %y) {
 ; LMULMAX1-RV32-NEXT:    vle32.v v26, (a0)
 ; LMULMAX1-RV32-NEXT:    vsrl.vi v27, v25, 8
 ; LMULMAX1-RV32-NEXT:    lui a2, 16
-; LMULMAX1-RV32-NEXT:    addi a7, a2, -256
-; LMULMAX1-RV32-NEXT:    vand.vx v27, v27, a7
+; LMULMAX1-RV32-NEXT:    addi a2, a2, -256
+; LMULMAX1-RV32-NEXT:    vand.vx v27, v27, a2
 ; LMULMAX1-RV32-NEXT:    vsrl.vi v28, v25, 24
 ; LMULMAX1-RV32-NEXT:    vor.vv v27, v27, v28
 ; LMULMAX1-RV32-NEXT:    vsll.vi v28, v25, 8
-; LMULMAX1-RV32-NEXT:    lui t0, 4080
-; LMULMAX1-RV32-NEXT:    vand.vx v28, v28, t0
+; LMULMAX1-RV32-NEXT:    lui a3, 4080
+; LMULMAX1-RV32-NEXT:    vand.vx v28, v28, a3
 ; LMULMAX1-RV32-NEXT:    vsll.vi v25, v25, 24
 ; LMULMAX1-RV32-NEXT:    vor.vv v25, v25, v28
 ; LMULMAX1-RV32-NEXT:    vor.vv v25, v25, v27
+; LMULMAX1-RV32-NEXT:    vsrl.vi v27, v25, 4
 ; LMULMAX1-RV32-NEXT:    lui a4, 61681
-; LMULMAX1-RV32-NEXT:    addi t1, a4, -241
-; LMULMAX1-RV32-NEXT:    vand.vx v27, v25, t1
-; LMULMAX1-RV32-NEXT:    vsll.vi v27, v27, 4
-; LMULMAX1-RV32-NEXT:    lui a5, 986895
-; LMULMAX1-RV32-NEXT:    addi a5, a5, 240
-; LMULMAX1-RV32-NEXT:    vand.vx v25, v25, a5
-; LMULMAX1-RV32-NEXT:    vsrl.vi v25, v25, 4
-; LMULMAX1-RV32-NEXT:    vor.vv v25, v25, v27
-; LMULMAX1-RV32-NEXT:    lui a1, 209715
-; LMULMAX1-RV32-NEXT:    addi a1, a1, 819
-; LMULMAX1-RV32-NEXT:    vand.vx v27, v25, a1
-; LMULMAX1-RV32-NEXT:    vsll.vi v27, v27, 2
-; LMULMAX1-RV32-NEXT:    lui a2, 838861
-; LMULMAX1-RV32-NEXT:    addi a2, a2, -820
-; LMULMAX1-RV32-NEXT:    vand.vx v25, v25, a2
-; LMULMAX1-RV32-NEXT:    vsrl.vi v25, v25, 2
-; LMULMAX1-RV32-NEXT:    vor.vv v25, v25, v27
-; LMULMAX1-RV32-NEXT:    lui a3, 349525
-; LMULMAX1-RV32-NEXT:    addi a3, a3, 1365
-; LMULMAX1-RV32-NEXT:    vand.vx v27, v25, a3
-; LMULMAX1-RV32-NEXT:    vadd.vv v27, v27, v27
-; LMULMAX1-RV32-NEXT:    lui a4, 699051
-; LMULMAX1-RV32-NEXT:    addi a4, a4, -1366
+; LMULMAX1-RV32-NEXT:    addi a4, a4, -241
+; LMULMAX1-RV32-NEXT:    vand.vx v27, v27, a4
 ; LMULMAX1-RV32-NEXT:    vand.vx v25, v25, a4
-; LMULMAX1-RV32-NEXT:    vsrl.vi v25, v25, 1
-; LMULMAX1-RV32-NEXT:    vor.vv v25, v25, v27
+; LMULMAX1-RV32-NEXT:    vsll.vi v25, v25, 4
+; LMULMAX1-RV32-NEXT:    vor.vv v25, v27, v25
+; LMULMAX1-RV32-NEXT:    vsrl.vi v27, v25, 2
+; LMULMAX1-RV32-NEXT:    lui a5, 209715
+; LMULMAX1-RV32-NEXT:    addi a5, a5, 819
+; LMULMAX1-RV32-NEXT:    vand.vx v27, v27, a5
+; LMULMAX1-RV32-NEXT:    vand.vx v25, v25, a5
+; LMULMAX1-RV32-NEXT:    vsll.vi v25, v25, 2
+; LMULMAX1-RV32-NEXT:    vor.vv v25, v27, v25
+; LMULMAX1-RV32-NEXT:    vsrl.vi v27, v25, 1
+; LMULMAX1-RV32-NEXT:    lui a1, 349525
+; LMULMAX1-RV32-NEXT:    addi a1, a1, 1365
+; LMULMAX1-RV32-NEXT:    vand.vx v27, v27, a1
+; LMULMAX1-RV32-NEXT:    vand.vx v25, v25, a1
+; LMULMAX1-RV32-NEXT:    vadd.vv v25, v25, v25
+; LMULMAX1-RV32-NEXT:    vor.vv v25, v27, v25
 ; LMULMAX1-RV32-NEXT:    vsrl.vi v27, v26, 8
-; LMULMAX1-RV32-NEXT:    vand.vx v27, v27, a7
+; LMULMAX1-RV32-NEXT:    vand.vx v27, v27, a2
 ; LMULMAX1-RV32-NEXT:    vsrl.vi v28, v26, 24
 ; LMULMAX1-RV32-NEXT:    vor.vv v27, v27, v28
 ; LMULMAX1-RV32-NEXT:    vsll.vi v28, v26, 8
-; LMULMAX1-RV32-NEXT:    vand.vx v28, v28, t0
+; LMULMAX1-RV32-NEXT:    vand.vx v28, v28, a3
 ; LMULMAX1-RV32-NEXT:    vsll.vi v26, v26, 24
 ; LMULMAX1-RV32-NEXT:    vor.vv v26, v26, v28
 ; LMULMAX1-RV32-NEXT:    vor.vv v26, v26, v27
-; LMULMAX1-RV32-NEXT:    vand.vx v27, v26, t1
-; LMULMAX1-RV32-NEXT:    vsll.vi v27, v27, 4
-; LMULMAX1-RV32-NEXT:    vand.vx v26, v26, a5
-; LMULMAX1-RV32-NEXT:    vsrl.vi v26, v26, 4
-; LMULMAX1-RV32-NEXT:    vor.vv v26, v26, v27
-; LMULMAX1-RV32-NEXT:    vand.vx v27, v26, a1
-; LMULMAX1-RV32-NEXT:    vsll.vi v27, v27, 2
-; LMULMAX1-RV32-NEXT:    vand.vx v26, v26, a2
-; LMULMAX1-RV32-NEXT:    vsrl.vi v26, v26, 2
-; LMULMAX1-RV32-NEXT:    vor.vv v26, v26, v27
-; LMULMAX1-RV32-NEXT:    vand.vx v27, v26, a3
-; LMULMAX1-RV32-NEXT:    vadd.vv v27, v27, v27
+; LMULMAX1-RV32-NEXT:    vsrl.vi v27, v26, 4
+; LMULMAX1-RV32-NEXT:    vand.vx v27, v27, a4
 ; LMULMAX1-RV32-NEXT:    vand.vx v26, v26, a4
-; LMULMAX1-RV32-NEXT:    vsrl.vi v26, v26, 1
-; LMULMAX1-RV32-NEXT:    vor.vv v26, v26, v27
+; LMULMAX1-RV32-NEXT:    vsll.vi v26, v26, 4
+; LMULMAX1-RV32-NEXT:    vor.vv v26, v27, v26
+; LMULMAX1-RV32-NEXT:    vsrl.vi v27, v26, 2
+; LMULMAX1-RV32-NEXT:    vand.vx v27, v27, a5
+; LMULMAX1-RV32-NEXT:    vand.vx v26, v26, a5
+; LMULMAX1-RV32-NEXT:    vsll.vi v26, v26, 2
+; LMULMAX1-RV32-NEXT:    vor.vv v26, v27, v26
+; LMULMAX1-RV32-NEXT:    vsrl.vi v27, v26, 1
+; LMULMAX1-RV32-NEXT:    vand.vx v27, v27, a1
+; LMULMAX1-RV32-NEXT:    vand.vx v26, v26, a1
+; LMULMAX1-RV32-NEXT:    vadd.vv v26, v26, v26
+; LMULMAX1-RV32-NEXT:    vor.vv v26, v27, v26
 ; LMULMAX1-RV32-NEXT:    vse32.v v26, (a0)
 ; LMULMAX1-RV32-NEXT:    vse32.v v25, (a6)
 ; LMULMAX1-RV32-NEXT:    ret
@@ -1155,68 +969,56 @@ define void @bitreverse_v8i32(<8 x i32>* %x, <8 x i32>* %y) {
 ; LMULMAX1-RV64-NEXT:    vsrl.vi v28, v25, 24
 ; LMULMAX1-RV64-NEXT:    vor.vv v27, v27, v28
 ; LMULMAX1-RV64-NEXT:    vsll.vi v28, v25, 8
-; LMULMAX1-RV64-NEXT:    lui a7, 4080
-; LMULMAX1-RV64-NEXT:    vand.vx v28, v28, a7
+; LMULMAX1-RV64-NEXT:    lui a3, 4080
+; LMULMAX1-RV64-NEXT:    vand.vx v28, v28, a3
 ; LMULMAX1-RV64-NEXT:    vsll.vi v25, v25, 24
 ; LMULMAX1-RV64-NEXT:    vor.vv v25, v25, v28
 ; LMULMAX1-RV64-NEXT:    vor.vv v25, v25, v27
+; LMULMAX1-RV64-NEXT:    vsrl.vi v27, v25, 4
 ; LMULMAX1-RV64-NEXT:    lui a4, 61681
 ; LMULMAX1-RV64-NEXT:    addiw a4, a4, -241
-; LMULMAX1-RV64-NEXT:    vand.vx v27, v25, a4
-; LMULMAX1-RV64-NEXT:    vsll.vi v27, v27, 4
-; LMULMAX1-RV64-NEXT:    lui a5, 241
-; LMULMAX1-RV64-NEXT:    addiw a5, a5, -241
-; LMULMAX1-RV64-NEXT:    slli a5, a5, 12
-; LMULMAX1-RV64-NEXT:    addi t0, a5, 240
-; LMULMAX1-RV64-NEXT:    vand.vx v25, v25, t0
-; LMULMAX1-RV64-NEXT:    vsrl.vi v25, v25, 4
-; LMULMAX1-RV64-NEXT:    vor.vv v25, v25, v27
-; LMULMAX1-RV64-NEXT:    lui a1, 209715
-; LMULMAX1-RV64-NEXT:    addiw a1, a1, 819
-; LMULMAX1-RV64-NEXT:    vand.vx v27, v25, a1
-; LMULMAX1-RV64-NEXT:    vsll.vi v27, v27, 2
-; LMULMAX1-RV64-NEXT:    lui a3, 205
-; LMULMAX1-RV64-NEXT:    addiw a3, a3, -819
-; LMULMAX1-RV64-NEXT:    slli a3, a3, 12
-; LMULMAX1-RV64-NEXT:    addi t1, a3, -820
-; LMULMAX1-RV64-NEXT:    vand.vx v25, v25, t1
-; LMULMAX1-RV64-NEXT:    vsrl.vi v25, v25, 2
-; LMULMAX1-RV64-NEXT:    vor.vv v25, v25, v27
-; LMULMAX1-RV64-NEXT:    lui a5, 349525
-; LMULMAX1-RV64-NEXT:    addiw a5, a5, 1365
-; LMULMAX1-RV64-NEXT:    vand.vx v27, v25, a5
-; LMULMAX1-RV64-NEXT:    vadd.vv v27, v27, v27
-; LMULMAX1-RV64-NEXT:    lui a3, 171
-; LMULMAX1-RV64-NEXT:    addiw a3, a3, -1365
-; LMULMAX1-RV64-NEXT:    slli a3, a3, 12
-; LMULMAX1-RV64-NEXT:    addi a3, a3, -1366
-; LMULMAX1-RV64-NEXT:    vand.vx v25, v25, a3
-; LMULMAX1-RV64-NEXT:    vsrl.vi v25, v25, 1
-; LMULMAX1-RV64-NEXT:    vor.vv v25, v25, v27
+; LMULMAX1-RV64-NEXT:    vand.vx v27, v27, a4
+; LMULMAX1-RV64-NEXT:    vand.vx v25, v25, a4
+; LMULMAX1-RV64-NEXT:    vsll.vi v25, v25, 4
+; LMULMAX1-RV64-NEXT:    vor.vv v25, v27, v25
+; LMULMAX1-RV64-NEXT:    vsrl.vi v27, v25, 2
+; LMULMAX1-RV64-NEXT:    lui a5, 209715
+; LMULMAX1-RV64-NEXT:    addiw a5, a5, 819
+; LMULMAX1-RV64-NEXT:    vand.vx v27, v27, a5
+; LMULMAX1-RV64-NEXT:    vand.vx v25, v25, a5
+; LMULMAX1-RV64-NEXT:    vsll.vi v25, v25, 2
+; LMULMAX1-RV64-NEXT:    vor.vv v25, v27, v25
+; LMULMAX1-RV64-NEXT:    vsrl.vi v27, v25, 1
+; LMULMAX1-RV64-NEXT:    lui a1, 349525
+; LMULMAX1-RV64-NEXT:    addiw a1, a1, 1365
+; LMULMAX1-RV64-NEXT:    vand.vx v27, v27, a1
+; LMULMAX1-RV64-NEXT:    vand.vx v25, v25, a1
+; LMULMAX1-RV64-NEXT:    vadd.vv v25, v25, v25
+; LMULMAX1-RV64-NEXT:    vor.vv v25, v27, v25
 ; LMULMAX1-RV64-NEXT:    vsrl.vi v27, v26, 8
 ; LMULMAX1-RV64-NEXT:    vand.vx v27, v27, a2
 ; LMULMAX1-RV64-NEXT:    vsrl.vi v28, v26, 24
 ; LMULMAX1-RV64-NEXT:    vor.vv v27, v27, v28
 ; LMULMAX1-RV64-NEXT:    vsll.vi v28, v26, 8
-; LMULMAX1-RV64-NEXT:    vand.vx v28, v28, a7
+; LMULMAX1-RV64-NEXT:    vand.vx v28, v28, a3
 ; LMULMAX1-RV64-NEXT:    vsll.vi v26, v26, 24
 ; LMULMAX1-RV64-NEXT:    vor.vv v26, v26, v28
 ; LMULMAX1-RV64-NEXT:    vor.vv v26, v26, v27
-; LMULMAX1-RV64-NEXT:    vand.vx v27, v26, a4
-; LMULMAX1-RV64-NEXT:    vsll.vi v27, v27, 4
-; LMULMAX1-RV64-NEXT:    vand.vx v26, v26, t0
-; LMULMAX1-RV64-NEXT:    vsrl.vi v26, v26, 4
-; LMULMAX1-RV64-NEXT:    vor.vv v26, v26, v27
-; LMULMAX1-RV64-NEXT:    vand.vx v27, v26, a1
-; LMULMAX1-RV64-NEXT:    vsll.vi v27, v27, 2
-; LMULMAX1-RV64-NEXT:    vand.vx v26, v26, t1
-; LMULMAX1-RV64-NEXT:    vsrl.vi v26, v26, 2
-; LMULMAX1-RV64-NEXT:    vor.vv v26, v26, v27
-; LMULMAX1-RV64-NEXT:    vand.vx v27, v26, a5
-; LMULMAX1-RV64-NEXT:    vadd.vv v27, v27, v27
-; LMULMAX1-RV64-NEXT:    vand.vx v26, v26, a3
-; LMULMAX1-RV64-NEXT:    vsrl.vi v26, v26, 1
-; LMULMAX1-RV64-NEXT:    vor.vv v26, v26, v27
+; LMULMAX1-RV64-NEXT:    vsrl.vi v27, v26, 4
+; LMULMAX1-RV64-NEXT:    vand.vx v27, v27, a4
+; LMULMAX1-RV64-NEXT:    vand.vx v26, v26, a4
+; LMULMAX1-RV64-NEXT:    vsll.vi v26, v26, 4
+; LMULMAX1-RV64-NEXT:    vor.vv v26, v27, v26
+; LMULMAX1-RV64-NEXT:    vsrl.vi v27, v26, 2
+; LMULMAX1-RV64-NEXT:    vand.vx v27, v27, a5
+; LMULMAX1-RV64-NEXT:    vand.vx v26, v26, a5
+; LMULMAX1-RV64-NEXT:    vsll.vi v26, v26, 2
+; LMULMAX1-RV64-NEXT:    vor.vv v26, v27, v26
+; LMULMAX1-RV64-NEXT:    vsrl.vi v27, v26, 1
+; LMULMAX1-RV64-NEXT:    vand.vx v27, v27, a1
+; LMULMAX1-RV64-NEXT:    vand.vx v26, v26, a1
+; LMULMAX1-RV64-NEXT:    vadd.vv v26, v26, v26
+; LMULMAX1-RV64-NEXT:    vor.vv v26, v27, v26
 ; LMULMAX1-RV64-NEXT:    vse32.v v26, (a0)
 ; LMULMAX1-RV64-NEXT:    vse32.v v25, (a6)
 ; LMULMAX1-RV64-NEXT:    ret
@@ -1280,51 +1082,36 @@ define void @bitreverse_v4i64(<4 x i64>* %x, <4 x i64>* %y) {
 ; LMULMAX2-RV32-NEXT:    vor.vv v26, v26, v8
 ; LMULMAX2-RV32-NEXT:    vor.vv v26, v26, v30
 ; LMULMAX2-RV32-NEXT:    vor.vv v26, v26, v28
+; LMULMAX2-RV32-NEXT:    vsrl.vi v28, v26, 4
 ; LMULMAX2-RV32-NEXT:    lui a1, 61681
 ; LMULMAX2-RV32-NEXT:    addi a1, a1, -241
 ; LMULMAX2-RV32-NEXT:    vsetivli zero, 8, e32, m2, ta, mu
-; LMULMAX2-RV32-NEXT:    vmv.v.x v28, a1
-; LMULMAX2-RV32-NEXT:    vsetivli zero, 4, e64, m2, ta, mu
-; LMULMAX2-RV32-NEXT:    vand.vv v28, v26, v28
-; LMULMAX2-RV32-NEXT:    vsll.vi v28, v28, 4
-; LMULMAX2-RV32-NEXT:    lui a1, 986895
-; LMULMAX2-RV32-NEXT:    addi a1, a1, 240
-; LMULMAX2-RV32-NEXT:    vsetivli zero, 8, e32, m2, ta, mu
 ; LMULMAX2-RV32-NEXT:    vmv.v.x v30, a1
 ; LMULMAX2-RV32-NEXT:    vsetivli zero, 4, e64, m2, ta, mu
+; LMULMAX2-RV32-NEXT:    vand.vv v28, v28, v30
 ; LMULMAX2-RV32-NEXT:    vand.vv v26, v26, v30
-; LMULMAX2-RV32-NEXT:    vsrl.vi v26, v26, 4
-; LMULMAX2-RV32-NEXT:    vor.vv v26, v26, v28
+; LMULMAX2-RV32-NEXT:    vsll.vi v26, v26, 4
+; LMULMAX2-RV32-NEXT:    vor.vv v26, v28, v26
+; LMULMAX2-RV32-NEXT:    vsrl.vi v28, v26, 2
 ; LMULMAX2-RV32-NEXT:    lui a1, 209715
 ; LMULMAX2-RV32-NEXT:    addi a1, a1, 819
 ; LMULMAX2-RV32-NEXT:    vsetivli zero, 8, e32, m2, ta, mu
-; LMULMAX2-RV32-NEXT:    vmv.v.x v28, a1
-; LMULMAX2-RV32-NEXT:    vsetivli zero, 4, e64, m2, ta, mu
-; LMULMAX2-RV32-NEXT:    vand.vv v28, v26, v28
-; LMULMAX2-RV32-NEXT:    vsll.vi v28, v28, 2
-; LMULMAX2-RV32-NEXT:    lui a1, 838861
-; LMULMAX2-RV32-NEXT:    addi a1, a1, -820
-; LMULMAX2-RV32-NEXT:    vsetivli zero, 8, e32, m2, ta, mu
 ; LMULMAX2-RV32-NEXT:    vmv.v.x v30, a1
 ; LMULMAX2-RV32-NEXT:    vsetivli zero, 4, e64, m2, ta, mu
+; LMULMAX2-RV32-NEXT:    vand.vv v28, v28, v30
 ; LMULMAX2-RV32-NEXT:    vand.vv v26, v26, v30
-; LMULMAX2-RV32-NEXT:    vsrl.vi v26, v26, 2
-; LMULMAX2-RV32-NEXT:    vor.vv v26, v26, v28
+; LMULMAX2-RV32-NEXT:    vsll.vi v26, v26, 2
+; LMULMAX2-RV32-NEXT:    vor.vv v26, v28, v26
+; LMULMAX2-RV32-NEXT:    vsrl.vi v28, v26, 1
 ; LMULMAX2-RV32-NEXT:    lui a1, 349525
 ; LMULMAX2-RV32-NEXT:    addi a1, a1, 1365
 ; LMULMAX2-RV32-NEXT:    vsetivli zero, 8, e32, m2, ta, mu
-; LMULMAX2-RV32-NEXT:    vmv.v.x v28, a1
-; LMULMAX2-RV32-NEXT:    vsetivli zero, 4, e64, m2, ta, mu
-; LMULMAX2-RV32-NEXT:    vand.vv v28, v26, v28
-; LMULMAX2-RV32-NEXT:    vadd.vv v28, v28, v28
-; LMULMAX2-RV32-NEXT:    lui a1, 699051
-; LMULMAX2-RV32-NEXT:    addi a1, a1, -1366
-; LMULMAX2-RV32-NEXT:    vsetivli zero, 8, e32, m2, ta, mu
 ; LMULMAX2-RV32-NEXT:    vmv.v.x v30, a1
 ; LMULMAX2-RV32-NEXT:    vsetivli zero, 4, e64, m2, ta, mu
+; LMULMAX2-RV32-NEXT:    vand.vv v28, v28, v30
 ; LMULMAX2-RV32-NEXT:    vand.vv v26, v26, v30
-; LMULMAX2-RV32-NEXT:    vsrl.vi v26, v26, 1
-; LMULMAX2-RV32-NEXT:    vor.vv v26, v26, v28
+; LMULMAX2-RV32-NEXT:    vadd.vv v26, v26, v26
+; LMULMAX2-RV32-NEXT:    vor.vv v26, v28, v26
 ; LMULMAX2-RV32-NEXT:    vse64.v v26, (a0)
 ; LMULMAX2-RV32-NEXT:    ret
 ;
@@ -1363,6 +1150,7 @@ define void @bitreverse_v4i64(<4 x i64>* %x, <4 x i64>* %y) {
 ; LMULMAX2-RV64-NEXT:    vor.vv v26, v8, v26
 ; LMULMAX2-RV64-NEXT:    vor.vv v26, v26, v30
 ; LMULMAX2-RV64-NEXT:    vor.vv v26, v26, v28
+; LMULMAX2-RV64-NEXT:    vsrl.vi v28, v26, 4
 ; LMULMAX2-RV64-NEXT:    lui a1, 3855
 ; LMULMAX2-RV64-NEXT:    addiw a1, a1, 241
 ; LMULMAX2-RV64-NEXT:    slli a1, a1, 12
@@ -1371,19 +1159,11 @@ define void @bitreverse_v4i64(<4 x i64>* %x, <4 x i64>* %y) {
 ; LMULMAX2-RV64-NEXT:    addi a1, a1, 241
 ; LMULMAX2-RV64-NEXT:    slli a1, a1, 12
 ; LMULMAX2-RV64-NEXT:    addi a1, a1, -241
-; LMULMAX2-RV64-NEXT:    vand.vx v28, v26, a1
-; LMULMAX2-RV64-NEXT:    vsll.vi v28, v28, 4
-; LMULMAX2-RV64-NEXT:    lui a1, 1044721
-; LMULMAX2-RV64-NEXT:    addiw a1, a1, -241
-; LMULMAX2-RV64-NEXT:    slli a1, a1, 12
-; LMULMAX2-RV64-NEXT:    addi a1, a1, 241
-; LMULMAX2-RV64-NEXT:    slli a1, a1, 12
-; LMULMAX2-RV64-NEXT:    addi a1, a1, -241
-; LMULMAX2-RV64-NEXT:    slli a1, a1, 12
-; LMULMAX2-RV64-NEXT:    addi a1, a1, 240
+; LMULMAX2-RV64-NEXT:    vand.vx v28, v28, a1
 ; LMULMAX2-RV64-NEXT:    vand.vx v26, v26, a1
-; LMULMAX2-RV64-NEXT:    vsrl.vi v26, v26, 4
-; LMULMAX2-RV64-NEXT:    vor.vv v26, v26, v28
+; LMULMAX2-RV64-NEXT:    vsll.vi v26, v26, 4
+; LMULMAX2-RV64-NEXT:    vor.vv v26, v28, v26
+; LMULMAX2-RV64-NEXT:    vsrl.vi v28, v26, 2
 ; LMULMAX2-RV64-NEXT:    lui a1, 13107
 ; LMULMAX2-RV64-NEXT:    addiw a1, a1, 819
 ; LMULMAX2-RV64-NEXT:    slli a1, a1, 12
@@ -1392,19 +1172,11 @@ define void @bitreverse_v4i64(<4 x i64>* %x, <4 x i64>* %y) {
 ; LMULMAX2-RV64-NEXT:    addi a1, a1, 819
 ; LMULMAX2-RV64-NEXT:    slli a1, a1, 12
 ; LMULMAX2-RV64-NEXT:    addi a1, a1, 819
-; LMULMAX2-RV64-NEXT:    vand.vx v28, v26, a1
-; LMULMAX2-RV64-NEXT:    vsll.vi v28, v28, 2
-; LMULMAX2-RV64-NEXT:    lui a1, 1035469
-; LMULMAX2-RV64-NEXT:    addiw a1, a1, -819
-; LMULMAX2-RV64-NEXT:    slli a1, a1, 12
-; LMULMAX2-RV64-NEXT:    addi a1, a1, -819
-; LMULMAX2-RV64-NEXT:    slli a1, a1, 12
-; LMULMAX2-RV64-NEXT:    addi a1, a1, -819
-; LMULMAX2-RV64-NEXT:    slli a1, a1, 12
-; LMULMAX2-RV64-NEXT:    addi a1, a1, -820
+; LMULMAX2-RV64-NEXT:    vand.vx v28, v28, a1
 ; LMULMAX2-RV64-NEXT:    vand.vx v26, v26, a1
-; LMULMAX2-RV64-NEXT:    vsrl.vi v26, v26, 2
-; LMULMAX2-RV64-NEXT:    vor.vv v26, v26, v28
+; LMULMAX2-RV64-NEXT:    vsll.vi v26, v26, 2
+; LMULMAX2-RV64-NEXT:    vor.vv v26, v28, v26
+; LMULMAX2-RV64-NEXT:    vsrl.vi v28, v26, 1
 ; LMULMAX2-RV64-NEXT:    lui a1, 21845
 ; LMULMAX2-RV64-NEXT:    addiw a1, a1, 1365
 ; LMULMAX2-RV64-NEXT:    slli a1, a1, 12
@@ -1413,19 +1185,10 @@ define void @bitreverse_v4i64(<4 x i64>* %x, <4 x i64>* %y) {
 ; LMULMAX2-RV64-NEXT:    addi a1, a1, 1365
 ; LMULMAX2-RV64-NEXT:    slli a1, a1, 12
 ; LMULMAX2-RV64-NEXT:    addi a1, a1, 1365
-; LMULMAX2-RV64-NEXT:    vand.vx v28, v26, a1
-; LMULMAX2-RV64-NEXT:    vadd.vv v28, v28, v28
-; LMULMAX2-RV64-NEXT:    lui a1, 1026731
-; LMULMAX2-RV64-NEXT:    addiw a1, a1, -1365
-; LMULMAX2-RV64-NEXT:    slli a1, a1, 12
-; LMULMAX2-RV64-NEXT:    addi a1, a1, -1365
-; LMULMAX2-RV64-NEXT:    slli a1, a1, 12
-; LMULMAX2-RV64-NEXT:    addi a1, a1, -1365
-; LMULMAX2-RV64-NEXT:    slli a1, a1, 12
-; LMULMAX2-RV64-NEXT:    addi a1, a1, -1366
+; LMULMAX2-RV64-NEXT:    vand.vx v28, v28, a1
 ; LMULMAX2-RV64-NEXT:    vand.vx v26, v26, a1
-; LMULMAX2-RV64-NEXT:    vsrl.vi v26, v26, 1
-; LMULMAX2-RV64-NEXT:    vor.vv v26, v26, v28
+; LMULMAX2-RV64-NEXT:    vadd.vv v26, v26, v26
+; LMULMAX2-RV64-NEXT:    vor.vv v26, v28, v26
 ; LMULMAX2-RV64-NEXT:    vse64.v v26, (a0)
 ; LMULMAX2-RV64-NEXT:    ret
 ;
@@ -1433,17 +1196,17 @@ define void @bitreverse_v4i64(<4 x i64>* %x, <4 x i64>* %y) {
 ; LMULMAX1-RV32:       # %bb.0:
 ; LMULMAX1-RV32-NEXT:    vsetivli zero, 2, e64, m1, ta, mu
 ; LMULMAX1-RV32-NEXT:    addi a6, a0, 16
-; LMULMAX1-RV32-NEXT:    vle64.v v30, (a6)
+; LMULMAX1-RV32-NEXT:    vle64.v v29, (a6)
 ; LMULMAX1-RV32-NEXT:    vle64.v v25, (a0)
 ; LMULMAX1-RV32-NEXT:    addi a2, zero, 56
-; LMULMAX1-RV32-NEXT:    vsrl.vx v26, v30, a2
+; LMULMAX1-RV32-NEXT:    vsrl.vx v26, v29, a2
 ; LMULMAX1-RV32-NEXT:    addi a3, zero, 40
-; LMULMAX1-RV32-NEXT:    vsrl.vx v27, v30, a3
+; LMULMAX1-RV32-NEXT:    vsrl.vx v27, v29, a3
 ; LMULMAX1-RV32-NEXT:    lui a4, 16
 ; LMULMAX1-RV32-NEXT:    addi a4, a4, -256
 ; LMULMAX1-RV32-NEXT:    vand.vx v27, v27, a4
 ; LMULMAX1-RV32-NEXT:    vor.vv v27, v27, v26
-; LMULMAX1-RV32-NEXT:    vsrl.vi v26, v30, 24
+; LMULMAX1-RV32-NEXT:    vsrl.vi v26, v29, 24
 ; LMULMAX1-RV32-NEXT:    lui a5, 4080
 ; LMULMAX1-RV32-NEXT:    vand.vx v28, v26, a5
 ; LMULMAX1-RV32-NEXT:    addi a1, zero, 5
@@ -1454,125 +1217,106 @@ define void @bitreverse_v4i64(<4 x i64>* %x, <4 x i64>* %y) {
 ; LMULMAX1-RV32-NEXT:    lui a1, 1044480
 ; LMULMAX1-RV32-NEXT:    vmerge.vxm v26, v26, a1, v0
 ; LMULMAX1-RV32-NEXT:    vsetivli zero, 2, e64, m1, ta, mu
-; LMULMAX1-RV32-NEXT:    vsrl.vi v29, v30, 8
-; LMULMAX1-RV32-NEXT:    vand.vv v29, v29, v26
-; LMULMAX1-RV32-NEXT:    vor.vv v28, v29, v28
-; LMULMAX1-RV32-NEXT:    vor.vv v31, v28, v27
+; LMULMAX1-RV32-NEXT:    vsrl.vi v30, v29, 8
+; LMULMAX1-RV32-NEXT:    vand.vv v30, v30, v26
+; LMULMAX1-RV32-NEXT:    vor.vv v28, v30, v28
+; LMULMAX1-RV32-NEXT:    vor.vv v30, v28, v27
 ; LMULMAX1-RV32-NEXT:    addi a1, zero, 255
 ; LMULMAX1-RV32-NEXT:    vsetivli zero, 4, e32, m1, ta, mu
 ; LMULMAX1-RV32-NEXT:    vmv.v.x v27, a1
 ; LMULMAX1-RV32-NEXT:    vmerge.vim v27, v27, 0, v0
 ; LMULMAX1-RV32-NEXT:    vsetivli zero, 2, e64, m1, ta, mu
-; LMULMAX1-RV32-NEXT:    vsll.vi v28, v30, 8
-; LMULMAX1-RV32-NEXT:    vand.vv v29, v28, v27
+; LMULMAX1-RV32-NEXT:    vsll.vi v28, v29, 8
+; LMULMAX1-RV32-NEXT:    vand.vv v31, v28, v27
 ; LMULMAX1-RV32-NEXT:    vsetivli zero, 4, e32, m1, ta, mu
 ; LMULMAX1-RV32-NEXT:    vmv.v.x v28, a4
 ; LMULMAX1-RV32-NEXT:    vmerge.vim v28, v28, 0, v0
 ; LMULMAX1-RV32-NEXT:    vsetivli zero, 2, e64, m1, ta, mu
-; LMULMAX1-RV32-NEXT:    vsll.vi v8, v30, 24
+; LMULMAX1-RV32-NEXT:    vsll.vi v8, v29, 24
 ; LMULMAX1-RV32-NEXT:    vand.vv v8, v8, v28
-; LMULMAX1-RV32-NEXT:    vor.vv v8, v8, v29
-; LMULMAX1-RV32-NEXT:    vsll.vx v9, v30, a3
+; LMULMAX1-RV32-NEXT:    vor.vv v31, v8, v31
+; LMULMAX1-RV32-NEXT:    vsll.vx v8, v29, a3
 ; LMULMAX1-RV32-NEXT:    vsetivli zero, 4, e32, m1, ta, mu
-; LMULMAX1-RV32-NEXT:    vmv.v.x v29, a5
-; LMULMAX1-RV32-NEXT:    vmerge.vim v29, v29, 0, v0
+; LMULMAX1-RV32-NEXT:    vmv.v.x v9, a5
+; LMULMAX1-RV32-NEXT:    vmerge.vim v9, v9, 0, v0
 ; LMULMAX1-RV32-NEXT:    vsetivli zero, 2, e64, m1, ta, mu
-; LMULMAX1-RV32-NEXT:    vand.vv v9, v9, v29
-; LMULMAX1-RV32-NEXT:    vsll.vx v30, v30, a2
-; LMULMAX1-RV32-NEXT:    vor.vv v30, v30, v9
-; LMULMAX1-RV32-NEXT:    vor.vv v30, v30, v8
-; LMULMAX1-RV32-NEXT:    vor.vv v31, v30, v31
+; LMULMAX1-RV32-NEXT:    vand.vv v8, v8, v9
+; LMULMAX1-RV32-NEXT:    vsll.vx v29, v29, a2
+; LMULMAX1-RV32-NEXT:    vor.vv v29, v29, v8
+; LMULMAX1-RV32-NEXT:    vor.vv v29, v29, v31
+; LMULMAX1-RV32-NEXT:    vor.vv v29, v29, v30
+; LMULMAX1-RV32-NEXT:    vsrl.vi v30, v29, 4
 ; LMULMAX1-RV32-NEXT:    lui a1, 61681
 ; LMULMAX1-RV32-NEXT:    addi a1, a1, -241
 ; LMULMAX1-RV32-NEXT:    vsetivli zero, 4, e32, m1, ta, mu
-; LMULMAX1-RV32-NEXT:    vmv.v.x v30, a1
+; LMULMAX1-RV32-NEXT:    vmv.v.x v31, a1
 ; LMULMAX1-RV32-NEXT:    vsetivli zero, 2, e64, m1, ta, mu
-; LMULMAX1-RV32-NEXT:    vand.vv v8, v31, v30
-; LMULMAX1-RV32-NEXT:    vsll.vi v8, v8, 4
-; LMULMAX1-RV32-NEXT:    lui a1, 986895
-; LMULMAX1-RV32-NEXT:    addi a1, a1, 240
-; LMULMAX1-RV32-NEXT:    vsetivli zero, 4, e32, m1, ta, mu
-; LMULMAX1-RV32-NEXT:    vmv.v.x v9, a1
-; LMULMAX1-RV32-NEXT:    vsetivli zero, 2, e64, m1, ta, mu
-; LMULMAX1-RV32-NEXT:    vand.vv v31, v31, v9
-; LMULMAX1-RV32-NEXT:    vsrl.vi v31, v31, 4
-; LMULMAX1-RV32-NEXT:    vor.vv v31, v31, v8
+; LMULMAX1-RV32-NEXT:    vand.vv v30, v30, v31
+; LMULMAX1-RV32-NEXT:    vand.vv v29, v29, v31
+; LMULMAX1-RV32-NEXT:    vsll.vi v29, v29, 4
+; LMULMAX1-RV32-NEXT:    vor.vv v29, v30, v29
+; LMULMAX1-RV32-NEXT:    vsrl.vi v30, v29, 2
 ; LMULMAX1-RV32-NEXT:    lui a1, 209715
 ; LMULMAX1-RV32-NEXT:    addi a1, a1, 819
 ; LMULMAX1-RV32-NEXT:    vsetivli zero, 4, e32, m1, ta, mu
 ; LMULMAX1-RV32-NEXT:    vmv.v.x v8, a1
 ; LMULMAX1-RV32-NEXT:    vsetivli zero, 2, e64, m1, ta, mu
-; LMULMAX1-RV32-NEXT:    vand.vv v10, v31, v8
-; LMULMAX1-RV32-NEXT:    vsll.vi v10, v10, 2
-; LMULMAX1-RV32-NEXT:    lui a1, 838861
-; LMULMAX1-RV32-NEXT:    addi a1, a1, -820
-; LMULMAX1-RV32-NEXT:    vsetivli zero, 4, e32, m1, ta, mu
-; LMULMAX1-RV32-NEXT:    vmv.v.x v11, a1
-; LMULMAX1-RV32-NEXT:    vsetivli zero, 2, e64, m1, ta, mu
-; LMULMAX1-RV32-NEXT:    vand.vv v31, v31, v11
-; LMULMAX1-RV32-NEXT:    vsrl.vi v31, v31, 2
-; LMULMAX1-RV32-NEXT:    vor.vv v31, v31, v10
+; LMULMAX1-RV32-NEXT:    vand.vv v30, v30, v8
+; LMULMAX1-RV32-NEXT:    vand.vv v29, v29, v8
+; LMULMAX1-RV32-NEXT:    vsll.vi v29, v29, 2
+; LMULMAX1-RV32-NEXT:    vor.vv v29, v30, v29
+; LMULMAX1-RV32-NEXT:    vsrl.vi v30, v29, 1
 ; LMULMAX1-RV32-NEXT:    lui a1, 349525
 ; LMULMAX1-RV32-NEXT:    addi a1, a1, 1365
 ; LMULMAX1-RV32-NEXT:    vsetivli zero, 4, e32, m1, ta, mu
 ; LMULMAX1-RV32-NEXT:    vmv.v.x v10, a1
 ; LMULMAX1-RV32-NEXT:    vsetivli zero, 2, e64, m1, ta, mu
-; LMULMAX1-RV32-NEXT:    vand.vv v12, v31, v10
-; LMULMAX1-RV32-NEXT:    vadd.vv v12, v12, v12
-; LMULMAX1-RV32-NEXT:    lui a1, 699051
-; LMULMAX1-RV32-NEXT:    addi a1, a1, -1366
-; LMULMAX1-RV32-NEXT:    vsetivli zero, 4, e32, m1, ta, mu
-; LMULMAX1-RV32-NEXT:    vmv.v.x v13, a1
-; LMULMAX1-RV32-NEXT:    vsetivli zero, 2, e64, m1, ta, mu
-; LMULMAX1-RV32-NEXT:    vand.vv v31, v31, v13
-; LMULMAX1-RV32-NEXT:    vsrl.vi v31, v31, 1
-; LMULMAX1-RV32-NEXT:    vor.vv v31, v31, v12
-; LMULMAX1-RV32-NEXT:    vsrl.vx v12, v25, a2
-; LMULMAX1-RV32-NEXT:    vsrl.vx v14, v25, a3
-; LMULMAX1-RV32-NEXT:    vand.vx v14, v14, a4
-; LMULMAX1-RV32-NEXT:    vor.vv v12, v14, v12
-; LMULMAX1-RV32-NEXT:    vsrl.vi v14, v25, 24
-; LMULMAX1-RV32-NEXT:    vand.vx v14, v14, a5
-; LMULMAX1-RV32-NEXT:    vsrl.vi v15, v25, 8
-; LMULMAX1-RV32-NEXT:    vand.vv v26, v15, v26
-; LMULMAX1-RV32-NEXT:    vor.vv v26, v26, v14
-; LMULMAX1-RV32-NEXT:    vor.vv v26, v26, v12
-; LMULMAX1-RV32-NEXT:    vsll.vi v12, v25, 8
-; LMULMAX1-RV32-NEXT:    vand.vv v27, v12, v27
-; LMULMAX1-RV32-NEXT:    vsll.vi v12, v25, 24
-; LMULMAX1-RV32-NEXT:    vand.vv v28, v12, v28
+; LMULMAX1-RV32-NEXT:    vand.vv v30, v30, v10
+; LMULMAX1-RV32-NEXT:    vand.vv v29, v29, v10
+; LMULMAX1-RV32-NEXT:    vadd.vv v29, v29, v29
+; LMULMAX1-RV32-NEXT:    vor.vv v29, v30, v29
+; LMULMAX1-RV32-NEXT:    vsrl.vx v30, v25, a2
+; LMULMAX1-RV32-NEXT:    vsrl.vx v11, v25, a3
+; LMULMAX1-RV32-NEXT:    vand.vx v11, v11, a4
+; LMULMAX1-RV32-NEXT:    vor.vv v30, v11, v30
+; LMULMAX1-RV32-NEXT:    vsrl.vi v11, v25, 24
+; LMULMAX1-RV32-NEXT:    vand.vx v11, v11, a5
+; LMULMAX1-RV32-NEXT:    vsrl.vi v12, v25, 8
+; LMULMAX1-RV32-NEXT:    vand.vv v26, v12, v26
+; LMULMAX1-RV32-NEXT:    vor.vv v26, v26, v11
+; LMULMAX1-RV32-NEXT:    vor.vv v26, v26, v30
+; LMULMAX1-RV32-NEXT:    vsll.vi v30, v25, 8
+; LMULMAX1-RV32-NEXT:    vand.vv v27, v30, v27
+; LMULMAX1-RV32-NEXT:    vsll.vi v30, v25, 24
+; LMULMAX1-RV32-NEXT:    vand.vv v28, v30, v28
 ; LMULMAX1-RV32-NEXT:    vor.vv v27, v28, v27
 ; LMULMAX1-RV32-NEXT:    vsll.vx v28, v25, a3
-; LMULMAX1-RV32-NEXT:    vand.vv v28, v28, v29
+; LMULMAX1-RV32-NEXT:    vand.vv v28, v28, v9
 ; LMULMAX1-RV32-NEXT:    vsll.vx v25, v25, a2
 ; LMULMAX1-RV32-NEXT:    vor.vv v25, v25, v28
 ; LMULMAX1-RV32-NEXT:    vor.vv v25, v25, v27
 ; LMULMAX1-RV32-NEXT:    vor.vv v25, v25, v26
-; LMULMAX1-RV32-NEXT:    vand.vv v26, v25, v30
-; LMULMAX1-RV32-NEXT:    vsll.vi v26, v26, 4
-; LMULMAX1-RV32-NEXT:    vand.vv v25, v25, v9
-; LMULMAX1-RV32-NEXT:    vsrl.vi v25, v25, 4
-; LMULMAX1-RV32-NEXT:    vor.vv v25, v25, v26
-; LMULMAX1-RV32-NEXT:    vand.vv v26, v25, v8
-; LMULMAX1-RV32-NEXT:    vsll.vi v26, v26, 2
-; LMULMAX1-RV32-NEXT:    vand.vv v25, v25, v11
-; LMULMAX1-RV32-NEXT:    vsrl.vi v25, v25, 2
-; LMULMAX1-RV32-NEXT:    vor.vv v25, v25, v26
-; LMULMAX1-RV32-NEXT:    vand.vv v26, v25, v10
-; LMULMAX1-RV32-NEXT:    vadd.vv v26, v26, v26
-; LMULMAX1-RV32-NEXT:    vand.vv v25, v25, v13
-; LMULMAX1-RV32-NEXT:    vsrl.vi v25, v25, 1
-; LMULMAX1-RV32-NEXT:    vor.vv v25, v25, v26
+; LMULMAX1-RV32-NEXT:    vsrl.vi v26, v25, 4
+; LMULMAX1-RV32-NEXT:    vand.vv v26, v26, v31
+; LMULMAX1-RV32-NEXT:    vand.vv v25, v25, v31
+; LMULMAX1-RV32-NEXT:    vsll.vi v25, v25, 4
+; LMULMAX1-RV32-NEXT:    vor.vv v25, v26, v25
+; LMULMAX1-RV32-NEXT:    vsrl.vi v26, v25, 2
+; LMULMAX1-RV32-NEXT:    vand.vv v26, v26, v8
+; LMULMAX1-RV32-NEXT:    vand.vv v25, v25, v8
+; LMULMAX1-RV32-NEXT:    vsll.vi v25, v25, 2
+; LMULMAX1-RV32-NEXT:    vor.vv v25, v26, v25
+; LMULMAX1-RV32-NEXT:    vsrl.vi v26, v25, 1
+; LMULMAX1-RV32-NEXT:    vand.vv v26, v26, v10
+; LMULMAX1-RV32-NEXT:    vand.vv v25, v25, v10
+; LMULMAX1-RV32-NEXT:    vadd.vv v25, v25, v25
+; LMULMAX1-RV32-NEXT:    vor.vv v25, v26, v25
 ; LMULMAX1-RV32-NEXT:    vse64.v v25, (a0)
-; LMULMAX1-RV32-NEXT:    vse64.v v31, (a6)
+; LMULMAX1-RV32-NEXT:    vse64.v v29, (a6)
 ; LMULMAX1-RV32-NEXT:    ret
 ;
 ; LMULMAX1-RV64-LABEL: bitreverse_v4i64:
 ; LMULMAX1-RV64:       # %bb.0:
-; LMULMAX1-RV64-NEXT:    addi sp, sp, -16
-; LMULMAX1-RV64-NEXT:    .cfi_def_cfa_offset 16
-; LMULMAX1-RV64-NEXT:    sd s0, 8(sp) # 8-byte Folded Spill
-; LMULMAX1-RV64-NEXT:    .cfi_offset s0, -8
 ; LMULMAX1-RV64-NEXT:    vsetivli zero, 2, e64, m1, ta, mu
 ; LMULMAX1-RV64-NEXT:    addi a6, a0, 16
 ; LMULMAX1-RV64-NEXT:    vle64.v v26, (a6)
@@ -1581,33 +1325,34 @@ define void @bitreverse_v4i64(<4 x i64>* %x, <4 x i64>* %y) {
 ; LMULMAX1-RV64-NEXT:    vsrl.vx v27, v26, t0
 ; LMULMAX1-RV64-NEXT:    addi t1, zero, 40
 ; LMULMAX1-RV64-NEXT:    vsrl.vx v28, v26, t1
-; LMULMAX1-RV64-NEXT:    lui a1, 16
-; LMULMAX1-RV64-NEXT:    addiw t4, a1, -256
-; LMULMAX1-RV64-NEXT:    vand.vx v28, v28, t4
+; LMULMAX1-RV64-NEXT:    lui a4, 16
+; LMULMAX1-RV64-NEXT:    addiw t2, a4, -256
+; LMULMAX1-RV64-NEXT:    vand.vx v28, v28, t2
 ; LMULMAX1-RV64-NEXT:    vor.vv v27, v28, v27
 ; LMULMAX1-RV64-NEXT:    vsrl.vi v28, v26, 24
 ; LMULMAX1-RV64-NEXT:    lui a7, 4080
 ; LMULMAX1-RV64-NEXT:    vand.vx v28, v28, a7
 ; LMULMAX1-RV64-NEXT:    vsrl.vi v29, v26, 8
-; LMULMAX1-RV64-NEXT:    addi a3, zero, 255
-; LMULMAX1-RV64-NEXT:    slli a1, a3, 24
-; LMULMAX1-RV64-NEXT:    vand.vx v29, v29, a1
+; LMULMAX1-RV64-NEXT:    addi a1, zero, 255
+; LMULMAX1-RV64-NEXT:    slli t4, a1, 24
+; LMULMAX1-RV64-NEXT:    vand.vx v29, v29, t4
 ; LMULMAX1-RV64-NEXT:    vor.vv v28, v29, v28
 ; LMULMAX1-RV64-NEXT:    vor.vv v27, v28, v27
 ; LMULMAX1-RV64-NEXT:    vsll.vi v28, v26, 8
-; LMULMAX1-RV64-NEXT:    slli a5, a3, 32
-; LMULMAX1-RV64-NEXT:    vand.vx v28, v28, a5
+; LMULMAX1-RV64-NEXT:    slli a2, a1, 32
+; LMULMAX1-RV64-NEXT:    vand.vx v28, v28, a2
 ; LMULMAX1-RV64-NEXT:    vsll.vi v29, v26, 24
-; LMULMAX1-RV64-NEXT:    slli a2, a3, 40
-; LMULMAX1-RV64-NEXT:    vand.vx v29, v29, a2
+; LMULMAX1-RV64-NEXT:    slli a3, a1, 40
+; LMULMAX1-RV64-NEXT:    vand.vx v29, v29, a3
 ; LMULMAX1-RV64-NEXT:    vor.vv v28, v29, v28
 ; LMULMAX1-RV64-NEXT:    vsll.vx v29, v26, t0
 ; LMULMAX1-RV64-NEXT:    vsll.vx v26, v26, t1
-; LMULMAX1-RV64-NEXT:    slli a3, a3, 48
-; LMULMAX1-RV64-NEXT:    vand.vx v26, v26, a3
+; LMULMAX1-RV64-NEXT:    slli a1, a1, 48
+; LMULMAX1-RV64-NEXT:    vand.vx v26, v26, a1
 ; LMULMAX1-RV64-NEXT:    vor.vv v26, v29, v26
 ; LMULMAX1-RV64-NEXT:    vor.vv v26, v26, v28
 ; LMULMAX1-RV64-NEXT:    vor.vv v26, v26, v27
+; LMULMAX1-RV64-NEXT:    vsrl.vi v27, v26, 4
 ; LMULMAX1-RV64-NEXT:    lui a4, 3855
 ; LMULMAX1-RV64-NEXT:    addiw a4, a4, 241
 ; LMULMAX1-RV64-NEXT:    slli a4, a4, 12
@@ -1615,20 +1360,12 @@ define void @bitreverse_v4i64(<4 x i64>* %x, <4 x i64>* %y) {
 ; LMULMAX1-RV64-NEXT:    slli a4, a4, 12
 ; LMULMAX1-RV64-NEXT:    addi a4, a4, 241
 ; LMULMAX1-RV64-NEXT:    slli a4, a4, 12
-; LMULMAX1-RV64-NEXT:    addi t2, a4, -241
-; LMULMAX1-RV64-NEXT:    vand.vx v27, v26, t2
-; LMULMAX1-RV64-NEXT:    vsll.vi v27, v27, 4
-; LMULMAX1-RV64-NEXT:    lui a4, 1044721
-; LMULMAX1-RV64-NEXT:    addiw a4, a4, -241
-; LMULMAX1-RV64-NEXT:    slli a4, a4, 12
-; LMULMAX1-RV64-NEXT:    addi a4, a4, 241
-; LMULMAX1-RV64-NEXT:    slli a4, a4, 12
-; LMULMAX1-RV64-NEXT:    addi a4, a4, -241
-; LMULMAX1-RV64-NEXT:    slli a4, a4, 12
-; LMULMAX1-RV64-NEXT:    addi t3, a4, 240
+; LMULMAX1-RV64-NEXT:    addi t3, a4, -241
+; LMULMAX1-RV64-NEXT:    vand.vx v27, v27, t3
 ; LMULMAX1-RV64-NEXT:    vand.vx v26, v26, t3
-; LMULMAX1-RV64-NEXT:    vsrl.vi v26, v26, 4
-; LMULMAX1-RV64-NEXT:    vor.vv v26, v26, v27
+; LMULMAX1-RV64-NEXT:    vsll.vi v26, v26, 4
+; LMULMAX1-RV64-NEXT:    vor.vv v26, v27, v26
+; LMULMAX1-RV64-NEXT:    vsrl.vi v27, v26, 2
 ; LMULMAX1-RV64-NEXT:    lui a4, 13107
 ; LMULMAX1-RV64-NEXT:    addiw a4, a4, 819
 ; LMULMAX1-RV64-NEXT:    slli a4, a4, 12
@@ -1636,81 +1373,62 @@ define void @bitreverse_v4i64(<4 x i64>* %x, <4 x i64>* %y) {
 ; LMULMAX1-RV64-NEXT:    slli a4, a4, 12
 ; LMULMAX1-RV64-NEXT:    addi a4, a4, 819
 ; LMULMAX1-RV64-NEXT:    slli a4, a4, 12
-; LMULMAX1-RV64-NEXT:    addi t5, a4, 819
-; LMULMAX1-RV64-NEXT:    vand.vx v27, v26, t5
-; LMULMAX1-RV64-NEXT:    vsll.vi v27, v27, 2
-; LMULMAX1-RV64-NEXT:    lui a4, 1035469
-; LMULMAX1-RV64-NEXT:    addiw a4, a4, -819
-; LMULMAX1-RV64-NEXT:    slli a4, a4, 12
-; LMULMAX1-RV64-NEXT:    addi a4, a4, -819
-; LMULMAX1-RV64-NEXT:    slli a4, a4, 12
-; LMULMAX1-RV64-NEXT:    addi a4, a4, -819
-; LMULMAX1-RV64-NEXT:    slli a4, a4, 12
-; LMULMAX1-RV64-NEXT:    addi t6, a4, -820
-; LMULMAX1-RV64-NEXT:    vand.vx v26, v26, t6
-; LMULMAX1-RV64-NEXT:    vsrl.vi v26, v26, 2
-; LMULMAX1-RV64-NEXT:    vor.vv v26, v26, v27
-; LMULMAX1-RV64-NEXT:    lui a4, 21845
-; LMULMAX1-RV64-NEXT:    addiw a4, a4, 1365
-; LMULMAX1-RV64-NEXT:    slli a4, a4, 12
-; LMULMAX1-RV64-NEXT:    addi a4, a4, 1365
-; LMULMAX1-RV64-NEXT:    slli a4, a4, 12
-; LMULMAX1-RV64-NEXT:    addi a4, a4, 1365
-; LMULMAX1-RV64-NEXT:    slli a4, a4, 12
-; LMULMAX1-RV64-NEXT:    addi a4, a4, 1365
-; LMULMAX1-RV64-NEXT:    vand.vx v27, v26, a4
-; LMULMAX1-RV64-NEXT:    vadd.vv v27, v27, v27
-; LMULMAX1-RV64-NEXT:    lui s0, 1026731
-; LMULMAX1-RV64-NEXT:    addiw s0, s0, -1365
-; LMULMAX1-RV64-NEXT:    slli s0, s0, 12
-; LMULMAX1-RV64-NEXT:    addi s0, s0, -1365
-; LMULMAX1-RV64-NEXT:    slli s0, s0, 12
-; LMULMAX1-RV64-NEXT:    addi s0, s0, -1365
-; LMULMAX1-RV64-NEXT:    slli s0, s0, 12
-; LMULMAX1-RV64-NEXT:    addi s0, s0, -1366
-; LMULMAX1-RV64-NEXT:    vand.vx v26, v26, s0
-; LMULMAX1-RV64-NEXT:    vsrl.vi v26, v26, 1
-; LMULMAX1-RV64-NEXT:    vor.vv v26, v26, v27
+; LMULMAX1-RV64-NEXT:    addi a4, a4, 819
+; LMULMAX1-RV64-NEXT:    vand.vx v27, v27, a4
+; LMULMAX1-RV64-NEXT:    vand.vx v26, v26, a4
+; LMULMAX1-RV64-NEXT:    vsll.vi v26, v26, 2
+; LMULMAX1-RV64-NEXT:    vor.vv v26, v27, v26
+; LMULMAX1-RV64-NEXT:    vsrl.vi v27, v26, 1
+; LMULMAX1-RV64-NEXT:    lui a5, 21845
+; LMULMAX1-RV64-NEXT:    addiw a5, a5, 1365
+; LMULMAX1-RV64-NEXT:    slli a5, a5, 12
+; LMULMAX1-RV64-NEXT:    addi a5, a5, 1365
+; LMULMAX1-RV64-NEXT:    slli a5, a5, 12
+; LMULMAX1-RV64-NEXT:    addi a5, a5, 1365
+; LMULMAX1-RV64-NEXT:    slli a5, a5, 12
+; LMULMAX1-RV64-NEXT:    addi a5, a5, 1365
+; LMULMAX1-RV64-NEXT:    vand.vx v27, v27, a5
+; LMULMAX1-RV64-NEXT:    vand.vx v26, v26, a5
+; LMULMAX1-RV64-NEXT:    vadd.vv v26, v26, v26
+; LMULMAX1-RV64-NEXT:    vor.vv v26, v27, v26
 ; LMULMAX1-RV64-NEXT:    vsrl.vx v27, v25, t0
 ; LMULMAX1-RV64-NEXT:    vsrl.vx v28, v25, t1
-; LMULMAX1-RV64-NEXT:    vand.vx v28, v28, t4
+; LMULMAX1-RV64-NEXT:    vand.vx v28, v28, t2
 ; LMULMAX1-RV64-NEXT:    vor.vv v27, v28, v27
 ; LMULMAX1-RV64-NEXT:    vsrl.vi v28, v25, 24
 ; LMULMAX1-RV64-NEXT:    vand.vx v28, v28, a7
 ; LMULMAX1-RV64-NEXT:    vsrl.vi v29, v25, 8
-; LMULMAX1-RV64-NEXT:    vand.vx v29, v29, a1
+; LMULMAX1-RV64-NEXT:    vand.vx v29, v29, t4
 ; LMULMAX1-RV64-NEXT:    vor.vv v28, v29, v28
 ; LMULMAX1-RV64-NEXT:    vor.vv v27, v28, v27
 ; LMULMAX1-RV64-NEXT:    vsll.vi v28, v25, 8
-; LMULMAX1-RV64-NEXT:    vand.vx v28, v28, a5
+; LMULMAX1-RV64-NEXT:    vand.vx v28, v28, a2
 ; LMULMAX1-RV64-NEXT:    vsll.vi v29, v25, 24
-; LMULMAX1-RV64-NEXT:    vand.vx v29, v29, a2
+; LMULMAX1-RV64-NEXT:    vand.vx v29, v29, a3
 ; LMULMAX1-RV64-NEXT:    vor.vv v28, v29, v28
 ; LMULMAX1-RV64-NEXT:    vsll.vx v29, v25, t0
 ; LMULMAX1-RV64-NEXT:    vsll.vx v25, v25, t1
-; LMULMAX1-RV64-NEXT:    vand.vx v25, v25, a3
+; LMULMAX1-RV64-NEXT:    vand.vx v25, v25, a1
 ; LMULMAX1-RV64-NEXT:    vor.vv v25, v29, v25
 ; LMULMAX1-RV64-NEXT:    vor.vv v25, v25, v28
 ; LMULMAX1-RV64-NEXT:    vor.vv v25, v25, v27
-; LMULMAX1-RV64-NEXT:    vand.vx v27, v25, t2
-; LMULMAX1-RV64-NEXT:    vsll.vi v27, v27, 4
+; LMULMAX1-RV64-NEXT:    vsrl.vi v27, v25, 4
+; LMULMAX1-RV64-NEXT:    vand.vx v27, v27, t3
 ; LMULMAX1-RV64-NEXT:    vand.vx v25, v25, t3
-; LMULMAX1-RV64-NEXT:    vsrl.vi v25, v25, 4
-; LMULMAX1-RV64-NEXT:    vor.vv v25, v25, v27
-; LMULMAX1-RV64-NEXT:    vand.vx v27, v25, t5
-; LMULMAX1-RV64-NEXT:    vsll.vi v27, v27, 2
-; LMULMAX1-RV64-NEXT:    vand.vx v25, v25, t6
-; LMULMAX1-RV64-NEXT:    vsrl.vi v25, v25, 2
-; LMULMAX1-RV64-NEXT:    vor.vv v25, v25, v27
-; LMULMAX1-RV64-NEXT:    vand.vx v27, v25, a4
-; LMULMAX1-RV64-NEXT:    vadd.vv v27, v27, v27
-; LMULMAX1-RV64-NEXT:    vand.vx v25, v25, s0
-; LMULMAX1-RV64-NEXT:    vsrl.vi v25, v25, 1
-; LMULMAX1-RV64-NEXT:    vor.vv v25, v25, v27
+; LMULMAX1-RV64-NEXT:    vsll.vi v25, v25, 4
+; LMULMAX1-RV64-NEXT:    vor.vv v25, v27, v25
+; LMULMAX1-RV64-NEXT:    vsrl.vi v27, v25, 2
+; LMULMAX1-RV64-NEXT:    vand.vx v27, v27, a4
+; LMULMAX1-RV64-NEXT:    vand.vx v25, v25, a4
+; LMULMAX1-RV64-NEXT:    vsll.vi v25, v25, 2
+; LMULMAX1-RV64-NEXT:    vor.vv v25, v27, v25
+; LMULMAX1-RV64-NEXT:    vsrl.vi v27, v25, 1
+; LMULMAX1-RV64-NEXT:    vand.vx v27, v27, a5
+; LMULMAX1-RV64-NEXT:    vand.vx v25, v25, a5
+; LMULMAX1-RV64-NEXT:    vadd.vv v25, v25, v25
+; LMULMAX1-RV64-NEXT:    vor.vv v25, v27, v25
 ; LMULMAX1-RV64-NEXT:    vse64.v v25, (a0)
 ; LMULMAX1-RV64-NEXT:    vse64.v v26, (a6)
-; LMULMAX1-RV64-NEXT:    ld s0, 8(sp) # 8-byte Folded Reload
-; LMULMAX1-RV64-NEXT:    addi sp, sp, 16
 ; LMULMAX1-RV64-NEXT:    ret
   %a = load <4 x i64>, <4 x i64>* %x
   %b = load <4 x i64>, <4 x i64>* %y
