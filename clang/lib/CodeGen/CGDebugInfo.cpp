@@ -3951,10 +3951,13 @@ void CGDebugInfo::emitFunctionStart(GlobalDecl GD, SourceLocation Loc,
   unsigned ScopeLine = getLineNumber(ScopeLoc);
   llvm::DISubroutineType *DIFnType = getOrCreateFunctionType(D, FnType, Unit);
   llvm::DISubprogram *Decl = nullptr;
-  if (D)
+  llvm::DINodeArray Annotations = nullptr;
+  if (D) {
     Decl = isa<ObjCMethodDecl>(D)
                ? getObjCMethodDeclaration(D, DIFnType, LineNo, Flags, SPFlags)
                : getFunctionDeclaration(D);
+    Annotations = CollectBTFTagAnnotations(D);
+  }
 
   // FIXME: The function declaration we're constructing here is mostly reusing
   // declarations from CXXMethodDecl and not constructing new ones for arbitrary
@@ -3963,7 +3966,8 @@ void CGDebugInfo::emitFunctionStart(GlobalDecl GD, SourceLocation Loc,
   // are emitted as CU level entities by the backend.
   llvm::DISubprogram *SP = DBuilder.createFunction(
       FDContext, Name, LinkageName, Unit, LineNo, DIFnType, ScopeLine,
-      FlagsForDef, SPFlagsForDef, TParamsArray.get(), Decl);
+      FlagsForDef, SPFlagsForDef, TParamsArray.get(), Decl, nullptr,
+      Annotations);
   Fn->setSubprogram(SP);
   // We might get here with a VarDecl in the case we're generating
   // code for the initialization of globals. Do not record these decls
@@ -4022,10 +4026,11 @@ void CGDebugInfo::EmitFunctionDecl(GlobalDecl GD, SourceLocation Loc,
   if (CGM.getLangOpts().Optimize)
     SPFlags |= llvm::DISubprogram::SPFlagOptimized;
 
+  llvm::DINodeArray Annotations = CollectBTFTagAnnotations(D);
   llvm::DISubprogram *SP = DBuilder.createFunction(
       FDContext, Name, LinkageName, Unit, LineNo,
       getOrCreateFunctionType(D, FnType, Unit), ScopeLine, Flags, SPFlags,
-      TParamsArray.get(), getFunctionDeclaration(D));
+      TParamsArray.get(), getFunctionDeclaration(D), nullptr, Annotations);
 
   if (IsDeclForCallSite)
     Fn->setSubprogram(SP);
