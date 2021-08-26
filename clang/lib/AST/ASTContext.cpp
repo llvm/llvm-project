@@ -9653,11 +9653,19 @@ static QualType mergeEnumWithInteger(ASTContext &Context, const EnumType *ET,
 QualType ASTContext::mergeTypes(QualType LHS, QualType RHS,
                                 bool OfBlockPointer,
                                 bool Unqualified, bool BlockReturnType) {
+  // For C++ we will not reach this code with reference types (see below),
+  // for OpenMP variant call overloading we might.
+  //
   // C++ [expr]: If an expression initially has the type "reference to T", the
   // type is adjusted to "T" prior to any further analysis, the expression
   // designates the object or function denoted by the reference, and the
   // expression is an lvalue unless the reference is an rvalue reference and
   // the expression is a function call (possibly inside parentheses).
+  if (LangOpts.OpenMP && LHS->getAs<ReferenceType>() &&
+      RHS->getAs<ReferenceType>() && LHS->getTypeClass() == RHS->getTypeClass())
+    return mergeTypes(LHS->getAs<ReferenceType>()->getPointeeType(),
+                      RHS->getAs<ReferenceType>()->getPointeeType(),
+                      OfBlockPointer, Unqualified, BlockReturnType);
   if (LHS->getAs<ReferenceType>() || RHS->getAs<ReferenceType>())
     return {};
 
