@@ -1370,12 +1370,12 @@ void X86AsmPrinter::emitAsanMemaccessPartial(Module &M, unsigned Reg,
       STI);
   OutStreamer->emitInstruction(MCInstBuilder(X86::SHR64ri)
                                    .addReg(X86::R8)
-                                   .addReg(X86::NoRegister)
+                                   .addReg(X86::R8)
                                    .addImm(MappingScale),
                                STI);
   if (OrShadowOffset) {
     OutStreamer->emitInstruction(MCInstBuilder(X86::OR64ri32)
-                                     .addReg(X86::NoRegister)
+                                     .addReg(X86::R8)
                                      .addReg(X86::R8)
                                      .addImm(ShadowBase),
                                  STI);
