@@ -42,6 +42,7 @@ unittest("SupportTests") {
     "FileUtilitiesTest.cpp",
     "FormatVariadicTest.cpp",
     "GlobPatternTest.cpp",
+    "HashBuilderTest.cpp",
     "Host.cpp",
     "IndexedAccessorTest.cpp",
     "InstructionCostTest.cpp",
