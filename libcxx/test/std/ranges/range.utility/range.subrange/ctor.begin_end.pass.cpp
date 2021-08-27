@@ -14,7 +14,7 @@
 
 #include <ranges>
 
-#include "../subrange_test_types.h"
+#include "types.h"
 #include <cassert>
 #include "test_macros.h"
 #include "test_iterators.h"
