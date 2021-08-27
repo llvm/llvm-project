@@ -9951,13 +9951,17 @@ INTERCEPTOR(int, getentropy, void *buf, SIZE_T buflen) {
 
 #if SANITIZER_INTERCEPT_QSORT_R
 typedef int (*qsort_r_compar_f)(const void *, const void *, void *);
-static THREADLOCAL qsort_r_compar_f qsort_r_compar;
-static THREADLOCAL SIZE_T qsort_r_size;
+struct qsort_r_compar_params {
+  SIZE_T size;
+  qsort_r_compar_f compar;
+  void *arg;
+};
 static int wrapped_qsort_r_compar(const void *a, const void *b, void *arg) {
+  qsort_r_compar_params *params = (qsort_r_compar_params *)arg;
   COMMON_INTERCEPTOR_UNPOISON_PARAM(3);
-  COMMON_INTERCEPTOR_INITIALIZE_RANGE(a, qsort_r_size);
-  COMMON_INTERCEPTOR_INITIALIZE_RANGE(b, qsort_r_size);
-  return qsort_r_compar(a, b, arg);
+  COMMON_INTERCEPTOR_INITIALIZE_RANGE(a, params->size);
+  COMMON_INTERCEPTOR_INITIALIZE_RANGE(b, params->size);
+  return params->compar(a, b, params->arg);
 }
 
 INTERCEPTOR(void, qsort_r, void *base, SIZE_T nmemb, SIZE_T size,
@@ -9973,26 +9977,8 @@ INTERCEPTOR(void, qsort_r, void *base, SIZE_T nmemb, SIZE_T size,
       compar(p, q, arg);
     }
   }
-  qsort_r_compar_f old_compar = qsort_r_compar;
-  SIZE_T old_size = qsort_r_size;
-  // Handle qsort_r() implementations that recurse using an
-  // interposable function call:
-  bool already_wrapped = compar == wrapped_qsort_r_compar;
-  if (already_wrapped) {
-    // This case should only happen if the qsort() implementation calls itself
-    // using a preemptible function call (e.g. the FreeBSD libc version).
-    // Check that the size and comparator arguments are as expected.
-    CHECK_NE(compar, qsort_r_compar);
-    CHECK_EQ(qsort_r_size, size);
-  } else {
-    qsort_r_compar = compar;
-    qsort_r_size = size;
-  }
-  REAL(qsort_r)(base, nmemb, size, wrapped_qsort_r_compar, arg);
-  if (!already_wrapped) {
-    qsort_r_compar = old_compar;
-    qsort_r_size = old_size;
-  }
+  qsort_r_compar_params params = {size, compar, arg};
+  REAL(qsort_r)(base, nmemb, size, wrapped_qsort_r_compar, &params);
   COMMON_INTERCEPTOR_WRITE_RANGE(ctx, base, nmemb * size);
 }
 #  define INIT_QSORT_R COMMON_INTERCEPT_FUNCTION(qsort_r)
@@ -10000,7 +9986,15 @@ INTERCEPTOR(void, qsort_r, void *base, SIZE_T nmemb, SIZE_T size,
 #  define INIT_QSORT_R
 #endif
 
-#if SANITIZER_INTERCEPT_QSORT
+#if SANITIZER_INTERCEPT_QSORT && SANITIZER_INTERCEPT_QSORT_R
+INTERCEPTOR(void, qsort, void *base, SIZE_T nmemb, SIZE_T size,
+            qsort_r_compar_f compar) {
+  void *ctx;
+  COMMON_INTERCEPTOR_ENTER(ctx, qsort, base, nmemb, size, compar);
+  WRAP(qsort_r)(base, nmemb, size, compar, nullptr);
+}
+#  define INIT_QSORT COMMON_INTERCEPT_FUNCTION(qsort)
+#elif SANITIZER_INTERCEPT_QSORT && !SANITIZER_INTERCEPT_QSORT_R
 // Glibc qsort uses a temporary buffer allocated either on stack or on heap.
 // Poisoned memory from there may get copied into the comparator arguments,
 // where it needs to be dealt with. But even that is not enough - the results of
@@ -10057,29 +10051,30 @@ INTERCEPTOR(void, qsort, void *base, SIZE_T nmemb, SIZE_T size,
   }
   COMMON_INTERCEPTOR_WRITE_RANGE(ctx, base, nmemb * size);
 }
-#define INIT_QSORT COMMON_INTERCEPT_FUNCTION(qsort)
+#  define INIT_QSORT COMMON_INTERCEPT_FUNCTION(qsort)
 #else
-#define INIT_QSORT
+#  define INIT_QSORT
 #endif
 
 #if SANITIZER_INTERCEPT_BSEARCH
 typedef int (*bsearch_compar_f)(const void *, const void *);
-static THREADLOCAL bsearch_compar_f bsearch_compar;
-static int wrapped_bsearch_compar(const void *a, const void *b) {
+struct bsearch_compar_params {
+  const void *key;
+  bsearch_compar_f compar;
+};
+
+static int wrapped_bsearch_compar(const void *key, const void *b) {
+  const bsearch_compar_params *params = (const bsearch_compar_params *)key;
   COMMON_INTERCEPTOR_UNPOISON_PARAM(2);
-  return bsearch_compar(a, b);
+  return params->compar(params->key, b);
 }
 
 INTERCEPTOR(void *, bsearch, const void *key, const void *base, SIZE_T nmemb,
             SIZE_T size, bsearch_compar_f compar) {
   void *ctx;
   COMMON_INTERCEPTOR_ENTER(ctx, bsearch, key, base, nmemb, size, compar);
-  // Unlike qsort, don't expect recursive implementation of bsearch.
-  CHECK_NE(compar, wrapped_bsearch_compar);
-  Swap(bsearch_compar, compar);
-  void *r = REAL(bsearch)(key, base, nmemb, size, wrapped_bsearch_compar);
-  bsearch_compar = compar;
-  return r;
+  bsearch_compar_params params = {key, compar};
+  return REAL(bsearch)(&params, base, nmemb, size, wrapped_bsearch_compar);
 }
 #  define INIT_BSEARCH COMMON_INTERCEPT_FUNCTION(bsearch)
 #else
