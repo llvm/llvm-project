@@ -3258,13 +3258,16 @@ bool llvm::FoldBranchToCommonDest(BranchInst *BI, DomTreeUpdater *DTU,
     SawVectorOp |= isVectorOp(I);
 
     // Account for the cost of duplicating this instruction into each
-    // predecessor.
-    NumBonusInsts += PredCount;
+    // predecessor. Ignore free instructions.
+    if (!TTI ||
+        TTI->getUserCost(&I, CostKind) != TargetTransformInfo::TCC_Free) {
+      NumBonusInsts += PredCount;
 
-    // Early exits once we reach the limit.
-    if (NumBonusInsts >
-        BonusInstThreshold * BranchFoldToCommonDestVectorMultiplier)
-      return false;
+      // Early exits once we reach the limit.
+      if (NumBonusInsts >
+          BonusInstThreshold * BranchFoldToCommonDestVectorMultiplier)
+        return false;
+    }
 
     auto IsBCSSAUse = [BB, &I](Use &U) {
       auto *UI = cast<Instruction>(U.getUser());
