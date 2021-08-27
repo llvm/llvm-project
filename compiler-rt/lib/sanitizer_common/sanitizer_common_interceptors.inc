@@ -1334,7 +1334,7 @@ static void unpoison_tm(void *ctx, __sanitizer_tm *tm) {
     // Can not use COMMON_INTERCEPTOR_WRITE_RANGE here, because tm->tm_zone
     // can point to shared memory and tsan would report a data race.
     COMMON_INTERCEPTOR_INITIALIZE_RANGE(tm->tm_zone,
-                                        REAL(strlen(tm->tm_zone)) + 1);
+                                        internal_strlen(tm->tm_zone) + 1);
   }
 #endif
 }
@@ -4219,7 +4219,7 @@ INTERCEPTOR(char **, backtrace_symbols, void **buffer, int size) {
   if (res && size) {
     COMMON_INTERCEPTOR_WRITE_RANGE(ctx, res, size * sizeof(*res));
     for (int i = 0; i < size; ++i)
-      COMMON_INTERCEPTOR_WRITE_RANGE(ctx, res[i], REAL(strlen(res[i])) + 1);
+      COMMON_INTERCEPTOR_WRITE_RANGE(ctx, res[i], internal_strlen(res[i])) + 1);
   }
   return res;
 }
@@ -7058,7 +7058,7 @@ INTERCEPTOR(wchar_t *, wcsdup, wchar_t *s) {
 #if SANITIZER_INTERCEPT_STRXFRM
 static SIZE_T RealStrLen(const char *str) { return internal_strlen(str); }
 
-static SIZE_T RealStrLen(const wchar_t *str) { return REAL(wcslen)(str); }
+static SIZE_T RealStrLen(const wchar_t *str) { return internal_wcslen(str); }
 
 #define STRXFRM_INTERCEPTOR_IMPL(strxfrm, dest, src, len, ...)             \
   {                                                                        \
