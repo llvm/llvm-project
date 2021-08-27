@@ -587,8 +587,7 @@ MODULENAME?=$(DYLIB_NAME)
 PARSE_AS_LIBRARY = -parse-as-library
 endif
 
-VPATHSOURCES=$(patsubst %,$(VPATH)/%,$(SWIFT_SOURCES))
-VPATHDYLIBSOURCES=$(patsubst %,$(VPATH)/%,$(DYLIB_SWIFT_SOURCES))
+VPATHSOURCES=$(patsubst %,$(VPATH)/%,$(SWIFT_SOURCES)) $(patsubst %,$(VPATH)/%,$(DYLIB_SWIFT_SOURCES))
 
 %.o: %.swift $(SWIFT_BRIDGING_PCH) $(SWIFT_OBJC_HEADER)
 	@echo "### Compiling" $<
@@ -602,8 +601,8 @@ VPATHDYLIBSOURCES=$(patsubst %,$(VPATH)/%,$(DYLIB_SWIFT_SOURCES))
 ifeq "$(OS)" "Darwin"
 $(EXE): $(MODULENAME).swiftmodule $(OBJECTS)
 	@echo "### Linking" $(EXE)
-	$(SWIFTC) $(LD_EXTRAS) \
-	  $(patsubst $<,-Xlinker -add_ast_path -Xlinker $(BUILDDIR)/$<,$^) \
+	$(SWIFTC) $(LD_EXTRAS) $(OBJECTS) \
+	  -Xlinker -add_ast_path -Xlinker $(MODULENAME).swiftmodule \
 	  $(patsubst -g,,$(SWIFTFLAGS)) -o "$(EXE)"
 ifneq "$(CODESIGN)" ""
 	$(CODESIGN) -s - "$(EXE)"
@@ -625,8 +624,9 @@ endif
 $(MODULENAME).swiftmodule: $(OBJECTS) $(DYLIB_OBJECTS)
 	@echo "### Merging swift modules for $(MODULENAME)"
 	$(SWIFT_FE) $(SWIFT_FEFLAGS) $(SWIFT_HFLAGS) -merge-modules \
-	  -emit-module $(patsubst %.swift,%.partial.swiftmodule,$(SWIFT_SOURCES) $(DYLIB_SWIFT_SOURCES)) \
+	  -emit-module \
 	  -emit-module-interface-path $(BUILDDIR)/$(MODULENAME).swiftinterface \
+	  $(patsubst %.swift,%.partial.swiftmodule,$(SWIFT_SOURCES) $(DYLIB_SWIFT_SOURCES)) \
 	  -disable-diagnostic-passes -disable-sil-perf-optzns \
 	  -module-name $(MODULENAME) \
 	  -o $(BUILDDIR)/$@
@@ -642,7 +642,7 @@ endif
 ifneq "$(SWIFT_OBJC_HEADER)" ""
 $(SWIFT_OBJC_HEADER): $(SWIFT_SOURCES) $(DYLIB_SWIFT_SOURCES)
 	@echo "### Building Obj-C header"
-	$(SWIFT_FE) -typecheck $(VPATHSOURCES) $(VPATHDYLIBSOURCES) \
+	$(SWIFT_FE) -typecheck $(VPATHSOURCES) \
 	  $(SWIFT_FEFLAGS) $(SWIFT_HFLAGS) -module-name $(MODULENAME) \
 	  -emit-objc-header-path $(SWIFT_OBJC_HEADER)
 endif
@@ -693,21 +693,23 @@ ifeq "$(USESWIFTDRIVER)" "1"
 ifeq "$(OS)" "Darwin"
 DYLIB_SWIFT_FLAGS=  \
 	 -Xlinker -dylib \
-	 -Xlinker -add_ast_path -Xlinker $(DYLIB_NAME).swiftmodule \
 	 -Xlinker -install_name -Xlinker @executable_path/$(shell basename $@) \
 	 $(LD_EXTRAS)
+ifeq "$(DYLIB_HIDE_SWIFTMODULE)" ""
+DYLIB_SWIFT_FLAGS+= -Xlinker -add_ast_path -Xlinker $(DYLIB_NAME).swiftmodule
+endif
 else
 DYLIB_SWIFT_FLAGS=$(LD_EXTRAS)
 endif
-$(DYLIB_FILENAME) : $(DYLIB_OBJECTS)
+$(DYLIB_FILENAME) : $(DYLIB_OBJECTS) $(MODULE_INTERFACE)
 	@echo "### Linking dynamic library $(DYLIB_NAME)"
-ifneq "$(EXCLUDE_WRAPPED_SWIFTMODULE)" ""
+ifneq "$(DYLIB_HIDE_SWIFTMODULE)" ""
 	$(SWIFTC) $(patsubst -g,,$(SWIFTFLAGS)) \
             -emit-library $(DYLIB_SWIFT_FLAGS) -o $@ \
-            $(patsubst %.swiftmodule.o,,$^)
+            $(patsubst %.swiftmodule.o,,$(DYLIB_OBJECTS))
 else
 	$(SWIFTC) $(patsubst -g,,$(SWIFTFLAGS)) \
-            -emit-library $(DYLIB_SWIFT_FLAGS) -o $@ $^
+            -emit-library $(DYLIB_SWIFT_FLAGS) -o $@ $(DYLIB_OBJECTS)
 endif
 ifneq "$(CODESIGN)" ""
 	$(CODESIGN) -s - "$(DYLIB_FILENAME)"

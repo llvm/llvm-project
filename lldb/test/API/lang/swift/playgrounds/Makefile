@@ -4,6 +4,7 @@ SWIFT_SOURCES = PlaygroundStub.swift
 # The deployment target we set is pre-ABI stability. The Swift driver will not
 # point the RPATH at the system library. Do it manually.
 LD_EXTRAS := -Xlinker -rpath -Xlinker /usr/lib/swift
+LD_EXTRAS += -L. -lPlaygroundsRuntime
 
 PlaygroundStub: libPlaygroundsRuntime.dylib
 
