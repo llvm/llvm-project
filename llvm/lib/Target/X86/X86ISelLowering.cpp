@@ -5032,12 +5032,13 @@ X86TargetLowering::createFastISel(FunctionLoweringInfo &funcInfo,
 //                           Other Lowering Hooks
 //===----------------------------------------------------------------------===//
 
-static bool MayFoldLoad(SDValue Op) {
-  return Op.hasOneUse() && ISD::isNormalLoad(Op.getNode());
+static bool MayFoldLoad(SDValue Op, bool AssumeSingleUse = false) {
+  return (AssumeSingleUse || Op.hasOneUse()) && ISD::isNormalLoad(Op.getNode());
 }
 
-static bool MayFoldLoadIntoBroadcastFromMem(SDValue Op, MVT EltVT) {
-  if (!MayFoldLoad(Op))
+static bool MayFoldLoadIntoBroadcastFromMem(SDValue Op, MVT EltVT,
+                                            bool AssumeSingleUse = false) {
+  if (!MayFoldLoad(Op, AssumeSingleUse))
     return false;
 
   // We can not replace a wide volatile load with a broadcast-from-memory,
@@ -8981,6 +8982,11 @@ static SDValue EltsFromConsecutiveLoads(EVT VT, ArrayRef<SDValue> Elts,
             while (Broadcast.getValueSizeInBits() < VT.getSizeInBits())
               Broadcast = concatSubVectors(Broadcast, Broadcast, DAG, DL);
           } else {
+            if (!Subtarget.hasAVX2() &&
+                !MayFoldLoadIntoBroadcastFromMem(
+                    RepeatLoad, RepeatVT.getScalarType().getSimpleVT(),
+                    /*AssumeSingleUse=*/true))
+              return SDValue();
             Broadcast =
                 DAG.getNode(X86ISD::VBROADCAST, DL, BroadcastVT, RepeatLoad);
           }
