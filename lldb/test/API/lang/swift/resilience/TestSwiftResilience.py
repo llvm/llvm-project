@@ -28,6 +28,10 @@ class TestSwiftResilience(TestBase):
 
     @skipUnlessDarwin
     @swiftTest
+    # Because we rename the .swiftmodule files after building the
+    # N_AST symbol table entry is out of sync, whereas dsymutil
+    # captures the right one before the rename.
+    @skipIf(debug_info=no_match(["dsym"]))
     def test_cross_module_extension_a_a(self):
         """Test that LLDB can debug across resilient boundaries"""
         self.build()
@@ -35,6 +39,7 @@ class TestSwiftResilience(TestBase):
 
     @skipUnlessDarwin
     @swiftTest
+    @skipIf(debug_info=no_match(["dsym"]))
     def test_cross_module_extension_a_b(self):
         """Test that LLDB can debug across resilient boundaries"""
         self.build()
@@ -42,6 +47,7 @@ class TestSwiftResilience(TestBase):
 
     @skipUnlessDarwin
     @swiftTest
+    @skipIf(debug_info=no_match(["dsym"]))
     def test_cross_module_extension_b_a(self):
         """Test that LLDB can debug across resilient boundaries"""
         self.build()
@@ -49,6 +55,7 @@ class TestSwiftResilience(TestBase):
 
     @skipUnlessDarwin
     @swiftTest
+    @skipIf(debug_info=no_match(["dsym"]))
     def test_cross_module_extension_b_b(self):
         """Test that LLDB can debug across resilient boundaries"""
         self.build()
@@ -66,7 +73,7 @@ class TestSwiftResilience(TestBase):
         execute_command("ln -sf " + self.getBuildArtifact("libmod." + exe_flavor + ".dylib.dSYM") + " " + self.getBuildArtifact("libmod.dylib.dSYM"))
         execute_command("ln -sf " + self.getBuildArtifact("mod." + exe_flavor + ".o") + " " + self.getBuildArtifact("mod.o"))
 
-        execute_command("ln -sf " + self.getBuildArtifact("mod." + exe_flavor + ".swiftmodule") + " " + self.getBuildArtifact("mod.swiftmodule"))
+        execute_command("ln -sf " + self.getBuildArtifact("mod." + exe_flavor + ".swiftinterface") + " " + self.getBuildArtifact("mod.swiftinterface"))
 
     def cleanupSymlinks(self):
         execute_command(
