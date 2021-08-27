@@ -227,7 +227,7 @@ TEST(LlvmLibcStrToULTest, DecodeInOtherBases) {
             } else {
               errno = 0;
               ASSERT_EQ(__llvm_libc::strtoul(small_string, nullptr, base),
-                        first_digit);
+                        static_cast<unsigned long int>(first_digit));
               ASSERT_EQ(errno, 0);
             }
           } else {
