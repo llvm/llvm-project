@@ -18,5 +18,9 @@
 #include <ctime>
 #include <type_traits>
 
+#ifndef TIME_UTC
+#error TIME_UTC not defined
+#endif
+
 std::timespec tmspec = {};
 static_assert(std::is_same<decltype(std::timespec_get(&tmspec, 0)), int>::value, "");
