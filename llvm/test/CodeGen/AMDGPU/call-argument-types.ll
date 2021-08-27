@@ -144,7 +144,7 @@ define amdgpu_kernel void @test_call_external_void_func_i8_imm(i32) #0 {
 ; GCN-DAG: s_mov_b32 s32, 0
 
 ; GCN-NOT: s_waitcnt
-; GCN-NEXT: s_swappc_b64 s[30:31], s{{\[}}[[PC_LO]]:[[PC_HI]]{{\]}}
+; GCN: s_swappc_b64 s[30:31], s{{\[}}[[PC_LO]]:[[PC_HI]]{{\]}}
 ; GCN-NEXT: s_endpgm
 define amdgpu_kernel void @test_call_external_void_func_i8_signext(i32) #0 {
   %var = load volatile i8, i8 addrspace(1)* undef
@@ -162,7 +162,7 @@ define amdgpu_kernel void @test_call_external_void_func_i8_signext(i32) #0 {
 ; GCN-DAG: s_mov_b32 s32, 0
 
 ; GCN-NOT: s_waitcnt
-; GCN-NEXT: s_swappc_b64 s[30:31], s{{\[}}[[PC_LO]]:[[PC_HI]]{{\]}}
+; GCN: s_swappc_b64 s[30:31], s{{\[}}[[PC_LO]]:[[PC_HI]]{{\]}}
 ; GCN-NEXT: s_endpgm
 define amdgpu_kernel void @test_call_external_void_func_i8_zeroext(i32) #0 {
   %var = load volatile i8, i8 addrspace(1)* undef
@@ -191,7 +191,7 @@ define amdgpu_kernel void @test_call_external_void_func_i16_imm() #0 {
 ; GCN-DAG: s_mov_b32 s32, 0
 
 ; GCN-NOT: s_waitcnt
-; GCN-NEXT: s_swappc_b64 s[30:31], s{{\[}}[[PC_LO]]:[[PC_HI]]{{\]}}
+; GCN: s_swappc_b64 s[30:31], s{{\[}}[[PC_LO]]:[[PC_HI]]{{\]}}
 ; GCN-NEXT: s_endpgm
 define amdgpu_kernel void @test_call_external_void_func_i16_signext(i32) #0 {
   %var = load volatile i16, i16 addrspace(1)* undef
@@ -208,7 +208,7 @@ define amdgpu_kernel void @test_call_external_void_func_i16_signext(i32) #0 {
 ; GCN-DAG: s_mov_b32 s32, 0
 
 ; GCN-NOT: s_waitcnt
-; GCN-NEXT: s_swappc_b64 s[30:31], s{{\[}}[[PC_LO]]:[[PC_HI]]{{\]}}
+; GCN: s_swappc_b64 s[30:31], s{{\[}}[[PC_LO]]:[[PC_HI]]{{\]}}
 ; GCN-NEXT: s_endpgm
 define amdgpu_kernel void @test_call_external_void_func_i16_zeroext(i32) #0 {
   %var = load volatile i16, i16 addrspace(1)* undef
