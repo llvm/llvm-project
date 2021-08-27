@@ -13,12 +13,12 @@ mulxq %rax, %rax, %rcx
 
 # CHECK:      Iterations:        2
 # CHECK-NEXT: Instructions:      2
-# CHECK-NEXT: Total Cycles:      11
+# CHECK-NEXT: Total Cycles:      10
 # CHECK-NEXT: Total uOps:        4
 
 # CHECK:      Dispatch Width:    6
-# CHECK-NEXT: uOps Per Cycle:    0.36
-# CHECK-NEXT: IPC:               0.18
+# CHECK-NEXT: uOps Per Cycle:    0.40
+# CHECK-NEXT: IPC:               0.20
 # CHECK-NEXT: Block RThroughput: 1.0
 
 # CHECK:      Instruction Info:
@@ -66,11 +66,10 @@ mulxq %rax, %rax, %rcx
 # CHECK-NEXT:  -      -      -      -     1.00    -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     mulxl	%eax, %eax, %ecx
 
 # CHECK:      Timeline view:
-# CHECK-NEXT:                     0
 # CHECK-NEXT: Index     0123456789
 
-# CHECK:      [0,0]     DeeeeER   .   mulxl	%eax, %eax, %ecx
-# CHECK-NEXT: [1,0]     D====eeeeER   mulxl	%eax, %eax, %ecx
+# CHECK:      [0,0]     DeeeeER  .   mulxl	%eax, %eax, %ecx
+# CHECK-NEXT: [1,0]     D===eeeeER   mulxl	%eax, %eax, %ecx
 
 # CHECK:      Average Wait times (based on the timeline view):
 # CHECK-NEXT: [0]: Executions
@@ -79,18 +78,18 @@ mulxq %rax, %rax, %rcx
 # CHECK-NEXT: [3]: Average time elapsed from WB until retire stage
 
 # CHECK:            [0]    [1]    [2]    [3]
-# CHECK-NEXT: 0.     2     3.0    0.5    0.0       mulxl	%eax, %eax, %ecx
+# CHECK-NEXT: 0.     2     2.5    0.5    0.0       mulxl	%eax, %eax, %ecx
 
 # CHECK:      [1] Code Region
 
 # CHECK:      Iterations:        2
 # CHECK-NEXT: Instructions:      2
-# CHECK-NEXT: Total Cycles:      11
+# CHECK-NEXT: Total Cycles:      10
 # CHECK-NEXT: Total uOps:        4
 
 # CHECK:      Dispatch Width:    6
-# CHECK-NEXT: uOps Per Cycle:    0.36
-# CHECK-NEXT: IPC:               0.18
+# CHECK-NEXT: uOps Per Cycle:    0.40
+# CHECK-NEXT: IPC:               0.20
 # CHECK-NEXT: Block RThroughput: 1.0
 
 # CHECK:      Instruction Info:
@@ -138,11 +137,10 @@ mulxq %rax, %rax, %rcx
 # CHECK-NEXT:  -      -      -      -     1.00    -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     mulxq	%rax, %rax, %rcx
 
 # CHECK:      Timeline view:
-# CHECK-NEXT:                     0
 # CHECK-NEXT: Index     0123456789
 
-# CHECK:      [0,0]     DeeeeER   .   mulxq	%rax, %rax, %rcx
-# CHECK-NEXT: [1,0]     D====eeeeER   mulxq	%rax, %rax, %rcx
+# CHECK:      [0,0]     DeeeeER  .   mulxq	%rax, %rax, %rcx
+# CHECK-NEXT: [1,0]     D===eeeeER   mulxq	%rax, %rax, %rcx
 
 # CHECK:      Average Wait times (based on the timeline view):
 # CHECK-NEXT: [0]: Executions
@@ -151,4 +149,4 @@ mulxq %rax, %rax, %rcx
 # CHECK-NEXT: [3]: Average time elapsed from WB until retire stage
 
 # CHECK:            [0]    [1]    [2]    [3]
-# CHECK-NEXT: 0.     2     3.0    0.5    0.0       mulxq	%rax, %rax, %rcx
+# CHECK-NEXT: 0.     2     2.5    0.5    0.0       mulxq	%rax, %rax, %rcx
