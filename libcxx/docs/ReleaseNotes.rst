@@ -98,3 +98,6 @@ API Changes
   `CMAKE_POSITION_INDEPENDENT_CODE=ON` instead.
 
 - When the header <variant> is included, it will no longer include <array> transitively.
+
+- The ``std::result_of`` and ``std::is_literal_type`` type traits have been removed in
+  C++20 mode.
