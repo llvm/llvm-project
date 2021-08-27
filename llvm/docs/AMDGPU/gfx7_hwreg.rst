@@ -5,10 +5,10 @@
     *                                                *
     **************************************************
 
-.. _amdgpu_synid7_hwreg:
+.. _amdgpu_synid_gfx7_hwreg:
 
 hwreg
-===========================
+=====
 
 Bits of a hardware register being accessed.
 
