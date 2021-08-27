@@ -173,8 +173,6 @@ static StringRef intrinsicToAttrName(Intrinsic::ID ID,
     return "amdgpu-dispatch-ptr";
   case Intrinsic::amdgcn_dispatch_id:
     return "amdgpu-dispatch-id";
-  case Intrinsic::amdgcn_kernarg_segment_ptr:
-    return "amdgpu-kernarg-segment-ptr";
   case Intrinsic::amdgcn_implicitarg_ptr:
     return "amdgpu-implicitarg-ptr";
   case Intrinsic::amdgcn_queue_ptr:
@@ -310,15 +308,11 @@ bool AMDGPUAnnotateKernelFeatures::addFeatureAttributes(Function &F) {
         } else {
           bool NonKernelOnly = false;
 
-          if (!IsFunc && IID == Intrinsic::amdgcn_kernarg_segment_ptr) {
-            F.addFnAttr("amdgpu-kernarg-segment-ptr");
-          } else {
-            StringRef AttrName = intrinsicToAttrName(IID, NonKernelOnly,
-                                                     NeedQueuePtr);
-            if (!AttrName.empty() && (IsFunc || !NonKernelOnly)) {
-              F.addFnAttr(AttrName);
-              Changed = true;
-            }
+          StringRef AttrName = intrinsicToAttrName(IID, NonKernelOnly,
+                                                   NeedQueuePtr);
+          if (!AttrName.empty() && (IsFunc || !NonKernelOnly)) {
+            F.addFnAttr(AttrName);
+            Changed = true;
           }
         }
       }

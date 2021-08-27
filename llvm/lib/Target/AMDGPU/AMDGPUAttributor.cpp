@@ -60,8 +60,6 @@ static StringRef intrinsicToAttrName(Intrinsic::ID ID, bool &NonKernelOnly,
     return "amdgpu-dispatch-ptr";
   case Intrinsic::amdgcn_dispatch_id:
     return "amdgpu-dispatch-id";
-  case Intrinsic::amdgcn_kernarg_segment_ptr:
-    return "amdgpu-kernarg-segment-ptr";
   case Intrinsic::amdgcn_implicitarg_ptr:
     return "amdgpu-implicitarg-ptr";
   case Intrinsic::amdgcn_queue_ptr:
@@ -353,11 +351,6 @@ struct AAAMDAttributesFunction : public AAAMDAttributes {
     for (Function *Callee : AAEdges.getOptimisticEdges()) {
       Intrinsic::ID IID = Callee->getIntrinsicID();
       if (IID != Intrinsic::not_intrinsic) {
-        if (!IsNonEntryFunc && IID == Intrinsic::amdgcn_kernarg_segment_ptr) {
-          AddAttribute("amdgpu-kernarg-segment-ptr");
-          continue;
-        }
-
         bool NonKernelOnly = false;
         StringRef AttrName =
             intrinsicToAttrName(IID, NonKernelOnly, NeedsQueuePtr);

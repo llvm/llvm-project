@@ -293,7 +293,7 @@ define amdgpu_kernel void @use_queue_ptr(i32 addrspace(1)* %ptr) #1 {
 
 define amdgpu_kernel void @use_kernarg_segment_ptr(i32 addrspace(1)* %ptr) #1 {
 ; HSA-LABEL: define {{[^@]+}}@use_kernarg_segment_ptr
-; HSA-SAME: (i32 addrspace(1)* [[PTR:%.*]]) #[[ATTR12:[0-9]+]] {
+; HSA-SAME: (i32 addrspace(1)* [[PTR:%.*]]) #[[ATTR1]] {
 ; HSA-NEXT:    [[DISPATCH_PTR:%.*]] = call i8 addrspace(4)* @llvm.amdgcn.kernarg.segment.ptr()
 ; HSA-NEXT:    [[BC:%.*]] = bitcast i8 addrspace(4)* [[DISPATCH_PTR]] to i32 addrspace(4)*
 ; HSA-NEXT:    [[VAL:%.*]] = load i32, i32 addrspace(4)* [[BC]], align 4
@@ -442,13 +442,13 @@ define amdgpu_kernel void @use_is_private(i8* %ptr) #1 {
 
 define amdgpu_kernel void @use_alloca() #1 {
 ; AKF_HSA-LABEL: define {{[^@]+}}@use_alloca
-; AKF_HSA-SAME: () #[[ATTR13:[0-9]+]] {
+; AKF_HSA-SAME: () #[[ATTR12:[0-9]+]] {
 ; AKF_HSA-NEXT:    [[ALLOCA:%.*]] = alloca i32, align 4, addrspace(5)
 ; AKF_HSA-NEXT:    store i32 0, i32 addrspace(5)* [[ALLOCA]], align 4
 ; AKF_HSA-NEXT:    ret void
 ;
 ; ATTRIBUTOR_HSA-LABEL: define {{[^@]+}}@use_alloca
-; ATTRIBUTOR_HSA-SAME: () #[[ATTR13:[0-9]+]] {
+; ATTRIBUTOR_HSA-SAME: () #[[ATTR12:[0-9]+]] {
 ; ATTRIBUTOR_HSA-NEXT:    [[ALLOCA:%.*]] = alloca i32, align 4, addrspace(5)
 ; ATTRIBUTOR_HSA-NEXT:    ret void
 ;
@@ -459,7 +459,7 @@ define amdgpu_kernel void @use_alloca() #1 {
 
 define amdgpu_kernel void @use_alloca_non_entry_block() #1 {
 ; AKF_HSA-LABEL: define {{[^@]+}}@use_alloca_non_entry_block
-; AKF_HSA-SAME: () #[[ATTR13]] {
+; AKF_HSA-SAME: () #[[ATTR12]] {
 ; AKF_HSA-NEXT:  entry:
 ; AKF_HSA-NEXT:    br label [[BB:%.*]]
 ; AKF_HSA:       bb:
@@ -468,7 +468,7 @@ define amdgpu_kernel void @use_alloca_non_entry_block() #1 {
 ; AKF_HSA-NEXT:    ret void
 ;
 ; ATTRIBUTOR_HSA-LABEL: define {{[^@]+}}@use_alloca_non_entry_block
-; ATTRIBUTOR_HSA-SAME: () #[[ATTR13]] {
+; ATTRIBUTOR_HSA-SAME: () #[[ATTR12]] {
 ; ATTRIBUTOR_HSA-NEXT:  entry:
 ; ATTRIBUTOR_HSA-NEXT:    br label [[BB:%.*]]
 ; ATTRIBUTOR_HSA:       bb:
@@ -486,13 +486,13 @@ bb:
 
 define void @use_alloca_func() #1 {
 ; AKF_HSA-LABEL: define {{[^@]+}}@use_alloca_func
-; AKF_HSA-SAME: () #[[ATTR13]] {
+; AKF_HSA-SAME: () #[[ATTR12]] {
 ; AKF_HSA-NEXT:    [[ALLOCA:%.*]] = alloca i32, align 4, addrspace(5)
 ; AKF_HSA-NEXT:    store i32 0, i32 addrspace(5)* [[ALLOCA]], align 4
 ; AKF_HSA-NEXT:    ret void
 ;
 ; ATTRIBUTOR_HSA-LABEL: define {{[^@]+}}@use_alloca_func
-; ATTRIBUTOR_HSA-SAME: () #[[ATTR13]] {
+; ATTRIBUTOR_HSA-SAME: () #[[ATTR12]] {
 ; ATTRIBUTOR_HSA-NEXT:    [[ALLOCA:%.*]] = alloca i32, align 4, addrspace(5)
 ; ATTRIBUTOR_HSA-NEXT:    ret void
 ;
@@ -517,8 +517,7 @@ attributes #1 = { nounwind }
 ; AKF_HSA: attributes #[[ATTR9]] = { nounwind "amdgpu-work-group-id-y" "amdgpu-work-group-id-z" "amdgpu-work-item-id-y" "amdgpu-work-item-id-z" }
 ; AKF_HSA: attributes #[[ATTR10]] = { nounwind "amdgpu-dispatch-ptr" }
 ; AKF_HSA: attributes #[[ATTR11]] = { nounwind "amdgpu-queue-ptr" }
-; AKF_HSA: attributes #[[ATTR12]] = { nounwind "amdgpu-kernarg-segment-ptr" }
-; AKF_HSA: attributes #[[ATTR13]] = { nounwind "amdgpu-stack-objects" }
+; AKF_HSA: attributes #[[ATTR12]] = { nounwind "amdgpu-stack-objects" }
 ;.
 ; ATTRIBUTOR_HSA: attributes #[[ATTR0:[0-9]+]] = { nounwind readnone speculatable willreturn }
 ; ATTRIBUTOR_HSA: attributes #[[ATTR1]] = { nounwind "uniform-work-group-size"="false" }
@@ -532,6 +531,5 @@ attributes #1 = { nounwind }
 ; ATTRIBUTOR_HSA: attributes #[[ATTR9]] = { nounwind "amdgpu-work-group-id-y" "amdgpu-work-group-id-z" "amdgpu-work-item-id-y" "amdgpu-work-item-id-z" "uniform-work-group-size"="false" }
 ; ATTRIBUTOR_HSA: attributes #[[ATTR10]] = { nounwind "amdgpu-dispatch-ptr" "uniform-work-group-size"="false" }
 ; ATTRIBUTOR_HSA: attributes #[[ATTR11]] = { nounwind "amdgpu-queue-ptr" "uniform-work-group-size"="false" }
-; ATTRIBUTOR_HSA: attributes #[[ATTR12]] = { nounwind "amdgpu-kernarg-segment-ptr" "uniform-work-group-size"="false" }
-; ATTRIBUTOR_HSA: attributes #[[ATTR13]] = { nounwind "amdgpu-stack-objects" "uniform-work-group-size"="false" }
+; ATTRIBUTOR_HSA: attributes #[[ATTR12]] = { nounwind "amdgpu-stack-objects" "uniform-work-group-size"="false" }
 ;.
