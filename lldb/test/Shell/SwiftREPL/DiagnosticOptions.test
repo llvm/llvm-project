@@ -1,0 +1,20 @@
+// Test diagnostic options in REPL
+// REQUIRES: swift
+
+// RUN: %lldb --repl="-debug-diagnostic-names" < %s 2>&1 \
+// RUN: | FileCheck %s --check-prefix=DIAGNOSTIC
+
+// RUN: split-file %s %t.dir
+// RUN: %lldb --repl="-localization-path %t.dir -locale fr" < %s 2>&1 \
+// RUN: | FileCheck %s --check-prefix=LOCALIZED
+
+
+_ = "An unterminated string
+// DIAGNOSTIC: error: unterminated string literal [lex_unterminated_string]{{$}}
+// LOCALIZED: error: chaîne non terminée littérale{{$}}
+:quit
+
+
+//--- fr.yaml
+- id: "lex_unterminated_string"
+  msg: "chaîne non terminée littérale"
