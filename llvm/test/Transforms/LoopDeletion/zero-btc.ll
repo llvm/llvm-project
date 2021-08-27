@@ -239,6 +239,42 @@ exit2:
   ret void
 }
 
+declare i1 @unknown()
+
+; We can't compute an exit count for the latch, but we know the upper
+; bound on the trip count is zero anyways.
+define void @test_dead_latch1() {
+; CHECK-LABEL: @test_dead_latch1(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    br label [[LOOP:%.*]]
+; CHECK:       loop:
+; CHECK-NEXT:    store i32 0, i32* @G, align 4
+; CHECK-NEXT:    br i1 false, label [[LATCH:%.*]], label [[EXIT1:%.*]]
+; CHECK:       latch:
+; CHECK-NEXT:    [[LATCHCOND:%.*]] = call i1 @unknown()
+; CHECK-NEXT:    br label [[EXIT2:%.*]]
+; CHECK:       exit1:
+; CHECK-NEXT:    ret void
+; CHECK:       exit2:
+; CHECK-NEXT:    ret void
+;
+entry:
+  br label %loop
+
+loop:
+  store i32 0, i32* @G
+  br i1 false, label %latch, label %exit1
+latch:
+  %latchcond = call i1 @unknown()
+  br i1 %latchcond, label %loop, label %exit2
+
+exit1:
+  ret void
+exit2:
+  ret void
+}
+
+
 define void @test_live_inner() {
 ; CHECK-LABEL: @test_live_inner(
 ; CHECK-NEXT:  entry:
