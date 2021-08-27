@@ -86,6 +86,11 @@ struct OutlinableRegion {
   DenseMap<unsigned, unsigned> ExtractedArgToAgg;
   DenseMap<unsigned, unsigned> AggArgToExtracted;
 
+  /// Marks whether we need to change the order of the arguments when mapping
+  /// the old extracted function call to the new aggregate outlined function
+  /// call.
+  bool ChangedArgOrder = false;
+
   /// Mapping of the argument number in the deduplicated function
   /// to a given constant, which is used when creating the arguments to the call
   /// to the newly created deduplicated function.  This is handled separately

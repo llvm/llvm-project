@@ -87,6 +87,10 @@ struct OutlinableGroup {
   /// index in ArgumentTypes is an output argument.
   unsigned NumAggregateInputs = 0;
 
+  /// The mapping of the canonical numbering of the values in outlined sections
+  /// to specific arguments.
+  DenseMap<unsigned, unsigned> CanonicalNumberToAggArg;
+
   /// The number of instructions that will be outlined by extracting \ref
   /// Regions.
   InstructionCost Benefit = 0;
@@ -665,10 +669,21 @@ findExtractedInputToOverallInputMapping(OutlinableRegion &Region,
   // function to account for the extracted constants, we have two different
   // counters as we find extracted arguments, and as we come across overall
   // arguments.
+
+  // Additionally, in our first pass, for the first extracted function,
+  // we find argument locations for the canonical value numbering.  This
+  // numbering overrides any discovered location for the extracted code.
   for (unsigned InputVal : InputGVNs) {
+    Optional<unsigned> CanonicalNumberOpt = C.getCanonicalNum(InputVal);
+    assert(CanonicalNumberOpt.hasValue() && "Canonical number not found?");
+    unsigned CanonicalNumber = CanonicalNumberOpt.getValue();
+
     Optional<Value *> InputOpt = C.fromGVN(InputVal);
     assert(InputOpt.hasValue() && "Global value number not found?");
     Value *Input = InputOpt.getValue();
+
+    DenseMap<unsigned, unsigned>::iterator AggArgIt =
+        Group.CanonicalNumberToAggArg.find(CanonicalNumber);
 
     if (!Group.InputTypesSet) {
       Group.ArgumentTypes.push_back(Input->getType());
@@ -685,17 +700,34 @@ findExtractedInputToOverallInputMapping(OutlinableRegion &Region,
     // Check if we have a constant. If we do add it to the overall argument
     // number to Constant map for the region, and continue to the next input.
     if (Constant *CST = dyn_cast<Constant>(Input)) {
-      Region.AggArgToConstant.insert(std::make_pair(TypeIndex, CST));
+      if (AggArgIt != Group.CanonicalNumberToAggArg.end())
+        Region.AggArgToConstant.insert(std::make_pair(AggArgIt->second, CST));
+      else {
+        Group.CanonicalNumberToAggArg.insert(
+            std::make_pair(CanonicalNumber, TypeIndex));
+        Region.AggArgToConstant.insert(std::make_pair(TypeIndex, CST));
+      }
       TypeIndex++;
       continue;
     }
 
     // It is not a constant, we create the mapping from extracted argument list
-    // to the overall argument list.
+    // to the overall argument list, using the canonical location, if it exists.
     assert(ArgInputs.count(Input) && "Input cannot be found!");
 
-    Region.ExtractedArgToAgg.insert(std::make_pair(OriginalIndex, TypeIndex));
-    Region.AggArgToExtracted.insert(std::make_pair(TypeIndex, OriginalIndex));
+    if (AggArgIt != Group.CanonicalNumberToAggArg.end()) {
+      if (OriginalIndex != AggArgIt->second)
+        Region.ChangedArgOrder = true;
+      Region.ExtractedArgToAgg.insert(
+          std::make_pair(OriginalIndex, AggArgIt->second));
+      Region.AggArgToExtracted.insert(
+          std::make_pair(AggArgIt->second, OriginalIndex));
+    } else {
+      Group.CanonicalNumberToAggArg.insert(
+          std::make_pair(CanonicalNumber, TypeIndex));
+      Region.ExtractedArgToAgg.insert(std::make_pair(OriginalIndex, TypeIndex));
+      Region.AggArgToExtracted.insert(std::make_pair(TypeIndex, OriginalIndex));
+    }
     OriginalIndex++;
     TypeIndex++;
   }
@@ -821,9 +853,10 @@ CallInst *replaceCalledFunction(Module &M, OutlinableRegion &Region) {
   assert(AggFunc && "Function to replace with is nullptr?");
 
   // If the arguments are the same size, there are not values that need to be
-  // made argument, or different output registers to handle.  We can simply
-  // replace the called function in this case.
-  if (AggFunc->arg_size() == Call->arg_size()) {
+  // made into an argument, the argument ordering has not been change, or
+  // different output registers to handle.  We can simply replace the called
+  // function in this case.
+  if (!Region.ChangedArgOrder && AggFunc->arg_size() == Call->arg_size()) {
     LLVM_DEBUG(dbgs() << "Replace call to " << *Call << " with call to "
                       << *AggFunc << " with same number of arguments\n");
     Call->setCalledFunction(AggFunc);
