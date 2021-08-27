@@ -6,39 +6,22 @@
 ; Test to generate fibonacci numbers
 
 define i32 @fib(i32 %n) #0 {
-; AKF_CHECK-LABEL: define {{[^@]+}}@fib
-; AKF_CHECK-SAME: (i32 [[N:%.*]]) #[[ATTR0:[0-9]+]] {
-; AKF_CHECK-NEXT:    [[CMP1:%.*]] = icmp eq i32 [[N]], 0
-; AKF_CHECK-NEXT:    br i1 [[CMP1]], label [[EXIT:%.*]], label [[CONT1:%.*]]
-; AKF_CHECK:       cont1:
-; AKF_CHECK-NEXT:    [[CMP2:%.*]] = icmp eq i32 [[N]], 1
-; AKF_CHECK-NEXT:    br i1 [[CMP2]], label [[EXIT]], label [[CONT2:%.*]]
-; AKF_CHECK:       cont2:
-; AKF_CHECK-NEXT:    [[NM1:%.*]] = sub i32 [[N]], 1
-; AKF_CHECK-NEXT:    [[FIBM1:%.*]] = call i32 @fib(i32 [[NM1]])
-; AKF_CHECK-NEXT:    [[NM2:%.*]] = sub i32 [[N]], 2
-; AKF_CHECK-NEXT:    [[FIBM2:%.*]] = call i32 @fib(i32 [[NM2]])
-; AKF_CHECK-NEXT:    [[RETVAL:%.*]] = add i32 [[FIBM1]], [[FIBM2]]
-; AKF_CHECK-NEXT:    ret i32 [[RETVAL]]
-; AKF_CHECK:       exit:
-; AKF_CHECK-NEXT:    ret i32 1
-;
-; ATTRIBUTOR_CHECK-LABEL: define {{[^@]+}}@fib
-; ATTRIBUTOR_CHECK-SAME: (i32 [[N:%.*]]) #[[ATTR0:[0-9]+]] {
-; ATTRIBUTOR_CHECK-NEXT:    [[CMP1:%.*]] = icmp eq i32 [[N]], 0
-; ATTRIBUTOR_CHECK-NEXT:    br i1 [[CMP1]], label [[EXIT:%.*]], label [[CONT1:%.*]]
-; ATTRIBUTOR_CHECK:       cont1:
-; ATTRIBUTOR_CHECK-NEXT:    [[CMP2:%.*]] = icmp eq i32 [[N]], 1
-; ATTRIBUTOR_CHECK-NEXT:    br i1 [[CMP2]], label [[EXIT]], label [[CONT2:%.*]]
-; ATTRIBUTOR_CHECK:       cont2:
-; ATTRIBUTOR_CHECK-NEXT:    [[NM1:%.*]] = sub i32 [[N]], 1
-; ATTRIBUTOR_CHECK-NEXT:    [[FIBM1:%.*]] = call i32 @fib(i32 [[NM1]]) #[[ATTR3:[0-9]+]]
-; ATTRIBUTOR_CHECK-NEXT:    [[NM2:%.*]] = sub i32 [[N]], 2
-; ATTRIBUTOR_CHECK-NEXT:    [[FIBM2:%.*]] = call i32 @fib(i32 [[NM2]]) #[[ATTR3]]
-; ATTRIBUTOR_CHECK-NEXT:    [[RETVAL:%.*]] = add i32 [[FIBM1]], [[FIBM2]]
-; ATTRIBUTOR_CHECK-NEXT:    ret i32 [[RETVAL]]
-; ATTRIBUTOR_CHECK:       exit:
-; ATTRIBUTOR_CHECK-NEXT:    ret i32 1
+; CHECK-LABEL: define {{[^@]+}}@fib
+; CHECK-SAME: (i32 [[N:%.*]]) #[[ATTR0:[0-9]+]] {
+; CHECK-NEXT:    [[CMP1:%.*]] = icmp eq i32 [[N]], 0
+; CHECK-NEXT:    br i1 [[CMP1]], label [[EXIT:%.*]], label [[CONT1:%.*]]
+; CHECK:       cont1:
+; CHECK-NEXT:    [[CMP2:%.*]] = icmp eq i32 [[N]], 1
+; CHECK-NEXT:    br i1 [[CMP2]], label [[EXIT]], label [[CONT2:%.*]]
+; CHECK:       cont2:
+; CHECK-NEXT:    [[NM1:%.*]] = sub i32 [[N]], 1
+; CHECK-NEXT:    [[FIBM1:%.*]] = call i32 @fib(i32 [[NM1]])
+; CHECK-NEXT:    [[NM2:%.*]] = sub i32 [[N]], 2
+; CHECK-NEXT:    [[FIBM2:%.*]] = call i32 @fib(i32 [[NM2]])
+; CHECK-NEXT:    [[RETVAL:%.*]] = add i32 [[FIBM1]], [[FIBM2]]
+; CHECK-NEXT:    ret i32 [[RETVAL]]
+; CHECK:       exit:
+; CHECK-NEXT:    ret i32 1
 ;
   %cmp1 = icmp eq i32 %n, 0
   br i1 %cmp1, label %exit, label %cont1
@@ -87,9 +70,9 @@ define internal i32 @fib_internal(i32 %n) #0 {
 ; ATTRIBUTOR_CHECK-NEXT:    br i1 [[CMP2]], label [[EXIT]], label [[CONT2:%.*]]
 ; ATTRIBUTOR_CHECK:       cont2:
 ; ATTRIBUTOR_CHECK-NEXT:    [[NM1:%.*]] = sub i32 [[N]], 1
-; ATTRIBUTOR_CHECK-NEXT:    [[FIBM1:%.*]] = call i32 @fib_internal(i32 [[NM1]]) #[[ATTR4:[0-9]+]]
+; ATTRIBUTOR_CHECK-NEXT:    [[FIBM1:%.*]] = call i32 @fib_internal(i32 [[NM1]])
 ; ATTRIBUTOR_CHECK-NEXT:    [[NM2:%.*]] = sub i32 [[N]], 2
-; ATTRIBUTOR_CHECK-NEXT:    [[FIBM2:%.*]] = call i32 @fib_internal(i32 [[NM2]]) #[[ATTR4]]
+; ATTRIBUTOR_CHECK-NEXT:    [[FIBM2:%.*]] = call i32 @fib_internal(i32 [[NM2]])
 ; ATTRIBUTOR_CHECK-NEXT:    [[RETVAL:%.*]] = add i32 [[FIBM1]], [[FIBM2]]
 ; ATTRIBUTOR_CHECK-NEXT:    ret i32 [[RETVAL]]
 ; ATTRIBUTOR_CHECK:       exit:
@@ -126,8 +109,8 @@ define amdgpu_kernel void @kernel(i32 addrspace(1)* %m) #1 {
 ;
 ; ATTRIBUTOR_CHECK-LABEL: define {{[^@]+}}@kernel
 ; ATTRIBUTOR_CHECK-SAME: (i32 addrspace(1)* [[M:%.*]]) #[[ATTR2:[0-9]+]] {
-; ATTRIBUTOR_CHECK-NEXT:    [[R:%.*]] = call i32 @fib(i32 5) #[[ATTR3]]
-; ATTRIBUTOR_CHECK-NEXT:    [[R2:%.*]] = call i32 @fib_internal(i32 noundef 5) #[[ATTR3]]
+; ATTRIBUTOR_CHECK-NEXT:    [[R:%.*]] = call i32 @fib(i32 5)
+; ATTRIBUTOR_CHECK-NEXT:    [[R2:%.*]] = call i32 @fib_internal(i32 5)
 ; ATTRIBUTOR_CHECK-NEXT:    store i32 [[R]], i32 addrspace(1)* [[M]], align 4
 ; ATTRIBUTOR_CHECK-NEXT:    store i32 [[R2]], i32 addrspace(1)* [[M]], align 4
 ; ATTRIBUTOR_CHECK-NEXT:    ret void
@@ -149,8 +132,6 @@ attributes #1 = { "uniform-work-group-size"="true" }
 ; AKF_CHECK: attributes #[[ATTR1]] = { "amdgpu-calls" "uniform-work-group-size"="true" }
 ;.
 ; ATTRIBUTOR_CHECK: attributes #[[ATTR0]] = { nounwind readnone "uniform-work-group-size"="false" }
-; ATTRIBUTOR_CHECK: attributes #[[ATTR1]] = { nofree nosync nounwind readnone "uniform-work-group-size"="true" }
+; ATTRIBUTOR_CHECK: attributes #[[ATTR1]] = { nounwind readnone "uniform-work-group-size"="true" }
 ; ATTRIBUTOR_CHECK: attributes #[[ATTR2]] = { "uniform-work-group-size"="true" }
-; ATTRIBUTOR_CHECK: attributes #[[ATTR3]] = { nounwind readnone }
-; ATTRIBUTOR_CHECK: attributes #[[ATTR4]] = { nofree nounwind readnone }
 ;.

@@ -405,16 +405,12 @@ define amdgpu_kernel void @use_flat_to_constant_addrspacecast(i32* %ptr) #1 {
 }
 
 define amdgpu_kernel void @use_is_shared(i8* %ptr) #1 {
-; AKF_HSA-LABEL: define {{[^@]+}}@use_is_shared
-; AKF_HSA-SAME: (i8* [[PTR:%.*]]) #[[ATTR11]] {
-; AKF_HSA-NEXT:    [[IS_SHARED:%.*]] = call i1 @llvm.amdgcn.is.shared(i8* [[PTR]])
-; AKF_HSA-NEXT:    [[EXT:%.*]] = zext i1 [[IS_SHARED]] to i32
-; AKF_HSA-NEXT:    store i32 [[EXT]], i32 addrspace(1)* undef, align 4
-; AKF_HSA-NEXT:    ret void
-;
-; ATTRIBUTOR_HSA-LABEL: define {{[^@]+}}@use_is_shared
-; ATTRIBUTOR_HSA-SAME: (i8* [[PTR:%.*]]) #[[ATTR1]] {
-; ATTRIBUTOR_HSA-NEXT:    ret void
+; HSA-LABEL: define {{[^@]+}}@use_is_shared
+; HSA-SAME: (i8* [[PTR:%.*]]) #[[ATTR11]] {
+; HSA-NEXT:    [[IS_SHARED:%.*]] = call i1 @llvm.amdgcn.is.shared(i8* [[PTR]])
+; HSA-NEXT:    [[EXT:%.*]] = zext i1 [[IS_SHARED]] to i32
+; HSA-NEXT:    store i32 [[EXT]], i32 addrspace(1)* undef, align 4
+; HSA-NEXT:    ret void
 ;
   %is.shared = call i1 @llvm.amdgcn.is.shared(i8* %ptr)
   %ext = zext i1 %is.shared to i32
@@ -423,16 +419,12 @@ define amdgpu_kernel void @use_is_shared(i8* %ptr) #1 {
 }
 
 define amdgpu_kernel void @use_is_private(i8* %ptr) #1 {
-; AKF_HSA-LABEL: define {{[^@]+}}@use_is_private
-; AKF_HSA-SAME: (i8* [[PTR:%.*]]) #[[ATTR11]] {
-; AKF_HSA-NEXT:    [[IS_PRIVATE:%.*]] = call i1 @llvm.amdgcn.is.private(i8* [[PTR]])
-; AKF_HSA-NEXT:    [[EXT:%.*]] = zext i1 [[IS_PRIVATE]] to i32
-; AKF_HSA-NEXT:    store i32 [[EXT]], i32 addrspace(1)* undef, align 4
-; AKF_HSA-NEXT:    ret void
-;
-; ATTRIBUTOR_HSA-LABEL: define {{[^@]+}}@use_is_private
-; ATTRIBUTOR_HSA-SAME: (i8* [[PTR:%.*]]) #[[ATTR1]] {
-; ATTRIBUTOR_HSA-NEXT:    ret void
+; HSA-LABEL: define {{[^@]+}}@use_is_private
+; HSA-SAME: (i8* [[PTR:%.*]]) #[[ATTR11]] {
+; HSA-NEXT:    [[IS_PRIVATE:%.*]] = call i1 @llvm.amdgcn.is.private(i8* [[PTR]])
+; HSA-NEXT:    [[EXT:%.*]] = zext i1 [[IS_PRIVATE]] to i32
+; HSA-NEXT:    store i32 [[EXT]], i32 addrspace(1)* undef, align 4
+; HSA-NEXT:    ret void
 ;
   %is.private = call i1 @llvm.amdgcn.is.private(i8* %ptr)
   %ext = zext i1 %is.private to i32
