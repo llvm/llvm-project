@@ -921,6 +921,8 @@ protected:
 
   friend class CompilerType;
 
+  void ApplyDiagnosticOptions();
+
   /// Apply a PathMappingList dictionary on all search paths in the
   /// ClangImporterOptions.
   void RemapClangImporterOptions(const PathMappingList &path_map);
