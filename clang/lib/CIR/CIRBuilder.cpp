@@ -47,6 +47,8 @@
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/Support/Casting.h"
+#include "llvm/Support/ErrorHandling.h"
+#include "llvm/Support/FileSystem.h"
 #include "llvm/Support/raw_ostream.h"
 #include <numeric>
 
@@ -63,7 +65,6 @@ using llvm::SmallVector;
 using llvm::StringRef;
 using llvm::Twine;
 
-CIRContext::~CIRContext() {}
 CIRContext::CIRContext(clang::ASTContext &AC) : astCtx(AC) { Init(); }
 
 CIRCodeGenFunction::CIRCodeGenFunction() = default;
@@ -507,10 +508,28 @@ public:
 };
 } // namespace cir
 
+CIRContext::~CIRContext() {
+  if (cirOut) {
+    // FIXME: pick a more verbose level.
+    builder->getModule()->print(cirOut->os());
+    cirOut->keep();
+  }
+}
+
 void CIRContext::Init() {
+  using namespace llvm;
+
   mlirCtx = std::make_unique<mlir::MLIRContext>();
   mlirCtx->getOrLoadDialect<mlir::cir::CIRDialect>();
   builder = std::make_unique<CIRBuildImpl>(*mlirCtx.get(), astCtx);
+
+  std::error_code EC;
+  StringRef outFile = astCtx.getLangOpts().CIRFile;
+  if (outFile.empty())
+    return;
+  cirOut = std::make_unique<ToolOutputFile>(outFile, EC, sys::fs::OF_None);
+  if (EC)
+    report_fatal_error("Failed to open " + outFile + ": " + EC.message());
 }
 
 bool CIRContext::EmitFunction(const FunctionDecl *FD) {
@@ -521,6 +540,5 @@ bool CIRContext::EmitFunction(const FunctionDecl *FD) {
   // FIXME: currently checked after emitting every function, should
   // only run when the consumer of the context shutdowns.
   builder->verifyModule();
-  builder->getModule().dump();
   return true;
 }

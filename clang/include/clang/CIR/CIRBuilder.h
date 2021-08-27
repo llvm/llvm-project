@@ -14,6 +14,7 @@
 #ifndef CLANG_CIRBUILDER_H_
 #define CLANG_CIRBUILDER_H_
 
+#include "llvm/Support/ToolOutputFile.h"
 #include <memory>
 
 namespace mlir {
@@ -42,6 +43,7 @@ public:
 private:
   std::unique_ptr<mlir::MLIRContext> mlirCtx;
   std::unique_ptr<CIRBuildImpl> builder;
+  std::unique_ptr<llvm::ToolOutputFile> cirOut;
   clang::ASTContext &astCtx;
 };
 
