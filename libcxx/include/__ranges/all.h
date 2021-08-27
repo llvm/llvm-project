@@ -17,7 +17,7 @@
 #include <__ranges/range_adaptor.h>
 #include <__ranges/ref_view.h>
 #include <__ranges/subrange.h>
-#include <__utility/__decay_copy.h>
+#include <__utility/decay_copy.h>
 #include <__utility/declval.h>
 #include <__utility/forward.h>
 #include <type_traits>
