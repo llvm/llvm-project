@@ -17,9 +17,6 @@
 #pragma GCC system_header
 #endif
 
-_LIBCPP_PUSH_MACROS
-#include <__undef_macros>
-
 _LIBCPP_BEGIN_NAMESPACE_STD
 
 template <class _Tp>
@@ -46,7 +43,5 @@ move_if_noexcept(_Tp& __x) _NOEXCEPT {
 }
 
 _LIBCPP_END_NAMESPACE_STD
-
-_LIBCPP_POP_MACROS
 
 #endif // _LIBCPP___UTILITY_MOVE_H

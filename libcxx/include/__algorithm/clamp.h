@@ -17,13 +17,9 @@
 #pragma GCC system_header
 #endif
 
-_LIBCPP_PUSH_MACROS
-#include <__undef_macros>
-
 _LIBCPP_BEGIN_NAMESPACE_STD
 
 #if _LIBCPP_STD_VER > 14
-// clamp
 template<class _Tp, class _Compare>
 _LIBCPP_NODISCARD_EXT inline
 _LIBCPP_INLINE_VISIBILITY _LIBCPP_CONSTEXPR
@@ -46,7 +42,5 @@ clamp(const _Tp& __v, const _Tp& __lo, const _Tp& __hi)
 #endif
 
 _LIBCPP_END_NAMESPACE_STD
-
-_LIBCPP_POP_MACROS
 
 #endif // _LIBCPP___ALGORITHM_CLAMP_H

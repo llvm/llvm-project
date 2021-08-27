@@ -18,9 +18,6 @@
 #pragma GCC system_header
 #endif
 
-_LIBCPP_PUSH_MACROS
-#include <__undef_macros>
-
 _LIBCPP_BEGIN_NAMESPACE_STD
 
 #if _LIBCPP_STD_VER > 17
@@ -106,7 +103,5 @@ using wformat_parse_context = basic_format_parse_context<wchar_t>;
 #endif //_LIBCPP_STD_VER > 17
 
 _LIBCPP_END_NAMESPACE_STD
-
-_LIBCPP_POP_MACROS
 
 #endif // _LIBCPP___FORMAT_FORMAT_PARSE_CONTEXT_H
