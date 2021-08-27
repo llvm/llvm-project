@@ -80,7 +80,7 @@ public:
                                    CompileUnit::DIEInfo &Info) = 0;
 
   /// Apply the valid relocations to the buffer \p Data, taking into
-  /// account that Data is at \p BaseOffset in the debug_info section.
+  /// account that Data is at \p BaseOffset in the .debug_info section.
   ///
   /// \returns true whether any reloc has been applied.
   virtual bool applyValidRelocs(MutableArrayRef<char> Data, uint64_t BaseOffset,
@@ -109,7 +109,7 @@ public:
   /// Emit section named SecName with data SecData.
   virtual void emitSectionContents(StringRef SecData, StringRef SecName) = 0;
 
-  /// Emit the abbreviation table \p Abbrevs to the debug_abbrev section.
+  /// Emit the abbreviation table \p Abbrevs to the .debug_abbrev section.
   virtual void
   emitAbbrevs(const std::vector<std::unique_ptr<DIEAbbrev>> &Abbrevs,
               unsigned DwarfVersion) = 0;
@@ -137,7 +137,7 @@ public:
   virtual void
   emitAppleTypes(AccelTable<AppleAccelTableStaticTypeData> &Table) = 0;
 
-  /// Emit debug_ranges for \p FuncRange by translating the
+  /// Emit .debug_ranges for \p FuncRange by translating the
   /// original \p Entries.
   virtual void emitRangesEntries(
       int64_t UnitPcOffset, uint64_t OrigLowPc,
@@ -145,17 +145,17 @@ public:
       const std::vector<DWARFDebugRangeList::RangeListEntry> &Entries,
       unsigned AddressSize) = 0;
 
-  /// Emit debug_aranges entries for \p Unit and if \p DoRangesSection is true,
-  /// also emit the debug_ranges entries for the DW_TAG_compile_unit's
+  /// Emit .debug_aranges entries for \p Unit and if \p DoRangesSection is true,
+  /// also emit the .debug_ranges entries for the DW_TAG_compile_unit's
   /// DW_AT_ranges attribute.
   virtual void emitUnitRangesEntries(CompileUnit &Unit,
                                      bool DoRangesSection) = 0;
 
-  /// Copy the debug_line over to the updated binary while unobfuscating the
+  /// Copy the .debug_line over to the updated binary while unobfuscating the
   /// file names and directories.
   virtual void translateLineTable(DataExtractor LineData, uint64_t Offset) = 0;
 
-  /// Emit the line table described in \p Rows into the debug_line section.
+  /// Emit the line table described in \p Rows into the .debug_line section.
   virtual void emitLineTableForUnit(MCDwarfLineTableParams Params,
                                     StringRef PrologueBytes,
                                     unsigned MinInstLength,
@@ -175,7 +175,7 @@ public:
   virtual void emitFDE(uint32_t CIEOffset, uint32_t AddreSize, uint32_t Address,
                        StringRef Bytes) = 0;
 
-  /// Emit the debug_loc contribution for \p Unit by copying the entries from
+  /// Emit the .debug_loc contribution for \p Unit by copying the entries from
   /// \p Dwarf and offsetting them. Update the location attributes to point to
   /// the new entries.
   virtual void emitLocationsForUnit(
@@ -184,7 +184,7 @@ public:
           ProcessExpr) = 0;
 
   /// Emit the compilation unit header for \p Unit in the
-  /// debug_info section.
+  /// .debug_info section.
   ///
   /// As a side effect, this also switches the current Dwarf version
   /// of the MC layer to the one of U.getOrigUnit().
@@ -695,7 +695,7 @@ private:
   /// Assign an abbreviation number to \p Abbrev
   void assignAbbrev(DIEAbbrev &Abbrev);
 
-  /// Compute and emit debug_ranges section for \p Unit, and
+  /// Compute and emit .debug_ranges section for \p Unit, and
   /// patch the attributes referencing it.
   void patchRangesForUnit(const CompileUnit &Unit, DWARFContext &Dwarf,
                           const DWARFFile &File) const;
@@ -706,7 +706,7 @@ private:
 
   /// Extract the line tables from the original dwarf, extract the relevant
   /// parts according to the linked function ranges and emit the result in the
-  /// debug_line section.
+  /// .debug_line section.
   void patchLineTableForUnit(CompileUnit &Unit, DWARFContext &OrigDwarf,
                              const DWARFFile &File);
 
@@ -753,7 +753,7 @@ private:
   StringMap<uint32_t> EmittedCIEs;
 
   /// Offset of the last CIE that has been emitted in the output
-  /// debug_frame section.
+  /// .debug_frame section.
   uint32_t LastCIEOffset = 0;
 
   /// Apple accelerator tables.

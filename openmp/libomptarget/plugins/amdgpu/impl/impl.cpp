@@ -1,11 +1,11 @@
-//===--- amdgpu/impl/atmi.cpp ------------------------------------- C++ -*-===//
+//===--- amdgpu/impl/impl.cpp ------------------------------------- C++ -*-===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
 // SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
-#include "atmi_runtime.h"
+#include "impl_runtime.h"
 #include "hsa_api.h"
 #include "internal.h"
 #include "rt.h"
@@ -42,13 +42,13 @@ static hsa_status_t invoke_hsa_copy(hsa_signal_t sig, void *dest,
   return err;
 }
 
-struct atmiFreePtrDeletor {
+struct implFreePtrDeletor {
   void operator()(void *p) {
     core::Runtime::Memfree(p); // ignore failure to free
   }
 };
 
-hsa_status_t atmi_memcpy_h2d(hsa_signal_t signal, void *deviceDest,
+hsa_status_t impl_memcpy_h2d(hsa_signal_t signal, void *deviceDest,
                              const void *hostSrc, size_t size,
                              hsa_agent_t agent,
                              hsa_amd_memory_pool_t MemoryPool) {
@@ -68,7 +68,7 @@ hsa_status_t atmi_memcpy_h2d(hsa_signal_t signal, void *deviceDest,
                 size);
     return ret;
   }
-  std::unique_ptr<void, atmiFreePtrDeletor> del(tempHostPtr);
+  std::unique_ptr<void, implFreePtrDeletor> del(tempHostPtr);
   memcpy(tempHostPtr, hostSrc, size);
 
   if (invoke_hsa_copy(signal, deviceDest, tempHostPtr, size, agent) !=
@@ -78,7 +78,7 @@ hsa_status_t atmi_memcpy_h2d(hsa_signal_t signal, void *deviceDest,
   return HSA_STATUS_SUCCESS;
 }
 
-hsa_status_t atmi_memcpy_d2h(hsa_signal_t signal, void *dest,
+hsa_status_t impl_memcpy_d2h(hsa_signal_t signal, void *dest,
                              const void *deviceSrc, size_t size,
                              hsa_agent_t agent,
                              hsa_amd_memory_pool_t MemoryPool) {
@@ -98,7 +98,7 @@ hsa_status_t atmi_memcpy_d2h(hsa_signal_t signal, void *dest,
                 size);
     return ret;
   }
-  std::unique_ptr<void, atmiFreePtrDeletor> del(tempHostPtr);
+  std::unique_ptr<void, implFreePtrDeletor> del(tempHostPtr);
 
   if (invoke_hsa_copy(signal, tempHostPtr, deviceSrc, size, agent) !=
       HSA_STATUS_SUCCESS) {

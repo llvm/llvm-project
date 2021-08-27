@@ -641,7 +641,8 @@ namespace llvm {
         DIScope *Context, StringRef Name, StringRef LinkageName, DIFile *File,
         unsigned LineNo, DIType *Ty, bool IsLocalToUnit, bool isDefined = true,
         DIExpression *Expr = nullptr, MDNode *Decl = nullptr,
-        MDTuple *TemplateParams = nullptr, uint32_t AlignInBits = 0);
+        MDTuple *TemplateParams = nullptr, uint32_t AlignInBits = 0,
+        DINodeArray Annotations = nullptr);
 
     /// Identical to createGlobalVariable
     /// except that the resulting DbgNode is temporary and meant to be RAUWed.
@@ -687,7 +688,8 @@ namespace llvm {
     createParameterVariable(DIScope *Scope, StringRef Name, unsigned ArgNo,
                             DIFile *File, unsigned LineNo, DIType *Ty,
                             bool AlwaysPreserve = false,
-                            DINode::DIFlags Flags = DINode::FlagZero);
+                            DINode::DIFlags Flags = DINode::FlagZero,
+                            DINodeArray Annotations = nullptr);
 
     /// Create a new descriptor for the specified
     /// variable which has a complex address expression for its address.
@@ -716,6 +718,7 @@ namespace llvm {
     /// \param SPFlags       Additional flags specific to subprograms.
     /// \param TParams       Function template parameters.
     /// \param ThrownTypes   Exception types this function may throw.
+    /// \param Annotations   Attribute Annotations.
     DISubprogram *
     createFunction(DIScope *Scope, StringRef Name, StringRef LinkageName,
                    DIFile *File, unsigned LineNo, DISubroutineType *Ty,
@@ -723,7 +726,8 @@ namespace llvm {
                    DISubprogram::DISPFlags SPFlags = DISubprogram::SPFlagZero,
                    DITemplateParameterArray TParams = nullptr,
                    DISubprogram *Decl = nullptr,
-                   DITypeArray ThrownTypes = nullptr);
+                   DITypeArray ThrownTypes = nullptr,
+                   DINodeArray Annotations = nullptr);
 
     /// Identical to createFunction,
     /// except that the resulting DbgNode is meant to be RAUWed.

@@ -43,19 +43,14 @@ define internal void @indirect() {
 ; GFX9-NEXT:  s_swappc_b64 s[30:31], s[18:19]
 ; GFX9-NEXT:  s_endpgm
 define amdgpu_kernel void @test_simple_indirect_call() {
-; AKF_GCN-LABEL: define {{[^@]+}}@test_simple_indirect_call
-; AKF_GCN-SAME: () #[[ATTR1:[0-9]+]] {
-; AKF_GCN-NEXT:    [[FPTR:%.*]] = alloca void ()*, align 8, addrspace(5)
-; AKF_GCN-NEXT:    [[FPTR_CAST:%.*]] = addrspacecast void ()* addrspace(5)* [[FPTR]] to void ()**
-; AKF_GCN-NEXT:    store void ()* @indirect, void ()** [[FPTR_CAST]], align 8
-; AKF_GCN-NEXT:    [[FP:%.*]] = load void ()*, void ()** [[FPTR_CAST]], align 8
-; AKF_GCN-NEXT:    call void [[FP]]()
-; AKF_GCN-NEXT:    ret void
-;
-; ATTRIBUTOR_GCN-LABEL: define {{[^@]+}}@test_simple_indirect_call
-; ATTRIBUTOR_GCN-SAME: () #[[ATTR1:[0-9]+]] {
-; ATTRIBUTOR_GCN-NEXT:    call void @indirect()
-; ATTRIBUTOR_GCN-NEXT:    ret void
+; GCN-LABEL: define {{[^@]+}}@test_simple_indirect_call
+; GCN-SAME: () #[[ATTR1:[0-9]+]] {
+; GCN-NEXT:    [[FPTR:%.*]] = alloca void ()*, align 8, addrspace(5)
+; GCN-NEXT:    [[FPTR_CAST:%.*]] = addrspacecast void ()* addrspace(5)* [[FPTR]] to void ()**
+; GCN-NEXT:    store void ()* @indirect, void ()** [[FPTR_CAST]], align 8
+; GCN-NEXT:    [[FP:%.*]] = load void ()*, void ()** [[FPTR_CAST]], align 8
+; GCN-NEXT:    call void [[FP]]()
+; GCN-NEXT:    ret void
 ;
   %fptr = alloca void()*, addrspace(5)
   %fptr.cast = addrspacecast void()* addrspace(5)* %fptr to void()**
@@ -69,6 +64,6 @@ define amdgpu_kernel void @test_simple_indirect_call() {
 ; AKF_GCN: attributes #[[ATTR0]] = { "amdgpu-dispatch-id" "amdgpu-dispatch-ptr" "amdgpu-implicitarg-ptr" "amdgpu-queue-ptr" "amdgpu-work-group-id-x" "amdgpu-work-group-id-y" "amdgpu-work-group-id-z" "amdgpu-work-item-id-x" "amdgpu-work-item-id-y" "amdgpu-work-item-id-z" }
 ; AKF_GCN: attributes #[[ATTR1]] = { "amdgpu-calls" "amdgpu-dispatch-id" "amdgpu-dispatch-ptr" "amdgpu-implicitarg-ptr" "amdgpu-queue-ptr" "amdgpu-stack-objects" "amdgpu-work-group-id-x" "amdgpu-work-group-id-y" "amdgpu-work-group-id-z" "amdgpu-work-item-id-x" "amdgpu-work-item-id-y" "amdgpu-work-item-id-z" }
 ;.
-; ATTRIBUTOR_GCN: attributes #[[ATTR0]] = { "amdgpu-dispatch-id" "amdgpu-dispatch-ptr" "amdgpu-implicitarg-ptr" "amdgpu-queue-ptr" "amdgpu-work-group-id-x" "amdgpu-work-group-id-y" "amdgpu-work-group-id-z" "amdgpu-work-item-id-x" "amdgpu-work-item-id-y" "amdgpu-work-item-id-z" "uniform-work-group-size"="false" }
-; ATTRIBUTOR_GCN: attributes #[[ATTR1]] = { "amdgpu-calls" "amdgpu-dispatch-id" "amdgpu-dispatch-ptr" "amdgpu-implicitarg-ptr" "amdgpu-queue-ptr" "amdgpu-stack-objects" "amdgpu-work-group-id-x" "amdgpu-work-group-id-y" "amdgpu-work-group-id-z" "amdgpu-work-item-id-x" "amdgpu-work-item-id-y" "amdgpu-work-item-id-z" "uniform-work-group-size"="false" }
+; ATTRIBUTOR_GCN: attributes #[[ATTR0]] = { "amdgpu-no-dispatch-id" "amdgpu-no-dispatch-ptr" "amdgpu-no-implicitarg-ptr" "amdgpu-no-queue-ptr" "amdgpu-no-workgroup-id-x" "amdgpu-no-workgroup-id-y" "amdgpu-no-workgroup-id-z" "amdgpu-no-workitem-id-x" "amdgpu-no-workitem-id-y" "amdgpu-no-workitem-id-z" "uniform-work-group-size"="false" }
+; ATTRIBUTOR_GCN: attributes #[[ATTR1]] = { "uniform-work-group-size"="false" }
 ;.

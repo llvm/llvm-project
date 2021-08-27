@@ -875,7 +875,7 @@ Inline functions which are (explicitly or implicitly) marked inline
 
 .. option:: -flegacy-pass-manager, -fno-experimental-new-pass-manager, -fno-legacy-pass-manager
 
-Use the legacy pass manager in LLVM
+Use the legacy pass manager in LLVM (deprecated, to be removed in a future release)
 
 .. option:: -fno-crash-diagnostics
 

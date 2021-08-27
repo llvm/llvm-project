@@ -18,7 +18,6 @@
 #include "lld/Common/Reproduce.h"
 #include "llvm/ADT/CachedHashString.h"
 #include "llvm/ADT/DenseMap.h"
-#include "llvm/Bitcode/BitcodeReader.h"
 #include "llvm/LTO/LTO.h"
 #include "llvm/Option/Arg.h"
 #include "llvm/Option/ArgList.h"
@@ -275,30 +274,6 @@ StringRef macho::rerootPath(StringRef path) {
     return *rerootedPath;
 
   return path;
-}
-
-Optional<InputFile *> macho::loadArchiveMember(MemoryBufferRef mb,
-                                               uint32_t modTime,
-                                               StringRef archiveName,
-                                               bool objCOnly,
-                                               uint64_t offsetInArchive) {
-  if (config->zeroModTime)
-    modTime = 0;
-
-  switch (identify_magic(mb.getBuffer())) {
-  case file_magic::macho_object:
-    if (!objCOnly || hasObjCSection(mb))
-      return make<ObjFile>(mb, modTime, archiveName);
-    return None;
-  case file_magic::bitcode:
-    if (!objCOnly || check(isBitcodeContainingObjCCategory(mb)))
-      return make<BitcodeFile>(mb, archiveName, offsetInArchive);
-    return None;
-  default:
-    error(archiveName + ": archive member " + mb.getBufferIdentifier() +
-          " has unhandled file type");
-    return None;
-  }
 }
 
 uint32_t macho::getModTime(StringRef path) {

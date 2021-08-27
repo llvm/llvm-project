@@ -140,7 +140,7 @@ struct LookupResult {
   LookupResult() : Flags({0, 0, 0}), Entry() {}
 };
 
-/// This struct will be returned by \p DeviceTy::getOrAllocTgtPtr which provides
+/// This struct will be returned by \p DeviceTy::getTargetPointer which provides
 /// more data than just a target pointer.
 struct TargetPointerResultTy {
   struct {

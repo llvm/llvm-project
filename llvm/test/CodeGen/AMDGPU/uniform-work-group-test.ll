@@ -27,17 +27,11 @@ define void @func4() {
 }
 
 define void @func2() #0 {
-; AKF_CHECK-LABEL: define {{[^@]+}}@func2
-; AKF_CHECK-SAME: () #[[ATTR0]] {
-; AKF_CHECK-NEXT:    call void @func4()
-; AKF_CHECK-NEXT:    call void @func1()
-; AKF_CHECK-NEXT:    ret void
-;
-; ATTRIBUTOR_CHECK-LABEL: define {{[^@]+}}@func2
-; ATTRIBUTOR_CHECK-SAME: () #[[ATTR0]] {
-; ATTRIBUTOR_CHECK-NEXT:    call void @func4() #[[ATTR2:[0-9]+]]
-; ATTRIBUTOR_CHECK-NEXT:    call void @func1() #[[ATTR2]]
-; ATTRIBUTOR_CHECK-NEXT:    ret void
+; CHECK-LABEL: define {{[^@]+}}@func2
+; CHECK-SAME: () #[[ATTR0]] {
+; CHECK-NEXT:    call void @func4()
+; CHECK-NEXT:    call void @func1()
+; CHECK-NEXT:    ret void
 ;
   call void @func4()
   call void @func1()
@@ -45,15 +39,10 @@ define void @func2() #0 {
 }
 
 define void @func3() {
-; AKF_CHECK-LABEL: define {{[^@]+}}@func3
-; AKF_CHECK-SAME: () #[[ATTR0]] {
-; AKF_CHECK-NEXT:    call void @func1()
-; AKF_CHECK-NEXT:    ret void
-;
-; ATTRIBUTOR_CHECK-LABEL: define {{[^@]+}}@func3
-; ATTRIBUTOR_CHECK-SAME: () #[[ATTR0]] {
-; ATTRIBUTOR_CHECK-NEXT:    call void @func1() #[[ATTR2]]
-; ATTRIBUTOR_CHECK-NEXT:    ret void
+; CHECK-LABEL: define {{[^@]+}}@func3
+; CHECK-SAME: () #[[ATTR0]] {
+; CHECK-NEXT:    call void @func1()
+; CHECK-NEXT:    ret void
 ;
   call void @func1()
   ret void
@@ -67,9 +56,9 @@ define amdgpu_kernel void @kernel3() #0 {
 ; AKF_CHECK-NEXT:    ret void
 ;
 ; ATTRIBUTOR_CHECK-LABEL: define {{[^@]+}}@kernel3
-; ATTRIBUTOR_CHECK-SAME: () #[[ATTR1:[0-9]+]] {
-; ATTRIBUTOR_CHECK-NEXT:    call void @func2() #[[ATTR2]]
-; ATTRIBUTOR_CHECK-NEXT:    call void @func3() #[[ATTR2]]
+; ATTRIBUTOR_CHECK-SAME: () #[[ATTR0]] {
+; ATTRIBUTOR_CHECK-NEXT:    call void @func2()
+; ATTRIBUTOR_CHECK-NEXT:    call void @func3()
 ; ATTRIBUTOR_CHECK-NEXT:    ret void
 ;
   call void @func2()
@@ -82,7 +71,5 @@ attributes #0 = { "uniform-work-group-size"="false" }
 ; AKF_CHECK: attributes #[[ATTR0]] = { "uniform-work-group-size"="false" }
 ; AKF_CHECK: attributes #[[ATTR1]] = { "amdgpu-calls" "uniform-work-group-size"="false" }
 ;.
-; ATTRIBUTOR_CHECK: attributes #[[ATTR0]] = { nounwind writeonly "uniform-work-group-size"="false" }
-; ATTRIBUTOR_CHECK: attributes #[[ATTR1]] = { "amdgpu-calls" "uniform-work-group-size"="false" }
-; ATTRIBUTOR_CHECK: attributes #[[ATTR2]] = { nounwind writeonly }
+; ATTRIBUTOR_CHECK: attributes #[[ATTR0]] = { "amdgpu-no-dispatch-id" "amdgpu-no-dispatch-ptr" "amdgpu-no-implicitarg-ptr" "amdgpu-no-queue-ptr" "amdgpu-no-workgroup-id-x" "amdgpu-no-workgroup-id-y" "amdgpu-no-workgroup-id-z" "amdgpu-no-workitem-id-x" "amdgpu-no-workitem-id-y" "amdgpu-no-workitem-id-z" "uniform-work-group-size"="false" }
 ;.

@@ -131,10 +131,13 @@ define void @use_workitem_id_yz() #1 {
 ; VARABI: enable_vgpr_workitem_id = 0
 ; FIXEDABI: enable_vgpr_workitem_id = 2
 
-; FIXEDA-NOT: v0
+; FIXEDABI-DAG: v_lshlrev_b32_e32 [[TMP1:v[0-9]+]], 10, v1
+; FIXEDABI-DAG: v_lshlrev_b32_e32 [[TMP0:v[0-9]+]], 20, v2
+; FIXEDABI: v_or_b32_e32 [[TMP2:v[0-9]+]], v0, [[TMP1]]
+; FIXEDABI: v_or_b32_e32 v31, [[TMP2]], [[TMP0]]
+
 ; VARABI-NOT: v31
 ; GCN: s_swappc_b64
-; FIXEDABI-NOT: v0
 ; VARABI-NOT: v31
 define amdgpu_kernel void @kern_indirect_use_workitem_id_x() #1 {
   call void @use_workitem_id_x()
@@ -215,7 +218,7 @@ define amdgpu_kernel void @kern_indirect_use_workitem_id_xy() #1 {
 ; VARABI-NOT: v2
 
 
-; FIXEDABI-DAG:	v_lshlrev_b32_e32 [[TMP1:v[0-9]+]], 10, v1
+; FIXEDABI-DAG: v_lshlrev_b32_e32 [[TMP1:v[0-9]+]], 10, v1
 ; FIXEDABI-DAG: v_lshlrev_b32_e32 [[TMP0:v[0-9]+]], 20, v2
 ; FIXEDABI: v_or_b32_e32 [[TMP2:v[0-9]+]], v0, [[TMP1]]
 ; FIXEDABI: v_or_b32_e32 v31, [[TMP2]], [[TMP0]]
@@ -236,7 +239,7 @@ define amdgpu_kernel void @kern_indirect_use_workitem_id_xz() #1 {
 ; VARABI-NOT: v2
 
 
-; FIXEDABI-DAG:	v_lshlrev_b32_e32 [[TMP1:v[0-9]+]], 10, v1
+; FIXEDABI-DAG: v_lshlrev_b32_e32 [[TMP1:v[0-9]+]], 10, v1
 ; FIXEDABI-DAG: v_lshlrev_b32_e32 [[TMP0:v[0-9]+]], 20, v2
 ; FIXEDABI: v_or_b32_e32 [[TMP2:v[0-9]+]], v0, [[TMP1]]
 ; FIXEDABI: v_or_b32_e32 v31, [[TMP2]], [[TMP0]]
@@ -259,7 +262,7 @@ define amdgpu_kernel void @kern_indirect_use_workitem_id_yz() #1 {
 ; VARABI-NOT: v1
 ; VARABI-NOT: v2
 
-; FIXEDABI-DAG:	v_lshlrev_b32_e32 [[TMP1:v[0-9]+]], 10, v1
+; FIXEDABI-DAG: v_lshlrev_b32_e32 [[TMP1:v[0-9]+]], 10, v1
 ; FIXEDABI-DAG: v_lshlrev_b32_e32 [[TMP0:v[0-9]+]], 20, v2
 ; FIXEDABI: v_or_b32_e32 [[TMP2:v[0-9]+]], v0, [[TMP1]]
 ; FIXEDABI: v_or_b32_e32 v31, [[TMP2]], [[TMP0]]
@@ -771,7 +774,7 @@ define void @too_many_args_use_workitem_id_xyz(
 
 ; GCN-DAG: s_mov_b32 s32, 0
 
-; GCN-DAG:	v_lshlrev_b32_e32 [[TMP1:v[0-9]+]], 10, v1
+; GCN-DAG: v_lshlrev_b32_e32 [[TMP1:v[0-9]+]], 10, v1
 ; GCN-DAG: v_lshlrev_b32_e32 [[TMP0:v[0-9]+]], 20, v2
 ; GCN-DAG: v_or_b32_e32 [[TMP2:v[0-9]+]], v0, [[TMP1]]
 ; VARABI-DAG: v_or_b32_e32 [[PACKEDID:v[0-9]+]], [[TMP2]], [[TMP0]]

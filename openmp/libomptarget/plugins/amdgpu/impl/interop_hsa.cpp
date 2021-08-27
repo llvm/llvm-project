@@ -1,23 +1,23 @@
-//===--- amdgpu/impl/atmi_interop_hsa.cpp ------------------------- C++ -*-===//
+//===--- amdgpu/impl/interop_hsa.cpp ------------------------------ C++ -*-===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
 // SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
-#include "atmi_interop_hsa.h"
+#include "interop_hsa.h"
 #include "internal.h"
 
-hsa_status_t atmi_interop_hsa_get_symbol_info(
+hsa_status_t interop_hsa_get_symbol_info(
     const std::map<std::string, atl_symbol_info_t> &SymbolInfoTable,
     int DeviceId, const char *symbol, void **var_addr, unsigned int *var_size) {
   /*
      // Typical usage:
      void *var_addr;
      size_t var_size;
-     atmi_interop_hsa_get_symbol_addr(gpu_place, "symbol_name", &var_addr,
+     interop_hsa_get_symbol_addr(gpu_place, "symbol_name", &var_addr,
      &var_size);
-     atmi_memcpy(signal, host_add, var_addr, var_size);
+     impl_memcpy(signal, host_add, var_addr, var_size);
   */
 
   if (!symbol || !var_addr || !var_size)
@@ -38,14 +38,14 @@ hsa_status_t atmi_interop_hsa_get_symbol_info(
   }
 }
 
-hsa_status_t atmi_interop_hsa_get_kernel_info(
+hsa_status_t interop_hsa_get_kernel_info(
     const std::map<std::string, atl_kernel_info_t> &KernelInfoTable,
     int DeviceId, const char *kernel_name,
     hsa_executable_symbol_info_t kernel_info, uint32_t *value) {
   /*
      // Typical usage:
      uint32_t value;
-     atmi_interop_hsa_get_kernel_addr(gpu_place, "kernel_name",
+     interop_hsa_get_kernel_addr(gpu_place, "kernel_name",
                                   HSA_EXECUTABLE_SYMBOL_INFO_KERNEL_KERNARG_SEGMENT_SIZE,
                                   &val);
   */
@@ -68,7 +68,7 @@ hsa_status_t atmi_interop_hsa_get_kernel_info(
       break;
     case HSA_EXECUTABLE_SYMBOL_INFO_KERNEL_KERNARG_SEGMENT_SIZE:
       // return the size for non-implicit args
-      *value = info.kernel_segment_size - sizeof(atmi_implicit_args_t);
+      *value = info.kernel_segment_size - sizeof(impl_implicit_args_t);
       break;
     default:
       *value = 0;

@@ -129,6 +129,10 @@ struct ThreeWayCompView : std::ranges::view_base {
   constexpr ThreeWayCompIter end() const { return ThreeWayCompIter(globalBuff + 8); }
 };
 
+struct TimesTwo {
+  constexpr int operator()(int x) const { return x * 2; }
+};
+
 struct PlusOneMutable {
   constexpr int operator()(int x) { return x + 1; }
 };

@@ -294,7 +294,9 @@ void RegisterFile::addRegisterWrite(WriteRef Write,
     const WriteState *OtherWS = OtherWrite.getWriteState();
     if (OtherWS && OtherWrite.getSourceIndex() == Write.getSourceIndex()) {
       if (OtherWS->getLatency() > WS.getLatency()) {
-        // Conservatively keep the slowest write to RegID.
+        // Conservatively keep the slowest write on RegID.
+        if (ShouldAllocatePhysRegs)
+          allocatePhysRegs(RegisterMappings[RegID].second, UsedPhysRegs);
         return;
       }
     }

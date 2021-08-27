@@ -24,14 +24,14 @@ define i8 @test_bitreverse_i8(i8 %a) nounwind {
 ; SSE-NEXT:    movl %edi, %eax
 ; SSE-NEXT:    andb $51, %al
 ; SSE-NEXT:    shlb $2, %al
-; SSE-NEXT:    andb $-52, %dil
 ; SSE-NEXT:    shrb $2, %dil
+; SSE-NEXT:    andb $51, %dil
 ; SSE-NEXT:    orb %al, %dil
 ; SSE-NEXT:    movl %edi, %eax
 ; SSE-NEXT:    andb $85, %al
 ; SSE-NEXT:    addb %al, %al
-; SSE-NEXT:    andb $-86, %dil
 ; SSE-NEXT:    shrb %dil
+; SSE-NEXT:    andb $85, %dil
 ; SSE-NEXT:    addl %edi, %eax
 ; SSE-NEXT:    # kill: def $al killed $al killed $eax
 ; SSE-NEXT:    retq
@@ -43,14 +43,14 @@ define i8 @test_bitreverse_i8(i8 %a) nounwind {
 ; AVX-NEXT:    movl %edi, %eax
 ; AVX-NEXT:    andb $51, %al
 ; AVX-NEXT:    shlb $2, %al
-; AVX-NEXT:    andb $-52, %dil
 ; AVX-NEXT:    shrb $2, %dil
+; AVX-NEXT:    andb $51, %dil
 ; AVX-NEXT:    orb %al, %dil
 ; AVX-NEXT:    movl %edi, %eax
 ; AVX-NEXT:    andb $85, %al
 ; AVX-NEXT:    addb %al, %al
-; AVX-NEXT:    andb $-86, %dil
 ; AVX-NEXT:    shrb %dil
+; AVX-NEXT:    andb $85, %dil
 ; AVX-NEXT:    addl %edi, %eax
 ; AVX-NEXT:    # kill: def $al killed $al killed $eax
 ; AVX-NEXT:    retq
@@ -70,14 +70,14 @@ define i8 @test_bitreverse_i8(i8 %a) nounwind {
 ; GFNISSE-NEXT:    movl %edi, %eax
 ; GFNISSE-NEXT:    andb $51, %al
 ; GFNISSE-NEXT:    shlb $2, %al
-; GFNISSE-NEXT:    andb $-52, %dil
 ; GFNISSE-NEXT:    shrb $2, %dil
+; GFNISSE-NEXT:    andb $51, %dil
 ; GFNISSE-NEXT:    orb %al, %dil
 ; GFNISSE-NEXT:    movl %edi, %eax
 ; GFNISSE-NEXT:    andb $85, %al
 ; GFNISSE-NEXT:    addb %al, %al
-; GFNISSE-NEXT:    andb $-86, %dil
 ; GFNISSE-NEXT:    shrb %dil
+; GFNISSE-NEXT:    andb $85, %dil
 ; GFNISSE-NEXT:    addl %edi, %eax
 ; GFNISSE-NEXT:    # kill: def $al killed $al killed $eax
 ; GFNISSE-NEXT:    retq
@@ -89,14 +89,14 @@ define i8 @test_bitreverse_i8(i8 %a) nounwind {
 ; GFNIAVX-NEXT:    movl %edi, %eax
 ; GFNIAVX-NEXT:    andb $51, %al
 ; GFNIAVX-NEXT:    shlb $2, %al
-; GFNIAVX-NEXT:    andb $-52, %dil
 ; GFNIAVX-NEXT:    shrb $2, %dil
+; GFNIAVX-NEXT:    andb $51, %dil
 ; GFNIAVX-NEXT:    orb %al, %dil
 ; GFNIAVX-NEXT:    movl %edi, %eax
 ; GFNIAVX-NEXT:    andb $85, %al
 ; GFNIAVX-NEXT:    addb %al, %al
-; GFNIAVX-NEXT:    andb $-86, %dil
 ; GFNIAVX-NEXT:    shrb %dil
+; GFNIAVX-NEXT:    andb $85, %dil
 ; GFNIAVX-NEXT:    addl %edi, %eax
 ; GFNIAVX-NEXT:    # kill: def $al killed $al killed $eax
 ; GFNIAVX-NEXT:    retq
@@ -108,14 +108,14 @@ define i8 @test_bitreverse_i8(i8 %a) nounwind {
 ; GFNIAVX2-NEXT:    movl %edi, %eax
 ; GFNIAVX2-NEXT:    andb $51, %al
 ; GFNIAVX2-NEXT:    shlb $2, %al
-; GFNIAVX2-NEXT:    andb $-52, %dil
 ; GFNIAVX2-NEXT:    shrb $2, %dil
+; GFNIAVX2-NEXT:    andb $51, %dil
 ; GFNIAVX2-NEXT:    orb %al, %dil
 ; GFNIAVX2-NEXT:    movl %edi, %eax
 ; GFNIAVX2-NEXT:    andb $85, %al
 ; GFNIAVX2-NEXT:    addb %al, %al
-; GFNIAVX2-NEXT:    andb $-86, %dil
 ; GFNIAVX2-NEXT:    shrb %dil
+; GFNIAVX2-NEXT:    andb $85, %dil
 ; GFNIAVX2-NEXT:    addl %edi, %eax
 ; GFNIAVX2-NEXT:    # kill: def $al killed $al killed $eax
 ; GFNIAVX2-NEXT:    retq
@@ -127,14 +127,14 @@ define i8 @test_bitreverse_i8(i8 %a) nounwind {
 ; GFNIAVX512F-NEXT:    movl %edi, %eax
 ; GFNIAVX512F-NEXT:    andb $51, %al
 ; GFNIAVX512F-NEXT:    shlb $2, %al
-; GFNIAVX512F-NEXT:    andb $-52, %dil
 ; GFNIAVX512F-NEXT:    shrb $2, %dil
+; GFNIAVX512F-NEXT:    andb $51, %dil
 ; GFNIAVX512F-NEXT:    orb %al, %dil
 ; GFNIAVX512F-NEXT:    movl %edi, %eax
 ; GFNIAVX512F-NEXT:    andb $85, %al
 ; GFNIAVX512F-NEXT:    addb %al, %al
-; GFNIAVX512F-NEXT:    andb $-86, %dil
 ; GFNIAVX512F-NEXT:    shrb %dil
+; GFNIAVX512F-NEXT:    andb $85, %dil
 ; GFNIAVX512F-NEXT:    addl %edi, %eax
 ; GFNIAVX512F-NEXT:    # kill: def $al killed $al killed $eax
 ; GFNIAVX512F-NEXT:    retq
@@ -146,14 +146,14 @@ define i8 @test_bitreverse_i8(i8 %a) nounwind {
 ; GFNIAVX512BW-NEXT:    movl %edi, %eax
 ; GFNIAVX512BW-NEXT:    andb $51, %al
 ; GFNIAVX512BW-NEXT:    shlb $2, %al
-; GFNIAVX512BW-NEXT:    andb $-52, %dil
 ; GFNIAVX512BW-NEXT:    shrb $2, %dil
+; GFNIAVX512BW-NEXT:    andb $51, %dil
 ; GFNIAVX512BW-NEXT:    orb %al, %dil
 ; GFNIAVX512BW-NEXT:    movl %edi, %eax
 ; GFNIAVX512BW-NEXT:    andb $85, %al
 ; GFNIAVX512BW-NEXT:    addb %al, %al
-; GFNIAVX512BW-NEXT:    andb $-86, %dil
 ; GFNIAVX512BW-NEXT:    shrb %dil
+; GFNIAVX512BW-NEXT:    andb $85, %dil
 ; GFNIAVX512BW-NEXT:    addl %edi, %eax
 ; GFNIAVX512BW-NEXT:    # kill: def $al killed $al killed $eax
 ; GFNIAVX512BW-NEXT:    retq
@@ -169,18 +169,18 @@ define i16 @test_bitreverse_i16(i16 %a) nounwind {
 ; SSE-NEXT:    movl %edi, %eax
 ; SSE-NEXT:    andl $3855, %eax # imm = 0xF0F
 ; SSE-NEXT:    shll $4, %eax
-; SSE-NEXT:    andl $61680, %edi # imm = 0xF0F0
 ; SSE-NEXT:    shrl $4, %edi
+; SSE-NEXT:    andl $3855, %edi # imm = 0xF0F
 ; SSE-NEXT:    orl %eax, %edi
 ; SSE-NEXT:    movl %edi, %eax
 ; SSE-NEXT:    andl $13107, %eax # imm = 0x3333
-; SSE-NEXT:    andl $52428, %edi # imm = 0xCCCC
 ; SSE-NEXT:    shrl $2, %edi
+; SSE-NEXT:    andl $13107, %edi # imm = 0x3333
 ; SSE-NEXT:    leal (%rdi,%rax,4), %eax
 ; SSE-NEXT:    movl %eax, %ecx
 ; SSE-NEXT:    andl $21845, %ecx # imm = 0x5555
-; SSE-NEXT:    andl $43690, %eax # imm = 0xAAAA
 ; SSE-NEXT:    shrl %eax
+; SSE-NEXT:    andl $21845, %eax # imm = 0x5555
 ; SSE-NEXT:    leal (%rax,%rcx,2), %eax
 ; SSE-NEXT:    # kill: def $ax killed $ax killed $eax
 ; SSE-NEXT:    retq
@@ -192,18 +192,18 @@ define i16 @test_bitreverse_i16(i16 %a) nounwind {
 ; AVX-NEXT:    movl %edi, %eax
 ; AVX-NEXT:    andl $3855, %eax # imm = 0xF0F
 ; AVX-NEXT:    shll $4, %eax
-; AVX-NEXT:    andl $61680, %edi # imm = 0xF0F0
 ; AVX-NEXT:    shrl $4, %edi
+; AVX-NEXT:    andl $3855, %edi # imm = 0xF0F
 ; AVX-NEXT:    orl %eax, %edi
 ; AVX-NEXT:    movl %edi, %eax
 ; AVX-NEXT:    andl $13107, %eax # imm = 0x3333
-; AVX-NEXT:    andl $52428, %edi # imm = 0xCCCC
 ; AVX-NEXT:    shrl $2, %edi
+; AVX-NEXT:    andl $13107, %edi # imm = 0x3333
 ; AVX-NEXT:    leal (%rdi,%rax,4), %eax
 ; AVX-NEXT:    movl %eax, %ecx
 ; AVX-NEXT:    andl $21845, %ecx # imm = 0x5555
-; AVX-NEXT:    andl $43690, %eax # imm = 0xAAAA
 ; AVX-NEXT:    shrl %eax
+; AVX-NEXT:    andl $21845, %eax # imm = 0x5555
 ; AVX-NEXT:    leal (%rax,%rcx,2), %eax
 ; AVX-NEXT:    # kill: def $ax killed $ax killed $eax
 ; AVX-NEXT:    retq
@@ -223,18 +223,18 @@ define i16 @test_bitreverse_i16(i16 %a) nounwind {
 ; GFNISSE-NEXT:    movl %edi, %eax
 ; GFNISSE-NEXT:    andl $3855, %eax # imm = 0xF0F
 ; GFNISSE-NEXT:    shll $4, %eax
-; GFNISSE-NEXT:    andl $61680, %edi # imm = 0xF0F0
 ; GFNISSE-NEXT:    shrl $4, %edi
+; GFNISSE-NEXT:    andl $3855, %edi # imm = 0xF0F
 ; GFNISSE-NEXT:    orl %eax, %edi
 ; GFNISSE-NEXT:    movl %edi, %eax
 ; GFNISSE-NEXT:    andl $13107, %eax # imm = 0x3333
-; GFNISSE-NEXT:    andl $52428, %edi # imm = 0xCCCC
 ; GFNISSE-NEXT:    shrl $2, %edi
+; GFNISSE-NEXT:    andl $13107, %edi # imm = 0x3333
 ; GFNISSE-NEXT:    leal (%rdi,%rax,4), %eax
 ; GFNISSE-NEXT:    movl %eax, %ecx
 ; GFNISSE-NEXT:    andl $21845, %ecx # imm = 0x5555
-; GFNISSE-NEXT:    andl $43690, %eax # imm = 0xAAAA
 ; GFNISSE-NEXT:    shrl %eax
+; GFNISSE-NEXT:    andl $21845, %eax # imm = 0x5555
 ; GFNISSE-NEXT:    leal (%rax,%rcx,2), %eax
 ; GFNISSE-NEXT:    # kill: def $ax killed $ax killed $eax
 ; GFNISSE-NEXT:    retq
@@ -246,18 +246,18 @@ define i16 @test_bitreverse_i16(i16 %a) nounwind {
 ; GFNIAVX-NEXT:    movl %edi, %eax
 ; GFNIAVX-NEXT:    andl $3855, %eax # imm = 0xF0F
 ; GFNIAVX-NEXT:    shll $4, %eax
-; GFNIAVX-NEXT:    andl $61680, %edi # imm = 0xF0F0
 ; GFNIAVX-NEXT:    shrl $4, %edi
+; GFNIAVX-NEXT:    andl $3855, %edi # imm = 0xF0F
 ; GFNIAVX-NEXT:    orl %eax, %edi
 ; GFNIAVX-NEXT:    movl %edi, %eax
 ; GFNIAVX-NEXT:    andl $13107, %eax # imm = 0x3333
-; GFNIAVX-NEXT:    andl $52428, %edi # imm = 0xCCCC
 ; GFNIAVX-NEXT:    shrl $2, %edi
+; GFNIAVX-NEXT:    andl $13107, %edi # imm = 0x3333
 ; GFNIAVX-NEXT:    leal (%rdi,%rax,4), %eax
 ; GFNIAVX-NEXT:    movl %eax, %ecx
 ; GFNIAVX-NEXT:    andl $21845, %ecx # imm = 0x5555
-; GFNIAVX-NEXT:    andl $43690, %eax # imm = 0xAAAA
 ; GFNIAVX-NEXT:    shrl %eax
+; GFNIAVX-NEXT:    andl $21845, %eax # imm = 0x5555
 ; GFNIAVX-NEXT:    leal (%rax,%rcx,2), %eax
 ; GFNIAVX-NEXT:    # kill: def $ax killed $ax killed $eax
 ; GFNIAVX-NEXT:    retq
@@ -269,18 +269,18 @@ define i16 @test_bitreverse_i16(i16 %a) nounwind {
 ; GFNIAVX2-NEXT:    movl %edi, %eax
 ; GFNIAVX2-NEXT:    andl $3855, %eax # imm = 0xF0F
 ; GFNIAVX2-NEXT:    shll $4, %eax
-; GFNIAVX2-NEXT:    andl $61680, %edi # imm = 0xF0F0
 ; GFNIAVX2-NEXT:    shrl $4, %edi
+; GFNIAVX2-NEXT:    andl $3855, %edi # imm = 0xF0F
 ; GFNIAVX2-NEXT:    orl %eax, %edi
 ; GFNIAVX2-NEXT:    movl %edi, %eax
 ; GFNIAVX2-NEXT:    andl $13107, %eax # imm = 0x3333
-; GFNIAVX2-NEXT:    andl $52428, %edi # imm = 0xCCCC
 ; GFNIAVX2-NEXT:    shrl $2, %edi
+; GFNIAVX2-NEXT:    andl $13107, %edi # imm = 0x3333
 ; GFNIAVX2-NEXT:    leal (%rdi,%rax,4), %eax
 ; GFNIAVX2-NEXT:    movl %eax, %ecx
 ; GFNIAVX2-NEXT:    andl $21845, %ecx # imm = 0x5555
-; GFNIAVX2-NEXT:    andl $43690, %eax # imm = 0xAAAA
 ; GFNIAVX2-NEXT:    shrl %eax
+; GFNIAVX2-NEXT:    andl $21845, %eax # imm = 0x5555
 ; GFNIAVX2-NEXT:    leal (%rax,%rcx,2), %eax
 ; GFNIAVX2-NEXT:    # kill: def $ax killed $ax killed $eax
 ; GFNIAVX2-NEXT:    retq
@@ -292,18 +292,18 @@ define i16 @test_bitreverse_i16(i16 %a) nounwind {
 ; GFNIAVX512F-NEXT:    movl %edi, %eax
 ; GFNIAVX512F-NEXT:    andl $3855, %eax # imm = 0xF0F
 ; GFNIAVX512F-NEXT:    shll $4, %eax
-; GFNIAVX512F-NEXT:    andl $61680, %edi # imm = 0xF0F0
 ; GFNIAVX512F-NEXT:    shrl $4, %edi
+; GFNIAVX512F-NEXT:    andl $3855, %edi # imm = 0xF0F
 ; GFNIAVX512F-NEXT:    orl %eax, %edi
 ; GFNIAVX512F-NEXT:    movl %edi, %eax
 ; GFNIAVX512F-NEXT:    andl $13107, %eax # imm = 0x3333
-; GFNIAVX512F-NEXT:    andl $52428, %edi # imm = 0xCCCC
 ; GFNIAVX512F-NEXT:    shrl $2, %edi
+; GFNIAVX512F-NEXT:    andl $13107, %edi # imm = 0x3333
 ; GFNIAVX512F-NEXT:    leal (%rdi,%rax,4), %eax
 ; GFNIAVX512F-NEXT:    movl %eax, %ecx
 ; GFNIAVX512F-NEXT:    andl $21845, %ecx # imm = 0x5555
-; GFNIAVX512F-NEXT:    andl $43690, %eax # imm = 0xAAAA
 ; GFNIAVX512F-NEXT:    shrl %eax
+; GFNIAVX512F-NEXT:    andl $21845, %eax # imm = 0x5555
 ; GFNIAVX512F-NEXT:    leal (%rax,%rcx,2), %eax
 ; GFNIAVX512F-NEXT:    # kill: def $ax killed $ax killed $eax
 ; GFNIAVX512F-NEXT:    retq
@@ -315,18 +315,18 @@ define i16 @test_bitreverse_i16(i16 %a) nounwind {
 ; GFNIAVX512BW-NEXT:    movl %edi, %eax
 ; GFNIAVX512BW-NEXT:    andl $3855, %eax # imm = 0xF0F
 ; GFNIAVX512BW-NEXT:    shll $4, %eax
-; GFNIAVX512BW-NEXT:    andl $61680, %edi # imm = 0xF0F0
 ; GFNIAVX512BW-NEXT:    shrl $4, %edi
+; GFNIAVX512BW-NEXT:    andl $3855, %edi # imm = 0xF0F
 ; GFNIAVX512BW-NEXT:    orl %eax, %edi
 ; GFNIAVX512BW-NEXT:    movl %edi, %eax
 ; GFNIAVX512BW-NEXT:    andl $13107, %eax # imm = 0x3333
-; GFNIAVX512BW-NEXT:    andl $52428, %edi # imm = 0xCCCC
 ; GFNIAVX512BW-NEXT:    shrl $2, %edi
+; GFNIAVX512BW-NEXT:    andl $13107, %edi # imm = 0x3333
 ; GFNIAVX512BW-NEXT:    leal (%rdi,%rax,4), %eax
 ; GFNIAVX512BW-NEXT:    movl %eax, %ecx
 ; GFNIAVX512BW-NEXT:    andl $21845, %ecx # imm = 0x5555
-; GFNIAVX512BW-NEXT:    andl $43690, %eax # imm = 0xAAAA
 ; GFNIAVX512BW-NEXT:    shrl %eax
+; GFNIAVX512BW-NEXT:    andl $21845, %eax # imm = 0x5555
 ; GFNIAVX512BW-NEXT:    leal (%rax,%rcx,2), %eax
 ; GFNIAVX512BW-NEXT:    # kill: def $ax killed $ax killed $eax
 ; GFNIAVX512BW-NEXT:    retq
@@ -342,18 +342,18 @@ define i32 @test_bitreverse_i32(i32 %a) nounwind {
 ; SSE-NEXT:    movl %edi, %eax
 ; SSE-NEXT:    andl $252645135, %eax # imm = 0xF0F0F0F
 ; SSE-NEXT:    shll $4, %eax
-; SSE-NEXT:    andl $-252645136, %edi # imm = 0xF0F0F0F0
 ; SSE-NEXT:    shrl $4, %edi
+; SSE-NEXT:    andl $252645135, %edi # imm = 0xF0F0F0F
 ; SSE-NEXT:    orl %eax, %edi
 ; SSE-NEXT:    movl %edi, %eax
 ; SSE-NEXT:    andl $858993459, %eax # imm = 0x33333333
-; SSE-NEXT:    andl $-858993460, %edi # imm = 0xCCCCCCCC
 ; SSE-NEXT:    shrl $2, %edi
+; SSE-NEXT:    andl $858993459, %edi # imm = 0x33333333
 ; SSE-NEXT:    leal (%rdi,%rax,4), %eax
 ; SSE-NEXT:    movl %eax, %ecx
 ; SSE-NEXT:    andl $1431655765, %ecx # imm = 0x55555555
-; SSE-NEXT:    andl $-1431655766, %eax # imm = 0xAAAAAAAA
 ; SSE-NEXT:    shrl %eax
+; SSE-NEXT:    andl $1431655765, %eax # imm = 0x55555555
 ; SSE-NEXT:    leal (%rax,%rcx,2), %eax
 ; SSE-NEXT:    retq
 ;
@@ -364,18 +364,18 @@ define i32 @test_bitreverse_i32(i32 %a) nounwind {
 ; AVX-NEXT:    movl %edi, %eax
 ; AVX-NEXT:    andl $252645135, %eax # imm = 0xF0F0F0F
 ; AVX-NEXT:    shll $4, %eax
-; AVX-NEXT:    andl $-252645136, %edi # imm = 0xF0F0F0F0
 ; AVX-NEXT:    shrl $4, %edi
+; AVX-NEXT:    andl $252645135, %edi # imm = 0xF0F0F0F
 ; AVX-NEXT:    orl %eax, %edi
 ; AVX-NEXT:    movl %edi, %eax
 ; AVX-NEXT:    andl $858993459, %eax # imm = 0x33333333
-; AVX-NEXT:    andl $-858993460, %edi # imm = 0xCCCCCCCC
 ; AVX-NEXT:    shrl $2, %edi
+; AVX-NEXT:    andl $858993459, %edi # imm = 0x33333333
 ; AVX-NEXT:    leal (%rdi,%rax,4), %eax
 ; AVX-NEXT:    movl %eax, %ecx
 ; AVX-NEXT:    andl $1431655765, %ecx # imm = 0x55555555
-; AVX-NEXT:    andl $-1431655766, %eax # imm = 0xAAAAAAAA
 ; AVX-NEXT:    shrl %eax
+; AVX-NEXT:    andl $1431655765, %eax # imm = 0x55555555
 ; AVX-NEXT:    leal (%rax,%rcx,2), %eax
 ; AVX-NEXT:    retq
 ;
@@ -393,18 +393,18 @@ define i32 @test_bitreverse_i32(i32 %a) nounwind {
 ; GFNISSE-NEXT:    movl %edi, %eax
 ; GFNISSE-NEXT:    andl $252645135, %eax # imm = 0xF0F0F0F
 ; GFNISSE-NEXT:    shll $4, %eax
-; GFNISSE-NEXT:    andl $-252645136, %edi # imm = 0xF0F0F0F0
 ; GFNISSE-NEXT:    shrl $4, %edi
+; GFNISSE-NEXT:    andl $252645135, %edi # imm = 0xF0F0F0F
 ; GFNISSE-NEXT:    orl %eax, %edi
 ; GFNISSE-NEXT:    movl %edi, %eax
 ; GFNISSE-NEXT:    andl $858993459, %eax # imm = 0x33333333
-; GFNISSE-NEXT:    andl $-858993460, %edi # imm = 0xCCCCCCCC
 ; GFNISSE-NEXT:    shrl $2, %edi
+; GFNISSE-NEXT:    andl $858993459, %edi # imm = 0x33333333
 ; GFNISSE-NEXT:    leal (%rdi,%rax,4), %eax
 ; GFNISSE-NEXT:    movl %eax, %ecx
 ; GFNISSE-NEXT:    andl $1431655765, %ecx # imm = 0x55555555
-; GFNISSE-NEXT:    andl $-1431655766, %eax # imm = 0xAAAAAAAA
 ; GFNISSE-NEXT:    shrl %eax
+; GFNISSE-NEXT:    andl $1431655765, %eax # imm = 0x55555555
 ; GFNISSE-NEXT:    leal (%rax,%rcx,2), %eax
 ; GFNISSE-NEXT:    retq
 ;
@@ -415,18 +415,18 @@ define i32 @test_bitreverse_i32(i32 %a) nounwind {
 ; GFNIAVX-NEXT:    movl %edi, %eax
 ; GFNIAVX-NEXT:    andl $252645135, %eax # imm = 0xF0F0F0F
 ; GFNIAVX-NEXT:    shll $4, %eax
-; GFNIAVX-NEXT:    andl $-252645136, %edi # imm = 0xF0F0F0F0
 ; GFNIAVX-NEXT:    shrl $4, %edi
+; GFNIAVX-NEXT:    andl $252645135, %edi # imm = 0xF0F0F0F
 ; GFNIAVX-NEXT:    orl %eax, %edi
 ; GFNIAVX-NEXT:    movl %edi, %eax
 ; GFNIAVX-NEXT:    andl $858993459, %eax # imm = 0x33333333
-; GFNIAVX-NEXT:    andl $-858993460, %edi # imm = 0xCCCCCCCC
 ; GFNIAVX-NEXT:    shrl $2, %edi
+; GFNIAVX-NEXT:    andl $858993459, %edi # imm = 0x33333333
 ; GFNIAVX-NEXT:    leal (%rdi,%rax,4), %eax
 ; GFNIAVX-NEXT:    movl %eax, %ecx
 ; GFNIAVX-NEXT:    andl $1431655765, %ecx # imm = 0x55555555
-; GFNIAVX-NEXT:    andl $-1431655766, %eax # imm = 0xAAAAAAAA
 ; GFNIAVX-NEXT:    shrl %eax
+; GFNIAVX-NEXT:    andl $1431655765, %eax # imm = 0x55555555
 ; GFNIAVX-NEXT:    leal (%rax,%rcx,2), %eax
 ; GFNIAVX-NEXT:    retq
 ;
@@ -437,18 +437,18 @@ define i32 @test_bitreverse_i32(i32 %a) nounwind {
 ; GFNIAVX2-NEXT:    movl %edi, %eax
 ; GFNIAVX2-NEXT:    andl $252645135, %eax # imm = 0xF0F0F0F
 ; GFNIAVX2-NEXT:    shll $4, %eax
-; GFNIAVX2-NEXT:    andl $-252645136, %edi # imm = 0xF0F0F0F0
 ; GFNIAVX2-NEXT:    shrl $4, %edi
+; GFNIAVX2-NEXT:    andl $252645135, %edi # imm = 0xF0F0F0F
 ; GFNIAVX2-NEXT:    orl %eax, %edi
 ; GFNIAVX2-NEXT:    movl %edi, %eax
 ; GFNIAVX2-NEXT:    andl $858993459, %eax # imm = 0x33333333
-; GFNIAVX2-NEXT:    andl $-858993460, %edi # imm = 0xCCCCCCCC
 ; GFNIAVX2-NEXT:    shrl $2, %edi
+; GFNIAVX2-NEXT:    andl $858993459, %edi # imm = 0x33333333
 ; GFNIAVX2-NEXT:    leal (%rdi,%rax,4), %eax
 ; GFNIAVX2-NEXT:    movl %eax, %ecx
 ; GFNIAVX2-NEXT:    andl $1431655765, %ecx # imm = 0x55555555
-; GFNIAVX2-NEXT:    andl $-1431655766, %eax # imm = 0xAAAAAAAA
 ; GFNIAVX2-NEXT:    shrl %eax
+; GFNIAVX2-NEXT:    andl $1431655765, %eax # imm = 0x55555555
 ; GFNIAVX2-NEXT:    leal (%rax,%rcx,2), %eax
 ; GFNIAVX2-NEXT:    retq
 ;
@@ -459,18 +459,18 @@ define i32 @test_bitreverse_i32(i32 %a) nounwind {
 ; GFNIAVX512F-NEXT:    movl %edi, %eax
 ; GFNIAVX512F-NEXT:    andl $252645135, %eax # imm = 0xF0F0F0F
 ; GFNIAVX512F-NEXT:    shll $4, %eax
-; GFNIAVX512F-NEXT:    andl $-252645136, %edi # imm = 0xF0F0F0F0
 ; GFNIAVX512F-NEXT:    shrl $4, %edi
+; GFNIAVX512F-NEXT:    andl $252645135, %edi # imm = 0xF0F0F0F
 ; GFNIAVX512F-NEXT:    orl %eax, %edi
 ; GFNIAVX512F-NEXT:    movl %edi, %eax
 ; GFNIAVX512F-NEXT:    andl $858993459, %eax # imm = 0x33333333
-; GFNIAVX512F-NEXT:    andl $-858993460, %edi # imm = 0xCCCCCCCC
 ; GFNIAVX512F-NEXT:    shrl $2, %edi
+; GFNIAVX512F-NEXT:    andl $858993459, %edi # imm = 0x33333333
 ; GFNIAVX512F-NEXT:    leal (%rdi,%rax,4), %eax
 ; GFNIAVX512F-NEXT:    movl %eax, %ecx
 ; GFNIAVX512F-NEXT:    andl $1431655765, %ecx # imm = 0x55555555
-; GFNIAVX512F-NEXT:    andl $-1431655766, %eax # imm = 0xAAAAAAAA
 ; GFNIAVX512F-NEXT:    shrl %eax
+; GFNIAVX512F-NEXT:    andl $1431655765, %eax # imm = 0x55555555
 ; GFNIAVX512F-NEXT:    leal (%rax,%rcx,2), %eax
 ; GFNIAVX512F-NEXT:    retq
 ;
@@ -481,18 +481,18 @@ define i32 @test_bitreverse_i32(i32 %a) nounwind {
 ; GFNIAVX512BW-NEXT:    movl %edi, %eax
 ; GFNIAVX512BW-NEXT:    andl $252645135, %eax # imm = 0xF0F0F0F
 ; GFNIAVX512BW-NEXT:    shll $4, %eax
-; GFNIAVX512BW-NEXT:    andl $-252645136, %edi # imm = 0xF0F0F0F0
 ; GFNIAVX512BW-NEXT:    shrl $4, %edi
+; GFNIAVX512BW-NEXT:    andl $252645135, %edi # imm = 0xF0F0F0F
 ; GFNIAVX512BW-NEXT:    orl %eax, %edi
 ; GFNIAVX512BW-NEXT:    movl %edi, %eax
 ; GFNIAVX512BW-NEXT:    andl $858993459, %eax # imm = 0x33333333
-; GFNIAVX512BW-NEXT:    andl $-858993460, %edi # imm = 0xCCCCCCCC
 ; GFNIAVX512BW-NEXT:    shrl $2, %edi
+; GFNIAVX512BW-NEXT:    andl $858993459, %edi # imm = 0x33333333
 ; GFNIAVX512BW-NEXT:    leal (%rdi,%rax,4), %eax
 ; GFNIAVX512BW-NEXT:    movl %eax, %ecx
 ; GFNIAVX512BW-NEXT:    andl $1431655765, %ecx # imm = 0x55555555
-; GFNIAVX512BW-NEXT:    andl $-1431655766, %eax # imm = 0xAAAAAAAA
 ; GFNIAVX512BW-NEXT:    shrl %eax
+; GFNIAVX512BW-NEXT:    andl $1431655765, %eax # imm = 0x55555555
 ; GFNIAVX512BW-NEXT:    leal (%rax,%rcx,2), %eax
 ; GFNIAVX512BW-NEXT:    retq
   %b = call i32 @llvm.bitreverse.i32(i32 %a)
@@ -503,49 +503,49 @@ define i64 @test_bitreverse_i64(i64 %a) nounwind {
 ; SSE-LABEL: test_bitreverse_i64:
 ; SSE:       # %bb.0:
 ; SSE-NEXT:    bswapq %rdi
-; SSE-NEXT:    movabsq $1085102592571150095, %rax # imm = 0xF0F0F0F0F0F0F0F
-; SSE-NEXT:    andq %rdi, %rax
-; SSE-NEXT:    shlq $4, %rax
-; SSE-NEXT:    movabsq $-1085102592571150096, %rcx # imm = 0xF0F0F0F0F0F0F0F0
-; SSE-NEXT:    andq %rdi, %rcx
-; SSE-NEXT:    shrq $4, %rcx
-; SSE-NEXT:    orq %rax, %rcx
-; SSE-NEXT:    movabsq $3689348814741910323, %rax # imm = 0x3333333333333333
+; SSE-NEXT:    movq %rdi, %rax
+; SSE-NEXT:    shrq $4, %rax
+; SSE-NEXT:    movabsq $1085102592571150095, %rcx # imm = 0xF0F0F0F0F0F0F0F
 ; SSE-NEXT:    andq %rcx, %rax
-; SSE-NEXT:    movabsq $-3689348814741910324, %rdx # imm = 0xCCCCCCCCCCCCCCCC
-; SSE-NEXT:    andq %rcx, %rdx
-; SSE-NEXT:    shrq $2, %rdx
-; SSE-NEXT:    leaq (%rdx,%rax,4), %rax
-; SSE-NEXT:    movabsq $6148914691236517205, %rcx # imm = 0x5555555555555555
+; SSE-NEXT:    andq %rcx, %rdi
+; SSE-NEXT:    shlq $4, %rdi
+; SSE-NEXT:    orq %rax, %rdi
+; SSE-NEXT:    movabsq $3689348814741910323, %rax # imm = 0x3333333333333333
+; SSE-NEXT:    movq %rdi, %rcx
 ; SSE-NEXT:    andq %rax, %rcx
-; SSE-NEXT:    movabsq $-6148914691236517206, %rdx # imm = 0xAAAAAAAAAAAAAAAA
-; SSE-NEXT:    andq %rax, %rdx
-; SSE-NEXT:    shrq %rdx
-; SSE-NEXT:    leaq (%rdx,%rcx,2), %rax
+; SSE-NEXT:    shrq $2, %rdi
+; SSE-NEXT:    andq %rax, %rdi
+; SSE-NEXT:    leaq (%rdi,%rcx,4), %rax
+; SSE-NEXT:    movabsq $6148914691236517205, %rcx # imm = 0x5555555555555555
+; SSE-NEXT:    movq %rax, %rdx
+; SSE-NEXT:    andq %rcx, %rdx
+; SSE-NEXT:    shrq %rax
+; SSE-NEXT:    andq %rcx, %rax
+; SSE-NEXT:    leaq (%rax,%rdx,2), %rax
 ; SSE-NEXT:    retq
 ;
 ; AVX-LABEL: test_bitreverse_i64:
 ; AVX:       # %bb.0:
 ; AVX-NEXT:    bswapq %rdi
-; AVX-NEXT:    movabsq $1085102592571150095, %rax # imm = 0xF0F0F0F0F0F0F0F
-; AVX-NEXT:    andq %rdi, %rax
-; AVX-NEXT:    shlq $4, %rax
-; AVX-NEXT:    movabsq $-1085102592571150096, %rcx # imm = 0xF0F0F0F0F0F0F0F0
-; AVX-NEXT:    andq %rdi, %rcx
-; AVX-NEXT:    shrq $4, %rcx
-; AVX-NEXT:    orq %rax, %rcx
-; AVX-NEXT:    movabsq $3689348814741910323, %rax # imm = 0x3333333333333333
+; AVX-NEXT:    movq %rdi, %rax
+; AVX-NEXT:    shrq $4, %rax
+; AVX-NEXT:    movabsq $1085102592571150095, %rcx # imm = 0xF0F0F0F0F0F0F0F
 ; AVX-NEXT:    andq %rcx, %rax
-; AVX-NEXT:    movabsq $-3689348814741910324, %rdx # imm = 0xCCCCCCCCCCCCCCCC
-; AVX-NEXT:    andq %rcx, %rdx
-; AVX-NEXT:    shrq $2, %rdx
-; AVX-NEXT:    leaq (%rdx,%rax,4), %rax
-; AVX-NEXT:    movabsq $6148914691236517205, %rcx # imm = 0x5555555555555555
+; AVX-NEXT:    andq %rcx, %rdi
+; AVX-NEXT:    shlq $4, %rdi
+; AVX-NEXT:    orq %rax, %rdi
+; AVX-NEXT:    movabsq $3689348814741910323, %rax # imm = 0x3333333333333333
+; AVX-NEXT:    movq %rdi, %rcx
 ; AVX-NEXT:    andq %rax, %rcx
-; AVX-NEXT:    movabsq $-6148914691236517206, %rdx # imm = 0xAAAAAAAAAAAAAAAA
-; AVX-NEXT:    andq %rax, %rdx
-; AVX-NEXT:    shrq %rdx
-; AVX-NEXT:    leaq (%rdx,%rcx,2), %rax
+; AVX-NEXT:    shrq $2, %rdi
+; AVX-NEXT:    andq %rax, %rdi
+; AVX-NEXT:    leaq (%rdi,%rcx,4), %rax
+; AVX-NEXT:    movabsq $6148914691236517205, %rcx # imm = 0x5555555555555555
+; AVX-NEXT:    movq %rax, %rdx
+; AVX-NEXT:    andq %rcx, %rdx
+; AVX-NEXT:    shrq %rax
+; AVX-NEXT:    andq %rcx, %rax
+; AVX-NEXT:    leaq (%rax,%rdx,2), %rax
 ; AVX-NEXT:    retq
 ;
 ; XOP-LABEL: test_bitreverse_i64:
@@ -558,121 +558,121 @@ define i64 @test_bitreverse_i64(i64 %a) nounwind {
 ; GFNISSE-LABEL: test_bitreverse_i64:
 ; GFNISSE:       # %bb.0:
 ; GFNISSE-NEXT:    bswapq %rdi
-; GFNISSE-NEXT:    movabsq $1085102592571150095, %rax # imm = 0xF0F0F0F0F0F0F0F
-; GFNISSE-NEXT:    andq %rdi, %rax
-; GFNISSE-NEXT:    shlq $4, %rax
-; GFNISSE-NEXT:    movabsq $-1085102592571150096, %rcx # imm = 0xF0F0F0F0F0F0F0F0
-; GFNISSE-NEXT:    andq %rdi, %rcx
-; GFNISSE-NEXT:    shrq $4, %rcx
-; GFNISSE-NEXT:    orq %rax, %rcx
-; GFNISSE-NEXT:    movabsq $3689348814741910323, %rax # imm = 0x3333333333333333
+; GFNISSE-NEXT:    movq %rdi, %rax
+; GFNISSE-NEXT:    shrq $4, %rax
+; GFNISSE-NEXT:    movabsq $1085102592571150095, %rcx # imm = 0xF0F0F0F0F0F0F0F
 ; GFNISSE-NEXT:    andq %rcx, %rax
-; GFNISSE-NEXT:    movabsq $-3689348814741910324, %rdx # imm = 0xCCCCCCCCCCCCCCCC
-; GFNISSE-NEXT:    andq %rcx, %rdx
-; GFNISSE-NEXT:    shrq $2, %rdx
-; GFNISSE-NEXT:    leaq (%rdx,%rax,4), %rax
-; GFNISSE-NEXT:    movabsq $6148914691236517205, %rcx # imm = 0x5555555555555555
+; GFNISSE-NEXT:    andq %rcx, %rdi
+; GFNISSE-NEXT:    shlq $4, %rdi
+; GFNISSE-NEXT:    orq %rax, %rdi
+; GFNISSE-NEXT:    movabsq $3689348814741910323, %rax # imm = 0x3333333333333333
+; GFNISSE-NEXT:    movq %rdi, %rcx
 ; GFNISSE-NEXT:    andq %rax, %rcx
-; GFNISSE-NEXT:    movabsq $-6148914691236517206, %rdx # imm = 0xAAAAAAAAAAAAAAAA
-; GFNISSE-NEXT:    andq %rax, %rdx
-; GFNISSE-NEXT:    shrq %rdx
-; GFNISSE-NEXT:    leaq (%rdx,%rcx,2), %rax
+; GFNISSE-NEXT:    shrq $2, %rdi
+; GFNISSE-NEXT:    andq %rax, %rdi
+; GFNISSE-NEXT:    leaq (%rdi,%rcx,4), %rax
+; GFNISSE-NEXT:    movabsq $6148914691236517205, %rcx # imm = 0x5555555555555555
+; GFNISSE-NEXT:    movq %rax, %rdx
+; GFNISSE-NEXT:    andq %rcx, %rdx
+; GFNISSE-NEXT:    shrq %rax
+; GFNISSE-NEXT:    andq %rcx, %rax
+; GFNISSE-NEXT:    leaq (%rax,%rdx,2), %rax
 ; GFNISSE-NEXT:    retq
 ;
 ; GFNIAVX-LABEL: test_bitreverse_i64:
 ; GFNIAVX:       # %bb.0:
 ; GFNIAVX-NEXT:    bswapq %rdi
-; GFNIAVX-NEXT:    movabsq $1085102592571150095, %rax # imm = 0xF0F0F0F0F0F0F0F
-; GFNIAVX-NEXT:    andq %rdi, %rax
-; GFNIAVX-NEXT:    shlq $4, %rax
-; GFNIAVX-NEXT:    movabsq $-1085102592571150096, %rcx # imm = 0xF0F0F0F0F0F0F0F0
-; GFNIAVX-NEXT:    andq %rdi, %rcx
-; GFNIAVX-NEXT:    shrq $4, %rcx
-; GFNIAVX-NEXT:    orq %rax, %rcx
-; GFNIAVX-NEXT:    movabsq $3689348814741910323, %rax # imm = 0x3333333333333333
+; GFNIAVX-NEXT:    movq %rdi, %rax
+; GFNIAVX-NEXT:    shrq $4, %rax
+; GFNIAVX-NEXT:    movabsq $1085102592571150095, %rcx # imm = 0xF0F0F0F0F0F0F0F
 ; GFNIAVX-NEXT:    andq %rcx, %rax
-; GFNIAVX-NEXT:    movabsq $-3689348814741910324, %rdx # imm = 0xCCCCCCCCCCCCCCCC
-; GFNIAVX-NEXT:    andq %rcx, %rdx
-; GFNIAVX-NEXT:    shrq $2, %rdx
-; GFNIAVX-NEXT:    leaq (%rdx,%rax,4), %rax
-; GFNIAVX-NEXT:    movabsq $6148914691236517205, %rcx # imm = 0x5555555555555555
+; GFNIAVX-NEXT:    andq %rcx, %rdi
+; GFNIAVX-NEXT:    shlq $4, %rdi
+; GFNIAVX-NEXT:    orq %rax, %rdi
+; GFNIAVX-NEXT:    movabsq $3689348814741910323, %rax # imm = 0x3333333333333333
+; GFNIAVX-NEXT:    movq %rdi, %rcx
 ; GFNIAVX-NEXT:    andq %rax, %rcx
-; GFNIAVX-NEXT:    movabsq $-6148914691236517206, %rdx # imm = 0xAAAAAAAAAAAAAAAA
-; GFNIAVX-NEXT:    andq %rax, %rdx
-; GFNIAVX-NEXT:    shrq %rdx
-; GFNIAVX-NEXT:    leaq (%rdx,%rcx,2), %rax
+; GFNIAVX-NEXT:    shrq $2, %rdi
+; GFNIAVX-NEXT:    andq %rax, %rdi
+; GFNIAVX-NEXT:    leaq (%rdi,%rcx,4), %rax
+; GFNIAVX-NEXT:    movabsq $6148914691236517205, %rcx # imm = 0x5555555555555555
+; GFNIAVX-NEXT:    movq %rax, %rdx
+; GFNIAVX-NEXT:    andq %rcx, %rdx
+; GFNIAVX-NEXT:    shrq %rax
+; GFNIAVX-NEXT:    andq %rcx, %rax
+; GFNIAVX-NEXT:    leaq (%rax,%rdx,2), %rax
 ; GFNIAVX-NEXT:    retq
 ;
 ; GFNIAVX2-LABEL: test_bitreverse_i64:
 ; GFNIAVX2:       # %bb.0:
 ; GFNIAVX2-NEXT:    bswapq %rdi
-; GFNIAVX2-NEXT:    movabsq $1085102592571150095, %rax # imm = 0xF0F0F0F0F0F0F0F
-; GFNIAVX2-NEXT:    andq %rdi, %rax
-; GFNIAVX2-NEXT:    shlq $4, %rax
-; GFNIAVX2-NEXT:    movabsq $-1085102592571150096, %rcx # imm = 0xF0F0F0F0F0F0F0F0
-; GFNIAVX2-NEXT:    andq %rdi, %rcx
-; GFNIAVX2-NEXT:    shrq $4, %rcx
-; GFNIAVX2-NEXT:    orq %rax, %rcx
-; GFNIAVX2-NEXT:    movabsq $3689348814741910323, %rax # imm = 0x3333333333333333
+; GFNIAVX2-NEXT:    movq %rdi, %rax
+; GFNIAVX2-NEXT:    shrq $4, %rax
+; GFNIAVX2-NEXT:    movabsq $1085102592571150095, %rcx # imm = 0xF0F0F0F0F0F0F0F
 ; GFNIAVX2-NEXT:    andq %rcx, %rax
-; GFNIAVX2-NEXT:    movabsq $-3689348814741910324, %rdx # imm = 0xCCCCCCCCCCCCCCCC
-; GFNIAVX2-NEXT:    andq %rcx, %rdx
-; GFNIAVX2-NEXT:    shrq $2, %rdx
-; GFNIAVX2-NEXT:    leaq (%rdx,%rax,4), %rax
-; GFNIAVX2-NEXT:    movabsq $6148914691236517205, %rcx # imm = 0x5555555555555555
+; GFNIAVX2-NEXT:    andq %rcx, %rdi
+; GFNIAVX2-NEXT:    shlq $4, %rdi
+; GFNIAVX2-NEXT:    orq %rax, %rdi
+; GFNIAVX2-NEXT:    movabsq $3689348814741910323, %rax # imm = 0x3333333333333333
+; GFNIAVX2-NEXT:    movq %rdi, %rcx
 ; GFNIAVX2-NEXT:    andq %rax, %rcx
-; GFNIAVX2-NEXT:    movabsq $-6148914691236517206, %rdx # imm = 0xAAAAAAAAAAAAAAAA
-; GFNIAVX2-NEXT:    andq %rax, %rdx
-; GFNIAVX2-NEXT:    shrq %rdx
-; GFNIAVX2-NEXT:    leaq (%rdx,%rcx,2), %rax
+; GFNIAVX2-NEXT:    shrq $2, %rdi
+; GFNIAVX2-NEXT:    andq %rax, %rdi
+; GFNIAVX2-NEXT:    leaq (%rdi,%rcx,4), %rax
+; GFNIAVX2-NEXT:    movabsq $6148914691236517205, %rcx # imm = 0x5555555555555555
+; GFNIAVX2-NEXT:    movq %rax, %rdx
+; GFNIAVX2-NEXT:    andq %rcx, %rdx
+; GFNIAVX2-NEXT:    shrq %rax
+; GFNIAVX2-NEXT:    andq %rcx, %rax
+; GFNIAVX2-NEXT:    leaq (%rax,%rdx,2), %rax
 ; GFNIAVX2-NEXT:    retq
 ;
 ; GFNIAVX512F-LABEL: test_bitreverse_i64:
 ; GFNIAVX512F:       # %bb.0:
 ; GFNIAVX512F-NEXT:    bswapq %rdi
-; GFNIAVX512F-NEXT:    movabsq $1085102592571150095, %rax # imm = 0xF0F0F0F0F0F0F0F
-; GFNIAVX512F-NEXT:    andq %rdi, %rax
-; GFNIAVX512F-NEXT:    shlq $4, %rax
-; GFNIAVX512F-NEXT:    movabsq $-1085102592571150096, %rcx # imm = 0xF0F0F0F0F0F0F0F0
-; GFNIAVX512F-NEXT:    andq %rdi, %rcx
-; GFNIAVX512F-NEXT:    shrq $4, %rcx
-; GFNIAVX512F-NEXT:    orq %rax, %rcx
-; GFNIAVX512F-NEXT:    movabsq $3689348814741910323, %rax # imm = 0x3333333333333333
+; GFNIAVX512F-NEXT:    movq %rdi, %rax
+; GFNIAVX512F-NEXT:    shrq $4, %rax
+; GFNIAVX512F-NEXT:    movabsq $1085102592571150095, %rcx # imm = 0xF0F0F0F0F0F0F0F
 ; GFNIAVX512F-NEXT:    andq %rcx, %rax
-; GFNIAVX512F-NEXT:    movabsq $-3689348814741910324, %rdx # imm = 0xCCCCCCCCCCCCCCCC
-; GFNIAVX512F-NEXT:    andq %rcx, %rdx
-; GFNIAVX512F-NEXT:    shrq $2, %rdx
-; GFNIAVX512F-NEXT:    leaq (%rdx,%rax,4), %rax
-; GFNIAVX512F-NEXT:    movabsq $6148914691236517205, %rcx # imm = 0x5555555555555555
+; GFNIAVX512F-NEXT:    andq %rcx, %rdi
+; GFNIAVX512F-NEXT:    shlq $4, %rdi
+; GFNIAVX512F-NEXT:    orq %rax, %rdi
+; GFNIAVX512F-NEXT:    movabsq $3689348814741910323, %rax # imm = 0x3333333333333333
+; GFNIAVX512F-NEXT:    movq %rdi, %rcx
 ; GFNIAVX512F-NEXT:    andq %rax, %rcx
-; GFNIAVX512F-NEXT:    movabsq $-6148914691236517206, %rdx # imm = 0xAAAAAAAAAAAAAAAA
-; GFNIAVX512F-NEXT:    andq %rax, %rdx
-; GFNIAVX512F-NEXT:    shrq %rdx
-; GFNIAVX512F-NEXT:    leaq (%rdx,%rcx,2), %rax
+; GFNIAVX512F-NEXT:    shrq $2, %rdi
+; GFNIAVX512F-NEXT:    andq %rax, %rdi
+; GFNIAVX512F-NEXT:    leaq (%rdi,%rcx,4), %rax
+; GFNIAVX512F-NEXT:    movabsq $6148914691236517205, %rcx # imm = 0x5555555555555555
+; GFNIAVX512F-NEXT:    movq %rax, %rdx
+; GFNIAVX512F-NEXT:    andq %rcx, %rdx
+; GFNIAVX512F-NEXT:    shrq %rax
+; GFNIAVX512F-NEXT:    andq %rcx, %rax
+; GFNIAVX512F-NEXT:    leaq (%rax,%rdx,2), %rax
 ; GFNIAVX512F-NEXT:    retq
 ;
 ; GFNIAVX512BW-LABEL: test_bitreverse_i64:
 ; GFNIAVX512BW:       # %bb.0:
 ; GFNIAVX512BW-NEXT:    bswapq %rdi
-; GFNIAVX512BW-NEXT:    movabsq $1085102592571150095, %rax # imm = 0xF0F0F0F0F0F0F0F
-; GFNIAVX512BW-NEXT:    andq %rdi, %rax
-; GFNIAVX512BW-NEXT:    shlq $4, %rax
-; GFNIAVX512BW-NEXT:    movabsq $-1085102592571150096, %rcx # imm = 0xF0F0F0F0F0F0F0F0
-; GFNIAVX512BW-NEXT:    andq %rdi, %rcx
-; GFNIAVX512BW-NEXT:    shrq $4, %rcx
-; GFNIAVX512BW-NEXT:    orq %rax, %rcx
-; GFNIAVX512BW-NEXT:    movabsq $3689348814741910323, %rax # imm = 0x3333333333333333
+; GFNIAVX512BW-NEXT:    movq %rdi, %rax
+; GFNIAVX512BW-NEXT:    shrq $4, %rax
+; GFNIAVX512BW-NEXT:    movabsq $1085102592571150095, %rcx # imm = 0xF0F0F0F0F0F0F0F
 ; GFNIAVX512BW-NEXT:    andq %rcx, %rax
-; GFNIAVX512BW-NEXT:    movabsq $-3689348814741910324, %rdx # imm = 0xCCCCCCCCCCCCCCCC
-; GFNIAVX512BW-NEXT:    andq %rcx, %rdx
-; GFNIAVX512BW-NEXT:    shrq $2, %rdx
-; GFNIAVX512BW-NEXT:    leaq (%rdx,%rax,4), %rax
-; GFNIAVX512BW-NEXT:    movabsq $6148914691236517205, %rcx # imm = 0x5555555555555555
+; GFNIAVX512BW-NEXT:    andq %rcx, %rdi
+; GFNIAVX512BW-NEXT:    shlq $4, %rdi
+; GFNIAVX512BW-NEXT:    orq %rax, %rdi
+; GFNIAVX512BW-NEXT:    movabsq $3689348814741910323, %rax # imm = 0x3333333333333333
+; GFNIAVX512BW-NEXT:    movq %rdi, %rcx
 ; GFNIAVX512BW-NEXT:    andq %rax, %rcx
-; GFNIAVX512BW-NEXT:    movabsq $-6148914691236517206, %rdx # imm = 0xAAAAAAAAAAAAAAAA
-; GFNIAVX512BW-NEXT:    andq %rax, %rdx
-; GFNIAVX512BW-NEXT:    shrq %rdx
-; GFNIAVX512BW-NEXT:    leaq (%rdx,%rcx,2), %rax
+; GFNIAVX512BW-NEXT:    shrq $2, %rdi
+; GFNIAVX512BW-NEXT:    andq %rax, %rdi
+; GFNIAVX512BW-NEXT:    leaq (%rdi,%rcx,4), %rax
+; GFNIAVX512BW-NEXT:    movabsq $6148914691236517205, %rcx # imm = 0x5555555555555555
+; GFNIAVX512BW-NEXT:    movq %rax, %rdx
+; GFNIAVX512BW-NEXT:    andq %rcx, %rdx
+; GFNIAVX512BW-NEXT:    shrq %rax
+; GFNIAVX512BW-NEXT:    andq %rcx, %rax
+; GFNIAVX512BW-NEXT:    leaq (%rax,%rdx,2), %rax
 ; GFNIAVX512BW-NEXT:    retq
   %b = call i64 @llvm.bitreverse.i64(i64 %a)
   ret i64 %b
@@ -687,16 +687,18 @@ define <16 x i8> @test_bitreverse_v16i8(<16 x i8> %a) nounwind {
 ; SSE2-NEXT:    psrlw $4, %xmm0
 ; SSE2-NEXT:    pand {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0
 ; SSE2-NEXT:    por %xmm1, %xmm0
-; SSE2-NEXT:    movdqa {{.*#+}} xmm1 = [51,51,51,51,51,51,51,51,51,51,51,51,51,51,51,51]
-; SSE2-NEXT:    pand %xmm0, %xmm1
-; SSE2-NEXT:    psllw $2, %xmm1
-; SSE2-NEXT:    pand {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0
-; SSE2-NEXT:    psrlw $2, %xmm0
+; SSE2-NEXT:    movdqa %xmm0, %xmm1
+; SSE2-NEXT:    psrlw $2, %xmm1
+; SSE2-NEXT:    movdqa {{.*#+}} xmm2 = [51,51,51,51,51,51,51,51,51,51,51,51,51,51,51,51]
+; SSE2-NEXT:    pand %xmm2, %xmm1
+; SSE2-NEXT:    pand %xmm2, %xmm0
+; SSE2-NEXT:    psllw $2, %xmm0
 ; SSE2-NEXT:    por %xmm1, %xmm0
-; SSE2-NEXT:    movdqa {{.*#+}} xmm1 = [170,170,170,170,170,170,170,170,170,170,170,170,170,170,170,170]
-; SSE2-NEXT:    pand %xmm0, %xmm1
+; SSE2-NEXT:    movdqa %xmm0, %xmm1
 ; SSE2-NEXT:    psrlw $1, %xmm1
-; SSE2-NEXT:    pand {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0
+; SSE2-NEXT:    movdqa {{.*#+}} xmm2 = [85,85,85,85,85,85,85,85,85,85,85,85,85,85,85,85]
+; SSE2-NEXT:    pand %xmm2, %xmm1
+; SSE2-NEXT:    pand %xmm2, %xmm0
 ; SSE2-NEXT:    paddb %xmm0, %xmm0
 ; SSE2-NEXT:    por %xmm1, %xmm0
 ; SSE2-NEXT:    retq
@@ -775,16 +777,18 @@ define <8 x i16> @test_bitreverse_v8i16(<8 x i16> %a) nounwind {
 ; SSE2-NEXT:    psrlw $4, %xmm0
 ; SSE2-NEXT:    pand {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0
 ; SSE2-NEXT:    por %xmm1, %xmm0
-; SSE2-NEXT:    movdqa {{.*#+}} xmm1 = [51,51,51,51,51,51,51,51,51,51,51,51,51,51,51,51]
-; SSE2-NEXT:    pand %xmm0, %xmm1
-; SSE2-NEXT:    psllw $2, %xmm1
-; SSE2-NEXT:    pand {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0
-; SSE2-NEXT:    psrlw $2, %xmm0
+; SSE2-NEXT:    movdqa %xmm0, %xmm1
+; SSE2-NEXT:    psrlw $2, %xmm1
+; SSE2-NEXT:    movdqa {{.*#+}} xmm2 = [51,51,51,51,51,51,51,51,51,51,51,51,51,51,51,51]
+; SSE2-NEXT:    pand %xmm2, %xmm1
+; SSE2-NEXT:    pand %xmm2, %xmm0
+; SSE2-NEXT:    psllw $2, %xmm0
 ; SSE2-NEXT:    por %xmm1, %xmm0
-; SSE2-NEXT:    movdqa {{.*#+}} xmm1 = [170,170,170,170,170,170,170,170,170,170,170,170,170,170,170,170]
-; SSE2-NEXT:    pand %xmm0, %xmm1
+; SSE2-NEXT:    movdqa %xmm0, %xmm1
 ; SSE2-NEXT:    psrlw $1, %xmm1
-; SSE2-NEXT:    pand {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0
+; SSE2-NEXT:    movdqa {{.*#+}} xmm2 = [85,85,85,85,85,85,85,85,85,85,85,85,85,85,85,85]
+; SSE2-NEXT:    pand %xmm2, %xmm1
+; SSE2-NEXT:    pand %xmm2, %xmm0
 ; SSE2-NEXT:    paddb %xmm0, %xmm0
 ; SSE2-NEXT:    por %xmm1, %xmm0
 ; SSE2-NEXT:    retq
@@ -875,16 +879,18 @@ define <4 x i32> @test_bitreverse_v4i32(<4 x i32> %a) nounwind {
 ; SSE2-NEXT:    psrlw $4, %xmm0
 ; SSE2-NEXT:    pand {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0
 ; SSE2-NEXT:    por %xmm1, %xmm0
-; SSE2-NEXT:    movdqa {{.*#+}} xmm1 = [51,51,51,51,51,51,51,51,51,51,51,51,51,51,51,51]
-; SSE2-NEXT:    pand %xmm0, %xmm1
-; SSE2-NEXT:    psllw $2, %xmm1
-; SSE2-NEXT:    pand {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0
-; SSE2-NEXT:    psrlw $2, %xmm0
+; SSE2-NEXT:    movdqa %xmm0, %xmm1
+; SSE2-NEXT:    psrlw $2, %xmm1
+; SSE2-NEXT:    movdqa {{.*#+}} xmm2 = [51,51,51,51,51,51,51,51,51,51,51,51,51,51,51,51]
+; SSE2-NEXT:    pand %xmm2, %xmm1
+; SSE2-NEXT:    pand %xmm2, %xmm0
+; SSE2-NEXT:    psllw $2, %xmm0
 ; SSE2-NEXT:    por %xmm1, %xmm0
-; SSE2-NEXT:    movdqa {{.*#+}} xmm1 = [170,170,170,170,170,170,170,170,170,170,170,170,170,170,170,170]
-; SSE2-NEXT:    pand %xmm0, %xmm1
+; SSE2-NEXT:    movdqa %xmm0, %xmm1
 ; SSE2-NEXT:    psrlw $1, %xmm1
-; SSE2-NEXT:    pand {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0
+; SSE2-NEXT:    movdqa {{.*#+}} xmm2 = [85,85,85,85,85,85,85,85,85,85,85,85,85,85,85,85]
+; SSE2-NEXT:    pand %xmm2, %xmm1
+; SSE2-NEXT:    pand %xmm2, %xmm0
 ; SSE2-NEXT:    paddb %xmm0, %xmm0
 ; SSE2-NEXT:    por %xmm1, %xmm0
 ; SSE2-NEXT:    retq
@@ -977,16 +983,18 @@ define <2 x i64> @test_bitreverse_v2i64(<2 x i64> %a) nounwind {
 ; SSE2-NEXT:    psrlw $4, %xmm0
 ; SSE2-NEXT:    pand {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0
 ; SSE2-NEXT:    por %xmm1, %xmm0
-; SSE2-NEXT:    movdqa {{.*#+}} xmm1 = [51,51,51,51,51,51,51,51,51,51,51,51,51,51,51,51]
-; SSE2-NEXT:    pand %xmm0, %xmm1
-; SSE2-NEXT:    psllw $2, %xmm1
-; SSE2-NEXT:    pand {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0
-; SSE2-NEXT:    psrlw $2, %xmm0
+; SSE2-NEXT:    movdqa %xmm0, %xmm1
+; SSE2-NEXT:    psrlw $2, %xmm1
+; SSE2-NEXT:    movdqa {{.*#+}} xmm2 = [51,51,51,51,51,51,51,51,51,51,51,51,51,51,51,51]
+; SSE2-NEXT:    pand %xmm2, %xmm1
+; SSE2-NEXT:    pand %xmm2, %xmm0
+; SSE2-NEXT:    psllw $2, %xmm0
 ; SSE2-NEXT:    por %xmm1, %xmm0
-; SSE2-NEXT:    movdqa {{.*#+}} xmm1 = [170,170,170,170,170,170,170,170,170,170,170,170,170,170,170,170]
-; SSE2-NEXT:    pand %xmm0, %xmm1
+; SSE2-NEXT:    movdqa %xmm0, %xmm1
 ; SSE2-NEXT:    psrlw $1, %xmm1
-; SSE2-NEXT:    pand {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0
+; SSE2-NEXT:    movdqa {{.*#+}} xmm2 = [85,85,85,85,85,85,85,85,85,85,85,85,85,85,85,85]
+; SSE2-NEXT:    pand %xmm2, %xmm1
+; SSE2-NEXT:    pand %xmm2, %xmm0
 ; SSE2-NEXT:    paddb %xmm0, %xmm0
 ; SSE2-NEXT:    por %xmm1, %xmm0
 ; SSE2-NEXT:    retq
@@ -1071,38 +1079,38 @@ define <32 x i8> @test_bitreverse_v32i8(<32 x i8> %a) nounwind {
 ; SSE2-NEXT:    psrlw $4, %xmm0
 ; SSE2-NEXT:    pand %xmm1, %xmm0
 ; SSE2-NEXT:    por %xmm4, %xmm0
-; SSE2-NEXT:    movdqa {{.*#+}} xmm3 = [51,51,51,51,51,51,51,51,51,51,51,51,51,51,51,51]
 ; SSE2-NEXT:    movdqa %xmm0, %xmm4
+; SSE2-NEXT:    psrlw $2, %xmm4
+; SSE2-NEXT:    movdqa {{.*#+}} xmm3 = [51,51,51,51,51,51,51,51,51,51,51,51,51,51,51,51]
 ; SSE2-NEXT:    pand %xmm3, %xmm4
-; SSE2-NEXT:    psllw $2, %xmm4
-; SSE2-NEXT:    movdqa {{.*#+}} xmm5 = [204,204,204,204,204,204,204,204,204,204,204,204,204,204,204,204]
-; SSE2-NEXT:    pand %xmm5, %xmm0
-; SSE2-NEXT:    psrlw $2, %xmm0
+; SSE2-NEXT:    pand %xmm3, %xmm0
+; SSE2-NEXT:    psllw $2, %xmm0
 ; SSE2-NEXT:    por %xmm4, %xmm0
-; SSE2-NEXT:    movdqa {{.*#+}} xmm4 = [170,170,170,170,170,170,170,170,170,170,170,170,170,170,170,170]
-; SSE2-NEXT:    movdqa %xmm0, %xmm6
-; SSE2-NEXT:    pand %xmm4, %xmm6
-; SSE2-NEXT:    psrlw $1, %xmm6
-; SSE2-NEXT:    movdqa {{.*#+}} xmm7 = [85,85,85,85,85,85,85,85,85,85,85,85,85,85,85,85]
-; SSE2-NEXT:    pand %xmm7, %xmm0
+; SSE2-NEXT:    movdqa %xmm0, %xmm5
+; SSE2-NEXT:    psrlw $1, %xmm5
+; SSE2-NEXT:    movdqa {{.*#+}} xmm4 = [85,85,85,85,85,85,85,85,85,85,85,85,85,85,85,85]
+; SSE2-NEXT:    pand %xmm4, %xmm5
+; SSE2-NEXT:    pand %xmm4, %xmm0
 ; SSE2-NEXT:    paddb %xmm0, %xmm0
-; SSE2-NEXT:    por %xmm6, %xmm0
-; SSE2-NEXT:    movdqa %xmm2, %xmm6
-; SSE2-NEXT:    psllw $4, %xmm6
+; SSE2-NEXT:    por %xmm5, %xmm0
+; SSE2-NEXT:    movdqa %xmm2, %xmm5
+; SSE2-NEXT:    psllw $4, %xmm5
 ; SSE2-NEXT:    psrlw $4, %xmm2
 ; SSE2-NEXT:    pand %xmm1, %xmm2
-; SSE2-NEXT:    pandn %xmm6, %xmm1
+; SSE2-NEXT:    pandn %xmm5, %xmm1
 ; SSE2-NEXT:    por %xmm2, %xmm1
-; SSE2-NEXT:    pand %xmm1, %xmm3
-; SSE2-NEXT:    psllw $2, %xmm3
-; SSE2-NEXT:    pand %xmm5, %xmm1
-; SSE2-NEXT:    psrlw $2, %xmm1
-; SSE2-NEXT:    por %xmm3, %xmm1
-; SSE2-NEXT:    pand %xmm1, %xmm4
-; SSE2-NEXT:    psrlw $1, %xmm4
-; SSE2-NEXT:    pand %xmm7, %xmm1
+; SSE2-NEXT:    movdqa %xmm1, %xmm2
+; SSE2-NEXT:    psrlw $2, %xmm2
+; SSE2-NEXT:    pand %xmm3, %xmm2
+; SSE2-NEXT:    pand %xmm3, %xmm1
+; SSE2-NEXT:    psllw $2, %xmm1
+; SSE2-NEXT:    por %xmm2, %xmm1
+; SSE2-NEXT:    movdqa %xmm1, %xmm2
+; SSE2-NEXT:    psrlw $1, %xmm2
+; SSE2-NEXT:    pand %xmm4, %xmm2
+; SSE2-NEXT:    pand %xmm4, %xmm1
 ; SSE2-NEXT:    paddb %xmm1, %xmm1
-; SSE2-NEXT:    por %xmm4, %xmm1
+; SSE2-NEXT:    por %xmm2, %xmm1
 ; SSE2-NEXT:    retq
 ;
 ; SSSE3-LABEL: test_bitreverse_v32i8:
@@ -1248,42 +1256,42 @@ define <16 x i16> @test_bitreverse_v16i16(<16 x i16> %a) nounwind {
 ; SSE2-NEXT:    psrlw $4, %xmm0
 ; SSE2-NEXT:    pand %xmm1, %xmm0
 ; SSE2-NEXT:    por %xmm4, %xmm0
-; SSE2-NEXT:    movdqa {{.*#+}} xmm3 = [51,51,51,51,51,51,51,51,51,51,51,51,51,51,51,51]
 ; SSE2-NEXT:    movdqa %xmm0, %xmm4
+; SSE2-NEXT:    psrlw $2, %xmm4
+; SSE2-NEXT:    movdqa {{.*#+}} xmm3 = [51,51,51,51,51,51,51,51,51,51,51,51,51,51,51,51]
 ; SSE2-NEXT:    pand %xmm3, %xmm4
-; SSE2-NEXT:    psllw $2, %xmm4
-; SSE2-NEXT:    movdqa {{.*#+}} xmm5 = [204,204,204,204,204,204,204,204,204,204,204,204,204,204,204,204]
-; SSE2-NEXT:    pand %xmm5, %xmm0
-; SSE2-NEXT:    psrlw $2, %xmm0
+; SSE2-NEXT:    pand %xmm3, %xmm0
+; SSE2-NEXT:    psllw $2, %xmm0
 ; SSE2-NEXT:    por %xmm4, %xmm0
-; SSE2-NEXT:    movdqa {{.*#+}} xmm4 = [170,170,170,170,170,170,170,170,170,170,170,170,170,170,170,170]
-; SSE2-NEXT:    movdqa %xmm0, %xmm7
-; SSE2-NEXT:    pand %xmm4, %xmm7
-; SSE2-NEXT:    psrlw $1, %xmm7
-; SSE2-NEXT:    movdqa {{.*#+}} xmm6 = [85,85,85,85,85,85,85,85,85,85,85,85,85,85,85,85]
-; SSE2-NEXT:    pand %xmm6, %xmm0
+; SSE2-NEXT:    movdqa %xmm0, %xmm5
+; SSE2-NEXT:    psrlw $1, %xmm5
+; SSE2-NEXT:    movdqa {{.*#+}} xmm4 = [85,85,85,85,85,85,85,85,85,85,85,85,85,85,85,85]
+; SSE2-NEXT:    pand %xmm4, %xmm5
+; SSE2-NEXT:    pand %xmm4, %xmm0
 ; SSE2-NEXT:    paddb %xmm0, %xmm0
-; SSE2-NEXT:    por %xmm7, %xmm0
-; SSE2-NEXT:    movdqa %xmm2, %xmm7
-; SSE2-NEXT:    psrlw $8, %xmm7
+; SSE2-NEXT:    por %xmm5, %xmm0
+; SSE2-NEXT:    movdqa %xmm2, %xmm5
+; SSE2-NEXT:    psrlw $8, %xmm5
 ; SSE2-NEXT:    psllw $8, %xmm2
-; SSE2-NEXT:    por %xmm7, %xmm2
-; SSE2-NEXT:    movdqa %xmm2, %xmm7
-; SSE2-NEXT:    psllw $4, %xmm7
+; SSE2-NEXT:    por %xmm5, %xmm2
+; SSE2-NEXT:    movdqa %xmm2, %xmm5
+; SSE2-NEXT:    psllw $4, %xmm5
 ; SSE2-NEXT:    psrlw $4, %xmm2
 ; SSE2-NEXT:    pand %xmm1, %xmm2
-; SSE2-NEXT:    pandn %xmm7, %xmm1
+; SSE2-NEXT:    pandn %xmm5, %xmm1
 ; SSE2-NEXT:    por %xmm2, %xmm1
-; SSE2-NEXT:    pand %xmm1, %xmm3
-; SSE2-NEXT:    psllw $2, %xmm3
-; SSE2-NEXT:    pand %xmm5, %xmm1
-; SSE2-NEXT:    psrlw $2, %xmm1
-; SSE2-NEXT:    por %xmm3, %xmm1
-; SSE2-NEXT:    pand %xmm1, %xmm4
-; SSE2-NEXT:    psrlw $1, %xmm4
-; SSE2-NEXT:    pand %xmm6, %xmm1
+; SSE2-NEXT:    movdqa %xmm1, %xmm2
+; SSE2-NEXT:    psrlw $2, %xmm2
+; SSE2-NEXT:    pand %xmm3, %xmm2
+; SSE2-NEXT:    pand %xmm3, %xmm1
+; SSE2-NEXT:    psllw $2, %xmm1
+; SSE2-NEXT:    por %xmm2, %xmm1
+; SSE2-NEXT:    movdqa %xmm1, %xmm2
+; SSE2-NEXT:    psrlw $1, %xmm2
+; SSE2-NEXT:    pand %xmm4, %xmm2
+; SSE2-NEXT:    pand %xmm4, %xmm1
 ; SSE2-NEXT:    paddb %xmm1, %xmm1
-; SSE2-NEXT:    por %xmm4, %xmm1
+; SSE2-NEXT:    por %xmm2, %xmm1
 ; SSE2-NEXT:    retq
 ;
 ; SSSE3-LABEL: test_bitreverse_v16i16:
@@ -1434,63 +1442,63 @@ define <8 x i32> @test_bitreverse_v8i32(<8 x i32> %a) nounwind {
 ; SSE2-LABEL: test_bitreverse_v8i32:
 ; SSE2:       # %bb.0:
 ; SSE2-NEXT:    movdqa %xmm1, %xmm2
-; SSE2-NEXT:    pxor %xmm4, %xmm4
+; SSE2-NEXT:    pxor %xmm3, %xmm3
 ; SSE2-NEXT:    movdqa %xmm0, %xmm1
-; SSE2-NEXT:    punpckhbw {{.*#+}} xmm1 = xmm1[8],xmm4[8],xmm1[9],xmm4[9],xmm1[10],xmm4[10],xmm1[11],xmm4[11],xmm1[12],xmm4[12],xmm1[13],xmm4[13],xmm1[14],xmm4[14],xmm1[15],xmm4[15]
+; SSE2-NEXT:    punpckhbw {{.*#+}} xmm1 = xmm1[8],xmm3[8],xmm1[9],xmm3[9],xmm1[10],xmm3[10],xmm1[11],xmm3[11],xmm1[12],xmm3[12],xmm1[13],xmm3[13],xmm1[14],xmm3[14],xmm1[15],xmm3[15]
 ; SSE2-NEXT:    pshuflw {{.*#+}} xmm1 = xmm1[3,2,1,0,4,5,6,7]
 ; SSE2-NEXT:    pshufhw {{.*#+}} xmm1 = xmm1[0,1,2,3,7,6,5,4]
-; SSE2-NEXT:    punpcklbw {{.*#+}} xmm0 = xmm0[0],xmm4[0],xmm0[1],xmm4[1],xmm0[2],xmm4[2],xmm0[3],xmm4[3],xmm0[4],xmm4[4],xmm0[5],xmm4[5],xmm0[6],xmm4[6],xmm0[7],xmm4[7]
+; SSE2-NEXT:    punpcklbw {{.*#+}} xmm0 = xmm0[0],xmm3[0],xmm0[1],xmm3[1],xmm0[2],xmm3[2],xmm0[3],xmm3[3],xmm0[4],xmm3[4],xmm0[5],xmm3[5],xmm0[6],xmm3[6],xmm0[7],xmm3[7]
 ; SSE2-NEXT:    pshuflw {{.*#+}} xmm0 = xmm0[3,2,1,0,4,5,6,7]
 ; SSE2-NEXT:    pshufhw {{.*#+}} xmm0 = xmm0[0,1,2,3,7,6,5,4]
 ; SSE2-NEXT:    packuswb %xmm1, %xmm0
-; SSE2-NEXT:    movdqa %xmm0, %xmm3
-; SSE2-NEXT:    psllw $4, %xmm3
+; SSE2-NEXT:    movdqa %xmm0, %xmm4
+; SSE2-NEXT:    psllw $4, %xmm4
 ; SSE2-NEXT:    movdqa {{.*#+}} xmm1 = [15,15,15,15,15,15,15,15,15,15,15,15,15,15,15,15]
 ; SSE2-NEXT:    movdqa %xmm1, %xmm5
-; SSE2-NEXT:    pandn %xmm3, %xmm5
+; SSE2-NEXT:    pandn %xmm4, %xmm5
 ; SSE2-NEXT:    psrlw $4, %xmm0
 ; SSE2-NEXT:    pand %xmm1, %xmm0
 ; SSE2-NEXT:    por %xmm5, %xmm0
-; SSE2-NEXT:    movdqa {{.*#+}} xmm3 = [51,51,51,51,51,51,51,51,51,51,51,51,51,51,51,51]
 ; SSE2-NEXT:    movdqa %xmm0, %xmm5
-; SSE2-NEXT:    pand %xmm3, %xmm5
-; SSE2-NEXT:    psllw $2, %xmm5
-; SSE2-NEXT:    movdqa {{.*#+}} xmm8 = [204,204,204,204,204,204,204,204,204,204,204,204,204,204,204,204]
-; SSE2-NEXT:    pand %xmm8, %xmm0
-; SSE2-NEXT:    psrlw $2, %xmm0
+; SSE2-NEXT:    psrlw $2, %xmm5
+; SSE2-NEXT:    movdqa {{.*#+}} xmm4 = [51,51,51,51,51,51,51,51,51,51,51,51,51,51,51,51]
+; SSE2-NEXT:    pand %xmm4, %xmm5
+; SSE2-NEXT:    pand %xmm4, %xmm0
+; SSE2-NEXT:    psllw $2, %xmm0
 ; SSE2-NEXT:    por %xmm5, %xmm0
-; SSE2-NEXT:    movdqa {{.*#+}} xmm5 = [170,170,170,170,170,170,170,170,170,170,170,170,170,170,170,170]
 ; SSE2-NEXT:    movdqa %xmm0, %xmm6
-; SSE2-NEXT:    pand %xmm5, %xmm6
 ; SSE2-NEXT:    psrlw $1, %xmm6
-; SSE2-NEXT:    movdqa {{.*#+}} xmm7 = [85,85,85,85,85,85,85,85,85,85,85,85,85,85,85,85]
-; SSE2-NEXT:    pand %xmm7, %xmm0
+; SSE2-NEXT:    movdqa {{.*#+}} xmm5 = [85,85,85,85,85,85,85,85,85,85,85,85,85,85,85,85]
+; SSE2-NEXT:    pand %xmm5, %xmm6
+; SSE2-NEXT:    pand %xmm5, %xmm0
 ; SSE2-NEXT:    paddb %xmm0, %xmm0
 ; SSE2-NEXT:    por %xmm6, %xmm0
 ; SSE2-NEXT:    movdqa %xmm2, %xmm6
-; SSE2-NEXT:    punpckhbw {{.*#+}} xmm6 = xmm6[8],xmm4[8],xmm6[9],xmm4[9],xmm6[10],xmm4[10],xmm6[11],xmm4[11],xmm6[12],xmm4[12],xmm6[13],xmm4[13],xmm6[14],xmm4[14],xmm6[15],xmm4[15]
+; SSE2-NEXT:    punpckhbw {{.*#+}} xmm6 = xmm6[8],xmm3[8],xmm6[9],xmm3[9],xmm6[10],xmm3[10],xmm6[11],xmm3[11],xmm6[12],xmm3[12],xmm6[13],xmm3[13],xmm6[14],xmm3[14],xmm6[15],xmm3[15]
 ; SSE2-NEXT:    pshuflw {{.*#+}} xmm6 = xmm6[3,2,1,0,4,5,6,7]
 ; SSE2-NEXT:    pshufhw {{.*#+}} xmm6 = xmm6[0,1,2,3,7,6,5,4]
-; SSE2-NEXT:    punpcklbw {{.*#+}} xmm2 = xmm2[0],xmm4[0],xmm2[1],xmm4[1],xmm2[2],xmm4[2],xmm2[3],xmm4[3],xmm2[4],xmm4[4],xmm2[5],xmm4[5],xmm2[6],xmm4[6],xmm2[7],xmm4[7]
+; SSE2-NEXT:    punpcklbw {{.*#+}} xmm2 = xmm2[0],xmm3[0],xmm2[1],xmm3[1],xmm2[2],xmm3[2],xmm2[3],xmm3[3],xmm2[4],xmm3[4],xmm2[5],xmm3[5],xmm2[6],xmm3[6],xmm2[7],xmm3[7]
 ; SSE2-NEXT:    pshuflw {{.*#+}} xmm2 = xmm2[3,2,1,0,4,5,6,7]
 ; SSE2-NEXT:    pshufhw {{.*#+}} xmm2 = xmm2[0,1,2,3,7,6,5,4]
 ; SSE2-NEXT:    packuswb %xmm6, %xmm2
-; SSE2-NEXT:    movdqa %xmm2, %xmm4
-; SSE2-NEXT:    psllw $4, %xmm4
+; SSE2-NEXT:    movdqa %xmm2, %xmm3
+; SSE2-NEXT:    psllw $4, %xmm3
 ; SSE2-NEXT:    psrlw $4, %xmm2
 ; SSE2-NEXT:    pand %xmm1, %xmm2
-; SSE2-NEXT:    pandn %xmm4, %xmm1
+; SSE2-NEXT:    pandn %xmm3, %xmm1
 ; SSE2-NEXT:    por %xmm2, %xmm1
-; SSE2-NEXT:    pand %xmm1, %xmm3
-; SSE2-NEXT:    psllw $2, %xmm3
-; SSE2-NEXT:    pand %xmm8, %xmm1
-; SSE2-NEXT:    psrlw $2, %xmm1
-; SSE2-NEXT:    por %xmm3, %xmm1
-; SSE2-NEXT:    pand %xmm1, %xmm5
-; SSE2-NEXT:    psrlw $1, %xmm5
-; SSE2-NEXT:    pand %xmm7, %xmm1
+; SSE2-NEXT:    movdqa %xmm1, %xmm2
+; SSE2-NEXT:    psrlw $2, %xmm2
+; SSE2-NEXT:    pand %xmm4, %xmm2
+; SSE2-NEXT:    pand %xmm4, %xmm1
+; SSE2-NEXT:    psllw $2, %xmm1
+; SSE2-NEXT:    por %xmm2, %xmm1
+; SSE2-NEXT:    movdqa %xmm1, %xmm2
+; SSE2-NEXT:    psrlw $1, %xmm2
+; SSE2-NEXT:    pand %xmm5, %xmm2
+; SSE2-NEXT:    pand %xmm5, %xmm1
 ; SSE2-NEXT:    paddb %xmm1, %xmm1
-; SSE2-NEXT:    por %xmm5, %xmm1
+; SSE2-NEXT:    por %xmm2, %xmm1
 ; SSE2-NEXT:    retq
 ;
 ; SSSE3-LABEL: test_bitreverse_v8i32:
@@ -1641,67 +1649,67 @@ define <4 x i64> @test_bitreverse_v4i64(<4 x i64> %a) nounwind {
 ; SSE2-LABEL: test_bitreverse_v4i64:
 ; SSE2:       # %bb.0:
 ; SSE2-NEXT:    movdqa %xmm1, %xmm2
-; SSE2-NEXT:    pxor %xmm4, %xmm4
+; SSE2-NEXT:    pxor %xmm3, %xmm3
 ; SSE2-NEXT:    movdqa %xmm0, %xmm1
-; SSE2-NEXT:    punpckhbw {{.*#+}} xmm1 = xmm1[8],xmm4[8],xmm1[9],xmm4[9],xmm1[10],xmm4[10],xmm1[11],xmm4[11],xmm1[12],xmm4[12],xmm1[13],xmm4[13],xmm1[14],xmm4[14],xmm1[15],xmm4[15]
+; SSE2-NEXT:    punpckhbw {{.*#+}} xmm1 = xmm1[8],xmm3[8],xmm1[9],xmm3[9],xmm1[10],xmm3[10],xmm1[11],xmm3[11],xmm1[12],xmm3[12],xmm1[13],xmm3[13],xmm1[14],xmm3[14],xmm1[15],xmm3[15]
 ; SSE2-NEXT:    pshufd {{.*#+}} xmm1 = xmm1[2,3,0,1]
 ; SSE2-NEXT:    pshuflw {{.*#+}} xmm1 = xmm1[3,2,1,0,4,5,6,7]
 ; SSE2-NEXT:    pshufhw {{.*#+}} xmm1 = xmm1[0,1,2,3,7,6,5,4]
-; SSE2-NEXT:    punpcklbw {{.*#+}} xmm0 = xmm0[0],xmm4[0],xmm0[1],xmm4[1],xmm0[2],xmm4[2],xmm0[3],xmm4[3],xmm0[4],xmm4[4],xmm0[5],xmm4[5],xmm0[6],xmm4[6],xmm0[7],xmm4[7]
+; SSE2-NEXT:    punpcklbw {{.*#+}} xmm0 = xmm0[0],xmm3[0],xmm0[1],xmm3[1],xmm0[2],xmm3[2],xmm0[3],xmm3[3],xmm0[4],xmm3[4],xmm0[5],xmm3[5],xmm0[6],xmm3[6],xmm0[7],xmm3[7]
 ; SSE2-NEXT:    pshufd {{.*#+}} xmm0 = xmm0[2,3,0,1]
 ; SSE2-NEXT:    pshuflw {{.*#+}} xmm0 = xmm0[3,2,1,0,4,5,6,7]
 ; SSE2-NEXT:    pshufhw {{.*#+}} xmm0 = xmm0[0,1,2,3,7,6,5,4]
 ; SSE2-NEXT:    packuswb %xmm1, %xmm0
-; SSE2-NEXT:    movdqa %xmm0, %xmm3
-; SSE2-NEXT:    psllw $4, %xmm3
+; SSE2-NEXT:    movdqa %xmm0, %xmm4
+; SSE2-NEXT:    psllw $4, %xmm4
 ; SSE2-NEXT:    movdqa {{.*#+}} xmm1 = [15,15,15,15,15,15,15,15,15,15,15,15,15,15,15,15]
 ; SSE2-NEXT:    movdqa %xmm1, %xmm5
-; SSE2-NEXT:    pandn %xmm3, %xmm5
+; SSE2-NEXT:    pandn %xmm4, %xmm5
 ; SSE2-NEXT:    psrlw $4, %xmm0
 ; SSE2-NEXT:    pand %xmm1, %xmm0
 ; SSE2-NEXT:    por %xmm5, %xmm0
-; SSE2-NEXT:    movdqa {{.*#+}} xmm3 = [51,51,51,51,51,51,51,51,51,51,51,51,51,51,51,51]
 ; SSE2-NEXT:    movdqa %xmm0, %xmm5
-; SSE2-NEXT:    pand %xmm3, %xmm5
-; SSE2-NEXT:    psllw $2, %xmm5
-; SSE2-NEXT:    movdqa {{.*#+}} xmm8 = [204,204,204,204,204,204,204,204,204,204,204,204,204,204,204,204]
-; SSE2-NEXT:    pand %xmm8, %xmm0
-; SSE2-NEXT:    psrlw $2, %xmm0
+; SSE2-NEXT:    psrlw $2, %xmm5
+; SSE2-NEXT:    movdqa {{.*#+}} xmm4 = [51,51,51,51,51,51,51,51,51,51,51,51,51,51,51,51]
+; SSE2-NEXT:    pand %xmm4, %xmm5
+; SSE2-NEXT:    pand %xmm4, %xmm0
+; SSE2-NEXT:    psllw $2, %xmm0
 ; SSE2-NEXT:    por %xmm5, %xmm0
-; SSE2-NEXT:    movdqa {{.*#+}} xmm5 = [170,170,170,170,170,170,170,170,170,170,170,170,170,170,170,170]
 ; SSE2-NEXT:    movdqa %xmm0, %xmm6
-; SSE2-NEXT:    pand %xmm5, %xmm6
 ; SSE2-NEXT:    psrlw $1, %xmm6
-; SSE2-NEXT:    movdqa {{.*#+}} xmm7 = [85,85,85,85,85,85,85,85,85,85,85,85,85,85,85,85]
-; SSE2-NEXT:    pand %xmm7, %xmm0
+; SSE2-NEXT:    movdqa {{.*#+}} xmm5 = [85,85,85,85,85,85,85,85,85,85,85,85,85,85,85,85]
+; SSE2-NEXT:    pand %xmm5, %xmm6
+; SSE2-NEXT:    pand %xmm5, %xmm0
 ; SSE2-NEXT:    paddb %xmm0, %xmm0
 ; SSE2-NEXT:    por %xmm6, %xmm0
 ; SSE2-NEXT:    movdqa %xmm2, %xmm6
-; SSE2-NEXT:    punpckhbw {{.*#+}} xmm6 = xmm6[8],xmm4[8],xmm6[9],xmm4[9],xmm6[10],xmm4[10],xmm6[11],xmm4[11],xmm6[12],xmm4[12],xmm6[13],xmm4[13],xmm6[14],xmm4[14],xmm6[15],xmm4[15]
+; SSE2-NEXT:    punpckhbw {{.*#+}} xmm6 = xmm6[8],xmm3[8],xmm6[9],xmm3[9],xmm6[10],xmm3[10],xmm6[11],xmm3[11],xmm6[12],xmm3[12],xmm6[13],xmm3[13],xmm6[14],xmm3[14],xmm6[15],xmm3[15]
 ; SSE2-NEXT:    pshufd {{.*#+}} xmm6 = xmm6[2,3,0,1]
 ; SSE2-NEXT:    pshuflw {{.*#+}} xmm6 = xmm6[3,2,1,0,4,5,6,7]
 ; SSE2-NEXT:    pshufhw {{.*#+}} xmm6 = xmm6[0,1,2,3,7,6,5,4]
-; SSE2-NEXT:    punpcklbw {{.*#+}} xmm2 = xmm2[0],xmm4[0],xmm2[1],xmm4[1],xmm2[2],xmm4[2],xmm2[3],xmm4[3],xmm2[4],xmm4[4],xmm2[5],xmm4[5],xmm2[6],xmm4[6],xmm2[7],xmm4[7]
+; SSE2-NEXT:    punpcklbw {{.*#+}} xmm2 = xmm2[0],xmm3[0],xmm2[1],xmm3[1],xmm2[2],xmm3[2],xmm2[3],xmm3[3],xmm2[4],xmm3[4],xmm2[5],xmm3[5],xmm2[6],xmm3[6],xmm2[7],xmm3[7]
 ; SSE2-NEXT:    pshufd {{.*#+}} xmm2 = xmm2[2,3,0,1]
 ; SSE2-NEXT:    pshuflw {{.*#+}} xmm2 = xmm2[3,2,1,0,4,5,6,7]
 ; SSE2-NEXT:    pshufhw {{.*#+}} xmm2 = xmm2[0,1,2,3,7,6,5,4]
 ; SSE2-NEXT:    packuswb %xmm6, %xmm2
-; SSE2-NEXT:    movdqa %xmm2, %xmm4
-; SSE2-NEXT:    psllw $4, %xmm4
+; SSE2-NEXT:    movdqa %xmm2, %xmm3
+; SSE2-NEXT:    psllw $4, %xmm3
 ; SSE2-NEXT:    psrlw $4, %xmm2
 ; SSE2-NEXT:    pand %xmm1, %xmm2
-; SSE2-NEXT:    pandn %xmm4, %xmm1
+; SSE2-NEXT:    pandn %xmm3, %xmm1
 ; SSE2-NEXT:    por %xmm2, %xmm1
-; SSE2-NEXT:    pand %xmm1, %xmm3
-; SSE2-NEXT:    psllw $2, %xmm3
-; SSE2-NEXT:    pand %xmm8, %xmm1
-; SSE2-NEXT:    psrlw $2, %xmm1
-; SSE2-NEXT:    por %xmm3, %xmm1
-; SSE2-NEXT:    pand %xmm1, %xmm5
-; SSE2-NEXT:    psrlw $1, %xmm5
-; SSE2-NEXT:    pand %xmm7, %xmm1
+; SSE2-NEXT:    movdqa %xmm1, %xmm2
+; SSE2-NEXT:    psrlw $2, %xmm2
+; SSE2-NEXT:    pand %xmm4, %xmm2
+; SSE2-NEXT:    pand %xmm4, %xmm1
+; SSE2-NEXT:    psllw $2, %xmm1
+; SSE2-NEXT:    por %xmm2, %xmm1
+; SSE2-NEXT:    movdqa %xmm1, %xmm2
+; SSE2-NEXT:    psrlw $1, %xmm2
+; SSE2-NEXT:    pand %xmm5, %xmm2
+; SSE2-NEXT:    pand %xmm5, %xmm1
 ; SSE2-NEXT:    paddb %xmm1, %xmm1
-; SSE2-NEXT:    por %xmm5, %xmm1
+; SSE2-NEXT:    por %xmm2, %xmm1
 ; SSE2-NEXT:    retq
 ;
 ; SSSE3-LABEL: test_bitreverse_v4i64:
@@ -1851,7 +1859,7 @@ define <4 x i64> @test_bitreverse_v4i64(<4 x i64> %a) nounwind {
 define <64 x i8> @test_bitreverse_v64i8(<64 x i8> %a) nounwind {
 ; SSE2-LABEL: test_bitreverse_v64i8:
 ; SSE2:       # %bb.0:
-; SSE2-NEXT:    movdqa %xmm3, %xmm10
+; SSE2-NEXT:    movdqa %xmm3, %xmm4
 ; SSE2-NEXT:    movdqa %xmm0, %xmm5
 ; SSE2-NEXT:    psllw $4, %xmm5
 ; SSE2-NEXT:    movdqa {{.*#+}} xmm3 = [15,15,15,15,15,15,15,15,15,15,15,15,15,15,15,15]
@@ -1860,76 +1868,76 @@ define <64 x i8> @test_bitreverse_v64i8(<64 x i8> %a) nounwind {
 ; SSE2-NEXT:    psrlw $4, %xmm0
 ; SSE2-NEXT:    pand %xmm3, %xmm0
 ; SSE2-NEXT:    por %xmm6, %xmm0
-; SSE2-NEXT:    movdqa {{.*#+}} xmm5 = [51,51,51,51,51,51,51,51,51,51,51,51,51,51,51,51]
 ; SSE2-NEXT:    movdqa %xmm0, %xmm6
-; SSE2-NEXT:    pand %xmm5, %xmm6
-; SSE2-NEXT:    psllw $2, %xmm6
-; SSE2-NEXT:    movdqa {{.*#+}} xmm8 = [204,204,204,204,204,204,204,204,204,204,204,204,204,204,204,204]
+; SSE2-NEXT:    psrlw $2, %xmm6
+; SSE2-NEXT:    movdqa {{.*#+}} xmm8 = [51,51,51,51,51,51,51,51,51,51,51,51,51,51,51,51]
+; SSE2-NEXT:    pand %xmm8, %xmm6
 ; SSE2-NEXT:    pand %xmm8, %xmm0
-; SSE2-NEXT:    psrlw $2, %xmm0
+; SSE2-NEXT:    psllw $2, %xmm0
 ; SSE2-NEXT:    por %xmm6, %xmm0
-; SSE2-NEXT:    movdqa {{.*#+}} xmm6 = [170,170,170,170,170,170,170,170,170,170,170,170,170,170,170,170]
 ; SSE2-NEXT:    movdqa %xmm0, %xmm7
-; SSE2-NEXT:    pand %xmm6, %xmm7
 ; SSE2-NEXT:    psrlw $1, %xmm7
-; SSE2-NEXT:    movdqa {{.*#+}} xmm9 = [85,85,85,85,85,85,85,85,85,85,85,85,85,85,85,85]
-; SSE2-NEXT:    pand %xmm9, %xmm0
+; SSE2-NEXT:    movdqa {{.*#+}} xmm6 = [85,85,85,85,85,85,85,85,85,85,85,85,85,85,85,85]
+; SSE2-NEXT:    pand %xmm6, %xmm7
+; SSE2-NEXT:    pand %xmm6, %xmm0
 ; SSE2-NEXT:    paddb %xmm0, %xmm0
 ; SSE2-NEXT:    por %xmm7, %xmm0
 ; SSE2-NEXT:    movdqa %xmm1, %xmm7
 ; SSE2-NEXT:    psllw $4, %xmm7
-; SSE2-NEXT:    movdqa %xmm3, %xmm4
-; SSE2-NEXT:    pandn %xmm7, %xmm4
+; SSE2-NEXT:    movdqa %xmm3, %xmm5
+; SSE2-NEXT:    pandn %xmm7, %xmm5
 ; SSE2-NEXT:    psrlw $4, %xmm1
 ; SSE2-NEXT:    pand %xmm3, %xmm1
-; SSE2-NEXT:    por %xmm4, %xmm1
-; SSE2-NEXT:    movdqa %xmm1, %xmm4
-; SSE2-NEXT:    pand %xmm5, %xmm4
-; SSE2-NEXT:    psllw $2, %xmm4
+; SSE2-NEXT:    por %xmm5, %xmm1
+; SSE2-NEXT:    movdqa %xmm1, %xmm5
+; SSE2-NEXT:    psrlw $2, %xmm5
+; SSE2-NEXT:    pand %xmm8, %xmm5
 ; SSE2-NEXT:    pand %xmm8, %xmm1
-; SSE2-NEXT:    psrlw $2, %xmm1
-; SSE2-NEXT:    por %xmm4, %xmm1
-; SSE2-NEXT:    movdqa %xmm1, %xmm4
-; SSE2-NEXT:    pand %xmm6, %xmm4
-; SSE2-NEXT:    psrlw $1, %xmm4
-; SSE2-NEXT:    pand %xmm9, %xmm1
+; SSE2-NEXT:    psllw $2, %xmm1
+; SSE2-NEXT:    por %xmm5, %xmm1
+; SSE2-NEXT:    movdqa %xmm1, %xmm5
+; SSE2-NEXT:    psrlw $1, %xmm5
+; SSE2-NEXT:    pand %xmm6, %xmm5
+; SSE2-NEXT:    pand %xmm6, %xmm1
 ; SSE2-NEXT:    paddb %xmm1, %xmm1
-; SSE2-NEXT:    por %xmm4, %xmm1
-; SSE2-NEXT:    movdqa %xmm2, %xmm4
-; SSE2-NEXT:    psllw $4, %xmm4
+; SSE2-NEXT:    por %xmm5, %xmm1
+; SSE2-NEXT:    movdqa %xmm2, %xmm5
+; SSE2-NEXT:    psllw $4, %xmm5
 ; SSE2-NEXT:    movdqa %xmm3, %xmm7
-; SSE2-NEXT:    pandn %xmm4, %xmm7
+; SSE2-NEXT:    pandn %xmm5, %xmm7
 ; SSE2-NEXT:    psrlw $4, %xmm2
 ; SSE2-NEXT:    pand %xmm3, %xmm2
 ; SSE2-NEXT:    por %xmm7, %xmm2
-; SSE2-NEXT:    movdqa %xmm2, %xmm4
-; SSE2-NEXT:    pand %xmm5, %xmm4
-; SSE2-NEXT:    psllw $2, %xmm4
+; SSE2-NEXT:    movdqa %xmm2, %xmm5
+; SSE2-NEXT:    psrlw $2, %xmm5
+; SSE2-NEXT:    pand %xmm8, %xmm5
 ; SSE2-NEXT:    pand %xmm8, %xmm2
-; SSE2-NEXT:    psrlw $2, %xmm2
-; SSE2-NEXT:    por %xmm4, %xmm2
-; SSE2-NEXT:    movdqa %xmm2, %xmm4
-; SSE2-NEXT:    pand %xmm6, %xmm4
-; SSE2-NEXT:    psrlw $1, %xmm4
-; SSE2-NEXT:    pand %xmm9, %xmm2
+; SSE2-NEXT:    psllw $2, %xmm2
+; SSE2-NEXT:    por %xmm5, %xmm2
+; SSE2-NEXT:    movdqa %xmm2, %xmm5
+; SSE2-NEXT:    psrlw $1, %xmm5
+; SSE2-NEXT:    pand %xmm6, %xmm5
+; SSE2-NEXT:    pand %xmm6, %xmm2
 ; SSE2-NEXT:    paddb %xmm2, %xmm2
-; SSE2-NEXT:    por %xmm4, %xmm2
-; SSE2-NEXT:    movdqa %xmm10, %xmm4
-; SSE2-NEXT:    psllw $4, %xmm4
-; SSE2-NEXT:    psrlw $4, %xmm10
-; SSE2-NEXT:    pand %xmm3, %xmm10
-; SSE2-NEXT:    pandn %xmm4, %xmm3
-; SSE2-NEXT:    por %xmm10, %xmm3
-; SSE2-NEXT:    pand %xmm3, %xmm5
-; SSE2-NEXT:    psllw $2, %xmm5
+; SSE2-NEXT:    por %xmm5, %xmm2
+; SSE2-NEXT:    movdqa %xmm4, %xmm5
+; SSE2-NEXT:    psllw $4, %xmm5
+; SSE2-NEXT:    psrlw $4, %xmm4
+; SSE2-NEXT:    pand %xmm3, %xmm4
+; SSE2-NEXT:    pandn %xmm5, %xmm3
+; SSE2-NEXT:    por %xmm4, %xmm3
+; SSE2-NEXT:    movdqa %xmm3, %xmm4
+; SSE2-NEXT:    psrlw $2, %xmm4
+; SSE2-NEXT:    pand %xmm8, %xmm4
 ; SSE2-NEXT:    pand %xmm8, %xmm3
-; SSE2-NEXT:    psrlw $2, %xmm3
-; SSE2-NEXT:    por %xmm5, %xmm3
-; SSE2-NEXT:    pand %xmm3, %xmm6
-; SSE2-NEXT:    psrlw $1, %xmm6
-; SSE2-NEXT:    pand %xmm9, %xmm3
+; SSE2-NEXT:    psllw $2, %xmm3
+; SSE2-NEXT:    por %xmm4, %xmm3
+; SSE2-NEXT:    movdqa %xmm3, %xmm4
+; SSE2-NEXT:    psrlw $1, %xmm4
+; SSE2-NEXT:    pand %xmm6, %xmm4
+; SSE2-NEXT:    pand %xmm6, %xmm3
 ; SSE2-NEXT:    paddb %xmm3, %xmm3
-; SSE2-NEXT:    por %xmm6, %xmm3
+; SSE2-NEXT:    por %xmm4, %xmm3
 ; SSE2-NEXT:    retq
 ;
 ; SSSE3-LABEL: test_bitreverse_v64i8:
@@ -2152,20 +2160,18 @@ define <32 x i16> @test_bitreverse_v32i16(<32 x i16> %a) nounwind {
 ; SSE2-NEXT:    psrlw $4, %xmm0
 ; SSE2-NEXT:    pand %xmm3, %xmm0
 ; SSE2-NEXT:    por %xmm6, %xmm0
-; SSE2-NEXT:    movdqa {{.*#+}} xmm10 = [51,51,51,51,51,51,51,51,51,51,51,51,51,51,51,51]
 ; SSE2-NEXT:    movdqa %xmm0, %xmm6
-; SSE2-NEXT:    pand %xmm10, %xmm6
-; SSE2-NEXT:    psllw $2, %xmm6
-; SSE2-NEXT:    movdqa {{.*#+}} xmm8 = [204,204,204,204,204,204,204,204,204,204,204,204,204,204,204,204]
+; SSE2-NEXT:    psrlw $2, %xmm6
+; SSE2-NEXT:    movdqa {{.*#+}} xmm8 = [51,51,51,51,51,51,51,51,51,51,51,51,51,51,51,51]
+; SSE2-NEXT:    pand %xmm8, %xmm6
 ; SSE2-NEXT:    pand %xmm8, %xmm0
-; SSE2-NEXT:    psrlw $2, %xmm0
+; SSE2-NEXT:    psllw $2, %xmm0
 ; SSE2-NEXT:    por %xmm6, %xmm0
-; SSE2-NEXT:    movdqa {{.*#+}} xmm6 = [170,170,170,170,170,170,170,170,170,170,170,170,170,170,170,170]
 ; SSE2-NEXT:    movdqa %xmm0, %xmm7
-; SSE2-NEXT:    pand %xmm6, %xmm7
 ; SSE2-NEXT:    psrlw $1, %xmm7
-; SSE2-NEXT:    movdqa {{.*#+}} xmm9 = [85,85,85,85,85,85,85,85,85,85,85,85,85,85,85,85]
-; SSE2-NEXT:    pand %xmm9, %xmm0
+; SSE2-NEXT:    movdqa {{.*#+}} xmm6 = [85,85,85,85,85,85,85,85,85,85,85,85,85,85,85,85]
+; SSE2-NEXT:    pand %xmm6, %xmm7
+; SSE2-NEXT:    pand %xmm6, %xmm0
 ; SSE2-NEXT:    paddb %xmm0, %xmm0
 ; SSE2-NEXT:    por %xmm7, %xmm0
 ; SSE2-NEXT:    movdqa %xmm1, %xmm7
@@ -2180,15 +2186,15 @@ define <32 x i16> @test_bitreverse_v32i16(<32 x i16> %a) nounwind {
 ; SSE2-NEXT:    pand %xmm3, %xmm1
 ; SSE2-NEXT:    por %xmm5, %xmm1
 ; SSE2-NEXT:    movdqa %xmm1, %xmm5
-; SSE2-NEXT:    pand %xmm10, %xmm5
-; SSE2-NEXT:    psllw $2, %xmm5
+; SSE2-NEXT:    psrlw $2, %xmm5
+; SSE2-NEXT:    pand %xmm8, %xmm5
 ; SSE2-NEXT:    pand %xmm8, %xmm1
-; SSE2-NEXT:    psrlw $2, %xmm1
+; SSE2-NEXT:    psllw $2, %xmm1
 ; SSE2-NEXT:    por %xmm5, %xmm1
 ; SSE2-NEXT:    movdqa %xmm1, %xmm5
-; SSE2-NEXT:    pand %xmm6, %xmm5
 ; SSE2-NEXT:    psrlw $1, %xmm5
-; SSE2-NEXT:    pand %xmm9, %xmm1
+; SSE2-NEXT:    pand %xmm6, %xmm5
+; SSE2-NEXT:    pand %xmm6, %xmm1
 ; SSE2-NEXT:    paddb %xmm1, %xmm1
 ; SSE2-NEXT:    por %xmm5, %xmm1
 ; SSE2-NEXT:    movdqa %xmm2, %xmm5
@@ -2203,15 +2209,15 @@ define <32 x i16> @test_bitreverse_v32i16(<32 x i16> %a) nounwind {
 ; SSE2-NEXT:    pand %xmm3, %xmm2
 ; SSE2-NEXT:    por %xmm7, %xmm2
 ; SSE2-NEXT:    movdqa %xmm2, %xmm5
-; SSE2-NEXT:    pand %xmm10, %xmm5
-; SSE2-NEXT:    psllw $2, %xmm5
+; SSE2-NEXT:    psrlw $2, %xmm5
+; SSE2-NEXT:    pand %xmm8, %xmm5
 ; SSE2-NEXT:    pand %xmm8, %xmm2
-; SSE2-NEXT:    psrlw $2, %xmm2
+; SSE2-NEXT:    psllw $2, %xmm2
 ; SSE2-NEXT:    por %xmm5, %xmm2
 ; SSE2-NEXT:    movdqa %xmm2, %xmm5
-; SSE2-NEXT:    pand %xmm6, %xmm5
 ; SSE2-NEXT:    psrlw $1, %xmm5
-; SSE2-NEXT:    pand %xmm9, %xmm2
+; SSE2-NEXT:    pand %xmm6, %xmm5
+; SSE2-NEXT:    pand %xmm6, %xmm2
 ; SSE2-NEXT:    paddb %xmm2, %xmm2
 ; SSE2-NEXT:    por %xmm5, %xmm2
 ; SSE2-NEXT:    movdqa %xmm4, %xmm5
@@ -2224,16 +2230,18 @@ define <32 x i16> @test_bitreverse_v32i16(<32 x i16> %a) nounwind {
 ; SSE2-NEXT:    pand %xmm3, %xmm4
 ; SSE2-NEXT:    pandn %xmm5, %xmm3
 ; SSE2-NEXT:    por %xmm4, %xmm3
-; SSE2-NEXT:    pand %xmm3, %xmm10
-; SSE2-NEXT:    psllw $2, %xmm10
+; SSE2-NEXT:    movdqa %xmm3, %xmm4
+; SSE2-NEXT:    psrlw $2, %xmm4
+; SSE2-NEXT:    pand %xmm8, %xmm4
 ; SSE2-NEXT:    pand %xmm8, %xmm3
-; SSE2-NEXT:    psrlw $2, %xmm3
-; SSE2-NEXT:    por %xmm10, %xmm3
-; SSE2-NEXT:    pand %xmm3, %xmm6
-; SSE2-NEXT:    psrlw $1, %xmm6
-; SSE2-NEXT:    pand %xmm9, %xmm3
+; SSE2-NEXT:    psllw $2, %xmm3
+; SSE2-NEXT:    por %xmm4, %xmm3
+; SSE2-NEXT:    movdqa %xmm3, %xmm4
+; SSE2-NEXT:    psrlw $1, %xmm4
+; SSE2-NEXT:    pand %xmm6, %xmm4
+; SSE2-NEXT:    pand %xmm6, %xmm3
 ; SSE2-NEXT:    paddb %xmm3, %xmm3
-; SSE2-NEXT:    por %xmm6, %xmm3
+; SSE2-NEXT:    por %xmm4, %xmm3
 ; SSE2-NEXT:    retq
 ;
 ; SSSE3-LABEL: test_bitreverse_v32i16:
@@ -2478,118 +2486,118 @@ define <32 x i16> @test_bitreverse_v32i16(<32 x i16> %a) nounwind {
 define <16 x i32> @test_bitreverse_v16i32(<16 x i32> %a) nounwind {
 ; SSE2-LABEL: test_bitreverse_v16i32:
 ; SSE2:       # %bb.0:
-; SSE2-NEXT:    movdqa %xmm3, %xmm11
-; SSE2-NEXT:    pxor %xmm10, %xmm10
+; SSE2-NEXT:    movdqa %xmm3, %xmm4
+; SSE2-NEXT:    pxor %xmm8, %xmm8
 ; SSE2-NEXT:    movdqa %xmm0, %xmm3
-; SSE2-NEXT:    punpckhbw {{.*#+}} xmm3 = xmm3[8],xmm10[8],xmm3[9],xmm10[9],xmm3[10],xmm10[10],xmm3[11],xmm10[11],xmm3[12],xmm10[12],xmm3[13],xmm10[13],xmm3[14],xmm10[14],xmm3[15],xmm10[15]
+; SSE2-NEXT:    punpckhbw {{.*#+}} xmm3 = xmm3[8],xmm8[8],xmm3[9],xmm8[9],xmm3[10],xmm8[10],xmm3[11],xmm8[11],xmm3[12],xmm8[12],xmm3[13],xmm8[13],xmm3[14],xmm8[14],xmm3[15],xmm8[15]
 ; SSE2-NEXT:    pshuflw {{.*#+}} xmm3 = xmm3[3,2,1,0,4,5,6,7]
 ; SSE2-NEXT:    pshufhw {{.*#+}} xmm3 = xmm3[0,1,2,3,7,6,5,4]
-; SSE2-NEXT:    punpcklbw {{.*#+}} xmm0 = xmm0[0],xmm10[0],xmm0[1],xmm10[1],xmm0[2],xmm10[2],xmm0[3],xmm10[3],xmm0[4],xmm10[4],xmm0[5],xmm10[5],xmm0[6],xmm10[6],xmm0[7],xmm10[7]
+; SSE2-NEXT:    punpcklbw {{.*#+}} xmm0 = xmm0[0],xmm8[0],xmm0[1],xmm8[1],xmm0[2],xmm8[2],xmm0[3],xmm8[3],xmm0[4],xmm8[4],xmm0[5],xmm8[5],xmm0[6],xmm8[6],xmm0[7],xmm8[7]
 ; SSE2-NEXT:    pshuflw {{.*#+}} xmm0 = xmm0[3,2,1,0,4,5,6,7]
 ; SSE2-NEXT:    pshufhw {{.*#+}} xmm0 = xmm0[0,1,2,3,7,6,5,4]
 ; SSE2-NEXT:    packuswb %xmm3, %xmm0
-; SSE2-NEXT:    movdqa %xmm0, %xmm5
-; SSE2-NEXT:    psllw $4, %xmm5
+; SSE2-NEXT:    movdqa %xmm0, %xmm6
+; SSE2-NEXT:    psllw $4, %xmm6
 ; SSE2-NEXT:    movdqa {{.*#+}} xmm3 = [15,15,15,15,15,15,15,15,15,15,15,15,15,15,15,15]
 ; SSE2-NEXT:    movdqa %xmm3, %xmm7
-; SSE2-NEXT:    pandn %xmm5, %xmm7
+; SSE2-NEXT:    pandn %xmm6, %xmm7
 ; SSE2-NEXT:    psrlw $4, %xmm0
 ; SSE2-NEXT:    pand %xmm3, %xmm0
 ; SSE2-NEXT:    por %xmm7, %xmm0
-; SSE2-NEXT:    movdqa {{.*#+}} xmm5 = [51,51,51,51,51,51,51,51,51,51,51,51,51,51,51,51]
 ; SSE2-NEXT:    movdqa %xmm0, %xmm7
-; SSE2-NEXT:    pand %xmm5, %xmm7
-; SSE2-NEXT:    psllw $2, %xmm7
-; SSE2-NEXT:    movdqa {{.*#+}} xmm8 = [204,204,204,204,204,204,204,204,204,204,204,204,204,204,204,204]
-; SSE2-NEXT:    pand %xmm8, %xmm0
-; SSE2-NEXT:    psrlw $2, %xmm0
-; SSE2-NEXT:    por %xmm7, %xmm0
-; SSE2-NEXT:    movdqa {{.*#+}} xmm7 = [170,170,170,170,170,170,170,170,170,170,170,170,170,170,170,170]
-; SSE2-NEXT:    movdqa %xmm0, %xmm6
-; SSE2-NEXT:    pand %xmm7, %xmm6
-; SSE2-NEXT:    psrlw $1, %xmm6
-; SSE2-NEXT:    movdqa {{.*#+}} xmm9 = [85,85,85,85,85,85,85,85,85,85,85,85,85,85,85,85]
+; SSE2-NEXT:    psrlw $2, %xmm7
+; SSE2-NEXT:    movdqa {{.*#+}} xmm9 = [51,51,51,51,51,51,51,51,51,51,51,51,51,51,51,51]
+; SSE2-NEXT:    pand %xmm9, %xmm7
 ; SSE2-NEXT:    pand %xmm9, %xmm0
+; SSE2-NEXT:    psllw $2, %xmm0
+; SSE2-NEXT:    por %xmm7, %xmm0
+; SSE2-NEXT:    movdqa %xmm0, %xmm5
+; SSE2-NEXT:    psrlw $1, %xmm5
+; SSE2-NEXT:    movdqa {{.*#+}} xmm7 = [85,85,85,85,85,85,85,85,85,85,85,85,85,85,85,85]
+; SSE2-NEXT:    pand %xmm7, %xmm5
+; SSE2-NEXT:    pand %xmm7, %xmm0
 ; SSE2-NEXT:    paddb %xmm0, %xmm0
-; SSE2-NEXT:    por %xmm6, %xmm0
-; SSE2-NEXT:    movdqa %xmm1, %xmm6
-; SSE2-NEXT:    punpckhbw {{.*#+}} xmm6 = xmm6[8],xmm10[8],xmm6[9],xmm10[9],xmm6[10],xmm10[10],xmm6[11],xmm10[11],xmm6[12],xmm10[12],xmm6[13],xmm10[13],xmm6[14],xmm10[14],xmm6[15],xmm10[15]
-; SSE2-NEXT:    pshuflw {{.*#+}} xmm6 = xmm6[3,2,1,0,4,5,6,7]
-; SSE2-NEXT:    pshufhw {{.*#+}} xmm6 = xmm6[0,1,2,3,7,6,5,4]
-; SSE2-NEXT:    punpcklbw {{.*#+}} xmm1 = xmm1[0],xmm10[0],xmm1[1],xmm10[1],xmm1[2],xmm10[2],xmm1[3],xmm10[3],xmm1[4],xmm10[4],xmm1[5],xmm10[5],xmm1[6],xmm10[6],xmm1[7],xmm10[7]
+; SSE2-NEXT:    por %xmm5, %xmm0
+; SSE2-NEXT:    movdqa %xmm1, %xmm5
+; SSE2-NEXT:    punpckhbw {{.*#+}} xmm5 = xmm5[8],xmm8[8],xmm5[9],xmm8[9],xmm5[10],xmm8[10],xmm5[11],xmm8[11],xmm5[12],xmm8[12],xmm5[13],xmm8[13],xmm5[14],xmm8[14],xmm5[15],xmm8[15]
+; SSE2-NEXT:    pshuflw {{.*#+}} xmm5 = xmm5[3,2,1,0,4,5,6,7]
+; SSE2-NEXT:    pshufhw {{.*#+}} xmm5 = xmm5[0,1,2,3,7,6,5,4]
+; SSE2-NEXT:    punpcklbw {{.*#+}} xmm1 = xmm1[0],xmm8[0],xmm1[1],xmm8[1],xmm1[2],xmm8[2],xmm1[3],xmm8[3],xmm1[4],xmm8[4],xmm1[5],xmm8[5],xmm1[6],xmm8[6],xmm1[7],xmm8[7]
 ; SSE2-NEXT:    pshuflw {{.*#+}} xmm1 = xmm1[3,2,1,0,4,5,6,7]
 ; SSE2-NEXT:    pshufhw {{.*#+}} xmm1 = xmm1[0,1,2,3,7,6,5,4]
-; SSE2-NEXT:    packuswb %xmm6, %xmm1
-; SSE2-NEXT:    movdqa %xmm1, %xmm6
-; SSE2-NEXT:    psllw $4, %xmm6
-; SSE2-NEXT:    movdqa %xmm3, %xmm4
-; SSE2-NEXT:    pandn %xmm6, %xmm4
+; SSE2-NEXT:    packuswb %xmm5, %xmm1
+; SSE2-NEXT:    movdqa %xmm1, %xmm5
+; SSE2-NEXT:    psllw $4, %xmm5
+; SSE2-NEXT:    movdqa %xmm3, %xmm6
+; SSE2-NEXT:    pandn %xmm5, %xmm6
 ; SSE2-NEXT:    psrlw $4, %xmm1
 ; SSE2-NEXT:    pand %xmm3, %xmm1
-; SSE2-NEXT:    por %xmm4, %xmm1
-; SSE2-NEXT:    movdqa %xmm1, %xmm4
-; SSE2-NEXT:    pand %xmm5, %xmm4
-; SSE2-NEXT:    psllw $2, %xmm4
-; SSE2-NEXT:    pand %xmm8, %xmm1
-; SSE2-NEXT:    psrlw $2, %xmm1
-; SSE2-NEXT:    por %xmm4, %xmm1
-; SSE2-NEXT:    movdqa %xmm1, %xmm4
-; SSE2-NEXT:    pand %xmm7, %xmm4
-; SSE2-NEXT:    psrlw $1, %xmm4
+; SSE2-NEXT:    por %xmm6, %xmm1
+; SSE2-NEXT:    movdqa %xmm1, %xmm5
+; SSE2-NEXT:    psrlw $2, %xmm5
+; SSE2-NEXT:    pand %xmm9, %xmm5
 ; SSE2-NEXT:    pand %xmm9, %xmm1
+; SSE2-NEXT:    psllw $2, %xmm1
+; SSE2-NEXT:    por %xmm5, %xmm1
+; SSE2-NEXT:    movdqa %xmm1, %xmm5
+; SSE2-NEXT:    psrlw $1, %xmm5
+; SSE2-NEXT:    pand %xmm7, %xmm5
+; SSE2-NEXT:    pand %xmm7, %xmm1
 ; SSE2-NEXT:    paddb %xmm1, %xmm1
-; SSE2-NEXT:    por %xmm4, %xmm1
-; SSE2-NEXT:    movdqa %xmm2, %xmm4
-; SSE2-NEXT:    punpckhbw {{.*#+}} xmm4 = xmm4[8],xmm10[8],xmm4[9],xmm10[9],xmm4[10],xmm10[10],xmm4[11],xmm10[11],xmm4[12],xmm10[12],xmm4[13],xmm10[13],xmm4[14],xmm10[14],xmm4[15],xmm10[15]
-; SSE2-NEXT:    pshuflw {{.*#+}} xmm4 = xmm4[3,2,1,0,4,5,6,7]
-; SSE2-NEXT:    pshufhw {{.*#+}} xmm4 = xmm4[0,1,2,3,7,6,5,4]
-; SSE2-NEXT:    punpcklbw {{.*#+}} xmm2 = xmm2[0],xmm10[0],xmm2[1],xmm10[1],xmm2[2],xmm10[2],xmm2[3],xmm10[3],xmm2[4],xmm10[4],xmm2[5],xmm10[5],xmm2[6],xmm10[6],xmm2[7],xmm10[7]
+; SSE2-NEXT:    por %xmm5, %xmm1
+; SSE2-NEXT:    movdqa %xmm2, %xmm5
+; SSE2-NEXT:    punpckhbw {{.*#+}} xmm5 = xmm5[8],xmm8[8],xmm5[9],xmm8[9],xmm5[10],xmm8[10],xmm5[11],xmm8[11],xmm5[12],xmm8[12],xmm5[13],xmm8[13],xmm5[14],xmm8[14],xmm5[15],xmm8[15]
+; SSE2-NEXT:    pshuflw {{.*#+}} xmm5 = xmm5[3,2,1,0,4,5,6,7]
+; SSE2-NEXT:    pshufhw {{.*#+}} xmm5 = xmm5[0,1,2,3,7,6,5,4]
+; SSE2-NEXT:    punpcklbw {{.*#+}} xmm2 = xmm2[0],xmm8[0],xmm2[1],xmm8[1],xmm2[2],xmm8[2],xmm2[3],xmm8[3],xmm2[4],xmm8[4],xmm2[5],xmm8[5],xmm2[6],xmm8[6],xmm2[7],xmm8[7]
 ; SSE2-NEXT:    pshuflw {{.*#+}} xmm2 = xmm2[3,2,1,0,4,5,6,7]
 ; SSE2-NEXT:    pshufhw {{.*#+}} xmm2 = xmm2[0,1,2,3,7,6,5,4]
-; SSE2-NEXT:    packuswb %xmm4, %xmm2
-; SSE2-NEXT:    movdqa %xmm2, %xmm4
-; SSE2-NEXT:    psllw $4, %xmm4
+; SSE2-NEXT:    packuswb %xmm5, %xmm2
+; SSE2-NEXT:    movdqa %xmm2, %xmm5
+; SSE2-NEXT:    psllw $4, %xmm5
 ; SSE2-NEXT:    movdqa %xmm3, %xmm6
-; SSE2-NEXT:    pandn %xmm4, %xmm6
+; SSE2-NEXT:    pandn %xmm5, %xmm6
 ; SSE2-NEXT:    psrlw $4, %xmm2
 ; SSE2-NEXT:    pand %xmm3, %xmm2
 ; SSE2-NEXT:    por %xmm6, %xmm2
-; SSE2-NEXT:    movdqa %xmm2, %xmm4
-; SSE2-NEXT:    pand %xmm5, %xmm4
-; SSE2-NEXT:    psllw $2, %xmm4
-; SSE2-NEXT:    pand %xmm8, %xmm2
-; SSE2-NEXT:    psrlw $2, %xmm2
-; SSE2-NEXT:    por %xmm4, %xmm2
-; SSE2-NEXT:    movdqa %xmm2, %xmm4
-; SSE2-NEXT:    pand %xmm7, %xmm4
-; SSE2-NEXT:    psrlw $1, %xmm4
+; SSE2-NEXT:    movdqa %xmm2, %xmm5
+; SSE2-NEXT:    psrlw $2, %xmm5
+; SSE2-NEXT:    pand %xmm9, %xmm5
 ; SSE2-NEXT:    pand %xmm9, %xmm2
+; SSE2-NEXT:    psllw $2, %xmm2
+; SSE2-NEXT:    por %xmm5, %xmm2
+; SSE2-NEXT:    movdqa %xmm2, %xmm5
+; SSE2-NEXT:    psrlw $1, %xmm5
+; SSE2-NEXT:    pand %xmm7, %xmm5
+; SSE2-NEXT:    pand %xmm7, %xmm2
 ; SSE2-NEXT:    paddb %xmm2, %xmm2
-; SSE2-NEXT:    por %xmm4, %xmm2
-; SSE2-NEXT:    movdqa %xmm11, %xmm4
-; SSE2-NEXT:    punpckhbw {{.*#+}} xmm4 = xmm4[8],xmm10[8],xmm4[9],xmm10[9],xmm4[10],xmm10[10],xmm4[11],xmm10[11],xmm4[12],xmm10[12],xmm4[13],xmm10[13],xmm4[14],xmm10[14],xmm4[15],xmm10[15]
+; SSE2-NEXT:    por %xmm5, %xmm2
+; SSE2-NEXT:    movdqa %xmm4, %xmm5
+; SSE2-NEXT:    punpckhbw {{.*#+}} xmm5 = xmm5[8],xmm8[8],xmm5[9],xmm8[9],xmm5[10],xmm8[10],xmm5[11],xmm8[11],xmm5[12],xmm8[12],xmm5[13],xmm8[13],xmm5[14],xmm8[14],xmm5[15],xmm8[15]
+; SSE2-NEXT:    pshuflw {{.*#+}} xmm5 = xmm5[3,2,1,0,4,5,6,7]
+; SSE2-NEXT:    pshufhw {{.*#+}} xmm5 = xmm5[0,1,2,3,7,6,5,4]
+; SSE2-NEXT:    punpcklbw {{.*#+}} xmm4 = xmm4[0],xmm8[0],xmm4[1],xmm8[1],xmm4[2],xmm8[2],xmm4[3],xmm8[3],xmm4[4],xmm8[4],xmm4[5],xmm8[5],xmm4[6],xmm8[6],xmm4[7],xmm8[7]
 ; SSE2-NEXT:    pshuflw {{.*#+}} xmm4 = xmm4[3,2,1,0,4,5,6,7]
 ; SSE2-NEXT:    pshufhw {{.*#+}} xmm4 = xmm4[0,1,2,3,7,6,5,4]
-; SSE2-NEXT:    punpcklbw {{.*#+}} xmm11 = xmm11[0],xmm10[0],xmm11[1],xmm10[1],xmm11[2],xmm10[2],xmm11[3],xmm10[3],xmm11[4],xmm10[4],xmm11[5],xmm10[5],xmm11[6],xmm10[6],xmm11[7],xmm10[7]
-; SSE2-NEXT:    pshuflw {{.*#+}} xmm6 = xmm11[3,2,1,0,4,5,6,7]
-; SSE2-NEXT:    pshufhw {{.*#+}} xmm6 = xmm6[0,1,2,3,7,6,5,4]
-; SSE2-NEXT:    packuswb %xmm4, %xmm6
-; SSE2-NEXT:    movdqa %xmm6, %xmm4
-; SSE2-NEXT:    psllw $4, %xmm4
-; SSE2-NEXT:    psrlw $4, %xmm6
-; SSE2-NEXT:    pand %xmm3, %xmm6
-; SSE2-NEXT:    pandn %xmm4, %xmm3
-; SSE2-NEXT:    por %xmm6, %xmm3
-; SSE2-NEXT:    pand %xmm3, %xmm5
-; SSE2-NEXT:    psllw $2, %xmm5
-; SSE2-NEXT:    pand %xmm8, %xmm3
-; SSE2-NEXT:    psrlw $2, %xmm3
-; SSE2-NEXT:    por %xmm5, %xmm3
-; SSE2-NEXT:    pand %xmm3, %xmm7
-; SSE2-NEXT:    psrlw $1, %xmm7
+; SSE2-NEXT:    packuswb %xmm5, %xmm4
+; SSE2-NEXT:    movdqa %xmm4, %xmm5
+; SSE2-NEXT:    psllw $4, %xmm5
+; SSE2-NEXT:    psrlw $4, %xmm4
+; SSE2-NEXT:    pand %xmm3, %xmm4
+; SSE2-NEXT:    pandn %xmm5, %xmm3
+; SSE2-NEXT:    por %xmm4, %xmm3
+; SSE2-NEXT:    movdqa %xmm3, %xmm4
+; SSE2-NEXT:    psrlw $2, %xmm4
+; SSE2-NEXT:    pand %xmm9, %xmm4
 ; SSE2-NEXT:    pand %xmm9, %xmm3
+; SSE2-NEXT:    psllw $2, %xmm3
+; SSE2-NEXT:    por %xmm4, %xmm3
+; SSE2-NEXT:    movdqa %xmm3, %xmm4
+; SSE2-NEXT:    psrlw $1, %xmm4
+; SSE2-NEXT:    pand %xmm7, %xmm4
+; SSE2-NEXT:    pand %xmm7, %xmm3
 ; SSE2-NEXT:    paddb %xmm3, %xmm3
-; SSE2-NEXT:    por %xmm7, %xmm3
+; SSE2-NEXT:    por %xmm4, %xmm3
 ; SSE2-NEXT:    retq
 ;
 ; SSSE3-LABEL: test_bitreverse_v16i32:
@@ -2834,126 +2842,126 @@ define <16 x i32> @test_bitreverse_v16i32(<16 x i32> %a) nounwind {
 define <8 x i64> @test_bitreverse_v8i64(<8 x i64> %a) nounwind {
 ; SSE2-LABEL: test_bitreverse_v8i64:
 ; SSE2:       # %bb.0:
-; SSE2-NEXT:    movdqa %xmm3, %xmm11
-; SSE2-NEXT:    pxor %xmm10, %xmm10
+; SSE2-NEXT:    movdqa %xmm3, %xmm4
+; SSE2-NEXT:    pxor %xmm8, %xmm8
 ; SSE2-NEXT:    movdqa %xmm0, %xmm3
-; SSE2-NEXT:    punpckhbw {{.*#+}} xmm3 = xmm3[8],xmm10[8],xmm3[9],xmm10[9],xmm3[10],xmm10[10],xmm3[11],xmm10[11],xmm3[12],xmm10[12],xmm3[13],xmm10[13],xmm3[14],xmm10[14],xmm3[15],xmm10[15]
+; SSE2-NEXT:    punpckhbw {{.*#+}} xmm3 = xmm3[8],xmm8[8],xmm3[9],xmm8[9],xmm3[10],xmm8[10],xmm3[11],xmm8[11],xmm3[12],xmm8[12],xmm3[13],xmm8[13],xmm3[14],xmm8[14],xmm3[15],xmm8[15]
 ; SSE2-NEXT:    pshufd {{.*#+}} xmm3 = xmm3[2,3,0,1]
 ; SSE2-NEXT:    pshuflw {{.*#+}} xmm3 = xmm3[3,2,1,0,4,5,6,7]
 ; SSE2-NEXT:    pshufhw {{.*#+}} xmm3 = xmm3[0,1,2,3,7,6,5,4]
-; SSE2-NEXT:    punpcklbw {{.*#+}} xmm0 = xmm0[0],xmm10[0],xmm0[1],xmm10[1],xmm0[2],xmm10[2],xmm0[3],xmm10[3],xmm0[4],xmm10[4],xmm0[5],xmm10[5],xmm0[6],xmm10[6],xmm0[7],xmm10[7]
+; SSE2-NEXT:    punpcklbw {{.*#+}} xmm0 = xmm0[0],xmm8[0],xmm0[1],xmm8[1],xmm0[2],xmm8[2],xmm0[3],xmm8[3],xmm0[4],xmm8[4],xmm0[5],xmm8[5],xmm0[6],xmm8[6],xmm0[7],xmm8[7]
 ; SSE2-NEXT:    pshufd {{.*#+}} xmm0 = xmm0[2,3,0,1]
 ; SSE2-NEXT:    pshuflw {{.*#+}} xmm0 = xmm0[3,2,1,0,4,5,6,7]
 ; SSE2-NEXT:    pshufhw {{.*#+}} xmm0 = xmm0[0,1,2,3,7,6,5,4]
 ; SSE2-NEXT:    packuswb %xmm3, %xmm0
-; SSE2-NEXT:    movdqa %xmm0, %xmm5
-; SSE2-NEXT:    psllw $4, %xmm5
+; SSE2-NEXT:    movdqa %xmm0, %xmm6
+; SSE2-NEXT:    psllw $4, %xmm6
 ; SSE2-NEXT:    movdqa {{.*#+}} xmm3 = [15,15,15,15,15,15,15,15,15,15,15,15,15,15,15,15]
 ; SSE2-NEXT:    movdqa %xmm3, %xmm7
-; SSE2-NEXT:    pandn %xmm5, %xmm7
+; SSE2-NEXT:    pandn %xmm6, %xmm7
 ; SSE2-NEXT:    psrlw $4, %xmm0
 ; SSE2-NEXT:    pand %xmm3, %xmm0
 ; SSE2-NEXT:    por %xmm7, %xmm0
-; SSE2-NEXT:    movdqa {{.*#+}} xmm5 = [51,51,51,51,51,51,51,51,51,51,51,51,51,51,51,51]
 ; SSE2-NEXT:    movdqa %xmm0, %xmm7
-; SSE2-NEXT:    pand %xmm5, %xmm7
-; SSE2-NEXT:    psllw $2, %xmm7
-; SSE2-NEXT:    movdqa {{.*#+}} xmm8 = [204,204,204,204,204,204,204,204,204,204,204,204,204,204,204,204]
-; SSE2-NEXT:    pand %xmm8, %xmm0
-; SSE2-NEXT:    psrlw $2, %xmm0
-; SSE2-NEXT:    por %xmm7, %xmm0
-; SSE2-NEXT:    movdqa {{.*#+}} xmm7 = [170,170,170,170,170,170,170,170,170,170,170,170,170,170,170,170]
-; SSE2-NEXT:    movdqa %xmm0, %xmm6
-; SSE2-NEXT:    pand %xmm7, %xmm6
-; SSE2-NEXT:    psrlw $1, %xmm6
-; SSE2-NEXT:    movdqa {{.*#+}} xmm9 = [85,85,85,85,85,85,85,85,85,85,85,85,85,85,85,85]
+; SSE2-NEXT:    psrlw $2, %xmm7
+; SSE2-NEXT:    movdqa {{.*#+}} xmm9 = [51,51,51,51,51,51,51,51,51,51,51,51,51,51,51,51]
+; SSE2-NEXT:    pand %xmm9, %xmm7
 ; SSE2-NEXT:    pand %xmm9, %xmm0
+; SSE2-NEXT:    psllw $2, %xmm0
+; SSE2-NEXT:    por %xmm7, %xmm0
+; SSE2-NEXT:    movdqa %xmm0, %xmm5
+; SSE2-NEXT:    psrlw $1, %xmm5
+; SSE2-NEXT:    movdqa {{.*#+}} xmm7 = [85,85,85,85,85,85,85,85,85,85,85,85,85,85,85,85]
+; SSE2-NEXT:    pand %xmm7, %xmm5
+; SSE2-NEXT:    pand %xmm7, %xmm0
 ; SSE2-NEXT:    paddb %xmm0, %xmm0
-; SSE2-NEXT:    por %xmm6, %xmm0
-; SSE2-NEXT:    movdqa %xmm1, %xmm6
-; SSE2-NEXT:    punpckhbw {{.*#+}} xmm6 = xmm6[8],xmm10[8],xmm6[9],xmm10[9],xmm6[10],xmm10[10],xmm6[11],xmm10[11],xmm6[12],xmm10[12],xmm6[13],xmm10[13],xmm6[14],xmm10[14],xmm6[15],xmm10[15]
-; SSE2-NEXT:    pshufd {{.*#+}} xmm6 = xmm6[2,3,0,1]
-; SSE2-NEXT:    pshuflw {{.*#+}} xmm6 = xmm6[3,2,1,0,4,5,6,7]
-; SSE2-NEXT:    pshufhw {{.*#+}} xmm6 = xmm6[0,1,2,3,7,6,5,4]
-; SSE2-NEXT:    punpcklbw {{.*#+}} xmm1 = xmm1[0],xmm10[0],xmm1[1],xmm10[1],xmm1[2],xmm10[2],xmm1[3],xmm10[3],xmm1[4],xmm10[4],xmm1[5],xmm10[5],xmm1[6],xmm10[6],xmm1[7],xmm10[7]
+; SSE2-NEXT:    por %xmm5, %xmm0
+; SSE2-NEXT:    movdqa %xmm1, %xmm5
+; SSE2-NEXT:    punpckhbw {{.*#+}} xmm5 = xmm5[8],xmm8[8],xmm5[9],xmm8[9],xmm5[10],xmm8[10],xmm5[11],xmm8[11],xmm5[12],xmm8[12],xmm5[13],xmm8[13],xmm5[14],xmm8[14],xmm5[15],xmm8[15]
+; SSE2-NEXT:    pshufd {{.*#+}} xmm5 = xmm5[2,3,0,1]
+; SSE2-NEXT:    pshuflw {{.*#+}} xmm5 = xmm5[3,2,1,0,4,5,6,7]
+; SSE2-NEXT:    pshufhw {{.*#+}} xmm5 = xmm5[0,1,2,3,7,6,5,4]
+; SSE2-NEXT:    punpcklbw {{.*#+}} xmm1 = xmm1[0],xmm8[0],xmm1[1],xmm8[1],xmm1[2],xmm8[2],xmm1[3],xmm8[3],xmm1[4],xmm8[4],xmm1[5],xmm8[5],xmm1[6],xmm8[6],xmm1[7],xmm8[7]
 ; SSE2-NEXT:    pshufd {{.*#+}} xmm1 = xmm1[2,3,0,1]
 ; SSE2-NEXT:    pshuflw {{.*#+}} xmm1 = xmm1[3,2,1,0,4,5,6,7]
 ; SSE2-NEXT:    pshufhw {{.*#+}} xmm1 = xmm1[0,1,2,3,7,6,5,4]
-; SSE2-NEXT:    packuswb %xmm6, %xmm1
-; SSE2-NEXT:    movdqa %xmm1, %xmm6
-; SSE2-NEXT:    psllw $4, %xmm6
-; SSE2-NEXT:    movdqa %xmm3, %xmm4
-; SSE2-NEXT:    pandn %xmm6, %xmm4
+; SSE2-NEXT:    packuswb %xmm5, %xmm1
+; SSE2-NEXT:    movdqa %xmm1, %xmm5
+; SSE2-NEXT:    psllw $4, %xmm5
+; SSE2-NEXT:    movdqa %xmm3, %xmm6
+; SSE2-NEXT:    pandn %xmm5, %xmm6
 ; SSE2-NEXT:    psrlw $4, %xmm1
 ; SSE2-NEXT:    pand %xmm3, %xmm1
-; SSE2-NEXT:    por %xmm4, %xmm1
-; SSE2-NEXT:    movdqa %xmm1, %xmm4
-; SSE2-NEXT:    pand %xmm5, %xmm4
-; SSE2-NEXT:    psllw $2, %xmm4
-; SSE2-NEXT:    pand %xmm8, %xmm1
-; SSE2-NEXT:    psrlw $2, %xmm1
-; SSE2-NEXT:    por %xmm4, %xmm1
-; SSE2-NEXT:    movdqa %xmm1, %xmm4
-; SSE2-NEXT:    pand %xmm7, %xmm4
-; SSE2-NEXT:    psrlw $1, %xmm4
+; SSE2-NEXT:    por %xmm6, %xmm1
+; SSE2-NEXT:    movdqa %xmm1, %xmm5
+; SSE2-NEXT:    psrlw $2, %xmm5
+; SSE2-NEXT:    pand %xmm9, %xmm5
 ; SSE2-NEXT:    pand %xmm9, %xmm1
+; SSE2-NEXT:    psllw $2, %xmm1
+; SSE2-NEXT:    por %xmm5, %xmm1
+; SSE2-NEXT:    movdqa %xmm1, %xmm5
+; SSE2-NEXT:    psrlw $1, %xmm5
+; SSE2-NEXT:    pand %xmm7, %xmm5
+; SSE2-NEXT:    pand %xmm7, %xmm1
 ; SSE2-NEXT:    paddb %xmm1, %xmm1
-; SSE2-NEXT:    por %xmm4, %xmm1
-; SSE2-NEXT:    movdqa %xmm2, %xmm4
-; SSE2-NEXT:    punpckhbw {{.*#+}} xmm4 = xmm4[8],xmm10[8],xmm4[9],xmm10[9],xmm4[10],xmm10[10],xmm4[11],xmm10[11],xmm4[12],xmm10[12],xmm4[13],xmm10[13],xmm4[14],xmm10[14],xmm4[15],xmm10[15]
-; SSE2-NEXT:    pshufd {{.*#+}} xmm4 = xmm4[2,3,0,1]
-; SSE2-NEXT:    pshuflw {{.*#+}} xmm4 = xmm4[3,2,1,0,4,5,6,7]
-; SSE2-NEXT:    pshufhw {{.*#+}} xmm4 = xmm4[0,1,2,3,7,6,5,4]
-; SSE2-NEXT:    punpcklbw {{.*#+}} xmm2 = xmm2[0],xmm10[0],xmm2[1],xmm10[1],xmm2[2],xmm10[2],xmm2[3],xmm10[3],xmm2[4],xmm10[4],xmm2[5],xmm10[5],xmm2[6],xmm10[6],xmm2[7],xmm10[7]
+; SSE2-NEXT:    por %xmm5, %xmm1
+; SSE2-NEXT:    movdqa %xmm2, %xmm5
+; SSE2-NEXT:    punpckhbw {{.*#+}} xmm5 = xmm5[8],xmm8[8],xmm5[9],xmm8[9],xmm5[10],xmm8[10],xmm5[11],xmm8[11],xmm5[12],xmm8[12],xmm5[13],xmm8[13],xmm5[14],xmm8[14],xmm5[15],xmm8[15]
+; SSE2-NEXT:    pshufd {{.*#+}} xmm5 = xmm5[2,3,0,1]
+; SSE2-NEXT:    pshuflw {{.*#+}} xmm5 = xmm5[3,2,1,0,4,5,6,7]
+; SSE2-NEXT:    pshufhw {{.*#+}} xmm5 = xmm5[0,1,2,3,7,6,5,4]
+; SSE2-NEXT:    punpcklbw {{.*#+}} xmm2 = xmm2[0],xmm8[0],xmm2[1],xmm8[1],xmm2[2],xmm8[2],xmm2[3],xmm8[3],xmm2[4],xmm8[4],xmm2[5],xmm8[5],xmm2[6],xmm8[6],xmm2[7],xmm8[7]
 ; SSE2-NEXT:    pshufd {{.*#+}} xmm2 = xmm2[2,3,0,1]
 ; SSE2-NEXT:    pshuflw {{.*#+}} xmm2 = xmm2[3,2,1,0,4,5,6,7]
 ; SSE2-NEXT:    pshufhw {{.*#+}} xmm2 = xmm2[0,1,2,3,7,6,5,4]
-; SSE2-NEXT:    packuswb %xmm4, %xmm2
-; SSE2-NEXT:    movdqa %xmm2, %xmm4
-; SSE2-NEXT:    psllw $4, %xmm4
+; SSE2-NEXT:    packuswb %xmm5, %xmm2
+; SSE2-NEXT:    movdqa %xmm2, %xmm5
+; SSE2-NEXT:    psllw $4, %xmm5
 ; SSE2-NEXT:    movdqa %xmm3, %xmm6
-; SSE2-NEXT:    pandn %xmm4, %xmm6
+; SSE2-NEXT:    pandn %xmm5, %xmm6
 ; SSE2-NEXT:    psrlw $4, %xmm2
 ; SSE2-NEXT:    pand %xmm3, %xmm2
 ; SSE2-NEXT:    por %xmm6, %xmm2
-; SSE2-NEXT:    movdqa %xmm2, %xmm4
-; SSE2-NEXT:    pand %xmm5, %xmm4
-; SSE2-NEXT:    psllw $2, %xmm4
-; SSE2-NEXT:    pand %xmm8, %xmm2
-; SSE2-NEXT:    psrlw $2, %xmm2
-; SSE2-NEXT:    por %xmm4, %xmm2
-; SSE2-NEXT:    movdqa %xmm2, %xmm4
-; SSE2-NEXT:    pand %xmm7, %xmm4
-; SSE2-NEXT:    psrlw $1, %xmm4
+; SSE2-NEXT:    movdqa %xmm2, %xmm5
+; SSE2-NEXT:    psrlw $2, %xmm5
+; SSE2-NEXT:    pand %xmm9, %xmm5
 ; SSE2-NEXT:    pand %xmm9, %xmm2
+; SSE2-NEXT:    psllw $2, %xmm2
+; SSE2-NEXT:    por %xmm5, %xmm2
+; SSE2-NEXT:    movdqa %xmm2, %xmm5
+; SSE2-NEXT:    psrlw $1, %xmm5
+; SSE2-NEXT:    pand %xmm7, %xmm5
+; SSE2-NEXT:    pand %xmm7, %xmm2
 ; SSE2-NEXT:    paddb %xmm2, %xmm2
-; SSE2-NEXT:    por %xmm4, %xmm2
-; SSE2-NEXT:    movdqa %xmm11, %xmm4
-; SSE2-NEXT:    punpckhbw {{.*#+}} xmm4 = xmm4[8],xmm10[8],xmm4[9],xmm10[9],xmm4[10],xmm10[10],xmm4[11],xmm10[11],xmm4[12],xmm10[12],xmm4[13],xmm10[13],xmm4[14],xmm10[14],xmm4[15],xmm10[15]
+; SSE2-NEXT:    por %xmm5, %xmm2
+; SSE2-NEXT:    movdqa %xmm4, %xmm5
+; SSE2-NEXT:    punpckhbw {{.*#+}} xmm5 = xmm5[8],xmm8[8],xmm5[9],xmm8[9],xmm5[10],xmm8[10],xmm5[11],xmm8[11],xmm5[12],xmm8[12],xmm5[13],xmm8[13],xmm5[14],xmm8[14],xmm5[15],xmm8[15]
+; SSE2-NEXT:    pshufd {{.*#+}} xmm5 = xmm5[2,3,0,1]
+; SSE2-NEXT:    pshuflw {{.*#+}} xmm5 = xmm5[3,2,1,0,4,5,6,7]
+; SSE2-NEXT:    pshufhw {{.*#+}} xmm5 = xmm5[0,1,2,3,7,6,5,4]
+; SSE2-NEXT:    punpcklbw {{.*#+}} xmm4 = xmm4[0],xmm8[0],xmm4[1],xmm8[1],xmm4[2],xmm8[2],xmm4[3],xmm8[3],xmm4[4],xmm8[4],xmm4[5],xmm8[5],xmm4[6],xmm8[6],xmm4[7],xmm8[7]
 ; SSE2-NEXT:    pshufd {{.*#+}} xmm4 = xmm4[2,3,0,1]
 ; SSE2-NEXT:    pshuflw {{.*#+}} xmm4 = xmm4[3,2,1,0,4,5,6,7]
 ; SSE2-NEXT:    pshufhw {{.*#+}} xmm4 = xmm4[0,1,2,3,7,6,5,4]
-; SSE2-NEXT:    punpcklbw {{.*#+}} xmm11 = xmm11[0],xmm10[0],xmm11[1],xmm10[1],xmm11[2],xmm10[2],xmm11[3],xmm10[3],xmm11[4],xmm10[4],xmm11[5],xmm10[5],xmm11[6],xmm10[6],xmm11[7],xmm10[7]
-; SSE2-NEXT:    pshufd {{.*#+}} xmm6 = xmm11[2,3,0,1]
-; SSE2-NEXT:    pshuflw {{.*#+}} xmm6 = xmm6[3,2,1,0,4,5,6,7]
-; SSE2-NEXT:    pshufhw {{.*#+}} xmm6 = xmm6[0,1,2,3,7,6,5,4]
-; SSE2-NEXT:    packuswb %xmm4, %xmm6
-; SSE2-NEXT:    movdqa %xmm6, %xmm4
-; SSE2-NEXT:    psllw $4, %xmm4
-; SSE2-NEXT:    psrlw $4, %xmm6
-; SSE2-NEXT:    pand %xmm3, %xmm6
-; SSE2-NEXT:    pandn %xmm4, %xmm3
-; SSE2-NEXT:    por %xmm6, %xmm3
-; SSE2-NEXT:    pand %xmm3, %xmm5
-; SSE2-NEXT:    psllw $2, %xmm5
-; SSE2-NEXT:    pand %xmm8, %xmm3
-; SSE2-NEXT:    psrlw $2, %xmm3
-; SSE2-NEXT:    por %xmm5, %xmm3
-; SSE2-NEXT:    pand %xmm3, %xmm7
-; SSE2-NEXT:    psrlw $1, %xmm7
+; SSE2-NEXT:    packuswb %xmm5, %xmm4
+; SSE2-NEXT:    movdqa %xmm4, %xmm5
+; SSE2-NEXT:    psllw $4, %xmm5
+; SSE2-NEXT:    psrlw $4, %xmm4
+; SSE2-NEXT:    pand %xmm3, %xmm4
+; SSE2-NEXT:    pandn %xmm5, %xmm3
+; SSE2-NEXT:    por %xmm4, %xmm3
+; SSE2-NEXT:    movdqa %xmm3, %xmm4
+; SSE2-NEXT:    psrlw $2, %xmm4
+; SSE2-NEXT:    pand %xmm9, %xmm4
 ; SSE2-NEXT:    pand %xmm9, %xmm3
+; SSE2-NEXT:    psllw $2, %xmm3
+; SSE2-NEXT:    por %xmm4, %xmm3
+; SSE2-NEXT:    movdqa %xmm3, %xmm4
+; SSE2-NEXT:    psrlw $1, %xmm4
+; SSE2-NEXT:    pand %xmm7, %xmm4
+; SSE2-NEXT:    pand %xmm7, %xmm3
 ; SSE2-NEXT:    paddb %xmm3, %xmm3
-; SSE2-NEXT:    por %xmm7, %xmm3
+; SSE2-NEXT:    por %xmm4, %xmm3
 ; SSE2-NEXT:    retq
 ;
 ; SSSE3-LABEL: test_bitreverse_v8i64:
