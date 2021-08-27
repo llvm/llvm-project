@@ -565,6 +565,15 @@ bool IRSimilarityCandidate::compareCommutativeOperandMapping(
 
 bool IRSimilarityCandidate::compareStructure(const IRSimilarityCandidate &A,
                                              const IRSimilarityCandidate &B) {
+  DenseMap<unsigned, DenseSet<unsigned>> MappingA;
+  DenseMap<unsigned, DenseSet<unsigned>> MappingB;
+  return IRSimilarityCandidate::compareStructure(A, B, MappingA, MappingB);
+}
+
+bool IRSimilarityCandidate::compareStructure(
+    const IRSimilarityCandidate &A, const IRSimilarityCandidate &B,
+    DenseMap<unsigned, DenseSet<unsigned>> &ValueNumberMappingA,
+    DenseMap<unsigned, DenseSet<unsigned>> &ValueNumberMappingB) {
   if (A.getLength() != B.getLength())
     return false;
 
@@ -574,15 +583,12 @@ bool IRSimilarityCandidate::compareStructure(const IRSimilarityCandidate &A,
   iterator ItA = A.begin();
   iterator ItB = B.begin();
 
-  // These sets create a create a mapping between the values in one candidate
-  // to values in the other candidate.  If we create a set with one element,
-  // and that same element maps to the original element in the candidate
-  // we have a good mapping.
-  DenseMap<unsigned, DenseSet<unsigned>> ValueNumberMappingA;
-  DenseMap<unsigned, DenseSet<unsigned>> ValueNumberMappingB;
+  // These ValueNumber Mapping sets create a create a mapping between the values
+  // in one candidate to values in the other candidate.  If we create a set with
+  // one element, and that same element maps to the original element in the
+  // candidate we have a good mapping.
   DenseMap<unsigned, DenseSet<unsigned>>::iterator ValueMappingIt;
 
-  bool WasInserted;
 
   // Iterate over the instructions contained in each candidate
   unsigned SectionLength = A.getStartIdx() + A.getLength();
@@ -605,6 +611,7 @@ bool IRSimilarityCandidate::compareStructure(const IRSimilarityCandidate &A,
     unsigned InstValA = A.ValueToNumber.find(IA)->second;
     unsigned InstValB = B.ValueToNumber.find(IB)->second;
 
+    bool WasInserted;
     // Ensure that the mappings for the instructions exists.
     std::tie(ValueMappingIt, WasInserted) = ValueNumberMappingA.insert(
         std::make_pair(InstValA, DenseSet<unsigned>({InstValB})));
@@ -739,6 +746,78 @@ static void createCandidatesFromSuffixTree(
   }
 }
 
+void IRSimilarityCandidate::createCanonicalRelationFrom(
+    IRSimilarityCandidate &SourceCand,
+    DenseMap<unsigned, DenseSet<unsigned>> &ToSourceMapping,
+    DenseMap<unsigned, DenseSet<unsigned>> &FromSourceMapping) {
+  assert(SourceCand.CanonNumToNumber.size() != 0 &&
+         "Base canonical relationship is empty!");
+  assert(SourceCand.NumberToCanonNum.size() != 0 &&
+         "Base canonical relationship is empty!");
+
+  assert(CanonNumToNumber.size() == 0 && "Canonical Relationship is non-empty");
+  assert(NumberToCanonNum.size() == 0 && "Canonical Relationship is non-empty");
+
+  DenseSet<unsigned> UsedGVNs;
+  // Iterate over the mappings provided from this candidate to A.
+  for (std::pair<unsigned, DenseSet<unsigned>> &GVNMapping : ToSourceMapping) {
+    unsigned SourceGVN = GVNMapping.first;
+
+    assert(GVNMapping.second.size() != 0 && "Possible GVNs is 0!");
+
+    unsigned ResultGVN;
+    // We need special handling if we have more than one potential value.
+    if (GVNMapping.second.size() > 1) {
+      bool Found = false;
+      for (unsigned Val : GVNMapping.second) {
+        // We make sure the target value number hasn't already been reserved.
+        if (UsedGVNs.find(Val) != UsedGVNs.end())
+          continue;
+
+        // We make sure that the opposite mapping is still consistent.
+        DenseMap<unsigned, DenseSet<unsigned>>::iterator It =
+            FromSourceMapping.find(Val);
+
+        if (It->second.find(SourceGVN) == It->second.end())
+          continue;
+
+        // We pick the first item that satisfies these conditions.
+        Found = true;
+        ResultGVN = Val;
+        break;
+      }
+
+      assert(Found && "Could not find matching value for source GVN");
+
+    } else
+      ResultGVN = *GVNMapping.second.begin();
+
+    // Whatever GVN is found, we mark it as used.
+    UsedGVNs.insert(ResultGVN);
+
+    unsigned CanonNum = *SourceCand.getCanonicalNum(ResultGVN);
+    CanonNumToNumber.insert(std::make_pair(CanonNum, SourceGVN));
+    NumberToCanonNum.insert(std::make_pair(SourceGVN, CanonNum));
+  }
+}
+
+void IRSimilarityCandidate::createCanonicalMappingFor(
+    IRSimilarityCandidate &CurrCand) {
+  assert(CurrCand.CanonNumToNumber.size() == 0 &&
+         "Canonical Relationship is non-empty");
+  assert(CurrCand.NumberToCanonNum.size() == 0 &&
+         "Canonical Relationship is non-empty");
+
+  unsigned CanonNum = 0;
+  // Iterate over the value numbers found, the order does not matter in this
+  // case.
+  for (std::pair<unsigned, Value *> &NumToVal : CurrCand.NumberToValue) {
+    CurrCand.NumberToCanonNum.insert(std::make_pair(NumToVal.first, CanonNum));
+    CurrCand.CanonNumToNumber.insert(std::make_pair(CanonNum, NumToVal.first));
+    CanonNum++;
+  }
+}
+
 /// From the list of IRSimilarityCandidates, perform a comparison between each
 /// IRSimilarityCandidate to determine if there are overlapping
 /// IRInstructionData, or if they do not have the same structure.
@@ -774,6 +853,8 @@ static void findCandidateStructures(
 
   // Iterate over the candidates to determine its structural and overlapping
   // compatibility with other instructions
+  DenseMap<unsigned, DenseSet<unsigned>> ValueNumberMappingA;
+  DenseMap<unsigned, DenseSet<unsigned>> ValueNumberMappingB;
   for (CandIt = CandsForRepSubstring.begin(),
       CandEndIt = CandsForRepSubstring.end();
        CandIt != CandEndIt; CandIt++) {
@@ -792,9 +873,11 @@ static void findCandidateStructures(
     // Check if we already have a list of IRSimilarityCandidates for the current
     // structural group.  Create one if one does not exist.
     CurrentGroupPair = StructuralGroups.find(OuterGroupNum);
-    if (CurrentGroupPair == StructuralGroups.end())
+    if (CurrentGroupPair == StructuralGroups.end()) {
+      IRSimilarityCandidate::createCanonicalMappingFor(*CandIt);
       std::tie(CurrentGroupPair, Inserted) = StructuralGroups.insert(
           std::make_pair(OuterGroupNum, SimilarityGroup({*CandIt})));
+    }
 
     // Iterate over the IRSimilarityCandidates following the current
     // IRSimilarityCandidate in the list to determine whether the two
@@ -811,11 +894,15 @@ static void findCandidateStructures(
 
       // Otherwise we determine if they have the same structure and add it to
       // vector if they match.
-      SameStructure =
-          IRSimilarityCandidate::compareStructure(*CandIt, *InnerCandIt);
+      ValueNumberMappingA.clear();
+      ValueNumberMappingB.clear();
+      SameStructure = IRSimilarityCandidate::compareStructure(
+          *CandIt, *InnerCandIt, ValueNumberMappingA, ValueNumberMappingB);
       if (!SameStructure)
         continue;
 
+      InnerCandIt->createCanonicalRelationFrom(*CandIt, ValueNumberMappingA,
+                                               ValueNumberMappingB);
       CandToGroup.insert(std::make_pair(&*InnerCandIt, OuterGroupNum));
       CurrentGroupPair->second.push_back(*InnerCandIt);
     }
