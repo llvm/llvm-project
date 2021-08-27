@@ -51,8 +51,10 @@ struct RegisterInfo {
   /// List of registers (terminated with LLDB_INVALID_REGNUM). If this value is
   /// not null, all registers in this list will be read first, at which point
   /// the value for this register will be valid. For example, the value list
-  /// for ah would be eax (x86) or rax (x64).
-  uint32_t *value_regs; //
+  /// for ah would be eax (x86) or rax (x64). Register numbers are
+  /// of eRegisterKindLLDB. If multiple registers are listed, the final
+  /// value will be the concatenation of them.
+  uint32_t *value_regs;
   /// List of registers (terminated with LLDB_INVALID_REGNUM). If this value is
   /// not null, all registers in this list will be invalidated when the value of
   /// this register changes. For example, the invalidate list for eax would be
