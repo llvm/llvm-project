@@ -109,7 +109,7 @@ void ConcatOutputSection::addInput(ConcatInputSection *input) {
 //   thus, we place thunks at monotonically increasing addresses. Once a thunk
 //   is placed, it and all previous input-section addresses are final.
 //
-// * MergedInputSection::finalize() and MergedInputSection::writeTo() merge
+// * ConcatInputSection::finalize() and ConcatInputSection::writeTo() merge
 //   the inputs and thunks vectors (both ordered by ascending address), which
 //   is simple and cheap.
 
@@ -295,6 +295,12 @@ void ConcatOutputSection::finalize() {
       thunkInfo.isec =
           make<ConcatInputSection>(isec->getSegName(), isec->getName());
       thunkInfo.isec->parent = this;
+
+      // This code runs after dead code removal. Need to set the `live` bit
+      // on the thunk isec so that asserts that check that only live sections
+      // get written are happy.
+      thunkInfo.isec->live = true;
+
       StringRef thunkName = saver.save(funcSym->getName() + ".thunk." +
                                        std::to_string(thunkInfo.sequence++));
       r.referent = thunkInfo.sym = symtab->addDefined(
