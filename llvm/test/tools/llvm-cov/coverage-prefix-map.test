@@ -1,0 +1,27 @@
+# RUN: llvm-cov report -path-equivalence=.,%S/Inputs/coverage_prefix_map \
+# RUN:   -instr-profile %S/Inputs/coverage_prefix_map/main.profdata \
+# RUN:   %S/Inputs/coverage_prefix_map/main.covmapping \
+# RUN:   %S/Inputs/coverage_prefix_map/bar.h \
+# RUN:   | FileCheck --check-prefix=REPORT --implicit-check-not=main.c %s
+
+# RUN: llvm-cov export -format lcov -path-equivalence=.,%S/Inputs/coverage_prefix_map \
+# RUN:   -instr-profile %S/Inputs/coverage_prefix_map/main.profdata \
+# RUN:   %S/Inputs/coverage_prefix_map/main.covmapping \
+# RUN:   %S/Inputs/coverage_prefix_map/bar.h \
+# RUN:   | FileCheck --check-prefix=LCOV --implicit-check-not=main.c %s
+
+# REPORT: {{^}}bar.h{{.*}}
+# REPORT: {{^}}TOTAL{{.*}}100.00%
+
+# LCOV: SF:.{{/|\\+}}bar.h
+# LCOV-NOT: SF
+
+Instructions for regenerating the test:
+# cd %S/Inputs/coverage_prefix_map
+cp -r . /tmp/coverage_prefix_map
+
+clang -fprofile-instr-generate -mllvm -enable-name-compression=false -fcoverage-mapping -fcoverage-prefix-map=$PWD=. main.cc -o main
+LLVM_PROFILE_FILE="main.raw" ./main
+llvm-profdata merge main.raw -o main.profdata
+llvm-cov convert-for-testing ./main -o ./main.covmapping
+rm main main.raw
