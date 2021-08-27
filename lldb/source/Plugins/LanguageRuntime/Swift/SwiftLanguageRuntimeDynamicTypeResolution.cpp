@@ -1234,7 +1234,7 @@ llvm::Optional<std::string> SwiftLanguageRuntimeImpl::GetEnumCaseName(
   // Temporary workaround.
   if (eti->getEnumKind() == EnumKind::MultiPayloadEnum &&
       type.GetMangledTypeName().GetStringRef().startswith(
-          "$s10Foundation9IndexPathV7Storage10"))
+          "$s10Foundation9IndexPathV7Storage"))
     return GetMultiPayloadEnumCaseName(eti, data);
 
   return {};
