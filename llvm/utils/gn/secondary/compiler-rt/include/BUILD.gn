@@ -19,9 +19,14 @@ copy("include") {
     "sanitizer/tsan_interface.h",
     "sanitizer/tsan_interface_atomic.h",
     "sanitizer/ubsan_interface.h",
+  ]
+  outputs = [ "$clang_resource_dir/include/{{source_target_relative}}" ]
+}
+
+source_set("_unused") {
+  sources = [
     "xray/xray_interface.h",
     "xray/xray_log_interface.h",
     "xray/xray_records.h",
   ]
-  outputs = [ "$clang_resource_dir/include/{{source_target_relative}}" ]
 }
