@@ -38,7 +38,7 @@ typedef uint64_t __kmpc_impl_lanemask_t;
 #include "llvm/Frontend/OpenMP/OMPGridValues.h"
 
 INLINE constexpr const llvm::omp::GV &getGridValue() {
-  return llvm::omp::AMDGPUGridValues;
+  return llvm::omp::getAMDGPUGridValues<__AMDGCN_WAVEFRONT_SIZE>();
 }
 
 ////////////////////////////////////////////////////////////////////////////////

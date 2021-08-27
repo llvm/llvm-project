@@ -435,8 +435,9 @@ struct EnvironmentVariables {
   int MaxTeamsDefault;
 };
 
+template <uint32_t wavesize>
 static constexpr const llvm::omp::GV &getGridValue() {
-  return llvm::omp::AMDGPUGridValues;
+  return llvm::omp::getAMDGPUGridValues<wavesize>();
 }
 
 /// Class containing all the device information
@@ -507,10 +508,24 @@ public:
   static const unsigned HardTeamLimit =
       (1 << 16) - 1; // 64K needed to fit in uint16
   static const int DefaultNumTeams = 128;
-  static const int Max_Teams = getGridValue().GV_Max_Teams;
-  static const int Warp_Size = getGridValue().GV_Warp_Size;
-  static const int Max_WG_Size = getGridValue().GV_Max_WG_Size;
-  static const int Default_WG_Size = getGridValue().GV_Default_WG_Size;
+
+  // These need to be per-device since different devices can have different
+  // wave sizes, but are currently the same number for each so that refactor
+  // can be postponed.
+  static_assert(getGridValue<32>().GV_Max_Teams ==
+                    getGridValue<64>().GV_Max_Teams,
+                "");
+  static const int Max_Teams = getGridValue<64>().GV_Max_Teams;
+
+  static_assert(getGridValue<32>().GV_Max_WG_Size ==
+                    getGridValue<64>().GV_Max_WG_Size,
+                "");
+  static const int Max_WG_Size = getGridValue<64>().GV_Max_WG_Size;
+
+  static_assert(getGridValue<32>().GV_Default_WG_Size ==
+                    getGridValue<64>().GV_Default_WG_Size,
+                "");
+  static const int Default_WG_Size = getGridValue<64>().GV_Default_WG_Size;
 
   using MemcpyFunc = hsa_status_t (*)(hsa_signal_t, void *, const void *,
                                       size_t size, hsa_agent_t,
@@ -1059,8 +1074,9 @@ int32_t __tgt_rtl_init_device(int device_id) {
     DP("Queried wavefront size: %d\n", wavefront_size);
     DeviceInfo.WarpSize[device_id] = wavefront_size;
   } else {
-    DP("Default wavefront size: %d\n", getGridValue().GV_Warp_Size);
-    DeviceInfo.WarpSize[device_id] = getGridValue().GV_Warp_Size;
+    // TODO: Burn the wavefront size into the code object
+    DP("Warning: Unknown wavefront size, assuming 64\n");
+    DeviceInfo.WarpSize[device_id] = 64;
   }
 
   // Adjust teams to the env variables
@@ -1885,9 +1901,10 @@ struct launchVals {
   int WorkgroupSize;
   int GridSize;
 };
-launchVals getLaunchVals(EnvironmentVariables Env, int ConstWGSize,
-                         int ExecutionMode, int num_teams, int thread_limit,
-                         uint64_t loop_tripcount, int DeviceNumTeams) {
+launchVals getLaunchVals(int WarpSize, EnvironmentVariables Env,
+                         int ConstWGSize, int ExecutionMode, int num_teams,
+                         int thread_limit, uint64_t loop_tripcount,
+                         int DeviceNumTeams) {
 
   int threadsPerGroup = RTLDeviceInfoTy::Default_WG_Size;
   int num_groups = 0;
@@ -1900,7 +1917,7 @@ launchVals getLaunchVals(EnvironmentVariables Env, int ConstWGSize,
   if (print_kernel_trace & STARTUP_DETAILS) {
     DP("RTLDeviceInfoTy::Max_Teams: %d\n", RTLDeviceInfoTy::Max_Teams);
     DP("Max_Teams: %d\n", Max_Teams);
-    DP("RTLDeviceInfoTy::Warp_Size: %d\n", RTLDeviceInfoTy::Warp_Size);
+    DP("RTLDeviceInfoTy::Warp_Size: %d\n", WarpSize);
     DP("RTLDeviceInfoTy::Max_WG_Size: %d\n", RTLDeviceInfoTy::Max_WG_Size);
     DP("RTLDeviceInfoTy::Default_WG_Size: %d\n",
        RTLDeviceInfoTy::Default_WG_Size);
@@ -1913,8 +1930,8 @@ launchVals getLaunchVals(EnvironmentVariables Env, int ConstWGSize,
     threadsPerGroup = thread_limit;
     DP("Setting threads per block to requested %d\n", thread_limit);
     if (ExecutionMode == GENERIC) { // Add master warp for GENERIC
-      threadsPerGroup += RTLDeviceInfoTy::Warp_Size;
-      DP("Adding master wavefront: +%d threads\n", RTLDeviceInfoTy::Warp_Size);
+      threadsPerGroup += WarpSize;
+      DP("Adding master wavefront: +%d threads\n", WarpSize);
     }
     if (threadsPerGroup > RTLDeviceInfoTy::Max_WG_Size) { // limit to max
       threadsPerGroup = RTLDeviceInfoTy::Max_WG_Size;
@@ -1950,7 +1967,7 @@ launchVals getLaunchVals(EnvironmentVariables Env, int ConstWGSize,
   // So we only handle constant thread_limits.
   if (threadsPerGroup >
       RTLDeviceInfoTy::Default_WG_Size) //  256 < threadsPerGroup <= 1024
-    // Should we round threadsPerGroup up to nearest RTLDeviceInfoTy::Warp_Size
+    // Should we round threadsPerGroup up to nearest WarpSize
     // here?
     num_groups = (Max_Teams * RTLDeviceInfoTy::Max_WG_Size) / threadsPerGroup;
 
@@ -2099,12 +2116,13 @@ int32_t __tgt_rtl_run_target_team_region_locked(
   /*
    * Set limit based on ThreadsPerGroup and GroupsPerDevice
    */
-  launchVals LV = getLaunchVals(DeviceInfo.Env, KernelInfo->ConstWGSize,
-                                KernelInfo->ExecutionMode,
-                                num_teams,      // From run_region arg
-                                thread_limit,   // From run_region arg
-                                loop_tripcount, // From run_region arg
-                                DeviceInfo.NumTeams[KernelInfo->device_id]);
+  launchVals LV =
+      getLaunchVals(DeviceInfo.WarpSize[device_id], DeviceInfo.Env,
+                    KernelInfo->ConstWGSize, KernelInfo->ExecutionMode,
+                    num_teams,      // From run_region arg
+                    thread_limit,   // From run_region arg
+                    loop_tripcount, // From run_region arg
+                    DeviceInfo.NumTeams[KernelInfo->device_id]);
   const int GridSize = LV.GridSize;
   const int WorkgroupSize = LV.WorkgroupSize;
 
