@@ -1,5 +1,5 @@
 // RUN: %libomp-compile && env LIBOMP_NUM_HIDDEN_HELPER_THREADS=0 OMP_PROC_BIND=close OMP_PLACES=cores KMP_AFFINITY=verbose %libomp-run 8 1 4
-// REQUIRED: linux
+// REQUIRES: linux
 //
 // This test pthread_creates 8 root threads before any OpenMP
 // runtime entry is ever called. We have all the root threads
