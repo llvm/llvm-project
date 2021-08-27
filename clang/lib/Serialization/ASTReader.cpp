@@ -4251,7 +4251,7 @@ ASTReader::ASTReadResult ASTReader::ReadAST(StringRef FileName,
     ModuleFile &F = *M.Mod;
 
     // Read the AST block.
-    if (ASTReadResult Result = ReadASTBlock(F, ClientLoadCapabilities))
+    if (ReadASTBlock(F, ClientLoadCapabilities))
       return Failure;
 
     // The AST block should always have a definition for the main module.
@@ -4262,7 +4262,7 @@ ASTReader::ASTReadResult ASTReader::ReadAST(StringRef FileName,
 
     // Read the extension blocks.
     while (!SkipCursorToBlock(F.Stream, EXTENSION_BLOCK_ID)) {
-      if (ASTReadResult Result = ReadExtensionBlock(F))
+      if (ReadExtensionBlock(F))
         return Failure;
     }
 
