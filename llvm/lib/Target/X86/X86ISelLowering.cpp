@@ -3960,12 +3960,12 @@ SDValue X86TargetLowering::LowerFormalArguments(
     // the argument into a virtual register so that we can access it from the
     // return points.
     if (Ins[I].Flags.isSRet()) {
-      Register Reg = FuncInfo->getSRetReturnReg();
-      if (!Reg) {
-        MVT PtrTy = getPointerTy(DAG.getDataLayout());
-        Reg = MF.getRegInfo().createVirtualRegister(getRegClassFor(PtrTy));
-        FuncInfo->setSRetReturnReg(Reg);
-      }
+      assert(!FuncInfo->getSRetReturnReg() &&
+             "SRet return has already been set");
+      MVT PtrTy = getPointerTy(DAG.getDataLayout());
+      Register Reg =
+          MF.getRegInfo().createVirtualRegister(getRegClassFor(PtrTy));
+      FuncInfo->setSRetReturnReg(Reg);
       SDValue Copy = DAG.getCopyToReg(DAG.getEntryNode(), dl, Reg, InVals[I]);
       Chain = DAG.getNode(ISD::TokenFactor, dl, MVT::Other, Copy, Chain);
       break;
@@ -22617,6 +22617,11 @@ static SDValue lowerISNAN(SDValue Op, SelectionDAG &DAG) {
   MVT ArgVT = Arg.getSimpleValueType();
   MVT ResultVT = Op.getSimpleValueType();
 
+  // If exceptions are ignored, use unordered comparison for fp80. It recognizes
+  // unsupported values as NaNs.
+  if (ArgVT == MVT::f80 && Op->getFlags().hasNoFPExcept())
+    return DAG.getSetCC(DL, ResultVT, Arg, Arg, ISD::CondCode::SETUNE);
+
   // Determine classification of argument using instruction FXAM.
   unsigned Opc;
   switch (ArgVT.SimpleTy) {
@@ -22647,7 +22652,7 @@ static SDValue lowerISNAN(SDValue Op, SelectionDAG &DAG) {
                         DAG.getConstant(0x45, DL, MVT::i8));
 
   return DAG.getSetCC(DL, ResultVT, Extract, DAG.getConstant(1, DL, MVT::i8),
-                      ISD::CondCode::SETEQ);
+                      ISD::CondCode::SETLE);
 }
 
 /// Helper for creating a X86ISD::SETCC node.

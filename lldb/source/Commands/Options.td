@@ -744,6 +744,14 @@ let Command = "process save_core" in {
     "of corefile to be saved.">;
 }
 
+let Command = "process trace save" in {
+  def process_trace_save_directory: Option<"directory", "d">,
+    Group<1>,
+    Arg<"Value">, Required,
+    Desc<"The directory where the trace will be saved."
+        "It will be created if it does not exist.">;
+}
+
 let Command = "script import" in {
   def script_import_allow_reload : Option<"allow-reload", "r">, Group<1>,
     Desc<"Allow the script to be loaded even if it was already loaded before. "

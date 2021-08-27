@@ -1644,6 +1644,80 @@ protected:
   }
 };
 
+// CommandObjectProcessTraceSave
+#define LLDB_OPTIONS_process_trace_save
+#include "CommandOptions.inc"
+
+#pragma mark CommandObjectProcessTraceSave
+
+class CommandObjectProcessTraceSave : public CommandObjectParsed {
+public:
+  class CommandOptions : public Options {
+  public:
+    CommandOptions() : Options() { OptionParsingStarting(nullptr); }
+
+    Status SetOptionValue(uint32_t option_idx, llvm::StringRef option_arg,
+                          ExecutionContext *execution_context) override {
+      Status error;
+      const int short_option = m_getopt_table[option_idx].val;
+
+      switch (short_option) {
+
+      case 'd': {
+        m_directory.SetFile(option_arg, FileSpec::Style::native);
+        FileSystem::Instance().Resolve(m_directory);
+        break;
+      }
+      default:
+        llvm_unreachable("Unimplemented option");
+      }
+      return error;
+    }
+
+    void OptionParsingStarting(ExecutionContext *execution_context) override{};
+
+    llvm::ArrayRef<OptionDefinition> GetDefinitions() override {
+      return llvm::makeArrayRef(g_process_trace_save_options);
+    };
+
+    FileSpec m_directory;
+  };
+
+  Options *GetOptions() override { return &m_options; }
+  CommandObjectProcessTraceSave(CommandInterpreter &interpreter)
+      : CommandObjectParsed(
+            interpreter, "process trace save",
+            "Save the trace of the current process in the specified directory. "
+            "The directory will be created if needed. "
+            "This will also create a file <directory>/trace.json with the main "
+            "properties of the trace session, along with others files which "
+            "contain the actual trace data. The trace.json file can be used "
+            "later as input for the \"trace load\" command to load the trace "
+            "in LLDB",
+            "process trace save [<cmd-options>]",
+            eCommandRequiresProcess | eCommandTryTargetAPILock |
+                eCommandProcessMustBeLaunched | eCommandProcessMustBePaused |
+                eCommandProcessMustBeTraced) {}
+
+  ~CommandObjectProcessTraceSave() override = default;
+
+protected:
+  bool DoExecute(Args &command, CommandReturnObject &result) override {
+    ProcessSP process_sp = m_exe_ctx.GetProcessSP();
+
+    TraceSP trace_sp = process_sp->GetTarget().GetTrace();
+
+    if (llvm::Error err = trace_sp->SaveLiveTraceToDisk(m_options.m_directory))
+      result.AppendError(toString(std::move(err)));
+    else
+      result.SetStatus(eReturnStatusSuccessFinishResult);
+
+    return result.Succeeded();
+  }
+
+  CommandOptions m_options;
+};
+
 // CommandObjectProcessTraceStop
 class CommandObjectProcessTraceStop : public CommandObjectParsed {
 public:
@@ -1681,6 +1755,8 @@ public:
       : CommandObjectMultiword(
             interpreter, "trace", "Commands for tracing the current process.",
             "process trace <subcommand> [<subcommand objects>]") {
+    LoadSubCommand("save", CommandObjectSP(
+                               new CommandObjectProcessTraceSave(interpreter)));
     LoadSubCommand("start", CommandObjectSP(new CommandObjectProcessTraceStart(
                                 interpreter)));
     LoadSubCommand("stop", CommandObjectSP(

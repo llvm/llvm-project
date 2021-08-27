@@ -5,10 +5,10 @@
     *                                                *
     **************************************************
 
-.. _amdgpu_synid7_waitcnt:
+.. _amdgpu_synid_gfx7_waitcnt:
 
 waitcnt
-===========================
+=======
 
 Counts of outstanding instructions to wait for.
 

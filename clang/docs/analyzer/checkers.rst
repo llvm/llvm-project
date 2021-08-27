@@ -2190,10 +2190,6 @@ Limitations:
    not tighten the domain to prevent the overflow in the subsequent
    multiplication operation.
 
- - If the variable ``n`` participates in a comparison anywhere in the enclosing
-   function's scope, even after the ``malloc()``, the report will be still
-   suppressed.
-
  - It is an AST-based checker, thus it does not make use of the
    path-sensitive taint-analysis.
 
