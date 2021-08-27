@@ -448,8 +448,9 @@ define amdgpu_kernel void @use_alloca() #1 {
 ; AKF_HSA-NEXT:    ret void
 ;
 ; ATTRIBUTOR_HSA-LABEL: define {{[^@]+}}@use_alloca
-; ATTRIBUTOR_HSA-SAME: () #[[ATTR12:[0-9]+]] {
+; ATTRIBUTOR_HSA-SAME: () #[[ATTR1]] {
 ; ATTRIBUTOR_HSA-NEXT:    [[ALLOCA:%.*]] = alloca i32, align 4, addrspace(5)
+; ATTRIBUTOR_HSA-NEXT:    store i32 0, i32 addrspace(5)* [[ALLOCA]], align 4
 ; ATTRIBUTOR_HSA-NEXT:    ret void
 ;
   %alloca = alloca i32, addrspace(5)
@@ -468,11 +469,12 @@ define amdgpu_kernel void @use_alloca_non_entry_block() #1 {
 ; AKF_HSA-NEXT:    ret void
 ;
 ; ATTRIBUTOR_HSA-LABEL: define {{[^@]+}}@use_alloca_non_entry_block
-; ATTRIBUTOR_HSA-SAME: () #[[ATTR12]] {
+; ATTRIBUTOR_HSA-SAME: () #[[ATTR1]] {
 ; ATTRIBUTOR_HSA-NEXT:  entry:
 ; ATTRIBUTOR_HSA-NEXT:    br label [[BB:%.*]]
 ; ATTRIBUTOR_HSA:       bb:
 ; ATTRIBUTOR_HSA-NEXT:    [[ALLOCA:%.*]] = alloca i32, align 4, addrspace(5)
+; ATTRIBUTOR_HSA-NEXT:    store i32 0, i32 addrspace(5)* [[ALLOCA]], align 4
 ; ATTRIBUTOR_HSA-NEXT:    ret void
 ;
 entry:
@@ -492,8 +494,9 @@ define void @use_alloca_func() #1 {
 ; AKF_HSA-NEXT:    ret void
 ;
 ; ATTRIBUTOR_HSA-LABEL: define {{[^@]+}}@use_alloca_func
-; ATTRIBUTOR_HSA-SAME: () #[[ATTR12]] {
+; ATTRIBUTOR_HSA-SAME: () #[[ATTR1]] {
 ; ATTRIBUTOR_HSA-NEXT:    [[ALLOCA:%.*]] = alloca i32, align 4, addrspace(5)
+; ATTRIBUTOR_HSA-NEXT:    store i32 0, i32 addrspace(5)* [[ALLOCA]], align 4
 ; ATTRIBUTOR_HSA-NEXT:    ret void
 ;
   %alloca = alloca i32, addrspace(5)
@@ -531,5 +534,4 @@ attributes #1 = { nounwind }
 ; ATTRIBUTOR_HSA: attributes #[[ATTR9]] = { nounwind "amdgpu-work-group-id-y" "amdgpu-work-group-id-z" "amdgpu-work-item-id-y" "amdgpu-work-item-id-z" "uniform-work-group-size"="false" }
 ; ATTRIBUTOR_HSA: attributes #[[ATTR10]] = { nounwind "amdgpu-dispatch-ptr" "uniform-work-group-size"="false" }
 ; ATTRIBUTOR_HSA: attributes #[[ATTR11]] = { nounwind "amdgpu-queue-ptr" "uniform-work-group-size"="false" }
-; ATTRIBUTOR_HSA: attributes #[[ATTR12]] = { nounwind "amdgpu-stack-objects" "uniform-work-group-size"="false" }
 ;.

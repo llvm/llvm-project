@@ -20,7 +20,7 @@ define internal void @direct() {
 ; AKF_GCN-NEXT:    ret void
 ;
 ; ATTRIBUTOR_GCN-LABEL: define {{[^@]+}}@direct
-; ATTRIBUTOR_GCN-SAME: () #[[ATTR1:[0-9]+]] {
+; ATTRIBUTOR_GCN-SAME: () #[[ATTR0]] {
 ; ATTRIBUTOR_GCN-NEXT:    call void @indirect()
 ; ATTRIBUTOR_GCN-NEXT:    ret void
 ;
@@ -32,10 +32,15 @@ define internal void @direct() {
 }
 
 define amdgpu_kernel void @test_direct_indirect_call() {
-; GCN-LABEL: define {{[^@]+}}@test_direct_indirect_call
-; GCN-SAME: () #[[ATTR2:[0-9]+]] {
-; GCN-NEXT:    call void @direct()
-; GCN-NEXT:    ret void
+; AKF_GCN-LABEL: define {{[^@]+}}@test_direct_indirect_call
+; AKF_GCN-SAME: () #[[ATTR2:[0-9]+]] {
+; AKF_GCN-NEXT:    call void @direct()
+; AKF_GCN-NEXT:    ret void
+;
+; ATTRIBUTOR_GCN-LABEL: define {{[^@]+}}@test_direct_indirect_call
+; ATTRIBUTOR_GCN-SAME: () #[[ATTR0]] {
+; ATTRIBUTOR_GCN-NEXT:    call void @direct()
+; ATTRIBUTOR_GCN-NEXT:    ret void
 ;
   call void @direct()
   ret void
@@ -46,6 +51,4 @@ define amdgpu_kernel void @test_direct_indirect_call() {
 ; AKF_GCN: attributes #[[ATTR2]] = { "amdgpu-calls" "amdgpu-dispatch-id" "amdgpu-dispatch-ptr" "amdgpu-implicitarg-ptr" "amdgpu-queue-ptr" "amdgpu-work-group-id-x" "amdgpu-work-group-id-y" "amdgpu-work-group-id-z" "amdgpu-work-item-id-x" "amdgpu-work-item-id-y" "amdgpu-work-item-id-z" "uniform-work-group-size"="false" }
 ;.
 ; ATTRIBUTOR_GCN: attributes #[[ATTR0]] = { "amdgpu-dispatch-id" "amdgpu-dispatch-ptr" "amdgpu-implicitarg-ptr" "amdgpu-queue-ptr" "amdgpu-work-group-id-x" "amdgpu-work-group-id-y" "amdgpu-work-group-id-z" "amdgpu-work-item-id-x" "amdgpu-work-item-id-y" "amdgpu-work-item-id-z" "uniform-work-group-size"="false" }
-; ATTRIBUTOR_GCN: attributes #[[ATTR1]] = { "amdgpu-dispatch-id" "amdgpu-dispatch-ptr" "amdgpu-implicitarg-ptr" "amdgpu-queue-ptr" "amdgpu-stack-objects" "amdgpu-work-group-id-x" "amdgpu-work-group-id-y" "amdgpu-work-group-id-z" "amdgpu-work-item-id-x" "amdgpu-work-item-id-y" "amdgpu-work-item-id-z" "uniform-work-group-size"="false" }
-; ATTRIBUTOR_GCN: attributes #[[ATTR2]] = { "amdgpu-calls" "amdgpu-dispatch-id" "amdgpu-dispatch-ptr" "amdgpu-implicitarg-ptr" "amdgpu-queue-ptr" "amdgpu-work-group-id-x" "amdgpu-work-group-id-y" "amdgpu-work-group-id-z" "amdgpu-work-item-id-x" "amdgpu-work-item-id-y" "amdgpu-work-item-id-z" "uniform-work-group-size"="false" }
 ;.
