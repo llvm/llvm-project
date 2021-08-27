@@ -1204,8 +1204,10 @@ static bool useRVVForFixedLengthVectorVT(MVT VT,
 
   unsigned MinVLen = Subtarget.getMinRVVVectorSizeInBits();
 
+  MVT EltVT = VT.getVectorElementType();
+
   // Don't use RVV for vectors we cannot scalarize if required.
-  switch (VT.getVectorElementType().SimpleTy) {
+  switch (EltVT.SimpleTy) {
   // i1 is supported but has different rules.
   default:
     return false;
@@ -1234,6 +1236,10 @@ static bool useRVVForFixedLengthVectorVT(MVT VT,
     break;
   }
 
+  // Reject elements larger than ELEN.
+  if (EltVT.getSizeInBits() > Subtarget.getMaxELENForFixedLengthVectors())
+    return false;
+
   unsigned LMul = divideCeil(VT.getSizeInBits(), MinVLen);
   // Don't use RVV for types that don't fit.
   if (LMul > Subtarget.getMaxLMULForFixedLengthVectors())
@@ -1260,6 +1266,7 @@ static MVT getContainerForFixedLengthVector(const TargetLowering &TLI, MVT VT,
          "Expected legal fixed length vector!");
 
   unsigned MinVLen = Subtarget.getMinRVVVectorSizeInBits();
+  unsigned MaxELen = Subtarget.getMaxELENForFixedLengthVectors();
 
   MVT EltVT = VT.getVectorElementType();
   switch (EltVT.SimpleTy) {
@@ -1274,10 +1281,12 @@ static MVT getContainerForFixedLengthVector(const TargetLowering &TLI, MVT VT,
   case MVT::f32:
   case MVT::f64: {
     // We prefer to use LMUL=1 for VLEN sized types. Use fractional lmuls for
-    // narrower types, but we can't have a fractional LMUL with demoninator less
-    // than 64/SEW.
+    // narrower types. The smallest fractional LMUL we support is 8/ELEN. Within
+    // each fractional LMUL we support SEW between 8 and LMUL*ELEN.
     unsigned NumElts =
-        divideCeil(VT.getVectorNumElements(), MinVLen / RISCV::RVVBitsPerBlock);
+        (VT.getVectorNumElements() * RISCV::RVVBitsPerBlock) / MinVLen;
+    NumElts = std::max(NumElts, RISCV::RVVBitsPerBlock / MaxELen);
+    assert(isPowerOf2_32(NumElts) && "Expected power of 2 NumElts");
     return MVT::getScalableVectorVT(EltVT, NumElts);
   }
   }
