@@ -264,9 +264,9 @@ set(files
   __tree
   __tuple
   __undef_macros
-  __utility/__decay_copy.h
   __utility/as_const.h
   __utility/cmp.h
+  __utility/decay_copy.h
   __utility/declval.h
   __utility/exchange.h
   __utility/forward.h

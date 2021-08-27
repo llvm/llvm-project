@@ -79,3 +79,65 @@ define void @volatile_load_2_elts_bitcast() {
   store volatile <8 x double> %shuffle1, <8 x double>* undef, align 64
   ret void
 }
+
+define void @elts_from_consecutive_loads(<2 x i64>* %arg, i32* %arg12, <8 x i32>* %arg13, float %arg14, i1 %arg15) {
+; AVX-LABEL: elts_from_consecutive_loads:
+; AVX:       # %bb.0: # %bb
+; AVX-NEXT:    vxorps %xmm1, %xmm1, %xmm1
+; AVX-NEXT:    .p2align 4, 0x90
+; AVX-NEXT:  .LBB3_1: # %bb16
+; AVX-NEXT:    # =>This Loop Header: Depth=1
+; AVX-NEXT:    # Child Loop BB3_2 Depth 2
+; AVX-NEXT:    testb $1, %cl
+; AVX-NEXT:    je .LBB3_1
+; AVX-NEXT:    .p2align 4, 0x90
+; AVX-NEXT:  .LBB3_2: # %bb17
+; AVX-NEXT:    # Parent Loop BB3_1 Depth=1
+; AVX-NEXT:    # => This Inner Loop Header: Depth=2
+; AVX-NEXT:    movl (%rdi), %eax
+; AVX-NEXT:    vbroadcastss (%rdi), %ymm2
+; AVX-NEXT:    movl %eax, (%rsi)
+; AVX-NEXT:    vmovaps %ymm2, (%rdx)
+; AVX-NEXT:    vucomiss %xmm1, %xmm0
+; AVX-NEXT:    jne .LBB3_2
+; AVX-NEXT:    jp .LBB3_2
+; AVX-NEXT:    jmp .LBB3_1
+;
+; AVX2-LABEL: elts_from_consecutive_loads:
+; AVX2:       # %bb.0: # %bb
+; AVX2-NEXT:    vxorps %xmm1, %xmm1, %xmm1
+; AVX2-NEXT:    .p2align 4, 0x90
+; AVX2-NEXT:  .LBB3_1: # %bb16
+; AVX2-NEXT:    # =>This Loop Header: Depth=1
+; AVX2-NEXT:    # Child Loop BB3_2 Depth 2
+; AVX2-NEXT:    testb $1, %cl
+; AVX2-NEXT:    je .LBB3_1
+; AVX2-NEXT:    .p2align 4, 0x90
+; AVX2-NEXT:  .LBB3_2: # %bb17
+; AVX2-NEXT:    # Parent Loop BB3_1 Depth=1
+; AVX2-NEXT:    # => This Inner Loop Header: Depth=2
+; AVX2-NEXT:    vmovaps (%rdi), %xmm2
+; AVX2-NEXT:    vmovss %xmm2, (%rsi)
+; AVX2-NEXT:    vbroadcastss %xmm2, %ymm2
+; AVX2-NEXT:    vmovaps %ymm2, (%rdx)
+; AVX2-NEXT:    vucomiss %xmm1, %xmm0
+; AVX2-NEXT:    jne .LBB3_2
+; AVX2-NEXT:    jp .LBB3_2
+; AVX2-NEXT:    jmp .LBB3_1
+bb:
+  br label %bb16
+
+bb16:                                             ; preds = %bb17, %bb16, %bb
+  br i1 %arg15, label %bb17, label %bb16
+
+bb17:                                             ; preds = %bb17, %bb16
+  %tmp = load <2 x i64>, <2 x i64>* %arg, align 16
+  %tmp18 = extractelement <2 x i64> %tmp, i32 0
+  %tmp19 = trunc i64 %tmp18 to i32
+  store i32 %tmp19, i32* %arg12, align 4
+  %tmp20 = insertelement <8 x i32> <i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1>, i32 %tmp19, i32 0
+  %tmp21 = shufflevector <8 x i32> %tmp20, <8 x i32> <i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1>, <8 x i32> <i32 0, i32 undef, i32 undef, i32 undef, i32 0, i32 undef, i32 undef, i32 undef>
+  store <8 x i32> %tmp21, <8 x i32>* %arg13, align 32
+  %tmp22 = fcmp une float %arg14, 0.000000e+00
+  br i1 %tmp22, label %bb17, label %bb16
+}

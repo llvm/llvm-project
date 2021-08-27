@@ -363,15 +363,15 @@ define void @byval_not_readnone_2(i8* byval(i8) %written) readnone {
 }
 
 define void @byval_no_fnarg(i8* byval(i8) %written) {
-; IS__TUNIT____: Function Attrs: nofree nosync nounwind readnone willreturn
+; IS__TUNIT____: Function Attrs: argmemonly nofree nosync nounwind willreturn writeonly
 ; IS__TUNIT____-LABEL: define {{[^@]+}}@byval_no_fnarg
-; IS__TUNIT____-SAME: (i8* noalias nocapture nofree noundef nonnull writeonly byval(i8) dereferenceable(1) [[WRITTEN:%.*]]) #[[ATTR1]] {
+; IS__TUNIT____-SAME: (i8* noalias nocapture nofree noundef nonnull writeonly byval(i8) dereferenceable(1) [[WRITTEN:%.*]]) #[[ATTR3]] {
 ; IS__TUNIT____-NEXT:    store i8 0, i8* [[WRITTEN]], align 1
 ; IS__TUNIT____-NEXT:    ret void
 ;
-; IS__CGSCC____: Function Attrs: nofree norecurse nosync nounwind readnone willreturn
+; IS__CGSCC____: Function Attrs: argmemonly nofree norecurse nosync nounwind willreturn writeonly
 ; IS__CGSCC____-LABEL: define {{[^@]+}}@byval_no_fnarg
-; IS__CGSCC____-SAME: (i8* noalias nocapture nofree noundef nonnull writeonly byval(i8) dereferenceable(1) [[WRITTEN:%.*]]) #[[ATTR1]] {
+; IS__CGSCC____-SAME: (i8* noalias nocapture nofree noundef nonnull writeonly byval(i8) dereferenceable(1) [[WRITTEN:%.*]]) #[[ATTR3]] {
 ; IS__CGSCC____-NEXT:    store i8 0, i8* [[WRITTEN]], align 1
 ; IS__CGSCC____-NEXT:    ret void
 ;
@@ -384,13 +384,14 @@ define void @testbyval(i8* %read_only) {
 ; IS__TUNIT____-SAME: (i8* nocapture readonly [[READ_ONLY:%.*]]) {
 ; IS__TUNIT____-NEXT:    call void @byval_not_readonly_1(i8* nocapture readonly byval(i8) [[READ_ONLY]]) #[[ATTR2]]
 ; IS__TUNIT____-NEXT:    call void @byval_not_readnone_1(i8* noalias nocapture readnone byval(i8) [[READ_ONLY]])
+; IS__TUNIT____-NEXT:    call void @byval_no_fnarg(i8* nocapture nofree readonly byval(i8) [[READ_ONLY]]) #[[ATTR13:[0-9]+]]
 ; IS__TUNIT____-NEXT:    ret void
 ;
-; IS__CGSCC____: Function Attrs: readonly
 ; IS__CGSCC____-LABEL: define {{[^@]+}}@testbyval
-; IS__CGSCC____-SAME: (i8* nocapture noundef nonnull readonly dereferenceable(1) [[READ_ONLY:%.*]]) #[[ATTR2]] {
+; IS__CGSCC____-SAME: (i8* nocapture noundef nonnull readonly dereferenceable(1) [[READ_ONLY:%.*]]) {
 ; IS__CGSCC____-NEXT:    call void @byval_not_readonly_1(i8* noalias nocapture noundef nonnull readonly byval(i8) dereferenceable(1) [[READ_ONLY]]) #[[ATTR2]]
 ; IS__CGSCC____-NEXT:    call void @byval_not_readnone_1(i8* noalias nocapture noundef nonnull readnone byval(i8) dereferenceable(1) [[READ_ONLY]])
+; IS__CGSCC____-NEXT:    call void @byval_no_fnarg(i8* noalias nocapture nofree noundef nonnull readnone byval(i8) dereferenceable(1) [[READ_ONLY]]) #[[ATTR14:[0-9]+]]
 ; IS__CGSCC____-NEXT:    ret void
 ;
   call void @byval_not_readonly_1(i8* byval(i8) %read_only)
@@ -486,6 +487,7 @@ define i32 @read_only_constant_mem() {
 ; IS__TUNIT____: attributes #[[ATTR10]] = { willreturn writeonly }
 ; IS__TUNIT____: attributes #[[ATTR11]] = { readonly willreturn }
 ; IS__TUNIT____: attributes #[[ATTR12]] = { nounwind }
+; IS__TUNIT____: attributes #[[ATTR13]] = { nounwind writeonly }
 ;.
 ; IS__CGSCC____: attributes #[[ATTR0]] = { nofree norecurse nosync nounwind willreturn writeonly }
 ; IS__CGSCC____: attributes #[[ATTR1]] = { nofree norecurse nosync nounwind readnone willreturn }
@@ -501,4 +503,5 @@ define i32 @read_only_constant_mem() {
 ; IS__CGSCC____: attributes #[[ATTR11]] = { willreturn writeonly }
 ; IS__CGSCC____: attributes #[[ATTR12]] = { readonly willreturn }
 ; IS__CGSCC____: attributes #[[ATTR13]] = { nounwind }
+; IS__CGSCC____: attributes #[[ATTR14]] = { nounwind writeonly }
 ;.
