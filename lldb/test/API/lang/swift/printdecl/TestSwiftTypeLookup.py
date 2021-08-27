@@ -43,7 +43,7 @@ class TestSwiftTypeLookup(TestBase):
             "type lookup String",
             substrs=[
                 'struct String {',
-                'extension String : '])
+                'extension Swift.String : '])
         self.expect(
             "type lookup Cla1",
             substrs=[
@@ -88,7 +88,7 @@ class TestSwiftTypeLookup(TestBase):
             'type lookup _TtSi',
             substrs=[
                 'struct Int',
-                'extension Int'])
+                'extension Swift.Int'])
 
         # check that we can look for generic things
         self.expect('type lookup Generic', substrs=['class Generic', 'foo'])
