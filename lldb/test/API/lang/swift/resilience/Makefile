@@ -12,7 +12,8 @@ libmod.%.dylib: mod.%.swift
 		VPATH=$(SRCDIR) -I $(SRCDIR) -f $(SRCDIR)/dylib.mk all
 	mv libmod.dylib $@
 	mv libmod.dylib.dSYM $@.dSYM || true
-	mv mod.swiftmodule mod.$*.swiftmodule
+	rm mod.swiftmodule
+	mv mod.swiftinterface mod.$*.swiftinterface
 	mv mod.o mod.$*.o
 	rm mod.swift mod.partial.swiftmodule
 
@@ -20,7 +21,7 @@ main.%: main.swift
 	ln -sf libmod.$*.dylib libmod.dylib
 	ln -sf libmod.$*.dylib.dSYM libmod.dylib.dSYM
 	ln -sf mod.$*.swiftdoc mod.swiftdoc
-	ln -sf mod.$*.swiftmodule mod.swiftmodule
+	ln -sf mod.$*.swiftinterface mod.swiftinterface
 	$(MAKE) MAKE_DSYM=$(MAKE_DSYM) CC=$(CC) SWIFTC=$(SWIFTC) \
 		ARCH=$(ARCH) DSYMUTIL=$(DSYMUTIL) \
 		VPATH=$(SRCDIR) -I $(SRCDIR) -f $(SRCDIR)/exe.mk all
