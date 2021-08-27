@@ -4219,7 +4219,7 @@ INTERCEPTOR(char **, backtrace_symbols, void **buffer, int size) {
   if (res && size) {
     COMMON_INTERCEPTOR_WRITE_RANGE(ctx, res, size * sizeof(*res));
     for (int i = 0; i < size; ++i)
-      COMMON_INTERCEPTOR_WRITE_RANGE(ctx, res[i], internal_strlen(res[i])) + 1);
+      COMMON_INTERCEPTOR_WRITE_RANGE(ctx, res[i], internal_strlen(res[i]) + 1);
   }
   return res;
 }
