@@ -15,6 +15,9 @@
 // unavailable until macOS 10.15
 // XFAIL: use_system_cxx_lib && target={{.+}}-apple-macosx10.{{9|10|11|12|13|14}}
 
+// MinGW lacks timespec_get.
+// XFAIL: target={{.+}}-windows-gnu
+
 #include <ctime>
 #include <type_traits>
 
