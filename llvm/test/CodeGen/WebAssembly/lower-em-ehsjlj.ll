@@ -65,6 +65,10 @@ entry:
 ; CHECK-NEXT: %or = or i1 %cmp.eq.zero, %cmp.eq.one
 ; CHECK-NEXT: br i1 %or, label %tail, label %longjmp.rethrow
 
+; CHECK: try.cont:
+; CHECK-NEXT:  %phi = phi i32 [ undef, %tail ], [ undef, %lpad ]
+; CHECK-NEXT:  ret void
+
 ; CHECK:    tail:
 ; CHECK-NEXT: %cmp = icmp eq i32 %__THREW__.val, 1
 ; CHECK-NEXT: br i1 %cmp, label %lpad, label %try.cont
@@ -84,6 +88,7 @@ lpad:                                             ; preds = %entry
   br label %try.cont
 
 try.cont:                                         ; preds = %entry, %lpad
+ %phi = phi i32 [ undef, %entry ], [ undef, %lpad ]
   ret void
 }
 

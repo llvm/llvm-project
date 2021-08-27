@@ -891,6 +891,7 @@ bool WebAssemblyLowerEmscriptenEHSjLj::runEHOnFunction(Function &F) {
 
         IRB.CreateUnreachable();
         IRB.SetInsertPoint(Tail);
+        BB.replaceSuccessorsPhiUsesWith(&BB, Tail);
       }
 
       // Insert a branch based on __THREW__ variable
