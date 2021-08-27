@@ -18,7 +18,7 @@
 #include <__memory/pointer_traits.h>
 #include <__ranges/concepts.h>
 #include <__ranges/subrange.h>
-#include <__utility/__decay_copy.h>
+#include <__utility/decay_copy.h>
 #include <__utility/declval.h>
 #include <__utility/forward.h>
 #include <__utility/move.h>
