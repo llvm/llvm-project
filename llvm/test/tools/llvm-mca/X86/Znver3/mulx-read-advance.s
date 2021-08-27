@@ -15,13 +15,13 @@ mulxq (%rdi), %rax, %rdx
 
 # CHECK:      Iterations:        2
 # CHECK-NEXT: Instructions:      2
-# CHECK-NEXT: Total Cycles:      14
+# CHECK-NEXT: Total Cycles:      15
 # CHECK-NEXT: Total uOps:        4
 
 # CHECK:      Dispatch Width:    6
-# CHECK-NEXT: uOps Per Cycle:    0.29
-# CHECK-NEXT: IPC:               0.14
-# CHECK-NEXT: Block RThroughput: 2.0
+# CHECK-NEXT: uOps Per Cycle:    0.27
+# CHECK-NEXT: IPC:               0.13
+# CHECK-NEXT: Block RThroughput: 1.0
 
 # CHECK:      Instruction Info:
 # CHECK-NEXT: [1]: #uOps
@@ -32,7 +32,7 @@ mulxq (%rdi), %rax, %rdx
 # CHECK-NEXT: [6]: HasSideEffects (U)
 
 # CHECK:      [1]    [2]    [3]    [4]    [5]    [6]    Instructions:
-# CHECK-NEXT:  2      8     2.00    *                   mulxl	(%rdi), %eax, %edx
+# CHECK-NEXT:  2      8     1.00    *                   mulxl	(%rdi), %eax, %edx
 
 # CHECK:      Resources:
 # CHECK-NEXT: [0]   - Zn3AGU0
@@ -61,18 +61,18 @@ mulxq (%rdi), %rax, %rdx
 
 # CHECK:      Resource pressure per iteration:
 # CHECK-NEXT: [0]    [1]    [2]    [3]    [4]    [5]    [6]    [7]    [8]    [9]    [10]   [11]   [12.0] [12.1] [13]   [14.0] [14.1] [14.2] [15.0] [15.1] [15.2] [16.0] [16.1]
-# CHECK-NEXT:  -     0.50   0.50    -     2.00    -      -      -      -      -      -      -      -      -      -      -     0.50   0.50    -     0.50   0.50    -      -
+# CHECK-NEXT:  -     0.50   0.50    -     1.00    -      -      -      -      -      -      -      -      -      -      -     0.50   0.50    -     0.50   0.50    -      -
 
 # CHECK:      Resource pressure by instruction:
 # CHECK-NEXT: [0]    [1]    [2]    [3]    [4]    [5]    [6]    [7]    [8]    [9]    [10]   [11]   [12.0] [12.1] [13]   [14.0] [14.1] [14.2] [15.0] [15.1] [15.2] [16.0] [16.1] Instructions:
-# CHECK-NEXT:  -     0.50   0.50    -     2.00    -      -      -      -      -      -      -      -      -      -      -     0.50   0.50    -     0.50   0.50    -      -     mulxl	(%rdi), %eax, %edx
+# CHECK-NEXT:  -     0.50   0.50    -     1.00    -      -      -      -      -      -      -      -      -      -      -     0.50   0.50    -     0.50   0.50    -      -     mulxl	(%rdi), %eax, %edx
 
 # CHECK:      Timeline view:
-# CHECK-NEXT:                     0123
+# CHECK-NEXT:                     01234
 # CHECK-NEXT: Index     0123456789
 
-# CHECK:      [0,0]     DeeeeeeeeER  .   mulxl	(%rdi), %eax, %edx
-# CHECK-NEXT: [1,0]     D===eeeeeeeeER   mulxl	(%rdi), %eax, %edx
+# CHECK:      [0,0]     DeeeeeeeeER   .   mulxl	(%rdi), %eax, %edx
+# CHECK-NEXT: [1,0]     D====eeeeeeeeER   mulxl	(%rdi), %eax, %edx
 
 # CHECK:      Average Wait times (based on the timeline view):
 # CHECK-NEXT: [0]: Executions
@@ -81,19 +81,19 @@ mulxq (%rdi), %rax, %rdx
 # CHECK-NEXT: [3]: Average time elapsed from WB until retire stage
 
 # CHECK:            [0]    [1]    [2]    [3]
-# CHECK-NEXT: 0.     2     2.5    0.5    0.0       mulxl	(%rdi), %eax, %edx
+# CHECK-NEXT: 0.     2     3.0    0.5    0.0       mulxl	(%rdi), %eax, %edx
 
 # CHECK:      [1] Code Region
 
 # CHECK:      Iterations:        2
 # CHECK-NEXT: Instructions:      2
-# CHECK-NEXT: Total Cycles:      14
+# CHECK-NEXT: Total Cycles:      15
 # CHECK-NEXT: Total uOps:        4
 
 # CHECK:      Dispatch Width:    6
-# CHECK-NEXT: uOps Per Cycle:    0.29
-# CHECK-NEXT: IPC:               0.14
-# CHECK-NEXT: Block RThroughput: 2.0
+# CHECK-NEXT: uOps Per Cycle:    0.27
+# CHECK-NEXT: IPC:               0.13
+# CHECK-NEXT: Block RThroughput: 1.0
 
 # CHECK:      Instruction Info:
 # CHECK-NEXT: [1]: #uOps
@@ -104,7 +104,7 @@ mulxq (%rdi), %rax, %rdx
 # CHECK-NEXT: [6]: HasSideEffects (U)
 
 # CHECK:      [1]    [2]    [3]    [4]    [5]    [6]    Instructions:
-# CHECK-NEXT:  2      8     2.00    *                   mulxq	(%rdi), %rax, %rdx
+# CHECK-NEXT:  2      8     1.00    *                   mulxq	(%rdi), %rax, %rdx
 
 # CHECK:      Resources:
 # CHECK-NEXT: [0]   - Zn3AGU0
@@ -133,18 +133,18 @@ mulxq (%rdi), %rax, %rdx
 
 # CHECK:      Resource pressure per iteration:
 # CHECK-NEXT: [0]    [1]    [2]    [3]    [4]    [5]    [6]    [7]    [8]    [9]    [10]   [11]   [12.0] [12.1] [13]   [14.0] [14.1] [14.2] [15.0] [15.1] [15.2] [16.0] [16.1]
-# CHECK-NEXT:  -     0.50   0.50    -     2.00    -      -      -      -      -      -      -      -      -      -      -     0.50   0.50    -     0.50   0.50    -      -
+# CHECK-NEXT:  -     0.50   0.50    -     1.00    -      -      -      -      -      -      -      -      -      -      -     0.50   0.50    -     0.50   0.50    -      -
 
 # CHECK:      Resource pressure by instruction:
 # CHECK-NEXT: [0]    [1]    [2]    [3]    [4]    [5]    [6]    [7]    [8]    [9]    [10]   [11]   [12.0] [12.1] [13]   [14.0] [14.1] [14.2] [15.0] [15.1] [15.2] [16.0] [16.1] Instructions:
-# CHECK-NEXT:  -     0.50   0.50    -     2.00    -      -      -      -      -      -      -      -      -      -      -     0.50   0.50    -     0.50   0.50    -      -     mulxq	(%rdi), %rax, %rdx
+# CHECK-NEXT:  -     0.50   0.50    -     1.00    -      -      -      -      -      -      -      -      -      -      -     0.50   0.50    -     0.50   0.50    -      -     mulxq	(%rdi), %rax, %rdx
 
 # CHECK:      Timeline view:
-# CHECK-NEXT:                     0123
+# CHECK-NEXT:                     01234
 # CHECK-NEXT: Index     0123456789
 
-# CHECK:      [0,0]     DeeeeeeeeER  .   mulxq	(%rdi), %rax, %rdx
-# CHECK-NEXT: [1,0]     D===eeeeeeeeER   mulxq	(%rdi), %rax, %rdx
+# CHECK:      [0,0]     DeeeeeeeeER   .   mulxq	(%rdi), %rax, %rdx
+# CHECK-NEXT: [1,0]     D====eeeeeeeeER   mulxq	(%rdi), %rax, %rdx
 
 # CHECK:      Average Wait times (based on the timeline view):
 # CHECK-NEXT: [0]: Executions
@@ -153,4 +153,4 @@ mulxq (%rdi), %rax, %rdx
 # CHECK-NEXT: [3]: Average time elapsed from WB until retire stage
 
 # CHECK:            [0]    [1]    [2]    [3]
-# CHECK-NEXT: 0.     2     2.5    0.5    0.0       mulxq	(%rdi), %rax, %rdx
+# CHECK-NEXT: 0.     2     3.0    0.5    0.0       mulxq	(%rdi), %rax, %rdx
