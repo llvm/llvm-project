@@ -82,7 +82,7 @@ These instruction were tested with Visual Studio 2019 and Python 3.9.6:
    if you want to develop `lldb <https://lldb.llvm.org/>`_, selecting
    **Download debug binaries** is useful.
 7. Complete the Python installation.
-8. Run a "Developer Command Prompt for VS 2019" as administrator. This command
+8. Run a "Developer Command Prompt for VS 2019" **as administrator**. This command
     prompt provides correct path and environment variables to Visual Studio and
     the installed tools.
 9. In the terminal window, type the commands:
@@ -96,7 +96,17 @@ These instruction were tested with Visual Studio 2019 and Python 3.9.6:
   install into a path containing spaces (e.g. ``c:\Documents and Settings\...``)
   as it will fail.
 
-10. Install psutil and obtain LLVM source code:
+10. Register the Microsoft Debug Interface Access (DIA) DLLs
+
+    .. code-block:: bat
+
+     regsvr32 "%VSINSTALLDIR%\DIA SDK\bin\msdia140.dll"
+     regsvr32 "%VSINSTALLDIR%\DIA SDK\bin\amd64\msdia140.dll"
+
+ The DIA library is required for LLVM PDB tests and
+ `LLDB development <https://lldb.llvm.org/resources/build.html>`_.
+
+11. Install psutil and obtain LLVM source code:
 
     .. code-block:: bat
 
@@ -108,7 +118,7 @@ These instruction were tested with Visual Studio 2019 and Python 3.9.6:
  Select the last link: ``Source code (zip)`` and unpack the downloaded file using
  Windows Explorer built-in zip support or any other unzip tool.
 
-11. Finally, configure LLVM using CMake:
+12. Finally, configure LLVM using CMake:
 
     .. code-block:: bat
 
@@ -143,7 +153,7 @@ These instruction were tested with Visual Studio 2019 and Python 3.9.6:
      want to use the 64-bit toolset, pass the ``-Thost=x64`` flag when
      generating the Visual Studio solution. This requires CMake 3.8.0 or later.
 
-12. Start Visual Studio and select configuration:
+13. Start Visual Studio and select configuration:
 
    In the directory you created the project files will have an ``llvm.sln``
    file, just double-click on that to open Visual Studio. The default Visual
@@ -155,7 +165,7 @@ These instruction were tested with Visual Studio 2019 and Python 3.9.6:
    compiler flags, disabling optimization and enabling debug information, only
    for specific librares or source files you actually need to debug.
 
-13. Test LLVM in Visual Studio:
+14. Test LLVM in Visual Studio:
 
    You can run LLVM tests by merely building the project "check-all". The test
    results will be shown in the VS output window. Once the build succeeds, you
