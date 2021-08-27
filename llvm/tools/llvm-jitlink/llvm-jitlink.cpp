@@ -16,6 +16,7 @@
 
 #include "llvm/BinaryFormat/Magic.h"
 #include "llvm/ExecutionEngine/Orc/DebugObjectManagerPlugin.h"
+#include "llvm/ExecutionEngine/Orc/ELFNixPlatform.h"
 #include "llvm/ExecutionEngine/Orc/EPCDebugObjectRegistrar.h"
 #include "llvm/ExecutionEngine/Orc/EPCDynamicLibrarySearchGenerator.h"
 #include "llvm/ExecutionEngine/Orc/EPCEHFrameRegistrar.h"
@@ -922,6 +923,14 @@ Session::Session(std::unique_ptr<ExecutorProcessControl> EPC, Error &Err)
   if (TT.isOSBinFormatMachO() && !OrcRuntime.empty()) {
     if (auto P =
             MachOPlatform::Create(ES, ObjLayer, *MainJD, OrcRuntime.c_str()))
+      ES.setPlatform(std::move(*P));
+    else {
+      Err = P.takeError();
+      return;
+    }
+  } else if (TT.isOSBinFormatELF() && !OrcRuntime.empty()) {
+    if (auto P =
+            ELFNixPlatform::Create(ES, ObjLayer, *MainJD, OrcRuntime.c_str()))
       ES.setPlatform(std::move(*P));
     else {
       Err = P.takeError();
