@@ -9,9 +9,9 @@
 #ifndef LLDB_SOURCE_PLUGINS_TRACE_INTEL_PT_TRACEINTELPTSESSIONFILEPARSER_H
 #define LLDB_SOURCE_PLUGINS_TRACE_INTEL_PT_TRACEINTELPTSESSIONFILEPARSER_H
 
-#include "TraceIntelPT.h"
-
 #include "../common/TraceSessionFileParser.h"
+#include "TraceIntelPT.h"
+#include "TraceIntelPTJSONStructs.h"
 
 namespace lldb_private {
 namespace trace_intel_pt {
@@ -20,17 +20,6 @@ class TraceIntelPT;
 
 class TraceIntelPTSessionFileParser : public TraceSessionFileParser {
 public:
-  struct JSONTraceIntelPTCPUInfo {
-    int64_t family;
-    int64_t model;
-    int64_t stepping;
-    std::string vendor;
-  };
-
-  struct JSONTraceIntelPTSettings
-      : TraceSessionFileParser::JSONTracePluginSettings {
-    JSONTraceIntelPTCPUInfo cpuInfo;
-  };
 
   /// See \a TraceSessionFileParser::TraceSessionFileParser for the description
   /// of these fields.
@@ -65,24 +54,5 @@ private:
 } // namespace trace_intel_pt
 } // namespace lldb_private
 
-namespace llvm {
-namespace json {
-
-bool fromJSON(const Value &value,
-              lldb_private::trace_intel_pt::TraceIntelPTSessionFileParser::
-                  JSONTraceIntelPTSettings &plugin_settings,
-              Path path);
-
-bool fromJSON(const llvm::json::Value &value,
-              lldb_private::trace_intel_pt::TraceIntelPTSessionFileParser::
-                  JSONTraceIntelPTCPUInfo &packet,
-              llvm::json::Path path);
-
-llvm::json::Value
-toJSON(const lldb_private::trace_intel_pt::TraceIntelPTSessionFileParser::
-           JSONTraceIntelPTCPUInfo &packet);
-
-} // namespace json
-} // namespace llvm
 
 #endif // LLDB_SOURCE_PLUGINS_TRACE_INTEL_PT_TRACEINTELPTSESSIONFILEPARSER_H
