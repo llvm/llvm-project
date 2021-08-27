@@ -71,12 +71,6 @@ class SummaryView : public View {
   // Used to map resource indices to actual processor resource IDs.
   llvm::SmallVector<unsigned, 8> ResIdx2ProcResID;
 
-  // Compute the reciprocal throughput for the analyzed code block.
-  // The reciprocal block throughput is computed as the MAX between:
-  //   - NumMicroOps / DispatchWidth
-  //   - Total Resource Cycles / #Units   (for every resource consumed).
-  double getBlockRThroughput() const;
-
   /// Compute the data we want to print out in the object DV.
   void collectData(DisplayValues &DV) const;
 
