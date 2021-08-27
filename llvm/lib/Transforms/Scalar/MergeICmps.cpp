@@ -239,11 +239,13 @@ bool BCECmpBlock::canSinkBCECmpInst(const Instruction *Inst,
   // If this instruction may clobber the loads and is in middle of the BCE cmp
   // block instructions, then bail for now.
   if (Inst->mayWriteToMemory()) {
-    // Disallow instructions that might modify the BCE operands
-    MemoryLocation LLoc = MemoryLocation::get(Cmp.Lhs.LoadI);
-    MemoryLocation RLoc = MemoryLocation::get(Cmp.Rhs.LoadI);
-    if (isModSet(AA.getModRefInfo(Inst, LLoc)) ||
-        isModSet(AA.getModRefInfo(Inst, RLoc)))
+    auto MayClobber = [&](LoadInst *LI) {
+      // If a potentially clobbering instruction comes before the load,
+      // we can still safely sink the load.
+      return !Inst->comesBefore(LI) &&
+             isModSet(AA.getModRefInfo(Inst, MemoryLocation::get(LI)));
+    };
+    if (MayClobber(Cmp.Lhs.LoadI) || MayClobber(Cmp.Rhs.LoadI))
       return false;
   }
   // Make sure this instruction does not use any of the BCE cmp block
