@@ -8155,6 +8155,28 @@ void Clang::ConstructJob(Compilation &C, const JobAction &JA,
       Input.getInputArg().renderAsInput(Args, CmdArgs);
   }
 
+  if (Arg *A = Args.getLastArg(options::OPT_fcir_output_EQ,
+                               options::OPT_fcir_output)) {
+    if (A->getOption().matches(options::OPT_fcir_output_EQ)) {
+      StringRef Value = A->getValue();
+      CmdArgs.push_back(Args.MakeArgString("-fcir-output=" + Value));
+    } else {
+      std::string OutFile;
+      for (const InputInfo &Input : FrontendInputs) {
+        if (!Input.isFilename())
+          continue;
+        OutFile = Input.getFilename();
+        OutFile.append(".cir");
+        StringRef Value = OutFile;
+        CmdArgs.push_back(Args.MakeArgString("-fcir-output=" + Value));
+        break;
+      }
+
+      if (OutFile.empty())
+        D.Diag(diag::err_drv_cir_multiple_input);
+    }
+  }
+
   if (D.CC1Main && !D.CCGenDiagnostics) {
     // Invoke the CC1 directly in this process
     C.addCommand(std::make_unique<CC1Command>(
