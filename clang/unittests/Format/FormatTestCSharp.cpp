@@ -402,6 +402,7 @@ TEST_F(FormatTestCSharp, CSharpRegions) {
 }
 
 TEST_F(FormatTestCSharp, CSharpKeyWordEscaping) {
+  // AfterEnum is true by default.
   verifyFormat("public enum var\n"
                "{\n"
                "    none,\n"
@@ -1098,6 +1099,219 @@ class A {
   int f(int where) {}
 };)",
                getGoogleStyle(FormatStyle::LK_Cpp));
+}
+
+TEST_F(FormatTestCSharp, CSharpAfterEnum) {
+  FormatStyle Style = getGoogleStyle(FormatStyle::LK_CSharp);
+  Style.BreakBeforeBraces = FormatStyle::BS_Custom;
+  Style.BraceWrapping.AfterEnum = false;
+  Style.AllowShortEnumsOnASingleLine = false;
+
+  verifyFormat("enum MyEnum {\n"
+               "  Foo,\n"
+               "  Bar,\n"
+               "}",
+               Style);
+  verifyFormat("internal enum MyEnum {\n"
+               "  Foo,\n"
+               "  Bar,\n"
+               "}",
+               Style);
+  verifyFormat("public enum MyEnum {\n"
+               "  Foo,\n"
+               "  Bar,\n"
+               "}",
+               Style);
+  verifyFormat("protected enum MyEnum {\n"
+               "  Foo,\n"
+               "  Bar,\n"
+               "}",
+               Style);
+  verifyFormat("private enum MyEnum {\n"
+               "  Foo,\n"
+               "  Bar,\n"
+               "}",
+               Style);
+
+  Style.BraceWrapping.AfterEnum = true;
+  Style.AllowShortEnumsOnASingleLine = false;
+
+  verifyFormat("enum MyEnum\n"
+               "{\n"
+               "  Foo,\n"
+               "  Bar,\n"
+               "}",
+               Style);
+  verifyFormat("internal enum MyEnum\n"
+               "{\n"
+               "  Foo,\n"
+               "  Bar,\n"
+               "}",
+               Style);
+  verifyFormat("public enum MyEnum\n"
+               "{\n"
+               "  Foo,\n"
+               "  Bar,\n"
+               "}",
+               Style);
+  verifyFormat("protected enum MyEnum\n"
+               "{\n"
+               "  Foo,\n"
+               "  Bar,\n"
+               "}",
+               Style);
+  verifyFormat("private enum MyEnum\n"
+               "{\n"
+               "  Foo,\n"
+               "  Bar,\n"
+               "}",
+               Style);
+  verifyFormat("/* Foo */ private enum MyEnum\n"
+               "{\n"
+               "  Foo,\n"
+               "  Bar,\n"
+               "}",
+               Style);
+  verifyFormat("/* Foo */ /* Bar */ private enum MyEnum\n"
+               "{\n"
+               "  Foo,\n"
+               "  Bar,\n"
+               "}",
+               Style);
+}
+
+TEST_F(FormatTestCSharp, CSharpAfterClass) {
+  FormatStyle Style = getGoogleStyle(FormatStyle::LK_CSharp);
+  Style.BreakBeforeBraces = FormatStyle::BS_Custom;
+  Style.BraceWrapping.AfterClass = false;
+
+  verifyFormat("class MyClass {\n"
+               "  int a;\n"
+               "  int b;\n"
+               "}",
+               Style);
+  verifyFormat("internal class MyClass {\n"
+               "  int a;\n"
+               "  int b;\n"
+               "}",
+               Style);
+  verifyFormat("public class MyClass {\n"
+               "  int a;\n"
+               "  int b;\n"
+               "}",
+               Style);
+  verifyFormat("protected class MyClass {\n"
+               "  int a;\n"
+               "  int b;\n"
+               "}",
+               Style);
+  verifyFormat("private class MyClass {\n"
+               "  int a;\n"
+               "  int b;\n"
+               "}",
+               Style);
+
+  verifyFormat("interface Interface {\n"
+               "  int a;\n"
+               "  int b;\n"
+               "}",
+               Style);
+  verifyFormat("internal interface Interface {\n"
+               "  int a;\n"
+               "  int b;\n"
+               "}",
+               Style);
+  verifyFormat("public interface Interface {\n"
+               "  int a;\n"
+               "  int b;\n"
+               "}",
+               Style);
+  verifyFormat("protected interface Interface {\n"
+               "  int a;\n"
+               "  int b;\n"
+               "}",
+               Style);
+  verifyFormat("private interface Interface {\n"
+               "  int a;\n"
+               "  int b;\n"
+               "}",
+               Style);
+
+  Style.BraceWrapping.AfterClass = true;
+
+  verifyFormat("class MyClass\n"
+               "{\n"
+               "  int a;\n"
+               "  int b;\n"
+               "}",
+               Style);
+  verifyFormat("internal class MyClass\n"
+               "{\n"
+               "  int a;\n"
+               "  int b;\n"
+               "}",
+               Style);
+  verifyFormat("public class MyClass\n"
+               "{\n"
+               "  int a;\n"
+               "  int b;\n"
+               "}",
+               Style);
+  verifyFormat("protected class MyClass\n"
+               "{\n"
+               "  int a;\n"
+               "  int b;\n"
+               "}",
+               Style);
+  verifyFormat("private class MyClass\n"
+               "{\n"
+               "  int a;\n"
+               "  int b;\n"
+               "}",
+               Style);
+
+  verifyFormat("interface MyInterface\n"
+               "{\n"
+               "  int a;\n"
+               "  int b;\n"
+               "}",
+               Style);
+  verifyFormat("internal interface MyInterface\n"
+               "{\n"
+               "  int a;\n"
+               "  int b;\n"
+               "}",
+               Style);
+  verifyFormat("public interface MyInterface\n"
+               "{\n"
+               "  int a;\n"
+               "  int b;\n"
+               "}",
+               Style);
+  verifyFormat("protected interface MyInterface\n"
+               "{\n"
+               "  int a;\n"
+               "  int b;\n"
+               "}",
+               Style);
+  verifyFormat("private interface MyInterface\n"
+               "{\n"
+               "  int a;\n"
+               "  int b;\n"
+               "}",
+               Style);
+  verifyFormat("/* Foo */ private interface MyInterface\n"
+               "{\n"
+               "  int a;\n"
+               "  int b;\n"
+               "}",
+               Style);
+  verifyFormat("/* Foo */ /* Bar */ private interface MyInterface\n"
+               "{\n"
+               "  int a;\n"
+               "  int b;\n"
+               "}",
+               Style);
 }
 
 } // namespace format
