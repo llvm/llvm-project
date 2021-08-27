@@ -23,7 +23,7 @@ func throwsClassError() throws {
 try throwsClassError()
 
 // CHECK: $E0: ClassError = {
-// CHECK:   Foundation.NSError = domain: "ClassError" - code: 10 {
+// CHECK:   NSError = domain: "ClassError" - code: 10 {
 // CHECK:     _userInfo = 0 key/value pairs
 // CHECK:   }
 // CHECK:   message = "Hello error"
