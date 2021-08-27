@@ -145,6 +145,10 @@ BCEAtom visitICmpLoadOperand(Value *const Val, BaseIdentifier &BaseId) {
     return {};
   }
   Value *const Addr = LoadI->getOperand(0);
+  if (Addr->getType()->getPointerAddressSpace() != 0) {
+    LLVM_DEBUG(dbgs() << "from non-zero AddressSpace\n");
+    return {};
+  }
   auto *const GEP = dyn_cast<GetElementPtrInst>(Addr);
   if (!GEP)
     return {};
