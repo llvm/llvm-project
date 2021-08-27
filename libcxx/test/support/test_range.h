@@ -62,10 +62,4 @@ struct test_view : std::ranges::view_base {
   sentinel end() const;
 };
 
-template<template<class...> class I, class R>
-constexpr auto make_archetype_range(R&& r) {
-  return std::ranges::subrange(I(std::ranges::begin(r)), sentinel_wrapper(std::ranges::end(r)));
-}
-
-
 #endif // LIBCXX_TEST_SUPPORT_TEST_RANGE_H
