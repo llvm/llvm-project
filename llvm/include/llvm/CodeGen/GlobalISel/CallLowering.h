@@ -116,6 +116,9 @@ public:
     /// vreg that the swifterror should be copied into after the call.
     Register SwiftErrorVReg;
 
+    /// Original IR callsite corresponding to this call, if available.
+    const CallBase *CB = nullptr;
+
     MDNode *KnownCallees = nullptr;
 
     /// True if the call must be tail call optimized.
