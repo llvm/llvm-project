@@ -84,20 +84,20 @@ static void addCmdArgs(const ArgList &Args, ArgStringList &CmdArgs,
 
 static bool checkForPropOpts(const ToolChain &TC, const Driver &D,
                              const ArgList &Args, ArgStringList &CmdArgs,
-                             bool isLLD, bool checkOnly) {
+                             bool isLLD, bool checkOnly, bool HasAltPath) {
   bool OFastEnabled = isOptimizationLevelFast(Args);
   bool ClosedToolChainNeeded = hasLlvmAoccOption(Args);
 
   // Enable -loop-unswitch-aggressive opt flag, only when
   // 1) -Ofast
   // 2) -floop-unswitch-aggressive
-  if (((ClosedToolChainNeeded && OFastEnabled &&
+  if (((ClosedToolChainNeeded && OFastEnabled && HasAltPath &&
         !Args.hasArg(options::OPT_fno_loop_unswitch_aggressive)) ||
        Args.hasArg(options::OPT_floop_unswitch_aggressive)) &&
       !hasOption(Args, Args.MakeArgString("-aggressive-loop-unswitch"))) {
     if (!checkOnly) {
-    CmdArgs.push_back("-mllvm");
-    CmdArgs.push_back("-aggressive-loop-unswitch");
+      CmdArgs.push_back("-mllvm");
+      CmdArgs.push_back("-aggressive-loop-unswitch");
     }
     ClosedToolChainNeeded = true;
   }
@@ -233,7 +233,7 @@ static bool checkForPropOpts(const ToolChain &TC, const Driver &D,
 	       !isLLD);
     ClosedToolChainNeeded = true;
   } else if (Arg *A = Args.getLastArg(options::OPT_march_EQ)) {
-    if (ClosedToolChainNeeded) {
+    if (ClosedToolChainNeeded && HasAltPath) {
       std::string CPU = getCPUName(Args, TC.getTriple());
       StringRef MArch = A->getValue();
 #define ZNVER1_MEMBLOCK_SIZE "8192"
@@ -267,7 +267,7 @@ static bool checkForPropOpts(const ToolChain &TC, const Driver &D,
     }
   }
   if (Arg *A = Args.getLastArg(options::OPT_march_EQ)) {
-    if (ClosedToolChainNeeded) {
+    if (ClosedToolChainNeeded && HasAltPath) {
       StringRef MArch = A->getValue();
       if (MArch == "znver1") {
       if (!checkOnly) {
@@ -292,7 +292,7 @@ static bool checkForPropOpts(const ToolChain &TC, const Driver &D,
                "-phi-elim-preserve-cmpjmp-glue=false");
     ClosedToolChainNeeded = true;
   } else if (Arg *A = Args.getLastArg(options::OPT_march_EQ)) {
-    if (ClosedToolChainNeeded) {
+    if (ClosedToolChainNeeded && HasAltPath) {
       StringRef MArch = A->getValue();
       if (MArch == "znver1" || MArch == "znver2" || MArch == "znver3") {
         addCmdArgs(Args, CmdArgs, isLLD, checkOnly, "-enable-branch-combine");
@@ -352,8 +352,8 @@ bool tools::checkForAMDProprietaryOptOptions(
   }
 
   // check for more AOCC options
-  ProprietaryToolChainNeeded |=
-      checkForPropOpts(TC, D, Args, CmdArgs, isLLD, checkOnly);
+  ProprietaryToolChainNeeded |= checkForPropOpts(
+      TC, D, Args, CmdArgs, isLLD, checkOnly, TC.getVFS().exists(AltPath));
 
   if (ProprietaryToolChainNeeded && !TC.getVFS().exists(AltPath)) {
     D.Diag(diag::warn_drv_amd_opt_not_found);
