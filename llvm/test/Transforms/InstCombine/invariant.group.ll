@@ -159,8 +159,8 @@ define i16 addrspace(42)* @skipWithDifferentTypesDifferentAddrspace(i8* %a) {
   ret i16 addrspace(42)* %a3
 }
 
-define i1 @icmp_launder(i8* %a) {
-; CHECK-LABEL: @icmp_launder(
+define i1 @icmp_null_launder(i8* %a) {
+; CHECK-LABEL: @icmp_null_launder(
 ; CHECK-NEXT:    [[A2:%.*]] = call i8* @llvm.launder.invariant.group.p0i8(i8* [[A:%.*]])
 ; CHECK-NEXT:    [[R:%.*]] = icmp eq i8* [[A2]], null
 ; CHECK-NEXT:    ret i1 [[R]]
@@ -170,8 +170,8 @@ define i1 @icmp_launder(i8* %a) {
   ret i1 %r
 }
 
-define i1 @icmp_strip(i8* %a) {
-; CHECK-LABEL: @icmp_strip(
+define i1 @icmp_null_strip(i8* %a) {
+; CHECK-LABEL: @icmp_null_strip(
 ; CHECK-NEXT:    [[A2:%.*]] = call i8* @llvm.strip.invariant.group.p0i8(i8* [[A:%.*]])
 ; CHECK-NEXT:    [[R:%.*]] = icmp eq i8* [[A2]], null
 ; CHECK-NEXT:    ret i1 [[R]]
@@ -181,8 +181,8 @@ define i1 @icmp_strip(i8* %a) {
   ret i1 %r
 }
 
-define i1 @icmp_launder_valid_null(i8* %a) #0 {
-; CHECK-LABEL: @icmp_launder_valid_null(
+define i1 @icmp_null_launder_valid_null(i8* %a) #0 {
+; CHECK-LABEL: @icmp_null_launder_valid_null(
 ; CHECK-NEXT:    [[A2:%.*]] = call i8* @llvm.launder.invariant.group.p0i8(i8* [[A:%.*]])
 ; CHECK-NEXT:    [[R:%.*]] = icmp eq i8* [[A2]], null
 ; CHECK-NEXT:    ret i1 [[R]]
@@ -192,8 +192,8 @@ define i1 @icmp_launder_valid_null(i8* %a) #0 {
   ret i1 %r
 }
 
-define i1 @icmp_strip_valid_null(i8* %a) #0 {
-; CHECK-LABEL: @icmp_strip_valid_null(
+define i1 @icmp_null_strip_valid_null(i8* %a) #0 {
+; CHECK-LABEL: @icmp_null_strip_valid_null(
 ; CHECK-NEXT:    [[A2:%.*]] = call i8* @llvm.strip.invariant.group.p0i8(i8* [[A:%.*]])
 ; CHECK-NEXT:    [[R:%.*]] = icmp eq i8* [[A2]], null
 ; CHECK-NEXT:    ret i1 [[R]]
@@ -204,14 +204,28 @@ define i1 @icmp_strip_valid_null(i8* %a) #0 {
 }
 
 ; Check that null always becomes the RHS
-define i1 @icmp_launder_lhs(i8* %a) {
-; CHECK-LABEL: @icmp_launder_lhs(
+define i1 @icmp_null_launder_lhs(i8* %a) {
+; CHECK-LABEL: @icmp_null_launder_lhs(
 ; CHECK-NEXT:    [[A2:%.*]] = call i8* @llvm.launder.invariant.group.p0i8(i8* [[A:%.*]])
 ; CHECK-NEXT:    [[R:%.*]] = icmp eq i8* [[A2]], null
 ; CHECK-NEXT:    ret i1 [[R]]
 ;
   %a2 = call i8* @llvm.launder.invariant.group.p0i8(i8* %a)
   %r = icmp eq i8* null, %a2
+  ret i1 %r
+}
+
+define i1 @icmp_null_launder_bitcasts(i32* %a) {
+; CHECK-LABEL: @icmp_null_launder_bitcasts(
+; CHECK-NEXT:    [[A2:%.*]] = bitcast i32* [[A:%.*]] to i8*
+; CHECK-NEXT:    [[A3:%.*]] = call i8* @llvm.launder.invariant.group.p0i8(i8* [[A2]])
+; CHECK-NEXT:    [[R:%.*]] = icmp eq i8* [[A3]], null
+; CHECK-NEXT:    ret i1 [[R]]
+;
+  %a2 = bitcast i32* %a to i8*
+  %a3 = call i8* @llvm.launder.invariant.group.p0i8(i8* %a2)
+  %a4 = bitcast i8* %a3 to i32*
+  %r = icmp eq i32* %a4, null
   ret i1 %r
 }
 
