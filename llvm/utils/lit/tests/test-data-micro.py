@@ -1,7 +1,7 @@
 # Test features related to formats which support reporting additional test data.
 # and multiple test results.
 
-# RUN: %{lit} -j 1 -v %{inputs}/test-data-micro | FileCheck %s
+# RUN: %{lit} -v %{inputs}/test-data-micro | FileCheck %s
 
 # CHECK: -- Testing:
 
