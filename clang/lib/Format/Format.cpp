@@ -664,7 +664,7 @@ template <> struct MappingTraits<FormatStyle> {
     const bool IsGoogleOrChromium = BasedOn.equals_insensitive("google") ||
                                     BasedOn.equals_insensitive("chromium");
     bool OnCurrentLine = IsGoogleOrChromium;
-    bool OnNextLine = IsGoogleOrChromium;
+    bool OnNextLine = true;
     IO.mapOptional("ConstructorInitializerAllOnOneLineOrOnePerLine",
                    OnCurrentLine);
     IO.mapOptional("AllowAllConstructorInitializersOnNextLine", OnNextLine);
