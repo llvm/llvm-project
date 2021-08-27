@@ -170,6 +170,7 @@ ELFLinkGraphBuilder<ELFT>::getSymbolLinkageAndScope(
     // Nothing to do here.
     break;
   case ELF::STB_WEAK:
+  case ELF::STB_GNU_UNIQUE:
     L = Linkage::Weak;
     break;
   default:
