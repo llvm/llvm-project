@@ -788,6 +788,7 @@ void IRSimilarityCandidate::createCanonicalRelationFrom(
       }
 
       assert(Found && "Could not find matching value for source GVN");
+      (void)Found;
 
     } else
       ResultGVN = *GVNMapping.second.begin();
