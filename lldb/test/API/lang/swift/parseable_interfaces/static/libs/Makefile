@@ -3,9 +3,9 @@
 DYLIB_NAME := $(BASENAME)
 DYLIB_SWIFT_SOURCES := libs/$(BASENAME).swift
 
-# Don't use the default swift flags, as we don't want -g for the libraries in
-# this test.
-SWIFTFLAGS=-Onone -Xfrontend -serialize-debugging-options -parse-as-library -enable-library-evolution
+# Don't use -g for the libraries in this test.
+DEBUG_INFO_FLAG :=
+SWIFTFLAGS_EXTRAS := -enable-library-evolution
 
 # Don't include the wrapped .swiftmodule on Linux to make sure we use
 # the .swiftinterface. The issue here is that if the .swiftmodule is wrapped
@@ -13,16 +13,14 @@ SWIFTFLAGS=-Onone -Xfrontend -serialize-debugging-options -parse-as-library -ena
 # .swiftinterface loading path can be exercised.
 EXCLUDE_WRAPPED_SWIFTMODULE=1
 
-# Activates the rules for generating a static lib based on the .o files
-# corresponding to the dylib swift sources above.
-ARCHIVE_NAME := lib$(BASENAME).a
-ARCHIVE_OBJECTS = $(strip $(DYLIB_SWIFT_SOURCES:.swift=.o))
-
-$(ARCHIVE_NAME): $(BASENAME).swiftmodule
-
 include Makefile.rules
 
-# Generate only the static lib (all would generate a dylib as well).
+# These are *not* Makefile.rules config variables.
+ARCHIVE_NAME := lib$(BASENAME).a
+ARCHIVE_OBJECTS := $(strip $(DYLIB_SWIFT_SOURCES:.swift=.o))
+$(ARCHIVE_NAME): $(ARCHIVE_OBJECTS) $(BASENAME).swiftmodule
+	$(AR) $(ARFLAGS) $@ $<
+
 static_only: $(ARCHIVE_NAME)
 
 clean::
