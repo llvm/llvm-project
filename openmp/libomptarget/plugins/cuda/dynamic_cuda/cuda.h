@@ -196,6 +196,13 @@ typedef enum CUcomputeMode_enum {
   CU_COMPUTEMODE_EXCLUSIVE_PROCESS = 3,
 } CUcompute_mode;
 
+typedef enum CUevent_flags_enum {
+  CU_EVENT_DEFAULT = 0x0,
+  CU_EVENT_BLOCKING_SYNC = 0x1,
+  CU_EVENT_DISABLE_TIMING = 0x2,
+  CU_EVENT_INTERPROCESS = 0x4
+} CUevent_flags;
+
 CUresult cuCtxGetDevice(CUdevice *);
 CUresult cuDeviceGet(CUdevice *, int);
 CUresult cuDeviceGetAttribute(int *, CUdevice_attribute, CUdevice);
