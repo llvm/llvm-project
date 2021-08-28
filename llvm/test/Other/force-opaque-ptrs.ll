@@ -3,6 +3,8 @@
 ; RUN: llvm-as < %s | llvm-dis --force-opaque-pointers | FileCheck %s
 ; RUN: opt --force-opaque-pointers < %s -S | FileCheck %s
 
+%ty = type i32*
+
 ; CHECK: @g = external global i16
 @g = external global i16
 
@@ -44,6 +46,14 @@ define void @f2(i32** %p) {
 define void @f3(i32 addrspace(1)* addrspace(2)* %p) {
 ; CHECK-LABEL: define {{[^@]+}}@f3
 ; CHECK-SAME: (ptr addrspace(2) [[P:%.*]]) {
+; CHECK-NEXT:    unreachable
+;
+  unreachable
+}
+
+define void @f4(%ty* %p) {
+; CHECK-LABEL: define {{[^@]+}}@f4
+; CHECK-SAME: (ptr [[P:%.*]]) {
 ; CHECK-NEXT:    unreachable
 ;
   unreachable
