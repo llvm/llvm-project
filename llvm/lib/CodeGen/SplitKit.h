@@ -160,14 +160,11 @@ private:
   /// NumThroughBlocks - Number of live-through blocks.
   unsigned NumThroughBlocks;
 
-  /// DidRepairRange - analyze was forced to shrinkToUses().
-  bool DidRepairRange;
-
   // Sumarize statistics by counting instructions using CurLI.
   void analyzeUses();
 
   /// calcLiveBlockInfo - Compute per-block information about CurLI.
-  bool calcLiveBlockInfo();
+  void calcLiveBlockInfo();
 
 public:
   SplitAnalysis(const VirtRegMap &vrm, const LiveIntervals &lis,
@@ -176,11 +173,6 @@ public:
   /// analyze - set CurLI to the specified interval, and analyze how it may be
   /// split.
   void analyze(const LiveInterval *li);
-
-  /// didRepairRange() - Returns true if CurLI was invalid and has been repaired
-  /// by analyze(). This really shouldn't happen, but sometimes the coalescer
-  /// can create live ranges that end in mid-air.
-  bool didRepairRange() const { return DidRepairRange; }
 
   /// clear - clear all data structures so SplitAnalysis is ready to analyze a
   /// new interval.
