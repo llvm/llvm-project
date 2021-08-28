@@ -70,7 +70,7 @@ func @affine_apply_wrong_result_count() {
 
 func @unknown_custom_op() {
 ^bb0:
-  %i = crazyThing() {value = 0} : () -> index  // expected-error {{custom op 'crazyThing' is unknown}}
+  %i = test.crazyThing() {value = 0} : () -> index  // expected-error {{custom op 'test.crazyThing' is unknown}}
   return
 }
 

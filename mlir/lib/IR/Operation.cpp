@@ -643,9 +643,13 @@ ParseResult OpState::parse(OpAsmParser &parser, OperationState &result) {
 // The fallback for the printer is to print in the generic assembly form.
 void OpState::print(Operation *op, OpAsmPrinter &p) { p.printGenericOp(op); }
 // The fallback for the printer is to print in the generic assembly form.
-void OpState::printOpName(Operation *op, OpAsmPrinter &p) {
+void OpState::printOpName(Operation *op, OpAsmPrinter &p,
+                          StringRef defaultDialect) {
   StringRef name = op->getName().getStringRef();
-  if (name.startswith("std."))
+  if (name.startswith((defaultDialect + ".").str()))
+    name = name.drop_front(defaultDialect.size() + 1);
+  // TODO: remove this special case.
+  else if (name.startswith("std."))
     name = name.drop_front(4);
   p.getStream() << name;
 }

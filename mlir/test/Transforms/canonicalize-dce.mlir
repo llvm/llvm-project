@@ -82,7 +82,7 @@ func @f(%arg0: f32, %pred: i1) {
 // CHECK-NEXT:     return
 
 func @f(%arg0: f32) {
-  func @g(%arg1: f32) {
+  builtin.func @g(%arg1: f32) {
     %0 = "std.addf"(%arg1, %arg1) : (f32, f32) -> f32
     return
   }

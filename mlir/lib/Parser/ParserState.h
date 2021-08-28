@@ -82,6 +82,13 @@ struct ParserState {
   /// An optional pointer to a struct containing high level parser state to be
   /// populated during parsing.
   AsmParserState *asmState;
+
+  // Contains the stack of default dialect to use when parsing regions.
+  // A new dialect get pushed to the stack before parsing regions nested
+  // under an operation implementing `OpAsmOpInterface`, and
+  // popped when done. At the top-level we start with "builtin" as the
+  // default, so that the top-level `module` operation parses as-is.
+  SmallVector<StringRef> defaultDialectStack{"builtin"};
 };
 
 } // end namespace detail

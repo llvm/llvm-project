@@ -263,7 +263,7 @@ func @for_negative_stride() {
 // -----
 
 func @non_operation() {
-  asd   // expected-error {{custom op 'asd' is unknown}}
+  test.asd   // expected-error {{custom op 'test.asd' is unknown}}
 }
 
 // -----

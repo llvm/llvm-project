@@ -18,6 +18,7 @@
 #include "mlir/Parser.h"
 #include "mlir/Parser/AsmParserState.h"
 #include "llvm/ADT/DenseMap.h"
+#include "llvm/ADT/ScopeExit.h"
 #include "llvm/ADT/StringSet.h"
 #include "llvm/ADT/bit.h"
 #include "llvm/Support/PrettyStackTrace.h"
@@ -1842,31 +1843,36 @@ private:
 Operation *
 OperationParser::parseCustomOperation(ArrayRef<ResultRecord> resultIDs) {
   llvm::SMLoc opLoc = getToken().getLoc();
-  StringRef opName = getTokenSpelling();
+  std::string opName = getTokenSpelling().str();
   auto *opDefinition = AbstractOperation::lookup(opName, getContext());
+  StringRef defaultDialect = getState().defaultDialectStack.back();
   Dialect *dialect = nullptr;
   if (opDefinition) {
     dialect = &opDefinition->dialect;
   } else {
-    if (opName.contains('.')) {
+    if (StringRef(opName).contains('.')) {
       // This op has a dialect, we try to check if we can register it in the
       // context on the fly.
-      StringRef dialectName = opName.split('.').first;
+      StringRef dialectName = StringRef(opName).split('.').first;
       dialect = getContext()->getLoadedDialect(dialectName);
       if (!dialect && (dialect = getContext()->getOrLoadDialect(dialectName)))
         opDefinition = AbstractOperation::lookup(opName, getContext());
     } else {
-      // If the operation name has no namespace prefix we treat it as a builtin
-      // or standard operation and prefix it with "builtin" or "std".
-      // TODO: Remove the special casing here.
-      opDefinition = AbstractOperation::lookup(Twine("builtin." + opName).str(),
-                                               getContext());
+      // If the operation name has no namespace prefix we lookup the current
+      // default dialect (set through OpAsmOpInterface).
+      opDefinition = AbstractOperation::lookup(
+          Twine(defaultDialect + "." + opName).str(), getContext());
       if (!opDefinition && getContext()->getOrLoadDialect("std")) {
         opDefinition = AbstractOperation::lookup(Twine("std." + opName).str(),
                                                  getContext());
       }
-      if (opDefinition)
-        opName = opDefinition->name.strref();
+      if (opDefinition) {
+        dialect = &opDefinition->dialect;
+        opName = opDefinition->name.str();
+      } else if (!defaultDialect.empty()) {
+        dialect = getContext()->getOrLoadDialect(defaultDialect);
+        opName = (defaultDialect + "." + opName).str();
+      }
     }
   }
 
@@ -1876,10 +1882,14 @@ OperationParser::parseCustomOperation(ArrayRef<ResultRecord> resultIDs) {
   function_ref<ParseResult(OpAsmParser &, OperationState &)> parseAssemblyFn;
   bool isIsolatedFromAbove = false;
 
+  defaultDialect = "";
   if (opDefinition) {
     parseAssemblyFn = opDefinition->getParseAssemblyFn();
     isIsolatedFromAbove =
         opDefinition->hasTrait<OpTrait::IsIsolatedFromAbove>();
+    auto *iface = opDefinition->getInterface<OpAsmOpInterface>();
+    if (iface && !iface->getDefaultDialect().empty())
+      defaultDialect = iface->getDefaultDialect();
   } else {
     Optional<Dialect::ParseOpHook> dialectHook;
     if (dialect)
@@ -1890,14 +1900,16 @@ OperationParser::parseCustomOperation(ArrayRef<ResultRecord> resultIDs) {
     }
     parseAssemblyFn = *dialectHook;
   }
+  getState().defaultDialectStack.push_back(defaultDialect);
+  auto restoreDefaultDialect = llvm::make_scope_exit(
+      [&]() { getState().defaultDialectStack.pop_back(); });
 
   consumeToken();
 
   // If the custom op parser crashes, produce some indication to help
   // debugging.
-  std::string opNameStr = opName.str();
   llvm::PrettyStackTraceFormat fmt("MLIR Parser: custom op parser '%s'",
-                                   opNameStr.c_str());
+                                   opName.c_str());
 
   // Get location information for the operation.
   auto srcLocation = getEncodedSourceLocation(opLoc);

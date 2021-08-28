@@ -77,7 +77,7 @@ public:
   using ParseAssemblyFn =
       llvm::unique_function<ParseResult(OpAsmParser &, OperationState &) const>;
   using PrintAssemblyFn =
-      llvm::unique_function<void(Operation *, OpAsmPrinter &) const>;
+      llvm::unique_function<void(Operation *, OpAsmPrinter &, StringRef) const>;
   using VerifyInvariantsFn =
       llvm::unique_function<LogicalResult(Operation *) const>;
 
@@ -97,8 +97,9 @@ public:
   const ParseAssemblyFn &getParseAssemblyFn() const { return parseAssemblyFn; }
 
   /// This hook implements the AsmPrinter for this operation.
-  void printAssembly(Operation *op, OpAsmPrinter &p) const {
-    return printAssemblyFn(op, p);
+  void printAssembly(Operation *op, OpAsmPrinter &p,
+                     StringRef defaultDialect) const {
+    return printAssemblyFn(op, p, defaultDialect);
   }
 
   /// This hook implements the verifier for this operation.  It should emits an
