@@ -292,7 +292,7 @@ These each perform their respective integer arithmetic on a scalar.
 
   %dst:_(s32) = G_ADD %src0:_(s32), %src1:_(s32)
 
-The above exmaple adds %src1 to %src0 and stores the result in %dst.
+The above example adds %src1 to %src0 and stores the result in %dst.
 
 G_SDIVREM, G_UDIVREM
 ^^^^^^^^^^^^^^^^^^^^

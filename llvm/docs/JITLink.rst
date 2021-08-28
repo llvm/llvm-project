@@ -1014,7 +1014,7 @@ with:
 The ``-harness`` option may be of interest to people who want to perform some
 very late testing on build products to verify that compiled code behaves as
 expected. On basic C test cases this is relatively straightforward. Mocks for
-more complicated languages (e.g. C++) are much tricker: Any code involving
+more complicated languages (e.g. C++) are much trickier: Any code involving
 classes tends to have a lot of non-trivial surface area (e.g. vtables) that
 would require great care to mock.
 
