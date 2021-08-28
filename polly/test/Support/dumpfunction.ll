@@ -22,7 +22,7 @@
 
 @callee_alias = dso_local unnamed_addr alias void(i32, double*, i32), void(i32, double*, i32 )* @callee
 
-define void @callee(i32 %n, double* noalias nonnull %A, i32 %i) {
+define internal void @callee(i32 %n, double* noalias nonnull %A, i32 %i) {
 entry:
   br label %for
 
@@ -49,7 +49,7 @@ return:
 }
 
 
-define void @caller(i32 %n, double* noalias nonnull %A) {
+define internal void @caller(i32 %n, double* noalias nonnull %A) {
 entry:
   br label %for
 

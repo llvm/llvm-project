@@ -43,8 +43,14 @@ static void runDumpFunction(llvm::Function &F, StringRef Suffix) {
     return GV == &F;
   };
   std::unique_ptr<Module> CM = CloneModule(*M, VMap, ShouldCloneDefinition);
+  Function *NewF = cast<Function>(VMap.lookup(&F));
+  assert(NewF && "Expected selected function to be cloned");
 
   LLVM_DEBUG(dbgs() << "Global DCE...\n");
+
+  // Stop F itself from being pruned
+  GlobalValue::LinkageTypes OrigLinkage = NewF->getLinkage();
+  NewF->setLinkage(GlobalValue::ExternalLinkage);
 
   {
     ModuleAnalysisManager MAM;
@@ -57,6 +63,9 @@ static void runDumpFunction(llvm::Function &F, StringRef Suffix) {
     MPM.addPass(StripDeadPrototypesPass());
     MPM.run(*CM, MAM);
   }
+
+  // Restore old linkage
+  NewF->setLinkage(OrigLinkage);
 
   LLVM_DEBUG(dbgs() << "Write to file '" << Dumpfile << "'...\n");
 
