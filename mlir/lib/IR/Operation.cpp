@@ -14,6 +14,7 @@
 #include "mlir/IR/PatternMatch.h"
 #include "mlir/IR/TypeUtilities.h"
 #include "mlir/Interfaces/FoldInterfaces.h"
+#include "llvm/ADT/StringExtras.h"
 #include <numeric>
 
 using namespace mlir;
@@ -641,6 +642,13 @@ ParseResult OpState::parse(OpAsmParser &parser, OperationState &result) {
 
 // The fallback for the printer is to print in the generic assembly form.
 void OpState::print(Operation *op, OpAsmPrinter &p) { p.printGenericOp(op); }
+// The fallback for the printer is to print in the generic assembly form.
+void OpState::printOpName(Operation *op, OpAsmPrinter &p) {
+  StringRef name = op->getName().getStringRef();
+  if (name.startswith("std."))
+    name = name.drop_front(4);
+  p.getStream() << name;
+}
 
 /// Emit an error about fatal conditions with this operation, reporting up to
 /// any diagnostic handlers that may be listening.
@@ -1167,6 +1175,24 @@ ParseResult impl::parseOneResultSameOperandTypeOp(OpAsmParser &parser,
                                                   OperationState &result) {
   SmallVector<OpAsmParser::OperandType, 2> ops;
   Type type;
+  // If the operand list is in-between parentheses, then we have a generic form.
+  // (see the fallback in `printOneResultOp`).
+  llvm::SMLoc loc = parser.getCurrentLocation();
+  if (!parser.parseOptionalLParen()) {
+    if (parser.parseOperandList(ops) || parser.parseRParen() ||
+        parser.parseOptionalAttrDict(result.attributes) ||
+        parser.parseColon() || parser.parseType(type))
+      return failure();
+    auto fnType = type.dyn_cast<FunctionType>();
+    if (!fnType) {
+      parser.emitError(loc, "expected function type");
+      return failure();
+    }
+    if (parser.resolveOperands(ops, fnType.getInputs(), loc, result.operands))
+      return failure();
+    result.addTypes(fnType.getResults());
+    return success();
+  }
   return failure(parser.parseOperandList(ops) ||
                  parser.parseOptionalAttrDict(result.attributes) ||
                  parser.parseColonType(type) ||
@@ -1182,11 +1208,11 @@ void impl::printOneResultOp(Operation *op, OpAsmPrinter &p) {
   auto resultType = op->getResult(0).getType();
   if (llvm::any_of(op->getOperandTypes(),
                    [&](Type type) { return type != resultType; })) {
-    p.printGenericOp(op);
+    p.printGenericOp(op, /*printOpName=*/false);
     return;
   }
 
-  p << op->getName() << ' ';
+  p << ' ';
   p.printOperands(op->getOperands());
   p.printOptionalAttrDict(op->getAttrs());
   // Now we can output only one type for all operands and the result.
@@ -1257,7 +1283,7 @@ ParseResult impl::parseCastOp(OpAsmParser &parser, OperationState &result) {
 }
 
 void impl::printCastOp(Operation *op, OpAsmPrinter &p) {
-  p << op->getName() << ' ' << op->getOperand(0);
+  p << ' ' << op->getOperand(0);
   p.printOptionalAttrDict(op->getAttrs());
   p << " : " << op->getOperand(0).getType() << " to "
     << op->getResult(0).getType();

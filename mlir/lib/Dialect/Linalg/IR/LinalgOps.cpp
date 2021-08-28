@@ -560,7 +560,7 @@ void GenericOp::build(
 }
 
 static void print(OpAsmPrinter &p, GenericOp op) {
-  p << op.getOperationName() << " ";
+  p << " ";
 
   // Print extra attributes.
   auto genericAttrNames = op.linalgTraitAttrNames();
@@ -1889,7 +1889,6 @@ LogicalResult TensorCollapseShapeOp::reifyResultShapes(
 //===----------------------------------------------------------------------===//
 
 static void print(OpAsmPrinter &p, linalg::YieldOp op) {
-  p << op.getOperationName();
   if (op.getNumOperands() > 0)
     p << ' ' << op.getOperands();
   p.printOptionalAttrDict(op->getAttrs());
@@ -2044,9 +2043,8 @@ void TiledLoopOp::build(OpBuilder &builder, OperationState &result,
 }
 
 static void print(OpAsmPrinter &p, TiledLoopOp op) {
-  p << op.getOperationName() << " (" << op.getInductionVars() << ") = ("
-    << op.lowerBound() << ") to (" << op.upperBound() << ") step (" << op.step()
-    << ")";
+  p << " (" << op.getInductionVars() << ") = (" << op.lowerBound() << ") to ("
+    << op.upperBound() << ") step (" << op.step() << ")";
 
   if (!op.inputs().empty()) {
     p << " ins (";
@@ -2339,8 +2337,8 @@ struct DimOfTiledLoopInsOutsFolder : public OpRewritePattern<OpTy> {
     auto src = dimOp.source().template dyn_cast<BlockArgument>();
     if (!src)
       return failure();
-    auto loopOp = dyn_cast<TiledLoopOp>(
-        src.getOwner()->getParent()->getParentOp());
+    auto loopOp =
+        dyn_cast<TiledLoopOp>(src.getOwner()->getParent()->getParentOp());
     if (!loopOp)
       return failure();
 
@@ -2897,7 +2895,6 @@ static void printNamedStructuredOpResults(OpAsmPrinter &p,
 
 template <typename NamedStructuredOpType>
 static void printNamedStructuredOp(OpAsmPrinter &p, NamedStructuredOpType op) {
-  p << op.getOperationName();
   p.printOptionalAttrDict(
       op->getAttrs(),
       /*elidedAttrs=*/{"operand_segment_sizes",

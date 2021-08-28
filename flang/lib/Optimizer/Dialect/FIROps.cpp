@@ -246,7 +246,7 @@ mlir::FunctionType fir::CallOp::getFunctionType() {
 static void printCallOp(mlir::OpAsmPrinter &p, fir::CallOp &op) {
   auto callee = op.callee();
   bool isDirect = callee.hasValue();
-  p << op.getOperationName() << ' ';
+  p << ' ';
   if (isDirect)
     p << callee.getValue();
   else
@@ -320,7 +320,7 @@ void fir::buildCmpFOp(OpBuilder &builder, OperationState &result,
 
 template <typename OPTY>
 static void printCmpOp(OpAsmPrinter &p, OPTY op) {
-  p << op.getOperationName() << ' ';
+  p << ' ';
   auto predSym = mlir::symbolizeCmpFPredicate(
       op->template getAttrOfType<mlir::IntegerAttr>(
             OPTY::getPredicateAttrName())
@@ -440,7 +440,7 @@ bool fir::ConvertOp::isPointerCompatible(mlir::Type ty) {
 //===----------------------------------------------------------------------===//
 
 static void print(mlir::OpAsmPrinter &p, fir::CoordinateOp op) {
-  p << op.getOperationName() << ' ' << op.ref() << ", " << op.coor();
+  p << ' ' << op.ref() << ", " << op.coor();
   p.printOptionalAttrDict(op->getAttrs(), /*elideAttrs=*/{"baseType"});
   p << " : ";
   p.printFunctionalType(op.getOperandTypes(), op->getResultTypes());
@@ -919,9 +919,8 @@ static mlir::LogicalResult verify(fir::IterWhileOp op) {
 }
 
 static void print(mlir::OpAsmPrinter &p, fir::IterWhileOp op) {
-  p << fir::IterWhileOp::getOperationName() << " (" << op.getInductionVar()
-    << " = " << op.lowerBound() << " to " << op.upperBound() << " step "
-    << op.step() << ") and (";
+  p << " (" << op.getInductionVar() << " = " << op.lowerBound() << " to "
+    << op.upperBound() << " step " << op.step() << ") and (";
   assert(op.hasIterOperands());
   auto regionArgs = op.getRegionIterArgs();
   auto operands = op.getIterOperands();
@@ -1151,8 +1150,8 @@ static mlir::LogicalResult verify(fir::DoLoopOp op) {
 
 static void print(mlir::OpAsmPrinter &p, fir::DoLoopOp op) {
   bool printBlockTerminators = false;
-  p << fir::DoLoopOp::getOperationName() << ' ' << op.getInductionVar() << " = "
-    << op.lowerBound() << " to " << op.upperBound() << " step " << op.step();
+  p << ' ' << op.getInductionVar() << " = " << op.lowerBound() << " to "
+    << op.upperBound() << " step " << op.step();
   if (op.unordered())
     p << " unordered";
   if (op.hasIterOperands()) {
@@ -1808,7 +1807,7 @@ static LogicalResult verify(fir::IfOp op) {
 
 static void print(mlir::OpAsmPrinter &p, fir::IfOp op) {
   bool printBlockTerminators = false;
-  p << fir::IfOp::getOperationName() << ' ' << op.condition();
+  p << ' ' << op.condition();
   if (!op.results().empty()) {
     p << " -> (" << op.getResultTypes() << ')';
     printBlockTerminators = true;
@@ -1878,7 +1877,7 @@ static void printBinaryOp(Operation *op, OpAsmPrinter &p) {
   assert(op->getNumOperands() == 2 && "binary op must have two operands");
   assert(op->getNumResults() == 1 && "binary op must have one result");
 
-  p << op->getName() << ' ' << op->getOperand(0) << ", " << op->getOperand(1);
+  p << ' ' << op->getOperand(0) << ", " << op->getOperand(1);
   p.printOptionalAttrDict(op->getAttrs());
   p << " : " << op->getResult(0).getType();
 }
@@ -1888,7 +1887,7 @@ static void printUnaryOp(Operation *op, OpAsmPrinter &p) {
   assert(op->getNumOperands() == 1 && "unary op must have one operand");
   assert(op->getNumResults() == 1 && "unary op must have one result");
 
-  p << op->getName() << ' ' << op->getOperand(0);
+  p << ' ' << op->getOperand(0);
   p.printOptionalAttrDict(op->getAttrs());
   p << " : " << op->getResult(0).getType();
 }

@@ -162,7 +162,7 @@ def ROCDL_MubufLoadOp :
   let parser = [{ return parseROCDLMubufLoadOp(parser, result); }];
   let printer = [{
     Operation *op = this->getOperation();
-    p << op->getName() << " " << op->getOperands()
+    p << " " << op->getOperands()
       << " : " << op->getResultTypes();
   }];
 }
@@ -184,7 +184,7 @@ def ROCDL_MubufStoreOp :
   let parser = [{ return parseROCDLMubufStoreOp(parser, result); }];
   let printer = [{
     Operation *op = this->getOperation();
-    p << op->getName() << " " << op->getOperands()
+    p << " " << op->getOperands()
       << " : " << vdata().getType();
   }];
 }

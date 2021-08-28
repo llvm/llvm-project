@@ -382,7 +382,7 @@ public:
 
 private:
   /// Print the given operation in the generic form.
-  void printGenericOp(Operation *op) override {
+  void printGenericOp(Operation *op, bool printOpName = true) override {
     // Consider nested operations for aliases.
     if (op->getNumRegions() != 0) {
       for (Region &region : op->getRegions())
@@ -2318,7 +2318,7 @@ public:
   /// Print the bare location, not including indentation/location/etc.
   void printOperation(Operation *op);
   /// Print the given operation in the generic form.
-  void printGenericOp(Operation *op) override;
+  void printGenericOp(Operation *op, bool printOpName) override;
 
   /// Print the name of the given block.
   void printBlockName(Block *block);
@@ -2509,6 +2509,10 @@ void OperationPrinter::printOperation(Operation *op) {
     // Otherwise try to dispatch to the dialect, if available.
     if (Dialect *dialect = op->getDialect()) {
       if (auto opPrinter = dialect->getOperationPrinter(op)) {
+        // Print the op name first.
+        StringRef name = op->getName().getStringRef();
+        printEscapedString(name, os);
+        // Print the rest of the op now.
         opPrinter(op, *this);
         return;
       }
@@ -2516,13 +2520,16 @@ void OperationPrinter::printOperation(Operation *op) {
   }
 
   // Otherwise print with the generic assembly form.
-  printGenericOp(op);
+  printGenericOp(op, /*printOpName=*/true);
 }
 
-void OperationPrinter::printGenericOp(Operation *op) {
-  os << '"';
-  printEscapedString(op->getName().getStringRef(), os);
-  os << "\"(";
+void OperationPrinter::printGenericOp(Operation *op, bool printOpName) {
+  if (printOpName) {
+    os << '"';
+    printEscapedString(op->getName().getStringRef(), os);
+    os << '"';
+  }
+  os << '(';
   interleaveComma(op->getOperands(), [&](Value value) { printValueID(value); });
   os << ')';
 
