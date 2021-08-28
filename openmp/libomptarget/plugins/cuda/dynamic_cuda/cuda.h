@@ -22,6 +22,7 @@ typedef struct CUmod_st *CUmodule;
 typedef struct CUctx_st *CUcontext;
 typedef struct CUfunc_st *CUfunction;
 typedef struct CUstream_st *CUstream;
+typedef struct CUevent_st *CUevent;
 
 typedef enum cudaError_enum {
   CUDA_SUCCESS = 0,
@@ -247,5 +248,11 @@ CUresult cuMemcpyPeerAsync(CUdeviceptr, CUcontext, CUdeviceptr, CUcontext,
 
 CUresult cuCtxGetLimit(size_t *, CUlimit);
 CUresult cuCtxSetLimit(CUlimit, size_t);
+
+CUresult cuEventCreate(CUevent *, unsigned int);
+CUresult cuEventRecord(CUevent, CUstream);
+CUresult cuStreamWaitEvent(CUstream, CUevent, unsigned int);
+CUresult cuEventSynchronize(CUevent);
+CUresult cuEventDestroy(CUevent);
 
 #endif
