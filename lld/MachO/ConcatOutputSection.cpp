@@ -126,7 +126,8 @@ bool ConcatOutputSection::needsThunks() const {
   uint64_t isecAddr = addr;
   for (InputSection *isec : inputs)
     isecAddr = alignTo(isecAddr, isec->align) + isec->getSize();
-  if (isecAddr - addr + in.stubs->getSize() <= target->branchRange)
+  if (isecAddr - addr + in.stubs->getSize() <=
+      std::min(target->backwardBranchRange, target->forwardBranchRange))
     return false;
   // Yes, this program is large enough to need thunks.
   for (InputSection *isec : inputs) {
@@ -153,7 +154,6 @@ bool ConcatOutputSection::needsThunks() const {
 // Since __stubs is placed after __text, we must estimate the address
 // beyond which stubs are within range of a simple forward branch.
 uint64_t ConcatOutputSection::estimateStubsInRangeVA(size_t callIdx) const {
-  uint64_t branchRange = target->branchRange;
   size_t endIdx = inputs.size();
   ConcatInputSection *isec = inputs[callIdx];
   uint64_t isecVA = isec->getVA();
@@ -174,15 +174,16 @@ uint64_t ConcatOutputSection::estimateStubsInRangeVA(size_t callIdx) const {
   }
   // Estimate the address after which call sites can safely call stubs
   // directly rather than through intermediary thunks.
+  uint64_t forwardBranchRange = target->forwardBranchRange;
   uint64_t stubsInRangeVA = isecEnd + maxPotentialThunks * target->thunkSize +
-                            in.stubs->getSize() - branchRange;
+                            in.stubs->getSize() - forwardBranchRange;
   log("thunks = " + std::to_string(thunkMap.size()) +
       ", potential = " + std::to_string(maxPotentialThunks) +
       ", stubs = " + std::to_string(in.stubs->getSize()) + ", isecVA = " +
       to_hexString(isecVA) + ", threshold = " + to_hexString(stubsInRangeVA) +
       ", isecEnd = " + to_hexString(isecEnd) +
       ", tail = " + to_hexString(isecEnd - isecVA) +
-      ", slop = " + to_hexString(branchRange - (isecEnd - isecVA)));
+      ", slop = " + to_hexString(forwardBranchRange - (isecEnd - isecVA)));
   return stubsInRangeVA;
 }
 
@@ -206,7 +207,8 @@ void ConcatOutputSection::finalize() {
     return;
   }
 
-  uint64_t branchRange = target->branchRange;
+  uint64_t forwardBranchRange = target->forwardBranchRange;
+  uint64_t backwardBranchRange = target->backwardBranchRange;
   uint64_t stubsInRangeVA = TargetInfo::outOfRangeVA;
   size_t thunkSize = target->thunkSize;
   size_t relocCount = 0;
@@ -225,8 +227,8 @@ void ConcatOutputSection::finalize() {
     assert(isec->isFinal);
     uint64_t isecVA = isec->getVA();
     // Assign addresses up-to the forward branch-range limit
-    while (finalIdx < endIdx &&
-           isecAddr + inputs[finalIdx]->getSize() < isecVA + branchRange)
+    while (finalIdx < endIdx && isecAddr + inputs[finalIdx]->getSize() <
+                                    isecVA + forwardBranchRange - thunkSize)
       finalizeOne(inputs[finalIdx++]);
     if (isec->callSiteCount == 0)
       continue;
@@ -254,8 +256,9 @@ void ConcatOutputSection::finalize() {
       ++callSiteCount;
       // Calculate branch reachability boundaries
       uint64_t callVA = isecVA + r.offset;
-      uint64_t lowVA = branchRange < callVA ? callVA - branchRange : 0;
-      uint64_t highVA = callVA + branchRange;
+      uint64_t lowVA =
+          backwardBranchRange < callVA ? callVA - backwardBranchRange : 0;
+      uint64_t highVA = callVA + forwardBranchRange;
       // Calculate our call referent address
       auto *funcSym = r.referent.get<Symbol *>();
       ThunkInfo &thunkInfo = thunkMap[funcSym];
@@ -267,7 +270,7 @@ void ConcatOutputSection::finalize() {
       }
       uint64_t funcVA = funcSym->resolveBranchVA();
       ++thunkInfo.callSitesUsed;
-      if (lowVA < funcVA && funcVA < highVA) {
+      if (lowVA <= funcVA && funcVA <= highVA) {
         // The referent is reachable with a simple call instruction.
         continue;
       }
@@ -276,7 +279,7 @@ void ConcatOutputSection::finalize() {
       // If an existing thunk is reachable, use it ...
       if (thunkInfo.sym) {
         uint64_t thunkVA = thunkInfo.isec->getVA();
-        if (lowVA < thunkVA && thunkVA < highVA) {
+        if (lowVA <= thunkVA && thunkVA <= highVA) {
           r.referent = thunkInfo.sym;
           continue;
         }
