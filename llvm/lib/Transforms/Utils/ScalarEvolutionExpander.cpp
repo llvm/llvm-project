@@ -1581,14 +1581,9 @@ Value *SCEVExpander::visitAddRecExpr(const SCEVAddRecExpr *S) {
     ExposePointerBase(Base, ExposedRest, SE);
     // If we found a pointer, expand the AddRec with a GEP.
     if (PointerType *PTy = dyn_cast<PointerType>(Base->getType())) {
-      // Make sure the Base isn't something exotic, such as a multiplied
-      // or divided pointer value. In those cases, the result type isn't
-      // actually a pointer type.
-      if (!isa<SCEVMulExpr>(Base) && !isa<SCEVUDivExpr>(Base)) {
-        Value *StartV = expand(Base);
-        assert(StartV->getType() == PTy && "Pointer type mismatch for GEP!");
-        return expandAddToGEP(ExposedRest, PTy, Ty, StartV);
-      }
+      Value *StartV = expand(Base);
+      assert(StartV->getType() == PTy && "Pointer type mismatch for GEP!");
+      return expandAddToGEP(ExposedRest, PTy, Ty, StartV);
     }
 
     // Just do a normal add. Pre-expand the operands to suppress folding.
