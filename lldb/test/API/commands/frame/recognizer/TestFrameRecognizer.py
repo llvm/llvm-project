@@ -205,6 +205,64 @@ class FrameRecognizerTestCase(TestBase):
         self.expect("frame recognizer info 0",
                     substrs=['frame 0 is recognized by recognizer.MyFrameRecognizer'])
 
+    @skipUnlessDarwin
+    def test_frame_recognizer_not_only_first_instruction(self):
+        self.build()
+        exe = self.getBuildArtifact("a.out")
+
+        # Clear internal & plugins recognizers that get initialized at launch.
+        self.runCmd("frame recognizer clear")
+
+        self.runCmd("command script import " + os.path.join(self.getSourceDir(), "recognizer.py"))
+
+        self.expect("frame recognizer list",
+                    substrs=['no matching results found.'])
+
+        # Create a target.
+        target, process, thread, _ = lldbutil.run_to_name_breakpoint(self, "foo",
+                                                                 exe_name = exe)
+
+        # Move the PC one instruction further.
+        self.runCmd("next")
+
+        # Add a frame recognizer in that target.
+        self.runCmd("frame recognizer add -l recognizer.MyFrameRecognizer -s a.out -n foo -n bar")
+
+        # It's not applied to foo(), because frame's PC is not at the first instruction of the function.
+        self.expect("frame recognizer info 0",
+                    substrs=['frame 0 not recognized by any recognizer'])
+
+        # Add a frame recognizer with --first-instruction-only=true.
+        self.runCmd("frame recognizer clear")
+
+        self.runCmd("frame recognizer add -l recognizer.MyFrameRecognizer -s a.out -n foo -n bar --first-instruction-only=true")
+
+        # It's not applied to foo(), because frame's PC is not at the first instruction of the function.
+        self.expect("frame recognizer info 0",
+                    substrs=['frame 0 not recognized by any recognizer'])
+
+        # Now add a frame recognizer with --first-instruction-only=false.
+        self.runCmd("frame recognizer clear")
+
+        self.runCmd("frame recognizer add -l recognizer.MyFrameRecognizer -s a.out -n foo -n bar --first-instruction-only=false")
+
+        # This time it should recognize the frame.
+        self.expect("frame recognizer info 0",
+                    substrs=['frame 0 is recognized by recognizer.MyFrameRecognizer'])
+
+        opts = lldb.SBVariablesOptions()
+        opts.SetIncludeRecognizedArguments(True)
+        frame = thread.GetSelectedFrame()
+        variables = frame.GetVariables(opts)
+
+        self.assertEqual(variables.GetSize(), 2)
+        self.assertEqual(variables.GetValueAtIndex(0).name, "a")
+        self.assertEqual(variables.GetValueAtIndex(0).signed, 42)
+        self.assertEqual(variables.GetValueAtIndex(0).GetValueType(), lldb.eValueTypeVariableArgument)
+        self.assertEqual(variables.GetValueAtIndex(1).name, "b")
+        self.assertEqual(variables.GetValueAtIndex(1).signed, 56)
+        self.assertEqual(variables.GetValueAtIndex(1).GetValueType(), lldb.eValueTypeVariableArgument)
+
     @no_debug_info_test
     def test_frame_recognizer_delete_invalid_arg(self):
         self.expect("frame recognizer delete a", error=True,
@@ -226,3 +284,12 @@ class FrameRecognizerTestCase(TestBase):
                     substrs=["error: '-1' is not a valid frame index."])
         self.expect("frame recognizer info 4294967297", error=True,
                     substrs=["error: '4294967297' is not a valid frame index."])
+
+    @no_debug_info_test
+    def test_frame_recognizer_add_invalid_arg(self):
+        self.expect("frame recognizer add -f", error=True,
+                    substrs=["error: last option requires an argument"])
+        self.expect("frame recognizer add -f -1", error=True,
+                    substrs=["error: invalid boolean value '-1' passed for -f option"])
+        self.expect("frame recognizer add -f foo", error=True,
+                    substrs=["error: invalid boolean value 'foo' passed for -f option"])

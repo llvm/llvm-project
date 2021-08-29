@@ -14,6 +14,7 @@
 #include "lldb/Host/OptionParser.h"
 #include "lldb/Interpreter/CommandInterpreter.h"
 #include "lldb/Interpreter/CommandReturnObject.h"
+#include "lldb/Interpreter/OptionArgParser.h"
 #include "lldb/Interpreter/OptionGroupFormat.h"
 #include "lldb/Interpreter/OptionGroupValueObjectDisplay.h"
 #include "lldb/Interpreter/OptionGroupVariable.h"
@@ -739,6 +740,17 @@ private:
       const int short_option = m_getopt_table[option_idx].val;
 
       switch (short_option) {
+      case 'f': {
+        bool value, success;
+        value = OptionArgParser::ToBoolean(option_arg, true, &success);
+        if (success) {
+          m_first_instruction_only = value;
+        } else {
+          error.SetErrorStringWithFormat(
+              "invalid boolean value '%s' passed for -f option",
+              option_arg.str().c_str());
+        }
+      } break;
       case 'l':
         m_class_name = std::string(option_arg);
         break;
@@ -763,6 +775,7 @@ private:
       m_symbols.clear();
       m_class_name = "";
       m_regex = false;
+      m_first_instruction_only = true;
     }
 
     llvm::ArrayRef<OptionDefinition> GetDefinitions() override {
@@ -774,6 +787,7 @@ private:
     std::string m_module;
     std::vector<std::string> m_symbols;
     bool m_regex;
+    bool m_first_instruction_only;
   };
 
   CommandOptions m_options;
@@ -883,13 +897,13 @@ bool CommandObjectFrameRecognizerAdd::DoExecute(Args &command,
     auto func =
         RegularExpressionSP(new RegularExpression(m_options.m_symbols.front()));
     GetSelectedOrDummyTarget().GetFrameRecognizerManager().AddRecognizer(
-        recognizer_sp, module, func);
+        recognizer_sp, module, func, m_options.m_first_instruction_only);
   } else {
     auto module = ConstString(m_options.m_module);
     std::vector<ConstString> symbols(m_options.m_symbols.begin(),
                                      m_options.m_symbols.end());
     GetSelectedOrDummyTarget().GetFrameRecognizerManager().AddRecognizer(
-        recognizer_sp, module, symbols);
+        recognizer_sp, module, symbols, m_options.m_first_instruction_only);
   }
 #endif
 
