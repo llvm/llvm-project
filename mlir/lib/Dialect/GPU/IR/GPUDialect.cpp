@@ -1091,6 +1091,44 @@ LogicalResult MemcpyOp::fold(ArrayRef<Attribute> operands,
   return foldMemRefCast(*this);
 }
 
+//===----------------------------------------------------------------------===//
+// GPU_AllocOp
+//===----------------------------------------------------------------------===//
+namespace {
+
+/// Folding of memref.dim(gpu.alloc(%size), %idx) -> %size similar to
+/// `memref::AllocOp`.
+struct SimplifyDimOfAllocOp : public OpRewritePattern<memref::DimOp> {
+  using OpRewritePattern<memref::DimOp>::OpRewritePattern;
+
+  LogicalResult matchAndRewrite(memref::DimOp dimOp,
+                                PatternRewriter &rewriter) const override {
+    auto index = dimOp.index().getDefiningOp<ConstantIndexOp>();
+    if (!index)
+      return failure();
+
+    auto memrefType = dimOp.source().getType().dyn_cast<MemRefType>();
+    if (!memrefType || !memrefType.isDynamicDim(index.getValue()))
+      return failure();
+
+    auto alloc = dimOp.source().getDefiningOp<AllocOp>();
+    if (!alloc)
+      return failure();
+
+    Value substituteOp = *(alloc.dynamicSizes().begin() +
+                           memrefType.getDynamicDimIndex(index.getValue()));
+    rewriter.replaceOp(dimOp, substituteOp);
+    return success();
+  }
+};
+
+} // end anonymous namespace.
+
+void AllocOp::getCanonicalizationPatterns(RewritePatternSet &results,
+                                          MLIRContext *context) {
+  results.add<SimplifyDimOfAllocOp>(context);
+}
+
 #include "mlir/Dialect/GPU/GPUOpInterfaces.cpp.inc"
 
 #define GET_OP_CLASSES
