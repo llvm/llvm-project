@@ -911,7 +911,6 @@ static void addPltEntry(PltSection *plt, GotPltSection *gotPlt,
 static void addGotEntry(Symbol &sym) {
   in.got->addEntry(sym);
 
-  RelExpr expr = sym.isTls() ? R_TPREL : R_ABS;
   uint64_t off = sym.getGotOffset();
 
   // If a GOT slot value can be calculated at link-time, which is now,
@@ -924,19 +923,28 @@ static void addGotEntry(Symbol &sym) {
   bool isLinkTimeConstant =
       !sym.isPreemptible && (!config->isPic || isAbsolute(sym));
   if (isLinkTimeConstant) {
-    in.got->relocations.push_back({expr, target->symbolicRel, off, 0, &sym});
+    in.got->relocations.push_back({R_ABS, target->symbolicRel, off, 0, &sym});
     return;
   }
 
   // Otherwise, we emit a dynamic relocation to .rel[a].dyn so that
   // the GOT slot will be fixed at load-time.
-  if (!sym.isTls() && !sym.isPreemptible && config->isPic) {
+  if (sym.isPreemptible)
+    mainPart->relaDyn->addReloc({target->gotRel, in.got, off,
+                                 DynamicReloc::AgainstSymbol, sym, 0, R_ABS});
+  else
     addRelativeReloc(in.got, off, sym, 0, R_ABS, target->symbolicRel);
+}
+
+static void addTpOffsetGotEntry(Symbol &sym) {
+  in.got->addEntry(sym);
+  uint64_t off = sym.getGotOffset();
+  if (!sym.isPreemptible && !config->isPic) {
+    in.got->relocations.push_back({R_TPREL, target->symbolicRel, off, 0, &sym});
     return;
   }
   mainPart->relaDyn->addAddendOnlyRelocIfNonPreemptible(
-      sym.isTls() ? target->tlsGotRel : target->gotRel, in.got, off, sym,
-      target->symbolicRel);
+      target->tlsGotRel, in.got, off, sym, target->symbolicRel);
 }
 
 // Return true if we can define a symbol in the executable that
@@ -1286,17 +1294,22 @@ handleTlsRelocation(RelType type, Symbol &sym, InputSectionBase &c,
     return target->getTlsGdRelaxSkip(type);
   }
 
-  // Initial-Exec relocs can be relaxed to Local-Exec if the symbol is locally
-  // defined.
   if (oneof<R_GOT, R_GOTPLT, R_GOT_PC, R_AARCH64_GOT_PAGE_PC, R_GOT_OFF,
-            R_TLSIE_HINT>(expr) &&
-      toExecRelax && isLocalInExecutable) {
-    c.relocations.push_back({R_RELAX_TLS_IE_TO_LE, type, offset, addend, &sym});
+            R_TLSIE_HINT>(expr)) {
+    // Initial-Exec relocs can be relaxed to Local-Exec if the symbol is locally
+    // defined.
+    if (toExecRelax && isLocalInExecutable) {
+      c.relocations.push_back(
+          {R_RELAX_TLS_IE_TO_LE, type, offset, addend, &sym});
+    } else if (expr != R_TLSIE_HINT) {
+      if (!sym.isInGot())
+        addTpOffsetGotEntry(sym);
+      // R_GOT may not be a link-time constant.
+      processRelocAux<ELFT>(c, expr, type, offset, sym, addend);
+    }
     return 1;
   }
 
-  if (expr == R_TLSIE_HINT)
-    return 1;
   return 0;
 }
 
