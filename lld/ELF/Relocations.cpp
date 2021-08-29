@@ -156,183 +156,6 @@ template <RelExpr... Exprs> bool oneof(RelExpr expr) {
   return (uint64_t(1) << expr) & RelExprMaskBuilder<Exprs...>::build();
 }
 
-// This function is similar to the `handleTlsRelocation`. MIPS does not
-// support any relaxations for TLS relocations so by factoring out MIPS
-// handling in to the separate function we can simplify the code and do not
-// pollute other `handleTlsRelocation` by MIPS `ifs` statements.
-// Mips has a custom MipsGotSection that handles the writing of GOT entries
-// without dynamic relocations.
-static unsigned handleMipsTlsRelocation(RelType type, Symbol &sym,
-                                        InputSectionBase &c, uint64_t offset,
-                                        int64_t addend, RelExpr expr) {
-  if (expr == R_MIPS_TLSLD) {
-    in.mipsGot->addTlsIndex(*c.file);
-    c.relocations.push_back({expr, type, offset, addend, &sym});
-    return 1;
-  }
-  if (expr == R_MIPS_TLSGD) {
-    in.mipsGot->addDynTlsEntry(*c.file, sym);
-    c.relocations.push_back({expr, type, offset, addend, &sym});
-    return 1;
-  }
-  return 0;
-}
-
-// Notes about General Dynamic and Local Dynamic TLS models below. They may
-// require the generation of a pair of GOT entries that have associated dynamic
-// relocations. The pair of GOT entries created are of the form GOT[e0] Module
-// Index (Used to find pointer to TLS block at run-time) GOT[e1] Offset of
-// symbol in TLS block.
-//
-// Returns the number of relocations processed.
-template <class ELFT>
-static unsigned
-handleTlsRelocation(RelType type, Symbol &sym, InputSectionBase &c,
-                    typename ELFT::uint offset, int64_t addend, RelExpr expr) {
-  if (!sym.isTls())
-    return 0;
-
-  if (config->emachine == EM_MIPS)
-    return handleMipsTlsRelocation(type, sym, c, offset, addend, expr);
-
-  if (oneof<R_AARCH64_TLSDESC_PAGE, R_TLSDESC, R_TLSDESC_CALL, R_TLSDESC_PC>(
-          expr) &&
-      config->shared) {
-    if (in.got->addDynTlsEntry(sym)) {
-      uint64_t off = in.got->getGlobalDynOffset(sym);
-      mainPart->relaDyn->addAddendOnlyRelocIfNonPreemptible(
-          target->tlsDescRel, in.got, off, sym, target->tlsDescRel);
-    }
-    if (expr != R_TLSDESC_CALL)
-      c.relocations.push_back({expr, type, offset, addend, &sym});
-    return 1;
-  }
-
-  // ARM, Hexagon and RISC-V do not support GD/LD to IE/LE relaxation.  For
-  // PPC64, if the file has missing R_PPC64_TLSGD/R_PPC64_TLSLD, disable
-  // relaxation as well.
-  bool toExecRelax = !config->shared && config->emachine != EM_ARM &&
-                     config->emachine != EM_HEXAGON &&
-                     config->emachine != EM_RISCV &&
-                     !c.file->ppc64DisableTLSRelax;
-
-  // If we are producing an executable and the symbol is non-preemptable, it
-  // must be defined and the code sequence can be relaxed to use Local-Exec.
-  //
-  // ARM and RISC-V do not support any relaxations for TLS relocations, however,
-  // we can omit the DTPMOD dynamic relocations and resolve them at link time
-  // because them are always 1. This may be necessary for static linking as
-  // DTPMOD may not be expected at load time.
-  bool isLocalInExecutable = !sym.isPreemptible && !config->shared;
-
-  // Local Dynamic is for access to module local TLS variables, while still
-  // being suitable for being dynamically loaded via dlopen. GOT[e0] is the
-  // module index, with a special value of 0 for the current module. GOT[e1] is
-  // unused. There only needs to be one module index entry.
-  if (oneof<R_TLSLD_GOT, R_TLSLD_GOTPLT, R_TLSLD_PC, R_TLSLD_HINT>(
-          expr)) {
-    // Local-Dynamic relocs can be relaxed to Local-Exec.
-    if (toExecRelax) {
-      c.relocations.push_back(
-          {target->adjustTlsExpr(type, R_RELAX_TLS_LD_TO_LE), type, offset,
-           addend, &sym});
-      return target->getTlsGdRelaxSkip(type);
-    }
-    if (expr == R_TLSLD_HINT)
-      return 1;
-    if (in.got->addTlsIndex()) {
-      if (isLocalInExecutable)
-        in.got->relocations.push_back(
-            {R_ADDEND, target->symbolicRel, in.got->getTlsIndexOff(), 1, &sym});
-      else
-        mainPart->relaDyn->addReloc(
-            {target->tlsModuleIndexRel, in.got, in.got->getTlsIndexOff()});
-    }
-    c.relocations.push_back({expr, type, offset, addend, &sym});
-    return 1;
-  }
-
-  // Local-Dynamic relocs can be relaxed to Local-Exec.
-  if (expr == R_DTPREL && toExecRelax) {
-    c.relocations.push_back({target->adjustTlsExpr(type, R_RELAX_TLS_LD_TO_LE),
-                             type, offset, addend, &sym});
-    return 1;
-  }
-
-  // Local-Dynamic sequence where offset of tls variable relative to dynamic
-  // thread pointer is stored in the got. This cannot be relaxed to Local-Exec.
-  if (expr == R_TLSLD_GOT_OFF) {
-    if (!sym.isInGot()) {
-      in.got->addEntry(sym);
-      uint64_t off = sym.getGotOffset();
-      in.got->relocations.push_back(
-          {R_ABS, target->tlsOffsetRel, off, 0, &sym});
-    }
-    c.relocations.push_back({expr, type, offset, addend, &sym});
-    return 1;
-  }
-
-  if (oneof<R_AARCH64_TLSDESC_PAGE, R_TLSDESC, R_TLSDESC_CALL, R_TLSDESC_PC,
-            R_TLSGD_GOT, R_TLSGD_GOTPLT, R_TLSGD_PC>(expr)) {
-    if (!toExecRelax) {
-      if (in.got->addDynTlsEntry(sym)) {
-        uint64_t off = in.got->getGlobalDynOffset(sym);
-
-        if (isLocalInExecutable)
-          // Write one to the GOT slot.
-          in.got->relocations.push_back(
-              {R_ADDEND, target->symbolicRel, off, 1, &sym});
-        else
-          mainPart->relaDyn->addSymbolReloc(target->tlsModuleIndexRel, in.got,
-                                            off, sym);
-
-        // If the symbol is preemptible we need the dynamic linker to write
-        // the offset too.
-        uint64_t offsetOff = off + config->wordsize;
-        if (sym.isPreemptible)
-          mainPart->relaDyn->addSymbolReloc(target->tlsOffsetRel, in.got,
-                                            offsetOff, sym);
-        else
-          in.got->relocations.push_back(
-              {R_ABS, target->tlsOffsetRel, offsetOff, 0, &sym});
-      }
-      c.relocations.push_back({expr, type, offset, addend, &sym});
-      return 1;
-    }
-
-    // Global-Dynamic relocs can be relaxed to Initial-Exec or Local-Exec
-    // depending on the symbol being locally defined or not.
-    if (sym.isPreemptible) {
-      c.relocations.push_back(
-          {target->adjustTlsExpr(type, R_RELAX_TLS_GD_TO_IE), type, offset,
-           addend, &sym});
-      if (!sym.isInGot()) {
-        in.got->addEntry(sym);
-        mainPart->relaDyn->addSymbolReloc(target->tlsGotRel, in.got,
-                                          sym.getGotOffset(), sym);
-      }
-    } else {
-      c.relocations.push_back(
-          {target->adjustTlsExpr(type, R_RELAX_TLS_GD_TO_LE), type, offset,
-           addend, &sym});
-    }
-    return target->getTlsGdRelaxSkip(type);
-  }
-
-  // Initial-Exec relocs can be relaxed to Local-Exec if the symbol is locally
-  // defined.
-  if (oneof<R_GOT, R_GOTPLT, R_GOT_PC, R_AARCH64_GOT_PAGE_PC, R_GOT_OFF,
-            R_TLSIE_HINT>(expr) &&
-      toExecRelax && isLocalInExecutable) {
-    c.relocations.push_back({R_RELAX_TLS_IE_TO_LE, type, offset, addend, &sym});
-    return 1;
-  }
-
-  if (expr == R_TLSIE_HINT)
-    return 1;
-  return 0;
-}
-
 static RelType getMipsPairType(RelType type, bool isLocal) {
   switch (type) {
   case R_MIPS_HI16:
@@ -1298,6 +1121,183 @@ static void processRelocAux(InputSectionBase &sec, RelExpr expr, RelType type,
 
   errorOrWarn("symbol '" + toString(sym) + "' has no type" +
               getLocation(sec, sym, offset));
+}
+
+// This function is similar to the `handleTlsRelocation`. MIPS does not
+// support any relaxations for TLS relocations so by factoring out MIPS
+// handling in to the separate function we can simplify the code and do not
+// pollute other `handleTlsRelocation` by MIPS `ifs` statements.
+// Mips has a custom MipsGotSection that handles the writing of GOT entries
+// without dynamic relocations.
+static unsigned handleMipsTlsRelocation(RelType type, Symbol &sym,
+                                        InputSectionBase &c, uint64_t offset,
+                                        int64_t addend, RelExpr expr) {
+  if (expr == R_MIPS_TLSLD) {
+    in.mipsGot->addTlsIndex(*c.file);
+    c.relocations.push_back({expr, type, offset, addend, &sym});
+    return 1;
+  }
+  if (expr == R_MIPS_TLSGD) {
+    in.mipsGot->addDynTlsEntry(*c.file, sym);
+    c.relocations.push_back({expr, type, offset, addend, &sym});
+    return 1;
+  }
+  return 0;
+}
+
+// Notes about General Dynamic and Local Dynamic TLS models below. They may
+// require the generation of a pair of GOT entries that have associated dynamic
+// relocations. The pair of GOT entries created are of the form GOT[e0] Module
+// Index (Used to find pointer to TLS block at run-time) GOT[e1] Offset of
+// symbol in TLS block.
+//
+// Returns the number of relocations processed.
+template <class ELFT>
+static unsigned
+handleTlsRelocation(RelType type, Symbol &sym, InputSectionBase &c,
+                    typename ELFT::uint offset, int64_t addend, RelExpr expr) {
+  if (!sym.isTls())
+    return 0;
+
+  if (config->emachine == EM_MIPS)
+    return handleMipsTlsRelocation(type, sym, c, offset, addend, expr);
+
+  if (oneof<R_AARCH64_TLSDESC_PAGE, R_TLSDESC, R_TLSDESC_CALL, R_TLSDESC_PC>(
+          expr) &&
+      config->shared) {
+    if (in.got->addDynTlsEntry(sym)) {
+      uint64_t off = in.got->getGlobalDynOffset(sym);
+      mainPart->relaDyn->addAddendOnlyRelocIfNonPreemptible(
+          target->tlsDescRel, in.got, off, sym, target->tlsDescRel);
+    }
+    if (expr != R_TLSDESC_CALL)
+      c.relocations.push_back({expr, type, offset, addend, &sym});
+    return 1;
+  }
+
+  // ARM, Hexagon and RISC-V do not support GD/LD to IE/LE relaxation.  For
+  // PPC64, if the file has missing R_PPC64_TLSGD/R_PPC64_TLSLD, disable
+  // relaxation as well.
+  bool toExecRelax = !config->shared && config->emachine != EM_ARM &&
+                     config->emachine != EM_HEXAGON &&
+                     config->emachine != EM_RISCV &&
+                     !c.file->ppc64DisableTLSRelax;
+
+  // If we are producing an executable and the symbol is non-preemptable, it
+  // must be defined and the code sequence can be relaxed to use Local-Exec.
+  //
+  // ARM and RISC-V do not support any relaxations for TLS relocations, however,
+  // we can omit the DTPMOD dynamic relocations and resolve them at link time
+  // because them are always 1. This may be necessary for static linking as
+  // DTPMOD may not be expected at load time.
+  bool isLocalInExecutable = !sym.isPreemptible && !config->shared;
+
+  // Local Dynamic is for access to module local TLS variables, while still
+  // being suitable for being dynamically loaded via dlopen. GOT[e0] is the
+  // module index, with a special value of 0 for the current module. GOT[e1] is
+  // unused. There only needs to be one module index entry.
+  if (oneof<R_TLSLD_GOT, R_TLSLD_GOTPLT, R_TLSLD_PC, R_TLSLD_HINT>(
+          expr)) {
+    // Local-Dynamic relocs can be relaxed to Local-Exec.
+    if (toExecRelax) {
+      c.relocations.push_back(
+          {target->adjustTlsExpr(type, R_RELAX_TLS_LD_TO_LE), type, offset,
+           addend, &sym});
+      return target->getTlsGdRelaxSkip(type);
+    }
+    if (expr == R_TLSLD_HINT)
+      return 1;
+    if (in.got->addTlsIndex()) {
+      if (isLocalInExecutable)
+        in.got->relocations.push_back(
+            {R_ADDEND, target->symbolicRel, in.got->getTlsIndexOff(), 1, &sym});
+      else
+        mainPart->relaDyn->addReloc(
+            {target->tlsModuleIndexRel, in.got, in.got->getTlsIndexOff()});
+    }
+    c.relocations.push_back({expr, type, offset, addend, &sym});
+    return 1;
+  }
+
+  // Local-Dynamic relocs can be relaxed to Local-Exec.
+  if (expr == R_DTPREL && toExecRelax) {
+    c.relocations.push_back({target->adjustTlsExpr(type, R_RELAX_TLS_LD_TO_LE),
+                             type, offset, addend, &sym});
+    return 1;
+  }
+
+  // Local-Dynamic sequence where offset of tls variable relative to dynamic
+  // thread pointer is stored in the got. This cannot be relaxed to Local-Exec.
+  if (expr == R_TLSLD_GOT_OFF) {
+    if (!sym.isInGot()) {
+      in.got->addEntry(sym);
+      uint64_t off = sym.getGotOffset();
+      in.got->relocations.push_back(
+          {R_ABS, target->tlsOffsetRel, off, 0, &sym});
+    }
+    c.relocations.push_back({expr, type, offset, addend, &sym});
+    return 1;
+  }
+
+  if (oneof<R_AARCH64_TLSDESC_PAGE, R_TLSDESC, R_TLSDESC_CALL, R_TLSDESC_PC,
+            R_TLSGD_GOT, R_TLSGD_GOTPLT, R_TLSGD_PC>(expr)) {
+    if (!toExecRelax) {
+      if (in.got->addDynTlsEntry(sym)) {
+        uint64_t off = in.got->getGlobalDynOffset(sym);
+
+        if (isLocalInExecutable)
+          // Write one to the GOT slot.
+          in.got->relocations.push_back(
+              {R_ADDEND, target->symbolicRel, off, 1, &sym});
+        else
+          mainPart->relaDyn->addSymbolReloc(target->tlsModuleIndexRel, in.got,
+                                            off, sym);
+
+        // If the symbol is preemptible we need the dynamic linker to write
+        // the offset too.
+        uint64_t offsetOff = off + config->wordsize;
+        if (sym.isPreemptible)
+          mainPart->relaDyn->addSymbolReloc(target->tlsOffsetRel, in.got,
+                                            offsetOff, sym);
+        else
+          in.got->relocations.push_back(
+              {R_ABS, target->tlsOffsetRel, offsetOff, 0, &sym});
+      }
+      c.relocations.push_back({expr, type, offset, addend, &sym});
+      return 1;
+    }
+
+    // Global-Dynamic relocs can be relaxed to Initial-Exec or Local-Exec
+    // depending on the symbol being locally defined or not.
+    if (sym.isPreemptible) {
+      c.relocations.push_back(
+          {target->adjustTlsExpr(type, R_RELAX_TLS_GD_TO_IE), type, offset,
+           addend, &sym});
+      if (!sym.isInGot()) {
+        in.got->addEntry(sym);
+        mainPart->relaDyn->addSymbolReloc(target->tlsGotRel, in.got,
+                                          sym.getGotOffset(), sym);
+      }
+    } else {
+      c.relocations.push_back(
+          {target->adjustTlsExpr(type, R_RELAX_TLS_GD_TO_LE), type, offset,
+           addend, &sym});
+    }
+    return target->getTlsGdRelaxSkip(type);
+  }
+
+  // Initial-Exec relocs can be relaxed to Local-Exec if the symbol is locally
+  // defined.
+  if (oneof<R_GOT, R_GOTPLT, R_GOT_PC, R_AARCH64_GOT_PAGE_PC, R_GOT_OFF,
+            R_TLSIE_HINT>(expr) &&
+      toExecRelax && isLocalInExecutable) {
+    c.relocations.push_back({R_RELAX_TLS_IE_TO_LE, type, offset, addend, &sym});
+    return 1;
+  }
+
+  if (expr == R_TLSIE_HINT)
+    return 1;
+  return 0;
 }
 
 template <class ELFT, class RelTy>
