@@ -96,19 +96,21 @@ static Value getTensor(ConversionPatternRewriter &rewriter, unsigned width,
 }
 
 /// Returns function reference (first hit also inserts into module).
-static FlatSymbolRefAttr getFunc(Operation *op, StringRef name, Type result,
+static FlatSymbolRefAttr getFunc(Operation *op, StringRef name, Type resultType,
                                  ValueRange operands) {
   MLIRContext *context = op->getContext();
   auto module = op->getParentOfType<ModuleOp>();
-  auto func = module.lookupSymbol<FuncOp>(name);
+  auto result = SymbolRefAttr::get(context, name);
+  auto func = module.lookupSymbol<FuncOp>(result.getAttr());
   if (!func) {
     OpBuilder moduleBuilder(module.getBodyRegion());
     moduleBuilder
-        .create<FuncOp>(op->getLoc(), name,
-                        FunctionType::get(context, operands.getTypes(), result))
+        .create<FuncOp>(
+            op->getLoc(), name,
+            FunctionType::get(context, operands.getTypes(), resultType))
         .setPrivate();
   }
-  return SymbolRefAttr::get(context, name);
+  return result;
 }
 
 /// Generates a call into the "swiss army knife" method of the sparse runtime

@@ -343,8 +343,8 @@ LogicalResult verifySymbolAttribute(
     // a constraint in the operation definition.
     for (SymbolRefAttr symbolRef :
          attribute.cast<ArrayAttr>().getAsRange<SymbolRefAttr>()) {
-      StringRef metadataName = symbolRef.getRootReference();
-      StringRef symbolName = symbolRef.getLeafReference();
+      StringAttr metadataName = symbolRef.getRootReference();
+      StringAttr symbolName = symbolRef.getLeafReference();
       // We want @metadata::@symbol, not just @symbol
       if (metadataName == symbolName) {
         return op->emitOpError() << "expected '" << symbolRef
@@ -770,7 +770,7 @@ static LogicalResult verify(CallOp &op) {
   bool isIndirect = false;
 
   // If this is an indirect call, the callee attribute is missing.
-  Optional<StringRef> calleeName = op.callee();
+  FlatSymbolRefAttr calleeName = op.calleeAttr();
   if (!calleeName) {
     isIndirect = true;
     if (!op.getNumOperands())
@@ -782,14 +782,15 @@ static LogicalResult verify(CallOp &op) {
              << ptrType;
     fnType = ptrType.getElementType();
   } else {
-    Operation *callee = SymbolTable::lookupNearestSymbolFrom(op, *calleeName);
+    Operation *callee =
+        SymbolTable::lookupNearestSymbolFrom(op, calleeName.getAttr());
     if (!callee)
       return op.emitOpError()
-             << "'" << *calleeName
+             << "'" << calleeName.getValue()
              << "' does not reference a symbol in the current scope";
     auto fn = dyn_cast<LLVMFuncOp>(callee);
     if (!fn)
-      return op.emitOpError() << "'" << *calleeName
+      return op.emitOpError() << "'" << calleeName.getValue()
                               << "' does not reference a valid LLVM function";
 
     fnType = fn.getType();
@@ -2253,14 +2254,14 @@ LogicalResult LLVMDialect::verifyOperationAttribute(Operation *op,
         if (!accessGroupRef)
           return op->emitOpError()
                  << "expected '" << attr << "' to be a symbol reference";
-        StringRef metadataName = accessGroupRef.getRootReference();
+        StringAttr metadataName = accessGroupRef.getRootReference();
         auto metadataOp =
             SymbolTable::lookupNearestSymbolFrom<LLVM::MetadataOp>(
                 op->getParentOp(), metadataName);
         if (!metadataOp)
           return op->emitOpError()
                  << "expected '" << attr << "' to reference a metadata op";
-        StringRef accessGroupName = accessGroupRef.getLeafReference();
+        StringAttr accessGroupName = accessGroupRef.getLeafReference();
         Operation *accessGroupOp =
             SymbolTable::lookupNearestSymbolFrom(metadataOp, accessGroupName);
         if (!accessGroupOp)

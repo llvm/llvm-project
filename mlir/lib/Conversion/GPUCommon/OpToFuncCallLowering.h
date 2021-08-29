@@ -106,7 +106,8 @@ private:
                                      Operation *op) const {
     using LLVM::LLVMFuncOp;
 
-    Operation *funcOp = SymbolTable::lookupNearestSymbolFrom(op, funcName);
+    auto funcAttr = StringAttr::get(op->getContext(), funcName);
+    Operation *funcOp = SymbolTable::lookupNearestSymbolFrom(op, funcAttr);
     if (funcOp)
       return cast<LLVMFuncOp>(*funcOp);
 
