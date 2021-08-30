@@ -3464,8 +3464,11 @@ void DAGTypeLegalizer::ExpandIntRes_MULFIX(SDNode *N, SDValue &Lo,
         SDValue SatMin = DAG.getConstant(MinVal, dl, VT);
         SDValue SatMax = DAG.getConstant(MaxVal, dl, VT);
         SDValue Zero = DAG.getConstant(0, dl, VT);
-        SDValue ProdNeg = DAG.getSetCC(dl, BoolVT, Product, Zero, ISD::SETLT);
-        Result = DAG.getSelect(dl, VT, ProdNeg, SatMax, SatMin);
+        // Xor the inputs, if resulting sign bit is 0 the product will be
+        // positive, else negative.
+        SDValue Xor = DAG.getNode(ISD::XOR, dl, VT, LHS, RHS);
+        SDValue ProdNeg = DAG.getSetCC(dl, BoolVT, Xor, Zero, ISD::SETLT);
+        Result = DAG.getSelect(dl, VT, ProdNeg, SatMin, SatMax);
         Result = DAG.getSelect(dl, VT, Overflow, Result, Product);
       } else {
         // For unsigned multiplication, we only need to check the max since we
