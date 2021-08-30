@@ -1149,10 +1149,9 @@ static bool canDefineSymbolInExecutable(Symbol &sym) {
 // sections. Given that it is ro, we will need an extra PT_LOAD. This
 // complicates things for the dynamic linker and means we would have to reserve
 // space for the extra PT_LOAD even if we end up not using it.
-template <class ELFT, class RelTy>
+template <class ELFT>
 static void processRelocAux(InputSectionBase &sec, RelExpr expr, RelType type,
-                            uint64_t offset, Symbol &sym, const RelTy &rel,
-                            int64_t addend) {
+                            uint64_t offset, Symbol &sym, int64_t addend) {
   // If the relocation is known to be a link-time constant, we know no dynamic
   // relocation will be created, pass the control to relocateAlloc() or
   // relocateNonAlloc() to resolve it.
@@ -1543,7 +1542,7 @@ static void scanReloc(InputSectionBase &sec, OffsetGetter &getOffset, RelTy *&i,
     }
   }
 
-  processRelocAux<ELFT>(sec, expr, type, offset, sym, rel, addend);
+  processRelocAux<ELFT>(sec, expr, type, offset, sym, addend);
 }
 
 // R_PPC64_TLSGD/R_PPC64_TLSLD is required to mark `bl __tls_get_addr` for
