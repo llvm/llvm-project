@@ -205,7 +205,7 @@ def Symbol : OpInterface<"SymbolOpInterface"> {
 
     /// Convenience version of `setName` that take a StringRef.
     void setName(StringRef name) {
-      setName(StringAttr::get(this->getContext(), name));
+      setName(StringAttr::get($_op->getContext(), name));
     }
   }];
 }

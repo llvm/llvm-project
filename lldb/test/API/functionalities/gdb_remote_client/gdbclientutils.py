@@ -109,6 +109,8 @@ class MockGDBServerResponder:
             return self.vCont(packet)
         if packet[0] == "A":
             return self.A(packet)
+        if packet[0] == "D":
+            return self.D(packet)
         if packet[0] == "g":
             return self.readRegisters()
         if packet[0] == "G":
@@ -215,6 +217,9 @@ class MockGDBServerResponder:
 
     def A(self, packet):
         return ""
+
+    def D(self, packet):
+        return "OK"
 
     def readRegisters(self):
         return "00000000" * self.registerCount
