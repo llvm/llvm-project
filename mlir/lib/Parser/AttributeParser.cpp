@@ -191,7 +191,8 @@ Attribute Parser::parseAttribute(Type type) {
       consumeToken(Token::at_identifier);
       nestedRefs.push_back(SymbolRefAttr::get(getContext(), nameStr));
     }
-    SymbolRefAttr symbolRefAttr = builder.getSymbolRefAttr(nameStr, nestedRefs);
+    SymbolRefAttr symbolRefAttr =
+        SymbolRefAttr::get(getContext(), nameStr, nestedRefs);
 
     // If we are populating the assembly state, record this symbol reference.
     if (state.asmState)

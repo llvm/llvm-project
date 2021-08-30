@@ -174,7 +174,8 @@ void GenericCallOp::build(mlir::OpBuilder &builder, mlir::OperationState &state,
   // Generic call always returns an unranked Tensor initially.
   state.addTypes(UnrankedTensorType::get(builder.getF64Type()));
   state.addOperands(arguments);
-  state.addAttribute("callee", builder.getSymbolRefAttr(callee));
+  state.addAttribute("callee",
+                     mlir::SymbolRefAttr::get(builder.getContext(), callee));
 }
 
 //===----------------------------------------------------------------------===//

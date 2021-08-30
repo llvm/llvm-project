@@ -1406,9 +1406,8 @@ public:
     // If we are populating the assembly parser state, record this as a symbol
     // reference.
     if (parser.getState().asmState) {
-      parser.getState().asmState->addUses(
-          getBuilder().getSymbolRefAttr(result.getValue()),
-          atToken.getLocRange());
+      parser.getState().asmState->addUses(SymbolRefAttr::get(result),
+                                          atToken.getLocRange());
     }
     return success();
   }
