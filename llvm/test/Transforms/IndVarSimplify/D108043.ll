@@ -9,17 +9,12 @@ define internal fastcc void @func_2() unnamed_addr {
 ; CHECK-NEXT:  lbl_2898.preheader:
 ; CHECK-NEXT:    br label [[LBL_2898:%.*]]
 ; CHECK:       lbl_2898.loopexit:
-; CHECK-NEXT:    [[DOTLCSSA:%.*]] = phi i32* [ [[TMP0:%.*]], [[FOR_COND884:%.*]] ]
-; CHECK-NEXT:    store i32* [[DOTLCSSA]], i32** @g_1150, align 8
+; CHECK-NEXT:    store i32* getelementptr inbounds ([4 x [6 x i32]], [4 x [6 x i32]]* @g_2168, i64 0, i64 3, i64 1), i32** @g_1150, align 8
 ; CHECK-NEXT:    br label [[LBL_2898]]
 ; CHECK:       lbl_2898:
-; CHECK-NEXT:    [[G_1150_PROMOTED:%.*]] = load i32*, i32** @g_1150, align 8
-; CHECK-NEXT:    br label [[FOR_COND884]]
+; CHECK-NEXT:    br label [[FOR_COND884:%.*]]
 ; CHECK:       for.cond884:
-; CHECK-NEXT:    [[TMP0]] = phi i32* [ getelementptr inbounds ([4 x [6 x i32]], [4 x [6 x i32]]* @g_2168, i64 0, i64 3, i64 1), [[FOR_END987:%.*]] ], [ [[G_1150_PROMOTED]], [[LBL_2898]] ]
-; CHECK-NEXT:    [[STOREMERGE9:%.*]] = phi i16 [ [[ADD990:%.*]], [[FOR_END987]] ], [ 0, [[LBL_2898]] ]
-; CHECK-NEXT:    [[CMP886:%.*]] = icmp ult i16 [[STOREMERGE9]], 3
-; CHECK-NEXT:    br i1 [[CMP886]], label [[FOR_BODY888:%.*]], label [[LBL_2898_LOOPEXIT:%.*]]
+; CHECK-NEXT:    br i1 false, label [[FOR_BODY888:%.*]], label [[LBL_2898_LOOPEXIT:%.*]]
 ; CHECK:       for.body888:
 ; CHECK-NEXT:    br label [[FOR_COND918:%.*]]
 ; CHECK:       for.cond918:
@@ -27,9 +22,8 @@ define internal fastcc void @func_2() unnamed_addr {
 ; CHECK:       for.end926:
 ; CHECK-NEXT:    br label [[FOR_COND936:%.*]]
 ; CHECK:       for.cond936:
-; CHECK-NEXT:    br label [[FOR_END987]]
+; CHECK-NEXT:    br label [[FOR_END987:%.*]]
 ; CHECK:       for.end987:
-; CHECK-NEXT:    [[ADD990]] = add nuw nsw i16 [[STOREMERGE9]], 1
 ; CHECK-NEXT:    br label [[FOR_COND884]]
 ;
 lbl_2898.preheader:
