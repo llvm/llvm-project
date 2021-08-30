@@ -658,7 +658,14 @@ template <> struct MappingTraits<FormatStyle> {
 
     IO.mapOptional("PackConstructorInitializers",
                    Style.PackConstructorInitializers);
-    // For backward compatibility.
+    // For backward compatibility:
+    // The default value of ConstructorInitializerAllOnOneLineOrOnePerLine was
+    // false unless BasedOnStyle was Google or Chromium whereas that of
+    // AllowAllConstructorInitializersOnNextLine was always true, so the
+    // equivalent default value of PackConstructorInitializers is PCIS_NextLine
+    // for Google/Chromium or PCIS_BinPack otherwise. If the deprecated options
+    // had a non-default value while PackConstructorInitializers has a default
+    // value, set the latter to an equivalent non-default value if needed.
     StringRef BasedOn;
     IO.mapOptional("BasedOnStyle", BasedOn);
     const bool IsGoogleOrChromium = BasedOn.equals_insensitive("google") ||
@@ -668,17 +675,19 @@ template <> struct MappingTraits<FormatStyle> {
     IO.mapOptional("ConstructorInitializerAllOnOneLineOrOnePerLine",
                    OnCurrentLine);
     IO.mapOptional("AllowAllConstructorInitializersOnNextLine", OnNextLine);
-    if (IsGoogleOrChromium &&
-        Style.PackConstructorInitializers == FormatStyle::PCIS_NextLine) {
+    if (!IsGoogleOrChromium) {
+      if (Style.PackConstructorInitializers == FormatStyle::PCIS_BinPack &&
+          OnCurrentLine) {
+        Style.PackConstructorInitializers = OnNextLine
+                                                ? FormatStyle::PCIS_NextLine
+                                                : FormatStyle::PCIS_CurrentLine;
+      }
+    } else if (Style.PackConstructorInitializers ==
+               FormatStyle::PCIS_NextLine) {
       if (!OnCurrentLine)
         Style.PackConstructorInitializers = FormatStyle::PCIS_BinPack;
       else if (!OnNextLine)
         Style.PackConstructorInitializers = FormatStyle::PCIS_CurrentLine;
-    } else if (Style.PackConstructorInitializers == FormatStyle::PCIS_BinPack &&
-               OnCurrentLine) {
-      Style.PackConstructorInitializers = OnNextLine
-                                              ? FormatStyle::PCIS_NextLine
-                                              : FormatStyle::PCIS_CurrentLine;
     }
 
     IO.mapOptional("FixNamespaceComments", Style.FixNamespaceComments);
