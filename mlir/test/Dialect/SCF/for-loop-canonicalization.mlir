@@ -1,4 +1,4 @@
-// RUN: mlir-opt %s -canonicalize-scf-affine-op -split-input-file | FileCheck %s
+// RUN: mlir-opt %s -for-loop-canonicalization -split-input-file | FileCheck %s
 
 // CHECK-LABEL: func @scf_for_canonicalize_min
 //       CHECK:   %[[C2:.*]] = constant 2 : i64
@@ -223,4 +223,22 @@ func @scf_parallel_canonicalize_min_2(%A : memref<i64>) {
     memref.store %2, %A[]: memref<i64>
   }
   return
+}
+
+// -----
+
+// CHECK-LABEL: func @tensor_dim_of_iter_arg(
+//  CHECK-SAME:     %[[t:.*]]: tensor<?x?xf32>
+//       CHECK:   scf.for
+//       CHECK:     tensor.dim %[[t]]
+func @tensor_dim_of_iter_arg(%t : tensor<?x?xf32>) -> index {
+  %c0 = constant 0 : index
+  %c1 = constant 1 : index
+  %c10 = constant 10 : index
+  %0, %1 = scf.for %i = %c0 to %c10 step %c1 iter_args(%arg0 = %t, %arg1 = %c0)
+      -> (tensor<?x?xf32>, index) {
+    %dim = tensor.dim %arg0, %c0 : tensor<?x?xf32>
+    scf.yield %arg0, %dim : tensor<?x?xf32>, index
+  }
+  return %1 : index
 }

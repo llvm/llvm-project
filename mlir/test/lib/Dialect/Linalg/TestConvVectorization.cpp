@@ -71,7 +71,7 @@ void TestConvVectorization::runOnOperation() {
 
   RewritePatternSet stage2Patterns =
       linalg::getLinalgTilingCanonicalizationPatterns(context);
-  scf::populateSCFLoopBodyCanonicalizationPatterns(stage2Patterns);
+  scf::populateSCFForLoopCanonicalizationPatterns(stage2Patterns);
 
   auto stage3Transforms = [](Operation *op) {
     PassManager pm(op->getContext());

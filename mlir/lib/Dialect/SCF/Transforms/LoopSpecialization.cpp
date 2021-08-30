@@ -516,40 +516,6 @@ struct ForLoopPeelingPattern : public OpRewritePattern<ForOp> {
   /// the direct parent.
   bool skipPartial;
 };
-
-/// Canonicalize AffineMinOp/AffineMaxOp operations in the context of scf.for
-/// and scf.parallel loops with a known range.
-template <typename OpTy, bool IsMin>
-struct AffineOpSCFCanonicalizationPattern : public OpRewritePattern<OpTy> {
-  using OpRewritePattern<OpTy>::OpRewritePattern;
-
-  LogicalResult matchAndRewrite(OpTy op,
-                                PatternRewriter &rewriter) const override {
-    auto loopMatcher = [](Value iv, Value &lb, Value &ub, Value &step) {
-      if (scf::ForOp forOp = scf::getForInductionVarOwner(iv)) {
-        lb = forOp.lowerBound();
-        ub = forOp.upperBound();
-        step = forOp.step();
-        return success();
-      }
-      if (scf::ParallelOp parOp = scf::getParallelForInductionVarOwner(iv)) {
-        for (unsigned idx = 0; idx < parOp.getNumLoops(); ++idx) {
-          if (parOp.getInductionVars()[idx] == iv) {
-            lb = parOp.lowerBound()[idx];
-            ub = parOp.upperBound()[idx];
-            step = parOp.step()[idx];
-            return success();
-          }
-        }
-        return failure();
-      }
-      return failure();
-    };
-
-    return scf::canonicalizeMinMaxOpInLoop(rewriter, op, op.getAffineMap(),
-                                           op.operands(), IsMin, loopMatcher);
-  }
-};
 } // namespace
 
 namespace {
@@ -583,23 +549,7 @@ struct ForLoopPeeling : public SCFForLoopPeelingBase<ForLoopPeeling> {
     });
   }
 };
-
-struct SCFAffineOpCanonicalization
-    : public SCFAffineOpCanonicalizationBase<SCFAffineOpCanonicalization> {
-  void runOnFunction() override {
-    FuncOp funcOp = getFunction();
-    MLIRContext *ctx = funcOp.getContext();
-    RewritePatternSet patterns(ctx);
-    scf::populateSCFLoopBodyCanonicalizationPatterns(patterns);
-    if (failed(applyPatternsAndFoldGreedily(funcOp, std::move(patterns))))
-      signalPassFailure();
-  }
-};
 } // namespace
-
-std::unique_ptr<Pass> mlir::createSCFAffineOpCanonicalizationPass() {
-  return std::make_unique<SCFAffineOpCanonicalization>();
-}
 
 std::unique_ptr<Pass> mlir::createParallelLoopSpecializationPass() {
   return std::make_unique<ParallelLoopSpecialization>();
@@ -611,13 +561,4 @@ std::unique_ptr<Pass> mlir::createForLoopSpecializationPass() {
 
 std::unique_ptr<Pass> mlir::createForLoopPeelingPass() {
   return std::make_unique<ForLoopPeeling>();
-}
-
-void mlir::scf::populateSCFLoopBodyCanonicalizationPatterns(
-    RewritePatternSet &patterns) {
-  MLIRContext *ctx = patterns.getContext();
-  patterns
-      .insert<AffineOpSCFCanonicalizationPattern<AffineMinOp, /*IsMin=*/true>,
-              AffineOpSCFCanonicalizationPattern<AffineMaxOp, /*IsMin=*/false>>(
-          ctx);
 }

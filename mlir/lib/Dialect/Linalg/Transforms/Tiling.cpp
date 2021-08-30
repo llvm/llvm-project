@@ -537,7 +537,7 @@ applyTilingToLoopPatterns(LinalgTilingLoopType loopType, FuncOp funcOp,
   MLIRContext *ctx = funcOp.getContext();
   RewritePatternSet patterns(ctx);
   insertTilingPatterns(patterns, options);
-  scf::populateSCFLoopBodyCanonicalizationPatterns(patterns);
+  scf::populateSCFForLoopCanonicalizationPatterns(patterns);
   (void)applyPatternsAndFoldGreedily(funcOp, std::move(patterns));
   (void)applyPatternsAndFoldGreedily(
       funcOp, getLinalgTilingCanonicalizationPatterns(ctx));
