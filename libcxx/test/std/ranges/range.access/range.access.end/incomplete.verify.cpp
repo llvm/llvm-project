@@ -9,24 +9,30 @@
 // UNSUPPORTED: c++03, c++11, c++14, c++17
 // UNSUPPORTED: libcpp-no-concepts
 // UNSUPPORTED: libcpp-has-no-incomplete-ranges
+// REQUIRES: libc++
 
-// ranges::cbegin;
+// Test the libc++ specific behavior that we provide a better diagnostic when calling
+// std::ranges::end on an array of incomplete type.
 
 #include <ranges>
 
 #include <type_traits>
 
-using cbegin_t = decltype(std::ranges::cbegin);
+using end_t = decltype(std::ranges::end);
 
-template <class T>
-requires(!std::invocable<cbegin_t&, T>)
-void f() {}
+template <class T> void f() requires std::invocable<end_t&, T> { }
+template <class T> void f() { }
 
 void test() {
   struct incomplete;
+  f<incomplete(&)[]>();
+  // expected-error@*:* {{"`std::ranges::begin` is SFINAE-unfriendly on arrays of an incomplete type."}}
+  // expected-error@*:* {{"`std::ranges::end` is SFINAE-unfriendly on arrays of an incomplete type."}}
   f<incomplete(&)[10]>();
   // expected-error@*:* {{"`std::ranges::begin` is SFINAE-unfriendly on arrays of an incomplete type."}}
-  // expected-error@-2 {{no matching function for call to 'f'}}
+  // expected-error@*:* {{"`std::ranges::end` is SFINAE-unfriendly on arrays of an incomplete type."}}
+  f<incomplete(&)[2][2]>();
+  // expected-error@*:* {{"`std::ranges::begin` is SFINAE-unfriendly on arrays of an incomplete type."}}
 
   // This is okay because calling `std::ranges::end` on any rvalue is ill-formed.
   f<incomplete(&&)[10]>();

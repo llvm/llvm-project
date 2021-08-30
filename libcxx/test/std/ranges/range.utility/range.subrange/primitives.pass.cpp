@@ -17,9 +17,7 @@
 #include <cassert>
 #include "test_macros.h"
 #include "test_iterators.h"
-#include "../subrange_test_types.h"
-
-// Note: begin and end tested in range.subrange.ctor.pass.cpp.
+#include "types.h"
 
 constexpr bool test() {
   std::ranges::subrange<MoveOnlyForwardIter, int*> a(MoveOnlyForwardIter(globalBuff), globalBuff + 8, 8);

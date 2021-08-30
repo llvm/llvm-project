@@ -4728,8 +4728,6 @@ public:
   void EmitMultiVersionResolver(llvm::Function *Resolver,
                                 ArrayRef<MultiVersionResolverOption> Options);
 
-  static uint64_t GetX86CpuSupportsMask(ArrayRef<StringRef> FeatureStrs);
-
 private:
   QualType getVarArgType(const Expr *Arg);
 

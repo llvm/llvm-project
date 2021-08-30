@@ -367,7 +367,7 @@ Error appendToError(Error Err, StringRef After) {
   Stream << Err;
   Stream << " " << After;
   consumeError(std::move(Err));
-  return createError(Stream.str().c_str());
+  return createError(Stream.str());
 }
 
 /// This function populates a DynamicEntries struct using an ELFT::DynRange.

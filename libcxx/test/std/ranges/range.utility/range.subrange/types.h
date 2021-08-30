@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef SUBRANGE_TEST_TYPES_H
-#define SUBRANGE_TEST_TYPES_H
+#ifndef LIBCXX_TEST_STD_RANGES_RANGE_UTILITY_RANGE_SUBRANGE_TYPES_H
+#define LIBCXX_TEST_STD_RANGES_RANGE_UTILITY_RANGE_SUBRANGE_TYPES_H
 
 #include "test_macros.h"
 #include "test_iterators.h"
@@ -212,4 +212,4 @@ using DifferentSentinelWithSizeMemberSubrange = std::ranges::subrange<ForwardIte
                                                                       DifferentSentinelWithSizeMember::sentinel,
                                                                       std::ranges::subrange_kind::unsized>;
 
-#endif // SUBRANGE_TEST_TYPES_H
+#endif // LIBCXX_TEST_STD_RANGES_RANGE_UTILITY_RANGE_SUBRANGE_TYPES_H

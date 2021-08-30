@@ -32,7 +32,7 @@ struct ZeroOnDestroy : std::ranges::view_base {
   constexpr ForwardIter end() const { return ForwardIter(); }
 
   ~ZeroOnDestroy() {
-    memset(buff, 0, sizeof(buff));
+    std::memset(buff, 0, sizeof(buff));
   }
 
   static auto dropFirstFour() {

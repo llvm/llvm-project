@@ -10,7 +10,6 @@
 // UNSUPPORTED: libcpp-no-concepts
 // UNSUPPORTED: libcpp-has-no-incomplete-ranges
 
-// take_view() requires default_initializable<V> = default;
 // constexpr take_view(V base, range_difference_t<V> count);
 
 #include <ranges>
@@ -20,27 +19,6 @@
 #include "test_iterators.h"
 #include "test_range.h"
 #include "types.h"
-
-int globalBuffer[8] = {1, 2, 3, 4, 5, 6, 7, 8};
-
-template<bool IsDefaultCtorable>
-struct DefaultConstructible : std::ranges::view_base {
-  DefaultConstructible() requires IsDefaultCtorable = default;
-  DefaultConstructible(int*);
-  int* begin();
-  sentinel_wrapper<int*> end();
-};
-
-struct SizedRandomAccessViewToGlobal : std::ranges::view_base {
-  RandomAccessIter begin() { return RandomAccessIter(globalBuffer); }
-  RandomAccessIter begin() const { return RandomAccessIter(globalBuffer); }
-  sentinel_wrapper<RandomAccessIter> end() {
-    return sentinel_wrapper<RandomAccessIter>{RandomAccessIter(globalBuffer + 8)};
-  }
-  sentinel_wrapper<RandomAccessIter> end() const {
-    return sentinel_wrapper<RandomAccessIter>{RandomAccessIter(globalBuffer + 8)};
-  }
-};
 
 constexpr bool test() {
   int buffer[8] = {1, 2, 3, 4, 5, 6, 7, 8};
@@ -69,14 +47,6 @@ constexpr bool test() {
 int main(int, char**) {
   test();
   static_assert(test());
-
-  // Tests for the default ctor.
-  static_assert( std::default_initializable<DefaultConstructible<true>>);
-  static_assert(!std::default_initializable<DefaultConstructible<false>>);
-
-  std::ranges::take_view<SizedRandomAccessViewToGlobal> tv;
-  assert(*tv.base().begin() == 1);
-  assert(tv.size() == 0);
 
   return 0;
 }
