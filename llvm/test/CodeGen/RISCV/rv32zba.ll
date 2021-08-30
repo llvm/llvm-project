@@ -796,16 +796,14 @@ define i32 @addshl_5_6(i32 %a, i32 %b) {
 ;
 ; RV32B-LABEL: addshl_5_6:
 ; RV32B:       # %bb.0:
+; RV32B-NEXT:    sh1add a0, a1, a0
 ; RV32B-NEXT:    slli a0, a0, 5
-; RV32B-NEXT:    slli a1, a1, 6
-; RV32B-NEXT:    add a0, a0, a1
 ; RV32B-NEXT:    ret
 ;
 ; RV32ZBA-LABEL: addshl_5_6:
 ; RV32ZBA:       # %bb.0:
+; RV32ZBA-NEXT:    sh1add a0, a1, a0
 ; RV32ZBA-NEXT:    slli a0, a0, 5
-; RV32ZBA-NEXT:    slli a1, a1, 6
-; RV32ZBA-NEXT:    add a0, a0, a1
 ; RV32ZBA-NEXT:    ret
   %c = shl i32 %a, 5
   %d = shl i32 %b, 6
@@ -823,16 +821,14 @@ define i32 @addshl_5_7(i32 %a, i32 %b) {
 ;
 ; RV32B-LABEL: addshl_5_7:
 ; RV32B:       # %bb.0:
+; RV32B-NEXT:    sh2add a0, a1, a0
 ; RV32B-NEXT:    slli a0, a0, 5
-; RV32B-NEXT:    slli a1, a1, 7
-; RV32B-NEXT:    add a0, a0, a1
 ; RV32B-NEXT:    ret
 ;
 ; RV32ZBA-LABEL: addshl_5_7:
 ; RV32ZBA:       # %bb.0:
+; RV32ZBA-NEXT:    sh2add a0, a1, a0
 ; RV32ZBA-NEXT:    slli a0, a0, 5
-; RV32ZBA-NEXT:    slli a1, a1, 7
-; RV32ZBA-NEXT:    add a0, a0, a1
 ; RV32ZBA-NEXT:    ret
   %c = shl i32 %a, 5
   %d = shl i32 %b, 7
@@ -850,16 +846,14 @@ define i32 @addshl_5_8(i32 %a, i32 %b) {
 ;
 ; RV32B-LABEL: addshl_5_8:
 ; RV32B:       # %bb.0:
+; RV32B-NEXT:    sh3add a0, a1, a0
 ; RV32B-NEXT:    slli a0, a0, 5
-; RV32B-NEXT:    slli a1, a1, 8
-; RV32B-NEXT:    add a0, a0, a1
 ; RV32B-NEXT:    ret
 ;
 ; RV32ZBA-LABEL: addshl_5_8:
 ; RV32ZBA:       # %bb.0:
+; RV32ZBA-NEXT:    sh3add a0, a1, a0
 ; RV32ZBA-NEXT:    slli a0, a0, 5
-; RV32ZBA-NEXT:    slli a1, a1, 8
-; RV32ZBA-NEXT:    add a0, a0, a1
 ; RV32ZBA-NEXT:    ret
   %c = shl i32 %a, 5
   %d = shl i32 %b, 8
