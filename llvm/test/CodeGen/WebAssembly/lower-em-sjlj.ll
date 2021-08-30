@@ -311,7 +311,7 @@ attributes #3 = { allocsize(0) }
 ; CHECK-DAG: attributes #{{[0-9]+}} = { "wasm-import-module"="env" "wasm-import-name"="__invoke_void" }
 ; CHECK-DAG: attributes #{{[0-9]+}} = { "wasm-import-module"="env" "wasm-import-name"="saveSetjmp" }
 ; CHECK-DAG: attributes #{{[0-9]+}} = { "wasm-import-module"="env" "wasm-import-name"="testSetjmp" }
-; CHECK-DAG: attributes #{{[0-9]+}} = { "wasm-import-module"="env" "wasm-import-name"="emscripten_longjmp" }
+; CHECK-DAG: attributes #{{[0-9]+}} = { noreturn "wasm-import-module"="env" "wasm-import-name"="emscripten_longjmp" }
 ; CHECK-DAG: attributes #{{[0-9]+}} = { "wasm-import-module"="env" "wasm-import-name"="__invoke_i8*_i32_%struct.__jmp_buf_tag*" }
 ; CHECK-DAG: attributes #[[ALLOCSIZE_ATTR]] = { allocsize(1) }
 
