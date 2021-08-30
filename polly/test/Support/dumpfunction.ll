@@ -1,11 +1,11 @@
 ; New pass manager
-; RUN: opt %loadPolly -enable-new-pm=1 -O3 -polly -polly-position=before-vectorizer -polly-dump-before --disable-output %s 
+; RUN: opt %loadPolly -enable-new-pm=1 -O3 -polly -polly-position=before-vectorizer -polly-dump-before --disable-output %s
 ; RUN: FileCheck --input-file=dumpfunction-callee-before.ll --check-prefix=CHECK --check-prefix=CALLEE %s
 ; RUN: FileCheck --input-file=dumpfunction-caller-before.ll --check-prefix=CHECK --check-prefix=CALLER %s
 ;
-; RUN: opt %loadPolly -enable-new-pm=1 -O3 -polly -polly-position=before-vectorizer -polly-dump-after  --disable-output %s
-; RUN: FileCheck --input-file=dumpfunction-callee-before.ll --check-prefix=CHECK --check-prefix=CALLEE %s
-; RUN: FileCheck --input-file=dumpfunction-caller-before.ll --check-prefix=CHECK --check-prefix=CALLER %s
+; RUN: opt %loadPolly -enable-new-pm=1 -O3 -polly -polly-position=before-vectorizer -polly-dump-after --disable-output %s
+; RUN: FileCheck --input-file=dumpfunction-callee-after.ll --check-prefix=CHECK --check-prefix=CALLEE %s
+; RUN: FileCheck --input-file=dumpfunction-caller-after.ll --check-prefix=CHECK --check-prefix=CALLER %s
 
 ; void callee(int n, double A[], int i) {
 ;   for (int j = 0; j < n; j += 1)
@@ -22,7 +22,7 @@
 
 @callee_alias = dso_local unnamed_addr alias void(i32, double*, i32), void(i32, double*, i32 )* @callee
 
-define internal void @callee(i32 %n, double* noalias nonnull %A, i32 %i) {
+define internal void @callee(i32 %n, double* noalias nonnull %A, i32 %i) #0 {
 entry:
   br label %for
 
@@ -49,7 +49,7 @@ return:
 }
 
 
-define internal void @caller(i32 %n, double* noalias nonnull %A) {
+define void @caller(i32 %n, double* noalias nonnull %A) #0 {
 entry:
   br label %for
 
@@ -59,7 +59,7 @@ for:
   br i1 %i.cmp, label %body, label %exit
 
     body:
-      call void @callee_alias(i32 %n, double* %A, i32 %i)
+      call void @callee(i32 %n, double* %A, i32 %i)
       br label %inc
 
 inc:
@@ -77,6 +77,8 @@ return:
 declare void @unrelated_decl()
 
 
+attributes #0 = { noinline }
+
 !llvm.ident = !{!8}
 !8 = !{!"xyxxy"}
 
@@ -87,7 +89,7 @@ declare void @unrelated_decl()
 ; CALLEE-NOT: @caller
 ; CALLEE-NOT: @unrelated_decl
 
-; CALLER-NOT: @callee(
+; CALLER-NOT: define {{.*}} @callee(
 ; CALLER-LABEL: @caller(
 
 ; CHECK-NOT: @unrelated_decl
