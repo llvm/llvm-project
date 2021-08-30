@@ -48,7 +48,7 @@ void mlir::linalg::CodegenStrategy::transform(FuncOp func) const {
 
   RewritePatternSet stage2Patterns =
       linalg::getLinalgTilingCanonicalizationPatterns(context);
-  scf::populateSCFLoopBodyCanonicalizationPatterns(stage2Patterns);
+  scf::populateSCFForLoopCanonicalizationPatterns(stage2Patterns);
 
   auto stage3Transforms = [&](Operation *op) {
     // Some of these may be too aggressive as a stage 3 that is applied on each

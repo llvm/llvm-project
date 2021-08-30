@@ -1491,6 +1491,7 @@ cc_library(
         ":SCFPassIncGen",
         ":StandardOps",
         ":Support",
+        ":TensorDialect",
         ":Transforms",
         "//llvm:Support",
     ],
