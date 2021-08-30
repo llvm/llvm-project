@@ -2340,7 +2340,7 @@ template <class _Tp> using make_unsigned_t = typename make_unsigned<_Tp>::type;
 
 #ifndef _LIBCPP_CXX03_LANG
 template <class _Tp>
-_LIBCPP_NODISCARD_ATTRIBUTE _LIBCPP_INLINE_VISIBILITY constexpr
+_LIBCPP_HIDE_FROM_ABI constexpr
 typename make_unsigned<_Tp>::type __to_unsigned_like(_Tp __x) noexcept {
     return static_cast<typename make_unsigned<_Tp>::type>(__x);
 }
