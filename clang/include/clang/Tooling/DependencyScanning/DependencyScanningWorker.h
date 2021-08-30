@@ -74,16 +74,15 @@ class DependencyScanningWorker {
 public:
   DependencyScanningWorker(DependencyScanningService &Service);
 
-  /// Run the dependency scanning tool for a given clang driver invocation (as
-  /// specified for the given Input in the CDB), and report the discovered
-  /// dependencies to the provided consumer. If \p ModuleName isn't empty, this
-  /// function reports the dependencies of module \p ModuleName.
+  /// Run the dependency scanning tool for a given clang driver command-line,
+  /// and report the discovered dependencies to the provided consumer. If \p
+  /// ModuleName isn't empty, this function reports the dependencies of module
+  /// \p ModuleName.
   ///
   /// \returns A \c StringError with the diagnostic output if clang errors
   /// occurred, success otherwise.
-  llvm::Error computeDependencies(const std::string &Input,
-                                  StringRef WorkingDirectory,
-                                  const CompilationDatabase &CDB,
+  llvm::Error computeDependencies(StringRef WorkingDirectory,
+                                  const std::vector<std::string> &CommandLine,
                                   DependencyConsumer &Consumer,
                                   llvm::Optional<StringRef> ModuleName = None);
 
