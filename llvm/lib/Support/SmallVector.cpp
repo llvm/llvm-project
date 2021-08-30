@@ -19,12 +19,21 @@ using namespace llvm;
 
 // Check that no bytes are wasted and everything is well-aligned.
 namespace {
+// These structures may cause binary compat warnings on AIX. Suppress the
+// warning since we are only using these types for the static assertions below.
+#if defined(_AIX)
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Waix-compat"
+#endif
 struct Struct16B {
   alignas(16) void *X;
 };
 struct Struct32B {
   alignas(32) void *X;
 };
+#if defined(_AIX)
+#pragma GCC diagnostic pop
+#endif
 }
 static_assert(sizeof(SmallVector<void *, 0>) ==
                   sizeof(unsigned) * 2 + sizeof(void *),
