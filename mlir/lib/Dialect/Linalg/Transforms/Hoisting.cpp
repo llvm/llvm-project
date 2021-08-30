@@ -559,14 +559,11 @@ static FlatAffineValueConstraints
 initLoopIvsAndBounds(ArrayRef<Operation *> loops) {
   FlatAffineValueConstraints constraints;
   for (Operation *op : loops)
-    constraints.addDimId(constraints.getNumDimIds(),
-                         cast<scf::ForOp>(op).getInductionVar());
+    constraints.appendDimId(cast<scf::ForOp>(op).getInductionVar());
   for (Operation *op : loops)
-    constraints.addDimId(constraints.getNumDimIds(),
-                         cast<scf::ForOp>(op).lowerBound());
+    constraints.appendDimId(cast<scf::ForOp>(op).lowerBound());
   for (Operation *op : loops)
-    constraints.addDimId(constraints.getNumDimIds(),
-                         cast<scf::ForOp>(op).upperBound());
+    constraints.appendDimId(cast<scf::ForOp>(op).upperBound());
   unsigned numLoops = loops.size();
   for (unsigned ivIdx = 0, e = numLoops; ivIdx < e; ++ivIdx) {
     // iv - lb >= 0
@@ -628,7 +625,7 @@ foldUpperBoundsIntoConstraintsSet(FlatAffineValueConstraints &constraints,
           constraints.findId(v, &pos);
           return pos >= constraints.getNumDimIds();
         }
-        constraints.addDimId(constraints.getNumDimIds(), v);
+        constraints.appendDimId(v);
         return false;
       };
 
