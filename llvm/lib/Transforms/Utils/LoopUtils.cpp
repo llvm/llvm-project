@@ -1142,8 +1142,6 @@ struct RewritePhi {
   Instruction *ExpansionPoint; // Where we'd like to expand that SCEV?
   bool HighCost;               // Is this expansion a high-cost?
 
-  Value *Expansion = nullptr;
-
   RewritePhi(PHINode *P, unsigned I, const SCEV *Val, Instruction *ExpansionPt,
              bool H)
       : PN(P), Ith(I), ExpansionSCEV(Val), ExpansionPoint(ExpansionPt),
@@ -1313,32 +1311,10 @@ int llvm::rewriteLoopExitValues(Loop *L, LoopInfo *LI, TargetLibraryInfo *TLI,
     }
   }
 
-  // Now that we've done preliminary filtering and billed all the SCEV's,
-  // we can perform the last sanity check - the expansion must be valid.
-  for (RewritePhi &Phi : RewritePhiSet) {
-    Phi.Expansion = Rewriter.expandCodeFor(Phi.ExpansionSCEV, Phi.PN->getType(),
-                                           Phi.ExpansionPoint);
-
-    LLVM_DEBUG(dbgs() << "rewriteLoopExitValues: AfterLoopVal = "
-                      << *(Phi.Expansion) << '\n'
-                      << "  LoopVal = " << *(Phi.ExpansionPoint) << "\n");
-
-#ifndef NDEBUG
-    // If we reuse an instruction from a loop which is neither L nor one of
-    // its containing loops, we end up breaking LCSSA form for this loop by
-    // creating a new use of its instruction.
-    if (auto *ExitInsn = dyn_cast<Instruction>(Phi.Expansion))
-      if (auto *EVL = LI->getLoopFor(ExitInsn->getParent()))
-        if (EVL != L)
-          assert(EVL->contains(L) && "LCSSA breach detected!");
-#endif
-  }
-
-  // TODO: after isValidRewrite() is an assertion, evaluate whether
-  // it is beneficial to change how we calculate high-cost:
-  // if we have SCEV 'A' which we know we will expand, should we calculate
-  // the cost of other SCEV's after expanding SCEV 'A',
-  // thus potentially giving cost bonus to those other SCEV's?
+  // TODO: evaluate whether it is beneficial to change how we calculate
+  // high-cost: if we have SCEV 'A' which we know we will expand, should we
+  // calculate the cost of other SCEV's after expanding SCEV 'A', thus
+  // potentially giving cost bonus to those other SCEV's?
 
   bool LoopCanBeDel = canLoopBeDeleted(L, RewritePhiSet);
   int NumReplaced = 0;
@@ -1346,14 +1322,28 @@ int llvm::rewriteLoopExitValues(Loop *L, LoopInfo *LI, TargetLibraryInfo *TLI,
   // Transformation.
   for (const RewritePhi &Phi : RewritePhiSet) {
     PHINode *PN = Phi.PN;
-    Value *ExitVal = Phi.Expansion;
 
     // Only do the rewrite when the ExitValue can be expanded cheaply.
     // If LoopCanBeDel is true, rewrite exit value aggressively.
-    if (ReplaceExitValue == OnlyCheapRepl && !LoopCanBeDel && Phi.HighCost) {
-      DeadInsts.push_back(ExitVal);
+    if (ReplaceExitValue == OnlyCheapRepl && !LoopCanBeDel && Phi.HighCost)
       continue;
-    }
+
+    Value *ExitVal = Rewriter.expandCodeFor(
+        Phi.ExpansionSCEV, Phi.PN->getType(), Phi.ExpansionPoint);
+
+    LLVM_DEBUG(dbgs() << "rewriteLoopExitValues: AfterLoopVal = " << *ExitVal
+                      << '\n'
+                      << "  LoopVal = " << *(Phi.ExpansionPoint) << "\n");
+
+#ifndef NDEBUG
+    // If we reuse an instruction from a loop which is neither L nor one of
+    // its containing loops, we end up breaking LCSSA form for this loop by
+    // creating a new use of its instruction.
+    if (auto *ExitInsn = dyn_cast<Instruction>(ExitVal))
+      if (auto *EVL = LI->getLoopFor(ExitInsn->getParent()))
+        if (EVL != L)
+          assert(EVL->contains(L) && "LCSSA breach detected!");
+#endif
 
     NumReplaced++;
     Instruction *Inst = cast<Instruction>(PN->getIncomingValue(Phi.Ith));
