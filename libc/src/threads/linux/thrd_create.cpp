@@ -82,13 +82,15 @@ LLVM_LIBC_FUNCTION(int, thrd_create,
   // but it might differ for other architectures. So, make this call
   // architecture independent. May be implement a glibc like wrapper for clone
   // and use it here.
-  long clone_result =
+  long register clone_result asm("rax");
+  clone_result =
       __llvm_libc::syscall(SYS_clone, clone_flags, adjusted_stack,
                            &thread->__tid, clear_tid_address, 0);
 
   if (clone_result == 0) {
     start_thread();
   } else if (clone_result < 0) {
+    __llvm_libc::munmap(thread->__stack, thread->__stack_size);
     int error_val = -clone_result;
     return error_val == ENOMEM ? thrd_nomem : thrd_error;
   }
