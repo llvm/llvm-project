@@ -461,7 +461,7 @@ bool AVRAsmParser::tryParseRelocExpression(OperandVector &Operands) {
     return true;
   }
   StringRef ModifierName = Parser.getTok().getString();
-  ModifierKind = AVRMCExpr::getKindByName(ModifierName.str().c_str());
+  ModifierKind = AVRMCExpr::getKindByName(ModifierName);
 
   if (ModifierKind != AVRMCExpr::VK_AVR_None) {
     Parser.Lex();
@@ -469,7 +469,7 @@ bool AVRAsmParser::tryParseRelocExpression(OperandVector &Operands) {
     if (Parser.getTok().getString() == GENERATE_STUBS &&
         Parser.getTok().getKind() == AsmToken::Identifier) {
       std::string GSModName = ModifierName.str() + "_" + GENERATE_STUBS;
-      ModifierKind = AVRMCExpr::getKindByName(GSModName.c_str());
+      ModifierKind = AVRMCExpr::getKindByName(GSModName);
       if (ModifierKind != AVRMCExpr::VK_AVR_None)
         Parser.Lex(); // Eat gs modifier name
     }
@@ -678,7 +678,7 @@ bool AVRAsmParser::parseLiteralValues(unsigned SizeInBytes, SMLoc L) {
       Parser.getLexer().peekTok().getKind() == AsmToken::LParen) {
     StringRef ModifierName = Parser.getTok().getString();
     AVRMCExpr::VariantKind ModifierKind =
-        AVRMCExpr::getKindByName(ModifierName.str().c_str());
+        AVRMCExpr::getKindByName(ModifierName);
     if (ModifierKind != AVRMCExpr::VK_AVR_None) {
       Parser.Lex();
       Parser.Lex(); // Eat the modifier and parenthesis
@@ -722,7 +722,7 @@ unsigned AVRAsmParser::validateTargetOperandClass(MCParsedAsmOperand &AsmOp,
       int64_t RegNum = Const->getValue();
       std::ostringstream RegName;
       RegName << "r" << RegNum;
-      RegNum = MatchRegisterName(RegName.str().c_str());
+      RegNum = MatchRegisterName(RegName.str());
       if (RegNum != AVR::NoRegister) {
         Op.makeReg(RegNum);
         if (validateOperandClass(Op, Expected) == Match_Success) {
