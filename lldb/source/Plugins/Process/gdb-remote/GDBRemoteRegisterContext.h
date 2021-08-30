@@ -83,7 +83,7 @@ public:
 protected:
   friend class ThreadGDBRemote;
 
-  bool ReadRegisterBytes(const RegisterInfo *reg_info, DataExtractor &data);
+  bool ReadRegisterBytes(const RegisterInfo *reg_info);
 
   bool WriteRegisterBytes(const RegisterInfo *reg_info, DataExtractor &data,
                           uint32_t data_offset);
