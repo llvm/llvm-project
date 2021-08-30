@@ -73,7 +73,7 @@ def SRL64 : SDNodeXForm<imm, [{
 //
 
 let Interpretation64Bit = 1, isCodeGenOnly = 1 in {
-let isTerminator = 1, isBarrier = 1, PPC970_Unit = 7 in {
+let isTerminator = 1, isBarrier = 1, PPC970_Unit = 7, hasSideEffects = 0 in {
   let isReturn = 1, isPredicable = 1, Uses = [LR8, RM] in
     def BLR8 : XLForm_2_ext<19, 16, 20, 0, 0, (outs), (ins), "blr", IIC_BrB,
                             [(retflag)]>, Requires<[In64BitMode]>;
@@ -100,7 +100,7 @@ let Defs = [LR8] in
   def MovePCtoLR8 : PPCEmitTimePseudo<(outs), (ins), "#MovePCtoLR8", []>,
                     PPC970_Unit_BRU;
 
-let isBranch = 1, isTerminator = 1, hasCtrlDep = 1, PPC970_Unit = 7 in {
+let isBranch = 1, isTerminator = 1, hasCtrlDep = 1, PPC970_Unit = 7, hasSideEffects = 0 in {
   let Defs = [CTR8], Uses = [CTR8] in {
     def BDZ8  : BForm_1<16, 18, 0, 0, (outs), (ins condbrtarget:$dst),
                         "bdz $dst">;
@@ -118,7 +118,7 @@ let isBranch = 1, isTerminator = 1, hasCtrlDep = 1, PPC970_Unit = 7 in {
 
 
 
-let isCall = 1, PPC970_Unit = 7, Defs = [LR8] in {
+let isCall = 1, PPC970_Unit = 7, Defs = [LR8], hasSideEffects = 0 in {
   // Convenient aliases for call instructions
   let Uses = [RM] in {
     def BL8  : IForm<18, 0, 1, (outs), (ins calltarget:$func),
@@ -193,7 +193,7 @@ let isCall = 1, PPC970_Unit = 7, isCodeGenOnly = 1,
 // FIXME: Duplicating this for the asm parser should be unnecessary, but the
 // previous definition must be marked as CodeGen only to prevent decoding
 // conflicts.
-let Interpretation64Bit = 1, isAsmParserOnly = 1 in
+let Interpretation64Bit = 1, isAsmParserOnly = 1, hasSideEffects = 0 in
 let isCall = 1, PPC970_Unit = 7, Defs = [LR8], Uses = [RM] in
 def BL8_TLS_ : IForm<18, 0, 1, (outs), (ins tlscall:$func),
                      "bl $func", IIC_BrB, []>;
@@ -408,6 +408,7 @@ def TCRETURNri8 : PPCEmitTimePseudo<(outs), (ins CTRRC8:$dst, i32imm:$offset),
                  "#TC_RETURNr8 $dst $offset",
                  []>;
 
+let hasSideEffects = 0 in {
 let isTerminator = 1, isBarrier = 1, PPC970_Unit = 7, isBranch = 1,
     isIndirectBranch = 1, isCall = 1, isReturn = 1, Uses = [CTR8, RM] in
 def TAILBCTR8 : XLForm_2_ext<19, 528, 20, 0, 0, (outs), (ins), "bctr", IIC_BrB,
@@ -425,6 +426,7 @@ let isBranch = 1, isTerminator = 1, hasCtrlDep = 1, PPC970_Unit = 7,
 def TAILBA8   : IForm<18, 0, 0, (outs), (ins abscalltarget:$dst),
                   "ba $dst", IIC_BrB,
                   []>;
+}
 } // Interpretation64Bit
 
 def : Pat<(PPCtc_return (i64 tglobaladdr:$dst),  imm:$imm),
