@@ -25,7 +25,6 @@
 // NO_MACRO-NOT: DIMacroFile
 
 // CHECK:  !DICompileUnit({{.*}} macros: [[Macros:![0-9]+]]
-// CHECK:  [[EmptyMD:![0-9]+]] = !{}
 
 // NO_PCH: [[Macros]] = !{[[MainMacroFile:![0-9]+]], [[BuiltinMacro:![0-9]+]], {{.*}}, [[DefineC1:![0-9]+]], [[DefineA:![0-9]+]], [[UndefC1:![0-9]+]]}
 // PCH:    [[Macros]] = !{[[MainMacroFile:![0-9]+]], [[DefineC1:![0-9]+]], [[DefineA:![0-9]+]], [[UndefC1:![0-9]+]]}
