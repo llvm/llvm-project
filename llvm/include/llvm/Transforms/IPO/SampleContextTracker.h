@@ -110,7 +110,8 @@ public:
   // deterministically.
   using ContextSamplesTy = std::set<FunctionSamples *, ProfileComparer>;
 
-  SampleContextTracker(SampleProfileMap &Profiles);
+  SampleContextTracker(SampleProfileMap &Profiles,
+                       const DenseMap<uint64_t, StringRef> *GUIDToFuncNameMap);
   // Query context profile for a specific callee with given name at a given
   // call-site. The full context is identified by location of call instruction.
   FunctionSamples *getCalleeContextSamplesFor(const CallBase &Inst,
@@ -134,6 +135,8 @@ public:
   FunctionSamples *getBaseSamplesFor(StringRef Name, bool MergeContext = true);
   // Retrieve the context trie node for given profile context
   ContextTrieNode *getContextFor(const SampleContext &Context);
+  // Get real function name for a given trie node.
+  StringRef getFuncNameFor(ContextTrieNode *Node) const;
   // Mark a context profile as inlined when function is inlined.
   // This makes sure that inlined context profile will be excluded in
   // function's base profile.
@@ -162,6 +165,9 @@ private:
 
   // Map from function name to context profiles (excluding base profile)
   StringMap<ContextSamplesTy> FuncToCtxtProfiles;
+
+  // Map from function guid to real function names. Only used in md5 mode.
+  const DenseMap<uint64_t, StringRef> *GUIDToFuncNameMap;
 
   // Root node for context trie tree
   ContextTrieNode RootContext;

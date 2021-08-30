@@ -203,7 +203,10 @@ ContextTrieNode *ContextTrieNode::getOrCreateChildContext(
 }
 
 // Profiler tracker than manages profiles and its associated context
-SampleContextTracker::SampleContextTracker(SampleProfileMap &Profiles) {
+SampleContextTracker::SampleContextTracker(
+    SampleProfileMap &Profiles,
+    const DenseMap<uint64_t, StringRef> *GUIDToFuncNameMap)
+    : GUIDToFuncNameMap(GUIDToFuncNameMap) {
   for (auto &FuncSample : Profiles) {
     FunctionSamples *FSamples = &FuncSample.second;
     SampleContext Context = FuncSample.first;
@@ -227,6 +230,10 @@ SampleContextTracker::getCalleeContextSamplesFor(const CallBase &Inst,
     return nullptr;
 
   CalleeName = FunctionSamples::getCanonicalFnName(CalleeName);
+  // Convert real function names to MD5 names, if the input profile is
+  // MD5-based.
+  std::string FGUID;
+  CalleeName = getRepInFormat(CalleeName, FunctionSamples::UseMD5, FGUID);
 
   // For indirect call, CalleeName will be empty, in which case the context
   // profile for callee with largest total samples will be returned.
@@ -313,6 +320,11 @@ FunctionSamples *SampleContextTracker::getBaseSamplesFor(const Function &Func,
 FunctionSamples *SampleContextTracker::getBaseSamplesFor(StringRef Name,
                                                          bool MergeContext) {
   LLVM_DEBUG(dbgs() << "Getting base profile for function: " << Name << "\n");
+  // Convert real function names to MD5 names, if the input profile is
+  // MD5-based.
+  std::string FGUID;
+  Name = getRepInFormat(Name, FunctionSamples::UseMD5, FGUID);
+
   // Base profile is top-level node (child of root node), so try to retrieve
   // existing top-level node for given function first. If it exists, it could be
   // that we've merged base profile before, or there's actually context-less
@@ -416,6 +428,13 @@ ContextTrieNode &SampleContextTracker::promoteMergeContextSamplesTree(
 
 void SampleContextTracker::dump() { RootContext.dumpTree(); }
 
+StringRef SampleContextTracker::getFuncNameFor(ContextTrieNode *Node) const {
+  if (!FunctionSamples::UseMD5)
+    return Node->getFuncName();
+  assert(GUIDToFuncNameMap && "GUIDToFuncNameMap needs to be populated first");
+  return GUIDToFuncNameMap->lookup(std::stoull(Node->getFuncName().data()));
+}
+
 ContextTrieNode *
 SampleContextTracker::getContextFor(const SampleContext &Context) {
   return getOrCreateContextPath(Context, false);
@@ -457,6 +476,17 @@ ContextTrieNode *SampleContextTracker::getContextFor(const DILocation *DIL) {
   if (RootName.empty())
     RootName = PrevDIL->getScope()->getSubprogram()->getName();
   S.push_back(std::make_pair(LineLocation(0, 0), RootName));
+
+  // Convert real function names to MD5 names, if the input profile is
+  // MD5-based.
+  std::vector<std::string> MD5Names;
+  if (FunctionSamples::UseMD5) {
+    for (auto &Location : S) {
+      MD5Names.emplace_back();
+      getRepInFormat(Location.second, FunctionSamples::UseMD5, MD5Names.back());
+      Location.second = MD5Names.back();
+    }
+  }
 
   ContextTrieNode *ContextNode = &RootContext;
   int I = S.size();
