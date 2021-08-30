@@ -217,7 +217,7 @@ public:
 
   /// Returns this sparse tensor storage scheme as a new memory-resident
   /// sparse tensor in coordinate scheme with the given dimension order.
-  SparseTensor<V> *asCOO(uint64_t *perm) {
+  SparseTensor<V> *toCOO(uint64_t *perm) {
     // Restore original order of the dimension sizes and allocate coordinate
     // scheme with desired new ordering specified in perm.
     uint64_t size = getRank();
@@ -272,6 +272,9 @@ private:
       if (sparsity[d] == kCompressed) {
         indices[d].push_back(idx);
       } else {
+        // For dense storage we must fill in all the zero values between
+        // the previous element (when last we ran this for-loop) and the
+        // current element.
         for (; full < idx; full++)
           fromCOO(tensor, sparsity, 0, 0, d + 1); // pass empty
         full++;
@@ -284,6 +287,8 @@ private:
     if (sparsity[d] == kCompressed) {
       pointers[d].push_back(indices[d].size());
     } else {
+      // For dense storage we must fill in all the zero values after
+      // the last element.
       for (uint64_t sz = tensor->getSizes()[d]; full < sz; full++)
         fromCOO(tensor, sparsity, 0, 0, d + 1); // pass empty
     }
@@ -495,7 +500,7 @@ char *getTensorFilename(uint64_t id) {
     else if (action == 2)                                                      \
       return SparseTensor<V>::newSparseTensor(asize, sizes, perm);             \
     else                                                                       \
-      return static_cast<SparseTensorStorage<P, I, V> *>(ptr)->asCOO(perm);    \
+      return static_cast<SparseTensorStorage<P, I, V> *>(ptr)->toCOO(perm);    \
     return SparseTensorStorage<P, I, V>::newSparseTensor(tensor, sparsity,     \
                                                          perm);                \
   }
