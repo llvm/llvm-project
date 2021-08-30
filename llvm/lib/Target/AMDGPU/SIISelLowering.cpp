@@ -8298,6 +8298,16 @@ SDValue SITargetLowering::LowerSELECT(SDValue Op, SelectionDAG &DAG) const {
   SDLoc DL(Op);
   SDValue Cond = Op.getOperand(0);
 
+  if (Subtarget->hasScalarCompareEq64() && Op->getOperand(0)->hasOneUse() &&
+      !Op->isDivergent()) {
+    if (VT == MVT::i64)
+      return Op;
+    SDValue LHS = DAG.getNode(ISD::BITCAST, DL, MVT::i64, Op.getOperand(1));
+    SDValue RHS = DAG.getNode(ISD::BITCAST, DL, MVT::i64, Op.getOperand(2));
+    return DAG.getNode(ISD::BITCAST, DL, VT,
+                       DAG.getSelect(DL, MVT::i64, Cond, LHS, RHS));
+  }
+
   SDValue Zero = DAG.getConstant(0, DL, MVT::i32);
   SDValue One = DAG.getConstant(1, DL, MVT::i32);
 
