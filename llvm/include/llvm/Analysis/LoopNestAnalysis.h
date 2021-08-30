@@ -24,7 +24,7 @@ using LoopVectorTy = SmallVector<Loop *, 8>;
 class LPMUpdater;
 
 /// This class represents a loop nest and can be used to query its properties.
-class LoopNest {
+class LLVM_EXTERNAL_VISIBILITY LoopNest {
 public:
   /// Construct a loop nest rooted by loop \p Root.
   LoopNest(Loop &Root, ScalarEvolution &SE);
