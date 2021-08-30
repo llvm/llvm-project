@@ -847,7 +847,7 @@ MicrosoftCXXABI::getRecordArgABI(const CXXRecordDecl *RD) const {
     // arguments was not supported and resulted in a compiler error. In 19.14
     // and later versions, such arguments are now passed indirectly.
     TypeInfo Info = getContext().getTypeInfo(RD->getTypeForDecl());
-    if (Info.AlignIsRequired && Info.Align > 4)
+    if (Info.isAlignRequired() && Info.Align > 4)
       return RAA_Indirect;
 
     // If C++ prohibits us from making a copy, construct the arguments directly

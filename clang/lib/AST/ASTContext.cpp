@@ -1859,7 +1859,7 @@ static getConstantArrayInfoInChars(const ASTContext &Context,
     Width = llvm::alignTo(Width, Align);
   return TypeInfoChars(CharUnits::fromQuantity(Width),
                        CharUnits::fromQuantity(Align),
-                       EltInfo.AlignIsRequired);
+                       EltInfo.AlignRequirement);
 }
 
 TypeInfoChars ASTContext::getTypeInfoInChars(const Type *T) const {
@@ -1867,8 +1867,7 @@ TypeInfoChars ASTContext::getTypeInfoInChars(const Type *T) const {
     return getConstantArrayInfoInChars(*this, CAT);
   TypeInfo Info = getTypeInfo(T);
   return TypeInfoChars(toCharUnitsFromBits(Info.Width),
-                       toCharUnitsFromBits(Info.Align),
-                       Info.AlignIsRequired);
+                       toCharUnitsFromBits(Info.Align), Info.AlignRequirement);
 }
 
 TypeInfoChars ASTContext::getTypeInfoInChars(QualType T) const {
@@ -1876,7 +1875,7 @@ TypeInfoChars ASTContext::getTypeInfoInChars(QualType T) const {
 }
 
 bool ASTContext::isAlignmentRequired(const Type *T) const {
-  return getTypeInfo(T).AlignIsRequired;
+  return getTypeInfo(T).AlignRequirement != AlignRequirementKind::None;
 }
 
 bool ASTContext::isAlignmentRequired(QualType T) const {
@@ -1928,7 +1927,7 @@ TypeInfo ASTContext::getTypeInfo(const Type *T) const {
 TypeInfo ASTContext::getTypeInfoImpl(const Type *T) const {
   uint64_t Width = 0;
   unsigned Align = 8;
-  bool AlignIsRequired = false;
+  AlignRequirementKind AlignRequirement = AlignRequirementKind::None;
   unsigned AS = 0;
   switch (T->getTypeClass()) {
 #define TYPE(Class, Base)
@@ -1962,7 +1961,7 @@ TypeInfo ASTContext::getTypeInfoImpl(const Type *T) const {
            "Overflow in array type bit size evaluation");
     Width = EltInfo.Width * Size;
     Align = EltInfo.Align;
-    AlignIsRequired = EltInfo.AlignIsRequired;
+    AlignRequirement = EltInfo.AlignRequirement;
     if (!getTargetInfo().getCXXABI().isMicrosoft() ||
         getTargetInfo().getPointerWidth(0) == 64)
       Width = llvm::alignTo(Width, Align);
@@ -2299,7 +2298,7 @@ TypeInfo ASTContext::getTypeInfoImpl(const Type *T) const {
           getTypeInfo(ED->getIntegerType()->getUnqualifiedDesugaredType());
       if (unsigned AttrAlign = ED->getMaxAlignment()) {
         Info.Align = AttrAlign;
-        Info.AlignIsRequired = true;
+        Info.AlignRequirement = AlignRequirementKind::RequiredByEnum;
       }
       return Info;
     }
@@ -2309,7 +2308,9 @@ TypeInfo ASTContext::getTypeInfoImpl(const Type *T) const {
     const ASTRecordLayout &Layout = getASTRecordLayout(RD);
     Width = toBits(Layout.getSize());
     Align = toBits(Layout.getAlignment());
-    AlignIsRequired = RD->hasAttr<AlignedAttr>();
+    AlignRequirement = RD->hasAttr<AlignedAttr>()
+                           ? AlignRequirementKind::RequiredByRecord
+                           : AlignRequirementKind::None;
     break;
   }
 
@@ -2343,10 +2344,10 @@ TypeInfo ASTContext::getTypeInfoImpl(const Type *T) const {
     // attribute(aligned) can only round up) but matches its implementation.
     if (unsigned AttrAlign = Typedef->getMaxAlignment()) {
       Align = AttrAlign;
-      AlignIsRequired = true;
+      AlignRequirement = AlignRequirementKind::RequiredByTypedef;
     } else {
       Align = Info.Align;
-      AlignIsRequired = Info.AlignIsRequired;
+      AlignRequirement = Info.AlignRequirement;
     }
     Width = Info.Width;
     break;
@@ -2392,7 +2393,7 @@ TypeInfo ASTContext::getTypeInfoImpl(const Type *T) const {
   }
 
   assert(llvm::isPowerOf2_32(Align) && "Alignment must be power of 2");
-  return TypeInfo(Width, Align, AlignIsRequired);
+  return TypeInfo(Width, Align, AlignRequirement);
 }
 
 unsigned ASTContext::getTypeUnadjustedAlign(const Type *T) const {
@@ -2482,7 +2483,7 @@ unsigned ASTContext::getPreferredTypeAlign(const Type *T) const {
 
     // When used as part of a typedef, or together with a 'packed' attribute,
     // the 'aligned' attribute can be used to decrease alignment.
-    if ((TI.AlignIsRequired && T->getAs<TypedefType>() != nullptr) ||
+    if ((TI.isAlignRequired() && T->getAs<TypedefType>() != nullptr) ||
         RD->isInvalidDecl())
       return ABIAlign;
 
@@ -2507,7 +2508,7 @@ unsigned ASTContext::getPreferredTypeAlign(const Type *T) const {
        Target->defaultsToAIXPowerAlignment()))
     // Don't increase the alignment if an alignment attribute was specified on a
     // typedef declaration.
-    if (!TI.AlignIsRequired)
+    if (!TI.isAlignRequired())
       return std::max(ABIAlign, (unsigned)getTypeSize(T));
 
   return ABIAlign;

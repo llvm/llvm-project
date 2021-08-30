@@ -164,24 +164,46 @@ namespace serialization {
 template <class> class AbstractTypeReader;
 } // namespace serialization
 
+enum class AlignRequirementKind {
+  /// The alignment was not explicit in code.
+  None,
+
+  /// The alignment comes from an alignment attribute on a typedef.
+  RequiredByTypedef,
+
+  /// The alignment comes from an alignment attribute on a record type.
+  RequiredByRecord,
+
+  /// The alignment comes from an alignment attribute on a enum type.
+  RequiredByEnum,
+};
+
 struct TypeInfo {
   uint64_t Width = 0;
   unsigned Align = 0;
-  bool AlignIsRequired : 1;
+  AlignRequirementKind AlignRequirement;
 
-  TypeInfo() : AlignIsRequired(false) {}
-  TypeInfo(uint64_t Width, unsigned Align, bool AlignIsRequired)
-      : Width(Width), Align(Align), AlignIsRequired(AlignIsRequired) {}
+  TypeInfo() : AlignRequirement(AlignRequirementKind::None) {}
+  TypeInfo(uint64_t Width, unsigned Align,
+           AlignRequirementKind AlignRequirement)
+      : Width(Width), Align(Align), AlignRequirement(AlignRequirement) {}
+  bool isAlignRequired() {
+    return AlignRequirement != AlignRequirementKind::None;
+  }
 };
 
 struct TypeInfoChars {
   CharUnits Width;
   CharUnits Align;
-  bool AlignIsRequired : 1;
+  AlignRequirementKind AlignRequirement;
 
-  TypeInfoChars() : AlignIsRequired(false) {}
-  TypeInfoChars(CharUnits Width, CharUnits Align, bool AlignIsRequired)
-      : Width(Width), Align(Align), AlignIsRequired(AlignIsRequired) {}
+  TypeInfoChars() : AlignRequirement(AlignRequirementKind::None) {}
+  TypeInfoChars(CharUnits Width, CharUnits Align,
+                AlignRequirementKind AlignRequirement)
+      : Width(Width), Align(Align), AlignRequirement(AlignRequirement) {}
+  bool isAlignRequired() {
+    return AlignRequirement != AlignRequirementKind::None;
+  }
 };
 
 /// Holds long-lived AST nodes (such as types and decls) that can be
