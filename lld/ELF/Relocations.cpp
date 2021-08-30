@@ -910,28 +910,19 @@ static void addPltEntry(PltSection *plt, GotPltSection *gotPlt,
 
 static void addGotEntry(Symbol &sym) {
   in.got->addEntry(sym);
-
   uint64_t off = sym.getGotOffset();
 
-  // If a GOT slot value can be calculated at link-time, which is now,
-  // we can just fill that out.
-  //
-  // (We don't actually write a value to a GOT slot right now, but we
-  // add a static relocation to a Relocations vector so that
-  // InputSection::relocate will do the work for us. We may be able
-  // to just write a value now, but it is a TODO.)
-  bool isLinkTimeConstant =
-      !sym.isPreemptible && (!config->isPic || isAbsolute(sym));
-  if (isLinkTimeConstant) {
-    in.got->relocations.push_back({R_ABS, target->symbolicRel, off, 0, &sym});
+  // If preemptible, emit a GLOB_DAT relocation.
+  if (sym.isPreemptible) {
+    mainPart->relaDyn->addReloc({target->gotRel, in.got, off,
+                                 DynamicReloc::AgainstSymbol, sym, 0, R_ABS});
     return;
   }
 
-  // Otherwise, we emit a dynamic relocation to .rel[a].dyn so that
-  // the GOT slot will be fixed at load-time.
-  if (sym.isPreemptible)
-    mainPart->relaDyn->addReloc({target->gotRel, in.got, off,
-                                 DynamicReloc::AgainstSymbol, sym, 0, R_ABS});
+  // Otherwise, the value is either a link-time constant or the load base
+  // plus a constant.
+  if (!config->isPic || isAbsolute(sym))
+    in.got->relocations.push_back({R_ABS, target->symbolicRel, off, 0, &sym});
   else
     addRelativeReloc(in.got, off, sym, 0, R_ABS, target->symbolicRel);
 }
