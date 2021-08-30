@@ -107,6 +107,10 @@ struct Mutex {
   }
 };
 
+static_assert(sizeof(Mutex) == sizeof(mtx_t),
+              "Sizes of internal representation of mutex and the public mtx_t "
+              "do not match.");
+
 class MutexLock {
   Mutex *mutex;
 
