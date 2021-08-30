@@ -26063,6 +26063,35 @@ SDValue X86TargetLowering::LowerINTRINSIC_WO_CHAIN(SDValue Op,
       // Swap Src1 and Src2 in the node creation
       return DAG.getNode(IntrData->Opc0, dl, VT,Src2, Src1);
     }
+    case FMA_OP_MASKZ:
+    case FMA_OP_MASK: {
+      SDValue Src1 = Op.getOperand(1);
+      SDValue Src2 = Op.getOperand(2);
+      SDValue Src3 = Op.getOperand(3);
+      SDValue Mask = Op.getOperand(4);
+      MVT VT = Op.getSimpleValueType();
+
+      SDValue PassThru = Src1;
+      if (IntrData->Type == FMA_OP_MASKZ)
+        PassThru = getZeroVector(VT, Subtarget, DAG, dl);
+
+      // We add rounding mode to the Node when
+      //   - RC Opcode is specified and
+      //   - RC is not "current direction".
+      SDValue NewOp;
+      if (IntrData->Opc1 != 0) {
+        SDValue Rnd = Op.getOperand(5);
+        unsigned RC = 0;
+        if (isRoundModeSAEToX(Rnd, RC))
+          NewOp = DAG.getNode(IntrData->Opc1, dl, VT, Src1, Src2, Src3,
+                              DAG.getTargetConstant(RC, dl, MVT::i32));
+        else if (!isRoundModeCurDirection(Rnd))
+          return SDValue();
+      }
+      if (!NewOp)
+        NewOp = DAG.getNode(IntrData->Opc0, dl, VT, Src1, Src2, Src3);
+      return getVectorMaskingNode(NewOp, Mask, PassThru, Subtarget, DAG);
+    }
     case IFMA_OP:
       // NOTE: We need to swizzle the operands to pass the multiply operands
       // first.
@@ -32341,6 +32370,22 @@ const char *X86TargetLowering::getTargetNodeName(unsigned Opcode) const {
   NODE_NAME_CASE(FNMSUB_RND)
   NODE_NAME_CASE(FMADDSUB_RND)
   NODE_NAME_CASE(FMSUBADD_RND)
+  NODE_NAME_CASE(VFMADDC)
+  NODE_NAME_CASE(VFMADDC_RND)
+  NODE_NAME_CASE(VFCMADDC)
+  NODE_NAME_CASE(VFCMADDC_RND)
+  NODE_NAME_CASE(VFMULC)
+  NODE_NAME_CASE(VFMULC_RND)
+  NODE_NAME_CASE(VFCMULC)
+  NODE_NAME_CASE(VFCMULC_RND)
+  NODE_NAME_CASE(VFMULCSH)
+  NODE_NAME_CASE(VFMULCSH_RND)
+  NODE_NAME_CASE(VFCMULCSH)
+  NODE_NAME_CASE(VFCMULCSH_RND)
+  NODE_NAME_CASE(VFMADDCSH)
+  NODE_NAME_CASE(VFMADDCSH_RND)
+  NODE_NAME_CASE(VFCMADDCSH)
+  NODE_NAME_CASE(VFCMADDCSH_RND)
   NODE_NAME_CASE(VPMADD52H)
   NODE_NAME_CASE(VPMADD52L)
   NODE_NAME_CASE(VRNDSCALE)
@@ -47377,11 +47422,141 @@ static SDValue combineToHorizontalAddSub(SDNode *N, SelectionDAG &DAG,
   return SDValue();
 }
 
+//  Try to combine the following nodes
+//  t29: i64 = X86ISD::Wrapper TargetConstantPool:i64
+//    <i32 -2147483648[float -0.000000e+00]> 0
+//  t27: v16i32[v16f32],ch = X86ISD::VBROADCAST_LOAD
+//    <(load 4 from constant-pool)> t0, t29
+//  [t30: v16i32 = bitcast t27]
+//  t6: v16i32 = xor t7, t27[t30]
+//  t11: v16f32 = bitcast t6
+//  t21: v16f32 = X86ISD::VFMULC[X86ISD::VCFMULC] t11, t8
+//  into X86ISD::VFCMULC[X86ISD::VFMULC] if possible:
+//  t22: v16f32 = bitcast t7
+//  t23: v16f32 = X86ISD::VFCMULC[X86ISD::VFMULC] t8, t22
+//  t24: v32f16 = bitcast t23
+static SDValue combineFMulcFCMulc(SDNode *N, SelectionDAG &DAG,
+                                  const X86Subtarget &Subtarget) {
+  EVT VT = N->getValueType(0);
+  SDValue LHS = N->getOperand(0);
+  SDValue RHS = N->getOperand(1);
+  int CombineOpcode =
+      N->getOpcode() == X86ISD::VFCMULC ? X86ISD::VFMULC : X86ISD::VFCMULC;
+  auto isConjugationConstant = [](const Constant *c) {
+    if (const auto *CI = dyn_cast<ConstantInt>(c)) {
+      APInt ConjugationInt32 = APInt(32, 0x80000000, true);
+      APInt ConjugationInt64 = APInt(64, 0x8000000080000000ULL, true);
+      switch (CI->getBitWidth()) {
+      case 16:
+        return false;
+      case 32:
+        return CI->getValue() == ConjugationInt32;
+      case 64:
+        return CI->getValue() == ConjugationInt64;
+      default:
+        llvm_unreachable("Unexpected bit width");
+      }
+    }
+    if (const auto *CF = dyn_cast<ConstantFP>(c))
+      return CF->isNegativeZeroValue();
+    return false;
+  };
+  auto combineConjugation = [&](SDValue &r) {
+    if (LHS->getOpcode() == ISD::BITCAST && RHS.hasOneUse()) {
+      SDValue XOR = LHS.getOperand(0);
+      if (XOR->getOpcode() == ISD::XOR && XOR.hasOneUse()) {
+        SDValue XORRHS = XOR.getOperand(1);
+        if (XORRHS.getOpcode() == ISD::BITCAST && XORRHS.hasOneUse())
+          XORRHS = XORRHS.getOperand(0);
+        if (XORRHS.getOpcode() == X86ISD::VBROADCAST_LOAD &&
+            XORRHS.getOperand(1).getNumOperands()) {
+          ConstantPoolSDNode *CP =
+              dyn_cast<ConstantPoolSDNode>(XORRHS.getOperand(1).getOperand(0));
+          if (CP && isConjugationConstant(CP->getConstVal())) {
+            SelectionDAG::FlagInserter FlagsInserter(DAG, N);
+            SDValue I2F = DAG.getBitcast(VT, LHS.getOperand(0).getOperand(0));
+            SDValue FCMulC = DAG.getNode(CombineOpcode, SDLoc(N), VT, RHS, I2F);
+            r = DAG.getBitcast(VT, FCMulC);
+            return true;
+          }
+        }
+      }
+    }
+    return false;
+  };
+  SDValue Res;
+  if (combineConjugation(Res))
+    return Res;
+  std::swap(LHS, RHS);
+  if (combineConjugation(Res))
+    return Res;
+  return Res;
+}
+
+//  Try to combine the following nodes
+//  t21: v16f32 = X86ISD::VFMULC/VFCMULC t7, t8
+//  t15: v32f16 = bitcast t21
+//  t16: v32f16 = fadd nnan ninf nsz arcp contract afn reassoc t15, t2
+//  into X86ISD::VFMADDC/VFCMADDC if possible:
+//  t22: v16f32 = bitcast t2
+//  t23: v16f32 = nnan ninf nsz arcp contract afn reassoc
+//                X86ISD::VFMADDC/VFCMADDC t7, t8, t22
+//  t24: v32f16 = bitcast t23
+static SDValue combineFaddCFmul(SDNode *N, SelectionDAG &DAG,
+                                const X86Subtarget &Subtarget) {
+  auto AllowContract = [&DAG](SDNode *N) {
+    return DAG.getTarget().Options.AllowFPOpFusion == FPOpFusion::Fast ||
+           N->getFlags().hasAllowContract();
+  };
+  if (N->getOpcode() != ISD::FADD || !Subtarget.hasFP16() || !AllowContract(N))
+    return SDValue();
+
+  EVT VT = N->getValueType(0);
+  if (VT != MVT::v8f16 && VT != MVT::v16f16 && VT != MVT::v32f16)
+    return SDValue();
+
+  SDValue LHS = N->getOperand(0);
+  SDValue RHS = N->getOperand(1);
+  SDValue CFmul, FAddOp1;
+  auto GetCFmulFrom = [&CFmul, &AllowContract](SDValue N) -> bool {
+    if (!N.hasOneUse() || N.getOpcode() != ISD::BITCAST)
+        return false;
+    SDValue Op0 = N.getOperand(0);
+    unsigned Opcode = Op0.getOpcode();
+    if (Op0.hasOneUse() && AllowContract(Op0.getNode()) &&
+        (Opcode == X86ISD::VFMULC || Opcode == X86ISD::VFCMULC))
+      CFmul = Op0;
+    return !!CFmul;
+  };
+
+  if (GetCFmulFrom(LHS))
+    FAddOp1 = RHS;
+  else if (GetCFmulFrom(RHS))
+    FAddOp1 = LHS;
+  else
+    return SDValue();
+
+  MVT CVT = MVT::getVectorVT(MVT::f32, VT.getVectorNumElements() / 2);
+  assert(CFmul->getValueType(0) == CVT && "Complex type mismatch");
+  FAddOp1 = DAG.getBitcast(CVT, FAddOp1);
+  unsigned newOp = CFmul.getOpcode() == X86ISD::VFMULC ? X86ISD::VFMADDC
+                                                       : X86ISD::VFCMADDC;
+  // FIXME: How do we handle when fast math flags of FADD are different from
+  // CFMUL's?
+  CFmul = DAG.getNode(newOp, SDLoc(N), CVT, FAddOp1, CFmul.getOperand(0),
+                      CFmul.getOperand(1), N->getFlags());
+  return DAG.getBitcast(VT, CFmul);
+}
+
 /// Do target-specific dag combines on floating-point adds/subs.
 static SDValue combineFaddFsub(SDNode *N, SelectionDAG &DAG,
                                const X86Subtarget &Subtarget) {
   if (SDValue HOp = combineToHorizontalAddSub(N, DAG, Subtarget))
     return HOp;
+
+  if (SDValue COp = combineFaddCFmul(N, DAG, Subtarget))
+    return COp;
+
   return SDValue();
 }
 
@@ -51985,6 +52160,8 @@ SDValue X86TargetLowering::PerformDAGCombine(SDNode *N,
     return combineUIntToFP(N, DAG, Subtarget);
   case ISD::FADD:
   case ISD::FSUB:           return combineFaddFsub(N, DAG, Subtarget);
+  case X86ISD::VFCMULC:
+  case X86ISD::VFMULC:      return combineFMulcFCMulc(N, DAG, Subtarget);
   case ISD::FNEG:           return combineFneg(N, DAG, DCI, Subtarget);
   case ISD::TRUNCATE:       return combineTruncate(N, DAG, Subtarget);
   case X86ISD::VTRUNC:      return combineVTRUNC(N, DAG, DCI);
